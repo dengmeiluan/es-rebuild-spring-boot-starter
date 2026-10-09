@@ -148,7 +148,7 @@ function onKeydown(event: KeyboardEvent) {
   else if (props.axis === 'vertical' && event.key === 'ArrowRight') next = boundedSize.value + step;
   else if (props.axis === 'horizontal' && event.key === 'ArrowUp') next = boundedSize.value - step;
   else if (props.axis === 'horizontal' && event.key === 'ArrowDown') next = boundedSize.value + step;
-  else if (event.key === 'r' || event.key === 'R' || event.key === 'Enter') {
+  else if (event.key === 'r' || event.key === 'R' || event.key === 'Enter' || event.key === ' ') {
     event.preventDefault();
     emit('reset');
     return;

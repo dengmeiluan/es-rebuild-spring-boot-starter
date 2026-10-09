@@ -9,7 +9,10 @@ import { ref, watch, type Ref } from 'vue';
    承担），此前的 Xmigrate 专用键控复合行为随换壳退役（五百五十八批(b) 注释事实
    修正：全库已无该键控字面）。
    一百三十五批：内核补可选 onEnter/onCopy 回调（焦点行 Enter=打开详情、Ctrl+C=复制行，
-   Xmigrate 同语义），调用方接线后行导航从「只能移动」升级为「移动+操作」。 */
+   Xmigrate 同语义），调用方接线后行导航从「只能移动」升级为「移动+操作」。
+   八百二十九批裁决：Enter 有激活语义而 Space 刻意不加——消费容器（.ih-list/.rt）皆
+   scroll 滚层，滚层 Space=滚动是平台惯例；行级激活由行内 role=button 双键齐备承接，
+   内核加 Space 反伤滚动习惯（spaceGuard829 负向锁看守）。 */
 export function useRowNav(
   rowCount: Ref<number>,
   opts?: { guard?: () => boolean; onEnter?: (i: number) => void; onCopy?: (i: number) => void },

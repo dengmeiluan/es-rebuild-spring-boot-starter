@@ -26,7 +26,8 @@
       <div v-for="(t, i) in tabs" :key="t.id" class="dt-tab" :class="{ active: i === active }"
         role="tab" :aria-selected="i === active" :tabindex="i === active ? 0 : -1"
         @click="renamingIdx !== i && (active = i)" @mousedown.middle.prevent="closeTab(i)"
-        @dblclick.self="startRename(i)" @keydown.enter.prevent="renamingIdx !== i && (active = i)">
+        @dblclick.self="startRename(i)" @keydown.enter.prevent="renamingIdx !== i && (active = i)"
+        @keydown.space.self.prevent="renamingIdx !== i && (active = i)">
         <input v-if="renamingIdx === i" v-model="renameVal" class="dt-tab-ren mono" :aria-label="'重命名标签 ' + (i + 1)"
           @keydown.enter.prevent="commitRename(i)" @keydown.esc.prevent="renamingIdx = null"
           @blur="commitRename(i)" @click.stop v-focus />
