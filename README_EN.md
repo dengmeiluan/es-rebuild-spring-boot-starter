@@ -108,6 +108,28 @@ es:
 
 All properties ship with IDE metadata (`spring-boot-configuration-processor`).
 
+## The ops console
+
+With `es.rebuild.mode=console`, a full ops console ships inside the jar — zero frontend
+build for the host app:
+
+**Live monitoring** — node KPIs, cluster trends, alerts and slow requests on one screen:
+
+![Live monitoring](docs/screenshots/console-live.png)
+
+**Index workspace** — index list with an embedded document grid (filter, column stats,
+snapshots, export):
+
+![Index workspace](docs/screenshots/console-indices.png)
+
+**Data browser** — index catalog and document-level CRUD with CSV/Markdown/XLSX export:
+
+![Data browser](docs/screenshots/console-browser.png)
+
+**Cluster overview** — health/storage/document distribution and monitoring history:
+
+![Cluster overview](docs/screenshots/console-overview.png)
+
 ## HTTP endpoints & mapping auto-reconcile
 
 Endpoints live under the `/internal/es/index/` path prefix, served by
