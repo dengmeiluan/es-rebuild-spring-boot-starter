@@ -23,12 +23,13 @@ jobs:
           node-version: "20"
           cache: npm
           cache-dependency-path: console/package-lock.json
-      # 前端产物 git-ignored：先现构建，再让 maven 跳过内置 vite（与本地口径逐字节同源）
+      # 前端产物 git-ignored：先现构建一次供 skip 路径兜底；backend job 再以默认路径
+      # （generate-resources 内调 npm，POSIX 分支）真跑一遍——跨平台回归守卫
       - name: Build console
         working-directory: console
         run: npm ci && npm run build
-      - name: Backend tests
-        run: mvn -B clean test -Dconsole.build.skip=true
+      - name: Backend tests (default path, npm inside maven on POSIX)
+        run: mvn -B clean test
 
   frontend:
     runs-on: ubuntu-latest

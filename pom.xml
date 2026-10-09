@@ -15,7 +15,7 @@
 
     <groupId>io.github.dengmeiluan</groupId>
     <artifactId>es-rebuild-spring-boot-starter</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <packaging>jar</packaging>
     <name>es-rebuild-spring-boot-starter</name>
     <description>Zero-downtime Elasticsearch index rebuild Spring Boot starter: alias-based write-index
@@ -54,6 +54,34 @@
              默认 false：package 永远自带最新前端产物，杆掉“忘跑 vite 就打包旧包”事故。 -->
         <console.build.skip>false</console.build.skip>
     </properties>
+
+    <!-- npm 可执行物跨平台：Windows 是 npm.cmd，POSIX（Linux/macOS）是 npm——
+         硬编码任一形态都会让另一半世界的 fresh clone 在 generate-resources 阶段必炸。
+         OS 自动激活的 profile 各自给 ${npm.executable} 赋值，exec 插件只引用属性。 -->
+    <profiles>
+        <profile>
+            <id>npm-windows</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <npm.executable>npm.cmd</npm.executable>
+            </properties>
+        </profile>
+        <profile>
+            <id>npm-unix</id>
+            <activation>
+                <os>
+                    <family>!windows</family>
+                </os>
+            </activation>
+            <properties>
+                <npm.executable>npm</npm.executable>
+            </properties>
+        </profile>
+    </profiles>
 
     <dependencies>
         <dependency>
@@ -154,7 +182,7 @@
                         </goals>
                         <configuration>
                             <skip>${console.build.skip}</skip>
-                            <executable>npm.cmd</executable>
+                            <executable>${npm.executable}</executable>
                             <workingDirectory>${project.basedir}/console</workingDirectory>
                             <arguments>
                                 <argument>run</argument>
