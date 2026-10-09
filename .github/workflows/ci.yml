@@ -59,4 +59,13 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
       - name: Unit tests
-        run: npm test
+        run: |
+          set -o pipefail
+          npx vitest run --reporter=json --outputFile=/tmp/vitest.json > /tmp/vitest.log 2>&1 || true
+          node -e "
+            const r=require('/tmp/vitest.json');
+            const bad=[];
+            for(const f of r.testResults||[]) for(const t of f.assertionResults||[])
+              if(t.status==='failed') bad.push((f.name||'').split('/src/')[1]+' :: '+t.fullName+' :: '+String(t.failureMessages&&t.failureMessages[0]||'').split('\n').slice(0,4).join(' | '));
+            for(const b of bad.slice(0,50)) console.log('::error::'+b.slice(0,400));
+            if(bad.length) process.exit(1);"
