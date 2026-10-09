@@ -1,0 +1,24 @@
+# Java
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# 前端构建产物（打包时由 vite 现生成；pom 里有 require-console-assets 兜底校验）
+src/main/resources/static/console/
+
+# Node
+node_modules/
+*.log
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
+Thumbs.db
