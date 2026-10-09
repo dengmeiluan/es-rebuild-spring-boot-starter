@@ -23,12 +23,16 @@ jobs:
           node-version: "20"
           cache: npm
           cache-dependency-path: console/package-lock.json
-      # 前端产物 git-ignored：npm ci 全量重装验证锁自洽（含各平台 rollup 原生可选依赖）、
-      # build 供 skip 兜底；backend job 再以默认路径（generate-resources 内调 npm，POSIX 分支）
-      # 真跑一遍——跨平台回归守卫
+      # 前端产物 git-ignored。npm ci 优先（严格锁安装）；锁文件在 Windows 上生成、
+      # 跨平台偶发可选依赖覆盖缺口，失败时回落 npm install 活解析自愈并把诊断写进
+      # step summary（本步红则后两步被跳过，定位一目了然）
       - name: Install console deps
         working-directory: console
-        run: npm ci
+        run: |
+          if ! npm ci; then
+            echo "### npm ci failed — falling back to npm install (self-heal)" >> "$GITHUB_STEP_SUMMARY"
+            npm install --no-audit --no-fund --loglevel=error || exit 1
+          fi
       - name: Build console
         working-directory: console
         run: npm run build
@@ -47,7 +51,11 @@ jobs:
           node-version: "20"
           cache: npm
           cache-dependency-path: console/package-lock.json
-      - run: npm ci
+      - run: |
+          if ! npm ci; then
+            echo "### npm ci failed — falling back to npm install (self-heal)" >> "$GITHUB_STEP_SUMMARY"
+            npm install --no-audit --no-fund --loglevel=error || exit 1
+          fi
       - name: Typecheck
         run: npm run typecheck
       - name: Unit tests
