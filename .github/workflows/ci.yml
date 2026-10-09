@@ -44,6 +44,10 @@ jobs:
     defaults:
       run:
         working-directory: console
+    # 控制台日期/时间显示按东八区产品语义断言（若干守卫用例对固定 epoch 断言本地时刻），
+    # runner 默认 UTC 会让 epoch 落日漂移——显式钉定时区，与主要用户环境一致
+    env:
+      TZ: Asia/Shanghai
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -56,6 +60,9 @@ jobs:
             echo "### npm ci failed — falling back to npm install (self-heal)" >> "$GITHUB_STEP_SUMMARY"
             npm install --no-audit --no-fund --loglevel=error || exit 1
           fi
+      # 产物体积守卫（bundleBudget436）扫描 vite 产物目录——测试前必须先 build
+      - name: Build console
+        run: npm run build
       - name: Typecheck
         run: npm run typecheck
       - name: Unit tests
