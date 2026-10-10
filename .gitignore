@@ -22,3 +22,6 @@ node_modules/
 # OS
 .DS_Store
 Thumbs.db
+
+# local maintenance notes (kept out of the distribution; history lives in commit messages)
+console/docs/GOAL-*
