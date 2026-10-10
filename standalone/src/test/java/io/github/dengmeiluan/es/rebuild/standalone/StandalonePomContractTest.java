@@ -78,4 +78,20 @@ class StandalonePomContractTest {
         int end = pom.indexOf("</version>", at);
         return pom.substring(at + "<version>".length(), end).trim();
     }
+
+    @Test
+    public void readmeTeachesDefaultCredentialsAndFirstBootOrder() throws IOException {
+        Path readme = Paths.get(System.getProperty("user.dir"), "README.md");
+        String body = read(readme);
+
+        // 首启第一公里必须文档化：默认账号+先 Setup 后登录的顺序+兜底账号失效语义
+        for (String required : Arrays.asList(
+                "`admin` / `es-console`",
+                "First-boot order",
+                "SETUP_REQUIRED",
+                "create your own user")) {
+            assertTrue(body.contains(required),
+                    "standalone README must teach first-boot credential guidance: " + required);
+        }
+    }
 }

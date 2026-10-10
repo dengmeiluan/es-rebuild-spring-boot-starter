@@ -45,5 +45,22 @@ class StandaloneBootSmokeTest {
         ResponseEntity<String> auth =
                 rest.getForEntity("http://localhost:" + port + "/internal/es/index/auth/me", String.class);
         assertNotEquals(404, auth.getStatusCodeValue(), "auth route must be mapped");
+
+        // 4) 首启体验契约：未绑定控制集群时登录必须优雅 409 引导先 Setup（不是异常栈/500）
+        ResponseEntity<String> login = rest.postForEntity(
+                "http://localhost:" + port + "/internal/es/index/auth/login",
+                java.util.Collections.singletonMap("username", "admin"),
+                String.class);
+        assertEquals(409, login.getStatusCodeValue(), "login before setup must guide, not crash");
+        assertTrue(login.getBody().contains("SETUP_REQUIRED"),
+                "login body must carry the SETUP_REQUIRED code: " + login.getBody());
+
+        // 5) Setup 向导本身不受认证拦截（否则首连死锁：登录要控制集群，集群要向导绑）
+        ResponseEntity<String> probe = rest.postForEntity(
+                "http://localhost:" + port + "/internal/es/index/setup/test",
+                java.util.Collections.singletonMap("url", "http://127.0.0.1:9200"),
+                String.class);
+        assertEquals(200, probe.getStatusCodeValue(),
+                "setup test must be reachable without auth on first boot");
     }
 }
