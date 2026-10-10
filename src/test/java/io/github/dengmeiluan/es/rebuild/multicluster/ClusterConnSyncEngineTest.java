@@ -1,5 +1,22 @@
+/*
+ * Copyright 2026 Meiluan Deng
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.github.dengmeiluan.es.rebuild.multicluster;
 
+import java.util.Locale;
 import io.github.dengmeiluan.es.rebuild.xmigrate.RemoteClusterConn;
 import org.junit.Before;
 import org.junit.Test;
@@ -81,8 +98,8 @@ public class ClusterConnSyncEngineTest {
             v.put("port", p.getPort());
             v.put("username", p.getUsername());
             v.put("hasPassword", pw != null && !pw.isEmpty());
-            v.put("minRole", minRole == null || minRole.trim().isEmpty() ? "VIEWER" : minRole.trim().toUpperCase());
-            v.put("env", env == null || env.trim().isEmpty() ? null : env.trim().toUpperCase());
+            v.put("minRole", minRole == null || minRole.trim().isEmpty() ? "VIEWER" : minRole.trim().toUpperCase(Locale.ROOT));
+            v.put("env", env == null || env.trim().isEmpty() ? null : env.trim().toUpperCase(Locale.ROOT));
             v.put("authType", authType == null || authType.trim().isEmpty()
                     ? "BASIC" : authType.trim().toUpperCase(java.util.Locale.ROOT));
             if (old != null && old.get("syncState") != null) v.put("syncState", old.get("syncState"));

@@ -1,5 +1,22 @@
+/*
+ * Copyright 2026 Meiluan Deng
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.github.dengmeiluan.es.rebuild.auth;
 
+import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +74,7 @@ public enum ConsoleRole {
             return VIEWER;
         }
         try {
-            return valueOf(s.trim().toUpperCase());
+            return valueOf(s.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             // 静默降 VIEWER 会让「宿主发了陌生角色串」零痕（静默掉权）——
             // 补节流 WARN 带原始串（仅角色名，不落 token/凭据）；返回 VIEWER 契约不变

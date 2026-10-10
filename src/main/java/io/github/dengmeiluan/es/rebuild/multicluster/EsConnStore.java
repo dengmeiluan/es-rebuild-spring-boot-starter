@@ -1,5 +1,22 @@
+/*
+ * Copyright 2026 Meiluan Deng
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.github.dengmeiluan.es.rebuild.multicluster;
 
+import java.util.Locale;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.dengmeiluan.es.rebuild.xmigrate.RemoteClusterConn;
 import org.elasticsearch.client.Request;
@@ -202,11 +219,11 @@ public class EsConnStore implements ConnStore {
         }
         doc.put("password", pw);
         // minRole 空串视为未设置（= VIEWER），统一存大写档位便于前端直显
-        doc.put("minRole", minRole == null || minRole.trim().isEmpty() ? null : minRole.trim().toUpperCase());
+        doc.put("minRole", minRole == null || minRole.trim().isEmpty() ? null : minRole.trim().toUpperCase(Locale.ROOT));
         doc.put("connectTimeoutMs", connectTimeoutMs);
         doc.put("socketTimeoutMs", socketTimeoutMs);
         // 环境标识空串视为未标注，统一存大写便于前端直显着色
-        doc.put("env", env == null || env.trim().isEmpty() ? null : env.trim().toUpperCase());
+        doc.put("env", env == null || env.trim().isEmpty() ? null : env.trim().toUpperCase(Locale.ROOT));
         // 连接中心自动同步批·API Key 认证：authType 空缺归一 BASIC；API_KEY 时 password 位承载 ApiKey
         doc.put("authType", authType == null || authType.trim().isEmpty()
                 ? "BASIC" : authType.trim().toUpperCase(java.util.Locale.ROOT));

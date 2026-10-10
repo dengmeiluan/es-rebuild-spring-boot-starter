@@ -1,5 +1,22 @@
+/*
+ * Copyright 2026 Meiluan Deng
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.github.dengmeiluan.es.rebuild.multicluster;
 
+import java.util.Locale;
 import io.github.dengmeiluan.es.rebuild.xmigrate.RemoteClusterConn;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -156,10 +173,10 @@ public class JdbcConnStore implements ConnStore {
         if ((pw == null || pw.isEmpty()) && old != null) {
             pw = str(old.get("password"));
         }
-        String normRole = minRole == null || minRole.trim().isEmpty() ? null : minRole.trim().toUpperCase();
-        String normEnv = env == null || env.trim().isEmpty() ? null : env.trim().toUpperCase();
+        String normRole = minRole == null || minRole.trim().isEmpty() ? null : minRole.trim().toUpperCase(Locale.ROOT);
+        String normEnv = env == null || env.trim().isEmpty() ? null : env.trim().toUpperCase(Locale.ROOT);
         String normAuth = authType == null || authType.trim().isEmpty()
-                ? "BASIC" : authType.trim().toUpperCase();
+                ? "BASIC" : authType.trim().toUpperCase(Locale.ROOT);
         String esVersion = old != null ? str(old.get("es_version")) : null;
         long createdAt = old != null && old.get("created_at") instanceof Number
                 ? ((Number) old.get("created_at")).longValue() : now;
