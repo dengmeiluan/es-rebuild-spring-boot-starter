@@ -213,6 +213,23 @@ public class IntegrationDocsContractTest {
     }
 
     @Test
+    public void troubleshootingTeachesHostRunnerSetupRequiredTolerance() throws IOException {
+        String troubleshooting = read(integrationRoot.resolve("troubleshooting.md"));
+
+        // 宿主启动期 Runner 消费控制面 API 的容错课:未绑定属新环境常态,
+        // 直接调用无容错=应用启动失败死锁(Setup 须经 console 完成)
+        for (String required : Arrays.asList(
+                "SetupRequiredException",
+                "Setup 首连",
+                "ApplicationRunner",
+                "降级",
+                "死锁")) {
+            assertTrue("troubleshooting.md must contain " + required,
+                    troubleshooting.contains(required));
+        }
+    }
+
+    @Test
     public void dynamicTemplatesAreDocumentedAsManualOnly() throws IOException {
         String autoRegister = read(integrationRoot.resolve("mapping-auto-register.md"));
 

@@ -50,6 +50,18 @@
 
 `RUNNER_FAILED`、`AMBIGUOUS_CLIENT` 和 `NO_MAPPING_SOURCE` 不属于报告 detail；它们是 runner 直接输出、可搜索的 `reason` 日志，处理方式见上表。
 
+## 启动失败：控制面 SetupRequiredException
+
+控制面尚未绑定控制集群时（新环境首次启动，Setup 首连未完成），任何控制面读取（如 `EsConnStore.list()`、`ControlClusterResolver.client()`）都会抛 `SetupRequiredException`（“控制台尚未绑定控制集群，请先完成 Setup 首连”）。这是引导首连的接口契约，不是故障。
+
+| 症状 | 检查 | 修复 |
+|---|---|---|
+| 宿主应用启动失败在 `Failed to execute ApplicationRunner`，堆栈含 `SetupRequiredException` | 盘点宿主自己的启动逻辑（`ApplicationRunner` / `CommandLineRunner` / `@EventListener` 启动钩子）里是否有对控制面 API 的直接调用 | 在该宿主 runner 中 catch 并降级：打印 WARN 日志后跳过本轮依赖连接清单的逻辑；Setup 首连完成、保存连接事件发生后，该逻辑通常会被事件路径再次触发，无需重启补齐 |
+
+- 全新环境（空存储）首次启动命中此异常是常态，与配置缺失无关，也没有跳过 Setup 的配置键——首连必须经控制台 Setup 向导完成。
+- 宿主启动逻辑不降级会形成死锁：Setup 要在应用启动后经控制台页面完成，而应用起不来就永远无法 Setup。
+- 更简单的替代：把依赖连接清单的宿主启动逻辑改为响应连接保存事件（连接建立后自动触发），从结构上避免启动期强依赖。
+
 ## 快速复核
 
 1. 业务应用应是 `mode=client`，目标页面是 `/internal/es/index/desired-state.html`。
