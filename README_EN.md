@@ -75,26 +75,39 @@ state is persisted, resumable and auditable.
 > explode at runtime, typically **after** the target index has been created, leaving a
 > half-copy. See [docs/es-stack-contract.md](docs/es-stack-contract.md) for the full FAQ.
 
-### 2. Implement ManagedEsIndex
+### 2. Declare @Document entities
+
+The starter auto-scans `@Document` entities in your base package and safely registers new
+fields to the existing ES index on startup (mapping auto-register) — zero interface
+implementation, zero hand-written mapping:
 
 ```java
-@Component
-public class OrderIndex implements ManagedEsIndex {
-    @Override public String alias()      { return "orders"; }
-    @Override public String writeIndex() { return "orders-v2"; }
-    @Override public Settings settings() { return Settings.builder()
-        .put("index.number_of_shards", 3).build(); }
-    @Override public XContentBuilder mapping() throws IOException { /* your new mapping */ }
+@Document(indexName = "bond_quote")
+public class BondQuoteES {
+    @Id
+    private String id;
+
+    @Field(type = FieldType.Keyword)
+    private String bondCode;
+
+    @Field(type = FieldType.Text, analyzer = "ik_max_word", searchAnalyzer = "ik_smart")
+    private String shortName;
 }
 ```
 
-### 3. Trigger a rebuild
+First startup with new fields logs `[MappingReconcile] status=UPDATED`; conflict semantics
+are covered in [mapping-auto-register.md](docs/integration/mapping-auto-register.md).
 
-```http
-POST /internal/es/index/rebuild
-```
+### 3. Zero-downtime rebuild
 
-…or open the built-in console: `http://localhost:8080/es-rebuild.html`
+When you need to change an existing field type, analyzer, or create a new physical index,
+use the **managed rebuild** workflow:
+
+1. Open `/internal/es/index/desired-state.html` in the business app, verify entity,
+   settings, mapping and field info, then **copy the desired config**.
+2. Paste it into the **Adhoc managed rebuild** wizard in the host ops console.
+3. Run config validation and dry-run, confirm the plan, execute.
+4. Watch the copy, catch-up, alias flip and cleanup — reads and writes never stop.
 
 ### 4. Configuration
 

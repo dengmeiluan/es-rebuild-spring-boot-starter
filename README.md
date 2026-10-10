@@ -71,26 +71,34 @@ Elasticsearch 的索引 mapping/分词/配置**不可原地修改**——改一�
 > 错配即拒绝启动并给出两条可操作的修复路径（升客户端 / 降 spring-data-elasticsearch，
 > 二者不等价，报文里写明适用条件）。配套时只打一行 INFO。
 
-### 2. 实现 ManagedEsIndex
+### 2. 声明 @Document 实体
+
+starter 自动扫描基础包内的 `@Document` 实体，启动时把新增字段安全登记到既有 ES 索引（mapping auto-register）——零接口实现、零手写 mapping：
 
 ```java
-@Component
-public class OrderIndex implements ManagedEsIndex {
-    @Override public String alias()      { return "orders"; }        // 读写都走这个别名
-    @Override public String writeIndex() { return "orders-v2"; }     // 当前写索引
-    @Override public Settings settings() { return Settings.builder()
-        .put("index.number_of_shards", 3).build(); }
-    @Override public XContentBuilder mapping() throws IOException { /* 你的新 mapping */ }
+@Document(indexName = "bond_quote")
+public class BondQuoteES {
+    @Id
+    private String id;
+
+    @Field(type = FieldType.Keyword)
+    private String bondCode;
+
+    @Field(type = FieldType.Text, analyzer = "ik_max_word", searchAnalyzer = "ik_smart")
+    private String shortName;
 }
 ```
 
-### 3. 触发重建
+首次启动新增字段时日志形如 `[MappingReconcile] status=UPDATED`；冲突与边界语义详见 [mapping-auto-register.md](docs/integration/mapping-auto-register.md)。
 
-```http
-POST /internal/es/index/rebuild
-```
+### 3. 零停机重建
 
-或打开内置控制台（默认随 jar 分发）：`http://localhost:8080/es-rebuild.html`
+需要改既有字段类型、analyzer 或建新物理索引时，走**托管重建**四步：
+
+1. 业务应用打开 `/internal/es/index/desired-state.html`，核对实体、settings、mapping 与字段信息，**复制期望配置**。
+2. 宿主应用进入 **Adhoc 托管重建**，粘贴期望配置。
+3. 先跑配置校验与 dry-run，确认执行计划后执行。
+4. 观察复制、追平、别名切换和收尾状态——全程读写不停。
 
 ### 4. 配置（application.yml）
 
