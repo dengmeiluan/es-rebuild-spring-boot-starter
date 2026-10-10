@@ -196,7 +196,7 @@ See the [integration docs](docs/integration/README.md).
 git clone https://github.com/dengmeiluan/es-rebuild-spring-boot-starter.git
 cd es-rebuild-spring-boot-starter
 cd console && npm ci && npm run build && cd ..   # Node 18+
-mvn clean package                                 # JDK 8+
+mvn clean package                                 # JDK 8+ (or ./mvnw clean package)
 ```
 
 Test suites:

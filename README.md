@@ -192,7 +192,7 @@ cd es-rebuild-spring-boot-starter
 # 前端（Node 18+）
 cd console && npm ci && npm run build && cd ..
 # 后端（JDK 8+，会自动复用 console 构建产物）
-mvn clean package
+mvn clean package        # 未装 Maven 时用 ./mvnw clean package，首跑自举
 ```
 
 测试口径：
