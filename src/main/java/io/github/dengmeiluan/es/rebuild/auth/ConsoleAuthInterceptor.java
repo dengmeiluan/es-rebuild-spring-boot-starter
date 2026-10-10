@@ -326,7 +326,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             /* ·可审计补全：执行类只读 POST（painless 脚本执行/analyze 分词验证/
                reindex 预估/config-lab dry-run）零数据写入但执行脚本或消耗集群资源——落 EXEC
                审计留痕（谁在哪个集群跑了什么），其余只读查询维持零噪音。 */
-            recordExecAuditIfNeeded(request, uri); System.out.println("[DBG] readonly-branch called");
+            recordExecAuditIfNeeded(request, uri);
             return;
         }
         Object p = request.getAttribute(ATTR_PRINCIPAL);
