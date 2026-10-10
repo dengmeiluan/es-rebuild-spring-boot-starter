@@ -161,9 +161,11 @@ describe('529 W-B QRT 内核能力：排序+导出四格式+列选', () => {
     const firstCell = tbl.querySelector('tbody tr td:nth-child(2)')!;
     expect(firstCell.textContent).toBe('j-a');
     expect(tbl.querySelector('th[data-col="jobId"]')!.getAttribute('aria-sort')).toBe('ascending');
-    /* 导出四格式 + 列选（525 批 QRT 工具行五钮） */
+    /* 导出四格式 + 列选（525 批五钮 → 835 批「导出 ▾」聚合菜单：开菜单验四格式项在场） */
+    (card.querySelector('button[aria-label="导出"]') as HTMLElement).click();
+    await settle(2);
     for (const label of ['CSV', 'MD', 'XLSX', 'PNG']) {
-      expect([...card.querySelectorAll('button')].some(b => b.textContent?.includes(label)), `导出 ${label} 钮在场`).toBe(true);
+      expect([...card.querySelectorAll('button')].some(bb => bb.textContent?.includes(label)), `导出 ${label} 项在场`).toBe(true);
     }
     expect(card.querySelector('.qrt-bar .col-picker, .qrt-bar [class*="picker"], .qrt-bar button[aria-label*="列"]') ?? null, '列选入口在场').not.toBeNull();
     app.unmount();
