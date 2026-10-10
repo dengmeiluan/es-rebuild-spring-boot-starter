@@ -96,7 +96,8 @@ ES 文档锁（以 indexKey 为锁文档 _id）。
 | `es.rebuild.console.conn-probe-enabled` | `true` | 连接档案后台周期探活开关（列表/顶栏状态点数据源） |
 | `es.rebuild.console.conn-probe-interval-seconds` | `60` | 探活间隔秒（最小 10） |
 | `es.rebuild.console.host-cluster-visible` | `true` | 数据面是否暴露「宿主集群」目标；纯管理平台形态设 `false`——控制集群降级为纯元数据存储，后端同步拒绝 host 目标直捣 |
-| `es.rebuild.console.store` | `control-es` | 元数据存储模式：`control-es`（落控制集群 ES 索引）/ `jdbc`（落宿主 DataSource 数据库表）；宿主自注册 ConnStore/ConsoleOpsAuditStore Bean 则完全接管 |
+| `es.rebuild.console.store` | `control-es` | 元数据存储模式：`control-es`（落控制集群 ES 索引）/ `jdbc`（落宿主 DataSource 数据库表）/ `sqlite`（落本地 SQLite 库文件，见 `sqlite-path`——零外部服务依赖，重启后历史可查）。影响作业元数据与控制台操作审计两处（两者同宿）；classpath 缺 sqlite 驱动（`org.xerial:sqlite-jdbc`，starter 中为 optional）时回落 `control-es` 并 WARN |
+| `es.rebuild.console.sqlite-path` | （空串） | `store=sqlite` 时的本地库文件路径；空 → `~/.es-console/<appName>/jobs.db`（与控制集群自举档案同目录） |
 
 ## 控制台鉴权（es.rebuild.console.auth）
 

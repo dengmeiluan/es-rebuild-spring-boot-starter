@@ -116,7 +116,8 @@ public class AuditContributorWiringTest {
     private static ConsoleOpsAuditStore build(EsRebuildAutoConfiguration.ConsoleModeConfiguration cfg,
                                               EsRebuildProperties props,
                                               ConsoleAuditContributor contributor) {
-        return cfg.consoleOpsAuditStore(null, props, provider(emptyDb()), provider(contributor));
+        return cfg.consoleOpsAuditStore(null, props, provider(emptyDb()), provider(contributor),
+                new org.springframework.core.env.StandardEnvironment());
     }
 
     /** 宿主记录桩：一条 ts=200 的 HOST_OP 记录。 */

@@ -18,7 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>home-dir 钉到 target 隔离真实 ~/.es-console 自举档案。</p>
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"es.rebuild.console.home-dir=target/test-bootstrap-home"})
+        properties = {"es.rebuild.console.home-dir=target/test-bootstrap-home",
+                "es.rebuild.console.sqlite.path=target/test-bootstrap-home/jobs.db"})
 class StandaloneBootSmokeTest {
 
     @LocalServerPort

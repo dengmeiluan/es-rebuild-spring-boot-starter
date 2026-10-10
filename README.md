@@ -126,8 +126,9 @@ public class BondQuoteES {
 es:
   rebuild:
     mode: console          # rebuild-only：纯重建；console：重建+运维控制台
-    adhoc:
-      store: jdbc          # 作业状态落库（默认内存）
+    console:
+      store: sqlite        # 作业+审计存哪：control-es（默认，控制集群 ES 索引，重启后仍在）/
+                           # sqlite（本地库文件，零外部依赖）/ jdbc（宿主数据库）
 ```
 
 全部配置项带 IDE 提示（`spring-boot-configuration-processor` 元数据随 jar 分发）。

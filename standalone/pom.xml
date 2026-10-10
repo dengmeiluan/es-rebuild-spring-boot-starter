@@ -48,6 +48,13 @@
             <groupId>org.elasticsearch.client</groupId>
             <artifactId>elasticsearch-rest-high-level-client</artifactId>
         </dependency>
+        <!-- standalone 默认 store=sqlite：作业+审计落本地库文件（~/.es-console/<app>/jobs.db），
+             重启后历史可查，零外部服务依赖。版本与主 pom 的 optional 声明保持一致。 -->
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>3.42.0.0</version>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

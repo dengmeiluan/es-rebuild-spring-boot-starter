@@ -119,6 +119,16 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
+        <!-- 本地 SQLite 档驱动（es.rebuild.console.store=sqlite：作业+审计落一个本地库文件）。
+             optional：不向嵌入宿主传递——默认档 control-es 不需要它；显式选 sqlite 档的宿主
+             自行引入 org.xerial:sqlite-jdbc（缺驱动时装配回落 control-es 并 WARN 留痕）。
+             standalone 应用以 compile 自带，开箱即持久。 -->
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>3.42.0.0</version>
+            <optional>true</optional>
+        </dependency>
         <!-- 配置项元数据（IDE 提示），编译期生成、不参与运行 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -752,7 +752,13 @@ public class EsRebuildAutoConfiguration {
         @ConditionalOnMissingBean
         public AdhocJobStore adhocJobStore(ControlClusterResolver controlClusterResolver,
                                            EsRebuildProperties properties,
-                                           ObjectProvider<DataSource> dataSourceProvider) {
+                                           ObjectProvider<DataSource> dataSourceProvider,
+                                           org.springframework.core.env.Environment environment) {
+            DataSource sqlite = sqliteDataSourceOrNull(properties,
+                    environment.getProperty("spring.application.name", "default"));
+            if (sqlite != null) {
+                return new JdbcAdhocJobStore(sqlite);
+            }
             if ("jdbc".equalsIgnoreCase(properties.getConsole().getStore())) {
                 DataSource ds = dataSourceProvider.getIfAvailable();
                 if (ds == null) {
@@ -764,6 +770,31 @@ public class EsRebuildAutoConfiguration {
             // adhoc 无专属索引名配置项（不新造），走 store 默认索引；
             // EsAdhocJobStore 构造对空/null 亦回落到 DEFAULT_INDEX。
             return new EsAdhocJobStore(controlClusterResolver::client, EsAdhocJobStore.DEFAULT_INDEX);
+        }
+
+        /**
+         * {@code store=sqlite} 时的本地库连接源（作业与审计同宿一个 SQLite 文件）。
+         * 档位未选 sqlite，或 classpath 缺 {@code org.xerial:sqlite-jdbc}（optional 依赖，
+         * 不传染嵌入宿主），或建库 IO 失败 → 返回 null 由调用方回落 control-es 并留痕。
+         */
+        private DataSource sqliteDataSourceOrNull(EsRebuildProperties properties, String appName) {
+            if (!"sqlite".equalsIgnoreCase(properties.getConsole().getStore())) {
+                return null;
+            }
+            if (!io.github.dengmeiluan.es.rebuild.store.SqliteStores.driverAvailable()) {
+                logger.warn("es.rebuild.console.store=sqlite 但 classpath 缺 org.xerial:sqlite-jdbc，"
+                        + "回落 control-es 档（作业/审计仍落控制集群）；引入该依赖后重启即生效");
+                return null;
+            }
+            try {
+                java.nio.file.Path db = io.github.dengmeiluan.es.rebuild.store.SqliteStores
+                        .resolveDatabaseFile(properties.getConsole().getSqlitePath(), appName);
+                logger.info("[Store] sqlite 档：作业+审计落 {}", db);
+                return io.github.dengmeiluan.es.rebuild.store.SqliteStores.buildDataSource(db);
+            } catch (java.io.IOException e) {
+                logger.warn("es.rebuild.console.store=sqlite 建库失败（{}），回落 control-es 档", e.getMessage());
+                return null;
+            }
         }
 
         @Bean
@@ -889,11 +920,13 @@ public class EsRebuildAutoConfiguration {
         public ConsoleOpsAuditStore consoleOpsAuditStore(ControlClusterResolver controlClusterResolver,
                                                          EsRebuildProperties properties,
                                                          ObjectProvider<DataSource> dataSourceProvider,
-                                                         ObjectProvider<ConsoleAuditContributor> contributorProvider) {
-            // R63：审计存储随 store 模式切换，与连接档案同进退（审计与元数据必须同宿）
-            // 一百九十批：外面包 PAGE_DENIED 去重聚合层——VIEWER 停留在无权限页时的轮询心跳
+                                                         ObjectProvider<ConsoleAuditContributor> contributorProvider,
+                                                         org.springframework.core.env.Environment environment) {
+            // 审计存储随 store 模式切换，与作业元数据同宿（两者必须一致，运维对账不分裂）
+            // 外面包 PAGE_DENIED 去重聚合层——VIEWER 停留在无权限页时的轮询心跳
             // 不再逐条刷爆审计流（同 username|uri 十分钟窗一条+抑制计数带出）
-            ConsoleOpsAuditStore raw = buildRawOpsAuditStore(controlClusterResolver, properties, dataSourceProvider);
+            ConsoleOpsAuditStore raw = buildRawOpsAuditStore(controlClusterResolver, properties,
+                    dataSourceProvider, environment.getProperty("spring.application.name", "default"));
             // 五百五十五批：宿主注册 ConsoleAuditContributor Bean 则查询并入宿主审计流水。
             // 20260922 用户裁决改默认关：宿主侧记录多为匿名登录族（trusted-login 时无会话切面，
             // username 结构性 null），非本控制台请求进控制台审计视图不可读也不可追责——宿主确需
@@ -908,7 +941,12 @@ public class EsRebuildAutoConfiguration {
 
         private ConsoleOpsAuditStore buildRawOpsAuditStore(ControlClusterResolver controlClusterResolver,
                                                            EsRebuildProperties properties,
-                                                           ObjectProvider<DataSource> dataSourceProvider) {
+                                                           ObjectProvider<DataSource> dataSourceProvider,
+                                                           String appName) {
+            DataSource sqlite = sqliteDataSourceOrNull(properties, appName);
+            if (sqlite != null) {
+                return new JdbcConsoleOpsAuditStore(sqlite);
+            }
             if ("jdbc".equalsIgnoreCase(properties.getConsole().getStore())) {
                 DataSource ds = dataSourceProvider.getIfAvailable();
                 if (ds == null) {

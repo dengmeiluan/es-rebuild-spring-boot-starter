@@ -5,6 +5,21 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [Unreleased]
+
+### 新增
+
+- **独立部署形态**（`standalone/` 模块）：`java -jar es-rebuild-standalone` 即拥有全套控制台——
+  自带 web 服务器（默认端口 `5601`）与 ES 客户端栈，无需宿主应用；Setup 向导完成首连后档案
+  持久在 `~/.es-console/`。与 starter 同版本线发布（`StandalonePomContractTest` 防漂移），
+  CI 双构建步恒守；README 双语「两种部署形态」节
+- **本地 SQLite 存储档**（`es.rebuild.console.store=sqlite`）：作业与操作审计落同一本地库文件
+  （默认 `~/.es-console/<appName>/jobs.db`，`es.rebuild.console.sqlite.path` 可改址），
+  重启后历史可查、零外部服务依赖。驱动 `org.xerial:sqlite-jdbc` 为 optional 不传染嵌入宿主，
+  缺驱动时回落 `control-es` 并 WARN；standalone 默认启用 sqlite 档
+- standalone 首启体验契约：未绑定控制集群时登录以 `409 SETUP_REQUIRED` 优雅引导（先 Setup
+  后登录，无死锁）；README 明示默认凭据 `admin / es-console`（仅用户索引为空时生效）与公网暴露安全指引
+
 ## [1.0.2]
 
 ### 修复

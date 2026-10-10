@@ -209,11 +209,19 @@ public class EsRebuildProperties {
          */
         private boolean hostClusterVisible = true;
         /**
-         * R63 控制台元数据存储模式：{@code control-es}（默认，落控制集群 ES 索引）/
-         * {@code jdbc}（落宿主 DataSource 的数据库表，适合嵌入 宿主 等拥有自己数据库的底座）。
-         * 影响集群连接档案与控制台操作审计两处；宿主自注册 ConnStore/ConsoleOpsAuditStore Bean 则完全接管。
+         * 控制台元数据存储模式：{@code control-es}（默认，落控制集群 ES 索引）/
+         * {@code jdbc}（落宿主 DataSource 的数据库表，适合拥有自己数据库的底座）/
+         * {@code sqlite}（落本地 SQLite 库文件，见 {@link #sqlitePath}——零外部服务依赖，
+         * 作业与审计重启后历史可查；classpath 缺 sqlite 驱动时回落 control-es 并 WARN）。
+         * 影响<b>作业元数据与控制台操作审计</b>两处（两者同宿）；集群连接档案恒走控制集群；
+         * 宿主自注册 AdhocJobStore/ConsoleOpsAuditStore Bean 则完全接管。
          */
         private String store = "control-es";
+        /**
+         * {@code store=sqlite} 时的本地库文件路径；空 → {@code ~/.es-console/<appName>/jobs.db}
+         * （与控制集群自举档案同目录）。仅 sqlite 档消费。
+         */
+        private String sqlitePath = "";
         /** 2.5.0 菜单 SPI：页面级授权（仅 delegated 身份 + 宿主下发 grantedPages 时生效）。 */
         private PageAuth pageAuth = new PageAuth();
         /** 连接中心自动同步参数(前缀 es.rebuild.console.conn-sync,连接中心自动同步批)。 */
@@ -237,6 +245,8 @@ public class EsRebuildProperties {
         public void setHostClusterVisible(boolean hostClusterVisible) { this.hostClusterVisible = hostClusterVisible; }
         public String getStore() { return store; }
         public void setStore(String store) { this.store = store; }
+        public String getSqlitePath() { return sqlitePath; }
+        public void setSqlitePath(String sqlitePath) { this.sqlitePath = sqlitePath; }
         public PageAuth getPageAuth() { return pageAuth; }
         public void setPageAuth(PageAuth pageAuth) { this.pageAuth = pageAuth; }
         public ConnSync getConnSync() { return connSync; }
