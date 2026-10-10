@@ -72,6 +72,7 @@ import { NAV_ITEMS } from '../router';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
 import { aliasForTitle } from '../utils/cmdAlias';
+import { readStoredJson } from '../utils/safeJson';
 import { askConfirm } from '../composables/confirm';
 /* 裸 .empty 迁 EmptyState compact */
 import EmptyState from './EmptyState.vue';
@@ -544,7 +545,8 @@ const commands = computed<Cmd[]>(() => {
   return list;
 });
 
-const recent = ref<string[]>(JSON.parse(localStorage.getItem('es_cmd_recent') || '[]'));
+/* 脏值防御读取：手改/残留坏 JSON 不得炸命令面板挂载 */
+const recent = ref<string[]>(readStoredJson(localStorage, 'es_cmd_recent', [], Array.isArray));
 
 /* /：中文别名表（拼音首字母）+ 查表逻辑抽到 utils/cmdAlias.ts——
  * 查表判据只有一处定义，且便于单测遍历全键 + 配反向变异证明。 */

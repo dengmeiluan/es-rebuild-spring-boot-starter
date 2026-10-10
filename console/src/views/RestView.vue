@@ -158,7 +158,7 @@ import { useQueryRun } from '../composables/useQueryRun';
 /* 历史换装 QueryHistoryPanel 后 relTime/fmtTime/exportStamp/downloadText 随本地实现退役 */
 import { copyText } from '../utils/format';
 import { jq } from '../utils/minijq';
-import { parseJsonSafe } from '../utils/safeJson';
+import { parseJsonSafe, readStoredJson } from '../utils/safeJson';
 /* respErr 上色走 highlightJson（jsonc.ts 单一出处）；并 errPreHtml/friendlyEsError */
 import { stripJsonComments, highlightJson } from '../utils/jsonc';
 import { errPreHtml, errMeta } from '../utils/errPre';
@@ -230,7 +230,8 @@ const REST_ED_H_TIERS = ['100%', 'max(180px, 56vh)', 'max(180px, 72vh)'];
 const { v: restEdH, cycle: cycleRestEdH } = useTierCycle('rest.edH', REST_ED_H_TIERS);
 
 interface HistItem { method: string; path: string; body: string; ts: number }
-const history = ref<HistItem[]>(JSON.parse(localStorage.getItem('es_rest_hist') || '[]'));
+/* 脏值防御读取：手改/残留坏 JSON 不得炸 Rest 页挂载 */
+const history = ref<HistItem[]>(readStoredJson(localStorage, 'es_rest_hist', [], Array.isArray));
 function persistHist() { localStorage.setItem('es_rest_hist', JSON.stringify(history.value.slice(0, 30))); }
 
 /* 历史适配 QueryHistoryPanel HistRow——query=「METHOD path」（面板过滤按 query/index/name

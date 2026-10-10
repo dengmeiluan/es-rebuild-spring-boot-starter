@@ -90,6 +90,7 @@
 
 <script setup lang="ts">
 import { STARTER_VERSION } from '../data/integrationGuide';
+import { readStoredJson } from '../utils/safeJson';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import {
   Search, X,
@@ -134,7 +135,8 @@ const icons: Record<string, any> = {
 const route = useRoute();
 const auth = useAuthStore();
 const LS_KEY = 'es-console.nav.collapsed';
-const collapsed = ref<Record<string, boolean>>(JSON.parse(localStorage.getItem(LS_KEY) || '{}'));
+/* 脏值防御读取：手改/残留坏 JSON 不得炸全站导航挂载 */
+const collapsed = ref<Record<string, boolean>>(readStoredJson(localStorage, LS_KEY, {}, (v) => v != null && typeof v === 'object' && !Array.isArray(v)));
 
 /* 导航搜索：按名称/路径过滤，命中组强制展开；/ 键全局聚焦 */
 const navQuery = ref('');

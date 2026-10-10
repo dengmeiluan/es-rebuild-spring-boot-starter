@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { quoteBigInts, parseJsonSafe } from '../safeJson';
+import { quoteBigInts, parseJsonSafe, readStoredJson } from '../safeJson';
 
 /* R87：JSON 长整型精度保真契约——19 位雪花 ID 经原生 JSON.parse 尾数抹零是数据污染级
    缺陷（读出→编辑→回写全链路失真），此处逐条锁死安全边界与字符串跳过语义。 */
@@ -61,5 +61,43 @@ describe('quoteBigInts 快速通道', () => {
   it('字符串里的长数字触发慢通道但输出不变', () => {
     const raw = '{"s":"2018093000000045397"}';
     expect(quoteBigInts(raw)).toBe(raw);
+  });
+});
+
+/* 851 批：存储通道防御性读取单源（G85 同族余量清扫）。
+   病灶家族：组件挂载期裸 `JSON.parse(localStorage.getItem(k) || '[]')`——用户手改/
+   旧版残留的脏值让 parse 抛错，setup 顶层即崩（SideNav 是全站导航件，崩=白屏级）。
+   726 G85 已修 useTablePrefs.restoreCols 单点并立法「parse 不抛不代表形态对」；
+   本单源把「坏 JSON 回落 + 形态校验回落」收编为可复用原语，消费点=851 三处
+   （CmdPalette es_cmd_recent / SideNav nav.collapsed / RestView es_rest_hist）。 */
+describe('readStoredJson 存储通道防御读取', () => {
+  const mem = (v: string | null) => ({ getItem: (_k: string) => v });
+
+  it('合法 JSON 且形态过校验 → 原值返回', () => {
+    expect(readStoredJson(mem('["a","b"]'), 'k', [], Array.isArray)).toEqual(['a', 'b']);
+  });
+
+  it('坏 JSON（parse 抛错）→ 回落 fallback', () => {
+    expect(readStoredJson(mem('{"a":'), 'k', ['x'], Array.isArray)).toEqual(['x']);
+  });
+
+  it('合法 JSON 但形态不符（对象冒充数组）→ 回落 fallback（G85 立法：parse 不抛不代表形态对）', () => {
+    expect(readStoredJson(mem('{"evil":1}'), 'k', ['d'], Array.isArray)).toEqual(['d']);
+  });
+
+  it('键缺失（getItem 返回 null）→ 回落 fallback', () => {
+    expect(readStoredJson(mem(null), 'k', { n: 1 }, () => true)).toEqual({ n: 1 });
+  });
+
+  it('形态校验缺省 = 恒真（任何合法 JSON 原样返回）', () => {
+    expect(readStoredJson(mem('42'), 'k', 0)).toBe(42);
+  });
+
+  it('对象形态校验范式：非对象/数组冒充对象一律回落（SideNav collapsed 消费形态）', () => {
+    const isRecord = (v: any) => v != null && typeof v === 'object' && !Array.isArray(v);
+    expect(readStoredJson(mem('[1,2]'), 'k', {}, isRecord)).toEqual({});
+    expect(readStoredJson(mem('"str"'), 'k', {}, isRecord)).toEqual({});
+    expect(readStoredJson(mem('null'), 'k', {}, isRecord)).toEqual({});
+    expect(readStoredJson(mem('{"g":true}'), 'k', {}, isRecord)).toEqual({ g: true });
   });
 });

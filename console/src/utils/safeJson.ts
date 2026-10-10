@@ -70,3 +70,24 @@ export function quoteBigInts(text: string): string {
 export function parseJsonSafe(text: string): any {
   return JSON.parse(quoteBigInts(text));
 }
+
+/** 存储通道防御性读取。
+   localStorage/sessionStorage 由用户环境共有，任意文本皆可入内——裸
+   JSON.parse 挂载期一崩全屏。坏 JSON/形态不符/键缺失一律回落 fallback；
+   isShape 缺省恒真，数组/对象消费方传 Array.isArray 等谓词
+   （parse 不抛不代表形态对——非数组/非对象字面量一律按记录损坏回落）。 */
+export function readStoredJson<T>(
+  storage: Pick<Storage, 'getItem'>,
+  key: string,
+  fallback: T,
+  isShape?: (v: any) => boolean,
+): T {
+  try {
+    const raw = storage.getItem(key);
+    if (raw == null) return fallback;
+    const v = JSON.parse(raw);
+    return (isShape ?? (() => true))(v) ? v : fallback;
+  } catch {
+    return fallback;
+  }
+}
