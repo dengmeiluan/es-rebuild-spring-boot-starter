@@ -144,6 +144,23 @@ es:
 
 All properties ship with IDE metadata (`spring-boot-configuration-processor`).
 
+### 5. HTTP endpoints & mapping auto-reconcile
+
+Endpoints live under the `/internal/es/index/` path prefix, served by
+`InternalEsIndexRebuildController`:
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /internal/es/index/rebuild` | trigger a zero-downtime rebuild |
+| `GET /internal/es/index/keys` | list registered `ManagedEsIndex` keys |
+| `GET /internal/es/index/desired-state.html` | desired-state page: declare the mapping you want, review, execute |
+
+Startup mapping auto-reconcile (`MappingReconcile`, enabled via
+`es.rebuild.mapping.auto-register`) adds new fields automatically; conflicts are handled per
+`es.rebuild.mapping.conflict-policy` (`fail` = refuse to start, `warn` = merge conflict-free
+additions only) with `USE_ADHOC_REBUILD` as the remediation pointer.
+See the [integration docs](docs/integration/README.md).
+
 ## Runnable example
 
 [examples/demo-host](examples/demo-host/) is the runnable quick start: one `@Document` entity +
@@ -155,6 +172,21 @@ SQLite. Two commands to boot — see its [README](examples/demo-host/README.md).
 
 With `es.rebuild.mode=console`, a full ops console ships inside the jar — zero frontend
 build for the host app:
+
+- **Ad-hoc rebuilds**: wizard-driven zero-downtime rebuilds (pick index → review
+  settings/mapping → catch-up policy → confirm preview → execution monitoring)
+- **Index workspace**: index list with an embedded document grid (filter / column stats /
+  snapshots / export / inline edits)
+- **Query workbench**: DSL / ES-SQL / Lucene / sandbox / PIT pagination / syntax bridge —
+  six modes with intelligent completion and highlighting
+- **Data browser**: document CRUD, column stats, multi-format export
+- **Cluster governance**: indices / aliases / mapping / ILM / snapshots / task tree /
+  settings drift detection / health reports
+- **Audit**: typed 12-column console operation audit + SPI integration with the host
+  account system
+- **Live monitoring**: node KPIs / alerts / slow requests / top indices, multi-cluster view
+
+### A quick tour
 
 **Live monitoring** — node KPIs, cluster trends, alerts and slow requests on one screen:
 
@@ -172,23 +204,6 @@ snapshots, export):
 **Cluster overview** — health/storage/document distribution and monitoring history:
 
 ![Cluster overview](docs/screenshots/console-overview.png)
-
-## HTTP endpoints & mapping auto-reconcile
-
-Endpoints live under the `/internal/es/index/` path prefix, served by
-`InternalEsIndexRebuildController`:
-
-| Endpoint | Purpose |
-|---|---|
-| `POST /internal/es/index/rebuild` | trigger a zero-downtime rebuild |
-| `GET /internal/es/index/keys` | list registered `ManagedEsIndex` keys |
-| `GET /internal/es/index/desired-state.html` | desired-state page: declare the mapping you want, review, execute |
-
-Startup mapping auto-reconcile (`MappingReconcile`, enabled via
-`es.rebuild.mapping.auto-register`) adds new fields automatically; conflicts are handled per
-`es.rebuild.mapping.conflict-policy` (`fail` = refuse to start, `warn` = merge conflict-free
-additions only) with `USE_ADHOC_REBUILD` as the remediation pointer.
-See the [integration docs](docs/integration/README.md).
 
 ## Build from source
 
@@ -213,6 +228,11 @@ cd console && npm test                     # frontend (~8200 cases)
 | Java | 8+ | |
 | Spring Boot | 2.3.x baseline | ES stack provided; declare your own matching pair |
 | Elasticsearch | 7.6+ server | `compat` layer covers 7.x shape differences |
+
+## Design docs
+
+- [Console design language & interaction charter](docs/design.md)
+- [ES stack contract (provided) FAQ](docs/es-stack-contract.md)
 
 ## License
 
