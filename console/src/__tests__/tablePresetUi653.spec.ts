@@ -95,11 +95,12 @@ describe('653 批 A 源码锁：双表接线与铁律 C 收纳', () => {
       expect(seg).toContain(':apply="applyPreset"');
       expect(seg).toContain(':del="deletePreset"');
       expect(seg).toContain(`btn-cls="${cls}"`);
-      const colw = src.indexOf('/> 列宽');
+      /* 835 批随迁：列宽重置收编「视图 ⋯」聚合菜单——位次锚改视图聚合钮（列宽项在其菜单内） */
+      const view = src.indexOf('aria-label="视图设置"');
       const extra = src.indexOf('<slot name="bar-extra"');
-      expect(colw).toBeGreaterThan(-1);
+      expect(view).toBeGreaterThan(-1);
       expect(extra).toBeGreaterThan(-1);
-      expect(at, '布局钮在列宽钮之后（行高/列选/列宽既有位零扰动）').toBeGreaterThan(colw);
+      expect(at, '布局钮在视图聚合钮之后（位置恒定语义不变）').toBeGreaterThan(view);
       expect(at, '布局钮在 bar-extra 槽之前').toBeLessThan(extra);
     }
   });

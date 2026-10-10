@@ -174,7 +174,7 @@ describe('buildExportSheets 双 sheet 装配单源（五百六十批）', () => 
 describe('五百六十批源码锁：QRT JSON 钮+双内核接线', () => {
   it('QRT JSON 第五导出钮：aria/实现/命名（Braces 已 import；矩阵 json 与 copy-table-json 同口径）', () => {
     expect(qrt).toMatch(/:aria-label="'导出当前视图 JSON'"/);
-    expect(qrt).toContain('@click="exportJson"');
+    expect(qrt).toContain('@click="exportJson(); closeMenus()"');
     expect(qrt).toMatch(/function exportJson\(\)/);
     expect(qrt).toContain("matrixText({ rows, cols: shownCols.value, getVal: (row, c) => qColVal(row, c) }, 'json')");
     expect(qrt).toContain("${props.exportName || 'table-export'}-${exportStamp()}.json");

@@ -75,11 +75,13 @@ describe('QueryResultTable 记忆三件套', () => {
     expect(host.querySelectorAll('th').length).toBe(9);
   });
 
-  it('行高三档钮：点击写 es_tbl_rowh（245 批全局键）+cozy class，重挂载恢复', async () => {
+  it('行高三档（835 批「视图 ⋯」聚合菜单显式直选）：写 es_tbl_rowh（245 批全局键）+cozy class，重挂载恢复', async () => {
     await mountTbl({ hits: makeHits(3) as any, storageKey: 'lucene:idx-1' });
-    ([...host.querySelectorAll('.qrt-bar-r button') as unknown as HTMLButtonElement[]].find(b => b.title.includes('行高')) as HTMLButtonElement).click(); /* 272 批起首钮是导出 */
+    /* 272 批起首钮是导出；835 批行高收编「视图 ⋯」聚合菜单（显式三选，循环钮退役） */
+    ([...host.querySelectorAll('.qrt-bar-r button') as unknown as HTMLButtonElement[]].find(b => b.getAttribute('aria-label') === '视图设置') as HTMLButtonElement).click();
     await nextTick();
-    /* 循环序 紧凑→标准→宽松：默认 standard 首击 → cozy */
+    [...host.querySelectorAll('.qrt-menu button') as unknown as HTMLButtonElement[]].find(b => b.textContent!.includes('宽松'))!.click();
+    await nextTick();
     expect(localStorage.getItem('es_tbl_rowh')).toBe('cozy');
     expect(host.querySelector('.qrt-tbl')!.classList.contains('cozy')).toBe(true);
     host.innerHTML = '';
@@ -96,18 +98,24 @@ describe('QueryResultTable 记忆三件套', () => {
     expect(th.style.width).toBe('234px');
   });
 
-  it('列宽批量重置：点击工具行钮清全部列宽+LS 归 {}；无拖拽记录时钮禁用（七十一批）', async () => {
+  it('列宽批量重置（835 批收编「视图 ⋯」聚合菜单）：点击清全部列宽+LS 归 {}；无拖拽记录时项禁用（七十一批）', async () => {
     localStorage.setItem('es_tbl_w:lucene:idx-1', JSON.stringify({ f0: 234, f1: 300 }));
     await mountTbl({ hits: makeHits(3) as any, storageKey: 'lucene:idx-1' });
-    const btn = host.querySelector('button[aria-label="重置全部列宽"]') as HTMLButtonElement;
-    expect(btn, '工具行应有重置列宽钮').not.toBeNull();
+    /* 835 批：列宽重置收进「视图 ⋯」菜单——先开菜单再点项 */
+    ([...host.querySelectorAll('.qrt-bar-r button') as unknown as HTMLButtonElement[]].find(b => b.getAttribute('aria-label') === '视图设置') as HTMLButtonElement).click();
+    await nextTick();
+    const btn = host.querySelector('.qrt-menu button[aria-label="重置全部列宽"]') as HTMLButtonElement;
+    expect(btn, '菜单内应有重置列宽项').not.toBeNull();
     expect(btn.disabled).toBe(false);
     btn.click();
     for (let i = 0; i < 4; i++) { await nextTick(); await Promise.resolve(); }
     expect(JSON.parse(localStorage.getItem('es_tbl_w:lucene:idx-1') || '{}')).toEqual({});
     const th = [...host.querySelectorAll('th')].find(t => t.textContent?.trim() === 'f0') as HTMLElement;
     expect(th.style.width).toBe('');
-    expect((host.querySelector('button[aria-label="重置全部列宽"]') as HTMLButtonElement).disabled).toBe(true);
+    await mountTbl({ hits: makeHits(3) as any, storageKey: 'lucene:idx-1' });
+    ([...host.querySelectorAll('.qrt-bar-r button') as unknown as HTMLButtonElement[]].find(b => b.getAttribute('aria-label') === '视图设置') as HTMLButtonElement).click();
+    await nextTick();
+    expect((host.querySelector('.qrt-menu button[aria-label="重置全部列宽"]') as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('拖拽表头右缘写 es_tbl_w:<dim>（180 起始 + 60 位移 = 240），期间挂 body.col-resizing 光标态、松开摘除（三十五批接线）', async () => {

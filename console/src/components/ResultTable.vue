@@ -121,18 +121,32 @@
           <Camera :size="13" /> 快照
         </button>
         <!-- 一百五十二批：工具钮全部「图标+文字」自解释（dbx 工具栏语言，纯图标让人猜是散落感根源） -->
-        <!-- 二百四十五批：行高三档钮（useTablePrefs 内核循环）——旧「密度」钮是僵尸
-             （根类绑定 239 批起 rowH 驱动，点 dense 两态视觉无变化），退役换真行高钮 -->
-        <button :aria-label="`行高：当前${rowHLabel}，点击循环三档`" class="btn sm ghost rt-tool-btn" :title="`行高：${rowHLabel}（点击循环 紧凑→标准→宽松）`" @click="cycleRowH">
-          <AlignJustify :size="13" /> 行高·{{ rowHLabel }}
-        </button>
+        <!-- 八百三十五批：行高三档循环 + 列宽重置双钮收编「视图 ⋯」聚合钮（行高改显式三选带
+             当前档 ✓，比连点循环可预期；列宽重置=低频破坏性弱操作，菜单底项+分隔线隔离） -->
+        <span class="menu-wrap">
+          <button aria-label="视图设置" class="btn sm ghost rt-tool-btn" :class="{ on: viewMenuOpen }"
+            aria-haspopup="menu" :aria-expanded="viewMenuOpen" title="视图：行高、列宽"
+            @click.stop="viewMenuOpen = !viewMenuOpen">
+            视图 ⋯
+          </button>
+          <div v-if="viewMenuOpen" class="rt-menu" role="menu" aria-label="视图设置">
+            <div class="rt-m-t">行高（当前：{{ rowHLabel }}）</div>
+            <button class="rt-mi" :class="{ on: rowH === 'compact' }" role="menuitemradio" :aria-checked="rowH === 'compact'"
+              @click="setRowH('compact'); closeMenus()">紧凑</button>
+            <button class="rt-mi" :class="{ on: rowH === 'standard' }" role="menuitemradio" :aria-checked="rowH === 'standard'"
+              @click="setRowH('standard'); closeMenus()">标准</button>
+            <button class="rt-mi" :class="{ on: rowH === 'cozy' }" role="menuitemradio" :aria-checked="rowH === 'cozy'"
+              @click="setRowH('cozy'); closeMenus()">宽松</button>
+            <div class="rt-m-sep" role="separator"></div>
+            <button :aria-label="'重置全部列宽'" class="rt-mi" role="menuitem" title="重置全部列宽（拖拽过的列回原始宽）"
+              :disabled="!Object.keys(colWidths).length" @click="resetColWidths(); closeMenus()">
+              ⤺ 重置全部列宽
+            </button>
+          </div>
+        </span>
         <!-- R130 三十二批：列选收编 ColPicker 共享件（与 QueryResultTable 同一实现）；
              五百四十六批：types 透传（工蚁3 契约）——弹层字段名旁类型徽标与列头徽标同源 -->
         <ColPicker :cols="allCols" :selected="visibleCols" label="列选" :types="fieldTypes" @update:selected="visibleCols = $event" @locate="locateCol" />
-        <!-- 七十一批：列宽批量重置（记忆可退出——单列双击柄只能逐列清） -->
-        <button :aria-label="'重置全部列宽'" class="btn sm ghost rt-tool-btn" title="重置全部列宽（拖拽过的列回原始宽）" :disabled="!Object.keys(colWidths).length" @click="resetColWidths">
-          <RotateCcw :size="13" /> 列宽
-        </button>
         <!-- 六百五十三批：列布局方案收纳（TablePresetMenu 单钮+弹层，铁律 C）——652 内核
              preset 三操作消费面；ColPicker 同款共享件，位次=列宽后（291 钮序锁兼容追加） -->
         <TablePresetMenu :presets="presets" :save="savePreset" :apply="applyPreset" :del="deletePreset" btn-cls="rt-tool-btn" />
@@ -550,7 +564,7 @@ import { ref, computed, watch, nextTick, onBeforeUnmount, type Ref } from 'vue';
 import { usePref } from '../composables/urlState';
 import { NModal, NDrawer, NDrawerContent, NPopover } from 'naive-ui';
 import {
-  ArrowUp, ArrowDown, ArrowRight, ArrowUpDown, Eye, EyeOff, Pin, MoveHorizontal, Trash2, Copy, ClipboardList, FileDown, X, Pencil, AlignJustify, SearchCheck, ScanSearch, Inbox, RotateCcw, ChevronDown, ChevronRight, Braces, Table, Send, FileText, Search, Filter, Camera, GitCompareArrows, Maximize2, Minimize2 } from 'lucide-vue-next';
+  ArrowUp, ArrowDown, ArrowRight, ArrowUpDown, Eye, EyeOff, Pin, MoveHorizontal, Trash2, Copy, ClipboardList, FileDown, X, Pencil, SearchCheck, ScanSearch, Inbox, RotateCcw, ChevronDown, ChevronRight, Braces, Table, Send, FileText, Search, Filter, Camera, GitCompareArrows, Maximize2, Minimize2 } from 'lucide-vue-next';
 import ColPicker from './ColPicker.vue';
 /* 六百五十三批：列布局方案共享件（652 preset 内核消费面，RT/QRT 单一出处） */
 import TablePresetMenu from './TablePresetMenu.vue';
@@ -749,6 +763,19 @@ const props = withDefaults(defineProps<{
 
 /* 五百一十六批：内建聚焦面状态(FS headless 双向绑定) */
 const focused = ref(false);
+/* 八百三十五批：右簇聚合菜单（视图 ⋯）状态——Esc/点外关闭 */
+const viewMenuOpen = ref(false);
+function closeMenus() { viewMenuOpen.value = false; }
+function onDocMenusClick(e: Event) {
+  if (!(e.target as HTMLElement | null)?.closest('.menu-wrap')) closeMenus();
+}
+function onDocMenusEsc(e: KeyboardEvent) { if (e.key === 'Escape') closeMenus(); }
+document.addEventListener('click', onDocMenusClick);
+document.addEventListener('keydown', onDocMenusEsc);
+onBeforeUnmount(() => {
+  document.removeEventListener('click', onDocMenusClick);
+  document.removeEventListener('keydown', onDocMenusEsc);
+});
 /* ═══ 六百零九批：内建视图档状态机（QRT 607 对称件）═══
    altView=用户档位（viewPrefKey 提供时 usePref 落盘跨会话记忆，缺省仅内存态——KeepAlive
    下组件实例常驻，状态不重置）；effView=数据驱动生效档——持久化/手选档位的数据源缺席时
@@ -2703,4 +2730,15 @@ tr.sel td { background: var(--ac-soft); }
 /* 一百三十六批：上次提交失败项红标（mapping 冲突/类型错重试前心里有数） */
 .pv-row.pv-failed { background: var(--err-soft); border-radius: var(--r-s); }
 .pv-fail-tag { margin-left: var(--sp-1h); font-size: var(--fs-2xs); color: var(--err); border: 1px solid var(--err); border-radius: 99px; padding: 0 5px; }
+
+/* 八百三十五批：视图 ⋯ 聚合菜单——浮层四要素齐备（bg1 底/强边线/阴影/圆角） */
+.menu-wrap { position: relative; }
+.rt-tool-btn.on { border-color: var(--ac-line); color: var(--ac-hi); }
+.rt-menu { position: absolute; top: calc(100% + var(--sp-1)); right: 0; z-index: 60; background: var(--bg1); border: 1px solid var(--line-strong); border-radius: var(--r-m); box-shadow: 0 8px 24px rgba(0, 0, 0, .5); padding: var(--sp-1h); min-width: 210px; }
+.rt-mi { display: flex; align-items: center; width: 100%; padding: var(--sp-1h) var(--sp-2h); border: 0; background: transparent; border-radius: var(--r-s); color: var(--tx1); font-size: var(--fs-xs); cursor: pointer; text-align: left; white-space: nowrap; }
+.rt-mi:hover:not(:disabled) { background: var(--bg2); color: var(--tx0); }
+.rt-mi:disabled { color: var(--tx2); opacity: .55; cursor: default; }
+.rt-mi.on { color: var(--ac-hi); }
+.rt-m-t { padding: var(--sp-1) var(--sp-2h) 0; font-size: var(--fs-2xs); color: var(--tx2); letter-spacing: .05em; }
+.rt-m-sep { height: 1px; background: var(--line); margin: var(--sp-1) var(--sp-2); }
 </style>

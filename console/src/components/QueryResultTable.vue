@@ -65,47 +65,68 @@
         <TableRefreshBtn :on="refreshable" btn-cls="qrt-tool-btn" @refresh="emit('refresh')" />
       </template>
       <template #bar-right>
-        <!-- 二百七十二批：导出钮（RT 五件套对齐——导出/行高/列选/列宽）；五百二十五批：补 MD/XLSX/PNG
-             三档（行集/列集与 CSV 同走 csvBlock()——可见列+排序后全量，所见即所得） -->
-        <button :aria-label="'导出当前视图 CSV'" class="btn sm ghost qrt-tool-btn"
-          title="导出当前视图 CSV（筛选/排序所见即所得）" :disabled="!rawRows.length" @click="exportCsv">
-          <FileDown :size="13" /> CSV
-        </button>
-        <!-- 五百二十五批：Markdown 档（RT 121 批同格式——表格直贴文档/聊天） -->
-        <button :aria-label="'导出当前视图 Markdown'" class="btn sm ghost qrt-tool-btn"
-          title="导出当前视图 Markdown 表格" :disabled="!rawRows.length" @click="exportMd">
-          <FileText :size="13" /> MD
-        </button>
-        <!-- 五百二十五批：XLSX 档（xlsxMini 手写零依赖，data+meta 双 sheet，RT 同款） -->
-        <button :aria-label="'导出当前视图 XLSX'" class="btn sm ghost qrt-tool-btn"
-          title="导出当前视图 XLSX（含 meta 页）" :disabled="!rawRows.length" @click="exportXlsx">
-          <Table :size="13" /> XLSX
-        </button>
-        <!-- 五百二十五批：PNG 快照档（tableSnapshot 2x 像素，html-to-image 动态 import） -->
-        <button :aria-label="'导出表格快照 PNG'" class="btn sm ghost qrt-tool-btn"
-          title="导出表格快照 PNG（所见即所得截图）" :disabled="isEmpty" @click="exportPng">
-          <Camera :size="13" /> PNG
-        </button>
-        <!-- 五百六十批：JSON 第五导出钮（RT 五格式+快照对位收尾）——QRT 矩阵 JSON 即正解：
-            与 RT exportRows('json') 的 _id+_source 文档语义有意分工（rows 型无 _source，
-            行集=sortedRows 全量、列=shownCols，与「复制整表 JSON」同口径） -->
-        <button :aria-label="'导出当前视图 JSON'" class="btn sm ghost qrt-tool-btn"
-          title="导出当前视图 JSON（矩阵，与复制整表 JSON 同口径）" :disabled="isEmpty" @click="exportJson">
-          <Braces :size="13" /> JSON
-        </button>
-        <!-- 二百四十五批：与 RT 同一颗「行高」三档钮（useTablePrefs 内核循环）——
-             旧「密度」两态钮与 RT 三档行高不一致（行高一致性用户实报的收尾半边） -->
-        <button :aria-label="`行高：当前${rowHLabel}，点击循环三档`" class="btn sm ghost qrt-tool-btn"
-          :title="`行高：${rowHLabel}（点击循环 紧凑→标准→宽松）`" @click="cycleRowH">
-          <AlignJustify :size="13" /> 行高·{{ rowHLabel }}
-        </button>
+        <!-- 八百三十五批：导出格式五连平铺收编「导出 ▾」聚合钮（铁律 C：同类枚举合一，常驻可见 ≤5）——
+             五格式 aria/title/实现函数逐字保留（525/560 锁面随迁不破），只动入口不动引擎；
+             空结果整组禁用（非 v-if 消失） -->
+        <span class="menu-wrap">
+          <button aria-label="导出" class="btn sm ghost qrt-tool-btn" :class="{ on: expMenuOpen }"
+            aria-haspopup="menu" :aria-expanded="expMenuOpen" title="导出（CSV/XLSX/JSON/PNG/Markdown）"
+            @click.stop="expMenuOpen = !expMenuOpen">
+            <FileDown :size="13" /> 导出 ▾
+          </button>
+          <div v-if="expMenuOpen" class="qrt-menu" role="menu" aria-label="导出当前视图">
+            <button :aria-label="'导出当前视图 CSV'" class="qrt-mi" role="menuitem"
+              title="导出当前视图 CSV（筛选/排序所见即所得）" :disabled="!rawRows.length" @click="exportCsv(); closeMenus()">
+              <span class="qrt-mi-f">CSV</span> 通用表格
+            </button>
+            <!-- 五百二十五批：XLSX 档（xlsxMini 手写零依赖，data+meta 双 sheet） -->
+            <button :aria-label="'导出当前视图 XLSX'" class="qrt-mi" role="menuitem"
+              title="导出当前视图 XLSX（含 meta 页）" :disabled="!rawRows.length" @click="exportXlsx(); closeMenus()">
+              <span class="qrt-mi-f">XLSX</span> Excel · 含 meta 页
+            </button>
+            <!-- 五百六十批：JSON 第五导出钮——QRT 矩阵 JSON 即正解（与「复制整表 JSON」同口径） -->
+            <button :aria-label="'导出当前视图 JSON'" class="qrt-mi" role="menuitem"
+              title="导出当前视图 JSON（矩阵，与复制整表 JSON 同口径）" :disabled="isEmpty" @click="exportJson(); closeMenus()">
+              <span class="qrt-mi-f">JSON</span> JSON · 矩阵
+            </button>
+            <!-- 五百二十五批：PNG 快照档（tableSnapshot 2x 像素，html-to-image 动态 import） -->
+            <button :aria-label="'导出表格快照 PNG'" class="qrt-mi" role="menuitem"
+              title="导出表格快照 PNG（所见即所得截图）" :disabled="isEmpty" @click="exportPng(); closeMenus()">
+              <span class="qrt-mi-f">PNG</span> PNG · 表格快照
+            </button>
+            <!-- 五百二十五批：Markdown 档（RT 121 批同格式——表格直贴文档/聊天） -->
+            <button :aria-label="'导出当前视图 Markdown'" class="qrt-mi" role="menuitem"
+              title="导出当前视图 Markdown 表格" :disabled="!rawRows.length" @click="exportMd(); closeMenus()">
+              <span class="qrt-mi-f">MD</span> Markdown · 表格
+            </button>
+          </div>
+        </span>
+        <!-- 八百三十五批：行高三档循环 + 列宽重置双钮收编「视图 ⋯」聚合钮（行高改显式三选带
+             当前档 ✓，比连点循环可预期；列宽重置=低频破坏性弱操作，菜单底项+分隔线隔离） -->
+        <span class="menu-wrap">
+          <button aria-label="视图设置" class="btn sm ghost qrt-tool-btn" :class="{ on: viewMenuOpen }"
+            aria-haspopup="menu" :aria-expanded="viewMenuOpen" title="视图：行高、列宽"
+            @click.stop="viewMenuOpen = !viewMenuOpen">
+            视图 ⋯
+          </button>
+          <div v-if="viewMenuOpen" class="qrt-menu" role="menu" aria-label="视图设置">
+            <div class="qrt-m-t">行高（当前：{{ rowHLabel }}）</div>
+            <button class="qrt-mi" :class="{ on: rowH === 'compact' }" role="menuitemradio" :aria-checked="rowH === 'compact'"
+              @click="setRowH('compact'); closeMenus()">紧凑</button>
+            <button class="qrt-mi" :class="{ on: rowH === 'standard' }" role="menuitemradio" :aria-checked="rowH === 'standard'"
+              @click="setRowH('standard'); closeMenus()">标准</button>
+            <button class="qrt-mi" :class="{ on: rowH === 'cozy' }" role="menuitemradio" :aria-checked="rowH === 'cozy'"
+              @click="setRowH('cozy'); closeMenus()">宽松</button>
+            <div class="qrt-m-sep" role="separator"></div>
+            <button :aria-label="'重置全部列宽'" class="qrt-mi" role="menuitem" title="重置全部列宽（拖拽过的列回原始宽）"
+              :disabled="!Object.keys(colWidths).length" @click="resetColWidths(); closeMenus()">
+              ⤺ 重置全部列宽
+            </button>
+          </div>
+        </span>
         <!-- R130 三十二批：列选收编 ColPicker 共享件（与 ResultTable 同一实现）；
              五百四十六批：types 透传（工蚁3 契约）——弹层字段名旁类型徽标与列头徽标同源 -->
         <ColPicker :cols="columns" :selected="visibleCols" label="列选" :types="cpTypes" @update:selected="visibleCols = $event" @locate="locateCol" />
-        <!-- 七十一批：列宽批量重置（与 ResultTable 同钮同语义） -->
-        <button :aria-label="'重置全部列宽'" class="btn sm ghost qrt-tool-btn" title="重置全部列宽（拖拽过的列回原始宽）" :disabled="!Object.keys(colWidths).length" @click="resetColWidths">
-          <RotateCcw :size="13" /> 列宽
-        </button>
         <!-- 六百五十三批：列布局方案收纳（TablePresetMenu 单钮+弹层，铁律 C）——652 内核
              preset 三操作消费面；ColPicker 同款共享件，位次=列宽后（291 钮序锁兼容追加）；
              寄居 prefsOn 主壳（storageKey 通道），SQL 独立壳分支不出钮（652 维度关闭=零落盘） -->
@@ -431,7 +452,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, nextTick, onBeforeUnmount, useSlots, type Ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { AlignJustify, Inbox, RotateCcw, Copy, Braces, ArrowDown, ArrowUp, EyeOff, Pin, MoveHorizontal, Filter, ExternalLink, Search, FileDown, FileText, Camera, ClipboardList, Maximize2, Minimize2, Table, ChevronDown, ChevronRight } from 'lucide-vue-next';
+import { RotateCcw, Inbox, Copy, Braces, ArrowDown, ArrowUp, EyeOff, Pin, MoveHorizontal, Filter, ExternalLink, Search, FileDown, Table, ClipboardList, Maximize2, Minimize2, ChevronDown, ChevronRight } from 'lucide-vue-next';
 import FocusableSurface from './FocusableSurface.vue';
 import EmptyState from './EmptyState.vue';
 import SkeletonBox from './SkeletonBox.vue';
@@ -631,6 +652,20 @@ interface Props {
 
 /* 五百一十六批：内建聚焦面状态(FS headless 双向绑定) */
 const focused = ref(false);
+/* 八百三十五批：右簇聚合菜单（导出 ▾ / 视图 ⋯）状态——Esc/点外关闭，互斥开 */
+const expMenuOpen = ref(false);
+const viewMenuOpen = ref(false);
+function closeMenus() { expMenuOpen.value = false; viewMenuOpen.value = false; }
+function onDocMenusClick(e: Event) {
+  if (!(e.target as HTMLElement | null)?.closest('.menu-wrap')) closeMenus();
+}
+function onDocMenusEsc(e: KeyboardEvent) { if (e.key === 'Escape') closeMenus(); }
+document.addEventListener('click', onDocMenusClick);
+document.addEventListener('keydown', onDocMenusEsc);
+onBeforeUnmount(() => {
+  document.removeEventListener('click', onDocMenusClick);
+  document.removeEventListener('keydown', onDocMenusEsc);
+});
 const props = withDefaults(defineProps<Props>(), {
   focusable: true,
   hits: undefined,
@@ -835,7 +870,7 @@ const columns = computed<string[]>(() => {
 /* ═══ 偏好记忆（列选/密度/列宽）——storageKey 缺省即整体关闭 ═══ */
 const dimension = computed(() => props.storageKey || null);
 const {
-  on: prefsOn, rowH, rowHLabel, cycleRowH,
+  on: prefsOn, rowH, setRowH, rowHLabel, cycleRowH,
   visibleCols, colWidths,
   colStyle, startResize, resetColWidths,
   /* 五百二十五批：rows 型转置（RT 231 批同款内核）——useTablePrefs 自带记忆（es_tbl_transpose:*），
@@ -2219,4 +2254,16 @@ th.qrt-drop-after { box-shadow: inset -3px 0 0 var(--info); }
 .qrt-tbl tbody tr:hover td.qrt-col-frozen { background: var(--bg2); }
 .qrt-tbl tbody tr.qrt-row-focus td.qrt-col-frozen { background: var(--ac-soft); }
 .qrt-tbl tbody tr.qrt-row-focus > td.qrt-idx { background: var(--ac-soft); }
+
+/* 八百三十五批：右簇聚合菜单（导出 ▾ / 视图 ⋯）——浮层四要素齐备（bg1 底/强边线/阴影/圆角） */
+.menu-wrap { position: relative; }
+.qrt-tool-btn.on { border-color: var(--ac-line); color: var(--ac-hi); }
+.qrt-menu { position: absolute; top: calc(100% + var(--sp-1)); right: 0; z-index: 60; background: var(--bg1); border: 1px solid var(--line-strong); border-radius: var(--r-m); box-shadow: 0 8px 24px rgba(0, 0, 0, .5); padding: var(--sp-1h); min-width: 230px; }
+.qrt-mi { display: flex; align-items: center; gap: var(--sp-2); width: 100%; padding: var(--sp-1h) var(--sp-2h); border: 0; background: transparent; border-radius: var(--r-s); color: var(--tx1); font-size: var(--fs-xs); cursor: pointer; text-align: left; white-space: nowrap; }
+.qrt-mi:hover:not(:disabled) { background: var(--bg2); color: var(--tx0); }
+.qrt-mi:disabled { color: var(--tx2); opacity: .55; cursor: default; }
+.qrt-mi.on { color: var(--ac-hi); }
+.qrt-mi-f { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--ac-hi); width: var(--sp-5); flex-shrink: 0; }
+.qrt-m-t { padding: var(--sp-1) var(--sp-2h) 0; font-size: var(--fs-2xs); color: var(--tx2); letter-spacing: .05em; }
+.qrt-m-sep { height: 1px; background: var(--line); margin: var(--sp-1) var(--sp-2); }
 </style>
