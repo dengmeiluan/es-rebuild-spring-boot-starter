@@ -34,6 +34,26 @@ Elasticsearch 的索引 mapping/分词/配置**不可原地修改**——改一�
 - **多集群**：连接目录 + SPI 托管，控制台可纳管多个 ES 集群
 - **ES 栈契约校验**：启动期比对类型签名（不比版本号），ES 栈错配拒绝启动并给出可操作报文
 - **版本兼容层**：`compat` 包处理 7.x 前后的 total hits/ bulk NDJSON 等形态差异
+- **两种部署形态**：独立部署（Kibana 式 `java -jar` 即全套控制台）或嵌入式 starter（嵌进宿主
+  Spring Boot 应用共享其认证与路由）——同一份能力，两种交付
+
+## 两种部署形态
+
+### 独立部署（standalone，Kibana 式）
+
+```bash
+java -jar es-rebuild-standalone-1.0.2.jar
+```
+
+内置 web 服务器（默认端口 `5601`）与 ES 客户端栈，不依赖任何宿主应用。启动后打开
+`http://localhost:5601/es-rebuild.html`，首次使用按 Setup 向导完成控制集群首连，
+全部能力（多集群纳管/重建向导/数据浏览/查询工作台/实时监控）即可用；首连档案持久在
+`~/.es-console/`，重启即达。构建方式见 [standalone/README.md](standalone/README.md)。
+
+### 嵌入式部署（Spring Boot starter，下文快速开始）
+
+把 starter 作为依赖加进宿主 Spring Boot 应用，控制台静态资源与 HTTP 端点由 starter
+自动注册，认证可委托宿主（iframe 共享登录态），适合与业务系统一体化交付。
 
 ## 快速开始
 

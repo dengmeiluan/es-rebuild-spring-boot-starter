@@ -1,0 +1,20 @@
+# 独立部署默认配置：java -jar 即用，全部键可按需覆盖（命令行 --key=value 或外置 application.yml）。
+server:
+  # Kibana 同款默认端口，避免与常见 8080 业务端口相撞
+  port: 5601
+
+spring:
+  application:
+    # 自举档案目录 ~/.es-console/<name>（首连后控制集群档案持久于此）
+    name: es-rebuild-standalone
+  main:
+    banner-mode: off
+
+es:
+  rebuild:
+    # console 模式：装配全套控制台（Setup 向导/多集群/控制面 API/静态资源入口）。
+    # 独立部署没有宿主业务实体，被管集群全部来自连接档案
+    mode: console
+    console:
+      # auto：本地自举档案优先，其次探测直连，否则 Setup 向导首连
+      control-mode: auto

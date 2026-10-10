@@ -38,6 +38,12 @@ jobs:
         run: npm run build
       - name: Backend tests (default path, npm inside maven on POSIX)
         run: mvn -B clean test
+      # 双部署形态回归：standalone（可执行应用 jar）依赖本地仓里的 starter，
+      # install 后构建并跑其契约+启动冒烟测试（空环境起完整上下文）
+      - name: Standalone build & smoke tests
+        run: |
+          mvn -B install -DskipTests
+          cd standalone && mvn -B test
 
   frontend:
     runs-on: ubuntu-latest

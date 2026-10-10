@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.3.12.RELEASE</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>io.github.dengmeiluan</groupId>
+    <artifactId>es-rebuild-standalone</artifactId>
+    <version>1.0.2</version>
+    <name>es-rebuild-standalone</name>
+    <description>Standalone distribution of the ES rebuild ops console: java -jar and you have the
+        full console (Setup wizard, multi-cluster management, adhoc rebuilds) without embedding it
+        into a host application — Kibana-style deployment.</description>
+    <url>https://github.com/dengmeiluan/es-rebuild-spring-boot-starter</url>
+
+    <properties>
+        <java.version>1.8</java.version>
+    </properties>
+
+    <dependencies>
+        <!-- 全部能力来自 starter（自动配置/控制面/控制台静态资源均自带） -->
+        <dependency>
+            <groupId>io.github.dengmeiluan</groupId>
+            <artifactId>es-rebuild-spring-boot-starter</artifactId>
+            <!-- 与仓根 es-rebuild-spring-boot-starter 版本同步发布，StandalonePomContractTest 防漂移 -->
+            <version>1.0.2</version>
+        </dependency>
+
+        <!-- 独立部署自带的运行时栈：内嵌 web 服务器 + ES 客户端。
+             starter 对这三件是 provided（版本决定权交宿主）；本应用没有宿主，自己 compile 带上，
+             版本一律走 spring-boot-starter-parent BOM，与嵌入式形态共享同一条版本线。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.elasticsearch.client</groupId>
+            <artifactId>elasticsearch-rest-high-level-client</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 应用 jar：repackage 必须生效（与库 jar 的 skip=true 纪律互为镜像），
+                 产出可执行 fat jar，java -jar 直接启动全套控制台 -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

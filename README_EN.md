@@ -42,6 +42,29 @@ state is persisted, resumable and auditable.
 - **ES stack contract validation** — startup-time type-signature comparison (not version
   numbers); mismatches refuse to start with actionable remediation text
 - **Compat layer** — 7.x total-hits / bulk-NDJSON shape differences handled
+- **Two deployment shapes** — standalone (Kibana-style `java -jar` with the full console) or
+  embedded starter (nested in a host Spring Boot app sharing its auth and routing) — same
+  capabilities, two delivery modes
+
+## Two deployment shapes
+
+### Standalone (Kibana-style)
+
+```bash
+java -jar es-rebuild-standalone-1.0.2.jar
+```
+
+Bundles its own web server (default port `5601`) and ES client stack — no host application
+required. Open `http://localhost:5601/es-rebuild.html`, complete the first-connect Setup
+wizard, and the full capability set (multi-cluster management / rebuild wizard / data browser /
+query workbench / live monitoring) is available. The bootstrap profile persists under
+`~/.es-console/` and survives restarts. Build instructions: [standalone/README.md](standalone/README.md).
+
+### Embedded (Spring Boot starter — the quick start below)
+
+Add the starter as a dependency of your host Spring Boot application; console static assets
+and HTTP endpoints are registered automatically, and authentication can delegate to the host
+(iframe shared login) for integrated delivery.
 
 ## Quick start
 
