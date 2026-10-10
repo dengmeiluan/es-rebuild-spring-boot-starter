@@ -156,6 +156,17 @@
 
     <build>
         <plugins>
+            <!-- javadoc 容错：内部方法注释量大，部分缺 @param/@return 标注——
+                 顶级 OSS 工具（javadoc.io 等）拉取时不应因这些警告而失败；
+                 公共 SPI（ManagedEsIndex 等）的 javadoc 已完备，渐进改善 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <failOnError>false</failOnError>
+                    <doclint>none</doclint>
+                </configuration>
+            </plugin>
             <!-- 关键：spring-boot-starter-parent 在 pluginManagement 里为 spring-boot-maven-plugin 绑定了
                  repackage goal，库 jar 若被 repackage 会把类塞进 BOOT-INF/classes/、变成不可被依赖的
                  可执行 fat jar。用 skip=true 关闭（对所有 execution 生效，不依赖 execution id）。 -->
