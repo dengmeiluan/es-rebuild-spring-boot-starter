@@ -1,0 +1,26 @@
+# 最小嵌入式宿主配置：每一段都可以照抄进你的业务应用。
+server:
+  # 避开 8080 常用业务端口，方便与你的应用并排跑
+  port: 8081
+
+spring:
+  application:
+    # 自举档案/SQLite 库文件目录 ~/.es-console/<name>/
+    name: demo-host
+  data:
+    elasticsearch:
+      repositories:
+        enabled: false
+
+es:
+  rebuild:
+    # console 模式：重建能力 + 运维控制台全套（改 client 则只保留重建，不开控制台）
+    mode: console
+    mapping:
+      # 启动时对账 @Document 实体与线上 mapping：新增字段自动补齐
+      auto-register: startup
+    console:
+      # auto：本地自举档案优先，其次 Setup 向导首连
+      control-mode: auto
+      # 作业+审计落本地 SQLite（~/.es-console/demo-host/jobs.db），重启历史不丢
+      store: sqlite

@@ -148,6 +148,12 @@ es:
 `warn` 仅提交无冲突 additions），冲突修复建议返回 `USE_ADHOC_REBUILD` 走托管重建。
 详见[接入文档](docs/integration/README.md)。
 
+## 可运行示例
+
+[examples/demo-host](examples/demo-host/) 是快速开始的可运行版：一个 `@Document` 实体 +
+`@SpringBootApplication`，即得全套运维控制台（Setup 向导 / mapping 自动对账 / 托管重建 /
+实时监控），作业与审计落本地 SQLite。两步跑通，详见其 [README](examples/demo-host/README.md)。
+
 ## 运维控制台
 
 `es.rebuild.mode=console` 时启用。单页应用随 jar 分发，宿主零前端构建：

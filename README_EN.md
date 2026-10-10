@@ -144,6 +144,13 @@ es:
 
 All properties ship with IDE metadata (`spring-boot-configuration-processor`).
 
+## Runnable example
+
+[examples/demo-host](examples/demo-host/) is the runnable quick start: one `@Document` entity +
+one `@SpringBootApplication` class gives you the full ops console (Setup wizard / mapping
+auto-reconcile / adhoc rebuilds / live monitoring), with jobs and audit persisted to local
+SQLite. Two commands to boot — see its [README](examples/demo-host/README.md).
+
 ## The ops console
 
 With `es.rebuild.mode=console`, a full ops console ships inside the jar — zero frontend
