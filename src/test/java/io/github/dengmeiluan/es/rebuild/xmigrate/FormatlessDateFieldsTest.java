@@ -15,7 +15,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * mapping 级「无 format 的 date 字段」告知的测试。
  *
- * <p><b>被守的性质</b>：迁移要如实告知<b>哪些</b> date 字段没有 format（那正是有 R94 风险的字段），
+ * <p><b>被守的性质</b>：迁移要如实告知<b>哪些</b> date 字段没有 format（那正是有  风险的字段），
  * 且文案必须说清<b>迁移没做什么</b>——不许暗示已处理/已兼容/已加宽。</p>
  *
  * @author aicoding

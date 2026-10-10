@@ -28,7 +28,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百六十批轨5【Java 可观测】六件（Observability558 范式：Logback ListAppender 直挂
+ * 轨5【Java 可观测】六件（Observability558 范式：Logback ListAppender 直挂
  * logger 断言 WARN/DEBUG 事件；PropertiesAuthDelegate lastEndpointWarnAt 首败节流为同款范式）。
  * <b>全部改动 = 补 WARN/DEBUG 留痕，返回值与控制流契约零变更、零签名变更</b>；TDD 先红后绿。
  *

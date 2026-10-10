@@ -4,7 +4,7 @@
 
 <script setup lang="ts">
 /**
- * R88：dot-key 原子组件——断行只允许发生在「.」后（<wbr> 软断点），
+ * dot-key 原子组件——断行只允许发生在「.」后（<wbr> 软断点），
  * 根治 word-break:break-all 把 query.info 撕成「query.i / nfo」的词中撕裂。
  * hover title 恒给全量 key（展示被剪前缀时用 full 传原始 key）。
  * v3.0.0：可选 kw——过滤输入命中片段 <mark>（splitMark 全 key 切分；

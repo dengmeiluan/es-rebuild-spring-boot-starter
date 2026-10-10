@@ -19,7 +19,7 @@ import java.util.Map;
 /**
  * (内部) ES 索引控制台运维接口。
  *
- * <p>R93 阶段⑤：SPI 驱动的重建端点（first-migrate / rebuild / finish / full-reload /
+ * <p> 阶段⑤：SPI 驱动的重建端点（first-migrate / rebuild / finish / full-reload /
  * cleanup / abort / jobs / lock-release / diagnostics）已整体退役，重建改由
  * {@code adhoc} 路径按索引名执行。本类保留索引诊断、巡检查询与集群级只读能力。</p>
  *
@@ -75,7 +75,7 @@ public class InternalEsIndexRebuildController {
         return esIndexRebuildService.inspect(indexKey, sampleSize);
     }
 
-    /** Q1: starter 自家系统索引详情（R93 阶段⑤后仅剩 lock；job / audit 已随 SPI 重建路径退役）。闸门见 {@link EsIndexRebuildService#inspectSystem}。 */
+    /** Q1: starter 自家系统索引详情（ 阶段⑤后仅剩 lock；job / audit 已随 SPI 重建路径退役）。闸门见 {@link EsIndexRebuildService#inspectSystem}。 */
     @GetMapping("system-inspect")
     public Map<String, Object> systemInspect(@RequestParam String which) throws IOException {
         return esIndexRebuildService.inspectSystem(which);
@@ -89,7 +89,7 @@ public class InternalEsIndexRebuildController {
         return esIndexRebuildService.queryDsl(indexKey, dslJson, size);
     }
 
-    /** 系统索引 Query DSL（R93 阶段⑤后 which 仅接受 lock，其余值 400）。闸门见 {@link EsIndexRebuildService#querySystem}。 */
+    /** 系统索引 Query DSL（ 阶段⑤后 which 仅接受 lock，其余值 400）。闸门见 {@link EsIndexRebuildService#querySystem}。 */
     @PostMapping("system-query")
     public Map<String, Object> systemQuery(@RequestParam String which,
                                            @RequestParam(required = false, defaultValue = "10") int size,
@@ -154,7 +154,7 @@ public class InternalEsIndexRebuildController {
     }
 
     /**
-     * R94：采样 date 字段的实际存储形态（只读）。
+     * 采样 date 字段的实际存储形态（只读）。
      *
      * <p>响应带 {@code sampling} 说明取样口径——前端必须一并展示：一份不说明自己怎么取样的
      * 报告，读者会默认它是随机的。</p>
@@ -260,7 +260,7 @@ public class InternalEsIndexRebuildController {
                                            @org.springframework.web.bind.annotation.RequestBody(required = false) Map<String, String> body) throws java.io.IOException {
         String resolved = esIndexRebuildService.resolveToPhysical(index);
         if (esIndexAdmin.indexExists(resolved)) {
-            /* 五百六十二批：200-with-{error:true,message} 错误体补 code+endpoint（additive，
+            /* 200-with-{error:true,message} 错误体补 code+endpoint（additive，
                EsErrorMapper.body 口径）——error:true 既有键保留（前端 api.ts 200-with-error
                分支零破坏），code 供前端精确分流，endpoint 定位失败端点 */
             return EsErrorMapper.body("INDEX_EXISTS", "索引已存在: " + resolved, EsErrorMapper.endpointOf(currentRequest()));
@@ -279,7 +279,7 @@ public class InternalEsIndexRebuildController {
     public Map<String, Object> deleteIndex(@RequestParam String index) throws java.io.IOException {
         String resolved = esIndexRebuildService.resolveToPhysical(index);
         if (!esIndexAdmin.indexExists(resolved)) {
-            /* 五百六十二批：错误体补 code+endpoint（additive，EsErrorMapper.body 口径，同 create-index 注） */
+            /* 错误体补 code+endpoint（additive，EsErrorMapper.body 口径，同 create-index 注） */
             return EsErrorMapper.body("INDEX_NOT_FOUND", "索引不存在: " + resolved, EsErrorMapper.endpointOf(currentRequest()));
         }
         esIndexAdmin.deleteIndex(resolved);
@@ -300,7 +300,7 @@ public class InternalEsIndexRebuildController {
         String resolved = esIndexRebuildService.resolveToPhysical(index);
         Map<String, Object> r = new java.util.LinkedHashMap<>();
         if (!esIndexAdmin.indexExists(resolved)) {
-            /* 五百六十二批：错误体补 code+endpoint（additive，EsErrorMapper.body 口径，同 create-index 注） */
+            /* 错误体补 code+endpoint（additive，EsErrorMapper.body 口径，同 create-index 注） */
             return EsErrorMapper.body("INDEX_NOT_FOUND", "索引不存在: " + resolved, EsErrorMapper.endpointOf(currentRequest()));
         }
         if (maxSegments < 1) {
@@ -315,7 +315,7 @@ public class InternalEsIndexRebuildController {
         return r;
     }
 
-    // ═══ R12: Query Profiler / Count 预估 / REST Playground / 部分更新 ═══
+    // ═══ : Query Profiler / Count 预估 / REST Playground / 部分更新 ═══
 
     /** Profile 查询：注入 profile:true 执行 _search，返回完整原始响应（含 profile breakdown）。 */
     @PostMapping(value = "cluster/profile", produces = "application/json")
@@ -334,7 +334,7 @@ public class InternalEsIndexRebuildController {
     }
 
     /** REST Playground：透传任意 ES REST 调用（method 白名单 + path 校验）。body: {method, path, body}
-     *  五百五十五批：执行摘要回填 request attribute（拦截器 afterCompletion 落入 HIGH_RISK detail）——
+     *  执行摘要回填 request attribute（拦截器 afterCompletion 落入 HIGH_RISK detail）——
      *  高危操作审计从「谁调过 raw」到「谁执行了什么」。 */
     @PostMapping("cluster/raw")
     public Map<String, Object> clusterRaw(@org.springframework.web.bind.annotation.RequestBody Map<String, String> req) throws IOException {
@@ -347,7 +347,7 @@ public class InternalEsIndexRebuildController {
                         org.springframework.web.context.request.RequestAttributes.SCOPE_REQUEST);
             }
         } catch (Exception e) {
-            // 五百五十八批：原 catch(Exception ignore) 整段静默——本次高危审计将缺执行摘要
+            // 原 catch(Exception ignore) 整段静默——本次高危审计将缺执行摘要
             // 且无痕（审计链断点）。低频用户路径直接 WARN 不节流；回填失败不影响执行契约不变
             log.warn("[es-console-raw] 审计摘要回填失败(本次高危审计缺执行摘要): {}", e.getMessage());
         }
@@ -362,7 +362,7 @@ public class InternalEsIndexRebuildController {
         return esIndexAdmin.updatePartial(resolved, id, partialDocJson);
     }
 
-    // ═══ R22: 集群运维观测端点（tasks/allocation/hot_threads/pending/nodes_stats/analyze/aliases） ═══
+    // ═══ : 集群运维观测端点（tasks/allocation/hot_threads/pending/nodes_stats/analyze/aliases） ═══
 
     /** 列出集群当前运行中的任务（_tasks）。actions 可用、寒开列过滤 */
     @GetMapping("cluster/tasks")
@@ -418,7 +418,7 @@ public class InternalEsIndexRebuildController {
         return esIndexAdmin.listAllAliases();
     }
 
-    // ═══ R23: 平台/分布式能力端点（templates / snapshot / shards distribution） ═══
+    // ═══ : 平台/分布式能力端点（templates / snapshot / shards distribution） ═══
 
     /** 列出索引模板 + 组件模板并集 */
     @GetMapping("cluster/templates")
@@ -482,7 +482,7 @@ public class InternalEsIndexRebuildController {
         return esIndexAdmin.shardsDistribution(index);
     }
 
-    /* ================= R24: 搜索沙盒 / 热Setting / Reroute / ILM ================= */
+    /* ================= : 搜索沙盒 / 热Setting / Reroute / ILM ================= */
 
     /** DSL 沙盒（支持 explain / profile） */
     @PostMapping("cluster/search-dsl")
@@ -540,7 +540,7 @@ public class InternalEsIndexRebuildController {
     }
 
     /* =============================================================
-     * R25：集群设置 / Task 详情 / Shard Stores / Snapshot Status / Reindex Preview
+     * 集群设置 / Task 详情 / Shard Stores / Snapshot Status / Reindex Preview
      * ============================================================= */
 
     /** 集群级设置全景（persistent/transient/defaults）*/
@@ -549,7 +549,7 @@ public class InternalEsIndexRebuildController {
         return esIndexAdmin.getClusterSettings();
     }
 
-    /** R84：索引 settings 含集群默认值（include_defaults）——Settings 面板「看全」手段；
+    /** 索引 settings 含集群默认值（include_defaults）——Settings 面板「看全」手段；
      *  只读透传，不在 ADMIN 关键词内，VIEWER 可用（raw 是 ADMIN-only，不能拿它兼职）。 */
     @GetMapping("cluster/index-settings-defaults")
     public Map<String, Object> indexSettingsWithDefaults(@RequestParam String index) throws java.io.IOException {
@@ -597,14 +597,14 @@ public class InternalEsIndexRebuildController {
         return esIndexAdmin.reindexPreview(source, query);
     }
 
-    /* ======== R26：一键综合体检 ======== */
+    /* ======== ：一键综合体检 ======== */
     /** 一键集群体检：聚合 cluster health + 不健康索引 + pending tasks + 节点负载，产出评分与建议 */
     @GetMapping("cluster/health-report")
     public Map<String, Object> clusterHealthReport() throws java.io.IOException {
         return esIndexAdmin.healthReport();
     }
 
-    /* ======== R27：分布式运维 - SLM / Watcher / Remote Clusters ======== */
+    /* ======== ：分布式运维 - SLM / Watcher / Remote Clusters ======== */
     /** SLM 快照策略列表 */
     @GetMapping("cluster/slm/policies")
     public Map<String, Object> clusterSlmPolicies() throws java.io.IOException {
@@ -635,7 +635,7 @@ public class InternalEsIndexRebuildController {
         return esIndexAdmin.remoteClusters();
     }
 
-    /** R27➕：高级 Reindex — 自定义目标集群 / 自由 body / 全参数开放 */
+    /** ➕：高级 Reindex — 自定义目标集群 / 自由 body / 全参数开放 */
     @PostMapping("cluster/reindex-advanced")
     public Map<String, Object> clusterReindexAdvanced(
             @RequestParam(required = false) String slices,
@@ -657,7 +657,7 @@ public class InternalEsIndexRebuildController {
         return esIndexAdmin.reindexAdvanced(body, opts);
     }
 
-    /* ======== R28：分布式自定义 - 批量编辑 / SQL / 文档直编 ======== */
+    /* ======== ：分布式自定义 - 批量编辑 / SQL / 文档直编 ======== */
 
     /** _update_by_query：按自定义 query 批量更新 */
     @PostMapping("cluster/update-by-query")
@@ -760,7 +760,7 @@ public class InternalEsIndexRebuildController {
     }
 
     /* ====================================================================
-     * R29 —— painless / stored scripts / rollover / ILM ops / nodes stats brief
+     *  —— painless / stored scripts / rollover / ILM ops / nodes stats brief
      * ==================================================================== */
 
     /** POST /_scripts/painless/_execute —— 脚本沙盒 */
@@ -810,7 +810,7 @@ public class InternalEsIndexRebuildController {
     }
 
     /* =========================================================
-     * R30 —— 查询能力全通道 Query Bridge：SQL 宽容 / Lucene / PIT / schema 探测
+     *  —— 查询能力全通道 Query Bridge：SQL 宽容 / Lucene / PIT / schema 探测
      * ========================================================= */
     /** SQL 宽容执行（自动注入 field_multi_value_leniency=true） */
     @PostMapping("cluster/sql/lenient")
@@ -850,48 +850,48 @@ public class InternalEsIndexRebuildController {
     }
 
     /* =========================================================================
-     * R31 —— 索引运维中枢：mapping / analysis / synonyms / plugins
+     *  —— 索引运维中枢：mapping / analysis / synonyms / plugins
      * ========================================================================= */
 
-    /** R31：Mapping 详情树（nested/object/multi-fields 展开） */
+    /** Mapping 详情树（nested/object/multi-fields 展开） */
     @GetMapping("cluster/mapping-detail")
     public Map<String, Object> mappingDetail(@RequestParam String index) throws java.io.IOException {
         return esIndexAdmin.getMappingDetail(index);
     }
 
-    /** R31：为索引新增字段（只能加，不能改/删） */
+    /** 为索引新增字段（只能加，不能改/删） */
     @PostMapping("cluster/mapping-put")
     public Map<String, Object> mappingPut(@RequestParam String index,
                                           @org.springframework.web.bind.annotation.RequestBody(required = false) String body) throws java.io.IOException {
         return esIndexAdmin.putMappingField(index, body);
     }
 
-    /** R31：读索引 analysis 全景 */
+    /** 读索引 analysis 全景 */
     @GetMapping("cluster/analysis-settings")
     public Map<String, Object> analysisSettings(@RequestParam String index) throws java.io.IOException {
         return esIndexAdmin.getAnalysisSettings(index);
     }
 
-    /** R31：更新 analysis（close→PUT→open 自动） */
+    /** 更新 analysis（close→PUT→open 自动） */
     @PostMapping("cluster/analysis-update")
     public Map<String, Object> analysisUpdate(@RequestParam String index,
                                               @org.springframework.web.bind.annotation.RequestBody(required = false) String body) throws java.io.IOException {
         return esIndexAdmin.updateAnalysisSettings(index, body);
     }
 
-    /** R31：搜索分词器热重载 */
+    /** 搜索分词器热重载 */
     @PostMapping("cluster/reload-analyzers")
     public Map<String, Object> reloadAnalyzers(@RequestParam String index) throws java.io.IOException {
         return esIndexAdmin.reloadSearchAnalyzers(index);
     }
 
-    /** R31：插件矩阵 */
+    /** 插件矩阵 */
     @GetMapping("cluster/plugins")
     public Map<String, Object> plugins() throws java.io.IOException {
         return esIndexAdmin.pluginsList();
     }
 
-    /** R31：便捷 —— 同义词 upsert (index-level inline synonym_graph filter) */
+    /** 便捷 —— 同义词 upsert (index-level inline synonym_graph filter) */
     @PostMapping("cluster/synonyms-upsert")
     public Map<String, Object> synonymsUpsert(@RequestParam String index,
                                               @RequestParam(defaultValue = "custom_synonyms") String filter,
@@ -901,17 +901,17 @@ public class InternalEsIndexRebuildController {
     }
 
     /* =========================================================================
-     * R32 —— 相关性打分实验室：explain / validate / termvectors / search 透传
+     *  —— 相关性打分实验室：explain / validate / termvectors / search 透传
      * ========================================================================= */
 
-    /** R32：搜索透传（body 可含 explain:true / _name 命名子句） */
+    /** 搜索透传（body 可含 explain:true / _name 命名子句） */
     @PostMapping("cluster/search-raw")
     public Map<String, Object> searchRaw(@RequestParam String index,
                                          @org.springframework.web.bind.annotation.RequestBody(required = false) String body) throws java.io.IOException {
         return esIndexAdmin.searchRaw(index, body);
     }
 
-    /** R32：单文档打分解释 / why-not 诊断 */
+    /** 单文档打分解释 / why-not 诊断 */
     @PostMapping("cluster/explain-doc")
     public Map<String, Object> explainDoc(@RequestParam String index,
                                           @RequestParam String id,
@@ -919,14 +919,14 @@ public class InternalEsIndexRebuildController {
         return esIndexAdmin.explainDoc(index, id, body);
     }
 
-    /** R32：查询校验 + Lucene 改写透视 */
+    /** 查询校验 + Lucene 改写透视 */
     @PostMapping("cluster/validate-query")
     public Map<String, Object> validateQuery(@RequestParam String index,
                                              @org.springframework.web.bind.annotation.RequestBody(required = false) String body) throws java.io.IOException {
         return esIndexAdmin.validateQuery(index, body);
     }
 
-    /** R32：词频取证 _termvectors */
+    /** 词频取证 _termvectors */
     @GetMapping("cluster/term-vectors")
     public Map<String, Object> termVectors(@RequestParam String index,
                                            @RequestParam String id,
@@ -935,24 +935,24 @@ public class InternalEsIndexRebuildController {
     }
 
     /* =========================================================================
-* R33 —— 搜索模板中心 + 别名管控台
+*  —— 搜索模板中心 + 别名管控台
      * ========================================================================= */
 
-/** R33：mustache 模板渲染预览 _render/template */
+/** mustache 模板渲染预览 _render/template */
     @PostMapping("cluster/render-template")
     public Map<String, Object> renderTemplate(
             @org.springframework.web.bind.annotation.RequestBody(required = false) String body) throws java.io.IOException {
         return esIndexAdmin.renderTemplate(body);
     }
 
-/** R33：执行搜索模板 _search/template */
+/** 执行搜索模板 _search/template */
     @PostMapping("cluster/search-template")
     public Map<String, Object> searchTemplate(@RequestParam String index,
             @org.springframework.web.bind.annotation.RequestBody(required = false) String body) throws java.io.IOException {
         return esIndexAdmin.searchTemplate(index, body);
     }
 
-/** R33：别名原子操作 POST /_aliases */
+/** 别名原子操作 POST /_aliases */
     @PostMapping("cluster/alias-actions")
     public Map<String, Object> aliasActions(
             @org.springframework.web.bind.annotation.RequestBody(required = false) String body) throws java.io.IOException {
@@ -985,7 +985,7 @@ public class InternalEsIndexRebuildController {
     @org.springframework.web.bind.annotation.ResponseBody
     public org.springframework.http.ResponseEntity<Map<String, Object>> handleError(Exception e,
             javax.servlet.http.HttpServletRequest request) {
-        /* R92-C2：状态码映射与 message 组装统一走 EsErrorMapper（与全包兜底 advice 同口径）——
+        /* -C2：状态码映射与 message 组装统一走 EsErrorMapper（与全包兜底 advice 同口径）——
            ES 端 4xx 透传原状态码不拉平成 500，5xx/网络故障映射 502，message 保留 ES 原始报错体供前端提 root_cause；
            错误体补 endpoint（method + " " + requestURI），与兜底 advice 同步 */
         return org.springframework.http.ResponseEntity.status(EsErrorMapper.httpStatusOf(e))

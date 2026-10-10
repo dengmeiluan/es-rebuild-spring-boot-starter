@@ -14,7 +14,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
- * R94 D13 守门：自动适配的装配顺序。
+ *  D13 守门：自动适配的装配顺序。
  *
  * <p>断言的不是「Bean 存在」而是「转换器<b>确实进了</b> conversions」——
  * 天真写法（放进 {@code @AutoConfigureAfter} 的主配置里）会让 Boot 先建空的 conversions，

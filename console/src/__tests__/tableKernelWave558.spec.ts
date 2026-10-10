@@ -1,11 +1,11 @@
 /**
- * 五百五十八批 轨3 表格内核两件。
+ *  轨3 表格内核两件。
  * 锁定：
  * 1) emptyPctOf 单源下沉——useColStats 新增出口（emptyRate×100 后 Math.round 取整 %，
- *    与 554 批双内核 tfoot「· 空值率 N%」内联实现逐字语义等值），QRT/RT aggEmptyPct
+ *    与 双内核 tfoot「· 空值率 N%」内联实现逐字语义等值），QRT/RT aggEmptyPct
  *    双份退役换调用（口径单源化）；538 源码锁（numericOfCount 装配 return 行 / count 档）
  *    零触碰——只动 aggEmptyPct 档，append 锁随迁确认；
- * 2) RT 列头右键菜单补「复制整表 JSON」（557 批 QRT 单侧漂移的对称件）——照 QRT 同款
+ * 2) RT 列头右键菜单补「复制整表 JSON」（ QRT 单侧漂移的对称件）——照 QRT 同款
  *    形态：行集=sortedHits（与区域复制/导出行序同源）、列=visibleCols 所见即所复、
  *    值=raw（getSourceVal，JSON 档不做显示加工），走既有 copyMatrix json 管道
  *    （缺省 jsonRow 按 cols 构造、缺值补 null、2 空格缩进）；零新键零持久化。
@@ -61,14 +61,14 @@ async function openColMenuRt(root: HTMLElement, col: string) {
 }
 
 /* ═══════════ 一、emptyPctOf 单源下沉（件1） ═══════════ */
-describe('五百五十八批 T1：useColStats.emptyPctOf（emptyRate×100 后 Math.round 取整 %）', () => {
+describe(' T1：useColStats.emptyPctOf（emptyRate×100 后 Math.round 取整 %）', () => {
   const base = {
     rows: () => [] as any[],
     getVal: (r: any, c: string) => r[c],
     labelOf: (v: any) => String(v),
   };
 
-  it('整数舍入口径：1/3→33、2/3→67（与 554 批 tfoot「空值率 33%」同源 Math.round）', () => {
+  it('整数舍入口径：1/3→33、2/3→67（与  tfoot「空值率 33%」同源 Math.round）', () => {
     const rows3 = [{ v: 1 }, { v: null }, { v: 3 }];
     const s1 = useColStats({ ...base, rows: () => rows3 }).emptyPctOf('v');
     expect(s1, 'emptyRate=1/3 → Math.round(33.33…)=33').toBe(33);
@@ -88,7 +88,7 @@ describe('五百五十八批 T1：useColStats.emptyPctOf（emptyRate×100 后 Ma
     for (const [name, src] of [['QRT', qrt], ['RT', rt]] as const) {
       expect(src, `${name} aggEmptyPct 换调用单源出口`).toContain('out[c] = colStats.emptyPctOf(c);');
       expect(src, `${name} 内联 Math.round 实现已退役`).not.toContain('Math.round((colStats.statsOf(c).emptyRate ?? 0) * 100)');
-      /* 538 批源码锁逐字在场（tableKernelWave538:85）——本批零触碰的随迁确认 */
+      /* 源码锁逐字在场（tableKernelWave538:85）——本批零触碰的随迁确认 */
       expect(src, `${name} numericOfCount 装配 return 行 538 锁不动`).toContain('return s.numeric ? { ...s.numeric, count: s.count } : null;');
     }
   });
@@ -116,7 +116,7 @@ describe('五百五十八批 T1：useColStats.emptyPctOf（emptyRate×100 后 Ma
 });
 
 /* ═══════════ 二、RT 复制整表 JSON（件2：557 单侧漂移对称件） ═══════════ */
-describe('五百五十八批 T2：RT 列头菜单「复制整表 JSON」', () => {
+describe(' T2：RT 列头菜单「复制整表 JSON」', () => {
   it('列头菜单出项 → 剪贴板=visibleCols 全行 JSON 数组（raw 值、2 空格缩进）', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator.clipboard, { writeText });

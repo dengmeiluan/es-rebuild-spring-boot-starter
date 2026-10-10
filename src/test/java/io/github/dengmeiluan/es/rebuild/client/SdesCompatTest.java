@@ -6,11 +6,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 /**
- * R96：sdes 4.0.x 与 4.4.x 的注解取值形态不同（单值 vs 数组），
+ * sdes 4.0.x 与 4.4.x 的注解取值形态不同（单值 vs 数组），
  * SdesCompat 必须让两种形态在调用侧不可见。
  *
  * <p>本测试只锁形状归一逻辑与本机 sdes（4.0.9）下的真实取值；
- * 双版本兑现由 Task 6 的 SdesContractMatrixTest 负责 ——
+ * 双版本兑现由  的 SdesContractMatrixTest 负责 ——
  * 「本机这版过了」不等于「另一版也过」，那正是本波要修的问题。</p>
  */
 public class SdesCompatTest {
@@ -35,7 +35,7 @@ public class SdesCompatTest {
         assertNull(SdesCompat.firstIfArray(null));
     }
 
-    /* ---- formatName / pattern：Task 2 真正消费的两个方法，必须有覆盖 ----
+    /* ---- formatName / pattern： 真正消费的两个方法，必须有覆盖 ----
        只测 firstIfArray 是不够的：那只证明形状归一对，不证明这两个方法
        从真实注解上取到了值。用带 @Field 的样本类反射取注解实例来验。 */
 
@@ -114,7 +114,7 @@ public class SdesCompatTest {
         org.junit.Assert.assertFalse("firstIfArray 的返回值不该还是数组", r.getClass().isArray());
     }
 
-    /* ---- R98：注解「写了但读不出」必须与「没写」可分辨 ----
+    /* ---- ：注解「写了但读不出」必须与「没写」可分辨 ----
        实测成因：实体 class 的编译期 sdes 与运行期跨 4.0/4.2 形态边界（单值 ↔ 数组）时，
        注解代理在调用 format()/pattern() 时抛 AnnotationTypeMismatchException。
        改动前 invoke 的 catch(Throwable) 把它吞成 null → desired-state 报「未声明」，

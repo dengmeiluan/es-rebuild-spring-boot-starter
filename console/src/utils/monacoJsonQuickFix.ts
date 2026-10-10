@@ -1,5 +1,5 @@
 /**
- * ux2 Task 4：JSON 语言级 quick fix（全仓首个 CodeActionProvider，用户痛点③「No quick fixes available」根治）。
+ * ux2 ：JSON 语言级 quick fix（全仓首个 CodeActionProvider，用户痛点③「No quick fixes available」根治）。
  *
  * 只处理 JSON LS 自产 marker（getModelMarkers { owner:'json' } 过滤——es-dsl-lint owner 天然隔开，
  * 其行内建议通道不动）：
@@ -10,16 +10,16 @@
  *  - 2.6.0 514 Expected comma →「补逗号」（错误码出处：vscode-json-languageservice ErrorCode 枚举——
   *    CommaExpected=514；513=PropertyExpected 是前导逗号/双逗号场景，绝不可误配补逗号 action；
  *    不设 isPreferred，与 519 同口径防误顶首选）
- *  - 533 批 513 PropertyExpected →「双逗号删一」（只处理 marker 行含字面 ',,' 的安全子集——
+ *  -  513 PropertyExpected →「双逗号删一」（只处理 marker 行含字面 ',,' 的安全子集——
  *    有 ',,' 证据才出 action；前导逗号等其余 513 场景零 action，「不得误配补逗号」裁定不越界）
- *  - 558 批 513 补前导逗号删除分支（marker 所在行 trimStart 以 ',' 开头 → 删该逗号——
+ *  -  513 补前导逗号删除分支（marker 所在行 trimStart 以 ',' 开头 → 删该逗号——
  *    删除不是补逗号，与 519 同属删除通道，旧裁定不越界；两证据都不在仍零 action）
  * code 联合类型归一（string | { value }）；code 缺席时 message 兜底（跨 monaco 版本 code 漂移防御）。
  * 行相交过滤：provideCodeActions 的 range=当前选区/光标行，不相交的 marker 不出 action。
  *
  * 幂等：模块级 flag——MonacoEditor onMounted 每实例都会调，注册仅一次（provider 是语言级，非实例级）。
  *
- * 五百三十四批 P0-2：es-dsl-lint（DSL 静态体检）quick fix 通道，与既有 owner='json' 四码链路
+ *  P0-2：es-dsl-lint（DSL 静态体检）quick fix 通道，与既有 owner='json' 四码链路
  * 并存零触碰（独立注册函数 ensureDslLintQuickFixes——既有 spec 的「json 恰注册一次」计数契约
  * 不破；MonacoEditor onMounted 两函数各调各的，幂等同款）：
  *  - MonacoEditor.setMarkers 落 es-dsl-lint marker 时补 code:{value:'es-dsl-lint:'+规则名}，
@@ -31,18 +31,18 @@
  *    按消息内「最接近：」改名）/ bool-key-typo·root-key-typo·settings-key·mapping-key（marker
  *    即坏键本体，整段改名）/ terms-scalar（标量 → [标量]）/ body-value-type·settings-value
  *    （剥引号成数——仅值串内是合法数字才出，防越修越坏）；
- *    546 批再补四条：unknown-field·sort-unknown-field（marker 即坏字段本体，证据闸校验后
+ *    再补四条：unknown-field·sort-unknown-field（marker 即坏字段本体，证据闸校验后
  *    按「最接近：」改名）/ agg-text-field（坏字段追加 .keyword）/ mapping-type（锚点 'type'
  *    键，坏类型值锚后右扫改名）；
  *    agg-interval-key（日历 vs 固定二义）与 match-all / deep-paging 等建议类零 action。
- *  - 547 批再补三条：text-sort（消息拆坏字段+证据闸，整段改名加 .keyword）/
+ *  - 再补三条：text-sort（消息拆坏字段+证据闸，整段改名加 .keyword）/
  *    text-term（消息不含字段名，反向证据闸=marker 覆盖带引号串且非 .keyword 结尾）/
  *    multi-match-fields（fields 锚后右扫 + 标量包数组，terms-scalar 同款）。
- *  - 556 批再补三条（残面清零）：agg-size-default（terms 体收尾 '}' 前插 "size": 20——
+ *  - 再补三条（残面清零）：agg-size-default（terms 体收尾 '}' 前插 "size": 20——
  *    字符串感知配平扫描定位收尾，空体不带前导逗号）/ collapse-structure（消息拆坏值+
  *    值位证据闸，标量子集包对象 {"v": {}}；数组形态零 action）/ highlight-fields（fields
  *    标量子集包数组，multi-match-fields 同款；「缺 fields」分支无修复价值零 action）。
- *  - 557 批再补三条：root-bare-clause（裸子句逐键包 query 外壳——「整 body 重写不可修」
+ *  - 再补三条：root-bare-clause（裸子句逐键包 query 外壳——「整 body 重写不可修」
  *    旧裁定翻案为逐键 wrap 已可修：子句键前零宽插 "query": { + 复用 balancedCloseOf/
  *    objectInsertBeforeClose 在子句值收尾补 }；证据闸双条=marker 覆盖消息内子句键本体
  *    + root 无 "query" 键（首层键扫，防产出重复 query 键）；值非对象零 action）/
@@ -50,22 +50,22 @@
  *    agg-interval-key（calendar_interval/fixed_interval 双键互斥分支出删键双 action
  *    二选一，删值含尾随逗号或回吞前导逗号——「日历 vs 固定二义不越界」旧裁定收窄为
  *    仅互斥分支可修，废弃 interval / 双缺分支维持零 action）。
- *  - 558 批再补两处：agg-interval-key 废弃 interval 分支（「不越界」裁定对废弃单键场景
- *    的残留翻案，557 批 root-bare-clause 翻案同款先例——消息拆废弃键名「使用已废弃的
+ *  - 再补两处：agg-interval-key 废弃 interval 分支（「不越界」裁定对废弃单键场景
+ *    的残留翻案， root-bare-clause 翻案同款先例——消息拆废弃键名「使用已废弃的
  *    "x" 键」右扫整段改名 calendar_interval，script-inline 同款形态；键名拆不出/字面
  *    不在场零 action）/ 513 前导逗号删除（见上头注，头注记档：删除不是补逗号）。
- *  - 561 批再补两处：json 通道白名单新增「Comments are not allowed in JSON」→「删除注释」
+ *  - 再补两处：json 通道白名单新增「Comments are not allowed in JSON」→「删除注释」
  *    （JSONC 手写高频；只删除不改写——行内注释删 marker 区间本体、该行除注释外只剩空白时
  *    连同整行与行尾换行一并删（末行无换行删到行尾）、跨行块注释只删区间本体）/
  *    agg-type-typo 接键改名 action（bool-key-typo 同形态并入同分支，marker 即坏类型键
  *    本体，nearestOf 消息拆「最接近：」候选整段改名）。
- *  - 五百六十五批件①：上一条 561 comments quickfix 复活——MonacoEditor
+ *  - 件①：上一条 561 comments quickfix 复活——MonacoEditor
  *    setDiagnosticsOptions({ allowComments:true, comments:'ignore' }) 下 JSON worker 永不产
  *    注释 marker，该分支实为死代码（无 lint 源）。json provider 末尾追加了
  *    appendSelfScanCommentActions：对当前模型自扫注释范围（jsonc.findCommentRanges 字符串
  *    感知扫描单源）出「删除注释」，不强依赖 diagnostics；561 marker 分支保留原样（真有
  *    marker 时同区间去重不重复出），既有四码与 DSL 白名单逻辑零扰动。
- *  - 562 批再补一处：should-in-filter（dslLint 规则③ 561 立法的 quickfix 兜底）——
+ *  - 再补一处：should-in-filter（dslLint 规则③ 561 立法的 quickfix 兜底）——
  *    should 同层 bool 体收尾零宽插 "minimum_should_match": 1（agg-size-default 定位件
  *    形态平移、方向相反：锚="should" 键本体，其值是数组，收尾定位向左扫 bool 体开口；
  *    收尾配平与空体判定抽出共用件 insertBeforeObjectClose）。
@@ -80,7 +80,7 @@
  *    均从本记档移出）。
  */
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
-/* 五百六十五批件①：字符串感知注释扫描单源（jsonc 同源抽出）——json provider 自扫当前
+/* 件①：字符串感知注释扫描单源（jsonc 同源抽出）——json provider 自扫当前
    模型注释范围出「删除注释」quickfix。 */
 import { findCommentRanges } from './jsonc';
 
@@ -147,9 +147,9 @@ export function ensureJsonQuickFixes(): void {
             },
           });
         } else if (code === '513' || /property expected/i.test(m.message)) {
-          /* 533 批：513 只处理「,, 双逗号」安全子集——marker 行文本含字面 ',,' 才出
+          /* 513 只处理「,, 双逗号」安全子集——marker 行文本含字面 ',,' 才出
              「双逗号删一」（把 ',,' 换成 ','）。
-             558 批补前导逗号删除分支：marker 所在行 trimStart() 以 ',' 开头 → 删该前导
+             补前导逗号删除分支：marker 所在行 trimStart() 以 ',' 开头 → 删该前导
              逗号。头注记档：这是删除不是补逗号（与 519 同属删除通道），「513 不得误配
              补逗号」旧裁定不越界；',,' 在场仍走双逗号子集（既有优先级零漂移），两证据
              都不在（其余 513 场景无可靠修复点）维持零 action。 */
@@ -191,7 +191,7 @@ export function ensureJsonQuickFixes(): void {
             });
           }
         } else if (/comments are not allowed/i.test(m.message)) {
-          /* 561 批：JSONC 手写高频（注释在严格 JSON 非法）。安全修复只删除不改写：
+          /* JSONC 手写高频（注释在严格 JSON 非法）。安全修复只删除不改写：
              行内注释删 marker 区间本体；该行除注释外只剩空白时连同整行与行尾换行一并删
              （末行无换行只删到行尾，不留可吞换行）；跨行块注释区间跨行，仅删区间本体。 */
           const isMulti = m.endLineNumber > m.startLineNumber;
@@ -217,7 +217,7 @@ export function ensureJsonQuickFixes(): void {
           });
         }
       }
-      /* 五百六十五批件①：注释 quickfix 复活——自扫当前模型注释范围出「删除注释」。
+      /* 件①：注释 quickfix 复活——自扫当前模型注释范围出「删除注释」。
          背景：MonacoEditor setDiagnosticsOptions({ allowComments:true, comments:'ignore' })
          下 JSON worker 永不产注释 marker，上方 561 分支无 lint 源是死代码；自扫通道不依赖
          diagnostics，allowComments 手写注释（JSONC 调试常态）也有修复可点。
@@ -229,7 +229,7 @@ export function ensureJsonQuickFixes(): void {
   });
 }
 
-/* ═══ 五百六十五批件①：注释自扫 quickfix（复活 561 死代码通道）═══ */
+/* ═══ 件①：注释自扫 quickfix（复活 561 死代码通道）═══ */
 
 /** 注释区间的删除编辑区（与 561 marker 分支同一套安全删除语义，本处对自扫区间独立实现
  *  不回流改既有分支）：独占整行的行内注释连同整行与行尾换行一并删（末行无换行删到行尾，
@@ -307,7 +307,7 @@ function prevNonBlankLine(model: monaco.editor.ITextModel, fromLine: number): nu
   return 0;
 }
 
-/* ═════════ 五百三十四批 P0-2：es-dsl-lint 注册表 + quick fix ═════════ */
+/* ═════════  P0-2：es-dsl-lint 注册表 + quick fix ═════════ */
 
 /** 注册表条目：marker 定位（1 基行列）+ 产该 marker 的 finding（rule 驱动 fix 分派，
  *  message 供「最接近：」候选拆取）。 */
@@ -368,7 +368,7 @@ export function ensureDslLintQuickFixes(): void {
         if (!intersects(m, range)) continue;
         const entry = findDslLintEntry(model.uri.toString(), m.startLineNumber, m.startColumn);
         const rule = entry?.finding.rule ?? markerRuleSuffix(m);
-        /* 557 批：返回值放宽为单/多 action（agg-interval-key 互斥分支出删键双 action） */
+        /* 返回值放宽为单/多 action（agg-interval-key 互斥分支出删键双 action） */
         const r = dslLintAction(model, m, rule, entry?.finding.message ?? m.message);
         if (r) for (const a of Array.isArray(r) ? r : [r]) actions.push(a);
       }
@@ -405,7 +405,7 @@ function valueAfterMarker(model: monaco.editor.ITextModel, m: monaco.IRange): { 
   };
 }
 
-/* ═══ 556 批：对象体收尾定位（agg-size-default 补 size 的修复点）═══ */
+/* ═══ ：对象体收尾定位（agg-size-default 补 size 的修复点）═══ */
 
 /** 全文文本拼装（逐行 getLineContent，getLineMaxColumn=行长+1 → 行内容长度）。 */
 function modelFullText(model: monaco.editor.ITextModel): string | null {
@@ -460,7 +460,7 @@ function balancedCloseOf(full: string, openIdx: number): number {
 
 /** marker 锚（如 "terms"）之后对象体的收尾 '}' 零宽插入位。规则判定域保证锚值是对象；
  *  锚后无 '{' / 配平不闭合 → null（宁缺勿错）。
- *  562 批：收尾配平与空体判定抽出共用件 insertBeforeObjectClose——agg-size-default
+ *  收尾配平与空体判定抽出共用件 insertBeforeObjectClose——agg-size-default
  *  （锚后右找 '{'）与本批 should-in-filter（锚前左找 '{'）各管开口定位，形态对称。 */
 function insertBeforeObjectClose(full: string, openIdx: number): { line: number; col: number; bodyEmpty: boolean } | null {
   const close = balancedCloseOf(full, openIdx);
@@ -482,7 +482,7 @@ function objectInsertBeforeClose(model: monaco.editor.ITextModel, m: monaco.IRan
   };
 }
 
-/* ═══ 557 批：root-bare-clause 包壳 / agg-interval-key 删键的文本扫描件 ═══ */
+/* ═══ ：root-bare-clause 包壳 / agg-interval-key 删键的文本扫描件 ═══ */
 
 /** 从开引号位扫到收引号后一位（转义感知；未闭合 -1）。 */
 function skipString(full: string, openIdx: number): number {
@@ -568,7 +568,7 @@ function rootKeysOf(full: string): string[] {
 
 /** 规则→fix 白名单分派。白名单外（match-all / deep-paging 等建议类）恒 null=零
  *  action；改名类候选拆不出「最接近：」同样不出（宁缺勿错）。
- *  557 批返回值放宽为单/多 action（agg-interval-key 互斥分支出删键双 action）。 */
+ *  返回值放宽为单/多 action（agg-interval-key 互斥分支出删键双 action）。 */
 function dslLintAction(model: monaco.editor.ITextModel, m: monaco.editor.IMarker, rule: string, message: string): monaco.languages.CodeAction | monaco.languages.CodeAction[] | null {
   const mk = (r: monaco.IRange, text: string, title: string): monaco.languages.CodeAction => ({
     title,
@@ -620,13 +620,13 @@ function dslLintAction(model: monaco.editor.ITextModel, m: monaco.editor.IMarker
   if (rule === 'bool-key-typo' || rule === 'root-key-typo' || rule === 'settings-key' || rule === 'mapping-key'
       || rule === 'agg-type-typo') {
     /* marker 覆盖的就是坏键本体（anchor=拼错键），整段改名。
-       561 批并入 agg-type-typo（bool-key-typo 同消息形态，nearestOf 拆「最接近：」候选） */
+       并入 agg-type-typo（bool-key-typo 同消息形态，nearestOf 拆「最接近：」候选） */
     const near = nearestOf(message);
     if (!near) return null;
     return mk(m, '"' + near + '"', '键改为「' + near + '」');
   }
   if (rule === 'unknown-field' || rule === 'sort-unknown-field') {
-    /* 546 批：坏字段改名。marker 覆盖的就是坏字段本体（anchor=字段名，setMarkers 带引号定位），
+    /* 坏字段改名。marker 覆盖的就是坏字段本体（anchor=字段名，setMarkers 带引号定位），
        消息拆坏字段名做证据闸 + 「最接近：」候选整段改名（bool-key-typo 同款形态）。
        证据闸防误配：marker 文本 ≠ "坏字段" 即零 action（注册表缺席/构造错位宁缺勿错） */
     const bad = /字段「(.+?)」不在当前索引/.exec(message)?.[1];
@@ -636,7 +636,7 @@ function dslLintAction(model: monaco.editor.ITextModel, m: monaco.editor.IMarker
     return mk(m, '"' + near + '"', '字段改为「' + near + '」');
   }
   if (rule === 'agg-text-field') {
-    /* 546 批：text 字段聚合改 .keyword 子字段（消息建议文案同源）。marker 覆盖坏字段本体，
+    /* text 字段聚合改 .keyword 子字段（消息建议文案同源）。marker 覆盖坏字段本体，
        整段替换为 "字段.keyword"；坏字段名拆不出（消息形态漂移）或 marker 错位即零 action */
     const bad = /text 字段 (\S+?)：/.exec(message)?.[1];
     if (!bad) return null;
@@ -644,7 +644,7 @@ function dslLintAction(model: monaco.editor.ITextModel, m: monaco.editor.IMarker
     return mk(m, '"' + bad + '.keyword"', '字段改为「' + bad + '.keyword」');
   }
   if (rule === 'mapping-type') {
-    /* 546 批：坏类型值改名。anchor 钉 'type' 键名，坏值在其后（JSON 文本序），右扫首条命中
+    /* 坏类型值改名。anchor 钉 'type' 键名，坏值在其后（JSON 文本序），右扫首条命中
        （sort-order-typo 同款形态）；候选拆不出 / 文档无坏值即零 action */
     const near = nearestOf(message);
     const bad = /类型「(.+?)」疑似/.exec(message)?.[1];
@@ -654,7 +654,7 @@ function dslLintAction(model: monaco.editor.ITextModel, m: monaco.editor.IMarker
     return mk(hit, '"' + near + '"', '类型改为「' + near + '」');
   }
   if (rule === 'text-sort') {
-    /* 547 批：sort 打 text 字段 → 排序字段追加 .keyword 子字段（消息拆坏字段做证据闸 +
+    /* sort 打 text 字段 → 排序字段追加 .keyword 子字段（消息拆坏字段做证据闸 +
        整段改名，agg-text-field 同款形态）。marker 文本 ≠ "坏字段" 即零 action（宁缺勿错） */
     const bad = /sort 打在 text 字段 (\S+?)：/.exec(message)?.[1];
     if (!bad) return null;
@@ -662,7 +662,7 @@ function dslLintAction(model: monaco.editor.ITextModel, m: monaco.editor.IMarker
     return mk(m, '"' + bad + '.keyword"', '字段改为「' + bad + '.keyword」');
   }
   if (rule === 'text-term') {
-    /* 547 批：text 字段 term/terms/wildcard → 字段追加 .keyword 子字段。消息不含字段名，
+    /* text 字段 term/terms/wildcard → 字段追加 .keyword 子字段。消息不含字段名，
        反向证据闸：marker 覆盖文本本身须是带引号字符串字面量且不以 .keyword 结尾——
        弱闸宁缺勿错（非串 / 已带 .keyword 零 action，quickFixTextTiers547 B 段钉死） */
     const inner = /^"([^"]+)"$/.exec(model.getValueInRange(m))?.[1];
@@ -670,7 +670,7 @@ function dslLintAction(model: monaco.editor.ITextModel, m: monaco.editor.IMarker
     return mk(m, '"' + inner + '.keyword"', '字段改为「' + inner + '.keyword」');
   }
   if (rule === 'multi-match-fields') {
-    /* 547 批：multi_match fields 标量包数组（terms-scalar 同款）。anchor=multi_match 键本体，
+    /* multi_match fields 标量包数组（terms-scalar 同款）。anchor=multi_match 键本体，
        fields 键在其后（JSON 文本序）右扫定位，再按「键值冒号+标量」提取（valueAfterMarker
        同形态）；fields 键不在场（缺 fields 分支）/值非标量（数组、对象形态）→ 零 action */
     const fKey = firstMatchAfter(model, m, '"fields"');
@@ -680,7 +680,7 @@ function dslLintAction(model: monaco.editor.ITextModel, m: monaco.editor.IMarker
     return mk(v.range, '[' + v.text + ']', '标量包成数组 [' + v.text + ']');
   }
   if (rule === 'should-in-filter') {
-    /* 五百六十二批：filter/must_not 语境纯 should 补 "minimum_should_match": 1（should
+    /* filter/must_not 语境纯 should 补 "minimum_should_match": 1（should
        成为硬性匹配条件，dslLint 规则 ③ 561 立法的 quickfix 兜底面）。
        修复点=should 所在 bool 体收尾 '}' 前零宽插入（agg-size-default 定位件形态平移，
        方向相反：锚是 "should" 键本体、其值是数组，锚后首个 '{' 是数组元素对象——须向左
@@ -704,7 +704,7 @@ function dslLintAction(model: monaco.editor.ITextModel, m: monaco.editor.IMarker
     );
   }
   if (rule === 'agg-size-default') {
-    /* 556 批：terms 桶补 "size": 20（dslLint 判定域=terms 体是对象且 size 缺失）。
+    /* terms 桶补 "size": 20（dslLint 判定域=terms 体是对象且 size 缺失）。
        修复点=terms 体收尾 '}' 前零宽插入（字符串感知配平扫描定位）；marker 非 "terms"
        本体（534 B 段 {"anchor": {}} 负向形态）/体不闭合 → 零 action（宁缺勿错）。
        空体 {} 不带前导逗号。20 与构建器/值建议链路的 terms size 同档。 */
@@ -715,7 +715,7 @@ function dslLintAction(model: monaco.editor.ITextModel, m: monaco.editor.IMarker
     return mk(tail.insert, text, '补 "size": 20（默认 10 桶截断）');
   }
   if (rule === 'collapse-structure') {
-    /* 556 批：collapse 标量子集包对象（"v" → {"v": {}}）。消息拆坏值做证据闸 +
+    /* collapse 标量子集包对象（"v" → {"v": {}}）。消息拆坏值做证据闸 +
        valueAfterMarker 值位校验（collapse 键后标量串与消息一致才出）；数组形态
        （消息=「收到数组」）/对象形态不进判定域 → 零 action */
     const bad = /收到标量「(.+?)」/.exec(message)?.[1];
@@ -725,7 +725,7 @@ function dslLintAction(model: monaco.editor.ITextModel, m: monaco.editor.IMarker
     return mk(v.range, '{"' + bad + '": {}}', '改为对象 {"' + bad + '": {}}');
   }
   if (rule === 'highlight-fields') {
-    /* 556 批：highlight fields 标量子集包数组（multi-match-fields 同款形态）。
+    /* highlight fields 标量子集包数组（multi-match-fields 同款形态）。
        「缺 fields」分支（534 B 段负向锁形态）无修复价值（补空 fields=零高亮）零 action；
        标量分支按 fields 键右扫 + 值位标量提取。 */
     if (!/收到标量「.+?」/.test(message)) return null;
@@ -736,7 +736,7 @@ function dslLintAction(model: monaco.editor.ITextModel, m: monaco.editor.IMarker
     return mk(v.range, '[' + v.text + ']', '标量包成数组 [' + v.text + ']');
   }
   if (rule === 'root-bare-clause') {
-    /* 557 批：裸子句逐键包 query 外壳（「整 body 重写不可修」旧裁定翻案——wrap 只动
+    /* 裸子句逐键包 query 外壳（「整 body 重写不可修」旧裁定翻案——wrap 只动
        两处零宽点，body 原文零重写）。证据闸：① 消息拆子句键名 + marker 文本 === "键"
        （注册表错位宁缺勿错，534 B 段 {"anchor": {}} 形态拦在①）；② root 无 "query"
        键（rootKeysOf 首层键扫——已有 query 再 wrap 必产重复 query 键）；③ 锚后紧邻
@@ -772,7 +772,7 @@ function dslLintAction(model: monaco.editor.ITextModel, m: monaco.editor.IMarker
     };
   }
   if (rule === 'text-range') {
-    /* 557 批：range 打 text 字段 → 字段追加 .keyword 子字段（.keyword 后 range 在
+    /* range 打 text 字段 → 字段追加 .keyword 子字段（.keyword 后 range 在
        词项级精确值上做字典序比较，语义至少自洽）。消息不含可锚字段名，text-term 同款
        反向证据闸：marker 覆盖文本须是带引号字符串字面量且不以 .keyword 结尾——弱闸
        宁缺勿错（非串 / 已带 .keyword 零 action）。 */
@@ -781,7 +781,7 @@ function dslLintAction(model: monaco.editor.ITextModel, m: monaco.editor.IMarker
     return mk(m, '"' + inner + '.keyword"', '字段改为「' + inner + '.keyword」');
   }
   if (rule === 'agg-interval-key') {
-    /* 557 批：双键互斥分支出删键双 action（日历/固定语义二选一，删哪个由用户定）。
+    /* 双键互斥分支出删键双 action（日历/固定语义二选一，删哪个由用户定）。
        证据闸：① marker 覆盖 "date_histogram" 本体（534 B 段 {"anchor": {}} 形态拦在①）；
        ② 消息含「互斥」；③ 两键在锚后都在场且各自能扫出标量对删除区间（含尾随逗号或回吞
        前导逗号——删后 JSON 必须仍合法）。 */
@@ -807,7 +807,7 @@ function dslLintAction(model: monaco.editor.ITextModel, m: monaco.editor.IMarker
       }
       return out;
     }
-    /* 558 批：废弃 interval 分支翻案出改名 action（557 批 root-bare-clause「不可修」
+    /* 废弃 interval 分支翻案出改名 action（ root-bare-clause「不可修」
        翻案同款先例）。lint 消息拆废弃键名（「使用已废弃的 "x" 键」文案契约）做证据闸，
        右扫 '"x"' 字面整段改名 calendar_interval——日历语义是 suggestion 文案的首选侧，
        单键改名比双键二选一的互斥分支更保守（script-inline 同款形态）。键名拆不出

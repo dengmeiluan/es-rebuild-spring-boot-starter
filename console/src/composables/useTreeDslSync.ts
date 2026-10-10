@@ -2,7 +2,7 @@
    防环：树写 dsl 前置 origin='tree'，dsl watch 见到即清标记跳过；
    手改 dsl debounce 250ms 回解；失败（非法 JSON）树冻结 stale=true，dsl 一字不动。
    回解只 stripJsonComments、不 applyVars——${var} 占位符必须随树往返（零降级）。
-   shallowRef：树不可变更新（Task 6 契约），引用变化即新树，免深响应代理开销。 */
+   shallowRef：树不可变更新（ 契约），引用变化即新树，免深响应代理开销。 */
 import { shallowRef, ref, watch, onScopeDispose, getCurrentScope, type Ref } from 'vue';
 import { stripJsonComments, tryParse } from '../utils/jsonc';
 import { parseTree, serializeTree, emptyTree, type QueryTree } from '../utils/queryAst';

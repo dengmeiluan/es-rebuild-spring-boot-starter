@@ -3,7 +3,7 @@ package io.github.dengmeiluan.es.rebuild.auth;
 import java.util.List;
 
 /**
- * 控制台操作审计存储 SPI（R34 落 ES；R63 抽象化；五百五十五批不留余地类型化）：
+ * 控制台操作审计存储 SPI（ 落 ES； 抽象化；不留余地类型化）：
  * 谁在什么时候对哪个端点、针对哪个集群做了什么。
  *
  * <p>存储可插拔（平台化底座）：独立部署默认落控制集群 ES 索引
@@ -13,7 +13,7 @@ import java.util.List;
  *
  * <p>契约红线：审计永不反噬业务——record 必须异步/尽力而为，任何失败只记日志不上抛。</p>
  *
- * <p><b>五百五十五批契约收紧（不留余地）</b>：写入唯一入口为
+ * <p><b>契约收紧（不留余地）</b>：写入唯一入口为
  * {@link #record(ConsoleOpsAuditEvent)}（旧 8 参/7 参签名删除）；查询唯一入口为
  * {@link #search(String, String, int, int, Long)}，出参为类型化记录列表——旧
  * 「ES search 响应 Map 形态」不再是 SPI 契约，线缆形态由控制器单点组装。</p>

@@ -1,11 +1,11 @@
 /**
- * 五百六十批 轨2（工蚁B）IndexHub 深化——六刀（源码锁）。
+ *  轨2（工蚁B）IndexHub 深化——六刀（源码锁）。
  *
  * ① JsonArea getEditor 转发：defineExpose 增 getEditor（MonacoEditor :931 已 expose，
  *    组件零触）——父面拿内层 Monaco 实例的统一出口，全站多宿主（AR/IH/Doc）共用，纯增量；
  * ② IndexHub query tab Ctrl+I 唤起补全：DevToolsView 557 判例逐字平移（watch(ref)+
  *    nextTick 后置取 + happy-dom stub 守卫），键经 JsonArea getEditor 转发通道；
- * ③ docs/query 两 tab cURL 快速复制：docs 档包 buildDocsDslWithSort()（262 批源码锁钉
+ * ③ docs/query 两 tab cURL 快速复制：docs 档包 buildDocsDslWithSort()（源码锁钉
  *    buildDocsDsl 调用字面，原函数不改）、query 档用编辑器 DSL 原文，histCurl 手法组串，
  *    copyText 管线 + notify 反馈；
  * ④ settings/mapping 高度三档：useTierCycle('ih.settingsH'/'ih.mapH')，SettingsGrid/
@@ -70,7 +70,7 @@ describe('560 ③：cURL 快速复制', () => {
   it('docs 档组串包 buildDocsDslWithSort()（原函数不改），query 档用 DSL 原文', () => {
     expect(ih).toMatch(/function copyDocsCurl\(\) \{[^]*?buildDocsDslWithSort\(\)[^]*?copyText\(c\)/);
     expect(ih).toMatch(/function copyQryCurl\(\) \{[^]*?dsl\.value[^]*?copyText\(c\)/);
-    expect(ih, '262 批单源不动：buildDocsDslWithSort 函数体仍调 buildDocsDsl')
+    expect(ih, '单源不动：buildDocsDslWithSort 函数体仍调 buildDocsDsl')
       .toMatch(/function buildDocsDslWithSort\(\): string \{[^]*?buildDocsDsl\(docsQ\.value/);
   });
   it('copyText 管线 + notify 反馈（histCurl 同款句式）', () => {
@@ -102,7 +102,7 @@ describe('560 ④：settingsH/mapH 高度档位', () => {
 /* ═══ ⑤ RawIo 取数特征 scope 分流 ═══ */
 describe('560 ⑤：openRawIo scope 分流', () => {
   it('签名加参 + ops 双回退（552 双参由来）+ query 四特征链（669 随迁）', () => {
-    /* 六百六十九批随迁（击穿者：件A 特征链扩容——565 批 DQ 侧五写路径扩容时 IH 被冻结
+    /* 随迁（击穿者：件A 特征链扩容—— DQ 侧五写路径扩容时 IH 被冻结
        记档，解冻后 query 档补齐 query→profile→update-document→delete-by-id 四特征回退；
        ops 双参/签名/调用点分流/判空分档零触；本体锚 rawIoChain669.spec A1。
        ⚠随迁漏扫自省：669 家族快验未含本 spec（650-C3 全目录 grep 纪律执行不到位），
@@ -126,7 +126,7 @@ describe('560 ⑥：--ih-alt-cap 变量化与 JsonArea :deep 退壳', () => {
   it('ih-json-wrap/ih-tree-view max-height 变量化（值零变零视觉）', () => {
     expect(ih).toContain('.ih-json-wrap { max-height: var(--ih-alt-cap, 56vh); }');
     expect(ih).toContain('.ih-tree-view { max-height: var(--ih-alt-cap, 56vh); padding: var(--sp-2); }');
-    expect(ih, '402 批注释口径保留').toMatch(/402 批 vh 统一族/);
+    expect(ih, '注释口径保留').toMatch(/ vh 统一族/);
   });
   it('query tab fill 与 doc 编辑弹窗 fill 两处视图侧退壳（组件本体零触）', () => {
     expect(ih).toContain('.ih-dsl-wrap :deep(.ja)');

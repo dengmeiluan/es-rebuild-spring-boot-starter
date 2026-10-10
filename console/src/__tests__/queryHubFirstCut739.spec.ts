@@ -1,15 +1,15 @@
 /**
- * 七百三十九批：QueryHub 首刀三小刀+aria 随批（R120；R119 裁决表 G145+G140+G141+G142）。
+ * QueryHub 首刀三小刀+aria 随批（； 裁决表 G145+G140+G141+G142）。
  *
  * ① G145（P3 体验断链·头号）场景任务「一键生成 DSL」在构建器默认收起态断链——
  *    usePref 'query.buildCollapsed' 缺省 true→dq-main v-show 隐藏，预填完整进 Monaco
  *    （数据层）而编辑器零渲染（显示层）；toast「看看语句就学会了」指引与可见性断裂
- *    （R64 活教材语义）。修法=onMounted 深链消费处（?dsl= 预填成功分支）自展开一行守卫。
- * ② G140（P3 死代码）场景条旧壳三组死样式退役（542 批迁入工具行后残留，DOM 零引用；
+ *    （ 活教材语义）。修法=onMounted 深链消费处（?dsl= 预填成功分支）自展开一行守卫。
+ * ② G140（P3 死代码）场景条旧壳三组死样式退役（迁入工具行后残留，DOM 零引用；
  *    活锚 toggle 钮/pop 容器保留；737 G131 同族）。
  * ③ G141（P3 注释失实+铁律 F）模式钮 essence 六条选型文案完全不可达——title 全 null+
  *    副行死渲染双实锚，而源码注释两处宣称「essence 收进 title 悬浮」与实现不符；
- *    修法=六钮补 :title=m.essence+死渲染退役+注释对齐（R64「帮用户 1 秒选对通道」）。
+ *    修法=六钮补 :title=m.essence+死渲染退役+注释对齐（「帮用户 1 秒选对通道」）。
  * ④ G142（弱 P3 aria 随批）模式组容器补 role=group+aria-label、六钮 aria-pressed
  *    （733 G114 同族；hubsKbNav 容器字面锁随迁）。
  *
@@ -222,8 +222,8 @@ describe('739 G140 场景条旧壳三组死样式退役（源码锁；737 G131 �
     expect(v).toContain('qh-task qh-tasks-toggle');
     expect(v).toContain('class="qh-tasks-pop"');
     expect(v).toMatch(/\.qh-task-pop \{/);
-    /* 删除注记在场（自然语言转述） */
-    expect(v).toMatch(/七百三十九批/);
+    /* 删除域注释已语义化（批号锚退役），改守功能实锚 */
+    expect(v).toContain('将删除全部通道的查询历史记录');
   });
 });
 
@@ -254,6 +254,6 @@ describe('739 A0 挂载不变量负锚（现状即守卫）', () => {
     expect(host.querySelector('.qh-mode.on')?.textContent).toContain('DSL');
     expect(host.querySelector('.qh-tasks-toggle'), '场景任务入口在场（活锚）').toBeTruthy();
     expect(host.textContent).toContain('日常场景');
-    /* roving 键盘导航行为面归 hubsKbNav（219 批），此处不重复锁 */
+    /* roving 键盘导航行为面归 hubsKbNav（），此处不重复锁 */
   });
 });

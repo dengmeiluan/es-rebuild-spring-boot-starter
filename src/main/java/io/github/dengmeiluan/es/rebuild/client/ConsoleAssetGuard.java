@@ -4,7 +4,7 @@ import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * R93 client 模式资源守卫：让控制台静态资源返 404。
+ *  client 模式资源守卫：让控制台静态资源返 404。
  *
  * <p>为什么需要它：控制台的 6MB 静态资源打在 {@code classpath:/static/console/} 下，
  * 由 Spring Boot 默认资源处理器无条件兜住 —— {@code es.rebuild.web-enabled=false}

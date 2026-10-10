@@ -1,5 +1,5 @@
 /**
- * 二百二十七批：单元格值 → 查询 DSL 生成（dbx 19 种复制 extractor 的 ES 语义对位）。
+ * 单元格值 → 查询 DSL 生成（dbx 19 种复制 extractor 的 ES 语义对位）。
  *
  * 路由规则：_id → ids；多值（去重后 >1）→ terms；单值按字段类型 text → match、
  * 其余（keyword/数值/日期/布尔/未知）→ term。epoch 毫秒人性化只存在于显示层
@@ -25,7 +25,7 @@ export function buildDsl(field: string, values: unknown[], fieldType?: string): 
   return { term: { [field]: v } };
 }
 
-/* 二百五十三批：exists 查询——字段存在性检索语义（buildDsl 剔空值的反面：
+/* exists 查询——字段存在性检索语义（buildDsl 剔空值的反面：
    找的就是「这列有没有值」）。任意业务列可用（含 text）；_id 恒存在无意义不出项 */
 export function buildExistsDsl(field: string): Record<string, any> | null {
   if (!field || field === '_id') return null;

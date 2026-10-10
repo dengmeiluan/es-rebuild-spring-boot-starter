@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 控制台操作审计——控制集群 ES 档（R34，R63 抽 SPI 后的默认实现）：异步单线程落 ES 索引，
+ * 控制台操作审计——控制集群 ES 档（， 抽 SPI 后的默认实现）：异步单线程落 ES 索引，
  * 队列满即丢弃（审计不反噬业务可用性）。
  *
  * <p>与重建域的 {@code RebuildAuditStore}（记录索引重建生命周期）互补：本店记录的是
@@ -66,7 +66,7 @@ public class EsConsoleOpsAuditStore implements ConsoleOpsAuditStore {
     private final String auditIndex;
     private final boolean rollover;
     private final ThreadPoolExecutor executor;
-    /* 五百四十六批：审计落库失败累计（首条 WARN 节流计数，见 warnAuditDrop） */
+    /* 审计落库失败累计（首条 WARN 节流计数，见 warnAuditDrop） */
     private final AtomicLong dropCount = new AtomicLong();
     /* 环形写路径：已确保建过索引的「日」标记（单写线程内防同日重复 PUT；volatile=查询线程无涉、仅写线程读写） */
     private volatile String ensuredDay;
@@ -92,7 +92,7 @@ public class EsConsoleOpsAuditStore implements ConsoleOpsAuditStore {
         this.executor.allowCoreThreadTimeOut(true);
     }
 
-    /** 记一笔操作（异步，永不抛）。五百五十五批：唯一写入口为富事件。 */
+    /** 记一笔操作（异步，永不抛）。：唯一写入口为富事件。 */
     @Override
     public void record(ConsoleOpsAuditEvent event) {
         try {
@@ -183,7 +183,7 @@ public class EsConsoleOpsAuditStore implements ConsoleOpsAuditStore {
     }
 
     /**
-     * 五百四十六批：审计落库失败观测——首条 WARN 留痕，此后仅累计静默（与 JDBC 档同一口径，
+     * 审计落库失败观测——首条 WARN 留痕，此后仅累计静默（与 JDBC 档同一口径，
      * 详见 {@code JdbcConsoleOpsAuditStore#warnAuditDrop} 的形态裁决：高频可复现失败路径
      * 不逐条打，但丢审计流水首次必须留痕）。 */
     private void warnAuditDrop(String where, Exception e) {

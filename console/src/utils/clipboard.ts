@@ -1,4 +1,4 @@
-/* 242 批 v4：剪贴板架构层统一管线（全站唯一复制出口 format.copyText 委托至此）。
+/*  v4：剪贴板架构层统一管线（全站唯一复制出口 format.copyText 委托至此）。
    三层语义，每层可靠性递进：
    ┌ L1 Clipboard API（secure context）——现代标准，最可靠；
    ├ L2 copy 事件劫持——execCommand('copy') 仅作触发器，ClipboardEvent.clipboardData.setData

@@ -35,7 +35,7 @@ import java.util.TreeSet;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * R93 本波最关键的测试：钉住「业务侧默认零装配」。
+ *  本波最关键的测试：钉住「业务侧默认零装配」。
  *
  * <p>这 3800 行删除面几乎零测试覆盖，唯一能自动化证明「业务侧真的变轻了」的手段就是本类。
  * 断言的是 Bean 的<b>存在与不存在</b>，不是行为——因此它对实现细节不敏感、不会因重构假红。</p>
@@ -71,7 +71,7 @@ public class ClientModeWiringTest {
                     ctx.getBeanNamesForType(EntityIndexNames.class).length > 0);
             org.junit.Assert.assertTrue("client 模式必须装 IndexMetaRegistry",
                     ctx.getBeanNamesForType(IndexMetaRegistry.class).length > 0);
-            /* R96：4 个 sdes 签名断裂点里有两个落在 EntityFieldScanner —— client 模式
+            /* 4 个 sdes 签名断裂点里有两个落在 EntityFieldScanner —— client 模式
                desired-state 的必经之路。契约诊断只在 console 装，等于让最需要它的一方
                拿不到；故它必须出现在 client 模式的装配清单里。 */
             org.junit.Assert.assertTrue("client 模式必须装 EsStackContractValidator（断裂点正在 client 侧）",
@@ -80,7 +80,7 @@ public class ClientModeWiringTest {
     }
 
     /**
-     * R94 修订一的前提看守：client 模式下<b>没有任何东西校验 mappingJson 的 JSON 合法性</b>。
+     *  修订一的前提看守：client 模式下<b>没有任何东西校验 mappingJson 的 JSON 合法性</b>。
      *
      * <p>唯一会校验它的 {@link io.github.dengmeiluan.es.rebuild.validate.IndexConfigValidator}
      * 与 {@link io.github.dengmeiluan.es.rebuild.validate.ConfigValidationStartupRunner}
@@ -118,7 +118,7 @@ public class ClientModeWiringTest {
     }
 
     /**
-     * R93 Task 7：{@code AdhocRebuildService} 必须<b>真的拿到</b> {@code RebuildLockStore}。
+     *  {@code AdhocRebuildService} 必须<b>真的拿到</b> {@code RebuildLockStore}。
      *
      * <p><b>本断言声称防的失败模式</b>：装配处漏传 lockStore（或传了 null），adhoc 退回
      * 无锁构造 —— 两个人对同一索引起重建仍会各建新索引、各翻别名，而<b>整套锁代码看起来都在</b>，
@@ -242,7 +242,7 @@ public class ClientModeWiringTest {
      * 而不是因为拿到 null 而恒真通过。</p>
      *
      * <p>端到端「真 404」不在本测试范围内（starter 无 @SpringBootApplication，
-     * 起不了带容器的上下文），由 Task 5 的真实进程 curl 验证。</p>
+     * 起不了带容器的上下文），由  的真实进程 curl 验证。</p>
      */
     @Test
     public void consoleAssetGuardRegistersConsolePatternWithNoLocations() throws Exception {
@@ -361,10 +361,10 @@ public class ClientModeWiringTest {
     }
 
     /**
-     * R100：残留的手写 {@link ManagedEsIndex} bean 必须让上下文<b>启动失败</b>，并点名违规类。
+     * 残留的手写 {@link ManagedEsIndex} bean 必须让上下文<b>启动失败</b>，并点名违规类。
      *
      * <p><b>本条原先断言的是相反的行为</b>（「从容器收集手写 ManagedEsIndex」）。
-     * R100 把受管索引改成「带 {@code @Document} 就自动发现」，并<b>整体废掉</b>手写 provider 通道：
+     *  把受管索引改成「带 {@code @Document} 就自动发现」，并<b>整体废掉</b>手写 provider 通道：
      * {@code ManagedEsIndexScanner.rejectLeftoverProviders} 一旦发现残留实现即抛
      * {@code IllegalStateException}。原断言描述的能力已被有意删除，故本条改为钉住新语义。</p>
      *
@@ -401,7 +401,7 @@ public class ClientModeWiringTest {
     }
 
     /**
-     * 模拟接入方<b>残留</b>的手写 provider（R100 已废弃的通道），用于上面那条 fail-fast 断言。
+     * 模拟接入方<b>残留</b>的手写 provider（ 已废弃的通道），用于上面那条 fail-fast 断言。
      *
      * <p>用具名类而非 lambda：异常信息点名的是 {@code getClass().getName()}，
      * lambda 的名字形如 {@code ...$$Lambda$677/2091439256} 带运行期序号，无法稳定断言。</p>
@@ -423,7 +423,7 @@ public class ClientModeWiringTest {
     }
 
     /**
-     * 模拟宿主「基础包里放了个 {@code @Document} 实体」—— R100 之后唯一合法的接入形态。
+     * 模拟宿主「基础包里放了个 {@code @Document} 实体」——  之后唯一合法的接入形态。
      *
      * <p>通过 {@link org.springframework.boot.autoconfigure.AutoConfigurationPackages#register}
      * 把 {@code ...config.hostpkg} 注册为宿主基础包，让 {@code ManagedEsIndexScanner.discover}
@@ -445,7 +445,7 @@ public class ClientModeWiringTest {
     }
 
     /**
-     * R93-5：client 模式必须装期望配置控制器，否则「一键复制」无从下手。
+     * -5：client 模式必须装期望配置控制器，否则「一键复制」无从下手。
      *
      * <p><b>这是本 Task 的存亡断言</b>：该 Bean 若被误写进 {@code ConsoleModeConfiguration}
      * （本类里 51 个控制台 Bean 都在那个嵌套类里，放错是最可能的失误），
@@ -467,7 +467,7 @@ public class ClientModeWiringTest {
                         ctx.getBeanNamesForType(DesiredStateController.class).length > 0));
     }
 
-    /* ---- R98：`/internal/es/index/keys` 是 console 专属，desired-state 两种模式都在 ----
+    /* ---- ：`/internal/es/index/keys` 是 console 专属，desired-state 两种模式都在 ----
        起因：README 原写「client 模式下 /internal/es/index/** 全部 404」，而
        DesiredStateController 映射的是**同一个前缀**且两种模式都装 —— 该说法自相矛盾。
        AGENTS.md 更进一步，把 console 专属的 /keys 写成通用「接口自检」步骤，
@@ -501,7 +501,7 @@ public class ClientModeWiringTest {
      * 而控制器若拿到一个空 registry（或另一个实例），端点会稳定返回 {@code []} ——
      * 页面显示空态，看起来「正常」，实则业务方永远复制不到任何东西。那是静默空转。</p>
      *
-     * <p><b>R100 只换了声明机制，没换意图</b>：宿主原先靠手写 {@code ManagedEsIndex} bean 声明索引，
+     * <p><b> 只换了声明机制，没换意图</b>：宿主原先靠手写 {@code ManagedEsIndex} bean 声明索引，
      * 现在靠「基础包里放 {@code @Document} 实体」。本条的判别力（端到端：宿主声明 → 扫描 →
      * registry → 控制器 payload）原样保留，只是夹具从注册 provider bean 换成注册
      * {@code AutoConfigurationPackages}。</p>
@@ -590,7 +590,7 @@ public class ClientModeWiringTest {
     }
 
     /**
-     * R93 Task 9.5（台账 #65）：{@code StaleWriteBlockDetector} 在<b>两种模式</b>都必须装。
+     *  .5（台账 #65）：{@code StaleWriteBlockDetector} 在<b>两种模式</b>都必须装。
      *
      * <p><b>本断言声称防的失败模式</b>：这条诊断被顺手挪进 {@code ConsoleModeConfiguration}，
      * 于是<b>业务侧</b>——也就是唯一的受害者、唯一知道自己有哪些索引的那一方——反而没有它，
@@ -608,7 +608,7 @@ public class ClientModeWiringTest {
     }
 
     /**
-     * R93 #70（台账）：{@code EsWriteRetryAspect} 与 {@code EsWriteRetryTemplate}
+     *  #70（台账）：{@code EsWriteRetryAspect} 与 {@code EsWriteRetryTemplate}
      * 在<b>两种模式</b>都必须装。
      *
      * <p><b>本断言声称防的失败模式</b>：这对 Bean 原本被放在 {@code ConsoleModeConfiguration} 里，

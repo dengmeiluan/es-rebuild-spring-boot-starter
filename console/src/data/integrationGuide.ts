@@ -1,5 +1,5 @@
 /* 2.6.5 接入文档（顶栏抽屉展示）：内容是数据不是模板——6 节覆盖接入全路径，
-   版本号从 __STARTER_VERSION__（vite define 构建期注入，见 Task 5）单点拼装，
+   版本号从 __STARTER_VERSION__（vite define 构建期注入，见 ）单点拼装，
    升版本只改 pom，文档自动跟随。宿主侧代码片段按 宿主形态给出，接入方复制改包名即可。 */
 
 export interface GuideSection {

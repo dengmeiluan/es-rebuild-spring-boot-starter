@@ -4,7 +4,7 @@
    （splitMark 纯函数复用，不开 v-html 注入面，同 MarkText 手法）。
    rank 规则（FieldPicker 既有语义原样下沉）：精确=0 > 前缀=1 > 包含=2，同级字母序。 */
 import { ref } from 'vue';
-/* 五百六十五批件⑤：splitMark 改从 utils/markSeg 引（原反向 import composables/useGridSearch
+/* 件⑤：splitMark 改从 utils/markSeg 引（原反向 import composables/useGridSearch
    的依赖倒挂退役；useGridSearch re-export 同一函数引用，行为零漂移） */
 import { splitMark } from './markSeg';
 import type { FieldItem } from '../composables/useIndexFields';
@@ -31,7 +31,7 @@ export interface FieldHit {
 interface FieldGroup { label: string; hits: FieldHit[] }
 
 /* 组头中文名（FieldPicker 既有 GH_LABEL 迁入）：数值族/date 给中文名，其余用类型原名。
-   556 批只增 date_nanos（554 批 opsForType/值档已并入 date 族的组头归一，fieldSelectPopup
+   只增 date_nanos（ opsForType/值档已并入 date 族的组头归一，fieldSelectPopup
    锁面无此类型不受影响）；text/keyword 等组头字面被既有 spec 锁定不扩——全类型人话词表
    收口在 utils/esEnumZh.FIELD_TYPE_ZH（本表后续扩容从彼接线）。
    558b 批：接线兑现——groupLabelOf 兜底链 GH_LABEL[type] || FIELD_TYPE_ZH[type] || type，
@@ -100,7 +100,7 @@ export function searchFields(opts: {
      最近字段为「近似候选」：rank=3 恒居既有三档之后（仅零命中时存在，天然殿后），
      距离升序、同距字母序；typeFilter 语义照常生效（不越类型域）；空查询不纠错（无笔误可纠正）。
      total 随之计入近似候选数（消费方 N/N 计数连贯），capped 仍只按真实命中判定。
-     556 批短词阈值收紧：kw ≤2 字符时距离 ≤1 才纠错——两字全换的 d=2 候选（'ab'→'bd'）
+     短词阈值收紧：kw ≤2 字符时距离 ≤1 才纠错——两字全换的 d=2 候选（'ab'→'bd'）
      基本无关，噪音大于价值；≥3 字符维持既有 ≤2 口径（548 C 锁面不回退） */
   let total = base.length;
   if (!flat.length && kw) {
@@ -130,7 +130,7 @@ const curIndex = ref('');
 export function setFieldSearchIndex(idx: string) { curIndex.value = (idx || '').trim(); }
 export function curFieldSearchIndex(): string { return curIndex.value; }
 
-/* ═══ 五百二十五批：树内已用字段上下文（FieldSelect 候选 used 前置段的数据源） ═══
+/* ═══ ：树内已用字段上下文（FieldSelect 候选 used 前置段的数据源） ═══
    setFieldSearchIndex 同款模块态范式：QueryTreePane watch 树变化收集全部叶子条件字段名
    （去重）写入，FieldSelect 只读——免 prop 逐层透传（NodeRenderer 之下透传面过大，既有先例）。
    语义本就是「本次查询全局已用」（非组件私有态），FieldSelect 多实例同页读同一份可接受。 */
@@ -176,7 +176,7 @@ export function defaultLeafTarget(
   return { field, op: t ? opsForType(t)[0] : 'term' };
 }
 
-/* ═══ 五百六十五批件④：值位静态档表单源（TYPE_VALUE_HINTS）═══
+/* ═══ 件④：值位静态档表单源（TYPE_VALUE_HINTS）═══
    Lucene 值位形态全档收编（此前 LuceneInput 本地七表 / sqlCompletion VAL_FORMAT_HINTS 字面档
    / 本文件 valueHintsForType 三处平行表，逐批手工对齐漂移风险收口）。
    保锁口径（任务书偏差记档）：① LuceneInput 值位 if 链被 luceneValTiers538/sqlLuceneTiers546/
@@ -197,13 +197,13 @@ export const TYPE_VALUE_HINTS: Record<string, readonly string[]> = {
   geo_point: ['40.71,-74.01'],
   version: ['1.0.0'],
 };
-/* 数值族（NUMERIC_VALUE_TYPES 十口径含 token_count——552 批立法分词计数=数值语义）
+/* 数值族（NUMERIC_VALUE_TYPES 十口径含 token_count——立法分词计数=数值语义）
    与四数值 range 族：区间形态档（[10 TO 20]），与 LuceneInput NUM_HINTS 既有值逐字同形 */
 for (const t of [...NUMERIC_VALUE_TYPES, 'integer_range', 'long_range', 'float_range', 'double_range']) {
   TYPE_VALUE_HINTS[t] = ['>100', '[10 TO 20]'];
 }
 
-/* ═══ 五百六十三批：字段类型 → 值位输入建议档（智能提示精化·类型感知）═══
+/* ═══ ：字段类型 → 值位输入建议档（智能提示精化·类型感知）═══
    任务书轨1「候选排序按字段类型优先匹配对应类型」：date 字段查询输入优先 date 函数/
    now 族与范围语法（range 是 date 首推算子，opsForType 同源），数值字段优先范围算子，
    boolean 出字面量对；keyword/text/ip 精确值语义无附加提示出空（ES terms 候选即权威，
@@ -218,7 +218,7 @@ export function valueHintsForType(type: string | undefined): string[] {
   return [];
 }
 
-/** 五百六十三批：词项候选按字段类型精化排序（纯函数，不改入参数组）。date 字段 ISO
+/** 词项候选按字段类型精化排序（纯函数，不改入参数组）。date 字段 ISO
  *  形态排前、epoch 纯数字串殿后（epoch 是 date 字段合法值但人不可读，殿后不打扰），
  *  其余居中保 ES 原序；数值字段数值形态排前；keyword/text 等 fallback 原样返回——
  *  ES doc_count 权威序零扰动。Array.prototype.sort 稳定（V8 规范），同档保原序。

@@ -24,7 +24,7 @@
 
 ## 2. 声明实体
 
-R100 会扫描宿主 `AutoConfigurationPackages` 基础包及其子包中的全部 `@Document` 实体。不要实现或注册手写 `ManagedEsIndex`：legacy provider 通道已经废弃，扫描器发现残留实现会直接拒绝启动。
+mapping 自动注册会扫描宿主 `AutoConfigurationPackages` 基础包及其子包中的全部 `@Document` 实体。不要实现或注册手写 `ManagedEsIndex`：legacy provider 通道已经废弃，扫描器发现残留实现会直接拒绝启动。
 
 ```java
 package com.example.quote;

@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 多集群 client 路由器（R36）：控制台的「当前目标集群」上下文。
+ * 多集群 client 路由器（）：控制台的「当前目标集群」上下文。
  *
  * <p>三件事：</p>
  * <ol>
@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *       {@code X-Es-Target} 头 {@link #bind}，请求结束 {@link #clear}；</li>
  *   <li><b>长连接缓存</b>——connId → {@link RestHighLevelClient}，同一连接反复切换不重建；
  *       连接档案更新/删除时 {@link #evict} 关旧建新；</li>
- *   <li><b>控制集群兜底</b>——无目标头/头值为 {@code host} 时返回控制集群 client（R37 经
+ *   <li><b>控制集群兜底</b>——无目标头/头值为 {@code host} 时返回控制集群 client（ 经
  *       Supplier 懒解析，兼容 Setup 后才绑定的自举形态），行为与单集群时代完全一致。</li>
  * </ol>
  *
@@ -43,7 +43,7 @@ public class EsClientRouter {
     private final Map<String, RestHighLevelClient> cache = new ConcurrentHashMap<>();
     /** connId → 建连时的档案指纹（档案变更即失效重建）。 */
     private final Map<String, Integer> fingerprints = new ConcurrentHashMap<>();
-    /** R93-67 宿主版本探测器（setter 可选注入）：宿主无连接档案，版本只能主动探。 */
+    /** -67 宿主版本探测器（setter 可选注入）：宿主无连接档案，版本只能主动探。 */
     private volatile HostEsVersionProvider hostVersionProvider;
 
     public EsClientRouter(java.util.function.Supplier<RestHighLevelClient> controlClient, ConnStore connStore,
@@ -53,7 +53,7 @@ public class EsClientRouter {
         this.clientFactory = clientFactory;
     }
 
-    /** 注入宿主版本探测器（R93-67）；不注入则宿主版本恒未知（退化为修复前行为的「诚实版」）。 */
+    /** 注入宿主版本探测器（-67）；不注入则宿主版本恒未知（退化为修复前行为的「诚实版」）。 */
     public void setHostVersionProvider(HostEsVersionProvider hostVersionProvider) {
         this.hostVersionProvider = hostVersionProvider;
     }
@@ -112,12 +112,12 @@ public class EsClientRouter {
     }
 
     /**
-     * R40/R93-67：当前目标集群的服务端版本。
+     * /-67：当前目标集群的服务端版本。
      *
      * <p>有目标（远程集群）→ 连接档案里探活回写的 esVersion；
      * <b>无目标（宿主/控制集群）→ {@link HostEsVersionProvider} 主动探测</b>（{@code GET /}）。</p>
      *
-     * <p>R93-67 之前此处对宿主<b>恒返回 null</b>，而 null 被当成 7.x 默认，
+     * <p>-67 之前此处对宿主<b>恒返回 null</b>，而 null 被当成 7.x 默认，
      * 导致宿主为 6.x 时全部版本分叉集体走错（{@code createIndexLegacy6} 对宿主永远不可达，
      * 产线 6.7.2 宿主上 adhoc 重建构造性不可用）。</p>
      *

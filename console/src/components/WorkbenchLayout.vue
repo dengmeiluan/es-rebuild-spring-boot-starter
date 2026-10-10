@@ -31,7 +31,7 @@
         >
           <slot :name="paneSlotName(spec.id)" :focus-pane="focusPane" :is-focused="isFocused" :restore-default="restoreDefault" />
         </ResizablePane>
-        <!-- 五百五十三批：独占态还原竖轨（用户实报「按了就不显示/无法还原」实勘：独占隐藏侧=
+        <!-- 独占态还原竖轨（实报「按了就不显示/无法还原」实勘：独占隐藏侧=
              0 宽+整栏无柄（538 压 0+549 立法）=物理不可见，还原只剩宿主工具行 seg 一个远端入口。
              竖轨=隐藏侧原位的常驻还原入口，点击 setMaximize(null) 回对半；与 ResizablePane
              折叠竖标轨同一视觉语言。仅独占隐藏侧渲染，其余布局零渲染=既有消费方零感知 -->
@@ -44,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-/* P1 统一可调工作台（resizable workbench plan Task 4）：
+/* P1 统一可调工作台（resizable workbench plan ）：
    页面只声明 pane 规格，布局容器统一负责——尺寸受控（ResizablePane 只收发事件）、
    偏好读写（useLayoutPreferences，scope=target+route+mode+profile）、预设分配
    （utils/layout.distributePreset 纯函数）、embedded/compact 档 stacked 上下堆叠。
@@ -65,7 +65,7 @@ export interface WorkbenchPaneSpec {
   collapsible?: boolean;
   focusable?: boolean;
   persist?: boolean;
-  /* 五百三十八批：分栏互覆盖（档位循环）——声明后，两侧都 maximizable 的 pane 之间
+  /* 分栏互覆盖（档位循环）——声明后，两侧都 maximizable 的 pane 之间
      拖拽柄出现档位钮：对半→前位独占→后位独占循环（独占=隐藏对方，占满全宽）。
      独占态为会话态不写偏好（还原即回原布局）；maxName 用于档位钮 aria/title 文案。 */
   maximizable?: boolean;
@@ -78,9 +78,9 @@ const props = withDefaults(defineProps<{
   axis?: 'horizontal' | 'vertical';
   profile?: ViewportProfile;
   mode?: string;
-  /* 五百一十四批视口兜底下限（.wl min-height:100vh-210px）开关：默认开=既有消费方零行为变化。
+  /* 视口兜底下限（.wl min-height:100vh-210px）开关：默认开=既有消费方零行为变化。
      宿主自建真高度链的页（查询工作台 DSL 模式 .dq 定高 flex 分配）传 false——否则 .wl 独占
-     整屏高，常规流兄弟节点（结果区 res-bar）被顶到视口底沿（P0 用户实报）。
+     整屏高，常规流兄弟节点（结果区 res-bar）被顶到视口底沿（P0 实报）。
      预设钮文案：编辑/结果优先在双 pane 语义页（如 DSL 条件树|编辑器）实调的是左右宽分配，
      由宿主按实际布局换口径；默认值=通用文案（零破坏）。 */
   fillViewport?: boolean;
@@ -125,7 +125,7 @@ const constraintsRecord = computed<Record<string, PaneConstraint>>(() => {
   return out;
 });
 const sizedConstraints = computed<PaneConstraint[]>(() => Object.values(constraintsRecord.value));
-/* 五百一十九批：flex pane 不参与 preset 分配，但其 minSize 必须作为上界保留（对齐 maxOf 的
+/* flex pane 不参与 preset 分配，但其 minSize 必须作为上界保留（对齐 maxOf 的
    reservedForSiblings 口径）；且存在 flex pane 时「结果优先」反向——sized 压向 min 让位给 flex */
 const flexReservedMin = computed(() => props.panes.reduce((sum, p) => (isFlex(p) ? sum + p.minSize : sum), 0));
 
@@ -134,7 +134,7 @@ const available = computed(() => (props.axis === 'vertical' ? vp.width.value : v
 const sizes = ref<Record<string, number>>({});
 const collapsedIds = ref(new Set<string>());
 
-/* 五百三十八批：分栏互覆盖（档位循环）——maximizedId 指向独占 pane，其余 maximizable
+/* 分栏互覆盖（档位循环）——maximizedId 指向独占 pane，其余 maximizable
    pane 经 isPaneHidden 走折叠管线隐藏（rp-content display:none 移除高度/宽度贡献）。
    会话态不写偏好：还原=清 maximizedId 即回原布局，sizes/collapsedIds 分毫不差。 */
 const maximizedId = ref<string | null>(null);
@@ -142,7 +142,7 @@ function isPaneHidden(spec: WorkbenchPaneSpec) {
   if (collapsedIds.value.has(spec.id)) return true;
   return maximizedId.value != null && spec.maximizable === true && maximizedId.value !== spec.id;
 }
-/* 五百五十三批：还原竖轨渲染判据——与 paneOverrideStyleFor 的 0 宽压 Conditions 完全同域
+/* 还原竖轨渲染判据——与 paneOverrideStyleFor 的 0 宽压 Conditions 完全同域
    （独占隐藏侧=maximizedId 在场+maximizable+非本尊），手动折叠/普通布局不渲染；
    restoreRailTitle 用独占侧 maxName/role 生成「点此还原」提示（title/aria 同源）。 */
 function isMaxHidden(spec: WorkbenchPaneSpec) {
@@ -158,8 +158,8 @@ function cycleMaximize(index: number) {
   if (!spec || !next || spec.maximizable !== true || next.maximizable !== true) return;
   maximizedId.value = cycleMaxState(maximizedId.value, spec.id, next.id);
 }
-/* 五百四十二批：受控独占（宿主 seg 点选用）——null=对半恢复。柄上循环钮之外的
-   显性入口：独占态还原不再依赖 11px 柄（用户实报「回不去了」）。 */
+/* 受控独占（宿主 seg 点选用）——null=对半恢复。柄上循环钮之外的
+   显性入口：独占态还原不再依赖 11px 柄（实报「回不去了」）。 */
 function setMaximize(id: string | null) {
   if (id != null && !props.panes.some(p => p.id === id && p.maximizable === true)) return;
   maximizedId.value = id;
@@ -189,7 +189,7 @@ function paneOverrideStyleFor(spec: WorkbenchPaneSpec) {
   }
   return undefined;
 }
-/* 七百二十三批 G78（R103 裁决表头号）：堆叠态高度保底——≤1100 堆叠出生挂载（直开/SPA 重挂）
+/*  G78（ 裁决表头号）：堆叠态高度保底——≤1100 堆叠出生挂载（直开/SPA 重挂）
    时 .wl-body 转 column，sized pane flex:0 0 auto 高度按 min-content，而消费方 pane 内容
    高度链（height:100% → JsonArea fill Monaco height:100%）反过来依赖 pane 确定高度 →
    循环塌缩（ReindexPreview query pane 塌 122px/编辑器 31px 单行，flex result 吞 568px；
@@ -206,17 +206,17 @@ function paneStyleFor(spec: WorkbenchPaneSpec) {
 }
 
 function isFlex(spec: WorkbenchPaneSpec) { return spec.defaultSize === 'flex'; }
-/* 五百零一批：最后一个 sized pane 吸收剩余空间——两 pane 尺寸和(如 420+560=980)小于容器时
-   右侧大片空白、聚焦钮悬浮在空白边（用户实报 DevTools/分词验证布局崩坏）。
+/* 最后一个 sized pane 吸收剩余空间——两 pane 尺寸和(如 420+560=980)小于容器时
+   右侧大片空白、聚焦钮悬浮在空白边（实报 DevTools/分词验证布局崩坏）。
    非 stacked 时 last pane flex:1 1 auto（width 作 basis 伸展），拖拽语义不变：
    前序 pane 拖大 → last pane 自动收窄。stacked（上下堆叠）各自然高不参与。 */
-/* 五百零二批修正：fill 只属于「真正的最后一个可见 pane」——isLastSized 会把后随 flex
+/* 修正：fill 只属于「真正的最后一个可见 pane」——isLastSized 会把后随 flex
    pane 过滤掉而误判（查询工作台 tree 被拉到 894px、flex 工作台被压到 424px，右栏挤爆，
-   用户实报「右边太小看不清+遮挡」）；后随 flex pane 时剩余空间本就该由 flex 吸收。 */
+   实报「右边太小看不清+遮挡」）；后随 flex pane 时剩余空间本就该由 flex 吸收。 */
 function isFill(spec: WorkbenchPaneSpec, index: number) {
   if (stacked.value || isFlex(spec) || isPaneHidden(spec)) return false;
   const rest = props.panes.slice(index + 1);
-  /* 五百三十八批：后随 flex 未隐藏才让位（被独占隐藏的 flex 不再吸收剩余空间，
+  /* 后随 flex 未隐藏才让位（被独占隐藏的 flex 不再吸收剩余空间，
      独占的 sized pane 改由 fill 吸满全宽）；结尾全 hidden（折叠/独占）即 fill。 */
   if (rest.some(p => isFlex(p) && !isPaneHidden(p))) return false;
   return rest.every(p => isPaneHidden(p));
@@ -225,7 +225,7 @@ function isFill(spec: WorkbenchPaneSpec, index: number) {
    否则 restore 的大值/拖拽到底/「编辑优先」preset 都会把 flex 编辑器挤到 0 宽（查询工作台右侧整块消失的根因） */
 /* sized pane 的有效上界必须为其余 pane 保留各自 min（flex 的 minSize 同样保留）——
    否则 restore 的大值/拖拽到底/「编辑优先」preset 都会把 flex 编辑器挤到 0 宽（查询工作台右侧整块消失的根因）。
-   五百三十八批：被独占隐藏的 pane 不占位，不保留 reserved（否则独占侧被钳在 available-min 拉不满）。 */
+   被独占隐藏的 pane 不占位，不保留 reserved（否则独占侧被钳在 available-min 拉不满）。 */
 function reservedForSiblings(excludeId: string) {
   return props.panes.reduce((sum, p) => (p.id === excludeId || isPaneHidden(p) ? sum : sum + p.minSize), 0);
 }
@@ -239,11 +239,11 @@ function maxOf(spec: WorkbenchPaneSpec) {
   const configured = spec.maxSize === 'available' || spec.maxSize == null ? Math.max(spec.minSize, available.value) : spec.maxSize;
   return Math.max(spec.minSize, Math.min(configured, Math.max(0, available.value - reservedForSiblings(spec.id))));
 }
-/* 五百一十九批：last 原判 isLastSized 把后随 flex pane 过滤掉——最常见的 [sized,flex]
+/* last 原判 isLastSized 把后随 flex pane 过滤掉——最常见的 [sized,flex]
    双栏里 sized pane 被误判「最后一个」→ 不渲染拖拽柄（11 个视图 10 个 0 柄，
-   用户实报「编辑框无法调节」）。现后面还有任何 pane 就渲染柄，真正的最后一个 pane 才不渲染。
-   五百四十九批：独占态（maximizedId 在场）整栏无柄——0 宽侧的还原柄孤立悬在屏幕边缘
-   （用户实报「拉伸没用」的异物源），且 542 批已立法工具行 seg 常驻还原（setMaximize），
+   实报「编辑框无法调节」）。现后面还有任何 pane 就渲染柄，真正的最后一个 pane 才不渲染。
+   独占态（maximizedId 在场）整栏无柄——0 宽侧的还原柄孤立悬在屏幕边缘
+   （实报「拉伸没用」的异物源），且 已立法工具行 seg 常驻还原（setMaximize），
    柄的还原职责退役。 */
 function isLastPane(index: number) {
   return index === props.panes.length - 1;
@@ -307,7 +307,7 @@ function restoreAll() {
   const restoredCollapsed = new Set<string>();
   for (const c of sizedConstraints.value) {
     sizes.value[c.id] = initial.restorePane(c.id, c, available.value);
-    /* 五百一十九批：折叠态随偏好快照回放（此前从不恢复，折叠后刷新/切页回来即丢）；
+    /* 折叠态随偏好快照回放（此前从不恢复，折叠后刷新/切页回来即丢）；
        只认 constraintsRecord 里存在的 id（flex pane 无快照条目） */
     if (initial.snapshot.value.panes[c.id]?.collapsed === true) restoredCollapsed.add(c.id);
   }
@@ -324,7 +324,7 @@ function paneSlotName(id: string) { return `pane-${id.split('.').join('-')}`; }
 /* flex:1 —— 本组件常作为页面 flex 容器的子项（如 .dq-main），不补会收缩到内容最小宽，
    视口实测宽度随之变小误判 compact → stacked 上下堆叠，编辑器 pane 高度归零（查询工作台右侧整块消失的真根因） */
 .wl { display: flex; flex-direction: column; min-width: 0; min-height: 0; flex: 1 1 auto; }
-/* 五百一十四批:统一架构——WorkbenchLayout 自带视口撑满下限(8 视图统一生效,不再逐视图补),
+/* 统一架构——WorkbenchLayout 自带视口撑满下限(8 视图统一生效,不再逐视图补),
    flex:1 1 auto 在有高度链的父容器里跟随伸展,无高度链的父容器里按 min-height 兜底 */
 .wl { min-height: calc(100vh - var(--vh-offset, 210px)); }
 /* fillViewport=false：宿主自建确定高度链，视口兜底退役（min-height 撑满会把常规流兄弟
@@ -337,12 +337,12 @@ function paneSlotName(id: string) { return `pane-${id.split('.').join('-')}`; }
 .wl.stacked .wl-body { flex-direction: column; overflow: auto; }
 .wl.stacked :deep(.resizable-pane) { width: auto !important; max-width: none !important; flex: 0 0 auto; }
 .wl-flex-pane { flex: 1 1 0 !important; width: auto !important; }
-/* 五百零一批：最后一个 sized pane 吸收剩余空间（width 作 basis 伸展，拖拽语义不变） */
+/* 最后一个 sized pane 吸收剩余空间（width 作 basis 伸展，拖拽语义不变） */
 .wl-fill-pane { flex: 1 1 auto !important; }
-/* 五百五十三批：独占态还原竖轨——bg2 底+线分界+hover 柔底色变=可点暗示；
+/* 独占态还原竖轨——bg2 底+线分界+hover 柔底色变=可点暗示；
    行布局（axis=vertical 未堆叠）=竖排直立轨（ResizablePane 折叠竖标轨 34px 同语言，取 30px）；
    stacked/横向轴=列布局退化为横向细条。
-   554 批豁免记档（零行为变更）：本轨「独占还原轨非标题轨」，不在「竖排标题轨退役」范式
+   豁免记档（零行为变更）：本轨「独占还原轨非标题轨」，不在「竖排标题轨退役」范式
    射程内——ResizablePane rp-title 竖排轨随 title 消费清零成死码已同批退役，而本轨有活
    消费者（maximizedId 独占压 0 侧的常驻还原入口，isMaxHidden 判据）且承担还原交互，
    竖排直立形态是刻意同语言而非待退役遗留。 */

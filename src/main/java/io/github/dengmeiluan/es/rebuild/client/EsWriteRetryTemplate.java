@@ -42,10 +42,10 @@ public class EsWriteRetryTemplate {
     /** 退避上限 */
     private final long maxBackoffMs;
 
-    /** 五百六十二批：重试 WARN 节流间隔（MigrateJobTracker.save 60s 范式）。 */
+    /** 重试 WARN 节流间隔（MigrateJobTracker.save 60s 范式）。 */
     private static final long RETRY_WARN_THROTTLE_MS = 60_000L;
 
-    /** 五百六十二批：重试 WARN 按 action 键 60s 节流——持续写故障（如宿主集群整体写阻塞）时
+    /** 重试 WARN 按 action 键 60s 节流——持续写故障（如宿主集群整体写阻塞）时
      *  高频写路径每 attempt 一条 WARN 会刷屏淹没业务日志。范式平移 MigrateJobTracker.save：
      *  窗口首条全量，窗口内仅累计，窗口尾（下一窗口首败）先汇总「xN」一条再落本窗首条。
      *  action 是调用点常量（键数量有限不失控）；节流只动日志，重试/退避/抛出契约零改动。 */
@@ -93,7 +93,7 @@ public class EsWriteRetryTemplate {
     }
 
     /**
-     * 重试 WARN 按 action 键 60s 节流（五百六十二批）：窗口首条全量；窗口内仅累计；
+     * 重试 WARN 按 action 键 60s 节流（）：窗口首条全量；窗口内仅累计；
      * 窗口尾（下一窗口首败）先汇总上一窗累计「xN」一条再落本窗首条。
      * 只动日志，重试/退避/抛出契约零改动。
      */

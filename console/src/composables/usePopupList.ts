@@ -1,4 +1,4 @@
-/* W2 Task 7a：弹层列表 headless 骨架——FieldPicker/SettingsKeyInput 双实例同构抽取（行为保持型重构）。
+/* W2 ：弹层列表 headless 骨架——FieldPicker/SettingsKeyInput 双实例同构抽取（行为保持型重构）。
    抽取面（两组件现状骨架交集，行为零增量下沉）：
      open/cursor 状态与 openPanel/close 语义；↑↓ 钳位导航 + scrollToCur；
      place() fixed 定位（minWidth/上下翻转阈值参数化——两实例数值分歧：280/260/280 与 340/280/300）；

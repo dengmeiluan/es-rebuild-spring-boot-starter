@@ -15,7 +15,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百四十六批：{@link SliceWorker#clearScrollQuietly} 失败的 <b>WARN 留痕</b>（观测缺口收口）。
+ * {@link SliceWorker#clearScrollQuietly} 失败的 <b>WARN 留痕</b>（观测缺口收口）。
  *
  * <p><b>缺口</b>：clearScroll 失败此前仅 {@code logger.debug("clearScroll ignore")}——该路径
  * 是低频真异常（远端集群断连/网关 4xx），失败即意味着 scroll 上下文在远端残留到 keep-alive

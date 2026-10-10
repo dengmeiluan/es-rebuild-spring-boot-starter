@@ -22,10 +22,10 @@ public class EsRebuildProperties {
     private String versionFormat = "yyyyMMddHHmmss";
 
     /**
-     * 装配模式（R93）：
+     * 装配模式（）：
      * <ul>
      *   <li>{@code client}（默认）—— 业务应用侧：只装索引声明；期望配置端点与自包含单页
-     *       由 {@code DesiredStateController} 提供，<b>R93 Task 5 才引入</b>，本开关引入时尚不存在，
+     *       由 {@code DesiredStateController} 提供，<b>  才引入</b>，本开关引入时尚不存在，
      *       不装控制台、不装 AOP 切面、不装控制集群解析、不装 ES 管理客户端；</li>
      *   <li>{@code console} —— 宿主侧：全量装配。</li>
      * </ul>
@@ -33,7 +33,7 @@ public class EsRebuildProperties {
      * 「变重」必须显式声明，避免宿主稀里糊涂背上整个控制面。
      */
     private String mode = "client";
-    /* 二百三十九批 P2-4 v2：连接环境页面模板（纯 grantedPages 同构）——
+    /*  P2-4 v2：连接环境页面模板（纯 grantedPages 同构）——
        键=连接 env（PROD/STAGING/QA/DEV），值=页面 key 白名单集合；
        默认空=不启用（未配置 env 原样透传，向后兼容）。语义详见 EnvPagesResolver。 */
     private java.util.Map<String, java.util.Set<String>> envPages = new java.util.HashMap<>();
@@ -41,9 +41,9 @@ public class EsRebuildProperties {
     public java.util.Map<String, java.util.Set<String>> getEnvPages() { return envPages; }
 
     public void setEnvPages(java.util.Map<String, java.util.Set<String>> envPages) { this.envPages = envPages; }
-    /** 二百三十九批 P2-4：连接环境 → 角色上限（env-role-cap）。键=连接 env（PROD/STAGING/QA/DEV），
+    /**  P2-4：连接环境 → 角色上限（env-role-cap）。键=连接 env（PROD/STAGING/QA/DEV），
      *  值=ConsoleRole 名（如 VIEWER）；未配置的环境不封顶（向后兼容）。声明式插拔：删配置即回滚。 */
-    /* 二百四十批：默认启用环境封顶档位——生产/预发只读、QA 到重建、DEV 全开
+    /* 默认启用环境封顶档位——生产/预发只读、QA 到重建、DEV 全开
        （用户需求：生产大多数只读、测试环境放开）。宿主可在 application.yml
        覆盖 es-rebuild.env-role-cap 同键调整档位；置空 Map 即完全关闭该特性。 */
 
@@ -190,21 +190,21 @@ public class EsRebuildProperties {
         public void setMaxBackoffMs(long maxBackoffMs) { this.maxBackoffMs = maxBackoffMs; }
     }
 
-    /** 控制台（面板+接口）安全参数（前缀 {@code es.rebuild.console}）。R34 新增。 */
+    /** 控制台（面板+接口）安全参数（前缀 {@code es.rebuild.console}）。 新增。 */
     public static class Console {
         private Auth auth = new Auth();
-        /** R36 多集群连接档案索引名（存控制集群，密码只留服务端）。 */
+        /**  多集群连接档案索引名（存控制集群，密码只留服务端）。 */
         private String connIndexName = "es_console_conn";
-        /** R37 控制集群自举档案目录；空 → {@code ${user.home}/.es-console/<appName>/}。 */
+        /**  控制集群自举档案目录；空 → {@code ${user.home}/.es-console/<appName>/}。 */
         private String homeDir = "";
-        /** R37 控制集群解析模式：auto（自举档案→spring 探测→Setup 向导）/ spring（钉死宿主 ES，向导永不出现）。 */
+        /**  控制集群解析模式：auto（自举档案→spring 探测→Setup 向导）/ spring（钉死宿主 ES，向导永不出现）。 */
         private String controlMode = "auto";
-        /** R38 连接档案后台周期探活开关（列表/顶栏状态点数据源）。 */
+        /**  连接档案后台周期探活开关（列表/顶栏状态点数据源）。 */
         private boolean connProbeEnabled = true;
-        /** R38 探活间隔秒（最小 10）。 */
+        /**  探活间隔秒（最小 10）。 */
         private int connProbeIntervalSeconds = 60;
         /**
-         * R39.2 数据面是否暴露「宿主集群」目标。纯管理平台形态（宿主）设 false：
+         * .2 数据面是否暴露「宿主集群」目标。纯管理平台形态（宿主）设 false：
          * 控制集群降级为纯元数据存储，切换器只列自定义连接档案，后端同步拒绝 host 目标直捣。
          */
         private boolean hostClusterVisible = true;
@@ -285,7 +285,7 @@ public class EsRebuildProperties {
      * 控制台页面级授权参数（前缀 {@code es.rebuild.console.page-auth}）。2.5.0 菜单 SPI 新增。
      *
      * <p>仅对 delegated 身份且宿主下发了 grantedPages 的请求生效；内置身份 / 宿主未下发 / 本开关关闭
-     * 时退化为 R34 三档角色拦截，行为与 2.4.0 完全一致（向后兼容）。</p>
+     * 时退化为  三档角色拦截，行为与 2.4.0 完全一致（向后兼容）。</p>
      */
     public static class PageAuth {
         /** 页面级授权开关（默认 true）。false = 逃生阀：线上异常时紧急回退纯角色档，无需回滚版本。 */
@@ -322,7 +322,7 @@ public class EsRebuildProperties {
 
     /** 控制台鉴权参数（前缀 {@code es.rebuild.console.auth}）。 */
     public static class Auth {
-        /** 是否启用控制台鉴权（默认 true；关闭后恢复 R33 及以前的裸奔行为，仅限内网/演示）。 */
+        /** 是否启用控制台鉴权（默认 true；关闭后恢复  及以前的裸奔行为，仅限内网/演示）。 */
         private boolean enabled = true;
         /** 兜底默认账号：仅当用户索引一个账号都没有时可登录（角色 ADMIN）。 */
         private String fallbackUsername = "admin";
@@ -339,13 +339,13 @@ public class EsRebuildProperties {
         /** 20260922 环形保留立法（统一只用 QA ES 单载体）：按日索引 + 双闸清理。 */
         private AuditRetention auditRetention = new AuditRetention();
         /**
-         * 宿主审计并入开关（20260922 用户裁决<b>默认关</b>）：开启后宿主注册的
-         * ConsoleAuditContributor 记录才并入控制台审计视图（555 批原「注册即生效」语义）。
+         * 宿主审计并入开关（裁决<b>默认关</b>）：开启后宿主注册的
+         * ConsoleAuditContributor 记录才并入控制台审计视图（原「注册即生效」语义）。
          * 关闭理由：宿主侧记录多为匿名登录族（trusted-login 时无会话切面，username 结构性
          * null），非本控制台请求进控制台审计视图不可读也不可追责。
          */
         private boolean hostAuditMerge = false;
-        /** R38 配置式宿主鉴权委托（零 Java 代码对接，代码 SPI Bean 优先）。 */
+        /**  配置式宿主鉴权委托（零 Java 代码对接，代码 SPI Bean 优先）。 */
         private Delegate delegate = new Delegate();
 
         public boolean isEnabled() { return enabled; }
@@ -398,7 +398,7 @@ public class EsRebuildProperties {
     }
 
     /**
-     * R38 配置式宿主鉴权委托（前缀 {@code es.rebuild.console.auth.delegate}）：
+     *  配置式宿主鉴权委托（前缀 {@code es.rebuild.console.auth.delegate}）：
      * 不写一行 Java 即可把控制台登录接到宿主凭据体系。mode 不配 = 不启用；
      * 宿主若注册了 {@code ConsoleAuthDelegate} 代码 SPI Bean，代码 SPI 优先（本配置被忽略）。
      */
@@ -436,7 +436,7 @@ public class EsRebuildProperties {
             private String usernameClaim = "sub";
             /** 角色 claim（支持 a.b.c 点分路径；值为数组或逗号串）。 */
             private String rolesClaim = "roles";
-            /** 展示名 claim（R63，点分路径，如 name / user.nickname）；空 = 不取，顶栏回落 username。 */
+            /** 展示名 claim（，点分路径，如 name / user.nickname）；空 = 不取，顶栏回落 username。 */
             private String displayNameClaim = "";
 
             public String getSecret() { return secret; }
@@ -461,7 +461,7 @@ public class EsRebuildProperties {
             private String usernamePath = "username";
             /** 返回 JSON 里角色字段路径（数组或逗号串）。 */
             private String rolesPath = "roles";
-            /** 返回 JSON 里展示名字段路径（R63）；空 = 不取。 */
+            /** 返回 JSON 里展示名字段路径（）；空 = 不取。 */
             private String displayNamePath = "";
             /** 校验结果短缓存秒数（按 token 缓存，降低宿主接口压力）。 */
             private int cacheSeconds = 30;
@@ -486,7 +486,7 @@ public class EsRebuildProperties {
             private String userHeader = "";
             /** 角色头（逗号分隔，经 role-mapping 映射）。 */
             private String rolesHeader = "";
-            /** 展示名头（R63；值若经 URL 编码可携中文，服务端自动解码）；空 = 不取。 */
+            /** 展示名头（；值若经 URL 编码可携中文，服务端自动解码）；空 = 不取。 */
             private String displayNameHeader = "";
 
             public String getUserHeader() { return userHeader; }
@@ -499,7 +499,7 @@ public class EsRebuildProperties {
     }
 
     /**
-     * R35 启动期索引配置校验（前缀 {@code es.rebuild.config-validation}）：
+     *  启动期索引配置校验（前缀 {@code es.rebuild.config-validation}）：
      * 对所有注册 provider 实体的 @Setting/@Mapping JSON 做 L1 静态 Lint + L2 临时索引 Dry-run，
      * 把「代码里写错索引配置、发到服务上建索引才炸」提前到启动那一刻暴露。
      */
@@ -591,7 +591,7 @@ public class EsRebuildProperties {
     public Adhoc getAdhoc() { return adhoc; }
     public void setAdhoc(Adhoc adhoc) { this.adhoc = adhoc; }
 
-    /** Adhoc 托管重建参数（前缀 {@code es.rebuild.adhoc}）。R93 新增。 */
+    /** Adhoc 托管重建参数（前缀 {@code es.rebuild.adhoc}）。 新增。 */
     public static class Adhoc {
 
         /** 等待超时上限（7 天）：再大就会让 deadline 计算溢出，反而立刻超时。 */
@@ -612,7 +612,7 @@ public class EsRebuildProperties {
     public Compat getCompat() { return compat; }
     public void setCompat(Compat compat) { this.compat = compat; }
 
-    /** R94 date 兼容开关（前缀 {@code es.rebuild.compat}）。 */
+    /**  date 兼容开关（前缀 {@code es.rebuild.compat}）。 */
     public static class Compat {
 
         /**
@@ -623,7 +623,7 @@ public class EsRebuildProperties {
          * <b>属性级</b>转换器接管，抢在本开关注册的 {@code ElasticsearchCustomConversions}
          * 之前生效。对这类字段<b>打开开关什么也不会发生，而且不报错</b> ——
          * 使用者很容易误以为已经修好。这类字段应改 {@code @Field(format = ...)}
-         * 或把实体类型换成 {@code Long} 自行转换。（QA 6.7.2 实测，R94 Task 18）</p>
+         * 或把实体类型换成 {@code Long} 自行转换。（QA 6.7.2 实测， ）</p>
          *
          * <p>能救的是<b>不带</b>日期注解、而存储形态是 epoch 数值的
          * {@code Timestamp} / {@code Date} / {@code Instant} 字段。</p>

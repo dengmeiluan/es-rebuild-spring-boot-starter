@@ -3,19 +3,19 @@ import { getTarget } from '../api';
 import { NAV_ITEMS } from '../router';
 import { draftStorageKey } from '../composables/useScopedDraft';
 
-/* R54：收藏重放统一真链路（收藏夹页 + 命令面板共用）。
+/* 收藏重放统一真链路（收藏夹页 + 命令面板共用）。
    此前 dsl/rest 分支写的预填键没有任何视图消费，「打开」是假动作；
    且 SQL/Lucene/Bulk 等收藏全标 kind:rest，按 rest 重放必然空白。
-   现按 tags 语义分发回源视图：一次性 carry 键 / 各视图既有 prefill 键 / R53 草稿键。 */
+   现按 tags 语义分发回源视图：一次性 carry 键 / 各视图既有 prefill 键 /  草稿键。 */
 
-/* R56：tags→重放去向（与下方 replayFavorite 分发逻辑同文件同源维护）。
+/* tags→重放去向（与下方 replayFavorite 分发逻辑同文件同源维护）。
    收藏卡片用它标注「打开」去哪个视图——重放前可预期，不用点了才知道。 */
 export function replayTarget(it: { kind: string; tags?: string[]; payload?: any }): { path: string; label: string } {
   const tags: string[] = it.tags || [];
-  /* R64：查询家族收敛进查询工作台（/search?mode=），重放直达对应模式 */
+  /* 查询家族收敛进查询工作台（/search?mode=），重放直达对应模式 */
   if (it.kind === 'dsl') return { path: '/search', label: '查询工作台 · DSL' };
   if (it.kind === 'route') {
-    /* 七百二十七批 G88：R56「重放去向前置可见」在 route 类兑现——payload.path 才是真去向
+    /*  G88：「重放去向前置可见」在 route 类兑现——payload.path 才是真去向
        （replayFavorite 直推它），按 NAV_ITEMS 契约（es-console-pages.json 唯一事实源）映射
        具体视图名；缺 path/未收录路径（旧重定向路由）回落泛化「视图跳转」不具假名 */
     const rp = it.payload?.path;
@@ -23,7 +23,7 @@ export function replayTarget(it: { kind: string; tags?: string[]; payload?: any 
     return { path: '', label: nav ? nav.name : '视图跳转' };
   }
   if (it.kind === 'template') return { path: '/search', label: '查询工作台 · 沙盒' };
-  /* 八百二十七批：DevTools 存藏标注回源视图（与下方 replayFavorite devtools 分支同源维护） */
+  /* DevTools 存藏标注回源视图（与下方 replayFavorite devtools 分支同源维护） */
   if (tags.includes('devtools')) return { path: '/devtools', label: 'Dev Tools' };
   if (tags.includes('sql')) return { path: '/search', label: '查询工作台 · ES-SQL' };
   if (tags.includes('lucene')) return { path: '/search', label: '查询工作台 · Lucene' };
@@ -41,7 +41,7 @@ export function replayFavorite(
 ) {
   const p = it.payload || {};
   const tags: string[] = it.tags || [];
-  /* R56：payload 缺关键字段（旧格式/手工导入损坏）不再静默假成功——
+  /* payload 缺关键字段（旧格式/手工导入损坏）不再静默假成功——
      如实告知但仍跳到目标视图，现场可手动补全，不留死胡同 */
   const partial = (view: string) =>
     notify('warning', `收藏数据不完整（可能为旧版本格式），已带你到${view}，请手动补全后重新收藏`);
@@ -63,20 +63,20 @@ export function replayFavorite(
       } else if (tags.includes('lucene')) {
         if (p.q) sessionStorage.setItem('es-console.lucene.q', p.q);
         if (p.index) sessionStorage.setItem('es-console.lucene.index', p.index);
-        /* R55：排序现场本就是 URL 状态，走 query 带齐——重放不再丢排序 */
+        /* 排序现场本就是 URL 状态，走 query 带齐——重放不再丢排序 */
         router.push({ path: '/search', query: { mode: 'lucene', ...(p.sortField ? { sort: p.sortField } : {}), ...(p.sortOrder ? { order: p.sortOrder } : {}) } });
         if (p.q || p.index) notify('success', 'Lucene 查询已恢复');
         else partial('Lucene 查询');
       } else if (tags.includes('bulk')) {
         if (p.body) {
-          /* 八十二批：改写一次性 carry 键（旧 es-console.draft.bulk-editor.body 是草稿治理轮前的
+          /* 改写一次性 carry 键（旧 es-console.draft.bulk-editor.body 是草稿治理轮前的
              死命名空间，无消费方，恢复提示是假的）——BulkEditorView 挂载即消费并转入自身草稿 */
           sessionStorage.setItem('es-console.bulk.carry', p.body);
           router.push({ path: '/bulk', query: p.index ? { idx: p.index } : {} });
           notify('success', 'Bulk 操作体已恢复');
         } else { router.push({ path: '/bulk', query: p.index ? { idx: p.index } : {} }); partial('Bulk 编辑器'); }
       } else if (tags.includes('ubq') || tags.includes('dbq')) {
-        /* 八十二批：同理改 es-console.ubq.carry（UpdateByQueryView 挂载消费，取 .query 入草稿） */
+        /* 同理改 es-console.ubq.carry（UpdateByQueryView 挂载消费，取 .query 入草稿） */
         const ok = !!(p.body && p.body.trim());
         if (ok) sessionStorage.setItem('es-console.ubq.carry', p.body);
         router.push({ path: '/update-by-query', query: { ...(p.index ? { idx: p.index } : {}), ...(p.mode ? { mode: p.mode } : {}) } });
@@ -90,15 +90,15 @@ export function replayFavorite(
         } else { router.push('/reindex-advanced'); partial('Reindex 配置页'); }
       } else if (tags.includes('doc')) {
         if (p.index && p.id) {
-          /* R55：收藏时的编辑稿走一次性 carry 键带回——拉取最新版后自动恢复，正好落在 diff 对比区 */
+          /* 收藏时的编辑稿走一次性 carry 键带回——拉取最新版后自动恢复，正好落在 diff 对比区 */
           if (p.source) sessionStorage.setItem('es-console.doc-diff.carry.source', p.source);
           router.push({ path: '/doc-diff', query: { idx: p.index, id: p.id } });
           notify('success', '已定位文档，正在拉取最新版本');
         } else { router.push('/doc-diff'); partial('文档 Diff 编辑器'); }
       } else if (tags.includes('devtools')) {
-        /* 八百二十七批：DevTools 存藏回源视图——写 R42-f §8.2 预填键（DevToolsView
+        /* DevTools 存藏回源视图——写 -f §8.2 预填键（DevToolsView
            consumePrefill 统一消费=新标签装填 method/path/body），不再坠 /rest 通用兜底；
-           用户实报「打开跳转无效+不自动填充」根因①（payload 缺失仍到 DevTools=partial 诚实） */
+           实报「打开跳转无效+不自动填充」根因①（payload 缺失仍到 DevTools=partial 诚实） */
         const ok = !!(p.method || p.path);
         if (ok) {
           sessionStorage.setItem('es-console.devtools.open', JSON.stringify({
@@ -110,7 +110,7 @@ export function replayFavorite(
         if (ok) notify('success', '请求已恢复至 Dev Tools 新标签');
         else partial('Dev Tools');
       } else {
-        /* 通用 REST：写 R53 草稿键，RestView 挂载即读 */
+        /* 通用 REST：写  草稿键，RestView 挂载即读 */
         /* 草稿治理轮：走 draftStorageKey（带集群目标维度），与 RestView 读取同键 */
         const restScope = { route: 'rest', target: () => getTarget() };
         sessionStorage.setItem(draftStorageKey(restScope, 'method'), p.method || 'GET');
@@ -122,7 +122,7 @@ export function replayFavorite(
       }
       break;
     case 'route':
-      /* 一百一十四批：path 缺失防御——旧数据/手工导入可能无 path，push("undefined")
+      /* path 缺失防御——旧数据/手工导入可能无 path，push("undefined")
          会落 404；改回概览页并如实提示 */
       if (p.path && typeof p.path === 'string') {
         router.push(p.path);

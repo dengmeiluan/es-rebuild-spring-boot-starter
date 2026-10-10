@@ -10,7 +10,7 @@
           <button class="btn ghost sm" :disabled="!data" @click="exportMd">
             <Download :size="12" /> 导出 Markdown
           </button>
-          <!-- 七百七十九批 G263：原始 IO 快查（778 G259/777 G255 同构）——本页体检通道
+          <!--  G263：原始 IO 快查（778 G259/777 G255 同构）——本页体检通道
                （GET /cluster/health-report）请求/响应原文直达 -->
           <button class="btn sm ghost" title="最近一次集群体检（health-report）请求/响应原文（复制/cURL 回放）" @click="openRawIo">
             <Terminal :size="11" /> 原始 IO
@@ -23,7 +23,7 @@
       </PageHeader>
 </div>
 
-    <!-- G2-B3：失败不再仅 toast 后回落「尚未运行体检」伪装空态（R91b 同源）——
+    <!-- G2-B3：失败不再仅 toast 后回落「尚未运行体检」伪装空态（ 同源）——
          err-bar 全文+重试常驻；有旧报告时与报告并存，刷新失败不丢数据 -->
     <div v-if="runErr" role="alert" class="err-bar rise-in">
       体检失败：{{ runErr }}
@@ -35,7 +35,7 @@
                 hint="生成 30 秒可读、可导出、可分享的诊断报告"
                 action-text="开始体检" @action="run" />
 
-    <!-- 七百七十九批 G265a：role=status——在途状态语义播报（G224/G229/G235 族；
+    <!--  G265a：role=status——在途状态语义播报（G224/G229/G235 族；
          shimmer 无真实进度值，progressbar 无 valuenow 语义含糊，语义归容器） -->
     <div v-if="loading" class="hr-load" role="status" aria-label="正在体检，耗时约 5-15 秒">
       <div class="hr-load-tt">正在体检…</div>
@@ -44,9 +44,9 @@
     </div>
 
     <div v-if="data" class="hr-body">
-      <!-- 二百一十八批：多份存档任选两次对比（202「与上次对比」升级）——基准/对照下拉+得分差摘要+完全一致正向反馈 -->
+      <!-- 多份存档任选两次对比（202「与上次对比」升级）——基准/对照下拉+得分差摘要+完全一致正向反馈 -->
       <details v-if="archive.length >= 2" class="hr-diff">
-        <!-- 554 批：得分差/变化率徽标换装 StatusPill 统一件（升降直映主档：up→g/down→r；
+        <!-- 得分差/变化率徽标换装 StatusPill 统一件（升降直映主档：up→g/down→r；
              xs 档对齐原 2xs，mono 保数字档；hr-diff-pct 锚类保留，皮归 .pill 单源） -->
         <summary>体检对比（{{ diffItems.length }} 项变化 · 得分 {{ baseScore ?? '—' }} → {{ cmpScore ?? '—' }} <StatusPill v-if="scoreDelta" class="hr-diff-pct mono xs" :tone="deltaUp ? 'g' : 'r'" :label="scoreDelta" />）</summary>
         <div class="hr-diff-pick">
@@ -71,15 +71,15 @@
           <Teleport :to="teleportTo" :disabled="inplace">
             <transition name="pop">
               <div v-if="baseOpen" class="hr-pop float-pop" :class="{ inplace }" :style="basePopStyle" @mousedown.prevent.stop>
-                <!-- 五百五十八批(b)：hr-pop-hint 裸 div 空态收编 EmptyState compact 统一件
-                    （557 批 rp-empty/st-list-empty 同语言；文案逐字保留走 :text 绑定） -->
+                <!-- (b)：hr-pop-hint 裸 div 空态收编 EmptyState compact 统一件
+                    （ rp-empty/st-list-empty 同语言；文案逐字保留走 :text 绑定） -->
                 <EmptyState v-if="!baseItems.length" compact :icon="SearchX" :text="'没有匹配「' + baseKw + '」的存档报告'" />
                 <div v-else class="hr-pop-list" ref="baseListEl" :id="baseListId" role="listbox">
                   <div v-for="(o, i) in baseItems" :key="o.i" class="hr-pop-item" :class="{ act: i === baseCursor }"
                     role="option" :id="baseItemId(i)" :aria-selected="i === baseCursor" tabindex="-1"
                     @mouseenter="baseCursor = i" @click="chooseBase(o)">
                     <span class="mono">{{ o.label }}</span>
-                    <!-- 554 批：选中标记换装 StatusPill（本弹层当前选中原 .on→b 强调档/另一角色
+                    <!-- 选中标记换装 StatusPill（本弹层当前选中原 .on→b 强调档/另一角色
                          →n 中性档；mark 徽标语义非搜索高亮，MarkText 不合——记档 pillSweep554 头注） -->
                     <StatusPill v-if="o.i === pickBase" class="hr-pop-mark" tone="b" label="当前基准" />
                     <StatusPill v-if="o.i === pickCmp" class="hr-pop-mark" tone="n" label="当前对照" />
@@ -104,7 +104,7 @@
               </div>
             </transition>
           </Teleport>
-          <!-- 二百二十三批：对比结果 Markdown 复制（处置报告贴工单——得分差+变化清单全带出） -->
+          <!-- 对比结果 Markdown 复制（处置报告贴工单——得分差+变化清单全带出） -->
           <button class="btn sm ghost" style="margin-left:auto" title="复制对比结果为 Markdown（工单/群聊直贴）" @click="copyDiffMd"><ClipboardCopy :size="11" /> 复制对比 MD</button>
         </div>
         <div v-if="diffItems.length" class="hr-diff-body">
@@ -127,17 +127,17 @@
           </div>
           <div class="hr-score-tt">{{ scoreLabel }}</div>
         </div>
-        <!-- 五百五十批：摘要值并 meta-num 全局数值档（b 已 mono，补 tabular-nums，三页统一数值档） -->
+        <!-- 摘要值并 meta-num 全局数值档（b 已 mono，补 tabular-nums，三页统一数值档） -->
         <div class="hr-hero-r meta-num">
           <div class="hr-hero-row">
-            <!-- 五百三十一批：状态 toUpperCase 裸串+statCls 手配色 → StatusPill 统一件
+            <!-- 状态 toUpperCase 裸串+statCls 手配色 → StatusPill 统一件
                  （tone 走 statusTone=healthPill 同源窄化：green→g/yellow→y/其余→r）。
-                 五百三十四批：label 中文化——clusterHealthZh 主显（健康/亚健康/异常），
+                 label 中文化——clusterHealthZh 主显（健康/亚健康/异常），
                  未收录枚举回落原裸串（OverviewView jobStatusZh 同款回落形态） -->
             <span>状态</span><StatusPill :tone="statusTone" :label="healthZh(String(data.summary?.status || '')) || String(data.summary?.status || '').toUpperCase() || '-'" />
           </div>
           <div class="hr-hero-row"><span>未分配分片</span><b>{{ data.summary?.unassigned }}</b></div>
-          <!-- 七百七十九批 G265b：ES 术语 label 中文悬停释义（G55/G60/G79 族；术语主显保留，
+          <!--  G265b：ES 术语 label 中文悬停释义（G55/G60/G79 族；术语主显保留，
                buildReportMd 工单导出同词不动） -->
           <div class="hr-hero-row"><span title="集群待处理任务数（pending tasks）">Pending Tasks</span><b>{{ data.summary?.pending }}</b></div>
           <div class="hr-hero-row"><span>不健康索引</span><b>{{ data.summary?.unhealthyIndices }}</b></div>
@@ -148,14 +148,14 @@
 
       <!-- 检查项 -->
       <div class="hr-sec">
-        <!-- 554 批：分节计数徽标换装 StatusPill n 档（中性计数；hr-sec-cnt 锚类保留，皮归 .pill 单源） -->
+        <!-- 分节计数徽标换装 StatusPill n 档（中性计数；hr-sec-cnt 锚类保留，皮归 .pill 单源） -->
         <div class="card-t hr-sec-hd">检查项 <StatusPill class="hr-sec-cnt" tone="n" :label="String(data.checks?.length || 0)" /></div>
         <div class="hr-checks">
           <div v-for="(c, i) in data.checks" :key="i" class="hr-check" :class="'lv-' + c.level">
             <span class="hr-lv"><Circle v-if="c.level==='info'" :size="8" fill="currentColor" /><AlertTriangle v-else-if="c.level==='warn'" :size="12" /><AlertOctagon v-else :size="13" /></span>
             <span class="hr-name">{{ c.name }}</span>
             <span class="hr-msg">{{ c.message }}</span>
-            <!-- 三百二十七批：检查项复制（critical/warn 正是贴工单内容） -->
+            <!-- 检查项复制（critical/warn 正是贴工单内容） -->
             <button class="btn ghost xs" style="margin-left:auto;flex:none" :aria-label="'复制检查项：' + c.name"
               title="复制此检查项（级别+名称+详情）" @click="copyCheck(c)">
 <ClipboardCopy :size="10" />
@@ -170,7 +170,7 @@
 不健康索引
           <StatusPill class="hr-sec-cnt" tone="n" :label="String(data.unhealthyIndices.length)" />
         </div>
-        <!-- 五百二十五批 W5：裸表换 QRT rows 型（天罗W6 graft 胶水退役：useTableSort 排序/
+        <!--  W5：裸表换 QRT rows 型（天罗W6 graft 胶水退役：useTableSort 排序/
              useColStats tfoot/Σ 开关钮/数值矩阵钮/idxKw 快滤框——排序/漏斗/聚合行/整表 TSV/
              列选归 QRT 内核；idxKw 与漏斗语义重叠，过滤职责归 QRT 漏斗+Ctrl+F，SystemView
              天罗W6 同判据）。storageKey=health:unhealthy 与既有 es_tbl_agg:health:unhealthy
@@ -180,14 +180,14 @@
              索引名跳转由 row-actions 注入钮承接 -->
         <QueryResultTable :cols="UX_COLS" :rows="uxMatrix" sortable
           storage-key="health:unhealthy" export-name="health-ux" :field-types="UX_TYPES" max-height="420px">
-          <!-- 五百三十三批：health/size 两列补显示槽（QRT 数据恒 raw——uxMatrix 原值不动，
+          <!-- health/size 两列补显示槽（QRT 数据恒 raw——uxMatrix 原值不动，
                排序/聚合/导出/漏斗全走原值；仅显示层加工，两槽 title 恒 raw 原值）：
                health → healthZh 中文主显 + 色点（green→g / yellow→y / red→r，healthPill 档名）；
                size → semFormat bytes 单源（parseBytes 先归一字节数，不可解析回落原值）。
                ⚠已知冲突记档：healthThreeState.spec.ts:191 旧锚锁单元格文本==='red'，
                中文主显后该例红灯——锚迁移归守卫归属方（本批文件面不含该 spec） -->
           <template #cell-health="{ value }">
-            <!-- 五百六十一批：health 色点换装 MetaStrip dot 形态单源（DiagView dgMeta 判例）——
+            <!-- health 色点换装 MetaStrip dot 形态单源（DiagView dgMeta 判例）——
                  私造圆点与 hd-g/y/r 三档色规则退役，色值直传 dot 位（healthColor 与原三档
                  同 token）；中文主显走 value 亮色段（文案不变），title 兜底仍由槽级 span 承接
                  （semanticTier533 锚随迁） -->
@@ -206,9 +206,9 @@
       <!-- 节点 -->
       <div v-if="data.nodes?.length" class="hr-sec">
         <div class="card-t hr-sec-hd">节点负载 <StatusPill class="hr-sec-cnt" tone="n" :label="String(data.nodes.length)" /></div>
-        <!-- 五百二十五批 W5：节点负载表同批换 QRT rows 型（storageKey=health:nodes 与
+        <!--  W5：节点负载表同批换 QRT rows 型（storageKey=health:nodes 与
              es_tbl_agg:health:nodes 兼容）；heap/cpu/disk/ram hotCls 水位色档随纯文本壳退役
-             （数值保真进排序/聚合/漏斗区间）；五百二十七批 W-F：hotCls 行级语义回收——
+             （数值保真进排序/聚合/漏斗区间）； W-F：hotCls 行级语义回收——
              rowClass 契约（内核 W-D 落地：返回 class 追加到 tr），heap/cpu/disk 超阈行挂
              hr-row-hot（bad）/hr-row-warm（warn），多列取最严重档，CSS 类定义留本视图 scoped -->
         <QueryResultTable :cols="ND_COLS" :rows="ndMatrix" sortable
@@ -234,7 +234,7 @@
       </div>
     </div>
 
-    <!-- 七百七十九批 G263：受控弹窗挂页尾（777/778 同款） -->
+    <!--  G263：受控弹窗挂页尾（777/778 同款） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
   </div>
 </template>
@@ -244,39 +244,39 @@ import { ref, computed, onMounted } from 'vue';
 import { HeartPulse, Download, RefreshCcw, Circle, AlertTriangle, AlertOctagon, ClipboardCopy, ExternalLink, SearchX, Terminal } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import EmptyState from '../components/EmptyState.vue';
-import StatusPill from '../components/StatusPill.vue'; /* 五百三十一批：状态徽标统一件 */
-import RawIoModal from '../components/RawIoModal.vue'; /* 七百七十九批 G263：原始 IO 快查弹窗（778 G259 同构） */
+import StatusPill from '../components/StatusPill.vue'; /* ：状态徽标统一件 */
+import RawIoModal from '../components/RawIoModal.vue'; /*  G263：原始 IO 快查弹窗（778 G259 同构） */
 import { useRouter } from 'vue-router';
 import { api, ioRecorder, type RawIoRec } from '../api';
 import { useAppStore } from '../stores/app';
 import { useScopedDraft } from '../composables/useScopedDraft';
 import { exportStamp, fmtTime, downloadText, copyText, healthPill } from '../utils/format';
-/* 五百六十一批：health 色点 dot 色值单源（healthColor 独立 import 行——上一行 format import
+/* health 色点 dot 色值单源（healthColor 独立 import 行——上一行 format import
    被 semanticTier531 字面锁定，逐字不动，parseBytes 先例同款） */
 import { healthColor } from '../utils/format';
-import MetaStrip from '../components/MetaStrip.vue'; /* 五百六十一批：health 色点 dot 形态单源（bw-hdot 四胞之一） */
-/* 五百三十三批：size 列 bytes 显示槽归一（parseBytes 独立 import 行——上一行 format import
+import MetaStrip from '../components/MetaStrip.vue'; /* ：health 色点 dot 形态单源（bw-hdot 四胞之一） */
+/* size 列 bytes 显示槽归一（parseBytes 独立 import 行——上一行 format import
    被 semanticTier531.spec 字面锁定，逐字不动） */
 import { parseBytes } from '../utils/format';
 import { friendlyEsError } from '../utils/esError';
 /* 天罗W6：枚举跨页收口——reason 人话与 can_allocate 三档出自 utils/esEnumZh（DiagView 同源） */
 import { reasonZh, canAllocateCls } from '../utils/esEnumZh';
-/* 五百三十三批：health 列中文主显——五百三十四批起本地 HEALTH_ZH 三值映射退役，收编
+/* health 列中文主显——起本地 HEALTH_ZH 三值映射退役，收编
    esEnumZh.clusterHealthZh 单源（ClusterSwitcher/SetupWizard 同源；esEnumZh 本批随批提交，
    批内自洽；import 别名 healthZh 模板槽零改动）。独立 import 行——上一行 esEnumZh import
    被 semanticTier533.spec 字面锁定，逐字不动 */
 import { clusterHealthZh as healthZh } from '../utils/esEnumZh';
-import { semFormat } from '../composables/useSemFormat'; /* 五百三十三批：size 列 bytes 单源显示 */
+import { semFormat } from '../composables/useSemFormat'; /* ：size 列 bytes 单源显示 */
 import { loadArchive, pushReport, archiveLabel, defaultPair, type ArchivedReport } from '../utils/reportArchive';
 import { usePopupList } from '../composables/usePopupList';
 import { highlightJson } from '../utils/jsonc';
-import QueryResultTable from '../components/QueryResultTable.vue'; /* 五百二十五批 W5：双表换 QRT rows 型 */
-import { metricTone } from '../utils/metricThresholds'; /* 五百二十七批 W-F：节点表行级水位档（hotCls 语义回收，阈值单一真源） */
+import QueryResultTable from '../components/QueryResultTable.vue'; /*  W5：双表换 QRT rows 型 */
+import { metricTone } from '../utils/metricThresholds'; /*  W-F：节点表行级水位档（hotCls 语义回收，阈值单一真源） */
 
 const store = useAppStore();
 const router = useRouter();
 
-/* R50：不健康索引名可点——直跳索引工作区分片诊断 tab（五百二十五批 W5：入口从 index 格
+/* 不健康索引名可点——直跳索引工作区分片诊断 tab（ W5：入口从 index 格
    点击改由 QRT row-actions 注入钮承接，goHub 语义零变化） */
 function goHub(name: string) {
   store.pick(name);
@@ -290,7 +290,7 @@ const allocExplainHtml = computed(() =>
 /* G2-B3：失败状态位——err-bar 常驻（全文+重试），与 EmptyState/报告区互斥 */
 const runErr = ref('');
 
-/* 七百七十九批 G263：原始 IO 快查（778 G259 同构）——按本页体检通道端点取记录环最近一条；
+/*  G263：原始 IO 快查（778 G259 同构）——按本页体检通道端点取记录环最近一条；
    判空 rec=null 时 notify 引导，不开空弹窗 */
 const rawIoShow = ref(false);
 const rawIoRec = ref<RawIoRec | null>(null);
@@ -301,7 +301,7 @@ function openRawIo() {
   rawIoShow.value = true;
 }
 
-/* ═══ 五百二十五批 W5：双表 QRT rows 型数据映射 ═══
+/* ═══  W5：双表 QRT rows 型数据映射 ═══
    列头文案逐字承旧 thead（index/health/pri/rep/docs/size；name/heap%/cpu%/load 1m/disk%/ram%）；
    数值列 Number 化——QRT 内核采样口径 isNumeric 只认 number（graft 期 useColStats
    isNumeric:()=>true 强制口径在内核侧的等价实现；'5' 字符串若不转 Number 会被 Σ 出局），
@@ -316,8 +316,8 @@ const ND_COLS = ['name', 'heap%', 'cpu%', 'load 1m', 'disk%', 'ram%'];
 const ndMatrix = computed(() => (data.value?.nodes || []).map((n: any) =>
   [n.name ?? null, num(n['heap.percent']), num(n.cpu), num(n['load_1m']), num(n['disk.used_percent']), num(n['ram.percent'])]));
 const ND_TYPES: Record<string, string> = { 'heap%': 'scaled_float', 'cpu%': 'scaled_float', 'load 1m': 'float', 'disk%': 'scaled_float', 'ram%': 'scaled_float' };
-/* 五百二十七批 W-F：节点表水位行色档消费（QRT rowClass 契约，内核 W-D 并行在途）——
-   525 批 W5 随纯文本壳退役的 hotCls 语义行级回收：heap/cpu/disk 三列过 METRIC_THRESHOLDS
+/*  W-F：节点表水位行色档消费（QRT rowClass 契约，内核 W-D 并行在途）——
+    W5 随纯文本壳退役的 hotCls 语义行级回收：heap/cpu/disk 三列过 METRIC_THRESHOLDS
    阈值表（单一真源，与 LiveDashboard/DiagView 同源不回自造阈值），bad→hr-row-hot、
    warn→hr-row-warm（多列取最严重档）；ndMatrix 列序 [name, heap%, cpu%, load 1m, disk%, ram%]。
    QRT 尚无该 prop 时经 attrs 透传不报错，待内核落地后 Lead 终验。 */
@@ -332,9 +332,9 @@ const ndRowClass = (row: any[]): string | undefined => {
   return undefined;
 };
 
-/* R51：报告可重入——最近一次体检落 sessionStorage，刷新后自动复原（生成时间行可辨新旧） */
+/* 报告可重入——最近一次体检落 sessionStorage，刷新后自动复原（生成时间行可辨新旧） */
 const SS_KEY = 'es-console.health-report.last';
-/* 二百一十八批：多份存档 + 任选两次对比（202 单份 PREV_KEY「与上次对比」升级）——
+/* 多份存档 + 任选两次对比（202 单份 PREV_KEY「与上次对比」升级）——
    localStorage 环形存档 8 份，对比卡任选基准/对照两份 diff */
 const archive = ref<ArchivedReport[]>([]);
 const pickBase = ref(1); /* 基准下标（旧，默认次新） */
@@ -411,7 +411,7 @@ const scoreLabel = computed(() => {
   const s = data.value?.score ?? 0;
   return s >= 85 ? '状态良好，可继续观察' : s >= 60 ? '存在告警，建议处理' : '严重问题，立即处置';
 });
-/* 五百三十一批：statCls 手配色三元随状态徽标换装 StatusPill 退役
+/* statCls 手配色三元随状态徽标换装 StatusPill 退役
    （tone 走 utils/format.healthPill：green→g / yellow→y / 其余→r 单源）；
    healthPill 返回 string 而组件 tone 是五主档联合——本 computed 仅做类型窄化
    （healthPill 按定义只出 g/y/r，as 断言诚实，逻辑零重复） */
@@ -424,8 +424,8 @@ async function run() {
   try {
     data.value = await api.healthReport();
     try { sessionStorage.setItem(SS_KEY, JSON.stringify(data.value)); } catch { /* 容量满容忍 */ }
-    /* 二百一十八批：多份存档——落 localStorage 环形档并重置默认对比对（基准=次新/对照=最新）；
-       sessionStorage SS_KEY 仍写（R51 刷新复原语义不变），PREV_KEY 单份对比退役 */
+    /* 多份存档——落 localStorage 环形档并重置默认对比对（基准=次新/对照=最新）；
+       sessionStorage SS_KEY 仍写（ 刷新复原语义不变），PREV_KEY 单份对比退役 */
     archive.value = pushReport(localStorage, data.value);
     const dp = defaultPair(archive.value);
     if (dp) { pickBase.value = dp.base; pickCmp.value = dp.cmp; }
@@ -463,7 +463,7 @@ const diffItems = computed(() => {
   const a = flatReport(baseEntry.value.data);
   const b = flatReport(cmpEntry.value.data);
   const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])];
-  /* 二百一十三批：数值型变化附变化率（↑/↓ 徽标，可视化拉满）；非数值/缺失不判 */
+  /* 数值型变化附变化率（↑/↓ 徽标，可视化拉满）；非数值/缺失不判 */
   const out: { k: string; old: string; new: string; pct?: string; up?: boolean }[] = [];
   for (const k of keys) {
     if (!(k in a)) { out.push({ k, old: '', new: b[k] }); continue; }
@@ -482,7 +482,7 @@ const diffItems = computed(() => {
   }
   return out.slice(0, 200);
 });
-/* 二百二十三批：对比结果 Markdown 复制（处置报告贴工单——基准/对照标签+得分差+全量变化清单） */
+/* 对比结果 Markdown 复制（处置报告贴工单——基准/对照标签+得分差+全量变化清单） */
 async function copyDiffMd() {
   if (!baseEntry.value || !cmpEntry.value) return;
   const esc = (v: any) => String(v ?? '').replace(/\|/g, '\\|').replace(/[\r\n]+/g, ' ');
@@ -504,7 +504,7 @@ async function copyDiffMd() {
   store.notify(ok ? 'success' : 'error', ok ? '已复制对比结果（Markdown）' : '复制失败');
 }
 
-/* 三百二十七批：报告组装抽 buildReportMd（导出与剪贴板复制共用同一口径） */
+/* 报告组装抽 buildReportMd（导出与剪贴板复制共用同一口径） */
 function buildReportMd(): string {
   if (!data.value) return '';
   const d = data.value;
@@ -559,13 +559,13 @@ function exportMd() {
   store.notify('success', 'Markdown 报告已导出');
 }
 
-/* 三百二十七批：检查项复制（级别+名称+详情） */
+/* 检查项复制（级别+名称+详情） */
 async function copyCheck(c: any) {
   const ok = await copyText(`[${c.level}] ${c.name}: ${c.message}`);
   store.notify(ok ? 'success' : 'error', ok ? '检查项已复制' : '复制失败');
 }
 
-/* 三百二十七批：主报告复制 Markdown（文件下载之外的剪贴板通道，贴群/工单直达） */
+/* 主报告复制 Markdown（文件下载之外的剪贴板通道，贴群/工单直达） */
 async function copyReportMd() {
   const md = buildReportMd();
   const ok = await copyText(md);
@@ -577,7 +577,7 @@ async function copyReportMd() {
 /* G2-C7：区块级间距落梯 --sp token（亚阶梯微调、控件内 padding、尺寸值不动） */
 .hr-page { display: flex; flex-direction: column; gap: var(--sp-4); }
 .hr-hd { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-3); }
-/* 五百二十七批 W-F：.hr-hd-l/.hr-hd-ic/.hr-hd-tt/.hr-hd-sub 死规则删除（页头已迁 §7 PageHeader 全局件） */
+/*  W-F：.hr-hd-l/.hr-hd-ic/.hr-hd-tt/.hr-hd-sub 死规则删除（页头已迁 §7 PageHeader 全局件） */
 .hr-hd-r { display: flex; gap: var(--sp-2); }
 
 
@@ -586,15 +586,15 @@ async function copyReportMd() {
 .hr-load-bar { max-width: 380px; height: 4px; margin: 0 auto; background: var(--bg2); border-radius: 2px; overflow: hidden; }
 .hr-load-fill { height: 100%; width: 30%; background: linear-gradient(90deg, transparent, var(--ac-hi), transparent); animation: lb 1.4s ease-in-out infinite; }
 .hr-load-sub { font-size: var(--fs-xs); color: var(--tx2); margin-top: var(--sp-3); }
-/* 第十批：位移动画 margin-left → transform（合成器线程跑，不再逐帧重排）；
+/* 位移动画 margin-left → transform（合成器线程跑，不再逐帧重排）；
    translateX 百分比相对自身宽（30% 轨宽），-100%↔333% 与原 margin-left -30%↔100% 轨道等价 */
 @keyframes lb { 0% { transform: translateX(-100%); } 100% { transform: translateX(333%); } }
 
-/* 五百六十三批轨4：dashed 大容器框退役（立法④）——框三件消除，border-top 分节承接
+/* 轨4：dashed 大容器框退役（立法④）——框三件消除，border-top 分节承接
    （.hr-sec 636 同类同语言）；模板类名被 healthDiff.spec.ts:28 字面锁，只动 CSS 不动模板 */
 .hr-diff { margin-bottom: var(--sp-3); border-top: 1px solid var(--line); padding-top: var(--sp-2); }
 .hr-diff summary { cursor: pointer; font-size: var(--fs-sm); color: var(--tx1); padding: var(--sp-1h) var(--sp-2h); }
-/* 五百三十三批：240px 定高 → max(240px, 42vh) 视口弹性档（525 批 lc-result 同款口径——
+/* 240px 定高 → max(240px, 42vh) 视口弹性档（ lc-result 同款口径——
    240px 保底略升，矮屏可用性优先；w527 行级锁只锁 .hr-hero 两档，此处安全） */
 .hr-diff-body { padding: var(--sp-1) var(--sp-2h) var(--sp-2); max-height: max(240px, 42vh); overflow: auto; }
 .hr-diff-row { display: flex; align-items: baseline; gap: var(--sp-2); font-size: var(--fs-xs); padding: var(--sp-0) 0; border-bottom: 1px dashed var(--line); }
@@ -603,31 +603,31 @@ async function copyReportMd() {
 .hr-diff-old { color: var(--err); text-decoration: line-through; opacity: .8; }
 .hr-diff-new { color: var(--ac-hi); }
 .hr-diff-arrow { color: var(--tx2); }
-/* 554 批：.hr-diff-pct 私造皮（2xs 手滚胶囊+up 绿/down 红手配色）随换装 StatusPill 退役——
+/* .hr-diff-pct 私造皮（2xs 手滚胶囊+up 绿/down 红手配色）随换装 StatusPill 退役——
    升降档归 .pill g/r 单源、尺寸走全局 .pill.xs；类名保留作锚（pillSweep554 看守不再长回皮） */
-/* 二百一十八批:对比对选择器(基准→对照紧凑下拉)与完全一致正向反馈 */
+/* 对比对选择器(基准→对照紧凑下拉)与完全一致正向反馈 */
 .hr-diff-pick { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); padding: var(--sp-0) var(--sp-2h) var(--sp-2); font-size: var(--fs-xs); color: var(--tx2); }
 .hr-diff-pick label { display: inline-flex; align-items: center; gap: var(--sp-1); }
 .hr-sel { font-size: var(--fs-xs); color: var(--tx1); background: var(--bg2); border: 1px solid var(--line); border-radius: var(--r-xs); padding: var(--sp-0) var(--sp-1h); max-width: 260px; }
 .hr-sel:focus-visible { outline: 2px solid var(--ac); outline-offset: 1px; }
 /* 基准/对照弹层选择器（usePopupList）：输入复用 .hr-sel 皮，弹层 Teleport 到 body（fixed 定位随 place()） */
 .hr-pick { position: relative; }
-/* 五百二十四批：壳属性（fixed/--z-island/bg/border/shadow/圆角）收编 theme.css .float-pop，本类只留坐标外裁切与字号
-   525 批：.hr-pop.inplace scoped 拷贝随之退役——inplace 基座（absolute/top:100%/left:0/min-width:100%）
+/* 壳属性（fixed/--z-island/bg/border/shadow/圆角）收编 theme.css .float-pop，本类只留坐标外裁切与字号
+   .hr-pop.inplace scoped 拷贝随之退役——inplace 基座（absolute/top:100%/left:0/min-width:100%）
    收编 theme.css .float-pop.inplace；模板 class 已是 float-pop xx-pop 链，inplace 行为不变 */
 .hr-pop { overflow: hidden; font-size: var(--fs-xs); }
 .hr-pop-list { max-height: 220px; overflow: auto; padding: 3px 0; }
 .hr-pop-item { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-1) var(--sp-2h); cursor: pointer; }
 .hr-pop-item.act, .hr-pop-item:hover { background: var(--hover); }
-/* 554 批：.hr-pop-mark 换装 StatusPill 后只留布局锚（弹层行内推右 + 不压缩）——描边/字号/
+/* .hr-pop-mark 换装 StatusPill 后只留布局锚（弹层行内推右 + 不压缩）——描边/字号/
    色档归 .pill b/n 单源（本弹层当前选中原 .on 强调→b、另一角色弱化→n） */
 .hr-pop-mark { margin-left: auto; flex: none; }
-/* 五百五十八批(b)：弹层空态收编 EmptyState compact（.hr-pop-hint 裸 div 与本地规则退役，
+/* (b)：弹层空态收编 EmptyState compact（.hr-pop-hint 裸 div 与本地规则退役，
    文案逐字保留走 :text 绑定）——窄弹层留白按原 hint 档收紧（compact 默认 16px 12px
    在弹层内喧宾夺主），图标/文案排布归 EmptyState 统一留白体系 */
 .hr-pop :deep(.empty-state) { padding: var(--sp-2h) var(--sp-3); }
 .hr-diff-same { padding: var(--sp-1) var(--sp-2h) var(--sp-2h); font-size: var(--fs-xs); color: var(--ok); }
-/* 五百五十一批：hr-hero 大横幅框退役（551 裁决推翻 545「hero 豁免」记档：hero 是 chrome
+/* hr-hero 大横幅框退役（551 裁决推翻 545「hero 豁免」记档：hero 是 chrome
    非语义）——bg/三态渐变底/全框边/radius:10px/fat padding 整块消除，降为 border-bottom
    分节（hr-sec 同语言，内容回行首）；ok/warn/err 三态语义色由 hr-score-n 文本色承接
    （分数即状态），.hr-hero.ok/.warn/.err 的边框/渐变档退役、字色档保留；
@@ -635,7 +635,7 @@ async function copyReportMd() {
 .hr-hero { display: flex; gap: var(--sp-4); padding: var(--sp-1) 0 var(--sp-3); border-bottom: 1px solid var(--line); }
 .hr-hero-l { display: flex; flex-direction: column; justify-content: center; padding-right: var(--sp-4); border-right: 1px solid var(--line); min-width: 160px; }
 .hr-score { font-family: var(--mono); }
-/* 第十批：44px 大数字 700→650；525 批：字面量归 --fs-num-xl 展示数字档 */
+/* 44px 大数字 700→650；：字面量归 --fs-num-xl 展示数字档 */
 .hr-score-n { font-size: var(--fs-num-xl); font-weight: 650; line-height: 1; font-variant-numeric: tabular-nums; }
 .hr-hero.ok .hr-score-n { color: var(--ok); }
 .hr-hero.warn .hr-score-n { color: var(--warn); }
@@ -643,7 +643,7 @@ async function copyReportMd() {
 .hr-score-max { font-size: var(--fs-lg); color: var(--tx2); margin-left: var(--sp-1); }
 .hr-score-tt { font-size: var(--fs-sm); color: var(--tx1); margin-top: var(--sp-2); }
 .hr-hero-r { flex: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-1) var(--sp-4); }
-/* 五百三十批：大屏 1600 档四列——hero 摘要 KPI 在 2K 宽下收成四列，减少行间大留白 */
+/* 大屏 1600 档四列——hero 摘要 KPI 在 2K 宽下收成四列，减少行间大留白 */
 @media (min-width: 1600px) {
   .hr-hero-r { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
@@ -655,23 +655,23 @@ async function copyReportMd() {
 .warn { color: var(--warn); }
 .err { color: var(--err); }
 
-/* 五百四十五批轨4：hr-sec 中性大容器框（bg+border+radius）退役 → io-preview 540 同款
+/* 轨4：hr-sec 中性大容器框（bg+border+radius）退役 → io-preview 540 同款
    border-top 分节（hr-page flex gap 承担节间距）；hr-sec-hd card-t 行首档保（降层不消义）。
-   五百五十一批：hr-hero 大横幅框随裁决退役并入分节流（上文注），其 border-bottom 即
+   hr-hero 大横幅框随裁决退役并入分节流（上文注），其 border-bottom 即
    hero 与首节分界——紧邻首节不再重复出线。原 545「hero 语义边框豁免」记档就此推翻 */
 .hr-sec { border-top: 1px solid var(--line); padding-top: var(--sp-2); }
 .hr-hero + .hr-sec { border-top: 0; padding-top: 0; }
 .hr-alloc-line { font-size: var(--fs-sm); margin-bottom: var(--sp-2); }
-/* 五百五十批：键名裸 b 收口 .dg-k（DiagView dg-alloc-row 同款类名/同款形对齐） */
+/* 键名裸 b 收口 .dg-k（DiagView dg-alloc-row 同款类名/同款形对齐） */
 .dg-k { color: var(--tx0); font-weight: 600; margin-right: var(--sp-1); }
 .hr-alloc-details summary { font-size: var(--fs-xs); color: var(--tx2); cursor: pointer; }
-/* 五百二十七批 W-F：分节头挂全局 .card-t（650 卡头档），本地 600 自造声明退役（口径 B 归位） */
+/*  W-F：分节头挂全局 .card-t（650 卡头档），本地 600 自造声明退役（口径 B 归位） */
 .hr-sec-hd { margin-bottom: var(--sp-2); }
-/* 554 批：.hr-sec-cnt 私造皮（fs-xs+bg2 底胶囊）随换装 StatusPill n 档退役——形态与
+/* .hr-sec-cnt 私造皮（fs-xs+bg2 底胶囊）随换装 StatusPill n 档退役——形态与
    .pill 默认档同形（fs-xs/bg2 底），色板归单源；类名保留作锚 */
 
-/* 五百二十七批 W-F：节点表水位行色档（hotCls 语义行级回收）。tr 由 QRT 内核渲染，
-   :deep 穿透（类名消费在本视图 scoped，阈值逻辑在上方 ndRowClass 单一出处） */
+/*  W-F：节点表水位行色档（hotCls 语义行级回收）。tr 由 QRT 内核渲染，
+   deep 穿透（类名消费在本视图 scoped，阈值逻辑在上方 ndRowClass 单一出处） */
 .hr-body :deep(.hr-row-hot td) { background: var(--err-soft); color: var(--err); }
 .hr-body :deep(.hr-row-warm td) { background: var(--warn-soft); color: var(--warn); }
 
@@ -686,16 +686,16 @@ async function copyReportMd() {
 .hr-msg { color: var(--tx1); }
 .hr-check.lv-critical .hr-msg, .hr-check.lv-warn .hr-msg { color: inherit; }
 
-/* 五百二十五批 W5：双表表皮（.hr-tbl/.hr-tbl-wrap/.hr-flt/.hr-agg-* 全家）随换 QRT 壳退役——
+/*  W5：双表表皮（.hr-tbl/.hr-tbl-wrap/.hr-flt/.hr-agg-* 全家）随换 QRT 壳退役——
    排序态/过滤框/聚合 footer 行/色档归 QRT 内建（max-height 420px 由 props 传内核） */
 
 .hr-alloc-zh { color: var(--tx2); }
 .hr-code { background: var(--bg2); padding: var(--sp-3); border-radius: var(--r-s); font-family: var(--mono); font-size: var(--fs-xs); max-height: max(240px, 42vh); overflow-y: auto; white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; }
 
-/* 五百六十一批：hd-g/y/r 私造圆点三档随 MetaStrip dot 形态单源退役
+/* hd-g/y/r 私造圆点三档随 MetaStrip dot 形态单源退役
    （DiagView dgMeta 判例；色值经 healthColor 直传组件 dot 位，8px 圆点归 .ms-dot 单源） */
 
-/* 五百二十七批 W-F：补 1100 堆叠档（此前仅 900 倒挂）。双档范式（Overview/Diag 同口径）：
+/*  W-F：补 1100 堆叠档（此前仅 900 倒挂）。双档范式（Overview/Diag 同口径）：
    1100=布局堆叠——hero 得分列与摘要列纵向铺开、摘要 3 列收 2 列，消除中段宽度互相挤压；
    900 保留紧凑微调语义（hero-r 单列 + 检查行塌两栏）不动。 */
 @media (max-width: 1100px) {
@@ -704,7 +704,7 @@ async function copyReportMd() {
   .hr-hero-r { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-/* R99：窄容器塌两栏（24px 图标列保留）。G2-C1 断点归一 §9.3 标准值 900（紧凑微调语义）：
+/* 窄容器塌两栏（24px 图标列保留）。G2-C1 断点归一 §9.3 标准值 900（紧凑微调语义）：
    900-1000 带恢复三栏（24px+minmax(120,160)+1fr 实测排得下），900 以下塌两栏表现同原意图。
    .hr-msg 必须显式落到第 2 栏：3 个子项进 2 栏栅格会被自动放置排到「第2行第1栏」，
    即 24px 图标轨道里，实测宽 24px / scroll 48px 直接溢出（量尺抓到）。 */
@@ -713,7 +713,7 @@ async function copyReportMd() {
   .hr-hero-r { grid-template-columns: 1fr; }
   .hr-check { grid-template-columns: 24px minmax(0, 1fr); }
   .hr-msg { grid-column: 2; }
-  /* 三百二十七批的复制按钮是 .hr-check 第 4 个 grid 子项：塌两栏后自动放置会把它
+  /* 的复制按钮是 .hr-check 第 4 个 grid 子项：塌两栏后自动放置会把它
      排进「第 2 行第 1 栏」（24px 图标轨道）直接溢出（量尺抓到）——显式落第 2 栏右对齐 */
   .hr-check > .btn { grid-column: 2; justify-self: end; }
 }

@@ -1,5 +1,5 @@
 /**
- * 五百四十批 W3（轨3 数据表格内核）：remoteSort 消费侧真接线（§6y 遗留收口）。
+ *  W3（轨3 数据表格内核）：remoteSort 消费侧真接线（§6y 遗留收口）。
  *
  * 契约（本批验收锚）：
  * ① IndexHubView 文档浏览器（docs tab）接 RT remoteSort 档：remote-sort + @sort-change；
@@ -9,7 +9,7 @@
  *    走 runDocs 天然携带 docsSort 态（排序是浏览态，不随页码/查询词重置，Kibana Discover
  *    心智）；切索引（watch cur）清 sort 态——排序属于当前索引维度。
  * ③ sort body 注入收口 buildDocsDslWithSort：parse-merge 包一层（buildDocsDsl 是共享纯函数，
- *    被 DslQueryView 等黑名单消费方读，262 批源码锁锚其字面调用形态——不改 utils/workbench.ts）；
+ *    被 DslQueryView 等黑名单消费方读，源码锁锚其字面调用形态——不改 utils/workbench.ts）；
  *    body 形态 [{ f: { order: 'asc'|'desc', unmapped_type: 'long' } }]（unmapped_type 防动态列/
  *    跨分片映射缺失 400，ES 官方同款）。
  * ④ RT remoteSort 档 emit 契约轻量再锚（535 立法随行核）：点表头 emit {f,d}、行序/落盘零触碰。
@@ -164,7 +164,7 @@ afterEach(() => {
 });
 
 /* ═══════════ 一、源码锁：docs tab remoteSort 接线 ═══════════ */
-describe('五百四十批：IndexHubView 文档浏览器 remoteSort 消费接线（源码锁）', () => {
+describe('：IndexHubView 文档浏览器 remoteSort 消费接线（源码锁）', () => {
   it('docs RT 标签 remote-sort + @sort-change 在场；query tab RT 不接线（DSL 手写不冲突）', () => {
     /* docs RT 标签切片（防 query/其他消费方误匹配） */
     const dStart = ih.indexOf('<ResultTable ref="docsTbl"');
@@ -189,12 +189,12 @@ describe('五百四十批：IndexHubView 文档浏览器 remoteSort 消费接线
     expect(fnBody).toContain('void runDocs();');
     expect(fnBody, '重查当前页：排序不归页 1（页码语义与翻页一致）').not.toContain('docsPage.value = 1');
 
-    /* sort body 注入收口：parse-merge 包一层，262 批 buildDocsDsl 字面调用锚原样保留 */
+    /* sort body 注入收口：parse-merge 包一层， buildDocsDsl 字面调用锚原样保留 */
     expect(ih).toMatch(/function buildDocsDslWithSort\(\): string \{/);
     expect(ih).toMatch(/JSON\.parse\(buildDocsDsl\(docsQ\.value, docsSize\.value, \(docsPage\.value - 1\) \* docsSize\.value\)\)/);
     expect(ih).toMatch(/o\.sort = \[\{ \[docsSort\.value\.f\]: \{ order: docsSort\.value\.d, unmapped_type: 'long' \} \}\];/);
     /* runDocs 消费注入件（api.clusterQuery 第二参 DSL 来自带 sort 版本）。
-       五百五十二批随迁：runDocs 接直方图注入链（useHistAgg 统一件）后改为 bodyObj
+       随迁：runDocs 接直方图注入链（useHistAgg 统一件）后改为 bodyObj
        可变引用形态——buildDocsDslWithSort() 产物 parse 进 bodyObj（sort 注入不变），
        applyHistToBody 只加 __hist 聚合不动 sort，降级重试两处均 stringify(bodyObj)。
        锁意图原样：带 sort 的产物进重查 body、重查当前页不归 1。 */
@@ -207,13 +207,13 @@ describe('五百四十批：IndexHubView 文档浏览器 remoteSort 消费接线
     expect(wStart).toBeGreaterThan(-1);
     const wBody = ih.slice(wStart, ih.indexOf('\n});', wStart));
     expect(wBody).toContain('docsSort.value = null;');
-    /* 262 批归位行原样保留（既有锁随行核） */
-    expect(wBody).toContain('docsPage.value = 1; /* 262 批：切索引翻页归位 */');
+    /* 归位行原样保留（既有锁随行核） */
+    expect(wBody).toContain('docsPage.value = 1; /* 切索引翻页归位 */');
   });
 });
 
 /* ═══════════ 二、行为网：排序下推真重查 ═══════════ */
-describe('五百四十批：docs tab 排序下推行为网（真服务端排序重查当前页）', () => {
+describe('：docs tab 排序下推行为网（真服务端排序重查当前页）', () => {
   it('首查无 sort；点表头→携 ES sort body 重查当前页（from 不变）；三态 asc→desc→取消', async () => {
     localStorage.setItem('es_picked', 'a-idx');
     const { host } = await mountHub(); /* 默认 docs tab：onMounted 即 runDocs */
@@ -288,7 +288,7 @@ describe('五百四十批：docs tab 排序下推行为网（真服务端排序�
 });
 
 /* ═══════════ 三、RT remoteSort 档 emit 契约锚（535 立法随行核） ═══════════ */
-describe('五百四十批：RT remoteSort 档 emit 契约（轻量再锚）', () => {
+describe('：RT remoteSort 档 emit 契约（轻量再锚）', () => {
   it('remoteSort=true 点表头只 emit {f,d}（asc 起步）；本地行序/落盘零触碰', async () => {
     const got: Array<{ f: string; d: 'asc' | 'desc' } | null> = [];
     const HITS = [

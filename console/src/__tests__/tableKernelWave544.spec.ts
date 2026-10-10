@@ -1,7 +1,7 @@
 /**
- * 五百四十三批 W3（轨3 数据表格内核）：syncSort 宿主权威排序态回填（540 批立法遗留收口）。
+ *  W3（轨3 数据表格内核）：syncSort 宿主权威排序态回填（立法遗留收口）。
  *
- * 背景：540 批给 IndexHubView docs tab 接了 remote-sort+@sort-change（docsSort 态+重查），
+ * 背景：给 IndexHubView docs tab 接了 remote-sort+@sort-change（docsSort 态+重查），
  * 但 RT 内核排序箭头只由内部意图态 remoteSortCur（升→降→取消三态循环）驱动——宿主清了
  * docsSort（切索引），内核箭头仍停旧态。本批立法 syncSort 回填通道：
  * ① prop `syncSort?: { f: string; d: 1 | -1 } | null`（d 按立法契约收 1|-1，内核内部归一
@@ -9,7 +9,7 @@
  *    同步该态，此后用户点击仍走既有三态循环只 emit 意图）；null=清态（箭头清+循环基点清）。
  * ② 缺省 undefined=未接线零增量：本地排序档/remote 档逐字节不变（不读不写 remoteSortCur，
  *    remote 未接线档箭头恒 hint/aria-sort 恒无）。本地（客户端）档不消费本 prop。
- * ③ 与五百三十八批「remoteSort=true 档挂载不读排序落盘」正交兼容：回填只走 prop 不触 LS。
+ * ③ 与「remoteSort=true 档挂载不读排序落盘」正交兼容：回填只走 prop 不触 LS。
  * ④ IndexHubView 消费侧接线：docsSortSync computed（'asc'|'desc'→1|-1 归一）传
  *    :sync-sort；切索引 watch(cur) 置 docsSort=null 即内核箭头同步清。重查不变路径零改动。
  *
@@ -136,7 +136,7 @@ async function mountHub() {
   return { host, router, st: useAppStore(pinia) };
 }
 
-/* RT 直挂（540 批 part 三同款）：propsFactory 每渲读取（ref 回填通道需响应式重渲） */
+/* RT 直挂（ part 三同款）：propsFactory 每渲读取（ref 回填通道需响应式重渲） */
 const RT_HITS = [
   { _id: 'a', _source: { n: 30 } },
   { _id: 'b', _source: { n: 10 } },
@@ -175,7 +175,7 @@ afterEach(() => {
 });
 
 /* ═══════════ 一、RT 内核 syncSort 契约（行为网）═══════════ */
-describe('五百四十三批：RT syncSort 缺省零增量锚（本地档/remote 档逐字节不变）', () => {
+describe('：RT syncSort 缺省零增量锚（本地档/remote 档逐字节不变）', () => {
   it('remote 档未接线（缺省 undefined）：点击 emit 意图但箭头恒 hint/aria-sort 恒无，行序零触碰', async () => {
     const got: Array<{ f: string; d: 'asc' | 'desc' } | null> = [];
     const host = await mountRtLive(() => ({ hits: RT_HITS, total: 2, index: 'w543rt', remoteSort: true, onSortChange: (s: any) => got.push(s) }));
@@ -203,7 +203,7 @@ describe('五百四十三批：RT syncSort 缺省零增量锚（本地档/remote
   });
 });
 
-describe('五百四十三批：RT syncSort 回填/清态契约（remote 档箭头回显通道）', () => {
+describe('：RT syncSort 回填/清态契约（remote 档箭头回显通道）', () => {
   it('syncSort 有值→箭头/aria-sort 显示该态（回填驱动），行序/落盘零触碰；改值跟切', async () => {
     const sync = ref<{ f: string; d: 1 | -1 } | null>({ f: 'n', d: 1 });
     const host = await mountRtLive(() => ({ hits: RT_HITS, total: 2, index: 'w543sync', storageKey: 'w543sync', remoteSort: true, syncSort: sync.value }));
@@ -244,7 +244,7 @@ describe('五百四十三批：RT syncSort 回填/清态契约（remote 档箭�
     expect(got, '清态后点击从 asc 重启（循环基点已清）').toEqual([{ f: 'n', d: 'asc' }]);
   });
 
-  it('五百三十八批兼容锚：remote 档挂载不读排序落盘——LS 残留不上箭头；回填值（非 LS 值）决定显示', async () => {
+  it('兼容锚：remote 档挂载不读排序落盘——LS 残留不上箭头；回填值（非 LS 值）决定显示', async () => {
     localStorage.setItem('es_tbl_sort:w543ls:m', JSON.stringify([{ f: 'n', d: 'asc' }]));
     const raw = localStorage.getItem('es_tbl_sort:w543ls:m');
     /* 未接线：LS 残留不恢复箭头（538 审计口径，显示面再核） */
@@ -260,7 +260,7 @@ describe('五百四十三批：RT syncSort 回填/清态契约（remote 档箭�
 });
 
 /* ═══════════ 二、IndexHubView 消费侧接线（源码锁+行为锚）═══════════ */
-describe('五百四十三批：IndexHubView docsSortSync 接线（源码锁）', () => {
+describe('：IndexHubView docsSortSync 接线（源码锁）', () => {
   it('docs RT 标签 :sync-sort 在场；query tab RT 不接线；docsSortSync 归一 1/-1', () => {
     const dStart = ih.indexOf('<ResultTable ref="docsTbl"');
     expect(dStart).toBeGreaterThan(-1);
@@ -283,11 +283,11 @@ describe('五百四十三批：IndexHubView docsSortSync 接线（源码锁）',
     expect(wStart).toBeGreaterThan(-1);
     const wBody = ih.slice(wStart, ih.indexOf('\n});', wStart));
     expect(wBody).toContain('docsSort.value = null;');
-    expect(wBody).toContain('docsPage.value = 1; /* 262 批：切索引翻页归位 */');
+    expect(wBody).toContain('docsPage.value = 1; /* 切索引翻页归位 */');
   });
 });
 
-describe('五百四十三批：IndexHubView 接线行为锚（切索引内核箭头同步清）', () => {
+describe('：IndexHubView 接线行为锚（切索引内核箭头同步清）', () => {
   it('点表头回填上行（aria-sort=ascending）→ 切索引 docsSort=null → 箭头清', async () => {
     localStorage.setItem('es_picked', 'a-idx');
     const { st } = await mountHub(); /* 默认 docs tab：onMounted 即 runDocs */

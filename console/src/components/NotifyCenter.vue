@@ -1,7 +1,7 @@
 <template>
-  <!-- R80：通知中心——toast 转瞬即逝，重度用户切页/离开期间错过的失败通知在这里回看；
+  <!-- 通知中心——toast 转瞬即逝，重度用户切页/离开期间错过的失败通知在这里回看；
        未读只计 error/warning（app store 口径），打开面板即视为已读 -->
-  <!-- 九十一批：popover 改受控——清空历史需先关面板再弹确认（避开弹层 z-index 叠加） -->
+  <!-- popover 改受控——清空历史需先关面板再弹确认（避开弹层 z-index 叠加） -->
   <n-popover trigger="click" placement="bottom-end" :show-arrow="false" raw :show="open" @update:show="onToggle">
     <template #trigger>
       <button class="btn ghost sm nc-btn" title="通知历史（最近 50 条，错过的失败提醒可回看）" aria-label="通知历史" :aria-expanded="open">
@@ -12,25 +12,25 @@
     <div class="nc-pane" role="dialog" aria-label="通知历史">
       <div class="nc-head">
         <span>通知历史</span>
-        <!-- 第十批 C：工具行挂全局 .toolrow（theme.css），本地同构 flex 样式退役 -->
+        <!--  C：工具行挂全局 .toolrow（theme.css），本地同构 flex 样式退役 -->
         <div class="nc-tools toolrow">
-          <!-- R85：历史里成功类占大头时，真正要回看的异常被淹没——一键只看 error/warning -->
+          <!-- 历史里成功类占大头时，真正要回看的异常被淹没——一键只看 error/warning -->
           <button v-if="store.notifyLog.length" class="btn ghost sm" :class="{ on: errOnly }"
             @click="errOnly = !errOnly" title="只看异常（error/warning）">
 仅异常
 </button>
-          <!-- 九十一批：清空补确认（65 批 RestView 清空历史同款——本地记录清了就没了） -->
+          <!-- 清空补确认（65 批 RestView 清空历史同款——本地记录清了就没了） -->
           <button v-if="store.notifyLog.length" class="btn ghost sm" @click="clearLog" title="清空历史">
             <Trash2 :size="12" /> 清空
           </button>
         </div>
       </div>
-      <!-- 第十批 B：两支裸空态迁 EmptyState compact（原 .nc-empty 裸文案拆 title/hint，语义不变） -->
+      <!--  B：两支裸空态迁 EmptyState compact（原 .nc-empty 裸文案拆 title/hint，语义不变） -->
       <EmptyState v-if="!store.notifyLog.length" compact :icon="Bell" text="暂无通知"
         hint="作业完成/失败、操作结果都会留档在这里" />
       <EmptyState v-else-if="!shownLog.length" compact :icon="Bell" text="没有异常通知" hint="一切正常" />
       <div v-else class="nc-list">
-        <!-- R86：日期分组的真时间线——跨天回看不用靠「2d 前」心算归属 -->
+        <!-- 日期分组的真时间线——跨天回看不用靠「2d 前」心算归属 -->
         <template v-for="g in grouped" :key="g.label">
           <div class="nc-day">{{ g.label }}</div>
           <div v-for="(n, i) in g.items" :key="n.ts + '-' + i" class="nc-item">
@@ -39,9 +39,9 @@
               <div class="nc-msg">{{ n.msg }}</div>
               <div class="nc-meta">
                 <span class="nc-ts mono" :title="tsTitle(n)">{{ relTime(n.ts, now) }}</span>
-                <!-- R85：同文案风暴聚合为一条，×N 保留发生次数证据；R86：首见→最近跨度一并可见 -->
+                <!-- 同文案风暴聚合为一条，×N 保留发生次数证据；：首见→最近跨度一并可见 -->
                 <span v-if="(n.count || 1) > 1" class="nc-cnt mono" :title="tsTitle(n)">×{{ n.count }}</span>
-                <!-- 三百一十六批：动作徽标——该通知带过操作按钮（toast 已逝，历史侧至少知悉错过了什么） -->
+                <!-- 动作徽标——该通知带过操作按钮（toast 已逝，历史侧至少知悉错过了什么） -->
                 <span v-if="n.actions?.length" class="nc-acts mono" :title="'此通知带动作：' + n.actions.join('、') + '（toast 已消失，如需操作请重试原动作）'">⚡{{ n.actions.length }}</span>
                 <span v-if="n.firstTs && n.ts - n.firstTs >= 1000" class="nc-span mono" :title="tsTitle(n)">持续 {{ fmtDur(n.ts - n.firstTs) }}</span>
               </div>
@@ -72,7 +72,7 @@ const unread = computed(() => store.notifyUnread);
 const errOnly = ref(false);
 const shownLog = computed(() =>
   errOnly.value ? store.notifyLog.filter(n => n.kind === 'error' || n.kind === 'warning') : store.notifyLog);
-/* R86：按自然日分组（历史已是时序，顺序扫描即可）；绑 now 保证跨午夜时「今天/昨天」自动滑动 */
+/* 按自然日分组（历史已是时序，顺序扫描即可）；绑 now 保证跨午夜时「今天/昨天」自动滑动 */
 const grouped = computed(() => {
   const gs: { label: string; items: typeof store.notifyLog }[] = [];
   for (const n of shownLog.value) {
@@ -88,14 +88,14 @@ function tsTitle(n: { ts: number; firstTs?: number; count?: number }): string {
     ? `首见 ${fmtTime(n.firstTs)} → 最近 ${fmtTime(n.ts)}，共 ${n.count} 次（已聚合）`
     : fmtTime(n.ts);
 }
-/* 九十一批：popover 受控——清空历史要先关面板再弹确认（确认弹窗 z-index 低于
+/* popover 受控——清空历史要先关面板再弹确认（确认弹窗 z-index 低于
    naive 弹层，不关会叠在面板后面） */
 const open = ref(false);
 function onToggle(show: boolean) {
   open.value = show;
   if (show) store.markNotifySeen();
 }
-/* 九十一批：清空通知历史补确认——65 批 RestView 清空历史同款（本地记录清了就没了，
+/* 清空通知历史补确认——65 批 RestView 清空历史同款（本地记录清了就没了，
    且含未读标记）。先收面板，确认弹窗由 App.vue 全局宿主渲染 */
 async function clearLog() {
   open.value = false;
@@ -130,9 +130,9 @@ async function copyMsg(msg: string) {
   display: flex; align-items: center; justify-content: space-between; padding: var(--sp-2) var(--sp-3);
   font-size: var(--fs-sm); font-weight: 650; color: var(--tx1); border-bottom: 1px solid var(--line); flex-shrink: 0;
 }
-/* 第十批 C：.nc-tools 基础 flex 样式由全局 .toolrow 承担，仅保留选中态 */
+/*  C：.nc-tools 基础 flex 样式由全局 .toolrow 承担，仅保留选中态 */
 .nc-tools .btn.on { color: var(--warn); border-color: currentColor; }
-/* 第十批 B：.nc-empty 裸空态退役迁 EmptyState compact，本地样式随迁删除 */
+/*  B：.nc-empty 裸空态退役迁 EmptyState compact，本地样式随迁删除 */
 .nc-list { overflow-y: auto; padding: var(--sp-1) 0; }
 /* 日期组头：时间线的骨架，滚动时吸顶保持当前日期可见 */
 .nc-day {

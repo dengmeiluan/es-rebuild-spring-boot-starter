@@ -1,6 +1,6 @@
 import { ref, onActivated, onDeactivated, onBeforeUnmount, type Ref } from 'vue';
 
-/* 二百三十二批 P1-4：结果自动刷新（dbx auto-refresh 对位——档位关/10s/30s/60s，不默认开）。
+/*  P1-4：结果自动刷新（dbx auto-refresh 对位——档位关/10s/30s/60s，不默认开）。
    生命周期收口：KeepAlive onActivated/onDeactivated + 页面 visibilitychange + onBeforeUnmount
    全链停/续（QueryHub 二级 KeepAlive 会双触发 activated——start 幂等：先 stop 再排新表）；
    tick 时再验 guard（dbx 同款「触发时再验 canRefresh」）——调用方把「保存中/加载中/有
@@ -22,7 +22,7 @@ export function useAutoRefresh(fn: () => void | Promise<void>, opts: {
 } {
   const on = ref(false);
   let timer: ReturnType<typeof setInterval> | null = null;
-  /* 五百六十三批：初始化盲区收口（533 静默失效类②变体）——此前恒按可见初始化，
+  /* 初始化盲区收口（533 静默失效类②变体）——此前恒按可见初始化，
      后台标签页首载（document.hidden 已 true）时无 visibilitychange 可听，
      首个 visibilitychange 前轮询照跑；改读实值让 hidden 短路在首轮 tick 前生效 */
   let pageVisible = !document.hidden;

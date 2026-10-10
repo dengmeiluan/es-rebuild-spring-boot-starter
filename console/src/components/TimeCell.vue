@@ -1,5 +1,5 @@
 <template>
-  <!-- R99：时间单元格统一入口。列内给相对时间（窄、好扫读），
+  <!-- 时间单元格统一入口。列内给相对时间（窄、好扫读），
        悬浮给带时区的绝对时间（精确、跨机器无歧义）。
        这个组合此前已在 NotifyCenter / DslQueryView / OverviewView /
        RestView / XmigrateView 五处自发形成，此处固化成组件后推广。 -->

@@ -7,7 +7,7 @@ import java.util.Arrays;
 import static org.junit.Assert.assertEquals;
 
 /**
- * R94：无 format 的 date 字段告知必须<b>活过持久化快照</b>。
+ * 无 format 的 date 字段告知必须<b>活过持久化快照</b>。
  *
  * <p><b>为什么单独测这个</b>：{@link MigrationHandle#toJobEs()} 每次构造<b>全新</b>的
  * {@link MigrateJobES}，逐字段拷贝。漏拷一个字段不会有任何编译错误、不会有任何现有测试变红，

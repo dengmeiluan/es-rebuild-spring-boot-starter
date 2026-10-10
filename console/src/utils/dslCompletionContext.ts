@@ -1,12 +1,12 @@
-/* W4 Task 12：DSL 补全上下文判定——从文首扫到 offset，维护 {}/[] 栈与每层最近键名。
+/* W4 ：DSL 补全上下文判定——从文首扫到 offset，维护 {}/[] 栈与每层最近键名。
    非严格解析（残缺文档容忍）：栈不平衡/半截字符串按已扫描信息兜底。
    root→根层键补全；query-type→查询类型 snippet；field→叶子子句字段名位（clause=子句名）；
    range-op→range 字段值对象内操作符位（gte/gt/lt/lte）；exists-key→exists 键位钉死 "field"；
    agg-name→aggs 容器键位（实例自由命名）；agg-type→实例值对象键位（聚合类型骨架）；none→不出层。 */
 import { SETTINGS_CATALOG } from './indexSettingsCatalog';
-/* 五百三十八批：字段位类型亲和置顶序的语义源（五百三十批下沉 queryAstOps 的单一出处，
+/* 字段位类型亲和置顶序的语义源（下沉 queryAstOps 的单一出处，
    本链此前未消费——sqlCompletion/ClauseNode 同源，不另起算子映射表防漂移）
-   554 批：keyword/number 两族改吃 queryAstOps 族表单源（KEYWORD_VALUE_TYPES 三员同值；
+   keyword/number 两族改吃 queryAstOps 族表单源（KEYWORD_VALUE_TYPES 三员同值；
    number 滤 token_count 保持九口径——AFFINITY 族序零变，dslValueTiers545 行为锁保形） */
 import { typePriorityForOp, KEYWORD_VALUE_TYPES, NUMERIC_VALUE_TYPES } from './queryAstOps';
 
@@ -61,7 +61,7 @@ export const ROOT_KEY_SNIPPETS: Record<string, { text: string; detail: string }>
     2.6.0：exists 移出——其键位钉死 "field"（exists-key 档），出字段名档是语义误导 */
 const FIELD_CLAUSES = new Set(['match', 'match_phrase', 'term', 'terms', 'range', 'wildcard', 'prefix', 'fuzzy', 'regexp']);
 
-/* 五百四十六批：数组键链白名单位（对标 Kibana sort/_source 补全）。两类白名单各管一个位：
+/* 数组键链白名单位（对标 Kibana sort/_source 补全）。两类白名单各管一个位：
    - 元素对象键位（"sort": [{ "<光标" }]）：数组属主键 ∈ DSL_ARRAY_OBJKEY_CHAINS（本批=sort，
      排序字段位；top_hits 等嵌套 sort 同构命中），dslContext 出 array-elem-key 档；
    - 元素串位（"_source": ["<光标"]）：数组属主键 ∈ DSL_ARRAY_ELEM_CHAINS（本批=_source，
@@ -139,7 +139,7 @@ export function dslContext(doc: string, offset: number): DslCtx {
       if (innerA.length === 1 && innerA[0].type === '{') return { kind: 'agg-name' };
       if (innerA.length === 2 && innerA[1].type === '{') return { kind: 'agg-type' };
     }
-    /* 五百四十六批：数组元素对象键位（键链白名单位）——栈顶 { 的下层是 [ 数组帧、数组帧属主键
+    /* 数组元素对象键位（键链白名单位）——栈顶 { 的下层是 [ 数组帧、数组帧属主键
        ∈ DSL_ARRAY_OBJKEY_CHAINS（本批=sort，排序字段键位；top_hits 等嵌套 sort 同构命中）。
        白名单外数组（must/filter 等元素对象）不在此出层，既有 query-type/field 口径零变化；
        sort 元素对象内再开对象（"order": 位）栈顶下层是 { 不是 [，不命中——540 钉 none 面不沾。 */
@@ -181,7 +181,7 @@ export function dslContext(doc: string, offset: number): DslCtx {
   return { kind: 'query-type' };
 }
 
-/* 五百三十八批：DSL 字段位算子→类型亲和置顶序（纯函数，零 UI 变化——只调序不改候选集）。
+/* DSL 字段位算子→类型亲和置顶序（纯函数，零 UI 变化——只调序不改候选集）。
    typePriorityForOp 的置顶档按「族」描述（text/keyword/number/date…），族展开为具体 mapping
    类型供字段清单 rank：族表对齐本仓既有口径——数值族九种（LuceneInput NUMERIC_TYPES 同表）、
    keyword 族含 wildcard（queryAstOps.opsForType keyword||wildcard 同分支）、date 族含
@@ -190,7 +190,7 @@ export function dslContext(doc: string, offset: number): DslCtx {
    未命中垫底（同档保原序）；无类型倾向算子 prio 空 → 原序直通。 */
 const AFFINITY_FAMILIES: Record<string, string[]> = {
   text: ['text', 'annotated_text'],
-  /* 554 批：两族改吃 queryAstOps 单源（值与原 literal 逐字同形）——keyword 三员直用；
+  /* 两族改吃 queryAstOps 单源（值与原 literal 逐字同形）——keyword 三员直用；
      number 九口径=十口径滤 token_count（分词计数无 range 精确语义，AFFINITY 序零变） */
   keyword: KEYWORD_VALUE_TYPES,
   number: NUMERIC_VALUE_TYPES.filter(t => t !== 'token_count'),
@@ -219,7 +219,7 @@ export function orderFieldsByClauseOp<T extends { type: string }>(fields: T[], c
     .map(x => x.f);
 }
 
-/* 五百四十批：DSL 字段位算子→类型置顶序（原始序版）——MonacoEditor 本地 orderFieldsByType
+/* DSL 字段位算子→类型置顶序（原始序版）——MonacoEditor 本地 orderFieldsByType
    原样收口进册（原地 diff 裁定：与 orderFieldsByClauseOp 语义**有差**，不合并）。
    本函数直消费 typePriorityForOp 的原始序、不做亲和族展开：term 位 type='wildcard'
    字段不命中（keyword 本名独占置顶）、range 位 date_nanos 不命中（date 本名才命中）；
@@ -235,16 +235,16 @@ export function orderFieldsByTypeForOp<T extends { type: string }>(fields: T[], 
     .map(x => x.f);
 }
 
-/* 五百四十批：DSL 值位类型档静态候选（date/ip 两档）——语义平移自 sqlCompletion.VAL_FORMAT_HINTS
-   同名档（date→date-math、ip→点分字面）与 LuceneInput 538 批 DATE/IP_HINTS 先例；
+/* DSL 值位类型档静态候选（date/ip 两档）——语义平移自 sqlCompletion.VAL_FORMAT_HINTS
+   同名档（date→date-math、ip→点分字面）与 LuceneInput  DATE/IP_HINTS 先例；
    只提示格式不约束输入，任意值仍可手输。表外类型不入表=消费侧维持既有压制。
-   五百四十三批：本表**保持 date/ip 两档零变动**——dslValueTiers540 B 段把表内容钉死（keyword/
+   本表**保持 date/ip 两档零变动**——dslValueTiers540 B 段把表内容钉死（keyword/
    boolean/long/integer/double toBeUndefined）、C 段把 term/keyword 与 range/数值 值位压制钉死，
    且 540 记档「date-math·ip 外值形态（产品裁决）」：':' 值串位的类型档 regime 冻结。
    本批 keyword/数值/boolean 形态档落姊妹表 DSL_ARRAY_ELEM_TYPE_HINTS（见下），仅数组元素位
    链路消费；540 契约将来演进放开后两表可并。
-   五百五十八批：随迁翻案收编 date_nanos + geo_point 两档（dslValueTiers540 B 段 toBeUndefined
-   负锁随迁注记翻案，557 批 root-bare-clause 翻案同款先例）——姊妹面 546/547/552/554 批已四批
+   随迁翻案收编 date_nanos + geo_point 两档（dslValueTiers540 B 段 toBeUndefined
+   负锁随迁注记翻案， root-bare-clause 翻案同款先例）——姊妹面 546/547/552/已四批
    扩档（date_nanos≡date 族、geo_point '纬度,经度'），本表的 540 收窄 regime 不再成立，
    detail 与 values 自 sqlCompletion VAL_FORMAT_HINTS 同名档逐字平移；仍只提示格式不约束输入。 */
 export const DSL_VALUE_TYPE_HINTS: Record<string, { detail: string; values: string[] }> = {
@@ -254,7 +254,7 @@ export const DSL_VALUE_TYPE_HINTS: Record<string, { detail: string; values: stri
   geo_point: { detail: '字面提示 · geo_point', values: ['40.71,-74.01'] },
 };
 
-/* 五百四十三批：数组元素位形态档（DSL_VALUE_TYPE_HINTS 的姊妹表，仅 terms 值数组续元素位链路
+/* 数组元素位形态档（DSL_VALUE_TYPE_HINTS 的姊妹表，仅 terms 值数组续元素位链路
    消费——dslKeyGuard arrayElem 键链口）。keyword 族（含 wildcard——queryAstOps keyword||wildcard
    同分支口径）通配形态 pref*（wildcard 语义，QUERY_SNIPPETS wildcard 骨架 "${2:pref*}" 同形
    先例）、数值族八类型字面数字（整型 1/浮点 1.5，整浮分档只提示形态；AFFINITY number 族第九种
@@ -274,7 +274,7 @@ export const DSL_ARRAY_ELEM_TYPE_HINTS: Record<string, { detail: string; values:
   boolean: { detail: '字面提示 · boolean', values: ['true', 'false'] },
 };
 
-/** 五百四十批：值位字段解析（dslKeyGuard 键链 → 字段路径；非字段值位返回 null 维持压制）。
+/** 值位字段解析（dslKeyGuard 键链 → 字段路径；非字段值位返回 null 维持压制）。
     叶子子句直挂值位（"term": { "<vk>": "<光标" ）→ 字段=vk；
     range 操作符值位（"range": { "<pk>": { "<vk>": "<光标 ）→ 字段=pk，vk 限 RANGE_OPS 四操作符
     （time_zone/format 等元键出 date-math 候选是误导）。
@@ -286,7 +286,7 @@ export function dslValueFieldAt(valueKey: string, parentKey: string | null, gran
   return null;
 }
 
-/** 五百四十三批：数组元素位字段解析（dslValueFieldAt 的姊妹——值数组的元素串位没有「当前键」，
+/** 数组元素位字段解析（dslValueFieldAt 的姊妹——值数组的元素串位没有「当前键」，
     字段=数组属主键。"terms": { "<field>": [ "x", "<光标" ）→ ownerKey（数组的属主键）∈ 叶子
     子句（FIELD_CLAUSES 同表）且 elemKey 非空 → 字段=elemKey；must/ids/_source/sort 等非字段
     值数组 → null 维持压制。与 dslValueFieldAt 同一哲学：解析层只出「形态上的字段名」，是否真
@@ -299,14 +299,14 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
 
 /* W6：DevTools body 端点语义分级——bodyKind 判定 + settings/mapping 档数据源。
    纯函数零请求；settings 档复用 W1 SETTINGS_CATALOG（带中文说明）。
-   五百二十四批：增 'doc' 档——文档体（GET/PUT /idx/_doc/1、_create、_update、_source 端点）
+   增 'doc' 档——文档体（GET/PUT /idx/_doc/1、_create、_update、_source 端点）
    键位零候选（_source 字段名自由，出 root 查询键骨架是误导）、仅 field 值位白名单出字段候选。
-   五百二十五批：增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
+   增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
    不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
    值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
 export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'none';
 
-/* 五百二十五批：_analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
+/* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
    analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
 export const ANALYZE_KEY_SNIPPETS: Record<string, { text: string; detail: string }> = {
   analyzer:    { text: '"analyzer": "${1:standard}"',              detail: '指定分词器（内置名或自定义组件名）' },
@@ -319,12 +319,12 @@ export const ANALYZE_KEY_SNIPPETS: Record<string, { text: string; detail: string
   explain:     { text: '"explain": ${1|true,false|}',              detail: '输出分词过程明细（每个 token 经过的组件）' },
 };
 
-/* 五百二十五批：analyzer/search_analyzer/normalizer/tokenizer 值位内置清单（analyze 档）。
+/* analyzer/search_analyzer/normalizer/tokenizer 值位内置清单（analyze 档）。
    ik_* 拆两个实名（console 目标集群标配插件分词器）；实名自定义组件由视图侧
    dslAssist.analyzers() 通道并入（与 mapping 档 524+1 通道同一闭包契约），缺席=纯内置。 */
 export const BUILTIN_ANALYZERS = ['standard', 'simple', 'whitespace', 'stop', 'keyword', 'pattern', 'fingerprint', 'ik_max_word', 'ik_smart'];
 
-/* 五百六十批：analysis 内置组件三张同族表（与 BUILTIN_ANALYZERS 同位置同风格——
+/* analysis 内置组件三张同族表（与 BUILTIN_ANALYZERS 同位置同风格——
    AnalyzerLab 自定义组合 tokenizer/char_filter/filter 三输入 datalist 候选源，各归其位，
    不再与 analyzer 名混表）。只做提示零请求；缺席=自定义组件名（视图侧 analyzers() 通道
    并入先例同轨，后续消费方照此并）。ik 族照附（插件分词组件，console 目标集群标配）。 */
@@ -332,7 +332,7 @@ export const BUILTIN_TOKENIZERS = ['standard', 'keyword', 'whitespace', 'letter'
 export const BUILTIN_CHAR_FILTERS = ['html_strip', 'mapping', 'pattern_replace'];
 export const BUILTIN_TOKEN_FILTERS = ['lowercase', 'stop', 'asciifolding', 'stemmer', 'synonym', 'synonym_graph', 'trim', 'unique', 'truncate', 'word_delimiter', 'shingle', 'snowball', 'ik_max_word', 'ik_smart'];
 
-/* 五百六十二批：analysis 内置组件名中文释义表（AnalyzerLab 四 datalist option 挂 title——
+/* analysis 内置组件名中文释义表（AnalyzerLab 四 datalist option 挂 title——
    「候选只有英文名不知是干嘛的」根治面；esEnumZh 面向字段类型不掺 analysis 组件，本表
    随四张 BUILTIN_* 同放此处）。键覆盖 BUILTIN_ANALYZERS/TOKENIZERS/CHAR_FILTERS/
    TOKEN_FILTERS 四表全员；表外键回落空串（消费侧 `|| ''`，缺席零扰动零误挂）。 */
@@ -366,7 +366,7 @@ export const ANALYZER_COMPONENT_ZH: Record<string, string> = {
   shingle: 'shingle：相邻词元组合成词组（bigram 等）',
 };
 
-/* 五百六十批：analyzer 高频参数中文词表（AnalysisSettingsView 条目展开参数释义串消费，
+/* analyzer 高频参数中文词表（AnalysisSettingsView 条目展开参数释义串消费，
    「analysis 组件参数只见英文名不知作用」根治面）。键=自定义组件配置体高频出现的参数名；
    词表外键回落空串（消费侧 filter 后拼串，零扰动零误挂）。 */
 export const ANALYSIS_PARAM_ZH: Record<string, string> = {
@@ -384,7 +384,7 @@ export const ANALYSIS_PARAM_ZH: Record<string, string> = {
   aliases: '词干规则别名（stemmer/snowball 的同义形态）',
   type: '组件类型（custom 或内置名）',
   preserve_original: '保留原词（词干/去重等过滤器是否保留原始词元）',
-  /* 五百六十一批：参数词表扩容（ngram/edge_ngram/shingle/pattern_replace/stemmer 高频参数，
+  /* 参数词表扩容（ngram/edge_ngram/shingle/pattern_replace/stemmer 高频参数，
      AnalysisSettingsView 条目展开释义串同通道消费；表外键回落空串零扰动） */
   min_gram: '最小词元长度（ngram/edge_ngram 切分下限）',
   max_gram: '最大词元长度（ngram/edge_ngram 切分上限）',
@@ -402,7 +402,7 @@ export const ANALYSIS_PARAM_ZH: Record<string, string> = {
 export function bodyKindForPath(rawPath: string): BodyKind {
   const p = (rawPath || '').split('?')[0].toLowerCase();
   if (p.includes('_bulk')) return 'none';
-  /* doc 档四端点（五百二十四批）：带斜杠前缀防误伤——'_update/' 不吃 _update_by_query（后者是
+  /* doc 档四端点（）：带斜杠前缀防误伤——'_update/' 不吃 _update_by_query（后者是
      search 族，dslCompletionContext.spec 既有断言钉死），'/_source' 尾形态与 /_doc/1/_source 双保险 */
   if (p.includes('/_doc/') || p.includes('/_create/') || p.includes('/_update/') || p.includes('/_source')) return 'doc';
   if (p.includes('_settings')) return 'settings';
@@ -413,7 +413,7 @@ export function bodyKindForPath(rawPath: string): BodyKind {
 /** 补全项统一形态：insertText 已是完整插入串（含引号/snippet 语法），provider 直接消费 */
 export type AssistItem = { label: string; detail?: string; insertText: string; snippet?: boolean };
 
-/* 五百二十四批：painless 字段访问提取（hover 用纯函数，Monaco 不初始化也可断言）。
+/* painless 字段访问提取（hover 用纯函数，Monaco 不初始化也可断言）。
    光标 offset 落在 doc['f'] / ctx['f'] 的 'f' 单引号串内（起始引号后到闭引号前，贴闭引号也算）
    → 返回 f；否则 null。左扫最近的开引号（遇 [ ] " 换行即断——painless 字段名不含引号、
    单行字面量），右扫闭引号同口径；前缀核对其前必为 '['，再往前的标识符须是 doc/ctx。 */
@@ -479,7 +479,7 @@ export function reindentSnippet(text: string, indent: string): string {
   return text.replace(/\n/g, '\n' + indent);
 }
 
-/* ux2 Task 6：index_template / component_template body 键档（TemplatesView editBody 用）。
+/* ux2 ：index_template / component_template body 键档（TemplatesView editBody 用）。
    八键全 snippet 骨架——模板 body 键集封闭且层级固定，骨架比裸键名省事；
    component_template 同用（其 body={ template: {...} } 子集，容器骨架兼容）。 */
 export function templateKeyItems(): AssistItem[] {

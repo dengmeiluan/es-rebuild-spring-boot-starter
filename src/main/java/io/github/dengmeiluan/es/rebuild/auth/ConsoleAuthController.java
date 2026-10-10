@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.TreeSet;
 
 /**
- * (内部) ES 控制台鉴权端点（R34）：登录 / 自助 / 用户管理 / 操作审计流水。
+ * (内部) ES 控制台鉴权端点（）：登录 / 自助 / 用户管理 / 操作审计流水。
  *
  * <p>仅在使用内置 {@link BuiltinConsoleAuthService} 时装配；宿主用自己的
  * {@link EsConsoleAuthorizer} 替换后，登录发生在宿主体系里，本控制器不再出现。</p>
@@ -68,7 +68,7 @@ public class ConsoleAuthController {
         return Collections.unmodifiableMap(out);
     }
 
-    /** 登录（免鉴权白名单）。凭证错误回 401 结构化 code。五百五十五批：登录审计带来源 IP。 */
+    /** 登录（免鉴权白名单）。凭证错误回 401 结构化 code。：登录审计带来源 IP。 */
     @PostMapping("login")
     public Map<String, Object> login(@RequestBody Map<String, String> body,
                                      HttpServletRequest request,
@@ -123,7 +123,7 @@ public class ConsoleAuthController {
         out.put("role", p.getRole().name());
         out.put("fallback", p.isFallback());
         out.put("delegated", p.isDelegated());
-        // R63：身份档案位——人名 + 来源 + 宿主扩展属性，顶栏身份卡产品化的数据源
+        // 身份档案位——人名 + 来源 + 宿主扩展属性，顶栏身份卡产品化的数据源
         out.put("displayName", p.getDisplayName());
         out.put("authSource", p.isDelegated() ? "delegate" : "builtin");
         // 2.5.0 菜单 SPI：页面白名单三态下发（null=不启用；空列表=全拒，不得折叠成 null）+ 契约全量
@@ -145,7 +145,7 @@ public class ConsoleAuthController {
                                               @RequestBody Map<String, String> body) throws IOException {
         ConsolePrincipal p = (ConsolePrincipal) request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);
         if (p.isDelegated()) {
-            // R37：委托身份由宿主体系管理凭证，控制台无密码可改
+            // 委托身份由宿主体系管理凭证，控制台无密码可改
             response.setStatus(400);
             Map<String, Object> err = new LinkedHashMap<>();
             err.put("code", "DELEGATED");
@@ -187,7 +187,7 @@ public class ConsoleAuthController {
         return out;
     }
 
-    /** 操作审计流水（倒序，支持 from 分页）。五百五十五批：线缆 {records:[...]}——
+    /** 操作审计流水（倒序，支持 from 分页）。：线缆 {records:[...]}——
      *  旧「ES search 响应形态直通」的契约泄漏在此单点终结，记录键即 {@link ConsoleOpsAuditEvent} 维度全集。
      *  20260922 快筛批：全维筛选下推（时间范围/集群/角色/方法/HTTP/来源/IP/耗时阈值/URI 前缀/关键词），
      *  旧 since 参数保持兼容（fromMs 未传时落 since）。 */
@@ -209,7 +209,7 @@ public class ConsoleAuthController {
                                         @RequestParam(required = false) Long minCostMs,
                                         @RequestParam(required = false) String uriPrefix,
                                         @RequestParam(required = false) String kw) {
-        /* 二百一十二批：时间范围下推；20260922：全维结构化查询对象 */
+        /* 时间范围下推；20260922：全维结构化查询对象 */
         return wire(opsAuditStore.search(ConsoleOpsAuditQuery.builder()
                 .username(username).action(action)
                 .fromMs(fromMs != null ? fromMs : since).toMs(toMs)
@@ -220,7 +220,7 @@ public class ConsoleAuthController {
                 .build()));
     }
 
-    /** 二百二十批：自助操作流水——任何已认证身份（VIEWER+，拦截器已放行）查「自己的」操作。
+    /** 自助操作流水——任何已认证身份（VIEWER+，拦截器已放行）查「自己的」操作。
         username 强制取服务端身份，请求参数不可注入——越权看他人流水在结构上不可能；
         非审计角色（非 AUDIT_OP/ADMIN）无法进安全中心全量表，这里给「我做了什么」的最小回溯。
         20260922 快筛批：自助安全子集=时间范围/动作/方法/HTTP/耗时阈值/URI 前缀/关键词。 */

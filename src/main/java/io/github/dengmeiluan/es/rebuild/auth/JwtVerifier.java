@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 极简 JWT 验签器（R38 配置式鉴权 jwt 模式）：手写 HS256/RS256 验签，零新增依赖。
+ * 极简 JWT 验签器（ 配置式鉴权 jwt 模式）：手写 HS256/RS256 验签，零新增依赖。
  *
  * <p>只做委托鉴权需要的最小闭环：拆三段 → Base64URL 解码 → 按 header.alg 验签
  * （HS256 用 {@link Mac} + {@link MessageDigest#isEqual} 恒时比较防时序侧信道；
@@ -38,12 +38,12 @@ public class JwtVerifier {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    /** 五百六十批：token 解析失败 WARN 节流间隔（防无效 token 高频探测刷屏；endpoint 臂同款范式）。 */
+    /** token 解析失败 WARN 节流间隔（防无效 token 高频探测刷屏；endpoint 臂同款范式）。 */
     private static final long WARN_THROTTLE_MS = 60_000L;
 
     private final byte[] hmacSecret;
     private final PublicKey rsaPublicKey;
-    /** 五百六十批：解析失败节流 WARN 计数（首败留痕，同 key 节流；lastJwtWarnAt 范式）。 */
+    /** 解析失败节流 WARN 计数（首败留痕，同 key 节流；lastJwtWarnAt 范式）。 */
     private final AtomicLong lastParseWarnAt = new AtomicLong(0);
 
     /**
@@ -96,7 +96,7 @@ public class JwtVerifier {
             }
             return claims;
         } catch (Exception e) {
-            // 五百六十批：catch→null 全臂静默=认证故障零留痕（Base64 坏段/claims 非 JSON 连 debug 都没有），
+            // catch→null 全臂静默=认证故障零留痕（Base64 坏段/claims 非 JSON 连 debug 都没有），
             // 补节流 WARN——只记异常类+message 摘要，不落 token 内容；返回 null 交回内置鉴权契约不变
             long now = System.currentTimeMillis();
             long last = lastParseWarnAt.get();

@@ -1,4 +1,4 @@
-<!-- 五百三十四批轨4 P1-1：同构确认弹窗共享壳（原 ConfirmModal/GuardedActionButton 双实现
+<!-- 轨4 P1-1：同构确认弹窗共享壳（原 ConfirmModal/GuardedActionButton 双实现
      的 mask+box 结构与 CSS 收编单源——两组件首行「同构确认弹窗双实现」注释的壳层在此合流，
      业务体（图标/文案/守卫输入/facts/askConfirm 契约/foot 按钮组）仍归消费方；
      focusTrap/Enter 接管语义仍由消费方 window keydown 自持（boxRef 容器含 foot，逐块对照零回归）。
@@ -40,7 +40,7 @@ const boxStyle = computed<Record<string, string>>(() => {
   return s;
 });
 
-/* 五百六十九批：Esc 收口升 document 捕获级（566 Pagination / 568 ColFilterPopover 立法推广；
+/* Esc 收口升 document 捕获级（566 Pagination / 568 ColFilterPopover 立法推广；
    568 弹层台账 B 档头号——壳 mask 元素级修饰符依赖 mask 持焦点收键，第三消费方 RawIoModal
    零键盘接管，焦点在页面任意处按 Esc 关不掉=真缺陷）。本壳是常驻组件（prop 控显隐），
    与 CFP「挂载即开层」不同：开层（show→true）才存触发时焦点并挂捕获级监听，收 Escape 即

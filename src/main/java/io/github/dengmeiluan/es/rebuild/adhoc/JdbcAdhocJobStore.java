@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * {@link AdhocJobStore} 的宿主数据库档（R63 平台化底座）：作业落宿主 {@code DataSource}
+ * {@link AdhocJobStore} 的宿主数据库档（ 平台化底座）：作业落宿主 {@code DataSource}
  * 的 {@code es_rebuild_adhoc_job} 表（首次使用自动建表），重启后仍可在列表页看历史。
  * 照 {@link io.github.dengmeiluan.es.rebuild.auth.JdbcConsoleOpsAuditStore} 范式：
  * {@code TABLE} 常量 + {@code volatile schemaReady} + 幂等 {@code CREATE TABLE IF NOT EXISTS}。
@@ -34,7 +34,7 @@ import java.util.Optional;
  * 但已落 {@code index_name} 专列供 SQL 直查。回读得到的是「查询视图」，非可继续跑的活作业——
  * 活作业永远命中 service 的内存一级缓存，DB 回读只服务重启后的历史查看，语义吻合。</p>
  *
- * <p>契约红线：{@link #save} 失败只 {@code logger.warn} 不上抛（与 Task2 persist 一致），
+ * <p>契约红线：{@link #save} 失败只 {@code logger.warn} 不上抛（与  persist 一致），
  * 持久化永不反噬正在跑的 reindex。</p>
  *
  * @author aicoding

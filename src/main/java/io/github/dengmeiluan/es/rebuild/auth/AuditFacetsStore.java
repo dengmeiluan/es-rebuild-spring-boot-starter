@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 审计下拉值建议（R12 terms agg）：对审计日期索引族跑 terms 聚合，给安全中心
+ * 审计下拉值建议（ terms agg）：对审计日期索引族跑 terms 聚合，给安全中心
  * 动作/集群下拉提供「数据里真实出现过」的值与计数（替代硬编码词表）。
  *
  * <p>只读；404/失败 → 空建议（前端回落硬编码词表，绝不反噬）。VIEWER 可用
@@ -86,7 +86,7 @@ public class AuditFacetsStore {
     }
 
     /** facets 聚合体（static=测点）：action/connName/username/uri 四 terms 各 20；must_not 排除指标/告警 doc（同族混居，计数只算探活）。
-     *  R28：by_uri=真实 URI Top20（uri 前缀筛选的值建议源——高基数无法前缀聚合，用真实 Top 值兜建议）。 */
+     *  by_uri=真实 URI Top20（uri 前缀筛选的值建议源——高基数无法前缀聚合，用真实 Top 值兜建议）。 */
     static String buildFacetsBody() {
         return "{\"size\":0,\"query\":{\"bool\":{\"must_not\":["
                 + "{\"term\":{\"kind\":\"metrics\"}},{\"term\":{\"kind\":\"alert\"}}]}},"

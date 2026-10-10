@@ -55,7 +55,7 @@ public class InternalAdhocRebuildController {
     }
 
     /**
-     * R93：人工放行切换（仅对 pauseBeforeSwitch=true 的作业有效）。
+     * 人工放行切换（仅对 pauseBeforeSwitch=true 的作业有效）。
      *
      * <p>若等待已超时/中止，返回 IllegalState 错误而非成功 —— 谎报成功会让操作者
      * 以为切换正在进行，而实际作业已中止、写阻断已解除。</p>

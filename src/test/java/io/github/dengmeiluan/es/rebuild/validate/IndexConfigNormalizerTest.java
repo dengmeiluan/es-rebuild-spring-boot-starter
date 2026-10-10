@@ -10,9 +10,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 第 503 批：索引配置形态归一化单测——用户实报 payload 形态固化。
+ * 第 ：索引配置形态归一化单测——实报 payload 形态固化。
  *
- * <p>用户实报链路：Mapping 页「发送到托管重建」→ validate 全是误报
+ * <p>实报链路：Mapping 页「发送到托管重建」→ validate 全是误报
  * （UNKNOWN_SETTING_KEY×1 + TYPE_NAME_WRAPPER ERROR + ANALYZER_UNDEFINED×12，dry-run 被挡）。
  * 根因 = inspect 返回的 settings/mappings 段保留索引名壳 + HLRC Settings keySet 天然 flat。
  * 归一化器必须把「ES 原样响应形态」无损还原为建索引标准形态。</p>
@@ -21,7 +21,7 @@ public class IndexConfigNormalizerTest {
 
     private static final ObjectMapper M = new ObjectMapper();
 
-    /** 用户实报 settings 形态：索引名壳 + flat 平铺键 + 数组字符串 */
+    /** 实报 settings 形态：索引名壳 + flat 平铺键 + 数组字符串 */
     private static final String FLAT_SHELLED_SETTINGS = "{\n"
             + "  \"sentiment_news_published\": {\n"
             + "    \"index.analysis.analyzer.my_hanlp_index_analyzer.char_filter\": \"[my_html_strip, my_char_filter]\",\n"
@@ -102,7 +102,7 @@ public class IndexConfigNormalizerTest {
 
     @Test
     public void mappingIndexShellStrippedNotTypeError() throws Exception {
-        // 用户实报 mapping 形态：索引名壳 + properties 直下——曾被误判为 6.x type 包裹 ERROR
+        // 实报 mapping 形态：索引名壳 + properties 直下——曾被误判为 6.x type 包裹 ERROR
         String mapping = "{\"sentiment_news_published\":{\"properties\":{\"title\":{\"type\":\"text\",\"analyzer\":\"standard\"}}}}";
         IndexConfigNormalizer.Result r = IndexConfigNormalizer.normalize(null, mapping);
         JsonNode root = M.readTree(r.mappingJson);

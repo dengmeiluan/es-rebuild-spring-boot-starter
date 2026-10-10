@@ -20,7 +20,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * R93 Task 11+12：{@link EsIndexRebuildService} 手术后<b>幸存方法仍然做对了事</b>的判据。
+ *  +12：{@link EsIndexRebuildService} 手术后<b>幸存方法仍然做对了事</b>的判据。
  *
  * <p><b>为什么需要本类</b>：本 Task 删掉了 service 的 SPI 重建路径，并对
  * {@code status} / {@code health} / {@code rebuildEmpty} 三个<b>幸存方法做了原地手术</b>
@@ -163,7 +163,7 @@ public class EsIndexRebuildServiceSurvivingBehaviorTest {
         assertFalse("非别名态不该有 aliasIndices", status.containsKey("aliasIndices"));
     }
 
-    /** 锁视图仍必须按 RebuildLock 的充血方法产出 owner/expired/self —— Task 7 的锁能力不受本次删除影响。 */
+    /** 锁视图仍必须按 RebuildLock 的充血方法产出 owner/expired/self ——  的锁能力不受本次删除影响。 */
     @Test
     public void statusStillExposesLockView() throws IOException {
         FakeLockGuard guard = new FakeLockGuard();

@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 二百三十九批 P2-4 v2：连接环境页面模板（纯 grantedPages 同构方案）。
+ *  P2-4 v2：连接环境页面模板（纯 grantedPages 同构方案）。
  *
  * <p>语义：连接档案的 {@code env}（PROD/STAGING/QA/DEV）映射到该环境的<b>页面 key 白名单模板</b>，
  * 与宿主 grantedPages <b>取交集</b>后作为该连接下的实际页面授权——「测试环境菜单全给、
@@ -66,7 +66,7 @@ public class EnvPagesResolver {
     }
 
     /**
-     * 有效页面授权(五百一十批扩展连接维度):
+     * 有效页面授权(扩展连接维度):
      * <ul>
      *   <li>静态 key(无 conn: 前缀)→ 全局页,对所有连接生效(仍受 env 模板交集);</li>
      *   <li>conn:{connId}:{pageKey} 键 → 仅对 targetId=connId 的连接生效(pageKey 并入有效集);</li>
@@ -120,8 +120,8 @@ public class EnvPagesResolver {
         return grantedPages.contains(CONN_KEY_PREFIX + targetId + ":w:" + pageKey);
     }
 
-    /** 五百七十五批·用户实报打通:targetId 连接上是否持有任意页写键(conn:{id}:w:* 通配)——
-     *  与前端 auth.canWriteOn 的 conn 解析语义同源对齐(563 批),供共享端点(无页面归属、
+    /** ·实报打通:targetId 连接上是否持有任意页写键(conn:{id}:w:* 通配)——
+     *  与前端 auth.canWriteOn 的 conn 解析语义同源对齐(),供共享端点(无页面归属、
      *  无法按页精确定位写键)的低危写档放行判定使用。 */
     public boolean hasAnyWriteKey(String targetId, Set<String> grantedPages) {
         if (grantedPages == null || targetId == null || targetId.isEmpty()) return false;

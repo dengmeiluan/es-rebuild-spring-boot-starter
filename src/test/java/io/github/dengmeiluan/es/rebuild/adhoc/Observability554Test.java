@@ -28,7 +28,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百五十四批：静默臂治理续批（Observability550/551/552 范式：ListAppender 直挂 logger +
+ * 静默臂治理续批（Observability550/551/552 范式：ListAppender 直挂 logger +
  * 契约反锁双形态）。<b>返回值契约零改动</b>（吞异常照旧、仍返回 null/空列表），只把
  * 「回退误导/语义变更」类冷路径从静默升为 WARN；TDD 先红后绿。
  *

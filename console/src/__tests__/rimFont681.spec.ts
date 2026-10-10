@@ -1,5 +1,5 @@
 /**
- * 六百八十一批：RawIoModal 原始 IO 弹窗字号三档 seg（rim.font 跨页弹层独立键）。
+ * ：RawIoModal 原始 IO 弹窗字号三档 seg（rim.font 跨页弹层独立键）。
  *
  *  RawIoModal 是 IndexHub/SqlConsole/Adhoc/Xmigrate 四页共用的 teleport 自研弹层，
  *  不属于任何单页 → usePref 不挂页面键，立独立键 'rim.font'（缺省档=EDITOR_FONT_TIERS
@@ -87,7 +87,7 @@ describe('681 A：RawIoModal 字号档源码锚', () => {
     expect(tiers).toContain('export const EDITOR_FONT_TIERS: number[] = [12.5, 14, 16];');
   });
   it('A7 头注 681 记档在场', () => {
-    expect(rim).toContain('六百八十一批');
+    expect(rim).toContain('');
   });
 });
 

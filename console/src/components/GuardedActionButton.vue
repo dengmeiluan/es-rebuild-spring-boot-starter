@@ -6,7 +6,7 @@
   </button>
 
   <!-- 影响预估确认卡（护栏协议：未看预估不能执行）。
-       五百三十四批轨4 P1-1：mask+box 壳层收编 ModalShell 共享件（同构确认弹窗双实现合流），
+       轨4 P1-1：mask+box 壳层收编 ModalShell 共享件（同构确认弹窗双实现合流），
        本组件只余业务体；焦点陷阱仍走本组件 boxRef 容器（含 foot，语义逐字不变） -->
   <ModalShell :show="modalOpen" label="影响预估" width="480px" @close="close">
     <div ref="boxRef" class="ga">
@@ -18,9 +18,9 @@
       </div>
 
       <div class="ga-body">
-        <!-- 五百二十五批：护栏错误双轨——首行 friendlyEsError 人话，errPreHtml v-html 全文兜底
+        <!-- 护栏错误双轨——首行 friendlyEsError 人话，errPreHtml v-html 全文兜底
              （含 { 走 highlightJson 着色、否则转义平文）；.ga-error 布局容器类名契约保留 -->
-        <!-- 五百六十批：护栏错误盒收编 err-bar 档（role=alert；bg/border/radius/padding 归
+        <!-- 护栏错误盒收编 err-bar 档（role=alert；bg/border/radius/padding 归
              theme.css .err-bar 单源，.ga-error 类锚保留——guardedBtn499 挂载锁同路径零迁；
              弹层内零高度副作用：ga-body 容器 auto 高无定高链，仅盒模型微差在 theme 档容差内；
              友好行+全文 pre 双轨保留） -->
@@ -91,13 +91,13 @@ import { ref, computed, onBeforeUnmount } from 'vue';
 import { Loader2, ShieldCheck, CheckCircle2 } from 'lucide-vue-next';
 import { api, ApiError } from '../api';
 import { trapTabKey } from '../utils/focusTrap';
-/* 五百二十五批：护栏错误人话行 + errPreHtml v-html 全文内核 */
+/* 护栏错误人话行 + errPreHtml v-html 全文内核 */
 import { friendlyEsError } from '../utils/esError';
 import { errPreHtml, errMeta } from '../utils/errPre';
-/* 五百三十四批轨4 P1-1：mask+box 壳层共享件（同构确认弹窗双实现合流） */
+/* 轨4 P1-1：mask+box 壳层共享件（同构确认弹窗双实现合流） */
 import ModalShell from './ModalShell.vue';
 
-/** R39 GuardedActionButton：护栏动作按钮——状态机 idle→estimating→confirming→(dryRunning)→executing→receipt。
+/**  GuardedActionButton：护栏动作按钮——状态机 idle→estimating→confirming→(dryRunning)→executing→receipt。
     estimate 拿 confirmToken，execute 必须带 token（无/过期/参数篡改后端一律 403）。 */
 const props = withDefaults(defineProps<{
   actionId: string;
@@ -123,7 +123,7 @@ const dryRunResult = ref<any>(null);
 const error = ref('');
 /* 534 收口波双参换装：原始错误对象旁路留存（catch 压串丢 code/endpoint，喂 errMeta 用） */
 const errorRaw = ref<unknown>(null);
-/* 五百二十五批：错误面板首行人话摘要（pre 仍保全文） */
+/* 错误面板首行人话摘要（pre 仍保全文） */
 const friendlyError = computed(() => friendlyEsError(error.value));
 const guardInput = ref('');
 const receipt = ref<any>(null);
@@ -217,7 +217,7 @@ function close() {
 }
 
 /* Tab 焦点陷阱（与 ConfirmModal 同基线；close 自带 executing 保护，执行中不会误关）。
-   五百六十九批：收键已由 ModalShell 壳层 document 捕获级单源承接——本组件 @close 即
+   收键已由 ModalShell 壳层 document 捕获级单源承接——本组件 @close 即
    close（executing 保护在函数内不变），与原自持分支语义等价。 */
 function onKey(e: KeyboardEvent) {
   if (!modalOpen.value) return;
@@ -228,10 +228,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
 </script>
 
 <style scoped>
-/* 525 批：本地 .spin 旋转档（自造 keyframes，0.9s 双速残留）退役，统一走 theme.css 全局 .spinning
+/* 本地 .spin 旋转档（自造 keyframes，0.9s 双速残留）退役，统一走 theme.css 全局 .spinning
    （svg 适用，速度随全局归一 1s——spinSpeed456 的漏网档收口） */
 
-/* 五百三十四批轨4 P1-1：mask/box 壳 CSS（.ga-mask/.ga）收编 ModalShell 单源，本地段只余业务体；
+/* 轨4 P1-1：mask/box 壳 CSS（.ga-mask/.ga）收编 ModalShell 单源，本地段只余业务体；
    foot（.ga-foot）保留自持（与 ConfirmModal .cf-foot 同值，语义锚不动） */
 /* 风险色阶条 */
 .ga-risk { height: 3px; }
@@ -246,9 +246,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
 .ga-badge.risk-medium {color: var(--warn);}
 .ga-badge.risk-high {color: var(--err);}
 .ga-body { padding: var(--sp-2h) var(--sp-4) var(--sp-1h); font-size: var(--fs-sm); line-height: 1.6; }
-/* 五百六十批：.ga-error 本地红壳（err 色/err-soft 底/err-line 边/r-s 圆角/padding）随收编
+/* .ga-error 本地红壳（err 色/err-soft 底/err-line 边/r-s 圆角/padding）随收编
    err-bar 档退役归 theme.css 单源——类名保留作挂载锁锚，布局容器语义不变 */
-/* 五百二十五批：护栏错误双轨内件——人话行 + 全文 pre（token 取值，限高防长堆栈撑爆弹层） */
+/* 护栏错误双轨内件——人话行 + 全文 pre（token 取值，限高防长堆栈撑爆弹层） */
 .ga-error-h { font-weight: 400; }
 .ga-error-pre { margin: var(--sp-1) 0 0; font-family: var(--mono); font-size: var(--fs-xs); white-space: pre-wrap; word-break: break-word; color: var(--fg); max-height: 160px; overflow: auto; }
 .ga-summary { color: var(--tx0); margin-bottom: var(--sp-2); }

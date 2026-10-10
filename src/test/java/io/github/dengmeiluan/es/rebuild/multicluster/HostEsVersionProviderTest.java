@@ -10,7 +10,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 
 /**
- * R93-67：宿主集群版本必须<b>真的接进</b>版本感知机制，且「探不到」<b>不得</b>被当成 7.x。
+ * -67：宿主集群版本必须<b>真的接进</b>版本感知机制，且「探不到」<b>不得</b>被当成 7.x。
  *
  * <p><b>这条守的是什么</b>：#67 的根因是 {@code EsClientRouter.currentEsVersion()} 对宿主恒返回 null，
  * 而 null 被 {@code EsVersionCaps} 兜底成 7.x —— 于是产线 6.7.2 宿主上

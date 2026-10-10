@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
 /**
- * 控制台鉴权拦截器（R34）：覆盖 {@code /internal/es/index/**} 与 {@code /internal/es/xmigrate/**}。
+ * 控制台鉴权拦截器（）：覆盖 {@code /internal/es/index/**} 与 {@code /internal/es/xmigrate/**}。
  *
  * <p>分级规则（傻瓜化默认，无需配置）：</p>
  * <ul>
@@ -37,21 +37,21 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
 
     private static final Logger LOG = LoggerFactory.getLogger(ConsoleAuthInterceptor.class);
 
-    /** 五百五十八批：connName 解析失败 WARN 节流间隔（审计是每写请求路径，防刷屏）。 */
+    /** connName 解析失败 WARN 节流间隔（审计是每写请求路径，防刷屏）。 */
     private static final long WARN_THROTTLE_MS = 60_000L;
 
     /** request attribute：已认证身份，供 auth controller / 审计复用。 */
     public static final String ATTR_PRINCIPAL = "es.console.principal";
 
-    /** request attribute：拦截器入口时刻（毫秒）——审计耗时维度（五百五十五批）。 */
+    /** request attribute：拦截器入口时刻（毫秒）——审计耗时维度（）。 */
     static final String ATTR_START_MS = "es.console.audit.startMs";
 
     /** request attribute：raw 透传执行摘要（"GET /_cat/indices" 形态）——由 /cluster/raw
-     *  端点解析请求体后回填，afterCompletion 落入 HIGH_RISK detail（五百五十五批：
+     *  端点解析请求体后回填，afterCompletion 落入 HIGH_RISK detail（：
      *  高危操作从「零法证」到「谁对哪个集群执行了什么」）。 */
     public static final String ATTR_RAW_SUMMARY = "es.console.raw.summary";
 
-    /** 免鉴权路径（登录本身 + R37 Setup 状态查询）。 */
+    /** 免鉴权路径（登录本身 +  Setup 状态查询）。 */
     private static final List<String> WHITELIST = Arrays.asList(
             "/internal/es/index/auth/login",
             "/internal/es/index/setup/status");
@@ -70,11 +70,11 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             "/rebuild", "/first-migrate", "/full-reload", "/cleanup", "/abort",
             "/lock/release", "/force-merge", "/replicas",
             "/cluster/update-by-query", "/cluster/bulk",
-            /* 五百七十四批：reindex-advanced（@PostMapping，无 GET 形态）与 /rebuild 同族的
+            /* reindex-advanced（@PostMapping，无 GET 形态）与 /rebuild 同族的
                重建写端点，原先落缺省 OPERATOR，升 rank3 */
             "/reindex-advanced",
             "/xmigrate/start", "/xmigrate/resume", "/xmigrate/abort",
-            /* 五百五十八批：裸词 "/adhoc-rebuild" 退役（危险级重划）——adhoc 的 GET（任务列表/
+            /* 裸词 "/adhoc-rebuild" 退役（危险级重划）——adhoc 的 GET（任务列表/
                就绪检查）是观测面，裸 contains 把静态模型 VIEWER 也拦在门外（历史 403 噪声源）；
                写动词逐一列出即可覆盖全部写端点（start/abort/confirm-switch）。 */
             "adhoc-rebuild/start", "adhoc-rebuild/abort", "adhoc-rebuild/confirm-switch");
@@ -86,7 +86,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             "/cluster/alias-actions", "/cluster/rollover",
             "/cluster/templates/put", "/cluster/templates/delete",
             "/cluster/scripts/put", "/cluster/scripts/delete",
-            /* 五百五十八批危险级重划补漏：删备份/改 ILM 策略/执行 SLM 原先落在缺省 rank2
+            /* 危险级重划补漏：删备份/改 ILM 策略/执行 SLM 原先落在缺省 rank2
                （OPERATOR 即可）——删快照毁备份、ILM 策略变更影响全索引生命周期，升 rank3。 */
             "/cluster/snapshot/delete",
             "/cluster/snapshot/restore", "/cluster/snapshot/create",
@@ -103,16 +103,16 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
     private static final List<String> ADMIN_KEYWORDS = Arrays.asList(
             "/auth/users",
             "/cluster/raw",
-            "/setup/rebind",  // R37 重绑控制集群（高危：控制面数据归属切换）
-            "/clusters/");  // R36 多集群连接保存/删除/测试（凭据流转）；GET /clusters 列表脱敏，VIEWER 可读
-    /** 五百九十三批·管理域放开（用户裁决「管理域放」）：连接模型下按菜单勾选裁决的收口子集——
+            "/setup/rebind",  //  重绑控制集群（高危：控制面数据归属切换）
+            "/clusters/");  //  多集群连接保存/删除/测试（凭据流转）；GET /clusters 列表脱敏，VIEWER 可读
+    /** ·管理域放开（裁决「管理域放」）：连接模型下按菜单勾选裁决的收口子集——
      *  只有这两类端点没有菜单页勾选项可对应（连接档案=授权体系载体/重绑=控制面归属切换），
      *  维持 ADMIN 专属；raw 与 users 已归属 rest/security 页（pages.json apiPrefixes），
      *  由页面门按读键可见+写键 WRITE_DENIED 自然接管。 */
     private static final List<String> SYSTEM_ADMIN_KEYWORDS = Arrays.asList(
             "/setup/rebind",
             "/clusters/");
-    /** 五百九十九批：执行类只读 POST（零数据写入但执行脚本/消耗资源）——落 EXEC 审计留痕。 */
+    /** 执行类只读 POST（零数据写入但执行脚本/消耗资源）——落 EXEC 审计留痕。 */
     private static final List<String> EXEC_AUDIT_POST_KEYWORDS = Arrays.asList(
             "/cluster/painless/execute", "/cluster/analyze", "/cluster/reindex-preview",
             "/config-lab/validate");
@@ -125,7 +125,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
     }
 
     /**
-     * R92-C1 只读 POST 清单（DSL/SQL 必须走 body 才用 POST，零副作用）。
+     * -C1 只读 POST 清单（DSL/SQL 必须走 body 才用 POST，零副作用）。
      * 审计与 GET 同策略——不落流水：查询类每翻一页就一条，噪音会把真正的写操作淹没（产线截图实锤：
      * 三条 POST /cluster/query 被记成 WRITE，合规回溯时误导「谁改了数据」）。
      */
@@ -145,13 +145,13 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
     private final io.github.dengmeiluan.es.rebuild.control.ControlClusterResolver resolver;
     private final ConsolePageCatalog pageCatalog;
     private final boolean pageAuthEnabled;
-    /* 二百三十九批 P2-4 v2：连接环境页面模板（env-pages profile）——纯 grantedPages 同构方案 */
+    /*  P2-4 v2：连接环境页面模板（env-pages profile）——纯 grantedPages 同构方案 */
     private final EnvPagesResolver envPagesResolver;
-    /* 五百五十五批：连接档案——审计的集群实名维度（connId → connName）；可为 null（测试桩） */
+    /* 连接档案——审计的集群实名维度（connId → connName）；可为 null（测试桩） */
     private final io.github.dengmeiluan.es.rebuild.multicluster.ConnStore connStore;
-    /** 五百五十八批：connName 解析失败 WARN 节流计数（实例级——拦截器产线单例）。 */
+    /** connName 解析失败 WARN 节流计数（实例级——拦截器产线单例）。 */
     private final AtomicLong lastConnNameWarnAt = new AtomicLong(0);
-    /* 委托令牌首见登记（会话 LOGIN 审计去重，五百五十八批）——LRU 封顶防长期运行膨胀；
+    /* 委托令牌首见登记（会话 LOGIN 审计去重，）——LRU 封顶防长期运行膨胀；
        令牌即会话标识（宿主 会话期内令牌稳定，换发即新会话）。 */
     private final java.util.Map<String, Long> seenDelegateTokens =
             java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<String, Long>(16, 0.75f, false) {
@@ -187,7 +187,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             deny(response, 400, "{\"code\":\"BAD_PATH\",\"message\":\"请求路径非法：无法解码或含非法 % 序列\"}");
             return false;
         }
-        // R37 SETUP 短路：未绑定控制集群时，除 setup 三端点外统一 409（前端据此弹首连向导）
+        //  SETUP 短路：未绑定控制集群时，除 setup 三端点外统一 409（前端据此弹首连向导）
         if (!resolver.bound()) {
             if (path.contains("/setup/status") || path.contains("/setup/test") || path.contains("/setup/apply")
                     || "OPTIONS".equalsIgnoreCase(request.getMethod())) {
@@ -216,7 +216,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             return false;
         }
         request.setAttribute(ATTR_PRINCIPAL, principal);
-        /* 五百五十八批：委托会话 LOGIN 审计——宿主 iframe 流没有控制台登录动作（历史 LOGIN
+        /* 委托会话 LOGIN 审计——宿主 iframe 流没有控制台登录动作（历史 LOGIN
            事件全来自独立部署的内置登录），「正常登录的审计日志」在宿主形态下一直缺位。
            以宿主令牌首见为会话建立点落一笔 LOGIN（实名/角色/IP 全维；令牌换发=新会话再落）。
            GET 观测不审计的原则不破例——这是会话级事件，不是请求级观测。 */
@@ -231,16 +231,16 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         }
         // 2.5.0 菜单 SPI 页面门（先于角色门）：delegated 且宿主下发了白名单（含空集=全拒）时，
         // 页面专属端点必须在白名单内；共享端点（pageOf 返回 null）不吃页面级，维持角色档
-        /* 2.5.0 页面门 × 五百一十批连接写门(合并):delegated 且宿主下发 grantedPages 时,
+        /* 2.5.0 页面门 × 连接写门(合并):delegated 且宿主下发 grantedPages 时,
            conn:{connId}:{page} 键按连接判定页面可见;conn 模型用户的读写判定即为最终裁决
            (写请求须 conn:{target}:w:{page} 写键),短路角色门——菜单授权即权限,无二次推导。
            静态 key(无 conn: 前缀)=全局页,对所有连接生效,仍受 env 模板收缩;无 conn 键=现状行为。 */
         if (pageAuthEnabled && principal.isDelegated() && principal.getGrantedPages() != null) {
-            /* 五百五十八批超管域优先裁决 × 五百九十三批管理域放开:前置拦截收窄为系统管理子集
+            /* 超管域优先裁决 × 管理域放开:前置拦截收窄为系统管理子集
                (重绑/连接档案——无菜单勾选项对应且是授权载体,维持 ADMIN 专属);raw/users 已
                归属 rest/security 页(pages.json apiPrefixes),由页面门按读键可见+写键
                WRITE_DENIED 自然接管——连接菜单勾选即权限,角色档不再一刀切。 */
-            /* 五百九十四批·系统管理端点也按连接勾选放开（用户裁决「rebind/clusters 这个也要」）：
+            /* ·系统管理端点也按连接勾选放开（裁决「rebind/clusters 这个也要」）：
                conn 模型写键持有人（hasAnyWriteKey）=宿主授过写权的管理者，系统管理写请求
                （重绑/连接档案 save/delete/sync）豁免 ADMIN 一刀切——纯勾选语义，零角色。 */
             boolean sysAdminWritable = !"GET".equalsIgnoreCase(request.getMethod())
@@ -262,7 +262,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                     && !isReadonlyPost(path);
             if (page != null) {
                 if (!effectivePages.contains(page.getKey())) {
-                    /* 页面不可见:拒绝事件显式落审计(五百五十五批:带目标集群/实名/来源 IP 维度) */
+                    /* 页面不可见:拒绝事件显式落审计(:带目标集群/实名/来源 IP 维度) */
                     opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
                             "PAGE_DENIED", 403, "page=" + page.getKey()));
                     deny(response, 403, "{\"code\":\"FORBIDDEN\",\"page\":\"" + jsonEscape(page.getKey())
@@ -282,7 +282,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                 }
             }
             /* 无页面归属的共享写端点:默认走角色门(不短路)——保守,不扩大拒绝面。
-               五百八十四批语义升格(用户裁决「按照角色菜单配置的勾选来,按照真正的连接权限菜单
+               语义升格(裁决「按照角色菜单配置的勾选来,按照真正的连接权限菜单
                spi 来」):conn 模型下勾选即权限——持该连接任意写键(conn:{tid}:w:*)即放行全部
                共享写端点(表格编辑/文档增删/任务取消/ilm policy/delete-by-id 等),角色档在
                连接模型下不再参与裁决;ADMIN_KEYWORDS 管理域(raw/users/clusters 等)已在前面
@@ -302,7 +302,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         return true;
     }
 
-    /** 五百九十九批：命中执行类清单的只读 POST 落 EXEC 审计（谁在哪个集群执行了脚本/预估）。 */
+    /** 命中执行类清单的只读 POST 落 EXEC 审计（谁在哪个集群执行了脚本/预估）。 */
     private void recordExecAuditIfNeeded(HttpServletRequest request, String uri) {
         boolean isExec = false;
         for (String kw : EXEC_AUDIT_POST_KEYWORDS) {
@@ -321,9 +321,9 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             return;
         }
         String uri = stripContextPath(request);
-        // R92-C1：只读查询类 POST（含 /probe 探活）与 GET 同策略，不算 WRITE
+        // -C1：只读查询类 POST（含 /probe 探活）与 GET 同策略，不算 WRITE
         if (isReadonlyPost(uri)) {
-            /* 五百九十九批·可审计补全：执行类只读 POST（painless 脚本执行/analyze 分词验证/
+            /* ·可审计补全：执行类只读 POST（painless 脚本执行/analyze 分词验证/
                reindex 预估/config-lab dry-run）零数据写入但执行脚本或消耗集群资源——落 EXEC
                审计留痕（谁在哪个集群跑了什么），其余只读查询维持零噪音。 */
             recordExecAuditIfNeeded(request, uri); System.out.println("[DBG] readonly-branch called");
@@ -336,7 +336,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         ConsolePrincipal principal = (ConsolePrincipal) p;
         String action = isAdminUri(uri) ? "HIGH_RISK" : "WRITE";
         String qs = request.getQueryString();
-        /* 五百五十五批：高危 raw 透传的法证摘要（端点回填）——detail 从空到「raw=GET /_cat/indices」 */
+        /* 高危 raw 透传的法证摘要（端点回填）——detail 从空到「raw=GET /_cat/indices」 */
         String detail = null;
         Object rawSummary = request.getAttribute(ATTR_RAW_SUMMARY);
         if (rawSummary instanceof String && !((String) rawSummary).isEmpty()) {
@@ -350,7 +350,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
     }
 
     /**
-     * 审计事件组装（五百五十五批）：目标集群（connId/connName）+来源 IP+耗时三维采集单点。
+     * 审计事件组装（）：目标集群（connId/connName）+来源 IP+耗时三维采集单点。
      * connId 取 X-Es-Target（"host"/空=无连接上下文→null）；connName 经 ConnStore 实名，
      * 查不到留 null；耗时覆盖拒绝（preHandle 记录点）与写完成（afterCompletion）两路。
      */
@@ -365,7 +365,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                 connName = connStore.getName(targetId.trim());
             } catch (Exception e) {
                 /* 连接档案瞬态不可用：审计维度尽力而为，绝不反噬；
-                   五百五十八批：补节流 WARN——connName 恒 null 会让审计集群列失真且此前零痕 */
+                   补节流 WARN——connName 恒 null 会让审计集群列失真且此前零痕 */
                 long now = System.currentTimeMillis();
                 long last = lastConnNameWarnAt.get();
                 if (now - last > WARN_THROTTLE_MS && lastConnNameWarnAt.compareAndSet(last, now)) {
@@ -410,7 +410,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
 
     /** URI + 方法 → 所需最低角色。 */
     static ConsoleRole requiredRole(String method, String uri) {
-        // R38：探活是只读观测（POST 但零副作用），从 /clusters/ 高危清单中豁免给 VIEWER
+        // 探活是只读观测（POST 但零副作用），从 /clusters/ 高危清单中豁免给 VIEWER
         if (uri.contains("/clusters/") && uri.endsWith("/probe")) {
             return ConsoleRole.VIEWER;
         }
@@ -419,7 +419,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         if (isAdminUri(uri)) {
             return ConsoleRole.ADMIN;
         }
-        /* 二百二十批：自助流水「只看自己」给全角色——username 由服务端身份强制（见 controller），
+        /* 自助流水「只看自己」给全角色——username 由服务端身份强制（见 controller），
            须在 AUDIT_KEYWORDS(/auth/ops-audit 前缀包含)命中前特例，否则被提 rank3 */
         if (uri.endsWith("/auth/ops-audit/mine")) {
             return ConsoleRole.VIEWER;
@@ -432,7 +432,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         if ("GET".equalsIgnoreCase(method)) {
             return ConsoleRole.VIEWER;
         }
-        // R92-C1：只读查询类 POST 与 GET 同权——UI 承诺「VIEWER 仅查询观测」，查询却要 OPERATOR 是自相矛盾
+        // -C1：只读查询类 POST 与 GET 同权——UI 承诺「VIEWER 仅查询观测」，查询却要 OPERATOR 是自相矛盾
         if (isReadonlyPost(uri)) {
             return ConsoleRole.VIEWER;
         }
@@ -532,7 +532,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         }
     }
 
-    /** R92-C1：审计 URI 统一剥 servlet context（宿主部署在 /宿主 时与登录记录口径一致）。 */
+    /** -C1：审计 URI 统一剥 servlet context（宿主部署在 /宿主 时与登录记录口径一致）。 */
     private static String stripContextPath(HttpServletRequest request) {
         String uri = request.getRequestURI();
         String ctx = request.getContextPath();

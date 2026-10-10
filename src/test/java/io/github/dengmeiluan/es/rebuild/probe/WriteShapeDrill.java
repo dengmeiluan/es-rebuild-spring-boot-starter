@@ -25,7 +25,7 @@ import java.util.Collections;
 import java.util.stream.Collectors;
 
 /**
- * R94 Task 18 修订二演练：开启 epoch 转换器后，<b>写侧 {@code _source} 形态是否改变</b>。
+ *   修订二演练：开启 epoch 转换器后，<b>写侧 {@code _source} 形态是否改变</b>。
  *
  * <p><b>这是个经验问题，不许用推理代替</b>：sdes 4.0.9 的写路径是否真的会走
  * {@code Timestamp -> Long} 这个 WritingConverter，只能在真实 ES 上写一条再读回来看。</p>
@@ -52,14 +52,14 @@ import java.util.stream.Collectors;
  * <pre>
  * mvn -o test-compile
  * mvn -o exec:java -Dexec.classpathScope=test \
- *     -Dexec.mainClass=io.github.dengmeiluan.es.rebuild.probe.R94WriteShapeDrill
+ *     -Dexec.mainClass=io.github.dengmeiluan.es.rebuild.probe.WriteShapeDrill
  * </pre>
  */
-public final class R94WriteShapeDrill {
+public final class WriteShapeDrill {
 
     private static final String ES_HOST = "10.64.10.74";
     private static final int ES_PORT = 9200;
-    private static final String INDEX = "r93_r94_writeshape_drill";
+    private static final String INDEX = "r93__writeshape_drill";
 
     /** 固定值：2025-08-01T00:53:20Z = 1754000000000 毫秒。 */
     private static final long FIXED_MILLIS = 1754000000000L;
@@ -112,7 +112,7 @@ public final class R94WriteShapeDrill {
                 RestClient.builder(new HttpHost(ES_HOST, ES_PORT, "http")));
         RestClient ll = client.getLowLevelClient();
         try {
-            System.out.println("=== R94 write-shape drill (QA " + ES_HOST + ") ===");
+            System.out.println("=== write-shape drill (QA " + ES_HOST + ") ===");
             System.out.println("server version : " + get(ll, "/"));
 
             drop(ll);

@@ -13,12 +13,12 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 /**
- * R92-C1：ES 6.x/7.x/8.x 响应形态兼容行为守门。
+ * -C1：ES 6.x/7.x/8.x 响应形态兼容行为守门。
  *
  * <p>锁住三段版本感知解析逻辑，防未来重构回归：
  * ① {@link EsIndexAdmin#parseHitsTotal}——hits.total 数字（6.x）与对象（7.x+）双形态归一；
- * ② {@link EsIndexAdmin#unwrapTypeLayer}——6.x mapping type 包层剥离（R41）；
- * ③ {@link EsIndexAdmin#legacyBulkNdjson}——6.x bulk action 行 _type 注入（R74）。</p>
+ * ② {@link EsIndexAdmin#unwrapTypeLayer}——6.x mapping type 包层剥离（）；
+ * ③ {@link EsIndexAdmin#legacyBulkNdjson}——6.x bulk action 行 _type 注入（）。</p>
  *
  * @author aicoding
  */

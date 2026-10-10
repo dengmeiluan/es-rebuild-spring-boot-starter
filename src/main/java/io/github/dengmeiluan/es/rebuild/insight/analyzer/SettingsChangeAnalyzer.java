@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * R39 现场①：索引 settings 变更分析器。
+ *  现场①：索引 settings 变更分析器。
  *
  * <p>逐项判定 DYNAMIC（可热更）/ STATIC（需重建）/ ILLEGAL（未知键或值非法），
  * L1 门禁复用 {@link IndexConfigLinter}（无状态，自持实例），静态项耗时预估复用
@@ -128,7 +128,7 @@ public class SettingsChangeAnalyzer {
         try {
             return linter.lint(OBJECT_MAPPER.writeValueAsString(changes), null);
         } catch (Exception e) {
-            // 五百五十四批裁决（三态之②回退误导类）：lint 失败若伪装「零问题」空列表，
+            // 裁决（三态之②回退误导类）：lint 失败若伪装「零问题」空列表，
             // analyze 的 L1 门禁即假绿灯，非法 settings 会被调用方直接采纳。冷路径
             // （lint 仅在分析入口执行一次），WARN 带键名摘要与堆栈——刻意只记键不记值
             // （settings 值可能带敏感语义）；返回空列表契约不变（Observability554Test 反锁）。

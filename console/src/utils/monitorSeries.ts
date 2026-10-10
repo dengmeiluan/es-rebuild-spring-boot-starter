@@ -13,14 +13,14 @@ export type MonitorSeriesField =
   | 'gcYoungPerMin' /* R8 GC 差分（仅节点下钻图卡） */
   | 'searchLatencyMs' | 'indexingLatencyMs' /* R9 慢查询代理指标 */
   | 'load1m' | 'diskReadKbS' | 'diskWriteKbS' | 'diskReadIops' | 'diskWriteIops'
-  | 'tpSearchActive' | 'tpSearchQueue' /* R29 节点深耕（仅节点下钻图卡） */
-  | 'shards' | 'primaryShards' /* R31 分片总数/主分片数（G3 对标阿里云集群级指标卡） */
-  | 'indices' /* R58 索引数量（对标阿里云集群级「索引数量」卡；cluster doc 既有键，AGG_METRIC_FIELDS 既有） */
-  | 'tpWriteActive' | 'tpWriteQueue' | 'docsDeleted' /* R62 对标阿里云线程池 Rows 写入侧+被标记删除文档（仅节点下钻图卡） */
-  | 'ioUtilPct' | 'gcYoungTimeMs' | 'gcOldTimeMs' /* R62b IOUtil%+GC 耗时（差分测点，仅节点下钻图卡；对标阿里云 IOUtil/节点 Young·Old GC 耗时） */
-  | 'heapUsedMb' /* R65 对标阿里云「节点 Old 区使用」锯齿形态：heap_used_in_bytes→MB（仅节点下钻图卡） */
-  | 'fielddataMb' /* R72 对标阿里云 JVM 组「fielddata 内存使用」（查询抖动经典根因，仅节点下钻图卡） */
-  | 'netRxKbS' | 'netTxKbS'; /* R32 内部传输吞吐（G7，transport 差分，仅节点下钻图卡） */
+  | 'tpSearchActive' | 'tpSearchQueue' /*  节点深耕（仅节点下钻图卡） */
+  | 'shards' | 'primaryShards' /*  分片总数/主分片数（G3 对标阿里云集群级指标卡） */
+  | 'indices' /*  索引数量（对标阿里云集群级「索引数量」卡；cluster doc 既有键，AGG_METRIC_FIELDS 既有） */
+  | 'tpWriteActive' | 'tpWriteQueue' | 'docsDeleted' /*  对标阿里云线程池 Rows 写入侧+被标记删除文档（仅节点下钻图卡） */
+  | 'ioUtilPct' | 'gcYoungTimeMs' | 'gcOldTimeMs' /*  IOUtil%+GC 耗时（差分测点，仅节点下钻图卡；对标阿里云 IOUtil/节点 Young·Old GC 耗时） */
+  | 'heapUsedMb' /*  对标阿里云「节点 Old 区使用」锯齿形态：heap_used_in_bytes→MB（仅节点下钻图卡） */
+  | 'fielddataMb' /*  对标阿里云 JVM 组「fielddata 内存使用」（查询抖动经典根因，仅节点下钻图卡） */
+  | 'netRxKbS' | 'netTxKbS'; /*  内部传输吞吐（G7，transport 差分，仅节点下钻图卡） */
 
 /**
  * 把采样行按集群分组并抽取指定指标序列。
@@ -111,7 +111,7 @@ export function intervalFor(range: string): string {
 }
 
 /** fixed_interval 字符串（'1m'/'5m'/'1h'…）→ 毫秒；非法回落 5m=300000。
- *  六百四十三批 637-C2 抽出：周期档（1m/5m/15m/30m/1h）的断档阈值需按「生效桶宽」而非范围推导。 */
+ *   637-C2 抽出：周期档（1m/5m/15m/30m/1h）的断档阈值需按「生效桶宽」而非范围推导。 */
 export function fixedIntervalMs(interval: string): number {
   const m = /^(\d+)([smhd])$/.exec(interval);
   return m ? Number(m[1]) * INTERVAL_UNIT_MS[m[2]!] : 300_000;
@@ -122,7 +122,7 @@ export function intervalMsFor(range: string): number {
   return fixedIntervalMs(intervalFor(range));
 }
 
-/* ═══ 周期档「原始逐点」安全窗（637 批） ═══
+/* ═══ 周期档「原始逐点」安全窗（） ═══
  * 原始查询路径（不传 interval 时）在服务端钳 size=3000 且按时间升序返回：窗口越宽越先取满
  * 前 3000 行 → 图右端最新点被挡在窗外（曲线「停在过去」）。采集默认 60s ⇒ 3000 行 ≈ 50h，
  * 故 span 超过此跨度时「原始逐点」不安全，须回落按范围降采样。 */
@@ -303,15 +303,15 @@ export function diskForecast(
 }
 
 /**
- * 七百批①：悬浮读出行超长防护——超 cap 截前 cap 行，尾部聚合「+K」行由视图渲染
- * （R56「对比读出>8 节点截断」观察项收口；纯函数出 {rows, hidden}，视图零算术）。
+ * ①：悬浮读出行超长防护——超 cap 截前 cap 行，尾部聚合「+K」行由视图渲染
+ * （「对比读出>8 节点截断」观察项收口；纯函数出 {rows, hidden}，视图零算术）。
  */
 export function capRows<T>(rows: T[], cap: number): { rows: T[]; hidden: number } {
   const shown = rows.slice(0, Math.max(0, cap));
   return { rows: shown, hidden: Math.max(0, rows.length - shown.length) };
 }
 
-/** R18 探活历史健康摘要：按集群聚合窗口内 RED 次数/采样总数/最慢时延（ms）。
+/**  探活历史健康摘要：按集群聚合窗口内 RED 次数/采样总数/最慢时延（ms）。
  *  输入为探活快照行（connName/status/latencyMs），输出按 RED 次数降序、名称升序。 */
 export function probeDigest(
   records: MonitorMetricsRecord[],

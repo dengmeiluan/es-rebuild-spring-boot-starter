@@ -21,7 +21,7 @@ import java.util.Map;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百四十八批：{@link EsIndexAdmin#remoteClusters()} 本端信息 {@code GET /} 失败 <b>WARN 留痕</b>
+ * {@link EsIndexAdmin#remoteClusters()} 本端信息 {@code GET /} 失败 <b>WARN 留痕</b>
  * （观测缺口收口，模板：JdbcConnStoreUpdateVersionWarnTest 的 ListAppender 范式）。
  *
  * <p><b>缺口</b>：末段 {@code catch (Exception ignored) {}} 完全空体——远端列表正常而本端

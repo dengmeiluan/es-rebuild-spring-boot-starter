@@ -1,5 +1,5 @@
 /**
- * 五百六十一批（工蚁D1·轨4 扁平化）：RawIo 第六波九面铺装 + SFB 收编最后两面 + 随迁记档。
+ * （工蚁D1·轨4 扁平化）：RawIo 第六波九面铺装 + SFB 收编最后两面 + 随迁记档。
  *
  *  ① RawIo 第六波九面（契约逐字承 errBarWave558b.spec:74-99 判例＝546/548 CASES 同形态）：
  *     PitScroll / IndexSettings / ClusterSettings / Ilm / Slm / Snapshots / Synonyms /
@@ -83,7 +83,7 @@ describe('561 ①：RawIo 第六波九面（558b CASES 字面锁同形态）', (
 /* ═══════════ ② SFB 收编最后两面 ═══════════ */
 
 describe('561 ②：SFB 收编最后两面（558b tv-kw / 560 六胞同判例）', () => {
-  /* 561 批记档:AnalysisSettingsView SFB 换装系并行 lane 在途件,本批 HOLD,解禁后随 data-test=as-kw 断言回补 */
+  /* 记档:AnalysisSettingsView SFB 换装系并行 lane 在途件,本批 HOLD,解禁后随 data-test=as-kw 断言回补 */
   it('IndexSettingsView：is-raw-filter 换装 SearchFilterBar + data-test="is-raw-kw"（第 16 胞）', () => {
     const v = read('../views/IndexSettingsView.vue');
     expect(v).toContain("import SearchFilterBar from '../components/SearchFilterBar.vue'");
@@ -101,7 +101,7 @@ describe('561 ②：SFB 收编最后两面（558b tv-kw / 560 六胞同判例）
 describe('561 ③：随迁记档两件', () => {
   it('ClusterSettingsView：900 档批次记档注释补齐（全站唯一无记档的单 900 档）', () => {
     const v = read('../views/ClusterSettingsView.vue');
-    expect(v).toContain('561 批 900 档（.cs-k 纵排）');
+    expect(v).toContain(' 900 档（.cs-k 纵排）');
   });
   it('PitScrollView：预览 QRT 补 export-name="pit-preview"（527 W-D 导出文件名主段契约）', () => {
     const v = read('../views/PitScrollView.vue');

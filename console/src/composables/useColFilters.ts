@@ -1,7 +1,7 @@
 import { ref, computed, watch, type Ref } from 'vue';
 
-/* 二百二十九批 P0-4：列值筛选下沉共享（dbx ColumnFilterPopover 对位）。
-   此前筛选漏斗只在 QRT（169 批「RT 待收编」欠账）——抽 composable 后 QRT 回归锁
+/*  P0-4：列值筛选下沉共享（dbx ColumnFilterPopover 对位）。
+   此前筛选漏斗只在 QRT（「RT 待收编」欠账）——抽 composable 后 QRT 回归锁
    行为零变化、RT 接入补齐。相对 QRT 原实现的增强：
    — 每值计数（filterVals 返回 {v, n}）；
    — 值内搜索（kw 参数，labelOf/normVal 双口径）；
@@ -11,10 +11,10 @@ import { ref, computed, watch, type Ref } from 'vue';
 
 export interface ColFilterVal { v: any; n: number }
 
-/** 五百二十批：区间筛选端点（col -> {min,max}，原始输入文本；空串=该端不设限） */
+/** 区间筛选端点（col -> {min,max}，原始输入文本；空串=该端不设限） */
 interface ColRangeFilter { min: string; max: string }
 
-/* ═══ 五百六十三批：过滤管线纯函数单源（531 遗留件①收口）═══
+/* ═══ ：过滤管线纯函数单源（531 遗留件①收口）═══
    归一键/区间/包含命中契约与 OR/AND 双档语义自 composable 闭包出位成模块级纯函数——
    filterRows 委托 filterRowsPure（534 源码锁 filterRows 签名行保真；552/556 contains
    与三档 OR 运行时锚零变），语义面从此一处可锁（kernelFilterOrMode563 全锁双档）。 */
@@ -66,7 +66,7 @@ interface ColFilterState {
 
 /** 过滤管线纯函数（useColFilters.filterRows 委托单源）：多列组合档
    （mode 缺省 'AND'=每列命中全过，既有行为逐字节不变；
-   五百三十四批 P1-1：'OR'=任一筛选列命中即保留——跨列 OR 并集档）；
+    P1-1：'OR'=任一筛选列命中即保留——跨列 OR 并集档）；
    每列空选集=该列不过滤；区间谓词与等值同档组合叠加；包含谓词尾部同构叠加
    （空白词列不出现在生效列集）；零生效列恒等回落（返回同引用，零增量语义保真）。 */
 export function filterRowsPure<T>(
@@ -103,7 +103,7 @@ export function useColFilters(opts: {
 }): {
   colFilters: Ref<Record<string, string[]>>;
   rangeFilters: Ref<Record<string, ColRangeFilter>>;
-  /* 五百五十二批：列内文本包含档（col -> kw；空/空白=该列不设限） */
+  /* 列内文本包含档（col -> kw；空/空白=该列不设限） */
   containsFilters: Ref<Record<string, string>>;
   activeFilterCount: Ref<number>;
   normVal: (v: any) => string;
@@ -111,9 +111,9 @@ export function useColFilters(opts: {
   filterVals: (col: string, kw?: string, maxUnique?: number) => { vals: ColFilterVal[]; hasMore: boolean; total: number };
   toggleFilterVal: (col: string, v: any) => void;
   setRangeFilter: (col: string, side: 'min' | 'max', v: string) => void;
-  /** 五百五十二批：区间生效判定出口（漏斗激活高亮并集口径消费） */
+  /** 区间生效判定出口（漏斗激活高亮并集口径消费） */
   rangeOn: (r: ColRangeFilter | undefined) => boolean;
-  /** 五百五十二批：包含档生效判定出口（漏斗激活高亮并集口径消费） */
+  /** 包含档生效判定出口（漏斗激活高亮并集口径消费） */
   containsOn: (col: string) => boolean;
   setContainsFilter: (col: string, v: string) => void;
   clearFilter: (col: string) => void;
@@ -122,12 +122,12 @@ export function useColFilters(opts: {
 } {
   /** col -> 选中值 norm 集（数组存储便于整组替换触发响应式） */
   const colFilters = ref<Record<string, string[]>>({});
-  /* 五百二十批：类型感知快捷过滤的区间态——与 colFilters 同列可并存，filterRows 尾部 AND 叠加 */
+  /* 类型感知快捷过滤的区间态——与 colFilters 同列可并存，filterRows 尾部 AND 叠加 */
   const rangeFilters = ref<Record<string, ColRangeFilter>>({});
-  /* 五百五十二批：列内文本包含态——与 colFilters/rangeFilters 同列可并存，filterRows 尾部 AND 叠加 */
+  /* 列内文本包含态——与 colFilters/rangeFilters 同列可并存，filterRows 尾部 AND 叠加 */
   const containsFilters = ref<Record<string, string>>({});
 
-  /* 归一键 normVal 五百六十三批上提模块级（filterRowsPure 纯函数单源共用，返回面不变） */
+  /* 归一键 normVal 上提模块级（filterRowsPure 纯函数单源共用，返回面不变） */
 
   /** 该列当前行集内的去重值+计数（按首现序）；kw 对 label/norm 双口径包含匹配；
    *  无搜索词且基数超限时按计数降序取前 maxUnique（高频优先），hasMore 提示继续用搜索 */
@@ -158,14 +158,14 @@ export function useColFilters(opts: {
     colFilters.value = { ...colFilters.value, [col]: [...cur] };
   }
 
-  /* 五百二十批：区间端点写入（min/max 独立输入框各写一边，整组替换触发响应式） */
+  /* 区间端点写入（min/max 独立输入框各写一边，整组替换触发响应式） */
   function setRangeFilter(col: string, side: 'min' | 'max', v: string) {
     const cur = { ...(rangeFilters.value[col] ?? { min: '', max: '' }), [side]: v };
     rangeFilters.value = { ...rangeFilters.value, [col]: cur };
   }
-  /* rangeOn/containsHit/rangeHit 命中契约五百六十三批上提模块级（filterRowsPure 单源共用；
+  /* rangeOn/containsHit/rangeHit 命中契约上提模块级（filterRowsPure 单源共用；
      rangeOn 返回面不变——返回键仍指向同签名模块级纯函数） */
-  /* 五百五十二批：包含档写入（整组替换触发响应式；空白=该列不设限） */
+  /* 包含档写入（整组替换触发响应式；空白=该列不设限） */
   function setContainsFilter(col: string, v: string) {
     containsFilters.value = { ...containsFilters.value, [col]: v };
   }
@@ -182,7 +182,7 @@ export function useColFilters(opts: {
     const nextR = { ...rangeFilters.value };
     delete nextR[col];
     rangeFilters.value = nextR;
-    /* 五百五十二批：包含档同构清除（与区间同款三档一列同清） */
+    /* 包含档同构清除（与区间同款三档一列同清） */
     const nextC = { ...containsFilters.value };
     delete nextC[col];
     containsFilters.value = nextC;
@@ -194,8 +194,8 @@ export function useColFilters(opts: {
     containsFilters.value = {};
   }
 
-  /* 五百二十批：等值勾选列与区间列并集计数（同列只算一次）——「已筛选 N 列」提示条口径；
-     五百五十二批：包含档并入计数 */
+  /* 等值勾选列与区间列并集计数（同列只算一次）——「已筛选 N 列」提示条口径；
+     包含档并入计数 */
   const activeFilterCount = computed(() => {
     const eq = new Set(Object.keys(colFilters.value).filter(c => colFilters.value[c]?.length));
     for (const c of Object.keys(rangeFilters.value)) if (rangeOn(rangeFilters.value[c])) eq.add(c);
@@ -204,7 +204,7 @@ export function useColFilters(opts: {
   });
 
   /** 过滤管线：多列组合档（mode 缺省 'AND' 既有行为逐字节不变；'OR' 跨列并集档——
-     语义细则见模块级 filterRowsPure）。五百六十三批：本函数收窄为运行态委托——
+     语义细则见模块级 filterRowsPure）。：本函数收窄为运行态委托——
      三档 .value 快照入纯函数单源（534 源码锁签名行保真；552/556 运行时锚零变）。 */
   function filterRows<T>(rows: T[], mode: 'AND' | 'OR' = 'AND'): T[] {
     return filterRowsPure(rows, {
@@ -215,7 +215,7 @@ export function useColFilters(opts: {
   }
 
   /* 暗状态守卫：筛选拉了随后被列选隐藏的列 → 该列筛选自动清（「所见即所筛」T22 同源；
-     QRT 88/169 批守卫收编内置）。连带回调供调用方清坐标键状态 */
+     QRT 88/守卫收编内置）。连带回调供调用方清坐标键状态 */
   if (opts.cols) {
     watch(opts.cols, (cols) => {
       const hidden = Object.keys(colFilters.value).filter(c => !cols.includes(c))
@@ -228,7 +228,7 @@ export function useColFilters(opts: {
         const nextR = { ...rangeFilters.value };
         for (const c of hidden) delete nextR[c];
         rangeFilters.value = nextR;
-        /* 五百五十二批：包含档同构清（三档一列同清） */
+        /* 包含档同构清（三档一列同清） */
         const nextC = { ...containsFilters.value };
         for (const c of hidden) delete nextC[c];
         containsFilters.value = nextC;
@@ -240,7 +240,7 @@ export function useColFilters(opts: {
   return { colFilters, rangeFilters, containsFilters, activeFilterCount, normVal, labelOf: opts.labelOf, filterVals, toggleFilterVal, setRangeFilter, rangeOn, containsOn, setContainsFilter, clearFilter, clearAllFilters, filterRows };
 }
 
-/* ═══ 五百六十批：filterMode 组合档三态循环下沉（RT 1002-1004 / QRT 938-940 逐字同构收编）═══
+/* ═══ ：filterMode 组合档三态循环下沉（RT 1002-1004 / QRT 938-940 逐字同构收编）═══
    prop 播种运行档（缺省 'AND'）；toggleFilterMode 就地翻转（AND↔OR 二态循环）；prop 变化
    跟随播种。管线仍在 useColFilters.filterRows（mode 参数收口）。双内核接线形态：
    const { filterModeLive, toggleFilterMode } = useFilterMode(props)。 */
@@ -254,7 +254,7 @@ export function useFilterMode(props: { filterMode?: 'AND' | 'OR' }): {
   return { filterModeLive, toggleFilterMode };
 }
 
-/* ═══ 五百六十批：quickFilter 跨列 contains 快滤单源（RT 1076-1081 quickHits /
+/* ═══ ：quickFilter 跨列 contains 快滤单源（RT 1076-1081 quickHits /
    QRT 958-963 quickRows 逐字同构收编）═══
    q=生效词（trim+小写包含匹配）；空白/未传=恒等回落（返回同引用，零增量语义保真）；
    getVal/fullOf 参数化——两内核匹配口径一处 getSourceVal+rtCellFullText、一处 qColVal+fullText，

@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * R102：{@code profile} 必须进 DSL body，绝不能进 URL 查询参数。
+ * {@code profile} 必须进 DSL body，绝不能进 URL 查询参数。
  *
  * <p><b>这是一个从未能工作过的功能</b>。「Profile 火焰图」页面走
  * {@code api.searchDsl(..., {profile:true})} → {@code EsIndexAdmin.searchDsl}，

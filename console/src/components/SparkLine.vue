@@ -7,7 +7,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
-/* R92-D4：零依赖自绘 SVG 迷你趋势线——消费方传数值数组即可，纵轴按窗口内 min/max 自适应 */
+/* -D4：零依赖自绘 SVG 迷你趋势线——消费方传数值数组即可，纵轴按窗口内 min/max 自适应 */
 const props = withDefaults(defineProps<{ data: number[]; w?: number; h?: number; color?: string }>(),
   { w: 110, h: 26, color: 'var(--ac)' });
 const pts = computed(() => {

@@ -1,5 +1,5 @@
 <template>
-  <!-- 六百五十三批：列布局方案共享件（轨3 preset 消费面，⑥ 652 头号候选落地）——
+  <!-- 列布局方案共享件（轨3 preset 消费面，⑥ 652 头号候选落地）——
        ColPicker 同款「单钮+弹层」收纳范式（铁律 C：save/apply/delete 收进弹层，
        工具行不新增平铺枚举钮）；弹层壳按 563 立法 raw+自绘四要素（白底/边框/阴影/圆角，
        .pgn-psize-pop 同配方）；Esc 收口按 566 范式两段（非空清词→空关层+焦点回触发钮，
@@ -52,7 +52,7 @@ const props = withDefaults(defineProps<{
   del: (name: string) => boolean;
   /** 触发钮形制类（TableRefreshBtn 同款注入：RT rt-tool-btn / QRT qrt-tool-btn） */
   btnCls?: string;
-  /** 触发钮文字（152 批图标+文字语言；不传则纯图标） */
+  /** 触发钮文字（图标+文字语言；不传则纯图标） */
   label?: string;
 }>(), { btnCls: '', label: '布局' });
 
@@ -72,8 +72,8 @@ function doDel(p: string) {
   props.del(p);
 }
 
-/* 五百六十六批范式：弹层 Esc 收口（宪法铁律 D1#5「开弹层→Esc→焦点回触发器」）——
-   :show 受控 naive 不自带关层；开层挂 document 捕获级监听，两段语义（输入非空先
+/* 范式：弹层 Esc 收口（宪法铁律 D1#5「开弹层→Esc→焦点回触发器」）——
+   show 受控 naive 不自带关层；开层挂 document 捕获级监听，两段语义（输入非空先
    清词=输入框内 Esc 清词惯例，空则关层并还焦点触发钮）；卸载兜底摘监听。 */
 function onEsc(e: KeyboardEvent) {
   if (e.key !== 'Escape') return;

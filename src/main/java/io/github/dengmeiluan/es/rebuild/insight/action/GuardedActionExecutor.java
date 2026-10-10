@@ -12,7 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * R39 护栏动作执行器——协议编排层。
+ *  护栏动作执行器——协议编排层。
  *
  * <p>estimate → 角色校验 → 动作预估 → 附 confirmToken/riskLevel/supportsDryRun；
  * execute → 角色校验 → token 校验（失败 403 CONFIRM_TOKEN_INVALID）→ 动作执行 →
@@ -104,7 +104,7 @@ public class GuardedActionExecutor {
                     .build());
         } catch (Exception e) {
             // 审计失败不影响主流程（与既有异步审计"尽力而为"语义一致）；
-            // 五百五十八批：补 WARN——高危动作审计丢失此前全静默=审计黑洞无痕
+            // 补 WARN——高危动作审计丢失此前全静默=审计黑洞无痕
             // （护栏动作本身低频且高危，逐条直 WARN 不节流）
             LOG.warn("[GuardedActionExecutor] 护栏动作审计序列化/落档失败 actionId={}（审计流水丢失，"
                     + "回执照常返回）: {}", receipt.getActionId(), e.getMessage());

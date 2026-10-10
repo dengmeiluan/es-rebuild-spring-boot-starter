@@ -13,8 +13,8 @@ const app = createApp(App);
 app.use(createPinia());
 app.use(router);
 
-/* 三百八十一批：全局异常兜底——此前渲染异常/未捕获 Promise 拒绝直接白屏+控制台裸奔。
-   完整堆栈进控制台（调试可用）；用户侧经 store.notify 弹一次（自带 R85 风暴抑制，
+/* 全局异常兜底——此前渲染异常/未捕获 Promise 拒绝直接白屏+控制台裸奔。
+   完整堆栈进控制台（调试可用）；用户侧经 store.notify 弹一次（自带  风暴抑制，
    轮询炸裂期不轰炸）。errorHandler 在 pinia/router 之后挂，store 已可用。 */
 app.config.errorHandler = (err: unknown, _inst, info) => {
   console.error('[es-console] 渲染异常', err, '\n处理链:', info);
@@ -28,7 +28,7 @@ window.addEventListener('unhandledrejection', (e) => {
 
 app.mount('#app');
 
-/* R92-B2：空闲预取 monaco 大分包（约 2.8MB，gzip 741KB）——首屏不驮，
+/* -B2：空闲预取 monaco 大分包（约 2.8MB，gzip 741KB）——首屏不驮，
    等 window load（首屏关键资源全落）后再进空闲队列预热，不和首屏抢带宽；
    首次进 DSL 工作台/Mapping 编辑时 chunk 已在缓存 */
 const idlePrefetch = () => { import('./components/MonacoEditor.vue').catch(() => { /* 预取失败不影响主流程，进视图时再正常拉 */ }); };

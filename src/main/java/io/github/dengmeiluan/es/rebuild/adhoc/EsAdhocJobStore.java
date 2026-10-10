@@ -17,7 +17,7 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 /**
- * {@link AdhocJobStore} 的 ES 档（R63 平台化底座）：作业落控制集群索引
+ * {@link AdhocJobStore} 的 ES 档（ 平台化底座）：作业落控制集群索引
  * {@value #DEFAULT_INDEX}（首次使用建索引），重启后仍可在列表页看历史。
  * 照 {@link io.github.dengmeiluan.es.rebuild.auth.EsConsoleOpsAuditStore} 范式：
  * 客户端 {@link Supplier} 懒解析 + 低层 REST + {@link ObjectMapper} 手工组 body。
@@ -377,7 +377,7 @@ public class EsAdhocJobStore implements AdhocJobStore {
             Object type = ((Map<?, ?>) error).get("type");
             return type == null ? null : String.valueOf(type);
         } catch (Exception ignored) {
-            // 五百五十二批裁决（三态之③刻意降级维持静默）：此臂只可能因「ResponseException 响应体
+            // 裁决（三态之③刻意降级维持静默）：此臂只可能因「ResponseException 响应体
             // 不可读 / 非 ES 标准错误结构」触发，返回 null → alreadyExists=false → ensureIndex
             // 抛 IllegalStateException——save 侧按契约红线 WARN「落作业失败」、find/listRecent
             // 直接上抛，失败链全程响亮，此处再加日志只会双重告警。维持零 WARN，

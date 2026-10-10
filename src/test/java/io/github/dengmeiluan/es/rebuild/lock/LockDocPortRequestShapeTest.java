@@ -14,7 +14,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
- * R93-67：锁的请求<b>形态</b>看守——判据落在「实际发出的 method + path」这个<b>值</b>上。
+ * -67：锁的请求<b>形态</b>看守——判据落在「实际发出的 method + path」这个<b>值</b>上。
  *
  * <p><b>守的是什么</b>：RHLC 的 {@code IndexRequest.opType(CREATE)} 无论是否知道版本都发
  * {@code PUT /{index}/_create/{id}}，6.7.2 实测 <b>400 invalid_type_name_exception</b>

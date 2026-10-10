@@ -18,8 +18,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 配置式宿主鉴权委托（R38）：{@code es.rebuild.console.auth.delegate.*} 纯 properties
- * 即可对接宿主凭据体系，不写一行 Java——与 R37 代码 SPI（{@link ConsoleAuthDelegate}）
+ * 配置式宿主鉴权委托（）：{@code es.rebuild.console.auth.delegate.*} 纯 properties
+ * 即可对接宿主凭据体系，不写一行 Java——与  代码 SPI（{@link ConsoleAuthDelegate}）
  * 同一插槽，代码 SPI 优先（AutoConfiguration 用 {@code @ConditionalOnMissingBean} 让位）。
  *
  * <p>三模式：<b>jwt</b>（本地验签 {@link JwtVerifier}）/ <b>endpoint</b>（POST 回调宿主校验接口，
@@ -44,7 +44,7 @@ public class PropertiesAuthDelegate implements ConsoleAuthDelegate {
     /** endpoint 模式：token → 缓存的校验结果。 */
     private final Map<String, CachedVerdict> verdictCache = new ConcurrentHashMap<>();
     private final AtomicLong lastEndpointWarnAt = new AtomicLong(0);
-    /** 五百五十八批：jwt 验签失败 WARN 节流计数（同 endpoint 臂 lastEndpointWarnAt 范式）。 */
+    /** jwt 验签失败 WARN 节流计数（同 endpoint 臂 lastEndpointWarnAt 范式）。 */
     private final AtomicLong lastJwtWarnAt = new AtomicLong(0);
 
     public PropertiesAuthDelegate(EsRebuildProperties.Delegate props) {
@@ -80,7 +80,7 @@ public class PropertiesAuthDelegate implements ConsoleAuthDelegate {
         }
         JsonNode claims = jwtVerifier.verify(token);
         if (claims == null) {
-            // 五百五十八批：debug→节流 WARN——secret/publicKey 配错（全量验签失败）此前无痕，
+            // debug→节流 WARN——secret/publicKey 配错（全量验签失败）此前无痕，
             // 交回内置鉴权后运营无从排查；复用 endpoint 臂同款节流器防无效 token 高频探测刷屏
             long now = System.currentTimeMillis();
             long last = lastJwtWarnAt.get();
@@ -96,7 +96,7 @@ public class PropertiesAuthDelegate implements ConsoleAuthDelegate {
             return null;
         }
         List<String> hostRoles = JwtVerifier.claimRoles(claims, props.getJwt().getRolesClaim());
-        // R63：取展示名 claim（配了才取），顶栏/审计从哈希变人话
+        // 取展示名 claim（配了才取），顶栏/审计从哈希变人话
         String displayName = props.getJwt().getDisplayNameClaim().isEmpty() ? null
                 : JwtVerifier.claimText(claims, props.getJwt().getDisplayNameClaim());
         return new ConsolePrincipal(username, roleMapper.map(hostRoles), false, true, displayName, null);
@@ -140,7 +140,7 @@ public class PropertiesAuthDelegate implements ConsoleAuthDelegate {
             conn.getOutputStream().close(); // 空 body POST
             int code = conn.getResponseCode();
             if (code < 200 || code >= 300) {
-                // 五百五十批：debug→节流 WARN——401/5xx 等故障此前无痕（交回内置鉴权运营无从排查）；
+                // debug→节流 WARN——401/5xx 等故障此前无痕（交回内置鉴权运营无从排查）；
                 // 401 高频回退场景复用 exception 臂节流器防刷屏（首条留痕，60s 内不再重复告警）
                 long now = System.currentTimeMillis();
                 long last = lastEndpointWarnAt.get();
@@ -159,7 +159,7 @@ public class PropertiesAuthDelegate implements ConsoleAuthDelegate {
                     return null;
                 }
                 List<String> hostRoles = JwtVerifier.claimRoles(body, props.getEndpoint().getRolesPath());
-                // R63：宿主校验接口可同时下发展示名
+                // 宿主校验接口可同时下发展示名
                 String displayName = props.getEndpoint().getDisplayNamePath().isEmpty() ? null
                         : JwtVerifier.claimText(body, props.getEndpoint().getDisplayNamePath());
                 return new ConsolePrincipal(username, roleMapper.map(hostRoles), false, true, displayName, null);
@@ -194,7 +194,7 @@ public class PropertiesAuthDelegate implements ConsoleAuthDelegate {
                 role = roleMapper.map(java.util.Arrays.asList(raw.split(",")));
             }
         }
-        // R63：展示名头（网关注入）；含 % 视为 URL 编码过——HTTP 头携中文需编码，服务端兜底解
+        // 展示名头（网关注入）；含 % 视为 URL 编码过——HTTP 头携中文需编码，服务端兜底解
         String displayName = null;
         String dnHeader = props.getHeader().getDisplayNameHeader();
         if (!dnHeader.isEmpty()) {

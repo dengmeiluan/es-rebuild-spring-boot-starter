@@ -1,18 +1,18 @@
 /**
- * 五百五十八批 轨4（工蚁 F）：「用当前索引」内联回填钮收编 PickCurrentIdxBtn 统一件 +
+ *  轨4（工蚁 F）：「用当前索引」内联回填钮收编 PickCurrentIdxBtn 统一件 +
  * UpdateByQueryView ubq.scriptH 私造高度档收编 useTierCycle。
  *
  * ① 四视图（BulkEditorView / ConfigValidatorView / IndexOptimizerView / UpdateByQueryView）
- *    逐字重复的内联回填钮（525/528 批范式）退役，换消费统一件 PickCurrentIdxBtn（工蚁 C
+ *    逐字重复的内联回填钮（525/范式）退役，换消费统一件 PickCurrentIdxBtn（工蚁 C
  *    并行落件；AdhocRebuildView 同批归 C）：组件内聚 Crosshair 图标 / btn ghost sm 样式 /
  *    data-test="use-current-idx" / title 文案，props 无、emit 'pick'——落点回填仍由各页
- *    @pick 显式写自身 useIdxState（R61 写类页不开 follow 口径不变，行为等值迁移）。
+ *    @pick 显式写自身 useIdxState（ 写类页不开 follow 口径不变，行为等值迁移）。
  *    ⚠ 记档（558 实证）：组件文件落盘前 vite:import-analysis 在解析层硬失败（Failed to
  *    resolve import），vi.mock 打桩无法越过解析层——挂载/行为用例改 describe.skipIf(组件
  *    在场才跑)，工蚁 C 组件合并后自动激活，且激活后直吃真实组件（不打桩，收口保真）；
  *    落盘前的红绿由源码锁 + useTierCycle 直连行为用例承载。
- * ② ubq.scriptH：五百二十八批私造「TIERS + usePref + cycle」三件套机械平移 useTierCycle
- *    统一件（535 批 W9 口径）——键名 ubq.scriptH / 档值序 / 默认档（tiers[0]）不变，零迁移。
+ * ② ubq.scriptH：私造「TIERS + usePref + cycle」三件套机械平移 useTierCycle
+ *    统一件（ W9 口径）——键名 ubq.scriptH / 档值序 / 默认档（tiers[0]）不变，零迁移。
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
@@ -104,7 +104,7 @@ beforeEach(() => {
 });
 
 /* ═══════════ ① 四视图收编（源码锁，不依赖组件落盘） ═══════════ */
-describe('四视图回填钮收编 PickCurrentIdxBtn 统一件（558 批，源码锁）', () => {
+describe('四视图回填钮收编 PickCurrentIdxBtn 统一件（，源码锁）', () => {
   const PICK_VIEWS = [
     { f: 'BulkEditorView', bind: 'index' },
     { f: 'ConfigValidatorView', bind: 'importIndex' },
@@ -120,7 +120,7 @@ describe('四视图回填钮收编 PickCurrentIdxBtn 统一件（558 批，源�
       expect(s, `${f} 内联钮退役（data-test/title/图标归组件内聚）`).not.toMatch(/data-test="use-current-idx"/);
       expect(s, `${f} 就地 useCurrentIdx 函数退役`).not.toMatch(/function useCurrentIdx\(\)/);
       expect(s, `${f} Crosshair 随钮退役（图标归组件）`).not.toMatch(/Crosshair/);
-      expect(s, `${f} R61 口径注释保留（写类页不开 follow 的理由）`).toMatch(/R61/);
+      expect(s, `${f} 口径注释保留（写类页不开 follow 的理由）`).toMatch(/写类页不开|写类向导不开/);
     }
   });
 });
@@ -193,11 +193,11 @@ describe.skipIf(!compReady)('四视图 @pick 点击回填落点（挂载；558 �
 });
 
 /* ═══════════ ③ ubq.scriptH 收编 useTierCycle ═══════════ */
-describe('UpdateByQueryView ubq.scriptH 收编 useTierCycle（558 批）', () => {
+describe('UpdateByQueryView ubq.scriptH 收编 useTierCycle（）', () => {
   it('源码锁：useTierCycle 键名档值原样平移（零迁移），私造三件套退役', () => {
     const s = read('../views/UpdateByQueryView.vue');
     expect(s, '机械平移：const { v, cycle } = useTierCycle(\'ubq.scriptH\', 原TIERS)').toMatch(/const \{ v: scriptH, cycle: cycleScriptH \} = useTierCycle\('ubq\.scriptH', SCRIPT_H_TIERS\)/);
-    expect(s, '档值序原样（528 批定档）').toMatch(/'max\(110px, 42vh\)', 'max\(150px, 56vh\)', 'max\(220px, 72vh\)'/);
+    expect(s, '档值序原样（定档）').toMatch(/'max\(110px, 42vh\)', 'max\(150px, 56vh\)', 'max\(220px, 72vh\)'/);
     expect(s, '私造循环退役').not.toMatch(/SCRIPT_H_TIERS\.indexOf/);
     expect(s, '私造 cycle 函数退役（uq.resultH 单值偏好非档循环，合法在场）').not.toMatch(/function cycle/);
   });

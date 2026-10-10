@@ -13,10 +13,10 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * R94：判定 date 字段在 {@code _source} 里的<b>实际存储形态</b>。
+ * 判定 date 字段在 {@code _source} 里的<b>实际存储形态</b>。
  *
  * <p>为什么需要它：ES6→ES7 的 date 兼容风险是「存储形态 x Java 类型」这对组合决定的
- * （R94 实测 30 格只有 6 格可读通），而存储形态只能从数据里采样得到 —— mapping 上看不出来。</p>
+ * （ 实测 30 格只有 6 格可读通），而存储形态只能从数据里采样得到 —— mapping 上看不出来。</p>
  *
  * <p><b>逐值判定，不按字段判定</b>：同一字段既有秒又有毫秒是真实存在的情况，
  * 逐值判定天然把它暴露成两种形态并存，而按字段判定只会给出一个错的结论。</p>
@@ -213,7 +213,7 @@ public final class DateFormSampler {
      *
      * <p><b>入参必须是「已剥 type 包层」的无类型形态</b>（{@code {"properties":...}}），
      * 由 {@code EsIndexAdmin.getMapping()} 保证——它在返回前已调用
-     * {@code EsIndexAdmin.unwrapTypeLayer}（R41，行为由 {@code EsResponseShapeTest} 锁定）
+     * {@code EsIndexAdmin.unwrapTypeLayer}（，行为由 {@code EsResponseShapeTest} 锁定）
      * 剥掉 6.x 的单 type 包层。</p>
      *
      * <p><b>本方法刻意不做任何剥离兜底。</b> 曾有过一个 {@code root.size()==1} 的兜底分支，

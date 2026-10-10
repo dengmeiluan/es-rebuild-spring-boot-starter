@@ -19,12 +19,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 控制台操作审计——宿主数据库档（R63 平台化底座）：审计落宿主 {@code DataSource}
+ * 控制台操作审计——宿主数据库档（ 平台化底座）：审计落宿主 {@code DataSource}
  * 的 {@code es_console_ops_audit} 表（首次使用自动建表），接入方可用自己的 BI/SQL
  * 直接分析控制台操作流水，并与其用户体系（username/displayName）天然对齐。
  *
  * <p>异步单线程 + 队列满丢弃，与 ES 档同一契约：审计永不反噬业务可用性。
- * 五百五十五批：查询出参与 ES 档同构（类型化记录列表），ES 形态不再泄漏进 SPI。</p>
+ * 查询出参与 ES 档同构（类型化记录列表），ES 形态不再泄漏进 SPI。</p>
  *
  * @author aicoding
  */
@@ -36,10 +36,10 @@ public class JdbcConsoleOpsAuditStore implements ConsoleOpsAuditStore {
     private final DataSource dataSource;
     private final ThreadPoolExecutor executor;
     private volatile boolean schemaReady;
-    /* 五百五十五批：富列（conn_id/conn_name/ip/cost_ms）可用性——ensureSchema 探测定值，
+    /* 富列（conn_id/conn_name/ip/cost_ms）可用性——ensureSchema 探测定值，
        写路径首败也可永久降级（insertRow）；查询路径按此开关决定是否回读富列 */
     private volatile boolean richColumns = true;
-    /* 五百四十六批：审计落库失败累计（首条 WARN 节流计数，见 warnAuditDrop） */
+    /* 审计落库失败累计（首条 WARN 节流计数，见 warnAuditDrop） */
     private final AtomicLong dropCount = new AtomicLong();
 
     public JdbcConsoleOpsAuditStore(DataSource dataSource) {
@@ -55,7 +55,7 @@ public class JdbcConsoleOpsAuditStore implements ConsoleOpsAuditStore {
         this.executor.allowCoreThreadTimeOut(true);
     }
 
-    /** 记一笔操作（异步，永不抛）。五百五十五批：唯一写入口为富事件；旧表兼容：优先富列插入，
+    /** 记一笔操作（异步，永不抛）。：唯一写入口为富事件；旧表兼容：优先富列插入，
      * 首次 SQLException（列不存在/无 ALTER 权限）永久回退旧 9 列——契约红线审计永不反噬业务。 */
     @Override
     public void record(ConsoleOpsAuditEvent event) {
@@ -128,9 +128,9 @@ public class JdbcConsoleOpsAuditStore implements ConsoleOpsAuditStore {
     }
 
     /**
-     * 五百四十六批：审计落库失败观测——首条 WARN 留痕，此后仅累计静默。丢审计流水=丢合规
+     * 审计落库失败观测——首条 WARN 留痕，此后仅累计静默。丢审计流水=丢合规
      * 留痕数据，静默（debug 级常态不可见）不可观测；但宿主库不可用时每笔操作都会失败，
-     * 逐条 WARN 会刷屏（节流形态与 545 批 addErrors「n&gt;0 才打」的差别在此：那是低频
+     * 逐条 WARN 会刷屏（节流形态与  addErrors「n&gt;0 才打」的差别在此：那是低频
      * 落账，这是高频可复现路径），故取「首条 WARN + 计数静默」。
      */
     private void warnAuditDrop(String where, Exception e) {
@@ -140,7 +140,7 @@ public class JdbcConsoleOpsAuditStore implements ConsoleOpsAuditStore {
         }
     }
 
-    /** 审计流水查询（timestamp 倒序）。五百五十五批：出参类型化，与 ES 档同构。 */
+    /** 审计流水查询（timestamp 倒序）。：出参类型化，与 ES 档同构。 */
     @Override
     public List<ConsoleOpsAuditEvent> search(String username, String action, int size, int from, Long sinceMs) {
         ensureSchema();
@@ -154,7 +154,7 @@ public class JdbcConsoleOpsAuditStore implements ConsoleOpsAuditStore {
             sql.append(" AND action_name=?");
             args.add(action);
         }
-        /* 二百一十二批：时间范围下推（sinceMs 毫秒，ts 列为毫秒 epoch） */
+        /* 时间范围下推（sinceMs 毫秒，ts 列为毫秒 epoch） */
         if (sinceMs != null) {
             sql.append(" AND ts>=?");
             args.add(sinceMs);
@@ -236,9 +236,9 @@ public class JdbcConsoleOpsAuditStore implements ConsoleOpsAuditStore {
                 } catch (SQLException ignore) {
                     LOG.debug("[es-console-audit-jdbc] ts 索引已存在，跳过");
                 }
-                /* 五百五十五批：存量表补富列（幂等 best-effort）+ 探测定降级——
+                /* 存量表补富列（幂等 best-effort）+ 探测定降级——
                    ALTER 全败/探测失败（无权限等）即永久旧 9 列，审计照记不丢。
-                   五百六十一批：全败（无 ALTER 权限=永久降级定局）升 WARN 恰一次（带权限指引，
+                   全败（无 ALTER 权限=永久降级定局）升 WARN 恰一次（带权限指引，
                    运维不查源码不知为何审计缺列）；部分成功（列已存在的幂等冲突）维持 debug 不刷屏。 */
                 int alterFailed = 0;
                 for (String col : new String[]{

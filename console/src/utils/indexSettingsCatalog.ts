@@ -1,5 +1,5 @@
 /**
- * W1 Task 3：索引设置键静态目录（ES 7.10 文档口径）+ 模糊过滤纯函数。
+ * W1 ：索引设置键静态目录（ES 7.10 文档口径）+ 模糊过滤纯函数。
  *
  * dynamic 标注口径：
  *   true  = 动态键，可 PUT /{index}/_settings 热更（open 索引）；
@@ -54,7 +54,7 @@ export const SETTINGS_CATALOG: SettingEntry[] = [
   { key: 'mapping.depth.limit', desc: '字段嵌套深度上限', example: '20', dynamic: true },
   { key: 'unassigned.node_left.delayed_timeout', desc: '节点离线后副本延迟恢复时长（防分片风暴，到点才真正重建）', example: '1d / 5d', dynamic: true },
   { key: 'max_refresh_listeners', desc: '刷新监听并发上限（等待新可见点的请求排队额度）', example: '1000 / -1（不限）', dynamic: true },
-  /* 五百六十一批：ingest 管道 / ILM 挂接 / merge 调度（键名以 ES 官方为准） */
+  /* ingest 管道 / ILM 挂接 / merge 调度（键名以 ES 官方为准） */
   { key: 'default_pipeline', desc: '默认 ingest 管道（写入自动走该管道加工，_none 关闭）', example: 'my-pipeline / _none', dynamic: true },
   { key: 'final_pipeline', desc: '最终 ingest 管道（default_pipeline 之后兜底执行）', example: 'my-pipeline / _none', dynamic: true },
   { key: 'lifecycle.name', desc: '索引挂接的 ILM 生命周期策略名', example: 'logs-policy / _none', dynamic: true },
@@ -66,16 +66,16 @@ export const SETTINGS_CATALOG: SettingEntry[] = [
   { key: 'codec', desc: '存储压缩算法', example: 'default / best_compression', dynamic: false },
   { key: 'analysis.analyzer.*', desc: '自定义分析器（建索引时或 closed 状态设置）', example: '{"type":"custom","tokenizer":"standard"}', dynamic: false },
   { key: 'soft_deletes.enabled', desc: '软删除开关（建索引时定，影响增量恢复/CCR）', example: 'true（默认）/ false', dynamic: false },
-  /* 五百六十批：默认排序两键（ES 键名 index.sort.field / index.sort.order；本目录键口径
+  /* 默认排序两键（ES 键名 index.sort.field / index.sort.order；本目录键口径
      去 index. 前缀，IndexSettingsView normKey 消费零视图改动）。静态键：建索引时定，写入后不可改。 */
   { key: 'sort.field', desc: '默认排序字段（index.sort.field，静态建索引时定）', example: 'ts', dynamic: false },
   { key: 'sort.order', desc: '默认排序方向（index.sort.order，与 sort.field 配套）', example: 'asc / desc', dynamic: false },
-  /* 五百六十一批：存储类型（静态，open 索引不可热更） */
+  /* 存储类型（静态，open 索引不可热更） */
   { key: 'store.type', desc: '存储类型（建索引时定，open 索引不可改）', example: 'fs / niofs / mmapfs / hybridfs', dynamic: false },
 ];
 
 /**
- * 五百五十七批：集群级设置键中文目录（_cluster/settings persistent/transient 口径）。
+ * 集群级设置键中文目录（_cluster/settings persistent/transient 口径）。
  * 字段结构对齐 SETTINGS_CATALOG（desc 中文 + example + dynamic）；
  * dynamic 口径本目录换轨定义：true = 可经 _cluster/settings API 热更；
  * false = 节点级/遗留键（discovery.zen.* 在 7.x 已由集群自动维护，列册只为悬停不空白）。
@@ -98,7 +98,7 @@ export const CLUSTER_SETTINGS_CATALOG: SettingEntry[] = [
   { key: 'indices.breaker.fielddata.limit', desc: 'fielddata 断路器堆占比上限', example: '40%', dynamic: true },
   { key: 'indices.breaker.request.limit', desc: 'request 断路器堆占比上限', example: '60%', dynamic: true },
   { key: 'indices.queries.cache.size', desc: '节点查询缓存堆占比上限', example: '10%', dynamic: true },
-  /* 五百六十一批：缓存与均衡（键名以 ES 官方为准） */
+  /* 缓存与均衡（键名以 ES 官方为准） */
   { key: 'indices.fielddata.cache.size', desc: 'fielddata 堆缓存占比上限（默认无界，建议显式设限防 OOM）', example: '20% / 40%', dynamic: true },
   { key: 'cluster.routing.allocation.balance.index', desc: '按索引均衡权重因子（各索引在节点间的分片数拉平倾向，默认 0.5）', example: '0.5', dynamic: true },
   { key: 'cluster.routing.allocation.balance.shard', desc: '按总分片数均衡权重因子（节点总分片数拉平倾向，默认 0.45）', example: '0.45', dynamic: true },

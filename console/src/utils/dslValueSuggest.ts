@@ -1,5 +1,5 @@
-/* 六百五十六批（轨1 · Monaco DSL 值位动态候选 P1 内核先行）：
-   655 批设计记档 `docs/goal655-monaco-value-dynamic-design.md` §4 方案 A / §5 判定细则落地——
+/* （轨1 · Monaco DSL 值位动态候选 P1 内核先行）：
+   设计记档 `docs/goal655-monaco-value-dynamic-design.md` §4 方案 A / §5 判定细则落地——
    独立第六通道 provider 工厂（builder 侧 useTermsSuggest 同源机制的 Monaco 补全面接线），
    util 层 import monaco editor.api（monacoJsonQuickFix.ts 同范式先例）。
 
@@ -24,7 +24,7 @@ import {
   dslArrayElemFieldAt, dslValueFieldAt,
   type BodyKind,
 } from './dslCompletionContext';
-/* 563 批：类型感知精化排序单源（展示层消费；缓存/请求语义仍走 ES 权威序） */
+/* 类型感知精化排序单源（展示层消费；缓存/请求语义仍走 ES 权威序） */
 import { rankTermsByType } from './fieldSearch';
 
 type FieldInfo = { path: string; type: string };

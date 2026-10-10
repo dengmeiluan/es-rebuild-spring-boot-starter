@@ -1,4 +1,4 @@
-/* 六百二十一批对标阿里云「分组」导航（626 批实测：阿里云基础监控内容区左上「分组: 概览 ▾」，
+/* 对标阿里云「分组」导航（实测：阿里云基础监控内容区左上「分组: 概览 ▾」，
  * 展开 9 项=概览/集群指标/索引指标/节点资源指标/节点网络指标/节点磁盘指标/节点JVM指标/线程池指标/
  * 主节点指标）。
  *
@@ -6,7 +6,7 @@
  * 已含主节点（sortedNodes 带 master role），其 CPU/heap/disk 在「节点资源指标」组即可见，
  * 独立成组增量信息≈0 且无 master 专有采集字段（MonitorMetricsStore.AGG_METRIC_FIELDS 无此口径）。
  *
- * ⚠**与 onlyNodeMode/onlyClusterMode 的区别**（626 批关键辨析，勿混）：
+ * ⚠**与 onlyNodeMode/onlyClusterMode 的区别**（关键辨析，勿混）：
  *   - `onlyNodeMode / onlyClusterMode`（LiveDashboardView）= **数据可用性驱动的自动二态隐藏**
  *     （scope=cluster/node 时服务端无对应聚合口径的卡自动收起）；
  *   - `HIST_GROUP_OF / inHistGroup`（本文件）= **用户主动的导航过滤**。

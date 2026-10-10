@@ -12,7 +12,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
- * R93-5：在<b>真正决定结果的那一层</b>断言 —— 序列化后的字符串。
+ * -5：在<b>真正决定结果的那一层</b>断言 —— 序列化后的字符串。
  *
  * <p>为什么必须有本类：{@code DesiredStatePayloadTest} 的 7 条断言止步于 {@code Map} 层。
  * 而决定「人复制到的文本」与「宿主 收到的 JSON」长什么样的是 Jackson，
@@ -167,7 +167,7 @@ public class DesiredStateSerializationTest {
      * <p>为什么这是被守住的性质而非巧合：页面「复制全部」透传服务端原文、「复制单行」走浏览器
      * {@code JSON.stringify(row, null, 2)}。两者冒号形态若不同，同一页面上两个按钮对同一份数据
      * 产出不同文本，使用者无法判断哪个权威；且 宿主侧对粘贴 payload 做 diff 时
-     * （R95 configDiff）会制造满屏假差异。</p>
+     * （ configDiff）会制造满屏假差异。</p>
      *
      * <p>判别力：去掉 {@code JsonStringifyStylePrinter} 覆写（回落 Jackson 默认）→
      * 输出含 {@code " : "} → 两条断言均红。</p>

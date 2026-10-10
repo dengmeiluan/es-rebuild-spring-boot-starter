@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 /**
- * R93 Task 6：切换前人工确认门的<b>并发裁决</b>测试。
+ *  切换前人工确认门的<b>并发裁决</b>测试。
  *
  * <p><b>本测试声称要防的失败模式 X：</b>人在超时判定的同一瞬间点了确认，导致<b>两条路径双双生效</b> ——
  * 超时路径解除了写阻断并置 ABORTED，而确认路径又让作业继续走到别名切换。
@@ -75,7 +75,7 @@ public class AdhocSwitchConfirmGateRaceTest {
         }
     }
 
-    /** confirmTimeoutMs=0：死线在进入门的那一刻即已过期，worker 第一轮就走向超时 CAS。 */
+    /** confirmTimeoutMs=0：死线在进入门的那一刻即已过期，worker 就走向超时 CAS。 */
     private static AdhocRebuildService serviceWithImmediateDeadline(EsIndexAdmin admin) {
         return new AdhocRebuildService(admin, () -> null, 0L);
     }
@@ -234,7 +234,7 @@ public class AdhocSwitchConfirmGateRaceTest {
     /**
      * `toMap()` 必须暴露门的精确结局，且三种结局各自可辨。
      *
-     * <p><b>本断言声称防的失败模式</b>：下游（控制台/Task 7-8）拿不到门结局，只能从 {@code status}
+     * <p><b>本断言声称防的失败模式</b>：下游（控制台/-8）拿不到门结局，只能从 {@code status}
      * 反推 —— 而 {@code status} 对「超时中止」与「人工中止」是同一个 ABORTED，分不开。</p>
      *
      * <p>注意这里<b>不用</b>「toMap 含 gateOutcome 键」做断言：那种写法在值被写死成 null

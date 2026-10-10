@@ -35,17 +35,17 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百四十七批：可观测缺口 top5 <b>WARN 升档</b>——吞异常契约逐字节不动（返回值/控制流
+ * 可观测缺口 top5 <b>WARN 升档</b>——吞异常契约逐字节不动（返回值/控制流
  * 零改动，只加日志），失败路径从 debug/静默升 WARN 留痕。TDD 先红后绿。
  *
  * <ol>
- *   <li>{@link EsConnStore#updateVersion} catch→debug：546 批只修了 Jdbc 店同名方法漏了
+ *   <li>{@link EsConnStore#updateVersion} catch→debug：只修了 Jdbc 店同名方法漏了
  *       ES 店——「探活到新版本但 ES 档案写不进」同样无痕，同一句式补齐。</li>
  *   <li>{@link JdbcConnStore#updateVersion} 的 ensureSchema 臂 catch→debug+return：schema
- *       建不出来是持续性失败（每轮探活回写都会再败），比单次失败更该留痕（546 批审计裁决
+ *       建不出来是持续性失败（每轮探活回写都会再败），比单次失败更该留痕（审计裁决
  *       时明确暂缓本臂，本批收口）；升 WARN + 行注释记缘由。</li>
  *   <li>{@link ConnHealthProber#probeAll} connStore.list 失败→debug 跳整轮：升 AtomicLong
- *       节流 WARN（首条留痕后续仅累计，范式=546 批审计双店 warnAuditDrop——探活周期调度
+ *       节流 WARN（首条留痕后续仅累计，范式=审计双店 warnAuditDrop——探活周期调度
  *       高频可复现，逐条 WARN 会刷屏）；过时注释「如 NONE 模式未 Setup」一并修正——
  *       list 失败与存储模式无关（ES 未就绪/网络/权限皆可）。</li>
  *   <li>{@link BuiltinConsoleAuthService#verifyToken} fallback 臂 hasAnyUser IOException
@@ -65,7 +65,7 @@ import static org.junit.Assert.assertTrue;
  *
  * @author aicoding
  */
-public class Observability547Test {
+public class ObservabilityAuditTest {
 
     private ListAppender<ILoggingEvent> appender;
 
@@ -89,7 +89,7 @@ public class Observability547Test {
         }
     }
 
-    /* ══ 1. EsConnStore.updateVersion：ES 店失败路径补 WARN（546 批 Jdbc 店同款句式） ══ */
+    /* ══ 1. EsConnStore.updateVersion：ES 店失败路径补 WARN（ Jdbc 店同款句式） ══ */
 
     /** ES 档案版本回写失败必须落 WARN（控制 client 不可达时无痕=版本不刷新无从排查），且仍不抛。 */
     @Test
@@ -98,7 +98,7 @@ public class Observability547Test {
 
         store.updateVersion("conn-1", "7.17.0");
 
-        assertTrue("EsConnStore updateVersion 失败必须落服务端 WARN（546 批只修了 Jdbc 店）",
+        assertTrue("EsConnStore updateVersion 失败必须落服务端 WARN（只修了 Jdbc 店）",
                 countWarn("[EsConnStore] updateVersion failed") >= 1);
     }
 
@@ -293,7 +293,7 @@ public class Observability547Test {
 
     /** list 即抛的 ConnStore 桩（动态代理，本仓无 mockito 基线的标准替身）。 */
     private static ConnStore brokenConnStore() {
-        ClassLoader cl = Observability547Test.class.getClassLoader();
+        ClassLoader cl = ObservabilityAuditTest.class.getClassLoader();
         InvocationHandler handler = (proxy, method, args) -> {
             if ("list".equals(method.getName())) {
                 throw new RuntimeException("控制集群不可达(桩)");

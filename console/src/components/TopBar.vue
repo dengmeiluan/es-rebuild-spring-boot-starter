@@ -1,8 +1,8 @@
 <template>
   <header class="tbar">
     <div class="tbar-left">
-      <!-- R66：侧栏折叠开关——auto 态下的自动折叠必须给用户一个显式反悔入口 -->
-      <!-- 二百三十八批：navHidden 时优先恢复侧栏（Mod+B 同义）；否则图标折叠切换 -->
+      <!-- 侧栏折叠开关——auto 态下的自动折叠必须给用户一个显式反悔入口 -->
+      <!-- navHidden 时优先恢复侧栏（Mod+B 同义）；否则图标折叠切换 -->
       <button
         :aria-label="store.navHidden ? '展开侧栏' : store.navIcon ? '折叠侧栏' : '收成图标条'"
         class="btn ghost sm nav-toggle"
@@ -28,27 +28,27 @@
       />
       <span v-if="store.pickedInfo" class="idx-meta mono"
         :title="fmtNum(store.pickedInfo['docs.count']) + ' docs · ' + store.pickedInfo['store.size']">
-        <!-- 五百三十二批：store.size 裸字节串 → storeSizeText 单源（utils/format，semFormat bytes 档）；
+        <!-- store.size 裸字节串 → storeSizeText 单源（utils/format，semFormat bytes 档）；
              title 恒 raw（Overview 同范式：悬浮保留原始值） -->
         {{ fmtNum(store.pickedInfo['docs.count']) }} docs · {{ storeSizeText(store.pickedInfo['store.size']) }}
       </span>
-      <!-- 五百六十批：健康徽标换装 StatusPill 统一件（healthCls→tone 映射 g/y/r 语义档；
+      <!-- 健康徽标换装 StatusPill 统一件（healthCls→tone 映射 g/y/r 语义档；
            label 语义=health 原文保留；flex-shrink 落位由 .tbar-left .pill 既有规则承接不变） -->
       <StatusPill v-if="store.pickedInfo" :tone="healthCls(store.pickedInfo.health)" :label="store.pickedInfo.health" />
     </div>
     <div class="tbar-right">
-      <!-- R78：全局作业进度——长耗时作业（托管重建/跨集群迁移）跑完不需守页，
+      <!-- 全局作业进度——长耗时作业（托管重建/跨集群迁移）跑完不需守页，
            任何页面看得见在跑几个、跑到几成，点击回作业页；无在跑作业时不占位 -->
       <button v-if="jobCount" class="btn ghost sm tbar-job" :title="jobTitle" @click="gotoJobs">
         <Loader2 :size="13" class="tbar-job-spin" />
         <span class="tbar-alert-n">{{ jobCount }}<template v-if="jobPct >= 0"> · {{ jobPct }}%</template></span>
       </button>
-      <!-- R77：全局告警指示——告警不再只活在大屏，任何页面都看得见并一键回大屏处理；无告警时不占位不制噪 -->
+      <!-- 全局告警指示——告警不再只活在大屏，任何页面都看得见并一键回大屏处理；无告警时不占位不制噪 -->
       <button v-if="alertCount" class="btn ghost sm tbar-alert" :class="{ bad: monBad > 0 }" :title="alertTitle" @click="gotoLive">
         <BellRing :size="13" />
         <span class="tbar-alert-n">{{ alertCount }}</span>
       </button>
-      <!-- R80：通知历史入口——错过的 toast（尤其失败提醒）在这里回看，未读 error/warning 亮红点 -->
+      <!-- 通知历史入口——错过的 toast（尤其失败提醒）在这里回看，未读 error/warning 亮红点 -->
       <NotifyCenter />
       <UserMenu />
       <span v-if="store.clusterSelf" class="idx-meta mono self-chip" :title="'当前实例 ' + store.clusterSelf">{{ store.clusterSelf }}</span>
@@ -81,7 +81,7 @@ import { useAppStore } from '../stores/app';
 import { useLiveMonitorStore } from '../stores/liveMonitor';
 import { useJobTrackerStore } from '../stores/jobTracker';
 import ClusterSwitcher from './ClusterSwitcher.vue';
-import StatusPill from './StatusPill.vue'; /* 五百六十批：健康徽标统一件 */
+import StatusPill from './StatusPill.vue'; /* ：健康徽标统一件 */
 import UserMenu from './UserMenu.vue';
 import NotifyCenter from './NotifyCenter.vue';
 import IntegrationGuide from './IntegrationGuide.vue';
@@ -90,7 +90,7 @@ import IndexOptionRow from './IndexOptionRow.vue';
 import { ensureAliases, aliasEntries, aliasesOf } from '../composables/useAliases';
 
 const emit = defineEmits<{ (e: 'open-palette'): void }>();
-/* 一百一十三批：命令面板关闭后焦点归还触发钮（键盘用户 Esc 后不悬空；父组件经 ref 调用） */
+/* 命令面板关闭后焦点归还触发钮（键盘用户 Esc 后不悬空；父组件经 ref 调用） */
 const palBtnRef = ref<HTMLButtonElement | null>(null);
 function focusPaletteBtn() { palBtnRef.value?.focus(); }
 defineExpose({ focusPaletteBtn });
@@ -100,7 +100,7 @@ const router = useRouter();
 const mon = useLiveMonitorStore();
 const jt = useJobTrackerStore();
 
-/* 全局作业徽标：数据源是常驻轮询 store（R78），离开作业页仍在跟 */
+/* 全局作业徽标：数据源是常驻轮询 store（），离开作业页仍在跟 */
 const jobCount = computed(() => jt.runningCount);
 const jobPct = computed(() => jt.overallPct);
 const jobTitle = computed(() => {
@@ -117,7 +117,7 @@ function gotoJobs() {
   router.push(xm >= jt.runningCount - xm ? '/xmigrate' : '/adhoc-rebuild');
 }
 
-/* 全局告警徽标：数据源是常驻采样 store（R76），因此不在大屏也持续更新 */
+/* 全局告警徽标：数据源是常驻采样 store（），因此不在大屏也持续更新 */
 const monBad = computed(() => mon.badCount);
 const alertCount = computed(() => mon.activeAlerts.length);
 const alertTitle = computed(() => {
@@ -137,7 +137,7 @@ const themeLabel = computed(() => {
     : t === 'host' ? '跟随宿主 (当前 ' + store.effectiveTheme + ')' : '深色';
 });
 
-/* R61 最近使用 + W3 D7 别名分组置顶：别名是查询一等目标，放所有分组最前；
+/*  最近使用 + W3 D7 别名分组置顶：别名是查询一等目标，放所有分组最前；
    recent 从 pool（别名+索引）里找——选过的别名也进最近使用。 */
 const clusterKey = computed(() => store.target || '@host');
 watch(clusterKey, k => { ensureAliases(k); }, { immediate: true });
@@ -189,7 +189,7 @@ function onPick(v: string | null) {
   store.pick(v || '');
 }
 
-/* 五百二十五批 W4：healthCls 页内版退役，收口 utils/format 的 healthPill
+/*  W4：healthCls 页内版退役，收口 utils/format 的 healthPill
    （green→g / yellow→y / 其余→r，与 healthColor 同源分档） */
 </script>
 
@@ -200,17 +200,17 @@ function onPick(v: string | null) {
 }
 .tbar-left { display: flex; align-items: center; gap: var(--sp-2); flex: 1; min-width: 0; overflow: hidden; }
 .idx-select { width: 320px; max-width: 44vw; flex-shrink: 1; min-width: 240px; }
-/* R65c：docs/size 元信息不许被硬裁成“546,”——收缩时省略号兜底，窄视口下整体隐藏（要么完整要么不显示） */
+/* docs/size 元信息不许被硬裁成“546,”——收缩时省略号兜底，窄视口下整体隐藏（要么完整要么不显示） */
 .idx-meta { font-size: var(--fs-xs); color: var(--tx2); white-space: nowrap; flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-/* 五百五十批：原游离窄档（idx-meta 隐藏+idx-select 底线收缩）并入本档——
+/* 原游离窄档（idx-meta 隐藏+idx-select 底线收缩）并入本档——
    1100 档与 utils/layout BP_STACK 互锚（workbenchStackBp527 同语言），全站断点单源对齐 */
 @media (max-width: 1100px) {
   .tbar-left .idx-meta { display: none; }
   .idx-select { min-width: 200px; }
 }
-/* R66：866px iframe 实测 .tbar-left cw165/sw336 硬裁——窄容器下次要信息整体隐藏，
+/* 866px iframe 实测 .tbar-left cw165/sw336 硬裁——窄容器下次要信息整体隐藏，
    选择器底线降到 150，⌘K 只留图标（title 已有快捷键说明），实例 chip 让位。
-   台账：1000px 为非标断点（不在 1100/900 全站双档册内，R66 iframe 实测豁免档；
+   台账：1000px 为非标断点（不在 1100/900 全站双档册内， iframe 实测豁免档；
    adaptive556 记 TopBar 自适应档恒定 2 处在案），不并入标准档——改档=行为变更，超本批面 */
 @media (max-width: 1000px) {
   .idx-select { min-width: 150px; width: 240px; }
@@ -218,7 +218,7 @@ function onPick(v: string | null) {
   .tbar-kt { display: none; }
   .tbar { padding: 0 var(--sp-2); gap: var(--sp-2); }
 }
-/* R49：健康徽标不可被挤压截断（yellow → yell…） */
+/* 健康徽标不可被挤压截断（yellow → yell…） */
 .tbar-left .pill { flex-shrink: 0; }
 /* 告警徽标：默认警告色，有严重条目时转错误色；数字与铃铛同行不另开气泡挤顶栏 */
 .tbar-alert { flex-shrink: 0; color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); }

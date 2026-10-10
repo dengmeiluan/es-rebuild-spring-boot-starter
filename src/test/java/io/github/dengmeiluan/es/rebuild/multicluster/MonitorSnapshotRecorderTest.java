@@ -88,7 +88,7 @@ public class MonitorSnapshotRecorderTest {
         assertFalse(doc.containsKey("latencyMs"));
     }
 
-    /** 端到端：一轮两连接 → 1 次建当日索引 + 2 条快照落当日日期索引；第二轮同日不再建索引。 */
+    /** 端到端：一轮两连接 → 1 次建当日索引 + 2 条快照落当日日期索引；同日不再建索引。 */
     @Test
     public void recordOnce_先建当日索引再逐连接落快照() throws Exception {
         List<String> puts = new CopyOnWriteArrayList<>();
@@ -115,7 +115,7 @@ public class MonitorSnapshotRecorderTest {
         assertEquals("每连接一条快照", 2, posts.size());
         assertTrue(posts.get(0).startsWith("/es_console_monitor-2"));
         assertTrue(posts.get(1).startsWith("/es_console_monitor-2"));
-        /* 第二轮：索引已 ensure，仅追加快照 */
+        /* 索引已 ensure，仅追加快照 */
         recorder.recordOnce();
         assertEquals("同日不再重复建索引", 1, puts.size());
         assertEquals(4, posts.size());

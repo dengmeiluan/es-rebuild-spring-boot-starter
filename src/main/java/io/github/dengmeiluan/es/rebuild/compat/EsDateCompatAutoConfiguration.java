@@ -14,7 +14,7 @@ import org.springframework.data.elasticsearch.core.convert.ElasticsearchCustomCo
 import java.util.Arrays;
 
 /**
- * R94：epoch 日期兼容转换器的自动配置。<b>默认不装</b>
+ * epoch 日期兼容转换器的自动配置。<b>默认不装</b>
  * （{@code es.rebuild.compat.date-converters} 默认 {@code false}）。
  *
  * <h3>⚠ 开启前必读：它救不了带日期注解的字段</h3>

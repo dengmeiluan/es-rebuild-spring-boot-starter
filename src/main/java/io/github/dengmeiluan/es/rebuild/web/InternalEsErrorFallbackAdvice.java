@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * R92-C2：starter 全部控制台端点的 <b>ES 异常兜底</b>——按包生效（{@code io.github.dengmeiluan.es.rebuild} 下的
+ * -C2：starter 全部控制台端点的 <b>ES 异常兜底</b>——按包生效（{@code io.github.dengmeiluan.es.rebuild} 下的
  * 所有 controller），把 {@link java.io.IOException}（含 {@code ResponseException}）与
  * {@link org.elasticsearch.ElasticsearchException} 转成结构化 {@code {error,code,message}}，
  * message 内含 ES 原始报错体，前端 {@code friendlyEsError} 据此提取 {@code root_cause.reason}。
@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * <p>Order 排在两个 {@code HIGHEST_PRECEDENCE} 业务 advice 之后、宿主全局 advice
  * （无 {@code @Order} = LOWEST）之前：业务拒绝码（LOCK_CONFLICT/BAD_REQUEST 等）优先，ES 故障由本类接管。</p>
  *
- * <p>五百六十一批：log.error 补 60s 全局单键节流（AtomicLong，范式=560 批 JwtVerifier
+ * <p>：log.error 补 60s 全局单键节流（AtomicLong，范式= JwtVerifier
  * lastParseWarnAt）——ES 故障（如控制集群宕机）时每个失败请求都打全栈 ERROR 会刷屏淹没
  * 业务日志，且故障期间每条的栈几乎相同。首条仍 ERROR 带全栈（告警职责保留），60s 窗口内
  * 静默；HTTP 响应体与状态码逐字节不变（节流只动日志，错误透传给前端的职责不受影响）。</p>
@@ -42,11 +42,11 @@ public class InternalEsErrorFallbackAdvice {
 
     private static final Logger log = LoggerFactory.getLogger(InternalEsErrorFallbackAdvice.class);
 
-    /** 五百六十一批：ERROR 日志节流间隔与全局单键（ES 故障期间的重复全栈刷屏根治）。 */
+    /** ERROR 日志节流间隔与全局单键（ES 故障期间的重复全栈刷屏根治）。 */
     private static final long ERROR_LOG_THROTTLE_MS = 60_000L;
     private static final AtomicLong lastErrorLogAt = new AtomicLong(0);
 
-    /** ES 侧失败：4xx 透传原状态码，5xx 与网络故障 → 502。ERROR 级日志保留（原先由宿主 advice 承担的告警职责），五百六十一批起 60s 节流。
+    /** ES 侧失败：4xx 透传原状态码，5xx 与网络故障 → 502。ERROR 级日志保留（原先由宿主 advice 承担的告警职责），起 60s 节流。
      *  错误体补 {@code endpoint}（method + " " + requestURI），供前端/运维定位失败端点。 */
     @ExceptionHandler({java.io.IOException.class, org.elasticsearch.ElasticsearchException.class})
     public ResponseEntity<Map<String, Object>> esError(Exception e, javax.servlet.http.HttpServletRequest request) {

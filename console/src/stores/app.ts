@@ -16,13 +16,13 @@ export const useAppStore = defineStore('app', () => {
   const loadingIndices = ref(false);
   const clusterOk = ref<boolean | null>(null);
   const clusterSelf = ref('');
-  /* R72：真实集群健康色（green/yellow/red，空=未知）——侧栏底栏不再用「连接成功」冒充「集群正常」 */
+  /* 真实集群健康色（green/yellow/red，空=未知）——侧栏底栏不再用「连接成功」冒充「集群正常」 */
   const clusterHealth = ref<string>('');
   const clusterUnassigned = ref(0);
 
   async function loadIndices() {
     await ensureSetup();
-    // R39.2：宿主隐藏且尚未选中连接：不发数据面请求（后端会 403 HOST_DISABLED），保持未知态等引导
+    // .2：宿主隐藏且尚未选中连接：不发数据面请求（后端会 403 HOST_DISABLED），保持未知态等引导
     if (!hostVisible.value && !target.value) {
       indices.value = [];
       clusterOk.value = null;
@@ -35,7 +35,7 @@ export const useAppStore = defineStore('app', () => {
       const list = await api.clusterIndices();
       indices.value = Array.isArray(list) ? list : [];
       clusterOk.value = true;
-      loadVersion(); // R42 §8.4：连接成功后顺带识别版本，供导航级能力降级标注
+      loadVersion(); //  §8.4：连接成功后顺带识别版本，供导航级能力降级标注
       api.overview().then(o => { clusterSelf.value = o?.self || ''; }).catch(() => {});
       api.clusterHealth().then((h: any) => {
         clusterHealth.value = h?.status || '';
@@ -58,7 +58,7 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
-  /* R61：最近工作索引（最多 8 个）——顶栏选择器与 ⌘K 置顶展示，大集群免翻找 */
+  /* 最近工作索引（最多 8 个）——顶栏选择器与 ⌘K 置顶展示，大集群免翻找 */
   const RECENT_KEY = 'es_recent_idx';
   const recentIdx = ref<string[]>(loadRecent());
   function loadRecent(): string[] {
@@ -79,9 +79,9 @@ export const useAppStore = defineStore('app', () => {
 
   const pickedInfo = computed(() => indices.value.find(i => i.index === pickedIdx.value));
 
-  /* R36：多集群目标——''=宿主；非空= connId（api 层自动带 X-Es-Target 头）
-     R38：列表已按登录角色过滤 minRole（低于档案门槛的连接后端直接不返回），并附 health 探活结果
-     R39.2：hostVisible=false（纯管理平台形态）时切换器藏掉宿主项，无目标时自动映射首个可见连接 */
+  /* 多集群目标——''=宿主；非空= connId（api 层自动带 X-Es-Target 头）
+     列表已按登录角色过滤 minRole（低于档案门槛的连接后端直接不返回），并附 health 探活结果
+     .2：hostVisible=false（纯管理平台形态）时切换器藏掉宿主项，无目标时自动映射首个可见连接 */
   const target = ref<string>(getTarget());
   const targetName = ref<string>(localStorage.getItem('es-console.target.name') || '');
   /* w45:双键撕裂自愈——id 与 name 是两个独立 localStorage 键,部分清理/异常可致
@@ -118,7 +118,7 @@ export const useAppStore = defineStore('app', () => {
         notify('warning', first ? `目标集群连接已删除，已切到「${first.name}」` : '目标集群连接已删除，请先添加集群连接');
       }
     } else if (!hostVisible.value && !target.value && conns.value.length) {
-      // R39.2 自动映射：宿主隐藏且未选目标，默认选中首个可见连接，免去手动切一次
+      // .2 自动映射：宿主隐藏且未选目标，默认选中首个可见连接，免去手动切一次
       const first = conns.value[0];
       setTarget(first.id, first.name);
     }
@@ -129,14 +129,14 @@ export const useAppStore = defineStore('app', () => {
     setTargetId(id);
     localStorage.setItem('es-console.target.name', targetName.value);
     pick(''); // 切集群后旧 picked 索引大概率不存在，清空避免误导
-    recentIdx.value = []; // R61：最近索引同理随集群失效，避免跨集群误导
+    recentIdx.value = []; // ：最近索引同理随集群失效，避免跨集群误导
     localStorage.removeItem(RECENT_KEY);
     esVersion.value = ''; // 版本随目标失效，等 loadIndices 成功后重新识别
     loadIndices();
   }
 
-  /* R42 §8.4：当前目标集群的 ES 版本（如 7.10.1）——导航「需 x.x+」降级标注数据源。
-     远端目标优先取连接档案里 R40 回写的版本；档案缺失或宿主目标则 GET / 识别；拿不到留空=不标注（有意降级） */
+  /*  §8.4：当前目标集群的 ES 版本（如 7.10.1）——导航「需 x.x+」降级标注数据源。
+     远端目标优先取连接档案里  回写的版本；档案缺失或宿主目标则 GET / 识别；拿不到留空=不标注（有意降级） */
   const esVersion = ref<string>('');
   let verInflight: Promise<void> | null = null;
   function loadVersion(): Promise<void> {
@@ -146,8 +146,8 @@ export const useAppStore = defineStore('app', () => {
       if (v) { esVersion.value = v; return Promise.resolve(); }
     }
     if (verInflight) return verInflight;
-    /* 五百六十批：回落弃 raw 透传改 clusterHealth（后端顺带 version）——raw 是 ADMIN 域
-       高危端点，版本识别每次开屏都落一条 HIGH_RISK「raw=GET /」刷审计流水（用户实报
+    /* 回落弃 raw 透传改 clusterHealth（后端顺带 version）——raw 是 ADMIN 域
+       高危端点，版本识别每次开屏都落一条 HIGH_RISK「raw=GET /」刷审计流水（实报
        「只是打开页面就出现高危操作」）。共享端点 VIEWER 可读零审计噪声。 */
     verInflight = api.clusterHealth()
       .then((h: any) => {
@@ -167,7 +167,7 @@ export const useAppStore = defineStore('app', () => {
   interface NotifyItem { id: number; kind: 'success' | 'error' | 'warning' | 'info'; msg: string; action?: NotifyAction; actions?: NotifyAction[]; duration?: number }
   const notifyQueue = ref<NotifyItem[]>([]);
   let nid = 0;
-  /* R85：toast 风暴抑制——轮询/重试场景同一错误连环弹（如服务重启期 inspect 连挂），
+  /* toast 风暴抑制——轮询/重试场景同一错误连环弹（如服务重启期 inspect 连挂），
      右下角轰炸 + 通知历史刷屏都是垃圾体验。同 kind+文案在窗口期内只弹一次 toast，
      历史侧则聚合为一条 ×N（见 pushNotifyLog），信息不丢、噪音归零。 */
   const TOAST_DEDUP_MS = 8000;
@@ -175,7 +175,7 @@ export const useAppStore = defineStore('app', () => {
   function notify(kind: 'success' | 'error' | 'warning' | 'info', msg: string, opts?: { action?: NotifyAction; actions?: NotifyAction[]; duration?: number }) {
     /* 错误类消息全局友好化：ES 原始错误 JSON 提取 reason + 常见场景翻译 + 限长 */
     const shown = kind === 'error' ? friendlyEsError(msg) : msg;
-    /* R46 + 二百四十六批动作数组化：友好化后原始错误不丢——自动附「复制原始」动作；
+    /*  + 动作数组化：友好化后原始错误不丢——自动附「复制原始」动作；
        调用方还可经 opts.actions 追加「跳转」类动作（如查询失败直达诊断页），
        单 action 入参保持兼容并并入数组头（渲染层见 App.vue toast-acts 多按钮） */
     const actions: NotifyAction[] = [...(opts?.actions ?? [])];
@@ -195,7 +195,7 @@ export const useAppStore = defineStore('app', () => {
   }
   function shiftNotify() { notifyQueue.value.shift(); }
 
-  /* 五百三十批：慢请求可观测——api 层对 >10s 的成功请求广播 es-console:slow-request
+  /* 慢请求可观测——api 层对 >10s 的成功请求广播 es-console:slow-request
      （事件桥与 unauthorized/setup-required 同范式，api 层不反依赖 store），此处转发
      既有 notify warning 档；同 path+文案的轮询重弹由 notify 内建 8s 去重吸收 */
   if (typeof window !== 'undefined') {
@@ -205,10 +205,10 @@ export const useAppStore = defineStore('app', () => {
     });
   }
 
-  /* R80：通知历史——toast 转瞬即逝，错过就永久丢失（尤其 R78/R79 的作业失败通知）。
+  /* 通知历史——toast 转瞬即逝，错过就永久丢失（尤其 / 的作业失败通知）。
      落 localStorage 跨刷新可回看；action 回调不可序列化，历史只留 kind/msg/ts */
   interface NotifyLogItem { kind: NotifyItem['kind']; msg: string; ts: number; count?: number; firstTs?: number;
-    /** 三百一十六批：该通知的动作 label 清单（回调不可序列化；历史侧展示徽标提示错过了可操作按钮） */
+    /** 该通知的动作 label 清单（回调不可序列化；历史侧展示徽标提示错过了可操作按钮） */
     actions?: string[] }
   const NLOG_KEY = 'es-console.notify.log';
   const NSEEN_KEY = 'es-console.notify.seen';
@@ -220,11 +220,11 @@ export const useAppStore = defineStore('app', () => {
     catch { return []; }
   }
   function pushNotifyLog(kind: NotifyItem['kind'], msg: string, actionLabels?: string[]) {
-    /* R85：连发同类消息聚合为一条 ×N——重试风暴不再刷穿 50 条历史，把真正有价值的通知挤丢 */
+    /* 连发同类消息聚合为一条 ×N——重试风暴不再刷穿 50 条历史，把真正有价值的通知挤丢 */
     const head = notifyLog.value[0];
     if (head && head.kind === kind && head.msg === msg) {
       head.count = (head.count || 1) + 1;
-      head.firstTs = head.firstTs || head.ts; // R86：首见时间留住——风暴从何时开始、持续多久是排障关键线索
+      head.firstTs = head.firstTs || head.ts; // ：首见时间留住——风暴从何时开始、持续多久是排障关键线索
       head.ts = Date.now();
     } else {
       notifyLog.value.unshift({ kind, msg, ts: Date.now(), actions: actionLabels });
@@ -247,7 +247,7 @@ export const useAppStore = defineStore('app', () => {
   const eventBus = ref<{ name: string; payload?: any; ts: number }>({ name: '', ts: 0 });
   function emit(name: string, payload?: any) { eventBus.value = { name, payload, ts: Date.now() }; }
 
-  /* R27：收藏夹（localStorage 持久化，跨会话恢复） */
+  /* 收藏夹（localStorage 持久化，跨会话恢复） */
   interface Favorite {
     id: string;
     kind: 'dsl' | 'rest' | 'route' | 'template';
@@ -296,7 +296,7 @@ export const useAppStore = defineStore('app', () => {
     density: (localStorage.getItem('es_density') as 'comfortable' | 'compact') || 'comfortable',
     theme: (localStorage.getItem('es_theme') as 'dark' | 'light' | 'auto' | 'host')
       || (embedded ? 'host' : 'dark'),
-    /* R66：侧栏形态 auto/on/off——auto 时按可用宽度自动折叠（iframe 内嵌宿主只有 ~866px，208px 侧栏吃掉 1/4 空间导致内容区处处截断），用户手动切换后固定其显式选择 */
+    /* 侧栏形态 auto/on/off——auto 时按可用宽度自动折叠（iframe 内嵌宿主只有 ~866px，208px 侧栏吃掉 1/4 空间导致内容区处处截断），用户手动切换后固定其显式选择 */
     navCollapse: (localStorage.getItem('es_nav_collapse') as 'auto' | 'on' | 'off') || 'auto',
   });
   function applyDensity() {
@@ -354,7 +354,7 @@ export const useAppStore = defineStore('app', () => {
     saveSettings();
   }
 
-  /* R66：视口宽度（窄容器判定用）——iframe 内嵌时这就是 iframe 自身宽度 */
+  /* 视口宽度（窄容器判定用）——iframe 内嵌时这就是 iframe 自身宽度 */
   const viewportW = ref(typeof window !== 'undefined' ? window.innerWidth : 1440);
   if (typeof window !== 'undefined') {
     let rt: any = null;
@@ -374,7 +374,7 @@ export const useAppStore = defineStore('app', () => {
     settings.value.navCollapse = navIcon.value ? 'off' : 'on';
     localStorage.setItem('es_nav_collapse', settings.value.navCollapse);
   }
-  /* 二百三十八批：完全隐藏侧栏（dbx Mod+B 对位——查询/索引控制台全屏体验）。
+  /* 完全隐藏侧栏（dbx Mod+B 对位——查询/索引控制台全屏体验）。
      独立于图标折叠档：hidden 时侧栏整体移除，主区占满；持久化（dbx 同款跨会话记忆），
      TopBar 钮与 Mod+B 均可唤回。 */
   const navHidden = ref(localStorage.getItem('es_nav_hidden') === '1');

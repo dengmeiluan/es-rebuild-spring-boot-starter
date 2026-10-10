@@ -1,15 +1,15 @@
 <template>
   <div class="sy-page">
     <div class="sy-hd">
-      <PageHeader :icon="BookText" title="同义词字典" subtitle="R31 · ES 7.10 走 index-level inline synonym_graph filter · 支持逗号/箭头两种语法">
+      <PageHeader :icon="BookText" title="同义词字典" subtitle="ES 7.10 走 index-level inline synonym_graph filter · 支持逗号/箭头两种语法">
       <template #actions>
-<!-- 五百二十五批：页内 IndexPicker 退役换只读 CurrentIdxChip（W1 件：无 props 自读 store、空不渲染）——
+<!-- 页内 IndexPicker 退役换只读 CurrentIdxChip（W1 件：无 props 自读 store、空不渲染）——
      选索引入口收敛 TopBar 唯一处；useIdxState follow 档零改（index 跟随顶栏，watch 照常自动 doLoad） -->
 <CurrentIdxChip />
 <button class="btn ghost sm" @click="doLoad" :disabled="!index || busy">
   <RefreshCw :size="12" :class="{ spinning: busy }" /> 加载
 </button>
-<!-- 五百六十一批：原始请求/响应快查弹窗（RawIo 第六波，558b 判例同形态；
+<!-- 原始请求/响应快查弹窗（RawIo 第六波，558b 判例同形态；
      路径子串取写通道 '/cluster/synonyms-upsert'——GET analysis-settings 被
      Analysis/Mapping/Analyze 三页污染，548 MappingDesigner '/cluster/mapping-put' 同判例勿用） -->
 <button class="btn ghost sm" data-test="raw-io" aria-label="查看原始 IO（同义词下发）" title="最近一次同义词字典下发请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIo">
@@ -27,7 +27,7 @@
       </div>
     </div>
 
-    <!-- 五百二十五批：1fr 1fr 双栏等分 → 中缝 11px SplitHandle 占位列（TemplatesView 范式），
+    <!-- 1fr 1fr 双栏等分 → 中缝 11px SplitHandle 占位列（TemplatesView 范式），
          左宽走 --sy-left-w（默认两栏等分，0=自动），pref 键 synonyms.leftW 跨会话记忆 -->
     <div class="sy-grid" :style="syLeftW > 0 ? { '--sy-left-w': syLeftW + 'px' } : undefined">
       <div class="sy-card">
@@ -36,7 +36,7 @@
         </div>
         <div class="sy-form">
           <label class="sy-lb"><span>filter 名</span>
-            <!-- 557 批：裸 input 挂 datalist——候选=本次加载 settings 里的同义词 filter id
+            <!-- 裸 input 挂 datalist——候选=本次加载 settings 里的同义词 filter id
                  清单（doLoad 原本只回填首个，多 filter 时可下拉直选；未加载/无候选零扰动） -->
             <input v-model="filterName" class="sy-ii" placeholder="custom_synonyms" list="sy-filter-ids" />
             <datalist id="sy-filter-ids">
@@ -53,13 +53,13 @@
           <label class="sy-lb"><span>词典规则（每行一条）</span>
             <MonacoEditor ref="ruleEdRef" v-model="raw" language="synonyms" height="100%" class="sy-rule-ed" />
           </label>
-          <!-- 五百二十四批+1：坏行 lint 提示挂统计条旁（warn 档）——有坏行时「下发」禁用 -->
+          <!-- +1：坏行 lint 提示挂统计条旁（warn 档）——有坏行时「下发」禁用 -->
           <div class="sy-stat">
             已解析 <b>{{ parsed.length }}</b> 条 · 忽略 <b>{{ skipped }}</b> 行
             <span v-if="badLines.length" role="status" class="sy-lint">
               <AlertTriangle :size="11" /> {{ badLines.length }} 行有问题：<span v-for="(b, i) in badLines" :key="i" class="sy-lint-item">第 {{ b.line }} 行 {{ b.reason }}</span>
             </span>
-            <!-- 五百六十三批：坏行纠错建议（「怎么改」与 badLines「哪错了」互补；只对确定
+            <!-- 坏行纠错建议（「怎么改」与 badLines「哪错了」互补；只对确定
                  可修形态说话——全角标点给半角改写结果/=> 右项缺失给补法/分隔符混用给裁决
                  口径；拿不准不说话，纯函数单源 utils/inputAdvice.synonymFixHint） -->
             <span v-if="badFixHints.length" role="status" class="sy-lint">
@@ -69,7 +69,7 @@
         </div>
       </div>
 
-      <!-- 五百二十五批：分栏拖拽柄（TemplatesView 同范式：双击/R 键重置回等分，窄屏柄隐堆叠） -->
+      <!-- 分栏拖拽柄（TemplatesView 同范式：双击/R 键重置回等分，窄屏柄隐堆叠） -->
       <SplitHandle axis="vertical" :size="syLeftW > 0 ? syLeftW : 340" :min="220" :max="2000"
         label="配置/预览分栏" class="sy-split"
         @resize-end="(s: number) => syLeftW = clampSyW(s)" @reset="syLeftW = 0" />
@@ -87,7 +87,7 @@
             </button>
           </div>
         </div>
-        <!-- 第十批 D：裸 JSON 换 highlightJson（previewBody 已是 pretty 串，着色 + json-view 全局范式） -->
+        <!--  D：裸 JSON 换 highlightJson（previewBody 已是 pretty 串，着色 + json-view 全局范式） -->
         <pre class="sy-preview json-view" v-html="highlightDslJson(previewBody)"></pre>
 
         <div class="sy-tips">
@@ -128,7 +128,7 @@
       </div>
     </div>
 
-    <!-- 五百六十一批：原始 IO 弹窗（宿主受控开关；rec=最近一条 /cluster/synonyms-upsert 记录） -->
+    <!-- 原始 IO 弹窗（宿主受控开关；rec=最近一条 /cluster/synonyms-upsert 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
   </div>
 </template>
@@ -138,7 +138,7 @@ import { ref, computed, watch, nextTick } from 'vue';
 import { BookText, RefreshCw, Info, Send, Zap, AlertTriangle, Terminal, Lightbulb } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
-/* 五百六十一批：原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
+/* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
 import RawIoModal from '../components/RawIoModal.vue';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
@@ -147,23 +147,23 @@ import { useScopedDraft } from '../composables/useScopedDraft';
 import { askConfirm } from '../composables/confirm';
 import { fmtTime } from '../utils/format';
 import { friendlyEsError } from '../utils/esError';
-/* 五百六十三批：下发 body 语义分档高亮（analysis/filter/type 等 ANALYSIS_PARAM_ZH
+/* 下发 body 语义分档高亮（analysis/filter/type 等 ANALYSIS_PARAM_ZH
    语义键命中 j-clause 档；textContent 与 highlightJson 逐字一致零扰动） */
 import { highlightDslJson } from '../utils/jsonc';
-/* 五百六十三批：坏行纠错建议单源（见 badFixHints） */
+/* 坏行纠错建议单源（见 badFixHints） */
 import { synonymFixHint } from '../utils/inputAdvice';
-/* 五百二十五批：IndexPicker 退役换只读 CurrentIdxChip + 分栏 SplitHandle（pref 走 urlState） */
+/* IndexPicker 退役换只读 CurrentIdxChip + 分栏 SplitHandle（pref 走 urlState） */
 import CurrentIdxChip from '../components/CurrentIdxChip.vue';
 import SplitHandle from '../components/SplitHandle.vue';
 import MonacoEditor from '../components/MonacoEditor.vue';
 
 const store = useAppStore();
-/* 二百二十一批：权限门禁——同义词下发/热重载=/cluster/synonyms-upsert|reload-analyzers=CLUSTER 档（rank3+）；
+/* 权限门禁——同义词下发/热重载=/cluster/synonyms-upsert|reload-analyzers=CLUSTER 档（rank3+）；
    编辑/解析/预览全角色可用 */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/synonyms-upsert', store.target));
 
-/* 五百六十一批：原始 IO 三件套（RemoteClusters 557 同款）；判空不开空弹窗 */
+/* 原始 IO 三件套（RemoteClusters 557 同款）；判空不开空弹窗 */
 const rawIoShow = ref(false);
 const rawIoRec = ref<RawIoRec | null>(null);
 function openRawIo() {
@@ -172,17 +172,17 @@ function openRawIo() {
   rawIoRec.value = rec;
   rawIoShow.value = true;
 }
-/* R50：目标索引进 URL——刷新/分享链接可复原（可重入） */
+/* 目标索引进 URL——刷新/分享链接可复原（可重入） */
 const index = useIdxState({ follow: true });
-/* 五百二十五批：双栏比例可调（synonyms.leftW，0=两栏等分）——中缝 SplitHandle 拖拽 +
+/* 双栏比例可调（synonyms.leftW，0=两栏等分）——中缝 SplitHandle 拖拽 +
    usePref 跨会话记忆（TemplatesView 同范式） */
 const syLeftW = usePref('synonyms.leftW', 0);
 function clampSyW(s: number) { return Math.round(Math.min(2000, Math.max(220, s))); }
 const filterName = ref('custom_synonyms');
-/* 557 批：已加载的同义词 filter id 清单（datalist 候选源，doLoad 随载随填、加载前清空） */
+/* 已加载的同义词 filter id 清单（datalist 候选源，doLoad 随载随填、加载前清空） */
 const loadedFilterIds = ref<string[]>([]);
 const expand = ref(true);
-/* R121: 同义词全集进草稿——多行手工维护的内容切页/刷新不丢（空串恢复示例稿） */
+/* 同义词全集进草稿——多行手工维护的内容切页/刷新不丢（空串恢复示例稿） */
 const raw = useScopedDraft('raw', { route: 'synonyms' }, `# 示例
 elasticsearch, es, elastic search
 数据库, database, db
@@ -211,7 +211,7 @@ const parsed = computed(() => {
   return out;
 });
 
-/* 五百二十四批+1：规则行级 lint——坏行列表（行号 1 基 + 原因），九类硬错（五百二十五批 4→9）：
+/* +1：规则行级 lint——坏行列表（行号 1 基 + 原因），九类硬错（ 4→9）：
    ① 无「,」也无「=>」（ES 解析不了，close→PUT→open 失败会让索引停在关闭态）；
    ② 左侧词表为空；③ 整行重复；④ 超 80 字符的超长 token；
    ⑤ 中文标点（，、：或全角 ＝）——ES 语法分隔符只有半角，全角必解析失败；
@@ -244,7 +244,7 @@ const badLines = computed<{ line: number; reason: string }[]>(() => {
   return out;
 });
 
-/* 五百二十五批：坏行同步划进规则编辑器（MonacoEditor.setLineMarkers 行号直射 Warning marker，
+/* 坏行同步划进规则编辑器（MonacoEditor.setLineMarkers 行号直射 Warning marker，
    绕开 setMarkers 的 findMatches 锚点定位——规则行非 JSON、无锚点键名）。computed→watch 即时
    （规则行敲完即划，无 debounce 必要）；回调包 nextTick——immediate 在 setup 期同步跑时
    ruleEdRef 尚未挂载，挂载即带坏行的草稿（KeepAlive 恢复/刷新回填）会静默漏划；
@@ -256,7 +256,7 @@ watch(badLines, bl => {
   });
 }, { immediate: true });
 
-/* 五百六十三批：坏行纠错建议——按 badLines 行号回取原行喂 synonymFixHint（纯函数只对
+/* 坏行纠错建议——按 badLines 行号回取原行喂 synonymFixHint（纯函数只对
    确定可修形态说话：全角标点/=> 右项缺失/分隔符混用；badLines 检出的重复行/超长行等
    无单一改法，不出建议宁缺毋滥）。 */
 const badFixHints = computed(() => {
@@ -299,11 +299,11 @@ const previewBody = computed(() => {
 async function doLoad() {
   if (!index.value.trim()) return;
   busy.value = true;
-  loadedFilterIds.value = []; /* 557 批：datalist 候选随本次加载重算 */
+  loadedFilterIds.value = []; /* ：datalist 候选随本次加载重算 */
   try {
     const r: any = await api.analysisSettings(index.value.trim());
     const flt = r?.analysis?.filter || {};
-    /* 557 批：收集全部同义词 filter id（synonym_graph/synonym 两型）——首个仍回填表单，
+    /* 收集全部同义词 filter id（synonym_graph/synonym 两型）——首个仍回填表单，
        全量进 datalist 候选（原 break 首个语义零变） */
     const ids = Object.keys(flt).filter(k => flt[k]?.type === 'synonym_graph' || flt[k]?.type === 'synonym');
     loadedFilterIds.value = ids;
@@ -317,7 +317,7 @@ async function doLoad() {
     } else {
       pushLog('warn', '索引未定义 synonym_graph filter，可从零开始编辑');
     }
-  } catch (e: any) { /* 第十批 A：ES 错误友好化 */ pushLog('err', '加载失败：' + friendlyEsError(String(e?.message ?? e)), true); }
+  } catch (e: any) { /*  A：ES 错误友好化 */ pushLog('err', '加载失败：' + friendlyEsError(String(e?.message ?? e)), true); }
   finally { busy.value = false; }
 }
 
@@ -342,7 +342,7 @@ async function doSave() {
       store.notify('warning', '下发部分完成，检查日志');
     }
   } catch (e: any) {
-    /* 第十批 A：ES 错误友好化（下发失败原因可读化） */
+    /*  A：ES 错误友好化（下发失败原因可读化） */
     pushLog('err', '下发失败：' + friendlyEsError(String(e?.message ?? e)));
     store.notify('error', '下发失败 — 请检查目标集群连接与分词器插件是否就绪');
   } finally { busy.value = false; }
@@ -350,7 +350,7 @@ async function doSave() {
 
 async function doReload() {
   if (!index.value.trim()) return;
-  /* 七百一十九批（R99 G66）：热重载在途守卫——起手 busy + finally 复位（与 doLoad/doSave 同款，
+  /* （ G66）：热重载在途守卫——起手 busy + finally 复位（与 doLoad/doSave 同款，
      修「在途窗钮不禁用、连点可重复触发 reload-analyzers」；doSave 内 await 本函数时 busy 已置位，
      复位幂等无扰动） */
   busy.value = true;
@@ -359,7 +359,7 @@ async function doReload() {
     pushLog('ok', '热重载 _reload_search_analyzers 完成');
     store.notify('success', '搜索分词器已热重载');
   } catch (e: any) {
-    /* 第十批 A：ES 错误友好化（热重载失败原因可读化） */
+    /*  A：ES 错误友好化（热重载失败原因可读化） */
     pushLog('err', '热重载失败：' + friendlyEsError(String(e?.message ?? e)));
   } finally { busy.value = false; }
 }
@@ -372,16 +372,16 @@ watch(index, v => { if (v) doLoad(); });
    原 12px 16px 24px 与其叠加成双层 padding，移除与多数视图取齐（同批 11c ProfileFlameView 处理） */
 .sy-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); }
 .sy-hd-r { display: flex; gap: var(--sp-1h); align-items: center; }
-/* 七百一十九批（R99 G67）：页头收编 PageHeader 后遗留的左组标题四条死规则与表单壳收编
+/* （ G67）：页头收编 PageHeader 后遗留的左组标题四条死规则与表单壳收编
    后遗留的表单行修饰两条死规则删（模板零元素实证，713/715/717 同族清理）；
    .sy-hd 外距锚、.sy-hd-r 预览卡头钮组、.sy-ii 输入框为活规则保留 */
 .sy-ii { background: var(--bg2); border: 1px solid var(--border); color: var(--fg); padding: var(--sp-1) var(--sp-2); border-radius: var(--r-xs); font-family: var(--mono); font-size: var(--fs-sm); min-width: 180px; }
 .sy-note { display: flex; gap: var(--sp-2); padding: var(--sp-2h) var(--sp-3); background: color-mix(in srgb, var(--dv-blue) 8%, transparent); border: 1px solid color-mix(in srgb, var(--dv-blue) 30%, transparent); border-radius: var(--r-s); margin-bottom: var(--sp-3); font-size: var(--fs-sm); }
 .sy-note code { background: var(--bg2); padding: 1px var(--sp-1); border-radius: 3px; font-size: var(--fs-xs); }
-/* 五百二十五批：1fr 1fr 等分 → 三列（左可拖 + 11px 柄 + 右自适应）——默认两栏等分观感不变
+/* 1fr 1fr 等分 → 三列（左可拖 + 11px 柄 + 右自适应）——默认两栏等分观感不变
    （左右都 minmax(0,1fr)），拖过之后 --sy-left-w 接管左宽（pref synonyms.leftW） */
 .sy-grid { display: grid; grid-template-columns: var(--sy-left-w, minmax(0, 1fr)) 11px minmax(0, 1fr); gap: var(--sp-3); margin-bottom: var(--sp-3); }
-/* 五百四十批：工作台分节壳（bg+border+radius）退役（四刀立法③④）——内容直贴，分界由
+/* 工作台分节壳（bg+border+radius）退役（四刀立法③④）——内容直贴，分界由
    .sy-card-hd 既有 border-bottom 承接（SqlBridge 535 先例）；overflow 防撑破骨架保留
    （Monaco 100% 高容器的结构语义非 chrome） */
 .sy-card { overflow: hidden; }
@@ -389,16 +389,16 @@ watch(index, v => { if (v) doLoad(); });
 .sy-form { padding: var(--sp-3); }
 /* 词典规则编辑器弹性（原 290px 写死）：height:100% 在块流表单中不可解析，由 min-height 兜底——
    290px 原值保底，42vh 视口弹性档（与 SqlConsole/ConfigValidator 同口径），Monaco 内置 RO 自动 layout。
-   五百五十八批(b)：编辑器外框退役并入本条（sy-card-hd 既有 border-bottom 承接分界；
+   (b)：编辑器外框退役并入本条（sy-card-hd 既有 border-bottom 承接分界；
    无源码锁安全并入；组件本体零触，纯视觉） */
 .sy-form > .sy-lb > .sy-rule-ed { min-height: max(290px, 42vh); border: none; border-radius: 0; }
 .sy-lb { display: block; margin-bottom: var(--sp-2h); font-size: var(--fs-sm); }
 .sy-lb > span { display: block; color: var(--muted); margin-bottom: var(--sp-1); }
 .sy-lb .sy-ii { min-width: 100%; box-sizing: border-box; }
 .sy-stat { font-size: var(--fs-xs); color: var(--muted); }
-/* 528 批：统计条计数数字徽标归 650（裸 b 默认 bold≈700 越过全站 650 上限立法） */
+/* 统计条计数数字徽标归 650（裸 b 默认 bold≈700 越过全站 650 上限立法） */
 .sy-stat b { color: var(--fg); font-weight: 650; }
-/* 五百二十四批+1：规则行 lint（warn 档）与 filter 名非法（err 档）——走主题 token 体系 */
+/* +1：规则行 lint（warn 档）与 filter 名非法（err 档）——走主题 token 体系 */
 .sy-lint { display: inline-flex; align-items: baseline; gap: 3px; margin-left: var(--sp-2h); color: var(--warn); flex-wrap: wrap; }
 .sy-lint svg { align-self: center; flex-shrink: 0; }
 .sy-lint-item { margin-right: var(--sp-2); }
@@ -418,13 +418,13 @@ watch(index, v => { if (v) doLoad(); });
 .sy-log-retry { margin-left: auto; flex-shrink: 0; color: var(--brand); cursor: pointer; }
 .sy-log-retry:hover { text-decoration: underline; }
 
-/* 窄屏塌单栏：断点值复用 IlmView/TemplatesView 既有的 1000px（五百二十五批：柄隐藏照抄 TemplatesView） */
+/* 窄屏塌单栏：断点值复用 IlmView/TemplatesView 既有的 1000px（：柄隐藏照抄 TemplatesView） */
 @media (max-width: 1100px) {
   .sy-grid { grid-template-columns: minmax(0, 1fr); }
   .sy-split { display: none; }
 }
 
-/* 五百二十九批：900 紧凑微调档（§9.3 口径；§6q 遗留补齐，W-D）——双栏堆叠/柄隐藏已由
+/* 900 紧凑微调档（§9.3 口径；§6q 遗留补齐，W-D）——双栏堆叠/柄隐藏已由
    1100 档收编，此处页头/卡头/提示条允许换行（标题+右上钮组、note 蓝条窄卡不再硬挤） */
 @media (max-width: 900px) {
   .sy-hd { flex-wrap: wrap; row-gap: var(--sp-1); }

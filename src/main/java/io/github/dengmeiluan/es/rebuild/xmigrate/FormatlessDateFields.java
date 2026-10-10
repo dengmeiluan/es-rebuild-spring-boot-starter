@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 迁移时对目标 mapping 里「无 {@code format} 的 date 字段」的<b>如实告知</b>（R94 / spec §9.8 改写版）。
+ * 迁移时对目标 mapping 里「无 {@code format} 的 date 字段」的<b>如实告知</b>（ / spec §9.8 改写版）。
  *
  * <p><b>本类只陈述事实，不改任何东西。</b> 这一点是设计的核心，需要交代它的来历：</p>
  *
@@ -37,7 +37,7 @@ import java.util.Map;
  *
  * <p><b>为什么只看 mapping、不采样文档</b>：判断「某字段里是否真的存着 10 位 epoch」需要读源文档并判形态，
  * 而 {@code date-forms} 采样端点已经在做这件事。迁移路径里再做一份就是第二份实现。
- * 本类只回答 mapping 能回答的那部分：<b>哪些 date 字段没有 format</b>——那正是有 R94 风险的那些字段。</p>
+ * 本类只回答 mapping 能回答的那部分：<b>哪些 date 字段没有 format</b>——那正是有  风险的那些字段。</p>
  *
  * @author aicoding
  */
@@ -47,7 +47,7 @@ public final class FormatlessDateFields {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    /** 会受 R94 影响的 date 系类型：这些类型无 format 时才落入清单。 */
+    /** 会受  影响的 date 系类型：这些类型无 format 时才落入清单。 */
     private static final String T_DATE = "date";
     private static final String T_DATE_NANOS = "date_nanos";
     private static final String T_DATE_RANGE = "date_range";
@@ -75,7 +75,7 @@ public final class FormatlessDateFields {
             walk(root, "", out);
             return Collections.unmodifiableList(out);
         } catch (Exception e) {
-            // 五百六十批：解析失败静默空清单（「真的没有」与「解析不了」合流）——debug 留痕可追，
+            // 解析失败静默空清单（「真的没有」与「解析不了」合流）——debug 留痕可追，
             // 空清单返回契约不变（调用方文案仍不可把空清单表述为「已确认无风险」）
             LOG.debug("[FormatlessDateFields] 日期字段扫描失败返回空清单：{}: {}",
                     e.getClass().getSimpleName(), e.getMessage());
@@ -146,7 +146,7 @@ public final class FormatlessDateFields {
         }
         return "以下 " + formatlessFields.size() + " 个 date 字段在 mapping 中没有声明 format："
                 + String.join("、", formatlessFields)
-                + "。若其中存有 10 位的 epoch 秒值，ES 会按毫秒解释，读出来是 1970 年附近的时间（R94）。"
+                + "。若其中存有 10 位的 epoch 秒值，ES 会按毫秒解释，读出来是 1970 年附近的时间。"
                 + "本次迁移既不会造成这个问题，也不会修复它——源索引什么样，目标索引就什么样，"
                 + "mapping 与文档均按原样搬运。是否需要处理，请对照源集群自行判定。";
     }

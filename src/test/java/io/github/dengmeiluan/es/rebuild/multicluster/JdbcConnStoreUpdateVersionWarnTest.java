@@ -24,7 +24,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百四十六批：{@link JdbcConnStore#updateVersion} 失败的 <b>WARN 留痕</b>（观测缺口收口）。
+ * {@link JdbcConnStore#updateVersion} 失败的 <b>WARN 留痕</b>（观测缺口收口）。
  *
  * <p><b>缺口</b>：UPDATE 失败此前仅 {@code LOG.debug("updateVersion failed")}——es_version
  * 回填是探活链路的增强信息，写失败意味着「探活到了新版本但档案不更新」，排查版本不刷新

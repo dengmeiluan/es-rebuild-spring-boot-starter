@@ -10,7 +10,7 @@ import org.elasticsearch.client.RestHighLevelClient;
 import java.util.Map;
 
 /**
- * R94 Task 16 阶段⑤′演练：在真实 QA 6.7.2 上验证 {@code date-forms} 采样口径。
+ *   阶段⑤′演练：在真实 QA 6.7.2 上验证 {@code date-forms} 采样口径。
  *
  * <p><b>本演练要证的两件事</b>（其一是硬门）：</p>
  * <ol>
@@ -42,14 +42,14 @@ import java.util.Map;
  * <pre>
  * mvn -o test-compile
  * mvn -o exec:java -Dexec.classpathScope=test \
- *     -Dexec.mainClass=io.github.dengmeiluan.es.rebuild.probe.R94DateFormSamplingDrill
+ *     -Dexec.mainClass=io.github.dengmeiluan.es.rebuild.probe.DateFormSamplingDrill
  * </pre>
  */
-public final class R94DateFormSamplingDrill {
+public final class DateFormSamplingDrill {
 
     private static final String ES_HOST = "10.64.10.74";
     private static final int ES_PORT = 9200;
-    private static final String INDEX = "r93_r94_dateform_drill";
+    private static final String INDEX = "r93__dateform_drill";
     private static final ObjectMapper OM = new ObjectMapper();
 
     public static void main(String[] args) throws Exception {
@@ -59,12 +59,12 @@ public final class R94DateFormSamplingDrill {
         EsIndexAdmin admin = new EsIndexAdmin(client);
         int exit = 0;
         try {
-            System.out.println("=== R94 date-form sampling drill (QA " + ES_HOST + ") ===");
+            System.out.println("=== date-form sampling drill (QA " + ES_HOST + ") ===");
             System.out.println("server version : " + version(ll));
 
             drop(ll);
             create(ll);
-            // 第一批：20 条 epoch_millis；第二批：20 条 ISO 串。严格先后写入。
+            // 20 条 epoch_millis；：20 条 ISO 串。严格先后写入。
             bulk(ll, "a", 20, true);
             refresh(ll);
             bulk(ll, "b", 20, false);
@@ -79,7 +79,7 @@ public final class R94DateFormSamplingDrill {
                     biased = false;
                 }
             }
-            System.out.println("  => match_all 偏倚存在（第二批恒 0）: " + biased);
+            System.out.println("  => match_all 偏倚存在（第二组样本恒 0）: " + biased);
 
             System.out.println("\n--- [2] random_score size=20 (采用口径) x3 ---");
             boolean mixes = true;
@@ -91,7 +91,7 @@ public final class R94DateFormSamplingDrill {
                     mixes = false;
                 }
             }
-            System.out.println("  => random_score 每次都混到第二批: " + mixes);
+            System.out.println("  => random_score 每次都混到第二组: " + mixes);
 
             System.out.println("\n--- [3] getMapping 剥 6.x type 包层后能否挑出 date 字段 ---");
             String mapping = admin.getMapping(INDEX);
@@ -132,7 +132,7 @@ public final class R94DateFormSamplingDrill {
                 new io.github.dengmeiluan.es.rebuild.core.IndexNameResolver(admin, props, null), props);
     }
 
-    /** 返回 {第一批命中数, 第二批命中数}——走真实 EsIndexAdmin.queryDsl。 */
+    /** 返回 {命中数, 命中数}——走真实 EsIndexAdmin.queryDsl。 */
     @SuppressWarnings("unchecked")
     private static int[] tallyBatches(EsIndexAdmin admin, String dsl, int size) throws Exception {
         Map<String, Object> resp = admin.queryDsl(INDEX, dsl, size);
@@ -201,6 +201,6 @@ public final class R94DateFormSamplingDrill {
                 org.apache.http.util.EntityUtils.toString(ll.performRequest(r).getEntity()), Map.class);
     }
 
-    private R94DateFormSamplingDrill() {
+    private DateFormSamplingDrill() {
     }
 }

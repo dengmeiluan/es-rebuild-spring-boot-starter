@@ -11,10 +11,10 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
- * R93-67 <b>防复发看守</b>：证明「锁层写出 typeless RHLC 请求」在<b>类型层面不可达</b>。
+ * -67 <b>防复发看守</b>：证明「锁层写出 typeless RHLC 请求」在<b>类型层面不可达</b>。
  *
  * <p><b>为什么需要它</b>：{@code putMappingVersionAware} / {@code _update} / {@code _explain} /
- * {@code _termvectors} 早在 R73/R74 就做了版本感知兜底，<b>唯独 R93 新加的锁绕过了全部惯例</b>。
+ * {@code _termvectors} 早在 / 就做了版本感知兜底，<b>唯独  新加的锁绕过了全部惯例</b>。
  * 原因不是能力缺失，而是——<b>惯例只活在老代码里，不活在任何能拦住新代码的地方</b>。</p>
  *
  * <p><b>看守形式：让错误不可能，而不是检测错误。</b>

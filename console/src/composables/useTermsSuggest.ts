@@ -4,14 +4,14 @@
    raw.aggregations 兜底是防御性死代码（后端原样透传顶层 aggregations），留作形态漂移保险。
    stale 响应不写缓存（序号守卫在 cache.set 之前）：旧前缀回退 5min 内会多一次请求——有意取舍。
    suggestions 只读消费约定（与 useIndexFields 对齐）：消费方 filter/computed 链使用，禁止原地改。
-   556 批首轮时延形态：同步候选即刻回填（同 key 缓存命中升级为同步完成不进防抖 / 548 A2 宽前缀
+   首轮时延形态：同步候选即刻回填（同 key 缓存命中升级为同步完成不进防抖 / 548 A2 宽前缀
    本地滤上移同步段 / 新增 localStorage 词项持久档 stash 按前缀同步回填），词项请求 fire-and-forget
    到达后 merge 刷新（网络 top20 在前 + 持久档匹配补后去重，随响应滚动更新）——
    首轮（缓存全空）不再等防抖+ES 往返才出候选。 */
 import { onScopeDispose, ref, watch } from 'vue';
 import { api } from '../api';
 import { useAppStore } from '../stores/app';
-/* 五百六十三批：类型感知精化排序单源（fieldSearch 同批新增，展示层消费） */
+/* 类型感知精化排序单源（fieldSearch 同批新增，展示层消费） */
 import { rankTermsByType } from '../utils/fieldSearch';
 
 type CacheEntry = { at: number; values: string[] };
@@ -31,7 +31,7 @@ function pruneCache() {
 /** 测试专用：清空缓存 */
 export function __clearSuggestCache() { cache.clear(); }
 
-/* ═══ 556 批：词项持久档（localStorage）═══
+/* ═══ ：词项持久档（localStorage）═══
    TTL 内存缓存之外的「上次 top20」快照：跨会话/缓存过期后的首轮 suggest 同步候选来源
    （零网络零防抖即刻回填，权威词项到达后 merge 刷新）。key 前三段与内存缓存同构；
    读写 try/catch（隐私模式/存储满静默，不影响主流程）。 */
@@ -50,11 +50,11 @@ function writeStash(key: string, values: string[]) {
   try { localStorage.setItem(key, JSON.stringify(values.slice(0, STASH_CAP))); } catch { /* 持久档失败不影响主流程 */ }
 }
 
-/* 五百六十三批：工厂可选第二参 types——字段类型表读源（消费方持有字段表时传入，
+/* 工厂可选第二参 types——字段类型表读源（消费方持有字段表时传入，
    候选展示值按 rankTermsByType 类型精化排序：date 字段 ISO 形态排前、数值字段数值
-   形态排前）。可选参默认零行为：不传既有序零变（556 批「响应=suggestions 精确值」
-   契约不回退）；五消费面接线：565 批三处（LuceneInput/BoostTuner/sqlCompletion）+
-   六百批两处（FieldSelect/ClauseNode）至此全接。
+   形态排前）。可选参默认零行为：不传既有序零变（「响应=suggestions 精确值」
+   契约不回退）；五消费面接线：三处（LuceneInput/BoostTuner/sqlCompletion）+
+   两处（FieldSelect/ClauseNode）至此全接。
    精化只作用展示 ref——缓存/stash 仍写 ES 权威序（排序纯展示语义，读出后再排，
    不污染排序基准）；suggestAsync resolve 传 ES 权威序（与缓存语义一致，展示精化
    属视觉层，程序消费面拿原始值），差异记档。 */
@@ -64,7 +64,7 @@ export function useTermsSuggest(index: () => string, types?: () => Record<string
   const suggesting = ref(false);
   let timer: ReturnType<typeof setTimeout> | null = null;
   let seq = 0;
-  /* 535 批 R3 新增出口的挂账表（suggest 本体零变更）：seq → resolver，该 seq 终点兑现。
+  /*  R3 新增出口的挂账表（suggest 本体零变更）：seq → resolver，该 seq 终点兑现。
      五类终点全覆盖：空参早退/缓存命中/序号过期/成功/失败——一律 resolve 不 reject
      （失败静默语义不变，async 消费方拿到 []）。
      548 A1 增第六类终点：防抖窗内/在飞被新 suggest 超越时立即取消兑现 []（原缺陷：被清
@@ -173,7 +173,7 @@ export function useTermsSuggest(index: () => string, types?: () => Record<string
       finally { if (mySeq === seq) suggesting.value = false; }
     }, delay);
   }
-  /* 535 批 R3：async 消费出口——复用 suggest 全部既有机制（防抖/序号守卫/TTL 缓存/失败静默），
+  /*  R3：async 消费出口——复用 suggest 全部既有机制（防抖/序号守卫/TTL 缓存/失败静默），
      suggest 同步 ++seq 后返回，单线程无插入，此刻 seq 即本次调用序号，据此挂 promise。
      独立新签名（suggest 既有签名零变更，十四用例锁）。
      556：同 key 缓存命中已是同步终点（syncSettled）时 promise 即刻兑现，不经挂账（防悬挂）。 */

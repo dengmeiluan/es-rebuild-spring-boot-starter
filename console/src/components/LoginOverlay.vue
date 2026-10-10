@@ -34,12 +34,12 @@
 </template>
 
 <script setup lang="ts">
-/* R34：全屏登录遮罩 —— 监听 api.ts 广播的 401 事件，任何请求未授权即弹出 */
+/* 全屏登录遮罩 —— 监听 api.ts 广播的 401 事件，任何请求未授权即弹出 */
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { ShieldCheck, LogIn, Loader2, Info } from 'lucide-vue-next';
 import { useAuthStore } from '../stores/auth';
 import { useAppStore } from '../stores/app';
-import { friendlyEsError } from '../utils/esError'; /* 五百二十八批：登录错误一行收口 */
+import { friendlyEsError } from '../utils/esError'; /* ：登录错误一行收口 */
 
 const auth = useAuthStore();
 const store = useAppStore();
@@ -61,7 +61,7 @@ async function doLogin() {
       // 兜底账号登录成功：提醒建号（store 里 notify 由各视图消费，这里轻提示即可）
     }
   } catch (e: any) {
-    /* 五百二十八批：裸 e.message → friendlyEsError 一行收口（与全站错误面板同口径；
+    /* 裸 e.message → friendlyEsError 一行收口（与全站错误面板同口径；
        friendly 未命中时回落原文，再兜底「登录失败」） */
     error.value = friendlyEsError(String(e?.message ?? e)) || '登录失败';
   } finally {
@@ -103,5 +103,5 @@ onBeforeUnmount(() => window.removeEventListener('es-console:unauthorized', onUn
 }
 .lo-hint svg { flex-shrink: 0; margin-top: var(--sp-0); }
 .lo-hint code { color: var(--tx1); }
-/* 525 批：本地 .spin 旋转档（自造 keyframes）退役，统一走 theme.css 全局 .spinning（svg 适用） */
+/* 本地 .spin 旋转档（自造 keyframes）退役，统一走 theme.css 全局 .spinning（svg 适用） */
 </style>

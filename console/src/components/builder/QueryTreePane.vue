@@ -6,15 +6,15 @@
 
     <!-- 面板头部：递归叶子条件计数徽标（含嵌套与临时停用） -->
     <div v-if="tree.root" class="qtp-hd">
-      <!-- 五百一十九批：徽标升级分档读数「共 N · 停用 M · 嵌套 K」（M/K 为 0 省略段）；
+      <!-- 徽标升级分档读数「共 N · 停用 M · 嵌套 K」（M/K 为 0 省略段）；
            N>10 转 .hot 警示色，提示条件树偏大。
-           五百五十三批：裸 pill 升级 .chip.static 质感档（bg2 底+line 边+tabular-nums 全局单源），
+           裸 pill 升级 .chip.static 质感档（bg2 底+line 边+tabular-nums 全局单源），
            数字 mono 包裹（textContent 不变，fieldSelectPopup 计数断言兼容） -->
       <span class="qtp-cnt chip static" :class="{ hot: leafStats.total > 10 }" :title="cntTitle">共 <b class="mono">{{ leafStats.total }}</b> 条件<template v-if="leafStats.disabled"> · 停用 <b class="mono">{{ leafStats.disabled }}</b></template><template v-if="leafStats.nested"> · 嵌套 <b class="mono">{{ leafStats.nested }}</b></template></span>
       <span style="flex:1"></span>
-      <!-- 五百一十九批：条件搜索定位——命中行柔底高亮并滚动定位，清空恢复；
+      <!-- 条件搜索定位——命中行柔底高亮并滚动定位，清空恢复；
            【W3b】计数 N/M + Enter/Shift+Enter 逐命中轮转（当前命中加重档）。
-           五百五十三批：裸 input 收编 SearchFilterBar 统一件（547 批 wt/fv/tg 三胞胎后第四胞胎，
+           裸 input 收编 SearchFilterBar 统一件（ wt/fv/tg 三胞胎后第四胞胎，
            同构判定：过滤词+Enter 导航+附加件插槽+Esc 清空内建；Shift+Enter 反向轮转经
            组件 @enter 转出的原生 KeyboardEvent.shiftKey 承接），胶囊壳质感归组件单源 -->
       <!-- title 经组件 $attrs 透传落胶囊根（inheritAttrs 关闭显式透传），悬停提示原语义保留 -->
@@ -22,11 +22,11 @@
         <span v-if="findHits.length" class="qtp-find-nav chip static mono" aria-live="polite"
               :title="'命中 ' + findHits.length + ' 条，当前第 ' + findCur + ' 条'">{{ findCur }}/{{ findHits.length }}</span>
       </SearchFilterBar>
-      <!-- 五百四十一批：四枚举钮收敛两枚状态感知循环钮（折叠⇄展开 / 启用⇄停用各一枚，
+      <!-- 四枚举钮收敛两枚状态感知循环钮（折叠⇄展开 / 启用⇄停用各一枚，
            显隐条件与 title 原语义保留）——
            折叠态不进 queryTree（BoolGroupNode 组内 ref+scoped draft）→ 上次动作 ref；
            启停态树内必有字段（叶 disabled，leafStats 已统计）→ 存在停用显「启用全部」。
-           五百五十三批：补 lucide icon 与 BoolGroupNode 组头 icon 钮语言对齐
+           补 lucide icon 与 BoolGroupNode 组头 icon 钮语言对齐
            （双 chevron 表「全部」批量语义，区别于组头单 chevron） -->
       <template v-if="tree.root.type === 'bool'">
         <button v-if="anyCollapsed" class="btn sm ghost" title="展开全部嵌套组" @click="broadcastCollapse(false)"><ChevronsUp :size="11" /> 展开全部</button>
@@ -38,7 +38,7 @@
       </template>
     </div>
 
-    <!-- R125 v3.1 空态：漏斗插画+光晕引导（替代单行虚线框） -->
+    <!--  v3.1 空态：漏斗插画+光晕引导（替代单行虚线框） -->
     <div v-if="!tree.root" class="qtp-none">
       <div class="qtp-funnel">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -89,7 +89,7 @@
 /* W1：构建器主面板。root 形态规则：null→加查询条件；纯 match_all→空态；
    bool→直渲染；单节点→渲染+「转条件组」。
    归一化：root bool 子句删光自动回 match_all；root 永不缺失。
-   provide TREE_BUS：落点分区的 move 在这里统一 moveNode（Task 6 防环）。
+   provide TREE_BUS：落点分区的 move 在这里统一 moveNode（ 防环）。
    index prop：写入 fieldSearch 的当前索引上下文（per-index 最近字段记忆供 defaultLeaf 与
    子树深处的 FieldSelect 读取——NodeRenderer 之下逐层透传 prop 不现实）。 */
 import { computed, watch, provide, ref, nextTick } from 'vue';
@@ -112,7 +112,7 @@ const emit = defineEmits<{ (e: 'update:tree', t: QueryTree): void }>();
 
 watch(() => props.index, i => setFieldSearchIndex(i || ''), { immediate: true });
 
-/* 五百二十五批：树内已用字段→fieldSearch 模块态（FieldSelect 候选 used 前置段数据源）——
+/* 树内已用字段→fieldSearch 模块态（FieldSelect 候选 used 前置段数据源）——
    收集全部叶子条件字段名去重写入（bool 下钻 / wrap 下钻 / 叶取 field）。树编辑全走不可变
    更新（子组件 emit 新节点、setRoot 换引用），watch 引用替换即全量重扫，无深监听。
    免 prop 逐层透传：NodeRenderer 之下透传面过大，setFieldSearchIndex 同款既有先例。 */
@@ -137,7 +137,7 @@ function defaultLeaf(): LeafNode {
 }
 
 /* 面板头部量变读数：递归数叶子条件（wrap 的子句也算，bool 只下钻不计自身）——
-   五百一十九批：升级为 total/disabled/nested 分档（root 组自身不计入嵌套），
+   升级为 total/disabled/nested 分档（root 组自身不计入嵌套），
    停用/嵌套为 0 时徽标省略对应段（零噪音）；total>10 由模板挂 .hot 警示色 */
 const leafStats = computed(() => {
   const st = { total: 0, disabled: 0, nested: 0 };
@@ -157,7 +157,7 @@ const leafStats = computed(() => {
   walk(r, true);
   return st;
 });
-/* 五百四十一批：启停循环钮感知源——树内叶 disabled 字段必然在场（leafStats 递归已统计）：
+/* 启停循环钮感知源——树内叶 disabled 字段必然在场（leafStats 递归已统计）：
    存在停用条件显「启用全部」，否则显「停用全部」；点后写树换引用，感知随动 */
 const hasDisabled = computed(() => leafStats.value.disabled > 0);
 const cntTitle = computed(() => {
@@ -169,7 +169,7 @@ const cntTitle = computed(() => {
   return t;
 });
 
-/* 五百一十九批：条件搜索定位——扫描条件行（字段名+算子+值），命中加 .qtp-hit 柔底并滚动到
+/* 条件搜索定位——扫描条件行（字段名+算子+值），命中加 .qtp-hit 柔底并滚动到
    首个命中；清空恢复。走 DOM 扫描而非逐层透传过滤词：树是 BoolGroupNode→NodeRenderer→ClauseNode
    递归多组件渲染，prop 透传锁定面大，且命中高亮是视图态不进数据。
    【W3b】导航升级（参照 useHitNav 范式）：1-based 游标 + wrap-around 轮转；
@@ -212,7 +212,7 @@ function applyFindCur() {
   el.classList.add('qtp-hit-cur');
   el.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
-/* 五百五十三批：改由 SearchFilterBar @enter 定向转出（组件 .enter.prevent 已挡默认行为）——
+/* 改由 SearchFilterBar @enter 定向转出（组件 .enter.prevent 已挡默认行为）——
    函数体零触：Enter/Shift+Enter 轮转语义经转出的原生 KeyboardEvent 原样承接 */
 function onFindKey(e: KeyboardEvent) {
   if (e.key !== 'Enter') return;
@@ -224,10 +224,10 @@ function onFindKey(e: KeyboardEvent) {
   applyFindCur();
 }
 
-/* 五百一十九批：折叠/展开全部嵌套组——组折叠态是 BoolGroupNode 组内内存 ref，
+/* 折叠/展开全部嵌套组——组折叠态是 BoolGroupNode 组内内存 ref，
    经 window 事件广播（同 DRAG_EVENT 模式，事件名定义在 BoolGroupNode module 块；
    TreeBus 注入接口不动）。
-   五百四十一批：折叠态不进 queryTree（组内 ref+scoped draft，树数据无字段可推）——
+   折叠态不进 queryTree（组内 ref+scoped draft，树数据无字段可推）——
    按「本地 ref 记忆上次动作」收敛单枚循环钮：初始视为全展开（显「折叠全部」），
    点击广播同时翻转记忆，下一眼显反向动作。 */
 const anyCollapsed = ref(false);
@@ -235,7 +235,7 @@ function broadcastCollapse(collapsed: boolean) {
   anyCollapsed.value = collapsed;
   window.dispatchEvent(new CustomEvent(BGN_COLLAPSE_EVENT, { detail: { collapsed } }));
 }
-/* 五百一十九批：批量启停——本组件即树 owner，直接递归翻所有叶 disabled（与叶级开关
+/* 批量启停——本组件即树 owner，直接递归翻所有叶 disabled（与叶级开关
    同走 disabled 字段：ClauseNode 恢复按钮/整行降透明度随之生效），无需绕 TREE_BUS */
 function setAllDisabled(disabled: boolean) {
   const r = props.tree.root;
@@ -335,35 +335,35 @@ provide(TREE_BUS, {
 
 <style scoped>
 .qtp { font-size: var(--fs-sm); }
-/* 面板头部计数徽标（chip.static 弱化档）+ 工具行（五百一十九批：过滤输入/折叠/启停按钮）。
-   五百五十三批：行布局对齐 DQ 执行行（.dq-run-row 同式）——--ctl-h: 26px 控制线，
+/* 面板头部计数徽标（chip.static 弱化档）+ 工具行（：过滤输入/折叠/启停按钮）。
+   行布局对齐 DQ 执行行（.dq-run-row 同式）——--ctl-h: 26px 控制线，
    输入框与按钮统一消费；间距 var(--sp-*) */
 .qtp-hd { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-1); flex-wrap: wrap; --ctl-h: 26px; }
 .qtp-hd .btn { height: var(--ctl-h); }
-/* 五百五十三批：chip 形态（bg2 底/line 边/字重 500/tabular-nums）归全局 .chip 单源，
+/* chip 形态（bg2 底/line 边/字重 500/tabular-nums）归全局 .chip 单源，
    本处只压小档字号；hot 档 warn 底色+描边随 chip 边框语言 */
 .qtp-cnt { font-size: var(--fs-2xs); }
-/* 五百一十九批：N>10 警示色档（warn 系变量，黄点语义=条件树偏大需留意） */
+/* N>10 警示色档（warn 系变量，黄点语义=条件树偏大需留意） */
 .qtp-cnt.hot { color: var(--warn); background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
-/* 五百五十三批：条件搜索定位（SearchFilterBar 第四胞胎）——壳三件套（panel 底/border-subtle
+/* 条件搜索定位（SearchFilterBar 第四胞胎）——壳三件套（panel 底/border-subtle
    弱边/8px 圆角）归组件单源，本处只落位：宽度放宽 110→150、26px 控制线、内衬 var(--sp-*)；
    focus 态 accent 边对齐 theme.css .inp:focus 范式（组件单源不动，视图侧补） */
 .qtp-find { width: 150px; height: var(--ctl-h); flex: none; padding: var(--sp-0) var(--sp-2); }
 .qtp-find:focus-within { border-color: var(--ac-line); box-shadow: var(--focus-ring); }
 /* 【W3b】命中计数 N/M（chip.static 弱化档，压小档字号与计数徽标同形） */
 .qtp-find-nav { font-size: var(--fs-2xs); }
-/* 五百一十九批：命中条件行柔底（:deep 穿透递归子组件；3 类选择器压过 ClauseNode .cn:hover 的 2 类） */
+/* 命中条件行柔底（:deep 穿透递归子组件；3 类选择器压过 ClauseNode .cn:hover 的 2 类） */
 .qtp :deep(.cn.qtp-hit) { background: var(--ac-soft); }
 /* 【W3b】当前命中加重档：品牌色内描边（inset 不抖布局），柔底保留 */
 .qtp :deep(.cn.qtp-hit-cur) { background: var(--ac-soft); box-shadow: inset 0 0 0 1px var(--ac); }
 .qtp-stale { padding: var(--sp-2); margin-bottom: var(--sp-2); border: 1px solid var(--warn); border-radius: var(--r-s); background: var(--warn-soft); color: var(--warn); font-size: var(--fs-xs); }
-/* R125 v3.1 空态：漏斗插画+光晕（品牌渐变方块+白漏斗），居中引导 */
+/*  v3.1 空态：漏斗插画+光晕（品牌渐变方块+白漏斗），居中引导 */
 .qtp-none { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--sp-0);
   padding: var(--sp-5) var(--sp-3) var(--sp-4); border: 1.5px dashed var(--line); border-radius: var(--r-l);
   background: radial-gradient(120% 100% at 50% 0%, color-mix(in srgb, var(--brand) 6%, transparent), transparent 60%); }
 .qtp-funnel { width: 44px; height: 44px; border-radius: var(--r-l); margin-bottom: var(--sp-2);
   display: flex; align-items: center; justify-content: center;
-  /* 五百四十八批：SVG stroke 收 currentColor，图标本体色走这里的 color——漏斗坐在品牌渐变徽标上，
+  /* SVG stroke 收 currentColor，图标本体色走这里的 color——漏斗坐在品牌渐变徽标上，
    * 恒白（不取 --tx-on-strong：该 token 暗色下是深字，会翻转既有白图标视觉；浅色下徽标底色已随
    * --ac 加深一档，白图标对比在案）。替换前为 SVG 属性硬编码白描边（#fff），浅色主题同底色渲染不变 */
   color: #fff;
@@ -380,6 +380,6 @@ provide(TREE_BUS, {
    .qtp-none/.qtp-single-bar 一并冻结：stale 时「加查询条件」同样会覆盖手改。 */
 .qtp.froz .bgn, .qtp.froz .cn, .qtp.froz .gn, .qtp.froz .wnr, .qtp.froz .rx,
 .qtp.froz .qtp-none, .qtp.froz .qtp-single-bar { pointer-events: none; opacity: .55; }
-/* 五百一十九批：头部工具（过滤/折叠/启停）一并冻结——「停用全部」会写树，冻结期覆盖手改不可逆 */
+/* 头部工具（过滤/折叠/启停）一并冻结——「停用全部」会写树，冻结期覆盖手改不可逆 */
 .qtp.froz .qtp-hd { pointer-events: none; opacity: .55; }
 </style>

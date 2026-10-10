@@ -4,7 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * R35 配置门禁——单条校验问题。
+ *  配置门禁——单条校验问题。
  *
  * <p>三层来源（layer）：</p>
  * <ul>

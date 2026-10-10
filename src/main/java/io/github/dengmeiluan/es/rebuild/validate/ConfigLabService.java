@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * R35 配置实验室服务：交互式校验 + 配置漂移检测。
+ *  配置实验室服务：交互式校验 + 配置漂移检测。
  *
  * <p><b>漂移检测</b>解决返工的另一半场景——「代码里的 @Setting/@Mapping 和线上索引实际配置不一致」：
  * 代码侧与线上侧都归一化为「去 index. 前缀、剔系统键、扁平化排序」的 JSON 后对比，
@@ -43,7 +43,7 @@ public class ConfigLabService {
 
     private final IndexConfigValidator validator;
     private final EsIndexAdmin esIndexAdmin;
-    /** R38：宿主 client 改 Supplier 懒解析（零 ES 依赖宿主经 ControlClusterResolver 供给）。 */
+    /** 宿主 client 改 Supplier 懒解析（零 ES 依赖宿主经 ControlClusterResolver 供给）。 */
     private final java.util.function.Supplier<RestHighLevelClient> restHighLevelClient;
     private final ObjectProvider<IndexMetaRegistry> registryProvider;
 

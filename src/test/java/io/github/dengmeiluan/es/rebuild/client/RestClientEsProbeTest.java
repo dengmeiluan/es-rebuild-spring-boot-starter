@@ -10,7 +10,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * R93 Task 9.5：{@link StaleWriteBlockDetector.RestClientEsProbe} 的剥壳与异常路径。
+ *  .5：{@link StaleWriteBlockDetector.RestClientEsProbe} 的剥壳与异常路径。
  *
  * <h3>为什么这层非测不可</h3>
  * <p>{@code StaleWriteBlockDetectorTest} 全部走 {@code StubProbe}，桩直接返回已剥好的 Map，

@@ -4,7 +4,7 @@
 
 自动登记只在 `es.rebuild.mode=client` 下装配，`es.rebuild.mapping.auto-register=startup` 默认开启。它监听 `ApplicationReadyEvent`，随后用一个 daemon 单线程异步执行一次；应用 ready 不等待对账完成。`off` 不装配启动 runner。
 
-R100 自动扫描宿主基础包中的 `@Document` 实体。手写 `ManagedEsIndex` 是已废弃的 legacy provider，残留 Bean 会被扫描器 fail-fast 拒绝，不能作为扩展点继续使用。
+mapping 自动注册在启动时扫描宿主基础包中的 `@Document` 实体。手写 `ManagedEsIndex` 是已废弃的 legacy provider，残留 Bean 会被扫描器 fail-fast 拒绝，不能作为扩展点继续使用。
 
 ## Mapping 来源优先级
 

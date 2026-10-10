@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 控制台三级角色（R34）。
+ * 控制台三级角色（）。
  *
  * <p>rank 越大权限越高：VIEWER 只读（GET）、OPERATOR 低危写（普通 POST）、
  * ADMIN 高危操作（重建/迁移/别名切换/删除/集群 settings 等）。
@@ -31,11 +31,11 @@ public enum ConsoleRole {
 
     private static final Logger LOG = LoggerFactory.getLogger(ConsoleRole.class);
 
-    /** 五百五十八批：解析失败 WARN 节流间隔。 */
+    /** 解析失败 WARN 节流间隔。 */
     private static final long WARN_THROTTLE_MS = 60_000L;
 
     /**
-     * 五百五十八批：解析失败 WARN 节流计数。枚举天然 JVM 单例，静态即实例；
+     * 解析失败 WARN 节流计数。枚举天然 JVM 单例，静态即实例；
      * 刻意<b>非 final</b>——测试需反射复位（Observability558Test），产线无碍。
      */
     private static AtomicLong lastParseWarnAt = new AtomicLong(0);
@@ -59,7 +59,7 @@ public enum ConsoleRole {
         try {
             return valueOf(s.trim().toUpperCase());
         } catch (IllegalArgumentException e) {
-            // 五百五十八批：静默降 VIEWER 会让「宿主发了陌生角色串」零痕（静默掉权）——
+            // 静默降 VIEWER 会让「宿主发了陌生角色串」零痕（静默掉权）——
             // 补节流 WARN 带原始串（仅角色名，不落 token/凭据）；返回 VIEWER 契约不变
             long now = System.currentTimeMillis();
             long last = lastParseWarnAt.get();

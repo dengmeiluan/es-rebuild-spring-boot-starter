@@ -1,18 +1,18 @@
 <template>
   <div class="lc-page">
-    <!-- 四百一十五批：执行中局部进度条（ind-bar 全站范式） -->
+    <!-- 执行中局部进度条（ind-bar 全站范式） -->
     <div class="pg-progress ind-bar" :class="{ on: busy }"></div>
     <div class="lc-hd">
-      <PageHeader :icon="SearchCode" title="Lucene 查询（query_string）" subtitle="R30 · 数组/nested/text 全友好 · 绕过 ES-SQL 硬伤 · 分布式无损">
+      <PageHeader :icon="SearchCode" title="Lucene 查询（query_string）" subtitle="数组/nested/text 全友好 · 绕过 ES-SQL 硬伤 · 分布式无损">
       <template #actions>
         <div class="lc-hd-r">
 <!-- W4-T14：构建器前置入口——lucene 文本包装 query_string 走 ?dsl= 通道预填构建器 -->
 <button class="btn ghost sm" @click="openInBuilder" title="转成 DSL 在构建器中打开（query_string 包装，现场尽量预填）">
   <ListTree :size="12" /> 在构建器中打开
 </button>
-<!-- 561 批：两钮 title 改随态三元（SqlConsole 执行钮 525 W10 同语言）——479 禁用原因
+<!-- 两钮 title 改随态三元（SqlConsole 执行钮 525 W10 同语言）——479 禁用原因
      契约保留在 else 支（缺索引/缺查询词仍见禁用原因），条件齐备时出功能描述 -->
-<!-- 八百一十一批：字段体检在途双通道（spinning+「体检中…」）+主执行钮补 Play spinning
+<!-- 字段体检在途双通道（spinning+「体检中…」）+主执行钮补 Play spinning
      （文案切换既有）+重试钮 G81 文案通道——G161 族，803 池①横切 -->
 <button class="btn ghost sm" :title="index ? '探测当前索引字段，提前提醒 SQL 失能字段（在 Lucene 里不受影响）' : '请先选择索引'" @click="doSchema" :disabled="!index || busy">
   <ShieldAlert :size="12" :class="{ spinning: busy }" /> {{ busy ? '体检中…' : '字段体检' }}
@@ -23,8 +23,8 @@
 <button class="btn ghost sm" @click="copyLink" title="URL 即查询现场：复制链接发同事，打开即复现">
   <Link2 :size="12" /> 复制链接
 </button>
-<!-- 五百二十八批：页内历史入口（四视图统一，DslQueryView 弹窗范式）——doRun 一直在
-     push mode=lucene 历史（R100），此前页内零出口 -->
+<!-- 页内历史入口（四视图统一，DslQueryView 弹窗范式）——doRun 一直在
+     push mode=lucene 历史（），此前页内零出口 -->
 <button class="btn ghost sm" data-test="open-hist" @click="histOpen = true" title="查询历史"><History :size="12" /> 历史</button>
 <button class="btn ghost sm" @click="doFav" :disabled="!qs.trim()">
   <Star :size="12" /> 收藏
@@ -38,19 +38,19 @@
       </PageHeader>
     </div>
 
-    <!-- 第十批：写死 .lc-grid 双栏退役 → WorkbenchLayout 双 pane（比例可调/可折叠/预设/记忆，
+    <!-- 写死 .lc-grid 双栏退役 → WorkbenchLayout 双 pane（比例可调/可折叠/预设/记忆，
          <1100 自动 stacked，自制 @media 断点删除）。editor pane=条件区+语法模板+速查+体检警告
          （纵向卡片栈），result pane=结果区；60vh 硬顶交 pane 撑满 -->
     <WorkbenchLayout :scope="lcScope" :panes="LC_PANES" axis="vertical" mode="lucene">
       <template #pane-lucene-editor>
       <div class="lc-pane-stack">
-      <!-- 五百三十四批轨4：.lc-card 局部壳退役（四刀立法③④）——pane 已是容器，内容直贴，
+      <!-- 轨4：.lc-card 局部壳退役（四刀立法③④）——pane 已是容器，内容直贴，
            分界由 .lc-card-hd border-bottom 承接；warn 块为语义告警框（红框语义同族）自持边框 -->
       <div class="lc-editor">
         <div class="lc-card-hd">
           <div class="lc-inp-line">
             <label class="lc-inp"><span>index</span>
-              <!-- 五百二十五批：页内 IndexPicker 退役换只读 CurrentIdxChip——「选索引」唯一可写
+              <!-- 页内 IndexPicker 退役换只读 CurrentIdxChip——「选索引」唯一可写
                    入口收敛顶栏（架构裁决）；useIdxState follow 下行跟随不变，未选索引走下方
                    「先在顶栏选择一个索引」空态（DslQueryView 同款范式） -->
               <CurrentIdxChip />
@@ -62,10 +62,10 @@
             <label class="lc-inp"><span title="跳过条数 · 翻页偏移">from</span>
               <input v-model.number="from" type="number" min="0" class="lc-ii sm" />
             </label>
-            <!-- 五百六十批：size/from/order 三件套补齐第四件——sort 裸 label 挂中文释义 title -->
+            <!-- size/from/order 三件套补齐第四件——sort 裸 label 挂中文释义 title -->
             <label class="lc-inp"><span title="排序字段（可排序类型，_score/_doc 可手输）">sort</span>
-              <!-- 第十批：type-filter 只出可排序类型（同 PIT/构建器排序行口径）；伪字段 _score/_doc 手输保留。
-                   五百三十一批：排序场景 date/long 提前（时间与数值是最常排序族） -->
+              <!-- type-filter 只出可排序类型（同 PIT/构建器排序行口径）；伪字段 _score/_doc 手输保留。
+                   排序场景 date/long 提前（时间与数值是最常排序族） -->
               <FieldPicker v-model="sortField" :index="index" :type-filter="SORTABLE_TYPES" :type-priority="['date','long']" placeholder="ts / @timestamp" />
             </label>
             <label class="lc-inp"><span title="排序方向 desc 降序 asc 升序">order</span>
@@ -76,7 +76,7 @@
             </label>
           </div>
         </div>
-        <!-- W2 Task 8：主查询框换 LuceneInput 三段补全（字段/terms/op 提示）。
+        <!-- W2 ：主查询框换 LuceneInput 三段补全（字段/terms/op 提示）。
              原 textarea 的 Ctrl+Enter 执行语义由 @enter 承接——面板关时 Enter 透发即执行；
              弹层有候选时 Enter=回填不执行（补全与执行不打架）。 -->
         <div class="lc-qwrap">
@@ -157,12 +157,12 @@
         <div v-if="busy" class="lc-loading">
           <SkeletonBox v-for="i in 3" :key="i" height="42px" round style="margin-bottom:var(--sp-1h)" />
         </div>
-        <!-- 五百六十一批：.lc-err 私造错误条收编全局 err-bar（558b 三面红壳同范式——role=alert
+        <!-- .lc-err 私造错误条收编全局 err-bar（558b 三面红壳同范式——role=alert
              在场、v-if 链同条件保形、.lc-err-pre 槽类沿 558 先例保留；红壳底/边框归 theme.css 单源） -->
         <div v-else-if="runErr" role="alert" class="err-bar lc-err">
           <AlertCircle :size="14" />
           <div class="lc-err-body">
-            <!-- 第十批：标题行走 friendlyEsError 人话；五百二十五批：pre 换 errPreHtml v-html
+            <!-- 标题行走 friendlyEsError 人话；：pre 换 errPreHtml v-html
                  （DslQueryView 同款——JSON 错误体着色，否则转义平文，全文可回看语义不变） -->
             <div><b>Lucene 查询失败</b> · {{ friendlyRunErr }}</div>
             <pre class="lc-err-pre" v-html="errPreHtml(runErr, errMeta(runErrRaw))"></pre>
@@ -171,7 +171,7 @@
             </div>
           </div>
         </div>
-        <!-- 第十批：裸空态收编 EmptyState compact（初始引导 / 0 命中两分支） -->
+        <!-- 裸空态收编 EmptyState compact（初始引导 / 0 命中两分支） -->
         <EmptyState v-else-if="!index" compact :icon="SearchCode" text="先在顶栏选择一个索引" />
         <EmptyState v-else-if="!searched" compact :icon="SearchCode" text="选择索引、输入 query_string 后按 Enter 执行" hint="补全弹层开着时 Enter=回填候选，结果将显示在这里" />
         <EmptyState v-else-if="!hits.length && from > 0" compact :icon="SearchX" text="本页无结果（可能已翻过末页）" action-text="回到第一页" @action="backToFirstPage" />
@@ -180,33 +180,33 @@
         <div class="lc-card-hd">
           <span>
             结果：<b>{{ fmtNum(hits.length) }}</b> / 共 <b>{{ totalGte ? '≥ ' : '' }}{{ fmtNum(total) }}</b>
-            <!-- 第十批：手写元信息串收编 MetaStrip（值亮+标签暗+·分隔统一口径）；
-                 五百二十一批：took 纯数值 stats item → TookBadge 四档语义徽标（BulkEditorView 同款），shards 留值对 -->
+            <!-- 手写元信息串收编 MetaStrip（值亮+标签暗+·分隔统一口径）；
+                 took 纯数值 stats item → TookBadge 四档语义徽标（BulkEditorView 同款），shards 留值对 -->
             <MetaStrip class="lc-meta" :items="metaItems"><TookBadge :ms="took" /></MetaStrip>
           </span>
           <div class="lc-hd-r">
-            <!-- 五百四十六批：原始 IO 快查——最近一次 /cluster/lucene-search 请求/响应原文（ioRecorder 记录环） -->
+            <!-- 原始 IO 快查——最近一次 /cluster/lucene-search 请求/响应原文（ioRecorder 记录环） -->
             <button class="btn ghost xs" data-test="raw-io" aria-label="查看原始 IO（Lucene 检索）" title="最近一次检索请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIo"><Terminal :size="11" /> 原始 IO</button>
-            <!-- 三百零二批：换共享 Pagination——五百二十五批：表格视图分页随 QRT 内建分页行
+            <!-- 换共享 Pagination——：表格视图分页随 QRT 内建分页行
                  （页码/页大小/翻页事件全量内建），顶部分页器只剩 JSON 视图在用（JSON 无 QRT）；
                  聚焦 JSON 工具行的分页器同步保留 -->
             <Pagination v-if="viewMode === 'json'" :page="page" :total-pages="totalPages" :page-size="size" :disabled="busy"
               @update:page="goPage" @update:page-size="setSize" />
-            <!-- 五百六十一批：视图切换/JSONL/CSV 三钮退役——seg+JSONL 寄居 QRT 工具行
+            <!-- 视图切换/JSONL/CSV 三钮退役——seg+JSONL 寄居 QRT 工具行
                  （#bar-prepend，下方），CSV 走 QRT 内建导出钮（bar-right 常驻，与 SystemView
                  561 收口同判据：宿主钮与内建能力重复）。QRT :hide-body 随视图分档——
                  工具行常驻，切回表格入口不丢（DslQueryView 541 同款范式）。 -->
           </div>
         </div>
-          <!-- 五百六十一批：表格头收口——QRT 移出 FS 常驻（表格/JSON 双档同渲染）：seg+JSONL
+          <!-- 表格头收口——QRT 移出 FS 常驻（表格/JSON 双档同渲染）：seg+JSONL
                寄居 bar-prepend、:hide-body 分档（JSON 档表格体隐、工具行常驻）、聚焦放大换
                QRT 内建聚焦面（FS headless，外层表格 FS 与 focusable 关断随收口退役；
-               hideBody→true 自动退聚焦=RT 552 rtFix552 对称件）。四百二十三批外层 FS
+               hideBody→true 自动退聚焦=RT 552 rtFix552 对称件）。外层 FS
                聚焦通道随本收口退役。 -->
           <QueryResultTable ref="resultTbl" :hits="hits" :total="total" :total-gte="totalGte" :loading="busy" sortable :took="took" :page="page" :page-size="size" :pager-disabled="busy" @update:page="goPage" @update:page-size="setSize" :hide-body="viewMode !== 'table'" max-height="100%" :storage-key="index ? 'lucene:' + index : undefined" :field-types="fieldTypes" empty-hint="调整查询语句或时间范围后重查">
             <template #bar-prepend>
               <!-- 特定能力保留在外层：扁平表格 vs 逐 hit JsonTree（嵌套展开）切换，不塞进通用表；
-                   八百一十一批：seg 升格（容器 role=group+aria-label+钮 aria-pressed，G192 范式） -->
+                   seg 升格（容器 role=group+aria-label+钮 aria-pressed，G192 范式） -->
               <div class="seg" role="group" aria-label="展示形态">
                 <button :class="{ on: viewMode === 'table' }" :aria-pressed="viewMode === 'table'" @click="viewMode = 'table'">表格</button>
                 <button :class="{ on: viewMode === 'json' }" :aria-pressed="viewMode === 'json'" @click="viewMode = 'json'">文档 JSON</button>
@@ -216,11 +216,11 @@
               </button>
             </template>
           </QueryResultTable>
-        <!-- 四百五十二批：JSON 视图对称聚焦（嵌套展开树同样需要全屏浏览）——五百六十一批
+        <!-- JSON 视图对称聚焦（嵌套展开树同样需要全屏浏览）——
              v-else 随表格档 FS 退役改显式 v-if（QRT 常驻后 JSON 面只管 JSON 树） -->
         <FocusableSurface v-if="viewMode === 'json'" pane-id="lucene.json" title="JSON 结果" :enabled="focusPaneId === 'lucene.json'"
           @update:enabled="v => (focusPaneId = v ? 'lucene.json' : null)">
-          <!-- 四百六十批：JSON 聚焦态工具行（分页+导出在放大态可用，与 449 表格分支对称） -->
+          <!-- JSON 聚焦态工具行（分页+导出在放大态可用，与 449 表格分支对称） -->
           <div v-if="focusPaneId === 'lucene.json'" class="lc-hd-r focus-tools">
             <button class="btn ghost xs" @click="viewMode = 'table'; focusPaneId = null">
               <ListTree :size="11" /> 表格
@@ -236,8 +236,8 @@
             </button>
           </div>
         <div class="lc-tbl-wrap">
-          <!-- 三百七十四批：JSON 视图内查找（304 遗留项）——_id/_source 双匹配过滤 + 命中计数。
-               五百六十二批：手写 input 换装 SearchFilterBar 统一件（ss-hits-find 561 先例同款
+          <!-- JSON 视图内查找（304 遗留项）——_id/_source 双匹配过滤 + 命中计数。
+               手写 input 换装 SearchFilterBar 统一件（ss-hits-find 561 先例同款
                窄栏胶囊；Esc 清空组件内建承接行为等价，placeholder 兼 aria-label；
                计数/清除入 slot 胶囊内右翼，jsonKw/jsonHits 过滤链零触） -->
           <div class="lc-json-find" v-if="hits.length">
@@ -255,12 +255,12 @@
               </tr>
             </thead>
             <tbody>
-              <!-- 五百二十一批：过滤态命中行给锚点——_id 套 MarkText 高亮 + 行底色类 + aria-current
+              <!-- 过滤态命中行给锚点——_id 套 MarkText 高亮 + 行底色类 + aria-current
                    （轻量版：滚动定位仍归 QRT/HitNav 链路；kw 空时无类无属性，零扰动） -->
               <tr v-for="h in jsonHits" :key="h._id" :class="{ 'lc-hit-row': !!jsonMarkKw }" :aria-current="jsonMarkKw ? 'true' : undefined">
                 <td><code><MarkText :text="h._id" :kw="jsonMarkKw" /></code></td>
                 <td>{{ fmtScore(h._score) }}</td>
-                <!-- 550 批：548 E2 记档回收——JsonTree 开 highlightKw 外部高亮通道（tools 私有
+                <!-- 548 E2 记档回收——JsonTree 开 highlightKw 外部高亮通道（tools 私有
                      kw 空时回落生效），_source 侧接 jsonMarkKw（_id 列 MarkText 同源），过滤
                      命中行锚点补齐；行底色类 .lc-hit-row + aria-current 保留 -->
                 <td class="lc-src"><JsonTree :data="h._source" :highlight-kw="jsonMarkKw" /></td>
@@ -274,7 +274,7 @@
       </template>
     </WorkbenchLayout>
 
-    <!-- 五百二十八批：页内查询历史（mode=lucene 单档过滤，DslQueryView 弹窗范式）。
+    <!-- 页内查询历史（mode=lucene 单档过滤，DslQueryView 弹窗范式）。
          play=回填 ?q= 现场并执行、fill=仅回填；导入/清空入口关闭（同沙盒口径） -->
     <n-modal v-model:show="histOpen" preset="card" title="查询历史（Lucene）" style="width:640px;max-width:92vw" :bordered="false">
       <QueryHistoryPanel
@@ -284,7 +284,7 @@
       />
     </n-modal>
 
-    <!-- 五百四十六批：原始 IO 弹窗（宿主受控开关；rec 取该页最近一条 /cluster/lucene-search 记录） -->
+    <!-- 原始 IO 弹窗（宿主受控开关；rec 取该页最近一条 /cluster/lucene-search 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
   </div>
 </template>
@@ -293,32 +293,32 @@
 import { ref, computed, watch, onMounted, type Ref } from 'vue';
 import { SearchCode, BookOpen, Play, Star, ShieldAlert, FileDown, Link2, AlertCircle, ListTree, X, SearchX, History, Terminal } from 'lucide-vue-next';
 import { NModal } from 'naive-ui';
-/* 五百二十八批：页内历史面板收编 QueryHistoryPanel 共享件（DslQueryView 弹窗范式） */
+/* 页内历史面板收编 QueryHistoryPanel 共享件（DslQueryView 弹窗范式） */
 import QueryHistoryPanel from '../components/QueryHistoryPanel.vue';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
-/* 五百四十六批：原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环） */
+/* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环） */
 import RawIoModal from '../components/RawIoModal.vue';
 import Pagination from '../components/Pagination.vue';
 import { useAppStore } from '../stores/app';
 import { useQueryHistoryStore } from '../stores/queryHistory';
-import CurrentIdxChip from '../components/CurrentIdxChip.vue'; /* 五百二十五批：页内选择器退役换只读 chip */
+import CurrentIdxChip from '../components/CurrentIdxChip.vue'; /* ：页内选择器退役换只读 chip */
 import FieldPicker from '../components/FieldPicker.vue';
 import LuceneInput from '../components/LuceneInput.vue';
 import JsonTree from '../components/JsonTree.vue';
 import QueryResultTable from '../components/QueryResultTable.vue';
 import FocusableSurface from '../components/FocusableSurface.vue';
 import SkeletonBox from '../components/SkeletonBox.vue';
-/* 第十批：双 pane 可调工作台（editor=条件区/result=结果区） */
+/* 双 pane 可调工作台（editor=条件区/result=结果区） */
 import WorkbenchLayout, { type WorkbenchPaneSpec } from '../components/WorkbenchLayout.vue';
-/* 第十批：空态统一 EmptyState、元信息统一 MetaStrip、错误人话 friendlyEsError */
+/* 空态统一 EmptyState、元信息统一 MetaStrip、错误人话 friendlyEsError */
 import EmptyState from '../components/EmptyState.vue';
 import MetaStrip from '../components/MetaStrip.vue';
 import MarkText from '../components/MarkText.vue';
 import TookBadge from '../components/TookBadge.vue';
-import SearchFilterBar from '../components/SearchFilterBar.vue'; /* 五百六十二批：JSON 视图查找胶囊统一件 */
+import SearchFilterBar from '../components/SearchFilterBar.vue'; /* ：JSON 视图查找胶囊统一件 */
 import { friendlyEsError } from '../utils/esError';
-/* 五百二十五批：错误面板 pre v-html 内核（DslQueryView 消费先例同款） */
+/* 错误面板 pre v-html 内核（DslQueryView 消费先例同款） */
 import { errPreHtml, errMeta } from '../utils/errPre';
 import { useUrlState, useIdxState, usePref } from '../composables/urlState';
 import { usePagerSize } from '../composables/usePagerSize';
@@ -330,28 +330,28 @@ import { exportStamp, copyText, fmtTime, downloadText, totalOf, fmtNum, csvCell,
 
 const store = useAppStore();
 const router = useRouter();
-/* 第十批：sort 字段 FieldPicker 的可排序类型过滤（逗号分隔字符串，同 PIT/构建器排序行口径）。
+/* sort 字段 FieldPicker 的可排序类型过滤（逗号分隔字符串，同 PIT/构建器排序行口径）。
    548 E1：补 unsigned_long（545 数值族九口径对齐——此前排序字段选择器漏第九种数值类型） */
 const SORTABLE_TYPES = 'keyword,date,long,integer,short,byte,double,float,half_float,scaled_float,unsigned_long,boolean';
-/* 第十批：可调工作台声明（照 AnalyzeView 形态）——条件区可折叠，结果区吃剩余；
+/* 可调工作台声明（照 AnalyzeView 形态）——条件区可折叠，结果区吃剩余；
    本视图经 QueryHubView 嵌入（route 恒为 /search），mode 维度区分记忆键 */
 const lcScope = { target: store.target || 'host', route: '/search', mode: 'lucene', profile: 'standard' as const };
-/* 五百三十四批轨4：竖排标题轨退役（§6v 刀①，AnalyzeView 519 先例）——结果卡头
+/* 轨4：竖排标题轨退役（§6v 刀①，AnalyzeView 519 先例）——结果卡头
    「结果：…」已是横排承接，条件区字段行自描述，title 置空即不渲染 34px 竖排轨 */
 const LC_PANES: WorkbenchPaneSpec[] = [
   { id: 'lucene.editor', role: 'request', title: '', minSize: 300, defaultSize: 380, collapsible: true },
   { id: 'lucene.result', role: 'response', title: '', minSize: 360, defaultSize: 'flex' },
 ];
-/* R44 §8.3：核心查询现场进 URL——链接可发同事、刷新可复原；size 属个人偏好落 localStorage */
+/*  §8.3：核心查询现场进 URL——链接可发同事、刷新可复原；size 属个人偏好落 localStorage */
 const index = useIdxState({ follow: true });
-/* 一百七十一批：字段类型映射（mapping-detail 顶层叶子）——QRT 双层列头类型徽标 */
+/* 字段类型映射（mapping-detail 顶层叶子）——QRT 双层列头类型徽标 */
 const fieldTypes = useIndexFieldTypes(index);
 const qs = useUrlState('q', '*');
-/* 三百零二批页大小收编共享 usePagerSize：读=共享键钳制档位（10/20/50/100，越档/坏值回落），
+/* 页大小收编共享 usePagerSize：读=共享键钳制档位（10/20/50/100，越档/坏值回落），
    写=共享键 es_pager_size（一次调节全站一致）。共享键从未设置时保持本视图历史默认 50
    （legacyKey=lucene.size 兼容读 → 50）——usePagerSize 的全局 DEF=20 不回填本视图
    （lucene 起档 50 语义契约，dslAssistPenetration ③ 以 size:50 锁）；
-   遗留清零二批裸种子退役：lucene.size 越档值（如 15）旧裸读放行，现与共享键同钳制回落 50。 */
+   遗留清裸种子退役：lucene.size 越档值（如 15）旧裸读放行，现与共享键同钳制回落 50。 */
 const { size, set: setSharedSize } = usePagerSize({ legacyKey: 'lucene.size', def: 50 });
 function setSize(v: number) {
   setSharedSize(v);
@@ -376,11 +376,11 @@ const hits = ref<any[]>([]);
 const total = ref(0);
 const totalGte = ref(false);
 /* 表格化（默认，QueryResultTable 扁平列）与逐 hit JsonTree 嵌套展开的视图切换 */
-/* 四百五十八批：视图模式持久化（usePref）——与 DslQuery view 草稿持久化口径对齐 */
+/* 视图模式持久化（usePref）——与 DslQuery view 草稿持久化口径对齐 */
 const viewMode = usePref<'table' | 'json'>('lucene.viewMode', 'table');
-/* 四百二十三批：结果表聚焦态 */
+/* 结果表聚焦态 */
 const focusPaneId = ref<string | null>(null);
-/* 三百七十四批：JSON 视图内查找（304 遗留项收尾）——按 _id/_source 内容过滤，表格视图查找走 QRT/HitNav 不共用 */
+/* JSON 视图内查找（304 遗留项收尾）——按 _id/_source 内容过滤，表格视图查找走 QRT/HitNav 不共用 */
 const jsonKw = ref('');
 const jsonHits = computed(() => {
   const kw = jsonKw.value.trim().toLowerCase();
@@ -390,29 +390,29 @@ const jsonHits = computed(() => {
     JSON.stringify(h._source ?? {}).toLowerCase().includes(kw));
 });
 const took = ref(0);
-/* 五百二十一批：JSON 视图过滤态命中标记关键词（MarkText kw；trim 后空串=无标记零扰动） */
+/* JSON 视图过滤态命中标记关键词（MarkText kw；trim 后空串=无标记零扰动） */
 const jsonMarkKw = computed(() => jsonKw.value.trim());
 const totalShards = ref(0);
 const successfulShards = ref(0);
 const warnings = ref<string[]>([]);
 const busy = ref(false);
-const qr = useQueryRun(); // 长查询读秒 + 取消（R80 范式）
+const qr = useQueryRun(); // 长查询读秒 + 取消（ 范式）
 const showSyntax = ref(false);
 /* 三态契约状态位：searched 区分「未执行/已执行」，runErr 持错误全文供内联面板回看 */
 const searched = ref(false);
 const runErr = ref('');
 /* 534 收口波双参换装：原始错误对象旁路留存（catch 压串丢 code/endpoint，喂 errMeta 用） */
 const runErrRaw = ref<unknown>(null);
-/* 第十批：runErr 面板标题行的人话摘要（pre 仍保全文） */
+/* runErr 面板标题行的人话摘要（pre 仍保全文） */
 const friendlyRunErr = computed(() => friendlyEsError(runErr.value));
-/* 第十批：结果头元信息串（MetaStrip 值对）——took 已收编 TookBadge（五百二十一批），只留 shards */
+/* 结果头元信息串（MetaStrip 值对）——took 已收编 TookBadge（），只留 shards */
 const metaItems = computed(() => [
   { value: `${successfulShards.value}/${totalShards.value}`, label: 'shards' },
 ]);
-/* 第十批：0 命中空态「回到第一页」行动钮 */
+/* 0 命中空态「回到第一页」行动钮 */
 function backToFirstPage() { from.value = 0; doRun(); }
 
-/* 五百二十五批：JSON 视图 _score 裸 toFixed(3) 换 ScoreExplainView fmtScore 同语义
+/* JSON 视图 _score 裸 toFixed(3) 换 ScoreExplainView fmtScore 同语义
    （数值取 Number+4 位小数；缺分/'-' 档、非有限数值回原文不崩）——
    原写法 toFixed?.(3) 对 0 分命中显示 '-'（falsy 短路）、小数位与评分页口径不一 */
 function fmtScore(s: any): string {
@@ -433,7 +433,7 @@ const TEMPLATES = [
   { k: '数组',    d: '匹配任意值', q: 'tags:red' },
   { k: 'nested',  d: 'nested field 平铺', q: 'products.color:red' },
   { k: '日期',    d: 'ISO 日期', q: 'ts:[2024-01-01 TO 2024-12-31]' },
-  /* 556 批：值位类型盲区补档——ip 段区间形态（date 族区间已有，ip 缺席） */
+  /* 值位类型盲区补档——ip 段区间形态（date 族区间已有，ip 缺席） */
   { k: 'IP 段',   d: 'IP 区间', q: 'ip:[10.0.0.0 TO 10.0.0.255]' },
   { k: 'boost',   d: '字段加权', q: 'title:hello^2 OR body:hello' },
 ];
@@ -460,18 +460,18 @@ async function doRun() {
     total.value = typeof r.hits?.total === 'object' ? (r.hits.total.value || 0) : (r.hits?.total || 0);
     totalGte.value = totalOf(r.hits).gte;
     searched.value = true;
-    /* R100：执行成功记跨模式历史（query_string 原文 + 目标索引） */
-    /* R101：记录查询耗时 */
+    /* 执行成功记跨模式历史（query_string 原文 + 目标索引） */
+    /* 记录查询耗时 */
     useQueryHistoryStore().push('lucene', qs.value.trim(), index.value.trim() || undefined, took.value || undefined);
   } catch (e: any) {
     runErr.value = String(e?.message || e); /* 原文留 pre 全文回看；人话由 friendlyRunErr 派生 */
     runErrRaw.value = e; /* 534 收口波：原始对象旁路（errMeta 读 code/endpoint，压串时丢失） */
-    /* 第十批收尾：toast 裸串并轨 friendlyEsError */
+    /* toast 裸串并轨 friendlyEsError */
     store.notify('error', 'Lucene 查询失败：' + friendlyEsError(String(e?.message ?? e)));
   } finally { busy.value = false; qr.finish(); }
 }
 
-/* 五百二十八批：页内历史回放/回填——play=回填 ?q= 现场并执行、fill=仅回填。
+/* 页内历史回放/回填——play=回填 ?q= 现场并执行、fill=仅回填。
    doRun 自带「无索引/空查询」守卫，历史条目在无索引现场回放时静默回落为仅回填 */
 const qh = useQueryHistoryStore();
 const histOpen = ref(false);
@@ -482,7 +482,7 @@ function replayHistRow(row: { query: string }, runIt: boolean) {
   if (runIt) doRun();
 }
 
-/* 五百四十六批：原始 IO 快查（545 四页同款）——特征 /cluster/lucene-search；判空 rec=null
+/* 原始 IO 快查（545 四页同款）——特征 /cluster/lucene-search；判空 rec=null
    （本页还没检索过）时 notify 引导，不开空弹窗 */
 const rawIoShow = ref(false);
 const rawIoRec = ref<RawIoRec | null>(null);
@@ -503,11 +503,11 @@ async function doSchema() {
     warnings.value = r?.warnings || [];
     store.notify(warnings.value.length ? 'warning' : 'success',
       warnings.value.length ? `${warnings.value.length} 项 SQL 失能字段（Lucene 不受影响）` : '无 SQL 限制风险');
-  } catch (e: any) { /* 第十批收尾：裸串并轨 friendlyEsError */ store.notify('error', '体检失败：' + friendlyEsError(String(e?.message ?? e))); }
+  } catch (e: any) { /* ：裸串并轨 friendlyEsError */ store.notify('error', '体检失败：' + friendlyEsError(String(e?.message ?? e))); }
   finally { busy.value = false; }
 }
 
-/* R46：查询现场已全量在 URL（idx/q/sort/order），复制链接即可分享复现 */
+/* 查询现场已全量在 URL（idx/q/sort/order），复制链接即可分享复现 */
 async function copyLink() {
   if (await copyText(location.href)) store.notify('success', '链接已复制，打开即复现当前查询');
 }
@@ -549,7 +549,7 @@ function exportJsonl() {
   store.notify('success', 'JSONL 已导出');
 }
 
-/* 七十六批：CSV 导出——经 QRT getCsvBlock 拿「可见列+排序后行矩阵」（所见即所得），
+/* CSV 导出——经 QRT getCsvBlock 拿「可见列+排序后行矩阵」（所见即所得），
    与 SQL 通道同格式（csvCell 转义 + BOM，Excel 直开） */
 const resultTbl = ref<{ getCsvBlock: () => { head: string[]; rows: any[][] } } | null>(null);
 function exportCsv() {
@@ -563,30 +563,30 @@ function exportCsv() {
 </script>
 
 <style scoped>
-/* 第十批：.lc-page 转纵向 flex 撑满——WorkbenchLayout 在有高度链的容器里吃满剩余，
+/* .lc-page 转纵向 flex 撑满——WorkbenchLayout 在有高度链的容器里吃满剩余，
    无高度链（QueryHub 嵌入）时由其内置 min-height 兜底 */
 .lc-page { padding: var(--sp-3) var(--sp-4) var(--sp-5); position: relative; display: flex; flex-direction: column; height: 100%; }
-/* 四百一十五批：执行进度条贴页顶 */
+/* 执行进度条贴页顶 */
 .lc-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); }
-/* 第十批收尾：删 .lc-hd-l 死规则（.lc-hd-tt/-ic/-sub 上批已删，同族漏网；模板 grep 0 引用） */
-/* 第十批：删 -hd-tt/-hd-ic/-hd-sub 死规则（页头已由 PageHeader 接管，模板 0 引用，grep 确认） */
-/* 四百六十四批：工具行窄容器换行策略（415 dt-actions 同款——容器可换行、子项不逐字断） */
+/* 删 .lc-hd-l 死规则（.lc-hd-tt/-ic/-sub 上批已删，同族漏网；模板 grep 0 引用） */
+/* 删 -hd-tt/-hd-ic/-hd-sub 死规则（页头已由 PageHeader 接管，模板 0 引用，grep 确认） */
+/* 工具行窄容器换行策略（415 dt-actions 同款——容器可换行、子项不逐字断） */
 .lc-hd-r { display: flex; gap: var(--sp-1h); flex-wrap: wrap; row-gap: var(--sp-1); align-items: center; }
 .lc-hd-r > * { white-space: nowrap; flex-shrink: 0; }
-/* 第十批：.lc-grid 写死双栏退役——双栏交给 WorkbenchLayout（pane 内 rp-content 转纵向 flex，
+/* .lc-grid 写死双栏退役——双栏交给 WorkbenchLayout（pane 内 rp-content 转纵向 flex，
    卡片吃满 pane 宽；结果卡吃满 pane 高，60vh 硬顶随之退役） */
 .lc-page :deep(.rp-content) { display: flex; flex-direction: column; }
 .lc-pane-stack { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
-/* 五百三十四批轨4：.lc-card 壳规则（bg+border+radius+overflow）退役——pane 即容器，
+/* 轨4：.lc-card 壳规则（bg+border+radius+overflow）退役——pane 即容器，
    内容直贴；区块分界由 .lc-card-hd border-bottom 承接（§6v 刀③④），高度链零变动 */
 .lc-result { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
-/* 五百二十七批：卡头字重 400→650 对齐标题四档（.st-card-hd/.qx-card-hd 同形态全站口径） */
+/* 卡头字重 400→650 对齐标题四档（.st-card-hd/.qx-card-hd 同形态全站口径） */
 .lc-card-hd { padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--border); font-size: var(--fs-sm); font-weight: 650; }
 .lc-inp-line { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
 .lc-inp { display: flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-xs); color: var(--muted); }
 .lc-ii { border: 1px solid var(--border); border-radius: 3px; padding: 3px var(--sp-1h); font-size: var(--fs-xs); background: var(--card-bg); color: var(--fg); font-family: var(--mono); min-width: 140px; }
 .lc-ii.sm { min-width: 70px; }
-/* W2 Task 8：LuceneInput 外壳——对齐原 .lc-ta 的 code-bg 嵌入观感，宽度仍 100% 随卡片 */
+/* W2 ：LuceneInput 外壳——对齐原 .lc-ta 的 code-bg 嵌入观感，宽度仍 100% 随卡片 */
 .lc-qwrap { padding: var(--sp-2) var(--sp-3); background: var(--code-bg); }
 .lc-tpl-ul { list-style: none; padding: 0; margin: 0; }
 .lc-tpl-ul li { padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--border); font-size: var(--fs-xs); cursor: pointer; }
@@ -600,39 +600,39 @@ function exportCsv() {
 .lc-syn-tt { font-size: var(--fs-sm); font-weight: 600; margin-bottom: var(--sp-1); color: var(--brand); }
 .lc-syn-col ul { list-style: disc; padding-left: 18px; margin: 0; font-size: var(--fs-xs); }
 .lc-syn-col code { background: var(--code-bg); padding: 1px var(--sp-1); border-radius: 2px; }
-/* 五百三十四批轨4：.lc-card 壳退役后 warn 块语义边框自持（§6v 刀④「语义边框保留」——
+/* 轨4：.lc-card 壳退役后 warn 块语义边框自持（§6v 刀④「语义边框保留」——
    warn 琥珀框与 err 红框同族，完整 border+radius+soft 底不动） */
 .lc-warn { display: flex; gap: var(--sp-2h); padding: var(--sp-3) 14px; background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: var(--r-m); color: var(--warning, var(--warn)); }
 .lc-warn-list { margin: var(--sp-1) 0 0 var(--sp-5); padding: 0; font-size: var(--fs-xs); color: var(--fg); }
-/* 第十批：.lc-meta 只留外距——排版（值亮/标签暗/mono/·分隔）由 MetaStrip 统一承担 */
+/* .lc-meta 只留外距——排版（值亮/标签暗/mono/·分隔）由 MetaStrip 统一承担 */
 .lc-meta { margin-left: var(--sp-1h); }
 .lc-loading { padding: 14px; }
-/* 五百六十一批：.lc-err 私造红壳（padding/color）收编全局 err-bar（theme.css 单源）——
+/* .lc-err 私造红壳（padding/color）收编全局 err-bar（theme.css 单源）——
    本地只留多行面板顶对齐（558b ProfileFlame .pf-err 同款；.lc-err-pre 槽类沿 558 先例保留） */
 .lc-err { align-items: flex-start; }
 .lc-err-body { flex: 1; min-width: 0; }
 .lc-err-pre { margin: var(--sp-1h) 0 0; font-family: var(--mono); font-size: var(--fs-xs); white-space: pre-wrap; word-break: break-word; color: var(--fg); max-height: 200px; overflow: auto; }
 .lc-err-acts { margin-top: var(--sp-2); }
-/* 第十批：60vh 硬顶交 pane 撑满——非聚焦 max-height:100% 随 pane（无高度链时回落自然高）；
+/* 60vh 硬顶交 pane 撑满——非聚焦 max-height:100% 随 pane（无高度链时回落自然高）；
    聚焦态 fs-active 全屏链保持不变 */
 .lc-tbl-wrap { overflow: auto; max-height: 100%; }
-/* 四百五十二批：JSON 聚焦态充满聚焦面 */
+/* JSON 聚焦态充满聚焦面 */
 .fs-active .lc-tbl-wrap { max-height: none; height: 100%; }
-/* 三百七十四批：JSON 视图内查找条（输入+命中计数+清除） */
+/* JSON 视图内查找条（输入+命中计数+清除） */
 .lc-json-find { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
-/* 五百六十二批：sfb 落位类挂 SearchFilterBar 根（ss-hits-find-bar 同款）——原 input inline
+/* sfb 落位类挂 SearchFilterBar 根（ss-hits-find-bar 同款）——原 input inline
    max-width:220px 违规退役归此类；mono 经根继承进 .sfb-i（原 inp mono 皮保真） */
 .lc-json-find-bar { flex: none; width: 220px; padding: 0 var(--sp-2); font-family: var(--mono); font-size: var(--fs-xs); }
 .lc-json-count { font-size: var(--fs-xs); color: var(--tx2); white-space: nowrap; }
-/* 五百二十一批：过滤态命中行底色（文本高亮由 MarkText mt-mark 承担，行底色给整行锚点） */
+/* 过滤态命中行底色（文本高亮由 MarkText mt-mark 承担，行底色给整行锚点） */
 .lc-hit-row td { background: var(--ac-soft); }
 .lc-tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-xs); }
 .lc-tbl th, .lc-tbl td { padding: var(--sp-1) var(--sp-2); border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
 .lc-tbl th { background: var(--code-bg); position: sticky; top: 0; font-weight: 400; }
 .lc-src { max-height: 200px; overflow: auto; background: var(--code-bg); padding: var(--sp-1h) var(--sp-2); border-radius: 3px; }
 
-/* 第十批：1100px 自制断点随 .lc-grid 退役——窄视口 stacked 由 WorkbenchLayout 自动处理 */
-/* 五百三十三批 900 档豁免记档（实测裁决，不补 @media 档）——pane 外的页头/条件行全链路
+/* 1100px 自制断点随 .lc-grid 退役——窄视口 stacked 由 WorkbenchLayout 自动处理 */
+/*  900 档豁免记档（实测裁决，不补 @media 档）——pane 外的页头/条件行全链路
    已有自适应兜底：<900 页头靠 PageHeader 自身 flex-wrap（ph/ph-r 档）+ .lc-hd-r 工具行
    自带 wrap（415 dt-actions 同款）自然单列化；条件行 .lc-inp-line 自带 wrap；主体双栏
    <1100 交 WorkbenchLayout JS stacked 档；语法手册 grid auto-fill minmax(220px,1fr) 自动

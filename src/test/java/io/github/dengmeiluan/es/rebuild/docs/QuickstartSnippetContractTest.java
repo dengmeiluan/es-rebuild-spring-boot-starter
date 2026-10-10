@@ -14,7 +14,7 @@ import static org.junit.Assert.assertTrue;
 
 /**
  * 快速开始文档与实际 SPI 零漂移守卫：
- * ①ManagedEsIndex 实际接口=entityClass()+default indexKey()（R93 后 SPI 窄化为
+ * ①ManagedEsIndex 实际接口=entityClass()+default indexKey()（ 后 SPI 窄化为
  *   「声明受管索引」，重建走宿主 Adhoc；legacy provider 已废弃且 fail-fast 拒绝）——
  *   文档不得再教用户实现 alias()/writeIndex()/settings()/mapping() 等已退役方法；
  * ②文档 Maven 坐标版本与 pom.xml 一致（不残留旧内部版本号）；
@@ -34,7 +34,7 @@ public class QuickstartSnippetContractTest {
 
     @Test
     public void managedEsIndexHasNoLegacyRebuildMethods() {
-        /* R93 后 SPI 只剩 entityClass()+default indexKey()——重建能力已迁宿主 Adhoc。
+        /*  后 SPI 只剩 entityClass()+default indexKey()——重建能力已迁宿主 Adhoc。
          * 只查方法声明形态（javadoc 退役注记合法）；实体重建能力走宿主 Adhoc 托管重建。 */
         for (String dead : new String[]{
                 "default String alias()", "String alias();",

@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * 控制集群解析器（R37）：控制面（登录用户/连接档案/审计/作业/锁）到底存到哪台 ES。
+ * 控制集群解析器（）：控制面（登录用户/连接档案/审计/作业/锁）到底存到哪台 ES。
  *
  * <p>解析优先级（controlMode=auto）：</p>
  * <ol>
@@ -57,7 +57,7 @@ public class ControlClusterResolver {
     /** 脱敏 endpoint（scheme://host:port）；SPRING 模式为 "(spring)"。 */
     private volatile String endpoint = "";
     private volatile long lastSpringProbeAt = 0L;
-    /** 五百五十八批：ping 失败首条 WARN 节流计数（三态见 warnPingFailureThrottled）。 */
+    /** ping 失败首条 WARN 节流计数（三态见 warnPingFailureThrottled）。 */
     private final AtomicLong pingFailCount = new AtomicLong();
 
     public ControlClusterResolver(RestHighLevelClient springClient, ElasticsearchOperations springOps,
@@ -94,7 +94,7 @@ public class ControlClusterResolver {
                 return;
             } catch (Exception e) {
                 // 档案在但建连失败：保持 BOOTSTRAP 语义交由 503 报错，绝不回落 SETUP
-                // 五百五十一批：ERROR 末参补 e（堆栈是 ERROR 级的本分，只有 getMessage 无从定位
+                // ERROR 末参补 e（堆栈是 ERROR 级的本分，只有 getMessage 无从定位
                 // 根因）+ 文案补脱敏 endpoint（哪台集群连不上一眼可辨）
                 LOG.error("[ControlClusterResolver] 自举档案建连失败 endpoint={}（保持绑定语义，等待集群恢复）: {}",
                         home.endpoint(), e.getMessage(), e);
@@ -176,7 +176,7 @@ public class ControlClusterResolver {
     // ---------------- internal ----------------
 
     private void adoptSpring() {
-        // R38：宿主可能零 ES 依赖（springClient=null）——probeSpring 已短路，能走到这里只剩
+        // 宿主可能零 ES 依赖（springClient=null）——probeSpring 已短路，能走到这里只剩
         // controlMode=spring 显式钉死一种可能，属配置错误，快速失败给出明确指引
         if (springClient == null) {
             throw new IllegalStateException("controlMode=spring 需要宿主装配 ES（RestHighLevelClient Bean），"
@@ -223,13 +223,13 @@ public class ControlClusterResolver {
             Future<Boolean> f = es.submit(() -> client.ping(RequestOptions.DEFAULT));
             boolean ok = Boolean.TRUE.equals(f.get(timeoutMs, TimeUnit.MILLISECONDS));
             if (ok) {
-                rearmPingWarn(); // 五百五十八批：恢复成功重臂（下次失败再 WARN）
+                rearmPingWarn(); // ：恢复成功重臂（下次失败再 WARN）
             }
             return ok;
         } catch (Exception e) {
-            // 五百五十八批：原整段静默——控制面降级 NONE 时用户只见 409 SETUP_REQUIRED，
+            // 原整段静默——控制面降级 NONE 时用户只见 409 SETUP_REQUIRED，
             // 根因零痕无从排查。首败节流 WARN（三态：首败 WARN/连败仅累计/恢复重臂，
-            // 范式=547 批 ConnHealthProber.skipRoundCount）。返回 false 契约不变
+            // 范式= ConnHealthProber.skipRoundCount）。返回 false 契约不变
             warnPingFailureThrottled(e);
             return false;
         } finally {
@@ -237,10 +237,10 @@ public class ControlClusterResolver {
         }
     }
 
-    // ---------------- 探活失败 WARN 节流（五百五十八批，包内可见便于单测） ----------------
+    // ---------------- 探活失败 WARN 节流（，包内可见便于单测） ----------------
 
     /**
-     * 探活失败节流 WARN（三态：首败 WARN／连败仅累计静默／恢复成功重臂——与 547 批
+     * 探活失败节流 WARN（三态：首败 WARN／连败仅累计静默／恢复成功重臂——与 
      * ConnHealthProber.skipRoundCount 语义对齐）：探活是高频路径（NONE 10s 惰性重探 +
      * 绑定/启动探活），逐条 WARN 会刷屏，但全静默时「控制面为何降级 NONE」无从排查。
      * ping 在 probe 线程与调用线程两处触发，{@code incrementAndGet} 原子性保证只有

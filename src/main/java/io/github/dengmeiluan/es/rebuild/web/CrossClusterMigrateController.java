@@ -26,7 +26,7 @@ import java.util.Map;
  * <p>与零停机重建接口（{@code /internal/es/index/**}）并列、解耦。由 {@code es.rebuild.web-enabled} 与
  * {@code es.rebuild.migrate.enabled} 同时为 true 才装配。<b>凭据类请求一律走 POST body，不进 query/日志。</b></p>
  *
- * <p>R38 起源集群支持引用已存连接档案（{@code srcConnId}/{@code connId}）：服务端取档案含密构造连接，
+ * <p> 起源集群支持引用已存连接档案（{@code srcConnId}/{@code connId}）：服务端取档案含密构造连接，
  * 密码明文不经前端；引用前校验当前登录角色满足档案 minRole（不满足 403 CONN_FORBIDDEN）。</p>
  */
 @RestController

@@ -1,7 +1,7 @@
 import { ref } from 'vue';
 
 /**
- * 长查询「读秒 + 取消」范式（R80 抽离）：此前只有 DSL 通道有，其余通道骨架屏干等。
+ * 长查询「读秒 + 取消」范式（ 抽离）：此前只有 DSL 通道有，其余通道骨架屏干等。
  * 用法：const { running, elapsedMs, begin, cancel, finish } = useQueryRun();
  *   const signal = begin(); try { await api.xxx(..., signal); } finally { finish(); }
  */
@@ -12,7 +12,7 @@ export function useQueryRun() {
   let abortCtl: AbortController | null = null;
 
   function begin(): AbortSignal {
-    /* 三百八十二批：新查询即作废旧查询——此前旧 AbortController 被直接覆盖，旧请求
+    /* 新查询即作废旧查询——此前旧 AbortController 被直接覆盖，旧请求
        在网络上继续跑且响应照常返回，后到即覆盖新结果（连查/改参快查竞态）；
        abort 后旧 fetch 以 AbortError reject，视图 catch 分支丢弃，不写状态 */
     abortCtl?.abort();
@@ -21,7 +21,7 @@ export function useQueryRun() {
     running.value = true;
     const t0 = Date.now();
     elapsedTimer = window.setInterval(() => {
-      if (document.hidden) return; // 五百六十二批：后台标签页跳过 tick（561 批 useNow 判例：读秒不可见，空转唤醒纯属浪费；回前台下个 tick 自动续上）
+      if (document.hidden) return; // ：后台标签页跳过 tick（ useNow 判例：读秒不可见，空转唤醒纯属浪费；回前台下个 tick 自动续上）
       elapsedMs.value = Date.now() - t0;
     }, 100);
     return abortCtl.signal;

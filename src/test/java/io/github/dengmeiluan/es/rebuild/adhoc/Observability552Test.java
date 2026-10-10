@@ -25,7 +25,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 /**
- * 五百五十二批：静默臂治理三态收口（Observability550/551 范式：ListAppender 直挂 logger +
+ * 静默臂治理三态收口（Observability550/551 范式：ListAppender 直挂 logger +
  * 契约反锁双形态）。<b>返回值/降级语义零改动</b>（吞异常契约逐字节不动，只加日志或注释记档），
  * TDD 先红后绿。
  *

@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * R93-3：钉住 {@link IndexMetaRegistry} 真的按 {@link ManagedEsIndex} 装配。
+ * -3：钉住 {@link IndexMetaRegistry} 真的按 {@link ManagedEsIndex} 装配。
  *
  * <p><b>这条测试存在的理由</b>：本 Task 是纯改名，35 处引用替换。{@code ManagedEsIndexTest}
  * 只覆盖 {@code indexKey()} 的字符串逻辑（那段是逐字节复制的，永远不会红），

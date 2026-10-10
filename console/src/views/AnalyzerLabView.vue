@@ -1,13 +1,13 @@
 <template>
   <div class="al-page">
     <div class="al-hd">
-      <PageHeader :icon="FlaskConical" title="分词实验室" subtitle="R31 · _analyze 试跑 · 多 analyzer 并排对比 · R34 字段一键验证（真实样本 + field 链路）">
+      <PageHeader :icon="FlaskConical" title="分词实验室" subtitle="_analyze 试跑 · 多 analyzer 并排对比 · 字段一键验证（真实样本 + field 链路）">
       <template #actions>
-<!-- 五百二十五批：页内 IndexPicker 退役换 CurrentIdxChip 只读件（W1 建件；选索引入口收敛
+<!-- 页内 IndexPicker 退役换 CurrentIdxChip 只读件（W1 建件；选索引入口收敛
      TopBar 唯一处）。useIdxState follow 零改——顶栏换索引仍经 index ref 同步进本页，
      原 @update:model-value 清字段清单的语义由 watch(index) 承接 -->
 <CurrentIdxChip />
-<!-- 七百三十三批 G110：两钮在途可感知（spinning+文案切换，729 G95/731 G104 同款）；
+<!--  G110：两钮在途可感知（spinning+文案切换，729 G95/731 G104 同款）；
      G113：analyzer 输入 Enter 直达该列试跑（高频两跳→一跳） -->
 <button class="btn ghost sm" @click="loadFields" :disabled="!index.trim() || fieldsBusy">
   <FolderSearch :size="12" :class="{ spinning: fieldsBusy }" /> {{ fieldsBusy ? '加载中…' : '加载 text 字段' }}
@@ -19,11 +19,11 @@
       </PageHeader>
 </div>
 
-    <!-- R34：索引→text 字段清单→一键验证 -->
+    <!-- 索引→text 字段清单→一键验证 -->
     <div class="al-card" v-if="fields.length">
       <div class="al-card-hd">
         <span>text 字段清单（{{ fields.length }} 个 · 点「一键验证」：拉真实样本填入 + 按 field/analyzer/search_analyzer 三链路并排）</span>
-        <!-- 五百二十五批：清单限高档位（usePref al.fieldsH，默认 280=原 CSS 写死值；
+        <!-- 清单限高档位（usePref al.fieldsH，默认 280=原 CSS 写死值；
              数百 text 字段时 280px 只见一角，三档循环，al.toksH 同语言） -->
         <button class="btn ghost xs" data-al-flds-h :title="'字段清单高度档：' + alFieldsH + 'px'" @click="cycleFieldsH">高</button>
       </div>
@@ -40,8 +40,8 @@
     </div>
 
     <!-- 加载字段失败：内联错误行（原因 + 重试），不再只靠一闪而过的 toast
-         （五百四十六批：err 语义变体豁免保留——摘 al-card 类保原形，err 行内错误条非卡面）。
-         561 批：补 role=alert（失败反馈可被读屏播报；类名/CSS 零触，flattenWave546 锚保形） -->
+         （：err 语义变体豁免保留——摘 al-card 类保原形，err 行内错误条非卡面）。
+         补 role=alert（失败反馈可被读屏播报；类名/CSS 零触，flattenWave546 锚保形） -->
     <div v-else-if="fieldsError" role="alert" class="al-fld-err">
       <span class="al-fld-err-msg">加载字段失败：{{ fieldsError }}</span>
       <button class="btn ghost xs" @click="loadFields" :disabled="!index.trim() || fieldsBusy">
@@ -49,23 +49,23 @@
       </button>
     </div>
 
-    <!-- 字段清单加载/错误/空/有值四态互斥。七百三十三批 G111：补在途行——加载中不再
-         误显「暂无字段清单」空态（R113 三跑实锚在途窗空态在场=误导） -->
+    <!-- 字段清单加载/错误/空/有值四态互斥。 G111：补在途行——加载中不再
+         误显「暂无字段清单」空态（ 三跑实锚在途窗空态在场=误导） -->
     <div v-else-if="fieldsBusy" class="al-busy"><span class="spinning"></span> 加载字段中…</div>
 
-    <!-- 字段清单空态：引导先填索引再加载（第十批 B：裸空态迁 EmptyState compact；
-         五百四十六批：空态卡整块空框纠正——538 立法「空态不留整块空框」，EmptyState 直贴） -->
+    <!-- 字段清单空态：引导先填索引再加载（ B：裸空态迁 EmptyState compact；
+         空态卡整块空框纠正——538 立法「空态不留整块空框」，EmptyState 直贴） -->
     <EmptyState v-else compact :icon="FolderSearch" text="暂无字段清单" hint="填写索引后点「加载 text 字段」" />
 
     <div class="al-card">
       <div class="al-card-hd"><span>待分词文本</span></div>
-      <!-- 五百二十批：高度 usePref('al.taH') 持久化——resize:vertical 拖拽结束（pointerup）读实高
-           落盘，下次进页恢复；默认空串不设内联高，跟随 rows 行高（五百二十五批 rows 3→6：
+      <!-- 高度 usePref('al.taH') 持久化——resize:vertical 拖拽结束（pointerup）读实高
+           落盘，下次进页恢复；默认空串不设内联高，跟随 rows 行高（ rows 3→6：
            3 行放不下一条长句的折行，首屏信息量太薄；拖拽记忆键沿用 al.taH 不另立） -->
       <textarea v-model="text" class="al-txt" rows="6" :style="alTaH ? { height: alTaH } : undefined" @pointerup="saveTaH" placeholder="输入要分词的文本，例如 Elasticsearch 是分布式搜索引擎"></textarea>
     </div>
 
-    <!-- 第十批 C：工具行挂全局 .toolrow（theme.css），本地同构 flex 样式退役 -->
+    <!--  C：工具行挂全局 .toolrow（theme.css），本地同构 flex 样式退役 -->
     <div class="al-toolbar toolrow">
       <span class="al-hint"><Info :size="11" /> 每列独立配置 analyzer 或自定义组合。点+加对比列</span>
       <button class="btn ghost sm" @click="addLane">
@@ -75,7 +75,7 @@
         <Wand2 :size="12" /> 加载常用预设（standard/whitespace/keyword/ik*）
       </button>
       <!-- W2 批：结果区可调三件（usePref 跨会话记忆）——token 密度二档 / 结果区高度档 / lane 比例两档
-           五百二十五批：两档降为预设（点按回比例并清连续宽度），双栏日常调宽走 SplitHandle 拖拽 -->
+           两档降为预设（点按回比例并清连续宽度），双栏日常调宽走 SplitHandle 拖拽 -->
       <span class="al-adj">
         <button class="btn ghost xs" data-al-dense :class="{ on: alDense }" :aria-pressed="alDense" title="token 紧凑密度（小字号）" @click="alDense = !alDense">紧凑</button>
         <button class="btn ghost xs" data-al-toks-h :title="'分词结果区高度档：' + alToksH + 'px'" @click="cycleToksH">高</button>
@@ -84,12 +84,12 @@
       </span>
     </div>
 
-    <!-- 547 批：analyzer 族四输入接原生 datalist 候选（零依赖方案）——候选源=共享表
+    <!-- analyzer 族四输入接原生 datalist 候选（零依赖方案）——候选源=共享表
          BUILTIN_ANALYZERS 只读消费（dslCompletionContext 单一出处，不另造漂移表）。
-         五百六十批：自定义组合 tokenizer/char_filter/filter 三 input 改各指新 datalist
+         自定义组合 tokenizer/char_filter/filter 三 input 改各指新 datalist
          （候选分表 BUILTIN_TOKENIZERS/CHAR_FILTERS/TOKEN_FILTERS 各归其位，不与 analyzer
          名混表）；analyzer 档 al-analyzer-opts 原名原内容保留不动。
-         五百六十二批：四表 option 挂中文释义 title（ANALYZER_COMPONENT_ZH 单源，
+         四表 option 挂中文释义 title（ANALYZER_COMPONENT_ZH 单源，
          表外键回落空串零扰动） -->
     <datalist id="al-analyzer-opts">
       <option v-for="a in BUILTIN_ANALYZERS" :key="a" :value="a" :title="ANALYZER_COMPONENT_ZH[a] || ''" />
@@ -104,7 +104,7 @@
       <option v-for="a in BUILTIN_TOKEN_FILTERS" :key="a" :value="a" :title="ANALYZER_COMPONENT_ZH[a] || ''" />
     </datalist>
 
-    <!-- 五百二十五批：lane 比例连续可调——恰好双栏时 SplitHandle 纵缝拖拽（al.laneW px
+    <!-- lane 比例连续可调——恰好双栏时 SplitHandle 纵缝拖拽（al.laneW px
          落盘，两档按钮留作预设回比例）；≥3 列改 auto-fit（split- 两档强 2 列会让第 3 列
          折行成半宽孤列）；1 列 auto-fit 不变 -->
     <div class="al-lanes" :class="lanesClass" :style="lanesStyle">
@@ -128,7 +128,7 @@
             <input v-model="l.analyzer" class="al-ii" list="al-analyzer-opts" placeholder="standard / ik_max_word / whitespace" @keyup.enter="doRun(i)" />
           </label>
           <label v-else-if="l.mode === 'field'" class="al-lb"><span>field（需上方指定 index）</span>
-            <!-- 五百三十一批：分析字段场景 text 置顶（本页字段清单/验证链路全以 text 字段为对象） -->
+            <!-- 分析字段场景 text 置顶（本页字段清单/验证链路全以 text 字段为对象） -->
             <FieldPicker :model-value="l.fieldName || ''" @update:model-value="(v: string) => l.fieldName = v" :index="index" placeholder="如 bondName / issuer.name" :type-priority="['text']" class="al-ii" />
           </label>
           <template v-else>
@@ -142,39 +142,39 @@
               <input v-model="l.filter" class="al-ii" list="al-tokenfilter-opts" placeholder="lowercase, stop, asciifolding" />
             </label>
           </template>
-          <!-- 七百三十三批 G110：lane 钮在途可感知（lane 级 busy 行本就在场，触发钮补 spinning 半缺） -->
+          <!--  G110：lane 钮在途可感知（lane 级 busy 行本就在场，触发钮补 spinning 半缺） -->
           <button class="btn ghost xs" @click="doRun(i)" :disabled="!text || busy || l.busy">
             <Play :size="10" :class="{ spinning: l.busy }" /> {{ l.busy ? '分析中…' : '试跑' }}
           </button>
         </div>
         <div class="al-lane-result">
-          <!-- 561 批：lane 失败行补 role=alert（al-fld-err 同批口径） -->
+          <!-- lane 失败行补 role=alert（al-fld-err 同批口径） -->
           <div v-if="l.err" role="alert" class="al-err">{{ l.err }}</div>
           <!-- lane 级进行中态：err/busy/empty/结果四态互斥 -->
           <div v-else-if="l.busy" class="al-busy"><span class="spinning"></span> 分析中…</div>
-          <!-- 五百五十七批：lane 级「尚未运行」占位收编 EmptyState compact（文案逐字保留，
+          <!-- lane 级「尚未运行」占位收编 EmptyState compact（文案逐字保留，
                lane 窄容器走 compact 档） -->
           <EmptyState v-else-if="!l.tokens.length" compact :icon="Play" text="尚未运行 · 点「试跑」查看分词结果" />
           <!-- W2 批：token 区限高内滚（max-height 走 usePref al.toksH，默认 240=ik_max_word
                几百 token 不再撑出一两屏）+ 密度二档（紧凑=--fs-2xs）
-               五百五十七批：token 胶囊挂 tokTier type 色档（type 此前只进 :title 全列同色） -->
+               token 胶囊挂 tokTier type 色档（type 此前只进 :title 全列同色） -->
           <div v-else class="al-toks" :class="{ dense: alDense }" :style="{ maxHeight: alToksH + 'px' }">
             <span v-for="(t, ti) in l.tokens" :key="ti" class="al-tok" :class="tokTier(t.type)"
                   :title="`pos=${t.position} · offsets=${t.start_offset}-${t.end_offset} · type=${t.type}`">
               {{ t.token }}
             </span>
           </div>
-          <!-- 五百三十一批：lane meta 行收编 MetaStrip 统一件（计数走 items，默认插槽承接双复制钮）。
-               七百三十三批 G112：tokens 段补中文 tip（G101 同族；铁律 F） -->
+          <!-- lane meta 行收编 MetaStrip 统一件（计数走 items，默认插槽承接双复制钮）。
+                G112：tokens 段补中文 tip（G101 同族；铁律 F） -->
           <MetaStrip v-if="l.tokens.length" class="al-lane-meta"
             :items="[{ value: l.tokens.length, label: 'tokens', tip: '分词结果条数' }]">
-            <!-- 三百二十三批：lane 结果复制（TSV=token+type 贴文档；JSON=全量 meta） -->
+            <!-- lane 结果复制（TSV=token+type 贴文档；JSON=全量 meta） -->
             <button class="btn ghost xs" style="margin-left:auto" @click="copyLaneTsv(l)" title="复制 token（TSV：token → type）">TSV</button>
             <button class="btn ghost xs" @click="copyLaneJson(l)" title="复制全量 meta JSON">JSON</button>
           </MetaStrip>
         </div>
       </div>
-      <!-- 五百二十五批：双栏纵缝（仅恰好 2 列渲染；窄屏断点 CSS 隐藏） -->
+      <!-- 双栏纵缝（仅恰好 2 列渲染；窄屏断点 CSS 隐藏） -->
       <SplitHandle
         v-if="lanes.length === 2 && i === 0"
         axis="vertical"
@@ -197,22 +197,22 @@ import { useRoute } from 'vue-router';
 
 import PageHeader from '../components/PageHeader.vue';import { api } from '../api';
 import { copyText } from '../utils/format';
-import { BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS, ANALYZER_COMPONENT_ZH } from '../utils/dslCompletionContext'; /* 547 批：analyzer 族四输入 datalist 候选源（共享表只读消费）；560 批：自定义组合三件套分表同源；562 批：组件名中文释义表（option title 单源） */
+import { BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS, ANALYZER_COMPONENT_ZH } from '../utils/dslCompletionContext'; /* ：analyzer 族四输入 datalist 候选源（共享表只读消费）；：自定义组合三件套分表同源；：组件名中文释义表（option title 单源） */
 import { friendlyEsError } from '../utils/esError';
 import { useAppStore } from '../stores/app';
 import { useIdxState, useUrlState, usePref } from '../composables/urlState';
-import { useTierCycle } from '../composables/useTierCycle'; /* 五百五十八批：al.toksH/fieldsH 三件套收编 */
+import { useTierCycle } from '../composables/useTierCycle'; /* ：al.toksH/fieldsH 三件套收编 */
 import { useScopedDraft, useScopedDraftState } from '../composables/useScopedDraft';
 import CurrentIdxChip from '../components/CurrentIdxChip.vue';
 import FieldPicker from '../components/FieldPicker.vue';
 import EmptyState from '../components/EmptyState.vue';
 import SplitHandle from '../components/SplitHandle.vue';
-import MetaStrip from '../components/MetaStrip.vue'; /* 五百三十一批：lane meta 行统一件 */
-import { useLinkCarry } from '../composables/useLinkCarry'; /* 五百三十一批：跨页一次性值携带统一件 */
+import MetaStrip from '../components/MetaStrip.vue'; /* ：lane meta 行统一件 */
+import { useLinkCarry } from '../composables/useLinkCarry'; /* ：跨页一次性值携带统一件 */
 
 const store = useAppStore();
 
-/* 三百二十三批：lane 结果复制（多列对比正是要贴文档的场景） */
+/* lane 结果复制（多列对比正是要贴文档的场景） */
 async function copyLaneTsv(l: Lane) {
   const text = l.tokens.map(t => `${t.token}\t${t.type || '-'}`).join('\n');
   const ok = await copyText(text);
@@ -223,7 +223,7 @@ async function copyLaneJson(l: Lane) {
   store.notify(ok ? 'success' : 'error', ok ? '已复制全量 meta JSON' : '复制失败');
 }
 
-/* 五百五十七批：token type → 色档 class（type 此前只进 :title 无视觉差）。
+/* token type → 色档 class（type 此前只进 :title 无视觉差）。
    档判据按 ES _analyze 常见 type 族：先剥 <>壳+小写，再**精确族匹配**——<ALPHANUM>
    含 'num' 字面，裸 includes 会把主流文本 token 误入数值档，故不裸 includes。
    数值族（<NUM>/number/arabic/ip/double 等）→ al-tok-num（info 档）、
@@ -234,14 +234,14 @@ function tokTier(t?: string): string {
   if (s.includes('synonym')) return 'al-tok-syn';
   return '';
 }
-/* R50：目标索引进 URL——刷新/分享链接可复原（可重入） */
+/* 目标索引进 URL——刷新/分享链接可复原（可重入） */
 const index = useIdxState({ follow: true });
 const route = useRoute();
-/* R53→草稿治理轮：试验文本草稿迁 useScopedDraft（按集群目标隔离）——
+/* →草稿治理轮：试验文本草稿迁 useScopedDraft（按集群目标隔离）——
    analyzer 可离索引跑（builtin），索引维不进 key，行为不变 */
 const text = useScopedDraft('text', {
   route: 'analyzer-lab',}, 'Elasticsearch 是分布式搜索引擎').text;
-/* 五百二十批：分词输入高度记忆（QueryXrayView qx.taH 同款 pointerup 落盘口径，偏好键 al.taH；
+/* 分词输入高度记忆（QueryXrayView qx.taH 同款 pointerup 落盘口径，偏好键 al.taH；
    默认空串不设内联高——rows=3 即历史现状，拖拽过才落盘） */
 const alTaH = usePref<string>('al.taH', '');
 function saveTaH(e: PointerEvent) {
@@ -251,13 +251,13 @@ function saveTaH(e: PointerEvent) {
 /* W2 批：结果区可调三件（usePref 跨会话记忆）——
    密度二档（紧凑=--fs-2xs）/ token 区限高档（默认 240）/ lane 比例两档（五五/四六） */
 const alDense = usePref('al.dense', false);
-/* 五百五十八批：两处三件套（TIERS+usePref+手写 cycle）收编 useTierCycle 单源（键不变=零迁移）。
+/* 两处三件套（TIERS+usePref+手写 cycle）收编 useTierCycle 单源（键不变=零迁移）。
    al.toksH 默认档 240 非首位（数组第二位）defVal 必显式传；al.fieldsH 默认 280 虽=首位，
    也按批次约定显式传（防档值数组前插档时默认档静默漂移）；cycle 语义等值 */
 const TOKS_H_TIERS = [160, 240, 360];
 const { v: alToksH, cycle: cycleToksH } = useTierCycle('al.toksH', TOKS_H_TIERS, 240);
 const laneSplit = usePref<'half' | '4060'>('al.laneSplit', 'half');
-/* 五百二十五批：字段清单限高三档（usePref al.fieldsH，默认 280=原 CSS 写死值）；
+/* 字段清单限高三档（usePref al.fieldsH，默认 280=原 CSS 写死值）；
    lane 双栏连续宽度（usePref al.laneW，px，0=未拖过跟随 laneSplit 预设） */
 const FIELDS_H_TIERS = [280, 420, 600];
 const { v: alFieldsH, cycle: cycleFieldsH } = useTierCycle('al.fieldsH', FIELDS_H_TIERS, 280);
@@ -279,7 +279,7 @@ interface Lane {
   busy?: boolean;
 }
 
-/* R121: 通道配置进草稿——逐条调好的 analyzer/tokenizer 组合切页/刷新不丢（结果 tokens/err 不落盘） */
+/* 通道配置进草稿——逐条调好的 analyzer/tokenizer 组合切页/刷新不丢（结果 tokens/err 不落盘） */
 const LANES_DEF: Lane[] = [
   { mode: 'analyzer', analyzer: 'standard',    tokenizer: '', charFilter: '', filter: '', tokens: [], err: '' },
   { mode: 'analyzer', analyzer: 'whitespace',  tokenizer: '', charFilter: '', filter: '', tokens: [], err: '' },
@@ -291,7 +291,7 @@ const lanes = computed({
   set: (v: Lane[]) => { lanesDraft.state.value = v; },
 });
 
-/* 五百二十五批：lane 布局档——恰好 2 列：拖过（alLaneW>0）走 duo 连续宽度档（CSS 变量
+/* lane 布局档——恰好 2 列：拖过（alLaneW>0）走 duo 连续宽度档（CSS 变量
    传第一列宽，窄屏断点可整条覆盖回单列），未拖走 split-half/4060 预设；1 或 ≥3 列回
    auto-fit（两档强 2 列在 ≥3 列时第 3 列折行成半宽孤列，此即孤列修正） */
 const lanesClass = computed(() => {
@@ -342,7 +342,7 @@ async function doRun(i: number) {
   try {
     const r: any = await api.analyzeText(index.value.trim() || undefined, JSON.stringify(body));
     l.tokens = r.tokens || [];
-  } catch (e: any) { /* 第十批 A：ES 错误友好化（AnalyzeView 274 并轨范例同款） */ l.err = friendlyEsError(String(e?.message ?? e)); }
+  } catch (e: any) { /*  A：ES 错误友好化（AnalyzeView 274 并轨范例同款） */ l.err = friendlyEsError(String(e?.message ?? e)); }
   finally { l.busy = false; }
 }
 
@@ -354,12 +354,12 @@ async function doRunAll() {
   } finally { busy.value = false; }
 }
 
-/* ==================== R34：索引→text 字段→一键验证 ==================== */
+/* ==================== ：索引→text 字段→一键验证 ==================== */
 interface TextField { path: string; analyzer?: string; searchAnalyzer?: string }
 const fields = ref<TextField[]>([]);
 const fieldsBusy = ref(false);
 const fieldsError = ref(''); // 加载失败原因，供字段卡位内联错误行展示
-/* 五百二十五批：换装 CurrentIdxChip 后页内选择器退役——「换索引清字段清单」语义由
+/* 换装 CurrentIdxChip 后页内选择器退役——「换索引清字段清单」语义由
    watch 承接（原 IndexPicker @update:model-value 内联；顶栏换索引经 follow 同步 index 即清） */
 watch(index, () => { fields.value = []; fieldsError.value = ''; });
 
@@ -392,7 +392,7 @@ async function loadFields() {
     fields.value = out;
     if (!out.length) store.notify('info', '该索引没有 text 字段');
   } catch (e: any) {
-    /* 第十批收尾：ES 错误友好化（doRun 223 行同款口径）——toast 与内联错误条同源并轨 */
+    /* ES 错误友好化（doRun 223 行同款口径）——toast 与内联错误条同源并轨 */
     const msg = friendlyEsError(String(e?.message ?? e)) || '加载字段失败';
     store.notify('error', msg + '（可在控制台重试）');
     fieldsError.value = msg;
@@ -447,15 +447,15 @@ async function verifyField(f: TextField) {
   }
 }
 
-/* R33：接收「查询X光」送来的词 —— 自动填入并全部试跑。
-   一百七十九批：字段级联动深链 /analyzer-lab?idx=<索引>&field=<a.b.c>——
+/* 接收「查询X光」送来的词 —— 自动填入并全部试跑。
+   字段级联动深链 /analyzer-lab?idx=<索引>&field=<a.b.c>——
    MappingFieldTree「字段验证」入口：加载 text 字段清单后对指定字段一键验证
    （真实样本 + field/analyzer/search_analyzer 三链路并排；嵌套 / multi-field 路径
    由 field 参数整体交给 ES 解析实际生效链，前端无需拆解） */
-/* 三百三十一批：?analyzerField=<path> 深链——MappingFieldTree 右键「analyzer 快验」落点
+/* ?analyzerField=<path> 深链——MappingFieldTree 右键「analyzer 快验」落点
    （verifyField 同语义：真实样本填入+field/analyzer 三链路并排；消费即清防刷新重灌） */
 const afLink = useUrlState('analyzerField');
-/* 五百三十一批：接收「查询X光」送词的手写 sessionStorage 键收编 useLinkCarry（发送侧由对方页负责） */
+/* 接收「查询X光」送词的手写 sessionStorage 键收编 useLinkCarry（发送侧由对方页负责） */
 const analyzerCarry = useLinkCarry<{ index?: string; text?: string }>('analyzer');
 watch(afLink, async (v) => {
   const path = (v || '').trim();
@@ -468,7 +468,7 @@ watch(afLink, async (v) => {
 }, { immediate: true });
 
 onMounted(() => {
-  /* 五百三十一批：手写「读→焚→解」接收侧换 useLinkCarry.receive() 统一件（语义等价：
+  /* 手写「读→焚→解」接收侧换 useLinkCarry.receive() 统一件（语义等价：
      取后即焚、坏 JSON 吞掉返 null）；键名与 payload 结构逐字保持 es-console.link.analyzer */
   const p = analyzerCarry.receive();
   if (p) {
@@ -500,32 +500,32 @@ async function consumeFieldLink(path: string) {
 <style scoped>
 .al-page { padding: var(--sp-3) var(--sp-4) var(--sp-5); }
 .al-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); }
-/* 七百三十三批 G109：PageHeader 收编后页头左组/图标/标题/副题/右组五条死规则删
+/*  G109：PageHeader 收编后页头左组/图标/标题/副题/右组五条死规则删
    （模板 0 引用 grep 实锚，713 G53/729 G94 同族）——页头行活锚保留（模板唯一消费） */
-/* 五百二十五批：.al-inp 壳层随 IndexPicker 退役删除（CurrentIdxChip 自带胶囊观感） */
+/* .al-inp 壳层随 IndexPicker 退役删除（CurrentIdxChip 自带胶囊观感） */
 .al-ii { background: var(--bg2); border: 1px solid var(--border); color: var(--fg); padding: var(--sp-1) var(--sp-2); border-radius: var(--r-xs); font-family: var(--mono); font-size: var(--fs-sm); min-width: 160px; }
 .al-ii.sm { min-width: 100px; }
-/* 五百四十六批：al-card 壳三件套退役 → border-top 分节（545 lc-panel 同语言；模板/高度链零动，
+/* al-card 壳三件套退役 → border-top 分节（545 lc-panel 同语言；模板/高度链零动，
    分界由 al-card-hd 既有 border-bottom 承接；al-lane 对比列工作台卡豁免不在扫荡域） */
 .al-card { border-top: 1px solid var(--line); padding-top: var(--sp-2); margin-bottom: var(--sp-3); }
-/* 五百二十五批：卡头 flex 化（右端可挂档位钮，如字段清单「高」档）——纯 span 卡视觉不变 */
+/* 卡头 flex 化（右端可挂档位钮，如字段清单「高」档）——纯 span 卡视觉不变 */
 .al-card-hd { padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--border); font-size: var(--fs-sm); font-weight: 650; display: flex; align-items: center; gap: var(--sp-2); }
 .al-card-hd > span { flex: 1 1 auto; }
 .al-txt { width: 100%; box-sizing: border-box; background: var(--bg2); border: none; color: var(--fg); font-family: var(--mono); font-size: var(--fs-md); padding: var(--sp-2h); resize: vertical; }
-/* 第十批 C：.al-toolbar 基础 flex 样式由全局 .toolrow 承担，仅留与全局无关的下间距 */
+/*  C：.al-toolbar 基础 flex 样式由全局 .toolrow 承担，仅留与全局无关的下间距 */
 .al-toolbar { margin-bottom: var(--sp-2h); }
 .al-hint { display: flex; align-items: center; gap: var(--sp-1); color: var(--muted); font-size: var(--fs-xs); }
-/* 五百二十五批：孤列修正——minmax 240→320：≥3 列时 split- 两档强 2 列会让第 3 列折行成
+/* 孤列修正——minmax 240→320：≥3 列时 split- 两档强 2 列会让第 3 列折行成
    半宽孤列，≥3 列现统一回 auto-fit（320px 保 lane 表单/结果可读的最小宽） */
 .al-lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--sp-3); }
-/* 五百二十五批：lane 比例——双栏档：split-half/4060 两档按钮留作预设（中缝 11px 柄列），
+/* lane 比例——双栏档：split-half/4060 两档按钮留作预设（中缝 11px 柄列），
    duo=SplitHandle 连续拖拽档（第一列宽走 --al-lane-w，CSS 变量让窄屏断点可整条覆盖） */
 .al-lanes.split-half { grid-template-columns: minmax(0, 1fr) 11px minmax(0, 1fr); }
 .al-lanes.split-4060 { grid-template-columns: minmax(0, 4fr) 11px minmax(0, 6fr); }
 .al-lanes.duo { grid-template-columns: var(--al-lane-w, minmax(0, 1fr)) 11px minmax(0, 1fr); }
-/* 524 批：强比例列在窄窗口（≤1100 全站标准断点）回单列堆叠——五五/四六在挤压布局里
+/* 强比例列在窄窗口（≤1100 全站标准断点）回单列堆叠——五五/四六在挤压布局里
    lane 内容不可读；auto-fit 基础档本就自适应，两档强列在堆叠断点让位；
-   525 批：duo 档同让位 + 纵缝柄隐藏（单列流里竖柄无拖拽语义） */
+   duo 档同让位 + 纵缝柄隐藏（单列流里竖柄无拖拽语义） */
 @media (max-width: 1100px) {
   .al-lanes.split-half, .al-lanes.split-4060, .al-lanes.duo { grid-template-columns: minmax(0, 1fr); }
   .al-lanes :deep(.split-handle) { display: none; }
@@ -533,11 +533,11 @@ async function consumeFieldLink(path: string) {
 /* W2 批：结果区可调钮组 */
 .al-adj { display: flex; gap: var(--sp-1); align-items: center; margin-left: auto; }
 .al-adj .btn.on { background: var(--ac-soft); color: var(--ac-hi); border-color: var(--ac-line); }
-/* 五百二十五批：lane 头/尾统一为「线」语言（取一）——原 .al-lane-hd「线+底色」、
+/* lane 头/尾统一为「线」语言（取一）——原 .al-lane-hd「线+底色」、
    .al-lane-result「线+底色」双保险，同页 .al-card-hd 只有线；两处底色退役只留分隔线，
    与 .al-card-hd/.al-field 虚线同组（取舍：本页既有分隔语言以线为主，底色分组不保留）。
-   五百五十八批：lane 容器壳（border+card-bg+radius 三件套，546 批豁免判例本批收编）
-   退役 → border-top 分节承接（立法④，554 批 ar-sec 同刀）；布局骨架 overflow/flex
+   lane 容器壳（border+card-bg+radius 三件套，豁免判例本批收编）
+   退役 → border-top 分节承接（立法④， ar-sec 同刀）；布局骨架 overflow/flex
    保留，消费面（token 胶囊区/lane 表单）零语义变动 */
 .al-lane { border-top: 1px solid var(--border); overflow: hidden; display: flex; flex-direction: column; }
 .al-lane-hd { display: flex; justify-content: space-between; align-items: center; padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--border); }
@@ -549,25 +549,25 @@ async function consumeFieldLink(path: string) {
 .al-lane-result { padding: var(--sp-2h) var(--sp-3); border-top: 1px solid var(--border); min-height: 80px; }
 .al-err { color: var(--err); font-size: var(--fs-xs); font-family: var(--mono); word-break: normal; overflow-wrap: anywhere; }
 .al-busy { color: var(--muted); font-size: var(--fs-xs); display: flex; align-items: center; justify-content: center; gap: var(--sp-1h); }
-/* 五百五十七批：.al-empty 裸占位随「尚未运行…」收编 EmptyState compact 退役，留白归组件 */
+/* .al-empty 裸占位随「尚未运行…」收编 EmptyState compact 退役，留白归组件 */
 /* W2 批：token 区限高内滚（usePref al.toksH 内联 max-height，默认 240）——
    ik_max_word 几百 token 不再无限换行撑出一两屏；密度二档紧凑=全站最小字号 */
 .al-toks { display: flex; flex-wrap: wrap; gap: var(--sp-1); overflow: auto; }
 .al-toks.dense .al-tok { font-size: var(--fs-2xs); }
 .al-tok { padding: var(--sp-0) var(--sp-1h); background: var(--ac-soft); color: var(--brand); border-radius: 3px; font-size: var(--fs-xs); font-family: var(--mono); cursor: help; }
-/* 五百五十七批：token type 色档（tokTier）——数值族 info、同义词族 warn；
+/* token type 色档（tokTier）——数值族 info、同义词族 warn；
    只加 class 附加两档，默认档（ac-soft/brand）零迁 */
 .al-tok.al-tok-num { background: var(--info-soft); color: var(--info); }
 .al-tok.al-tok-syn { background: var(--warn-soft); color: var(--warn); }
 .al-lane-meta { font-size: var(--fs-xs); color: var(--muted); margin-top: var(--sp-2); }
-/* 五百三十一批：lane meta 行收编 MetaStrip 统一件——计数 b 由统一件 .ms b（600）承担，
+/* lane meta 行收编 MetaStrip 统一件——计数 b 由统一件 .ms b（600）承担，
    原 `.al-lane-meta b` 650 局部规则随裸 b 退役（scoped 规则不命中统一件内部元素） */
 
-/* R34：字段清单 */
-/* 字段可能数百个：限高滚动，不全铺开顶出首屏；五百二十五批 max-height 写死 280px 退役，
+/* 字段清单 */
+/* 字段可能数百个：限高滚动，不全铺开顶出首屏； max-height 写死 280px 退役，
    改 useTierCycle('al.fieldsH') 档位（内联 style 绑定，默认 280=原值） */
 .al-fields { display: flex; flex-direction: column; overflow: auto; }
-/* 第十批 B：.al-fld-empty 裸空态退役迁 EmptyState compact，本地样式随迁删除 */
+/*  B：.al-fld-empty 裸空态退役迁 EmptyState compact，本地样式随迁删除 */
 .al-fld-err { padding: var(--sp-2h) var(--sp-3); display: flex; align-items: center; gap: var(--sp-2h); font-size: var(--fs-xs); color: var(--err); }
 .al-fld-err-msg { font-family: var(--mono); word-break: normal; overflow-wrap: anywhere; }
 .al-fld-err .btn { margin-left: auto; flex-shrink: 0; }
@@ -578,7 +578,7 @@ async function consumeFieldLink(path: string) {
 .al-fa-s { color: var(--brand); }
 .al-field .btn { margin-left: auto; }
 
-/* 五百二十九批：900 紧凑微调档（§9.3 口径；§6q 遗留补齐，W-D）——页头/字段行窄视口
+/* 900 紧凑微调档（§9.3 口径；§6q 遗留补齐，W-D）——页头/字段行窄视口
    允许换行不硬挤；lane auto-fit 的 320px 下限改 min() 钳制防极窄溢出（对比语义保留，
    900 以下随视口自然折列；强比例三档堆叠已由 1100 档收编，不在此重复） */
 @media (max-width: 900px) {

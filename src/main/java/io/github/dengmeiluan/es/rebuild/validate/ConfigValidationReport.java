@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * R35 配置门禁——一次校验的聚合报告（L1 Lint + L2 Dry-run + L3 Advisor）。
+ *  配置门禁——一次校验的聚合报告（L1 Lint + L2 Dry-run + L3 Advisor）。
  *
  * <p>{@code valid} 只看 ERROR：有任一 ERROR 即 false（WARN/INFO 不阻断）。
  * {@code dryRunExecuted}/{@code dryRunPassed} 区分「没跑 dry-run」与「跑了没过」。</p>

@@ -1,5 +1,5 @@
 /**
- * 五百六十批：XLSX 双 sheet 装配单源（RT 1189-1205 / QRT 1822-1834 逐字同构收编，
+ * XLSX 双 sheet 装配单源（RT 1189-1205 / QRT 1822-1834 逐字同构收编，
  * 唯一实差=meta 差异字段——RT 有「索引/范围」、QRT 无，以 meta0 前置行参数化注入）。
  * data sheet 原样直通；meta sheet 表头恒 ['key','value']，行集=[...meta0,
  * ['导出时间', ISO], ['行数', data.rows.length]]。buildXlsx 装配仍归 utils/xlsxMini。

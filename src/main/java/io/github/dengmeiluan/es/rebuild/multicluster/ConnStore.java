@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 多集群连接档案存储 SPI（R63 平台化底座）：把「集群档案存哪」从实现里解耦——
+ * 多集群连接档案存储 SPI（ 平台化底座）：把「集群档案存哪」从实现里解耦——
  * 独立部署默认落控制集群 ES 索引（{@link EsConnStore}）；嵌入宿主（如 宿主）时
  * 可切宿主数据库表（{@link JdbcConnStore}，配置 {@code es.rebuild.console.store=jdbc}）；
  * 宿主注册自定义本接口 Bean 则完全接管（{@code @ConditionalOnMissingBean} 让位）。
@@ -29,7 +29,7 @@ public interface ConnStore {
 
     /**
      * 档案里的服务端版本（探活回写）；未探到/不存在返回 null。
-     * <p>R93-67：null 表示<b>未知</b>，调用方须经 {@link EsVersionCaps#mappingTypeMode(String)}
+     * <p>-67：null 表示<b>未知</b>，调用方须经 {@link EsVersionCaps#mappingTypeMode(String)}
      * 显式处理，<b>不得假设 7.x</b>。</p>
      */
     String getVersion(String id);

@@ -1,5 +1,5 @@
 <template>
-  <!-- 五百六十五批：alt 三视图体共享件（DQ 换装落地；IndexHub docs/query 六百六十七批
+  <!-- alt 三视图体共享件（DQ 换装落地；IndexHub docs/query 
        解冻收口换装接入——单源第四消费面，565 暂缓记档就此闭环）。
        契约=三处现役绑定的最小集：view=json 渲染高亮 pretty pre（preEl expose 供宿主
        jsonFind 定位链 querySelector/scrollTop）；view=tree 渲染 JsonTree tools 档；

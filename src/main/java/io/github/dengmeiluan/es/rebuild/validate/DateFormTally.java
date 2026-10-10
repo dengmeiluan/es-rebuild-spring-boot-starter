@@ -5,14 +5,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * R94：{@link DateFormSampler#tally} 的结果——<b>计数与样例分两棵树</b>。
+ * {@link DateFormSampler#tally} 的结果——<b>计数与样例分两棵树</b>。
  *
  * <p><b>为什么不是一棵树。</b> 曾经的形态是 {@code Map<String,Map<String,Object>>}，
  * 把计数（{@code Integer}）与样例（{@code List<String>}）混装在同一个 value map 里，
  * 靠「{@code _} 前缀键是样例，遍历计数时跳过」这条约定区分。评审指出该约定不可执行：</p>
  *
  * <ul>
- *   <li>下游 Task 17 是 <b>TypeScript</b>，序列化成 JSON 后样例键与计数键<b>完全平级</b>，
+ *   <li>下游  是 <b>TypeScript</b>，序列化成 JSON 后样例键与计数键<b>完全平级</b>，
  *       {@code Object.entries(forms[f]).reduce(sum)} 会把数组加进计数——<b>静默算错</b>；</li>
  *   <li>Java 侧加个 {@code isSampleKey()} 访问器<b>救不了 TS 消费方</b>；</li>
  *   <li>这条约定必须跨 <b>Java → JSON → TypeScript 三层</b>被人记住才成立。</li>

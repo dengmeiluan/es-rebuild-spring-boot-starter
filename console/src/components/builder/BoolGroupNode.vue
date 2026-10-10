@@ -32,7 +32,7 @@
       @dragover.prevent @drop.stop.prevent="onDrop(o)"
     >
       <div class="bgn-occur">
-        <!-- R125: occur 语义 pill——四色对齐 must/filter/should/must_not 心智（绿/蓝/紫/红），
+        <!-- occur 语义 pill——四色对齐 must/filter/should/must_not 心智（绿/蓝/紫/红），
              底色用既有 --*-soft token；中文为主 key 弱化 -->
         <span class="bgn-pill" :class="'p-' + o"><i></i>{{ OCCUR_LABEL[o] }}<code>{{ o }}</code></span>
         <span style="flex:1"></span>
@@ -62,7 +62,7 @@
 </template>
 
 <script lang="ts">
-/* 五百一十九批：面板头「折叠全部/展开全部」的 window 广播事件名（同 DRAG_EVENT 模式，
+/* 面板头「折叠全部/展开全部」的 window 广播事件名（同 DRAG_EVENT 模式，
    事件名常量随本组件导出，QueryTreePane 引用同名常量 dispatch；折叠态仍是组内内存 ref） */
 export const BGN_COLLAPSE_EVENT = 'qtp-collapse-all';
 </script>
@@ -162,14 +162,14 @@ function onDrop(o: Occur) {
 const onDragEvt = (e: Event) => { dragging.value = !!(e as CustomEvent).detail?.on; };
 onMounted(() => window.addEventListener(DRAG_EVENT, onDragEvt));
 onBeforeUnmount(() => window.removeEventListener(DRAG_EVENT, onDragEvt));
-/* 五百一十九批：响应面板头「折叠全部/展开全部」广播（折叠态置组内内存 ref） */
+/* 响应面板头「折叠全部/展开全部」广播（折叠态置组内内存 ref） */
 const onCollapseEvt = (e: Event) => { collapsed.value = !!(e as CustomEvent).detail?.collapsed; };
 onMounted(() => window.addEventListener(BGN_COLLAPSE_EVENT, onCollapseEvt));
 onBeforeUnmount(() => window.removeEventListener(BGN_COLLAPSE_EVENT, onCollapseEvt));
 </script>
 
 <style scoped>
-/* R125 v2 去卡片化（对标 Linear/Notion/Airtable 过滤器）：组不再有边框/底色/内边距——
+/*  v2 去卡片化（对标 Linear/Notion/Airtable 过滤器）：组不再有边框/底色/内边距——
    嵌套 scope 全靠缩进+左引导线表达，层级再深视觉重量恒定；组工具钮平时不可见、
    组悬停浮现（scope 即悬停区域），条件行悬停才浮出浅底。全程 var(--tr) 微过渡。 */
 .bgn { padding: 0; margin: 0; }
@@ -183,7 +183,7 @@ onBeforeUnmount(() => window.removeEventListener(BGN_COLLAPSE_EVENT, onCollapseE
 .bgn-sum { font-family: var(--mono, ui-monospace, monospace); font-size: var(--fs-2xs); color: var(--tx2); user-select: none; }
 .bgn-grip { cursor: grab; color: var(--tx2); font-size: var(--fs-xs); user-select: none; }
 .bgn-params { margin: var(--sp-0) 0 var(--sp-1); padding: var(--sp-2) var(--sp-3); background: var(--bg2); border-radius: var(--r-s); }
-/* R125 v3.1: git-graph 引导线——同色淡线+顶部圆点（pill 左下角垂下），嵌套层级如提交树 */
+/*  v3.1: git-graph 引导线——同色淡线+顶部圆点（pill 左下角垂下），嵌套层级如提交树 */
 .bgn-part { position: relative; border-left: 2px solid var(--line); padding-left: var(--sp-3); margin: var(--sp-1) 0 var(--sp-1) 3px; transition: border-color var(--tr); }
 .bgn:hover > .bgn-part { border-left-color: color-mix(in srgb, var(--tx2) 45%, var(--line)); }
 .bgn-part::before { content: ''; position: absolute; left: -5px; top: 0; width: 8px; height: 8px; border-radius: 50%;
@@ -202,7 +202,7 @@ onBeforeUnmount(() => window.removeEventListener(BGN_COLLAPSE_EVENT, onCollapseE
   padding: var(--sp-0) var(--sp-2h) var(--sp-0) var(--sp-2); border-radius: 999px; }
 .bgn-pill i { width: 7px; height: 7px; border-radius: 50%; flex: none; }
 .bgn-pill code { font-family: var(--mono, ui-monospace, monospace); font-size: var(--fs-2xs); font-weight: 400; opacity: .62; }
-/* R125 v3.1: git-graph 引导线——分区线降饱和底色，组悬停时加深 */
+/*  v3.1: git-graph 引导线——分区线降饱和底色，组悬停时加深 */
 .bgn-pill.p-must { color: var(--c-must, var(--ok)); background: var(--c-must-bg, var(--ok-soft)); }
 .bgn-pill.p-filter { color: var(--c-filter, var(--info)); background: var(--c-filter-bg, var(--info-soft)); }
 .bgn-pill.p-should { color: var(--c-should, var(--violet)); background: var(--c-should-bg, var(--dv-violet-soft)); }

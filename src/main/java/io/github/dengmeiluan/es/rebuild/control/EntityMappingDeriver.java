@@ -19,7 +19,7 @@ import org.springframework.data.elasticsearch.core.mapping.SimpleElasticsearchMa
  *
  * <p><b>离线</b>：只用裸 {@link SimpleElasticsearchMappingContext}，<b>不要</b>
  * {@code ElasticsearchOperations} —— 与 {@code EntityIndexNames} 同一条路径，
- * 守住 R37/R38「宿主零 ES 依赖」的地基。</p>
+ * 守住 /「宿主零 ES 依赖」的地基。</p>
  */
 public class EntityMappingDeriver {
 

@@ -147,7 +147,7 @@ public class DesiredStatePayloadTest {
         assertEquals("assetBasicInfo", out.get(1).get("indexKey"));
     }
 
-    // ---------------- R100：derivedMappingJson（重建实际会应用的那份 mapping）----------------
+    // ---------------- ：derivedMappingJson（重建实际会应用的那份 mapping）----------------
 
     /** 无 @Mapping 但有可映射属性的实体：推导得出内容。 */
     @Document(indexName = "payload_derived_alias")
@@ -218,7 +218,7 @@ public class DesiredStatePayloadTest {
         assertNull(row.get("derivedMappingJson"));
     }
 
-    /** deriver 为 null（调用方无推导能力）→ 退化为 R100 之前的行为，不抛异常。 */
+    /** deriver 为 null（调用方无推导能力）→ 退化为  之前的行为，不抛异常。 */
     @Test
     public void nullDeriverDegradesInsteadOfThrowing() {
         Map<String, Object> row = DesiredStatePayload.of(Collections.singletonList(

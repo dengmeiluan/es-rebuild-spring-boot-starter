@@ -1,4 +1,4 @@
-/* 五百五十二批：直方图注入链统一件（用户裁决「直方图和 Profile 的组件应该是同一套，
+/* 直方图注入链统一件（裁决「直方图和 Profile 的组件应该是同一套，
    且位置是同一套」的注入侧收编）——此前整条链内联在 DslQueryView execQuery（:894-965）：
    autoHist 开时 pickHistField 选字段 → buildHistAgg 分档聚合体注入 __hist → ES 拒绝
    （histBrokenIdx session 拉黑）剥聚合降级重试一次不连坐主查询 → hits 值形态二次嗅探。
@@ -6,7 +6,7 @@
    — IndexHubView docs/query 两 tab（本批接线，偏好键 ih.docs.* / ih.qry.*）；
    — DslQueryView 同位替换下批做（届时偏好键传 'query' 前缀，行为零变化）。
    字段裁决纯函数零改直消费（utils/histField.ts：isDateLikeValue/sniffDateField/
-   pickHistField/buildHistAgg，R87/R90 立法在彼处）。 */
+   pickHistField/buildHistAgg，/ 立法在彼处）。 */
 import { computed, ref, watch } from 'vue';
 import { usePref } from './urlState';
 import { buildHistAgg, pickHistField, sniffDateField } from '../utils/histField';
@@ -43,9 +43,9 @@ export function useHistAgg(opts: HistAggOptions) {
   const autoHist = usePref<boolean>(opts.prefPrefix + '.autoHist', true);
   const histSecOpen = usePref<boolean>(opts.prefPrefix + '.histSecOpen', true);
 
-  /* R90：直方图聚合被 ES 拒过的索引（降级后本 session 不再注入；按索引维度，切索引不漂白） */
+  /* 直方图聚合被 ES 拒过的索引（降级后本 session 不再注入；按索引维度，切索引不漂白） */
   const histBrokenIdx = new Set<string>();
-  /* R90：手动重开直方图开关 = 明确要求重试，清掉当前索引的降级标记 */
+  /* 手动重开直方图开关 = 明确要求重试，清掉当前索引的降级标记 */
   watch(autoHist, (on) => { if (on) histBrokenIdx.delete(opts.index()); });
 
   const histBuckets = ref<HistBucket[]>([]);
@@ -56,7 +56,7 @@ export function useHistAgg(opts: HistAggOptions) {
   let queried = false;
   const hasResult = () => opts.hasResult?.() ?? queried;
 
-  /* 20260920 用户裁决「无时间索引要有提示」：mapping 已加载且无 date 字段 → 开关旁即时标注 */
+  /* 裁决「无时间索引要有提示」：mapping 已加载且无 date 字段 → 开关旁即时标注 */
   const histNoDateField = computed(() => !!opts.mappingKnown?.() && !(opts.mappingDates?.() || []).length);
 
   /* 20260920 直方图可见性自证：执行了查询但无直方图时给出原因（消静默，DQ 文案链逐字随迁） */
@@ -69,7 +69,7 @@ export function useHistAgg(opts: HistAggOptions) {
     return '未识别到可作直方图的字段（需 date / keyword / 数值型，且值形态匹配）——若预期有请检查 mapping';
   });
 
-  /* 五百四十九批：节头 meta 三态（桶数/原因/未执行）——无桶时节头恒在场由它承接语义 */
+  /* 节头 meta 三态（桶数/原因/未执行）——无桶时节头恒在场由它承接语义 */
   const histHeadMeta = computed(() => {
     if (histBuckets.value.length) return histBuckets.value.length + ' 桶';
     if (!hasResult()) return '执行查询后生成';

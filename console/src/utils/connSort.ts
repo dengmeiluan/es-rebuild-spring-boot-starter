@@ -1,7 +1,7 @@
 /**
- * 五百九十七批：集群切换器列表排序纯函数（ClusterSwitcher 管理面板与快速菜单共用真源）。
+ * 集群切换器列表排序纯函数（ClusterSwitcher 管理面板与快速菜单共用真源）。
  * 语义与边界详见 utils/__tests__/connSort.spec.ts。
- * 六百二十五批：增 'manual' 档（623 设计稿 D3/D4 用户裁决落码）——按 manualOrder 序排列，
+ * 增 'manual' 档（623 设计稿 D3/D4 裁决落码）——按 manualOrder 序排列，
  * 不在序中的连接沉底（组内名称升序，新添加连接自然排尾）；moveInOrder 纯函数承担
  * 拖拽落位与 Ctrl+↑/↓ 键盘移位的共用语义（越界钳位、幂等、不改入参）。
  */
@@ -59,7 +59,7 @@ export function normalizeSortMode(v: unknown): SortMode {
 }
 
 /**
- * 六百二十五批：手动档落位纯函数——id 移到 toIndex（相对移除 id 后的数组，越界钳位）。
+ * 手动档落位纯函数——id 移到 toIndex（相对移除 id 后的数组，越界钳位）。
  * 拖拽落位（toIndex=目标行在序中的下标=插到目标行前）与键盘 Ctrl+↑/↓（toIndex=当前位±1）
  * 共用此语义；幂等、纯函数、不丢项。
  */

@@ -36,12 +36,12 @@ import java.util.concurrent.atomic.AtomicLong;
  * <p><b>契约</b>：doc 字段名逐字固定（前端图表依赖）；cluster doc=
  * {@code {kind:"metrics", scope:"cluster", timestamp, connId, connName, env,
  * status, qps, indexRate, heapUsedPct, cpuPct, diskUsedPct, nodes, dataNodes,
- * indices, shards, unassigned, writeRejected, searchRejected[, topIndexes(R42
+ * indices, shards, unassigned, writeRejected, searchRejected[, topIndexes(
  * 索引级 Top 快照：index/qps/idxRate/storeMb ×≤8，mapping enabled:false 仅存储)]}；node doc=
  * {@code {kind:"metrics", scope:"node", timestamp, connId, connName, env, nodeName,
  * heapUsedPct, cpuPct, diskUsedPct, gcYoungPerMin, gcOldPerMin, load1m,
  * diskReadKbS, diskWriteKbS, diskReadIops, diskWriteIops,
- * tpSearchActive, tpSearchQueue, netRxKbS, netTxKbS}}（R29/R32=节点深耕新增）；alert doc 见
+ * tpSearchActive, tpSearchQueue, netRxKbS, netTxKbS}}（/=节点深耕新增）；alert doc 见
  * {@link #evaluateAlerts}。null/无法计算的字段静默省略。</p>
  *
  * <p><b>断链 RED doc</b>：单连接 health/stats 拉取失败也落 1 条
@@ -91,9 +91,9 @@ public class ClusterMetricsCollector {
     static final double REJECTED_WARN_THRESHOLD = 0.0;
     /** R7 告警 message 截断上限（doc 契约 ≤300）。 */
     static final int MAX_ALERT_MESSAGE = 300;
-    /** R21 告警阈值：Young GC 每分钟次数 ≥ 10 → WARN（经验参考线，可用配置覆盖前先取此默认）。 */
+    /**  告警阈值：Young GC 每分钟次数 ≥ 10 → WARN（经验参考线，可用配置覆盖前先取此默认）。 */
     static final double GC_YOUNG_ALERT_PER_MIN = 10.0;
-    /** R21 告警需连续 ≥ 2 轮超限（单轮尖峰不告警，削抖动误报）。 */
+    /**  告警需连续 ≥ 2 轮超限（单轮尖峰不告警，削抖动误报）。 */
     static final int GC_YOUNG_ALERT_ROUNDS = 2;
 
     /**
@@ -165,10 +165,10 @@ public class ClusterMetricsCollector {
     /** connId → 上一轮每节点 GC 计数基线（gcYoungPerMin/gcOldPerMin 差分用，随节点集重建清理）。 */
     private final Map<String, GcBaseline> lastGcCounters = new ConcurrentHashMap<>();
 
-    /** connId → 上一轮 SLM 累计失败快照数（R33 snapshotFailedDelta 差分基线）。 */
+    /** connId → 上一轮 SLM 累计失败快照数（ snapshotFailedDelta 差分基线）。 */
     private final Map<String, Long> lastSlmFailed = new ConcurrentHashMap<>();
 
-    /** connId → 上一轮 per-index 计数基线（R42 topIndexes 速率差分，随索引集重建清理）。 */
+    /** connId → 上一轮 per-index 计数基线（ topIndexes 速率差分，随索引集重建清理）。 */
     private final Map<String, IndexBaseline> lastIndexCounters = new ConcurrentHashMap<>();
     /** R7 告警状态机：{@code connId|metric} → 是否告警中（核心去重，重启即失同基线取舍）。 */
     private final Map<String, Boolean> alerting = new ConcurrentHashMap<>();
@@ -262,7 +262,7 @@ public class ClusterMetricsCollector {
                     buildRedDoc(conn, rootMessage(e), System.currentTimeMillis())));
             return;
         }
-        /* R33 G6 快照状态：_slm/stats 轻量拉取——失败/6.x 无此端点/权限不足 → 静默缺省，
+        /*  G6 快照状态：_slm/stats 轻量拉取——失败/6.x 无此端点/权限不足 → 静默缺省，
            绝不反噬采集主链路（快照指标是锦上添花） */
         Map<String, Object> slm = null;
         try {
@@ -270,7 +270,7 @@ public class ClusterMetricsCollector {
         } catch (Exception ignore) {
             /* 快照指标缺省 */
         }
-        /* R42 索引级 Top 指标：/_stats per-index 差分（失败 → 静默缺省，绝不反噬主链路） */
+        /*  索引级 Top 指标：/_stats per-index 差分（失败 → 静默缺省，绝不反噬主链路） */
         Map<String, Object> idxStats = null;
         try {
             idxStats = getJson(target, indexStatsRequest());
@@ -286,7 +286,7 @@ public class ClusterMetricsCollector {
             lastIndexCounters.put(connId, newIdxBaseline);
         }
         if (!topIndexes.isEmpty()) {
-            /* R49：条目附 connId——前端点击索引名可 setTarget 到来源集群再进数据浏览器 */
+            /* 条目附 connId——前端点击索引名可 setTarget 到来源集群再进数据浏览器 */
             for (Map<String, Object> t : topIndexes) {
                 t.put("connId", connId);
             }
@@ -349,7 +349,7 @@ public class ClusterMetricsCollector {
     }
 
     /** _nodes/stats 请求（filter_path 收窄到指标所需字段，静态=测点；GC 计数为 R8 差分新增，
-        耗时毫秒为 R9 慢查询代理指标新增；R29 节点深耕新增=load_average/fs.io_stats.total/
+        耗时毫秒为 R9 慢查询代理指标新增； 节点深耕新增=load_average/fs.io_stats.total/
         thread_pool search+index 的 active 与 queue）。 */
     static Request nodesStatsRequest() {
         Request req = new Request("GET", "/_nodes/stats");
@@ -422,7 +422,7 @@ public class ClusterMetricsCollector {
         putLong(doc, "shards", health == null ? null : health.get("active_shards"));
         putLong(doc, "primaryShards", health == null ? null : health.get("active_primary_shards"));
         putLong(doc, "unassigned", health == null ? null : health.get("unassigned_shards"));
-        /* R31 失联节点数：期望节点数 − 本轮实际报到数（告警状态机消费，>0 → WARN） */
+        /*  失联节点数：期望节点数 − 本轮实际报到数（告警状态机消费，>0 → WARN） */
         Long nodesMissing = nodesMissingOf(health, nodes);
         if (nodesMissing != null) {
             doc.put("nodesMissing", nodesMissing);
@@ -511,7 +511,7 @@ public class ClusterMetricsCollector {
             if (heap != null) {
                 doc.put("heapUsedPct", heap);
             }
-            /* R65 对标阿里云「节点 Old 区使用(B)」锯齿形态：heap_used_in_bytes→MB（堆字节量锯齿可直读 GC 回收幅度） */
+            /*  对标阿里云「节点 Old 区使用(B)」锯齿形态：heap_used_in_bytes→MB（堆字节量锯齿可直读 GC 回收幅度） */
             Double heapBytes = numOrNull(leaf(node, "jvm.mem.heap_used_in_bytes"));
             if (heapBytes != null) {
                 doc.put("heapUsedMb", Math.round(heapBytes / 1048576.0 * 10.0) / 10.0);
@@ -524,7 +524,7 @@ public class ClusterMetricsCollector {
             if (disk != null) {
                 doc.put("diskUsedPct", disk);
             }
-            /* R29 节点深耕：Load_1m 与查询线程池 active/queue（即时值，字段缺省=平台不支持，静默省略） */
+            /*  节点深耕：Load_1m 与查询线程池 active/queue（即时值，字段缺省=平台不支持，静默省略） */
             Double load1m = load1mOf(leaf(node, "os.cpu.load_average"));
             if (load1m != null) {
                 doc.put("load1m", load1m);
@@ -537,7 +537,7 @@ public class ClusterMetricsCollector {
             if (tpSearchQueue != null) {
                 doc.put("tpSearchQueue", tpSearchQueue);
             }
-            /* R62 对标阿里云线程池 Rows（写入侧）+被标记删除文档：测点型即时值（docsDeleted=force_merge 需求判定信号） */
+            /*  对标阿里云线程池 Rows（写入侧）+被标记删除文档：测点型即时值（docsDeleted=force_merge 需求判定信号） */
             Long tpWriteActive = counterOrNull(leaf(node, "thread_pool.write.active"));
             if (tpWriteActive != null) {
                 doc.put("tpWriteActive", tpWriteActive);
@@ -550,7 +550,7 @@ public class ClusterMetricsCollector {
             if (docsDeleted != null) {
                 doc.put("docsDeleted", docsDeleted);
             }
-            /* R72 对标阿里云 JVM 组「fielddata 内存使用」：fielddata 超限=查询抖动经典根因 */
+            /*  对标阿里云 JVM 组「fielddata 内存使用」：fielddata 超限=查询抖动经典根因 */
             Double fielddataBytes = numOrNull(leaf(node, "indices.fielddata.memory_size_in_bytes"));
             if (fielddataBytes != null) {
                 doc.put("fielddataMb", Math.round(fielddataBytes / 1048576.0 * 10.0) / 10.0);
@@ -567,7 +567,7 @@ public class ClusterMetricsCollector {
                 if (oldPerMin != null) {
                     doc.put("gcOldPerMin", oldPerMin);
                 }
-                /* R29 磁盘 IO 差分：带宽 KiB/s + IOPS 次/秒（R34 真机校准=7.10 实测字段
+                /*  磁盘 IO 差分：带宽 KiB/s + IOPS 次/秒（ 真机校准=7.10 实测字段
                    read_kilobytes/write_kilobytes/read_operations/write_operations；
                    kilobytes 已是 KiB 无需 ÷1024，非 Linux 节点缺省 → null 省略） */
                 Double readKbS = opsPerSec(counterOrNull(leaf(node, "fs.io_stats.total.read_kilobytes")),
@@ -590,7 +590,7 @@ public class ClusterMetricsCollector {
                 if (writeIops != null) {
                     doc.put("diskWriteIops", writeIops);
                 }
-                /* R32 G7 内部传输吞吐差分：transport rx/tx KiB/s（节点间通信量，非 HTTP 流量） */
+                /*  G7 内部传输吞吐差分：transport rx/tx KiB/s（节点间通信量，非 HTTP 流量） */
                 Double netRx = kbPerSec(counterOrNull(leaf(node, "transport.rx_size_in_bytes")),
                         prev == null ? null : prev[6], ts - lastGc.timestampMs);
                 if (netRx != null) {
@@ -601,7 +601,7 @@ public class ClusterMetricsCollector {
                 if (netTx != null) {
                     doc.put("netTxKbS", netTx);
                 }
-                /* R62b 对标阿里云 IOUtil(%) 与「节点 Young/Old GC 耗时(ms)」：io_time 占时间轴百分比
+                /*  对标阿里云 IOUtil(%) 与「节点 Young/Old GC 耗时(ms)」：io_time 占时间轴百分比
                    （钳 0~100，回退/越界省略）+每次 GC 平均耗时（Δtime÷Δcount，Δcount=0 省略） */
                 Double ioUtil = pctOverMs(counterOrNull(leaf(node, "fs.io_stats.total.io_time_in_millis")),
                         prev == null ? null : prev[8], ts - lastGc.timestampMs);
@@ -669,7 +669,7 @@ public class ClusterMetricsCollector {
     }
 
     /**
-     * 单连接上一轮<b>每节点</b>计数基线（R8 GC 差分起步，R29 扩员磁盘 IO 差分）：随
+     * 单连接上一轮<b>每节点</b>计数基线（R8 GC 差分起步， 扩员磁盘 IO 差分）：随
      * {@link #nextGcBaseline} 按 当前节点集整体重建——节点下线/改名后旧键自然清理，无需额外淘汰逻辑。
      */
     public static final class GcBaseline {
@@ -679,7 +679,7 @@ public class ClusterMetricsCollector {
          * nodeName → [young collection_count, old collection_count,
          * disk read_kilobytes, disk write_kilobytes, disk read_operations, disk write_operations,
          * transport rx_size_in_bytes, transport tx_size_in_bytes,
-         * io_time_in_millis, young collection_time_in_millis, old collection_time_in_millis]（R62b 扩员）；
+         * io_time_in_millis, young collection_time_in_millis, old collection_time_in_millis]（ 扩员）；
          * null=该计数缺失，不参与差分。
          */
         public final Map<String, Long[]> collectors;
@@ -717,7 +717,7 @@ public class ClusterMetricsCollector {
     }
 
     /**
-     * 本轮每节点计数基线（R8 GC 差分起步，R29 扩员磁盘 IO 四计数，静态=测点）：按<b>当前</b>节点集
+     * 本轮每节点计数基线（R8 GC 差分起步， 扩员磁盘 IO 四计数，静态=测点）：按<b>当前</b>节点集
      * 重建——节点集变化时旧节点键自然清理；stats 无节点 → null=不更新；无 name 的节点无法作键，跳过；
      * 计数字段缺失记 null（不参与差分，防伪造 0）。
      */
@@ -741,7 +741,7 @@ public class ClusterMetricsCollector {
                     counterOrNull(leaf(node, "fs.io_stats.total.write_operations")),
                     counterOrNull(leaf(node, "transport.rx_size_in_bytes")),
                     counterOrNull(leaf(node, "transport.tx_size_in_bytes")),
-                    /* R62b 槽扩员：io_time_in_millis（IOUtil%）+Young/Old collection_time_in_millis（GC 耗时） */
+                    /*  槽扩员：io_time_in_millis（IOUtil%）+Young/Old collection_time_in_millis（GC 耗时） */
                     counterOrNull(leaf(node, "fs.io_stats.total.io_time_in_millis")),
                     counterOrNull(leaf(node, "jvm.gc.collectors.young.collection_time_in_millis")),
                     counterOrNull(leaf(node, "jvm.gc.collectors.old.collection_time_in_millis"))});
@@ -762,7 +762,7 @@ public class ClusterMetricsCollector {
     }
 
     /**
-     * R29 磁盘带宽差分（KiB/s，一位小数，静态=测点）：Δbytes÷Δt秒÷1024；
+     *  磁盘带宽差分（KiB/s，一位小数，静态=测点）：Δbytes÷Δt秒÷1024；
      * 首轮/计数缺失/回退/Δt 非正 → null（与 gcPerMin 同口径）。
      */
     static Double kbPerSec(Long current, Long previous, long dtMs) {
@@ -773,7 +773,7 @@ public class ClusterMetricsCollector {
         return Math.round((current.longValue() - previous.longValue()) / (dtMs / 1000.0) / 1024.0 * 10.0) / 10.0;
     }
 
-    /** R62b：IOUtil%（Δio_time_in_millis÷Δt×100，钳 0~100；缺前值/回退/越界 → null 省略）。 */
+    /** IOUtil%（Δio_time_in_millis÷Δt×100，钳 0~100；缺前值/回退/越界 → null 省略）。 */
     static Double pctOverMs(Long curMs, Long prevMs, long dtMs) {
         if (curMs == null || prevMs == null || dtMs <= 0) {
             return null;
@@ -789,7 +789,7 @@ public class ClusterMetricsCollector {
         return Math.round(util * 10.0) / 10.0;
     }
 
-    /** R62b：每次 GC 平均耗时 ms（Δtime÷Δcount；Δcount≤0（无 GC 发生）/缺前值 → null 省略）。 */
+    /** 每次 GC 平均耗时 ms（Δtime÷Δcount；Δcount≤0（无 GC 发生）/缺前值 → null 省略）。 */
     static Long msPerCount(Long curTime, Long prevTime, Long curCount, Long prevCount) {
         if (curTime == null || prevTime == null || curCount == null || prevCount == null) {
             return null;
@@ -803,7 +803,7 @@ public class ClusterMetricsCollector {
     }
 
     /**
-     * R29 IOPS 差分（次/秒，一位小数，静态=测点）：Δoperations÷Δt秒；
+     *  IOPS 差分（次/秒，一位小数，静态=测点）：Δoperations÷Δt秒；
      * 首轮/计数缺失/回退/Δt 非正 → null（与 gcPerMin 同口径）。
      */
     static Double opsPerSec(Long current, Long previous, long dtMs) {
@@ -814,7 +814,7 @@ public class ClusterMetricsCollector {
         return Math.round((current.longValue() - previous.longValue()) / (dtMs / 1000.0) * 10.0) / 10.0;
     }
 
-    /** R29 Load_1m（即时值）：os.cpu.load_average 的 1m 档；平台不支持/缺省 → null。 */
+    /**  Load_1m（即时值）：os.cpu.load_average 的 1m 档；平台不支持/缺省 → null。 */
     static Double load1mOf(Object loadAverage) {
         if (!(loadAverage instanceof Map)) {
             return null;
@@ -836,7 +836,7 @@ public class ClusterMetricsCollector {
     }
 
     /**
-     * R33 G6 SLM 统计解析（静态=测点）：取顶层 {@code total_snapshots_failed}/
+     *  G6 SLM 统计解析（静态=测点）：取顶层 {@code total_snapshots_failed}/
      * {@code total_snapshots_taken}；响应缺省/类型不对 → null（快照指标整组省略）。
      */
     static long[] slmStatsOf(Map<String, Object> slm) {
@@ -851,7 +851,7 @@ public class ClusterMetricsCollector {
         return new long[]{((Number) failed).longValue(), ((Number) total).longValue()};
     }
 
-    /** R42 索引 stats 请求（静态=测点）：filter_path 收窄到速率/存储所需字段。 */
+    /**  索引 stats 请求（静态=测点）：filter_path 收窄到速率/存储所需字段。 */
     static Request indexStatsRequest() {
         Request req = new Request("GET", "/_stats");
         req.addParameter("filter_path", "indices.*.total.search.query_total,"
@@ -863,7 +863,7 @@ public class ClusterMetricsCollector {
     }
 
     /**
-     * R42 per-index 速率差分 + Top 选取（静态=测点）：每索引 查询 QPS/写入速率（计数差 ÷ Δt秒，
+     *  per-index 速率差分 + Top 选取（静态=测点）：每索引 查询 QPS/写入速率（计数差 ÷ Δt秒，
      * 首轮/新索引/回退/Δt≤0 → 该索引无速率不入选）；有效样本（qps&gt;0 或 idxRate&gt;0）按
      * qps+idxRate 降序取 Top 8，附 primaries 存储折 MB。对标阿里云 Grafana Index 索引行。
      */
@@ -922,7 +922,7 @@ public class ClusterMetricsCollector {
         return new IndexBaseline(ts, counters);
     }
 
-    /** 单连接上一轮 per-index 计数基线（R42）：随索引集整体重建，旧键自然清理。 */
+    /** 单连接上一轮 per-index 计数基线（）：随索引集整体重建，旧键自然清理。 */
     public static final class IndexBaseline {
         /** 基线时刻（毫秒 epoch）。 */
         public final long timestampMs;
@@ -937,7 +937,7 @@ public class ClusterMetricsCollector {
     }
 
     /**
-     * R31 失联节点数（静态=测点）：health.number_of_nodes（期望）− 本轮实际报到节点数。
+     *  失联节点数（静态=测点）：health.number_of_nodes（期望）− 本轮实际报到节点数。
      * 仅 stats 拉到节点（nodes 非空）且差 ≥0 才落——stats 空档/口径异常（实到&gt;期望）宁缺毋假；
      * 差 0 是有效信息（无失联），照落（状态机恒不触发）。
      */
@@ -982,7 +982,7 @@ public class ClusterMetricsCollector {
     }
 
     /**
-     * R21 重载：结构化入参版（gcYoungPerMin=集群级 Young GC 次/分，gcYoungConsecutiveRounds=
+     *  重载：结构化入参版（gcYoungPerMin=集群级 Young GC 次/分，gcYoungConsecutiveRounds=
      * 连续超限轮数）。语义同上：仅迁移沿写 doc，持续超限不重复。
      */
     static AlertEvaluation evaluateAlerts(Map<String, Object> clusterDoc, Set<String> prevAlertKeys,
@@ -1013,14 +1013,14 @@ public class ClusterMetricsCollector {
                 gcYoung != null && gcYoung >= GC_YOUNG_ALERT_PER_MIN && gcYoungConsecutiveRounds >= GC_YOUNG_ALERT_ROUNDS,
                 gcYoung == null ? 0.0 : gcYoung.doubleValue(), GC_YOUNG_ALERT_PER_MIN, "WARN",
                 gcYoung == null ? null : "Young GC " + gcYoung + " 次/分，持续 " + gcYoungConsecutiveRounds + " 轮超限");
-        /* R31 失联节点规则：health 期望节点数 > 本轮实到节点数 → WARN（字段缺省=不可判定，不触发） */
+        /*  失联节点规则：health 期望节点数 > 本轮实到节点数 → WARN（字段缺省=不可判定，不触发） */
         Double missing = numOrNull(clusterDoc.get("nodesMissing"));
         transition(docs, keys, clusterDoc, prevAlertKeys, connId, "nodesMissing",
                 missing != null && missing.doubleValue() > 0,
                 missing == null ? 0.0 : missing.doubleValue(), 0, "WARN",
                 missing == null ? null : "失联 " + missing.intValue() + " 个节点（期望 "
                         + clusterDoc.get("nodes") + "，实到 " + missing.intValue() + "+）");
-        /* R33 G6 SLM 快照失败规则：本轮新增失败（delta>0）→ WARN；delta=0（无新增）写恢复，
+        /*  G6 SLM 快照失败规则：本轮新增失败（delta>0）→ WARN；delta=0（无新增）写恢复，
            字段缺省（无 SLM/拉取失败）不触发不误报恢复 */
         Double slmDelta = numOrNull(clusterDoc.get("snapshotFailedDelta"));
         transition(docs, keys, clusterDoc, prevAlertKeys, connId, "slm",

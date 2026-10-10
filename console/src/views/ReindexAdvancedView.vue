@@ -3,7 +3,7 @@
     <div class="ra-hd">
       <PageHeader :icon="Wand2" title="Reindex 高级自定义" subtitle="跨集群 / 自由 body / 全参数开放 — 高级用户模式，不强制幂等">
       <template #actions>
-<!-- 第十批：草稿恢复徽标（DraftBadge 统一件，接入形态同 AdhocRebuildView）——挂载时恢复非默认表单稿才显示 -->
+<!-- 草稿恢复徽标（DraftBadge 统一件，接入形态同 AdhocRebuildView）——挂载时恢复非默认表单稿才显示 -->
 <DraftBadge v-if="draftRestored" @clear="formDraft.clear" />
 <button class="btn ghost sm" @click="showBody = !showBody">
   <Code2 :size="12" /> {{ showBody ? '收起 body' : '展开原始 body' }}
@@ -51,18 +51,18 @@
         </div>
         <div class="ra-f wide">
           <label class="ra-qh">query（可选 JSON，留空即全量）
-            <!-- 五百三十批：query 编辑框高度三档循环钮（本页 ra-script-h 同款形态；script 面既有档零改动） -->
+            <!-- query 编辑框高度三档循环钮（本页 ra-script-h 同款形态；script 面既有档零改动） -->
             <button class="btn ghost xs" style="margin-left:auto" data-test="ra-query-h"
               :title="'query 编辑框高度档：' + queryH + ' 行'" @click="cycleQueryH">高</button>
           </label>
-          <!-- 第十批：dsl-assist 字段智能补全（useIndexFields 全站字段源标准）。
-               五百二十五批：@submit（Ctrl+Enter）接既有 submit（确认门在 submit 内不绕过）。
-               五百三十批：rows=4 定高 → 三档行数循环（JsonArea 既有 rows 写法；默认档 4 行不变，
+          <!-- dsl-assist 字段智能补全（useIndexFields 全站字段源标准）。
+               @submit（Ctrl+Enter）接既有 submit（确认门在 submit 内不绕过）。
+               rows=4 定高 → 三档行数循环（JsonArea 既有 rows 写法；默认档 4 行不变，
                保持 rawBody fill 弹性 '100%' 的 stub 特征唯一——rebuildThreeState A1/A2 锁定） -->
           <JsonArea ref="raQueryJaRef" v-model="srcQueryStr" :rows="queryH" :dsl-assist="raQueryAssist" placeholder="{&quot;match_all&quot;:{}}" @submit="submit" />
           <!-- G3-A2：非法 query 不再静默剔除（会退化为全量 reindex）——后果前置 + submit 阻断 -->
           <div v-if="srcQueryErr" class="ra-qerr">{{ srcQueryErr }}</div>
-          <!-- 五百二十五批：lintDsl 静态体检提示条（SearchSandboxView join 串形态同款，随输入实时重估，
+          <!-- lintDsl 静态体检提示条（SearchSandboxView join 串形态同款，随输入实时重估，
                零阻塞不拦执行；不用 v-for——表单页无列表空态，不进三态契约判定面）；
                error 红条单列（结构必错 ES 直接拒绝），warning/hint 黄条并列；JSON 非法静默
                （srcQueryErr 红字已报） -->
@@ -87,7 +87,7 @@
           <!-- sem-rm 智能纠错：目标索引名硬规则即时红字（非法字符/大写）+ 本地源=目标同名校验（同 Xmigrate idxNameProblem 人话口径） -->
           <div v-if="destIndexErr" role="alert" class="ra-derr">{{ destIndexErr }}</div>
         </div>
-        <!-- 745 G159：五 select label 补 :title 中文释义——对齐同页 slices 等 561 批口径，一页两标准归一 -->
+        <!-- 745 G159：五 select label 补 :title 中文释义——对齐同页 slices 等 口径，一页两标准归一 -->
         <div class="ra-f">
           <label title="op_type：写入方式——create 仅新增（同 ID 已存在即冲突报错），index 存在则覆盖（默认）">op_type</label>
           <select class="ra-i" v-model="destOpType">
@@ -108,7 +108,7 @@
         </div>
         <div class="ra-f">
           <label>pipeline（可选）</label>
-          <!-- 第十批收尾：placeholder 中文化（BulkEditorView 同款先例） -->
+          <!-- placeholder 中文化（BulkEditorView 同款先例） -->
           <input class="ra-i" v-model="destPipeline" placeholder="ingest pipeline ID（可选）" />
         </div>
       </div>
@@ -117,7 +117,7 @@
       <!-- Script -->
       <div class="ra-sec">
         <div class="card-t"><Terminal :size="14" /> Script（可选）
-          <!-- 五百二十八批：脚本面高度档循环钮（SqlConsoleView codeH「高」钮同款形态，
+          <!-- 脚本面高度档循环钮（SqlConsoleView codeH「高」钮同款形态，
                editorTiers 族口径：st.editorH/qx.taH 先例） -->
           <button class="btn ghost xs" style="margin-left:auto" data-test="ra-script-h"
             :title="'脚本编辑器高度档：' + scriptH" @click="cycleScriptH">高</button>
@@ -132,10 +132,10 @@
         </div>
         <div class="ra-f wide">
           <label>source</label>
-          <!-- 五百二十八批：28vh → 42vh 弹性档 + usePref 记忆（SqlConsole codeH 三档循环同款） -->
-          <!-- 五百二十四批：painless 面接 assist（raQueryAssist 同源 src 字段——脚本里 doc['f']
+          <!-- 28vh → 42vh 弹性档 + usePref 记忆（SqlConsole codeH 三档循环同款） -->
+          <!-- painless 面接 assist（raQueryAssist 同源 src 字段——脚本里 doc['f']
                hover 与四骨架补全共享源索引字段源）。
-               五百二十五批：@execute（Ctrl+Enter）接既有 submit（确认门在 submit 内不绕过） -->
+               @execute（Ctrl+Enter）接既有 submit（确认门在 submit 内不绕过） -->
           <MonacoEditor v-model="scriptSource" language="painless" :height="scriptH" :dsl-assist="raQueryAssist" @execute="submit" />
         </div>
       </div>
@@ -155,7 +155,7 @@
         </div>
         <div class="ra-f">
           <label title="slices：并行切片数——auto 交 ES 自定，或正整数">slices</label>
-          <!-- 五百六十一批：五参数裸 input 接 useInputLint 既有正则（UpdateByQueryView :52/:68 姊妹面
+          <!-- 五参数裸 input 接 useInputLint 既有正则（UpdateByQueryView :52/:68 姊妹面
                判例）——@blur 失焦校验出 .il-hint 行内提示，输入即清防旧 hint 滞留；
                label/input :title 中文释义口径随 UBQ 同参数；placeholder 文案保形 -->
           <input class="ra-i" v-model="slices" placeholder="auto / 数字 / 留空" title="slices：并行切片数——auto 交 ES 自定，或正整数" @blur="slicesCheck(slices)" />
@@ -202,7 +202,7 @@
 
       <!-- Body preview（并入单卡分区；「由表单重建」入口删卡头重复项，统一 footer 一处） -->
       <div class="ra-sec ra-body" v-if="showBody">
-        <!-- 五百二十七批：.ra-body-tt 400 弱标分节升档全局 .card-t.sm 分节档（原无字重，
+        <!-- .ra-body-tt 400 弱标分节升档全局 .card-t.sm 分节档（原无字重，
              随升档获得 600/12px；本地规则删） -->
         <div class="card-t sm">
           <Code2 :size="12" /> 实际提交 body（可编辑）
@@ -212,9 +212,9 @@
         <!-- G3-A1：手编置 bodyTouched——v-model 与事件同名属性不能重复写，拆为 :model-value + onBodyEdit；
              dsl-assist 透传 src 字段（raBodyAssist，与 srcQuery 同源）。
              W4c：rows=14 定高 → fill 弹性（AdhocRebuild 手编区同款），.ra-body 限高承接。
-             五百二十五批：@submit（Ctrl+Enter）接既有 submit（确认门在 submit 内不绕过） -->
+             @submit（Ctrl+Enter）接既有 submit（确认门在 submit 内不绕过） -->
         <JsonArea ref="raBodyJaRef" :model-value="rawBody" fill :dsl-assist="raBodyAssist" @update:model-value="onBodyEdit" @submit="submit" />
-        <!-- 五百二十五批：手编 body 的 lintDsl 静态体检提示条（join 串形态，随输入实时重估，
+        <!-- 手编 body 的 lintDsl 静态体检提示条（join 串形态，随输入实时重估，
              零阻塞不拦执行；手编坏 JSON 由 bodyJsonErr 红字 + submit 阻断承担，lint 条只管结构语义） -->
         <div v-if="raBodyLintErrors.length" role="alert" class="lint-bar lint-bar-err">
           <span>DSL 检查（错误）：{{ raBodyLintErrors.map(f => f.message + '（' + f.suggestion + '）').join('；') }}</span>
@@ -227,7 +227,7 @@
       <div class="ra-sec ra-footer">
         <div class="ra-url">URL：<code>POST /cluster/reindex-advanced?{{ finalQs }}</code></div>
         <div class="ra-btns">
-          <!-- 五百四十八批：原始 IO 快查——本页最近一次 reindex-advanced 请求/响应原文（ioRecorder 记录环） -->
+          <!-- 原始 IO 快查——本页最近一次 reindex-advanced 请求/响应原文（ioRecorder 记录环） -->
           <button class="btn ghost" data-test="raw-io" aria-label="查看原始 IO（Reindex 高级）" title="最近一次 Reindex 请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIo"><Terminal :size="12" /> 原始 IO</button>
           <button class="btn ghost" @click="rebuildFromForm"><RefreshCcw :size="12" /> 预览 body</button>
           <button v-if="canOps" class="btn pri" @click="submit" :disabled="running">
@@ -237,7 +237,7 @@
       </div>
     </div>
 
-    <!-- 五百六十一批：双色横幅分档单源化——err 档挂 theme.css .err-bar（role=alert，558b 红壳收编
+    <!-- 双色横幅分档单源化——err 档挂 theme.css .err-bar（role=alert，558b 红壳收编
          同范式），ok 档留 .ra-result 素底（ok-soft，去 border/radius 双写保语义绿）；
          单节点 class 三元换装，DOM 结构与子元素零变动 -->
     <div v-if="result" :class="result?.error ? 'err-bar' : 'ra-result'" :role="result?.error ? 'alert' : undefined">
@@ -250,24 +250,24 @@
       <div v-if="result.error" class="ra-err-full mono">{{ errText }}</div>
       <div class="ra-result-b">
         <span v-if="result.taskId">taskId：<code>{{ result.taskId }}</code>
-          <!-- 五百五十七批：死 API 激活——api.progress(taskId) 一次性拉取（InternalEsIndexRebuildController
+          <!-- 死 API 激活——api.progress(taskId) 一次性拉取（InternalEsIndexRebuildController
                /progress 端点现成，Java 零改）；行内三态中文（进行中 x/y / 已完成 / 查不到降级）。
                UpdateByQueryView StatusPill 旁同款钮，两侧 data-test 各自独立 -->
           <button class="btn ghost sm" data-test="ra-progress" :disabled="progressLoading"
             title="拉取该任务当前进度（一次性查询，不挂轮询）" @click="queryTaskProgress">查进度</button>
           <span v-if="progressLoading || progressText" role="status" class="ra-prog">{{ progressLoading ? '进度查询中…' : progressText }}</span>
         </span>
-        <!-- 五百一十九批：took 裸 ms → TookBadge 四档语义徽标（BulkEditorView 同款）；
+        <!-- took 裸 ms → TookBadge 四档语义徽标（BulkEditorView 同款）；
              total/created/updated → MetaStrip 值亮标签暗（taskId/path 保留 code 形态不进 items） -->
         <span v-if="typeof result.took === 'number'">took：<TookBadge :ms="result.took" /></span>
         <MetaStrip v-if="raResultMeta.length" :items="raResultMeta" />
         <span v-if="result.finalPath">path：<code>{{ result.finalPath }}</code></span>
       </div>
-      <details class="ra-result-raw"><summary>原始响应</summary><pre class="json-view" v-html="prettyResultHtml"></pre></details><!-- 第十批：裸 pre → highlightJson 高亮 -->
+      <details class="ra-result-raw"><summary>原始响应</summary><pre class="json-view" v-html="prettyResultHtml"></pre></details><!-- ：裸 pre → highlightJson 高亮 -->
       <div class="ra-result-jump" v-if="result.error || result.taskId || typeof result.total === 'number'">
         <button v-if="result.error && canOps" class="btn ghost sm" :disabled="running" @click="submit"><RotateCcw :size="12" /> 重试</button>
         <button v-if="result.taskId" class="btn ghost sm" @click="goTasks"><ArrowRight :size="12" /> 到任务树查看进度</button>
-        <!-- 九十八批：写类视图验证去處收口——同步完成（total 在场）时立即可查；异步场景建议到任务树确认完成后再来 -->
+        <!-- 写类视图验证去處收口——同步完成（total 在场）时立即可查；异步场景建议到任务树确认完成后再来 -->
         <button v-if="destIndex && (typeof result.total === 'number' || !result.taskId)" class="btn ghost sm"
           @click="router.push({ path: '/search', query: { mode: 'dsl', idx: destIndex } })">
           <Search :size="12" /> 去查询验证
@@ -275,7 +275,7 @@
       </div>
     </div>
 
-    <!-- 五百四十八批：原始 IO 弹窗（宿主受控开关；rec 取本页最近一条 reindex-advanced 记录） -->
+    <!-- 原始 IO 弹窗（宿主受控开关；rec 取本页最近一条 reindex-advanced 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
   </div>
 </template>
@@ -287,15 +287,15 @@ import { useRouter } from 'vue-router';
 import { Wand2, Database, Target, Terminal, SlidersHorizontal, Code2, RefreshCcw, Play, Star, AlertTriangle, CheckCircle2, XCircle, ArrowRight, RotateCcw, Search } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
-/* 五百四十八批：原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环） */
+/* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环） */
 import RawIoModal from '../components/RawIoModal.vue';
 import { useAppStore } from '../stores/app';
-import { useAuthStore } from '../stores/auth'; /* 五百七十四批：权限写门真源 */
-import { useQueryHistoryStore } from '../stores/queryHistory'; /* 五百二十七批：执行留痕（写操作入跨模式历史） */
+import { useAuthStore } from '../stores/auth'; /* ：权限写门真源 */
+import { useQueryHistoryStore } from '../stores/queryHistory'; /* ：执行留痕（写操作入跨模式历史） */
 import { friendlyEsError } from '../utils/esError';
 import { permDeniedAdvice } from '../utils/esErrorAdvice'; /* W4c：三视图同构 403 建议收敛单一出处（文案逐字等价） */
 import { useIdxState } from '../composables/urlState';
-import { useTierCycle } from '../composables/useTierCycle'; /* 五百五十八批：ra.scriptH/queryH 三件套收编 */
+import { useTierCycle } from '../composables/useTierCycle'; /* ：ra.scriptH/queryH 三件套收编 */
 import { useScopedDraftState } from '../composables/useScopedDraft';
 import IndexPicker from '../components/IndexPicker.vue';
 import RemoteSourceFields from '../components/RemoteSourceFields.vue'; /* 远程源表单统一件（Xmigrate 同款收编） */
@@ -303,19 +303,19 @@ import { indexNameProblem } from '../utils/indexNameRule'; /* 索引名硬规则
 import { askConfirm } from '../composables/confirm';
 import JsonArea from '../components/JsonArea.vue';
 import MonacoEditor from '../components/MonacoEditor.vue';
-import { useIndexFields } from '../composables/useIndexFields'; /* 第十批：dsl-assist 字段源 */
-import { useTermsSuggest } from '../composables/useTermsSuggest'; /* 六百六十二批：值位动态候选（661 范式） */
-import { useDebounceFn } from '../composables/useDebounceFn'; /* 533 批：lint 划线防抖统一件 */
-import { lintDsl } from '../utils/dslLint'; /* 五百二十五批：DSL 静态体检 */
-import { useInputLint, patternRule, SLICES_RE, RPS_RE, TIME_RE } from '../composables/useInputLint'; /* 五百六十一批：五参数结构化校验正则单源 */
-import DraftBadge from '../components/DraftBadge.vue'; /* 第十批：草稿恢复徽标统一件 */
-import { highlightJson } from '../utils/jsonc'; /* 第十批：原始响应高亮 */
-import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue'; /* 五百一十九批：结果指标串统一件 */
-import TookBadge from '../components/TookBadge.vue'; /* 五百一十九批：took 四档语义徽标 */
+import { useIndexFields } from '../composables/useIndexFields'; /* ：dsl-assist 字段源 */
+import { useTermsSuggest } from '../composables/useTermsSuggest'; /* ：值位动态候选（661 范式） */
+import { useDebounceFn } from '../composables/useDebounceFn'; /* ：lint 划线防抖统一件 */
+import { lintDsl } from '../utils/dslLint'; /* ：DSL 静态体检 */
+import { useInputLint, patternRule, SLICES_RE, RPS_RE, TIME_RE } from '../composables/useInputLint'; /* ：五参数结构化校验正则单源 */
+import DraftBadge from '../components/DraftBadge.vue'; /* ：草稿恢复徽标统一件 */
+import { highlightJson } from '../utils/jsonc'; /* ：原始响应高亮 */
+import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue'; /* ：结果指标串统一件 */
+import TookBadge from '../components/TookBadge.vue'; /* ：took 四档语义徽标 */
 
 const store = useAppStore();
 const router = useRouter();
-/* 五百七十四批：权限写门——reindex-advanced 同批升 rank3 归 ops 档，VIEWER 不显示执行/重试入口 */
+/* 权限写门——reindex-advanced 同批升 rank3 归 ops 档，VIEWER 不显示执行/重试入口 */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/reindex-advanced', store.target));
 
@@ -330,24 +330,24 @@ const raRemoteConn = computed<any>({
   get: () => ({ scheme: '', host: srcRemote.value, port: '', username: srcRemoteUser.value, password: srcRemotePwd.value }),
   set: (v) => { srcRemote.value = v.host; srcRemoteUser.value = v.username || ''; srcRemotePwd.value = v.password || ''; },
 });
-/* R50→R60：源索引并轨 useIdxState——深链 ?src= 归并为全站统一 ?idx=，上下行顶栏。
-   本页是写类视图（R61 本不入 follow 白名单），但源索引只是执行引用、写副作用落在
+/* →：源索引并轨 useIdxState——深链 ?src= 归并为全站统一 ?idx=，上下行顶栏。
+   本页是写类视图（ 本不入 follow 白名单），但源索引只是执行引用、写副作用落在
    dest，故开跟随并加条件 guard：destIndex 已有手填/草稿恢复值时冻结跟随——
    src 在 dest 定好后被悄悄换掉，会变成「为 A 配的目标搬 B 的数据」。
    guard 闭包迟引用下方声明的 destIndex：仅由 pickedIdx 变更触发、setup 完成后才求值，无 TDZ。
-   533 批记档·三范式差异（有意并存，勿后续误统一）：索引引用 = 只读 chip（查询类页
+   记档·三范式差异（有意并存，勿后续误统一）：索引引用 = 只读 chip（查询类页
    CurrentIdxChip）/ 回填钮（写类页手填 IndexPicker）/ 条件 follow（本页独有——执行引用
    跟随 pickedIdx，写副作用落在 dest 才需冻结 guard）。 */
 const srcIndex = useIdxState({ follow: () => !destIndex.value.trim() });
 const srcSize = ref('1000');
 const srcQueryStr = ref('');
 
-/* 第十批：源 query 编辑器接字段智能补全（dsl-assist 全站字段源标准，三行写法参照
+/* 源 query 编辑器接字段智能补全（dsl-assist 全站字段源标准，三行写法参照
    AdhocRebuildView arSettingsAssist）。本地源索引变化时预载字段（幂等+缓存）；远程源与
    pattern 形态 mappingDetail 失败零降级（fields 空＝无候选，不影响手输）。bodyKind 缺省
    即 'search'（MonacoEditor 分派缺省），query 体语义正好。 */
 const { fields: raSrcFields, ensure: ensureRaFields } = useIndexFields(() => srcIndex.value);
-/* 六百六十二批：值位动态候选接线（661 范式照抄）——useTermsSuggest 实例+terms 闭包双件同源，索引源与 fields 同源现调现读 */
+/* 值位动态候选接线（661 范式照抄）——useTermsSuggest 实例+terms 闭包双件同源，索引源与 fields 同源现调现读 */
 const raTerms = useTermsSuggest(() => srcIndex.value);
 const raQueryAssist = { fields: () => raSrcFields.value, terms: (f: string, p: string) => raTerms.suggestAsync(f, p) };
 /* 手编整身 body 编辑器同源透传 src 字段（raQueryAssist 同构；bodyKind 缺省 search 档，
@@ -364,16 +364,16 @@ const destPipeline = ref('');
 /* script */
 const scriptLang = ref('');
 const scriptSource = ref('');
-/* 五百二十八批：painless 脚本面 28vh → 42vh 弹性档 + usePref 跨会话记忆
+/* painless 脚本面 28vh → 42vh 弹性档 + usePref 跨会话记忆
    （SqlConsoleView codeH「高」钮三档循环同款，editorTiers 族口径：st.editorH/qx.taH 先例） */
 const SCRIPT_H_TIERS = ['max(110px, 42vh)', 'max(150px, 56vh)', 'max(220px, 72vh)'];
-/* 五百五十八批：usePref+手写 cycle 收编 useTierCycle 单源（ra.scriptH 键不变=零迁移；
+/* usePref+手写 cycle 收编 useTierCycle 单源（ra.scriptH 键不变=零迁移；
    默认档=首位，defVal 缺省；cycle 语义等值） */
 const { v: scriptH, cycle: cycleScriptH } = useTierCycle('ra.scriptH', SCRIPT_H_TIERS);
-/* 五百三十批：src query 编辑框三档行数循环 + 跨会话记忆（script 面既有档零改动；
+/* src query 编辑框三档行数循环 + 跨会话记忆（script 面既有档零改动；
    走 JsonArea 既有 rows 写法而非 fill 容器——默认档 4 行 92px 不变，rawBody fill '100%'
    stub 特征保持唯一，rebuildThreeState A1/A2 黑名单锁不破）。
-   五百五十八批：收编 useTierCycle 单源（ra.queryH 键不变；默认档=首位，defVal 缺省） */
+   收编 useTierCycle 单源（ra.queryH 键不变；默认档=首位，defVal 缺省） */
 const QUERY_H_TIERS = [4, 10, 18];
 const { v: queryH, cycle: cycleQueryH } = useTierCycle('ra.queryH', QUERY_H_TIERS);
 
@@ -386,7 +386,7 @@ const requestsPerSecond = ref('');
 const scroll = ref('');
 const timeout = ref('');
 const waitForActiveShards = ref('');
-/* 五百六十一批：五参数裸 input 接 useInputLint 既有正则出校验提示（UpdateByQueryView :52/:68
+/* 五参数裸 input 接 useInputLint 既有正则出校验提示（UpdateByQueryView :52/:68
    姊妹面判例同款）——@blur 失焦校验、输入即清防旧 hint 滞留；hint msg 与 :title 释义口径随
    UBQ 同参数。slices/requests_per_second/scroll/timeout 走既有 SLICES_RE/RPS_RE/TIME_RE；
    wait_for_active_shards 无既有正则，patternRule 内联 all/整数 */
@@ -413,11 +413,11 @@ watch(waitForActiveShards, () => wfasClear());
 
 const showBody = ref(false);
 const rawBody = ref('');
-/* R121: 表单现场(除 remote 凭据三字段——凭据永不落盘)进会话草稿，切页/刷新可复原；
+/* 表单现场(除 remote 凭据三字段——凭据永不落盘)进会话草稿，切页/刷新可复原；
    挂载时草稿有非默认稿才回填，防覆盖深链 ?src= 的初值 */
 const FORM_DEF = { srcSize: '1000', srcQueryStr: '', destIndex: '', destOpType: '', destVersionType: '', destPipeline: '', scriptLang: '', scriptSource: '', conflicts: '', slices: 'auto', refresh: '', waitForCompletion: 'false', requestsPerSecond: '', scroll: '', timeout: '', waitForActiveShards: '', rawBody: '' };
 const formDraft = useScopedDraftState('form', { route: 'reindex-advanced' }, FORM_DEF);
-/* 第十批：草稿恢复徽标——顶层 ref 接出供模板自动解包（DraftBadge 统一件接入形态同 AdhocRebuildView） */
+/* 草稿恢复徽标——顶层 ref 接出供模板自动解包（DraftBadge 统一件接入形态同 AdhocRebuildView） */
 const draftRestored = formDraft.restored;
 /* 745 G160：挂载初始化期守卫——草稿恢复回填与挂载首拍 body 快照都是程序化写，若经下方
    watch 深写草稿对象会把 restored 在首渲染前翻 false，DraftBadge 恒不可见（AdhocRebuild
@@ -442,12 +442,12 @@ if (formDraft.restored.value) {
 /* G3-A1：bodyTouched 脏标记——未手编时 rawBody 恒随表单同步（含收起态），
    手编/carry 注入后表单改动不再覆写 body；submit 按此取舍，杜绝提交挂载时刻的陈旧快照 */
 const bodyTouched = ref(false);
-/* R121: 草稿恢复了手编 body → 同步脏标记（bodyTouched 声明在其后，单独回填） */
+/* 草稿恢复了手编 body → 同步脏标记（bodyTouched 声明在其后，单独回填） */
 if (formDraft.restored.value) bodyTouched.value = !!formDraft.state.value.rawBody;
 const running = ref(false);
 const result = ref<any>(null);
 
-/* 五百四十八批：原始 IO 快查（546 六页同款三件套）——/cluster/reindex-advanced 全站独占；
+/* 原始 IO 快查（546 六页同款三件套）——/cluster/reindex-advanced 全站独占；
    判空 rec=null（本页还没执行过操作）时 notify 引导，不开空弹窗 */
 const rawIoShow = ref(false);
 const rawIoRec = ref<RawIoRec | null>(null);
@@ -484,7 +484,7 @@ const bodyJsonErr = computed(() => {
   if (!s) return '';
   try { JSON.parse(s); return ''; } catch (e: any) { return 'body JSON 无法解析：' + String(e?.message ?? e).slice(0, 90) + '——已阻断提交，请修正或点「预览 body」回到表单权威'; }
 });
-/* 五百二十五批：lintDsl 静态体检（UpdateByQueryView 最简接线同款）——srcQuery 与手编 body 各一路，
+/* lintDsl 静态体检（UpdateByQueryView 最简接线同款）——srcQuery 与手编 body 各一路，
    fields 同 raQueryAssist 源（raSrcFields）；JSON 解析失败静默（srcQueryErr/bodyJsonErr 红字已报）。
    body lint 出提示的前提是手编态（未手编时 rawBody 恒由表单生成，语义由表单权威兜着） */
 const raQueryLint = computed(() => {
@@ -500,7 +500,7 @@ const raBodyLint = computed(() => {
 });
 const raBodyLintErrors = computed(() => raBodyLint.value.filter(f => f.severity === 'error'));
 const raBodyLintWarns = computed(() => raBodyLint.value.filter(f => f.severity === 'warning' || f.severity === 'hint'));
-/* 533 批：lint findings 注入编辑器划线（SearchSandboxView 范式：debounce 250ms 防每敲一键
+/* lint findings 注入编辑器划线（SearchSandboxView 范式：debounce 250ms 防每敲一键
    全量 findMatches；info 降级 hint——MonacoEditor marker 档只收 warning/hint/error；
    banner 提示条保留双通道）——srcQuery 与手编 body 两路各自接各自的 JsonArea 实例 */
 const raQueryJaRef = ref<InstanceType<typeof JsonArea> | null>(null);
@@ -515,7 +515,7 @@ const queueBodyLintMarkers = useDebounceFn(() => {
 watch(rawBody, () => { queueBodyLintMarkers(); }, { immediate: true });
 const errText = computed(() => friendlyEsError(String(result.value?.message ?? '')));
 
-/* 五百一十九批：结果指标 total/created/updated → MetaStrip items（在场的才渲染；took 走 TookBadge）。
+/* 结果指标 total/created/updated → MetaStrip items（在场的才渲染；took 走 TookBadge）。
    745 G156：三段补中文语义 tip（:title 悬停+help 档；英文 label 留检索，G133 双语同款） */
 const raResultMeta = computed<MetaStripItem[]>(() => {
   const r = result.value;
@@ -596,7 +596,7 @@ async function submit() {
       waitForActiveShards: waitForActiveShards.value,
     });
     result.value = r;
-    /* 五百二十七批：执行留痕入查询历史（526 遗留「写操作无历史不可回溯」）——R100 既有
+    /* 执行留痕入查询历史（526 遗留「写操作无历史不可回溯」）—— 既有
        push 一行落账，不新增 store API；body 是 reindex 结构、非六查询通道之一，mode 落
        'reindex'（历史面板 modeLabel 回退原样显示徽标；回放经查询工作台按 DSL 档兜底打开） */
     useQueryHistoryStore().push('reindex', body, destIndex.value);
@@ -623,7 +623,7 @@ function goTasks() {
   else router.push('/task-tree');
 }
 
-/* 五百五十七批：死 API 激活——api.progress(taskId) 一次性拉取（后端 ReindexProgress：
+/* 死 API 激活——api.progress(taskId) 一次性拉取（后端 ReindexProgress：
    status=RUNNING|COMPLETED|UNKNOWN + total/created/updated/deleted 结构化计数）。
    三态中文：RUNNING=进行中 x/y、COMPLETED=已完成、UNKNOWN/拉取失败=查不到降级
    （任务完成后从 _tasks 消失/过期是常态路径，降级是预期分支不是异常，不 toast 轰炸）。
@@ -651,7 +651,7 @@ const progressText = computed(() => {
 const prettyResult = computed(() => {
   try { return JSON.stringify(result.value, null, 2); } catch { return String(result.value); }
 });
-/* 第十批：原始响应裸 pre → highlightJson 高亮（输出已转义，v-html 安全） */
+/* 原始响应裸 pre → highlightJson 高亮（输出已转义，v-html 安全） */
 const prettyResultHtml = computed(() => highlightJson(prettyResult.value));
 
 function favorite() {
@@ -700,27 +700,27 @@ onMounted(async () => {
 .ra-warn-inline b { font-weight: 600; }
 .ra-warn-inline i { font-style: normal; color: var(--text-muted); }
 /* 单卡连体：Source/Dest/Script/全局参数/body/footer 一卡分区（分组标题+边框分隔，消灭卡缝）。
-   五百五十一批：ra-card 列表行卡壳退役（立法④：panel 底+border-subtle 全框+radius:10px 整块
+   ra-card 列表行卡壳退役（立法④：panel 底+border-subtle 全框+radius:10px 整块
    消除 → border-top 分节流，xm-res 547 判例语言）；ra-top border-bottom 与 ra-sec 间
    border-top 既有内部分节线原样承接分界 */
 .ra-card { border-top: 1px solid var(--border-subtle); margin-bottom: var(--sp-3); }
 .ra-sec { padding: var(--sp-3) var(--sp-4); }
 .ra-sec + .ra-sec { border-top: 1px solid var(--border-subtle); }
-/* 525 批：.ra-card-tt 退役换全局 .card-t（字重 600→650 视觉无感；margin var(--sp-3)→10px、
+/* .ra-card-tt 退役换全局 .card-t（字重 600→650 视觉无感；margin var(--sp-3)→10px、
    gap→8px 随全局档；附带 color/letter-spacing 与 compact 密度档 margin 联动） */
 .ra-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-3); }
 .ra-f { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
 .ra-f.wide { grid-column: span 2; }
-/* 五百六十二批：编辑器外框退役（立法③，560 批 sq-editor/be-card-editor 同语言视图侧
+/* 编辑器外框退役（立法③， sq-editor/be-card-editor 同语言视图侧
    独立追加）；本页仅 source 一处 Monaco（ra-f.wide 独占整行），label 行自承分界 */
 .ra-f.wide > :deep(.monaco-host) { border: none; border-radius: 0; }
 .ra-f label { font-size: var(--fs-xs); color: var(--text-muted); }
-/* 五百三十批：query 编辑框高度档 label 行（钮右靠）；行数档走 JsonArea 既有 rows 写法，无容器层 */
+/* query 编辑框高度档 label 行（钮右靠）；行数档走 JsonArea 既有 rows 写法，无容器层 */
 .ra-qh { display: flex; align-items: center; gap: var(--sp-1); }
 /* RemoteSourceFields 统一件在 4 列栅格中独占一整行（原远程源三框各占一格） */
 .ra-remote { grid-column: 1 / -1; }
 .ra-qerr { font-size: var(--fs-xs); color: var(--err); }
-/* 五百六十一批：.ra-lint 私有三件套退役 → theme.css 单源 .lint-bar/.lint-bar-warn/.lint-bar-err
+/* .ra-lint 私有三件套退役 → theme.css 单源 .lint-bar/.lint-bar-warn/.lint-bar-err
    直接消费（模板 class 换装、DOM 结构保形；margin-top 落位随主题档） */
 /* sem-rm 智能纠错：dest 名即时红字 + 手编 body JSON 非法卡头红字（err 档） */
 .ra-derr { font-size: var(--fs-xs); color: var(--err); line-height: 1.5; }
@@ -739,15 +739,15 @@ onMounted(async () => {
    W4c：body 编辑器 fill 弹性后由本区承接高度——min-height 对齐原 rows=14 定高
    （282px Monaco + JsonArea 工具条），竖向可随内容成长 */
 .ra-body { display: flex; flex-direction: column; min-height: 316px; }
-/* 五百五十七批：.ja 退壳——JsonArea fill 已吃满 .ra-body 分节（RankDebugView:418 等五先例），
+/* .ja 退壳——JsonArea fill 已吃满 .ra-body 分节（RankDebugView:418 等五先例），
    外框 border/圆角随壳退役，与分节卡一体观感 */
 .ra-body :deep(.ja) { flex: 1; min-height: 0; border: none; border-radius: 0; }
-/* 五百二十七批：.ra-body-tt 规则随 .card-t.sm 收编退役（升档注释见模板） */
+/* .ra-body-tt 规则随 .card-t.sm 收编退役（升档注释见模板） */
 .ra-footer { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); flex-wrap: wrap; }
 .ra-url { font-size: var(--fs-xs); color: var(--text-muted); min-width: 0; overflow-x: auto; }
 .ra-url code { background: var(--code-bg); padding: var(--sp-0) var(--sp-1h); border-radius: 3px; }
 .ra-btns { display: flex; gap: var(--sp-2); }
-/* 五百六十一批：err 档私造双色双写退役（err-soft 底/err-line 边归 theme.css .err-bar 单源，
+/* err 档私造双色双写退役（err-soft 底/err-line 边归 theme.css .err-bar 单源，
    role=alert 随挂）；ok 档去 radius/边框保语义绿素底（ok-soft）。margin-top/padding 为本页
    落位节奏保留 */
 .ra-result { margin-top: var(--sp-3); padding: var(--sp-3) var(--sp-4); background: var(--ok-soft); color: var(--ok); }
@@ -756,13 +756,13 @@ onMounted(async () => {
 .ra-err-full { max-height: 160px; overflow: auto; margin-top: var(--sp-2); font-size: var(--fs-xs); white-space: pre-wrap; word-break: break-all; color: var(--err); }
 .ra-result-b { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-2); font-size: var(--fs-xs); color: var(--text-muted); }
 .ra-result-b code { background: var(--code-bg); padding: 1px var(--sp-1h); border-radius: 3px; color: var(--text); }
-/* 五百五十七批：查进度行内三态文案（进行中 x/y / 已完成 / 查不到降级） */
+/* 查进度行内三态文案（进行中 x/y / 已完成 / 查不到降级） */
 .ra-prog { color: var(--tx2); }
 .ra-result-raw { margin-top: var(--sp-2); font-size: var(--fs-xs); }
 .ra-result-raw summary { cursor: pointer; color: var(--text-muted); }
 .ra-result-raw pre { background: var(--code-bg); padding: var(--sp-2) var(--sp-3); border-radius: 5px; overflow-x: auto; max-height: 300px; margin-top: var(--sp-2); font-size: var(--fs-xs); color: var(--text); }
 .ra-result-jump { margin-top: var(--sp-2); }
-/* 五百一十九批：4 列栅格补响应断点——1100px 降 2 列、900px 降 1 列（§9.3 标准档）；
+/* 4 列栅格补响应断点——1100px 降 2 列、900px 降 1 列（§9.3 标准档）；
    单列档 .ra-f.wide 的 span 2 会撑出隐式列，一并回落 auto */
 @media (max-width: 1100px) { .ra-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ra-f.wide { grid-column: span 2; } }
 @media (max-width: 900px) { .ra-grid { grid-template-columns: minmax(0, 1fr); } .ra-f.wide { grid-column: auto; } }

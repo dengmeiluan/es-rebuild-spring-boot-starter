@@ -4,7 +4,7 @@
       <!-- 原独立工具条 tv2-bar 整体并入页头 actions（横幅层叠 -1） -->
       <template #actions>
         <div class="tv2-acts">
-<!-- 八百一十一批：模板类型 seg 升格（容器 role=group+aria-label+钮 aria-pressed，G192 范式） -->
+<!-- 模板类型 seg 升格（容器 role=group+aria-label+钮 aria-pressed，G192 范式） -->
           <div class="seg" role="group" aria-label="模板类型">
             <!-- KPI 大卡墙退役：两 tab 条数改分段按钮角标（tv2-kpi 两卡删除，计数与 legacy 提示全保留） -->
             <button :class="{ on: tab === 'index' }" :aria-pressed="tab === 'index'" :title="'index_template 已注册 ' + indexTemplates.length + ' 个'" @click="tab = 'index'"><FileCode2 :size="11" /> index_template<i class="tv2-tab-n">{{ indexTemplates.length }}</i></button>
@@ -16,9 +16,9 @@
 <Puzzle :size="11" /> component_template<i class="tv2-tab-n">{{ legacy ? '—' : componentTemplates.length }}</i>
 </button>
           </div>
-          <!-- R41：目标集群 < 7.8 时后端降级读 legacy /_template，前端明示而非静默假装 -->
+          <!-- 目标集群 < 7.8 时后端降级读 legacy /_template，前端明示而非静默假装 -->
           <span v-if="legacy" class="tv2-legacy" title="目标集群版本 < 7.8，已降级读写 legacy /_template；注意 legacy 语法：settings/mappings 在顶层，用 order 而非 priority">legacy /_template</span>
-          <!-- 五百六十批：手写过滤框换装 SearchFilterBar 统一件（全站第 7 胞；558 tv-kw 判例：
+          <!-- 手写过滤框换装 SearchFilterBar 统一件（全站第 7 胞；558 tv-kw 判例：
                v-model 接原 ref 零触、placeholder 逐字保留、Esc 清空/Enter 检索内建语义对齐；
                tv2-kw-wrap 落位类挂根（min() 极窄钳制随迁），tv2-kw 类锚随 input-class 保留在
                input 上；.tv2-input 类保留给「新建模板名」combobox 输入，其皮不属本批改动面） -->
@@ -26,7 +26,7 @@
           <!-- 搜索定位：命中计数 + 上/下一个（Enter/Shift+Enter 在过滤框接线） -->
           <HitNav :count="filtered.length" :current="hitCur" compact @next="hitNext" @prev="hitPrev" />
           <button v-if="canOps" class="btn sm" @click="openNew"><Plus :size="12" /> 新建 {{ tab === 'index' ? '索引模板' : '组件模板' }}</button>
-          <!-- 五百六十一批：原始请求/响应快查弹窗（RawIo 第六波，558b 判例同形态；
+          <!-- 原始请求/响应快查弹窗（RawIo 第六波，558b 判例同形态；
                路径子串 '/cluster/templates'=本页 list/put/delete 全通道，本页独占调用者） -->
           <button class="btn sm ghost" data-test="raw-io" aria-label="查看原始 IO（模板）" title="最近一次模板列表/保存/删除请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIo">
             <Terminal :size="12" /> 原始 IO
@@ -39,7 +39,7 @@
     </PageHeader>
 
     <div class="tv2-grid" :style="tv2LeftW > 0 ? { '--tv2-left-w': tv2LeftW + 'px' } : undefined">
-      <!-- 左：列表。五百四十七批：pane 壳三件套（border/bg/radius）退役（535 SqlBridge pane
+      <!-- 左：列表。：pane 壳三件套（border/bg/radius）退役（535 SqlBridge pane
            直贴立法续扫）——flex/overflow 布局语义与 .card padding 载体原样迁 .tv2-list -->
       <div class="tv2-list">
         <div class="card-t">
@@ -84,8 +84,8 @@
             </button>
           </div>
         </div>
-        <!-- R41 §1：失败/过滤隐藏/真无三态分明——失败态已由互斥链外顶置 err-bar 承担（G6-B1）
-             第十批收尾：两处裸 .empty 迁 EmptyState compact（左列表窄列），清除过滤改 actionText 等价保留 -->
+        <!--  §1：失败/过滤隐藏/真无三态分明——失败态已由互斥链外顶置 err-bar 承担（G6-B1）
+             两处裸 .empty 迁 EmptyState compact（左列表窄列），清除过滤改 actionText 等价保留 -->
         <EmptyState v-else-if="filter && (tab === 'index' ? indexTemplates : componentTemplates).length" compact :icon="ListFilter"
           :text="'无匹配模板（共 ' + (tab === 'index' ? indexTemplates : componentTemplates).length + ' 个，被当前关键字隐藏）'"
           action-text="清除过滤" @action="filter = ''" />
@@ -94,12 +94,12 @@
           hint="可点右上角「新建」创建（注：6.x 集群仅支持 legacy _template）" />
       </div>
 
-      <!-- 524 批：列表/编辑器分栏拖拽柄（中缝 11px 占位列；窄屏堆叠态隐藏） -->
+      <!-- 列表/编辑器分栏拖拽柄（中缝 11px 占位列；窄屏堆叠态隐藏） -->
       <SplitHandle axis="vertical" :size="tv2LeftW > 0 ? tv2LeftW : 340" :min="220" :max="2000"
         label="列表/编辑器分栏" class="tv2-split"
         @resize-end="(s: number) => tv2LeftW = clampTv2W(s)" @reset="tv2LeftW = 0" />
 
-      <!-- 右：编辑器（五百四十七批：pane 壳退役，布局语义与 padding 载体迁 .tv2-editor） -->
+      <!-- 右：编辑器（：pane 壳退役，布局语义与 padding 载体迁 .tv2-editor） -->
       <div class="tv2-editor">
         <div class="card-t">
           <template v-if="selected || newMode">
@@ -121,7 +121,7 @@
 
         <div v-if="newMode" class="tv2-newname">
           <label>名称：</label>
-          <!-- 524 批：原生 datalist 收编 usePopupList 轻量形态（XmigrateView 同款就地渲染）——
+          <!-- 原生 datalist 收编 usePopupList 轻量形态（XmigrateView 同款就地渲染）——
                原生 datalist 触发行为随浏览器不可控且无法键盘导航，统一骨架带来 ↑↓/Enter/Esc、
                aria combobox、点击外部关闭；候选=现有模板名按输入过滤（cap 30），手输新名不受影响 -->
           <div class="tv2-nm-wrap" ref="nmRootEl">
@@ -155,10 +155,10 @@
       </div>
     </div>
 
-    <!-- 五百二十五批 W4：删模板确认直挂 ConfirmModal 退役，收编全局 askConfirm
-         （R41 §7 后果前置语义不变，del() 内联承载） -->
+    <!--  W4：删模板确认直挂 ConfirmModal 退役，收编全局 askConfirm
+         （ §7 后果前置语义不变，del() 内联承载） -->
 
-    <!-- 五百六十一批：原始 IO 弹窗（宿主受控开关；rec=最近一条 /cluster/templates 记录） -->
+    <!-- 原始 IO 弹窗（宿主受控开关；rec=最近一条 /cluster/templates 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
   </div>
 </template>
@@ -167,11 +167,11 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch, type Ref } from 'vue';
 import { FileCode2, Puzzle, List, Plus, Trash2, RefreshCw, Save, Info, ListFilter, Terminal } from 'lucide-vue-next';
 import { api, ioRecorder, type RawIoRec } from '../api';
-/* 五百六十一批：原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
+/* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
 import RawIoModal from '../components/RawIoModal.vue';
 import { askConfirm } from '../composables/confirm';
 import PageHeader from '../components/PageHeader.vue';
-import SearchFilterBar from '../components/SearchFilterBar.vue'; /* 五百六十批：页头过滤胶囊统一件 */
+import SearchFilterBar from '../components/SearchFilterBar.vue'; /* ：页头过滤胶囊统一件 */
 import { useScopedDraft } from '../composables/useScopedDraft';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
@@ -184,18 +184,18 @@ import { friendlyEsError } from '../utils/esError';
 import { useInputLint, dupRule } from '../composables/useInputLint';
 import HitNav from '../components/HitNav.vue';
 import { useHitLocate } from '../composables/useHitNav';
-/* 524 批：列表/编辑器分栏拖拽柄 + 模板名候选下拉统一骨架（XmigrateView 轻量形态） */
+/* 列表/编辑器分栏拖拽柄 + 模板名候选下拉统一骨架（XmigrateView 轻量形态） */
 import SplitHandle from '../components/SplitHandle.vue';
 import { usePopupList } from '../composables/usePopupList';
 import type { BodyKind } from '../utils/dslCompletionContext';
 
 const store = useAppStore();
-/* 二百二十一批：权限门禁——模板保存/删除=/cluster/templates/put|delete=CLUSTER 档（rank3+）；
+/* 权限门禁——模板保存/删除=/cluster/templates/put|delete=CLUSTER 档（rank3+）；
    查看模板内容全角色可用 */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/templates/put', store.target));
 
-/* 五百六十一批：原始 IO 三件套（RemoteClusters 557 同款）；判空不开空弹窗 */
+/* 原始 IO 三件套（RemoteClusters 557 同款）；判空不开空弹窗 */
 const rawIoShow = ref(false);
 const rawIoRec = ref<RawIoRec | null>(null);
 function openRawIo() {
@@ -205,7 +205,7 @@ function openRawIo() {
   rawIoShow.value = true;
 }
 
-/* R42 §8.3：tab/过滤词进 URL */
+/*  §8.3：tab/过滤词进 URL */
 const tab = useUrlState('tab', 'index') as Ref<'index' | 'component'>;
 const filter = useScopedDraft('kw', { route: 'templates' }, '').text;
 const indexTemplates = ref<any[]>([]);
@@ -219,16 +219,16 @@ const saving = ref(false);
 const selected = ref<any>(null);
 const newMode = ref(false);
 const newName = ref('');
-/* ux2 Task 11：模板名查重 warn（put 覆盖语义）+ datalist 原生补全，就地校验 */
+/* ux2 ：模板名查重 warn（put 覆盖语义）+ datalist 原生补全，就地校验 */
 const { hint: newNameHint, level: newNameLevel, check: newNameCheck } = useInputLint([
   dupRule(() => [...indexTemplates.value, ...componentTemplates.value].map(t => t.name), '模板'),
 ]);
 watch(newName, v => newNameCheck(v));
-/* 524 批：双栏比例可调（templates.leftW，0=自动 minmax(280px,380px)）——中缝 SplitHandle
+/* 双栏比例可调（templates.leftW，0=自动 minmax(280px,380px)）——中缝 SplitHandle
    拖拽 + usePref 跨会话记忆（ConfigValidator/DiffEditor 同范式） */
 const tv2LeftW = usePref('templates.leftW', 0);
 function clampTv2W(s: number) { return Math.round(Math.min(2000, Math.max(220, s))); }
-/* 524 批：模板名候选迁 usePopupList 统一骨架（轻量形态：就地渲染 + 纯文本行）。
+/* 模板名候选迁 usePopupList 统一骨架（轻量形态：就地渲染 + 纯文本行）。
    候选=index+component 模板名并集按输入过滤（cap 30），Enter/点击回填；查重 lint
    走既有 watch(newName) 不重复接线 */
 const NM_CAP = 30;
@@ -256,7 +256,7 @@ function onNmInput(e: Event) {
   if (!nmOpen.value) nmOpenPanel();
 }
 const editBody = ref('');
-/* ux2 Task 6：模板 body 挂新增 template 档（index_patterns/priority/template 容器等八键全 snippet）。
+/* ux2 ：模板 body 挂新增 template 档（index_patterns/priority/template 容器等八键全 snippet）。
    quality 修复轮零降级门：component tab（顶层仅 template/version/_meta 合法，六键必 400）
    与 legacy 模式（<7.8，顶层 settings/mappings + order 语法不同）降 none 不出层。 */
 const tplAssist = {
@@ -336,7 +336,7 @@ watch(tab, () => cancel());
 async function save() {
   const name = newMode.value ? newName.value.trim() : selected.value?.name;
   if (!name) { store.notify('error', '请填写模板名称'); return; }
-  /* R126: 覆盖同名模板会整体替换其 body，需二次确认 */
+  /* 覆盖同名模板会整体替换其 body，需二次确认 */
   const exists = (tab.value === 'index' ? indexTemplates.value : componentTemplates.value).some(t => t.name === name);
   if (exists) {
     const okOverwrite = await askConfirm({
@@ -363,7 +363,7 @@ async function save() {
   }
 }
 
-/* R41 §7：删除走统一确认。五百二十五批 W4：直挂 ConfirmModal 收编 askConfirm，
+/*  §7：删除走统一确认。 W4：直挂 ConfirmModal 收编 askConfirm，
    模板名入 facts 具名行，后果语句逐字保留 */
 async function del(t: any) {
   if (!await askConfirm({
@@ -411,17 +411,17 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onGlobalKey));
 .tv2-tab-n { font-style: normal; font-size: var(--fs-2xs); line-height: 1; padding: var(--sp-0) 5px; border-radius: var(--r-m); background: var(--bg2); color: var(--tx2); font-variant-numeric: tabular-nums; }
 .seg button.on .tv2-tab-n { background: var(--ac-soft); color: var(--ac-hi); }
 .seg .tv2-tab-n { margin-left: var(--sp-0); }
-/* 五百四十七批：min-width:200px → min(200px,100%) 极窄溢出钳制（529 带兜底范式）。
+/* min-width:200px → min(200px,100%) 极窄溢出钳制（529 带兜底范式）。
    .tv2-input 皮保留给「新建模板名」combobox 输入（过滤框已换装 SearchFilterBar 不在此域） */
 .tv2-input { height: 26px; padding: 0 var(--sp-2); font-size: var(--fs-sm); background: var(--bg2); border: 1px solid var(--line); border-radius: var(--r-xs); color: var(--tx0); font-family: var(--font-mono, monospace); min-width: min(200px, 100%); }
 .tv2-input:focus { border-color: var(--ac); outline: 0; }
-/* 五百六十批：类随换装挂 SearchFilterBar 根——胶囊壳三件套归组件单源，本类只留落位
+/* 类随换装挂 SearchFilterBar 根——胶囊壳三件套归组件单源，本类只留落位
    （min() 极窄钳制随迁，paneShellWave547 锁面）与高度内衬（26px 对齐现行，高度链零动） */
 .tv2-kw-wrap { min-width: min(200px, 100%); height: 26px; padding: 0 var(--sp-2); font-size: var(--fs-sm); }
 
-/* 524 批：双栏比例可调——中缝 11px SplitHandle 占位列，左宽走 --tv2-left-w（默认 minmax(280px,380px) 自适应，0=自动） */
+/* 双栏比例可调——中缝 11px SplitHandle 占位列，左宽走 --tv2-left-w（默认 minmax(280px,380px) 自适应，0=自动） */
 .tv2-grid { display: grid; grid-template-columns: var(--tv2-left-w, minmax(280px, 380px)) 11px minmax(0, 1fr); gap: var(--sp-3); flex: 1; min-height: 480px; }
-/* 五百四十七批：pane 壳（.card 三件套）退役——flex/overflow 布局语义与 .card padding 载体
+/* pane 壳（.card 三件套）退役——flex/overflow 布局语义与 .card padding 载体
    原样迁入无壳类（14px 垂直留白为 .card 刻意值随迁保字面，内容边距零变动） */
 .tv2-list { display: flex; flex-direction: column; overflow: hidden; padding: 14px var(--sp-4); }
 /* G6-B1：err-bar 在卡片内的边距（全局 .err-bar 仅 margin-bottom，卡内需补侧距） */
@@ -442,11 +442,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onGlobalKey));
 .tv2-pri, .tv2-comp { padding: 1px var(--sp-1h); background: var(--ac-soft); color: var(--ac-hi); border-radius: 3px; font-size: var(--fs-xs); }
 .tv2-legacy { padding: var(--sp-0) var(--sp-2); background: var(--warn-soft); color: var(--warn); border: 1px solid var(--warn-line); border-radius: 10px; font-size: var(--fs-xs); font-family: var(--font-mono, monospace); cursor: help; }
 .seg button:disabled { opacity: .45; cursor: not-allowed; }
-/* 第十批收尾：.tv2-clr 随列表空态迁 EmptyState compact 退役（按钮间距归 .es-extra gap） */
+/* .tv2-clr 随列表空态迁 EmptyState compact 退役（按钮间距归 .es-extra gap） */
 
-/* 五百四十七批：pane 壳退役，flex/overflow 布局语义与 .card padding 载体原样迁入 */
+/* pane 壳退役，flex/overflow 布局语义与 .card padding 载体原样迁入 */
 .tv2-editor { display: flex; flex-direction: column; overflow: hidden; padding: 14px var(--sp-4); }
-/* 五百五十七批：.ja 编辑器外框退役（立法③，AnalysisSettings as-card-raw:365 判例同语言）
+/* .ja 编辑器外框退役（立法③，AnalysisSettings as-card-raw:365 判例同语言）
    ——分界由编辑器卡头承接线承担（全局 .card-t 无 border，本批补齐，纯视觉）；
    组件本体零触，flex/高度链零变动 */
 .tv2-editor > .card-t { border-bottom: 1px solid var(--border); padding-bottom: var(--sp-2); }
@@ -455,30 +455,30 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onGlobalKey));
 .tv2-newname { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--line); font-size: var(--fs-sm); }
 .tv2-newname label { color: var(--tx1); }
 .tv2-newname .tv2-input { flex: 1; }
-/* 524 批：模板名候选下拉（usePopupList 就地渲染，absolute 随根） */
+/* 模板名候选下拉（usePopupList 就地渲染，absolute 随根） */
 .tv2-nm-wrap { position: relative; flex: 1; display: flex; min-width: 0; }
 .tv2-nm-drop { position: absolute; top: 100%; left: 0; right: 0; z-index: 40; margin-top: var(--sp-1); background: var(--bg1); border: 1px solid var(--line); border-radius: var(--r-s); box-shadow: var(--shadow-pop); max-height: 240px; overflow: auto; }
 .tv2-nm-item { padding: 5px var(--sp-2h); font-size: var(--fs-xs); cursor: pointer; }
 .tv2-nm-item:hover, .tv2-nm-item.act { background: var(--ac-soft); color: var(--ac-hi); }
 /* G6：引导态归位 EmptyState 后只补「撑满编辑器列 + 垂直居中」；留白归 .empty-state 一处所有；
-   第十批收尾：列表空态亦迁 EmptyState compact，全局 .empty 在本页已无引用 */
+   列表空态亦迁 EmptyState compact，全局 .empty 在本页已无引用 */
 .tv2-ed-empty { height: calc(100% - 42px); justify-content: center; }
 .tv2-hint-tx { font-size: var(--fs-sm); color: var(--tx1); line-height: 1.5; max-width: 460px; text-align: center; }
 .tv2-hint-tx code { background: var(--bg2); padding: 1px 5px; border-radius: 3px; font-size: var(--fs-xs); color: var(--ac-hi); }
 
 
-/* G6-B3：断点归一 §9.3 双档标准——.tv2-grid 双栏→单栏堆叠语义取 1100（原 1000 为 R66 历史值，theme.css 已无该档）。
+/* G6-B3：断点归一 §9.3 双档标准——.tv2-grid 双栏→单栏堆叠语义取 1100（原 1000 为  历史值，theme.css 已无该档）。
    堆叠后 Monaco host 高 calc(100% - 42px) 的父高链 indefinite 会塌陷（AnalyzeView 同构先例）：
    页面放开定高改由内容撑高，编辑器列给定高。 */
 @media (max-width: 1100px) {
   .tv2 { height: auto; min-height: 100%; }
   .tv2-grid { grid-template-columns: minmax(0, 1fr); }
-  /* 524 批：堆叠态拖拽柄隐藏（.df-split 同款） */
+  /* 堆叠态拖拽柄隐藏（.df-split 同款） */
   .tv2-split { display: none; }
-  /* 524 批：编辑器定高 480px 改 vh 弹性档（.rd-card-ed 第十批 max() 同口径——480px 兜底、42vh 跟随视口） */
+  /* 编辑器定高 480px 改 vh 弹性档（.rd-card-ed  max() 同口径——480px 兜底、42vh 跟随视口） */
   .tv2-editor { height: max(480px, 42vh); }
 }
-/* 五百二十八批：900 紧凑微调档（§9.3 口径）——堆叠后编辑器头动作行（保存/删除/格式化等）
+/* 900 紧凑微调档（§9.3 口径）——堆叠后编辑器头动作行（保存/删除/格式化等）
    窄视口允许换行不再右推；列表行工具钮随之自然收纳（表格横滚兜底在全局 .tbl-wrap） */
 @media (max-width: 900px) {
   .tv2-ed-acts { margin-left: 0; flex-wrap: wrap; }

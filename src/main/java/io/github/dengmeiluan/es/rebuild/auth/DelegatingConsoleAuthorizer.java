@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * 组合鉴权器（R37）：宿主委托先行、内置账号兜底。
+ * 组合鉴权器（）：宿主委托先行、内置账号兜底。
  *
  * <p>宿主注册 {@link ConsoleAuthDelegate}（如 宿主 校验 X-Es-Host-Token）后，
  * 每个请求先问 delegate；返回 null（本请求不带宿主凭证）则回落内置
@@ -39,7 +39,7 @@ public class DelegatingConsoleAuthorizer implements EsConsoleAuthorizer {
                     return p;
                 }
             } catch (Exception e) {
-                // 五百五十一批：WARN 末参补 e——降级留痕只有 getMessage 无从定位宿主侧根因，
+                // WARN 末参补 e——降级留痕只有 getMessage 无从定位宿主侧根因，
                 // 堆栈补上；返回 fallback 契约不变
                 LOG.warn("[DelegatingConsoleAuthorizer] 宿主委托鉴权异常（降级内置校验）: {}", e.getMessage(), e);
             }

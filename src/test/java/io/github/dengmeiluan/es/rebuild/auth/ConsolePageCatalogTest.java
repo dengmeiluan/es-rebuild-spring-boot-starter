@@ -56,12 +56,12 @@ public class ConsolePageCatalogTest {
         assertEquals("adhoc-rebuild", catalog.pageOf("/internal/es/index/adhoc-rebuild/prepare").getKey());
         assertEquals("adhoc-rebuild", catalog.pageOf("/internal/es/index/adhoc-rebuild").getKey());
         assertEquals("xmigrate", catalog.pageOf("/internal/es/xmigrate/jobs").getKey());
-        /* 五百九十批·管理域放开（用户裁决）：auth/users 归属 security 页——读键可见用户
-           列表、写键（w:security）放行用户管理（558 批 ADMIN 一刀切随「管理域放」退役）；
+        /* ·管理域放开（裁决）：auth/users 归属 security 页——读键可见用户
+           列表、写键（w:security）放行用户管理（ ADMIN 一刀切随「管理域放」退役）；
            系统管理（/setup/rebind、/clusters/）仍维持 ADMIN 专属（无菜单勾选项对应）。 */
         assertEquals("security", catalog.pageOf("/internal/es/index/auth/users").getKey());
         assertEquals("security", catalog.pageOf("/internal/es/index/auth/users/upsert").getKey());
-        /* 五百七十四批：ops-audit 移出 security 页归属（auth/users 同款收权）——全量审计
+        /* ops-audit 移出 security 页归属（auth/users 同款收权）——全量审计
            回归共享端点走角色门（AUDIT_KEYWORDS rank3）；VIEWER 的 /auth/ops-audit/mine
            特例是自助流水，不受页面归属影响 */
         assertNull(catalog.pageOf("/internal/es/index/auth/ops-audit"));
@@ -82,7 +82,7 @@ public class ConsolePageCatalogTest {
         assertNull(catalog.pageOf("/internal/es/index/health"));
         assertNull(catalog.pageOf("/internal/es/index/cluster/indices"));
         assertNull(catalog.pageOf("/internal/es/index/cluster/health"));
-        /* 五百九十批：cluster/raw 归属 rest 页（REST 直连页写勾选=raw 透传可用） */
+        /* cluster/raw 归属 rest 页（REST 直连页写勾选=raw 透传可用） */
         assertEquals("rest", catalog.pageOf("/internal/es/index/cluster/raw").getKey());
         assertNull(catalog.pageOf("/internal/es/index/cluster/query"));
         assertNull(catalog.pageOf("/internal/es/index/cluster/tasks"));

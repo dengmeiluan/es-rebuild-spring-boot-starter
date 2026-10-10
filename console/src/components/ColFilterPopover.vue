@@ -4,7 +4,7 @@
       <div ref="panelEl" class="cfp float-pop" role="dialog" :aria-label="'筛选 ' + col + ' 列'" :style="{ left: pos.x + 'px', top: pos.y + 'px' }" @click.stop tabindex="-1">
         <div class="cfp-hd mono">
           <span>筛选「{{ col }}」</span>
-          <!-- 五百六十三批：内建组合档 chip（可选 filterMode——缺省不传零渲染，五通道既有
+          <!-- 内建组合档 chip（可选 filterMode——缺省不传零渲染，五通道既有
                消费方弹层零变化；561 双内核走默认槽注入位，本 chip 供未接线通道 opt-in）。
                aria/title 文案与双内核槽钮同语汇（filterModeToggle561 行为锚同串） -->
           <button v-if="filterMode" class="cfp-fmode mono"
@@ -16,7 +16,7 @@
         <input v-if="search" class="cfp-kw mono" type="text" :value="kw"
                :placeholder="`搜索值（共 ${total} 个不同值）…`"
                @input="emit('update:kw', ($event.target as HTMLInputElement).value)" @keydown.stop />
-        <!-- 五百二十批：类型感知区间过滤（QRT/RT/Security 通道）——min/max 双输入，与等值勾选并存 AND；
+        <!-- 类型感知区间过滤（QRT/RT/Security 通道）——min/max 双输入，与等值勾选并存 AND；
              占位缺省「最小/最大值（含）」，date 列由消费方传带 ISO/epoch 示例的占位 -->
         <div v-if="range" class="cfp-range">
           <input class="cfp-range-in mono" type="text" :value="rangeMin"
@@ -27,7 +27,7 @@
                  :placeholder="rangeMaxPh" :aria-label="col + ' 最大值（含）'"
                  @input="emit('set-range', 'max', ($event.target as HTMLInputElement).value)" @keydown.stop />
         </div>
-        <!-- 五百五十二批：列内文本包含行（contains 门控；与等值/区间并存 AND）——
+        <!-- 列内文本包含行（contains 门控；与等值/区间并存 AND）——
              未传 contains 恒不渲染（五通道既有消费方弹层零变化） -->
         <input v-if="contains" class="cfp-kw mono" type="text" :value="containsVal"
                placeholder="包含文本（含即保留）" :aria-label="col + ' 包含文本筛选'"
@@ -38,7 +38,7 @@
                不传（Browser/Plugins/Security）：裸 ∅/String 展示，行为与五处原壳逐字一致 -->
           <span v-if="labelOf" class="mono cfp-val" :title="labelOf(e.v)"><MarkText :text="labelOf(e.v)" :kw="kw" /></span>
           <span v-else class="mono cfp-val">{{ fmtVal(e.v) }}</span>
-          <!-- 五百一十九批：值分布 mini-bar（bars，QRT/RT 通道）——按所显示值最大计数归一的纯 CSS 百分条 -->
+          <!-- 值分布 mini-bar（bars，QRT/RT 通道）——按所显示值最大计数归一的纯 CSS 百分条 -->
           <span v-if="bars" class="cfp-barw" :title="barScopeTip" aria-hidden="true"><span class="cfp-bar" :style="{ width: barPct(e.n) }"></span></span>
           <span class="cfp-n mono" :title="'该值 ' + e.n + ' 行'">{{ e.n }}</span>
         </label>
@@ -52,13 +52,13 @@
 </template>
 
 <script setup lang="ts">
-/* 五百二十四批：列筛选弹层共享壳收编——此前 QRT(qfp)/RT(rfp)/Browser(bw-fp)/Plugins(pl-afp)/
+/* 列筛选弹层共享壳收编——此前 QRT(qfp)/RT(rfp)/Browser(bw-fp)/Plugins(pl-afp)/
    Security(afp) 五份同构手写壳（mask+fixed 面板+「筛选「列」」头+清除+值内搜索+每值计数+Esc 关），
    筛选逻辑本就走共享 useColFilters，此处只统一「壳」。五处差异以可选 props 表达（按实际最小公共集）：
    — search/kw：值内搜索输入（Browser 无）；bars：值分布 mini-bar（仅 QRT/RT）；
    — showHasMore：基数降级提示（仅 QRT/RT 渲染）；range 系列：区间双输入（QRT/RT 类型感知、
      Security httpStatus）；labelOf：MarkText 高亮展示（Browser/Plugins/Security 裸文本）；
-   — fit：视口碰撞自适应+开层聚焦首输入（QRT/RT 222 批语义平移；其余三处保持原静态落点）。
+   — fit：视口碰撞自适应+开层聚焦首输入（QRT/RT 语义平移；其余三处保持原静态落点）。
    z 层级硬约束：弹层必须仍被页面滚动遮罩语义管理（原 1200/1201 上下文层）——.float-pop 自带
    --z-island，局部覆写压回 ctx 档（mask=var(--z-ctx)、面板=calc(var(--z-ctx) + 1)），不升浮岛档。 */
 import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue';
@@ -95,13 +95,13 @@ const props = withDefaults(defineProps<{
   rangeMax?: string;
   rangeMinPh?: string;
   rangeMaxPh?: string;
-  /* 五百五十二批：列内文本包含行（可选——不传=弹层零变化，五通道既有消费方零增量）；
+  /* 列内文本包含行（可选——不传=弹层零变化，五通道既有消费方零增量）；
      contains=true 渲染包含词输入（emit set-contains 交消费方 useColFilters.setContainsFilter） */
   contains?: boolean;
   containsVal?: string;
   /* 视口碰撞自适应 + 打开即聚焦首输入（QRT/RT；其余通道保持静态落点零增量） */
   fit?: boolean;
-  /* 五百六十三批：内建组合档 chip（可选——缺省 undefined 零渲染；传 'AND'/'OR' 显示
+  /* 内建组合档 chip（可选——缺省 undefined 零渲染；传 'AND'/'OR' 显示
      「组合：X」钮，点击 emit toggle-filter-mode 交消费方 useFilterMode.toggleFilterMode） */
   filterMode?: 'AND' | 'OR';
 }>(), {
@@ -119,7 +119,7 @@ const props = withDefaults(defineProps<{
   contains: false,
   containsVal: '',
   fit: false,
-  /* 五百六十三批：内建 chip 缺省 undefined（零渲染——withDefaults 不覆盖可选联合型） */
+  /* 内建 chip 缺省 undefined（零渲染——withDefaults 不覆盖可选联合型） */
   filterMode: undefined,
 });
 
@@ -129,9 +129,9 @@ const emit = defineEmits<{
   (e: 'toggle', v: any): void;
   (e: 'update:kw', v: string): void;
   (e: 'set-range', side: 'min' | 'max', v: string): void;
-  /* 五百五十二批：包含词输入（消费方接线 useColFilters.setContainsFilter） */
+  /* 包含词输入（消费方接线 useColFilters.setContainsFilter） */
   (e: 'set-contains', v: string): void;
-  /* 五百六十三批：内建组合档 chip 点击（消费方接线 useFilterMode.toggleFilterMode） */
+  /* 内建组合档 chip 点击（消费方接线 useFilterMode.toggleFilterMode） */
   (e: 'toggle-filter-mode'): void;
 }>();
 
@@ -162,7 +162,7 @@ watch(() => [props.x, props.y], async ([nx, ny]) => {
   (el.querySelector('input') as HTMLInputElement | null)?.focus();
 }, { immediate: true });
 
-/* 五百六十八批：Esc 收口升 document 捕获级（566 Pagination 立法推广；宪法铁律 D1#5；
+/* Esc 收口升 document 捕获级（566 Pagination 立法推广；宪法铁律 D1#5；
    567 真机实锚）——原 mask/panel 元素级 esc 双挂依赖弹层内持焦点（tabindex=-1 族），
    漏斗钮聚焦时 Esc 关不掉；且 .cfp-kw/.cfp-range-in 的 `@keydown.stop` 掐断冒泡，
    焦点在输入框内同样关不掉。挂载（=开层，消费方条件渲染）即存触发时焦点（漏斗钮），
@@ -192,7 +192,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onDocEsc, true));
 }
 .cfp-hd { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); font-size: var(--fs-2xs); font-weight: 650; color: var(--tx2); letter-spacing: .06em; padding: var(--sp-1) var(--sp-2h) var(--sp-1h); border-bottom: 1px solid var(--line); margin-bottom: 3px; }
 .cfp-clear { border: 0; background: transparent; color: var(--ac-hi); font-size: var(--fs-xs); cursor: pointer; padding: 0; font-family: inherit; }
-/* 五百六十三批：内建组合档 chip（值档与双内核 -fmode 系同款，TableFilteredHint 同串单源语汇） */
+/* 内建组合档 chip（值档与双内核 -fmode 系同款，TableFilteredHint 同串单源语汇） */
 .cfp-fmode { border: 1px solid var(--line); background: transparent; color: var(--info); cursor: pointer; font-size: var(--fs-2xs); border-radius: 3px; padding: 0 var(--sp-1); line-height: 1.4; font-family: inherit; flex-shrink: 0; }
 .cfp-fmode:hover { border-color: var(--info); }
 .cfp-kw { width: 100%; box-sizing: border-box; font-size: var(--fs-xs); padding: 3px var(--sp-2); margin-bottom: var(--sp-1); background: var(--bg1); border: 1px solid var(--line); border-radius: var(--r-xs); color: var(--tx0); outline: none; font-family: inherit; }

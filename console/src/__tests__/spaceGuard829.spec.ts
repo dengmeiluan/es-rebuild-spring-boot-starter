@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { createApp, h, nextTick } from 'vue';
 import SplitHandle from '../components/SplitHandle.vue';
 
-// 八百二十九批·族3 泛 keydown 域收口（826 立法②记档域开刀）。
+// ·族3 泛 keydown 域收口（826 立法②记档域开刀）。
 // Phase 0：全站泛 @keydown（无键位修饰符）37 站点/22 文件三路斥候逐 handler 裁决——
 // 26 处泛 handler：豁免 24（combobox 输入框 14 + 原生 button roving 容器 2 + Monaco
 // 编辑器 Ctrl 组合键面 3 + tabindex=-1 region 地标 2 + 输入框显式放行/纯导航 3）+
@@ -93,7 +93,7 @@ describe('spaceGuard829 全域守卫：role=tab 激活键双通道（826 populat
 describe('spaceGuard829 豁免立法锁', () => {
   it('useRowNav 内核滚层 Space=滚动豁免记档（829 裁决：禁 Space 激活分支回潮）', () => {
     const v = rd('../composables/useRowNav.ts');
-    expect(v).toContain('八百二十九批裁决'); // 豁免立法注释锚
+    expect(v).toContain('裁决'); // 豁免立法注释锚
     expect(v).not.toMatch(/e\.key === ' '/); // 负向锁：滚层容器 Space 保持平台滚动语义
   });
 });

@@ -19,13 +19,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百五十五批：审计 SPI 装配级布线测试——直接调用
+ * 审计 SPI 装配级布线测试——直接调用
  * {@code EsRebuildAutoConfiguration.ConsoleModeConfiguration#consoleOpsAuditStore}
  * 的 @Bean 方法体（jdbc 档 + 桩 DataSource + ObjectProvider 桩），锁定装配分支：
  * <ul>
  *   <li>宿主注册 {@link ConsoleAuditContributor} 且显式开启 host-audit-merge → 查询期并入
  *       宿主记录（合并层生效，宿主记录 source=host）；</li>
- *   <li>宿主注册但未开启（<b>20260922 用户裁决默认关</b>：宿主侧多为匿名登录族，username
+ *   <li>宿主注册但未开启（<b>裁决默认关</b>：宿主侧多为匿名登录族，username
  *       结构性 null 不可读，非本控制台请求不进控制台审计视图）→ 不包合并层；</li>
  *   <li>宿主未注册（getIfAvailable=null）→ 裸 JdbcConsoleOpsAuditStore——「不注册零影响」。</li>
  * </ul>
@@ -139,7 +139,7 @@ public class AuditContributorWiringTest {
         assertEquals("HOST_OP", out.get(0).getAction());
     }
 
-    /** 20260922 用户裁决锚：宿主注册但未显式开启 host-audit-merge（默认关）→ 不包合并层，
+    /** 裁决锚：宿主注册但未显式开启 host-audit-merge（默认关）→ 不包合并层，
      *  非本控制台请求（匿名登录族等 null 用户宿主记录）不进控制台审计视图。 */
     @Test
     public void 宿主注册但默认关hostMerge_装配分支不包合并层_宿主记录不进控制台审计() {

@@ -45,7 +45,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
         return stubRequest(method, uri, contextPath, "", null);
     }
 
-    /** 五百五十八批：带请求头的桩（委托令牌/目标头）——LOGIN 审计事件用例专用。 */
+    /** 带请求头的桩（委托令牌/目标头）——LOGIN 审计事件用例专用。 */
     private static HttpServletRequest stubRequest(String method, String uri, Map<String, String> headers) {
         Map<String, Object> attrs = new HashMap<>();
         InvocationHandler h = (proxy, m, args) -> {
@@ -124,7 +124,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
         String bodyText() { return new String(body.toByteArray(), StandardCharsets.UTF_8); }
     }
 
-    /** 审计捕获桩（五百五十五批：唯一写入口=富事件）。 */
+    /** 审计捕获桩（：唯一写入口=富事件）。 */
     private static class CapturingAudit implements ConsoleOpsAuditStore {
         String action; int httpStatus; String uri; ConsoleOpsAuditEvent last;
         @Override public void record(ConsoleOpsAuditEvent event) {
@@ -140,7 +140,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
         return new ConsolePrincipal("host-u1", ConsoleRole.ADMIN, false, true, "宿主用户", null, grantedPages);
     }
 
-    /** 五百五十八批：可指定角色的委托身份（超管域优先裁决用例——conn 模型用户恒非 ADMIN）。 */
+    /** 可指定角色的委托身份（超管域优先裁决用例——conn 模型用户恒非 ADMIN）。 */
     private static ConsolePrincipal delegatedAs(ConsoleRole role, Set<String> grantedPages) {
         return new ConsolePrincipal("host-u1", role, false, true, "宿主用户", null, grantedPages);
     }
@@ -224,10 +224,10 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
-    public void 五百九十三批_管理域放开_security读键可见用户列表_无键仍PAGE_DENIED() throws Exception {
+    public void 管理域放开_security读键可见用户列表_无键仍PAGE_DENIED() throws Exception {
         CapturingAudit audit = new CapturingAudit();
-        /* 五百九十三批语义升格：users 归属 security 页（pages.json apiPrefixes），读按页读键
-           可见（用户列表）——558 批的 ADMIN 一刀切拦截随「管理域放开」退役；写操作仍须
+        /* 语义升格：users 归属 security 页（pages.json apiPrefixes），读按页读键
+           可见（用户列表）——的 ADMIN 一刀切拦截随「管理域放开」退役；写操作仍须
            w:security 写键（本文件「users 归 security 页_写键放行_无写键仍拒」用例钉死） */
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
                 new HashSet<>(Arrays.asList("conn:c1:security", "conn:c1:overview"))), true, audit);
@@ -242,7 +242,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
                 java.util.Collections.singletonMap("X-Es-Target", "c1")), resp2.proxy, null));
         assertEquals(403, resp2.status);
         assertEquals("PAGE_DENIED", audit.action);
-        /* 五百七十四批：ops-audit 移出 security 页归属——回归共享端点走角色门（rank3），
+        /* ops-audit 移出 security 页归属——回归共享端点走角色门（rank3），
            conn 读键不再放行 VIEWER 的全量审计（auth/users 同款收权） */
         StubResponse respAudit = new StubResponse();
         assertFalse(it.preHandle(stubRequest("GET", "/internal/es/index/auth/ops-audit",
@@ -252,7 +252,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
-    public void 五百五十八批_委托会话首见落LOGIN审计_同令牌去重() throws Exception {
+    public void 委托会话首见落LOGIN审计_同令牌去重() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
                 new HashSet<>(Arrays.asList("conn:c1:overview"))), true, audit);
@@ -317,7 +317,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
     @Test
     public void 非委托身份_带grantedPages_页面门不生效_放行() throws Exception {
         CapturingAudit audit = new CapturingAudit();
-        // 畸形身份（非 delegated 但 grantedPages 非 null）：AND 短路门不生效——Task 11 依赖此语义
+        // 畸形身份（非 delegated 但 grantedPages 非 null）：AND 短路门不生效—— 依赖此语义
         ConsolePrincipal p = new ConsolePrincipal("u", ConsoleRole.ADMIN, true, false, null, null,
                 Collections.singleton("search"));
         ConsoleAuthInterceptor it = interceptor(p, true, audit);
@@ -339,10 +339,10 @@ public class ConsoleAuthInterceptorPageAuthTest {
         assertFalse("页面门已通过，拒绝必须来自角色门", resp.bodyText().contains("\"page\""));
     }
 
-    /* ---------------- 五百七十四批：conn 模型写门 WRITE_DENIED + 内置 VIEWER 角色门强制 ---------------- */
+    /* ---------------- ：conn 模型写门 WRITE_DENIED + 内置 VIEWER 角色门强制 ---------------- */
 
     @Test
-    public void 五百七十四批_conn模型只有读键_写请求WRITE_DENIED403() throws Exception {
+    public void conn模型只有读键_写请求WRITE_DENIED403() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         // conn 模型 VIEWER 只授 indices 页读键（conn:c1:indices）：delete-index 写请求须写键
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
@@ -359,7 +359,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
-    public void 五百七十四批_conn模型写键_写请求放行_短路角色门() throws Exception {
+    public void conn模型写键_写请求放行_短路角色门() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         // 同请求换写键 conn:c1:w:indices：连接模型的写授权即最终裁决——VIEWER 角色门不再二次否决
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
@@ -370,7 +370,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
-    public void 五百七十四批_内置VIEWER角色门强制_高危写端点403报required() throws Exception {
+    public void 内置VIEWER角色门强制_高危写端点403报required() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         // 内置（非 delegated）身份 grantedPages=null：页面门不启用，角色门全量强制
         ConsoleAuthInterceptor it = interceptor(
@@ -396,20 +396,20 @@ public class ConsoleAuthInterceptorPageAuthTest {
         assertNull("拒绝路径在 preHandle 内落审计前不产生动作", audit.action);
     }
 
-    /* ------------- 五百七十五批·用户实报打通：共享低危写端点认 conn 写键（角色×授权形态×端点档位全矩阵） -------------
-       用户实报：飞书授权用户（宿主角色映射恒 VIEWER）持 QA 集群写键，表格编辑提交
+    /* ------------- ·实报打通：共享低危写端点认 conn 写键（角色×授权形态×端点档位全矩阵） -------------
+       实报：飞书授权用户（宿主角色映射恒 VIEWER）持 QA 集群写键，表格编辑提交
        （POST /cluster/update-partial，共享端点无页面归属）被角色门拦——前端 canWriteOn 认
        conn:{tid}:w:* 通配写键开放编辑入口，后端共享端点却不认写键 = 有权限写不进。
-       575 批打通语义（已被 584 升格取代）：conn 模型写键持有者可执行「缺省低危写档」的共享端点；
+       打通语义（已被 584 升格取代）：conn 模型写键持有者可执行「缺省低危写档」的共享端点；
        584 起不限档位（任意写键放行共享写，ADMIN 管理域除外），strict 已随语义升格整体退役。
-       五百八十四批语义升格（用户裁决「按照角色菜单配置的勾选来，按照真正的连接权限菜单 spi 来」）：
+       语义升格（裁决「按照角色菜单配置的勾选来，按照真正的连接权限菜单 spi 来」）：
        conn 模型下勾选即权限——共享写端点不再限 OPERATOR 档（任意写键放行，ADMIN 管理域除外），
        strict 双因子开关整体退役（角色门在连接模型下不复辟）。 */
 
     @Test
-    public void 五百七十五批打通_conn写键VIEWER_共享低危写端点放行_表格编辑提交() throws Exception {
+    public void 打通_conn写键VIEWER_共享低危写端点放行_表格编辑提交() throws Exception {
         CapturingAudit audit = new CapturingAudit();
-        // 断点锚（用户实报场景）：VIEWER + docs 页写键 + POST update-partial（共享端点）→ 放行
+        // 断点锚（实报场景）：VIEWER + docs 页写键 + POST update-partial（共享端点）→ 放行
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
                 new HashSet<>(Arrays.asList("conn:c1:docs", "conn:c1:w:docs"))), true, audit);
         assertTrue(it.preHandle(stubRequest("POST", "/internal/es/index/cluster/update-partial",
@@ -418,7 +418,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
-    public void 五百七十五批打通_仅读键无写键_共享写端点维持角色门403() throws Exception {
+    public void 打通_仅读键无写键_共享写端点维持角色门403() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         // 只授 docs 读键（无 w: 键）：共享写端点仍落角色门——收紧面不因打通扩大
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
@@ -431,7 +431,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
-    public void 五百八十四批_连接勾选即权限_写键放行共享高危档deleteById() throws Exception {
+    public void 连接勾选即权限_写键放行共享高危档deleteById() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         // 584 语义升格：delete-by-id（删文档，CLUSTER→REBUILD_OP 共享端点）不再限 OPERATOR 档——
         // 连接菜单勾了写（任意 w: 键）即可做，角色档在连接模型下不参与裁决
@@ -443,7 +443,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
-    public void 五百八十四批_连接勾选即权限_写键放行共享ilmPolicy写端点() throws Exception {
+    public void 连接勾选即权限_写键放行共享ilmPolicy写端点() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         // PUT /cluster/ilm/policy（CLUSTER→REBUILD_OP 共享端点）：同语义放行
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
@@ -453,13 +453,13 @@ public class ConsoleAuthInterceptorPageAuthTest {
         assertNull(audit.action);
     }
 
-    /* ------------- 五百九十三批·管理域放开（用户裁决「管理域放」）：raw/users 归属菜单页按勾选裁决 -------------
+    /* ------------- ·管理域放开（裁决「管理域放」）：raw/users 归属菜单页按勾选裁决 -------------
        raw 归 rest 页（POST /cluster/raw 归 REST 直连页写勾选）、users 归 security 页（用户管理
        归安全中心写勾选）——es-console-pages.json apiPrefixes 归属后页面门自然接管（读键可见+
        写键 WRITE_DENIED）；系统管理（/setup/rebind 重绑、/clusters/ 连接档案）无菜单勾选项
        对应且为授权体系载体，维持 ADMIN 专属。静态模型（SPI 未启用）维持角色档 ADMIN。 */
     @Test
-    public void 五百九十三批_管理域放开_raw归rest页_写键放行() throws Exception {
+    public void 管理域放开_raw归rest页_写键放行() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
                 new HashSet<>(Arrays.asList("conn:c1:rest", "conn:c1:w:rest"))), true, audit);
@@ -469,7 +469,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
-    public void 五百九十三批_管理域放开_users归security页_写键放行_无写键仍拒() throws Exception {
+    public void 管理域放开_users归security页_写键放行_无写键仍拒() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         // 有 security 写键：用户管理（POST /auth/users/upsert）放行
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
@@ -486,11 +486,11 @@ public class ConsoleAuthInterceptorPageAuthTest {
         assertTrue(resp2.bodyText().contains("WRITE_DENIED"));
     }
 
-    /* ------------- 五百九十四批·系统管理端点也按连接勾选放开（用户裁决「rebind/clusters 这个也要」）-------------
+    /* ------------- ·系统管理端点也按连接勾选放开（裁决「rebind/clusters 这个也要」）-------------
        语义：conn 模型写键持有人（hasAnyWriteKey）=宿主授过写权的管理者，可管理连接档案
        （save/delete/sync）与重绑控制集群（rebind）；无写键维持 403（负锚保判别力）。 */
     @Test
-    public void 五百九十四批_系统管理放开_写键持有人可管连接档案() throws Exception {
+    public void 系统管理放开_写键持有人可管连接档案() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
                 new HashSet<>(Arrays.asList("conn:c1:rest", "conn:c1:w:rest", "conn:c1:security", "conn:c1:w:security"))), true, audit);
@@ -500,7 +500,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
-    public void 五百九十四批_系统管理放开_写键持有人可重绑控制集群() throws Exception {
+    public void 系统管理放开_写键持有人可重绑控制集群() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
                 new HashSet<>(Arrays.asList("conn:c1:rest", "conn:c1:w:rest"))), true, audit);
@@ -510,7 +510,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
-    public void 五百九十批_系统管理无写键_维持ADMIN角色档403_负锚() throws Exception {
+    public void 系统管理无写键_维持ADMIN角色档403_负锚() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         // 仅读键（无任意 w: 键）：系统管理端点维持 ADMIN 档拒绝（静态/连接模型同语义）
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
@@ -527,7 +527,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
-    public void 五百九十三批_静态模型管理域维持角色档_raw无授权VIEWER仍拒() throws Exception {
+    public void 静态模型管理域维持角色档_raw无授权VIEWER仍拒() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         // 静态模型（grantedPages=null，SPI 未启用）：raw 维持 ADMIN 角色档兜底
         ConsoleAuthInterceptor it = interceptor(
@@ -539,7 +539,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
-    public void 五百七十五批打通_OPERATOR纯角色无写键_低危共享写端点角色门放行不回归() throws Exception {
+    public void 打通_OPERATOR纯角色无写键_低危共享写端点角色门放行不回归() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         // OPERATOR（无任何 grantedPages=null，非 conn 模型）：角色门既有放行路径不回归
         ConsoleAuthInterceptor it = interceptor(
@@ -548,10 +548,10 @@ public class ConsoleAuthInterceptorPageAuthTest {
                 new StubResponse().proxy, null));
     }
 
-    /* ---------------- 五百七十八批：打通面角落矩阵（target 错配 / 桶成员逐一 / 静态模型 / 读请求不受扰） ---------------- */
+    /* ---------------- ：打通面角落矩阵（target 错配 / 桶成员逐一 / 静态模型 / 读请求不受扰） ---------------- */
 
     @Test
-    public void 五百七十八批打通_target错配_c1写键救不了c2的共享写请求() throws Exception {
+    public void 打通_target错配_c1写键救不了c2的共享写请求() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         // hasAnyWriteKey 按 targetId 查（conn:{target}:w: 前缀）：c1 的写键对 c2 的请求无效
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
@@ -565,7 +565,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
-    public void 五百七十八批打通_共享低危写桶成员逐一放行锚() throws Exception {
+    public void 打通_共享低危写桶成员逐一放行锚() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         // 桶成员=pageOf==null（契约核实共享）且 requiredRole==OPERATOR（不在 rank3/readonly/admin 清单）的写端点
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
@@ -590,7 +590,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
-    public void 五百七十八批打通_静态键模型_共享写端点维持角色门() throws Exception {
+    public void 打通_静态键模型_共享写端点维持角色门() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         // grantedPages 全静态键（无 conn: 前缀）→ inConnModel=false：静态键本就不授写，永不因写键语义放行
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
@@ -603,7 +603,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
-    public void 五百七十八批打通_写键持有人读请求不受扰_GET照旧放行() throws Exception {
+    public void 打通_写键持有人读请求不受扰_GET照旧放行() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         // GET 本就 VIEWER 放行（requiredRole=VIEWER 先于一切），打通分支只动写路径——防回归
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,

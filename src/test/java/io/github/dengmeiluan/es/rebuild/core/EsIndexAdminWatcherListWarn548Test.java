@@ -22,7 +22,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 
 /**
- * 五百四十八批：{@link EsIndexAdmin#watcherList()} 的 {@code .watches} 子查询失败 <b>WARN 留痕 + reason 回填</b>
+ * {@link EsIndexAdmin#watcherList()} 的 {@code .watches} 子查询失败 <b>WARN 留痕 + reason 回填</b>
  * （观测缺口收口，模板：JdbcConnStoreUpdateVersionWarnTest 的 ListAppender 范式）。
  *
  * <p><b>缺口</b>：内层 catch 此前静默 {@code out.put("watches", emptyMap())}——「watcher 主体统计在、

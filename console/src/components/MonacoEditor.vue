@@ -4,14 +4,14 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
-// R92-B1：按需引入——editor.api 只含核心，功能按 contrib 显式挂载（少一个 import 少一个能力，全列在此）
+// -B1：按需引入——editor.api 只含核心，功能按 contrib 显式挂载（少一个 import 少一个能力，全列在此）
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import 'monaco-editor/esm/vs/language/json/monaco.contribution';        // JSON 语言 + 校验 + 格式化
 import 'monaco-editor/esm/vs/editor/contrib/folding/browser/folding';   // 折叠（options.folding 用）
 import 'monaco-editor/esm/vs/editor/contrib/find/browser/findController'; // Ctrl+F 查找
 import 'monaco-editor/esm/vs/editor/contrib/format/browser/formatActions'; // formatDocument 动作
 import 'monaco-editor/esm/vs/editor/contrib/suggest/browser/suggestController'; // 补全弹层
-import 'monaco-editor/esm/vs/editor/contrib/hover/browser/hoverContribution'; // glyph/内容 hover（R39 徽标用）
+import 'monaco-editor/esm/vs/editor/contrib/hover/browser/hoverContribution'; // glyph/内容 hover（ 徽标用）
 import 'monaco-editor/esm/vs/editor/contrib/bracketMatching/browser/bracketMatching';
 import 'monaco-editor/esm/vs/editor/contrib/clipboard/browser/clipboard';
 import 'monaco-editor/esm/vs/editor/contrib/contextmenu/browser/contextmenu';
@@ -106,9 +106,9 @@ function ensureTheme() {
 type GuardFrame = { type: '{' | '['; lastKey: string | null };
 
 /* 值位白名单（spec §4.4）：仅此三键的值串位放行出档，其余值位一律压制（防误导优先）。
-   五百二十四批+1：补 analyzer/search_analyzer/normalizer/tokenizer 四键——dslKeyGuard 侧
+   +1：补 analyzer/search_analyzer/normalizer/tokenizer 四键——dslKeyGuard 侧
    只负责放行出 valueKey，消费侧分档收口（search 档仍一律压空，仅 mapping 档接 analyzers 通道）
-   五百四十批：白名单外 ':' 值串位另设字段类型门（date/ip 静态档）——ok 仍 false、键链随行
+   白名单外 ':' 值串位另设字段类型门（date/ip 静态档）——ok 仍 false、键链随行
    回传（valueKey/parentKey/grandKey），放行权在 computeSuggestions 值位类型档按类型收口 */
 const VALUE_WHITELIST = new Set(['order', 'track_total_hits', 'field', 'analyzer', 'search_analyzer', 'normalizer', 'tokenizer']);
 /* analyzers 通道消费键（mapping 值位）：与 VALUE_WHITELIST 的组件名键对齐 */
@@ -145,7 +145,7 @@ function dslKeyGuard(doc: string, offset: number): { ok: boolean; strStart: numb
   if (j < 0) return { ok: false, strStart: inStr ? strStart : cursor, inStr };
   if (inStr) {
     const left = text[j];
-    /* 五百四十三批：数组续元素串位（',' 左邻且栈顶 '['）回传键链——arrayElem 标记元素位，
+    /* 数组续元素串位（',' 左邻且栈顶 '['）回传键链——arrayElem 标记元素位，
        valueKey=数组属主键（terms 值对象内的字段键）、parentKey=再上层键，供消费侧
        dslArrayElemFieldAt 解析字段→值位类型档出静态候选；该位现状错档（query-type 的
        QUERY_SNIPPETS 落进值数组），本批归位。须置于下方 '{'/',' 键位口之前——',' 左邻
@@ -156,7 +156,7 @@ function dslKeyGuard(doc: string, offset: number): { ok: boolean; strStart: numb
       const ownerKey = stack.length >= 3 ? stack[stack.length - 3].lastKey : null;
       return { ok: false, strStart, inStr, valueKey: elemKey ?? undefined, parentKey: ownerKey, arrayElem: true };
     }
-    /* 五百四十六批：数组键链白名单位首元素位（'[' 左邻且栈顶 '['）——'[' 左邻此前一律无键链
+    /* 数组键链白名单位首元素位（'[' 左邻且栈顶 '['）——'[' 左邻此前一律无键链
        直落压制（540 契约钉 terms 值数组首元素位、544 复钉），仅当数组属主键 ∈
        DSL_ARRAY_ELEM_CHAINS（本批=_source，返回字段裁剪位）才回传键链放行，arrayElem 同标记
        消费侧与续元素位同路分派；白名单外（terms/must/ids 等全部既有面）保持原样零增量。 */
@@ -171,7 +171,7 @@ function dslKeyGuard(doc: string, offset: number): { ok: boolean; strStart: numb
     if (left === ':' && topKey && VALUE_WHITELIST.has(topKey)) {
       return { ok: true, strStart, inStr, valueKey: topKey };
     }
-    /* 五百四十批：非白名单 ':' 值串位回传键链（valueKey=当前键/parentKey=上层键/grandKey=上上层键）
+    /* 非白名单 ':' 值串位回传键链（valueKey=当前键/parentKey=上层键/grandKey=上上层键）
        供值位类型档分派（dslValueFieldAt 解析字段→DSL_VALUE_TYPE_HINTS 按类型出静态候选）。
        ok 仍 false——「其余值位一律压制」的既有语义不变，放行权在消费侧按字段类型收口；
        数组元素串（'[' 左邻首元素位）不回传键链，维持压制（540 契约 spec 既有断言钉死）。 */
@@ -205,8 +205,8 @@ function dslSortText(idx: number, label: string): string {
   return '!' + String(idx).padStart(3, '0') + label;
 }
 
-/* 五百三十一批：field 档类型感知排序已收口 dslCompletionContext.orderFieldsByTypeForOp
-   （五百四十批原样平移：与 orderFieldsByClauseOp 语义有差——原始序不做亲和族展开，
+/* field 档类型感知排序已收口 dslCompletionContext.orderFieldsByTypeForOp
+   （原样平移：与 orderFieldsByClauseOp 语义有差——原始序不做亲和族展开，
    语义分界与平移沿革见该函数注释；dslFieldPrio538 锁定族展开版零触碰）。 */
 
 /* W5-1 过滤关：让敲 " 后的过滤 pattern（含已敲引号）能匹配上——见 dslSortText 上注释①。 */
@@ -251,13 +251,13 @@ const props = withDefaults(defineProps<{
   fontSize?: number;
   /* W4-T13：可选 DSL 智能补全——传则注册 JSON completion provider（未传=现状零影响）
      W6：契约扩展 bodyKind——按 body 语义分档（search 三档/settings 设置键/mapping 骨架/none 空）
-     五百二十四批：契约再扩 doc——文档体档（键位零候选，仅 field 值位白名单出字段候选）；并扩语言面：
+     契约再扩 doc——文档体档（键位零候选，仅 field 值位白名单出字段候选）；并扩语言面：
      dslAssist 存在时 painless 语言同挂四骨架补全 + doc['f']/ctx['f'] 字段 hover（挂载计数见 spec 524）
-     五百二十四批+1：契约再扩 analyzers——mapping 值位 analyzer/normalizer/tokenizer 四键
+     +1：契约再扩 analyzers——mapping 值位 analyzer/normalizer/tokenizer 四键
      出自定义组件名候选（MappingView 弹层注入 analysisSettings 实名），缺席=该通道关
-     五百二十五批：analyze 档复用同一 analyzers() 闭包通道——analyzer/search_analyzer/
+     analyze 档复用同一 analyzers() 闭包通道——analyzer/search_analyzer/
      normalizer/tokenizer 值位出「内置清单 ∪ 实名组件」（缺席=纯内置，语义不关档）
-     六百五十八批：契约再扩 terms——search 档可聚合字段值位出 top20 真实值动态候选
+     契约再扩 terms——search 档可聚合字段值位出 top20 真实值动态候选
      （655 设计记档 P2，独立第六通道 provider；缺席=零注册行为零变，524+1 先例） */
   dslAssist?: { fields: () => { path: string; type: string }[]; bodyKind?: () => BodyKind; analyzers?: () => string[]; terms?: (field: string, prefix: string) => Promise<string[]> };
 }>(), {
@@ -274,7 +274,7 @@ const emit = defineEmits<{
 
 const hostRef = ref<HTMLElement>();
 let editor: monaco.editor.IStandaloneCodeEditor | null = null;
-/* 五百二十一批：dslAssist provider 逐语言一份（json+ndjson），dispose 全量随组件卸载；
+/* dslAssist provider 逐语言一份（json+ndjson），dispose 全量随组件卸载；
    W3 起数组同时承载补全与字段 hover 两类注册（dispose 对称同路） */
 let dslAssistDisposables: monaco.IDisposable[] = [];
 let hostRORef: ResizeObserver | null = null;
@@ -284,8 +284,8 @@ const themeName = () => (appStore.effectiveTheme === 'light' ? 'es-light' : 'es-
 onMounted(() => {
   ensureTheme();
   ensureLanguages(); /* ux2：sql 官方包 + 4 自研 monarch（幂等，全实例共享一次注册） */
-  ensureJsonQuickFixes(); /* ux2 Task 4：JSON quick fix 语言级注册（模块级幂等） */
-  ensureDslLintQuickFixes(); /* 五百三十四批 P0-2：es-dsl-lint quick fix 注册（独立幂等，既有 json 四码链路零触碰） */
+  ensureJsonQuickFixes(); /* ux2 ：JSON quick fix 语言级注册（模块级幂等） */
+  ensureDslLintQuickFixes(); /*  P0-2：es-dsl-lint quick fix 注册（独立幂等，既有 json 四码链路零触碰） */
   // w70:Ctrl+Shift+F 全站格式化(注册在 create 后)
   editor = monaco.editor.create(hostRef.value!, {
     value: props.modelValue,
@@ -299,7 +299,7 @@ onMounted(() => {
     folding: true,
     scrollBeyondLastLine: false,
     automaticLayout: true,
-    /* 五百五十四批 P0：suggest/hover/quickfix 弹层默认渲染在 editor DOM 内部，会被任何
+    /*  P0：suggest/hover/quickfix 弹层默认渲染在 editor DOM 内部，会被任何
        overflow:auto/hidden 祖先裁切（产线实报 DevTools「纠错弹窗被覆盖无法显示详情」，
        .dt-out overflow:auto 为裁切源之一）。fixedOverflowWidgets 让弹层 fixed 定位挂
        body 逃逸裁切——一处配置全站编辑器受益。 */
@@ -324,7 +324,7 @@ onMounted(() => {
   editor.onDidChangeModelContent(() => {
     emit('update:modelValue', editor!.getValue());
   });
-  /* 布局补偿（五百一十七批→V3 强化）：WorkbenchLayout pane 内 create 时容器可能处于 0 尺寸过渡态
+  /* 布局补偿（→V3 强化）：WorkbenchLayout pane 内 create 时容器可能处于 0 尺寸过渡态
      （pane 高度异步分配），monaco 的 initial layout 读到 0 后渲染层停在 0×0——
      model 有值、view-lines 0 行，视觉全空且不可编辑（托管重建 settings/mapping「无法编辑」真凶）。
      实测单次 RO/双 rAF 补偿在部分页仍会漏（渲染恢复有数秒级随机延迟），升级为多拍补偿：
@@ -347,7 +347,7 @@ onMounted(() => {
      上下文判定复用 T12 dslContext；键位/值位守卫先行（公共入口），值位默认空层——
      2.6.0 起 order/track_total_hits/field 三键值串位白名单放行（spec §4.4，见下方值位档）。 */
   if (props.dslAssist) {
-    /* 五百二十一批：provider 抽工厂逐语言注册（json + ndjson）。为什么：BulkEditor body 是
+    /* provider 抽工厂逐语言注册（json + ndjson）。为什么：BulkEditor body 是
        ndjson 语言（monacoLanguages 自研 monarch），只注册 json 时 dslAssist 挂在 ndjson
        实例上补全静默失效。provider 内部只读 model 文本/光标（getValue/getOffsetAt/
        getPositionAt），对 language 零假设——同一工厂直接复用；memo 是闭包内状态，
@@ -380,7 +380,7 @@ onMounted(() => {
     dslAssistDisposables = ['json', 'ndjson'].map(lang =>
       monaco.languages.registerCompletionItemProvider(lang, makeDslAssistProvider()));
 
-    /* 六百五十八批：值位动态候选第六通道（655 设计记档 P2 落地，D1~D4 用户裁决取推荐值）——
+    /* 值位动态候选第六通道（655 设计记档 P2 落地，D1~D4 裁决取推荐值）——
        terms 在场才注册（缺席=零注册=行为逐字节现状，524+1 先例）；json+ndjson 逐语言一份，
        无 triggerCharacters（不串 dslRegs ['"'] 计数契约=655-C1 判例安全位）；dispose 入
        dslAssistDisposables 随卸载全量释放（既有 dispose 链路白得）。540/543 静态档仅 doc 档
@@ -393,7 +393,7 @@ onMounted(() => {
         }))));
     }
 
-    /* 五百二十四批：painless 语言补全——四骨架 snippet 档（脚本编辑不写 JSON，dslKeyGuard/dslContext
+    /* painless 语言补全——四骨架 snippet 档（脚本编辑不写 JSON，dslKeyGuard/dslContext
        的 JSON 栈扫描全不适用，独立工厂走词位 range 纯插入）。triggerCharacters ['[', '.']：
        doc['/ctx[' 敲 [ 即弹、params. 与 PainlessLab 既有 params 键候选并列；签名 ≠ 恰 ['"']，
        不串 json/ndjson 的 dslRegs 计数（monacoDslAssist.spec 契约）。 */
@@ -449,7 +449,7 @@ onMounted(() => {
     dslAssistDisposables.push(...['json', 'ndjson'].map(lang =>
       monaco.languages.registerHoverProvider(lang, makeDslFieldHoverProvider())));
 
-    /* 五百二十四批：painless 字段 hover——光标落 doc['f'] / ctx['f'] 的 f 串内时出「type · path」。
+    /* painless 字段 hover——光标落 doc['f'] / ctx['f'] 的 f 串内时出「type · path」。
        fields() 闭包内现调（惰性，519 教训：注册期/挂载期绝不预载，防污染 fieldPickerPenetration
        计数契约）；提取逻辑走 painlessFieldAt 纯函数（dslCompletionContext 单一出处，可脱离 Monaco 断言）。 */
     function makePainlessFieldHoverProvider() {
@@ -477,13 +477,13 @@ onMounted(() => {
            缺省（含显式 undefined）回退 search，走下方 W4 三档现状逻辑（一行不动）。 */
         const bk: BodyKind = props.dslAssist!.bodyKind?.() ?? 'search';
         if (bk === 'none') return { suggestions: [] };
-        /* 五百二十四批：doc 档（文档体 /idx/_doc/1 等）——键位一律零候选；仅值位白名单 field 键的
+        /* doc 档（文档体 /idx/_doc/1 等）——键位一律零候选；仅值位白名单 field 键的
            值串位放行出 fields() 字段候选（与 search 值位档同形态：range 覆盖整串，insertText 自带引号；
            kind=Value 同口径）。其余值位/串外/键位落下方兜底 []。
-           五百三十一批：文档体无算子上下文（typePriorityForOp 无从取 op），字段候选维持 fields() 序。 */
+           文档体无算子上下文（typePriorityForOp 无从取 op），字段候选维持 fields() 序。 */
         if (bk === 'doc') {
           const g = dslKeyGuard(doc, offset);
-          /* 五百四十三批：arrayElem 一并压住——doc 档「仅 field 键 ':' 值串位放行」语义原样，
+          /* arrayElem 一并压住——doc 档「仅 field 键 ':' 值串位放行」语义原样，
              "field": [ 元素位不是值串位（元素位没有 ':' 左邻） */
           if (!g.ok || !g.inStr || g.valueKey !== 'field' || g.arrayElem) return { suggestions: [] };
           const dEnd = scanStringEnd(doc, Math.max(0, Math.min(offset, doc.length)));
@@ -499,7 +499,7 @@ onMounted(() => {
             sortText: dslSortText(i, v),
           })) };
         }
-        /* 五百二十五批：analyze 档（_analyze body）——键位（串内）出八键骨架；值位分派：
+        /* analyze 档（_analyze body）——键位（串内）出八键骨架；值位分派：
            analyzer/search_analyzer/normalizer/tokenizer 出「内置清单 ∪ analyzers() 实名组件」
            （视图侧惰性拉 analysisSettings 注入，缺席=纯内置不关档）；field 出 fields()；
            text 等其余值位压住（text 不在 VALUE_WHITELIST，dslKeyGuard 不放行同归此处）；
@@ -544,7 +544,7 @@ onMounted(() => {
             filterText: dslFilterText(k), sortText: dslSortText(i, k),
           })) };
         }
-        /* 五百二十四批+1：mapping 值位 analyzers 通道——组件名四键的值串位出
+        /* +1：mapping 值位 analyzers 通道——组件名四键的值串位出
            analyzers() 实名候选（range 覆盖整串 I-1 同形态）；候选空/非 mapping 档
            落到下方既有压制口，零增量。 */
         if (bk === 'mapping') {
@@ -598,7 +598,7 @@ onMounted(() => {
            提前拦会把值位白名单档拦死；纯函数换位对既有三档零行为差（guard 压制位依旧 []）。 */
         const guard = dslKeyGuard(doc, offset);
         if (!guard.ok) {
-          /* 五百四十六批：数组键链白名单位（_source 元素串位）——数组元素即字段名本尊（非某字段
+          /* 数组键链白名单位（_source 元素串位）——数组元素即字段名本尊（非某字段
              的值），与 dslArrayElemFieldAt 的「值位字段解析」不同轨（dslValueTiers544 把
              ('_source', null)→null 钉死，不共函数）。首元素位经 guard 白名单口、续元素位经既有
              arrayElem 口，同归此分派出 fields() 全字段候选（Value 档，range 覆盖整串 I-1 同形态）。 */
@@ -613,11 +613,11 @@ onMounted(() => {
               filterText: dslFilterText(f.path), sortText: dslSortText(i, f.path),
             })) };
           }
-          /* 五百四十批：值位类型档（date-math/ip）——非白名单 ':' 值串位按字段类型放行静态候选。
+          /* 值位类型档（date-math/ip）——非白名单 ':' 值串位按字段类型放行静态候选。
              dslValueFieldAt 解析字段（叶子子句直挂值 / range 操作符值两形态）→ fields() 精确查表
              （aggs 撞名键查无此字段自然压制）→ DSL_VALUE_TYPE_HINTS 按类型出档；
              表外类型维持既有压制——候选只增不改。
-             五百四十三批：数组续元素位分派（arrayElem，值数组的元素串位没有「当前键」）走姊妹
+             数组续元素位分派（arrayElem，值数组的元素串位没有「当前键」）走姊妹
              解析 dslArrayElemFieldAt（字段=数组属主键），查表先共享表再姊妹表（keyword/数值/
              boolean 形态档仅此链路消费，':' 值位 regime 540 冻结不动）；既有 ':' 值串位走
              dslValueFieldAt + 共享表原路逐字节不变。 */
@@ -775,12 +775,12 @@ onMounted(() => {
         /* 2.6.0：字段名带值骨架（spec §4.3）+ commaAffixes 逗号自适应——逗号为 snippet 外字面量，tab 流程同 root 档。
            值形态统一字符串占位：terms 数组/range 对象需用户手改——子句值形态各异，按 clause 全定制收益低，防误导优先。
            esc：f.path 是首个进 snippet 语法的动态数据，$ / } / \ 会被解析器变形，转义闭环（mapping 字段名罕见但防御零成本）
-           五百三十一批：类型感知排序——ctx.clause 即该子句值位同级 op 键，命中类型的
+           类型感知排序——ctx.clause 即该子句值位同级 op 键，命中类型的
            字段排前（range→date/数值族、term→keyword、match→text/keyword…），候选集不变仅 sortText 分档；
            doc 档 field 值位无算子上下文，维持 fields() 序（orderFieldsByTypeForOp 空 prio 零增量同口径）。 */
         const fieldAffix = commaAffixes(doc, startOff, end);
         const escSnippet = (s: string) => s.replace(/\\/g, '\\\\').replace(/\$/g, '\\$').replace(/}/g, '\\}');
-        /* 五百四十六批：数组元素对象键位（键链白名单=sort，dslContext array-elem-key 档）——
+        /* 数组元素对象键位（键链白名单=sort，dslContext array-elem-key 档）——
            排序字段位出字段候选，插入形态对齐 ROOT_KEY_SNIPPETS.sort 骨架（字段键 + order 值骨架）；
            逗号自适应与 root 档同手法。白名单外数组（must/filter 元素对象键位）不进本档，
            既有 query-type 出档零变化。 */
@@ -795,7 +795,7 @@ onMounted(() => {
             sortText: dslSortText(i, f.path),
           })) };
         }
-        /* 五百四十批：收口消费共享 orderFieldsByTypeForOp（本地 orderFieldsByType 原样平移，
+        /* 收口消费共享 orderFieldsByTypeForOp（本地 orderFieldsByType 原样平移，
            行为逐字节等值——原始序不做亲和族展开，与 orderFieldsByClauseOp 的语义分界见共享侧注释） */
         const opFields = orderFieldsByTypeForOp(props.dslAssist!.fields(), ctx.clause);
         return { suggestions: opFields.map((f, i) => ({
@@ -815,11 +815,11 @@ watch(() => props.modelValue, (v) => {
   if (editor && editor.getValue() !== v) editor.setValue(v ?? '');
 });
 watch(() => props.readonly, (v) => editor?.updateOptions({ readOnly: v }));
-/* 六百六十八批：字号响应缺角修复——560 批字号档立法时只建了挂载初值通道，prop 变更
+/* 字号响应缺角修复——字号档立法时只建了挂载初值通道，prop 变更
    后 Monaco 实例无感知（档位点击渲染字号不变，探针当年只断言 seg UI 在场）。
    readOnly watch 同款范式补一行：档位点击即刻生效，偏好还原路径（挂载初值）不受影响。 */
 watch(() => props.fontSize, (v) => editor?.updateOptions({ fontSize: v }));
-/* 五百三十二批 P0-2a：language prop 运行时跟随——DevTools body 在 _bulk 档切 ndjson
+/*  P0-2a：language prop 运行时跟随——DevTools body 在 _bulk 档切 ndjson
    （多根 NDJSON 不再被 json worker 全线误报语法红线，高亮保留、校验退场）。
    同 model 换语言（setModelLanguage），不重建编辑器：value/undo/滚动/布局全保留。 */
 watch(() => props.language, (v) => {
@@ -847,7 +847,7 @@ function insertSnippet(text: string) {
   editor.focus();
 }
 
-/* R39：行内判定徽标通道——glyph margin 三色小点 + hover 人话（deltaDecorations 增量替换） */
+/* 行内判定徽标通道——glyph margin 三色小点 + hover 人话（deltaDecorations 增量替换） */
 let chipDecorations: string[] = [];
 function setGutterChips(chips: { line: number; kind: string; hover: string }[]) {
   if (!editor) return;
@@ -872,7 +872,7 @@ function setGutterChips(chips: { line: number; kind: string; hover: string }[]) 
    severity 档：warning→黄线、hint→灰点、error→红线（dslLint terms-scalar 结构错等必错形态）——
    DslQueryView 的 info→hint 降级映射喂进来仍是合法档位。 */
 const LINT_OWNER = 'es-dsl-lint';
-/* 五百三十四批 P0-2：泛型约束补可选 rule——dslLint Finding 全量在场，零 rule 的旧调用方
+/*  P0-2：泛型约束补可选 rule——dslLint Finding 全量在场，零 rule 的旧调用方
    （analyze525 stub 形态）零破坏；code 后缀与注册表 finding.rule 供 es-dsl-lint quick fix 分派。 */
 function setMarkers<T extends {
   message: string; suggestion: string; severity: 'warning' | 'hint' | 'error'; anchor: string; nth: number; rule?: string;
@@ -881,7 +881,7 @@ function setMarkers<T extends {
   if (!model) return { placed: 0, unplaced: findings.slice() };
   const markers: monaco.editor.IMarkerData[] = [];
   const unplaced: T[] = [];
-  /* 五百三十四批 P0-2：定位→finding 注册表随 setMarkers 全量替换（重复 lint 不叠加），
+  /*  P0-2：定位→finding 注册表随 setMarkers 全量替换（重复 lint 不叠加），
      es-dsl-lint quick fix provider 按 marker 行列反查（monacoJsonQuickFix 承载）。 */
   const registry: DslLintMarkerEntry[] = [];
   for (const f of findings) {
@@ -912,7 +912,7 @@ function setMarkers<T extends {
   return { placed: markers.length, unplaced };
 }
 
-/* 五百二十五批：行号直射 Warning marker——synonyms 规则行这类「行号已知」的 lint 源，
+/* 行号直射 Warning marker——synonyms 规则行这类「行号已知」的 lint 源，
    findMatches('"anchor"') 锚点定位反而是错位源（规则行非 JSON、无锚点键名）。行号直射：
    marker 覆盖整行（起 1 列、止=行尾列），severity 恒 Warning。owner 由调用方给
    （'es-syn-lint' 等，多 lint 源同编辑器互不清，且与 JSON 语法诊断 owner 'json' 分离）；
@@ -934,14 +934,14 @@ function setLineMarkers(markers: { line: number; message: string }[], owner: str
 
 onBeforeUnmount(() => {
   hostRORef?.disconnect();
-  /* 五百二十一批：逐语言 provider 全量 dispose（json+ndjson 注册面随组件卸载退役） */
+  /* 逐语言 provider 全量 dispose（json+ndjson 注册面随组件卸载退役） */
   for (const d of dslAssistDisposables) d.dispose();
   dslAssistDisposables = [];
-  /* 五百二十五批：setLineMarkers 各 owner 随卸载清空（setModelMarkers 全局注册面，不随 dispose 自动撤） */
+  /* setLineMarkers 各 owner 随卸载清空（setModelMarkers 全局注册面，不随 dispose 自动撤） */
   const m = editor?.getModel?.() ?? null;
   if (m) for (const o of lineMarkerOwners) monaco.editor.setModelMarkers(m, o, []);
   lineMarkerOwners.clear();
-  /* 五百三十四批 P0-2：es-dsl-lint 注册表随卸载清理（marker 面随 model dispose 退役，
+  /*  P0-2：es-dsl-lint 注册表随卸载清理（marker 面随 model dispose 退役，
      注册表是模块级 Map 必须显式删；setModelMarkers 清 marker 属 524 既有契约——es-dsl-lint
      不在卸载清空列，本件只清注册表不动 marker 调用面） */
   if (m) clearDslLintMarkers(m.uri?.toString?.() ?? '');
@@ -956,7 +956,7 @@ defineExpose({ format, insertSnippet, setGutterChips, setMarkers, setLineMarkers
 </style>
 
 <style>
-/* R39 徽标三色（全局：monaco 装饰在组件 scope 外渲染） */
+/*  徽标三色（全局：monaco 装饰在组件 scope 外渲染） */
 .insight-chip { border-radius: 50%; width: 8px !important; height: 8px !important; margin: var(--sp-1h) 0 0 var(--sp-1h); }
 .insight-chip-dynamic { background: var(--ok); }
 .insight-chip-static { background: var(--warn); }

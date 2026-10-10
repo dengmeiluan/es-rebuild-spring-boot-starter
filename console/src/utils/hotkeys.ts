@@ -1,8 +1,8 @@
-/* R93-13：goto 快捷键唯一权威源。
+/* -13：goto 快捷键唯一权威源。
  *
  * 原先「App.vue 里的 GOTO_MAP」与「HotkeyPanel.vue 里的硬编码文案」是两份数据，
  * App.vue 的注释自己写着「登记表在 HotkeyPanel.vue 内维护」——明写的手工同步点。
- * Task 13 退役 OpsView/HistoryView 时 GOTO_MAP 删了 p/h，面板文案没跟着改，
+ *  退役 OpsView/HistoryView 时 GOTO_MAP 删了 p/h，面板文案没跟着改，
  * 于是面板宣传 p/h 两个不存在的绑定（g,p 静默无反应；g,h 穿透到 NAV 的 h→/workspace，
  * 说去「历史」实际去工作台）。硬编码字符串 vue-tsc 和单测都抓不到。
  *
@@ -18,13 +18,13 @@ interface GotoTarget {
 
 /* 键 = g 之后按下的字母；顺序即速查面板展示顺序 */
 export const GOTO_TARGETS: Readonly<Record<string, GotoTarget>> = {
-  /* R64：q/s 指向查询工作台对应模式（旧路径也有 redirect 兜底，这里直达省一跳） */
+  /* q/s 指向查询工作台对应模式（旧路径也有 redirect 兜底，这里直达省一跳） */
   o: { path: '/overview', label: '概览' },
   q: { path: '/search', label: '查询工作台' },
   m: { path: '/mapping', label: 'Mapping' },
   b: { path: '/browser', label: '数据浏览器' },
   r: { path: '/rest', label: 'REST 直连' },
-  /* R93-13：h 原登记的「历史」随 HistoryView 退役被删，但 NAV 有单键 h→/workspace，
+  /* -13：h 原登记的「历史」随 HistoryView 退役被删，但 NAV 有单键 h→/workspace，
      App.vue 的 chord 分支查不到 GOTO 时会落到 NAV 单键回退，g,h 因此仍能跳——
      跳的是工作台。既然行为真实存在就如实登记，否则就是「有功能没人知道」。 */
   h: { path: '/workspace', label: '工作台' },
@@ -45,10 +45,10 @@ export const GOTO_TARGETS: Readonly<Record<string, GotoTarget>> = {
   v: { path: '/health-report', label: '一键体检' },
   w: { path: '/templates-gallery', label: '模板画廊' },
   z: { path: '/optimizer', label: '优化向导' },
-  /* R27：g→u 到 watcher。q/r/b/x 已被既有占用（query/rest/browser/xmigrate），
-     R27 就直接用 NAV 单键 u/q/r/b/x 即可（看 router.ts） */
+  /* g→u 到 watcher。q/r/b/x 已被既有占用（query/rest/browser/xmigrate），
+      就直接用 NAV 单键 u/q/r/b/x 即可（看 router.ts） */
   u: { path: '/watcher', label: 'Watcher 告警' },
-  /* R48：26 字母单键已全占用，索引工作区走 gg chord（vim 风） */
+  /* 26 字母单键已全占用，索引工作区走 gg chord（vim 风） */
   g: { path: '/indices', label: '索引工作区' },
 };
 

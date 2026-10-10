@@ -43,7 +43,7 @@
         <router-link to="/security" class="um-act">
           <Shield :size="12" /> 安全中心（审计 / 账号）
         </router-link>
-        <!-- 一百零四批：复制诊断信息——报障时用户要手抄角色/身份/实例，一键复制 -->
+        <!-- 复制诊断信息——报障时用户要手抄角色/身份/实例，一键复制 -->
         <button class="um-act" @click="copyDiag">
           <ClipboardCopy :size="12" /> 复制诊断信息
         </button>
@@ -65,7 +65,7 @@ import { useAppStore } from '../stores/app';
 import { copyText } from '../utils/format';
 
 /**
- * R63 顶栏身份组件：displayName 优先展示（宿主委托身份的 username 常是不可读哈希），
+ *  顶栏身份组件：displayName 优先展示（宿主委托身份的 username 常是不可读哈希），
  * 长哈希自动缩略；点开可见完整身份档案（角色解释/来源/宿主属性）。
  */
 const auth = useAuthStore();
@@ -108,7 +108,7 @@ const sourceLabel = computed(() => {
 /** 宿主附加属性（部门/工号等，委托模式按需下发） */
 const attrEntries = computed(() => Object.entries(auth.me?.attributes ?? {}));
 
-/** 一百零四批：复制诊断信息——报障时一键带走身份/角色/来源/实例，免手抄 */
+/** 复制诊断信息——报障时一键带走身份/角色/来源/实例，免手抄 */
 async function copyDiag() {
   const app = useAppStore();
   const me = auth.me;

@@ -3,7 +3,7 @@ package io.github.dengmeiluan.es.rebuild.auth;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * 宿主鉴权委托 SPI（R37）：宿主应用（如 宿主）注册本接口 Bean 后，
+ * 宿主鉴权委托 SPI（）：宿主应用（如 宿主）注册本接口 Bean 后，
  * 控制台请求先交宿主校验自己的凭据（如 {@code X-Es-Host-Token} 里的宿主 JWT），
  * 认出则免控制台内置登录直接放行；返回 {@code null} 交回内置 token 鉴权（两套并存，互不排斥）。
  *

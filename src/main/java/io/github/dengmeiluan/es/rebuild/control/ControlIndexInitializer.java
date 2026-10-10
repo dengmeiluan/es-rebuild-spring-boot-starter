@@ -17,13 +17,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 控制索引幂等初始化（R37）：向导绑定控制集群时把控制面三索引建出来——
+ * 控制索引幂等初始化（）：向导绑定控制集群时把控制面三索引建出来——
  * 对标 Kibana 首次连接 ES 自建 {@code .kibana} 系统索引的行为。
  *
  * <p>幂等语义：索引已存在（{@code resource_already_exists_exception}）视为成功；
- * 重复 apply / rebind 同集群无害。lock 索引由首写自建，不在此列（job/audit 已随 R93 阶段⑤退役）。</p>
+ * 重复 apply / rebind 同集群无害。lock 索引由首写自建，不在此列（job/audit 已随  阶段⑤退役）。</p>
  *
- * <p><b>R93-67 版本感知</b>：原实现用 {@code CreateIndexRequest.mapping(SEED_MAPPING, JSON)}，
+ * <p><b>-67 版本感知</b>：原实现用 {@code CreateIndexRequest.mapping(SEED_MAPPING, JSON)}，
  * RHLC 7.x 把它序列化成 typeless mappings，<b>6.x 上 400 mapper_parsing_exception</b>
  * （「Root mapping definition has unsupported parameters: [updatedAt ...]」，6.7.2 实测）
  * ——即产线 6.x 宿主上向导绑定必然失败。</p>
@@ -170,7 +170,7 @@ public class ControlIndexInitializer {
             Object type = ((Map<?, ?>) error).get("type");
             return type == null ? null : String.valueOf(type);
         } catch (Exception ignored) {
-            // 五百五十二批裁决（三态之③刻意降级维持静默）：此臂只可能因「ResponseException 响应体
+            // 裁决（三态之③刻意降级维持静默）：此臂只可能因「ResponseException 响应体
             // 不可读 / 非 ES 标准错误结构」触发，返回 null → alreadyExists=false → ensure 抛
             // IllegalStateException → ensureAll 上抛 → 绑定流程整体回滚——失败链全程响亮
             // （回滚报错本身带索引名与 cause），此处再加日志只会双重告警。维持零 WARN，

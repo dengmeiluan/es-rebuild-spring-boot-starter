@@ -3,36 +3,36 @@
    W-A：增 ctx（mapping 字段表）与「字段类型错配」规则——不传 ctx 时零回归（只跑原四规则）。
    W3：键拼写纠错包（bool 键/根键/range 操作符，仅键名与结构、零 ctx 依赖）+
    terms 标量结构错（error 档）+ multi_match fields 元素拼写（复用 mapping 字段表）。
-   五百二十四批：date-math ||复合段放行 ES 合法舍入段（数学段带 /舍入、纯舍入段）+
+   date-math ||复合段放行 ES 合法舍入段（数学段带 /舍入、纯舍入段）+
    multi_match fields 结构两分支（标量串=error / 缺 fields=warning，零 ctx 依赖）。
-   五百二十五批：match-all（根 query 全量扫描，SearchSandboxView 私藏红条语义下沉为规则，
+   match-all（根 query 全量扫描，SearchSandboxView 私藏红条语义下沉为规则，
    该页调用侧由 W2 迁移消费）+ search-after-no-sort（无 sort 的 search_after 必 400，
    terms-scalar 同 error 档）+ agg-size-default（terms 桶缺 size 默认 10 桶截断）+
    sort-unknown-field（sort 字段不在 mapping，unknown-field 口径）。
-   五百二十八批：root-bare-clause（根层裸子句未包 query，error）+ collapse-structure
+   root-bare-clause（根层裸子句未包 query，error）+ collapse-structure
   （collapse 标量/数组结构错，error）+ sort-order-typo（排序方向白名单 asc/desc，
    range-op-typo 同型编辑距离）+ highlight-fields（缺 fields / fields 标量串，warning）
    + script-inline（script 旧键 "inline" 未改名 "source"，warning）——五条全部零 ctx
    依赖（不传 mapping 字段表照常工作）。
-   五百三十批：agg-text-field（聚合 field 打 text 无 .keyword → fielddata 400，warning，
+   agg-text-field（聚合 field 打 text 无 .keyword → fielddata 400，warning，
    需 ctx）+ body-value-type（根层 from/size 收非数字标量，error，零 ctx）+
    agg-interval-key（date_histogram 废弃 interval / 间隔键双缺 / 双键互斥，error，零 ctx）+
    nested-path（nested 缺 path，error，零 ctx）+ query-structure（根层 query 标量/数组，
    error，零 ctx，补 root-bare-clause 只查裸子句键的盲区）+ ROOT_KEY_WHITELIST 补
    pit / runtime_mappings / preference / routing / ext / stats 六键（PitScrollView 用户
    手写 pit 不再误报 root-key-typo）。
-   五百三十二批：lintSettingsBody / lintMappingBody 精简出口（DevTools body 档路由消费，
+   lintSettingsBody / lintMappingBody 精简出口（DevTools body 档路由消费，
    settings/mapping 语义不吃 search 规则——root-key-typo 的 ROOT_KEY_WHITELIST 是 search
    根键表，settings 根键 number_of_shards 进去必误报，故另立白名单）+ 新规则档
    ndjson-pair / settings-key / settings-value / mapping-key / mapping-type（DevToolsView
    _bulk 档的 NDJSON 配对告警镜像为 Finding 形态进 lint 管线）。
-   五百五十八批：FIELD_CLAUSES 收 exists（子句值形态 {"field":x}，字段引用在值位而非键位，
+   FIELD_CLAUSES 收 exists（子句值形态 {"field":x}，字段引用在值位而非键位，
    walk 分派入口换参走统一 lintFieldUsage 口径——{"exists":{"field":"statuz"}} 笔误报
    unknown-field；root-bare-clause 顺带覆盖根层裸 exists）+ AGG_FIELD_METRICS 判定域
    field 值复用 unknown-field 口径（aggs.terms.field 拼错=静默空桶，文案与 lintFieldUsage
    ③ 逐字同形，monacoJsonQuickFix unknown-field 改名 fix 同通道消费）；两件都需 ctx，
    零 ctx 零回归。
-   五百六十一批：agg-type-typo（aggs.<名>.<类型> 的类型键不在聚合白名单且编辑距离 ≤2 →
+   agg-type-typo（aggs.<名>.<类型> 的类型键不在聚合白名单且编辑距离 ≤2 →
    warning「最接近：」，bool-key-typo 同消息形态，monacoJsonQuickFix 同通道改名；实例名位/
    meta 伴随键豁免，零 ctx）+ date-term-value（term/match_phrase 打 date 系字段收非日期串
    「昨天」→ warning，isLegalDateValue 白名单复用，需 ctx）+ should-in-filter（bool 仅含
@@ -78,12 +78,12 @@ export interface LintCtx {
 const NON_SCORING = new Set(['term', 'terms', 'range', 'exists']);
 
 /** W-A：字段名作为键出现的叶子查询子句——类型错配四规则在这里的下一层（字段名键）上检查。
-    五百五十八批收 exists：其值形态是 {"field": "x"}，字段引用在值位（键恒 'field'），
+    收 exists：其值形态是 {"field": "x"}，字段引用在值位（键恒 'field'），
     walk 分派入口对 exists 换参后同走 lintFieldUsage；root-bare-clause 顺带覆盖根层裸 exists。 */
 const FIELD_CLAUSES = new Set(['term', 'terms', 'range', 'match', 'match_phrase', 'prefix', 'fuzzy', 'wildcard', 'exists']);
 const NUMERIC_TYPES = new Set(['long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float', 'unsigned_long']);
 const RANGE_OPS = new Set(['gte', 'gt', 'lte', 'lt']);
-/** 五百二十一批：date 系类型集（同 NUMERIC_TYPES 的类型集常量范式）——date range 值判型的判定域 */
+/** date 系类型集（同 NUMERIC_TYPES 的类型集常量范式）——date range 值判型的判定域 */
 const DATE_TYPES = new Set(['date', 'date_nanos']);
 
 /* ---- W3：键拼写纠错包的数据域 ---- */
@@ -97,7 +97,7 @@ const ROOT_KEY_WHITELIST = new Set([
   'post_filter', 'rescore', 'script_fields', 'search_after', 'profile', 'explain',
   'version', 'seq_no_primary_term', 'track_scores', 'terminate_after',
   'indices_boost', 'stored_fields', 'fields', 'docvalue_fields',
-  /* 五百三十批：pit（PitScrollView 用户手写 PIT 检索）/ runtime_mappings（运行时字段）/
+  /* pit（PitScrollView 用户手写 PIT 检索）/ runtime_mappings（运行时字段）/
      preference / routing（路由与副本偏好）/ ext（请求扩展段）/ stats（统计分组）——
      六键都是 ES 合法根键，缺席此前会被 root-key-typo 按编辑距离误报。 */
   'pit', 'runtime_mappings', 'preference', 'routing', 'ext', 'stats',
@@ -106,9 +106,9 @@ const ROOT_KEY_WHITELIST = new Set([
 const RANGE_META_KEYS = new Set(['format', 'time_zone', 'boost', 'relation']);
 /** terms 体里的标量参数键（值非数组合法） */
 const TERMS_PARAM_KEYS = new Set(['boost', '_name']);
-/** 五百二十八批：sort 排序方向白名单（order 值/简写串值共用；ascending/descend 等拼写 ES 直接 400） */
+/** sort 排序方向白名单（order 值/简写串值共用；ascending/descend 等拼写 ES 直接 400） */
 const SORT_ORDERS = new Set(['asc', 'desc']);
-/** 五百三十批：带 field 参数的桶/指标聚合类型——agg-text-field 规则的判定域。
+/** 带 field 参数的桶/指标聚合类型——agg-text-field 规则的判定域。
      只收打在 doc_values/fielddata 上的聚合（terms/数值指标/直方图类）；
      top_hits / nested 等无 field 参数的聚合不进集（防误扩）。 */
 const AGG_FIELD_METRICS = new Set([
@@ -116,7 +116,7 @@ const AGG_FIELD_METRICS = new Set([
   'cardinality', 'date_histogram', 'histogram', 'value_count', 'percentiles',
 ]);
 
-/** 五百六十一批：聚合类型白名单（AGG_SNIPPETS 既有 11 键为基础补常规聚合族）——
+/** 聚合类型白名单（AGG_SNIPPETS 既有 11 键为基础补常规聚合族）——
     agg-type-typo 规则的判定域。桶/指标/管道三族 + 聚合体伴随键 meta（与类型键同层合法）。
     aggs 容器自身不入表（类型位判定天然豁免，见 isAggTypePosition）；geo 系等表外聚合
     只是不提示（覆盖面缺口），nearestKey 距离 ≤2 闸保证不误报。 */
@@ -139,7 +139,7 @@ const AGG_TYPES = new Set([
   'meta',
 ]);
 
-/** 五百六十一批：键路径是否落在「聚合类型位」（aggs.<名>.<类型> 的第三段起）——
+/** 键路径是否落在「聚合类型位」（aggs.<名>.<类型> 的第三段起）——
     距最近 aggs/aggregations 容器恰好两层才是类型位；一层=实例名（自由命名不判）；
     零层=容器自身（嵌套 aggs 键）；三层以上=类型体内参数键/子查询不判。 */
 function isAggTypePosition(p: string): boolean {
@@ -161,12 +161,12 @@ function nearestKey(k: string, vocab: Set<string>): string | null {
   return best;
 }
 
-/* 五百二十一批：date range 值的「合法日期」白名单口径。
+/* date range 值的「合法日期」白名单口径。
    ES 对 date 字段 range 接受：ISO 8601 日期/日期时间、now 及 now±n单位(/舍入单位) 日期数学、
    「合法基串||日期数学」复合、纯数字（epoch 毫秒——构建器 ⏰ 标准时间转换的产物即此形态，
    不放行会把自家转换结果误报成非日期串）。其余一律视为非日期串。 */
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
-/* 五百二十四批：||复合段两形态白名单——ES 合法舍入段此前被拒（误报）：
+/* ||复合段两形态白名单——ES 合法舍入段此前被拒（误报）：
    ① 数学段可带 /舍入单位（"2026-01-01||+1M/d"）；② 纯舍入段（"now||/M"）无 ±n 前缀也是合法数学。
    乱写段（"2026-01-01||abc"）两形态都不匹配，仍报——防漏网意图不变。 */
 const DATE_MATH_SEG_RE = /^[+-]\d+[yMwdhHms](\/[yMwdhHms])?$/;
@@ -225,7 +225,7 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
 
   /* ---- 规则 1：前缀通配符 ---- */
   /* parentKey：当前节点在 DSL 里的父键（如 'term'/'range'）——字段名键靠它识别语义。
-     五百六十一批：filterCtx 语境传递——进过 bool.filter/must_not 子树的节点恒处过滤语境
+     filterCtx 语境传递——进过 bool.filter/must_not 子树的节点恒处过滤语境
      （打分不适用），should-in-filter 规则靠它判定；数组元素同透，query 语境恒 false。 */
   const walk = (node: unknown, path: string, parentKey?: string, filterCtx = false) => {
     if (!node || typeof node !== 'object') return;
@@ -264,7 +264,7 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
           });
         }
       }
-      /* 五百二十一批规则③：regexp 值以 .* / * 开头并入 prefix-wildcard——正则前缀全匹配
+      /* 规则③：regexp 值以 .* / * 开头并入 prefix-wildcard——正则前缀全匹配
          与通配符同罪（无法利用倒排前缀词典，逐词正则求值=全表扫描）。锚点/nth 口径同上两分支。 */
       if (k === 'regexp' && v && typeof v === 'object' && !Array.isArray(v)) {
         for (const [field, val] of Object.entries(v as Record<string, unknown>)) {
@@ -279,7 +279,7 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
           }
         }
       }
-      /* 五百二十一批规则②：sort 打 text 字段（非 .keyword 后缀）→ fielddata 高频 400。
+      /* 规则②：sort 打 text 字段（非 .keyword 后缀）→ fielddata 高频 400。
          字段形态三种：["f"]/["f","g"]、[{"f": {"order": …}}]、[{"f": "desc"}]（含根级裸串）。
          anchor=字段名（findMatches('"字段名"')）；nth 对齐口径：对象形态的字段名是键、
          下方 walk(v) 递归会记次 → 取「即将记入的下标」（occur 现值）；纯串形态不会被记次 → 在此补记，
@@ -295,10 +295,10 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
             if (keys.length === 1) field = keys[0]; /* 多键对象非 sort 约定形态，不判（防误导） */
           }
           /* _score/_doc 等元字段排序合法；未替换变量不判；.keyword 子字段是正解不判
-             （五百二十五批：.keyword 形态即使基字段缺席 mapping 也按已知放行——带后缀
+             （：.keyword 形态即使基字段缺席 mapping 也按已知放行——带后缀
              说明写的是 multi-field 正解形态，不进 sort-unknown-field 判定防误报） */
           if (!field || field.startsWith('_') || field.includes('${') || field.endsWith('.keyword')) continue;
-          /* ---- 五百二十五批规则：sort 字段不在 mapping（sort-unknown-field，warning 档）----
+          /* ---- 规则：sort 字段不在 mapping（sort-unknown-field，warning 档）----
              复用 unknown-field 口径：编辑距离 ≤2 才提示（防噪音）、附最近字段候选。
              字段是纯串值时 walk 不会记次 → nth 在发现时补记；键形态走 occur 现值
              （text-sort 两种形态同款 selfMark 契约）；与 text-sort 互斥（在表内才判 text）。 */
@@ -330,7 +330,7 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
       /* ---- W-A：字段类型错配四规则（仅在传入 mapping 字段表时启用）----
          检查点在「字段名键」上（parentKey=子句类型），anchor/nth 用字段名自身的出现序，
          与 MonacoEditor findMatches('"字段名"') 的命中下标天然对齐。
-         五百五十八批：exists 子句例外——值形态 {"field": "x"} 字段引用在值位（键恒
+         exists 子句例外——值形态 {"field": "x"} 字段引用在值位（键恒
          'field' 不是字段名），入口换成值位字段名再走统一口径；字段名是串值非键，
          nth 走发现时补记（text-sort 纯串形态同款 selfMark 契约）。非串值（变量/
          对象形态）不判。 */
@@ -343,7 +343,7 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
           out.push(...lintFieldUsage(parentKey, k, v, p, kNth, fieldMap));
         }
       }
-      /* ---- 五百六十一批规则①：聚合类型拼写（agg-type-typo，warning 档，零 ctx）----
+      /* ---- 规则①：聚合类型拼写（agg-type-typo，warning 档，零 ctx）----
          aggs.<名>.<类型> 的类型键不在聚合白名单（AGG_TYPES：AGG_SNIPPETS 既有 11 键为基础
          补常规聚合族）且与某在册类型编辑距离 ≤2 → 疑似拼写（未知类型 ES 拒绝请求 400；
          距离 >2 可能是插件/新版类型，宁少勿噪音不报）。实例名位（距 aggs 容器一层）自由
@@ -374,7 +374,7 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
           });
         }
       }
-      /* ---- 五百六十一批规则③：filter/must_not 语境纯 should（should-in-filter，hint 档，零 ctx）----
+      /* ---- 规则③：filter/must_not 语境纯 should（should-in-filter，hint 档，零 ctx）----
          bool 节点仅含 should 键、无 minimum_should_match、且处于 filter/must_not 语境：
          过滤语境不打分，纯 should 无 msm 兜底时匹配条件无声失效（查询「看似对但语义漂移」）。
          语境在 walk 递归中单调传递（进过 filter/must_not 子树的 bool 全在过滤语境，数组同透）；
@@ -422,7 +422,7 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
           });
         }
       }
-      /* ---- 五百二十五批规则：aggs 下 terms 桶未写 size（agg-size-default，hint 档）----
+      /* ---- 规则：aggs 下 terms 桶未写 size（agg-size-default，hint 档）----
          terms 聚合缺 size 时 ES 默认只回 10 桶，长尾分布被静默截断（查询不报错、结果少得无声）。
          路径前缀口径与 terms-scalar 的豁免正好互补（aggs./aggregations. 前缀=聚合体）；
          anchor=terms 键自身、nth 走 kNth（bool-key-typo / multi-match-fields 同口径）。 */
@@ -436,12 +436,12 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
           path: p, anchor: k, nth: kNth,
         });
       }
-      /* ---- 五百三十批规则：聚合 field 打 text 字段（agg-text-field，warning 档，需 ctx）----
+      /* ---- 规则：聚合 field 打 text 字段（agg-text-field，warning 档，需 ctx）----
          terms/avg/sum 等聚合要读 fielddata/doc_values，text 字段默认禁用（请求大概率 400）。
          仅 aggs./aggregations. 路径下的聚合体判（query 子句走 lintFieldUsage 的 text-term 系）；
          .keyword 子字段与 multi-field（fieldMap 里类型非 text）豁免；不传 ctx 全哑。
          字段名在文本里是串值非键，nth 在发现时补记（text-sort 纯串形态同款 selfMark 契约）。
-         五百五十八批②：同判定域内 field 值不在 mapping 时复用 unknown-field 口径
+         ②：同判定域内 field 值不在 mapping 时复用 unknown-field 口径
          （hint 档，编辑距离 ≤2 才提示）——aggs.terms.field 拼错 ES 静默回空桶，查询
          不报错、结果少得无声，比 400 更隐蔽。文案与 lintFieldUsage ③ 逐字同形；
          .keyword 形态按基字段在场豁免（multi-field 正解形态，同 ③ 兜底口径）。 */
@@ -473,7 +473,7 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
           }
         }
       }
-      /* ---- 五百三十批规则：date_histogram 间隔键（agg-interval-key，error 档，零 ctx）----
+      /* ---- 规则：date_histogram 间隔键（agg-interval-key，error 档，零 ctx）----
          三分支各报一条：① 旧键 "interval" 已废弃（ES 7.2 起拆分，新版本直接 400）；
          ② calendar_interval / fixed_interval 双缺；③ 双键并存（互斥，ES 拒绝请求）。
          ① 优先（用户改掉废弃键时自然会补新键，避免同一体双报噪音）；
@@ -498,7 +498,7 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
           });
         }
       }
-      /* ---- 五百三十批规则：nested 缺 path（nested-path，error 档，零 ctx）----
+      /* ---- 规则：nested 缺 path（nested-path，error 档，零 ctx）----
          query 子句与 aggs 聚合两种形态的 nested 都必须带 path（指向 mapping 里的 nested 字段），
          缺失 ES 直接拒绝请求（400）。有 path 键即放行（值合法性零 ctx 判不了，不误扩）。
          anchor=nested 自身、nth 走 kNth（bool-key-typo 同口径）。 */
@@ -562,7 +562,7 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
           }
         }
       }
-      /* ---- 五百二十八批规则：collapse 结构（collapse-structure，error 档）----
+      /* ---- 规则：collapse 结构（collapse-structure，error 档）----
          collapse 值必须是 { 字段名: {} } 对象形态；标量串/数组 ES 直接拒绝请求（400）。
          对象形态即放行（键是否为合法字段无法零 ctx 判定，不误扩）。
          anchor=collapse 键自身、nth 走 kNth（multi-match-fields 同口径）。 */
@@ -574,7 +574,7 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
           path: p, anchor: k, nth: kNth,
         });
       }
-      /* ---- 五百二十八批规则：highlight 结构（highlight-fields，warning 档）----
+      /* ---- 规则：highlight 结构（highlight-fields，warning 档）----
          ① 整个缺 fields：ES 拒绝或整卡零高亮（无声失败）；② fields 写标量串：结构错。
          对象形态（per-field 参数）与数组形态都是合法，不判。multi-match-fields 双分支同型。
          anchor=highlight 键自身、nth 走 kNth。 */
@@ -596,7 +596,7 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
           });
         }
       }
-      /* ---- 五百二十八批规则：script 旧键 inline（script-inline，warning 档）----
+      /* ---- 规则：script 旧键 inline（script-inline，warning 档）----
          ES 6.x 起 script 源码键由 "inline" 改名 "source"，7+ 对 "inline" 直接拒绝请求（400）。
          script_fields/sort script/聚合 script 等所有 script 出现处统一判；script 无
          "inline" 键（已是 source/模板 id 等合法形态）不判。
@@ -610,7 +610,7 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
           path: p, anchor: k, nth: kNth,
         });
       }
-      /* ---- 五百二十八批规则：sort 排序方向拼写（sort-order-typo，warning 档，零 ctx 依赖）----
+      /* ---- 规则：sort 排序方向拼写（sort-order-typo，warning 档，零 ctx 依赖）----
          方向白名单只有 asc / desc；ascending/descend 等拼写 ES 直接拒绝请求（400）。
          两种形态：{"f": {"order": "ascending"}} / 简写 {"f": "ascending"}（串值即 order）。
          range-op-typo 同型编辑距离机制（nearestKey）；anchor=字段名，nth 与 text-sort 同款
@@ -675,7 +675,7 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
     });
   }
 
-  /* ---- 五百三十批规则：根层 from/size 收非数字标量（body-value-type，error 档，零 ctx）----
+  /* ---- 规则：根层 from/size 收非数字标量（body-value-type，error 档，零 ctx）----
      手写 JSON 常见把值写成串（"size":"10"——Kibana 导出/复制丢引号语境），ES 对分页参数
      类型严格，直接拒绝请求（400）。只判标量错型（串/布尔）；对象/数组等结构错型不在本规则
      判定域（不误扩）。根层语义规则，与深分页同区（裸子句出口 skipRoot 跳过）。
@@ -716,7 +716,7 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
     }
   }
 
-  /* ---- 五百二十五批规则：match_all / 空 query 全量扫描（match-all，warning 档）----
+  /* ---- 规则：match_all / 空 query 全量扫描（match-all，warning 档）----
      SearchSandboxView 私藏红条语义下沉为规则（该页调用侧由 W2 迁移消费）。根 query 顶层
      含 match_all 键 = 原页 isMatchAll（'match_all' in q）口径原样保留，含 boost 等参数形态
      一并命中；另补空对象 query（{}）等价 match_all 形态。bool 子句内嵌的 match_all 不判
@@ -741,7 +741,7 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
     }
   }
 
-  /* ---- 五百三十批规则：根层 query 结构（query-structure，error 档，零 ctx）----
+  /* ---- 规则：根层 query 结构（query-structure，error 档，零 ctx）----
      query 为标量/数组 = 子句没包对象外壳（补 root-bare-clause 只查裸子句键的盲区：
      {"query":"term"} / {"query":["term"]} 这类 query 键在场但值形态错的形态），
      ES 直接拒绝请求（400）。正常对象 query（含 match-all 两形态）不进判定；
@@ -761,7 +761,7 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
     }
   }
 
-  /* ---- 五百二十五批规则：search_after 无 sort（search-after-no-sort，error 档）----
+  /* ---- 规则：search_after 无 sort（search-after-no-sort，error 档）----
      非 PIT 上下文里 search_after 必须配合 sort，否则 ES 直接拒绝请求（400）——与 terms-scalar
      同档结构必错。根级带 pit 参数时 ES 隐式 _shard_doc 排序属合法形态，豁免不判。
      根级才判（search_after 不是子句键，嵌套出现非 search body 约定形态）。 */
@@ -774,7 +774,7 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
     });
   }
 
-  /* ---- 五百二十八批规则：根层裸子句（root-bare-clause，error 档）----
+  /* ---- 规则：根层裸子句（root-bare-clause，error 档）----
      {"term":{"status":1}} 直接当 search body 发——子句没包 query，ES 对根级未知键
      直接 400（parsing_exception 或 strict 口径视版本）。常见于复制查询片段时漏了外壳。
      根层出现 FIELD_CLAUSES 键本身就等于「未包 query」（合法 DSL 根层只有 ROOT_KEY_WHITELIST
@@ -802,13 +802,13 @@ export function lintClause(obj: unknown, ctx?: LintCtx): Finding[] {
 }
 
 /* ═══ W-A：字段类型错配规则（需要 mapping 字段表） ═══
-   ① text-term     term/terms/wildcard 打在 text 字段且无 .keyword 后缀 → warning（terms 五百二十一批并入）
+   ① text-term     term/terms/wildcard 打在 text 字段且无 .keyword 后缀 → warning（terms 并入）
    ② range-type    range 值与字段类型错配（numeric 字段传非数值串）→ warning
    ③ unknown-field 字段名不在 mapping → hint 附编辑距离最近字段（≤2 才提示）
    ④ keyword-range range 打在 keyword 字段 → info「keyword 的 range 按字典序比较」
-   ⑤ text-range    range 打在 text 字段 → warning（五百一十九批：分词后词项上字典序比较，语义失真）
-   ⑥ date-range    range 值与 date 字段错配（非日期串）→ warning（五百二十一批）
-   + text-sort     sort 打 text 字段 → warning（五百二十一批；形态判定在 walk 的 sort 键处，不走本函数）
+   ⑤ text-range    range 打在 text 字段 → warning（：分词后词项上字典序比较，语义失真）
+   ⑥ date-range    range 值与 date 字段错配（非日期串）→ warning（）
+   + text-sort     sort 打 text 字段 → warning（；形态判定在 walk 的 sort 键处，不走本函数）
    + range-op-typo range 值对象操作符键拼写 → warning（W3；值对象含 format/time_zone 时 ⑥ 整组豁免） */
 function lintFieldUsage(
   clause: string, field: string, val: unknown, path: string, nth: number,
@@ -844,7 +844,7 @@ function lintFieldUsage(
   }
 
   /* ① term/terms/wildcard 打 text（无 .keyword 后缀）——分词后倒排词与原值不一致，大概率查空。
-     五百二十一批补 terms：值是数组、判型口径=数组元素存在即报（元素落分词词项与 term 同罪），
+     补 terms：值是数组、判型口径=数组元素存在即报（元素落分词词项与 term 同罪），
      字段类型判定与元素值形态无关（数字元素同样匹配不上分词词项）。 */
   if ((clause === 'term' || clause === 'terms' || clause === 'wildcard') && type === 'text' && !field.endsWith('.keyword')) {
     out.push({
@@ -855,7 +855,7 @@ function lintFieldUsage(
     });
   }
 
-  /* ---- 五百六十一批规则②：term/match_phrase 值与 date 系字段错配（date-term-value，warning 档）----
+  /* ---- 规则②：term/match_phrase 值与 date 系字段错配（date-term-value，warning 档）----
      「昨天」「上周」这类自然语言日期串打在 date/date_nanos 字段上 ES 无法解析（400 或查空）。
      合法口径复用 isLegalDateValue 白名单（ISO / now 日期数学 / ||复合 / epoch 毫秒——数字值
      本就合法不判）；对象值形态（value/boost 参数）不在判定域（不误扩）。 */
@@ -903,7 +903,7 @@ function lintFieldUsage(
     }
   }
 
-  /* ⑥ 五百二十一批：range 值与 date 字段错配——非日期串打在 date 字段上 ES 无法解析（400 或查空）。
+  /* ⑥ ：range 值与 date 字段错配——非日期串打在 date 字段上 ES 无法解析（400 或查空）。
      合法口径见 isLegalDateValue 白名单（ISO/now 日期数学/||复合/epoch 毫秒）；数字值本就合法不判。
      W3 误报修复：值对象带 format/time_zone 时值串按自定义格式/时区解析，isLegalDateValue 的
      ISO 白名单不再适用——「"gte":"01/2026","format":"MM/yyyy"」是合法形态，整组跳过不判。 */
@@ -935,7 +935,7 @@ function lintFieldUsage(
     });
   }
 
-  /* ⑤ 五百一十九批：range 打 text——range 是词项级字典序比较，text 分词后的词项与原值
+  /* ⑤ ：range 打 text——range 是词项级字典序比较，text 分词后的词项与原值
      几乎不可比（数值/时间语义必失真），比 keyword-range 更危险，升 warning。
      'a.keyword' 形态的 multi-field 类型是 keyword，走 ④ 不会误入此分支。 */
   if (clause === 'range' && type === 'text') {
@@ -950,7 +950,7 @@ function lintFieldUsage(
   return out;
 }
 
-/* ═══ 五百三十二批 P0-2b：settings / mapping body 精简 lint（DevTools dtLint 档路由消费） ═══
+/* ═══  P0-2b：settings / mapping body 精简 lint（DevTools dtLint 档路由消费） ═══
    与 lintDsl 的 root-key-typo 刻意分库：ROOT_KEY_WHITELIST 是 search body 根键表，settings
    根键（number_of_shards 等）进那张表必误报。规则宁少勿误报：只做「键拼写」（编辑距离 ≤2
    才提示，nearestKey 既有口径）与「数值型设置键的值类型」（ES 对数字与数字串都宽容，
@@ -1018,7 +1018,7 @@ function walkSettingsContainer(node: unknown, prefix: string, out: Finding[], oc
   }
 }
 
-/** 五百三十二批 P0-2b：settings body 精简 lint（PUT _settings / create-index settings 段）。
+/**  P0-2b：settings body 精简 lint（PUT _settings / create-index settings 段）。
     容器分派：root.index / root.settings 在场吃之（两者并存都吃）；全无包裹键 → 根即容器
     （裸平铺形态）。JSON 解析失败由调用侧静默（与 lintDsl 同契约）。 */
 export function lintSettingsBody(obj: unknown): Finding[] {
@@ -1081,7 +1081,7 @@ function walkMappingProps(props: unknown, prefix: string, out: Finding[], markTy
   }
 }
 
-/** 五百三十二批 P0-2b：mapping body 精简 lint（PUT _mapping / create-index mappings 段）。
+/**  P0-2b：mapping body 精简 lint（PUT _mapping / create-index mappings 段）。
     root.mappings 包一层时下钻一层；runtime 字段同吃 type 检查。 */
 export function lintMappingBody(obj: unknown): Finding[] {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return [];

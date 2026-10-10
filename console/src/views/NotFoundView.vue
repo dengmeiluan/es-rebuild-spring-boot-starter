@@ -5,7 +5,7 @@
       <div class="nf-code mono">404</div>
       <div class="nf-title">页面不存在</div>
       <div class="nf-path mono">{{ route.fullPath }}</div>
-      <!-- R42：未匹配路由不再静默空白——给相近路由猜测，输错一两个字符也能一键到达 -->
+      <!-- 未匹配路由不再静默空白——给相近路由猜测，输错一两个字符也能一键到达 -->
       <div v-if="guesses.length" class="nf-guess">
         <div class="nf-guess-t">你是不是想去：</div>
         <button v-for="g in guesses" :key="g.path" class="btn ghost sm" @click="router.push(g.path)">
@@ -59,10 +59,10 @@ function editDistance(a: string, b: string): number {
 /* W8：视口口径收编 --vh-offset（标准偏移 210px）；404 页无顶栏工具条，回补 delta 90px（等价旧值 120px） */
 .nf-page { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - var(--vh-offset, 210px) + 90px); }
 /* 空态/留白契约：padding 走全站空态契约 34px（theme.css .empty 注释明令），不再用大留白档。
-   五百五十四批：16px 收 --sp-4（34px 契约值保字面；spSweep540/551 锚随迁） */
+   16px 收 --sp-4（34px 契约值保字面；spSweep540/551 锚随迁） */
 .nf-card { text-align: center; padding: 34px var(--sp-4); max-width: 480px; }
 .nf-ic { color: var(--tx2); opacity: .5; }
-/* 528 批：44px 归展示数字三档 --fs-num-xl（数字档消费守卫=650+mono+tabular-nums，mono 由模板 .mono 挂）；
+/* 44px 归展示数字三档 --fs-num-xl（数字档消费守卫=650+mono+tabular-nums，mono 由模板 .mono 挂）；
    letter-spacing: 4px 为 404 展示字刻意宽距豁免保字面（px 级字距族不入 --ls em 梯） */
 .nf-code { font-size: var(--fs-num-xl); font-weight: 650; color: var(--tx2); letter-spacing: 4px; margin-top: var(--sp-1); font-variant-numeric: tabular-nums; }
 /* 15px 归档裁决：nf-title 是 404 卡内主文案（视觉权重介于小标题与页头之间），

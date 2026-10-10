@@ -5,7 +5,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * R39 ES 7.10 索引级 setting 动态/静态目录（静态常量类）。
+ *  ES 7.10 索引级 setting 动态/静态目录（静态常量类）。
  *
  * <p>依据 ES 7.10 官方 index modules 文档整理；代码库此前无该判定逻辑
  * （前端仅硬编码 8 个热键表单），此类为唯一权威来源。</p>

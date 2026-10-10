@@ -2,7 +2,7 @@ export type ViewportProfile = 'embedded' | 'compact' | 'standard' | 'wide';
 export type LayoutPreset = 'equal' | 'editor-first' | 'result-first' | 'reset';
 type PaneSizeLimit = number | 'available';
 
-/* ═══ 断点常量单源（五百二十八批收编，工具层）═══
+/* ═══ 断点常量单源（收编，工具层）═══
    JS 判据（matchMedia / stacked）与 CSS @media 档互为锚——改档必须两处同步：
    · BP_STACK 与全站 CSS max-width:1100px 档互锚（workbenchStackBp527.spec 锚定）；
    · BP_NARROW 与 theme.css min-width:901px 补集锁步（responsiveGuard239.spec 锚④）；
@@ -47,7 +47,7 @@ function distributeExtra(
     for (const index of preferred) {
       const pane = panes[index];
       const current = sizes[pane.id];
-      /* 五百一十九批：上界除自身 max 外，还为未参与分配的 flex 兄弟（reservedMin）和其余
+      /* 上界除自身 max 外，还为未参与分配的 flex 兄弟（reservedMin）和其余
          sized pane 的当前值留位——否则编辑优先会把 flex 编辑器挤到 min 以下
          （对齐 WorkbenchLayout.maxOf 的 reservedForSiblings 口径） */
       const others = Object.entries(sizes).reduce((sum, [id, size]) => (id === pane.id ? sum : sum + size), 0);
@@ -74,7 +74,7 @@ export function distributePreset(
   if (!panes.length) return {};
 
   const safeAvailable = Math.max(0, Number.isFinite(available) ? available : 0);
-  /* 五百一十九批：reservedMin = 未参与分配的 flex pane 的 minSize 合计（WorkbenchLayout 传入）。
+  /* reservedMin = 未参与分配的 flex pane 的 minSize 合计（WorkbenchLayout 传入）。
      作用：①distributeExtra 上界为其保留，preset 不再把 flex 编辑器挤到 min 以下；
      ②reservedMin>0（存在 flex pane）时「结果优先」反向——sized 全部压到 min，余量由 flex 吸收。 */
   const reserved = Math.max(0, Math.round(options.reservedMin ?? 0));
@@ -99,7 +99,7 @@ export function distributePreset(
   }
 
   if (preset === 'equal') {
-    /* 五百一十九批：等分基数先扣掉 flex 保留额，否则 distributeExtra 的上界保留会被基数分配绕过 */
+    /* 等分基数先扣掉 flex 保留额，否则 distributeExtra 的上界保留会被基数分配绕过 */
     const pool = Math.max(0, safeAvailable - reserved);
     const equal = Math.floor(pool / panes.length);
     panes.forEach((pane) => {
@@ -127,7 +127,7 @@ export function migrateLegacySplit(raw: string | null, paneId: string): { size: 
   return Number.isFinite(size) && size > 0 ? { size, source: 'legacy' } : null;
 }
 
-/* 五百三十八批：分栏互覆盖档位循环（纯函数，WorkbenchLayout.cycleMaximize 调用）——
+/* 分栏互覆盖档位循环（纯函数，WorkbenchLayout.cycleMaximize 调用）——
    null=对半；点击序 对半→前位(prev)独占→后位(next)独占→对半。 */
 export function cycleMaxState(cur: string | null, prevId: string, nextId: string): string | null {
   if (cur === prevId) return nextId;

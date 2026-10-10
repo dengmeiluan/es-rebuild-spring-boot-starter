@@ -24,14 +24,14 @@ import java.util.Collections;
 import java.util.stream.Collectors;
 
 /**
- * R94 Task 20 / Q2 演练：<b>{@code @Field(type = FieldType.Date)} 但<u>不写</u> {@code format}</b>
+ *   / Q2 演练：<b>{@code @Field(type = FieldType.Date)} 但<u>不写</u> {@code format}</b>
  * 的字段，对 {@code es.rebuild.compat.date-converters} 开关是否免疫。
  *
  * <h3>为什么必须实测这一格</h3>
  *
- * <p>Task 18 查明「带日期注解的字段对本开关免疫」，但它的实体用的是
+ * <p> 查明「带日期注解的字段对本开关免疫」，但它的实体用的是
  * {@code @Field(type = FieldType.Date, format = DateFormat.date_optional_time)}——<b>带 format</b>。
- * <b>「带 type=Date 但不带 format」这一格 Task 18 从未测过</b>，而它恰恰是 R94 的核心病例
+ * <b>「带 type=Date 但不带 format」这一格  从未测过</b>，而它恰恰是  的核心病例
  * （「无 format 的 date 字段」，见 {@code FormatlessDateFields}）。</p>
  *
  * <p>判定层 {@code dateRisk.ts#hasDateAnnotation} 要求 {@code annType} 与 {@code annFormat}
@@ -79,7 +79,7 @@ import java.util.stream.Collectors;
  * 这是一个<b>潜伏的硬失败</b>，也正是判定层规则 0 可达的原因 ——
  * 读的人否则会问「都装不起来了还报什么」。</p>
  *
- * <p><b>与 Task 18 的关系</b>：不矛盾，是补上了它的射程。Task 18 测的是
+ * <p><b>与  的关系</b>：不矛盾，是补上了它的射程。 测的是
  * {@code @Field(type=Date, format=...)}（<b>带</b> format）—— 那一格确实免疫。
  * 三档分界见 {@code EpochDateConverters} 类头的表。
  * 故 {@code hasDateAnnotation} 的 {@code &&} 是<b>对的</b>，不是笔误。</p>
@@ -89,19 +89,19 @@ import java.util.stream.Collectors;
  * <b>CI 侧对应的看守</b>是 {@code dateRisk.spec.ts} 里 {@code INVALID_DATE_ANNOTATION}
  * 那组单测（规则 0：{@code annType ∈ {Date, Date_Nanos}} + {@code annFormat === 'none'}
  * + javaType 为时间类型 → error）—— 本演练的字节码结论若被改坏，那几条会红。
- * 同 {@code R94WriteShapeDrill} / Task 16 先例。</p>
+ * 同 {@code R94WriteShapeDrill} /  先例。</p>
  *
  * <pre>
  * mvn -o test-compile
  * mvn -o exec:java -Dexec.classpathScope=test \
- *     -Dexec.mainClass=io.github.dengmeiluan.es.rebuild.probe.R94TypeOnlyAnnotationDrill
+ *     -Dexec.mainClass=io.github.dengmeiluan.es.rebuild.probe.TypeOnlyAnnotationDrill
  * </pre>
  */
-public final class R94TypeOnlyAnnotationDrill {
+public final class TypeOnlyAnnotationDrill {
 
     private static final String ES_HOST = "10.64.10.74";
     private static final int ES_PORT = 9200;
-    private static final String INDEX = "r93_r94_typeonly_drill";
+    private static final String INDEX = "r93__typeonly_drill";
 
     /** 10 位 epoch <b>秒</b>。无 format 的 date 字段会把它当毫秒 =&gt; 1970-01-21 附近。 */
     private static final long EPOCH_SECONDS_10 = 1754000000L;
@@ -115,7 +115,7 @@ public final class R94TypeOnlyAnnotationDrill {
         @Field(type = FieldType.Date)
         private Timestamp typeOnlyTime;
 
-        /** 对照：完全无 @Field，Task 18 已证明它走 CustomConversions。 */
+        /** 对照：完全无 @Field， 已证明它走 CustomConversions。 */
         private Timestamp plainTime;
 
         public Doc() {
@@ -151,7 +151,7 @@ public final class R94TypeOnlyAnnotationDrill {
                 RestClient.builder(new HttpHost(ES_HOST, ES_PORT, "http")));
         RestClient ll = client.getLowLevelClient();
         try {
-            System.out.println("=== R94 type-only-annotation drill (QA " + ES_HOST + ") ===");
+            System.out.println("=== type-only-annotation drill (QA " + ES_HOST + ") ===");
             System.out.println("server version : " + get(ll, "/"));
 
             drop(ll);
@@ -176,7 +176,7 @@ public final class R94TypeOnlyAnnotationDrill {
             readAndReport(template(client, true));
 
             /* ---- 阳性对照（新增甲）：先证明本演练的**读**通路是活的 ----
-               Task 18 前两次测量就是死通路。若哨兵读转换器也不生效，
+                前两次测量就是死通路。若哨兵读转换器也不生效，
                说明整条 ReadingConverter 通路在本演练里根本没被调用，
                R-OFF/R-ON 的差异（或无差异）都不可解释。 */
             System.out.println("\n--- [CTRL] POSITIVE CONTROL (sentinel reading converter) ---");
@@ -236,7 +236,7 @@ public final class R94TypeOnlyAnnotationDrill {
 
     private static void create(RestClient ll) throws Exception {
         Request r = new Request("PUT", "/" + INDEX);
-        /* 两个字段都是**无 format** 的 date —— 正是 R94 的核心病例形态。 */
+        /* 两个字段都是**无 format** 的 date —— 正是  的核心病例形态。 */
         r.setJsonEntity("{\"settings\":{\"number_of_shards\":1,\"number_of_replicas\":0},"
                 + "\"mappings\":{\"_doc\":{\"properties\":{"
                 + "\"typeOnlyTime\":{\"type\":\"date\"},"

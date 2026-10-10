@@ -10,7 +10,7 @@ import java.time.Instant;
 import java.util.Date;
 
 /**
- * R94：epoch 数值 → 日期类型的可选转换器（<b>默认不装</b>，见
+ * epoch 数值 → 日期类型的可选转换器（<b>默认不装</b>，见
  * {@link EsDateCompatAutoConfiguration}）。
  *
  * <h3>⚠ 这个开关救不了哪些字段（先读这段）</h3>
@@ -18,13 +18,13 @@ import java.util.Date;
  * <p><b>带 {@code @Field(type = FieldType.Date, format = ...)} 注解的字段，本开关对它们完全无效。</b>
  * sdes 4.0.9 会为这类属性安装<b>属性级</b>日期转换器，它<b>抢在</b>
  * {@code ElasticsearchCustomConversions} 之前生效，本类的转换器<b>根本不会被调用</b>。
- * QA 6.7.2 实测（R94 Task 18）：带注解字段在开关关 / 开两种情况下 {@code _source}
+ * QA 6.7.2 实测（ ）：带注解字段在开关关 / 开两种情况下 {@code _source}
  * <b>完全一致</b>；同一实体上<b>不带</b>注解的字段才走本类。</p>
  *
  * <p><b>后果</b>：若你的故障字段带日期注解，打开本开关<b>什么也不会发生，而且不报错</b> ——
  * 你会以为已经修好了。<b>而不是</b>打开本开关，正确做法见下面「三档」与「两条路的边界」。</p>
  *
- * <h3>三档（R94 Task 20 补上了中间那档）</h3>
+ * <h3>三档（  补上了中间那档）</h3>
  *
  * <p>免疫的触发条件是 <b>{@code format} 有显式值</b>，不是「写了 {@code @Field}」。
  * 少了中间那档会以为「带注解 = 免疫」，而它其实<b>连实体都构建不起来</b>：</p>
@@ -33,11 +33,11 @@ import java.util.Date;
  *   <caption>写法 × 实际行为</caption>
  *   <tr><th>写法</th><th>实际行为</th></tr>
  *   <tr><td>{@code @Field(type=Date, format=…)}</td>
- *       <td><b>免疫</b>（属性级转换器抢先）—— Task 18 实测</td></tr>
+ *       <td><b>免疫</b>（属性级转换器抢先）——  实测</td></tr>
  *   <tr><td>{@code @Field(type=Date)} 无 format，
  *           且 javaType 为 {@code TemporalAccessor}/{@code Date} 可赋值</td>
  *       <td><b>构造即抛 {@code MappingException}</b>（"...but has no DateFormat defined"），
- *           谈不上免不免疫 —— Task 20 实测 + {@code initDateConverter()} 字节码</td></tr>
+ *           谈不上免不免疫 ——  实测 + {@code initDateConverter()} 字节码</td></tr>
  *   <tr><td>无 {@code @Field} / {@code @Field} 非日期类型</td>
  *       <td>本类的转换器<b>生效</b></td></tr>
  * </table>
@@ -49,7 +49,7 @@ import java.util.Date;
  * <h3>两条修复路径的边界（不要当成可互换）</h3>
  *
  * <p>本段原先写作「改 {@code @Field(format=…)} <b>或</b>换 {@code Long} 自行转换」，
- * 那个「或」<b>暗示两者等价，而它们不等价</b>（R94 Task 19 之后）：</p>
+ * 那个「或」<b>暗示两者等价，而它们不等价</b>（  之后）：</p>
  *
  * <ul>
  *   <li><b>Path A（改 {@code @Field(format=…)}）</b>：只在<b>存量宽度单一</b>时成立，
@@ -70,7 +70,7 @@ import java.util.Date;
  *
  * <p>ES6 时代大量索引把 date 字段存成 epoch 数值（秒或毫秒），而 sdes 4.0.9 读到裸数值时
  * 并不会自动填进<b>无日期注解</b>的 {@link Timestamp} / {@link Date} / {@link Instant} 字段。
- * R94 实测的「存储形态 × Java 类型」30 格里只有 6 格天然可读通，本类补其中若干格。</p>
+ *  实测的「存储形态 × Java 类型」30 格里只有 6 格天然可读通，本类补其中若干格。</p>
  *
  * <h3>写方向</h3>
  *
@@ -79,7 +79,7 @@ import java.util.Date;
  * <p><b>实测（QA 6.7.2）：它是个 no-op</b> —— sdes 4.0.9 本就把 {@link Timestamp}
  * 原生写成 epoch 毫秒，开关关 / 开写出的 {@code _source} 逐字节相同。
  * 故<b>开启本开关不会改变已有的写出形态</b>，也就<b>不会</b>把某字段变成「多形态并存」
- * （R94 规则 2 {@code MIXED_STORED_FORMS}，判 error）。保留这个转换器是为了把
+ * （ 规则 2 {@code MIXED_STORED_FORMS}，判 error）。保留这个转换器是为了把
  * 「写侧统一毫秒」这条口径<b>显式钉住</b>，使其不随 sdes 版本升级而静默漂移。</p>
  *
  * <h3>阈值口径</h3>

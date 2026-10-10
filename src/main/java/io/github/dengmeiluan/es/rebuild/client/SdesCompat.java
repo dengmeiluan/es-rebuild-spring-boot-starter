@@ -6,7 +6,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 
 /**
- * R96：spring-data-elasticsearch 跨小版本的注解取值兼容层。
+ * spring-data-elasticsearch 跨小版本的注解取值兼容层。
  *
  * <p>实测签名差异（javap + JVM 反射双重确认）：
  * <pre>
@@ -25,7 +25,7 @@ public final class SdesCompat {
     private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(SdesCompat.class);
 
     /**
-     * R98 哨兵：注解<b>确实写了该项</b>，但当前 runtime 读不出它的值（实体 class 的编译期
+     *  哨兵：注解<b>确实写了该项</b>，但当前 runtime 读不出它的值（实体 class 的编译期
      * sdes 与运行期 sdes 跨了 4.0/4.2 形态边界）。
      *
      * <p><b>为什么必须区别于 null</b>：本类文档约定 {@code null} = 「没写注解」、
@@ -135,7 +135,7 @@ public final class SdesCompat {
             Method m = target.getClass().getMethod(method);
             return m.invoke(target);
         } catch (java.lang.reflect.InvocationTargetException e) {
-            /* R98：注解成员「写了但类型对不上」与「取不到」是两件事，必须分开。
+            /* 注解成员「写了但类型对不上」与「取不到」是两件事，必须分开。
                实体 class 编译期 sdes 与运行期跨 4.0/4.2 形态边界时（单值 ↔ 数组），
                注解代理在调用该成员时抛 AnnotationTypeMismatchException ——
                注解值确实在 class 文件里，只是当前 runtime 的成员类型与之不符。

@@ -1,4 +1,4 @@
-<!-- 五百六十一批：RT/QRT 双内核「筛选态提示 span」同构段收编片段组件（169/230/534 批
+<!-- RT/QRT 双内核「筛选态提示 span」同构段收编片段组件（169/230/
      暗状态可见性+组合档切换钮，单根 span 无 fragment 规避 T39）。
      类名经 props 注入（rt-/qrt- 前缀串）；行数档两内核行源不同（QRT filteredRows/rawRows、
      RT filteredHits/hits）→ shown/total props；动作双 emit（toggle-mode/clear）。
@@ -15,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-/* 五百六十三批：mode 改可选（缺省 'AND' 向后兼容）——未传档位的调用方不破渲染
+/* mode 改可选（缺省 'AND' 向后兼容）——未传档位的调用方不破渲染
    （561 双内核接线恒传，行为不变）；其余 prop 维持既有形态。 */
 withDefaults(defineProps<{
   /* 类名注入：'rt-filtered mono' / 'qrt-filtered mono'；fmode/clear 同系 */
@@ -34,7 +34,7 @@ defineEmits<{ (e: 'toggle-mode'): void; (e: 'clear'): void }>();
 </script>
 
 <!-- 样式为何不 scoped：同 TableAggFoot（片段元素无宿主 scopeId，内核 scoped 打不中）。
-     五百五十四批工蚁1「防折行 nowrap 纪律」规则原字面随块平移（wave554:321-322 随迁锚）。
+     工蚁1「防折行 nowrap 纪律」规则原字面随块平移（wave554:321-322 随迁锚）。
      ⚠两内核原值微差有意保留（rt-filtered=文本 inline 流 fs-xs、qrt-filtered=inline-flex
      fs-2xs；clear 色档/padding 各按原档）——收编只去重不统一视觉。
      -fmode 系规则内核侧仍在（两内核筛选弹层槽第二注入位使用），此处为提示行位同款复制
@@ -47,7 +47,7 @@ defineEmits<{ (e: 'toggle-mode'): void; (e: 'clear'): void }>();
 .rt-filtered { font-size: var(--fs-xs); color: var(--info); white-space: nowrap; }
 .rt-filtered-clear { border: 0; background: none; color: var(--tx2); cursor: pointer; padding: 0 3px; }
 .rt-filtered-clear:hover { color: var(--err); }
-/* 五百三十四批 W3：筛选组合档切换钮（提示行/筛选弹层共用，AND/OR 就地翻转；双内核同值） */
+/*  W3：筛选组合档切换钮（提示行/筛选弹层共用，AND/OR 就地翻转；双内核同值） */
 .qrt-fmode, .rt-fmode { border: 1px solid var(--line); background: transparent; color: var(--info); cursor: pointer; font-size: var(--fs-2xs); border-radius: 3px; padding: 0 var(--sp-1); line-height: 1.4; }
 .qrt-fmode:hover, .rt-fmode:hover { border-color: var(--info); }
 </style>

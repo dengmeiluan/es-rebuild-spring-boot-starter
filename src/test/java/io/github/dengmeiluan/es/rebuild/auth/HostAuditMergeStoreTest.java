@@ -11,7 +11,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百五十五批：宿主审计贡献合并层单测——全局倒序、裁剪、source=host stamp、
+ * 宿主审计贡献合并层单测——全局倒序、裁剪、source=host stamp、
  * 贡献者故障降级（契约红线：宿主故障绝不反噬控制台自身审计查询）。
  */
 public class HostAuditMergeStoreTest {

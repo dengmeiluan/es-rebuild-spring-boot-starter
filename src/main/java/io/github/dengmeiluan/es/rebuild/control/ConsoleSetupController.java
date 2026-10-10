@@ -26,7 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 控制集群 Setup 端点（R37）：{@code /internal/es/index/setup}。
+ * 控制集群 Setup 端点（）：{@code /internal/es/index/setup}。
  *
  * <p>与 Kibana 首连体验对齐：宿主无 ES（NONE 模式）时前端弹首连向导，
  * 用户录入控制集群连接串 → test 探测 → apply 绑定（幂等初始化控制索引 + 本地自举档案）。</p>
@@ -68,7 +68,7 @@ public class ConsoleSetupController {
         r.put("mode", resolver.mode().name());
         r.put("endpoint", resolver.endpoint());
         r.put("appName", appName);
-        // R39.2：纯管理平台形态下前端藏掉「宿主集群」入口（后端 EsTargetInterceptor 同步拒绝）
+        // .2：纯管理平台形态下前端藏掉「宿主集群」入口（后端 EsTargetInterceptor 同步拒绝）
         r.put("hostVisible", hostClusterVisible);
         return r;
     }
@@ -177,11 +177,11 @@ public class ConsoleSetupController {
             }
         } catch (Exception e) {
             r.put("ok", false);
-            // 五百五十八批：与 EsClusterConnController.test 及 advice 路径 {code,message} 双轨对齐
+            // 与 EsClusterConnController.test 及 advice 路径 {code,message} 双轨对齐
             // ——错误体补 code 键（ok/message 既有键保留，前端消费零破坏）；message null 兜底改中文
             r.put("code", "PROBE_FAILED");
             r.put("message", e.getMessage() == null ? "连接探测失败(未知异常类型)" : e.getMessage());
-            // 五百六十一批：补 endpoint 键（additive）——与 advice 路径 EsErrorMapper.body 同口径
+            // 补 endpoint 键（additive）——与 advice 路径 EsErrorMapper.body 同口径
             // （method + " " + requestURI），失败端点一眼可定位；RequestContextHolder 取当前请求，
             // 非 web 线程/单测无上下文时宁缺勿炸不输出该键（endpointOf 空白口径同源）
             String endpoint = EsErrorMapper.endpointOf(currentRequest());

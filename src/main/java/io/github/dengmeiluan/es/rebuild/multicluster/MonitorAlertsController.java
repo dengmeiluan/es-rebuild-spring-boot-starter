@@ -30,7 +30,7 @@ public class MonitorAlertsController {
     }
 
     /** 告警事件（timestamp 倒序，最新打头）。线缆 {records:[...]}，与 monitor-metrics 同款单点组装。
-     *  R11 时间窗：fromMs/toMs 供图卡事件标记与可见时间域对齐（缺省不限）。 */
+     *   时间窗：fromMs/toMs 供图卡事件标记与可见时间域对齐（缺省不限）。 */
     @GetMapping
     public Map<String, Object> alerts(@RequestParam(required = false, defaultValue = "50") int size,
                                       @RequestParam(required = false) Long fromMs,

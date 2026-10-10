@@ -98,7 +98,7 @@ public class SliceWorker implements Runnable {
         } catch (Exception e) {
             handle.markSlice(sliceId, MigrateJobTracker.SLICE_FAILED);
             handle.addErrors(0, "slice " + sliceId + " 异常: " + e.getMessage());
-            // 五百二十九批：slice 级失败观测——catch 兜底致命异常计 1 次（bulk 级可重试失败已计全局 errors），
+            // slice 级失败观测——catch 兜底致命异常计 1 次（bulk 级可重试失败已计全局 errors），
             // 前端进度列据此渲染失败切片红 chip；与 sliceStatus 并存，向后兼容只加不改
             handle.addSliceError(sliceId, 1L);
             logger.warn("[SliceWorker] slice {} failed: {}", sliceId, e.getMessage(), e);
@@ -235,7 +235,7 @@ public class SliceWorker implements Runnable {
     }
 
     /**
-     * 五百六十五批：bulk 可重试失败进入退避重试前的 WARN 留痕（观测缺口收口，纯日志零契约）。
+     * bulk 可重试失败进入退避重试前的 WARN 留痕（观测缺口收口，纯日志零契约）。
      *
      * <p>缺口：重试窗口内的抖动（bulk 线程池满/网关 5xx）此前服务端日志零痕迹——只有耗尽
      * {@code maxAttempts} 才计 errors 落一条错误消息，排障时分不清「一次没成」还是
@@ -258,7 +258,7 @@ public class SliceWorker implements Runnable {
             req.setJsonEntity(OBJECT_MAPPER.writeValueAsString(body));
             remoteLowLevel.performRequest(req);
         } catch (Exception e) {
-            /* 五百四十六批：debug→WARN——低频真异常路径（远端断连/网关 4xx），失败即 scroll
+            /* debug→WARN——低频真异常路径（远端断连/网关 4xx），失败即 scroll
                上下文在远端残留到 keep-alive 到期（资源泄漏），留痕可查；吞异常契约不变 */
             logger.warn("[SliceWorker] clearScroll 失败（scroll 上下文残留，远端 keep-alive 到期后自清）: {}", e.getMessage());
         }

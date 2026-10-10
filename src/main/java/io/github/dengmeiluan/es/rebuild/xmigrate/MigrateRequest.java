@@ -12,7 +12,7 @@ public class MigrateRequest {
     private RemoteClusterConn conn;
 
     /**
-     * R38 可选：已存连接档案 id（与手输 {@link #conn} 二选一，非空优先）——
+     *  可选：已存连接档案 id（与手输 {@link #conn} 二选一，非空优先）——
      * 服务端按 id 从控制集群取全量档案（含密码），明文不经前端回传；
      * 控制器层同时校验当前登录角色满足该档案的 minRole。
      */

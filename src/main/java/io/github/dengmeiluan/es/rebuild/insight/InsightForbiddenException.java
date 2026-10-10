@@ -1,7 +1,7 @@
 package io.github.dengmeiluan.es.rebuild.insight;
 
 /**
- * R39 Insight 403 语义异常。
+ *  Insight 403 语义异常。
  *
  * <p>两类 code：</p>
  * <ul>

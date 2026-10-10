@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * R93 Task 7：adhoc 重建锁。
+ *  adhoc 重建锁。
  *
  * <p><b>本测试类声称要防的核心失败模式 X：</b>人工等待期间本实例已<b>失去</b>索引的重建锁
  * （锁被他人强夺，同一索引上可能正有<b>另一个重建</b>在跑），作业却<b>仍然去切换别名</b>。
@@ -160,7 +160,7 @@ public class AdhocRebuildLockTest {
     }
 
     /**
-     * leaseMs=3 → renewIntervalMs()=1ms，等待循环第一轮即到续约点。
+     * leaseMs=3 → renewIntervalMs()=1ms，等待循环即到续约点。
      *
      * <p>confirmTimeoutMs 取 5s 而非 10 分钟：本类各用例都应在毫秒级由「确认已赢」或
      * 「丢锁中止」终止循环；一旦某个实现缺陷让它们走到超时兜底，用例必须<b>很快</b>失败，
@@ -326,10 +326,10 @@ public class AdhocRebuildLockTest {
                 .isEqualTo(AdhocRebuildService.REASON_LOCK_LOST);
     }
 
-    // ================================================================ 与 Task 6 不变量的交互
+    // ================================================================ 与  不变量的交互
 
     /**
-     * 确认已赢下 CAS 之后才发现失锁：切换<b>不可撤销</b>（Task 6 的结构性不变量），
+     * 确认已赢下 CAS 之后才发现失锁：切换<b>不可撤销</b>（ 的结构性不变量），
      * 但这个事实<b>必须进作业报告</b> —— 运维看的是控制台，不是 grep 日志。
      */
     @Test
@@ -462,7 +462,7 @@ public class AdhocRebuildLockTest {
      * 关闭时真实 store 的 {@code tryAcquire}/{@code renew} 恒 true，但 <b>{@code get} 恒 null</b>。
      * 若把这个 null 当成「锁没了」，则：取锁成功 → 作业正常跑 → 第一个续约点 get() 返回 null
      * → 判失锁 → GATE_ABORTED → 拒绝切换。即<b>关掉分布式锁 = 重建功能整体失效</b>，
-     * 比 R93 之前更差。</p>
+     * 比  之前更差。</p>
      *
      * <p><b>必须走「尚未确认」的路径。</b>若先 {@code confirmSwitch()}，
      * {@code while (!isSwitchConfirmed())} 会直接短路出循环、<b>根本到不了续约点</b>，
@@ -606,8 +606,8 @@ public class AdhocRebuildLockTest {
     }
 
     /**
-     * 无锁构造（lockStore=null）时行为与 R93 之前完全一致：门照常放行，不因缺锁而中止。
-     * 既有 12 个 Task 6 测试全部走这条路径。
+     * 无锁构造（lockStore=null）时行为与  之前完全一致：门照常放行，不因缺锁而中止。
+     * 既有 12 个  测试全部走这条路径。
      */
     @Test
     public void noLockStore_behavesExactlyAsBefore() throws Exception {

@@ -11,9 +11,9 @@
             <b :class="running ? 'rn' : 'st'">{{ running ? '实时' : '已暂停' }}</b></span>
       </template>
       <template #actions>
-<!-- 第十批：轮询频率下拉换装 AutoRefreshSelect 统一件（原 .ld-sel 退役；开关由右侧暂停/开始按钮承担，档位不含「关」） -->
+<!-- 轮询频率下拉换装 AutoRefreshSelect 统一件（原 .ld-sel 退役；开关由右侧暂停/开始按钮承担，档位不含「关」） -->
         <AutoRefreshSelect v-model:ms="intervalMs" :sizes="[2000, 5000, 10000, 30000, 60000]" :label="fullscreen ? '轮询间隔：挂墙模式恒定 5s' : '轮询间隔'" :disabled="fullscreen" />
-        <!-- R64：趋势窗长（对标阿里云时间控件多档体验）——六卡/对比卡折线展示点数，偏好落盘 -->
+        <!-- 趋势窗长（对标阿里云时间控件多档体验）——六卡/对比卡折线展示点数，偏好落盘 -->
         <select v-model="windowPts" class="inp sm" aria-label="趋势窗长" title="趋势窗长：实时折线展示的采样点数">
           <option :value="60">近 60 点</option>
           <option :value="120">近 120 点</option>
@@ -32,7 +32,7 @@
 </PageHeader>
     </div>
 
-    <!-- R41：观测中断横幅——拉不到数据时明确告知，而不是静默展示陈旧快照 -->
+    <!-- 观测中断横幅——拉不到数据时明确告知，而不是静默展示陈旧快照 -->
     <div v-if="obsStale" class="ld-stale">
       <AlertTriangle :size="13" />
       观测中断：已 {{ fmtDur(nowTs - lastOkAt) }} 未获取到新数据（登录态过期或目标集群不可达），下方为最后快照，告警状态已冻结
@@ -47,10 +47,10 @@
     <MetaStrip class="ld-strip" :items="ldMeta" />
 
     <div class="ld-charts" data-st="1" :class="{ 'st-in': pageIn }">
-      <!-- R41 §3：标注与曲线分层——当前值放卡片头部，SVG 只画曲线；采样不足给占位不画空轴 -->
-      <!-- 六百三十八批 P1a-2：五张折线卡收编 LiveChartCard 统一件（几何/点位走 sparkChart 单源，
+      <!--  §3：标注与曲线分层——当前值放卡片头部，SVG 只画曲线；采样不足给占位不画空轴 -->
+      <!--  P1a-2：五张折线卡收编 LiveChartCard 统一件（几何/点位走 sparkChart 单源，
            悬浮命中自持、展开态/遮罩/Esc 由视图承担） -->
-      <!-- 六百八十一批（622 §9-D1）：QPS 身份色仲裁改青轴——蓝=CPU 全屏唯一语义（对比卡/历史区
+      <!-- （622 §9-D1）：QPS 身份色仲裁改青轴——蓝=CPU 全屏唯一语义（对比卡/历史区
            PALETTE 不受影响，NODE_METRICS 同律）；CPU 卡保持 --dv-blue -->
       <LiveChartCard title="集群 QPS（搜索/秒）" :cur-text="qpsText" :cur-key="qpsText"
         cur-color="var(--dv-cyan)" :window="windowLabel"
@@ -68,7 +68,7 @@
         :series="winSlice(heapSeries)" :ts="winSlice(sampleTs)" mode="pct" color="var(--warn)" gid="ldg-heap"
         :expanded="expandedCard === 'heap'" :wait-text="waitText"
         @expand="toggleExpand('heap')" />
-      <!-- R54/R52：CPU/磁盘均值走势两卡（实报「很多东西没有实时走势图」）——数据节点均值序列
+      <!-- /：CPU/磁盘均值走势两卡（实报「很多东西没有实时走势图」）——数据节点均值序列
            （store.cpuSeries/diskSeries，切集群随快照隔离），百分比固定 0-100 刻度与阈值线同 Heap 卡 -->
       <LiveChartCard title="CPU 使用趋势" :cur-text="cpuText" :cur-key="cpuText"
         cur-color="var(--dv-blue)" :cur-title="cpuTitle"
@@ -82,49 +82,49 @@
         :series="winSlice(diskSeries)" :ts="winSlice(sampleTs)" mode="pct" color="var(--dv-purple)" gid="ldg-disk"
         :expanded="expandedCard === 'disk'" :wait-text="waitText"
         @expand="toggleExpand('disk')" />
-      <!-- 五百三十批：第四卡「运行中任务」——单源读全局 jobTracker（常驻轮询，本页不新拉端点），
+      <!-- 第四卡「运行中任务」——单源读全局 jobTracker（常驻轮询，本页不新拉端点），
            形态对齐既有三卡（.ld-chart 容器 + 头部当前值）；跨页作业进度在大屏可见 -->
       <div class="ld-chart">
         <!-- 799 件1（用户五令+截图实锚 A2：任务卡数字旧形态=六卡排版不统一头名）：任务卡头升
              两行制 KPI 与 LiveChartCard 五卡同构——行① 标题+四类小字+走势 spark；行② 28px 大数。 -->
         <div class="ld-chart-tt">
           <span class="ld-chart-tt-top">运行中任务<em class="ld-chart-th">托管 / 迁移 / Reindex / 快照</em>
-            <!-- 七百批②任务卡走势：会话窗任务数 spark（<2 点不画=宁缺毋假；全局口径不随集群切换清位） -->
+            <!-- ②任务卡走势：会话窗任务数 spark（<2 点不画=宁缺毋假；全局口径不随集群切换清位） -->
             <svg v-if="mon.jobCountSeries.length > 1" class="ld-job-spark" :viewBox="'0 0 72 18'" preserveAspectRatio="none" aria-hidden="true" role="img" :title="'本次会话运行任务数走势（最近 ' + mon.jobCountSeries.length + ' 点）'"><polyline :points="sparklinePoints(mon.jobCountSeries, 72, 18)" fill="none" stroke="var(--dv-blue)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
           </span>
           <b class="ld-chart-cur" :key="runningJobs.length" style="color:var(--dv-blue)" title="托管重建 / 跨集群迁移 / Reindex 任务 / 快照">{{ runningJobs.length }}</b>
         </div>
         <div v-if="runningJobs.length" class="ld-jobs">
           <div v-for="j in runningJobs.slice(0, 5)" :key="j.id" class="ld-job" :title="j.kindName + '「' + j.label + '」' + (j.pct >= 0 ? ' 进度 ' + j.pct + '%' : '')">
-            <!-- 五百三十一批：徽标换装 StatusPill（jobTone 本地字典收口 utils/esEnumZh 的 jobKindTone） -->
+            <!-- 徽标换装 StatusPill（jobTone 本地字典收口 utils/esEnumZh 的 jobKindTone） -->
             <StatusPill :tone="jobKindTone(j.kindName)" :label="j.kindName" />
             <span class="ld-job-lb">{{ j.label }}</span>
             <b v-if="j.pct >= 0" class="ld-job-pct mono">{{ j.pct }}%</b>
           </div>
           <div v-if="runningJobs.length > 5" class="ld-job-more">等 {{ runningJobs.length }} 个运行中…</div>
         </div>
-        <!-- 第十批收尾：空态占位收编 EmptyState compact 统一件（文案逐字保留，obsStack530 看守；
+        <!-- 空态占位收编 EmptyState compact 统一件（文案逐字保留，obsStack530 看守；
              无任务=全清语义，图标选 CheckCircle2） -->
         <EmptyState v-else compact :icon="CheckCircle2" text="暂无运行中任务" class="ld-jobs-empty" />
       </div>
     </div>
 
     <div class="ld-nodes" data-st="2" :class="{ 'st-in': pageIn }">
-      <!-- 七百九十四批件1：对比面改 fixed 浮动面板——八百零六批件3 用户令推翻（「节点对比
+      <!-- 件1：对比面改 fixed 浮动面板——件3 令推翻（「节点对比
            怎么回事，怎么单独弹出了一个页面，投机倒把，重新设计跟页面一样的设计语言」）：
            fixed 浮层/拖动把柄/位置落盘/dialog 语义全退役，容器迁入本区页面流内联展开
            （800 监控明细单容器同构语言）；入口钮位置恒定只换开合语义。释放的版面让节点卡
            grid 加宽（minmax 220→240，794 件3）维持。 -->
       <div class="ld-nodes-hd">
         <div class="ld-nodes-tt sec-t">节点实时视图</div>
-        <!-- 八百零六批件1：区块头汇总（节点/master/水位告警一眼读出） -->
+        <!-- 件1：区块头汇总（节点/master/水位告警一眼读出） -->
         <span class="ld-nodes-sum">{{ nodesSummary }}</span>
         <button ref="cmpEntryRef" type="button" class="ld-ncmp-entry" :aria-expanded="cmpPanelOpen"
           :title="cmpPanelOpen ? '收起节点对比' : '展开节点对比'" @click="toggleCmpPanel">
           <GitCompareArrows :size="12" />节点对比
         </button>
       </div>
-      <!-- 八百零六批件3：对比面内联容器（页面流 .ld-nodes 区内；panel 壳与节点卡/六卡同语言；
+      <!-- 件3：对比面内联容器（页面流 .ld-nodes 区内；panel 壳与节点卡/六卡同语言；
            头部行=题+恢复钮+seg 五档+✕；图区内容原样迁移——悬浮读出 mousemove/mouseleave
            保留=十字线语义不丢） -->
       <div v-if="cmpPanelOpen" class="ld-ncmp-panel" aria-label="节点对比"
@@ -145,7 +145,7 @@
               <g v-if="cmpMode === 'pct'" class="ld-glines" aria-hidden="true">
                 <line v-for="g in PCT_GRID" :key="'g' + g" x1="0" x2="720" :y1="CMP_H - CMP_H * (g / 100)" :y2="CMP_H - CMP_H * (g / 100)" vector-effect="non-scaling-stroke" />
               </g>
-              <!-- 八百二十八批：折线平滑统一（Catmull-Rom 单源；pct/abs 档 sparkPts 同源） -->
+              <!-- 折线平滑统一（Catmull-Rom 单源；pct/abs 档 sparkPts 同源） -->
               <path v-for="s in cmpSeries" :key="s.name" :d="catmullRomPath(sparkPts(s.data, CMP_W, CMP_H, cmpMetric === 'qps' || cmpMetric === 'idx' ? 'abs' : 'pct'), CMP_W, CMP_H)" fill="none" :stroke="s.color" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
               <line v-if="cmpWarn !== null" x1="0" :y1="CMP_H - CMP_H * (cmpWarn / 100)" x2="720" :y2="CMP_H - CMP_H * (cmpWarn / 100)" stroke="var(--err)" stroke-dasharray="4 2" vector-effect="non-scaling-stroke" />
             </svg>
@@ -171,7 +171,7 @@
             <span class="ld-ta">{{ fmtTime(cmpTs[cmpTs.length - 1]) }}</span>
           </div>
         </template>
-        <!-- 八百一十六批件1：图例 chips 行（hc-legend 同语言；点击显隐=off 划线，色号锚定不换色；
+        <!-- 件1：图例 chips 行（hc-legend 同语言；点击显隐=off 划线，色号锚定不换色；
              常驻=有节点即显示，不随 cmpHasData 条件块） -->
         <div class="ld-cmp-legend">
           <button v-for="c in cmpChips" :key="c.name" type="button" class="ld-cmp-lg" :class="{ off: c.off }"
@@ -179,31 +179,31 @@
             <i :style="{ background: c.color }" aria-hidden="true" />{{ c.name }}<em class="mono">{{ c.cur }}</em>
           </button>
         </div>
-        <!-- 八百一十六批件1：svg-wait 因 chips 常驻隔断 v-else 链改显式 v-if -->
+        <!-- 件1：svg-wait 因 chips 常驻隔断 v-else 链改显式 v-if -->
         <div v-if="!cmpHasData" class="ld-svg-wait">{{ waitText }}</div>
       </div>
-      <!-- 七百九十四批件1：对比区块整迁出页面流（悬浮面板版在 ld-page 尾部 fixed 渲染） -->
+      <!-- 件1：对比区块整迁出页面流（悬浮面板版在 ld-page 尾部 fixed 渲染） -->
       <div class="ld-nodes-grid">
-        <!-- 第十批：裸 div 空态收编 EmptyState compact 统一件（grid 跨列落位由 .ld-nodes-empty 承担） -->
+        <!-- 裸 div 空态收编 EmptyState compact 统一件（grid 跨列落位由 .ld-nodes-empty 承担） -->
         <EmptyState v-if="!sortedNodes.length" class="ld-nodes-empty" compact :icon="MonitorSpeaker" text="暂无节点数据" />
-        <!-- R59：节点卡可点下钻 /diag?node={name}（告警条 alertRoute 同语汇；role/tabindex/Enter=铁律 B 键盘可达） -->
+        <!-- 节点卡可点下钻 /diag?node={name}（告警条 alertRoute 同语汇；role/tabindex/Enter=铁律 B 键盘可达） -->
         <div v-for="n in sortedNodes" :key="n.nodeId" class="ld-node" :class="nodeTone(n)" role="button" tabindex="0"
           :aria-label="`节点 ${n.name}，点击进入诊断`" title="点击进入诊断"
           @click="router.push({ path: '/diag', query: { node: n.name } })"
           @keydown.enter.prevent="router.push({ path: '/diag', query: { node: n.name } })" @keydown.space.prevent="router.push({ path: '/diag', query: { node: n.name } })">
           <div class="ld-node-hd">
             <span class="ld-node-name">
-              <!-- 五百六十一批：节点健康色点换装 MetaStrip dot 形态单源（DiagView dgMeta 判例）——
+              <!-- 节点健康色点换装 MetaStrip dot 形态单源（DiagView dgMeta 判例）——
                    .ld-node-tone 私造圆点四档退役，色值经 nodeToneDot 直传组件 dot 位（8px 归 .ms-dot） -->
               <MetaStrip :items="[{ dot: nodeToneDot(n) }]" />
               <b>{{ n.name }}</b>
             </span>
             <span class="ld-node-role" :class="roleClass(n)">{{ roleLabel(n) }}</span>
           </div>
-          <!-- 第十批：水位条 width 过渡改 transform: scaleX（合成层动画不走 layout；绑定值=百分比/100，origin left） -->
-          <!-- 五百三十二批：数值侧接 tone 分档（metricToneCls 走 METRIC_THRESHOLDS 单源，
+          <!-- 水位条 width 过渡改 transform: scaleX（合成层动画不走 layout；绑定值=百分比/100，origin left） -->
+          <!-- 数值侧接 tone 分档（metricToneCls 走 METRIC_THRESHOLDS 单源，
                与 MetaStrip 均值/卡边框同值同色；条形保留指标身份色不冲突，ok 档不着色） -->
-          <!-- 八百零六批件1：条升主视觉 12px+85/90 阈值刻度双标+超档条色切 tone（ok=身份色
+          <!-- 件1：条升主视觉 12px+85/90 阈值刻度双标+超档条色切 tone（ok=身份色
                走 --mc 变量；「离危险多远」一眼可读=对齐 802 底座语言） -->
           <div class="ld-node-row">
             <span>heap</span>
@@ -220,7 +220,7 @@
             <div class="ld-bar"><div class="ld-fill" :class="metricToneCls('disk', diskUsedPct(n))" :style="{ transform: 'scaleX(' + diskUsedPct(n) / 100 + ')', '--mc': METRIC_COLOR.disk }"></div><i class="ld-bar-tick" aria-hidden="true"></i><i class="ld-bar-tick t90" aria-hidden="true"></i></div>
             <b :class="metricToneCls('disk', diskUsedPct(n))">{{ diskUsedPct(n).toFixed(0) }}%</b>
           </div>
-          <!-- 八百零六批件1：tp（R58 对标 Thread_pool Rows 即时值）+load（R57 load_average.1m）
+          <!-- 件1：tp（ 对标 Thread_pool Rows 即时值）+load（ load_average.1m）
                两行纯文字合一行 mono 收尾（上缘收尾分隔线=「有收尾」；缺省段诚实不渲染契约维持
                ——liveKpi596/liveLoad595 消费面文案 'tp'/'load'/'N/M'/'N.NN' 逐字保留） -->
           <div v-if="tpOf(n) || load1mOf(n)" class="ld-node-row ld-node-foot">
@@ -228,26 +228,26 @@
             <span v-if="tpOf(n) && load1mOf(n)" class="ld-node-foot-sep" aria-hidden="true">·</span>
             <span v-if="load1mOf(n)">load <b>{{ load1mOf(n) }}</b></span>
           </div>
-          <!-- 七百八十一批 K3：卡内三行迷你 spark 退役（用户实报「节点卡信息过密」）——与上方
+          <!--  K3：卡内三行迷你 spark 退役（实报「节点卡信息过密」）——与上方
                节点对比图同数据（seg 可切 heap/cpu/disk/qps/idx 五档）+历史趋势「按节点查看」
                下钻重复，属页面元素零重复执法面；节点卡收为「名+角色+三水位+tp/load」六行档 -->
         </div>
       </div>
     </div>
 
-    <!-- R41 §2：告警状态机——一条状况一个条目，实时更新当前值/峰值/持续时长；恢复灰化留痕；禁止日志刷屏 -->
+    <!--  §2：告警状态机——一条状况一个条目，实时更新当前值/峰值/持续时长；恢复灰化留痕；禁止日志刷屏 -->
     <div v-if="activeAlerts.length || resolvedAlerts.length" class="ld-alerts" data-st="3" :class="{ 'st-in': pageIn }">
       <div class="ld-alerts-tt">
         <AlertTriangle :size="12" /> 实时告警
-        <!-- 五百三十一批：计数徽标换装 StatusPill（ld-al-badge 锚类保留在外层，pillSingleTrack 看守；
+        <!-- 计数徽标换装 StatusPill（ld-al-badge 锚类保留在外层，pillSingleTrack 看守；
              原手写 .bd/.wn 文字色档随换装退役——色归 tone 单源） -->
         <StatusPill v-if="badCount" tone="r" class="ld-al-badge" :label="badCount + ' 严重'" />
         <StatusPill v-if="warnCount" tone="y" class="ld-al-badge" :label="warnCount + ' 警告'" />
-        <!-- 八百二十六批B3：空态灰字/胶囊随整行 v-if 退役（搁浅分隔条+死代码清除） -->
+        <!-- B3：空态灰字/胶囊随整行 v-if 退役（搁浅分隔条+死代码清除） -->
         <span class="ld-al-sp"></span>
         <button v-if="resolvedAlerts.length" class="ld-al-clear" @click="clearResolved">清除已恢复（{{ resolvedAlerts.length }}）</button>
       </div>
-      <!-- 三百五十六批：告警横条键盘可达（role/tabindex/Enter 触发——纯 click 绑定对键盘用户不可达） -->
+      <!-- 告警横条键盘可达（role/tabindex/Enter 触发——纯 click 绑定对键盘用户不可达） -->
       <div v-for="a in activeAlerts" :key="a.key" class="ld-alert" :class="a.severity" role="button" tabindex="0"
         :aria-label="`告警：${a.title}，点击定位到对应处置`" title="点击定位到对应处置"
         @click="alertRoute(a)" @keydown.enter.prevent="alertRoute(a)" @keydown.space.prevent="alertRoute(a)">
@@ -267,7 +267,7 @@
         <span class="ld-alert-t">持续 {{ fmtDur((a.resolvedAt || 0) - a.firstAt) }} · {{ fmtTime(a.resolvedAt || 0) }} 已恢复</span>
       </div>
     </div>
-    <!-- 八百二十六批B3：空态=轻量绿胶囊行（无 warn 头行无 border-bottom——搁浅分隔条退役；健康态语义保留=808 A2 锚） -->
+    <!-- B3：空态=轻量绿胶囊行（无 warn 头行无 border-bottom——搁浅分隔条退役；健康态语义保留=808 A2 锚） -->
     <div v-else class="ld-alerts ld-alerts-empty" data-st="3" :class="{ 'st-in': pageIn }"><span class="ld-ok-chip"><i aria-hidden="true" />无活动告警</span></div>
 
     <!-- 集群监控历史趋势：服务端每分钟采样（GET /monitor-metrics，只读——服务端定时任务=唯一写入方，
@@ -278,7 +278,7 @@
          buildSeries 单源，色板锚定节点排序位）。 -->
     <div class="ld-hist" data-st="4" :class="{ 'st-in': pageIn }">
       <div class="ld-hist-head">
-        <!-- 七百八十二批 Z4（用户实报「协调性」）：两行分层——行①轻信息（标题/副题/环形用量条）
+        <!--  Z4（实报「协调性」）：两行分层——行①轻信息（标题/副题/环形用量条）
              +行②控件（分组/时间/集群/刷新/⋯）。原单行 flex-wrap 塞 11 子项，wrap 断点随内容
              漂移=「头部拥挤」实报根源；控件行恒 5+⋯ 与页头 actions 同语言（铁律 C 不变量）。 -->
         <div class="ld-hist-head-top">
@@ -292,7 +292,7 @@
           </span>
         </div>
         <div class="ld-hist-head-ctl">
-        <!-- 六百二十八批：分组导航 seg（对标阿里云「分组: 概览 ▾」实测 9 项；我方收敛 8 组——
+        <!-- 分组导航 seg（对标阿里云「分组: 概览 ▾」实测 9 项；我方收敛 8 组——
              不照搬「主节点指标」：节点下钻已含主节点，独立成组增量≈0）。
              短标签 + title 全称（900 窄档单行不折行的关键）；overview=pass-through。
              分组=用户导航过滤，与 onlyNodeMode/onlyClusterMode 的自动二态隐藏正交（626 辨析）。 -->
@@ -312,7 +312,7 @@
           <option value="14d">最近 14 天</option>
           <option value="custom">自定义</option>
         </select>
-        <!-- R66 G5 自定义时间档收官：起止 datetime-local（原生控件=键盘可达），rangeMs 单源解析 -->
+        <!--  G5 自定义时间档收官：起止 datetime-local（原生控件=键盘可达），rangeMs 单源解析 -->
         <template v-if="mh2Range === 'custom'">
           <input v-model="customFrom" type="datetime-local" class="inp sm" aria-label="自定义开始时间" title="自定义开始时间" />
           <input v-model="customTo" type="datetime-local" class="inp sm" aria-label="自定义结束时间" title="自定义结束时间" />
@@ -322,7 +322,7 @@
           <option v-for="c in histClusters" :key="c" :value="c">{{ c }}</option>
         </select>
         <button class="btn ghost sm" :disabled="histLoading" @click="loadHist"><RotateCw :size="12" /> 刷新</button>
-        <!-- 六百二十八批：低频控件收进 ⋯（铁律 C「工具行默认可见按钮 ≤5，其余收进 ⋯」）。
+        <!-- 低频控件收进 ⋯（铁律 C「工具行默认可见按钮 ≤5，其余收进 ⋯」）。
              明面＝分组 seg / 时间范围 / 筛选集群 / 刷新 / ⋯ ＝ 5。
              用原生 details：键盘可达（Enter/Space 开合）；面板四要素（bg1 底 + border +
              shadow + r-m）见样式段。⚠665 勘误：原文「无需 document 捕获级 Esc 接线（不入
@@ -332,7 +332,7 @@
           <summary ref="histMoreSumEl" class="ld-hist-more-sum" aria-label="更多选项"
             title="更多选项：聚合方式 / 自动刷新 / 按节点查看">⋯</summary>
           <div class="ld-hist-more-pop">
-            <!-- R31 G4 聚合方式：avg=桶均值（趋势口径）| max=桶内峰值（瞬时尖峰），随取数下推服务端 -->
+            <!--  G4 聚合方式：avg=桶均值（趋势口径）| max=桶内峰值（瞬时尖峰），随取数下推服务端 -->
             <div class="ld-hist-more-row">
               <span class="ld-hist-more-lb">聚合方式</span>
               <select v-model="mhAgg" class="inp sm" aria-label="聚合方式" title="聚合方式：均值看趋势，峰值看突刺">
@@ -340,7 +340,7 @@
                 <option value="max">峰值</option>
               </select>
             </div>
-            <!-- 六百三十七批：聚合粒度（周期）档（对标阿里云每卡头「(周期:1分钟)」；626 裁决 D8
+            <!-- 聚合粒度（周期）档（对标阿里云每卡头「(周期:1分钟)」；626 裁决 D8
                  周期半边，零 Java 改动）。落点在 ⋯ 浮层内——明面已用满 5 控件（铁律 C）。
                  原始逐点受 50 小时安全窗约束：超限时 option 禁用 + title 说明并自动回落「自动」
                  （原始查询 size 钳 3000 + asc，长窗会丢最新点）。 -->
@@ -356,7 +356,7 @@
                 <option value="1h">1 小时</option>
               </select>
             </div>
-            <!-- R38 自动刷新（对标阿里云基础监控自动刷新开关）：挂墙大屏历史自动推进，
+            <!--  自动刷新（对标阿里云基础监控自动刷新开关）：挂墙大屏历史自动推进，
                  档位关/30s/1m/5m 偏好记忆 live.histAuto 默认关；页面隐藏/KeepAlive 失活自动停 -->
             <div class="ld-hist-more-row">
               <span class="ld-hist-more-lb">自动刷新</span>
@@ -377,7 +377,7 @@
       <!-- R7 服务端告警条：/monitor-alerts 活跃告警 chips（CRIT 红/WARN 黄/INFO 中性，title 带时间+阈值；
            头部同排已拥挤（治理条+双筛选+下钻+刷新），独立成行——chips 多条时随 flex-wrap 自然换行）。
            全无=小灰字「无活动告警」，与实时告警区同语汇；拉取失败静默缺席，不打扰图表 -->
-      <!-- 八百一十六批件6：空告警整行不渲染（与实时告警区「无活动告警」胶囊重复=页面元素零重复执法；
+      <!-- 件6：空告警整行不渲染（与实时告警区「无活动告警」胶囊重复=页面元素零重复执法；
            有 CRIT/WARN chips 时保留行） -->
       <div v-if="srvActive.length" class="ld-hist-alerts" role="status" aria-label="服务端告警">
         <span v-for="a in srvActive" :key="(a.connId || '') + '|' + a.metric" class="ld-hist-al"
@@ -388,11 +388,11 @@
         </span>
         <span v-if="!srvActive.length" class="ld-ok-chip"><i aria-hidden="true" />无活动告警</span>
       </div>
-      <!-- ══ 八百批：监控明细单容器（用户六令实报 20261008 13:18「top写入索引为什么不跟下面的
+      <!-- ══ ：监控明细单容器（用户六令实报 20261008 13:18「top写入索引为什么不跟下面的
            监控在一块，这严重违反了我想要的设计」）——根因=Top 索引/慢请求/告警历史三条独立
            CollapsePanel 收起条视觉分离；改法=三面板整合为一个壳（.ld-detail）+seg 三视图切换
            （铁律 C 形态枚举）；三旧 open 状态合一（detailOpen+detailTab）；视图内容原样迁入
-           （Top 曲线双视图=794 件2/慢请求阈值行=634 权限语义/告警筛选导出=R48）；懒加载保持
+           （Top 曲线双视图=794 件2/慢请求阈值行=634 权限语义/告警筛选导出=）；懒加载保持
            （开容器且切到该视图才拉取）；三表 .tbl zebra 换装形态（784）与计数源（782 治漂移）
            全保留。══ -->
       <div class="ld-detail">
@@ -401,12 +401,12 @@
             :title="detailOpen ? '收起监控明细' : '展开监控明细'" @click="toggleDetail">
             <ChevronDown :size="12" class="ld-detail-chev" :class="{ open: detailOpen }" />监控明细
           </button>
-          <!-- 八百一十六批件3：seg 收起态隐藏（「该 UI 样式非常丑陋」=收起条 seg 挤左侧两行；
+          <!-- 件3：seg 收起态隐藏（「该 UI 样式非常丑陋」=收起条 seg 挤左侧两行；
                展开态才见三视图切换=收起条单行三件〔toggle/meta/⋯〕对称）。
-               〔816 批内勘正：按钮 v-if="!nodeMode" 误罩 v-for（Vue3 同元素 v-if 先于 v-for）——
+               〔内勘正：按钮 v-if="!nodeMode" 误罩 v-for（Vue3 同元素 v-if 先于 v-for）——
                  detailTabs computed 本就按 nodeMode 摘 Top，这层 v-if 只会把 nodeMode 用户打成
                  空壳 seg（byNode 默认开后=默认可见；真机 probe S3 按钮=0 铁证）→删〕 -->
-          <span v-if="detailOpen" class="seg ld-seg ld-detail-seg" role="group" aria-label="监控明细视图"> <!-- 八百二十六批A1：补 ld-seg 作用域=等宽钮+居中+真滑块 -->
+          <span v-if="detailOpen" class="seg ld-seg ld-detail-seg" role="group" aria-label="监控明细视图"> <!-- A1：补 ld-seg 作用域=等宽钮+居中+真滑块 -->
             <span class="seg-thumb" :style="segPillStyle(detailSegN, detailTabIdx)" aria-hidden="true" />
             <button v-for="t in detailTabs" :key="t.k" type="button" :class="{ on: detailTab === t.k }"
               :aria-pressed="detailTab === t.k" @click="switchDetail(t.k as any)">{{ t.label }}</button>
@@ -418,7 +418,7 @@
               <b class="crit">{{ alertCounts.crit }}</b> 严重 · <b class="warn">{{ alertCounts.warn }}</b> 警告 · <b>{{ alertCounts.info }}</b> 提示 · <b class="ok">{{ alertCounts.recovered }}</b> 恢复
             </template>
           </span>
-          <!-- 八百零二批件2：导出 ⋯ 收纳（三视图共用+按 detailTab 分发；Esc=window 捕获级 665 范式） -->
+          <!-- 件2：导出 ⋯ 收纳（三视图共用+按 detailTab 分发；Esc=window 捕获级 665 范式） -->
           <details ref="detailMoreEl" class="ld-detail-more" @toggle="onDetailMoreToggle">
             <summary aria-label="更多操作" title="导出当前视图">⋯</summary>
             <div class="ld-detail-more-menu" role="menu">
@@ -428,7 +428,7 @@
           </details>
         </div>
         <div v-if="detailOpen" class="ld-detail-body">
-          <!-- Top 索引视图（R42 对标 Grafana Index 索引行；内容自 794 件2 原样迁入） -->
+          <!-- Top 索引视图（ 对标 Grafana Index 索引行；内容自 794 件2 原样迁入） -->
           <template v-if="detailTab === 'top' && !nodeMode">
             <div class="ld-detail-tools">
               <span class="seg ld-top-viewseg" role="group" aria-label="Top 索引视图">
@@ -439,9 +439,9 @@
             <div v-if="topView === 'curve'" class="ld-cmp-plot ld-top-plot" @mousemove="onTopMove($event)" @mouseleave="onTopLeave()">
               <template v-if="topHasData">
                 <svg :viewBox="'0 0 720 ' + CMP_H" class="ld-ncmp-svg" preserveAspectRatio="none" aria-hidden="true">
-                  <!-- 八百零二批件1：横向网格线四档（全局 max 同坐标系底座） -->
+                  <!-- 件1：横向网格线四档（全局 max 同坐标系底座） -->
                   <line v-for="gy in GRID_YS" :key="'grid' + gy" class="ld-grid" x1="0" :x2="720" :y1="(CMP_H * (1 - gy)).toFixed(1)" :y2="(CMP_H * (1 - gy)).toFixed(1)" />
-                  <!-- 八百二十八批：折线平滑统一（Catmull-Rom 单源） -->
+                  <!-- 折线平滑统一（Catmull-Rom 单源） -->
                   <path v-for="s in topCurves" :key="s.key" :d="catmullRomPath(topPlotPts(s.data), CMP_W, CMP_H)" fill="none" :stroke="s.color" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
                 </svg>
                 <span v-for="(tv, i) in topYTicks" :key="'yt' + i" class="ld-yt" :style="{ top: ['2%', '25.5%', '50.5%', '75.5%'][i] }" aria-hidden="true">{{ tv }}</span>
@@ -459,7 +459,7 @@
               </template>
               <div v-else class="ld-svg-wait">采样中，打开面板起逐拍累积（实时曲线不回溯历史）…</div>
             </div>
-            <!-- 八百零二批件1：常显图例（色点+索引名+当前速率；曲线颜色↔索引映射不再仅 hover 可见） -->
+            <!-- 件1：常显图例（色点+索引名+当前速率；曲线颜色↔索引映射不再仅 hover 可见） -->
             <div v-if="topView === 'curve' && topHasData" class="ld-top-legend" aria-label="Top 索引曲线图例">
               <span v-for="s in topCurves" :key="'lg' + s.key" class="ld-top-lg" :title="s.name + '（' + s.cluster + '）当前写入速率'">
                 <i :style="{ background: s.color }" /><b>{{ s.name }}</b><em>{{ fmtNum(s.cur) }}</em>
@@ -472,7 +472,7 @@
               <tbody>
                 <tr v-for="t in topRows" :key="t.cluster + '|' + t.index">
                   <td>{{ t.cluster }}</td>
-                  <!-- R49 高频交互闭环：索引名可点=setTarget 到来源集群+深链数据浏览器 -->
+                  <!--  高频交互闭环：索引名可点=setTarget 到来源集群+深链数据浏览器 -->
                   <td class="mono"><a class="ld-top-link" role="link" tabindex="0" @click="gotoBrowser(t)" @keydown.enter.prevent="gotoBrowser(t)">{{ t.index }}</a></td>
                   <td class="mono">{{ t.qps }}</td>
                   <td class="mono">{{ t.idxRate }}</td>
@@ -482,7 +482,7 @@
               </tbody>
             </table>
           </template>
-          <!-- 慢请求视图（R36 对标阿里云慢查询 tab；634 权限语义锚=无权限诚实说明不静默消失） -->
+          <!-- 慢请求视图（ 对标阿里云慢查询 tab；634 权限语义锚=无权限诚实说明不静默消失） -->
           <template v-else-if="detailTab === 'slow'">
             <template v-if="auth.canAuditAll()">
               <div class="ld-detail-tools">
@@ -490,7 +490,7 @@
                   <input v-model.number="slowThresholdMs" class="inp sm ld-slow-inp" type="number" min="100" step="100"
                     aria-label="耗时阈值毫秒" title="耗时阈值（毫秒）" @change="loadSlow" />
                   <span class="ld-hist-sub">ms</span>
-                  <button class="btn ghost sm" :disabled="slowLoading" @click="loadSlow"><RotateCw :size="12" :class="{ spinning: slowLoading }" /> 刷新</button> <!-- 八百一十批件2：在途图标旋转=铁律 D 在途可感知（713 G51 家族/IlmView 同款惯例） -->
+                  <button class="btn ghost sm" :disabled="slowLoading" @click="loadSlow"><RotateCw :size="12" :class="{ spinning: slowLoading }" /> 刷新</button> <!-- 件2：在途图标旋转=铁律 D 在途可感知（713 G51 家族/IlmView 同款惯例） -->
                 </div>
               </div>
               <div v-if="slowErr" role="alert" class="err-bar">慢请求加载失败：{{ slowErr }}</div>
@@ -505,7 +505,7 @@
                     <td>{{ r.connName || r.connId || '-' }}</td>
                     <td>{{ r.method || '-' }}</td>
                     <td class="ld-hist-hist-msg">{{ r.uri || '-' }}</td>
-                    <td class="mono" :class="slowCostTone(r.costMs)">{{ r.costMs ?? '-' }}</td> <!-- 八百一十批件1：阈值语义链 tone（≥×2 err/≥×1.5 warn） -->
+                    <td class="mono" :class="slowCostTone(r.costMs)">{{ r.costMs ?? '-' }}</td> <!-- 件1：阈值语义链 tone（≥×2 err/≥×1.5 warn） -->
                     <td class="mono">{{ r.httpStatus || '-' }}</td>
                   </tr>
                   <tr v-if="!slowRows.length && !slowLoading"><td colspan="7" class="ld-hist-hist-empty">时间窗内无 ≥ 阈值的慢请求</td></tr>
@@ -517,7 +517,7 @@
               「慢请求」面板需 <b>审计全量权限</b>（rank3+）——当前账号无此权限；可在「安全中心」查看本账号已授予的页面范围。
             </div>
           </template>
-          <!-- 告警历史视图（R35 对标阿里云报警概览；计数源=alertHistRows 治 782 漂移语义保留） -->
+          <!-- 告警历史视图（ 对标阿里云报警概览；计数源=alertHistRows 治 782 漂移语义保留） -->
           <template v-else-if="detailTab === 'alert'">
             <div class="ld-detail-tools">
               <select v-model="alertHistFilter" class="inp sm" aria-label="告警历史筛选">
@@ -565,7 +565,7 @@
           <span class="mono" role="cell">{{ fmtN(n.diskUsedPct) }}</span>
         </div>
       </div>
-      <!-- 六百二十八批：分组空态——「组 × 观察口径」交集为空时（如集群模式选「节点磁盘指标」，
+      <!-- 分组空态——「组 × 观察口径」交集为空时（如集群模式选「节点磁盘指标」，
            或节点下钻选「集群指标」）不渲染空白栅格，给出可行动说明。独立类名不与图卡级空态
            （ld-hist-clean / HistoryChart 内「暂无采样」）混淆。 -->
       <EmptyState v-if="!histCharts.length" class="ld-hist-empty" compact
@@ -604,18 +604,18 @@ import FocusableSurface from '../components/FocusableSurface.vue';
 import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue';
 import EmptyState from '../components/EmptyState.vue';
 import AutoRefreshSelect from '../components/AutoRefreshSelect.vue';
-import StatusPill from '../components/StatusPill.vue'; /* 五百三十一批：运行任务/告警计数徽标统一件 */
+import StatusPill from '../components/StatusPill.vue'; /* ：运行任务/告警计数徽标统一件 */
 import { useLiveMonitorStore, type LiveAlert } from '../stores/liveMonitor';
 import { useAuthStore } from '../stores/auth';
 import { useAppStore } from '../stores/app';
-/* 五百三十批：第四卡单源——全局作业跟踪器（App.vue 登录就绪后常驻轮询），本页只读不拉新端点 */
+/* 第四卡单源——全局作业跟踪器（App.vue 登录就绪后常驻轮询），本页只读不拉新端点 */
 import { useJobTrackerStore } from '../stores/jobTracker';
 import { fmtTime, fmtDur, fmtWindow, fmtNum, copyText } from '../utils/format';
 import { matrixText } from '../utils/copyMatrix';
 import { METRIC_THRESHOLDS, metricTone } from '../utils/metricThresholds';
 /* 天罗W6：节点角色分档收口 utils/esEnumZh（data=蓝/master=紫单一出处，DiagView 节点表同源）；
    行为等价迁移：模板绑定的 roleLabel/roleClass 与 sortedNodes 的 isDataNode 语义不变。
-   五百三十一批：作业种类 pill 档 jobKindTone 同源收口（原 :187 jobTone 本地字典退役） */
+   作业种类 pill 档 jobKindTone 同源收口（原 :187 jobTone 本地字典退役） */
 import { isDataNode, nodeRoleLabel, nodeRoleClass, jobKindTone } from '../utils/esEnumZh';
 /* 历史趋势分区：读侧端点 + 采样行→叠加折线纯函数 + 错误文案单源 + 时间范围偏好持久化；
    图卡渲染归 HistoryChart 统一件（本视图只管取数/筛选/下钻状态与序列构建） */
@@ -623,32 +623,32 @@ import HistoryChart from '../components/HistoryChart.vue';
 import SkeletonBox from '../components/SkeletonBox.vue';
 import { api, type MonitorMetricsRecord, type MonitorAlertDoc } from '../api';
 import { buildSeries, capRows, diskForecast, intervalFor, fixedIntervalMs, rawPeriodSafe, redBands, latestByNode, activeAlerts as deriveActiveAlerts, type MonitorSeriesField, type NamedSeries } from '../utils/monitorSeries';
-/* 六百二十八批：分组导航单源（对标阿里云「分组」实测 9 项；我方收敛 8 组）。
+/* 分组导航单源（对标阿里云「分组」实测 9 项；我方收敛 8 组）。
    映射外挂于 utils（不写进 HIST_CHARTS 条目）→ 不触碰 monitorHistoryTrend 对条目字面的逐字锁。 */
 import { HIST_GROUPS, inHistGroup, histGroupLabel, type HistGroupKey } from '../utils/histGroups';
-import { catmullRomPath, sparkPts, CMP_W, CMP_H, PCT_GRID, type Pt, sparklinePoints, sparklinePointsPct } from '../utils/sparkChart'; /* 六百三十八批 P1a-1 单源下沉；781 批 K2 增 PCT_GRID（对比卡 pct 网格）/SPARK_H 随迷你 spark 退役移出 */
-import LiveChartCard from '../components/LiveChartCard.vue'; /* 六百三十八批 P1a-2：实时走势主卡统一件 */
-import CollapsePanel from '../components/CollapsePanel.vue'; /* 七百八十二批 Z1：三表可展开外壳统一件（组件性头名） */
+import { catmullRomPath, sparkPts, CMP_W, CMP_H, PCT_GRID, type Pt, sparklinePoints, sparklinePointsPct } from '../utils/sparkChart'; /*  P1a-1 单源下沉； K2 增 PCT_GRID（对比卡 pct 网格）/SPARK_H 随迷你 spark 退役移出 */
+import LiveChartCard from '../components/LiveChartCard.vue'; /*  P1a-2：实时走势主卡统一件 */
+import CollapsePanel from '../components/CollapsePanel.vue'; /*  Z1：三表可展开外壳统一件（组件性头名） */
 
-/* 六百三十八批：几何常量（LD_H/SPARK_H/CMP_W/CMP_H/PCT_GRID）与点位纯函数已下沉
+/* 几何常量（LD_H/SPARK_H/CMP_W/CMP_H/PCT_GRID）与点位纯函数已下沉
    utils/sparkChart.ts 单源（P1a-1）；此处经 import 引入，模板与悬浮换算照常使用。 */
-/* R55：走势卡悬浮命中纯函数（十字线/圆点/读出钉在曲线上，点位公式与 sparklinePoints(Pct) 同源） */
+/* 走势卡悬浮命中纯函数（十字线/圆点/读出钉在曲线上，点位公式与 sparklinePoints(Pct) 同源） */
 import { sparkHoverAt, type SparkHoverHit } from '../utils/sparkHover';
 import { friendlyEsError } from '../utils/esError';
 import { usePref } from '../composables/urlState';
 import { setTargetId } from '../api';
 import { useAutoRefresh } from '../composables/useAutoRefresh';
 
-/* R76：采样器/趋势/告警状态机全部住进全局 store（切页不中断），组件只管展示与启动 */
+/* 采样器/趋势/告警状态机全部住进全局 store（切页不中断），组件只管展示与启动 */
 const mon = useLiveMonitorStore();
 const router = useRouter();
-/* 五百三十批：运行中任务单源读取（jobs 为响应式数组，jobTracker 常驻轮询自动刷新本卡） */
+/* 运行中任务单源读取（jobs 为响应式数组，jobTracker 常驻轮询自动刷新本卡） */
 const tracker = useJobTrackerStore();
 const runningJobs = computed(() => tracker.jobs.filter(j => j.status === 'RUNNING'));
-/* 七百批②任务卡走势：运行任务数入 store 会话窗序列（快照续采；任务为全局口径
+/* ②任务卡走势：运行任务数入 store 会话窗序列（快照续采；任务为全局口径
    ——jobTracker 不分集群，切目标集群不清位，与 qps/heap 按集群隔离序列相反） */
 watch(() => runningJobs.value.length, n => mon.pushJobCount(n), { immediate: true });
-/* kindName → pill 档：五百三十一批收口 utils/esEnumZh 的 jobKindTone（Reindex 写类 y /
+/* kindName → pill 档： utils/esEnumZh 的 jobKindTone（Reindex 写类 y /
    快照中性 n / 托管重建·迁移信息蓝 b），本地字典退役——import 别名供模板零改动消费 */
 
 /* 告警条目按语义 key 路由到对应处置页（诊断→定位桥，此前告警纯展示无法点） */
@@ -672,7 +672,7 @@ const {
 } = storeToRefs(mon);
 const fullscreen = ref(false);
 
-/* 六百八十四批（622 §8-P4 挂墙，独立稿 goal684-wall-mode.html；用户令「全部干全部批准」）：
+/* （622 §8-P4 挂墙，独立稿 goal684-wall-mode.html；令「全部干全部批准」）：
    全屏态=挂墙模式。轮询恒定 5s（W2 推荐）——进墙存档锁 5s、出墙还原进墙前档位
    （usePref 落盘值进出等值还原，铁律 B 零状态重置）；选择器禁用不禁藏在模板接线。
    其余四件（隐元信息带/告警折叠/当前值升 --fs-num-l/时间锚升满轴）全走 .ld-wall CSS
@@ -688,7 +688,7 @@ watch(fullscreen, on => {
   }
 });
 
-/* 六百四十七批 G\'3（646 重盘差距面）：实时数值「无数据」回落「—」——差分首轮（QPS/写入，
+/*  G\'3（646 重盘差距面）：实时数值「无数据」回落「—」——差分首轮（QPS/写入，
    序列空待第二针才出数）与无节点时刻（Heap/CPU/磁盘均值）此前显「0.0」/「0.0%」，
    无数据与零值不可分辨。序列/数据空回落 em dash；有数据保持原 toFixed 形态零变化。
    cur-key 同步走 text（「—」态稳定不触发数值动画重放）；pct 三卡 title 无数据不渲染。 */
@@ -697,7 +697,7 @@ const idxText = computed(() => indexRateSeries.value.length ? curIdx.value.toFix
 const heapText = computed(() => heapSeries.value.length ? avgHeap.value.toFixed(1) + '%' : '—');
 const cpuText = computed(() => cpuSeries.value.length ? avgCpu.value.toFixed(1) + '%' : '—');
 const diskText = computed(() => diskSeries.value.length ? avgDisk.value.toFixed(1) + '%' : '—');
-/* 七百八十二批 Z3（不重复性）：采样等待文案单源——旧形态同字面量在五卡 prop+对比卡共写 6 份 */
+/*  Z3（不重复性）：采样等待文案单源——旧形态同字面量在五卡 prop+对比卡共写 6 份 */
 const waitText = computed(() => '采样中，约 ' + (intervalMs.value / 1000 * 2) + 's 后出图…');
 const heapTitle = computed(() => heapSeries.value.length ? '数据节点均值 ' + avgHeap.value.toFixed(1) + '% · 阈值告警见虚线' : undefined);
 const cpuTitle = computed(() => cpuSeries.value.length ? '数据节点均值 ' + avgCpu.value.toFixed(1) + '% · 阈值告警见虚线' : undefined);
@@ -718,7 +718,7 @@ function retryObserve() { mon.setFocus(false); mon.setFocus(true); }
 const roleLabel = nodeRoleLabel;
 const roleClass = nodeRoleClass;
 const sortedNodes = computed(() => [...nodes.value].sort((a, b) => Number(isDataNode(b)) - Number(isDataNode(a))));
-/* 八百零六批件1：区块头汇总（节点/master/水位告警一眼读出；空串=空态不占位） */
+/* 件1：区块头汇总（节点/master/水位告警一眼读出；空串=空态不占位） */
 const nodesSummary = computed(() => {
   const ns = sortedNodes.value;
   if (!ns.length) return '';
@@ -730,7 +730,7 @@ const nodesSummary = computed(() => {
   return parts.join(' · ');
 });
 /* 指标身份色：节点卡水位条与对比卡折线共用同一色，健康度另由边框/角标表达（不抢指标身份）；
-   七百八十一批 K3：NODE_METRICS 表随卡内迷你 spark 退役（对比卡指标档=cmpSeries 直接读
+    K3：NODE_METRICS 表随卡内迷你 spark 退役（对比卡指标档=cmpSeries 直接读
    nodeSeries，色板走 CMP_PALETTE 排序位锚定） */
 const METRIC_COLOR: Record<'heap' | 'cpu' | 'disk', string> = {
   heap: 'var(--warn)',
@@ -738,13 +738,13 @@ const METRIC_COLOR: Record<'heap' | 'cpu' | 'disk', string> = {
   disk: 'var(--dv-purple)',
 };
 const nodeSeriesFor = (name: string, metric: 'heap' | 'cpu' | 'disk' | 'qps' | 'idx') => nodeSeries.value[name]?.[metric] || [];
-/* R57：节点 Load_1m 实时化——brief 已带 load_average 对象，此前从未消费；缺省节点返回 null（整行不渲染，诚实缺省） */
+/* 节点 Load_1m 实时化——brief 已带 load_average 对象，此前从未消费；缺省节点返回 null（整行不渲染，诚实缺省） */
 const load1mOf = (n: any): string | null => {
   const la = n?.load;
   const v = la && typeof la === 'object' ? Number(la['1m']) : Number(la);
   return Number.isFinite(v) ? v.toFixed(2) : null;
 };
-/* R58 对标 Thread_pool Rows：查询线程池即时值（active/queue，写入拒绝前兆）；缺省 null 不渲染 */
+/*  对标 Thread_pool Rows：查询线程池即时值（active/queue，写入拒绝前兆）；缺省 null 不渲染 */
 const tpOf = (n: any): string | null => {
   const a = Number(n?.tpSearchActive), q = Number(n?.tpSearchQueue);
   return Number.isFinite(a) && Number.isFinite(q) ? `${a}/${q}` : null;
@@ -776,13 +776,13 @@ const ldMeta = computed<MetaStripItem[]>(() => [
     value: health.value?.active_shards || 0,
     tip: `活跃分片 ${health.value?.active_shards || 0}（${(health.value?.active_shards_percent_as_number || 0).toFixed(1)}% 已激活）`,
   },
-  /* R58 对标阿里云集群级「索引数量」：health 接口无此值，取同页历史拉取的最新 cluster 采样
+  /*  对标阿里云集群级「索引数量」：health 接口无此值，取同页历史拉取的最新 cluster 采样
      （服务端每分钟口径=阿里云 1min 同档，零新请求）；node 下钻/无采样时 chip 不渲染 */
   ...(lastClusterIndices.value !== null ? [{
     label: `索引数量（最近采样）`, value: lastClusterIndices.value,
     tip: `索引数量 ${lastClusterIndices.value}（服务端每分钟采样口径）`,
   }] : []),
-  /* R59 对标阿里云集群级「快照状态」：失败>0 err 档；无采样不渲染 */
+  /*  对标阿里云集群级「快照状态」：失败>0 err 档；无采样不渲染 */
   ...(lastClusterSnapshot.value ? [{
     label: `快照（共 ${lastClusterSnapshot.value.total}）`, value: lastClusterSnapshot.value.failed,
     tone: lastClusterSnapshot.value.failed > 0 ? 'err' as const : 'ok' as const,
@@ -811,14 +811,14 @@ function nodeTone(n: any): 'ok' | 'warn' | 'bad' {
   if (tones.includes('warn')) return 'warn';
   return 'ok';
 }
-/* 五百六十一批：节点健康色值映射（MetaStrip dot 位直传——组件 dot 吃 CSS 色值不吃档名，
+/* 节点健康色值映射（MetaStrip dot 位直传——组件 dot 吃 CSS 色值不吃档名，
    ok/warn/bad → --ok/--warn/--err 同 token 等值迁移，.ld-node-tone 三档色规则随之退役） */
 function nodeToneDot(n: any): string {
   const t = nodeTone(n);
   return t === 'ok' ? 'var(--ok)' : t === 'warn' ? 'var(--warn)' : 'var(--err)';
 }
 
-/* R101：写入拒绝率统计 */
+/* 写入拒绝率统计 */
 const totalRejected = computed(() => {
   return nodes.value.reduce((sum, n) => {
     const search = n.searchRejected ?? n.threadPool?.search?.rejected ?? 0;
@@ -842,19 +842,19 @@ const bgMs = computed(() => Math.max(intervalMs.value, 15000));
 /* 趋势窗口跨度标注：用首末采样时刻真实跨度（跳过降频档后估算会失真）。
  * 走 fmtWindow 而非 fmtDur——这里描述的是「图覆盖多大窗口」的档位标签而非耗时；
  * fmtDur 会渲染出「近 1m0s」这种带冗余次级单位的不自然形态。空串时标注整体不渲染。 */
-/* R64：趋势窗长截尾单源——六卡/对比卡/悬浮与窗标注全部经此切片（窗长=live.windowPts 偏好） */
+/* 趋势窗长截尾单源——六卡/对比卡/悬浮与窗标注全部经此切片（窗长=live.windowPts 偏好） */
 const winSlice = (arr: number[]) => (arr.length > windowPts.value ? arr.slice(arr.length - windowPts.value) : arr);
 const winWindowMs = computed(() => {
   const ts = winSlice(sampleTs.value);
   return ts.length > 1 ? ts[ts.length - 1] - ts[0] : 0;
 });
 const windowLabel = computed(() => fmtWindow(winWindowMs.value));
-/* R71：单卡放大全屏——双态同钮（Maximize2↔Minimize2）+Esc window 捕获级+遮罩；
+/* 单卡放大全屏——双态同钮（Maximize2↔Minimize2）+Esc window 捕获级+遮罩；
    卡原地 fixed 全屏（SVG viewBox 自适应放大，零内容重复渲染）；Esc 关闭还焦由按钮 title 语义承担 */
-/* R73（615 批）：节点筛选——图例 chip 点选隐藏/恢复（Grafana 图例语汇），折线与悬浮行同步过滤 */
+/* （）：节点筛选——图例 chip 点选隐藏/恢复（Grafana 图例语汇），折线与悬浮行同步过滤 */
 const hiddenNodes = ref<string[]>([]);
-/* ══ 八百零六批件3：节点对比归流内联容器状态机 ══
-   用户令推翻 794 悬浮形态（「怎么单独弹出了一个页面，投机倒把，重新设计跟页面一样的
+/* ══ 件3：节点对比归流内联容器状态机 ══
+   令推翻 794 悬浮形态（「怎么单独弹出了一个页面，投机倒把，重新设计跟页面一样的
    设计语言」）＝fixed 浮层/拖动把柄/位置落盘（ld.cmpPos）/dialog 语义全退役，容器迁入
    .ld-nodes 区页面流（800 监控明细单容器同构语言）；开合态 usePref 落盘保留（铁律 B）；
    Esc=window 捕获级+焦点回入口钮语义保留（铁律 D1#5）。 */
@@ -892,7 +892,7 @@ watch(expandedCard, (v) => {
 });
 onBeforeUnmount(() => { window.removeEventListener('keydown', onExpandEsc, true); document.body.classList.remove('ld-chart-mask'); });
 
-/* ═══ 665 批 G'5：⋯浮层（.ld-hist-more）Esc 收口——铁律 D1#5「开弹层→Esc→焦点回触发器」 ═══
+/* ═══  G'5：⋯浮层（.ld-hist-more）Esc 收口——铁律 D1#5「开弹层→Esc→焦点回触发器」 ═══
  * 664 复检缺口（664-C2）：details 原生语义无 Esc 关层（628「无需 Esc 接线」注释证伪勘误）。
  * 566 立法范式落专属收口：开层（toggle）挂 window 捕获级 keydown，Esc 关层+焦点回 summary；
  * 关层摘卸+处理体防御性摘卸双保险（程序化 open 变更的 toggle 派发个别环境缺失时仍不泄漏）；
@@ -913,28 +913,28 @@ function onHistMoreEsc(e: KeyboardEvent) {
 }
 onBeforeUnmount(() => window.removeEventListener('keydown', onHistMoreEsc, true));
 
-/* ═══ R56：节点对比叠加图（各节点序列叠加，悬浮=各节点该时刻值行） ═══
+/* ═══ ：节点对比叠加图（各节点序列叠加，悬浮=各节点该时刻值行） ═══
  * 色板 HistoryChart PALETTE 同源五色锚定节点排序位（>5 节点循环）；点位换算复用
  * sparkHoverAt 单源（pct 刻度，基准=第一条有效序列，序列长度不足该时刻的节点行不列）。 */
 const CMP_METRICS = [
   { k: 'heap', label: 'Heap', mode: 'pct', warn: METRIC_THRESHOLDS.heap.warn },
   { k: 'cpu', label: 'CPU', mode: 'pct', warn: METRIC_THRESHOLDS.cpu.warn },
   { k: 'disk', label: '磁盘', mode: 'pct', warn: METRIC_THRESHOLDS.disk.warn },
-  /* R57：QPS/写入两档=个体吞吐负载（nodeSeries per-node 差分序列，abs 峰值地板刻度无阈值线） */
+  /* QPS/写入两档=个体吞吐负载（nodeSeries per-node 差分序列，abs 峰值地板刻度无阈值线） */
   { k: 'qps', label: 'QPS', mode: 'abs', warn: null },
   { k: 'idx', label: '写入', mode: 'abs', warn: null },
 ] as const;
 type CmpMetric = typeof CMP_METRICS[number]['k'];
 const CMP_PALETTE = ['var(--dv-blue)', 'var(--ok)', 'var(--wn)', 'var(--err)', 'var(--ac)'];
 const cmpMetric = ref<CmpMetric>('heap');
-/* 六百三十二批：seg 滑动指示器（622 §3.1）——激活项索引与等分几何（等宽钮下 pill 左=idx·1/n）。
+/* seg 滑动指示器（622 §3.1）——激活项索引与等分几何（等宽钮下 pill 左=idx·1/n）。
    left/width 全用百分比 → 容器宽度变化零 JS 干预，过渡由 .seg-thumb 的 left/width transition 承担。 */
 const cmpMetricIdx = computed(() => Math.max(0, CMP_METRICS.findIndex(m => m.k === cmpMetric.value)));
 function segPillStyle(count: number, activeIdx: number) {
   const n = Math.max(1, count);
   return { left: `${(activeIdx * 100 / n)}%`, width: `${(100 / n)}%` };
 }
-/* 八百一十六批件1：色号锚定排序位（对齐 hc colorOf 语义——隐藏不换色；chips 行与曲线同色） */
+/* 件1：色号锚定排序位（对齐 hc colorOf 语义——隐藏不换色；chips 行与曲线同色） */
 function cmpColorOf(name: string): string {
   const i = sortedNodes.value.findIndex(n => String(n.name || n.nodeId) === name);
   return CMP_PALETTE[(i < 0 ? 0 : i) % CMP_PALETTE.length];
@@ -946,7 +946,7 @@ const cmpSeries = computed(() => sortedNodes.value
     color: cmpColorOf(String(n.name || n.nodeId)),
     data: winSlice(nodeSeriesFor(n.name, cmpMetric.value)),
   })));
-/* 八百一十六批件1：图例 chips 行（全节点常驻——色点+名+当前值+点击显隐=hc-chip 同语言；
+/* 件1：图例 chips 行（全节点常驻——色点+名+当前值+点击显隐=hc-chip 同语言；
    「为什么仍然是这个效果」根治=对比曲线值不再只藏悬浮读出） */
 const cmpChips = computed(() => sortedNodes.value.map((n: any) => {
   const name = String(n.name || n.nodeId);
@@ -969,7 +969,7 @@ function onCmpMove(e: MouseEvent) {
   const rect = el?.getBoundingClientRect();
   const frac = rect && rect.width > 0 ? (e.clientX - rect.left) / rect.width : 0;
   const base = cmpSeries.value.find(s => s.data.length > 1);
-  /* 八百二十三批件1：Y 向跟手（指针 y 相对图区钳位） */
+  /* 件1：Y 向跟手（指针 y 相对图区钳位） */
   const y = rect ? Math.min(Math.max(e.clientY - rect.top, 14), rect.height - 14) : 0;
   const hit = base ? sparkHoverAt(base.data, sampleTs.value, frac, CMP_W, CMP_H, cmpMode.value) : null;
   cmpHit.value = hit ? { ...hit, y: y ?? 0 } : null;
@@ -987,12 +987,12 @@ const cmpRows = computed(() => {
 });
 const cmpLeft = (frac: number) => (frac * 100).toFixed(2) + '%';
 const cmpShift = (frac: number) => frac > 0.72 ? 'translateX(calc(-100% - 10px))' : 'translateX(10px)';
-/* 七百批①：读出层超长防护——>8 行截前 8 行+尾行「+K 节点」聚合（title 兜底全列名；
-   行尾 × 可隐藏节点减行+头部恢复，两通道互补〔781 批图例退役后唯一隐藏通道〕） */
-/* 八百二十五批：cap 8→24（用户实报「+1 节点…看不完整」——9 节点集群必然截断；823 跟手小卡片+260px 滚动兜底下不再爆行；+N 尾行通道保留兜底极端规模） */
+/* ①：读出层超长防护——>8 行截前 8 行+尾行「+K 节点」聚合（title 兜底全列名；
+   行尾 × 可隐藏节点减行+头部恢复，两通道互补〔图例退役后唯一隐藏通道〕） */
+/* cap 8→24（实报「+1 节点…看不完整」——9 节点集群必然截断；823 跟手小卡片+260px 滚动兜底下不再爆行；+N 尾行通道保留兜底极端规模） */
 const CMP_TIP_CAP = 24;
 const cmpRowsCapped = computed(() => capRows(cmpRows.value, CMP_TIP_CAP));
-/* 七百八十一批 K2：对比卡轴系——X 轴 3 锚取窗切片（与主卡 tsWin 同口径）；
+/*  K2：对比卡轴系——X 轴 3 锚取窗切片（与主卡 tsWin 同口径）；
    Y 顶刻度 pct=固定 100 / abs=全序列窗峰值（与 sparklinePoints 的 max(...data,1) 地板刻度同域） */
 const cmpTs = computed(() => winSlice(sampleTs.value));
 const cmpYTop = computed(() => {
@@ -1002,8 +1002,8 @@ const cmpYTop = computed(() => {
   return mx >= 100 ? String(Math.round(mx)) : mx.toFixed(1);
 });
 
-// 采样器常驻 store：首次挂载启动，卸载不停——再回来趋势连续（R76 核心修复）
-// R77：在大屏期间升到前台全速档，离开后降回背景档（仍在采）
+// 采样器常驻 store：首次挂载启动，卸载不停——再回来趋势连续（ 核心修复）
+// 在大屏期间升到前台全速档，离开后降回背景档（仍在采）
 onMounted(() => { mon.start(); mon.setFocus(true); });
 onBeforeUnmount(() => { mon.setFocus(false); });
 
@@ -1013,7 +1013,7 @@ onBeforeUnmount(() => { mon.setFocus(false); });
  * 范围与集群筛选全量下推；加载失败经 friendlyEsError 进 err-bar（role=alert）；
  * 加载态骨架蒙层保留上轮数据防闪烁。 */
 const hist = ref<MonitorMetricsRecord[]>([]);
-/* R58：最新 cluster 采样里的索引数量（D2；按 timestamp 取最新、非 node 采样，node 下钻态/空数据=null） */
+/* 最新 cluster 采样里的索引数量（D2；按 timestamp 取最新、非 node 采样，node 下钻态/空数据=null） */
 const lastClusterIndices = computed<number | null>(() => {
   let best: number | null = null, bestTs = -1;
   for (const r of hist.value as any[]) {
@@ -1024,7 +1024,7 @@ const lastClusterIndices = computed<number | null>(() => {
   }
   return best;
 });
-/* R59 对标阿里云集群级「快照状态」卡：timestamp 最新采样的 slm 快照失败数（R33 管道既有键） */
+/*  对标阿里云集群级「快照状态」卡：timestamp 最新采样的 slm 快照失败数（ 管道既有键） */
 const lastClusterSnapshot = computed<{ failed: number; total: number } | null>(() => {
   let best: { failed: number; total: number } | null = null, bestTs = -1;
   for (const r of hist.value as any[]) {
@@ -1053,14 +1053,14 @@ function srvAlertTitle(a: MonitorAlertDoc): string {
   const th = typeof a.threshold === 'number' ? ` · 阈值 ${a.threshold}` : '';
   return `${fmtTime(a.timestamp)} · ${a.connName || a.connId || '未知集群'} ${a.metric}=${srvAlertVal(a.value)}${th}${a.message ? ' · ' + a.message : ''}`;
 }
-/* R35 告警历史（对标阿里云报警概览）：时间窗内告警+恢复事件全量表，默认收起；
+/*  告警历史（对标阿里云报警概览）：时间窗内告警+恢复事件全量表，默认收起；
    指标中文化映射（新 metric 未入表回落原文，绝不空白） */
 const ALERT_METRIC_ZH: Record<string, string> = {
   heap: 'Heap 占用', disk: '磁盘水位', health: '集群健康', rejected: '线程池拒绝',
   gcYoung: 'Young GC', nodesMissing: '失联节点', slm: '快照失败',
 };
 function metricZh(m: string): string { return ALERT_METRIC_ZH[m] || m; }
-/* ══ 八百批：监控明细单容器状态（用户六令实报「top写入索引要跟下面的监控在一块」）——
+/* ══ ：监控明细单容器状态（用户六令实报「top写入索引要跟下面的监控在一块」）——
    三旧独立面板 open 状态（topOpen/slowOpen/alertHistOpen）合一：detailOpen（容器开合）+
    detailTab（三视图切换）；懒加载语义保持=开容器且切到该视图才拉取（Top 曲线累积随轮询
    推进同 794 接线）。告警历史数据随 loadHist 同窗拉取（零专属拉取）无需懒加载。 */
@@ -1093,12 +1093,12 @@ const alertHistFilter = ref<'all' | 'alert' | 'recovered'>('all');
 const alertHistRows = computed(() => srvAlerts.value
   .filter(a => alertHistFilter.value === 'all'
     || (alertHistFilter.value === 'recovered') === !!a.recovered));
-/* R42 Top 索引快照（对标阿里云 Index 索引行）：选定单集群=该集群 Top；全部集群=逐集群拉取合并（上限 10）
-   七百九十四批件2（用户实报「top 写入索引为什么不是一样是曲线显示」）：快照→时序多折线——
-   前端会话累积 per-index 写入速率序列（jobCountSeries 700 批同款范式，零后端改动；窗长随
+/*  Top 索引快照（对标阿里云 Index 索引行）：选定单集群=该集群 Top；全部集群=逐集群拉取合并（上限 10）
+   件2（实报「top 写入索引为什么不是一样是曲线显示」）：快照→时序多折线——
+   前端会话累积 per-index 写入速率序列（jobCountSeries 同款范式，零后端改动；窗长随
    趋势窗长档钳制，打开面板起逐拍推进不回溯历史=实时监控诚实语义）；曲线/表格双视图 seg
    （曲线默认）；悬浮读出=十字线+行（色点+索引名+该时刻 doc/s，与节点对比同语汇），
-   行内索引名可点下钻（R49 闭环保留）。 */
+   行内索引名可点下钻（ 闭环保留）。 */
 const topRows = ref<any[]>([]);
 const topView = usePref<'curve' | 'table'>('ld.topView', 'curve');
 const topIdxSeries = ref<Record<string, number[]>>({});
@@ -1117,7 +1117,7 @@ function onTopMove(e: MouseEvent) {
   const rect = el?.getBoundingClientRect();
   const frac = rect && rect.width > 0 ? (e.clientX - rect.left) / rect.width : 0;
   const base = topCurves.value.find(s => s.data.length > 1);
-  /* 八百二十三批件1：Y 向跟手（指针 y 相对图区钳位） */
+  /* 件1：Y 向跟手（指针 y 相对图区钳位） */
   const y = rect ? Math.min(Math.max(e.clientY - rect.top, 14), rect.height - 14) : 0;
   const topRes = base ? sparkHoverAt(base.data, topTsArr.value, frac, CMP_W, CMP_H, 'abs') : null;
   topHit.value = topRes ? { ...topRes, y: y ?? 0 } : null;
@@ -1137,7 +1137,7 @@ const topYTop = computed(() => {
   for (const s of topCurves.value) for (const v of s.data) if (v > mx) mx = v;
   return mx ? String(Math.ceil(mx)) : '';
 });
-/* ══ 八百零二批件1：Top 曲线图表底座（截图实报「不符合」=白板图根治；对标 Grafana time series）══
+/* ══ 件1：Top 曲线图表底座（截图实报「不符合」=白板图根治；对标 Grafana time series）══
    网格线四档+Y 中间刻度（全局 max 同坐标系——多折线各按自身 max 归一是 794 既有形态，
    底座刻度要有意义必须全局 scaleMax，sparklinePoints 可选参零破坏既有消费面）+X 时间三锚。 */
 const GRID_YS = [0.25, 0.5, 0.75, 1] as const;
@@ -1146,7 +1146,7 @@ const topScaleMax = computed(() => {
   for (const s of topCurves.value) for (const v of s.data) if (v > mx) mx = v;
   return mx;
 });
-/* 八百二十八批：返回 Pt[]（Top viewBox 同 720×CMP_H；topScaleMax 全局归一保留）供 catmullRomPath 消费 */
+/* 返回 Pt[]（Top viewBox 同 720×CMP_H；topScaleMax 全局归一保留）供 catmullRomPath 消费 */
 function topPlotPts(data: number[]): Pt[] {
   const mx = topScaleMax.value || Math.max(...data, 1);
   const n = data.length;
@@ -1162,7 +1162,7 @@ const topXTs = computed(() => {
   if (a.length < 2) return [] as string[];
   return [fmtTime(a[0]), fmtTime(a[Math.floor((a.length - 1) / 2)]), fmtTime(a[a.length - 1])];
 });
-/* ══ 八百零二批件2：导出 ⋯ 收纳（铁律 C：低频动作收菜单；三视图共用一个 details+按 detailTab 分发）══ */
+/* ══ 件2：导出 ⋯ 收纳（铁律 C：低频动作收菜单；三视图共用一个 details+按 detailTab 分发）══ */
 const detailMoreEl = ref<HTMLDetailsElement | null>(null);
 function onDetailMoreToggle() {
   if (detailMoreEl.value?.open) window.addEventListener('keydown', onDetailMoreEsc, true);
@@ -1184,7 +1184,7 @@ const detailCanExport = computed(() => {
   if (detailTab.value === 'slow') return slowRows.value.length > 0;
   return alertHistRows.value.length > 0;
 });
-/* 七百八十二批 Z1：toggleTop/toggleSlow 函数随 CollapsePanel v-model:open 收编退役——
+/*  Z1：toggleTop/toggleSlow 函数随 CollapsePanel v-model:open 收编退役——
    首开懒加载语义保留（watch open 起手拉取，与旧 toggle 内 if 分支等价） */
 function gotoBrowser(t: any) {
   if (t.connId) setTargetId(t.connId);
@@ -1194,10 +1194,10 @@ async function loadTop() {
   if (nodeMode.value) { topRows.value = []; return; }
   const targets = clusterFilter.value ? [clusterFilter.value] : clusterList.value.slice(0, 10);
   try {
-    const perCluster = clusterFilter.value ? 8 : 3; /* R45：合并视图每集群 Top 3 压缩同源重复（多档案同物理集群），选定单集群保留完整 Top 8 */
+    const perCluster = clusterFilter.value ? 8 : 3; /* ：合并视图每集群 Top 3 压缩同源重复（多档案同物理集群），选定单集群保留完整 Top 8 */
     const rs = await Promise.all(targets.map(c => api.monitorTopIndexes(c).catch(() => ({ records: [] }))));
     topRows.value = rs.flatMap((r, i) => (r?.records || []).slice(0, perCluster).map((x: any) => ({ ...x, cluster: targets[i] })));
-    /* R46 合并视图按索引名去重（.kibana_1 等同名系统索引跨集群重复是主要噪声；
+    /*  合并视图按索引名去重（.kibana_1 等同名系统索引跨集群重复是主要噪声；
        保留首个=速率最高的集群；选定单集群视图不受影响） */
     if (!clusterFilter.value) {
       const seen = new Set<string>();
@@ -1219,14 +1219,14 @@ async function loadTop() {
     }
   } catch { topRows.value = []; }
 }
-/* R47 Top 索引导出：TSV（表格粘贴）/MD（群聊工单直贴）双形态，matrixText 单源 */
+/*  Top 索引导出：TSV（表格粘贴）/MD（群聊工单直贴）双形态，matrixText 单源 */
 async function copyTop(fmt: 'tsv' | 'md') {
   const cols = ['集群', '索引', '查询 QPS', '写入速率(doc/秒)', '存储(MB)'];
   const rows = topRows.value.map(t => [t.cluster, t.index, t.qps, t.idxRate, t.storeMb]);
   const ok = await copyText(matrixText({ rows, cols, getVal: (row: any[], c: string) => String(row[cols.indexOf(c)] ?? '') }, fmt));
   store.notify(ok ? 'success' : 'error', ok ? `已复制 ${rows.length} 条 Top 索引（${fmt.toUpperCase()}）` : '复制失败');
 }
-/* R48 导出对称补全：告警历史/慢请求与 Top 索引同款 matrixText 单源 */
+/*  导出对称补全：告警历史/慢请求与 Top 索引同款 matrixText 单源 */
 async function copyAlertHist(fmt: 'tsv' | 'md') {
   const cols = ['时间', '集群', '级别', '指标', '值', '阈值', '状态', '文案'];
   const rows = alertHistRows.value.map(a => [fmtTime(a.timestamp), a.connName || a.connId || '未知集群', a.level, metricZh(a.metric), srvAlertVal(a.value), typeof a.threshold === 'number' ? a.threshold : '-', a.recovered ? '已恢复' : '告警', a.message || '-']);
@@ -1239,7 +1239,7 @@ async function copySlow(fmt: 'tsv' | 'md') {
   const ok = await copyText(matrixText({ rows, cols, getVal: (row: any[], c: string) => String(row[cols.indexOf(c)] ?? '') }, fmt));
   store.notify(ok ? 'success' : 'error', ok ? `已复制 ${rows.length} 条慢请求（${fmt.toUpperCase()}）` : '复制失败');
 }
-/* R37 等级分布计数（对标阿里云报警概览等级分布）：恢复行单列，其余按级别归桶 */
+/*  等级分布计数（对标阿里云报警概览等级分布）：恢复行单列，其余按级别归桶 */
 const alertCounts = computed(() => {
   let crit = 0, warn = 0, info = 0, recovered = 0;
   for (const a of srvAlerts.value) {
@@ -1248,13 +1248,13 @@ const alertCounts = computed(() => {
   }
   return { crit, warn, info, recovered };
 });
-/* R36 慢请求面板（对标阿里云慢查询日志 tab）：数据源=操作审计流水（已带耗时列，零新管道），
+/*  慢请求面板（对标阿里云慢查询日志 tab）：数据源=操作审计流水（已带耗时列，零新管道），
    minCostMs+时间窗下推服务端；仅 rank3+ 可见（全量审计权限同源） */
 const slowThresholdMs = usePref<number>('live.slowMs', 1000);
 const slowRows = ref<any[]>([]);
 const slowLoading = ref(false);
 const slowErr = ref('');
-/* 八百一十批件1：慢请求耗时 tone 档（阈值语义链单源——≥阈值×2 err 红=重灾；≥阈值×1.5 warn 黄=趋热；
+/* 件1：慢请求耗时 tone 档（阈值语义链单源——≥阈值×2 err 红=重灾；≥阈值×1.5 warn 黄=趋热；
    恰阈值=默认档不着色。「有多慢」一眼可读=节点卡水位 tone 同语言） */
 function slowCostTone(costMs: number | null | undefined): '' | 'ld-cost-warn' | 'ld-cost-err' {
   const v = Number(costMs);
@@ -1277,7 +1277,7 @@ async function loadSlow() {
   } catch (e: any) { slowErr.value = friendlyEsError(String(e?.message ?? e)); }
   finally { slowLoading.value = false; }
 }
-/* R38 历史自动刷新（对标阿里云自动刷新开关）：复用 useAutoRefresh 全生命周期
+/*  历史自动刷新（对标阿里云自动刷新开关）：复用 useAutoRefresh 全生命周期
    （页面隐藏/KeepAlive 失活自动停续），tick guard=加载中互斥；偏好记忆 live.histAuto 默认关 */
 const histAutoMs = usePref<number>('live.histAuto', 0);
 const { setOn: histAutoSetOn } = useAutoRefresh(() => { void loadHist(); if (detailShows('slow')) void loadSlow(); }, {
@@ -1287,7 +1287,7 @@ const { setOn: histAutoSetOn } = useAutoRefresh(() => { void loadHist(); if (det
 function onHistAutoChange() { histAutoSetOn(Number(histAutoMs.value) > 0); }
 if (Number(histAutoMs.value) > 0) histAutoSetOn(true);
 const mh2Range = usePref<string>('live.histRange', '24h');
-/* R66 G5 自定义时间档：起止 datetime-local（毫秒解析）；rangeMs 单源——曲线/告警/慢请求三消费点同窗，
+/*  G5 自定义时间档：起止 datetime-local（毫秒解析）；rangeMs 单源——曲线/告警/慢请求三消费点同窗，
    custom 档非法/缺省端点回落 now，非 custom 档维持 MH_RANGE_MS 固定窗 */
 const customFrom = ref('');
 const customTo = ref('');
@@ -1301,32 +1301,32 @@ const rangeMs = computed(() => {
   }
   return { from: Date.now() - (MH_RANGE_MS[mh2Range.value] ?? MH_RANGE_MS['24h']), to: Date.now() };
 });
-/* R31 G4 聚合方式（avg 缺省|max）：随取数下推服务端子聚合，桶记录字段名不变前端零改动；
+/*  G4 聚合方式（avg 缺省|max）：随取数下推服务端子聚合，桶记录字段名不变前端零改动；
    max 桶捕捉瞬时尖峰（heap 突刺等），对标阿里云每卡聚合切换（我们收敛为区头全局一档） */
 const mhAgg = usePref<string>('live.histAgg', 'avg');
-/* 六百二十八批：分组导航偏好（对标阿里云「分组: 概览」；默认 overview=pass-through）。
+/* 分组导航偏好（对标阿里云「分组: 概览」；默认 overview=pass-through）。
    铁律 B：切集群/切观察口径/切时间范围**均不得改写本偏好**——故它不进下方重查 watch，
    全程只在用户点 seg 时被赋值（spec 反锁：源码不得出现第二次 `histGroup.value =`）。 */
 const histGroup = usePref<HistGroupKey>('live.histGroup', 'overview');
-/* 六百三十二批：分组 seg 的滑动指示器激活索引（等宽钮下与 segPillStyle 等分几何配套） */
-/* 六百三十三批：入场编排触发位（挂载后下一帧翻真，保证初态先渲染再起过渡；622 §3.3） */
+/* 分组 seg 的滑动指示器激活索引（等宽钮下与 segPillStyle 等分几何配套） */
+/* 入场编排触发位（挂载后下一帧翻真，保证初态先渲染再起过渡；622 §3.3） */
 const pageIn = ref(false);
 const histGroupIdx = computed(() => Math.max(0, HIST_GROUPS.findIndex(g => g.key === histGroup.value)));
 const clusterFilter = ref('');
-/* R60（599 批）：观察口径=集群维度——历史趋势筛选跟随顶部集群切换器（target→conns 实名，
-   R34 纪律实名下推禁 connId）；用户可手动切「全部集群」做跨集群对比，仅同 target 内不回弹，
+/* （）：观察口径=集群维度——历史趋势筛选跟随顶部集群切换器（target→conns 实名，
+    纪律实名下推禁 connId）；用户可手动切「全部集群」做跨集群对比，仅同 target 内不回弹，
    切换器再换集群时重新跟随。实时区本就按 target 隔离（快照键），历史区同口径后全页一致。 */
 const connNameOfTarget = computed(() => store.conns.find(c => c.id === store.target)?.name || '');
 watch(connNameOfTarget, (name) => { if (name) clusterFilter.value = name; }, { immediate: true });
-/* 八百一十六批件4：按节点默认开启（「按节点藏太深，按节点应该是默认效果」）——usePref 落盘
+/* 件4：按节点默认开启（「按节点藏太深，按节点应该是默认效果」）——usePref 落盘
    老用户已显式关过则尊重偏好；新会话/新用户默认 true=选中集群即节点叠加 */
 const byNode = usePref<boolean>('live.byNode', true);
 /* nodeMode 单源：byNode 开且集群已选定才真下钻——清空集群即回集群视图（checkbox 联动回弹） */
 const nodeMode = computed(() => byNode.value && !!clusterFilter.value);
-/* 八百一十六批批内勘正：nodeMode 立真后 detailTab stale 'top'=seg 摘 Top+body 无分支命中双空壳
+/* 批内勘正：nodeMode 立真后 detailTab stale 'top'=seg 摘 Top+body 无分支命中双空壳
    （HEAD 潜伏，byNode 默认开=默认可见）——immediate 规范到告警历史，与 switchDetail 回落语义同源 */
 watch(nodeMode, (nm) => { if (nm && detailTab.value === 'top') detailTab.value = 'alert'; }, { immediate: true });
-/* 七百九十四批件2：Top 索引随自动刷新推进（治旧注释宣称与实况不符——原只在范围/首开触发）；
+/* 件2：Top 索引随自动刷新推进（治旧注释宣称与实况不符——原只在范围/首开触发）；
    watch 置于 clusterFilter/nodeMode 声明后（getter 立即求值撞后置声明 TDZ 的教训）；
    每拍快照落 topRows 同时累积 per-index 序列（窗长钳制 windowPts） */
 watch(() => sampleTs.value.length, () => { if (detailShows('top') && !nodeMode.value) void loadTop(); });
@@ -1338,7 +1338,7 @@ const MH_RANGE_MS: Record<string, number> = { '1h': 3.6e6, '6h': 2.16e7, '24h': 
 /* 降采样档位单源：范围档→interval（1h→1m…7d→30m，未知回落 5m）随取数下推——
    服务端走 ES date_histogram 降采样桶（timestamp 升序/桶距恒定/空桶也在但字段缺省），
    大范围不再逐点拉爆 size 上限；断档阈值=3 倍桶距（下方 :gap-ms 接线同源） */
-/* 六百三十七批：周期档（对标阿里云每卡头「(周期:1分钟)」；626 裁决 D8「周期」半边，零 Java 改动）。
+/* 周期档（对标阿里云每卡头「(周期:1分钟)」；626 裁决 D8「周期」半边，零 Java 改动）。
    覆盖既有隐式推导 mh2Interval＝聚合粒度的显式出口；偏好落 usePref（跨会话记忆）。
    档位：自动（按范围）| 原始逐点 | 1m | 5m | 15m | 30m | 1h。
    ⚠不提供 30 秒档：采集默认 60s、下限 30s（ClusterMetricsCollector.java / EsRebuildProperties.java），
@@ -1359,7 +1359,7 @@ const mh2Interval = computed<string | undefined>(() => {
   if (MH_PERIODS.includes(p)) return p;
   return intervalFor(mh2Range.value); /* auto（及未知档）= 现行为 */
 });
-/* 六百四十三批 637-C2：断档阈值跟「生效 interval」而非时间范围——选比范围默认更粗的周期
+/*  637-C2：断档阈值跟「生效 interval」而非时间范围——选比范围默认更粗的周期
    （如 24h 范围选 1h 桶）时，实际取数用 1h 桶、gap 若仍按范围（5m）推导会让 HistoryChart
    误判相邻 1h 点为断档、走势退化为孤点。原始逐点档（interval=undefined）回采集默认 60s。 */
 const mh2GapMs = computed(() => (mh2Interval.value ? fixedIntervalMs(mh2Interval.value) : 60_000) * 3);
@@ -1369,7 +1369,7 @@ const histRawTitle = computed(() => histRawSafe.value
   : '原始逐点：当前时间跨度超过 50 小时安全窗（原始查询 size 钳 3000 会丢最新点），已自动回落「自动」');
 const HIST_COLORS = ['var(--dv-blue)', 'var(--ok)', 'var(--wn)', 'var(--err)', 'var(--ac)'];
 const HIST_CHARTS: { field: MonitorSeriesField; label: string; unit: string; onlyNodeMode?: boolean; onlyClusterMode?: boolean; threshold?: number }[] = [
-  /* R39：onlyClusterMode=集群 doc 专属指标，节点下钻时无意义（node doc 无此字段）→ 整卡隐藏，
+  /* onlyClusterMode=集群 doc 专属指标，节点下钻时无意义（node doc 无此字段）→ 整卡隐藏，
      不再挂「暂无采样」假空态（真机走查发现） */
   { field: 'qps', label: 'QPS', unit: '/s', onlyClusterMode: true },
   { field: 'indexRate', label: '写入速率', unit: 'doc/s', onlyClusterMode: true },
@@ -1384,7 +1384,7 @@ const HIST_CHARTS: { field: MonitorSeriesField; label: string; unit: string; onl
   /* R9：慢查询代理指标（ms/次）——查询耗时突增常先于容量问题，与实时大屏数值互补 */
   { field: 'searchLatencyMs', label: '查询耗时', unit: 'ms', onlyClusterMode: true },
   { field: 'indexingLatencyMs', label: '索引耗时', unit: 'ms', onlyClusterMode: true },
-  /* R29 节点深耕（对标阿里云基础监控节点级指标）：线程池即时值=队列打满前兆；
+  /*  节点深耕（对标阿里云基础监控节点级指标）：线程池即时值=队列打满前兆；
      磁盘带宽/IOPS=fs.io_stats 差分（首轮/回退缺省）；Load_1m=os 负载——均 onlyNodeMode */
   { field: 'tpSearchActive', label: '查询线程池活跃（个）', unit: '', onlyNodeMode: true },
   { field: 'tpSearchQueue', label: '查询线程池排队（个）', unit: '', onlyNodeMode: true },
@@ -1393,31 +1393,31 @@ const HIST_CHARTS: { field: MonitorSeriesField; label: string; unit: string; onl
   { field: 'diskReadIops', label: '磁盘 IOPS·读（次/秒）', unit: '', onlyNodeMode: true },
   { field: 'diskWriteIops', label: '磁盘 IOPS·写（次/秒）', unit: '', onlyNodeMode: true },
   { field: 'load1m', label: 'Load_1m', unit: '', onlyNodeMode: true },
-  /* R32 G7 内部传输吞吐（transport rx/tx 差分）：节点间通信量（非 HTTP 流量），
+  /*  G7 内部传输吞吐（transport rx/tx 差分）：节点间通信量（非 HTTP 流量），
      跨节点复制/分片迁移打满内网时此卡可见尖峰 */
   { field: 'netRxKbS', label: '内部传输·收（KiB/s）', unit: 'KiB/s', onlyNodeMode: true },
   { field: 'netTxKbS', label: '内部传输·发（KiB/s）', unit: 'KiB/s', onlyNodeMode: true },
-  /* R31 G3 对标阿里云集群级指标卡：分片总数/主分片数（health 字段，平缓量但容量规划要看得见） */
+  /*  G3 对标阿里云集群级指标卡：分片总数/主分片数（health 字段，平缓量但容量规划要看得见） */
   { field: 'shards', label: '分片总数', unit: '', onlyClusterMode: true },
   { field: 'primaryShards', label: '主分片数', unit: '', onlyClusterMode: true },
-  /* R58 对标阿里云集群级「索引数量」：cluster doc 既有键（AGG_METRIC_FIELDS 同在），此前未画卡 */
+  /*  对标阿里云集群级「索引数量」：cluster doc 既有键（AGG_METRIC_FIELDS 同在），此前未画卡 */
   { field: 'indices', label: '索引数量', unit: '', onlyClusterMode: true },
-  /* R62 对标阿里云线程池 Rows（写入侧）+被标记删除文档：force_merge 需求判定信号（docsDeleted 持续走高=该 merge 了） */
+  /*  对标阿里云线程池 Rows（写入侧）+被标记删除文档：force_merge 需求判定信号（docsDeleted 持续走高=该 merge 了） */
   { field: 'tpWriteActive', label: '写入线程池活跃', unit: '', onlyNodeMode: true },
   { field: 'tpWriteQueue', label: '写入线程池排队', unit: '', onlyNodeMode: true },
   { field: 'docsDeleted', label: '被标记删除文档', unit: '', onlyNodeMode: true },
-  /* R62b 对标阿里云 IOUtil(%) 与「节点 Young/Old GC 耗时(ms)」：差分测点三卡 */
+  /*  对标阿里云 IOUtil(%) 与「节点 Young/Old GC 耗时(ms)」：差分测点三卡 */
   { field: 'ioUtilPct', label: 'IOUtil', unit: '%', onlyNodeMode: true },
   { field: 'gcYoungTimeMs', label: 'Young GC 耗时', unit: 'ms', onlyNodeMode: true },
   { field: 'gcOldTimeMs', label: 'Old GC 耗时', unit: 'ms', onlyNodeMode: true },
-  /* R65 对标阿里云 JVM 组「Old 区使用」锯齿形态：堆字节量 MB 直读 GC 回收幅度 */
+  /*  对标阿里云 JVM 组「Old 区使用」锯齿形态：堆字节量 MB 直读 GC 回收幅度 */
   { field: 'heapUsedMb', label: 'Heap 使用（MB）', unit: 'MB', onlyNodeMode: true },
-  /* R72 对标阿里云 JVM 组「fielddata 内存使用」：查询抖动经典根因观测 */
+  /*  对标阿里云 JVM 组「fielddata 内存使用」：查询抖动经典根因观测 */
   { field: 'fielddataMb', label: 'fielddata 内存', unit: 'MB', onlyNodeMode: true },
 ];
 
 async function loadHist() {
-  /* R7 服务端告警并行拉取：时间窗与曲线取数同域（R11 事件标记与图卡时间轴对齐），
+  /* R7 服务端告警并行拉取：时间窗与曲线取数同域（ 事件标记与图卡时间轴对齐），
      先发不 await（不阻塞曲线取数），独立失败静默（空集=「无活动告警」） */
   const histFromMs = rangeMs.value.from;
   void api.monitorAlerts(100, histFromMs, rangeMs.value.to)
@@ -1427,12 +1427,12 @@ async function loadHist() {
   try {
     const res = await api.monitorMetrics({
       scope: nodeMode.value ? 'node' : 'cluster',
-      connName: clusterFilter.value || undefined, /* R34 修复：下拉值=集群实名，传 connName 下推（原误传 connId 恒空） */
+      connName: clusterFilter.value || undefined, /*  修复：下拉值=集群实名，传 connName 下推（原误传 connId 恒空） */
       fromMs: histFromMs,
-      toMs: rangeMs.value.to, /* R66：custom 档终点下推（固定档=now 与现状等价） */
+      toMs: rangeMs.value.to, /* ：custom 档终点下推（固定档=now 与现状等价） */
       size: 3000,
       interval: mh2Interval.value, /* 降采样桶记录；空桶字段缺省由 buildSeries 剔点天然消化 */
-      agg: mhAgg.value, /* R31 G4 聚合方式下推（avg|max） */
+      agg: mhAgg.value, /*  G4 聚合方式下推（avg|max） */
     });
     let records: MonitorMetricsRecord[] = res?.records || [];
     if (nodeMode.value) {
@@ -1471,7 +1471,7 @@ const statusBands = computed(() => redBands(hist.value).map(b => {
   return { ...b, label: cause?.error ? '集群失联：' + cause.error : '集群失联时段' };
 }));
 
-/* R11 告警事件标记：服务端告警（未恢复的 CRIT/WARN）落图卡事件轴——
+/*  告警事件标记：服务端告警（未恢复的 CRIT/WARN）落图卡事件轴——
    超限瞬间的菱形标记与曲线/色带同时间域，悬停 title 可读事件文案 */
 const chartEvents = computed(() => srvAlerts.value
   .filter(a => !a.recovered && (a.level === 'CRIT' || a.level === 'WARN'))
@@ -1483,7 +1483,7 @@ const chartEvents = computed(() => srvAlerts.value
 
 /* R4 节点一览行集（仅节点下钻模式有值；latestByNode 单源=每节点最新一条） */
 const nodeRows = computed(() => latestByNode(hist.value));
-/* R51 质感：长节点 ID（未设 node.name 的集群）截短展示，title 悬停看全量 */
+/*  质感：长节点 ID（未设 node.name 的集群）截短展示，title 悬停看全量 */
 function shortNode(name: string): string {
   return name && name.length > 18 ? name.slice(0, 10) + '…' + name.slice(-6) : name;
 }
@@ -1499,7 +1499,7 @@ function clustersOf(records: MonitorMetricsRecord[]): string[] {
   return [...set].sort();
 }
 const clusterList = ref<string[]>([]);
-/* R60：下拉选项并入 target 实名兜底——clusterList 由历史拉取异步回填，晚于跟随 watch 时
+/* 下拉选项并入 target 实名兜底——clusterList 由历史拉取异步回填，晚于跟随 watch 时
    options 会瞬时缺当前集群（select 显示回落''）；兜底后选项恒含当前观察口径集群 */
 const histClusters = computed<string[]>(() => {
   const set = new Set(clusterList.value);
@@ -1513,7 +1513,7 @@ const histCharts = computed(() => HIST_CHARTS
   /* R8：onlyNodeMode 项（GC 差分）仅节点下钻渲染，集群态过滤掉（服务端无该聚合口径）；
      拒绝图卡的 allClean 健康态一句话逻辑不受影响（过滤在先、健康态判定在后，各自独立） */
   .filter(m => (!m.onlyNodeMode || nodeMode.value) && (!m.onlyClusterMode || !nodeMode.value))
-  /* 六百二十八批：分组导航过滤（用户主动）——**必须追加在 scope 过滤之后**：
+  /* 分组导航过滤（用户主动）——**必须追加在 scope 过滤之后**：
      先按数据可用性自动二态隐藏（scope=cluster/node），再按用户所选组收窄。
      overview 走 inHistGroup 恒真 = pass-through → 默认档渲染结果与引入分组前逐字相同。 */
   .filter(m => inHistGroup(m.field, histGroup.value))
@@ -1545,7 +1545,7 @@ const histCharts = computed(() => HIST_CHARTS
   }));
 const allClean = computed(() => !hist.value.some(r => (r.writeRejected ?? 0) > 0 || (r.searchRejected ?? 0) > 0));
 
-/* 六百二十八批：分组空态文案——「所选组 × 当前观察口径」交集为空时给出可行动说明
+/* 分组空态文案——「所选组 × 当前观察口径」交集为空时给出可行动说明
    （例：集群模式下选「节点磁盘指标」，或节点下钻选「集群指标」）。 */
 const histGroupEmpty = computed(() =>
   `${histGroupLabel(histGroup.value)}分组在「${nodeMode.value ? '按节点查看' : '集群'}」口径下暂无指标卡——`
@@ -1555,12 +1555,12 @@ const histGroupEmpty = computed(() =>
    首挂载拉一针（与实时采样器互不干扰） */
 watch(clusterFilter, v => { if (!v) byNode.value = false; });
 watch([mh2Range, clusterFilter, nodeMode, mhAgg, customFrom, customTo], () => { void loadHist(); if (detailShows('slow')) void loadSlow(); if (detailShows('top')) void loadTop(); });
-/* 六百三十七批：周期档切换即重查——独立 watch（不动上方被 monitorHistoryTrend 逐字锁的数组字面）。
+/* 周期档切换即重查——独立 watch（不动上方被 monitorHistoryTrend 逐字锁的数组字面）。
    histGroup 仍**不入**重查依赖：分组是用户导航过滤（628 立法），切集群/范围/档位均不得重置。 */
 watch(histPeriod, () => { void loadHist(); if (detailShows('slow')) void loadSlow(); if (detailShows('top')) void loadTop(); });
 onMounted(() => {
   loadHist();
-  /* 六百三十三批：入场编排——next rAF 翻真，令 [data-st] 初态先落一帧再起过渡 */
+  /* 入场编排——next rAF 翻真，令 [data-st] 初态先落一帧再起过渡 */
   requestAnimationFrame(() => { pageIn.value = true; });
 });
 </script>
@@ -1571,50 +1571,50 @@ onMounted(() => {
 .fs-active .ld-page { max-width: none; }
 /* 全屏态壳由 FocusableSurface（fs-active）统一承担；本体吃满聚焦面并自带滚动 */
 .ld-page[data-flex-fill] { flex: 1 1 auto; min-height: 0; overflow: auto; }
-/* 七百八十二批 Z3（一致性）：.ld-hd/.ld-hd-l/.ld-hd-ic/.ld-hd-tt/.ld-hd-sub/.ld-hd-r 六条旧页头
-   死规则整删——页头已迁 PageHeader 组件（.ph 系列），模板零引用零 spec 锁（780 批
+/*  Z3（一致性）：.ld-hd/.ld-hd-l/.ld-hd-ic/.ld-hd-tt/.ld-hd-sub/.ld-hd-r 六条旧页头
+   死规则整删——页头已迁 PageHeader 组件（.ph 系列），模板零引用零 spec 锁（
    .page-head 死规则族 G267/G268 同族第二例；PageHeader 收编漏删温床=页头类名域） */
 /* 副标题已迁 PageHeader（.ph-sub），状态色选择器同步接线（slot 内容带本组件 scope） */
 .ph-sub b.rn { color: var(--ok); }
 .ph-sub b.st { color: var(--err); }
-/* 第十批：轮询频率下拉换装 AutoRefreshSelect 统一件，.ld-sel 残留删除 */
+/* 轮询频率下拉换装 AutoRefreshSelect 统一件，.ld-sel 残留删除 */
 .ld-stale { display: flex; gap: var(--sp-2); align-items: center; padding: var(--sp-2) var(--sp-3); margin-bottom: var(--sp-3); font-size: var(--fs-sm); color: var(--warn); background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: var(--r-s); }
 .ld-stale-acts { margin-left: auto; display: inline-flex; gap: var(--sp-2); flex-shrink: 0; }
 
 /* 指标卡墙退役后的 inline 元信息带（MetaStrip 统一件；本视图只承担落位间距） */
-/* 八百一十六批件5：页头 actions 单行化（「UI 太丑啦」竖排三行根治——.ph-r wrap+shrink:0
+/* 件5：页头 actions 单行化（「UI 太丑啦」竖排三行根治——.ph-r wrap+shrink:0
    在标题长的本页换行竖排；本页 scope :deep nowrap 覆写，全站其他页 wrap 行为不受扰） */
 .ld-page :deep(.ph-r) { flex-wrap: nowrap; }
 .ld-page :deep(.ph-r .inp.sm) { min-width: 0; }
 .ld-strip { margin-bottom: var(--sp-3); }
 
-/* 六百八十四批（622 §8-P4 挂墙，goal684-wall-mode.html §2 五件套）：全屏态=挂墙模式，
+/* （622 §8-P4 挂墙，goal684-wall-mode.html §2 五件套）：全屏态=挂墙模式，
    墙作用域=FocusableSurface 根 fs-active（MetaStrip/卡墙/告警/历史区是 fs-body 下兄弟节点，
    不在 .ld-page 内——ld-wall 私类方案实测失配废弃）；四件 CSS 级联零 DOM 增删
    （671-C2 v-show 恒在 DOM 同律——探针判据走 computed display；.ld-* 元素类与
    data-v 双限定=规则只及本页元素，他页 fs-active 不串） */
 .fs-active .ld-strip { display: none; } /* ①元信息带隐藏：阈值细节非墙播语义，健康态由卡 tone 与告警头承担 */
 .fs-active .ld-alert { display: none; } /* ②告警折叠：头行严重/警告计数徽标=墙播摘要，条目出墙复原 */
-.fs-active :deep(.ld-chart-cur) { font-size: var(--fs-num-l); } /* ③当前值升 28px 区块大数（W4=R71 放大态同档同语言） */
-.fs-active :deep(.ld-ta) { font-size: var(--fs-xs); } /* ⑤时间锚升满轴：fs-2xs 注脚→fs-xs 轴刻度（W5）；781 批 K1 锚移图下独立行，bottom/opacity 两值随定位退役 */
+.fs-active :deep(.ld-chart-cur) { font-size: var(--fs-num-l); } /* ③当前值升 28px 区块大数（W4= 放大态同档同语言） */
+.fs-active :deep(.ld-ta) { font-size: var(--fs-xs); } /* ⑤时间锚升满轴：fs-2xs 注脚→fs-xs 轴刻度（W5）； K1 锚移图下独立行，bottom/opacity 两值随定位退役 */
 
-/* 五百三十批：卡墙入列默认 2x2；R54/R52 实时走势扩展后六卡（QPS/写入/Heap/CPU/磁盘/任务），
+/* 卡墙入列默认 2x2；/ 实时走势扩展后六卡（QPS/写入/Heap/CPU/磁盘/任务），
    1600+ 大屏换 3 列两行平衡（原四列档每卡偏窄，走势可读性优先）；1100/900 断点既有档保留 */
 .ld-charts { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3); margin-bottom: var(--sp-4); } /* 795 件4：区块间距升档，卡间 gap 维持 sp-3（疏密对比） */
 @media (min-width: 1600px) {
   .ld-charts { grid-template-columns: repeat(3, 1fr); }
 }
-/* 五百三十批：运行中任务清单行（pill + 标签 + 进度；标签截断防长索引名撑爆卡） */
+/* 运行中任务清单行（pill + 标签 + 进度；标签截断防长索引名撑爆卡） */
 .ld-jobs { display: flex; flex-direction: column; gap: var(--sp-1); min-height: 64px; justify-content: center; }
-.ld-job-spark { margin-left: var(--sp-2); width: 72px; height: 18px; flex-shrink: 0; align-self: center; } /* 七百批②任务卡走势 spark（abs 档，头行右缘） */
-.ld-ncmp-tip-more { color: var(--tx2); font-size: var(--fs-xs); } /* 七百批①读出截断尾行（聚合行弱化） */
-/* 五百三十一批：空态收编 EmptyState compact——原 .ld-svg-wait 占位形态归组件，本类只承担落位 */
+.ld-job-spark { margin-left: var(--sp-2); width: 72px; height: 18px; flex-shrink: 0; align-self: center; } /* ②任务卡走势 spark（abs 档，头行右缘） */
+.ld-ncmp-tip-more { color: var(--tx2); font-size: var(--fs-xs); } /* ①读出截断尾行（聚合行弱化） */
+/* 空态收编 EmptyState compact——原 .ld-svg-wait 占位形态归组件，本类只承担落位 */
 .ld-jobs-empty { min-height: 64px; justify-content: center; padding-top: var(--sp-3); padding-bottom: var(--sp-3); }
 .ld-job { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); min-width: 0; }
 .ld-job-lb { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--tx1); }
 .ld-job-pct { color: var(--tx2); font-variant-numeric: tabular-nums; }
 .ld-job-more { font-size: var(--fs-2xs); color: var(--tx2); }
-/* 797 件1（用户令大厂级统一卡壳）：556 分节壳退役口径随用户令升级——任务卡与 LiveChartCard
+/* 797 件1（令大厂级统一卡壳）：556 分节壳退役口径随令升级——任务卡与 LiveChartCard
    五线卡同步升 panel 壳（同语言全站统一）；类名锚保留（obsStack530 锁同源） */
 .ld-chart { background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-m); padding: var(--sp-3); }
 /* 遮罩：--mask 主题跟随 token（theme.css:130）；inset 四向写法规避 componentUnifySweep 的 fixed+inset:0 自建全屏壳正则（遮罩非壳） */
@@ -1625,16 +1625,16 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 .ld-chart-tt-top .ld-job-spark { margin-left: auto; }
 .ld-chart-cur { display: block; font-family: var(--mono); font-size: var(--fs-num-l); font-weight: 650; font-variant-numeric: tabular-nums; line-height: 1.25; margin: var(--sp-0) 0 var(--sp-1); }
 .ld-chart-th { font-size: var(--fs-2xs); font-style: normal; color: var(--muted); }
-/* R56：节点对比叠加卡——多折线（节点色锚排序位）+阈值虚线+站内 .seg 指标分段+多行值读出；
+/* 节点对比叠加卡——多折线（节点色锚排序位）+阈值虚线+站内 .seg 指标分段+多行值读出；
    容器按 556 立法 border-top 分节（不加壳框） */
-/* ══ 七百九十四批件1：悬浮面板壳（弹层四要素：bg1+边框+阴影+r-m=铁律 C）══
+/* ══ 件1：悬浮面板壳（弹层四要素：bg1+边框+阴影+r-m=铁律 C）══
    fixed 真悬浮（页面流零占位）；默认右上 84px 档（pos.x=-1 未拖过时）；宽 640 自适应钳制。
    旧 .ld-ncmp 流内主规则随区块迁出页面流整删（794 死规则守卫域）。 */
-/* 八百零六批件3：fixed 浮层退役（用户令推翻 794 悬浮形态）——迁 .ld-nodes 区页面流内联
+/* 件3：fixed 浮层退役（令推翻 794 悬浮形态）——迁 .ld-nodes 区页面流内联
    容器：panel 壳与节点卡/六卡同语言（--panel 底+r-m），shadow/宽度钳制随浮层语义退役 */
 .ld-ncmp-panel { margin-bottom: var(--sp-2); background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-m); padding: var(--sp-2) var(--sp-3) var(--sp-3); }
 .ld-ncmp-panel .ld-ncmp-svg { height: 150px; }
-/* 八百一十六批件1：图例 chips 行（hc-chip 同语言：色点+名+当前值 mono；off=划线灰化，色号不换） */
+/* 件1：图例 chips 行（hc-chip 同语言：色点+名+当前值 mono；off=划线灰化，色号不换） */
 .ld-cmp-legend { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-2); margin-top: var(--sp-2); }
 .ld-cmp-lg { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-2xs); color: var(--tx1); background: transparent; border: 1px solid var(--border); border-radius: var(--r-s); padding: var(--sp-0) var(--sp-2); cursor: pointer; line-height: 16px; max-width: 260px; }
 .ld-cmp-lg:hover { border-color: var(--muted); color: var(--tx0); }
@@ -1647,25 +1647,25 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 /* 入口钮（节点区头部，弹层触点软底语言） */
 .ld-nodes-hd { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
 .ld-nodes-hd .ld-nodes-tt { margin-bottom: 0; }
-/* 八百零六批件1：区块头汇总（mono 弱化不抢题） */
+/* 件1：区块头汇总（mono 弱化不抢题） */
 .ld-nodes-sum { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--muted); margin-right: auto; }
 .ld-ncmp-entry { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-xs); color: var(--ac-hi); background: var(--ac-soft); border: 1px solid var(--ac-line); border-radius: 99px; padding: 2px var(--sp-2); cursor: pointer; transition: color .12s ease-out; }
 .ld-ncmp-entry:hover { color: var(--ac); }
-/* ══ 八百批：监控明细单容器（三面板合一壳=用户六令实锚「在一块」）══ */
+/* ══ ：监控明细单容器（三面板合一壳=用户六令实锚「在一块」）══ */
 .ld-detail { margin-bottom: var(--sp-4); background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-m); }
 .ld-detail-hd { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); }
-/* 八百二十二批件4：seg 防折行（theme .seg flex-wrap:wrap 全局锁在本容器被挤=两排不对称；
+/* 件4：seg 防折行（theme .seg flex-wrap:wrap 全局锁在本容器被挤=两排不对称；
    scope nowrap+按钮不折不缩+meta 弹性让位） */
 .ld-detail-hd .ld-detail-seg { flex-wrap: nowrap; flex-shrink: 0; }
-.ld-detail-hd .ld-detail-seg button { white-space: nowrap; min-width: 0; } /* 八百二十六批A1b：min-width:0 解除 flex auto 下限=ld-seg flex:1 1 0 真等分（内容宽下限是等宽杀手） */
-.ld-detail-toggle { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-sm); font-weight: 600; /* 八百一十七批件2：容器标题升 sec-t 档 */ color: var(--tx0); background: transparent; border: none; cursor: pointer; padding: 0; }
+.ld-detail-hd .ld-detail-seg button { white-space: nowrap; min-width: 0; } /* A1b：min-width:0 解除 flex auto 下限=ld-seg flex:1 1 0 真等分（内容宽下限是等宽杀手） */
+.ld-detail-toggle { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-sm); font-weight: 600; /* 件2：容器标题升 sec-t 档 */ color: var(--tx0); background: transparent; border: none; cursor: pointer; padding: 0; }
 .ld-detail-chev { transition: transform .12s ease-out; }
 .ld-detail-chev.open { transform: rotate(180deg); }
-.ld-detail-meta { margin-left: auto; font-size: var(--fs-2xs); color: var(--tx2); font-variant-numeric: tabular-nums;  min-width: 0;; white-space: nowrap; } /* 八百二十六批A2 */
+.ld-detail-meta { margin-left: auto; font-size: var(--fs-2xs); color: var(--tx2); font-variant-numeric: tabular-nums;  min-width: 0;; white-space: nowrap; } /* A2 */
 .ld-detail-meta .crit { color: var(--err); } .ld-detail-meta .warn { color: var(--warn); } .ld-detail-meta .ok { color: var(--ok); }
 .ld-detail-body { padding: var(--sp-2) var(--sp-3) var(--sp-3); border-top: 1px solid var(--border); }
 .ld-detail-tools { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
-/* ══ 八百零二批件2：导出 ⋯ 收纳（三视图共用 details 弹层；Esc=window 捕获级，弹层四要素 bg+border+shadow+r）══ */
+/* ══ 件2：导出 ⋯ 收纳（三视图共用 details 弹层；Esc=window 捕获级，弹层四要素 bg+border+shadow+r）══ */
 .ld-detail-more { position: relative; margin-left: var(--sp-1); }
 .ld-detail-more > summary { list-style: none; display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; border: 1px solid var(--border); border-radius: var(--r-s); color: var(--tx2); font-size: var(--fs-sm); font-weight: 650; cursor: pointer; user-select: none; }
 .ld-detail-more > summary::-webkit-details-marker { display: none; }
@@ -1674,32 +1674,32 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 .ld-detail-more-menu button { display: block; width: 100%; text-align: left; background: none; border: none; color: var(--tx0); font-size: var(--fs-xs); padding: 6px 10px; border-radius: var(--r-s); cursor: pointer; }
 .ld-detail-more-menu button:not(:disabled):hover { background: var(--hl-soft, rgba(127, 127, 127, .12)); }
 .ld-detail-more-menu button:disabled { opacity: .45; cursor: not-allowed; }
-/* ══ 八百零二批件1：Top 曲线图表底座（网格线/Y 中间刻度/X 时间锚/常显图例——截图「白板图」根治）══ */
+/* ══ 件1：Top 曲线图表底座（网格线/Y 中间刻度/X 时间锚/常显图例——截图「白板图」根治）══ */
 .ld-grid { stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; opacity: .75; }
 .ld-xt { position: absolute; bottom: 2px; transform: translateX(-50%); font-size: var(--fs-2xs); color: var(--tx2); font-family: var(--mono); pointer-events: none; }
 .ld-top-legend { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-4); margin: var(--sp-1) 2px var(--sp-2); }
-/* 八百一十九批件1：Top 图例升胶囊 chip 族（与 ld-cmp-lg/hc-chip 同语言——border+r-s+圆点 50%+hover；
+/* 件1：Top 图例升胶囊 chip 族（与 ld-cmp-lg/hc-chip 同语言——border+r-s+圆点 50%+hover；
    802 旧代裸列表〔方色点/min-width 178〕退役；dot/name/cur 三件结构保留=802 A4 锁兼容）。
-   八百二十批批内勘正：旧代 em 残留规则退役（单规则=cmp 同字面 tx0/600/tabular）+非点击 span 摘
+   批内勘正：旧代 em 残留规则退役（单规则=cmp 同字面 tx0/600/tabular）+非点击 span 摘
    cursor:pointer 假示能（pointer 属可点击的 cmp-lg 按钮） */
 .ld-top-lg { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-2xs); color: var(--tx1); background: transparent; border: 1px solid var(--border); border-radius: var(--r-s); padding: var(--sp-0) var(--sp-2); line-height: 16px; max-width: 260px; }
 .ld-top-lg:hover { border-color: var(--muted); color: var(--tx0); }
 .ld-top-lg i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .ld-top-lg b { font-weight: 500; color: var(--tx0); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 130px; }
 .ld-top-lg em { font-style: normal; color: var(--tx0); font-weight: 600; font-variant-numeric: tabular-nums; }
-/* ══ 八百零二批件4：服务端告警状态胶囊（「无活动告警」灰字升格；绿点+边框容器）══ */
+/* ══ 件4：服务端告警状态胶囊（「无活动告警」灰字升格；绿点+边框容器）══ */
 .ld-ok-chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 99px; padding: 3px 10px; font-size: var(--fs-2xs); color: var(--tx2); background: var(--panel); }
 .ld-ok-chip i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok, #34d399); box-shadow: 0 0 5px rgba(52, 211, 153, .5); }
-/* ══ 七百九十四批件2：Top 索引曲线视图（曲线/表格双 seg+读出层复用 ld-hv-stack 语汇）══ */
+/* ══ 件2：Top 索引曲线视图（曲线/表格双 seg+读出层复用 ld-hv-stack 语汇）══ */
 .ld-top-viewseg { margin-left: var(--sp-2); }
 .ld-top-plot { margin: var(--sp-1) 0 var(--sp-2); }
 .ld-top-hv { min-width: 150px; }
 .ld-ncmp-hd { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
-.ld-ncmp-tt { font-size: var(--fs-sm); font-weight: 600; color: var(--tx1); } /* 八百一十七批件3：容器头升档=与监控明细孪生容器同语言（muted 卡级色退役） */
+.ld-ncmp-tt { font-size: var(--fs-sm); font-weight: 600; color: var(--tx1); } /* 件3：容器头升档=与监控明细孪生容器同语言（muted 卡级色退役） */
 .ld-ncmp-hd .seg { margin-left: auto; }
 .ld-ncmp-svg { width: 100%; height: 120px; display: block; }
-/* 七百八十一批 K2：图例退役后的头部恢复钮（软底+品牌描边，fv-tab.act 同语言）——
-   R73（615 批）图例 chip 点选随常驻图例退役，隐藏/恢复唯一通道=读出行尾 ×+本钮 */
+/*  K2：图例退役后的头部恢复钮（软底+品牌描边，fv-tab.act 同语言）——
+   （）图例 chip 点选随常驻图例退役，隐藏/恢复唯一通道=读出行尾 ×+本钮 */
 .ld-ncmp-restore { font-size: var(--fs-2xs); color: var(--ac-hi); background: var(--ac-soft); border: 1px solid var(--ac-line); border-radius: 99px; padding: 1px var(--sp-2); cursor: pointer; }
 .ld-ncmp-restore:hover { color: var(--ac); }
 /* 图区包裹层：轴刻度/十字线/读出的定位上下文（与图同宽） */
@@ -1712,89 +1712,89 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 .ld-thv { position: absolute; right: 0; transform: translateY(-50%); font-size: var(--fs-2xs); color: var(--err); font-family: var(--mono); pointer-events: none; background: var(--bg1); padding: 0 var(--sp-0); }
 .ld-xaxis { display: flex; justify-content: space-between; margin-top: var(--sp-1); font-size: var(--fs-2xs); color: var(--tx2); font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .ld-ta { pointer-events: none; }
-/* R73（615 批）：读出层纵排堆叠（9 节点横排爆行修复）；781 批 K2 行尾 × 隐藏钮。
-   八百二十二批件3：.ld-hv 补弹层四要素（bg1 底+border+shadow-m+r-s+padding=hc-tip 同语言）
-   ——781 年代起读出容器无壳裸奔（用户实报「不应该是悬浮小卡片吗」根治） */
-/* 八百二十六批C1：十字线规则补位（族3/4 .ld-xline 781 年代起无规则=悬浮十字线不可见 bug；对齐族1/2 1px tx2@.45） */
+/* （）：读出层纵排堆叠（9 节点横排爆行修复）； K2 行尾 × 隐藏钮。
+   件3：.ld-hv 补弹层四要素（bg1 底+border+shadow-m+r-s+padding=hc-tip 同语言）
+   ——781 年代起读出容器无壳裸奔（实报「不应该是悬浮小卡片吗」根治） */
+/* C1：十字线规则补位（族3/4 .ld-xline 781 年代起无规则=悬浮十字线不可见 bug；对齐族1/2 1px tx2@.45） */
 .ld-xline { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--tx2); opacity: .45; pointer-events: none; }
-.ld-hv { position: absolute; z-index: 3; /* 八百二十六批C2：壳对齐 hc-tip（bg2+fs-2xs） */ background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r-s); box-shadow: var(--shadow-m); padding: var(--sp-1) var(--sp-2); pointer-events: none;; font-size: var(--fs-2xs); }
-.ld-hv-stack { flex-direction: column; align-items: stretch; gap: var(--sp-0); min-width: 150px; max-height: 260px; overflow-y: auto; } /* 八百二十五批：全量显示滚动兜底（>24 行极端集群） */
+.ld-hv { position: absolute; z-index: 3; /* C2：壳对齐 hc-tip（bg2+fs-2xs） */ background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r-s); box-shadow: var(--shadow-m); padding: var(--sp-1) var(--sp-2); pointer-events: none;; font-size: var(--fs-2xs); }
+.ld-hv-stack { flex-direction: column; align-items: stretch; gap: var(--sp-0); min-width: 150px; max-height: 260px; overflow-y: auto; } /* ：全量显示滚动兜底（>24 行极端集群） */
 .ld-ncmp-tip-r { display: flex; align-items: center; gap: var(--sp-1); white-space: nowrap; }
 .ld-ncmp-tip-r i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
-.ld-ncmp-tip-r em { font-style: normal; font-family: var(--mono); color: var(--tx0); font-weight: 600; font-variant-numeric: tabular-nums; margin-left: auto; padding-left: var(--sp-2h); } /* 八百二十六批C3：值档对齐 hc-tip（tx0/600） */
-.ld-hv-t { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--tx2); margin-bottom: var(--sp-0); } /* 八百二十六批C3：时间行样式（781 年代起无样式） */
+.ld-ncmp-tip-r em { font-style: normal; font-family: var(--mono); color: var(--tx0); font-weight: 600; font-variant-numeric: tabular-nums; margin-left: auto; padding-left: var(--sp-2h); } /* C3：值档对齐 hc-tip（tx0/600） */
+.ld-hv-t { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--tx2); margin-bottom: var(--sp-0); } /* C3：时间行样式（781 年代起无样式） */
 .ld-ncmp-hide { border: none; background: transparent; color: var(--tx2); cursor: pointer; font-size: var(--fs-sm); line-height: 1; padding: 0 var(--sp-0); pointer-events: auto; }
 .ld-ncmp-hide:hover { color: var(--err); }
 
 .ld-nodes { margin-bottom: var(--sp-4); } /* 795 件4：区块间距升档（疏密对比=区块间疏+卡间维持密） */
-/* 五百二十七批 W-F：弱分节标题挂全局 .sec-t，本地排版本地声明退役（口径 B）；
+/*  W-F：弱分节标题挂全局 .sec-t，本地排版本地声明退役（口径 B）；
    .ld-chart-tt/.ld-alerts-tt 带当前值/徽标属组件私有形态豁免 */
 .ld-nodes-tt { margin-bottom: var(--sp-2); }
 /* 件3（794）：对比块迁出页面流后版面释放——节点卡 minmax 220→240 加宽一档（1600 档更大气） */
 .ld-nodes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--sp-2); }
-/* 第十批：空态收编 EmptyState compact 统一件，本类只留 grid 跨列落位（视觉归组件） */
+/* 空态收编 EmptyState compact 统一件，本类只留 grid 跨列落位（视觉归组件） */
 .ld-nodes-empty { grid-column: 1 / -1; }
-.ld-node { padding: var(--sp-2) var(--sp-3); background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-m); } /* 八百零六批件1：r-xs→r-m+横向内距升档=六卡 panel 同语言 */
-/* R59：节点卡可点下钻（/diag?node=，告警条 alertRoute 同语汇）——hover 微亮+键盘焦点环；不改语义边框 tone */
+.ld-node { padding: var(--sp-2) var(--sp-3); background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-m); } /* 件1：r-xs→r-m+横向内距升档=六卡 panel 同语言 */
+/* 节点卡可点下钻（/diag?node=，告警条 alertRoute 同语汇）——hover 微亮+键盘焦点环；不改语义边框 tone */
 .ld-node { cursor: pointer; transition: background .12s ease-out, border-color .12s ease-out; }
-.ld-node:hover { background: var(--bg2); border-color: var(--ac); } /* 八百零六批件1：hover 品牌青强调=可点下钻暗示（797 件4 hover 家族） */
+.ld-node:hover { background: var(--bg2); border-color: var(--ac); } /* 件1：hover 品牌青强调=可点下钻暗示（797 件4 hover 家族） */
 .ld-node.warn { border-color: var(--warn); }
 .ld-node.bad { border-color: var(--err); }
 .ld-node-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-2); font-size: var(--fs-xs); }
 .ld-node-name { display: inline-flex; align-items: center; gap: var(--sp-1h); min-width: 0; }
 .ld-node-name b { font-weight: 650; } /* 795 件3：节点名加粗档 */
-/* 五百六十一批：.ld-node-tone 四条私造圆点规则随 MetaStrip dot 形态单源退役
+/* .ld-node-tone 四条私造圆点规则随 MetaStrip dot 形态单源退役
    （bw-hdot 四胞之一；色值映射迁 nodeToneDot 单点，8px 圆点归组件 .ms-dot 单源） */
-/* 525 批：9px 裸值清零（低于 --fs-2xs 自守卫下限），三处归档 */
+/* 9px 裸值清零（低于 --fs-2xs 自守卫下限），三处归档 */
 .ld-node-role { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--muted); padding: 1px 5px; border-radius: var(--r-xs); line-height: 15px; }
 .ld-node-role.data { color: var(--dv-blue); background: color-mix(in srgb, var(--dv-blue) 14%, transparent); }
 .ld-node-role.master { color: var(--dv-purple); background: color-mix(in srgb, var(--dv-purple) 14%, transparent); }
-/* 七百八十一批 K3：.ld-node-sparks/.ld-spark-row/.ld-spark-lb/.ld-spark/.ld-spark-wait 五条
+/*  K3：.ld-node-sparks/.ld-spark-row/.ld-spark-lb/.ld-spark/.ld-spark-wait 五条
    随卡内迷你 spark 退役整删（模板 0 引用；与节点对比图/历史下钻重复） */
 .ld-node-row { display: flex; gap: var(--sp-2); align-items: center; margin-bottom: 3px; font-size: var(--fs-xs); }
 .ld-node-row > span:first-child { width: 30px; color: var(--muted); }
 .ld-node-row > b { width: 40px; text-align: right; font-family: var(--mono); }
-/* 五百三十二批：数值 tone 两档（既有语义色 token；阈值判定全走 metricTone 单源，
+/* 数值 tone 两档（既有语义色 token；阈值判定全走 metricTone 单源，
    disk bad=90 与 heap/cpu 统一口径——ES watermark 85 红线的旧分叉不再引入） */
 .ld-node-row > b.warn { color: var(--warn); }
 .ld-node-row > b.err { color: var(--err); }
-/* R57：load 行（绝对值非百分比，无水位条；b 推右对齐其他行值位） */
+/* load 行（绝对值非百分比，无水位条；b 推右对齐其他行值位） */
 .ld-node-row-plain > b { margin-left: auto; }
-/* 八百零六批件1：tp+load 合一行收尾（上缘分隔线收口；.ld-node-row 30px 标签列在此档释放） */
+/* 件1：tp+load 合一行收尾（上缘分隔线收口；.ld-node-row 30px 标签列在此档释放） */
 .ld-node-foot { margin: 6px 0 0; padding-top: 5px; border-top: 1px solid var(--border-soft); font-size: var(--fs-2xs); color: var(--tx2); font-family: var(--mono); }
 .ld-node-foot > span:first-child { width: auto; }
 .ld-node-foot b { color: var(--tx0); font-weight: 600; }
 .ld-node-foot-sep { color: var(--muted); }
-.ld-bar { flex: 1; height: 12px; background: var(--panel-2); border-radius: var(--r-xs); overflow: hidden; position: relative; } /* 八百零六批件1：8→12px 卡内主视觉+刻度定位上下文 */
-/* 第十批：width 过渡改 transform: scaleX（合成层动画不走 layout，百分比/100 由模板绑定；origin left 等效左起填充）。
-   八百零六批件1：填充色走 --mc 身份色变量（ok 档），warn/err 档切语义色=条与数值同色同档（metricTone 单源） */
+.ld-bar { flex: 1; height: 12px; background: var(--panel-2); border-radius: var(--r-xs); overflow: hidden; position: relative; } /* 件1：8→12px 卡内主视觉+刻度定位上下文 */
+/* width 过渡改 transform: scaleX（合成层动画不走 layout，百分比/100 由模板绑定；origin left 等效左起填充）。
+   件1：填充色走 --mc 身份色变量（ok 档），warn/err 档切语义色=条与数值同色同档（metricTone 单源） */
 .ld-bar > div { width: 100%; height: 100%; transform-origin: left; transition: transform 0.3s; background: var(--mc); }
 .ld-bar > div.warn { background: var(--warn); }
 .ld-bar > div.err { background: var(--err); }
-/* 八百零六批件1：85/90 阈值刻度双标（track 上 1px 竖线，「离危险多远」一眼可读；90 档染 err） */
+/* 件1：85/90 阈值刻度双标（track 上 1px 竖线，「离危险多远」一眼可读；90 档染 err） */
 .ld-bar-tick { position: absolute; top: 1px; bottom: 1px; width: 1px; left: 85%; background: var(--tx2); opacity: .45; }
 .ld-bar-tick.t90 { left: 90%; background: var(--err); opacity: .55; }
 
-/* 五百三十五批：.ld-alerts 告警盒外框退役（§6v 刀④局部）——border/radius/panel 壳退役，
+/* .ld-alerts 告警盒外框退役（§6v 刀④局部）——border/radius/panel 壳退役，
    容器与类名保留（.ld-alerts-tt 头条 527 W-F 豁免形态原样保留不动；条目行分隔由
    .ld-alert border-bottom 自持） */
-/* 五百三十八批：.ld-alerts-tt 头条本体漏面补刀（535 W6 只退了 .ld-alerts 外框）——panel-2 底块
+/* .ld-alerts-tt 头条本体漏面补刀（535 W6 只退了 .ld-alerts 外框）——panel-2 底块
    退役转 fs-head 行首横排档（§6v 立法「分界归 fs-head border-bottom」：分界线保留，退的是底色；
    PainlessLab .pl-editor-hd 同款），warn 语义字色与条栏布局原样保留 */
-/* 八百二十六批B3：空态轻量行（无 warn 头行无分隔线——搁浅分隔条退役） */
+/* B3：空态轻量行（无 warn 头行无分隔线——搁浅分隔条退役） */
 .ld-alerts-empty { display: flex; align-items: center; padding: 0 var(--sp-3); }
-/* 八百二十六批B2：告警区容器间距（535 退役外框后间距无处安放=与历史区交界 0px 焊死） */
+/* B2：告警区容器间距（535 退役外框后间距无处安放=与历史区交界 0px 焊死） */
 .ld-alerts { margin-bottom: var(--sp-4); }
-/* 八百一十七批件1：区块标题升 sec-t 立法档（12px·600）=四区同档；warn 语义色保留 */
+/* 件1：区块标题升 sec-t 立法档（12px·600）=四区同档；warn 语义色保留 */
 .ld-alerts-tt { padding: var(--sp-2) var(--sp-3); font-size: var(--fs-sm); font-weight: 600; border-bottom: 1px solid var(--border); display: flex; gap: var(--sp-2); align-items: center; color: var(--warn); }
-/* 五百三十一批：告警计数徽标换装 StatusPill——落位锚类保留（pillSingleTrack MERGED 看守），
-   原 .bd/.wn 文字色档随换装退役（色归 tone 单源）。七百八十二批 Z3：空规则壳删除
+/* 告警计数徽标换装 StatusPill——落位锚类保留（pillSingleTrack MERGED 看守），
+   原 .bd/.wn 文字色档随换装退役（色归 tone 单源）。 Z3：空规则壳删除
    （类名仍在模板作锚；pillSingleTrack 断言=禁自带尺寸/色值，规则缺席恒过） */
-/* 八百零八批件1：.ld-al-ok 灰字规则随空态胶囊化退役（ld-ok-chip 单源消费） */
+/* 件1：.ld-al-ok 灰字规则随空态胶囊化退役（ld-ok-chip 单源消费） */
 .ld-al-sp { flex: 1; }
 .ld-al-clear { padding: var(--sp-0) var(--sp-2); font-size: var(--fs-2xs); border: 1px solid var(--border); border-radius: var(--r-xs); background: transparent; color: var(--muted); cursor: pointer; }
 .ld-al-clear:hover { color: var(--fg); border-color: var(--muted); }
-/* 八百零八批件1：告警行 chip 卡化——level tint 底+1px level 边+r-s 圆角+chip 间距
+/* 件1：告警行 chip 卡化——level tint 底+1px level 边+r-s 圆角+chip 间距
    （border-bottom 分隔退役），与 782 服务端告警 chips（.ld-hist-al）同语言；
    左缘 4px 色条保留（795 件2「一眼分档」档维持）。 */
 .ld-alert { padding: var(--sp-1h) var(--sp-3); font-size: var(--fs-xs); border: 1px solid var(--border); border-radius: var(--r-s); margin-bottom: var(--sp-1); display: flex; gap: var(--sp-3); align-items: center; transition: filter .12s ease-out, background .12s ease-out; }
@@ -1806,7 +1806,7 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 .ld-alert.bad { border: 1px solid var(--err-line); border-left: 4px solid var(--err); background: var(--err-soft); }
 .ld-alert.resolved { border: 1px solid var(--border); border-left: 4px solid var(--border); color: var(--muted); opacity: 0.75; }
 .ld-alert-m { display: inline-flex; gap: var(--sp-2); align-items: baseline; }
-.ld-alert-v { font-family: var(--mono); font-weight: 600; font-size: var(--fs-sm); } /* 第十批：700→600 */
+.ld-alert-v { font-family: var(--mono); font-weight: 600; font-size: var(--fs-sm); } /* ：700→600 */
 .ld-alert.warn .ld-alert-v { color: var(--warn); }
 .ld-alert.bad .ld-alert-v { color: var(--err); }
 .ld-alert-pk { font-size: var(--fs-2xs); color: var(--muted); font-family: var(--mono); }
@@ -1824,24 +1824,24 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 /* ═══ 集群监控历史趋势（分界归 border-top，spacing 全走 --sp-* token；
        图卡本体归 HistoryChart 统一件，此处只承担筛选行/栅格落位/加载蒙层） ═══ */
 .ld-hist { margin-bottom: var(--sp-4); }
-/* 七百八十二批 Z4（协调性）：头部两行分层——原单行 flex-wrap 11 子项 wrap 断点随内容漂移
+/*  Z4（协调性）：头部两行分层——原单行 flex-wrap 11 子项 wrap 断点随内容漂移
    （「头部拥挤」实报根源）；行①轻信息（标题/副题/环形用量）+行②控件（恒 5+⋯ 与页头 actions
    同语言）。select.inp 局部翻案规则保留（选择器仍为 .ld-hist-head 后代=monitorHistoryTrend 锁面） */
 .ld-hist-head { padding: var(--sp-2) var(--sp-3); border-top: 1px solid var(--border); }
 .ld-hist-head-top { display: flex; align-items: baseline; gap: var(--sp-2); min-width: 0; }
 .ld-hist-head-ctl { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; margin-top: var(--sp-1h); }
-/* 六百二十八批：分组导航 seg（对标阿里云「分组」）。紧凑修饰只走本 scope——不动 theme.css 的
+/* 分组导航 seg（对标阿里云「分组」）。紧凑修饰只走本 scope——不动 theme.css 的
    .seg 基类（responsiveGuard239 逐字锁 `.seg { display: inline-flex; flex-wrap: wrap;`）；
    短标签 8 档（概览/集群/索引/资源/网络/磁盘/JVM/线程池）在 900 展开侧栏（可用宽 ≈630px）
    仍单行不折；全称走 button title 兜底（信息不丢）。 */
 .ld-hist-group { flex: 0 0 auto; }
 .ld-hist-group button { padding: var(--sp-1) var(--sp-2h); font-size: var(--fs-xs); }
-/* 六百三十二批：seg 滑动指示器（622 §3.1/§3.5）——增量修饰，不动 theme.css 的 .seg 基类
+/* seg 滑动指示器（622 §3.1/§3.5）——增量修饰，不动 theme.css 的 .seg 基类
    （responsiveGuard239 锁 .seg{display:inline-flex;flex-wrap:wrap}）；等宽钮 + 单枚 pill 绝对定位，
    left/width 走 --dur-fast/--ease-out 真滑动，激活钮 .on 自持背景退役由 pill 接管。 */
 .ld-seg { position: relative; gap: 0; }
 .ld-seg button { position: relative; z-index: 1; flex: 1 1 0; padding-left: var(--sp-1); padding-right: var(--sp-1); text-align: center; }
-/* 六百八十一批（622 §3.2）：seg 按钮按下反馈——transform-only（--dur-fast 微交互档） */
+/* （622 §3.2）：seg 按钮按下反馈——transform-only（--dur-fast 微交互档） */
 .ld-seg button { transition: transform var(--dur-fast) var(--ease-out); }
 .ld-seg button:active { transform: scale(.96); }
 .ld-seg button.on { background: transparent; box-shadow: none; }
@@ -1850,7 +1850,7 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
   background: var(--bg3); border-radius: var(--r-s); box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
   transition: left var(--dur-fast) var(--ease-out), width var(--dur-fast) var(--ease-out);
 }
-/* 六百二十八批：⋯ 溢出收纳（铁律 C「工具行默认可见按钮 ≤5，其余收进 ⋯」）。
+/* ⋯ 溢出收纳（铁律 C「工具行默认可见按钮 ≤5，其余收进 ⋯」）。
    原生 details——键盘可达且**无需 document 捕获级 Esc 接线**（不入 568/569 Esc 台账）。 */
 .ld-hist-more { position: relative; flex: 0 0 auto; }
 .ld-hist-more-sum {
@@ -1872,9 +1872,9 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 }
 .ld-hist-more-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); font-size: var(--fs-xs); color: var(--tx2); }
 .ld-hist-more-lb { flex-shrink: 0; }
-/* 六百二十八批：分组空态——独立类，不与图卡级空态（.ld-hist-clean / HistoryChart 内「暂无采样」）混用 */
+/* 分组空态——独立类，不与图卡级空态（.ld-hist-clean / HistoryChart 内「暂无采样」）混用 */
 .ld-hist-empty { padding: var(--sp-5) var(--sp-3); }
-/* 六百三十三批：入场编排（622 §3.3 按区分组）+ 数值 roll（§3.4）。只动 transform/opacity；
+/* 入场编排（622 §3.3 按区分组）+ 数值 roll（§3.4）。只动 transform/opacity；
    降级靠 theme.css 全局兜底（*{transition-duration:.01ms!important}），视图内不新增媒体查询。 */
 [data-st] { opacity: 0; transform: translate3d(0, 8px, 0); }
 [data-st].st-in { opacity: 1; transform: none; transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out); }
@@ -1884,7 +1884,7 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 [data-st="4"].st-in { transition-delay: calc(var(--stagger) * 3); }
 @keyframes ld-roll { from { opacity: 0; transform: translate3d(0, 7px, 0); } }
 .ld-charts .ld-chart-cur { animation: ld-roll var(--dur-base) var(--ease-out); }
-/* R44 布局质感修复：全局 .inp width:100% 让头部四个下拉各占满一行竖排（挤压版面），
+/*  布局质感修复：全局 .inp width:100% 让头部四个下拉各占满一行竖排（挤压版面），
    此处约束为内容宽回一行工具栏形态 */
 .ld-hist-head select.inp { width: auto; flex: 0 0 auto; min-width: 110px; }
 /* R7 服务端告警条：头部下 chips 行（CRIT 红/WARN 黄/INFO 中性——色走语义 token+soft 底随主题；
@@ -1896,10 +1896,10 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 .ld-hist-al.warn { border-color: var(--warn-line); color: var(--wn); background: var(--warn-soft); }
 .ld-hist-al-msg { opacity: .8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* R35 告警历史表（默认收起；展开后随 flex 自然占位）。
-   七百八十二批 Z1：外壳布局随 CollapsePanel 收编退役（组件 .cp 承担 flex column/gap；
+/*  告警历史表（默认收起；展开后随 flex 自然占位）。
+    Z1：外壳布局随 CollapsePanel 收编退役（组件 .cp 承担 flex column/gap；
    本类保留作 DOM 锚与样式钩——表/空态/等级分布子规则照旧在此） */
-/* 七百八十四批：三表换装全站 .tbl（挂 tbl zebra 类，782 稿决议表「下批候选」）——
+/* 三表换装全站 .tbl（挂 tbl zebra 类，782 稿决议表「下批候选」）——
    基底（width/border-collapse/表体 fs-sm）与表头语言（fs-xs 600/sticky/bg2）、hover
    高亮、斑马纹全部由 theme.css .tbl 族承载；本域 scoped 只留差异化语言=紧凑密度
    （th/td 3px，监控页高密度不漂移）+nowrap 语义（msg 列回开）。782 Z3 的 12px→fs-sm
@@ -1916,11 +1916,11 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 .ld-hist-hist-c .crit { color: var(--err); }
 .ld-hist-hist-c .warn { color: var(--wn); }
 .ld-hist-hist-c .ok { color: var(--ok); }
-/* 七百八十二批 Z1：慢请求阈值行收编（原 438 行内联 style+input 内联宽退役） */
-/* 八百一十批件1：耗时 tone 两档色+600 字重（mono 语义值升格） */
+/*  Z1：慢请求阈值行收编（原 438 行内联 style+input 内联宽退役） */
+/* 件1：耗时 tone 两档色+600 字重（mono 语义值升格） */
 .ld-cost-warn { color: var(--wn); font-weight: 600; }
 .ld-cost-err { color: var(--err); font-weight: 600; }
-/* 八百一十批件2：慢请求刷新钮在途旋转（IlmView 同款；scoped keyframes 本视图自持） */
+/* 件2：慢请求刷新钮在途旋转（IlmView 同款；scoped keyframes 本视图自持） */
 .spinning { animation: ld-spin 1s linear infinite; }
 @keyframes ld-spin { to { transform: rotate(360deg); } }
 .ld-slow-bar { display: flex; gap: var(--sp-1); align-items: center; }
@@ -1934,7 +1934,7 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 /* 「按节点查看」下钻开关：未选定集群置灰（无具体集群就没有节点序列） */
 .ld-hist-node { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-xs); color: var(--tx1); cursor: pointer; user-select: none; }
 .ld-hist-node:has(input:disabled) { opacity: .5; cursor: not-allowed; }
-.ld-hist-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3); } /* 八百二十六批B1：与六卡同档 */
+.ld-hist-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3); } /* B1：与六卡同档 */
 /* R4 节点一览紧凑表：四列网格行（节点名 mono，水位数值右对齐表列） */
 .ld-hist-ntab { border: 1px solid var(--border); border-radius: var(--r-s); overflow: hidden; }
 .ld-hist-ntab-r { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: var(--sp-2); padding: var(--sp-1) var(--sp-2); font-size: var(--fs-xs); }
@@ -1942,7 +1942,7 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 .ld-hist-ntab-r + .ld-hist-ntab-r { border-top: 1px solid var(--border); }
 .ld-hist-ntab-r [role='cell']:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
 .ld-hist-ntab-r .mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* 797 件1（用户令大厂级统一卡壳）：历史五图分节式 border-top 退役→panel 壳
+/* 797 件1（令大厂级统一卡壳）：历史五图分节式 border-top 退役→panel 壳
    （与六卡 .ld-chart/节点卡/CollapsePanel 同语言=全站卡壳统一协调）；
    797 件2：奇数张末张 span 2 满行收底（2+2+1 孤儿半行宽=不对称治） */
 .ld-hist-cell { position: relative; background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-m); padding: var(--sp-3); min-width: 0; }

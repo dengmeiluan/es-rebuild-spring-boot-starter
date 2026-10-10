@@ -17,7 +17,7 @@ import static io.github.dengmeiluan.es.rebuild.validate.ConfigIssue.LAYER_ADVISO
 import static io.github.dengmeiluan.es.rebuild.validate.ConfigIssue.LAYER_LINT;
 
 /**
- * R35 配置门禁 L1 静态 Lint + L3 最佳实践 Advisor（纯内存，不碰 ES）。
+ *  配置门禁 L1 静态 Lint + L3 最佳实践 Advisor（纯内存，不碰 ES）。
  *
  * <p>专治「代码里写错索引配置、发到服务上建索引才炸」的高频错型（按 ES 7.10 语义）：</p>
  * <ul>

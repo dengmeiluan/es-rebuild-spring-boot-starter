@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *       新建前与手工域交集冲突跳过(手工优先,零触碰);</li>
  *   <li><b>指纹免刷</b>:name/url/username/env/minRole/password 全同不 save——防周期 SAVED
  *       事件刷连接菜单供给器;任一不同才 save + evict + 探活(与 EsClusterConnController.save 同款链);</li>
- *   <li><b>失联标记保留</b>(用户裁决):源消失 → markSyncState(STALE) 保留;源复现 → 恢复并更新;
+ *   <li><b>失联标记保留</b>(裁决):源消失 → markSyncState(STALE) 保留;源复现 → 恢复并更新;
  *       失联档案人工删除后不复活;在线档案人工删除按镜像语义下轮重建;</li>
  *   <li><b>降级红线</b>:contribute() 抛错一次 WARN 后本进程永久降级;单条失败计入报告不中断整轮。</li>
  * </ul>
@@ -396,7 +396,7 @@ public class ClusterConnSyncEngine {
             }
         }
 
-        // E. STALE 扫描:同步域内不在本轮 contributed 的 → 标记保留(用户裁决:不自动删)
+        // E. STALE 扫描:同步域内不在本轮 contributed 的 → 标记保留(裁决:不自动删)
         for (Map.Entry<String, Map<String, Object>> en : syncDomain.entrySet()) {
             if (presentIds.contains(en.getKey())) {
                 continue;

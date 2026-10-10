@@ -35,7 +35,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百六十二批轨5【错误码四件 + 高频日志节流三件】（Observability561b 范式：Logback
+ * 轨5【错误码四件 + 高频日志节流三件】（Observability561b 范式：Logback
  * ListAppender 直挂 logger 断言事件；AtomicLong 节流窗口经反射倒拨驱动窗口尾汇总）。
  *
  * <ol>

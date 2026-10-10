@@ -1,5 +1,5 @@
 <template>
-  <!-- 五百四十七批轨4：页头过滤胶囊统一件——三胞胎同场景（wt-search-head/fv-search/tg-search）
+  <!-- 轨4：页头过滤胶囊统一件——三胞胎同场景（wt-search-head/fv-search/tg-search）
        三份手写同构收编一处。根元素 v-bind="$attrs"（inheritAttrs 关闭显式透传）：
        class 落位类（wt-search-head/fv-search/tg-search）透传到根，视图 scoped 样式
        （flex:1/margin-left:auto/gap/padding 等落位与内衬）照常命中，layout 归视图零漂移；
@@ -8,8 +8,8 @@
        Enter 走 input 定向 emit('enter')（不走根冒泡：插槽里 HitNav 按钮的键击不误触）；
        Esc 清空内建（update:modelValue('')，三消费方原 @keydown.esc.prevent="kw = ''" 行为等价；
        filterEscClear379 守卫口径随迁）。异形不收（豁免记档）：IndexHub .ih-search（Esc 两级
-       语义）/SideNav .nav-search/ResultTable .rt-qsearch。⚠五百六十一批：.bw-search 异形
-       豁免由 561 批第 16 胞换装立法推翻（unifyWave561 锁），IndexHub docs/query tab 同批
+       语义）/SideNav .nav-search/ResultTable .rt-qsearch。⚠：.bw-search 异形
+       豁免由 第 16 胞换装立法推翻（unifyWave561 锁），IndexHub docs/query tab 同批
        换装记档让位（共享树并行 lane 在途域）。 -->
   <div class="sfb" v-bind="$attrs">
     <Search :size="12" />

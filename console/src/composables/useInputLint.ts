@@ -1,6 +1,6 @@
 import { ref, type Ref } from 'vue';
 
-/* ux2 Task 11：非编辑器输入智能——实体名查重/命名规则 + 结构化格式值校验。
+/* ux2 ：非编辑器输入智能——实体名查重/命名规则 + 结构化格式值校验。
    composable 只出数据（hint/level/check/clear），提示条样式全仓单一出处 theme.css .il-hint */
 
 type LintLevel = 'err' | 'warn';

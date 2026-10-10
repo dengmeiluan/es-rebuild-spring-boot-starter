@@ -1,5 +1,5 @@
 /**
- * 二百六十二批：索引工作区文档表翻页范式与查询工作台统一（用户实报「翻页行为不一致」）。
+ * ：索引工作区文档表翻页范式与查询工作台统一（实报「翻页行为不一致」）。
  * 旧形态：IndexHub「N 条」下拉（20/50/100）改 size 重查，无翻页器；
  * 新形态：与 DslQueryView 同款 Pagination 组件 + from/size 真检索 + 共享页大小记忆 es_pager_size
  *（一次调节两工作台一致，页大小选项集随之统一为 Pagination 默认 10/20/50/100）。
@@ -12,7 +12,7 @@ import { buildDocsDsl } from '../utils/workbench';
 
 const read = (p: string) => readFileSync(join(__dirname, p), 'utf-8');
 
-describe('文档表真分页统一（262 批）', () => {
+describe('文档表真分页统一（）', () => {
   it('buildDocsDsl：from 注入 DSL（缺省 0 向后兼容）', () => {
     const d = JSON.parse(buildDocsDsl('', 20, 40));
     expect(d.from).toBe(40);
@@ -23,7 +23,7 @@ describe('文档表真分页统一（262 批）', () => {
 
   it('IndexHubView 源码锁：Pagination 接线+共享键+旧范式退役', () => {
     const v = read('../views/IndexHubView.vue');
-    /* 五百五十四批随迁：JSON/Tree 档无翻页语义，Pagination 带视图档 v-if 前缀（DQ 同款），
+    /* 随迁：JSON/Tree 档无翻页语义，Pagination 带视图档 v-if 前缀（DQ 同款），
        props 值恒等（from/size 真检索语义零触） */
     expect(v).toMatch(/<Pagination v-if="docsView !== 'json' && docsView !== 'tree'"\s*\n\s+:page="docsPage" :total-pages="docsTotalPages" :page-size="docsSize"/);
     expect(v).toMatch(/es_pager_size/);
@@ -31,14 +31,14 @@ describe('文档表真分页统一（262 批）', () => {
     expect(v).toMatch(/function runDocsNew\(\)/);
     expect(v, '旧「N 条」选项集退役').not.toMatch(/SIZE_OPTS/);
     expect(v, '旧维度键不再写（兼容读保留）').not.toMatch(/setItem\('ihub\.docsSize'/);
-    expect(v).toMatch(/docsPage\.value = 1; \/\* 262 批：切索引翻页归位 \*\//);
+    expect(v).toMatch(/docsPage\.value = 1; \/\* 切索引翻页归位 \*\//);
   });
 
   it('两工作台页大小同源：DslQueryView 读写同键 es_pager_size', () => {
     const dq = read('../views/DslQueryView.vue');
     /* 收编 usePagerSize 统一件后契约随迁：读写+档位钳制（越档/坏值回落 20、旧 ihub.docsSize
        兼容读）归统一件，视图不再裸读写 es_pager_size */
-    /* 五百六十二批随迁（击穿者：562 用户实报 size 与分页档脱节——import 增补 PAGER_SIZES
+    /* 随迁（击穿者：562 实报 size 与分页档脱节——import 增补 PAGER_SIZES
        档位单源，执行窗口同步块见 dqSizePagerSync562） */
     expect(dq).toMatch(/import \{ usePagerSize, PAGER_SIZES \} from '\.\.\/composables\/usePagerSize';/);
     expect(dq).toMatch(/const \{ size: pageSize, set: writePageSize \} = usePagerSize\(\);/);

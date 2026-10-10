@@ -6,7 +6,7 @@
 <button class="btn ghost sm" @click="load" :disabled="loading">
   <RefreshCcw :size="12" :class="{ spinning: loading }" /> 刷新
 </button>
-<!-- 五百五十七批：原始 IO 快查——本页最近一次 remote-clusters 连通性拉取请求/响应原文
+<!-- 原始 IO 快查——本页最近一次 remote-clusters 连通性拉取请求/响应原文
      （ioRecorder 记录环；连接状态列表即该接口响应的快查姊妹入口） -->
 <button class="btn ghost sm" data-test="raw-io" aria-label="查看原始 IO（远程集群）" title="最近一次远程集群状态拉取请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIo"><Terminal :size="12" /> 原始 IO</button>
       </template>
@@ -32,11 +32,11 @@
         <div class="rc-alert-tt">远程集群 API 异常</div>
         <div class="rc-alert-sub">{{ reason }}</div>
       </div>
-      <!-- R92-A2：失败态就地重试 -->
+      <!-- -A2：失败态就地重试 -->
       <button class="btn sm" style="margin-left:auto" @click="load" :disabled="loading">重试</button>
     </div>
 
-    <!-- R92-A2：API 异常时不再叠显「未配置」空态，失败≠空（R91b 同款教训） -->
+    <!-- -A2：API 异常时不再叠显「未配置」空态，失败≠空（ 同款教训） -->
     <EmptyState v-if="rows.length === 0 && !reason" :icon="Network"
       text="未配置任何远程集群"
       hint="使用 PUT /_cluster/settings 添加：">
@@ -54,14 +54,14 @@
             <span class="rc-mode">{{ r.mode || 'sniff' }}</span>
           </div>
           <div class="rc-card-sub">
-            <!-- 五百三十三批：连接状态纯文本+rc-dot 色点收编 StatusPill 统一件（530 W-D 范式）——
+            <!-- 连接状态纯文本+rc-dot 色点收编 StatusPill 统一件（530 W-D 范式）——
                  tone g/r 直挂全局 .pill 语义档，en 档带英文小字，色点冗余色标随 pill 底色退役 -->
             <StatusPill :tone="r.connected ? 'g' : 'r'" :label="r.connected ? '已连接' : '未连接'"
               :en="r.connected ? 'connected' : 'disconnected'" />
             <template v-if="r.connected"> · 连接 {{ r.num_nodes_connected || r.connected_nodes || 0 }} 节点</template>
             <template v-if="r.max_connections_per_cluster"> / 最大 {{ r.max_connections_per_cluster }}</template>
           </div>
-          <!-- 五百三十三批：手写四段 kv（seeds/proxy/skip_unavailable/initial_timeout）收编
+          <!-- 手写四段 kv（seeds/proxy/skip_unavailable/initial_timeout）收编
                MetaStrip 统一件（值亮+标签暗+·分隔）；skip_unavailable=true 段 tone warn +
                既有降级解释文案随 tip，四段 v-if 条件逐段保留（metaOf） -->
           <MetaStrip class="rc-card-meta" :items="metaOf(r)" />
@@ -76,7 +76,7 @@
     </div>
     </template>
 
-    <!-- 五百五十七批：原始 IO 弹窗（宿主受控开关；rec 取本页最近一条 remote-clusters 记录） -->
+    <!-- 原始 IO 弹窗（宿主受控开关；rec 取本页最近一条 remote-clusters 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
   </div>
 </template>
@@ -87,12 +87,12 @@ import { useRouter } from 'vue-router';
 import { Network, Server, RefreshCcw, AlertTriangle, ArrowRightLeft, Copy, Terminal } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
-/* 五百五十七批：原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
+/* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
 import RawIoModal from '../components/RawIoModal.vue';
 import { useAppStore } from '../stores/app';
 import EmptyState from '../components/EmptyState.vue';
 import SkeletonBox from '../components/SkeletonBox.vue';
-/* 五百三十三批：状态徽标/元信息串统一件收编（StatusPill tone g/r；MetaStrip items 见 metaOf） */
+/* 状态徽标/元信息串统一件收编（StatusPill tone g/r；MetaStrip items 见 metaOf） */
 import StatusPill from '../components/StatusPill.vue';
 import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue';
 import { friendlyEsError } from '../utils/esError';
@@ -119,8 +119,8 @@ const rows = computed(() => {
   return arr;
 });
 
-/* 五百三十三批：rc-card-meta 四段 kv → MetaStrip items（原手写 v-if 条件逐段随迁）。
-   七百一十五批（G55 铁律 F）：四段英文 label 全部补中文 tip（seeds=种子节点地址/proxy=
+/* rc-card-meta 四段 kv → MetaStrip items（原手写 v-if 条件逐段随迁）。
+   （G55 铁律 F）：四段英文 label 全部补中文 tip（seeds=种子节点地址/proxy=
    代理地址/skip_unavailable=远端不可达时是否跳过/initial_timeout=初始连接超时）；
    skip_unavailable=true 段 tone warn+容忍断连既有文案保持，false 段无 warn 色
    （与 true 段色差即语义差） */
@@ -168,10 +168,10 @@ function ccsQuery(name: string) {
 }
 
 function copyBody(r: any) {
-  copyText(JSON.stringify(r, null, 2)).then(ok => store.notify(ok ? 'success' : 'error', ok ? '远程集群配置已复制' : '复制失败')); /* 282 批 */
+  copyText(JSON.stringify(r, null, 2)).then(ok => store.notify(ok ? 'success' : 'error', ok ? '远程集群配置已复制' : '复制失败')); /*  */
 }
 
-/* 五百五十七批：原始 IO 快查（546/548 同款三件套）——特征 /cluster/remote-clusters（连通性拉取
+/* 原始 IO 快查（546/548 同款三件套）——特征 /cluster/remote-clusters（连通性拉取
    响应=本页唯一 IO）；判空 rec=null（还没拉取过/页未回）时 notify 引导，不开空弹窗 */
 const rawIoShow = ref(false);
 const rawIoRec = ref<RawIoRec | null>(null);
@@ -189,10 +189,10 @@ onMounted(load);
 /* G1-C12：区块级间距落梯 --sp token（亚阶梯微调不动；双轨变量收口属独立批次，本轮不动） */
 .rc-page { padding: var(--sp-4) var(--sp-4) var(--sp-5); }
 .rc-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4); padding-bottom: var(--sp-3); border-bottom: 1px solid var(--border-subtle); }
-/* 七百一十五批（G56）：页头子元素四类死样式删（-l/-ic/-tt/-sub 后缀族）——页头已
-   收编 PageHeader 无对应元素（713 批 .pl-hd 同族先例）；.rc-hd 本体是 PageHeader
+/* （G56）：页头子元素四类死样式删（-l/-ic/-tt/-sub 后缀族）——页头已
+   收编 PageHeader 无对应元素（ .pl-hd 同族先例）；.rc-hd 本体是 PageHeader
    外距/分隔锚保留 */
-/* 五百五十六批：rc-self 本集群信息条壳退役（立法④）——同页 rc-card 列表项 551 已 border-top 行，
+/* rc-self 本集群信息条壳退役（立法④）——同页 rc-card 列表项 551 已 border-top 行，
    全框信息条构成同页双标（MappingView 554「同页双标根治」判例）；border-subtle 对齐 rc-card 语言 */
 .rc-self { display: flex; gap: var(--sp-3); align-items: center; padding: var(--sp-3) var(--sp-4); border-top: 1px solid var(--border-subtle); margin-bottom: var(--sp-3); font-size: var(--fs-sm); }
 .rc-self-sub { font-size: var(--fs-xs); color: var(--text-muted); margin-top: var(--sp-0); }
@@ -201,13 +201,13 @@ onMounted(load);
 .rc-alert-sub { font-size: var(--fs-xs); color: var(--text-muted); margin-top: var(--sp-0); }
 /* 插槽里的 JSON 样例：只保留代码块自身观感（等宽/左对齐/可复制），
    外层留白已归 EmptyState 的 34px 16px，故不再有 .rc-empty 的 40px 容器 */
-/* 五百五十一批记档：rc-empty-pre 的 code-bg 底是代码内容面（EmptyState 插槽内的 JSON 样例块），
+/* 记档：rc-empty-pre 的 code-bg 底是代码内容面（EmptyState 插槽内的 JSON 样例块），
    立法④「语义内容面保留」豁免（540 df-ta / 546 al-card 同判），只记档不退役 */
 .rc-empty-pre { background: var(--code-bg); padding: var(--sp-2) var(--sp-3); border-radius: 5px; text-align: left; display: inline-block; margin: 0; font-size: var(--fs-xs); white-space: pre-wrap; overflow-wrap: anywhere; }
 /* G1-B3：首载骨架与列表同节奏（纵向堆叠） */
 .rc-loading { display: flex; flex-direction: column; gap: var(--sp-3); }
 .rc-list { display: flex; flex-direction: column; gap: var(--sp-3); }
-/* 五百五十一批：rc-card 行卡壳退役（立法④：panel 底+border-subtle 全框+radius:10px 整块消除
+/* rc-card 行卡壳退役（立法④：panel 底+border-subtle 全框+radius:10px 整块消除
    → border-top 分节流，xm-res 547 判例语言）；悬停反馈由顶部 hairline 变色承接；
    rc-card-sub/rc-card-meta 布局锚保留（obsStack530/layoutAdaptive533 锚随行） */
 .rc-card { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-3); padding: var(--sp-3) 0; border-top: 1px solid var(--border-subtle); }
@@ -217,12 +217,12 @@ onMounted(load);
 .rc-card-tt { display: flex; align-items: center; gap: var(--sp-1h); font-size: var(--fs-md); font-weight: 600; }
 .rc-mode { margin-left: auto; padding: 1px var(--sp-1h); background: var(--ac-soft); color: var(--ac-hi); border-radius: 3px; font-size: var(--fs-xs); font-weight: 400; }
 .rc-card-sub { display: flex; align-items: center; flex-wrap: wrap; font-size: var(--fs-xs); color: var(--text-muted); margin-top: 3px; }
-/* 五百三十三批：MetaStrip 收编后本类只留布局锚外距（flex/wrap/mono/字号归 .ms 单一出处，
+/* MetaStrip 收编后本类只留布局锚外距（flex/wrap/mono/字号归 .ms 单一出处，
    AnalysisSettingsView .meta-strip 同款只留外距范式）；rc-dot/rc-warn-t/code 底色随收编退役 */
 .rc-card-meta { margin-top: var(--sp-2); }
 .rc-card-r { display: flex; gap: var(--sp-2); }
 
-/* 五百三十批：1100 堆叠档（零结构动）——卡行左信息/右操作双栏在中窄视口互相挤压，
+/* 1100 堆叠档（零结构动）——卡行左信息/右操作双栏在中窄视口互相挤压，
    塌纵向堆叠（信息在上、按钮换行到下），与 TasksView 1100 档同口径 */
 @media (max-width: 1100px) {
   .rc-self { flex-wrap: wrap; }
@@ -230,9 +230,9 @@ onMounted(load);
   .rc-card-r { justify-content: flex-end; }
 }
 
-/* 五百三十三批：900 紧凑微调档——卡列表本就纵向单列（rc-list flex column，无网格可塌，
+/* 900 紧凑微调档——卡列表本就纵向单列（rc-list flex column，无网格可塌，
    1100 堆叠档已收卡内双栏），此处只收页侧距与卡内 padding（AnalysisSettings 同款节奏；
-   551 批：卡壳随分节流退役后纵内衬收一档） */
+   卡壳随分节流退役后纵内衬收一档） */
 @media (max-width: 900px) {
   .rc-page { padding: var(--sp-3) var(--sp-3) var(--sp-5); }
   .rc-card { padding: var(--sp-2) 0; }

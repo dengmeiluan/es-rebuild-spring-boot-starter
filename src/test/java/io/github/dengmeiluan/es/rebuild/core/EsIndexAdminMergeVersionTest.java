@@ -9,7 +9,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
 /**
- * 五百六十批：健康概览版本合并（包内静态纯函数）——raw 版本探测退役的配套契约。
+ * 健康概览版本合并（包内静态纯函数）——raw 版本探测退役的配套契约。
  * root JSON 的 version.number 并入健康概览；空/无版本静默不动。
  */
 public class EsIndexAdminMergeVersionTest {

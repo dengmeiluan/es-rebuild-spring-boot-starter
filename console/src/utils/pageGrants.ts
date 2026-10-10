@@ -1,5 +1,5 @@
 /**
- * 五百九十八批：安全中心页面授权解析纯函数（SecurityView 我的账号/页面授权区消费）。
+ * 安全中心页面授权解析纯函数（SecurityView 我的账号/页面授权区消费）。
  * 语义与边界详见 utils/__tests__/pageGrants.spec.ts。
  */
 

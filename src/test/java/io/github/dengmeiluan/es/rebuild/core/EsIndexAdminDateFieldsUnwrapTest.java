@@ -13,9 +13,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
- * R94 Task 16 复审 I-1：「6.x 原始 mapping → 既有剥离 → 挑 date 字段」<b>整链</b>验证。
+ *   复审 I-1：「6.x 原始 mapping → 既有剥离 → 挑 date 字段」<b>整链</b>验证。
  *
- * <p><b>为什么在 core 包</b>：{@code EsIndexAdmin.unwrapTypeLayer} 是包级可见（R41），
+ * <p><b>为什么在 core 包</b>：{@code EsIndexAdmin.unwrapTypeLayer} 是包级可见（），
  * 只有同包测试能调。<b>不为了测试放宽生产可见性</b>——那是让测试反向污染生产 API。</p>
  *
  * <p><b>为什么需要整链</b>：{@code DateFormSampler.dateFieldsOf} 刻意不做剥离兜底，
@@ -43,7 +43,7 @@ public class EsIndexAdminDateFieldsUnwrapTest {
                 + "\"upd_time\":{\"type\":\"date\",\"format\":\"epoch_millis\"}}}}";
         Map<String, Object> mappings = OM.readValue(v6Raw, Map.class);
 
-        // 走仓库里唯一那份剥离实现（R41），不在测试里另写一份
+        // 走仓库里唯一那份剥离实现（），不在测试里另写一份
         Map<String, Object> unwrapped = EsIndexAdmin.unwrapTypeLayer(mappings);
         List<String> got = new ArrayList<String>(
                 DateFormSampler.dateFieldsOf(OM.writeValueAsString(unwrapped)));

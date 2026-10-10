@@ -52,7 +52,7 @@ public class MigrateJobStore {
 
     public void save(MigrateJobES job) {
         elasticsearchOperations.get().save(job, coordinates);
-        /* R96：ElasticsearchOperations.refresh(IndexCoordinates) 在 sdes 4.4.x 已移除，
+        /* ElasticsearchOperations.refresh(IndexCoordinates) 在 sdes 4.4.x 已移除，
            而 indexOps(coordinates).refresh() 在 4.0.9 与 4.4.18 上签名相同（javap 实测），
            故改走这条共存路径 —— 能用共存 API 消掉的差异不引入反射。 */
         elasticsearchOperations.get().indexOps(coordinates).refresh();
@@ -64,7 +64,7 @@ public class MigrateJobStore {
 
     /** 近期作业列表（按 createTime 倒序，最多 limit 条）。 */
     public List<MigrateJobES> listRecent(int limit) {
-        /* R96：withPageable 在 sdes 4.4.x 上移到 BaseQueryBuilder 并返回父类型，
+        /* withPageable 在 sdes 4.4.x 上移到 BaseQueryBuilder 并返回父类型，
            链式接返回值会因返回类型不符而抛 NoSuchMethodError。builder 可变，
            调用即生效，故拆成分步。withQuery/withSort 两版签名相同（反射实测），保持链式。 */
         NativeSearchQueryBuilder builder = new NativeSearchQueryBuilder()
@@ -80,7 +80,7 @@ public class MigrateJobStore {
 
     /** 列出指定状态的作业（启动期清扫 INTERRUPTED 用）。 */
     public List<MigrateJobES> listByStatus(String status, int limit) {
-        /* R96：同 listRecent —— withPageable 摘出来走 SdesCompat，其余保持链式。 */
+        /* 同 listRecent —— withPageable 摘出来走 SdesCompat，其余保持链式。 */
         NativeSearchQueryBuilder builder = new NativeSearchQueryBuilder()
                 .withQuery(QueryBuilders.termQuery("status", status))
                 .withSort(SortBuilders.fieldSort("createTime").order(SortOrder.DESC));

@@ -1,5 +1,5 @@
 /**
- * 五百三十四批 P0-3：SQL 静态 lint（SqlConsoleView / SqlBridgeView 划线+banner 双通道消费）。
+ *  P0-3：SQL 静态 lint（SqlConsoleView / SqlBridgeView 划线+banner 双通道消费）。
  * 纯函数、零 Monaco/Vue 依赖，规则可穷举单测；输出 { line, message, suggestion } 行号形态
  * （MonacoEditor.setLineMarkers 行号直射契约，SynonymsManagerView 范式）。
  *

@@ -3,9 +3,9 @@ import { copyViaIntercept } from './clipboard';
 import { semFormat } from '../composables/useSemFormat';
 
 export function fmtNum(n: any): string {
-  /* R57：null/undefined 必须显示 '-' 而非 '0'——Number(null)===0 会把「无数据」冒充成真实计数（单测首跑逮住） */
+  /* null/undefined 必须显示 '-' 而非 '0'——Number(null)===0 会把「无数据」冒充成真实计数（单测首跑逮住） */
   if (n == null || n === '') return '-';
-  /* 二百二十七批 M7：超安全整数的「数字字符串」不走 Number——后端以字符串下发的雪花 ID/
+  /*  M7：超安全整数的「数字字符串」不走 Number——后端以字符串下发的雪花 ID/
      长单号/超大数值，Number 化再 toLocaleString 会输出丢精度错值。正则千分位保真：
      位数原样、只插逗号。（typeof number 的 >2^53 值在 JSON.parse 层已丢精度，无法前端挽救） */
   if (typeof n === 'string' && /^-?\d+$/.test(n) && !Number.isSafeInteger(Number(n))) {
@@ -16,7 +16,7 @@ export function fmtNum(n: any): string {
   return v.toLocaleString('en-US');
 }
 
-/** R66：紧凑数字（KPI 卡等窄容器）——336,466,995 在 866px iframe 里必被裁，
+/** 紧凑数字（KPI 卡等窄容器）——336,466,995 在 866px iframe 里必被裁，
  *  主值用「3.36亿」量级一眼可读，精确值由调用方配 title/副文案展示 */
 export function fmtNumCompact(n: any): string {
   if (n == null || n === '') return '-';
@@ -62,7 +62,7 @@ export function parseBytes(v: any): number {
   return n * Math.pow(1024, exp[m[2] || 'b']);
 }
 
-/** 五百三十二批：store.size 单源——ES '4.9kb' 字节串或数字字节 → 友好字节串（'4.9 KB' 档，
+/** store.size 单源——ES '4.9kb' 字节串或数字字节 → 友好字节串（'4.9 KB' 档，
     semFormat bytes 单源）。TopBar 首点消费；OverviewView/BrowserView 两处本地同名实现
     （语义层锁 semanticTier531 看守）收口批再收编——本函数输出口径与它们逐字一致（同为
     parseBytes 归一 + semFormat bytes 档），收编零视觉漂移。契约差异记档：两本地版不可解析
@@ -104,7 +104,7 @@ export function fmtWindow(ms: any): string {
   return m > 0 ? `${h} 小时 ${m} 分钟` : `${h} 小时`;
 }
 
-/** 相对时间。R86：传入 now（useNow 心跳）可让「Xm 前」随时间自更新——
+/** 相对时间。：传入 now（useNow 心跳）可让「Xm 前」随时间自更新——
  *  否则只在渲染瞬间算一次，面板开着十分钟还显示「4m 前」；
  *  超过 7 天相对值失去意义，直接给日期（跨年带年份）。 */
 export function relTime(t: any, now?: number): string {
@@ -123,7 +123,7 @@ export function relTime(t: any, now?: number): string {
   return dt.getFullYear() === new Date(base).getFullYear() ? md : `${dt.getFullYear()}-${md}`;
 }
 
-/** R86：时间线日期分组标签：今天 / 昨天 / MM-DD（跨年 YYYY-MM-DD） */
+/** 时间线日期分组标签：今天 / 昨天 / MM-DD（跨年 YYYY-MM-DD） */
 export function dayLabel(t: any, now?: number): string {
   const n = typeof t === 'number' ? t : Date.parse(String(t));
   if (!isFinite(n)) return '-';
@@ -137,7 +137,7 @@ export function dayLabel(t: any, now?: number): string {
   return d.getFullYear() === b.getFullYear() ? dk.slice(5) : dk;
 }
 
-/* R99：钉死 Asia/Shanghai。
+/* 钉死 Asia/Shanghai。
    起因：全站 20 处时间显示各写各的，且绝对时间不带时区标识——换台机器/服务器
    时区不同，读数的人无法判断看到的是哪个时区。后端一律给 epoch millis，
    前端原先用 new Date(ms) 按**本地**时区渲染，在 +08:00 的机器上碰巧是对的。
@@ -166,7 +166,7 @@ export function fmtTimeTz(t: any): string {
   return SH_FMT.format(new Date(n)) + ' (UTC+8)';
 }
 
-/** 状态 → pill 色。五百二十五批 W4：SUCCEEDED 补绿档（AdhocRebuildView jobStatusColor
+/** 状态 → pill 色。 W4：SUCCEEDED 补绿档（AdhocRebuildView jobStatusColor
     页内特例上提，该函数随之退役）；ABORTED 出红档——「中止≠失败」语义，落中性灰 n。 */
 export function statusColor(s: any): string {
   const v = String(s || '').toUpperCase();
@@ -186,7 +186,7 @@ export function trunc(v: any, len = 80): string {
 }
 
 /** 剪贴板复制（返回是否成功，配合 .cpy 点击复制样式）——
- *  242 批 v4：架构层统一管线，委托 utils/clipboard.ts 三层递进：
+ *   v4：架构层统一管线，委托 utils/clipboard.ts 三层递进：
  *  L1 Clipboard API（secure context）→ L2 copy 事件劫持（execCommand 仅触发，
  *  setData 权威写入，与选区/焦点错位无关——根治「toast 已复制但 Ctrl+V 空」）
  *  → L3 焦点门拿不到焦点返回 false（调用点显性报错+全选引导）。 */
@@ -201,7 +201,7 @@ export async function copyText(text: string): Promise<boolean> {
    与 copyText 互补（复制/下载对称）；7 处导出（CSV/JSON/JSONL/Markdown）曾各自手写这 5 行样板。
    opts.bom：CSV 类导出前置 UTF-8 BOM，防 Excel 直接双击打开中文乱码；JSON 类导出勿开——
    前导 BOM 会破坏 JSON.parse。 */
-/* 二百五十五批：导出文件名时间戳（yyyyMMdd-HHmmss 本地时）——
+/* 导出文件名时间戳（yyyyMMdd-HHmmss 本地时）——
    全站 downloadText 统一口径：可读时间戳替代 epoch 大数，多次导出不互覆、按名可排序 */
 export function exportStamp(d = new Date()): string {
   const p = (n: number) => String(n).padStart(2, '0');
@@ -217,7 +217,7 @@ export function downloadText(filename: string, content: string, mime: string, op
   URL.revokeObjectURL(url);
 }
 
-/** 二百三十五批：触发浏览器下载二进制内容（xlsx 等字节流；与 downloadText 互补） */
+/** 触发浏览器下载二进制内容（xlsx 等字节流；与 downloadText 互补） */
 export function downloadBlob(filename: string, blob: Blob): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -232,7 +232,7 @@ export function csvCell(v: any): string {
   return '"' + String(v ?? '').replace(/"/g, '""') + '"';
 }
 
-/* 四百三十四批：CSV 文本组装单一出处——BOM（Excel 中文不乱码）+ 表头 + 行矩阵。
+/* CSV 文本组装单一出处——BOM（Excel 中文不乱码）+ 表头 + 行矩阵。
    此前 Browser/MatchMatrix/Security/Snapshots 四视图各自拼接同一模式 */
 export function csvText(head: string[], rows: unknown[][]): string {
   const BOM = '﻿';
@@ -240,7 +240,7 @@ export function csvText(head: string[], rows: unknown[][]): string {
   return BOM + head.map(csvCell).join(',') + NL + rows.map(r => r.map(csvCell).join(',')).join(NL);
 }
 
-/** CSV 单元格值格式化：空值 ∅、对象/数组 JSON 序列化（八十四批收编——
+/** CSV 单元格值格式化：空值 ∅、对象/数组 JSON 序列化（收编——
     SqlConsole/Lucene/PIT 三处同款局部函数，与 csvCell 配套使用） */
 export function fmtCell(v: any): string {
   if (v === null || v === undefined) return '∅';
@@ -253,9 +253,9 @@ export function healthColor(h: string): string {
   return h === 'green' ? 'var(--ok)' : h === 'yellow' ? 'var(--warn)' : h === 'red' ? 'var(--err)' : 'var(--tx2)';
 }
 
-/** ES 健康状态 → .pill 档名（五百二十五批 W4：TopBar healthCls 页内版上提，与 healthColor
+/** ES 健康状态 → .pill 档名（ W4：TopBar healthCls 页内版上提，与 healthColor
     同源分档）：green→g / yellow→y / 其余（red 及缺席）→r——健康徽标非绿即疑。 */
-/* 五百三十二批：返回域收窄 'g'|'y'|'r'（531 批 sevPill 同款先例）——StatusPill tone prop 是
+/* 返回域收窄 'g'|'y'|'r'（ sevPill 同款先例）——StatusPill tone prop 是
    五主档联合，string 直传 vue-tsc 报错；收窄对既有 class 串消费方零影响，
    HealthReportView 既有 as 断言变冗余但合法（其收口批可顺带摘除） */
 export function healthPill(h: string): 'g' | 'y' | 'r' {
@@ -294,7 +294,7 @@ export function stdTimeToEpochMs(v: string): number | null {
   return isNaN(d2.getTime()) ? null : d2.getTime();
 }
 
-/** R130 四十二批：epoch 毫秒人性化（13 位数字落在 2008~2049 年区间才转换，
+/**  epoch 毫秒人性化（13 位数字落在 2008~2049 年区间才转换，
     19 位雪花 ID / 订单号不误伤）——ResultTable 与 QueryResultTable 共用 */
 export function epochMsText(v: any): string | null {
   if (typeof v !== 'number' && !(typeof v === 'string' && /^\d{13}$/.test(v))) return null;
@@ -305,7 +305,7 @@ export function epochMsText(v: any): string | null {
   return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
 }
 
-/** 第十批前置：耗时四档语义档——QueryHistoryPanel/DevToolsView 同值同色两份定义收口单一出处。
+/** 前置：耗时四档语义档——QueryHistoryPanel/DevToolsView 同值同色两份定义收口单一出处。
     fast<100ms / ok<1s / slow<3s / veryslow；色值由使用方 scoped 样式或全局 .took-* 档承接 */
 export function fmtTook(ms: number): string {
   if (ms < 1000) return `${ms}ms`;

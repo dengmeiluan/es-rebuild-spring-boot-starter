@@ -1,20 +1,20 @@
 /**
- * GOAL-534 五百六十一批（轨2，工蚁 B'）：IndexHub 部分分片失败黄条 + 两 RT export-name
- * + 561 批 Ctrl+I 两处补锚。
+ * GOAL-534 （轨2，工蚁 B'）：IndexHub 部分分片失败黄条 + 两 RT export-name
+ * +  Ctrl+I 两处补锚。
  *
  * 背景：
- * ① DslQueryView 230 批 P1-7 有「部分分片失败黄条」（shardsHint 统一口径：_shards.failed/
+ * ① DslQueryView  P1-7 有「部分分片失败黄条」（shardsHint 统一口径：_shards.failed/
  *    timed_out>0 = 结果可能不完整，诚实呈现），IndexHub docs/query 两 tab 的检索响应同结构
- *    （api.clusterQuery 裸透传，运行时字段 _shards；类型侧 types.ts SearchResp.shards 是 230 批
+ *    （api.clusterQuery 裸透传，运行时字段 _shards；类型侧 types.ts SearchResp.shards 是 
  *    预留消费位）却无同款提示——本批补齐：独立 computed×2 + 独立黄条块×2（role=status，
  *    .ih-partial 新类名，扁平样式 warn 色+warn-soft 底+--r-s 圆角、无新壳边框；可关闭）。
  *    独立块插 HistogramSection 与 err-bar/RT 之间，不进 ih-qerr 既有 v-if/v-else-if 链
  *    （上游锁面零触），高度链零触（内容增量不进 min-height 链）。
- * ② docs RT export-name="ih-docs" / query RT export-name="ih-qry"（527 批 W-D 导出契约
+ * ② docs RT export-name="ih-docs" / query RT export-name="ih-qry"（ W-D 导出契约
  *    消费位补齐；rtTag 切片锁 :144-148 只增属性行安全；命名 ih- 前缀不撞既有名）。
- * ③ HotkeyPanel「查询工作台编辑器补全」Ctrl+I 行——561 批前工蚁 B1 已落（本 spec 只补锚）。
+ * ③ HotkeyPanel「查询工作台编辑器补全」Ctrl+I 行——前工蚁 B1 已落（本 spec 只补锚）。
  * ④ DslQueryView Ctrl+I addCommand——同前工蚁 B1 已落（本 spec 只补锚）。
- *    ⚠ 561 批 Ctrl+I 落点随 DslQueryView 在途态，若对方波重排需随迁（readFileSync 只读锚）。
+ *    ⚠  Ctrl+I 落点随 DslQueryView 在途态，若对方波重排需随迁（readFileSync 只读锚）。
  *
  * 设施：ihUnify554 同款 monaco stub + 只 mock ../api + 裸 createApp 挂载（行为网）；
  * 源码锚全部走新建切片（本 describe 自有区间），不插入既有顺序锁区间。
@@ -262,7 +262,7 @@ describe('561 ①：黄条行为网（裸 createApp 挂载，ihUnify554 同设�
   });
 });
 
-/* ═══════════ ②：两 RT 补 export-name（527 批 W-D 导出契约消费位） ═══════════ */
+/* ═══════════ ②：两 RT 补 export-name（ W-D 导出契约消费位） ═══════════ */
 describe('561 ②：docs/query 两 RT export-name（ih-docs / ih-qry，命名不撞既有名）', () => {
   it('docs RT export-name="ih-docs"、query RT export-name="ih-qry"（各唯一）', () => {
     expect(rtTag(ih, 'docsTbl')).toContain('export-name="ih-docs"');
@@ -275,18 +275,18 @@ describe('561 ②：docs/query 两 RT export-name（ih-docs / ih-qry，命名不
 
 /* ═══════════ ③：HotkeyPanel Ctrl+I「查询工作台编辑器补全」行（B1 已落件补锚） ═══════════ */
 describe('561 ③：HotkeyPanel「查询工作台编辑器补全」Ctrl+I 行（B1 已完成件，零触碰补锚）', () => {
-  it('登记行字面在场 + 561 批记档注释', () => {
+  it('登记行字面在场 + 记档注释', () => {
     expect(hkp).toContain("{ keys: ['Ctrl', 'I'], desc: '查询工作台编辑器补全' }");
-    expect(hkp).toContain('五百六十一批：查询工作台 DSL 编辑器 Ctrl+I 补全登记');
+    expect(hkp).toContain('查询工作台 DSL 编辑器 Ctrl+I 补全登记');
   });
 });
 
 /* ═══════════ ④：DslQueryView Ctrl+I addCommand（B1 已落件补锚） ═══════════ */
 describe('561 ④：DslQueryView Ctrl+I addCommand（B1 已写入，readFileSync 只读锚）', () => {
-  /* ⚠ 561 批 Ctrl+I 落点随 DslQueryView 在途态，若对方波重排需随迁 */
+  /* ⚠  Ctrl+I 落点随 DslQueryView 在途态，若对方波重排需随迁 */
   it('addCommand(KeyMod.CtrlCmd | KeyCode.KeyI) → triggerSuggest 接线字面在场', () => {
     expect(dqv).toContain('ed.addCommand(m.KeyMod.CtrlCmd | m.KeyCode.KeyI, () => {');
     expect(dqv).toContain("ed.trigger('', 'editor.action.triggerSuggest', null);");
-    expect(dqv).toContain('五百六十一批：Ctrl+I 唤起补全');
+    expect(dqv).toContain('：Ctrl+I 唤起补全');
   });
 });

@@ -3,7 +3,7 @@
     <div class="uq-hd">
       <PageHeader :icon="Recycle" title="Update / Delete by Query" subtitle="按自定义 query 批量更新 / 删除 · 支持 script · 全参数开放 · 默认异步返回 taskId">
         <template #actions>
-          <!-- 七百七十批 G242：模式组容器补 role=group+aria-label+双钮 aria-pressed
+          <!--  G242：模式组容器补 role=group+aria-label+双钮 aria-pressed
                （QueryXray qx-tabs 753 G192 同款；act 类只管视觉，aria 承语义） -->
           <div class="uq-mode" role="group" aria-label="模式切换：update_by_query / delete_by_query">
             <button class="uq-mode-b" :class="{ act: mode === 'update' }" :aria-pressed="mode === 'update'" @click="mode = 'update'">
@@ -18,25 +18,25 @@
     </div>
 
     <div class="uq-grid">
-      <!-- 五百三十八批：uq-card 整卡壳退役（bg+border+radius 整块消除，§6v 立法①）→ uq-sec 只留
+      <!-- uq-card 整卡壳退役（bg+border+radius 整块消除，§6v 立法①）→ uq-sec 只留
            border-top 分节；卡身内衬（框中框双层）随壳一并退役——字段直贴分节，间距归 uq-sec 的
            flex gap（高度链零变动：uq-qcard min-height 280 原样随迁） -->
       <div class="uq-sec">
-        <!-- 卡头位：五百二十七批曾并轨全局 .card-t（13px/650 卡头档），五百三十八批壳退役随刀转
+        <!-- 卡头位：曾并轨全局 .card-t（13px/650 卡头档），壳退役随刀转
              fs-head 行首横排档（PainlessLab .pl-editor-hd 同款：fs-xs 行 + border-bottom 分界，
              底色块本就无） -->
         <div class="uq-card-hd">目标</div>
           <div class="uq-field">
-            <!-- 七百七十批 G243：八字段 label 补 title 中文悬停释义（铁律 F「不知道这参数
+            <!--  G243：八字段 label 补 title 中文悬停释义（铁律 F「不知道这参数
                  干什么」即缺陷；ReindexAdvanced 745 G159「参数名：中文说明」形态，label
                  文本不动英文留检索；option/placeholder 既有中文覆盖不动） -->
             <label title="索引：批量写的目标索引——支持通配符 pattern（如 logs-*）与逗号分隔多索引（a,b,c），命中即全量生效">索引（支持 pattern，如 logs-* / a,b,c）</label>
             <div class="uq-idx-row">
-              <!-- 五百三十二批：页内 IndexPicker 退役换 CurrentIdxChip 只读件（「选索引」唯一入口收敛顶栏）；
-                   写类页不开 useIdxState follow（R61 口径），「用当前索引」回填钮保留（AdhocRebuild 范式） -->
+              <!-- 页内 IndexPicker 退役换 CurrentIdxChip 只读件（「选索引」唯一入口收敛顶栏）；
+                   写类页不开 useIdxState follow（统一件口径），「用当前索引」回填钮保留（AdhocRebuild 范式） -->
               <CurrentIdxChip />
-              <!-- 「用当前索引」一键回填：写类页不开 follow（R61 口径），统一件把顶栏全局
-                   选中带入目标；不自动执行。五百五十八批：内联钮收编 PickCurrentIdxBtn
+              <!-- 「用当前索引」一键回填：写类页不开 follow（统一件口径），统一件把顶栏全局
+                   选中带入目标；不自动执行。：内联钮收编 PickCurrentIdxBtn
                    统一件（图标/样式/data-test/title 随件内聚，本页只接 @pick 显式覆盖口） -->
               <PickCurrentIdxBtn @pick="index = store.pickedIdx" />
             </div>
@@ -102,19 +102,19 @@
           </div>
         </div>
         <!-- W4c：rows=10 定高 → fill 弹性（AdhocRebuild 手编区同款），.uq-qcard min-height 承接。
-             五百二十五批：@submit（Ctrl+Enter）接既有 doSubmit（确认门与空 query 守卫都在
+             @submit（Ctrl+Enter）接既有 doSubmit（确认门与空 query 守卫都在
              doSubmit 内，键盘路径不绕；painless 编辑器 @execute 先例同款补齐） -->
-        <!-- 五百三十四批 P0-1：编辑器划线通道挂点（黄条 banner 保留双通道，见 script queueUqLintMarkers） -->
+        <!--  P0-1：编辑器划线通道挂点（黄条 banner 保留双通道，见 script queueUqLintMarkers） -->
         <JsonArea ref="uqJaRef" v-model="queryStr" fill :placeholder="queryPlaceholder" :dsl-assist="uqQueryAssist" @submit="doSubmit" />
         <div v-if="mode === 'update'" class="uq-script">
-          <div class="uq-script-hd">Painless Script（可选，与 doc 二选一）<!-- 第十批：直达调试入口 --><router-link class="uq-lab-link" to="/painless-lab">去 Painless Lab 调试</router-link>
-            <!-- 五百二十八批：脚本面高度档循环钮（SqlConsoleView codeH「高」钮同款形态） -->
+          <div class="uq-script-hd">Painless Script（可选，与 doc 二选一）<!-- ：直达调试入口 --><router-link class="uq-lab-link" to="/painless-lab">去 Painless Lab 调试</router-link>
+            <!-- 脚本面高度档循环钮（SqlConsoleView codeH「高」钮同款形态） -->
             <button class="btn ghost xs" style="margin-left:auto" data-test="ubq-script-h"
               :title="'脚本编辑器高度档：' + scriptH" @click="cycleScriptH">高</button>
           </div>
-          <!-- 五百二十八批：28vh → 42vh 弹性档 + usePref 记忆（SqlConsole codeH 三档循环同款，
+          <!-- 28vh → 42vh 弹性档 + usePref 记忆（SqlConsole codeH 三档循环同款，
                editorTiers 族口径：st.editorH/qx.taH 先例）。
-               五百二十四批：painless 面接 assist（uqQueryAssist 同源 fields——脚本里 doc['f']
+               painless 面接 assist（uqQueryAssist 同源 fields——脚本里 doc['f']
                hover 与四骨架补全共享查询口字段源） -->
           <MonacoEditor v-model="scriptSource" language="painless" :height="scriptH"
           :dsl-assist="uqQueryAssist"
@@ -122,9 +122,9 @@
         </div>
       </div>
 
-      <!-- 第十批：执行前 DSL 静态体检护栏条（占网格整行，贴近执行按钮）。
+      <!-- 执行前 DSL 静态体检护栏条（占网格整行，贴近执行按钮）。
            警告黄条只提示不拦截；全量删除组合红条同样只提示——放行门仍是既有 askConfirm 确认流程。
-           五百六十二批：.uq-lint 私造双档换装 theme.css .lint-bar 单源（uq-lint 锚并存，
+           .uq-lint 私造双档换装 theme.css .lint-bar 单源（uq-lint 锚并存，
            grid-column 落位留 scoped；role 语义与文案逐字不动） -->
       <div v-if="fullDeleteWarn" role="alert" class="lint-bar uq-lint lint-bar-err">
         ⚠ delete_by_query + match_all 组合＝<b>全量删除</b>：目标索引命中的全部文档将被真实删除且不可恢复。建议先「预估影响文档数」核对范围再执行。
@@ -134,7 +134,7 @@
       </div>
 
       <div class="uq-actions">
-        <!-- 七百七十批 G241：预估钮 Loader2/Search 双态+「预估中…」在途文案（铁律 D；
+        <!--  G241：预估钮 Loader2/Search 双态+「预估中…」在途文案（铁律 D；
              768 G238/766 G234/753 G190 族同款——:disabled 之外补 spinning+文案两通道） -->
         <button class="btn ghost sm" @click="loadEstimate" :disabled="estimating">
           <Loader2 v-if="estimating" :size="12" class="spinning" /><Search v-else :size="12" /> {{ estimating ? '预估中…' : '预估影响文档数' }}
@@ -165,34 +165,34 @@
         <div class="uq-card-hd">
           <span>结果</span>
           <div class="uq-card-hd-r">
-            <!-- 五百四十六批：原始 IO 快查——本页 update/delete_by_query 最近一次请求/响应原文（ioRecorder 记录环） -->
+            <!-- 原始 IO 快查——本页 update/delete_by_query 最近一次请求/响应原文（ioRecorder 记录环） -->
             <button class="btn ghost xs" data-test="raw-io" aria-label="查看原始 IO（批量写执行）" title="最近一次 update/delete_by_query 请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIo">
               <Terminal :size="11" /> 原始 IO
             </button>
-            <!-- 五百五十一批：uq-badge code-bg 私造徽标换装 StatusPill 统一件（中性 n 档：taskId
+            <!-- uq-badge code-bg 私造徽标换装 StatusPill 统一件（中性 n 档：taskId
              是状态型信息 chip，非强调语义） -->
             <StatusPill v-if="result.taskId" tone="n" :label="'异步任务：' + result.taskId" />
-            <!-- 五百五十七批：死 API 激活——api.progress(taskId) 一次性拉取（InternalEsIndexRebuildController
+            <!-- 死 API 激活——api.progress(taskId) 一次性拉取（InternalEsIndexRebuildController
                  /progress 端点现成，Java 零改）；行内三态中文（ReindexAdvancedView 同款） -->
             <button v-if="result.taskId" class="btn ghost xs" data-test="ubq-progress" :disabled="progressLoading"
               title="拉取该任务当前进度（一次性查询，不挂轮询）" @click="queryTaskProgress">{{ progressLoading ? '查进度中…' : '查进度' }}</button>
             <button v-if="result.taskId" class="btn ghost xs" @click="goTaskTree">
               <ExternalLink :size="11" /> 到任务树
             </button>
-            <!-- 九十七批：下钻对称——写完就地验证（Search 图标已 import 未用，正好归位） -->
+            <!-- 下钻对称——写完就地验证（Search 图标已 import 未用，正好归位） -->
             <button v-if="index" class="btn ghost xs" @click="router.push({ path: '/search', query: { mode: 'dsl', idx: index } })">
               <Search :size="11" /> 去查询验证
             </button>
           </div>
         </div>
-        <!-- 五百五十七批：查进度行内三态（进行中 x/y / 已完成 / 查不到降级） -->
+        <!-- 查进度行内三态（进行中 x/y / 已完成 / 查不到降级） -->
         <div v-if="result.taskId && (progressLoading || progressText)" role="status" class="uq-prog">{{ progressLoading ? '进度查询中…' : progressText }}</div>
         <!-- W4c：结果区限高落偏好 usePref（默认 400=历史定值），内联 maxHeight 覆盖 -->
         <pre class="uq-result json-view" :style="{ maxHeight: uqResultH + 'px' }" v-html="resultHtml"></pre>
       </div>
     </div>
 
-    <!-- 五百四十六批：原始 IO 弹窗（宿主受控开关；rec 取该页最近一条 -by-query 记录） -->
+    <!-- 原始 IO 弹窗（宿主受控开关；rec 取该页最近一条 -by-query 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
   </div>
 </template>
@@ -203,46 +203,46 @@ import { useRouter } from 'vue-router';
 import { Recycle, Pencil, Trash2, Star, Send, Search, ExternalLink, Terminal, Loader2 } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
-/* 五百四十六批：原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环） */
+/* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环） */
 import RawIoModal from '../components/RawIoModal.vue';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
-import { useQueryHistoryStore } from '../stores/queryHistory'; /* 五百二十七批：执行留痕（写操作入跨模式历史） */
+import { useQueryHistoryStore } from '../stores/queryHistory'; /* ：执行留痕（写操作入跨模式历史） */
 import { useUrlState, useIdxState, usePref } from '../composables/urlState';
 import { useScopedDraft } from '../composables/useScopedDraft';
-import CurrentIdxChip from '../components/CurrentIdxChip.vue'; /* 五百三十二批：页内选择器退役换只读 chip */
-import PickCurrentIdxBtn from '../components/PickCurrentIdxBtn.vue'; /* 五百五十八批：「用当前索引」回填钮统一件 */
-import StatusPill from '../components/StatusPill.vue'; /* 五百五十一批：异步任务徽标统一件 */
+import CurrentIdxChip from '../components/CurrentIdxChip.vue'; /* ：页内选择器退役换只读 chip */
+import PickCurrentIdxBtn from '../components/PickCurrentIdxBtn.vue'; /* ：「用当前索引」回填钮统一件 */
+import StatusPill from '../components/StatusPill.vue'; /* ：异步任务徽标统一件 */
 import { askConfirm } from '../composables/confirm';
 import JsonArea from '../components/JsonArea.vue';
 import { useInputLint, patternRule, SLICES_RE, RPS_RE } from '../composables/useInputLint';
 import { fmtTime, fmtNum } from '../utils/format';
 import { highlightJson } from '../utils/jsonc';
-import { lintDsl } from '../utils/dslLint'; /* 第十批：执行前 DSL 静态体检 */
-import { friendlyEsError } from '../utils/esError'; /* 五百五十七批：预估失败裸错误串收敛 */
-import { useDebounceFn } from '../composables/useDebounceFn'; /* 五百三十四批 P0-1：划线防抖统一件 */
+import { lintDsl } from '../utils/dslLint'; /* ：执行前 DSL 静态体检 */
+import { friendlyEsError } from '../utils/esError'; /* ：预估失败裸错误串收敛 */
+import { useDebounceFn } from '../composables/useDebounceFn'; /*  P0-1：划线防抖统一件 */
 import { permDeniedAdvice } from '../utils/esErrorAdvice'; /* W4c：三视图同构 403 建议收敛单一出处 */
-import { useIndexFields } from '../composables/useIndexFields'; /* 第十批：lint 字段表 + dsl-assist 字段源 */
-import { useTermsSuggest } from '../composables/useTermsSuggest'; /* 六百六十二批：值位动态候选（661 范式） */
-import { useTierCycle } from '../composables/useTierCycle'; /* 五百五十八批：脚本面高度档循环统一件 */
+import { useIndexFields } from '../composables/useIndexFields'; /* ：lint 字段表 + dsl-assist 字段源 */
+import { useTermsSuggest } from '../composables/useTermsSuggest'; /* ：值位动态候选（661 范式） */
+import { useTierCycle } from '../composables/useTierCycle'; /* ：脚本面高度档循环统一件 */
 import MonacoEditor from '../components/MonacoEditor.vue';
 
 const store = useAppStore();
-/* 二百二十一批：权限门禁——UBQ/DBQ=/cluster/update-by-query|delete-by-query=REBUILD 档（rank3+）；
+/* 权限门禁——UBQ/DBQ=/cluster/update-by-query|delete-by-query=REBUILD 档（rank3+）；
    预估影响（count 只读）全角色可用 */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/update-by-query', store.target));
 const router = useRouter();
-/* R54：模式进 URL（?mode=）——收藏重放/分享链接可复原 update|delete 现场 */
+/* 模式进 URL（?mode=）——收藏重放/分享链接可复原 update|delete 现场 */
 const mode = useUrlState('mode', 'update') as unknown as import('vue').Ref<'update' | 'delete'>;
-/* R50：目标索引进 URL——刷新/分享链接可复原（可重入） */
+/* 目标索引进 URL——刷新/分享链接可复原（可重入） */
 const index = useIdxState();
 const maxDocs = ref('');
 const conflicts = ref('');
 const slices = ref('auto');
 const waitForCompletion = ref('false');
 const requestsPerSecond = ref('');
-/* ux2 Task 11：slices / requests_per_second 结构化格式失焦校验 + 输入即清（防旧 hint 滞留误导） */
+/* ux2 ：slices / requests_per_second 结构化格式失焦校验 + 输入即清（防旧 hint 滞留误导） */
 const { hint: slicesHint, level: slicesLevel, check: slicesCheck, clear: slicesClear } = useInputLint([
   patternRule(SLICES_RE, 'slices：auto 或整数'),
 ]);
@@ -253,7 +253,7 @@ watch(slices, () => slicesClear());
 watch(requestsPerSecond, () => rpsClear());
 const refresh = ref('');
 const scroll = ref('');
-/* R53：手写查询进 sessionStorage 草稿——刷新/误导航不丢稿（可重入） */
+/* 手写查询进 sessionStorage 草稿——刷新/误导航不丢稿（可重入） */
 /* 草稿治理轮：写类视图——查询体草稿必须按 集群/索引 隔离（防 A 的更新语句带到 B） */
 const queryStr = useScopedDraft('query', {
   route: 'update-by-query',
@@ -264,7 +264,7 @@ const scriptSource = useScopedDraft('script', {
   route: 'update-by-query',
   index: () => index.value,
 }).text;
-/* 八十二批：收藏回放 carry——favReplay 写一次性键，挂载即消费（取 body.query 入查询草稿；
+/* 收藏回放 carry——favReplay 写一次性键，挂载即消费（取 body.query 入查询草稿；
    旧 es-console.draft.update-by-query.query 是草稿治理前命名空间，无人消费，「已恢复」提示是假的） */
 const ubqCarry = sessionStorage.getItem('es-console.ubq.carry');
 if (ubqCarry && ubqCarry.trim()) {
@@ -279,7 +279,7 @@ const estimating = ref(false);
 const submitting = ref(false);
 const result = ref<any>(null);
 
-/* 五百四十六批：原始 IO 快查（545 四页同款）——特征 '-by-query' 统一接 update/delete_by_query
+/* 原始 IO 快查（545 四页同款）——特征 '-by-query' 统一接 update/delete_by_query
    两通道；判空 rec=null（本页还没执行过写操作）时 notify 引导，不开空弹窗 */
 const rawIoShow = ref(false);
 const rawIoRec = ref<RawIoRec | null>(null);
@@ -290,7 +290,7 @@ function openRawIo() {
   rawIoShow.value = true;
 }
 
-/* ═══ 第十批：执行前智能护栏（本页是全站破坏性最强的入口） ═══
+/* ═══ ：执行前智能护栏（本页是全站破坏性最强的入口） ═══
    lintDsl 对 query 文本做静态体检，warning 项在执行按钮附近出黄条；delete_by_query +
    match_all 组合＝全量删除，红条单独点名。两者都只提示不拦截——真正放行门仍是既有
    askConfirm 确认弹层（delete 走 critical 级 + 索引名 guard），本批不改变确认流程。 */
@@ -299,7 +299,7 @@ const { fields: uqIdxFields, ensure: ensureUqFields } = useIndexFields(() => ind
    arSettingsAssist——setup 作用域常量，防模板内联对象每次渲染换引用反复重注册 provider）。
    bodyKind 缺省即 'search'（MonacoEditor 分派缺省），query 体语义正好。索引含 pattern 时
    mappingDetail 失败零降级（fields 空＝无候选，不影响手输与执行）。 */
-/* 六百六十二批：值位动态候选接线（661 范式照抄）——useTermsSuggest 实例+terms 闭包，索引源与 fields 同源现调现读 */
+/* 值位动态候选接线（661 范式照抄）——useTermsSuggest 实例+terms 闭包，索引源与 fields 同源现调现读 */
 const uqTerms = useTermsSuggest(() => index.value);
 const uqQueryAssist = { fields: () => uqIdxFields.value, terms: (f: string, p: string) => uqTerms.suggestAsync(f, p) };
 watch(index, () => { void ensureUqFields(); }, { immediate: true });
@@ -310,7 +310,7 @@ const queryLint = computed(() => {
 });
 const queryLintWarnings = computed(() => queryLint.value.filter(f => f.severity === 'warning'));
 
-/* 五百三十四批 P0-1：banner→划线双通道（既有黄条 banner 保留）——SearchSandboxView 524 批
+/*  P0-1：banner→划线双通道（既有黄条 banner 保留）——SearchSandboxView 
    范式逐字：useDebounceFn 250ms + info 降级 hint；queryLint 非法 JSON 静默返 []，setMarkers([])
    即清旧划线。error 档（terms-scalar 等）banner 原本只走 warning——划线通道把 error 也在
    编辑器内点名，双通道互补。 */
@@ -366,7 +366,7 @@ async function loadEstimate() {
     const r = await api.searchDsl(index.value, JSON.stringify({ query: q, size: 0, track_total_hits: true }));
     estimateN.value = r?.hits?.total?.value ?? r?.hits?.total ?? 0;
   } catch (e: any) {
-    /* 五百五十七批：裸错误串 → friendlyEsError（XmigrateView w80 行逐字平移，全站兜底判例） */
+    /* 裸错误串 → friendlyEsError（XmigrateView w80 行逐字平移，全站兜底判例） */
     store.notify('error', '预估失败：' + friendlyEsError(String(e?.message ?? e)));
     estimateN.value = null;
   } finally { estimating.value = false; }
@@ -386,7 +386,7 @@ function doFav() {
 
 /* z5 轮：403 补下一步建议——W4c 起收敛 utils/esErrorAdvice 单一出处（三视图文案逐字等价） */
 async function doSubmit() {
-  /* R126: @execute(Grave/Ctrl+Enter) 与重试按钮不经执行钮 disabled，此处必须自防重入 */
+  /* @execute(Grave/Ctrl+Enter) 与重试按钮不经执行钮 disabled，此处必须自防重入 */
   if (submitting.value) return;
   /* z5 轮实测缺口：执行钮 :disabled 有 !queryStr 门，但 Monaco Ctrl+Enter 路径不经按钮——
      空 query 会构造出 {"query":{}}（ES 语义=match_all 打全索引），与按钮门对齐 */
@@ -418,7 +418,7 @@ async function doSubmit() {
       ? await api.updateByQuery(index.value, bodyStr.value, opts)
       : await api.deleteByQuery(index.value, bodyStr.value, opts);
     result.value = r;
-    /* 五百二十七批：执行留痕入查询历史（526 遗留「写操作无历史不可回溯」）——R100 跨模式
+    /* 执行留痕入查询历史（526 遗留「写操作无历史不可回溯」）—— 跨模式
        账本既有 push 接口一行落账，不新增 store API；mode 取最接近档 'dsl'（body 即 DSL 查询体，
        查询工作台 dsl 通道可回放），update/delete 之别由确认弹层与结果卡承载 */
     useQueryHistoryStore().push('dsl', bodyStr.value, index.value);
@@ -441,7 +441,7 @@ function goTaskTree() {
   }
 }
 
-/* 五百五十七批：死 API 激活——api.progress(taskId) 一次性拉取（后端 ReindexProgress：
+/* 死 API 激活——api.progress(taskId) 一次性拉取（后端 ReindexProgress：
    status=RUNNING|COMPLETED|UNKNOWN + total/created/updated/deleted 结构化计数）。
    三态中文：RUNNING=进行中 x/y、COMPLETED=已完成、UNKNOWN/拉取失败=查不到降级
    （任务完成后从 _tasks 消失/过期是常态路径，降级是预期分支不是异常，不 toast 轰炸）。
@@ -468,10 +468,10 @@ const progressText = computed(() => {
 
 /* W4c：结果区限高落偏好（默认 400=历史定值；经内联 maxHeight 生效） */
 const uqResultH = usePref('ubq.resultH', 400);
-/* 五百二十八批：painless 脚本面 28vh → 42vh 弹性档 + usePref 跨会话记忆
+/* painless 脚本面 28vh → 42vh 弹性档 + usePref 跨会话记忆
    （SqlConsoleView codeH「高」钮三档循环同款，editorTiers 族口径：st.editorH/qx.taH 先例）。
-   五百五十八批：私造「TIERS + usePref + cycle」三件套收编 useTierCycle 统一件
-   （535 批 W9 口径）——键名 ubq.scriptH / 档值序 / 默认档（tiers[0]）不变，零迁移 */
+   私造「TIERS + usePref + cycle」三件套收编 useTierCycle 统一件
+   （ W9 口径）——键名 ubq.scriptH / 档值序 / 默认档（tiers[0]）不变，零迁移 */
 const SCRIPT_H_TIERS = ['max(110px, 42vh)', 'max(150px, 56vh)', 'max(220px, 72vh)'];
 const { v: scriptH, cycle: cycleScriptH } = useTierCycle('ubq.scriptH', SCRIPT_H_TIERS);
 </script>
@@ -479,8 +479,8 @@ const { v: scriptH, cycle: cycleScriptH } = useTierCycle('ubq.scriptH', SCRIPT_H
 <style scoped>
 .uq-page { padding: var(--sp-3) var(--sp-4) var(--sp-5); }
 .uq-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); }
-/* 五百二十七批：W4c 同口径死 CSS 清理——.uq-hd-l/-ic/-tt/-sub 页头换 PageHeader 后无模板引用，删除。
-   五百三十八批：卡头随壳退役转 fs-head 行首横排档（PainlessLab .pl-editor-hd 同款：fs-xs 行 +
+/* W4c 同口径死 CSS 清理——.uq-hd-l/-ic/-tt/-sub 页头换 PageHeader 后无模板引用，删除。
+   卡头随壳退役转 fs-head 行首横排档（PainlessLab .pl-editor-hd 同款：fs-xs 行 +
    border-bottom 分界；.card-t 并轨随模板摘除退役），本地只留条栏布局与行首小标题档 */
 .uq-card-hd { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); padding: 5px var(--sp-2); border-bottom: 1px solid var(--border); font-size: var(--fs-xs); font-weight: 650; color: var(--tx1); letter-spacing: .02em; }
 .uq-mode { display: flex; border: 1px solid var(--border); border-radius: var(--r-s); overflow: hidden; background: var(--bg2); }
@@ -490,62 +490,62 @@ const { v: scriptH, cycle: cycleScriptH } = useTierCycle('ubq.scriptH', SCRIPT_H
 .uq-mode-b.act { background: var(--ac-soft); color: var(--ac-hi); font-weight: 600; }
 .uq-mode-b.danger.act { background: var(--err-soft); color: var(--err); }
 .uq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
-/* 五百三十八批：uq-card 壳（bg+border+radius+overflow）退役 → uq-sec border-top 分节 +
+/* uq-card 壳（bg+border+radius+overflow）退役 → uq-sec border-top 分节 +
    flex 列布局承接原卡身内衬的纵向间距（内衬 padding 框随退役，字段直贴分节） */
 .uq-sec { border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: var(--sp-2); }
 .uq-sec.wide { grid-column: 1 / -1; }
 /* W4c：query 编辑器 fill 弹性（JsonArea fill 自带 flex:1），卡身 flex column + min-height
    承接原 rows=10 定高（206px Monaco + 工具条），竖向可随窗成长。
-   五百三十八批：flex column 归 uq-sec 单源，本地只留 min-height 定高字面（高度链零变动） */
+   flex column 归 uq-sec 单源，本地只留 min-height 定高字面（高度链零变动） */
 .uq-qcard { min-height: 280px; }
-/* 五百五十七批：.ja 退壳——JsonArea fill 已吃满 .uq-qcard 分节（RankDebugView:418 等五先例），
+/* .ja 退壳——JsonArea fill 已吃满 .uq-qcard 分节（RankDebugView:418 等五先例），
    外框 border/圆角随壳退役，与分节卡一体观感 */
 .uq-qcard :deep(.ja) { flex: 1; min-height: 0; border: none; border-radius: 0; }
 .uq-card-hd-r { display: flex; gap: var(--sp-1); }
 .uq-field { display: flex; flex-direction: column; gap: var(--sp-1); }
 .uq-field label { font-size: var(--fs-xs); color: var(--muted); }
-/* 525 批：「用当前索引」回填钮与选择器同行。
-   五百三十二批：> .ixp 满宽规则随 IndexPicker 退役清零（chip 自带胶囊观感不满宽） */
+/* 「用当前索引」回填钮与选择器同行。
+   > .ixp 满宽规则随 IndexPicker 退役清零（chip 自带胶囊观感不满宽） */
 .uq-idx-row { display: flex; align-items: center; gap: var(--sp-1h); }
 .inp { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--r-xs); padding: 5px var(--sp-2); font-size: var(--fs-sm); color: var(--fg); }
 .uq-script { border-top: 1px solid var(--border); }
-/* 五百六十二批：编辑器外框退役（立法③，560 批 sq-editor/be-card-editor 同语言视图侧
+/* 编辑器外框退役（立法③， sq-editor/be-card-editor 同语言视图侧
    独立追加）；uq-script-hd 既有 border-bottom 承接分界 */
 .uq-script > :deep(.monaco-host) { border: none; border-radius: 0; }
-/* 第十批：卡头行改 flex，右侧挂「去 Painless Lab 调试」弱链。
-   五百四十批：code-bg 头条退役 → 立法②行首横排档（uq-card-hd 538 同语言：border-bottom 分界 +
+/* 卡头行改 flex，右侧挂「去 Painless Lab 调试」弱链。
+   code-bg 头条退役 → 立法②行首横排档（uq-card-hd 538 同语言：border-bottom 分界 +
    650/tx1/.02em，muted 弱化档退役；padding 原值不动，flex 结构零变动） */
 .uq-script-hd { display: flex; align-items: center; padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--border); font-size: var(--fs-xs); font-weight: 650; color: var(--tx1); letter-spacing: .02em; }
 .uq-lab-link { margin-left: auto; color: var(--ac); text-decoration: none; font-size: var(--fs-xs); }
 .uq-lab-link:hover { text-decoration: underline; }
-/* 五百六十二批：.uq-lint 私造形态/双档随换装 lint-bar 单源退役，只留网格整行落位 */
+/* .uq-lint 私造形态/双档随换装 lint-bar 单源退役，只留网格整行落位 */
 .uq-lint { grid-column: 1 / -1; }
 .uq-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) 0; }
 .uq-actions-r { margin-left: auto; }
 .uq-est { font-size: var(--fs-sm); color: var(--muted); }
 .uq-est b { color: var(--fg); }
-/* 五百五十一批：.uq-badge 私造样式随 StatusPill 换装退役（n 档形态归 .pill 单源） */
+/* .uq-badge 私造样式随 StatusPill 换装退役（n 档形态归 .pill 单源） */
 /* W4c：max-height 裸值退役——限高落 usePref('ubq.resultH')，经内联 maxHeight 生效 */
 .uq-result { padding: var(--sp-3); font-size: var(--fs-xs); background: var(--code-bg); margin: 0; overflow-x: auto; }
 /* G5-B1：err-bar 占满网格整行；全局 err-bar 的 margin-bottom 与网格 gap 叠加，清零（Bulk be-err 同构）。
    写链路失败长文（version_conflict 明细/脚本编译栈）限高可滚 */
 .uq-err { grid-column: 1 / -1; margin-bottom: 0; align-items: flex-start; }
 .uq-err-msg { max-height: 120px; overflow: auto; white-space: pre-wrap; }
-/* 五百五十七批：查进度行内三态文案（进行中 x/y / 已完成 / 查不到降级）——
+/* 查进度行内三态文案（进行中 x/y / 已完成 / 查不到降级）——
    .uq-sec 是 flex 纵列（非 grid），side padding 对齐 .uq-card-hd */
 .uq-prog { margin: 0; padding: 0 var(--sp-2); font-size: var(--fs-xs); color: var(--tx2); }
 
-/* G5-B2：R99 实测 iframe 可用宽 ~866px，双栏在此挤压（Bulk 批 12b 同款硬伤）。
+/* G5-B2： 实测 iframe 可用宽 ~866px，双栏在此挤压（Bulk 批 12b 同款硬伤）。
    断点归一 §9.3 标准值 1100（堆叠语义） */
 @media (max-width: 1100px) {
   .uq-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* 五百二十九批：900 紧凑微调档（§9.3 口径；§6q 遗留补齐，W-D）——双卡堆叠已由 1100 档
+/* 900 紧凑微调档（§9.3 口径；§6q 遗留补齐，W-D）——双卡堆叠已由 1100 档
    收编，此处收页侧距，卡头与执行行动作区允许换行（体检徽标+执行钮组窄视口不再硬挤；
    结果区横滚由 .uq-result overflow-x 自带） */
 @media (max-width: 900px) {
-  .uq-page { padding: var(--sp-2) var(--sp-2h) var(--sp-4); } /* 543 批：10px → var(--sp-2h) 精确等值收口 */
+  .uq-page { padding: var(--sp-2) var(--sp-2h) var(--sp-4); } /* ：10px → var(--sp-2h) 精确等值收口 */
   .uq-card-hd { flex-wrap: wrap; row-gap: var(--sp-1); }
   .uq-actions { flex-wrap: wrap; row-gap: var(--sp-1); }
 }

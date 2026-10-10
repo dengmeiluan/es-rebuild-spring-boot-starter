@@ -1,4 +1,4 @@
-/* 242 批：托管重建「粘贴导入」解析器 —— 用户手里的一串原始 JSON 形态各异：
+/* 托管重建「粘贴导入」解析器 —— 用户手里的一串原始 JSON 形态各异：
    — Mapping 页「原始 JSON」复制的完整配置：{ mappings, settings }
    — GET {index}/_mapping 响应（索引名包裹）：{ "idx": { mappings: {...} } }
    — GET {index}/_settings 响应（索引名包裹）：{ "idx": { settings: {...} } }
@@ -25,7 +25,7 @@ function looksFlatSettings(o: Record<string, unknown>): boolean {
   return keys.length > 0 && keys.every(k => /^index\./.test(k) || /^analysis\./.test(k));
 }
 
-/* 503 批：索引名单键壳剥离——Mapping 页 rawJson 的 settings/mappings 段本身带索引名壳
+/* 索引名单键壳剥离——Mapping 页 rawJson 的 settings/mappings 段本身带索引名壳
    （inspect 保留索引名维度：settings={idx:{"index.*"平铺}}、mappings={idx:{properties}}），
    GET _mapping/_settings 粘贴的内层 {idx:{properties}} 同构。唯一键+值是对象+键非结构键才剥。 */
 const STRUCT_KEYS = ['index', 'settings', 'mappings', 'properties', '_doc', 'doc'];
@@ -64,7 +64,7 @@ export function parseEsConfigPaste(text: string): ParsedEsConfig {
       body = first;
       shell = topKeys[0];
     } else if (isPlainObject(first) && !STRUCT_KEYS.includes(topKeys[0])) {
-      /* 503 批：内层无 mappings/settings 键（inspect 形态 {idx:{properties}}）——同样剥壳；
+      /* 内层无 mappings/settings 键（inspect 形态 {idx:{properties}}）——同样剥壳；
          键本身是结构键（{properties}/{index} 裸形态）时不是壳，照旧透传 */
       body = first;
       shell = topKeys[0];
@@ -72,7 +72,7 @@ export function parseEsConfigPaste(text: string): ParsedEsConfig {
   }
 
   const notes: string[] = [];
-  /* 503 批：段内索引名壳剥离——settings/mappings 拆出后各自可能还套着一层索引名 */
+  /* 段内索引名壳剥离——settings/mappings 拆出后各自可能还套着一层索引名 */
   let settings = isPlainObject(body.settings) ? body.settings : undefined;
   let mappings = isPlainObject(body.mappings) ? body.mappings : undefined;
   if (settings) {
@@ -99,7 +99,7 @@ export function parseEsConfigPaste(text: string): ParsedEsConfig {
     notes.push(`识别为 settings（${Object.keys(body).length} 项），已填入 settings 框`);
     return { ok: true, settings: body, notes };
   } else {
-    /* 503 批兜底：{idx:{properties}} / {idx:{"index.*"平铺}} / {idx:{"index":{...}}}——壳内才是正文 */
+    /* 兜底：{idx:{properties}} / {idx:{"index.*"平铺}} / {idx:{"index":{...}}}——壳内才是正文 */
     const b = stripIndexShell(body);
     const inner = b.body as Record<string, unknown>;
     if (isPlainObject(inner.properties)) {
@@ -117,7 +117,7 @@ export function parseEsConfigPaste(text: string): ParsedEsConfig {
   return { ok: true, settings, mappings, notes };
 }
 
-/* 二百五十七批：粘贴预览行——弹窗内联实时回显识别结果（不必点「解析并填入」才知道
+/* 粘贴预览行——弹窗内联实时回显识别结果（不必点「解析并填入」才知道
    认成了什么）；ok=false 时返回单行错误。口径与 notes/字段计数一致 */
 export function pastePreviewLines(r: ParsedEsConfig): string[] {
   if (!r.ok) return [r.error || '无法识别粘贴内容'];
@@ -126,7 +126,7 @@ export function pastePreviewLines(r: ParsedEsConfig): string[] {
   if (r.mappings) {
     const m = r.mappings as Record<string, unknown>;
     lines.push(`mapping：${fieldCount(m)} 个顶层字段`);
-    /* 二百八十八批：字段级回显——预览前 5 个顶层字段名（多则省略号），贴入前即可目检校准 */
+    /* 字段级回显——预览前 5 个顶层字段名（多则省略号），贴入前即可目检校准 */
     const props = isPlainObject(m.properties) ? Object.keys(m.properties) : [];
     if (props.length) {
       const head = props.slice(0, 5).join('、') + (props.length > 5 ? ` 等 ${props.length} 个` : '');

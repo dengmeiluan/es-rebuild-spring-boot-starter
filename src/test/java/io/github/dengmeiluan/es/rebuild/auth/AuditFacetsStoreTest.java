@@ -12,9 +12,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * R26 值建议收口：AuditFacetsStore——buildFacetsBody 三 terms（by_action/by_conn/by_user）
+ *  值建议收口：AuditFacetsStore——buildFacetsBody 三 terms（by_action/by_conn/by_user）
  * + must_not 排除 metrics/alert 同族混居 doc；facets() 解析 by_user 桶进 users 键
- * （R24 只加了请求体没加解析的半成品在此补完）；失败回空仍带 users 键（前端契约恒全）。
+ * （ 只加了请求体没加解析的半成品在此补完）；失败回空仍带 users 键（前端契约恒全）。
  */
 public class AuditFacetsStoreTest {
 
@@ -25,16 +25,16 @@ public class AuditFacetsStoreTest {
         String body = AuditFacetsStore.buildFacetsBody();
         assertTrue(body.contains("\"by_action\":{\"terms\":{\"field\":\"action\",\"size\":20}}"));
         assertTrue(body.contains("\"by_conn\":{\"terms\":{\"field\":\"connName\",\"size\":20}}"));
-        assertTrue("R24 username 维度值建议聚合",
+        assertTrue("username 维度值建议聚合",
                 body.contains("\"by_user\":{\"terms\":{\"field\":\"username\",\"size\":20}}"));
-        assertTrue("R28 uri 维度值建议聚合（真实 Top URI 供前缀筛选兜建议）",
+        assertTrue("uri 维度值建议聚合（真实 Top URI 供前缀筛选兜建议）",
                 body.contains("\"by_uri\":{\"terms\":{\"field\":\"uri\",\"size\":20}}"));
         assertTrue("must_not 排除指标/告警 doc（计数只算探活流水）",
                 body.contains("{\"term\":{\"kind\":\"metrics\"}}"));
         assertTrue(body.contains("{\"term\":{\"kind\":\"alert\"}}"));
     }
 
-    /** 端到端：by_user/by_uri 桶解析进 users/uris 键（R24 半成品补完——此前响应缺 users 字段）。 */
+    /** 端到端：by_user/by_uri 桶解析进 users/uris 键（ 半成品补完——此前响应缺 users 字段）。 */
     @Test
     public void facets_byUserByUri桶进对应键() throws Exception {
         RestHighLevelClient client = EsFakeClients.scripted(req -> "{\"aggregations\":{"
@@ -53,7 +53,7 @@ public class AuditFacetsStoreTest {
         assertEquals(5L, users.get(0).get("count"));
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> uris = (List<Map<String, Object>>) out.get("uris");
-        assertEquals("uris 键在响应契约内（R28）", 2, uris.size());
+        assertEquals("uris 键在响应契约内", 2, uris.size());
         assertEquals("/index/_search", uris.get(0).get("key"));
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> actions = (List<Map<String, Object>>) out.get("actions");
@@ -71,7 +71,7 @@ public class AuditFacetsStoreTest {
         assertTrue(out.get("actions") instanceof List);
         assertTrue(out.get("conns") instanceof List);
         assertTrue(out.get("users") instanceof List);
-        assertTrue("uris 键恒在（R28 契约）", out.get("uris") instanceof List);
+        assertTrue("uris 键恒在（ 契约）", out.get("uris") instanceof List);
         assertEquals(0, ((List<?>) out.get("uris")).size());
     }
 }

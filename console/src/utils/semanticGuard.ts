@@ -1,7 +1,7 @@
-/* 五百六十三批（531 遗留件③收口）：显式非语义类型抑制守卫纯函数单源——
+/* （531 遗留件③收口）：显式非语义类型抑制守卫纯函数单源——
    列类型分档展示（类型徽标/区间过滤/值分布/走势/排序档）对「显式非语义」列的抑制判定：
    ① 类型档：typeTiers.isNonSemanticType（⚠typeTiers.ts 黑名单禁改，只 import 其既有导出——
-     binary/nested/geo 等 18 型正则，557/561 批两次扩容记档在档）；
+     binary/nested/geo 等 18 型正则，557/两次扩容记档在档）；
    ② 元字段档：_source 等非业务元字段（raw doc 对象列的排序/分布/分档展示皆无语义，按名抑制；
      显式类型常缺位，^_ 全等锚定防 business_source 类业务列误伤）。
    记档豁免：_id/_index/_score/_seq_no 排序/定位有语义不收。
@@ -11,7 +11,7 @@
 
 import { isNonSemanticType } from './typeTiers';
 
-/* 非业务元字段名档（563 批首收 1 名；扩容须逐名评估消费点：抑制即 Σ/分布/走势/排序全退） */
+/* 非业务元字段名档（首收 1 名；扩容须逐名评估消费点：抑制即 Σ/分布/走势/排序全退） */
 const META_NON_BUSINESS_FIELDS = new Set<string>(['_source']);
 
 /** 元字段档判定（按名；与类型档独立——_source 常无显式类型） */

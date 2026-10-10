@@ -25,7 +25,7 @@
 
     <Teleport :to="teleportTo" :disabled="inplace">
       <!-- 弹层默认 Teleport 在 body 下：mousedown 需 .stop，否则 document 层 onDocDown 会先关面板导致 click 选项丢失。
-           :to="false" 时 Teleport disabled → 就地渲染在 .fxp 根内（QueryHubView 场景任务嵌 naive popover 场景：
+           to="false" 时 Teleport disabled → 就地渲染在 .fxp 根内（QueryHubView 场景任务嵌 naive popover 场景：
            弹层与 popover 同子树，clickoutside 不再误判关 popover 导致 click 丢失） -->
       <transition name="pop">
         <div v-if="open" class="fxp-pop float-pop" :class="{ inplace }" :style="popStyle" @mousedown.prevent.stop>
@@ -47,11 +47,11 @@
               role="option" :id="itemId(r.i!)" :aria-selected="r.i === cursor" tabindex="-1"
               @mouseenter="cursor = r.i!" @click="choose(r.f!.path)" @keydown.enter.prevent="choose(r.f!.path)"
             >
-              <!-- 第十批：类型徽标挂全站色卡 .mft-type（theme.css），删局部四类型撞色规则 -->
+              <!-- 类型徽标挂全站色卡 .mft-type（theme.css），删局部四类型撞色规则 -->
               <span class="fxp-type mono mft-type" :data-t="r.f!.type">{{ r.f!.type }}</span>
-              <!-- 550 批：近似候选徽标（548 C fuzzy 零命中纠错标记，与 LuceneInput 同文案） -->
+              <!-- 近似候选徽标（548 C fuzzy 零命中纠错标记，与 LuceneInput 同文案） -->
               <i v-if="r.f!.fuzzy" class="fxp-fuzzy">近似</i>
-              <!-- 546 批：全站最后一处注入式高亮残留退役——esc+mark 拼串通道换 MarkText 共享件
+              <!-- 全站最后一处注入式高亮残留退役——esc+mark 拼串通道换 MarkText 共享件
                   （textContent 与原文一致；kw=lastSeg 已 trim 末段，与 searchFields 内部 rawQ 同口径；
                    .fxp-name :deep(mark) specificity 压过 .mt-mark，视觉不变） -->
               <span class="fxp-name mono"><MarkText :text="r.f!.path" :kw="lastSeg" /></span>
@@ -60,7 +60,7 @@
         </div>
 
         <div class="fxp-ft">
-          <!-- 五百一十九批：页脚补 N/M 匹配计数（对齐 FieldSelect 页脚形态）+ cap 提示；
+          <!-- 页脚补 N/M 匹配计数（对齐 FieldSelect 页脚形态）+ cap 提示；
                保留「N 字段」「（typeFilter）」既有文案（fieldPicker.spec 契约） -->
           <span>{{ fields.length }} 字段{{ typeFilter ? '（' + typeFilter + '）' : '' }}<template v-if="items.length"> · {{ items.length }}/{{ res.total }} 匹配{{ res.capped ? '，仅显示前 ' + CAP + ' 个，输入更精确可缩小' : '' }}</template></span>
           <span class="fxp-keys"><kbd class="kbd">↑↓</kbd> 选择 <kbd class="kbd">Enter</kbd> 确认 <kbd class="kbd">Esc</kbd> 关闭</span>
@@ -72,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-/* R42-f §8.5：统一字段选择器——索引选定后字段不再手写。
+/* -f §8.5：统一字段选择器——索引选定后字段不再手写。
    数据源 useIndexFields（mappingDetail 拍平/缓存统一收口，key=集群目标|索引）；
    multi 模式支持逗号分隔多字段（只补全最后一段）。 */
 import { ref, computed, watch } from 'vue';
@@ -103,7 +103,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{ (e: 'update:modelValue', v: string): void; (e: 'picked', v: string, type?: string): void; (e: 'enter'): void }>();
 
-/* 五百一十九批：候选上限显式归一为 50（= searchFields 默认值，写死防两处漂移） */
+/* 候选上限显式归一为 50（= searchFields 默认值，写死防两处漂移） */
 const CAP = 50;
 
 const store = useAppStore();
@@ -134,7 +134,7 @@ const res = computed(() => searchFields({
   typePriority: (props.typePriority || []).map(s => s.trim()).filter(Boolean),
 }));
 
-/* 五百二十五批：候选侧补 recent 前置（与 FieldSelect 同口径：recent 命中段式全前置、
+/* 候选侧补 recent 前置（与 FieldSelect 同口径：recent 命中段式全前置、
    段内保持 rank+字母序）——消除「choose 写 recent 却从不吃 recent」的读写不对称。
    前置后统一重编 i：usePopupList cursor/act/aria 按 items 数组下标导航，i 必须与下标一致
    （rows 的 prio 分支同消费 h.i，不重编会高亮/选中错位）。 */
@@ -149,13 +149,13 @@ const ordered = computed<FieldHit[]>(() => {
   return flat.map((h, i) => (h.i === i ? h : { ...h, i }));
 });
 
-/* 550 批：候选行携 fuzzy（548 C 近似候选 → .fxp-fuzzy「近似」徽标；FieldItem 结构扩展不外溢） */
+/* 候选行携 fuzzy（548 C 近似候选 → .fxp-fuzzy「近似」徽标；FieldItem 结构扩展不外溢） */
 type FxpItem = FieldItem & { fuzzy?: boolean };
 const items = computed<FxpItem[]>(() => ordered.value.map(h => ({ path: h.path, type: h.type, fuzzy: h.fuzzy })));
 
 /* 分组标签行：mono 小字可视化「类型优先」；数值族/date 给中文名，其余用类型原名。
    标签只进 rows 不进 items——cursor/onChoose 的候选索引仍是字段序。
-   五百二十五批：分组从重排后的 ordered 归堆（groupByLabel 与 FieldSelect 同源），recent
+   分组从重排后的 ordered 归堆（groupByLabel 与 FieldSelect 同源），recent
    命中段参与首现序归堆——与 FieldSelect 前置段分组口径对齐 */
 type FxpRow = { gh?: string; f?: FxpItem; i?: number };
 const rows = computed<FxpRow[]>(() => {
@@ -170,7 +170,7 @@ const rows = computed<FxpRow[]>(() => {
   return out;
 });
 
-/* W2 Task 7a：弹层骨架下沉 usePopupList（open/cursor/place/onKey/onDocDown/listId/to 双模式）；
+/* W2 ：弹层骨架下沉 usePopupList（open/cursor/place/onKey/onDocDown/listId/to 双模式）；
    本组件只留数据源（ensure 走 onOpen）、过滤排序、multi 段、choose 回填与 enter 透发委托 */
 const {
   open, cursor, popStyle, teleportTo, inplace, listId, itemId,
@@ -193,7 +193,7 @@ function onInput(e: Event) {
 
 function choose(path: string) {
   const v = applySeg(path);
-  /* 五百一十九批：per-index 最近使用回写（fieldSearch 记忆通道，FieldSelect 已有先例）——
+  /* per-index 最近使用回写（fieldSearch 记忆通道，FieldSelect 已有先例）——
      键拼本组件 index prop；存储满/隐私模式写入静默失败不影响选择 */
   rememberRecentField(props.index, path);
   /* 第三个参数带字段类型（可选，既有监听者忽略即零影响）：消费方可据此做
@@ -224,7 +224,7 @@ watch(() => store.target, () => { open.value = false; });
 .fxp-x { display: inline-flex; border: none; background: none; color: var(--muted); cursor: pointer; padding: 1px; border-radius: var(--r-xs); }
 .fxp-x:hover { color: inherit; background: var(--hover); }
 
-/* 五百二十四批：壳属性（fixed/--z-island/bg/border/shadow/圆角）收编 theme.css .float-pop，本类只留坐标外裁切与字号 */
+/* 壳属性（fixed/--z-island/bg/border/shadow/圆角）收编 theme.css .float-pop，本类只留坐标外裁切与字号 */
 .fxp-pop { overflow: hidden; font-size: var(--fs-sm); }
 /* 就地模式：absolute 随 .fxp 根（position:relative）定位；渲染在 popover 子树内天然随父 stacking context，无需 9000 z-index */
 .fxp-pop.inplace { position: absolute; top: 100%; left: 0; min-width: 100%; z-index: 10; }
@@ -236,12 +236,12 @@ watch(() => store.target, () => { open.value = false; });
 .fxp-item.act { background: var(--hover); }
 .fxp-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fxp-name :deep(mark) { background: none; color: var(--acc); font-weight: 600; }
-/* 第十批：类型徽标色统一 theme.css 全站 .mft-type[data-t] 色卡（本文件原局部四类型规则已删）。
+/* 类型徽标色统一 theme.css 全站 .mft-type[data-t] 色卡（本文件原局部四类型规则已删）。
    未入色卡的冷门类型回落档走 :where（编译后 :where(.fxp-type[data-v])，specificity 0）
    ——保证色卡规则必胜，回落只在无色卡命中时生效 */
 .fxp-type { flex: none; min-width: 52px; text-align: center; font-size: var(--fs-2xs); padding: 0 5px; border-radius: var(--r-xs); line-height: 16px; }
 :where(.fxp-type) { color: var(--muted); background: var(--hl); }
-/* 550 批：近似候选徽标（548 C fuzzy 透传渲染，warn 色微字） */
+/* 近似候选徽标（548 C fuzzy 透传渲染，warn 色微字） */
 .fxp-fuzzy { font-size: var(--fs-2xs); color: var(--warn); font-style: normal; margin-left: var(--sp-1); }
 .fxp-ft { display: flex; align-items: center; justify-content: space-between; padding: 5px var(--sp-2h); border-top: 1px solid var(--line); color: var(--muted); font-size: var(--fs-xs); }
 .mono { font-family: var(--mono, ui-monospace, monospace); }

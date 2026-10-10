@@ -9,7 +9,7 @@ import io.github.dengmeiluan.es.rebuild.spi.ManagedEsIndex;
  * 由别名的 is_write_index 路由到当前物理索引。</p>
  *
  * <p>仅承载由 ES 实体解析出的<b>基础设施元数据</b>（别名/前缀/settings/mapping）+ 业务策略
- * {@link ManagedEsIndex} 句柄。R93 阶段⑤起业务侧契约收窄为「声明受管索引」，
+ * {@link ManagedEsIndex} 句柄。 阶段⑤起业务侧契约收窄为「声明受管索引」，
  * 物理删除追删 / 增量重放 / 全量回灌等能力接口已随 SPI 重建路径一并退役。</p>
  */
 public class RebuildableIndexMeta {

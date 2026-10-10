@@ -16,7 +16,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百六十五批：{@link SliceWorker} <b>per-slice bulk 重试 WARN 留痕</b>（观测缺口收口，纯日志零契约）。
+ * {@link SliceWorker} <b>per-slice bulk 重试 WARN 留痕</b>（观测缺口收口，纯日志零契约）。
  *
  * <p><b>缺口</b>：bulk 可重试失败进入退避重试此前无痕——只有耗尽 {@code maxAttempts} 才计
  * errors 落一条错误消息；重试窗口内的抖动（bulk 线程池满/网关 5xx）在服务端日志零痕迹，

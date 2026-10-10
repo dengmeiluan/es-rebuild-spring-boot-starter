@@ -20,7 +20,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * R96：兼容层的<b>双版本兑现</b>。
+ * 兼容层的<b>双版本兑现</b>。
  *
  * <p>其余测试都跑在本机 sdes 4.0.9 上，而本波要修的正是
  * 「4.0.9 过了不代表 4.4.x 过」——「本机这版能用」根本不是本波的命题。

@@ -32,7 +32,7 @@ public class MonitorMetricsController {
     /** interval 桶宽合法性（缺省不聚合走原始 doc；给了必须形如 60s/10m/1h/1d）。 */
     private static final String INTERVAL_PATTERN = "\\d+[smhd]";
 
-    /** R31 聚合方式合法性（仅 avg|max；非法抛异常回前端，不静默当 avg 用）。
+    /**  聚合方式合法性（仅 avg|max；非法抛异常回前端，不静默当 avg 用）。
      *  637 三值同返后，{@code agg} 仅决定标量别名 {@code <field>} 取哪个值；
      *  每字段另平铺 {@code <field>Avg/Max/Min} 三键，故校验面不变（仍仅 avg|max）。 */
     private static final String AGG_PATTERN = "avg|max";
@@ -73,7 +73,7 @@ public class MonitorMetricsController {
     }
 
     /**
-     * R42 最新 Top 索引快照（对标阿里云 Grafana Index 索引行）：取带 topIndexes 的最新
+     *  最新 Top 索引快照（对标阿里云 Grafana Index 索引行）：取带 topIndexes 的最新
      * cluster doc，返回 {index,qps,idxRate,storeMb}×≤8；无快照（首次采集/索引全静）回空数组。
      */
     @GetMapping("top-indexes")

@@ -26,7 +26,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百五十五批：审计上下文采集单测——PAGE_DENIED/WRITE/HIGH_RISK 落档必须携带
+ * 审计上下文采集单测——PAGE_DENIED/WRITE/HIGH_RISK 落档必须携带
  * 所属集群（connId/connName）、来源 IP（XFF 首跳）、耗时；高危 raw 透传 detail 带
  * 端点回填的执行摘要（产线权限审计定案：1049 条 raw 零法证 → 谁对哪个集群执行了什么）。
  */
@@ -198,11 +198,11 @@ public class ConsoleAuthInterceptorAuditContextTest {
         assertEquals(500, audit.last.getHttpStatus());
     }
 
-    /* ---------------- 五百九十九批：执行类只读 POST 落 EXEC 审计（可审计补全） ----------------
+    /* ---------------- ：执行类只读 POST 落 EXEC 审计（可审计补全） ----------------
        painless 脚本执行/analyze/reindex 预估/config-lab dry-run 这类「零数据写入但消耗集群
        资源/执行脚本」的只读 POST 此前完全零审计——用户要求操作可审计，此类须留痕。 */
     @Test
-    public void 五百九十九批_执行类只读POST落EXEC审计_painless脚本可追溯() {
+    public void 执行类只读POST落EXEC审计_painless脚本可追溯() {
         CapturingAudit audit = new CapturingAudit();
         ConsoleAuthInterceptor it = interceptor(audit);
         Map<String, Object> attrs = new HashMap<>();
@@ -219,7 +219,7 @@ public class ConsoleAuthInterceptorAuditContextTest {
     }
 
     @Test
-    public void 五百九十九批_普通只读查询POST不落审计_零噪音保持() {
+    public void 普通只读查询POST不落审计_零噪音保持() {
         CapturingAudit audit = new CapturingAudit();
         ConsoleAuthInterceptor it = interceptor(audit);
         Map<String, String> headers = new HashMap<>();

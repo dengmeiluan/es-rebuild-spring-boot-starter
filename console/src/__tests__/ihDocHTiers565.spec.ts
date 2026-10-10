@@ -1,5 +1,5 @@
 /**
- * 五百六十五批·轨2 W2 件④：高度档补齐三面（useTierCycle 统一件，缺省档=旧固定值零漂移）。
+ * ·轨2 W2 件④：高度档补齐三面（useTierCycle 统一件，缺省档=旧固定值零漂移）。
  *
  *  ① IndexHubView 文档编辑弹窗 JsonArea 定高 min(60vh,420px)（原无档）→ ih.docH 三档
  *     （dq.docH 同款档序列：min(60vh,420px)/min(70vh,560px)/min(80vh,700px)；档钮在弹窗

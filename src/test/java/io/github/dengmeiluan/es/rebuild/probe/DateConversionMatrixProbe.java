@@ -13,7 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * R94 机制实测：ES6→ES7 迁移时「date 字段 + Java 时间类型」到底哪些组合会炸、炸在读还是写。
+ *  机制实测：ES6→ES7 迁移时「date 字段 + Java 时间类型」到底哪些组合会炸、炸在读还是写。
  *
  * <p>刻意<b>不连 ES</b>：待验证的机制在 spring-data-elasticsearch 4.0.9 的
  * {@link MappingElasticsearchConverter} 客户端转换层，与服务端版本无关。

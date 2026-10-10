@@ -19,7 +19,7 @@ import java.util.concurrent.Executors;
  *  - 整个 starter 在容器 ready 后用单个 daemon 线程串行 ensureIndex（互不阻塞）
  *  - 失败仅告警；首次业务写时 ES 仍会自动建（auto_create_index 启用时）
  *
- * <p>R93 阶段⑤：audit / job 两个 store 随 SPI 重建路径退役，本类只剩 lock 一个。</p>
+ * <p> 阶段⑤：audit / job 两个 store 随 SPI 重建路径退役，本类只剩 lock 一个。</p>
  *
  * @author aicoding
  */
@@ -51,7 +51,7 @@ public class EsRebuildBootstrapRunner {
     }
 
     /**
-     * R93-67：<b>不再靠「没抛异常」判定成功</b>。
+     * -67：<b>不再靠「没抛异常」判定成功</b>。
      *
      * <p>各 store 的 {@code ensureIndex()} 本身就是旁路设计——内部 catch 掉异常只打 WARN，
      * 因此这里<b>永远</b>收不到异常，旧代码于是无论真实成败都打出 {@code "xxx index ensured"}。

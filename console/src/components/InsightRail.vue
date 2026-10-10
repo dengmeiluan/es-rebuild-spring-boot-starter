@@ -7,14 +7,14 @@
     </div>
     <div class="irail-body">
       <slot />
-      <!-- 第十批 B：裸空态迁 EmptyState compact（原 .irail-empty 裸文案，窄侧栏走紧凑档） -->
+      <!--  B：裸空态迁 EmptyState compact（原 .irail-empty 裸文案，窄侧栏走紧凑档） -->
       <EmptyState v-if="empty && !loading" compact :icon="Sparkles" text="暂无分析建议" />
     </div>
   </aside>
 </template>
 
 <script setup lang="ts">
-/** R39 InsightRail：右侧现场智能分析栏容器（各视图内嵌卡片，不是独立页面）。
+/**  InsightRail：右侧现场智能分析栏容器（各视图内嵌卡片，不是独立页面）。
     props.degraded=true → 整栏收起（智能死了，页面功能零影响）。 */
 import { Sparkles } from 'lucide-vue-next';
 import EmptyState from './EmptyState.vue';
@@ -40,5 +40,5 @@ withDefaults(defineProps<{
   50% { opacity: .55; box-shadow: 0 0 0 5px color-mix(in srgb, var(--ac) 0%, transparent); }
 }
 .irail-body { display: flex; flex-direction: column; gap: var(--sp-2h); }
-/* 第十批 B：.irail-empty 裸空态退役迁 EmptyState compact，本地样式随迁删除 */
+/*  B：.irail-empty 裸空态退役迁 EmptyState compact，本地样式随迁删除 */
 </style>

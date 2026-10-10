@@ -12,7 +12,7 @@ import java.util.Map;
  * {@link RebuildLockStore} 的实现：以 {@code indexKey} 为锁文档 {@code _id}，借 ES 单 {@code _id} 操作的
  * 线性化 + {@code op_type=create} 的 CAS 语义实现跨实例互斥；过期锁用 {@code if_seq_no/if_primary_term} 原子强夺。
  *
- * <p><b>R93-67：本类不再持有 {@code RestHighLevelClient}，改持 {@link LockDocPort} 窄端口。</b>
+ * <p><b>-67：本类不再持有 {@code RestHighLevelClient}，改持 {@link LockDocPort} 窄端口。</b>
  * 原因：RHLC 的 {@code IndexRequest.opType(CREATE)} <b>无论是否知道版本</b>都发
  * {@code PUT /idx/_create/id}，这条 typeless 路由在 6.x 上 400（{@code invalid_type_name_exception}），
  * 导致产线 6.7.2 宿主上<b>连锁都拿不到</b>、adhoc 重建根本无法启动。</p>
@@ -35,10 +35,10 @@ public class EsRebuildLockStore implements RebuildLockStore {
     private static final String FIELD_ACQUIRE_TIME = "acquireTime";
     private static final String FIELD_EXPIRE_TIME = "expireTime";
 
-    /** 五百六十二批：renew I/O 失败 WARN 节流间隔（MigrateJobTracker.save 60s 范式）。 */
+    /** renew I/O 失败 WARN 节流间隔（MigrateJobTracker.save 60s 范式）。 */
     private static final long RENEW_WARN_THROTTLE_MS = 60_000L;
 
-    /** 五百六十二批：renew I/O 失败 WARN 60s 单键节流——ES 持续不可达时每个 adhoc 作业
+    /** renew I/O 失败 WARN 60s 单键节流——ES 持续不可达时每个 adhoc 作业
      *  每个续约点一条 WARN 会刷屏。首条保留原样（含 indexKey），窗口内仅累计，窗口尾先
      *  汇总一条「xN」再落本窗首条；节流只动日志，renew 返回 false 契约不变。 */
     private final java.util.concurrent.atomic.AtomicLong lastRenewIoWarnAt = new java.util.concurrent.atomic.AtomicLong(0);
@@ -76,7 +76,7 @@ public class EsRebuildLockStore implements RebuildLockStore {
      * 此时首次 {@code op_type=create} 会 404；与 {@code EsRebuildJobStore/EsRebuildAuditStore} 同模式
      * 显式预建。mapping 3 个字段（owner keyword、acquireTime/expireTime long），不依赖动态映射。</p>
      *
-     * <p>R93-67：mappings 的 {@code _doc} type 包层由 {@link LockDocPort#createIndex} 按宿主版本决定
+     * <p>-67：mappings 的 {@code _doc} type 包层由 {@link LockDocPort#createIndex} 按宿主版本决定
      * ——6.x 上缺包层会 {@code mapper_parsing_exception}（6.7.2 实测 400，且索引不会被建出来）。</p>
      *
      * @return <b>true=锁索引确实就绪</b>（已存在或本次建成）；false=未就绪。
@@ -181,7 +181,7 @@ public class EsRebuildLockStore implements RebuildLockStore {
                     lockSource(toLong(src.get(FIELD_ACQUIRE_TIME)), now + leaseMs),
                     doc.seqNo(), doc.primaryTerm());
         } catch (IOException e) {
-            // 五百六十二批：WARN 60s 单键节流（MigrateJobTracker.save 范式）——窗口首条全量，
+            // WARN 60s 单键节流（MigrateJobTracker.save 范式）——窗口首条全量，
             // 窗口内仅累计，窗口尾先汇总「xN」一条再落本窗首条
             renewIoFailSinceWarn.incrementAndGet();
             long ts = System.currentTimeMillis();

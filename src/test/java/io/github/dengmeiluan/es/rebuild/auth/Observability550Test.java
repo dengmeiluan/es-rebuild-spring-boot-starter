@@ -26,8 +26,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百五十批：endpoint 模式<b>非 2xx 臂 debug→节流 WARN</b>（观测缺口收口，Observability547
- * 范式 + 五百四十八批 HttpServer 桩先例）。
+ * endpoint 模式<b>非 2xx 臂 debug→节流 WARN</b>（观测缺口收口，Observability547
+ * 范式 +  HttpServer 桩先例）。
  *
  * <p><b>缺口</b>：{@link PropertiesAuthDelegate#callVerifyEndpoint} 非 2xx 臂此前只落
  * {@code LOG.debug}——401/5xx/网关异常时请求被静默交回内置鉴权，运营侧「为什么配了宿主鉴权

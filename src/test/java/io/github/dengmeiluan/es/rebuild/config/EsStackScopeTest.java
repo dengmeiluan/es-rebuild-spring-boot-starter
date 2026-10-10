@@ -9,7 +9,7 @@ import java.nio.file.Files;
 import static org.junit.Assert.assertTrue;
 
 /**
- * R97：ES 栈必须是 {@code provided} —— starter 不向宿主传递自己的 ES 版本。
+ * ES 栈必须是 {@code provided} —— starter 不向宿主传递自己的 ES 版本。
  *
  * <p>为什么这条要测：改回 {@code compile} 不会有任何编译错误、任何测试变红，
  * 但「两套 ES 栈由 Maven 就近原则静默裁决」这个歧义源就回来了 ——
@@ -42,14 +42,14 @@ public class EsStackScopeTest {
     public void sdesStarterIsProvided() throws Exception {
         String block = depBlock(pom(), "spring-boot-starter-data-elasticsearch");
         assertTrue("spring-boot-starter-data-elasticsearch 必须是 provided —— "
-                        + "starter 不该向宿主传递自己的 sdes 版本（R97）。实际块: " + block,
+                        + "starter 不该向宿主传递自己的 sdes 版本。实际块: " + block,
                 block.contains("<scope>provided</scope>"));
     }
 
     @Test
     public void rhlcIsProvided() throws Exception {
         String block = depBlock(pom(), "elasticsearch-rest-high-level-client");
-        assertTrue("elasticsearch-rest-high-level-client 必须是 provided（R97）。实际块: " + block,
+        assertTrue("elasticsearch-rest-high-level-client 必须是 provided。实际块: " + block,
                 block.contains("<scope>provided</scope>"));
     }
 }

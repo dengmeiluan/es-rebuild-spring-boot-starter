@@ -48,7 +48,7 @@
       <div v-else-if="step === 1" class="wz-panel">
         <div class="wz-lead">选一个动作立刻上手：</div>
         <div class="wz-actions">
-          <!-- 三百七十一批：快捷入口键盘可达（role/tabindex/Enter，369 批 Overview 同口径） -->
+          <!-- 快捷入口键盘可达（role/tabindex/Enter， Overview 同口径） -->
           <div class="wz-act" role="button" tabindex="0" aria-label="集群概览：健康/节点/热索引" @click="go('/overview', '概览')" @keydown.enter.prevent="go('/overview', '概览')" @keydown.space.prevent="go('/overview', '概览')">
             <LayoutDashboard :size="16" /><b>集群概览</b>
             <span>健康/节点/热索引</span>
@@ -122,7 +122,7 @@ import {
 } from 'lucide-vue-next';
 import { GOTO_TARGETS } from '../utils/hotkeys';
 
-/* R93-13：首启引导里的 goto 示例原是硬编码「g h = 历史」——HistoryView 已退役，
+/* -13：首启引导里的 goto 示例原是硬编码「g h = 历史」——HistoryView 已退役，
    属于和速查面板同一类的「撒谎的界面」。改为从登记表取前三条，不再手工维护。 */
 const gotoHint = (() => {
   const sample = Object.entries(GOTO_TARGETS).filter(([k]) => k !== 'g').slice(0, 3);
@@ -154,7 +154,7 @@ function next() {
   }
   step.value = Math.min(step.value + 1, steps.length - 1);
 }
-/* 五百二十五批 W10：步 1 键盘连续性——Enter 此前只选中，「下一步」只能鼠标点。
+/*  W10：步 1 键盘连续性——Enter 此前只选中，「下一步」只能鼠标点。
    现按 Enter=选中并前进（store.pick 经 next() 同路生效）。鼠标点击仍仅选中：
    先比较几个索引再点「下一步」的挑选流不被 auto-advance 打断。 */
 function pickIdx(idx: string) {
@@ -174,7 +174,7 @@ function finish(skipped: boolean) {
 
 onMounted(() => {
   if (localStorage.getItem(LS_KEY) === '1') return;
-  // R39.2：等真加载到索引再弹——connections-only 未选连接/集群不通时，
+  // .2：等真加载到索引再弹——connections-only 未选连接/集群不通时，
   // 第一步「选默认索引」是空态死胡同，弹了反而挡住选集群的引导横幅
   let fired = false;
   watch(() => (store.indices || []).length > 0, (ok) => {
@@ -228,7 +228,7 @@ defineExpose({ open: () => { step.value = 0; show.value = true; }, });
 .wz-skip { display: flex; align-items: center; gap: var(--sp-1h); font-size: var(--fs-sm); color: var(--tx2); cursor: pointer; }
 .wz-ft-r { display: flex; gap: var(--sp-1h); }
 
-/* 五百六十三批（轨5）：900 窄档（与 theme.css 900 档/utils/layout.ts BP_NARROW 单源互锚）——
+/* （轨5）：900 窄档（与 theme.css 900 档/utils/layout.ts BP_NARROW 单源互锚）——
    窄视口下双列卡格与「130px 100px 1fr」三列快捷键行挤压，降单列/竖排；
    纯 CSS 档内声明、模板零结构动，档内零 height/flex 尺寸声明（高度链红线自证） */
 @media (max-width: 900px) {

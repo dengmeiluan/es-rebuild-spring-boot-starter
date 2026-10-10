@@ -60,7 +60,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百五十八批(b)轨5【Java 全栈可观测】七件（Observability550 范式：Logback ListAppender
+ * (b)轨5【Java 全栈可观测】七件（Observability550 范式：Logback ListAppender
  * 直挂 logger 断言 WARN 事件；PropertiesAuthDelegate lastEndpointWarnAt 首败节流为同款范式）。
  * <b>全部改动 = 补 WARN 留痕 / 补错误码，返回值与控制流契约零变更</b>；TDD 先红后绿。
  *

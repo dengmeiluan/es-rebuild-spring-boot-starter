@@ -15,7 +15,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * R94 Task 16 复审 C1/I-2：{@link EsIndexRebuildService#dateForms} 的<b>CI 侧</b>判据。
+ *   复审 C1/I-2：{@link EsIndexRebuildService#dateForms} 的<b>CI 侧</b>判据。
  *
  * <p><b>为什么必须有本类</b>：修订一那条硬门（采样口径不许用 {@code match_all}，因为它在
  * 「形态发生过变化」这一被测场景下系统性假阴性）此前<b>只被一个 main 方法演练程序覆盖</b>

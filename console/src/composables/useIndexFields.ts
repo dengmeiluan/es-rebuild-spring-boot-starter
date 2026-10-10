@@ -24,7 +24,7 @@ function walk(props: any, prefix: string, out: FieldItem[]) {
   });
 }
 
-/* 五百六十二批·用户实报：字段清单加载失败浮层裸怼千字级后端 ResponseException 原文——
+/* ·实报：字段清单加载失败浮层裸怼千字级后端 ResponseException 原文——
    压缩为人话短串：抽 status line 状态码+首个 ES reason；未命中形态退 160 字截断。
    单源在 composable（FieldPicker/补全七消费面白得），导出供行为锁直测。 */
 export function compactLoadErr(e: any): string {

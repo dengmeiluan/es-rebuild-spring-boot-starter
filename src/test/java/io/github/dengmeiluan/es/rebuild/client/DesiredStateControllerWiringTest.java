@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 而没有任何测试会察觉。</p>
  *
  * <p>这条链是 basic（client 模式）唯一让索引「可见」的路径：
- * {@code DesiredStateController} 是「R93 业务侧唯一的运维端点」，人从它复制配置到 宿主；
+ * {@code DesiredStateController} 是「 业务侧唯一的运维端点」，人从它复制配置到 宿主；
  * 而 宿主 有 0 个 {@code @Document} 实体、<b>无法自己推导</b>，只能用被复制过去的那份。
  * 推导 mapping 掉在这里，索引就会被按 ES 动态推断重建，代码声明的字段类型静默丢失。</p>
  */

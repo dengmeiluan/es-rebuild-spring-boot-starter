@@ -18,7 +18,7 @@
       <select v-else-if="schemaOpt(row.key)" class="inp gp-v" :value="String(row.val)" @change="setChild(row.key, ($event.target as HTMLSelectElement).value)">
         <option v-for="o in schemaOpt(row.key)" :key="o" :value="o">{{ o }}</option>
       </select>
-      <!-- 五百一十九批：字段键行渲染 FieldSelect（rank/分组/类型徽标/mark 全套，同 ClauseNode）；
+      <!-- 字段键行渲染 FieldSelect（rank/分组/类型徽标/mark 全套，同 ClauseNode）；
            fields 为空（无字段源）回落普通输入，零降级 -->
       <FieldSelect v-else-if="isFieldKey(row.key)" class="gp-fs"
                    :model-value="String(row.val)" :fields="fields" :types="types" :type-priority="typePriority"
@@ -51,12 +51,12 @@ const props = withDefaults(defineProps<{
   schema?: ParamMeta[];
   depth?: number;
   pathPrefix?: string;
-  /** 五百一十九批：字段键名单——命中的键渲染 FieldSelect；空/缺省 = 现状裸键值表（逐字节不变） */
+  /** 字段键名单——命中的键渲染 FieldSelect；空/缺省 = 现状裸键值表（逐字节不变） */
   fieldKeys?: string[];
-  /** 五百一十九批：FieldSelect 字段清单与类型表（由调用方传入；空 = 无字段源，字段键回落普通输入） */
+  /** FieldSelect 字段清单与类型表（由调用方传入；空 = 无字段源，字段键回落普通输入） */
   fields?: string[];
   types?: Record<string, string>;
-  /** 五百二十一批：字段键行 FieldSelect 的类型置顶——调用方按算子/聚合场景传入
+  /** 字段键行 FieldSelect 的类型置顶——调用方按算子/聚合场景传入
    *  （ClauseNode term/terms/prefix→keyword、range→date/数值族；排序行已有 typeFilter SORTABLE_TYPES 范式）。
    *  缺省空 = FieldSelect 归一 null 纯 rank 平铺，既有调用方零增量。 */
   typePriority?: string[];
@@ -80,7 +80,7 @@ const rows = computed((): Row[] => Object.entries(props.value as Record<string, 
 }));
 
 const schemaOpt = (k: string) => props.schema.find(s => s.key === k && s.kind === 'enum')?.options || null;
-/* 五百一十九批：键名命中字段键名单且确有字段源时才走 FieldSelect（缺字段源回落普通输入） */
+/* 键名命中字段键名单且确有字段源时才走 FieldSelect（缺字段源回落普通输入） */
 const isFieldKey = (k: string) => props.fieldKeys.includes(k) && props.fields.length > 0;
 /* 【W3b】字段键的数组值：子表逐项 FieldSelect——把数组序号当作字段键名单传给子实例 */
 const childFieldKeys = (row: Row): string[] =>
@@ -142,7 +142,7 @@ function toggle(k: string) {
 .gp-v { height: 28px; font-size: var(--fs-sm); padding: var(--sp-0) var(--sp-2); flex: 1 1 100px; min-width: 0; }
 .gp-v.warn { border-color: var(--warn); }
 .gp-sub { flex-basis: 100%; }
-/* 五百一十九批：字段键行内的 FieldSelect 对齐 .gp-v 的 flex 形态（吃满剩余宽度、高度同键值行） */
+/* 字段键行内的 FieldSelect 对齐 .gp-v 的 flex 形态（吃满剩余宽度、高度同键值行） */
 .gp-row :deep(.gp-fs) { flex: 1 1 100px; min-width: 0; }
 .gp-row :deep(.gp-fs .fs-inp) { height: 28px; }
 .gp-add { display: flex; gap: var(--sp-2); margin-top: var(--sp-1); margin-left: calc(var(--d, 0) * 10px); }

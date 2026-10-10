@@ -31,7 +31,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百五十一批：可观测四点收口（Observability547/550 范式：ListAppender 直挂 logger +
+ * 可观测四点收口（Observability547/550 范式：ListAppender 直挂 logger +
  * 契约反锁双形态）。<b>吞异常契约逐字节不动</b>（返回值/降级语义零改动，只加日志），TDD 先红后绿。
  *
  * <ol>
@@ -44,7 +44,7 @@ import static org.junit.Assert.assertTrue;
  *       文案补 endpoint（脱敏 {@code scheme://host:port}，可安全入日志）。</li>
  *   <li>{@link HostEsVersionProvider} currentClient 异常臂 {@code LOG.debug}→null：
  *       与同文件探测失败三臂 WARN 档位不一致（宿主 client 拿不到=持续性状态，debug 对运营
- *       不可见）——升 <b>60s 节流 WARN</b>（复用 550 批 {@code WARN_THROTTLE_MS}+AtomicLong
+ *       不可见）——升 <b>60s 节流 WARN</b>（复用  {@code WARN_THROTTLE_MS}+AtomicLong
  *       +CAS 范式；热路径硬前提：每个请求都可能摸到版本探测）。反锁：client 为 null
  *       （未绑定，预期态）与探测成功路径零 WARN。</li>
  *   <li>{@link DelegatingConsoleAuthorizer#authenticate} 委托鉴权异常降级 WARN 只带

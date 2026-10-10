@@ -19,7 +19,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * R93-67 阶段④演练：<b>走真实的 {@link EsRebuildLockStore} 类</b>在 6.7.2 上抢锁。
+ * -67 阶段④演练：<b>走真实的 {@link EsRebuildLockStore} 类</b>在 6.7.2 上抢锁。
  *
  * <p><b>为什么必须重跑</b>：阶段⑤ Step 8 的「8 进程恰好 1 个成功」是用 <b>curl 复刻 6.x 形态</b>
  * 得出的——脚本发的是 6.x 形态，而代码经 RHLC 发的是 typeless 形态，<b>两条线路不同</b>。
@@ -32,10 +32,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <pre>
  * mvn -o test-compile
  * mvn -o exec:java -Dexec.classpathScope=test \
- *     -Dexec.mainClass=io.github.dengmeiluan.es.rebuild.probe.R93LockContentionDrill
+ *     -Dexec.mainClass=io.github.dengmeiluan.es.rebuild.probe.LockContentionDrill
  * </pre>
  */
-public final class R93LockContentionDrill {
+public final class LockContentionDrill {
 
     private static final String ES_HOST = "10.64.10.74";
     private static final int ES_PORT = 9200;
@@ -51,7 +51,7 @@ public final class R93LockContentionDrill {
             HostEsVersionProvider hostVersion = new HostEsVersionProvider(() -> client);
             String version = hostVersion.currentVersion();
             EsVersionCaps.MappingTypeMode mode = hostVersion.mappingTypeMode();
-            System.out.println("=== R93-67 lock contention drill (real EsRebuildLockStore) ===");
+            System.out.println("=== lock contention drill (real EsRebuildLockStore) ===");
             System.out.println("host version probed : " + version);
             System.out.println("mappingTypeMode     : " + mode);
             if (!"6.7.2".equals(version) || mode != EsVersionCaps.MappingTypeMode.TYPED_6X) {
@@ -157,6 +157,6 @@ public final class R93LockContentionDrill {
                 client.getLowLevelClient().performRequest(new Request("GET", path)).getEntity());
     }
 
-    private R93LockContentionDrill() {
+    private LockContentionDrill() {
     }
 }

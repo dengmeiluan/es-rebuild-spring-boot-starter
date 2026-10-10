@@ -19,7 +19,7 @@
       <rect v-if="brush" :x="brushX0" :y="0" :width="brushWSel" :height="h" class="agg-brush" />
     </svg>
     <!-- 空态引导审计：说明成因（自动注入的日期/词条聚合都未产出桶）作为下一步提示
-         第十批收尾：裸 .empty（含内联 padding:12px）迁 EmptyState compact（图表窄容器） -->
+         裸 .empty（含内联 padding:12px）迁 EmptyState compact（图表窄容器） -->
     <EmptyState v-else compact :icon="BarChart3" text="无直方图数据"
       hint="需索引含可聚合字段（date 型走时间直方图，keyword/数值型走词条分布），或 DSL 自带 date_histogram 聚合" />
     <div v-if="hover" class="agg-tip mono">{{ hover.key_as_string || hover.key }} · {{ fmtNum(hover.doc_count) }}</div>
@@ -30,7 +30,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { BarChart3 } from 'lucide-vue-next';
 import { fmtNum } from '../utils/format';
-/* 第十批收尾：裸 .empty 迁 EmptyState compact */
+/* 裸 .empty 迁 EmptyState compact */
 import EmptyState from './EmptyState.vue';
 
 interface Bucket { key: number | string; key_as_string?: string; doc_count: number }
@@ -38,7 +38,7 @@ interface Bucket { key: number | string; key_as_string?: string; doc_count: numb
 const props = defineProps<{ buckets: Bucket[]; height?: number }>();
 const emit = defineEmits<{ (e: 'brush', from: Bucket, to: Bucket): void }>();
 
-/* 一百九十六批（G 组·渲染性能）：桶降采样——date_histogram 的 interval 细时桶数可达千/万，
+/* （G 组·渲染性能）：桶降采样——date_histogram 的 interval 细时桶数可达千/万，
    SVG 全量渲染拖慢 brush。超 MAX_BARS 按组等宽合并（doc_count 求和、key 取组首），
    组首 key 即原桶 key，brush from/to 语义不变（误差 ≤ 一组）。≤MAX_BARS 全量渲染。 */
 const MAX_BARS = 400;
@@ -120,7 +120,7 @@ onMounted(() => {
 });
 onBeforeUnmount(() => ro?.disconnect());
 
-/* 五百五十二批 0 宽兜底（用户实报直方图 svg 溢出/游离观感）：宿主以 v-show=false（节收起/
+/*  0 宽兜底（实报直方图 svg 溢出/游离观感）：宿主以 v-show=false（节收起/
    无桶）挂载本件时容器无盒模型，clientWidth 测到 0——旧实现把 0 直接落 w（svg 被压成 0 宽），
    翻转显形瞬间 RO 未回包则闪一帧旧 600 宽溢出。现 0 宽不落值：rAF 有界重测直至非 0 定宽
    （RO 缺席/不回包环境兜底），显形正常路径由 RO 回包（0→真宽）定宽。

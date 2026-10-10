@@ -1,11 +1,11 @@
-<!-- 五百四十五批·轨2：原始请求/响应快查弹窗（IndexHub/SqlConsole/Adhoc/Xmigrate 四页「原始 IO」钮共用）。
+<!-- ·轨2：原始请求/响应快查弹窗（IndexHub/SqlConsole/Adhoc/Xmigrate 四页「原始 IO」钮共用）。
      数据源=api.ts ioRecorder 记录环（宿主传 rec，本组件零请求）；请求/响应两分节 Monaco 只读——
      json/ndjson 语言档吃 es-dark/es-light 既有主题 token 规则（键/串值/数字/标点语义分档高亮免费获得，
      ndjson 多根不挂 JSON LS 无误报红线）；每分节复制钮走 format.copyText 三层管线（全站唯一复制出口）；
      无记录空态 EmptyState 统一件。扁平化立法：弹窗内不套卡，Monaco 直贴，分节 border-top 承接；
      Monaco 定高 min(38vh,360px) 不随内容增长（弹窗内定高先例=doc 弹窗 min(60vh,Npx) 同口径降档），
      超小屏整体滚动由 .rim 兜底。壳=ModalShell 共享件（ConfirmModal 同源），Esc/遮罩关闭语义随壳。
-     六百八十一批：头部补字号三档 seg（rim.font 独立落盘——本弹层四页共用不挂页面键；
+     头部补字号三档 seg（rim.font 独立落盘——本弹层四页共用不挂页面键；
      dq/dt/ih 同源 EDITOR_FONT_TIERS 单源；请求/响应两 Monaco 同键 :font-size 接线）。 -->
 <template>
   <ModalShell :show="show" label="原始 IO" width="960px" @close="close">
@@ -14,7 +14,7 @@
         <span class="rim-method">{{ rec.method }}</span>
         <span class="rim-url mono" :title="rec.url">{{ rec.url }}</span>
         <span class="rim-status" :class="statusCls" :title="statusText">{{ statusText }}</span>
-        <!-- 六百八十一批：字号三档 seg（rim.font 落盘；跨页独立弹层不挂页面键，
+        <!-- 字号三档 seg（rim.font 落盘；跨页独立弹层不挂页面键，
              dq/dt/ih 同源 EDITOR_FONT_TIERS 单源；请求/响应两 Monaco 同键同档） -->
         <span class="seg rim-font-seg" role="group" aria-label="编辑器字号档">
           <button v-for="f in EDITOR_FONT_TIERS" :key="f" type="button" :class="{ on: rimFont === f }"
@@ -69,7 +69,7 @@ const props = defineProps<{ show: boolean; rec: RawIoRec | null }>();
 const emit = defineEmits<{ (e: 'update:show', v: boolean): void }>();
 const store = useAppStore();
 
-/* 六百八十一批：字号三档落盘（rim.font，缺省=EDITOR_FONT_TIERS 首档=MonacoEditor 组件
+/* 字号三档落盘（rim.font，缺省=EDITOR_FONT_TIERS 首档=MonacoEditor 组件
    既有默认零漂移）——RawIoModal 跨四页共用，属独立弹层面，不挂任何页面键（dq/dt/ih 同形） */
 const rimFont = usePref<number>('rim.font', EDITOR_FONT_TIERS[0]);
 
@@ -132,7 +132,7 @@ async function copyCurl() {
 <style scoped>
 /* 扁平化立法：弹窗内不套卡——头部行 + 两分节 border-top 承接，Monaco 直贴。
    token 化（间距/字号/圆角全走 --sp、--fs、--r 系列档位）；rim 整体滚动只作超小屏兜底，Monaco 自身定高不增长 */
-/* 五百六十二批：编辑器外框退役（立法③）——monaco-host 是 MonacoEditor 根、携本组件
+/* 编辑器外框退役（立法③）——monaco-host 是 MonacoEditor 根、携本组件
    scope id，本弹窗仅请求/响应两处直挂 Monaco，scoped 裸类规则直接命中（MappingView
    弹窗判例）；rim-sec-hd/border-top 自承分界 */
 .monaco-host { border: none; border-radius: 0; }
@@ -152,7 +152,7 @@ async function copyCurl() {
 .rim-meta { font-size: var(--fs-xs); font-weight: 400; color: var(--tx2); }
 .rim-trunc { font-size: var(--fs-2xs); line-height: 1; padding: var(--sp-1) var(--sp-2); border-radius: 999px; color: var(--warn); background: var(--warn-line); }
 .rim-acts { display: flex; gap: var(--sp-1h); margin-left: auto; }
-/* 六百八十一批：字号 seg 尺寸锚（dt/dq-font-seg 同形——.seg 全局基类+本弹窗档钮压尺寸） */
+/* 字号 seg 尺寸锚（dt/dq-font-seg 同形——.seg 全局基类+本弹窗档钮压尺寸） */
 .rim-font-seg { flex-shrink: 0; }
 .rim-font-seg button { padding: 0 var(--sp-1h); font-size: var(--fs-xs); line-height: 1.8; }
 </style>

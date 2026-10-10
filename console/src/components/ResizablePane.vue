@@ -21,7 +21,7 @@
       </button>
     </header>
     <div v-show="!collapsed" class="rp-content"><slot /></div>
-    <!-- 五百三十八批：被分栏独占隐藏的 pane（handleMaxLabel 在场即互覆盖参与者）保留柄——
+    <!-- 被分栏独占隐藏的 pane（handleMaxLabel 在场即互覆盖参与者）保留柄——
          0 宽 pane+11px 柄=右缘细条，柄上档位钮激活态常显=唯一还原入口（否则独占后无法切回）。
          手动折叠（title 轨场景）无 handleMaxLabel，柄照旧隐藏。 -->
     <SplitHandle
@@ -57,7 +57,7 @@ const props = withDefaults(defineProps<{
   collapsible?: boolean;
   focusable?: boolean;
   last?: boolean;
-  /* 五百三十八批：分栏档位循环钮（互覆盖）透传 SplitHandle */
+  /* 分栏档位循环钮（互覆盖）透传 SplitHandle */
   handleMaxLabel?: string;
   handleMaxActive?: boolean;
 }>(), {
@@ -79,8 +79,8 @@ const emit = defineEmits<{
 }>();
 
 const paneStyle = computed(() => {
-  /* 五百零三批：折叠塌缩——此前 collapsed 只清 min-width，paneStyle 的 width 原值仍在，
-     折叠后留下一个「空壳面板+竖排标题轨+孤立折叠钮」（用户实报「按钮分布在线上」）；
+  /* 折叠塌缩——此前 collapsed 只清 min-width，paneStyle 的 width 原值仍在，
+     折叠后留下一个「空壳面板+竖排标题轨+孤立折叠钮」（实报「按钮分布在线上」）；
      现塌缩到标题轨宽（vertical 34px / horizontal 34px），旁边 pane 由 fill/flex 自动补位。 */
   if (props.collapsed) {
     return props.axis === 'vertical'
@@ -116,7 +116,7 @@ const paneStyle = computed(() => {
   font-weight: 600;
   border-bottom: 1px solid var(--line);
 }
-/* 554 批：axis-vertical 竖排标题轨死码退役（R125 v2 刻意竖排设计随 519/538 批全部 pane spec
+/* axis-vertical 竖排标题轨死码退役（ v2 刻意竖排设计随 519/全部 pane spec
    title:'' 消费清零而失活；layoutOcclusionGuard501/flattenWave534⑤ 字面锁随迁翻负）。
    边界记档：只退役「竖排轨」——横排 title 头分支与 .rp-title/.rp-toggle 基础档保留
    （horizontal 轴 dormant 路径 + WorkbenchPaneSpec title 契约未来消费，非本范式射程；

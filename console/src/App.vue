@@ -18,19 +18,19 @@
                 <AlertTriangle :size="13" />
                 <span>此功能恒定作用于<b>宿主集群</b>，与当前所选目标「{{ store.targetName }}」无关</span>
               </div>
-              <!-- R39.2：纯管理平台形态未选目标：引导横幅（数据面请求已在 store 层短路，不会报错刷屏） -->
+              <!-- .2：纯管理平台形态未选目标：引导横幅（数据面请求已在 store 层短路，不会报错刷屏） -->
               <div v-else-if="!store.hostVisible && !store.isRemote" class="cluster-banner info">
                 <AlertTriangle :size="13" />
                 <span>尚未选择集群连接，请在顶栏切换器中选择或添加目标集群</span>
               </div>
               <div class="page scroll-y" :class="{ 'page-wide': pageWide }">
                 <!-- 页面在后台（document.hidden）时 rAF 被冻结，out-in 过渡会永久卡在旧视图——后台时直接无过渡切换 -->
-                <!-- R40：key 带上数据面目标，切集群即整页重挂载，所有视图 onMounted 按新目标重拉，杀死旧集群残留数据 -->
+                <!-- key 带上数据面目标，切集群即整页重挂载，所有视图 onMounted 按新目标重拉，杀死旧集群残留数据 -->
                 <!-- KeepAlive 白名单：重状态页（查询工作台/数据浏览器等）侧栏切页不再清空现场——
                      「切 tab 就清空」顽疾的根因即路由级无保活；名单外页面维持原样即换即重挂。
                      被保活页的深链预填必须同时提供 onActivated 消费（见 QueryHubView） -->
                 <router-view v-slot="{ Component }">
-                  <!-- R124: 移除 route 级 transition(fade out-in)。Vue 3.5 的 Transition+KeepAlive
+                  <!-- 移除 route 级 transition(fade out-in)。Vue 3.5 的 Transition+KeepAlive
                        组合在「白名单外组件卸载」的切换序列下过渡状态机死锁：旧视图已卸载、新视图
                        永不挂载，页面整页空白（真机 7789 复现：索引工作区→概览→切回，稳定复现；
                        duration 硬超时不解——卡点不在 transitionend 等待而在 hooks 时序）。
@@ -44,7 +44,7 @@
             </div>
           </div>
           <CmdPalette v-model:show="paletteOpen" />
-          <!-- R42 §8.1：全局确认服务唯一宿主，视图侧 await askConfirm() 即可，原生 confirm() 全站禁用 -->
+          <!--  §8.1：全局确认服务唯一宿主，视图侧 await askConfirm() 即可，原生 confirm() 全站禁用 -->
           <ConfirmModal
             :show="confirmState.show" :title="confirmState.title" :message="confirmState.message"
             :level="confirmState.level" :guard-text="confirmState.guardText" :ok-text="confirmState.okText"
@@ -53,7 +53,7 @@
           <WelcomeWizard ref="wizardRef" />
           <LoginOverlay />
           <SetupWizard />
-          <!-- R92-D3：分组快捷键速查面板（? 开关）。R93-13：goto 登记表已迁至 utils/hotkeys.ts，
+          <!-- -D3：分组快捷键速查面板（? 开关）。-13：goto 登记表已迁至 utils/hotkeys.ts，
                面板由该表渲染，不再是需要手工同步的第二份数据 -->
           <HotkeyPanel :show="helpOpen" @close="helpOpen = false" />
         </n-dialog-provider>
@@ -96,7 +96,7 @@ const KEEP_ALIVE_VIEWS = [
   'DevToolsView',    // 开发者工具
   'WorkspaceView',   // 工作台
   'PitScrollView',   // PIT 分页（长任务现场）
-  'IndexHubView',    // R124: 索引工作区（列表筛选/滚动/tab 现场，重挂即丢）
+  'IndexHubView',    // 索引工作区（列表筛选/滚动/tab 现场，重挂即丢）
 ];
 import { setHostToken, getHostToken, setAuthSettled } from './api';
 
@@ -111,35 +111,35 @@ const topBarRef = ref<any>(null);
 const helpOpen = ref(false);
 const wizardRef = ref<any>(null);
 
-/* R26：监听事件总线，open-wizard 时开启欢迎面板 */
+/* 监听事件总线，open-wizard 时开启欢迎面板 */
 watch(() => store.eventBus, (ev) => {
   if (ev?.name === 'open-wizard') wizardRef.value?.open?.();
-  /* 一百一十一批：命令面板「键盘速查」命令——鼠标用户直达速查面板（? 键之外的可发现入口） */
+  /* 命令面板「键盘速查」命令——鼠标用户直达速查面板（? 键之外的可发现入口） */
   if (ev?.name === 'open-hotkeys') helpOpen.value = true;
-  /* 一百一十三批：命令面板关闭后焦点归还触发钮（键盘用户 Esc 后不悬空） */
+  /* 命令面板关闭后焦点归还触发钮（键盘用户 Esc 后不悬空） */
   if (ev?.name === 'palette-closed') topBarRef.value?.focusPaletteBtn?.();
 });
 
-/* R77：采样器在「已登录 + 集群可达」后全局启动，不再要求先进过大屏——
+/* 采样器在「已登录 + 集群可达」后全局启动，不再要求先进过大屏——
    顶栏告警徽标与趋势窗口从进站即开始累积；非大屏页自动降到背景频率（见 stores/liveMonitor）。
    条件缺一不启动：未登录会 401 刷屏，未选目标数据面请求本就被短路。 */
 watch(() => store.clusterOk === true && !auth.showLogin, (ready) => {
   if (ready) mon.start();
 }, { immediate: true });
 
-/* R78：作业跟踪器同样全局常驻——长耗时重建/迁移跑完不再要求守着页面，
+/* 作业跟踪器同样全局常驻——长耗时重建/迁移跑完不再要求守着页面，
    顶栏随时可见进度、终态自动弹通知。作业端点恒在宿主控制面，只要登录成功就能跟，
    不等 clusterOk（数据面目标不可达时作业照样在跑，这时候更需要看得见）。 */
 watch(() => !auth.showLogin && auth.probed, (ready) => {
   if (ready) jt.start();
 }, { immediate: true });
 
-/* R36：宿主专属视图集合——这些页面的后端端点不在 /cluster/** 数据面，切了远程目标也不生效
-   R41 缺陷 A 修复：/config-validator 移出——validate Dry-run 已纳入数据面跟随目标，
+/* 宿主专属视图集合——这些页面的后端端点不在 /cluster/** 数据面，切了远程目标也不生效
+    缺陷 A 修复：/config-validator 移出——validate Dry-run 已纳入数据面跟随目标，
    且该页「导入现有索引」「建索引」本就走 /cluster/**，横幅宣称恒定宿主是错误且危险的
    target-aware adhoc：/adhoc-rebuild 移出——prepare/start 已是数据面入口，重建作用于当前选中集群 */
 /* xmigrate 摘出（2026-08-22）：页面自带源集群选择器（srcConnId），「恒定作用于宿主、与所选目标无关」的横幅对它是误导——迁移写宿主的语义由页内源/目标展示自说明 */
-/* 一百八十九批：/security、/system 移出——纯宿主管理页（账号/审计/系统索引）的数据
+/* /security、/system 移出——纯宿主管理页（账号/审计/系统索引）的数据
    天然与数据面目标无关，横幅=每进一次页面就被「警告」一次的噪音；宿主语义改由
    页面副标题自述（信息保留、噪音消除）。
    /config-drift 保留：目标选「生产」时用户会以为在比对生产配置，实际在宿主——
@@ -148,7 +148,7 @@ const HOST_ONLY = new Set(['/config-drift', '/system']);
 const hostOnlyRoute = computed(() => HOST_ONLY.has(route.path));
 
 /* 超宽屏（≥1920）数据密集页豁免居中——路由 meta.wide 由 router.ts WIDE_ROUTES 逐条枚举
-   （查询工作台/索引工作区/重建迁移/开发者工具/表格观测页）。用户实报 2000px 视口下
+   （查询工作台/索引工作区/重建迁移/开发者工具/表格观测页）。实报 2000px 视口下
    查询工作台被压成 ~40% 居中窄列，结果区被顶出视口，豁免后吃满可用宽。 */
 const pageWide = computed(() => route.meta.wide === true);
 
@@ -188,7 +188,7 @@ let rbTimer: any = null;
 router.beforeEach(() => { routeLoading.value = true; clearTimeout(rbTimer); return true; });
 router.afterEach(() => { rbTimer = setTimeout(() => (routeLoading.value = false), 260); });
 
-/* R61：工作现场恢复——进站前先读存量（afterEach 会覆盖），裸进站时 toast 提供一键回 */
+/* 工作现场恢复——进站前先读存量（afterEach 会覆盖），裸进站时 toast 提供一键回 */
 const entryHash = location.hash;
 const lastRoute = readLastRoute();
 router.afterEach((to) => { saveLastRoute(to.fullPath); });
@@ -207,7 +207,7 @@ const darkOverrides: GlobalThemeOverrides = {
     fontSize: NAIVE_FONT_SIZE,
     fontFamily: '"Inter Variable", "Inter", -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
     fontFamilyMono: '"JetBrains Mono Variable", "JetBrains Mono", Consolas, monospace',
-    /* R130: 与 theme.css 青调中性阶逐项同步（此前是蓝灰旧值，弹层与页面底色色温不一致） */
+    /* 与 theme.css 青调中性阶逐项同步（此前是蓝灰旧值，弹层与页面底色色温不一致） */
     bodyColor: '#0c1213',
     cardColor: '#111819',
     modalColor: '#131a1b',
@@ -235,7 +235,7 @@ const darkOverrides: GlobalThemeOverrides = {
 const NotifyConsumer = defineComponent({
   setup() {
     const notification = useNotification();
-    /* 三百七十八批：toast 屏幕阅读器播报通道——naive-ui notification 源码零 aria/role，
+    /* toast 屏幕阅读器播报通道——naive-ui notification 源码零 aria/role，
        视觉 toast 对读屏用户完全静默；error 走 assertive 即时打断，其余 polite。 */
     const ariaPolite = ref('');
     const ariaAssertive = ref('');
@@ -249,7 +249,7 @@ const NotifyConsumer = defineComponent({
           content: item.msg,
           duration: item.duration ?? (item.kind === 'error' ? 6000 : 3000),
         };
-        /* 二百四十六批：动作数组渲染（toast-acts 多按钮）——错误 toast 可同时给
+        /* 动作数组渲染（toast-acts 多按钮）——错误 toast 可同时给
            「查看诊断」跳转与「复制原始」取全文；旧单 action 字段保持兼容 */
         const acts = item.actions?.length ? item.actions : item.action ? [item.action] : [];
         if (acts.length) {
@@ -263,7 +263,7 @@ const NotifyConsumer = defineComponent({
       },
       { immediate: true }
     );
-    /* 三百七十八批：不能用 display:none（aria-live 对隐藏元素静默），走 sr-only 视觉隐藏 */
+    /* 不能用 display:none（aria-live 对隐藏元素静默），走 sr-only 视觉隐藏 */
     return () => h('div', { class: 'sr-only' }, [
       h('div', { role: 'status', 'aria-live': 'polite' }, ariaPolite.value),
       h('div', { role: 'alert', 'aria-live': 'assertive' }, ariaAssertive.value),
@@ -272,7 +272,7 @@ const NotifyConsumer = defineComponent({
 });
 
 /* 全局快捷键：1-0 切页、g+字母 开零式 goto（输入框内不触发）。
-   R93-13：GOTO_MAP 迁到 utils/hotkeys.ts，与速查面板共用同一份数据 */
+   -13：GOTO_MAP 迁到 utils/hotkeys.ts，与速查面板共用同一份数据 */
 let gWaitUntil = 0;
 
 /* v3.0.0：click 触发浮层 Esc 统一关闭层（全站唯一挂点，防逐页打补丁复发）。
@@ -323,7 +323,7 @@ function onKey(e: KeyboardEvent) {
     paletteOpen.value = !paletteOpen.value;
     return;
   }
-  /* 二百三十八批：Mod+B 切换侧栏（dbx Toggle sidebar 对位——完全隐藏/恢复，
+  /* Mod+B 切换侧栏（dbx Toggle sidebar 对位——完全隐藏/恢复，
      查询与索引控制台全屏体验；输入态也可用，无文本副作用） */
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'b') {
     e.preventDefault();
@@ -348,8 +348,8 @@ function onKey(e: KeyboardEvent) {
 /* 2.5.0 页面级授权复核（响应式）：probe 完成前守卫按「未启用」放行，身份到达后复核当前路由（迟到白名单补救）。
    watch grantedPages 天然收敛全部身份到达路径——首次 probe、onHostMessage 宿主凭证后重探、login() 成功后重探，
    后两条无需额外挂接。不加 immediate：me 从 null 起步，probe 完成自然触发；null→null 不触发（未启用语义不变）。
-   五百一十五批：复核按当前目标连接收缩；conns.length 并入 watch 源——连接目录晚于身份到达时
-   纯连接模型用户（host 无静态页）也要能自动落到首个授权连接，否则开屏即 403+空侧栏（用户实报「进不去」）。 */
+   复核按当前目标连接收缩；conns.length 并入 watch 源——连接目录晚于身份到达时
+   纯连接模型用户（host 无静态页）也要能自动落到首个授权连接，否则开屏即 403+空侧栏（实报「进不去」）。 */
 function autoPickConnTarget(gp: readonly string[] | null) {
   if (!gp) return;
   const connIds = new Set<string>();
@@ -371,7 +371,7 @@ watch([() => auth.grantedPages, () => store.conns.length], ([gp]) => {
   if (r) router.replace(r);
 });
 
-/* ==================== 五百五十七批：授权就绪门（连接模型开屏竞态根治） ====================
+/* ==================== ：授权就绪门（连接模型开屏竞态根治） ====================
    门注册在 setup 同步期（早于任何子视图挂载发请求）：iframe 形态下身份（grantedPages）、
    连接目录（conns）、目标钉选（autoPickConnTarget）三步未就绪时，非豁免内部请求在 api 层
    等待——此前的开屏并行（probe 与 loadIndices 同发）让连接模型用户的首屏请求全部裸奔，
@@ -428,7 +428,7 @@ onMounted(() => {
   });
   mo.observe(document.body, { childList: true, subtree: true });
   (window as any).__esSortableMo = mo;
-  // R37：iframe 嵌入宿主页面时的 postMessage 握手 ——
+  // iframe 嵌入宿主页面时的 postMessage 握手 ——
   // 子页就绪即发 es-console-ready，宿主回 es-console-host-token 下发宿主凭证（内存态），
   // 收到后重探身份：委托鉴权认出即免内置登录。独立开页（非 iframe）零开销。
   if (window.parent !== window) {
@@ -440,7 +440,7 @@ onMounted(() => {
   } else {
     bootstrapIdentity();
   }
-  // R61：裸进站且存在未过期现场 → 提供「继续上次」（深链进站是明确意图，不打扰）
+  // 裸进站且存在未过期现场 → 提供「继续上次」（深链进站是明确意图，不打扰）
   const rst = restorable(entryHash, lastRoute);
   if (rst) {
     store.notify('info', '上次工作现场：' + rst.name, {

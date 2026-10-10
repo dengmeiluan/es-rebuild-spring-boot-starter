@@ -1,4 +1,4 @@
-/* 五百六十三批（531 遗留件②收口）：值分布等宽 8 桶纯函数单源——
+/* （531 遗留件②收口）：值分布等宽 8 桶纯函数单源——
    原 useColStats 私有 distOf 逐字平移本院（独占域 utils），列详情弹窗（stats.dist 经
    useColStats 委托）与聚合行 dist mini-bar（useAggRow aggDist → TableAggFoot）同源复用。
    口径（colDetailDist561 行为锁保真，逐字不动）：

@@ -10,7 +10,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百五十五批：审计记录唯一类型（事件即记录）双端形状锁——
+ * 审计记录唯一类型（事件即记录）双端形状锁——
  * ES 档 buildDoc 落档文档维度全集 / toEvents 反解回填，null 维度静默省略。
  */
 public class ConsoleOpsAuditDocShapeTest {

@@ -1,4 +1,4 @@
-/* 六百三十八批（P1a-1）：实时走势卡「几何 + 点位」纯函数单源下沉。
+/* （P1a-1）：实时走势卡「几何 + 点位」纯函数单源下沉。
  * 原 `LiveDashboardView.vue` 本地 `const LD_H/SPARK_H/CMP_W/CMP_H/PCT_GRID` + 三个点位函数
  * `sparklinePoints / sparklinePointsPct / sparkArea`（五卡 + 对比卡 + 迷你 spark 复用），
  * 抽成独立 util——为 P1a-2（`LiveChartCard` 组件单源化）与 §2.1（曲线平滑，新增 `smoothPoints`）打地基。
@@ -7,11 +7,11 @@
  * ⚠几何纪律（判例 629-C1）：CSS 高度字面（`.ld-svg height:88px` 等）与这些常量**必须同值**，
  *   由 `chartGeometry629.spec.ts` 反锁「CSS 字面 == 常量值」——改此处必红，改前先想清影响面。 */
 
-/** 主卡图高（622 §2.7 比例规范表；64→88 系 629 批升档：88px 才「看出走势形状」） */
+/** 主卡图高（622 §2.7 比例规范表；64→88 系 升档：88px 才「看出走势形状」） */
 export const LD_H = 88;
-/** 主卡窄档渲染高（六百四十九批 G'1，台账 R80）：≤900px 单列满宽下 88px 纵横比过扁
- *  （R77 重盘 G'1 候选），随档位微升至 110（<120=CMP_H 对比卡，视觉主图层级不倒挂）。
- *  ⚠这是**渲染档位**而非数据坐标系：viewBox/悬浮命中仍走 LD_H（R71 放大态同范式，
+/** 主卡窄档渲染高（ G'1，台账 ）：≤900px 单列满宽下 88px 纵横比过扁
+ *  （ 重盘 G'1 候选），随档位微升至 110（<120=CMP_H 对比卡，视觉主图层级不倒挂）。
+ *  ⚠这是**渲染档位**而非数据坐标系：viewBox/悬浮命中仍走 LD_H（ 放大态同范式，
  *  preserveAspectRatio=none 拉伸 + 悬浮层全百分比定位，任意渲染高几何自洽）；
  *  CSS 窄档字面须与本常量同值，由 chartNarrowTier649.spec 反锁漂移。 */
 export const LD_H_NARROW = 110;
@@ -24,7 +24,7 @@ export const CMP_H = 120;
 export const PCT_GRID = [25, 50, 75];
 
 /** 绝对值语义折线点串：max(...data,1) 地板缩放（零值不除零）。空数据返回空串。
- *  八百零二批件1：可选 scaleMax——多折线同坐标系时传全局 max（Top 索引曲线网格/刻度
+ *  件1：可选 scaleMax——多折线同坐标系时传全局 max（Top 索引曲线网格/刻度
  *  底座才有意义；缺省维持各序列自身 max 归一=对比卡既有语义零破坏）。 */
 export function sparklinePoints(data: number[], W: number, H: number, scaleMax?: number): string {
   if (!data.length) return '';
@@ -47,7 +47,7 @@ function sparkArea(data: number[], W: number, H: number, mode: 'pct' | 'abs' = '
   return `0,${H} ${line} ${W},${H}`;
 }
 
-/* ── 六百八十一批（622 §9-D4）：Catmull-Rom 曲线平滑（t=0.5 张力，立方贝塞尔近似） ──
+/* ── （622 §9-D4）：Catmull-Rom 曲线平滑（t=0.5 张力，立方贝塞尔近似） ──
  * 消费面=LiveChartCard 主卡折线+渐变面积（path.ld-line / path.ld-area）；对比卡/迷你
  * spark/HistoryChart 保持 polyline（591/615 逐字锁面 + 小尺寸无收益）。投影与折线
  * 同公式同精度（toFixed(1)），控制点逐轴钳位 [0,W]×[0,H]——曲线永不出图体（稿 D4 风险兜底）。 */

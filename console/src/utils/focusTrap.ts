@@ -1,4 +1,4 @@
-/* R71：弹窗焦点陷阱——Tab/Shift+Tab 循环锁在弹窗容器内，
+/* 弹窗焦点陷阱——Tab/Shift+Tab 循环锁在弹窗容器内，
    键盘用户不会 Tab 到遮罩背后的页面元素（自建 dialog 的 a11y 基线，
    ConfirmModal / GuardedActionButton / CmdPalette 共用）。 */
 

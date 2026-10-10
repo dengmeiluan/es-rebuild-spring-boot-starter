@@ -2,7 +2,7 @@
    额外产出 field→type 映射（原实现只在 type==='date' 时记 date，其余类型丢弃），
    供查询构建器按类型给出算子候选与值控件。纯函数，可穷举单测。
 
-   行为等价约束（回归网 R41§1 三态与 R90 pickHistField 都依赖它）：
+   行为等价约束（回归网 §1 三态与  pickHistField 都依赖它）：
    - fields 顺序 = 父先子后的深度优先，调用方仍做 [...new Set()].sort()
    - dates 顺序 = 遍历顺序，调用方只做 [...new Set()] 不排序（pickHistField 认首个）
    - 只递归 v.properties，不下钻 multi-fields 的 v.fields */

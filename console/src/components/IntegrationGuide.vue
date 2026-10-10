@@ -17,7 +17,7 @@
 import { computed } from 'vue';
 import { NDrawer, NDrawerContent } from 'naive-ui';
 import { GUIDE_SECTIONS, mavenCoordinate } from '../data/integrationGuide';
-import { escapeHtml } from '../utils/highlightSanitize'; /* 五百六十批：三连转义收编单源（DiagView 同批收编，语义逐字不变） */
+import { escapeHtml } from '../utils/highlightSanitize'; /* ：三连转义收编单源（DiagView 同批收编，语义逐字不变） */
 
 defineProps<{ show: boolean }>();
 const emit = defineEmits<{ (e: 'update:show', v: boolean): void }>();
@@ -29,7 +29,7 @@ const coordinate = computed(() => mavenCoordinate());
    先整段转义（& < >），再对已转义文本按序包受控 span。两档：
    ① XML 标签（&lt;tag&gt; / 带属性 / 自闭合）→ --info；② 点分 config key（行首 es.rebuild.*:）→ --ac-hi。
    内联 style 直用 token：双主题自适应，v-html 内容拿不到 scoped 属性。
-   五百六十批：三连转义收编 utils/highlightSanitize escapeHtml 导出单源 */
+   三连转义收编 utils/highlightSanitize escapeHtml 导出单源 */
 function tintGuide(src: string): string {
   const esc = escapeHtml(src);
   return esc

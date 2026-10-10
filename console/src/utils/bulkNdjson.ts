@@ -1,4 +1,4 @@
-/* 二百三十四批 P2-7：待提交批量变更 → bulk NDJSON（Beekeeper「Copy To SQL」的 ES 对位）。
+/*  P2-7：待提交批量变更 → bulk NDJSON（Beekeeper「Copy To SQL」的 ES 对位）。
    编辑链的 pending 更改一键导出为 bulk API 请求体——审计/复现/在别处重放三合一。
    格式：动作行 + 文档行成对，符合 ES _bulk 规范（ndjson，末尾换行）。
    ⚠ 文档行只含变更字段（部分更新语义，与 api.updatePartial 同口径），不是全量 _source。 */
@@ -15,7 +15,7 @@ export function buildBulkNdjson(index: string, changes: BulkChange[]): string {
   return lines.join('\n') + '\n';
 }
 
-/* 四百四十三批：NDJSON 配对即时校验抽为纯函数（427 内联 computed 不可单测）——
+/* NDJSON 配对即时校验抽为纯函数（427 内联 computed 不可单测）——
    bulk 执行最高频失败源（配对错/非法 JSON 行）执行前拦截。
    动作行（index/create/update/delete 开头的单行 JSON）与文档行配对：
    index/create/update 需要一行文档，delete 自带不需要；非动作行均视为文档行。 */

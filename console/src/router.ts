@@ -7,11 +7,11 @@ import pagesContract from '../../src/main/resources/META-INF/es-console-pages.js
 /* 侧边栏分组与导航项（2.5.0 起）从页面契约 es-console-pages.json 派生——
    契约是 Java 拦截器 / 本前端 / 宿主菜单注册器三端的唯一事实源，禁止回到手工维护（防漂移）。
    组序 = 契约 sort 升序；NavItem.key = 契约 hotkey（vim 跳转与 ⌘K 沿用）。
-   R48 IA 分组语义、R64 查询入口收敛等历史决策已固化进契约文件。 */
+    IA 分组语义、 查询入口收敛等历史决策已固化进契约文件。 */
 export const NAV_GROUPS: readonly { id: string; name: string }[] =
   [...pagesContract.groups].sort((a, b) => a.sort - b.sort).map(g => ({ id: g.id, name: g.name }));
 
-/* R42 §8.4：导航项类型——minVer 为功能要求的最低 ES 版本（major.minor），
+/*  §8.4：导航项类型——minVer 为功能要求的最低 ES 版本（major.minor），
    当前集群版本低于它时侧边栏入口显示「需 x.x+」降级徽标（预警不禁止，不允许点进去才 400）。
    2.5.0 增 pageKey：页面级授权（菜单 SPI）的判定单元，与契约 pages[].key 一一对应。 */
 interface NavItem {
@@ -24,7 +24,7 @@ export const NAV_ITEMS: readonly NavItem[] = pagesContract.pages.map(p => ({
   pageKey: p.key, minVer: p.minVer ?? undefined,
 }));
 
-/* 五百一十五批:连接模型键解析(与后端 EnvPagesResolver.connPagesOf/effectivePages 同构):
+/* 连接模型键解析(与后端 EnvPagesResolver.connPagesOf/effectivePages 同构):
    grantedPages 键 = conn:{connId}:{pageKey} / conn:{connId}:w:{pageKey}(写键页面同可见,写门另判)
    + 静态 key(全局页,对所有目标生效)。targetId 空=宿主(host 下仅静态键可见——连接键不跨连接)。
    返回 null 仅当 grantedPages 未启用(null),语义与三态一致。 */
@@ -81,7 +81,7 @@ export function pageDeniedRedirect(
    查询工作台群 / 索引工作区群 / 重建迁移群 / 开发者工具群 / 各表格观测页全覆盖；
    纯阅读（/favorites 收藏列表、/templates-gallery 模板画廊）与向导/错误页
    （/forbidden、404）保持居中不进本集合。
-   豁免记档（525 批裁决）：/browser、/diag、/search 三页页头由工具条/模式切换器承担，
+   豁免记档（裁决）：/browser、/diag、/search 三页页头由工具条/模式切换器承担，
    不补 PageHeader。 */
 const WIDE_ROUTES: ReadonlySet<string> = new Set([
   /* 概览/索引工作区群 */
@@ -110,7 +110,7 @@ export const router = createRouter({
     { path: '/', redirect: '/overview' },
     { path: '/overview', component: () => import('./views/OverviewView.vue') },
     { path: '/indices', component: () => import('./views/IndexHubView.vue') },
-    /* R64：查询工作台（六模式一页）+ 旧查询路由零死链重定向（收藏/⌘K/goto/分享链接全保参数） */
+    /* 查询工作台（六模式一页）+ 旧查询路由零死链重定向（收藏/⌘K/goto/分享链接全保参数） */
     { path: '/search', component: () => import('./views/QueryHubView.vue') },
     ...Object.keys(LEGACY_QUERY_PATHS).map(p => ({
       path: p,
@@ -136,18 +136,18 @@ export const router = createRouter({
     { path: '/health-report', component: () => import('./views/HealthReportView.vue') },
     { path: '/templates-gallery', component: () => import('./views/TemplateGalleryView.vue') },
     { path: '/optimizer', component: () => import('./views/IndexOptimizerView.vue') },
-    /* R27 */
+    /*  */
     { path: '/slm', component: () => import('./views/SlmView.vue') },
     { path: '/watcher', component: () => import('./views/WatcherView.vue') },
     { path: '/remote-clusters', component: () => import('./views/RemoteClustersView.vue') },
     { path: '/favorites', component: () => import('./views/FavoritesView.vue') },
     { path: '/reindex-advanced', component: () => import('./views/ReindexAdvancedView.vue') },
-    /* R28 */
+    /*  */
     { path: '/workspace', component: () => import('./views/WorkspaceView.vue') },
     { path: '/bulk', component: () => import('./views/BulkEditorView.vue') },
     { path: '/update-by-query', component: () => import('./views/UpdateByQueryView.vue') },
     { path: '/doc-diff', component: () => import('./views/DiffEditorView.vue') },
-    /* R29 */
+    /*  */
     { path: '/devtools', component: () => import('./views/DevToolsView.vue') },
     /* 合并：旧 /cluster-map（圆环拓扑）并入 /topology，保留重定向防旧深链/收藏 404 */
     { path: '/cluster-map', redirect: '/topology' },
@@ -155,7 +155,7 @@ export const router = createRouter({
     { path: '/live', component: () => import('./views/LiveDashboardView.vue') },
     { path: '/painless-lab', component: () => import('./views/PainlessLabView.vue') },
     { path: '/lifecycle', component: () => import('./views/LifecycleView.vue') },
-    /* R31 */
+    /*  */
     { path: '/mapping-designer', component: () => import('./views/MappingDesignerView.vue') },
     { path: '/analyzer-lab', component: () => import('./views/AnalyzerLabView.vue') },
     { path: '/synonyms', component: () => import('./views/SynonymsManagerView.vue') },
@@ -166,17 +166,17 @@ export const router = createRouter({
     { path: '/boost-tuner', component: () => import('./views/BoostTunerView.vue') },
     { path: '/match-matrix', component: () => import('./views/MatchMatrixView.vue') },
     { path: '/query-xray', component: () => import('./views/QueryXrayView.vue') },
-    /* R33 */
+    /*  */
     { path: '/search-templates', component: () => import('./views/SearchTemplatesView.vue') },
-    /* R34 */
+    /*  */
     { path: '/security', component: () => import('./views/SecurityView.vue') },
     { path: '/adhoc-rebuild', component: () => import('./views/AdhocRebuildView.vue') },
-    /* R35 */
+    /*  */
     { path: '/config-validator', component: () => import('./views/ConfigValidatorView.vue') },
     { path: '/config-drift', component: () => import('./views/ConfigDriftView.vue') },
     /* 2.5.0：页面级授权拒绝落地页（不进 NAV_ITEMS——守卫对非页面路由不拦，全拒用户可达） */
     { path: '/forbidden', component: () => import('./views/ForbiddenView.vue') },
-    /* R42：未匹配路由兜底——静默空白是产品事故，给 404 页 + 相近路由猜测 */
+    /* 未匹配路由兜底——静默空白是产品事故，给 404 页 + 相近路由猜测 */
     { path: '/:pathMatch(.*)*', component: () => import('./views/NotFoundView.vue') },
   ].map(r => (WIDE_ROUTES.has(r.path) ? { ...r, meta: { wide: true } } : r)),
 });
@@ -195,7 +195,7 @@ router.onError((err, to) => {
 
 /* 2.5.0 页面级授权守卫：probe 完成前 grantedPages=null（未启用语义）首屏不拦，
    身份到达后由 App.vue watch grantedPages 复核当前路由兜底纠正（跳转构造收敛在 pageDeniedRedirect）。
-   五百一十五批：判定按当前目标连接收缩（conn:{id}:{page} 键只对目标连接生效）。 */
+   判定按当前目标连接收缩（conn:{id}:{page} 键只对目标连接生效）。 */
 router.beforeEach((to) => {
   return pageDeniedRedirect(useAuthStore().grantedPages, to.path, useAppStore().target) ?? true;
 });

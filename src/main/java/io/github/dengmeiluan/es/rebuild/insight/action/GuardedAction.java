@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.util.Map;
 
 /**
- * R39 护栏动作协议：所有"会改变集群状态"的控制台动作统一走
+ *  护栏动作协议：所有"会改变集群状态"的控制台动作统一走
  * estimate（影响预估 + 发 confirmToken）→ 可选 dry-run → execute（验 token）→ 回执审计。
  *
  * <p>API 层强制"未看预估不能执行"：execute 必须携带 estimate 阶段签发的

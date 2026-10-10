@@ -6,7 +6,7 @@
  * 告诉他换账号或找管理员；非权限类错误原样透传（version_conflict 等排障明细不受扰动）。
  * 各写视图角色档不同（bulk/ubq=REBUILD_OP、reindex=OPERATOR），文案保持角色无关。
  *
- * <p>五百五十六批：防双拼——api.ts 对 403+CONN_FORBIDDEN 已替换为自带完整出路的友好文案
+ * <p>：防双拼——api.ts 对 403+CONN_FORBIDDEN 已替换为自带完整出路的友好文案
  * （「…请联系管理员调整连接的最低角色…」），仅凭 {@code status===403} 判断会再叠一层
  * 「角色不足」建议成双重指引噪音。故消息里已含「联系管理员」出路（或已拼过本建议）时
  * 不再追加；raw ES security_exception 等无出路的 403 仍照常补。</p>

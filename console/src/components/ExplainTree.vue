@@ -22,7 +22,7 @@ import { ref, computed } from 'vue';
 import { ChevronRight } from 'lucide-vue-next';
 
 /**
- * R32：BM25 explanation 递归树。
+ * BM25 explanation 递归树。
  * node 形如 { value, description, details: [...] }（ES explain 原始结构）。
  * total 为根节点分值，用于计算每个节点的贡献百分比。
  */
@@ -79,7 +79,7 @@ function fmtVal(v: any) {
 .xt-caret { flex: none; transition: transform .12s; opacity: .55; }
 .xt-caret.open { transform: rotate(90deg); }
 .xt-caret-ph { width: 10px; flex: none; }
-/* 第十批收尾：删死 fallback（.xt-val/.xt-pct/.xt-desc 共 3 处 mono 同族清理，--mono 已在 theme.css 定义） */
+/* 删死 fallback（.xt-val/.xt-pct/.xt-desc 共 3 处 mono 同族清理，--mono 已在 theme.css 定义） */
 .xt-val { flex: none; min-width: 62px; text-align: right; font-family: var(--mono); font-weight: 600; }
 .xt-bar-wrap { flex: none; width: 90px; height: 6px; border-radius: 3px; background: var(--bg2); overflow: hidden; }
 .xt-bar { display: block; height: 100%; border-radius: 3px; background: var(--dv-slate); }
@@ -92,7 +92,7 @@ function fmtVal(v: any) {
 .xt-kids { border-left: 1px dashed var(--line-strong); margin-left: calc(11px + var(--xt-depth) * 14px); }
 
 /* 因子配色：weight 蓝 · idf 紫 · tf 青 · boost 橙 · norm 绿 · combine 灰 */
-/* 第十批：四枚举 -soft 并入 var()——原 var(--x)-soft 非法、整条声明被解析器丢弃，徽标实际无底色 */
+/* 四枚举 -soft 并入 var()——原 var(--x)-soft 非法、整条声明被解析器丢弃，徽标实际无底色 */
 .xk-weight.xt-bar, .xt-bar.xk-weight { background: var(--dv-blue); }
 .xt-kind.xk-weight { color: var(--dv-blue); background: var(--dv-blue-soft); }
 .xk-idf.xt-bar, .xt-bar.xk-idf { background: var(--dv-violet); }
@@ -106,7 +106,7 @@ function fmtVal(v: any) {
 .xk-combine.xt-bar, .xt-bar.xk-combine { background: var(--tx2); }
 .xt-kind.xk-combine { color: var(--tx2); }
 .xk-script.xt-bar, .xt-bar.xk-script { background: var(--dv-pink); }
-.xt-kind.xk-script { color: var(--dv-pink); background: var(--dv-pink-soft); } /* 第十批：同上 -soft 修复 */
+.xt-kind.xk-script { color: var(--dv-pink); background: var(--dv-pink-soft); } /* ：同上 -soft 修复 */
 .xk-const.xt-bar, .xt-bar.xk-const { background: var(--dv-slate); }
 .xt-kind.xk-const { color: var(--dv-slate); }
 </style>

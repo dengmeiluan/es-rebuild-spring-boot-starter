@@ -6,7 +6,7 @@
 
 /* 常见 ES 错误 → 人话（命中子串即翻译，保留原因短句） */
 const KNOWN: Array<{ match: string; friendly: string }> = [
-  /* R85：网络层错误——浏览器原生文案（Failed to fetch 等）对用户零信息量，
+  /* 网络层错误——浏览器原生文案（Failed to fetch 等）对用户零信息量，
      实测服务重启/连接池阻塞时整面刷这个，必须给出原因方向与行动指引 */
   { match: 'Failed to fetch', friendly: '网络请求失败——服务不可达或正在重启，稍后点「刷新」重试；持续失败请检查服务状态与网络' },
   { match: 'NetworkError when attempting', friendly: '网络请求失败——服务不可达或正在重启，稍后点「刷新」重试；持续失败请检查服务状态与网络' },
@@ -14,7 +14,7 @@ const KNOWN: Array<{ match: string; friendly: string }> = [
   { match: 'unable to find any unassigned shards to explain', friendly: '当前没有未分配的分片——集群分片分配健康，无需诊断' },
   { match: 'index_not_found_exception', friendly: '索引不存在（index_not_found）' },
   { match: 'resource_already_exists_exception', friendly: '资源已存在（同名索引/别名冲突）' },
-  /* 五百二十七批：三场景扩容。位置立法：必须列在 search_phase_execution_exception /
+  /* 三场景扩容。位置立法：必须列在 search_phase_execution_exception /
      parsing_exception 这类**包装型**异常之前——真实报错原文里包装 type
      （SearchPhaseExecutionException、mapper_parsing_exception…）与叶子原因
      （closed / PIT 过期 / No handler for type）常同串共存，indexOf 顺序先命中者赢，
@@ -23,11 +23,11 @@ const KNOWN: Array<{ match: string; friendly: string }> = [
   { match: 'index_closed_exception', friendly: '索引已关闭——先在索引设置中开启该索引，或改查其他索引' },
   { match: 'search_context_missing_exception', friendly: 'PIT 已过期——请重新创建 PIT 后再翻页（PIT 有存活期限制）' },
   { match: 'No handler for type', friendly: 'mapping 字段类型不识别——检查字段 type 拼写（如 text/keyword/long/date）' },
-  /* 五百五十八批：高频错误码四条扩容。位置立法同 527 批：叶子原因必须列在包装型
+  /* 高频错误码四条扩容。位置立法同 ：叶子原因必须列在包装型
      （search_phase_execution_exception / parsing_exception）之前——真实报错原文里包装
      type 与叶子原因常同串共存，indexOf 顺序先命中者赢。
      ⚠ mapper_parsing_exception / document_parsing_exception 两码不在本表：与泛
-     'parsing_exception' 子串互斥（进表必把裸异常串的泛翻译顶掉——jobTracker R79 把
+     'parsing_exception' 子串互斥（进表必把裸异常串的泛翻译顶掉——jobTracker  把
      裸串 'mapper_parsing_exception: …' → 'DSL 解析失败' 钉死），改走 friendlyEsError
      顶部的结构化 "type":"…" 检查（explainDocMissing 同款「结构化先于子串」位），见下。 */
   { match: 'query_shard_exception', friendly: '查询构建错误（分片执行失败）——常见于查询字段/排序/聚合与 mapping 不匹配' },
@@ -43,18 +43,18 @@ const KNOWN: Array<{ match: string; friendly: string }> = [
   { match: 'snapshot_missing_exception', friendly: '快照不存在' },
   { match: 'repository_missing_exception', friendly: '快照仓库不存在' },
   { match: 'security_exception', friendly: '权限不足（ES 账号无该操作权限）' },
-  /* 五百五十六批：HTTP 状态兜底映射（401/403/404/409/502）——api.ts 对空 body 错误兜底
+  /* HTTP 状态兜底映射（401/403/404/409/502）——api.ts 对空 body 错误兜底
      `HTTP ${status}` 裸串、网关/代理层也可能原样回 502 文本，此前全部落「原样限长」分支
      零指引。立法列 KNOWN 尾部：ES error.type 叶子同串共存时先命中先赢（位置立法同 527
      批头注）。ES 透传原文的 status line 形如 `HTTP/1.1 404`（带斜杠）不命中 `HTTP 404`，
-     叶子翻译路径零扰动；R102 _explain 结构化判据更在其前，零交集。 */
+     叶子翻译路径零扰动； _explain 结构化判据更在其前，零交集。 */
   { match: 'HTTP 401', friendly: '登录凭证已失效或未登录——请重新登录后再试（通常顶栏已弹出登录框）' },
   { match: 'HTTP 403', friendly: '权限不足——当前账号无权执行该操作，请联系管理员开通权限或切换更高角色账号' },
   { match: 'HTTP 404', friendly: '请求的资源不存在——目标索引/端点可能已被删除或路径有误，请确认后重试' },
   { match: 'HTTP 409', friendly: '请求冲突——资源状态已变化（重复创建/锁占用/状态过期），请刷新后重试' },
   { match: 'HTTP 502', friendly: '上游 ES 集群不可达——控制台后端收到网关错误，请检查目标集群地址/网络连通性后重试' },
-  /* 五百五十八批：HTTP 兜底补 400/500/503（556 批只收 401/403/404/409/502，400 最常见——
-     DSL 校验失败经网关透传时 body 为空只剩状态码）。立法同 556 批：列 KNOWN 尾部，
+  /* HTTP 兜底补 400/500/503（只收 401/403/404/409/502，400 最常见——
+     DSL 校验失败经网关透传时 body 为空只剩状态码）。立法同 ：列 KNOWN 尾部，
      ES error.type 叶子同串共存时先命中先赢；ES 透传原文的 status line 形如 `HTTP/1.1 400`
      （带斜杠）不命中裸串，叶子翻译路径零扰动。 */
   { match: 'HTTP 400', friendly: '请求被拒绝（400）——DSL 语法或参数校验未通过，请检查请求体后重试' },
@@ -113,12 +113,12 @@ export function friendlyEsError(raw: string, maxLen = 260): string {
      不先判就会掉到末尾把原始 ResponseException 全文摔出来。 */
   const docMissing = explainDocMissing(s);
   if (docMissing) return docMissing;
-  /* 五百五十八批：mapper_parsing_exception / document_parsing_exception 结构化映射——
+  /* mapper_parsing_exception / document_parsing_exception 结构化映射——
      两码含泛 'parsing_exception' 子串，进 KNOWN 子串表会把裸异常串的泛翻译（jobTracker
-     R79 锁：裸串 → 'DSL 解析失败'）顶掉，故按 error.type 的 JSON 形态在此先于 KNOWN
+      锁：裸串 → 'DSL 解析失败'）顶掉，故按 error.type 的 JSON 形态在此先于 KNOWN
      精确翻译（explainDocMissing 同款「结构化先于子串」位，527 叶子先于包装型立法同源）；
      裸异常串（后端透传 'xxx: reason' 形态）不匹配维持泛翻译零回归。
-     让位条款：body 内含更具体叶子 'No handler for type'（527 批「specific 压过
+     让位条款：body 内含更具体叶子 'No handler for type'（「specific 压过
      mapper_parsing 泛载体」立法，esError.spec 同名锁）时不接手，仍由 KNOWN 叶子赢。 */
   const leafType = /"type"\s*:\s*"(mapper_parsing_exception|document_parsing_exception)"/.exec(s)?.[1];
   if (leafType && !s.includes('No handler for type')) {
@@ -133,9 +133,9 @@ export function friendlyEsError(raw: string, maxLen = 260): string {
   for (const k of KNOWN) {
     const at = s.indexOf(k.match);
     if (at >= 0) {
-      /* R85：调用方的操作上下文前缀（如「inspect 失败: 」）不能被翻译吞掉——
+      /* 调用方的操作上下文前缀（如「inspect 失败: 」）不能被翻译吞掉——
          短前缀保留，用户才知道是哪个操作出的错；ES JSON 大块前缀被长度门槛挡掉。
-         重拼分隔符恒全角「：」（esError.spec R85 锁：'inspect 失败：' 全角形态钉死；
+         重拼分隔符恒全角「：」（esError.spec  锁：'inspect 失败：' 全角形态钉死；
          组装态消息里 'id: ' 类 ASCII 结构不受此影响——命中点在异常词中时前缀
          剥离到不了 id 的冒号，结构自然保留，commitFailReason 立法同源）。 */
       const prefix = s.slice(0, at).replace(/[\s:：-]+$/, '').trim();
@@ -158,7 +158,7 @@ export function isBenignEsError(raw: string): boolean {
   return String(raw ?? '').includes('unable to find any unassigned shards to explain');
 }
 
-/* 五百六十一批：后端结构化错误码 → 人话。存量 KNOWN 表按 message 子串猜语义，适合
+/* 后端结构化错误码 → 人话。存量 KNOWN 表按 message 子串猜语义，适合
    ES 原始报错体；但后端 advice/interceptor 已给出明确分流码（{code,message} 错误体），
    code 是后端立法语义，命中时优先级恒高于 message 子串猜测（message 可能是与 code
    语义无关的 ES 原始串）。未命中/无 code 降级 friendlyEsError（存量口径零改动）。 */

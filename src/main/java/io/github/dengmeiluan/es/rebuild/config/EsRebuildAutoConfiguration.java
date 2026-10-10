@@ -113,7 +113,7 @@ import java.util.Map;
  *
  * <p>显式 {@code @Bean} 装配 starter 全部组件（不用 {@code @ComponentScan}，边界清晰、可被条件精确控制）。
  * 接入方只需：① 引入本依赖；② 实现 {@link ManagedEsIndex} 并注册为 bean。
- * R93 阶段⑤起业务侧契约收窄为「声明受管索引」（只需 {@code entityClass()}），
+ *  阶段⑤起业务侧契约收窄为「声明受管索引」（只需 {@code entityClass()}），
  * 能力接口与 SPI 重建路径已整体退役。starter 切面会自动 cut {@code ElasticsearchOperations}
  * 写方法做写重试，业务无需任何注解。</p>
  *
@@ -130,7 +130,7 @@ import java.util.Map;
 public class EsRebuildAutoConfiguration {
 
     /**
-     * R96：宿主 ES 栈版本契约的启动期诊断。
+     * 宿主 ES 栈版本契约的启动期诊断。
      *
      * <p><b>两种模式都装、不加 mode 条件</b>：4 个签名断裂点里有两个落在
      * {@link io.github.dengmeiluan.es.rebuild.client.EntityFieldScanner}，那是 client 模式
@@ -150,7 +150,7 @@ public class EsRebuildAutoConfiguration {
     @ConditionalOnMissingBean
     public EntityIndexNames entityIndexNames(ObjectProvider<ElasticsearchOperations> hostOpsProvider,
                                              ApplicationContext applicationContext) {
-        // R38：索引名解析去宿主 ops 化——零 ES 依赖宿主的地基（有 ops 则行为与历史完全一致）
+        // 索引名解析去宿主 ops 化——零 ES 依赖宿主的地基（有 ops 则行为与历史完全一致）
         return new EntityIndexNames(hostOpsProvider, applicationContext);
     }
 
@@ -175,7 +175,7 @@ public class EsRebuildAutoConfiguration {
     }
 
     /**
-     * R93：client 模式挡掉控制台静态资源。条件用 havingValue="client" + matchIfMissing=true
+     * client 模式挡掉控制台静态资源。条件用 havingValue="client" + matchIfMissing=true
      * ——「不配 mode」与「配 client」都要装，与 ConsoleModeConfiguration 恰好互补。
      *
      * <p><b>此处不加 {@code @ConditionalOnMissingBean}，是遵循本类既有惯例而非孤例</b>：
@@ -198,7 +198,7 @@ public class EsRebuildAutoConfiguration {
     }
 
     /**
-     * R93：期望配置端点与自包含单页。<b>必须留在外层</b>（不进 {@code ConsoleModeConfiguration}）——
+     * 期望配置端点与自包含单页。<b>必须留在外层</b>（不进 {@code ConsoleModeConfiguration}）——
      * 它正是给 client 模式的业务应用用的，装到 console 块里会让业务侧根本没有这个页面，
      * 本波「业务侧只声明、靠人复制 payload 到 宿主」的接线就断了。
      *
@@ -212,12 +212,12 @@ public class EsRebuildAutoConfiguration {
     @ConditionalOnMissingBean
     public DesiredStateController desiredStateController(IndexMetaRegistry indexMetaRegistry,
                                                         EntityMappingDeriver entityMappingDeriver) {
-        // R100：payload 要带上「重建实际会用的」注解推导 mapping，宿主 无法自己推导
+        // payload 要带上「重建实际会用的」注解推导 mapping，宿主 无法自己推导
         return new DesiredStateController(indexMetaRegistry, entityMappingDeriver);
     }
 
     /**
-     * R93 Task 9.5（台账 #65）：启动期发现「写别名当前指向的物理索引被挡写」。
+     *  .5（台账 #65）：启动期发现「写别名当前指向的物理索引被挡写」。
      *
      * <p><b>两种模式都装</b>。判据是「本进程声明的索引，其写别名指向的物理索引是否被挡写」——
      * 这件事该不该告警，取决于<b>本进程是不是这些索引的写入方</b>，而不取决于它跑在哪个模式。
@@ -226,7 +226,7 @@ public class EsRebuildAutoConfiguration {
      * 同样会被挡写打中。装在外层意味着这条诊断不会因为将来某次「宿主 也声明一个索引」
      * 而<b>静默失效</b>；只装 client 模式则留下一个依赖未来改动才暴露的缺口。</p>
      *
-     * <p>宿主无 {@link RestHighLevelClient}（R38 零 ES 依赖宿主）时传 null，
+     * <p>宿主无 {@link RestHighLevelClient}（ 零 ES 依赖宿主）时传 null，
      * 扫描直接跳过并记一行 info——诊断功能绝不许变成启动阻塞点。</p>
      */
     @Bean
@@ -237,7 +237,7 @@ public class EsRebuildAutoConfiguration {
     }
 
     /**
-     * R93 #70（台账）：ES 写重试模板 —— <b>两种模式都装</b>。
+     *  #70（台账）：ES 写重试模板 —— <b>两种模式都装</b>。
      *
      * <p>它服务的是 {@link EsWriteRetryAspect}，而后者拦的是<b>业务应用自己</b>的 ES 写入。
      * 此前两者都在 {@code ConsoleModeConfiguration} 里，于是 client 模式（业务应用，默认模式）
@@ -251,14 +251,14 @@ public class EsRebuildAutoConfiguration {
     }
 
     /**
-     * R93 #70（台账）：ES 写重试切面 —— <b>两种模式都装</b>。
+     *  #70（台账）：ES 写重试切面 —— <b>两种模式都装</b>。
      *
      * <p>client 模式装它是本 Task 的目的；console 模式同样装，理由与
      * {@link #staleWriteBlockDetector} 一致：宿主 <b>一旦声明索引就同样是写入方</b>。
      * 装在外层意味着这层保护不会因为将来某次改动而静默失效。</p>
      *
      * <p><b>不再依赖 {@code RebuildAuditStore}</b>：原实现要求「重建窗口开着」才重试，
-     * 而业务侧既没有该 Bean、R93 之后也不该知道重建这件事。可否重试完全由
+     * 而业务侧既没有该 Bean、 之后也不该知道重建这件事。可否重试完全由
      * {@link EsWriteRetryTemplate} 的异常识别决定（cluster_block / 429 / 网络抖动可重试，
      * 其余立即抛出）。详见 {@link EsWriteRetryAspect} 类注释。</p>
      */
@@ -288,7 +288,7 @@ public class EsRebuildAutoConfiguration {
     }
 
     // ----------------------------------------------------------------------------------------------
-    // R93 装配分层：控制面（控制台 + 重建引擎 + 审计 + 迁移 + 鉴权）只在 console 模式装。
+    //  装配分层：控制面（控制台 + 重建引擎 + 审计 + 迁移 + 鉴权）只在 console 模式装。
     // 一个 @ConditionalOnProperty 守整块，语义集中在此一处——后续新增 Bean 只要写在本类里
     // 就自动继承约束，不会出现「新增 Bean 忘记翻默认」的长期漏洞。
     // 既有细粒度开关（web-enabled / migrate.enabled / console.auth.enabled /
@@ -312,7 +312,7 @@ public class EsRebuildAutoConfiguration {
         }
 
         // ----------------------------------------------------------------------------------------------
-        // R37 控制集群自举：控制面（用户/连接档案/审计/作业/锁）从硬依赖宿主 spring ES 泛化为控制集群——
+        //  控制集群自举：控制面（用户/连接档案/审计/作业/锁）从硬依赖宿主 spring ES 泛化为控制集群——
         // 自举档案 > 探测 spring ES > NONE（前端首连向导）；存储件一律经 Supplier 懒解析。
         // ----------------------------------------------------------------------------------------------
 
@@ -338,7 +338,7 @@ public class EsRebuildAutoConfiguration {
                                                              EsRebuildProperties properties) {
             RemoteEsClientFactory factory = new RemoteEsClientFactory(
                     properties.getMigrate().getConnectTimeoutMs(), properties.getMigrate().getSocketTimeoutMs());
-            // R38：宿主 ES 改可选依赖（零 ES 依赖宿主传 null，resolver 内部已全链路 null 短路）
+            // 宿主 ES 改可选依赖（零 ES 依赖宿主传 null，resolver 内部已全链路 null 短路）
             ControlClusterResolver resolver = new ControlClusterResolver(
                     restHighLevelClientProvider.getIfAvailable(), elasticsearchOperationsProvider.getIfAvailable(),
                     bootstrapHomeStore, factory, controlIndexInitializer, properties.getConsole().getControlMode());
@@ -358,17 +358,17 @@ public class EsRebuildAutoConfiguration {
         @ConditionalOnMissingBean
         public EsIndexAdmin esIndexAdmin(ObjectProvider<RestHighLevelClient> restHighLevelClientProvider,
                                          EsClientRouter esClientRouter) {
-            // R38：宿主 client 可选（null 时数据面恒走 router，router 无目标头时兜底到控制集群）
+            // 宿主 client 可选（null 时数据面恒走 router，router 无目标头时兜底到控制集群）
             EsIndexAdmin admin = new EsIndexAdmin(restHighLevelClientProvider.getIfAvailable());
-            // R36：注入多集群路由——数据面（/cluster/**）跟随 X-Es-Target 目标，控制面恒定宿主
+            // 注入多集群路由——数据面（/cluster/**）跟随 X-Es-Target 目标，控制面恒定宿主
             admin.setClientRouter(esClientRouter);
             return admin;
         }
 
         // ----------------------------------------------------------------------------------------------
-        // R36 多集群：自定义连接串成为一等公民数据源——连接档案存宿主集群（密码不出服务端），
+        //  多集群：自定义连接串成为一等公民数据源——连接档案存宿主集群（密码不出服务端），
         // EsClientRouter 按 X-Es-Target 头把数据面操作路由到目标集群；控制面（鉴权/审计/作业/锁）永远宿主。
-        // R63 平台化：档案存储抽 SPI（ConnStore），默认控制集群 ES；es.rebuild.console.store=jdbc
+        //  平台化：档案存储抽 SPI（ConnStore），默认控制集群 ES；es.rebuild.console.store=jdbc
         // 切宿主数据库表；宿主自注册 ConnStore Bean 则完全接管（@ConditionalOnMissingBean 让位）。
         // ----------------------------------------------------------------------------------------------
 
@@ -389,7 +389,7 @@ public class EsRebuildAutoConfiguration {
         }
 
         /**
-         * R93-67 宿主集群版本探测器：宿主没有连接档案，版本只能主动探（{@code GET /} 的 version.number）。
+         * -67 宿主集群版本探测器：宿主没有连接档案，版本只能主动探（{@code GET /} 的 version.number）。
          * 探不到保持「未知」（null），<b>不回退成 7.x</b>——见 {@link HostEsVersionProvider} 的设计说明。
          */
         @Bean
@@ -407,7 +407,7 @@ public class EsRebuildAutoConfiguration {
             RemoteEsClientFactory factory = new RemoteEsClientFactory(
                     properties.getMigrate().getConnectTimeoutMs(), properties.getMigrate().getSocketTimeoutMs());
             EsClientRouter router = new EsClientRouter(controlClusterResolver::client, connStore, factory);
-            // R93-67：把宿主版本接进同一套版本感知机制——这一行让 createIndexLegacy6 等
+            // -67：把宿主版本接进同一套版本感知机制——这一行让 createIndexLegacy6 等
             // 6 个「已版本感知、只是拿不到版本」的分叉点对宿主同时可达
             router.setHostVersionProvider(hostEsVersionProvider);
             return router;
@@ -418,7 +418,7 @@ public class EsRebuildAutoConfiguration {
         @ConditionalOnProperty(prefix = "es.rebuild.console", name = "conn-probe-enabled", matchIfMissing = true)
         public ConnHealthProber connHealthProber(ConnStore connStore, EsClientRouter esClientRouter,
                                                  EsRebuildProperties properties) {
-            // R38 连接健康探针：周期并发 ping 全部已存档案，列表/顶栏状态点数据源
+            //  连接健康探针：周期并发 ping 全部已存档案，列表/顶栏状态点数据源
             ConnHealthProber prober = new ConnHealthProber(connStore, esClientRouter,
                     properties.getConsole().getConnProbeIntervalSeconds());
             prober.start();
@@ -470,7 +470,7 @@ public class EsRebuildAutoConfiguration {
             return new MonitorMetricsController(monitorMetricsStore);
         }
 
-        /** R12 审计下拉值建议(只读 terms agg):动作/集群真实出现值+计数,VIEWER 可用,失败回空建议。
+        /**  审计下拉值建议(只读 terms agg):动作/集群真实出现值+计数,VIEWER 可用,失败回空建议。
          *  store 内联构造(无独立 Bean)——部分装配测试上下文无需额外依赖链。 */
         @Bean
         @ConditionalOnMissingBean
@@ -529,7 +529,7 @@ public class EsRebuildAutoConfiguration {
         @ConditionalOnProperty(prefix = "es.rebuild", name = "web-enabled", matchIfMissing = true)
         public org.springframework.web.servlet.config.annotation.WebMvcConfigurer esTargetWebMvcConfigurer(
                 EsClientRouter esClientRouter, ConnStore connStore, EsRebuildProperties properties) {
-            // R38：拦截器需 principal 做 minRole 校验，order(20) 保证排在鉴权拦截器（order 10）之后
+            // 拦截器需 principal 做 minRole 校验，order(20) 保证排在鉴权拦截器（order 10）之后
             EsTargetInterceptor interceptor = new EsTargetInterceptor(esClientRouter, connStore,
                     properties.getConsole().isHostClusterVisible());
             return new org.springframework.web.servlet.config.annotation.WebMvcConfigurer() {
@@ -549,7 +549,7 @@ public class EsRebuildAutoConfiguration {
             // H 阶段：lock 索引名与 starter 命名族保持一致（<profile><app>_es_rebuild_lock）。
             // 接入方仍可用 es.rebuild.lock.index-name=... 显式覆盖整名。
             String configured = resolveLockIndexName(properties, environment);
-            // R93-67：锁不再直接拿 RHLC，改经 LockDocPort 窄端口（版本感知 + typeless API 不可达）
+            // -67：锁不再直接拿 RHLC，改经 LockDocPort 窄端口（版本感知 + typeless API 不可达）
             return new EsRebuildLockStore(
                     new io.github.dengmeiluan.es.rebuild.lock.VersionAwareLockDocPort(
                             controlClusterResolver::client, hostEsVersionProvider),
@@ -559,7 +559,7 @@ public class EsRebuildAutoConfiguration {
         /**
          * 解析 lock 索引名（<b>唯一</b>推导处，锁与控制台系统索引查询共用）。
          *
-         * <p>R93 阶段⑤：原实现从 {@code EsRebuildJobES} 的 {@code @Document} 解析出 job 索引名
+         * <p> 阶段⑤：原实现从 {@code EsRebuildJobES} 的 {@code @Document} 解析出 job 索引名
          * 再把尾段 job→lock 替换。job 实体已随 SPI 重建路径删除，故此处直接按<b>同一套默认规则</b>
          * 拼出 lock 名——默认路径下解析结果与删除前逐字相同，锁索引名不发生漂移。</p>
          */
@@ -587,7 +587,7 @@ public class EsRebuildAutoConfiguration {
                                                    EsRebuildProperties properties,
                                                    EntityMappingDeriver entityMappingDeriver) {
             // R1：把 nextPhysical/resolvePhysical/resolveMappingJson 等索引名相关逻辑收敛在此
-            // R100：mapping 解析的第②级「注解推导」由 entityMappingDeriver 提供
+            // mapping 解析的第②级「注解推导」由 entityMappingDeriver 提供
             return new IndexNameResolver(esIndexAdmin, properties, entityMappingDeriver);
         }
 
@@ -628,7 +628,7 @@ public class EsRebuildAutoConfiguration {
         @ConditionalOnMissingBean
         @ConditionalOnProperty(prefix = "es.rebuild", name = "web-enabled", matchIfMissing = true)
         public InternalEsErrorFallbackAdvice internalEsErrorFallbackAdvice() {
-            // R92-C2：starter 全部端点的 ES 异常兜底——把 ES 原始报错体（含 root_cause.reason）结构化透给前端，
+            // -C2：starter 全部端点的 ES 异常兜底——把 ES 原始报错体（含 root_cause.reason）结构化透给前端，
             // 不再落到宿主全局 advice 被拍平成「内部错误:traceId」
             return new InternalEsErrorFallbackAdvice();
         }
@@ -681,7 +681,7 @@ public class EsRebuildAutoConfiguration {
                                                                      EsRebuildProperties properties,
                                                                      org.springframework.core.env.Environment environment,
                                                                      HostEsVersionProvider hostEsVersionProvider) {
-            // R38：本地 client 统一经 ControlClusterResolver 懒供给（SPRING 模式≡宿主 client，零回归）
+            // 本地 client 统一经 ControlClusterResolver 懒供给（SPRING 模式≡宿主 client，零回归）
             // #69：目标集群大版本守卫需要宿主版本——探不到保持「未知」并拒绝起迁移，不假装 7.x
             return new CrossClusterMigrateService(controlClusterResolver::client, esIndexAdmin, remoteEsClientFactory,
                     migrateJobTracker, runningMigrations, indexMetaRegistry, properties, environment,
@@ -715,7 +715,7 @@ public class EsRebuildAutoConfiguration {
         }
 
         // ----------------------------------------------------------------------------------------------
-        // R34 Adhoc 托管重建：无 provider、作用于任意逻辑索引名的一次性运维重建（控制台向导驱动）。
+        //  Adhoc 托管重建：无 provider、作用于任意逻辑索引名的一次性运维重建（控制台向导驱动）。
         // ----------------------------------------------------------------------------------------------
 
         @Bean
@@ -727,10 +727,10 @@ public class EsRebuildAutoConfiguration {
                                                        AdhocJobStore adhocJobStore,
                                                        EsClientRouter esClientRouter,
                                                        ConnStore connStore) {
-            // R38：同 crossClusterMigrateService，经 resolver 懒供给
-            // R93：接入重建锁——adhoc 此前只有内存态 map，无跨实例互斥，
+            // 同 crossClusterMigrateService，经 resolver 懒供给
+            // 接入重建锁——adhoc 此前只有内存态 map，无跨实例互斥，
             // 两人同时对同一索引起重建会各建新物理索引、各翻别名。
-            // Task 6：接入作业持久化 store（6 参构造），重启后仍可在列表页看历史。
+            // 接入作业持久化 store（6 参构造），重启后仍可在列表页看历史。
             // target-aware adhoc：注入路由器与连接档案——start 捕获当前选中目标，
             // worker/abort 固定在 job 目标上执行，锁按 target+逻辑名隔离。
             return new AdhocRebuildService(esIndexAdmin, controlClusterResolver::client,
@@ -740,7 +740,7 @@ public class EsRebuildAutoConfiguration {
         }
 
         /**
-         * Task 6：作业持久化 store 三选一装配，复用审计同款 {@code es.rebuild.console.store} 开关
+         * 作业持久化 store 三选一装配，复用审计同款 {@code es.rebuild.console.store} 开关
          * （见 {@code consoleOpsAuditStore}），审计与作业元数据必须同宿。
          *
          * <p>{@code store=jdbc}：取宿主 DataSource，缺失则<b>响亮失败</b>（配置错误不静默降级，与审计一致）。
@@ -805,7 +805,7 @@ public class EsRebuildAutoConfiguration {
         }
 
         // ----------------------------------------------------------------------------------------------
-        // R35 索引配置质量门禁：L1 Lint + L2 Dry-run + L3 Advisor 三层校验内核，
+        //  索引配置质量门禁：L1 Lint + L2 Dry-run + L3 Advisor 三层校验内核，
         // 覆盖控制台交互校验、启动期 @Setting/@Mapping 门禁、配置漂移检测三个接入面。
         // ----------------------------------------------------------------------------------------------
 
@@ -824,7 +824,7 @@ public class EsRebuildAutoConfiguration {
                                                  EsIndexAdmin esIndexAdmin,
                                                  ControlClusterResolver controlClusterResolver,
                                                  ObjectProvider<IndexMetaRegistry> registryProvider) {
-            // R38：同 crossClusterMigrateService，经 resolver 懒供给
+            // 同 crossClusterMigrateService，经 resolver 懒供给
             return new ConfigLabService(indexConfigValidator, esIndexAdmin, controlClusterResolver::client, registryProvider);
         }
 
@@ -841,13 +841,13 @@ public class EsRebuildAutoConfiguration {
                                                                            ObjectProvider<IndexMetaRegistry> registryProvider,
                                                                            EsRebuildProperties properties,
                                                                            EntityMappingDeriver entityMappingDeriver) {
-            // R100：与重建同源校验 mapping（entityMappingDeriver 是外层无条件 Bean，此处可注入）
+            // 与重建同源校验 mapping（entityMappingDeriver 是外层无条件 Bean，此处可注入）
             return new ConfigValidationStartupRunner(indexConfigValidator, registryProvider, properties,
                     entityMappingDeriver);
         }
 
         // ----------------------------------------------------------------------------------------------
-        // R39 现场内嵌智能：护栏动作协议（estimate→dry-run→confirmToken→execute→回执 + 控制台操作审计）+
+        //  现场内嵌智能：护栏动作协议（estimate→dry-run→confirmToken→execute→回执 + 控制台操作审计）+
         // settings 变更分析器。新增动作只需注册 GuardedAction Bean，协议层零改动。
         // 「审计」的所指见 guardedActionExecutor(...) 的 javadoc —— 那里的 {@link} 才进编译器视野。
         // ----------------------------------------------------------------------------------------------
@@ -881,7 +881,7 @@ public class EsRebuildAutoConfiguration {
          * 护栏动作协议编排器：estimate → dry-run → confirmToken → execute → 回执 + 审计。
          *
          * <p><b>此处「审计」指控制台写操作流水 {@link ConsoleOpsAuditStore}（健在），
-         * 不是 R93 阶段⑤已删的重建窗口期记账 {@code audit/RebuildAuditStore}</b>——两者同名不同物。
+         * 不是  阶段⑤已删的重建窗口期记账 {@code audit/RebuildAuditStore}</b>——两者同名不同物。
          * 台账 #72 普查「描述已删事物的注释」时，本条几乎因这次撞名被误删；
          * 实测 {@link GuardedActionExecutor#execute} 六环俱在，故写死区分留给下一个人。</p>
          */
@@ -910,7 +910,7 @@ public class EsRebuildAutoConfiguration {
         }
 
         // ----------------------------------------------------------------------------------------------
-        // R34 控制台鉴权：默认开启（es.rebuild.console.auth.enabled=false 可关）。
+        //  控制台鉴权：默认开启（es.rebuild.console.auth.enabled=false 可关）。
         // 宿主注册自己的 EsConsoleAuthorizer bean 即可整体替换内置账号体系（JWT/SSO 融入）。
         // ----------------------------------------------------------------------------------------------
 
@@ -927,8 +927,8 @@ public class EsRebuildAutoConfiguration {
             // 不再逐条刷爆审计流（同 username|uri 十分钟窗一条+抑制计数带出）
             ConsoleOpsAuditStore raw = buildRawOpsAuditStore(controlClusterResolver, properties,
                     dataSourceProvider, environment.getProperty("spring.application.name", "default"));
-            // 五百五十五批：宿主注册 ConsoleAuditContributor Bean 则查询并入宿主审计流水。
-            // 20260922 用户裁决改默认关：宿主侧记录多为匿名登录族（trusted-login 时无会话切面，
+            // 宿主注册 ConsoleAuditContributor Bean 则查询并入宿主审计流水。
+            // 裁决改默认关：宿主侧记录多为匿名登录族（trusted-login 时无会话切面，
             // username 结构性 null），非本控制台请求进控制台审计视图不可读也不可追责——宿主确需
             // 并入时显式开 es.rebuild.console.auth.host-audit-merge=true（贡献者故障由合并层降级、
             // 绝不反噬控制台审计的红线不变）。
@@ -1077,7 +1077,7 @@ public class EsRebuildAutoConfiguration {
         @ConditionalOnMissingBean(ConsoleAuthDelegate.class)
         @ConditionalOnProperty(prefix = "es.rebuild.console.auth.delegate", name = "mode")
         public ConsoleAuthDelegate propertiesAuthDelegate(EsRebuildProperties properties) {
-            // R38 配置式宿主鉴权：零 Java 对接；宿主代码 SPI Bean 存在则本 Bean 让位（代码优先）
+            //  配置式宿主鉴权：零 Java 对接；宿主代码 SPI Bean 存在则本 Bean 让位（代码优先）
             return new PropertiesAuthDelegate(properties.getConsole().getAuth().getDelegate());
         }
 
@@ -1089,7 +1089,7 @@ public class EsRebuildAutoConfiguration {
                 ControlClusterResolver controlClusterResolver, ConnStore connStore,
                 ObjectProvider<ConsoleAuthDelegate> delegateProvider,
                 ConsolePageCatalog consolePageCatalog, EsRebuildProperties properties) {
-            // R37：宿主注册 ConsoleAuthDelegate 则组合之——委托先行（iframe 嵌入带宿主凭证）、内置兜底（独立开页登录）
+            // 宿主注册 ConsoleAuthDelegate 则组合之——委托先行（iframe 嵌入带宿主凭证）、内置兜底（独立开页登录）
             ConsoleAuthDelegate delegate = delegateProvider.getIfAvailable();
             EsConsoleAuthorizer effective = delegate == null ? esConsoleAuthorizer
                     : new DelegatingConsoleAuthorizer(delegate, esConsoleAuthorizer);

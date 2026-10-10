@@ -20,7 +20,7 @@ public class InternalEsMigrateExceptionAdvice {
 
     /** 入参非法。 */
     public static final String CODE_BAD_REQUEST = "BAD_REQUEST";
-    /** R38 引用已存连接但登录角色低于档案 minRole。 */
+    /**  引用已存连接但登录角色低于档案 minRole。 */
     public static final String CODE_CONN_FORBIDDEN = "CONN_FORBIDDEN";
     /** 连接旧集群失败。 */
     public static final String CODE_REMOTE_CONNECT_FAILED = "REMOTE_CONNECT_FAILED";

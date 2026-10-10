@@ -9,10 +9,10 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * R92-C1 / R93-67：{@link EsVersionCaps} 版本能力矩阵守门——版本感知的唯一判定入口，
+ * -C1 / -67：{@link EsVersionCaps} 版本能力矩阵守门——版本感知的唯一判定入口，
  * 判定翻转会让 6.x/8.x 目标集群的所有分叉路径（type 层、bulk、SQL endpoint）集体走错。
  *
- * <p><b>R93-67 改动说明（不是「改断言迁就实现」，而是原断言把缺陷写成了预期）</b>：
+ * <p><b>-67 改动说明（不是「改断言迁就实现」，而是原断言把缺陷写成了预期）</b>：
  * 本文件原有 {@code major_unknownFallsBackTo7} 与
  * {@code assertFalse("版本未知按 7.x：不得走 typed 路径", requiresMappingType(null))}，
  * 它们把「未知 == 7.x」<b>固化成了契约</b>。而这正是 #67 的根因——

@@ -59,7 +59,7 @@ public class AdhocTargetInterceptorTest {
                 case "getHeader": return targetHeader;
                 case "getAttribute": return attrs.get(args[0]);
                 case "setAttribute": attrs.put((String) args[0], args[1]); return null;
-                /* 二百三十九批 P2-4：env 封顶判定读请求方法（非 GET=写） */
+                /*  P2-4：env 封顶判定读请求方法（非 GET=写） */
                 case "getMethod": return "POST";
                 default: throw new UnsupportedOperationException(m.getName());
             }

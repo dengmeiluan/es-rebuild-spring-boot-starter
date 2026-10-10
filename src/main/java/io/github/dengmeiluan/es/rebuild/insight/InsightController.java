@@ -18,7 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * (内部) R39 现场智能 + 护栏动作端点。
+ * (内部)  现场智能 + 护栏动作端点。
  *
  * <p>挂 {@code internal/es/index/insight} 前缀——鉴权（ConsoleAuthInterceptor）、
  * 多集群目标头（EsTargetInterceptor 已扩 /insight）、CORS、context-path 全自动继承。
@@ -108,6 +108,6 @@ public class InsightController {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
-    /* R92-C2：ES 侧失败（索引不存在、连接异常等）不再本地处理——统一由 InternalEsErrorFallbackAdvice 兜底，
+    /* -C2：ES 侧失败（索引不存在、连接异常等）不再本地处理——统一由 InternalEsErrorFallbackAdvice 兜底，
        它同样回 {code:ES_ERROR, message:<含 root_cause 的原始报错体>}，但状态码按 ES 端 4xx 透传（原先一律拍成 502）。 */
 }

@@ -15,15 +15,15 @@
       </template>
     </PageHeader>
 
-    <!-- R42 §8.2：接口失败不再静默——页面级错误条，可重试。
-         五百六十批：手写红壳收编 err-bar 单源（558b 三面判例同语言：role=alert + theme.css
+    <!--  §8.2：接口失败不再静默——页面级错误条，可重试。
+         手写红壳收编 err-bar 单源（558b 三面判例同语言：role=alert + theme.css
          .err-bar 档；本地 bg/border/radius 私造三件套退役；err-bar word-break 承接全文不断链） -->
     <div v-if="loadErr" role="alert" class="err-bar rise-in">
       部分数据加载失败：{{ loadErr }}
       <button class="btn xs" :disabled="ovLoading" @click="load">重试</button>
     </div>
 
-    <!-- R25：集群实时预警条（red/yellow/pending/unassigned 任一命中则显示） -->
+    <!-- 集群实时预警条（red/yellow/pending/unassigned 任一命中则显示） -->
     <transition name="pop">
       <div v-if="alerts.length" class="ov-alerts" :class="'sev-' + alertSev">
         <AlertOctagon :size="14" class="ov-alerts-ic" />
@@ -45,7 +45,7 @@
       </div>
     </transition>
 
-    <!-- stuck 提醒。五百六十批：警示条收编 err-bar 基座（role=alert）——warn 语义档视图侧
+    <!-- stuck 提醒。：警示条收编 err-bar 基座（role=alert）——warn 语义档视图侧
          覆写换色（err 红→warn 黄 token），布局节奏对齐现行，本地只留 tone 换色 -->
     <transition name="pop">
       <div v-if="stuckJobs.length" role="alert" class="err-bar ov-stuck">
@@ -55,8 +55,8 @@
     </transition>
 
     <!-- 迷你分布式拓扑条 -->
-    <!-- 三百六十九批：下钻卡键盘可达（role/tabindex/Enter——纯 click 绑定对键盘用户不可达；焦点环走全局 :focus-visible） -->
-    <!-- 681 批 G17（R75 差距记档，本次解锁）：节点条横向溢出时右缘渐隐暗示可横滚——判定纯函数
+    <!-- 下钻卡键盘可达（role/tabindex/Enter——纯 click 绑定对键盘用户不可达；焦点环走全局 :focus-visible） -->
+    <!--  G17（ 差距记档，本次解锁）：节点条横向溢出时右缘渐隐暗示可横滚——判定纯函数
          evalTopoClip（spec 直采单源），topoClip 消费为真元素 v-if fade（勿 ::after，可测性优先）。
          fade 锚在 nodes-wrap：.ov-topo 直挂 right:0 会压住 .ov-topo-r KPI（G17 语义=暗示可滚，
          不是遮数据），故 .ov-topo 无需 position:relative、由 wrapper 承接（检查结论记档） -->
@@ -92,7 +92,7 @@
     </div>
 
     <div class="ov-grid">
-      <!-- 大小 Top10。五百五十四批：顶层 .card 壳退役（立法④）→ border-top 分节（SecurityView 同批同语言） -->
+      <!-- 大小 Top10。：顶层 .card 壳退役（立法④）→ border-top 分节（SecurityView 同批同语言） -->
       <div class="ov-cell">
         <div class="card-t"><HardDrive :size="13" /> 存储 Top 10</div>
         <div v-for="idx in topBySize" :key="idx.index" class="ov-bar-row" role="button" tabindex="0" :aria-label="'查看索引 ' + idx.index" @click="goIndex(idx.index)" @keydown.enter.prevent="goIndex(idx.index)" @keydown.space.prevent="goIndex(idx.index)">
@@ -100,7 +100,7 @@
           <div class="ov-bar-track">
             <div class="ov-bar-fill" :style="{ width: (idx._sizeN / topBySize[0]._sizeN * 100) + '%' }"></div>
           </div>
-          <!-- 五百三十一批：store.size 裸 ES 串 → semFormat bytes 单源（parseBytes 先归一字节数——
+          <!-- store.size 裸 ES 串 → semFormat bytes 单源（parseBytes 先归一字节数——
                semFormat 只吃数字；解析失败回落原串；title 保 raw 原值，右对齐 .ov-bar-val 既有
                数值列对齐口径不变） -->
           <span class="ov-bar-val mono" :title="idx['store.size']">{{ storeSizeText(idx['store.size']) }}</span>
@@ -108,7 +108,7 @@
         <EmptyState v-if="!topBySize.length" compact :icon="HardDrive" text="暂无索引" hint="按存储占用排序需集群内有索引" />
       </div>
 
-      <!-- 文档数 Top10。五百五十四批：同上款 .card 壳退役 → border-top 分节 -->
+      <!-- 文档数 Top10。：同上款 .card 壳退役 → border-top 分节 -->
       <div class="ov-cell">
         <div class="card-t"><FileText :size="13" /> 文档数 Top 10</div>
         <div v-for="idx in topByDocs" :key="idx.index" class="ov-bar-row" role="button" tabindex="0" :aria-label="'查看索引 ' + idx.index" @click="goIndex(idx.index)" @keydown.enter.prevent="goIndex(idx.index)" @keydown.space.prevent="goIndex(idx.index)">
@@ -121,17 +121,17 @@
         <EmptyState v-if="!topByDocs.length" compact :icon="FileText" text="暂无索引" hint="按文档数排序需集群内有索引" />
       </div>
 
-      <!-- 健康分布。五百五十四批：同上款 .card 壳退役 → border-top 分节。
-           六百三十四批 G12：原与「最近作业」同胞——627 批 R75 差距 G12 实锚「1600 档四列立法下
+      <!-- 健康分布。：同上款 .card 壳退役 → border-top 分节。
+            G12：原与「最近作业」同胞——  差距 G12 实锚「1600 档四列立法下
            3 胞令第 4 列整列空置」；拆胞后四列满编（两病同治=第 4 列空置 + 作业列被压 1/3 宽拥挤） -->
       <div class="ov-cell">
         <div class="card-t"><Activity :size="13" /> 健康分布</div>
         <div class="ov-health">
           <div v-for="h in healthDist" :key="h.name" class="ov-h-item" role="button" tabindex="0" :aria-label="'查看 ' + h.name + ' 索引清单'" @click="goHealth(h.name)" @keydown.enter.prevent="goHealth(h.name)" @keydown.space.prevent="goHealth(h.name)" :title="'查看 ' + h.name + ' 索引清单'">
-            <!-- 五百六十一批：健康分布色点换装 MetaStrip dot 形态单源（DiagView dgMeta 判例）——
+            <!-- 健康分布色点换装 MetaStrip dot 形态单源（DiagView dgMeta 判例）——
                  .ov-h-dot 私造圆点退役，8px 圆点形态归组件 .ms-dot 单源（色值 h.color 直传） -->
             <MetaStrip :items="[{ dot: h.color }]" />
-            <!-- 六百三十四批 G14：裸英文（green/yellow/red）→ CLUSTER_HEALTH_ZH 单源中文主显
+            <!--  G14：裸英文（green/yellow/red）→ CLUSTER_HEALTH_ZH 单源中文主显
                  （HealthReportView #cell-health 534 立法同源）；raw 枚举键仍在下钻与 title 内可检索 -->
             <span class="ov-h-name">{{ clusterHealthZh(h.name) || h.name }}</span>
             <span class="ov-h-n mono">{{ h.count }}</span>
@@ -142,19 +142,19 @@
         </div>
       </div>
 
-      <!-- 最近作业。六百三十四批 G12：独立成胞（原为健康分布胞内的分节）——1600 四列第 4 胞满编；
+      <!-- 最近作业。 G12：独立成胞（原为健康分布胞内的分节）——1600 四列第 4 胞满编；
            3 列区间（1101~1599）由 .ov-jobs 档整行横跨，避拆胞后孤悬次行左侧 -->
       <div class="ov-cell ov-jobs">
-        <!-- 五百二十七批 W-F 口径随迁：胞内分节档 .card-t.sm 升为胞头档 .card-t（与另三胞同语言） -->
+        <!--  W-F 口径随迁：胞内分节档 .card-t.sm 升为胞头档 .card-t（与另三胞同语言） -->
         <div class="card-t"><History :size="13" /> 最近作业</div>
         <div v-if="!loaded">
           <div v-for="i in 3" :key="i" class="sk" style="height:28px;margin-bottom:var(--sp-2);border-radius:var(--r-m)"></div>
         </div>
         <div v-else-if="recentJobs.length">
-          <!-- R87：key 禁用 jobId——19 位雪花 long 曾被 JSON.parse 截断成重复值，keyed diff 失效导致
+          <!-- key 禁用 jobId——19 位雪花 long 曾被 JSON.parse 截断成重复值，keyed diff 失效导致
                每轮 5s 轮询整块重挂 + rise 动画重放（布局抖动）；indexKey 每索引一条、天然唯一且稳定 -->
           <div v-for="(j, i) in recentJobs" :key="j.indexKey" class="ov-job rise" :style="{ animationDelay: i * 45 + 'ms' }" role="button" tabindex="0" aria-label="前往托管重建" @click="goJob(j)" @keydown.enter.prevent="goJob(j)" @keydown.space.prevent="goJob(j)" :title="j.indexKey">
-            <!-- 五百三十一批：状态徽标换装 StatusPill（中文主显 jobStatusZh + en 英文小字档组件化，
+            <!-- 状态徽标换装 StatusPill（中文主显 jobStatusZh + en 英文小字档组件化，
                  英文小字类随迁退役）。dot-pulse 呼吸点保留本地：StatusPill 无插槽不硬塞，
                  点以兄弟元素随行渲染（记档） -->
             <span class="ov-job-st">
@@ -162,8 +162,8 @@
               <StatusPill :tone="jobTone(j.status)" :label="jobStatusZh(j.status) || j.status || '-'" :en="jobStatusZh(j.status) ? j.status : undefined" />
             </span>
             <span class="ov-job-key mono">{{ j.indexKey }}</span>
-            <!-- 五百六十三批：手写「:title=fmtTime + relTime(…, now)」收编 TimeCell 统一件
-                 （R99 列内相对+悬浮绝对同构五处收编续账）；ov-job-time 锚类随迁，孤儿 import
+            <!-- 手写「:title=fmtTime + relTime(…, now)」收编 TimeCell 统一件
+                 （ 列内相对+悬浮绝对同构五处收编续账）；ov-job-time 锚类随迁，孤儿 import
                  （fmtTime/relTime/useNow/now）随迁退役，相对时间心跳归组件内 useNow 单例 -->
             <TimeCell class="ov-job-time" :ts="j.updateTime || j.createTime" />
           </div>
@@ -179,13 +179,13 @@
       <div class="card-t"><Activity :size="13" /> 集群监控历史
         <span class="ov-mh-sub">服务端定时快照 · 环形保留</span>
         <span style="flex:1"></span>
-        <!-- 七百批③ G15 复盘收口（627 批 Phase 0 最后一项活口）：运行时指标**入口**缺位补入口——
+        <!-- ③ G15 复盘收口（ Phase 0 最后一项活口）：运行时指标**入口**缺位补入口——
              两页分工立法定案：概览=历史回看+探活（/monitor-history），实时监控页=运行时指标（/live）；
              指标本体不搬防重复建设（G16「全站单源一致性」同族裁决） -->
         <button class="btn sm ghost" title="进入实时监控大屏：QPS / 写入 / Heap / CPU / 磁盘实时走势、节点对比、挂墙模式" @click="router.push('/live')"><Gauge :size="11" /> 实时监控</button>
         <label class="ov-mh-auto" title="自动刷新（60s）"><input v-model="mhAuto" type="checkbox" /> 自动</label>
         <span v-if="mhAuto && mhAutoAt" class="dim sm-txt" title="上次自动刷新时间">上次自动 {{ fmtTime(mhAutoAt) }}</span>
-        <!-- R19 导出：TSV/MD 复制走 QRT getCsvBlock 单源（表头自动继承列名，所见即所复） -->
+        <!--  导出：TSV/MD 复制走 QRT getCsvBlock 单源（表头自动继承列名，所见即所复） -->
         <button class="btn sm ghost" :disabled="!mhRows.length" title="复制当前筛选结果为 TSV（Excel/飞书直贴）" @click="copyMonitorTsv">TSV</button>
         <button class="btn sm ghost" :disabled="!mhRows.length" title="复制当前筛选结果为 Markdown（群聊/工单直贴）" @click="copyMonitorMd">MD</button>
         <button class="btn sm ghost" :disabled="mhLoading" @click="loadHistory"><RotateCw :size="11" :class="{ spinning: mhLoading }" /> 刷新</button>
@@ -212,7 +212,7 @@
         监控历史加载失败：{{ mhErr }}
         <button class="btn xs" :disabled="mhLoading" @click="loadHistory">重试</button>
       </div>
-      <!-- R18 健康摘要条：窗口内每集群采样数/RED 次数一眼可见（probeDigest 单源） -->
+      <!--  健康摘要条：窗口内每集群采样数/RED 次数一眼可见（probeDigest 单源） -->
       <div v-if="mhDigest.length" class="ov-mh-digest">
         <span v-for="d in mhDigest" :key="d.name" class="ov-mh-digest-i"
           :title="`${d.name}：采样 ${d.total} 条 · RED ${d.reds} 次 · 最慢 ${d.worstMs ?? '-'} ms`">
@@ -223,7 +223,7 @@
         </span>
       </div>
       <div v-if="mhLoading && !mhRows.length" class="sk" style="height:64px;border-radius:var(--r-m)"></div>
-      <!-- R19 导出：TSV/MD 复制走 QRT getCsvBlock 单源（表头自动继承列名，所见即所复） -->
+      <!--  导出：TSV/MD 复制走 QRT getCsvBlock 单源（表头自动继承列名，所见即所复） -->
       <QueryResultTable v-if="mhRows.length" ref="mhQrt" :cols="MH_COLS" :rows="mhMatrix" sortable
         storage-key="overview:monitor-history" export-name="overview-monitor-history"
         max-height="380px">
@@ -239,7 +239,7 @@
 </template>
 
 <script lang="ts">
-/* 681 批 G17：溢出判定纯函数单源（+1 容差——亚像素取整抖动不误报「可滚」判定）。
+/*  G17：溢出判定纯函数单源（+1 容差——亚像素取整抖动不误报「可滚」判定）。
    <script setup> 不能具名导出，按 SFC 双块惯例单列——spec 直采单源，不经组件实例
    （589 判例：happy-dom 布局宽度恒 0，纯函数 + 类绑定才可测） */
 export function evalTopoClip(sw: number, cw: number): boolean {
@@ -256,52 +256,52 @@ import { AlertTriangle, HardDrive, FileText, Activity, History, Network, AlertOc
 import PageHeader from '../components/PageHeader.vue';
 import EmptyState from '../components/EmptyState.vue';
 import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue';
-import StatusPill from '../components/StatusPill.vue'; /* 五百三十一批：状态徽标统一件 */
+import StatusPill from '../components/StatusPill.vue'; /* ：状态徽标统一件 */
 import { api } from '../api';
 import { probeDigest } from '../utils/monitorSeries';
 import { useAppStore } from '../stores/app';
 import { useLiveMonitorStore } from '../stores/liveMonitor';
 import SkeletonBox from '../components/SkeletonBox.vue';
-import TimeCell from '../components/TimeCell.vue'; /* 五百六十三批：作业时间列统一件收编 */
-/* 五百六十三批：fmtTime/relTime 随 ov-job-time 换装 TimeCell 退役（本页再无直接消费） */
+import TimeCell from '../components/TimeCell.vue'; /* ：作业时间列统一件收编 */
+/* fmtTime/relTime 随 ov-job-time 换装 TimeCell 退役（本页再无直接消费） */
 import { fmtTime, fmtNum, fmtNumCompact, statusColor, healthColor, splitSize, parseBytes, copyText } from '../utils/format';
 import { matrixText } from '../utils/copyMatrix';
-/* 五百三十一批：bytes 档位单源（Top10 存储值展示） */
+/* bytes 档位单源（Top10 存储值展示） */
 import { semFormat } from '../composables/useSemFormat';
-/* 五百二十八批：最近作业状态枚举中文接线；六百三十四批 G14：健康词汇（KPI/健康分布/
+/* 最近作业状态枚举中文接线； G14：健康词汇（KPI/健康分布/
    状态 pill/状态 option 四处）接 CLUSTER_HEALTH_ZH 单源，裸英文三形态归位（esEnumZh 只消费） */
 import { jobStatusZh, clusterHealthZh } from '../utils/esEnumZh';
-import { friendlyEsError } from '../utils/esError'; /* 五百六十批：err-bar 三源 reason 裸拼人话化 */
+import { friendlyEsError } from '../utils/esError'; /* ：err-bar 三源 reason 裸拼人话化 */
 import QueryResultTable from '../components/QueryResultTable.vue'; /* 监控历史表格内核 */
 import { usePref } from '../composables/urlState'; /* 监控历史时间范围偏好 */
 import type { MonitorRow } from '../api'; /* 监控快照落库批④:读侧行类型 */
 
 const router = useRouter();
 const store = useAppStore();
-const mon = useLiveMonitorStore(); // R92-D4：趋势序列来自全局常驻采样器
+const mon = useLiveMonitorStore(); // -D4：趋势序列来自全局常驻采样器
 
 const overview = ref<any>(null);
 const healthData = ref<any>(null);
 const clusterHealth = ref<any>(null);
 const loaded = ref(false);
 const loadErr = ref('');
-/* 七百九十八批巡查：主 load 在途 ref（err-bar 重试钮守卫；713 G51/748 G170 在途反馈族） */
+/* 巡查：主 load 在途 ref（err-bar 重试钮守卫；713 G51/748 G170 在途反馈族） */
 const ovLoading = ref(false);
 
 /* 非终态 stage 视为活动任务（终态含 DONE/FAIL/CANCEL/SUCCESS 等） */
 const isActiveStage = (s: string) => !!s && !/DONE|FAIL|CANCEL|SUCCESS|COMPLETE/i.test(s);
-/* 三百七十五批：5s 进度轮询收编 useAutoRefresh（358 批 Xmigrate 同款）——
+/* 5s 进度轮询收编 useAutoRefresh（ Xmigrate 同款）——
    此前裸 setInterval 只挂 onBeforeUnmount，后台标签页/KeepAlive 失活照跑 */
 const hasActiveJob = computed(() => (overview.value?.indices || [] as any[]).some((i: any) => i?.job && isActiveStage(i.job.stage)));
 async function load() {
-  /* R42 §8.2：禁止静默吞错——失败记入错误条，轮询时不重复 toast 轰炸。
-     R87：三接口并行——此前串行 await，一个慢接口全体骨架陪跪；配合 api 层 60s 超时兜底，
+  /*  §8.2：禁止静默吞错——失败记入错误条，轮询时不重复 toast 轰炸。
+     三接口并行——此前串行 await，一个慢接口全体骨架陪跪；配合 api 层 60s 超时兜底，
      骨架屏最长停留 = 最慢单接口，永挂路径封死 */
   ovLoading.value = true;
   try {
     const errs: string[] = [];
     const [ov, hd, ch] = await Promise.allSettled([api.overview(), api.health(), api.clusterHealth()]);
-    /* 五百六十批：三源 reason.message 裸拼 → friendlyEsError 单源翻译（前缀「概览接口/健康接口/
+    /* 三源 reason.message 裸拼 → friendlyEsError 单源翻译（前缀「概览接口/健康接口/
        集群健康」保留；obsWave560 BoostTuner w80 判例口径） */
     if (ov.status === 'fulfilled') overview.value = ov.value; else errs.push('概览接口：' + friendlyEsError(String(ov.reason?.message ?? ov.reason)));
     if (hd.status === 'fulfilled') healthData.value = hd.value; else errs.push('健康接口：' + friendlyEsError(String(hd.reason?.message ?? hd.reason)));
@@ -313,7 +313,7 @@ async function load() {
     // 有活动任务时 5s 自动轮询，便于盯重建进度（ms getter 逐轮重估，任务终态即自然停）
     ovRefresher.restart();
   } finally {
-    /* 七百九十八批巡查：allSettled 不抛也走 finally 复位（err-bar 重试钮守卫语义） */
+    /* 巡查：allSettled 不抛也走 finally 复位（err-bar 重试钮守卫语义） */
     ovLoading.value = false;
   }
 }
@@ -341,7 +341,7 @@ function parseSize(s: string): number {
   const mult: Record<string, number> = { b: 1, kb: 1e3, mb: 1e6, gb: 1e9, tb: 1e12 };
   return n * (mult[unit] || 0);
 }
-/* 五百三十一批：store.size 裸 ES 串（'12.3mb'）→ 单源 bytes 档（semFormat 只吃数字，
+/* store.size 裸 ES 串（'12.3mb'）→ 单源 bytes 档（semFormat 只吃数字，
    parseBytes 先归一；不可解析回落原串不丢信息）；title 侧调用方保 raw */
 function storeSizeText(v: any): string {
   return semFormat(parseBytes(v), 'bytes')?.text ?? String(v ?? '-');
@@ -376,14 +376,14 @@ const idxCountAnim = useCountUp(() => store.indices.length);
 const docCountAnim = useCountUp(() => totalDocs.value);
 
 const kpis = computed(() => [
-  /* 八十三批：to=下钻目标（联动轴）——索引数→索引工作区、总文档→数据浏览器、
+  /* to=下钻目标（联动轴）——索引数→索引工作区、总文档→数据浏览器、
      总存储→拓扑（节点存储分布）、集群状态→一键体检 */
   { label: '索引数', value: fmtNum(idxCountAnim.value), sub: '非系统索引', tip: '', trend: [] as number[], trendColor: '', trendTip: '', to: '/indices' },
-  /* R66：亿级文档数千分位在 866px iframe 的 KPI 卡里必被裁（实测 cw112/sw158）——
+  /* 亿级文档数千分位在 866px iframe 的 KPI 卡里必被裁（实测 cw112/sw158）——
      主值用量级一眼可读，精确值下沉到副文案 + title */
   { label: '总文档', value: fmtNumCompact(docCountAnim.value), sub: fmtNum(totalDocs.value) + ' docs', tip: fmtNum(totalDocs.value), trend: mon.indexRateSeries, trendColor: 'var(--ac)', trendTip: '写入速率趋势（全局采样窗口）', to: '/browser' },
   { label: '总存储', value: storeSizeFmt.value.num, unit: storeSizeFmt.value.unit, sub: 'store.size 合计', tip: '', trend: [] as number[], trendColor: '', trendTip: '', to: '/topology' },
-  /* 六百三十四批 G14：KPI 集群状态裸英文（小写 green）→ CLUSTER_HEALTH_ZH 单源中文主显；
+  /*  G14：KPI 集群状态裸英文（小写 green）→ CLUSTER_HEALTH_ZH 单源中文主显；
      raw 枚举（大写）下沉 tip 保检索（MetaStrip tip 兜底，信息不丢） */
   { label: '集群状态', value: clusterHealthZh(clusterHealth.value?.status) || clusterHealth.value?.status || '-', color: healthColor(clusterHealth.value?.status || ''), sub: `${clusterHealth.value?.number_of_nodes ?? '-'} 节点`, tip: String(clusterHealth.value?.status || '').toUpperCase(), trend: mon.heapSeries, trendColor: 'var(--dv-violet)', trendTip: '节点平均堆使用率趋势', to: '/health-report' },
 ]);
@@ -420,31 +420,31 @@ const healthDist = computed(() => {
 
 const stuckJobs = computed(() => healthData.value?.stuckJobs || []);
 
-/* 五百三十一批：statusColor 档名直传 StatusPill——其返回域即 pill 五主档，本包装仅做
+/* statusColor 档名直传 StatusPill——其返回域即 pill 五主档，本包装仅做
    类型窄化（utils/format 不归本批文件面，不改其签名），逻辑零重复 */
 function jobTone(s: any): 'g' | 'y' | 'r' | 'b' | 'n' {
   return statusColor(s) as 'g' | 'y' | 'r' | 'b' | 'n';
 }
-/* R25：实时预警集合（集群状态 / pending tasks / unassigned shards / stuck jobs）
-   五百三十三批：sev 档名统一——原自造 w（info 级）档退役并入 y，对齐全站 pill 五主档档名；
+/* 实时预警集合（集群状态 / pending tasks / unassigned shards / stuck jobs）
+   sev 档名统一——原自造 w（info 级）档退役并入 y，对齐全站 pill 五主档档名；
    初始化/重定位分片原 w 档随之走黄档（色值 --wn 同 token，展示等价）*/
 interface Alert { k: string; t: string; s: 'r' | 'y' }
 const alerts = computed<Alert[]>(() => {
   const out: Alert[] = [];
   const ch: any = clusterHealth.value;
   if (ch) {
-    /* R43 信噪比：red=主分片不可用（事故）；yellow 仅多数据节点才告警（单节点副本
+    /*  信噪比：red=主分片不可用（事故）；yellow 仅多数据节点才告警（单节点副本
        无处放置属拓扑常态，不进预警条）；未分配数并入对应状态条目的严重度，不再一律标红 */
     const multiData = (ch.number_of_data_nodes ?? 0) > 1;
-    /* 六百三十四批 G14：预警条主体裸英文（RED/YELLOW 大写形态）→ CLUSTER_HEALTH_ZH 单源中文
-       主体 + 原枚举括注（533 批「待处理任务 N（pending tasks）」同语言立法） */
+    /*  G14：预警条主体裸英文（RED/YELLOW 大写形态）→ CLUSTER_HEALTH_ZH 单源中文
+       主体 + 原枚举括注（「待处理任务 N（pending tasks）」同语言立法） */
     if (ch.status === 'red') out.push({ k: 'st', t: `集群状态 ${clusterHealthZh('red')}（RED）· 未分配分片 ${ch.unassigned_shards ?? 0}`, s: 'r' });
     else if (ch.status === 'yellow' && multiData) out.push({ k: 'st', t: `集群状态 ${clusterHealthZh('yellow')}（YELLOW）· 副本未分配 ${ch.unassigned_shards ?? 0}`, s: 'y' });
     if ((ch.initializing_shards ?? 0) > 0) out.push({ k: 'in', t: `初始化分片 ${ch.initializing_shards}`, s: 'y' });
     if ((ch.relocating_shards ?? 0) > 0) out.push({ k: 're', t: `重定位分片 ${ch.relocating_shards}`, s: 'y' });
-    /* 五百三十三批：'Pending Tasks N' → 中文主体 + 原词汇括注（显示层换装，枚举词汇不丢） */
+    /* 'Pending Tasks N' → 中文主体 + 原词汇括注（显示层换装，枚举词汇不丢） */
     if ((ch.number_of_pending_tasks ?? 0) > 0) out.push({ k: 'pt', t: `待处理任务 ${ch.number_of_pending_tasks}（pending tasks）`, s: 'y' });
-    /* 五百三十三批：队列等待裸 ms → semFormat duration 单源人话化（异常回落原 toFixed 秒档） */
+    /* 队列等待裸 ms → semFormat duration 单源人话化（异常回落原 toFixed 秒档） */
     if ((ch.task_max_waiting_in_queue_millis ?? 0) > 30_000) out.push({ k: 'wq', t: `任务队列等待 ${semFormat(ch.task_max_waiting_in_queue_millis, 'duration')?.text ?? ((ch.task_max_waiting_in_queue_millis / 1000).toFixed(0) + 's')}`, s: 'y' });
   }
   if (stuckJobs.value.length) out.push({ k: 'sj', t: `卡死作业 ${stuckJobs.value.length}`, s: 'r' });
@@ -494,14 +494,14 @@ const topoNodes = computed(() => {
 });
 const topoTotalShards = computed(() => topoShards.value.length);
 const topoUnassigned = computed(() => topoShards.value.filter(s => s.state === 'UNASSIGNED').length);
-/* R43：未分配是否异常——red 恒异常；否则仅多数据节点异常（单节点副本无处放置为常态） */
+/* 未分配是否异常——red 恒异常；否则仅多数据节点异常（单节点副本无处放置为常态） */
 const topoUaAbnormal = computed(() => {
   if (!topoUnassigned.value) return false;
   const ch: any = clusterHealth.value;
   return ch?.status === 'red' || (ch?.number_of_data_nodes ?? 0) > 1;
 });
 const topoRelocating = computed(() => topoShards.value.filter(s => s.state === 'RELOCATING').length);
-/* 681 批 G17：节点条横向溢出（放不下）→ topoClip 亮出右缘渐隐「可横滚」暗示（渐变只压最右 40px）。
+/*  G17：节点条横向溢出（放不下）→ topoClip 亮出右缘渐隐「可横滚」暗示（渐变只压最右 40px）。
    检测时点三路：onMounted 同步首检 / watch(topoNodesEl)——shards 异步到达晚于 onMounted，
    v-if 挂绑即补检（否则首屏判定恒 false）/ window resize 伸缩重判（onUnmounted 清理） */
 const topoNodesEl = ref<HTMLElement | null>(null);
@@ -530,43 +530,43 @@ const recentJobs = computed(() => {
     .slice(0, 6);
 });
 
-/* R93-13：Ops 操作台已退役，改进「托管重建」。这里只有 indexKey，而 AdhocRebuildView 收的
+/* -13：Ops 操作台已退役，改进「托管重建」。这里只有 indexKey，而 AdhocRebuildView 收的
    ?index= 是索引名/别名 —— 语义不同，硬塞会预填出一个查不到的名字，故不带参进页。 */
 function goJob(_j: any) {
   router.push('/adhoc-rebuild');
 }
 
-/* R48 IA：索引名点击统一进索引工作区（原跳 /browser 已降为工作区内的一个动作） */
+/*  IA：索引名点击统一进索引工作区（原跳 /browser 已降为工作区内的一个动作） */
 function goIndex(idx: string) {
   store.pick(idx);
   router.push({ path: '/indices', query: { idx } });
 }
 
-/* R49：健康分布计数可点——跳索引工作区并带上 health 过滤（工作区侧 healthF 是 URL 状态） */
+/* 健康分布计数可点——跳索引工作区并带上 health 过滤（工作区侧 healthF 是 URL 状态） */
 function goHealth(name: string) {
   router.push({ path: '/indices', query: { health: name } });
 }
 
 /* ═══ 监控快照落库批④：集群监控历史（本区纯只读——服务端定时任务是唯一写入方） ═══ */
 const MH_COLS = ['时间', '集群', '环境', '状态', '时延(ms)', '版本', '错误'];
-/* 六百三十四批 G14：状态筛选选项文案走 CLUSTER_HEALTH_ZH 单源（中文主显 + 原枚举括注，
-   533 批「待处理任务 N（pending tasks）」同语言立法）；option value 仍是服务端枚举契约 */
+/*  G14：状态筛选选项文案走 CLUSTER_HEALTH_ZH 单源（中文主显 + 原枚举括注，
+   「待处理任务 N（pending tasks）」同语言立法）；option value 仍是服务端枚举契约 */
 const MH_STATUS_OPTS = ['GREEN', 'RED'].map(v => ({ v, label: `${clusterHealthZh(v)}（${v}）` }));
-/* 六百零二批：观察口径按集群——监控历史默认筛选当前所选集群（可切换/清空看全部）。
-   六百三十一批纠错：`mhConn` 的语义是**连接 id**——option 是 `:value="c.id"`，同一个值又下推
+/* 观察口径按集群——监控历史默认筛选当前所选集群（可切换/清空看全部）。
+   纠错：`mhConn` 的语义是**连接 id**——option 是 `:value="c.id"`，同一个值又下推
    `api.monitorHistory({ connId })`；原初始化却写 `?.name`，于是选中远程集群时没有任何 option 命中，
-   原生 select 渲染为**空白**（用户实报「这个不显示选中」），同时把实名当 connId 下推服务端。
+   原生 select 渲染为**空白**（实报「这个不显示选中」），同时把实名当 connId 下推服务端。
    现改 id 语义；并补「target 须在连接档案内」守卫——已删/失联的 target 不再落回同一空白坑
-   （回落「全部集群」）；连接档案异步到达时跟随（与 LiveDashboardView 599 批同律：切换器换集群
+   （回落「全部集群」）；连接档案异步到达时跟随（与 LiveDashboardView 同律：切换器换集群
    重新跟随，同 target 内用户手改不回弹）。 */
 const mhConn = ref('');
 const mhConnOfTarget = computed(() => (store.conns.some(c => c.id === store.target) ? store.target : ''));
 watch(mhConnOfTarget, (id) => { if (id) mhConn.value = id; }, { immediate: true });
 const mhStatus = ref('');
-/* R20 大盘联动：与 LiveDashboardView 历史趋势共享同一偏好键——一处改档两处同步 */
+/*  大盘联动：与 LiveDashboardView 历史趋势共享同一偏好键——一处改档两处同步 */
 const mhRange = usePref<string>('live.histRange', '24h');
 const mhAuto = ref(false);
-const mhAutoAt = ref<number | null>(null); /* 六百四十五批 G18：自动刷新 tick 时间戳（可视反馈） */
+const mhAutoAt = ref<number | null>(null); /*  G18：自动刷新 tick 时间戳（可视反馈） */
 const mhRows = ref<MonitorRow[]>([]);
 const mhQrt = ref<InstanceType<typeof QueryResultTable> | null>(null);
 const mhLoading = ref(false);
@@ -588,7 +588,7 @@ async function loadHistory() {
   }
 }
 
-/* R19 导出：TSV/MD 复制走 QRT getCsvBlock 单源（表头自动继承列名，所见即所复） */
+/*  导出：TSV/MD 复制走 QRT getCsvBlock 单源（表头自动继承列名，所见即所复） */
 async function copyMonitorTsv() {
   const blk = mhQrt.value?.getCsvBlock();
   if (!blk || !blk.rows.length) return;
@@ -610,7 +610,7 @@ async function copyMonitorMd() {
   store.notify(ok ? 'success' : 'error', ok ? `已复制 ${blk.rows.length} 条监控快照（Markdown）` : '复制失败');
 }
 
-/* R18 健康摘要条：窗口内每集群 RED 次数/采样总数/最慢时延一眼可见（probeDigest 单源） */
+/*  健康摘要条：窗口内每集群 RED 次数/采样总数/最慢时延一眼可见（probeDigest 单源） */
 const mhDigest = computed(() => probeDigest(mhRows.value as any));
 const mhMatrix = computed(() => mhRows.value.map(r => [
   r.timestamp, r.connName || r.connId || '-', r.env || '-', r.status || 'UNKNOWN',
@@ -629,18 +629,18 @@ onMounted(loadHistory);
 /* KPI 大卡墙退役后的 inline 元信息串（MetaStrip 统一件；本视图只承担落位间距） */
 .ov-strip { margin-top: 5px; }
 
-/* R42 §8.2：页面级加载错误条。五百六十批：ov-loaderr/ov-stuck 手写红壳退役收编 err-bar
+/*  §8.2：页面级加载错误条。：ov-loaderr/ov-stuck 手写红壳退役收编 err-bar
    单源（theme.css .err-bar 档：bg/border/radius/word-break 全归基座）；ov-stuck warn 语义档
    视图侧覆写（红→黄 token 换色，err-bar 基座布局零动） */
 .ov-stuck { background: var(--warn-soft); border-color: var(--warn-line); color: var(--warn); }
 
-/* R25：预警条。五百五十四批：摘全局 .card 类（立法④）——sev 色带（语义边框豁免）由本类
+/* 预警条。：摘全局 .card 类（立法④）——sev 色带（语义边框豁免）由本类
    自持：bg/border 本就自带，card 供出的 radius 补记回本类（视觉零变动） */
 .ov-alerts {
   display: flex; gap: var(--sp-3); align-items: center; padding: var(--sp-3) var(--sp-4);
   border: 1px solid var(--bd); border-radius: var(--r-l);
 }
-/* 五百三十三批：预警条 w 档三条死规则随档名统一退役（并入 y 黄档，--wn 同 token 展示等价） */
+/* 预警条 w 档三条死规则随档名统一退役（并入 y 黄档，--wn 同 token 展示等价） */
 .ov-alerts.sev-r { border-color: color-mix(in oklab, var(--err) 55%, var(--bd)); background: color-mix(in oklab, var(--err) 6%, var(--bg1)); }
 .ov-alerts.sev-y { border-color: color-mix(in oklab, var(--wn) 55%, var(--bd)); background: color-mix(in oklab, var(--wn) 6%, var(--bg1)); }
 .ov-alerts-ic { flex-shrink: 0; }
@@ -658,9 +658,9 @@ onMounted(loadHistory);
 .ov-alerts-act { display: flex; gap: var(--sp-2); flex-shrink: 0; }
 @keyframes pulseDot { 0%,100% { opacity: .55; transform: scale(1); } 50% { opacity: 1; transform: scale(1.4); } }
 
-/* R49：minmax(0,1fr) 防 grid 子项 min-content 撑爆容器（窄窗口右列被裁切+横向滚动） */
+/* minmax(0,1fr) 防 grid 子项 min-content 撑爆容器（窄窗口右列被裁切+横向滚动） */
 .ov-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-3); align-items: start; }
-/* 五百五十四批：三张顶层 .card 壳退役 → border-top 分节（立法④；原卡 padding 14px var(--sp-4)
+/* 三张顶层 .card 壳退役 → border-top 分节（立法④；原卡 padding 14px var(--sp-4)
    等值迁入，盒模型零变动）；空态 EmptyState 直贴不留整块空框 */
 .ov-cell { border-top: 1px solid var(--border); padding: 14px var(--sp-4); }
 
@@ -670,23 +670,23 @@ onMounted(loadHistory);
 .ov-mh .card-t { display: flex; align-items: center; gap: var(--sp-2); }
 .ov-mh .card-t .ov-mh-sub { white-space: nowrap; }
 .ov-mh-filters { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
-/* R18 健康摘要条：集群采样/RED 计数 chips（RED>0 挂 --err 暖标） */
+/*  健康摘要条：集群采样/RED 计数 chips（RED>0 挂 --err 暖标） */
 .ov-mh-digest { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-2); margin-bottom: var(--sp-2); }
 .ov-mh-digest-i { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-2xs); background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r-s); padding: var(--sp-0) var(--sp-2); }
 .ov-mh-digest-i .mono { color: var(--tx1); }
 .ov-mh-digest-i .dim { color: var(--tx2); }
 .ov-mh-red { color: var(--err); font-weight: 600; }
-/* 六百三十四批 G13：筛选三件此前逐行满宽堆叠（theme.css `.inp` 全局 width:100% + 本容器无
+/*  G13：筛选三件此前逐行满宽堆叠（theme.css `.inp` 全局 width:100% + 本容器无
    宽度约束 → 每件独占一行，三件吃 ~430px 纵向）——容器级宽度约束归位：显式宽度档 + 保底
    min-width，同行横排、窄屏随 wrap 自然换行（178px 为刻意值，按 --sp 收编立法记档豁免） */
 .ov-mh-filters .inp { width: auto; flex: 0 1 178px; min-width: 150px; }
 .ov-mh-sub { font-weight: 400; font-size: var(--fs-xs); color: var(--tx2); }
 .ov-mh-auto { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-xs); color: var(--tx2); cursor: pointer; user-select: none; }
-/* 五百三十批：大屏 1600 档四列——2K 或带侧栏 1920 宽下卡墙不再留大片空白（小屏断点见文件尾） */
+/* 大屏 1600 档四列——2K 或带侧栏 1920 宽下卡墙不再留大片空白（小屏断点见文件尾） */
 @media (min-width: 1600px) {
   .ov-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
-/* 六百三十四批 G12：拆胞后 3 列区间（1101~1599）4 胞会余 1 胞孤悬次行左侧——「最近作业」
+/*  G12：拆胞后 3 列区间（1101~1599）4 胞会余 1 胞孤悬次行左侧——「最近作业」
    整行横跨（同时治作业列在此区间被压成 1/3 宽的拥挤）。1600 档四列满编 / ≤1100 两列 2×2 /
    ≤900 单列，均不命中本档（1101 为 1100 上限的补集，与既有断点无缝隙无重叠） */
 @media (min-width: 1101px) and (max-width: 1599px) {
@@ -704,7 +704,7 @@ onMounted(loadHistory);
 .ov-h-item { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-sm); cursor: pointer; padding: var(--sp-0) var(--sp-2); margin: 0 calc(-1 * var(--sp-2)); border-radius: var(--r-s); }
 .ov-h-item:hover { background: var(--bg2); }
 .ov-h-item:hover .ov-h-name { color: var(--ac-hi); }
-/* 五百六十一批：.ov-h-dot 私造圆点随 MetaStrip dot 形态单源退役（bw-hdot 四胞之一，
+/* .ov-h-dot 私造圆点随 MetaStrip dot 形态单源退役（bw-hdot 四胞之一，
    DiagView dgMeta 判例；8px 圆点归组件 .ms-dot 单源） */
 .ov-h-name { color: var(--tx1); }
 .ov-h-n { font-weight: 600; }
@@ -715,19 +715,19 @@ onMounted(loadHistory);
 .ov-job:hover { background: var(--bg2); }
 .ov-job:hover .ov-job-key { color: var(--ac-hi); }
 .ov-job-key { flex: 1; color: var(--tx1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* 五百三十一批：状态枚举英文小字规则随 StatusPill 换装退役（en 档归组件 .sp-en 单源）；
+/* 状态枚举英文小字规则随 StatusPill 换装退役（en 档归组件 .sp-en 单源）；
    呼吸点+胶囊同行容器（组件无插槽，dot-pulse 保留本地以兄弟元素渲染——记档） */
 .ov-job-st { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; }
 .ov-job-time { font-size: var(--fs-xs); color: var(--tx2); }
 
-/* 迷你分布式拓扑条。五百五十四批：.card 壳退役（立法④）→ border-top 分节 hairline；
+/* 迷你分布式拓扑条。：.card 壳退役（立法④）→ border-top 分节 hairline；
    本类 padding（var(--sp-3) var(--sp-4)）原样自持零触 */
 .ov-topo { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-3) var(--sp-4); border-top: 1px solid var(--border); cursor: pointer; transition: transform var(--tr), box-shadow var(--tr); }
 .ov-topo:hover { transform: translateY(-1px); box-shadow: var(--shadow-m); }
 .ov-topo-l { display: flex; flex-direction: column; gap: var(--sp-0); min-width: 130px; }
 .ov-topo-title { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-sm); font-weight: 650; color: var(--tx0); }
 .ov-topo-sub { font-size: var(--fs-xs); color: var(--tx2); }
-/* 681 批 G17：节点条包裹层——承接原 .ov-topo-nodes 的 flex:1/min-width:0 并作 fade 绝对定位锚
+/*  G17：节点条包裹层——承接原 .ov-topo-nodes 的 flex:1/min-width:0 并作 fade 绝对定位锚
    （检查结论记档：.ov-topo 直挂 right:0 会压住 .ov-topo-r KPI 违「暗示非遮挡」，.ov-topo 无需
    position:relative，由 wrapper 承接；节点条自身盒模型零触）。fade 右缘 40px 渐变终点色=
    分区所在页面底色 --bg0（554 扁平化后本区无自绘底），pointer-events:none 不挡点击/滚轮 */
@@ -750,7 +750,7 @@ onMounted(loadHistory);
 /* 13px/650 并档卡头档；mono+tabular 由全局 .meta-num b 承担（模板已挂 meta-num） */
 .ov-topo-kpi b { font-size: var(--fs-md); color: var(--tx0); font-weight: 650; }
 
-/* R66：响应式断点——iframe 实测 866px 下 3 列卡内宽仅 ~160px（Top10 行 cw164/sw180 溢出），
+/* 响应式断点——iframe 实测 866px 下 3 列卡内宽仅 ~160px（Top10 行 cw164/sw180 溢出），
    降列而不是硬挤；900 以下 KPI 也收 2 列，拓扑条副文案让位 */
 @media (max-width: 1100px) {
   .ov-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

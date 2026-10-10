@@ -1,5 +1,5 @@
 /**
- * 七百三十七批：Slm 首刀三小刀+史志注释修正（R118；R117 裁决表 G131+G132+G133+G139-②）。
+ * ：Slm 首刀三小刀+史志注释修正（； 裁决表 G131+G132+G133+G139-②）。
  *
  * ① G131（P3 死代码·头号）PageHeader 收编后页头旧壳左组/图标/标题/副题四条死规则删
  *    （styleSheets 各 1 命中合计 4+模板 0 引用双实锚；活锚页头行基壳/右组钮容器/
@@ -10,8 +10,8 @@
  *    735 G121 同族）。
  * ③ G133（P3 铁律 F）卡 MetaStrip indices 段英文裸 label 无 tip（title=null 实锚）；
  *    修法=补中文 tip，英文 label 留检索（717 G60 双语同款）。
- * ④ G139-②（史志失实随刀修正）三百零九批注释宣称右键菜单四项而实现恒三项——
- *    注释与实现对齐（R106 G85 意图与实现不符弱形态；705-C1 转述零字面量）。
+ * ④ G139-②（史志失实随刀修正）注释宣称右键菜单四项而实现恒三项——
+ *    注释与实现对齐（ G85 意图与实现不符弱形态；705-C1 转述零字面量）。
  *
  * 驱动方式照 lifecycleFirstCut735（vue-router 轻 mock + 只 mock ../api）+
  * protectThreeState 的 SLM 端点分桶；askConfirm 全程 mock 放行（确认门行为归
@@ -214,12 +214,12 @@ describe('737 G131 页头四条死规则退役（源码锁；735 G120 同族）'
   });
 });
 
-describe('737 G139-② 右键菜单史志注释与实现对齐（R106 G85 弱形态）', () => {
+describe('737 G139-② 右键菜单史志注释与实现对齐（ G85 弱形态）', () => {
   it('失实第四项宣称零残留+修正注记在场（705-C1 转述零字面量）+菜单三项契约不回归', () => {
     const v = read('../views/SlmView.vue');
     expect(v.includes('在 DevTools 打开策略 JSON'), '史志失实宣称须随刀修正').toBe(false);
-    expect(v).toMatch(/七百三十七批史志修正/);
-    /* 三项契约（309 批行为面归 slmMenu309，此处锁注释↔实现一致性锚） */
+    expect(v).toMatch(/史志修正/);
+    /* 三项契约（行为面归 slmMenu309，此处锁注释↔实现一致性锚） */
     for (const anchor of ["key: 'copy-id'", "key: 'copy-body'", "key: 'exec'"]) {
       expect(v, anchor).toContain(anchor);
     }

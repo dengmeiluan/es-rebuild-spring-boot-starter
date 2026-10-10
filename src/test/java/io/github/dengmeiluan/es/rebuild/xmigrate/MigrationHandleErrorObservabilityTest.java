@@ -13,7 +13,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百四十五批：批量失败落账（{@code addErrors} n&gt;0）的<b>服务端 WARN 留痕</b>（观测缺口收口）。
+ * 批量失败落账（{@code addErrors} n&gt;0）的<b>服务端 WARN 留痕</b>（观测缺口收口）。
  *
  * <p><b>缺口</b>：迁移 bulk 级失败重试耗尽时只 {@code addErrors}（全局 errors 计数 + errorSamples
  * 快照字段一条，全仓唯一 n&gt;0 调用点 = {@code SliceWorker#executeWithRetry} 耗尽分支），slice

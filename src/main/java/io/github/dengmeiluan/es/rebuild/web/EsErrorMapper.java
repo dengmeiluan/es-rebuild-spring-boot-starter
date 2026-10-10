@@ -4,7 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * R92-C2：ES 错误透传的统一口径（状态码映射 + message 组装），供控制台各端点异常处理复用。
+ * -C2：ES 错误透传的统一口径（状态码映射 + message 组装），供控制台各端点异常处理复用。
  *
  * <p>为什么必须把 ES 原始报错体带给前端：RestHighLevelClient 的 {@code ResponseException#getMessage()}
  * 内含 ES 返回的完整 JSON（{@code error.root_cause[].reason}），前端 {@code utils/esError.ts:friendlyEsError}

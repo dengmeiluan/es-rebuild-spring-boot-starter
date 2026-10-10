@@ -1,6 +1,6 @@
 import { NAV_ITEMS } from '../router';
 
-/* R61：工作现场恢复——路由每次切换都记录「最后停留的现场」（fullPath 含 query，
+/* 工作现场恢复——路由每次切换都记录「最后停留的现场」（fullPath 含 query，
    配合全站 URL 即现场的约定，query/idx/草稿键都在里面）。
    下次裸进站（#/ 或 #/overview，无深链意图）时 toast 提供「继续上次」一键回；
    深链进站是明确意图，不打扰；现场超过 7 天视为过期不再提示。 */

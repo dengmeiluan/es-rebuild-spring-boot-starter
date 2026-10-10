@@ -113,9 +113,9 @@ public class MigrateJobES {
     private String message;
 
     /**
-     * R94：目标 mapping 中<b>无 {@code format} 的 date 字段</b>清单（如实告知，不是警报）。
+     * 目标 mapping 中<b>无 {@code format} 的 date 字段</b>清单（如实告知，不是警报）。
      *
-     * <p>迁移<b>既不造成也不修复</b>这些字段的 R94 风险——源什么样目标就什么样。
+     * <p>迁移<b>既不造成也不修复</b>这些字段的  风险——源什么样目标就什么样。
      * 之所以单独持久化而不塞进 {@link #message}：{@code message} 会在收尾时被结果文案覆盖，
      * 而这份告知必须在作业完成<b>之后</b>仍然可见——它恰恰是「一次顺利完成的迁移」需要交代的事。</p>
      */

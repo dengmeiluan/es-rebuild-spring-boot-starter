@@ -23,7 +23,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百五十五批：JDBC 档富列（conn_id/conn_name/ip/cost_ms）三态契约——
+ * JDBC 档富列（conn_id/conn_name/ip/cost_ms）三态契约——
  * 新表全维落档 / 旧表探测降级（写入与回读都不丢条） / 富列中途失败永久回退重试一次。
  * 桩为 JDK 动态代理（仓内无 mockito/h2，本仓测试基线=直构造）。
  */

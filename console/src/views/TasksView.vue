@@ -13,7 +13,7 @@
           @update:value="load"
         />
         <!-- 节点过滤（前端过滤：_tasks API 只有 actions 参数）——父任务被滤掉时子任务按根展示；
-             五百二十五批：补 filterable（大集群节点 >20 无过滤不可用，TopBar 索引下拉同款） -->
+             补 filterable（大集群节点 >20 无过滤不可用，TopBar 索引下拉同款） -->
         <n-select
           v-model:value="nodeFilter"
           :options="nodeOpts"
@@ -23,9 +23,9 @@
           placeholder="全部节点"
           filterable
         />
-        <!-- 五百二十四批：kw 过滤（taskId/action/描述子串，flatList 展开序上过滤），
+        <!-- kw 过滤（taskId/action/描述子串，flatList 展开序上过滤），
              taskId/描述列 MarkText 命中高亮。
-             五百五十八批：手写过滤框换装 SearchFilterBar 统一件（v-model kw 绑定零触；
+             手写过滤框换装 SearchFilterBar 统一件（v-model kw 绑定零触；
              Esc 清空内建；胶囊壳归组件单源，tv-kw 类锚随 input-class 保留在 input 上——
              sweep524 挂载过滤锁同路径零迁；tv-kw-wrap 只留落位宽高，对齐 tv-sel 25px 基线） -->
         <SearchFilterBar v-model="kw" class="tv-kw-wrap" input-class="tv-kw" placeholder="过滤 taskId / action / 描述…" />
@@ -35,13 +35,13 @@
           <input type="checkbox" v-model="autoRefresh" />
           <span>自动刷新</span>
         </label>
-        <!-- 一百九十八批补/211:刷新频率档位(3s 盯进度/10s 常规/30s 省请求,usePref 记忆)
-             第十批：下拉换装 AutoRefreshSelect 统一件（原 .ipt tv-interval 原生 select 退役；开关 checkbox 与 usePref 逻辑不动） -->
+        <!-- 补/211:刷新频率档位(3s 盯进度/10s 常规/30s 省请求,usePref 记忆)
+             下拉换装 AutoRefreshSelect 统一件（原 .ipt tv-interval 原生 select 退役；开关 checkbox 与 usePref 逻辑不动） -->
         <AutoRefreshSelect v-if="autoRefresh" v-model:ms="intervalMs" :sizes="[3000, 10000, 30000]" label="自动刷新频率" />
         <button aria-label="刷新任务列表" class="btn sm ghost" @click="load" :disabled="loading" title="刷新任务列表">
           <RefreshCw :size="12" :class="{ spinning: loading }" />
         </button>
-        <!-- 七百七十七批 G255：原始 IO 快查入口（铁律 F·755 G200 三件套同构——本页与
+        <!--  G255：原始 IO 快查入口（铁律 F·755 G200 三件套同构——本页与
              TaskTree 同端点 _tasks；记录环最近一条请求/响应原文直达，无记录不开空弹窗） -->
         <button class="btn sm ghost" title="最近一次任务列表（_tasks）请求/响应原文（复制/curl 回放）" @click="openRawIo">
           <Terminal :size="11" /> 原始 IO
@@ -49,18 +49,18 @@
       </div>
     </div>
 
-    <!-- R92-A2：页面级失败态——轮询失败不能只闪 toast，持续故障时页面要有常驻提示；下次成功自动消隐。
-         五百五十批：裸插值换 errPreHtml+errMeta 双参（DiagView 547 同款）——错误原文全文回看，
+    <!-- -A2：页面级失败态——轮询失败不能只闪 toast，持续故障时页面要有常驻提示；下次成功自动消隐。
+         裸插值换 errPreHtml+errMeta 双参（DiagView 547 同款）——错误原文全文回看，
          code 徽标/「失败于 端点」元信息行走 loadErrRaw 旁路原始对象（压串读不出） -->
     <div v-if="loadErr" role="alert" class="err-bar rise-in">
       <span class="tv-err-txt" v-html="errPreHtml(loadErr, errMeta(loadErrRaw))"></span>
-      <!-- 七百七十七批 G256：重试钮 icon 补 spinning（同页刷新钮两标准归一） -->
+      <!--  G256：重试钮 icon 补 spinning（同页刷新钮两标准归一） -->
       <button class="btn sm" @click="load" :disabled="loading"><RefreshCw :size="12" :class="{ spinning: loading }" /> 重试</button>
     </div>
 
     <!-- KPI 卡墙退役（ih-meta 范式）：4 项统计并入下方树卡头 inline 元信息串 -->
 
-    <!-- 树。五百四十七批：pane 壳三件套（border/bg/radius）退役（535 SqlBridge pane 直贴
+    <!-- 树。：pane 壳三件套（border/bg/radius）退役（535 SqlBridge pane 直贴
          立法续扫）——min-height 布局语义与 .card padding 载体原样迁 .tv-tree-card -->
     <div class="tv-tree-card">
       <div class="card-t">
@@ -68,7 +68,7 @@
         <!-- KPI 大卡退役（IndexHubView .ih-meta 范式）：全量语义走 :title 兜底，
              Action 类型列表窄屏只展示前 3 个，全列表在 :title -->
         <!-- KPI 大卡退役（IndexHubView .ih-meta 范式）：四项统计走 MetaStrip items、
-             超 5m>0 warn 走组件 tone 档。五百二十五批：Action 类型前 3 清单原是「插槽尾巴 +
+             超 5m>0 warn 走组件 tone 档。：Action 类型前 3 清单原是「插槽尾巴 +
              手写 ksep + join(' · ') 串」三来源混一条 · 节奏——收编为 items 尾部 text 项
              （组件 sep 统一节奏），全量语义仍走 :title 兜底 -->
         <MetaStrip class="tv-meta" :items="tvMeta" :title="'运行中 ' + visibleTasks.length + '（当前集群 _tasks 快照） · 可取消 ' + cancellableCount + '（cancellable=true） · 超 5m 长任务 ' + longRunning + '（runningTime > 5m） · Action 类型 ' + actionKinds.length + ' 种：' + (actionKinds.join(' · ') || '-')" />
@@ -83,13 +83,13 @@
       <div v-if="loading && !trees.length" class="tv-loading">
         <SkeletonBox v-for="i in 3" :key="i" height="30px" round />
       </div>
-      <!-- 一百七十二批：空态/失败占位 EmptyState 三件套（原裸文案缺下一步指引） -->
+      <!-- 空态/失败占位 EmptyState 三件套（原裸文案缺下一步指引） -->
       <EmptyState v-else-if="!trees.length && loadErr" :icon="RefreshCw" text="任务列表拉取失败" hint="失败原因与重试见页顶错误条" />
       <EmptyState v-else-if="!trees.length" :icon="ListTodo" text="当前无运行中任务" hint="重建/迁移发起后任务会出现在这里，也可点右上角刷新" />
-      <!-- 七百七十七批 G257a：容器 role=log+aria-label（G210 容器族——轮询/过滤驱动的
+      <!--  G257a：容器 role=log+aria-label（G210 容器族——轮询/过滤驱动的
            列表到达语义读屏公告） -->
       <div v-else class="tv-tree scroll-y" role="log" aria-label="任务树（随过滤与展开实时更新）">
-        <!-- 五百二十四批：过滤致空（树有行但 kw 无命中）——轻提示 + 清除入口（ColPicker none 先例形态） -->
+        <!-- 过滤致空（树有行但 kw 无命中）——轻提示 + 清除入口（ColPicker none 先例形态） -->
         <div v-if="kw.trim() && !shownList.length" class="tv-nohit">
           无匹配任务（过滤词：{{ kw }}）
           <button class="btn xs ghost" @click="kw = ''">清除过滤</button>
@@ -117,20 +117,20 @@
             >▸</span>
             <span v-else class="tv-caret ph"></span>
             <!-- G1-C1：.p-* 色款类全仓无定义（pill 曾实际无色），改用全局 .pill 五主档色款。
-                 五百三十三批：action 徽标换装 StatusPill 统一件（色档走组件 tone=actionColor，
+                 action 徽标换装 StatusPill 统一件（色档走组件 tone=actionColor，
                  胶囊形态/色值不再本页手拼 class；组件根元素仍渲染 .pill+y 档，行内形态不变） -->
             <StatusPill :tone="actionColor(t.action)" :label="actionShort(t.action)" />
-            <!-- 五百二十四批：taskId/描述列 MarkText 命中高亮（textContent 与原文一致，title 不受影响） -->
+            <!-- taskId/描述列 MarkText 命中高亮（textContent 与原文一致，title 不受影响） -->
             <span class="mono tv-tid" :title="t.taskId"><MarkText :text="t.taskId" :kw="kw" /></span>
             <span class="mono tv-node-node" :title="t.node">@ {{ t.node }}</span>
           </div>
           <div class="tv-node-m">
             <span class="tv-node-desc mono" :title="t.description"><MarkText :text="trunc(t.description, 80)" :kw="kw" /></span>
-            <!-- 五百二十八批：reindex 进度渲染（可观测断链）——ES _tasks?detailed 已带回
+            <!-- reindex 进度渲染（可观测断链）——ES _tasks?detailed 已带回
                  status（BulkByScrollTask.Status），有 total 出「已处理/总数 百分比」+进度条，
                  total 缺失只显已处理数；不逐行打 /progress 端点（详见 reindexProgress 注释） -->
             <span v-if="t.prog" class="tv-prog" :title="t.prog.title">
-              <!-- 七百七十七批 G257b：进度条 progressbar 语义（704 G32/773 G35 族；原 aria-hidden
+              <!--  G257b：进度条 progressbar 语义（704 G32/773 G35 族；原 aria-hidden
                    退役——bar 获读屏语义，可见文本通道不动） -->
               <span v-if="t.prog.pct != null" class="tv-prog-bar" role="progressbar" :aria-valuenow="t.prog.pct" aria-valuemin="0" aria-valuemax="100" :aria-label="'任务进度 ' + t.prog.pct + '%'">
                 <span class="tv-prog-fill" :style="{ width: t.prog.pct + '%' }"></span>
@@ -139,7 +139,7 @@
             </span>
           </div>
           <div class="tv-node-r">
-            <!-- 五百三十一批：tookMs 真值展示——后端 listTasks 已新增 tookMs（runningTimeNanos
+            <!-- tookMs 真值展示——后端 listTasks 已新增 tookMs（runningTimeNanos
                  折算 ms，任务在途即已耗时），缺失时前端回落 runningMs 同源折算，不再有「-1 显 -」
                  兜底语义。口径记档：ES _tasks 无 finished 概念（任务完成即从列表消失），本列是
                  「该任务至今已耗时」而非「作业总耗时终值」；人话化时长走 semFormat duration 单源 -->
@@ -157,13 +157,13 @@
               @click="cancelOne(t)"
               :title="t.cancellable ? '取消任务' : '不可取消'"
             >
-              <!-- 七百七十七批 G256：取消钮 Loader2/X 双态（cancelling 按行门控=天然无跨钮
+              <!--  G256：取消钮 Loader2/X 双态（cancelling 按行门控=天然无跨钮
                    污染；772 G246 族） -->
               <Loader2 v-if="cancelling.has(t.taskId)" :size="11" class="spinning" />
               <X v-else :size="11" /> 取消
             </button>
           </div>
-          <!-- 一百九十五批补（原 183 口径）：取消失败原因持久显示在任务行上（title 全量） -->
+          <!-- 补（原 183 口径）：取消失败原因持久显示在任务行上（title 全量） -->
           <div v-if="cancelFailures.has(t.taskId)" class="tv-cancel-err" :title="cancelFailures.get(t.taskId)">
             取消失败：{{ cancelFailures.get(t.taskId) }}
           </div>
@@ -171,10 +171,10 @@
       </div>
     </div>
 
-    <!-- 一百八十六批：任务节点右键菜单（E 组逐表过 dbx 清单）——复制 taskId/任务信息/取消直达 -->
+    <!-- 任务节点右键菜单（E 组逐表过 dbx 清单）——复制 taskId/任务信息/取消直达 -->
     <CellContextMenu v-if="taskMenu" :x="taskMenu.x" :y="taskMenu.y" :title="taskMenu.t.taskId"
       :items="taskMenuItems" @close="taskMenu = null" />
-    <!-- 七百七十七批 G255：原始 IO 快查弹窗 -->
+    <!--  G255：原始 IO 快查弹窗 -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
   </div>
 </template>
@@ -188,10 +188,10 @@ import { api, ioRecorder, type RawIoRec } from '../api';
 import PageHeader from '../components/PageHeader.vue';
 import MarkText from '../components/MarkText.vue';
 import EmptyState from '../components/EmptyState.vue';
-import StatusPill from '../components/StatusPill.vue'; /* 五百三十三批：action 徽标统一件 */
+import StatusPill from '../components/StatusPill.vue'; /* ：action 徽标统一件 */
 import AutoRefreshSelect from '../components/AutoRefreshSelect.vue';
 import CellContextMenu from '../components/CellContextMenu.vue';
-import SearchFilterBar from '../components/SearchFilterBar.vue'; /* 五百五十八批：kw 过滤胶囊统一件 */
+import SearchFilterBar from '../components/SearchFilterBar.vue'; /* ：kw 过滤胶囊统一件 */
 import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue'; /* 卡头统计串统一件 */
 import { useScopedDraft } from '../composables/useScopedDraft';
 import { useAutoRefresh } from '../composables/useAutoRefresh';
@@ -200,19 +200,19 @@ import { useAuthStore } from '../stores/auth';
 import { askConfirm } from '../composables/confirm';
 import { usePref } from '../composables/urlState';
 import { fmtDur, trunc, copyText, fmtNumCompact } from '../utils/format';
-/* 五百三十一批：时长人话化单源（tookMs 列） */
+/* 时长人话化单源（tookMs 列） */
 import { semFormat } from '../composables/useSemFormat';
 import { friendlyEsError } from '../utils/esError';
-/* 五百五十批：错误面双参换装（code/endpoint 元信息行，DiagView 547 同范式） */
+/* 错误面双参换装（code/endpoint 元信息行，DiagView 547 同范式） */
 import { errPreHtml, errMeta } from '../utils/errPre';
-/* 五百三十批：actionShort/actionColor 迁 utils/esEnumZh 收口（taskActionZh 契约签名
+/* actionShort/actionColor 迁 utils/esEnumZh 收口（taskActionZh 契约签名
    (a: string): string、色档拆 taskActionTone）——别名绑定供模板与既有调用点零改动消费 */
 import { taskActionZh as actionShort, taskActionTone as actionColor } from '../utils/esEnumZh';
 import SkeletonBox from '../components/SkeletonBox.vue';
-import RawIoModal from '../components/RawIoModal.vue'; /* 七百七十七批 G255：原始 IO 快查弹窗（755 G200 同构） */
+import RawIoModal from '../components/RawIoModal.vue'; /*  G255：原始 IO 快查弹窗（755 G200 同构） */
 
 const store = useAppStore();
-/* 二百二十一批：权限门禁——取消任务=/cluster/tasks/cancel=普通写档（OPERATOR+）；
+/* 权限门禁——取消任务=/cluster/tasks/cancel=普通写档（OPERATOR+）；
    任务观测全角色可用 */
 const auth = useAuthStore();
 const canWrite = computed(() => auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/tasks/cancel', store.target));
@@ -228,19 +228,19 @@ interface Task {
   cancellable: boolean;
   status: any;
   runningMs: number;
-  /* 五百三十一批：tookMs 真值——后端 listTasks 新增下发（runningTimeNanos 折算 ms，运行中即已耗时）；
+  /* tookMs 真值——后端 listTasks 新增下发（runningTimeNanos 折算 ms，运行中即已耗时）；
      前端对缺失值回落 runningMs 同源折算。ES _tasks 无 finished 概念（完成即消失），
      本字段语义=「任务至今已耗时」，不存在「运行中=-1」的终态未定语义（原 -1 兜底退役） */
   tookMs: number;
 }
 
-/* 五百三十一批：tookMs 人话化时长——semFormat duration 单源（ms<1000 '123 ms'、≥1000 '1.2s'），
+/* tookMs 人话化时长——semFormat duration 单源（ms<1000 '123 ms'、≥1000 '1.2s'），
    异常值回落 fmtDur 既有口径 */
 function tookText(ms: number): string {
   return semFormat(ms, 'duration')?.text ?? fmtDur(ms);
 }
 
-/* 五百二十八批：reindex 行内进度（可观测断链）——字段名按后端 EsIndexAdmin.getReindexProgress
+/* reindex 行内进度（可观测断链）——字段名按后端 EsIndexAdmin.getReindexProgress
    对 ES status JSON 的解析键实地核实（total/updated/created/deleted，BulkByScrollTask.Status），
    非凭记忆编造；processed 口径=updated+created+deleted（version_conflicts 是被跳过的文档不计）。
    /progress 端点裁决：taskId 语义核实为通用 ES nodeId:taskNum（GetTaskRequest 直拆），
@@ -267,17 +267,17 @@ function reindexProgress(t: Task): ProgChip | null {
 const tasks = ref<Task[]>([]);
 const loading = ref(false);
 const loadErr = ref('');
-/* 五百五十批：原始错误对象旁路（errPreHtml 压串丢 code/endpoint，errMeta 读不到——DiagView 547 同范式） */
+/* 原始错误对象旁路（errPreHtml 压串丢 code/endpoint，errMeta 读不到——DiagView 547 同范式） */
 const loadErrRaw = ref<unknown>(null);
 const cancelling = ref(new Set<string>());
-/* 一百九十五批补（原 183 口径）：取消失败原因按 taskId 持久展示在任务行上，成功后清除 */
+/* 补（原 183 口径）：取消失败原因按 taskId 持久展示在任务行上，成功后清除 */
 const cancelFailures = ref(new Map<string, string>());
-/* R42 §8.3：过滤器进 URL（可分享「只看 reindex 任务」链接），自动刷新是个人偏好落 localStorage */
+/*  §8.3：过滤器进 URL（可分享「只看 reindex 任务」链接），自动刷新是个人偏好落 localStorage */
 const actionsFilter = useScopedDraft('filter', { route: 'tasks' }, '').text;
 const autoRefresh = usePref('tasks.autoRefresh', true);
 const expandAll = ref(true);
 const expandedIds = ref(new Set<string>());
-/* 一百九十八批补/211:刷新频率档位(usePref 记忆,默认 3s 同旧行为) */
+/* 补/211:刷新频率档位(usePref 记忆,默认 3s 同旧行为) */
 const intervalMs = usePref('tasks.intervalMs', 3000);
 
 const filterOpts = [
@@ -311,7 +311,7 @@ async function load() {
     tasks.value = (raw || []).map((t: any) => ({
       ...t,
       runningMs: Math.round(Number(t.runningTimeNanos || 0) / 1e6),
-      /* 五百三十一批：tookMs 真值展示——后端已下发即用真值，缺失回落 runningMs 同源折算
+      /* tookMs 真值展示——后端已下发即用真值，缺失回落 runningMs 同源折算
          （原「-1 显 -」兜底退役：ES _tasks 无 finished 概念，任务在途即有已耗时真值） */
       tookMs: Number.isFinite(Number(t.tookMs)) && Number(t.tookMs) >= 0
         ? Number(t.tookMs)
@@ -321,7 +321,7 @@ async function load() {
     loadErrRaw.value = null;
   } catch (e: any) {
     loadErr.value = friendlyEsError(String(e?.message ?? e));
-    loadErrRaw.value = e; /* 五百五十批：原始错误对象旁路留存（压串前的 ApiError 供 errMeta） */
+    loadErrRaw.value = e; /* ：原始错误对象旁路留存（压串前的 ApiError 供 errMeta） */
     store.notify('error', '加载任务失败：' + loadErr.value);
   } finally {
     loading.value = false;
@@ -343,7 +343,7 @@ async function cancelOne(t: Task) {
     store.notify('success', '任务取消已发起：' + t.taskId);
     setTimeout(load, 500);
   } catch (e: any) {
-    /* 一百九十五批补（原 183 口径）：失败原因落到任务行持久显示，不只 toast 一闪 */
+    /* 补（原 183 口径）：失败原因落到任务行持久显示，不只 toast 一闪 */
     const reason = friendlyEsError(String(e?.message || e));
     cancelFailures.value.set(t.taskId, reason);
     store.notify('error', '取消失败：' + reason);
@@ -352,7 +352,7 @@ async function cancelOne(t: Task) {
   }
 }
 
-/* 七百七十七批 G255：原始 IO 快查（755 G200 同构）——按本页端点取记录环最近一条；
+/*  G255：原始 IO 快查（755 G200 同构）——按本页端点取记录环最近一条；
    '/cluster/tasks?' 含查询串前缀，与 /cluster/tasks/cancel 写端点互不混淆；
    判空 rec=null 时 notify 引导，不开空弹窗 */
 const rawIoShow = ref(false);
@@ -364,7 +364,7 @@ function openRawIo() {
   rawIoShow.value = true;
 }
 
-/* 构建父子树：parent_task_id 无效时视为根（五百二十八批：节点随建附 reindex 进度 chip） */
+/* 构建父子树：parent_task_id 无效时视为根（：节点随建附 reindex 进度 chip） */
 interface TreeNode extends Task { children: TreeNode[]; depth: number; hasChildren: boolean; prog: ProgChip | null }
 const trees = computed<TreeNode[]>(() => {
   const map = new Map<string, TreeNode>();
@@ -404,7 +404,7 @@ const flatList = computed(() => {
 const collapsedTotal = computed(() =>
   visibleTasks.value.length - flatList.value.length);
 
-/* 五百二十四批：kw 过滤——taskId/action/description 子串匹配，在 flatList 展开序上过滤
+/* kw 过滤——taskId/action/description 子串匹配，在 flatList 展开序上过滤
    （命中行保留原 depth 缩进）；taskId/描述列 MarkText 命中高亮 */
 const kw = ref('');
 const shownList = computed(() => {
@@ -416,12 +416,12 @@ const shownList = computed(() => {
     || String(t.description || '').toLowerCase().includes(k));
 });
 
-/* 五百二十四批：?taskId= 深链读侧（TaskTreeView onMounted 消费同构）——命中行 .tv-hit
+/* ?taskId= 深链读侧（TaskTreeView onMounted 消费同构）——命中行 .tv-hit
    高亮 + load 后滚动定位；任务不在当前列表（已完成/被 kw 滤掉）时高亮位不渲染，静默无副作用 */
 const route = useRoute();
 const deepTaskId = ref('');
 
-/* 一百四十四批：任务列表 Markdown 复制——卡死/慢任务排障贴群的一手清单 */
+/* 任务列表 Markdown 复制——卡死/慢任务排障贴群的一手清单 */
 async function copyTasksMd() {
   const rows = flatList.value;
   if (!rows.length) return;
@@ -437,7 +437,7 @@ async function copyTasksMd() {
   store.notify(ok ? 'success' : 'error', ok ? `已复制 ${rows.length} 个任务（Markdown）` : '复制失败');
 }
 
-/* ═══ 一百八十六批：任务节点右键菜单（E 组逐表过 dbx 清单）——taskId/任务信息复制+
+/* ═══ ：任务节点右键菜单（E 组逐表过 dbx 清单）——taskId/任务信息复制+
    取消直达（仍走 askConfirm 确认链）；不做列管理：任务树是层级清单非列式表格 ═══ */
 const taskMenu = ref<{ x: number; y: number; t: Task } | null>(null);
 function openTaskMenu(e: MouseEvent, t: Task) {
@@ -468,7 +468,7 @@ const actionKinds = computed(() => {
 });
 
 /* 卡头统计串 MetaStrip items——超 5m 长任务 >0 走 warn（0 回中性亮色）；
-   五百二十五批：Action 类型前 3 清单拆 text 项进 items（原插槽尾巴+手写 ksep+join 串三来源
+   Action 类型前 3 清单拆 text 项进 items（原插槽尾巴+手写 ksep+join 串三来源
    混一条 · 节奏收编组件 sep 统一节奏；kinds 空时不追加——值对「Action 类型 0」已表达） */
 const tvMeta = computed<MetaStripItem[]>(() => [
   { value: visibleTasks.value.length, label: '运行中' },
@@ -491,7 +491,7 @@ function toggleExpand(id: string) {
   expandedIds.value = new Set(s);
 }
 
-/* 二百四十八批：轮询收编 useAutoRefresh——KeepAlive 激活/失活+页面隐藏（visibilitychange）
+/* 轮询收编 useAutoRefresh——KeepAlive 激活/失活+页面隐藏（visibilitychange）
    +卸载全链停续，tick 时再验 loading（此前裸 setInterval 在后台标签页/隐藏态照跑）。
    ms getter 读 autoRefresh（关=0 不排表）；开关/间隔变更 restart 重排（开=立即拉一轮） */
 const refresher = useAutoRefresh(load, {
@@ -499,7 +499,7 @@ const refresher = useAutoRefresh(load, {
   guard: () => !loading.value,
 });
 refresher.setOn(true);
-/* 五百二十四批：onMounted 消费 ?taskId= 深链（读 query → 置高亮位 → load 后滚动定位） */
+/* onMounted 消费 ?taskId= 深链（读 query → 置高亮位 → load 后滚动定位） */
 onMounted(async () => {
   const q = route.query.taskId;
   deepTaskId.value = Array.isArray(q) ? String(q[0] ?? '') : q != null ? String(q) : '';
@@ -516,22 +516,22 @@ watch(intervalMs, () => refresher.restart());
 <style scoped>
 /* G1-C12：区块级间距落梯 --sp token（亚阶梯微调与负 margin 对齐 hack 不动） */
 .tv { display: flex; flex-direction: column; gap: var(--sp-3); }
-/* 五百二十七批：.tv-bar 空规则删除（lr-bar 骨架样式全局承担；类名本身在模板与
-   lrBarSingleTrack 契约清单里，不可摘）。七百七十七批 G258：.tv-title 死规则删
+/* .tv-bar 空规则删除（lr-bar 骨架样式全局承担；类名本身在模板与
+   lrBarSingleTrack 契约清单里，不可摘）。 G258：.tv-title 死规则删
    （PageHeader 收编伴漏删——G220/G227/G232 族；527「卡头位保持」裁定随页头收编失效） */
 .tv-auto { display: flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-sm); color: var(--tx1); cursor: pointer; user-select: none; }
 .tv-auto span { white-space: nowrap; }
 
 /* KPI 大卡墙退役后的 inline 统计串换装 MetaStrip 统一件——基础形态（flex/b/i/sep/mono/tone）
    全由组件承担；本页只留卡头字重回落（.card-t 650 不下渗到标签）。
-   五百二十五批：手写 .tv-meta-ksep 与插槽段 .tv-meta-kinds 随「kinds 拆 text 项进 items」退役 */
+   手写 .tv-meta-ksep 与插槽段 .tv-meta-kinds 随「kinds 拆 text 项进 items」退役 */
 .tv-meta { font-weight: 400; letter-spacing: 0; }
 
 /* 工具行对齐：n-select tiny(22px) 与 .btn.sm(~25px) 混排高度跳变，收敛到同一基准 */
 .tv-sel :deep(.n-base-selection) { --n-height: 25px !important; height: 25px; }
 .tv-sel :deep(.n-base-selection .n-base-selection-label) { height: 25px; font-size: var(--fs-xs); }
 
-/* 五百四十七批：pane 壳（.card 三件套）退役——min-height 布局语义与 .card padding 载体
+/* pane 壳（.card 三件套）退役——min-height 布局语义与 .card padding 载体
    原样迁入（14px 垂直留白为 .card 刻意值随迁保字面；.tv-tree 负 margin 几何不变） */
 .tv-tree-card { min-height: 200px; padding: 14px var(--sp-4); }
 /* G1-C2：初始加载骨架（loading && 无数据），与空态/失败占位互斥 */
@@ -554,20 +554,20 @@ watch(intervalMs, () => refresher.restart());
 .tv-node-node { color: var(--tx2); font-size: var(--fs-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex-shrink: 2; }
 .tv-node-m { min-width: 0; overflow: hidden; }
 .tv-node-desc { color: var(--tx1); font-size: var(--fs-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-/* 五百二十八批：reindex 行内进度 chip（描述行下沿）——文字 mono+tabular 防跳动，
+/* reindex 行内进度 chip（描述行下沿）——文字 mono+tabular 防跳动，
    进度条走 --ac 同全局进度语言；无 total 只剩文字（不出空条） */
 .tv-prog { display: flex; align-items: center; gap: var(--sp-1h); margin-top: var(--sp-0); min-width: 0; }
 .tv-prog-bar { width: 72px; height: 4px; border-radius: 2px; background: var(--bg2); overflow: hidden; flex-shrink: 0; }
 .tv-prog-fill { display: block; height: 100%; background: var(--ac); border-radius: 2px; transition: width 400ms ease; }
 .tv-prog-txt { font-size: var(--fs-2xs); color: var(--tx2); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tv-node-r { display: flex; align-items: center; gap: var(--sp-2); justify-content: flex-end; }
-/* 一百九十五批补：取消失败原因行（红字持久显示在任务行下，title 全量） */
+/* 补：取消失败原因行（红字持久显示在任务行下，title 全量） */
 .tv-cancel-err { color: var(--err); font-size: var(--fs-xs); padding: var(--sp-0) 0 var(--sp-1); overflow-wrap: anywhere; }
 .tv-dur { font-size: var(--fs-xs); color: var(--tx2); min-width: 55px; text-align: right; }
 .tv-dur.warn { color: var(--warn); font-weight: 400; }
-/* 五百三十批：job 级总耗时列（与 .tv-dur 同轨弱化展示，右缘运行时长保持主视觉） */
+/* job 级总耗时列（与 .tv-dur 同轨弱化展示，右缘运行时长保持主视觉） */
 .tv-took { font-size: var(--fs-xs); color: var(--tx2); opacity: 0.85; min-width: 40px; text-align: right; }
-/* 五百二十四批：kw 过滤输入落位（tv-kw 类锚随换装迁 input——sweep524 挂载锁同路径；
+/* kw 过滤输入落位（tv-kw 类锚随换装迁 input——sweep524 挂载锁同路径；
    胶囊壳归 SearchFilterBar 单源，tv-kw-wrap 只留宽高、box-sizing 对齐 tv-sel 25px 基线） */
 .tv-kw-wrap { width: 200px; height: 25px; box-sizing: border-box; }
 .tv-node.tv-hit { background: var(--ac-soft); box-shadow: inset 3px 0 0 var(--ac-hi); }

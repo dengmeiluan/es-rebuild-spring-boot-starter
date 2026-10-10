@@ -15,9 +15,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * R94：反射扫 ES 实体的字段，产出 field -&gt; (javaType, esType, @Field 注解值) 三元信息。
+ * 反射扫 ES 实体的字段，产出 field -&gt; (javaType, esType, @Field 注解值) 三元信息。
  *
- * <p>用途：宿主侧把它与「ES 侧采样出的存储形态」交叉，查 R94 实测的 30 格矩阵判定
+ * <p>用途：宿主侧把它与「ES 侧采样出的存储形态」交叉，查  实测的 30 格矩阵判定
  * date 兼容风险 —— 有了这一列就是查表，没有它只能猜。</p>
  *
  * <p><b>两个 null 语义互不相同，前端不许合并处理</b>：</p>
@@ -85,8 +85,8 @@ public final class EntityFieldScanner {
         try {
             declared = entityClass.getDeclaredFields();
         } catch (Throwable t) {
-            /* 五百四十七批：静默 emptyList→WARN——getDeclaredFields 抛 Throwable 属 JVM 级
-               异常（NoClassDefFoundError 等），全字段扫描无痕归零则 R94 矩阵静默失明无从
+            /* 静默 emptyList→WARN——getDeclaredFields 抛 Throwable 属 JVM 级
+               异常（NoClassDefFoundError 等），全字段扫描无痕归零则  矩阵静默失明无从
                排查；吞异常契约不变（返回 emptyList 控制流零改动）。同族 null 返回点核查：
                sdesVersion() 的 Throwable→null 与 parseProperties() 的 catch→null 均为文档化
                正常路径（前者 jar 无 Implementation-Version 常态、后者契约内解析失败经
@@ -117,7 +117,7 @@ public final class EntityFieldScanner {
                 // 注意：type()/format() 未显式指定时返回枚举默认值（Auto / none）而非 null，
                 // 此处刻意<b>不</b>把默认值规整成 null —— 「注解在但未指定」与「没写注解」必须可分辨。
                 //
-                // R96：format()/pattern() 的返回形态在 sdes 4.0.x（单值）与 4.4.x（数组）间不同，
+                // format()/pattern() 的返回形态在 sdes 4.0.x（单值）与 4.4.x（数组）间不同，
                 // 编译期直调会把返回类型钉进字节码 → 换版本抛 NoSuchMethodError，
                 // 且只在真正访问该字段时才炸（启动期不报）——第一个撞见的是打开 desired-state 页的人。
                 // 故经 SdesCompat 反射取值。type()/value()/name() 两版签名相同（javap 实测），保持直调。
@@ -191,7 +191,7 @@ public final class EntityFieldScanner {
     /**
      * mapping 里该字段的 {@code format} 键；无则 null。
      *
-     * <p><b>为何由后端产出而非前端现取</b>（R93 Task 17 裁定四）：它是 spec §9.5 规则 1
+     * <p><b>为何由后端产出而非前端现取</b>（  裁定四）：它是 spec §9.5 规则 1
      * {@code SECONDS_IN_FORMATLESS_DATE} 唯一的 mapping 侧输入。若前端为此自行解析一次
      * mappingJson，仓库里就有<b>两个 mapping 解析器</b> —— 它们此刻一致，从此各自演化；
      * 且「后端 {@code mappingParsed=false} 而前端解析成功读出了 format」这种错位状态

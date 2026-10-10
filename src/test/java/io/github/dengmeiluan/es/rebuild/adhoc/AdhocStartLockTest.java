@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 /**
- * R93 Task 7：{@code start()} 的取锁与<b>锁泄漏</b>。
+ *  {@code start()} 的取锁与<b>锁泄漏</b>。
  *
  * <p>本类各方法各自声称的失败模式写在各自的 javadoc 上。共同背景：锁一旦泄漏，
  * 该索引在<b>整个租约期</b>（默认 60 分钟）内都无法再发起重建，而没有任何作业在跑。</p>
@@ -321,7 +321,7 @@ public class AdhocStartLockTest {
      *
      * <p><b>失效方向的不对称是要害。</b>C1 是误报——拒绝切换、<b>吵闹地失败</b>，运维立刻发现；
      * C2 是漏报——不报错、{@code switchedWithoutLock} 恒 false、作业显示 SUCCEEDED、报告干净，
-     * <b>控制台上无任何痕迹</b>，而 Task 7 的全部安全性质都挂在 {@code lockActive} 这一个布尔上。</p>
+     * <b>控制台上无任何痕迹</b>，而  的全部安全性质都挂在 {@code lockActive} 这一个布尔上。</p>
      *
      * <p>构造：{@code enabled=true}（锁确实启用）但 {@code get()} 返回 null（真实实现吞掉 ES
      * 异常后的表现）。<b>必须经由 {@code start()}</b> —— 判定发生在生产代码的那一行上，
@@ -351,14 +351,14 @@ public class AdhocStartLockTest {
      * {@code isEnabled()} 必须是 {@code default} 方法 —— 加成抽象方法会让宿主侧已有实现
      * <b>编译期直接断裂</b>，而本仓 3 个实现都已更新、测试全绿，恰恰会<b>掩盖仓外断裂</b>。
      *
-     * <p>本用例模拟一个<b>不知道 {@code isEnabled()} 存在</b>的宿主实现（只实现 R93 之前的
+     * <p>本用例模拟一个<b>不知道 {@code isEnabled()} 存在</b>的宿主实现（只实现  之前的
      * 6 个方法）。它<b>能编译</b>即证明 SPI 未断裂；其 {@code isEnabled()} 为 <b>true</b>
      * 即证明默认值落在<b>保守的误报方向</b>（宁可多做一次归属校验、必要时吵闹地拒绝切换），
      * 而不是漏报方向（静默跳过全部锁保护）。</p>
      */
     @Test
     public void legacyStoreWithoutIsEnabled_stillCompilesAndDefaultsToProtected() {
-        // 只实现 R93 之前就存在的 6 个方法，刻意不覆写 isEnabled()
+        // 只实现  之前就存在的 6 个方法，刻意不覆写 isEnabled()
         RebuildLockStore legacy = new RebuildLockStore() {
             @Override
             public boolean tryAcquire(String indexKey, long leaseMs) {

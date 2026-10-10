@@ -40,7 +40,7 @@ public class EsIndexAdmin {
     /** 宿主集群 client（单集群时代的唯一通道，仍是兼容兜底）。 */
     private final RestHighLevelClient hostClient;
 
-    /** R36 多集群路由（setter 可选注入）：非空时数据面操作跟随请求上下文的目标集群。 */
+    /**  多集群路由（setter 可选注入）：非空时数据面操作跟随请求上下文的目标集群。 */
     private volatile io.github.dengmeiluan.es.rebuild.multicluster.EsClientRouter clientRouter;
 
     public EsIndexAdmin(RestHighLevelClient restHighLevelClient) {
@@ -68,7 +68,7 @@ public class EsIndexAdmin {
     /**
      * 显式创建物理索引（带 settings + mapping），不依赖 ES 自动建索引。
      *
-     * <p>R40 版本感知：目标是 6.x 集群时 mappings 必须带 type 包一层，走低层 REST 分叉；
+     * <p> 版本感知：目标是 6.x 集群时 mappings 必须带 type 包一层，走低层 REST 分叉；
      * 7.x+/版本未知走既有 typeless 路径（行为与旧版完全一致）。</p>
      *
      * @param mappingJson 可为 null（无 @Mapping 的实体）
@@ -118,9 +118,9 @@ public class EsIndexAdmin {
     }
 
     /**
-     * R41：mapping body 归一化——6.x 目标集群的 {@code _mapping} 响应多一层 type 包裹
+     * mapping body 归一化——6.x 目标集群的 {@code _mapping} 响应多一层 type 包裹
      * （{@code mappings.{type}.properties}），剥掉后与 7.x 同构，避免控制台字段视图对 6.x 集群误报「无字段」。
-     * <p>包级可见：R92-C1 单测锁双形态行为（见 EsResponseShapeTest）。</p>
+     * <p>包级可见：-C1 单测锁双形态行为（见 EsResponseShapeTest）。</p>
      */
     @SuppressWarnings("unchecked")
     static Map<String, Object> unwrapTypeLayer(Map<String, Object> mappings) {
@@ -135,7 +135,7 @@ public class EsIndexAdmin {
     }
 
     /**
-     * R92-C1：hits.total 双形态归一——6.x 是数字，7.x+ 是 {@code {value,relation}} 对象，
+     * -C1：hits.total 双形态归一——6.x 是数字，7.x+ 是 {@code {value,relation}} 对象，
      * 统一取出数值。未知形态（null/异构）原样透传，不在这里拦。
      * <p>注：searchDsl/pitSearch 等透传原始响应的路径不走本方法——前端已统一
      * {@code total?.value ?? total} 双形态消费，那是既定契约。</p>
@@ -309,7 +309,7 @@ public class EsIndexAdmin {
             Map<String, Object> map = OBJECT_MAPPER.readValue(json, Map.class);
             return map;
         } catch (Exception e) {
-            // 五百六十批：状态体解析失败回 null（调用方回退原文，契约不变）——debug 带 reason 摘要留痕
+            // 状态体解析失败回 null（调用方回退原文，契约不变）——debug 带 reason 摘要留痕
             logger.debug("[EsIndexAdmin] tryParseStatus 解析失败回退原文：{}: {}",
                     e.getClass().getSimpleName(), e.getMessage());
             return null;
@@ -556,7 +556,7 @@ public class EsIndexAdmin {
 
     private Map<String, Object> doExecuteSql(String sql) throws IOException {
         String body = OBJECT_MAPPER.writeValueAsString(java.util.Collections.singletonMap("query", sql));
-        /* R75：经版本感知 SQL 路径（6.x 是 /_xpack/sql） */
+        /* 经版本感知 SQL 路径（6.x 是 /_xpack/sql） */
         return performSqlVersionAware("?format=json", body);
     }
 
@@ -585,7 +585,7 @@ public class EsIndexAdmin {
                 }
             }
         } catch (Exception e) {
-            /* 五百六十一批：静默吞补 debug 留痕（异常类名+message）——「重写放弃」与「没触发重写」
+            /* 静默吞补 debug 留痕（异常类名+message）——「重写放弃」与「没触发重写」
                在日志上可区分；返回 null 契约不变（重写放弃，原始错误照常透传）。 */
             logger.debug("[EsIndexAdmin] rewriteSqlExcludingArrays mapping 探测失败（放弃重写）：{}: {}",
                     e.getClass().getSimpleName(), e.getMessage());
@@ -672,8 +672,8 @@ public class EsIndexAdmin {
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> result = OBJECT_MAPPER.readValue(body, Map.class);
-        /* 五百六十批：顺带版本号（伴随 GET /，best-effort）——控制台版本识别回落原先走
-           raw 透传（ADMIN 域），每次开屏被记成 HIGH_RISK「raw=GET /」刷屏（用户实报
+        /* 顺带版本号（伴随 GET /，best-effort）——控制台版本识别回落原先走
+           raw 透传（ADMIN 域），每次开屏被记成 HIGH_RISK「raw=GET /」刷屏（实报
            「我只是打开页面却出现高危操作」）。共享端点带版本后前端弃 raw 回落。 */
         try {
             org.elasticsearch.client.Request root = new org.elasticsearch.client.Request("GET", "/");
@@ -769,7 +769,7 @@ public class EsIndexAdmin {
     }
 
     /**
-     * R73 版本感知 PUT _mapping：6.x 目标 typeless 会报 400 mapping type is missing，
+     *  版本感知 PUT _mapping：6.x 目标 typeless 会报 400 mapping type is missing，
      * 必须走 {@code PUT /{index}/_mapping/{type}}（type 从现有 mapping 反查，老索引可能是自定义 type，
      * 拿不到回退 {@code _doc}，与 {@link #createIndexLegacy6} 同构）。
      * 版本未探到但目标实为 6.x 时，typeless 首发 400 再用 typed 路径重试一次兜底。
@@ -807,7 +807,7 @@ public class EsIndexAdmin {
                 }
             }
         } catch (Exception e) {
-            // 五百五十二批裁决（三态之②冷路径 WARN）：反查失败回退 _doc 的降级有真实代价——
+            // 裁决（三态之②冷路径 WARN）：反查失败回退 _doc 的降级有真实代价——
             // 6.x 索引若实为自定义 type，后续 PUT _mapping/_doc 会以「more than 1 type」类
             // 错误失败，运营者看到的将是误导性下游根因；此处 WARN 把反查失败的真因留在日志
             // 因果链里。冷路径（用户触发的 putMapping / 文档级操作才走到），直接 WARN 无需
@@ -819,7 +819,7 @@ public class EsIndexAdmin {
     }
 
     /**
-     * R74 版本感知文档级子路由：{@code _update}/{@code _explain}/{@code _termvectors} 的 typeless 形态
+     *  版本感知文档级子路由：{@code _update}/{@code _explain}/{@code _termvectors} 的 typeless 形态
      * （{@code /{index}/_update/{id}}）是 7.0 才有的路由，6.x 会把 {@code _update} 段误解析成 type 名报
      * 400 invalid_type_name，必须走 {@code /{index}/{type}/{id}/_update}（type 同 {@link #legacyMappingType} 反查）。
      * 版本未探到时 typeless 首发 400 再 typed 路径重试一次兜底，与 {@link #putMappingVersionAware} 同构。
@@ -948,7 +948,7 @@ public class EsIndexAdmin {
         return result;
     }
 
-    // ═══ R22: 集群级运维观测能力（tasks/allocation/hot_threads/pending/nodes_stats/analyze/aliases） ═══
+    // ═══ : 集群级运维观测能力（tasks/allocation/hot_threads/pending/nodes_stats/analyze/aliases） ═══
 
     /**
      * 列出集群任务（{@code GET /_tasks}）。返回结构化 {@code [{taskId,node,action,description,parentTaskId,startTimeMillis,runningTimeNanos,tookMs,cancellable}]}。
@@ -1205,19 +1205,19 @@ public class EsIndexAdmin {
         } catch (java.io.UnsupportedEncodingException e) {
             encodedId = id;
         }
-        /* R74：typeless _update 是 7.0 才有的路由，经版本感知路径兼容 6.x */
+        /* typeless _update 是 7.0 才有的路由，经版本感知路径兼容 6.x */
         Map<String, Object> result = performDocOpVersionAware("POST", index, encodedId,
                 "_update", "?refresh=true", "{\"doc\":" + partialDocJson + "}");
         logger.info("[EsIndexAdmin] updatePartial index={} id={} result={}", index, id, result.get("result"));
         return result;
     }
 
-    // ═══ R23: 平台/分布式能力（templates / snapshot / shards distribution） ═══
+    // ═══ : 平台/分布式能力（templates / snapshot / shards distribution） ═══
 
     /**
      * 列出所有索引模板（{@code _index_template}）与组件模板（{@code _component_template}）并集。
      * 返回 {@code {index_templates:[{name,index_patterns,priority,version,composed_of,template}], component_templates:[{name,template,version}]}}。
-     * <p>R41：composable template 是 7.8+ 才有的 API，目标集群更低版本（6.x / 7.7-）时
+     * <p>：composable template 是 7.8+ 才有的 API，目标集群更低版本（6.x / 7.7-）时
      * 降级读 legacy {@code /_template}，归一化成同构形状并附 {@code legacy:true} 标记。
      */
     public Map<String, Object> listTemplates() throws IOException {
@@ -1283,7 +1283,7 @@ public class EsIndexAdmin {
         return result;
     }
 
-    /* R41：模板端点版本感知——路由到目标集群时按其版本选 composable / legacy API */
+    /* 模板端点版本感知——路由到目标集群时按其版本选 composable / legacy API */
     private boolean supportsComposableTemplateNow() {
         io.github.dengmeiluan.es.rebuild.multicluster.EsClientRouter r = clientRouter;
         String v = r == null ? null : r.currentEsVersion();
@@ -1408,7 +1408,7 @@ public class EsIndexAdmin {
     }
 
     /* =========================================================
-     * R24: 深度产品化 - 搜索沙盒/热Setting/Reroute/ILM
+     * 深度产品化 - 搜索沙盒/热Setting/Reroute/ILM
      * ========================================================= */
 
     /**
@@ -1530,7 +1530,7 @@ public class EsIndexAdmin {
     }
 
     /* ================================================================
-     * R25：深度产品化 - Cluster Settings / Task Manager /
+     * 深度产品化 - Cluster Settings / Task Manager /
      *      Shard Stores / Snapshot Status / Reindex Preview
      * ================================================================ */
 
@@ -1818,7 +1818,7 @@ public class EsIndexAdmin {
     }
 
     /* ================================================================
-     * R26：一键综合体检 healthReport
+     * 一键综合体检 healthReport
      * ================================================================ */
 
     /**
@@ -1834,7 +1834,7 @@ public class EsIndexAdmin {
         int score = 100;
 
         /* 1) cluster/health
-           R43 信噪比：按「根因」计罚一次，不再让同一件事（yellow=副本未分配）在
+            信噪比：按「根因」计罚一次，不再让同一件事（yellow=副本未分配）在
            cluster.status / shards.unassigned / indices.yellow 三处重复扣分把常态打成「严重问题」。
            且区分 red（主分片不可用=事故）与 yellow（副本未分配）：单数据节点集群任何 rep>=1
            的索引恒 yellow，属拓扑常态而非异常，只提示不扣分。 */
@@ -1900,7 +1900,7 @@ public class EsIndexAdmin {
         if (!unhealthy.isEmpty()) {
             long reds = unhealthy.stream().filter(m -> "red".equalsIgnoreCase(String.valueOf(m.get("health")))).count();
             long yellows = unhealthy.size() - reds;
-            /* R43：索引级红黄就是集群 status 的构成因子，列表供定位，不再叠加扣分 */
+            /* 索引级红黄就是集群 status 的构成因子，列表供定位，不再叠加扣分 */
             if (reds > 0) {
                 checks.add(check("critical", "indices.red", reds + " 个索引 RED（主分片不可用，见下方清单）", null));
             }
@@ -1930,7 +1930,7 @@ public class EsIndexAdmin {
             Map<String, Object> pt = performJson("GET", "/_cluster/pending_tasks", null);
             out.put("pendingTasks", pt.getOrDefault("tasks", java.util.Collections.emptyList()));
         } catch (IOException e) {
-            // 五百五十八批：原裸 ignored{} 整段静默——pending 面失明时报告只显示「没有
+            // 原裸 ignored{} 整段静默——pending 面失明时报告只显示「没有
             // pending task」，与集群真没任务无法区分。错误键与同方法 mappingsError/
             // settingsError/docCountError/aliasesError 兄弟键齐平；报告照常返回契约不变
             out.put("pendingTasksError", e.getMessage());
@@ -1991,7 +1991,7 @@ public class EsIndexAdmin {
         if (v instanceof String) {
             try { return Integer.parseInt((String) v); }
             catch (Exception e) {
-                // 五百六十批：伪 0 兜底此前与合法 0 静默合流（解析失败不可见）——debug 留痕，返回值语义零变
+                // 伪 0 兜底此前与合法 0 静默合流（解析失败不可见）——debug 留痕，返回值语义零变
                 logger.debug("[EsIndexAdmin] intOf 解析失败按 0 兜底：{}: {}", e.getClass().getSimpleName(), e.getMessage());
                 return 0;
             }
@@ -2003,7 +2003,7 @@ public class EsIndexAdmin {
         if (v instanceof String) {
             try { return Long.parseLong((String) v); }
             catch (Exception e) {
-                // 五百六十批：同 intOf——debug 留痕，伪 0 兜底语义零变
+                // 同 intOf——debug 留痕，伪 0 兜底语义零变
                 logger.debug("[EsIndexAdmin] longOf 解析失败按 0 兜底：{}: {}", e.getClass().getSimpleName(), e.getMessage());
                 return 0L;
             }
@@ -2011,7 +2011,7 @@ public class EsIndexAdmin {
         return 0L;
     }
 
-    /* ======== R27：分布式运维 - SLM / Watcher / Remote Clusters ======== */
+    /* ======== ：分布式运维 - SLM / Watcher / Remote Clusters ======== */
 
     /** SLM 快照策略列表（含最近执行时间/下次执行时间/统计）。 */
     @SuppressWarnings("unchecked")
@@ -2063,7 +2063,7 @@ public class EsIndexAdmin {
                 Map<String, Object> hits = performJson("POST", "/.watches/_search", OBJECT_MAPPER.writeValueAsString(body));
                 out.put("watches", hits);
             } catch (Exception ignore) {
-                /* 五百四十八批：.watches 子查询失败升 WARN + 回填 reason（原静默置空）——
+                /* .watches 子查询失败升 WARN + 回填 reason（原静默置空）——
                  * 「没配任何 watch」与「.watches 索引读失败」须可分辨（.watches 不存在的 404
                  * 也走此路径，WARN 即「列表为空的原因留痕」）；低频（仅 Watcher 面板打开触发），
                  * 单条 WARN 不刷屏。字段名照抄本方法外层 catch 的 reason 形态。 */
@@ -2103,7 +2103,7 @@ public class EsIndexAdmin {
             out.put("localClusterName", self.get("cluster_name"));
             out.put("localVersion", self.get("version"));
         } catch (Exception ex) {
-            /* 五百四十八批：本端信息失败升 WARN 留痕（原 catch (ignored) 完全空体）——远端列表
+            /* 本端信息失败升 WARN 留痕（原 catch (ignored) 完全空体）——远端列表
              * 正常而本端 name/version 静默缺列时无从排查。只加日志、不动返回结构：
              * remotes/count/localClusterName 形态是前端 RemoteClustersView 消费面，禁改。 */
             logger.warn("[EsIndexAdmin] remoteClusters 本端信息（GET /）读取失败，localClusterName/localVersion 缺省: {}",
@@ -2112,7 +2112,7 @@ public class EsIndexAdmin {
         return out;
     }
 
-    /* ======== R27➕ / R28 自定义化扩展 ======== */
+    /* ======== ➕ /  自定义化扩展 ======== */
 
     /**
      * 高级 Reindex——完全自定义。
@@ -2208,7 +2208,7 @@ public class EsIndexAdmin {
         addQ(qs, "timeout", o.get("timeout"));
         addQ(qs, "wait_for_active_shards", o.get("waitForActiveShards"));
         if (!qs.isEmpty()) path.append('?').append(String.join("&", qs));
-        /* R74：6.x bulk action 行强制要求 _type，7.x 形态 NDJSON（无 _type）会整请求 400——版本感知注入；
+        /* 6.x bulk action 行强制要求 _type，7.x 形态 NDJSON（无 _type）会整请求 400——版本感知注入；
          * 版本未探到时首发 400 type is missing 再注入重试一次兜底（400 表示整请求被拒未执行，重试安全） */
         io.github.dengmeiluan.es.rebuild.multicluster.EsClientRouter r = clientRouter;
         String version = r == null ? null : r.currentEsVersion();
@@ -2249,7 +2249,7 @@ public class EsIndexAdmin {
 
     private Map<String, Object> doBulkRequest(String path, String ndjson) throws IOException {
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("POST", path);
-        /* R74：ContentType 不能带 charset——6.x 严格校验拒收 "application/x-ndjson; charset=UTF-8"（406） */
+        /* ContentType 不能带 charset——6.x 严格校验拒收 "application/x-ndjson; charset=UTF-8"（406） */
         req.setEntity(new org.apache.http.entity.StringEntity(ndjson,
                 org.apache.http.entity.ContentType.create("application/x-ndjson")));
         org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
@@ -2257,10 +2257,10 @@ public class EsIndexAdmin {
     }
 
     /**
-     * R74：6.x bulk 兼容——逐行解析 NDJSON，action 行（index/create/update/delete）meta 缺 {@code _type}
+     * 6.x bulk 兼容——逐行解析 NDJSON，action 行（index/create/update/delete）meta 缺 {@code _type}
      * 时注入（type 由 typeResolver 反查，按索引缓存）；source 行原样透传。
      * 解析失败的行原样透传留给 ES 报错，不在这里拦。
-     * <p>R92-C1 抽静态 + type 反查函数注入：剥离 REST 依赖，单测直接锁 NDJSON 改写行为。</p>
+     * <p>-C1 抽静态 + type 反查函数注入：剥离 REST 依赖，单测直接锁 NDJSON 改写行为。</p>
      */
     @SuppressWarnings("unchecked")
     static String legacyBulkNdjson(String indexOrNull, String ndjson,
@@ -2302,7 +2302,7 @@ public class EsIndexAdmin {
     /**
      * ES SQL / _sql?format=json —— 分布式 SQL。
      * body: {"query":"SELECT ...","fetch_size":100} 或 {"cursor":"xx"} 分页。
-     * <p>R75：6.x 的 SQL 端点挂在 {@code /_xpack/sql} 前缀下（6.3+ 就有 SQL 能力），
+     * <p>：6.x 的 SQL 端点挂在 {@code /_xpack/sql} 前缀下（6.3+ 就有 SQL 能力），
      * 打 7.x 路径 {@code /_sql} 会 405/400——此前被当成「未启用 _sql」假降级，
      * 实际 QA 6.7 实测 {@code POST /_xpack/sql} 可用，经 {@link #performSqlVersionAware} 修复。
      */
@@ -2321,7 +2321,7 @@ public class EsIndexAdmin {
     }
 
     /**
-     * R75 版本感知 SQL 请求：6.x 走 {@code /_xpack/sql}，7+ 走 {@code /_sql}；
+     *  版本感知 SQL 请求：6.x 走 {@code /_xpack/sql}，7+ 走 {@code /_sql}；
      * 版本未探到时 {@code /_sql} 首发 405（或 400 invalid_index_name，6.x 把 /_sql/translate
      * 误解析成索引名）再用 xpack 前缀重试一次兜底，与 {@link #putMappingVersionAware} 同构。
      *
@@ -2387,7 +2387,7 @@ public class EsIndexAdmin {
         return performJson("PUT", p, body);
     }
 
-    /** _update partial doc —— 局部更新。body: {"doc":{...}} 或 {"script":{...}}。R74：版本感知路径兼容 6.x。 */
+    /** _update partial doc —— 局部更新。body: {"doc":{...}} 或 {"script":{...}}。：版本感知路径兼容 6.x。 */
     public Map<String, Object> updateDoc(String index, String id, String body, String refresh) throws IOException {
         if (index == null || index.trim().isEmpty()) throw new IllegalArgumentException("index 不能为空");
         if (id == null || id.isEmpty()) throw new IllegalArgumentException("id 不能为空");
@@ -2408,7 +2408,7 @@ public class EsIndexAdmin {
     }
 
     /* ============================================================
-     * R29 深度产品化 —— painless / stored scripts / rollover / ILM ops / nodes stats brief
+     *  深度产品化 —— painless / stored scripts / rollover / ILM ops / nodes stats brief
      * ============================================================ */
 
     /** POST /_scripts/painless/_execute —— 脚本沙盒试跑。 */
@@ -2491,7 +2491,7 @@ public class EsIndexAdmin {
         catch (Exception ex) { Map<String, Object> o = new java.util.LinkedHashMap<>(); o.put("available", false); o.put("reason", ex.getMessage()); return o; }
     }
 
-    /** 实时监控大屏简化统计——只取 name/jvm.heap%/os.cpu.load/fs.total/indexing rate/search rate/线程池即时值（R58 对标 Thread_pool Rows）。 */
+    /** 实时监控大屏简化统计——只取 name/jvm.heap%/os.cpu.load/fs.total/indexing rate/search rate/线程池即时值（ 对标 Thread_pool Rows）。 */
     @SuppressWarnings("unchecked")
     public java.util.List<Map<String, Object>> nodesStatsBrief() throws IOException {
         Map<String, Object> resp = performJson("GET",
@@ -2534,7 +2534,7 @@ public class EsIndexAdmin {
             row.put("storeSize", store.get("size_in_bytes"));
             row.put("indexTotal", indexing.get("index_total"));
             row.put("queryTotal", search.get("query_total"));
-            /* R58：查询线程池即时值（对标阿里云 Thread_pool Rows；写入拒绝前兆，历史管道 R29 同口径） */
+            /* 查询线程池即时值（对标阿里云 Thread_pool Rows；写入拒绝前兆，历史管道  同口径） */
             Map<String, Object> tp = (Map<String, Object>) n.getOrDefault("thread_pool", java.util.Collections.emptyMap());
             Map<String, Object> tpSearch = (Map<String, Object>) tp.getOrDefault("search", java.util.Collections.emptyMap());
             row.put("tpSearchActive", tpSearch.get("active"));
@@ -2545,7 +2545,7 @@ public class EsIndexAdmin {
     }
 
     /* ============================================================
-     * R30 查询能力全通道（Query Bridge）
+     *  查询能力全通道（Query Bridge）
      *   专治 ES-SQL 硬伤：数组字段报错 / nested 不支持 / text 禁 GROUP BY / 翻页上限。
      *   新增 6 个 low-level：
      *     1. sqlLenient    — SQL 宽容模式（自动包 field_multi_value_leniency + 可选 runtime_mappings 拍平数组）
@@ -2570,7 +2570,7 @@ public class EsIndexAdmin {
             finalBody = "{\"field_multi_value_leniency\":true," + finalBody.substring(1);
         }
         try {
-            /* R75：经版本感知 SQL 路径（6.x 是 /_xpack/sql） */
+            /* 经版本感知 SQL 路径（6.x 是 /_xpack/sql） */
             return performSqlVersionAware("?format=json", finalBody);
         } catch (Exception ex) {
             Map<String, Object> out = new java.util.LinkedHashMap<>();
@@ -2659,7 +2659,7 @@ public class EsIndexAdmin {
                 scanArrays(src, "", observedArrayFields);
             }
         } catch (Exception e) {
-            // 五百五十二批裁决（三态之②冷路径 WARN）：样本行探测失败 → observedArrayFields 恒空
+            // 裁决（三态之②冷路径 WARN）：样本行探测失败 → observedArrayFields 恒空
             // → isArray/isNested 判定降级 → supportsSql 启发式可能把「SQL 会破」的字段误报为
             // 安全，用户拿着错误结论去写 SQL 且无痕可查。冷路径（控制台显式触发 schema 解析
             // 才走到），直接 WARN 带 index 与堆栈；主流程返回契约不变（fields 仍按 mapping 给出，
@@ -2742,10 +2742,10 @@ public class EsIndexAdmin {
         }
     }
 
-    /* ============ R31：索引运维中枢（mapping / analysis / synonyms / plugins） ============ */
+    /* ============ ：索引运维中枢（mapping / analysis / synonyms / plugins） ============ */
 
     /**
-     * R31：Mapping 详情——结构化返回字段树。
+     * Mapping 详情——结构化返回字段树。
      * 每个字段：name / type / analyzer / search_analyzer / format / isNested / isObject / isMultiField / children[]。
      */
     @SuppressWarnings("unchecked")
@@ -2832,18 +2832,18 @@ public class EsIndexAdmin {
     }
 
     /**
-     * R31：Mapping 增加字段（只允许 add，不允许改/删；ES 硬性约束）。
+     * Mapping 增加字段（只允许 add，不允许改/删；ES 硬性约束）。
      * body 期望是标准 mapping 片段 {"properties":{"newField":{"type":"keyword"}}}
      */
     public Map<String, Object> putMappingField(String index, String body) throws IOException {
         if (index == null || index.trim().isEmpty()) throw new IllegalArgumentException("index 不能为空");
         if (body == null || body.trim().isEmpty()) throw new IllegalArgumentException("body 不能为空");
-        // R73：与 putMapping 同走版本感知路径（6.x 必须 typed，否则 400 mapping type is missing）
+        // 与 putMapping 同走版本感知路径（6.x 必须 typed，否则 400 mapping type is missing）
         return putMappingVersionAware(java.net.URLEncoder.encode(index, "UTF-8"), body);
     }
 
     /**
-     * R31：读取索引 analysis 全景——analyzer / tokenizer / filter / char_filter / normalizer。
+     * 读取索引 analysis 全景——analyzer / tokenizer / filter / char_filter / normalizer。
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> getAnalysisSettings(String index) throws IOException {
@@ -2874,7 +2874,7 @@ public class EsIndexAdmin {
     private static int sizeOf(Object m) { return (m instanceof Map) ? ((Map<?, ?>) m).size() : 0; }
 
     /**
-     * R31：更新 analysis 配置——自动执行 close→PUT settings→open 三步曲。
+     * 更新 analysis 配置——自动执行 close→PUT settings→open 三步曲。
      * body 示例：{"analysis":{"filter":{"my_syn":{"type":"synonym_graph","synonyms":["car,auto"]}}}}
      */
     public Map<String, Object> updateAnalysisSettings(String index, String body) throws IOException {
@@ -2896,7 +2896,7 @@ public class EsIndexAdmin {
     }
 
     /**
-     * R31：分词 API 试跑。body 支持指定 analyzer 或即席组合（tokenizer + filter + char_filter）。
+     * 分词 API 试跑。body 支持指定 analyzer 或即席组合（tokenizer + filter + char_filter）。
      * 若 index 为空则走 /_analyze（builtin analyzer 才有效）。
      */
     public Map<String, Object> analyzeText(String index, String body) throws IOException {
@@ -2908,7 +2908,7 @@ public class EsIndexAdmin {
     }
 
     /**
-     * R31：热重载搜索分词器（同义词/文件字典变更后无需 close-index）。
+     * 热重载搜索分词器（同义词/文件字典变更后无需 close-index）。
      * ES 7.3+ 支持；仅对 search_analyzer 生效，index_analyzer 变更仍需 close-open。
      */
     public Map<String, Object> reloadSearchAnalyzers(String index) throws IOException {
@@ -2917,7 +2917,7 @@ public class EsIndexAdmin {
     }
 
     /**
-     * R31：集群插件矩阵——`_cat/plugins?format=json`。
+     * 集群插件矩阵——`_cat/plugins?format=json`。
      * 返回：{ nodes:[{name, plugin, version, description}], summary:{pluginName:{installedOn:[node...], count}}, mismatches:[] }
      * mismatches 会标出"某插件未在所有节点上安装"这种脏 setup。
      */
@@ -2972,7 +2972,7 @@ public class EsIndexAdmin {
     }
 
     /**
-     * R31：便捷方法——把同义词列表写入索引级 synonym_graph filter。
+     * 便捷方法——把同义词列表写入索引级 synonym_graph filter。
      * 自动执行 close→PUT→open。字典编辑器专用。
      */
     public Map<String, Object> synonymsGraphUpsert(String index, String filterName, java.util.List<String> entries, boolean expand) throws IOException {
@@ -2993,10 +2993,10 @@ public class EsIndexAdmin {
         return updateAnalysisSettings(index, body.toString());
     }
 
-    /* ==================== R32：相关性打分实验室 ==================== */
+    /* ==================== ：相关性打分实验室 ==================== */
 
     /**
-     * R32：带 explain 的搜索透传。body 由前端自由控制（可含 explain:true / _name 命名子句）。
+     * 带 explain 的搜索透传。body 由前端自由控制（可含 explain:true / _name 命名子句）。
      */
     public Map<String, Object> searchRaw(String index, String body) throws IOException {
         String enc = java.net.URLEncoder.encode(index, "UTF-8");
@@ -3004,18 +3004,18 @@ public class EsIndexAdmin {
     }
 
     /**
-     * R32：对指定文档问“为什么得这个分 / 为什么没命中”。
+     * 对指定文档问“为什么得这个分 / 为什么没命中”。
      * body 形如 {"query":{...}}，命中时返回完整 BM25 解释树，未命中时 matched=false。
      */
     public Map<String, Object> explainDoc(String index, String id, String body) throws IOException {
         String enc = java.net.URLEncoder.encode(index, "UTF-8");
         String encId = java.net.URLEncoder.encode(id, "UTF-8");
-        /* R74：typeless _explain 是 7.0 才有的路由，经版本感知路径兼容 6.x */
+        /* typeless _explain 是 7.0 才有的路由，经版本感知路径兼容 6.x */
         return performDocOpVersionAware("POST", enc, encId, "_explain", "", body);
     }
 
     /**
-     * R32：查询校验 + Lucene 改写透视。看“我写的 match 实际被改写成什么”。
+     * 查询校验 + Lucene 改写透视。看“我写的 match 实际被改写成什么”。
      */
     public Map<String, Object> validateQuery(String index, String body) throws IOException {
         String enc = java.net.URLEncoder.encode(index, "UTF-8");
@@ -3023,7 +3023,7 @@ public class EsIndexAdmin {
     }
 
     /**
-     * R32：词频取证。指定文档指定字段的 term 统计（tf/ttf/doc_freq），打分调试的微观证据。
+     * 词频取证。指定文档指定字段的 term 统计（tf/ttf/doc_freq），打分调试的微观证据。
      */
     public Map<String, Object> termVectors(String index, String id, String fields) throws IOException {
         String enc = java.net.URLEncoder.encode(index, "UTF-8");
@@ -3032,14 +3032,14 @@ public class EsIndexAdmin {
         if (fields != null && !fields.trim().isEmpty()) {
             qs.append("&fields=").append(java.net.URLEncoder.encode(fields.trim(), "UTF-8"));
         }
-        /* R74：typeless _termvectors 是 7.0 才有的路由，经版本感知路径兼容 6.x */
+        /* typeless _termvectors 是 7.0 才有的路由，经版本感知路径兼容 6.x */
         return performDocOpVersionAware("GET", enc, encId, "_termvectors", qs.toString(), null);
     }
 
-    /* ==================== R33：搜索模板中心 + 别名管控台 ==================== */
+    /* ==================== ：搜索模板中心 + 别名管控台 ==================== */
 
     /**
-     * R33：mustache 模板渲染预览。body 形如 {"id":"tpl","params":{...}} 或 {"source":{...},"params":{...}}，
+     * mustache 模板渲染预览。body 形如 {"id":"tpl","params":{...}} 或 {"source":{...},"params":{...}}，
      * 返回渲染后的最终 DSL（template_output），不真正执行搜索。
      */
     public Map<String, Object> renderTemplate(String body) throws IOException {
@@ -3048,7 +3048,7 @@ public class EsIndexAdmin {
     }
 
     /**
-     * R33：执行搜索模板。POST /{index}/_search/template，body 同 _render/template。
+     * 执行搜索模板。POST /{index}/_search/template，body 同 _render/template。
      */
     public Map<String, Object> searchTemplate(String index, String body) throws IOException {
         if (body == null || body.trim().isEmpty()) throw new IllegalArgumentException("body 不能为空");
@@ -3057,7 +3057,7 @@ public class EsIndexAdmin {
     }
 
     /**
-     * R33：别名原子操作。POST /_aliases，body 形如 {"actions":[{"add":{...}},{"remove":{...}}]}，
+     * 别名原子操作。POST /_aliases，body 形如 {"actions":[{"add":{...}},{"remove":{...}}]}，
      * 所有 action 在 ES 内部一次元数据变更中完成——零停机切流量的根基。
      */
     public Map<String, Object> aliasActions(String body) throws IOException {

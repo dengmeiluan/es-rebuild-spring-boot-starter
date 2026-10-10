@@ -6,15 +6,15 @@ import java.io.IOException;
 import java.util.Map;
 
 /**
- * 锁文档存取的<b>窄端口</b>（R93-67 防复发看守）——按<b>意图</b>建模，不按 ES 动词建模。
+ * 锁文档存取的<b>窄端口</b>（-67 防复发看守）——按<b>意图</b>建模，不按 ES 动词建模。
  *
- * <p><b>它拦住了什么</b>：R93 之前 {@code EsRebuildLockStore} 直接持有
+ * <p><b>它拦住了什么</b>： 之前 {@code EsRebuildLockStore} 直接持有
  * {@code Supplier<RestHighLevelClient>}，于是可以写出
  * {@code new IndexRequest(idx).id(id).opType(CREATE)}——RHLC 无论是否知道版本都把它发成
  * {@code PUT /idx/_create/id}，这条 typeless 路由在 6.x 上是 <b>400 invalid_type_name_exception</b>
  * （「Document mapping type name can't start with '_', found: [_create]」，6.7.2 实测）。
- * {@code putMappingVersionAware} / {@code _update} / {@code _explain} 等早在 R73/R74 就做了版本感知兜底，
- * <b>唯独 R93 新加的锁绕过了全部惯例</b>——因为惯例只活在老代码里，<b>不活在任何能拦住新代码的地方</b>。</p>
+ * {@code putMappingVersionAware} / {@code _update} / {@code _explain} 等早在 / 就做了版本感知兜底，
+ * <b>唯独  新加的锁绕过了全部惯例</b>——因为惯例只活在老代码里，<b>不活在任何能拦住新代码的地方</b>。</p>
  *
  * <p><b>为什么这个端口真的拦得住下一个人</b>：调用方拿不到 {@code RestHighLevelClient}，
  * 也拿不到 {@code IndexRequest}。<b>本接口的词汇表里根本没有「发一个 typeless 请求」这个概念</b>——

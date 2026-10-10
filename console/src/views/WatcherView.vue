@@ -11,7 +11,7 @@
         <MetaStrip v-if="available && raw" class="wt-meta" :items="wtMeta" :title="'节点 ' + fmtNum(nodeCount) + ' · Watch 数（估） ' + fmtNum(watchCount) + ' · 状态 ' + watchState + ' · 队列（当前） ' + fmtNum(queueCurrent) + ' · 已执行 ' + fmtNum(executed) + ' · 失败 ' + fmtNum(failed)" />
       </template>
       <template #actions>
-<!-- 五百六十一批：原始请求/响应快查弹窗（RawIo 第六波，558b 判例同形态；
+<!-- 原始请求/响应快查弹窗（RawIo 第六波，558b 判例同形态；
      路径子串 '/cluster/watcher'=本页列表拉取通道，本页独占调用者） -->
 <button class="btn ghost sm" data-test="raw-io" aria-label="查看原始 IO（Watcher）" title="最近一次 Watcher 列表拉取请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIo"><Terminal :size="12" /> 原始 IO</button>
 <button class="btn ghost sm" @click="load" :disabled="loading">
@@ -36,13 +36,13 @@
         </div>
         <div class="wt-alert-sub" v-else>{{ reason || 'Elastic Watcher 需要商业许可证或未启用 xpack.watcher。' }}</div>
       </div>
-      <!-- R92-A2：失败态就地重试，不靠用户自己找刷新入口 -->
+      <!-- -A2：失败态就地重试，不靠用户自己找刷新入口 -->
       <button class="btn sm" style="margin-left:auto" @click="load" :disabled="loading">重试</button>
     </div>
 
     <div v-if="available" class="wt-list" role="group" aria-label="watch 清单">
       <!-- 搜索行原为独立横幅，现融合为列表区头部（去独立横幅层）。
-           五百四十七批：三胞胎页头过滤胶囊组件化——SearchFilterBar 统一件（图标/Esc 内建），
+           三胞胎页头过滤胶囊组件化——SearchFilterBar 统一件（图标/Esc 内建），
            落位类 wt-search-head 透传到组件根（scoped 落位样式照常命中）；Enter 接线走组件
            enter 事件（原 input @keydown.enter.prevent 等价，HitNav 键击不误触），Esc 清空
            内建（原 kw = '' 行为等价），HitNav 附加件走默认插槽原位 -->
@@ -51,7 +51,7 @@
         <HitNav :count="filteredWatches.length" :current="hitCur" compact @next="hitNext" @prev="hitPrev" />
       </SearchFilterBar>
       <!-- G2-C4：过滤致空与真空分流（G1 C4 同构）——逃生口走 EmptyState 插槽，间距归组件 .es-extra -->
-      <!-- 三百四十四批：slice(0,100) 静默截断补计数提示 -->
+      <!-- slice(0,100) 静默截断补计数提示 -->
       <div v-if="filteredTruncated" class="wv-trunc" data-test="wv-trunc">
         watch 较多，已显示前 100 个（共 {{ allWatches.length }} 个）——请用关键字过滤缩小范围
       </div>
@@ -107,7 +107,7 @@
     </div>
     </template>
 
-    <!-- 五百六十一批：原始 IO 弹窗（宿主受控开关；rec=最近一条 /cluster/watcher 记录） -->
+    <!-- 原始 IO 弹窗（宿主受控开关；rec=最近一条 /cluster/watcher 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
   </div>
 </template>
@@ -118,18 +118,18 @@ import { useRouter } from 'vue-router';
 import { BellRing, Bell, RefreshCcw, AlertTriangle, Search, Copy, TerminalSquare, Terminal, Pencil } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
-/* 五百六十一批：原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
+/* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
 import RawIoModal from '../components/RawIoModal.vue';
 import { useScopedDraft } from '../composables/useScopedDraft';
 import { useAppStore } from '../stores/app';
 import { friendlyEsError } from '../utils/esError';
-import { watcherStateZh, watcherStateTone } from '../utils/esEnumZh'; /* 五百三十四批：watcher_state 中文主显收口件 */
+import { watcherStateZh, watcherStateTone } from '../utils/esEnumZh'; /* ：watcher_state 中文主显收口件 */
 
 import { copyText, fmtNum } from '../utils/format';
 import { highlightJson, prettyJson } from '../utils/jsonc';
 import { NPopover } from 'naive-ui';
 import EmptyState from '../components/EmptyState.vue';
-/* 五百四十七批：三胞胎页头过滤胶囊统一件（wt/fv/tg 同场景收编） */
+/* 三胞胎页头过滤胶囊统一件（wt/fv/tg 同场景收编） */
 import SearchFilterBar from '../components/SearchFilterBar.vue';
 import SkeletonBox from '../components/SkeletonBox.vue';
 import HitNav from '../components/HitNav.vue';
@@ -140,7 +140,7 @@ import { useHitLocate } from '../composables/useHitNav';
 const store = useAppStore();
 const router = useRouter();
 
-/* 五百六十一批：原始 IO 三件套（RemoteClusters 557 同款）；判空不开空弹窗 */
+/* 原始 IO 三件套（RemoteClusters 557 同款）；判空不开空弹窗 */
 const rawIoShow = ref(false);
 const rawIoRec = ref<RawIoRec | null>(null);
 function openRawIo() {
@@ -204,7 +204,7 @@ function sumField(path: string): number {
 const wtMeta = computed<MetaStripItem[]>(() => [
   { value: fmtNum(nodeCount.value), label: '节点' },
   { value: fmtNum(watchCount.value), label: 'Watch 数（估）' },
-  /* 五百三十四批：watcher_state 中文主显（watcherStateZh），英文原值留 tip 保检索；
+  /* watcher_state 中文主显（watcherStateZh），英文原值留 tip 保检索；
      tone 走收口件既有口径（started→ok/其余 warn），与原手写三元等价 */
   { value: watcherStateZh(watchState.value), label: '状态', tone: watcherStateTone(watchState.value), tip: watchState.value },
   { value: fmtNum(queueCurrent.value), label: '队列（当前）', tip: '待执行 watch 队列长度（_watcher/stats execution_thread_pool.queue_size 各节点汇总）' },
@@ -217,7 +217,7 @@ const allWatches = computed<any[]>(() => {
   return Array.isArray(hits) ? hits : [];
 });
 const watchCount = computed(() => raw.value?.watches?.hits?.total?.value ?? raw.value?.watches?.hits?.total ?? allWatches.value.length);
-/* 762 G222：354 批注释宣称「computed 纯化、截断标志改由 watch 驱动」与实况不符（实况 computed
+/* 762 G222：注释宣称「computed 纯化、截断标志改由 watch 驱动」与实况不符（实况 computed
    内写 filteredTruncated ref 的 side-effect 且全文件无 watch）——本批落真纯化：matchedWatches
    同源派生，截断标志亦纯 computed；语义不变（无关键字=全量前 100，有关键字=过滤后前 100） */
 const matchedWatches = computed(() => {
@@ -259,11 +259,11 @@ function onMetaKey(e: KeyboardEvent) {
 }
 
 function copyBody(w: any) {
-  /* 三百三十九批：诚实口径扫尾（此前无论成败都报成功） */
+  /* 诚实口径扫尾（此前无论成败都报成功） */
   copyText(JSON.stringify(w, null, 2)).then(ok => store.notify(ok ? 'success' : 'error', ok ? 'Watch 已复制' : '复制失败'));
 }
 
-/* R42-f §8.2：跨工具联动——在 DevTools 里打开该 watch 定义，改完直接 PUT 回去 */
+/* -f §8.2：跨工具联动——在 DevTools 里打开该 watch 定义，改完直接 PUT 回去 */
 function toDevTools(w: any) {
   sessionStorage.setItem('es-console.devtools.open', JSON.stringify({
     title: 'watch/' + w._id, method: 'GET', path: '/_watcher/watch/' + encodeURIComponent(w._id), run: true,
@@ -271,7 +271,7 @@ function toDevTools(w: any) {
   router.push('/devtools');
 }
 
-/* 三百四十四批：真空态快捷起步——示例 watch 送入 DevTools（不自动执行） */
+/* 真空态快捷起步——示例 watch 送入 DevTools（不自动执行） */
 function toDevToolsSample() {
   const body = JSON.stringify({
     trigger: { schedule: { interval: '1h' } },
@@ -284,7 +284,7 @@ function toDevToolsSample() {
   router.push('/devtools');
 }
 
-/* 三百四十四批：PUT 编辑变体——GET 现定义入 body，改完直接 PUT 回写（免手工复制粘贴） */
+/* PUT 编辑变体——GET 现定义入 body，改完直接 PUT 回写（免手工复制粘贴） */
 function toDevToolsEdit(w: any) {
   const body = JSON.stringify(w.watch ?? w, null, 2);
   sessionStorage.setItem('es-console.devtools.open', JSON.stringify({
@@ -311,12 +311,12 @@ onMounted(load);
    基础形态（flex/b/i/sep/mono/tone 色档）全由组件承担，本页只留落位 */
 .wt-meta { margin-top: 3px; }
 /* 搜索行融合为列表区头部（原独立横幅 .wt-search 退役）。
-   五百四十七批：胶囊壳三件套（panel 底/border-subtle 弱边/8px 圆角）随组件化归
+   胶囊壳三件套（panel 底/border-subtle 弱边/8px 圆角）随组件化归
    SearchFilterBar 单源，本类只留落位与内衬（padding 对齐现行，高度结构零变动）；
    .wt-search-i 裸输入形态归组件 .sfb-i 单源（inputClass 保留类名锚） */
 .wt-search-head { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); }
 .wt-list { display: flex; flex-direction: column; gap: var(--sp-3); }
-/* 五百五十四批：wt-card 列表项卡带框降层为 border-top 行（立法④；slm-card 551 先例：
+/* wt-card 列表项卡带框降层为 border-top 行（立法④；slm-card 551 先例：
    panel 底+全框+radius 整块消除，悬停反馈由顶部 hairline 变色承接）；类名保留作 DOM 锚 */
 .wt-card { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-3); padding: var(--sp-3) 0; border-top: 1px solid var(--border-subtle); }
 .wt-card:hover { border-color: var(--brand); }
@@ -328,14 +328,14 @@ onMounted(load);
 .wt-card-id { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wt-card-sub { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 3px; }
 .wt-card-actions { font-size: var(--fs-xs); color: var(--text-muted); margin-top: var(--sp-1); }
-.wt-act { display: inline-block; margin-left: var(--sp-1); padding: 1px var(--sp-1h); background: var(--ac-soft); color: var(--ac-hi); border-radius: 3px; font-size: var(--fs-xs); } /* 五百五十四批：6px→--sp-1h 收编（1px 边框豁免保字面；spSweep544/545/551 锚随迁） */
+.wt-act { display: inline-block; margin-left: var(--sp-1); padding: 1px var(--sp-1h); background: var(--ac-soft); color: var(--ac-hi); border-radius: 3px; font-size: var(--fs-xs); } /* ：6px→--sp-1h 收编（1px 边框豁免保字面；spSweep544/545/551 锚随迁） */
 .wt-card-meta { font-size: var(--fs-xs); color: var(--text-muted); margin-top: var(--sp-2); }
 .wt-card-meta code { background: var(--hl-soft); padding: var(--sp-0) var(--sp-1h); border-radius: 3px; display: inline-block; max-width: 100%; overflow-x: auto; }
 .wt-meta-json { max-height: 320px; overflow: auto; margin: 0; }
 /* 当前命中卡片：柔底 + 左侧强调条 + 焦点环（.hit-cur 由 useHitScroll 运行时挂/摘） */
 .wt-card.hit-cur { background: var(--ac-soft) !important; border-color: var(--ac-line); box-shadow: inset 3px 0 0 var(--ac-hi), var(--focus-ring); }
 
-/* 五百三十批：1100 堆叠档（零结构动）——watch 卡左信息/右操作与页头双栏在中窄视口挤压，
+/* 1100 堆叠档（零结构动）——watch 卡左信息/右操作与页头双栏在中窄视口挤压，
    塌纵向堆叠；搜索行输入本就 flex:1 自适应不动 */
 @media (max-width: 1100px) {
   .wt-hd { flex-direction: column; align-items: flex-start; gap: var(--sp-2); }
@@ -343,7 +343,7 @@ onMounted(load);
   .wt-card-r { justify-content: flex-end; }
 }
 
-/* 五百三十四批：900 紧凑微调档（529 批口径，纯样式追加零结构动）——页侧距收一档、
+/* 900 紧凑微调档（口径，纯样式追加零结构动）——页侧距收一档、
    搜索行头（输入×刷新钮）允许换行兜挤压；分栏堆叠归 1100 档不重复 */
 @media (max-width: 900px) {
   .wt-page { padding: var(--sp-3) var(--sp-3) var(--sp-4); }

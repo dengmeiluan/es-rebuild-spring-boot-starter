@@ -21,10 +21,10 @@ public final class MappingDeltaCalculator {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    /** 五百六十批：mapping 解析失败 WARN 节流间隔（同 key 节流防刷屏；endpoint 臂同款范式）。 */
+    /** mapping 解析失败 WARN 节流间隔（同 key 节流防刷屏；endpoint 臂同款范式）。 */
     private static final long WARN_THROTTLE_MS = 60_000L;
 
-    /** 五百六十批：解析失败节流 WARN 计数（首败留痕；静态方法配静态计数）。 */
+    /** 解析失败节流 WARN 计数（首败留痕；静态方法配静态计数）。 */
     private static final AtomicLong lastParseWarnAt = new AtomicLong(0);
 
     private static final List<String> MAPPING_PARAMETERS = Arrays.asList(
@@ -88,7 +88,7 @@ public final class MappingDeltaCalculator {
             }
             return root;
         } catch (Exception e) {
-            // 五百六十批：解析失败=delta 记 unparsed=漂移检测静默隐形（期望/实际有一侧坏 JSON，
+            // 解析失败=delta 记 unparsed=漂移检测静默隐形（期望/实际有一侧坏 JSON，
             // 对比结果直接消失且零痕）——补节流 WARN；unparsed 返回契约不变
             long now = System.currentTimeMillis();
             long last = lastParseWarnAt.get();

@@ -16,7 +16,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
 /**
- * R93 业务侧唯一的运维端点：暴露「期望的索引配置」供人一键复制到 宿主。
+ *  业务侧唯一的运维端点：暴露「期望的索引配置」供人一键复制到 宿主。
  *
  * <p>两条路径刻意分开，不做 Accept 内容协商 —— curl 默认 {@code Accept: *}{@code /*}，
  * 内容协商会让命令行与 e2e 拿到不确定结果。</p>

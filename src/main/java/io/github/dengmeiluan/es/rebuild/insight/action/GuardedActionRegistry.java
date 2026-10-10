@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * R39 护栏动作注册表。
+ *  护栏动作注册表。
  *
  * <p>构造收 {@code List<GuardedAction>}（AutoConfig 集合注入），后续批次新增动作
  * 只需注册新的 {@link GuardedAction} Bean，协议层零改动。</p>

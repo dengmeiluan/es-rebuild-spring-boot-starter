@@ -21,11 +21,11 @@ import java.util.Map;
  * 可重建 ES 索引注册表。
  *
  * <p>构造时接收一份已汇总好的 {@code List<ManagedEsIndex>}，逐个登记为 {@link RebuildableIndexMeta}。
- * <b>R100 起清单由 {@code ManagedEsIndexScanner} 扫描宿主基础包下全部 {@code @Document} 实体自动合成</b>——
+ * <b> 起清单由 {@code ManagedEsIndexScanner} 扫描宿主基础包下全部 {@code @Document} 实体自动合成</b>——
  * 新增索引只需给实体加 {@code @Document}，<b>不要再手写 {@link ManagedEsIndex} 实现类</b>
  * （那条通道已废弃，残留实现会在启动期被 fail-fast 点名）。本类不感知清单从何而来（开闭原则）。
  * 用 {@link EntityIndexNames} 解析各 provider 实体的 @Document 索引名
- * （与实际读写一致，R38 起不依赖宿主 ops），反射读取 @Setting/@Mapping 的 json 资源，建为 {@link RebuildableIndexMeta}。</p>
+ * （与实际读写一致， 起不依赖宿主 ops），反射读取 @Setting/@Mapping 的 json 资源，建为 {@link RebuildableIndexMeta}。</p>
  */
 public class IndexMetaRegistry {
 
@@ -107,7 +107,7 @@ public class IndexMetaRegistry {
     }
 
     /**
-     * 全部登记元数据（按登记顺序）。R93：供 DesiredStateController 组装期望配置 payload。
+     * 全部登记元数据（按登记顺序）。：供 DesiredStateController 组装期望配置 payload。
      * 返回不可变视图，避免调用方改动内部 registry。
      */
     public List<RebuildableIndexMeta> listMetas() {

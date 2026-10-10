@@ -8,12 +8,12 @@ import org.springframework.core.annotation.Order;
 /**
  * ES 写操作横切之「重试」切面：业务侧（client）机制。
  *
- * <p><b>R93 #70</b>：本切面拦的是<b>业务应用自己</b>的 ES 写入，因此与 {@code ConsoleAssetGuard}、
+ * <p><b> #70</b>：本切面拦的是<b>业务应用自己</b>的 ES 写入，因此与 {@code ConsoleAssetGuard}、
  * {@code StaleWriteBlockDetector} 同属 {@code client} 包，并在两种模式下都装配。
  * 此前它被放进 {@code ConsoleModeConfiguration}，导致唯一的受益方——业务应用——反而没有它。</p>
  *
  * <p><b>为什么不再有「重建窗口」闸门</b>：原实现要求 {@code RebuildAuditStore.isWindowOpen(indexKey)}
- * 为真才重试。R93 之后重建状态只活在 宿主，业务侧既拿不到该信息也不该拿；且
+ * 为真才重试。 之后重建状态只活在 宿主，业务侧既拿不到该信息也不该拿；且
  * {@code RebuildAuditStore} 与整个 {@code audit/} 包在阶段⑤删除清单上。
  * 判定「可否重试」的真正安全边界是 {@link EsWriteRetryTemplate} 的异常识别——
  * cluster_block / 429 / 网络抖动是<b>自解释</b>的瞬时失败，无需知道是否有重建在跑；

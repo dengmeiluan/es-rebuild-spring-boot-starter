@@ -12,7 +12,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 /**
- * R93-67：<b>真实</b> {@link VersionAwareLockDocPort} 拼出来的 path 形态看守。
+ * -67：<b>真实</b> {@link VersionAwareLockDocPort} 拼出来的 path 形态看守。
  *
  * <p>{@link LockDocPortRequestShapeTest} 用桩端口验证「锁存储层怎么用端口」，
  * 本测试补上另一半——<b>端口自己拼出来的 path 长什么样</b>。缺了这一半，

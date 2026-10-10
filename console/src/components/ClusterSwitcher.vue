@@ -1,5 +1,5 @@
 <template>
-  <!-- R36：集群切换器——数据面目标（宿主 / 自定义连接），控制面永远走宿主 -->
+  <!-- 集群切换器——数据面目标（宿主 / 自定义连接），控制面永远走宿主 -->
   <n-popover trigger="click" placement="bottom-start" :show="menuOpen" @update:show="v => menuOpen = v" raw :show-arrow="false">
     <template #trigger>
       <button class="cs-chip mono" :class="[{ remote: store.isRemote, none: !store.hostVisible && !store.isRemote }, curEnv ? 'env-' + curEnv.toLowerCase() : '']" :title="chipTip" :aria-expanded="menuOpen">
@@ -10,7 +10,7 @@
       </button>
     </template>
     <div class="cs-menu">
-      <!-- R39.2：纯管理平台形态藏掉宿主项——数据面只认自定义连接档案；三百七十一批：切换项键盘可达（role/tabindex/Enter，369 批 Overview 同口径） -->
+      <!-- .2：纯管理平台形态藏掉宿主项——数据面只认自定义连接档案；：切换项键盘可达（role/tabindex/Enter， Overview 同口径） -->
       <div v-if="store.hostVisible" class="cs-item" :class="{ on: !store.isRemote }" role="button" tabindex="0" aria-label="切换到宿主集群" @click="pickTarget('', '')" @keydown.enter.prevent="pickTarget('', '')" @keydown.space.prevent="pickTarget('', '')">
         <Server :size="12" />
         <span class="cs-item-name">宿主集群</span>
@@ -28,7 +28,7 @@
         <span class="cs-item-sub mono">{{ c.host }}:{{ c.port }}</span>
         <Check v-if="store.target === c.id" :size="12" class="cs-check" />
       </div>
-      <!-- 第十批 B：裸空态迁 EmptyState compact（原 .cs-empty 裸文案同文案语义不变，窄弹层走紧凑档） -->
+      <!--  B：裸空态迁 EmptyState compact（原 .cs-empty 裸文案同文案语义不变，窄弹层走紧凑档） -->
       <EmptyState v-if="!visibleConns.length" compact :icon="Globe"
         :text="canAdmin ? (store.hostVisible ? '尚无自定义连接——点下方「管理连接…」添加第一个连接' : '尚无集群连接，请先在下方「管理连接」添加') : '暂无可用集群，请联系管理员在角色中授权'" />
       <div class="cs-sep"></div>
@@ -40,7 +40,7 @@
   </n-popover>
 
   <!-- 连接管理弹窗 -->
-  <!-- 六百二十五批：单框双效后续·深度质感重造（623 设计稿 v3 D1~D7 用户裁决「开始推进」）——
+  <!-- 单框双效后续·深度质感重造（623 设计稿 v3 D1~D7 裁决「开始推进」）——
        骨架=720px+max-height 恒不超屏（头部/排序/双折叠节固定，唯一滚动区=连接列表，滚动条常显）；
        列表与表单双折叠节互让空间；行卡=双层网格（主行身份/次行地址/右锚状态）+grip 拖拽手动排序
        （自动切「手动」第四档+Ctrl+↑/↓ 键盘可达，597 connSort 扩档不替换）+hover-reveal 图标操作
@@ -94,7 +94,7 @@
                 :title="probingId === c.id ? '探活中…' : '立即探活：GET / 测连通与时延'" :aria-label="'立即探活：' + c.name">
                 <Activity :size="13" :class="{ spinning: probingId === c.id }" />
               </button>
-              <!-- 六百二十五批：⋯ 次级菜单退役改图标直出（hover-reveal；ADMIN 门控不变随迁 permGating） -->
+              <!-- ⋯ 次级菜单退役改图标直出（hover-reveal；ADMIN 门控不变随迁 permGating） -->
               <template v-if="canAdmin">
                 <button class="cm-icob" :disabled="testingId === c.id" @click="testExisting(c.id)" title="测试连接（含认证）" :aria-label="'测试连接：' + c.name"><PlugZap :size="13" /></button>
                 <button class="cm-icob" @click="editConn(c)" title="编辑" :aria-label="'编辑连接：' + c.name"><Pencil :size="13" /></button>
@@ -110,7 +110,7 @@
     <div v-if="testResult" class="cm-test" :class="testResult.ok ? 'ok' : 'err'">
       <template v-if="testResult.ok">
         <CircleCheck :size="13" />
-        <span>连接成功：<b>{{ testResult.clusterName }}</b> · v{{ testResult.version }} · <!-- 五百三十二批：status 裸枚举换 StatusPill（中文主显 + en 英文小字；tone 走 healthPill） --><StatusPill v-if="testResult.status" :tone="healthPill(testResult.status.toLowerCase())" :label="clusterHealthZh(testResult.status) || testResult.status" :en="testResult.status" /> · {{ testResult.nodes }} 节点</span>
+        <span>连接成功：<b>{{ testResult.clusterName }}</b> · v{{ testResult.version }} · <!-- ：status 裸枚举换 StatusPill（中文主显 + en 英文小字；tone 走 healthPill） --><StatusPill v-if="testResult.status" :tone="healthPill(testResult.status.toLowerCase())" :label="clusterHealthZh(testResult.status) || testResult.status" :en="testResult.status" /> · {{ testResult.nodes }} 节点</span>
       </template>
       <template v-else>
         <CircleAlert :size="13" />
@@ -158,7 +158,7 @@
           <label>API Key（编辑时留空=保留旧 Key）</label>
           <input v-model="form.password" class="ipt mono pw-mask" type="text" autocomplete="off" placeholder="base64 的 id:api_key" />
         </div>
-        <!-- 五百一十一批:minRole 退役——连接可见性与操作授权由「连接菜单 × 读写档位」RBAC 决定 -->
+        <!-- minRole 退役——连接可见性与操作授权由「连接菜单 × 读写档位」RBAC 决定 -->
         <div class="cm-f wide">
           <label>环境标识（纯展示：切换器/顶栏据此着色警示，生产红色）</label>
           <div class="cm-roles">
@@ -189,13 +189,13 @@
       </div>
       </div>
     </div>
-    <!-- 二百二十批：非 ADMIN 自述（查看/切换/探活可用，档案管理需升权）——不再展示会 403 的表单 -->
+    <!-- 非 ADMIN 自述（查看/切换/探活可用，档案管理需升权）——不再展示会 403 的表单 -->
     <div v-else class="cm-tip dim" style="margin-top:var(--sp-2)">
       连接档案的新增/编辑/删除需 ADMIN 角色；当前可查看、切换与探活已有连接。
     </div>
   </n-modal>
 
-  <!-- 五百一十二批：卡片次级菜单改 NPopover 锚定按钮(placement left-start)——CellContextMenu 挂 body
+  <!-- 卡片次级菜单改 NPopover 锚定按钮(placement left-start)——CellContextMenu 挂 body
        在抽屉场景会盖到抽屉外的页面(观感「飘出去」);naive 弹层随按钮定位永在抽屉内 -->
 </template>
 
@@ -206,7 +206,7 @@ import { Server, Globe, ChevronDown, Check, Settings2, PlugZap, Pencil, Trash2, 
 import CellContextMenu from '../components/CellContextMenu.vue';
 import { useAppStore } from '../stores/app';
 import { usePref } from '../composables/urlState';
-import { sortConns, normalizeSortMode, moveInOrder, type SortMode } from '../utils/connSort'; /* 五百九十七批：列表状态分类排序+可调；六百二十五批：增手动档+moveInOrder 落位 */
+import { sortConns, normalizeSortMode, moveInOrder, type SortMode } from '../utils/connSort'; /* ：列表状态分类排序+可调；：增手动档+moveInOrder 落位 */
 import { useAuthStore } from '../stores/auth';
 import { askConfirm } from '../composables/confirm';
 import { api } from '../api';
@@ -215,31 +215,31 @@ import { useModalEnter } from '../composables/useModalEnter';
 import { friendlyEsError } from '../utils/esError';
 import EmptyState from './EmptyState.vue';
 import StatusPill from './StatusPill.vue';
-/* 五百三十二批：连通测试结果 status 换装 StatusPill——healthPill tone 档（全等小写匹配，
+/* 连通测试结果 status 换装 StatusPill——healthPill tone 档（全等小写匹配，
    后端 GREEN/YELLOW/RED 大写须先归一）+ clusterHealthZh 中文主显（esEnumZh 单源） */
 import { healthPill } from '../utils/format';
 import { clusterHealthZh } from '../utils/esEnumZh';
 
 const store = useAppStore();
-/* 二百二十批：连接档案管理（新增/编辑/删除/测试=ADMIN，/clusters/ 写与 test 均在超管清单）——
-   非 ADMIN 保留查看/切换/探活（probe=R38 VIEWER 豁免），不再展示必 403 的管理入口 */
+/* 连接档案管理（新增/编辑/删除/测试=ADMIN，/clusters/ 写与 test 均在超管清单）——
+   非 ADMIN 保留查看/切换/探活（probe= VIEWER 豁免），不再展示必 403 的管理入口 */
 const auth = useAuthStore();
-const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/clusters/save', store.target)); /* 五百九十四批：连接档案管理按连接勾选（写键持有人=管理者）；静态模型回落 ADMIN 档 */
-/* 五百九十七批：列表排序——默认 status（异常置顶），可切 name/latency；usePref 跨会话记忆。
-   六百二十五批：增第四档「手动」（623 设计稿 D3/D4 裁决）——manualOrder 落盘跨会话记忆；
+const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/clusters/save', store.target)); /* 连接档案管理按连接勾选（写键持有人=管理者）；静态模型回落 ADMIN 档 */
+/* 列表排序——默认 status（异常置顶），可切 name/latency；usePref 跨会话记忆。
+   增第四档「手动」（623 设计稿 D3/D4 裁决）——manualOrder 落盘跨会话记忆；
    sortedConns 传 manualOrder 给 sortConns（非手动档忽略该参） */
 const sortMode = usePref<SortMode>('cs.sort', 'status');
 const manualOrder = usePref<string[]>('cs.manualOrder', []);
 const sortedConns = computed(() => sortConns(visibleConns.value, normalizeSortMode(sortMode.value), manualOrder.value));
 const setSort = (m: SortMode) => { sortMode.value = m; };
 const sortOptions: [SortMode, string][] = [['status', '状态'], ['name', '名称'], ['latency', '时延'], ['manual', '手动']];
-/* 六百二十五批：双折叠节（D7）——列表默认展开、表单默认收起 */
+/* 双折叠节（D7）——列表默认展开、表单默认收起 */
 const listFoldOpen = ref(true);
 const formOpen = ref(false);
 const formFoldEl = ref<HTMLElement | null>(null);
 /* 头部摘要 chip（623 稿 §4）：N 连接 · M 异常 */
 const errCount = computed(() => visibleConns.value.filter(c => c.health?.status === 'RED').length);
-/* 六百二十五批：拖拽与键盘移位共用落位——moveInOrder 纯函数（connSort 单源）；
+/* 拖拽与键盘移位共用落位——moveInOrder 纯函数（connSort 单源）；
    非手动档下先以当前可视序播种 manualOrder 再切档（拖到哪/移到哪所见即所得） */
 const dragId = ref('');
 function seedManualFromView() {
@@ -280,7 +280,7 @@ const testingForm = ref(false);
 const saving = ref(false);
 const testResult = ref<{ ok: boolean; clusterName?: string; version?: string; status?: string; nodes?: number; message?: string } | null>(null);
 
-/* R39.2：chip 三态——远程目标 / 宿主 / 纯管理形态未选择（引导态） */
+/* .2：chip 三态——远程目标 / 宿主 / 纯管理形态未选择（引导态） */
 const chipText = computed(() => {
   if (store.isRemote) return store.targetName;
   return store.hostVisible ? '宿主集群' : '选择集群连接…';
@@ -290,7 +290,7 @@ const chipTip = computed(() => {
   return store.hostVisible ? '数据面目标：宿主集群（点击切换）' : '尚未选择数据面目标，点击选择集群连接';
 });
 
-/* R46：环境标识（纯展示）——防止“以为在测试集群实则生产”的误操作 */
+/* 环境标识（纯展示）——防止“以为在测试集群实则生产”的误操作 */
 const ENV_OPTS = [
   { k: '', t: '无', tip: '不标注环境' },
   { k: 'PROD', t: 'PROD', tip: '生产环境：切换器与顶栏红色警示' },
@@ -300,7 +300,7 @@ const ENV_OPTS = [
 ] as const;
 const curEnv = computed(() => store.conns.find(c => c.id === store.target)?.env || '');
 function envTip(env: string) {
-  /* 二百三十九批 S2：与后端 env-role-cap 默认建议对齐——PROD 连接封顶只读 */
+  /*  S2：与后端 env-role-cap 默认建议对齐——PROD 连接封顶只读 */
   if (env === 'PROD') return '生产环境：已封顶只读，写操作在当前环境不可用';
   return `环境标识：${env}`;
 }
@@ -318,7 +318,7 @@ const emptyForm = () => ({
 });
 const form = ref(emptyForm());
 
-/* R38：健康状态点样式/提示（GREEN 绿 / RED 红 / UNKNOWN 灰） */
+/* 健康状态点样式/提示（GREEN 绿 / RED 红 / UNKNOWN 灰） */
 function hdotCls(h?: ConnHealth) {
   const s = h?.status || 'UNKNOWN';
   return { green: s === 'GREEN', red: s === 'RED', unknown: s === 'UNKNOWN' };
@@ -328,7 +328,7 @@ function hdotTip(h?: ConnHealth) {
   if (h.status === 'GREEN') return `探活正常 · ${h.latencyMs}ms`;
   return `最近探活失败：${h.error || '未知错误'}`;
 }
-/* R40：服务端版本——档案持久化值优先，其次本轮探活内存值 */
+/* 服务端版本——档案持久化值优先，其次本轮探活内存值 */
 function verOf(c: ClusterConnView) {
   return c.esVersion || c.health?.version || '';
 }
@@ -364,12 +364,12 @@ async function probeConn(c: ClusterConnView) {
     if (h.status === 'GREEN') store.notify('success', `「${c.name}」连通正常 · ${h.latencyMs}ms`);
     else store.notify('warning', `「${c.name}」探活失败：${h.error || '未知错误'}`);
   } catch (e: any) {
-    /* 第十批 A：ES 错误友好化（探活失败原因可读化） */
+    /*  A：ES 错误友好化（探活失败原因可读化） */
     store.notify('error', '探活请求失败: ' + friendlyEsError(String(e?.message ?? e)));
   } finally { probingId.value = ''; }
 }
 
-/* 五百一十一批:非 admin 按连接菜单授权过滤可见连接(grantedPages conn:{id}:{page} 键推导);
+/* 非 admin 按连接菜单授权过滤可见连接(grantedPages conn:{id}:{page} 键推导);
    admin 全量管理。visibleConns 供列表与切换菜单共用。 */
 const grantedConnIds = computed(() => {
   const gp = auth.grantedPages;
@@ -391,7 +391,7 @@ function openManage() {
   menuOpen.value = false;
   testResult.value = null;
   resetForm();
-  formOpen.value = false; /* 六百二十五批：开弹窗=折叠节默认态（列表满高，表单收起） */
+  formOpen.value = false; /* ：开弹窗=折叠节默认态（列表满高，表单收起） */
   listFoldOpen.value = true;
   manageOpen.value = true;
   store.loadConns();
@@ -407,26 +407,26 @@ function editConn(c: any) {
     connectTimeoutMs: c.connectTimeoutMs ?? '', socketTimeoutMs: c.socketTimeoutMs ?? '',
     env: c.env || '', authType: c.authType || 'BASIC',
   };
-  /* 六百二十五批：编辑自动展开表单折叠节并滚至表单（623 稿 §6 状态机） */
+  /* 编辑自动展开表单折叠节并滚至表单（623 稿 §6 状态机） */
   formOpen.value = true;
   void nextTick(() => formFoldEl.value?.scrollIntoView({ block: 'nearest' }));
 }
 
-/* 六百二十五批：取消编辑=重置并收起折叠节（表单不常驻占位） */
+/* 取消编辑=重置并收起折叠节（表单不常驻占位） */
 function cancelForm() {
   resetForm();
   formOpen.value = false;
 }
 
 async function testExisting(id: string) {
-  /* 一百六十五批：已存连接的测试反馈 toast 化（原写入共享 testResult 区，渲染在列表顶部易被忽略） */
+  /* 已存连接的测试反馈 toast 化（原写入共享 testResult 区，渲染在列表顶部易被忽略） */
   testingId.value = id;
   try {
     const r = await api.clustersTest({ id });
     if (r.ok) store.notify('success', `「${store.conns.find(x => x.id === id)?.name || '连接'}」连通正常 · v${r.version} · ${r.nodes} 节点`);
     else store.notify('warning', `连接失败：${r.message || '未知错误'}`);
   } catch (e: any) {
-    /* 第十批 A：ES 错误友好化（测试连接失败原因可读化） */
+    /*  A：ES 错误友好化（测试连接失败原因可读化） */
     store.notify('error', '测试请求失败: ' + friendlyEsError(String(e?.message ?? e)));
   } finally { testingId.value = ''; }
 }
@@ -442,12 +442,12 @@ async function testForm() {
       password: form.value.password || undefined,
       authType: form.value.authType || undefined,
     });
-  } catch (e: any) { /* 第十批 A：ES 错误友好化 */ testResult.value = { ok: false, message: friendlyEsError(String(e?.message ?? e)) }; }
+  } catch (e: any) { /*  A：ES 错误友好化 */ testResult.value = { ok: false, message: friendlyEsError(String(e?.message ?? e)) }; }
   finally { testingForm.value = false; }
 }
 
 async function saveConn() {
-  /* 一百六十五批：URL 前置校验（提交前拦——必须 http(s):// 开头且带端口，免得服务端报错绕一圈） */
+  /* URL 前置校验（提交前拦——必须 http(s):// 开头且带端口，免得服务端报错绕一圈） */
   const url = form.value.url.trim();
   if (!/^https?:\/\/.+/.test(url) || !/:\d+/.test(url.replace(/^https?:\/\//, '').split('/')[0])) {
     store.notify('error', 'URL 格式应为 http://host:9200（可选 http://user:pass@host:9200）');
@@ -469,15 +469,15 @@ async function saveConn() {
     });
     store.notify('success', form.value.id ? '连接已更新' : '连接已添加');
     resetForm();
-    formOpen.value = false; /* 六百二十五批：保存成功收起表单折叠节（列表回到满高） */
+    formOpen.value = false; /* ：保存成功收起表单折叠节（列表回到满高） */
     testResult.value = null;
     await store.loadConns();
   } catch (e: any) {
-    /* 第十批 A：ES 错误友好化（保存连接失败原因可读化） */
+    /*  A：ES 错误友好化（保存连接失败原因可读化） */
     store.notify('error', '保存失败: ' + friendlyEsError(String(e?.message ?? e)));
   } finally { saving.value = false; }
 }
-/* 六十六批：连接表单弹窗 Enter=保存（can 与主按钮 disabled 同口径——name/url 必填且非保存中） */
+/* 连接表单弹窗 Enter=保存（can 与主按钮 disabled 同口径——name/url 必填且非保存中） */
 useModalEnter(manageOpen, saveConn, () => !!form.value.name && !!form.value.url && !saving.value);
 
 async function delConn(c: any) {
@@ -492,12 +492,12 @@ async function delConn(c: any) {
     store.notify('success', '连接已删除');
     await store.loadConns(); // 若删的是当前目标，loadConns 内部会自动回落宿主
   } catch (e: any) {
-    /* 第十批 A：ES 错误友好化（删除连接失败原因可读化） */
+    /*  A：ES 错误友好化（删除连接失败原因可读化） */
     store.notify('error', '删除失败: ' + friendlyEsError(String(e?.message ?? e)));
   }
 }
 
-/* 六百二十五批 D2 触屏兜底：粗指针下操作钮恒常显——本组件在 adaptSweep563 豁免册（媒体查询
+/*  D2 触屏兜底：粗指针下操作钮恒常显——本组件在 adaptSweep563 豁免册（媒体查询
    须经裁决迁册后才能新增），改 matchMedia + is-coarse 类 */
 const coarse = ref(false);
 onMounted(() => {
@@ -515,9 +515,9 @@ onMounted(() => store.loadConns());
 }
 .cs-chip:hover { border-color: var(--ac-hi); }
 .cs-chip.remote { color: var(--warn); border-color: var(--warn); background: var(--warn-soft); }
-/* R46：生产环境目标——chip 整体红色警示，压过 remote 黄色 */
+/* 生产环境目标——chip 整体红色警示，压过 remote 黄色 */
 .cs-chip.env-prod { color: var(--err); border-color: var(--err); background: var(--err-soft); }
-/* R39.2：未选择引导态——强调色呼吸提示，避免用户对空白页一头雾水 */
+/* .2：未选择引导态——强调色呼吸提示，避免用户对空白页一头雾水 */
 .cs-chip.none { color: var(--ac-hi); border-color: var(--ac-hi); background: var(--ac-soft); animation: cs-breath 2.4s ease-in-out infinite; }
 @keyframes cs-breath { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ac) 25%, transparent); } 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--ac) 0%, transparent); } }
 .cs-name { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
@@ -533,19 +533,19 @@ onMounted(() => store.loadConns());
 }
 .cs-item:hover { background: var(--bg2); }
 .cs-item.on { color: var(--ac-hi); }
-/* R65c：长连接名自身省略，不再把右侧 endpoint/版本徽章挤出菜单 */
+/* 长连接名自身省略，不再把右侧 endpoint/版本徽章挤出菜单 */
 .cs-item-name { flex-shrink: 1; min-width: 0; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cs-item-sub { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-xs); color: var(--tx2); text-align: right; }
-/* R40：服务端版本徽章（探活自动识别） */
+/* 服务端版本徽章（探活自动识别） */
 .cs-ver { flex-shrink: 0; padding: 1px 5px; font-size: var(--fs-xs); font-weight: 600; color: var(--ac-hi); background: var(--ac-soft); border: 1px solid var(--ac-line); border-radius: 3px; }
 .cs-check { color: var(--ac-hi); flex-shrink: 0; }
-/* 第十批 B：.cs-empty 裸空态退役迁 EmptyState compact，本地样式随迁删除 */
+/*  B：.cs-empty 裸空态退役迁 EmptyState compact，本地样式随迁删除 */
 .cs-sep { height: 1px; margin: var(--sp-1) var(--sp-0); background: var(--line); }
 .cs-item.manage { color: var(--tx2); }
 .cs-item.manage:hover { color: var(--tx1); }
 
 .cm-tip { font-size: var(--fs-xs); line-height: 1.7; color: var(--tx2); margin-bottom: var(--sp-3); }
-/* 六百二十五批：弹窗骨架 flex 列——头部/说明/排序/双折叠节固定，唯一滚动区=连接列表 */
+/* 弹窗骨架 flex 列——头部/说明/排序/双折叠节固定，唯一滚动区=连接列表 */
 .cm-tip { flex-shrink: 0; }
 .cm-sort { flex-shrink: 0; }
 .cm-list { display: flex; flex-direction: column; gap: var(--sp-1h); overflow-y: auto; min-height: 0; flex: 1 1 auto;
@@ -553,7 +553,7 @@ onMounted(() => store.loadConns());
 .cm-list::-webkit-scrollbar { width: 8px; }
 .cm-list::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: var(--r-xs); }
 .cm-list::-webkit-scrollbar-thumb:hover { background: var(--tx2); }
-/* 六百二十五批：双折叠节（列表/表单互让空间）——折叠头摘要行 + 开合态 */
+/* 双折叠节（列表/表单互让空间）——折叠头摘要行 + 开合态 */
 .cm-fold { border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg2); margin-bottom: var(--sp-3); flex-shrink: 0; }
 .cm-fold-hd { display: flex; align-items: center; gap: var(--sp-2); width: 100%; padding: var(--sp-2h) var(--sp-3);
   background: none; border: 0; cursor: pointer; font: 650 var(--fs-sm) var(--font); color: var(--tx0); text-align: left; }
@@ -566,23 +566,23 @@ onMounted(() => store.loadConns());
 .cm-fold.open .cm-fold-bd { display: block; }
 .cm-fold-list { border: 0; background: none; }
 .cm-fold-list .cm-fold-hd { padding: 0 0 var(--sp-1h); }
-/* 六百三十批：列表保底（用户产线实报「连接列表被挤没」）——原 min-height:0 意味列表可被无条件压扁，
+/* 列表保底（用户产线实报「连接列表被挤没」）——原 min-height:0 意味列表可被无条件压扁，
    表单节 flex-shrink:0 吃满固有高后，全部高度亏空只能由列表承担（真机 1842×937 实测列表仅剩 151px、
    10 个连接只有 2 行可见；视口高 800px 时仅 34px、0 行完整可见，末行被横切成半看着像被下卡片压住）。
    保底 = 折叠头 ~32px + 3 行卡（~63px/行）→ 表单无论开合，列表恒有 3 个连接可见可点。 */
 .cm-fold-list.open { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 222px; }
 .cm-fold-list .cm-fold-bd { min-height: 0; flex: 1; }
 .cm-fold-list.open .cm-fold-bd { display: flex; flex-direction: column; }
-/* 六百三十批：让位方改「表单」——列表保底之后，高度亏空由表单折叠节收缩承担并自滚
+/* 让位方改「表单」——列表保底之后，高度亏空由表单折叠节收缩承担并自滚
    （此前表单 flex-shrink:0 恒不让位，正是列表被挤没的直接原因；唯一滚动区语义由「列表独有」
    扩为「列表 + 表单体两处」，列表滚动条常显不变）。 */
 .cm-fold-form.open { display: flex; flex-direction: column; min-height: 0; flex-shrink: 1; }
 .cm-fold-form.open .cm-fold-hd { flex-shrink: 0; }
 .cm-fold-form.open .cm-fold-bd { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-top: var(--sp-2); }
-/* 六百三十批：表单自滚后主按钮不得滚出视野——操作行钉住表单滚动区底缘（同底色遮挡滚过内容，
+/* 表单自滚后主按钮不得滚出视野——操作行钉住表单滚动区底缘（同底色遮挡滚过内容，
    不新增色值） */
 .cm-fold-form.open .cm-form-ops { position: sticky; bottom: 0; background: var(--bg2); }
-/* 六百二十五批：双层行卡——主行身份/次行地址/右锚状态/悬停操作（623 稿 §3 解剖学） */
+/* 双层行卡——主行身份/次行地址/右锚状态/悬停操作（623 稿 §3 解剖学） */
 .cm-row {
   display: grid; grid-template-columns: 14px minmax(0, 1fr) auto;
   grid-template-areas: "grip main aux" "grip sub ops";
@@ -592,7 +592,7 @@ onMounted(() => store.loadConns());
   transition: border-color .15s ease-out, background .15s ease-out;
 }
 .cm-row:hover { border-color: var(--line-strong); background: var(--bg3); }
-/* 一百六十四批：探活失败（RED）整卡警示——左侧红条+浅红底，异常一眼可辨 */
+/* 探活失败（RED）整卡警示——左侧红条+浅红底，异常一眼可辨 */
 .cm-row.err { border-color: var(--err-line); background: var(--err-soft); box-shadow: inset 3px 0 0 var(--err); }
 .cm-row.dragover { border-color: var(--ac-line); }
 .cm-grip { grid-area: grip; align-self: stretch; display: flex; align-items: center; justify-content: center;
@@ -607,7 +607,7 @@ onMounted(() => store.loadConns());
 .cm-lat-idle { color: var(--tx2); }
 .cm-row-sub { grid-area: sub; display: flex; align-items: center; gap: var(--sp-2); min-width: 0; margin-top: var(--sp-0); }
 .cm-row-ep { font-size: var(--fs-2xs); color: var(--tx2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* 六百二十五批：操作图标 hover-reveal（507 先例）——「立即探活」文字钮与 ⋯ 次级菜单在此退役
+/* 操作图标 hover-reveal（507 先例）——「立即探活」文字钮与 ⋯ 次级菜单在此退役
    （permGating 门控语义随迁：探活全角色，三管理钮 canAdmin）；触屏兜底走 matchMedia+is-coarse 类（本组件在 adaptSweep563 豁免册：媒体查询须经裁决迁册后才能新增） */
 .cm-row-ops { grid-area: ops; display: flex; gap: var(--sp-1); justify-self: end; opacity: 0; transition: opacity .12s ease-out; }
 .cm-row:hover .cm-row-ops, .cm-row:focus-within .cm-row-ops { opacity: 1; }
@@ -628,7 +628,7 @@ onMounted(() => store.loadConns());
 .cm-test.err { color: var(--err); background: var(--err-soft); border: 1px solid var(--err-line); }
 
 .cm-form { padding: var(--sp-3); background: var(--bg2); border: 1px solid var(--line); border-radius: var(--r-m); }
-/* 六百二十五批：.cm-form-title 退役（标题并入折叠头 cm-fold-hd） */
+/* .cm-form-title 退役（标题并入折叠头 cm-fold-hd） */
 .cm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2h); }
 .cm-f { display: flex; flex-direction: column; gap: var(--sp-1); }
 .cm-f.wide { grid-column: span 2; }
@@ -636,9 +636,9 @@ onMounted(() => store.loadConns());
 .cm-form-ops { display: flex; justify-content: flex-end; gap: var(--sp-2); margin-top: var(--sp-3); }
 .btn.danger:hover { color: var(--err); border-color: var(--err); }
 
-/* R38：健康状态点（切换菜单 + 管理列表共用）与 minRole 徽标 */
+/* 健康状态点（切换菜单 + 管理列表共用）与 minRole 徽标 */
 .cs-hdot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--tx2); opacity: .55; }
-/* R46：环境徽章（chip/切换菜单/管理列表共用），生产红色醒目警示 */
+/* 环境徽章（chip/切换菜单/管理列表共用），生产红色醒目警示 */
 .cs-env { flex-shrink: 0; padding: 1px 5px; font-size: var(--fs-2xs); font-weight: 650; letter-spacing: .3px; border-radius: 3px; border: 1px solid; }
 .cs-ro { font-size: var(--fs-2xs); margin-left: 3px; opacity: .85; }
 .cs-env.e-prod { color: var(--err); background: var(--err-soft); border-color: var(--err-line); }
@@ -647,8 +647,8 @@ onMounted(() => store.loadConns());
 .cs-env.e-dev { color: var(--tx2); background: var(--bg2); border-color: var(--line); }
 .cs-hdot.green { background: var(--ok); opacity: 1; box-shadow: 0 0 0 3px var(--ok-line); }
 .cs-hdot.red { background: var(--err); opacity: 1; box-shadow: 0 0 0 3px var(--err-line); }
-/* 六百二十五批：.cm-health 系退役（时延转右锚 .cm-lat；状态点直入主行 .cs-hdot，与切换菜单单源复用） */
-/* 五百三十二批：探活延迟简单分档——≥1000ms 落警告色（既有 --warn token，勿新建色值） */
+/* .cm-health 系退役（时延转右锚 .cm-lat；状态点直入主行 .cs-hdot，与切换菜单单源复用） */
+/* 探活延迟简单分档——≥1000ms 落警告色（既有 --warn token，勿新建色值） */
 .cm-lat-warn { color: var(--warn); }
 /* 连接中心自动同步批·API Key 认证:AK 迷你角标(token 化,与 .cs-ver 同构) */
 .cs-ak { flex-shrink: 0; padding: 1px 5px; font-size: var(--fs-2xs); font-weight: 600; color: var(--tx2); background: var(--bg2); border: 1px solid var(--line-strong); border-radius: 3px; }
@@ -664,5 +664,5 @@ onMounted(() => store.loadConns());
 }
 .cm-role-btn:hover { color: var(--tx1); border-color: var(--ac-hi); }
 .cm-role-btn.on { color: var(--ac-hi); border-color: var(--ac-hi); background: var(--ac-soft); font-weight: 600; }
-/* 525 批：本地 .spin 旋转档（自造 keyframes）退役，统一走 theme.css 全局 .spinning（svg 适用） */
+/* 本地 .spin 旋转档（自造 keyframes）退役，统一走 theme.css 全局 .spinning（svg 适用） */
 </style>

@@ -1,9 +1,9 @@
 <template>
   <div class="mft" ref="rootEl">
-    <!-- 三百二十九批：字段行右键菜单（复制路径/复制类型/复制完整字段信息/analyzer 快验联动） -->
+    <!-- 字段行右键菜单（复制路径/复制类型/复制完整字段信息/analyzer 快验联动） -->
     <CellContextMenu v-if="rowMenu" :x="rowMenu.x" :y="rowMenu.y"
       :title="'字段 ' + rowMenu.f.path" :items="rowMenuItems" @close="rowMenu = null" />
-    <!-- R81：查询 DSL 污染警示——mapping 里出现 query.bool.* 是「查询体被当文档写入」的铁证，
+    <!-- 查询 DSL 污染警示——mapping 里出现 query.bool.* 是「查询体被当文档写入」的铁证，
          不识别它，用户会以为是业务字段甚至以为控制台显示坏了 -->
     <div v-if="pollutedRoots.length" class="mft-warn">
       <ShieldAlert :size="13" style="flex-shrink:0" />
@@ -15,7 +15,7 @@
       <button class="btn sm ghost" style="flex-shrink:0" @click="togglePolluted">
         {{ pollutedCollapsed ? '展开查看' : '折叠这些字段' }}
       </button>
-      <!-- R82：警示闭环——只告知「需零停机重建」不给入口是把用户扔在半路；
+      <!-- 警示闭环——只告知「需零停机重建」不给入口是把用户扔在半路；
            直达托管重建并携带污染根清单，向导侧自动剔除 + dynamic:false 防复染 -->
       <button v-if="index" class="btn sm warn" style="flex-shrink:0" @click="gotoRebuild">
         <Hammer :size="12" /> 去零停机重建
@@ -23,7 +23,7 @@
     </div>
 
     <div class="mft-bar">
-      <!-- 六百五十批轨4：手作绝对图标过滤胞换装 SearchFilterBar 单源（sfbUnify650 锁）——
+      <!-- 轨4：手作绝对图标过滤胞换装 SearchFilterBar 单源（sfbUnify650 锁）——
            壳三件套+图标归组件（padding-left:30px 内联 hack 退役），Esc 清空内建承接
            （原裸 input 无 Esc 语义=补课），Enter 定位轮转经 @enter 接线语义等价 -->
       <SearchFilterBar v-model="kwLocal" class="mft-sfb" placeholder="过滤字段名 / 类型 / analyzer…" @enter="onHitKey" />
@@ -45,7 +45,7 @@
             :data-hit-idx="hitIdxMap.get(f.path)"
           >
             <td class="mono mft-cell">
-              <!-- R84：缩进导线——纯 paddingLeft 的层级在深树里肉眼难对齐，竖导线才读得出父子归属。
+              <!-- 缩进导线——纯 paddingLeft 的层级在深树里肉眼难对齐，竖导线才读得出父子归属。
                    搜索态保留导线：祖先是真实结构行（不再是灰显路径前缀），层级依旧一眼可辨 -->
               <span v-for="i in f.depth" :key="i" class="mft-guide"></span>
               <!-- object 行可折叠；搜索态强制展开命中子树（折叠集被绕过），不再出折叠钮 -->
@@ -60,7 +60,7 @@
                   --><template v-else>{{ seg.t }}</template><!--
                 --></template><!--
               --></span>
-              <!-- R84：multi-field 不再压在 attrs 文本里被截断，层级化子行 + 显式徽标 -->
+              <!-- multi-field 不再压在 attrs 文本里被截断，层级化子行 + 显式徽标 -->
               <span v-if="f.multi" class="mft-mf" title="multi-field（fields.*）：同一段数据的另一种索引方式，查询时用完整路径引用">多字段</span>
               <span v-if="f.hasChildren && collapsed.has(f.path) && !searching" class="mft-count" tabindex="0" role="button" :aria-label="'展开 ' + f.path + ' 的 ' + childCount(f.path) + ' 个子字段'" @keydown.enter.prevent="toggle(f.path)" @keydown.space.prevent="toggle(f.path)" @click="toggle(f.path)">
                 +{{ childCount(f.path) }} 字段
@@ -70,7 +70,7 @@
             <td><span class="chip mono mft-type" :data-t="f.type">{{ f.type }}</span></td>
             <td class="mono mft-attrs" :title="f.attrs">
 <!--
-              一百七十九批：分析器组件名一键验证——名字点击=组件本体快验（/analyze）；
+              分析器组件名一键验证——名字点击=组件本体快验（/analyze）；
               text 字段行另给「字段验证」= 真实写入链路（/analyzer-lab field 通道，真实样本+三链路并排）
             --><template v-for="(seg, si) in attrTokens(f.attrs)" :key="si">
 <!--
@@ -87,7 +87,7 @@
           </tr>
         </tbody>
       </table>
-      <!-- 第十批收尾：两处裸 .empty 迁 EmptyState compact（字段树内嵌窄容器），清除过滤改 actionText 等价保留 -->
+      <!-- 两处裸 .empty 迁 EmptyState compact（字段树内嵌窄容器），清除过滤改 actionText 等价保留 -->
       <EmptyState v-if="!shownRows.length && rows.length" compact :icon="Search"
         :text="'无匹配字段（共 ' + rows.length + ' 个，被当前关键字隐藏，0 命中）'"
         action-text="清除过滤" @action="kwLocal = ''" />
@@ -103,21 +103,21 @@ import { useRouter } from 'vue-router';
 import { Search, ChevronRight, ChevronDown, ChevronsUpDown, ChevronsDownUp, ShieldAlert, Hammer, Copy, Braces } from 'lucide-vue-next';
 import { flattenMapping, detectDslPollution, visibleRows, descendantCount, type MappingRow } from '../utils/mappingTree';
 import { copyText } from '../utils/format';
-/* 第十批收尾：两处裸 .empty 迁 EmptyState compact */
+/* 两处裸 .empty 迁 EmptyState compact */
 import EmptyState from './EmptyState.vue';
-import SearchFilterBar from './SearchFilterBar.vue'; /* 六百五十批轨4：手作绝对图标过滤胞换装统一件（sfbUnify650 锁） */
-/* 第十批：搜索命中排序统一 rank 口径（精确>前缀>包含，与 FieldPicker/FieldSelect 同源） */
+import SearchFilterBar from './SearchFilterBar.vue'; /* 轨4：手作绝对图标过滤胞换装统一件（sfbUnify650 锁） */
+/* 搜索命中排序统一 rank 口径（精确>前缀>包含，与 FieldPicker/FieldSelect 同源） */
 import { searchFields } from '../utils/fieldSearch';
 import CellContextMenu from './CellContextMenu.vue';
 import { useAppStore } from '../stores/app';
 import { askConfirm } from '../composables/confirm';
 import { useHitLocate } from '../composables/useHitNav';
 import { useScopedDraft } from '../composables/useScopedDraft';
-/* 558 批：hlSegs 手写切分收口 splitMark 单源（useGridSearch 557 批起带数值归一二遍） */
+/* hlSegs 手写切分收口 splitMark 单源（useGridSearch 起带数值归一二遍） */
 import { splitMark } from '../composables/useGridSearch';
 import HitNav from './HitNav.vue';
 
-/* R81：Mapping 字段树统一组件——MappingView 与索引工作区 Mapping Tab 共用。
+/* Mapping 字段树统一组件——MappingView 与索引工作区 Mapping Tab 共用。
    核心主张：嵌套可折叠（默认收起深树）、搜索显全路径、点击复制路径、DSL 污染显式警示。 */
 const props = withDefaults(defineProps<{
   /** ES mapping 的 properties 对象（多物理索引时视图侧先合并） */
@@ -125,7 +125,7 @@ const props = withDefaults(defineProps<{
   /** 外部受控过滤词（如 MappingView 的 URL kw），不传则组件内自治 */
   keyword?: string;
   maxHeight?: string;
-  /** R82：索引名——传入后污染警示条显示「去零停机重建」直达 CTA */
+  /** 索引名——传入后污染警示条显示「去零停机重建」直达 CTA */
   index?: string;
 }>(), { keyword: undefined, maxHeight: '60vh', index: '' });
 const emit = defineEmits<{ (e: 'update:keyword', v: string): void; (e: 'analyze', f: any): void }>();
@@ -133,7 +133,7 @@ const emit = defineEmits<{ (e: 'update:keyword', v: string): void; (e: 'analyze'
 const store = useAppStore();
 const router = useRouter();
 
-/* ═══ 一百七十九批：分析器联动（定义/引用 → 一键验证闭环）═══
+/* ═══ ：分析器联动（定义/引用 → 一键验证闭环）═══
    attrs 属性摘要拆段：分词语义键（analyzer/search_analyzer/normalizer/tokenizer/filter/char_filter）
    的值渲染为可点名字，点击跳 /analyze 预填并自动执行（组件本体快验）；
    text 字段行附「字段验证」跳 /analyzer-lab?field=<path>（真实写入链路，嵌套/multi-field
@@ -158,8 +158,8 @@ function goFieldLab(path: string) {
   router.push({ path: '/analyzer-lab', query: { ...(props.index ? { idx: props.index } : {}), field: path } });
 }
 
-/* R82：污染警示→托管重建闭环：携带索引名与污染根清单，向导侧预剔除并设防复染。
-   R83：托管重建恒定作用于宿主集群——数据面在远程目标时，宿主未必有同名同构索引，
+/* 污染警示→托管重建闭环：携带索引名与污染根清单，向导侧预剔除并设防复染。
+   托管重建恒定作用于宿主集群——数据面在远程目标时，宿主未必有同名同构索引，
    不拦一道会把用户带进「向导预填与本页所见不一致」的迷惑现场 */
 async function gotoRebuild() {
   if (store.isRemote && !await askConfirm({
@@ -173,7 +173,7 @@ async function gotoRebuild() {
 }
 
 /* 过滤词：受控/自治双模。自治分支走会话草稿(按索引作用域)——
-   切页签/切菜单/iframe 重建回到本页时过滤词不再丢(R120 产线实测痛点) */
+   切页签/切菜单/iframe 重建回到本页时过滤词不再丢( 产线实测痛点) */
 const kwDraft = useScopedDraft(
   'filter', { route: 'indices-mapping', index: () => props.index || '' }, '');
 const kwLocal = computed({
@@ -221,7 +221,7 @@ function rowMatch(f: MappingRow, k: string): boolean {
 
 /* 搜索态：保祖先过滤——节点自身或任一后代命中则保留，命中节点的全部祖先保留为结构行
    （TaskTreeView filteredRoots 同款先例：结构上下文不丢，用户不再在深树里迷失） */
-/* 第十批：命中行排序接 fieldSearch.searchFields 统一 rank 口径（精确=0 > 前缀=1 > 包含=2，
+/* 命中行排序接 fieldSearch.searchFields 统一 rank 口径（精确=0 > 前缀=1 > 包含=2，
    同级字母序）——此前按 mapping 原序，最相关的精确/前缀命中可能淹没在深树尾部。
    仅重排命中行先后并让祖先结构行跟随各自命中链输出，树形展示结构（层级导线）不变；
    type/attrs-only 命中（path 不含关键字）searchFields 不收录，统一归包含档殿后。 */
@@ -271,16 +271,16 @@ const { current: hitCur, next: hitNext, prev: hitPrev } = useHitLocate(() => hit
 function onHitKey(e: KeyboardEvent) { if (e.shiftKey) hitPrev(); else hitNext(); }
 
 /* 字段名命中片段拆分（模板 <mark> 渲染，插值天然转义，无 v-html 注入面——JsonTree renderHl 同款口径）。
-   558 批：手写 while 切分退役收口 useGridSearch.splitMark 单源（JsonTree renderHl 557 批先例，
+   手写 while 切分退役收口 useGridSearch.splitMark 单源（JsonTree renderHl 先例，
    全站第四份纯文本切分实现归一）；返回结构保形 {t,hit}（模板消费点零变更），splitMark 的
-   {t,m} 纯映射；557 批数值归一二遍白得（两侧同数字形态整段 mark），字面切分行为零漂移。 */
+   {t,m} 纯映射；数值归一二遍白得（两侧同数字形态整段 mark），字面切分行为零漂移。 */
 function hlSegs(name: string): { t: string; hit: boolean }[] {
   const k = kwLocal.value.trim().toLowerCase();
   return splitMark(name, k).map(s => ({ t: s.t, hit: s.m }));
 }
 function childCount(path: string): number { return descendantCount(rows.value, path); }
 
-/* ═══ 三百二十九批：字段行右键菜单 ═══ */
+/* ═══ ：字段行右键菜单 ═══ */
 const rowMenu = ref<{ x: number; y: number; f: any } | null>(null);
 function openRowMenu(e: MouseEvent, f: any) {
   rowMenu.value = { x: e.clientX, y: e.clientY, f };
@@ -298,7 +298,7 @@ const rowMenuItems = computed(() => {
 });
 
 async function copyPath(path: string) {
-  /* 三百一十八批：失败分支补齐（282 批诚实口径——此前失败静默） */
+  /* 失败分支补齐（诚实口径——此前失败静默） */
   const ok = await copyText(path);
   store.notify(ok ? 'success' : 'error', ok ? '已复制字段路径：' + path : '复制失败');
 }
@@ -312,10 +312,10 @@ async function copyPath(path: string) {
   background: var(--warn-soft); border-radius: var(--r-m);
 }
 .mft-bar { display: flex; align-items: center; gap: var(--sp-2); }
-/* 六百五十批轨4：过滤胞换装 SFB 落位类（壳三件套+图标归组件单源，原手作绝对图标壳双规则退役） */
+/* 轨4：过滤胞换装 SFB 落位类（壳三件套+图标归组件单源，原手作绝对图标壳双规则退役） */
 .mft-sfb { position: relative; flex: 1; height: 30px; padding: 0 var(--sp-2h); font-size: var(--fs-sm); }
 .mft-cell { white-space: nowrap; }
-/* R84：层级竖导线——每深一层一条，父子归属一眼可辨 */
+/* 层级竖导线——每深一层一条，父子归属一眼可辨 */
 .mft-guide { display: inline-block; width: 15px; height: 17px; vertical-align: -4px; border-left: 1px solid color-mix(in srgb, var(--line) 85%, var(--tx2)); }
 .mft-mf {
   margin-left: 7px; font-size: var(--fs-2xs); padding: 0 var(--sp-1h); border-radius: 99px;
@@ -337,7 +337,7 @@ tr.mft-hit td { background: var(--warn-soft); }
 /* 搜索态的结构祖先行：不为命中、只作路径上下文，整体降一档存在感 */
 .mft-struct .mft-name { color: var(--tx1); }
 .mft-struct .mft-type, .mft-struct .mft-attrs { opacity: .78; }
-/* 一百七十九批：分析器名一键验证（虚线下划线=可点链接语义，info 蓝与类型徽标同族） */
+/* 分析器名一键验证（虚线下划线=可点链接语义，info 蓝与类型徽标同族） */
 .mft-attr-link { color: var(--info); cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
 .mft-attr-link:hover { color: var(--ac-hi); }
 .mft-attr-sep { opacity: .6; }
@@ -355,8 +355,8 @@ tr.hit-cur { background: var(--ac-soft) !important; box-shadow: inset 3px 0 0 va
 }
 .mft-pollute .mft-cell, .mft-pollute .mft-attrs { opacity: .72; }
 .mft-type { font-size: var(--fs-xs); padding: 1px 7px; }
-/* R84：attrs 不再 ellipsis 后半截——允许换行，任何属性都看得全（title 仍保留供悬停确认） */
+/* attrs 不再 ellipsis 后半截——允许换行，任何属性都看得全（title 仍保留供悬停确认） */
 .mft-attrs { font-size: var(--fs-xs); color: var(--tx2); max-width: 340px; white-space: normal; word-break: break-word; line-height: 1.5; }
-/* R84：超长字段名/深路径不被容器 hidden 掉——横向可滚，能滚到 = 能看全 */
+/* 超长字段名/深路径不被容器 hidden 掉——横向可滚，能滚到 = 能看全 */
 .mft .scroll-y { overflow-x: auto; }
 </style>

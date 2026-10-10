@@ -44,7 +44,7 @@ export function nodeRoleClass(n: { roles?: string[] }): string {
   return isDataNode(n) ? 'data' : (n.roles || []).includes('master') ? 'master' : '';
 }
 
-/* ═══ ④ 迁移作业阶段枚举 → 中文（五百二十五批 W4，XmigrateView statusZh 迁入）═══
+/* ═══ ④ 迁移作业阶段枚举 → 中文（ W4，XmigrateView statusZh 迁入）═══
    纯显示层；数据/排序/导出仍用原枚举。未收录枚举回退空串 → 消费方回显原英文
    （新枚举出现不丢信息）。 */
 export const XM_STATUS_ZH: Record<string, string> = {
@@ -54,7 +54,7 @@ export function xmStatusZh(s: any): string {
   return XM_STATUS_ZH[String(s || '').toUpperCase()] || '';
 }
 
-/* ═══ ⑤ 校验/建议 severity → 中文 + pill 档（五百二十五批 W4 三套口径收口）═══
+/* ═══ ⑤ 校验/建议 severity → 中文 + pill 档（ W4 三套口径收口）═══
    退役并收口：AdhocRebuildView sevPill（r/y/b）、ConfigValidatorView cvSevPill
    （err/warn/info 别名档）、IndexOptimizerView svLabel（中文）。
    pill 档统一 theme.css .pill 五主档单字母——err/warn/info 别名档与 r/y/b 同
@@ -62,17 +62,17 @@ export function xmStatusZh(s: any): string {
    一致：critical→严重 / warn→警告 / 其余（info 等）=改进建议档。 */
 export function sevZh(s: string): string {
   const v = String(s || '').toLowerCase();
-  /* 五百三十一批补 error 档：ES 校验报告 severity 用 ERROR（非 critical 词汇系），
+  /* 补 error 档：ES 校验报告 severity 用 ERROR（非 critical 词汇系），
      落「建议」与红档错位；critical/warn/其余三档旧口径（svLabel 逐字）不变 */
   if (v === 'critical') return '严重';
   if (v === 'error') return '错误';
   if (v === 'warn') return '警告';
-  /* 五百三十二批补 warning 别名：date 兼容风险行 level 用 warning（warn 的变体词汇，
+  /* 补 warning 别名：date 兼容风险行 level 用 warning（warn 的变体词汇，
      sevPill 侧 warning→y 早已有档），原先落「建议」与黄档错位 */
   if (v === 'warning') return '警告';
   return '建议';
 }
-/* 五百三十一批：返回域类型化（'r'|'y'|'b'|'n' 五主档子集）——StatusPill tone prop 是
+/* 返回域类型化（'r'|'y'|'b'|'n' 五主档子集）——StatusPill tone prop 是
    五主档联合，string 直传 vue-tsc 报错；返回域收窄对既有 class 串消费方零影响 */
 type SevTone = 'r' | 'y' | 'b' | 'n';
 export function sevPill(s: any): SevTone {
@@ -83,7 +83,7 @@ export function sevPill(s: any): SevTone {
   return 'n';
 }
 
-/* ═══ ⑥ 重建/迁移族作业状态 → 中文（五百二十八批 Lead 先行公共依赖）═══
+/* ═══ ⑥ 重建/迁移族作业状态 → 中文（ Lead 先行公共依赖）═══
    AdhocRebuildView 作业表（原 :390 裸英文）与 OverviewView 最近作业（原 :136）接线消费。
    与 XM_STATUS_ZH 并存：xmigrate 族文案口径历史既有不动，rebuild 族在此扩容。
    纯显示层；数据/排序/导出仍用原枚举（permGating 锁条件行，展示插值才换）。 */
@@ -96,7 +96,7 @@ export function jobStatusZh(s: any): string {
   return JOB_STATUS_ZH[String(s || '').toUpperCase()] || '';
 }
 
-/* ═══ ⑦ 快照 state → 中文（五百二十八批，SnapshotsView chip 接线）═══ */
+/* ═══ ⑦ 快照 state → 中文（，SnapshotsView chip 接线）═══ */
 const SNAPSHOT_STATE_ZH: Record<string, string> = {
   SUCCESS: '成功', PARTIAL: '部分成功', FAILED: '失败', IN_PROGRESS: '进行中', INCOMPATIBLE: '不兼容',
 };
@@ -104,7 +104,7 @@ export function snapshotStateZh(s: any): string {
   return SNAPSHOT_STATE_ZH[String(s || '').toUpperCase()] || '';
 }
 
-/* ═══ ⑧ ILM phase → 中文（五百二十八批，IlmView 生命周期阶段接线）═══ */
+/* ═══ ⑧ ILM phase → 中文（，IlmView 生命周期阶段接线）═══ */
 export const ILM_PHASE_ZH: Record<string, string> = {
   hot: '热', warm: '温', cold: '冷', frozen: '冻结', delete: '删除',
 };
@@ -113,7 +113,7 @@ export function phaseZh(s: any): string {
   return ILM_PHASE_ZH[v] || '';
 }
 
-/* ═══ ⑱b ILM action → 中文释义（五百六十一批，LifecycleView move 弹窗 datalist 候选域）═══
+/* ═══ ⑱b ILM action → 中文释义（，LifecycleView move 弹窗 datalist 候选域）═══
    九键核实自 ES 官方 ILM actions 全集（ILM action 是闭词汇域，固定九值）：
    forcemerge（warm 合并段降段数）/ shrink（缩减主分片数）/ allocate（调副本数与分配规则）/
    delete（删除索引）/ rollover（别名滚动到新索引）/ set_priority（设节点重启后恢复优先级）/
@@ -126,13 +126,13 @@ export const ILM_ACTION_ZH: Record<string, string> = {
   unfollow: '解除跟随', searchable_snapshot: '可搜索快照', downsample: '降采样',
 };
 
-/* ═══ ⑨ 索引 open/close → 中文（五百二十八批，BrowserView 列表接线；跨工蚁契约导出）═══ */
+/* ═══ ⑨ 索引 open/close → 中文（，BrowserView 列表接线；跨工蚁契约导出）═══ */
 export function indexStatusZh(s: any): string {
   const v = String(s || '').toLowerCase();
   return v === 'open' ? '已打开' : v === 'close' ? '已关闭' : '';
 }
 
-/* ═══ ⑩ ES 任务 action → 短标签 + pill 色档（五百三十批，TasksView 原本地 actionShort/
+/* ═══ ⑩ ES 任务 action → 短标签 + pill 色档（，TasksView 原本地 actionShort/
    actionColor 迁入收口；taskActionZh 契约签名 (a: string): string 预定死，色档拆
    taskActionTone 独立导出）。纯显示层；过滤/复制等数据语义不受影响。
    色档口径随迁：bulk 归写类 warn 档——任务全部处于运行中，绿档会被误读为「已成功」 */
@@ -157,7 +157,7 @@ export function taskActionTone(a: string): TaskActionTone {
   return 'n';
 }
 
-/* ═══ ⑪ 分片 state → 中文 + pill 档（五百三十一批 Lead 先行跨工蚁契约）═══
+/* ═══ ⑪ 分片 state → 中文 + pill 档（ Lead 先行跨工蚁契约）═══
    IndexHubView 分片统计原四枚举内联三元（STARTED 裸英文，其余三项已中文）收口；
    TopologyView shard tooltip 手配色同源消费。档位口径随迁原视图：STARTED=绿 /
    RELOCATING·INITIALIZING=黄 / UNASSIGNED=红。纯显示层。 */
@@ -175,7 +175,7 @@ export function shardStateTone(s: any): 'g' | 'y' | 'r' | 'n' {
   return 'n';
 }
 
-/* ═══ ⑫ 重建作业 stage → 中文（五百三十一批 Lead 先行跨工蚁契约）═══
+/* ═══ ⑫ 重建作业 stage → 中文（ Lead 先行跨工蚁契约）═══
    枚举值实地核自 AdhocRebuildService setStage 全部打点（PENDING..DONE 十值）。
    AdhocRebuildView job.stage / 轮次 r.phase 原裸英文接线消费。未收录值回退空串
    → 消费方回显原英文（新 stage 出现不丢信息）。 */
@@ -188,7 +188,7 @@ export function stageZh(s: any): string {
   return ADHOC_STAGE_ZH[String(s || '').toUpperCase()] || '';
 }
 
-/* ═══ ⑭ 重建轮次 phase → 中文（五百三十一批 Lead 收口，实地核自 AdhocRebuildService
+/* ═══ ⑭ 重建轮次 phase → 中文（ Lead 收口，实地核自 AdhocRebuildService
    addRound 全部打点四值）。与 job.stage 不同词汇域独立映射；AdhocRebuildView 轮次表
    r.phase 消费（原 phaseZh 误挂 ILM 词汇域，轮次枚举全数回退英文，本件收口）。 */
 const ADHOC_ROUND_ZH: Record<string, string> = {
@@ -198,7 +198,7 @@ export function roundZh(s: any): string {
   return ADHOC_ROUND_ZH[String(s || '').toUpperCase()] || '';
 }
 
-/* ═══ ⑬ 托管作业种类 → pill 色档（五百三十一批，LiveDashboardView :187 jobTone 本地
+/* ═══ ⑬ 托管作业种类 → pill 色档（，LiveDashboardView :187 jobTone 本地
    字典逐字迁入收口；LiveDashboardView 第四卡「运行中任务」行首徽标消费）═══
    口径随迁原视图：Reindex 是写类走 y（与 taskActionTone 同口径——写类黄档避免被误读为
    「已成功」）、快照中性 n、其余（托管重建/跨集群迁移）信息蓝 b。
@@ -212,7 +212,7 @@ export function jobKindTone(kind: string): JobKindTone {
   return 'b';
 }
 
-/* ═══ ⑮ 集群健康 GREEN/YELLOW/RED → 中文（五百三十二批）═══
+/* ═══ ⑮ 集群健康 GREEN/YELLOW/RED → 中文（）═══
    ClusterSwitcher/SetupWizard 连通测试结果 StatusPill 中文主显 + 英文小字（en 档）消费；
    tone 档走 utils/format.healthPill（g/y/r，全等小写匹配——后端给大写枚举，调用方先
    toLowerCase）。纯显示层；条件判断/数据仍用原枚举。 */
@@ -223,7 +223,7 @@ export function clusterHealthZh(s: any): string {
   return CLUSTER_HEALTH_ZH[String(s || '').toUpperCase()] || '';
 }
 
-/* ═══ ⑯ SLM operation_mode → 中文 + tone（五百三十四批，SlmView 页头状态接线）═══
+/* ═══ ⑯ SLM operation_mode → 中文 + tone（，SlmView 页头状态接线）═══
    与 ⑮ 同形：枚举大小写归一 + 未收录回退空串（消费方回显原英文不丢信息）。
    tone 既有口径随迁：RUNNING→ok / 其余（STARTING/STOPPING 过渡态、STOPPED、UNKNOWN）→warn。
    纯显示层；英文原值由消费方留 tip/title 保检索。 */
@@ -237,7 +237,7 @@ export function slmOpModeTone(s: any): 'ok' | 'warn' {
   return String(s || '').toUpperCase() === 'RUNNING' ? 'ok' : 'warn';
 }
 
-/* ═══ ⑰ Watcher state → 中文 + tone（五百三十四批，WatcherView 页头状态接线）═══
+/* ═══ ⑰ Watcher state → 中文 + tone（，WatcherView 页头状态接线）═══
    watcher_state 是小写词汇域（started/stopping/stopped），toLowerCase 归一。
    tone 既有口径随迁：started→ok / 其余→warn。纯显示层。 */
 const WATCHER_STATE_ZH: Record<string, string> = {
@@ -250,7 +250,7 @@ export function watcherStateTone(s: any): 'ok' | 'warn' {
   return String(s || '').toLowerCase() === 'started' ? 'ok' : 'warn';
 }
 
-/* ═══ ⑱ mapping 字段类型 → 人话（五百五十六批，只增收口）═══
+/* ═══ ⑱ mapping 字段类型 → 人话（，只增收口）═══
    四查询面/ClauseNode/FieldSelect 等消费点的字段类型枚举此前词汇域分散（fieldSearch.GH_LABEL
    组头只收数值族+date，其余类型组头裸英文名——fieldSelectPopup/boostFieldPrioW3b 已锁字面，
    本表不改其行为，作跨页单一出处供消费方渐进接线）。未知代码原样返回（不猜不编）。 */

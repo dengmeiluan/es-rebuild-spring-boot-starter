@@ -60,7 +60,7 @@ public class CrossClusterMigrateService {
     /** 台账 #69：目标（宿主）集群版本探测；null 表示未注入，守卫按「未知」处理——不假装已知。 */
     private final HostEsVersionProvider hostVersionProvider;
 
-    /** R38：本地 client 改 Supplier 懒解析（宿主零 ES 依赖形态下经 ControlClusterResolver 供给）。 */
+    /** 本地 client 改 Supplier 懒解析（宿主零 ES 依赖形态下经 ControlClusterResolver 供给）。 */
     public CrossClusterMigrateService(java.util.function.Supplier<RestHighLevelClient> localClient, EsIndexAdmin localAdmin,
                                       RemoteEsClientFactory remoteClientFactory, MigrateJobTracker tracker,
                                       RunningMigrations running, IndexMetaRegistry indexMetaRegistry,
@@ -209,7 +209,7 @@ public class CrossClusterMigrateService {
         try {
             destExists = localAdmin.indexExists(req.getDestIndex());
         } catch (java.io.IOException e) {
-            // 预检失败不阻断启动，仅不展示 dest 警告（557 批：静默降级补 WARN，运维留痕）
+            // 预检失败不阻断启动，仅不展示 dest 警告（：静默降级补 WARN，运维留痕）
             logger.warn("[CrossClusterMigrateService] preflight indexExists failed dest={}: {}",
                     req.getDestIndex(), e.getMessage());
         }
@@ -510,7 +510,7 @@ public class CrossClusterMigrateService {
     // ---------------------------------------------------------------- 内部：目标索引
 
     /**
-     * 建/跳过目标索引，并返回目标 mapping 中<b>无 format 的 date 字段</b>清单（R94 如实告知）。
+     * 建/跳过目标索引，并返回目标 mapping 中<b>无 format 的 date 字段</b>清单（ 如实告知）。
      *
      * <p>清单只由 mapping 得出，<b>不采样文档、不判断值</b>——判断字段里是否真存着 10 位 epoch
      * 需要读源文档，而 {@code date-forms} 采样端点已在做那件事，此处再做一份就是第二份实现。</p>
@@ -646,7 +646,7 @@ public class CrossClusterMigrateService {
         }
         Map<String, Object> wrap = new LinkedHashMap<>();
         wrap.put("index", out);
-        /* 四百七十三批：还原 ES 脱敏的插件组件引用（校准误差根治）——
+        /* 还原 ES 脱敏的插件组件引用（校准误差根治）——
            源索引若使用插件注册的 analyzer（如 hanlp），GET _settings 返回的
            analyzer.tokenizer 值会被 ES 脱敏为 "***"（真实组件名不在 index settings
            中，ES 序列化时以 *** 占位）。把这个脱敏副本原样用于校准/建索引必然失败：

@@ -16,19 +16,19 @@
       >
         <span class="sg-k">
           <DotKey :k="displayKey(r.k)" :full="r.k" />
-          <!-- 五百二十四批+1：静态键徽标——只可随重建修改的 index 静态 settings。
-               五百五十二批：手滚胶囊换装 StatusPill（静态档 tone r=热改会被拒需重建 /
+          <!-- +1：静态键徽标——只可随重建修改的 index 静态 settings。
+               手滚胶囊换装 StatusPill（静态档 tone r=热改会被拒需重建 /
                默认档 tone n），色档归 .pill 单源（pillSingleTrack MERGED 随迁登记），
                sg-badge/sg-static 只留 DOM 锚 -->
           <StatusPill v-if="isStaticKey(r.k)" class="sg-badge sg-static" tone="r" label="静态" title="需重建索引方可修改" />
-          <!-- 一百七十九批：analysis.* 定义行「试」钮——一键跳分词工具验证该组件（预填+自动执行） -->
+          <!-- analysis.* 定义行「试」钮——一键跳分词工具验证该组件（预填+自动执行） -->
           <button v-if="defTarget(r)" class="sg-try" :aria-label="'验证 ' + defTarget(r)!.name + ' 的分词效果'" :title="'验证「' + defTarget(r)!.name + '」的分词效果'" @click="goAnalyze(defTarget(r)!)">
             <FlaskConical :size="11" />
           </button>
           <StatusPill v-if="r.def" class="sg-badge" tone="n" label="默认" title="集群默认值（未显式设置）" />
         </span>
         <span class="sg-v mono" :title="'点击复制：' + (r.v || '（空）')" tabindex="0" role="button" @keydown.enter.prevent="copyRow(r)" @keydown.space.prevent="copyRow(r)" @click="copyRow(r)">
-          <!-- 一百七十九批：引用行（键尾 .analyzer/.tokenizer/.filter/.char_filter/.normalizer）的值
+          <!-- 引用行（键尾 .analyzer/.tokenizer/.filter/.char_filter/.normalizer）的值
                按逗号拆成可点名字——点名字=跳分词工具验证该组件；名字外区域仍是点击复制 -->
           <template v-if="analyzeRefs(r)"><template v-for="(t, ti) in analyzeRefs(r)" :key="ti"><!--
             --><a class="sg-analyze" :title="'验证「' + t.name + '」的分词效果'" href="javascript:void 0" @keydown.enter.prevent.stop="goAnalyze(t)" @click.stop="goAnalyze(t)">{{ t.name }}</a><!--
@@ -36,7 +36,7 @@
           <template v-else>{{ r.v === '' ? '—' : r.v }}</template>
         </span>
       </div>
-      <!-- 第十批收尾：裸 .empty 迁 EmptyState compact（settings 卡内嵌窄容器） -->
+      <!-- 裸 .empty 迁 EmptyState compact（settings 卡内嵌窄容器） -->
       <EmptyState v-if="!shown.length" compact :icon="SlidersHorizontal" :text="kw ? '无匹配 setting' : emptyText" />
     </div>
   </div>
@@ -44,7 +44,7 @@
 
 <script setup lang="ts">
 /**
- * R88：全站统一 Settings 呈现组件——收编 MappingView kv 行 / IndexHub JsonTree /
+ * 全站统一 Settings 呈现组件——收编 MappingView kv 行 / IndexHub JsonTree /
  * 各处 pre 的重复设计。契约：
  * - dot-key 只在「.」后断行（DotKey <wbr>），零词中撕裂、零溢出
  * - 值点击复制（key: value 全量），空值给 —
@@ -58,11 +58,11 @@ import { useAppStore } from '../stores/app';
 import { copyText } from '../utils/format';
 import { filterSettingRows, isStaticSettingKey, type SettingRow } from '../utils/settingsView';
 import { useHitLocate } from '../composables/useHitNav';
-/* 第十批收尾：裸 .empty 迁 EmptyState compact */
+/* 裸 .empty 迁 EmptyState compact */
 import EmptyState from './EmptyState.vue';
 import DotKey from './DotKey.vue';
 import HitNav from './HitNav.vue';
-/* 五百五十二批：sg-badge/sg-static 胶囊换装 StatusPill 统一件（r 静态档/n 默认档） */
+/* sg-badge/sg-static 胶囊换装 StatusPill 统一件（r 静态档/n 默认档） */
 import StatusPill from './StatusPill.vue';
 
 const props = withDefaults(defineProps<{
@@ -73,7 +73,7 @@ const props = withDefaults(defineProps<{
   filterPlaceholder?: string;
   maxHeight?: string;
   emptyText?: string;
-  /** 一百七十九批：分析器联动上下文（所属索引名）——传入后 analysis.* 定义/引用行出现
+  /** 分析器联动上下文（所属索引名）——传入后 analysis.* 定义/引用行出现
       「试」/可点名字，跳 /analyze 预填并自动执行；不传零增量 */
   analyzeIndex?: string;
 }>(), {
@@ -98,8 +98,8 @@ function displayKey(k: string): string {
   return props.stripPrefix && k.startsWith(props.stripPrefix) ? k.slice(props.stripPrefix.length) : k;
 }
 
-/* ═══ 五百二十四批+1：静态键徽标 ═══
-   ES 静态 index settings 清单——五百六十二批收编 utils/settingsView#isStaticSettingKey
+/* ═══ +1：静态键徽标 ═══
+   ES 静态 index settings 清单——收编 utils/settingsView#isStaticSettingKey
    单源（MappingView 折叠节头「静态 M」摘要共用），本类只留调用。 */
 function isStaticKey(k: string): boolean {
   return isStaticSettingKey(k);
@@ -108,7 +108,7 @@ async function copyRow(r: SettingRow) {
   if (await copyText(r.k + ': ' + r.v)) store.notify('success', '已复制 ' + displayKey(r.k));
 }
 
-/* ═══ 一百七十九批：分析器联动（analyzeIndex 传入才启用）═══
+/* ═══ ：分析器联动（analyzeIndex 传入才启用）═══
    定义行：index.analysis.<kind>.<name>(.*) 键 → 行名旁「试」钮（kind: analyzer/tokenizer/
    filter/char_filter/normalizer）；引用行：键尾 .analyzer/.tokenizer/.filter/.char_filter/
    .normalizer 的逗号分隔值 → 每个名字可点。目的地 /analyze?idx&kind&name 预填并自动执行。 */
@@ -157,11 +157,11 @@ function goAnalyze(t: AnalyzeTarget) {
 .sg-def { opacity: .55; }
 /* 当前命中行：柔底 + 左侧强调条 + 焦点环（.hit-cur 由 useHitScroll 运行时挂/摘） */
 .sg-row.hit-cur { background: var(--ac-soft); box-shadow: inset 3px 0 0 var(--ac-hi), var(--focus-ring); border-radius: var(--r-s); opacity: 1; }
-/* 五百五十二批：sg-badge/sg-static 换装 StatusPill（静态档 tone r / 默认档 tone n）——
+/* sg-badge/sg-static 换装 StatusPill（静态档 tone r / 默认档 tone n）——
    尺寸/色值归 .pill 单源（pillSingleTrack MERGED 随迁登记），本类只留行内落位 */
 .sg-badge { margin-left: var(--sp-1h); vertical-align: 1px; }
-/* 第十批收尾：.sg-empty（16px 内边距）随空态迁 EmptyState compact 退役，留白归组件 */
-/* 一百七十九批：分析器联动——「试」钮与可点名字（info 蓝虚线=链接语义） */
+/* .sg-empty（16px 内边距）随空态迁 EmptyState compact 退役，留白归组件 */
+/* 分析器联动——「试」钮与可点名字（info 蓝虚线=链接语义） */
 .sg-try {
   display: inline-flex; align-items: center; margin-left: 5px; padding: 1px var(--sp-1);
   border: 0; border-radius: var(--r-s); background: transparent; color: var(--info);
@@ -170,7 +170,7 @@ function goAnalyze(t: AnalyzeTarget) {
 .sg-try:hover { color: var(--ac-hi); background: var(--ac-soft); }
 .sg-analyze { color: var(--info); cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
 .sg-analyze:hover { color: var(--ac-hi); }
-/* 五百六十三批：宽容器变体（容器查询）——MappingView 全宽折叠节 ~1200px 主受益者。
+/* 宽容器变体（容器查询）——MappingView 全宽折叠节 ~1200px 主受益者。
    窄容器（IndexHub 右栏 ~280px）不触发断点零变：右对齐在窄栏的正确性（键折行后值
    仍独立可读）保留。宽容器下键尾→值右缘可达 600px 视觉断裂，值改左对齐紧随键列
    边界（Kibana settings 范式），gap 同步放宽到 --sp-4 维持列间呼吸。 */

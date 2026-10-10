@@ -227,7 +227,7 @@ public class EntityFieldScannerTest {
     }
 
     // ------------------------------------------------------------------------------------------
-    // R93 Task 17 裁定四：esFormat —— mapping 里该字段的 format 键。
+    //   裁定四：esFormat —— mapping 里该字段的 format 键。
     //
     // 为何在后端而非前端现取：前端若为了 spec §9.5 规则 1 的 hasExplicitFormat 自行解析一次
     // mappingJson，仓库里就有了两个 mapping 解析器。它们此刻一致，从此各自演化。
@@ -254,7 +254,7 @@ public class EntityFieldScannerTest {
      * 字段在 mapping 里、但没写 format -> null。
      *
      * <p>这一格正是规则 1 报 ERROR 的前提：epoch_seconds 存进<b>无 format</b> 的 date 字段，
-     * ES 默认 format 不含 epoch_second，排序/范围/聚合从第一天就是错的（R94 §5b）。
+     * ES 默认 format 不含 epoch_second，排序/范围/聚合从第一天就是错的（ §5b）。
      * 若实现把「没写 format」误报成某个默认值，规则 1 会全线哑火。</p>
      */
     @Test
@@ -349,18 +349,18 @@ public class EntityFieldScannerTest {
         System.out.println("[anchor] jar=" + jar.getName() + " Implementation-Version=" + fromManifest);
 
         assertNotNull("sdes jar 的 manifest 必须有 Implementation-Version", fromManifest);
-        /* R96：已验证区间从 4.0.x 扩到 4.0.x / 4.4.x —— R96 做的正是「换大版本必须重测」这件事
+        /* 已验证区间从 4.0.x 扩到 4.0.x / 4.4.x ——  做的正是「换大版本必须重测」这件事
            （4 个签名断裂点已由 SdesCompat 反射化，双版本兑现见 SdesContractMatrixTest）。
            闸门语义不变：换到 4.1 / 4.2 / 5.x 仍然会红，那时 date 兼容矩阵仍需重测。
            区间的单一来源是 EsStackContractValidator.VERIFIED_SDES，改动时两处必须同步。 */
-        assertTrue("R96 已将已验证区间扩到 4.0.x / 4.4.x（参见 EsStackContractValidator.VERIFIED_SDES）；"
+        assertTrue("已将已验证区间扩到 4.0.x / 4.4.x（参见 EsStackContractValidator.VERIFIED_SDES）；"
                         + "其它大版本必须重测。实际=" + fromManifest,
                 fromManifest.startsWith("4.0.") || fromManifest.startsWith("4.4."));
         assertEquals("sdesVersion() 必须与 jar manifest 实际值一致",
                 fromManifest, EntityFieldScanner.sdesVersion());
     }
 
-    /* R96：改用 SdesCompat 反射取值后，annFormat/annPattern 的口径必须与改动前一致 ——
+    /* 改用 SdesCompat 反射取值后，annFormat/annPattern 的口径必须与改动前一致 ——
        「注解在但未指定」产出枚举默认名（不是 null），「没写注解」才是 null。
        这条防的是「为了跨版本兼容而顺手把默认值规整成 null」，那会让两种情形不可分辨。 */
     @Test
@@ -385,7 +385,7 @@ public class EntityFieldScannerTest {
         assertNull("未指定 pattern 应归一为 null", annotated.get("annPattern"));
     }
 
-    /** R96 口径测试用的最小实体：一个带 @Field 未指定 format、一个完全没注解。 */
+    /**  口径测试用的最小实体：一个带 @Field 未指定 format、一个完全没注解。 */
     static class R96Plain {
         @Field(type = org.springframework.data.elasticsearch.annotations.FieldType.Keyword)
         String annotated;

@@ -1,7 +1,7 @@
 package io.github.dengmeiluan.es.rebuild.multicluster;
 
 /**
- * 连接生命周期事件(五百一十批):连接档案创建/删除后由 {@link ConnStore} 实现发布,
+ * 连接生命周期事件():连接档案创建/删除后由 {@link ConnStore} 实现发布,
  * 宿主(如 宿主的连接菜单供给器)监听后同步自家 RBAC 菜单——新增连接自动注册
  * 菜单目录、删除连接级联移除,控制台不再维护第二份授权配置。
  *

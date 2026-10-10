@@ -50,7 +50,7 @@ public class RemoteEsClientFactory {
                     new UsernamePasswordCredentials(conn.getUsername(), conn.getPassword()));
             builder.setHttpClientConfigCallback(hc -> hc.setDefaultCredentialsProvider(credentialsProvider));
         }
-        // R38：档案带独立超时则覆盖全局默认（慢集群调大 / 探活调小互不干扰）
+        // 档案带独立超时则覆盖全局默认（慢集群调大 / 探活调小互不干扰）
         final int connectMs = conn.getConnectTimeoutMs() != null ? conn.getConnectTimeoutMs() : connectTimeoutMs;
         final int socketMs = conn.getSocketTimeoutMs() != null ? conn.getSocketTimeoutMs() : socketTimeoutMs;
         builder.setRequestConfigCallback(rc -> rc

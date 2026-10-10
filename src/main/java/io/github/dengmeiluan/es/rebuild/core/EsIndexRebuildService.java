@@ -17,7 +17,7 @@ import java.util.Set;
  * ES 索引控制台通用能力服务（Facade + 协作者模式 R1）：把锁管理、索引名解析等子职责
  * 委托给 {@link RebuildLockGuard} / {@link IndexNameResolver}（OOP/SRP）。
  *
- * <p><b>R93 阶段⑤</b>：SPI 驱动的重建编排路径（firstMigrate / rebuild / finishRebuild /
+ * <p><b> 阶段⑤</b>：SPI 驱动的重建编排路径（firstMigrate / rebuild / finishRebuild /
  * cleanup / abort / full-reload / 作业追踪）已整条退役，重建执行改由
  * {@code adhoc/AdhocRebuildService} 按索引名承担（不再要求业务侧实现能力接口）。
  * 本类保留控制台通用能力：索引/别名诊断（status / overview / health）、reindex 进度查询、
@@ -57,7 +57,7 @@ public class EsIndexRebuildService {
         try {
             resolved = registry.getByKey(name).getAliasName();
         } catch (Exception e) {
-            // 五百五十八批：registry 异常与「未注册直传」此前静默合流零痕——补 debug 留痕
+            // registry 异常与「未注册直传」此前静默合流零痕——补 debug 留痕
             // （带异常类名）。未注册物理索引名直传是合法主路径，维持 debug 不升 WARN 防刷屏
             logger.debug("[inspect] indexKey 解析未命中/registry 异常，按物理索引名直传 name={} exception={}",
                     name, e.getClass().getName());
@@ -69,7 +69,7 @@ public class EsIndexRebuildService {
     /**
      * Q1: starter 自家系统索引详情。
      *
-     * <p>R93 阶段⑤：{@code job} / {@code audit} 两个系统索引随 SPI 重建路径退役，
+     * <p> 阶段⑤：{@code job} / {@code audit} 两个系统索引随 SPI 重建路径退役，
      * 仅剩 {@code lock} 可查。</p>
      */
     public Map<String, Object> inspectSystem(String which) throws IOException {
@@ -100,7 +100,7 @@ public class EsIndexRebuildService {
     /**
      * 空索引重建（清空数据）：基于 provider 声明的 mapping/settings 新建空物理索引 → alias atomic swap → 删旧。
      *
-     * <p>R93 阶段⑤：原 {@code triggerReload} 参数依赖已退役的 {@code fullReload} SPI，已移除；
+     * <p> 阶段⑤：原 {@code triggerReload} 参数依赖已退役的 {@code fullReload} SPI，已移除；
      * 本方法只做「换成一个空索引」，回灌由业务侧自行发起。</p>
      */
     public Map<String, Object> rebuildEmpty(String indexKey) throws IOException {
@@ -167,7 +167,7 @@ public class EsIndexRebuildService {
     /**
      * 系统索引 Query DSL。
      *
-     * <p>R93 阶段⑤：{@code job} / {@code audit} 两个系统索引随 SPI 重建路径退役，
+     * <p> 阶段⑤：{@code job} / {@code audit} 两个系统索引随 SPI 重建路径退役，
      * 仅剩 {@code lock} 可查。</p>
      */
     public Map<String, Object> querySystem(String which, String dslJson, int size) throws IOException {
@@ -180,7 +180,7 @@ public class EsIndexRebuildService {
         try {
             resolved = registry.getByKey(name).getAliasName();
         } catch (Exception e) {
-            // 五百五十八批：同 inspect——debug 留痕带异常类名，控制流零变更
+            // 同 inspect——debug 留痕带异常类名，控制流零变更
             logger.debug("[queryDsl] indexKey 解析未命中/registry 异常，按物理索引名直传 name={} exception={}",
                     name, e.getClass().getName());
             resolved = name;
@@ -310,7 +310,7 @@ public class EsIndexRebuildService {
         try {
             alias = registry.getByKey(name).getAliasName();
         } catch (Exception e) {
-            // 五百五十八批：同 inspect——debug 留痕带异常类名，控制流零变更
+            // 同 inspect——debug 留痕带异常类名，控制流零变更
             logger.debug("[resolveToPhysical] indexKey 解析未命中/registry 异常，按原名返回 name={} exception={}",
                     name, e.getClass().getName());
             return name;
@@ -319,22 +319,22 @@ public class EsIndexRebuildService {
             String physical = esIndexAdmin.getWriteIndex(alias);
             return physical != null ? physical : alias;
         } catch (Exception e) {
-            // 五百五十八批：同上——第二臂（别名解析成功但读写索引失败）此前亦静默
+            // 同上——第二臂（别名解析成功但读写索引失败）此前亦静默
             logger.debug("[resolveToPhysical] 读写索引解析失败，回退别名 alias={} exception={}",
                     alias, e.getClass().getName());
             return alias;
         }
     }
 
-    /** R94：{@link #dateForms} 的采样口径标识，随响应返回，供报告说明「这份样本怎么取的」。 */
+    /** {@link #dateForms} 的采样口径标识，随响应返回，供报告说明「这份样本怎么取的」。 */
     public static final String SAMPLING_RANDOM_SCORE = "random_score";
 
     /**
-     * R94：采样索引的 date 字段实际存储形态。
+     * 采样索引的 date 字段实际存储形态。
      *
      * <p><b>为什么不是 match_all</b>：QA 6.7.2 实测（40 条文档 = 先写 20 条 epoch_millis、
      * 后写 20 条 ISO 串），{@code {"query":{"match_all":{}},"size":20}} 连续三次<b>全部</b>返回
-     * 最先写入的 {@code a1..a20}，第二批命中 0 条。而本端点存在的理由正是<b>发现存储形态
+     * 最先写入的 {@code a1..a20}，命中 0 条。而本端点存在的理由正是<b>发现存储形态
      * 发生过变化</b>（老文档一种形态、新文档另一种）——一个偏向老文档的采样口径与被测性质
      * <b>反相关</b>，会系统性地把「新写入换了形态」报成「未发现异形」。样本量再大也补不掉，
      * 因为那不是「样本少」。故改用 {@code function_score + random_score}
@@ -363,7 +363,7 @@ public class EsIndexRebuildService {
                 }
             }
         }
-        // getMapping 内部已剥 6.x 单 type 包层（EsIndexAdmin.unwrapTypeLayer，R41），此处不重复实现
+        // getMapping 内部已剥 6.x 单 type 包层（EsIndexAdmin.unwrapTypeLayer，），此处不重复实现
         Set<String> dateFields = DateFormSampler.dateFieldsOf(esIndexAdmin.getMapping(physical));
         io.github.dengmeiluan.es.rebuild.validate.DateFormTally tally =
                 DateFormSampler.tally(sources, dateFields);

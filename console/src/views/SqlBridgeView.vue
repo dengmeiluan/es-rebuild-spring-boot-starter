@@ -1,9 +1,9 @@
 <template>
   <div class="br-page">
     <div class="br-hd">
-      <PageHeader :icon="ArrowLeftRight" title="查询语法桥" subtitle="R30 · SQL ↔ DSL ↔ Lucene 三态互转 · 一目了然 · 教你原理">
+      <PageHeader :icon="ArrowLeftRight" title="查询语法桥" subtitle="SQL ↔ DSL ↔ Lucene 三态互转 · 一目了然 · 教你原理">
       <template #actions>
-<!-- 五百三十三批：页头挂只读当前索引 chip（AnalysisSettingsView 范式；SQL 补全/示例 FROM
+<!-- 页头挂只读当前索引 chip（AnalysisSettingsView 范式；SQL 补全/示例 FROM
      静默消费 store.pickedIdx 却无可视锚，此处补齐；空索引时组件自身不渲染） -->
 <CurrentIdxChip />
 <button class="btn ghost sm" data-test="open-hist" @click="histOpen = true" title="查询历史"><History :size="12" /> 历史</button>
@@ -11,7 +11,7 @@
   <BookOpen :size="12" /> 加载示例
 </button>
 <button class="btn primary sm" @click="doAll" :disabled="!sql.trim() || busy">
-  <!-- 七百六十八批 G238：Wand2 单态无在途反馈（767 盘点 D5 实锚=钮 dis 唯一通道）→
+  <!--  G238：Wand2 单态无在途反馈（767 盘点 D5 实锚=钮 dis 唯一通道）→
        Loader2/Wand2 双态+「转换中…」文案（746 G161/766 G234 族）；kbd 提示保留（快捷键恒语义） -->
   <Loader2 v-if="busy" :size="12" class="spinning" /><Wand2 v-else :size="12" /> {{ busy ? '转换中…' : '一键全转换' }} <span class="kbd inline">⌘⏎</span>
 </button>
@@ -19,15 +19,15 @@
       </PageHeader>
 </div>
 
-    <!-- 一键转换失败：内联面板留存 + 重试（失败时两卡旧结果已清空，防误读）；四百零六批移出工作台（失败态全宽可见）。
-         五百六十二批：脱 .br-card 大容器卡壳（border+card-bg+radius 退役）→ 全局 .err-bar 形态
+    <!-- 一键转换失败：内联面板留存 + 重试（失败时两卡旧结果已清空，防误读）；移出工作台（失败态全宽可见）。
+         脱 .br-card 大容器卡壳（border+card-bg+radius 退役）→ 全局 .err-bar 形态
          承载（558b pf-err 判例），br-err 锚只留多行富内容顶对齐 + role=alert；.br-err-pre 槽类保留 -->
     <div v-if="convErr" role="alert" class="err-bar br-err" style="margin-bottom:var(--sp-3)">
       <AlertCircle :size="14" />
       <div class="br-err-body">
-        <!-- 五百二十八批：标题行走 friendlyEsError 人话 + pre 换 errPreHtml v-html 全文双轨
+        <!-- 标题行走 friendlyEsError 人话 + pre 换 errPreHtml v-html 全文双轨
              （SqlConsoleView/SearchSandboxView 同范式；.br-err-pre 类名与面板位置不动）。
-             561 批：换装双参——errMeta(convErrRaw) 旁路对象读 code/endpoint（convErr 已压串
+             换装双参——errMeta(convErrRaw) 旁路对象读 code/endpoint（convErr 已压串
              读不出），meta 空时输出与单参逐字一致（errPre524 锚），字符串全文回看语义不变 -->
         <div><b>一键转换失败</b> · {{ friendlyConvErr }}</div>
         <pre class="br-err-pre" v-html="errPreHtml(convErr, errMeta(convErrRaw))"></pre>
@@ -37,11 +37,11 @@
       </div>
     </div>
 
-    <!-- 四百零六批：三栏接统一可调工作台（与 DevTools/查询工作台同底座）——
+    <!-- 三栏接统一可调工作台（与 DevTools/查询工作台同底座）——
          此前固定等分 grid 不可调；现白得拖拽调宽/三预设/偏好记忆/窄屏自动堆叠 -->
     <WorkbenchLayout :scope="brScope" :panes="BRIDGE_PANES" axis="vertical" mode="bridge">
       <template #pane-bridge-sql>
-        <!-- 五百三十五批：三 pane 卡壳退役（四刀立法③④）——pane 即容器内容直贴，分界由
+        <!-- 三 pane 卡壳退役（四刀立法③④）——pane 即容器内容直贴，分界由
              .br-card-hd 既有 border-bottom 承接；竖排轨标题语义落行首横排 br-title（DevTools 0b130b92 同款）。
              ⚠高度链承重墙等效迁移：.br-pane 保 height:100%+flex column（rp-content 已拉伸定高），
              monaco-host 直挂原 flex 字面（sqlLint534:145 锚随换装迁移） -->
@@ -49,36 +49,36 @@
           <div class="br-card-hd">
             <span class="br-title">分布式 SQL · 商业版 · 数组失败</span>
             <div class="br-hd-r">
-              <!-- 五百三十五批 T4：试跑接 useQueryRun——读秒文案+瞬时取消钮（IndexHub 534 P0-A 同款）；
+              <!--  T4：试跑接 useQueryRun——读秒文案+瞬时取消钮（IndexHub 534 P0-A 同款）；
                    busy 仍兼作试跑/转换互斥既有口径（页头钮 disabled 绑定零变化），qr 只供计时/取消/signal -->
               <button class="btn ghost xs" @click="runSql" :disabled="!sql.trim() || busy">
                 <Play :size="11" /> {{ qr.running.value ? '试跑中 ' + (qr.elapsedMs.value / 1000).toFixed(1) + 's' : '试跑' }}
               </button>
               <button v-if="qr.running.value" class="btn ghost xs" @click="qr.cancel()"><X :size="11" /> 取消</button>
-              <!-- 七百六十八批 G240：试跑原始响应恒驻入口（Mapping R84「原始 JSON」轻形态同构；
-                   IndexHub 554 批 P1 形态=失败态也可回看；未试跑无响应=disabled 非 v-if 消失） -->
+              <!--  G240：试跑原始响应恒驻入口（Mapping 「原始 JSON」轻形态同构；
+                   IndexHub  P1 形态=失败态也可回看；未试跑无响应=disabled 非 v-if 消失） -->
               <button class="btn ghost xs" aria-label="查看试跑原始响应" title="最近一次试跑的原始响应（成功/不可用/失败现场均可回看）" :disabled="!lastRaw" @click="rawOpen = true"><FileJson :size="11" /></button>
             </div>
           </div>
-          <!-- 五百三十四批 P0-3：划线通道挂点 + 体检提示条（banner 双通道；535 批 br-card 壳退役后
+          <!--  P0-3：划线通道挂点 + 体检提示条（banner 双通道； br-card 壳退役后
                pane 布局结构不动，提示条自动高度不进编辑器高度链；lint 零阻塞不拦试跑/转换）。
-               五百六十二批：.br-sql-lint 私造形态换装 theme.css .lint-bar 单源（锚并存） -->
+               .br-sql-lint 私造形态换装 theme.css .lint-bar 单源（锚并存） -->
           <MonacoEditor ref="brSqlMonaco" v-model="sql" language="sql" height="100%" @execute="doAll" />
           <div v-if="brSqlLint.length" class="lint-bar br-sql-lint lint-bar-warn" role="status">
             <span v-for="(f, i) in brSqlLint" :key="i">· 第 {{ f.line }} 行：{{ f.message }} — {{ f.suggestion }}</span>
           </div>
-          <!-- 七百六十八批 G239：结果条补 role=status（试跑后动态出现，SR 自动播报；lint-bar 族同款） -->
+          <!--  G239：结果条补 role=status（试跑后动态出现，SR 自动播报；lint-bar 族同款） -->
           <div v-if="sqlResult" role="status" class="br-result" :class="{ err: sqlResult.err }">
             <b>{{ sqlResult.err ? '❌ 失败' : '✅ 成功' }}：</b>{{ sqlResult.msg }}
           </div>
-          <!-- 五百二十四批 W1：试跑结果文本行 → 真表格（表头=cols、行=lastRows 前 20 行）。
-               五百二十五批 W5：预览裸表换 QRT rows 型——lastCols+lastRows 天然就是
+          <!--  W1：试跑结果文本行 → 真表格（表头=cols、行=lastRows 前 20 行）。
+                W5：预览裸表换 QRT rows 型——lastCols+lastRows 天然就是
                QRT rows 型二维矩阵，同构度最高（换壳 < 保留壳自补列选/右键/放大三件的成本），
                白得列选（列宽/密度按 storageKey 记忆）/单元格右键菜单（复制值/行 JSON/整表 TSV/
                排序/列管理）/聚焦放大/Ctrl+F 查找/行导航/行内展开/漏斗。三格式复制钮保留卡头：
                QRT 内建整表复制只覆盖预览 20 行，「复制按钮取全量」语义不可让。ISO 日期/数值
-               语义档五百二十七批起走 QRT 内建按值采样推断（SQL 无 mapping；预览固定 20 行切片
-               与内核采样窗一致）——延续 524 批 es_tbl_sem 口径，数据恒 raw（复制/导出不加工）。 -->
+               语义档起走 QRT 内建按值采样推断（SQL 无 mapping；预览固定 20 行切片
+               与内核采样窗一致）——延续  es_tbl_sem 口径，数据恒 raw（复制/导出不加工）。 -->
           <div v-if="sqlResult && !sqlResult.err && previewRows.length" class="br-preview">
             <div class="br-preview-hd">
               <span class="br-preview-note">仅预览前 {{ previewRows.length }} 行（共 {{ lastRows.length }} 行）——复制按钮取全量</span>
@@ -104,7 +104,7 @@
               </button>
             </div>
           </div>
-          <!-- 五百二十五批：DSL 只读面挂 dsl-assist 白得通道（brDslAssist，字段 hover 白得） -->
+          <!-- DSL 只读面挂 dsl-assist 白得通道（brDslAssist，字段 hover 白得） -->
           <MonacoEditor :model-value="dsl || '// 点击一键转换后自动生成'" language="json" :readonly="true" height="100%" :dsl-assist="brDslAssist" />
         </div>
       </template>
@@ -126,7 +126,7 @@
       </template>
     </WorkbenchLayout>
 
-    <!-- 五百三十五批 §6u：页内查询历史（此前只写不显，遗留补齐）——mode=sql 单档过滤
+    <!--  §6u：页内查询历史（此前只写不显，遗留补齐）——mode=sql 单档过滤
          （与 SqlConsole 共池，Lead 裁决），DslQueryView 弹窗范式；导入/清空入口关闭（同沙盒口径）。
          play=回填草稿并试跑、fill=仅回填 -->
     <n-modal v-model:show="histOpen" preset="card" title="查询历史（语法桥）" style="width:640px;max-width:92vw" :bordered="false">
@@ -137,8 +137,8 @@
       />
     </n-modal>
 
-    <!-- 七百六十八批 G240：试跑原始响应全文回看（铁律 F）——QRT 只展示 rows/columns=
-         「所见非所存」缝隙，此处一键看全文；Mapping R84 轻形态同构（highlightJson
+    <!--  G240：试跑原始响应全文回看（铁律 F）——QRT 只展示 rows/columns=
+         「所见非所存」缝隙，此处一键看全文；Mapping  轻形态同构（highlightJson
          转义安全 v-html；rawJson 本身已是 pretty 串） -->
     <n-modal v-model:show="rawOpen" preset="card" title="试跑原始响应 — POST /cluster/sql/lenient" style="width:760px;max-width:94vw" :bordered="false">
       <pre class="mono scroll-y br-raw-pre" v-html="highlightJson(rawJson)"></pre>
@@ -156,7 +156,7 @@
           <span>三者能力对比</span>
           <span class="br-meta">选择合适的通道，别用错工具打错仗</span>
         </div>
-        <!-- 七百六十八批 G239：sr-only caption（视觉零变化高度零影响；卡头可见标题之外
+        <!--  G239：sr-only caption（视觉零变化高度零影响；卡头可见标题之外
              的表格语义锚，屏幕阅读器读表前先闻其名） -->
         <table class="br-cmp">
           <caption class="sr-only">三者能力对比：SQL / DSL / Lucene query_string 通道选择</caption>
@@ -189,39 +189,39 @@ import { NModal } from 'naive-ui';
 
 import PageHeader from '../components/PageHeader.vue';import { api } from '../api';
 import { useAppStore } from '../stores/app';
-import { useQueryHistoryStore } from '../stores/queryHistory'; /* 五百三十五批 §6u：试跑成功记历史（与 SqlConsole 共池） */
+import { useQueryHistoryStore } from '../stores/queryHistory'; /*  §6u：试跑成功记历史（与 SqlConsole 共池） */
 import { encodeDslParam } from '../utils/queryHub';
-import { copyText } from '../utils/format'; /* 五百二十五批 W5：fmtNum/epochMsText 随 brCellText 退役（显示层归 QRT 内建） */
-import { matrixText } from '../utils/copyMatrix'; /* 五百二十四批 W1：试跑结果 TSV/MD/JSON 三格式复制（RT/QRT 共用矩阵内核） */
+import { copyText } from '../utils/format'; /*  W5：fmtNum/epochMsText 随 brCellText 退役（显示层归 QRT 内建） */
+import { matrixText } from '../utils/copyMatrix'; /*  W1：试跑结果 TSV/MD/JSON 三格式复制（RT/QRT 共用矩阵内核） */
 import { dslToLucene } from '../utils/dslToLucene';
-import { errPreHtml, errMeta } from '../utils/errPre'; /* 五百二十八批：错误面板 pre v-html 内核（双轨范式）；561 批：补 errMeta 双参换装 */
-import { highlightJson } from '../utils/jsonc'; /* 七百六十八批 G240：试跑原始响应全文高亮（Mapping R84 同款） */
-import { friendlyEsError } from '../utils/esError'; /* 五百二十八批：错误标题行人话 */
+import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-html 内核（双轨范式）；：补 errMeta 双参换装 */
+import { highlightJson } from '../utils/jsonc'; /*  G240：试跑原始响应全文高亮（Mapping  同款） */
+import { friendlyEsError } from '../utils/esError'; /* ：错误标题行人话 */
 import { usePref } from '../composables/urlState';
 import { useScopedDraft } from '../composables/useScopedDraft';
-import { useQueryRun } from '../composables/useQueryRun'; /* 五百三十五批 T4：试跑读秒+可取消（R80 范式统一件） */
-import QueryHistoryPanel from '../components/QueryHistoryPanel.vue'; /* 五百三十五批 §6u：页内历史面板收编共享件（SqlConsole 同范式） */
+import { useQueryRun } from '../composables/useQueryRun'; /*  T4：试跑读秒+可取消（ 范式统一件） */
+import QueryHistoryPanel from '../components/QueryHistoryPanel.vue'; /*  §6u：页内历史面板收编共享件（SqlConsole 同范式） */
 import MonacoEditor from '../components/MonacoEditor.vue';
-import QueryResultTable from '../components/QueryResultTable.vue'; /* 五百二十五批 W5：预览表换 QRT rows 型（列选/右键/放大/查找内核化） */
-import CurrentIdxChip from '../components/CurrentIdxChip.vue'; /* 五百三十三批：页头只读当前索引锚 */
+import QueryResultTable from '../components/QueryResultTable.vue'; /*  W5：预览表换 QRT rows 型（列选/右键/放大/查找内核化） */
+import CurrentIdxChip from '../components/CurrentIdxChip.vue'; /* ：页头只读当前索引锚 */
 import WorkbenchLayout, { type WorkbenchPaneSpec } from '../components/WorkbenchLayout.vue';
 /* W2 批：SQL 智能补全 provider 迁 utils/sqlCompletion.ts 单例（SqlConsole 同享同一份语言级注册）；
    monaco 实例与字段源仍由本页供给（monaco 单例模块与 MonacoEditor 同实例，字段源幂等缓存） */
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import { useIndexFields } from '../composables/useIndexFields';
 import { ensureSqlCompletion, type SqlCompletionCtx } from '../utils/sqlCompletion';
-import { lintSql } from '../utils/sqlLint'; /* 五百三十四批 P0-3：SQL 静态 lint */
-import { useDebounceFn } from '../composables/useDebounceFn'; /* 五百三十四批 P0-3：划线防抖统一件 */
+import { lintSql } from '../utils/sqlLint'; /*  P0-3：SQL 静态 lint */
+import { useDebounceFn } from '../composables/useDebounceFn'; /*  P0-3：划线防抖统一件 */
 
 const store = useAppStore();
 const router = useRouter();
 
-/* 四百零六批：三栏可调工作台声明。W2 批修复「柄在但拖不动」：三 pane 全 'flex' 时
+/* 三栏可调工作台声明。W2 批修复「柄在但拖不动」：三 pane 全 'flex' 时
    sizeOf 恒回 minSize + .wl-flex-pane 永久压内联宽，constraintsRecord 排除 flex 后
    预设条不渲染、拖拽置 userTouched 反而关闭自适应。改 sized+flex 混合：
    SQL/Lucene 定宽可拖（进 constraintsRecord → 拖拽/预设/记忆全活），DSL 吃剩余空间。 */
 const brScope = { target: store.target || 'host', route: '/sql-bridge', mode: 'bridge', profile: 'standard' as const };
-/* 五百三十五批：竖排标题轨退役（刀①②，519 批立法：title 置空即不渲染）——34px 侧轨×3
+/* 竖排标题轨退役（刀①②，立法：title 置空即不渲染）——34px 侧轨×3
    回收工作区，标题语义落各 pane 行首横排 br-title（DevTools 0b130b92 同款） */
 const BRIDGE_PANES: WorkbenchPaneSpec[] = [
   { id: 'bridge.sql', role: 'request', title: '', minSize: 280, defaultSize: 340, collapsible: true },
@@ -229,12 +229,12 @@ const BRIDGE_PANES: WorkbenchPaneSpec[] = [
   { id: 'bridge.lucene', role: 'response', title: '', minSize: 260, defaultSize: 320, collapsible: true },
 ];
 
-/* R44 §8.3：SQL 草稿跨会话记忆（内容体量不适合塞 URL，落 localStorage） */
+/*  §8.3：SQL 草稿跨会话记忆（内容体量不适合塞 URL，落 localStorage） */
 const sql = usePref('sqlbridge.sql', '');
 
-/* 五百三十四批 P0-3：SQL 静态 lint 双通道（SqlConsoleView 同款）——
+/*  P0-3：SQL 静态 lint 双通道（SqlConsoleView 同款）——
    ① 编辑器划线：setLineMarkers 行号直射 owner='es-sql-lint'，useDebounceFn 250ms；
-   ② 页内 banner：brSqlLint 逐条「第 N 行」提示条（自动高度，535 批去壳后 pane 布局结构不动——
+   ② 页内 banner：brSqlLint 逐条「第 N 行」提示条（自动高度，去壳后 pane 布局结构不动——
    与 .br-result 既有自动高兄弟同形态，编辑器 flex:1 1 0 min-height:260px 既有弹性不动）。 */
 const brSqlMonaco = ref<InstanceType<typeof MonacoEditor> | null>(null);
 const brSqlLint = computed(() => lintSql(sql.value || ''));
@@ -245,7 +245,7 @@ const queueBrSqlLintMarkers = useDebounceFn(() => {
   );
 }, 250);
 watch(sql, () => { queueBrSqlLintMarkers(); }, { immediate: true });
-/* 三百五十二批：dsl/lucene 转换输出持久化（此前刷新即丢；按 SQL 文本指纹隔离——同 SQL 恒同转换） */
+/* dsl/lucene 转换输出持久化（此前刷新即丢；按 SQL 文本指纹隔离——同 SQL 恒同转换） */
 /* mode 槽承载 SQL 指纹（长度+首尾采样）——同 SQL 恒同转换，换 SQL 即隔离 */
 const sqlFingerprint = computed(() => {
   const q = sql.value.trim();
@@ -254,21 +254,21 @@ const sqlFingerprint = computed(() => {
 /* .text 解包：dsl/lucene 回到 Ref<string> 语义（模板与 doAll/copy 系零变化） */
 const dsl = useScopedDraft('dsl-out', { route: 'sqlbridge', mode: () => sqlFingerprint.value }, '').text;
 const lucene = useScopedDraft('lucene-out', { route: 'sqlbridge', mode: () => sqlFingerprint.value }, '').text;
-/* 三百四十五批：试跑结果落内存（rows/columns 可预览可复制）——此前只报「X 行 × Y 列」即弃。
-   五百二十四批 W1：preview 文本行/cols 随真表格化退役——展示直接吃 lastRows/lastCols 单一数据源 */
+/* 试跑结果落内存（rows/columns 可预览可复制）——此前只报「X 行 × Y 列」即弃。
+    W1：preview 文本行/cols 随真表格化退役——展示直接吃 lastRows/lastCols 单一数据源 */
 const sqlResult = ref<{ err: boolean; msg: string } | null>(null);
-/* 三百四十五批：保留原始行列（复制全量数据源；表格预览吃前 20 行） */
+/* 保留原始行列（复制全量数据源；表格预览吃前 20 行） */
 const lastRows = ref<any[][]>([]);
 const lastCols = ref<string[]>([]);
-/* 五百二十四批 W1：预览行集——「仅预览前 20 行」语义保留并明示；复制钮取 lastRows 全量 */
+/*  W1：预览行集——「仅预览前 20 行」语义保留并明示；复制钮取 lastRows 全量 */
 const previewRows = computed(() => lastRows.value.slice(0, 20));
 const convErr = ref(''); // 一键转换失败全文，供内联面板回看
-/* 561 批：errPre 双参换装旁路——doAll catch 把 ApiError 压串进 convErr（既有行为不动，
+/* errPre 双参换装旁路——doAll catch 把 ApiError 压串进 convErr（既有行为不动，
    全文回看语义逐字保留），原始错误对象旁路留存供 errMeta 读 code/endpoint（xm-err 549
    范式，SqlConsole runErrObj 同款）；translate 不可用分支无原始对象，meta 空时输出与
    单参逐字一致（errPre524 锚）；重跑即清 */
 const convErrRaw = ref<unknown>(null);
-/* 五百二十八批：错误标题行人话（pre 保留全文，双轨范式） */
+/* 错误标题行人话（pre 保留全文，双轨范式） */
 const friendlyConvErr = computed(() => friendlyEsError(convErr.value));
 const busy = ref(false);
 
@@ -294,12 +294,12 @@ LIMIT 100`;
 }
 
 async function doAll() {
-  /* 七百六十八批 G238b：起手 busy 守卫——⌘⏎ 走 Monaco @execute 直达本函数，模板
+  /*  G238b：起手 busy 守卫——⌘⏎ 走 Monaco @execute 直达本函数，模板
      disabled 挡不住键盘通道（G213 判例同构）；与 runSql 起手对称，在途窗内不重复发 */
   if (!sql.value.trim() || busy.value) return;
   busy.value = true;
   convErr.value = '';
-  convErrRaw.value = null; /* 561 批：重跑清 raw 旁路（runErrObj 同款） */
+  convErrRaw.value = null; /* ：重跑清 raw 旁路（runErrObj 同款） */
   try {
     /* 1. translate SQL → DSL */
     const r: any = await api.sqlTranslate(JSON.stringify({ query: sql.value }));
@@ -316,26 +316,26 @@ async function doAll() {
     /* 失败时清空两卡旧结果：内联面板占位，残留的上轮成果易被误读成本轮输出 */
     dsl.value = ''; lucene.value = '';
     convErr.value = String(e?.message || e);
-    convErrRaw.value = e; /* 561 批：原始错误对象旁路（errMeta 读 code/endpoint，压串时丢失） */
-    /* 561 批：toast 裸串并轨 friendlyEsError（obsWave560 FFE 范式） */
+    convErrRaw.value = e; /* ：原始错误对象旁路（errMeta 读 code/endpoint，压串时丢失） */
+    /* toast 裸串并轨 friendlyEsError（obsWave560 FFE 范式） */
     store.notify('error', '转换失败：' + friendlyEsError(String(e?.message ?? e)));
   } finally { busy.value = false; }
 }
 
-/* 五百三十五批 T4：试跑接 useQueryRun（R80 范式统一件，IndexHub 534 P0-A 同款）——
+/*  T4：试跑接 useQueryRun（ 范式统一件，IndexHub 534 P0-A 同款）——
    begin() 返回 signal 传 api.sqlLenient 既有 signal 形参（零 api 改动），100ms tick 驱动
    「试跑中 X.Xs」读秒；begin 即作废上一轮控制器。busy 仍兼作试跑/转换互斥口径
    （页头钮 disabled 绑定零变化），qr 只供计时/取消/signal */
 const qr = useQueryRun();
 
-/* 七百六十八批 G240：试跑原始响应旁路留存（内存态，与 sqlResult/lastRows 同生命周期）——
+/*  G240：试跑原始响应旁路留存（内存态，与 sqlResult/lastRows 同生命周期）——
    三态置位：成功/noavail=响应体原文（await 后即置，两分支共用）；异常=error 串（失败现场
    可回看）；AbortError 取消不置位=旧值保留（与「上一轮结果条原样保留」语义一致） */
 const rawOpen = ref(false);
 const lastRaw = ref<unknown>(null);
 const rawJson = computed(() => JSON.stringify(lastRaw.value, null, 2));
 function copyRaw() {
-  /* 282 批：按复制结果反馈 */
+  /* 按复制结果反馈 */
   copyText(rawJson.value).then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制原始响应' : '复制失败'));
 }
 
@@ -355,11 +355,11 @@ async function runSql() {
       err: false,
       msg: `返回 ${rows.length} 行 × ${cols.length} 列`,
     };
-    /* 五百三十五批 §6u：试跑成功记跨模式历史（mode='sql' 与 SqlConsole 共池，Lead 裁决）；
+    /*  §6u：试跑成功记跨模式历史（mode='sql' 与 SqlConsole 共池，Lead 裁决）；
        索引锚 pickedIdx 优先，缺省解析 FROM 表名（引号壳兼容；解析不到留空由 store 归 undefined） */
     qh.push('sql', sql.value, store.pickedIdx || /\bFROM\s+"?([\w.-]+)"?/i.exec(sql.value)?.[1] || '');
   } catch (e: any) {
-    /* 用户主动取消不算错误（R80 同语义）：AbortError 静默丢弃——不进 br-result.err 红条，
+    /* 用户主动取消不算错误（ 同语义）：AbortError 静默丢弃——不进 br-result.err 红条，
        只给轻提示（DslQueryView/IndexHub 同款），上一轮结果条原样保留 */
     if (e?.name === 'AbortError') { store.notify('info', '已取消试跑'); return; }
     lastRaw.value = { error: String(e?.message || e) };
@@ -367,7 +367,7 @@ async function runSql() {
   } finally { busy.value = false; qr.finish(); }
 }
 
-/* ═══ 五百三十五批 §6u：页内查询历史（此前只写不显，遗留补齐）═══
+/* ═══  §6u：页内查询历史（此前只写不显，遗留补齐）═══
    mode='sql' 单档过滤与 SqlConsole 共池（Lead 裁决：语法桥试跑即 SQL 查询）；
    DslQueryView 弹窗范式收编 QueryHistoryPanel 共享件，导入/清空入口关闭（同沙盒口径） */
 const qh = useQueryHistoryStore();
@@ -379,13 +379,13 @@ function replayHistRow(row: { query: string }, runIt: boolean) {
   if (runIt) runSql();
 }
 
-/* 五百二十四批 W1：语义显示层（es_tbl_sem 口径）——五百二十五批 W5 换 QRT 壳后
+/*  W1：语义显示层（es_tbl_sem 口径）—— W5 换 QRT 壳后
    显示层归 QRT displayText 内建（epoch 毫秒人性化恒开；ISO 日期本地化/数值千分位右对齐
-   走列类型语义档）；brCellText 手写显示函数随壳退役。五百二十七批：brColTypes 宿主推断
+   走列类型语义档）；brCellText 手写显示函数随壳退役。：brColTypes 宿主推断
    胶水退役——QRT 内建按值采样档（ISO 日期/数值形态占比≥50%）与原胶水口径等价，
    预览固定 20 行切片与内核采样窗一致，行为锁见 tableKernelContracts527。 */
 
-/* 三百四十五批 TSV 复制收编升级（五百二十四批 W1）：matrixText 三格式（TSV/MD/JSON），
+/*  TSV 复制收编升级（ W1）：matrixText 三格式（TSV/MD/JSON），
    行集恒 lastRows 全量——预览只截显示不截复制，工单拿到的必须是完整结果 */
 function copyPreviewMatrix(fmt: 'tsv' | 'md' | 'json') {
   if (!lastRows.value.length || !lastCols.value.length) return;
@@ -400,12 +400,12 @@ function copyPreviewMatrix(fmt: 'tsv' | 'md' | 'json') {
 
 function copyDsl() {
   if (!dsl.value) return;
-  /* 二百八十二批：先报成功后异步复制=时序假成功——改为按结果反馈 */
+  /* 先报成功后异步复制=时序假成功——改为按结果反馈 */
   copyText(dsl.value).then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制 DSL' : '复制失败'));
 }
 function copyLucene() {
   if (!lucene.value) return;
-  copyText(lucene.value).then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制 Lucene' : '复制失败')); /* 282 批 */
+  copyText(lucene.value).then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制 Lucene' : '复制失败')); /*  */
 }
 function gotoQuery() {
   if (!dsl.value) return;
@@ -424,7 +424,7 @@ function gotoLucene() {
    FROM 表名位字段源由单例模块内部持有。 */
 const curFieldsCtx = useIndexFields(() => store.pickedIdx || '');
 
-/* 五百二十五批：DSL 只读面 dsl-assist 白得通道——fields 复用 SQL 补全同一 useIndexFields 出口
+/* DSL 只读面 dsl-assist 白得通道——fields 复用 SQL 补全同一 useIndexFields 出口
    （curFieldsCtx，模块级缓存共享；挂载 ensure 预热，见 onMounted）。bodyKind 'doc'：该面是
    机器生成的完整转换产物（非用户编写），补全插入语义不存在，'doc' 档键位零候选最静音
    （标 'search' 会在 Ctrl+Space 出查询键骨架噪音——只读面出插不了的建议纯误导）；
@@ -436,8 +436,8 @@ function sqlCtx(): SqlCompletionCtx {
     indices: () => store.indices,
     pickedIdx: () => store.pickedIdx || '',
     curFields: () => curFieldsCtx.fields.value,
-    /* 561 批：去 void 包装直返 Promise（契约本就 void|Promise<void>，④值位冷缓存首轮
-         await 到位再分派——551 批 ③A3 契约半边补齐） */
+    /* 去 void 包装直返 Promise（契约本就 void|Promise<void>，④值位冷缓存首轮
+         await 到位再分派—— ③A3 契约半边补齐） */
     ensureCurFields: () => curFieldsCtx.ensure(),
   };
 }
@@ -445,19 +445,19 @@ function sqlCtx(): SqlCompletionCtx {
 let sqlCompletion: { dispose(): void } | null = null;
 onMounted(() => {
   sqlCompletion = ensureSqlCompletion(monaco, sqlCtx);
-  void curFieldsCtx.ensure(); /* 五百二十五批：DSL 面字段 hover 预热（幂等+缓存，DevToolsView 同范式；空索引早退零请求） */
+  void curFieldsCtx.ensure(); /* ：DSL 面字段 hover 预热（幂等+缓存，DevToolsView 同范式；空索引早退零请求） */
 });
 onBeforeUnmount(() => { sqlCompletion?.dispose(); sqlCompletion = null; });
 </script>
 
 <style scoped>
-/* 五百二十七批：.br-hd-l/.br-hd-ic/.br-hd-tt/.br-hd-sub 死规则退役（页头早已由 PageHeader 接管，模板 grep 0 引用） */
+/* .br-hd-l/.br-hd-ic/.br-hd-tt/.br-hd-sub 死规则退役（页头早已由 PageHeader 接管，模板 grep 0 引用） */
 .br-page { padding: var(--sp-3) var(--sp-4) var(--sp-5); }
 .br-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); }
 .br-hd-r { display: flex; gap: var(--sp-1h); align-items: center; }
-/* 四百零六批：固定等分 grid 退役——三栏布局交给 WorkbenchLayout（拖拽/预设/记忆/窄屏堆叠）；
+/* 固定等分 grid 退役——三栏布局交给 WorkbenchLayout（拖拽/预设/记忆/窄屏堆叠）；
    .br-card.wide 的 grid-column 语义随之失效（wide 卡已移出工作台），保留类名仅样式兜底 */
-/* 五百三十五批：三 pane 卡壳退役（四刀立法③④）——pane 即容器内容直贴，分界由 .br-card-hd
+/* 三 pane 卡壳退役（四刀立法③④）——pane 即容器内容直贴，分界由 .br-card-hd
    既有 border-bottom 承接；.br-card 壳（bg+border+radius）仅页面级 wide 卡（err 面板/对比表）保留 */
 .br-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--r-m); overflow: hidden; display: flex; flex-direction: column; }
 /* 编辑器弹性（高度链承重墙等效迁移）：pane 根保 height:100%+flex column（rp-content 已拉伸定高），
@@ -465,23 +465,23 @@ onBeforeUnmount(() => { sqlCompletion?.dispose(); sqlCompletion = null; });
    height:100% 失效回落 auto，host 由 min-height 260px 兜底（原值） */
 .br-pane { height: 100%; display: flex; flex-direction: column; }
 .br-pane > :deep(.monaco-host) { flex: 1 1 0; min-height: 260px; }
-/* 五百五十八批(b)：编辑器外框退役（同 av-left 独立追加手法——sqlLint534:147/
+/* (b)：编辑器外框退役（同 av-left 独立追加手法——sqlLint534:147/
    sqlBridgeFlat535:140 逐字锁钉死原行）；pane 卡头 br-card-hd 既有 border-bottom 承接分界，
    组件本体零触 */
 .br-pane > :deep(.monaco-host) { border: none; border-radius: 0; }
 .br-card.wide { margin-bottom: var(--sp-3); }
 .br-card-hd { display: flex; align-items: center; padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--border); font-size: var(--fs-sm); gap: var(--sp-2); }
-/* 七百六十八批 G237：tag 族四变体死规则整删（767 S-G237 死扫实锚=模板零引用；
+/*  G237：tag 族四变体死规则整删（767 S-G237 死扫实锚=模板零引用；
    pillSingleTrack MERGED 字典该类项留作负向防回潮锚——重新长出尺寸/色值会被看守抓 */
-/* 五百三十五批：竖排轨退役后 br-title 升 sec-t 行首横排档（DevTools .dt-pane-tt 同语言：
+/* 竖排轨退役后 br-title 升 sec-t 行首横排档（DevTools .dt-pane-tt 同语言：
    tx1+加重，muted 弱化档退役——它现在是 pane 主标题不是卡内小注） */
 .br-title { color: var(--tx1); font-size: var(--fs-sm); font-weight: 600; flex: 1; }
 .br-meta { color: var(--muted); font-size: var(--fs-xs); margin-left: var(--sp-3); }
-/* 五百二十五批：结果条「线+背景差」双保险收敛为背景差单保险——色块底已分组，border-top 删除
+/* 结果条「线+背景差」双保险收敛为背景差单保险——色块底已分组，border-top 删除
    （err 分支同基类治：只覆写 background/color，无自有线） */
 .br-result { padding: var(--sp-1h) var(--sp-3); font-size: var(--fs-xs); background: var(--ok-soft); color: var(--ok); }
 .br-result.err { background: var(--err-soft); color: var(--err); }
-/* 五百六十二批：.br-sql-lint 私造形态（含 warn-line 边线）随换装 theme.css .lint-bar 单源退役；
+/* .br-sql-lint 私造形态（含 warn-line 边线）随换装 theme.css .lint-bar 单源退役；
    自动高度 flex none 语义归 .lint-bar，编辑器既有弹性不动 */
 .br-cmp { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 .br-cmp th, .br-cmp td { padding: var(--sp-1h) var(--sp-2h); border-bottom: 1px solid var(--border); text-align: left; }
@@ -490,7 +490,7 @@ onBeforeUnmount(() => { sqlCompletion?.dispose(); sqlCompletion = null; });
 .br-cmp-c.ok { color: var(--ok); }
 .br-cmp-c.partial { color: var(--warn); }
 .br-cmp-c.no { color: var(--err); }
-/* 五百六十二批：.br-err 私造红壳（err 色/err-line 边/err-soft 底/私造 padding）随脱卡壳
+/* .br-err 私造红壳（err 色/err-line 边/err-soft 底/私造 padding）随脱卡壳
    收编全局 .err-bar 形态（theme.css :554 单源，558b pf-err 同语言）——只留多行富内容
    顶对齐（icon+body 不随 err-bar 居中），上落位由模板内联 margin 保形 */
 .br-err { align-items: flex-start; }
@@ -498,19 +498,19 @@ onBeforeUnmount(() => { sqlCompletion?.dispose(); sqlCompletion = null; });
 .br-err-pre { margin: var(--sp-1h) 0 0; font-family: var(--mono); font-size: var(--fs-xs); white-space: pre-wrap; word-break: break-word; color: var(--fg); max-height: 200px; overflow: auto; }
 .br-err-acts { margin-top: var(--sp-2); }
 
-/* 五百二十四批 W1：试跑结果三格式复制工具行；
-   五百二十五批 W5：预览表格皮（滚动容器/手写表格全家）随换 QRT 壳退役——
+/*  W1：试跑结果三格式复制工具行；
+    W5：预览表格皮（滚动容器/手写表格全家）随换 QRT 壳退役——
    滚动/表头粘顶/数值右对齐归 QRT 内建（max-height 240px 由 props 传内核） */
 .br-preview-hd { display: flex; align-items: center; gap: var(--sp-1h); padding: var(--sp-1h) var(--sp-3) 0; flex-wrap: wrap; }
 .br-preview-note { font-size: var(--fs-xs); color: var(--muted); margin-right: auto; }
-/* 七百六十八批 G240：原始响应 modal 全文 pre（字体归全局 .mono、滚动归 .scroll-y，
+/*  G240：原始响应 modal 全文 pre（字体归全局 .mono、滚动归 .scroll-y，
    此处只落限高与内边距两私有量） */
 .br-raw-pre { max-height: 60vh; padding: var(--sp-2); font-size: var(--fs-xs); }
 
-/* 四百零六批：窄屏堆叠由 WorkbenchLayout stacked 档自动处理（embedded/compact），
+/* 窄屏堆叠由 WorkbenchLayout stacked 档自动处理（embedded/compact），
    自制 1100px 断点退役 */
 
-/* 五百三十一批：900 紧凑微调档（Workbench 五视图之四）——页侧距 --sp-4 收 --sp-3（顶/底节奏不动）；
+/* 900 紧凑微调档（Workbench 五视图之四）——页侧距 --sp-4 收 --sp-3（顶/底节奏不动）；
    三 pane 卡头（标题+试跑/复制/跳转钮组）窄容器补 wrap，.br-title flex:1 可收缩、钮组整排落到次行 */
 @media (max-width: 900px) {
   .br-page { padding: var(--sp-3) var(--sp-3) var(--sp-5); }

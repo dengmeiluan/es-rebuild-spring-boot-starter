@@ -22,10 +22,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百四十六批：控制台操作审计双店（JDBC 档 / ES 档）<b>落审计失败的 WARN 观测留痕</b>。
+ * 控制台操作审计双店（JDBC 档 / ES 档）<b>落审计失败的 WARN 观测留痕</b>。
  *
  * <p><b>缺口</b>：审计落库失败此前仅 {@code LOG.debug("落审计失败（忽略）")}——审计流水是
- * 合规留痕数据，落库失败即丢数，静默不可观测。五百四十五批 {@code MigrationHandle#addErrors}
+ * 合规留痕数据，落库失败即丢数，静默不可观测。 {@code MigrationHandle#addErrors}
  * 同形态收口：失败路径必须落服务端 WARN。但审计失败与 bulk 落账不同——宿主库/ES 不可用时
  * <b>每笔操作都会失败</b>，高频刷屏会淹没日志，故节流形态取「首条 WARN + 计数静默」：
  * 首次失败 WARN 留痕，此后仅内部累计不再打（{@code addErrors} 是 n&gt;0 才打且低频，此处
@@ -121,7 +121,7 @@ public class ConsoleOpsAuditStoreObservabilityTest {
 
     /* ── 桩与工具 ── */
 
-    /** 五百五十五批：富事件构造（唯一写入口）。 */
+    /** 富事件构造（唯一写入口）。 */
     private static ConsoleOpsAuditEvent ev(String username, String displayName, String uri, String action) {
         return ConsoleOpsAuditEvent.builder()
                 .username(username).displayName(displayName).role("ADMIN")

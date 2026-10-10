@@ -26,8 +26,8 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * <p><b>服务端聚合</b>（{@link #searchAgg}）：原始 60s 粒度拉 7 天 = 10080 点，超
  * {@link #MAX_SIZE} 钳制且 ASC 只留最旧——图表丢最新段，全错。改走 ES
- * {@code date_histogram} 服务端聚合（R31 重构：by_group terms 分组〔cluster→connName/
- * node→nodeName〕+ by_time 桶化 + {@link #AGG_METRIC_FIELDS} 全指标子聚合；637 批三值同返＝
+ * {@code date_histogram} 服务端聚合（ 重构：by_group terms 分组〔cluster→connName/
+ * node→nodeName〕+ by_time 桶化 + {@link #AGG_METRIC_FIELDS} 全指标子聚合；三值同返＝
  * 每字段平铺 {@code <field>Avg/Max/Min} + 标量别名 {@code <field>}），
  * 桶数=区间/interval 恒在钳内；桶记录字段名与原始 doc 同名同型，前端零改动兼容
  * （空桶 value=null → 键省略，前端缺值剔点已有）。timestamp 天然升序。</p>
@@ -125,7 +125,7 @@ public class MonitorMetricsStore {
     }
 
     /**
-     * R34 重载：connName 精确过滤——聚合模式按 connName 分组后，前端筛选下拉拿到的是
+     *  重载：connName 精确过滤——聚合模式按 connName 分组后，前端筛选下拉拿到的是
      * 实名而非 connId，历史缺陷「下拉把实名传进 connId 参数→恒空」在此根治。
      */
     public List<Map<String, Object>> search(String connId, String connName, String scope, int size, int from,
@@ -164,7 +164,7 @@ public class MonitorMetricsStore {
     }
 
     /**
-     * R11 时间窗重载：只取 {@code [fromMs,toMs]} 窗口内的告警/恢复 doc（图卡事件标记与
+     *  时间窗重载：只取 {@code [fromMs,toMs]} 窗口内的告警/恢复 doc（图卡事件标记与
      * 可见时间域对齐用）。窗口缺省=不限。
      */
     public List<Map<String, Object>> searchAlerts(int size, Long fromMs, Long toMs) {
@@ -268,10 +268,10 @@ public class MonitorMetricsStore {
     }
 
     /**
-     * R31 聚合方式重载：{@code agg}="avg"|"max"（合法性由 controller 校验后传入）——
+     *  聚合方式重载：{@code agg}="avg"|"max"（合法性由 controller 校验后传入）——
      * 阿里云每卡聚合切换（平均值/最大值）对标：max 桶捕捉瞬时尖峰（heap 突刺等）。
      *
-     * <p>637 批三值同返：{@code agg} 仅决定<b>标量别名</b> {@code <field>} 取哪个值；
+     * <p>三值同返：{@code agg} 仅决定<b>标量别名</b> {@code <field>} 取哪个值；
      * 每字段同时平铺 {@code <field>Avg/<field>Max/<field>Min} 三键，前端逐卡本地切三值零请求。</p>
      */
     public List<Map<String, Object>> searchAgg(String connId, String scope,
@@ -279,7 +279,7 @@ public class MonitorMetricsStore {
         return searchAgg(connId, null, scope, fromMs, toMs, interval, agg);
     }
 
-    /** R34 重载：connName 精确过滤（聚合分组键=connName，前端筛选下拉传实名）。 */
+    /**  重载：connName 精确过滤（聚合分组键=connName，前端筛选下拉传实名）。 */
     public List<Map<String, Object>> searchAgg(String connId, String connName, String scope,
                                                Long fromMs, Long toMs, String interval, String agg) {
         try {
@@ -301,7 +301,7 @@ public class MonitorMetricsStore {
     }
 
     /**
-     * R31 全指标聚合清单：与 {@link ClusterMetricsCollector} cluster/node doc 数值字段
+     *  全指标聚合清单：与 {@link ClusterMetricsCollector} cluster/node doc 数值字段
      * 一一对应——此前只聚合起步期六指标，历史趋势后加的卡（拒绝/GC/耗时/节点深耕七卡）
      * 在聚合模式下恒空的历史缺陷在此根治。
      */
@@ -322,7 +322,7 @@ public class MonitorMetricsStore {
      * filter 顺序：kind 恒定 term 打头，scope/connId 可选 term，timestamp range 收尾；
      * {@code min_doc_count:0} 空桶补齐时间轴（前端缺值剔点，不跳格）。
      *
-     * <p><b>R31 分组重构</b>：by_group terms（scope=node → nodeName，否则 connName）
+     * <p><b> 分组重构</b>：by_group terms（scope=node → nodeName，否则 connName）
      * 打头、by_time date_histogram 内嵌——此前聚合体不分组，多集群叠加与节点下钻
      * 在聚合模式下失真（全部序列挤进「未知集群」）；桶记录组键回填 connName/nodeName，
      * 与原始 doc 键名一致，前端 buildSeries 分组零改动。</p>
@@ -367,7 +367,7 @@ public class MonitorMetricsStore {
                 range.append('}');
                 filters.add("{\"range\":{\"timestamp\":" + range + "}}");
             }
-            /* 637 批三值同返（方案 C）：每字段平铺 <field>Avg/Max/Min 三键 + 保留标量别名 <field>
+            /* 三值同返（方案 C）：每字段平铺 <field>Avg/Max/Min 三键 + 保留标量别名 <field>
                （= 请求 agg 参数对应的那个值）——老前端读 <field> 照常工作（向后兼容零破坏），
                前端即可逐卡本地切换 avg/max/min 三值零请求放大。 */
             String aggType = "max".equals(agg) ? "max" : "avg";
@@ -437,7 +437,7 @@ public class MonitorMetricsStore {
                     rec.put("timestamp", Long.valueOf(((Number) bucket.get("key")).longValue()));
                 }
                 for (String f : AGG_METRIC_FIELDS) {
-                    /* 637 批三值同返：满桶三键齐（<field>Avg/Max/Min）+ 标量别名 <field>；
+                    /* 三值同返：满桶三键齐（<field>Avg/Max/Min）+ 标量别名 <field>；
                        空桶 value=null → 三键（含别名）一并省略（沿用 putAggValue「Number 才落键」语义） */
                     putAggValue(rec, f + "Avg", bucket);
                     putAggValue(rec, f + "Max", bucket);
@@ -460,7 +460,7 @@ public class MonitorMetricsStore {
     }
 
     /**
-     * R42 最新 Top 索引快照（可选连接过滤）：取带 topIndexes 字段的最新 cluster doc，
+     *  最新 Top 索引快照（可选连接过滤）：取带 topIndexes 字段的最新 cluster doc，
      * 返回其 topIndexes 数组（index/qps/idxRate/storeMb ×≤8）；无快照 → 空列表。
      */
     public List<Map<String, Object>> searchTopIndexes(String connName) {
@@ -493,7 +493,7 @@ public class MonitorMetricsStore {
     }
 
     /** Top 索引查询体（包内可见=测点）：最新 1 条 cluster doc 且带 topIndexes 字段。
-     *  R43 修正：过滤键用 connName（前端集群下拉持有的是实名；R34 同款教训不复述）。 */
+     *   修正：过滤键用 connName（前端集群下拉持有的是实名； 同款教训不复述）。 */
     static String buildTopBody(String connName) {
         String f = "";
         if (connName != null && !connName.isEmpty()) {

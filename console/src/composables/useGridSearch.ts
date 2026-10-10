@@ -1,12 +1,12 @@
 import { ref, computed, watch, type Ref } from 'vue';
 import { useHitNav, type HitNav } from './useHitNav';
-/* 五百六十五批件⑤：splitMark/normNumStr 纯函数件迁 utils/markSeg（fieldSearch 反向 import
+/* 件⑤：splitMark/normNumStr 纯函数件迁 utils/markSeg（fieldSearch 反向 import
    composables 的依赖倒挂根治）；本文件 re-export 保全站 10+ 消费方 import 路径与值引用零改，
    本体 matches 内部仍经 import 消费 normNumStr（行为零漂移）。 */
 import { normNumStr } from '../utils/markSeg';
 export { splitMark, normNumStr } from '../utils/markSeg';
 
-/* 二百二十九批 P0-1：结果表格内查找（dbx Grid SearchBar 对位——此前 HitNav 底座只服务
+/*  P0-1：结果表格内查找（dbx Grid SearchBar 对位——此前 HitNav 底座只服务
    JSON 树/映射树，表格本体无任何查找）。复用 useHitNav 游标（1-based 回绕+收缩钳制）；
    匹配口径=「显示文本」（epoch 人性化后的所见即所搜，由调用方 getText 决定）；
    搜索范围由调用方钉死在渲染集（renderHits——所见即所搜，dbx 同款 ≈ 语义由调用方提示）。
@@ -14,11 +14,11 @@ export { splitMark, normNumStr } from '../utils/markSeg';
 
 interface GridMatch { ri: number; ci: number }
 
-/* 五百六十五批件⑤：splitMark/normNumStr 函数本体迁 utils/markSeg（逐字平移零行为漂移，
+/* 件⑤：splitMark/normNumStr 函数本体迁 utils/markSeg（逐字平移零行为漂移，
    函数头注随迁），本文件头部 re-export 保 10+ 消费方 import 路径零改——
    既有 557 数值归一整段 mark、229 大小写不敏感切分等契约语义归 markSeg 单源承接。 */
 
-/** 五百六十三批：date 列类型感知——日期分隔符归一比对（/ . 与 - 互认，「2024/01/15」
+/** date 列类型感知——日期分隔符归一比对（/ . 与 - 互认，「2024/01/15」
  *  命中 kw「2024-01-15」）。仅两侧都呈日期形态（`^\d{4}[-/.]\d{1,2}` 起手）才归一，
  *  防普通文本去符号误伤；boolean 列不出专档（第一遍大小写不敏感已覆盖 "True"∈"true"）。 */
 const DATE_LIKE_RE = /^\d{4}[-/.]\d{1,2}(?:[-/.]\d{1,2})?/;
@@ -30,8 +30,8 @@ export function useGridSearch(opts: {
   cols: () => number;
   /** (ri, ci) → 该格显示文本（小写匹配在内部做） */
   getText: (ri: number, ci: number) => string;
-  /** (ci) → 列 mapping 类型（可选，五百六十三批）：date 列启用第三遍分隔符归一兜底；
-   *  未传零行为（229 批 includes/数值归一两遍契约零回退），消费面（QRT/ResultTable）
+  /** (ci) → 列 mapping 类型（可选，）：date 列启用第三遍分隔符归一兜底；
+   *  未传零行为（ includes/数值归一两遍契约零回退），消费面（QRT/ResultTable）
    *  在黑名单内核域，colType 接线记档下批 */
   colType?: (ci: number) => string | undefined;
   debounceMs?: number;
@@ -70,7 +70,7 @@ export function useGridSearch(opts: {
     for (let ri = 0; ri < rows; ri++) {
       for (let ci = 0; ci < cols; ci++) {
         const text = opts.getText(ri, ci);
-        /* 第一遍原样 includes——229 批契约零变，命中即命中 */
+        /* 第一遍原样 includes——契约零变，命中即命中 */
         if (text.toLowerCase().includes(k)) { out.push({ ri, ci }); continue; }
         /* 第二遍数值双口径归一（548）：仅两侧都「看起来是数字」才比对 */
         if (nk !== null) {

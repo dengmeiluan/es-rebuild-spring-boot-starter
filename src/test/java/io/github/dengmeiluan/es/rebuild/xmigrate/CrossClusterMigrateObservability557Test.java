@@ -20,7 +20,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百五十七批：{@link CrossClusterMigrateService} 两处静默臂补 WARN（Observability554
+ * {@link CrossClusterMigrateService} 两处静默臂补 WARN（Observability554
  * 同构：ListAppender 直挂 logger + 契约反锁双形态，断言风格对齐同包
  * SliceWorkerClearScrollWarnTest 先例）。<b>行为契约零改动</b>（预检照旧不阻断、
  * tuneMode 照旧回退 AGGRESSIVE），只把「失败被静默吞掉」的冷路径补上 WARN 留痕；

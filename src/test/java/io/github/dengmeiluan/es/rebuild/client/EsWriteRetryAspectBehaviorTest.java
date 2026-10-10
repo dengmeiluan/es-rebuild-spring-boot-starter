@@ -18,7 +18,7 @@ import java.lang.reflect.Proxy;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * R93 #70：{@link EsWriteRetryAspect} 的<b>行为</b>测试 —— 它是否真的重试。
+ *  #70：{@link EsWriteRetryAspect} 的<b>行为</b>测试 —— 它是否真的重试。
  *
  * <p><b>为什么装配断言不够</b>：{@code ClientModeWiringTest} 只能证明两个 Bean 存在。
  * 但「Bean 在」与「写失败会被重试」是两件事：闸门若还在（而业务侧永远取不到重建窗口），

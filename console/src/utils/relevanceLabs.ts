@@ -1,4 +1,4 @@
-/* 四百五十三批：相关性实验室清单单点化——六 lab（评分解释/排名侦探/X 光/命中矩阵/
+/* 相关性实验室清单单点化——六 lab（评分解释/排名侦探/X 光/命中矩阵/
    Boost 沙盒/火焰图）此前仅在 QueryHubView 本地定义；LabNav 互跳导航与 QueryHub
    popover 共用此单点。icon 为 lucide 组件引用（视图渲染用）。 */
 import { SearchCheck, Gauge, ScanSearch, Grid3x3, SlidersHorizontal, Flame } from 'lucide-vue-next';

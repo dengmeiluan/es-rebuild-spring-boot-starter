@@ -1,5 +1,5 @@
 <template>
-  <!-- 五百二十五批：follow 档视图页内只读「当前索引」chip——选索引入口收敛 TopBar 唯一处
+  <!-- follow 档视图页内只读「当前索引」chip——选索引入口收敛 TopBar 唯一处
        （别名组/recent/健康度都在顶栏），本件只读 store 自显 + 三个助攻动作。
        未选索引整件不渲染（根 v-if），页内空态兜底契约留给各视图。 -->
   <span v-if="store.pickedIdx" class="cic" :title="store.pickedIdx">
@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-/* 五百二十五批：follow 档视图页内 IndexPicker 退役配套件——无 props 自读 store
+/* follow 档视图页内 IndexPicker 退役配套件——无 props 自读 store
    （pickedIdx/pickedInfo/pick）。健康色点沿用 IndexOptionRow .ior-dot 色映射
    （green→ok/yellow→warn/red→err/未知灰）；docs·size 小字与 TopBar idx-meta 同口径。 */
 import { computed } from 'vue';

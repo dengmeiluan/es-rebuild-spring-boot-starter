@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
 import static io.github.dengmeiluan.es.rebuild.validate.ConfigIssue.LAYER_DRYRUN;
 
 /**
- * R35 配置门禁——校验编排内核：L1/L3（{@link IndexConfigLinter}）+ L2 服务端 Dry-run。
+ *  配置门禁——校验编排内核：L1/L3（{@link IndexConfigLinter}）+ L2 服务端 Dry-run。
  *
  * <p><b>L2 Dry-run 原理</b>：ES 7.10 没有 validate-config API，唯一的零副作用真校验是
  * 「临时索引试建」——用被校验的 settings+mapping 建 {@code es_console_validate_<ts>_<rand>}，
@@ -66,7 +66,7 @@ public class IndexConfigValidator {
     public ConfigValidationReport validate(String settingsJson, String mappingJson, boolean dryRun) {
         long t0 = System.currentTimeMillis();
         ConfigValidationReport report = new ConfigValidationReport();
-        /* 第 503 批：形态归一化——GET _settings/_mapping 原样形态（索引名壳+flat 平铺）宽容接受，
+        /* 第 ：形态归一化——GET _settings/_mapping 原样形态（索引名壳+flat 平铺）宽容接受，
            L1/L2 都吃净形态，剥壳/归组动作以 INFO 透出（校准误差第二案根治） */
         IndexConfigNormalizer.Result nr = IndexConfigNormalizer.normalize(settingsJson, mappingJson);
         for (String note : nr.notes) {

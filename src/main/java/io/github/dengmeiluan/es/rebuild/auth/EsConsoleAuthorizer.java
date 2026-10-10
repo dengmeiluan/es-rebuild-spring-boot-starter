@@ -3,7 +3,7 @@ package io.github.dengmeiluan.es.rebuild.auth;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * 控制台鉴权 SPI（R34）。
+ * 控制台鉴权 SPI（）。
  *
  * <p>starter 默认提供 {@link BuiltinConsoleAuthService}（账号存 ES 系统索引 + HMAC token）。
  * 宿主项目若已有自己的登录体系（JWT/SSO/Spring Security），注册一个本接口的 bean 即可整体替换：

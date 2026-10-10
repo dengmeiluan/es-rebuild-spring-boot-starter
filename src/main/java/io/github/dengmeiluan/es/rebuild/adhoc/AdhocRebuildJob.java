@@ -20,14 +20,14 @@ import java.util.Map;
  */
 public class AdhocRebuildJob {
 
-    /** R93 门结局：人工确认放行 */
+    /**  门结局：人工确认放行 */
     public static final String GATE_CONFIRMED = "CONFIRMED";
-    /** R93 门结局：等待人工确认超时 */
+    /**  门结局：等待人工确认超时 */
     public static final String GATE_TIMED_OUT = "TIMED_OUT";
-    /** R93 门结局：等待期间收到中止请求 */
+    /**  门结局：等待期间收到中止请求 */
     public static final String GATE_ABORTED = "ABORTED";
 
-    /** R93：切换前等待人工确认的 stage 名 */
+    /** 切换前等待人工确认的 stage 名 */
     public static final String STAGE_AWAIT_CONFIRM = "AWAIT_CONFIRM";
 
     /** 追平策略 */
@@ -51,7 +51,7 @@ public class AdhocRebuildJob {
     private final String timeField;
     private final long bufferMs;
     private final boolean deleteOldIndex;
-    /** R93：切换前是否停下来等人工确认（粘贴期望配置的流程默认开启） */
+    /** 切换前是否停下来等人工确认（粘贴期望配置的流程默认开启） */
     private final boolean pauseBeforeSwitch;
     private final long startedAt;
     /**
@@ -72,10 +72,10 @@ public class AdhocRebuildJob {
     private volatile String currentTaskId;
     private volatile long finishedAt;
     private volatile boolean abortRequested;
-    /** R93：本实例已失去重建锁（锁现属他人）。见 {@link #isLockLost()}。 */
+    /** 本实例已失去重建锁（锁现属他人）。见 {@link #isLockLost()}。 */
     private volatile boolean lockLost;
     /**
-     * R93：本作业的分布式锁是否<b>真的在提供互斥</b>（取自 {@code RebuildLockStore.isEnabled()}）。
+     * 本作业的分布式锁是否<b>真的在提供互斥</b>（取自 {@code RebuildLockStore.isEnabled()}）。
      *
      * <p>{@code es.rebuild.lock.enabled=false}（受支持的生产开关）时，store 的
      * {@code tryAcquire}/{@code renew} 恒 true 而 {@code get} 恒 null。若把该 null 当成
@@ -88,7 +88,7 @@ public class AdhocRebuildJob {
      */
     private volatile boolean lockActive;
     /**
-     * R93：本作业在<b>已失去重建锁</b>的情况下仍执行了别名切换（人工确认已赢下门、切换不可撤销）。
+     * 本作业在<b>已失去重建锁</b>的情况下仍执行了别名切换（人工确认已赢下门、切换不可撤销）。
      *
      * <p><b>为什么是一等字段而不是塞进 report map。</b>切换成功后 {@code run()} 会用
      * {@code buildReport(...)} <b>整体替换</b> report，塞在 map 里的该事实会<b>恰好在切换成功时消失</b>
@@ -96,7 +96,7 @@ public class AdhocRebuildJob {
      */
     private volatile boolean switchedWithoutLock;
     /**
-     * R93：切换确认门的<b>唯一裁决点</b>。null=未决；CONFIRMED=人工放行；TIMED_OUT=等待超时；ABORTED=等待期间中止。
+     * 切换确认门的<b>唯一裁决点</b>。null=未决；CONFIRMED=人工放行；TIMED_OUT=等待超时；ABORTED=等待期间中止。
      *
      * <p><b>为什么是 CAS 而不是裸 volatile boolean。</b>两条线程会同时争这个门：worker 线程做超时判定，
      * HTTP 线程处理人工确认。裸 volatile 只能「读到什么就是什么」，输的一方<b>无从得知自己输了</b> ——
@@ -110,14 +110,14 @@ public class AdhocRebuildJob {
      */
     private final java.util.concurrent.atomic.AtomicReference<String> gateOutcome =
             new java.util.concurrent.atomic.AtomicReference<>();
-    /** R93：进入 AWAIT_CONFIRM 的时刻（0=未进入）。用于控制台显示已阻断时长与超时判定 */
+    /** 进入 AWAIT_CONFIRM 的时刻（0=未进入）。用于控制台显示已阻断时长与超时判定 */
     private volatile long awaitConfirmSince;
     private volatile Long sourceDocCount;
     private volatile Long destDocCount;
     /** 全量 reindex 实时进度（created/total），awaitTask 每秒刷新，控制台进度条用；完成/失败后置 null */
     private volatile Map<String, Object> currentProgress;
     /**
-     * 五百六十五批：docs 级实时进度三字段（total/created/updated），计数取自
+     * docs 级实时进度三字段（total/created/updated），计数取自
      * {@link io.github.dengmeiluan.es.rebuild.core.ReindexProgress} 单源（core 层解析 ES status 的
      * 唯一出处），{@code awaitTask} 轮询经 {@link #applyProgress} 刷新。
      *
@@ -200,13 +200,13 @@ public class AdhocRebuildJob {
         m.put("targetName", targetNameSnapshot);
         m.put("targetEsVersion", targetEsVersionSnapshot);
         m.put("awaitConfirmSince", awaitConfirmSince == 0 ? null : awaitConfirmSince);
-        // R93：门的精确结局（null=未决/未开门）。status 只能反推「作业中止了」，
+        // 门的精确结局（null=未决/未开门）。status 只能反推「作业中止了」，
         // 分不出是超时还是人工中止；下游少一个字段就要多一层猜测。
         m.put("gateOutcome", gateOutcome.get());
-        // R93：失锁切换标记。刻意<b>不</b>放进 report —— report 会被切换成功后的
+        // 失锁切换标记。刻意<b>不</b>放进 report —— report 会被切换成功后的
         // buildReport(...) 整体替换，那样该事实恰好在最需要追查的场景（无锁切换且成功）下消失。
         m.put("switchedWithoutLock", switchedWithoutLock);
-        // R93：锁是否真的在提供互斥。暴露它是为了让「本次重建有没有跨实例保护」在控制台上可见 ——
+        // 锁是否真的在提供互斥。暴露它是为了让「本次重建有没有跨实例保护」在控制台上可见 ——
         // 否则 lock.enabled=false 与锁正常工作在界面上完全无法区分。
         m.put("lockActive", lockActive);
         m.put("stage", stage);
@@ -215,13 +215,13 @@ public class AdhocRebuildJob {
         m.put("currentTaskId", currentTaskId);
         m.put("startedAt", startedAt);
         m.put("finishedAt", finishedAt == 0 ? null : finishedAt);
-        // 五百三十批：作业级总耗时（finishedAt-startedAt）；运行中约定 -1（前端按「-」展示），
+        // 作业级总耗时（finishedAt-startedAt）；运行中约定 -1（前端按「-」展示），
         // /status 与 /jobs 端点零改直出本键
         m.put("tookMs", finishedAt == 0 ? -1L : finishedAt - startedAt);
         m.put("sourceDocCount", sourceDocCount);
         m.put("destDocCount", destDocCount);
         m.put("currentProgress", currentProgress);
-        // 五百六十五批：docs 级进度三字段直出顶层（/status 与 /jobs 同一 toMap 输出）。
+        // docs 级进度三字段直出顶层（/status 与 /jobs 同一 toMap 输出）。
         // null=未进入 reindex 阶段/旧回读，控制台按「字段缺席不渲染」向后兼容（纯增量）
         m.put("total", progressTotal);
         m.put("created", progressCreated);
@@ -298,13 +298,13 @@ public class AdhocRebuildJob {
         return pauseBeforeSwitch;
     }
 
-    /** R93：门是否已被人工确认放行（等价于 gateOutcome==CONFIRMED）。 */
+    /** 门是否已被人工确认放行（等价于 gateOutcome==CONFIRMED）。 */
     public boolean isSwitchConfirmed() {
         return GATE_CONFIRMED.equals(gateOutcome.get());
     }
 
     /**
-     * R93：尝试人工放行。<b>可能失败</b> —— 若超时/中止已先一步裁决，返回 false。
+     * 尝试人工放行。<b>可能失败</b> —— 若超时/中止已先一步裁决，返回 false。
      *
      * <p>调用方必须检查返回值：返回 false 意味着这次确认<b>没有生效</b>，绝不可回一个成功应答，
      * 否则操作者会以为切换正在进行，而实际上作业已中止、写阻断已解除。</p>
@@ -316,7 +316,7 @@ public class AdhocRebuildJob {
     }
 
     /**
-     * R93：尝试把门裁决为 TIMED_OUT / ABORTED（worker 侧调用）。
+     * 尝试把门裁决为 TIMED_OUT / ABORTED（worker 侧调用）。
      *
      * <p>返回 false 表示人工确认在同一瞬间抢先赢了 —— 此时 worker <b>绝不能</b>解除写阻断，
      * 必须放行切换继续走，否则就会在已解除阻断的索引上做切换。</p>
@@ -325,7 +325,7 @@ public class AdhocRebuildJob {
         return gateOutcome.compareAndSet(null, outcome);
     }
 
-    /** R93：门的当前结局（null=未决）。 */
+    /** 门的当前结局（null=未决）。 */
     public String getGateOutcome() {
         return gateOutcome.get();
     }
@@ -387,7 +387,7 @@ public class AdhocRebuildJob {
     }
 
     /**
-     * R93：本实例是否已失去该索引的重建锁。
+     * 本实例是否已失去该索引的重建锁。
      *
      * <p>用途是<b>阻止误删他人的锁</b>：{@code EsRebuildLockStore.release} 刻意不校验 owner，
      * 失锁后再 release 删掉的是强夺者的锁，等于摘掉正在跑的那个重建的互斥保护。</p>
@@ -400,7 +400,7 @@ public class AdhocRebuildJob {
         this.lockLost = true;
     }
 
-    /** R93：分布式锁是否真的在生效（lock.enabled=false 时为 false）。见字段 javadoc。 */
+    /** 分布式锁是否真的在生效（lock.enabled=false 时为 false）。见字段 javadoc。 */
     public boolean isLockActive() {
         return lockActive;
     }
@@ -410,7 +410,7 @@ public class AdhocRebuildJob {
     }
 
     /**
-     * R93：是否在失锁状态下执行了切换。为 true 时同一索引上可能存在第二个重建作业，
+     * 是否在失锁状态下执行了切换。为 true 时同一索引上可能存在第二个重建作业，
      * 两者都可能翻过别名，必须人工核查别名指向与孤儿索引。
      */
     public boolean isSwitchedWithoutLock() {
@@ -434,7 +434,7 @@ public class AdhocRebuildJob {
     }
 
     /**
-     * 五百六十五批：docs 级进度三字段的单一写入口——{@code awaitTask} 轮询
+     * docs 级进度三字段的单一写入口——{@code awaitTask} 轮询
      * {@code EsIndexAdmin.getReindexProgress} 后回填，计数取 {@link ReindexProgress} 单源。
      * null 入参忽略（轮询失败不擦末次已知值）；简单路径（计数不可知）字段维持 null，
      * 控制台不渲染（不冒充 0）。
@@ -453,7 +453,7 @@ public class AdhocRebuildJob {
     }
 
     public void addRound(Map<String, Object> round) {
-        // 五百三十批：轮次耗时透出。本轮起点=上一轮 markMs（无轮次回退 startedAt）；
+        // 轮次耗时透出。本轮起点=上一轮 markMs（无轮次回退 startedAt）；
         // service 按时间顺序 append，markMs 单调递增故差值非负，clamp 兜底时钟回拨，
         // 保证 rounds[] 元素恒含 roundTookMs>=0（收口在本模型：五个 append 调用点自动生效）
         long start = lastRoundMarkMs();

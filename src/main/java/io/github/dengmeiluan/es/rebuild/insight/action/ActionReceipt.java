@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * R39 护栏动作执行回执。
+ *  护栏动作执行回执。
  *
  * <p>{@code ConsoleOpsAuditStore.record} 为异步 void（无返回 id），故回执 id 由
  * 本类自生成 UUID，审计 detail JSON 里同样带 receiptId——前端/运维可按 receiptId

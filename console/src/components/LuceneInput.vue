@@ -18,7 +18,7 @@
       @click="onCursorMove"
     />
 
-    <!-- 语义高亮轮：轻量语法检查提示条（五百六十一批升级双档：硬伤 error 红档/软提示 warn 黄档，
+    <!-- 语义高亮轮：轻量语法检查提示条（升级双档：硬伤 error 红档/软提示 warn 黄档，
          档色随最重档；渲染面与文案拼接口径不变）。此前段级解析的错误形态（未闭合引号→phrase
          段不出层、尾随 AND/OR/NOT→op 段只出运算符候选）都无显式纠错反馈，用户只能执行后才被 ES 拒。
          放输入框正下方而非补全弹层 hint 区：两种错误形态下弹层多半是关的，hint 区永远看不见。
@@ -31,7 +31,7 @@
     <Teleport :to="teleportTo" :disabled="inplace">
       <!-- 弹层默认 Teleport 在 body 下：mousedown 需 .prevent.stop——不抢输入焦点（契约⑦），
            且 document 层 onDocDown 不会先关面板导致 click 选项丢失；
-           :to="false" 时就地渲染在 .li 根内（通用约定 8 容器边界载体，同 FieldPicker） -->
+           to="false" 时就地渲染在 .li 根内（通用约定 8 容器边界载体，同 FieldPicker） -->
       <transition name="pop">
         <div v-if="open" class="li-pop float-pop" :class="{ inplace }" :style="popStyle" @mousedown.prevent.stop>
         <div v-if="hint === 'no-index'" class="li-hint">先在上方选择索引，才能补全</div>
@@ -39,7 +39,7 @@
         <div v-else-if="hint === 'err'" class="li-hint">字段清单加载失败：{{ loadErr }}（仍可手输）<button class="btn ghost sm" @click="reload">重试</button></div>
         <div v-else-if="hint === 'empty'" class="li-hint">该索引没有可选字段（仍可手输）</div>
         <div v-else-if="hint === 'no-match'" class="li-hint">没有匹配「{{ seg.kind === 'field' ? seg.prefix : '' }}」的字段（仍可手输）</div>
-        <!-- 551 批：keyword 值位 terms 飞行中的加载占位（复用字段 loading 档形态）——
+        <!-- keyword 值位 terms 飞行中的加载占位（复用字段 loading 档形态）——
              此前飞行中 hint=null → refresh 关层、响应到位再弹=弹层闪关 -->
         <div v-else-if="hint === 'values-loading'" class="li-hint">正在加载候选值…</div>
         <div v-else-if="hint === 'no-values' && seg.kind === 'value'" class="li-hint">字段「{{ seg.field }}」暂无匹配「{{ seg.prefix }}」的候选值（仍可手输{{ fieldType(seg.field) === 'text' ? '；text → 建议用 .keyword 子字段精确匹配' : '' }}）</div>
@@ -51,11 +51,11 @@
             role="option" :id="itemId(i)" :aria-selected="i === cursor" tabindex="-1"
             @mouseenter="cursor = i" @click="choose(it)" @keydown.enter.prevent="choose(it)"
           >
-            <!-- 第十批：类型徽标挂全站色卡 .mft-type（theme.css），删局部四类型撞色规则 -->
+            <!-- 类型徽标挂全站色卡 .mft-type（theme.css），删局部四类型撞色规则 -->
             <span v-if="it.type" class="li-type mono mft-type" :data-t="it.type">{{ it.type }}</span>
-            <!-- 550 批：548 C 近似候选徽标（fuzzy 只在零命中纠错时出现） -->
+            <!-- 548 C 近似候选徽标（fuzzy 只在零命中纠错时出现） -->
             <i v-if="it.fuzzy" class="li-fuzzy">近似</i>
-            <!-- 五百三十四批 P1-2：三段统一 splitMark 片段渲染——field 段既有的 :54 形态推广至
+            <!--  P1-2：三段统一 splitMark 片段渲染——field 段既有的 :54 形态推广至
                  op/value 段（items 侧统一产 segs），字符串注入式高亮通道退役（本组件不再有
                  任何 HTML 注入渲染面，同 FieldSelect/MarkText 手法） -->
             <span class="li-name mono"><template v-for="(sg, si) in it.segs" :key="si"><mark v-if="sg.m">{{ sg.t }}</mark><template v-else>{{ sg.t }}</template></template></span>
@@ -68,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-/* W2 Task 7b：Lucene 三段补全输入框。
+/* W2 ：Lucene 三段补全输入框。
    input 事件取 selectionStart 调 luceneSegment 判段：
      field 段 → useIndexFields 过滤（排序对齐 FieldPicker：精确>前缀>包含，cap 30），item=字段名+类型徽标；
      value 段 → 字段类型 keyword 走 useTermsSuggest（terms agg），date/numeric/boolean/ip 出静态格式提示项；
@@ -87,15 +87,15 @@ import { useTermsSuggest } from '../composables/useTermsSuggest';
 import { usePopupList } from '../composables/usePopupList';
 import { luceneSegment, type LuceneSeg } from '../utils/luceneContext';
 import { isEscapedQuote } from '../utils/dslCompletionContext';
-/* 第十批：field 段候选收口 fieldSearch 共享内核（rank 排序/splitMark 切分与 FieldPicker/FieldSelect
-   同源不漂移），并接 per-index 最近字段记忆。554 批：值位首轮预载读 lastRecentField */
+/* field 段候选收口 fieldSearch 共享内核（rank 排序/splitMark 切分与 FieldPicker/FieldSelect
+   同源不漂移），并接 per-index 最近字段记忆。：值位首轮预载读 lastRecentField */
 import { searchFields, rememberRecentField, lastRecentField, type MarkSeg } from '../utils/fieldSearch';
-/* 546 批：field 段（裸词）传 term 语义类型置顶序（typePriorityForOp 单一出处，
+/* field 段（裸词）传 term 语义类型置顶序（typePriorityForOp 单一出处，
    builder FieldSelect 同表先例——keyword 字段排前）
-   554 批：值位 keyword 族表与数值族十口径同源消费（KEYWORD_VALUE_TYPES/
+   值位 keyword 族表与数值族十口径同源消费（KEYWORD_VALUE_TYPES/
    NUMERIC_VALUE_TYPES 单一出处 queryAstOps——四处 literal 收口） */
 import { typePriorityForOp, KEYWORD_VALUE_TYPES, NUMERIC_VALUE_TYPES } from '../utils/queryAstOps';
-/* 五百三十四批 P1-2：op/value 段统一 splitMark 片段（注入式高亮退役）+ 未知字段最近候选 */
+/*  P1-2：op/value 段统一 splitMark 片段（注入式高亮退役）+ 未知字段最近候选 */
 import { splitMark } from '../composables/useGridSearch';
 import { editDistance } from '../utils/editDistance';
 
@@ -108,53 +108,53 @@ const props = withDefaults(defineProps<{
   to?: string | false;
 }>(), { to: 'body' });
 
-/* enter：面板关或无候选时 Enter 透发（宿主绑定执行查询——Task 8 渗透用） */
+/* enter：面板关或无候选时 Enter 透发（宿主绑定执行查询—— 渗透用） */
 const emit = defineEmits<{ (e: 'update:modelValue', v: string): void; (e: 'enter'): void }>();
 
 /** 候选统一形态：text=回填文本；type 仅 field 段有（类型徽标 .li-type[data-t]）；
- *  五百三十四批 P1-2：segs 三段必备（splitMark 命中切分片段，模板统一按段渲染 <mark>，
+ *   P1-2：segs 三段必备（splitMark 命中切分片段，模板统一按段渲染 <mark>，
  *  注入式高亮通道退役后无第二渲染分支）；
- *  550 批：fuzzy 透传（548 C 零命中近似候选 → .li-fuzzy「近似」徽标） */
+ *  fuzzy 透传（548 C 零命中近似候选 → .li-fuzzy「近似」徽标） */
 type LiItem = { text: string; type?: string; segs: MarkSeg[]; fuzzy?: boolean };
 
 const OPS = ['AND', 'OR', 'NOT'];
 const DATE_HINTS = ['now-1h/h', 'now-1d/d', '>=2026-08-01'];
 const NUM_HINTS = ['>100', '[10 TO 20]'];
-/* 五百三十八批：value 段补 boolean/ip 静态档（sqlCompletion.VAL_FORMAT_HINTS 同语义平移——
+/* value 段补 boolean/ip 静态档（sqlCompletion.VAL_FORMAT_HINTS 同语义平移——
    boolean→true/false 字面、ip→点分示例；只提示格式不约束输入，任意值仍可手输）。
-   546 批再补两档（新档内容平移既有档形）：wildcard→'pref*' 通配形态（544 姊妹表
+   再补两档（新档内容平移既有档形）：wildcard→'pref*' 通配形态（544 姊妹表
    keyword/wildcard→pref* 同形）；date_nanos≡date 族，消费分支复用 DATE_HINTS 同款内容。
-   551 批：ip 档补 CIDR 形态档（网段匹配语法，sqlCompletion D1 姊妹面同批对齐）。
-   五百六十五批记档：七表+if 链被 luceneValTiers538:28-36/sqlLuceneTiers546:222-241/
+   ip 档补 CIDR 形态档（网段匹配语法，sqlCompletion D1 姊妹面同批对齐）。
+   记档：七表+if 链被 luceneValTiers538:28-36/sqlLuceneTiers546:222-241/
    suggestWave554:256-266 三处旧 spec 连常量本体与分支行逐字锁死，TYPE_VALUE_HINTS
    （fieldSearch 565 单源表）收编不可行——单源与本表同形性由 valHintTable565 双字面锁钉住，
    下波旧锁解禁随迁时改引单源为纯机械操作。 */
 const BOOL_HINTS = ['true', 'false'];
 const IP_HINTS = ['192.168.0.1', '192.168.0.0/24'];
 const WILDCARD_HINTS = ['pref*'];
-/* 552 批：补 token_count（分词计数=数值语义，值位走数值静态档；known 经 NUMERIC_TYPES 同权）。
-   554 批：表本体下沉 queryAstOps.NUMERIC_VALUE_TYPES 单源（值逐字同形） */
+/* 补 token_count（分词计数=数值语义，值位走数值静态档；known 经 NUMERIC_TYPES 同权）。
+   表本体下沉 queryAstOps.NUMERIC_VALUE_TYPES 单源（值逐字同形） */
 const NUMERIC_TYPES = NUMERIC_VALUE_TYPES;
-/* 554 批：geo_point 值位静态档（'纬度,经度' 形态示例，sqlCompletion VAL_FORMAT_HINTS.geo_point
+/* geo_point 值位静态档（'纬度,经度' 形态示例，sqlCompletion VAL_FORMAT_HINTS.geo_point
    同款对齐；只提示格式不约束输入） */
 const GEO_HINTS = ['40.71,-74.01'];
-/* 五百六十批：version 值位静态档（semver 点分形态示例，sqlCompletion VAL_FORMAT_HINTS.version
+/* version 值位静态档（semver 点分形态示例，sqlCompletion VAL_FORMAT_HINTS.version
    同款对齐；只提示格式不约束输入） */
 const VERSION_HINTS = ['1.0.0'];
-/* 五百六十二批：range 字段族 + flattened 值位档——range 查询值形态与普通类型同构：
+/* range 字段族 + flattened 值位档——range 查询值形态与普通类型同构：
    四数值 range 族出 NUM_HINTS（[10 TO 20] 区间形态）、date_range 复用 DATE_HINTS
    （date-math）、ip_range 复用 IP_HINTS（CIDR/点分，sqlCompletion VAL_FORMAT_HINTS
    姊妹档 562 同批对齐）、flattened 出 WILDCARD_HINTS（键.值 任意形态，通配提示最贴）。
    known 行同步随权（滤空出「无候选值」提示与既有档同权） */
 const RANGE_FLAT_TYPES = ['integer_range', 'long_range', 'float_range', 'double_range', 'date_range', 'ip_range', 'flattened'];
-/* 554 批：keyword 族 terms-agg 候选档=族内去 wildcard（wildcard 保留静态 pref* 档不动——
+/* keyword 族 terms-agg 候选档=族内去 wildcard（wildcard 保留静态 pref* 档不动——
    546/luceneValTiers538 字面锁保形；constant_keyword 同走 terms-agg，sqlCompletion AGG_VALUE_TYPES 同口径） */
 const AGG_KEYWORD_TYPES = KEYWORD_VALUE_TYPES.filter(t => t !== 'wildcard');
 
 const store = useAppStore();
 const inputEl = ref<HTMLInputElement>();
 const { fields, loading, loadErr, ensure, reload } = useIndexFields(() => props.index);
-/* 五百六十五批件②：值位 terms 候选接类型感知精化排序（useTermsSuggest 可选第二参 types，
+/* 件②：值位 terms 候选接类型感知精化排序（useTermsSuggest 可选第二参 types，
    563 立法的消费接线——字段类型源=本组件字段表，与 fieldType() 同源）。keyword 族字段
    rankTermsByType 原样返回（ES doc_count 权威序零扰动），本组件 suggest 仅 keyword 族触发，
    缺省/keyword 场景行为逐字节不变；date/数值族字段（若经 AGG 族外通道触发）ISO/数值形态
@@ -180,19 +180,19 @@ const fieldType = (path: string) => fields.value.find(f => f.path === path)?.typ
 const items = computed<LiItem[]>(() => {
   const s = seg.value;
   if (s.kind === 'field') {
-    /* 第十批：手写第三份 rank（精确>前缀>包含 cap30）收口 fieldSearch.searchFields——
+    /* 手写第三份 rank（精确>前缀>包含 cap30）收口 fieldSearch.searchFields——
        与 FieldPicker/FieldSelect 同源排序与 mark 切分，不再漂移；cap 30 保留。
        不接最近字段置顶：下拉补全保序，记忆只写入供 builder FieldSelect 与后续使用。
-       546 批：裸词=term 语义，typePriorityForOp('term') 置顶序（builder FieldSelect 同表先例，
+       裸词=term 语义，typePriorityForOp('term') 置顶序（builder FieldSelect 同表先例，
        候选集不变仅 keyword 组置前） */
     return searchFields({ fields: fields.value, query: s.prefix, cap: 30, typePriority: typePriorityForOp('term') })
       .flat.map(h => ({ text: h.path, type: h.type, segs: h.segs, fuzzy: h.fuzzy }));
   }
-  /* 五百三十四批 P1-2：op/value 段同走 splitMark 片段（hl() 退役；prefix 为空时
+  /*  P1-2：op/value 段同走 splitMark 片段（hl() 退役；prefix 为空时
      splitMark 返回单段无 mark，等价原 esc 平文渲染） */
   if (s.kind === 'op') return OPS.map(t => ({ text: t, segs: splitMark(t, s.prefix) }));
   if (s.kind === 'value') {
-    /* 五百六十批：_exists_ 值位实为字段名位——候选=fieldSearch 字段清单（field 段同款：
+    /* _exists_ 值位实为字段名位——候选=fieldSearch 字段清单（field 段同款：
        term 亲和置顶序 + LiItem 四件套 text/type/segs/fuzzy），非类型分档 */
     if (s.field === '_exists_') {
       return searchFields({ fields: fields.value, query: s.prefix, cap: 30, typePriority: typePriorityForOp('term') })
@@ -202,10 +202,10 @@ const items = computed<LiItem[]>(() => {
     const p = s.prefix.toLowerCase();
     const withSegs = (v: string) => ({ text: v, segs: splitMark(v, s.prefix) });
     /* terms/格式提示均按当前段前缀本地 startsWith 过滤：防抖延迟期旧建议不误显。
-       554 批：keyword 本名判定收口 AGG_KEYWORD_TYPES 族（constant_keyword 同走 terms-agg）。
-       561 批：keyword 值位精确前缀置顶（sqlCompletion 558 先例同款稳定排序——已敲前缀
+       keyword 本名判定收口 AGG_KEYWORD_TYPES 族（constant_keyword 同走 terms-agg）。
+       keyword 值位精确前缀置顶（sqlCompletion 558 先例同款稳定排序——已敲前缀
        恰为某候选全文时提到首位，服务端 doc_count 序保底：非精确项相对序零漂移；空前缀
-       无精确语义不重排）。⚠554 批锁行字面留档（suggestWave554:252 非随迁锁保绿；
+       无精确语义不重排）。⚠锁行字面留档（suggestWave554:252 非随迁锁保绿；
        luceneValTiers538:63 已随迁新字面，解禁后应去本留档并把断言更新为新字面）：
        if (AGG_KEYWORD_TYPES.includes(t)) return suggestions.value.filter(v => !p || v.toLowerCase().startsWith(p)).map(withSegs); */
     if (AGG_KEYWORD_TYPES.includes(t)) return suggestions.value.filter(v => !p || v.toLowerCase().startsWith(p)).sort((a, b) => Number(b.toLowerCase() === p) - Number(a.toLowerCase() === p)).map(withSegs);
@@ -213,19 +213,19 @@ const items = computed<LiItem[]>(() => {
     if (NUMERIC_TYPES.includes(t)) return NUM_HINTS.filter(h => !p || h.toLowerCase().startsWith(p)).map(withSegs);
     if (t === 'boolean') return BOOL_HINTS.filter(h => !p || h.toLowerCase().startsWith(p)).map(withSegs);
     if (t === 'ip') return IP_HINTS.filter(h => !p || h.toLowerCase().startsWith(p)).map(withSegs);
-    /* 546 批：wildcard 档（pref* 通配形态）与 date_nanos 档（≡date 族，复用 DATE_HINTS） */
+    /* wildcard 档（pref* 通配形态）与 date_nanos 档（≡date 族，复用 DATE_HINTS） */
     if (t === 'wildcard') return WILDCARD_HINTS.filter(h => !p || h.toLowerCase().startsWith(p)).map(withSegs);
     if (t === 'date_nanos') return DATE_HINTS.filter(h => !p || h.toLowerCase().startsWith(p)).map(withSegs);
-    /* 554 批：geo_point 档（'纬度,经度' 形态，sqlCompletion VAL_FORMAT_HINTS.geo_point 对齐） */
+    /* geo_point 档（'纬度,经度' 形态，sqlCompletion VAL_FORMAT_HINTS.geo_point 对齐） */
     if (t === 'geo_point') return GEO_HINTS.filter(h => !p || h.toLowerCase().startsWith(p)).map(withSegs);
-    /* 五百六十批：version 档（semver 点分形态，sqlCompletion VAL_FORMAT_HINTS.version 对齐） */
+    /* version 档（semver 点分形态，sqlCompletion VAL_FORMAT_HINTS.version 对齐） */
     if (t === 'version') return VERSION_HINTS.filter(h => !p || h.toLowerCase().startsWith(p)).map(withSegs);
-    /* 五百六十二批：range 字段族 + flattened 档（区间/date-math/CIDR/通配四形态，见 RANGE_FLAT_TYPES 注） */
+    /* range 字段族 + flattened 档（区间/date-math/CIDR/通配四形态，见 RANGE_FLAT_TYPES 注） */
     if (t === 'integer_range' || t === 'long_range' || t === 'float_range' || t === 'double_range') return NUM_HINTS.filter(h => !p || h.toLowerCase().startsWith(p)).map(withSegs);
     if (t === 'date_range') return DATE_HINTS.filter(h => !p || h.toLowerCase().startsWith(p)).map(withSegs);
     if (t === 'ip_range') return IP_HINTS.filter(h => !p || h.toLowerCase().startsWith(p)).map(withSegs);
     if (t === 'flattened') return WILDCARD_HINTS.filter(h => !p || h.toLowerCase().startsWith(p)).map(withSegs);
-    /* 550 批：text 档——mapping 清单确有 `field.keyword` 子字段时值位出一个子字段建议项
+    /* text 档——mapping 清单确有 `field.keyword` 子字段时值位出一个子字段建议项
        （形态对齐既有静态档：withSegs 包装 + 前缀 startsWith 本地过滤）；无子字段不出项
        （hint known 同批补 text 档，滤空提示带「.keyword 子字段」文案） */
     if (t === 'text') {
@@ -239,13 +239,13 @@ const items = computed<LiItem[]>(() => {
 });
 
 /* 轻量语法检查（纯字符串扫描，零请求零阻塞，随输入实时增减）。
-   五百六十一批：条目升级 {msg, level} 双档（渲染拼接口径 join('；') 不变）——
+   条目升级 {msg, level} 双档（渲染拼接口径 join('；') 不变）——
    硬伤（语法非法，ES 必拒）=error 红档：①②③⑤ 系（引号未闭合/尾随运算符/括号配对错乱/
    区间未闭合）；软提示（可疑但可能合法）=warn 黄档：④字段缺查询值、⑥未知字段
    （字段清单未到位时漏报属预期，非硬伤口径）。档色取最重档（任一 error 整条红）。
-   既有两规则（五百二十五批保留勿动）：① 未闭合引号——非转义引号计数为奇；② 尾随大写 AND/OR/NOT——缺右侧条件。
+   既有两规则（保留勿动）：① 未闭合引号——非转义引号计数为奇；② 尾随大写 AND/OR/NOT——缺右侧条件。
    运算符仅认大写：query_string 里小写 and/or 是普通词不是运算符，不误报。
-   五百二十五批增四规则（2→6）：③ ()[]{} 栈扫描不平衡——配对错乱（(] 交错/多余右括号）与 ( 未闭合；
+   增四规则（2→6）：③ ()[]{} 栈扫描不平衡——配对错乱（(] 交错/多余右括号）与 ( 未闭合；
    ④ 字段缺值——行尾落在 `field:` 冒号后无值；⑤ 未闭合区间——[ 或 { 开到行尾无闭合
    （与 ③ 分工：③ 报配对错乱与 (，⑤ 报 [ { 的行尾未闭合）；⑥ 未知字段——`field:` 引用的字段名
    不在当前索引字段清单（fields 未到位/空清单跳过防误报；_ 开头元字段豁免）。
@@ -285,13 +285,13 @@ const syntaxIssues = computed<SyntaxIssue[]>(() => {
     const fv = /[\w.\-]+:\s*$/.exec(bare);
     if (fv) out.push({ msg: `字段「${fv[0].replace(/:\s*$/, '')}」缺查询值（冒号后为空）`, level: 'warn' });
     /* ⑥ 未知字段：字段引用不在 fields 清单（同一未知字段只点名一次）。
-       五百三十四批 P1-2：附编辑距离最近候选（「最接近：xxx」）——dslLint unknown-field
+        P1-2：附编辑距离最近候选（「最接近：xxx」）——dslLint unknown-field
        同口径：距离 ≤2 才附（>2 大概率是全新字段不是笔误，附了反而误导）。
-       550 批：正则放宽吞尾部 boost^2/^2.5——`status^2:ok` 原把 `2` 当字段名误报
+       正则放宽吞尾部 boost^2/^2.5——`status^2:ok` 原把 `2` 当字段名误报
        「未知字段「2」」，放宽后点名剥净 boost 的真字段名。 */
     if (fields.value.length) {
       /* 558b 批：未知字段判定收口共用（known 口径 + editDistance 最近候选 + 同格式提示）——
-         规则⑥正则与 _exists_ 扫描两处同走本判定；既有锁面字面（534 批 C/suggestWave550
+         规则⑥正则与 _exists_ 扫描两处同走本判定；既有锁面字面（ C/suggestWave550
          boost 锁）原文随迁进 helper 不改一字 */
       const pushUnknownField = (f: string) => {
         const known = fields.value.some(fd => fd.path === f || f.startsWith(fd.path + '.'));
@@ -326,7 +326,7 @@ const syntaxIssues = computed<SyntaxIssue[]>(() => {
 
 /* hint 与列表互斥：value 段 terms 已到位但零匹配出「无候选值」提示（比静默关层多一句解释——
    用户知道是「没有这个值」而非「补全坏了」）；terms 未到位/未知字段仍 hint=null 不出层（零降级手输）。
-   551 批：keyword 值位请求在飞且无可显示候选 → 出「正在加载候选值」档（此前飞行中 hint=null →
+   keyword 值位请求在飞且无可显示候选 → 出「正在加载候选值」档（此前飞行中 hint=null →
    refresh 关层、响应到位再弹层=闪关）；items 非空不出此档——收窄过滤期旧候选照常显示不闪 */
 const hint = computed<'no-index' | 'loading' | 'err' | 'empty' | 'no-match' | 'no-values' | 'values-loading' | null>(() => {
   const s = seg.value;
@@ -339,17 +339,17 @@ const hint = computed<'no-index' | 'loading' | 'err' | 'empty' | 'no-match' | 'n
     if (!items.value.length) return 'no-match';
   }
   if (s.kind === 'value') {
-    /* 554 批：飞行中档门槛随 keyword 族收口（constant_keyword terms-agg 飞行中同出
+    /* 飞行中档门槛随 keyword 族收口（constant_keyword terms-agg 飞行中同出
        加载占位，防闪关——551 立法语义随族表扩员） */
     if (suggesting.value && !items.value.length && AGG_KEYWORD_TYPES.includes(fieldType(s.field))) return 'values-loading';
     /* value 段：keyword terms 已回（suggesting=false）且本地过滤后为空 → 明示无候选值；
        date/numeric/boolean/ip 静态提示被前缀滤空同理；未知字段仍不出层。
        548 D1：known 扩 wildcard/date_nanos 两档（值位候选已 546 立法，滤空提示随档同权）。
-       550 批：known 再补 text 档（值位 .keyword 建议已立法，滤空提示带「.keyword 子字段」
+       known 再补 text 档（值位 .keyword 建议已立法，滤空提示带「.keyword 子字段」
        文案——luceneValTiers538 / sqlLuceneTiers546 双字面锁随迁注明「550 随迁」） */
     if (!suggesting.value) {
       const t = fieldType(s.field);
-      /* 552 批：known 补 constant_keyword（keyword 族值语义，KEYWORD_VALUE_TYPES 同族——
+      /* known 补 constant_keyword（keyword 族值语义，KEYWORD_VALUE_TYPES 同族——
          滤空出「无候选值」提示与既有档同权）；token_count 经 NUMERIC_TYPES 同批入档。
          554 随迁：known 收口族表（KEYWORD_VALUE_TYPES 三员 covers 原 keyword/wildcard/
          constant_keyword 三档）+ geo_point 新档随权；语义与原行逐档等值扩张。
@@ -384,7 +384,7 @@ function refresh() {
   const s = seg.value;
   if (s.kind === 'phrase') { close(); return; }
   if (!ensured) { ensured = true; ensure(); }
-  /* 554 批：keyword 本名判定收口 AGG_KEYWORD_TYPES 族（constant_keyword 同走 terms-agg） */
+  /* keyword 本名判定收口 AGG_KEYWORD_TYPES 族（constant_keyword 同走 terms-agg） */
   if (s.kind === 'value' && AGG_KEYWORD_TYPES.includes(fieldType(s.field))) suggest(s.field, s.prefix);
   if (items.value.length || hint.value) { if (!open.value) openPanel(); }
   else close();
@@ -414,13 +414,13 @@ function onCursorMove() {
 
 function choose(it: LiItem) {
   const s = seg.value;
-  /* 第十批：field 段选中回写 per-index 最近字段记忆（与 FieldSelect 同一 localStorage 键族，
+  /* field 段选中回写 per-index 最近字段记忆（与 FieldSelect 同一 localStorage 键族，
      跨面板共享「最近使用」）；无索引语境（props.index 空）rememberRecentField 落全局键，不丢。
-     551 批：选中 keyword 字段即空前缀预载其候选值（TTL 缓存白得——后续值位任意前缀走
+     选中 keyword 字段即空前缀预载其候选值（TTL 缓存白得——后续值位任意前缀走
      548 A2 宽前缀本地滤零网络白得；非 keyword 字段值位走静态档/子字段推荐，不预载浪费 terms） */
   if (s.kind === 'field') {
     rememberRecentField(props.index, it.text);
-    /* 554 批：keyword 本名判定收口 AGG_KEYWORD_TYPES 族（constant_keyword 选中同预载候选值） */
+    /* keyword 本名判定收口 AGG_KEYWORD_TYPES 族（constant_keyword 选中同预载候选值） */
     if (AGG_KEYWORD_TYPES.includes(fieldType(it.text))) suggest(it.text, '');
   }
   const v = props.modelValue || '';
@@ -436,7 +436,7 @@ function choose(it: LiItem) {
 }
 
 /* 异步链任一环节到位都重估出层：fields（类型判定前提）→ suggest 触发；suggestions → terms 列表出层。
-   554 批：fields 到位即读 per-index 最近使用字段（lastRecentField），命中 keyword 族则空前缀
+   fields 到位即读 per-index 最近使用字段（lastRecentField），命中 keyword 族则空前缀
    预热 terms-agg TTL 缓存——手输字段名+冒号后值位首轮缓存命中零网络（useTermsSuggest 缓存
    命中同步回填既有锁保形）；无记录/非 keyword 族（静态档/子字段推荐语境）零动作零请求 */
 function primeRecentFieldAgg() {
@@ -457,29 +457,29 @@ watch(() => store.target, () => { open.value = false; ensured = false; });
 .li-inp:focus { border-color: var(--acc); }
 
 /* 语法检查提示条：warn 语义档（警告/需注意），soft 底+line 边与全站黄条（.dq-partial）同语言
-   五百五十七批：margin-top 4px 等值收 --sp-1；gap:5px 保字面（spSweep545 记档收窄）。
-   五百六十批：padding 横向 8px 精确等值收 --sp-2（spSweep545 头注③记档翻案收编，3px 纵向保字面）
-   五百六十一批：增 err 硬伤红档（任一 error 级条目整条红，:class 线于模板） */
+   margin-top 4px 等值收 --sp-1；gap:5px 保字面（spSweep545 记档收窄）。
+   padding 横向 8px 精确等值收 --sp-2（spSweep545 头注③记档翻案收编，3px 纵向保字面）
+   增 err 硬伤红档（任一 error 级条目整条红，:class 线于模板） */
 .li-syntax { display: flex; align-items: center; gap: 5px; margin-top: var(--sp-1); padding: 3px var(--sp-2); font-size: var(--fs-xs); line-height: 1.5; color: var(--warn); background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: var(--r-s); }
 .li-syntax.err { color: var(--err); background: var(--err-soft); border-color: var(--err-line); }
 .li-syntax svg { flex-shrink: 0; }
 
-/* 五百二十四批：壳属性（fixed/--z-island/bg/border/shadow/圆角）收编 theme.css .float-pop，本类只留坐标外裁切与字号 */
+/* 壳属性（fixed/--z-island/bg/border/shadow/圆角）收编 theme.css .float-pop，本类只留坐标外裁切与字号 */
 .li-pop { overflow: hidden; font-size: var(--fs-sm); }
 /* 就地模式：absolute 随 .li 根（position:relative）定位（同 FieldPicker 约定） */
 .li-pop.inplace { position: absolute; top: 100%; left: 0; min-width: 100%; z-index: 10; }
 .li-hint { padding: var(--sp-3) var(--sp-2h); color: var(--muted); }
 .li-list { max-height: 240px; overflow: auto; padding: 3px 0; }
-/* 五百六十批：padding 横向 10px 精确等值收 --sp-2h（spSweep545 头注③记档翻案收编，5px 纵向保字面） */
+/* padding 横向 10px 精确等值收 --sp-2h（spSweep545 头注③记档翻案收编，5px 纵向保字面） */
 .li-item { display: flex; align-items: center; gap: var(--sp-2); padding: 5px var(--sp-2h); cursor: pointer; }
 .li-item.act { background: var(--hover); }
 .li-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .li-name :deep(mark) { background: none; color: var(--acc); font-weight: 600; }
-/* 第十批：类型徽标色统一 theme.css 全站 .mft-type[data-t] 色卡（本文件原局部四类型规则已删）；
+/* 类型徽标色统一 theme.css 全站 .mft-type[data-t] 色卡（本文件原局部四类型规则已删）；
    冷门类型回落档走 :where（specificity 0），色卡命中时必胜（同 FieldPicker 口径） */
 .li-type { flex: none; min-width: 52px; text-align: center; font-size: var(--fs-2xs); padding: 0 5px; border-radius: var(--r-xs); line-height: 16px; }
 :where(.li-type) { color: var(--muted); background: var(--hl); }
-/* 550 批：近似候选徽标（548 C fuzzy 透传渲染，warn 色微字） */
+/* 近似候选徽标（548 C fuzzy 透传渲染，warn 色微字） */
 .li-fuzzy { font-size: var(--fs-2xs); color: var(--warn); font-style: normal; margin-left: var(--sp-1); }
 .mono { font-family: var(--mono, ui-monospace, monospace); }
 </style>

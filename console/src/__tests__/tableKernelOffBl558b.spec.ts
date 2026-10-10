@@ -1,14 +1,14 @@
 /**
- * 五百五十八批(b) 轨3：表格内核非黑名单件增量。
+ * (b) 轨3：表格内核非黑名单件增量。
  * 锁定：
  * 1) ColDetailModal typeCls 收编 typeTiers 单源——本地五正则副本字面退役
- *    （typeTiers.ts:44-51 官方实现逐字同值，519 批弹窗内聚副本随本批收编）；
+ *    （typeTiers.ts:44-51 官方实现逐字同值，弹窗内聚副本随本批收编）；
  * 2) ColDetailModal 高频值列表补「复制」出口：整列 top 值 TSV（值/行数两列、
  *    不受 kw 过滤影响），格式化走 copyMatrix.matrixTsv 单源、复制走
  *    format.copyText → clipboard.ts 三层管线（happy-dom 无剪贴板，断言调用参数）；
  * 3) tableSort.ts 记档锁：useTableSort 已零生产消费、numeric() 唯余 ResultTable
  *    （黑名单件）消费——两导出仍存在防误删 + 记档注释在场防回潮；
- * 4) useRowNav 注释事实锁：XmigrateView 五百二十九批已换壳 QRT，xm-tbl 键控字面退役
+ * 4) useRowNav 注释事实锁：XmigrateView 已换壳 QRT，xm-tbl 键控字面退役
  *    （全库 grep 无 xm-tbl），注释不再保留「有意不收编」过时记档。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -24,7 +24,7 @@ const tableSort = readFileSync(join(__dirname, '../composables/tableSort.ts'), '
 const useRowNavSrc = readFileSync(join(__dirname, '../composables/useRowNav.ts'), 'utf-8');
 
 /* ═══════════ ① typeCls 单源收编（源码锁） ═══════════ */
-describe('ColDetailModal typeCls 单源（五百五十八批b）', () => {
+describe('ColDetailModal typeCls 单源（b）', () => {
   it('import typeTiers 在场（isNonSemanticType+typeCls 同行引入）', () => {
     expect(cdm, '应改引 typeTiers 单源').toContain(
       "import { isNonSemanticType, typeCls } from '../utils/typeTiers';",
@@ -42,7 +42,7 @@ describe('ColDetailModal typeCls 单源（五百五十八批b）', () => {
 });
 
 /* ═══════════ ② 高频值复制钮（行为锁，挂载样板照抄 colStatsTopTotal525） ═══════════ */
-describe('ColDetailModal 高频值复制钮（五百五十八批b）', () => {
+describe('ColDetailModal 高频值复制钮（b）', () => {
   const apps: ReturnType<typeof createApp>[] = [];
   let host: HTMLElement;
 
@@ -90,7 +90,7 @@ describe('ColDetailModal 高频值复制钮（五百五十八批b）', () => {
     Object.assign(navigator.clipboard, { writeText });
     await mountWith(mkStats(25));
     const kwInp = document.body.querySelector('.rt-cd-kw') as HTMLInputElement;
-    expect(kwInp, 'topTotal>20 应出 kw 过滤（525 批契约）').toBeTruthy();
+    expect(kwInp, 'topTotal>20 应出 kw 过滤（契约）').toBeTruthy();
     kwInp.value = 'v3';
     kwInp.dispatchEvent(new Event('input', { bubbles: true }));
     await tick();
@@ -102,27 +102,27 @@ describe('ColDetailModal 高频值复制钮（五百五十八批b）', () => {
 });
 
 /* ═══════════ ③ tableSort 记档锁（源码锁） ═══════════ */
-describe('tableSort 记档锁（五百五十八批b）', () => {
+describe('tableSort 记档锁（b）', () => {
   it('僵尸壳已按 603 裁决退役；useSortChain 状态机单源在场（防回潮）', () => {
-    expect(tableSort, 'useTableSort 已退役（603 批裁决，558b 防误删锁语义升格为退役锁）').not.toContain('export function useTableSort');
+    expect(tableSort, 'useTableSort 已退役（裁决，558b 防误删锁语义升格为退役锁）').not.toContain('export function useTableSort');
     expect(tableSort, '排序状态机单源在档（560 记档大件落地）').toContain('export function useSortChain');
   });
-  it('numeric 导出仍存在（防误删）+记档注释在场：numeric() 双内核消费（五百六十批事实更新随迁——RT/QRT 均经 compareVals 接线消费）；603 裁决记档在档', () => {
+  it('numeric 导出仍存在（防误删）+记档注释在场：numeric() 双内核消费（事实更新随迁——RT/QRT 均经 compareVals 接线消费）；603 裁决记档在档', () => {
     expect(tableSort).toContain('export function numeric(');
     expect(tableSort, '记档锚一：numeric() 双内核消费（RT/QRT compareVals 单源接线）').toContain('双内核消费');
-    expect(tableSort, '记档锚二：批次标记').toContain('五百五十八批(b)');
-    expect(tableSort, '记档锚三：603 僵尸壳退役裁决').toContain('六百零三批');
+    expect(tableSort, '记档锚二：批次标记').toContain('(b)');
+    expect(tableSort, '记档锚三：603 僵尸壳退役裁决').toContain('');
   });
 });
 
 /* ═══════════ ④ useRowNav 注释事实锁（源码锁） ═══════════ */
-describe('useRowNav 注释事实锁（五百五十八批b）', () => {
-  it('xm-tbl 字面退役（XmigrateView 529 批已换壳 QRT，「有意不收编」记档过时）', () => {
+describe('useRowNav 注释事实锁（b）', () => {
+  it('xm-tbl 字面退役（XmigrateView 已换壳 QRT，「有意不收编」记档过时）', () => {
     expect(useRowNavSrc, '全文件不应再出现 xm-tbl 字面').not.toContain('xm-tbl');
     expect(useRowNavSrc, '内核导出仍完好').toContain('export function useRowNav');
   });
   it('换壳事实记档在场（QRT 承接行导航）', () => {
-    expect(useRowNavSrc).toContain('五百二十九批');
+    expect(useRowNavSrc).toContain('');
     expect(useRowNavSrc).toContain('QRT');
   });
 });

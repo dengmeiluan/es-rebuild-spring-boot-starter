@@ -12,7 +12,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Task 3 契约红线：<b>持久化 save 失败绝不反噬重建</b>。
+ *  契约红线：<b>持久化 save 失败绝不反噬重建</b>。
  *
  * <p>注入一个 {@code save} 必抛 {@link RuntimeException} 的 {@link AdhocJobStore}，跑一个能快速
  * 终结的 MANUAL + 别名模式作业（复用 {@link AdhocServiceStorePersistTest} 的假 {@link EsIndexAdmin}
@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   <li>内存 {@code jobs} 一级缓存里仍有该作业（persist 先 put 再 try-save，save 失败不动缓存）。</li>
  * </ol>
  *
- * <p>红线由 Task 2 的 {@code persist} 内 try-catch 守住；若去掉该 try-catch，本测试必转红
+ * <p>红线由  的 {@code persist} 内 try-catch 守住；若去掉该 try-catch，本测试必转红
  * （异常从 worker 冒泡、作业停在 RUNNING）。</p>
  */
 public class AdhocPersistNeverBreaksRebuildTest {

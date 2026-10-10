@@ -13,7 +13,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * R92-C2：ES 错误透传口径的守门测试——状态码映射、原始报错体（含 root_cause）不被吞、超长截断、
+ * -C2：ES 错误透传口径的守门测试——状态码映射、原始报错体（含 root_cause）不被吞、超长截断、
  * 以及全包兜底 advice 的产出体形态。前端 {@code friendlyEsError} 依赖 message 里的 reason，
  * 这里一旦松动，控制台就会退回「内部错误」黑洞。
  *

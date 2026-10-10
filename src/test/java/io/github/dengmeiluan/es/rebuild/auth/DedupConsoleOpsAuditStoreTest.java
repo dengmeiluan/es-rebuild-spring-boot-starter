@@ -14,13 +14,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 一百九十批：PAGE_DENIED 审计去重聚合层单测。
+ * PAGE_DENIED 审计去重聚合层单测。
  * 背景：VIEWER 停留在无权限页时，页面轮询每分钟对同一 URI 反复 403，
  * 拦截器逐条落审计——审计流被同质心跳刷屏（产线实证：每分钟 3 条、无限重复）。
  */
 public class DedupConsoleOpsAuditStoreTest {
 
-    /** 记录 delegate 收到的落档事件（五百五十五批：事件即记录唯一类型） */
+    /** 记录 delegate 收到的落档事件（：事件即记录唯一类型） */
     private static final class CapturingStore implements ConsoleOpsAuditStore {
         final List<ConsoleOpsAuditEvent> records = new ArrayList<ConsoleOpsAuditEvent>();
 

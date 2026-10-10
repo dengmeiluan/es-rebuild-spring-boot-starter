@@ -13,14 +13,14 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百六十五批：迁移作业<b>周期心跳日志</b>（观测缺口收口，纯日志零契约）。
+ * 迁移作业<b>周期心跳日志</b>（观测缺口收口，纯日志零契约）。
  *
  * <p><b>缺口</b>：迁移进度此前只落存储（{@code save}）不留服务端日志——长作业（小时级 slice
  * 搬运）在控制台日志里全程静默，排障时无法从日志侧回答「作业还活着吗、搬到哪了」。
  * {@code save} 是进度刷新的必经收口（SliceWorker 持久化槽位驱动），在它上面挂 60s 节流心跳
  * INFO：特征串 {@code [Xmigrate] heartbeat jobId=... done=100/total=1000}。</p>
  *
- * <p>既有契约不动：save 仍吞异常、消息截断与更新时间戳照旧；节流同 561 批 save-failed
+ * <p>既有契约不动：save 仍吞异常、消息截断与更新时间戳照旧；节流同  save-failed
  * WARN 同款 AtomicLong 范式——心跳纯观测，绝不反噬主逻辑。测试桩用 supplier 返回 null 的
  * 真实 MigrateJobStore（store 落库 NPE 走 tracker 既有 catch，心跳在 try 之前不受影响）。</p>
  */

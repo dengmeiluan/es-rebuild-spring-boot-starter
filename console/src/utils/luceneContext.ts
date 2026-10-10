@@ -1,8 +1,8 @@
 /* Lucene 光标段判定：只看光标左侧文本，从尾向前扫描。
    覆盖 field:/AND/OR/NOT/括号/引号短语/范围；长尾语法（模糊~/正则）一律兜底为 field/value 段（零降级）。
-   550 批：尾部 boost^2/^2.5 剥离——`status^2:ok` 判 field=status（原误判 `status^2`）、
+   尾部 boost^2/^2.5 剥离——`status^2:ok` 判 field=status（原误判 `status^2`）、
    `status:ok^2` 值前缀剥净（原 terms 前缀滤空）；提权语法本身不拦（零降级保留）。
-   W2 Task 5：LuceneInput（Task 7）的判段纯函数 —— field 段→字段补全；value 段→terms 建议；
+   W2 ：LuceneInput（）的判段纯函数 —— field 段→字段补全；value 段→terms 建议；
    phrase 段→不出层；op 段→AND/OR/NOT 提示。 */
 import { isEscapedQuote } from './dslCompletionContext';
 
@@ -49,7 +49,7 @@ export function luceneSegment(text: string, cursor: number): LuceneSeg {
   const start = i + 1;
   const token = left.slice(start);
 
-  /* 550 批：尾部 boost 剥离——query_string 提权语法 `field^2:value^2` 此前被判成
+  /* 尾部 boost 剥离——query_string 提权语法 `field^2:value^2` 此前被判成
      field=`status^2`（未知字段误报）/ 值前缀带 ^2（terms 前缀滤空补全失效）。
      field 段前缀、value 段字段名与值前缀三处同剥，补全恢复命中；语义零降级不拦输入 */
   const deboost = (s: string) => s.replace(/\^\d+(?:\.\d+)?$/, '');
@@ -64,7 +64,7 @@ export function luceneSegment(text: string, cursor: number): LuceneSeg {
   }
 
   /* 5. 前一词以 field: 收尾且光标前是空白/左括号 → value 段（'status: '、'foo:(' 场景）；
-     550 批：字段名允许带 boost（`status^2: ` → field=status） */
+     字段名允许带 boost（`status^2: ` → field=status） */
   const before = left.slice(0, start).replace(/[()]+$/, '');
   const fm = before.match(/([\w.*]+)(?:\^\d+(?:\.\d+)?)?:\s*$/);
   if (fm && start > 0 && /[\s(]/.test(left[start - 1])) {
@@ -74,6 +74,6 @@ export function luceneSegment(text: string, cursor: number): LuceneSeg {
   /* 6. 操作符整词判定 */
   if (OPS.includes(token)) return { kind: 'op', prefix: token };
 
-  /* 7. 默认字段段（550 批：前缀尾部 boost 剥净，`status^2` → 字段补全照常命中） */
+  /* 7. 默认字段段（：前缀尾部 boost 剥净，`status^2` → 字段补全照常命中） */
   return { kind: 'field', prefix: deboost(token) };
 }

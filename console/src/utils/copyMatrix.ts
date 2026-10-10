@@ -1,10 +1,10 @@
 /**
- * 五百一十九批：矩阵复制内核（RT/QRT 共用）——rows/cols/getVal 三参生成 TSV/Markdown/JSON
+ * 矩阵复制内核（RT/QRT 共用）——rows/cols/getVal 三参生成 TSV/Markdown/JSON
  * 剪贴板文本。RT copySelRows 的 TSV/MD 格式化与 copyRegionTsv 的 TSV 分支同源合并；
  * JSON 分支经 jsonRow 钩子保留两表既有语义（RT 行复制=_id+全 _source 文档、
  * QRT 行复制=可见列对象、RT 选区=_id+选区列），格式化细节不在此分叉。
  *
- * 口径铁律（与 RT copySelRows 130 批行为锁一致）：
+ * 口径铁律（与 RT copySelRows 行为锁一致）：
  * — TSV/MD 的值文本：null/undefined→空串，对象/数组 JSON.stringify；
  * — TSV 单元格内 \t \r \n 折为空格（Excel/飞书直贴不破行）；MD 另转义 |；
  * — 表头行必含（TSV 首行列名、MD 表头+分隔行）。

@@ -9,28 +9,28 @@
         </button>
       </template>
     </PageHeader>
-    <!-- 五百五十四批 P2：执行进度条（ind-bar 全站范式；连接检查 checking/启动迁移 starting 任一在途即点亮，
+    <!--  P2：执行进度条（ind-bar 全站范式；连接检查 checking/启动迁移 starting 任一在途即点亮，
          绝对定位零高度占位纯 CSS 动画——fetchCfg 复用 checking 同亮，拉取预览也有反馈） -->
     <div class="xm-progress ind-bar" :class="{ on: checking || starting }"></div>
-    <!-- 新建迁移。五百五十一批：.card 壳退役 → border-top 分节（:202 .xm-res 547 判例同语言）；
+    <!-- 新建迁移。：.card 壳退役 → border-top 分节（:202 .xm-res 547 判例同语言）；
          卡 padding 由 .xm-new-t 落位类与 form/cfg/actions 落位 margin 承接（盒模型尺寸等值） -->
     <div class="xm-new">
       <div class="card-t xm-new-t">
 <Rocket :size="13" /> 新建跨集群迁移
       </div>
-      <!-- 第十批：草稿恢复徽标（DraftBadge 统一件）——conn/连接档案/form 草稿恢复时提示，一键清本页四把会话稿 -->
+      <!-- 草稿恢复徽标（DraftBadge 统一件）——conn/连接档案/form 草稿恢复时提示，一键清本页四把会话稿 -->
       <div v-if="xmDraftRestored" class="xm-draft-row"><DraftBadge @clear="clearDrafts" /></div>
 
       <template v-if="formOpen">
         <!-- w80:连接区并入第 1 组(三组统一编号——1 连接检查/2 选源/3 定目标,副标题同步) -->
         <div class="xm-form">
           <!-- ── 第 1 步:连接检查(旧集群) ──
-               五百三十四批：分节标题走全局 .sec-t 档（531 上半刀去 background 之后的下半刀：
+               分节标题走全局 .sec-t 档（531 上半刀去 background 之后的下半刀：
                border 壳退役→border-top 分隔，编号语义保留） -->
           <div class="xm-group">
             <div class="xm-g-hd sec-t"><span class="xm-g-num">1</span> 连接旧集群</div>
-            <!-- R38：已存连接下拉——服务端按档案取密，明文不经前端；留「手动输入…」回退；
-                 五百二十五批：补 filterable（连接档案多时不可用，TopBar 索引下拉同款） -->
+            <!-- 已存连接下拉——服务端按档案取密，明文不经前端；留「手动输入…」回退；
+                 补 filterable（连接档案多时不可用，TopBar 索引下拉同款） -->
             <div class="xm-src-pick">
               <label>源集群</label>
               <n-select v-model:value="srcConnId" :options="connOpts" :render-label="renderConnOpt" size="small" filterable
@@ -59,7 +59,7 @@
             </div>
 
             <!-- G3-B2：连接检查失败内联面板（全文+重试）——不再仅 toast 后索引区消隐、失败现场归零。
-                 五百五十批：裸插值换 errPreHtml+errMeta 双参（TaskTreeView 547 口径） -->
+                 裸插值换 errPreHtml+errMeta 双参（TaskTreeView 547 口径） -->
             <div v-if="checkErr" role="alert" class="err-bar rise-in xm-conn-err">
               <span class="xm-err-txt" v-html="errPreHtml(checkErr, errMeta(checkErrRaw))"></span>
               <button class="btn sm" @click="check"><RefreshCw :size="12" /> 重试</button>
@@ -69,7 +69,7 @@
           <!-- ── 第 2 步:选源(旧集群) ── -->
           <div class="xm-group">
             <div class="xm-g-hd sec-t"><span class="xm-g-num">2</span> 从旧集群选一个要迁走的索引</div>
-            <!-- 第十批：手写受控下拉（@focus/@blur/mousedown.prevent 三件套）迁 usePopupList 统一骨架
+            <!-- 手写受控下拉（@focus/@blur/mousedown.prevent 三件套）迁 usePopupList 统一骨架
                  （IndexPicker 同款消费形态）：↑↓/Enter/Esc 键盘导航、aria combobox、点击外部关闭由骨架带来；
                  cap 30 保留原 slice(0,30) 口径，就地渲染保持原 .xm-drop absolute 随根形态 -->
             <div class="xm-f-row" ref="srcRootEl">
@@ -79,7 +79,7 @@
                 :aria-activedescendant="srcOpen && srcItems[srcCursor] ? srcItemId(srcCursor) : undefined"
                 @focus="srcOpenPanel" @input="onSrcInput" @keydown="srcOnKey" />
               <div v-if="srcOpen && srcItems.length" class="xm-drop" ref="srcListEl" role="listbox" :id="srcListId">
-                <!-- 五百一十九批：候选行纯文本 → MarkText 命中高亮（kw=源输入框值，chips 区同款） -->
+                <!-- 候选行纯文本 → MarkText 命中高亮（kw=源输入框值，chips 区同款） -->
                 <div v-for="(it, i) in srcItems" :key="it.index" class="xm-drop-item mono" :class="{ act: i === srcCursor }"
                   role="option" :id="srcItemId(i)" :aria-selected="i === srcCursor"
                   @mouseenter="srcCursor = i" @click="pickSrc(it)"><MarkText :text="it.index" :kw="form.sourceIndex" /></div>
@@ -107,7 +107,7 @@
           <!-- ── 第 3 步:定目标(宿主集群) ── -->
           <div class="xm-group">
             <div class="xm-g-hd sec-t"><span class="xm-g-num">3</span> 在宿主集群定一个目标索引</div>
-            <!-- 第十批：目标下拉同迁 usePopupList（骨架语义见源下拉处批注） -->
+            <!-- 目标下拉同迁 usePopupList（骨架语义见源下拉处批注） -->
             <div class="xm-f-row" ref="dstRootEl">
               <input :value="form.destIndex" class="inp mono xm-idx-inp" placeholder="搜索宿主已有索引,或输入新索引名"
                 spellcheck="false" autocomplete="off" role="combobox" aria-autocomplete="list"
@@ -115,7 +115,7 @@
                 :aria-activedescendant="dstOpen && dstItems[dstCursor] ? dstItemId(dstCursor) : undefined"
                 @focus="dstOpenPanel" @input="onDstInput" @keydown="dstOnKey" />
               <div v-if="dstOpen && dstItems.length" class="xm-drop" ref="dstListEl" role="listbox" :id="dstListId">
-                <!-- 五百一十九批：候选行纯文本 → MarkText 命中高亮（kw=目标输入框值） -->
+                <!-- 候选行纯文本 → MarkText 命中高亮（kw=目标输入框值） -->
                 <div v-for="(it, i) in dstItems" :key="it.index" class="xm-drop-item mono" :class="{ act: i === dstCursor }"
                   role="option" :id="dstItemId(i)" :aria-selected="i === dstCursor"
                   @mouseenter="dstCursor = i" @click="pickDst(it)"><MarkText :text="it.index" :kw="form.destIndex" /></div>
@@ -142,7 +142,7 @@
             <!-- 调优档:同一行 -->
             <div class="xm-f-row xm-inline">
               <span class="xm-inline-lb">迁移速度</span>
-              <!-- 五百一十九批：emoji ⚡/🪶 → lucide 图标（Zap/Feather，全站图标语言统一） -->
+              <!-- emoji ⚡/🪶 → lucide 图标（Zap/Feather，全站图标语言统一） -->
               <div class="seg">
                 <button :class="{ on: form.tuneMode === 'AGGRESSIVE' }" @click="form.tuneMode = 'AGGRESSIVE'" title="大批次多并发,速度优先（离线时段推荐）"><Zap :size="11" /> 极速</button>
                 <button :class="{ on: form.tuneMode === 'GENTLE' }" @click="form.tuneMode = 'GENTLE'" title="小批次少并发,在线优先（业务高峰推荐）"><Feather :size="11" /> 温和</button>
@@ -163,8 +163,8 @@
         </div>
 
         <!-- 源配置预览 -->
-        <!-- 540 批 W2：pre→JsonArea readonly 接线（538 批「不做」裁决重估）——
-             ① readonly 通道已补（JsonArea 540 批）；② 高度模型确定解成立：
+        <!--  W2：pre→JsonArea readonly 接线（「不做」裁决重估）——
+             ① readonly 通道已补（JsonArea ）；② 高度模型确定解成立：
              rows=min(内容行数,封顶行数) → height=rows*19+16 是纯内容函数，无 DOM 测量、
              无回写回路（红线「高度棘轮/循环扩大」不触）。「随内容生长至封顶」语义保全：
              小配置少行、大配置封顶 10 行（10*19+16=206px ≈ 原 .xm-cfg 裸 pre 时代 max-height
@@ -173,16 +173,16 @@
              每块新增复制钮（裸 pre 时代无复制入口），Monaco 自带高亮与 JSON 校验圆点 -->
         <div v-if="form.destCreateMode === 'COPY_FROM_SOURCE'" class="xm-cfg">
           <button class="btn sm" :disabled="!form.sourceIndex || checking" @click="fetchCfg"><FileDown :size="11" /> {{ checking ? '拉取中…' : '拉取源 mapping/settings 预览' }}</button>
-          <!-- 五百五十二批：原始 IO 钮上移 .xm-actions 行常驻渲染——钮原被本分节 COPY_FROM_SOURCE
+          <!-- 原始 IO 钮上移 .xm-actions 行常驻渲染——钮原被本分节 COPY_FROM_SOURCE
                v-if 包裹，NONE/FROM_ENTITY/REBUILD 三档模式下连接检查/启动迁移 IO 都入记录环
                （'/xmigrate/'）却全页无取数入口；钮形/aria/特征串零触（rawIo545 锁保全） -->
-          <!-- 五百五十二批：预览行数三档循环钮（useTierCycle 消费形态照抄 IlmView 宽/CV 高钮）——
+          <!-- 预览行数三档循环钮（useTierCycle 消费形态照抄 IlmView 宽/CV 高钮）——
                10/20/40 落盘键 xm.cfgRows，默认档 10=540 封顶值既有视觉零变化 -->
           <button class="btn sm ghost" :title="'配置预览行数档：' + cfgCapRows + ' 行（点击切换）'" @click="cycleCfgRows">行数</button>
           <template v-if="cfgPreview">
             <div class="xm-cfg-grid">
-              <!-- 五百五十四批 P2：分节标题升 .sec-t 档（.xm-g-hd 先例同款，形态归全局单源）。
-                   五百六十二批：裸英文标签补中文弱化小字（K6 扫尾；class 计数随 554 锁零触） -->
+              <!--  P2：分节标题升 .sec-t 档（.xm-g-hd 先例同款，形态归全局单源）。
+                   裸英文标签补中文弱化小字（K6 扫尾；class 计数随 554 锁零触） -->
               <div><div class="xm-cfg-t sec-t">mapping <span class="dim">字段映射</span></div><JsonArea :model-value="cfgMappingText" readonly :rows="cfgRows(cfgMappingText)" /></div>
               <div><div class="xm-cfg-t sec-t">settings <span class="dim">索引设置</span></div><JsonArea :model-value="cfgSettingsText" readonly :rows="cfgRows(cfgSettingsText)" /></div>
             </div>
@@ -190,7 +190,7 @@
         </div>
 
         <!-- G3-B3：启动失败内联面板（全文+重试）——重试重开确认弹层，warn 级确认不旁路。
-             五百五十批：裸插值换 errPreHtml+errMeta 双参（TaskTreeView 547 口径） -->
+             裸插值换 errPreHtml+errMeta 双参（TaskTreeView 547 口径） -->
         <div v-if="startErr" role="alert" class="err-bar rise-in xm-start-err">
           <span class="xm-err-txt" v-html="errPreHtml(startErr, errMeta(startErrRaw))"></span>
           <button class="btn sm" @click="openStartConfirm"><RotateCcw :size="12" /> 重试</button>
@@ -199,7 +199,7 @@
         <div class="xm-actions">
           <!-- F4：索引名非法的内联红字——按钮 disabled 只说「点不了」，这行才说为什么 -->
           <span v-if="idxNameError" class="xm-idx-err">{{ idxNameError }}</span>
-          <!-- 五百五十二批：原始 IO 快查钮常驻位（自 .xm-cfg 分节上移，钮形/aria/特征串零触）——
+          <!-- 原始 IO 快查钮常驻位（自 .xm-cfg 分节上移，钮形/aria/特征串零触）——
                margin-right:auto 靠行首（F4 红字同语言），启动钮仍在行尾 -->
           <button class="btn sm ghost" style="margin-right:auto" aria-label="查看原始 IO（迁移接口）" title="最近一次迁移接口调用的请求/响应原文" @click="openRawIo"><Terminal :size="11" /> 原始 IO</button>
           <button v-if="canOps" class="btn pri" :disabled="!canStart || starting" @click="openStartConfirm">
@@ -210,23 +210,23 @@
       </template>
     </div>
 
-    <!-- 作业列表。五百四十七批：表格包裹壳退役（.card + padding:0/overflow:hidden 内联随壳
+    <!-- 作业列表。：表格包裹壳退役（.card + padding:0/overflow:hidden 内联随壳
          退役）→ 538 SystemView .sy-res / 546 BrowserView .bw-res 同语言 border-top 分节；
          card-t 内联 padding 迁 .xm-res-t 落位类（盒模型尺寸零变动，QRT 本就全出血） -->
     <div class="xm-res">
       <div class="card-t xm-res-t">
 <ListTodo :size="13" /> 迁移作业
-        <!-- 一百四十二批：Markdown 复制与 TSV 并存（跟催场景贴群聊，Excel 场景走 TSV）——
-             五百二十九批换壳 QRT 后仍走宿主 copyText（QRT 内建导出是下载文件，贴群场景要剪贴板）；
+        <!-- Markdown 复制与 TSV 并存（跟催场景贴群聊，Excel 场景走 TSV）——
+             换壳 QRT 后仍走宿主 copyText（QRT 内建导出是下载文件，贴群场景要剪贴板）；
              行序经 qrtRef.getSortedRows() 取排序后行集（所见即所复，见 exportRows） -->
         <button v-if="jobs.length" class="btn sm ghost" style="margin-left:auto" @click="exportMd" title="复制当前视图为 Markdown 表（群聊/工单直贴）"><ClipboardList :size="11" /> Markdown</button>
         <button v-if="jobs.length" class="btn sm ghost" @click="exportTsv" title="复制当前视图为 TSV（Excel 可直接粘贴）"><ClipboardCopy :size="11" /> 导出 TSV</button>
         <button aria-label="刷新任务列表" class="btn sm ghost" :style="jobs.length ? '' : 'margin-left:auto'" @click="loadJobs" title="刷新任务列表"><RefreshCw :size="11" /></button>
       </div>
-      <!-- 五百二十四批 W1：作业表工具行——kw 过滤（状态/目标索引/源索引）；过滤绝不吞数据，
-           n/m 命中数与清除钮可见。五百二十九批：排序/Σ 聚合/列管理交 QRT 内核（storage-key 记忆） -->
+      <!--  W1：作业表工具行——kw 过滤（状态/目标索引/源索引）；过滤绝不吞数据，
+           n/m 命中数与清除钮可见。：排序/Σ 聚合/列管理交 QRT 内核（storage-key 记忆） -->
       <div v-if="jobs.length" class="xm-jobs-tools">
-        <!-- 五百六十批：kw 过滤换装 SearchFilterBar 统一件（559 TasksView tv-kw 判例；placeholder 逐字保留，
+        <!-- kw 过滤换装 SearchFilterBar 统一件（559 TasksView tv-kw 判例；placeholder 逐字保留，
              Esc 清空/Enter 语义内建；xm-jobs-kw 类锚随 input-class 保留在 input 上——cardShellWave547 DOM 锚字面保全，
              落位宽度随换装迁 wrap 根） -->
         <SearchFilterBar v-model="jobKw" class="xm-jobs-kw-wrap" input-class="inp xm-jobs-kw" placeholder="过滤：状态 / 目标索引 / 源索引" />
@@ -235,9 +235,9 @@
       </div>
       <!-- G3-B1：首载骨架前置（loading 初值 true + 无旧数据才出骨架，轮询/手动刷新不闪）；
            互斥链：骨架 → 表 → EmptyState（!loadErr 守卫） -->
-      <!-- G3 审查 I1（R92-A2 形态收口）：err-bar 上移独立于互斥链（对齐 ClusterTopologyView 范式）——
+      <!-- G3 审查 I1（-A2 形态收口）：err-bar 上移独立于互斥链（对齐 ClusterTopologyView 范式）——
            有旧数据时轮询/手动刷新失败也有渲染出口，不退化为仅 toast；失败不伪装空态。
-           五百五十批：裸插值换 errPreHtml+errMeta 双参（TaskTreeView 547 口径） -->
+           裸插值换 errPreHtml+errMeta 双参（TaskTreeView 547 口径） -->
       <div v-if="loadErr" role="alert" class="err-bar rise-in" style="margin:var(--sp-3) var(--sp-4)">
         <span class="xm-err-txt" v-html="errPreHtml(loadErr, errMeta(loadErrRaw))"></span>
         <button class="btn sm" @click="loadJobs"><RefreshCw :size="12" /> 重试</button>
@@ -247,13 +247,13 @@
         <SkeletonBox height="30px" />
         <SkeletonBox height="30px" />
       </div>
-      <!-- 五百二十九批 W-C：作业裸表换壳 QRT rows 型（DiagView/HealthReport 525 同款消费形态）——
+      <!--  W-C：作业裸表换壳 QRT rows 型（DiagView/HealthReport 525 同款消费形态）——
            表头键盘可达（370）/排序记忆/列管理/Σ 聚合行/行展开（TableExpandRow）/行导航收编内核；
            富单元格走 #cell-<col> 槽（状态 pill/进度条/观测行），行级行动走 #row-actions 槽，
            行定位强调走 rowClass 契约挂 .xm-hit（527 深链定位链保全，见 jobRowCls） -->
-      <!-- 五百三十一批：补 fieldTypes（docs 数值列类型徽标+类型感知区间过滤白得；
+      <!-- 补 fieldTypes（docs 数值列类型徽标+类型感知区间过滤白得；
            进度/冲突/错误=long、发起=date——四列全有 #cell-<col> 槽接管渲染，显示层零双重格式化）。
-           五百三十二批：补 export-name（内核导出文件名 xm-jobs-*）；semOn 经形态核对不接——
+           补 export-name（内核导出文件名 xm-jobs-*）；semOn 经形态核对不接——
            八列全有 #cell- 槽接管显示（semOn 显示收益=0），且裸数字按值推断会把 0/1 值
            误挂 percent g 档 tone 类到 td（进度/冲突/错误列 0/1 是合法业务值），得不偿失 -->
       <QueryResultTable v-else-if="jobs.length" ref="qrtRef" :cols="XM_COLS" :rows="jobRows" sortable
@@ -263,7 +263,7 @@
           <span class="mono cpy" :title="'点击复制 jobId: ' + row[0]" tabindex="0" role="button" @click.stop="copyJobId(String(row[0]))" @keydown.enter.prevent="copyJobId(String(row[0]))" @keydown.space.prevent="copyJobId(String(row[0]))">{{ row[0] }}</span>
 </template>
         <!-- xmStatusZh 中文主显 + 英文枚举小字 en 档（519 范式，528 W-E 形态不回退）；结果文案上 title。
-             五百三十一批：手滚 pill 换装 StatusPill 统一件（n 档兜底——未命中枚举回显原文并进 title）；
+             手滚 pill 换装 StatusPill 统一件（n 档兜底——未命中枚举回显原文并进 title）；
              RUNNING dot-pulse 呼吸点随装退役（StatusPill 契约四项无插槽，运行中标识由 y 档色语义承担） -->
         <template #cell-状态="{ row }">
           <StatusPill :tone="statusTone(rowJob(row)?.status)"
@@ -273,21 +273,21 @@
         </template>
         <template #cell-目标索引="{ row }">
           <span class="mono">{{ rowJob(row)?.destIndex }}</span>
-          <!-- 二百八十一批：目标索引跳转芯片（本地集群索引，247 批 QRT 同范式）；源索引属远程集群不跳 -->
+          <!-- 目标索引跳转芯片（本地集群索引， QRT 同范式）；源索引属远程集群不跳 -->
           <button class="xm-idx-go" :aria-label="'打开索引工作区：' + rowJob(row)?.destIndex" title="打开索引工作区" @click.stop="gotoIdx(rowJob(row)?.destIndex)"><ExternalLink :size="11" /></button>
         </template>
         <template #cell-源="{ row }">
           <span class="mono xm-src-cell" :title="rowJob(row)?.sourceIndex + ' ← ' + rowJob(row)?.remoteEndpoint + '（点击复制）'" style="cursor:pointer"
             @click.stop="copyText(rowJob(row)?.sourceIndex + ' ← ' + rowJob(row)?.remoteEndpoint).then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制源信息' : '复制失败'))">{{ rowJob(row)?.sourceIndex }} ← {{ rowJob(row)?.remoteEndpoint }}</span>
         </template>
-        <!-- 进度槽：进度条 + migrated/total meta + 五百二十九批观测行（耗时人话化 / sliceMigrated Σ
+        <!-- 进度槽：进度条 + migrated/total meta + 观测行（耗时人话化 / sliceMigrated Σ
              速率 docs/s / 失败切片红 chip）——旧 JSON 无新字段时全部静默降级不显（null 安全） -->
         <template #cell-进度="{ row }">
           <div class="xm-p-track">
             <div v-if="indeterminate(rowJob(row))" class="xm-p-fill xm-p-indet"></div>
             <div v-else class="xm-p-fill" :class="{ run: rowJob(row)?.status === 'RUNNING' }" :style="{ width: pctOf(rowJob(row)) + '%' }"></div>
           </div>
-          <!-- 五百三十一批：进度 meta 手滚 mono 串 → MetaStrip 统一件（items+tone 分档：
+          <!-- 进度 meta 手滚 mono 串 → MetaStrip 统一件（items+tone 分档：
                运行中 info / 完成 ok / 其余中性灰；「迁移中 N 条（总量未知）」「N/T（P%）」文案语义逐字对位，
                原本地 xm-p-run/xm-p-ok 色档规则随装退役由 tone 承担） -->
           <MetaStrip class="xm-p-meta" :items="progressMeta(rowJob(row))" />
@@ -306,7 +306,7 @@
         <template #cell-错误="{ row }">
           <span class="mono" :class="row[6] ? 'meta-err' : ''">{{ fmtNum(row[6]) }}</span>
         </template>
-        <!-- R99 TimeCell 收编：相对时间 + 悬浮带时区绝对时间（QRT 对 epoch 数值的人性化只作复制/导出 raw 兜底） -->
+        <!--  TimeCell 收编：相对时间 + 悬浮带时区绝对时间（QRT 对 epoch 数值的人性化只作复制/导出 raw 兜底） -->
         <template #cell-发起="{ row }">
           <TimeCell v-if="row[7] != null" :ts="row[7]" />
           <span v-else class="qrt-null">∅</span>
@@ -315,29 +315,29 @@
         <template #row-actions="{ row }">
           <button aria-label="中止迁移：停止拉取，目标索引已写入的数据保留（不自动清理）" v-if="canOps && rowJob(row)?.status === 'RUNNING'" class="btn sm danger" title="中止迁移：停止拉取，目标索引已写入的数据保留（不自动清理）" :disabled="aborting" @click.stop="askAbort(rowJob(row))"><OctagonX :size="11" :class="{ spinning: aborting }" /></button>
           <button aria-label="断点续跑" v-if="canOps && ['FAILED','ABORTED','INTERRUPTED'].includes(rowJob(row)?.status ?? '')" class="btn sm" @click.stop="askResume(rowJob(row))" title="断点续跑"><RotateCcw :size="11" /></button>
-          <!-- R130 三十三批联动性：迁移完成一键去查询工作台验证目标索引（对齐二十四批托管重建「去查询验证」深链） -->
+          <!--  联动性：迁移完成一键去查询工作台验证目标索引（对齐托管重建「去查询验证」深链） -->
           <button aria-label="去查询验证：在查询工作台打开目标索引" v-if="rowJob(row)?.status === 'DONE' && rowJob(row)?.destIndex" class="btn sm" :title="'验证迁移结果：在查询工作台打开「' + rowJob(row)?.destIndex + '」'" @click.stop="goVerify(rowJob(row))"><SearchCheck :size="11" /></button>
-          <!-- 三百二十批：错误样本全量复制（诚实口径）——展开详情降维 JsonTree 后复制入口上移行尾 -->
+          <!-- 错误样本全量复制（诚实口径）——展开详情降维 JsonTree 后复制入口上移行尾 -->
           <button v-if="rowJob(row)?.errorSamples?.length" class="btn sm ghost" :aria-label="'复制全部 ' + rowJob(row)?.errorSamples.length + ' 条错误样本'"
             title="复制全部错误样本" @click.stop="copyErrSamples(rowJob(row))"><ClipboardList :size="11" /></button>
-          <!-- 一百八十五批：作业行菜单（CellContextMenu）——行级 contextmenu 被 QRT 内核列管理占用，
+          <!-- 作业行菜单（CellContextMenu）——行级 contextmenu 被 QRT 内核列管理占用，
                入口改行尾菜单钮（左键/右键皆开）；行展开由内核行尾钮/E 键承接 -->
           <button aria-label="作业行菜单" class="btn sm ghost" title="复制 jobId / 复制作业信息（右键本钮同效）"
             @click.stop="openJobMenu($event, rowJob(row))" @contextmenu.stop.prevent="openJobMenu($event, rowJob(row))"><MoreHorizontal :size="11" /></button>
 </template>
       </QueryResultTable>
       <!-- G3-C1：空态归位 EmptyState 组件（S6），不再用旧全局 .empty 裸文案；
-           !loadErr 守卫（R92-A2）：失败时只剩顶部 err-bar，不并存「暂无迁移作业」 -->
+           !loadErr 守卫（-A2）：失败时只剩顶部 err-bar，不并存「暂无迁移作业」 -->
       <EmptyState v-else-if="!loadErr" :icon="ListTodo" text="暂无迁移作业" hint="上方新建迁移，或点右上角刷新" />
     </div>
 
-    <!-- 五百二十五批 W4：启动/中止确认直挂 ConfirmModal 退役，收编全局 askConfirm
+    <!--  W4：启动/中止确认直挂 ConfirmModal 退役，收编全局 askConfirm
          （openStartConfirm/askAbort 内联承载；F3 警告分支在 preflight 落定后随弹层一次呈现） -->
 
     <!-- resume modal -->
     <n-modal v-model:show="resumeOpen" preset="card" title="续跑迁移（重新供给旧集群凭据）" style="width:480px;max-width:92vw" :bordered="false">
       <div class="xm-tip" style="margin-bottom:var(--sp-3)">目标：<b class="mono">{{ actJob?.sourceIndex }}</b> → <b class="mono">{{ actJob?.destIndex }}</b>（{{ actJob?.remoteEndpoint }}）</div>
-      <!-- R38：续跑同样可引用已存连接档案；五百二十五批：补 filterable（与源集群下拉同款） -->
+      <!-- 续跑同样可引用已存连接档案；：补 filterable（与源集群下拉同款） -->
       <div style="margin-bottom:var(--sp-2)">
         <n-select v-model:value="resumeConnId" :options="connOpts" :render-label="renderConnOpt" size="small" filterable placeholder="手动输入连接信息" />
       </div>
@@ -356,11 +356,11 @@
       </template>
     </n-modal>
 
-    <!-- 一百八十五批：作业行右键菜单（CellContextMenu 第四场景）——复制/详情直达，移出行消失 -->
+    <!-- 作业行右键菜单（CellContextMenu 第四场景）——复制/详情直达，移出行消失 -->
     <CellContextMenu v-if="jobMenu" :x="jobMenu.x" :y="jobMenu.y" :title="jobMenu.job.destIndex || jobMenu.job.jobId"
       :items="jobMenuItems" @close="jobMenu = null" />
 
-    <!-- 五百四十五批：原始 IO 弹窗（宿主受控开关；rec=最近一条 /xmigrate/ 记录） -->
+    <!-- 原始 IO 弹窗（宿主受控开关；rec=最近一条 /xmigrate/ 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
   </div>
 </template>
@@ -374,24 +374,24 @@ import { NSelect, NModal } from 'naive-ui';
 import MarkText from '../components/MarkText.vue';
 import PageHeader from '../components/PageHeader.vue'; /* 页头统一件（AdhocRebuild/Ilm 同范式） */
 import RemoteSourceFields from '../components/RemoteSourceFields.vue'; /* 远程源连接表单统一件（RA 同款收编） */
-import QueryResultTable from '../components/QueryResultTable.vue'; /* 五百二十九批 W-C：作业裸表换壳 QRT rows 型 */
-import StatusPill from '../components/StatusPill.vue'; /* 五百三十一批：状态手滚 pill 换装统一件（componentUnify530 范式） */
-import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue'; /* 五百三十一批：进度 meta 手滚 mono 串换统一件 */
+import QueryResultTable from '../components/QueryResultTable.vue'; /*  W-C：作业裸表换壳 QRT rows 型 */
+import StatusPill from '../components/StatusPill.vue'; /* ：状态手滚 pill 换装统一件（componentUnify530 范式） */
+import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue'; /* ：进度 meta 手滚 mono 串换统一件 */
 import { api, ioRecorder, type RawIoRec } from '../api';
-/* 五百四十五批：原始请求/响应快查弹窗（源配置预览分节消费，ioRecorder 记录环取数） */
+/* 原始请求/响应快查弹窗（源配置预览分节消费，ioRecorder 记录环取数） */
 import RawIoModal from '../components/RawIoModal.vue';
 import { friendlyApiError } from '../utils/esError';
-/* 五百五十批：err-bar 双参换装（errMetaPave547 TaskTreeView 口径——errPreHtml+errMeta，
+/* err-bar 双参换装（errMetaPave547 TaskTreeView 口径——errPreHtml+errMeta，
    错误原文全文不回退，仅头部追加 code 徽标/「失败于 端点」元信息行） */
 import { errPreHtml, errMeta } from '../utils/errPre';
 import type { ConnHealth } from '../api';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
 import { useScopedDraft, useScopedDraftState } from '../composables/useScopedDraft';
-import { usePref } from '../composables/urlState'; /* 五百三十一批：xm.recentKeys 最近选用置顶（预览限高稿 cfgMaxH 已随 540 批 pre 退役） */
-import { useTierCycle } from '../composables/useTierCycle'; /* 五百五十二批：配置预览行数三档（xm.cfgRows，Ilm/CV 同款消费形态） */
+import { usePref } from '../composables/urlState'; /* ：xm.recentKeys 最近选用置顶（预览限高稿 cfgMaxH 已随  pre 退役） */
+import { useTierCycle } from '../composables/useTierCycle'; /* ：配置预览行数三档（xm.cfgRows，Ilm/CV 同款消费形态） */
 import { fmtNum, fmtTime, statusColor } from '../utils/format';
-/* 五百二十五批 W4：迁移阶段枚举 → 中文名映射收口 utils/esEnumZh（xmStatusZh，
+/*  W4：迁移阶段枚举 → 中文名映射收口 utils/esEnumZh（xmStatusZh，
    别名保模板 statusZh 字面量；纯显示层，数据/排序/导出仍用原枚举） */
 import { xmStatusZh as statusZh } from '../utils/esEnumZh';
 import { askConfirm } from '../composables/confirm';
@@ -402,19 +402,19 @@ import SkeletonBox from '../components/SkeletonBox.vue';
 import EmptyState from '../components/EmptyState.vue';
 import CellContextMenu from '../components/CellContextMenu.vue';
 import { useModalEnter } from '../composables/useModalEnter';
-import { usePopupList } from '../composables/usePopupList'; /* 第十批：手写下拉统一骨架 */
-import { useQueryRun } from '../composables/useQueryRun'; /* 五百六十批：启动行读秒（AdhocRebuild :433 范式） */
-import SearchFilterBar from '../components/SearchFilterBar.vue'; /* 五百六十批：作业表 kw 过滤胶囊统一件（559 TasksView tv-kw 判例） */
-import DraftBadge from '../components/DraftBadge.vue'; /* 第十批：草稿恢复徽标统一件 */
-import JsonArea from '../components/JsonArea.vue'; /* 540 批 W2：源配置预览只读渲染统一件（readonly 通道 + 行数封顶高度模型） */
+import { usePopupList } from '../composables/usePopupList'; /* ：手写下拉统一骨架 */
+import { useQueryRun } from '../composables/useQueryRun'; /* ：启动行读秒（AdhocRebuild :433 范式） */
+import SearchFilterBar from '../components/SearchFilterBar.vue'; /* ：作业表 kw 过滤胶囊统一件（559 TasksView tv-kw 判例） */
+import DraftBadge from '../components/DraftBadge.vue'; /* ：草稿恢复徽标统一件 */
+import JsonArea from '../components/JsonArea.vue'; /*  W2：源配置预览只读渲染统一件（readonly 通道 + 行数封顶高度模型） */
 
 const store = useAppStore();
-/* 二百二十一批：权限门禁——迁移发起/中止/续跑=/xmigrate/start|abort|resume=REBUILD 档（rank3+） */
+/* 权限门禁——迁移发起/中止/续跑=/xmigrate/start|abort|resume=REBUILD 档（rank3+） */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/xmigrate/start', store.target));
 const router = useRouter();
-/* 二百八十一批：目标索引直达索引工作区 */
-/* 三百二十批：错误样本全量复制（诚实口径） */
+/* 目标索引直达索引工作区 */
+/* 错误样本全量复制（诚实口径） */
 function copyErrSamples(j: any) {
   const text = (j.errorSamples || []).join('\n');
   copyText(text).then(ok => store.notify(ok ? 'success' : 'error', ok ? `已复制 ${j.errorSamples.length} 条错误样本` : '复制失败'));
@@ -431,7 +431,7 @@ const DEST_MODES = [
   { k: 'REBUILD', t: '删旧重建', tip: '⚠ 先删除已有目标索引（含全部数据!），再按源结构建新索引，然后全量迁入（用于目标脏了想从头来）' },
 ] as const;
 
-/* 五百五十二批：formOpen 落盘（usePref 'xm.formOpen'，默认 true=既有行为零变化；
+/* formOpen 落盘（usePref 'xm.formOpen'，默认 true=既有行为零变化；
    550 轨2 ② DevTools dt.histOpen 同范式——展开/收起跨会话记忆） */
 const formOpen = usePref('xm.formOpen', true);
 const connUrl = ref('');
@@ -443,7 +443,7 @@ const conn = connDraft.state;
 /* 挂载后立即清 password 草稿残留(useScopedDraftState 恢复整个对象,但 password 不该在存储里) */
 onMounted(() => { conn.value.password = ''; });
 
-/* R38：已存连接下拉——选中则服务端按档案取密，明文不经前端；''=手动输入回退 */
+/* 已存连接下拉——选中则服务端按档案取密，明文不经前端；''=手动输入回退 */
 const srcConnIdDraft = useScopedDraft('src-conn-id', { route: 'xmigrate' });
 const srcConnId = srcConnIdDraft.text;
 const connOpts = computed(() => [
@@ -485,12 +485,12 @@ const XM_FORM_DEFAULT = ({
    启动成功后的清除语义保留（clear()）。 */
 const formDraft = useScopedDraftState<any>('form', { route: 'xmigrate',}, XM_FORM_DEFAULT);
 const form = formDraft.state;
-/* 第 2 步宿主目标索引默认回填顶栏选中（R60 单一真相）：一次性初值，仅空时回填——
-   不改用户已输/草稿恢复值；写类视图不做持续 follow（R61 白名单口径，防「A 的目标
+/* 第 2 步宿主目标索引默认回填顶栏选中（ 单一真相）：一次性初值，仅空时回填——
+   不改用户已输/草稿恢复值；写类视图不做持续 follow（ 白名单口径，防「A 的目标
    被顶栏切换悄悄改掉」），要换目标由用户显式改输入。 */
 if (!form.value.destIndex && store.pickedIdx) form.value.destIndex = store.pickedIdx;
 const keyOpts = ref<{ label: string; value: string }[]>([]);
-/* 五百三十一批：迁移 key 下拉 localeCompare 字母序 + 最近选用置顶——
+/* 迁移 key 下拉 localeCompare 字母序 + 最近选用置顶——
    选中即记录（去重 unshift，cap 5：太长置顶区挤占字母序视野），usePref 落盘刷新保持。
    纯显示层排序：api.keys 原始清单与提交值零触碰 */
 const recentKeys = usePref<string[]>('xm.recentKeys', []);
@@ -533,10 +533,10 @@ function parseUrl() {
 /* 连接检查 */
 const checking = ref(false);
 const checkErr = ref(''); // G3-B2：连接检查失败内联面板状态位
-const checkErrRaw = ref<unknown>(null); // 五百五十批：原始错误对象旁路（catch 压串丢 code/endpoint，喂 errMeta）
+const checkErrRaw = ref<unknown>(null); // ：原始错误对象旁路（catch 压串丢 code/endpoint，喂 errMeta）
 const remoteIndices = ref<any[]>([]);
 /* w59:下拉过滤（清单仍按输入关键字过滤）。
-   五百一十九批：套 fieldSearch 同款 rank 排序（精确=0 > 前缀=1 > 包含=2，同级字母序）——
+   套 fieldSearch 同款 rank 排序（精确=0 > 前缀=1 > 包含=2，同级字母序）——
    纯 includes 序把精确命中淹没在中间 */
 const srcFiltered = computed(() => {
   const kw = form.value.sourceIndex?.trim().toLowerCase() || '';
@@ -556,7 +556,7 @@ const dstFiltered = computed(() => {
     .filter(h => String(h.index).toLowerCase().includes(kw))
     .sort((a, b) => rankOf(String(a.index)) - rankOf(String(b.index)) || String(a.index).localeCompare(String(b.index)));
 });
-/* ══ 第十批：源/目标索引手写受控下拉迁 usePopupList 统一骨架（IndexPicker 同款消费形态） ══
+/* ══ ：源/目标索引手写受控下拉迁 usePopupList 统一骨架（IndexPicker 同款消费形态） ══
    键盘 ↑↓/Enter/Esc、aria combobox 关联、点击外部关闭由骨架带来；手写 @focus/@blur/
    mousedown.prevent 三件套退役。to:false = 就地渲染（保持原 .xm-drop absolute 随根定位，
    place() 的 fixed 坐标不参与）；cap 30 保留原 slice(0,30) 口径（items computed 等价截断，
@@ -626,7 +626,7 @@ async function check() {
   } catch (e: any) {
     remoteIndices.value = [];
     /* G3-B2：失败不再仅 toast——内联面板留全文可回看（证书/认证/超时排障需要），toast 同步保留；
-       五百五十批：原始对象旁路（errMeta 读 code/endpoint） */
+       原始对象旁路（errMeta 读 code/endpoint） */
     checkErr.value = '连接失败：' + friendlyApiError(e);
     checkErrRaw.value = e;
     store.notify('error', checkErr.value);
@@ -635,14 +635,14 @@ async function check() {
 
 /* 源配置预览 */
 const cfgPreview = ref<any>(null);
-/* 540 批 W2：配置预览文本体——prettyJson 兜底原文（解析失败回显原串，校验圆点诚实报非法）；
+/*  W2：配置预览文本体——prettyJson 兜底原文（解析失败回显原串，校验圆点诚实报非法）；
    highlightJson v-html 通道随裸 pre 退役（Monaco 自带高亮）。封顶 10 行
    （10*19+16=206px ≈ 原 cfgMaxH 默认 200px）；cfgRows=min(内容行数,封顶) 纯内容函数，
    无 DOM 测量、无回写回路——「随内容生长至封顶」确定解（红线：高度棘轮/循环扩大不触） */
 const cfgMappingText = computed(() => prettyJson(cfgPreview.value?.mapping ?? ''));
 const cfgSettingsText = computed(() => prettyJson(cfgPreview.value?.settings ?? ''));
 const XM_CFG_CAP_ROWS = 10;
-/* 五百五十二批：预览行数封顶改三档循环（useTierCycle 统一件，IlmView ilm.listW /
+/* 预览行数封顶改三档循环（useTierCycle 统一件，IlmView ilm.listW /
    ConfigValidatorView issuesH 同款消费形态）——10/20/40 落盘键 xm.cfgRows，
    默认档 10=原封顶值既有视觉零变化；cfgRows 仍纯内容函数 min(内容行数,档值)，
    无 DOM 测量、无回写回路（高度红线不触） */
@@ -657,11 +657,11 @@ async function fetchCfg() {
   finally { checking.value = false; }
 }
 
-/* 五百四十五批：原始 IO 快查（预览分节）——取记录环最近一条 /xmigrate/ 记录
+/* 原始 IO 快查（预览分节）——取记录环最近一条 /xmigrate/ 记录
    （fetch-config/preflight/connect-check 等本页 xb 调用皆算）开弹窗；无记录时 EmptyState 引导 */
 const rawIoShow = ref(false);
 const rawIoRec = ref<RawIoRec | null>(null);
-/* 五百五十一批：判空随迁（DslQueryView 550 口径逐字平移）——无记录 notify 引导不开空弹窗 */
+/* 判空随迁（DslQueryView 550 口径逐字平移）——无记录 notify 引导不开空弹窗 */
 function openRawIo() {
   const rec = ioRecorder.last('/xmigrate/');
   if (!rec) { store.notify('info', '暂无原始 IO 记录，先在本页执行一次操作（记录环近 30 条）再查看'); return; }
@@ -671,15 +671,15 @@ function openRawIo() {
 
 /* 启动 */
 const starting = ref(false);
-/* 五百六十批：启动行读秒（AdhocRebuildView :433 范式；starting 布尔与 qr 状态并存，
+/* 启动行读秒（AdhocRebuildView :433 范式；starting 布尔与 qr 状态并存，
    互斥口径照 SqlBridgeView doStart 守卫双查先例）——api.xb.start 签名无 signal 参，
    begin() 只供计时（elapsedMs 100ms tick 驱动「启动中 X.Xs」读秒），不做竞态丢弃 */
 const qr = useQueryRun();
 const startSecs = computed(() => (qr.elapsedMs.value / 1000).toFixed(1));
 const startErr = ref(''); // G3-B3：启动失败内联面板状态位
-const startErrRaw = ref<unknown>(null); // 五百五十批：原始错误对象旁路（喂 errMeta，同 checkErrRaw）
+const startErrRaw = ref<unknown>(null); // ：原始错误对象旁路（喂 errMeta，同 checkErrRaw）
 const preflight = ref<any>(null); // 启动前预检（dest 是否已存在）
-/* 五百二十五批 W4：启动确认直挂 ConfirmModal 收编 askConfirm——preflight 先行落定，
+/*  W4：启动确认直挂 ConfirmModal 收编 askConfirm——preflight 先行落定，
    弹层一次性呈现完整警告分支（F3：REBUILD 删数据警示绝不允许缺席，故不参与
    dismissable 会话跳过——同 title 下后续作业的删数据警示不得被静默吞掉）。
    destExists 统一取 destExistsSafe（preflight 缺席时用 hostIndices 兜底）。 */
@@ -740,12 +740,12 @@ const canStart = computed(() =>
   (form.value.destCreateMode !== 'FROM_ENTITY' || form.value.indexKey) &&
   !idxNameError.value);
 async function doStart() {
-  /* 五百六十批：互斥口径照 SqlBridgeView（starting 布尔 + qr.running 双查）——在途重入直接短路 */
+  /* 互斥口径照 SqlBridgeView（starting 布尔 + qr.running 双查）——在途重入直接短路 */
   if (starting.value || qr.running.value) return;
   starting.value = true;
   startErr.value = '';
   startErrRaw.value = null;
-  qr.begin(); /* 五百六十批：读秒计时（start 无 signal 参，不接竞态丢弃） */
+  qr.begin(); /* ：读秒计时（start 无 signal 参，不接竞态丢弃） */
   try {
     const req: any = {
       sourceIndex: form.value.sourceIndex, destIndex: form.value.destIndex,
@@ -763,7 +763,7 @@ async function doStart() {
     loadJobs();
   } catch (e: any) {
     /* G3-B3：启动失败不再仅 toast——内联面板留全文（后端校验长错误可回看），重试重开确认弹层；
-       五百五十批：原始对象旁路（errMeta 读 code/endpoint） */
+       原始对象旁路（errMeta 读 code/endpoint） */
     startErr.value = '启动失败：' + friendlyApiError(e);
     startErrRaw.value = e;
     store.notify('error', startErr.value);
@@ -775,7 +775,7 @@ async function doStart() {
 const jobs = ref<any[]>([]);
 /* w80：「查看进度」定位高亮——作业表通常在页下方，滚动定位该 jobId 行并挂高亮类（2.5s 自熄），
    不再是只收起表单的空操作；行未渲染（列表暂未含新作业）时静默跳过。
-   五百二十九批换壳 QRT：data-job 属性契约不可用（内核渲染 tr），定位链改 rowClass 契约挂
+   换壳 QRT：data-job 属性契约不可用（内核渲染 tr），定位链改 rowClass 契约挂
    .xm-hit 类（527 深链读侧三口范式与 locateJobRow 语义原样保全）。 */
 const hitJobId = ref('');
 let hitTimer: any = null;
@@ -790,23 +790,23 @@ function locateJobRow(jobId: string) {
     hitTimer = setTimeout(() => { hitJobId.value = ''; }, 2500);
   });
 }
-/* 五百三十二批：卸载清 timer——组件销毁后定时器仍会把 hitJobId 置空一次（无害但悬空），
+/* 卸载清 timer——组件销毁后定时器仍会把 hitJobId 置空一次（无害但悬空），
    卸载时显式回收 */
 onBeforeUnmount(() => { if (hitTimer) clearTimeout(hitTimer); });
 const loadErr = ref('');
-const loadErrRaw = ref<unknown>(null); // 五百五十批：原始错误对象旁路（喂 errMeta，同 checkErrRaw）
+const loadErrRaw = ref<unknown>(null); // ：原始错误对象旁路（喂 errMeta，同 checkErrRaw）
 /* G3-B1：loading 初值 true——首载未完成前不渲染空态（G2 B6 Watcher 范式）；
    try/finally 保证复位，轮询/手动刷新时 jobs 已有旧数据不闪骨架 */
 const jobsLoading = ref(true);
 
-/* ═══ 五百二十九批 W-C：QRT rows 型数据面 ═══
+/* ═══  W-C：QRT rows 型数据面 ═══
    列集：jobId（行身份+专职复制）/ 状态 / 目标索引 / 源 / 进度(=migrated 数值，Σ 聚合落此列) /
    冲突 / 错误 / 发起(epoch)。kw 过滤保留宿主侧（filteredJobs）；排序/Σ 聚合/列管理交内核
    （storage-key="xm-jobs" 记忆：排序 es_tbl_sort:xm-jobs:*、聚合 es_tbl_agg:xm-jobs）。 */
 const XM_COLS = ['jobId', '状态', '目标索引', '源', '进度', '冲突', '错误', '发起'];
 const jobKw = ref('');
-/* 第十批：草稿恢复徽标——conn/src-conn-id/form 三把内容稿任一恢复即提示；
-   五百二十九批：list-sort 排序偏好稿随排序收编 QRT 内核（es_tbl_sort 记忆）退役，
+/* 草稿恢复徽标——conn/src-conn-id/form 三把内容稿任一恢复即提示；
+   list-sort 排序偏好稿随排序收编 QRT 内核（es_tbl_sort 记忆）退役，
    「清除」覆盖本页三把会话稿。 */
 const xmDraftRestored = computed(() =>
   connDraft.restored.value || srcConnIdDraft.restored.value || formDraft.restored.value);
@@ -833,12 +833,12 @@ const jobsById = computed(() => {
 function rowJob(row: any[] | undefined): any {
   return row ? jobsById.value.get(String(row[0])) : undefined;
 }
-/* 五百三十一批：StatusPill tone 字面量收窄（BulkEditorView statusPillCls 同法）——
+/* StatusPill tone 字面量收窄（BulkEditorView statusPillCls 同法）——
    statusColor 返回 string，StatusPill 契约 tone 为五档联合 */
 function statusTone(s: any): 'g' | 'y' | 'r' | 'b' | 'n' {
   return statusColor(s) as 'g' | 'y' | 'r' | 'b' | 'n';
 }
-/* 五百三十一批：状态 pill title——作业 message 优先；未命中枚举（原文回显）时原文进 title 兜底 */
+/* 状态 pill title——作业 message 优先；未命中枚举（原文回显）时原文进 title 兜底 */
 function xmStatusTitle(j: any): string | undefined {
   if (!j) return undefined;
   return j.message || (statusZh(j.status) ? undefined : String(j.status ?? '')) || undefined;
@@ -848,7 +848,7 @@ function jobRowCls(row: any[]): string | undefined {
   return hitJobId.value && String(row?.[0]) === hitJobId.value ? 'xm-hit' : undefined;
 }
 
-/* ── 进度列观测行（五百二十九批主菜：耗时/速率/失败切片）——旧 JSON 无新字段全静默降级 ── */
+/* ── 进度列观测行（主菜：耗时/速率/失败切片）——旧 JSON 无新字段全静默降级 ── */
 function elapsedMsOf(j: any): number | null {
   if (!j?.startedAtMs) return null; // 旧文档无 startedAtMs：不显耗时（不假装已知）
   return Math.max(0, (j.finishedAtMs ?? Date.now()) - j.startedAtMs);
@@ -880,7 +880,7 @@ function sliceFailChips(j: any): { id: string; n: number }[] {
     .map(([id, n]) => ({ id, n: Number(n) }));
 }
 
-/* 五百五十批：切片 checkpoint 观测段——sliceStatus 聚合人话「已完成 x/y 片」；有 FAILED/ABORTED
+/* 切片 checkpoint 观测段——sliceStatus 聚合人话「已完成 x/y 片」；有 FAILED/ABORTED
    切片附「中断于 slice N（共 M 片）」。后端零改（sliceStatus Map 既有数据，后端 SLICE_*
    PENDING/RUNNING/DONE/FAILED 四档；ABORTED 为防御档），MetaStrip text 段并入 progressMeta
    输出链（不新增独立行容器）；旧 JSON 无字段/空 Map 静默降级不显（529 观测行同口径）。 */
@@ -897,11 +897,11 @@ function sliceCheckpointMeta(j: any): MetaStripItem | null {
     : `已完成 ${done}/${total} 片` };
 }
 
-/* 五百三十一批：进度 meta → MetaStrip items（tone 分档：运行中 info / 完成 ok / 其余中性灰）。
+/* 进度 meta → MetaStrip items（tone 分档：运行中 info / 完成 ok / 其余中性灰）。
    文案与原手滚 mono 串逐字对位（「迁移中 N 条（总量未知）」/「N/T（P%）」）；
    total 未知时段 tip 说明「不冒充 0%」的降级口径，显示层换壳、数据与导出零触碰。
-   五百五十批：尾随并入 checkpoint 观测段（sliceCheckpointMeta，两分支统一并链）。
-   五百五十四批 P2：尾随再并入 ETA 段（etaMeta，MetaStrip value+label 形态 tone=info；
+   尾随并入 checkpoint 观测段（sliceCheckpointMeta，两分支统一并链）。
+    P2：尾随再并入 ETA 段（etaMeta，MetaStrip value+label 形态 tone=info；
    速率缺失/非正、total 未知、余量非正一律不出=不冒充，rateOf 既有差分件零触）。 */
 function etaMeta(j: any): MetaStripItem | null {
   const rate = rateOf(j);
@@ -947,16 +947,16 @@ async function loadJobs() {
     loadErr.value = '';
     loadErrRaw.value = null;
   } catch (e: any) {
-    /* 五百五十七批：toast 轰炸防御——轮询修好后后端故障期会每 3s 轰一次 notify；改仅首败
+    /* toast 轰炸防御——轮询修好后后端故障期会每 3s 轰一次 notify；改仅首败
        toast（OverviewView:202-204 判例），err-bar 常驻承担可见性。loadErr 语义=本轮失败
        标记：下一轮成功复位（上方 try 内既有 ''），恢复后再遇新故障才再报 */
     const firstFail = !loadErr.value;
     loadErr.value = '加载迁移作业失败：' + friendlyApiError(e);
-    loadErrRaw.value = e; /* 五百五十批：原始对象旁路（errMeta 读 code/endpoint） */
+    loadErrRaw.value = e; /* ：原始对象旁路（errMeta 读 code/endpoint） */
     if (firstFail) store.notify('error', loadErr.value);
   } finally { jobsLoading.value = false; }
 }
-/* 五百二十七批：?jobId= 深链读侧（此前跳转裸 push('/xmigrate') 只能落作业表顶部——526 遗留收口）。
+/* ?jobId= 深链读侧（此前跳转裸 push('/xmigrate') 只能落作业表顶部——526 遗留收口）。
    读侧三口范式同 AdhocRebuildView ?index=：① 挂载 ② onActivated（KeepAlive 回流口——本页暂不在
    App.vue 白名单，入名单前先备好消费口）③ watch（SPA 内同页重入，组件实例复用、onMounted 不再跑，
    仅在 jobId「从无到有/值变化」时消费，消费后的摘除不回环）；loadJobs 后 locateJobRow 定位+行强调
@@ -975,25 +975,25 @@ async function consumeJobDeepLink() {
 }
 onMounted(async () => {
   consumeJobDeepLink(); /* 首载（无 ?jobId= 时即普通 loadJobs） */
-  store.loadConns(); // R38：连接下拉数据源
+  store.loadConns(); // ：连接下拉数据源
   // 目标索引补全清单：迁移写入端（宿主）索引，拿不到不阻塞（纯补全增强）
   api.xb.destIndices().then(list => { hostIndices.value = list || []; }).catch(() => {});
-  /* 五百三十一批：装载即排序（字母序 + 最近选用置顶，见 sortKeyOpts） */
+  /* 装载即排序（字母序 + 最近选用置顶，见 sortKeyOpts） */
   try { keyOpts.value = sortKeyOpts((await api.keys()).map((k: string) => ({ label: k, value: k }))); }
   catch (e: any) { store.notify('warning', 'indexKey 清单加载失败（不影响手输）：' + friendlyApiError(e)); } /* w80：裸 e.message → friendlyEsError */
 });
-/* 五百二十七批：深链第二/三口——KeepAlive 回流与 SPA 内重入共用 consumeJobDeepLink（见上注） */
+/* 深链第二/三口——KeepAlive 回流与 SPA 内重入共用 consumeJobDeepLink（见上注） */
 onActivated(() => { consumeJobDeepLink(); });
 watch(() => route.query.jobId, (nv, ov) => {
   if (nv === ov) return;
   if (nv) consumeJobDeepLink();
 });
-/* R130 三十三批联动性：迁移完成一键去查询工作台验证目标索引——
-   与二十四批托管重建「去查询验证」同一深链模式（store.pick 全局选中 + idx query） */
+/*  联动性：迁移完成一键去查询工作台验证目标索引——
+   与托管重建「去查询验证」同一深链模式（store.pick 全局选中 + idx query） */
 async function goVerify(j: any) {
   if (j.destIndex) store.pick(j.destIndex);
   router.push({ path: '/search', query: j.destIndex ? { idx: j.destIndex } : {} });
-  /* 第五十一批：目标索引存在性预检——DONE 任务的 dest 可能事后被删（r98 案实证），
+  /* 目标索引存在性预检——DONE 任务的 dest 可能事后被删（r98 案实证），
      提前警示防「跳过去才看到 404」；清单拉取失败不阻断跳转主流程。 */
   try {
     const list: any[] = (await api.clusterIndices()) || [];
@@ -1003,8 +1003,8 @@ async function goVerify(j: any) {
     }
   } catch { /* 预检失败不打扰跳转 */ }
 }
-/* ═══ 一百八十五批：作业行菜单（dbx 行菜单）——复制 jobId/作业信息；
-   五百二十九批换壳 QRT：行级 contextmenu 让位内核列管理（全站 QRT 消费方一致口径），
+/* ═══ ：作业行菜单（dbx 行菜单）——复制 jobId/作业信息；
+   换壳 QRT：行级 contextmenu 让位内核列管理（全站 QRT 消费方一致口径），
    菜单入口改行尾菜单钮（左键/右键皆开）；「展开详情」条目退役——行展开由内核行尾钮/
    焦点行 E 键承接（TableExpandRow，宿主不可程序化控制）；列管理白得内核 ColPicker ═══ */
 const jobMenu = ref<{ x: number; y: number; job: any } | null>(null);
@@ -1021,13 +1021,13 @@ const jobMenuItems = computed(() => {
       const ok = await copyText(facts);
       store.notify(ok ? 'success' : 'error', ok ? '已复制作业信息' : '复制失败');
     } },
-    /* 五百六十一批：以此作业新建迁移（只增项不改既有项——xmigrateRowMenu 字面锁零触），
+    /* 以此作业新建迁移（只增项不改既有项——xmigrateRowMenu 字面锁零触），
        回填逻辑见 newMigrationFromJob */
     { key: 'new-from-job', label: '以此作业新建迁移', icon: Rocket, run: () => newMigrationFromJob(j) },
   ];
 });
 
-/* ═══ 五百六十一批：以作业为模板新建迁移 ═══
+/* ═══ ：以作业为模板新建迁移 ═══
    job doc 自持 sourceIndex/destIndex/remoteEndpoint（resume 弹窗同源读法），回填
    「1 连接旧集群」（remoteEndpoint 解析 + 命中已存连接档案则选档案，明文不经前端；
    手动回退时密码不回填——凭据不自持不猜）与「2 源索引」「3 目标索引」；
@@ -1081,7 +1081,7 @@ async function exportTsv() {
   const ok = await copyText(lines.join('\n'));
   store.notify(ok ? 'success' : 'error', ok ? `已复制 ${rows.length} 行 TSV 到剪贴板` : '复制失败');
 }
-/* 一百四十二批：迁移任务 Markdown 表（群聊/工单跟催直贴；行序=QRT 排序后所见即所得） */
+/* 迁移任务 Markdown 表（群聊/工单跟催直贴；行序=QRT 排序后所见即所得） */
 async function exportMd() {
   const rows = exportRows();
   if (!rows.length) return;
@@ -1105,12 +1105,12 @@ function pctOf(j: any): number {
   if (totalUnknown(j)) return j.status === 'DONE' ? 100 : 0;
   return Math.min(100, Math.round(((j.migrated || 0) / j.total) * 100));
 }
-/* 五百二十四批 W1 的 tfoot Σ 聚合随壳收编 QRT 内建（useAggRow：列头菜单「聚合行」开关，
+/*  W1 的 tfoot Σ 聚合随壳收编 QRT 内建（useAggRow：列头菜单「聚合行」开关，
    es_tbl_agg:xm-jobs 记忆；Σ 作用于过滤后集合——宿主传入的 jobRows 已过滤） */
 
-/* 三百五十八批：RUNNING 轮询收编 useAutoRefresh——KeepAlive/页面隐藏/卸载全链停续
+/* RUNNING 轮询收编 useAutoRefresh——KeepAlive/页面隐藏/卸载全链停续
    （此前裸 setInterval 在后台标签页照跑）；guard 验 running 状态（本视图无 loading 锁）。
-   五百五十七批：轮询静默修复（556 记档件）——ms getter 只在 start() 采样一次
+   轮询静默修复（556 记档件）——ms getter 只在 start() 采样一次
    （useAutoRefresh 契约「间隔变更由调用方重启」）：零 RUNNING 挂载时不排表，首作业转
    RUNNING 后无人重启 → 轮询永不启动；RUNNING 中挂载转终态同理永不停表。抽 hasRunningJob
    computed + watch → restart() 双向接线（转 RUNNING 启表、转终态停表，启停判据与 ms
@@ -1127,7 +1127,7 @@ const actJob = ref<any>(null);
 const resumeOpen = ref(false);
 const resumeConn = ref<any>({ scheme: 'http', host: '', port: 9200, username: '', password: '' });
 const resumeConnId = ref('');
-/* 五百二十五批 W4：中止确认直挂 ConfirmModal 收编 askConfirm——warn 级白得
+/*  W4：中止确认直挂 ConfirmModal 收编 askConfirm——warn 级白得
    dismissable（已有 3s 撤销窗兜底、已搬运数据保留，适合会话级防呆） */
 async function askAbort(j: any) {
   actJob.value = j;
@@ -1192,7 +1192,7 @@ async function doResume() {
   } catch (e: any) { store.notify('error', '续跑失败: ' + friendlyApiError(e)); } /* w80：裸 e.message → friendlyEsError */
   finally { resuming.value = false; }
 }
-/* 六十六批：续跑凭据弹窗 Enter=提交（can 门与主按钮 disabled 同口径——resuming 在途不放行，
+/* 续跑凭据弹窗 Enter=提交（can 门与主按钮 disabled 同口径——resuming 在途不放行，
    原注释「首行即关弹窗天然防连按」不够：resume 已关但 API 在途时再按 Enter 仍会重复下发） */
 useModalEnter(resumeOpen, doResume, () => !resuming.value);
 </script>
@@ -1201,20 +1201,20 @@ useModalEnter(resumeOpen, doResume, () => !resuming.value);
 .xm { display: flex; flex-direction: column; gap: var(--sp-3); position: relative; }
 /* 页根 gap 承担区块间距，PageHeader 自带 margin-bottom 归零（AdhocRebuildView 同款） */
 .xm > .ph { margin-bottom: 0; }
-/* 五百五十四批 P2：执行进度条（ind-bar 全站范式，DevTools dt-progress 同款 absolute 零高度占位） */
+/*  P2：执行进度条（ind-bar 全站范式，DevTools dt-progress 同款 absolute 零高度占位） */
 .xm-progress { position: absolute; top: 0; left: 0; right: 0; color: var(--ac); }
-/* 五百五十一批：新建迁移 .card 壳退役 → border-top 分节（下方 .xm-res 547 判例同语言）——
+/* 新建迁移 .card 壳退役 → border-top 分节（下方 .xm-res 547 判例同语言）——
    卡 padding 由 .xm-new-t 落位类与 draft-row/form/cfg/actions 落位 margin 承接（盒模型等值）；
    与作业列表分节的块间距仍由页根 .xm flex gap 承担 */
 .xm-new { border-top: 1px solid var(--border); }
 .xm-new-t { padding: var(--sp-3) var(--sp-4) 0; }
 .xm-sk { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); }
 .xm-conn-err { margin-top: var(--sp-2); }
-/* 五百五十一批：壳 padding 退役，左右落位 margin 承接（err 红框语义零触，只动定位） */
+/* 壳 padding 退役，左右落位 margin 承接（err 红框语义零触，只动定位） */
 .xm-start-err { margin: var(--sp-3) var(--sp-4) 0; }
 .xm-src-pick { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3); }
 .xm-src-pick > label { font-size: var(--fs-sm); color: var(--tx1); flex-shrink: 0; }
-/* 五百三十四批：.xm-src-picked border 盒退役——选中态回显降为 inline 行（.xm-conn flex 骨架承担，
+/* .xm-src-picked border 盒退役——选中态回显降为 inline 行（.xm-conn flex 骨架承担，
    凭据说明/检查钮原位），类保留作 DOM 锚 */
 /* w80：逐字拷贝 ClusterSwitcher 的 .cs-hdot 三条改本地语义类——模板已用 .xm-hdot，
    本页不引该组件，不再借他页类名（视觉等价：中性点/绿点/红点三态） */
@@ -1224,14 +1224,14 @@ useModalEnter(resumeOpen, doResume, () => !resuming.value);
 .xm-paste { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-3); }
 .xm-conn { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
 .xm-tip { font-size: var(--fs-xs); color: var(--tx2); margin-top: var(--sp-2); }
-/* w59:分组步骤式布局。五百三十一批：三分节去 background 降视觉重量（组壳原 --bg1 底与卡片
+/* w59:分组步骤式布局。：三分节去 background 降视觉重量（组壳原 --bg1 底与卡片
    --bg0 叠两层灰阶，编号+边框已足够承载 1/2/3 步骤语义；边框与编号原样保留）。
-   五百三十四批：分节降层下半刀——border 壳退役，分节改 border-top 行首分隔+sec-t 标题档
+   分节降层下半刀——border 壳退役，分节改 border-top 行首分隔+sec-t 标题档
    （IndexHub ih-op-sec/DevTools dt-hist 同语言；常规流零高度链）。
-   五百四十七批：531 旧 border 盒死规则（本行一直被下行覆盖压死）退役删除——
+   531 旧 border 盒死规则（本行一直被下行覆盖压死）退役删除——
    rebuildMigrate531:268 / rebuildFlat534:94 两处 531 字面锁随迁（死规则退役改 not 锚） */
 .xm-group { margin-bottom: 0; padding: var(--sp-2) 0 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; }
-/* 五百六十批：三步向导全宽纵排——.xm-form 2 列 grid 下三组呈之字排布，grid-column 全宽让
+/* 三步向导全宽纵排——.xm-form 2 列 grid 下三组呈之字排布，grid-column 全宽让
    连接/选源/定目标三组阅读顺序归位；独立规则追加（上方锁面字面零触），.xm-cfg-grid 双列保留 */
 .xm-group { grid-column: 1 / -1; }
 /* 分节标题形态归全局 .sec-t（fs-sm/600/tx1），本类只留 flex 排布与编号落位 */
@@ -1250,7 +1250,7 @@ useModalEnter(resumeOpen, doResume, () => !resuming.value);
    `.xm-f-row > label` 死规则删除(表单行子标签早已改 span.xm-inline-lb,label 子元素零引用) */
 .xm-f-row { position: relative; display: flex; align-items: center; gap: var(--sp-3); }
 .xm-drop {
-  /* 五百二十四批 W1 z 档位注释：50=页内局部层级——只盖同卡片表单流的就地 absolute 下拉，
+  /*  W1 z 档位注释：50=页内局部层级——只盖同卡片表单流的就地 absolute 下拉，
      不出页、不与全局浮层阶梯（--z-popover 1150 / --z-ctx 1200 右键菜单档）争层；
      层级语义不同，勿硬归 --z-* token */
   position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
@@ -1259,16 +1259,16 @@ useModalEnter(resumeOpen, doResume, () => !resuming.value);
   box-shadow: var(--shadow-pop);
 }
 .xm-drop-item { padding: 5px var(--sp-2h); font-size: var(--fs-sm); cursor: pointer; }
-/* 第十批：usePopupList 骨架高亮行（原仅 :hover，键盘 ↑↓ 候选不可见）——色档同 hover。
-   五百五十一批：fallback 硬编码退役 → var(--hl-soft) 裸 token（主题换肤/浅色档不脱钩，纯等值） */
+/* usePopupList 骨架高亮行（原仅 :hover，键盘 ↑↓ 候选不可见）——色档同 hover。
+   fallback 硬编码退役 → var(--hl-soft) 裸 token（主题换肤/浅色档不脱钩，纯等值） */
 .xm-drop-item:hover, .xm-drop-item.act { background: var(--hl-soft); color: var(--ac); }
 .xm-drop-more { padding: var(--sp-1) var(--sp-2h); font-size: var(--fs-2xs); color: var(--muted); border-top: 1px solid var(--line); }
 .xm-idx-inp { width: 100%; }
-/* 第十批：草稿恢复徽标行（AdhocRebuildView ar-draft-row 同款形态）；五百五十一批：壳 padding
+/* 草稿恢复徽标行（AdhocRebuildView ar-draft-row 同款形态）；：壳 padding
    退役，落位 margin 承接左右留白（顶距近似原卡 padding-top，底距保分节间距） */
 .xm-draft-row { margin: var(--sp-2) var(--sp-4) var(--sp-2); }
 
-/* 五百三十四批：.xm-remote border 盒退役→border-top 分节分隔+sec-t 标题档（与 xm-group 同刀；
+/* .xm-remote border 盒退役→border-top 分节分隔+sec-t 标题档（与 xm-group 同刀；
    900 档 `.xm-remote { padding: var(--sp-2); }` 字面被 rebuildMigrate531 锁保留——窄档仅有
    轻微内衬，宽档行内裸排） */
 .xm-remote { margin-top: var(--sp-3); border: 0; border-top: 1px solid var(--line); padding: var(--sp-2) 0 0; }
@@ -1276,27 +1276,27 @@ useModalEnter(resumeOpen, doResume, () => !resuming.value);
 /* w80：.xm-r-kw 死样式删除（remoteKw 过滤输入框随双轨收敛退役，模板零引用） */
 .xm-r-more { font-size: var(--fs-xs); color: var(--tx2); align-self: center; }
 .xm-r-list { display: flex; flex-wrap: wrap; gap: var(--sp-2); max-height: 120px; overflow-y: auto; }
-/* 五百五十一批：壳 padding 退役，margin 左右落位承接（grid 骨架零触） */
+/* 壳 padding 退役，margin 左右落位承接（grid 骨架零触） */
 .xm-form { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3) var(--sp-4); margin: var(--sp-4) var(--sp-4) 0; }
 .xm-adv { display: flex; gap: var(--sp-3); align-items: center; flex-wrap: wrap; }
 .xm-adv-f { display: flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-xs); color: var(--tx2); }
 .xm-fm { display: flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-xs); color: var(--tx1); }
-/* 五百五十一批：壳 padding 退役，margin 左右落位承接 */
+/* 壳 padding 退役，margin 左右落位承接 */
 .xm-cfg { margin: var(--sp-3) var(--sp-4) 0; }
 .xm-cfg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); margin-top: var(--sp-3); }
-/* 五百六十五批：源配置预览两块只读 JsonArea 摘默认框（.ja 的 border/radius 双层框感剥掉，
-   :deep(.ja) 全站口径——DQ :2181/IH :2181/AR :2170 判例；JsonArea 组件本体零触，
+/* 源配置预览两块只读 JsonArea 摘默认框（.ja 的 border/radius 双层框感剥掉，
+   deep(.ja) 全站口径——DQ :2181/IH :2181/AR :2170 判例；JsonArea 组件本体零触，
    视图 style 追加独立规则；只读预览贴分节底直排） */
 .xm-cfg-grid :deep(.ja) { border: none; border-radius: 0; }
-/* 五百五十四批 P2：.xm-cfg-t 类型归全局 .sec-t（fs-sm/600/tx1，.xm-g-hd 先例同款），本类只留落位 */
+/*  P2：.xm-cfg-t 类型归全局 .sec-t（fs-sm/600/tx1，.xm-g-hd 先例同款），本类只留落位 */
 .xm-cfg-t { margin-bottom: var(--sp-1); }
-/* 540 批 W2：配置预览裸 pre 样式随 JsonArea 接线退役（外壳/工具行/高度归统一件，类名字面随锁规避） */
-/* 五百五十一批：壳 padding 退役，margin 四向落位承接（右下留白归位） */
+/*  W2：配置预览裸 pre 样式随 JsonArea 接线退役（外壳/工具行/高度归统一件，类名字面随锁规避） */
+/* 壳 padding 退役，margin 四向落位承接（右下留白归位） */
 .xm-actions { margin: var(--sp-4) var(--sp-4) var(--sp-3); display: flex; justify-content: flex-end; }
 /* F4：启动按钮左侧的内联校验红字（margin-right:auto 把按钮推回右侧） */
 .xm-idx-err { margin-right: auto; align-self: center; font-size: var(--fs-sm); color: var(--err); }
-/* ── 五百二十九批换壳 QRT 后的作业表样式（表骨架/行高/展开行归内核）── */
-/* 五百四十七批：作业列表包裹壳（.card + padding:0/overflow:hidden 内联）退役 → border-top
+/* ── 换壳 QRT 后的作业表样式（表骨架/行高/展开行归内核）── */
+/* 作业列表包裹壳（.card + padding:0/overflow:hidden 内联）退役 → border-top
    分节（538 .sy-res / 546 .bw-res 同语言）；card-t 原内联 padding 迁落位类（盒模型尺寸零变动） */
 .xm-res { border-top: 1px solid var(--border); }
 .xm-res-t { padding: var(--sp-3) var(--sp-4) 0; }
@@ -1326,32 +1326,32 @@ useModalEnter(resumeOpen, doResume, () => !resuming.value);
 }
 @keyframes xm-indet-slide { from { background-position: 0 0; } to { background-position: 17px 0; } }
 @keyframes xm-indet-breathe { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
-/* 五百三十一批：进度 meta 换壳 MetaStrip——字号/mono/分隔归组件 .ms，wrapper 只留与进度条的
+/* 进度 meta 换壳 MetaStrip——字号/mono/分隔归组件 .ms，wrapper 只留与进度条的
    间距（margin-top 3px 为视觉刻意值豁免保字面，--sp 梯无 3 档，与 .xm-sfails 同族）；
    原本地 xm-p-run（ac）/xm-p-ok（ok）色档规则随装退役，语义分档由 items tone（info/ok）承担 */
 .xm-p-meta { margin-top: 3px; }
-/* 五百二十九批观测行：耗时 + 速率 docs/s（旧 JSON 无新字段时不渲染）；
-   margin-top 2px 收编 --sp-0 半档（五百三十一批 --sp 裸值收编） */
+/* 观测行：耗时 + 速率 docs/s（旧 JSON 无新字段时不渲染）；
+   margin-top 2px 收编 --sp-0 半档（ --sp 裸值收编） */
 .xm-p-obs { font-size: var(--fs-2xs); color: var(--tx2); margin-top: var(--sp-0); display: flex; gap: var(--sp-1); }
 /* 失败切片红 chip（sliceErrors 有值的切片）：进度列一眼锁定失败现场，不必展开 */
 .xm-sfails { display: flex; flex-wrap: wrap; gap: var(--sp-1); margin-top: 3px; }
 .xm-sfail { border-color: var(--err-line); color: var(--err); font-size: var(--fs-2xs); }
-/* 五百二十四批 W1：作业表工具行（kw 过滤宿主侧保留；排序/Σ/列管理随壳归内核） */
+/*  W1：作业表工具行（kw 过滤宿主侧保留；排序/Σ/列管理随壳归内核） */
 .xm-jobs-tools { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4) 0; flex-wrap: wrap; }
-/* 五百四十七批：width:240px → min(240px,100%) 极窄溢出钳制（529 responsive 带兜底范式，
+/* width:240px → min(240px,100%) 极窄溢出钳制（529 responsive 带兜底范式，
    AnalysisSettingsView:366 min(320px,100%) 同款；900 档 100% 独占行不变。
-   五百六十批换装 SFB 后类锚随 input-class 留在 input 上） */
+   换装 SFB 后类锚随 input-class 留在 input 上） */
 .xm-jobs-kw { width: min(240px, 100%); }
-/* 五百六十批：SFB 胶囊壳落位宽（TasksView tv-kw-wrap 判例；box-sizing 含壳边框） */
+/* SFB 胶囊壳落位宽（TasksView tv-kw-wrap 判例；box-sizing 含壳边框） */
 .xm-jobs-kw-wrap { width: min(240px, 100%); box-sizing: border-box; }
 .xm-jobs-hit { font-size: var(--fs-xs); }
 /* G3-C2：§9.3 标准断点——双栏（表单/配置预览）堆叠为单栏 */
 @media (max-width: 1100px) {
   .xm-form, .xm-cfg-grid { grid-template-columns: 1fr; }
 }
-/* 五百二十八批：900 紧凑微调档（§9.3 口径：局部紧凑微调一律 900）——连接/源选择/表单行
+/* 900 紧凑微调档（§9.3 口径：局部紧凑微调一律 900）——连接/源选择/表单行
    窄视口允许换行不硬挤；作业表工具行 kw 输入独占一行（.xm-jobs-tools 已 wrap）。
-   五百三十一批查漏补齐：启动行动作行允许换行（红字+按钮不硬挤）、快捷清单侧距收窄 */
+   查漏补齐：启动行动作行允许换行（红字+按钮不硬挤）、快捷清单侧距收窄 */
 @media (max-width: 900px) {
   .xm-paste, .xm-src-pick, .xm-f-row { flex-wrap: wrap; }
   .xm-jobs-kw { width: 100%; }

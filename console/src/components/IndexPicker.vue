@@ -27,7 +27,7 @@
 
     <Teleport :to="teleportTo" :disabled="inplace">
       <!-- 弹层默认 Teleport 在 body 下：mousedown 需 .stop，否则 document 层 onDocDown 会先关面板导致 click 选项丢失。
-           :to="false" 时 Teleport disabled → 就地渲染在 .ixp 根内（嵌 naive popover 场景：弹层与 popover 同子树，
+           to="false" 时 Teleport disabled → 就地渲染在 .ixp 根内（嵌 naive popover 场景：弹层与 popover 同子树，
            clickoutside 不再误判关 popover 导致 click 丢失） -->
       <transition name="pop">
         <div v-if="open" class="ixp-pop float-pop" :class="{ inplace }" :style="popStyle" @mousedown.prevent.stop>
@@ -72,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-/* R42-e §8.5：统一索引选择器——全站禁止裸 index input。
+/* -e §8.5：统一索引选择器——全站禁止裸 index input。
    自动补全集群真实索引+别名、与全局选中(pickedIdx)联动、键盘导航、docs/size 元信息。 */
 import { ref, computed, watch } from 'vue';
 import { Database, X, MousePointerClick } from 'lucide-vue-next';
@@ -204,7 +204,7 @@ watch(() => store.target, () => { close(); });
 .ixp-x { display: inline-flex; border: none; background: none; color: var(--muted); cursor: pointer; padding: 1px; border-radius: var(--r-xs); }
 .ixp-x:hover { color: inherit; background: var(--hover); }
 
-/* 五百二十四批：壳属性（fixed/--z-island/bg/border/shadow/圆角）收编 theme.css .float-pop，本类只留坐标外裁切与字号 */
+/* 壳属性（fixed/--z-island/bg/border/shadow/圆角）收编 theme.css .float-pop，本类只留坐标外裁切与字号 */
 .ixp-pop { overflow: hidden; font-size: var(--fs-sm); }
 /* 就地模式：absolute 随 .ixp 根（position:relative）定位；渲染在 popover 子树内天然随父 stacking context，无需 9000 z-index */
 .ixp-pop.inplace { position: absolute; top: 100%; left: 0; min-width: 100%; z-index: 10; }

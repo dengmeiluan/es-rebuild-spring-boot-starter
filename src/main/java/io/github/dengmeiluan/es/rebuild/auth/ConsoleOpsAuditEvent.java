@@ -1,7 +1,7 @@
 package io.github.dengmeiluan.es.rebuild.auth;
 
 /**
- * 控制台操作审计——审计记录唯一类型（五百五十五批，不留余地的类型化改造）：
+ * 控制台操作审计——审计记录唯一类型（，不留余地的类型化改造）：
  * 写入路径（record）与查询路径（search 出参）同构，旧「ES 响应 Map 形态即 SPI 契约」的
  * 泄漏在本批清除——存储实现不再把 {@code hits.hits[]._source} 包装当返回值，线缆形态
  * 由 {@code ConsoleAuthController} 单点组装为 {@code records:[...]}。

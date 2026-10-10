@@ -17,13 +17,13 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 多集群连接存储（R36）：把「自定义 ES 连接串」持久化到<b>控制集群</b>内部索引
+ * 多集群连接存储（）：把「自定义 ES 连接串」持久化到<b>控制集群</b>内部索引
  * {@code es_console_conn}，密码只在服务端流转——列表/详情接口一律脱敏，前端永远拿不到明文。
  *
  * <p>与 {@link RemoteClusterConn}（xmigrate 一次性连接，用完即弃）互补：本店保存的是
  * <b>可反复切换的目标集群档案</b>，供 {@link EsClientRouter} 按 connId 建立长连接。
- * R37 起 client 经 {@code Supplier} 懒解析（控制集群可能在 Setup 绑定后才就绪）。
- * R63 起为 {@link ConnStore} SPI 的默认档（嵌入宿主时可切 {@link JdbcConnStore}）。</p>
+ *  起 client 经 {@code Supplier} 懒解析（控制集群可能在 Setup 绑定后才就绪）。
+ *  起为 {@link ConnStore} SPI 的默认档（嵌入宿主时可切 {@link JdbcConnStore}）。</p>
  *
  * @author aicoding
  */
@@ -108,7 +108,7 @@ public class EsConnStore implements ConnStore {
         return src == null ? null : str(src.get("name"));
     }
 
-    /** R40：档案里的服务端版本（探活回写）；未探到/不存在返回 null，调用方按 7.x 默认。 */
+    /** 档案里的服务端版本（探活回写）；未探到/不存在返回 null，调用方按 7.x 默认。 */
     @Override
     public String getVersion(String id) {
         Map<String, Object> src = getSource(id);
@@ -123,10 +123,10 @@ public class EsConnStore implements ConnStore {
      * @param url              连接串 {@code http(s)://[user:pass@]host[:port]}（必填）
      * @param username         独立传的用户名（优先于 url 内嵌）
      * @param password         独立传的密码；<b>编辑时留空 = 保留旧密码</b>
-     * @param minRole          访问本连接的最低角色（R38）；空 = VIEWER
-     * @param connectTimeoutMs 独立连接超时（R38）；null = 用全局默认
-     * @param socketTimeoutMs  独立读超时（R38）；null = 用全局默认
-     * @param env              环境标识（R46）：PROD/STAGING/QA/DEV；空 = 未标注。纯展示字段，
+     * @param minRole          访问本连接的最低角色（）；空 = VIEWER
+     * @param connectTimeoutMs 独立连接超时（）；null = 用全局默认
+     * @param socketTimeoutMs  独立读超时（）；null = 用全局默认
+     * @param env              环境标识（）：PROD/STAGING/QA/DEV；空 = 未标注。纯展示字段，
      *                         前端据此给切换器/顶栏着色警示（生产红色）；不影响连接指纹与长连接重建
      * @return 脱敏视图
      */
@@ -201,16 +201,16 @@ public class EsConnStore implements ConnStore {
             pw = str(old.get("password"));
         }
         doc.put("password", pw);
-        // R38：minRole 空串视为未设置（= VIEWER），统一存大写档位便于前端直显
+        // minRole 空串视为未设置（= VIEWER），统一存大写档位便于前端直显
         doc.put("minRole", minRole == null || minRole.trim().isEmpty() ? null : minRole.trim().toUpperCase());
         doc.put("connectTimeoutMs", connectTimeoutMs);
         doc.put("socketTimeoutMs", socketTimeoutMs);
-        // R46：环境标识空串视为未标注，统一存大写便于前端直显着色
+        // 环境标识空串视为未标注，统一存大写便于前端直显着色
         doc.put("env", env == null || env.trim().isEmpty() ? null : env.trim().toUpperCase());
         // 连接中心自动同步批·API Key 认证：authType 空缺归一 BASIC；API_KEY 时 password 位承载 ApiKey
         doc.put("authType", authType == null || authType.trim().isEmpty()
                 ? "BASIC" : authType.trim().toUpperCase(java.util.Locale.ROOT));
-        // R40：esVersion 由探活/测试连接回写，保存档案时沿用旧值（endpoint 变更后首轮探活自动刷新）
+        // esVersion 由探活/测试连接回写，保存档案时沿用旧值（endpoint 变更后首轮探活自动刷新）
         doc.put("esVersion", old != null ? old.get("esVersion") : null);
         // 连接中心同步域:保存沿用旧 syncState(手工编辑失联档案不清标记;引擎轮内显式恢复)
         doc.put("syncState", old != null ? old.get("syncState") : null);
@@ -233,7 +233,7 @@ public class EsConnStore implements ConnStore {
     }
 
     /**
-     * R40：回写服务端版本号（探活/测试连接成功后调）。与旧值相同则跳过；
+     * 回写服务端版本号（探活/测试连接成功后调）。与旧值相同则跳过；
      * 失败只记 debug——版本是增强信息，绝不影响探活主流程。
      * 注：用整篇 PUT _doc 而非 _update 端点——后者 6.x/7.x 路径形态不同，控制集群自身也要版本无关。
      */
@@ -253,8 +253,8 @@ public class EsConnStore implements ConnStore {
             controlClient.get().getLowLevelClient().performRequest(req);
             LOG.info("[EsConnStore] conn id={} esVersion -> {}", id.trim(), esVersion.trim());
         } catch (Exception e) {
-            /* 五百四十七批：debug→WARN——「探活到新版本但 ES 档案写不进」的低频真异常无痕
-               则版本不刷新无从排查；546 批只修了 JdbcConnStore 同名方法漏了 ES 店，本批补齐
+            /* debug→WARN——「探活到新版本但 ES 档案写不进」的低频真异常无痕
+               则版本不刷新无从排查；只修了 JdbcConnStore 同名方法漏了 ES 店，本批补齐
                同一句式。吞异常契约不变（版本是增强信息，绝不影响探活主流程） */
             LOG.warn("[EsConnStore] updateVersion failed id={}: {}", id, e.getMessage());
         }
@@ -340,11 +340,11 @@ public class EsConnStore implements ConnStore {
         v.put("username", src.get("username"));
         String pw = str(src.get("password"));
         v.put("hasPassword", pw != null && !pw.isEmpty());
-        // R38：minRole/超时非敏感，脱敏视图直接透出供列表展示与编辑回填
+        // minRole/超时非敏感，脱敏视图直接透出供列表展示与编辑回填
         v.put("minRole", src.get("minRole") == null ? "VIEWER" : src.get("minRole"));
-        // R40：服务端版本（探活回写），前端版本徽章 + 数据面能力门禁的数据源
+        // 服务端版本（探活回写），前端版本徽章 + 数据面能力门禁的数据源
         v.put("esVersion", src.get("esVersion"));
-        // R46：环境标识（纯展示），切换器/顶栏着色警示的数据源
+        // 环境标识（纯展示），切换器/顶栏着色警示的数据源
         v.put("env", src.get("env"));
         // 连接中心自动同步批：认证形态 BASIC/API_KEY（前端表单切换与探活链路凭据注入依据）
         v.put("authType", src.get("authType"));

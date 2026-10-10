@@ -5,9 +5,9 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 /**
- * 二百二十批：requiredRole 映射锚点——自助流水 {@code /auth/ops-audit/mine} 全角色可看（VIEWER），
+ * requiredRole 映射锚点——自助流水 {@code /auth/ops-audit/mine} 全角色可看（VIEWER），
  * 全量审计 {@code /auth/ops-audit} 保持 rank3（AUDIT_OP/CLUSTER_OP/REBUILD_OP/ADMIN），
- * 防自助通道把全量审计门槛拉低；顺手锚住用户点名的两档高危映射（删索引/用户管理）。
+ * 防自助通道把全量审计门槛拉低；顺手锚住点名的两档高危映射（删索引/用户管理）。
  */
 public class ConsoleAuthInterceptorRoleMapTest {
 
@@ -44,7 +44,7 @@ public class ConsoleAuthInterceptorRoleMapTest {
     }
 
     @Test
-    public void 五百五十八批_危险级重划_观测读降档与漏网写升档() {
+    public void 危险级重划_观测读降档与漏网写升档() {
         /* adhoc 的 GET（任务列表/就绪检查）是观测面：裸词 "/adhoc-rebuild" 退役后 VIEWER 可读 */
         assertEquals(ConsoleRole.VIEWER,
                 ConsoleAuthInterceptor.requiredRole("GET", "/internal/es/index/adhoc-rebuild/jobs"));
@@ -67,7 +67,7 @@ public class ConsoleAuthInterceptorRoleMapTest {
     }
 
     @Test
-    public void 五百七十四批_reindexAdvanced写端点升rank3() {
+    public void reindexAdvanced写端点升rank3() {
         /* reindex-advanced（@PostMapping cluster/reindex-advanced）是与 /rebuild 同族的重建写端点，
            原先落缺省 OPERATOR；升 rank3（该端点无 GET 形态，裸词不误伤观测面） */
         assertEquals(ConsoleRole.REBUILD_OP,

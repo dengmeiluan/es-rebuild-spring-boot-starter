@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * 离线从实体注解推导 mapping —— 对齐 spring-data-es「先 @Mapping 配置、否则注解推导」的次序。
  *
- * <p><b>承重点</b>：必须**不依赖 ElasticsearchOperations**（R37/R38「宿主零 ES 依赖」是地基，
+ * <p><b>承重点</b>：必须**不依赖 ElasticsearchOperations**（/「宿主零 ES 依赖」是地基，
  * 无 ES Bean 的宿主连启动都不能被拖累）。本测试全程只有裸 ApplicationContext，
  * 一旦实现偷偷去要 ops，这里会直接失败。</p>
  */

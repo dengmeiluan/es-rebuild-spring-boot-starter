@@ -6,7 +6,7 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * 宿主角色 → 控制台角色映射（R38 配置式鉴权配套）。
+ * 宿主角色 → 控制台角色映射（ 配置式鉴权配套）。
  *
  * <p>配置形如 {@code role-mapping.ADMIN=admin,superuser}（console 角色 → 宿主角色逗号串），
  * 构造时倒排成「宿主角色(小写) → ConsoleRole」查找表；{@link #map} 对用户的全部宿主角色

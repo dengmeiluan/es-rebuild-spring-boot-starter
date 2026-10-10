@@ -26,11 +26,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 多集群连接管理端点（R36）：{@code /internal/es/index/clusters}。
+ * 多集群连接管理端点（）：{@code /internal/es/index/clusters}。
  *
  * <p>路径设计说明：挂在 {@code /internal/es/index/**} 下天然被控制台鉴权拦截器覆盖；
  * {@code clusters}（复数）刻意避开 {@link EsTargetInterceptor} 的 {@code /cluster/} 白名单——
- * 连接管理永远作用于宿主集群。GET 列表对 VIEWER 开放（脱敏无密码，R38 起按 minRole
+ * 连接管理永远作用于宿主集群。GET 列表对 VIEWER 开放（脱敏无密码， 起按 minRole
  * 过滤可见性 + 附 health 探活字段），探活为只读观测同样 VIEWER 可用（见
  * ConsoleAuthInterceptor 的 probe 豁免），保存/删除/连通性测试为 ADMIN（见高危清单 {@code /clusters/}）。</p>
  *
@@ -66,7 +66,7 @@ public class EsClusterConnController {
 
     /**
      * 连接列表（脱敏：无密码明文）——顶栏集群切换器数据源。
-     * R38：按当前登录角色过滤 minRole（看不见 = 切不了，集群级隔离的第一道门），
+     * 按当前登录角色过滤 minRole（看不见 = 切不了，集群级隔离的第一道门），
      * 并附最近一次探活结果 {@code health}（探活关闭时无此字段）。
      */
     @GetMapping
@@ -90,7 +90,7 @@ public class EsClusterConnController {
 
     /**
      * 保存连接（新建/编辑）。body: {id?, name, url, username?, password?, minRole?, connectTimeoutMs?, socketTimeoutMs?, env?}；
-     * 编辑时密码留空=保留旧密码；超时留空=用全局默认；env 为环境标识（PROD/STAGING/QA/DEV，R46 纯展示）。
+     * 编辑时密码留空=保留旧密码；超时留空=用全局默认；env 为环境标识（PROD/STAGING/QA/DEV， 纯展示）。
      */
     @PostMapping("save")
     public Map<String, Object> save(@RequestBody Map<String, Object> body) {
@@ -113,7 +113,7 @@ public class EsClusterConnController {
         if (prober == null) {
             r.put("status", "UNKNOWN");
             r.put("error", "探活已禁用（es.rebuild.console.conn-probe-enabled=false）");
-            /* 五百六十二批：补 code+endpoint（additive，:191 PROBE_FAILED 判例同口径）。
+            /* 补 code+endpoint（additive，:191 PROBE_FAILED 判例同口径）。
                裁决记档：error 字段保留 string 只 additive——前端 ConnHealth.error 契约是
                string|null，ClusterSwitcher.probeConn 直接渲染「探活失败：${h.error}」，
                改 boolean 信封会破前端展示，故既有键零改动 */
@@ -191,7 +191,7 @@ public class EsClusterConnController {
             Object ver = infoMap.get("version");
             Object verNum = ver instanceof Map ? ((Map<?, ?>) ver).get("number") : null;
             r.put("version", verNum);
-            // R40：测的是已存档案 → 顺带回写服务端版本（同值短路，失败静默）
+            // 测的是已存档案 → 顺带回写服务端版本（同值短路，失败静默）
             String testedId = body.get("id");
             if (verNum != null && testedId != null && !testedId.trim().isEmpty()) {
                 connStore.updateVersion(testedId.trim(), String.valueOf(verNum));
@@ -208,11 +208,11 @@ public class EsClusterConnController {
             }
         } catch (Exception e) {
             r.put("ok", false);
-            // 五百五十八批：与 advice 路径 {code,message} 双轨对齐——错误体补 code 键
+            // 与 advice 路径 {code,message} 双轨对齐——错误体补 code 键
             // （ok/message 既有键保留，前端消费零破坏）；message null 兜底改中文
             r.put("code", "PROBE_FAILED");
             r.put("message", e.getMessage() == null ? "连接探测失败(未知异常类型)" : e.getMessage());
-            // 五百六十一批：补 endpoint 键（additive）——与 advice 路径 EsErrorMapper.body 同口径
+            // 补 endpoint 键（additive）——与 advice 路径 EsErrorMapper.body 同口径
             // （method + " " + requestURI），失败端点一眼可定位；RequestContextHolder 取当前请求，
             // 非 web 线程/单测无上下文时宁缺勿炸不输出该键（endpointOf 空白口径同源）
             String endpoint = EsErrorMapper.endpointOf(currentRequest());

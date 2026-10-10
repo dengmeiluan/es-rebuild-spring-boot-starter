@@ -4,13 +4,13 @@
       <span class="ja-dot" :class="'ja-' + validity" :title="validity === 'ok' ? 'JSON 合法' : validity === 'bad' ? 'JSON 非法' : '空'" />
       <span v-if="validity === 'bad'" class="ja-err">{{ errMsg }}</span>
       <span style="flex:1" />
-      <!-- 540 批 W2：readonly 态格式化/压缩（编辑动作）隐藏、复制保留——缺省分支零改动，
+      <!--  W2：readonly 态格式化/压缩（编辑动作）隐藏、复制保留——缺省分支零改动，
            既有消费方（不传 readonly）渲染逐字节不变 -->
       <button v-if="!readonly" class="ja-btn" title="格式化（2 空格缩进）" @click="fmt"><WrapText :size="11" /> 格式化</button>
       <button v-if="!readonly" class="ja-btn" title="压缩为单行" @click="minify"><FoldVertical :size="11" /> 压缩</button>
       <button class="ja-btn" title="复制全文" @click="copy"><Copy :size="11" /> 复制</button>
     </div>
-    <!-- 第十批收尾：submit = MonacoEditor 既有 Ctrl+Enter（es-execute action）透传。
+    <!-- submit = MonacoEditor 既有 Ctrl+Enter（es-execute action）透传。
          纯新增 emit：不监听的既有消费方行为零变化（Ctrl+Enter 此前在 JsonArea 内即
          emit('execute') 无人接，透传后同样无人接）。 -->
     <MonacoEditor
@@ -43,25 +43,25 @@ const props = withDefaults(defineProps<{
   placeholder?: string;
   fill?: boolean;
   /* v3.0.1:透传 MonacoEditor dslAssist——DSL 编辑器统一字段智能补全(IndexHub 查询 tab 等),默认关不影响既有调用方
-     533 批:契约补 analyzers 可选字段(MonacoEditor.vue 同名契约此前分叉——Monaco 侧 524+1 已扩,
+     契约补 analyzers 可选字段(MonacoEditor.vue 同名契约此前分叉——Monaco 侧 524+1 已扩,
      本统一件漏跟),对象整体透传内层 Monaco,缺席=analyzer 值位通道关,15 处既有调用零改动
-     六百六十批:契约再补 terms 可选字段(533 同款对齐——Monaco 侧 658 已扩,值位动态候选
+     契约再补 terms 可选字段(533 同款对齐——Monaco 侧 658 已扩,值位动态候选
      top20 经整体透传直达内层 Monaco,缺席=零注册行为逐字节现状) */
   dslAssist?: { fields: () => { path: string; type: string }[]; bodyKind?: () => BodyKind; analyzers?: () => string[]; terms?: (field: string, prefix: string) => Promise<string[]> };
-  /* 540 批 W2：readonly 通道——薄透传内层 Monaco readOnly（MonacoEditor 契约既有，含运行时
+  /*  W2：readonly 通道——薄透传内层 Monaco readOnly（MonacoEditor 契约既有，含运行时
      watch 追随），缺省 false=既有行为逐字节不变、既有消费方零感知。readonly 态最小确定解：
      格式化/压缩（编辑动作）隐藏、复制保留；高度模型不动（rows 换算/fill 原样）——消费方要
      「随内容生长至封顶」用 rows=min(内容行数,封顶行数) 表达（纯内容函数，无 DOM 测量回路，
      Xmigrate 源配置预览即此消费形态） */
   readonly?: boolean;
-  /* 六百六十八批：字号薄透传——内层 Monaco 既有可选 prop（668 批同批补 watch 响应缺角），
+  /* 字号薄透传——内层 Monaco 既有可选 prop（同批补 watch 响应缺角），
      缺席=undefined 透传、内层 withDefaults 缺省档 12.5 承接，既有 21 处消费方零感知；
      IH 查询 tab 编辑器（ih.font）首消费 */
   fontSize?: number;
 }>(), { rows: 10, placeholder: '', fill: false, readonly: false });
 const emit = defineEmits<{
   (e: 'update:modelValue', v: string): void;
-  /* 第十批收尾：Ctrl+Enter 提交透传（来源 MonacoEditor 既有 execute action），可选监听零影响 */
+  /* Ctrl+Enter 提交透传（来源 MonacoEditor 既有 execute action），可选监听零影响 */
   (e: 'submit'): void;
 }>();
 const store = useAppStore();
@@ -87,12 +87,12 @@ async function copy() {
   store.notify(ok ? 'success' : 'error', ok ? '已复制' : '复制失败');
 }
 
-/* 第十批收尾：外部聚焦入口（粘贴导入弹窗打开即聚焦，替代原裸 textarea 的 autofocus）。
+/* 外部聚焦入口（粘贴导入弹窗打开即聚焦，替代原裸 textarea 的 autofocus）。
    MonacoEditor 已 expose getEditor，此处仅转发——未挂载/已销毁/测试 stub 无该能力时
    双可选链静默，不抛错。 */
 const meRef = ref<InstanceType<typeof MonacoEditor> | null>(null);
 function focus() { meRef.value?.getEditor?.()?.focus(); }
-/* 五百二十四批：setMarkers 透传——父面把 lint findings 注入内层 Monaco 划线
+/* setMarkers 透传——父面把 lint findings 注入内层 Monaco 划线
    （MonacoEditor 已 expose setMarkers，此前全站仅 DslQueryView 直挂 Monaco 消费；
    JsonArea 统一件包了内层 Monaco，父面拿不到实例，此处补同签名出口）。
    severity 结构类型与 MonacoEditor.setMarkers 泛型约束同形（info 由调用方降级 hint 后再喂，
@@ -101,7 +101,7 @@ type MarkerFinding = { message: string; suggestion: string; severity: 'warning' 
 function setMarkers(findings: MarkerFinding[]) {
   return meRef.value?.setMarkers?.(findings);
 }
-/* 五百六十批：getEditor 透传——父面拿内层 Monaco 实例（IndexHub Ctrl+I 补全接线等
+/* getEditor 透传——父面拿内层 Monaco 实例（IndexHub Ctrl+I 补全接线等
    useMonacoLocate/DevToolsView registerFormatKeybind 同通道；MonacoEditor :931 已 expose
    getEditor，此处仅转发）。全站多宿主（AR/IH/Doc）共用本组件，expose 纯增量：
    未挂载/已销毁/测试 stub 无该能力时双可选链静默，不抛错。 */

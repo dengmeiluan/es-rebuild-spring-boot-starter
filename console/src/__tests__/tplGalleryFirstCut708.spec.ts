@@ -1,15 +1,15 @@
 /**
- * 七百零八批：TemplateGallery 首刀=G39+G40「代码区可达+动线落点」
- * （R88 裁决表两 P2；G41 收藏卡面回显+G42 史志注释修正随刀）。
+ * ：TemplateGallery 首刀=G39+G40「代码区可达+动线落点」
+ * （ 裁决表两 P2；G41 收藏卡面回显+G42 史志注释修正随刀）。
  * - G39：卡片代码区 max-height:130px 截断 18/23 卡（最长 32 行仅可见 ~7 行，铁律 F）
  *   → 单卡双态展开钮（ChevronDown↔ChevronUp 双态同钮，铁律 C；aria-expanded+键盘可达），
  *   展开态 .tg-card.open 覆盖 max-height:none（紧凑默认 130px 零触，flattenWave551 锁不破）。
  * - G40：toQuery 落点受 QueryHub mode 记忆扰动（上次停留沙盒 tab 时 DSL 钮落地
- *   #/search?mode=sandbox，R88 读数实证；QueryHub:194 无 ?mode= 时吃 lastMode 记忆）
+ *   #/search?mode=sandbox， 读数实证；QueryHub:194 无 ?mode= 时吃 lastMode 记忆）
  *   → 显式 query { mode: 'dsl' } 落点钉死（深链 mode 优先于记忆；toSandbox 对称件范式）。
- * - G41：收藏写侧（六十九批 templateFav）上线后卡面无回显、无取消通道
+ * - G41：收藏写侧（ templateFav）上线后卡面无回显、无取消通道
  *   → Star 双态（aria-pressed+fill 态+再点取消 removeFavorite，收藏交互闭环）。
- * - G42：R42 §8.3 史志注释「关键词/分类进 URL」与实现不符（useScopedDraft=sessionStorage
+ * - G42： §8.3 史志注释「关键词/分类进 URL」与实现不符（useScopedDraft=sessionStorage
  *   草稿，无深链）→ 注释如实化。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -133,6 +133,6 @@ describe('G42：史志注释如实化（kw/cat 实为 sessionStorage 草稿，�
   it('源码锁：失实注释退役，如实注释在场', () => {
     const s = read('../views/TemplateGalleryView.vue');
     expect(s, '「进 URL」失实表述退役').not.toContain('关键词/分类进 URL');
-    expect(s, '如实注释放线（sessionStorage 草稿+无深链说明）').toMatch(/R42 §8\.3[\s\S]{0,120}sessionStorage/);
+    expect(s, '如实注释放线（sessionStorage 草稿+无深链说明）').toMatch(/ §8\.3[\s\S]{0,120}sessionStorage/);
   });
 });

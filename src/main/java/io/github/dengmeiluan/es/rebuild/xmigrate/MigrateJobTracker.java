@@ -17,17 +17,17 @@ public class MigrateJobTracker {
 
     private static final int MAX_MESSAGE_LEN = 1000;
 
-    /** 五百六十一批：save failed WARN 节流间隔（JwtVerifier lastParseWarnAt 同款范式）。 */
+    /** save failed WARN 节流间隔（JwtVerifier lastParseWarnAt 同款范式）。 */
     private static final long WARN_THROTTLE_MS = 60_000L;
 
-    /** 五百六十五批：进度心跳节流间隔（同 WARN_THROTTLE_MS 的 60s 档——日志侧回答「作业还活着吗」。 */
+    /** 进度心跳节流间隔（同 WARN_THROTTLE_MS 的 60s 档——日志侧回答「作业还活着吗」。 */
     private static final long HEARTBEAT_THROTTLE_MS = 60_000L;
 
-    /** 五百六十一批：save 失败节流——窗口开时间戳与窗口内累计数（追踪是旁路，存储持续故障时
+    /** save 失败节流——窗口开时间戳与窗口内累计数（追踪是旁路，存储持续故障时
      *  逐条全栈 WARN 会刷屏淹没业务日志：首条带栈留全量证据，窗口内仅累计，窗口尾汇总一条无栈）。 */
     private final AtomicLong lastSaveWarnAt = new AtomicLong(0);
     private final AtomicLong saveFailSinceWarn = new AtomicLong(0);
-    /** 五百六十五批：心跳窗口开时间戳（AtomicLong CAS 单写者，同 lastSaveWarnAt 范式）。 */
+    /** 心跳窗口开时间戳（AtomicLong CAS 单写者，同 lastSaveWarnAt 范式）。 */
     private final AtomicLong lastHeartbeatAt = new AtomicLong(0);
 
     /** 作业状态。 */
@@ -49,7 +49,7 @@ public class MigrateJobTracker {
         this.jobStore = jobStore;
     }
 
-    /** 持久化一份作业快照（创建 / 进度刷新 / 终态都走这里）。失败仅告警（五百六十一批起节流）。 */
+    /** 持久化一份作业快照（创建 / 进度刷新 / 终态都走这里）。失败仅告警（起节流）。 */
     public void save(MigrateJobES job) {
         heartbeat(job);
         try {
@@ -57,7 +57,7 @@ public class MigrateJobTracker {
             job.setUpdateTime(System.currentTimeMillis());
             jobStore.save(job);
         } catch (Exception e) {
-            /* 五百六十一批：WARN 60s 节流（AtomicLong，范式=560 批 JwtVerifier lastParseWarnAt）——
+            /* WARN 60s 节流（AtomicLong，范式= JwtVerifier lastParseWarnAt）——
                迁移进度刷新是高频路径，存储持续故障时逐条全栈 WARN 刷屏。首条带全栈（告警职责
                保留）；窗口内仅累计；窗口尾（下一窗口首败）先汇总上一窗累计 xN 一条无栈再落本窗
                首条。节流只动日志，save 契约（吞异常、不反噬主逻辑）不变。 */
@@ -118,7 +118,7 @@ public class MigrateJobTracker {
     }
 
     /**
-     * 五百六十五批：RUNNING 作业的<b>周期心跳日志</b>（观测缺口收口，纯日志零契约）。
+     * RUNNING 作业的<b>周期心跳日志</b>（观测缺口收口，纯日志零契约）。
      *
      * <p>迁移进度此前只落存储不留服务端日志——长作业（小时级 slice 搬运）在控制台日志里
      * 全程静默，排障时无法从日志侧回答「作业还活着吗、搬到哪了」。{@code save} 是进度刷新

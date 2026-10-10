@@ -38,7 +38,7 @@ public class ClusterMetricsCollectorTest {
             + "\"number_of_data_nodes\":3,\"active_shards\":897,\"active_primary_shards\":449,"
             + "\"unassigned_shards\":0}";
 
-    /** R31 端到端自洽罐头：期望节点数=1 与单节点 stats 罐头一致——不触发失联告警，
+    /**  端到端自洽罐头：期望节点数=1 与单节点 stats 罐头一致——不触发失联告警，
         让既有端到端测试继续隔离 heap/rejected 语义（失联规则由专属测试覆盖）。 */
     private static final String HEALTH_SINGLE_JSON = "{\"status\":\"green\",\"number_of_nodes\":1,"
             + "\"number_of_data_nodes\":1,\"active_shards\":897,\"active_primary_shards\":449,"
@@ -95,8 +95,8 @@ public class ClusterMetricsCollectorTest {
             + "\"indices\":{\"docs\":{\"count\":1000},\"search\":{\"query_total\":160},"
             + "\"indexing\":{\"index_total\":80}}}}}";
 
-    /** R29 即时值罐头：Load_1m=1.98 + 查询线程池 active=2/queue=0。 */
-    private static final String STATS_R29_INSTANT_JSON = "{\"nodes\":{\"n1\":{\"name\":\"node-1\","
+    /**  即时值罐头：Load_1m=1.98 + 查询线程池 active=2/queue=0。 */
+    private static final String STATS__INSTANT_JSON = "{\"nodes\":{\"n1\":{\"name\":\"node-1\","
             + "\"jvm\":{\"mem\":{\"heap_used_percent\":36}},\"os\":{\"cpu\":{\"percent\":3,"
             + "\"load_average\":{\"1m\":1.98,\"5m\":1.4,\"15m\":1.1}}},"
             + "\"thread_pool\":{\"search\":{\"active\":2,\"queue\":0,\"rejected\":0},"
@@ -105,7 +105,7 @@ public class ClusterMetricsCollectorTest {
             + "\"fielddata\":{\"memory_size_in_bytes\":4194304}},"
             + "\"fs\":{\"total\":{\"total_in_bytes\":252000000000,\"free_in_bytes\":49000000000}}}}}";
 
-    /** R29 磁盘 IO 差分罐头（低，R34 校准为 7.10 实测字段/标度）：read_kilobytes=1000、write_kilobytes=2000、
+    /**  磁盘 IO 差分罐头（低， 校准为 7.10 实测字段/标度）：read_kilobytes=1000、write_kilobytes=2000、
      * read_operations=10、write_operations=20。 */
     private static final String STATS_IO_LOW_JSON = "{\"nodes\":{\"n1\":{\"name\":\"node-1\","
             + "\"jvm\":{\"mem\":{\"heap_used_percent\":36}},\"os\":{\"cpu\":{\"percent\":3}},"
@@ -113,7 +113,7 @@ public class ClusterMetricsCollectorTest {
             + "\"io_stats\":{\"total\":{\"read_kilobytes\":1000,\"write_kilobytes\":2000,"
             + "\"read_operations\":10,\"write_operations\":20,\"io_time_in_millis\":1000}}}}}}";
 
-    /** R29 磁盘 IO 差分罐头（高）：Δread_kilobytes=600（→10.0 KiB/s@60s）、Δwrite_kilobytes=300（→5.0）、
+    /**  磁盘 IO 差分罐头（高）：Δread_kilobytes=600（→10.0 KiB/s@60s）、Δwrite_kilobytes=300（→5.0）、
      * Δread_operations=60（→1.0 次/秒）、Δwrite_operations=90（→1.5）。 */
     private static final String STATS_IO_HIGH_JSON = "{\"nodes\":{\"n1\":{\"name\":\"node-1\","
             + "\"jvm\":{\"mem\":{\"heap_used_percent\":36}},\"os\":{\"cpu\":{\"percent\":3}},"
@@ -121,26 +121,26 @@ public class ClusterMetricsCollectorTest {
             + "\"io_stats\":{\"total\":{\"read_kilobytes\":1600,\"write_kilobytes\":2300,"
             + "\"read_operations\":70,\"write_operations\":110,\"io_time_in_millis\":2500}}}}}}";
 
-    /** R42 索引 stats 罐头（低基线轮）：idx_a qps 计数 100/idx_b 写入计数 50。 */
+    /**  索引 stats 罐头（低基线轮）：idx_a qps 计数 100/idx_b 写入计数 50。 */
     private static final String IDX_STATS_LOW_JSON = "{\"indices\":{"
             + "\"idx_a\":{\"total\":{\"search\":{\"query_total\":100},\"indexing\":{\"index_total\":10}},"
             + "\"primaries\":{\"store\":{\"size_in_bytes\":104857600}}},"
             + "\"idx_b\":{\"total\":{\"search\":{\"query_total\":10},\"indexing\":{\"index_total\":50}},"
             + "\"primaries\":{\"store\":{\"size_in_bytes\":209715200}}}}}";
 
-    /** R42 索引 stats 罐头（高基线轮）：idx_a Δquery=600（→10.0/s@60s）、idx_b Δindex=300（→5.0/s）。 */
+    /**  索引 stats 罐头（高基线轮）：idx_a Δquery=600（→10.0/s@60s）、idx_b Δindex=300（→5.0/s）。 */
     private static final String IDX_STATS_HIGH_JSON = "{\"indices\":{"
             + "\"idx_a\":{\"total\":{\"search\":{\"query_total\":700},\"indexing\":{\"index_total\":10}},"
             + "\"primaries\":{\"store\":{\"size_in_bytes\":104857600}}},"
             + "\"idx_b\":{\"total\":{\"search\":{\"query_total\":10},\"indexing\":{\"index_total\":350}},"
             + "\"primaries\":{\"store\":{\"size_in_bytes\":209715200}}}}}";
 
-    /** R32 传输吞吐差分罐头（低）：transport rx=10240000、tx=20480000。 */
+    /**  传输吞吐差分罐头（低）：transport rx=10240000、tx=20480000。 */
     private static final String STATS_NET_LOW_JSON = "{\"nodes\":{\"n1\":{\"name\":\"node-1\","
             + "\"jvm\":{\"mem\":{\"heap_used_percent\":36}},\"os\":{\"cpu\":{\"percent\":3}},"
             + "\"transport\":{\"rx_size_in_bytes\":10240000,\"tx_size_in_bytes\":20480000}}}}";
 
-    /** R32 传输吞吐差分罐头（高）：Δrx=614400（→10.0 KiB/s@60s）、Δtx=307200（→5.0）。 */
+    /**  传输吞吐差分罐头（高）：Δrx=614400（→10.0 KiB/s@60s）、Δtx=307200（→5.0）。 */
     private static final String STATS_NET_HIGH_JSON = "{\"nodes\":{\"n1\":{\"name\":\"node-1\","
             + "\"jvm\":{\"mem\":{\"heap_used_percent\":36}},\"os\":{\"cpu\":{\"percent\":3}},"
             + "\"transport\":{\"rx_size_in_bytes\":10854400,\"tx_size_in_bytes\":20787200}}}}";
@@ -215,9 +215,9 @@ public class ClusterMetricsCollectorTest {
         assertEquals(3L, doc.get("nodes"));
         assertEquals(3L, doc.get("dataNodes"));
         assertEquals(897L, doc.get("shards"));
-        assertEquals("R31 主分片数=health.active_primary_shards", 449L, doc.get("primaryShards"));
+        assertEquals("主分片数=health.active_primary_shards", 449L, doc.get("primaryShards"));
         assertEquals(0L, doc.get("unassigned"));
-        assertEquals("R31 失联节点数=期望 3−实到 1", 2L, doc.get("nodesMissing"));
+        assertEquals("失联节点数=期望 3−实到 1", 2L, doc.get("nodesMissing"));
         assertEquals("cluster 级 heap=节点均值", 36.0, (Double) doc.get("heapUsedPct"), 0.0001);
         assertEquals(3.0, (Double) doc.get("cpuPct"), 0.0001);
         assertEquals("磁盘占用=(252e9-49e9)/252e9×100", 80.5555, (Double) doc.get("diskUsedPct"), 0.001);
@@ -388,7 +388,7 @@ public class ClusterMetricsCollectorTest {
                 && bodies.get(0).contains("\"kind\":\"metrics\"") && bodies.get(0).contains("\"connId\":\"c1\""));
         assertTrue("后两条=node docs", bodies.get(1).contains("\"nodeName\":\"node-1\"")
                 && bodies.get(2).contains("\"nodeName\":\"node-2\""));
-        /* 第二轮：同日索引已 ensure，只追加 3 条 doc */
+        /* 同日索引已 ensure，只追加 3 条 doc */
         collector.collectOnce();
         assertEquals("同日不再重复建索引", 1, puts.size());
         assertEquals(6, posts.size());
@@ -764,7 +764,7 @@ public class ClusterMetricsCollectorTest {
                 Boolean.TRUE, rec.get("recovered"));
     }
 
-    /** R33 G6 端到端：SLM 差分基线两轮——首轮建基线无告警，次轮新增失败 → cluster doc 带快照字段+slm WARN doc。 */
+    /**  G6 端到端：SLM 差分基线两轮——首轮建基线无告警，次轮新增失败 → cluster doc 带快照字段+slm WARN doc。 */
     @Test
     public void collectOnce_SLM快照_差分与告警() throws Exception {
         List<String> bodies = new CopyOnWriteArrayList<>();
@@ -838,33 +838,33 @@ public class ClusterMetricsCollectorTest {
         assertEquals(1, docs.size());
         assertEquals("基线 100→160、Δt=60s → gcYoungPerMin=60", 60L, docs.get(0).get("gcYoungPerMin"));
         assertEquals("基线 20→25、Δt=60s → gcOldPerMin=5", 5L, docs.get(0).get("gcOldPerMin"));
-        /* R62 对标阿里云「节点 Young/Old GC 耗时(ms)」：Δtime÷Δcount=每次平均耗时 */
+        /*  对标阿里云「节点 Young/Old GC 耗时(ms)」：Δtime÷Δcount=每次平均耗时 */
         assertEquals("Δ3000ms÷Δ60 次=50ms/次 Young GC 耗时", 50L, docs.get(0).get("gcYoungTimeMs"));
         assertEquals("Δ1500ms÷Δ5 次=300ms/次 Old GC 耗时", 300L, docs.get(0).get("gcOldTimeMs"));
-        /* R65 对标阿里云「节点 Old 区使用(B)」锯齿形态：heap_used_in_bytes→MB（一位小数） */
+        /*  对标阿里云「节点 Old 区使用(B)」锯齿形态：heap_used_in_bytes→MB（一位小数） */
         assertEquals("654311424B÷1048576=624.0MB", 624.0, (Double) docs.get(0).get("heapUsedMb"), 0.0001);
     }
 
     @Test
-    public void buildNodeDocs_R29即时值_load与线程池() throws Exception {
+    public void buildNodeDocs_即时值_load与线程池() throws Exception {
         Map<String, Object> doc = ClusterMetricsCollector.buildNodeDocs(
-                conn("c1", "腾讯云QA", "QA"), json(STATS_R29_INSTANT_JSON), 1000L, null).get(0);
+                conn("c1", "腾讯云QA", "QA"), json(STATS__INSTANT_JSON), 1000L, null).get(0);
         assertEquals("os.cpu.load_average 的 1m 档", 1.98, (Double) doc.get("load1m"), 0.0001);
         assertEquals("查询线程池活跃数（即时）", 2L, doc.get("tpSearchActive"));
         assertEquals("查询线程池排队数（即时）", 0L, doc.get("tpSearchQueue"));
-        /* R62 对标阿里云线程池 Rows（写入侧）+被标记删除文档：测点型即时值 */
+        /*  对标阿里云线程池 Rows（写入侧）+被标记删除文档：测点型即时值 */
         assertEquals("写入线程池活跃数（即时）", 1L, doc.get("tpWriteActive"));
         assertEquals("写入线程池排队数（即时）", 4L, doc.get("tpWriteQueue"));
         assertEquals("被标记删除未清理文档数（测点）", 340000L, doc.get("docsDeleted"));
-        /* R72 对标阿里云 JVM 组「fielddata 内存使用」：fielddata.memory_size_in_bytes→MB（查询抖动经典根因观测） */
+        /*  对标阿里云 JVM 组「fielddata 内存使用」：fielddata.memory_size_in_bytes→MB（查询抖动经典根因观测） */
         assertEquals("fielddata 4194304B÷1048576=4.0MB", 4.0, (Double) doc.get("fielddataMb"), 0.0001);
-        /* R29 差分字段与 GC 字段同口径：首轮无基线时缺省 */
+        /*  差分字段与 GC 字段同口径：首轮无基线时缺省 */
         assertFalse(doc.containsKey("diskReadKbS"));
         assertFalse(doc.containsKey("diskWriteIops"));
     }
 
     @Test
-    public void buildNodeDocs_R29磁盘IO差分_带宽与IOPS() throws Exception {
+    public void buildNodeDocs_磁盘IO差分_带宽与IOPS() throws Exception {
         ClusterMetricsCollector.GcBaseline last =
                 ClusterMetricsCollector.nextGcBaseline(json(STATS_IO_LOW_JSON), 0L);
         List<Map<String, Object>> docs = ClusterMetricsCollector.buildNodeDocs(
@@ -875,12 +875,12 @@ public class ClusterMetricsCollectorTest {
         assertEquals("Δ307200B÷60s÷1024=5.0 KiB/s", 5.0, (Double) doc.get("diskWriteKbS"), 0.0001);
         assertEquals("Δ60 ops÷60s=1.0 次/秒", 1.0, (Double) doc.get("diskReadIops"), 0.0001);
         assertEquals("Δ90 ops÷60s=1.5 次/秒", 1.5, (Double) doc.get("diskWriteIops"), 0.0001);
-        /* R62 对标阿里云 IOUtil(%)：Δio_time_in_millis÷Δt×100=1500/60000×100=2.5% */
+        /*  对标阿里云 IOUtil(%)：Δio_time_in_millis÷Δt×100=1500/60000×100=2.5% */
         assertEquals("Δ1500ms÷60s×100=2.5% IOUtil", 2.5, (Double) doc.get("ioUtilPct"), 0.0001);
     }
 
     @Test
-    public void buildTopIndexes_差分与Top选取_R42() throws Exception {
+    public void buildTopIndexes_差分与Top选取_() throws Exception {
         ClusterMetricsCollector.IndexBaseline prev =
                 ClusterMetricsCollector.nextIndexCounters(json(IDX_STATS_LOW_JSON), 0L);
         List<Map<String, Object>> top = ClusterMetricsCollector.buildTopIndexes(
@@ -909,7 +909,7 @@ public class ClusterMetricsCollectorTest {
 
     @Test
     public void kbPerSec_opsPerSec_load1mOf_差分口径() throws Exception {
-        assertEquals("R34 kilobytes 已是 KiB：Δ600KB÷60s=10.0 KiB/s",
+        assertEquals("kilobytes 已是 KiB：Δ600KB÷60s=10.0 KiB/s",
                 10.0, ClusterMetricsCollector.opsPerSec(1_600L, 1_000L, 60_000L), 0.0001);
         assertNull("首轮无前值省略", ClusterMetricsCollector.opsPerSec(1_600L, null, 60_000L));
         assertNull("计数回退省略", ClusterMetricsCollector.opsPerSec(500L, 1_000L, 60_000L));
@@ -923,7 +923,7 @@ public class ClusterMetricsCollectorTest {
     }
 
     @Test
-    public void buildNodeDocs_R32传输吞吐差分_rxTx() throws Exception {
+    public void buildNodeDocs_传输吞吐差分_rxTx() throws Exception {
         ClusterMetricsCollector.GcBaseline last =
                 ClusterMetricsCollector.nextGcBaseline(json(STATS_NET_LOW_JSON), 0L);
         List<Map<String, Object>> docs = ClusterMetricsCollector.buildNodeDocs(
@@ -1003,13 +1003,13 @@ public class ClusterMetricsCollectorTest {
     }
 
     @Test
-    public void nodesStatsRequest_filterPath含R29新增字段() throws Exception {
+    public void nodesStatsRequest_filterPath含新增字段() throws Exception {
         org.elasticsearch.client.Request req = ClusterMetricsCollector.nodesStatsRequest();
         String fp = req.getParameters().get("filter_path");
-        assertTrue("R29 Load_1m 源字段", fp.contains("nodes.*.os.cpu.load_average"));
-        assertTrue("R29 磁盘 IO 计数（R34 校准 7.10 实测字段）", fp.contains("nodes.*.fs.io_stats.total.read_kilobytes"));
+        assertTrue("Load_1m 源字段", fp.contains("nodes.*.os.cpu.load_average"));
+        assertTrue("磁盘 IO 计数（ 校准 7.10 实测字段）", fp.contains("nodes.*.fs.io_stats.total.read_kilobytes"));
         assertTrue(fp.contains("nodes.*.fs.io_stats.total.write_operations"));
-        assertTrue("R29 线程池即时值", fp.contains("nodes.*.thread_pool.search.active"));
+        assertTrue("线程池即时值", fp.contains("nodes.*.thread_pool.search.active"));
         assertTrue(fp.contains("nodes.*.thread_pool.search.queue"));
         /* R8/R9 既有字段不回退 */
         assertTrue(fp.contains("nodes.*.jvm.gc.collectors.young.collection_count"));

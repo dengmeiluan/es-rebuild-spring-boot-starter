@@ -1,5 +1,5 @@
 <template>
-  <!-- 第十批：全站「自动刷新间隔下拉」统一件——原 6 处原生 select 各自漂移
+  <!-- 全站「自动刷新间隔下拉」统一件——原 6 处原生 select 各自漂移
        （内联样式/scoped 类/档位不一），收编为一个紧凑控件。保持原生 select 语义，
        控件底子挂全局 .ipt，档位/文案由 ms 值生成，双向 v-model:ms（number） -->
   <select v-model="ms" class="ipt arf-sel" :title="label" :aria-label="label" :disabled="disabled">
@@ -8,11 +8,11 @@
 </template>
 
 <script setup lang="ts">
-/* 第十批：自动刷新间隔下拉统一件。
+/* 自动刷新间隔下拉统一件。
    - ms：当前间隔毫秒（v-model:ms，number；0=关，档位表是否含 0 由调用方 sizes 决定）
    - sizes：档位表，默认 [0, 10000, 30000, 60000]（关/10s/30s/60s）
    - label：title 与 aria-label 提示文本，默认「自动刷新」
-   - disabled：禁用档（六百八十四批挂墙模式——轮询恒定期控件禁用不禁藏；纯增量 prop，既有消费方零感知） */
+   - disabled：禁用档（挂墙模式——轮询恒定期控件禁用不禁藏；纯增量 prop，既有消费方零感知） */
 withDefaults(defineProps<{
   sizes?: number[];
   label?: string;
@@ -29,7 +29,7 @@ function labelOf(s: number): string {
 </script>
 
 <style scoped>
-/* 第十批：紧凑档统一基准——宽 ~90px、高 25px（对齐全站工具行 .btn.sm 基准）；
+/* 紧凑档统一基准——宽 ~90px、高 25px（对齐全站工具行 .btn.sm 基准）；
    .ipt 全局类带 width:100%/padding 6px 10px，这里收窄为工具行控件形态（scoped 提级覆盖） */
 .arf-sel { width: 90px; height: 25px; padding: var(--sp-0) var(--sp-1h); font-size: var(--fs-sm); box-sizing: border-box; }
 </style>

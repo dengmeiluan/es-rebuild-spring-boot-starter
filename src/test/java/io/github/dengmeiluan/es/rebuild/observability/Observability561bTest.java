@@ -43,7 +43,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百六十一批轨5【Java 可观测六件】（Observability560/558 范式：Logback ListAppender
+ * 轨5【Java 可观测六件】（Observability560/558 范式：Logback ListAppender
  * 直挂 logger 断言事件；JwtVerifier/MappingDeltaCalculator lastXxxAt AtomicLong 节流范式）。
  * ⚠ 命名记档：{@code Observability561Test} 已被并行在途工作占用（untracked，legacyBulkNdjson
  * 等 debug 三件），本文件另起 561b 简名共存于同包——互不触碰。

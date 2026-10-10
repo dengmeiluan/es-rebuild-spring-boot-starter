@@ -9,7 +9,7 @@ package io.github.dengmeiluan.es.rebuild.spi;
  * <p>这样核心编排件（registry / service）只依赖本抽象，不反向依赖具体业务 service，
  * 新增索引 = 新增一个实现类，registry 一行不改（满足开闭原则与依赖倒置）。</p>
  *
- * <p>R93 阶段⑤起本接口语义收窄为业务侧<b>声明受管索引</b>，而非<b>提供重建能力</b>——
+ * <p> 阶段⑤起本接口语义收窄为业务侧<b>声明受管索引</b>，而非<b>提供重建能力</b>——
  * 重建执行已迁往 宿主侧，业务应用不再背控制台。{@code fullReload()} 与
  * {@code PhysicalDeletionAware} / {@code IncrementalReplayable} 两个能力接口
  * 已随 SPI 重建路径一并退役（阶段④真实演练通过后执行）。</p>

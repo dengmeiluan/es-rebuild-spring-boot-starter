@@ -9,7 +9,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
- * R93-67：{@code ensureIndex()} 的成败必须是一个<b>可读取的返回值</b>，
+ * -67：{@code ensureIndex()} 的成败必须是一个<b>可读取的返回值</b>，
  * 而不是「有没有抛异常」这个控制流信号。
  *
  * <p><b>实测抓到的假成功</b>（6.7.2 演练日志，相邻两行）：</p>

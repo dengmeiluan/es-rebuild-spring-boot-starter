@@ -1,5 +1,5 @@
-<!-- 五百六十一批：RT/QRT 双内核「refreshable 刷新钮」同构段收编片段组件（546 批 W3 QRT /
-     547 批 RT 撤销 G2 记档，单根 button 无 fragment 规避 T39）。类名经 btnCls prop 注入；
+<!-- RT/QRT 双内核「refreshable 刷新钮」同构段收编片段组件（ W3 QRT /
+      RT 撤销 G2 记档，单根 button 无 fragment 规避 T39）。类名经 btnCls prop 注入；
      只 emit 'refresh' 意图（对齐 RT 既有事件名；525 分页同构：取数归宿主）。
      ⚠DOM 逐字节保真：aria-label/title/图标/文案与两内核原模板零变动（547 钮形制源码锚
      随迁读本文件）。 -->

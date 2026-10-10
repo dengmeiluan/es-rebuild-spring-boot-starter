@@ -1,7 +1,7 @@
 <template>
-  <!-- 五百五十二批：Profile 耗时树组件化（DslQueryView:211-214 外壳 + :1312-1328 ProfileNode
+  <!-- Profile 耗时树组件化（DslQueryView:211-214 外壳 + :1312-1328 ProfileNode
        递归 + :2137-2143 pf-* 样式整体迁入，类名全保留——「直方图和 Profile 的组件应该是同一套，
-       且位置是同一套」用户裁决）。IndexHub 本批完成组件抽取，视图接线随直方图同批量力评估
+       且位置是同一套」裁决）。IndexHub 本批完成组件抽取，视图接线随直方图同批量力评估
        （裁决记档见 ihUnify552.spec / 交接报告）；DQ 侧同位替换下批做，过渡期并存。 -->
   <div class="dq-profile">
     <div class="sec-t dq-sec-hd"><Flame :size="13" /> Profile 耗时树 <button aria-label="关闭 Profile 耗时树" class="btn sm ghost" style="margin-left:auto" @click="emit('close')"><X :size="11" /></button></div>
@@ -45,7 +45,7 @@ const ProfileNode = defineComponent({
 
 <style scoped>
 /* 样式随迁自 DslQueryView（pf-* 走 :deep——ProfileNode 是运行时 h() 子树，scoped 属性不落其上，
-   DQ 同款；间距 var(--sp-*) 梯；500 三十一批限高口径 max(240px, 42vh) 原样） */
+   DQ 同款；间距 var(--sp-*) 梯；500 限高口径 max(240px, 42vh) 原样） */
 .dq-profile { margin-top: var(--sp-2h); max-height: max(240px, 42vh); overflow-y: auto; border-top: 1px solid var(--line); padding-top: var(--sp-2); }
 :deep(.pf-node) { margin-left: 0; }
 :deep(.pf-row) { display: flex; align-items: center; gap: var(--sp-2h); padding: var(--sp-0) 0 var(--sp-0) calc(var(--d, 0) * 16px); }

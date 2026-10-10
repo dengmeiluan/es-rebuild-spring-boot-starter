@@ -28,6 +28,6 @@ export interface SearchResp {
   hits: SearchHit[];
   aggregations?: Record<string, any>;
   took?: number;
-  /** 230 批 P1-7：分片统计（failed/timed_out>0=部分失败，结果可能不完整，UI 出黄条） */
+  /**  P1-7：分片统计（failed/timed_out>0=部分失败，结果可能不完整，UI 出黄条） */
   shards?: { total?: number; failed?: number; timed_out?: number } | null;
 }

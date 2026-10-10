@@ -31,7 +31,7 @@
             role="option" :id="itemId(i)" :aria-selected="i === cursor" tabindex="-1"
             @mouseenter="cursor = i" @click="choose(s.key)" @keydown.enter.prevent="choose(s.key)"
           >
-            <span class="skp-key mono"><!-- 五百一十九批：候选键按当前输入 splitMark 切段 <mark> 高亮（与全站 MarkText 同视觉语言） --><template v-for="(seg, si) in keySegs(s.key)" :key="si"><mark v-if="seg.m" class="skp-mark">{{ seg.t }}</mark><template v-else>{{ seg.t }}</template></template></span>
+            <span class="skp-key mono"><!-- ：候选键按当前输入 splitMark 切段 <mark> 高亮（与全站 MarkText 同视觉语言） --><template v-for="(seg, si) in keySegs(s.key)" :key="si"><mark v-if="seg.m" class="skp-mark">{{ seg.t }}</mark><template v-else>{{ seg.t }}</template></template></span>
             <span class="skp-desc">{{ s.desc }}</span>
             <span class="skp-badge" :data-d="s.dynamic ? 'dyn' : 'sta'">{{ s.dynamic ? '热更' : '静态' }}</span>
           </div>
@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-/* W1 Task 3：setting 键补全输入——数据源是静态目录（indexSettingsCatalog，零请求）。
+/* W1 ：setting 键补全输入——数据源是静态目录（indexSettingsCatalog，零请求）。
    交互骨架复刻 FieldPicker：Teleport 弹层 + place() 定位 + ↑↓/Enter/Esc + 点击外部关闭。
    三态契约：弹层不抢焦点不打断输入；目录无匹配时退化为纯手输（Enter 收面板保留手输值）。 */
 import { ref, computed } from 'vue';
@@ -68,7 +68,7 @@ const inputEl = ref<HTMLInputElement>();
 /* 静态目录过滤：filterSettings 纯函数随当前输入实时过滤，零请求零 loading */
 const items = computed<SettingEntry[]>(() => filterSettings(props.modelValue || ''));
 
-/* W2 Task 7a：弹层骨架下沉 usePopupList（open/cursor/place/onKey/onDocDown/listId）；
+/* W2 ：弹层骨架下沉 usePopupList（open/cursor/place/onKey/onDocDown/listId）；
    本组件只留静态目录数据源与 choose 回填；无 enter 透发（onEnter 缺省）、挂载点恒 body（to 缺省）、
    place 定位参数与 FieldPicker 分歧数值在此显式传入 */
 const {
@@ -85,7 +85,7 @@ const {
 /* 底部 hint 行跟随高亮项 example */
 const curExample = computed(() => items.value[cursor.value]?.example || '');
 
-/* 五百一十九批：候选键高亮切段——kw 与 filterSettings 同源（当前输入值），空输入原样单段 */
+/* 候选键高亮切段——kw 与 filterSettings 同源（当前输入值），空输入原样单段 */
 function keySegs(key: string) {
   return splitMark(key, props.modelValue || '');
 }
@@ -111,7 +111,7 @@ function choose(key: string) {
 .skp.focus, .skp:focus-within { border-color: var(--ac); }
 .skp-inp { display: block; width: 100%; height: 100%; min-height: 24px; border: none; outline: none; background: transparent; color: inherit; font-size: inherit; padding: 0; font-family: var(--mono, ui-monospace, monospace); }
 
-/* 五百二十四批：壳属性（fixed/--z-island/bg/border/shadow/圆角）收编 theme.css .float-pop，本类只留坐标外裁切与字号 */
+/* 壳属性（fixed/--z-island/bg/border/shadow/圆角）收编 theme.css .float-pop，本类只留坐标外裁切与字号 */
 .skp-pop { overflow: hidden; font-size: var(--fs-sm); }
 .skp-hint { padding: var(--sp-3) var(--sp-2h); color: var(--muted); }
 .skp-list { max-height: 260px; overflow: auto; padding: 3px 0; }
@@ -125,6 +125,6 @@ function choose(key: string) {
 .skp-ex { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .skp-keys { flex: none; }
 .mono { font-family: var(--mono, ui-monospace, monospace); }
-/* 五百一十九批：候选键命中段高亮（对齐 MarkText .mt-mark 视觉） */
+/* 候选键命中段高亮（对齐 MarkText .mt-mark 视觉） */
 .skp-mark { background: var(--warn); color: var(--tx-on-strong); border-radius: 2px; padding: 0 1px; }
 </style>

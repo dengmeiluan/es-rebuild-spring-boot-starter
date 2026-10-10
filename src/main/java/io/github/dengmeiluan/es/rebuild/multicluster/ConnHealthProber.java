@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 连接健康探针（R38）：周期性并发 ping 全部已存连接档案，结果驻留内存供
+ * 连接健康探针（）：周期性并发 ping 全部已存连接档案，结果驻留内存供
  * 列表接口附带 health 字段——前端顶栏/连接管理页据此渲染 GREEN/RED 状态点，
  * 故障集群在切换前就能被看见，而不是切过去才报错。
  *
@@ -49,7 +49,7 @@ public class ConnHealthProber {
     /** connId → 最近一次探活结果。 */
     private final Map<String, Map<String, Object>> healthMap = new ConcurrentHashMap<>();
 
-    /* 五百四十七批：整轮跳过累计（首条 WARN 节流计数，见 probeAll） */
+    /* 整轮跳过累计（首条 WARN 节流计数，见 probeAll） */
     private final AtomicLong skipRoundCount = new AtomicLong();
 
     private final ScheduledExecutorService scheduler;
@@ -89,7 +89,7 @@ public class ConnHealthProber {
         try {
             conns = connStore.list();
         } catch (Exception e) {
-            /* 五百四十七批：debug→首条 WARN 节流（AtomicLong 累计，范式=546 批审计双店
+            /* debug→首条 WARN 节流（AtomicLong 累计，范式=审计双店
                warnAuditDrop——探活是周期调度高频路径，逐条 WARN 会刷屏，但持续性整轮跳过
                比单次失败更该留痕，全静默时「健康面整体失明」无从察觉）。注释修正过时假设：
                list 失败与存储模式无关（控制集群 ES 未就绪/网络/权限等皆可），原「仅 NONE
@@ -154,7 +154,7 @@ public class ConnHealthProber {
         return unknown;
     }
 
-    /** worker 线程内的真实 ping：GET / 测连通与时延，顺带解析服务端版本回写档案（R40）。 */
+    /** worker 线程内的真实 ping：GET / 测连通与时延，顺带解析服务端版本回写档案（）。 */
     private Map<String, Object> pingOnce(String connId) {
         long t0 = System.currentTimeMillis();
         try {

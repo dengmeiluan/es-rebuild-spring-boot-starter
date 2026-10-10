@@ -10,16 +10,16 @@ interface OpMeta {
   params?: ParamMeta[];
 }
 
-/* 五百五十四批：值类型族单源（本文件零依赖，可被 sqlCompletion/dslCompletionContext/
-   LuceneInput 等四处 literal 同源消费——keyword 族三员即 552 批 sqlCompletion.KEYWORD_VALUE_TYPES
-   原表逐字同形；数值族十口径=551/552 批 sqlCompletion.NUMERIC_HINT_TYPES 与 LuceneInput
+/* 值类型族单源（本文件零依赖，可被 sqlCompletion/dslCompletionContext/
+   LuceneInput 等四处 literal 同源消费——keyword 族三员即  sqlCompletion.KEYWORD_VALUE_TYPES
+   原表逐字同形；数值族十口径=551/ sqlCompletion.NUMERIC_HINT_TYPES 与 LuceneInput
    NUMERIC_TYPES 原表逐字同形，含 token_count 分词计数数值语义） */
 export const KEYWORD_VALUE_TYPES = ['keyword', 'wildcard', 'constant_keyword'];
 export const NUMERIC_VALUE_TYPES = ['long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float', 'unsigned_long', 'token_count'];
 
-/* 五百四十五批：NUM 补 unsigned_long（数值族九口径——AFFINITY_FAMILIES.number/LuceneInput
+/* NUM 补 unsigned_long（数值族九口径——AFFINITY_FAMILIES.number/LuceneInput
    NUMERIC_TYPES/sqlCompletion 数值档同表九种，此前 opsForType 对 unsigned_long 字段只推荐 exists）
-   554 批：本表改吃 NUMERIC_VALUE_TYPES 单源滤 token_count（分词计数无 term/range 精确语义，
+   本表改吃 NUMERIC_VALUE_TYPES 单源滤 token_count（分词计数无 term/range 精确语义，
    维持 ['exists'] 兜底——opsForType 行为零变） */
 const NUM = NUMERIC_VALUE_TYPES.filter(t => t !== 'token_count');
 
@@ -62,22 +62,22 @@ export function opsForType(type: string | undefined): string[] {
 
 export const RICH_OPS: string[] = Object.keys(OPS_META);
 
-/* 五百三十批：算子场景 → 字段候选类型置顶序（ClauseNode fieldTypePriority 消费，DSL/非 Vue
+/* 算子场景 → 字段候选类型置顶序（ClauseNode fieldTypePriority 消费，DSL/非 Vue
    语境也可直接复用）。term/terms/prefix/wildcard 精确语义 keyword 优先；
    range 数值/时间语义 date+数值族优先；match 系全文语义 text+keyword；
-   535 批 R4：match_phrase_prefix 并入 match 系、regexp/fuzzy → keyword+text（与 OPS_META.types
+    R4：match_phrase_prefix 并入 match 系、regexp/fuzzy → keyword+text（与 OPS_META.types
    对齐；ClauseNode 值候选档 includes('keyword') 随之放行，历史值 datalist 白得）；
    其余算子无类型倾向，空数组 = FieldSelect 归一 null 纯 rank 平铺。
    只调候选分组排序，不改候选集（fieldPickerPenetration 契约）。 */
 export function typePriorityForOp(op: string): string[] {
   if (op === 'term' || op === 'terms' || op === 'prefix' || op === 'wildcard') return ['keyword'];
-  /* 五百四十五批：range 序补 unsigned_long（数值族第九种——AFFINITY_FAMILIES.number 同表口径；
+  /* range 序补 unsigned_long（数值族第九种——AFFINITY_FAMILIES.number 同表口径；
      此前编辑器补全排序 orderFieldsByTypeForOp 与 sqlCompletion ORDER BY 加权两条链漏置顶）
      548 B：再补 date_nanos（紧跟 date 位置——opsForType date 分支并档同批；dslValueTiers545 /
      lintExpand530 两处精确锁随迁） */
   if (op === 'range') return ['date', 'date_nanos', 'long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float', 'unsigned_long'];
   if (op === 'match' || op === 'match_phrase' || op === 'match_phrase_prefix' || op === 'multi_match' || op === 'query_string') return ['text', 'keyword'];
-  /* 535 批 R4：regexp/fuzzy 补档（与 OPS_META.types ['keyword','text'] 对齐）——
+  /*  R4：regexp/fuzzy 补档（与 OPS_META.types ['keyword','text'] 对齐）——
      ClauseNode 值候选档判定 includes('keyword') 命中，历史值 datalist 白得（语义成立）。 */
   if (op === 'regexp' || op === 'fuzzy') return ['keyword', 'text'];
   return [];

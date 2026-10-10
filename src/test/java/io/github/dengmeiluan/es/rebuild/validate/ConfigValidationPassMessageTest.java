@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * ① 对根本没校验 mapping 的索引说「配置校验通过」（空头承诺）；
  * ② 对已经按注解推导 mapping 校验过的索引说「未覆盖 mapping」（自我贬低，会让人以为还有活要干）。</p>
  *
- * <p>R100 起校验器与重建共用 {@code EntityMappingDeriver.declaredOrDerived}，
+ * <p> 起校验器与重建共用 {@code EntityMappingDeriver.declaredOrDerived}，
  * 所以无 {@code @Mapping} 的实体校验的已经是<b>重建实际会应用的那份</b>推导 mapping ——
  * 只有「注解推导也为空」时才真的没有 mapping 可校验（那时重建会走复制旧索引 / ES 动态映射，
  * 启动期无从预判）。</p>

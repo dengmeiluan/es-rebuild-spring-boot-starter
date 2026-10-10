@@ -3,10 +3,10 @@ import { computed, ref } from 'vue';
 import { api, setToken, clearToken, getToken } from '../api';
 import { canCap, canViewAllAudit, type ConsoleCap } from '../utils/capability';
 
-/** R34：控制台鉴权状态 —— token 持久在 localStorage，身份内存态 */
+/** 控制台鉴权状态 —— token 持久在 localStorage，身份内存态 */
 export const useAuthStore = defineStore('auth', () => {
-  /** 当前身份（null=未登录/未知）；delegated=宿主委托鉴权（R37，凭证归宿主管，不可退出/改密）；
-   *  displayName/authSource/attributes=R63 身份档案（宿主真实姓名与来源，顶栏产品化展示） */
+  /** 当前身份（null=未登录/未知）；delegated=宿主委托鉴权（，凭证归宿主管，不可退出/改密）；
+   *  displayName/authSource/attributes= 身份档案（宿主真实姓名与来源，顶栏产品化展示） */
   const me = ref<{
     username: string; role: string; fallback: boolean; hasAnyUser?: boolean; delegated?: boolean;
     displayName?: string | null; authSource?: string; attributes?: Record<string, string>;
@@ -72,7 +72,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAdmin = () => me.value?.role === 'ADMIN';
   const atLeastOperator = () => me.value?.role === 'ADMIN' || me.value?.role === 'OPERATOR';
-  /* 二百二十批：能力门禁统一入口（镜像后端拦截器 rank 语义）——危险按钮「不展示」都走 can()，
+  /* 能力门禁统一入口（镜像后端拦截器 rank 语义）——危险按钮「不展示」都走 can()，
      语义真源在 utils/capability.ts；安全边界始终在后端，这里是体验层防误点。
      分层兜底：me=null（后端未启用鉴权/身份未探测到）→ 全放行——无鉴权部署全功能可用的既有语义不破
      （有鉴权但未登录时整卡被 LoginOverlay 遮罩拦截，此放行不可达）；me 有值但 role 无法识别 →
@@ -80,7 +80,7 @@ export const useAuthStore = defineStore('auth', () => {
   const can = (cap: ConsoleCap) => me.value == null ? true : canCap(me.value.role, cap);
   const canAuditAll = () => me.value != null && canViewAllAudit(me.value.role);
 
-  /* 五百六十三批·用户实报「同事被授予 qa 连接后仍无法操作数据」前端断点打通：
+  /* ·实报「同事被授予 qa 连接后仍无法操作数据」前端断点打通：
      连接级写授权镜像后端拦截器写门语义（conn 模型=连接授权最终裁决，跳过全局角色门）。
      三态解析：授权体系未启用（grantedPages=null）或该目标无 conn 键（静态键模型）→
      返回 null 走既有全局角色门；该目标存在 conn 键 → 写键 conn:{tid}:w:* 在场即裁决。
@@ -100,7 +100,7 @@ export const useAuthStore = defineStore('auth', () => {
     return can('write');
   };
 
-  /* 五百八十四批：页面级连接感知门——conn 模型下「勾选即权限」，本页写键(conn:{tid}:w:{pageKey})
+  /* 页面级连接感知门——conn 模型下「勾选即权限」，本页写键(conn:{tid}:w:{pageKey})
      在场即放行（镜像后端页面门 writeAllowed 精确键语义）；静态模型（grantedPages=null）与
      非连接上下文回落全局角色档 canCap；admin 是管理域（连接菜单无对应勾选项）不走连接分支。 */
   const canPage = (cap: ConsoleCap, pageKey: string, targetId: string | null | undefined) => {
@@ -113,7 +113,7 @@ export const useAuthStore = defineStore('auth', () => {
     return canCap(me.value.role, cap);
   };
 
-  /* 五百八十八批：端点级单一权限入口——用 me.pages 下发的 apiPrefixes 镜像后端 pageOf
+  /* 端点级单一权限入口——用 me.pages 下发的 apiPrefixes 镜像后端 pageOf
      （最长前缀匹配→归属页），conn 模型按精确 conn:{tid}:w:{pageKey} 裁决；未命中（共享
      端点）按任意写键；静态模型回落 canCap；admin 管理域不走连接分支。视图只传按钮真实
      调用的端点路径，零 pageKey 硬编码（586 错位根治）。 */

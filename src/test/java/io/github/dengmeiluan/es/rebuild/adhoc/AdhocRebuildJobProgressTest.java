@@ -9,7 +9,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * 五百六十五批：托管重建作业的 docs 级进度三字段契约（{@code total}/{@code created}/{@code updated}）。
+ * 托管重建作业的 docs 级进度三字段契约（{@code total}/{@code created}/{@code updated}）。
  *
  * <ul>
  *   <li>{@code toMap()} 恒含三键：默认 {@code null}=未进入 reindex 阶段/旧持久化回读——

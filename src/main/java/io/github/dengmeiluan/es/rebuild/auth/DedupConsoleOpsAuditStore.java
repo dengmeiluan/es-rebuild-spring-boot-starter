@@ -6,7 +6,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 控制台操作审计——PAGE_DENIED 去重聚合装饰层（一百九十批，架构修复）。
+ * 控制台操作审计——PAGE_DENIED 去重聚合装饰层（，架构修复）。
  *
  * <p><b>缺陷背景</b>：VIEWER 用户停留在无权限页面时，页面轮询（诊断/迁移/重建列表）
  * 每分钟对同一 URI 反复 403，拦截器逐条落 PAGE_DENIED 审计——审计流被同质心跳刷屏，
@@ -39,7 +39,7 @@ public class DedupConsoleOpsAuditStore implements ConsoleOpsAuditStore {
         this.delegate = delegate;
     }
 
-    /* 五百五十五批：唯一写入口=富事件——聚合逻辑单点在此，富维度（集群/IP/耗时）原样透传下层 */
+    /* 唯一写入口=富事件——聚合逻辑单点在此，富维度（集群/IP/耗时）原样透传下层 */
     @Override
     public void record(ConsoleOpsAuditEvent event) {
         if ("PAGE_DENIED".equals(event.getAction())) {
@@ -75,7 +75,7 @@ public class DedupConsoleOpsAuditStore implements ConsoleOpsAuditStore {
         delegate.record(event);
     }
 
-    /* 查询透传（单签名——五百五十五批契约收紧）。20260922 快筛批：结构化查询同透传——
+    /* 查询透传（单签名——契约收紧）。20260922 快筛批：结构化查询同透传——
        去重是写侧语义，查询面无论新旧签名都必须原样抵达底层档，不得被 default 桥接旁路 */
     @Override
     public List<ConsoleOpsAuditEvent> search(String username, String action, int size, int from, Long sinceMs) {

@@ -89,7 +89,7 @@ public class ConsoleAuthControllerOpsAuditFilterTest {
     }
 
     /** mine 自助：username 服务端强制（请求侧无此参数），安全子集维度下发。
-     *  六百零二批语义升格（用户裁决「观察口径按集群维度」）：补 connName 集群维度下推——
+     *  语义升格（裁决「观察口径按集群维度」）：补 connName 集群维度下推——
      *  自助面不再跨全部集群混排；username 强制与未传参数缺省语义不变。 */
     @Test
     public void opsAuditMine_username服务端强制_安全子集下发() {
@@ -111,7 +111,7 @@ public class ConsoleAuthControllerOpsAuditFilterTest {
         assertNull("mine 不下发集群维度（自助面只看自己的动作）", q.getConnId());
     }
 
-    /** 六百零二批：mine 集群维度下推（connName 精确过滤）——观察口径按集群；username 强制不受影响。 */
+    /** mine 集群维度下推（connName 精确过滤）——观察口径按集群；username 强制不受影响。 */
     @Test
     public void opsAuditMine_connName集群维度下推_观察口径按集群() {
         CapturingStore store = new CapturingStore();

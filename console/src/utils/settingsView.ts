@@ -1,5 +1,5 @@
 /**
- * R88：settings 呈现统一层的纯函数（视图无关，可单测）。
+ * settings 呈现统一层的纯函数（视图无关，可单测）。
  *
  * 背景：全站 6 处 settings 呈现各自为政（KPI 卡 + JsonTree / kv 行 / 表格 / pre），
  * 长 dot-key（如 index.search.slowlog.threshold.query.info 可达 50+ 字符）在
@@ -78,7 +78,7 @@ export function filterSettingRows(rows: SettingRow[], kw: string): SettingRow[] 
   return rows.filter(r => r.k.toLowerCase().includes(q) || r.v.toLowerCase().includes(q));
 }
 
-/* ═══ 五百六十二批：静态键判定单源 ═══
+/* ═══ ：静态键判定单源 ═══
    ES 静态 index settings 清单（建索引后不可改，改了要么被拒要么需重建生效）。
    动态键（number_of_replicas/refresh_interval 等）不入列。匹配口径：全 key 相等，
    或剥掉 index. 前缀后相等——带前缀（IndexHub）与不带（部分调用方）两种行口径都命中。

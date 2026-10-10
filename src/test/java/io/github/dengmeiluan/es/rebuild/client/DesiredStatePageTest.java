@@ -13,7 +13,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
- * R93：自包含单页的硬约束。
+ * 自包含单页的硬约束。
  *
  * <p>它们不是风格偏好 —— 单页要在无外网的业务服务器上打开就必须自包含，
  * 而放错位置（static/）会绕过 client 模式的资源守卫被无条件暴露。</p>
@@ -87,7 +87,7 @@ public class DesiredStatePageTest {
      * 空态若只是空表格，人无法区分「自己没配好 / 页面坏了 / starter 没生效」三种情况。
      * 故空态必须指出<b>下一步做什么</b>：实现 ManagedEsIndex 并注册为 Bean。</p>
      *
-     * <p><b>普查修正（台账 #86 第一轮）</b>：原写 {@code h.contains("ManagedEsIndex")} +
+     * <p><b>普查修正（台账 #86 ）</b>：原写 {@code h.contains("ManagedEsIndex")} +
      * {@code h.contains("Bean") || h.contains("@Component")}，两个锚都只是<b>裸词</b>。
      * 实测把 {@code showEmpty()} 里整段 {@code .steps} 引导（三条 {@code <li>}）全部删掉、
      * 只在 JS 注释里留下 {@code // ManagedEsIndex / Bean / @Component} 一行 ——
@@ -100,7 +100,7 @@ public class DesiredStatePageTest {
      *
      * <p>判别力：删掉空态分支、删掉 {@code .steps} 引导、或把引导降级成泛泛的「暂无数据」，均红。</p>
      *
-     * <p><b>R100 起断言的对象变了，原因记此</b>：原来这两条钉的是
+     * <p><b> 起断言的对象变了，原因记此</b>：原来这两条钉的是
      * 「实现 {@code ManagedEsIndex} 接口」+「注册为 Spring Bean」。本波把手写 provider 通道
      * <b>整体废除</b>（残留实现会被 {@code ManagedEsIndexScanner} fail-fast 点名，应用起不来），
      * 于是那段引导从「可操作」变成了<b>有害</b> —— 照着做会把应用搞成启动失败。
@@ -222,7 +222,7 @@ public class DesiredStatePageTest {
     }
 
     // --------------------------------------------------------------------------------------
-    // R94 评审 I-1：Step 7 的 date 字段列此前在 src/test/java 全无覆盖 ——
+    //  评审 I-1：Step 7 的 date 字段列此前在 src/test/java 全无覆盖 ——
     // 把「未知」分支删掉、让未解析显示 0，后端能全绿。以下四条补上看守。
     //
     // 断言刻意不落在孤立词上（本波已知 contains(单个词) 形态薄弱），
@@ -232,7 +232,7 @@ public class DesiredStatePageTest {
     /**
      * date 字段信息必须存在，且计数口径是 esType==='date'（不是 annType，也不是 javaType 猜测）。
      *
-     * <p><b>R101 起第一条的锚点换了，原因记此</b>：页面由<b>表格改为卡片</b>，
+     * <p><b> 起第一条的锚点换了，原因记此</b>：页面由<b>表格改为卡片</b>，
      * 整张 {@code <table>} 连同 {@code <thead>} 一起消失，原锚 {@code "<th>date 字段"}
      * 在新页面里<b>不可能存在</b> —— 它守的是「表头有这一列」，而卡片式布局根本没有列表头。
      * 若不换锚，本条会因为页面形态变更而恒红，而不是因为被测行为丢失。</p>
@@ -262,7 +262,7 @@ public class DesiredStatePageTest {
      * 必须由 {@code r.mappingJson == null} 这个条件<b>单独</b>分支出来。
      *
      * <p>若把它并入「未解析」，页面会对没写 mapping 的业务方说「你的 mapping 没解析成功」，
-     * 让他去查一个不存在的 JSON 语法错误 —— 那是 Task 13 刚清掉的「撒谎的界面」。</p>
+     * 让他去查一个不存在的 JSON 语法错误 —— 那是  刚清掉的「撒谎的界面」。</p>
      */
     @Test
     public void pageDistinguishesUndeclaredMappingByItsOwnBranch() throws Exception {
@@ -273,7 +273,7 @@ public class DesiredStatePageTest {
                 h.contains("return '<span class=\"dc\" title=\"' + esc(why) + '\">'"));
         assertTrue("未声明态必须仍打「未声明」标，不得混成失败/错误态",
                 h.contains("<span class=\"tag no\">未声明</span></span>'"));
-        /* R100 起该分支的解释文案<b>必须分两态</b>：
+        /*  起该分支的解释文案<b>必须分两态</b>：
            原文案「未写 @Mapping，字段类型由 ES 推断」在有 derivedMappingJson 时是假话
            —— 字段类型来自注解推导，不是 ES 推断。 */
         assertTrue("有注解推导时必须说明字段类型来自推导、而非 ES 推断",
@@ -337,7 +337,7 @@ public class DesiredStatePageTest {
     }
 
     /**
-     * R103：JSON 语法高亮存在且不复用 esc()。
+     * JSON 语法高亮存在且不复用 esc()。
      * <p>刻意不锚裸词 hl —— 锚 hl 的<b>关键实现约束</b>：它必须先只转义 &lt;&gt;&amp;（保留字面 "），
      * 否则 esc() 把 " 变 &amp;quot; 会让 key/string 正则全部落空、上不了色（这是本波真踩过的坑）。
      * 删掉 hl 或让它复用 esc() 时本条必须红。

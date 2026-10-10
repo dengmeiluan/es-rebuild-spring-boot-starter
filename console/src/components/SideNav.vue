@@ -10,7 +10,7 @@
       </div>
     </div>
 
-    <!-- R67 丝滑收展：常驻 DOM，收起时高度/透明度连续过渡——v-if 抽走 31px 是「往上顶」的元凶 -->
+    <!--  丝滑收展：常驻 DOM，收起时高度/透明度连续过渡——v-if 抽走 31px 是「往上顶」的元凶 -->
     <div class="nav-search" :class="{ hid: store.navIcon }">
       <Search :size="13" class="nav-search-ic" />
       <input
@@ -75,11 +75,11 @@
         <Command :size="12" />
         <span class="foot-tx">⌘K 命令面板</span>
       </div>
-      <!-- 四百四十七批：当前版本号可见（发版核验最后一米：UI 即所见版本） -->
+      <!-- 当前版本号可见（发版核验最后一米：UI 即所见版本） -->
       <div class="foot-row dim" :title="'es-console 当前版本 ' + STARTER_VERSION">
         <span class="foot-tx mono v-num">v{{ STARTER_VERSION }}</span>
       </div>
-      <!-- 一百一十二批：速查面板鼠标入口（? 键之外的第二可达路径；点击发事件总线） -->
+      <!-- 速查面板鼠标入口（? 键之外的第二可达路径；点击发事件总线） -->
       <button class="foot-row dim foot-btn" title="键盘速查（快捷键 ?）" @click="store.emit('open-hotkeys')">
         <Keyboard :size="12" />
         <span class="foot-tx">? 键盘速查</span>
@@ -130,7 +130,7 @@ const icons: Record<string, any> = {
   LayoutTemplate, Hammer, GitCompareArrows, Boxes,
 };
 
-/* R33：分组折叠——状态持久化；当前路由所在组强制展开 */
+/* 分组折叠——状态持久化；当前路由所在组强制展开 */
 const route = useRoute();
 const auth = useAuthStore();
 const LS_KEY = 'es-console.nav.collapsed';
@@ -143,7 +143,7 @@ const searchEl = ref<HTMLInputElement | null>(null);
 const grouped = computed(() => {
   const q = navQuery.value.trim().toLowerCase();
   const gp = auth.grantedPages; // 2.5.0：null=未启用全量可见；白名单外页面连入口都不露
-  /* 五百一十五批：连接模型键(conn:{id}:{page})按当前目标收缩——host 下仅静态键可见 */
+  /* 连接模型键(conn:{id}:{page})按当前目标收缩——host 下仅静态键可见 */
   const eff = effectivePagesForTarget(gp, store.target);
   return NAV_GROUPS
     .map(g => ({
@@ -184,7 +184,7 @@ function toggleGroup(id: string) {
   localStorage.setItem(LS_KEY, JSON.stringify(collapsed.value));
 }
 
-/* R72：底栏状态改报真实集群健康——连接成功不等于集群正常（yellow/red 必须如实露出） */
+/* 底栏状态改报真实集群健康——连接成功不等于集群正常（yellow/red 必须如实露出） */
 const dotCls = computed(() => {
   if (store.clusterOk === null) return 'c-warn';
   if (!store.clusterOk) return 'c-err';
@@ -205,7 +205,7 @@ const footTitle = computed(() => {
   return `集群健康：${h}${un > 0 ? ` · 未分配分片 ${un}` : ''}`;
 });
 
-/* R66 图标态：文字全隐，tooltip 是唯一可读入口——名称+快捷键都要在 title 里给全 */
+/*  图标态：文字全隐，tooltip 是唯一可读入口——名称+快捷键都要在 title 里给全 */
 function itemTip(item: { name: string; key?: string }) {
   return item.key ? `${item.name} · 快捷键 ${item.key}` : item.name;
 }
@@ -232,7 +232,7 @@ function itemTip(item: { name: string; key?: string }) {
   padding: 0 var(--sp-2); height: 27px; flex-shrink: 0;
   border: 1px solid var(--line); border-radius: var(--r-s);
   background: var(--bg0); color: var(--tx2);
-  /* R67：收展时高度/边距/透明度一起插值，下方内容被「推着走」而非瞬间上顶 */
+  /* 收展时高度/边距/透明度一起插值，下方内容被「推着走」而非瞬间上顶 */
   overflow: hidden;
   transition: border-color var(--tr), height var(--nav-tr), margin var(--nav-tr),
               opacity var(--nav-tr), border-width var(--nav-tr);
@@ -290,7 +290,7 @@ function itemTip(item: { name: string; key?: string }) {
   flex: 1; font-size: var(--fs-sm); font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   transition: opacity var(--nav-tr);
 }
-/* R42 §8.4：版本能力降级徽标——入口级预警不禁止，悬停解释原因 */
+/*  §8.4：版本能力降级徽标——入口级预警不禁止，悬停解释原因 */
 .nav-ver {
   flex-shrink: 0; font-size: var(--fs-2xs); line-height: 1; padding: var(--sp-1);
   border-radius: var(--r-s); color: var(--warn); background: var(--warn-soft, var(--warn-line));
@@ -304,7 +304,7 @@ function itemTip(item: { name: string; key?: string }) {
 .nav-foot { padding: var(--sp-3); border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: var(--sp-2); }
 .foot-row { display: flex; align-items: center; gap: var(--sp-2); color: var(--tx1); }
 .foot-row.dim { color: var(--tx2); }
-/* 一百一十二批：速查入口是 button（可点），对齐 div 行视觉但保留 hover 反馈 */
+/* 速查入口是 button（可点），对齐 div 行视觉但保留 hover 反馈 */
 .foot-btn { background: transparent; border: 0; cursor: pointer; font: inherit; text-align: left; padding: 0; width: 100%; }
 .foot-btn:hover { color: var(--tx0); }
 .foot-tx { font-size: var(--fs-xs); }
@@ -314,8 +314,8 @@ function itemTip(item: { name: string; key?: string }) {
 .dot.c-warn { background: var(--warn); }
 .dot.c-err { background: var(--err); box-shadow: var(--glow-m) var(--err); }
 
-/* ── R66/R67 图标折叠态：866px iframe 里 208px 侧栏吃掉 1/4 宽度，收成 56px 纯图标轨。
-   R67 丝滑化：所有元素常驻 DOM，高度/透明度/宽度全程同步插值（同一时长同一缓动），
+/* ── / 图标折叠态：866px iframe 里 208px 侧栏吃掉 1/4 宽度，收成 56px 纯图标轨。
+    丝滑化：所有元素常驻 DOM，高度/透明度/宽度全程同步插值（同一时长同一缓动），
    彻底消灭 v-if 抽行导致的「往上顶」跳变；尊重 reduced-motion（theme.css 全局已压缩动效）。 */
 .snav { --nav-tr: 240ms cubic-bezier(.25, .8, .3, 1); transition: width var(--nav-tr); will-change: width; }
 .snav.icon { width: 56px; }
@@ -344,6 +344,6 @@ function itemTip(item: { name: string; key?: string }) {
 .snav.icon .foot-tx { max-width: 0; opacity: 0; }
 </style>
 
-/* 四百四十七批：版本号微缩显示（icon 态由 nav-name 同款折叠规则隐藏） */
+/* 版本号微缩显示（icon 态由 nav-name 同款折叠规则隐藏） */
 .v-num { font-size: var(--fs-2xs); letter-spacing: .02em; }
 .snav.icon .v-num { flex: 0 0 0; max-width: 0; min-width: 0; opacity: 0; overflow: hidden; }

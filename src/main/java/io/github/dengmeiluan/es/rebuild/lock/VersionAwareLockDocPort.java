@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 /**
- * {@link LockDocPort} 的版本感知实现（R93-67）——<b>全仓唯一</b>被允许为锁拼 ES 请求的地方。
+ * {@link LockDocPort} 的版本感知实现（-67）——<b>全仓唯一</b>被允许为锁拼 ES 请求的地方。
  *
  * <p><b>为什么全篇走低层 REST</b>：RHLC 的 {@code IndexRequest.opType(CREATE)}
  * <b>无论是否知道版本</b>都序列化成 {@code PUT /{index}/_create/{id}}——这条 typeless 路由是 7.0 才有的，

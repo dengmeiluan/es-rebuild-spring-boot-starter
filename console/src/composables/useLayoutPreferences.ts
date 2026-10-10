@@ -26,7 +26,7 @@ interface LayoutSnapshot {
 
 const EMPTY_SNAPSHOT = (): LayoutSnapshot => ({ version: 1, updatedAt: 0, panes: {} });
 
-/* R125 v2: 偏好 key 版本升 v2——v1 里存着 560px 窄树宽，加宽默认(680)对存量用户
+/*  v2: 偏好 key 版本升 v2——v1 里存着 560px 窄树宽，加宽默认(680)对存量用户
    会被旧偏好覆盖；升版本即全部视图布局一次性回新 defaultSize，代价可接受 */
 export function layoutStorageKey(scope: LayoutScope): string {
   return `es-console.layout.v2:${scope.target || 'host'}:${scope.route}:${scope.mode}:${scope.profile}`;
@@ -83,7 +83,7 @@ export function createLayoutPreferences(
       };
       writeSnapshot(key, snapshot.value);
     }
-    /* 三百五十批：迁移成功或确认无旧值后清除遗留键（此前只读不删，localStorage 永久残留） */
+    /* 迁移成功或确认无旧值后清除遗留键（此前只读不删，localStorage 永久残留） */
     if (legacyRaw != null || migrated) {
       try { localStorage.removeItem('es_console_qb_split'); } catch { /* 隐私模式容忍 */ }
     }

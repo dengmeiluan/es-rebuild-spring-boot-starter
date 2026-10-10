@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * R93-5：把 {@link DesiredStatePayload} 的 payload 序列化成<b>确定的文本</b>。
+ * -5：把 {@link DesiredStatePayload} 的 payload 序列化成<b>确定的文本</b>。
  *
  * <p><b>为什么不交给宿主的 {@code ObjectMapper}</b>：{@code DesiredStatePayload} 的两个核心保证
  * —— 「键序固定」与「{@code mappingJson}/{@code settingsJson} 为 null 原样透出」—— 都止步于
@@ -59,7 +59,7 @@ final class DesiredStateJson {
      * <ul>
      *   <li>页面「复制全部」透传服务端原文、「复制单行」走浏览器序列化 ——
      *       若冒号形态不同，同一页面两个按钮对同一份数据产出不同文本，使用者无法判断哪个权威；</li>
-     *   <li>宿主侧若对粘贴的 payload 做 diff（R95 configDiff），
+     *   <li>宿主侧若对粘贴的 payload 做 diff（ configDiff），
      *       冒号空格差异会制造<b>满屏假差异</b>。</li>
      * </ul>
      * <p>由 {@code DesiredStateSerializationTest} 钉住冒号形态。</p>

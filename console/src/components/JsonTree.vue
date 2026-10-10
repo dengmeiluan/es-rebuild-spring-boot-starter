@@ -1,6 +1,6 @@
 <template>
   <div class="jtree mono" ref="rootEl">
-    <!-- R92-D2：输出区统一能力——一键复制 + 关键字高亮（命中时自动展开全部节点）。
+    <!-- -D2：输出区统一能力——一键复制 + 关键字高亮（命中时自动展开全部节点）。
          默认关：大量调用方是表格行内嵌入（每行一棵树），工具条只在大面板场景显式开启 -->
     <div v-if="tools" class="jt-tools">
       <input
@@ -26,21 +26,21 @@ import HitNav from './HitNav.vue';
 const props = withDefaults(defineProps<{
   data: any;
   tools?: boolean;
-  /** 二百二十九批 P0-2：单节点子项渲染上限（防御 MB 级数组/千键对象把弹层拖死；
+  /**  P0-2：单节点子项渲染上限（防御 MB 级数组/千键对象把弹层拖死；
    *  默认 Infinity=既有 6 处调用零变化），超限追加「… 共 N 项」灰色行 */
   maxChildren?: number;
   /** 叶子字符串渲染上限（超长截断，全文靠 title/复制按钮；默认 Infinity） */
   maxStrLen?: number;
-  /** 550 批：外部高亮通道——tools 私有搜索词（kw）为空时回落生效（LuceneQueryView JSON
+  /** 外部高亮通道——tools 私有搜索词（kw）为空时回落生效（LuceneQueryView JSON
    *  视图过滤词接线，回收 548 E2 记档）；缺省 undefined 零变化（对齐 maxChildren 惯例） */
   highlightKw?: string;
 }>(), { tools: false, maxChildren: Infinity, maxStrLen: Infinity });
 const rootEl = ref<HTMLElement | null>(null);
 const rootEntries = computed(() => toEntries(props.data));
 
-/* R92-D2：搜索词 + 复制反馈（JNode 闭包引用 kw，命中高亮并强制展开） */
+/* -D2：搜索词 + 复制反馈（JNode 闭包引用 kw，命中高亮并强制展开） */
 const kw = ref('');
-/* 550 批：生效关键字 = tools 私有搜索词优先，空则回落外部 highlightKw（都 trim；
+/* 生效关键字 = tools 私有搜索词优先，空则回落外部 highlightKw（都 trim；
    缺省 undefined 零变化）——renderHl/hitIdxOf/isCollapsed 三处统一吃 effKw */
 const effKw = computed(() => kw.value.trim() || (props.highlightKw || '').trim());
 const copied = ref(false);
@@ -49,7 +49,7 @@ async function copyAll() {
   if (ok) { copied.value = true; setTimeout(() => (copied.value = false), 1200); }
 }
 /* 命中片段包 <mark>：h() 渲染路径直接拆 vnode，无 v-html 注入面。
-   557 批：手写 indexOf 切分循环退役（全站第三份切分实现收口）——切分改吃
+   手写 indexOf 切分循环退役（全站第三份切分实现收口）——切分改吃
    useGridSearch.splitMark 单源（本组件注释即该函数头注里的历史同思路出处），
    jt-mark 类与样式零变；行为=高亮覆盖面只增不减（splitMark 557 数值归一联动白得）。 */
 function renderHl(text: string) {
@@ -107,7 +107,7 @@ const hitCount = computed(() => hitIdxOf.value.size);
 const { current: hitCur, next: hitNext, prev: hitPrev } = useHitLocate(() => hitCount.value, () => rootEl.value);
 function onHitKey(e: KeyboardEvent) { if (e.shiftKey) hitPrev(); else hitNext(); }
 
-/* 叶子文本渲染：maxStrLen 截断（229 批 P0-2）——超长字符串全文靠 title 悬浮与
+/* 叶子文本渲染：maxStrLen 截断（ P0-2）——超长字符串全文靠 title 悬浮与
    工具条复制（复制走 props.data 全量不受伤）；非字符串不截（对象走 preview/递归） */
 function leafText(v: any): { text: string; clipped: boolean } {
   const t = valText(v);
@@ -128,7 +128,7 @@ const JNode: any = defineComponent({
   setup(p) {
     const collapsed = ref<Record<string, boolean>>({});
     return () => {
-      /* 229 批 P0-2：maxChildren 渲染裁剪——只裁渲染，命中编号（hitIdxOf）仍全量
+      /*  P0-2：maxChildren 渲染裁剪——只裁渲染，命中编号（hitIdxOf）仍全量
          离线计算（被裁子树若有命中，游标落位找不到元素静默跳过，不炸不错位） */
       const all = p.kv;
       const capped = Number.isFinite(props.maxChildren) && all.length > props.maxChildren
@@ -196,7 +196,7 @@ const JNode: any = defineComponent({
 :deep(.j-prev) { color: var(--tx2); cursor: pointer; font-style: italic; }
 :deep(.j-prev:hover) { color: var(--tx1); }
 :deep(.j-colon) { color: var(--tx2); }
-/* 二百二十九批 P0-2：maxChildren 裁剪提示行 / maxStrLen 截断叶子 */
+/*  P0-2：maxChildren 裁剪提示行 / maxStrLen 截断叶子 */
 :deep(.jmore) { color: var(--tx2); font-size: var(--fs-xs); padding-left: var(--sp-3); font-style: italic; }
 :deep(.j-clipped) { opacity: .75; }
 :deep(.j-str), :deep(.j-num), :deep(.j-bool), :deep(.j-null) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60vw; }

@@ -28,7 +28,7 @@ public class MonitorMetricsStoreTest {
 
     private static final String PREFIX = "es_console_monitor";
 
-    /** 637 批三值同返：统计子串出现次数（逐字段全覆盖锚）。 */
+    /** 三值同返：统计子串出现次数（逐字段全覆盖锚）。 */
     private static int count(String hay, String needle) {
         int c = 0;
         int i = 0;
@@ -121,9 +121,9 @@ public class MonitorMetricsStoreTest {
         assertTrue("fixed_interval 逐字", body.contains("\"fixed_interval\":\"60s\""));
         assertTrue("min_doc_count:0 空桶补齐时间轴（前端缺值剔点，不跳格）",
                 body.contains("\"min_doc_count\":0"));
-        assertTrue("R31 分组重构：cluster 态按 connName terms 分组（多集群叠加不再挤「未知集群」）",
+        assertTrue("分组重构：cluster 态按 connName terms 分组（多集群叠加不再挤「未知集群」）",
                 body.contains("\"by_group\":{\"terms\":{\"field\":\"connName\",\"size\":30}"));
-        /* 637 批三值同返随迁：旧形态断言 {@code "qps":{"avg":{"field":"qps"}}} 已升级为
+        /* 三值同返随迁：旧形态断言 {@code "qps":{"avg":{"field":"qps"}}} 已升级为
            「三键平铺 + 标量别名」；qps 标量别名仍在（＝请求 agg 对应的那个值），老前端读 qps 照常工作 */
         assertTrue("三值同返：每字段平铺 <field>Avg（桶记录与原始 doc 键同名同型，前端零改动）",
                 body.contains("\"qpsAvg\":{\"avg\":{\"field\":\"qps\"}}"));
@@ -132,11 +132,11 @@ public class MonitorMetricsStoreTest {
         assertTrue("标量别名 <field> 保留（向后兼容零破坏，老前端读 qps 不炸）",
                 body.contains("\"qps\":{\"avg\":{\"field\":\"qps\"}}"));
         assertTrue(body.contains("\"heapUsedPctAvg\":{\"avg\":{\"field\":\"heapUsedPct\"}}"));
-        assertTrue("R31 全指标聚合根治：后加卡片字段在案（此前聚合模式下恒空）",
+        assertTrue("全指标聚合根治：后加卡片字段在案（此前聚合模式下恒空）",
                 body.contains("\"writeRejectedAvg\":{\"avg\":{\"field\":\"writeRejected\"}}"));
         assertTrue(body.contains("\"gcYoungPerMinAvg\":{\"avg\":{\"field\":\"gcYoungPerMin\"}}"));
-        /* R63 校准轮回归锚：三卡字段在 AGG（漏扩则节点下钻聚合模式恒空）
-           —— 637 三值同返：613 批曾恒空的这三卡也必须逐字段三键齐 */
+        /*  校准轮回归锚：三卡字段在 AGG（漏扩则节点下钻聚合模式恒空）
+           —— 637 三值同返：曾恒空的这三卡也必须逐字段三键齐 */
         assertTrue(body.contains("\"ioUtilPctAvg\":{\"avg\":{\"field\":\"ioUtilPct\"}}"));
         assertTrue(body.contains("\"ioUtilPctMax\":{\"max\":{\"field\":\"ioUtilPct\"}}"));
         assertTrue(body.contains("\"ioUtilPctMin\":{\"min\":{\"field\":\"ioUtilPct\"}}"));
@@ -148,7 +148,7 @@ public class MonitorMetricsStoreTest {
         assertTrue(body.contains("\"gcOldTimeMsMin\":{\"min\":{\"field\":\"gcOldTimeMs\"}}"));
         assertTrue(body.contains("\"tpSearchActiveAvg\":{\"avg\":{\"field\":\"tpSearchActive\"}}"));
         assertTrue(body.contains("\"primaryShardsAvg\":{\"avg\":{\"field\":\"primaryShards\"}}"));
-        /* 613 批「漏扩 AGG 致三卡恒空」同类坑防回流锚：逐字段全覆盖（Min/Max 子聚合数＝AGG 键数） */
+        /* 「漏扩 AGG 致三卡恒空」同类坑防回流锚：逐字段全覆盖（Min/Max 子聚合数＝AGG 键数） */
         assertEquals("三值同返逐字段全覆盖：Min 子聚合数＝AGG 键数（漏扩即红）",
                 MonitorMetricsStore.AGG_METRIC_FIELDS.length,
                 count(body, "\":{\"min\":{\"field\":\""));
@@ -161,7 +161,7 @@ public class MonitorMetricsStoreTest {
     @Test
     public void buildAggBody_max聚合与节点分组() {
         String avg = MonitorMetricsStore.buildAggBody(null, "cluster", null, null, "60s", "avg");
-        /* 637 批三值同返随迁：旧 {avg,max} 单值形态断言改写为「三键 + 别名」；
+        /* 三值同返随迁：旧 {avg,max} 单值形态断言改写为「三键 + 别名」；
            别名 <field> ＝请求 agg 对应的那个值（avg 档取 avg，max 档取 max） */
         assertTrue("agg=avg 档：标量别名 qps 取 avg（老前端读 qps 仍是均值）",
                 avg.contains("\"qps\":{\"avg\":{\"field\":\"qps\"}}"));
@@ -183,9 +183,9 @@ public class MonitorMetricsStoreTest {
     }
 
     @Test
-    public void buildSearchBody_buildAggBody_connName过滤_R34() {
+    public void buildSearchBody_buildAggBody_connName过滤_() {
         String search = MonitorMetricsStore.buildSearchBody(null, "腾讯云QA", "cluster", 100, 0, null, null);
-        assertTrue("R34 connName 精确过滤（筛选下拉传实名的修复）",
+        assertTrue("connName 精确过滤（筛选下拉传实名的修复）",
                 search.contains("{\"term\":{\"connName\":\"腾讯云QA\"}}"));
         String agg = MonitorMetricsStore.buildAggBody(null, "腾讯云QA", "cluster", null, null, "60s", "avg");
         assertTrue(agg.contains("{\"term\":{\"connName\":\"腾讯云QA\"}}"));
@@ -216,7 +216,7 @@ public class MonitorMetricsStoreTest {
                 MonitorMetricsStore.parseAggResponse(MAPPER.readValue(respJson, Map.class), "cluster");
         assertEquals("两桶各出一条记录", 2, out.size());
         Map<String, Object> first = out.get(0);
-        assertEquals("R31 组键回填：cluster 态组键=connName", "腾讯云QA", first.get("connName"));
+        assertEquals("组键回填：cluster 态组键=connName", "腾讯云QA", first.get("connName"));
         assertEquals("timestamp=桶 key 毫秒", 1000L, first.get("timestamp"));
         assertEquals(1.5, ((Number) first.get("qps")).doubleValue(), 0.0001);
         assertEquals(0.5, ((Number) first.get("indexRate")).doubleValue(), 0.0001);
@@ -236,7 +236,7 @@ public class MonitorMetricsStoreTest {
     }
 
     /**
-     * 637 批三值同返：罐头桶含 {@code <field>Avg/Max/Min} 三键 + 标量别名 {@code <field>}。
+     * 三值同返：罐头桶含 {@code <field>Avg/Max/Min} 三键 + 标量别名 {@code <field>}。
      * 满桶三键齐解析正确；空桶三键（含别名）一并省略（沿用 putAggValue「Number 才落键」语义）。
      */
     @Test
@@ -267,7 +267,7 @@ public class MonitorMetricsStoreTest {
         assertEquals("满桶三键齐：min", 0.3, ((Number) full.get("qpsMin")).doubleValue(), 0.0001);
         assertEquals("标量别名 qps 仍在（向后兼容，＝请求 agg 值）",
                 1.5, ((Number) full.get("qps")).doubleValue(), 0.0001);
-        /* 613 批曾恒空的三卡：三值同返逐卡可切，均需解析出值 */
+        /* 曾恒空的三卡：三值同返逐卡可切，均需解析出值 */
         assertEquals(40.0, ((Number) full.get("ioUtilPctAvg")).doubleValue(), 0.0001);
         assertEquals(99.0, ((Number) full.get("ioUtilPctMax")).doubleValue(), 0.0001);
         assertEquals(2.0, ((Number) full.get("ioUtilPctMin")).doubleValue(), 0.0001);
@@ -347,14 +347,14 @@ public class MonitorMetricsStoreTest {
     /* ==================== R7 告警读侧 ==================== */
 
     @Test
-    public void buildTopBody_R42_最新快照契约() {
+    public void buildTopBody__最新快照契约() {
         String body = MonitorMetricsStore.buildTopBody("腾讯云QA");
         assertTrue("size:1 取最新一条", body.contains("\"size\":1"));
         assertTrue("timestamp 降序", body.contains("\"order\":\"desc\""));
         assertTrue("kind+scope 恒定过滤", body.contains("\"term\":{\"kind\":\"metrics\"}}"));
         assertTrue(body.contains("\"term\":{\"scope\":\"cluster\"}"));
         assertTrue("exists 过滤带 topIndexes 字段的 doc", body.contains("\"exists\":{\"field\":\"topIndexes\"}"));
-        assertTrue("R43 connName 过滤转义透传（前端下拉持实名）", body.contains("{\"term\":{\"connName\":\"腾讯云QA\"}}"));
+        assertTrue("connName 过滤转义透传（前端下拉持实名）", body.contains("{\"term\":{\"connName\":\"腾讯云QA\"}}"));
     }
 
     @Test

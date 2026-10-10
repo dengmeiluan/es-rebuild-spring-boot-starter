@@ -10,7 +10,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * R96：契约校验器必须在<b>本机这套 sdes（4.0.9）</b>上报「全部满足」。
+ * 契约校验器必须在<b>本机这套 sdes（4.0.9）</b>上报「全部满足」。
  *
  * <p>这既是正向对照（证明探针不是恒报失败），也是回归看守 ——
  * 将来谁把 starter 的 sdes 版本换掉而没更新兼容层，这条会红。</p>
@@ -66,7 +66,7 @@ public class EsStackContractValidatorTest {
         assertFalse(EsStackContractValidator.VERIFIED_SDES.trim().isEmpty());
     }
 
-    /* ---- R97：宿主 sdes 与 ES 客户端的配套校验 ---- */
+    /* ---- ：宿主 sdes 与 ES 客户端的配套校验 ---- */
 
     /**
      * 本机（sdes 4.0.9 + ES 7.6.2）是配套的，必须报无错配。
@@ -86,7 +86,7 @@ public class EsStackContractValidatorTest {
         String sig = EsStackContractValidator.xcontentTypeSignature();
         assertNotNull("应能读到 XContentType 的实际包路径", sig);
         assertTrue("应是 XContentType，实际: " + sig, sig.endsWith(".XContentType"));
-        System.out.println("[R97] ES 侧实际提供: " + sig);
+        System.out.println("ES 侧实际提供: " + sig);
     }
 
     /**
@@ -104,7 +104,7 @@ public class EsStackContractValidatorTest {
                 "org.elasticsearch.xcontent.XContentType",
                 "org.elasticsearch.common.xcontent.XContentType", "probe");
         assertFalse("签名不一致时必须报错配（否则「本机无错配」毫无意义）", out.isEmpty());
-        System.out.println("[R97] 反向对照报文: " + out.get(0));
+        System.out.println("反向对照报文: " + out.get(0));
     }
 
     /**
@@ -120,7 +120,7 @@ public class EsStackContractValidatorTest {
         m.setAccessible(true);
         Object expected = m.invoke(null);
         assertNotNull("本机 sdes 应能读出确定的期待签名（null 意味着校验器会静默放行）", expected);
-        System.out.println("[R97] sdes 侧期待: " + expected);
+        System.out.println("sdes 侧期待: " + expected);
         /* 本机是 4.0.9 → 旧路径。这不是在测 sdes，是在测读法没跑偏。 */
         assertEquals("本机 sdes 4.0.9 应期待旧包路径",
                 "org.elasticsearch.common.xcontent.XContentType", expected);

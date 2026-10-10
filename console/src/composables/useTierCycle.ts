@@ -1,7 +1,7 @@
 import { type Ref } from 'vue';
 import { usePref } from './urlState';
 
-/* 五百三十五批 W9：档循环统一件——视图本地「TIERS 数组 + usePref + cycle 函数」三件套的
+/*  W9：档循环统一件——视图本地「TIERS 数组 + usePref + cycle 函数」三件套的
    最小抽象，示范迁移 IlmView（宽度档 ilm.listW）与 ConfigValidatorView（px 档
    configvalidator.issuesH）。罩住站内既有四形态：行数档（JsonArea rows）、px 档
    （面板 max-height）、vh 档（弹性高）、宽度档（CSS var 注入侧栏宽）。

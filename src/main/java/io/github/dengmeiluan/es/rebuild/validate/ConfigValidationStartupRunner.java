@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * R35 启动期配置门禁：对所有注册 provider 实体的 @Setting/@Mapping 跑三层校验，
+ *  启动期配置门禁：对所有注册 provider 实体的 @Setting/@Mapping 跑三层校验，
  * 把「配置写错、上线建索引才炸」提前到<b>服务启动那一刻</b>暴露（strict 模式直接拒绝启动）。
  *
  * <p>判罚边界（不误杀）：</p>
@@ -98,7 +98,7 @@ public class ConfigValidationStartupRunner implements ApplicationRunner {
     /**
      * 「通过」措辞必须点明<b>校验的是哪一份 mapping</b>。
      *
-     * <p>R100 起校验器与重建共用 {@code EntityMappingDeriver.declaredOrDerived}，
+     * <p> 起校验器与重建共用 {@code EntityMappingDeriver.declaredOrDerived}，
      * 所以对无 {@code @Mapping} 的实体，校验的已经是<b>重建实际会应用的那份注解推导 mapping</b>，
      * 不再是「只校验了 settings」。措辞据此分三态，避免两种误导：
      * 既不许对未校验的说「通过」，也不许对已校验的说「未覆盖」。</p>

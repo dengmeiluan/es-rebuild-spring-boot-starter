@@ -1,16 +1,16 @@
 <template>
   <div class="ss">
-    <!-- 四百一十五批：执行中局部进度条（ind-bar 全站范式） -->
+    <!-- 执行中局部进度条（ind-bar 全站范式） -->
     <div class="pg-progress ind-bar" :class="{ on: running }"></div>
     <PageHeader :icon="FlaskConical" title="DSL 搜索沙盒" subtitle="全集群试错：explain/profile/相关性调试" />
-    <!-- 顶栏。五百五十二批：card 壳退役（立法③）——裸 lr-bar 行直贴页面流，border-bottom 分界 -->
+    <!-- 顶栏。：card 壳退役（立法③）——裸 lr-bar 行直贴页面流，border-bottom 分界 -->
     <div class="ss-bar lr-bar">
       <div class="ss-bar-l lr-bar-l">
-        <!-- 五百二十四批：裸 n-select 换统一选择器；五百二十五批反转：页内可写选择器退役换
+        <!-- 裸 n-select 换统一选择器；反转：页内可写选择器退役换
              只读 CurrentIdxChip——「选索引」唯一可写入口收敛顶栏（架构裁决）。
              留空=全集群语义保留：chip 只在选中时渲染，未选时 indexName 照旧为空串走 _all -->
         <CurrentIdxChip />
-        <!-- 五百六十二批：三开关补中文释义 title（悬停可读，纯属性追加；explain 响应变大、
+        <!-- 三开关补中文释义 title（悬停可读，纯属性追加；explain 响应变大、
              profile 调优排障、auto-highlight 高亮语义一句话说清） -->
         <label class="ss-chk" title="返回每命中的打分解释（_explanation，响应变大）"><input type="checkbox" v-model="opts.explain" /><span>explain</span></label>
         <label class="ss-chk" title="返回各分片执行明细（Profile，调优排障用，响应变大）"><input type="checkbox" v-model="opts.profile" /><span>profile</span></label>
@@ -20,18 +20,18 @@
         <!-- 裸串「took Xms · hits N」换装 MetaStrip 统一件 + TookBadge 四档语义徽标
              （took 徽标只能在默认插槽——其四档色归统一件，item.value 无从承接组件段；
              顺序随插槽位收敛为 hits 在前，语义无损失）。≥ 前缀（totalGte）并入 hits 值。
-             五百二十五批：手写 ss-took-sep 分隔与 ss-took-i 弱化包装退役——插槽段挂组件
+             手写 ss-took-sep 分隔与 ss-took-i 弱化包装退役——插槽段挂组件
              同名形态类 .ms-i/.ms-t（sep 自动化归 MetaStrip 组件），样式单一出处 -->
         <MetaStrip v-if="took != null" class="ss-took-ms" :items="ssResultMeta">
           <span class="ms-i ms-t"><i>took</i> <TookBadge :ms="took" /></span>
         </MetaStrip>
-        <!-- 五百二十八批：页内历史入口（四视图统一，DslQueryView 弹窗范式）——run() 一直在
-             push mode=sandbox 历史（R100），此前页内零出口，回放只能去查询工作台跨模式抽屉 -->
+        <!-- 页内历史入口（四视图统一，DslQueryView 弹窗范式）——run() 一直在
+             push mode=sandbox 历史（），此前页内零出口，回放只能去查询工作台跨模式抽屉 -->
         <button class="btn sm ghost" data-test="open-hist" @click="histOpen = true" title="查询历史"><History :size="12" /> 历史</button>
         <button class="btn sm ghost" @click="copyCurl" :disabled="!dslBody.trim()" title="复制为 curl 命令，贴终端直接执行">
           <FileCode2 :size="12" /> curl
         </button>
-<!-- 八百一十一批：run 主钮补 Play spinning（文案切换既有——803 池「文案通道 NONE」系
+<!-- run 主钮补 Play spinning（文案切换既有——803 池「文案通道 NONE」系
      静态扫描误报实地核真修正记档；G161 族同图标 spinning 化） -->
         <button class="btn primary sm" @click="run" :disabled="running">
           <Play :size="12" :class="{ spinning: running }" /> {{ running ? '搜索中（' + (qr.elapsedMs.value / 1000).toFixed(1) + 's）…' : '搜索 (Ctrl+Enter)' }}
@@ -49,17 +49,17 @@
       </button>
     </div>
 
-    <!-- 第十批：写死 .ss-grid（1fr 1.2fr + min-height:520px）退役 → WorkbenchLayout 双 pane
+    <!-- 写死 .ss-grid（1fr 1.2fr + min-height:520px）退役 → WorkbenchLayout 双 pane
          （比例可调/可折叠/预设/记忆/<1100 自动 stacked）：editor=DSL 编辑器，result=结果区 -->
     <WorkbenchLayout :scope="ssScope" :panes="SS_PANES" axis="vertical" mode="sandbox">
       <template #pane-sandbox-editor>
-      <!-- 左：DSL 编辑器（五百三十四批轨4：.card 壳退役——pane 即容器内容直贴，卡头
+      <!-- 左：DSL 编辑器（轨4：.card 壳退役——pane 即容器内容直贴，卡头
            card-t border-bottom 承接分界；卡头文案与 pane title 同文案双现身随 title 置空消重） -->
       <div class="ss-editor">
         <div class="card-t">
           <FileCode2 :size="13" /> Request DSL
           <span style="margin-left:auto; color:var(--tx2); font-size: var(--fs-xs)">Ctrl+Enter 执行 · Ctrl+S 保存到 localStorage</span>
-          <!-- 五百二十五批：「在构建器中打开」桥——条件树↔裸 JSON 通道此前只通一半
+          <!-- 「在构建器中打开」桥——条件树↔裸 JSON 通道此前只通一半
                （构建器→沙盒有、沙盒→构建器无）。走 ?dsl= 深链通道（DslQueryView onMounted
                消费预填并自动执行，SqlBridge/SqlConsole 同款跳转形态），目标索引随 ?idx= 带去 -->
           <button class="btn ghost xs" :disabled="!dslBody.trim()" @click="openInBuilder"
@@ -70,15 +70,15 @@
         <!-- W-C 批：裸 Monaco 换 JsonArea（合法性圆点+格式化+压缩+复制工具条）。
              @keydown 未声明 emit 经 attrs 透传 .ja 根元素、Monaco textarea 冒泡可达，
              Ctrl+Enter 执行 / Ctrl+S 显式保存行为不变；Ctrl+Enter 走冒泡路径（原 @execute 通道随之退役）。
-             第十批：dsl-assist 接字段智能补全（fields 源 useIndexFields，与 DslQueryView 同管线） -->
+             dsl-assist 接字段智能补全（fields 源 useIndexFields，与 DslQueryView 同管线） -->
         <JsonArea ref="ssJaRef" v-model="dslBody" fill :dsl-assist="dslAssist" @keydown="onEditorKey" />
-        <!-- 第十批：执行前静态检查提示条（随输入实时更新，零阻塞不拦执行）——
-             红条=match_all 全量扫描（lintDsl 无此规则，此处补语义；五百二十五批：规则本体已
+        <!-- 执行前静态检查提示条（随输入实时更新，零阻塞不拦执行）——
+             红条=match_all 全量扫描（lintDsl 无此规则，此处补语义；：规则本体已
              下沉 dslLint（rule id 'match-all'，warning 档），本页维持独立红条口径，黄条流
              按 rule 排除 match-all 防同文双显）；黄条=lintDsl 非档位条。
-             五百二十四批：lint findings 全档展示（此前只筛 warning，terms-scalar 等 error 档被吞）——
+             lint findings 全档展示（此前只筛 warning，terms-scalar 等 error 档被吞）——
              error 红条单列（结构必错 ES 直接拒绝），warning/hint/info 黄条并列；编辑器内同步 setMarkers 划线 -->
-        <!-- 五百六十一批：lint 条换装 theme.css .lint-bar 单源（纯类名替换，DOM 保形；
+        <!-- lint 条换装 theme.css .lint-bar 单源（纯类名替换，DOM 保形；
              本页图标 DOM 零触） -->
         <div v-if="isMatchAll" class="lint-bar lint-bar-err" role="alert">
           <AlertCircle :size="11" />
@@ -99,8 +99,8 @@
 
       <template #pane-sandbox-result>
       <!-- 右：结果 -->
-      <!-- 四百五十六批后：结果区聚焦放大（hits/aggs/explain/profile/raw 五视图整卡聚焦）。
-           五百六十五批：结果 pane 双标题行合并（立法②二留一）——FocusableSurface headless 档
+      <!-- 后：结果区聚焦放大（hits/aggs/explain/profile/raw 五视图整卡聚焦）。
+           结果 pane 双标题行合并（立法②二留一）——FocusableSurface headless 档
            （LiveDashboard ld.page 先例）退 fs-head 工具行，放大/还原双态钮并入 card-t 行尾；
            Esc 退出与焦点管理仍由组件统一承担。headless 置 :enabled 后（459 前缀锁保形） -->
       <FocusableSurface pane-id="sandbox.result" title="结果区" :enabled="focusPaneId === 'sandbox.result'" headless
@@ -108,7 +108,7 @@
       <div class="ss-result">
         <div class="card-t">
           <ListChecks :size="13" /> Response
-<!-- 八百一十一批：结果视图 seg 升格（容器 role=group+aria-label+钮 aria-pressed，G192 范式随批裁） -->
+<!-- 结果视图 seg 升格（容器 role=group+aria-label+钮 aria-pressed，G192 范式随批裁） -->
           <div class="seg" role="group" aria-label="结果视图" style="margin-left:auto">
             <button :class="{ on: view === 'hits' }" :aria-pressed="view === 'hits'" @click="view = 'hits'"><FileText :size="11" /> hits ({{ hits.length }})</button>
             <button :class="{ on: view === 'agg' }" :aria-pressed="view === 'agg'" @click="view = 'agg'" :disabled="!hasAgg" title="DSL 需包含 aggs 聚合才有数据"><PieChart :size="11" /> aggs</button>
@@ -116,9 +116,9 @@
             <button :class="{ on: view === 'profile' }" :aria-pressed="view === 'profile'" @click="view = 'profile'; opts.profile = true" title="自动勾选 profile 并显示分片耗时（请求选项可关）"><Activity :size="11" /> profile</button>
             <button :class="{ on: view === 'raw' }" :aria-pressed="view === 'raw'" @click="view = 'raw'"><Braces :size="11" /> raw</button>
           </div>
-          <!-- 五百四十六批：原始 IO 快查——最近一次 /cluster/search-dsl 请求/响应原文（ioRecorder 记录环） -->
+          <!-- 原始 IO 快查——最近一次 /cluster/search-dsl 请求/响应原文（ioRecorder 记录环） -->
           <button class="btn ghost xs" data-test="raw-io" aria-label="查看原始 IO（搜索沙盒）" title="最近一次搜索请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIo"><Terminal :size="11" /> 原始 IO</button>
-          <!-- 五百六十五批：聚焦双态钮（fs-head 行退役后的放大/还原入口，ld.page 先例） -->
+          <!-- 聚焦双态钮（fs-head 行退役后的放大/还原入口，ld.page 先例） -->
           <button class="btn ghost xs" :aria-label="fsResOn ? '还原结果区' : '聚焦结果区'"
             :title="fsResOn ? '还原结果区（Esc 也可退出）' : '聚焦结果区'" @click="fsResOn = !fsResOn">
             <Minimize2 v-if="fsResOn" :size="11" /><Maximize2 v-else :size="11" />
@@ -130,14 +130,14 @@
         </div>
 
         <!-- 失败内联面板：错误全文留痕 + 重试，不再回落就绪空态。
-             五百六十一批：私造红壳（padding+err 色+err-soft 底，样式 .ss-err 段）退役收编全局
-             .err-bar 形态（role=alert 补齐，theme.css 单源；558 批 mm/bt/pf 判例）——
+             私造红壳（padding+err 色+err-soft 底，样式 .ss-err 段）退役收编全局
+             .err-bar 形态（role=alert 补齐，theme.css 单源； mm/bt/pf 判例）——
              标题/pre/重试钮内容零触，本类只留 icon+body 多行面板顶对齐（mm-err 同款） -->
         <div v-else-if="runErr" role="alert" class="err-bar ss-err">
           <AlertCircle :size="14" />
           <div class="ss-err-body">
-            <!-- 第十批：标题行走 friendlyEsError 人话，pre 保留错误全文（可复制回查）；
-                 五百二十五批：pre 裸插值换 errPreHtml v-html（含 { 走 highlightJson 着色，否则转义平文） -->
+            <!-- 标题行走 friendlyEsError 人话，pre 保留错误全文（可复制回查）；
+                 pre 裸插值换 errPreHtml v-html（含 { 走 highlightJson 着色，否则转义平文） -->
             <div class="ss-err-h">搜索失败 · {{ friendlyRunErr }}</div>
             <pre class="mono ss-err-pre" v-html="errPreHtml(runErr, errMeta(runErrRaw))"></pre>
             <button class="btn sm" @click="run" :disabled="running">{{ running ? '重试中…' : '重试' }}</button>
@@ -147,9 +147,9 @@
         <template v-else-if="response">
           <!-- hits 视图：卡片列表 + 高亮 -->
           <div v-if="view === 'hits'" class="ss-hits">
-            <!-- 558b 批：hits 结果面查找三件套（374 批 lc-json-find 同款：过滤+计数+清除）。
-                 五百六十一批：手写 input（inline max-width:220px 违规）换装 SearchFilterBar 统一件
-                 （560 批 alv-kw-wrap 胞同款；Esc 清空组件内建，placeholder 兼 aria-label）；
+            <!-- 558b 批：hits 结果面查找三件套（ lc-json-find 同款：过滤+计数+清除）。
+                 手写 input（inline max-width:220px 违规）换装 SearchFilterBar 统一件
+                 （ alv-kw-wrap 胞同款；Esc 清空组件内建，placeholder 兼 aria-label）；
                  计数与清除钮走组件 slot 胶囊内右翼，hitsKw/shownHits 过滤链零触 -->
             <div class="ss-hits-find" v-if="hits.length">
               <SearchFilterBar v-model="hitsKw" class="ss-hits-find-bar" placeholder="在结果内查找（_id/_index）…">
@@ -158,7 +158,7 @@
               </SearchFilterBar>
             </div>
             <!-- 558b 批：v-for 换 shownHits（携原始序号 i，explain 展开/收起仍按原 hits 下标定位）。
-                 五百六十五批：_id/_index 裸 mark 换装 MarkText 统一件（splitMark 单源封装，
+                 _id/_index 裸 mark 换装 MarkText 统一件（splitMark 单源封装，
                  mt-mark 全站统一命中底色；textContent 与原文一致、无 v-html 注入面契约不变），
                  kw 空时单段平文零扰动 -->
             <div v-for="({ h, i }) in shownHits" :key="h._id + '_' + i" class="ss-hit">
@@ -184,7 +184,7 @@
                 <ExplainTree :node="h._explanation" />
               </div>
             </div>
-            <!-- 第十批收尾：裸 .empty 迁 EmptyState compact（0 命中语义，pane 结果区内嵌窄态） -->
+            <!-- 裸 .empty 迁 EmptyState compact（0 命中语义，pane 结果区内嵌窄态） -->
             <EmptyState v-if="!hits.length" compact :icon="SearchX" text="无命中结果" hint="检查索引 / 查询语法" />
           </div>
 
@@ -204,14 +204,14 @@
               </div>
               <ExplainTree :node="hits[0]._explanation" />
             </div>
-            <!-- 第十批收尾：裸 .empty 迁 EmptyState compact -->
+            <!-- 裸 .empty 迁 EmptyState compact -->
             <EmptyState v-else compact :icon="Sigma" text="无 explain 数据" hint="需勾选 explain 且有命中" />
           </div>
 
           <!-- profile 视图：分片耗时（勾选 profile 后端已返回，此前只能去 raw 翻） -->
           <div v-else-if="view === 'profile'" class="ss-profile">
             <JsonTree v-if="response.profile" :data="response.profile" tools />
-            <!-- 第十批收尾：裸 .empty 迁 EmptyState compact -->
+            <!-- 裸 .empty 迁 EmptyState compact -->
             <EmptyState v-else compact :icon="Activity" text="无 profile 数据" hint="需勾选 profile 且有命中" />
           </div>
 
@@ -222,8 +222,8 @@
           </div>
         </template>
 
-        <!-- 第十批收尾：初始引导裸 .empty 迁 EmptyState compact（引导语义：先写 DSL 再执行）；
-             五百二十五批：补 hint+action 三件套（action 接现成 reset=填示例 DSL） -->
+        <!-- 初始引导裸 .empty 迁 EmptyState compact（引导语义：先写 DSL 再执行）；
+             补 hint+action 三件套（action 接现成 reset=填示例 DSL） -->
         <EmptyState v-else compact :icon="FileCode2" text="左侧编写 DSL 后 Ctrl+Enter 执行"
           hint="快捷片段一键填入常见查询骨架，留空索引即全集群试跑" action-text="填入示例 DSL" @action="reset" />
       </div>
@@ -231,7 +231,7 @@
       </template>
     </WorkbenchLayout>
 
-    <!-- 五百二十八批：页内查询历史（mode=sandbox 单档过滤，DslQueryView 弹窗范式）。
+    <!-- 页内查询历史（mode=sandbox 单档过滤，DslQueryView 弹窗范式）。
          play=回填草稿并执行（Ctrl+Enter 同通道）、fill=仅回填（四视图统一语义）；
          导入/清空入口关闭（importable=false/:clearable=false）——本面板只消费 mode 过滤后的
          queryHistory store，全清与导入仍归查询工作台跨模式抽屉，防「此处清空全模式连坐」 -->
@@ -243,7 +243,7 @@
       />
     </n-modal>
 
-    <!-- 五百四十六批：原始 IO 弹窗（宿主受控开关；rec 取该页最近一条 /cluster/search-dsl 记录） -->
+    <!-- 原始 IO 弹窗（宿主受控开关；rec 取该页最近一条 /cluster/search-dsl 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
   </div>
 </template>
@@ -255,13 +255,13 @@ import { FlaskConical, Play, RotateCcw, Sparkles, FileCode2, FileText, PieChart,
   Sigma, Braces, ListChecks, Info, AlertCircle, AlertTriangle, Activity, SearchX, ListTree, History, Terminal,
   Maximize2, Minimize2 } from 'lucide-vue-next';
 import { NModal } from 'naive-ui';
-/* 五百二十八批：页内历史面板收编 QueryHistoryPanel 共享件（DslQueryView 弹窗范式） */
+/* 页内历史面板收编 QueryHistoryPanel 共享件（DslQueryView 弹窗范式） */
 import QueryHistoryPanel from '../components/QueryHistoryPanel.vue';
 import { api, ioRecorder, type RawIoRec } from '../api';
-/* 五百四十六批：原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环） */
+/* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环） */
 import RawIoModal from '../components/RawIoModal.vue';
 import PageHeader from '../components/PageHeader.vue';
-/* 第十批收尾：四处裸 .empty 迁 EmptyState compact */
+/* 四处裸 .empty 迁 EmptyState compact */
 import EmptyState from '../components/EmptyState.vue';
 import { useAppStore } from '../stores/app';
 import { useScopedDraft, draftStorageKey } from '../composables/useScopedDraft';
@@ -269,30 +269,30 @@ import { useQueryHistoryStore } from '../stores/queryHistory';
 import { useQueryRun } from '../composables/useQueryRun';
 import { useIdxState } from '../composables/urlState';
 import { toCurl } from '../utils/codegen';
-import { encodeDslParam } from '../utils/queryHub'; /* 五百二十五批：沙盒→构建器 ?dsl= 桥 */
+import { encodeDslParam } from '../utils/queryHub'; /* ：沙盒→构建器 ?dsl= 桥 */
 import { copyText, totalOf, fmtNum } from '../utils/format';
 import JsonArea from '../components/JsonArea.vue';
-import SearchFilterBar from '../components/SearchFilterBar.vue'; /* 五百六十一批：hits 结果面查找胶囊统一件 */
-/* 五百二十五批：页内 IndexPicker 退役 → 只读 CurrentIdxChip（选择入口收敛顶栏；useIdxState
+import SearchFilterBar from '../components/SearchFilterBar.vue'; /* ：hits 结果面查找胶囊统一件 */
+/* 页内 IndexPicker 退役 → 只读 CurrentIdxChip（选择入口收敛顶栏；useIdxState
    follow 下行跟随与 ?idx= 深链上行语义不变），IndexPicker import 随之孤儿化删除 */
 import CurrentIdxChip from '../components/CurrentIdxChip.vue';
-import { highlightDslJson } from '../utils/jsonc'; /* 561 批：DSL 语义键 j-clause 着色（highlightJson 语法遍同内核） */
+import { highlightDslJson } from '../utils/jsonc'; /* ：DSL 语义键 j-clause 着色（highlightJson 语法遍同内核） */
 import FocusableSurface from '../components/FocusableSurface.vue';
 import SkeletonBox from '../components/SkeletonBox.vue';
 import JsonTree from '../components/JsonTree.vue';
-/* 第十批：双 pane 可调工作台、DSL 静态检查、字段智能补全源、错误人话 */
+/* 双 pane 可调工作台、DSL 静态检查、字段智能补全源、错误人话 */
 import WorkbenchLayout, { type WorkbenchPaneSpec } from '../components/WorkbenchLayout.vue';
 import { lintDsl } from '../utils/dslLint';
-import { useDebounceFn } from '../composables/useDebounceFn'; /* 530 批 W-D：防抖统一件 */
+import { useDebounceFn } from '../composables/useDebounceFn'; /*  W-D：防抖统一件 */
 import { useIndexFields } from '../composables/useIndexFields';
-import { useTermsSuggest } from '../composables/useTermsSuggest'; /* 六百六十一批：值位动态候选（660 范式） */
+import { useTermsSuggest } from '../composables/useTermsSuggest'; /* ：值位动态候选（660 范式） */
 import { friendlyEsError } from '../utils/esError';
 /* 558b 批：ES highlight 片段净化单源（原本地 hlSafe 平移，ResultTable.vue:1345 同构待其解禁随迁） */
 import { hlSafe } from '../utils/highlightSanitize';
-/* 五百六十五批：hits 面 _id/_index 查找命中换装 MarkText 统一件（558b 手写 splitMark
+/* hits 面 _id/_index 查找命中换装 MarkText 统一件（558b 手写 splitMark
    渲染退役，mt-mark 视觉单源；hintWave558b 源码锁随迁改锚） */
 import MarkText from '../components/MarkText.vue';
-import { errPreHtml, errMeta } from '../utils/errPre'; /* 五百二十五批：错误面板 pre v-html 内核；534 收口波：双参换装（errMeta 旁路） */
+import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-html 内核；534 收口波：双参换装（errMeta 旁路） */
 /* 结果信息行统一件化：MetaStrip 承接 hits 段、TookBadge 承接 took 四档语义徽标 */
 import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue';
 import TookBadge from '../components/TookBadge.vue';
@@ -311,7 +311,7 @@ const DEFAULT_DSL = `{
 }`;
 
 /* 草稿治理轮：DSL 体迁 useScopedDraft（按 集群/索引 隔离），Ctrl+S 保留为显式确认 */
-/* R44 §8.3：目标索引进 URL，分享/刷新后现场可复原；R60：与顶栏全局工作索引双向就位 */
+/*  §8.3：目标索引进 URL，分享/刷新后现场可复原；：与顶栏全局工作索引双向就位 */
 const indexName = useIdxState({ follow: true });
 const dslBody = useScopedDraft('dsl', {
   route: 'search-sandbox',
@@ -320,27 +320,27 @@ const dslBody = useScopedDraft('dsl', {
 }, DEFAULT_DSL).text;
 const opts = ref({ explain: false, profile: false, highlight: true });
 const running = ref(false);
-/* 四百五十六批后：结果区聚焦态 */
+/* 后：结果区聚焦态 */
 const focusPaneId = ref<string | null>(null);
-/* 五百六十五批：结果区聚焦双态钮（FocusableSurface headless 档，fs-head 行退役后
+/* 结果区聚焦双态钮（FocusableSurface headless 档，fs-head 行退役后
    放大/还原入口迁结果卡头；set 复用既有 focusPaneId 通道，Esc 退出由组件承担） */
 const fsResOn = computed({
   get: () => focusPaneId.value === 'sandbox.result',
   set: (on: boolean) => { focusPaneId.value = on ? 'sandbox.result' : null; },
 });
-const qr = useQueryRun(); // 长查询读秒 + 取消（R80 范式）
+const qr = useQueryRun(); // 长查询读秒 + 取消（ 范式）
 const response = ref<any>(null);
-/* R91b 禁「失败伪装成就绪空态」：错误全文进内联面板留痕，可重试 */
+/*  禁「失败伪装成就绪空态」：错误全文进内联面板留痕，可重试 */
 const runErr = ref('');
 /* 534 收口波双参换装：原始错误对象旁路留存（catch 压串丢 code/endpoint，喂 errMeta 用） */
 const runErrRaw = ref<unknown>(null);
-/* 第十批：runErr 面板标题行的人话摘要（pre 仍保全文） */
+/* runErr 面板标题行的人话摘要（pre 仍保全文） */
 const friendlyRunErr = computed(() => friendlyEsError(runErr.value));
 const view = ref<'hits' | 'agg' | 'explain' | 'profile' | 'raw'>('hits');
 const expandedExplain = ref<number | null>(null);
 
-/* 第十批：可调工作台声明（照 AnalyzeView 形态）——编辑器 pane 可折叠，结果 pane 吃剩余。
-   五百三十四批轨4：竖排标题轨退役（§6v 刀①）——卡头 Request DSL/Response 已是横排承接，
+/* 可调工作台声明（照 AnalyzeView 形态）——编辑器 pane 可折叠，结果 pane 吃剩余。
+   轨4：竖排标题轨退役（§6v 刀①）——卡头 Request DSL/Response 已是横排承接，
    与 pane title 同文案双现身随置空消重（单源） */
 const ssScope = { target: store.target || 'host', route: '/search', mode: 'sandbox', profile: 'standard' as const };
 const SS_PANES: WorkbenchPaneSpec[] = [
@@ -348,16 +348,16 @@ const SS_PANES: WorkbenchPaneSpec[] = [
   { id: 'sandbox.result', role: 'response', title: '', minSize: 360, defaultSize: 'flex' },
 ];
 
-/* 第十批：字段智能补全源——useIndexFields（mappingDetail 出口，与 DslQueryView/FieldPicker 同管线）；
+/* 字段智能补全源——useIndexFields（mappingDetail 出口，与 DslQueryView/FieldPicker 同管线）；
    留空索引（全集群）fields 为空，补全与类型规则零降级。闭包常量落 setup 作用域
    （模板内联对象字面量经 _ctx 代理会取到 undefined，DslQueryView 渗透 spec 红灯实证） */
 const { fields: ssFields, ensure: ensureSsFields } = useIndexFields(() => indexName.value || '');
 watch(indexName, () => ensureSsFields(), { immediate: true });
-/* 六百六十一批：terms 闭包接线——索引源=indexName 与 ssFields 同源现调现读 */
+/* terms 闭包接线——索引源=indexName 与 ssFields 同源现调现读 */
 const ssTerms = useTermsSuggest(() => indexName.value || '');
 const dslAssist = { fields: () => ssFields.value, terms: (f: string, p: string) => ssTerms.suggestAsync(f, p) };
 
-/* 第十批：执行前静态检查——lintDsl（ctx 传 mapping fields）随输入实时重估，
+/* 执行前静态检查——lintDsl（ctx 传 mapping fields）随输入实时重估，
    只提示不拦截（零阻塞，同 LuceneInput .li-syntax 口径）；JSON 非法时静默
    （JsonArea 圆点已报，执行时后端会给出真实错误）。match_all 全量类警告单列红条 */
 const parsedDsl = computed<Record<string, unknown> | null>(() => {
@@ -370,7 +370,7 @@ const isMatchAll = computed(() => {
   const q = parsedDsl.value?.query as unknown;
   return !!q && typeof q === 'object' && !Array.isArray(q) && 'match_all' in q;
 });
-/* 五百二十四批：lint findings 全档展示（此前 warnFindings 只筛 warning——terms-scalar 等
+/* lint findings 全档展示（此前 warnFindings 只筛 warning——terms-scalar 等
    error 结构必错档被吞）。error 红条单列，其余（warning/hint/info）黄条并列；
    编辑器内同步注入划线（JsonArea 新透传 setMarkers）。 */
 const lintFindings = computed(() => {
@@ -380,12 +380,12 @@ const lintFindings = computed(() => {
 const lintErrors = computed(() => lintFindings.value.filter(f => f.severity === 'error'));
 const lintWarns = computed(() => lintFindings.value.filter(f => f.severity !== 'error' && f.rule !== 'match-all'));
 
-/* 五百二十四批：lint findings 注入编辑器划线（DslQueryView 范式：debounce 250ms 防每敲一键
+/* lint findings 注入编辑器划线（DslQueryView 范式：debounce 250ms 防每敲一键
    全量 findMatches；非法 JSON 不 lint——JsonArea 圆点已报；info 降级 hint，MonacoEditor
    marker 档只收 warning/hint/error；定位不到的 finding 由 setMarkers 返回 unplaced，
    行内条已全档兜底展示，不静默丢信息）。 */
 const ssJaRef = ref<InstanceType<typeof JsonArea> | null>(null);
-/* 530 批 W-D：手写 setTimeout 防抖换 useDebounceFn 统一件（250ms 同值；卸载自动清理，
+/*  W-D：手写 setTimeout 防抖换 useDebounceFn 统一件（250ms 同值；卸载自动清理，
    原手写版组件卸载后 timer 仍会触发一次 setMarkers） */
 const queueLintMarkers = useDebounceFn(() => {
   const findings = parsedDsl.value ? lintDsl(parsedDsl.value, { fields: ssFields.value }) : [];
@@ -395,7 +395,7 @@ watch(dslBody, () => { queueLintMarkers(); }, { immediate: true });
 
 const hits = computed<any[]>(() => response.value?.hits?.hits || []);
 
-/* 558b 批：hits 结果面查找（374 批 lucene json-find 三件套同款：过滤+计数+清除）——
+/* 558b 批：hits 结果面查找（ lucene json-find 三件套同款：过滤+计数+清除）——
    此前 hits 面无任何查找入口，大结果集只能肉眼扫 _id/_index。_id/_index 子串过滤不区分
    大小写；shownHits 携原始序号 i（过滤态 explain 展开/收起仍按原 hits 下标定位不串位）；
    hitsMarkKw 供 splitMark 切分高亮（trim 后空串=无标记零扰动） */
@@ -413,7 +413,7 @@ const hitsMarkKw = computed(() => hitsKw.value.trim());
 /* 558b 批：hlSafe 净化单源迁 utils/highlightSanitize（import 在顶部 import 区，逻辑逐字
    平移，本视图只消费；ResultTable.vue:1345 同构待其解禁随迁）。模板净化出口
    v-html="hlSafe(...)" 不变 */
-/* W-C 批：raw 视图响应 JSON 高亮（输出已转义）；561 批：换 highlightDslJson——DSL 语义键出
+/* W-C 批：raw 视图响应 JSON 高亮（输出已转义）；：换 highlightDslJson——DSL 语义键出
    j-clause，span 只换类名不改 textContent（响应面板 textContent 消费零扰动） */
 const rawHtml = computed(() => (response.value ? highlightDslJson(JSON.stringify(response.value, null, 2)) : ''));
 const totalHits = computed(() => totalOf(response.value?.hits).value);
@@ -436,7 +436,7 @@ const snippets = computed<Snip[]>(() => [
   { name: 'match 分词', body: `{"size":10,"query":{"match":{"字段":"关键词"}},"highlight":{"fields":{"字段":{}}}}` },
   { name: 'bool 组合', body: `{"size":10,"query":{"bool":{"must":[{"match":{"字段":"关键词"}}],"filter":[{"term":{"状态":"已发布"}}],"must_not":[],"should":[]}}}` },
   { name: 'range 时间', body: `{"size":10,"query":{"range":{"createTime":{"gte":"now-7d/d","lte":"now"}}}}` },
-  /* 556 批：值位类型盲区补档——boolean 字面量与 ip 区间（queryAstOps 类型族对照，此前两面缺席） */
+  /* 值位类型盲区补档——boolean 字面量与 ip 区间（queryAstOps 类型族对照，此前两面缺席） */
   { name: 'term 布尔', body: `{"size":10,"query":{"term":{"deleted":false}}}` },
   { name: 'range IP', body: `{"size":10,"query":{"range":{"ip":{"gte":"10.0.0.10","lte":"10.0.0.20"}}}}` },
   { name: 'aggs terms', body: `{"size":0,"aggs":{"by_status":{"terms":{"field":"状态.keyword","size":20}}}}` },
@@ -450,13 +450,13 @@ function applySnippet(s: Snip) {
 
 function reset() { dslBody.value = DEFAULT_DSL; }
 
-/* R46：沙盒现场一键变 curl——复现/报障不用手拼命令 */
+/* 沙盒现场一键变 curl——复现/报障不用手拼命令 */
 async function copyCurl() {
   const path = `/${indexName.value.trim() || '_all'}/_search`;
   if (await copyText(toCurl('POST', path, dslBody.value))) store.notify('success', '已复制 curl 命令');
 }
 
-/* 五百二十五批：沙盒→构建器桥——条件树↔裸 JSON 双向通道补齐（此前构建器→沙盒有、
+/* 沙盒→构建器桥——条件树↔裸 JSON 双向通道补齐（此前构建器→沙盒有、
    沙盒→构建器断头）。?dsl= 入站契约已存在（DslQueryView onMounted atob 解码预填+自动执行，
    encodeDslParam 与其解码互为逆运算；SqlBridge/SqlConsole 同款 router.push 形态）。
    目标索引随 ?idx= 带去（留空不带，保持全集群语义）；mode=dsl 直落构建器分页 */
@@ -500,20 +500,20 @@ async function run() {
     view.value = 'hits';
     // 命中为 0 但有 aggs -> 自动切 aggs
     if (!hits.value.length && hasAgg.value) view.value = 'agg';
-    /* R100：执行成功记跨模式历史（原始 Request DSL + 目标索引，留空=全集群） */
-    /* R101：记录查询耗时 */
+    /* 执行成功记跨模式历史（原始 Request DSL + 目标索引，留空=全集群） */
+    /* 记录查询耗时 */
     useQueryHistoryStore().push('sandbox', dslBody.value, indexName.value.trim() || undefined, took.value ?? undefined);
   } catch (e: any) {
     runErr.value = String(e?.message || e);
     runErrRaw.value = e; /* 534 收口波：原始对象旁路（errMeta 读 code/endpoint，压串时丢失） */
-    store.notify('error', '搜索失败：' + friendlyEsError(String(e?.message ?? e))); /* 五百六十批：面板 friendlyRunErr 已友好，toast 裸串并轨（BoostTunerView:347 口径） */
+    store.notify('error', '搜索失败：' + friendlyEsError(String(e?.message ?? e))); /* ：面板 friendlyRunErr 已友好，toast 裸串并轨（BoostTunerView:347 口径） */
   } finally {
     running.value = false;
     qr.finish();
   }
 }
 
-/* 五百二十八批：页内历史回放/回填——play=回填草稿并执行（Ctrl+Enter 同通道）、fill=仅回填。
+/* 页内历史回放/回填——play=回填草稿并执行（Ctrl+Enter 同通道）、fill=仅回填。
    草稿通道=useScopedDraft dslBody（按集群/索引隔离），与手工编辑同一条写入路径 */
 const qh = useQueryHistoryStore();
 const histOpen = ref(false);
@@ -524,7 +524,7 @@ function replayHistRow(row: { query: string }, runIt: boolean) {
   if (runIt) run();
 }
 
-/* 五百四十六批：原始 IO 快查（545 四页同款）——特征 /cluster/search-dsl；判空 rec=null（本页
+/* 原始 IO 快查（545 四页同款）——特征 /cluster/search-dsl；判空 rec=null（本页
    还没跑过搜索）时 notify 引导，不开空弹窗 */
 const rawIoShow = ref(false);
 const rawIoRec = ref<RawIoRec | null>(null);
@@ -546,7 +546,7 @@ function onEditorKey(e: KeyboardEvent) {
     store.notify('success', 'DSL 已保存到浏览器');
   }
 }
-/* R44 §9：Ctrl+Enter 只在编辑器内监听（onEditorKey）。
+/*  §9：Ctrl+Enter 只在编辑器内监听（onEditorKey）。
    此前额外挂了 window 级监听，与编辑器监听叠加会一次触发两回 run()，已移除。 */
 onMounted(() => {
   if (!store.indices.length) store.loadIndices();
@@ -584,12 +584,12 @@ const ExplainTree: any = defineComponent({
 
 <style scoped>
 .ss { display: flex; flex-direction: column; gap: var(--sp-2h); height: 100%; position: relative; }
-/* 四百一十五批：执行进度条贴页顶 */
-/* 五百二十七批：.ss-title 死规则退役（卡头已用全局 .card-t，模板 grep 0 引用）。
-   五百五十二批：card 壳退役——裸行只留竖距与分界线，横距归页面流（14px 侧距随壳退役） */
+/* 执行进度条贴页顶 */
+/* .ss-title 死规则退役（卡头已用全局 .card-t，模板 grep 0 引用）。
+   card 壳退役——裸行只留竖距与分界线，横距归页面流（14px 侧距随壳退役） */
 .ss-bar { padding: var(--sp-2h) 0; border-bottom: 1px solid var(--line); }
 /* 结果信息行换装 MetaStrip+TookBadge——基础形态归组件，插槽段（took 徽标）挂组件同名
-   形态类 .ms-i/.ms-t；五百二十五批：手写 ss-took-sep/.ss-took-i 三条 scoped 规则退役，
+   形态类 .ms-i/.ms-t；：手写 ss-took-sep/.ss-took-i 三条 scoped 规则退役，
    sep 自动化与形态归 MetaStrip 组件单一出处 */
 .ss-took-ms { flex: none; }
 .ss-chk { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-xs); color: var(--tx1); cursor: pointer; }
@@ -603,24 +603,24 @@ const ExplainTree: any = defineComponent({
 }
 .ss-snip:hover { border-color: var(--ac); color: var(--ac-hi); background: var(--ac-soft); }
 
-/* 第十批：.ss-grid（1fr 1.2fr + min-height:520px）退役——双栏交给 WorkbenchLayout
+/* .ss-grid（1fr 1.2fr + min-height:520px）退役——双栏交给 WorkbenchLayout
    （pane 内 rp-content 转纵向 flex，编辑器/结果卡吃满 pane）；1100px 自制断点随之删除，
    窄视口 stacked 由 WorkbenchLayout 自动处理 */
 .ss :deep(.rp-content) { display: flex; flex-direction: column; }
-/* 五百三十四批轨4：.card 全局壳随模板类退役（四刀立法③④）——flex 链本体保留零变动；
+/* 轨4：.card 全局壳随模板类退役（四刀立法③④）——flex 链本体保留零变动；
    卡头转 fs-head 语言（DevTools .dt-pane-tt 同款）：行首横排 + border-bottom 承接分界，
    内容直贴 pane（Kibana 控制台同语言）；card-t 全局档无 padding/border，本地补齐 */
 .ss-editor, .ss-result { display: flex; flex-direction: column; overflow: hidden; flex: 1 1 auto; min-height: 0; }
 .ss-editor > .card-t, .ss-result > .card-t { padding: var(--sp-2) var(--sp-3); margin-bottom: 0; border-bottom: 1px solid var(--border); flex-shrink: 0; font-size: var(--fs-sm); }
-/* 五百五十七批：.ja 编辑器外框退役（立法③，AnalysisSettings as-card-raw:365 判例同语言）
-   ——分界由 .ss-editor > .card-t 既有 border-bottom 承接（534 批已补），radius 随判例归零；
+/* .ja 编辑器外框退役（立法③，AnalysisSettings as-card-raw:365 判例同语言）
+   ——分界由 .ss-editor > .card-t 既有 border-bottom 承接（已补），radius 随判例归零；
    组件本体零触，视图侧覆盖。纯视觉，flex/高度链零变动 */
 .ss-editor :deep(.ja) { border: none; border-radius: 0; }
-/* 五百六十一批：lint 体检提示条私有形态（row 版 display/gap/padding/border-top + svg 内衬 +
+/* lint 体检提示条私有形态（row 版 display/gap/padding/border-top + svg 内衬 +
    warn/err 底色）退役 → theme.css .lint-bar 单源（模板纯类名换装，DOM 保形） */
 .ss-loading { padding: 14px; }
-/* 五百六十一批：.ss-err 私造红壳（padding+err 色+err-soft 底）退役收编 theme.css .err-bar
-   （role=alert；558 批 mm-err 判例同款）——本组只留 icon+body 多行面板顶对齐
+/* .ss-err 私造红壳（padding+err 色+err-soft 底）退役收编 theme.css .err-bar
+   （role=alert； mm-err 判例同款）——本组只留 icon+body 多行面板顶对齐
    （err-bar align-items:center 对富内容不对，抵掉即顶对齐；mm-err 同口径） */
 .ss-err { align-items: flex-start; }
 .ss-err-body { flex: 1; min-width: 0; }
@@ -628,13 +628,13 @@ const ExplainTree: any = defineComponent({
 .ss-err-pre { font-size: var(--fs-xs); margin: 0 0 var(--sp-2); white-space: pre-wrap; word-break: break-word; color: var(--tx1); max-height: 200px; overflow: auto; }
 
 .ss-hits { overflow-y: auto; padding: var(--sp-2) var(--sp-3); flex: 1; }
-/* 558b 批：hits 结果面查找条（374 批 .lc-json-find 同形态） */
+/* 558b 批：hits 结果面查找条（ .lc-json-find 同形态） */
 .ss-hits-find { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
-/* 五百六十一批：sfb 落位类挂 SearchFilterBar 根（alv-kw-wrap 胞同款）——inline max-width:220px
+/* sfb 落位类挂 SearchFilterBar 根（alv-kw-wrap 胞同款）——inline max-width:220px
    违规退役归此类；mono 字号经根继承进 .sfb-i（原 inp mono 皮保真），内衬贴胶囊原密度 */
 .ss-hits-find-bar { flex: none; width: 220px; padding: 0 var(--sp-2); font-family: var(--mono); font-size: var(--fs-xs); }
 .ss-hits-count { font-size: var(--fs-xs); color: var(--tx2); white-space: nowrap; }
-/* 五百六十五批：.ss-hit-head mark 私有样式退役——_id/_index 命中高亮换装 MarkText，
+/* .ss-hit-head mark 私有样式退役——_id/_index 命中高亮换装 MarkText，
    mt-mark 组件单源承接（warn 底/tx-on-strong/2px 圆角/0 1px 内衬同值，全站统一命中底色） */
 .ss-hit { padding: var(--sp-2h) var(--sp-3); border-bottom: 1px solid var(--line); }
 .ss-hit-head { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-1h); flex-wrap: wrap; }
@@ -648,7 +648,7 @@ const ExplainTree: any = defineComponent({
 .ss-hit-src-t { cursor: pointer; font-size: var(--fs-xs); color: var(--tx2); padding: 3px 0; }
 .ss-hit-src-t:hover { color: var(--ac-hi); }
 .ss-hit-src pre { max-height: 260px; overflow: auto; background: var(--bg1); padding: var(--sp-2); border-radius: var(--r-xs); font-size: var(--fs-xs); }
-/* 五百零二批：聚焦面内限高解除（404 同款）——ss-err-pre/ss-hit-src pre 在 sandbox.result
+/* 聚焦面内限高解除（404 同款）——ss-err-pre/ss-hit-src pre 在 sandbox.result
    聚焦面内，放大后仍被 200/260px 限高裁在面顶部（有滚动但浪费整面空间）；聚焦态解除随面拉伸。 */
 .fs-active .ss-err-pre, .fs-active .ss-hit-src pre { max-height: none; flex: 1 1 auto; }
 
@@ -658,7 +658,7 @@ const ExplainTree: any = defineComponent({
 /* flex-start：整句折成两行时图标须对齐首行，center 会让图标飘到两行正中 */
 .ss-explain-hint { display: flex; align-items: flex-start; gap: var(--sp-1h); color: var(--tx2); font-size: var(--fs-xs); padding: var(--sp-1) 0 var(--sp-2h); }
 .ss-explain-hint > svg { flex: none; margin-top: var(--sp-0); }
-/* R91：ExplainTree 是 render 函数内联组件，元素无 scope 属性，样式必须 :deep() */
+/* ExplainTree 是 render 函数内联组件，元素无 scope 属性，样式必须 :deep() */
 :deep(.ss-ex-node) { padding: var(--sp-0) 0; }
 :deep(.ss-ex-head) { display: flex; align-items: baseline; gap: var(--sp-2); cursor: pointer; padding: var(--sp-0) var(--sp-1); border-radius: 3px; }
 :deep(.ss-ex-head:hover) { background: var(--bg2); }
@@ -667,14 +667,14 @@ const ExplainTree: any = defineComponent({
 :deep(.ss-ex-desc) { font-size: var(--fs-xs); color: var(--tx1); }
 
 .ss-agg pre, .ss-raw pre { flex: 1; overflow: auto; padding: var(--sp-3); margin: 0; font-size: var(--fs-xs); }
-/* 第十批收尾：scoped .empty 覆盖（26px 紧凑留白）随四处空态迁 EmptyState compact 一并退役，留白归组件 */
+/* scoped .empty 覆盖（26px 紧凑留白）随四处空态迁 EmptyState compact 一并退役，留白归组件 */
 
-/* 五百三十一批：900 紧凑微调档（Workbench 五视图之一：pane 堆叠已由 WorkbenchLayout <1100 JS 档
+/* 900 紧凑微调档（Workbench 五视图之一：pane 堆叠已由 WorkbenchLayout <1100 JS 档
    兜底；lrBarSingleTrack 裁决=.ss-bar-r 局部 wrap 规则退役——子栏 flex/align/
    gap 一律归 lr-bar 骨架单源，骨架既有 wrap 兜底已覆盖窄宿主，本页不再自携）。
-   五百五十二批：.ss-bar 900 侧距收窄档随 card 壳退役删除——裸行横距归页面流，窄宿主换行归 lr-bar wrap */
+   .ss-bar 900 侧距收窄档随 card 壳退役删除——裸行横距归页面流，窄宿主换行归 lr-bar wrap */
 
-/* 五百六十五批：900 紧凑微调档重立（§9.3 口径；552 出册后 W4 实裁补档）——本页零
+/* 900 紧凑微调档重立（§9.3 口径；552 出册后 W4 实裁补档）——本页零
    grid-template-columns（单列化无对象），唯两卡头工具群 900 下横排挤压（编辑器卡头
    快捷键提示+构建器钮、结果卡头 seg 五视图钮+原始 IO+聚焦钮），允许 wrap 换行即安全
    （528 W-E「只加 CSS 零结构动」口径）；pane 堆叠归 WorkbenchLayout <1100 JS 档、

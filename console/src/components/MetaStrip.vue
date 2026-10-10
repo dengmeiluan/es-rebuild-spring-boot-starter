@@ -2,7 +2,7 @@
   <!-- 统一 inline 元信息串（IndexHubView .ih-meta 同款范式收编）：
        值亮(b tabular-nums)+单位弱化+标签暗(i)，· 分隔，flex-wrap 窄屏换行，tip 走 :title 兜底。
        tone 走语义 token 色；to 可选点击跳转（键盘可达：role=link + Enter）。默认插槽承接自定义段，
-       525 批起其前自动补段间分隔（消费方手写 ih-meta-sep/dg-slot-sep/tv-meta-ksep 等随之退役）。 -->
+       起其前自动补段间分隔（消费方手写 ih-meta-sep/dg-slot-sep/tv-meta-ksep 等随之退役）。 -->
   <div class="ms">
     <template v-for="(it, i) in items" :key="i">
       <span v-if="i" class="ms-sep" aria-hidden="true">·</span>
@@ -20,7 +20,7 @@
         <b :class="it.tone ? 'ms-' + it.tone : undefined">{{ it.value }}</b><span v-if="it.unit" class="ms-unit">{{ it.unit }}</span> <i v-if="it.label">{{ it.label }}</i>
       </span>
     </template>
-    <!-- 525 批：默认插槽前自动渲染段间分隔。与 items 段间分隔同语义（分隔只出现在段与段之间）：
+    <!-- 默认插槽前自动渲染段间分隔。与 items 段间分隔同语义（分隔只出现在段与段之间）：
          items 为空时插槽即首段，不带前导「·」，防头部悬挂点。组件全量核实仅此一个默认插槽 -->
     <span v-if="items.length && $slots.default" class="ms-sep" aria-hidden="true">·</span>
     <slot />
@@ -62,7 +62,7 @@ function go(it: MetaStripItem) {
 </script>
 
 <style scoped>
-/* 六百八十一批（台账 R77 G'2）：窄档两行换行补行距节奏——row-gap 走 --sp-2；
+/* （台账  G'2）：窄档两行换行补行距节奏——row-gap 走 --sp-2；
    列距 7px 刻意紧凑值保字面（651「精确等值才收」同律），单行渲染零变化 */
 .ms { display: flex; align-items: center; gap: var(--sp-2) 7px; flex-wrap: wrap; font-size: var(--fs-xs); font-family: var(--mono); color: var(--tx1); min-width: 0; }
 .ms b { color: var(--tx0); font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -79,7 +79,7 @@ function go(it: MetaStripItem) {
 .ms-i.link { cursor: pointer; }
 .ms-i.link:hover b { text-decoration: underline; }
 .ms-t { color: var(--tx2); }
-/* 五百二十五批 Lead 收尾：插槽段（消费方挂 ms-i/ms-t，如 took 徽标段）——scoped 规则不命中插槽内容，:slotted 承接 */
+/*  Lead 收尾：插槽段（消费方挂 ms-i/ms-t，如 took 徽标段）——scoped 规则不命中插槽内容，:slotted 承接 */
 .ms :slotted(.ms-i) { display: inline-flex; align-items: baseline; gap: var(--sp-1); }
 .ms :slotted(.ms-i i) { font-style: normal; color: var(--tx2); font-size: var(--fs-xs); }
 .ms :slotted(.ms-t) { color: var(--tx2); }

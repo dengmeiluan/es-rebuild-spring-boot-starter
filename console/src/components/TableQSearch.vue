@@ -1,9 +1,9 @@
-<!-- 五百六十一批：RT/QRT 双内核「searchable 内建搜索框」同构段收编片段组件（546 批 W3，
+<!-- RT/QRT 双内核「searchable 内建搜索框」同构段收编片段组件（ W3，
      单根 span 无 fragment 规避 T39）。类名经 qCls prop 注入（rt-/qrt- 前缀串）；
      双绑走 update:kw（宿主 searchableKw 既有 ref 契约不变——输入驱动 quickFilter 过滤链、
      Esc 清词语义等值平移）。缺省 searchable=false 整块不渲染（零增量口径不变）。
      ⚠DOM 逐字节保真：结构/文案/aria 与两内核原模板零变动（546 行为锁零改锚）。
-     六百二十一批·单框双效：新增 enter 定向转 emit（SFB 547 同立法——Enter 不走根冒泡，
+     ·单框双效：新增 enter 定向转 emit（SFB 547 同立法——Enter 不走根冒泡，
      宿主接 @enter=桥接滚动下一命中行；DOM 零变动）。 -->
 <template>
   <span v-if="on" :class="qCls">
@@ -32,8 +32,8 @@ defineEmits<{ (e: 'update:kw', v: string): void; (e: 'enter'): void }>();
      全站仅本组件使用（两内核 scoped 原规则随迁出退役），全局单一出处零泄漏。
      searchFilterBar547「rt-qsearch 异形豁免」锚随迁读本文件。 -->
 <style>
-/* 五百四十六批 W3：searchable 内建搜索框（工具行同档高度，与 .btn.sm 同排对齐）
-   八百二十四批：根 span min-width:0=收缩使能（554 收缩序里原恒 160px 固宽不让位，
+/*  W3：searchable 内建搜索框（工具行同档高度，与 .btn.sm 同排对齐）
+   根 span min-width:0=收缩使能（554 收缩序里原恒 160px 固宽不让位，
    左簇计数条 ellipsis 缓冲被独吸到近零）；-inp min-width 90px 地板=placeholder
    「搜索结果…」可读下限，挤压时快滤框至多让位 70px 后保形 */
 .qrt-qsearch, .rt-qsearch { position: relative; display: inline-flex; align-items: center; min-width: 0; }

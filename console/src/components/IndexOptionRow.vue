@@ -32,8 +32,8 @@
 import { computed } from 'vue';
 import { Copy } from 'lucide-vue-next';
 import { copyText } from '../utils/format';
-/* 558 批：命中高亮收口 splitMark 分段渲染——原 esc()+<mark> 串接只标首处（indexOf 单点），
-   且 v-html 是本组件唯一注入面。模板 v-for 插值天然转义：多命中全标 + 557 批数值归一白得，
+/* 命中高亮收口 splitMark 分段渲染——原 esc()+<mark> 串接只标首处（indexOf 单点），
+   且 v-html 是本组件唯一注入面。模板 v-for 插值天然转义：多命中全标 + 数值归一白得，
    字面行为零漂移（kw 空白 trim 后视同无高亮，单段原文）。 */
 import { splitMark } from '../composables/useGridSearch';
 import { useAppStore } from '../stores/app';
@@ -51,8 +51,8 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{ (e: 'select-alias', name: string): void }>();
 const store = useAppStore();
 
-/* v3.0.1:去中段省略双重截断（原 midEllipsis 已于 788 批退役）——CSS ellipsis+title 全文已兜底,JS 再截会让高亮定位失真且复制语义混乱。
-   558 批：v-html 面退役——splitMark 分段直接模板渲染（多命中全标），shown/esc 一并退役 */
+/* v3.0.1:去中段省略双重截断（原 midEllipsis 已于 退役）——CSS ellipsis+title 全文已兜底,JS 再截会让高亮定位失真且复制语义混乱。
+   v-html 面退役——splitMark 分段直接模板渲染（多命中全标），shown/esc 一并退役 */
 const nameSegs = computed(() => splitMark(props.name, props.hl || ''));
 
 async function doCopy() {

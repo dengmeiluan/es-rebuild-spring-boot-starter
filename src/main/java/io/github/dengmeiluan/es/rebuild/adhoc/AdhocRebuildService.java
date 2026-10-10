@@ -57,28 +57,28 @@ public class AdhocRebuildService {
     private static final long CATCHUP_CONVERGE_THRESHOLD = 50;
     /** reindex 进度轮询间隔 */
     private static final long POLL_INTERVAL_MS = 2000;
-    /** R93：等待人工确认的轮询间隔 */
+    /** 等待人工确认的轮询间隔 */
     private static final long GATE_POLL_INTERVAL_MS = 1000;
-    /** R93：因失去重建锁而中止的报告 reason（与超时/人工中止可区分） */
+    /** 因失去重建锁而中止的报告 reason（与超时/人工中止可区分） */
     static final String REASON_LOCK_LOST = "LOCK_LOST";
 
-    /** 五百六十二批：renew/锁丢失 ERROR 节流间隔（MigrateJobTracker.save 60s 范式）。 */
+    /** renew/锁丢失 ERROR 节流间隔（MigrateJobTracker.save 60s 范式）。 */
     private static final long LOCK_ERR_THROTTLE_MS = 60_000L;
 
-    /** 五百六十二批：renewLockOrLose 两处 ERROR（renew 失败/续约校验异常）60s 单键节流——
+    /** renewLockOrLose 两处 ERROR（renew 失败/续约校验异常）60s 单键节流——
      *  ES 持续不可达时每个作业每个续约点一条 ERROR 会刷屏。首条全量（异常臂带栈保留），
      *  窗口内仅累计，窗口尾先汇总一条无栈再落本窗首条；两臂共享一键（同一失锁族）。 */
     private final java.util.concurrent.atomic.AtomicLong lastRenewErrAt = new java.util.concurrent.atomic.AtomicLong(0);
     private final java.util.concurrent.atomic.AtomicLong renewErrSinceThrottle = new java.util.concurrent.atomic.AtomicLong(0);
 
     private final EsIndexAdmin esIndexAdmin;
-    /** R93：人工确认切换的等待超时（毫秒） */
+    /** 人工确认切换的等待超时（毫秒） */
     private final long confirmTimeoutMs;
-    /** R93：重建锁租约（毫秒）。长作业与人工等待期间按 {@link #renewIntervalMs()} 续约。 */
+    /** 重建锁租约（毫秒）。长作业与人工等待期间按 {@link #renewIntervalMs()} 续约。 */
     private final long lockLeaseMs;
-    /** R93：按逻辑索引名跨实例互斥的重建锁 */
+    /** 按逻辑索引名跨实例互斥的重建锁 */
     private final RebuildLockStore lockStore;
-    /** R38：宿主 client 改 Supplier 懒解析（零 ES 依赖宿主经 ControlClusterResolver 供给）。 */
+    /** 宿主 client 改 Supplier 懒解析（零 ES 依赖宿主经 ControlClusterResolver 供给）。 */
     private final java.util.function.Supplier<RestHighLevelClient> client;
     /**
      * target-aware adhoc：多集群路由器。start 经 {@link EsClientRouter#requireCapturedTarget()}
@@ -89,9 +89,9 @@ public class AdhocRebuildService {
     /** 目标快照取名字/版本用；null 安全。 */
     private final ConnStore connStore;
     private final Map<String, AdhocRebuildJob> jobs = new ConcurrentHashMap<>();
-    /** Task 2：作业记录存储 SPI。{@link #jobs} 作一级缓存，状态变更时经 {@link #persist} 落盘于此。 */
+    /** 作业记录存储 SPI。{@link #jobs} 作一级缓存，状态变更时经 {@link #persist} 落盘于此。 */
     private final AdhocJobStore store;
-    /** 五百五十四批：已 WARN 过 docCount 失败的索引（每索引仅记首次，防 prepare 轮询刷屏）。 */
+    /** 已 WARN 过 docCount 失败的索引（每索引仅记首次，防 prepare 轮询刷屏）。 */
     private final Set<String> docCountWarned = ConcurrentHashMap.newKeySet();
     private final ExecutorService worker = Executors.newCachedThreadPool(r -> {
         Thread t = new Thread(r, "es-adhoc-rebuild");
@@ -109,7 +109,7 @@ public class AdhocRebuildService {
     }
 
     /**
-     * 无锁构造（既有调用方/测试用）：锁降级为 no-op，行为与 R93 之前完全一致。
+     * 无锁构造（既有调用方/测试用）：锁降级为 no-op，行为与  之前完全一致。
      */
     public AdhocRebuildService(EsIndexAdmin esIndexAdmin, java.util.function.Supplier<RestHighLevelClient> client,
                                long confirmTimeoutMs) {
@@ -118,7 +118,7 @@ public class AdhocRebuildService {
 
     /**
      * 既有 5 参构造：store 默认内存实现，委托给全参构造。装配处（EsRebuildAutoConfiguration）
-     * 仍走本签名，Task 2 独立可编译；Task 6 再把装配改为注入 store bean（走下面的 6 参构造）。
+     * 仍走本签名， 独立可编译； 再把装配改为注入 store bean（走下面的 6 参构造）。
      */
     public AdhocRebuildService(EsIndexAdmin esIndexAdmin, java.util.function.Supplier<RestHighLevelClient> client,
                                long confirmTimeoutMs, RebuildLockStore lockStore, long lockLeaseMs) {
@@ -126,7 +126,7 @@ public class AdhocRebuildService {
     }
 
     /**
-     * Task 2 新增全参构造：显式注入 {@link AdhocJobStore}。其余参数与 5 参构造语义一致。
+     *  新增全参构造：显式注入 {@link AdhocJobStore}。其余参数与 5 参构造语义一致。
      */
     public AdhocRebuildService(EsIndexAdmin esIndexAdmin, java.util.function.Supplier<RestHighLevelClient> client,
                                long confirmTimeoutMs, RebuildLockStore lockStore, long lockLeaseMs,
@@ -154,7 +154,7 @@ public class AdhocRebuildService {
     }
 
     /**
-     * Task 2：统一状态落盘。内存 {@link #jobs} 作一级缓存先写，再落 {@link #store}；
+     * 统一状态落盘。内存 {@link #jobs} 作一级缓存先写，再落 {@link #store}；
      * <b>持久化永不反噬重建</b>——save 失败只 warn 不上抛（契约红线，见 {@link AdhocJobStore}）。
      */
     private void persist(AdhocRebuildJob job) {
@@ -176,7 +176,7 @@ public class AdhocRebuildService {
     // ------------------------------------------------------------------ 重建锁
 
     /**
-     * R93：本服务的锁是否<b>真的在提供互斥</b>。
+     * 本服务的锁是否<b>真的在提供互斥</b>。
      *
      * <p><b>直接问 store，不从 {@code get()} 的返回值反推。</b>{@code get} 返回 null 有三种成因：
      * ①{@code lock.enabled=false} ②锁文档已被释放 ③<b>ES 读失败</b>（实现吞掉全部异常返回 null）。
@@ -189,7 +189,7 @@ public class AdhocRebuildService {
     }
 
     /**
-     * R93：按逻辑索引名取重建锁。
+     * 按逻辑索引名取重建锁。
      *
      * @return true=已持锁或无需持锁（无锁构造/锁未启用）；false=锁被他人持有，必须拒绝发起
      */
@@ -201,7 +201,7 @@ public class AdhocRebuildService {
     }
 
     /**
-     * R93：释放锁，失败仅告警（锁终会因租约过期自动释放，不能因此让作业以失败收场）。
+     * 释放锁，失败仅告警（锁终会因租约过期自动释放，不能因此让作业以失败收场）。
      *
      * <p><b>已失锁时必须跳过。</b>{@code EsRebuildLockStore.release} 刻意<b>不校验 owner</b>
      * （"任意实例都能释放"），所以本实例失锁后再调 release，删掉的是<b>强夺者的锁</b> ——
@@ -225,7 +225,7 @@ public class AdhocRebuildService {
     }
 
     /**
-     * R93：<b>先校验归属、再续约</b>。
+     * <b>先校验归属、再续约</b>。
      *
      * <p><b>顺序不可颠倒。</b>{@link io.github.dengmeiluan.es.rebuild.lock.EsRebuildLockStore#renew}
      * 读出锁文档后用 {@code lockSource(...)} <b>整份重写</b>，而 {@code lockSource} 写的是
@@ -286,7 +286,7 @@ public class AdhocRebuildService {
     }
 
     /**
-     * 五百六十二批：renewLockOrLose 两处 ERROR 的 60s 单键节流出口（varargs 透传，slf4j
+     * renewLockOrLose 两处 ERROR 的 60s 单键节流出口（varargs 透传，slf4j
      * 末参为 Throwable 时照常带栈）。节流只动日志，失锁判定（markLockLost/返回 false）契约不变。
      */
     private void logRenewErrorThrottled(String format, Object... args) {
@@ -304,7 +304,7 @@ public class AdhocRebuildService {
     }
 
     /**
-     * R93：丢锁时关闭作业。<b>本 Task 最重要的安全性质</b>——续约与归属校验都失败说明锁已被他人持有，
+     * 丢锁时关闭作业。<b>本 Task 最重要的安全性质</b>——续约与归属校验都失败说明锁已被他人持有，
      * <b>同一索引上可能正有另一个重建在跑</b>，此刻绝不能再去切换别名。
      *
      * <p>不新增第四种门结局：复用 {@code GATE_ABORTED} 并靠 {@code report.reason} 区分，
@@ -314,7 +314,7 @@ public class AdhocRebuildService {
      */
     private boolean closeJobOnLockLost(AdhocRebuildJob job) {
         if (!job.tryCloseGate(AdhocRebuildJob.GATE_ABORTED)) {
-            return false; // 确认已赢下 CAS，"先到者赢且不可撤销"是 Task 6 的结构性不变量
+            return false; // 确认已赢下 CAS，"先到者赢且不可撤销"是  的结构性不变量
         }
         boolean released = releaseWriteBlockQuietly(job);
         Map<String, Object> report = gateClosedReport(job, REASON_LOCK_LOST, released);
@@ -396,14 +396,14 @@ public class AdhocRebuildService {
         }
         long bufferMs = req.get("bufferMs") instanceof Number ? ((Number) req.get("bufferMs")).longValue() : 120_000L;
         boolean deleteOld = Boolean.TRUE.equals(req.get("deleteOldIndex"));
-        // R93：切换前人工确认门。默认 false —— 直接调 API 的老路径行为完全不变；
+        // 切换前人工确认门。默认 false —— 直接调 API 的老路径行为完全不变；
         // 控制台「粘贴期望配置」流程会显式传 true。
         boolean pauseBeforeSwitch = Boolean.TRUE.equals(req.get("pauseBeforeSwitch"));
 
         // target-aware adhoc：在数据面入口捕获用户当前选中的目标（interceptor 已按
         // X-Es-Target 绑定；无路由器的旧装配/单测归一 host）。名称/版本做创建时快照——
         // 连接此后改名/删除不影响历史作业的语义与审计。
-        // 五百四十八批：宿主版本探测失败 debug 升 WARN——快照缺失=job 记录 targetEsVersion
+        // 宿主版本探测失败 debug 升 WARN——快照缺失=job 记录 targetEsVersion
         // 恒空，「历史作业跑在哪个 ES 版本上」的审计语义丢失，与上行「创建时快照」契约相悖；
         // 探测仅在 start 时一次（低频），逐条 WARN 无刷屏风险。异常仍吞在 try 内，控制流零变化。
         String targetId = router == null ? AdhocRebuildJob.TARGET_HOST : router.requireCapturedTarget();
@@ -462,7 +462,7 @@ public class AdhocRebuildService {
         if (mappingJson == null) {
             mappingJson = esIndexAdmin.getMapping(source);
         }
-        /* 第 503 批：审编框原文可能是「ES 原样形态」（Mapping 页直通/粘贴导入：索引名壳+flat 平铺）——
+        /* 第 ：审编框原文可能是「ES 原样形态」（Mapping 页直通/粘贴导入：索引名壳+flat 平铺）——
            与 validate 同一归一化器，保证「校验过的形态 = 落 ES 的形态」，带壳 JSON 不再直送 createIndex */
         io.github.dengmeiluan.es.rebuild.validate.IndexConfigNormalizer.Result nr =
                 io.github.dengmeiluan.es.rebuild.validate.IndexConfigNormalizer.normalize(settingsJson, mappingJson);
@@ -476,7 +476,7 @@ public class AdhocRebuildService {
         String jobId = "adhoc-" + UUID.randomUUID().toString().substring(0, 8);
         AdhocRebuildJob job = new AdhocRebuildJob(jobId, index, strategy, isAlias, source, dest,
                 timeField, bufferMs, deleteOld, pauseBeforeSwitch, targetId, targetName, targetEsVersion);
-        // R93：按 target+逻辑索引名跨实例互斥。此前 adhoc 作业只是内存态 map，无跨实例互斥——
+        // 按 target+逻辑索引名跨实例互斥。此前 adhoc 作业只是内存态 map，无跨实例互斥——
         // 两人同时对同一索引起重建会各建新物理索引、各翻别名，后翻的赢，先翻的那个新索引成为孤儿。
         // target-aware adhoc：锁 key 带 target 维度——不同集群的同名索引不互相顶锁。
         // 放在所有校验之后：校验失败时不必取锁，也就不存在校验分支上的锁泄漏。
@@ -486,7 +486,7 @@ public class AdhocRebuildService {
                     + (held == null ? "" : "（owner=" + held.getOwner() + "）")
                     + "，请先等它结束或释放锁");
         }
-        // R93：记录「锁是否真的在提供互斥」。直接问 store，不从 get() 反推 ——
+        // 记录「锁是否真的在提供互斥」。直接问 store，不从 get() 反推 ——
         // get() 返回 null 还可能是 ES 读失败或锁已释放，误判成「锁未启用」会让作业
         // 静默降级为无锁运行（不报错、不留痕、照常切换别名）。
         job.setLockActive(lockProvidesMutex());
@@ -531,7 +531,7 @@ public class AdhocRebuildService {
         if (job == null) {
             throw new IllegalArgumentException("作业不存在: " + jobId);
         }
-        // R93：与 confirmSwitch 对称 —— 确认已赢下门之后切换必然执行，此时的 abort 拦不住任何东西。
+        // 与 confirmSwitch 对称 —— 确认已赢下门之后切换必然执行，此时的 abort 拦不住任何东西。
         // 若在此静默置位 abortRequested，会造成两处伤害：
         //   ① 端点回 200，操作者以为已中止，而切换照常执行 —— 一次说谎的中止应答；
         //   ② run() 的 catch 用 isAbortRequested() 决定 ABORTED/FAILED，切换后 FINALIZE 抛异常时
@@ -583,7 +583,7 @@ public class AdhocRebuildService {
             logger.error("[AdhocRebuild] job {} rejected: target={} 连接已删除，fail closed", job.getJobId(), job.getTargetId());
             return;
         }
-        // R93：切换是否已发生 —— 决定 catch 兜底能否解除挡写（切换后的挡写是刻意的只读保护）
+        // 切换是否已发生 —— 决定 catch 兜底能否解除挡写（切换后的挡写是刻意的只读保护）
         boolean switched = false;
         // target-aware adhoc：整个 worker 体固定在 job 创建时捕获的目标上执行——
         // EsIndexAdmin 与低层 perform 都经 router 取 client，scope 内一律路由到 job 目标；
@@ -651,7 +651,7 @@ public class AdhocRebuildService {
                     break;
             }
 
-            // R93：切换前人工确认门。WRITE_BLOCK 策略此刻已经在挡写，业务写入持续失败，
+            // 切换前人工确认门。WRITE_BLOCK 策略此刻已经在挡写，业务写入持续失败，
             // 所以这里必须有超时并在超时时强制解除挡写 —— 不能让业务因为「人忘了点确认」永久写不进。
             if (job.isPauseBeforeSwitch() && !awaitSwitchConfirm(job)) {
                 return; // 门裁决为超时/中止，已在门内完成解除挡写与收尾
@@ -716,7 +716,7 @@ public class AdhocRebuildService {
     }
 
     /**
-     * R93：切换前人工确认门。阻塞 worker 线程直到人工放行、超时或中止。
+     * 切换前人工确认门。阻塞 worker 线程直到人工放行、超时或中止。
      *
      * <p><b>并发裁决。</b>本方法（worker 线程）与 {@link #confirmSwitch(String)}（HTTP 线程）
      * 通过 {@link AdhocRebuildJob#tryCloseGate} / {@link AdhocRebuildJob#confirmSwitch} 的 CAS
@@ -748,7 +748,7 @@ public class AdhocRebuildService {
                 job.markFinished();
                 return false;
             }
-            // R93：持锁时长 = reindex 耗时 + 人工等待时长。确认超时可配到 7 天而租约默认 60 分钟，
+            // 持锁时长 = reindex 耗时 + 人工等待时长。确认超时可配到 7 天而租约默认 60 分钟，
             // 不续约则锁必然在人工等待中途过期并被他人强夺——正是这把锁要防的事。
             if (System.currentTimeMillis() >= nextRenewAt) {
                 if (!renewLockOrLose(job) && closeJobOnLockLost(job)) {
@@ -772,7 +772,7 @@ public class AdhocRebuildService {
             }
             Thread.sleep(GATE_POLL_INTERVAL_MS);
         }
-        // 确认已赢下门（不可撤销，Task 6 的结构性不变量）。但若此时本实例已失锁，切换就是在
+        // 确认已赢下门（不可撤销， 的结构性不变量）。但若此时本实例已失锁，切换就是在
         // 一个可能有第二个重建在跑的索引上翻别名——这个事实必须进作业报告，不能只写日志：
         // 运维看的是控制台，不是 grep 日志。
         if (!renewLockOrLose(job)) {
@@ -850,7 +850,7 @@ public class AdhocRebuildService {
     }
 
     /**
-     * R93：人工放行切换。
+     * 人工放行切换。
      *
      * <p><b>非幂等地"总是成功"</b> —— 若超时/中止已抢先裁决，这里必须抛错而不是回一个成功应答：
      * 谎报成功会让操作者以为切换正在进行，而实际上作业已中止、写阻断已解除。</p>
@@ -879,7 +879,7 @@ public class AdhocRebuildService {
     /**
      * 轮询任务直到完成；abort 时置状态并返回 null。
      *
-     * <p>R93：长作业（5TB 索引 reindex 可远超 60 分钟的默认租约）必须在此续约，否则锁会在
+     * <p>：长作业（5TB 索引 reindex 可远超 60 分钟的默认租约）必须在此续约，否则锁会在
      * reindex 中途过期被他人强夺——那样这把锁<b>恰恰对最需要它的长作业失效</b>，
      * 等于交付一个虚假的互斥保障。失锁则中止：返回 null，由 run() 走已有的"aborted"出口。</p>
      */
@@ -909,7 +909,7 @@ public class AdhocRebuildService {
                 job.setCurrentProgress(null);
                 return p;
             }
-            /* 五百六十五批：docs 级三字段（total/created/updated）经 applyProgress 单入口刷新，
+            /* docs 级三字段（total/created/updated）经 applyProgress 单入口刷新，
                /status 与 /jobs 的 toMap 顶层直出（AdhocRebuildJobProgressTest 契约）；
                currentProgress 兼容通道原样并存 */
             job.applyProgress(p);
@@ -1012,7 +1012,7 @@ public class AdhocRebuildService {
             Object c = resp == null ? null : resp.get("count");
             return c instanceof Number ? ((Number) c).longValue() : null;
         } catch (Exception e) {
-            // 五百五十四批裁决（三态之②回退误导类）：索引不可达/权限不足等真异常被吞成
+            // 裁决（三态之②回退误导类）：索引不可达/权限不足等真异常被吞成
             // null，前端把「数不到」当成「待数」无从区分。冷路径 WARN 恰一条（每索引仅
             // 首次——prepare 会被前端轮询、作业源/目标两处消费，不设去重即刷屏）。注意
             // 404 走 perform 的判据臂返回 null，不进本臂（「索引不存在」属判据内静默，
@@ -1113,7 +1113,7 @@ public class AdhocRebuildService {
     /**
      * 解析 mapping 中某字段（支持 a.b.c 路径）的 type，未知返回 null。
      *
-     * <p>五百五十二批：private → package-private（同文件 {@code timeFieldCandidates} 同款
+     * <p>：private → package-private（同文件 {@code timeFieldCandidates} 同款
      * 先例），供 {@code Observability552Test} 直调反锁；公共签名零变更。</p>
      */
     String resolveFieldType(String mappingJson, String fieldPath) {
@@ -1140,10 +1140,10 @@ public class AdhocRebuildService {
                 props = ((Map<?, ?>) def).get("properties");
             }
         } catch (Exception e) {
-            // 五百五十二批裁决（三态之②冷路径 WARN）：此臂掩盖的是 mapping JSON 解析失败——
+            // 裁决（三态之②冷路径 WARN）：此臂掩盖的是 mapping JSON 解析失败——
             // timeFieldType 静默降级 null 后，rangeReindex 不再加 format=epoch_millis，
             // 若该 timeField 实为 date 且目标字段 format 非默认，追平范围查询语义悄然改变
-            // （可能漏数）。冷路径（每作业仅追平编排时一次），按 551 批三态法 ② 直接 WARN
+            // （可能漏数）。冷路径（每作业仅追平编排时一次），按 三态法 ② 直接 WARN
             // 带 fieldPath 与堆栈；返回 null 契约不变（Observability552Test 反锁）。
             logger.warn("[AdhocRebuild] 解析 mapping 取 timeField 类型失败，type 按 null 处理"
                     + "（追平查询将不带 format=epoch_millis）: field={}", fieldPath, e);

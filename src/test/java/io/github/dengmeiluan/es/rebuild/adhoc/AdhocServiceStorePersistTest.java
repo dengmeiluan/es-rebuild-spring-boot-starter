@@ -13,7 +13,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Task 2：验证 {@link AdhocRebuildService} 每次状态变更都落盘到 {@link AdhocJobStore}。
+ * 验证 {@link AdhocRebuildService} 每次状态变更都落盘到 {@link AdhocJobStore}。
  *
  * <p>注入一个「捕获型」store（每次 save 立刻快照 jobId+status），跑一个能快速终结的
  * MANUAL + 别名模式作业（不触真 ES：假 {@link EsIndexAdmin} + null client supplier），

@@ -1,10 +1,10 @@
 import { ref, computed, watch, type Ref } from 'vue';
 
-/* R130 二十八批：表格态偏好记忆（列选/密度/列宽三件套），从 ResultTable 的
+/*  表格态偏好记忆（列选/密度/列宽三件套），从 ResultTable 的
    索引维度口径（T21）抽出，供轻量只读表（QueryResultTable）复用；ResultTable
    后续迁移到本 composable 后即闭环。键空间与 ResultTable 完全一致：
      es_cols:<dim> / es_tbl_dense:<dim>（兼容读旧全局 es_tbl_dense 作初值）/ es_tbl_w:<dim>
-   dimension 为 null/空串 → 记忆整体关闭（SQL 通道 R54 特例：每次执行回原始行序，
+   dimension 为 null/空串 → 记忆整体关闭（SQL 通道  特例：每次执行回原始行序，
    不带任何跨执行状态），此时状态自足、不读写 localStorage。
    修复 ResultTable 原实现的缺口：列宽此前只写不读（刷新即丢），此处恢复完整读写。 */
 export function useTablePrefs(
@@ -12,7 +12,7 @@ export function useTablePrefs(
   allCols: Ref<string[]>,
   opts?: {
     onColsReset?: () => void;
-    /* 五百五十五批：默认可见列全集（缺省=前 8 列启发式）。列数增长会越过 8 列启发式
+    /* 默认可见列全集（缺省=前 8 列启发式）。列数增长会越过 8 列启发式
        把尾部列（如审计「详情」）静默藏掉的表，传全列作默认——列选记忆语义不变 */
     defaultVisibleCols?: () => string[] | undefined;
   },
@@ -20,9 +20,9 @@ export function useTablePrefs(
   const on = computed(() => !!dimension.value);
 
   /* ── 密度/行高 ──
-     242 批：改为全站统一键（不分维度）——行高/密度是「阅读生理偏好」，同一索引从
+     改为全站统一键（不分维度）——行高/密度是「阅读生理偏好」，同一索引从
      索引工作区与查询工作台进入（useIdxState 与 pickedIdx 同源，维度本应相同）必须
-     一致；且操作列等渲染差异不该被记忆键割裂放大（用户实报行高不一致）。
+     一致；且操作列等渲染差异不该被记忆键割裂放大（实报行高不一致）。
      读侧兼容迁移：全局键缺省时回落读旧维度键，写入只落全局键（一次调节全站生效）。 */
   function readDense(d: string | null): boolean {
     const g = localStorage.getItem('es_tbl_dense');
@@ -32,8 +32,8 @@ export function useTablePrefs(
     return false;
   }
   const dense = ref(readDense(dimension.value));
-  /* 二百三十九批 P2：行高三档——'compact'(3px)/'standard'(默认)/'cozy'(宽松 12px)；
-     242 批起键 es_tbl_rowh（全局，不分维度），dense 布尔档保留兼容旧调用方 */
+  /*  P2：行高三档——'compact'(3px)/'standard'(默认)/'cozy'(宽松 12px)；
+     起键 es_tbl_rowh（全局，不分维度），dense 布尔档保留兼容旧调用方 */
   type RowH = 'compact' | 'standard' | 'cozy';
   function readRowH(d: string | null): RowH {
     const g = localStorage.getItem('es_tbl_rowh');
@@ -46,7 +46,7 @@ export function useTablePrefs(
     rowH.value = v;
     localStorage.setItem('es_tbl_rowh', v);
   }
-  /* 二百四十五批：行高三档循环+档位中文名收编进内核——RT/QRT 工具条同一颗「行高」钮
+  /* 行高三档循环+档位中文名收编进内核——RT/QRT 工具条同一颗「行高」钮
      同一循环序（紧凑→标准→宽松）；此前 RT 本地实现、QRT 只有 dense 两态且钮是僵尸
      （根类绑定已改 rowH 驱动后点「密度」视觉无变化） */
   const ROWH_LABEL: Record<RowH, string> = { compact: '紧凑', standard: '标准', cozy: '宽松' };
@@ -67,8 +67,8 @@ export function useTablePrefs(
     if (d) {
       try {
         const v = JSON.parse(localStorage.getItem('es_cols:' + d) || '[]');
-        /* G85（726 批）：parse 不抛不代表是列名数组（对象/数字/null 字面皆合法 JSON），
-           非数组一律按记录损坏回落——652 批 readPresets 的 Array.isArray 范式同构 */
+        /* G85（）：parse 不抛不代表是列名数组（对象/数字/null 字面皆合法 JSON），
+           非数组一律按记录损坏回落—— readPresets 的 Array.isArray 范式同构 */
         if (Array.isArray(v)) saved = v;
       } catch { /* 记录损坏回落默认前 8 列 */ }
     }
@@ -82,7 +82,7 @@ export function useTablePrefs(
     if (dimension.value) localStorage.setItem('es_cols:' + dimension.value, JSON.stringify(visibleCols.value));
   }
   watch(visibleCols, persistCols, { deep: true });
-  /* ── 转置（R130 四十批：ResultTable 单文档平铺查看偏好，T21 同口径第四件） ── */
+  /* ── 转置（ ：ResultTable 单文档平铺查看偏好，T21 同口径第四件） ── */
   const transpose = ref(readFlag(dimension.value));
   function toggleTranspose() {
     transpose.value = !transpose.value;
@@ -93,7 +93,7 @@ export function useTablePrefs(
     return localStorage.getItem('es_tbl_transpose:' + d) === '1';
   }
 
-  /* ── 二百三十一批 P1-3：多行转置档位（解除 hits===1 限制后的渲染行数选择）──
+  /* ──  P1-3：多行转置档位（解除 hits===1 限制后的渲染行数选择）──
      档位 1/5/10/20（1=旧行为兼容）；es_tbl_transpose_n:<dim> 持久化；旧布尔键不动 */
   const TRANSPOSE_N = [1, 5, 10, 20];
   function readTransposeN(d: string | null): number {
@@ -118,7 +118,7 @@ export function useTablePrefs(
   function startResize(e: MouseEvent, col: string) {
     e.stopPropagation(); e.preventDefault();
     resizing = { col, startX: e.clientX, startW: colWidths.value[col] || 180 };
-    /* R130 三十五批：激活 ResultTable 既有全局样式（拖拽中全站 col-resize 光标 + 禁文本选中），
+    /*  激活 ResultTable 既有全局样式（拖拽中全站 col-resize 光标 + 禁文本选中），
        此前该样式从未接线是死代码 */
     document.body.classList.add('col-resizing');
     window.addEventListener('mousemove', onColResize);
@@ -136,7 +136,7 @@ export function useTablePrefs(
     window.removeEventListener('mouseup', endColResize);
   }
   function resetColWidth(col: string) { delete colWidths.value[col]; }
-  /* 七十一批：列宽批量重置——单列双击柄只能逐列清，拖乱多列后没有一键回原始宽的出口
+  /* 列宽批量重置——单列双击柄只能逐列清，拖乱多列后没有一键回原始宽的出口
      （列选有全选/密度有切换，唯列宽缺「记忆可退出」）；清空后 watch 落盘 {} 同步 LS */
   function resetColWidths() { colWidths.value = {}; }
   function colStyle(col: string) {
@@ -156,11 +156,11 @@ export function useTablePrefs(
     transpose.value = readFlag(d);
     transposeN.value = readTransposeN(d);
     freezeN.value = readFreezeN(d);
-    presets.value = readPresets(d); /* 652 批：名册随维度重读 */
+    presets.value = readPresets(d); /* ：名册随维度重读 */
   });
 
-  /* ── 冻结窗格（一百九十七批/207 批：宽表横向滚动时行身份不丢）──
-     二百三十六批 P2-4：升级为前缀多列冻结——es_tbl_freeze_n:<dim> 存冻结列数
+  /* ── 冻结窗格（/：宽表横向滚动时行身份不丢）──
+      P2-4：升级为前缀多列冻结——es_tbl_freeze_n:<dim> 存冻结列数
      （0=关）；旧 es_tbl_freeze:'1' 迁移读作 1；freezeFirst 计算属性兼容既有调用。 */
   function readFreezeN(d: string | null): number {
     if (!d) return 0;
@@ -179,7 +179,7 @@ export function useTablePrefs(
   }
   watch(dimension, (d) => { freezeN.value = readFreezeN(d); });
 
-  /* ── 列布局命名 preset（六百五十二批：轨3 内核先行，dbx 式布局管理）──
+  /* ── 列布局命名 preset（：轨3 内核先行，dbx 式布局管理）──
      651 斥候还原本体：上方键族只有「当前态」记忆、无命名 preset 体系。本件补齐：
      槽位 es_tbl_preset:<dim>:<name>（八字段快照 v1=cols/widths/rowH/dense/transpose/
      transposeN/freezeN）+ 名册 es_tbl_preset_list:<dim>（登记名序，同名覆盖位置稳定）

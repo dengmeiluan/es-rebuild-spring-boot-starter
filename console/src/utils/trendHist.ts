@@ -1,8 +1,8 @@
 /**
- * 诊断节点趋势采样单一真源（二百一十七批收口）。
+ * 诊断节点趋势采样单一真源（）。
  *
- * 背景：214 批 HEAP 趋势 SparkLine 的采样逻辑内联在 DiagView（Map 推入 + 30 点截断），
- * 217 批对称补齐 CPU 趋势时两份内联必然漂移；且「趋势线只能看形、读不出数」——
+ * 背景： HEAP 趋势 SparkLine 的采样逻辑内联在 DiagView（Map 推入 + 30 点截断），
+ * 对称补齐 CPU 趋势时两份内联必然漂移；且「趋势线只能看形、读不出数」——
  * 悬浮摘要（近 N 次 min~max / 最新值）需要一处纯逻辑供双列复用。
  * 此处收口：pushSample（滚动窗口采样）与 trendTip（悬浮摘要文案）只认这一份。
  */
@@ -11,7 +11,7 @@
 export const TREND_MAX = 30;
 
 /**
- * 滚动窗口采样：按 key 推入一点（null / 非有限数按 0 兜底，与 214 批 Number(x ?? 0) 同口径），
+ * 滚动窗口采样：按 key 推入一点（null / 非有限数按 0 兜底，与  Number(x ?? 0) 同口径），
  * 超出 max 滚动丢弃最旧点。直接原地改 hist（Map<节点名, 序列>），视图层持有 ref 即可触发更新。
  */
 export function pushSample(hist: Map<string, number[]>, key: string, value: number | null | undefined, max = TREND_MAX): void {

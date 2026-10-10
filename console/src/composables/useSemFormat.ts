@@ -1,4 +1,4 @@
-/* ═══ 五百三十批 W-B：语义格式化共享件（bytes / duration / percent 三型）═══
+/* ═══  W-B：语义格式化共享件（bytes / duration / percent 三型）═══
    与既有 W7 语义层（RT/QRT 内联 date 本地化 + 数值千分位）互补：那层管「类型驱动的
    通用可读性」，本件管「值域驱动的单位人性化」——纯函数、无状态、不落盘。
    契约：命中三型 → { text, tone? }；不命中 → null（调用方回落既有渲染）。
@@ -16,7 +16,7 @@ interface SemFmt {
   tone?: 'g' | 'y' | 'r' | 'b' | 'n';
 }
 
-/* ═══ 五百三十四批 W3：显式非语义类型抑制守卫（531/533 两次记档主项的内核收口）═══
+/* ═══  W3：显式非语义类型抑制守卫（531/533 两次记档主项的内核收口）═══
    noInfer=true 抑制「按值推断」链（裸数字 ≥1000 判 ms / 0..1 判 percent / % 串判 percent）——
    供两内核 semRawCols prop 消费（列名命中即抑制）；显式三型标注判定（bytes/duration/percent
    正则族）不受影响：语义标注在场的列，推断压不压都得走标注档。
@@ -38,7 +38,7 @@ function bytesText(n: number): string {
   return `${s} ${BYTES_UNITS[u]}`;
 }
 
-/* ═══ 五百三十四批 W3：bytes 显式标注列的「ES 带单位字节串」档 ═══
+/* ═══  W3：bytes 显式标注列的「ES 带单位字节串」档 ═══
    store.size 类字段直出 '1.2mb'/'10.5 GB' 串（BrowserView 存储:bytes 通道平移的内核前置
    ——此前该列只能槽内 parseBytes 化解，槽退役后显示归 semOn 单链）。判据镜像
    utils/format.parseBytes 同一正则（数字+可选 b/kb/mb/gb/tb/pb，大小写/空白容忍），
@@ -78,7 +78,7 @@ function percentText(p: number): string {
  * percent（0..1 数字或以 % 结尾的 0..100 串 → 分档 tone：≥0.9 红 / ≥0.7 黄 / 其余绿）。
  * @param v       单元格原始值（raw，恒不修改）
  * @param effType 字段类型标注（显式 fieldTypes ∪ 按值采样档；空串=无标注走按值推断）
- * @param opts    五百三十四批：noInfer=true 抑制「按值推断」链（semRawCols 命中列显式保 raw，
+ * @param opts    ：noInfer=true 抑制「按值推断」链（semRawCols 命中列显式保 raw，
  *                显式三型标注判定不受影响）；缺省 undefined=既有行为逐字节不变
  * @returns 命中三型 → { text, tone? }；否则 null（调用方回落既有渲染链）
  */
@@ -107,7 +107,7 @@ export function semFormat(v: unknown, effType: string, opts?: SemFmtOpts): SemFm
   if (BYTES_TYPE_RE.test(effType)) {
     const n = numOf(v);
     if (isFiniteNum(n) && n >= 0) return { text: bytesText(n) };
-    const sn = bytesStrNum(v); /* 五百三十四批：'1.2mb' 带单位字节串档（显式标注不受 noInfer 影响） */
+    const sn = bytesStrNum(v); /* ：'1.2mb' 带单位字节串档（显式标注不受 noInfer 影响） */
     if (sn !== null && sn >= 0) return { text: bytesText(sn) };
     return null;
   }

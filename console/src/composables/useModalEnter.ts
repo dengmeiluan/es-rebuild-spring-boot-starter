@@ -1,4 +1,4 @@
-/* 第六十六批：表单型 n-modal 的 Enter=提交（便捷性/快捷性）。
+/* 表单型 n-modal 的 Enter=提交（便捷性/快捷性）。
  * ConfirmModal 的 Enter=确认是「中性焦点才接管」（44 批）；表单弹窗语义相反——
  * 焦点通常就停在 input 上，input+Enter=提交是表单惯例，不接管则每次都要鼠标够按钮。
  * 接管条件（全部满足）：
@@ -15,7 +15,7 @@ export function useModalEnter(show: Ref<boolean>, submit: () => void, can?: () =
   function onKey(e: KeyboardEvent) {
     if (!show.value || e.key !== 'Enter') return;
     if (e.isComposing || e.keyCode === 229) return;
-    /* 七十四批：确认层在场时让路——表单弹窗 Enter 弹出二次确认（askConfirm 或
+    /* 确认层在场时让路——表单弹窗 Enter 弹出二次确认（askConfirm 或
        模板内 ConfirmModal 实例）后焦点仍停在表单 input 上，此时再按 Enter 用户
        意图是「确认」，若这里再触发 submit，confirm.ts 的旧 resolver 会被按取消
        收掉、确认框重闪（doCreate/doResume 等会二次入队）。让给 ConfirmModal

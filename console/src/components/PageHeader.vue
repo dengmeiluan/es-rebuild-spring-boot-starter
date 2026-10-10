@@ -51,7 +51,7 @@ withDefaults(defineProps<{
 .ph-l { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; }
 .ph-ic { color: var(--brand); flex-shrink: 0; }
 .ph-tx { min-width: 0; }
-/* 525 批：600→650（字重倒挂修复——页头 16px/600 曾被卡头 13px/650 压住；
+/* 600→650（字重倒挂修复——页头 16px/600 曾被卡头 13px/650 压住；
    与 .card-t 同 650 档，靠 16 vs 13 字号拉开层级） */
 .ph-tt { font-size: var(--fs-xl); font-weight: 650; display: flex; align-items: center; gap: var(--sp-2); }
 .ph-sub { font-size: var(--fs-xs); color: var(--muted); margin-top: var(--sp-0); }

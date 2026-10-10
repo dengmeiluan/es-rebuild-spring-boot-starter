@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 /**
- * 宿主（控制）集群服务端版本探测与缓存（R93-67）。
+ * 宿主（控制）集群服务端版本探测与缓存（-67）。
  *
  * <p><b>为什么需要它</b>：远程集群的版本由连接档案在探活/测试连接时回写
  * （{@code ConnStore.updateVersion}），但<b>宿主集群没有连接档案</b>——
@@ -51,12 +51,12 @@ public class HostEsVersionProvider {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    /** 五百五十一批：client 获取失败 warn 节流间隔（热路径硬前提，范式=550 批 PropertiesAuthDelegate）。 */
+    /** client 获取失败 warn 节流间隔（热路径硬前提，范式= PropertiesAuthDelegate）。 */
     private static final long WARN_THROTTLE_MS = 60_000L;
 
     private final Supplier<RestHighLevelClient> hostClient;
 
-    /** 五百五十一批：client 获取失败 WARN 节流器（实例级，CAS 抢占防并发重复告警）。 */
+    /** client 获取失败 WARN 节流器（实例级，CAS 抢占防并发重复告警）。 */
     private final AtomicLong lastUnavailableWarnAt = new AtomicLong(0L);
 
     /**
@@ -132,7 +132,7 @@ public class HostEsVersionProvider {
         try {
             return hostClient.get();
         } catch (Exception e) {
-            // 五百五十一批：debug→节流 WARN——与同文件探测失败三臂（:142/:147/:153）档位拉齐：
+            // debug→节流 WARN——与同文件探测失败三臂（:142/:147/:153）档位拉齐：
             // client 拿不到是持续性状态，debug 对运营不可见=版本恒未知无从排查。supplier 每个
             // 请求都可能摸到（热路径），60s 节流防刷屏（首条留痕含堆栈，后续静默）；
             // client==null 的未绑定预期态臂维持既有静默（见 currentVersion 内 debug）

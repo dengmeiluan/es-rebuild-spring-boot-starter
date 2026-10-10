@@ -1,4 +1,4 @@
-/* R81：Mapping 字段树的领域逻辑——拍平、折叠可见性、查询 DSL 污染检测。
+/* Mapping 字段树的领域逻辑——拍平、折叠可见性、查询 DSL 污染检测。
    与视图解耦：MappingView 与索引工作区 Mapping Tab 共用一份口径（单测锁契约）。 */
 
 export interface MappingRow {
@@ -15,12 +15,12 @@ export interface MappingRow {
   /** 展示属性摘要：analyzer / format 等（multi-fields 已层级化为子行，不再塞这里） */
   attrs: string;
   hasChildren: boolean;
-  /** R84：multi-field 子行（父字段的 fields.* 子索引方式） */
+  /** multi-field 子行（父字段的 fields.* 子索引方式） */
   multi?: boolean;
 }
 
 /** 把 ES mapping 的 properties 递归拍平为行数组（先序，父在子前）。
- *  R84：multi-fields（fields.*）不再压缩进 attrs 文本被截断，而是产出为可折叠子行——
+ *  multi-fields（fields.*）不再压缩进 attrs 文本被截断，而是产出为可折叠子行——
  *  它们本就是可查询的真实路径（如 title.keyword），理应层级展示。 */
 export function flattenMapping(props: Record<string, any> | null | undefined): MappingRow[] {
   const out: MappingRow[] = [];

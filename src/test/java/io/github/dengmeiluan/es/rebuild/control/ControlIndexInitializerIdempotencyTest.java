@@ -15,7 +15,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 /**
- * R93-67 I1：控制索引初始化的<b>幂等判据必须落在 {@code error.type} 这个值上</b>，
+ * -67 I1：控制索引初始化的<b>幂等判据必须落在 {@code error.type} 这个值上</b>，
  * 不得落在异常消息文本上。
  *
  * <h3>为什么这层非测不可</h3>

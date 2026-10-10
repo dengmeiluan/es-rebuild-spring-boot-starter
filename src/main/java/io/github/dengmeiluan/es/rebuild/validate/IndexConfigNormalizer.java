@@ -12,9 +12,9 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 第 503 批：索引配置形态归一化——「ES 原样响应」宽容接受（校准误差第二案）。
+ * 第 ：索引配置形态归一化——「ES 原样响应」宽容接受（校准误差第二案）。
  *
- * <p>用户实报：Mapping 页「发送到托管重建」→ validate 报 UNKNOWN_SETTING_KEY×1 +
+ * <p>实报：Mapping 页「发送到托管重建」→ validate 报 UNKNOWN_SETTING_KEY×1 +
  * TYPE_NAME_WRAPPER ERROR（挡死 dry-run）+ ANALYZER_UNDEFINED×12。根因是
  * {@code EsIndexAdmin.inspect} 返回的 settings 段保留索引名壳 + HLRC Settings keySet
  * 天然 flat（{@code index.analysis.analyzer.x.tokenizer} 平铺键），mappings 段保留索引名壳；

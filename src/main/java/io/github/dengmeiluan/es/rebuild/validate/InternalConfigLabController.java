@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * R35 配置实验室端点（校验器 + 漂移检测）。
+ *  配置实验室端点（校验器 + 漂移检测）。
  *
  * <p>路径 {@code internal/es/index/config-lab/**}：validate 为 POST → 拦截器默认 OPERATOR
  * （dry-run 会瞬时建删临时索引，OPERATOR 合理）；drift 为 GET → VIEWER 可读。

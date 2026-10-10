@@ -12,9 +12,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百二十九批：迁移作业可观测字段全链（startedAtMs / finishedAtMs / sliceErrors）。
+ * 迁移作业可观测字段全链（startedAtMs / finishedAtMs / sliceErrors）。
  *
- * <p><b>为什么单独测这个</b>：与 R94 告知同病——{@link MigrationHandle#toJobEs()} 逐字段拷贝、
+ * <p><b>为什么单独测这个</b>：与  告知同病——{@link MigrationHandle#toJobEs()} 逐字段拷贝、
  * 漏一个不会有编译错误也不会有现有测试变红，观测字段会在持久化时静默消失；
  * 而 resume 重开会重置 handle，打点的「重置/清空」语义也是「靠纪律维持」的点。
  * 全部纯 JUnit 直构造（同 {@link MigrationHandleFormatlessDatesTest} 形态）。</p>

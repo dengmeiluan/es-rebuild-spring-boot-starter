@@ -1,5 +1,5 @@
 /**
- * R90：直方图日期字段选择——值形态驱动，根治「字段名含 time 就当日期」的误伤。
+ * 直方图日期字段选择——值形态驱动，根治「字段名含 time 就当日期」的误伤。
  * 产线事故锚：sen「time」ntId 是 19 位 long（keyword 索引），旧嗅探按字段名命中 /time/i
  * 被塞进 date_histogram，ES 直接 400 连坐整个查询。
  */
@@ -11,7 +11,7 @@ const EPOCH_S_MAX = EPOCH_MS_MAX / 1000;
 
 /**
  * 值是否长得像日期：ISO 前缀字符串，或落在 2000~2100 年 epoch 秒/毫秒窗口内的数字。
- * 纯数字字符串一律不算——R87 起长整型经 parseJsonSafe 加引号保真成字符串（如 19 位 sentimentId），
+ * 纯数字字符串一律不算—— 起长整型经 parseJsonSafe 加引号保真成字符串（如 19 位 sentimentId），
  * 它们是 ID 不是时间。
  */
 export function isDateLikeValue(v: unknown): boolean {
@@ -55,7 +55,7 @@ export function pickHistField(mappingDates: string[], hits: Hit[]): string {
  * 直方图聚合体分档：keyword 型（ISO 日期串存成文本）走 terms 桶按 key 升序（ISO 串天然时序）；
  * date/数值/未知类型照旧走 date_histogram（ES 接受数值 epoch 字段）。
  * 产线锚：industry_hotspots_review_es 的 publishDate 是 keyword，注入 date_histogram
- * 直接 400，R90 降级把直方图永久剥掉（「直方图不显示了」事故）。
+ * 直接 400， 降级把直方图永久剥掉（「直方图不显示了」事故）。
  */
 export function buildHistAgg(field: string, fieldType: string | undefined, verBelow650: boolean): Record<string, unknown> {
   if (fieldType === 'keyword') return { terms: { field, size: 60, order: { _key: 'asc' } } };

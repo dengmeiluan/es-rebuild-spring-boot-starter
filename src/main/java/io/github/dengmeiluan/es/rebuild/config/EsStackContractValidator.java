@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * R96：把「宿主 ES 栈版本契约」从隐形假设变成启动期可见的显式约束。
+ * 把「宿主 ES 栈版本契约」从隐形假设变成启动期可见的显式约束。
  *
  * <p>起因（实测）：starter 编译期是 sdes 4.0.9，而宿主可能自带 4.4.x。
  * 两版之间有 4 个签名不兼容点，其中两个落在 {@code EntityFieldScanner}
@@ -63,7 +63,7 @@ public class EsStackContractValidator {
             String v = k.getPackage() == null ? null : k.getPackage().getImplementationVersion();
             return v == null || v.trim().isEmpty() ? "unknown" : v;
         } catch (Throwable t) {
-            /* 五百六十一批：静默兜底补 debug 留痕（异常类名+message）——探测失败与「确实无版本」
+            /* 静默兜底补 debug 留痕（异常类名+message）——探测失败与「确实无版本」
                在日志上可区分，排障不再两眼一抹黑；返回 "unknown" 契约不变。 */
             LOG.debug("[EsStackContract] sdes 版本探测失败（按 unknown 处理）：{}: {}",
                     t.getClass().getName(), t.getMessage());
@@ -75,7 +75,7 @@ public class EsStackContractValidator {
     public void report() {
         String v = detectedSdesVersion();
 
-        /* R97：宿主栈错配 —— fail-fast。
+        /* 宿主栈错配 —— fail-fast。
            与下面 starter 侧契约点只 WARN 的**不对称是有意的**：
            starter 侧契约点已由 SdesCompat 反射化，探测不到也可能能用；
            而宿主栈错配是**已实测会炸**的（#96），且炸在建出目标索引之后、留下半拷贝 ——
@@ -86,7 +86,7 @@ public class EsStackContractValidator {
             for (String s : hostMismatch) {
                 msg.append("  - ").append(s).append('\n');
             }
-            msg.append("  修法二选一（R98 实测：两条路不等价）：\n")
+            msg.append("  修法二选一（实测：两条路不等价）：\n")
                     .append("    ① 把 elasticsearch 客户端升到与 spring-data-elasticsearch 匹配的版本\n")
                     .append("       ⚠ 仅当服务端 minor >= 客户端 minor 时可行 —— RHLC 官方保证是单向前向兼容\n")
                     .append("       （client_minor <= node_minor）。服务端比客户端老时这条路不可用。\n")
@@ -118,10 +118,10 @@ public class EsStackContractValidator {
                 + "（见 starter README「宿主依赖约束」）");
     }
 
-    /* ================= R97：宿主 sdes 与 ES 客户端的配套校验 ================= */
+    /* ================= ：宿主 sdes 与 ES 客户端的配套校验 ================= */
 
     /**
-     * R97：宿主自身的 sdes 与 ES 客户端是否配套。
+     * 宿主自身的 sdes 与 ES 客户端是否配套。
      *
      * <p><b>判据是真实签名，不是版本号区间。</b>台账 #96 的故障是
      * {@code Requests.INDEX_CONTENT_TYPE} 的<b>类型签名</b>在 sdes 与 ES 之间不一致
@@ -186,7 +186,7 @@ public class EsStackContractValidator {
 
     /**
      * 测试接缝（流由外部注入，同 {@code AdhocRebuildService#resolveFieldType} 的
-     * package-private 先例）：五百五十四批把「字节流读取失败」臂从静默改为冷路径 WARN。
+     * package-private 先例）：把「字节流读取失败」臂从静默改为冷路径 WARN。
      * 该臂吞掉的是宿主栈错配检测的<b>整段能力</b>（fail-open 跳过），静默会让
      * 「检测跳过」被误读为「检测通过」。启动期一次性冷路径，WARN 一条不刷屏；
      * 返回 null 契约不变（{@link #probeHostStackMismatch()} 对 null 维持
@@ -216,7 +216,7 @@ public class EsStackContractValidator {
             }
             return null;
         } catch (Throwable t) {
-            // 五百五十四批裁决（三态之②回退误导类）：探测失败 = 宿主栈错配检测整段跳过，
+            // 裁决（三态之②回退误导类）：探测失败 = 宿主栈错配检测整段跳过，
             // 启动期一次性冷路径 WARN 留痕（Observability554Test 反锁）；null 契约不变。
             LOG.warn("[EsStackContract] 栈契约检测跳过：sdes RequestFactory 字节流读取失败（{}）"
                     + "—— 本轮无法校验宿主 sdes 与 ES 客户端的 XContentType 签名配套",

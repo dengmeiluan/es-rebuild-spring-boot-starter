@@ -9,7 +9,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * 五百三十批：托管重建作业的耗时透出契约。
+ * 托管重建作业的耗时透出契约。
  *
  * <ul>
  *   <li>作业级 {@code tookMs}：finishedAt-startedAt，运行中约定 -1（D-2 契约，前端按「-」展示）；</li>

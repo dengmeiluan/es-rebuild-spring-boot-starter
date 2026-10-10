@@ -1,5 +1,5 @@
 /**
- * 五百三十四批：Levenshtein 编辑距离共享小实现（dslLint 内部同款算法抽出共享——dslLint.ts
+ * Levenshtein 编辑距离共享小实现（dslLint 内部同款算法抽出共享——dslLint.ts
  * 是兄弟 lane 成品禁改，本文件供新消费方 import；dslLint 内部私有实现维持原样不迁移）。
  * 纯函数、零依赖。消费方：utils/sqlLint.ts（保留字拼写）、components/LuceneInput.vue
  * （未知字段最近候选）。

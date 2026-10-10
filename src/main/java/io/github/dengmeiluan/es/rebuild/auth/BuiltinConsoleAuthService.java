@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 内置控制台账号服务（R34）：账号存 ES 索引 {@code es_console_user}，无任何外部依赖。
+ * 内置控制台账号服务（）：账号存 ES 索引 {@code es_console_user}，无任何外部依赖。
  *
  * <p>核心语义（与用户约定一致）：<b>用户索引里一个账号都没有时，用兜底默认账号
  * {@code admin / es-console}（可配置）登录，角色 ADMIN；一旦 ES 里建立了任何账号，
@@ -166,7 +166,7 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
                     return null;
                 }
             } catch (IOException e) {
-                /* 五百四十七批：静默拒绝→WARN——合法兜底 token 被用户索引 IO 失败静默拒绝
+                /* 静默拒绝→WARN——合法兜底 token 被用户索引 IO 失败静默拒绝
                    =用户锁死且零日志（登录失败与「建号后兜底失效」从外表无法分辨）；拒绝语义
                    本身不变（吞异常契约：校验失败一律 null），只补留痕与 username 上下文 */
                 LOG.warn("[es-console-auth] 兜底 token 因用户索引 IO 失败被按无效拒绝 username={}：{}",
@@ -315,7 +315,7 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
             byte[] actual = pbkdf2(password, salt, iterations);
             return MessageDigest.isEqual(expected, actual);
         } catch (Exception e) {
-            // 五百五十一批：全静默→WARN——档案要素损坏（坏 Base64/迭代数坏值等）时登录失败
+            // 全静默→WARN——档案要素损坏（坏 Base64/迭代数坏值等）时登录失败
             // 与「密码错误」从外表无法分辨且零日志；拒绝语义不变（吞异常契约：一律 false），
             // 只补留痕。密码材料零入日志：仅 username + throwable（哈希/salt 绝不打）
             LOG.warn("[es-console-auth] 密码校验失败（用户档案要素损坏?，按凭证错误拒绝）username={}",

@@ -17,11 +17,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * R93 Task 9.5（台账 #65）：启动期发现「写别名当前指向的物理索引处于写阻断状态」。
+ *  .5（台账 #65）：启动期发现「写别名当前指向的物理索引处于写阻断状态」。
  *
  * <h3>要解决的故障</h3>
  * <p>{@code WRITE_BLOCK} 策略的重建会给源物理索引加 {@code index.blocks.write=true}，切换别名后解除。
- * R93 的 {@code pauseBeforeSwitch} 人工确认门会让作业<b>停在挡写状态等人</b>。此时若 宿主 重启，
+ *  的 {@code pauseBeforeSwitch} 人工确认门会让作业<b>停在挡写状态等人</b>。此时若 宿主 重启，
  * 内存态作业记录全部丢失，没有任何东西记得「我挡了谁的写」，但挡写留在 ES 上无人解除，
  * 业务写入永久失败——而业务侧只看到 {@code cluster_block_exception}，毫无线索。</p>
  *

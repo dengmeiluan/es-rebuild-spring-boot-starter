@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 多集群连接档案——宿主数据库档（R63 平台化底座）：档案落宿主 {@code DataSource}
+ * 多集群连接档案——宿主数据库档（ 平台化底座）：档案落宿主 {@code DataSource}
  * 的 {@code es_console_conn} 表（首次使用自动建表），让接入方（如 宿主）用
  * 自己的数据库统一管理多套集群，并纳入其备份/权限/运维体系。
  *
@@ -209,8 +209,8 @@ public class JdbcConnStore implements ConnStore {
         try {
             ensureSchema();
         } catch (Exception e) {
-            /* 五百四十七批：debug→WARN——schema 建不出来是<b>持续性</b>失败（宿主库不可用期间
-               每轮探活回写都会再败），比单次 UPDATE 失败更该留痕（546 批裁决时明确暂缓本臂，
+            /* debug→WARN——schema 建不出来是<b>持续性</b>失败（宿主库不可用期间
+               每轮探活回写都会再败），比单次 UPDATE 失败更该留痕（裁决时明确暂缓本臂，
                本批收口，句式与下方 UPDATE 臂 WARN 同源）。吞异常契约不变（版本是增强信息，
                绝不影响探活主流程） */
             LOG.warn("[JdbcConnStore] updateVersion ensureSchema failed: {}", e.getMessage());
@@ -226,7 +226,7 @@ public class JdbcConnStore implements ConnStore {
                 LOG.info("[JdbcConnStore] conn id={} esVersion -> {}", id.trim(), esVersion.trim());
             }
         } catch (SQLException e) {
-            /* 五百四十六批：debug→WARN——「探活到新版本但档案写不进」的低频真异常，无痕则
+            /* debug→WARN——「探活到新版本但档案写不进」的低频真异常，无痕则
                版本不刷新无从排查；吞异常契约不变（增强信息绝不影响探活主流程） */
             LOG.warn("[JdbcConnStore] updateVersion failed id={}: {}", id, e.getMessage());
         }

@@ -17,7 +17,7 @@
       <GenericParams :value="node.meta" path-prefix="" @update="onMeta" />
     </div>
     <div class="agn-body">
-      <!-- 五百一十九批：top 常见聚合的 .field 键传 fieldKeys，行内渲染 FieldSelect 字段选择器；
+      <!-- top 常见聚合的 .field 键传 fieldKeys，行内渲染 FieldSelect 字段选择器；
            其余/未知聚合名不传（空数组），回落裸键值表零降级 -->
       <GenericParams v-if="isObj(node.body)" :value="(node.body as Record<string, unknown>)" path-prefix=""
                      :field-keys="aggFieldKeys" :fields="fields" :types="types" :type-priority="aggTypePriority"
@@ -50,7 +50,7 @@ const emit = defineEmits<{ (e: 'update:node', n: AggNode): void; (e: 'remove'): 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const metaOpen = ref(false);
 
-/* 五百一十九批：top 常见聚合的 body.field 是字段键——命中时 GenericParams 该行渲染 FieldSelect
+/* top 常见聚合的 body.field 是字段键——命中时 GenericParams 该行渲染 FieldSelect
    （rank/分组/类型徽标/mark 全套）。未知聚合名/其余聚合（top_hits/filters/nested…）body 无
    直接字段键语义，传空数组回落裸键值表（零降级）。 */
 const FIELD_BODY_AGGS = new Set(['terms', 'histogram', 'date_histogram', 'range', 'avg', 'max', 'min', 'sum', 'cardinality']);
@@ -58,7 +58,7 @@ const aggFieldKeys = computed(() => (FIELD_BODY_AGGS.has(props.node.op) ? ['fiel
 
 /* 【W3b】聚合 field 行的类型置顶：候选分组按聚合语义排前（不改候选集）——
    date_histogram 打时间字段、terms 分桶常打 keyword（数值桶也常见，数值族次之）；
-   五百三十一批补全：avg/min/max/sum/cardinality/histogram 是数值聚合/数值直方图（非数值字段
+   补全：avg/min/max/sum/cardinality/histogram 是数值聚合/数值直方图（非数值字段
    会被 ES 拒或产出无意义桶）→ 数值族置顶；range 分桶 date+数值族皆常见 → date 置顶数值族次之；
    其余聚合无类型倾向，空数组 = GenericParams 归一 null 纯 rank 平铺（现状零增量） */
 const NUMERIC_TYPES = ['long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float'];

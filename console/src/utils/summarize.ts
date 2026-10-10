@@ -1,5 +1,5 @@
 /**
- * 二百二十七批：选区/聚合统一统计（dbx 选区底栏聚合对位——Sum/Average/格数一行直读）。
+ * 选区/聚合统一统计（dbx 选区底栏聚合对位——Sum/Average/格数一行直读）。
  *
  * 口径铁律：数值 = typeof number 且 Number.isFinite——数字字符串/NaN/Infinity/null/布尔
  * 一律计入 skipped（产线聚合口径必须硬；parseFloat 宽口径是排序语义，不给聚合用）。

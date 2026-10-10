@@ -1,4 +1,4 @@
-/* R64：查询工作台——六个查询通道（DSL/SQL/Lucene/沙盒/PIT/语法桥）收敛为一个
+/* 查询工作台——六个查询通道（DSL/SQL/Lucene/沙盒/PIT/语法桥）收敛为一个
    多模式工作台（#/search?mode=）。本文件是纯逻辑层：模式元数据 + 旧路由重定向，
    视图壳（QueryHubView）与侧边栏/命令面板都从这里取单一真相。 */
 import type { LocationQuery, LocationQueryRaw } from 'vue-router';
@@ -44,7 +44,7 @@ export function legacyRedirect(path: string, query: LocationQuery): { path: stri
   return { path: '/search', query: { ...query, mode: LEGACY_QUERY_PATHS[path] || DEFAULT_MODE } };
 }
 
-/* ==== R64：开发场景直达层 ====
+/* ==== ：开发场景直达层 ====
    开发者不是带着「我要写 DSL」来的，而是带着任务来的：数据写进去没有？按 ID 捞一条看看？
    字段回填漏了多少？场景任务把这些日常动作一键翻译成 DSL 预填进编辑器——
    既是快捷方式，也是活的 DSL 教材（用户看到生成的语句即学会）。 */
@@ -55,7 +55,7 @@ export interface QuickTask {
   /** 场景描述（开发者的原话，不是 ES 术语） */
   scene: string;
   /** 需要用户补充的输入（如文档 ID / 字段名）；无则一键直达。
-     W1 Task 4：kind='field' 标记字段名语义——视图层换 FieldPicker（mapping 补全），其余保持纯手输；
+     W1 ：kind='field' 标记字段名语义——视图层换 FieldPicker（mapping 补全），其余保持纯手输；
      typeFilter 透传 FieldPicker 类型过滤（如 recent 只出 date 字段），无该标记的任务传 undefined */
   input?: { placeholder: string; kind?: 'field'; typeFilter?: string };
   /** 生成 DSL（input 为用户输入，一键型忽略） */

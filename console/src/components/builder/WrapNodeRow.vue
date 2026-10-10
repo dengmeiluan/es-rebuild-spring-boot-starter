@@ -32,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-/* W1：nested/has_child/has_parent 包装节点。child=null 时序列化兜底 match_all（Task 1 契约）。
+/* W1：nested/has_child/has_parent 包装节点。child=null 时序列化兜底 match_all（ 契约）。
    子节点不传给解散入口（dissolve 仅支持 bool-in-bool）。 */
 import { ref, computed } from 'vue';
 import { X, Group, Plus, SlidersHorizontal } from 'lucide-vue-next';

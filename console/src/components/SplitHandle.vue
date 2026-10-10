@@ -15,7 +15,7 @@
     @pointerdown.prevent="onPointerDown"
     @dblclick="emit('reset')"
   >
-    <!-- 五百三十八批：分栏档位循环钮（互覆盖）——柄=两栏关系调节器的心智：对半→前位独占→
+    <!-- 分栏档位循环钮（互覆盖）——柄=两栏关系调节器的心智：对半→前位独占→
          后位独占循环。maxLabel 由 WorkbenchLayout 按两侧 pane 的 maxName 与当前档位算好传入，
          空=不渲染（既有消费方零感知）。pointerdown.stop 防误触发柄拖拽热区。 -->
     <button
@@ -45,7 +45,7 @@ const props = defineProps<{
   min: number;
   max: number;
   label: string;
-  /* 五百三十八批：分栏档位循环钮（互覆盖）——文案/激活态由宿主算好传入 */
+  /* 分栏档位循环钮（互覆盖）——文案/激活态由宿主算好传入 */
   maxLabel?: string;
   maxActive?: boolean;
 }>();
@@ -182,7 +182,7 @@ onBeforeUnmount(cleanupPointer);
   background: var(--ac);
   box-shadow: 0 0 0 1px var(--ac);
 }
-/* 五百一十九批：拖拽柄可视性——此前 9px 热区只有 1px 细线（::after inset 0 4px），
+/* 拖拽柄可视性——此前 9px 热区只有 1px 细线（::after inset 0 4px），
    竖排标题轨看起来像分隔条却拖不动（「无法调节」感知的根因之一）。热区加宽到 11px、
    可视线加粗到 3px，hover/focus/drag 叠加 grip 点阵（var(--ac)）明示可拖拽；键盘/指针逻辑不动。 */
 .split-handle::before {
@@ -218,7 +218,7 @@ onBeforeUnmount(cleanupPointer);
   background-size: 6px 5px;
   background-position: center;
 }
-/* 五百三十八批：档位循环钮——五百四十一批发现性根治（用户产线实报「没有快捷左右拉伸」
+/* 档位循环钮——发现性根治（用户产线实报「没有快捷左右拉伸」
    实为钮 hover 才显形不可发现）：常显半透明 0.55，hover/激活全显 */
 .sh-max {
   position: absolute;

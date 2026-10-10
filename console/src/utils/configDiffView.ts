@@ -1,4 +1,4 @@
-/* R93-9 修复：configDiff 的**呈现层**纯函数（标签 / 提示 / 该不该比对）。
+/* -9 修复：configDiff 的**呈现层**纯函数（标签 / 提示 / 该不该比对）。
    从 AdhocRebuildView.vue 模板里提出来，唯一目的是让它们可被断言 ——
    评审 I-4：「KIND_LABEL 与 added 提示挂载点零测试看守」，而挂载点
    （v-else-if="row.kind === 'added'"）正是当初写反过的地方，
@@ -10,14 +10,14 @@
    一旦混同，diffConfig 就会把整棵 actual 判成 removed，
    界面于是断言「你的期望里没有这些字段」—— 而用户根本没提供期望。
 
-   本项目第三次撞这个坑（Wave 2 docDiff 的 MISSING 哨兵、Task 8 walk 把缺席侧
+   本项目第三次撞这个坑（Wave 2 docDiff 的 MISSING 哨兵、 walk 把缺席侧
    退化成 {}）。所以这里不打补丁，而是把「缺席」提升成类型上的一等公民：
    parseExpectedMapping 返回 null 表示缺席，shouldDiff 据此裁决，
    缺席永远不进 diffConfig —— 不产出行，而不是产出一屏方向错误的行。 */
 
 import type { ConfigDiffKind, ConfigDiffRow } from './configDiff';
 
-/* kind 是 Task 8 已评审的契约不改，但 added/removed 两个词对使用者天然歧义
+/* kind 是  已评审的契约不改，但 added/removed 两个词对使用者天然歧义
    （"added" 听起来像"新出现的"，实际是"期望有、实际没有"），界面一律显示人话。
    brief 本身就把这对语义写反过一次，故本表由 diffConfig 真实输出驱动的断言看守。 */
 const KIND_LABEL: Record<ConfigDiffKind, string> = {
@@ -84,7 +84,7 @@ export function isBenignDefault(row: Pick<ConfigDiffRow, 'kind' | 'path' | 'expe
  *
  * 缺席的三种来源，语义上完全一致（都是「业务侧没有声明 mapping」）：
  *   ① 用户压根没粘贴          → 文本为 ''
- *   ② 粘了但该索引 mappingJson 为 null → pickPaste 置 ''（Task 4 裁定 null 原样透传）
+ *   ② 粘了但该索引 mappingJson 为 null → pickPaste 置 ''（ 裁定 null 原样透传）
  *   ③ 粘了一份空白/纯空格文本  → trim 后为 ''
  * 三者都不该产出 diff —— 没有期望就没有「期望 vs 实际」这回事。
  *
@@ -112,7 +112,7 @@ export function parseExpectedMapping(text: string | null | undefined): Record<st
  *
  * 判据是「**期望侧确实提供了 mapping**」，而不是「用户粘贴过」——
  * 评审给的最小修法 pasteIdx >= 0 是后者。二者不等价，且在真实路径上会分叉：
- * 粘贴了一条 mappingJson 为 null 的索引（Task 4 明确支持的路径，e2e 5-4 正在跑）
+ * 粘贴了一条 mappingJson 为 null 的索引（ 明确支持的路径，e2e 5-4 正在跑）
  * 时 pasteIdx >= 0 成立但 mappingJson 为 ''，仍会拿 {} 去比 —— C-1 原样复发。
  * 故取「有期望 mapping」为判据，它才是 computeDiff 真正依赖的前提。
  */

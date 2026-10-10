@@ -1,13 +1,13 @@
-/* R94：date 存储形态 × Java 类型的兼容风险判定。纯函数、零 Vue 依赖，规则可穷举单测
+/* date 存储形态 × Java 类型的兼容风险判定。纯函数、零 Vue 依赖，规则可穷举单测
    —— 与 dslLint / docDiff / configDiff 同范式。
 
    === 判定的两个输入从哪来 ===
-   ① 存储形态（forms）：Task 16 的 GET /internal/es/index/cluster/date-forms 随机采样得出，
+   ① 存储形态（forms）： 的 GET /internal/es/index/cluster/date-forms 随机采样得出，
       零业务侧依赖。端点另有一棵 samples 树装样例值（string[]），与 forms（计数，number）
       是**两棵分开的树**，不可混淆——本函数只吃 forms。
-   ② Java 类型与注解（fields）：Task 15 的 desired-state payload，业务侧反射得出。
+   ② Java 类型与注解（fields）： 的 desired-state payload，业务侧反射得出。
 
-   两者交叉查 R94 实测的 30 格矩阵即可判定红/绿，零猜测。
+   两者交叉查  实测的 30 格矩阵即可判定红/绿，零猜测。
 
    === 贯穿本文件的一条原则：ok 是一个结论，缺席不是 ===
    信息不足时必须**明确说出「测不出」**，不许静默给 ok，也不许拿一个我们没有的结论去吓人。
@@ -27,10 +27,10 @@
    后者会把「mapping 合法但 properties 为空」（每个字段都真走 dynamic，该报）
    与「mappingJson 坏掉」（一个都不该报）混为一谈，两者在键集为空上同形。 */
 
-/** Task 16 DateFormSampler 的观测值域，逐一对应其 9 个常量（EPOCH_MILLIS…OTHER）。
+/**  DateFormSampler 的观测值域，逐一对应其 9 个常量（EPOCH_MILLIS…OTHER）。
 
     先声明为「值」再派生类型，而不是直接写 union type：TS 的 type 在运行期不存在、
-    不可被断言，词表只有是值才落得下判据（否则 Task 16 加了形态而这边没跟上，无人会红）。
+    不可被断言，词表只有是值才落得下判据（否则  加了形态而这边没跟上，无人会红）。
 
     ⚠ 刻意**不含** 'mixed'：mixed 是判定层的 code（MIXED_STORED_FORMS），不是采样器的观测。
     把它塞进本词表会让同一事实有两个表示位置——`{epoch_millis:5, mixed:5}` 究竟是几种形态？
@@ -41,7 +41,7 @@ export type StoredForm = typeof STORED_FORMS[number];
 
 type RiskLevel = 'error' | 'warning' | 'info' | 'ok';
 
-/** Task 18 的 starter 开关属性名。抽成常量以便两处对齐——改名时不会只改一半。 */
+/**  的 starter 开关属性名。抽成常量以便两处对齐——改名时不会只改一半。 */
 export const COMPAT_DATE_CONVERTERS_KEY = 'es.rebuild.compat.date-converters';
 
 interface DateFieldRisk {
@@ -72,7 +72,7 @@ interface DateRiskField {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   R94 §1 READ 矩阵：30 格（5 存储形态 × 6 Java 类型），只有 7 格可读。
+    §1 READ 矩阵：30 格（5 存储形态 × 6 Java 类型），只有 7 格可读。
 
    写成显式数据表而非一串 if —— 矩阵是从实测来的事实，必须一眼能与 notes 对照。
    复跑：mvn -o test -Dtest='DateConversionMatrixProbe+DateFixMatrixProbe'
@@ -81,7 +81,7 @@ interface DateRiskField {
 const T = 'java.sql.Timestamp', SD = 'java.sql.Date', UD = 'java.util.Date',
   LONG = 'java.lang.Long', INST = 'java.time.Instant', LDT = 'java.time.LocalDateTime';
 
-/** 每种存储形态下**能读出来**的 Java 类型。不在集合里 = R94 §1 的 ✗。 */
+/** 每种存储形态下**能读出来**的 Java 类型。不在集合里 =  §1 的 ✗。 */
 const READABLE: Partial<Record<StoredForm, ReadonlySet<string>>> = {
   //              Timestamp  sql.Date  util.Date  Long   Instant  LocalDateTime
   epoch_millis: new Set([/*✗*/ /*✗*/ UD, LONG /*✗ ✗*/]),
@@ -101,12 +101,12 @@ const REAL_FORMS: ReadonlySet<StoredForm> = new Set<StoredForm>([
   'ambiguous_small', 'other',
 ]);
 
-/** 数字存储：在 sdes 4.0.9 上注解路线**完全无效**，唯一出路是 Converter（R94 §4 推论）。 */
+/** 数字存储：在 sdes 4.0.9 上注解路线**完全无效**，唯一出路是 Converter（ §4 推论）。 */
 const NUMERIC_FORMS: ReadonlySet<StoredForm> = new Set<StoredForm>(['epoch_millis', 'epoch_seconds']);
 
-/** 无时区的 Java 类型：按系统默认时区折算，跨时区服务写入会静默错位（R94 §2）。 */
+/** 无时区的 Java 类型：按系统默认时区折算，跨时区服务写入会静默错位（ §2）。 */
 const TZ_NAIVE = LDT;
-/** TemporalAccessor 类型：无 @Field 日期注解且无 Converter 时读不出（R94 §3 自伤闭环）。 */
+/** TemporalAccessor 类型：无 @Field 日期注解且无 Converter 时读不出（ §3 自伤闭环）。 */
 const TEMPORAL_TYPES: ReadonlySet<string> = new Set([INST, LDT]);
 
 /** sdes `FieldType` 里的日期类型。规则 0 的第一个合取项。 */
@@ -123,7 +123,7 @@ const DATE_FIELD_TYPES: ReadonlySet<string> = new Set(['Date', 'Date_Nanos']);
  */
 const CONSTRUCT_FAILING_TYPES: ReadonlySet<string> = new Set([T, SD, UD, INST, LDT]);
 
-/** sdes 的 DateFormat 枚举加入 epoch_millis / epoch_second 的版本（R94 §4，javap 实测 4.0.9 没有）。 */
+/** sdes 的 DateFormat 枚举加入 epoch_millis / epoch_second 的版本（ §4，javap 实测 4.0.9 没有）。 */
 const EPOCH_FORMAT_SINCE = { major: 4, minor: 2 };
 
 const LEVEL_RANK: Record<RiskLevel, number> = { error: 0, warning: 1, info: 2, ok: 3 };
@@ -143,7 +143,7 @@ function realFormsPresent(forms: Partial<Record<StoredForm, number>>): StoredFor
 /**
  * 注解是否**足以**让该形态读出来。
  *
- * R94 §4 实测：注解路线**只对字符串存储有效**（C 行 OK）；对 epoch 数字存储无效
+ *  §4 实测：注解路线**只对字符串存储有效**（C 行 OK）；对 epoch 数字存储无效
  * （A / D 两行 FAIL）——「加了注解就没事」是本题最常见的误判，故数字形态一律返回 false。
  *
  * `annType`/`annFormat` 为 'Auto'/'none' 是 sdes 枚举默认值（哨兵值，表示「注解在但该项未指定」），
@@ -165,7 +165,7 @@ function hasDateAnnotation(field: DateRiskField): boolean {
  * 规则 0：`@Field(type = Date|Date_Nanos)` 而 `format` 未指定，且 javaType 是时间类型。
  *
  * **这不是「可能有问题」，是确定的构造期硬失败**（字节码给的，见
- * `R94TypeOnlyAnnotationDrill` 的 `initDateConverter()` 反编译）：
+ * sdes `initDateConverter()` 构建路径的字节码反编译）：
  * `DateFormat.none` 是注解默认值，sdes 4.0.9 在**首次构建该 persistent entity** 时
  * 直接抛 `MappingException`，早于任何读、写、转换器。
  *
@@ -187,7 +187,7 @@ function isInvalidDateAnnotation(field: DateRiskField): boolean {
  *   · `hasDateAnnotation`   —— 注解**足以让值读出来**吗（要求 format 也显式给了）
  *   · `hasAnyDateAnnotation` —— 该字段**归属性级日期转换器管**吗
  *
- * 后者才是「兼容开关对它有没有用」的判据：Task 18 实测，带 `@Field(type=Date, format=…)`
+ * 后者才是「兼容开关对它有没有用」的判据： 实测，带 `@Field(type=Date, format=…)`
  * 的属性由 sdes 安装**属性级**日期转换器，它**抢在** `ElasticsearchCustomConversions`
  * 之前生效 —— 打开 `es.rebuild.compat.date-converters` **什么也不会发生，而且不报错**。
  */
@@ -222,7 +222,7 @@ const CONVERTER_SNIPPET =
 /** 数字存储（epoch_millis / epoch_seconds）读不出来时的修法，按 sdes 版本分叉。
  *
  *  ⚠ **只对「不带日期注解」的字段成立**。带 `@Field(type=Date…)` 的字段由属性级转换器接管，
- *  兼容开关对它们完全无效（Task 18 实测）—— 那条路走 {@link fixForAnnotatedNumeric}。
+ *  兼容开关对它们完全无效（ 实测）—— 那条路走 {@link fixForAnnotatedNumeric}。
  *  调用方一律经 {@link fixForUnreadable} 分流，不要直接调本函数。 */
 function fixForNumeric(sdesVersion: string | null): string {
   const head = `首推：配 \`${COMPAT_DATE_CONVERTERS_KEY}=true\`（一行，starter 自动注册读写转换器）。`;
@@ -232,7 +232,7 @@ function fixForNumeric(sdesVersion: string | null): string {
   }
   const known = parseSdes(sdesVersion) != null;
   const tail = known
-    ? `当前 sdes ${sdesVersion} < 4.2，DateFormat 枚举里**没有** epoch 相关值，注解路线编译都过不了（R94 §4 实测）。`
+    ? `当前 sdes ${sdesVersion} < 4.2，DateFormat 枚举里**没有** epoch 相关值，注解路线编译都过不了（字节码实测）。`
     : `sdes 版本未知：4.2 以下只能用转换器；4.2 及以上还可用注解 format。两套都列出，不赌。`;
   return `${head}\n${tail}\n不想用开关时自行注册：\n${CONVERTER_SNIPPET}`;
 }
@@ -240,14 +240,14 @@ function fixForNumeric(sdesVersion: string | null): string {
 /**
  * **带日期注解**的字段遇上 epoch 数字存储时的修法。
  *
- * 本函数存在的唯一理由：**不许给这类字段推荐兼容开关**。Task 18 实测，属性级日期转换器
+ * 本函数存在的唯一理由：**不许给这类字段推荐兼容开关**。 实测，属性级日期转换器
  * 抢在 `ElasticsearchCustomConversions` 之前生效，打开开关**什么也不会发生、而且不报错**
  * —— 使用者会以为已经修好了。**一个照着做了却没效果且不声张的建议，比不给建议更糟。**
  *
- * 那么真正可行的是什么？两条路，且**都有 Task 19 划定的边界**：
+ * 那么真正可行的是什么？两条路，且**都有  划定的边界**：
  *
  * · **Path A（改 `@Field(format=…)`）**：只在**存量宽度单一**时成立。
- *   Task 19 实测：10 位与 13 位在数值上**不可区分**，`epoch_second` 前置则 13 位飞到公元 57000 年、
+ *    实测：10 位与 13 位在数值上**不可区分**，`epoch_second` 前置则 13 位飞到公元 57000 年、
  *   后置则 10 位掉回 1970 —— **mapping 侧结构上无解**。故混合宽度下 Path A **不可能**，
  *   不是「不推荐」而是「做不到」。且它依赖「存量宽度从此不再变化」这个前提。
  *
@@ -271,14 +271,14 @@ function fixForAnnotatedNumeric(
   const head = `⚠ 该字段带 @Field(type = FieldType.Date${field.annFormat && field.annFormat !== 'none'
     ? `, format = ${field.annFormat}` : ''})，`
     + `属性级日期转换器抢在 CustomConversions 之前生效 —— `
-    + `**starter 的 epoch 兼容开关对它完全无效，且不会报任何错**（Task 18 实测）。`
+    + `**starter 的 epoch 兼容开关对它完全无效，且不会报任何错**（实测）。`
     + `不要走那条路：打开了什么也不会发生，你会以为已经修好了。`;
 
   const body = mixedWidth
     ? `**本字段没有干净的修法**，如实告知：样本中 10 位（秒）与 13 位（毫秒）**并存**，`
       + `而两者在数值上不可区分。改 @Field(format=…) 属于 mapping 侧方案，`
       + `epoch_second 前置则 13 位值被解析到公元 57000 年、后置则 10 位值掉回 1970 —— `
-      + `**结构上不可能**同时正确（R94 / Task 19 实测）。\n`
+      + `**结构上不可能**同时正确（字节码实测）。\n`
       + `唯一结构上成立的路：把实体字段类型换成 \`Long\`，在 Java 读侧自行换算`
       + `（\`abs(v) >= 1e12\` 判毫秒，否则判秒 —— 歧义只能在读写侧消解，mapping 侧消解不了）。\n`
       + `需要人工决策的点：是接受改类型，还是先 reindex 把存量统一成一种宽度。`
@@ -288,7 +288,7 @@ function fixForAnnotatedNumeric(
         + `⚠ 该方案依赖「存量宽度从此不再变化」这个前提 —— 一旦将来混入另一种宽度，它会再次失效。\n`
         + `更稳妥：换成 \`Long\` 在 Java 读侧自行换算，宽度变化对它无影响。`
       : `存量宽度单一，但当前 sdes ${sdesVersion ?? '版本未知'} < 4.2，`
-        + `DateFormat 枚举里**没有** epoch 相关值，注解路线编译都过不了（R94 §4 实测）—— `
+        + `DateFormat 枚举里**没有** epoch 相关值，注解路线编译都过不了（字节码实测）—— `
         + `**Path A 在这个版本上不可用**。\n`
         + `可行的是：把实体字段类型换成 \`Long\`，在 Java 读侧自行换算。`;
 
@@ -301,17 +301,17 @@ function fixForAnnotatedNumeric(
   return `${head}\n${body}${tail}`;
 }
 
-/** 字符串存储读不出来时的修法：注解路线有效（R94 §4 C 行实测 OK）。 */
+/** 字符串存储读不出来时的修法：注解路线有效（ §4 C 行实测 OK）。 */
 function fixForString(form: StoredForm): string {
   const pattern = form === 'space_sep' ? 'yyyy-MM-dd HH:mm:ss'
     : form === 'date_only' ? 'yyyy-MM-dd' : "yyyy-MM-dd'T'HH:mm:ssXXX";
   return `字符串存储可用注解修复：@Field(type = FieldType.Date, `
     + `format = DateFormat.custom, pattern = "${pattern}")。\n`
-    + `或改用与该形态匹配的 Java 类型（见 R94 §1 矩阵）。`;
+    + `或改用与该形态匹配的 Java 类型（与字段存储形态、javaType 与 format 三者的兼容矩阵一致）。`;
 }
 
 /** 读不出来时的修法总入口。**数字存储必须先按「带不带日期注解」分流** ——
- *  带注解的字段兼容开关无效（Task 18），给它推开关是一条静默失效的假建议。 */
+ *  带注解的字段兼容开关无效（），给它推开关是一条静默失效的假建议。 */
 function fixForUnreadable(
   field: DateRiskField, form: StoredForm,
   forms: Partial<Record<StoredForm, number>>, sdesVersion: string | null,
@@ -335,7 +335,7 @@ const FIX_SECONDS_IN_FORMATLESS =
    ══════════════════════════════════════════════════════════════════════════ */
 
 export function assessDateRisks(input: {
-  /** Task 15 的 payload row 级判别位。false = mappingJson 未能解析，此时依赖 mapping 的
+  /**  的 payload row 级判别位。false = mappingJson 未能解析，此时依赖 mapping 的
    *  规则 {1, 6} 全部不可判（规则 7 归 assessFieldNameMismatch）。
    *
    *  ⚠ 本函数**刻意不接收 mappingJson**：规则 1 需要的 format 由后端随 esType 一并给成
@@ -369,11 +369,11 @@ export function assessDateRisks(input: {
 
     /* ---- 规则 0：INVALID_DATE_ANNOTATION（error）· 构造期硬失败，排在规则 1 之前 ----
 
-       编号从 0 起是刻意的：**不重排既有规则编号**（spec 条号被多处引用，Task 17 定下）。
+       编号从 0 起是刻意的：**不重排既有规则编号**（spec 条号被多处引用，不改动）。
        它必须最先判 —— 一旦成立，该字段上其它一切关于「存储形态怎么读」的判定都是无意义的：
        实体根本装不起来，先说这个，再谈别的没有意义。
 
-       判据来自字节码而非行为探测（`R94TypeOnlyAnnotationDrill`：行为探测是死仪器，
+       判据来自字节码而非行为探测（行为探测是死仪器，
        阳性对照抛同样异常，只能证明没走到转换器）。 */
     if (isInvalidDateAnnotation(field)) {
       emit('error', 'INVALID_DATE_ANNOTATION',
@@ -403,7 +403,7 @@ export function assessDateRisks(input: {
         `样本中出现 epoch_seconds（10 位秒），而该字段 mapping 无 epoch_second format。`
         + `ES 默认 format 为 strict_date_optional_time||epoch_millis，不含 epoch_second，`
         + `秒值会被解析成 1970 年附近 —— 该字段的范围查询、排序、date_histogram 聚合`
-        + `从写入第一天起就是错的（R94 §5b 实测）。这不是迁移风险，是存量 bug。`,
+        + `从写入第一天起就是错的（字节码路径实测）。这不是迁移风险，是存量 bug。`,
         FIX_SECONDS_IN_FORMATLESS);
     }
 
@@ -424,10 +424,10 @@ export function assessDateRisks(input: {
         if (READABLE[form]!.has(javaType)) continue;
         if (annotationRescues(field, form)) continue;
         emit('error', 'UNREADABLE_COMBINATION',
-          `存储形态 ${form} 读进 ${javaType} 在 R94 §1 实测矩阵里是红格 —— 读取会抛异常`
+          `存储形态 ${form} 读进 ${javaType} 在类型兼容实测矩阵里是红格 —— 读取会抛异常`
           + `（数字→时间类型报 ConverterNotFoundException，字符串报 DateTimeParseException）。`
           + (NUMERIC_FORMS.has(form)
-            ? `注解路线对数字存储无效（R94 §4 A/D 行实测 FAIL），只能注册转换器。` : ``),
+            ? `注解路线对数字存储无效（兼容矩阵 A/D 行实测 FAIL），只能注册转换器。` : ``),
           fixForUnreadable(field, form, storedForms, sdesVersion));
       }
     }
@@ -442,7 +442,7 @@ export function assessDateRisks(input: {
       emit('error', 'SELF_INFLICTED_LOOP',
         `${javaType} 没有 @Field 日期注解：写入时能落成 epoch_millis 数字，`
         + `读回同一份数据却抛 ConverterNotFoundException —— 自己写进去的自己读不出来`
-        + `（R94 §3，与是否迁移、与 ES 版本都无关）。`,
+        + `（结构使然，与是否迁移、与 ES 版本都无关）。`,
         hasAnyDateAnnotation(field)
           ? fixForAnnotatedNumeric(field, storedForms, sdesVersion)
           : fixForNumeric(sdesVersion));
@@ -453,7 +453,7 @@ export function assessDateRisks(input: {
       emit('warning', 'LOCALDATETIME_TZ_DRIFT',
         `LocalDateTime 无时区，sdes 按**系统默认时区**折算 epoch。`
         + `实测比其余五种类型少 8 小时（CST 偏移）；源数据若由不同时区的服务写入，`
-        + `迁移后会静默错位 —— 不报错，只是数据不对（R94 §2）。`,
+        + `迁移后会静默错位 —— 不报错，只是数据不对。`,
         `改用 Instant + @Field(type = FieldType.Date, format = DateFormat.date_optional_time)，`
         + `或显式注册带固定时区的转换器，把时区从「运行环境」变成「代码里写死的事实」。`);
     }
@@ -524,7 +524,7 @@ export function assessDateRisks(input: {
 /**
  * 判据是「mapping 的 properties 里**没有** `name` 这个键」，**不是**「name 与 declaredName 不一致」。
  *
- * R94 §5 的病理：`@Field("updateTime")` 而 mapping 写的是 `update_time`，
+ *  §5 的病理：`@Field("updateTime")` 而 mapping 写的是 `update_time`，
  * 问题在于**那条 mapping 从未生效**，跟驼峰/下划线像不像毫无关系。
  * 「名字不一致」只是这个 bug 最常见的**外观**，不是它的**定义** ——
  * 拿外观当判据会漏掉「name 与 declaredName 一致、但 mapping 里压根没这个键」的情形。
@@ -544,7 +544,7 @@ export function assessDateRisks(input: {
  */
 export function assessFieldNameMismatch(input: {
   mappingJson: string | null;
-  /** Task 15 的 payload row 级判别位。**判据落在这个值上**，不落在解析结果是否为空上。 */
+  /**  的 payload row 级判别位。**判据落在这个值上**，不落在解析结果是否为空上。 */
   mappingParsed: boolean;
   fields: Array<{ name: string; declaredName: string }>;
 }): Array<{ code: string; level: RiskLevel; field: string; reason: string; fix: string }> {
@@ -585,7 +585,7 @@ export function assessFieldNameMismatch(input: {
       code: 'FIELD_NAME_MISMATCH', level: 'warning', field: f.name,
       reason: `实体以 "${f.name}" 写入${declaredNote}，而 mapping 的 properties 里没有这个键 —— `
         + `该字段实际走 dynamic mapping，mapping 里那条同类定义**从未生效**。`
-        + `迁移后若目标集群 dynamic 策略不同，类型可能漂移（R94 §5）。`,
+        + `迁移后若目标集群 dynamic 策略不同，类型可能漂移。`,
       fix: `两个方向选一：① 改实体 @Field 名对齐 mapping 里已有的键；`
         + `② 改 mapping 键名对齐实体的 "${f.name}"。`
         + `注意 mapping 改键名需要重建索引，而改实体注解会改变新数据的写入字段名 —— `
@@ -609,7 +609,7 @@ function parseMappingKeys(mappingJson: string | null): Set<string> | null {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   合并展示（Task 20 / 移交一）
+   合并展示（ / 移交一）
    ══════════════════════════════════════════════════════════════════════════ */
 
 /** 界面消费的统一行形状。两个判定函数的产出在这几个键上同构，故可合并渲染。 */
@@ -625,10 +625,10 @@ export interface RiskRow {
  * 合并 {@link assessDateRisks} 与 {@link assessFieldNameMismatch} 的产出。
  *
  * <b>移交一：两个函数都必须调</b>。`FIELD_NAME_MISMATCH` **只由** `assessFieldNameMismatch`
- * 产出（Task 17 已把它从 `assessDateRisks` 的优先级序列里移除，否则同一 code 出两条）。
- * 只调 `assessDateRisks` 会让该 code **整类**不出现在界面上 —— 而它对应的是 R94 §5 的
+ * 产出（ 已把它从 `assessDateRisks` 的优先级序列里移除，否则同一 code 出两条）。
+ * 只调 `assessDateRisks` 会让该 code **整类**不出现在界面上 —— 而它对应的是  §5 的
  * **原始案例**（`@Field("updateTime")` 而 mapping 写 `update_time`，那条 mapping 从未生效），
- * 整个 R94 调查就是从这个案例开始的。
+ * 整个  调查就是从这个案例开始的。
  *
  * <h3>★ 排序口径（移交二要求写明）★</h3>
  *
@@ -637,7 +637,7 @@ export interface RiskRow {
  * 与 `assessDateRisks` 内部的口径（field 优先、级别其次）**不同**：那里是「同一字段的诸条聚在一起」，
  * 这里是「最严重的先看见」—— 合并后跨字段同屏，读者要的是先看到 error。
  *
- * ⚠ 因此 **Task 17 那条按 `LEVEL_RANK` 的看守不覆盖本函数**，本函数自带看守。
+ * ⚠ 因此 ** 那条按 `LEVEL_RANK` 的看守不覆盖本函数**，本函数自带看守。
  * 且看守必须挑「本排序口径分辨不出」的两个对象来构造 —— 用同 level 同 field 的两条，
  * 否则钉住的是排序键而不是「两类 code 都在」这个目标性质。
  *

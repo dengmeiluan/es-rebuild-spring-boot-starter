@@ -20,7 +20,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Task 6：{@code AdhocJobStore} 三选一装配的接线证明（照审计 {@code consoleOpsAuditStore} 范式）。
+ * {@code AdhocJobStore} 三选一装配的接线证明（照审计 {@code consoleOpsAuditStore} 范式）。
  *
  * <p>断言的是「容器里注入的 store 是哪一种实现」与「显式配 jdbc 却缺 DataSource 时上下文响亮失败」，
  * 不触真 ES/DB —— {@code JdbcAdhocJobStore}/{@code EsAdhocJobStore} 构造均为懒解析，不在装配期连接。</p>

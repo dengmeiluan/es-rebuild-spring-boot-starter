@@ -13,7 +13,7 @@ import java.time.format.DateTimeFormatter;
  * 索引名解析器（R1 SRP 抽取）：把"下个物理索引名 / 旧索引兜底 mapping" 两类
  * 索引名相关的逻辑从 {@link EsIndexRebuildService} 抽出，service 不必再到处持 versionFormat / esIndexAdmin。
  *
- * <p>R93 阶段⑤：{@code resolvePhysical}（从作业记录自取并校验物理索引名）随 SPI 重建路径
+ * <p> 阶段⑤：{@code resolvePhysical}（从作业记录自取并校验物理索引名）随 SPI 重建路径
  * 与作业追踪一并退役。</p>
  *
  * @author aicoding

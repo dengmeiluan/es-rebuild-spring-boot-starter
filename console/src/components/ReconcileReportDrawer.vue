@@ -5,7 +5,7 @@
         <button class="btn sm ghost" @click="load"><RefreshCw :size="12" :class="{ spin: loading }" /> 刷新</button>
       </template>
 
-      <!-- 五百六十二批：.rr-err 私造红壳（err 色/err-soft 底/radius/padding）收编全局 .err-bar
+      <!-- .rr-err 私造红壳（err 色/err-soft 底/radius/padding）收编全局 .err-bar
            形态（theme.css :554 单源，558b pf-err 判例；err-bar 自带 margin-bottom 与原值同档），
            rr-err 锚保留；重试钮走 .err-bar .btn 右靠档 + role=alert 语义补齐 -->
       <div v-if="loadErr" role="alert" class="err-bar rr-err">
@@ -13,7 +13,7 @@
         <button class="btn sm ghost" @click="load">重试</button>
       </div>
 
-      <!-- 五百三十二批：手写 rr-tbl 换壳 QRT rows 型——自造状态漏斗/kw 过滤门控/手写 copyMatrix
+      <!-- 手写 rr-tbl 换壳 QRT rows 型——自造状态漏斗/kw 过滤门控/手写 copyMatrix
            全退役，过滤收口内核 quickFilter（显示与导出同源走 sortedRows，viewRows「所见即所复制」
            锁语义天然继承）；导出 CSV/MD/XLSX/PNG 与右键复制矩阵归内核（状态列导出人话值与旧
            copyMatrix 同口径，说明列恒 raw 原文）。空态/骨架走内核 empty-text/empty-hint/loading。 -->
@@ -70,12 +70,12 @@ import StatusPill from './StatusPill.vue';
 const props = defineProps<{ show: boolean }>();
 const emit = defineEmits<{ (e: 'update:show', v: boolean): void }>();
 
-/* 五百二十八批：620 固定宽无视口钳制（≤620px 视口整条溢出）——按视口 94% 收口，
+/* 620 固定宽无视口钳制（≤620px 视口整条溢出）——按视口 94% 收口，
    上限仍 620（大屏观感不变）；本站纯 SPA，window 直读无 SSR 顾虑 */
 const drawerW = computed(() => Math.min(620, Math.round(window.innerWidth * 0.94)));
 
 const router = useRouter();
-/* 五百三十二批：索引列 goHub 跳转（XmigrateView gotoIdx 同范式） */
+/* 索引列 goHub 跳转（XmigrateView gotoIdx 同范式） */
 function gotoHub(idx?: string) {
   if (!idx) return;
   router.push({ path: '/indices', query: { idx } });
@@ -107,7 +107,7 @@ function shortReason(reason?: string) {
     .slice(0, 120);
 }
 
-/* 五百三十二批：换壳 QRT rows 型——列名与旧表头逐字同源；状态列携 statusText 人话值
+/* 换壳 QRT rows 型——列名与旧表头逐字同源；状态列携 statusText 人话值
    （quickFilter 中文可命中、内核导出与旧 copyMatrix「状态人话列」同口径）、
    索引/说明携原文（说明显示 shortReason 走 #cell- 槽，title/导出/复制恒 raw） */
 const RR_COLS = ['状态', '索引', '说明'];
@@ -131,7 +131,7 @@ async function load() {
       addedCount: x.addedCount, conflictCount: x.conflictCount,
     }));
   } catch (e: any) {
-    /* 第十批 A：ES 错误友好化——裸 message 换全站 friendlyEsError 口径 */
+    /*  A：ES 错误友好化——裸 message 换全站 friendlyEsError 口径 */
     loadErr.value = friendlyEsError(String(e?.message ?? e));
   } finally {
     loading.value = false;
@@ -144,12 +144,12 @@ watch(() => props.show, v => { if (v) { kw.value = ''; load(); } });
 
 <style scoped>
 .rr-tip { font-size: var(--fs-xs); color: var(--tx2); background: var(--bg2); border-radius: var(--r-s); padding: var(--sp-2) var(--sp-2h); margin-bottom: var(--sp-2h); line-height: 1.7; }
-/* 五百六十二批：.rr-err 私造红壳随收编 .err-bar 单源退役（margin-bottom 与 err-bar 自带值同档） */
-/* 五百三十二批：漏斗 chips/rr-none 随换壳退役，工具行只留 quick-filter 输入（kernel 过滤收口） */
+/* .rr-err 私造红壳随收编 .err-bar 单源退役（margin-bottom 与 err-bar 自带值同档） */
+/* 漏斗 chips/rr-none 随换壳退役，工具行只留 quick-filter 输入（kernel 过滤收口） */
 .rr-tools { display: flex; align-items: center; gap: var(--sp-1h); margin-bottom: var(--sp-2); }
 .rr-kw { width: 200px; height: 24px; }
 .rr-reason { color: var(--tx2); }
-/* 五百三十二批：索引列 goHub 芯片（XmigrateView .xm-idx-go 同语言） */
+/* 索引列 goHub 芯片（XmigrateView .xm-idx-go 同语言） */
 .rr-go {
   display: inline-flex; align-items: center; justify-content: center;
   width: 18px; height: 18px; padding: 0; margin-left: 5px; vertical-align: middle;

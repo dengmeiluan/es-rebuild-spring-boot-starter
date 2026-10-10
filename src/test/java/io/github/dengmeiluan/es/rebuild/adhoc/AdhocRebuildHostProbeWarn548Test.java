@@ -26,7 +26,7 @@ import java.util.Map;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百四十八批：{@link AdhocRebuildService#start(Map)} 宿主版本探测失败 <b>debug 升 WARN</b>
+ * {@link AdhocRebuildService#start(Map)} 宿主版本探测失败 <b>debug 升 WARN</b>
  * （观测缺口收口，模板：JdbcConnStoreUpdateVersionWarnTest 的 ListAppender 范式）。
  *
  * <p><b>缺口与裁决</b>：target 快照契约（start 内注释在案）宣称「名称/版本做创建时快照——

@@ -20,7 +20,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 五百五十八批：轨5 自适应+Java 可观测三件（Observability552/557 范式：ListAppender
+ * 轨5 自适应+Java 可观测三件（Observability552/557 范式：ListAppender
  * 直挂 logger + 契约锚双形态，源码锚照 Observability547Test 直读 src/main/java 先例）。
  * <b>降级/返回值契约零改动</b>（false 仍 false、报告照常返回、raw 照常执行），只把静默臂
  * 补上留痕；TDD 先红后绿。
@@ -36,8 +36,8 @@ import static org.junit.Assert.assertTrue;
  *       {@code catch (Exception e) { return false; }} 静默 → 首败节流 WARN（控制集群探活
  *       失败(第 n 次) + 根因 + 控制面维持 NONE 降级）；连败仅累计静默（探活是 NONE 10s
  *       惰性重探的高频路径，逐条 WARN 刷屏）；恢复成功重臂后下次失败再 WARN（三态语义
- *       与 547 批 ConnHealthProber.skipRoundCount 对齐）。返回 false 契约不变。</li>
- *   <li>io.github.dengmeiluan.es.rebuild.web.InternalEsIndexRebuildController clusterRaw 555 批
+ *       与  ConnHealthProber.skipRoundCount 对齐）。返回 false 契约不变。</li>
+ *   <li>io.github.dengmeiluan.es.rebuild.web.InternalEsIndexRebuildController clusterRaw 
  *       审计摘要回填 {@code catch (Exception ignore)} 静默（源码契约锚）：必须直接 WARN
  *       （低频用户路径不节流），文案带 [es-console-raw] 前缀与「本次高危审计缺执行摘要」
  *       语义；回填失败不影响执行契约不变。</li>
@@ -133,7 +133,7 @@ public class Observability558Test {
     /* ══ 3. clusterRaw 审计摘要回填吞臂 → 直接 WARN（源码契约锚） ══ */
 
     /**
-     * 源码锚：555 批回填臂必须具名 catch (Exception e) 并落带 [es-console-raw] 前缀的
+     * 源码锚：回填臂必须具名 catch (Exception e) 并落带 [es-console-raw] 前缀的
      * WARN——「谁执行了什么」的执行摘要缺失且无痕 = 高危审计链断点。低频用户路径，
      * 不节流（与 ping 高频路径的节流策略刻意相反）。
      */

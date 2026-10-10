@@ -4,14 +4,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * ES 服务端版本能力矩阵（R40）：版本感知架构的唯一判定入口。
+ * ES 服务端版本能力矩阵（）：版本感知架构的唯一判定入口。
  *
  * <p>连接档案在探活/测试连接时记录服务端 {@code version.number}（如 {@code 6.8.23} /
  * {@code 7.10.1} / {@code 8.17.0}），数据面需要按版本分叉的请求（mapping type、
  * hits.total 形态、data streams 等）一律经本类判定，<b>禁止散落 if (version...)</b>——
  * 未来适配 8.x/9.x（阿里云基线 8.15/8.17/9.4）只需在此扩充判定，不动调用方。</p>
  *
- * <p><b>R93-67：版本未知不再冒充 7.x。</b> 此处原有一句
+ * <p><b>-67：版本未知不再冒充 7.x。</b> 此处原有一句
  * 「版本未知时所有判定按 7.x 默认——探活一轮后自动精确」，<b>那句话对宿主集群从来不成立</b>：
  * {@code ConnStore.updateVersion} 的两个调用点（{@code ConnHealthProber} /
  * {@code EsClusterConnController}）都以 connId 为前提，而宿主没有连接档案，
@@ -80,7 +80,7 @@ public final class EsVersionCaps {
             int m = Integer.parseInt(majorStr.trim());
             return m > 0 ? Integer.valueOf(m) : null;
         } catch (NumberFormatException e) {
-            // 五百六十批：解析失败静默降为「未知」此前零痕——debug 留痕，null 返回契约不变
+            // 解析失败静默降为「未知」此前零痕——debug 留痕，null 返回契约不变
             LOG.debug("[EsVersionCaps] major 解析失败按未知处理：input={}", version);
             return null;
         }
@@ -98,7 +98,7 @@ public final class EsVersionCaps {
         try {
             return Integer.parseInt(parts[1].trim());
         } catch (NumberFormatException e) {
-            // 五百六十批：同 majorOrNull——debug 留痕，0 兜底语义零变
+            // 同 majorOrNull——debug 留痕，0 兜底语义零变
             LOG.debug("[EsVersionCaps] minor 解析失败按 0 处理：input={}", version);
             return 0;
         }

@@ -110,7 +110,7 @@ public class MigrationHandle {
 
     /** 累计失败计数（n&gt;0 = bulk 级失败重试耗尽的真丢数据落账，全仓唯一调用点为 SliceWorker
      *  耗尽分支；n=0 = slice 致命异常的零计数样本登记，SliceWorker 已有 WARN 不重复打）。
-     *  五百四十五批：n&gt;0 落账时服务端 WARN 留痕——此前只进 errorSamples 滚动快照（上限 20 条、
+     *  n&gt;0 落账时服务端 WARN 留痕——此前只进 errorSamples 滚动快照（上限 20 条、
      *  仅 progress API 可见），日志面全无且 slice 仍标 DONE，运维无法从日志定位丢失。 */
     public void addErrors(long n, String sample) {
         errors.addAndGet(n);
@@ -154,7 +154,7 @@ public class MigrationHandle {
         s.setTotal(meta.getTotal());
         s.setCreateTime(meta.getCreateTime());
         s.setSavedSettings(new LinkedHashMap<>(meta.getSavedSettings()));
-        // R94：无 format 的 date 字段告知必须随每次快照带出——toJobEs 每次都造全新对象，
+        // 无 format 的 date 字段告知必须随每次快照带出——toJobEs 每次都造全新对象，
         // 漏带这一行，告知就会在收尾持久化时静默消失，而那正是它最需要在场的时刻。
         s.setFormatlessDateFields(new java.util.ArrayList<>(meta.getFormatlessDateFields()));
 

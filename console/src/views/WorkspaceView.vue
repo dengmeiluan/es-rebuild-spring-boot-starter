@@ -27,7 +27,7 @@
           @dragstart="dragIdx = i"
           @dragover.prevent
           @drop="moveTo(i)">
-          <!-- 七百一十批 G44+G47：勾选/跨度即落盘（@change=persist，副标题持久化承诺兑现）
+          <!--  G44+G47：勾选/跨度即落盘（@change=persist，副标题持久化承诺兑现）
                + checkbox/select 补部件名 aria-label、grab 装饰字 aria-hidden -->
           <span class="ws-cfg-grab" aria-hidden="true">⋮⋮</span>
           <input type="checkbox" v-model="w.on" @change="persist()"
@@ -58,7 +58,7 @@
 
         <!-- Widgets -->
         <div v-if="w.k === 'health'" class="ws-w-bd">
-          <!-- 五百六十批：手写空态壳退役收编 EmptyState compact + action（一键体检语义保留；
+          <!-- 手写空态壳退役收编 EmptyState compact + action（一键体检语义保留；
                action 位无 disabled 档——防重入守卫迁 loadHealth 函数内，行为等价） -->
           <EmptyState v-if="!hResult" compact :icon="HeartPulse" text="尚未体检" action-text="一键体检" @action="loadHealth" />
           <div v-else>
@@ -109,7 +109,7 @@
 
         <div v-else-if="w.k === 'shortcuts'" class="ws-w-bd">
           <div class="ws-sc">
-            <!-- 七百一十批 G45：DSL 落点钉死（708 TemplateGallery toQuery 同范式）——
+            <!--  G45：DSL 落点钉死（708 TemplateGallery toQuery 同范式）——
                  裸 /search push 会吃 QueryHub mode 记忆被带进沙盒，显式 mode=dsl 深链优先 -->
             <button class="btn ghost xs" @click="$router.push({ path: '/search', query: { mode: 'dsl' } })"><Zap :size="10" /> DSL 查询</button>
             <button class="btn ghost xs" @click="$router.push('/bulk')"><Rows3 :size="10" /> Bulk 编辑</button>
@@ -122,7 +122,7 @@
 
         <div v-else-if="w.k === 'wanquan'" class="ws-w-bd">
           <div class="ws-sub">当前会话统计</div>
-          <!-- 五百五十一批：四行 ws-kv 手写 meta 行收编 MetaStrip mini 档（550 sv-repo-meta 判例：
+          <!-- 四行 ws-kv 手写 meta 行收编 MetaStrip mini 档（550 sv-repo-meta 判例：
                值亮+标签暗+·分隔）；长索引名段 tip 兜底（原 ellipsis+title 语义随迁） -->
           <MetaStrip class="ws-strip" :items="[
             { value: store.indices.length, label: '索引' },
@@ -149,13 +149,13 @@ import {
 
 import PageHeader from '../components/PageHeader.vue';import { api } from '../api';
 import EmptyState from '../components/EmptyState.vue';
-import MetaStrip from '../components/MetaStrip.vue'; /* 五百五十一批：ws-kv meta 行统一件 */
+import MetaStrip from '../components/MetaStrip.vue'; /* ：ws-kv meta 行统一件 */
 import { useAppStore } from '../stores/app';
 import { } from '../composables/urlState';
 import { useScopedDraft } from '../composables/useScopedDraft';
 import { askConfirm } from '../composables/confirm';
 import { fmtTimeTz } from '../utils/format';
-import { BP_NARROW, BP_STACK } from '../utils/layout'; /* 五百二十八批：响应式列数断点单源（与下方 CSS 档互锚） */
+import { BP_NARROW, BP_STACK } from '../utils/layout'; /* ：响应式列数断点单源（与下方 CSS 档互锚） */
 
 const store = useAppStore();
 
@@ -178,7 +178,7 @@ const dragIdx = ref<number | null>(null);
 
 const hResult = ref<any>(null);
 const hBusy = ref(false);
-/* R53：快查 SQL 进 sessionStorage 草稿——刷新不丢稿（可重入） */
+/* 快查 SQL 进 sessionStorage 草稿——刷新不丢稿（可重入） */
 /* 草稿治理轮：快捷 SQL 草稿迁 useScopedDraft（按集群目标隔离） */
 const quickSql = useScopedDraft('quick-sql', {
   route: 'workspace',}).text;
@@ -212,8 +212,8 @@ async function reset() {
   })) return;
   localStorage.removeItem(LS_KEY);
   loadLayout();
-  /* 七百一十一批 G46：重置恢复默认全 on 后复用 refreshAll 补拉——此前隐藏期挂载
-     条件跳过拉取，重置后卡面数值 0/null 陈旧须手点「全部刷新」（R90 修法原文） */
+  /*  G46：重置恢复默认全 on 后复用 refreshAll 补拉——此前隐藏期挂载
+     条件跳过拉取，重置后卡面数值 0/null 陈旧须手点「全部刷新」（ 修法原文） */
   refreshAll();
   store.notify('success', '布局已重置');
 }
@@ -226,7 +226,7 @@ function moveTo(i: number) {
   persist();
 }
 
-/* 七百一十批 G48：配置面板 Esc 收口（665 window 捕获级范式）——R90 时点裁「非弹层
+/*  G48：配置面板 Esc 收口（665 window 捕获级范式）—— 时点裁「非弹层
    569 边界外」本批裁决收口：面板是「编辑布局」钮触发的编辑态面，Esc 退出+焦点回触发钮
    与 Kibana dashboard 编辑模式同语言；弹层让路守卫=.msk-box/.cf 在开时 Esc 归弹层单源不抢 */
 const cfgBtnEl = ref<HTMLButtonElement | null>(null);
@@ -243,14 +243,14 @@ watch(showConfig, on => {
 });
 
 async function loadHealth() {
-  if (hBusy.value) return; /* 五百六十批：EmptyState action 位无 disabled 档——防重入守卫迁此（原按钮 :disabled 等价） */
+  if (hBusy.value) return; /* ：EmptyState action 位无 disabled 档——防重入守卫迁此（原按钮 :disabled 等价） */
   hBusy.value = true;
   try { hResult.value = await api.healthReport(); } catch (e: any) { store.notify('error', '体检失败：' + (e?.message || e)); } finally { hBusy.value = false; }
 }
 async function refreshAll() {
   store.loadIndices();
   if (layout.value.find(l => l.k === 'health' && l.on)) loadHealth();
-  /* R42 §8.2：部分卡片刷新失败不再假报成功 */
+  /*  §8.2：部分卡片刷新失败不再假报成功 */
   const fails: string[] = [];
   if (layout.value.find(l => l.k === 'remote' && l.on)) {
     try { const r = await api.remoteClusters(); remoteCount.value = r?.count || 0; } catch { fails.push('远程集群'); }
@@ -287,8 +287,8 @@ let mq1100: MediaQueryList | null = null;
 let mq900: MediaQueryList | null = null;
 function syncCols() { cols.value = mq900?.matches ? 1 : mq1100?.matches ? 2 : 3; }
 
-/* 五百六十批：秒表 visibilitychange 守卫（jobTracker onVisChange 范式）——页面隐藏停表，
-   回前台立即续走一拍并重启；R49 离开视图停表语义不变（onBeforeUnmount 兜底保留） */
+/* 秒表 visibilitychange 守卫（jobTracker onVisChange 范式）——页面隐藏停表，
+   回前台立即续走一拍并重启； 离开视图停表语义不变（onBeforeUnmount 兜底保留） */
 function onVisChange() {
   if (document.hidden) {
     if (clockTimer) { window.clearInterval(clockTimer); clockTimer = undefined; }
@@ -313,44 +313,44 @@ onMounted(() => {
   }
 });
 onBeforeUnmount(() => {
-  if (clockTimer) window.clearInterval(clockTimer); /* R49：离开视图停表，防后台常驻计时器 */
+  if (clockTimer) window.clearInterval(clockTimer); /* ：离开视图停表，防后台常驻计时器 */
   document.removeEventListener('visibilitychange', onVisChange);
   mq1100?.removeEventListener('change', syncCols);
   mq900?.removeEventListener('change', syncCols);
-  window.removeEventListener('keydown', onCfgEsc, true); /* 七百一十批 G48：Esc 挂摘随卸载兜底 */
+  window.removeEventListener('keydown', onCfgEsc, true); /*  G48：Esc 挂摘随卸载兜底 */
 });
 </script>
 
 <style scoped>
 .ws-page { padding: var(--sp-3) var(--sp-4) var(--sp-5); }
-/* 五百二十七批 W-F：.ws-hd/.ws-hd-l/.ws-hd-ic/.ws-hd-tt/.ws-hd-sub/.ws-hd-r 死规则删除（页头已迁 §7 PageHeader） */
-/* 五百五十六批：ws-cfg 页面级配置面板壳退役（立法④；ra-card 已退形态同类）——
+/*  W-F：.ws-hd/.ws-hd-l/.ws-hd-ic/.ws-hd-tt/.ws-hd-sub/.ws-hd-r 死规则删除（页头已迁 §7 PageHeader） */
+/* ws-cfg 页面级配置面板壳退役（立法④；ra-card 已退形态同类）——
    bg/整框/radius 三件套消除，分界 border-top 承接，padding/margin 等值迁入盒模型零变动 */
 .ws-cfg { border-top: 1px solid var(--border); padding: var(--sp-3); margin-bottom: var(--sp-3); }
-/* 五百二十七批 W-F：弱分节标题挂全局 .sec-t，本地排版本地声明退役（口径 B） */
+/*  W-F：弱分节标题挂全局 .sec-t，本地排版本地声明退役（口径 B） */
 .ws-cfg-tt { margin-bottom: var(--sp-2); }
 .ws-cfg-list { display: flex; flex-direction: column; gap: var(--sp-1); }
 .ws-cfg-row { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2); border: 1px solid var(--border); border-radius: var(--r-xs); cursor: move; }
 .ws-cfg-grab { cursor: grab; color: var(--muted); font-family: var(--mono); }
 .ws-cfg-name { flex: 1; font-size: var(--fs-sm); }
 .ws-cfg-sz { border: 1px solid var(--border); background: var(--card-bg); color: var(--fg); border-radius: 3px; padding: var(--sp-0) var(--sp-1); font-size: var(--fs-xs); }
-/* 五百三十四批：固定 3 列改 auto-fit minmax——超宽视口 3 大列浪费、中宽视口 3 列挤压，
+/* 固定 3 列改 auto-fit minmax——超宽视口 3 大列浪费、中宽视口 3 列挤压，
    列数随容器自适应（TemplateGallery .tg-grid 同口径）；≤1100/≤900 档仍压 2/1 列不回归 */
 .ws-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: var(--sp-3); }
-/* 五百五十六批：ws-w 网格部件分节壳退役（立法④；ov-cell 554 终态同语言）——壳三件套消除，
+/* ws-w 网格部件分节壳退役（立法④；ov-cell 554 终态同语言）——壳三件套消除，
    border-top 承接分界，padding 等值迁入；ws-w-empty 空态不再被整块空框包裹（空态零空框） */
 .ws-w { border-top: 1px solid var(--border); padding: var(--sp-3) var(--sp-4); min-height: 120px; display: flex; flex-direction: column; }
 .ws-w-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-2); }
-/* 五百二十七批 W-F：卡头 400 失序归位 650（口径 B） */
+/*  W-F：卡头 400 失序归位 650（口径 B） */
 .ws-w-tt { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-sm); font-weight: 650; }
 .ws-w-bd { flex: 1; display: flex; flex-direction: column; gap: var(--sp-1); }
-/* 五百六十批：.ws-w-empty 手写空态壳退役——health 空态收编 EmptyState compact+action
+/* .ws-w-empty 手写空态壳退役——health 空态收编 EmptyState compact+action
    （留白归组件单源，空态不留整块空框） */
-/* 五百二十七批 W-F：28px 大数字字面量归 --fs-num-l 展示数字档（Lead 收尾补 650+mono+tabular 三件套） */
+/*  W-F：28px 大数字字面量归 --fs-num-l 展示数字档（Lead 收尾补 650+mono+tabular 三件套） */
 .ws-score { font-size: var(--fs-num-l); font-weight: 650; font-family: var(--mono); font-variant-numeric: tabular-nums; margin: var(--sp-1) 0; }
 .ws-score.good { color: var(--success); }
 .ws-score.warn { color: var(--warning); }
-.ws-score.bad { color: var(--err); } /* 五百六十一批：--danger 别名退役归 --err 本名 */
+.ws-score.bad { color: var(--err); } /* ：--danger 别名退役归 --err 本名 */
 .ws-num { font-size: var(--fs-num-l); font-weight: 650; font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .ws-sub { font-size: var(--fs-xs); color: var(--muted); }
 .ws-link { font-size: var(--fs-xs); color: var(--brand); text-decoration: none; margin-top: var(--sp-2); }
@@ -359,7 +359,7 @@ onBeforeUnmount(() => {
 .ws-fav li { padding: var(--sp-0) 0; display: flex; align-items: center; gap: var(--sp-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ws-inp { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--r-xs); padding: var(--sp-1) var(--sp-2); font-size: var(--fs-sm); font-family: var(--mono); color: var(--fg); }
 .ws-sc { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-2); }
-/* 五百五十一批：ws-kv 三条私造行样式随 MetaStrip 收编退役（形态归 .ms 单源） */
+/* ws-kv 三条私造行样式随 MetaStrip 收编退役（形态归 .ms 单源） */
 /* 仅保留栅格占位：内边距/居中已由 EmptyState 组件自带 */
 .ws-empty { grid-column: 1 / -1; }
 

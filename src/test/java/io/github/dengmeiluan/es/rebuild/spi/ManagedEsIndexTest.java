@@ -5,7 +5,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 /**
- * R93：ManagedEsIndex.indexKey() 的 default 反推逻辑必须与改名前逐字等价。
+ * ManagedEsIndex.indexKey() 的 default 反推逻辑必须与改名前逐字等价。
  * 这是唯一有逻辑的 default 方法，改名过程中最容易被顺手"优化"坏。
  */
 public class ManagedEsIndexTest {

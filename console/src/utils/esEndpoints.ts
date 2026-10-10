@@ -2,7 +2,7 @@
    {index} 为索引槽位——由动态清单插值；body 为该端点骨架 snippet。 */
 export type EsEndpoint = { methods: string[]; path: string; doc: string; body?: string };
 
-/* 四百三十二批：REST 方法全集收口（DevTools/RestView 此前各自定义） */
+/* REST 方法全集收口（DevTools/RestView 此前各自定义） */
 export const REST_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'HEAD'] as const;
 
 export const ES_ENDPOINTS: EsEndpoint[] = [

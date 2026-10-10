@@ -1,6 +1,6 @@
 import { ref, type Ref } from 'vue';
 
-/* 二百三十一批 P1-6：列拖拽重排（dbx 列头拖拽对位，RT/QRT 共用）。
+/*  P1-6：列拖拽重排（dbx 列头拖拽对位，RT/QRT 共用）。
    事件层刻意薄（happy-dom 无 DragEvent，纯函数才是可测层）；重排落点指示与
    「拖完误触列头排序点击」的抑制（300ms 双保险）都在此收口。
    持久化不在此处——调用方把 cols ref 绑到 useTablePrefs.visibleCols，

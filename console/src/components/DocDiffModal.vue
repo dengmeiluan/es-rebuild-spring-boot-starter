@@ -1,11 +1,11 @@
 <template>
-  <!-- 242 批 P2-8：文档对比弹窗（RT 多选 2-3 篇右键直达；Kibana Compare selected 语义）——
+  <!--  P2-8：文档对比弹窗（RT 多选 2-3 篇右键直达；Kibana Compare selected 语义）——
        基准可换（chips 切换纯前端重算）、格级 kind 着色（红=值冲突/琥珀=单侧独有/弱化=一致）、
        统计条 + 复制 Markdown 联动。值超长截断 + title 全量 + 点击复制。 -->
   <!-- v-if 根部短路：show=false 不留任何 DOM（happy-dom/KeepAlive 下 tbody 会污染宿主页面级查询） -->
   <n-modal v-if="show" :show="show" preset="card" :title="title" style="width:920px;max-width:96vw" :bordered="false" @update:show="emit('update:show', $event)">
     <div class="ddm">
-      <!-- 二百四十七批：索引名芯片——对比的是哪个索引一目了然，点击直达索引工作区 -->
+      <!-- 索引名芯片——对比的是哪个索引一目了然，点击直达索引工作区 -->
       <div class="ddm-top" v-if="index">
         <button type="button" class="ddm-idx mono" :title="index + '（点击打开索引工作区）'" @click="gotoIndex">
           {{ index }} <ExternalLink :size="11" />
@@ -19,9 +19,9 @@
         </button>
       </div>
       <div class="ddm-stat">
-        <!-- 二百八十三批：只看差异——大字段表 diff 聚焦冲突/独有行，一致行默认噪音 -->
+        <!-- 只看差异——大字段表 diff 聚焦冲突/独有行，一致行默认噪音 -->
         <label class="ddm-only-diff"><input type="checkbox" v-model="onlyDiff" /> 只看差异</label>
-        <!-- 二百八十七批：字段路径过滤——大字段表快速聚焦目标字段（含子路径命中） -->
+        <!-- 字段路径过滤——大字段表快速聚焦目标字段（含子路径命中） -->
         <input v-model="pathKw" class="ddm-filter mono" placeholder="按字段路径过滤…" aria-label="按字段路径过滤" />
         <span class="s s-same" v-if="!onlyDiff">{{ stat.same }} 一致</span>
         <span class="s s-chg">{{ stat.changed }} 不同</span>
@@ -74,13 +74,13 @@ const props = defineProps<{
   /** 2~3 篇文档；baseIdx 指定谁是基准 */
   hits: SearchHit[];
   baseIdx: number;
-  /** 二百四十七批：所属索引名（RT 传入）——展示+芯片跳转索引工作区 */
+  /** 所属索引名（RT 传入）——展示+芯片跳转索引工作区 */
   index?: string;
 }>();
 
 const emit = defineEmits<{ (e: 'update:show', v: boolean): void; (e: 'base', i: number): void }>();
 
-/* 二百四十七批：索引芯片跳转——router 在无路由测试环境为 undefined，护栏 */
+/* 索引芯片跳转——router 在无路由测试环境为 undefined，护栏 */
 const router = useRouter();
 function gotoIndex() {
   if (!props.index) return;
@@ -101,9 +101,9 @@ const diff = computed(() => {
   if (!b) return { rows: [] as MultiDocDiffRow[], same: 0, changed: 0, onlyBase: 0, onlyTarget: 0 };
   return docDiffMulti(b._source ?? {}, targetHits.value.map(h => h._source ?? {}));
 });
-/* 二百八十三批：onlyDiff 过滤——只剩 changed/only-base/only-target 行（same 隐藏） */
+/* onlyDiff 过滤——只剩 changed/only-base/only-target 行（same 隐藏） */
 const onlyDiff = ref(false);
-/* 二百八十七批：字段路径过滤（大小写不敏感子串，含嵌套子路径命中） */
+/* 字段路径过滤（大小写不敏感子串，含嵌套子路径命中） */
 const pathKw = ref('');
 const rows = computed(() => {
   let rs = diff.value.rows;
@@ -144,13 +144,13 @@ async function copyMd() {
 </script>
 
 <style scoped>
-/* 242 批 P2-8：文档对比——dbx 紧凑语言；状态色全走主题 token（暗色自动适配） */
+/*  P2-8：文档对比——dbx 紧凑语言；状态色全走主题 token（暗色自动适配） */
 .ddm { display: flex; flex-direction: column; gap: var(--sp-2); }
-/* 二百八十三批：只看差异 checkbox（与统计 chip 同行语言） */
+/* 只看差异 checkbox（与统计 chip 同行语言） */
 .ddm-only-diff { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-xs); color: var(--tx1); cursor: pointer; user-select: none; }
 .ddm-filter { width: 180px; padding: 3px var(--sp-2); font-size: var(--fs-xs); color: var(--tx0); background: var(--bg0); border: 1px solid var(--line); border-radius: var(--r-s); outline: none; }
 .ddm-filter:focus { border-color: var(--ac); }
-/* 二百四十七批：索引名芯片——与基准 chips 同语言，专职跳转 */
+/* 索引名芯片——与基准 chips 同语言，专职跳转 */
 .ddm-top { display: flex; align-items: center; }
 .ddm-idx {
   display: inline-flex; align-items: center; gap: var(--sp-1);

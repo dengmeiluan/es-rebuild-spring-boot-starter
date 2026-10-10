@@ -26,7 +26,7 @@ import java.util.Map;
         io.github.dengmeiluan.es.rebuild.multicluster.EsClusterConnController.class,
         io.github.dengmeiluan.es.rebuild.control.ConsoleSetupController.class,
         io.github.dengmeiluan.es.rebuild.adhoc.InternalAdhocRebuildController.class,
-        // 五百五十八批：validate 包 ConfigLab 场景（drift 无注册 provider 的 ISE）与 client 包
+        // validate 包 ConfigLab 场景（drift 无注册 provider 的 ISE）与 client 包
         // DesiredState 场景（期望配置序列化失败的 ISE）——业务可恢复 ISE 不再落宿主 500 拍平，
         // 统一转结构化 {code,message}；既有 4 家行为零变动
         io.github.dengmeiluan.es.rebuild.validate.InternalConfigLabController.class,
@@ -44,9 +44,9 @@ public class InternalEsRebuildExceptionAdvice {
     public static final String CODE_BAD_REQUEST = "BAD_REQUEST";
     /** 兜底业务规则拒绝 */
     public static final String CODE_RULE_REJECTED = "RULE_REJECTED";
-    /** R37 控制台尚未绑定控制集群（前端弹首连向导） */
+    /**  控制台尚未绑定控制集群（前端弹首连向导） */
     public static final String CODE_SETUP_REQUIRED = "SETUP_REQUIRED";
-    /** R37 已绑定但控制集群不可达（绝不回落 SETUP） */
+    /**  已绑定但控制集群不可达（绝不回落 SETUP） */
     public static final String CODE_CONTROL_CLUSTER_DOWN = "CONTROL_CLUSTER_DOWN";
 
     @ExceptionHandler(io.github.dengmeiluan.es.rebuild.control.SetupRequiredException.class)

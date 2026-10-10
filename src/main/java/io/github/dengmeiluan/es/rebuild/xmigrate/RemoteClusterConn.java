@@ -28,13 +28,13 @@ public final class RemoteClusterConn {
     private String passwordRef;
 
     /**
-     * R38 连接档案字段：访问本连接所需的最低控制台角色（VIEWER/OPERATOR/ADMIN），
+     *  连接档案字段：访问本连接所需的最低控制台角色（VIEWER/OPERATOR/ADMIN），
      * 空 = VIEWER（全员可见可用）；独立超时为 null 时回退 starter 全局 migrate 超时。
      * 三者<b>纳入 equals/hashCode</b>——{@link io.github.dengmeiluan.es.rebuild.multicluster.EsClientRouter}
      * 依赖档案指纹变化触发长连接重建（超时变更必须重建 client 才生效）。
      */
     private String minRole;
-    /** 二百三十九批：环境标识 PROD/STAGING/QA/DEV（连接级权限封顶 env-role-cap 的解析输入）。 */
+    /** 环境标识 PROD/STAGING/QA/DEV（连接级权限封顶 env-role-cap 的解析输入）。 */
     private String env;
     /**
      * 连接中心自动同步批·API Key 认证：认证形态 BASIC（默认，账密）/ API_KEY
