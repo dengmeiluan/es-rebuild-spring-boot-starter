@@ -328,14 +328,16 @@ async function loadDrift(indexKey: string) {
   driftBusy.value = true;
   try {
     const r = await api.configLab.drift(indexKey);
+    if (indexKey !== picked.value) return;
     drift.value = r;
     verdicts.value[indexKey] = !r.liveExists ? 'missing'
       : (r.settingsDiff?.clean && r.mappingEqual) ? 'clean' : 'drift';
   } catch (e: any) {
+    if (indexKey !== picked.value) return;
     /* A：ES 错误友好化——driftErr 与下方 toast 同源走 friendly 口径 */
     driftErr.value = friendlyEsError(String(e?.message ?? e));
     store.notify('error', '检测失败：' + driftErr.value);
-  } finally { driftBusy.value = false; }
+  } finally { if (indexKey === picked.value) driftBusy.value = false; }
 }
 
 /* G206：原始 IO 快查（755 G200/747 G162 三件套同构）——按本页

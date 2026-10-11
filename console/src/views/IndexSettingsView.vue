@@ -419,11 +419,14 @@ function pick(obj: any, dotPath: string): any {
 
 async function loadSettings() {
   if (!index.value) return;
+  const idx = index.value;
   loading.value = true;
   loadErr.value = '';
   try {
-    raw.value = await api.indexSettings(index.value);
-    const node = raw.value?.[index.value] || Object.values(raw.value || {})[0] || {};
+    const r = await api.indexSettings(idx);
+    if (idx !== index.value) return;
+    raw.value = r;
+    const node = r?.[idx] || Object.values(r || {})[0] || {};
     const idxCur = node.settings?.index || {};
     const idxDef = node.defaults?.index || {};
     curSettings.value = idxCur;
@@ -441,12 +444,13 @@ async function loadSettings() {
     if (!customRowsDraft.restored.value) customRows.value = [];   // 有草稿不冲行
     lastReload.value = fmtTime(Date.now());
   } catch (e: any) {
+    if (idx !== index.value) return;
     /* 裸错误串改 friendlyEsError */
     loadErr.value = friendlyEsError(e?.message || String(e));
     form.value = null;
     store.notify('error', 'index-settings: ' + loadErr.value);
   } finally {
-    loading.value = false;
+    if (idx === index.value) loading.value = false;
   }
 }
 

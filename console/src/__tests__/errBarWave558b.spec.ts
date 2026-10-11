@@ -127,7 +127,9 @@ describe('558b ③：ConfigDrift 清单角标（五百六十批解禁改用同�
 
 describe('558b ④：BoostTuner 滑杆动态权重提示', () => {
   it('bt-slider 补 :title（动态 ×N + multi_match 提权系数语义）', () => {
-    expect(bt).toMatch(/<input type="range" v-model\.number="x\.f\.boost"[^>]*:title="'权重 ×' \+ x\.f\.boost\.toFixed\(1\) \+ '[^']*multi_match[^']*'"/);
+    /* 动态倍数走 fmtBoost 归一（草稿恢复值经 JSON.parse 不受类型约束，展示前
+     Number 归一防 .toFixed 抛 TypeError；857 随刀锁随迁——锁语义 ×N 动态+multi_match 语义不变） */
+    expect(bt).toMatch(/<input type="range" v-model\.number="x\.f\.boost"[^>]*:title="'权重 ×' \+ fmtBoost\(x\.f\.boost\) \+ '[^']*multi_match[^']*'"/);
   });
 });
 

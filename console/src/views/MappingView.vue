@@ -254,16 +254,18 @@ const recentPicks = computed<string[]>(() =>
 
 async function load() {
   if (!store.pickedIdx) return;
+  const idx = store.pickedIdx;
   loading.value = true;
   loadErr.value = '';
-  try { data.value = await api.clusterInspect(store.pickedIdx, 0); }
+  try { const r = await api.clusterInspect(idx, 0); if (idx !== store.pickedIdx) return; data.value = r; }
   catch (e: any) {
+    if (idx !== store.pickedIdx) return;
     /* 裸错误串改 friendlyEsError（inspect 失败的操作上下文前缀由其内部保留） */
     loadErr.value = friendlyEsError(e?.message || String(e));
     data.value = null;
     store.notify('error', 'inspect 失败: ' + loadErr.value);
   }
-  finally { loading.value = false; }
+  finally { if (idx === store.pickedIdx) loading.value = false; }
 }
 onMounted(load);
 watch(() => store.pickedIdx, load);

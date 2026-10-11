@@ -471,16 +471,20 @@ function explainToDevtools() {
 
 async function loadExplain() {
   if (!explainIndex.value) { explain.value = null; explainErr.value = ''; return; }
+  const idx = explainIndex.value;
   explainLoading.value = true;
   try {
-    explain.value = await api.ilmExplain(explainIndex.value);
+    const r = await api.ilmExplain(idx);
+    if (idx !== explainIndex.value) return;
+    explain.value = r;
     explainErr.value = '';
     selected.value = null; // 切换到 explain 视图
   } catch (e: any) {
+    if (idx !== explainIndex.value) return;
     explainErr.value = friendlyEsError(String(e?.message ?? e));
     store.notify('error', 'ilm/explain: ' + friendlyEsError(String(e?.message ?? e))); /* ：裸 err → friendlyEsError（ilm/move 同口径，前缀保留） */
     explain.value = null;
-  } finally { explainLoading.value = false; }
+  } finally { if (idx === explainIndex.value) explainLoading.value = false; }
 }
 
 /* step_info 异常（如 illegal_argument_exception）可重试当前 step */

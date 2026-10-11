@@ -58,9 +58,9 @@
  补动态 aria-label（字段名+权重倍数）——title 之外读屏第二通道，多行滑杆可区分 -->
             <input type="range" v-model.number="x.f.boost" min="0" max="10" step="0.1" class="bt-slider"
                    :aria-label="'字段 ' + (x.f.name || '未命名') + ' 权重倍数（multi_match 提权系数）'"
-                   :title="'权重 ×' + x.f.boost.toFixed(1) + '：multi_match fields 提权系数，>1 加权 <1 降权'"
+                   :title="'权重 ×' + fmtBoost(x.f.boost) + '：multi_match fields 提权系数，>1 加权 <1 降权'"
                    @change="onTune" />
-            <span class="bt-boost" :class="{ hot: x.f.boost > 1, cold: x.f.boost < 1 }">×{{ x.f.boost.toFixed(1) }}</span>
+            <span class="bt-boost" :class="{ hot: x.f.boost > 1, cold: x.f.boost < 1 }">×{{ fmtBoost(x.f.boost) }}</span>
             <button aria-label="删除调参字段" class="btn ghost xs" @click="fields.splice(x.i, 1); onTune()"><X :size="10" /></button>
           </div>
           <!-- 过滤空档合并 EmptyState compact（文案逐字保留——
@@ -220,8 +220,11 @@ const index = useIdxState({ follow: true });
 const keyword = useScopedDraft('keyword', { route: 'boost-tuner',}).text;
 const live = ref(false); // 默认手动模式：不打爆生产
 const busy = ref(false);
-/* 调参字段表进草稿——手工逐条加的 boost 配置切页/刷新不丢 */
+/* 调参字段表进草稿——手工逐条加的 boost 配置切页/刷新不丢。
+ 恢复值经 JSON.parse 不受类型约束（旧数据/手改存储可为 string），
+ 展示前归一：非法值回落默认权重 1（normal-multiplier 语义），防 .toFixed 抛 TypeError 炸整页 */
 const fields = useScopedDraftState<{ name: string; boost: number; disabled?: boolean }[]>('fields', { route: 'boost-tuner' }, []).state;
+const fmtBoost = (v: unknown) => { const n = Number(v); return (Number.isFinite(n) ? n : 1).toFixed(1); };
 const baseline = ref<any[]>([]); // 基准快照
 const current = ref<any[]>([]);
 const runErr = ref(''); // 执行失败全文，供内联面板回看（三态契约错误位）
