@@ -423,20 +423,28 @@ async function onRepoChange() {
 
 async function loadSnapshots() {
   if (!currentRepo.value) return;
+  /* 选择源快照比对——repo 切换 onRepoChange 绕自动刷新 guard 直调，旧 repo 迟到回包
+ 不得顶掉新 repo 列表（失败支清空与 finally 复位/进度搭车同口径） */
+  const repo = currentRepo.value;
   loading.value = true;
   try {
-    snapshots.value = (await api.snapshotList(currentRepo.value)) as any[];
+    const list = (await api.snapshotList(repo)) as any[];
+    if (repo !== currentRepo.value) return;
+    snapshots.value = list;
     loadErr.value = '';
     loadErrRaw.value = null;
   } catch (e: any) {
+    if (repo !== currentRepo.value) return;
     loadErr.value = '快照列表拉取失败：' + friendlyApiError(e);
     loadErrRaw.value = e; /* ：原始对象旁路（errMeta 双参喂入） */
     store.notify('error', 'snapshotList: ' + loadErr.value);
     snapshots.value = [];
   } finally {
-    loading.value = false;
-    /* 进行中行进度随列表刷新搭车拉取（不新开定时器；失败清空同路径清进度） */
-    void loadSnapProgress();
+    if (repo === currentRepo.value) {
+      loading.value = false;
+      /* 进行中行进度随列表刷新搭车拉取（不新开定时器；失败清空同路径清进度） */
+      void loadSnapProgress();
+    }
   }
 }
 

@@ -42,7 +42,10 @@ describe('筛选集群下拉不再空白（631 批·用户实报「不显示选�
   it('option 与下推参数同源 id 语义（既有契约不回退）', () => {
     expect(ov).toMatch(/<option value="">全部集群<\/option>/);
     expect(ov).toMatch(/<option v-for="c in store\.conns" :key="c\.id" :value="c\.id">\{\{ c\.name \}\}<\/option>/);
-    expect(ov).toMatch(/connId: mhConn\.value \|\| undefined/);
+    /* 下推参数与下拉同源：conn 为 loadHistory 起手的筛选源快照（定义行锁同源性），
+ 迟到回包丢弃守卫不得改变「下推值=mhConn 快照」语义 */
+    expect(ov).toMatch(/const conn = mhConn\.value/);
+    expect(ov).toMatch(/connId: conn \|\| undefined/);
   });
 
   it('三筛选（集群/状态/时间范围）模板顺序不变——截图行序锚不回退', () => {

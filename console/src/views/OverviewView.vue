@@ -573,18 +573,25 @@ const mhLoading = ref(false);
 const mhErr = ref('');
 const MH_RANGE_MS: Record<string, number> = { '1h': 3.6e6, '6h': 2.16e7, '24h': 8.64e7, '3d': 2.592e8, '7d': 6.048e8, '14d': 1.2096e9 };
 async function loadHistory() {
+  /* 筛选源快照比对——watch 直调与自动刷新双触发源可并发，旧筛选迟到回包
+ 不得顶掉新筛选数据（失败支 err 位与 finally 复位同口径） */
+  const conn = mhConn.value, status = mhStatus.value, range = mhRange.value;
   mhLoading.value = true; mhErr.value = '';
   try {
-    const fromMs = Date.now() - (MH_RANGE_MS[mhRange.value] ?? MH_RANGE_MS['24h']);
+    const fromMs = Date.now() - (MH_RANGE_MS[range] ?? MH_RANGE_MS['24h']);
     const res = await api.monitorHistory({
-      connId: mhConn.value || undefined, status: mhStatus.value || undefined,
+      connId: conn || undefined, status: status || undefined,
       fromMs, size: 200,
     });
+    if (conn !== mhConn.value || status !== mhStatus.value || range !== mhRange.value) return;
     mhRows.value = res.records || [];
   } catch (e: any) {
+    if (conn !== mhConn.value || status !== mhStatus.value || range !== mhRange.value) return;
     mhErr.value = friendlyEsError(String(e?.message ?? e));
   } finally {
-    mhLoading.value = false;
+    if (conn === mhConn.value && status === mhStatus.value && range === mhRange.value) {
+      mhLoading.value = false;
+    }
   }
 }
 

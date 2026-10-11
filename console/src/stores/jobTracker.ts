@@ -192,6 +192,9 @@ export const useJobTrackerStore = defineStore('jobTracker', () => {
   }
   function isOk(status: string) { return status === 'DONE' || status === 'SUCCEEDED'; }
 
+  /* 轮询世代计数——拍间无在途互斥（档位切换重排后新拍与在途慢拍并发），
+ 旧拍回包迟到不得覆盖 jobs 清单、不得把已消失作业错登记进终态检测状态机 */
+  let pollSeq = 0;
   async function poll() {
     /* 两类作业各自容忍失败：403（角色不足看迁移）/404（未装 adhoc）不该让整块跟踪瘫掉。
  权限感知——页面白名单不含对应页时，本角色对这两个轮询端点必然 403，
@@ -218,12 +221,14 @@ export const useJobTrackerStore = defineStore('jobTracker', () => {
       pollSilentNotified = true;
       app.notify('warning', '当前账号未被授权任何集群连接，作业跟踪与数据面轮询已停用（授权后自动恢复）');
     }
+    const seq = ++pollSeq;
     const [ad, xm, ts, sn] = await Promise.all([
       wantAdhoc ? api.adhoc.jobs().catch(() => null) : Promise.resolve(null),
       wantXm ? api.xb.jobs(30).catch(() => null) : Promise.resolve(null),
       wantTasks ? api.clusterTasks('indices:data/write/reindex*', true).catch(() => null) : Promise.resolve(null),
       wantSnaps ? api.snapshotStatus().catch(() => null) : Promise.resolve(null),
     ]);
+    if (seq !== pollSeq) return; // 迟到拍丢弃（新拍已发起/落地，旧回包不得入状态机）
     const tsOk = ts != null;
     const snOk = sn != null;
     if (ad == null && xm == null && !tsOk && !snOk) return; // 全失败：保留上一轮视图，不谎报「没有作业」

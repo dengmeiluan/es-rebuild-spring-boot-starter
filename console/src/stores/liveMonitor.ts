@@ -208,7 +208,11 @@ const nodeSeries = ref<Record<string, NodeSeries>>({});
   }
 
   /* ==================== 采样主循环 ==================== */
+  /* 采样世代计数——轮询拍无在途互斥（间隔抖动慢拍、setFocus 回屏补针都会双拍并发），
+ 旧拍回包迟到不得覆盖新拍采样、错推差分基线、翻转告警或落盘旧态快照 */
+  let tickSeq = 0;
   async function tick() {
+    const seq = ++tickSeq;
     try {
       /* 无 diag 页权限时跳过 pending-tasks 采样（保留 0 值）——
  无权限角色每采样周期 403 会往审计流刷 PAGE_DENIED 心跳。
@@ -223,6 +227,7 @@ const nodeSeries = ref<Record<string, NodeSeries>>({});
         api.nodesStatsBrief().catch(() => []),
         canDiag ? api.pendingTasks().catch(() => ({ tasks: [] })) : Promise.resolve({ tasks: [] as any[] }),
       ]);
+      if (seq !== tickSeq) return; // 迟到拍丢弃（新拍已发起/落地，旧回包不得覆盖）
       nowTs.value = Date.now();
       // 观测中断：全部拉取失败 ≠ 指标恢复，保留最后快照与告警状态，横幅提示用户
       if (!h && !(ns && ns.length)) return;
