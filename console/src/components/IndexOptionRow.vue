@@ -4,11 +4,11 @@
       <span v-if="kind === 'alias'" class="ior-tag">别名</span>
       <span v-else class="ior-dot" :class="'h-' + (health || 'grey')" :title="'health: ' + (health || '-')"></span>
       <span class="ior-name mono" :title="name"><!--
- --><template v-for="(seg, si) in nameSegs" :key="si"><!--
- --><mark v-if="seg.m">{{ seg.t }}</mark><!--
- --><template v-else>{{ seg.t }}</template><!--
- --></template><!--
- --></span>
+        --><template v-for="(seg, si) in nameSegs" :key="si"><!--
+          --><mark v-if="seg.m">{{ seg.t }}</mark><!--
+          --><template v-else>{{ seg.t }}</template><!--
+        --></template><!--
+      --></span>
       <span v-if="meta" class="ior-meta">{{ meta }}</span>
       <button :aria-label="'复制：' + name" class="ior-copy" :title="'复制：' + name" @mousedown.stop.prevent @click.stop="doCopy">
         <Copy :size="11" />

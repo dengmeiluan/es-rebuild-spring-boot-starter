@@ -31,8 +31,8 @@
           <!-- 引用行（键尾 .analyzer/.tokenizer/.filter/.char_filter/.normalizer）的值
  按逗号拆成可点名字——点名字=跳分词工具验证该组件；名字外区域仍是点击复制 -->
           <template v-if="analyzeRefs(r)"><template v-for="(t, ti) in analyzeRefs(r)" :key="ti"><!--
- --><a class="sg-analyze" :title="'验证「' + t.name + '」的分词效果'" href="javascript:void 0" @keydown.enter.prevent.stop="goAnalyze(t)" @click.stop="goAnalyze(t)">{{ t.name }}</a><!--
- --><span v-if="ti < analyzeRefs(r)!.length - 1">, </span></template></template>
+            --><a class="sg-analyze" :title="'验证「' + t.name + '」的分词效果'" href="javascript:void 0" @keydown.enter.prevent.stop="goAnalyze(t)" @click.stop="goAnalyze(t)">{{ t.name }}</a><!--
+            --><span v-if="ti < analyzeRefs(r)!.length - 1">, </span></template></template>
           <template v-else>{{ r.v === '' ? '—' : r.v }}</template>
         </span>
       </div>

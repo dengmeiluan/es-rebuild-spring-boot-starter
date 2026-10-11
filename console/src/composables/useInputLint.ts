@@ -36,10 +36,10 @@ export function indexNameRule(): LintRule {
   return (v) => {
     if (/[A-Z]/.test(v)) return { msg: '索引名必须全小写' };
     if (/[\\/*?"<>| ,#:]/.test(v)) return { msg: '索引名含非法字符（\\ / * ? " < > | 空格 , # :）' };
- if (/^[._]/.test(v)) return { msg: '索引名不得以 . 或 _ 开头（保留给系统索引）' };
- if (new TextEncoder().encode(v).length > 255) return { msg: '索引名超长（>255 字节）' };
- return null;
- };
+    if (/^[._]/.test(v)) return { msg: '索引名不得以 . 或 _ 开头（保留给系统索引）' };
+    if (new TextEncoder().encode(v).length > 255) return { msg: '索引名超长（>255 字节）' };
+    return null;
+  };
 }
 
 /** 实体查重：默认 warn（put 覆盖语义）；建索引等硬失败场景传 'err' */

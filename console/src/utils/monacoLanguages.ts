@@ -69,12 +69,12 @@ export function ensureLanguages() {
       ],
       comment: [
         [/[^/*]+/, 'comment'],
- [/\*\//, 'comment', '@pop'],
- [/[/*]/, 'comment'],
- ],
- },
- });
- monaco.languages.setLanguageConfiguration('painless', BRACKET_CONF);
+        [/\*\//, 'comment', '@pop'],
+        [/[/*]/, 'comment'],
+      ],
+    },
+  });
+  monaco.languages.setLanguageConfiguration('painless', BRACKET_CONF);
 
  /* ndjson：json 系 token 名复用（吃既有主题规则），独立语言不挂 JSON LS */
   monaco.languages.register({ id: 'ndjson' });

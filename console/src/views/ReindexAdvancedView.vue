@@ -43,241 +43,241 @@
         <RemoteSourceFields v-if="srcRemote !== ''" class="ra-remote" hostRaw :conn="raRemoteConn" @update:conn="raRemoteConn = $event" />
         <div class="ra-f wide">
           <label>索引名（可 逗号/*）</label>
- <IndexPicker v-model="srcIndex" placeholder="orders,logs-*" allow-wildcard width="100%" />
- </div>
- <div class="ra-f">
- <label>size（每批）</label>
- <input class="ra-i" v-model="srcSize" placeholder="1000" />
- </div>
- <div class="ra-f wide">
- <label class="ra-qh">query（可选 JSON，留空即全量）
+          <IndexPicker v-model="srcIndex" placeholder="orders,logs-*" allow-wildcard width="100%" />
+        </div>
+        <div class="ra-f">
+          <label>size（每批）</label>
+          <input class="ra-i" v-model="srcSize" placeholder="1000" />
+        </div>
+        <div class="ra-f wide">
+          <label class="ra-qh">query（可选 JSON，留空即全量）
  <!-- query 编辑框高度三档循环钮（本页 ra-script-h 同款形态；script 面既有档零改动） -->
- <button class="btn ghost xs" style="margin-left:auto" data-test="ra-query-h"
- :title="'query 编辑框高度档：' + queryH + ' 行'" @click="cycleQueryH">高</button>
- </label>
+            <button class="btn ghost xs" style="margin-left:auto" data-test="ra-query-h"
+              :title="'query 编辑框高度档：' + queryH + ' 行'" @click="cycleQueryH">高</button>
+          </label>
  <!-- dsl-assist 字段智能补全（useIndexFields 全站字段源标准）。
  @submit（Ctrl+Enter）接既有 submit（确认门在 submit 内不绕过）。
  rows=4 定高 → 三档行数循环（JsonArea 既有 rows 写法；默认档 4 行不变，
  保持 rawBody fill 弹性 '100%' 的 stub 特征唯一——rebuildThreeState A1/A2 锁定） -->
- <JsonArea ref="raQueryJaRef" v-model="srcQueryStr" :rows="queryH" :dsl-assist="raQueryAssist" placeholder="{&quot;match_all&quot;:{}}" @submit="submit" />
+          <JsonArea ref="raQueryJaRef" v-model="srcQueryStr" :rows="queryH" :dsl-assist="raQueryAssist" placeholder="{&quot;match_all&quot;:{}}" @submit="submit" />
  <!-- G3-A2：非法 query 不再静默剔除（会退化为全量 reindex）——后果前置 + submit 阻断 -->
- <div v-if="srcQueryErr" class="ra-qerr">{{ srcQueryErr }}</div>
+          <div v-if="srcQueryErr" class="ra-qerr">{{ srcQueryErr }}</div>
  <!-- lintDsl 静态体检提示条（SearchSandboxView join 串形态同款，随输入实时重估，
  零阻塞不拦执行；不用 v-for——表单页无列表空态，不进三态契约判定面）；
  error 红条单列（结构必错 ES 直接拒绝），warning/hint 黄条并列；JSON 非法静默
  （srcQueryErr 红字已报） -->
- <div v-if="raQueryLintErrors.length" role="alert" class="lint-bar lint-bar-err">
- <span>DSL 检查（错误）：{{ raQueryLintErrors.map(f => f.message + '（' + f.suggestion + '）').join('；') }}</span>
- </div>
- <div v-else-if="raQueryLintWarns.length" role="status" class="lint-bar lint-bar-warn">
- <span>DSL 检查：{{ raQueryLintWarns.map(f => f.message + '（' + f.suggestion + '）').join('；') }}</span>
- </div>
- </div>
- </div>
- </div>
+          <div v-if="raQueryLintErrors.length" role="alert" class="lint-bar lint-bar-err">
+            <span>DSL 检查（错误）：{{ raQueryLintErrors.map(f => f.message + '（' + f.suggestion + '）').join('；') }}</span>
+          </div>
+          <div v-else-if="raQueryLintWarns.length" role="status" class="lint-bar lint-bar-warn">
+            <span>DSL 检查：{{ raQueryLintWarns.map(f => f.message + '（' + f.suggestion + '）').join('；') }}</span>
+          </div>
+        </div>
+      </div>
+      </div>
 
  <!-- Dest -->
- <div class="ra-sec">
- <div class="card-t"><Target :size="14" /> Dest</div>
- <div class="ra-grid">
- <div class="ra-f wide">
- <label>目标索引</label>
- <IndexPicker v-model="destIndex" placeholder="orders-v2（可选已有或手输新名）" allow-wildcard width="100%" />
- <div class="ra-hint">不预检、不校验存在性，允许写入已有索引或新索引；若使用别名请自行确认</div>
+      <div class="ra-sec">
+        <div class="card-t"><Target :size="14" /> Dest</div>
+      <div class="ra-grid">
+        <div class="ra-f wide">
+          <label>目标索引</label>
+          <IndexPicker v-model="destIndex" placeholder="orders-v2（可选已有或手输新名）" allow-wildcard width="100%" />
+          <div class="ra-hint">不预检、不校验存在性，允许写入已有索引或新索引；若使用别名请自行确认</div>
  <!-- sem-rm 智能纠错：目标索引名硬规则即时红字（非法字符/大写）+ 本地源=目标同名校验（同 Xmigrate idxNameProblem 人话口径） -->
- <div v-if="destIndexErr" role="alert" class="ra-derr">{{ destIndexErr }}</div>
- </div>
+          <div v-if="destIndexErr" role="alert" class="ra-derr">{{ destIndexErr }}</div>
+        </div>
  <!-- 五 select label 补 :title 中文释义——对齐同页 slices 等 口径，一页两标准归一 -->
- <div class="ra-f">
- <label title="op_type：写入方式——create 仅新增（同 ID 已存在即冲突报错），index 存在则覆盖（默认）">op_type</label>
- <select class="ra-i" v-model="destOpType">
- <option value="">（默认 index）</option>
- <option value="create">create（仅新增，冲突报错）</option>
- <option value="index">index（存在则覆盖）</option>
- </select>
- </div>
- <div class="ra-f">
- <label title="version_type：版本控制——internal 用 dest 内部自增版本（默认）；external 系以源文档 _version 为准，external_gt 仅源版本更大才写入，external_gte 更大或相等才写入">version_type</label>
- <select class="ra-i" v-model="destVersionType">
- <option value="">（默认 internal）</option>
- <option value="internal">internal</option>
- <option value="external">external（保留源版本）</option>
- <option value="external_gt">external_gt（仅源版本更大才写入）</option>
- <option value="external_gte">external_gte（更大或相等才写入）</option>
- </select>
- </div>
- <div class="ra-f">
- <label>pipeline（可选）</label>
+        <div class="ra-f">
+          <label title="op_type：写入方式——create 仅新增（同 ID 已存在即冲突报错），index 存在则覆盖（默认）">op_type</label>
+          <select class="ra-i" v-model="destOpType">
+            <option value="">（默认 index）</option>
+            <option value="create">create（仅新增，冲突报错）</option>
+            <option value="index">index（存在则覆盖）</option>
+          </select>
+        </div>
+        <div class="ra-f">
+          <label title="version_type：版本控制——internal 用 dest 内部自增版本（默认）；external 系以源文档 _version 为准，external_gt 仅源版本更大才写入，external_gte 更大或相等才写入">version_type</label>
+          <select class="ra-i" v-model="destVersionType">
+            <option value="">（默认 internal）</option>
+            <option value="internal">internal</option>
+            <option value="external">external（保留源版本）</option>
+            <option value="external_gt">external_gt（仅源版本更大才写入）</option>
+            <option value="external_gte">external_gte（更大或相等才写入）</option>
+          </select>
+        </div>
+        <div class="ra-f">
+          <label>pipeline（可选）</label>
  <!-- placeholder 中文化（BulkEditorView 同款先例） -->
- <input class="ra-i" v-model="destPipeline" placeholder="ingest pipeline ID（可选）" />
- </div>
- </div>
- </div>
+          <input class="ra-i" v-model="destPipeline" placeholder="ingest pipeline ID（可选）" />
+        </div>
+      </div>
+      </div>
 
  <!-- Script -->
- <div class="ra-sec">
- <div class="card-t"><Terminal :size="14" /> Script（可选）
+      <div class="ra-sec">
+        <div class="card-t"><Terminal :size="14" /> Script（可选）
  <!-- 脚本面高度档循环钮（SqlConsoleView codeH「高」钮同款形态，
  editorTiers 族口径：st.editorH/qx.taH 先例） -->
- <button class="btn ghost xs" style="margin-left:auto" data-test="ra-script-h"
- :title="'脚本编辑器高度档：' + scriptH" @click="cycleScriptH">高</button>
- </div>
- <div class="ra-grid">
- <div class="ra-f">
- <label>语言</label>
- <select class="ra-i" v-model="scriptLang">
- <option value="">（不使用脚本）</option>
- <option value="painless">painless</option>
- </select>
- </div>
- <div class="ra-f wide">
- <label>source</label>
+          <button class="btn ghost xs" style="margin-left:auto" data-test="ra-script-h"
+            :title="'脚本编辑器高度档：' + scriptH" @click="cycleScriptH">高</button>
+        </div>
+      <div class="ra-grid">
+        <div class="ra-f">
+          <label>语言</label>
+          <select class="ra-i" v-model="scriptLang">
+            <option value="">（不使用脚本）</option>
+            <option value="painless">painless</option>
+          </select>
+        </div>
+        <div class="ra-f wide">
+          <label>source</label>
  <!-- 28vh → 42vh 弹性档 + usePref 记忆（SqlConsole codeH 三档循环同款） -->
  <!-- painless 面接 assist（raQueryAssist 同源 src 字段——脚本里 doc['f']
  hover 与四骨架补全共享源索引字段源）。
  @execute（Ctrl+Enter）接既有 submit（确认门在 submit 内不绕过） -->
- <MonacoEditor v-model="scriptSource" language="painless" :height="scriptH" :dsl-assist="raQueryAssist" @execute="submit" />
- </div>
- </div>
- </div>
+          <MonacoEditor v-model="scriptSource" language="painless" :height="scriptH" :dsl-assist="raQueryAssist" @execute="submit" />
+        </div>
+      </div>
+      </div>
 
  <!-- Global params -->
- <div class="ra-sec">
- <div class="card-t"><SlidersHorizontal :size="14" /> 全局参数</div>
- <div class="ra-grid">
- <div class="ra-f">
- <label title="conflicts：版本冲突策略——abort 遇冲突中止（默认），proceed 跳过冲突文档继续">conflicts</label>
- <select class="ra-i" v-model="conflicts">
- <option value="">（默认 abort）</option>
- <option value="abort">abort（版本冲突时中止）</option>
- <option value="proceed">proceed（跳过并继续）</option>
- </select>
- </div>
- <div class="ra-f">
- <label title="slices：并行切片数——auto 交 ES 自定，或正整数">slices</label>
+      <div class="ra-sec">
+        <div class="card-t"><SlidersHorizontal :size="14" /> 全局参数</div>
+      <div class="ra-grid">
+        <div class="ra-f">
+          <label title="conflicts：版本冲突策略——abort 遇冲突中止（默认），proceed 跳过冲突文档继续">conflicts</label>
+          <select class="ra-i" v-model="conflicts">
+            <option value="">（默认 abort）</option>
+            <option value="abort">abort（版本冲突时中止）</option>
+            <option value="proceed">proceed（跳过并继续）</option>
+          </select>
+        </div>
+        <div class="ra-f">
+          <label title="slices：并行切片数——auto 交 ES 自定，或正整数">slices</label>
  <!-- 五参数裸 input 接 useInputLint 既有正则（UpdateByQueryView :52/:68 姊妹面
  先例）——@blur 失焦校验出 .il-hint 行内提示，输入即清防旧 hint 滞留；
  label/input :title 中文释义口径随 UBQ 同参数；placeholder 文案保形 -->
- <input class="ra-i" v-model="slices" placeholder="auto / 数字 / 留空" title="slices：并行切片数——auto 交 ES 自定，或正整数" @blur="slicesCheck(slices)" />
- <div v-if="slicesHint" class="il-hint" :class="'il-' + slicesLevel">{{ slicesHint }}</div>
- </div>
- <div class="ra-f">
- <label title="refresh：完成后刷新——不刷新（默认）/ true 立即可搜 / wait_for 等待下次自动刷新">refresh</label>
- <select class="ra-i" v-model="refresh">
- <option value="">（不刷新）</option>
- <option value="true">true</option>
- <option value="wait_for">wait_for</option>
- </select>
- </div>
- <div class="ra-f">
- <label title="wait_for_completion：false 立即返回 taskId 异步执行、到任务树查进度（默认）；true 同步等到完成返回统计">wait_for_completion</label>
- <select class="ra-i" v-model="waitForCompletion">
- <option value="false">false（异步返回 taskId）</option>
- <option value="true">true（同步等到完成）</option>
- </select>
- </div>
- <div class="ra-f">
- <label title="requests_per_second：每秒限流——-1 不限，或数字（可小数）">requests_per_second</label>
- <input class="ra-i" v-model="requestsPerSecond" placeholder="-1（不限） / 1000" title="requests_per_second：每秒限流——-1 不限，或数字（可小数）" @blur="rpsCheck(requestsPerSecond)" />
- <div v-if="rpsHint" class="il-hint" :class="'il-' + rpsLevel">{{ rpsHint }}</div>
- </div>
- <div class="ra-f">
- <label title="scroll：滚动快照保活时长——数字+单位（ms/s/m/h/d），如 5m">scroll</label>
- <input class="ra-i" v-model="scroll" placeholder="5m" title="scroll：滚动快照保活时长——数字+单位（ms/s/m/h/d），如 5m" @blur="scrollCheck(scroll)" />
- <div v-if="scrollHint" class="il-hint" :class="'il-' + scrollLevel">{{ scrollHint }}</div>
- </div>
- <div class="ra-f">
- <label title="timeout：请求超时时长——数字+单位（ms/s/m/h/d），如 1m">timeout</label>
- <input class="ra-i" v-model="timeout" placeholder="1m" title="timeout：请求超时时长——数字+单位（ms/s/m/h/d），如 1m" @blur="timeoutCheck(timeout)" />
- <div v-if="timeoutHint" class="il-hint" :class="'il-' + timeoutLevel">{{ timeoutHint }}</div>
- </div>
- <div class="ra-f">
- <label title="wait_for_active_shards：执行前须活跃的分片数——all 或整数，如 1">wait_for_active_shards</label>
+          <input class="ra-i" v-model="slices" placeholder="auto / 数字 / 留空" title="slices：并行切片数——auto 交 ES 自定，或正整数" @blur="slicesCheck(slices)" />
+          <div v-if="slicesHint" class="il-hint" :class="'il-' + slicesLevel">{{ slicesHint }}</div>
+        </div>
+        <div class="ra-f">
+          <label title="refresh：完成后刷新——不刷新（默认）/ true 立即可搜 / wait_for 等待下次自动刷新">refresh</label>
+          <select class="ra-i" v-model="refresh">
+            <option value="">（不刷新）</option>
+            <option value="true">true</option>
+            <option value="wait_for">wait_for</option>
+          </select>
+        </div>
+        <div class="ra-f">
+          <label title="wait_for_completion：false 立即返回 taskId 异步执行、到任务树查进度（默认）；true 同步等到完成返回统计">wait_for_completion</label>
+          <select class="ra-i" v-model="waitForCompletion">
+            <option value="false">false（异步返回 taskId）</option>
+            <option value="true">true（同步等到完成）</option>
+          </select>
+        </div>
+        <div class="ra-f">
+          <label title="requests_per_second：每秒限流——-1 不限，或数字（可小数）">requests_per_second</label>
+          <input class="ra-i" v-model="requestsPerSecond" placeholder="-1（不限） / 1000" title="requests_per_second：每秒限流——-1 不限，或数字（可小数）" @blur="rpsCheck(requestsPerSecond)" />
+          <div v-if="rpsHint" class="il-hint" :class="'il-' + rpsLevel">{{ rpsHint }}</div>
+        </div>
+        <div class="ra-f">
+          <label title="scroll：滚动快照保活时长——数字+单位（ms/s/m/h/d），如 5m">scroll</label>
+          <input class="ra-i" v-model="scroll" placeholder="5m" title="scroll：滚动快照保活时长——数字+单位（ms/s/m/h/d），如 5m" @blur="scrollCheck(scroll)" />
+          <div v-if="scrollHint" class="il-hint" :class="'il-' + scrollLevel">{{ scrollHint }}</div>
+        </div>
+        <div class="ra-f">
+          <label title="timeout：请求超时时长——数字+单位（ms/s/m/h/d），如 1m">timeout</label>
+          <input class="ra-i" v-model="timeout" placeholder="1m" title="timeout：请求超时时长——数字+单位（ms/s/m/h/d），如 1m" @blur="timeoutCheck(timeout)" />
+          <div v-if="timeoutHint" class="il-hint" :class="'il-' + timeoutLevel">{{ timeoutHint }}</div>
+        </div>
+        <div class="ra-f">
+          <label title="wait_for_active_shards：执行前须活跃的分片数——all 或整数，如 1">wait_for_active_shards</label>
  <!-- wait_for_active_shards 无既有正则，patternRule 内联 all/整数（placeholder 口径 1 / all / 数字） -->
- <input class="ra-i" v-model="waitForActiveShards" placeholder="1 / all / 数字" title="wait_for_active_shards：执行前须活跃的分片数——all 或整数，如 1" @blur="wfasCheck(waitForActiveShards)" />
- <div v-if="wfasHint" class="il-hint" :class="'il-' + wfasLevel">{{ wfasHint }}</div>
- </div>
- </div>
- </div>
+          <input class="ra-i" v-model="waitForActiveShards" placeholder="1 / all / 数字" title="wait_for_active_shards：执行前须活跃的分片数——all 或整数，如 1" @blur="wfasCheck(waitForActiveShards)" />
+          <div v-if="wfasHint" class="il-hint" :class="'il-' + wfasLevel">{{ wfasHint }}</div>
+        </div>
+      </div>
+      </div>
 
  <!-- Body preview（并入单卡分区；「由表单重建」入口删卡头重复项，统一 footer 一处） -->
- <div class="ra-sec ra-body" v-if="showBody">
+      <div class="ra-sec ra-body" v-if="showBody">
  <!-- .ra-body-tt 400 弱标分节升档全局 .card-t.sm 分节档（原无字重，
  随升档获得 600/12px；本地规则删） -->
- <div class="card-t sm">
- <Code2 :size="12" /> 实际提交 body（可编辑）
+        <div class="card-t sm">
+          <Code2 :size="12" /> 实际提交 body（可编辑）
  <!-- sem-rm 智能纠错：手编 body JSON 非法前置提示（JsonArea 红点在编辑器内，这里给全宽 err 红字；submit 一并阻断） -->
- <span v-if="bodyJsonErr" role="alert" class="ra-berr">{{ bodyJsonErr }}</span>
- </div>
+          <span v-if="bodyJsonErr" role="alert" class="ra-berr">{{ bodyJsonErr }}</span>
+        </div>
  <!-- G3-A1：手编置 bodyTouched——v-model 与事件同名属性不能重复写，拆为 :model-value + onBodyEdit；
  dsl-assist 透传 src 字段（raBodyAssist，与 srcQuery 同源）。
  W4c：rows=14 定高 → fill 弹性（AdhocRebuild 手编区同款），.ra-body 限高承接。
  @submit（Ctrl+Enter）接既有 submit（确认门在 submit 内不绕过） -->
- <JsonArea ref="raBodyJaRef" :model-value="rawBody" fill :dsl-assist="raBodyAssist" @update:model-value="onBodyEdit" @submit="submit" />
+        <JsonArea ref="raBodyJaRef" :model-value="rawBody" fill :dsl-assist="raBodyAssist" @update:model-value="onBodyEdit" @submit="submit" />
  <!-- 手编 body 的 lintDsl 静态体检提示条（join 串形态，随输入实时重估，
  零阻塞不拦执行；手编坏 JSON 由 bodyJsonErr 红字 + submit 阻断承担，lint 条只管结构语义） -->
- <div v-if="raBodyLintErrors.length" role="alert" class="lint-bar lint-bar-err">
- <span>DSL 检查（错误）：{{ raBodyLintErrors.map(f => f.message + '（' + f.suggestion + '）').join('；') }}</span>
- </div>
- <div v-else-if="raBodyLintWarns.length" role="status" class="lint-bar lint-bar-warn">
- <span>DSL 检查：{{ raBodyLintWarns.map(f => f.message + '（' + f.suggestion + '）').join('；') }}</span>
- </div>
- </div>
+        <div v-if="raBodyLintErrors.length" role="alert" class="lint-bar lint-bar-err">
+          <span>DSL 检查（错误）：{{ raBodyLintErrors.map(f => f.message + '（' + f.suggestion + '）').join('；') }}</span>
+        </div>
+        <div v-else-if="raBodyLintWarns.length" role="status" class="lint-bar lint-bar-warn">
+          <span>DSL 检查：{{ raBodyLintWarns.map(f => f.message + '（' + f.suggestion + '）').join('；') }}</span>
+        </div>
+      </div>
 
- <div class="ra-sec ra-footer">
- <div class="ra-url">URL：<code>POST /cluster/reindex-advanced?{{ finalQs }}</code></div>
- <div class="ra-btns">
+      <div class="ra-sec ra-footer">
+        <div class="ra-url">URL：<code>POST /cluster/reindex-advanced?{{ finalQs }}</code></div>
+        <div class="ra-btns">
  <!-- 原始 IO 快查——本页最近一次 reindex-advanced 请求/响应原文（ioRecorder 记录环） -->
- <button class="btn ghost" data-test="raw-io" aria-label="查看原始 IO（Reindex 高级）" title="最近一次 Reindex 请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIo"><Terminal :size="12" /> 原始 IO</button>
- <button class="btn ghost" @click="rebuildFromForm"><RefreshCcw :size="12" /> 预览 body</button>
- <button v-if="canOps" class="btn pri" @click="submit" :disabled="running">
- <Play :size="12" :class="{ spinning: running }" /> {{ running ? '提交中…' : '开始 Reindex' }}
- </button>
- </div>
- </div>
- </div>
+          <button class="btn ghost" data-test="raw-io" aria-label="查看原始 IO（Reindex 高级）" title="最近一次 Reindex 请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIo"><Terminal :size="12" /> 原始 IO</button>
+          <button class="btn ghost" @click="rebuildFromForm"><RefreshCcw :size="12" /> 预览 body</button>
+          <button v-if="canOps" class="btn pri" @click="submit" :disabled="running">
+            <Play :size="12" :class="{ spinning: running }" /> {{ running ? '提交中…' : '开始 Reindex' }}
+          </button>
+        </div>
+      </div>
+    </div>
 
  <!-- 双色横幅分档单源化——err 档挂 theme.css .err-bar（role=alert，558b 红壳合并
  同范式），ok 档留 .ra-result 素底（ok-soft，去 border/radius 双写保语义绿）；
  单节点 class 三元改用，DOM 结构与子元素零变动 -->
- <div v-if="result" :class="result?.error ? 'err-bar' : 'ra-result'" :role="result?.error ? 'alert' : undefined">
- <div class="ra-result-tt">
- <CheckCircle2 v-if="!result.error" :size="14" />
- <XCircle v-else :size="14" />
- {{ result.error ? '失败' : '已提交' }}
- </div>
+    <div v-if="result" :class="result?.error ? 'err-bar' : 'ra-result'" :role="result?.error ? 'alert' : undefined">
+      <div class="ra-result-tt">
+        <CheckCircle2 v-if="!result.error" :size="14" />
+        <XCircle v-else :size="14" />
+        {{ result.error ? '失败' : '已提交' }}
+      </div>
  <!-- G3-B4：失败全文内联（friendlyEsError，限高可滚）——不再埋进折叠 details、不再仅 toast -->
- <div v-if="result.error" class="ra-err-full mono">{{ errText }}</div>
- <div class="ra-result-b">
- <span v-if="result.taskId">taskId：<code>{{ result.taskId }}</code>
+      <div v-if="result.error" class="ra-err-full mono">{{ errText }}</div>
+      <div class="ra-result-b">
+        <span v-if="result.taskId">taskId：<code>{{ result.taskId }}</code>
  <!-- 死 API 激活——api.progress(taskId) 一次性拉取（InternalEsIndexRebuildController
  /progress 端点现成，Java 零改）；行内三态中文（进行中 x/y / 已完成 / 查不到降级）。
  UpdateByQueryView StatusPill 旁同款钮，两侧 data-test 各自独立 -->
- <button class="btn ghost sm" data-test="ra-progress" :disabled="progressLoading"
- title="拉取该任务当前进度（一次性查询，不挂轮询）" @click="queryTaskProgress">查进度</button>
- <span v-if="progressLoading || progressText" role="status" class="ra-prog">{{ progressLoading ? '进度查询中…' : progressText }}</span>
- </span>
+          <button class="btn ghost sm" data-test="ra-progress" :disabled="progressLoading"
+            title="拉取该任务当前进度（一次性查询，不挂轮询）" @click="queryTaskProgress">查进度</button>
+          <span v-if="progressLoading || progressText" role="status" class="ra-prog">{{ progressLoading ? '进度查询中…' : progressText }}</span>
+        </span>
  <!-- took 裸 ms → TookBadge 四档语义徽标（BulkEditorView 同款）；
  total/created/updated → MetaStrip 值亮标签暗（taskId/path 保留 code 形态不进 items） -->
- <span v-if="typeof result.took === 'number'">took：<TookBadge :ms="result.took" /></span>
- <MetaStrip v-if="raResultMeta.length" :items="raResultMeta" />
- <span v-if="result.finalPath">path：<code>{{ result.finalPath }}</code></span>
- </div>
- <details class="ra-result-raw"><summary>原始响应</summary><pre class="json-view" v-html="prettyResultHtml"></pre></details><!-- ：裸 pre → highlightJson 高亮 -->
- <div class="ra-result-jump" v-if="result.error || result.taskId || typeof result.total === 'number'">
- <button v-if="result.error && canOps" class="btn ghost sm" :disabled="running" @click="submit"><RotateCcw :size="12" /> 重试</button>
- <button v-if="result.taskId" class="btn ghost sm" @click="goTasks"><ArrowRight :size="12" /> 到任务树查看进度</button>
+        <span v-if="typeof result.took === 'number'">took：<TookBadge :ms="result.took" /></span>
+        <MetaStrip v-if="raResultMeta.length" :items="raResultMeta" />
+        <span v-if="result.finalPath">path：<code>{{ result.finalPath }}</code></span>
+      </div>
+      <details class="ra-result-raw"><summary>原始响应</summary><pre class="json-view" v-html="prettyResultHtml"></pre></details><!-- ：裸 pre → highlightJson 高亮 -->
+      <div class="ra-result-jump" v-if="result.error || result.taskId || typeof result.total === 'number'">
+        <button v-if="result.error && canOps" class="btn ghost sm" :disabled="running" @click="submit"><RotateCcw :size="12" /> 重试</button>
+        <button v-if="result.taskId" class="btn ghost sm" @click="goTasks"><ArrowRight :size="12" /> 到任务树查看进度</button>
  <!-- 写类视图验证去處收口——同步完成（total 在场）时立即可查；异步场景建议到任务树确认完成后再来 -->
- <button v-if="destIndex && (typeof result.total === 'number' || !result.taskId)" class="btn ghost sm"
- @click="router.push({ path: '/search', query: { mode: 'dsl', idx: destIndex } })">
- <Search :size="12" /> 去查询验证
- </button>
- </div>
- </div>
+        <button v-if="destIndex && (typeof result.total === 'number' || !result.taskId)" class="btn ghost sm"
+          @click="router.push({ path: '/search', query: { mode: 'dsl', idx: destIndex } })">
+          <Search :size="12" /> 去查询验证
+        </button>
+      </div>
+    </div>
 
  <!-- 原始 IO 弹窗（宿主受控开关；rec 取本页最近一条 reindex-advanced 记录） -->
- <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
- </div>
+    <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
+  </div>
 </template>
 
 <script setup lang="ts">

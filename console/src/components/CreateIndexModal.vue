@@ -146,19 +146,19 @@ watch(() => props.show, async (v) => {
 const ILLEGAL = /[\\/*?"<>|,# :]/;
 interface Check { t: string; lv: 'ok' | 'err' | 'warn' }
 const checks = computed<Check[]>(() => {
- const n = name.value;
- const out: Check[] = [];
- const push = (pass: boolean, okT: string, errT: string, warn = false) =>
- out.push(pass ? { t: okT, lv: 'ok' } : { t: errT, lv: warn ? 'warn' : 'err' });
- push(n === n.toLowerCase(), '全小写', '必须全小写（含大写字母不被 ES 接受）');
- push(!ILLEGAL.test(n), '无非法字符', '含非法字符（\\ / * ? " < > | 空格 , # :）');
- push(!/^[-_+]/.test(n), '开头合法', '不能以 - _ + 开头');
- push(n !== '.' && n !== '..', '非保留名', '不能是 . 或 ..');
- push(new TextEncoder().encode(n).length < 255, '长度合规', '超过 255 字节上限');
- const dup = store.indices.some(i => i.index === n);
- push(!dup, '名称未被占用', '同名索引已存在（后端也会拒绝）');
- if (n.startsWith('.')) out.push({ t: '以 . 开头将被视为系统/隐藏索引，请确认这是有意为之', lv: 'warn' });
- return out;
+  const n = name.value;
+  const out: Check[] = [];
+  const push = (pass: boolean, okT: string, errT: string, warn = false) =>
+    out.push(pass ? { t: okT, lv: 'ok' } : { t: errT, lv: warn ? 'warn' : 'err' });
+  push(n === n.toLowerCase(), '全小写', '必须全小写（含大写字母不被 ES 接受）');
+  push(!ILLEGAL.test(n), '无非法字符', '含非法字符（\\ / * ? " < > | 空格 , # :）');
+  push(!/^[-_+]/.test(n), '开头合法', '不能以 - _ + 开头');
+  push(n !== '.' && n !== '..', '非保留名', '不能是 . 或 ..');
+  push(new TextEncoder().encode(n).length < 255, '长度合规', '超过 255 字节上限');
+  const dup = store.indices.some(i => i.index === n);
+  push(!dup, '名称未被占用', '同名索引已存在（后端也会拒绝）');
+  if (n.startsWith('.')) out.push({ t: '以 . 开头将被视为系统/隐藏索引，请确认这是有意为之', lv: 'warn' });
+  return out;
 });
 const nameOk = computed(() => !!name.value && !checks.value.some(c => c.lv === 'err'));
 
