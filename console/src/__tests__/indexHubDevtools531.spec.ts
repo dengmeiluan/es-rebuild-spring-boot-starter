@@ -1,13 +1,13 @@
 /**
- * 五百三十一批（WE 工蚁）：IndexHub/DevTools 本批契约记档（源码锁 + 抽屉行为锁）。
+ * 五百三十一批（WE 工蚁）：IndexHub/DevTools 契约备案（源码锁 + 抽屉行为锁）。
  * ① IndexHub ops 区卡中卡降层——照 530 批 IndexSettings ir-card 三分节范式：
  *    分节标题走全局 .sec-t 档、分节间上边框分隔（危险区分节 err 档线）、
  *    操作项描边小卡退役、仅危险区保留描边档；全部 11 个操作入口零丢失；
  * ② 索引列表抽屉「选完即收」退役——选中后不自动关（当前项 .on 高亮），
  *    关闭走关闭钮/Esc/遮罩三条既有路径（Esc 语义保留）；
- * ③ whyHit/xrayHit 裸 setItem 收编 useLinkCarry 统一件（payload 逐字保持）；
+ * ③ whyHit/xrayHit 裸 setItem 合并 useLinkCarry 统一件（payload 逐字保持）；
  * ④ DevTools 本 Tab 历史迁入响应 pane 内折叠区（不再顶高整页滚），高度统一
- *    max(240px, 42vh) 口径；权限降级文案缩为图标+tooltip；draftTimer 手写保留记档
+ *    max(240px, 42vh) 口径；权限降级文案缩为图标+tooltip；draftTimer 手写保留备案
  *    （统一件无 flush API，pagehide flushDraft 需要）。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -74,7 +74,7 @@ describe('IndexHub ops 区卡中卡降层（五百三十一批，照 530 ir-card
   });
 });
 
-describe('IndexHub 状态徽标/分片统计收编（五百三十一批）', () => {
+describe('IndexHub 状态徽标/分片统计合并（五百三十一批）', () => {
   it('详情头状态徽标换 StatusPill+indexStatusZh（en 档英文小字），裸 status 三元退役', () => {
     expect(ih).toContain('<StatusPill :tone="curInfo?.status === \'open\' ? \'g\' : \'n\'"');
     expect(ih).toContain('indexStatusZh(curInfo?.status)');
@@ -135,7 +135,7 @@ describe('索引列表抽屉不自动关（五百三十一批，行为锁）', (
   });
 });
 
-describe('useLinkCarry 收编（五百三十一批）', () => {
+describe('useLinkCarry 合并（五百三十一批）', () => {
   it('whyHit/xrayHit 换统一件，payload 逐字保持；裸 es-console.link.* setItem 字面退役', () => {
     expect(ih).toContain("useLinkCarry<{ index: string; id: string; query: string }>('rankdebug')");
     expect(ih).toContain("useLinkCarry<{ index: string; id: string }>('xray')");
@@ -145,21 +145,21 @@ describe('useLinkCarry 收编（五百三十一批）', () => {
   });
 });
 
-describe('DevTools 历史落位 + 权限图标（五百三十一批；⚠hist 迁移 P0 回退记档）', () => {
-  it('dt-hist 直挂 dt-body（</WorkbenchLayout> 之后）——531 曾迁入响应 pane，产线 2.9.115 暴露与 pane 内 Monaco 100% 的高度棘轮回退；真正根因=dt-body 高度链不定解，本批以确定高度链根治', () => {
+describe('DevTools 历史落位 + 权限图标（五百三十一批；⚠hist 迁移 P0 回退备案）', () => {
+  it('dt-hist 直挂 dt-body（</WorkbenchLayout> 之后）——531 曾迁入响应 pane，产线 2.9.115 暴露与 pane 内 Monaco 100% 的高度棘轮回退；真正根因=dt-body 高度链不定解，以确定高度链根治', () => {
     const wlEndAt = dt.indexOf('</WorkbenchLayout>');
     const histAt = dt.indexOf('class="dt-hist"');
     expect(histAt).toBeGreaterThan(-1);
     expect(histAt).toBeGreaterThan(wlEndAt);
     /* hist 与 WorkbenchLayout 闭合之间不得再出现 pane 标记=确认在 panes 之外直挂 */
     expect(dt.slice(wlEndAt, histAt)).not.toContain('pane-devtools');
-    /* 折叠交互与 QHP actions 白名单随迁零改锚（histCollapse444/devtoolsHist312 同源） */
+    /* 折叠交互与 QHP actions 白名单同步更新零改锚（histCollapse444/devtoolsHist312 同源） */
     expect(dt).toMatch(/<div class="dt-hist-tt" role="button" tabindex="0" :aria-expanded="histOpen"/);
-    /* 五百五十一批随迁（击穿者：551 轨2 刀⑤——历史行 actions 加 'fav' 一键转收藏）：
+    /* 五百五十一批同步更新（击穿者：551 轨2 刀⑤——历史行 actions 加 'fav' 一键转收藏）：
        白名单锚随字面迁（折叠交互锚零触；fav 消费 store.addFavorite rest 形态，零新存储键）。
-       五百五十二批随迁（击穿者：552 轨2 刀④——actions 窄集加 'curl' 一键复制 curl，
+       五百五十二批同步更新（击穿者：552 轨2 刀④——actions 窄集加 'curl' 一键复制 curl，
        面板行级仅 emit、组装归宿主 histCurl）：五动作形随字面迁为六动作形 */
-    /* 五百六十一批随迁（击穿者：561 B2 刀①——actions 窄集加 'newtab' 回放到新 Tab）：
+    /* 五百六十一批同步更新（击穿者：561 B2 刀①——actions 窄集加 'newtab' 回放到新 Tab）：
        六动作形随字面迁为七动作形（面板行级仅 emit，mkTab+激活跳转归宿主 histNewTab；
        折叠交互锚零触） */
     expect(dt).toMatch(/:actions="\['play', 'fill', 'copy', 'fav', 'curl', 'newtab', 'del'\]"/);
@@ -176,11 +176,11 @@ describe('DevTools 历史落位 + 权限图标（五百三十一批；⚠hist �
     expect(dt).not.toContain('clamp(200px, 34vh, 420px)');
   });
 
-  it('权限降级文案缩为图标+tooltip（原文案字面保留在 aria/title），draftTimer 手写保留记档', () => {
+  it('权限降级文案缩为图标+tooltip（原文案字面保留在 aria/title），draftTimer 手写保留备案', () => {
     expect(dt).toContain('class="dt-perm-dim" tabindex="0" role="img" aria-label="运行需 ADMIN 角色"');
     expect(dt).toContain('<ShieldAlert :size="13" />');
     expect(dt, 'permGating 可见性语义锚零漂移').toContain('运行需 ADMIN 角色');
-    /* 记档：draftTimer 不换 useDebounceFn——统一件无 flush API，pagehide flushDraft 需要 */
+    /* 备案：draftTimer 不换 useDebounceFn——统一件无 flush API，pagehide flushDraft 需要 */
     expect(dt).toContain('let draftTimer');
     expect(dt).toContain('function flushDraft()');
   });

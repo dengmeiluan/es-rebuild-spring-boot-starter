@@ -3,7 +3,7 @@
  * 563 已交付：ColFilterPopover 内建组合档 chip（可选 filterMode prop + toggle-filter-mode
  * emit，kernelFilterOrMode563 已锁）；未接线证据：QRT 弹层仍走默认槽手搓钮
  * （<button class="qrt-fmode mono">组合：…</button> 注入 cfp-acts 行）。
- * 本批：QRT 默认槽手搓钮退役，改 popover 传 :filter-mode="filterModeLive"
+ * ：QRT 默认槽手搓钮退役，改 popover 传 :filter-mode="filterModeLive"
  * +@toggle-filter-mode="toggleFilterMode"（内建 chip，cfp-hd 头部渲染）。
  * ⚠filterModeToggle561 行为锚同串（「组合：X」/aria/title 同语汇）——语义等价迁移不删锁：
  * 弹层钮文本与翻转行为不变，561 断言应原样通过（复跑验证）。

@@ -4,7 +4,7 @@
  * 1) 每卡工具行：term kw 过滤（行数 >20 门控）+ doc_freq min/max 区间 + TSV/MD 复制
  *    （matrixText 内核，过滤后行集所见即所复制）+ 计数 N/M；
  * 2) term 走 MarkText（kw 命中 <mark>）；gotoAnalyzer 钮与稀有度 pill 保留；
- * 3) 531 批随迁：裸 .qx-tbl 换 QRT rows 型（排序/漏斗/右键/导出归内核）——行为锚随迁
+ * 3) 531 批同步更新：裸 .qx-tbl 换 QRT rows 型（排序/漏斗/右键/导出归内核）——行为锚同步更新
  *    table.qrt-tbl（过滤后行集所见即所渲），末行双线/表高封顶/粘顶表头归内核单一出处。
  * 设施照抄 qxXrayErrW3b（vue-router 轻 mock + api mock + MonacoEditor stub）。
  */
@@ -105,11 +105,11 @@ afterEach(() => {
   history.replaceState(null, '', '#/');
 });
 
-/* 531 批随迁：行集锚换 QRT 壳（过滤 nomatch/截断行，所见即所渲） */
+/* 531 批同步更新：行集锚换 QRT 壳（过滤 nomatch/截断行，所见即所渲） */
 const qrtRows = (root: ParentNode) =>
   [...root.querySelectorAll('table.qrt-tbl tbody tr')].filter(tr => !tr.classList.contains('qrt-nomatch') && !tr.classList.contains('qrt-trunc-row'));
 
-describe('QueryXray 词频表工具行（五百二十五批；531 随迁 QRT 壳）', () => {
+describe('QueryXray 词频表工具行（五百二十五批；531 同步更新 QRT 壳）', () => {
   it('kw 门控（25>20 出输入）→ 过滤行集+MarkText 命中+计数 N/M；空匹配提示', async () => {
     const host = await mountViewWithTerms();
     const card = host.querySelector('.qx-card') as HTMLElement;
@@ -171,19 +171,19 @@ describe('QueryXray 词频表工具行（五百二十五批；531 随迁 QRT 壳
   }, 40000);
 });
 
-describe('QueryXray 词频表表格化修边（五百二十五批源码锁；531 批随迁 QRT 壳）', () => {
+describe('QueryXray 词频表表格化修边（五百二十五批源码锁；531 批同步更新 QRT 壳）', () => {
   it('QRT rows 接线 + matrixText 内核 + MarkText/gotoAnalyzer/稀有度槽保真', () => {
     const v = readFileSync(join(__dirname, '../views/QueryXrayView.vue'), 'utf-8');
-    /* 531 批随迁：裸 .qx-tbl 退役换 QRT rows 型（storageKey/fieldTypes/empty-text 接线） */
+    /* 531 批同步更新：裸 .qx-tbl 退役换 QRT rows 型（storageKey/fieldTypes/empty-text 接线） */
     expect(v).not.toContain('.qx-tbl');
     expect(v).toMatch(/:cols="\['term', 'tf', 'doc_freq', 'ttf', '稀有度'\]"\s*\n\s*:rows="tvQRows\(fname\)" sortable/);
     expect(v).toContain('storage-key="xray:tv"');
     expect(v).toContain('empty-text="无匹配 term"');
     expect(v).toContain("import { matrixText } from '../utils/copyMatrix';");
-    /* term 走 MarkText（kw 命中 <mark>）+ gotoAnalyzer 钮经 #cell-term 槽保真（531 随迁） */
+    /* term 走 MarkText（kw 命中 <mark>）+ gotoAnalyzer 钮经 #cell-term 槽保真（531 同步更新） */
     expect(v).toContain("<MarkText :text=\"value\" :kw=\"tvTools[fname]?.kw ?? ''\" />");
     expect(v).toContain('@click="gotoAnalyzer(String(value))"');
-    /* 稀有度 pill 保留：rareCls 单一真源在 termRows，槽经 rareClsOf 反查（531 随迁） */
+    /* 稀有度 pill 保留：rareCls 单一真源在 termRows，槽经 rareClsOf 反查（531 同步更新） */
     expect(v).toContain('rareCls = \'hi\'');
     expect(v).toContain(':class="rareClsOf(String(value))"');
     /* 行集在 termRows 产出后套 computed */

@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 多集群 client 路由器（）：控制台的「当前目标集群」上下文。
+ * 多集群 client 路由器（控制台的「当前目标集群」上下文。
  *
  * <p>三件事：</p>
  * <ol>

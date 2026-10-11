@@ -1,7 +1,7 @@
 /**
  * 二百二十八批 M1+M4：渲染截断下的「所见即所导航/操作」。
  * M1（RT）：行导航行集钳位 renderHits（此前=sortedHits 全量，↓ 走过 2000 行后高亮挂
- * 在不存在的 DOM 上、Enter/Ctrl+C 对不可见行生效）+ 滚动跟随（QRT 62 批同款收编）。
+ * 在不存在的 DOM 上、Enter/Ctrl+C 对不可见行生效）+ 滚动跟随（QRT 62 批同款合并）。
  * M4（QRT）：渲染截断保护补齐（此前无护栏，大结果集即万行 DOM）——渲染行走 renderRows、
  * 导出（getSortedRows/getCsvBlock）仍走全量（RT「导出不受截断影响」同口径）。
  * 挂载样板照抄 multiSort（裸 createApp + pinia + api mock）。

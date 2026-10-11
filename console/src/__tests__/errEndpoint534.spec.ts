@@ -11,7 +11,7 @@ import { errMeta, errPreHtml } from '../utils/errPre';
 import { highlightJson } from '../utils/jsonc';
 
 describe('errEndpoint534：ApiError import 形态', () => {
-  it('ApiError extends Error；code/endpoint 经构造器落实例（Lead 先行契约，本批只消费）', () => {
+  it('ApiError extends Error；code/endpoint 经构造器落实例（Lead 先行契约，只消费）', () => {
     const err = new ApiError(409, '目标物理索引已存在', 'STAGE_GUARD', 'POST /internal/es/index/adhoc-rebuild/start');
     expect(err instanceof Error).toBe(true);
     expect(err.status).toBe(409);

@@ -51,7 +51,7 @@ describe('主按钮不滚出视野（630 批）', () => {
   });
 });
 
-describe('625 批既有契约不回退（630 批随迁锁）', () => {
+describe('625 批既有契约不回退（630 批同步更新锁）', () => {
   it('弹窗恒不超屏语义保留', () => {
     expect(cs).toMatch(/width:720px;max-width:94vw;max-height:86vh/);
   });

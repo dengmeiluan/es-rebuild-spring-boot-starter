@@ -8,7 +8,7 @@
  * title 现档形态）；563 的 showDefaults 双档绑定退役——档位循环是唯一高度真源
  * （双档与手调档互相覆盖必然打架，手调优先是可调节的本意）。
  * 字段树（MappingFieldTree）已是视口满高弹性（calc(100vh - vh-offset + 90px)），
- * 档位无增益不加（记档）。
+ * 档位无增益不加（备案）。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';

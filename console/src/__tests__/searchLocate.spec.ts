@@ -3,7 +3,7 @@
  *
  * 覆盖：
  *   1) useHitLocate 在真组件里的 wrap/钳制/落位（组合式 ↔ DOM 集成，行为不止单元）；
- *   2) BrowserView 全链路（五百二十九批反转随迁：视图 data-hit-idx/HitNav 随 QRT 换壳退役，
+ *   2) BrowserView 全链路（五百二十九批反转同步更新：视图 data-hit-idx/HitNav 随 QRT 换壳退役，
  *      搜索定位归 QRT Ctrl+F 网格查找）：mock 索引列表 → 输关键字过滤行集 →
  *      QRT 查找命中计数 n/n、Enter 后 .rt-hit-cur 落位；
  *   3) 无命中：显式空态文案。
@@ -134,7 +134,7 @@ async function typeKw(root: HTMLElement, q: string) {
   await settle();
 }
 
-/* 五百二十九批锚随迁：视图 data-hit-idx/HitNav 定位随 QRT 换壳退役——搜索定位归
+/* 五百二十九批锚同步更新：视图 data-hit-idx/HitNav 定位随 QRT 换壳退役——搜索定位归
    QRT Ctrl+F 网格查找（.qrt 根 @keydown.ctrl.f + 内建 HitNav + .rt-hit-cur 落位）。
    防抖走真实等待（rtGridSearch 同口径：fake timers 不 flush Vue 渲染微任务链）。 */
 const waitMs = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
@@ -153,7 +153,7 @@ async function qrtSearch(root: HTMLElement, q: string) {
   await settle();
 }
 
-/* 五百二十九批锚随迁：表体行取自 QRT table.qrt-tbl（剔除 .qrt-nomatch 提示行） */
+/* 五百二十九批锚同步更新：表体行取自 QRT table.qrt-tbl（剔除 .qrt-nomatch 提示行） */
 const qrtRows = (root: HTMLElement) =>
   [...root.querySelectorAll('table.qrt-tbl tbody tr')].filter(tr => !tr.classList.contains('qrt-nomatch'));
 

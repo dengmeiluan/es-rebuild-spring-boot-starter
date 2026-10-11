@@ -6,7 +6,7 @@
  * 空开仍显示上次插件名（pill + aria-label 带名 + 示例码用旧插件名），
  * 与「通用安装指南」语义不符（示例码 analysis-ik 兜底恒在场缓解了码面，pill 面裸露）。
  *
- * 修法（741 批记档候选）：两钮改走 openGuide('') 空名清名一行刀（×2 处：
+ * 修法（741 批备案候选）：两钮改走 openGuide('') 空名清名一行刀（×2 处：
  * 页头 PageHeader actions 钮 + 空态 EmptyState 插槽钮）——openGuide 先置
  * currentPlugin 再开弹窗，空名即清名，行菜单带名路径不受扰。
  *

@@ -1032,7 +1032,7 @@ public class AdhocRebuildService {
             // null，前端把「数不到」当成「待数」无从区分。冷路径 WARN 恰一条（每索引仅
             // 首次——prepare 会被前端轮询、作业源/目标两处消费，不设去重即刷屏）。注意
             // 404 走 perform 的判据臂返回 null，不进本臂（「索引不存在」属判据内静默，
-            // 552 三态立法）。null 契约不变（Observability554Test 反锁）。
+            // 552 三态约定）。null 契约不变（Observability554Test 反锁）。
             if (index != null && docCountWarned.add(index)) {
                 logger.warn("[AdhocRebuild] docCount 探测失败，按 null 处理（前端无法区分「待数」与「数不到」）"
                         + ": index={} : {}", index, e.getMessage(), e);

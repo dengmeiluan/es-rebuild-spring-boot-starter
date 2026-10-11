@@ -8,7 +8,7 @@
       <button aria-label="删除" class="btn sm ghost danger" title="删除" @click="$emit('remove')"><X :size="12" /></button>
     </div>
     <!-- 【W3b】multi_match/query_string 等的 fields/field 字段键接字段源：
-         有 mapping 时字段键行（含 fields 数组逐项）渲染 FieldSelect，无字段源回落裸键值表零降级 -->
+ 有 mapping 时字段键行（含 fields 数组逐项）渲染 FieldSelect，无字段源回落裸键值表零降级 -->
     <GenericParams :value="rawObj" path-prefix="" :field-keys="rawFieldKeys" :fields="fields" :types="types"
                    :type-priority="RAW_FIELD_PRIO" @update="patchRaw" />
   </div>
@@ -16,7 +16,7 @@
 
 <script setup lang="ts">
 /* W1：通用结构化节点——field===null 的 LeafNode（未知算子/非标准形态/多键 query）。
-   权威数据是 node.raw，这里只写回 raw，绝不动其他字段（往返无损）。 */
+ 权威数据是 node.raw，这里只写回 raw，绝不动其他字段（往返无损）。 */
 import { computed } from 'vue';
 import { X, Group } from 'lucide-vue-next';
 import GenericParams from './GenericParams.vue';
@@ -24,7 +24,7 @@ import { DRAG_KEY, fireDrag } from './treeBus';
 import type { LeafNode } from '../../utils/queryAst';
 
 /* 【W3b】fields/types 由 NodeRenderer 透传（QueryTreePane/RootExtrasPane 侧早已持有）；
-   缺省空 = 无字段源，字段键回落裸输入（既有调用方/旧 spec 零增量） */
+ 缺省空 = 无字段源，字段键回落裸输入（既有调用方/旧 spec 零增量） */
 const props = withDefaults(defineProps<{
   node: LeafNode;
   fields?: string[];
@@ -33,7 +33,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{ (e: 'update:node', n: LeafNode): void; (e: 'remove'): void; (e: 'wrap'): void }>();
 
 /* 【W3b】raw 顶层字段键：multi_match / query_string 的 fields（数组）/ field（标量）是字段语义键；
-   其余 op 的 raw 结构不认识，不猜（空 = 全裸键值表现状） */
+ 其余 op 的 raw 结构不认识，不猜（空 = 全裸键值表现状） */
 const FIELD_RAW_OPS = new Set(['multi_match', 'query_string']);
 const rawFieldKeys = computed(() => (FIELD_RAW_OPS.has(props.node.op) ? ['fields', 'field'] : []));
 /* 全文检索算子的字段以 text 为主、keyword 次之（typePriority 只重排候选分组，不改候选集） */

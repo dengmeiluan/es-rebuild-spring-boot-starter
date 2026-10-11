@@ -2,7 +2,7 @@
  * 五百五十四批（工蚁D）：全站扁平化·去壳扫荡。静态源码断言仿 flattenWave546/550/551/552 范式。
  *
  * ① SecurityView 四张顶层 .card（我的账号/用户管理/控制集群/审计流水）退壳——border-top
- *    分节承接（立法④；XmigrateView xm-new/xm-res 551 判例同语言），card-t 行首横排保留。
+ *    分节承接（约定④；XmigrateView xm-new/xm-res 551 先例同语言），card-t 行首横排保留。
  * ② OverviewView 三卡（Top10×2/健康）退壳 border-top 分节；空态 EmptyState 直贴不留整块
  *    空框；ov-alerts 摘 .card 保 sev 色带（语义边框豁免）；ov-topo 交互带同退。
  * ③ DiagView 巨型观测卡退壳 border-top 分节。
@@ -11,13 +11,13 @@
  *    border-bottom 分界。
  * ⑥ IndexSettingsView is-raw/ir-card 两残壳退（552 只退了 is-form）；MappingView 右列
  *    「类型分布/Settings」双 .card 退（左栏 547 已裸，同页双标根治）。
- * ⑦ SearchTemplatesView 三 .st-card 退壳：编辑器外框退役（立法③，st-card-hd border-bottom
+ * ⑦ SearchTemplatesView 三 .st-card 退壳：编辑器外框退役（约定③，st-card-hd border-bottom
  *    承接分界）。
  * ⑧ ScoreExplainView se-card / MatchMatrixView mm-card JsonArea 编辑器外框退役
  *    （⚠脚本零触：se/mm 脚本段零改动，QRT import/表格结构零触）。
  * ⑨ WatcherView wt-card / FavoritesView fv-card 列表项卡带框降层为 border-top 行
  *    （slm-card 551 先例：悬停反馈由顶部 hairline 变色承接）。
- * ⑩ --sp 收编四刀：st-list-empty/nf-card「34px 16px」→「34px var(--sp-4)」（34px 空态
+ * ⑩ --sp 合并四刀：st-list-empty/nf-card「34px 16px」→「34px var(--sp-4)」（34px 空态
  *    契约保字面）；mm-busy「gap:6px」→var(--sp-1h)「padding:14px 16px」→「14px var(--sp-4)」
  *    （14px 无档位刻值保字面）；wt-act「padding:1px 6px」→「1px var(--sp-1h)」（1px 边框豁免）。
  *
@@ -52,8 +52,8 @@ describe('五百五十四批②：OverviewView 三卡/交互带/预警条退壳'
   const s = read('../views/OverviewView.vue');
   it('全局 .card 壳类消费清零；四网格分节 ov-cell 锚在场', () => {
     expect(strip(s), 'card 壳类退役').not.toMatch(/class="(?:[^"]* )?card(?: [^"]*)?"/);
-    /* 六百三十四批 G12 随迁：三胞 → 四胞（「健康分布」「最近作业」分家，1600 四列满编）——
-       判别力随迁=计数 4（三裸胞 + ov-jobs 修饰胞；.ov-mh 非网格胞不入数）+ ov-jobs 独立胞锚
+    /* 六百三十四批 G12 同步更新：三胞 → 四胞（「健康分布」「最近作业」分家，1600 四列满编）——
+       判别力同步更新=计数 4（三裸胞 + ov-jobs 修饰胞；.ov-mh 非网格胞不入数）+ ov-jobs 独立胞锚
        （拆胞形态锁在 overviewPolish634.spec.ts） */
     expect((s.match(/class="ov-cell"|class="ov-cell ov-jobs"/g) || []).length, '四胞同锚').toBe(4);
     expect(s, '最近作业独立胞锚（634 拆胞）').toContain('class="ov-cell ov-jobs"');
@@ -96,7 +96,7 @@ describe('五百五十四批④：TopologyView tp-canvas/tp-palette 两 .card �
 
 describe('五百五十四批⑤：AnalyzeView av-bar card 工具条卡退壳（552 同族漏网）', () => {
   const s = read('../views/AnalyzeView.vue');
-  it('裸行 + border-bottom 分界（is-bar/ss-bar/tp-bar 552 判例同语言）', () => {
+  it('裸行 + border-bottom 分界（is-bar/ss-bar/tp-bar 552 先例同语言）', () => {
     expect(strip(s), 'card 壳类退役').not.toMatch(/class="(?:[^"]* )?card(?: [^"]*)?"/);
     expect(s).toContain('class="av-bar"');
     expect(s, 'border-bottom 分界在场').toContain('.av-bar { padding: var(--sp-2h) 0; border-bottom: 1px solid var(--line);');
@@ -115,14 +115,14 @@ describe('五百五十四批⑥：IndexSettingsView is-raw/ir-card 残壳退 + M
   it('MappingView：右列类型分布/Settings 双 .card 退（左栏 547 已裸，同页双标根治）', () => {
     const s = read('../views/MappingView.vue');
     expect(strip(s), 'card 壳类退役').not.toMatch(/class="(?:[^"]* )?card(?: [^"]*)?"/);
-    /* 五百六十二批随迁：Settings 迁出窄右栏→全宽折叠节后，右栏只剩类型分布一分节
+    /* 五百六十二批同步更新：Settings 迁出窄右栏→全宽折叠节后，右栏只剩类型分布一分节
        （迁移锁=新形态 mappingSettings562.spec.ts 在档） */
     expect((s.match(/class="mp-sec"/g) || []).length, '右列一分节（类型分布独占）').toBe(1);
     expect(s, '分节流样式锚').toContain('.mp-sec { border-top: 1px solid var(--border); padding: 14px var(--sp-4); }');
   });
 });
 
-describe('五百五十四批⑦：SearchTemplatesView 三 .st-card 退壳（编辑器外框退役·立法③）', () => {
+describe('五百五十四批⑦：SearchTemplatesView 三 .st-card 退壳（编辑器外框退役·约定③）', () => {
   const s = read('../views/SearchTemplatesView.vue');
   it('st-card 框壳（border+radius）退役；分界归 st-card-hd border-bottom 承接', () => {
     expect(s, '框壳退役').toContain('.st-card { border: 0; border-radius: 0; overflow: hidden; }');
@@ -160,16 +160,16 @@ describe('五百五十四批⑨：Watcher wt-card / Favorites fv-card 列表项�
   });
 });
 
-describe('五百五十四批⑩：--sp 收编四刀（刻值豁免保字面）', () => {
+describe('五百五十四批⑩：--sp 合并四刀（刻值豁免保字面）', () => {
   it('空态契约 34px 保字面（nf-card）；st-list-empty 死码随 561 批退役（负锁防回流）', () => {
-    /* 五百六十一批随迁：.st-list-empty 死码规则立删（557 批已清模板消费），改负锁防回流
-       （剥注释口径同 flattenWave556——历史记档注释里的字面不算数） */
+    /* 五百六十一批同步更新：.st-list-empty 死码规则立删（557 批已清模板消费），改负锁防回流
+       （剥注释口径同 flattenWave556——历史备案注释里的字面不算数） */
     const stripped = read('../views/SearchTemplatesView.vue')
       .replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/<!--[\s\S]*?-->/g, ' ');
     expect(stripped).not.toMatch(/\.st-list-empty/);
     expect(read('../views/NotFoundView.vue')).toMatch(/\.nf-card \{[^}]*padding: 34px var\(--sp-4\);/);
   });
-  it('mm-busy 混合刻值行收编（6px→--sp-1h；14px 刻值保字面、16px→--sp-4）', () => {
+  it('mm-busy 混合刻值行合并（6px→--sp-1h；14px 刻值保字面、16px→--sp-4）', () => {
     expect(read('../views/MatchMatrixView.vue')).toMatch(/gap: var\(--sp-1h\); padding: 14px var\(--sp-4\);/);
   });
   it('wt-act 微型内衬 1px 边框豁免保字面、6px 收 --sp-1h', () => {

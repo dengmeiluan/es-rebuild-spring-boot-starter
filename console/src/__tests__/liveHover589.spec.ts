@@ -184,8 +184,8 @@ describe('五百八十九批②：LiveDashboardView 走势卡悬浮详情接线'
 describe('五百八十九批③：源码锁（ld-svgwrap 挂接+HTML 悬浮层三件）', () => {
   it('五卡宿主 @mousemove/@mouseleave 接线 + ld-xline/ld-dot/ld-hv 语汇 + 点位公式同源', () => {
     const c = strip(cardSrc);
-    expect(c, '宿主挂 mousemove（收编进组件）').toContain('@mousemove="onMove"');
-    expect(c, '宿主挂 mouseleave（收编进组件）').toContain('@mouseleave="onLeave"');
+    expect(c, '宿主挂 mousemove（合并进组件）').toContain('@mousemove="onMove"');
+    expect(c, '宿主挂 mouseleave（合并进组件）').toContain('@mouseleave="onLeave"');
     expect(c, '十字线件').toContain('class="ld-svgwrap"');
     expect(c, '十字线件').toContain('.ld-xline');
     expect(c, '最近点圆点件').toContain('.ld-dot');

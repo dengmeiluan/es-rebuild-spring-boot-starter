@@ -215,7 +215,7 @@ vi.mock('../api', async (importOriginal) => {
     api: {
       ...actual.api,
       /* 走真实 request 内核：记录环真实落账（签名对齐原 sqlLenient：body+signal → post 端点回填）。
-         550 随迁：原 sqlLenient 包装对执行链经 ioKind:'sql' 打标（last 双参收口数据面），
+         550 同步更新：原 sqlLenient 包装对执行链经 ioKind:'sql' 打标（last 双参收口数据面），
          本镜像体同步补打标，否则 kind 过滤下执行记录不可见、行为锁（弹窗开 lenient 记录）失明 */
       sqlLenient: (body: unknown, signal?: unknown) =>
         (actual as unknown as { post: (p: string, b: unknown, base?: string, init?: unknown) => Promise<unknown> })
@@ -276,7 +276,7 @@ describe('五百四十五批③：IndexHub / Adhoc / Xmigrate 接线（字面锁
     expect(v).toContain('<RawIoModal');
   });
 
-  it('AdhocRebuildView：评估（探测）/执行预览两分节各一钮，特征 /adhoc-rebuild/（552 随迁：审编卡头补钮 + last 扩 /config-lab/ 回退——审编校验走 /config-lab/validate 不在托管特征下）', () => {
+  it('AdhocRebuildView：评估（探测）/执行预览两分节各一钮，特征 /adhoc-rebuild/（552 同步更新：审编卡头补钮 + last 扩 /config-lab/ 回退——审编校验走 /config-lab/validate 不在托管特征下）', () => {
     const v = read('../views/AdhocRebuildView.vue');
     expect(v).toContain("import RawIoModal from '../components/RawIoModal.vue'");
     expect(v).toContain('aria-label="查看原始 IO（探测评估）"');
@@ -295,13 +295,13 @@ describe('五百四十五批③：IndexHub / Adhoc / Xmigrate 接线（字面锁
     expect(v).toContain('<RawIoModal');
   });
 
-  it('SqlConsoleView：结果分节头一钮，特征 last(\'/cluster/sql/\', \'sql\') 双参收口（550 随迁）', () => {
+  it('SqlConsoleView：结果分节头一钮，特征 last(\'/cluster/sql/\', \'sql\') 双参收口（550 同步更新）', () => {
     const v = read('../views/SqlConsoleView.vue');
     expect(v).toContain("import RawIoModal from '../components/RawIoModal.vue'");
     expect(v).toContain('data-test="raw-io"');
-    /* 550 随迁：原锁钉 546 收紧形态 all().find 排 translate；550 批退役该补丁，
+    /* 550 同步更新：原锁钉 546 收紧形态 all().find 排 translate；550 批退役该补丁，
        改 last(pathSub, kind) 双参收口——kind='sql' 由 api 层打在执行链
-       （query/lenient/cursor/close），translate 未打标天然排除，语义等价随迁 */
+       （query/lenient/cursor/close），translate 未打标天然排除，语义等价同步更新 */
     expect(v).toContain("ioRecorder.last('/cluster/sql/', 'sql')");
     expect(v).toContain('<RawIoModal');
   });

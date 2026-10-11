@@ -13,7 +13,7 @@
  *      `rawPeriodSafe` 判定，超限自动回落「自动」并在 title 说明；
  *   4) 落点在历史区工具行 ⋯（`<details class="ld-hist-more">`）浮层内（明面已用满 5 控件，
  *      铁律 C）；切档入重查 watch（独立 watch，**不得**连带重置 histGroup——它是导航过滤）。
- * 负锁一律剥注释后断言（unifyWave561 口径：历史记档注释里的字面不算数）。
+ * 负锁一律剥注释后断言（unifyWave561 口径：历史备案注释里的字面不算数）。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';

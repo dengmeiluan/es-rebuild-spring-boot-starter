@@ -13,7 +13,7 @@ const v = readFileSync(join(__dirname, '../views/OverviewView.vue'), 'utf-8');
 describe('Overview 下钻卡键盘可达（369 批）', () => {
   it('五处下钻卡齐备 role+tabindex+Enter+aria-label', () => {
     const cards = [
-      /* 五百五十四批随迁：ov-topo .card 壳退役（class 字面摘 card，role/tabindex/Enter 契约零触） */
+      /* 五百五十四批同步更新：ov-topo .card 壳退役（class 字面摘 card，role/tabindex/Enter 契约零触） */
       /<div class="ov-topo" role="button" tabindex="0" aria-label="进入完整分布式拓扑视图" @click="router\.push\('\/topology'\)" @keydown\.enter\.prevent="router\.push\('\/topology'\)"/,
       /<div v-for="idx in topBySize"[^>]*role="button" tabindex="0" :aria-label="'查看索引 ' \+ idx\.index" @click="goIndex\(idx\.index\)" @keydown\.enter\.prevent="goIndex\(idx\.index\)"/,
       /<div v-for="idx in topByDocs"[^>]*role="button" tabindex="0" :aria-label="'查看索引 ' \+ idx\.index" @click="goIndex\(idx\.index\)" @keydown\.enter\.prevent="goIndex\(idx\.index\)"/,

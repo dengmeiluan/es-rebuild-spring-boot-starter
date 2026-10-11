@@ -1,14 +1,14 @@
 /**
  * 五百四十五批轨3：531 遗留「显式非语义类型抑制守卫」核查固化锁（锚点 3 裁决=守卫已在场，补行为锁）。
- * 核查记档（详见批报告，文件:行号）：
+ * 核查备案（详见批报告，文件:行号）：
  * — semFormat 语境的抑制 534 批已收口（useSemFormat noInfer + 两内核 semRawCols，
- *   tableKernelWave534 源码+运行时+单元三面锁），本 spec 不重复立法；
+ *   tableKernelWave534 源码+运行时+单元三面锁），本 spec 不重复约定；
  * — 数值感知面的抑制是「双机制」：①值形态硬口径（useColStats numStats/RT numericCols 采样
  *   只认 typeof number——对象/数组值天然不计，这是「嵌套 object 列不被误判」的主守卫）；
  *   ②显式类型白名单优先不回落（QRT effType/isNumericCol/isRangeCol、isNumeric 的
  *   `if (t) return NUMERIC_TYPES_RE.test(t)`——显式标非数值类型时压过按值采样档）。
  *   该链此前无行为级锁 → 本 spec 固化（纯测试文件，零内核改动、零行为变更）。
- * 口径记档（本 spec 同步固化）：Σ 统计以值为准——显式非数值标注+真 number 值的矛盾标注
+ * 口径备案（本 spec 同步固化）：Σ 统计以值为准——显式非数值标注+真 number 值的矛盾标注
  * 场景，右对齐/区间面被显式白名单抑制，Σ 仍按硬口径计入（真数字可数是容错非误判；
  * RT 统计面本就不消费 fieldTypes，两内核口径各自自洽）。
  * 锁定：
@@ -156,7 +156,7 @@ describe('RT 非语义值列抑制（五百四十五批）', () => {
 
   it('源码锁：isRangeCol 显式类型优先不回落 + colStats 不注入 isNumeric（硬口径以值为准）', () => {
     /* RT isRangeCol：显式 fieldTypes 在场即按白名单判，非数值类型直接 false（不回落采样）；
-       五百五十一批锁随迁：非语义族短路行插前（isNonSemanticType 更早 false），显式优先序与
+       五百五十一批锁同步更新：非语义族短路行插前（isNonSemanticType 更早 false），显式优先序与
        「不回落采样」意图逐字保留，正则只放行新短路行 */
     expect(rt).toMatch(/function isRangeCol\(c: string\): boolean \{\s*const t = props\.fieldTypes\?\.\[c\];\s*if \(t && isNonSemanticType\(t\)\) return false;\s*if \(t\) return NUMERIC_TYPES_RE\.test\(t\) \|\| RANGE_DATE_RE\.test\(t\);\s*return numericCols\.value\.has\(c\);/);
     /* RT colStats 注入段不含 isNumeric——统计面不消费 fieldTypes（硬口径，与 QRT 契约语义档分工） */

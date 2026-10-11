@@ -1,5 +1,5 @@
 /**
- * MetaStrip 统一件 spec：inline 元信息串（IndexHubView .ih-meta 范式收编）。
+ * MetaStrip 统一件 spec：inline 元信息串（IndexHubView .ih-meta 范式合并）。
  * 覆盖：渲染（值/标签/单位/分隔符）、tone 语义档、tip 兜底、to 点击跳转、默认插槽。
  */
 import { describe, it, expect, beforeEach } from 'vitest';

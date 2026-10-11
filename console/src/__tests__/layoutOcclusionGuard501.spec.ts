@@ -19,7 +19,7 @@ const analyze = rd('views/AnalyzeView.vue');
 describe('busy 不持久化（，DevTools 永久执行中死锁根治）', () => {
   it('persist 落盘前强制 busy:false', () => {
     /* v3.0.1 可重入性:tabs+active 合并单草稿对象(300ms 防抖+pagehide 冲刷),busy 剥离契约不变。
-       随迁（击穿者：565 件⑤——剥离面扩 segRuns/segView 段锚，与 result 同保密级） */
+       同步更新（击穿者：565 件⑤——剥离面扩 segRuns/segView 段锚，与 result 同保密级） */
     expect(devtools).toMatch(/JSON\.stringify\(\{\s*active: active\.value,\s*tabs: tabs\.value\.map\(t => \(\{ \.\.\.t, result: null, resultFull: null, busy: false, segRuns: \[\], segView: -1 \}\)\)/);
   });
   it('恢复侧 busy 兜底复位（存量脏数据自愈）', () => {
@@ -29,11 +29,11 @@ describe('busy 不持久化（，DevTools 永久执行中死锁根治）', () =>
 });
 
 describe('最后一个 sized pane 吸收剩余空间（右侧空白根治）', () => {
-  it('isFill 驱动 wl-fill-pane，且后随 flex pane 时不得 fill（502 修正：查询工作台 tree 被误拉 894px 挤爆 flex 工作台；582 随迁 538 isPaneHidden 语义超集）', () => {
+  it('isFill 驱动 wl-fill-pane，且后随 flex pane 时不得 fill（502 修正：查询工作台 tree 被误拉 894px 挤爆 flex 工作台；582 同步更新 538 isPaneHidden 语义超集）', () => {
     expect(wl).toMatch(/'wl-fill-pane': isFill\(spec, i\)/);
-    /* 随迁： isFill 升级——collapsedIds 单一判据换 isPaneHidden
+    /* 同步更新： isFill 升级——collapsedIds 单一判据换 isPaneHidden
        （折叠||独占隐藏语义超集），后随 flex 让位条件加 !isPaneHidden（被独占隐藏的 flex
-       不再吸收剩余空间）。语义与旧锁同向且更强，函数体字面随迁。 */
+       不再吸收剩余空间）。语义与旧锁同向且更强，函数体字面同步更新。 */
     expect(wl).toMatch(/function isFill\(spec: WorkbenchPaneSpec, index: number\) \{\s*if \(stacked\.value \|\| isFlex\(spec\) \|\| isPaneHidden\(spec\)\) return false;\s*const rest = props\.panes\.slice\(index \+ 1\);\s*\/\* [\s\S]*? \*\/\s*if \(rest\.some\(p => isFlex\(p\) && !isPaneHidden\(p\)\)\) return false;\s*return rest\.every\(p => isPaneHidden\(p\)\);\s*\}/);
   });
   it('fill 规则保留 width 作 basis（flex:1 1 auto，拖拽语义不变）', () => {
@@ -41,7 +41,7 @@ describe('最后一个 sized pane 吸收剩余空间（右侧空白根治）', (
   });
 });
 
-describe('vertical 轴 pane 标题竖排设计化（意外窄条换行根治）→ 554 随迁：竖排轨死码退役', () => {
+describe('vertical 轴 pane 标题竖排设计化（意外窄条换行根治）→ 554 同步更新：竖排轨死码退役', () => {
   it('竖排轨 CSS 退役（消费端全量 title:\'\' 后死码，清退；横排 .rp-title 基础档与头分支保留）', () => {
     expect(rp).not.toMatch(/\.axis-vertical > \.rp-title/);
     expect(rp, '竖排 writing-mode 随轨退役').not.toContain('writing-mode');

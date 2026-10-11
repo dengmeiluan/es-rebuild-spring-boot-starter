@@ -4,13 +4,13 @@
  *      .spinning 全局类 theme.css 428 批统一，零 CSS 新增）：
  *  - PitScroll：开/关 PIT 双钮（busy 单源）零反馈 → spinning+「开启中…/关闭中…」；
  *  - SearchSandbox：run 主钮文案切换在场（803 池「文案通道 NONE」系静态扫描误报，实地核真
- *    修正记档）补 Play spinning；重试钮（纯文本，G81 文案通道）补「重试中…」；
+ *    修正备案）补 Play spinning；重试钮（纯文本，G81 文案通道）补「重试中…」；
  *  - LuceneQuery：主执行钮文案切换在场补 Play spinning；字段体检钮双通道；重试钮文案通道。
  * 件2（G158/G192 seg 范式=QueryXray 753（容器 role=group+aria-label+钮 :aria-pressed）
  *      + 选中卡 aria-current=ConfigDrift 757（`|| undefined` 形态））：
  *  - LuceneQuery 展示形态 seg / Templates 模板类型 seg / SearchSandbox 结果视图 seg（随批裁）；
  *  - Ilm 策略卡 .ilm-p / Templates 模板行 .tv2-row 选中卡 :aria-current。
- * 撤旗记档（803-C1 三步定谳复演）：IndexSettings aria 面（保存钮守卫+刷新钮 spinning+
+ * 撤旗备案（803-C1 三步定谳复演）：IndexSettings aria 面（保存钮守卫+刷新钮 spinning+
  *  aria-label 全在场）与 PitScroll aria 面（无 seg/选中卡形态）实地零实锚=宽匹配误报。
  * 静态守卫范式（同 luceneQueryView521）：Monaco/QueryResultTable 挂载链 happy-dom 不可行，
  * 源码契约锁定。
@@ -75,7 +75,7 @@ describe('811 件2：seg 容器 aria+钮 aria-pressed（G192 范式）+选中卡
   });
 });
 
-describe('811 撤旗记档（803 池② IndexSettings/PitScroll aria 面=宽匹配误报定谳）', () => {
+describe('811 撤旗备案（803 池② IndexSettings/PitScroll aria 面=宽匹配误报定谳）', () => {
   it('IndexSettings 面向钮已全合规在场（spinning+aria-label 既有）——不动', () => {
     const isv = rd('IndexSettingsView.vue');
     expect(isv).toContain(`:class="{ spinning: loading }"`);

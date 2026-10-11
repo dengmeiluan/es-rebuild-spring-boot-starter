@@ -1,7 +1,7 @@
 /**
  * 547 批轨1：sqlCompletion VAL_FORMAT_HINTS 补 date_nanos 档。
  *
- * 基线事实：LuceneInput 值位已 7 档含 date_nanos（DATE_HINTS 复用），本批=SQL 侧对齐收口——
+ * 基线事实：LuceneInput 值位已 7 档含 date_nanos（DATE_HINTS 复用），=SQL 侧对齐收口——
  * date_nanos 列值位此前落 VAL_FORMAT_HINTS 缺档 → 零候选，与 Lucene 侧不一致。
  * detail 文案形同 date 档（'date-math 格式提示 · date_nanos'），values 复用
  * ['now-1d/d','now-1h/h']（date-math 对 date_nanos 同样合法，epoch_nanos 精度不影响格式提示）。
@@ -87,7 +87,7 @@ describe('547：date_nanos 档（SQL 侧与 LuceneInput 7 档对齐收口）', (
       const cases: Array<[string, string[], string]> = [
         ["SELECT * FROM orders WHERE created >= '", ['now-1d/d', 'now-1h/h'], 'date'],
         ['SELECT * FROM orders WHERE flag = ', ['true', 'false'], 'boolean'],
-        /* 551 随迁：ip 档补 CIDR 形态档（LuceneInput IP_HINTS 姊妹面同批对齐），点分示例不动 */
+        /* 551 同步更新：ip 档补 CIDR 形态档（LuceneInput IP_HINTS 姊妹面同批对齐），点分示例不动 */
         ['SELECT * FROM orders WHERE ip = ', ['192.168.0.1', '192.168.0.0/24'], 'ip'],
         ['SELECT * FROM orders WHERE amount = ', ['100'], 'double'],
       ];
@@ -103,7 +103,7 @@ describe('547：date_nanos 档（SQL 侧与 LuceneInput 7 档对齐收口）', (
     } finally { h.dispose(); }
   });
 
-  it('表锁：date_nanos 定形（detail 形同 date 档）；keyword 仍不入静态表（545 表锁零随迁）', () => {
+  it('表锁：date_nanos 定形（detail 形同 date 档）；keyword 仍不入静态表（545 表锁零同步更新）', () => {
     expect(VAL_FORMAT_HINTS.date_nanos).toEqual({ detail: 'date-math 格式提示 · date_nanos', values: ['now-1d/d', 'now-1h/h'] });
     expect(VAL_FORMAT_HINTS.keyword, 'keyword 走 terms agg 动态候选，不入静态表').toBeUndefined();
     expect(VAL_FORMAT_HINTS.date).toEqual({ detail: 'date-math 格式提示 · date', values: ['now-1d/d', 'now-1h/h'] });

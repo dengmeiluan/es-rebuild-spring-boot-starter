@@ -438,7 +438,7 @@ public class ClusterMetricsCollector {
         putLong(doc, "shards", health == null ? null : health.get("active_shards"));
         putLong(doc, "primaryShards", health == null ? null : health.get("active_primary_shards"));
         putLong(doc, "unassigned", health == null ? null : health.get("unassigned_shards"));
-        /*  失联节点数：期望节点数 − 本轮实际报到数（告警状态机消费，>0 → WARN） */
+        /*  失联节点数：期望节点数 − 实际报到数（告警状态机消费，>0 → WARN） */
         Long nodesMissing = nodesMissingOf(health, nodes);
         if (nodesMissing != null) {
             doc.put("nodesMissing", nodesMissing);
@@ -718,7 +718,7 @@ public class ClusterMetricsCollector {
         return (current - previous.longValue()) / (dtMs / 1000.0);
     }
 
-    /** 本轮计数器基线（stats 无节点可算 → null=不更新差分基线，防基线 0 制造下轮虚假尖峰）。 */
+    /** 计数器基线（stats 无节点可算 → null=不更新差分基线，防基线 0 制造下轮虚假尖峰）。 */
     static CounterBaseline nextBaseline(Map<String, Object> nodesStats, long ts) {
         List<Map<String, Object>> nodes = nodeMaps(nodesStats);
         if (nodes.isEmpty()) {
@@ -733,7 +733,7 @@ public class ClusterMetricsCollector {
     }
 
     /**
-     * 本轮每节点计数基线（R8 GC 差分起步， 扩员磁盘 IO 四计数，静态=测点）：按<b>当前</b>节点集
+     * 每节点计数基线（R8 GC 差分起步， 扩员磁盘 IO 四计数，静态=测点）：按<b>当前</b>节点集
      * 重建——节点集变化时旧节点键自然清理；stats 无节点 → null=不更新；无 name 的节点无法作键，跳过；
      * 计数字段缺失记 null（不参与差分，防伪造 0）。
      */
@@ -919,7 +919,7 @@ public class ClusterMetricsCollector {
         return out.size() > 8 ? new ArrayList<>(out.subList(0, 8)) : out;
     }
 
-    /** 本轮 per-index 计数基线（静态=测点）：按当前索引集重建——旧索引键自然清理；
+    /**  per-index 计数基线（静态=测点）：按当前索引集重建——旧索引键自然清理；
         stats 无索引 → null=不更新（防基线 0 制造下轮虚假尖峰）。 */
     static IndexBaseline nextIndexCounters(Map<String, Object> indexStats, long ts) {
         if (indexStats == null || !(indexStats.get("indices") instanceof Map)) {
@@ -938,7 +938,7 @@ public class ClusterMetricsCollector {
         return new IndexBaseline(ts, counters);
     }
 
-    /** 单连接上一轮 per-index 计数基线（）：随索引集整体重建，旧键自然清理。 */
+    /** 单连接上一轮 per-index 计数基线（随索引集整体重建，旧键自然清理。 */
     public static final class IndexBaseline {
         /** 基线时刻（毫秒 epoch）。 */
         public final long timestampMs;
@@ -953,7 +953,7 @@ public class ClusterMetricsCollector {
     }
 
     /**
-     *  失联节点数（静态=测点）：health.number_of_nodes（期望）− 本轮实际报到节点数。
+     *  失联节点数（静态=测点）：health.number_of_nodes（期望）− 实际报到节点数。
      * 仅 stats 拉到节点（nodes 非空）且差 ≥0 才落——stats 空档/口径异常（实到&gt;期望）宁缺毋假；
      * 差 0 是有效信息（无失联），照落（状态机恒不触发）。
      */
@@ -969,9 +969,9 @@ public class ClusterMetricsCollector {
         return missing >= 0 ? Long.valueOf(missing) : null;
     }
 
-    /** R7 评估产物：状态迁移 docs + 评估后的告警键全集（=本轮超限键，采集器据此重写状态）。 */
+    /** R7 评估产物：状态迁移 docs + 评估后的告警键全集（=超限键，采集器据此重写状态）。 */
     static final class AlertEvaluation {
-        /** 本轮迁移产生的 doc（false→true 告警 / true→false 恢复；无迁移=空列表）。 */
+        /** 迁移产生的 doc（false→true 告警 / true→false 恢复；无迁移=空列表）。 */
         final List<Map<String, Object>> alertDocs;
         /** 迁移后的告警键全集（{@code connId|metric}；状态纯由当前轮评估重建）。 */
         final Set<String> alertKeys;
@@ -1029,14 +1029,14 @@ public class ClusterMetricsCollector {
                 gcYoung != null && gcYoung >= GC_YOUNG_ALERT_PER_MIN && gcYoungConsecutiveRounds >= GC_YOUNG_ALERT_ROUNDS,
                 gcYoung == null ? 0.0 : gcYoung.doubleValue(), GC_YOUNG_ALERT_PER_MIN, "WARN",
                 gcYoung == null ? null : "Young GC " + gcYoung + " 次/分，持续 " + gcYoungConsecutiveRounds + " 轮超限");
-        /*  失联节点规则：health 期望节点数 > 本轮实到节点数 → WARN（字段缺省=不可判定，不触发） */
+        /*  失联节点规则：health 期望节点数 > 实到节点数 → WARN（字段缺省=不可判定，不触发） */
         Double missing = numOrNull(clusterDoc.get("nodesMissing"));
         transition(docs, keys, clusterDoc, prevAlertKeys, connId, "nodesMissing",
                 missing != null && missing.doubleValue() > 0,
                 missing == null ? 0.0 : missing.doubleValue(), 0, "WARN",
                 missing == null ? null : "失联 " + missing.intValue() + " 个节点（期望 "
                         + clusterDoc.get("nodes") + "，实到 " + missing.intValue() + "+）");
-        /*  G6 SLM 快照失败规则：本轮新增失败（delta>0）→ WARN；delta=0（无新增）写恢复，
+        /*  G6 SLM 快照失败规则：新增失败（delta>0）→ WARN；delta=0（无新增）写恢复，
            字段缺省（无 SLM/拉取失败）不触发不误报恢复 */
         Double slmDelta = numOrNull(clusterDoc.get("snapshotFailedDelta"));
         transition(docs, keys, clusterDoc, prevAlertKeys, connId, "slm",

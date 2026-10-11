@@ -31,7 +31,7 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * 控制集群「按日环形索引」公共机制（20260922 统一只用 QA ES 单载体立法）：
+ * 控制集群「按日环形索引」公共机制（20260922 统一只用 QA ES 单载体约定）：
  * 审计（{@code EsConsoleOpsAuditStore}）与监控快照（{@code MonitorSnapshotRecorder}）
  * 共用的日期命名、契约建索引体与容错 ensure——一套机制两个消费方，杜绝复制漂移。
  *

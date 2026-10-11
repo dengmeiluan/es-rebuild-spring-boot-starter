@@ -17,7 +17,7 @@ describe('NDJSON 配对即时校验（427 批）', () => {
   });
 
   it('校验条 UI：Monaco 下方、warn 态琥珀样式', () => {
-    /* 五百六十二批随迁：warn 态换装 theme.css .lint-bar-warn 单源（561 立法，be-lint-warn
+    /* 五百六十二批同步更新：warn 态改用 theme.css .lint-bar-warn 单源（561 约定，be-lint-warn
        锚并存，scoped 琥珀私档退役）；info 态保 .be-hint 基础档。⚠warn 态不并挂 be-hint：
        其 code-bg 底/muted 色以 scoped 权重压过 lint-bar-warn 单源档 */
     expect(v).toMatch(/<div v-if="ndjsonLint" :class="ndjsonLint\.level === 'warn' \? 'be-lint-warn lint-bar lint-bar-warn' : 'be-hint'">/);

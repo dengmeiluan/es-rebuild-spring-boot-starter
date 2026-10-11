@@ -75,7 +75,7 @@ describe('P0 超宽屏：meta.wide 豁免机制（router.ts + App.vue）', () =>
     }
   });
 
-  it('顺手收编：cluster-banner 字号与 naive 基准字号 token 化', () => {
+  it('顺手合并：cluster-banner 字号与 naive 基准字号 token 化', () => {
     expect(appSrc).toMatch(/\.cluster-banner \{[^}]*font-size: var\(--fs-sm\);/);
     /* naive 覆盖需 px 字面量（不认 CSS var）→ 抽常量与 --fs-md 同源，light/dark 两套共用 */
     expect(appSrc).toMatch(/const NAIVE_FONT_SIZE = '13px';/);
@@ -94,9 +94,9 @@ describe('P0 高度链：WorkbenchLayout fillViewport + DslQueryView 自建链',
     expect(wlSrc).toMatch(/\.wl\.wl-viewport-bounded \{ min-height: 0; \}/);
   });
 
-  it('DslQueryView：传 fill-viewport=false + 定高 flex 链（549 批高度链合一随迁：dq-main 高度恒由内联 style 承接 DQ_MAIN_H 档位值/拖柄自定义 px，CSS 定高退役；结果区保底 320）', () => {
+  it('DslQueryView：传 fill-viewport=false + 定高 flex 链（549 批高度链合一同步更新：dq-main 高度恒由内联 style 承接 DQ_MAIN_H 档位值/拖柄自定义 px，CSS 定高退役；结果区保底 320）', () => {
     expect(dqSrc).toMatch(/:fill-viewport="false"/);
-    /* 五百三十四批随迁二：dq-fill 只减全局 vh-offset（本页 chrome 进 flex 收缩链，不再手算预算） */
+    /* 五百三十四批同步更新二：dq-fill 只减全局 vh-offset（本页 chrome 进 flex 收缩链，不再手算预算） */
     expect(dqSrc).toMatch(/\.dq\.dq-fill \{ height: calc\(100vh - var\(--vh-offset, 210px\)\); \}/);
     /* 五百四十九批：34vh CSS 定高退役（与编辑器档位双轨分裂=空白带真凶），新契约=DQ_MAIN_H 四档；
        flex-shrink:0=声明高不被结果区内容挤压（真机 P3/P4 实证 shrink:1 恒被压回 min-height） */
@@ -105,8 +105,8 @@ describe('P0 高度链：WorkbenchLayout fillViewport + DslQueryView 自建链',
     expect(dqSrc).toMatch(/dqMainStyle = computed\(\(\) => \(\{ height: dqMainH\.value > 0 \? dqMainH\.value \+ 'px' : DQ_MAIN_H\[editorH\.value\] \}\)\)/);
     expect(dqSrc).toMatch(/\.dq-result \{ margin-top: (?:10px|var\(--sp-2h\)); flex: 1 1 auto; min-height: 320px; display: flex; flex-direction: column; \}/);
     /* res-body 转确定高容器，各视图分支自滚；cap 兜底保留。
-       五百五十七批随迁（击穿者：557 轨2 刀——.dq-res-body padding 退役）：正则去 padding 段，
-       --dq-view-cap: 56vh 与 flex 链逐字保留（workbenchParity402 cap 锚零触免随迁） */
+       五百五十七批同步更新（击穿者：557 轨2 刀——.dq-res-body padding 退役）：正则去 padding 段，
+       --dq-view-cap: 56vh 与 flex 链逐字保留（workbenchParity402 cap 锚零触免同步更新） */
     expect(dqSrc).toMatch(/\.dq-res-body \{ --dq-view-cap: 56vh; flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; \}/);
     expect(dqSrc).toMatch(/\.dq-json-wrap \{ max-height: var\(--dq-view-cap\); flex: 1 1 auto; min-height: 0; \}/);
     expect(dqSrc).toMatch(/\.dq-cards \{ display: grid; grid-template-columns: repeat\(auto-fill, minmax\(240px, 1fr\)\); gap: (?:10px|var\(--sp-2h\)); max-height: var\(--dq-view-cap\); flex: 1 1 auto; min-height: 0; \}/);
@@ -143,12 +143,12 @@ describe('P0 高度链：WorkbenchLayout fillViewport + DslQueryView 自建链',
     expect(dqSrc).toMatch(/window\.removeEventListener\('keydown', onGlobalRunKey\)/);
   });
 
-  it('P1 Lucene：?page= 契约对齐 DSL + 聚焦态全屏高口径（561 随迁：内建聚焦承接）', () => {
+  it('P1 Lucene：?page= 契约对齐 DSL + 聚焦态全屏高口径（561 同步更新：内建聚焦承接）', () => {
     expect(lcSrc).toMatch(/const pageLink = useUrlState\('page', '1'\);/);
     expect(lcSrc).toMatch(/const from = ref\(Math\.max\(0, \(\(parseInt\(pageLink\.value, 10\) \|\| 1\) - 1\) \* size\.value\)\);/);
     expect(lcSrc).toMatch(/watch\(page, v => \{ pageLink\.value = String\(v\); \}\);/);
     /* 旧裸 130px 退役（等价换算 210-80=130，视觉零变化）
-       五百六十一批随迁：聚焦态全屏高口径随表格头收口移交 QRT 内建聚焦面（FS headless
+       五百六十一批同步更新：聚焦态全屏高口径随表格头收口移交 QRT 内建聚焦面（FS headless
        .fs-active 链 max-height:none 承接，宿主 max-height 恒 '100%'）——宿主 80px 表达式退役为负锁 */
     expect(lcSrc).not.toMatch(/calc\(100vh - 130px\)/);
     expect(lcSrc).not.toMatch(/calc\(100vh - var\(--vh-offset, 210px\) \+ 80px\)/);
@@ -374,7 +374,7 @@ describe('DslQueryView 高度链 + 命中数常驻 + Ctrl+Enter（挂载型）',
 
   it('P0：.dq-res-bar 与 .dq-res-body 同时可现（结果区不再被顶出视口）', async () => {
     await mountDsl();
-    /* 541 批随迁：res-bar 退役，表格自带工具行 rt-bar 承担（视图 seg/分页寄居 bar-prepend） */
+    /* 541 批同步更新：res-bar 退役，表格自带工具行 rt-bar 承担（视图 seg/分页寄居 bar-prepend） */
     const bar = host!.querySelector('.rt-bar');
     const body = host!.querySelector('.dq-res-body');
     expect(bar, 'rt-bar（视图段钮/分页/命中徽标）必须渲染').toBeTruthy();

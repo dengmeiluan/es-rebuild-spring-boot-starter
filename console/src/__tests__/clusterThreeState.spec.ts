@@ -217,7 +217,7 @@ describe('G1-C9 PluginsView：raw 卡过滤致空行', () => {
     mismatches: [], nodeCount: 1, pluginCount: 1,
   };
 
-  it('过滤无匹配 → 「筛选条件无匹配行」行 + 清除筛选逃生口在（五百二十五批 W5 随迁）', async () => {
+  it('过滤无匹配 → 「筛选条件无匹配行」行 + 清除筛选逃生口在（五百二十五批 W5 同步更新）', async () => {
     /* raw 卡自造 kw 快滤框随换 QRT 壳退役（.pl-flt），过滤职责归 QRT 列漏斗——
        G1-C9「过滤致空须有逃生口」契约由内核 .qrt-nomatch 行 + 「清除全部筛选」钮承接，
        此处用双列漏斗 AND 造空集做行为级等价验证。 */
@@ -248,7 +248,7 @@ describe('G1-C9 PluginsView：raw 卡过滤致空行', () => {
     expect(host.textContent).toContain('筛选条件无匹配行');
     expect(host.textContent).toContain('清除全部筛选');
     /* 逃生口可用：一键清除全部筛选 → 行集恢复 2 行
-       （五百六十一批随迁：矩阵表亦换 QRT rows 型——raw 表按列头 data-col=node 判定取表） */
+       （五百六十一批同步更新：矩阵表亦换 QRT rows 型——raw 表按列头 data-col=node 判定取表） */
     [...host.querySelectorAll<HTMLButtonElement>('button')]
       .find(b => b.textContent?.includes('清除全部筛选'))!.click();
     await settle(6);

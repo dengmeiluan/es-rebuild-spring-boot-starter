@@ -1,15 +1,15 @@
 <template>
   <div class="rx">
-    <!--  v4 参数条：横向 chips（点击 chip 切换展开），展开内容全宽显示在条下方——
-         参数区从左树底部上移为横贯参数条，与编辑器/结果区纵向分层不再割裂 -->
+    <!-- v4 参数条：横向 chips（点击 chip 切换展开），展开内容全宽显示在条下方——
+ 参数区从左树底部上移为横贯参数条，与编辑器/结果区纵向分层不再割裂 -->
     <!-- chips 键盘导航——←→/Home/End 在 chips 间移动焦点（W3C APG roving），
-         Enter/Space 原生触发 toggle（chip=button）；Tab 逐个可达不变，导航是纯增强 -->
+ Enter/Space 原生触发 toggle（chip=button）；Tab 逐个可达不变，导航是纯增强 -->
     <div class="rx-chips" @keydown="onChipsKeydown">
       <!-- ·实报「无效控制」：分页胶囊（size/from 输入）退役——执行链里
-           from 恒被 (page-1)*pageSize 覆盖、size 恒被分页档接管（562 联动后彻底成为
-           分页器的重复入口），两个输入框作为「ES 检索参数」意义为零。分页唯一入口=
-           表格工具行分页器；DSL 手写档外 size（如 500）仍真实生效（执行链不注入）。
-           旧草稿树里的 size/from 键原样保留（序列化直通，用户可见可手删）。 -->
+ from 恒被 (page-1)*pageSize 覆盖、size 恒被分页档接管（562 联动后彻底成为
+ 分页器的重复入口），两个输入框作为「ES 检索参数」意义为零。分页唯一入口=
+ 表格工具行分页器；DSL 手写档外 size（如 500）仍真实生效（执行链不注入）。
+ 旧草稿树里的 size/from 键原样保留（序列化直通，用户可见可手删）。 -->
       <button type="button" class="rx-chip" :class="{ on: open.has('sort') }" @click="toggle('sort')">
         <span class="rx-cn">排序</span><code class="rx-key">sort</code>
         <span class="rx-state" :class="{ on: !!tree.sort?.length }">{{ tree.sort?.length ? tree.sort.length + ' 项' : '未设置' }}</span>
@@ -39,7 +39,7 @@
       <div v-if="tree.sort === null" class="rx-none">未设置 <button class="btn sm ghost rx-sort-add" @click="addSort">+ 加排序</button></div>
       <div v-for="(s, i) in tree.sort || []" :key="s.id" class="rx-sort-row">
         <!-- 排序行字段选择器只出可排序类型（ES doc_values 口径，含 boolean）；
-             【W3b】候选内 date/数值族置顶（typePriority 只重排分组，候选集不变） -->
+ 【W3b】候选内 date/数值族置顶（typePriority 只重排分组，候选集不变） -->
         <FieldSelect :model-value="s.field" :fields="fields" :types="types" :type-filter="SORTABLE_TYPES" :type-priority="SORT_PRIO_TYPES" @update:model-value="v => patchSort(s.id, { field: v })" />
         <select class="inp rx-sort-order" :value="String(s.params.order ?? 'asc')"
                 @change="patchSort(s.id, { params: { ...s.params, order: ($event.target as HTMLSelectElement).value } })">
@@ -103,7 +103,7 @@ ES 默认返回全部字段
       <template v-else>
         <div v-for="(f, i) in tree.highlight.fields" :key="i" class="rx-hl-row">
           <!-- 高亮行只出可分词高亮的文本类字段（text/keyword）；
-               【W3b】候选内 text 置顶（全文高亮主场景是分词字段） -->
+ 【W3b】候选内 text 置顶（全文高亮主场景是分词字段） -->
           <FieldSelect :model-value="f.name" :fields="fields" :types="types" :type-filter="HL_TYPES" :type-priority="HL_PRIO_TYPES" @update:model-value="v => hlPatchField(i, { name: v })" />
           <button aria-label="字段参数（fragment_size…）" class="btn sm ghost" title="字段参数（fragment_size…）" @click="hlParamsIdx = hlParamsIdx === i ? null : i"><Settings2 :size="12" /></button>
           <button aria-label="删除" class="btn sm ghost danger" title="删除" @click="hlDelField(i)"><X :size="12" /></button>
@@ -152,7 +152,7 @@ ES 默认返回全部字段
 
 <script setup lang="ts">
 /* W2：周边子句表单区。折叠分区有内容默认展开；size/from 非数字原样保留标黄（零降级）；
-   aggs 区由  挂载（本组件模板预留位置见  补丁）。 */
+ aggs 区由 挂载（本组件模板预留位置见 补丁）。 */
 import { ref, watch } from 'vue';
 import { Plus, X, ChevronUp, ChevronDown, Settings2 } from 'lucide-vue-next';
 import FieldSelect from './FieldSelect.vue';
@@ -166,19 +166,19 @@ const props = defineProps<{ tree: QueryTree; fields: string[]; types: Record<str
 const emit = defineEmits<{ (e: 'update:tree', t: QueryTree): void }>();
 
 /* 排序/高亮行 FieldSelect 的类型过滤口径——
-   可排序=有 doc_values 的类型（keyword/date/数值族/boolean）；高亮=text/keyword 文本类。
-   数组经 props 透传 searchFields.typeFilter，mapping 缺失类型时仍可清空输入框自由手输 */
+ 可排序=有 doc_values 的类型（keyword/date/数值族/boolean）；高亮=text/keyword 文本类。
+ 数组经 props 透传 searchFields.typeFilter，mapping 缺失类型时仍可清空输入框自由手输 */
 const SORTABLE_TYPES = ['keyword', 'date', 'long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float', 'boolean'];
 const HL_TYPES = ['text', 'keyword'];
 /* 【W3b】排序/高亮行的候选类型置顶（typePriority 只调候选分组排序，不改候选集）：
-   排序行 date 打头、数值族紧随（时间/数值范围排序是主场景，keyword 字典序排序殿后）；
-   高亮行 text 置顶（全文命中高亮主场景），keyword 次之 */
+ 排序行 date 打头、数值族紧随（时间/数值范围排序是主场景，keyword 字典序排序殿后）；
+ 高亮行 text 置顶（全文命中高亮主场景），keyword 次之 */
 const NUMERIC_PRIO = ['long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float'];
 const SORT_PRIO_TYPES = ['date', ...NUMERIC_PRIO];
 const HL_PRIO_TYPES = ['text'];
 
 /* FieldSelect 换代适配：写入 fieldSearch 当前索引上下文——排序/高亮行的字段选择器
-   按 per-index 记忆「最近使用」（与 QueryTreePane 同一上下文，谁挂载谁写，值同源） */
+ 按 per-index 记忆「最近使用」（与 QueryTreePane 同一上下文，谁挂载谁写，值同源） */
 watch(() => props.index, i => setFieldSearchIndex(i || ''), { immediate: true });
 
 const patch = (p: Partial<QueryTree>) => emit('update:tree', { ...props.tree, ...p });
@@ -199,8 +199,8 @@ function toggle(k: string) {
   open.value = n;
 }
 /* chips 键盘导航——←→ 环绕移动焦点、Home/End 跳首尾（W3C APG roving 焦点）。
-   chip 是原生 button，Enter/Space=toggle（展开即「编辑入口」）已免费获得；
-   其余键直接放行，Tab 逐个可达的既有路径不受影响 */
+ chip 是原生 button，Enter/Space=toggle（展开即「编辑入口」）已免费获得；
+ 其余键直接放行，Tab 逐个可达的既有路径不受影响 */
 function onChipsKeydown(e: KeyboardEvent) {
   if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Home' && e.key !== 'End') return;
   const chips = [...((e.currentTarget as HTMLElement).querySelectorAll('.rx-chip'))] as HTMLButtonElement[];
@@ -223,7 +223,7 @@ watch(() => Object.keys(props.tree.extras).length, (n, o) => { if (n && !o) auto
 watch(() => props.tree.aggs?.length, (n, o) => { if (n && !o) autoOpen('aggs'); });
 
 /* size/from 控制链随分页节退役（numText/numPatch 曾为其专用）——
-   tree 上残留的 size/from 键序列化直通（旧草稿兼容，执行链 562 联动语义接管） */
+ tree 上残留的 size/from 键序列化直通（旧草稿兼容，执行链 562 联动语义接管） */
 
 /* sort */
 const sortParamsId = ref<string | null>(null);
@@ -257,7 +257,7 @@ function setSrcPattern(key: 'includes' | 'excludes', raw: string) {
   if (!s) return;
   const arr = csv(raw);
   /* 编辑即声明存在：用户输入过该侧就置 presence=true，防 parse 记忆的显式 false 吞掉输入；
-     清空为空数组时保留原 presence（显式空保键 / 显式缺席语义不变） */
+ 清空为空数组时保留原 presence（显式空保键 / 显式缺席语义不变） */
   const hasKey = key === 'includes' ? 'hasIncludes' : 'hasExcludes';
   patch({ source: { ...s, [key]: arr, [hasKey]: arr.length ? true : s[hasKey] } });
 }
@@ -310,7 +310,7 @@ function onExtras(v: Record<string, unknown> | unknown[]) {
 </script>
 
 <style scoped>
-/*  v4 参数条样式：chips 横向一行 + 展开内容全宽 */
+/* v4 参数条样式：chips 横向一行 + 展开内容全宽 */
 .rx-chips { display: flex; align-items: center; gap: var(--sp-1h); flex-wrap: wrap; margin-bottom: var(--sp-2); justify-content: flex-start; }
 .rx-chip { display: inline-flex; align-items: center; gap: var(--sp-1h); border: 1px solid var(--line-strong); border-radius: var(--r-m);
   background: transparent; color: var(--tx2); font-size: var(--fs-xs); padding: var(--sp-1) 9px; cursor: pointer;
@@ -322,8 +322,8 @@ function onExtras(v: Record<string, unknown> | unknown[]) {
   background: var(--bg2); margin-bottom: var(--sp-2); }
 
 .rx { margin-top: var(--sp-3); border-top: 1px solid var(--line); padding-top: var(--sp-3); }
-/*  设置行设计：折叠头整行可点卡片化（32px 高/hover 反馈/状态 pill 右对齐），
-   中文名为主、英文 key 降级为 mono badge，状态一眼可读——替代原先文字与按钮堆叠 */
+/* 设置行设计：折叠头整行可点卡片化（32px 高/hover 反馈/状态 pill 右对齐），
+ 中文名为主、英文 key 降级为 mono badge，状态一眼可读——替代原先文字与按钮堆叠 */
 .rx-sec { margin-bottom: var(--sp-2); }
 .rx-sec-t { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-sm); font-weight: 600; color: var(--tx1); padding: 0 var(--sp-2); height: 32px; border-radius: var(--r-s); }
 .rx-fold { cursor: pointer; user-select: none; transition: background var(--tr); }
@@ -331,7 +331,7 @@ function onExtras(v: Record<string, unknown> | unknown[]) {
 .rx-fold:hover .rx-fold-add { opacity: 1; }
 .rx-name { color: var(--tx0); }
 .rx-key { font-family: var(--mono, ui-monospace, monospace); font-size: var(--fs-2xs); color: var(--tx2); background: var(--bg3); border-radius: var(--r-xs); padding: 1px 5px; font-weight: 400; }
-/*  v3.1: 状态 pill 带 5px 圆点，on 品牌绿点亮 */
+/* v3.1: 状态 pill 带 5px 圆点，on 品牌绿点亮 */
 .rx-state { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; font-size: var(--fs-2xs); font-weight: 400; color: var(--tx2); background: var(--bg3); border-radius: 999px; padding: var(--sp-0) 9px; }
 .rx-state::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--tx2); }
 .rx-state.on { color: var(--ac-deep, var(--ac)); background: var(--ac-soft); font-weight: 600; }
@@ -346,7 +346,7 @@ function onExtras(v: Record<string, unknown> | unknown[]) {
 .rx-none { font-size: var(--fs-xs); color: var(--tx2); padding: var(--sp-1) 0; display: flex; align-items: center; gap: var(--sp-2); }
 .rx-sort-row, .rx-hl-row { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; margin: var(--sp-1) 0; }
 /* 遮挡修复：FieldSelect 在 flex 行内默认只吃内容宽（~170px），排序/高亮行 5 个控件挤一行时
-   字段名显示不下——伸展占满剩余空间；按钮与下拉钉死不收缩，窄行整体折行而非互挤 */
+ 字段名显示不下——伸展占满剩余空间；按钮与下拉钉死不收缩，窄行整体折行而非互挤 */
 .rx-sort-row .fs, .rx-hl-row .fs { flex: 1 1 140px; min-width: 0; }
 .rx-sort-row .btn, .rx-hl-row .btn, .rx-sort-row .rx-sort-order { flex: none; }
 .rx-sort-order { height: 28px; font-size: var(--fs-sm); width: 76px; }

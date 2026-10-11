@@ -14,7 +14,7 @@ describe('BulkEditor 可调工作台（409 批）', () => {
     expect(v).toMatch(/<WorkbenchLayout :scope="beScope" :panes="BE_PANES" axis="vertical" mode="bulkedit">/);
     expect(v).toContain('<template #pane-bulkeditor-params>');
     expect(v).toContain('<template #pane-bulkeditor-editor>');
-    /* 五百三十四批轨4锚随迁：竖排标题轨退役（§6v 刀①）——title 文本锁逐字映射为 title: ''，
+    /* 五百三十四批轨4锚同步更新：竖排标题轨退役（§6v 刀①）——title 文本锁逐字映射为 title: ''，
        「参数」语义落 be-card-hd 横排卡头（413 批因 rp-title 在场而删，轨退役后回归），尺寸字面零变动 */
     expect(v).toMatch(/id: 'bulkeditor\.params', role: 'request', title: '', minSize: 220, defaultSize: 260, collapsible: true/);
     expect(v).toMatch(/id: 'bulkeditor\.editor', role: 'response', title: '', minSize: 360, defaultSize: 'flex'/);

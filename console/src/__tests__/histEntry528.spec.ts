@@ -304,7 +304,7 @@ describe('SearchTemplatesView：模板历史回放裁决（528 批）', () => {
 
 /* ═══════════ ③ BulkEditorView 回填钮 ═══════════ */
 describe('BulkEditorView：「用当前索引」回填钮（528 批补挂第六页）', () => {
-  it('532 换装随迁：picked 空双不渲染；picked 就位 chip 回显+钮在场；点钮显式带入目标索引（手填链路随 IndexPicker 退役）', async () => {
+  it('532 改用同步更新：picked 空双不渲染；picked 就位 chip 回显+钮在场；点钮显式带入目标索引（手填链路随 IndexPicker 退役）', async () => {
     const { host, store, unmount } = await mountView((await import('../views/BulkEditorView.vue')).default);
     expect(host.querySelector('[data-test="use-current-idx"]'), 'pickedIdx 为空时钮不渲染').toBeNull();
     expect(host.querySelector('.be-idx-row .cic'), 'pickedIdx 为空时只读 chip 同不渲染（根 v-if 同款）').toBeNull();
@@ -336,13 +336,13 @@ describe('BulkEditorView：「用当前索引」回填钮（528 批补挂第六�
 
 /* ═══════════ ④ PitScrollView 索引锁（Lead 裁决 b） ═══════════ */
 describe('PitScrollView：PIT 生命周期内 index 锁定（528 批）', () => {
-  it('532 换装随迁：只读 chip 回显顶栏选中；inert 锁定包裹层退役（锁定语义搬 useIdxState follow 停跟）；开/关 PIT 流程正常', async () => {
+  it('532 改用同步更新：只读 chip 回显顶栏选中；inert 锁定包裹层退役（锁定语义搬 useIdxState follow 停跟）；开/关 PIT 流程正常', async () => {
     localStorage.setItem('es_picked', 'logs-1');
     location.hash = '#/?idx=logs-1';
     const { host, unmount } = await mountView((await import('../views/PitScrollView.vue')).default);
     /* 528 批的 pit-idx-cell/pit-idx-lock inert 包裹层已随 532 批页内 IndexPicker 整段退役——
        「PIT 会话进行中切顶栏不跟随」锁定语义搬进 useIdxState follow () => !pitId（页面内部
-       ref，DOM 无回显，行为契约由 532 批自有 spec 接管）；本用例锁换装后形态+开/关流程 */
+       ref，DOM 无回显，行为契约由 532 批自有 spec 接管）；本用例锁改用后形态+开/关流程 */
     expect(host.querySelector('[data-test="pit-idx-lock"]'), 'inert 锁定包裹层随 532 退役').toBeNull();
     expect(host.querySelector('.pt-lb .cic-nm')?.textContent, 'chip 回显当前索引').toBe('logs-1');
     textBtn(host, '开 PIT')!.click();
@@ -362,14 +362,14 @@ describe('PitScrollView：PIT 生命周期内 index 锁定（528 批）', () => 
 /* ═══════════ ⑥ Reindex/UBQ painless 42vh 弹性档 + usePref（源码锁） ═══════════ */
 describe('528 批卫生：painless 脚本面 42vh 弹性档 + usePref 记忆', () => {
   const read = (p: string) => readFileSync(join(__dirname, p), 'utf-8');
-  it('两视图 height 换 :height="scriptH"（558 批收编 useTierCycle：ra/ubq.scriptH，默认 max(110px, 42vh)），28vh 不残留', () => {
+  it('两视图 height 换 :height="scriptH"（558 批合并 useTierCycle：ra/ubq.scriptH，默认 max(110px, 42vh)），28vh 不残留', () => {
     const ra = read('../views/ReindexAdvancedView.vue');
     const ubq = read('../views/UpdateByQueryView.vue');
     for (const [s, key] of [[ra, 'ra.scriptH'], [ubq, 'ubq.scriptH']] as const) {
       expect(s, key + ' 三档默认 42vh').toMatch(/SCRIPT_H_TIERS = \['max\(110px, 42vh\)', 'max\(150px, 56vh\)', 'max\(220px, 72vh\)'\]/);
-      expect(s, key + ' 走 useTierCycle（558 击穿随迁改锚：键名/档值/默认档不变，零迁移）').toMatch(new RegExp("useTierCycle\\('" + key.replace('.', '\\.') + "', SCRIPT_H_TIERS\\)"));
+      expect(s, key + ' 走 useTierCycle（558 击穿同步更新改锚：键名/档值/默认档不变，零迁移）').toMatch(new RegExp("useTierCycle\\('" + key.replace('.', '\\.') + "', SCRIPT_H_TIERS\\)"));
       expect(s, 'Monaco 高度换动态绑定').toMatch(/:height="scriptH"/);
-      expect(s, '28vh 旧档退役（字面高度串不残留；记档注释字样豁免）').not.toMatch(/max\(110px,\s*28vh\)/);
+      expect(s, '28vh 旧档退役（字面高度串不残留；备案注释字样豁免）').not.toMatch(/max\(110px,\s*28vh\)/);
       expect(s, '档位循环钮在').toMatch(/@click="cycleScriptH"/);
     }
     expect(getActivePinia(), '环境自检：前序挂载已建立 pinia').toBeTruthy();

@@ -13,7 +13,7 @@
  *     的 openRawIo 改六视图同款「判空 notify → return」形态（rawIoPave546 六页同文案）；
  *     特征子串逐字保留（rawIo545 spec 的 last('/adhoc-rebuild/') 与 all().find 排 translate
  *     字面锁），行为侧无记录时 notify 且不开弹窗（RawIoModal 空态 EmptyState 归弹窗自身兜底，
- *     本批不再以空 rec 开弹窗）。
+ *     不再以空 rec 开弹窗）。
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -159,20 +159,20 @@ describe('五百四十八批②：监控步速率观测行（data-test=adhoc-rat
 
 /* ═══ ═══════════ ③ RawIo 判空双口径统一（546 notify 口径） ═══════════ ═══ */
 describe('五百四十八批③：openRawIo 判空统一（notify 不开空弹窗）', () => {
-  it('AdhocRebuildView：last(\'/adhoc-rebuild/\') 特征逐字保留 + 546 判空形态（notify→return→开弹窗；552 随迁：last 扩 /config-lab/ 回退）', () => {
+  it('AdhocRebuildView：last(\'/adhoc-rebuild/\') 特征逐字保留 + 546 判空形态（notify→return→开弹窗；552 同步更新：last 扩 /config-lab/ 回退）', () => {
     const v = read('../views/AdhocRebuildView.vue');
-    /* 五百五十二批随迁：步②审编校验走 /config-lab/validate（不在 /adhoc-rebuild/ 特征下），
+    /* 五百五十二批同步更新：步②审编校验走 /config-lab/validate（不在 /adhoc-rebuild/ 特征下），
        last 取数扩回退链；特征子串与判空 notify 形态逐字保留 */
     expect(v).toContain("const rec = ioRecorder.last('/adhoc-rebuild/') ?? ioRecorder.last('/config-lab/');");
     expect(v).toContain("if (!rec) { store.notify('info', '暂无原始 IO 记录，先在本页执行一次操作（记录环近 30 条）再查看'); return; }");
     expect(v).toMatch(/return; \}\s*rawIoRec\.value = rec;\s*rawIoShow\.value = true;/);
   });
 
-  it('SqlConsoleView：last(\'/cluster/sql/\', \'sql\') 双参特征（550 随迁）+ 546 判空形态', () => {
+  it('SqlConsoleView：last(\'/cluster/sql/\', \'sql\') 双参特征（550 同步更新）+ 546 判空形态', () => {
     const s = read('../views/SqlConsoleView.vue');
-    /* 550 随迁：原锁钉 546 收紧形态「all().find 排 translate」；550 批退役该补丁，
+    /* 550 同步更新：原锁钉 546 收紧形态「all().find 排 translate」；550 批退役该补丁，
        改 last(pathSub, kind) 双参收口（kind='sql' 只打执行链，translate 未打标天然排除，
-       语义等价随迁）。判空 notify 形态与赋值链 548 语义零触碰 */
+       语义等价同步更新）。判空 notify 形态与赋值链 548 语义零触碰 */
     expect(s).toContain("const rec = ioRecorder.last('/cluster/sql/', 'sql');");
     expect(s).toContain("if (!rec) { store.notify('info', '暂无原始 IO 记录，先在本页执行一次操作（记录环近 30 条）再查看'); return; }");
     expect(s).toMatch(/return; \}\s*rawIoRec\.value = rec;\s*rawIoShow\.value = true;/);

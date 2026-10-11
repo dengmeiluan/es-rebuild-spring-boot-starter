@@ -6,10 +6,10 @@
  *   同一 known/editDistance 最近候选逻辑、同格式提示。
  * B AnalysisSettingsView 原始 settings JSON 区 dsl-assist 补 analyzers() 候选（AnalyzeView
  *   avBodyAssist 同通道契约）——页内 raw 即 analysis 对象，零请求派生；fields 维持空数组
- *   （W3b 五百一十九批契约不回归，随迁锁在 analysisSettingsAssistW3b.spec）。
+ *   （W3b 五百一十九批契约不回归，同步更新锁在 analysisSettingsAssistW3b.spec）。
  * C fieldSearch 组头中文兜底：GH_LABEL→esEnumZh.FIELD_TYPE_ZH→原名 三级链——text/keyword/
  *   ip/boolean/geo_point/object 组头出人话（词面升级，fieldSelectPopup/fieldPicker/
- *   boostFieldPrioW3b/suggestWave556 锁面同步随迁）。
+ *   boostFieldPrioW3b/suggestWave556 锁面同步同步更新）。
  * D utils/highlightSanitize 单源：SearchSandboxView hlSafe 平移导出（白名单放行
  *   <em class="hl">，其余转义 fail-closed）。
  * E SearchSandboxView hits 结果面查找三件套（374 批 lc-json-find 同款）接线源码锁。
@@ -217,7 +217,7 @@ describe('E SearchSandboxView hits 查找与净化单源接线（源码锁，558
     expect(ss, '本地定义退役（单源不许双份）').not.toMatch(/function hlSafe\(/);
     expect(ss).toContain('v-html="hlSafe(Array.isArray(v) ? v.join(\' … \') : String(v))"');
   });
-  /* 五百六十五批随迁：_id/_index 命中高亮换装 MarkText 统一件（558b 手写 splitMark
+  /* 五百六十五批同步更新：_id/_index 命中高亮改用 MarkText 统一件（558b 手写 splitMark
      渲染退役，sandboxMarkTextUnify565 详记）——断言语义=查找高亮在场，锚随单源收口改形态 */
   it('hits 结果面查找三件套：hitsKw 过滤+计数+清除，_id/_index MarkText 切分高亮', () => {
     expect(ss).toContain('const hitsKw = ref(\'\');');

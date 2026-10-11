@@ -2,13 +2,13 @@
  * 五百五十二批：直方图/Profile 同一套组件抽取 + IndexHub 接线。
  * 用户裁决：「直方图和 Profile 的组件应该是同一套，且位置是同一套」——
  * DslQueryView 的直方图节头/Profile 树此前是视图内联物，IndexHub 两 tab 完全没有；
- * 本批组件抽独立文件（HistogramSection/ProfileTree）+ 注入链收 composables/useHistAgg
+ * 组件抽独立文件（HistogramSection/ProfileTree）+ 注入链收 composables/useHistAgg
  * + IndexHub docs/query 两 tab 同位接线（检索/执行区后、结果表前）。DQ 侧同位替换
- * 下批做（本批 DQ 零改，仅作复制源）。
+ * 下批做（ DQ 零改，仅作复制源）。
  *
- * 契约（本批验收锚）：
+ * 契约（验收锚）：
  * ① 三新文件在场 + HistogramSection props/emits 契约（源码锁，类名 dq-hist-* 逐字保留，
- *    .dq-hist-sec 无 border-bottom/padding 框感——dqHistHead549 立法随迁）；
+ *    .dq-hist-sec 无 border-bottom/padding 框感——dqHistHead549 约定同步更新）；
  * ② IndexHub docs/query 两 tab 各含 <HistogramSection 且位于结果表之前（模板序断言）；
  * ③ runDocs/runDsl 注入 applyHistToBody + 降级链 shouldDegrade/stripHist/markBroken + onResp 喂桶；
  * ④ useHistAgg 偏好键走调用方 ih 前缀（ih.docs.autoHist / ih.qry.autoHist，与 DQ 键分开）；
@@ -49,7 +49,7 @@ describe('552 ①：三新文件在场 + HistogramSection 契约（源码锁）'
     expect(hist).toContain('<AggBarChart :buckets="buckets" :height="80"');
     expect(hist).toMatch(/@brush=/);
   });
-  it('dqHistHead549 立法随迁：.dq-hist-sec 无 border-bottom/padding 框感', () => {
+  it('dqHistHead549 约定同步更新：.dq-hist-sec 无 border-bottom/padding 框感', () => {
     expect(hist.match(/\.dq-hist-sec \{[^}]*\}/)?.[0]).not.toMatch(/border-bottom/);
     expect(hist.match(/\.dq-hist-sec \{[^}]*\}/)?.[0]).not.toMatch(/padding:/);
   });
@@ -63,7 +63,7 @@ describe('552 ①：三新文件在场 + HistogramSection 契约（源码锁）'
   });
 });
 
-describe('552 ④：useHistAgg 注入链（DQ execQuery :894-965 逻辑收编）', () => {
+describe('552 ④：useHistAgg 注入链（DQ execQuery :894-965 逻辑合并）', () => {
   it('封装面：applyHistToBody/injectField/sniffFromHits/shouldDegrade/stripHist/markBroken/onResp/reset', () => {
     expect(uha).toContain("from '../utils/histField'");
     for (const fn of ['applyHistToBody', 'injectField', 'sniffFromHits', 'shouldDegrade', 'stripHist', 'markBroken', 'onResp', 'reset']) {

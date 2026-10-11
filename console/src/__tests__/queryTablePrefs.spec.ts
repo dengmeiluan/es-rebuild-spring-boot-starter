@@ -77,7 +77,7 @@ describe('QueryResultTable 记忆三件套', () => {
 
   it('行高三档（835 批「视图 ⋯」聚合菜单显式直选）：写 es_tbl_rowh（245 批全局键）+cozy class，重挂载恢复', async () => {
     await mountTbl({ hits: makeHits(3) as any, storageKey: 'lucene:idx-1' });
-    /* 272 批起首钮是导出；835 批行高收编「视图 ⋯」聚合菜单（显式三选，循环钮退役） */
+    /* 272 批起首钮是导出；835 批行高合并「视图 ⋯」聚合菜单（显式三选，循环钮退役） */
     ([...host.querySelectorAll('.qrt-bar-r button') as unknown as HTMLButtonElement[]].find(b => b.getAttribute('aria-label') === '视图设置') as HTMLButtonElement).click();
     await nextTick();
     [...host.querySelectorAll('.qrt-menu button') as unknown as HTMLButtonElement[]].find(b => b.textContent!.includes('宽松'))!.click();
@@ -98,7 +98,7 @@ describe('QueryResultTable 记忆三件套', () => {
     expect(th.style.width).toBe('234px');
   });
 
-  it('列宽批量重置（835 批收编「视图 ⋯」聚合菜单）：点击清全部列宽+LS 归 {}；无拖拽记录时项禁用（七十一批）', async () => {
+  it('列宽批量重置（835 批合并「视图 ⋯」聚合菜单）：点击清全部列宽+LS 归 {}；无拖拽记录时项禁用（七十一批）', async () => {
     localStorage.setItem('es_tbl_w:lucene:idx-1', JSON.stringify({ f0: 234, f1: 300 }));
     await mountTbl({ hits: makeHits(3) as any, storageKey: 'lucene:idx-1' });
     /* 835 批：列宽重置收进「视图 ⋯」菜单——先开菜单再点项 */
@@ -279,7 +279,7 @@ describe('QRT 排序列隐藏自愈（八十八批）', () => {
     expect(localStorage.getItem('es_tbl_sort:hz:f')).toBe(null);
     expect(localStorage.getItem('es_tbl_sort:hz:d')).toBe(null);
     /* 行序回原始（无排序） */
-    /* 五百五十四批随迁：renderRows 改按 shownCols 投影（数量截齐在隐藏列交错时切错位；
+    /* 五百五十四批同步更新：renderRows 改按 shownCols 投影（数量截齐在隐藏列交错时切错位；
        原 body 全列渲染是错位形态=隐藏列值漂移到右邻表头下），age 显示位 children[3]→[2]，
        锁意图=自愈后行序回原始不破 */
     const rows = [...host.querySelectorAll('tbody tr')].map(tr => tr.children[2]?.textContent?.trim());

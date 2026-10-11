@@ -1,17 +1,17 @@
 /**
- *  P0-3：SQL 静态 lint（SqlConsoleView / SqlBridgeView 划线+banner 双通道消费）。
+ * P0-3：SQL 静态 lint（SqlConsoleView / SqlBridgeView 划线+banner 双通道消费）。
  * 纯函数、零 Monaco/Vue 依赖，规则可穷举单测；输出 { line, message, suggestion } 行号形态
  * （MonacoEditor.setLineMarkers 行号直射契约，SynonymsManagerView 范式）。
  *
  * 规则宁少勿误报（dslLint 同哲学）——五条：
- *  ① 引号未闭合（单/双引号，'' "" 双写转义；未闭合时只报此一条，其余规则整体跳过——
- *     字符串挖除不可靠，LuceneInput.syntaxIssues 同口径防噪音叠加）
- *  ② 括号不平衡（()[]{} 栈扫描：配对错乱报错位行，残栈报首个未闭合括号行）
- *  ③ FROM 缺表名（FROM 后无表名 token：EOF/标点/保留字开头均缺；引号壳与 ( 子查询算在场）
- *  ④ 保留字拼写（SELECT/FROM/WHERE/GROUP/ORDER 词表编辑距离 ≤2，且只在「词位证据」成立时
- *     提示——后随运算符/函数括号/限定点/保留字即视为标识符用法豁免，列名 form/wheres 等
- *     同形词不误报；GROUP/ORDER 额外要求后随 ≈BY；SELECT 要求语句起始位）
- *  ⑤ 行尾悬空 AND/OR（逐行；大小写不敏感；RANDOM/FOR 等词内命中被 \b 挡住）
+ * ① 引号未闭合（单/双引号，'' "" 双写转义；未闭合时只报此一条，其余规则整体跳过——
+ * 字符串挖除不可靠，LuceneInput.syntaxIssues 同口径防噪音叠加）
+ * ② 括号不平衡（()[]{} 栈扫描：配对错乱报错位行，残栈报首个未闭合括号行）
+ * ③ FROM 缺表名（FROM 后无表名 token：EOF/标点/保留字开头均缺；引号壳与 ( 子查询算在场）
+ * ④ 保留字拼写（SELECT/FROM/WHERE/GROUP/ORDER 词表编辑距离 ≤2，且只在「词位证据」成立时
+ * 提示——后随运算符/函数括号/限定点/保留字即视为标识符用法豁免，列名 form/wheres 等
+ * 同形词不误报；GROUP/ORDER 额外要求后随 ≈BY；SELECT 要求语句起始位）
+ * ⑤ 行尾悬空 AND/OR（逐行；大小写不敏感；RANDOM/FOR 等词内命中被 \b 挡住）
  */
 import { editDistance } from './editDistance';
 
@@ -25,7 +25,7 @@ interface SqlLintFinding {
 interface SqlTok { w: string; word: boolean; line: number }
 
 /** 保留字精确表：两个用途——FROM 缺表名的「后随保留字」判定、拼写候选的「后随词是保留字
- *  → 标识符用法」豁免。收录常用子句/操作词即可（宁小勿误）。 */
+ * → 标识符用法」豁免。收录常用子句/操作词即可（宁小勿误）。 */
 const RESERVED = new Set([
   'SELECT', 'FROM', 'WHERE', 'GROUP', 'ORDER', 'BY', 'LIMIT', 'HAVING',
   'AND', 'OR', 'NOT', 'AS', 'ASC', 'DESC', 'BETWEEN', 'IN', 'IS', 'NULL',
@@ -76,11 +76,11 @@ function nearestKeyword(w: string): string | null {
 }
 
 /** 词位证据守卫下的拼写候选判定（kw=nearestKeyword 命中的词表关键字，分支按词表关键字
- *  而非拼错词本身）：返回是否可报。
- *  - GROUP/ORDER：后随词 ≈BY（编辑距离 ≤1）即关键字证据（GROP BY / ORDR BY）；
- *  - SELECT：语句起始位（文首/`;`/`(` 之后）且后随 `*` 或标识符样；
- *  - FROM/WHERE：后随标识符样（非保留词或引号壳）且前驱非保留字（表名位豁免）。
- *  运算符后随/函数括号/限定点三种标识符用法在各分支前置豁免。 */
+ * 而非拼错词本身）：返回是否可报。
+ * - GROUP/ORDER：后随词 ≈BY（编辑距离 ≤1）即关键字证据（GROP BY / ORDR BY）；
+ * - SELECT：语句起始位（文首/`;`/`(` 之后）且后随 `*` 或标识符样；
+ * - FROM/WHERE：后随标识符样（非保留词或引号壳）且前驱非保留字（表名位豁免）。
+ * 运算符后随/函数括号/限定点三种标识符用法在各分支前置豁免。 */
 function keywordTypo(kw: string, t: SqlTok, pv: SqlTok | undefined, nx: SqlTok | undefined, nx2: SqlTok | undefined): boolean {
   if (!nx) return false;
   if (kw === 'GROUP' || kw === 'ORDER') {
@@ -100,7 +100,7 @@ function keywordTypo(kw: string, t: SqlTok, pv: SqlTok | undefined, nx: SqlTok |
     if (pv && RESERVED.has(pv.w.toUpperCase())) return false; /* 前驱保留字=表名/值位豁免 */
     if (kw === 'FROM' && nx2 && nx2.word && !RESERVED.has(nx2.w.toUpperCase())) return false;
     /* FROM 的表名位后不应再跟普通标识符（别名须 AS）——`select a form t x` 形态存疑不判，
-       `select a, b form t where` 的 nx2=WHERE 才出证据（EOF/`;`/保留字跟随均放行） */
+ `select a, b form t where` 的 nx2=WHERE 才出证据（EOF/`;`/保留字跟随均放行） */
     return true;
   }
   return false;
@@ -124,7 +124,7 @@ export function lintSql(sql: string): SqlLintFinding[] {
   };
 
   /* ① 引号未闭合 + 字符串挖除（'' "" 双写转义；串内挖成空格、引号壳保留——表名/串值
-     词法上退化为壳 token，行号不变）。 */
+ 词法上退化为壳 token，行号不变）。 */
   const chars = sql.split('');
   let unclosedLine = 0;
   for (let i = 0; i < chars.length; i++) {

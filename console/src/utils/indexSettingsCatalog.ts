@@ -2,8 +2,8 @@
  * W1 ：索引设置键静态目录（ES 7.10 文档口径）+ 模糊过滤纯函数。
  *
  * dynamic 标注口径：
- *   true  = 动态键，可 PUT /{index}/_settings 热更（open 索引）；
- *   false = 静态键，建索引时设定（analysis.* 亦可在 closed 索引上设置）。
+ * true = 动态键，可 PUT /{index}/_settings 热更（open 索引）；
+ * false = 静态键，建索引时设定（analysis.* 亦可在 closed 索引上设置）。
  *
  * 该目录只做补全提示（零请求）；变更真实去向仍由后端 settings-impact 判定。
  */
@@ -67,7 +67,7 @@ export const SETTINGS_CATALOG: SettingEntry[] = [
   { key: 'analysis.analyzer.*', desc: '自定义分析器（建索引时或 closed 状态设置）', example: '{"type":"custom","tokenizer":"standard"}', dynamic: false },
   { key: 'soft_deletes.enabled', desc: '软删除开关（建索引时定，影响增量恢复/CCR）', example: 'true（默认）/ false', dynamic: false },
   /* 默认排序两键（ES 键名 index.sort.field / index.sort.order；本目录键口径
-     去 index. 前缀，IndexSettingsView normKey 消费零视图改动）。静态键：建索引时定，写入后不可改。 */
+ 去 index. 前缀，IndexSettingsView normKey 消费零视图改动）。静态键：建索引时定，写入后不可改。 */
   { key: 'sort.field', desc: '默认排序字段（index.sort.field，静态建索引时定）', example: 'ts', dynamic: false },
   { key: 'sort.order', desc: '默认排序方向（index.sort.order，与 sort.field 配套）', example: 'asc / desc', dynamic: false },
   /* 存储类型（静态，open 索引不可热更） */

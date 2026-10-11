@@ -325,7 +325,7 @@ describe('G6 ConfigValidatorView：校验失败 err-bar（B7）', () => {
     expect(lintBtn.disabled, 'in-flight 期间 Lint 按钮必须禁用').toBe(true);
     expect(lintBtn.textContent, 'in-flight 期间必须出 pending 文案').toContain('校验中');
     expect(mainBtn.disabled, 'in-flight 期间主按钮必须禁用（busy 共享）').toBe(true);
-    /* 775 G250 锁随迁：共享 busy 改 lastDryRun 门控（772 G246 lastMode 族）——快速 Lint
+    /* 775 G250 锁同步更新：共享 busy 改 lastDryRun 门控（772 G246 lastMode 族）——快速 Lint
        发起时主按钮图标/文案双恒定，不再双钮同文案 */
     expect(mainBtn.textContent, '主按钮恒静（lastDryRun=false 门控=未由本钮发起）').toContain('校验 + Dry-run');
     expect(mainBtn.textContent).not.toContain('校验中');

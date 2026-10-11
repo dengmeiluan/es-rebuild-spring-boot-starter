@@ -133,6 +133,8 @@ describe('G42：史志注释如实化（kw/cat 实为 sessionStorage 草稿，�
   it('源码锁：失实注释退役，如实注释在场', () => {
     const s = read('../views/TemplateGalleryView.vue');
     expect(s, '「进 URL」失实表述退役').not.toContain('关键词/分类进 URL');
-    expect(s, '如实注释放线（sessionStorage 草稿+无深链说明）').toMatch(/ §8\.3[\s\S]{0,120}sessionStorage/);
+    /* 855 清洗随迁：原锁「§8.3」锚字样（批史前缀已全仓清洗），改锁如实注释本体
+       （URL 化未实施+sessionStorage 草稿说明），锁语义不变 */
+    expect(s, '如实注释放线（sessionStorage 草稿+无深链说明）').toMatch(/URL 化未实施[\s\S]{0,80}sessionStorage/);
   });
 });

@@ -4,7 +4,7 @@
  * 1) 预置排序记忆 状态/asc → 挂载后「状态」表头带 on 排序类；
  * 2) 点击「目标索引」表头 → 排序记忆持久化（列名+方向），表头类切换；
  * 3) 无排序时默认不落盘（等于默认不写；默认展示序=后端 createTime desc 原序）。
- * 五百二十九批 W-C：排序随壳收编 QRT 内核（storage-key="xm-jobs" → es_tbl_sort:xm-jobs:*，
+ * 五百二十九批 W-C：排序随壳合并 QRT 内核（storage-key="xm-jobs" → es_tbl_sort:xm-jobs:*，
  * 升→降→取消三击循环），记忆面由 useScopedDraft 会话稿改 localStorage 持久；
  * 挂真组件（xmigrateDoneLink.spec 同款最小 mock 面）。
  */

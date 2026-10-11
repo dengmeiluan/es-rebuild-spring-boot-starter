@@ -148,12 +148,12 @@ describe('K1 主卡（LiveChartCard）细线恒宽 + 轴系补齐', () => {
 });
 
 describe('K2 节点对比悬浮化 + 轴系', () => {
-  /* 794 件1 随迁：对比面悬浮面板化（默认关）——断言前点入口钮开面板 */
+  /* 794 件1 同步更新：对比面悬浮面板化（默认关）——断言前点入口钮开面板 */
   function cmpSync(): HTMLElement | null { return hostEl!.querySelector('.ld-ncmp-panel'); }
   async function cmp(): Promise<HTMLElement> {
     let p = cmpSync();
     if (!p) { (hostEl!.querySelector('.ld-ncmp-entry') as HTMLButtonElement)?.click(); await settle(); p = cmpSync(); }
-    if (!p) throw new Error('794 随迁：悬浮面板开失败');
+    if (!p) throw new Error('794 同步更新：悬浮面板开失败');
     return p;
   }
 
@@ -182,7 +182,7 @@ describe('K2 节点对比悬浮化 + 轴系', () => {
   });
 
   it('多线 1.5px 恒宽（non-scaling）', async () => {
-    const lines = [...(await cmp()).querySelectorAll('svg path')]; /* 八百二十八批 polyline→path 随迁 */
+    const lines = [...(await cmp()).querySelectorAll('svg path')]; /* 八百二十八批 polyline→path 同步更新 */
     expect(lines.length).toBe(9);
     for (const l of lines) {
       expect(l.getAttribute('stroke-width')).toBe('1.5');
@@ -201,7 +201,7 @@ describe('K2 节点对比悬浮化 + 轴系', () => {
     c.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 0 }));
     await settle(4);
     const hv = c.querySelector('.ld-hv.ld-hv-stack')!;
-    /* 八百二十五批随迁：CMP_TIP_CAP 8→24（用户实报「+1 节点…看不完整」）→9 节点全量读出+尾行零在场
+    /* 八百二十五批同步更新：CMP_TIP_CAP 8→24（用户实报「+1 节点…看不完整」）→9 节点全量读出+尾行零在场
        （700 批①截断口径退役于常规规模；+N 通道保留兜底 >24 行极端集群） */
     expect(hv.querySelectorAll('.ld-ncmp-tip-r').length).toBe(9);
     expect(hv.textContent).not.toContain('+1 节点');
@@ -212,14 +212,14 @@ describe('K2 节点对比悬浮化 + 轴系', () => {
     const row1 = [...hv.querySelectorAll('.ld-ncmp-tip-r')].find(r => r.textContent!.includes('n-1'))!;
     (row1.querySelector('button.ld-ncmp-hide') as HTMLElement).click();
     await settle();
-    expect(c.querySelectorAll('path').length).toBe(8); /* 八百二十八批随迁 */
+    expect(c.querySelectorAll('path').length).toBe(8); /* 八百二十八批同步更新 */
     const restore = c.querySelector('button.ld-ncmp-restore') as HTMLElement;
     expect(restore).toBeTruthy();
     expect(restore.textContent!).toContain('已隐藏 1');
     /* 恢复全部 → 9 条回全 */
     restore.click();
     await settle();
-    expect(c.querySelectorAll('path').length).toBe(9); /* 八百二十八批随迁 */
+    expect(c.querySelectorAll('path').length).toBe(9); /* 八百二十八批同步更新 */
     expect(c.querySelector('button.ld-ncmp-restore')).toBeNull();
   });
 });

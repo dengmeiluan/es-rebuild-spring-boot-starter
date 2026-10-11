@@ -1,7 +1,7 @@
 /**
  * 三百七十七批：错误条 role="alert" 全站守卫——err-bar 是全站错误展示统一语言
  * （21 文件 27 处），此前均无 ARIA live 语义，错误出现时屏幕阅读器零播报。
- * 本批全站补 role="alert"（插入即播报），并以此 spec 钉死：今后任何新增
+ * 全站补 role="alert"（插入即播报），并以此 spec 钉死：今后任何新增
  * err-bar 不带 role="alert" 即红。
  */
 import { describe, it, expect } from 'vitest';

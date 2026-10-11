@@ -29,16 +29,16 @@
       <span v-if="store.pickedInfo" class="idx-meta mono"
         :title="fmtNum(store.pickedInfo['docs.count']) + ' docs · ' + store.pickedInfo['store.size']">
         <!-- store.size 裸字节串 → storeSizeText 单源（utils/format，semFormat bytes 档）；
-             title 恒 raw（Overview 同范式：悬浮保留原始值） -->
+ title 恒 raw（Overview 同范式：悬浮保留原始值） -->
         {{ fmtNum(store.pickedInfo['docs.count']) }} docs · {{ storeSizeText(store.pickedInfo['store.size']) }}
       </span>
-      <!-- 健康徽标换装 StatusPill 统一件（healthCls→tone 映射 g/y/r 语义档；
-           label 语义=health 原文保留；flex-shrink 落位由 .tbar-left .pill 既有规则承接不变） -->
+      <!-- 健康徽标改用 StatusPill 统一件（healthCls→tone 映射 g/y/r 语义档；
+ label 语义=health 原文保留；flex-shrink 落位由 .tbar-left .pill 既有规则承接不变） -->
       <StatusPill v-if="store.pickedInfo" :tone="healthCls(store.pickedInfo.health)" :label="store.pickedInfo.health" />
     </div>
     <div class="tbar-right">
       <!-- 全局作业进度——长耗时作业（托管重建/跨集群迁移）跑完不需守页，
-           任何页面看得见在跑几个、跑到几成，点击回作业页；无在跑作业时不占位 -->
+ 任何页面看得见在跑几个、跑到几成，点击回作业页；无在跑作业时不占位 -->
       <button v-if="jobCount" class="btn ghost sm tbar-job" :title="jobTitle" @click="gotoJobs">
         <Loader2 :size="13" class="tbar-job-spin" />
         <span class="tbar-alert-n">{{ jobCount }}<template v-if="jobPct >= 0"> · {{ jobPct }}%</template></span>
@@ -100,7 +100,7 @@ const router = useRouter();
 const mon = useLiveMonitorStore();
 const jt = useJobTrackerStore();
 
-/* 全局作业徽标：数据源是常驻轮询 store（），离开作业页仍在跟 */
+/* 全局作业徽标：数据源是常驻轮询 store（离开作业页仍在跟 */
 const jobCount = computed(() => jt.runningCount);
 const jobPct = computed(() => jt.overallPct);
 const jobTitle = computed(() => {
@@ -117,7 +117,7 @@ function gotoJobs() {
   router.push(xm >= jt.runningCount - xm ? '/xmigrate' : '/adhoc-rebuild');
 }
 
-/* 全局告警徽标：数据源是常驻采样 store（），因此不在大屏也持续更新 */
+/* 全局告警徽标：数据源是常驻采样 store（因此不在大屏也持续更新 */
 const monBad = computed(() => mon.badCount);
 const alertCount = computed(() => mon.activeAlerts.length);
 const alertTitle = computed(() => {
@@ -137,8 +137,8 @@ const themeLabel = computed(() => {
     : t === 'host' ? '跟随宿主 (当前 ' + store.effectiveTheme + ')' : '深色';
 });
 
-/*  最近使用 + W3 D7 别名分组置顶：别名是查询一等目标，放所有分组最前；
-   recent 从 pool（别名+索引）里找——选过的别名也进最近使用。 */
+/* 最近使用 + W3 D7 别名分组置顶：别名是查询一等目标，放所有分组最前；
+ recent 从 pool（别名+索引）里找——选过的别名也进最近使用。 */
 const clusterKey = computed(() => store.target || '@host');
 watch(clusterKey, k => { ensureAliases(k); }, { immediate: true });
 
@@ -152,7 +152,7 @@ const idxOptions = computed(() => {
     .filter((o): o is NonNullable<typeof o> => !!o);
   const groups: any[] = [];
     /* 别名组保持全量不去重：选过的别名同时出现在「最近使用」与「别名」组是有意的
-       （别名是一等查询目标，置顶展示优先于去重洁癖），value 相同不影响 naive-ui 选中态 */
+ （别名是一等查询目标，置顶展示优先于去重洁癖），value 相同不影响 naive-ui 选中态 */
   if (ali.length) groups.push({ type: 'group' as const, label: '别名', key: 'alias', children: ali });
   if (!rec.length) { groups.push(...all); return groups; }
   const recSet = new Set(rec.map(o => o.value));
@@ -189,8 +189,8 @@ function onPick(v: string | null) {
   store.pick(v || '');
 }
 
-/*  W4：healthCls 页内版退役，收口 utils/format 的 healthPill
-   （green→g / yellow→y / 其余→r，与 healthColor 同源分档） */
+/* W4：healthCls 页内版退役，收口 utils/format 的 healthPill
+ （green→g / yellow→y / 其余→r，与 healthColor 同源分档） */
 </script>
 
 <style scoped>
@@ -203,15 +203,15 @@ function onPick(v: string | null) {
 /* docs/size 元信息不许被硬裁成“546,”——收缩时省略号兜底，窄视口下整体隐藏（要么完整要么不显示） */
 .idx-meta { font-size: var(--fs-xs); color: var(--tx2); white-space: nowrap; flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /* 原游离窄档（idx-meta 隐藏+idx-select 底线收缩）并入本档——
-   1100 档与 utils/layout BP_STACK 互锚（workbenchStackBp527 同语言），全站断点单源对齐 */
+ 1100 档与 utils/layout BP_STACK 互锚（workbenchStackBp527 同语言），全站断点单源对齐 */
 @media (max-width: 1100px) {
   .tbar-left .idx-meta { display: none; }
   .idx-select { min-width: 200px; }
 }
 /* 866px iframe 实测 .tbar-left cw165/sw336 硬裁——窄容器下次要信息整体隐藏，
-   选择器底线降到 150，⌘K 只留图标（title 已有快捷键说明），实例 chip 让位。
-   台账：1000px 为非标断点（不在 1100/900 全站双档册内， iframe 实测豁免档；
-   adaptive556 记 TopBar 自适应档恒定 2 处在案），不并入标准档——改档=行为变更，超本批面 */
+ 选择器底线降到 150，⌘K 只留图标（title 已有快捷键说明），实例 chip 让位。
+ 台账：1000px 为非标断点（不在 1100/900 全站双档册内， iframe 实测豁免档；
+ adaptive556 记 TopBar 自适应档恒定 2 处在案），不并入标准档——改档=行为变更，超面 */
 @media (max-width: 1000px) {
   .idx-select { min-width: 150px; width: 240px; }
   .tbar-right .self-chip { display: none; }
@@ -229,8 +229,8 @@ function onPick(v: string | null) {
 .tbar-job-spin { animation: rot 1.4s linear infinite; }
 .nav-toggle { flex-shrink: 0; }
 .tbar-right { display: flex; align-items: center; gap: var(--sp-1); }
-/* UX 轮 §9 S4：同一工具条控件高度归一 28px（sm 档，对齐 n-select small）；三容器本已 align-items:center。
-   子组件触发器（集群切换/用户菜单/通知中心）从这里 :deep 归一，不改子组件文件 */
+/* S4：同一工具条控件高度归一 28px（sm 档，对齐 n-select small）；三容器本已 align-items:center。
+ 子组件触发器（集群切换/用户菜单/通知中心）从这里 :deep 归一，不改子组件文件 */
 .tbar .btn.sm { height: 28px; }
 .tbar-left :deep(.cs-chip), .tbar-right :deep(.um-chip), .tbar-right :deep(.nc-btn) { height: 28px; }
 /* 实例标识长主机名时自身省略，把空间让给索引选择器（title 已有全名） */

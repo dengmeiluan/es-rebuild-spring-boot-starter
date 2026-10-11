@@ -7,14 +7,14 @@
  * 独立成组增量信息≈0 且无 master 专有采集字段（MonitorMetricsStore.AGG_METRIC_FIELDS 无此口径）。
  *
  * ⚠**与 onlyNodeMode/onlyClusterMode 的区别**（关键辨析，勿混）：
- *   - `onlyNodeMode / onlyClusterMode`（LiveDashboardView）= **数据可用性驱动的自动二态隐藏**
- *     （scope=cluster/node 时服务端无对应聚合口径的卡自动收起）；
- *   - `HIST_GROUP_OF / inHistGroup`（本文件）= **用户主动的导航过滤**。
- *   两者正交：先 scope 过滤（现有逻辑），再组过滤（本文件）；`overview` 组 = pass-through，
- *   渲染结果与引入分组前**逐字相同**（零行为变更）。
+ * - `onlyNodeMode / onlyClusterMode`（LiveDashboardView）= **数据可用性驱动的自动二态隐藏**
+ * （scope=cluster/node 时服务端无对应聚合口径的卡自动收起）；
+ * - `HIST_GROUP_OF / inHistGroup`（本文件）= **用户主动的导航过滤**。
+ * 两者正交：先 scope 过滤（现有逻辑），再组过滤（本文件）；`overview` 组 = pass-through，
+ * 渲染结果与引入分组前**逐字相同**（零行为变更）。
  *
  * 分组映射**外挂**于此（不写进 LiveDashboardView 的 HIST_CHARTS 条目）——避免触碰
- * monitorHistoryTrend.spec 对 HIST_CHARTS 条目字面的逐字锁（零随迁）。
+ * monitorHistoryTrend.spec 对 HIST_CHARTS 条目字面的逐字锁（零同步更新）。
  * 本文件为纯函数单源，零运行时依赖（仅类型引用）。 */
 
 import type { MonitorSeriesField } from './monitorSeries';

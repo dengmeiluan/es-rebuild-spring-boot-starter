@@ -1,9 +1,9 @@
 /**
- * 五百四十七批·轨4（工蚁）：任务 1 空态/加载态空框清零 · 契约记档。
+ * 五百四十七批·轨4（工蚁）：任务 1 空态/加载态空框清零 · 契约备案。
  *
- * 538 立法「空态不留整块空框」续扫（AnalyzerLabView:49 是 546 先例；SystemView:65 骨架裸置先例）：
+ * 538 约定「空态不留整块空框」续扫（AnalyzerLabView:49 是 546 先例；SystemView:65 骨架裸置先例）：
  * ① IndexSettingsView settings 拉取失败态整卡（card is-empty）→ EmptyState centered 直贴
- *    （文案保留原样；flattenWave534 的「失败态整卡豁免记档」由本批立法推翻，锁随迁彼处）；
+ *    （文案保留原样；flattenWave534 的「失败态整卡豁免备案」由约定推翻，锁同步更新彼处）；
  * ② IndexSettingsView / MappingView 加载骨架空框（card + padding:var(--sp-4) 内联包 8×SkeletonBox）
  *    → 壳退役骨架裸置（SystemView:65 先例）；
  * ③ IndexHubView 未选索引引导卡（card ih-guide，:1569 64px 居中即手写 EmptyState 形态）
@@ -29,7 +29,7 @@ const bw = read('../views/BrowserView.vue');
 
 /* ═══════════ ① IndexSettingsView 失败态整卡 → EmptyState centered ═══════════ */
 
-describe('五百四十七批①：IndexSettingsView 失败态整卡退役（538 空态空框立法续扫）', () => {
+describe('五百四十七批①：IndexSettingsView 失败态整卡退役（538 空态空框约定续扫）', () => {
   it('card is-empty 整卡与壳规则双退役；EmptyState centered 直贴在场', () => {
     expect(isv, '失败态整卡（card is-empty）退役').not.toMatch(/class="card is-empty"/);
     expect(isv, '.is-empty 壳规则退役（空态留白归 EmptyState 组件单源）').not.toMatch(/\.is-empty \{/);
@@ -68,15 +68,15 @@ describe('五百四十七批②：加载骨架 card 空框退役（IndexSettings
 
 describe('五百四十七批③：IndexHubView ih-guide 引导空框退役', () => {
   it('ih-guide 卡类/文案类/壳规则三退役；EmptyState centered 承接（文案逐字迁移）', () => {
-    /* 类与规则级锚（注释里的记档字样不算回流） */
+    /* 类与规则级锚（注释里的备案字样不算回流） */
     expect(ih, '引导卡 ih-guide 模板类退役').not.toMatch(/class="card ih-guide"/);
     expect(ih, '引导卡壳/文案规则退役').not.toMatch(/\.ih-guide[- t{]/);
     expect(ih, '未选索引态改 EmptyState centered 直贴').toMatch(/<EmptyState v-if="!cur" centered :icon="Boxes"/);
     expect(ih, '主文案逐字迁移').toContain('点击「索引列表」或搜索选择索引，进入索引工作区');
     expect(ih, '副文案逐字迁移').toContain('文档检索 · DSL 查询 · Settings · Mapping · 分片 · 运维操作，一个索引的全生命周期在一个页面完成');
-    /* 重锁区防误伤：五百五十一批随迁（击穿者：551 轨2 刀⑥a——ih-card-flush 大卡壳退役），
+    /* 重锁区防误伤：五百五十一批同步更新（击穿者：551 轨2 刀⑥a——ih-card-flush 大卡壳退役），
        547 豁免正锁字面改退役形，工作区分节容器 ih-ws 承接（锁意图=工作区容器形态回归防线） */
-    expect(ih, 'ih-card-flush 主卡退役（551 击穿随迁）').not.toMatch(/class="card ih-card-flush"/);
+    expect(ih, 'ih-card-flush 主卡退役（551 击穿同步更新）').not.toMatch(/class="card ih-card-flush"/);
     expect(ih, 'ih-ws 分节容器承接（551）').toMatch(/<div class="ih-ws">/);
   });
 });

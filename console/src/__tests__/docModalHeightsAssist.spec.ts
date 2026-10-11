@@ -5,11 +5,11 @@
  * ② IndexHubView 文档编辑态 JsonArea 补 dsl-assist：fields 源透传同页查询口（ihDslAssist.fields，
  *    同一 useIndexFields 出口），bodyKind 'doc'——五百二十四批 doc 档在档前的过渡是显式 'none'
  *    （五百三十批，彼时缺省 ?? 'search' 冒充查询体），现升 'doc'：键位零候选、field 值位白名单出字段候选。
- *    五百二十五批随迁：编辑态 rows=14 定高退役 → fill + 外包 min(60vh,420px) 定高 flex 容器
+ *    五百二十五批同步更新：编辑态 rows=14 定高退役 → fill + 外包 min(60vh,420px) 定高 flex 容器
  *    （同弹窗查看态同口径），dsl-assist 透传契约不变。
- *    六百七十四批随迁：561 批高度机制 usePref('dq.popH') → useTierCycle('dq.docH'/'dq.docHNew')
+ *    六百七十四批同步更新：561 批高度机制 usePref('dq.popH') → useTierCycle('dq.docH'/'dq.docHNew')
  *    档位制（首档=原值兜底语义不变）、669 批弹窗 :font-size 同页同键——字面锁同步刷新；
- *    561 升档时本 spec 尚在冻结名单（658 接管后解冻），恒红至今本批复诊销账。
+ *    561 升档时本 spec 尚在冻结名单（658 接管后解冻），恒红至今复诊销账。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -20,8 +20,8 @@ const ih = readFileSync(join(__dirname, '../views/IndexHubView.vue'), 'utf-8');
 
 describe('DslQueryView 文档弹窗高度弹性（原值兜底）', () => {
   it('编辑弹窗 min(60vh,420px)，新建/克隆弹窗 min(60vh,360px)', () => {
-    /* 六百七十四批随迁（674-C1 复诊）：561 批 usePref('dq.popH') 单值 → useTierCycle('dq.docH'/'dq.docHNew')
-       三档循环（档钮 title 实时回显），首档=原值兜底语义由 TIERS[0] 取值锁承接（629-C2 随迁补取值锁）；
+    /* 六百七十四批同步更新（674-C1 复诊）：561 批 usePref('dq.popH') 单值 → useTierCycle('dq.docH'/'dq.docHNew')
+       三档循环（档钮 title 实时回显），首档=原值兜底语义由 TIERS[0] 取值锁承接（629-C2 同步更新补取值锁）；
        669 批 :font-size="dqFont" 同页同键契约并入字面锁 */
     expect(dq).toContain('<MonacoEditor v-if="docEditMode" v-model="docEditText" :height="docH" :font-size="dqFont" />');
     expect(dq).toContain("const DOC_H_TIERS: string[] = ['min(60vh,420px)', 'min(70vh,560px)', 'min(80vh,700px)'];");

@@ -229,7 +229,7 @@ public final class DateFormSampler {
      *
      * <p><b>入参必须是「已剥 type 包层」的无类型形态</b>（{@code {"properties":...}}），
      * 由 {@code EsIndexAdmin.getMapping()} 保证——它在返回前已调用
-     * {@code EsIndexAdmin.unwrapTypeLayer}（，行为由 {@code EsResponseShapeTest} 锁定）
+     * {@code EsIndexAdmin.unwrapTypeLayer}（行为由 {@code EsResponseShapeTest} 锁定）
      * 剥掉 6.x 的单 type 包层。</p>
      *
      * <p><b>本方法刻意不做任何剥离兜底。</b> 曾有过一个 {@code root.size()==1} 的兜底分支，

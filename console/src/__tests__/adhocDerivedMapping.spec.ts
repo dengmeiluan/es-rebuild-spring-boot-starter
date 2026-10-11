@@ -97,9 +97,9 @@ async function mountWizard() {
   /** 在 step 0 粘贴一份期望配置并 pick */
   const paste = async (row: Record<string, unknown>) => {
     /* ux2 Task 9：pasteRaw 换 Monaco——驱动迁移 stub cap emit（同 adhocDiffWiring 形态；
-       w80:130px 定高→min(200px,24vh) 弹性档随迁；五百三十一批再升 min(60vh,420px) 大粘贴档；
+       w80:130px 定高→min(200px,24vh) 弹性档同步更新；五百三十一批再升 min(60vh,420px) 大粘贴档；
        五百三十八批升四档 useTierCycle 循环——默认档=原 min(60vh, 420px) 保底，cap 寻址按
-       默认档 DOM 值随迁；档值数组+接线源码锚在 rebuildFlat534 高度档用例） */
+       默认档 DOM 值同步更新；档值数组+接线源码锚在 rebuildFlat534 高度档用例） */
     const cap = monacoCaps.find(c => c.props.height === 'min(60vh, 420px)');
     expect(cap, 'pasteRaw Monaco（默认档 min(60vh, 420px)）必须在位').toBeTruthy();
     cap!.emit('update:modelValue', JSON.stringify({
@@ -120,13 +120,13 @@ async function mountWizard() {
   };
 
   /** 审编框里 mapping 的实际内容（Monaco stub cap 响应式 props）。.editors 下顺序为 settings、mapping
-   *  （554 随迁：rows=14→282px 与 fill→'100%' 两形态随高度档退役——四框改 adhoc.edH rows 驱动，
+   *  （554 同步更新：rows=14→282px 与 fill→'100%' 两形态随高度档退役——四框改 adhoc.edH rows 驱动，
    *  默认 16 档 → height=16*19+16=320px） */
   const mappingBox = () => {
     const caps = monacoCaps.filter(c => c.props.height === '320px');
     return caps.length >= 2 ? caps[1].props.modelValue : null;
   };
-  /* 五百五十二批随迁：注解推导徽标换装 StatusPill（私造类退役），存在性判据改 pill 文本寻址 */
+  /* 五百五十二批同步更新：注解推导徽标改用 StatusPill（私造类退役），存在性判据改 pill 文本寻址 */
   const derivedTag = () =>
     Array.from(host.querySelectorAll('.pill')).find(p => (p.textContent || '').includes('来自注解推导')) || null;
   const warnText = () => (host.querySelector('.ar-paste-warn') as HTMLElement | null)?.textContent || '';

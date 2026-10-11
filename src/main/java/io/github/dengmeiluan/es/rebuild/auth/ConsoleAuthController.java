@@ -33,7 +33,7 @@ import java.util.Map;
 import java.util.TreeSet;
 
 /**
- * (内部) ES 控制台鉴权端点（）：登录 / 自助 / 用户管理 / 操作审计流水。
+ * (内部) ES 控制台鉴权端点（登录 / 自助 / 用户管理 / 操作审计流水。
  *
  * <p>仅在使用内置 {@link BuiltinConsoleAuthService} 时装配；宿主用自己的
  * {@link EsConsoleAuthorizer} 替换后，登录发生在宿主体系里，本控制器不再出现。</p>

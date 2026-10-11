@@ -1,13 +1,13 @@
 import { ref, type Ref } from 'vue';
 
-/*  P1-6：列拖拽重排（dbx 列头拖拽对位，RT/QRT 共用）。
-   事件层刻意薄（happy-dom 无 DragEvent，纯函数才是可测层）；重排落点指示与
-   「拖完误触列头排序点击」的抑制（300ms 双保险）都在此收口。
-   持久化不在此处——调用方把 cols ref 绑到 useTablePrefs.visibleCols，
-   赋值后既有 watch 自动落盘 es_cols:<dim>（与「此列置首」同管道，不开新 key）。 */
+/* P1-6：列拖拽重排（dbx 列头拖拽对位，RT/QRT 共用）。
+ 事件层刻意薄（happy-dom 无 DragEvent，纯函数才是可测层）；重排落点指示与
+ 「拖完误触列头排序点击」的抑制（300ms 双保险）都在此收口。
+ 持久化不在此处——调用方把 cols ref 绑到 useTablePrefs.visibleCols，
+ 赋值后既有 watch 自动落盘 es_cols:<dim>（与「此列置首」同管道，不开新 key）。 */
 
 /** 纯函数：把 from 搬到 to 的 before/after；同列 no-op 返回原数组；
- *  minIdx=新位置下限（冻结首列占死 0 号位时传 1）。 */
+ * minIdx=新位置下限（冻结首列占死 0 号位时传 1）。 */
 export function reorderArr(arr: string[], from: string, to: string, place: 'before' | 'after', minIdx = 0): string[] {
   if (from === to) return arr;
   const fi = arr.indexOf(from), ti = arr.indexOf(to);

@@ -32,7 +32,7 @@ describe('安全中心骨架/空态状态机修复（一百八十九批补）', 
   it('usersLoading 状态位存在；骨架只在在途显示；空态条件含 !usersLoading', () => {
     expect(sec).toMatch(/const usersLoading = ref\(false\)/);
     expect(sec).toMatch(/v-if="usersLoading && !users\.length" class="sec-skel"/);
-    /* 第十批收尾随迁：裸 .dim.empty 迁 EmptyState compact，互斥链条件不变（空态仍只在「完成但为空」时出） */
+    /* 第十批收尾同步更新：裸 .dim.empty 迁 EmptyState compact，互斥链条件不变（空态仍只在「完成但为空」时出） */
     expect(sec).toMatch(/<EmptyState v-else-if="!usersLoading && !usersErr" compact :icon="UserPlus"/);
     expect(sec).toMatch(/usersLoading\.value = true;/);
     expect(sec).toMatch(/finally \{ usersLoading\.value = false; \}/);

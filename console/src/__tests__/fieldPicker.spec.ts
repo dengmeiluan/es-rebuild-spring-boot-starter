@@ -366,7 +366,7 @@ describe('FieldPicker 行为保护网', () => {
     await focus(host);
     /* keyword 组（message.keyword, status）排前；其余按现状字母序殿后 */
     expect(itemNames()).toEqual(['message.keyword', 'status', 'message', 'user', 'user.age', 'user.name']);
-    /* 558b 随迁：组头人话词面升级（GH_LABEL→FIELD_TYPE_ZH 兜底），keyword→精确值 */
+    /* 558b 同步更新：组头人话词面升级（GH_LABEL→FIELD_TYPE_ZH 兜底），keyword→精确值 */
     expect(groupHeads(), '组间必须插类型标签').toEqual(['精确值 字段', '其他 字段']);
   });
 
@@ -374,7 +374,7 @@ describe('FieldPicker 行为保护网', () => {
     const { host } = await mountPicker({ typePriority: ['integer', 'keyword'] });
     await focus(host);
     expect(itemNames()).toEqual(['user.age', 'message.keyword', 'status', 'message', 'user', 'user.name']);
-    /* 558b 随迁：组头人话词面升级（GH_LABEL→FIELD_TYPE_ZH 兜底），keyword→精确值 */
+    /* 558b 同步更新：组头人话词面升级（GH_LABEL→FIELD_TYPE_ZH 兜底），keyword→精确值 */
     expect(groupHeads(), 'integer→数值、keyword→精确值、其余→其他').toEqual(['数值 字段', '精确值 字段', '其他 字段']);
   });
 

@@ -1,9 +1,9 @@
 /**
- * 六百零三批 轨3：useSortChain 排序状态机单源下沉（560 记档大件落地）。
+ * 六百零三批 轨3：useSortChain 排序状态机单源下沉（560 备案大件落地）。
  * 背景：RT（'asc'|'desc' 字符串）与 QRT（1|-1 数字）各自维护一套排序状态机——
  * 三态循环/Shift 次键链/右键直选/远端意图镜像/syncSort 回填/维度落盘，语义经
  * 535/543/552/561/565/567 各批已逐字节对齐，唯内部方向编码与落点分叉。
- * 本批把全机收编 composables/tableSort.ts 单一出处，内部编码归一字符串
+ * 把全机合并 composables/tableSort.ts 单一出处，内部编码归一字符串
  * （公共 emit 契约 'asc'|'desc' 本形，QRT M2 写侧已归一字符串，RT 读侧已兼容双格式）；
  * RT/QRT 只留薄壳守卫（拖拽抑制/sortableGuard/sortable 开关）与排序应用点。
  * 同批裁决：僵尸壳 useTableSort 退役（558b ③ 防误删锁随语义升格，384 spec 同车）。

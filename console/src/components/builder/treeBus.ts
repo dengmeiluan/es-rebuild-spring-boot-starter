@@ -1,6 +1,6 @@
 /* 构建器内部协作总线（避免深层组件事件透传）。
-   TREE_BUS：落点分区 → 顶层统一 moveNode。DRAG_KEY：window 上被拖节点 id 暂存。
-   fireDrag：拖拽开始/结束广播，BoolGroupNode 借此亮出空分区作落点。 */
+ TREE_BUS：落点分区 → 顶层统一 moveNode。DRAG_KEY：window 上被拖节点 id 暂存。
+ fireDrag：拖拽开始/结束广播，BoolGroupNode 借此亮出空分区作落点。 */
 import type { InjectionKey } from 'vue';
 import type { Occur } from '../../utils/queryAst';
 

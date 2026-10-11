@@ -1,9 +1,9 @@
 /**
  * 六百五十六批（轨1 · Monaco DSL 值位动态候选 P1 内核先行）：
- * `utils/dslValueSuggest.ts` 行为锁——依据 655 批设计记档
+ * `utils/dslValueSuggest.ts` 行为锁——依据 655 批设计备案
  * `docs/goal655-monaco-value-dynamic-design.md` §5（判定链/类型册/组装细则）+ §7 红点清单
  * 前四组落 spec（第 5 组「注册契约」挂 MonacoEditor stub，属 P2 期——P0 解冻门未开，
- * 本批纯 util+spec 零冻结面零运行时消费面，probe 降级合法）。
+ * 纯 util+spec 零冻结面零运行时消费面，probe 降级合法）。
  *
  *  A 窄守卫 dslDynamicValueAt 位判定（§5.1 六步判定链）：
  *    直挂值位（':' 左邻）/range 四操作符值位/terms 续元素位（',' 左邻+栈顶 '['）出字段；
@@ -14,7 +14,7 @@
  *    boolean+ip 在册；date 族/text 族/object 族/geo_point/alias 不在册）。
  *  C 源锚 parity（§5.3）：DYNAMIC_EXCLUDE_VALUE_KEYS ≡ MonacoEditor.vue VALUE_WHITELIST
  *    字面同集；dslSortText/dslFilterText/scanStringEnd/ACCEPT_FORMAT_COMMAND 四镜像同形；
- *    工厂对象无 triggerCharacters 键（655-C1 判例：dslRegs 过滤器只认 ['"']，省略=天然不入，
+ *    工厂对象无 triggerCharacters 键（655-C1 先例：dslRegs 过滤器只认 ['"']，省略=天然不入，
  *    monacoDslAssist 计数零扰动）。
  *  D 工厂 makeDslValueSuggestProvider 行为：suggestAsync 消费+item 七字段逐断言
  *    （kind/insertText/range 整串 I-1/filterText/sortText 序/command/detail 中文）+
@@ -53,8 +53,8 @@ const FIELDS = [
   { path: 'created', type: 'date' },
   { path: 'w', type: 'wildcard' },
   { path: 'ck', type: 'constant_keyword' },
-  /* 白名单键同名边角（设计记档 §5.1 第 4 步 exclude 分支的判别字段——无它则 order 值位
-     走 fields 查无也 null，exclude 立法不可证） */
+  /* 白名单键同名边角（设计备案 §5.1 第 4 步 exclude 分支的判别字段——无它则 order 值位
+     走 fields 查无也 null，exclude 约定不可证） */
   { path: 'order', type: 'keyword' },
 ];
 
@@ -110,7 +110,7 @@ describe('A2 窄守卫压制面：六步判定链任一不满足即 null', () =>
     const cases = [
       '{ "aggs": { "by_host": { "terms": { "order": "as¤',          /* 判别例：parentKey=terms ∈ 子句 → 解析成功，靠 exclude 压制 */
       '{ "track_total_hits": "tr¤',
-      '{ "aggs": { "a": { "terms": { "field": "sta¤',               /* 设计记档 §5.1 第 4 步点名的边角 */
+      '{ "aggs": { "a": { "terms": { "field": "sta¤',               /* 设计备案 §5.1 第 4 步点名的边角 */
       '{ "aggs": { "a": { "terms": { "analyzer": "sta¤',
       '{ "aggs": { "a": { "terms": { "search_analyzer": "ik¤',
       '{ "aggs": { "a": { "terms": { "normalizer": "lc¤',
@@ -202,7 +202,7 @@ describe('C 源锚 parity（冻结面镜像看守）', () => {
     expect(white).toHaveLength(7);
     expect([...DYNAMIC_EXCLUDE_VALUE_KEYS].sort()).toEqual([...white].sort());
   });
-  it('dslSortText/dslFilterText 镜像同形（解冻后不强行收编——冻结面 diff 最小化）', () => {
+  it('dslSortText/dslFilterText 镜像同形（解冻后不强行合并——冻结面 diff 最小化）', () => {
     const SORT_BODY = "return '!' + String(idx).padStart(3, '0') + label;";
     const FILTER_BODY = 'return \'"\' + label;';
     expect(monacoSrc).toContain(SORT_BODY);
@@ -222,7 +222,7 @@ describe('C 源锚 parity（冻结面镜像看守）', () => {
     expect(monacoSrc).toContain(FMT);
     expect(utilSrc).toContain(FMT);
   });
-  it('工厂对象无 triggerCharacters 键——655-C1 判例：dslRegs 过滤器只认 [\'"\']，省略=计数零扰动', () => {
+  it('工厂对象无 triggerCharacters 键——655-C1 先例：dslRegs 过滤器只认 [\'"\']，省略=计数零扰动', () => {
     const deps: DslValueSuggestDeps = { fields: () => FIELDS, terms: async () => [] };
     const p = makeDslValueSuggestProvider(deps);
     expect(typeof p.provideCompletionItems).toBe('function');

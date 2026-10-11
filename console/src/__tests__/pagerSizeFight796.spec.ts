@@ -8,12 +8,12 @@
  * → writePageSize(20) 把用户刚点的 50 静默回滚 → 重查仍按 20 行 → 用户视角「点了没反应」，
  * 且此后每次执行都再回滚=分页器被 DSL 旧值永久锁死。
  *
- * 立法（796 口径）：**执行发起方仲裁**——分页器发起的执行（setPageSize 链路）=分页档新值
+ * 约定（796 口径）：**执行发起方仲裁**——分页器发起的执行（setPageSize 链路）=分页档新值
  * 获胜，DSL size 反向同步让位；反向同步仅在非分页驱动的执行（用户改稿后执行/深链/会话
  * 恢复）生效（562 语义维持：显式 DSL 档内 size 驱动分页档三处一致）。模板内嵌 size:20
- * 不动（DSL 声明式意图保留）；分页器改档不回写 DSL 文本（562 既有记档维持）。
+ * 不动（DSL 声明式意图保留）；分页器改档不回写 DSL 文本（562 既有备案维持）。
  *
- * 伴生观察记档（非本刀面）：pickSize 在 running 在途窗点击=弹层关+静默丢弃零反馈
+ * 伴生观察备案（非本刀面）：pickSize 在 running 在途窗点击=弹层关+静默丢弃零反馈
  * （goPage 同构 running 早退）——低频形态，留独立裁决。
  */
 import { describe, it, expect } from 'vitest';
@@ -45,7 +45,7 @@ describe('796：分页改档驱动的执行=分页档获胜（DSL size 同步让
     expect(dq).not.toMatch(/if \(typeof obj\.size === 'number' && PAGER_SIZES\.includes\(obj\.size\) && obj\.size !== pageSize\.value\) \{\s*\n\s*writePageSize\(obj\.size\);/);
   });
 
-  it('根因背景锚：DEFAULT_DSL 内嵌 size:20（模板家族维持不动——分页驱动让位修法，记档防误删）', () => {
+  it('根因背景锚：DEFAULT_DSL 内嵌 size:20（模板家族维持不动——分页驱动让位修法，备案防误删）', () => {
     const m = dq.match(/const DEFAULT_DSL = `[\s\S]*?`;/);
     expect(m, 'DEFAULT_DSL 在场').toBeTruthy();
     expect(m![0]).toContain('"size": 20');

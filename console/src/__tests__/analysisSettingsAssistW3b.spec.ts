@@ -3,7 +3,7 @@
  * （BodyKind 既有档位）——此前缺省按 'search' 冒充查询根键，"analyzer": 键位出 must/filter
  * 等查询键噪音。挂载断言：加载后 JsonArea 内层 Monaco 收到的 dslAssist.bodyKind() === 'settings'
  * 且 fields() 为空数组（五百一十九批 fields 契约不回归）。
- * 558b 随迁：dsl-assist 收口 setup 常量 asAssist 并补 analyzers() 候选通道（AnalyzeView
+ * 558b 同步更新：dsl-assist 收口 setup 常量 asAssist 并补 analyzers() 候选通道（AnalyzeView
  * avBodyAssist 同通道）——fields 空/ bodyKind settings 原断言不破，新增 analyzers 正向断言；
  * 源码锁从模板内联字面迁到 asAssist 接线 + script 侧档位/通道字面。
  */
@@ -95,11 +95,11 @@ describe('AnalysisSettings dsl-assist bodyKind=settings（W3b）', () => {
     expect(assist, 'JsonArea 内层 Monaco 必须收到 dslAssist').toBeTruthy();
     expect(assist.fields()).toEqual([]);
     expect(assist.bodyKind()).toBe('settings');
-    /* 558b 随迁：analyzers() 候选通道（mock analysis 只有 analyzer.my_std；filter 不入通道） */
+    /* 558b 同步更新：analyzers() 候选通道（mock analysis 只有 analyzer.my_std；filter 不入通道） */
     expect(assist.analyzers()).toEqual(['my_std']);
   });
 
-  it('源码锁：asAssist 接线在場，bodyKind 显式 settings（缺省 search 冒充不回归）+ fields 空数组 + analyzers 通道（558b 随迁）', () => {
+  it('源码锁：asAssist 接线在場，bodyKind 显式 settings（缺省 search 冒充不回归）+ fields 空数组 + analyzers 通道（558b 同步更新）', () => {
     const v = readFileSync(join(__dirname, '../views/AnalysisSettingsView.vue'), 'utf-8');
     expect(v).toContain(':dsl-assist="asAssist"');
     expect(v).toContain("bodyKind: (): BodyKind => 'settings'");

@@ -63,7 +63,7 @@ describe('四视图 setMarkers 双通道挂法锚（banner 保留）', () => {
     expect(ubq).toContain('uqJaRef.value?.setMarkers?.(queryLint.value');
     expect(ubq).toContain(DOWNGRADE_LINE);
     expect(ubq).toContain('watch(queryStr, () => { queueUqLintMarkers(); }, { immediate: true });');
-    /* 五百六十二批随迁：.uq-lint 私造双档换装 theme.css .lint-bar 单源（uq-lint 锚并存，
+    /* 五百六十二批同步更新：.uq-lint 私造双档改用 theme.css .lint-bar 单源（uq-lint 锚并存，
        grid-column 落位留 scoped），role 语义与条件逐字不动 */
     expect(ubq).toMatch(/fullDeleteWarn" role="alert" class="lint-bar uq-lint lint-bar-err"/);
     expect(ubq).toMatch(/queryLintWarnings\.length" class="lint-bar uq-lint lint-bar-warn"/);

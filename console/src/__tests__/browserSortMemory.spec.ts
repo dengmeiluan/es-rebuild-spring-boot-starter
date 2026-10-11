@@ -1,6 +1,6 @@
 /**
  * R130 第六十批：BrowserView 排序方向翻转 + 记忆守卫（39/52/53 列表态偏好范式）。
- * 五百二十九批反转随迁：裸表换 QRT rows 型——排序方向钮/下拉退役，排序归 QRT 列头点击，
+ * 五百二十九批反转同步更新：裸表换 QRT rows 型——排序方向钮/下拉退役，排序归 QRT 列头点击，
  * 方向+键记忆走内核 es_tbl_sort:<storageKey> 键空间（RT 同构字符串载荷）。
  * 锁定：
  * 1) 默认不写：未点击时 localStorage 无 es_tbl_sort:browser:indices（默认值不落盘口径）；
@@ -57,7 +57,7 @@ beforeEach(() => {
   document.body.appendChild(host);
 });
 
-/* 五百二十九批锚随迁：es-console.pref.browser.sortReversed（方向钮翻转位）
+/* 五百二十九批锚同步更新：es-console.pref.browser.sortReversed（方向钮翻转位）
    → es_tbl_sort:browser:indices（QRT 列头排序记忆，键+方向一体） */
 const KEY = 'es_tbl_sort:browser:indices:m';
 const nameTh = () => host.querySelector<HTMLTableCellElement>('table.qrt-tbl thead th[data-col="索引"]');

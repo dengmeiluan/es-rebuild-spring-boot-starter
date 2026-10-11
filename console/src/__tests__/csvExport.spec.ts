@@ -22,13 +22,13 @@ describe('Lucene/PIT CSV 导出对齐（七十六批）', () => {
   it('QRT 暴露 getCsvBlock（列头+行矩阵按可见列对齐；174 批起抽 csvBlock 内部函数共用）', () => {
     expect(qrtSrc).toMatch(/getCsvBlock:\s*csvBlock/);
     expect(qrtSrc).toMatch(/head: shownCols\.value\.slice\(\)/);
-    /* 五百三十批 W-B 随迁：csvBlock 行源改 srcRows（exportRowFilter 行级过滤收口，
+    /* 五百三十批 W-B 同步更新：csvBlock 行源改 srcRows（exportRowFilter 行级过滤收口，
        缺省 undefined=sortedRows 全量恒等），矩阵成型字面不变 */
     expect(qrtSrc).toMatch(/srcRows\.map\(r => idxs\.map\(i =>/);
   });
 
-  it('Lucene 接线：getCsvBlock 消费 + SQL 同格式（561 随迁：非聚焦宿主 CSV 钮退役走 QRT 内建，聚焦 JSON 工具行 CSV 保留）', () => {
-    /* 561 随迁：卡头表格视图门控 CSV 钮退役（QRT 内建导出钮 bar-right 常驻承接）；
+  it('Lucene 接线：getCsvBlock 消费 + SQL 同格式（561 同步更新：非聚焦宿主 CSV 钮退役走 QRT 内建，聚焦 JSON 工具行 CSV 保留）', () => {
+    /* 561 同步更新：卡头表格视图门控 CSV 钮退役（QRT 内建导出钮 bar-right 常驻承接）；
        聚焦 JSON 工具行（460 批锚不动）的 CSV 钮保留宿主 exportCsv 通道 */
     expect(luceneSrc).toMatch(/@click="exportCsv" :disabled="!hits\.length"/);
     expect(luceneSrc).not.toMatch(/@click="exportCsv" :disabled="viewMode !== 'table'/);

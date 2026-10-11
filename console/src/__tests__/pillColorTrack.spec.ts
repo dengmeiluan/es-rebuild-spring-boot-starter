@@ -77,12 +77,12 @@ describe('.pill 色款单轨（p-* 无定义类不许回潮）', () => {
 
   /* AliasesView 是本次修复的现场，锚住它真的在用合法色款——
      只有否定断言时，把这 7 个徽标整段删掉也能让上面全绿。
-     五百三十一批随迁：七处手写 pill 换装 StatusPill 统一件（色款走组件 tone 五主档，
+     五百三十一批同步更新：七处手写 pill 改用 StatusPill 统一件（色款走组件 tone 五主档，
      单源看守归 componentUnify530 / semanticTier531），锚改锁组件化形态不回退。 */
   it('AliasesView 的状态徽标使用合法色款（五百三十一批起锚 StatusPill 组件化形态）', () => {
     const tpl = templateOf(join(viewsDir, 'AliasesView.vue'));
     /* 按行匹配：v-if 表达式里含「>」会截断标签级正则（g.writeCount > 1），
-       本批七处 StatusPill 全部单行书写，行级断言等价且稳 */
+       七处 StatusPill 全部单行书写，行级断言等价且稳 */
     const pillLines = tpl.split('\n').filter(l => l.includes('<StatusPill'));
     expect(pillLines.length, 'AliasesView 的别名状态徽标消失了').toBeGreaterThanOrEqual(7);
     for (const line of pillLines) {

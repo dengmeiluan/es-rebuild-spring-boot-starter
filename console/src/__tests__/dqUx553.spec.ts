@@ -2,25 +2,25 @@
  * 五百五十三批 W1：查询工作台用户真机八点之交互七点（源码静态锁定，readFileSync 形态同族
  * dqHeightUnify549/dqFix552）。
  * A)（图1+图7）「顶栏 seg 按了之后一侧就不显示，无法还原」实勘：独占隐藏侧=0 宽+整栏无柄
- *    （538 压 0+549 立法）=物理不可见，还原只剩工具行 seg 一个远端入口。修：
+ *    （538 压 0+549 约定）=物理不可见，还原只剩工具行 seg 一个远端入口。修：
  *    ①seg toggle 语义（激活档再点=还原对半，分段控件通用心智+激活态 title 明示）；
  *    ②WorkbenchLayout 独占隐藏侧原位渲染「还原对半」竖轨（点击 setMaximize(null)），
- *      542「独占↔竖轨」立法补完；穷举 seg 三态×构建区收起×执行的矩阵由竖轨+seg 双通道兜底。
+ *      542「独占↔竖轨」约定补完；穷举 seg 三态×构建区收起×执行的矩阵由竖轨+seg 双通道兜底。
  * B)（图2）「往下拉表格反而大了」根因实证=结果柄方向反转：SplitHandle 增量=柄自身坐标基线+Δ，
  *    而结果柄在结果区上方——边界应随指针（VS Code 面板惯例），向下拖=顶缘下移=高度应减；
  *    组件黑名单不可改，宿主侧 pointerdown/focus 快照反向换算（552 clamp 320..视口-260 保留）。
  *    「默认就应该是这样高度才对人」裁决=buildCollapsed 缺省 true（构建区默认收起=表格默认大，
- *    行为变更记档：展开入口=工具行「查询构建与编辑」节头钮+表格头「还原」钮双入口常驻）。
- * C)（图3）直方图开关四迁：节头→执行行右组 Profile 旁（同款 .dq-sw 激活胶囊；立法史记档：
+ *    行为变更备案：展开入口=工具行「查询构建与编辑」节头钮+表格头「还原」钮双入口常驻）。
+ * C)（图3）直方图开关四迁：节头→执行行右组 Profile 旁（同款 .dq-sw 激活胶囊；约定史备案：
  *    542 执行行→547 表格工具行→549 节头→553 执行行 Profile 旁=用户终审）；柱状图本体/
  *    节头标题/meta/清除刷选留原位。
  * D)（图4）「看不到 profile」根因=Profile 树藏在 paramsOpen 缺省 false 的参数面板内——
  *    移出成 run-sec 独立块，只受 profileTree 数据门控（queryFlat534 字面锁保形）。
  * E)（图5）「日常场景应该跟查询构建器位置换一下」：构建节头先行，场景下拉（toolbar-prepend
- *    slot）随其后（542 三行合一顺序锁随迁翻案）。
+ *    slot）随其后（542 三行合一顺序锁同步更新修订）。
  * F)（图6）「检索参数/应用太廉价不美观无质感」：检索参数 tg 无框档→细描边胶囊+icon+激活柔底
- *    （track2Wave551 无框形翻案记档）；应用钮 ghost→描边实底次级钮+icon（与「执行」主钮
- *    主次层级；dqFix552 三件全 ghost 翻案记档）；--ctl-h 三锁零触。
+ *    （track2Wave551 无框形修订备案）；应用钮 ghost→描边实底次级钮+icon（与「执行」主钮
+ *    主次层级；dqFix552 三件全 ghost 修订备案）；--ctl-h 三锁零触。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -28,7 +28,7 @@ import { join } from 'node:path';
 
 const dq = readFileSync(join(__dirname, '../views/DslQueryView.vue'), 'utf-8');
 const wl = readFileSync(join(__dirname, '../components/WorkbenchLayout.vue'), 'utf-8');
-/* 五百五十八批随迁：直方图节壳换装 HistogramSection，C 组节头内容锁随迁组件源 */
+/* 五百五十八批同步更新：直方图节壳改用 HistogramSection，C 组节头内容锁同步更新组件源 */
 const hist = readFileSync(join(__dirname, '../components/HistogramSection.vue'), 'utf-8');
 
 describe('A①：seg toggle 还原语义（553 批，激活档再点=还原对半）', () => {
@@ -81,12 +81,12 @@ describe('B：结果柄方向反转修治+表格默认大（553 批）', () => {
     expect(fn).toMatch(/Math\.max\(320, desired\)/);
     expect(fn).toMatch(/window\.innerHeight - 260/);
   });
-  it('构建区缺省收起=表格默认大（buildCollapsed 缺省 true；行为变更记档）', () => {
+  it('构建区缺省收起=表格默认大（buildCollapsed 缺省 true；行为变更备案）', () => {
     expect(dq).toMatch(/const buildCollapsed = usePref\('query\.buildCollapsed', true\)/);
   });
 });
 
-describe('C：直方图开关四迁执行行右组 Profile 旁（553 批，用户终审；558 批随迁：节壳换装 HistogramSection，节头内容锁随迁组件源）', () => {
+describe('C：直方图开关四迁执行行右组 Profile 旁（553 批，用户终审；558 批同步更新：节壳改用 HistogramSection，节头内容锁同步更新组件源）', () => {
   const runRowAt = dq.indexOf('<div class="dq-run-row">');
   const runRowEnd = dq.indexOf('dq-params-standalone');
   const runRow = dq.slice(runRowAt, runRowEnd);
@@ -99,10 +99,10 @@ describe('C：直方图开关四迁执行行右组 Profile 旁（553 批，用�
     expect(runRow.indexOf('v-model="profileOn"')).toBeGreaterThan(-1);
     expect(runRow.indexOf('v-model="profileOn"'), 'Profile 旁（其后紧随）').toBeLessThan(runRow.indexOf('v-model="autoHist"'));
   });
-  it('节头行不再承载开关（直方图分布标题+meta+清除刷选+柱状图本体由组件承接；558 host 档换装标签零触）', () => {
-    expect(hsTag, '换装标签不承载开关').not.toContain('v-model="autoHist"');
+  it('节头行不再承载开关（直方图分布标题+meta+清除刷选+柱状图本体由组件承接；558 host 档改用标签零触）', () => {
+    expect(hsTag, '改用标签不承载开关').not.toContain('v-model="autoHist"');
     expect(hist, '直方图分布标题组件承接').toContain('直方图分布');
-    expect(dq, 'histHeadMeta 字面经 meta prop 直喂（549/553 切片锚随迁）').toContain(':meta="histHeadMeta"');
+    expect(dq, 'histHeadMeta 字面经 meta prop 直喂（549/553 切片锚同步更新）').toContain(':meta="histHeadMeta"');
     expect(hist, '清除刷选组件承接').toContain('清除刷选');
     expect(hist).toContain('<AggBarChart');
   });
@@ -123,7 +123,7 @@ describe('D：Profile 树移出参数面板（553 批，独立块）', () => {
     expect((seg.match(/<\/div>/g) || []).length, 'params-body 恰闭合一次（树已移出）').toBe(1);
   });
   it('Profile 块只受 profileTree 数据门控（queryFlat534 字面锁保形：类名/关闭钮/CSS 零触）', () => {
-    /* 五百六十五批随迁（击穿者：565 件④② Profile 树限高接 dq.profH 三档）——开标签补
+    /* 五百六十五批同步更新（击穿者：565 件④② Profile 树限高接 dq.profH 三档）——开标签补
        :style="profStyle"（内联 max-height 覆盖，缺省档=CSS 冻结值同值零漂移） */
     expect(dq).toContain('<div v-if="profileTree" class="dq-profile" :style="profStyle">');
     expect(dq).toContain('@click="profileTree = null"');
@@ -142,7 +142,7 @@ describe('E：构建节头与场景下拉对调（553 批，构建节头先行�
 });
 
 describe('F：检索参数/应用质感升级（553 批，去廉价感；--ctl-h 三锁零触）', () => {
-  it('检索参数 tg=细描边胶囊+激活柔底（track2Wave551 无框档翻案记档）', () => {
+  it('检索参数 tg=细描边胶囊+激活柔底（track2Wave551 无框档修订备案）', () => {
     expect(dq).toMatch(/class="dq-params-tg" :class="\{ on: paramsOpen \}"/);
     const base = dq.match(/^\.dq-params-tg \{[^}]*\}/m)?.[0];
     expect(base, '细描边').toMatch(/border: 1px solid var\(--line\)/);
@@ -151,7 +151,7 @@ describe('F：检索参数/应用质感升级（553 批，去廉价感；--ctl-h
     const on = dq.match(/^\.dq-params-tg\.on \{[^}]*\}/m)?.[0];
     expect(on, '激活态 accent-soft 底').toMatch(/background: var\(--ac-soft\)/);
   });
-  it('应用钮=描边实底次级钮+icon（dqFix552 三件全 ghost 翻案记档；清除钮仍 ghost）', () => {
+  it('应用钮=描边实底次级钮+icon（dqFix552 三件全 ghost 修订备案；清除钮仍 ghost）', () => {
     expect(dq).toContain('class="btn sm" @click="applyJq"');
     const runRowAt = dq.indexOf('<div class="dq-run-row">');
     const runRow = dq.slice(runRowAt, dq.indexOf('dq-params-standalone'));

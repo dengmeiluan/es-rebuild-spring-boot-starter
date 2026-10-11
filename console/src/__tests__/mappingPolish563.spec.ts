@@ -7,7 +7,7 @@
  *    键列边界，不再右对齐到容器最右造成 600px 视觉断裂）；窄容器（IndexHub 右栏
  *    ~280px）不触发断点零变——右对齐在窄栏的正确性（值独立可读）保留。
  * ② 全宽高度弹性档：折叠节 SettingsGrid max-height 440px/280px 定高 →
- *    min(60vh,520px)/min(42vh,380px)（「42vh 弹性档+原 px 兜底」立法先例）——全宽下
+ *    min(60vh,520px)/min(42vh,380px)（「42vh 弹性档+原 px 兜底」约定先例）——全宽下
  *    行不折行同屏行数更多，定高浪费视口。
  * ③ 过滤框上限：.sg-filter max-width:480px——全宽下吃满 1200px 整行失态（窄容器
  *    不触顶零变）。
@@ -37,7 +37,7 @@ describe('五百六十三批：全宽折叠节打磨五刀', () => {
     expect(g, '过滤框 max-width').toMatch(/\.sg-filter\s*\{[^}]*max-width:\s*480px/);
   });
 
-  it('② 节体高度弹性档（五百六十四批随迁：定档升级 useTierCycle 四档可调，锁迁 mappingTiers564）', () => {
+  it('② 节体高度弹性档（五百六十四批同步更新：定档升级 useTierCycle 四档可调，锁迁 mappingTiers564）', () => {
     const mv = read('../views/MappingView.vue');
     /* 563 原锁双档绑定（60vh/42vh）；564 档位循环成为唯一高度真源，双档绑定退役 */
     expect(mv, '高度绑定走档位值').toContain(':max-height="settingsH"');

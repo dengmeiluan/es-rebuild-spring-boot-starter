@@ -1,32 +1,32 @@
 /**
- * 五百五十一批·轨4（工蚁 W4）：全站扁平化扫荡 · 统一组件化收编 · 契约记档。
+ * 五百五十一批·轨4（工蚁 W4）：全站扁平化扫荡 · 统一组件化合并 · 契约备案。
  *
  * 静态源码断言仿 flattenWave546/550 范式 + ⑥运行时挂载抽查（useCurrentIdxWritePages525 mountView 骨架）：
- * ① 编辑器外框退役（立法③）四处——alv-fta / md-ta / pt-ta 三条死规则删除（模板早已 JsonArea 化，
+ * ① 编辑器外框退役（约定③）四处——alv-fta / md-ta / pt-ta 三条死规则删除（模板早已 JsonArea 化，
  *    grep 0 引用实证）；DiffEditor .df-ta 已是内容直贴（border:0 无 radius），正锁防回流，
- *    code-bg 代码内容面语义保留（540 df 判例）。
- * ② 大容器框退役（立法④）六处七件——ra-card / tg-card / rc-card / slm-card 列表行卡壳
- *    （bg+border+radius 整块消除 → border-top 分节流，xm-res 547 判例语言）；hr-hero 大横幅框
- *    降为 border-bottom 分节（551 裁决推翻 545「hero 豁免」记档：hero 是 chrome 非语义，
- *    三态语义色由 hr-score-n 文本色承接）；qx-tabs / rd-tabs 容器框退役（dq-sw 判例：
+ *    code-bg 代码内容面语义保留（540 df 先例）。
+ * ② 大容器框退役（约定④）六处七件——ra-card / tg-card / rc-card / slm-card 列表行卡壳
+ *    （bg+border+radius 整块消除 → border-top 分节流，xm-res 547 先例语言）；hr-hero 大横幅框
+ *    降为 border-bottom 分节（551 裁决推翻 545「hero 豁免」备案：hero 是 chrome 非语义，
+ *    三态语义色由 hr-score-n 文本色承接）；qx-tabs / rd-tabs 容器框退役（dq-sw 先例：
  *    去 bg2+border+radius 容器，tab 本身控件语义/act 态保留）。类名全保留：
  *    protectThreeState（.slm-card）/ healthThreeState（.hr-hero）/ qualityThreeState（.tg-card）
  *    在场锁不受影响，obsStack530 1100 堆叠档 / layoutAdaptive533 rc-card-meta 锚随行复核。
- * ③ 私造胶囊换装 StatusPill 统一件七件——SecurityView role-tag×4 + act-tag（六色 r-* / 五色 a-*
- *    私造配色退役，tone 映射表记档：ADMIN→r / OPERATOR→y / REBUILD_OP orange→y / VIEWER 只读→g /
+ * ③ 私造胶囊改用 StatusPill 统一件七件——SecurityView role-tag×4 + act-tag（六色 r-* / 五色 a-*
+ *    私造配色退役，tone 映射表备案：ADMIN→r / OPERATOR→y / REBUILD_OP orange→y / VIEWER 只读→g /
  *    CLUSTER_OP ac→b / AUDIT_OP violet→n；LOGIN ok→g / LOGIN_FAIL→y / WRITE→b / HIGH_RISK→r /
  *    PAGE_DENIED warn→y / READ→g / 其余→n（六百四十批 G24 危险等级隔离：HIGH_RISK 独占红、
  *    LOGIN_FAIL 降警告黄、WRITE 转信息蓝，与 PAGE_DENIED 分离））、UpdateByQuery uq-badge→n、Plugins pl-mo-tag→n、
- *    ClusterSettings cs-grp-chip→b（sweep524/tableKernelWave531 650 字面锁随迁）、
- *    MatchMatrix mm-dead-tag→r（TriangleAlert 随统一件无图标位退役，iconSizeFloor420 锁随迁）、
+ *    ClusterSettings cs-grp-chip→b（sweep524/tableKernelWave531 650 字面锁同步更新）、
+ *    MatchMatrix mm-dead-tag→r（TriangleAlert 随统一件无图标位退役，iconSizeFloor420 锁同步更新）、
  *    Aliases alv-warn-tag→y。
- * ④ 私造 meta 行收编 MetaStrip mini（550 批 sv-repo-meta 判例）六处——MappingDesigner md-kv 九行、
+ * ④ 私造 meta 行合并 MetaStrip mini（550 批 sv-repo-meta 先例）六处——MappingDesigner md-kv 九行、
  *    Workspace ws-kv 四行、IndexSettings ir-kv 三行、Slm slm-card-meta+slm-card-run 两行、
  *    Favorites fv-card-meta（fv-dest/fv-tag 语义特殊保留走插槽）、Aliases alv-meta（filter 段是
  *    popover 触发器走默认插槽，交互语义保留）。
  * ⑤ cardPrimitiveVerdict547 豁免册零新增：SecurityView 功能卡豁免（`<div class="card">` 正锁）
- *    本批未触，无需同步字典。
- * ⑥ 运行时挂载抽查三页——SecurityView 换装后 pill 渲染 + Roles 对照清单场景、SlmView 分节流
+ *    未触，无需同步字典。
+ * ⑥ 运行时挂载抽查三页——SecurityView 改用后 pill 渲染 + Roles 对照清单场景、SlmView 分节流
  *    （.slm-card 在场 + 卡内 MetaStrip）、MappingDesigner MetaStrip 渲染（点选字段后 md-kvs）。
  *
  * 范围铁律：纯视觉/语义层小刀——模板结构语义、高度链（max-height/height 定行）、六步卡结构零变动；
@@ -40,10 +40,10 @@ const read = (p: string) => readFileSync(join(__dirname, p), 'utf-8');
 
 /* ═══════════ ① 编辑器外框退役（刀③，四处） ═══════════ */
 
-describe('五百五十一批①：编辑器外框退役（立法③）', () => {
+describe('五百五十一批①：编辑器外框退役（约定③）', () => {
   it('AliasesView：.alv-fta 死规则退役（filter 编辑器早已 JsonArea 化，模板 0 引用实证）', () => {
     const s = read('../views/AliasesView.vue');
-    expect(s, 'alv-fta 规则随外框退役删除（记档注释允许保留字样）').not.toMatch(/\.alv-fta \{/);
+    expect(s, 'alv-fta 规则随外框退役删除（备案注释允许保留字样）').not.toMatch(/\.alv-fta \{/);
     expect(s, 'filter JsonArea 统一件消费不动（freeEditorTiers530 锚随行复核）').toContain('<JsonArea ref="filterJaRef"');
   });
 
@@ -51,7 +51,7 @@ describe('五百五十一批①：编辑器外框退役（立法③）', () => {
     const s = read('../views/DiffEditorView.vue');
     expect(s, '编辑器外框已退役的 border:0 形态不回流').toMatch(/\.df-ta \{[^}]*border: 0;/);
     expect(s, 'border/radius 外框不回流').not.toMatch(/\.df-ta \{[^}]*border-radius/);
-    expect(s, 'code-bg 代码内容面语义保留（540 df 判例 carve-out）').toMatch(/\.df-ta \{[^}]*background: var\(--code-bg\);/);
+    expect(s, 'code-bg 代码内容面语义保留（540 df 先例 carve-out）').toMatch(/\.df-ta \{[^}]*background: var\(--code-bg\);/);
   });
 
   it('MappingDesignerView：.md-ta 死规则退役（加字段额外 JSON 编辑器早已 JsonArea 化）', () => {
@@ -69,8 +69,8 @@ describe('五百五十一批①：编辑器外框退役（立法③）', () => {
 
 /* ═══════════ ② 大容器框退役（刀④，六处七件） ═══════════ */
 
-describe('五百五十一批②：大容器框退役（立法④，border-top/bottom 分节流）', () => {
-  it('ReindexAdvancedView：ra-card 壳退役 → border-top 分节（xm-res 547 判例语言）', () => {
+describe('五百五十一批②：大容器框退役（约定④，border-top/bottom 分节流）', () => {
+  it('ReindexAdvancedView：ra-card 壳退役 → border-top 分节（xm-res 547 先例语言）', () => {
     const s = read('../views/ReindexAdvancedView.vue');
     expect(s, '分节流新形态在场').toMatch(/\.ra-card \{ border-top: 1px solid var\(--border-subtle\); margin-bottom: var\(--sp-3\); \}/);
     expect(s, 'panel 底色退役').not.toMatch(/\.ra-card \{[^}]*background/);
@@ -84,7 +84,7 @@ describe('五百五十一批②：大容器框退役（立法④，border-top/bo
     expect(s, '分节流新形态在场').toMatch(/\.tg-card \{[^}]*border-top: 1px solid var\(--line\);/);
     expect(s, 'bg1 底色退役').not.toMatch(/\.tg-card \{[^}]*background/);
     expect(s, 'radius 退役').not.toMatch(/\.tg-card \{[^}]*border-radius/);
-    expect(s, 'hover 浮起（translateY+shadow）chrome 随迁退役').not.toMatch(/\.tg-card:hover \{[^}]*translateY/);
+    expect(s, 'hover 浮起（translateY+shadow）chrome 同步更新退役').not.toMatch(/\.tg-card:hover \{[^}]*translateY/);
     expect(s, 'tg-c-code 代码内容面 bg2 语义保留').toMatch(/\.tg-c-code \{[^}]*background: var\(--bg2\);/);
   });
 
@@ -106,7 +106,7 @@ describe('五百五十一批②：大容器框退役（立法④，border-top/bo
     expect(s, '类名在场（protectThreeState 运行时锁消费面）').toContain('class="slm-card"');
   });
 
-  it('HealthReportView：hr-hero 大横幅框退役 → border-bottom 分节（551 裁决推翻 545 hero 豁免记档）', () => {
+  it('HealthReportView：hr-hero 大横幅框退役 → border-bottom 分节（551 裁决推翻 545 hero 豁免备案）', () => {
     const s = read('../views/HealthReportView.vue');
     expect(s, '分节流新形态在场').toMatch(/\.hr-hero \{ display: flex; gap: var\(--sp-4\); padding: var\(--sp-1\) 0 var\(--sp-3\); border-bottom: 1px solid var\(--line\); \}/);
     expect(s, 'hero 底色/渐变退役').not.toMatch(/\.hr-hero \{[^}]*background/);
@@ -118,7 +118,7 @@ describe('五百五十一批②：大容器框退役（立法④，border-top/bo
     expect(s, 'hr-hero-r meta-num 档不动（flattenWave550⑥ 锚随行复核）').toContain('<div class="hr-hero-r meta-num">');
   });
 
-  it('QueryXrayView / RankDebugView：tabs 容器框退役 → 裸 tab 行（dq-sw 判例，act 态保留）', () => {
+  it('QueryXrayView / RankDebugView：tabs 容器框退役 → 裸 tab 行（dq-sw 先例，act 态保留）', () => {
     const qx = read('../views/QueryXrayView.vue');
     expect(qx, 'qx-tabs 裸 flex 行').toContain('.qx-tabs { display: flex; gap: var(--sp-1); }');
     expect(qx, '容器 bg2/border/radius/padding 退役').not.toMatch(/\.qx-tabs \{[^}]*background|\.qx-tabs \{[^}]*border|\.qx-tabs \{[^}]*border-radius|\.qx-tabs \{[^}]*padding/);
@@ -130,63 +130,63 @@ describe('五百五十一批②：大容器框退役（立法④，border-top/bo
   });
 });
 
-/* ═══════════ ③ 私造胶囊换装 StatusPill（七件） ═══════════ */
+/* ═══════════ ③ 私造胶囊改用 StatusPill（七件） ═══════════ */
 
-describe('五百五十一批③：私造胶囊换装 StatusPill 统一件（tone 五档映射记档）', () => {
-  it('SecurityView：role-tag×4 + act-tag 换装；六色 r-* / 五色 a-* 私造配色退役', () => {
+describe('五百五十一批③：私造胶囊改用 StatusPill 统一件（tone 五档映射备案）', () => {
+  it('SecurityView：role-tag×4 + act-tag 改用；六色 r-* / 五色 a-* 私造配色退役', () => {
     const s = read('../views/SecurityView.vue');
     expect(s, '统一件 import 在场').toContain("import StatusPill from '../components/StatusPill.vue';");
-    expect(s, '我的账号角色换装').toContain('<StatusPill :tone="roleTone(auth.me.role)" :label="auth.me.role" />');
-    expect(s, '用户表/审计表角色列换装（两处同形）').toMatch(/<StatusPill :tone="roleTone\(String\(value\)\)" :label="String\(value\)" \/>/);
+    expect(s, '我的账号角色改用').toContain('<StatusPill :tone="roleTone(auth.me.role)" :label="auth.me.role" />');
+    expect(s, '用户表/审计表角色列改用（两处同形）').toMatch(/<StatusPill :tone="roleTone\(String\(value\)\)" :label="String\(value\)" \/>/);
     expect((s.match(/<StatusPill :tone="roleTone\(String\(value\)\)" :label="String\(value\)" \/>/g) || []).length, '角色列恰两处（用户表+审计表）').toBe(2);
-    expect(s, '角色对照清单换装（落位锚类随迁）').toContain('<StatusPill class="role-pill" :tone="roleTone(rl)" :label="rl" />');
-    expect(s, '审计动作列换装（securityReadability 动作代码 title 锚随迁保真）')
+    expect(s, '角色对照清单改用（落位锚类同步更新）').toContain('<StatusPill class="role-pill" :tone="roleTone(rl)" :label="rl" />');
+    expect(s, '审计动作列改用（securityReadability 动作代码 title 锚同步更新保真）')
       .toContain(`<StatusPill :tone="actTone(String(value))" :label="actionZh(String(value))" :title="'动作代码：' + value" />`);
     expect(s, 'role-tag 私造样式退役').not.toMatch(/\.role-tag \{/);
     expect(s, 'r-* 六色私造配色退役').not.toMatch(/\.(r-admin|r-operator|r-viewer|r-rebuild_op|r-cluster_op|r-audit_op) \{/);
     expect(s, 'act-tag/a-* 五色私造配色退役').not.toMatch(/\.act-tag \{|\.(a-login|a-login_fail|a-write|a-high_risk|a-page_denied) \{/);
-    expect(s, 'tone 映射表记档在场（admin 危险→r）').toContain("ADMIN: 'r', OPERATOR: 'y', REBUILD_OP: 'y', VIEWER: 'g', CLUSTER_OP: 'b', AUDIT_OP: 'n',");
+    expect(s, 'tone 映射表备案在场（admin 危险→r）').toContain("ADMIN: 'r', OPERATOR: 'y', REBUILD_OP: 'y', VIEWER: 'g', CLUSTER_OP: 'b', AUDIT_OP: 'n',");
     expect(s, '动作 tone 映射表在场（六百四十批 G24 语义分层）').toContain("LOGIN: 'g', LOGIN_FAIL: 'y', WRITE: 'b', HIGH_RISK: 'r', PAGE_DENIED: 'y', READ: 'g',");
   });
 
-  it('UpdateByQueryView：uq-badge 异步任务徽标换装 StatusPill n', () => {
+  it('UpdateByQueryView：uq-badge 异步任务徽标改用 StatusPill n', () => {
     const s = read('../views/UpdateByQueryView.vue');
-    expect(s, '换装在场').toContain(`<StatusPill v-if="result.taskId" tone="n" :label="'异步任务：' + result.taskId" />`);
+    expect(s, '改用在场').toContain(`<StatusPill v-if="result.taskId" tone="n" :label="'异步任务：' + result.taskId" />`);
     expect(s, '私造样式退役').not.toMatch(/\.uq-badge \{/);
     expect(s, '统一件 import 在场').toContain("import StatusPill from '../components/StatusPill.vue';");
   });
 
-  it('PluginsView：pl-mo-tag 插件名徽标换装 StatusPill n', () => {
+  it('PluginsView：pl-mo-tag 插件名徽标改用 StatusPill n', () => {
     const s = read('../views/PluginsView.vue');
-    expect(s, '换装在场').toContain('<StatusPill v-if="currentPlugin" tone="n" :label="currentPlugin" />');
+    expect(s, '改用在场').toContain('<StatusPill v-if="currentPlugin" tone="n" :label="currentPlugin" />');
     expect(s, '私造样式退役').not.toMatch(/\.pl-mo-tag \{/);
   });
 
-  it('ClusterSettingsView：cs-grp-chip 分组列换装 StatusPill b（sweep524/tableKernelWave531 字面锁随迁）', () => {
+  it('ClusterSettingsView：cs-grp-chip 分组列改用 StatusPill b（sweep524/tableKernelWave531 字面锁同步更新）', () => {
     const s = read('../views/ClusterSettingsView.vue');
-    expect(s, '换装在场（cs-grp-chip 落位锚保留）').toContain('<StatusPill class="cs-grp-chip" tone="b" :label="String(value)" />');
+    expect(s, '改用在场（cs-grp-chip 落位锚保留）').toContain('<StatusPill class="cs-grp-chip" tone="b" :label="String(value)" />');
     expect(s, '650/ac-soft 私造底规则退役（色档归 pill 单源）').not.toMatch(/\.cs-grp-chip \{/);
   });
 
-  it('MatchMatrixView：mm-dead-tag 换装 StatusPill r；TriangleAlert 随统一件无图标位退役（spSweep 字面行不动）', () => {
+  it('MatchMatrixView：mm-dead-tag 改用 StatusPill r；TriangleAlert 随统一件无图标位退役（spSweep 字面行不动）', () => {
     const s = read('../views/MatchMatrixView.vue');
-    expect(s, '换装在场').toContain('<StatusPill v-if="c.count === 0" tone="r" label="没起作用" />');
+    expect(s, '改用在场').toContain('<StatusPill v-if="c.count === 0" tone="r" label="没起作用" />');
     expect(s, '私造样式退役').not.toMatch(/\.mm-dead-tag \{/);
     expect(s, '图标随统一件无图标位退役（import 一并清）').not.toContain('TriangleAlert');
-    expect(s, 'spSweep540/544/545 字面行随 554 收编改锚（.mm-busy 6px/16px→token，14px 刻值保字面）').toMatch(/gap: var\(--sp-1h\); padding: 14px var\(--sp-4\)/);
+    expect(s, 'spSweep540/544/545 字面行随 554 合并改锚（.mm-busy 6px/16px→token，14px 刻值保字面）').toMatch(/gap: var\(--sp-1h\); padding: 14px var\(--sp-4\)/);
   });
 
-  it('AliasesView：alv-warn-tag write 异常警示换装 StatusPill y', () => {
+  it('AliasesView：alv-warn-tag write 异常警示改用 StatusPill y', () => {
     const s = read('../views/AliasesView.vue');
-    expect(s, '换装在场').toContain('<StatusPill tone="y" :label="w.reason" />');
+    expect(s, '改用在场').toContain('<StatusPill tone="y" :label="w.reason" />');
     expect(s, '私造样式退役').not.toMatch(/\.alv-warn-tag/);
   });
 });
 
-/* ═══════════ ④ 私造 meta 行收编 MetaStrip mini（六处） ═══════════ */
+/* ═══════════ ④ 私造 meta 行合并 MetaStrip mini（六处） ═══════════ */
 
-describe('五百五十一批④：私造 meta 行收编 MetaStrip mini（550 sv-repo-meta 判例）', () => {
-  it('MappingDesignerView：md-kv 九行键值收编——值对段入 items，富内容三段走默认插槽', () => {
+describe('五百五十一批④：私造 meta 行合并 MetaStrip mini（550 sv-repo-meta 先例）', () => {
+  it('MappingDesignerView：md-kv 九行键值合并——值对段入 items，富内容三段走默认插槽', () => {
     const s = read('../views/MappingDesignerView.vue');
     expect(s, 'MetaStrip mini 档在场').toContain('<MetaStrip class="md-kvs" :items="pickedMeta">');
     expect(s, '值对 items 派生在场').toContain('const pickedMeta = computed<MetaStripItem[]>(() => {');
@@ -194,15 +194,15 @@ describe('五百五十一批④：私造 meta 行收编 MetaStrip mini（550 sv-
     expect(s, '类型 chip 全局单源消费保留（theme.css .chip mono 系豁免）').toContain('class="chip mono mft-type"');
   });
 
-  it('WorkspaceView：ws-kv 四行收编 MetaStrip（长索引名段 tip 兜底）', () => {
+  it('WorkspaceView：ws-kv 四行合并 MetaStrip（长索引名段 tip 兜底）', () => {
     const s = read('../views/WorkspaceView.vue');
     expect(s, 'MetaStrip mini 档在场').toContain('<MetaStrip class="ws-strip"');
-    expect(s, '选中段 tip 兜底（原 ellipsis+title 语义随迁）').toContain("{ value: store.pickedIdx || '—', label: '选中', tip: store.pickedIdx || undefined }");
+    expect(s, '选中段 tip 兜底（原 ellipsis+title 语义同步更新）').toContain("{ value: store.pickedIdx || '—', label: '选中', tip: store.pickedIdx || undefined }");
     expect(s, '统一件 import 在场').toContain("import MetaStrip from '../components/MetaStrip.vue';");
     expect(s, 'ws-kv 私造行样式退役').not.toMatch(/\.ws-kv \{|\.ws-kv b|\.ws-kv-v/);
   });
 
-  it('IndexSettingsView：ir-kv 三行收编 MetaStrip（重建预估段）', () => {
+  it('IndexSettingsView：ir-kv 三行合并 MetaStrip（重建预估段）', () => {
     const s = read('../views/IndexSettingsView.vue');
     expect(s, 'MetaStrip mini 档在场').toContain('<MetaStrip class="ir-kvs"');
     expect(s, '三段值对齐（文档数/主分片体积/预计耗时）').toContain("label: '文档数'");
@@ -210,7 +210,7 @@ describe('五百五十一批④：私造 meta 行收编 MetaStrip mini（550 sv-
     expect(s, 'ir-kv 私造行样式退役').not.toMatch(/\.ir-kv \{|\.ir-kv span|\.ir-kv b/);
   });
 
-  it('SlmView：slm-card-meta + slm-card-run 两行收编 MetaStrip（执行结果点随段迁移）', () => {
+  it('SlmView：slm-card-meta + slm-card-run 两行合并 MetaStrip（执行结果点随段迁移）', () => {
     const s = read('../views/SlmView.vue');
     expect(s, 'MetaStrip mini 档在场').toContain('<MetaStrip class="slm-card-meta" :items="slmCardMeta(p)" />');
     expect(s, 'items 派生函数在场').toContain('function slmCardMeta(p: any): MetaStripItem[] {');
@@ -219,10 +219,10 @@ describe('五百五十一批④：私造 meta 行收编 MetaStrip mini（550 sv-
     expect(s, 'slm-card-meta 落位外距锚（rc-card-meta 同款范式）').toContain('.slm-card-meta { margin-top: var(--sp-2); }');
   });
 
-  it('FavoritesView：fv-card-meta 收编 MetaStrip；fv-dest 保留插槽；fv-tag 收编 items text 段（561 批）', () => {
+  it('FavoritesView：fv-card-meta 合并 MetaStrip；fv-dest 保留插槽；fv-tag 合并 items text 段（561 批）', () => {
     const s = read('../views/FavoritesView.vue');
-    /* 五百六十一批随迁：tag chip 由插槽收编 MetaStrip items text 纯文本段（550 sv-repo 徽章
-       判例同语言），私造 chip 皮退役——剥注释口径防历史记档字面误命中（flattenWave556 同款） */
+    /* 五百六十一批同步更新：tag chip 由插槽合并 MetaStrip items text 纯文本段（550 sv-repo 徽章
+       先例同语言），私造 chip 皮退役——剥注释口径防历史备案字面误命中（flattenWave556 同款） */
     const code = s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/<!--[\s\S]*?-->/g, ' ');
     expect(code, 'MetaStrip mini 档在场（items 派生函数承接时间戳+tag 段）').toMatch(/<MetaStrip class="fv-card-meta" :items="fvCardMeta\(it\)">/);
     expect(s, 'fv-dest 重放目标 chip 保留').toContain('class="fv-dest"');
@@ -231,10 +231,10 @@ describe('五百五十一批④：私造 meta 行收编 MetaStrip mini（550 sv-
     expect(s, '本类只留落位外距（flex/字号归 .ms 单源）').toContain('.fv-card-meta { margin-top: var(--sp-2); }');
   });
 
-  it('AliasesView：alv-meta rt/filter 片收编 MetaStrip（filter popover 触发器走插槽保交互）', () => {
+  it('AliasesView：alv-meta rt/filter 片合并 MetaStrip（filter popover 触发器走插槽保交互）', () => {
     const s = read('../views/AliasesView.vue');
     expect(s, 'MetaStrip mini 档在场').toContain('<MetaStrip v-if="r.routing || r.filter" class="alv-rowmeta"');
-    expect(s, 'rt 值段入 items（title→tip 随迁）').toContain("{ value: r.routing, label: 'rt', tip: 'index_routing' }");
+    expect(s, 'rt 值段入 items（title→tip 同步更新）').toContain("{ value: r.routing, label: 'rt', tip: 'index_routing' }");
     expect(s, 'alv-meta bg2 胶囊私造样式退役').not.toMatch(/\.alv-meta \{/);
     expect(s, 'filter 段 popover 触发器交互语义保留').toMatch(/class="ms-i alv-meta-filter"/);
   });
@@ -333,7 +333,7 @@ beforeEach(() => {
 });
 
 describe('五百五十一批⑥：运行时挂载抽查', () => {
-  it('SecurityView：role/act 换装后 pill 渲染 + Roles 对照清单场景（role-pill×6、私造胶囊清零）', async () => {
+  it('SecurityView：role/act 改用后 pill 渲染 + Roles 对照清单场景（role-pill×6、私造胶囊清零）', async () => {
     const View = (await import('../views/SecurityView.vue')).default;
     const w = await mountView(View);
     const { useAuthStore } = await import('../stores/auth');

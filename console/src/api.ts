@@ -1,8 +1,8 @@
 /** API 层：fetch 封装 + 全部后端端点 */
 import { parseJsonSafe, writeStoredRaw, removeStoredRaw } from './utils/safeJson';
 /* 宿主可能配了 servlet context-path（如 宿主的 context-path）。
-   console 固定挂在 {ctx}/console/ 下且路由是 hash 模式，pathname 不含页内路由，
-   故从 pathname 截取 /console/ 之前的段即为 context-path（bond-basic 等无 ctx 宿主得 ''，行为不变）。 */
+ console 固定挂在 {ctx}/console/ 下且路由是 hash 模式，pathname 不含页内路由，
+ 故从 pathname 截取 /console/ 之前的段即为 context-path（bond-basic 等无 ctx 宿主得 ''，行为不变）。 */
 const CTX = (() => {
   const m = window.location.pathname.match(/^(.*?)\/console\//);
   return m ? m[1] : '';
@@ -23,7 +23,7 @@ const authHeaders = (): Record<string, string> => {
 
 /* ==================== ：宿主委托凭证（X-Es-Host-Token） ==================== */
 /* iframe 嵌入场景：宿主页面 postMessage 下发宿主凭证，内存态（不落 localStorage，随页面生命周期）。
-   带上后每个请求先走宿主委托鉴权（DelegatingConsoleAuthorizer），认出即免内置登录。 */
+ 带上后每个请求先走宿主委托鉴权（DelegatingConsoleAuthorizer），认出即免内置登录。 */
 let hostToken = '';
 export const setHostToken = (t: string) => { hostToken = t || ''; };
 export const getHostToken = () => hostToken;
@@ -44,12 +44,12 @@ const targetHeaders = (): Record<string, string> => {
 };
 
 /* ==================== ：授权就绪门（iframe 嵌入形态） ====================
-   连接模型用户（宿主委托）的页面门按 X-Es-Target 命中 conn:{id}:{page} 键判定——
-   开屏竞态（身份 probe / 连接目录 loadConns / autoPickConnTarget 钉选三步未就绪）期间
-   发出的裸请求=结构性 PAGE_DENIED（产线审计 81,572 条的两大主源之一：开屏爆发+轮询循环）。
-   App.vue 在三步完成后 release 本门；未 release 前的内部请求在此等待（4s 兜底放行，
-   宿主异常时最多延迟不满 4s，绝不死等）。豁免=身份/握手/连接目录自身（否则死锁）；
-   独立部署（hostToken 空）恒直通零回归。 */
+ 连接模型用户（宿主委托）的页面门按 X-Es-Target 命中 conn:{id}:{page} 键判定——
+ 开屏竞态（身份 probe / 连接目录 loadConns / autoPickConnTarget 钉选三步未就绪）期间
+ 发出的裸请求=结构性 PAGE_DENIED（产线审计 81,572 条的两大主源之一：开屏爆发+轮询循环）。
+ App.vue 在三步完成后 release 本门；未 release 前的内部请求在此等待（4s 兜底放行，
+ 宿主异常时最多延迟不满 4s，绝不死等）。豁免=身份/握手/连接目录自身（否则死锁）；
+ 独立部署（hostToken 空）恒直通零回归。 */
 let authSettled: Promise<void> = Promise.resolve();
 let authSettledPending = false;
 export function setAuthSettled(p: Promise<void>): void {
@@ -67,10 +67,10 @@ function authGateWait(path: string): Promise<void> | null {
 export class ApiError extends Error {
   status: number;
   /* 后端业务错误码透传（CONN_FORBIDDEN/LOCK_CONFLICT/ES_ERROR…）——
-     纯增量可选字段，errPre 徽标与调用方特判读它；缺失 undefined，旧调用点零改动 */
+ 纯增量可选字段，errPre 徽标与调用方特判读它；缺失 undefined，旧调用点零改动 */
   code?: string;
   /* 失败端点透传（如 "GET /internal/es/index/..."）——errPre「失败于 …」行
-     消费（errMeta 读它），旧后端缺省 undefined 不显行，与 code 同为纯增量契约 */
+ 消费（errMeta 读它），旧后端缺省 undefined 不显行，与 code 同为纯增量契约 */
   endpoint?: string;
   constructor(status: number, message: string, code?: string, endpoint?: string) {
     super(message);
@@ -81,20 +81,20 @@ export class ApiError extends Error {
 }
 
 /* 请求超时兜底——fetch 原生无超时，网络黑洞（代理挂死/服务假死）会让 await 永等，
-   Overview 骨架屏永挂就是这个病。默认 60s 宽松兜底（重建/快照等重操作不误伤）；
-   超时抛可读 ApiError(408)，与调用方主动取消（AbortError， 轻提示路径）严格区分 */
+ Overview 骨架屏永挂就是这个病。默认 60s 宽松兜底（重建/快照等重操作不误伤）；
+ 超时抛可读 ApiError(408)，与调用方主动取消（AbortError， 轻提示路径）严格区分 */
 const REQUEST_TIMEOUT_MS = 60_000;
 const TIMEOUT_REASON = Symbol('es-console.timeout');
 
 /* 慢请求可观测——成功响应耗时超过该阈值经全局事件桥弹 warning。
-   失败链路已有 error 通知，不重复打扰；快请求零输出 */
+ 失败链路已有 error 通知，不重复打扰；快请求零输出 */
 const SLOW_REQUEST_MS = 10_000;
 
 /* ==================== ：原始 IO 记录环（RawIoModal 数据源，additive） ==================== */
 /* request() 成功/失败全留痕：环形 30 条（读出恒新→旧）、响应原文 ~200KB 截断保护。
-   纯观测旁路：记录链路全 try/catch，任何异常静默吞掉，绝不影响主流程任何路径；
-   request<T> 返回值/超时/错误抛出契约零变更。消费方见 components/RawIoModal.vue
-   （IndexHub/SqlConsole/Adhoc/Xmigrate 四页「原始 IO」钮，按路径子串取该页最近一条）。 */
+ 纯观测旁路：记录链路全 try/catch，任何异常静默吞掉，绝不影响主流程任何路径；
+ request<T> 返回值/超时/错误抛出契约零变更。消费方见 components/RawIoModal.vue
+ （IndexHub/SqlConsole/Adhoc/Xmigrate 四页「原始 IO」钮，按路径子串取该页最近一条）。 */
 export interface RawIoRec {
   id: number;
   ts: number;
@@ -112,8 +112,8 @@ export interface RawIoRec {
   responseRaw: string;
   truncated?: boolean;
   /** 执行链打标（request init ioKind 通道透传，recordIo 第 8 参写入）——
-      last(pathSub, kind) 二段过滤收口（SqlConsole 546 find 补丁退役）。打标 opt-in：
-      未打标调用点该字段 undefined（零增量），kind 过滤天然跳过 */
+ last(pathSub, kind) 二段过滤收口（SqlConsole 546 find 补丁退役）。打标 opt-in：
+ 未打标调用点该字段 undefined（零增量），kind 过滤天然跳过 */
   kind?: string;
 }
 const IO_RING_MAX = 30;
@@ -131,11 +131,11 @@ function recordIo(url: string, method: string, requestBody: string, status: numb
   } catch { /* 观测旁路：记录失败静默，绝不影响主流程 */ }
 }
 
-/** 原始 IO 快查（）：last(路径子串) 取该页最近一条（无参=全局最近）；
-    双参 last(pathSub, kind)——kind 在场时二段过滤 r.kind === kind，
-    未命中回 null 不回退（不回落未打标档；SqlConsole 执行链 'sql' 收口即此语义）。
-    all() 新→旧全量；get(id) 精确取。恒返回拷贝（调用方改动不串环内对象）；
-    clear() 供测试/调试清环。读路径同样全 try/catch（异常回 null/[]，不炸消费方）。 */
+/** 原始 IO 快查（last(路径子串) 取该页最近一条（无参=全局最近）；
+ 双参 last(pathSub, kind)——kind 在场时二段过滤 r.kind === kind，
+ 未命中回 null 不回退（不回落未打标档；SqlConsole 执行链 'sql' 收口即此语义）。
+ all() 新→旧全量；get(id) 精确取。恒返回拷贝（调用方改动不串环内对象）；
+ clear() 供测试/调试清环。读路径同样全 try/catch（异常回 null/[]，不炸消费方）。 */
 export const ioRecorder = {
   last(pathSub?: string, kind?: string): RawIoRec | null {
     try {
@@ -180,7 +180,7 @@ function timeoutSignal(callerSignal: AbortSignal | null | undefined, ms: number)
 
 async function request<T = any>(path: string, init?: RequestInit & { timeoutMs?: number; ioKind?: string }, base: string = EP): Promise<T> {
   /* 授权就绪门——宿主令牌在途且身份/目标未 settle 时先等（豁免端点与独立部署直通，
-     token 快照必须在门后取：等待期间握手可能送达新凭证） */
+ token 快照必须在门后取：等待期间握手可能送达新凭证） */
   const gate = authGateWait(path);
   if (gate) await gate;
   const tokenAtRequest = getToken();
@@ -188,14 +188,14 @@ async function request<T = any>(path: string, init?: RequestInit & { timeoutMs?:
   /* 慢请求计时起点——fetch 全程（含排队/响应体读取） */
   const startedAt = performance.now();
   /* init.headers 必须并入组合头而非整体覆盖——此前 ...init 在 headers 之后展开，
-     显式带头的调用（如 sqlProbe 的 X-Es-Target）会把鉴权/Content-Type 全部冲掉导致 401 */
+ 显式带头的调用（如 sqlProbe 的 X-Es-Target）会把鉴权/Content-Type 全部冲掉导致 401 */
   /* ioKind 同 timeoutMs 形态——内部消费的打标通道（recordIo 第 8 参 →
-     RawIoRec.kind），在此解构剥离，不进 fetch init（公开 fetch 语义零增量） */
+ RawIoRec.kind），在此解构剥离，不进 fetch init（公开 fetch 语义零增量） */
   const { headers: extraHeaders, signal: callerSignal, timeoutMs, ioKind, ...restInit } = init || {};
   const ts = timeoutSignal(callerSignal, timeoutMs ?? REQUEST_TIMEOUT_MS);
   /* IO 记录前置提取（body 已由 post/put 序列化为字符串；此处只做安全转换，
-     双层 try 兜底——提取抛错也只退空串，绝不给主流程新增抛点）。主记录点在响应体读出后、
-     fetch 未及响应（超时/网络/取消）的记录点在其 catch。 */
+ 双层 try 兜底——提取抛错也只退空串，绝不给主流程新增抛点）。主记录点在响应体读出后、
+ fetch 未及响应（超时/网络/取消）的记录点在其 catch。 */
   const ioMethod = (restInit.method || 'GET').toUpperCase();
   let ioBody = '';
   try {
@@ -211,7 +211,7 @@ async function request<T = any>(path: string, init?: RequestInit & { timeoutMs?:
     });
   } catch (e: any) {
     /* 未及响应（超时/网络黑洞/调用方取消）也留痕（status=0），观测量，
-       不触碰下方既有超时/取消分流 */
+ 不触碰下方既有超时/取消分流 */
     try { recordIo(base + path, ioMethod, ioBody, 0, false, performance.now() - startedAt, String(e?.message || e), ioKind); } catch { /* 观测旁路静默 */ }
     /* 超时和用户取消都以 abort 形态抛出，靠 reason 分流：超时 → 可读错误；取消 → 原样上抛（ 语义不变） */
     if (ts.isTimeout()) throw new ApiError(408, `请求超时（${((timeoutMs ?? REQUEST_TIMEOUT_MS) / 1000).toFixed(0)}s 无响应），请检查网络或服务状态后重试`);
@@ -223,14 +223,14 @@ async function request<T = any>(path: string, init?: RequestInit & { timeoutMs?:
   let data: any = null;
   if (text) {
     /* 精度保真解析——19 位雪花 long（jobId/文档 ID）超 MAX_SAFE_INTEGER，
-       原生 JSON.parse 解析瞬间尾数抹零，展示/复制/回写全链路失真 */
+ 原生 JSON.parse 解析瞬间尾数抹零，展示/复制/回写全链路失真 */
     try { data = parseJsonSafe(text); } catch { data = text; }
   }
   /* IO 记录主点——成功/失败全留痕，ok 语义=HTTP ok 且非 200+error 业务信封
-     （与调用方拿到的成败一致）。置于业务分流之前：下方 401/409 广播、友好文案与
-     ApiError 抛出路径零触碰（记录是旁路，任何异常静默吞掉） */
-  /* 修正：costMs 只测一次——obsStack530 以 mockImplementationOnce 恰两桩
-     performance.now 钉死计时面，记录点多取一拍会偷桩致慢请求广播失明；记录与慢广播共用同一测量 */
+ （与调用方拿到的成败一致）。置于业务分流之前：下方 401/409 广播、友好文案与
+ ApiError 抛出路径零触碰（记录是旁路，任何异常静默吞掉） */
+  /* 修正：costMs 只测一次—— 以 mockImplementationOnce 恰两桩
+ performance.now 钉死计时面，记录点多取一拍会偷桩致慢请求广播失明；记录与慢广播共用同一测量 */
   const costMs = performance.now() - startedAt;
   try {
     recordIo(base + path, ioMethod, ioBody, resp.status,
@@ -257,7 +257,7 @@ async function request<T = any>(path: string, init?: RequestInit & { timeoutMs?:
       msg = '目标集群连接不存在或已被删除，请在顶栏切换器重新选择';
     }
     /* code 随错误透传（友好文案特判照旧读 data.code，语义不丢）；
-       endpoint 同透传（errPre「失败于 …」行消费，旧后端缺省不显） */
+ endpoint 同透传（errPre「失败于 …」行消费，旧后端缺省不显） */
     throw new ApiError(resp.status, msg,
       data && typeof data === 'object' ? data.code : undefined,
       data && typeof data === 'object' && typeof data.endpoint === 'string' ? data.endpoint : undefined);
@@ -268,8 +268,8 @@ async function request<T = any>(path: string, init?: RequestInit & { timeoutMs?:
       typeof data.endpoint === 'string' ? data.endpoint : undefined);
   }
   /* 慢请求可观测——只在成功链路广播，由 app store 监听转发既有 notify
-     warning 档（8s 同文去重内建）。事件桥与上方 unauthorized/setup-required 同范式：
-     api 层不反依赖 pinia store（会成环），监听侧见 stores/app.ts */
+ warning 档（8s 同文去重内建）。事件桥与上方 unauthorized/setup-required 同范式：
+ api 层不反依赖 pinia store（会成环），监听侧见 stores/app.ts */
   if (costMs > SLOW_REQUEST_MS) {
     window.dispatchEvent(new CustomEvent('es-console:slow-request', {
       detail: { path, seconds: +(costMs / 1000).toFixed(1) },
@@ -319,15 +319,15 @@ export interface MonitorMetricsRecord {
   timestamp: number; connId?: string; connName?: string; env?: string; scope?: string; nodeName?: string;
   status?: string; qps?: number; indexRate?: number; heapUsedPct?: number; cpuPct?: number; diskUsedPct?: number;
   nodes?: number; indices?: number; shards?: number; unassigned?: number;
-  /**  主分片数（health.active_primary_shards）/失联节点数（期望−实到，>0 触发 WARN 告警事件） */
+  /** 主分片数（health.active_primary_shards）/失联节点数（期望−实到，>0 触发 WARN 告警事件） */
   primaryShards?: number; nodesMissing?: number;
-  /**  对标阿里云线程池 Rows 写入侧+被标记删除文档（节点采样测点，force_merge 需求判定信号） */
+  /** 对标阿里云线程池 Rows 写入侧+被标记删除文档（节点采样测点，force_merge 需求判定信号） */
   tpWriteActive?: number; tpWriteQueue?: number; docsDeleted?: number;
-  /**  IOUtil%（io_time 差分钳 0~100）+Young/Old GC 每次平均耗时 ms（Δtime÷Δcount） */
+  /** IOUtil%（io_time 差分钳 0~100）+Young/Old GC 每次平均耗时 ms（Δtime÷Δcount） */
   ioUtilPct?: number; gcYoungTimeMs?: number; gcOldTimeMs?: number;
-  /**  堆字节量 MB（锯齿形态，对标阿里云节点 JVM Old 区使用） */
+  /** 堆字节量 MB（锯齿形态，对标阿里云节点 JVM Old 区使用） */
   heapUsedMb?: number;
-  /**  fielddata 内存 MB（查询抖动经典根因观测） */
+  /** fielddata 内存 MB（查询抖动经典根因观测） */
   fielddataMb?: number;
   /** 线程池每轮拒绝增量（write=bulk 写入队列，search=搜索队列；差分/分钟，首轮/回退省略） */
   writeRejected?: number; searchRejected?: number;
@@ -337,15 +337,15 @@ export interface MonitorMetricsRecord {
   gcYoungPerMin?: number; gcOldPerMin?: number;
   /** R9 慢查询代理指标：Δ耗时÷Δ次数（ms/次，一位小数；Δ计数≤0/缺基线缺省——前端按「非 number 剔点」消费） */
   searchLatencyMs?: number; indexingLatencyMs?: number;
-  /**  探活摘要：RED 采样行的时延（多数缺省） */
+  /** 探活摘要：RED 采样行的时延（多数缺省） */
   latencyMs?: number;
-  /**  节点深耕：Load_1m（即时值）/磁盘带宽（KiB/s，差分）/磁盘 IOPS（次/秒，差分）——node doc 专属 */
+  /** 节点深耕：Load_1m（即时值）/磁盘带宽（KiB/s，差分）/磁盘 IOPS（次/秒，差分）——node doc 专属 */
   load1m?: number; diskReadKbS?: number; diskWriteKbS?: number; diskReadIops?: number; diskWriteIops?: number;
-  /**  节点深耕：查询线程池 active/queue（即时值，node doc 专属） */
+  /** 节点深耕：查询线程池 active/queue（即时值，node doc 专属） */
   tpSearchActive?: number; tpSearchQueue?: number;
-  /**  内部传输吞吐：transport rx/tx 差分（KiB/s，node doc 专属——节点间通信量非 HTTP 流量） */
+  /** 内部传输吞吐：transport rx/tx 差分（KiB/s，node doc 专属——节点间通信量非 HTTP 流量） */
   netRxKbS?: number; netTxKbS?: number;
-  /**  G6 快照状态：SLM 累计执行/失败数 + 本轮新增失败（首轮/回退省略，0 照落；集群 doc 专属） */
+  /** 快照状态：SLM 累计执行/失败数 + 新增失败（首轮/回退省略，0 照落；集群 doc 专属） */
   snapshotFailed?: number; snapshotsTotal?: number; snapshotFailedDelta?: number;
 }
 /* R7 服务端告警读侧（GET /monitor-alerts，timestamp 降序；recovered:true=恢复事件——
@@ -373,9 +373,9 @@ export interface ClusterConnView {
 
 /* ═══ 集群/索引 ═══ */
 /* date 形态采样响应。
-   forms 与 samples 是<b>两棵分开的树</b>：forms 值域恒为 number，
-   故 Object.values(forms[f]).reduce((a,b)=>a+b,0) 天然正确——
-   样例在结构上不可能混进计数（后端 DateFormTally 保证）。 */
+ forms 与 samples 是<b>两棵分开的树</b>：forms 值域恒为 number，
+ 故 Object.values(forms[f]).reduce((a,b)=>a+b,0) 天然正确——
+ 样例在结构上不可能混进计数（后端 DateFormTally 保证）。 */
 interface DateFormsResp {
   index: string;
   physicalIndex: string;
@@ -390,7 +390,7 @@ interface DateFormsResp {
 }
 
 /* 快照状态摘要响应形状（/cluster/snapshot/status?summary=true 分支，
-   Java 侧同批交付）——进行中快照的行内进度单点：总 pct + 分片统计 + 每索引 stage 计数 */
+ Java 侧同步交付）——进行中快照的行内进度单点：总 pct + 分片统计 + 每索引 stage 计数 */
 interface SnapshotStageCounts {
   INIT: number; STARTED: number; START: number; FINALIZE: number; DONE: number; FAILURE: number;
 }
@@ -418,8 +418,8 @@ export const api = {
   clusterIndices: () => get('/cluster/indices'),
   clusterInspect: (index: string, sampleSize = 5) => get(`/cluster/inspect?${q({ index, sampleSize })}`),
   /* date 字段实际存储形态采样。响应带 sampling 说明取样口径（random_score），
-     展示时必须连同 sampled/sampling 一起给，否则读者会把有限样本当成全量结论。
-     forms 值域是 number，samples 是分开的另一棵树——求和时不会把样例数组加进计数 */
+ 展示时必须连同 sampled/sampling 一起给，否则读者会把有限样本当成全量结论。
+ forms 值域是 number，samples 是分开的另一棵树——求和时不会把样例数组加进计数 */
   dateForms: (index: string, size = 50) => get<DateFormsResp>(`/cluster/date-forms?${q({ index, size })}`),
   /* settings 含集群默认值（include_defaults 只读透传，VIEWER 可用） */
   indexSettingsDefaults: (index: string) => get<{ status: number; body: string }>(`/cluster/index-settings-defaults?${q({ index })}`),
@@ -428,7 +428,7 @@ export const api = {
   keys: () => get('/keys'),
 
   /* 多集群连接管理（永远作用于宿主，列表脱敏无密码）
-     档案增 minRole（最低可见角色）/独立超时；health 为最近探活结果；probe 手动即时探活 */
+ 档案增 minRole（最低可见角色）/独立超时；health 为最近探活结果；probe 手动即时探活 */
   clustersList: () => get<ClusterConnView[]>('/clusters'),
   clustersSave: (c: { id?: string; name: string; url: string; username?: string; password?: string;
     minRole?: string; connectTimeoutMs?: number | null; socketTimeoutMs?: number | null; env?: string;
@@ -442,14 +442,14 @@ export const api = {
   clustersSyncRun: () => post<ClusterSyncReport>('/clusters/sync/run'),
 
   /* R7 服务端告警（GET /monitor-alerts，VIEWER 只读；timestamp 降序，recovered:true=恢复事件） */
-  /*  最新 Top 索引快照（对标阿里云 Index 索引行）：{index,qps,idxRate,storeMb}×≤8 */
+  /* 最新 Top 索引快照（对标阿里云 Index 索引行）：{index,qps,idxRate,storeMb}×≤8 */
   monitorTopIndexes: (connId?: string) => get<{ records: any[] }>(`/monitor-metrics/top-indexes?${q({ connId })}`),
   monitorAlerts: (size = 50, fromMs?: number, toMs?: number) => get<{ records: MonitorAlertDoc[] }>(`/monitor-alerts?${q({ size, fromMs, toMs })}`),
 
   /* 集群监控历史趋势(GET /monitor-metrics,VIEWER 只读;scope=cluster 多集群叠加;
-     ? 分隔符显式——q() 不带前导 ?,缺失曾致 404 monitor-historyfromMs=...)
-     interval 可选降采样档(如 '5m'):带上=ES date_histogram 降采样桶(timestamp 升序/桶距恒定/
-     断档时段为空值字段——前端剔点+断档断线消费),缺省=原始逐点记录(现状行为不变) */
+ ? 分隔符显式——q() 不带前导 ?,缺失曾致 404 monitor-historyfromMs=...)
+ interval 可选降采样档(如 '5m'):带上=ES date_histogram 降采样桶(timestamp 升序/桶距恒定/
+ 断档时段为空值字段——前端剔点+断档断线消费),缺省=原始逐点记录(现状行为不变) */
   monitorMetrics: (p: { connId?: string; connName?: string; scope?: string; fromMs?: number; toMs?: number;
     size?: number; from?: number; interval?: string; agg?: string }) => get<{ records: MonitorMetricsRecord[] }>(`/monitor-metrics?${q(p)}`),
 
@@ -461,7 +461,7 @@ export const api = {
   monitorHistory: (p: { connId?: string; status?: string; fromMs?: number; toMs?: number;
     size?: number; from?: number }) => get<{ records: MonitorRow[] }>(`/monitor-history?${q(p)}`),
 
-  /* 查询（：可选 AbortSignal——长查询可取消，不再只能干等） */
+  /* 查询（可选 AbortSignal——长查询可取消，不再只能干等） */
   clusterQuery: (index: string, dsl: string, size = 20, signal?: AbortSignal) => post(`/cluster/query?${q({ index, size })}`, dsl, undefined, signal ? { signal } : undefined),
   profile: (index: string, dsl: string, signal?: AbortSignal) => post(`/cluster/profile?${q({ index })}`, dsl, undefined, signal ? { signal } : undefined),
   count: (index: string, dsl: string) => post(`/cluster/count?${q({ index })}`, dsl),
@@ -498,9 +498,9 @@ export const api = {
   cancelTask: (taskId: string) => post(`/cluster/tasks/cancel?${q({ taskId })}`),
   allocationExplain: (body?: any) => post('/cluster/allocation-explain', body == null ? undefined : (typeof body === 'string' ? body : JSON.stringify(body))),
   /* 裸 fetch 补 recordIo 两点式（545 记录环覆盖 request() 全量端点后，
-     hotThreads 是最后漏网）——响应读出后记真实 status（成功/HTTP 失败同点）；
-     fetch 未及响应（网络黑洞/中断）在拒绝分支记 status=0。then(onOk,onFail) 双参形态保证
-     onOk 内抛出的 ApiError 不进 onFail（不重复记账）；返回原文串/ApiError/原样上抛契约逐字不动 */
+ hotThreads 是最后漏网）——响应读出后记真实 status（成功/HTTP 失败同点）；
+ fetch 未及响应（网络黑洞/中断）在拒绝分支记 status=0。then(onOk,onFail) 双参形态保证
+ onOk 内抛出的 ApiError 不进 onFail（不重复记账）；返回原文串/ApiError/原样上抛契约逐字不动 */
   hotThreads: (threads = 3, interval = '500ms', type = 'cpu', nodeId?: string) => {
     const url = `${EP}/cluster/hot-threads?${q({ threads, interval, type, nodeId })}`;
     const startedAt = performance.now();
@@ -554,7 +554,7 @@ export const api = {
   putClusterSettings: (body: string) => post('/cluster/settings/put', body),
   snapshotStatus: (repo?: string, name?: string) => get<any>(`/cluster/snapshot/status?${q({ repo, name })}`),
   /* 同端点 summary=true 分支（SnapshotStatusSummary 契约见上）——
-     快照列表对 IN_PROGRESS 行的行内进度数据源；既有 snapshotStatus 行为不动 */
+ 快照列表对 IN_PROGRESS 行的行内进度数据源；既有 snapshotStatus 行为不动 */
   snapshotStatusSummary: (repo: string, name: string) =>
     get<SnapshotStatusSummary>(`/cluster/snapshot/status?${q({ repo, name, summary: true })}`),
   taskDetail: (taskId: string) => get<any>(`/cluster/task-detail?${q({ taskId })}`),
@@ -589,9 +589,9 @@ export const api = {
     index?: string; refresh?: string; pipeline?: string; timeout?: string; waitForActiveShards?: string;
   } = {}) => post<any>(`/cluster/bulk?${q(opts as any)}`, ndjson),
   /* 'sql' 打标（ioKind 通道）——SqlConsole 执行链（query/lenient/cursor/close）
-     落账 kind='sql'，供宿主 ioRecorder.last('/cluster/sql/', 'sql') 双参收口（SqlConsole 546
-     all().find 补丁退役）；translate 未打标=天然排除（546 排 translate 语义等价）。其余调用点
-     本次只开通道不打标（clusterQuery 等，避免面铺开，消费侧按需补）。 */
+ 落账 kind='sql'，供宿主 ioRecorder.last('/cluster/sql/', 'sql') 双参收口（SqlConsole 546
+ all().find 补丁退役）；translate 未打标=天然排除（546 排 translate 语义等价）。其余调用点
+ 本次只开通道不打标（clusterQuery 等，避免面铺开，消费侧按需补）。 */
   sqlJson: (body: string, signal?: AbortSignal) => post<any>('/cluster/sql/query', body, undefined, { ...(signal ? { signal } : undefined), ioKind: 'sql' }),
   sqlTranslate: (body: string) => post<any>('/cluster/sql/translate', body),
   sqlCursor: (cursor: string) => post<any>(`/cluster/sql/cursor?${q({ cursor })}`, undefined, undefined, { ioKind: 'sql' }),
@@ -663,16 +663,16 @@ export const api = {
       post<any>('/auth/users/upsert', { username, password, role }),
     deleteUser: (username: string) => post<any>(`/auth/users/delete?${q({ username })}`),
     /* since=毫秒 epoch 时间范围下推（服务端 range 过滤,可查全量历史）。
-       R9 全栈优化轮：connName 集群筛选下推（后端 16 参端点；缺省省略不过滤）。
-       uriPrefix 前缀下推补通（ 前端输入挂了但通道缺失的死输入接活） */
+ R9 全栈优化轮：connName 集群筛选下推（后端 16 参端点；缺省省略不过滤）。
+ uriPrefix 前缀下推补通（ 前端输入挂了但通道缺失的死输入接活） */
     opsAudit: (username?: string, action?: string, size = 100, from = 0, since?: number, connName?: string, uriPrefix?: string, minCostMs?: number, fromMs?: number, toMs?: number) =>
       get<any>(`/auth/ops-audit?${q({ username, action, size, from, since, connName, uriPrefix, minCostMs, fromMs, toMs })}`),
     /* 自助流水——username 服务端强制=当前身份（VIEWER+），非审计角色看「我做了什么」 */
     /* 集群维度下推（观察口径按集群）——自助面也可按集群过滤 */
     opsAuditMine: (action?: string, size = 50, from = 0, since?: number, connName?: string) =>
       get<any>(`/auth/ops-audit/mine?${q({ action, size, from, since, connName })}`),
-    /*  值建议：审计索引 terms agg（动作/集群真实出现值+计数，失败回空=回落硬编码词表）。
-       users 维度（ by_user 聚合）；：uris 维度（by_uri 真实 Top URI，供前缀筛选兜建议） */
+    /* 值建议：审计索引 terms agg（动作/集群真实出现值+计数，失败回空=回落硬编码词表）。
+ users 维度（ by_user 聚合）；：uris 维度（by_uri 真实 Top URI，供前缀筛选兜建议） */
     auditFacets: () => get<{ actions: { key: string; count?: number }[]; conns: { key: string; count?: number }[]; users: { key: string; count?: number }[]; uris: { key: string; count?: number }[] }>('/auth/audit-facets'),
   },
 
@@ -716,7 +716,7 @@ export const api = {
   },
 
   /* 跨集群迁移（XB 前缀）——对齐 CrossClusterMigrateController
-     connId/srcConnId 引用已存连接档案（服务端取密，明文不经前端；角色低于档案 minRole 回 403） */
+ connId/srcConnId 引用已存连接档案（服务端取密，明文不经前端；角色低于档案 minRole 回 403） */
   xb: {
     jobs: (limit = 20) => get(`/jobs?${q({ limit })}`, XB),
     /* 目标索引补全专用：迁移写入端（宿主）索引清单——恒宿主控制面，别用跟随 X-Es-Target 的 clusterIndices */

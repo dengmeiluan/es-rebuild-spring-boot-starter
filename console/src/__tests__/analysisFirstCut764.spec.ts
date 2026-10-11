@@ -5,10 +5,10 @@
  * 边界（analysisSettingsAssistW3b 同源 mock 形态，深链走 hash 域 readHashQuery）。
  *
  * ① G227（P3 死代码·头号）.as-hd-l/-ic/-tt/-sub/-r/.as-ii 六死规则（PageHeader
- *    收编漏删族+IndexPicker 退役伴漏删，713 G53/715 G56/717 G61/721 G72/727 G86/
+ *    合并漏删族+IndexPicker 退役伴漏删，713 G53/715 G56/717 G61/721 G72/727 G86/
  *    729 G94/737 G131/741 G147/761 G220 同族）——修法=纯删零连锁；.as-hd 基础规则
  *    与 .as-hd-ic2.lv-* 五活规则不动。547 批 smallScreenFloor547 ④ .as-ii min()
- *    锁随迁（负向锚：死类不回潮）。
+ *    锁同步更新（负向锚：死类不回潮）。
  * ② G230（P3 一致性·次刀）filterKw 裸 ref 无草稿（SearchFilterBar 24 消费面 21
  *    已接/3 面裸=少数派）——修法=一行接 useScopedDraft 同主流形态，按索引作用域
  *    （Mapping indices-mapping 同款）防 A 索引过滤词串到 B。
@@ -27,7 +27,7 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-/* MonacoEditor stub：JsonArea 内层编辑器边界（W3b 同款；本批刀面不触 dsl-assist） */
+/* MonacoEditor stub：JsonArea 内层编辑器边界（W3b 同款；刀面不触 dsl-assist） */
 vi.mock('../components/MonacoEditor.vue', async () => {
   const { defineComponent: dc } = await import('vue');
   return {
@@ -122,7 +122,7 @@ afterEach(() => {
   history.replaceState(null, '', '#/');
 });
 
-describe('764 A0 挂载不变量负锚（现状即守卫，非本批刀面）', () => {
+describe('764 A0 挂载不变量负锚（现状即守卫，非刀面）', () => {
   it('加载链：五卡在场+MetaStrip 五段+原始 JSON 卡+五类计数串', async () => {
     const host = await mountView();
     await loadMain(host);
@@ -140,7 +140,7 @@ describe('764 A0 挂载不变量负锚（现状即守卫，非本批刀面）', 
   });
 });
 
-describe('764 G227 六死规则整删（死代码·头号·PageHeader 收编漏删族+IndexPicker 退役伴漏删）', () => {
+describe('764 G227 六死规则整删（死代码·头号·PageHeader 合并漏删族+IndexPicker 退役伴漏删）', () => {
   it('源码锁：.as-hd-l/-ic/-tt/-sub/-r/.as-ii 六类名 scoped 绝迹（模板本就零引用）', () => {
     expect(src, '.as-hd-l 死规则须删').not.toMatch(/\.as-hd-l\b/);
     expect(src, '.as-hd-ic 死规则须删（-ic2 活锚不受扰，负向锚收词界）').not.toMatch(/\.as-hd-ic\s*\{/);

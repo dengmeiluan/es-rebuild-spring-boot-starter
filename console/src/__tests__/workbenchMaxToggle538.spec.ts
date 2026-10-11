@@ -67,12 +67,12 @@ describe('互覆盖接线（538 批）', () => {
 });
 
 describe('检索参数节头常显+参数前置执行行（538 批）', () => {
-  it('检索参数开关常驻可点（542 二刀随迁：钮在执行行 run-end 内常显，展开区独立 v-show）', () => {
+  it('检索参数开关常驻可点（542 二刀同步更新：钮在执行行 run-end 内常显，展开区独立 v-show）', () => {
     expect(dq).not.toMatch(/dq-params-tg" [^>]*v-show/);
     expect(dq).toContain('class="dq-params-tg"');
     expect(dq).toMatch(/<div v-show="paramsOpen" class="dq-params-body dq-params-standalone">/);
   });
-  it('参数开关与执行同处统一容器 dq-run-sec（542 二刀随迁：钮进 run-end、展开区在其下）', () => {
+  it('参数开关与执行同处统一容器 dq-run-sec（542 二刀同步更新：钮进 run-end、展开区在其下）', () => {
     const secAt = dq.indexOf('<div class="dq-run-sec">');
     const runAt = dq.indexOf('<div class="dq-run-row">');
     const paramsAt = dq.indexOf('dq-params-standalone');
@@ -86,7 +86,7 @@ describe('结果视图条糅合进结果卡（538 批）', () => {
   it('dq-res-bar 卡外独立条退役：视图 seg+分页+命中数并入 dq-res-body 卡内头部', () => {
     expect(dq).not.toContain('class="dq-res-bar"');
     expect(dq).toContain('dq-res-head');
-    /* 547 批随迁：.card 结果区卡壳退役——dq-res-body 只留布局容器职责（.card 类退役） */
+    /* 547 批同步更新：.card 结果区卡壳退役——dq-res-body 只留布局容器职责（.card 类退役） */
     const bodyAt = dq.indexOf('class="dq-res-body"');
     const headAt = dq.indexOf('dq-res-head');
     expect(bodyAt).toBeGreaterThan(-1);

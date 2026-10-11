@@ -1,7 +1,7 @@
 <template>
   <!-- 页头集群统一件：31 个 view 各写一套 {prefix}-hd/-l/-r/-ic/-tt/-sub 后
-       标题字号(15/16px)、副标题(11/11.5px)、图标色、gap 各自漂移。
-       这里固化多数派基线，差异只留 iconColor 一个 prop —— 其余靠插槽扩展而非新增开关 -->
+ 标题字号(15/16px)、副标题(11/11.5px)、图标色、gap 各自漂移。
+ 这里固化多数派基线，差异只留 iconColor 一个 prop —— 其余靠插槽扩展而非新增开关 -->
   <div class="ph" :class="{ 'ph-top': align === 'top' }">
     <div class="ph-l">
       <component :is="icon" v-if="icon" :size="18" class="ph-ic" :style="iconColor ? { color: iconColor } : undefined" />
@@ -52,7 +52,7 @@ withDefaults(defineProps<{
 .ph-ic { color: var(--brand); flex-shrink: 0; }
 .ph-tx { min-width: 0; }
 /* 600→650（字重倒挂修复——页头 16px/600 曾被卡头 13px/650 压住；
-   与 .card-t 同 650 档，靠 16 vs 13 字号拉开层级） */
+ 与 .card-t 同 650 档，靠 16 vs 13 字号拉开层级） */
 .ph-tt { font-size: var(--fs-xl); font-weight: 650; display: flex; align-items: center; gap: var(--sp-2); }
 .ph-sub { font-size: var(--fs-xs); color: var(--muted); margin-top: var(--sp-0); }
 .ph-r { display: flex; align-items: center; gap: var(--sp-2); flex-shrink: 0; flex-wrap: wrap; }

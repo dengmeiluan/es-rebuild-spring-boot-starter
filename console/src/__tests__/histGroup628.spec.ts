@@ -11,7 +11,7 @@
  *      `histGroup` 走 usePref 落盘且**切集群/模式/范围不重置**（铁律 B）；
  *   3) 工具行收纳：聚合方式 / 自动刷新 / 按节点查看 三件移入 ⋯（`<details class="ld-hist-more">`），
  *      明面保留 分组 / 时间范围 / 集群 / 刷新 / ⋯ = 5（铁律 C ≤5）。
- * 负锁一律剥注释后断言（unifyWave561 口径：历史记档注释里的字面不算数）。
+ * 负锁一律剥注释后断言（unifyWave561 口径：历史备案注释里的字面不算数）。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';

@@ -1,7 +1,7 @@
 /**
  * ：Slm 首刀三小刀+史志注释修正（； 裁决表 G131+G132+G133+G139-②）。
  *
- * ① G131（P3 死代码·头号）PageHeader 收编后页头旧壳左组/图标/标题/副题四条死规则删
+ * ① G131（P3 死代码·头号）PageHeader 合并后页头旧壳左组/图标/标题/副题四条死规则删
  *    （styleSheets 各 1 命中合计 4+模板 0 引用双实锚；活锚页头行基壳/右组钮容器/
  *    自动刷新 label 保留；713 G53/715 G56/717 G61/721 G72/727 G86/729 G94/733 G109/
  *    735 G120 先例链）。
@@ -15,7 +15,7 @@
  *
  * 驱动方式照 lifecycleFirstCut735（vue-router 轻 mock + 只 mock ../api）+
  * protectThreeState 的 SLM 端点分桶；askConfirm 全程 mock 放行（确认门行为归
- * protectThreeState/probe 域，本批只锁在途窗与 tip 通道）。
+ * protectThreeState/probe 域，只锁在途窗与 tip 通道）。
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';

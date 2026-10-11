@@ -1,7 +1,7 @@
 /**
  * 七百二十七批：Favorites 三小刀（R108；R106 裁决表 G86+G87+G88，⑥726 头号建议）。
  *
- * ① G86（P3 死代码）页头左组/右钮组两条死规则删——PageHeader 收编后第十批删
+ * ① G86（P3 死代码）页头左组/右钮组两条死规则删——PageHeader 合并后第十批删
  *    -hd-ic/-hd-tt/-hd-sub 三类时同族漏删（模板 0 引用；713 G53/715 G56/717 G61 同族）。
  * ② G87（P3 铁律 F）卡片 meta 时间戳段补段级中文 tip「收藏时间」——值段裸时间戳
  *    无任何语义说明（715 G55/717 G60/721 G74/724 G79 同族；tip 走 :title 悬停通道
@@ -120,7 +120,7 @@ describe('源码锁（G86 死规则退役 + G87/G88 字面在场）', () => {
   const replaySrc = readFileSync(join(SRC, 'utils/favReplay.ts'), 'utf-8');
 
   it('G86：页头左右组两条死规则零残留（转述注记可在，规则体不在）', () => {
-    /* 选择器形态锁：.fv-hd- 紧跟 l/r 的规则声明（-ic/-tt/-sub 第十批已删，本批补 l/r） */
+    /* 选择器形态锁：.fv-hd- 紧跟 l/r 的规则声明（-ic/-tt/-sub 第十批已删，补 l/r） */
     expect(viewSrc).not.toMatch(/\.fv-hd-(l|r)\s*\{/);
     /* 活锚保留：页头壳 .fv-hd（PageHeader 外距/分隔）不受本刀影响 */
     expect(viewSrc).toMatch(/\.fv-hd\s*\{/);

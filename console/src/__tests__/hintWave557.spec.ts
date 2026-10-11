@@ -1,7 +1,7 @@
 /**
  * 五百五十七批工蚁1（轨1 智能提示与高亮·修配器族）hintWave557：
  *  A monacoJsonQuickFix root-bare-clause CodeAction（裸子句逐键包 query 外壳，「整 body
- *    重写不可修」旧裁定翻案）：正向=两笔编辑（子句键前零宽插 "query": { + 子句值收尾补
+ *    重写不可修」旧裁定修订）：正向=两笔编辑（子句键前零宽插 "query": { + 子句值收尾补
  *    }，balancedCloseOf/objectInsertBeforeClose 配平定位）；负向=marker 键不符 /
  *    root 已有 "query" 键（首层键扫）/ 子句值非对象 一律零 action；
  *  B monacoJsonQuickFix 557 两条增量：text-range（range 打 text 字段追加 .keyword，
@@ -225,7 +225,7 @@ describe('557 B：text-range + agg-interval-key quickfix', () => {
   });
 
   it('agg-interval-key 负向：marker 非本体 → 零 action', () => {
-    /* 558 批随迁注记（557 root-bare-clause 翻案先例同款）：废弃 interval 分支已翻案出
+    /* 558 批同步更新注记（557 root-bare-clause 修订先例同款）：废弃 interval 分支已修订出
        「interval 改为 calendar_interval」改名 action，本用例原前半段（废弃消息零 action
        断言）废止，正样移 hintWave558 A 段；保留 marker 非本体证据闸负样。 */
     /* 534 B 段同形态：marker 不在 "date_histogram" 上 */

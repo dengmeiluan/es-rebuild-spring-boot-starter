@@ -1,8 +1,8 @@
 /* 手写 minimal XLSX（破窗点立项——供应链零依赖方案，不引 sheetjs/npm xlsx）。
-   范围刻意收窄：STORE 不压缩（免 deflate）、单元格 inlineStr（免 sharedStrings 索引）、
-   仅字符串/数字/空三种形态、多 sheet。够「数据交付」用，不做样式/公式/合并格。
-   ⚠ 测试必须字节级解析（CRC32 已知向量 + central directory + local header 校验），
-   字符串包含断言防不住 Excel「文件已损坏」类翻车。 */
+ 范围刻意收窄：STORE 不压缩（免 deflate）、单元格 inlineStr（免 sharedStrings 索引）、
+ 仅字符串/数字/空三种形态、多 sheet。够「数据交付」用，不做样式/公式/合并格。
+ ⚠ 测试必须字节级解析（CRC32 已知向量 + central directory + local header 校验），
+ 字符串包含断言防不住 Excel「文件已损坏」类翻车。 */
 
 /* ── CRC32（IEEE 802.3，查表法）── */
 const CRC_TABLE = (() => {

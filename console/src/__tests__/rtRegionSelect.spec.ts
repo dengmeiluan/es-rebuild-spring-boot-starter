@@ -89,8 +89,8 @@ describe('RT 拖拽框选（158 批）', () => {
     expect(writeText.mock.calls[0][0]).toBe('name\tage\nbanana\t2\napple\t3');
   });
 
-  it('纯点击（mousedown+mouseup 同格）不产生选区、不触发复制（582 随迁 563 用户裁决：单击复制退役）', async () => {
-    /* 五百八十二批随迁：563 批用户裁决「单击就复制不对」——单击自动复制退役改截断值
+  it('纯点击（mousedown+mouseup 同格）不产生选区、不触发复制（582 同步更新 563 用户裁决：单击复制退役）', async () => {
+    /* 五百八十二批同步更新：563 批用户裁决「单击就复制不对」——单击自动复制退役改截断值
        展开/收起，复制保留显式路径（右键菜单/Ctrl+C/列头/hover 钮）。本用例改锁退役形态：
        纯点击零副作用（无选区浮层+剪贴板零调用）。 */
     const writeText = vi.fn().mockResolvedValue(undefined);

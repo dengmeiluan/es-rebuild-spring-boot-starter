@@ -1,10 +1,10 @@
 /**
- *  W3（轨3 数据表格内核）：syncSort 宿主权威排序态回填（立法遗留收口）。
+ *  W3（轨3 数据表格内核）：syncSort 宿主权威排序态回填（约定遗留收口）。
  *
  * 背景：给 IndexHubView docs tab 接了 remote-sort+@sort-change（docsSort 态+重查），
  * 但 RT 内核排序箭头只由内部意图态 remoteSortCur（升→降→取消三态循环）驱动——宿主清了
- * docsSort（切索引），内核箭头仍停旧态。本批立法 syncSort 回填通道：
- * ① prop `syncSort?: { f: string; d: 1 | -1 } | null`（d 按立法契约收 1|-1，内核内部归一
+ * docsSort（切索引），内核箭头仍停旧态。约定 syncSort 回填通道：
+ * ① prop `syncSort?: { f: string; d: 1 | -1 } | null`（d 按约定契约收 1|-1，内核内部归一
  *    'asc'|'desc'——535 公共契约载荷）：remote 档下有值→回填 remoteSortCur（箭头/aria-sort
  *    同步该态，此后用户点击仍走既有三态循环只 emit 意图）；null=清态（箭头清+循环基点清）。
  * ② 缺省 undefined=未接线零增量：本地排序档/remote 档逐字节不变（不读不写 remoteSortCur，
@@ -13,7 +13,7 @@
  * ④ IndexHubView 消费侧接线：docsSortSync computed（'asc'|'desc'→1|-1 归一）传
  *    :sync-sort；切索引 watch(cur) 置 docsSort=null 即内核箭头同步清。重查不变路径零改动。
  *
- * ⚠ 域清单勘误（报告已列明）：本批特性叙述/540 接线/箭头内核（remoteSortCur）真身都在
+ * ⚠ 域清单勘误（报告已列明）：特性叙述/540 接线/箭头内核（remoteSortCur）真身都在
  * ResultTable.vue（docs tab 消费方 <ResultTable ref="docsTbl">）；独占域清单所写
  * QueryResultTable.vue 是 QRT（SQL 通道轻量表，IndexHubView 不消费，改之即死代码）。
  * 本 spec 以 RT 真身为锚。
@@ -278,7 +278,7 @@ describe('：IndexHubView docsSortSync 接线（源码锁）', () => {
     expect(ih).toMatch(/d: \(docsSort\.value\.d === 'asc' \? 1 : -1\) as 1 \| -1/);
   });
 
-  it('切索引清 docsSort（540 锚随迁核：清态即内核回填清的宿主侧来源）', () => {
+  it('切索引清 docsSort（540 锚同步更新核：清态即内核回填清的宿主侧来源）', () => {
     const wStart = ih.indexOf('watch(cur, () => {');
     expect(wStart).toBeGreaterThan(-1);
     const wBody = ih.slice(wStart, ih.indexOf('\n});', wStart));
@@ -304,7 +304,7 @@ describe('：IndexHubView 接线行为锚（切索引内核箭头同步清）', 
     const last = JSON.parse(clusterQueryFn.mock.calls[clusterQueryFn.mock.calls.length - 1][1]);
     expect(last.sort, '重查 body 无 sort（540 既有语义零改动）').toBeUndefined();
     const th2 = nTh(document);
-    expect(th2.getAttribute('aria-sort'), '切索引后内核箭头同步清（本批立法点）').toBeNull();
+    expect(th2.getAttribute('aria-sort'), '切索引后内核箭头同步清（约定点）').toBeNull();
     expect(hint(document), '箭头清后 hint 回归').toBeTruthy();
   });
 });

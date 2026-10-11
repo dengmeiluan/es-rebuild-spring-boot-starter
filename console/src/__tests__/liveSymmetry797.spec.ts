@@ -3,11 +3,11 @@
  * 稿=docs/goal797-live-symmetry.html）。
  *
  * 件1 卡语言统一（大厂级协调主刀）：六卡（.ld-chart）+历史五图（.ld-hist-cell）从
- *    「border-top 分节式」（556 批扁平执法遗产）升「panel 壳式」（background:var(--panel)+
+ *    「border-top 分节式」（556 批扁平遗产）升「panel 壳式」（background:var(--panel)+
  *    border+radius r-m）——与节点卡/CollapsePanel/悬浮面板同语言=全站卡壳统一。
- *    556 逐字锁行随迁记档（「797 用户令大厂级统一卡壳」；卡内零嵌套=556 卡中卡治理本意不破）。
+ *    556 逐字锁行同步更新备案（「797 用户令大厂级统一卡壳」；卡内零嵌套=556 卡中卡治理本意不破）。
  * 件2 历史五图孤儿收底：2 列 grid 下 2+2+1 末张半行孤儿→奇数张末张 grid-column: span 2 满行对称。
- * 件3 超宽屏内容锚：ld-page 常态 max-width 1760px+居中（挂墙态 fs-active 豁免=684 立法不破）。
+ * 件3 超宽屏内容锚：ld-page 常态 max-width 1760px+居中（挂墙态 fs-active 豁免=684 约定不破）。
  * 件4 交互美感（四令新增）：全页可点元素 hover 过渡档统一（0.12s ease-out）。
  */
 import { describe, it, expect } from 'vitest';

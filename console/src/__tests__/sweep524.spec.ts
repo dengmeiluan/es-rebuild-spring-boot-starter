@@ -1,5 +1,5 @@
 /**
- * 五百二十四批 W5 收编扫尾（S 级）——8 处落点防回退锁：
+ * 五百二十四批 W5 合并扫尾（S 级）——8 处落点防回退锁：
  *   T1 AnalyzeView：补 PageHeader 统一件 + Token 详情表 kw 过滤/MarkText
  *                  （525 批反转：页内 IndexPicker 退役换只读 CurrentIdxChip）；
  *   T2 IlmView：explain 索引裸 n-select 换统一选择器（525 批反转：页内选择器退役换只读 CurrentIdxChip）
@@ -34,7 +34,7 @@ const asv = rd('../views/AnalysisSettingsView.vue');
 const mdv = rd('../views/MappingDesignerView.vue');
 
 /* ═══════════ T1 AnalyzeView ═══════════ */
-describe('T1 AnalyzeView：PageHeader + token 表 kw 过滤（524；525 批反转随迁）', () => {
+describe('T1 AnalyzeView：PageHeader + token 表 kw 过滤（524；525 批反转同步更新）', () => {
   it('补页头统一件（邻页范式，标题贴分词验证语义）', () => {
     expect(analyze).toMatch(/<PageHeader :icon="FlaskConical" title="分词验证（Analyze）"/);
     expect(analyze).toContain("import PageHeader from '../components/PageHeader.vue';");
@@ -52,11 +52,11 @@ describe('T1 AnalyzeView：PageHeader + token 表 kw 过滤（524；525 批反�
     /* useIdxState follow 绑定零改 */
     expect(analyze).toMatch(/const followed = useIdxState\(\{ follow: true \}\);/);
   });
-  it('Token 详情表 kw 过滤：输入/命中计数/MarkText/序号保原位（529 反转随迁：MarkText 走 #cell- 槽）', () => {
-    /* 六百五十批随迁：kw 过滤胞换装 SearchFilterBar 统一件（sfbUnify650 锁；av-tk-kw 运行时锚保留） */
+  it('Token 详情表 kw 过滤：输入/命中计数/MarkText/序号保原位（529 反转同步更新：MarkText 走 #cell- 槽）', () => {
+    /* 六百五十批同步更新：kw 过滤胞改用 SearchFilterBar 统一件（sfbUnify650 锁；av-tk-kw 运行时锚保留） */
     expect(analyze).toMatch(/<SearchFilterBar v-model="tkKw" class="av-tk-kw-wrap" input-class="av-tk-kw"/);
     expect(analyze).toMatch(/命中 \{\{ shownTokens\.length \}\} \/ \{\{ tokens\.length \}\}/);
-    /* 五百二十九批锚随迁：裸表行内 <MarkText :text="r.t.token"…> → #cell-词元/#cell-词性
+    /* 五百二十九批锚同步更新：裸表行内 <MarkText :text="r.t.token"…> → #cell-词元/#cell-词性
        作用域槽（QRT 换壳后命中高亮经槽保真，r.t.* → 槽 value） */
     expect(analyze).toMatch(/<MarkText :text="value" :kw="tkKw" \/>/);
     expect(analyze).toMatch(/<MarkText :text="posZh\(value\)" :kw="tkKw" \/>/);
@@ -67,7 +67,7 @@ describe('T1 AnalyzeView：PageHeader + token 表 kw 过滤（524；525 批反�
 });
 
 /* ═══════════ T2 IlmView ═══════════ */
-describe('T2 IlmView：explain 选择器 + MetaStrip 统一件（524；525 批反转随迁）', () => {
+describe('T2 IlmView：explain 选择器 + MetaStrip 统一件（524；525 批反转同步更新）', () => {
   it('页内可写选择器退役换只读 CurrentIdxChip（选索引唯一入口=顶栏；follow 语义不变）', () => {
     expect(ilm).toContain('<CurrentIdxChip />');
     expect(ilm).not.toMatch(/<IndexPicker/);
@@ -75,7 +75,7 @@ describe('T2 IlmView：explain 选择器 + MetaStrip 统一件（524；525 批�
     expect(ilm).not.toMatch(/NSelect/);
   });
   it('手写 meta-strip 裸 div 换 MetaStrip :items（DiagView 正解形态，err 档走 tone）；525 批去全局 .meta-strip 双轨，535 批补 .mono 摘除', () => {
-    expect(ilm).toMatch(/<MetaStrip class="ilm-meta" :items="ilmMeta"/); /* 五百三十五批锚随迁：.mono 摘除（组件 .ms 自带 mono 字族，W8 meta-strip 全局块退役同判据） */
+    expect(ilm).toMatch(/<MetaStrip class="ilm-meta" :items="ilmMeta"/); /* 五百三十五批锚同步更新：.mono 摘除（组件 .ms 自带 mono 字族，W8 meta-strip 全局块退役同判据） */
     expect(ilm, '全局 .meta-strip 类退役（theme.css 归一由并行批处理承担）').not.toMatch(/class="[^"]*meta-strip/);
     expect(ilm).toMatch(/tone: hasErr\.value \? 'err' : undefined/);
     /* 三元色档退役：值不再挂 meta-err class（:class 三元与 scoped 提级规则均清） */
@@ -88,7 +88,7 @@ describe('T2 IlmView：explain 选择器 + MetaStrip 统一件（524；525 批�
 /* ═══════════ T3 TasksView ═══════════ */
 describe('T3 TasksView：kw 过滤 + ?taskId= 深链读侧（524）', () => {
   it('kw 输入/shownList 过滤（taskId/action/描述）/MarkText 高亮', () => {
-    /* 五百五十八批随迁：kw 过滤框换装 SearchFilterBar 统一件（tv-kw 类锚随 input-class 保留，
+    /* 五百五十八批同步更新：kw 过滤框改用 SearchFilterBar 统一件（tv-kw 类锚随 input-class 保留，
        本文件挂载锁 querySelector('.tv-kw') 同路径零迁；Esc 清空由组件内建承接） */
     expect(tasks).toContain('<SearchFilterBar v-model="kw" class="tv-kw-wrap" input-class="tv-kw"');
     expect(tasks).toMatch(/const shownList = computed\(/);
@@ -116,8 +116,8 @@ describe('T4 ClusterSettingsView：matrixText 整表复制 + 分组行字重（5
     expect(cs).toMatch(/@click="copyTable\('md'\)"/);
     expect(cs).toMatch(/isDirty\(k\) \? 'Y' : ''/);
   });
-  it('.cs-grp-chip 分组列换装 StatusPill b 统一件（551 批：650/ac-soft 私造规则退役色档归 .pill 单源；531 批换 QRT 壳：分组行改「分组」列 chip，锚类保留）', () => {
-    /* 五百五十一批随迁：原 650 字面锁随私造规则退役失效，改锚换装形态正锁（防回流） */
+  it('.cs-grp-chip 分组列改用 StatusPill b 统一件（551 批：650/ac-soft 私造规则退役色档归 .pill 单源；531 批换 QRT 壳：分组行改「分组」列 chip，锚类保留）', () => {
+    /* 五百五十一批同步更新：原 650 字面锁随私造规则退役失效，改锚改用形态正锁（防回流） */
     expect(cs).toContain('<StatusPill class="cs-grp-chip" tone="b" :label="String(value)" />');
     expect(cs).not.toMatch(/\.cs-grp-chip \{/);
   });
@@ -126,7 +126,7 @@ describe('T4 ClusterSettingsView：matrixText 整表复制 + 分组行字重（5
 /* ═══════════ T5 ReconcileReportDrawer ═══════════ */
 /* 五百三十二批：rr-tbl 换壳 QRT rows 型——漏斗/kw/copyMatrix 全退役归内核（quickFilter
    显示+导出同源），T5 三锁同步迁新形态（旧自造过滤机制不回潮） */
-describe('T5 ReconcileReportDrawer：QRT 换壳 + quickFilter 收口（524 立；532 换壳随迁）', () => {
+describe('T5 ReconcileReportDrawer：QRT 换壳 + quickFilter 收口（524 立；532 换壳同步更新）', () => {
   it('QRT rows 型在场：中文列键与旧表头同源 + storage-key + quick-filter 接线', () => {
     expect(rr).toMatch(/<QueryResultTable\s*\n\s*:cols="RR_COLS" :rows="rrMatrix" sortable\s*\n\s*storage-key="rr"\s*\n\s*:quick-filter="kw"/);
     expect(rr).toMatch(/const RR_COLS = \['状态', '索引', '说明'\];/);
@@ -159,9 +159,9 @@ describe('T7 TopologyView：固定 10s checkbox 换 AutoRefreshSelect（524）',
 
 /* ═══════════ T8 AnalysisSettingsView / MappingDesignerView ═══════════ */
 describe('T8 裸空态换 EmptyState compact（524）', () => {
-  it('AnalysisSettingsView：三处 as-empty 全量收编，裸类名与规则清零', () => {
-    /* 557 批锁随迁：as-empty-sub「-」占位亦收编 EmptyState compact（524「保留」裁决由 557
-       批覆盖，统一件收编口径），计数 3→4；三处原有形态锚与裸类名负锁不变 */
+  it('AnalysisSettingsView：三处 as-empty 全量合并，裸类名与规则清零', () => {
+    /* 557 批锁同步更新：as-empty-sub「-」占位亦合并 EmptyState compact（524「保留」裁决由 557
+       批覆盖，统一件合并口径），计数 3→4；三处原有形态锚与裸类名负锁不变 */
     expect((asv.match(/<EmptyState/g) || []).length).toBe(4);
     expect(asv).toMatch(/<EmptyState v-if="loadErr" compact :icon="AlertTriangle" text="analysis 加载失败" :hint="loadErr">/);
     expect(asv).toMatch(/<EmptyState v-else-if="!loaded" compact :icon="Info"/);
@@ -169,7 +169,7 @@ describe('T8 裸空态换 EmptyState compact（524）', () => {
     expect(asv).not.toMatch(/class="as-empty"/);
     expect(asv).not.toMatch(/\.as-empty \{/);
   });
-  it('MappingDesignerView：四处 md-empty 全量收编，分支顺序与文案语义保留', () => {
+  it('MappingDesignerView：四处 md-empty 全量合并，分支顺序与文案语义保留', () => {
     expect((mdv.match(/<EmptyState/g) || []).length).toBe(4);
     expect(mdv).toMatch(/<EmptyState v-else-if="!tree\.length && loadErr" compact :icon="ShieldAlert"/);
     expect(mdv).toMatch(/<EmptyState v-else-if="!tree\.length && loaded" compact :icon="FolderTree"/);
@@ -182,7 +182,7 @@ describe('T8 裸空态换 EmptyState compact（524）', () => {
 
 /* ═══════════ 模板编译冒烟（源码锁照不住 SFC 模板语法；import 即触发 plugin-vue 编译） ═══════════ */
 describe('524 改动视图 SFC 编译冒烟', () => {
-  /* 五百五十一批提额记档：该冒烟单跑冷变换实测 5.45s（551 改后）/5.76s（551 前原态，git stash A/B
+  /* 五百五十一批提额备案：该冒烟单跑冷变换实测 5.45s（551 改后）/5.76s（551 前原态，git stash A/B
      实测）——双态均贴 5s 默认帽超时，与视图改动无关（JsonArea→monaco 机器冷变换链，同 describe
      AnalyzeView 冒烟 529 批同因提额 15s 在册先例；8s 档余量 <1.5× 不足，从同链先例 15s） */
   it('MappingDesignerView：EmptyState 分支模板可编译、模块可加载', { timeout: 15000 }, async () => {

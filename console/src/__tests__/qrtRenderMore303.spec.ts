@@ -1,7 +1,7 @@
 /**
  * 三百零三批：QRT 增量渲染——截断行「继续渲染下 2000 行」按钮，浏览万级结果
  * 不必只能导出；行集变化自动回首批。
- * 五百二十八批 W-A 随迁（TableShell 第二刀）：逻辑同构段抽至 useRenderMore——
+ * 五百二十八批 W-A 同步更新（TableShell 第二刀）：逻辑同构段抽至 useRenderMore——
  * 源码锚改指 composable 本体 + QRT 接线行，模板文案保位不动。
  */
 import { describe, it, expect } from 'vitest';
@@ -12,7 +12,7 @@ const qrt = readFileSync(join(__dirname, '../components/QueryResultTable.vue'), 
 const rm = readFileSync(join(__dirname, '../composables/useRenderMore.ts'), 'utf-8');
 
 describe('QRT 增量渲染（303 批）', () => {
-  it('renderLimit 状态+按钮+自动回位（528 随迁：逻辑在 useRenderMore）', () => {
+  it('renderLimit 状态+按钮+自动回位（528 同步更新：逻辑在 useRenderMore）', () => {
     expect(rm).toMatch(/const renderLimit = ref\(MAX_RENDER\);/);
     expect(rm).toMatch(/watch\(\(\) => sorted\(\)\.length, \(\) => \{ renderLimit\.value = MAX_RENDER; \}\);/);
     expect(rm).toMatch(/function renderMore\(\) \{ renderLimit\.value \+= MAX_RENDER; \}/);

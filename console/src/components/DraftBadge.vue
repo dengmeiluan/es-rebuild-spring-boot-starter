@@ -6,10 +6,10 @@
 </template>
 
 <script setup lang="ts">
-/* 草稿治理轮：恢复指示徽标。useScopedDraft/useScopedDraftState 挂载时复原了
-   非默认草稿 → 父级以 v-if="restored" 控制显隐；「清除」仅 emit，清稿动作
-   （调用哪个 draft.clear()）归父级——徽标不持有任何状态，保持纯展示。
-   视觉走最弱一档（--hl-soft 底 + --muted 字）：提示「现场回来了」而非打扰。 */
+/* 草稿：恢复指示徽标。useScopedDraft/useScopedDraftState 挂载时复原了
+ 非默认草稿 → 父级以 v-if="restored" 控制显隐；「清除」仅 emit，清稿动作
+ （调用哪个 draft.clear()）归父级——徽标不持有任何状态，保持纯展示。
+ 视觉走最弱一档（--hl-soft 底 + --muted 字）：提示「现场回来了」而非打扰。 */
 defineEmits<{ (e: 'clear'): void }>();
 </script>
 

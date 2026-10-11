@@ -7,7 +7,7 @@
  *  on 激活态 + 共享常量 v-for + 「字号」文案）。请求体/响应两处只读 Monaco 各接线
  *  :font-size="rimFont"（fontSize 为可选 prop，缺席=undefined 走内层缺省，零破坏）。
  *
- *  断言形态承 edFontSpread668（668-C1 立法：UI 在场≠行为生效）——A 段源码锚之外，
+ *  断言形态承 edFontSpread668（668-C1 约定：UI 在场≠行为生效）——A 段源码锚之外，
  *  B 段必须断言 fontSize 真值经 mock 链到达两处 MonacoEditor（Monaco mock 以 rawIo545/
  *  rawIoReach565 既有 vi.mock 做法，stub 渲染 data-font-size 供读回）。
  */
@@ -86,12 +86,12 @@ describe('681 A：RawIoModal 字号档源码锚', () => {
   it('A6 editorTiers 单源零漂移（三档字面在 utils 不动）', () => {
     expect(tiers).toContain('export const EDITOR_FONT_TIERS: number[] = [12.5, 14, 16];');
   });
-  it('A7 头注 681 记档在场', () => {
+  it('A7 头注 681 备案在场', () => {
     expect(rim).toContain('');
   });
 });
 
-/* ═══════════ B：渲染真值（668-C1 立法：seg 在场≠生效） ═══════════ */
+/* ═══════════ B：渲染真值（668-C1 约定：seg 在场≠生效） ═══════════ */
 
 describe('681 B：fontSize 真值到达两处 Monaco + rim.font 落盘还原', () => {
   it('B1 默认首档 12.5：三钮在场+文案含字号+激活态在首钮+两 Monaco 同收 12.5', async () => {

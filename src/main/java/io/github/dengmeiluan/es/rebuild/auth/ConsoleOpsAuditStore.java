@@ -63,7 +63,7 @@ public interface ConsoleOpsAuditStore {
      * <p>default 桥接保证宿主自定义实现零破坏——未重写本方法的实现自动退化为
      * 基线三过滤（username/action/fromMs），扩维（集群/角色/方法/HTTP/来源/IP/
      * 耗时阈值/URI 前缀/关键词）被静默忽略。内置 ES 档全量下推；
-     * JDBC 档维持基线（统一只用 ES 单载体立法后，快筛能力仅在 ES 档承诺）。</p>
+     * JDBC 档维持基线（统一只用 ES 单载体约定后，快筛能力仅在 ES 档承诺）。</p>
      *
      * @param query 结构化查询（null 视为全量首查）
      * @return 记录列表（timestamp 必填，其余按档位实况；空档返回空列表）

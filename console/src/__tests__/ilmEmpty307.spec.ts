@@ -1,5 +1,5 @@
 /**
- * 三百零七批：IlmView 空态 EmptyState 收编+三视图骨架 margin 归容器 gap（G2-C7 口径）。
+ * 三百零七批：IlmView 空态 EmptyState 合并+三视图骨架 margin 归容器 gap（G2-C7 口径）。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -21,10 +21,10 @@ describe('Ilm 空态+骨架清尾（307 批）', () => {
     for (const s of [ilm, tt, snap]) {
       expect(s).not.toMatch(/SkeletonBox[^>]*margin-bottom/);
     }
-    /* 五百二十七批：snap/ilm 骨架容器 gap 字面量收编 --sp token（间距语义不变，锚随迁）；
-       五百四十六批：tt 骨架 gap:10px 同口径收 var(--sp-2h)（档表等值，锚随迁双形态防回潮） */
+    /* 五百二十七批：snap/ilm 骨架容器 gap 字面量合并 --sp token（间距语义不变，锚同步更新）；
+       五百四十六批：tt 骨架 gap:10px 同口径收 var(--sp-2h)（档表等值，锚同步更新双形态防回潮） */
     expect(tt).toMatch(/loading && !nodes\.length" class="tt-empty" style="display:flex;flex-direction:column;gap:(?:10px|var\(--sp-2h\))"/);
-    /* 五百二十七批：snap/ilm 骨架容器 gap 字面量收编 --sp token（间距语义不变，锚随迁） */
+    /* 五百二十七批：snap/ilm 骨架容器 gap 字面量合并 --sp token（间距语义不变，锚同步更新） */
     expect(snap).toMatch(/gap:(?:8px|var\(--sp-2\))"/);
     expect(ilm).toMatch(/gap:(?:8px|var\(--sp-2\))"/);
   });

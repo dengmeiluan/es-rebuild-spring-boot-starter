@@ -4,12 +4,12 @@
  * TableAggFoot dist 可选 prop 渲染 8 桶 mini-bar（aggDistMini563 只锁纯函数与缺省零渲染；
  * QRT 半边接线锁 tableKernelAggDistWire565）；未接线证据：RT useAggRow 解构仅
  * {aggOn,toggleAggRow,aggFoot,aggSpark} 未传 distOf、TableAggFoot 调用点未传 :dist。
- * 本批接线（QRT 565 同源）：statsOf(c).dist 直连第 5 参——守卫列
+ * 接线（QRT 565 同源）：statsOf(c).dist 直连第 5 参——守卫列
  * （semanticGuard.typeTierSuppressed：binary 等 18 型+_source）dist 恒 null 天然不出。
  * 锁定：
  * 1) 预置开聚合：keyword 标注列（值为 JS number，硬口径可数）tfoot 出 .rt-agg-dist
  *    8 桶 mini-bar（distBinsOf 单源 8 桶）；binary 守卫列不出；
- * 2) 关聚合（缺省）：TableAggFoot 整行退场（aggOn 门控）零渲染；
+ * 2) 关聚合（缺省）：TableAggFoot 整行移除（aggOn 门控）零渲染；
  * 3) 源码锁：解构含 aggDist + 第 5 参 statsOf(c).dist 直连 + TableAggFoot :dist 在场。
  */
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -72,7 +72,7 @@ describe('五百六十七批件①：RT aggDist 接线', () => {
     expect(cells[1]!.textContent!.trim(), 'binary 守卫列无 foot').toBe('');
   });
 
-  it('关聚合（缺省）：TableAggFoot 整行退场零渲染（RT 消费面缺省零增量）', async () => {
+  it('关聚合（缺省）：TableAggFoot 整行移除零渲染（RT 消费面缺省零增量）', async () => {
     await mountTbl(PROPS);
     expect(host.querySelector('.rt-agg-row'), 'aggOn 关闭无聚合行').toBeNull();
     expect(host.querySelector('.rt-agg-dist'), '零 dist 渲染').toBeNull();

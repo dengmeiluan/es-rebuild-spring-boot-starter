@@ -196,7 +196,7 @@ describe('同义词规则行级 lint（524+1 批）', () => {
   });
 
   it('④ 合法输入零 lint 提示（空词典/注释行/正常规则）', async () => {
-    /* 五百二十五批随迁：原稿 'car, auto => automobile' 撞新规则「混用「,」与「=>」」——
+    /* 五百二十五批同步更新：原稿 'car, auto => automobile' 撞新规则「混用「,」与「=>」」——
        9 规则口径下该形态非法，合法样例改用单向替换与等价清单两行 */
     sessionStorage.setItem(DRAFT_KEY, '# 只有注释\n\ncar => automobile\napple, banana');
     const host = await mountSy();

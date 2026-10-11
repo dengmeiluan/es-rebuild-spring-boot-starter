@@ -1,7 +1,7 @@
 /**
  * 六百四十三批：637-C2 收口——gap-ms 与所选「周期」解耦（历史趋势区 HistoryChart）。
  *
- * 病灶（637 批判例 637-C2）：`:gap-ms="intervalMsFor(mh2Range) * 3"` 仍按**时间范围**推导，
+ * 病灶（637 批先例 637-C2）：`:gap-ms="intervalMsFor(mh2Range) * 3"` 仍按**时间范围**推导，
  *   选比范围默认更粗的桶（如 24h 范围选 1h 周期）时，实际取数用 1h 桶、gap 却按 5m 桶距算，
  *   HistoryChart 误判相邻 1h 点为断档、走势退化为孤点。
  * 收口：gap 跟「生效 interval」——mh2GapMs = fixedIntervalMs(生效桶宽) × 3；原始逐点档

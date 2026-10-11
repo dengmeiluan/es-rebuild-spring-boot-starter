@@ -7,10 +7,10 @@
  * 2) ColDetailModal「分布」段——stats.dist 非空渲染 8 桶 mini 高度条（桶 :title=
  *    「from~to: count」，最高桶满高/零值桶零高）；dist 为 null 或缺省字段时段零渲染
  *    （缺省零视觉，既有样板形状不受影响）；
- * 3) *_range 族决策锚（561 批判定：仅 ip_range 收编，integer/long/float/double/date
- *    五型记档不收——数值/日期白名单核心成员，NON_SEMANTIC_TYPES_RE 并入将在双内核
+ * 3) *_range 族决策锚（561 批判定：仅 ip_range 合并，integer/long/float/double/date
+ *    五型备案不收——数值/日期白名单核心成员，NON_SEMANTIC_TYPES_RE 并入将在双内核
  *    isRangeCol/isNumericCol/aggFoot/aggSpark/contains 链 8 个消费点短路，行为回退
- *    不可小步随迁）：ip_range 判真、五型不误伤、NUMERIC_TYPES_RE/isRangeType 链不受损。
+ *    不可小步同步更新）：ip_range 判真、五型不误伤、NUMERIC_TYPES_RE/isRangeType 链不受损。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createApp, h, nextTick, reactive } from 'vue';
@@ -155,9 +155,9 @@ describe('ColDetailModal 分布段（五百六十一批）', () => {
 });
 
 /* ═══════════ 三、*_range 族类型守卫决策锚（561 批判定） ═══════════ */
-describe('NON_SEMANTIC_TYPES_RE 收编 ip_range（五百六十一批判定）', () => {
-  it('ip_range 判真；integer/long/float/double/date 五型记档不收（不误伤）', () => {
-    expect(isNonSemanticType('ip_range'), 'ip_range 已被 IP_TYPE_RE 抑制 contains/sem 链，561 批收编').toBe(true);
+describe('NON_SEMANTIC_TYPES_RE 合并 ip_range（五百六十一批判定）', () => {
+  it('ip_range 判真；integer/long/float/double/date 五型备案不收（不误伤）', () => {
+    expect(isNonSemanticType('ip_range'), 'ip_range 已被 IP_TYPE_RE 抑制 contains/sem 链，561 批合并').toBe(true);
     for (const t of ['integer', 'long', 'float', 'double', 'date']) {
       expect(isNonSemanticType(t), `数值/日期白名单核心成员 ${t} 不得误伤`).toBe(false);
     }

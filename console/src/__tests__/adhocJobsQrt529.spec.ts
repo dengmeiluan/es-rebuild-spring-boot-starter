@@ -1,10 +1,10 @@
 /**
  * 五百二十九批 W-B：AdhocRebuild 最近作业表换 QRT rows 型（525 W5 HealthReport/SqlBridge
  * 裸表换壳同判据）。524 批自有漏斗（kw 过滤/状态 pill 漏斗/TSV·MD 导出）与行为断言全数
- * 保留在 adhocJobsTable524（零删用例，结构锁随迁映射），本文件锁换壳侧：
+ * 保留在 adhocJobsTable524（零删用例，结构锁同步更新映射），本文件锁换壳侧：
  * ① 源码锁：QRT 接线形态（storage-key/sortable/:rows=jobsMatrix + #cell-<col> 槽 +
  *    #row-actions），旧裸表不残留（换壳勿留双份）；
- * ② 五百二十八批形态随迁不回退：状态 cell jobStatusZh 中文+英文小字（.ar-st-en）+
+ * ② 五百二十八批形态同步更新不回退：状态 cell jobStatusZh 中文+英文小字（.ar-st-en）+
  *    锁安全徽标（switchedWithoutLock 红 / lockActive 黄 / gateOutcome 徽，后端 toMap
  *    对 jobs 列表行同样透出三字段，与监控步同语义）；
  * ③ 换壳白得能力在位：表头排序（aria-sort）/导出四格式工具行（CSV/MD/XLSX/PNG）/列选；
@@ -75,7 +75,7 @@ const JOBS = [
   { jobId: 'j-gate-3', logicalName: 'gate_idx', strategy: 'MANUAL', status: 'ABORTED', stage: 'AWAIT_CONFIRM', startedAt: 1700000002000, gateOutcome: 'TIMED_OUT' },
 ];
 const jobsCard = (host: HTMLElement) =>
-  /* 554 随迁：.card 壳退役改 .ar-sec border-top 分节（定位语义=含作业表工具行的分节，不变） */
+  /* 554 同步更新：.card 壳退役改 .ar-sec border-top 分节（定位语义=含作业表工具行的分节，不变） */
   [...host.querySelectorAll('.ar-sec')].find(c => c.querySelector('.ar-jobs-tools'))!;
 
 beforeEach(() => {
@@ -87,7 +87,7 @@ beforeEach(() => {
   mocks.adhocStatus.mockResolvedValue({});
 });
 
-/* ═══ ① 源码锁：QRT 接线形态（改模板/函数名必须在此随迁） ═══ */
+/* ═══ ① 源码锁：QRT 接线形态（改模板/函数名必须在此同步更新） ═══ */
 describe('529 W-B 源码锁：最近作业表 QRT rows 壳', () => {
   it('QRT 接线（rows 型+记忆维度+槽位）与旧裸表零残留', () => {
     const v = readFileSync(join(__dirname, '../views/AdhocRebuildView.vue'), 'utf-8');
@@ -105,8 +105,8 @@ describe('529 W-B 源码锁：最近作业表 QRT rows 壳', () => {
   });
 });
 
-/* ═══ ② 528 形态随迁：状态 cell 中文+英文小字 + 锁安全徽标（挂载行为） ═══ */
-describe('529 W-B 状态 cell：jobStatusZh 中文 + 锁安全徽标随迁', () => {
+/* ═══ ② 528 形态同步更新：状态 cell 中文+英文小字 + 锁安全徽标（挂载行为） ═══ */
+describe('529 W-B 状态 cell：jobStatusZh 中文 + 锁安全徽标同步更新', () => {
   it('中文主体+英文小字（.ar-st-en）随 pill 漏斗同格渲染；三态锁徽标逐行对号', async () => {
     mocks.adhocJobs.mockResolvedValue(JOBS);
     const View = (await import('../views/AdhocRebuildView.vue')).default;
@@ -114,8 +114,8 @@ describe('529 W-B 状态 cell：jobStatusZh 中文 + 锁安全徽标随迁', () 
     const card = jobsCard(host);
     const rows = card.querySelectorAll('tbody tr');
     expect(rows.length).toBe(3);
-    /* 中文+英文小字（RUNNING → 运行中）。五百三十一批随迁：手滚 pill 换装 StatusPill，
-       .ar-st-en 锚类外挂于 pill 根（en 小字由组件 .sp-en 渲染），锚勿丢、断言随迁为包含 */
+    /* 中文+英文小字（RUNNING → 运行中）。五百三十一批同步更新：手滚 pill 改用 StatusPill，
+       .ar-st-en 锚类外挂于 pill 根（en 小字由组件 .sp-en 渲染），锚勿丢、断言同步更新为包含 */
     expect(rows[1].textContent).toContain('运行中');
     expect(rows[1].querySelector('.ar-st-en')!.textContent).toContain('RUNNING');
     /* 锁徽标三态：无锁切换（红）/锁保护未生效（黄，与前者互斥）/门结局徽标 */

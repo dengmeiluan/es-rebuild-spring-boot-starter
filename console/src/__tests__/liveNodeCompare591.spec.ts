@@ -4,13 +4,13 @@
  * 背景（goal METRICS「集群→节点两级监控数据可查、可对比」+档案 ⑥ 头号候选合并）：实时区
  * 节点卡各自持有 mini spark（180×20，悬浮命中窗窄=589 时评估结论），但跨节点对比只能
  * 眼扫小图；历史区 scope=node 已有「各节点序列叠加」交互（色板锚定节点排序位），实时区
- * 缺同语汇。本批=节点区加指标分段（Heap/CPU/磁盘）+一张全宽叠加卡：各节点序列按排序位
+ * 缺同语汇。=节点区加指标分段（Heap/CPU/磁盘）+一张全宽叠加卡：各节点序列按排序位
  * 锚定 HistoryChart PALETTE 同源五色画多折线+当前指标阈值虚线；悬浮复用 sparkHoverAt
  * （pct 刻度）出十字线+读出层按节点列「色点+名+该时刻值%」行（589 单值读出的多序列版）。
  *
  * 数据零新采样：nodeSeries（per-node heap/cpu/disk 序列）已在 store 常驻持久化。
  * 批号注：590 被对方 lane spResidue（轨5）占号（untracked spec+门禁文件在树，18:3x 活跃），
- * 567-C1/575 让位先例随迁 591。
+ * 567-C1/575 让位先例同步更新 591。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -83,23 +83,23 @@ describe('五百九十一批：实时区节点对比叠加图接线', () => {
     document.body.innerHTML = '';
   });
 
-  it('默认 Heap：叠加卡多折线（节点数条）+色板锚排序位+阈值虚线 80；悬浮读出含节点名（781 批图例退役随迁）', async () => {
+  it('默认 Heap：叠加卡多折线（节点数条）+色板锚排序位+阈值虚线 80；悬浮读出含节点名（781 批图例退役同步更新）', async () => {
     const { app, host, pinia } = await mountLive();
     try {
       seedNodes(useLiveMonitorStore(pinia));
       await settle();
-      /* 794 件1 随迁：对比面悬浮面板化（默认关）——断言前点入口钮开面板 */
+      /* 794 件1 同步更新：对比面悬浮面板化（默认关）——断言前点入口钮开面板 */
       (host.querySelector('.ld-ncmp-entry') as HTMLButtonElement)?.click();
       await settle();
       const cmp = host.querySelector('.ld-ncmp-panel');
       expect(cmp, '节点对比叠加卡在场').toBeTruthy();
-      const lines = cmp!.querySelectorAll('path'); /* 八百二十八批 polyline→path 平滑随迁 */
+      const lines = cmp!.querySelectorAll('path'); /* 八百二十八批 polyline→path 平滑同步更新 */
       expect(lines.length, '每节点一条折线').toBe(2);
       expect(lines[0].getAttribute('stroke'), '首序位色=dv-blue（HistoryChart PALETTE 同源）').toBe('var(--dv-blue)');
       expect(lines[1].getAttribute('stroke'), '次序位色=ok').toBe('var(--ok)');
       const th = cmp!.querySelector('line[stroke-dasharray]');
-      expect(parseFloat(th?.getAttribute('y1') ?? ''), 'heap.warn=80 → y=120-120*0.8（629 批对比卡图高 96→120 随迁）').toBeCloseTo(24, 5);
-      /* 七百八十一批 K2 随迁：常驻图例退役（与悬浮读出双份重复）——节点名断言迁悬浮读出层 */
+      expect(parseFloat(th?.getAttribute('y1') ?? ''), 'heap.warn=80 → y=120-120*0.8（629 批对比卡图高 96→120 同步更新）').toBeCloseTo(24, 5);
+      /* 七百八十一批 K2 同步更新：常驻图例退役（与悬浮读出双份重复）——节点名断言迁悬浮读出层 */
       cmp!.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 0 }));
       await settle(4);
       expect(cmp!.textContent).toContain('qa-es-1');
@@ -125,7 +125,7 @@ describe('五百九十一批：实时区节点对比叠加图接线', () => {
       };
       mon.sampleTs = [1000, 2000, 3000];
       await settle();
-      /* 794 件1 随迁：对比面悬浮面板化（默认关）——断言前点入口钮开面板 */
+      /* 794 件1 同步更新：对比面悬浮面板化（默认关）——断言前点入口钮开面板 */
       (host.querySelector('.ld-ncmp-entry') as HTMLButtonElement)?.click();
       await settle();
       const segs = [...host.querySelectorAll('.ld-ncmp-panel .seg button')] as HTMLButtonElement[];
@@ -134,7 +134,7 @@ describe('五百九十一批：实时区节点对比叠加图接线', () => {
       cpuBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await settle();
       const th = host.querySelector('.ld-ncmp-panel line[stroke-dasharray]');
-      expect(parseFloat(th?.getAttribute('y1') ?? ''), 'cpu.warn=75 → y=120-120*0.75=30（629 批对比卡图高 96→120 随迁）').toBeCloseTo(30, 5);
+      expect(parseFloat(th?.getAttribute('y1') ?? ''), 'cpu.warn=75 → y=120-120*0.75=30（629 批对比卡图高 96→120 同步更新）').toBeCloseTo(30, 5);
     } finally {
       app.unmount();
       host.remove();
@@ -146,7 +146,7 @@ describe('五百九十一批：实时区节点对比叠加图接线', () => {
     try {
       seedNodes(useLiveMonitorStore(pinia));
       await settle();
-      /* 794 件1 随迁：对比面悬浮面板化（默认关）——断言前点入口钮开面板 */
+      /* 794 件1 同步更新：对比面悬浮面板化（默认关）——断言前点入口钮开面板 */
       (host.querySelector('.ld-ncmp-entry') as HTMLButtonElement)?.click();
       await settle();
       const wrap = host.querySelector('.ld-ncmp-panel')!;
@@ -176,11 +176,11 @@ describe('五百九十一批：实时区节点对比叠加图接线', () => {
       const mon = useLiveMonitorStore(pinia);
       mon.nodes = [{ nodeId: 'n1', name: 'qa-es-1', roles: ['data'], heapPct: 30, cpuPct: 38, diskTotal: 100, diskFree: 41 }];
       await settle();
-      /* 794 件1 随迁：对比面悬浮面板化（默认关）——断言前点入口钮开面板 */
+      /* 794 件1 同步更新：对比面悬浮面板化（默认关）——断言前点入口钮开面板 */
       (host.querySelector('.ld-ncmp-entry') as HTMLButtonElement)?.click();
       await settle();
       const cmp = host.querySelector('.ld-ncmp-panel')!;
-      expect(cmp.querySelector('path'), '无序列不画线').toBeNull(); /* 八百二十八批随迁 */
+      expect(cmp.querySelector('path'), '无序列不画线').toBeNull(); /* 八百二十八批同步更新 */
       expect(cmp.textContent).toContain('采样中');
       cmp.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 0 }));
       await settle(4);

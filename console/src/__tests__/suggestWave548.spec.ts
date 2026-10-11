@@ -3,15 +3,15 @@
  *  A useTermsSuggest 四件：A1 悬挂修复（防抖窗内被清的旧 suggestAsync seq 立即兑现 []，
  *    不再永久悬挂）/ A2 宽前缀缓存本地滤（更宽前缀已缓存结果 startsWith 回填，零网络白得，
  *    随后照旧发网请求更新）/ A3 跨字段串显清空（field 变化 suggest 触发即清旧 top20）/
- *    A4 防抖起步置位（锁随迁在 useTermsSuggest395.spec，不在本件）；
+ *    A4 防抖起步置位（锁同步更新在 useTermsSuggest395.spec，不在本件）；
  *  B queryAstOps：opsForType date 分支并入 date_nanos（原落兜底 ['exists']）+
- *    typePriorityForOp('range') 序列补 date_nanos（紧跟 date；545/530 精确锁随迁）；
+ *    typePriorityForOp('range') 序列补 date_nanos（紧跟 date；545/530 精确锁同步更新）；
  *  C fieldSearch.searchFields 零命中近似候选：三档全空且查询词非空时附编辑距离 ≤2 的
  *    top-5 最近字段（rank=3 恒居既有三档之后 + fuzzy 标记；typeFilter 照常生效）；
- *  D LuceneInput：known 行扩 wildcard/date_nanos（双字面锁随迁在 luceneValTiers538 /
+ *  D LuceneInput：known 行扩 wildcard/date_nanos（双字面锁同步更新在 luceneValTiers538 /
  *    sqlLuceneTiers546，本件只锁 D2 纯 style 收口 gap→var(--sp-2)，--sp-2=8px 精确等值）；
  *  E LuceneQueryView：SORTABLE_TYPES 补 unsigned_long（545 数值族九口径对齐）。
- *    E2 记档：JSON 视图 _source 高亮——JsonTree.vue 的 kw 是 tools 模式私有 ref，
+ *    E2 备案：JSON 视图 _source 高亮——JsonTree.vue 的 kw 是 tools 模式私有 ref，
  *    无外部 kw/mark prop 通道，共享件不扩通道，本侧无可接线（_id 列 MarkText 既有）。
  *  F BoostTunerView：搜索词裸 input 接值位候选（useTermsSuggest 同内核 + datalist 轻量形态，
  *    前缀过滤；源锚断言同 boostTunerWorkbench408 形态——挂载整视图依赖面过重）。
@@ -223,15 +223,15 @@ describe('C searchFields 零命中近似候选', () => {
   });
 });
 
-/* ═══ D2 / E1：源锚（D1 双字面锁随迁在 luceneValTiers538 / sqlLuceneTiers546） ═══ */
+/* ═══ D2 / E1：源锚（D1 双字面锁同步更新在 luceneValTiers538 / sqlLuceneTiers546） ═══ */
 
 describe('D2/E1 源锚', () => {
   const li = readFileSync(join(SRC, 'components/LuceneInput.vue'), 'utf-8');
   const lqv = readFileSync(join(SRC, 'views/LuceneQueryView.vue'), 'utf-8');
 
   it('D2 纯 style 收口：.li-item gap 8px→var(--sp-2)（theme.css --sp-2=8px 精确等值，视觉零变化）', () => {
-    /* 560 随迁：.li-item padding 横向 10px 精确等值收 var(--sp-2h)（spSweep545 头注③
-       记档翻案收编）——原锁意图「gap 收 token 且无裸 8px」保持 */
+    /* 560 同步更新：.li-item padding 横向 10px 精确等值收 var(--sp-2h)（spSweep545 头注③
+       备案修订合并）——原锁意图「gap 收 token 且无裸 8px」保持 */
     expect(li).toContain('.li-item { display: flex; align-items: center; gap: var(--sp-2); padding: 5px var(--sp-2h); cursor: pointer; }');
     expect(li).not.toContain('gap: 8px');
   });

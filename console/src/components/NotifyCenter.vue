@@ -1,6 +1,6 @@
 <template>
   <!-- 通知中心——toast 转瞬即逝，重度用户切页/离开期间错过的失败通知在这里回看；
-       未读只计 error/warning（app store 口径），打开面板即视为已读 -->
+ 未读只计 error/warning（app store 口径），打开面板即视为已读 -->
   <!-- popover 改受控——清空历史需先关面板再弹确认（避开弹层 z-index 叠加） -->
   <n-popover trigger="click" placement="bottom-end" :show-arrow="false" raw :show="open" @update:show="onToggle">
     <template #trigger>
@@ -12,7 +12,7 @@
     <div class="nc-pane" role="dialog" aria-label="通知历史">
       <div class="nc-head">
         <span>通知历史</span>
-        <!--  C：工具行挂全局 .toolrow（theme.css），本地同构 flex 样式退役 -->
+        <!-- C：工具行挂全局 .toolrow（theme.css），本地同构 flex 样式退役 -->
         <div class="nc-tools toolrow">
           <!-- 历史里成功类占大头时，真正要回看的异常被淹没——一键只看 error/warning -->
           <button v-if="store.notifyLog.length" class="btn ghost sm" :class="{ on: errOnly }"
@@ -25,7 +25,7 @@
           </button>
         </div>
       </div>
-      <!--  B：两支裸空态迁 EmptyState compact（原 .nc-empty 裸文案拆 title/hint，语义不变） -->
+      <!-- B：两支裸空态迁 EmptyState compact（原 .nc-empty 裸文案拆 title/hint，语义不变） -->
       <EmptyState v-if="!store.notifyLog.length" compact :icon="Bell" text="暂无通知"
         hint="作业完成/失败、操作结果都会留档在这里" />
       <EmptyState v-else-if="!shownLog.length" compact :icon="Bell" text="没有异常通知" hint="一切正常" />
@@ -89,14 +89,14 @@ function tsTitle(n: { ts: number; firstTs?: number; count?: number }): string {
     : fmtTime(n.ts);
 }
 /* popover 受控——清空历史要先关面板再弹确认（确认弹窗 z-index 低于
-   naive 弹层，不关会叠在面板后面） */
+ naive 弹层，不关会叠在面板后面） */
 const open = ref(false);
 function onToggle(show: boolean) {
   open.value = show;
   if (show) store.markNotifySeen();
 }
 /* 清空通知历史补确认——65 批 RestView 清空历史同款（本地记录清了就没了，
-   且含未读标记）。先收面板，确认弹窗由 App.vue 全局宿主渲染 */
+ 且含未读标记）。先收面板，确认弹窗由 App.vue 全局宿主渲染 */
 async function clearLog() {
   open.value = false;
   if (!await askConfirm({
@@ -130,9 +130,9 @@ async function copyMsg(msg: string) {
   display: flex; align-items: center; justify-content: space-between; padding: var(--sp-2) var(--sp-3);
   font-size: var(--fs-sm); font-weight: 650; color: var(--tx1); border-bottom: 1px solid var(--line); flex-shrink: 0;
 }
-/*  C：.nc-tools 基础 flex 样式由全局 .toolrow 承担，仅保留选中态 */
+/* C：.nc-tools 基础 flex 样式由全局 .toolrow 承担，仅保留选中态 */
 .nc-tools .btn.on { color: var(--warn); border-color: currentColor; }
-/*  B：.nc-empty 裸空态退役迁 EmptyState compact，本地样式随迁删除 */
+/* B：.nc-empty 裸空态退役迁 EmptyState compact，本地样式同步更新删除 */
 .nc-list { overflow-y: auto; padding: var(--sp-1) 0; }
 /* 日期组头：时间线的骨架，滚动时吸顶保持当前日期可见 */
 .nc-day {

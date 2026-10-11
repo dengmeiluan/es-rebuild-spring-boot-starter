@@ -4,14 +4,14 @@
  * ⑦ 根因=①.rt-bar（RT:2331/QRT:1839）无 flex-wrap 单行纪律，勾选态反选钮（RT:127-130
  *    bar-right 尾部）使右簇变宽后，收缩压力全落在左簇文本类 flex item（rt-info/qrt-coln
  *    min-content=单字宽）→ 文本折行把工具行撑成两行、右簇溢出「反选」孤立悬挂；
- *   ②隐藏共因=527 批 TableShell 收编后内核 scoped 的 .rt-bar-r/.qrt-bar-r 规则因 scopeId
+ *   ②隐藏共因=527 批 TableShell 合并后内核 scoped 的 .rt-bar-r/.qrt-bar-r 规则因 scopeId
  *    不传播而死（壳内部元素无内核 scopeId，F6 实锤）——右簇实际裸 inline 排列无 flex/gap/
  *    垂直居中，挤压下排布失控。修法=壳级右簇纪律新家（TableShell 全局 style，双内核类名
  *    锚定 flex+nowrap+shrink:0）+两内核 .rt-bar/.qrt-bar 显式 nowrap+左簇文本项 ellipsis
  *    吸收收缩（rt-info/qrt-coln）+nowrap 防折（rt-filtered/qrt-filtered）；
  *    缺省（未勾选）态 DOM 逐字节不变（模板零动，纯 CSS），26px 控制线零触（ nowrap 后
  *    无折行撑高），291 内建钮字面零触。QRT selectable 勾选态工具行 DOM 零变化（F7 同病
- *    检查结论锁）。538:174 形态代表锚随迁 TableShell（锁意图=--sp 收编纪律，字面新家）。
+ *    检查结论锁）。538:174 形态代表锚同步更新 TableShell（锁意图=--sp 合并纪律，字面新家）。
  * 锁定：
  * ① RT 漏斗激活并集收尾（552 对称件）——funnelOn=等值勾选 ∪ 区间 ∪ 包含，RT 漏斗此前只认
  *    等值的暗状态缺口修复（锁形镜像 552:278-306 口径）；
@@ -27,7 +27,7 @@
  *    qrt-agg-empty），口径与 ColDetailModal.emptyRatePct 同源（Math.round 取整 %）；
  *    数值列才出（aggFoot 在场=装配守卫，与非语义守卫一致）；numericOfCount 装配 return 行
  *    538 源码锁逐字禁动——空值率从 statsOf 另取（aggEmptyPct computed），不塞装配层；
- * ⑥ range 判据收编 typeTiers——RANGE_DATE_RE/isRangeType/rangePlaceholderTxt 单源导出，
+ * ⑥ range 判据合并 typeTiers——RANGE_DATE_RE/isRangeType/rangePlaceholderTxt 单源导出，
  *    RT isRangeCol 本体 545 源码锁逐字不动（只改判据引用），两表行为逐字节等值。
  * 挂载样板照抄 tableKernelWave552（裸 createApp + pinia harness）。
  */
@@ -256,8 +256,8 @@ describe('五百五十四批 D：tfoot 空值率 append 档（「· med」后，
   }
 });
 
-/* ═══════════ 五、range 判据收编 typeTiers（⑥） ═══════════ */
-describe('五百五十四批 E：range 判据单源收编（行为逐字节等值）', () => {
+/* ═══════════ 五、range 判据合并 typeTiers（⑥） ═══════════ */
+describe('五百五十四批 E：range 判据单源合并（行为逐字节等值）', () => {
   it('⑥ typeTiers 单元：RANGE_DATE_RE/isRangeType/rangePlaceholderTxt 单源', () => {
     expect(RANGE_DATE_RE.source, '日期族正则与两表原字面同值').toBe('^(date|date_nanos)$');
     expect(isRangeType('long'), '数值族在档').toBe(true);
@@ -272,7 +272,7 @@ describe('五百五十四批 E：range 判据单源收编（行为逐字节等�
     expect(rangePlaceholderTxt(undefined, 'min')).toBe('最小值（含）');
   });
 
-  it('⑥ RT：date 列占位/区间判定、keyword 列无区间——收编后回归', async () => {
+  it('⑥ RT：date 列占位/区间判定、keyword 列无区间——合并后回归', async () => {
     await mountTbl(ResultTable, {
       hits: [
         { _id: 'a', _source: { ts: '2024-01-01', n: 1, s: 'x' } },
@@ -311,7 +311,7 @@ describe('五百五十四批 E：range 判据单源收编（行为逐字节等�
 const rtSrc = readFileSync(join(__dirname, '../components/ResultTable.vue'), 'utf-8');
 const qrtSrc = readFileSync(join(__dirname, '../components/QueryResultTable.vue'), 'utf-8');
 const shellSrc = readFileSync(join(__dirname, '../components/TableShell.vue'), 'utf-8');
-/* 五百六十一批随迁：筛选态提示 span 收编 TableFilteredHint 片段组件（nowrap 纪律字面新家） */
+/* 五百六十一批同步更新：筛选态提示 span 合并 TableFilteredHint 片段组件（nowrap 纪律字面新家） */
 const filteredHintSrc = readFileSync(join(__dirname, '../components/TableFilteredHint.vue'), 'utf-8');
 
 describe('五百五十四批 F：工具行勾选态单行纪律（工蚁1）', () => {
@@ -320,16 +320,16 @@ describe('五百五十四批 F：工具行勾选态单行纪律（工蚁1）', (
     expect(qrtSrc, 'QRT bar 显式单行纪律').toMatch(/\.qrt-bar \{[^}]*flex-wrap: nowrap/);
     expect(rtSrc, 'rt-info=ellipsis 吸收收缩（左簇文本不折行不撑高）').toMatch(/\.rt-info \{[^}]*text-overflow: ellipsis[^}]*white-space: nowrap/);
     expect(qrtSrc, 'qrt-coln 同构 ellipsis 纪律').toMatch(/\.qrt-coln \{[^}]*text-overflow: ellipsis[^}]*white-space: nowrap/);
-    /* 五百六十一批随迁：filtered 防折行纪律字面新家=TableFilteredHint（两内核字面各自保形） */
+    /* 五百六十一批同步更新：filtered 防折行纪律字面新家=TableFilteredHint（两内核字面各自保形） */
     expect(filteredHintSrc, 'rt-filtered 防折行（561 片段组件新家）').toMatch(/\.rt-filtered \{[^}]*white-space: nowrap/);
     expect(filteredHintSrc, 'qrt-filtered 防折行（561 片段组件新家）').toMatch(/\.qrt-filtered \{[^}]*white-space: nowrap/);
-    /* 死规则迁出反断言（字面新家=TableShell，538:174 随迁）——防内核再留一份永不命中的假规则 */
+    /* 死规则迁出反断言（字面新家=TableShell，538:174 同步更新）——防内核再留一份永不命中的假规则 */
     expect(rtSrc, 'RT 内核不再持有 .rt-bar-r 规则（scopeId 不传播=死规则）').not.toContain('.rt-bar-r { display: flex;');
     expect(qrtSrc, 'QRT 内核同迁出').not.toContain('.qrt-bar-r { display: flex;');
   });
 
   it('⑦ 源码锁：壳级右簇纪律新家（TableShell 全局 style——flex+nowrap+shrink:0 双内核锚定）', () => {
-    expect(shellSrc, '右簇规则单源新家（538:174 随迁锚同址）')
+    expect(shellSrc, '右簇规则单源新家（538:174 同步更新锚同址）')
       .toContain('.rt-bar-r, .qrt-bar-r { display: flex; gap: var(--sp-1); align-items: center; flex-wrap: nowrap; flex-shrink: 0; }');
     expect(shellSrc, '右簇子项零收缩（按钮/分隔条/ColPicker 不被压缩折行）')
       .toContain('.rt-bar-r > *, .qrt-bar-r > * { flex-shrink: 0; }');

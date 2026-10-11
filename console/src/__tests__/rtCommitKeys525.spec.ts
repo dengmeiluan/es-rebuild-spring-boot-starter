@@ -128,7 +128,7 @@ describe('RT 一键提交（五百二十五批）', () => {
     await tick();
     expect(updatePartialFn).toHaveBeenCalledTimes(1);
     expect(pendingCount()).toBe(0);
-    /* 提交完成后 chip 与迷你钮一起退场 */
+    /* 提交完成后 chip 与迷你钮一起移除 */
     expect(host.querySelector('.pend-mini-commit')).toBeNull();
   }, 30000);
 });

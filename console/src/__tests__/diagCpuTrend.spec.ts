@@ -1,8 +1,8 @@
 /**
  * 二百一十七批：DiagView 节点表 CPU 趋势列（与 214 批 HEAP 趋势对称补齐）。
- * 五百二十五批 W5 随迁：节点表换 QRT rows 型后，SparkLine 图形列随纯文本壳退役——
+ * 五百二十五批 W5 同步更新：节点表换 QRT rows 型后，SparkLine 图形列随纯文本壳退役——
  * 趋势列降为 trendTip 文本摘要列（近 N 次 min~max · 最新），采样真源 utils/trendHist
- * 不变（heapHist/cpuHist 仍每轮 loadOps 同轮采样）。源码锁（diagRowMenu 同款），随迁锁定：
+ * 不变（heapHist/cpuHist 仍每轮 loadOps 同轮采样）。源码锁（diagRowMenu 同款），同步更新锁定：
  * 1) QRT 列集含双趋势列且紧跟对应水位列（原对称形态延续）；
  * 2) cpuHist 声明 + 采样循环与 heapHist 同轮（一次 loadOps 双列同记）；
  * 3) 采样逻辑收口 utils/trendHist（不再内联 Map 推入）；
@@ -14,7 +14,7 @@ import { join } from 'node:path';
 
 const src = readFileSync(join(__dirname, '../views/DiagView.vue'), 'utf-8');
 
-describe('DiagView CPU 趋势列（二百一十七批→五百二十五批 W5 随迁）', () => {
+describe('DiagView CPU 趋势列（二百一十七批→五百二十五批 W5 同步更新）', () => {
   it('QRT 列集：双趋势列紧跟对应水位列（对称形态延续）', () => {
     expect(src).toContain("'HEAP%', 'HEAP 趋势', 'CPU%', 'CPU 趋势'");
   });

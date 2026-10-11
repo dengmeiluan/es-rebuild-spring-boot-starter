@@ -1,6 +1,6 @@
 /**
  * 五百六十三批（531 遗留件②收口）：数值列聚合行值分布 mini-bar（dist 单源纯函数+数据面+展示面）。
- * 此前 561 批已出 ColDetailModal「分布」段（stats.dist 等宽 8 桶），本批收口：
+ * 此前 561 批已出 ColDetailModal「分布」段（stats.dist 等宽 8 桶），收口：
  * 1) dist 纯函数抽独占域 utils 单源 distBinsOf（原 useColStats 私有 distOf 逐字平移，
  *    弹窗与聚合行同源复用；colDetailDist561 行为锁保真）；
  * 2) useAggRow 增可选第 5 参 distOf → aggDist 出口（aggSpark 同构：关闭恒 null 零求值/

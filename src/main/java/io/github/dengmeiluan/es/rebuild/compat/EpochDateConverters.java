@@ -34,7 +34,7 @@ import java.util.Date;
  * <p><b>带 {@code @Field(type = FieldType.Date, format = ...)} 注解的字段，本开关对它们完全无效。</b>
  * sdes 4.0.9 会为这类属性安装<b>属性级</b>日期转换器，它<b>抢在</b>
  * {@code ElasticsearchCustomConversions} 之前生效，本类的转换器<b>根本不会被调用</b>。
- * QA 6.7.2 实测（ ）：带注解字段在开关关 / 开两种情况下 {@code _source}
+ * QA 6.7.2 实测（带注解字段在开关关 / 开两种情况下 {@code _source}
  * <b>完全一致</b>；同一实体上<b>不带</b>注解的字段才走本类。</p>
  *
  * <p><b>后果</b>：若你的故障字段带日期注解，打开本开关<b>什么也不会发生，而且不报错</b> ——
@@ -90,7 +90,7 @@ import java.util.Date;
  *
  * <h3>写方向</h3>
  *
- * <p>{@link TimestampToLong} 把 {@link Timestamp} 写成 epoch <b>毫秒</b>（spec §9.7）。</p>
+ * <p>{@link TimestampToLong} 把 {@link Timestamp} 写成 epoch <b>毫秒</b>（spec ）。</p>
  *
  * <p><b>实测（QA 6.7.2）：它是个 no-op</b> —— sdes 4.0.9 本就把 {@link Timestamp}
  * 原生写成 epoch 毫秒，开关关 / 开写出的 {@code _source} 逐字节相同。

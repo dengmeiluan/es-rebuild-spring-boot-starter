@@ -225,7 +225,7 @@ public class CrossClusterMigrateService {
         try {
             destExists = localAdmin.indexExists(req.getDestIndex());
         } catch (java.io.IOException e) {
-            // 预检失败不阻断启动，仅不展示 dest 警告（：静默降级补 WARN，运维留痕）
+            // 预检失败不阻断启动，仅不展示 dest 警告（静默降级补 WARN，运维留痕）
             logger.warn("[CrossClusterMigrateService] preflight indexExists failed dest={}: {}",
                     req.getDestIndex(), e.getMessage());
         }
@@ -397,7 +397,7 @@ public class CrossClusterMigrateService {
         if (handle != null) {
             handle.setMessage("用户请求中止");
             handle.abort();
-            handle.getExecutor().shutdown(); // 不再接新任务；当前批次跑完即停
+            handle.getExecutor().shutdown(); // 不再接新任务；当次跑完即停
             logger.info("[CrossClusterMigrateService] abort signaled jobId={}", jobId);
             return;
         }

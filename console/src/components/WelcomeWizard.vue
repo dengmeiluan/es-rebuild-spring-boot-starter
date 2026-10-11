@@ -124,7 +124,7 @@ import { GOTO_TARGETS } from '../utils/hotkeys';
 import { writeStoredRaw } from '../utils/safeJson';
 
 /* -13：首启引导里的 goto 示例原是硬编码「g h = 历史」——HistoryView 已退役，
-   属于和速查面板同一类的「撒谎的界面」。改为从登记表取前三条，不再手工维护。 */
+ 属于和速查面板同一类的「撒谎的界面」。改为从登记表取前三条，不再手工维护。 */
 const gotoHint = (() => {
   const sample = Object.entries(GOTO_TARGETS).filter(([k]) => k !== 'g').slice(0, 3);
   return sample.map(([k, t]) => `g ${k} = ${t.label}`).join('、') + '…';
@@ -155,9 +155,9 @@ function next() {
   }
   step.value = Math.min(step.value + 1, steps.length - 1);
 }
-/*  W10：步 1 键盘连续性——Enter 此前只选中，「下一步」只能鼠标点。
-   现按 Enter=选中并前进（store.pick 经 next() 同路生效）。鼠标点击仍仅选中：
-   先比较几个索引再点「下一步」的挑选流不被 auto-advance 打断。 */
+/* W10：步 1 键盘连续性——Enter 此前只选中，「下一步」只能鼠标点。
+ 现按 Enter=选中并前进（store.pick 经 next() 同路生效）。鼠标点击仍仅选中：
+ 先比较几个索引再点「下一步」的挑选流不被 auto-advance 打断。 */
 function pickIdx(idx: string) {
   chosenIdx.value = idx;
   next();
@@ -230,8 +230,8 @@ defineExpose({ open: () => { step.value = 0; show.value = true; }, });
 .wz-ft-r { display: flex; gap: var(--sp-1h); }
 
 /* （轨5）：900 窄档（与 theme.css 900 档/utils/layout.ts BP_NARROW 单源互锚）——
-   窄视口下双列卡格与「130px 100px 1fr」三列快捷键行挤压，降单列/竖排；
-   纯 CSS 档内声明、模板零结构动，档内零 height/flex 尺寸声明（高度链红线自证） */
+ 窄视口下双列卡格与「130px 100px 1fr」三列快捷键行挤压，降单列/竖排；
+ 纯 CSS 档内声明、模板零结构动，档内零 height/flex 尺寸声明（高度链红线自证） */
 @media (max-width: 900px) {
   .wz-idx-list, .wz-actions { grid-template-columns: minmax(0, 1fr); }
   .wz-hk { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-0); }

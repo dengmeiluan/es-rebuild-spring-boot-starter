@@ -148,7 +148,7 @@ public class SettingsChangeAnalyzer {
             // analyze 的 L1 门禁即假绿灯，非法 settings 会被调用方直接采纳。冷路径
             // （lint 仅在分析入口执行一次），WARN 带键名摘要与堆栈——刻意只记键不记值
             // （settings 值可能带敏感语义）；返回空列表契约不变（Observability554Test 反锁）。
-            logger.warn("[SettingsChange] lint 门禁执行失败，本轮按零 issues 放行（假绿灯风险）"
+            logger.warn("[SettingsChange] lint 门禁执行失败，按零 issues 放行（假绿灯风险）"
                     + ": keys={} : {}", changes == null ? null : changes.keySet(), e.getMessage(), e);
             return new ArrayList<>();
         }

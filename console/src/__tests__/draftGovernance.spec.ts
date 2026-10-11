@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { draftStorageKey, useScopedDraft, redactDraft } from '../composables/useScopedDraft';
 
-/* 草稿治理轮验收矩阵：
+/* 草稿验收矩阵：
    1) 粘贴 → 重挂载仍存在（AdhocRebuild 真视图，徽标可见）
    2) 切集群目标不串稿（conn-b 不见 conn-a 的稿）
-   3) 显式清除才清（清除按钮 → 徽标退场 + 存储删键）
+   3) 显式清除才清（清除按钮 → 徽标移除 + 存储删键）
    4) 错误路径不清稿（composable 级：写稿后模拟失败路径，存储仍在）
    5) 凭据不落盘（password/token 掩埋）
    6) Monaco 真定位（findMatches → revealLineInCenter/setSelection） */
@@ -71,7 +71,7 @@ describe('草稿治理：视图级（AdhocRebuild）', () => {
     const clearBtn = m.host.querySelector('.draft-badge button') as HTMLButtonElement;
     clearBtn.click();
     await new Promise(r => setTimeout(r, 20));
-    expect(m.host.querySelector('.draft-badge'), '清除后徽标退场').toBeNull();
+    expect(m.host.querySelector('.draft-badge'), '清除后徽标移除').toBeNull();
     expect(sessionStorage.getItem(draftStorageKey({ route: 'adhoc' }, 'paste-raw'))).toBeNull();
     m.unmount();
   });

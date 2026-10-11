@@ -1,13 +1,13 @@
 /**
  * 五百六十九批：ModalShell 壳层 Esc 升 document 捕获级（566 Pagination / 568 ColFilterPopover
- * 立法范式推广；568 弹层台账 B 档头号遗留，宪法铁律 D1#5「开弹层→Esc→焦点回触发器」）。
+ * 约定范式推广；568 弹层台账 B 档头号遗留，宪法铁律 D1#5「开弹层→Esc→焦点回触发器」）。
  *
  * 缺陷实锚（568 台账②-3）：壳层原 mask 元素级修饰符依赖 mask 持焦点（tabindex=-1 族）——
  * 第三消费方 RawIoModal 零键盘接管，焦点在页面任意处（真实路径：点「原始 IO」钮后焦点留钮上，
  * Monaco 只读区也不持焦点）按 Esc 关不掉=真缺陷；ConfirmModal/GAB 有自持 window handler 兜底
  * 才合规，但与壳层构成双路径（元素级+window 级并存）。
  *
- * 立法形态：开层（show→true）即存触发时焦点，document 捕获级收 Esc（stopPropagation+emit
+ * 约定形态：开层（show→true）即存触发时焦点，document 捕获级收 Esc（stopPropagation+emit
  * close），关层（show→false）摘监听+焦点回触发时焦点（还档=关层伴随效果，拒关场景如 GAB
  * executing 中 show 不变则焦点不动）；卸载兜底摘监听；壳元素级修饰符与 ConfirmModal/GAB
  * 自持分支退役单源化（emit close 与两消费方 cancel/close 语义逐一等价：ConfirmModal

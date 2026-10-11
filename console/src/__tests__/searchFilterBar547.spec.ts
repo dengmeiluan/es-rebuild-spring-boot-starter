@@ -1,7 +1,7 @@
 /**
- * 五百四十七批·轨4（工蚁）：任务 4 页头过滤胶囊组件化 SearchFilterBar · 契约记档。
+ * 五百四十七批·轨4（工蚁）：任务 4 页头过滤胶囊组件化 SearchFilterBar · 契约备案。
  *
- * 三胞胎同场景（页头过滤输入胶囊）：WatcherView .wt-search-head / FavoritesView .fv-search /
+ * 三处同场景（页头过滤输入胶囊）：WatcherView .wt-search-head / FavoritesView .fv-search /
  * TemplateGalleryView .tg-search——三份手写同构（Search 图标 + 裸 input + 右挂附加件）。
  * 新建 components/SearchFilterBar.vue 统一件：
  *   props { modelValue, placeholder, inputClass? } + emit update:modelValue + 默认插槽
@@ -11,7 +11,7 @@
  * 胶囊形态统一为 wt/fv 同值（bg:var(--panel) + border-subtle + radius 8px）；
  * tg 值漂移（bg1/line/6px）归一，min-width:320px → min(320px,100%)；
  * padding/gap 留在视图落位类（「padding 对齐现行」，高度结构语义零变动）。
- * 异形不收（豁免记档）：IndexHubView .ih-search（Esc 两级语义）/BrowserView .bw-search/
+ * 异形不收（豁免备案）：IndexHubView .ih-search（Esc 两级语义）/BrowserView .bw-search/
  * SideNav .nav-search/ResultTable .rt-qsearch。
  */
 import { describe, it, expect } from 'vitest';
@@ -46,7 +46,7 @@ describe('五百四十七批：SearchFilterBar 统一件（组件源码锚）', 
   it('胶囊形态统一为 wt/fv 同值：panel 底 + border-subtle + radius 8px（gap/padding 留视图）', () => {
     expect(sfb, '统一底色').toMatch(/\.sfb \{[^}]*background: var\(--panel\);/);
     expect(sfb, '统一弱边').toMatch(/\.sfb \{[^}]*border: 1px solid var\(--border-subtle\);/);
-    expect(sfb, '统一 8px 圆角（654 批随迁：8px→var(--r-m) 阶梯等值收编）').toMatch(/\.sfb \{[^}]*border-radius: var\(--r-m\);/);
+    expect(sfb, '统一 8px 圆角（654 批同步更新：8px→var(--r-m) 阶梯等值合并）').toMatch(/\.sfb \{[^}]*border-radius: var\(--r-m\);/);
     expect(sfb, 'input 裸形态内建（flex:1 透明无边框）').toMatch(/\.sfb-i \{[^}]*flex: 1;/);
   });
 
@@ -84,9 +84,9 @@ describe('五百四十七批：SearchFilterBar 统一件（组件源码锚）', 
   });
 });
 
-/* ═══════════ 三视图换装（类名/placeholder/行为逐字保留——挂载型 spec 纪律） ═══════════ */
+/* ═══════════ 三视图改用（类名/placeholder/行为逐字保留——挂载型 spec 纪律） ═══════════ */
 
-describe('五百四十七批：三视图换装（placeholder/类名/接线逐字保留）', () => {
+describe('五百四十七批：三视图改用（placeholder/类名/接线逐字保留）', () => {
   it('WatcherView：wt-search-head 落位透传 + placeholder 逐字 + Enter/HitNav 接线不动', () => {
     expect(wt).toMatch(/<SearchFilterBar v-model="kw" class="wt-search-head" input-class="wt-search-i" placeholder="过滤 watch id \/ trigger \/ metadata…" @enter="onHitKey">/);
     expect(wt, 'HitNav 附加件走默认插槽').toMatch(/<SearchFilterBar[\s\S]*?<HitNav :count="filteredWatches\.length"[\s\S]*?<\/SearchFilterBar>/);
@@ -110,7 +110,7 @@ describe('五百四十七批：三视图换装（placeholder/类名/接线逐字
     expect(tg, 'tg-search 落位类在组件根（input 后代选择器依赖）').toMatch(/class="tg-search"/);
   });
 
-  it('异形不收（豁免记档）：四异形过滤框不在换装域', () => {
+  it('异形不收（豁免备案）：四异形过滤框不在改用域', () => {
     expect(read('../views/IndexHubView.vue'), 'ih-search Esc 两级语义，异形豁免').toMatch(/ih-search/);
     expect(read('../views/BrowserView.vue'), 'bw-search 异形豁免').toMatch(/bw-search/);
     expect(read('../components/SideNav.vue'), 'nav-search 异形豁免').toMatch(/nav-search/);

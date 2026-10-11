@@ -25,7 +25,7 @@ describe('自助操作流水（非 admin 可见自己的操作）', () => {
   });
   it('SecurityView：canAuditAll 分派全量/自助；身份就绪任意角色补拉', () => {
     expect(sec).toContain('const canAuditAll = computed(() => auth.canAuditAll());');
-    /*  随迁：uriPrefix 前缀下推第 7 参接活（ 输入挂了但通道缺失的死输入，
+    /*  同步更新：uriPrefix 前缀下推第 7 参接活（ 输入挂了但通道缺失的死输入，
        服务端 ConsoleAuthController uriPrefix 形参在案），源码锁字面随之（mine 分支 5 参未动，31 行锁零触） */
     expect(sec).toContain('? await api.auth.opsAudit(fUser.value || undefined, fAction.value || undefined, AUDIT_PAGE, offset, sinceMsOf(), fConn.value || undefined, fUri.value || undefined)');
     expect(sec).toContain(': await api.auth.opsAuditMine(fAction.value || undefined, AUDIT_PAGE, offset, sinceMsOf(), fConnMine.value || undefined);'); /* 自助面集群维度 */
@@ -48,8 +48,8 @@ describe('危险按钮按角色隐藏（点名：只读不再看到删索引/删
   it('IndexHub：删索引/重建/改 Setting/新建索引/托管重建=ops；ops 页 raw 系=admin + 低权自述空态', () => {
     expect(ih).toContain('<button v-if="cur && canRebuild" aria-label="托管重建当前索引"');
     /* 头部删除钮与 ops 危险区双入口收敛——唯一入口收在危险区（askDelIndex
-       critical 守卫不变），锚随迁危险区删除钮形态 */
-    expect(ih).toContain('<button class="btn sm danger" @click="askDelIndex">删除…</button>'); /*  W4 收编 askConfirm（askDelIndex）+头部入口收敛危险区 */
+       critical 守卫不变），锚同步更新危险区删除钮形态 */
+    expect(ih).toContain('<button class="btn sm danger" @click="askDelIndex">删除…</button>'); /*  W4 合并 askConfirm（askDelIndex）+头部入口收敛危险区 */
     expect(ih).toContain('<button v-if="canCreateIdx" aria-label="新建索引');
     expect(ih).toContain('v-if="!canOps && !canAdmin" class="ih-tip pad"');
     expect(ih).toContain('<div class="ih-op-sec" v-if="canAdmin">'); /* 数据可见性（raw 系） */
@@ -73,7 +73,7 @@ describe('危险按钮按角色隐藏（点名：只读不再看到删索引/删
     expect(sec).toContain('v-else v-model.trim="fConnMine"');
   });
   it('CmdPalette：create-index=ops / create-doc=write / runRaw 五命令=admin / ILM=ops', () => {
-    /* 随迁：canW 定义行升连接感知档 canWriteOn(store.target)（第四波扫荡）；
+    /* 同步更新：canW 定义行升连接感知档 canWriteOn(store.target)（第四波扫荡）；
        ：canO 细化为 canEndpoint(create-index 端点)——canO 唯一消费
        r59-create-index 的端点归 config-validator 页，连接模型按本页写键勾选裁决 */
     expect(pal).toContain("const canW = auth.canWriteOn(store.target), canO = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target), canA = auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target);");
@@ -85,13 +85,13 @@ describe('危险按钮按角色隐藏（点名：只读不再看到删索引/删
   });
   it('ClusterSwitcher：连接档案管理（表单/⋯菜单）=admin；查看/切换/探活全角色保留', () => {
     expect(cs).toContain("const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/clusters/save', store.target)); /* 连接档案管理按连接勾选（写键持有人=管理者）；静态模型回落 ADMIN 档 */");
-    /* 随迁：⋯ 次级菜单退役改 hover-reveal 图标直出（测试/编辑/删除仍 canAdmin 三件套门控；
+    /* 同步更新：⋯ 次级菜单退役改 hover-reveal 图标直出（测试/编辑/删除仍 canAdmin 三件套门控；
        探活钮移出菜单后依旧不受门禁—— probe=VIEWER 豁免） */
     expect(cs).toContain('<template v-if="canAdmin">');
     expect(cs).toContain(':disabled="testingId === c.id" @click="testExisting(c.id)"');
     expect(cs).toContain('@click="editConn(c)"');
     expect(cs).toContain('@click="delConn(c)"');
-    /* 随迁：表单包折叠节（canAdmin 门控随 wrapper 语义不变） */
+    /* 同步更新：表单包折叠节（canAdmin 门控随 wrapper 语义不变） */
     expect(cs).toContain('<div class="cm-fold cm-fold-form" :class="{ open: formOpen }" v-if="canAdmin"');
     expect(cs).toContain('连接档案的新增/编辑/删除需 ADMIN 角色；当前可查看、切换与探活已有连接。');
     /* 探活钮不受门禁（ probe=VIEWER 豁免） */
@@ -217,7 +217,7 @@ describe('第三波：写门收口（10 视图写按钮 VIEWER 不可见）', ()
   });
   it('SearchTemplatesView：保存/删除已存模板=ops', () => {
     const v = V('SearchTemplatesView.vue');
-    /* 随迁：定义行升页面感知档 canPage（conn 模型菜单勾选即权限，静态模型回落 canCap），模板锁零改 */
+    /* 同步更新：定义行升页面感知档 canPage（conn 模型菜单勾选即权限，静态模型回落 canCap），模板锁零改 */
     expect(v).toContain("const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/scripts/put', store.target));");
     expect(v).toContain('<button v-if="canOps" class="btn primary xs" @click="save" :disabled="!curId || busy">');
     expect(v).toContain('<button v-if="canOps" aria-label="从集群删除这个已存模板（_scripts），引用它的调用方会报错" class="btn danger xs"');
@@ -227,7 +227,7 @@ describe('第三波：写门收口（10 视图写按钮 VIEWER 不可见）', ()
     expect(v).toContain("const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/put-mapping', store.target));");
     expect(v).toContain('<button v-if="canOps" class="btn sm" @click="addOpen = true">');
     expect(v).toContain('<button v-if="canOps" class="btn sm" @click="settingsOpen = true">');
-    expect(v).toContain('<button v-if="canOps" class="btn pri" :disabled="!newMappingValid || putting"'); /*  G213 随迁：在途守卫入 disabled 绑定 */
+    expect(v).toContain('<button v-if="canOps" class="btn pri" :disabled="!newMappingValid || putting"'); /*  G213 同步更新：在途守卫入 disabled 绑定 */
     expect(v).toContain('<button v-if="canOps" class="btn pri" :disabled="!newSettingsValid || putting"');
   });
   it('AnalysisSettingsView：热重载/保存=ops（加载为读操作不受门禁）', () => {

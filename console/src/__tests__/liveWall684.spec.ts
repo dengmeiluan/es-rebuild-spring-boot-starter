@@ -155,7 +155,7 @@ describe('六百八十四批：挂墙模式（全屏态五件套）', () => {
     expect(t).toContain('挂墙');
     /* AutoRefreshSelect 透传 disabled（纯增量 prop） */
     expect(strip(arfSrc)).toContain(':disabled="disabled"');
-    /* 稿约红线：高度链零触碰——本批不新增/不改 .ld-chart-full 与 --vh-offset 规则（存量规则在 LiveChartCard 域） */
+    /* 稿约红线：高度链零触碰——不新增/不改 .ld-chart-full 与 --vh-offset 规则（存量规则在 LiveChartCard 域） */
     expect(t).not.toContain('--vh-offset');
     expect(t).not.toMatch(/\.fs-active[^{]*ld-chart-full/);
   });

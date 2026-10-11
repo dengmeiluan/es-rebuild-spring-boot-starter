@@ -1,13 +1,13 @@
 /**
  * 五百六十三批（531 遗留件③收口）：显式非语义类型抑制守卫纯函数单源+消费面。
- * typeTiers.isNonSemanticType（黑名单单源，557/561 两次扩容记档在档）只 import 不改；
- * 本批新增语义守卫单源 semanticGuard（类型档 ∪ _source 等非业务元字段名档）并接线：
+ * typeTiers.isNonSemanticType（黑名单单源，557/561 两次扩容备案在档）只 import 不改；
+ * 新增语义守卫单源 semanticGuard（类型档 ∪ _source 等非业务元字段名档）并接线：
  * 1) useColStats 消费——binary/_source 抑制列 dist 恒 null、seriesOf 恒 []（值形态硬口径
- *    之外的第二道显式标注守卫，typeTiers 551 批记档同源；内核黑名单件内联守卫不动）；
+ *    之外的第二道显式标注守卫，typeTiers 551 批备案同源；内核黑名单件内联守卫不动）；
  * 2) tableSort 消费——useTableSort 增可选 sortableOf 抑制档（suppressToggle：显式非语义列
  *    toggle 短路、indicator 保持空；_id/_index/_score 等排序有语义的元字段不收）。
  * 既有 spec 保真：colDetailDist561（无 fieldType 路径）/551 seriesOf 硬口径/
- * tableKernelOffBl558b（numeric/useTableSort 导出+记档锚）/wave560（compareVals）零触碰。
+ * tableKernelOffBl558b（numeric/useTableSort 导出+备案锚）/wave560（compareVals）零触碰。
  */
 import { describe, it, expect } from 'vitest';
 import { isMetaNonBusinessField, typeTierSuppressed } from '../utils/semanticGuard';
@@ -83,7 +83,7 @@ describe('tableSort 显式非语义排序抑制（五百六十三批）', () => 
     expect(sortableGuard(() => 'binary')('_source'), '类型档仍并判').toBe(false);
   });
 
-  it('抑制守卫消费形态（六百零三批随迁：useTableSort 僵尸壳退役，opts.sortableOf 档随退役——抑制语义由 sortableGuard 单源+双内核入口短路承接，接线锁=tableKernelSortableWire565/567）', () => {
+  it('抑制守卫消费形态（六百零三批同步更新：useTableSort 僵尸壳退役，opts.sortableOf 档随退役——抑制语义由 sortableGuard 单源+双内核入口短路承接，接线锁=tableKernelSortableWire565/567）', () => {
     /* 守卫入口短路语义直演：被抑制列不进委托链、放行列照常（双内核 onSort/sortBy 首行同款守卫） */
     const g = sortableGuard((c) => (c === 'raw' ? 'binary' : undefined));
     const entered: string[] = [];

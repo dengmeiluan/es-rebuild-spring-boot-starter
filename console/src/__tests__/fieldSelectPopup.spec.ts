@@ -141,7 +141,7 @@ describe('FieldSelect 换代：fieldSearch 共享内核', () => {
     });
     await focus(host);
     const gh = Array.from(document.body.querySelectorAll('.fs-gh')).map(el => el.textContent);
-    /* 558b 随迁：组头人话词面升级（GH_LABEL→FIELD_TYPE_ZH 兜底）——锁语义=组头人话，
+    /* 558b 同步更新：组头人话词面升级（GH_LABEL→FIELD_TYPE_ZH 兜底）——锁语义=组头人话，
          date 走 GH_LABEL 既有档不变，keyword/object/text 出 FIELD_TYPE_ZH 实词 */
     expect(gh).toEqual(['日期 字段', '精确值 字段', '对象 字段', '文本 字段']);
     const tags = Array.from(document.body.querySelectorAll('.fs-item .fs-ty')).map(el => (el as HTMLElement).dataset.t);

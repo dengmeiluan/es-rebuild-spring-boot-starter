@@ -24,10 +24,9 @@
           </div>
           <JsonArea ref="seJaRef" v-model="dsl" :dsl-assist="dslAssist" :rows="6" fill @submit="run" />
           <!-- lintDsl 静态体检提示条（SearchSandboxView join 串形态同款，随输入实时重估，
-               零阻塞不拦执行）——error 红条单列（结构必错 ES 直接拒绝），warning/hint 黄条并列；
-               JSON 非法静默（JsonArea 圆点已报） -->
-          <!-- .se-lint 私造双档随同构换装 theme.css .lint-bar 单源（561 立法，
-               dt-lint「lint-bar + 原类名锚 + 档位」先例，role 语义与文案逐字不动） -->
+ 零阻塞不拦执行）——error 红条单列（结构必错 ES 直接拒绝），warning/hint 黄条并列；
+ JSON 非法静默（JsonArea 圆点已报） -->
+          <!-- .se-lint 私造双档随同构改用 theme.css .lint-bar 单源（dt-lint「lint-bar + 原类名锚 + 档位」先例，role 语义与文案逐字不动） -->
           <div v-if="seLintErrors.length" role="alert" class="lint-bar se-lint lint-bar-err">
             <span>DSL 检查（错误）：{{ seLintErrors.map(f => f.message + '（' + f.suggestion + '）').join('；') }}</span>
           </div>
@@ -37,13 +36,13 @@
           <div class="se-hint">
             <Info :size="10" />
             <!-- 整句必须包成单个 flex 子项：否则 flex 把「提示：给子」/<code>/「句加」
-                 各自当独立项挤压换行，在 380px 窄栏里被撕成三栏乱码（实测） -->
+ 各自当独立项挤压换行，在 380px 窄栏里被撕成三栏乱码（实测） -->
             <span>提示：给子句加 <code>"_name"</code> 可在「命中矩阵」中追踪；size 建议 ≤ 20（explain 结果很大）</span>
           </div>
         </div>
         <!-- took 手写串换 MetaStrip/TookBadge 范式（SearchSandboxView ss-took 同款：
-             TookBadge 四档色归统一件、item.value 无从承接组件段走默认插槽，顺序随插槽位收敛为
-             命中在前，语义无损失；≥ 前缀（totalGte）并入命中值） -->
+ TookBadge 四档色归统一件、item.value 无从承接组件段走默认插槽，顺序随插槽位收敛为
+ 命中在前，语义无损失；≥ 前缀（totalGte）并入命中值） -->
         <MetaStrip v-if="tookMs >= 0" class="se-meta" :items="seMeta">
           <span class="ms-i ms-t"><i>took</i> <TookBadge :ms="tookMs" /></span>
         </MetaStrip>
@@ -54,9 +53,9 @@
         <div v-if="busy" class="se-loading">
           <SkeletonBox v-for="i in 3" :key="i" height="56px" round style="margin-bottom:var(--sp-2)" />
         </div>
-        <!-- se-err 完整私造红壳收编 theme.css .err-bar 单源（558b ov-loaderr 判例：
-             role=alert + rise-in 语义同批补齐）——bg/border/radius/padding 色壳归基座，
-             .se-err-body/-pre/-acts 结构保留作内容槽；900 档 padding 覆写随壳退役 -->
+        <!-- se-err 完整私造红壳合并 theme.css .err-bar 单源（558b ov-loaderr 先例：
+ role=alert + rise-in 语义同步补齐）——bg/border/radius/padding 色壳归基座，
+ .se-err-body/-pre/-acts 结构保留作内容槽；900 档 padding 覆写随壳退役 -->
         <div v-else-if="runErr" role="alert" class="err-bar rise-in">
           <AlertCircle :size="14" />
           <div class="se-err-body">
@@ -91,13 +90,13 @@
           </div>
           <div v-if="openIdx === i" class="se-hit-body">
             <div v-if="h.matched_queries?.length" class="se-mq-row">
-              <!-- 命中子句 chip 收编 MetaStrip mini 档（550 sv-repo 徽章判例同语言）——
-                   子句名走 value 亮色段，「命中子句：」引导词保留；.se-mq-chip 私造皮退役 -->
+              <!-- 命中子句 chip 合并 MetaStrip mini 档（550 sv-repo 徽章先例同语言）——
+ 子句名走 value 亮色段，「命中子句：」引导词保留；.se-mq-chip 私造皮退役 -->
               命中子句：<MetaStrip :items="h.matched_queries.map((m: string) => ({ value: m }))" />
             </div>
             <ExplainTree v-if="h._explanation" :node="h._explanation" :total="h._explanation.value" :depth="0" />
-            <!-- se-empty-sub 裸 div 收编 EmptyState compact 统一件（557 rp-empty 同语言；
-                 文案逐字保留，留白/图标归组件） -->
+            <!-- se-empty-sub 裸 div 合并 EmptyState compact 统一件（557 rp-empty 同语言；
+ 文案逐字保留，留白/图标归组件） -->
             <EmptyState v-else compact :icon="Info" text="此 hit 无 _explanation（检查 explain:true 是否被覆盖）" />
             <details class="se-src"><summary>_source</summary><JsonTree :data="h._source" /></details>
           </div>
@@ -123,7 +122,7 @@ import { api, ioRecorder, type RawIoRec } from '../api';
 import RawIoModal from '../components/RawIoModal.vue';
 import { useAppStore } from '../stores/app';
 import { useIdxState } from '../composables/urlState';
-import { useTierCycle } from '../composables/useTierCycle'; /* ：se.edH 三件套收编 */
+import { useTierCycle } from '../composables/useTierCycle'; /* ：se.edH 三件套合并 */
 import { useScopedDraft } from '../composables/useScopedDraft';
 import { useIndexFields } from '../composables/useIndexFields';
 import { useTermsSuggest } from '../composables/useTermsSuggest'; /* ：值位动态候选（660 范式） */
@@ -137,7 +136,7 @@ import TookBadge from '../components/TookBadge.vue';
 import type { MetaStripItem } from '../components/MetaStrip.vue';
 import { copyText, totalOf, fmtNum } from '../utils/format';
 import { friendlyEsError } from '../utils/esError'; /* ：runErr 人话化 */
-import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-html 内核；534 收口波：双参换装（errMeta 旁路） */
+import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-html 内核；534 收口波：双参改用（errMeta 旁路） */
 import JsonArea from '../components/JsonArea.vue';
 import { lintDsl } from '../utils/dslLint'; /* ：DSL 静态体检 */
 import JsonTree from '../components/JsonTree.vue';
@@ -147,14 +146,14 @@ const store = useAppStore();
 /* 目标索引进 URL——刷新/分享链接可复原（可重入） */
 const index = useIdxState({ follow: true });
 /* Query 接 dsl-assist——fields 闭包现调现读（DslQueryView 同范式）。
-   fields() 侧惰性 ensure：补全触发才拉 mapping（挂载零请求），cache 命中后直读；
-   不 await 零降级，失败仅无候选 */
+ fields() 侧惰性 ensure：补全触发才拉 mapping（挂载零请求），cache 命中后直读；
+ 不 await 零降级，失败仅无候选 */
 const { fields: assistFields, ensure: ensureAssistFields } = useIndexFields(() => index.value);
 /* terms 闭包接线——索引源=index 与 fields 同源现调现读（fields 惰性 ensure 形态保持，554 F 口径不变） */
 const seTerms = useTermsSuggest(() => index.value);
 const dslAssist = { fields: () => { if (!assistFields.value.length) ensureAssistFields(); return assistFields.value; }, terms: (f: string, p: string) => seTerms.suggestAsync(f, p) };
 /* lint ctx 字段表与 dsl-assist 同源——挂载即 ensure（UpdateByQueryView immediate
-   范式，只读 mapping 请求、失败零降级），fields 空=类型系规则自动跳过，零 ctx 规则始终生效 */
+ 范式，只读 mapping 请求、失败零降级），fields 空=类型系规则自动跳过，零 ctx 规则始终生效 */
 watch(index, () => { void ensureAssistFields(); }, { immediate: true });
 /* lintDsl 静态体检（UpdateByQueryView 最简接线同款）——JSON 解析失败静默不阻塞 */
 const seLint = computed(() => {
@@ -183,7 +182,7 @@ const DEFAULT_DSL = JSON.stringify({
   query: { match: { _all_replace_me_: { query: '关键词', _name: 'main-match' } } },
 }, null, 2).replace('_all_replace_me_', 'your_field');
 /* DSL 进 sessionStorage 草稿——刷新不丢稿（可重入） */
-/* 草稿治理轮：DSL 草稿迁 useScopedDraft（按 集群/索引 隔离），行为不变 */
+/* 草稿：DSL 草稿迁 useScopedDraft（按 集群/索引 隔离），行为不变 */
 const dsl = useScopedDraft('dsl', {
   route: 'score-explain',
 
@@ -191,8 +190,8 @@ const dsl = useScopedDraft('dsl', {
 }, DEFAULT_DSL).text;
 
 /* lint findings 注入编辑器划线（SearchSandboxView 范式：debounce 250ms 防每敲一键
-   全量 findMatches；info 降级 hint——MonacoEditor marker 档只收 warning/hint/error；
-   banner 提示条保留，双通道并存）。 */
+ 全量 findMatches；info 降级 hint——MonacoEditor marker 档只收 warning/hint/error；
+ banner 提示条保留，双通道并存）。 */
 const seJaRef = ref<InstanceType<typeof JsonArea> | null>(null);
 const queueLintMarkers = useDebounceFn(() => {
   seJaRef.value?.setMarkers?.(seLint.value.map(f => ({ ...f, severity: f.severity === 'info' ? 'hint' as const : f.severity })));
@@ -200,14 +199,14 @@ const queueLintMarkers = useDebounceFn(() => {
 watch(dsl, () => { queueLintMarkers(); }, { immediate: true });
 
 /* Query 编辑框高度三档循环 + 跨会话记忆（ra.scriptH 同款形态；
-   起档=原 max(300px, 42vh) 弹性档，不引入 height:100% 结构）。
-   TIERS+usePref+手写 cycle 三件套收编 useTierCycle 单源
-   （se.edH 键不变=已存档位零迁移；默认档=首位，defVal 缺省；cycle 语义等值） */
+ 起档=原 max(300px, 42vh) 弹性档，不引入 height:100% 结构）。
+ TIERS+usePref+手写 cycle 三件套合并 useTierCycle 单源
+ （se.edH 键不变=已存档位零迁移；默认档=首位，defVal 缺省；cycle 语义等值） */
 const SE_ED_H_TIERS = ['max(300px, 42vh)', 'max(390px, 56vh)', 'max(500px, 72vh)'];
 const { v: edH, cycle: cycleEdH } = useTierCycle('se.edH', SE_ED_H_TIERS);
 
 /* 原始 IO 快查（546 六页同款三件套）——/cluster/search-raw 本页独占（该端点
-   仅本页 explain 解剖使用）；判空 rec=null 时 notify 引导，不开空弹窗 */
+ 仅本页 explain 解剖使用）；判空 rec=null 时 notify 引导，不开空弹窗 */
 const rawIoShow = ref(false);
 const rawIoRec = ref<RawIoRec | null>(null);
 function openRawIo() {
@@ -227,13 +226,13 @@ function fmtScore(s: any) {
 }
 
 const runErr = ref(''); // 解剖失败全文，供内联面板回看（三态契约错误位）
-/* 534 收口波双参换装：原始错误对象旁路留存（catch 压串丢 code/endpoint，喂 errMeta 用） */
+/* 534 收口波双参改用：原始错误对象旁路留存（catch 压串丢 code/endpoint，喂 errMeta 用） */
 const runErrRaw = ref<unknown>(null);
 /* 错误面板首行人话；runErr 全文保留进 pre 回看 */
 const friendlyErr = computed(() => (runErr.value ? friendlyEsError(runErr.value) : ''));
 
 async function run() {
-  /* Ctrl+Enter（@submit）路径不经执行钮 :disabled——busy 期间自防重入（UBQ  同款） */
+  /* Ctrl+Enter（@submit）路径不经执行钮 :disabled——busy 期间自防重入（UBQ 同款） */
   if (busy.value) return;
   if (!index.value) return;
   let body: any;
@@ -265,8 +264,8 @@ async function copyExplain(h: any) {
 }
 
 /* ==================== ：实验室联动 —— hit 一键送去排名侦探 / 查询X光 ====================
-   手写 sessionStorage.setItem 换 useLinkCarry 统一件——键名与 payload 结构逐字保持
-   （es-console.link.rankdebug={index,id,query} / es-console.link.xray={index,id}），消费端零感 */
+ 手写 sessionStorage.setItem 换 useLinkCarry 统一件——键名与 payload 结构逐字保持
+ （es-console.link.rankdebug={index,id,query} / es-console.link.xray={index,id}），消费端零感 */
 const rankDebugCarry = useLinkCarry<{ index: string; id: string; query: string }>('rankdebug');
 const xrayCarry = useLinkCarry<{ index: string; id: string }>('xray');
 function gotoWhy(h: any) {
@@ -283,53 +282,53 @@ function gotoXray(h: any) {
 .se-page { display: flex; flex-direction: column; gap: var(--sp-3); height: 100%; }
 .se-hd { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
 /* 删 -hd-tt/-hd-sub 死规则（页头已由 PageHeader 接管，模板 0 引用）。
-   页头左组/图标色/右钮组修饰与索引输入框孤儿同族补清（PageHeader/CurrentIdxChip
-   收编后模板 0 引用；713/714/715/717/719 同族） */
+ 页头左组/图标色/右钮组修饰与索引输入框孤儿同族补清（PageHeader/CurrentIdxChip
+ 合并后模板 0 引用；713/714/715/717/719 同族） */
 /* 不加 align-items: start —— 本栅格被 .se-page 的 flex 撑到整屏高，
-   一旦 start 就让两栏塌回内容高，实测下方空出 612px 纯死白（栅格 846 / 左 234 / 右 147）。
-   默认 stretch 让两栏吃满行高，Query 框才能长到可用尺寸。 */
+ 一旦 start 就让两栏塌回内容高，实测下方空出 612px 纯死白（栅格 846 / 左 234 / 右 147）。
+ 默认 stretch 让两栏吃满行高，Query 框才能长到可用尺寸。 */
 .se-body { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: var(--sp-3); flex: 1; min-height: 0; }
 .se-left { display: flex; flex-direction: column; gap: var(--sp-2); min-height: 0; }
 /* 卡片吃左栏剩余高度但设上限：实测无上限时框高 737px、内容仅 11 行、框内 73% 是空白
-   —— 那是把「框太小」换成了「框内死白」。420px 够写 DSL，余量回流给下方结果区。 */
+ —— 那是把「框太小」换成了「框内死白」。420px 够写 DSL，余量回流给下方结果区。 */
 /* 编辑器高度跟随内容、不固定撑高：flex:none + min-height 保底 + max-height 封顶。
-   实测 flex:1 会把它钉在上限（354px）而 DSL 只有 7 行，框内约 200px 是空白——
-   那是把「框太小」换成了「框内虚高」。余量交给下方结果区/空态。 */
+ 实测 flex:1 会把它钉在上限（354px）而 DSL 只有 7 行，框内约 200px 是空白——
+ 那是把「框太小」换成了「框内虚高」。余量交给下方结果区/空态。 */
 /* 固定 260px：flex:none 会让外层卡片收缩，而内层 :deep(.ja-ta) 带 min-height:0，
-   两者打架时 textarea 跌到 134px（比 min-height:200px 还小）。给定高度消除歧义，
-   内容更长时编辑器内部滚动；下方结果区/空态用 flex:1 吃掉余量。 */
+ 两者打架时 textarea 跌到 134px（比 min-height:200px 还小）。给定高度消除歧义，
+ 内容更长时编辑器内部滚动；下方结果区/空态用 flex:1 吃掉余量。 */
 /* 定高改弹性档——max() 保留 300px 实测下限（见上三条注释），42vh 跟随视口，矮窗口不再局促。
-   弹性档升三档循环（SE_ED_H_TIERS，useTierCycle('se.edH') 记忆），高度经模板 :style
-   内联，本规则只留布局骨架——不引入 height:100% 结构 */
-/* se-card 编辑器外框退役（立法③）——内容直贴，分界由 se-card-hd border-bottom
-   承接（Kibana 同语言）；布局骨架（flex 纵向/flex:none）零触，脚本段零触 */
+ 弹性档升三档循环（SE_ED_H_TIERS，useTierCycle('se.edH') 记忆），高度经模板 :style
+ 内联，本规则只留布局骨架——不引入 height:100% 结构 */
+/* se-card 编辑器外框退役（约定③）——内容直贴，分界由 se-card-hd border-bottom
+ 承接（Kibana 同语言）；布局骨架（flex 纵向/flex:none）零触，脚本段零触 */
 .se-card { border: 0; border-radius: 0; overflow: hidden; display: flex; flex-direction: column; flex: none; }
 .se-card-hd { display: flex; align-items: center; gap: var(--sp-1h); padding: var(--sp-2) var(--sp-2h); font-size: var(--fs-xs); font-weight: 650; border-bottom: 1px solid var(--border); }
-/* .se-lint 私造三条（形态/warn/err）随换装 theme.css .lint-bar 单源退役
-   （561 立法 dt-lint 同语言，模板锚类保留作测试/后续落位挂点） */
+/* .se-lint 私造三条（形态/warn/err）随改用 theme.css .lint-bar 单源退役
+ （ dt-lint 同语言，模板锚类保留作测试/后续落位挂点） */
 /* 删 .se-ta 死定高规则（模板已用 JsonArea，0 引用） */
 /* JsonArea 自身已是 flex 纵向容器；只在本视图内接线让它随卡片长高，不改共享组件。
-   rows=6 仅作为无 flex 时的兜底高度，这里由 flex 接管。 */
+ rows=6 仅作为无 flex 时的兜底高度，这里由 flex 接管。 */
 .se-card :deep(.ja) { flex: 1; min-height: 0; border: none; border-radius: 0; }
 /* flex-start：整句折成两行时图标须对齐首行，center 会让图标飘到两行正中 */
 .se-hint { display: flex; align-items: flex-start; gap: 5px; padding: var(--sp-1h) var(--sp-2h); font-size: var(--fs-xs); opacity: .6; border-top: 1px dashed var(--border); flex: none; }
 .se-hint > svg { flex: none; margin-top: var(--sp-0); }
 .se-hint code { background: var(--bg2); padding: 0 var(--sp-1); border-radius: 3px; }
-/* 手写串样式随 MetaStrip/TookBadge 换装退役，只留落位 padding（字号/mono 由统一件承担）。
-   took 手写 sep 退役（MetaStrip 有默认插槽自动渲染 .ms-sep）、插槽段类名换组件档
-   ms-i/ms-t——三胞胎 scoped 样式随迁删除（形态单一出处归组件） */
+/* 手写串样式随 MetaStrip/TookBadge 改用退役，只留落位 padding（字号/mono 由统一件承担）。
+ took 手写 sep 退役（MetaStrip 有默认插槽自动渲染 .ms-sep）、插槽段类名换组件档
+ ms-i/ms-t——同族 scoped 样式同步删除（形态单一出处归组件） */
 .se-meta { padding: 0 var(--sp-0); }
 .se-right { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; overflow: auto; max-height: calc(100vh - var(--vh-offset, 210px) + 50px); }
 /* 空态在整片右栏里居中。用 margin:auto 而不是父级 justify-content:center ——
-   后者在 overflow:auto 容器里会把溢出内容的顶部裁掉、滚不回去。 */
+ 后者在 overflow:auto 容器里会把溢出内容的顶部裁掉、滚不回去。 */
 /* flex:1 吃掉编辑器下方的剩余高度（margin:auto 只负责在其中居中）——
-   只写 margin:auto 时空态仍是内容高，下方留一大片死白（实测 426px）。 */
+ 只写 margin:auto 时空态仍是内容高，下方留一大片死白（实测 426px）。 */
 .se-empty-fill { flex: 1; margin: auto; }
 .se-loading { display: flex; flex-direction: column; }
-/* .se-err 私造红壳（flex/padding/color/border/radius/bg 四件套）随 err-bar 收编退役
-   （flattenWave552 radius 锚随迁：语义红框归基座单源）；.se-err-body/-pre/-acts 结构留作内容槽 */
+/* .se-err 私造红壳（flex/padding/color/border/radius/bg 四件套）随 err-bar 合并退役
+ （ radius 锚同步更新：语义红框归基座单源）；.se-err-body/-pre/-acts 结构留作内容槽 */
 .se-err-body { flex: 1; min-width: 0; }
-.se-err-pre { margin: var(--sp-1h) 0 0; font-family: var(--mono); font-size: var(--fs-xs); white-space: pre-wrap; word-break: break-word; color: var(--fg); max-height: 200px; overflow: auto; } /* ：删死 fallback（注释所记未落实，本批补账） */
+.se-err-pre { margin: var(--sp-1h) 0 0; font-family: var(--mono); font-size: var(--fs-xs); white-space: pre-wrap; word-break: break-word; color: var(--fg); max-height: 200px; overflow: auto; } /* ：删死 fallback（注释所记未落实，补账） */
 .se-err-acts { margin-top: var(--sp-2); }
 .se-hit { border: 1px solid var(--border); border-radius: var(--r-m); overflow: hidden; }
 .se-hit.open { border-color: var(--dv-violet); }
@@ -347,18 +346,18 @@ function gotoXray(h: any) {
 .se-caret.open { transform: rotate(180deg); }
 .se-hit-body { border-top: 1px solid var(--border); padding: var(--sp-2); }
 .se-mq-row { font-size: var(--fs-xs); margin-bottom: var(--sp-1h); opacity: .85; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-/* .se-mq-chip 私造皮（dv-cyan-soft 底 chip）随命中子句段 MetaStrip mini 档收编退役；
-   .se-mq-row 引导行布局保留 */
-/* .se-empty-sub 裸占位随 EmptyState compact 收编退役（留白/图标归组件） */
+/* .se-mq-chip 私造皮（dv-cyan-soft 底 chip）随命中子句段 MetaStrip mini 档合并退役；
+ .se-mq-row 引导行布局保留 */
+/* .se-empty-sub 裸占位随 EmptyState compact 合并退役（留白/图标归组件） */
 .se-src { margin-top: var(--sp-2); font-size: var(--fs-xs); }
 .se-src summary { cursor: pointer; opacity: .6; }
-/* _source 内容区旧 pre 形态修饰删除——JsonTree 收编后渲染 .jtree 树非 pre
-   （ 42vh 弹性档史志注释随规则一并退役；713/714/715/717/719 同族） */
+/* _source 内容区旧 pre 形态修饰删除——JsonTree 合并后渲染 .jtree 树非 pre
+ （ 42vh 弹性档史志注释随规则一并退役；713/714/715/717/719 同族） */
 @media (max-width: 1100px) { .se-body { grid-template-columns: minmax(0, 1fr); } }
 
-/* 900 紧凑微调档（§9.3 口径；§6q 遗留补齐，W-D）——双栏堆叠已由 1100 档
-   收编，此处错误条/命中行头允许换行（窄视口 id+得分条+分值不再硬挤一行；页头右钮组
-   换行变体随死规则退役） */
+/* 900 紧凑微调档（ 口径；q 遗留补齐，W-D）——双栏堆叠已由 1100 档
+ 合并，此处错误条/命中行头允许换行（窄视口 id+得分条+分值不再硬挤一行；页头右钮组
+ 换行变体随死规则退役） */
 @media (max-width: 900px) {
   .se-hit-hd { flex-wrap: wrap; }
 }

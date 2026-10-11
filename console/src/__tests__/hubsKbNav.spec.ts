@@ -1,6 +1,6 @@
 /**
  * 二百一十九批：双中心键盘导航闭环。
- * ① 索引中心（IndexHub）索引列表 ↑↓/Home/End 浏览 + Enter 选中——useRowNav 共享内核收编
+ * ① 索引中心（IndexHub）索引列表 ↑↓/Home/End 浏览 + Enter 选中——useRowNav 共享内核合并
  *    （RT 48/QRT 55 同语义），搜索框 ↓ 直落列表，滚动跟随本视图接线，失焦清高亮。
  * ② 查询中心（QueryHub）模式条 ←→/Home/End roving 焦点（176 批 chips 同构，Enter/Space 切换）。
  * ③ HotkeyPanel 登记（173「有功能没人知道」防重演口径）。源码锁。
@@ -36,7 +36,7 @@ describe('索引中心：索引列表键盘导航（二百一十九批）', () =
 
 describe('查询中心：模式条 roving 焦点（二百一十九批）', () => {
   it('模式条 ←→/Home/End 移动焦点（176 chips 同构，不切换只移焦）', () => {
-    /* 七百三十九批锁随迁：模式组容器补 group 语义（G142 aria 随批刀） */
+    /* 七百三十九批锁同步更新：模式组容器补 group 语义（G142 aria 随批刀） */
     expect(qh).toContain('<div class="qh-modes" role="group" aria-label="查询模式" @keydown="onModesKeydown">');
     expect(qh).toContain("if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Home' && e.key !== 'End') return;");
     expect(qh).toContain("querySelectorAll('.qh-mode')");

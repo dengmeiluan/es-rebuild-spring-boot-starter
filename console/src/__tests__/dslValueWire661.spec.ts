@@ -2,23 +2,23 @@
  * 六百六十一批（轨1 · Monaco DSL 值位动态候选消费面三程·第一批）：
  * 658 首发刀（DqlQueryView）+660 二程（DevTools/IndexHub DSL tab/Rest）的姊妹三程——
  * 轨1 四查询面（QueryXray/RankDebug/ScoreExplain/SearchSandbox）+ AliasesView filter
- * （⑥660-2 点名件，filter=查询子句组合语义 528 批已立法）五面接线（660 范式照抄：
+ * （⑥660-2 点名件，filter=查询子句组合语义 528 批已约定）五面接线（660 范式照抄：
  * 每面=useTermsSuggest 实例+terms 闭包一小刀，索引源与 fields 同源现调现读）。
- * ⚠655 §1.3 消费面清单勘误（本批开工 grep 实锚）：该清单漏 QueryXray/RankDebug/
+ * ⚠655 §1.3 消费面清单勘误（开工 grep 实锚）：该清单漏 QueryXray/RankDebug/
  * ScoreExplain/SearchSandbox/PitScroll/ProfileFlame/MatchMatrix/UpdateByQuery/Reindex 系/
  * ReindexPreview/SearchTemplates/System/SqlBridge/MappingView/MappingDesigner/PainlessLab
- * 等面——本批接线五面属其缺口；零语义面（analyze/settings/mapping/none/readonly/painless）
- * 全量裁决记档见状态档案 ⑥661（不接线不占运行时面）。
+ * 等面——接线五面属其缺口；零语义面（analyze/settings/mapping/none/readonly/painless）
+ * 全量裁决备案见状态档案 ⑥661（不接线不占运行时面）。
  *   A 源锚（readFileSync 字面锁，660 spec A 段同范式）：五面 import/实例/闭包三行。
  *   B 挂载冒烟（658 B5 DqlQueryView 同范式）：五视图 terms 注入真达 JsonArea→
  *     MonacoEditor——动态恰 json+ndjson 两份且无 triggerCharacters（655-C1 安全位：
  *     dslRegs ['"'] 过滤器不认=monacoDslAssist 计数零扰动）+主签名 ['"'] 恰 2 不回归；
  *     AliasesView filter 编辑器在写操作面板（v-if="panel"）内——先造条件点开（660-C3），
  *     canOps 在 me==null 时恒 true（auth.canEndpoint 首行短路）无须 auth 造数。
- *   C 下界计数锁（650-C2 计数册实测口径）：全站视图 terms 闭包 ≥9（658+660 四面+本批五面），
+ *   C 下界计数锁（650-C2 计数册实测口径）：全站视图 terms 闭包 ≥9（658+660 四面+五面），
  *     662 三程第二批（PitScroll/ProfileFlame/MatchMatrix/UpdateByQuery/Reindex 系/ReindexPreview）
  *     只增不减。
- * 随迁（566-C4 纪律，本批唯一字面锁撞面）：suggestWave554 F1 两断言 qx/rd 的 dslAssist
+ * 同步更新（566-C4 纪律，唯一字面锁撞面）：suggestWave554 F1 两断言 qx/rd 的 dslAssist
  *     行字面随 terms 追加同步升形（fields 纯读语义零回退，ensure 仍由 watch immediate 承担）。
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -250,7 +250,7 @@ describe('661 批 B 挂载冒烟：五视图动态通道真达 + 主签名不回
 
 /* ---------- C 下界计数锁（650-C2 计数册口径） ---------- */
 describe('661 批 C 全站 terms 闭包下界计数', () => {
-  it('C1 全站视图 terms 闭包 ≥9（658+660 四面+本批五面；662 三程第二批只增不减）', () => {
+  it('C1 全站视图 terms 闭包 ≥9（658+660 四面+五面；662 三程第二批只增不减）', () => {
     const dir = join(__dirname, '../views');
     const files = readdirSync(dir).filter(f => f.endsWith('.vue'));
     let n = 0;

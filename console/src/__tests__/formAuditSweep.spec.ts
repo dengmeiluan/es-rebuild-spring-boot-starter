@@ -1,10 +1,10 @@
 /**
  * R130 一百九十五批：F 组三合一终扫固化——弹窗 Enter/表单防重入/确认文案四级。
- * 扫描结论（本批盘点，防下会话重扫）：
+ * 扫描结论（盘点，防下会话重扫）：
  *  - useModalEnter 已接 7 处表单型弹窗（Ilm/Mapping/Snapshots/CreateIndexModal/DslQuery/Xmigrate/ClusterSwitcher）；
  *    查看型弹窗（RT 待提交预览/REST 历史/IndexHub 文档 JSON[TEXTAREA 多行放行是设计]/WelcomeWizard 向导）Enter 不适用；
  *  - Escape：n-modal 默认 closeOnEsc 全站统一，无缺口；
- *  - 防重入：提交类函数走「按钮 disabled+函数体内 busy 门」双层，本批补 SecurityView.doUpsert 函数体级门；
+ *  - 防重入：提交类函数走「按钮 disabled+函数体内 busy 门」双层，补 SecurityView.doUpsert 函数体级门；
  *  - 确认文案：41 处 askConfirm 全扫——critical 必须 guardText、对象名必须「」包裹、okText 必须动词化。
  * 本文件 = 三维审计的守卫固化（violation 清单为空即绿，新增违规自动 FAIL）。
  */

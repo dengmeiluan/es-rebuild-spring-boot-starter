@@ -13,18 +13,18 @@
         </template>
       </div>
       <!-- 非语义类型降级——binary/geo 等照出高频值 top5（base64 串/坐标对
-           无阅读意义）即整段藏起；空值/空值率统计行保留（rt-cd-grid 不动）；
-           keyword/text 等语义类型与无类型（缺省徽标空串）照出，行为零回退 -->
+ 无阅读意义）即整段藏起；空值/空值率统计行保留（rt-cd-grid 不动）；
+ keyword/text 等语义类型与无类型（缺省徽标空串）照出，行为零回退 -->
       <div v-if="stats.top.length && !isNonSemanticType(stats.type)" class="rt-cd-top">
         <!-- 标题带全量口径（topTotal=useColStats slice 前条目数）——
-             此前「前 5」看不出列基数是否被截断；
-             (b)：标题行补「复制」钮（整列 top 值 TSV 出径，不受 kw 过滤影响） -->
+ 此前「前 5」看不出列基数是否被截断；
+ (b)：标题行补「复制」钮（整列 top 值 TSV 出径，不受 kw 过滤影响） -->
         <div class="rt-cd-t"><span>高频值（前 {{ stats.top.length }} / 共 {{ fmtNum(stats.topTotal) }}）</span><button class="btn ghost sm rt-cd-copy" type="button" @click="copyTop">复制</button></div>
         <!-- 全量条目 >20 时出 kw 过滤（ReconcileReportDrawer rows>20 门控先例）；
-             include 口径与 useColFilters.filterVals 一致（labelOf 小写包含） -->
-        <!-- 轨4：裸 input（自造胶囊皮 + focus 边框）收编 SearchFilterBar 第 19 胞。
-             topTotal>20 门控与 mono 字面锚随迁（colStatsTopTotal525 / tableKernelOffBl558b
-             运行时锚零迁移）；自造 focus 边框由 :focus-within 焦点环承接 -->
+ include 口径与 useColFilters.filterVals 一致（labelOf 小写包含） -->
+        <!-- 轨4：裸 input（自造胶囊皮 + focus 边框）合并 SearchFilterBar 第 19 胞。
+ topTotal>20 门控与 mono 字面锚同步更新（ / 
+ 运行时锚零迁移）；自造 focus 边框由 :focus-within 焦点环承接 -->
         <SearchFilterBar v-if="stats.topTotal > 20" v-model="kw" class="rt-cd-kw-wrap" input-class="rt-cd-kw mono" placeholder="过滤高频值…" />
         <div v-for="(e, i) in topView" :key="i" class="rt-cd-row mono">
           <span class="rt-cd-v" :title="labelOf(e.v)">{{ labelOf(e.v) }}</span>
@@ -33,8 +33,8 @@
         <div v-if="!topView.length" class="rt-cd-none">无匹配值</div>
       </div>
       <!-- 值分布段（531 遗留件）——stats.dist 非空（数值列且数值点≥2，
-           useColStats 硬口径）渲染 8 桶 mini 高度条（扁平无壳无边框，color var(--acc)，
-           桶 :title=「from~to: count」）；dist 为 null/缺省时段零渲染（缺省零视觉） -->
+ useColStats 硬口径）渲染 8 桶 mini 高度条（扁平无壳无边框，color var(--acc)，
+ 桶 :title=「from~to: count」）；dist 为 null/缺省时段零渲染（缺省零视觉） -->
       <div v-if="stats.dist" class="rt-cd-dist">
         <div class="rt-cd-t"><span>分布</span></div>
         <div class="rt-cd-bars">
@@ -57,11 +57,11 @@ import { useAppStore } from '../stores/app';
 import SearchFilterBar from './SearchFilterBar.vue'; /* 轨4：过滤框统一件（第 19 胞） */
 import type { ColDetailStats } from '../composables/useColStats';
 
-/* 列详情弹窗共享件（RT  P2-3 弹窗形态收编，QRT 同批接入）——
-   统计结果由 useColStats 产出经 props 注入；类名保留 rt-cd 系（RT 既有弹窗契约，
-   rtColDetailFreeze236 行为锁按 .rt-cd 查询）。
-   (b)：typeCls 收编 typeTiers 单源（弹窗内聚副本与 typeTiers.ts
-   官方实现逐字同值，本地五正则副本退役；列头徽标逻辑不动）。 */
+/* 列详情弹窗共享件（RT P2-3 弹窗形态合并，QRT 同步接入）——
+ 统计结果由 useColStats 产出经 props 注入；类名保留 rt-cd 系（RT 既有弹窗契约，
+ rtColDetailFreeze236 行为锁按 .rt-cd 查询）。
+ (b)：typeCls 合并 typeTiers 单源（弹窗内聚副本与 typeTiers.ts
+ 官方实现逐字同值，本地五正则副本退役；列头徽标逻辑不动）。 */
 const props = defineProps<{
   show: boolean;
   stats: ColDetailStats | null;
@@ -82,7 +82,7 @@ const distBarH = (n: number) => {
 };
 
 /* 高频值 kw 过滤（组件内 ref，include 口径与 useColFilters.filterVals 一致）——
-   只滤显示行（top 已按计数截断），换列自动清词 */
+ 只滤显示行（top 已按计数截断），换列自动清词 */
 const kw = ref('');
 watch(() => props.stats?.col, () => { kw.value = ''; });
 const topView = computed(() => {
@@ -93,8 +93,8 @@ const topView = computed(() => {
 });
 
 /* (b)：高频值整列复制出口——格式化走 copyMatrix.matrixTsv 单源
-   （「值/行数」两列 TSV、表头行必含），复制走 format.copyText → clipboard.ts
-   三层管线；出径=整列 top 全量（kw 过滤只滤显示行，不改复制内容） */
+ （「值/行数」两列 TSV、表头行必含），复制走 format.copyText → clipboard.ts
+ 三层管线；出径=整列 top 全量（kw 过滤只滤显示行，不改复制内容） */
 const store = useAppStore();
 async function copyTop() {
   const top = props.stats?.top ?? [];
@@ -115,8 +115,8 @@ async function copyTop() {
 .rt-cd-t { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); font-size: var(--fs-xs); color: var(--tx2); margin: var(--sp-2h) 0 var(--sp-1); }
 .rt-cd-copy { flex-shrink: 0; }
 /* 高频值 kw 过滤输入 + 空匹配提示；
-   换装 SearchFilterBar——自造输入皮（bg0 底/line 边/4px 圆角）退役归胶囊壳单源，
-   本类只留落位/内衬（width/box-sizing/padding/font 逐值迁入），focus 边框改 :focus-within 承接 */
+ 改用 SearchFilterBar——自造输入皮（bg0 底/line 边/4px 圆角）退役归胶囊壳单源，
+ 本类只留落位/内衬（width/box-sizing/padding/font 逐值迁入），focus 边框改 :focus-within 承接 */
 .rt-cd-kw-wrap { width: 100%; box-sizing: border-box; padding: var(--sp-1) var(--sp-2); font-size: var(--fs-xs); margin-bottom: var(--sp-1); }
 .rt-cd-kw-wrap:focus-within { border-color: var(--ac-line); }
 .rt-cd-none { font-size: var(--fs-xs); color: var(--tx2); padding: var(--sp-1) 0; }

@@ -1,19 +1,19 @@
 /**
- * 五百六十批·轨4（工蚁F）：编辑器外框剥壳三文件四面 + --sp 精确等值收编 4 文件 7 行。
+ * 五百六十批·轨4（工蚁F）：编辑器外框剥壳三文件四面 + --sp 精确等值合并 4 文件 7 行。
  * 静态源码断言仿 flattenWave558b/557 范式（strip 注释后断言 + 组件本体零触防回流）。
  *
  * ① 编辑器外框剥壳 4 面（BulkEditor 主 NDJSON / SqlConsole SQL 主 / ConfigValidator
  *    settings+mapping 双编辑器）：MonacoEditor .monaco-host 组件自带 1px line 框+radius
  *    （组件黑名单零触），经视图侧同选择器独立规则追加退役（CSS 声明合并语义等价，
- *    558(b) av-left/br-pane 判例同语言）。分界承接：be-card-hd / sq-card-hd / cv-card-hd
+ *    558(b) av-left/br-pane 先例同语言）。分界承接：be-card-hd / sq-card-hd / cv-card-hd
  *    既有 border-bottom。被逐字锁钉死的 flex/260px 原行零触——剥壳后高度链零变动，
- *    锚随迁移意图复核（selectorUnify532/flattenWave538/544/sqlLint534 在册）。
- * ② --sp 收编：theme.css 档表 --sp-0:2px，四处裸 2px padding 精确等值换算
+ *    锚同步更新移意图复核（selectorUnify532/flattenWave538/544/sqlLint534 在册）。
+ * ② --sp 合并：theme.css 档表 --sp-0:2px，四处裸 2px padding 精确等值换算
  *    var(--sp-0)（GenericParams gp-k/gp-v、AggTreeNode agn-name/agn-op/agn-scalar、
  *    RawIoModal rim-method、WorkbenchLayout wl-bar）。AggTreeNode .agn-children
  *    border-left 2px solid 是结构分界非间距，保字面零触；GenericParams calc 深度因子
  *    等几何刻意值零触。layoutOcclusionGuard501 断言域（isFill/wl-fill-pane）不触及
- *    wl-bar 行——本批收编不新增红。
+ *    wl-bar 行——合并不新增红。
  *
  * 范围铁律：剥壳只动 scoped style（追加 border:none;border-radius:0），模板结构
  * 零变动；--sp 只做等值替换；高度/flex/padding 几何语义零变动；禁改件零触。
@@ -60,19 +60,19 @@ describe('五百六十批①：编辑器外框剥壳 4 面（视图侧独立规�
   });
 });
 
-/* ═══════════ ② --sp 精确等值收编 7 行 ═══════════ */
+/* ═══════════ ② --sp 精确等值合并 7 行 ═══════════ */
 
-describe('五百六十批②：--sp-0 精确等值收编 7 行（theme.css 档表 --sp-0:2px 等值锚）', () => {
+describe('五百六十批②：--sp-0 精确等值合并 7 行（theme.css 档表 --sp-0:2px 等值锚）', () => {
   it('theme.css 档表等值锚：--sp-0 === 2px（换算精确性单一出处）', () => {
     expect(srcOf('theme.css')).toContain('--sp-0: 2px;');
   });
-  it('GenericParams：gp-k/gp-v 裸 2px 收编（calc 深度因子等几何刻意值零触）', () => {
+  it('GenericParams：gp-k/gp-v 裸 2px 合并（calc 深度因子等几何刻意值零触）', () => {
     const s = srcOf('components/builder/GenericParams.vue');
     expect(s).toMatch(/\.gp-k \{ width: 110px; height: 28px; font-size: var\(--fs-sm\); padding: var\(--sp-0\) var\(--sp-2\); \}/);
     expect(s).toMatch(/\.gp-v \{ height: 28px; font-size: var\(--fs-sm\); padding: var\(--sp-0\) var\(--sp-2\); flex: 1 1 100px; min-width: 0; \}/);
     expect(strip(s), 'gp 规则域裸 2px 清零').not.toMatch(/\.(gp-k|gp-v) \{[^}]*padding: 2px/);
   });
-  it('AggTreeNode：agn-name/agn-op/agn-scalar 裸 2px 收编；agn-children 结构 border-left 2px 保字面', () => {
+  it('AggTreeNode：agn-name/agn-op/agn-scalar 裸 2px 合并；agn-children 结构 border-left 2px 保字面', () => {
     const s = srcOf('components/builder/AggTreeNode.vue');
     expect(s).toMatch(/\.agn-name \{ width: 110px; height: 28px; font-size: var\(--fs-sm\); padding: var\(--sp-0\) var\(--sp-2\); \}/);
     expect(s).toMatch(/\.agn-op \{ width: 130px; height: 28px; font-size: var\(--fs-sm\); padding: var\(--sp-0\) var\(--sp-2\); color: var\(--ac-hi\); \}/);
@@ -80,12 +80,12 @@ describe('五百六十批②：--sp-0 精确等值收编 7 行（theme.css 档�
     expect(s).toContain('.agn-children { margin-top: var(--sp-2); padding-left: var(--sp-2); border-left: 2px solid var(--line); }');
     expect(strip(s), 'agn 缩进域裸 2px padding 清零').not.toMatch(/\.(agn-name|agn-op|agn-scalar) \{[^}]*padding: 2px/);
   });
-  it('RawIoModal：rim-method 裸 2px 收编（rim-method 胶囊间距归档位）', () => {
+  it('RawIoModal：rim-method 裸 2px 合并（rim-method 胶囊间距归档位）', () => {
     const s = srcOf('components/RawIoModal.vue');
     expect(s).toMatch(/\.rim-method \{ flex-shrink: 0; font-size: var\(--fs-2xs\); font-weight: 650; letter-spacing: \.04em; padding: var\(--sp-0\) var\(--sp-1h\); border-radius: var\(--r-s\); background: var\(--ac-soft\); color: var\(--ac-hi\); \}/);
     expect(strip(s), 'rim-method 裸 2px 清零').not.toMatch(/\.rim-method \{[^}]*padding: 2px/);
   });
-  it('WorkbenchLayout：wl-bar 裸 2px 收编（layoutOcclusionGuard501 断言域 isFill/wl-fill-pane 不涉及本行）', () => {
+  it('WorkbenchLayout：wl-bar 裸 2px 合并（layoutOcclusionGuard501 断言域 isFill/wl-fill-pane 不涉及本行）', () => {
     const s = srcOf('components/WorkbenchLayout.vue');
     expect(s).toMatch(/\.wl-bar \{ display: flex; gap: var\(--sp-1\); align-items: center; justify-content: flex-end; padding: var\(--sp-0\) 0 var\(--sp-2\); \}/);
     expect(strip(s), 'wl-bar 裸 2px 清零').not.toMatch(/\.wl-bar \{[^}]*padding: 2px/);

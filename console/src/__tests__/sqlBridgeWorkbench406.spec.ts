@@ -18,8 +18,8 @@ describe('SqlBridge 可调工作台（406 批）', () => {
     }
     /* W2 批：sized+flex 混合——三 pane 全 'flex' 时拖拽/预设/记忆全死（sizeOf 恒回 minSize +
        .wl-flex-pane 压内联宽 + constraintsRecord 排除 flex），改 SQL/Lucene 定宽可拖、DSL 吃剩余。
-       五百三十五批随迁：竖排标题轨退役（刀①②），title 置空即不渲染（519 批立法），
-       标题语义落 pane 行首横排 br-title——三行 title 逐字锁随换装迁移 */
+       五百三十五批同步更新：竖排标题轨退役（刀①②），title 置空即不渲染（519 批约定），
+       标题语义落 pane 行首横排 br-title——三行 title 逐字锁随改用迁移 */
     expect(v).toMatch(/id: 'bridge\.sql', role: 'request', title: '', minSize: 280, defaultSize: 340, collapsible: true/);
     expect(v).toMatch(/id: 'bridge\.dsl', role: 'response', title: '', minSize: 300, defaultSize: 'flex', collapsible: true/);
     expect(v).toMatch(/id: 'bridge\.lucene', role: 'response', title: '', minSize: 260, defaultSize: 320, collapsible: true/);

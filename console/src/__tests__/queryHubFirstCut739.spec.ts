@@ -11,7 +11,7 @@
  *    副行死渲染双实锚，而源码注释两处宣称「essence 收进 title 悬浮」与实现不符；
  *    修法=六钮补 :title=m.essence+死渲染退役+注释对齐（「帮用户 1 秒选对通道」）。
  * ④ G142（弱 P3 aria 随批）模式组容器补 role=group+aria-label、六钮 aria-pressed
- *    （733 G114 同族；hubsKbNav 容器字面锁随迁）。
+ *    （733 G114 同族；hubsKbNav 容器字面锁同步更新）。
  *
  * 挂载范式：G145 照 dqResilience546（monaco stub 链+api mock+memory router）；
  * G141/G142 照 dslAssistPenetration（同链挂 QueryHubView）；G140 源码锁（737 G131 同族）。

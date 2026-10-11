@@ -1,8 +1,8 @@
 /**
  * 视图内搜索 mark 内核单源——RestView.markHtml 与 DslQueryView.jsonMarkedHtml
- * 同构实现收编（escapeRe 正则转义 + split(/(<[^>]+>)/g) 文本/标签分轨 + 递增 data-hit-idx
+ * 同构实现合并（escapeRe 正则转义 + split(/(<[^>]+>)/g) 文本/标签分轨 + 递增 data-hit-idx
  * + 当前命中 j-mark-cur）。两处类名 j-mark/j-mark-cur 与 data-hit-idx 属性逐字保形
- * （jsonFindEscape500 批行为锁随迁本单源：标签段 i%2!==0 不参与替换，搜索词出现在
+ * （jsonFindEscape500 批行为锁同步更新本单源：标签段 i%2!==0 不参与替换，搜索词出现在
  * class 属性值里不误标；计数与渲染解耦由调用方各自传 cur——计数传 0，isCur 恒假不标记）。
  */
 

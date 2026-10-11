@@ -109,7 +109,7 @@ public class StaleWriteBlockDetector implements ApplicationRunner {
     /**
      * 扫描全部登记索引。<b>整体裹 try/catch(Throwable)</b>——诊断功能绝不许变成启动阻塞点。
      *
-     * <h3>耗时上界（已评估，本轮刻意不加超时/异步）</h3>
+     * <h3>耗时上界（已评估，刻意不加超时/异步）</h3>
      * <p>本方法<b>串行</b>扫描，每个索引 2 次低层 REST 调用；RHLC 低层 client 默认 socket timeout 30s。
      * 因此最坏耗时约 <b>N × 2 × 30s</b>（N = 登记索引数），且 {@link ApplicationRunner} 是<b>同步</b>的，
      * 这段时间里 {@code SpringApplication.run()} 不返回。</p>

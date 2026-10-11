@@ -1,16 +1,16 @@
 /**
- * 五百三十三批「语义收编换装」契约看守（工蚁 B）。
+ * 五百三十三批「语义合并改用」契约看守（工蚁 B）。
  *
  * 五条主契约：
- *  A TasksView action 徽标换装 StatusPill：手写 `class="pill"` 徽标退役（色档/胶囊形态归
+ *  A TasksView action 徽标改用 StatusPill：手写 `class="pill"` 徽标退役（色档/胶囊形态归
  *    组件单源；tone=actionColor、label=actionShort 既有单源不变）；
- *  B TaskTreeView action 词汇单源收编：本地 ttActionShort/ttActionColor（「TasksView 禁改期
+ *  B TaskTreeView action 词汇单源合并：本地 ttActionShort/ttActionColor（「TasksView 禁改期
  *    逐字复制」的漂移源）退役，换 import taskActionZh/taskActionTone；running 时长
  *    semFormat duration 人话化；树节点 mini 进度（detailed status 同源，无 total 不出，
  *    禁逐行打 task-detail 成本裁定在档）；
  *  C Lifecycle/Ilm phase 中文主显：甘特条/图例与策略卡色块 phaseZh 接线；
  *    Lifecycle roLint 划线接线（JsonArea ref + 防抖 setMarkers，info→hint 降级，banner 保留）；
- *  D Overview 预警横幅语义收编：队列等待 ms 人话化、'Pending Tasks N' 中文主体、
+ *  D Overview 预警横幅语义合并：队列等待 ms 人话化、'Pending Tasks N' 中文主体、
  *    自造 sev-'w' 档退役统一 'y'（对齐 pill 五主档档名）、SparkLine 死导入退役；
  *  E HealthReport 双列显示槽 + 视口弹性档：#cell-health（healthZh 本地映射中文 + 色点）/
  *    #cell-size（semFormat bytes）——数据恒 raw 仅显示层加工；.hr-diff-body/.hr-code
@@ -27,18 +27,18 @@ const SRC = join(__dirname, '..');
 const read = (p: string) => readFileSync(join(SRC, p), 'utf-8');
 const readView = (name: string) => read(`views/${name}.vue`);
 
-describe('A TasksView：action 徽标换装 StatusPill', () => {
+describe('A TasksView：action 徽标改用 StatusPill', () => {
   it('StatusPill 在場（tone=actionColor / label=actionShort），手写 class="pill" 徽标退役', () => {
     const s = readView('TasksView');
     expect(s).toContain("import StatusPill from '../components/StatusPill.vue';");
     expect(s).toContain('<StatusPill :tone="actionColor(t.action)" :label="actionShort(t.action)" />');
     expect(s, '手写 .pill 徽标退役（色档/胶囊形态归 StatusPill 组件单源）').not.toMatch(/class="pill/);
-    /* 底层词汇单源不受换装影响（obsStack530 同锚） */
+    /* 底层词汇单源不受改用影响（obsStack530 同锚） */
     expect(s).toContain("import { taskActionZh as actionShort, taskActionTone as actionColor } from '../utils/esEnumZh';");
   });
 });
 
-describe('B TaskTreeView：action 单源收编 + 时长人话化 + mini 进度', () => {
+describe('B TaskTreeView：action 单源合并 + 时长人话化 + mini 进度', () => {
   it('esEnumZh import 在場，本地 ttActionShort/ttActionColor 漂移源退役', () => {
     const s = readView('TaskTreeView');
     expect(s).toContain("import { taskActionZh as actionShort, taskActionTone as actionColor } from '../utils/esEnumZh';");
@@ -54,7 +54,7 @@ describe('B TaskTreeView：action 单源收编 + 时长人话化 + mini 进度',
     expect(s).toMatch(/semFormat\(active\.runningTimeNanos \/ 1e6, 'duration'\)\?\.text \?\? \(\(active\.runningTimeNanos \/ 1e9\)\.toFixed\(2\) \+ 's'\)/);
   });
 
-  it('mini 进度：status 数据管道在場 + done=updated+created+deleted/total 口径 + 禁逐行打点记档', () => {
+  it('mini 进度：status 数据管道在場 + done=updated+created+deleted/total 口径 + 禁逐行打点备案', () => {
     const s = readView('TaskTreeView');
     expect(s).toContain('status: t.status');
     expect(s).toContain('function miniProg(n: TN)');
@@ -80,8 +80,8 @@ describe('C Lifecycle/Ilm：phase 中文主显 + roLint 划线接线', () => {
 
   it('LifecycleView：phaseZh 在場，甘特条与图例中文主显（title 双语兜底），裸英文图例退役', () => {
     const s = readView('LifecycleView');
-    /* 六百七十四批随迁：561 批 move 弹窗 datalist 候选域扩员（ILM_PHASE_ZH/ILM_ACTION_ZH 并入同源导入），
-       573 批预判「对方提交后 spec 须按新形态字面随迁」——658 接管入库后恒红至今，本批销账；
+    /* 六百七十四批同步更新：561 批 move 弹窗 datalist 候选域扩员（ILM_PHASE_ZH/ILM_ACTION_ZH 并入同源导入），
+       573 批预判「对方提交后 spec 须按新形态字面同步更新」——658 接管入库后恒红至今，销账；
        phaseZh 仍居首符号，中文主显语义锁不变 */
     expect(s).toContain("import { phaseZh, ILM_PHASE_ZH, ILM_ACTION_ZH } from '../utils/esEnumZh';");
     expect(s, '甘特条内中文主显').toContain('{{ phaseZh(ph.name) || ph.name }}');
@@ -107,7 +107,7 @@ describe('C Lifecycle/Ilm：phase 中文主显 + roLint 划线接线', () => {
   });
 });
 
-describe('D OverviewView：预警横幅语义收编', () => {
+describe('D OverviewView：预警横幅语义合并', () => {
   it('队列等待 ms 走 semFormat duration；Pending Tasks 中文主体 + 原词汇括注', () => {
     const s = readView('OverviewView');
     expect(s).toMatch(/semFormat\(ch\.task_max_waiting_in_queue_millis, 'duration'\)/);
@@ -128,18 +128,18 @@ describe('D OverviewView：预警横幅语义收编', () => {
 describe('E HealthReportView：双列显示槽 + 视口弹性档', () => {
   it('#cell-health 显示槽在場：clusterHealthZh 单源中文主显 + 色点（MetaStrip dot 单源），title 恒 raw', () => {
     const s = readView('HealthReportView');
-    /* 五百三十四批锚随迁：视图本地 HEALTH_ZH 三值映射退役，收编 esEnumZh.clusterHealthZh
+    /* 五百三十四批锚同步更新：视图本地 HEALTH_ZH 三值映射退役，合并 esEnumZh.clusterHealthZh
        单源（esEnumZh 随 534 批提交，批内自洽）；import 别名 healthZh 模板槽零改动。
        既有 reasonZh/canAllocateCls import 锚（semanticTier531 字面锁）逐字保留。
-       五百六十一批锚随迁：.hr-hdot 私造圆点换装 MetaStrip dot 形态单源（DiagView dgMeta 判例），
+       五百六十一批锚同步更新：.hr-hdot 私造圆点改用 MetaStrip dot 形态单源（DiagView dgMeta 先例），
        色值走 healthColor 独立 import 行（format import 原行 531 字面锁不动）。 */
     expect(s).toContain("import { reasonZh, canAllocateCls } from '../utils/esEnumZh';");
     expect(s, 'clusterHealthZh 单源 import 在場').toContain("import { clusterHealthZh as healthZh } from '../utils/esEnumZh';");
     expect(s, '视图本地 HEALTH_ZH 映射退役').not.toContain('const HEALTH_ZH');
     expect(s).toContain('<template #cell-health="{ value }">');
-    expect(s, '色点换装 MetaStrip dot 形态单源（dot+value 段，文案不变）')
+    expect(s, '色点改用 MetaStrip dot 形态单源（dot+value 段，文案不变）')
       .toMatch(/<MetaStrip :items="\[\{ dot: healthColor\(String\(value \|\| ''\)\), value: healthZh\(value\) \|\| value \}\]" \/>/);
-    expect(s, 'hr-hdot 私造圆点退役（hd-g/y/r 三档随迁）').not.toContain('hr-hdot');
+    expect(s, 'hr-hdot 私造圆点退役（hd-g/y/r 三档同步更新）').not.toContain('hr-hdot');
     expect(s).toMatch(/<span class="hr-cell-health" :title="String\(value \?\? ''\)">/);
   });
 

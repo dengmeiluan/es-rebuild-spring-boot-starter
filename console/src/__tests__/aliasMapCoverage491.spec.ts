@@ -2,7 +2,7 @@
  * 四百七十三批：ALIAS_MAP 别名表内容完整性守卫——与 router.ts 的页面清单
  * （NAV_ITEMS/pages 合约）对齐核验：每个导航页都应有拼音别名条目（防新页面
  * 加入后「拼音搜索搜不到」静默失效）。别名查表函数本身已有 cmdAlias.spec.ts
- * 全/半角看守，本批不重复；此处验证「覆盖完整性」。
+ * 全/半角看守，不重复；此处验证「覆盖完整性」。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';

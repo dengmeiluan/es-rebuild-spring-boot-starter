@@ -5,7 +5,7 @@
       <template #actions>
 <!-- 页内 IndexPicker 退役换 CurrentIdxChip（W1 只读件，选索引入口收敛顶栏） -->
 <CurrentIdxChip />
-<!--  G192：tab 组容器语义+双钮动态 pressed（749 G158/743 G154 族同款） -->
+<!-- G192：tab 组容器语义+双钮动态 pressed（749 G158/743 G154 族同款） -->
 <div class="qx-tabs" role="group" aria-label="X 光模式">
   <button class="qx-tab" :class="{ act: tab === 'rewrite' }" :aria-pressed="tab === 'rewrite'" @click="tab = 'rewrite'">
     <Regex :size="12" /> 改写透视
@@ -22,22 +22,22 @@
     <!-- 改写透视 -->
     <template v-if="tab === 'rewrite'">
       <!-- 编辑器卡片高度 usePref('qx.taH') 持久化——CSS resize 原生拖拽结束
-           （pointerup）把实高落盘，下次进页恢复；默认 260px 保持历史视觉 -->
+ （pointerup）把实高落盘，下次进页恢复；默认 260px 保持历史视觉 -->
       <div class="qx-card qx-card-ed" :style="{ height: taH }" @pointerup="saveTaH">
         <div class="qx-card-hd">
 <FileJson :size="12" /> Query DSL
-<!--  G190：透视钮在途窗三通道（spinning 全局类+「透视中…」文案+disabled 既有；
-     751 G185/747 G161 族同款） -->
+<!-- G190：透视钮在途窗三通道（spinning 全局类+「透视中…」文案+disabled 既有；
+ 751 G185/747 G161 族同款） -->
           <button class="btn primary sm qx-run" @click="runValidate" :disabled="!index || busy"><Play :size="12" :class="{ spinning: busy }" /> {{ busy ? '透视中…' : '透视' }}</button>
           <!-- 原始 IO 快查——本页最近一次 validate-query 请求/响应原文（ioRecorder 记录环） -->
           <button class="btn ghost sm" data-test="raw-io" aria-label="查看原始 IO（透视校验）" title="最近一次透视校验请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIoValidate"><Terminal :size="12" /> 原始 IO</button>
         </div>
         <JsonArea ref="qxJaRef" v-model="dsl" :dsl-assist="dslAssist" :rows="6" fill />
         <!-- 行内 lint 兜底条（此前本页 lint 只有 setMarkers 编辑器划线单通道——
-             定位失败进不了 marker 的 finding（unplaced）用户看不见；行内条渲染 qxLint 全量
-             findings 兜底，RankDebug/SearchSandbox banner 同款）。error 红条单列（结构必错
-             ES 直接拒绝）role=alert，warning/hint 黄条并列 role=status；theme.css lint-bar
-             单源直用类名，本页零私造 CSS -->
+ 定位失败进不了 marker 的 finding（unplaced）用户看不见；行内条渲染 qxLint 全量
+ findings 兜底，RankDebug/SearchSandbox banner 同款）。error 红条单列（结构必错
+ ES 直接拒绝）role=alert，warning/hint 黄条并列 role=status；theme.css lint-bar
+ 单源直用类名，本页零私造 CSS -->
         <div v-if="qxLintErrors.length" role="alert" class="lint-bar lint-bar-err">
           <span>DSL 检查（错误）：{{ qxLintErrors.map(f => f.message + '（' + f.suggestion + '）').join('；') }}</span>
         </div>
@@ -46,10 +46,10 @@
         </div>
       </div>
       <!-- 透视失败内联面板：与词频取证的 tvErr 同 .bad 风格，错误现场留存 + 重试。
-           裸插值换双轨——标题行走 friendlyEsError 人话 + pre 走 errPreHtml v-html
-           全文（对齐 SearchSandbox 口径；errPreHtml 本文件已 import）。
-           role=alert 在场（红壳收编波；.qx-verdict.bad verdict 族与 err-bar 同
-           token 三件套，保守保形不挂类——同族 ok/bad 结论档共用此壳） -->
+ 裸插值换双轨——标题行走 friendlyEsError 人话 + pre 走 errPreHtml v-html
+ 全文（对齐 SearchSandbox 口径；errPreHtml 本文件已 import）。
+ role=alert 在场（红壳合并波；.qx-verdict.bad verdict 族与 err-bar 同
+ token 三件套，保守保形不挂类——同族 ok/bad 结论档共用此壳） -->
       <div v-if="vrErr" role="alert" class="qx-verdict bad qx-err-panel">
         <XCircle :size="15" />
         <div class="qx-err-body">
@@ -62,7 +62,7 @@
         <component :is="vr.valid ? CheckCircle2 : XCircle" :size="15" />
         <b>{{ vr.valid ? '查询合法' : '查询非法' }}</b>
         <!-- 裸 ES 串换 friendlyEsError 显示（title 保原文可悬停回看；
-             vrErr 标题行 已是此口径，结论档漏网补齐） -->
+ vrErr 标题行 已是此口径，结论档漏网补齐） -->
         <span v-if="vr.error" class="qx-verr" :title="vr.error">{{ friendlyEsError(vr.error) }}</span>
       </div>
       <div v-for="(ex, i) in vr?.explanations || []" :key="i" class="qx-card">
@@ -71,14 +71,14 @@
           <button class="btn ghost xs qx-run" @click="copyText(ex.explanation).then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制解释全文' : '复制失败'))"><Copy :size="10" /> 复制</button>
         </div>
         <!-- 【W3b】错误分支 err 档（IlmView .ilm-ex-step pre.err 手法）：该索引改写失败时
-             输出不再是「解释文本」而是错误现场，视觉上要与正常解释区分。
-             error 分支换 errPreHtml v-html（含 { 走 highlightJson 着色，否则转义平文，
-             与 DslQueryView 等五处错误面板同内核）；explanation 是纯文本 explain，保持插值 pre 不走 v-html -->
+ 输出不再是「解释文本」而是错误现场，视觉上要与正常解释区分。
+ error 分支换 errPreHtml v-html（含 { 走 highlightJson 着色，否则转义平文，
+ 与 DslQueryView 等五处错误面板同内核）；explanation 是纯文本 explain，保持插值 pre 不走 v-html -->
         <pre v-if="ex.explanation" class="qx-lucene">{{ ex.explanation }}</pre>
-        <!-- errPreHtml 双参换装（errMeta(ex) 旁路解释对象读 code/endpoint，xm-err 549
-             范式；ex 无 code/endpoint 时空 meta 输出与单参逐字一致，errPre524 锚）。
-             ⚠qxXrayErrW3b:107 单参锚非随迁锁留档（解禁后应去本留档并把断言更新为新字面）：
-             <pre v-else class="qx-lucene err" v-html="errPreHtml(ex.error || '-')"></pre> -->
+        <!-- errPreHtml 双参改用（errMeta(ex) 旁路解释对象读 code/endpoint，xm-err 549
+ 范式；ex 无 code/endpoint 时空 meta 输出与单参逐字一致，errPre524 锚）。
+ ⚠qxXrayErrW3b:107 单参锚非同步更新锁留档（解禁后应去本留档并把断言更新为新字面）：
+ <pre v-else class="qx-lucene err" v-html="errPreHtml(ex.error || '-')"></pre> -->
         <pre v-else class="qx-lucene err" v-html="errPreHtml(ex.error || '-', errMeta(ex))"></pre>
         <div class="qx-tip">
           <Lightbulb :size="10" />
@@ -87,8 +87,8 @@
         </div>
       </div>
       <!-- rewrite 是默认标签页，原先只有 term-vectors 分支有空态：
-           一进页面就是「编辑框 + 426px 纯空白」（实测卡片底 534、可用区底 960）。
-           空态占满剩余高度，既消除死白又告诉用户下一步做什么。 -->
+ 一进页面就是「编辑框 + 426px 纯空白」（实测卡片底 534、可用区底 960）。
+ 空态占满剩余高度，既消除死白又告诉用户下一步做什么。 -->
       <EmptyState v-if="!vr && !vrErr && !busy" :icon="Regex" class="qx-empty-fill"
                   text="尚未改写查询"
                   hint="上方写 DSL 后点「改写」，这里会显示 ES 内部真正执行的 Lucene 查询" />
@@ -97,20 +97,20 @@
     <!-- 词频取证 -->
     <template v-else>
       <div class="qx-row">
-<!--  G191：tv 输入行 label 悬停中文释义（英文键留检索=745 G156 双语同款） -->
+<!-- G191：tv 输入行 label 悬停中文释义（英文键留检索=745 G156 双语同款） -->
         <label class="qx-inp grow"><span title="要取证的文档 _id">doc _id</span>
           <!-- placeholder 补来源引导（_explain 404 档 esError 文案同方向：
-               不存在的 id 先去数据浏览页找一个真实的） -->
+ 不存在的 id 先去数据浏览页找一个真实的） -->
           <input v-model="tvId" class="qx-ii wide" placeholder="要取证的文档 _id（可在数据浏览页复制）" @keyup.enter="runTv" />
         </label>
         <label class="qx-inp grow"><span title="要取词频的字段列表，逗号分隔；空 = 全部 text 字段">fields</span>
           <!-- 【W3b】text 置顶（typePriority 只重排候选分组，「空 = 全部 text 字段」语义下 text 是主战场），候选集不变 -->
           <FieldPicker v-model="tvFields" :index="index" multi placeholder="逗号分隔，空 = 全部 text 字段" width="100%" class="qx-ii wide" :type-priority="['text']" />
         </label>
-        <!--  G190：取证钮在途窗三通道（同透视钮）+G191：统计行悬停中文释义 -->
+        <!-- G190：取证钮在途窗三通道（同透视钮）+G191：统计行悬停中文释义 -->
         <button class="btn primary sm" @click="runTv" :disabled="!index || !tvId || busy"><Play :size="12" :class="{ spinning: busy }" /> {{ busy ? '取证中…' : '取证' }}</button>
         <!-- 原始 IO 快查——本页最近一次 term-vectors 请求/响应原文（ioRecorder 记录环；
-             词频结果卡头在 v-for 内，钮落取证操作行防每字段卡重复） -->
+ 词频结果卡头在 v-for 内，钮落取证操作行防每字段卡重复） -->
         <button class="btn ghost sm" data-test="raw-io-tv" aria-label="查看原始 IO（词频取证）" title="最近一次词频取证请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIoTv"><Terminal :size="12" /> 原始 IO</button>
       </div>
       <!-- tvErr 错误条补 role=alert（vrErr 面板 同款，失败反馈可被读屏播报） -->
@@ -124,11 +124,11 @@
           </span>
         </div>
         <!-- 每卡工具行——term kw 过滤（行数 >20 才出，ReconcileReportDrawer 先例）
-             + doc_freq min/max 区间（Number 比较，空=不设限）+ 表复制 TSV/MD（matrixText 内核）；
-             行集=termRows 产出后经 tvViewMap 过滤（所见即所复制） -->
+ + doc_freq min/max 区间（Number 比较，空=不设限）+ 表复制 TSV/MD（matrixText 内核）；
+ 行集=termRows 产出后经 tvViewMap 过滤（所见即所复制） -->
         <div class="qx-tv-tools">
-          <!-- 轨4：term kw 过滤换装 SearchFilterBar 单源（sfbUnify650 锁）——
-               model-value 定向 setTvTool 形态保留，num 区间双输入异形不收 -->
+          <!-- 轨4：term kw 过滤改用 SearchFilterBar 单源（sfbUnify650 锁）——
+ model-value 定向 setTvTool 形态保留，num 区间双输入异形不收 -->
           <SearchFilterBar v-if="(tvViewMap[fname]?.total ?? 0) > 20" class="qx-tv-kw" :model-value="tvTools[fname]?.kw ?? ''" input-class="qx-tv-inp" placeholder="过滤 term…" @update:model-value="setTvTool(fname, 'kw', $event)" />
           <label class="qx-tv-range">doc_freq
             <input class="qx-tv-inp num" :value="tvTools[fname]?.min ?? ''" placeholder="min 不限" aria-label="doc_freq 最小值"
@@ -142,9 +142,9 @@
           <button class="btn xs ghost" :disabled="!tvViewMap[fname]?.rows.length" @click="copyTv(fname, 'md')" title="词频表复制为 Markdown（文档/群聊直贴）">MD</button>
         </div>
         <!-- term 统计裸表换 QRT rows 型（qrtRowsSwap529 先例，先列锚清单再动手）——
-             排序/列漏斗/右键/导出归内核；每卡工具行（kw/区间/TSV·MD 复制）留视图
-             （tvTools/tvViewMap 语义零改，QRT 行集=过滤后视图行）；term 列 MarkText/gotoAnalyzer、
-             稀有度徽标经 #cell- 槽保真；空匹配走内核空态（文案逐字保留） -->
+ 排序/列漏斗/右键/导出归内核；每卡工具行（kw/区间/TSV·MD 复制）留视图
+ （tvTools/tvViewMap 语义零改，QRT 行集=过滤后视图行）；term 列 MarkText/gotoAnalyzer、
+ 稀有度徽标经 #cell- 槽保真；空匹配走内核空态（文案逐字保留） -->
         <QueryResultTable
           :cols="['term', 'tf', 'doc_freq', 'ttf', '稀有度']"
           :rows="tvQRows(fname)" sortable
@@ -190,13 +190,13 @@ import { lintDsl } from '../utils/dslLint'; /* ：DSL 静态体检（此前 dsl-
 import CurrentIdxChip from '../components/CurrentIdxChip.vue';
 import FieldPicker from '../components/FieldPicker.vue';
 import MarkText from '../components/MarkText.vue';
-import SearchFilterBar from '../components/SearchFilterBar.vue'; /* 轨4：term kw 过滤胞换装统一件（sfbUnify650 锁） */
+import SearchFilterBar from '../components/SearchFilterBar.vue'; /* 轨4：term kw 过滤胞改用统一件（sfbUnify650 锁） */
 import { copyText as clipboardCopy, fmtNum } from '../utils/format';
 import { matrixText } from '../utils/copyMatrix';
-import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-html 内核；534 收口波：双参换装（errMeta 旁路） */
+import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-html 内核；534 收口波：双参改用（errMeta 旁路） */
 import { friendlyEsError } from '../utils/esError'; /* ：错误标题行人话 */
-/* 裸 sessionStorage 收发换 useLinkCarry 统一件（530 W-D 遗留清单收编，
-   键与 payload 逐字保持：analyzer {index,text} / xray {index,id}） */
+/* 裸 sessionStorage 收发换 useLinkCarry 统一件（530 W-D 遗留清单合并，
+ 键与 payload 逐字保持：analyzer {index,text} / xray {index,id}） */
 import { useLinkCarry } from '../composables/useLinkCarry';
 import JsonArea from '../components/JsonArea.vue';
 import EmptyState from '../components/EmptyState.vue';
@@ -207,9 +207,9 @@ const store = useAppStore();
 /* 目标索引进 URL——刷新/分享链接可复原（可重入） */
 const index = useIdxState({ follow: true });
 /* Query DSL 接 dsl-assist——fields 闭包现调现读（DslQueryView 同范式）。
-   fields() 侧惰性 ensure 改挂载即 ensure（SearchSandboxView watch immediate 范式，
-   只读 mapping 请求、失败零降级）——补全首轮不再承担首拉，fields() 退役为纯读；
-   索引切换跟随重拉 */
+ fields() 侧惰性 ensure 改挂载即 ensure（SearchSandboxView watch immediate 范式，
+ 只读 mapping 请求、失败零降级）——补全首轮不再承担首拉，fields() 退役为纯读；
+ 索引切换跟随重拉 */
 const { fields: assistFields, ensure: ensureAssistFields } = useIndexFields(() => index.value);
 watch(index, () => { void ensureAssistFields(); }, { immediate: true });
 /* terms 闭包接线——索引源=index 与 fields 同源现调现读（suggestAsync 防抖/TTL/stash 单源内建） */
@@ -218,7 +218,7 @@ const dslAssist = { fields: () => assistFields.value, terms: (f: string, p: stri
 const tab = ref<'rewrite' | 'tv'>('rewrite');
 const busy = ref(false);
 /* 编辑器卡片高度记忆（usePref 偏好键 qx.taH）——卡片 resize:vertical 原生拖拽
-   结束时读实高落盘（内容变化不改容器高，Monaco 内滚，故只需 pointerup 一个时机） */
+ 结束时读实高落盘（内容变化不改容器高，Monaco 内滚，故只需 pointerup 一个时机） */
 const taH = usePref<string>('qx.taH', '260px');
 function saveTaH(e: PointerEvent) {
   const h = Math.round((e.currentTarget as HTMLElement).getBoundingClientRect().height);
@@ -226,7 +226,7 @@ function saveTaH(e: PointerEvent) {
 }
 
 /* DSL 进 sessionStorage 草稿——刷新不丢稿（可重入） */
-/* 草稿治理轮：DSL 草稿迁 useScopedDraft（按 集群/索引 隔离），行为不变 */
+/* 草稿：DSL 草稿迁 useScopedDraft（按 集群/索引 隔离），行为不变 */
 const dsl = useScopedDraft('dsl', {
   route: 'query-xray',
 
@@ -234,13 +234,13 @@ const dsl = useScopedDraft('dsl', {
 }, JSON.stringify({ query: { match: { your_field: '关键词' } } }, null, 2)).text;
 
 /* lint findings 注入编辑器划线（SearchSandboxView 范式：debounce 250ms 防每敲一键
-   全量 findMatches；info 降级 hint——MonacoEditor marker 档只收 warning/hint/error）。
-   本页此前 dsl-assist 已接但零纠错，补 lintDsl 一路；JSON 非法时静默清 markers
-   （JsonArea 圆点已报，执行时后端会给出真实错误）。 */
+ 全量 findMatches；info 降级 hint——MonacoEditor marker 档只收 warning/hint/error）。
+ 本页此前 dsl-assist 已接但零纠错，补 lintDsl 一路；JSON 非法时静默清 markers
+ （JsonArea 圆点已报，执行时后端会给出真实错误）。 */
 const qxJaRef = ref<InstanceType<typeof JsonArea> | null>(null);
 /* lintDsl 提 computed 单源（RankDebug rdLint 同范式）——行内兜底条实时重估，
-   setMarkers 防抖通道消费同一 findings；unplaced 兜底=行内条显示全量 findings。
-   JSON 非法时静默清 markers（JsonArea 圆点已报，执行时后端会给出真实错误）。 */
+ setMarkers 防抖通道消费同一 findings；unplaced 兜底=行内条显示全量 findings。
+ JSON 非法时静默清 markers（JsonArea 圆点已报，执行时后端会给出真实错误）。 */
 const qxLint = computed(() => {
   try { return lintDsl(JSON.parse(dsl.value || ''), { fields: assistFields.value }); }
   catch { return []; }
@@ -253,7 +253,7 @@ const queueLintMarkers = useDebounceFn(() => {
 watch(dsl, () => { queueLintMarkers(); }, { immediate: true });
 const vr = ref<any>(null);
 const vrErr = ref(''); // 透视失败全文，内联 .bad 面板留存（与 tvErr 同模式）
-/* 534 收口波双参换装：原始错误对象旁路留存（catch 压串丢 code/endpoint，喂 errMeta 用） */
+/* 534 收口波双参改用：原始错误对象旁路留存（catch 压串丢 code/endpoint，喂 errMeta 用） */
 const vrErrRaw = ref<unknown>(null);
 /* 错误标题行人话（pre 保留全文，双轨范式） */
 const friendlyVrErr = computed(() => friendlyEsError(vrErr.value));
@@ -298,15 +298,15 @@ async function runTv() {
     }
   } catch (e: any) {
     /* catch 补 tvErr 内联（错误条 :96 现成，vrErr 面板同模式）——
-       此前取证异常只一闪 toast、内联条恒空；found===false/空词向量两分支既有赋值零动 */
+ 此前取证异常只一闪 toast、内联条恒空；found===false/空词向量两分支既有赋值零动 */
     tvErr.value = friendlyEsError(String(e?.message ?? e));
     store.notify('error', '取证失败：' + friendlyEsError(String(e?.message ?? e)));
   } finally { busy.value = false; }
 }
 
 /* 原始 IO 快查（546 六页同款三件套；545 Adhoc 双钮先例）——透视/词频两通道
-   各取各的记录（validate-query / term-vectors 前缀互不混淆）；判空 rec=null 时 notify 引导，
-   不开空弹窗。共用同一弹窗宿主 rawIoShow/rawIoRec，先后点开互不残留 */
+ 各取各的记录（validate-query / term-vectors 前缀互不混淆）；判空 rec=null 时 notify 引导，
+ 不开空弹窗。共用同一弹窗宿主 rawIoShow/rawIoRec，先后点开互不残留 */
 const rawIoShow = ref(false);
 const rawIoRec = ref<RawIoRec | null>(null);
 function openRawIoValidate() {
@@ -340,9 +340,9 @@ function termRows(fv: any) {
 }
 
 /* ═══ ：词频表每卡工具行（kw + doc_freq 区间 + TSV/MD 复制）═══
-   工具态按字段名挂 reactive Map；tvViewMap 在 termRows 产出后套 computed
-   （单文档词表量小，全字段一次算齐）。kw 口径=term 子串小写包含；
-   doc_freq min/max 为 Number 区间比较（空串=该端不设限，非数字输入视同空）。 */
+ 工具态按字段名挂 reactive Map；tvViewMap 在 termRows 产出后套 computed
+ （单文档词表量小，全字段一次算齐）。kw 口径=term 子串小写包含；
+ doc_freq min/max 为 Number 区间比较（空串=该端不设限，非数字输入视同空）。 */
 interface TvTool { kw: string; min: string; max: string }
 const tvTools = reactive<Record<string, TvTool>>({});
 function setTvTool(fname: string, side: 'kw' | 'min' | 'max', v: string) {
@@ -380,8 +380,8 @@ function copyTv(fname: string, ext: 'tsv' | 'md') {
 }
 
 /* ═══ ：term 统计表 QRT rows 型数据映射 ═══
-   行=termRows 产出后经 tvViewMap 过滤的视图行（所见即所排）；termRows 的 rareCls 仍为
-   稀有度色档单一真源，矩阵只落 rareLabel 标量、#cell-稀有度 槽经 rareClsOf 反查还原色档。 */
+ 行=termRows 产出后经 tvViewMap 过滤的视图行（所见即所排）；termRows 的 rareCls 仍为
+ 稀有度色档单一真源，矩阵只落 rareLabel 标量、#cell-稀有度 槽经 rareClsOf 反查还原色档。 */
 function rareClsOf(label: string): string {
   return label === '★★★ 极稀有' ? 'hi'
     : label === '★★ 稀有' ? 'hi2'
@@ -399,8 +399,8 @@ function copyText(s: string) {
 
 /* ==================== ：实验室联动 ==================== */
 /* 接收「打分解剖」送来的文档 —— 自动切到词频取证并开查。
-   接收侧换 useLinkCarry 统一件（键 es-console.link.xray 与 payload
-   {index,id} 逐字保持，发送方 ScoreExplain 零改；receive 取后即焚语义同旧三行）。 */
+ 接收侧换 useLinkCarry 统一件（键 es-console.link.xray 与 payload
+ {index,id} 逐字保持，发送方 ScoreExplain 零改；receive 取后即焚语义同旧三行）。 */
 const xrayCarry = useLinkCarry<{ index?: string; id?: string }>('xray');
 onMounted(() => {
   const p = xrayCarry.receive();
@@ -413,7 +413,7 @@ onMounted(() => {
   }
 });
 /* term 一键送去分词实验室——：发送侧换 useLinkCarry（键
-   es-console.link.analyzer 与 payload {index,text} 逐字保持，消费方 AnalyzerLab 零改） */
+ es-console.link.analyzer 与 payload {index,text} 逐字保持，消费方 AnalyzerLab 零改） */
 const analyzerCarry = useLinkCarry<{ index: string; text: string }>('analyzer');
 function gotoAnalyzer(term: string) {
   analyzerCarry.send({ index: index.value, text: term });
@@ -423,12 +423,12 @@ function gotoAnalyzer(term: string) {
 
 <style scoped>
 /* height:100% 让页面吃满 .page 可滚区（默认只有内容高，实测下方空出 695px 纯死白）。
-   min-height 而非 height：结果多时仍要能撑高滚动，不被截断。 */
+ min-height 而非 height：结果多时仍要能撑高滚动，不被截断。 */
 .qx-page { display: flex; flex-direction: column; gap: var(--sp-3); min-height: 100%; }
 .qx-hd { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
-/*  Lead 收尾：.qx-hd-l/ic/tt/sub/r 五类子规则删除——标题区已 PageHeader 化，模板零引用死 CSS */
-/* qx-tabs 容器框退役（立法④，dq-sw 判例：去 bg2+border+radius 容器条框，
-   内容直贴）；tab 本身控件语义/act 态保留 */
+/* Lead 收尾：.qx-hd-l/ic/tt/sub/r 五类子规则删除——标题区已 PageHeader 化，模板零引用死 CSS */
+/* qx-tabs 容器框退役（约定④，dq-sw 先例：去 bg2+border+radius 容器条框，
+ 内容直贴）；tab 本身控件语义/act 态保留 */
 .qx-tabs { display: flex; gap: var(--sp-1); }
 .qx-tab { display: inline-flex; align-items: center; gap: 5px; border: none; background: transparent; color: var(--tx1); font-size: var(--fs-xs); padding: 5px var(--sp-3); border-radius: var(--r-s); cursor: pointer; transition: all var(--tr); font-family: var(--font); }
 .qx-tab:hover { color: var(--tx0); }
@@ -438,23 +438,23 @@ function gotoAnalyzer(term: string) {
 .qx-ii { width: min(170px, 100%); padding: var(--sp-1) var(--sp-2); border: 1px solid var(--border); border-radius: var(--r-s); background: transparent; color: inherit; font-size: var(--fs-sm); } /* ：断点钳 min()（529 ④ BrowserView/AnalyzeView 同款范式）——基样式宽在极窄容器不撑破父级 */
 .qx-ii.wide { flex: 1; width: auto; }
 .qx-row { display: flex; align-items: center; gap: var(--sp-2h); flex-wrap: wrap; }
-/* 三消费面（编辑器卡/执行解释卡/词频取证卡）带框壳退役（立法③编辑器外框+
-   立法④；SearchTemplatesView st-card 554 判例同语言）——内容直贴，分界由 qx-card-hd
-   border-bottom 承接；overflow:hidden 保留（.qx-card-ed 的 CSS resize 手柄生效条件，
-   无 radius 后无视觉差） */
+/* 三消费面（编辑器卡/执行解释卡/词频取证卡）带框壳退役（约定③编辑器外框+
+ 约定④；SearchTemplatesView st-card 同语言）——内容直贴，分界由 qx-card-hd
+ border-bottom 承接；overflow:hidden 保留（.qx-card-ed 的 CSS resize 手柄生效条件，
+ 无 radius 后无视觉差） */
 .qx-card { border: 0; border-radius: 0; overflow: hidden; }
 /* 编辑器卡片吃掉页面剩余高度：结果区（透视结论 / Lucene 输出）按内容高，
-   剩下的都归编辑框——原来编辑框只有 123px，下方 695px 全是死白。
-   min-height:220px 保证结果很长把页面撑高时编辑框不被压到不可用。 */
-/*  复盘：只写 flex:1 会让编辑器吃掉整屏富余高度 —— 实测 780px，
-   内容仅 7 行、框内 16% 是空白。DSL 通常十几行，420px 足够；
-   上限之外的高度回流给下方结果区，这才是「编辑框够用 + 页面不留死白」的平衡。 */
+ 剩下的都归编辑框——原来编辑框只有 123px，下方 695px 全是死白。
+ min-height:220px 保证结果很长把页面撑高时编辑框不被压到不可用。 */
+/* 复盘：只写 flex:1 会让编辑器吃掉整屏富余高度 —— 实测 780px，
+ 内容仅 7 行、框内 16% 是空白。DSL 通常十几行，420px 足够；
+ 上限之外的高度回流给下方结果区，这才是「编辑框够用 + 页面不留死白」的平衡。 */
 /* 编辑器高度跟随内容、不固定撑高：flex:none + min-height 保底 + max-height 封顶。
-   实测 flex:1 会把它钉在上限（354px）而 DSL 只有 7 行，框内约 200px 是空白——
-   那是把「框太小」换成了「框内虚高」。余量交给下方结果区/空态。 */
+ 实测 flex:1 会把它钉在上限（354px）而 DSL 只有 7 行，框内约 200px 是空白——
+ 那是把「框太小」换成了「框内虚高」。余量交给下方结果区/空态。 */
 /* 定高改 usePref 接管（默认 260px 同旧值）+ resize:vertical 原生拖拽——
-   拖拽结束经 pointerup 落盘 qx.taH，刷新/回页不丢；（.qx-card 自带 overflow:hidden，
-   满足 CSS resize 生效条件，手柄出在卡片右下角） */
+ 拖拽结束经 pointerup 落盘 qx.taH，刷新/回页不丢；（.qx-card 自带 overflow:hidden，
+ 满足 CSS resize 生效条件，手柄出在卡片右下角） */
 .qx-card-ed { display: flex; flex-direction: column; flex: none; resize: vertical; }
 /* JsonArea 自身已是 flex 纵向容器；只在本视图内接线让它随卡片长高，不改共享组件 */
 .qx-card-ed :deep(.ja) { flex: 1; min-height: 0; border: none; border-radius: 0; }
@@ -462,9 +462,9 @@ function gotoAnalyzer(term: string) {
 .qx-run { margin-left: auto; }
 .qx-verdict { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2h) 14px; border-radius: var(--r-m); font-size: var(--fs-sm); }
 .qx-verdict.ok { background: var(--ok-soft); color: var(--ok); border: 1px solid var(--ok-line); }
-/* bad 档 err-bar 同源 token 记档（var(--err)/var(--err-soft)/var(--err-line)
-   三件套与 theme.css .err-bar 逐一同名——头注「保守保形不挂类」的 token 面即此，
-   防漂移只认这三个变量，禁手写色值） */
+/* bad 档 err-bar 同源 token （var(--err)/var(--err-soft)/var(--err-line)
+ 三件套与 theme.css .err-bar 逐一同名——头注「保守保形不挂类」的 token 面即此，
+ 防漂移只认这三个变量，禁手写色值） */
 .qx-verdict.bad { background: var(--err-soft); color: var(--err); border: 1px solid var(--err-line); }
 /* 双轨错误面板（friendly 标题行 + errPreHtml 全文 pre），多行内容顶对齐 */
 .qx-err-panel { align-items: flex-start; }
@@ -473,9 +473,9 @@ function gotoAnalyzer(term: string) {
 .qx-err-pre { margin: var(--sp-1) 0 0; font-family: var(--mono, monospace); font-size: var(--fs-xs); white-space: pre-wrap; word-break: break-word; color: var(--fg); max-height: 200px; overflow: auto; }
 .qx-verr { font-size: var(--fs-xs); font-family: var(--mono, monospace); opacity: .9; }
 /* 词频取证页没有编辑器吃 flex 余量，空态用 margin:auto 在整片余量里居中。
-   不用父级 justify-content:center——那在可滚容器里会裁掉溢出内容顶部且滚不回去。 */
+ 不用父级 justify-content:center——那在可滚容器里会裁掉溢出内容顶部且滚不回去。 */
 /* flex:1 吃掉编辑器下方的剩余高度（margin:auto 只负责在其中居中）——
-   只写 margin:auto 时空态仍是内容高，下方留一大片死白（实测 426px）。 */
+ 只写 margin:auto 时空态仍是内容高，下方留一大片死白（实测 426px）。 */
 .qx-empty-fill { flex: 1; margin: auto; }
 .qx-lucene { margin: 0; padding: var(--sp-3); font-size: var(--fs-sm); font-family: var(--mono, monospace); white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; background: color-mix(in srgb, var(--dv-pink) 4%, transparent); }
 /* 【W3b】改写失败现场的 err 档（同 IlmView pre.err：soft 底 + err 字色 + 左描边） */
@@ -484,12 +484,12 @@ function gotoAnalyzer(term: string) {
 .qx-tip code { background: var(--bg2); padding: 0 var(--sp-1); border-radius: 3px; }
 .qx-fstat { margin-left: auto; font-size: var(--fs-xs); color: var(--tx2); font-weight: 400; font-family: var(--mono, monospace); }
 /* 旧 term 裸表样式全家（表高封顶/粘顶表头/行语言，含 末行双线修复）
-   随换 QRT 壳退役（归内核单一出处；空匹配语义由内核空态 empty-text 承接） */
+ 随换 QRT 壳退役（归内核单一出处；空匹配语义由内核空态 empty-text 承接） */
 /* 每卡工具行（kw/doc_freq 区间/计数/TSV·MD 复制） */
 .qx-tv-tools { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; padding: var(--sp-1h) var(--sp-2h); border-bottom: 1px solid var(--border); font-size: var(--fs-xs); color: var(--tx2); }
 .qx-tv-inp { padding: 3px var(--sp-2); border: 1px solid var(--border); border-radius: var(--r-s); background: transparent; color: inherit; font-size: var(--fs-xs); }
 .qx-tv-inp.num { width: 88px; }
-/* 轨4：term kw 胞换装 SFB 落位类（input-class qx-tv-inp 仅运行时锚，scoped 样式不再命中内层 input） */
+/* 轨4：term kw 胞改用 SFB 落位类（input-class qx-tv-inp 仅运行时锚，scoped 样式不再命中内层 input） */
 .qx-tv-kw { width: 150px; height: 26px; padding: 0 var(--sp-2); font-size: var(--fs-xs); flex-shrink: 0; }
 .qx-tv-range { display: inline-flex; align-items: center; gap: var(--sp-1); }
 .qx-tv-n { color: var(--tx2); }
@@ -503,7 +503,7 @@ tr:hover .qx-term-link { opacity: .55; }
 .qx-term-link:hover { opacity: 1 !important; color: var(--ac); }
 
 /* 宿主 iframe 最窄 ~866px 档（ProfileFlame 524 同口径）——取证输入行纵向
-   堆叠；档内禁 ≥300px 裸 width（仓规），全文禁 901px+ 倒挂 min-width 档 */
+ 堆叠；档内禁 ≥300px 裸 width（仓规），全文禁 901px+ 倒挂 min-width 档 */
 @media (max-width: 900px) {
   .qx-row { flex-direction: column; align-items: stretch; }
   .qx-tv-inp.num { width: 72px; }

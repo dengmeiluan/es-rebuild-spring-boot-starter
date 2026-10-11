@@ -1,7 +1,7 @@
 <template>
-  <!--  P2-8：文档对比弹窗（RT 多选 2-3 篇右键直达；Kibana Compare selected 语义）——
-       基准可换（chips 切换纯前端重算）、格级 kind 着色（红=值冲突/琥珀=单侧独有/弱化=一致）、
-       统计条 + 复制 Markdown 联动。值超长截断 + title 全量 + 点击复制。 -->
+  <!-- P2-8：文档对比弹窗（RT 多选 2-3 篇右键直达；Kibana Compare selected 语义）——
+ 基准可换（chips 切换纯前端重算）、格级 kind 着色（红=值冲突/琥珀=单侧独有/弱化=一致）、
+ 统计条 + 复制 Markdown 联动。值超长截断 + title 全量 + 点击复制。 -->
   <!-- v-if 根部短路：show=false 不留任何 DOM（happy-dom/KeepAlive 下 tbody 会污染宿主页面级查询） -->
   <n-modal v-if="show" :show="show" preset="card" :title="title" style="width:920px;max-width:96vw" :bordered="false" @update:show="emit('update:show', $event)">
     <div class="ddm">
@@ -144,7 +144,7 @@ async function copyMd() {
 </script>
 
 <style scoped>
-/*  P2-8：文档对比——dbx 紧凑语言；状态色全走主题 token（暗色自动适配） */
+/* P2-8：文档对比——dbx 紧凑语言；状态色全走主题 token（暗色自动适配） */
 .ddm { display: flex; flex-direction: column; gap: var(--sp-2); }
 /* 只看差异 checkbox（与统计 chip 同行语言） */
 .ddm-only-diff { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-xs); color: var(--tx1); cursor: pointer; user-select: none; }

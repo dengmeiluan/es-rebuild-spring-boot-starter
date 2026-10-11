@@ -1,11 +1,11 @@
 /**
  * 六百五十八批（轨1 · Monaco DSL 值位动态候选 P2 接线）：
- * 655 设计记档 §7 红点第 5 组「注册契约」落地 + P2 接线源锚——
+ * 655 设计备案 §7 红点第 5 组「注册契约」落地 + P2 接线源锚——
  *   A 源锚：MonacoEditor 契约扩 terms / import util 工厂 / terms 在场守卫注册块 /
  *     DslQueryView 注入 useTermsSuggest.suggestAsync 闭包（D4 首发消费面=QueryHub dsl 模式面板）；
  *   B 行为（monacoDslAssist stub 范式挂真组件）：
  *     terms 缺席→补全注册恰 2（json+ndjson 主 provider）；terms 在场→恰 4
- *     （+2 动态 provider 无 triggerCharacters——655-C1 判例安全位：dslRegs ['"'] 过滤器不认，
+ *     （+2 动态 provider 无 triggerCharacters——655-C1 先例安全位：dslRegs ['"'] 过滤器不认，
  *     monacoDslAssist ②⑧⑬ 计数零扰动）；卸载 dispose 全量对称；
  *     动态 provider 功能冒烟（props.terms 闭包真达工厂：keyword 值位出 top 值候选）；
  *     DslQueryView 挂载冒烟（视图 terms 注入真达 MonacoEditor）。
@@ -146,7 +146,7 @@ afterEach(() => {
 
 /* ---------- A 源锚（readFileSync 字面锁，656 spec C 段同范式） ---------- */
 describe('658 批 A 源锚：P2 接线最小 diff', () => {
-  it('A1 MonacoEditor 契约扩 terms（签名与设计记档 §8 逐字同形）', () => {
+  it('A1 MonacoEditor 契约扩 terms（签名与设计备案 §8 逐字同形）', () => {
     expect(readSrc('../components/MonacoEditor.vue'))
       .toContain('terms?: (field: string, prefix: string) => Promise<string[]>');
   });
@@ -170,7 +170,7 @@ describe('658 批 A 源锚：P2 接线最小 diff', () => {
 });
 
 /* ---------- B 行为锁（挂真组件，注册计数+dispose+功能冒烟） ---------- */
-describe('658 批 B 注册契约（设计记档 §7 红点第 5 组）', () => {
+describe('658 批 B 注册契约（设计备案 §7 红点第 5 组）', () => {
   const FIELDS = [
     { path: 'title', type: 'text' },
     { path: 'status', type: 'keyword' },

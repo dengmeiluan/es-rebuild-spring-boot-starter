@@ -1,7 +1,7 @@
 /**
  * 八百三十五批：工具行密度改革落地（设计稿 goal833-toolbar-density.html 经用户批准）——
- * QRT 右簇导出格式五连平铺（CSV/MD/XLSX/PNG/JSON）收编「导出 ▾」聚合钮（铁律 C：
- * 同类枚举合一，可见 ≤5）；行高三档循环 + 列宽重置双钮收编「视图 ⋯」聚合钮
+ * QRT 右簇导出格式五连平铺（CSV/MD/XLSX/PNG/JSON）合并「导出 ▾」聚合钮（铁律 C：
+ * 同类枚举合一，可见 ≤5）；行高三档循环 + 列宽重置双钮合并「视图 ⋯」聚合钮
  * （行高改显式三选带当前档 ✓，比连点循环可预期）；RT 同步「视图 ⋯」（291 钮序守卫
  * 的两内核一致语义迁移到聚合层）；放大/消费方 bar-extra 常驻不变。
  * 能力零删除：五个格式导出函数、setRowH 三档、resetColWidths 实现零改动，只动入口。
@@ -24,7 +24,7 @@ describe('qrtToolbarAgg835 源码锚（聚合钮在位）', () => {
     expect(qrt()).toMatch(/aria-label="导出"[\s\S]{0,200}?aria-haspopup="menu"/);
     expect(qrt()).toContain('导出 ▾');
   });
-  it('QRT：导出菜单五格式 aria 逐字保留（525/560 锁面随迁不破）', () => {
+  it('QRT：导出菜单五格式 aria 逐字保留（525/560 锁面同步更新不破）', () => {
     const v = qrt();
     for (const a of ['导出当前视图 CSV', '导出当前视图 Markdown', '导出当前视图 XLSX', '导出表格快照 PNG', '导出当前视图 JSON']) {
       expect(v).toContain(a);

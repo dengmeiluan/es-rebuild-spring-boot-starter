@@ -4,10 +4,10 @@
  *   （时刻在上、节点值行纵排，ld-hv-stack）；
  * ②「无法筛选节点」——节点序列显隐切换（Grafana 图例语汇）。
  *
- * ⚠七百八十一批 K2 锁随迁：常驻图例 chip 退役（用户实报「节点对比应该是悬浮数据」=
+ * ⚠七百八十一批 K2 锁同步更新：常驻图例 chip 退役（用户实报「节点对比应该是悬浮数据」=
  * 图例行与悬浮读出双份重复）——隐藏交互迁「读出行尾 × 钮」+头部「已隐藏 N ▸ 恢复」
  * 一键复原（顺治 615 批图例隐藏后图例项随 cmpSeries 滤除=无法再显示的单向死路）。
- * 件②断言随迁至新交互；件①（纵排堆叠）与源码锁（toggleNode/hiddenNodes）不动。
+ * 件②断言同步更新至新交互；件①（纵排堆叠）与源码锁（toggleNode/hiddenNodes）不动。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -80,7 +80,7 @@ describe('六百一十五批：节点对比卡交互修复', () => {
     try {
       seed9(host, pinia);
       await settle();
-      /* 794 件1 随迁：对比面悬浮面板化（默认关）——断言前点入口钮开面板 */
+      /* 794 件1 同步更新：对比面悬浮面板化（默认关）——断言前点入口钮开面板 */
       (host.querySelector('.ld-ncmp-entry') as HTMLButtonElement)?.click();
       await settle();
       const cmp = host.querySelector('.ld-ncmp-panel')!;
@@ -95,16 +95,16 @@ describe('六百一十五批：节点对比卡交互修复', () => {
     }
   });
 
-  it('件②（781 随迁）：读出行尾 × 隐藏节点——折线与悬浮行同步过滤，头部恢复钮一键复原', async () => {
+  it('件②（781 同步更新）：读出行尾 × 隐藏节点——折线与悬浮行同步过滤，头部恢复钮一键复原', async () => {
     const { app, host, pinia } = await mountLive();
     try {
       seed9(host, pinia);
       await settle();
-      /* 794 件1 随迁：对比面悬浮面板化（默认关）——断言前点入口钮开面板 */
+      /* 794 件1 同步更新：对比面悬浮面板化（默认关）——断言前点入口钮开面板 */
       (host.querySelector('.ld-ncmp-entry') as HTMLButtonElement)?.click();
       await settle();
       const cmp = host.querySelector('.ld-ncmp-panel')!;
-      expect(cmp.querySelectorAll('path').length, '9 条折线（八百二十八批 polyline→path 平滑随迁）').toBe(9);
+      expect(cmp.querySelectorAll('path').length, '9 条折线（八百二十八批 polyline→path 平滑同步更新）').toBe(9);
       expect(cmp.querySelectorAll('.ld-ncmp-panel .ld-ncmp-leg-b').length, '常驻图例退役').toBe(0);
       /* 悬浮出读出层：行尾 × 隐藏钮（CMP_TIP_CAP=8 截断 → 8 钮+聚合行） */
       cmp.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 0 }));
@@ -135,7 +135,7 @@ describe('六百一十五批：节点对比卡交互修复', () => {
   it('源码锁：ld-hv-stack 纵排+行尾隐藏 toggle+hiddenNodes 状态', () => {
     const t = strip(liveSrc);
     expect(t, '读出层纵排').toContain('ld-hv-stack');
-    expect(t, '行尾隐藏切换（781 随迁）').toContain('toggleNode');
+    expect(t, '行尾隐藏切换（781 同步更新）').toContain('toggleNode');
     expect(t, '隐藏节点状态').toContain('hiddenNodes');
   });
 });

@@ -9,10 +9,10 @@
  *    会落「拉取失败」坏分支），故钮随 loadSettings——与其页内两个既有回填出口行为一致。
  * ② 42vh 弹性档收尾：ConfigDriftView .cd-diff 420px / ClusterSettingsView .cs-preview 240px /
  *    LifecycleView .lc-result 200px → max(240px, 42vh)（ProfileFlame 524 批同口径）。
- * ③ severity 三胞胎 token 语义错位纠正：.cv-iss-sev.error/.warn/.info 与 .cd-verdict.drift/.missing
+ * ③ severity 三处 token 语义错位纠正：.cv-iss-sev.error/.warn/.info 与 .cd-verdict.drift/.missing
  *    的 --danger/--warning（--err/--warn 别名）与 --brand（≠--info）→ --err/--warn/--info
  *    （W9 的 .pill.err/.warn/.info theme.css 别名档未就绪，先就地统一 token，类链形态待其落地）。
- * ④ 卫生：BrowserView 1280 独档并入 1100；router.ts WIDE_ROUTES 注释补三页页头豁免记档；
+ * ④ 卫生：BrowserView 1280 独档并入 1100；router.ts WIDE_ROUTES 注释补三页页头豁免备案；
  *    ReindexAdvancedView .ra-card-tt 退役换全局 .card-t。
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -202,41 +202,41 @@ describe('525 批卫生：42vh 弹性档 / sev token / 断点并档 / ra-card-tt
     expect(lc, '200px 定高退役').not.toMatch(/\.lc-result \{[^}]*max-height: 200px/);
   });
 
-  it('sev 三胞胎换装（525 批升 .pill 语义档；531 批 ConfigValidator 侧再收 StatusPill+sevZh）：本地配色档清零', () => {
+  it('sev 三处改用（525 批升 .pill 语义档；531 批 ConfigValidator 侧再收 StatusPill+sevZh）：本地配色档清零', () => {
     const cv = read('../views/ConfigValidatorView.vue');
     const cd = read('../views/ConfigDriftView.vue');
-    /* 531 批锚随迁：severity 裸英文枚举换 StatusPill（tone 仍走 cvSevPill=esEnumZh.sevPill 同源，
+    /* 531 批锚同步更新：severity 裸英文枚举换 StatusPill（tone 仍走 cvSevPill=esEnumZh.sevPill 同源，
        label 收 cvSevZh 中文），本地 pill 字面拼接退役 */
-    expect(cv, 'sev 徽标换装 StatusPill（tone 走同源 cvSevPill 五主档）').toMatch(/<StatusPill class="cv-iss-sev" :tone="cvSevPill\(/);
+    expect(cv, 'sev 徽标改用 StatusPill（tone 走同源 cvSevPill 五主档）').toMatch(/<StatusPill class="cv-iss-sev" :tone="cvSevPill\(/);
     expect(cv).toMatch(/\.cv-iss-sev \{ flex-shrink: 0; margin-top: 1px; \}/);
     expect(cv, 'cv sev 本地三档配色退役').not.toMatch(/\.cv-iss-sev\.[a-z]+ \{/);
-    /* 五百六十批锚随迁：清单角标换装 StatusPill 统一件（558b 回滚件解禁重做）——tone 走
+    /* 五百六十批锚同步更新：清单角标改用 StatusPill 统一件（558b 回滚件解禁重做）——tone 走
        cdVerdictPill 映射消费，手写 .pill 裸挂退役；定位壳 .cd-verdict absolute right/top 保留 */
-    expect(cd, 'verdict 徽标换装 StatusPill（tone=cdVerdictPill 映射消费，clean→g 正面绿，drift/missing→r/y）').toMatch(/<StatusPill v-if="verdicts\[k\.indexKey\]" class="cd-verdict" :tone="cdVerdictPill\(verdicts\[k\.indexKey\]\)"/);
+    expect(cd, 'verdict 徽标改用 StatusPill（tone=cdVerdictPill 映射消费，clean→g 正面绿，drift/missing→r/y）').toMatch(/<StatusPill v-if="verdicts\[k\.indexKey\]" class="cd-verdict" :tone="cdVerdictPill\(verdicts\[k\.indexKey\]\)"/);
     expect(cd, '手写 pill 裸挂退役').not.toContain('class="cd-verdict pill"');
     expect(cd).toMatch(/\.cd-verdict \{ position: absolute; right: 10px; top: 10px; \}/);
     expect(cd, 'cd verdict 本地三档配色退役').not.toMatch(/\.cd-verdict\.[a-z]+ \{/);
   });
 
-  it('BrowserView 1280 独档并入 1100 档（col-created 藏列随迁；529 批列头进内核改 :deep data-col）', () => {
+  it('BrowserView 1280 独档并入 1100 档（col-created 藏列同步更新；529 批列头进内核改 :deep data-col）', () => {
     const bw = read('../views/BrowserView.vue');
     expect(bw).toMatch(/@media \(max-width: 1100px\) \{\s*\.bw :deep\(\[data-col="创建时间"\]\) \{ display: none; \}\s*\}/);
     expect(bw, '1280 独档退役').not.toMatch(/max-width: 1280px/);
   });
 
-  it('router.ts WIDE_ROUTES 注释补三页页头豁免记档（525 批裁决）', () => {
+  it('router.ts WIDE_ROUTES 注释补三页页头豁免备案（525 批裁决）', () => {
     const rt = read('../router.ts');
     expect(rt).toMatch(/\/browser、\/diag、\/search 三页页头由工具条\/模式切换器承担，\s*不补 PageHeader/);
   });
 
   it('ReindexAdvancedView .ra-card-tt 退役换全局 .card-t（4 处模板 + 样式定义清零）', () => {
     const ra = read('../views/ReindexAdvancedView.vue');
-    expect(ra, 'ra-card-tt 样式定义退役（记档注释允许保留字样）').not.toMatch(/\.ra-card-tt \{/);
+    expect(ra, 'ra-card-tt 样式定义退役（备案注释允许保留字样）').not.toMatch(/\.ra-card-tt \{/);
     expect(ra, 'ra-card-tt 模板类名退役').not.toMatch(/class="ra-card-tt"/);
-    expect(ra.match(/class="card-t"/g)?.length, '4 处卡头换装全局档').toBeGreaterThanOrEqual(4);
+    expect(ra.match(/class="card-t"/g)?.length, '4 处卡头改用全局档').toBeGreaterThanOrEqual(4);
   });
 
-  it('四视图回填钮源码锚随 558 批收编改锚：写类三视图消费 PickCurrentIdxBtn 统一件，IndexSettings 回填钮退役（532 批 selectorUnify532 看守）', () => {
+  it('四视图回填钮源码锚随 558 批合并改锚：写类三视图消费 PickCurrentIdxBtn 统一件，IndexSettings 回填钮退役（532 批 selectorUnify532 看守）', () => {
     for (const f of ['IndexOptimizerView', 'UpdateByQueryView', 'ConfigValidatorView']) {
       const s = read(`../views/${f}.vue`);
       expect(s, `${f} 缺统一件消费`).toMatch(/<PickCurrentIdxBtn @pick=/);

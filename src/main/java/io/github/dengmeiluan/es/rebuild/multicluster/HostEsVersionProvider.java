@@ -87,7 +87,7 @@ public class HostEsVersionProvider {
      * <p><b>为什么不靠在 bindBootstrap 末尾调 invalidate()</b>：那依赖<b>调用方纪律</b>——
      * 下一个新增重绑入口的人会忘，而忘了不会有任何测试变红。把 client 身份纳入缓存键后，
      * 换了集群就<b>必然</b>换了 client 实例，重探是数据决定的，不依赖任何调用方记得做什么。
-     * 与本轮 {@code LockDocPort} 的取向一致：<b>让错误不可能 &gt; 检测错误</b>。</p>
+     * 与 {@code LockDocPort} 的取向一致：<b>让错误不可能 &gt; 检测错误</b>。</p>
      */
     private volatile VersionSnapshot snapshot;
 
@@ -148,7 +148,7 @@ public class HostEsVersionProvider {
         try {
             return hostClient.get();
         } catch (Exception e) {
-            // debug→节流 WARN——与同文件探测失败三臂（:142/:147/:153）档位拉齐：
+            // debug→节流 WARN——与同文件探测失败三臂（142/:147/:153）档位拉齐：
             // client 拿不到是持续性状态，debug 对运营不可见=版本恒未知无从排查。supplier 每个
             // 请求都可能摸到（热路径），60s 节流防刷屏（首条留痕含堆栈，后续静默）；
             // client==null 的未绑定预期态臂维持既有静默（见 currentVersion 内 debug）

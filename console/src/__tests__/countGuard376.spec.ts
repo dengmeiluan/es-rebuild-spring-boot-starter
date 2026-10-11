@@ -42,8 +42,8 @@ describe('六通道计数口径守卫（376 批）', () => {
   });
 
   it('沙盒通道：结果头 ≥ 前缀（totalOf relation）', () => {
-    /* MetaStrip 换装批随迁：≥ 前缀从模板内插值收进 ssResultMeta items（TookBadge 统一件），
-       契约不变——沙盒结果头必须保留 gte 估计口径的 ≥ 前缀，仅看守形态随迁 */
+    /* MetaStrip 改用批同步更新：≥ 前缀从模板内插值收进 ssResultMeta items（TookBadge 统一件），
+       契约不变——沙盒结果头必须保留 gte 估计口径的 ≥ 前缀，仅看守形态同步更新 */
     expect(sandbox).toMatch(/totalGte\.value \? '≥ ' : ''/);
     expect(sandbox).toMatch(/const totalGte = computed\(\(\) => totalOf\(response\.value\?\.hits\)\.gte\);/);
   });

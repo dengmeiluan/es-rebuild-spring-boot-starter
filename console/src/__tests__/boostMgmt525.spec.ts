@@ -3,8 +3,8 @@
  * 锁定：
  * 1) 卡头计数徽标（bt-cnt，N>10 转 hot 语义）+ 字段名过滤（computed 真过滤行集）；
  * 2) 行级停用 checkbox + 「启停全部」；builtQuery 同步滤除停用行（DSL fields=[]）；
- * 3) 531 批随迁：裸 .bt-tbl 换 QRT rows 型（排序/右键/导出归内核，升序起步）——
- *    排名语义锚随迁（新排名列仍按真实排名，rankOf 回原始索引）；
+ * 3) 531 批同步更新：裸 .bt-tbl 换 QRT rows 型（排序/右键/导出归内核，升序起步）——
+ *    排名语义锚同步更新（新排名列仍按真实排名，rankOf 回原始索引）；
  * 4) 行色档走 rowClass 契约（527 W-D），useTableSort 宿主胶水退役。
  * 设施照抄 boostFieldPrioW3b（vue-router 轻 mock + api mock）。
  */
@@ -134,12 +134,12 @@ describe('BoostTuner 权重行管理（五百二十五批）', () => {
   }, 40000);
 });
 
-/* 531 批随迁：行/列锚换 QRT 壳（过滤 nomatch/截断行；_id 格=第 3 数据格） */
+/* 531 批同步更新：行/列锚换 QRT 壳（过滤 nomatch/截断行；_id 格=第 3 数据格） */
 const rankRowsEl = (host: HTMLElement) =>
   [...host.querySelectorAll('table.qrt-tbl tbody tr')].filter(tr => !tr.classList.contains('qrt-nomatch') && !tr.classList.contains('qrt-trunc-row'));
 const ids = (host: HTMLElement) => rankRowsEl(host).map(tr => (tr.querySelectorAll('td.qrt-cell')[2] as HTMLElement).textContent?.trim());
 
-describe('BoostTuner 排名表排序（五百二十五批；531 随迁 QRT 内核三态，升序起步）', () => {
+describe('BoostTuner 排名表排序（五百二十五批；531 同步更新 QRT 内核三态，升序起步）', () => {
   it('_id 表头点击排序翻转行序；新排名列保持真实排名语义', async () => {
     const host = await mountView();
     const kw = host.querySelector('.bt-kw') as HTMLInputElement;
@@ -175,10 +175,10 @@ describe('BoostTuner 排名表排序（五百二十五批；531 随迁 QRT 内�
   }, 40000);
 });
 
-describe('BoostTuner 表格化修边（五百二十五批源码锁；531 批随迁 QRT 壳）', () => {
+describe('BoostTuner 表格化修边（五百二十五批源码锁；531 批同步更新 QRT 壳）', () => {
   it('QRT rows 接线 + 真实排名语义 + 行色档 rowClass + 管理件在位', () => {
     const v = readFileSync(join(__dirname, '../views/BoostTunerView.vue'), 'utf-8');
-    /* 531 批随迁：裸 .bt-tbl 退役换 QRT rows 型（useTableSort 宿主胶水随之退役） */
+    /* 531 批同步更新：裸 .bt-tbl 退役换 QRT rows 型（useTableSort 宿主胶水随之退役） */
     expect(v).not.toContain('.bt-tbl');
     expect(v).not.toContain("from '../composables/tableSort'");
     expect(v).toMatch(/:cols="RANK_COLS" :rows="rankRows" sortable/);
@@ -196,10 +196,10 @@ describe('BoostTuner 表格化修边（五百二十五批源码锁；531 批随�
     expect(v).not.toContain("sessionStorage.getItem('es-console.link.boost')");
     expect(v).toMatch(/@media \(max-width: 900px\)/);
     expect(v, '全文禁 min-width:901px 倒挂档').not.toMatch(/min-width:\s*901px/);
-    /* 管理件在位（525 批契约不变；554 批随迁：计数徽标换装 StatusPill 统一件，
+    /* 管理件在位（525 批契约不变；554 批同步更新：计数徽标改用 StatusPill 统一件，
        默认中性 n/N>10 热 y，bt-cnt 锚类保留——上方 .bt-cnt DOM 断言不受影响） */
     expect(v).toMatch(/<StatusPill class="bt-cnt xs" :tone="fields\.length > 10 \? 'y' : 'n'"/);
-    expect(v).toContain('input-class="bt-fkw"'); /* 六百五十批随迁：换装 SFB 后 bt-fkw 转运行时锚（sfbUnify650 锁） */
+    expect(v).toContain('input-class="bt-fkw"'); /* 六百五十批同步更新：改用 SFB 后 bt-fkw 转运行时锚（sfbUnify650 锁） */
     expect(v).toContain('class="bt-fen"');
     /* builtQuery 滤除停用行 */
     expect(v).toContain('f.disabled !== true && f.name.trim()');

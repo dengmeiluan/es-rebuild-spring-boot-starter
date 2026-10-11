@@ -14,10 +14,10 @@
 
 <script lang="ts">
 /* hostRaw 拆/拼纯函数（导出供行为 spec 直测）。
-   hostRaw 模式下父视图（ReindexAdvancedView）的 conn.host 承载完整
-   "[scheme://]host[:port]" 串（ES remote source 的 host 口径），组件内拆成
-   scheme/host/port 三段编辑、拼回单串回传。拼回恒等规则：拆不动的输入原样
-   落 host 段、scheme/port 缺席即不拼——任何输入 x 都满足 format(parse(x)) === x。 */
+ hostRaw 模式下父视图（ReindexAdvancedView）的 conn.host 承载完整
+ "[scheme://]host[:port]" 串（ES remote source 的 host 口径），组件内拆成
+ scheme/host/port 三段编辑、拼回单串回传。拼回恒等规则：拆不动的输入原样
+ 落 host 段、scheme/port 缺席即不拼——任何输入 x 都满足 format(parse(x)) === x。 */
 interface HostRawView { scheme: string; host: string; port: string | number }
 interface RemoteConn {
   scheme: 'http' | 'https' | '';
@@ -40,11 +40,11 @@ export function formatHostRaw(v: HostRawView): string {
 </script>
 
 <script setup lang="ts">
-/* 两页远程源连接表单统一件（XmigrateView 手动模式 / ReindexAdvancedView 远程源三框收编）。
-   纯展示件：状态与草稿策略留在父视图——Xmigrate 的 conn 草稿走 useScopedDraftState
-   （password 由 redactDraft 掩埋不落盘 + 挂载清残留），RA 三字段不进 formDraft（凭据永不落盘）。
-   DOM 锚点契约：容器类 .xm-conn 与 host 输入框 placeholder 以 "host" 开头、「连接检查」
-   按钮文案——rebuildThreeState 挂载型 spec 以最终 DOM 查询这些特征，改名即破锁。 */
+/* 两页远程源连接表单统一件（XmigrateView 手动模式 / ReindexAdvancedView 远程源三框合并）。
+ 纯展示件：状态与草稿策略留在父视图——Xmigrate 的 conn 草稿走 useScopedDraftState
+ （password 由 redactDraft 掩埋不落盘 + 挂载清残留），RA 三字段不进 formDraft（凭据永不落盘）。
+ DOM 锚点契约：容器类 .xm-conn 与 host 输入框 placeholder 以 "host" 开头、「连接检查」
+ 按钮文案——rebuildThreeState 挂载型 spec 以最终 DOM 查询这些特征，改名即破锁。 */
 import { computed } from 'vue';
 import { PlugZap } from 'lucide-vue-next';
 

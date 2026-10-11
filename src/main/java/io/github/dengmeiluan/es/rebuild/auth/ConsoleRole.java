@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 控制台三级角色（）。
+ * 控制台三级角色（。
  *
  * <p>rank 越大权限越高：VIEWER 只读（GET）、OPERATOR 低危写（普通 POST）、
  * ADMIN 高危操作（重建/迁移/别名切换/删除/集群 settings 等）。

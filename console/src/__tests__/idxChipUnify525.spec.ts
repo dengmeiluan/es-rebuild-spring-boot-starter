@@ -1,8 +1,8 @@
 /**
- * 五百二十五批 W2：follow 档视图页内「选索引」入口收敛 TopBar——六视图换装只读 CurrentIdxChip
+ * 五百二十五批 W2：follow 档视图页内「选索引」入口收敛 TopBar——六视图改用只读 CurrentIdxChip
  * + ProfileFlameView 本地目标态语义修 + indexOptions 死代码删除 + 同文件顺手件。
  *
- * ① 换装源码锁（六视图）：页内 IndexPicker 退役换 <CurrentIdxChip />（MappingDesigner/Lucene/
+ * ① 改用源码锁（六视图）：页内 IndexPicker 退役换 <CurrentIdxChip />（MappingDesigner/Lucene/
  *    Ilm/ReindexPreview/DiffEditor 主选/SearchSandbox）；useIdxState follow 绑定零改
  *    （DiffEditor 对比位 idxB 的 IndexPicker 原样保留）；SearchSandbox「留空=全集群」语义
  *    保留（chip 只在选中时渲染，空态照旧走 _all）；Lucene 未选索引出 DslQueryView 同款空态。
@@ -31,7 +31,7 @@ const rpv = read('../views/ReindexPreviewView.vue');
 const dfv = read('../views/DiffEditorView.vue');
 const pfv = read('../views/ProfileFlameView.vue');
 
-/* ═══════════ ① 六视图换装源码锁 ═══════════ */
+/* ═══════════ ① 六视图改用源码锁 ═══════════ */
 describe('六视图页内选择器退役换 CurrentIdxChip（525 批源码锁）', () => {
   it.each([
     ['MappingDesignerView', mdv],
@@ -208,7 +208,7 @@ describe('525 批顺手件', () => {
   it('Ilm 策略弹窗 JsonArea 视口档 min(60vh,358px) + 去 .meta-strip 双轨只留 .mono', () => {
     expect(ilm).toMatch(/class="ilm-policy-ja"[\s\S]{0,120}:rows="18"/);
     expect(ilm).toMatch(/\.ilm-policy-ja :deep\(\.monaco-host\) \{ height: min\(60vh, 358px\) !important; \}/);
-    expect(ilm).toMatch(/<MetaStrip class="ilm-meta" :items="ilmMeta"/); /* 五百三十五批锚随迁：.mono 摘除（组件 .ms 自带 mono 字族） */
+    expect(ilm).toMatch(/<MetaStrip class="ilm-meta" :items="ilmMeta"/); /* 五百三十五批锚同步更新：.mono 摘除（组件 .ms 自带 mono 字族） */
     expect(ilm, '全局 .meta-strip 类退役').not.toMatch(/class="[^"]*meta-strip/);
   });
 

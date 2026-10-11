@@ -1,8 +1,8 @@
 /**
- * 五百六十五批·轨2 W2 件②：IndexHub query tab 接 ProfileTree（552 记档「组件就绪待接」落地）。
+ * 五百六十五批·轨2 W2 件②：IndexHub query tab 接 ProfileTree（552 备案「组件就绪待接」落地）。
  *
- *  背景：IndexHubView.vue 记档「ProfileTree 组件已就绪待接」——query tab 就地执行无 Profile
- *  通道，per-shard/分段耗时只能在 DslQueryView 看。本批接上：
+ *  背景：IndexHubView.vue 备案「ProfileTree 组件已就绪待接」——query tab 就地执行无 Profile
+ *  通道，per-shard/分段耗时只能在 DslQueryView 看。接上：
  *  · query tab 执行行加 Profile 开关（ih.qry.profile usePref 落盘，默认关=DQ query.profile 同款）；
  *  · 开时 runDsl 走 api.profile（body 透传 _search+profile:true，hits/aggregations 同形不降级），
  *    主路径与 R90 降级重试路径同分支（DQ execQuery 双分支同款）；
@@ -47,7 +47,7 @@ describe('565 件②：IndexHub query tab ProfileTree 接线（源码锁）', ()
     expect(ih, '切索引清场').toMatch(/qryResp\.value = null; qryErr\.value = ''; qryPage\.value = 1; qryProfileTree\.value = null;/);
   });
 
-  it('552 「待接」记档退役（组件已接线，过时记档不留误导）', () => {
+  it('552 「待接」备案退役（组件已接线，过时备案不留误导）', () => {
     expect(ih).not.toContain('ProfileTree 组件已就绪待接');
   });
 });

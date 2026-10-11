@@ -10,12 +10,12 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-/* 第十批（lane）：历史弹窗体换装 QueryHistoryPanel 统一件——本地过滤/导出/空态实现退役，
+/* 第十批（lane）：历史弹窗体改用 QueryHistoryPanel 统一件——本地过滤/导出/空态实现退役，
    导出能力由共享件 exportShown 承接（过滤语义 shown + exportStamp 时间戳 + 诚实化 title 原样保留） */
 const src = readFileSync(join(__dirname, '../views/RestView.vue'), 'utf-8');
 const qhp = readFileSync(join(__dirname, '../components/QueryHistoryPanel.vue'), 'utf-8');
 
-describe('RestView 历史导出（九十二批，第十批收编 QueryHistoryPanel）', () => {
+describe('RestView 历史导出（九十二批，第十批合并 QueryHistoryPanel）', () => {
   it('导出按钮接线（shown 门控，共享件 exportShown）', () => {
     expect(qhp).toMatch(/:disabled="!shown\.length"[^>]*@click="exportShown"/);
     expect(qhp).toMatch(/function exportShown\(\)/);

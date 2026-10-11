@@ -190,7 +190,7 @@ describe('SettingsKeyInput 组件行为', () => {
     const { host } = await mountInput();
     await focus(host);
     await type(host, 'refres');
-    /* 560 随迁：SETTINGS_CATALOG 补 max_refresh_listeners（contains 命中 'refres'）——
+    /* 560 同步更新：SETTINGS_CATALOG 补 max_refresh_listeners（contains 命中 'refres'）——
        原契约意图保持：前缀命中优先，refresh_interval 仍居首（徽标/hint 行跟随断言零改），
        contains 组员按字母序殿后 */
     expect(itemKeys()).toEqual(['refresh_interval', 'max_refresh_listeners']);

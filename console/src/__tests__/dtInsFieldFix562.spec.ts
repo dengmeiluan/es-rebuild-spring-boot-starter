@@ -9,7 +9,7 @@
  *    修法=compactLoadErr 单源：抽 status line 状态码 + ES 首个 reason，未命中形态
  *    退 160 字截断（七消费面 FieldPicker/补全白得）。
  *  C .dt-actions 单轨化——实报窄容器按钮换行堆竖排（401 批「容器换行+子项不内断」
- *    不治本）。修法=543 批 lrBarSingleTrack 立法同刀：nowrap+横滚+flex:1 1 0 与
+ *    不治本）。修法=543 批 lrBarSingleTrack 约定同刀：nowrap+横滚+flex:1 1 0 与
  *    ⤢ 聚焦钮同行；子项 nowrap/flex-shrink:0 保留。
  *
  * 源码锁口径（assistLintWave533 同理由）：scoped CSS/computed 形态契约落源文本最稳。

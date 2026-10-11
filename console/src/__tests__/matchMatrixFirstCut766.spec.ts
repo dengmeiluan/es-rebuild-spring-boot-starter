@@ -4,12 +4,12 @@
  * 首刀族同构；本页首例真挂载首刀后 spec——matchMatrixSort 同源挂载/mock 形态：
  * 视图/组件全真，只 mock ../api 出口+JsonArea（Monaco）边界 stub；hash 深链 ?idx=）。
  *
- * ① G232（P3 死代码·头号）mm- 四死规则=页头三伴（PageHeader 收编漏删——源内
+ * ① G232（P3 死代码·头号）mm- 四死规则=页头三伴（PageHeader 合并漏删——源内
  *    「第十批」注释自证删 -hd-tt/-hd-sub 而三伴漏删）+ .mm-ii（IndexPicker 退役
  *    伴漏删+注释宣称已删规则仍在=764 .as-ii 同款再演，713 G53/715 G56/717 G61/
  *    721 G72/727 G86/729 G94/737 G131/741 G147/761 G220 同族）——修法=纯删零连锁；
  *    .mm-hd 基础规则与 @media 900 档活规则不动；scoped 规则 23→19 恰减四
- *    （765 盘点记档口径=「.mm-」前缀规则块数）。
+ *    （765 盘点备案口径=「.mm-」前缀规则块数）。
  * ② G234（P3 铁律 D·次刀）跑矩阵/重试钮 busy 无 spinning 无在途文案（busy 行
  *    「查询中…」+disabled 在场=半合规；746 G161/750 G185/721 G73 族）——修法=
  *    Loader2 v-if busy + Play v-else 双态+「查询中…」在途文案（AdhocRebuildView
@@ -85,7 +85,7 @@ beforeEach(() => {
   searchRawFn.mockReset().mockResolvedValue({ hits: { hits: HITS } });
 });
 
-describe('766 A0 挂载不变量负锚（现状即守卫，非本批刀面）', () => {
+describe('766 A0 挂载不变量负锚（现状即守卫，非刀面）', () => {
   it('页头三 action 钮+引导空态+run 钮 ?idx= 解禁+stats/表零渲染', async () => {
     const { app, host } = await mountMm();
     const btns = [...host.querySelectorAll<HTMLButtonElement>('button')].map(b => b.textContent || '');
@@ -101,7 +101,7 @@ describe('766 A0 挂载不变量负锚（现状即守卫，非本批刀面）', 
   });
 });
 
-describe('766 G232 四死规则整删（死代码·头号·PageHeader 收编漏删三伴+IndexPicker 退役伴漏删）', () => {
+describe('766 G232 四死规则整删（死代码·头号·PageHeader 合并漏删三伴+IndexPicker 退役伴漏删）', () => {
   it('源码锁：四死类 scoped 定义绝迹（模板本就零引用；-ic 负向锚收词界防误伤活类）', () => {
     expect(src, '页头三伴之一死规则须删').not.toMatch(/\.mm-hd-l\b/);
     expect(src, '页头三伴之二死规则须删（活类无 -ic 前缀冲突，词界锚）').not.toMatch(/\.mm-hd-ic\s*\{/);
@@ -134,12 +134,12 @@ describe('766 G234 run/重试钮在途态（铁律 D·次刀·746 G161 spinning+
     await settle(8);
     expect(runBtn.disabled, '完成复常解禁').toBe(false);
     expect(runBtn.textContent, '复常文案').toContain('跑矩阵');
-    expect(runBtn.querySelector('.spinning'), 'spinning 退场').toBe(null);
+    expect(runBtn.querySelector('.spinning'), 'spinning 移除').toBe(null);
     /* lucide-vue-next 本版本类名带 -icon 后缀（diag 实锚：lucide lucide-play-icon） */
     expect(runBtn.querySelector('.lucide-play-icon'), 'Play 图标复位').toBeTruthy();
     app.unmount();
   });
-  it('健康面守卫：busy 行内 spinner 双通道并存（.mm-busy「查询中…」不随本刀退场）', async () => {
+  it('健康面守卫：busy 行内 spinner 双通道并存（.mm-busy「查询中…」不随本刀移除）', async () => {
     let resolveRun!: (v: any) => void;
     searchRawFn.mockImplementation(() => new Promise(res => { resolveRun = res; }));
     const { app, host } = await mountMm();
@@ -151,7 +151,7 @@ describe('766 G234 run/重试钮在途态（铁律 D·次刀·746 G161 spinning+
     expect(busyRow!.querySelector('.spinning')).toBeTruthy();
     resolveRun({ hits: { hits: HITS } });
     await settle(8);
-    expect(host.querySelector('.mm-busy'), '完成 busy 行退场').toBe(null);
+    expect(host.querySelector('.mm-busy'), '完成 busy 行移除').toBe(null);
     app.unmount();
   });
   it('源码锁：双钮 Loader2 v-if busy 双态形态在场（重试钮 busy 态随 err-bar 卸载不可观测——源码对称防未来面板保形漏配）', () => {

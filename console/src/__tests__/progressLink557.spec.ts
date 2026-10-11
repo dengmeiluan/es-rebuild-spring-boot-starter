@@ -6,7 +6,7 @@
  * deleted 计数)全站零消费——提交 wait_for_completion=false 异步返回 taskId 后,用户只能
  * 「到任务树」间接看进度,结果卡行内无即时反馈。Java 零改(端点现成)。
  *
- * 本批两视图(ReindexAdvancedView 结果区 taskId 行 / UpdateByQueryView StatusPill 旁)
+ * 两视图(ReindexAdvancedView 结果区 taskId 行 / UpdateByQueryView StatusPill 旁)
  * 加「查进度」钮:点击一次性拉取 api.progress(taskId),行内三态中文渲染:
  * RUNNING=进行中 created/total;COMPLETED=已完成;UNKNOWN/拉取失败=查不到降级
  * (任务完成后从 _tasks 消失/过期是常态路径,降级是预期分支不是异常)。不挂轮询。

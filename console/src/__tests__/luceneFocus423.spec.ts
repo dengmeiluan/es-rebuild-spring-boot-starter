@@ -1,6 +1,6 @@
 /**
  * 四百二十三批：Lucene 结果表接聚焦放大——401 FocusableSurface 能力推广到高频查询页。
- * 五百六十一批随迁（表格头收口）：QRT 移出外层 FS 常驻（表格/JSON 双档同渲染），
+ * 五百六十一批同步更新（表格头收口）：QRT 移出外层 FS 常驻（表格/JSON 双档同渲染），
  * 聚焦放大换 QRT 内建聚焦面（FS headless，pane-id=qrt.table；:hide-body 分档 + 
  * hideBody→true 自动退聚焦=RT 552 rtFix552 对称件）；seg+JSONL 寄居 QRT #bar-prepend；
  * JSON 树聚焦面（lucene.json）保留、JSON 聚焦态工具行保留（460 批锚）。锁意图不变：
@@ -12,7 +12,7 @@ import { join } from 'node:path';
 
 const v = readFileSync(join(__dirname, '../views/LuceneQueryView.vue'), 'utf-8');
 
-describe('Lucene 结果表聚焦放大（423 批→561 表格头收口随迁）', () => {
+describe('Lucene 结果表聚焦放大（423 批→561 表格头收口同步更新）', () => {
   it('QRT 常驻 + hide-body 视图分档 + 内建聚焦接管（外层表格 FS 退役）', () => {
     expect(v, '表格档外层 FS 已退役（QRT 内建聚焦承接）').not.toMatch(/<FocusableSurface v-if="viewMode === 'table'"/);
     expect(v, 'QRT 常驻：:hide-body 分档在场').toMatch(/:hide-body="viewMode !== 'table'"/);
@@ -22,7 +22,7 @@ describe('Lucene 结果表聚焦放大（423 批→561 表格头收口随迁）'
   });
 
   it('seg+JSONL 寄居 QRT bar-prepend（541 同款范式）；JSON 顶部分页器保留', () => {
-    /* 811 批锁随迁：seg 升格容器属性（role=group+aria-label），寄居范式不变 */
+    /* 811 批锁同步更新：seg 升格容器属性（role=group+aria-label），寄居范式不变 */
     expect(v).toMatch(/<template #bar-prepend>[\s\S]*?<div class="seg" role="group" aria-label="展示形态">/);
     expect(v).toMatch(/<button :class="\{ on: viewMode === 'json' \}" :aria-pressed="viewMode === 'json'" @click="viewMode = 'json'">文档 JSON<\/button>/);
     expect(v).toMatch(/<Pagination v-if="viewMode === 'json'" :page="page"/);

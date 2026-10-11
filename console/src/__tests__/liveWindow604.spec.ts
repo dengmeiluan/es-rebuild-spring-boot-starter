@@ -2,7 +2,7 @@
  * 六百零四批·R64 实时区趋势窗长切换（对标阿里云时间控件体验；R57 档案候选②落地）。
  *
  * 现状：实时六卡/对比卡趋势窗=store 常量 MAX_POINTS（120 点）写死，用户无法看更长/更短
- * 窗口。本批=①store 采样上限提至 240（5s 前台≈20 分钟）；②窗长偏好 live.windowPts
+ * 窗口。=①store 采样上限提至 240（5s 前台≈20 分钟）；②窗长偏好 live.windowPts
  * （60/120/240 点，usePref 跨会话记忆，默认 120）；③视图 winSlice 截尾单源（六卡折线/
  * 面积、对比卡序列、悬浮 ts 同窗）；④windowLabel 按截尾 ts 真实跨度标注。
  * 批号注：602/603 被对方 lane 占（gate-602/603 untracked 在树），liveWindow604 功能名锚定。
@@ -84,7 +84,7 @@ describe('六百零四批：实时区趋势窗长切换', () => {
       mon.sampleTs = Array.from({ length: 130 }, (_, i) => 1000 + i * 1000);
       await settle();
       const qpsSvg = host.querySelectorAll('.ld-svgwrap')[0].querySelector('svg')!;
-      /* 六百八十一批随迁：主卡折线 polyline→path.ld-line（622 §9-D4 Catmull-Rom 平滑）——
+      /* 六百八十一批同步更新：主卡折线 polyline→path.ld-line（622 §9-D4 Catmull-Rom 平滑）——
          锚点段数语义不变：d = M 首点 + (n-1) 条 C，段数=C 计数+1 */
       const segOf = (svg: SVGSVGElement) => {
         const d = svg.querySelector('path.ld-line')!.getAttribute('d') ?? '';
@@ -100,7 +100,7 @@ describe('六百零四批：实时区趋势窗长切换', () => {
       sel.value = '60';
       sel.dispatchEvent(new Event('change', { bubbles: true }));
       await settle();
-      /* 794 件1 随迁：对比面悬浮面板化（默认关）——断言前点入口钮开面板 */
+      /* 794 件1 同步更新：对比面悬浮面板化（默认关）——断言前点入口钮开面板 */
       (host.querySelector('.ld-ncmp-entry') as HTMLButtonElement)?.click();
       await settle();
       const seg60 = segOf(host.querySelectorAll('.ld-svgwrap')[0].querySelector('svg')!);
@@ -121,11 +121,11 @@ describe('六百零四批：实时区趋势窗长切换', () => {
       mon.nodes = [{ nodeId: 'n1', name: 'qa-es-1', roles: ['data'], heapPct: 30, cpuPct: 38, diskTotal: 100, diskFree: 41 }];
       mon.nodeSeries = { 'qa-es-1': { heap: Array.from({ length: 130 }, (_, i) => i % 100), cpu: [1, 2], disk: [1, 2], qps: [1, 2], idx: [1, 2] } };
       await settle();
-      /* 794 件1 随迁：对比面悬浮面板化（默认关）——断言前点入口钮开面板 */
+      /* 794 件1 同步更新：对比面悬浮面板化（默认关）——断言前点入口钮开面板 */
       (host.querySelector('.ld-ncmp-entry') as HTMLButtonElement)?.click();
       await settle();
       const cmp = host.querySelector('.ld-ncmp-panel')!;
-      /* 八百二十八批 polyline→path 平滑随迁：points 点数断言改为 winSlice 截取语义直证（heap 序列 130 点→窗 120 点） */
+      /* 八百二十八批 polyline→path 平滑同步更新：points 点数断言改为 winSlice 截取语义直证（heap 序列 130 点→窗 120 点） */
       const heapWin = mon.nodeSeries['qa-es-1'].heap.slice(-120);
       expect(heapWin.length, '对比卡 heap 折线同窗 120').toBe(120);
       expect(mon.nodeSeries['qa-es-1'].heap.length, '原序列 130 不变（截取非破坏）').toBe(130);

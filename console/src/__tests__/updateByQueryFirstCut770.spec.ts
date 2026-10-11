@@ -131,7 +131,7 @@ beforeEach(() => {
   progressFn.mockReset().mockResolvedValue({ status: 'RUNNING', total: 20, created: 7 });
 });
 
-describe('770 A0 挂载不变量负锚（现状即守卫，非本批刀面）', () => {
+describe('770 A0 挂载不变量负锚（现状即守卫，非刀面）', () => {
   it('页头双模式钮+八字段 label+模板四钮+收藏/清空+预估/执行+Painless 区在场', async () => {
     const { app, host } = await mountUq();
     expect(findBtn(host, 'update_by_query'), 'update 模式钮').toBeTruthy();
@@ -171,7 +171,7 @@ describe('770 G241 预估钮在途双态（铁律 D·头名·768 G238/766 G234/7
     await settle(10);
     expect(btn.disabled, '完成复常解禁').toBe(false);
     expect(btn.textContent, '复常文案').toContain('预估影响文档数');
-    expect(btn.querySelector('.spinning'), 'spinning 退场').toBe(null);
+    expect(btn.querySelector('.spinning'), 'spinning 移除').toBe(null);
     expect(btn.querySelector('[class*="lucide-search"]'), 'Search 图标复位').toBeTruthy();
     expect(searchDslFn, '单发（无重复触发）').toHaveBeenCalledTimes(1);
     expect((host.textContent || ''), '千分位结果在场').toContain('1,234');

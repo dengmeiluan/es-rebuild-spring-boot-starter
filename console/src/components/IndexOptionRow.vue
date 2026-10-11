@@ -4,11 +4,11 @@
       <span v-if="kind === 'alias'" class="ior-tag">别名</span>
       <span v-else class="ior-dot" :class="'h-' + (health || 'grey')" :title="'health: ' + (health || '-')"></span>
       <span class="ior-name mono" :title="name"><!--
-        --><template v-for="(seg, si) in nameSegs" :key="si"><!--
-          --><mark v-if="seg.m">{{ seg.t }}</mark><!--
-          --><template v-else>{{ seg.t }}</template><!--
-        --></template><!--
-      --></span>
+ --><template v-for="(seg, si) in nameSegs" :key="si"><!--
+ --><mark v-if="seg.m">{{ seg.t }}</mark><!--
+ --><template v-else>{{ seg.t }}</template><!--
+ --></template><!--
+ --></span>
       <span v-if="meta" class="ior-meta">{{ meta }}</span>
       <button :aria-label="'复制：' + name" class="ior-copy" :title="'复制：' + name" @mousedown.stop.prevent @click.stop="doCopy">
         <Copy :size="11" />
@@ -27,14 +27,14 @@
 
 <script setup lang="ts">
 /* W3 D7：下拉/列表通用的索引条目——双行宽松形态。
-   首行：health 点/别名 tag + 中段省略名 + meta + hover 复制钮；次行：别名 chips。
-   复制/chip 双拦（mousedown/click）：弹层 mousedown 会关面板、click 会触发行选中。 */
+ 首行：health 点/别名 tag + 中段省略名 + meta + hover 复制钮；次行：别名 chips。
+ 复制/chip 双拦（mousedown/click）：弹层 mousedown 会关面板、click 会触发行选中。 */
 import { computed } from 'vue';
 import { Copy } from 'lucide-vue-next';
 import { copyText } from '../utils/format';
 /* 命中高亮收口 splitMark 分段渲染——原 esc()+<mark> 串接只标首处（indexOf 单点），
-   且 v-html 是本组件唯一注入面。模板 v-for 插值天然转义：多命中全标 + 数值归一白得，
-   字面行为零漂移（kw 空白 trim 后视同无高亮，单段原文）。 */
+ 且 v-html 是本组件唯一注入面。模板 v-for 插值天然转义：多命中全标 + 数值归一白得，
+ 字面行为零漂移（kw 空白 trim 后视同无高亮，单段原文）。 */
 import { splitMark } from '../composables/useGridSearch';
 import { useAppStore } from '../stores/app';
 
@@ -52,7 +52,7 @@ const emit = defineEmits<{ (e: 'select-alias', name: string): void }>();
 const store = useAppStore();
 
 /* v3.0.1:去中段省略双重截断（原 midEllipsis 已于 退役）——CSS ellipsis+title 全文已兜底,JS 再截会让高亮定位失真且复制语义混乱。
-   v-html 面退役——splitMark 分段直接模板渲染（多命中全标），shown/esc 一并退役 */
+ v-html 面退役——splitMark 分段直接模板渲染（多命中全标），shown/esc 一并退役 */
 const nameSegs = computed(() => splitMark(props.name, props.hl || ''));
 
 async function doCopy() {

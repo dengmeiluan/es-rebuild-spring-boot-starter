@@ -1,8 +1,8 @@
-/* kernel 层存储写入残量收编看守（854 批·851~853 存储防御族收官件）。
+/* kernel 层存储写入残量合并看守（854 批·851~853 存储防御族收官件）。
  *
  * 病灶家族：852 批 G2 正面清单 FROZEN_GUARDED 11 文件的 try 壳/裸写残量 18 位点
- * （stripComments 口径实勘：同行 try 壳 10+多行纯壳 5+真裸写 3）。854 收编
- * utils/safeJson writeStoredRaw/removeStoredRaw 单源（852 立法：try+吞异常+回执
+ * （stripComments 口径实勘：同行 try 壳 10+多行纯壳 5+真裸写 3）。854 合并
+ * utils/safeJson writeStoredRaw/removeStoredRaw 单源（852 约定：try+吞异常+回执
  * 布尔——存储不可用 ≠ 功能不可用，内存态照常可用）；冗余存储壳剥除（单源语义
  * 承载），混合域 try（useLinkCarry.receive 读+焚+解析链）保壳只换芯；读侧
  * try-getItem（readRaw/readLegacySplit/restore）归 851 读侧域不动。
@@ -29,7 +29,7 @@ const read = (rel: string) => readFileSync(join(srcDir, rel), 'utf8');
 const stripComments = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ');
 const RAW_OP = /(localStorage|sessionStorage)\.(setItem|removeItem)\(/;
 
-/* 852 时点 FROZEN_GUARDED 正面清单（854 收编对象）——收编后恒零，清单只减不增 */
+/* 852 时点 FROZEN_GUARDED 正面清单（854 合并对象）——合并后恒零，清单只减不增 */
 const KERNEL_GUARD_FILES = [
   'composables/confirm.ts',
   'composables/continuity.ts',
@@ -62,7 +62,7 @@ function armQuotaFailure() {
   }
 }
 
-describe('kernelStorageGuard854 · kernel 存储残量收编', () => {
+describe('kernelStorageGuard854 · kernel 存储残量合并', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     localStorage.clear();
@@ -74,7 +74,7 @@ describe('kernelStorageGuard854 · kernel 存储残量收编', () => {
     vi.restoreAllMocks();
   });
 
-  /* —— 单源自证（换装基建在场）—— */
+  /* —— 单源自证（改用基建在场）—— */
 
   it('S1 writeStoredRaw/removeStoredRaw 成功与配额抛写双态回执', () => {
     expect(writeStoredRaw(localStorage, 's1key', 'v')).toBe(true);

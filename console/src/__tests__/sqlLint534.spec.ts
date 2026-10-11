@@ -7,7 +7,7 @@
  *    行尾悬空 AND/OR）——输出 { line, message, suggestion } 行号形态；
  *  B 合法语句零误报（SqlConsole 六模板 + SqlBridge 示例 + 大小写/转义/子查询形态）；
  *  C 两页接线源锚：setLineMarkers(owner='es-sql-lint') + 页内 banner 双通道在場，
- *    useDebounceFn 250ms 防抖统一件；SqlConsole .sq-grid 高度链确定解不被本批触碰。
+ *    useDebounceFn 250ms 防抖统一件；SqlConsole .sq-grid 高度链确定解不被触碰。
  *
  * 行为断言直接 import 纯函数驱动（零 Monaco 依赖是本件第一契约）；接线断言落源文本
  * （assistLintWave533 同理由：happy-dom 不参与 Monaco 划线计算，接线形态契约源文本最稳）。
@@ -96,7 +96,7 @@ describe('A sqlLint 五规则穷举', () => {
 });
 
 describe('B 合法语句零误报（模板级样例）', () => {
-  /* SqlConsoleView TEMPLATES 逐字（本批 lint 上线后这六条是页内一键盘） */
+  /* SqlConsoleView TEMPLATES 逐字（ lint 上线后这六条是页内一键盘） */
   const TEMPLATES = [
     'SELECT * FROM "my-index" ORDER BY ts DESC LIMIT 100',
     'SELECT status, COUNT(*) as cnt FROM "my-index" GROUP BY status',
@@ -130,7 +130,7 @@ describe('C 两页接线源锚（划线 + banner 双通道）', () => {
     expect(consoleView).toContain(".setLineMarkers?.(");
     expect(consoleView).toContain("'es-sql-lint'");
     expect(consoleView).toContain('sqlLintFindings.value.map(f => ({ line: f.line, message: f.message');
-    expect(consoleView, '页内 banner 双通道在場（562 批随迁：lint-bar 单源换装，锚并存）').toContain('class="lint-bar sq-sql-lint lint-bar-warn" role="status"');
+    expect(consoleView, '页内 banner 双通道在場（562 批同步更新：lint-bar 单源改用，锚并存）').toContain('class="lint-bar sq-sql-lint lint-bar-warn" role="status"');
     expect(consoleView).toContain('watch(sql, () => { queueSqlLintMarkers(); }, { immediate: true });');
     expect(consoleView).toMatch(/useDebounceFn\(\(\) => \{[\s\S]*?\}, 250\)/);
   });
@@ -139,15 +139,15 @@ describe('C 两页接线源锚（划线 + banner 双通道）', () => {
     expect(bridgeView).toContain("import { lintSql } from '../utils/sqlLint';");
     expect(bridgeView).toContain('ref="brSqlMonaco"');
     expect(bridgeView).toContain("'es-sql-lint'");
-    expect(bridgeView, '页内 banner 双通道在場（562 批随迁：lint-bar 单源换装，锚并存）').toContain('class="lint-bar br-sql-lint lint-bar-warn" role="status"');
+    expect(bridgeView, '页内 banner 双通道在場（562 批同步更新：lint-bar 单源改用，锚并存）').toContain('class="lint-bar br-sql-lint lint-bar-warn" role="status"');
     expect(bridgeView).toContain('watch(sql, () => { queueBrSqlLintMarkers(); }, { immediate: true });');
     /* br pane 弹性骨架逐字不动：编辑器仍 flex:1 1 0 + min-height:260px（原值）。
-       五百三十五批随迁（锚随换装迁移先例）：三 pane 卡壳退役（四刀③④），承重根
-       .br-card→.br-pane 换装（height:100%+flex column 字面等效随迁），monaco-host 直挂原 flex 字面 */
+       五百三十五批同步更新（锚随改用迁移先例）：三 pane 卡壳退役（四刀③④），承重根
+       .br-card→.br-pane 改用（height:100%+flex column 字面等效同步更新），monaco-host 直挂原 flex 字面 */
     expect(bridgeView).toContain('.br-pane > :deep(.monaco-host) { flex: 1 1 0; min-height: 260px; }');
   });
 
-  it('SqlConsole 高度链确定解不被本批触碰（minmax(170px,42vh) + flex:1 min-height:0 逐字）', () => {
+  it('SqlConsole 高度链确定解不被触碰（minmax(170px,42vh) + flex:1 min-height:0 逐字）', () => {
     expect(consoleView).toContain('.sq-grid { grid-template-rows: minmax(170px, 42vh); }');
     expect(consoleView).toContain('.sq-editor { display: flex; flex-direction: column; min-height: 0; }');
     expect(consoleView).toContain('.sq-editor > :deep(.monaco-host) { flex: 1 1 0; min-height: 0; }');

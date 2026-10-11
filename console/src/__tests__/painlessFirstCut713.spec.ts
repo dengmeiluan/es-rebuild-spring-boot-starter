@@ -102,7 +102,7 @@ beforeEach(() => {
 afterEach(() => { while (apps.length) apps.pop()!.unmount(); });
 
 describe('G50：切输入源后结果区状态卫生（铁律 D 状态不误导）', () => {
-  it('① 失败试跑挂错误 → 点模板 → 旧错误退场回空态（loadTpl 清 runErr）', async () => {
+  it('① 失败试跑挂错误 → 点模板 → 旧错误移除回空态（loadTpl 清 runErr）', async () => {
     const host = await mountView();
     painlessExecuteFn.mockRejectedValue(new Error('PROBE_ERR: 500'));
     findBtn(host, '试跑').click();
@@ -111,11 +111,11 @@ describe('G50：切输入源后结果区状态卫生（铁律 D 状态不误导�
     expect(errOut, '失败试跑后错误态必须在场（前置）').toBeTruthy();
     findBtn(host, '算术').click();
     await settle();
-    expect(host.querySelector('.pl-out'), '切模板后旧错误必须退场').toBeNull();
+    expect(host.querySelector('.pl-out'), '切模板后旧错误必须移除').toBeNull();
     expect(host.textContent, '回空态引导文案').toContain('点击「试跑」运行脚本');
   });
 
-  it('② 成功试跑挂结果 → 点已存储脚本行 → 旧结果退场（pickStored 清 result）', async () => {
+  it('② 成功试跑挂结果 → 点已存储脚本行 → 旧结果移除（pickStored 清 result）', async () => {
     listStoredScriptsFn.mockResolvedValue({ scripts: { probe_1: { lang: 'painless', source: 'return 1;' } } });
     const host = await mountView();
     painlessExecuteFn.mockResolvedValue({ result: 42 });
@@ -126,10 +126,10 @@ describe('G50：切输入源后结果区状态卫生（铁律 D 状态不误导�
     expect(row, 'stored 行必须在场（前置）').toBeTruthy();
     row!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await settle();
-    expect(host.querySelector('.pl-out'), '切已存储脚本后旧结果必须退场').toBeNull();
+    expect(host.querySelector('.pl-out'), '切已存储脚本后旧结果必须移除').toBeNull();
   });
 
-  it('③ 失败试跑挂错误 → 点已存储脚本行 → 旧错误退场（pickStored 清 runErr）', async () => {
+  it('③ 失败试跑挂错误 → 点已存储脚本行 → 旧错误移除（pickStored 清 runErr）', async () => {
     listStoredScriptsFn.mockResolvedValue({ scripts: { probe_1: { lang: 'painless', source: 'return 1;' } } });
     const host = await mountView();
     painlessExecuteFn.mockRejectedValue(new Error('PROBE_ERR: 500'));
@@ -138,7 +138,7 @@ describe('G50：切输入源后结果区状态卫生（铁律 D 状态不误导�
     expect(host.querySelector('.pl-out.err'), '失败试跑后错误态必须在场（前置）').toBeTruthy();
     host.querySelector('.pl-stored')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await settle();
-    expect(host.querySelector('.pl-out'), '切已存储脚本后旧错误必须退场').toBeNull();
+    expect(host.querySelector('.pl-out'), '切已存储脚本后旧错误必须移除').toBeNull();
   });
 
   it('④ 源码锁：loadTpl/pickStored 两函数 runErr/result 双清（与 run() 起手三清对称）', () => {

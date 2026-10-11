@@ -1,13 +1,13 @@
 /**
- * 六百六十七批·轨2：IndexHub alt 三视图换装 AltHitsViews 统一件（565 暂缓件解冻收口）。
+ * 六百六十七批·轨2：IndexHub alt 三视图改用 AltHitsViews 统一件（565 件解冻收口）。
  *
  *  背景：565 件③抽 AltHitsViews 共享件时 DQ 落地、IndexHub docs/query 两域跳过——
- *  ihUnify554 DOM 字面锁在册 + 工作树 11 M 残留未清（altViewsShare565 头注记档
- *  「留给锁随迁批」）。658 批接管提交 9e999d7e 后工作树 M=0、黑名单制度性清零，
- *  冻结前提蒸发，本批解冻收口：IH 两域六分支换装共享件单源（轨4「相同场景共用
- *  同一套组件」执法；DQ/RT/QRT 之后第四消费面）。
+ *  ihUnify554 DOM 字面锁在册 + 工作树 11 M 残留未清（altViewsShare565 头注备案
+ *  「留给锁同步更新批」）。658 批接管提交 9e999d7e 后工作树 M=0、黑名单制度性清零，
+ *  冻结前提蒸发，解冻收口：IH 两域六分支改用共享件单源（轨4「相同场景共用
+ *  同一套组件」；DQ/RT/QRT 之后第四消费面）。
  *
- *  契约（本批验收锚）：
+ *  契约（验收锚）：
  *  一、IH import 共享件 + docs/query 两域 json/tree/cards 六分支各挂一件
  *      （view/:json-html/:tree-data/:hits + @open-doc 契约，565 DQ 同款）；
  *  二、内联内脏退役负锚：pre v-html 直挂/JsonTree 直挂/卡片 v-for 行/
@@ -15,7 +15,7 @@
  *  三、留宿主正锚（防过收）：jsonc 高亮链导入 + 两域行集 computed + 高亮管道
  *      在场（共享件输入源）；包裹层 v-show 容器类 ih-json-wrap/ih-tree-view/ih-cards
  *      + ih-alt-body 留宿主（track2Wave560-ih CSS 锁零触）。
- *  行为等值由随迁后 ihUnify554（四段点卡开文档）+ 565 组件行为锁 + 真机探针三重承接。
+ *  行为等值由同步更新后 ihUnify554（四段点卡开文档）+ 565 组件行为锁 + 真机探针三重承接。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';

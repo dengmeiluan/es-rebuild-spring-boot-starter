@@ -9,7 +9,7 @@
  *      不触发布局），挂在 `.ld-page .ld-chart-cur`；六处当前值靠 `:key` 绑定数值
  *      （值变才换节点 → 才重放动画；值不变不抖）；
  *   3) **降级**：不在视图内新增 `prefers-reduced-motion` 块——theme.css 全局兜底
- *      （`*{transition-duration:.01ms!important}`）已覆盖本批纯 transition/animation 形态
+ *      （`*{transition-duration:.01ms!important}`）已覆盖纯 transition/animation 形态
  *      （adaptive556 计数锁，625-C1/632-C1 同律）。
  * 负锁剥注释（unifyWave561 口径）。
  */
@@ -20,13 +20,13 @@ import { join } from 'node:path';
 const read = (p: string) => readFileSync(join(__dirname, '..', p), 'utf-8');
 const codeOf = (p: string) => read(p).replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/<!--[\s\S]*?-->/g, ' ');
 const VIEW = codeOf('views/LiveDashboardView.vue');
-const CARD = codeOf('components/LiveChartCard.vue'); /* 六百三十八批 P1a-2：五线卡收编进组件 */
+const CARD = codeOf('components/LiveChartCard.vue'); /* 六百三十八批 P1a-2：五线卡合并进组件 */
 
 describe('六百三十三批①：按区入场编排（622 §3.3）', () => {
   it('四区容器挂 data-st 1..4（六卡 / 节点 / 告警 / 历史，按区分组）', () => {
     expect(VIEW, '六卡区').toMatch(/<div class="ld-charts" data-st="1" /);
     expect(VIEW, '节点区').toMatch(/<div class="ld-nodes" data-st="2" /);
-    /* 八百二十六批B3 随迁：告警区空态整行 v-if 前缀（搁浅分隔条退役） */
+    /* 八百二十六批B3 同步更新：告警区空态整行 v-if 前缀（搁浅分隔条退役） */
     expect(VIEW, '告警区').toMatch(/<div v-if="activeAlerts\.length \|\| resolvedAlerts\.length" class="ld-alerts" data-st="3" /);
     expect(VIEW, '历史区').toMatch(/<div class="ld-hist" data-st="4" /);
   });
@@ -64,13 +64,13 @@ describe('六百三十三批②：数值 roll（622 §3.4）', () => {
   it('@keyframes ld-roll + 挂 .ld-charts .ld-chart-cur（不动既有 .ld-chart-cur 规则）', () => {
     expect(VIEW, 'keyframes 名').toMatch(/@keyframes ld-roll \{ from \{ opacity: 0; transform: translate3d\(0, 7px, 0\); \} \}/);
     expect(VIEW, '动画挂载').toMatch(/\.ld-charts \.ld-chart-cur \{ animation: ld-roll var\(--dur-base\) var\(--ease-out\); \}/);
-    /* 既有档位规则逐字保形（liveVisual597 锚；799 随迁：任务卡头升两行制 KPI=fs-num→fs-num-l 28px 与 LiveChartCard 同构） */
+    /* 既有档位规则逐字保形（liveVisual597 锚；799 同步更新：任务卡头升两行制 KPI=fs-num→fs-num-l 28px 与 LiveChartCard 同构） */
     expect(VIEW, '档位规则保形（799 终态）').toMatch(/\.ld-chart-cur \{ display: block; font-family: var\(--mono\); font-size: var\(--fs-num-l\);/);
   });
 
   it('六处当前值 :key 绑数值（值变才换节点 → 才重放）', () => {
     /* 五线卡 :key 经 cur-key 传入组件（组件内 :key="curKey"）；任务卡 :key 留视图 */
-    /* 六百四十七批随迁（击穿者：G'3——cur-text/cur-key 收编 *Text computed，无数据回落
+    /* 六百四十七批同步更新（击穿者：G'3——cur-text/cur-key 合并 *Text computed，无数据回落
        「—」语义；:key 仍绑值派生表达式：text 值变才变、「—」态稳定不重放，锁意图零回退） */
     const keys = VIEW.match(/:cur-key="(qpsText|idxText|heapText|cpuText|diskText)"/g) ?? [];
     expect(keys.length, '五线卡 cur-key 传入').toBe(5);

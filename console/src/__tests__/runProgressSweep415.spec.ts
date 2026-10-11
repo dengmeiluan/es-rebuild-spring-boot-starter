@@ -24,8 +24,8 @@ describe('执行进度条全站推广（415 批）', () => {
       expect(v, `${f} 进度条`).toContain(`<div class="pg-progress ind-bar" :class="{ on: ${busy} }"></div>`);
       const rootRule = v.match(new RegExp(`${rootCls.replace(/\./g, '\\.')} \\{[^}]*\\}`))?.[0] ?? '';
       expect(rootRule, `${f} 页根 relative 锚`).toContain('position: relative');
-      /* 430 批：样式收编 theme.css，视图内只保留接线 */
-      expect(v, `${f} 定位规则已收编`).not.toContain('.pg-progress { position: absolute');
+      /* 430 批：样式合并 theme.css，视图内只保留接线 */
+      expect(v, `${f} 定位规则已合并`).not.toContain('.pg-progress { position: absolute');
     });
   }
 

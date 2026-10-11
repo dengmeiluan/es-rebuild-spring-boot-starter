@@ -1,5 +1,5 @@
 /**
- * 五百一十九批：列宽适应内容内核（useColFit）——RT/QRT 各自手写 fitCol 收编。
+ * 五百一十九批：列宽适应内容内核（useColFit）——RT/QRT 各自手写 fitCol 合并。
  * 锁定：测量=列头名与前 N 行单元格 scrollWidth 取最大；前置固定列偏移注入（RT=2/QRT=1）；
  * 钳位 COL_W_MIN~COL_W_MAX=60~600（五百二十批起上限与两表手动微调同源——双击自适应
  * 不再反缩手动拖宽的列）；max=0 安全 no-op 不写宽（happy-dom 无布局引擎口径）；

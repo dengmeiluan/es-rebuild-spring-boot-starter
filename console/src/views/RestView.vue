@@ -4,8 +4,8 @@
     <div class="pg-progress ind-bar" :class="{ on: sending }"></div>
     <PageHeader :icon="Zap" title="REST 直连" subtitle="单次透传任意 ES REST 请求（快速试跑）" />
 
-    <!-- 请求行（：全局 .card 壳退役——bg/border/radius 归 theme.css 单源不再消费，
-         局部 padding 条栏形态原样保留；响应分节加 border-top 承接立法①分界） -->
+    <!-- 请求行（全局 .card 壳退役——bg/border/radius 归 theme.css 单源不再消费，
+ 局部 padding 条栏形态原样保留；响应分节加 border-top 承接约定①分界） -->
     <div class="rt-req">
       <div class="rt-req-row">
         <div class="seg rt-methods">
@@ -30,7 +30,7 @@
         <!-- 示例芯片键盘可达（role/tabindex/Enter， Overview 同口径） -->
         <span v-for="s in SNIPPETS" :key="s.path" class="chip mono" role="button" tabindex="0" :aria-label="'填入示例：' + s.label" @click="applySnippet(s)" @keydown.enter.prevent="applySnippet(s)" @keydown.space.prevent="applySnippet(s)">{{ s.label }}</span>
         <!-- W3-T11：端点带 body 骨架时出——直接覆盖现有 body（对齐 snippet 填充的无确认交互）；
-             T11 复审 M1：显隐与 body 编辑区同口径加 hasBody——GET/HEAD 无 body 区且发送不带 body，按钮同隐 -->
+ T11 复审 M1：显隐与 body 编辑区同口径加 hasBody——GET/HEAD 无 body 区且发送不带 body，按钮同隐 -->
         <button v-if="curEp?.body && hasBody" class="btn sm ghost" title="填入该端点的请求体骨架（覆盖现有 body）" @click="insertBody">
           <Braces :size="12" /> 插入 body 骨架
         </button>
@@ -38,20 +38,20 @@
         <button class="btn sm ghost rt-hist-btn" @click="histOpen = true"><History :size="12" /> 历史</button>
       </div>
       <!-- body（W6：dslAssist 按端点/path 语义分档补全）。
-           lintDsl 静态体检提示条（SearchSandboxView join 串形态同款，随输入实时重估，
-           零阻塞不拦执行）——仅 search 语义档接（body 是 JSON 查询才吃查询规则；settings/mapping/
-           bulk 档与 GET/HEAD 无 body 面不接，root-key-typo 会误报配置键）；error 红条单列，
-           warning/hint 黄条并列；JSON 非法静默 -->
+ lintDsl 静态体检提示条（SearchSandboxView join 串形态同款，随输入实时重估，
+ 零阻塞不拦执行）——仅 search 语义档接（body 是 JSON 查询才吃查询规则；settings/mapping/
+ bulk 档与 GET/HEAD 无 body 面不接，root-key-typo 会误报配置键）；error 红条单列，
+ warning/hint 黄条并列；JSON 非法静默 -->
       <div v-if="hasBody" class="rt-body-wrap">
         <!-- body 编辑器弹性档「高」钮 + usePref 记忆（ubq.scriptH 三档循环同款形态）——
-             首档 100% 沿既有块流 min-height max(180px,42vh) 兜底形态，后续档恒 ≥ 兜底不破口径 -->
+ 首档 100% 沿既有块流 min-height max(180px,42vh) 兜底形态，后续档恒 ≥ 兜底不破口径 -->
         <div class="rt-ed-hd">
           <button class="btn ghost xs" data-test="rest-body-h" :title="'body 编辑器高度档：' + restEdH" @click="cycleRestEdH">高</button>
         </div>
-        <!--  P0-1：编辑器划线通道挂点（banner 保留双通道，见 script queueRtLintMarkers） -->
+        <!-- P0-1：编辑器划线通道挂点（banner 保留双通道，见 script queueRtLintMarkers） -->
         <MonacoEditor ref="rtBodyMonaco" v-model="body" :height="restEdH" class="rt-body-ed" :dsl-assist="dslAssist" />
-        <!-- .rt-lint 私造三档随同构换装 theme.css .lint-bar 单源（软/硬档
-             lint-bar-warn/lint-bar-err，role/status 语义与文案逐字不动） -->
+        <!-- .rt-lint 私造三档随同构改用 theme.css .lint-bar 单源（软/硬档
+ lint-bar-warn/lint-bar-err，role/status 语义与文案逐字不动） -->
         <div v-if="rtLintErrors.length" role="alert" class="lint-bar lint-bar-err">
           <span>DSL 检查（错误）：{{ rtLintErrors.map(f => f.message + '（' + f.suggestion + '）').join('；') }}</span>
         </div>
@@ -64,7 +64,7 @@
     <!-- 响应（G7-C1：sending 期间保持分节在场，出占位文案，不闪引导空态） -->
     <div v-if="resp || respErr || sending" class="rt-resp">
       <div class="rt-resp-bar">
-        <!--  W-D：响应状态/失败徽标换装 StatusPill（三档映射与失败红档语义不变，文案逐字） -->
+        <!-- W-D：响应状态/失败徽标改用 StatusPill（三档映射与失败红档语义不变，文案逐字） -->
         <StatusPill v-if="resp" :tone="resp.status < 300 ? 'g' : resp.status < 500 ? 'y' : 'r'" :label="'HTTP ' + resp.status" />
         <StatusPill v-if="respErr" tone="r" label="请求失败" />
         <!-- 裸耗时 → TookBadge 四档语义徽标（阈值单源 utils/format，BulkEditor 同款） -->
@@ -76,7 +76,7 @@
         </button>
         <div class="rt-spacer"></div>
         <!-- G7-C2：错误时收敛无意义动作群（复制只会得到 "null"），只留显式重试——
-             重试走 send()：PUT/DELETE 重开危险确认，确认门不绕过 -->
+ 重试走 send()：PUT/DELETE 重开危险确认，确认门不绕过 -->
         <template v-if="resp">
           <input v-model="searchExpr" class="inp mono rt-search" placeholder="搜索响应…" @keydown.enter.prevent="searchExpr.trim() && ($event.shiftKey ? hitPrev() : hitNext())" @keydown.esc.prevent="searchExpr = ''" />
           <span v-if="searchExpr.trim()" class="mono rt-mc">{{ hitCur }}/{{ matchCount }}</span>
@@ -90,15 +90,15 @@
         </template>
         <button v-if="respErr && canAdmin" class="btn sm" :disabled="sending" @click="send"><RefreshCw :size="11" :class="{ spinning: sending }" /> 重试</button>
         <!-- 原始 IO 快查——最近一次 /cluster/raw 透传请求/响应原文（ioRecorder 记录环；
-             置动作群末尾不进 resp-only 分组，失败响应同样可查） -->
+ 置动作群末尾不进 resp-only 分组，失败响应同样可查） -->
         <button class="btn sm ghost" data-test="raw-io" aria-label="查看原始 IO（REST 直连）" title="最近一次透传请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIo"><Terminal :size="12" /> 原始 IO</button>
       </div>
       <div ref="respBox" class="scroll-y rt-resp-scroll">
         <!-- respErr 裸 pre → highlightJson v-html（转义安全，jsonc.ts 单一出处）——
-             错误保原文全文 + JSON 错误体上色（j-key/j-str 语义），非 JSON 纯文本不着色仍走 .rt-err-pre 红。
-             补 friendly 人话标题行（双轨范式）+ 上色内核换 errPreHtml
-             （含 { 走 highlightJson、否则 HTML 转义平文，与全站错误面板同内核）；
-             .rt-err-pre 类名不动（devxThreeState/restTruncW2 选择器锚） -->
+ 错误保原文全文 + JSON 错误体上色（j-key/j-str 语义），非 JSON 纯文本不着色仍走 .rt-err-pre 红。
+ 补 friendly 人话标题行（双轨范式）+ 上色内核换 errPreHtml
+ （含 { 走 highlightJson、否则 HTML 转义平文，与全站错误面板同内核）；
+ .rt-err-pre 类名不动（devxThreeState/restTruncW2 选择器锚） -->
         <template v-if="respErr">
           <div class="rt-err-h">请求失败 · {{ friendlyRespErr }}</div>
           <pre class="json-view rt-err-pre" v-html="respErrHtml"></pre>
@@ -110,15 +110,15 @@
     <EmptyState v-else :icon="Zap" text="输入任意 ES REST path 直接透传调用" hint="method 白名单 + path 校验由后端把关" />
 
     <!-- 危险方法确认收敛全局 askConfirm（本文件 166/190 已用，双范式归一）——
-         后果前置文案/okText 动态方法名语义等价保留，本地 ConfirmModal 宿主退役 -->
+ 后果前置文案/okText 动态方法名语义等价保留，本地 ConfirmModal 宿主退役 -->
 
     <!-- 历史 -->
-    <!-- 弹窗体换装 QueryHistoryPanel 统一件——存储 key es_rest_hist 不动；
-         条目映射见 histRows（query=「METHOD path」，合并串让旧 method/path 过滤口径等价）；
-         clickable 整行=play=replay（填入+关弹窗，等价旧行点击——play 不执行，无误触写请求面）；
-         actions 全量中 copy 面板自带（复制「METHOD path」），rename 不传（本页历史无名称字段无重命名存储）；
-         导入隐藏（面板导入写 queryHistory store，与本页 es_rest_hist 不同存储）；导出经 export-row
-         保留 {method,path,body,ts}（与 DevTools 导入互认的格式不变）；清空仍走 askClearHist 确认 -->
+    <!-- 弹窗体改用 QueryHistoryPanel 统一件——存储 key es_rest_hist 不动；
+ 条目映射见 histRows（query=「METHOD path」，合并串让旧 method/path 过滤口径等价）；
+ clickable 整行=play=replay（填入+关弹窗，等价旧行点击——play 不执行，无误触写请求面）；
+ actions 全量中 copy 面板自带（复制「METHOD path」），rename 不传（本页历史无名称字段无重命名存储）；
+ 导入隐藏（面板导入写 queryHistory store，与本页 es_rest_hist 不同存储）；导出经 export-row
+ 保留 {method,path,body,ts}（与 DevTools 导入互认的格式不变）；清空仍走 askClearHist 确认 -->
     <n-modal v-model:show="histOpen" preset="card" title="请求历史" style="width:560px;max-width:92vw" :bordered="false">
       <QueryHistoryPanel :items="histRows" :actions="['play', 'fill', 'copy', 'del']"
         clickable empty-text="暂无历史" :importable="false"
@@ -140,7 +140,7 @@
 import { ref, computed, watch, nextTick } from 'vue';
 import { NModal } from 'naive-ui';
 import EmptyState from '../components/EmptyState.vue';
-import StatusPill from '../components/StatusPill.vue'; /*  W-D：响应状态徽标统一件 */
+import StatusPill from '../components/StatusPill.vue'; /* W-D：响应状态徽标统一件 */
 import { Send, History, Copy, Zap, RefreshCw, Braces, X, Star, Terminal } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
@@ -151,11 +151,11 @@ import { useAuthStore } from '../stores/auth'; /* ：权限写门真源 */
 import { useScopedDraft } from '../composables/useScopedDraft';
 import { useHitNav } from '../composables/useHitNav';
 /* body 编辑器弹性档记忆（usePref rest.edH，ubq.scriptH 同款三档循环）
-   记忆件收编 useTierCycle 单源（pref 键/档值/默认档零迁） */
+ 记忆件合并 useTierCycle 单源（pref 键/档值/默认档零迁） */
 import { useTierCycle } from '../composables/useTierCycle';
 import TookBadge from '../components/TookBadge.vue'; /* ：裸耗时统一徽标 */
 import { useQueryRun } from '../composables/useQueryRun';
-/* 历史换装 QueryHistoryPanel 后 relTime/fmtTime/exportStamp/downloadText 随本地实现退役 */
+/* 历史改用 QueryHistoryPanel 后 relTime/fmtTime/exportStamp/downloadText 随本地实现退役 */
 import { copyText } from '../utils/format';
 import { jq } from '../utils/minijq';
 import { readStoredJson, parseJsonSafe, writeStoredRaw } from '../utils/safeJson';
@@ -168,13 +168,13 @@ import { useIndexFields } from '../composables/useIndexFields';
 import { useTermsSuggest } from '../composables/useTermsSuggest';
 import { bodyKindForPath } from '../utils/dslCompletionContext';
 import { lintDsl } from '../utils/dslLint'; /* ：DSL 静态体检 */
-import { useDebounceFn } from '../composables/useDebounceFn'; /*  P0-1：划线防抖统一件 */
+import { useDebounceFn } from '../composables/useDebounceFn'; /* P0-1：划线防抖统一件 */
 import EndpointPathInput from '../components/devtools/EndpointPathInput.vue';
 import { REST_METHODS, type EsEndpoint } from '../utils/esEndpoints';
 import { useInputLint, jqLiteRule } from '../composables/useInputLint';
-/* 视图内搜索 mark 内核收编 respMark 单源（escapeRe/markHtmlAll，本文件三件本地实现退役） */
+/* 视图内搜索 mark 内核合并 respMark 单源（escapeRe/markHtmlAll，本文件三件本地实现退役） */
 import { markHtmlAll } from '../utils/respMark';
-/* 历史弹窗体换装 QueryHistoryPanel 统一件（本地过滤/导出/空态实现退役） */
+/* 历史弹窗体改用 QueryHistoryPanel 统一件（本地过滤/导出/空态实现退役） */
 import QueryHistoryPanel, { type HistRow } from '../components/QueryHistoryPanel.vue';
 
 const store = useAppStore();
@@ -192,7 +192,7 @@ const SNIPPETS = [
   { label: 'aliases', method: 'GET', path: '/_aliases' },
 ];
 
-/* 草稿治理轮：method/path/body 迁 useScopedDraft（按集群目标隔离；favReplay 同键回填） */
+/* 草稿：method/path/body 迁 useScopedDraft（按集群目标隔离；favReplay 同键回填） */
 const restScope = { route: 'rest',};
 const method = useScopedDraft('method', restScope, 'GET').text as unknown as import('vue').Ref<typeof METHODS[number]>;
 const path = useScopedDraft('path', restScope).text;
@@ -202,11 +202,11 @@ const sending = ref(false);
 const qr = useQueryRun(); // 长查询读秒 + 取消（ 范式）
 const resp = ref<any>(null);
 const respErr = ref('');
-/* 534 收口波双参换装：原始错误对象旁路留存（catch 压串丢 code/endpoint，喂 errMeta 用） */
+/* 534 收口波双参改用：原始错误对象旁路留存（catch 压串丢 code/endpoint，喂 errMeta 用） */
 const respErrRaw = ref<unknown>(null);
 /* 错误全文保原文 + highlightJson 上色（esc 先行转义安全；非 JSON 文本不着色）。
-   内核换 errPreHtml（含 { 才走 highlightJson，平文走 HTML 转义——原实现
-   对非 JSON 串也硬跑 highlightJson，转义语义未契约化）；标题行 friendly 同批补。 */
+ 内核换 errPreHtml（含 { 才走 highlightJson，平文走 HTML 转义——原实现
+ 对非 JSON 串也硬跑 highlightJson，转义语义未契约化）；标题行 friendly 同步补。 */
 const respErrHtml = computed(() => errPreHtml(respErr.value, errMeta(respErrRaw.value)));
 const friendlyRespErr = computed(() => friendlyEsError(respErr.value));
 const elapsed = ref<number | null>(null);
@@ -223,9 +223,9 @@ const histOpen = ref(false);
 const hasBody = computed(() => method.value !== 'GET' && method.value !== 'HEAD');
 
 /* body 编辑器弹性档 + usePref 记忆（ubq.scriptH「高」钮三档循环同款；
-   首档 100% = 既有块流 min-height max(180px,42vh) 兜底形态，后续档恒 ≥ 兜底）。
-   TIERS+usePref+手写 cycle 三件套收编 useTierCycle 单源
-   （rest.edH 键不变=已存档位零迁移；默认档=首位，defVal 缺省；cycle 语义等值） */
+ 首档 100% = 既有块流 min-height max(180px,42vh) 兜底形态，后续档恒 ≥ 兜底）。
+ TIERS+usePref+手写 cycle 三件套合并 useTierCycle 单源
+ （rest.edH 键不变=已存档位零迁移；默认档=首位，defVal 缺省；cycle 语义等值） */
 const REST_ED_H_TIERS = ['100%', 'max(180px, 56vh)', 'max(180px, 72vh)'];
 const { v: restEdH, cycle: cycleRestEdH } = useTierCycle('rest.edH', REST_ED_H_TIERS);
 
@@ -235,7 +235,7 @@ const history = ref<HistItem[]>(readStoredJson(localStorage, 'es_rest_hist', [],
 function persistHist() { writeStoredRaw(localStorage, 'es_rest_hist', JSON.stringify(history.value.slice(0, 30))); }
 
 /* 历史适配 QueryHistoryPanel HistRow——query=「METHOD path」（面板过滤按 query/index/name
-   includes，合并串让旧 method/path 双口径过滤等价），id=原数组下标供删除定位；存储 key es_rest_hist 不动 */
+ includes，合并串让旧 method/path 双口径过滤等价），id=原数组下标供删除定位；存储 key es_rest_hist 不动 */
 interface RestHistRow extends HistRow { method: string; path: string; body: string }
 const histRows = computed<RestHistRow[]>(() =>
   history.value.map((h, i) => ({ ...h, id: i, query: h.method + ' ' + h.path })));
@@ -251,7 +251,7 @@ async function askClearHist() {
   persistHist();
 }
 /* play=回放（填入+关弹窗，等价旧行点击）；fill=仅填入（弹窗保持开可微调）。
-   处理器按面板 HistRow 签名收参，内部窄化为本页 RestHistRow */
+ 处理器按面板 HistRow 签名收参，内部窄化为本页 RestHistRow */
 function replay(hr: HistRow) {
   const h = hr as RestHistRow;
   method.value = h.method as any;
@@ -284,8 +284,8 @@ function applySnippet(s: { method: string; path: string }) {
 }
 
 /* 收藏当前请求——收藏体系对 /rest 的读侧早已闭环（favReplay 通用 rest 分支
-   写本页草稿键并跳回 /rest），但本页一直没有写侧入口，收藏夹空态「任何 REST 请求均可
-   收藏」的声明对 /rest 不成立。payload 形态与 DevToolsView saveFav 同构，回放落本页草稿。 */
+ 写本页草稿键并跳回 /rest），但本页一直没有写侧入口，收藏夹空态「任何 REST 请求均可
+ 收藏」的声明对 /rest 不成立。payload 形态与 DevToolsView saveFav 同构，回放落本页草稿。 */
 function saveFav() {
   if (!path.value.trim()) return;
   store.addFavorite({
@@ -299,7 +299,7 @@ function saveFav() {
 }
 
 /* W3-T11：端点目录联动——onEndpoint 记录选中端点，curEp 驱动 method 置灰与 body 骨架；
-   路径不再匹配端点模板（自由文本）即脱钩回全可用（零降级） */
+ 路径不再匹配端点模板（自由文本）即脱钩回全可用（零降级） */
 const pickedEp = ref<EsEndpoint | null>(null);
 /** 端点模板匹配：{index}/{id} 槽位段适配任意单段实例，查询串不参与 */
 function epMatch(ep: EsEndpoint, p: string): boolean {
@@ -318,19 +318,19 @@ function onEndpoint(ep: EsEndpoint) {
 function insertBody() { if (curEp.value?.body) body.value = curEp.value.body; }
 
 /* W6：body Monaco 智能补全——字段源吃当前工作索引 mappingDetail 出口（useIndexFields 统一管线，
-   immediate 预热 + 换索引重拉，与 DslQueryView 同范式；失败零降级仅 field 档无候选）。
-   bodyKind 随端点/path 派生：选中端点吃模板 path，自由文本按裸 path 判定（无特殊段回 search）。 */
+ immediate 预热 + 换索引重拉，与 DslQueryView 同范式；失败零降级仅 field 档无候选）。
+ bodyKind 随端点/path 派生：选中端点吃模板 path，自由文本按裸 path 判定（无特殊段回 search）。 */
 const { fields: rtFields, ensure: ensureRtFields } = useIndexFields(() => store.pickedIdx || '');
 watch(() => store.pickedIdx, () => { ensureRtFields(); }, { immediate: true });
 const rtBodyKind = computed(() => bodyKindForPath(curEp.value?.path ?? path.value ?? ''));
 /* dslAssist 闭包在 setup 作用域声明（T14 实证：模板内联字面量走 _ctx 代理，ref 顶层 unwrap 后 .value 取 undefined） */
 /* terms 通道接值位动态候选（658 DqlQueryView 首发姊妹刀）——索引源=store.pickedIdx
-   与 rtFields 同源（Rest 无路径索引派生，fields 同口径）；未选索引/异常恒 resolve [] 零扰动 */
+ 与 rtFields 同源（Rest 无路径索引派生，fields 同口径）；未选索引/异常恒 resolve [] 零扰动 */
 const rtTerms = useTermsSuggest(() => store.pickedIdx || '');
 const dslAssist = { fields: () => rtFields.value, bodyKind: () => rtBodyKind.value, terms: (f: string, p: string) => rtTerms.suggestAsync(f, p) };
 /* body lint 静态体检——body 是 JSON 查询才接（hasBody 排除 GET/HEAD 无 body 面、
-   rtBodyKind==='search' 排除 settings/mapping/bulk 配置体），fields 同 dslAssist 源（rtFields）；
-   JSON 解析失败静默 */
+ rtBodyKind==='search' 排除 settings/mapping/bulk 配置体），fields 同 dslAssist 源（rtFields）；
+ JSON 解析失败静默 */
 const rtLint = computed(() => {
   if (!hasBody.value || rtBodyKind.value !== 'search') return [];
   try { return lintDsl(JSON.parse(body.value || ''), { fields: rtFields.value }); }
@@ -339,10 +339,10 @@ const rtLint = computed(() => {
 const rtLintErrors = computed(() => rtLint.value.filter(f => f.severity === 'error'));
 const rtLintWarns = computed(() => rtLint.value.filter(f => f.severity === 'warning' || f.severity === 'hint'));
 
-/*  P0-1：banner→划线双通道（既有 banner 提示条保留）——SearchSandboxView 
-   范式逐字：useDebounceFn 250ms 防 findMatches 每键全量跑；info 降级 hint（marker 档只收
-   warning/hint/error）；rtLint 非法 JSON 静默返 []，setMarkers([]) 即清旧划线；
-   unplaced 由 banner 全档兜底，不静默丢信息。 */
+/* P0-1：banner→划线双通道（既有 banner 提示条保留）——SearchSandboxView 
+ 范式逐字：useDebounceFn 250ms 防 findMatches 每键全量跑；info 降级 hint（marker 档只收
+ warning/hint/error）；rtLint 非法 JSON 静默返 []，setMarkers([]) 即清旧划线；
+ unplaced 由 banner 全档兜底，不静默丢信息。 */
 const rtBodyMonaco = ref<InstanceType<typeof MonacoEditor> | null>(null);
 const queueRtLintMarkers = useDebounceFn(() => {
   rtBodyMonaco.value?.setMarkers?.(rtLint.value.map(f => ({ ...f, severity: f.severity === 'info' ? 'hint' as const : f.severity })));
@@ -350,10 +350,10 @@ const queueRtLintMarkers = useDebounceFn(() => {
 watch(body, () => { queueRtLintMarkers(); }, { immediate: true });
 
 /* 危险方法确认收敛全局 askConfirm（与 askClearHist 同范式）——PUT/DELETE 先过确认门，
-   重试按钮与发送同走 send()（G7-C2 语义：重试在失败现场，PUT/DELETE 重试同样重过确认门不直发） */
+ 重试按钮与发送同走 send()（G7-C2 语义：重试在失败现场，PUT/DELETE 重试同样重过确认门不直发） */
 async function send() {
   /* 执行体收口——raw 透传是 admin 档，裸 Enter（@enter="send"）与重试钮都汇入
-     此函数，按点位隐藏发送钮挡不住键盘路径，守卫收到执行体才是单源 */
+ 此函数，按点位隐藏发送钮挡不住键盘路径，守卫收到执行体才是单源 */
   if (!canAdmin.value) { store.notify('warning', 'raw 透传需要 ADMIN 角色'); return; }
   if (!path.value.trim().startsWith('/')) { store.notify('warning', 'path 必须以 / 开头'); return; }
   if (method.value === 'PUT' || method.value === 'DELETE') {
@@ -411,15 +411,15 @@ function applyJq() {
   try { jqResult.value = jq(respParsed.value, jqExpr.value.trim()); }
   catch (e: any) { store.notify('error', 'JQ: ' + e.message); }
 }
-/* 响应渲染（：本地 esc/hl 32 行手写高亮退役——与 respErr 同走 highlightJson
-   单一出处；对象/jq 结果先 pretty 再着色，j-key/j-str 等类名与全局 json-view 范式一致） */
+/* 响应渲染（本地 esc/hl 32 行手写高亮退役——与 respErr 同走 highlightJson
+ 单一出处；对象/jq 结果先 pretty 再着色，j-key/j-str 等类名与全局 json-view 范式一致） */
 const displaySrc = computed(() => {
   const v = jqResult.value !== null ? jqResult.value : respParsed.value;
   return typeof v === 'string' ? v : JSON.stringify(v, null, 2);
 });
 /* W2 批：大响应截断展示（并轨 DevToolsView 口径：512KB 常量）——全量字符串直接跑
-   highlightJson 在几 MB 响应上整卡假死；截断只作用于展示，复制/搜索语义不变（copyResp
-   仍取 respParsed 全量原文，徽标即「复制取全文」通道）。 */
+ highlightJson 在几 MB 响应上整卡假死；截断只作用于展示，复制/搜索语义不变（copyResp
+ 仍取 respParsed 全量原文，徽标即「复制取全文」通道）。 */
 const REST_RESP_MAX = 512 * 1024;
 const respTruncated = computed(() => (displaySrc.value?.length ?? 0) > REST_RESP_MAX);
 const truncKb = computed(() => Math.round((displaySrc.value?.length ?? 0) / 1024));
@@ -428,12 +428,12 @@ const displayHtml = computed(() => {
   return highlightJson(src.length > REST_RESP_MAX ? src.slice(0, REST_RESP_MAX) : src);
 });
 /* 响应内搜索（搜索定位轮）：文本节点包 <mark data-hit-idx>，当前命中加 cur 态并滚动定位。
-   计数与渲染解耦（cur=0 纯计数模式）——否则 matchCount→respMarked→hitCur→matchCount
-   成环，useHitNav 初始化即 TDZ。只作用于展示 HTML——复制走原文，搜索与复制互不污染。 */
+ 计数与渲染解耦（cur=0 纯计数模式）——否则 matchCount→respMarked→hitCur→matchCount
+ 成环，useHitNav 初始化即 TDZ。只作用于展示 HTML——复制走原文，搜索与复制互不污染。 */
 const searchKw = computed(() => searchExpr.value.trim());
-/* 本地 escapeRe/hitsInHtml/markHtml 三件退役，收编 utils/respMark.markHtmlAll
-   单源（与 DslQueryView jsonMarkedHtml 同构实现；j-mark/j-mark-cur/data-hit-idx 逐字保形，
-   cur=0 纯计数模式承接原 hitsInHtml——计数与渲染解耦防 useHitNav TDZ 环语义不变） */
+/* 本地 escapeRe/hitsInHtml/markHtml 三件退役，合并 utils/respMark.markHtmlAll
+ 单源（与 DslQueryView jsonMarkedHtml 同构实现；j-mark/j-mark-cur/data-hit-idx 逐字保形，
+ cur=0 纯计数模式承接原 hitsInHtml——计数与渲染解耦防 useHitNav TDZ 环语义不变） */
 const matchCount = computed(() => markHtmlAll(displayHtml.value, searchKw.value, 0).count);
 /* 命中游标（wrap）+ 当前命中滚动到视口中心；计数变化（jq 切换/新响应）回到首个。 */
 const { current: hitCur, next: hitNext, prev: hitPrev } = useHitNav(() => matchCount.value);
@@ -452,7 +452,7 @@ async function copyResp() {
 }
 
 /* 原始 IO 快查（545 四页同款）——特征 /cluster/raw；判空 rec=null（本页还没
-   发过请求）时 notify 引导，不开空弹窗 */
+ 发过请求）时 notify 引导，不开空弹窗 */
 const rawIoShow = ref(false);
 const rawIoRec = ref<RawIoRec | null>(null);
 function openRawIo() {
@@ -468,7 +468,7 @@ function openRawIo() {
 .rt { display: flex; flex-direction: column; gap: var(--sp-3); position: relative; }
 /* 执行进度条贴页顶 */
 /* 全局 .card 壳退役（请求/响应两块不再消费 theme 壳类，restFav/devxThreeState
-   锚类 rt-req-row/.rt-resp-scroll 零变动）；响应分节 border-top 承接立法①分界 */
+ 锚类 rt-req-row/.rt-resp-scroll 零变动）；响应分节 border-top 承接约定①分界 */
 .rt-req { padding: var(--sp-3) var(--sp-4); }
 /* 窄视口 7 控件必溢出——请求行可换行（row-gap 补换行后行距，gap 仍管同排间距） */
 .rt-req-row { display: flex; gap: var(--sp-2); row-gap: var(--sp-1); align-items: center; flex-wrap: wrap; }
@@ -480,19 +480,19 @@ function openRawIo() {
 .rt-body-wrap { margin-top: var(--sp-3); }
 /* body 编辑器高度「高」钮行（右对齐贴编辑器顶，块流自然高不构成恒高兄弟） */
 .rt-ed-hd { display: flex; justify-content: flex-end; margin-bottom: var(--sp-1); }
-/* .rt-lint/.rt-lint-warn/.rt-lint-err 三条私造规则随同构换装退役
-   （theme.css .lint-bar/.lint-bar-warn/.lint-bar-err 单源承接，soft 底语义等值） */
+/* .rt-lint/.rt-lint-warn/.rt-lint-err 三条私造规则随同构改用退役
+ （theme.css .lint-bar/.lint-bar-warn/.lint-bar-err 单源承接，soft 底语义等值） */
 /* body 编辑器弹性（原 180px 写死）：height:100% 在块流卡片中不可解析，由 min-height 兜底——
-   180px 原值保底，42vh 视口弹性档（与 SqlConsole/ConfigValidator 同口径），Monaco 内置 RO 自动 layout。
-   rest.edH 弹性档后本规则专管 100% 档兜底（后续档值恒 ≥ max(180px,42vh) 不受影响） */
+ 180px 原值保底，42vh 视口弹性档（与 SqlConsole/ConfigValidator 同口径），Monaco 内置 RO 自动 layout。
+ rest.edH 弹性档后本规则专管 100% 档兜底（后续档值恒 ≥ max(180px,42vh) 不受影响） */
 .rt-body-wrap > .rt-body-ed { min-height: max(180px, 42vh); }
-/* 编辑器外框退役（立法③， sq-editor/be-card-editor 同语言视图侧
-   独立追加——rt-body-ed 即 MonacoEditor 根、携本视图 scope id，scoped 类规则直接命中；
-   上方 rt-ed-hd 工具行自承分界）；538 min-height 锚行零触 */
+/* 编辑器外框退役（约定③， sq-editor/be-card-editor 同语言视图侧
+ 独立追加——rt-body-ed 即 MonacoEditor 根、携本视图 scope id，scoped 类规则直接命中；
+ 上方 rt-ed-hd 工具行自承分界）；538 min-height 锚行零触 */
 .rt-body-wrap > .rt-body-ed { border: none; border-radius: 0; }
 .rt-hist-btn { margin-left: auto; }
-/* 历史弹窗体换装 QueryHistoryPanel——.rt-hist-bar/.rt-hist 系本地行样式随自写实现退役
-   （过滤/计数/行布局/相对时间全由面板 qhp-* 承接） */
+/* 历史弹窗体改用 QueryHistoryPanel——.rt-hist-bar/.rt-hist 系本地行样式随自写实现退役
+ （过滤/计数/行布局/相对时间全由面板 qhp-* 承接） */
 .rt-spacer { flex: 1; }
 .rt-snippets { display: flex; align-items: center; gap: var(--sp-1h); margin-top: var(--sp-3); flex-wrap: wrap; }
 .rt-resp { padding: var(--sp-3) var(--sp-4); border-top: 1px solid var(--border); }
@@ -506,8 +506,8 @@ function openRawIo() {
 /* friendly 人话标题行（pre 保留全文，双轨范式） */
 .rt-err-h { font-weight: 600; font-size: var(--fs-sm); margin-bottom: var(--sp-1); }
 .rt-waiting { padding: var(--sp-3); color: var(--tx2); font-size: var(--fs-sm); }
-/* G7 复审 M3：C6 收编边角——引导空态图标的内联 opacity/margin 归 scoped（10px → 最近阶梯 --sp-3）。
-   .rt-elapsed 规则随裸耗时换装 TookBadge 退役（形态/色档归组件单源） */
+/* 复审 M3：C6 合并边角——引导空态图标的内联 opacity/margin 归 scoped（10px → 最近阶梯 --sp-3）。
+ .rt-elapsed 规则随裸耗时改用 TookBadge 退役（形态/色档归组件单源） */
 /* 固定 260px 改 flex-basis 可收缩（窄视口跟随换行行宽收缩，180px 可用下限兜底） */
 .rt-jq { flex: 0 1 260px; min-width: 180px; height: 26px; font-size: var(--fs-xs); }
 .rt-search { width: 130px; height: 26px; font-size: var(--fs-xs); }
@@ -515,7 +515,7 @@ function openRawIo() {
 .json-view :deep(.j-mark) { background: var(--warn-soft); color: inherit; border-radius: 2px; padding: 0 1px; }
 
 /* 900 紧凑微调档（Workbench 五视图之五）——请求/响应两卡水平侧距 --sp-4 收 --sp-3；
-   请求行/响应条/snippet 行 已带 flex-wrap，窄容器换行不重叠，不在此重复 */
+ 请求行/响应条/snippet 行 已带 flex-wrap，窄容器换行不重叠，不在此重复 */
 @media (max-width: 900px) {
   .rt-req { padding: var(--sp-3); }
   .rt-resp { padding: var(--sp-3); }

@@ -1,6 +1,6 @@
 /**
  * 三百六十八批：QRT total/totalGte 消费真接线——367 批只建了管道（props 声明），
- * 无任何视图通水；本批 Lucene/PIT/模板测试三宿主把已持有的 total refs 传入，
+ * 无任何视图通水； Lucene/PIT/模板测试三宿主把已持有的 total refs 传入，
  * 工具行计数「本页行数/全量命中（+ 为下界）」与 RT 计数条同口径。
  * SqlConsole 反向锁：SQL 行集无服务端总数概念，禁止误接（传了会显示假分母）。
  */
@@ -16,7 +16,7 @@ const tplSrc = readFileSync(join(SRC, 'views/SearchTemplatesView.vue'), 'utf-8')
 const sqlSrc = readFileSync(join(SRC, 'views/SqlConsoleView.vue'), 'utf-8');
 
 describe('QRT total 接线（368 批）', () => {
-  it('QRT：props 声明 + 工具行条件计数（367 批管道在此补锁；525 批随迁：计数条内嵌 took TookBadge）', () => {
+  it('QRT：props 声明 + 工具行条件计数（367 批管道在此补锁；525 批同步更新：计数条内嵌 took TookBadge）', () => {
     expect(qrtSrc).toMatch(/total\?: number;/);
     expect(qrtSrc).toMatch(/totalGte\?: boolean;/);
     expect(qrtSrc).toMatch(

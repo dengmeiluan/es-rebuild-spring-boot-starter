@@ -379,7 +379,7 @@ public class EsIndexRebuildService {
                 }
             }
         }
-        // getMapping 内部已剥 6.x 单 type 包层（EsIndexAdmin.unwrapTypeLayer，），此处不重复实现
+        // getMapping 内部已剥 6.x 单 type 包层（EsIndexAdmin.unwrapTypeLayer），此处不重复实现
         Set<String> dateFields = DateFormSampler.dateFieldsOf(esIndexAdmin.getMapping(physical));
         io.github.dengmeiluan.es.rebuild.validate.DateFormTally tally =
                 DateFormSampler.tally(sources, dateFields);

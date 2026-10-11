@@ -3,20 +3,20 @@
  * 深度重构前后端全栈加强，布局规范遵循 GOAL-CONSOLE-DEEP.md」）。
  *
  * 宪法对位（GOAL-CONSOLE-DEEP.md）：utilitarian/Kibana 同语言、--sp 与 --fs 档表制、
- * 禁 AI slop（本批零新色零玻璃零渐变滥用——渐变面积是 HistoryChart 既有数据语汇非装饰）、
- * 降层纯视觉（高度哨兵恒定）、加载态语汇（SkeletonBox 三层回声立法）、高频交互
+ * 禁 AI slop（零新色零玻璃零渐变滥用——渐变面积是 HistoryChart 既有数据语汇非装饰）、
+ * 降层纯视觉（高度哨兵恒定）、加载态语汇（SkeletonBox 三层回声约定）、高频交互
  * 下钻链路（铁律 B：告警条可点定位=既有，节点卡同级补齐）。
  *
  * 件 A【视觉】实时六卡折线渐变面积：SVG linearGradient（卡身份色 25%→透明）+polygon
  *   面积（sparkArea 拼 0,H/W,H 两角）——HistoryChart 渐变面积同语汇，实时卡此前裸线。
  * 件 B【视觉/档位纠偏】卡头当前值 14px→21px：.ld-chart-cur 升 var(--fs-num)
  *   （theme.css:90 档表用途明写「KPI 中号数字」，此前 fs-lg 14px=档位错配）。
- * 件 C【丝滑/加载态】采样中占位骨架化：SkeletonBox 取代纯文字（三层回声立法），
+ * 件 C【丝滑/加载态】采样中占位骨架化：SkeletonBox 取代纯文字（三层回声约定），
  *   「约 10s 后出图」提示语保留。
  * 件 D【交互/下钻】节点卡点击下钻 /diag?node={name}（告警条 alertRoute 同款语汇；
  *   role=button+tabindex+Enter 键盘可达=铁律 B；hover 边框亮）。
  * 件 E【视觉/KPI】快照状态 chip（对标阿里云集群级「快照状态」卡）：cluster doc
- *   snapshotFailed/snapshotsTotal 按 timestamp 最新取（596 立法），失败>0 err。
+ *   snapshotFailed/snapshotsTotal 按 timestamp 最新取（596 约定），失败>0 err。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -88,7 +88,7 @@ describe('五百九十七批：实时区视觉交互深度重构', () => {
     document.body.innerHTML = '';
   });
 
-  it('件 A：六卡渐变面积——linearGradient defs+面积 path 在场（fill=url(#ldg-*)；681 随迁 polygon→.ld-area）', async () => {
+  it('件 A：六卡渐变面积——linearGradient defs+面积 path 在场（fill=url(#ldg-*)；681 同步更新 polygon→.ld-area）', async () => {
     const { app, host, pinia } = await mountLive();
     try {
       const mon = useLiveMonitorStore(pinia);
@@ -98,7 +98,7 @@ describe('五百九十七批：实时区视觉交互深度重构', () => {
       const charts = host.querySelectorAll('.ld-chart');
       const grads = host.querySelectorAll('.ld-charts defs linearGradient');
       expect(grads.length, '渐变 defs 在场（六卡渐变语汇）').toBeGreaterThanOrEqual(1);
-      /* 六百八十一批随迁：面积 polygon→path.ld-area（622 §9-D4 曲线平滑同曲线面积）——
+      /* 六百八十一批同步更新：面积 polygon→path.ld-area（622 §9-D4 曲线平滑同曲线面积）——
          锚点数语义不变：3 数据点=2 条 C；两角闭合 L 右下 L 左下 Z */
       const areas = [...charts].filter(c => c.querySelector('path.ld-area'));
       expect(areas.length, '有折线的卡都有面积 path').toBeGreaterThanOrEqual(2);
@@ -113,7 +113,7 @@ describe('五百九十七批：实时区视觉交互深度重构', () => {
     }
   });
 
-  it('件 B：卡头当前值档位（597 fs-num 纠偏→799 随迁 fs-num-l 28px=任务卡两行制 KPI 与组件同构）', () => {
+  it('件 B：卡头当前值档位（597 fs-num 纠偏→799 同步更新 fs-num-l 28px=任务卡两行制 KPI 与组件同构）', () => {
     const t = strip(liveSrc);
     expect(t, '.ld-chart-cur 档位（799 终态）').toMatch(/\.ld-chart-cur \{[^}]*var\(--fs-num-l\)/);
     expect(t, '退役 14px 小字档').not.toMatch(/\.ld-chart-cur \{[^}]*var\(--fs-lg\)/);
@@ -176,7 +176,7 @@ describe('五百九十七批：实时区视觉交互深度重构', () => {
   it('源码锁：sparkArea 单源+骨架语汇+下钻接线+快照 chip 接线', () => {
     const t = strip(liveSrc);
     const c = strip(cardSrc);
-    expect(c, '面积拼接经 import 单源消费（收编进组件；681 随迁=平滑面积 catmullRomAreaPath 同单源）').toContain("catmullRomAreaPath } from '../utils/sparkChart'");
+    expect(c, '面积拼接经 import 单源消费（合并进组件；681 同步更新=平滑面积 catmullRomAreaPath 同单源）').toContain("catmullRomAreaPath } from '../utils/sparkChart'");
     expect(c, '组件不再本地定义 sparkArea（零重定义=单源）').not.toContain('function sparkArea');
     expect(strip(sparkSrc), 'sparkArea 真源在 utils/sparkChart.ts').toContain('function sparkArea');
     expect(c, '渐变 id 语汇（组件 :id="gid" 动态消费）').toContain(':id="gid"');

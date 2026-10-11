@@ -1,31 +1,31 @@
 /* （P1a-1）：实时走势卡「几何 + 点位」纯函数单源下沉。
  * 原 `LiveDashboardView.vue` 本地 `const LD_H/SPARK_H/CMP_W/CMP_H/PCT_GRID` + 三个点位函数
  * `sparklinePoints / sparklinePointsPct / sparkArea`（五卡 + 对比卡 + 迷你 spark 复用），
- * 抽成独立 util——为 P1a-2（`LiveChartCard` 组件单源化）与 §2.1（曲线平滑，新增 `smoothPoints`）打地基。
+ * 抽成独立 util——为 P1a-2（`LiveChartCard` 组件单源化）与 （曲线平滑，新增 `smoothPoints`）打地基。
  * 零运行时依赖（纯函数 + 纯常量）。
  *
- * ⚠几何纪律（判例 629-C1）：CSS 高度字面（`.ld-svg height:88px` 等）与这些常量**必须同值**，
- *   由 `chartGeometry629.spec.ts` 反锁「CSS 字面 == 常量值」——改此处必红，改前先想清影响面。 */
+ * ⚠几何纪律（先例 ）：CSS 高度字面（`.ld-svg height:88px` 等）与这些常量**必须同值**，
+ * 由 `chartGeometry629.spec.ts` 反锁「CSS 字面 == 常量值」——改此处必红，改前先想清影响面。 */
 
-/** 主卡图高（622 §2.7 比例规范表；64→88 系 升档：88px 才「看出走势形状」） */
+/** 主卡图高（622 比例规范表；64→88 系 升档：88px 才「看出走势形状」） */
 export const LD_H = 88;
 /** 主卡窄档渲染高（ G'1，台账 ）：≤900px 单列满宽下 88px 纵横比过扁
- *  （ 重盘 G'1 候选），随档位微升至 110（<120=CMP_H 对比卡，视觉主图层级不倒挂）。
- *  ⚠这是**渲染档位**而非数据坐标系：viewBox/悬浮命中仍走 LD_H（ 放大态同范式，
- *  preserveAspectRatio=none 拉伸 + 悬浮层全百分比定位，任意渲染高几何自洽）；
- *  CSS 窄档字面须与本常量同值，由 chartNarrowTier649.spec 反锁漂移。 */
+ * （ 重盘 G'1 候选），随档位微升至 110（<120=CMP_H 对比卡，视觉主图层级不倒挂）。
+ * ⚠这是**渲染档位**而非数据坐标系：viewBox/悬浮命中仍走 LD_H（ 放大态同范式，
+ * preserveAspectRatio=none 拉伸 + 悬浮层全百分比定位，任意渲染高几何自洽）；
+ * CSS 窄档字面须与本常量同值，由 chartNarrowTier649.spec 反锁漂移。 */
 export const LD_H_NARROW = 110;
 /** 迷你 spark 图高 */
 const SPARK_H = 24;
 /** 对比卡几何宽/高 */
 export const CMP_W = 720;
 export const CMP_H = 120;
-/** 百分比语义卡的参考网格档（25/50/75）——绝对值卡不画等分网格（622 §2.3 诚实原则） */
+/** 百分比语义卡的参考网格档（25/50/75）——绝对值卡不画等分网格（622 诚实原则） */
 export const PCT_GRID = [25, 50, 75];
 
 /** 绝对值语义折线点串：max(...data,1) 地板缩放（零值不除零）。空数据返回空串。
- *  件1：可选 scaleMax——多折线同坐标系时传全局 max（Top 索引曲线网格/刻度
- *  底座才有意义；缺省维持各序列自身 max 归一=对比卡既有语义零破坏）。 */
+ * 件1：可选 scaleMax——多折线同坐标系时传全局 max（Top 索引曲线网格/刻度
+ * 底座才有意义；缺省维持各序列自身 max 归一=对比卡既有语义零破坏）。 */
 export function sparklinePoints(data: number[], W: number, H: number, scaleMax?: number): string {
   if (!data.length) return '';
   const mx = scaleMax && scaleMax > 0 ? scaleMax : Math.max(...data, 1);
@@ -41,13 +41,13 @@ export function sparklinePointsPct(data: number[], W: number, H: number): string
 }
 
 /** 渐变面积点串（折线点 + 左下/右下两角闭合）——HistoryChart 渐变面积同语汇。
- *  pct 卡面积基底 = 图底（0 线），abs 卡 = max 地板同折线坐标系。 */
+ * pct 卡面积基底 = 图底（0 线），abs 卡 = max 地板同折线坐标系。 */
 function sparkArea(data: number[], W: number, H: number, mode: 'pct' | 'abs' = 'abs'): string {
   const line = mode === 'pct' ? sparklinePointsPct(data, W, H) : sparklinePoints(data, W, H);
   return `0,${H} ${line} ${W},${H}`;
 }
 
-/* ── （622 §9-D4）：Catmull-Rom 曲线平滑（t=0.5 张力，立方贝塞尔近似） ──
+/* ── （622 -D4）：Catmull-Rom 曲线平滑（t=0.5 张力，立方贝塞尔近似） ──
  * 消费面=LiveChartCard 主卡折线+渐变面积（path.ld-line / path.ld-area）；对比卡/迷你
  * spark/HistoryChart 保持 polyline（591/615 逐字锁面 + 小尺寸无收益）。投影与折线
  * 同公式同精度（toFixed(1)），控制点逐轴钳位 [0,W]×[0,H]——曲线永不出图体（稿 D4 风险兜底）。 */

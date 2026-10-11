@@ -11,7 +11,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createApp, h, nextTick } from 'vue';
 import { createPinia } from 'pinia';
 import { createRouter, createMemoryHistory } from 'vue-router';
-/* 八百零五批根治随迁：视图改静态 import=动态 import 首挂载墙内冷启动根因拔除
+/* 八百零五批根治同步更新：视图改静态 import=动态 import 首挂载墙内冷启动根因拔除
    （xmProgress529 同型同批，vi.mock 提升保证 api mock 先行） */
 import XmigrateView from '../views/XmigrateView.vue';
 
@@ -86,7 +86,7 @@ describe('XmigrateView ?jobId= 深链读侧（527 批，挂载）', () => {
     expect(hit!.textContent).not.toContain('dest-2');
     expect(host.querySelectorAll('.qrt-tbl tr.xm-hit').length).toBe(1);
     app.unmount();
-    /* 550 随迁墙 8000 保留；805 根治见顶部静态 import 注（动态 import 墙内冷启动已拔除） */
+    /* 550 同步更新墙 8000 保留；805 根治见顶部静态 import 注（动态 import 墙内冷启动已拔除） */
   }, 8000);
 
   it('消费后 query.jobId 摘除（历史 replace，刷新/回退不重定位）', async () => {

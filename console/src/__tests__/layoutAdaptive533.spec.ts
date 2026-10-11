@@ -3,7 +3,7 @@
  * 锁五件事（全源码锁，零挂载）：
  * ① ClusterSettingsView / RemoteClustersView 900 紧凑微调档在场——529/531 两批「全量」
  *    叙事的真实漏网页补齐，防回删（同 responsive900Sweep529 口径：档在场且非空）；
- *    RemoteClusters 语义收编（StatusPill / MetaStrip 统一件）一并锁防回退；
+ *    RemoteClusters 语义合并（StatusPill / MetaStrip 统一件）一并锁防回退；
  * ② QueryHubView .qh-top 窄容器换行（flex-wrap）在场——900 档单列化兜窄档之外，
  *    档位之间一带允许 chip/入口钮换行；
  * ③ QueryHub / SqlBridge / SqlConsole 三页页头 CurrentIdxChip 在场（import + 模板挂载）——
@@ -21,16 +21,16 @@ const srcOf = (name: string) => readFileSync(join(__dirname, '..', 'views', `${n
 const block900Of = (src: string) => src.match(/@media \(max-width: 900px\) \{[\s\S]*?\n\}/);
 
 describe('五百三十三批：布局自适应/重复元素收口（源码锁）', () => {
-  it('① ClusterSettings/RemoteClusters 900 档在场且非空；RemoteClusters StatusPill/MetaStrip 收编在场', () => {
+  it('① ClusterSettings/RemoteClusters 900 档在场且非空；RemoteClusters StatusPill/MetaStrip 合并在场', () => {
     for (const name of ['ClusterSettingsView', 'RemoteClustersView']) {
       const block = block900Of(srcOf(name));
       expect(block, `${name}.vue 缺 900 紧凑微调档`).toBeTruthy();
       expect(block![0], `${name}.vue 900 档为空壳`).toMatch(/\{[^{}]+\}/);
     }
     const rc = srcOf('RemoteClustersView');
-    expect(rc, '连接状态收编 StatusPill（tone g/r 双态）').toMatch(/<StatusPill :tone="r\.connected \? 'g' : 'r'"/);
-    expect(rc, 'rc-card-meta 收编 MetaStrip（items=metaOf）').toMatch(/<MetaStrip class="rc-card-meta" :items="metaOf\(r\)" \/>/);
-    expect(rc, 'rc-dot 色点随收编退役').not.toMatch(/class="rc-dot"/);
+    expect(rc, '连接状态合并 StatusPill（tone g/r 双态）').toMatch(/<StatusPill :tone="r\.connected \? 'g' : 'r'"/);
+    expect(rc, 'rc-card-meta 合并 MetaStrip（items=metaOf）').toMatch(/<MetaStrip class="rc-card-meta" :items="metaOf\(r\)" \/>/);
+    expect(rc, 'rc-dot 色点随合并退役').not.toMatch(/class="rc-dot"/);
   });
 
   it('② QueryHubView .qh-top 窄容器换行（flex-wrap）在场', () => {

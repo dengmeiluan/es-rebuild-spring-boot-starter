@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 迁移时对目标 mapping 里「无 {@code format} 的 date 字段」的<b>如实告知</b>（ / spec §9.8 改写版）。
+ * 迁移时对目标 mapping 里「无 {@code format} 的 date 字段」的<b>如实告知</b>（ / spec  改写版）。
  *
  * <p><b>本类只陈述事实，不改任何东西。</b> 这一点是设计的核心，需要交代它的来历：</p>
  *

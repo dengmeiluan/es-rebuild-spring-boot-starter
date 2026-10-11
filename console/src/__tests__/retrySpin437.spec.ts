@@ -27,8 +27,8 @@ describe('重试钮旋转统一（437 批）', () => {
 
   it('Mapping/IndexSettings 重试钮防重入 disabled 在场', () => {
     expect(readFileSync(join(SRC, 'views/MappingView.vue'), 'utf-8')).toMatch(/@click="load" :disabled="loading"/);
-    /* 547 批随迁：IndexSettings 失败态整卡（card is-empty）退役——重试走 EmptyState action 位，
-       防重入由分支切换承担（按钮仅在非 loading 分支在场，与旧 :disabled 等效；emptyFrameZero547 立法） */
+    /* 547 批同步更新：IndexSettings 失败态整卡（card is-empty）退役——重试走 EmptyState action 位，
+       防重入由分支切换承担（按钮仅在非 loading 分支在场，与旧 :disabled 等效；emptyFrameZero547 约定） */
     expect(readFileSync(join(SRC, 'views/IndexSettingsView.vue'), 'utf-8')).toMatch(/action-text="重试" @action="loadSettings"/);
   });
 

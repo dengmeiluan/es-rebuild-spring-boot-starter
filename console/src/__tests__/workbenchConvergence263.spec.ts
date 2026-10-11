@@ -5,7 +5,7 @@
  * 264 RT 斑马纹统一（.zebra opt-in 启用+紧凑档关闭=QRT 同惯例）
  * 265 单元格截断口径统一（60→160 字符/260→320px，QRT MAX_CELL 同口径）
  * 266 字号/空态文案/截断尾行文案统一
- * 267 QRT 补列拖拽重排（useColDrag 共用件收编+拖后误触排序抑制）
+ * 267 QRT 补列拖拽重排（useColDrag 共用件合并+拖后误触排序抑制）
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';

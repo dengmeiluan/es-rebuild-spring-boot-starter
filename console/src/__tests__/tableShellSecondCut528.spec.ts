@@ -73,7 +73,7 @@ describe('双内核同源（528 第二刀抽取）', () => {
     expect(rt).toMatch(/useAggRow\(\s*dimension,\s*\(\) => visibleCols\.value,/);
   });
 
-  it('531 批随迁：内核三件（quickFilter/selectable/exportRowFilter）双内核同源可选声明', () => {
+  it('531 批同步更新：内核三件（quickFilter/selectable/exportRowFilter）双内核同源可选声明', () => {
     for (const src of [qrt, rt]) {
       expect(src).toMatch(/quickFilter\?: string;/);
       expect(src).toMatch(/selectable\?: boolean;/);

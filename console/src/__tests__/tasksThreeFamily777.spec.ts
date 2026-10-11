@@ -15,9 +15,9 @@
  *    进度条 .tv-prog-bar aria-hidden 无 progressbar 语义（704 G32/773 G35 族）——
  *    修法=容器 role=log+aria-label；进度条 role=progressbar+aria-valuenow+aria-label。
  *    「展开全部/折叠全部」交换标签钮不补 aria-pressed（标签即状态，pressed 反语义——
- *    与 775 G251 静态标签 toggle 不同形，记档豁免）。
- * ④ G258（P3 死代码）.tv-title 死规则（模板零引用；PageHeader 收编伴漏删——
- *    G220/G227/G232/G245 族；527「卡头位保持」裁定随页头收编失效）——修法=整删。
+ *    与 775 G251 静态标签 toggle 不同形，备案豁免）。
+ * ④ G258（P3 死代码）.tv-title 死规则（模板零引用；PageHeader 合并伴漏删——
+ *    G220/G227/G232/G245 族；527「卡头位保持」裁定随页头合并失效）——修法=整删。
  *
  * 驱动方式照 taskTreeFirstCut755（视图/组件全真+只 mock ../api+Monaco stub）；
  * TasksView 域首例真挂载首刀后 spec（sweep524/errBarWave558b 既有挂载=kw/空态面，
@@ -203,10 +203,10 @@ describe('777 G256 双钮在途双态（铁律 D·次刀）', () => {
     releaseTasks();
     await settle(8);
     expect(btn.disabled, '复常解禁').toBe(false);
-    expect(btn.querySelectorAll('[class*="spinning"]').length, '复常 spinning 退场').toBe(0);
+    expect(btn.querySelectorAll('[class*="spinning"]').length, '复常 spinning 移除').toBe(0);
   });
 
-  it('重试钮 spinning 收口：失败态 err-bar 在场→在途窗 icon spinning（G256 刀面）→复常退场', async () => {
+  it('重试钮 spinning 收口：失败态 err-bar 在场→在途窗 icon spinning（G256 刀面）→复常移除', async () => {
     const host = await mountView();
     pending.shift()!(new Error('network down')); /* 首拉失败 → err-bar */
     await settle(8);
@@ -221,7 +221,7 @@ describe('777 G256 双钮在途双态（铁律 D·次刀）', () => {
     expect(retry.querySelectorAll('[class*="spinning"]').length, 'G256 病灶：修前重试钮 icon 无 spinning（同页刷新钮有=两标准）').toBe(1);
     releaseTasks();
     await settle(8);
-    expect(host.querySelector('.err-bar'), '复常 err-bar 退场').toBeFalsy();
+    expect(host.querySelector('.err-bar'), '复常 err-bar 移除').toBeFalsy();
     expect(host.querySelectorAll('.tv-node').length, '树再现').toBe(3);
   });
 
@@ -245,7 +245,7 @@ describe('777 G256 双钮在途双态（铁律 D·次刀）', () => {
     cancelPending.shift()!({ acknowledged: true });
     await settle(8);
     expect(row.querySelectorAll('[class*="lucide-x"]').length, '复常 X 复位').toBe(1);
-    expect(row.querySelectorAll('[class*="lucide-loader"]').length, '复常 Loader2 退场').toBe(0);
+    expect(row.querySelectorAll('[class*="lucide-loader"]').length, '复常 Loader2 移除').toBe(0);
     expect(cancelBtn.disabled, '复常解禁').toBe(false);
   });
 
@@ -289,8 +289,8 @@ describe('777 G257 aria 双刀（弱 P3 随批可裁）', () => {
   });
 });
 
-describe('777 G258 死规则负锚（G220 PageHeader 收编漏删族）', () => {
-  it('.tv-title 死规则整删（模板零引用；527「卡头位保持」裁定随页头收编失效）', () => {
+describe('777 G258 死规则负锚（G220 PageHeader 合并漏删族）', () => {
+  it('.tv-title 死规则整删（模板零引用；527「卡头位保持」裁定随页头合并失效）', () => {
     expect(src.includes('.tv-title {'), 'G258 病灶：修前死规则在场').toBe(false);
   });
 });

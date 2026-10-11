@@ -11,8 +11,8 @@
  * 3) P1-1 filterMode 跨列筛选组合档——缺省 'AND' 逐字节不变；'OR'=任一筛选列命中即保留
  *    （跨列并集）；提示行/筛选弹层注入位切换钮就地翻转；
  * 4) P2——QRT pagerOn 键盘翻页（PageUp/PageDown/Ctrl+Home/Ctrl+End 只 emit update:page）；
- *    P2「复制表头（TSV）」原放弃记档——五百三十五批单独批落地：cellMenuColMgmt:188 exact
- *    锚随迁 15 项，下方反向锁同步翻转正锁（toContain）。
+ *    P2「复制表头（TSV）」原放弃备案——五百三十五批单独批落地：cellMenuColMgmt:188 exact
+ *    锚同步更新 15 项，下方反向锁同步翻转正锁（toContain）。
  * 挂载样板照抄 tableKernelWave531/qrtColFilter（裸 createApp + pinia；CellContextMenu
  * 自绘可挂载断言；n-drawer teleport 到 body 查 document）。
  */
@@ -28,7 +28,7 @@ import { useColFilters } from '../composables/useColFilters';
 
 const qrt = readFileSync(join(__dirname, '../components/QueryResultTable.vue'), 'utf-8');
 const rt = readFileSync(join(__dirname, '../components/ResultTable.vue'), 'utf-8');
-/* 五百六十五批随迁：QRT 弹层组合档钮退役换 ColFilterPopover 内建 chip，「组合：X」字面
+/* 五百六十五批同步更新：QRT 弹层组合档钮退役换 ColFilterPopover 内建 chip，「组合：X」字面
    随组件单源（下方 P2 锚改读本文件） */
 const cfp = readFileSync(join(__dirname, '../components/ColFilterPopover.vue'), 'utf-8');
 const usf = readFileSync(join(__dirname, '../composables/useSemFormat.ts'), 'utf-8');
@@ -100,12 +100,12 @@ describe('五百三十四批源码锁：两内核新 prop 在场+缺省零增量
     expect(ucf).toMatch(/function filterRows<T>\(rows: T\[\], mode: 'AND' \| 'OR' = 'AND'\)/);
   });
 
-  it('P2：组合档切换钮双注入位（提示行/弹层槽）+QRT 键盘翻页接线（五百三十五批：复制表头项已落地，反向锁翻正锁——cellMenuColMgmt 188 行 exact 锚随迁 15 项）（五百六十五批随迁：QRT 手搓槽钮退役换 ColFilterPopover 内建 chip——双注入位语义等价，「组合：X」字面随组件单源）（五百六十七批随迁：RT 手搓槽钮对称退役同换内建 chip）', () => {
+  it('P2：组合档切换钮双注入位（提示行/弹层槽）+QRT 键盘翻页接线（五百三十五批：复制表头项已落地，反向锁翻正锁——cellMenuColMgmt 188 行 exact 锚同步更新 15 项）（五百六十五批同步更新：QRT 手搓槽钮退役换 ColFilterPopover 内建 chip——双注入位语义等价，「组合：X」字面随组件单源）（五百六十七批同步更新：RT 手搓槽钮对称退役同换内建 chip）', () => {
     expect(qrt).toContain('copy-head-tsv');
     expect(rt).toContain('copy-head-tsv');
-    /* 五百六十五批随迁：QRT 侧手搓钮字面（class="qrt-fmode mono"/组合：{{ filterModeLive }}）
+    /* 五百六十五批同步更新：QRT 侧手搓钮字面（class="qrt-fmode mono"/组合：{{ filterModeLive }}）
        退役换内建 chip 接线（prop+emit 同串）；提示行注入位（TableFilteredHint fmode-cls）不动
-       五百六十七批随迁：RT 侧对称退役（同串迁移 filterModeToggle561 行为锚原样通过） */
+       五百六十七批同步更新：RT 侧对称退役（同串迁移 filterModeToggle561 行为锚原样通过） */
     expect(qrt).toMatch(/:filter-mode="filterModeLive" @toggle-filter-mode="toggleFilterMode"/);
     expect(cfp).toMatch(/组合：\{\{ filterMode \}\}/);
     expect(rt).toMatch(/:filter-mode="filterModeLive" @toggle-filter-mode="toggleFilterMode"/);

@@ -33,7 +33,7 @@
 
 <script setup lang="ts">
 /* W1：nested/has_child/has_parent 包装节点。child=null 时序列化兜底 match_all（ 契约）。
-   子节点不传给解散入口（dissolve 仅支持 bool-in-bool）。 */
+ 子节点不传给解散入口（dissolve 仅支持 bool-in-bool）。 */
 import { ref, computed } from 'vue';
 import { X, Group, Plus, SlidersHorizontal } from 'lucide-vue-next';
 import FieldSelect from './FieldSelect.vue';
@@ -49,11 +49,11 @@ const emit = defineEmits<{
 
 const WRAP_LABEL: Record<string, string> = { nested: '嵌套', has_child: '子文档', has_parent: '父文档' };
 /* 【W3b】包装路由字段的类型置顶按 node.op 分派——实地核真 useIndexFields.walk：mapping 里
-   type:'nested'/'join' 按原类型入表、纯 properties 节点入 'object'，包装路由字段（nested 的
-   path / has_child·has_parent 的 join 字段名）类型是 nested/object/join，原 ['keyword'] 置顶
-   基本永不命中（打空）。nested→嵌套路径（nested/object 置顶）；has_child/has_parent→join 字段；
-   未知 wrap 算子回落 keyword（keyword 精确语义兜底）。typePriority 只重排候选分组、不改候选集；
-   fields 传参与 dsl-assist 计数链路不动（fieldPickerPenetration 契约）。 */
+ type:'nested'/'join' 按原类型入表、纯 properties 节点入 'object'，包装路由字段（nested 的
+ path / has_child·has_parent 的 join 字段名）类型是 nested/object/join，原 ['keyword'] 置顶
+ 基本永不命中（打空）。nested→嵌套路径（nested/object 置顶）；has_child/has_parent→join 字段；
+ 未知 wrap 算子回落 keyword（keyword 精确语义兜底）。typePriority 只重排候选分组、不改候选集；
+ fields 传参与 dsl-assist 计数链路不动（fieldPickerPenetration 契约）。 */
 const WRAPPER_PRIORITY_BY_OP: Record<string, string[]> = {
   nested: ['nested', 'object'],
   has_child: ['join'],

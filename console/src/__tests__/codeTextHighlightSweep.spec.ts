@@ -4,7 +4,7 @@
  * 背景：全站已有 highlightJson 范式（utils/jsonc.ts 的 highlightJson(prettyJson(x)) 输出
  * 已转义 HTML + <pre class="json-view" v-html>，DslQueryView/SystemView 为参考实现），
  * 但 13 个视图仍散落 `{{ JSON.stringify(x, null, 2) }}` 裸插值——无着色、且长文本裸 pre。
- * 本批统一收口到范式。本 spec 静态断言（渲染后取色在 happy-dom 下是死断言，见 themeTokenGuard 同理）：
+ * 统一收口到范式。本 spec 静态断言（渲染后取色在 happy-dom 下是死断言，见 themeTokenGuard 同理）：
  *   1) 上述视图 <template> 段不再出现 JSON.stringify( 直插（script 内逻辑用途豁免：
  *      序列化存草稿/_prefill/复制等是正当逻辑，不是渲染）；
  *   2) theme.css 全局类落位：.toolrow / .m-put（方法语义色轮）在场；.meta-strip 全局块
@@ -17,7 +17,7 @@ import { join } from 'node:path';
 const SRC = join(__dirname, '..');
 const read = (p: string) => readFileSync(join(SRC, p), 'utf-8');
 
-/** 本批收口的视图（含范式出生地 DevToolsView 与组件 IntegrationGuide） */
+/** 收口的视图（含范式出生地 DevToolsView 与组件 IntegrationGuide） */
 const SWEPT = [
   'views/DevToolsView.vue',
   'views/TaskTreeView.vue',

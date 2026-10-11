@@ -5,7 +5,7 @@
  * vite 无 resolver）——每个 SFC 模板里用到的 n-* 组件与 PascalCase 自定义组件
  * （含 lucide 图标）都必须在本文件显式 import。563 四刀在 Pagination.vue 用了
  * <n-popover> 却漏 import（真实浏览器组件不解析、触发钮不渲染、选项胶囊裸平铺，
- * 已随本批修），同一运行时扫荡又发现 ResultTable 的 n-popover、DocDiffModal 的
+ * 已随修），同一运行时扫荡又发现 ResultTable 的 n-popover、DocDiffModal 的
  * n-modal、QueryHubView 的 Copy、IlmView 的 TerminalSquare 同类缺失。
  *
  * 本守卫静态锁死整类：
@@ -62,7 +62,7 @@ for (const fp of files) {
 
   for (const m of tpl.matchAll(/<([A-Za-z][\w-]*)/g)) {
     const tag = m[1];
-    /* SFC 递归自引用：Vue 支持组件按自身文件名递归（AggTreeNode/ExplainTree 判例），豁免 */
+    /* SFC 递归自引用：Vue 支持组件按自身文件名递归（AggTreeNode/ExplainTree 先例），豁免 */
     if (tag === kebabToPascal(fp.replace(/\\/g, '/').split('/').pop()!.replace(/\.vue$/, ''))) continue;
     const line = src.slice(0, m.index ?? 0).split('\n').length;
     if (tag.startsWith('n-')) {

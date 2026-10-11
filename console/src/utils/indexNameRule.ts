@@ -3,7 +3,7 @@
  * ReindexAdvancedView destIndexErr。在提交前用人话拦下非法字符与大写字母，
  * 不等 bulk/reindex 跑一半才报难懂的 invalid_index_name_exception。
  *
- * 为什么不收编 composables/useInputLint 的 indexNameRule()：那是 spec §4-1 钦定的
+ * 为什么不合并 composables/useInputLint 的 indexNameRule()：那是 spec -1 钦定的
  * 严格 lint（额外拦 * : 空格、保留前缀、字节超长），而两页现行口径更宽松、错误文案
  * 已被即时红字与 submit 阻断链消费——本函数逐字保持既有文案与判定范围，不做语义升格。
  *

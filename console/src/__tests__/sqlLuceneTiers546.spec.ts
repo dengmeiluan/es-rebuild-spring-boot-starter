@@ -5,7 +5,7 @@
  *    （WHERE/GROUP BY/HAVING 位 keyword 置前、SELECT 位零倾向原 rank 序；候选集不变）；
  *  B LuceneInput：field 段 searchFields 传 typePriorityForOp('term')（裸词=term 语义，
  *    builder FieldSelect 同表先例）；值位档补 wildcard（'pref*' 通配形态，544 姊妹表同形）
- *    与 date_nanos（≡date 族，复用本地 DATE_HINTS）；既有五档字面行不回退（luceneValTiers538 锁随迁）；
+ *    与 date_nanos（≡date 族，复用本地 DATE_HINTS）；既有五档字面行不回退（luceneValTiers538 锁同步更新）；
  *  C ColPicker types 徽标：新可选 prop types（缺省 undefined=零增量不传不出徽标），
  *    清单行字段名旁渲染 .mft-type 色卡徽标（FieldPicker.vue:51 同语言）。
  *
@@ -105,7 +105,7 @@ describe('A sqlCompletion ② 限定列位语义排序', () => {
       ensureCurFields: () => {},
     }));
     const before = 'SELECT * FROM orders WHERE o.';
-    /* 551 随迁：A3 Promise 化——provider await ensure，首轮字段到位即出候选
+    /* 551 同步更新：A3 Promise 化——provider await ensure，首轮字段到位即出候选
        （原 fire-and-forget「首轮零候选等下次触发」契约随批退役）；语义排序/候选集/detail 断言原样保留 */
     const r1 = await sqlProvider(m).provideCompletionItems(fakeModel(before, before.length), { lineNumber: 1 });
     expect(labelsOf(r1), '首轮 await ensure 后即出候选（551 A3）').toEqual(['name', 'amount', 'created', 'title']);
@@ -125,7 +125,7 @@ describe('A sqlCompletion ② 限定列位语义排序', () => {
       ensureCurFields: () => {},
     }));
     const sel = 'SELECT o.';
-    /* 551 随迁：A3 Promise 化——首轮 await 即出（预载语义不变），后续轮断言原样 */
+    /* 551 同步更新：A3 Promise 化——首轮 await 即出（预载语义不变），后续轮断言原样 */
     await sqlProvider(m).provideCompletionItems(fakeModel(sel, sel.length), { lineNumber: 1 });
     await settle();
     const r2 = await sqlProvider(m).provideCompletionItems(fakeModel(sel, sel.length), { lineNumber: 1 });
@@ -223,32 +223,32 @@ describe('B LuceneInput typePriority 亲和 + wildcard/date_nanos 值位档', ()
     expect(li).toContain("if (t === 'wildcard') return WILDCARD_HINTS.filter(h => !p || h.toLowerCase().startsWith(p)).map(withSegs);");
     expect(li).toContain("if (t === 'date_nanos') return DATE_HINTS.filter(h => !p || h.toLowerCase().startsWith(p)).map(withSegs);");
     expect(li).toContain("typePriority: typePriorityForOp('term')");
-    /* 554 随迁：queryAstOps 单行导入扩为多导入（KEYWORD_VALUE_TYPES/NUMERIC_VALUE_TYPES
-       族表单源同批接入）——typePriorityForOp 自 queryAstOps 导入的锚意随迁保形 */
+    /* 554 同步更新：queryAstOps 单行导入扩为多导入（KEYWORD_VALUE_TYPES/NUMERIC_VALUE_TYPES
+       族表单源同批接入）——typePriorityForOp 自 queryAstOps 导入的锚意同步更新保形 */
     expect(li).toContain("import { typePriorityForOp, KEYWORD_VALUE_TYPES, NUMERIC_VALUE_TYPES } from '../utils/queryAstOps';");
   });
 
-  it('既有五档字面行不回退（luceneValTiers538 源锚锁随迁自证：BOOL/IP 逐字不动，只新增分支）', () => {
+  it('既有五档字面行不回退（luceneValTiers538 源锚锁同步更新自证：BOOL/IP 逐字不动，只新增分支）', () => {
     expect(li).toContain("const BOOL_HINTS = ['true', 'false'];");
-    /* 551 随迁：ip 档补 CIDR 形态档（sqlCompletion D1 姊妹面同批对齐）——点分示例逐字不动 */
+    /* 551 同步更新：ip 档补 CIDR 形态档（sqlCompletion D1 姊妹面同批对齐）——点分示例逐字不动 */
     expect(li).toContain("const IP_HINTS = ['192.168.0.1', '192.168.0.0/24'];");
-    /* 554 随迁：keyword 本名判定收口 AGG_KEYWORD_TYPES 族表（KEYWORD_VALUE_TYPES 去
+    /* 554 同步更新：keyword 本名判定收口 AGG_KEYWORD_TYPES 族表（KEYWORD_VALUE_TYPES 去
        wildcard，constant_keyword 同走 terms-agg）——原 keyword 档行为为族表真子集，不回退 */
     expect(li).toContain("if (AGG_KEYWORD_TYPES.includes(t)) return suggestions.value.filter(v => !p || v.toLowerCase().startsWith(p)).map(withSegs);");
     expect(li).toContain("if (t === 'date') return DATE_HINTS.filter(h => !p || h.toLowerCase().startsWith(p)).map(withSegs);");
     expect(li).toContain('if (NUMERIC_TYPES.includes(t)) return NUM_HINTS.filter(h => !p || h.toLowerCase().startsWith(p)).map(withSegs);');
     expect(li).toContain("if (t === 'boolean') return BOOL_HINTS.filter(h => !p || h.toLowerCase().startsWith(p)).map(withSegs);");
     expect(li).toContain("if (t === 'ip') return IP_HINTS.filter(h => !p || h.toLowerCase().startsWith(p)).map(withSegs);");
-    /* 548 锁随迁：known 行扩 wildcard/date_nanos 两档（548 D1 立法，滤空提示随档同权）；
+    /* 548 锁同步更新：known 行扩 wildcard/date_nanos 两档（548 D1 约定，滤空提示随档同权）；
        原契约意图保持——keyword/date/boolean/ip/numeric 五档逐字不动。
-       550 随迁：known 行再补 t === 'text' 档（值位 .keyword 子字段建议 550 立法，
+       550 同步更新：known 行再补 t === 'text' 档（值位 .keyword 子字段建议 550 约定，
        滤空提示随档同权并附「.keyword 子字段」文案），五档既有内容仍逐字不动。
-       552 随迁：known 行补 t === 'constant_keyword' 档（keyword 族值语义，
+       552 同步更新：known 行补 t === 'constant_keyword' 档（keyword 族值语义，
        sqlCompletion.KEYWORD_VALUE_TYPES 同族，滤空提示随档同权），既有各档仍逐字不动。
-       554 随迁：known 行收口 KEYWORD_VALUE_TYPES 族表（keyword/wildcard/constant_keyword
-       三档经族表在册），geo_point 新档随权（'纬度,经度' 静态档 554 立法）——逐档语义等值扩张。
-       560 随迁：known 行头部补 `s.field === '_exists_'`（值位候选改出字段清单 560 立法，
-       滤空提示随权）、尾部补 t === 'version'（静态档 560 立法）——既有各档语义仍不变 */
+       554 同步更新：known 行收口 KEYWORD_VALUE_TYPES 族表（keyword/wildcard/constant_keyword
+       三档经族表在册），geo_point 新档随权（'纬度,经度' 静态档 554 约定）——逐档语义等值扩张。
+       560 同步更新：known 行头部补 `s.field === '_exists_'`（值位候选改出字段清单 560 约定，
+       滤空提示随权）、尾部补 t === 'version'（静态档 560 约定）——既有各档语义仍不变 */
     expect(li).toContain("const known = s.field === '_exists_' || KEYWORD_VALUE_TYPES.includes(t) || t === 'date' || t === 'boolean' || t === 'ip' || t === 'date_nanos' || t === 'text' || t === 'geo_point' || t === 'version' || RANGE_FLAT_TYPES.includes(t) || NUMERIC_TYPES.includes(t);");
   });
 

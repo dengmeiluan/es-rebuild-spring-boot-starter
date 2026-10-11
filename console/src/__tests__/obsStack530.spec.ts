@@ -68,7 +68,7 @@ afterEach(() => {
 describe('A 慢请求可观测（api 计时 + 事件桥 + notify warning）', () => {
   it('api.request 有 performance.now 计时与 10s 阈值常量', () => {
     expect(apiSrc).toMatch(/const startedAt = performance\.now\(\);/);
-    expect(apiSrc).toMatch(/^const SLOW_REQUEST_MS = 10_000;/m); /* 七百九十一批随迁：export 形态→^行锚（791 私有化零外部消费） */
+    expect(apiSrc).toMatch(/^const SLOW_REQUEST_MS = 10_000;/m); /* 七百九十一批同步更新：export 形态→^行锚（791 私有化零外部消费） */
     expect(apiSrc).toMatch(/costMs > SLOW_REQUEST_MS/);
   });
 
@@ -167,7 +167,7 @@ describe('B 跨页任务进度（estask/snapshot 归一 TrackedJob）', () => {
   it('poll 并行打 clusterTasks(reindex action)+snapshotStatus，且有数据面守卫与全失败短路', () => {
     expect(trackerSrc).toMatch(/api\.clusterTasks\('indices:data\/write\/reindex\*', true\)/);
     expect(trackerSrc).toMatch(/api\.snapshotStatus\(\)/);
-    /* 五百五十七批随迁：wantData → dataReady（连接模型须目标钉选才发数据面请求——
+    /* 五百五十七批同步更新：wantData → dataReady（连接模型须目标钉选才发数据面请求——
         裸奔=结构性 PAGE_DENIED 循环主源）+ 快照通道 snapshots 页授权门 */
     expect(trackerSrc).toMatch(/const dataReady = !!app\.target \|\| \(!!app\.hostVisible && !connModel\);/);
     expect(trackerSrc).toMatch(/const wantSnaps = dataReady && can\('snapshots'\);/);
@@ -246,7 +246,7 @@ describe('B 跨页任务进度（estask/snapshot 归一 TrackedJob）', () => {
 /* ══════════ C TasksView（耗时列 + 枚举收口）══════════ */
 describe('C TasksView 耗时列与 actionColor 收口', () => {
   it('耗时列消费 job 级 tookMs（五百三十一批起真值展示：后端已下发，缺失回落 runningMs 折算）', () => {
-    /* 531 批锚随迁：后端 listTasks 新增 tookMs（runningTimeNanos 折算 ms，运行中即已耗时），
+    /* 531 批锚同步更新：后端 listTasks 新增 tookMs（runningTimeNanos 折算 ms，运行中即已耗时），
        原「-1 显 -」兜底退役——ES _tasks 无 finished 概念（完成即消失），列语义=任务至今已耗时 */
     expect(tasksViewSrc).toMatch(/tookMs: Number\.isFinite\(Number\(t\.tookMs\)\) && Number\(t\.tookMs\) >= 0\s*\n\s*\? Number\(t\.tookMs\)\s*\n\s*: Math\.round\(Number\(t\.runningTimeNanos \|\| 0\) \/ 1e6\)/);
     expect(tasksViewSrc).toContain('{{ tookText(t.tookMs) }}');
@@ -301,7 +301,7 @@ describe('D LiveDashboardView 第四卡「运行中任务」', () => {
   });
 
   it('卡墙保持默认 2x2；1600 大屏档随 R54 六卡换 3 列两行（原四列档收列）', () => {
-    expect(liveSrc).toMatch(/\.ld-charts \{ display: grid; grid-template-columns: repeat\(2, 1fr\); gap: var\(--sp-3\); margin-bottom: var\(--sp-4\); \}/); /* 795 件4 随迁：区块间距 sp-3→sp-4（疏密对比） */
+    expect(liveSrc).toMatch(/\.ld-charts \{ display: grid; grid-template-columns: repeat\(2, 1fr\); gap: var\(--sp-3\); margin-bottom: var\(--sp-4\); \}/); /* 795 件4 同步更新：区块间距 sp-3→sp-4（疏密对比） */
     expect(liveSrc).toMatch(/@media \(min-width: 1600px\) \{\s*\n\s*\.ld-charts \{ grid-template-columns: repeat\(3, 1fr\); \}/);
   });
 });

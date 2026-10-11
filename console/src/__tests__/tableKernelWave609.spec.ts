@@ -1,11 +1,11 @@
 /**
  * 六百零九批（轨3 表格内核）：RT 内建视图档 viewSeg 对称件——QRT 607 同款平移
- * （dbx 差距 #2 收编续程：607 批交付 QRT 侧+首消费面 SearchTemplatesView，其提交信息
+ * （dbx 差距 #2 合并续程：607 批交付 QRT 侧+首消费面 SearchTemplatesView，其提交信息
  * 立案「RT 对称件=接线下批」；RT 壳层 541 批 hideBody 注释明写「视图切换 seg 寄居
- * bar-prepend」——壳已留好，本批 seg+alt 体收进内核 opt-in）。
+ * bar-prepend」——壳已留好， seg+alt 体收进内核 opt-in）。
  *
- * ⚠双实产披露：608 号已被监控 lane probe-608-viewports.mjs 占号在途（本批开工 mtime
- * <1min 活跃，575 让位先例），本批按指针顺延 609，功能名+文件名锚定双向披露。
+ * ⚠双实产披露：608 号已被监控 lane probe-608-viewports.mjs 占号在途（开工 mtime
+ * <1min 活跃，575 让位先例），按指针顺延 609，功能名+文件名锚定双向披露。
  *
  * RT 与 QRT 结构差异（镜像时的契约落点）：
  *  ① RT 单壳（TableShell 恒在）——无 QRT 独立壳分支，seg 寄居 bar-left 最前（slot 前）；
@@ -15,7 +15,7 @@
  *     bodyHidden≡hideBody 行为等值零回归）。
  *
  * 消费面：RT 消费侧 IH/DQ 双双自有实现且 ihUnify554 冻结面/DQ spec 锁面（607 批
- * 裁决维持），本批=内核本体增量（轨3「消费侧被占时只做内核本体增量，接线下批」），
+ * 裁决维持），=内核本体增量（轨3「消费侧被占时只做内核本体增量，接线下批」），
  * 消费面接线锁随解锁批交付——故本 spec 无 SearchTemplates 式消费面锁。
  *
  * 挂载样板照抄 aggSelectScope606（裸 createApp + pinia + api mock；点击一律
@@ -121,7 +121,7 @@ describe('六百零九批二：viewSeg 分段出档与 alt 体', () => {
     expect(alt!.textContent).toContain('K609-JSON-ENVELOPE');
     await clickIt(segBtn('表格')!);
     expect(wrapEl()!.style.display, '回表格档体回归').not.toBe('none');
-    expect(host.querySelector('.rt-alt-body'), 'alt 体区退场').toBeNull();
+    expect(host.querySelector('.rt-alt-body'), 'alt 体区移除').toBeNull();
   });
   it('Tree/卡片档体渲染+卡片 open-doc 透传宿主', async () => {
     const seen: any[] = [];
@@ -162,7 +162,7 @@ describe('六百零九批三：viewPrefKey 落盘与回落', () => {
 
 /* ═══════════ 四、源码锁（内核对称件全套；消费面接线锁随 ihUnify554 解锁批交付） ═══════════ */
 describe('六百零九批四：源码锁', () => {
-  it('源码锁：props/computed/watch/守卫换装/AltHitsViews 单源/seg 形态全套', () => {
+  it('源码锁：props/computed/watch/守卫改用/AltHitsViews 单源/seg 形态全套', () => {
     expect(rt).toContain('viewSeg?: boolean;');
     expect(rt).toContain('viewPrefKey?: string;');
     expect(rt).toContain('jsonHtml?: string;');
@@ -171,8 +171,8 @@ describe('六百零九批四：源码锁', () => {
     expect(rt).toContain('viewSeg: false,');
     expect(rt).toContain("const bodyHidden = computed(() => props.hideBody === true || (viewSegOn.value && effView.value !== 'table'));");
     expect(rt).toContain('watch(bodyHidden, h => { if (h && focused.value) focused.value = false; });');
-    /* 守卫换装双点齐换（rt-wrap+rt-status），一处不缺（566-C4：裸词全形态扫） */
-    expect(rt.match(/v-show="!bodyHidden"/g)?.length, 'v-show 换装恰两处').toBe(2);
+    /* 守卫改用双点齐换（rt-wrap+rt-status），一处不缺（566-C4：裸词全形态扫） */
+    expect(rt.match(/v-show="!bodyHidden"/g)?.length, 'v-show 改用恰两处').toBe(2);
     expect(rt).not.toContain('v-show="!hideBody"');
     expect(rt).toContain("import AltHitsViews from './AltHitsViews.vue';");
     expect(rt).toContain('class="seg rt-view-seg"');

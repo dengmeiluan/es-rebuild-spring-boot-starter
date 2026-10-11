@@ -1,7 +1,7 @@
 /**
  * W2 批：SqlConsoleView 三处封死解锁 + SQL 补全单例接入。
  *
- *  ① 模板侧栏可折叠（554 批双钮合一随迁：工具行常驻单钮 data-sq-rail-toggle，随态换文案）
+ *  ① 模板侧栏可折叠（554 批双钮合一同步更新：工具行常驻单钮 data-sq-rail-toggle，随态换文案）
  *     + 宽度三档（data-sq-rail-w，usePref sql.railW）；
  *  ② 结果表高度档（data-sq-result-h，usePref sql.resultH，默认 500=原写死值）；
  *  ③ DSL 预览高度档（data-sq-code-h，usePref sql.codeH，默认 300=原 .sq-code 写死值）；
@@ -90,7 +90,7 @@ beforeEach(() => {
 afterEach(() => { while (apps.length) apps.pop()!.unmount(); });
 
 describe('W2 批：SqlConsole 布局可调 + 补全单例', () => {
-  it('① 模板侧栏可折叠：收起→模板卡出 DOM+偏好落盘；展开→恢复（554 双钮合一随迁：单 toggle 翻转）', async () => {
+  it('① 模板侧栏可折叠：收起→模板卡出 DOM+偏好落盘；展开→恢复（554 双钮合一同步更新：单 toggle 翻转）', async () => {
     const host = await mountView();
     expect(host.querySelector('.sq-samples'), '默认侧栏在').toBeTruthy();
     btn(host, '[data-sq-rail-toggle]').click();
@@ -123,7 +123,7 @@ describe('W2 批：SqlConsole 布局可调 + 补全单例', () => {
     expect(run, '「执行」按钮必须在场').toBeTruthy();
     run!.click();
     await settle();
-    /* 五百四十三批：sq-card 壳退役→结果卡 sq-sec border-top 分节，锁随迁 */
+    /* 五百四十三批：sq-card 壳退役→结果卡 sq-sec border-top 分节，锁同步更新 */
     expect(host.querySelector('.sq-sec.wide'), '结果卡必须出').toBeTruthy();
     btn(host, '[data-sq-result-h]').click();
     await settle();

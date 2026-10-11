@@ -3,7 +3,7 @@ import { createApp, h } from 'vue';
 import { createPinia } from 'pinia';
 import { createRouter, createMemoryHistory } from 'vue-router';
 
-/* IndexHubView 元信息串收编 MetaStrip 统一件回归：items 四段（文档/存储+单位/分片副本/创建）
+/* IndexHubView 元信息串合并 MetaStrip 统一件回归：items 四段（文档/存储+单位/分片副本/创建）
    渲染、别名段走默认插槽（前 3 截断 + 「管控」跳转交互）、整条 hover title 原文留根（信息保真：
    title 携带全量别名列表，显示只截前 3）。 */
 

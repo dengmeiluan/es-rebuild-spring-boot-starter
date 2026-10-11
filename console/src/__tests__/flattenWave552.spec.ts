@@ -1,17 +1,17 @@
 /**
  * 五百五十二批·轨4（工蚁4）：扁平化扫荡。静态源码断言仿 flattenWave546/550/551 范式。
  *
- * ① IndexSettingsView is-custom 卡中卡退役（立法④：dashed border+bg0+radius 子框整块消除
+ * ① IndexSettingsView is-custom 卡中卡退役（约定④：dashed border+bg0+radius 子框整块消除
  *    → border-top 分节；同页 is-diff 530 批已裁决形态为逐字参照系；is-custom-head sec-t
  *    标题行首横排锚在场）。
- * ② 三视图页顶工具条 card 壳退役（立法③：IndexSettings is-bar / SearchSandbox ss-bar /
+ * ② 三视图页顶工具条 card 壳退役（约定③：IndexSettings is-bar / SearchSandbox ss-bar /
  *    Topology tp-bar → 裸 lr-bar 行 + border-bottom 分界）——lr-bar 骨架单轨不动
  *    （lrBarSingleTrack CONSUMERS 在册）；tp-canvas/tp-palette 547 豁免正锁
- *    （paneShellWave547/cardPrimitiveVerdict547 在册，本批零触防误伤）。
- * ③ AdhocRebuildView 私造胶囊三族换装 StatusPill 统一件（已填/留空→n、注解推导→b、
+ *    （paneShellWave547/cardPrimitiveVerdict547 在册，零触防误伤）。
+ * ③ AdhocRebuildView 私造胶囊三族改用 StatusPill 统一件（已填/留空→n、注解推导→b、
  *    轮次阶段→b；en 英文小字归组件 sp-en 单源）；步②审编卡头补 Terminal 原始 IO 钮
  *    （openRawIo last 扩 /config-lab/ 回退——审编校验走 /config-lab/validate 不在
- *    /adhoc-rebuild/ 记录特征下；rawIo545 字面锁随迁）。
+ *    /adhoc-rebuild/ 记录特征下；rawIo545 字面锁同步更新）。
  * ④ 死 fallback 清扫六处四文件——token 均在 theme.css 在场（--line-strong/--r-m/--r-s/
  *    --err-line/--err-soft/--ok-line/--fg），`, fallback` 恒死分支。
  * ⑤ ClusterSettingsView 死规则 .empty .btn 删（模板 class="empty" 零引用实证）+ err 条
@@ -28,7 +28,7 @@ const read = (p: string) => readFileSync(join(__dirname, p), 'utf-8');
 /* 剥 CSS/HTML 注释：注释里的字面不算数（lrBarSingleTrack/emptyStatePadding 同一教训） */
 const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/<!--[\s\S]*?-->/g, ' ');
 
-/* ═══════════ ① IndexSettingsView：is-custom 卡中卡退役（立法④） ═══════════ */
+/* ═══════════ ① IndexSettingsView：is-custom 卡中卡退役（约定④） ═══════════ */
 
 describe('五百五十二批①：IndexSettingsView is-custom 卡中卡退役（border-top 分节流）', () => {
   it('is-custom 子框（bg0+dashed+radius）退役 → is-diff 同语言 border-top 分节', () => {
@@ -38,7 +38,7 @@ describe('五百五十二批①：IndexSettingsView is-custom 卡中卡退役（
     expect(s, 'radius 退役').not.toMatch(/\.is-custom \{[^}]*border-radius/);
     expect(s, '分节流新形态在场（is-diff 530 裁决逐字参照系）')
       .toMatch(/\.is-custom \{ margin-top: var\(--sp-3\); padding-top: var\(--sp-3\); border-top: 1px solid var\(--line\); \}/);
-    expect(s, '同页 is-diff 参照系锚随行复核（本批零触）')
+    expect(s, '同页 is-diff 参照系锚随行复核（零触）')
       .toContain('.is-diff { margin-top: var(--sp-3); padding-top: var(--sp-3); border-top: 1px solid var(--line); }');
     expect(s, '行首横排内缩随分节流（head/rows 自携 --sp-4，与 is-diff-t 同语言）')
       .toContain('.is-custom-head { display: flex; align-items: center; gap: var(--sp-3); margin: 0 var(--sp-4); }');
@@ -58,7 +58,7 @@ describe('五百五十二批①：IndexSettingsView is-custom 卡中卡退役（
   });
 });
 
-/* ═══════════ ② 三视图工具条 card 壳退役（立法③） ═══════════ */
+/* ═══════════ ② 三视图工具条 card 壳退役（约定③） ═══════════ */
 
 describe('五百五十二批②：三视图 -bar card 壳退役（裸 lr-bar 行 + border-bottom 分界）', () => {
   const bars: Array<[string, string, string]> = [
@@ -77,39 +77,39 @@ describe('五百五十二批②：三视图 -bar card 壳退役（裸 lr-bar 行
     }
   });
 
-  it('TopologyView：tp-canvas/tp-palette 547 豁免壳退役（554 击穿随迁：border-top 分节承接，本类 padding 零触）', () => {
+  it('TopologyView：tp-canvas/tp-palette 547 豁免壳退役（554 击穿同步更新：border-top 分节承接，本类 padding 零触）', () => {
     const s = read('../views/TopologyView.vue');
-    /* 五百五十四批随迁（击穿者：554 工蚁D④——两 .card 壳退役）：552「豁免不动」正锁改退役形
-       + 分节锚在场（paneShellWave547/cardPrimitiveVerdict547 同步随迁） */
-    expect(s, 'tp-canvas 卡壳退役（554 击穿随迁）').not.toMatch(/class="card tp-canvas"/);
-    expect(s, 'tp-palette 卡壳退役（554 击穿随迁）').not.toMatch(/class="card tp-palette"/);
+    /* 五百五十四批同步更新（击穿者：554 工蚁D④——两 .card 壳退役）：552「豁免不动」正锁改退役形
+       + 分节锚在场（paneShellWave547/cardPrimitiveVerdict547 同步同步更新） */
+    expect(s, 'tp-canvas 卡壳退役（554 击穿同步更新）').not.toMatch(/class="card tp-canvas"/);
+    expect(s, 'tp-palette 卡壳退役（554 击穿同步更新）').not.toMatch(/class="card tp-palette"/);
     expect(s, 'tp-canvas 分节锚承接（554）').toContain('class="tp-canvas"');
     expect(s, 'tp-palette 分节锚承接（554）').toContain('class="tp-palette"');
     expect(s, '豁免册卡壳 padding 零触').toContain('.tp-canvas { padding: var(--sp-4); min-height: 300px;');
   });
 });
 
-/* ═══════════ ③ AdhocRebuildView：私造胶囊三族换装 + 原始 IO 回退链 ═══════════ */
+/* ═══════════ ③ AdhocRebuildView：私造胶囊三族改用 + 原始 IO 回退链 ═══════════ */
 
-describe('五百五十二批③：AdhocRebuildView 三族胶囊换装 StatusPill + 原始 IO 钮', () => {
+describe('五百五十二批③：AdhocRebuildView 三族胶囊改用 StatusPill + 原始 IO 钮', () => {
   it('三族私造胶囊类名退役（CSS+模板全形态清零，注释字面一并清）', () => {
     const s = strip(read('../views/AdhocRebuildView.vue'));
     for (const cls of ['ar-manual-tag', 'ar-derived-tag', 'ph-tag']) {
-      expect(s, `.${cls} 私造胶囊退役（换装 StatusPill 统一件）`).not.toContain(cls);
+      expect(s, `.${cls} 私造胶囊退役（改用 StatusPill 统一件）`).not.toContain(cls);
     }
   });
 
-  it('StatusPill import 锚 + 换装在场（已填/留空→n、注解推导→b、轮次阶段→b + en 小字组件化）', () => {
+  it('StatusPill import 锚 + 改用在场（已填/留空→n、注解推导→b、轮次阶段→b + en 小字组件化）', () => {
     const s = read('../views/AdhocRebuildView.vue');
     expect(s).toContain("import StatusPill from '../components/StatusPill.vue';");
     expect(s, '手动 settings 已填徽标').toContain('<StatusPill v-if="manualSettings.trim()" tone="n" label="✓ 已填" />');
     expect(s, '手动 settings 留空提示徽标').toContain('<StatusPill v-else tone="n" label="留空 = 沿用源索引" />');
-    expect(s, '注解推导徽标（title 语义随迁）').toMatch(/<StatusPill v-if="mappingFromDerived" tone="b" label="来自注解推导"/);
+    expect(s, '注解推导徽标（title 语义同步更新）').toMatch(/<StatusPill v-if="mappingFromDerived" tone="b" label="来自注解推导"/);
     expect(s, '轮次阶段徽标（roundZh 未收录回退原英文；en 小字归组件 sp-en）')
       .toContain('<StatusPill tone="b" :label="roundZh(r.phase) || r.phase" :en="roundZh(r.phase) ? r.phase : undefined" />');
   });
 
-  it('openRawIo last 扩 /config-lab/ 回退（rawIo545 字面锁随迁）+ 步②审编卡头原始 IO 钮', () => {
+  it('openRawIo last 扩 /config-lab/ 回退（rawIo545 字面锁同步更新）+ 步②审编卡头原始 IO 钮', () => {
     const s = read('../views/AdhocRebuildView.vue');
     expect(s, '回退链：托管链无记录时回落 config-lab 校验记录（审编校验走 /config-lab/validate）')
       .toContain("ioRecorder.last('/adhoc-rebuild/') ?? ioRecorder.last('/config-lab/')");
@@ -148,20 +148,20 @@ describe('五百五十二批⑤：ClusterSettings 死规则删 + err 条三兄�
 
   it('err 条 radius/gap/padding px 字面统一（--r-m/--sp-*；border 语义红框零触）', () => {
     const se = read('../views/ScoreExplainView.vue');
-    /* 五百六十一批随迁：.se-err 私造红壳收编全局 err-bar（558b pf-err 同语言）——
+    /* 五百六十一批同步更新：.se-err 私造红壳合并全局 err-bar（558b pf-err 同语言）——
        radius/border 断言随私造规则退役改锁「不回流」+ role=alert 语义锚 */
     expect(se, '.se-err 私造红壳不回流（radius/border 归 err-bar 单源）').not.toMatch(/\.se-err \{/);
     expect(se, '失败面板走 err-bar 基座（role=alert 语义在场）').toMatch(/role="alert" class="err-bar rise-in"/);
     expect(se, '.se-err-body 内容槽保留').toContain('.se-err-body { flex: 1; min-width: 0; }');
     const pf = read('../views/ProfileFlameView.vue');
-    /* 五百五十八批随迁：.pf-err 红壳收编全局 err-bar（radius/border/err-soft 归 theme.css :554
-       单源，557 IH .ih-qerr 先例；收编形态锚 errBarWave558b）——radius/border 断言随私造规则
+    /* 五百五十八批同步更新：.pf-err 红壳合并全局 err-bar（radius/border/err-soft 归 theme.css :554
+       单源，557 IH .ih-qerr 先例；合并形态锚 errBarWave558b）——radius/border 断言随私造规则
        退役改锁「不回流」 */
     expect(pf, '.pf-err 私造红壳不回流（border/radius 归 err-bar 单源）').not.toMatch(/\.pf-err \{[^}]*border/);
     expect(pf, '.pf-err err-soft 底不回流').not.toMatch(/\.pf-err \{[^}]*err-soft/);
     const mm = read('../views/MatchMatrixView.vue');
-    /* 五百五十八批随迁：.mm-err 同上收编（token 行退役），只留顶对齐与落位节奏 */
+    /* 五百五十八批同步更新：.mm-err 同上合并（token 行退役），只留顶对齐与落位节奏 */
     expect(mm, '.mm-err 私造红壳不回流（border/radius 归 err-bar 单源）').not.toMatch(/\.mm-err \{[^}]*border/);
-    expect(mm, '.mm-err 收编形态（顶对齐+落位）在场').toMatch(/\.mm-err \{ align-items: flex-start; margin-bottom: 0; \}/);
+    expect(mm, '.mm-err 合并形态（顶对齐+落位）在场').toMatch(/\.mm-err \{ align-items: flex-start; margin-bottom: 0; \}/);
   });
 });

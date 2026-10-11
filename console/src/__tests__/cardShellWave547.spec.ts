@@ -1,11 +1,11 @@
 /**
- * 五百四十七批·轨4（工蚁）：任务 2 表格包裹壳退役 · 契约记档。
+ * 五百四十七批·轨4（工蚁）：任务 2 表格包裹壳退役 · 契约备案。
  *
  * 538 SystemView .sy-res / 546 BrowserView .bw-res 同语言续扫：
  * XmigrateView 作业列表 `<div class="card" style="padding:0;overflow:hidden">` 壳 +
  * card-t 内联 padding → border-top 分节（.xm-res/.xm-res-t 承接；QRT 本就全出血）；
  * ⚠ .xm-group 531 旧 border 盒死规则（被 534 覆盖行压死的死规则）一并退役——
- *   rebuildMigrate531:268 / rebuildFlat534:94 两处字面锁随迁（死规则退役，断言改 not.toMatch）；
+ *   rebuildMigrate531:268 / rebuildFlat534:94 两处字面锁同步更新（死规则退役，断言改 not.toMatch）；
  * 顺带 .xm-jobs-kw width:240px → min(240px,100%) 极窄溢出钳制（529 responsive 带兜底范式，
  *   AnalysisSettingsView:366 min(320px,100%) 同款）。
  *
@@ -38,12 +38,12 @@ describe('五百四十七批：XmigrateView 作业列表 .card 壳退役 → bor
     expect(xm.indexOf('class="xm-jobs-tools"'), '工具行在分节内').toBeGreaterThan(secAt);
   });
 
-  it('.xm-group 531 旧 border 盒死规则退役（534 覆盖行承接，锁随迁记录在 rebuildMigrate531/rebuildFlat534）', () => {
+  it('.xm-group 531 旧 border 盒死规则退役（534 覆盖行承接，锁同步更新记录在 rebuildMigrate531/rebuildFlat534）', () => {
     /* 死规则（被下一行覆盖行压死）退役：531 字面形不再在场 */
     expect(xm, '531 旧 border 盒死规则退役').not.toMatch(/\.xm-group \{ margin-bottom: var\(--sp-3\); padding: var\(--sp-2\) var\(--sp-3\); border: 1px solid var\(--line\); border-radius: var\(--r-m\); \}/);
     /* 534 覆盖行（现行生效形态）逐字零触 */
     expect(xm, '534 覆盖行现行形态零触').toContain('.xm-group { margin-bottom: 0; padding: var(--sp-2) 0 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; }');
-    expect(xm, '去 background 立法不回潮（531 ②）').not.toMatch(/\.xm-group \{[^}]*background/);
+    expect(xm, '去 background 约定不回潮（531 ②）').not.toMatch(/\.xm-group \{[^}]*background/);
   });
 
   it('.xm-jobs-kw 极窄溢出钳制：min(240px,100%)（529 带兜底范式），DOM 锚类保留', () => {

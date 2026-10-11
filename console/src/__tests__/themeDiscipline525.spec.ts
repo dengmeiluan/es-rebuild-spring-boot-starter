@@ -1,12 +1,12 @@
 /**
- * 五百二十五批（W9）：theme 纪律守卫——token 层 + 排版立直 + 分隔收编 + 微件归一。
+ * 五百二十五批（W9）：theme 纪律守卫——token 层 + 排版立直 + 分隔合并 + 微件归一。
  * 判据落在源文本上（happy-dom 不注入 theme.css，渲染后数值断言是死断言，pillSingleTrack 同理）；
  * MetaStrip 自动分隔一节走 createApp 手工 mount 看渲染结果（metaStripExt 同范式）。
  * 覆盖：
  *   ① 展示数字三档 token（--fs-num/--fs-num-l/--fs-num-xl）注册 + 字阶守卫注释声明
  *      展示数字 650+mono+tabular-nums；
  *   ② .pill 语义别名档 .err/.warn/.info（色值与 r/y/b 同源同 token）；
- *   ③ .float-pop.inplace 基座档收编（health scoped 拷贝退役）；
+ *   ③ .float-pop.inplace 基座档合并（health scoped 拷贝退役）；
  *   ④ 9px 裸值清零（W9 锁内五处归 --fs-2xs）；
  *   ⑤ MetaStrip 默认插槽前自动补 ms-sep（items 空时不产前导悬挂点）；
  *   ⑥ .chip.xs 迷你档 + SnapshotsView 消费；.ph-tt 650；body 行高 1.5；
@@ -68,7 +68,7 @@ describe('525 批 theme 纪律：分隔与浮层基座', () => {
     expect(theme, '.meta-strip 全局块必须整块退役（theme.css 不许回潮，形态归 MetaStrip 组件 .ms）').not.toMatch(/\.meta-strip/);
   });
 
-  it('裸值收编：body 行高 1.55→1.5；pre.json-view 12px→var(--fs-sm)', () => {
+  it('裸值合并：body 行高 1.55→1.5；pre.json-view 12px→var(--fs-sm)', () => {
     expect(theme).toMatch(/font:\s*13px\/1\.5\s+var\(--font\)/);
     expect(theme, 'body 行高不许回 1.55').not.toMatch(/font:\s*13px\/1\.55/);
     expect(theme).toMatch(/pre\.json-view\s*\{\s*margin:\s*0;\s*font:\s*var\(--fs-sm\)\/1\.6\s+var\(--mono\)/);
@@ -105,7 +105,7 @@ describe('525 批 theme 纪律：排版立直', () => {
   });
 });
 
-describe('525 批 theme 纪律：spin 收编', () => {
+describe('525 批 theme 纪律：spin 合并', () => {
   it('ClusterSwitcher/LoginOverlay/GuardedActionButton 本地 keyframes 退役，统一全局 .spinning', () => {
     expect(theme, '全局 .spinning 必须在场（spinUnify428 同锚）').toMatch(/\.spinning\s*\{\s*animation:\s*rot 1s linear infinite;\s*\}/);
     for (const [f, kf] of [
@@ -122,15 +122,15 @@ describe('525 批 theme 纪律：spin 收编', () => {
   });
 });
 
-/* ═══ 528 批守卫扩容：字重 650 上限立法防回流 + 裸 b/strong 默认 bold 越轨典型位 ═══
+/* ═══ 528 批守卫扩容：字重 650 上限约定防回流 + 裸 b/strong 默认 bold 越轨典型位 ═══
  * 裁决记录：选择扩本 spec 而非新建——「font-weight 裸 700/800 清零」与 525 批已立的
  * 「650 为全站字重上限」守卫注释（字阶守卫块）同属 theme 纪律域，同文件同域避免守卫碎片化；
  * 既有断言零触碰，仅末尾追加 describe。
  *
  * ① 「font-weight 裸 700/800 全站断言」：扫 styles(theme.css) 与全部组件/视图 style 块，
- *    不得出现 font-weight: 700/800 字面（现全站 0 处，523 批「700·800 全站归 650」收编后的
+ *    不得出现 font-weight: 700/800 字面（现全站 0 处，523 批「700·800 全站归 650」合并后的
  *    防回流锁）。裸 <b>/<strong> 的浏览器默认 bold≈700 不产生字面、抓不到——由 ② 的典型位
- *    显式 650 断言兜住高价值点位（数字徽标），其余文案强调位豁免记档（W-D 528 报告）。
+ *    显式 650 断言兜住高价值点位（数字徽标），其余文案强调位豁免备案（W-D 528 报告）。
  * ② 裸 b 默认 bold 越轨典型位：五个数字徽标消费点必须显式 font-weight: 650
  *    （TookBadge 耗时徽标 / RankDebug A·B 得分 / AnalyzerLab token 计数 / SynonymsManager
  *    解析计数 / ProfileFlame 摘要四格——最后者 525 前已 650，锁防回流）。
@@ -165,8 +165,8 @@ describe('528 批：字重 650 上限防回流 + 裸 b 默认 bold 越轨典型�
     expect(read('components/TookBadge.vue')).toMatch(/\.took-badge\s*\{[^}]*font-weight:\s*650/);
     /* RankDebug：A/B 对决得分 b（mono 数字） */
     expect(read('views/RankDebugView.vue')).toMatch(/\.rd-duel-side b\s*\{[^}]*font-weight:\s*650/);
-    /* AnalyzerLab：lane token 计数收编 MetaStrip 统一件（五百三十一批）——裸 b 与其 650
-       局部规则退役，计数 b 由统一件 .ms b（600，低于 650 上限）承担，改锁换装锚 */
+    /* AnalyzerLab：lane token 计数合并 MetaStrip 统一件（五百三十一批）——裸 b 与其 650
+       局部规则退役，计数 b 由统一件 .ms b（600，低于 650 上限）承担，改锁改用锚 */
     expect(read('views/AnalyzerLabView.vue')).toMatch(/<MetaStrip[^>]*class="al-lane-meta"/);
     /* SynonymsManager：解析/忽略计数 b */
     expect(read('views/SynonymsManagerView.vue')).toMatch(/\.sy-stat b\s*\{[^}]*font-weight:\s*650/);
@@ -174,12 +174,12 @@ describe('528 批：字重 650 上限防回流 + 裸 b 默认 bold 越轨典型�
     expect(read('views/ProfileFlameView.vue')).toMatch(/\.pf-sum-cell b\s*\{[^}]*font-weight:\s*650/);
   });
 
-  it('528 批字距两档注册且既有消费收编（.card-t/.tbl th）；px 级微调豁免保字面', () => {
+  it('528 批字距两档注册且既有消费合并（.card-t/.tbl th）；px 级微调豁免保字面', () => {
     expect(theme, '缺 --ls-tight').toMatch(/--ls-tight:\s*\.01em;/);
     expect(theme, '缺 --ls-wide').toMatch(/--ls-wide:\s*\.02em;/);
     expect(theme, '.card-t 字距须消费 --ls-tight').toMatch(/\.card-t\s*\{[^}]*letter-spacing:\s*var\(--ls-tight\)/);
     expect(theme, '.tbl th 字距须消费 --ls-wide').toMatch(/\.tbl th\s*\{[^}]*letter-spacing:\s*var\(--ls-wide\)/);
-    /* 豁免记档（保字面）：.nf-code 404 展示宽距 4px、.cs-env 徽章微距 .3px——px 级字距族不入 em 梯 */
+    /* 豁免备案（保字面）：.nf-code 404 展示宽距 4px、.cs-env 徽章微距 .3px——px 级字距族不入 em 梯 */
     expect(read('views/NotFoundView.vue')).toMatch(/letter-spacing:\s*4px/);
   });
 });

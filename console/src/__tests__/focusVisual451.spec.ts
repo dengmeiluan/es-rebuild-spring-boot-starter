@@ -24,7 +24,7 @@ describe('聚焦面视觉减扰（451 批）', () => {
     expect(fs).toContain('<slot name="actions" />');
   });
 
-  it('.focus-tools 全局类+视图消费（v3.0.1:DslQuery 改 headless 退场）', () => {
+  it('.focus-tools 全局类+视图消费（v3.0.1:DslQuery 改 headless 移除）', () => {
     expect(theme).toContain('.focus-tools { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-bottom: 8px; }');
     const anchors: [string, string][] = [
       ['LuceneQueryView.vue', 'lc-hd-r focus-tools'],

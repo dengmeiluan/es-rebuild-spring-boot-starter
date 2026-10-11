@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
  *   ④readFileSync 源码文本锁形态（chartNarrowTier649 型）静态 import 扫描不可见——
  *     机器名单须人工全文 grep 终审（LD_H_NARROW 因此剔除：spec 文本锁活的）。
  * 终名单 3 符号/2 文件：epochToDisplay/looksLikeTimeField（format.ts）+regexFilter（minijq.ts）。
- * 记档域不动（另有裁决）：类型 export 冗余 38+spec 孤儿值 35+export 冗余值 29。 */
+ * 备案域不动（另有裁决）：类型 export 冗余 38+spec 孤儿值 35+export 冗余值 29。 */
 
 const fmt = readFileSync(resolve(__dirname, '../utils/format.ts'), 'utf8');
 const mj = readFileSync(resolve(__dirname, '../utils/minijq.ts'), 'utf8');

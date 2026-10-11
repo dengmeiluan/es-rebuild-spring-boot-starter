@@ -15,18 +15,18 @@ import { describe, expect, it } from 'vitest';
  *     仅在 describe/it 文案，断言锁的是 kind 联合类型等他形态；del/put 词边界
  *     在 readFileSync spec 零实证）→ 归位内部活；
  *   · SLOW_REQUEST_MS=obsStack530:71 export 形态真锁+ClusterSyncReport=
- *     clusterConnSyncStale:20 声明形态真锁 → 去 export 须锁随迁（787-C2/789 立法）。
+ *     clusterConnSyncStale:20 声明形态真锁 → 去 export 须锁同步更新（787-C2/789 约定）。
  * 刀B=11 处去 export 关键字（api.ts 8：XB/authHeaders/REQUEST_TIMEOUT_MS/
  *   SLOW_REQUEST_MS/DateFormsResp/SnapshotStageCounts/SnapshotIndexProgress/
  *   ClusterSyncReport+liveMonitor NodeSeries+queryHistory QueryHistItem+
  *   jobTracker TrackedJob；零外部消费内部活，typecheck 0=零漏判铁证）
- *   +2 把文本锁随迁（export 形态断言→^行锚形态）。
+ *   +2 把文本锁同步更新（export 形态断言→^行锚形态）。
  * 真死 0（.ts 域残矿低收益观察档与 789/790 预期一致）；
- * 模板域死分支三形态三轮零命中=闭矿记档（786/790/791）。 */
+ * 模板域死分支三形态三轮零命中=备案（786/790/791）。 */
 
 const rd = (p: string) => readFileSync(resolve(__dirname, p), 'utf8');
 
-describe('七百九十一批：stores/api 域 export 私有化（11 处内部活+2 锁随迁）', () => {
+describe('七百九十一批：stores/api 域 export 私有化（11 处内部活+2 锁同步更新）', () => {
   const apiSrc = rd('../api.ts');
   const liveSrc = rd('../stores/liveMonitor.ts');
   const qhSrc = rd('../stores/queryHistory.ts');
@@ -60,7 +60,7 @@ describe('七百九十一批：stores/api 域 export 私有化（11 处内部活
     expect(apiSrc).toMatch(/^export const api = \{/m);
   });
 
-  it('B3 锁随迁自证：两把 readFileSync 文本锁已 ^行锚化（787-C2/789 立法）', () => {
+  it('B3 锁同步更新自证：两把 readFileSync 文本锁已 ^行锚化（787-C2/789 约定）', () => {
     expect(rd('obsStack530.spec.ts')).toMatch(/\^const SLOW_REQUEST_MS = 10_000;\/m/);
     expect(rd('clusterConnSyncStale.spec.ts')).toMatch(/\^interface ClusterSyncReport \\\{\/m/); /* 781-C1：源文本是反斜杠花括号，正则须 \\\{ 双层 */
   });

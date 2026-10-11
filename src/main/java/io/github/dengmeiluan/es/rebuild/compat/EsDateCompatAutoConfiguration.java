@@ -39,7 +39,7 @@ import java.util.Arrays;
  * 抢在本配置注册的 {@link ElasticsearchCustomConversions} 之前生效 ——
  * 对这类字段<b>打开开关什么也不会发生，且不报错</b>。详见 {@link EpochDateConverters} 头部。</p>
  *
- * <h3>为什么<b>必须</b>是 {@code @AutoConfigureBefore}（spec §9.7 D13）</h3>
+ * <h3>为什么<b>必须</b>是 {@code @AutoConfigureBefore}（spec  D13）</h3>
  *
  * <p>{@link ElasticsearchDataAutoConfiguration} 自己会以 {@code @ConditionalOnMissingBean}
  * 建一个<b>空的</b> {@link ElasticsearchCustomConversions}。若本配置晚于它装配，

@@ -77,9 +77,9 @@ beforeEach(() => {
 afterEach(() => { while (apps.length) apps.pop()!.unmount(); });
 
 describe('A 源码锚锁（静态断言，happy-dom 不挂载也成立）', () => {
-  it('四张 datalist 各一份；四 input 各挂 list（560 随迁：自定义组合三件套分表，analyzer 档不动）', () => {
+  it('四张 datalist 各一份；四 input 各挂 list（560 同步更新：自定义组合三件套分表，analyzer 档不动）', () => {
     const src = read('../views/AnalyzerLabView.vue');
-    /* 560 随迁：原「四 input 同指 al-analyzer-opts」改为分表——tokenizer/char_filter/filter
+    /* 560 同步更新：原「四 input 同指 al-analyzer-opts」改为分表——tokenizer/char_filter/filter
        各指 BUILTIN_TOKENIZERS/CHAR_FILTERS/TOKEN_FILTERS 对应 datalist（候选各归其位），
        analyzer 档 al-analyzer-opts 原名原内容零改动（原锁意图=四输入全有候选，不回退） */
     expect((src.match(/<datalist id="al-analyzer-opts">/g) || []).length, 'analyzer datalist 在场且仅一份').toBe(1);
@@ -92,7 +92,7 @@ describe('A 源码锚锁（静态断言，happy-dom 不挂载也成立）', () =
     expect((src.match(/<datalist id="al-tokenfilter-opts">/g) || []).length, 'tokenfilter datalist 在场且仅一份').toBe(1);
   });
 
-  it('候选源=共享表只读消费（560 随迁：四表同源 import，不另造漂移表；562 随迁：并 ANALYZER_COMPONENT_ZH 释义表 import，option 挂 title 单源）', () => {
+  it('候选源=共享表只读消费（560 同步更新：四表同源 import，不另造漂移表；562 同步更新：并 ANALYZER_COMPONENT_ZH 释义表 import，option 挂 title 单源）', () => {
     const src = read('../views/AnalyzerLabView.vue');
     expect(src, 'import 在场（dslCompletionContext 单一出处）')
       .toMatch(/import \{ BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS, ANALYZER_COMPONENT_ZH \} from '\.\.\/utils\/dslCompletionContext'/);
@@ -117,14 +117,14 @@ describe('B 组件挂载渲染锁（analyzerAdjustW2 同款设施）', () => {
     for (const inp of inputs) expect(inp.getAttribute('list')).toBe('al-analyzer-opts');
   });
 
-  it('lane 切 custom 模式：tokenizer/char_filter/filter 三 input 各挂分表 list（560 随迁：同表改分表；happy-dom：select 换值走 dispatchEvent）', async () => {
+  it('lane 切 custom 模式：tokenizer/char_filter/filter 三 input 各挂分表 list（560 同步更新：同表改分表；happy-dom：select 换值走 dispatchEvent）', async () => {
     const host = await mountView();
     const sel = host.querySelector('.al-lane-form select') as HTMLSelectElement;
     expect(sel, 'lane 模式 select 必须在场').toBeTruthy();
     sel.value = 'custom';
     sel.dispatchEvent(new Event('change'));
     await settle();
-    /* 560 随迁：lane0 转 custom 三 input 分表（al-tokenizer/charfilter/tokenfilter-opts），
+    /* 560 同步更新：lane0 转 custom 三 input 分表（al-tokenizer/charfilter/tokenfilter-opts），
        lane1/2 保持 analyzer（al-analyzer-opts）——原「同指一份 5 个」意图=每输入都有候选，
        分表后逐位锁各自的 list 属性 */
     const customInputs = (host.querySelector('.al-lane-form') as HTMLElement).querySelectorAll<HTMLInputElement>('input[list]');

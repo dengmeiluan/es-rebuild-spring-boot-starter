@@ -2,12 +2,12 @@
  * 七百八十二批：实时监控第二刀（用户实报续修「协调性/一致性/对称性/不重复性/组件性」；
  * 稿=docs/goal782-live-component.html；研究底=五维审计〔自勘+Explore 双路〕）。
  *
- * Z1 组件性·头名：三表外壳（Top 索引/告警历史/慢请求）同构手写三遍收编 CollapsePanel
+ * Z1 组件性·头名：三表外壳（Top 索引/告警历史/慢请求）同构手写三遍合并 CollapsePanel
  *    统一件（展开钮/计数/导出门控/空态四要素三套写法已漂移；顺手治真缺陷=告警历史
  *    展开钮计数源 srvAlerts.length 与表行 alertHistRows.length 筛选时不一致）。
  * Z2 不重复性：告警历史级别列 CRIT/WARN/INFO ternary→StatusPill 单源（映射 5 处→1）。
  * Z3 一致性：.ld-hd 六条旧页头死规则整删（780 G267/G268 族第二例）+.ld-al-badge{} 空规则删
- *    +表格 12px→var(--fs-sm) 精确等值收编+chips 2px→var(--sp-0)；waitText 六份字面量→一 computed。
+ *    +表格 12px→var(--fs-sm) 精确等值合并+chips 2px→var(--sp-0)；waitText 六份字面量→一 computed。
  * Z4 协调性：历史区头部两行分层（轻信息行/控件行解耦——11 子项单行 wrap 不可控）。
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -76,7 +76,7 @@ beforeEach(async () => {
 });
 afterEach(() => { app?.unmount(); hostEl?.remove(); app = null; hostEl = null; });
 
-describe('Z1：CollapsePanel 收编三表外壳', () => {
+describe('Z1：CollapsePanel 合并三表外壳', () => {
   it('组件契约：展开钮 aria-expanded/v-model:open/计数徽标/#actions slot', async () => {
     const mod = await import('../components/CollapsePanel.vue');
     const host = document.createElement('div');
@@ -94,7 +94,7 @@ describe('Z1：CollapsePanel 收编三表外壳', () => {
     a.unmount(); host.remove();
   });
 
-  it('三处消费接线（800 随迁：三表收编「监控明细」单容器 ld-detail；782 CollapsePanel 收编态为其中间形态）', () => {
+  it('三处消费接线（800 同步更新：三表合并「监控明细」单容器 ld-detail；782 CollapsePanel 合并态为其中间形态）', () => {
     const t = strip(liveSrc);
     expect(t, '单容器在场').toContain('ld-detail');
     /* 三视图表体与计数语汇在场（告警计数=表行集口径语义保留） */
@@ -106,7 +106,7 @@ describe('Z1：CollapsePanel 收编三表外壳', () => {
     expect(t).not.toContain(':aria-expanded="slowOpen"');
   });
 
-  it('导出函数保留视图侧（802 随迁：平铺双钮收 ⋯ 菜单=copyDetail 按 detailTab 分发三函数）', () => {
+  it('导出函数保留视图侧（802 同步更新：平铺双钮收 ⋯ 菜单=copyDetail 按 detailTab 分发三函数）', () => {
     const t = strip(liveSrc);
     expect(t).toContain("copyDetail('tsv')");
     expect(t).toMatch(/detailTab\.value === 'top'[^}]{0,60}copyTop\(fmt\)/);
@@ -123,18 +123,18 @@ describe('Z2：告警级别列 StatusPill 单源', () => {
   });
 });
 
-describe('Z3：死码与散值收编', () => {
+describe('Z3：死码与散值合并', () => {
   it('.ld-hd 六条死规则+.ld-al-badge 空规则整删（780 族第二例）', () => {
     const t = strip(liveSrc);
     expect(t, 'ld-hd 零残留').not.toContain('.ld-hd');
     expect(t, '空规则零残留').not.toMatch(/\.ld-al-badge\s*\{\s*\}/);
   });
 
-  it('散值精确等值收编：表格 12px→fs-sm；chips 2px→sp-0', () => {
+  it('散值精确等值合并：表格 12px→fs-sm；chips 2px→sp-0', () => {
     const t = strip(liveSrc);
-    /* 784 随迁：三表换装全站 .tbl（tbl zebra）——scoped 基底规则（fs-sm 逐值同）随换装
+    /* 784 同步更新：三表改用全站 .tbl（tbl zebra）——scoped 基底规则（fs-sm 逐值同）随改用
        整删，字号语言源移交 theme.css .tbl；12px 裸值退役断言口径不变 */
-    expect(t, '表格换装全站 .tbl（字号语言源=theme.css .tbl）').toMatch(/<table class="tbl zebra ld-hist-hist-t">/);
+    expect(t, '表格改用全站 .tbl（字号语言源=theme.css .tbl）').toMatch(/<table class="tbl zebra ld-hist-hist-t">/);
     expect(t, '旧裸值退役').not.toContain('font-size: 12px');
     expect(t, 'chips 纵向内边 token 化').toMatch(/\.ld-hist-al \{[^}]*padding: var\(--sp-0\) var\(--sp-2\)/);
   });

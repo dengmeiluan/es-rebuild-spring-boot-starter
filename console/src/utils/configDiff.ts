@@ -1,27 +1,27 @@
 /* 期望索引配置（业务应用声明）vs 实际（ES 现状）的字段级比对。
-   与 docDiff.ts 分开实现：那边比的是文档 _source，这边比的是 settings/mapping 配置树。
-   数组语义不同（配置里的数组是有序集合，逐元素 diff 噪声大），强行共用两边都别扭。
+ 与 docDiff.ts 分开实现：那边比的是文档 _source，这边比的是 settings/mapping 配置树。
+ 数组语义不同（配置里的数组是有序集合，逐元素 diff 噪声大），强行共用两边都别扭。
 
-   === 为什么必须先规范化再比对 ===
-   对 QA ES 6.7.2 实测：写入一份平铺 settings 再读回，有四类系统性失真，
-   不规范化的话每一类都产生假差异，diff 会变成 100% 噪音 ——
-   而一个总在喊狼来了的对比工具比没有更糟，人会直接不看它，真实漂移也被一起忽略。
+ === 为什么必须先规范化再比对 ===
+ 对 QA ES 6.7.2 实测：写入一份平铺 settings 再读回，有四类系统性失真，
+ 不规范化的话每一类都产生假差异，diff 会变成 100% 噪音 ——
+ 而一个总在喊狼来了的对比工具比没有更糟，人会直接不看它，真实漂移也被一起忽略。
 
-     写入 {"number_of_shards": 3, "refresh_interval": "30s", "index.max_result_window": 50000, ...}
-     读回 {"index": {"number_of_shards": "3", "refresh_interval": "30s",
-                     "max_result_window": "50000", "provided_name": "...",
-                     "creation_date": "...", "uuid": "...", "version": {"created": "..."}}}
+ 写入 {"number_of_shards": 3, "refresh_interval": "30s", "index.max_result_window": 50000, ...}
+ 读回 {"index": {"number_of_shards": "3", "refresh_interval": "30s",
+ "max_result_window": "50000", "provided_name": "...",
+ "creation_date": "...", "uuid": "...", "version": {"created": "..."}}}
 
-   ① index. 包装   → 不处理则每个键 1 条 added + 1 条 removed（路径全量错配）
-   ② 标量字符串化  → 不处理则每个数值/布尔设置都是假 changed
-   ③ 注入只读元数据 → 不处理则每个索引恒定 4 条假 removed
-   ④ 嵌套 analysis → 实测原样保留，无需处理
+ ① index. 包装 → 不处理则每个键 1 条 added + 1 条 removed（路径全量错配）
+ ② 标量字符串化 → 不处理则每个数值/布尔设置都是假 changed
+ ③ 注入只读元数据 → 不处理则每个索引恒定 4 条假 removed
+ ④ 嵌套 analysis → 实测原样保留，无需处理
 
-   === 贯穿本文件的取舍：宁可信息少，不可信息假；但静默隐藏同样是一种假 ===
-   所以被剔除的键不消失，而是产出 kind:'ignored' 的行并附 reason；
-   剥前缀撞车不静默合并，而是产出 kind:'conflict' 的行。
-   剔除名单宁窄勿宽 —— 名单太宽会藏起真实漂移，那是比噪音更危险的失效方向
-   （噪音是误报，藏漏是漏报）。 */
+ === 贯穿本文件的取舍：宁可信息少，不可信息假；但静默隐藏同样是一种假 ===
+ 所以被剔除的键不消失，而是产出 kind:'ignored' 的行并附 reason；
+ 剥前缀撞车不静默合并，而是产出 kind:'conflict' 的行。
+ 剔除名单宁窄勿宽 —— 名单太宽会藏起真实漂移，那是比噪音更危险的失效方向
+ （噪音是误报，藏漏是漏报）。 */
 
 export type ConfigDiffKind =
   | 'added'      // 只在 expected 有：业务声明了但 ES 没有，重建后会加上
@@ -79,12 +79,12 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
  *
  * 规则：仅当一侧是 number/boolean、另一侧是 string，且该 string 是该值的
  * **规范表示**（String(v) === s）时判等。于是：
- *   3 ≡ "3"        （ES 字符串化失真）
- *   true ≡ "true"  （同上，实测 blocks.write）
- *   30 ≢ "30s"     （带单位，非纯数字）
- *   false ≢ "0"    （跨类型，不是布尔的规范表示）
- *   1 ≢ "1.0"      （String(1) !== "1.0"）
- *   3 ≢ " 3"       （有空格，非规范表示）
+ * 3 ≡ "3" （ES 字符串化失真）
+ * true ≡ "true" （同上，实测 blocks.write）
+ * 30 ≢ "30s" （带单位，非纯数字）
+ * false ≢ "0" （跨类型，不是布尔的规范表示）
+ * 1 ≢ "1.0" （String(1) !== "1.0"）
+ * 3 ≢ " 3" （有空格，非规范表示）
  *
  * 一个例外口径：1e5 ≡ "100000" 会判 same。它不属于「字符串化失真」而属于
  * **值等价** —— 两者数值确实相等。落在宽容方向而非漏报方向（多判一次 same
@@ -106,8 +106,8 @@ function scalarEquals(a: unknown, b: unknown): boolean {
 
 /**
  * 剥掉最外层 index. 包装，把两种形态统一到平铺路径：
- *   { index: { a: 1 } }  → { a: 1 }   （GET _settings 的嵌套形态）
- *   { 'index.a': 1 }     → { a: 1 }   （人从 ES 复制粘贴的 dot-key 形态）
+ * { index: { a: 1 } } → { a: 1 } （GET _settings 的嵌套形态）
+ * { 'index.a': 1 } → { a: 1 } （人从 ES 复制粘贴的 dot-key 形态）
  * 只剥一层且只在最外层，深层的同名 index 键（如 analysis.analyzer.index）不受影响。
  *
  * 撞车（同侧同时存在 a 与 index.a）不静默合并 —— 静默合并会让其中一个悄悄消失，
@@ -183,8 +183,8 @@ export function diffConfig(expected: unknown, actual: unknown): ConfigDiffRow[] 
   const a = stripIndexPrefix(aObj ?? {});
 
   /* 撞车键先落 conflict 行，并从后续比对中摘出去——带歧义的键不该再给出 same/changed
-     结论，那等于替人挑了一个写法。歧义本身就是要人先解决的问题，
-     故即使两个写法的值恰好相同也仍报 conflict。 */
+ 结论，那等于替人挑了一个写法。歧义本身就是要人先解决的问题，
+ 故即使两个写法的值恰好相同也仍报 conflict。 */
   const conflicted = new Set<string>([...e.conflicts.keys(), ...a.conflicts.keys()]);
   for (const k of conflicted) {
     const eo = e.conflicts.get(k);
@@ -203,7 +203,7 @@ export function diffConfig(expected: unknown, actual: unknown): ConfigDiffRow[] 
 
   const walk = (l: unknown, r: unknown, prefix: string): void => {
     /* MISSING 侧不能退化成 {}：那样「整棵子树缺失」与「空对象」就分不开了。
-       下面用 lAbsent/rAbsent 显式记住哪一侧压根不存在。 */
+ 下面用 lAbsent/rAbsent 显式记住哪一侧压根不存在。 */
     const lAbsent = l === MISSING;
     const rAbsent = r === MISSING;
     const lo = isPlainObject(l) ? l : {};
@@ -231,8 +231,8 @@ export function diffConfig(expected: unknown, actual: unknown): ConfigDiffRow[] 
 
       if (lv === MISSING) {
         /* 单侧子树也要继续下钻，否则 { version: { created } } 会整棵记成一条
-           version:'removed'，永远走不到 version.created 的剔除判定，
-           4 条假 removed 就少剔了一条。下钻后路径也统一到叶子级。 */
+ version:'removed'，永远走不到 version.created 的剔除判定，
+ 4 条假 removed 就少剔了一条。下钻后路径也统一到叶子级。 */
         if (isPlainObject(rv) && Object.keys(rv).length) walk(MISSING, rv, p);
         else rows.push({ path: p, kind: 'removed', expected: undefined, actual: rv });
       } else if (rv === MISSING) {
@@ -242,7 +242,7 @@ export function diffConfig(expected: unknown, actual: unknown): ConfigDiffRow[] 
         walk(lv, rv, p);
       } else {
         /* 数组与对象一律整体比较（JSON 等价即 same）；标量额外走字符串化等价。
-           两侧原始值原样带出，不被规范化改写——人要看到 ES 真实返回的形态。 */
+ 两侧原始值原样带出，不被规范化改写——人要看到 ES 真实返回的形态。 */
         const same = JSON.stringify(lv) === JSON.stringify(rv) || scalarEquals(lv, rv);
         rows.push({ path: p, kind: same ? 'same' : 'changed', expected: lv, actual: rv });
       }

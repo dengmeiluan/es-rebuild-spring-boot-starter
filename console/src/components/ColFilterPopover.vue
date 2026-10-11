@@ -5,8 +5,8 @@
         <div class="cfp-hd mono">
           <span>筛选「{{ col }}」</span>
           <!-- 内建组合档 chip（可选 filterMode——缺省不传零渲染，五通道既有
-               消费方弹层零变化；561 双内核走默认槽注入位，本 chip 供未接线通道 opt-in）。
-               aria/title 文案与双内核槽钮同语汇（filterModeToggle561 行为锚同串） -->
+ 消费方弹层零变化；561 双内核走默认槽注入位，本 chip 供未接线通道 opt-in）。
+ aria/title 文案与双内核槽钮同语汇（filterModeToggle561 行为锚同串） -->
           <button v-if="filterMode" class="cfp-fmode mono"
                   :aria-label="'筛选组合档：' + filterMode + '（点击切换）'"
                   :title="'多列筛选组合：' + filterMode + '（点击切换为 ' + (filterMode === 'AND' ? 'OR 任一列命中' : 'AND 全部命中') + '）'"
@@ -17,7 +17,7 @@
                :placeholder="`搜索值（共 ${total} 个不同值）…`"
                @input="emit('update:kw', ($event.target as HTMLInputElement).value)" @keydown.stop />
         <!-- 类型感知区间过滤（QRT/RT/Security 通道）——min/max 双输入，与等值勾选并存 AND；
-             占位缺省「最小/最大值（含）」，date 列由消费方传带 ISO/epoch 示例的占位 -->
+ 占位缺省「最小/最大值（含）」，date 列由消费方传带 ISO/epoch 示例的占位 -->
         <div v-if="range" class="cfp-range">
           <input class="cfp-range-in mono" type="text" :value="rangeMin"
                  :placeholder="rangeMinPh" :aria-label="col + ' 最小值（含）'"
@@ -28,14 +28,14 @@
                  @input="emit('set-range', 'max', ($event.target as HTMLInputElement).value)" @keydown.stop />
         </div>
         <!-- 列内文本包含行（contains 门控；与等值/区间并存 AND）——
-             未传 contains 恒不渲染（五通道既有消费方弹层零变化） -->
+ 未传 contains 恒不渲染（五通道既有消费方弹层零变化） -->
         <input v-if="contains" class="cfp-kw mono" type="text" :value="containsVal"
                placeholder="包含文本（含即保留）" :aria-label="col + ' 包含文本筛选'"
                @input="emit('set-contains', ($event.target as HTMLInputElement).value)" @keydown.stop />
         <label v-for="(e, vi) in vals" :key="vi" class="cfp-row">
           <input type="checkbox" :checked="selected.includes(normOf(e.v))" @change="emit('toggle', e.v)" />
           <!-- 传 labelOf（QRT/RT）：MarkText 值内搜索命中段切 mark + title 全文；
-               不传（Browser/Plugins/Security）：裸 ∅/String 展示，行为与五处原壳逐字一致 -->
+ 不传（Browser/Plugins/Security）：裸 ∅/String 展示，行为与五处原壳逐字一致 -->
           <span v-if="labelOf" class="mono cfp-val" :title="labelOf(e.v)"><MarkText :text="labelOf(e.v)" :kw="kw" /></span>
           <span v-else class="mono cfp-val">{{ fmtVal(e.v) }}</span>
           <!-- 值分布 mini-bar（bars，QRT/RT 通道）——按所显示值最大计数归一的纯 CSS 百分条 -->
@@ -52,15 +52,15 @@
 </template>
 
 <script setup lang="ts">
-/* 列筛选弹层共享壳收编——此前 QRT(qfp)/RT(rfp)/Browser(bw-fp)/Plugins(pl-afp)/
-   Security(afp) 五份同构手写壳（mask+fixed 面板+「筛选「列」」头+清除+值内搜索+每值计数+Esc 关），
-   筛选逻辑本就走共享 useColFilters，此处只统一「壳」。五处差异以可选 props 表达（按实际最小公共集）：
-   — search/kw：值内搜索输入（Browser 无）；bars：值分布 mini-bar（仅 QRT/RT）；
-   — showHasMore：基数降级提示（仅 QRT/RT 渲染）；range 系列：区间双输入（QRT/RT 类型感知、
-     Security httpStatus）；labelOf：MarkText 高亮展示（Browser/Plugins/Security 裸文本）；
-   — fit：视口碰撞自适应+开层聚焦首输入（QRT/RT 语义平移；其余三处保持原静态落点）。
-   z 层级硬约束：弹层必须仍被页面滚动遮罩语义管理（原 1200/1201 上下文层）——.float-pop 自带
-   --z-island，局部覆写压回 ctx 档（mask=var(--z-ctx)、面板=calc(var(--z-ctx) + 1)），不升浮岛档。 */
+/* 列筛选弹层共享壳合并——此前 QRT(qfp)/RT(rfp)/Browser(bw-fp)/Plugins(pl-afp)/
+ Security(afp) 五份同构手写壳（mask+fixed 面板+「筛选「列」」头+清除+值内搜索+每值计数+Esc 关），
+ 筛选逻辑本就走共享 useColFilters，此处只统一「壳」。五处差异以可选 props 表达（按实际最小公共集）：
+ — search/kw：值内搜索输入（Browser 无）；bars：值分布 mini-bar（仅 QRT/RT）；
+ — showHasMore：基数降级提示（仅 QRT/RT 渲染）；range 系列：区间双输入（QRT/RT 类型感知、
+ Security httpStatus）；labelOf：MarkText 高亮展示（Browser/Plugins/Security 裸文本）；
+ — fit：视口碰撞自适应+开层聚焦首输入（QRT/RT 语义平移；其余三处保持原静态落点）。
+ z 层级硬约束：弹层必须仍被页面滚动遮罩语义管理（原 1200/1201 上下文层）——.float-pop 自带
+ --z-island，局部覆写压回 ctx 档（mask=var(--z-ctx)、面板=calc(var(--z-ctx) + 1)），不升浮岛档。 */
 import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue';
 import MarkText from './MarkText.vue';
 import { fitPopupPos } from '../utils/popFit';
@@ -96,13 +96,13 @@ const props = withDefaults(defineProps<{
   rangeMinPh?: string;
   rangeMaxPh?: string;
   /* 列内文本包含行（可选——不传=弹层零变化，五通道既有消费方零增量）；
-     contains=true 渲染包含词输入（emit set-contains 交消费方 useColFilters.setContainsFilter） */
+ contains=true 渲染包含词输入（emit set-contains 交消费方 useColFilters.setContainsFilter） */
   contains?: boolean;
   containsVal?: string;
   /* 视口碰撞自适应 + 打开即聚焦首输入（QRT/RT；其余通道保持静态落点零增量） */
   fit?: boolean;
   /* 内建组合档 chip（可选——缺省 undefined 零渲染；传 'AND'/'OR' 显示
-     「组合：X」钮，点击 emit toggle-filter-mode 交消费方 useFilterMode.toggleFilterMode） */
+ 「组合：X」钮，点击 emit toggle-filter-mode 交消费方 useFilterMode.toggleFilterMode） */
   filterMode?: 'AND' | 'OR';
 }>(), {
   hasMore: false,
@@ -149,7 +149,7 @@ const barScopeTip = computed(() =>
   `条宽按所显示值中最大计数（${maxN.value} 行）归一${props.hasMore ? `；已按高频截取前 ${props.vals.length} 个值，条宽不代表全量分布` : ''}`);
 
 /* 定位：先落点防闪帧；fit 通道 nextTick 实测碰撞翻转钳位（happy-dom 尺寸 0 数学上不翻）
-   并聚焦首输入（键盘用户可直接筛选；QRT/RT v3.0.0 语义平移） */
+ 并聚焦首输入（键盘用户可直接筛选；QRT/RT v3.0.0 语义平移） */
 const panelEl = ref<HTMLElement>();
 const pos = ref({ x: props.x, y: props.y });
 watch(() => [props.x, props.y], async ([nx, ny]) => {
@@ -162,13 +162,13 @@ watch(() => [props.x, props.y], async ([nx, ny]) => {
   (el.querySelector('input') as HTMLInputElement | null)?.focus();
 }, { immediate: true });
 
-/* Esc 收口升 document 捕获级（566 Pagination 立法推广；宪法铁律 D1#5；
-   567 真机实锚）——原 mask/panel 元素级 esc 双挂依赖弹层内持焦点（tabindex=-1 族），
-   漏斗钮聚焦时 Esc 关不掉；且 .cfp-kw/.cfp-range-in 的 `@keydown.stop` 掐断冒泡，
-   焦点在输入框内同样关不掉。挂载（=开层，消费方条件渲染）即存触发时焦点（漏斗钮），
-   document 捕获级收 Esc：stopPropagation+close+焦点回触发钮（触发时焦点存档-还档，
-   五通道消费方零改动）；卸载兜底摘监听（CellContextMenu 417 同款挂/摘配对）。
-   源码锁 colFilterPopoverEsc568⑤：元素级 esc 修饰符不得回流本文件（双源即回归）。 */
+/* Esc 收口升 document 捕获级（566 Pagination 约定推广；宪法铁律 D1#5；
+ 567 真机实锚）——原 mask/panel 元素级 esc 双挂依赖弹层内持焦点（tabindex=-1 族），
+ 漏斗钮聚焦时 Esc 关不掉；且 .cfp-kw/.cfp-range-in 的 `@keydown.stop` 掐断冒泡，
+ 焦点在输入框内同样关不掉。挂载（=开层，消费方条件渲染）即存触发时焦点（漏斗钮），
+ document 捕获级收 Esc：stopPropagation+close+焦点回触发钮（触发时焦点存档-还档，
+ 五通道消费方零改动）；卸载兜底摘监听（CellContextMenu 417 同款挂/摘配对）。
+ 源码锁 colFilterPopoverEsc568⑤：元素级 esc 修饰符不得回流本文件（双源即回归）。 */
 const escPrevFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 function onDocEsc(e: KeyboardEvent) {
   if (e.key !== 'Escape') return;
@@ -184,8 +184,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onDocEsc, true));
 /* mask 透明点击捕获层：z=--z-ctx（1200 上下文层语义，页面滚动遮罩档管理） */
 .cfp-mask { position: fixed; inset: 0; z-index: var(--z-ctx); }
 /* 面板基座 .float-pop（fixed+bg1+line-strong+shadow-pop+r-m，theme.css:552）；
-   硬约束：局部覆写把 float-pop 的 --z-island 压回 ctx 档 +1（原 1201 面板语义），
-   弹层不升浮岛档——仍归页面滚动遮罩语义管理 */
+ 硬约束：局部覆写把 float-pop 的 --z-island 压回 ctx 档 +1（原 1201 面板语义），
+ 弹层不升浮岛档——仍归页面滚动遮罩语义管理 */
 .cfp {
   z-index: calc(var(--z-ctx) + 1);
   min-width: 180px; max-width: 320px; max-height: 320px; overflow: auto; padding: var(--sp-1);

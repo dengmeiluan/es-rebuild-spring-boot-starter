@@ -1,7 +1,7 @@
 /**
  * R40 capability 行为单测收口：canViewAllAudit/roleRank 角色矩阵——
  * 此前仅有源码锚（permGating 断言 auth store 引用行），无行为级红绿；
- * 大屏慢请求面板（rank3+ 门）与安全中心全量审计共用此判定，角色矩阵在此立法。
+ * 大屏慢请求面板（rank3+ 门）与安全中心全量审计共用此判定，角色矩阵在此约定。
  * 语义镜像后端 ConsoleAuthInterceptor：AUDIT_OP/REBUILD_OP/CLUSTER_OP 三专项同 rank 互通；
  * 未知角色 fail-closed=最低 VIEWER。
  */

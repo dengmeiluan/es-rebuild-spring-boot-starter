@@ -4,7 +4,7 @@
  * 对标 byNode 悬浮读出形态=「我要的是这个效果」）；件2 HistoryChart Y 刻度列（线和文字互相遮挡）；
  * 件3 明细收起条 seg 收起态隐藏（该 UI 样式非常丑陋）；件4 byNode 默认开启（按节点藏太深应该是默认）；
  * 件5 页头 actions 单行化（UI 太丑啦 竖排三行）；件6 历史区告警胶囊行撤（两胶囊叠行+整块无设计语言）；
- * 件7 历史区头部保留两层制（seg 控行①②既有 Z4 立法维持）。
+ * 件7 历史区头部保留两层制（seg 控行①②既有 Z4 约定维持）。
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';

@@ -1,12 +1,12 @@
 <!-- ·轨2：原始请求/响应快查弹窗（IndexHub/SqlConsole/Adhoc/Xmigrate 四页「原始 IO」钮共用）。
-     数据源=api.ts ioRecorder 记录环（宿主传 rec，本组件零请求）；请求/响应两分节 Monaco 只读——
-     json/ndjson 语言档吃 es-dark/es-light 既有主题 token 规则（键/串值/数字/标点语义分档高亮免费获得，
-     ndjson 多根不挂 JSON LS 无误报红线）；每分节复制钮走 format.copyText 三层管线（全站唯一复制出口）；
-     无记录空态 EmptyState 统一件。扁平化立法：弹窗内不套卡，Monaco 直贴，分节 border-top 承接；
-     Monaco 定高 min(38vh,360px) 不随内容增长（弹窗内定高先例=doc 弹窗 min(60vh,Npx) 同口径降档），
-     超小屏整体滚动由 .rim 兜底。壳=ModalShell 共享件（ConfirmModal 同源），Esc/遮罩关闭语义随壳。
-     头部补字号三档 seg（rim.font 独立落盘——本弹层四页共用不挂页面键；
-     dq/dt/ih 同源 EDITOR_FONT_TIERS 单源；请求/响应两 Monaco 同键 :font-size 接线）。 -->
+ 数据源=api.ts ioRecorder 记录环（宿主传 rec，本组件零请求）；请求/响应两分节 Monaco 只读——
+ json/ndjson 语言档吃 es-dark/es-light 既有主题 token 规则（键/串值/数字/标点语义分档高亮免费获得，
+ ndjson 多根不挂 JSON LS 无误报红线）；每分节复制钮走 format.copyText 三层管线（全站唯一复制出口）；
+ 无记录空态 EmptyState 统一件。扁平化约定：弹窗内不套卡，Monaco 直贴，分节 border-top 承接；
+ Monaco 定高 min(38vh,360px) 不随内容增长（弹窗内定高先例=doc 弹窗 min(60vh,Npx) 同口径降档），
+ 超小屏整体滚动由 .rim 兜底。壳=ModalShell 共享件（ConfirmModal 同源），Esc/遮罩关闭语义随壳。
+ 头部补字号三档 seg（rim.font 独立落盘——本弹层四页共用不挂页面键；
+ dq/dt/ih 同源 EDITOR_FONT_TIERS 单源；请求/响应两 Monaco 同键 :font-size 接线）。 -->
 <template>
   <ModalShell :show="show" label="原始 IO" width="960px" @close="close">
     <div v-if="rec" class="rim">
@@ -15,7 +15,7 @@
         <span class="rim-url mono" :title="rec.url">{{ rec.url }}</span>
         <span class="rim-status" :class="statusCls" :title="statusText">{{ statusText }}</span>
         <!-- 字号三档 seg（rim.font 落盘；跨页独立弹层不挂页面键，
-             dq/dt/ih 同源 EDITOR_FONT_TIERS 单源；请求/响应两 Monaco 同键同档） -->
+ dq/dt/ih 同源 EDITOR_FONT_TIERS 单源；请求/响应两 Monaco 同键同档） -->
         <span class="seg rim-font-seg" role="group" aria-label="编辑器字号档">
           <button v-for="f in EDITOR_FONT_TIERS" :key="f" type="button" :class="{ on: rimFont === f }"
             :title="'编辑器字号 ' + f + 'px'" @click="rimFont = f">{{ f }}</button>
@@ -70,14 +70,14 @@ const emit = defineEmits<{ (e: 'update:show', v: boolean): void }>();
 const store = useAppStore();
 
 /* 字号三档落盘（rim.font，缺省=EDITOR_FONT_TIERS 首档=MonacoEditor 组件
-   既有默认零漂移）——RawIoModal 跨四页共用，属独立弹层面，不挂任何页面键（dq/dt/ih 同形） */
+ 既有默认零漂移）——RawIoModal 跨四页共用，属独立弹层面，不挂任何页面键（dq/dt/ih 同形） */
 const rimFont = usePref<number>('rim.font', EDITOR_FONT_TIERS[0]);
 
 function close() { emit('update:show', false); }
 
 /* 语言分档（与高亮语义分档配套）：单根 JSON → json（JSON LS 校验+键/值/数字四档 token）；
-   多根 NDJSON → ndjson（自研 monarch，只高亮不校验——多根对象不被 json worker 整片红线）；
-   其余纯文本（hot threads 等）→ plaintext，不产语法噪音。请求体/响应同口径。 */
+ 多根 NDJSON → ndjson（自研 monarch，只高亮不校验——多根对象不被 json worker 整片红线）；
+ 其余纯文本（hot threads 等）→ plaintext，不产语法噪音。请求体/响应同口径。 */
 function detectLang(s: string): string {
   const t = (s || '').trim();
   if (!t.startsWith('{') && !t.startsWith('[')) return 'plaintext';
@@ -106,7 +106,7 @@ const respMeta = computed(() => {
 });
 
 /* curl 形态（Lead 预裁）：origin 取 window.location.origin，不猜集群真名；
-   单引号体按 POSIX 惯例转义（'\''），无体请求不带 -d。 */
+ 单引号体按 POSIX 惯例转义（'\''），无体请求不带 -d。 */
 function curlText(): string {
   const r = props.rec!;
   const body = r.requestBody ? ` -d '${r.requestBody.replace(/'/g, `'\\''`)}'` : '';
@@ -130,11 +130,11 @@ async function copyCurl() {
 </script>
 
 <style scoped>
-/* 扁平化立法：弹窗内不套卡——头部行 + 两分节 border-top 承接，Monaco 直贴。
+/* 扁平化约定：弹窗内不套卡——头部行 + 两分节 border-top 承接，Monaco 直贴。
    token 化（间距/字号/圆角全走 --sp、--fs、--r 系列档位）；rim 整体滚动只作超小屏兜底，Monaco 自身定高不增长 */
-/* 编辑器外框退役（立法③）——monaco-host 是 MonacoEditor 根、携本组件
+/* 编辑器外框退役（约定③）——monaco-host 是 MonacoEditor 根、携本组件
    scope id，本弹窗仅请求/响应两处直挂 Monaco，scoped 裸类规则直接命中（MappingView
-   弹窗判例）；rim-sec-hd/border-top 自承分界 */
+   弹窗先例）；rim-sec-hd/border-top 自承分界 */
 .monaco-host { border: none; border-radius: 0; }
 .rim { display: flex; flex-direction: column; max-height: 86vh; overflow: auto; }
 .rim-hd { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--border); }
@@ -145,7 +145,7 @@ async function copyCurl() {
 .rim-status.s-err { color: var(--err); background: var(--err-soft); }
 .rim-status.s-na { color: var(--tx2); background: var(--bg2); }
 .rim-close { flex-shrink: 0; margin-left: var(--sp-1h); }
-/* 分节：border-top 承接分界（sq-sec 543 同语言）；分节头行首横排（卡头立法②形态） */
+/* 分节：border-top 承接分界（sq-sec 543 同语言）；分节头行首横排（卡头约定②形态） */
 .rim-sec { border-top: 1px solid var(--border); }
 .rim-sec-hd { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); font-size: var(--fs-sm); font-weight: 650; }
 .rim-sec-t { color: var(--tx0); }

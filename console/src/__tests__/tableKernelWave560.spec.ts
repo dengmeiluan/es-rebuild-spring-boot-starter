@@ -11,7 +11,7 @@
  *    装配单源，meta0 差异字段参数化）；
  * 4) QRT JSON 第五导出钮（aria/命名/matrixText json 口径）+ 双内核接线源码锁
  *    （compareVals/useFilterMode/quickFilterRows/frozenStyleOf/buildExportSheets 接线、
- *    RT md 走 matrixText 私造 esc 退役、RT hlSafe 收编 import）。
+ *    RT md 走 matrixText 私造 esc 退役、RT hlSafe 合并 import）。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -180,7 +180,7 @@ describe('五百六十批源码锁：QRT JSON 钮+双内核接线', () => {
     expect(qrt).toContain("${props.exportName || 'table-export'}-${exportStamp()}.json");
   });
 
-  it('比较器接线 compareVals（numeric 字面/parseFloat 双试退役；五百六十五批随迁：sortableGuard 随接线并入同一 import；五百六十七批随迁：RT 半边对称件同款并入；六百零三批随迁：useSortChain 状态机并入同一 import）', () => {
+  it('比较器接线 compareVals（numeric 字面/parseFloat 双试退役；五百六十五批同步更新：sortableGuard 随接线并入同一 import；五百六十七批同步更新：RT 半边对称件同款并入；六百零三批同步更新：useSortChain 状态机并入同一 import）', () => {
     expect(rt).toContain("import { compareVals, sortableGuard, useSortChain } from '../composables/tableSort'");
     expect(qrt).toContain("import { compareVals, sortableGuard, useSortChain } from '../composables/tableSort'");
     expect(rt).toContain('const r = compareVals(va, vb)');
@@ -205,7 +205,7 @@ describe('五百六十批源码锁：QRT JSON 钮+双内核接线', () => {
     expect(qrt).toContain('buildExportSheets(');
   });
 
-  it('RT md 分支走 matrixText（私造 esc 管道退役）；RT hlSafe 收编 import（本地定义退役）', () => {
+  it('RT md 分支走 matrixText（私造 esc 管道退役）；RT hlSafe 合并 import（本地定义退役）', () => {
     expect(rt).toMatch(/matrixText\(\{\s*rows,\s*cols: \['_id', \.\.\.cols\],[\s\S]*?'md'\)/);
     expect(rt).not.toContain("String(v ?? '').replace(/\\|/g");
     expect(rt).toContain("import { hlSafe } from '../utils/highlightSanitize'");

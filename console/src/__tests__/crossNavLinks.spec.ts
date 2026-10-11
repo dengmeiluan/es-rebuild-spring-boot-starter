@@ -87,7 +87,7 @@ describe('核心视图联动入口（三十四批）', () => {
     const t = readFileSync(join(__dirname, '../views/IndexHubView.vue'), 'utf-8');
     expect(t).toContain('show-relevance');
     /* 与 DslQueryView 同一 sessionStorage 契约键（消费方：RankDebugView/QueryXrayView）。
-       五百三十一批：裸 setItem 收编 useLinkCarry 统一件后源码字面 'es-console.link.*' 消失，
+       五百三十一批：裸 setItem 合并 useLinkCarry 统一件后源码字面 'es-console.link.*' 消失，
        改锚 useLinkCarry('rankdebug'/'xray') 形态（键前缀 es-console.link. 归统一件承担） */
     expect(t).toContain("useLinkCarry<{ index: string; id: string; query: string }>('rankdebug')");
     expect(t).toContain("useLinkCarry<{ index: string; id: string }>('xray')");

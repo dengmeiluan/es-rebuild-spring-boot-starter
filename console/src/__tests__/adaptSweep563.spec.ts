@@ -1,15 +1,15 @@
 /**
  * 五百六十三批（轨5 自适应与全栈）：--sp 残量收口 + 零 @media 裁决落档。
  * ① --sp：独占域 30 组件 spacing 声明档位裸 px 复扫恒零（spSweep538/545/flattenWave560-sp
- *    收口面反锁延续，本批实测零可收面）；theme.css 存量两行精确等值收编——
+ *    收口面反锁延续，实测零可收面）；theme.css 存量两行精确等值合并——
  *    .pill.xs「1px 6px」6px 半边收 var(--sp-1h)（1px 微衬刻意值保字面，flattenWave554
- *    WatcherView .wt-act「1px var(--sp-1h)」判例同款）、.btn gap 6px 收 var(--sp-1h)；
+ *    WatcherView .wt-act「1px var(--sp-1h)」先例同款）、.btn gap 6px 收 var(--sp-1h)；
  *    三行逐字锁（.kbd.inline=kbdUnify429、.chip.xs=themeDiscipline525、
  *    .focus-tools=focusVisual451，adaptive556 头注②豁免册在案）保字面负锁。
  * ② 零 @media 裁决：独占域 30 组件逐一裁决——WelcomeWizard 补 900 窄档（与 theme.css
  *    900 档/utils/layout.ts BP_NARROW 单源互锚；档内纯 CSS 零结构动：双列卡格降单列 +
  *    三列快捷键行竖排；档内零 height/flex-basis 尺寸声明，高度链红线自证）；其余 28 组件
- *    记档豁免（浮层 vw 钳制 8 / 壳层 JS 档已立 4 / 定宽壳栏带收纳开关 1 / pane 内容单列 15，
+ *    备案豁免（浮层 vw 钳制 8 / 壳层 JS 档已立 4 / 定宽壳栏带收纳开关 1 / pane 内容单列 15，
  *    逐文件台账见 GOAL-534-563-OBS-NOTES.md 附表），census 负锁防未裁决 @media 潜入。
  */
 import { describe, it, expect } from 'vitest';
@@ -22,7 +22,7 @@ const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, ' ');
 
 /* ═══════════ ① --sp 残量收口（theme.css 两行等值 + 逐字锁豁免册负锁） ═══════════ */
 
-describe('五百六十三批 ①：theme.css --sp 精确等值收编 2 行（逐字锁三行豁免保字面）', () => {
+describe('五百六十三批 ①：theme.css --sp 精确等值合并 2 行（逐字锁三行豁免保字面）', () => {
   it('档表等值锚：--sp-1h === 6px（换算精确性单一出处）', () => {
     expect(srcOf('theme.css')).toContain('--sp-1h: 6px;');
   });
@@ -79,7 +79,7 @@ describe('五百六十三批 ①：theme.css --sp 精确等值收编 2 行（逐
         }
       }
     }
-    expect(hits, `独占域组件 spacing 档位裸 px 残量（应收 var(--sp-N) 或记档豁免）\n${hits.join('\n')}`).toEqual([]);
+    expect(hits, `独占域组件 spacing 档位裸 px 残量（应收 var(--sp-N) 或备案豁免）\n${hits.join('\n')}`).toEqual([]);
   });
 });
 
@@ -127,7 +127,7 @@ describe('五百六十三批 ②：独占域零 @media 裁决（WelcomeWizard �
   it('豁免册 28 文件 census 恒零（新 @media 须先过裁决并迁册，防未裁决档潜入）', () => {
     for (const f of MEDIA_EXEMPT) {
       const s = srcOf(`components/${f}.vue`);
-      expect([...s.matchAll(/@media/g)].length, `${f}.vue 在豁免册（裁决记档见 OBS-NOTES 附表），出现 @media 即未裁决新档`).toBe(0);
+      expect([...s.matchAll(/@media/g)].length, `${f}.vue 在豁免册（裁决备案见 OBS-NOTES 附表），出现 @media 即未裁决新档`).toBe(0);
     }
   });
 });

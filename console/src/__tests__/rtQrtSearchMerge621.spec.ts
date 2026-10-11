@@ -4,7 +4,7 @@
  * 行内 mark 点亮（准，词桥驱动 useGridSearch）；Ctrl+F=聚焦常驻框（不再开独立条）；
  * Esc 即时清词回全集（不等 150ms 防抖，closeSearch 语义等值平移）；
  * Enter=桥接滚动下一命中行（D2：过滤后所见行皆命中行，行级滚动）。
- * 非 searchable 档 HitNav 原样保留（229 批「表格必有查找」立法不回退）——由
+ * 非 searchable 档 HitNav 原样保留（229 批「表格必有查找」约定不回退）——由
  * qrtGridSearch269/rtGridSearch 既有用例看守，本 spec 不重复。
  * 防抖走真实 220ms 等待（fake timers 不 flush Vue 渲染微任务链，229 批同口径）。
  */
@@ -91,7 +91,7 @@ describe('RT 单框双效（621 批·searchable 档）', () => {
     await waitDebounce();
     /* 过滤：'an' 仅 banana → 1 行 */
     const trs = [...host.querySelectorAll('.rt tbody tr')].filter(t => !t.classList.contains('rt-trunc-row'));
-    expect(trs.length, '不匹配行退场').toBe(1);
+    expect(trs.length, '不匹配行移除').toBe(1);
     expect(trs[0]!.textContent).toContain('banana');
     /* 点亮：命中格琥珀底 + mark 切分（此前只滤不亮） */
     expect(host.querySelectorAll('td.rt-hit').length, '命中格高亮').toBe(1);

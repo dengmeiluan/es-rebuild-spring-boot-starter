@@ -1,5 +1,5 @@
 /**
- * 索引设置页统一件收编（源码锁）：
+ * 索引设置页统一件合并（源码锁）：
  * ① 索引选择 n-select（裸 label/value，无健康度/别名补全）→ IndexPicker 统一件
  *    （R42-e「全站禁止裸 index input」口径），picked 即拉 settings；
  * ② 完整 settings 预 max-height 460px 定高 → calc(100vh - var(--vh-offset)) 视口弹性
@@ -12,8 +12,8 @@ import { join } from 'node:path';
 
 const src = readFileSync(join(__dirname, '../views/IndexSettingsView.vue'), 'utf-8');
 
-describe('IndexSettingsView：IndexPicker 收编 + raw 弹性高度', () => {
-  it('索引选择换装 CurrentIdxChip 只读件（五百三十二批：页内 IndexPicker 退役，选索引收敛顶栏）', () => {
+describe('IndexSettingsView：IndexPicker 合并 + raw 弹性高度', () => {
+  it('索引选择改用 CurrentIdxChip 只读件（五百三十二批：页内 IndexPicker 退役，选索引收敛顶栏）', () => {
     expect(src).toContain('<CurrentIdxChip />');
     expect(src, '页内 IndexPicker 退役').not.toMatch(/<IndexPicker/);
   });

@@ -17,7 +17,7 @@ describe('api.ts 连接中心同步契约面', () => {
     expect(apiSrc).toMatch(/syncState\?: string \| null;/);
   });
   it('ClusterSyncReport 报告形状在案(计数+notes+contributorBroken)', () => {
-    expect(apiSrc).toMatch(/^interface ClusterSyncReport \{/m); /* 七百九十一批随迁：export 声明形态→^行锚（791 私有化零外部消费） */
+    expect(apiSrc).toMatch(/^interface ClusterSyncReport \{/m); /* 七百九十一批同步更新：export 声明形态→^行锚（791 私有化零外部消费） */
     expect(apiSrc).toContain('contributorBroken: boolean;');
     expect(apiSrc).toContain('markedStale: number;');
     expect(apiSrc).toContain('notes: string[];');

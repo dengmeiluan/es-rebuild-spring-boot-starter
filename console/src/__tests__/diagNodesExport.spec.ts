@@ -2,7 +2,7 @@
  * R130 一百三十四批：DiagView 节点资源快照导出（容量汇报双通道）。
  * DiagView 沿用源码级锁形态（diagRetryAlloc 同款）：
  * 1) exportNodes 双格式：CSV 走 downloadText（BOM 防中文乱码）、Markdown 走剪贴板；
- * 2) 行序=QRT 内核所见（五百二十五批 W5 换壳随迁：nodesSorted 胶水退役，行集/列集改走
+ * 2) 行序=QRT 内核所见（五百二十五批 W5 换壳同步更新：nodesSorted 胶水退役，行集/列集改走
  *    QRT ref.getCsvBlock()——漏斗+排序+列选所见即所得；% 后缀/FS 人性化字节按列名就地回填）；
  * 3) 工具区双按钮接线（CSV/Markdown）且空数据 disabled；「数值」TSV 钮/「Σ 聚合行」开关
  *    随换壳退役（QRT 右键整表 TSV 与列头菜单聚合行内核接管）。

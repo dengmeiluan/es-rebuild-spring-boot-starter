@@ -5,20 +5,20 @@ import { draftStorageKey } from '../composables/useScopedDraft';
 import { writeStoredRaw } from './safeJson';
 
 /* 收藏重放统一真链路（收藏夹页 + 命令面板共用）。
-   此前 dsl/rest 分支写的预填键没有任何视图消费，「打开」是假动作；
-   且 SQL/Lucene/Bulk 等收藏全标 kind:rest，按 rest 重放必然空白。
-   现按 tags 语义分发回源视图：一次性 carry 键 / 各视图既有 prefill 键 /  草稿键。 */
+ 此前 dsl/rest 分支写的预填键没有任何视图消费，「打开」是假动作；
+ 且 SQL/Lucene/Bulk 等收藏全标 kind:rest，按 rest 重放必然空白。
+ 现按 tags 语义分发回源视图：一次性 carry 键 / 各视图既有 prefill 键 / 草稿键。 */
 
 /* tags→重放去向（与下方 replayFavorite 分发逻辑同文件同源维护）。
-   收藏卡片用它标注「打开」去哪个视图——重放前可预期，不用点了才知道。 */
+ 收藏卡片用它标注「打开」去哪个视图——重放前可预期，不用点了才知道。 */
 export function replayTarget(it: { kind: string; tags?: string[]; payload?: any }): { path: string; label: string } {
   const tags: string[] = it.tags || [];
   /* 查询家族收敛进查询工作台（/search?mode=），重放直达对应模式 */
   if (it.kind === 'dsl') return { path: '/search', label: '查询工作台 · DSL' };
   if (it.kind === 'route') {
-    /*  G88：「重放去向前置可见」在 route 类兑现——payload.path 才是真去向
-       （replayFavorite 直推它），按 NAV_ITEMS 契约（es-console-pages.json 唯一事实源）映射
-       具体视图名；缺 path/未收录路径（旧重定向路由）回落泛化「视图跳转」不具假名 */
+    /* ：「重放去向前置可见」在 route 类兑现——payload.path 才是真去向
+ （replayFavorite 直推它），按 NAV_ITEMS 契约（es-console-pages.json 唯一事实源）映射
+ 具体视图名；缺 path/未收录路径（旧重定向路由）回落泛化「视图跳转」不具假名 */
     const rp = it.payload?.path;
     const nav = typeof rp === 'string' ? NAV_ITEMS.find(n => n.path === rp.split('?')[0]) : undefined;
     return { path: '', label: nav ? nav.name : '视图跳转' };
@@ -43,7 +43,7 @@ export function replayFavorite(
   const p = it.payload || {};
   const tags: string[] = it.tags || [];
   /* payload 缺关键字段（旧格式/手工导入损坏）不再静默假成功——
-     如实告知但仍跳到目标视图，现场可手动补全，不留死胡同 */
+ 如实告知但仍跳到目标视图，现场可手动补全，不留死胡同 */
   const partial = (view: string) =>
     notify('warning', `收藏数据不完整（可能为旧版本格式），已带你到${view}，请手动补全后重新收藏`);
   switch (it.kind) {
@@ -70,8 +70,8 @@ export function replayFavorite(
         else partial('Lucene 查询');
       } else if (tags.includes('bulk')) {
         if (p.body) {
-          /* 改写一次性 carry 键（旧 es-console.draft.bulk-editor.body 是草稿治理轮前的
-             死命名空间，无消费方，恢复提示是假的）——BulkEditorView 挂载即消费并转入自身草稿 */
+          /* 改写一次性 carry 键（旧 es-console.draft.bulk-editor.body 是草稿前的
+ 死命名空间，无消费方，恢复提示是假的）——BulkEditorView 挂载即消费并转入自身草稿 */
           writeStoredRaw(sessionStorage, 'es-console.bulk.carry', p.body);
           router.push({ path: '/bulk', query: p.index ? { idx: p.index } : {} });
           notify('success', 'Bulk 操作体已恢复');
@@ -97,9 +97,9 @@ export function replayFavorite(
           notify('success', '已定位文档，正在拉取最新版本');
         } else { router.push('/doc-diff'); partial('文档 Diff 编辑器'); }
       } else if (tags.includes('devtools')) {
-        /* DevTools 存藏回源视图——写 -f §8.2 预填键（DevToolsView
-           consumePrefill 统一消费=新标签装填 method/path/body），不再坠 /rest 通用兜底；
-           实报「打开跳转无效+不自动填充」根因①（payload 缺失仍到 DevTools=partial 诚实） */
+        /* DevTools 存藏回源视图——写 -f 预填键（DevToolsView
+ consumePrefill 统一消费=新标签装填 method/path/body），不再坠 /rest 通用兜底；
+ 实报「打开跳转无效+不自动填充」根因①（payload 缺失仍到 DevTools=partial 诚实） */
         const ok = !!(p.method || p.path);
         if (ok) {
           writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
@@ -111,8 +111,8 @@ export function replayFavorite(
         if (ok) notify('success', '请求已恢复至 Dev Tools 新标签');
         else partial('Dev Tools');
       } else {
-        /* 通用 REST：写  草稿键，RestView 挂载即读 */
-        /* 草稿治理轮：走 draftStorageKey（带集群目标维度），与 RestView 读取同键 */
+        /* 通用 REST：写 草稿键，RestView 挂载即读 */
+        /* 草稿：走 draftStorageKey（带集群目标维度），与 RestView 读取同键 */
         const restScope = { route: 'rest', target: () => getTarget() };
         writeStoredRaw(sessionStorage, draftStorageKey(restScope, 'method'), p.method || 'GET');
         if (p.path) writeStoredRaw(sessionStorage, draftStorageKey(restScope, 'path'), p.path);
@@ -124,7 +124,7 @@ export function replayFavorite(
       break;
     case 'route':
       /* path 缺失防御——旧数据/手工导入可能无 path，push("undefined")
-         会落 404；改回概览页并如实提示 */
+ 会落 404；改回概览页并如实提示 */
       if (p.path && typeof p.path === 'string') {
         router.push(p.path);
         notify('success', '已跳转视图');

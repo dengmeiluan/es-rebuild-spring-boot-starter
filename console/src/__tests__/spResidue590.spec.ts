@@ -1,9 +1,9 @@
-/* 五百九十批轨5【--sp 精确等值轮转收编+负值出血豁免立法】看守。
+/* 五百九十批轨5【--sp 精确等值轮转合并+负值出血豁免约定】看守。
  *
- * 本轮全站审计（views+components 的 gap/margin/padding 声明对照 theme.css:102-103 档表）：
+ * 全站审计（views+components 的 gap/margin/padding 声明对照 theme.css:102-103 档表）：
  *  · 唯一可收等值残量 = DevToolsView .dt-tb-sep margin: 0 2px → var(--sp-0)；
- *  · 负值出血三判例（.ar-dest-err margin:-4px / .ih-list margin:0 -4px /
- *    .tv-tree margin:-6px）按 527 批豁免立法保字面——负 margin 是与同值正 padding
+ *  · 负值出血三先例（.ar-dest-err margin:-4px / .ih-list margin:0 -4px /
+ *    .tv-tree margin:-6px）按 527 批豁免约定保字面——负 margin 是与同值正 padding
  *    配对的列表出血微调，非间距阶梯语义，强收 calc(-1*var(--sp-N)) 破坏配对可读性；
  *  · ExplainTree 缩进 calc(6px + var(--xt-depth) * 14px) 属计算系，6px 非独立间距值；
  *  · font-size 裸 px 全站（views+components，黑名单两文件豁免）零残量，立扫描锁防回潮。
@@ -18,20 +18,20 @@ import { join } from 'node:path';
 
 const src = (p: string) => readFileSync(join(__dirname, '..', p), 'utf-8');
 
-describe('五百九十批：--sp 残量轮转收编与豁免立法', () => {
+describe('五百九十批：--sp 残量轮转合并与豁免约定', () => {
   it('DevToolsView .dt-tb-sep margin 0 2px → var(--sp-0)（theme.css:103 同值档）', () => {
     const css = src('views/DevToolsView.vue');
     expect(css).toMatch(/\.dt-tb-sep\s*\{[^}]*margin:\s*0\s+var\(--sp-0\)/);
     expect(css, '裸 2px margin 不得回潮').not.toMatch(/\.dt-tb-sep\s*\{[^}]*margin:\s*0\s+2px/);
   });
 
-  it('LiveChartCard .ld-expand padding 2px → var(--sp-0)（651 批收编，--sp 可收残量清零）', () => {
+  it('LiveChartCard .ld-expand padding 2px → var(--sp-0)（651 批合并，--sp 可收残量清零）', () => {
     const css = src('components/LiveChartCard.vue');
     expect(css).toMatch(/\.ld-expand\s*\{[^}]*padding:\s*var\(--sp-0\)/);
     expect(css, '裸 2px padding 不得回潮').not.toMatch(/\.ld-expand\s*\{[^}]*padding:\s*2px/);
   });
 
-  it('负值出血三判例保字面（527 批豁免立法：出血配对非间距阶梯，防顺手过收）', () => {
+  it('负值出血三先例保字面（527 批豁免约定：出血配对非间距阶梯，防顺手过收）', () => {
     expect(src('views/AdhocRebuildView.vue')).toMatch(
       /\.ar-dest-err\s*\{[^}]*margin:\s*-4px\s+0\s+var\(--sp-2\)/,
     );

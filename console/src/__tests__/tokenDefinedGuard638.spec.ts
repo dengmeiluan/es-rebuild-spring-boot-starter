@@ -9,11 +9,11 @@
  *   `var(--dim, #8a93a5)` / `var(--tx, #e8ecf2)` 的 fallback 是**深色档硬编码色**，
  *   因变量不存在而**必然生效**——浅色主题下前景落在白底上，对比度直接坏掉。
  *
- * 立法（本文件即执法面）：`var(--x, fallback)` 的 fallback 只在 `--x` **真未定义**时生效，
+ * 约定（本文件即面）：`var(--x, fallback)` 的 fallback 只在 `--x` **真未定义**时生效，
  *   所以「未定义 token + 硬编码颜色 fallback」≡ 把一个主题色写死。判据二选：
  *   ① 换正版 token（--tx0 / --tx1 / --tx2 / --line / --brand…）
  *   ② fallback 本身写另一个 token（如 `var(--bg-hover, var(--bg2))`，合法兜底写法）。
- *   已定义 token 的 fallback 永远是噪音（`themeTokenGuard` 既定口径），本文件不重复执法。
+ *   已定义 token 的 fallback 永远是噪音（`themeTokenGuard` 既定口径），本文件不重复。
  *
  * 覆盖范围（按字面理解，不要外推）：
  *   - 只扫**产品码**（src 下，跳过 `__tests__/`）；只认 `var(` 第一个逗号后的**首个**参数。
@@ -89,7 +89,7 @@ function fallbacks(src: string) {
   return out;
 }
 
-describe('未定义 token 的 fallback 不得是硬编码颜色（638 批立法）', () => {
+describe('未定义 token 的 fallback 不得是硬编码颜色（638 批约定）', () => {
   it('扫描器自检：确实扫到了产品码与 token 声明（防空跑假绿）', () => {
     expect(files.length, 'src 下产品码文件数').toBeGreaterThan(200);
     expect(known.size, 'theme.css 系 token 声明数').toBeGreaterThan(100);
@@ -115,7 +115,7 @@ describe('未定义 token 的 fallback 不得是硬编码颜色（638 批立法�
   });
 });
 
-describe('裸 var() 引用必须指向已定义 token（815 批立法）', () => {
+describe('裸 var() 引用必须指向已定义 token（815 批约定）', () => {
   /**
    * 现象（815 批横切第五轮预扫实锚）：LiveDashboardView 四处 `color: var(--tx)`——
    *   --tx 从未注册（正版是 --tx0/--tx1/--tx2，638 批注释在案），裸引用无 fallback，
@@ -123,8 +123,8 @@ describe('裸 var() 引用必须指向已定义 token（815 批立法）', () =>
    *   hover 提亮失效+文本档位漂移被继承兜底掩盖——深浅两主题下都「看着正常」，
    *   视觉走查与全量测试双盲。
    *
-   * 立法（本用例即执法面）：裸 `var(--x)`（无 fallback）必须指向已定义 token。
-   *   与 638 主用例互补：那边只执法「带 fallback 的硬编码色」，这边执法裸引用域。
+   * 约定（本用例即面）：裸 `var(--x)`（无 fallback）必须指向已定义 token。
+   *   与 638 主用例互补：那边只「带 fallback 的硬编码色」，这边裸引用域。
    */
   it('全站产品码：无 fallback 的 var(--x) 不得引用未定义 token', () => {
     const bad: string[] = [];
@@ -152,7 +152,7 @@ describe('六百三十八批修复锚：安全中心页面授权区 .pg-* 走正
   it('`.pg-conn-sum::before` / `.pg-conn-sum:hover` / `.pg-w` 三处引正版 token', () => {
     expect(sec, '折叠箭头色 → 弱文本档').toContain(".pg-conn-sum::before { content: '▸'; color: var(--tx2);");
     expect(sec, '悬浮提到主文本档').toContain('.pg-conn-sum:hover { color: var(--tx0); }');
-    /* 六百四十二批 G30 随迁：.pg-chip 自绘基座退役共用 .chip，可写修饰 .pg-w 走正版 --brand */
+    /* 六百四十二批 G30 同步更新：.pg-chip 自绘基座退役共用 .chip，可写修饰 .pg-w 走正版 --brand */
     expect(sec, '可写芯片 → 品牌色档（正版 --brand）').toContain('.pg-w { color: var(--brand);');
   });
 

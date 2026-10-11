@@ -2,13 +2,13 @@
  * 五百三十八批 W2：ReindexPreview 运行取消 + 读秒（轨2 重点页体验增量；useQueryRun 统一件，
  * SqlBridge 535 T4 同款范式）。
  *
- * 契约（挂载型行为面 + 源码锁；535「成功入史」锚随迁不回退）：
+ * 契约（挂载型行为面 + 源码锁；535「成功入史」锚同步更新不回退）：
  * ① begin() 的 signal 作第三形参传 api.reindexPreview（Lead 先行契约，post 透传先例=clusterQuery）；
  * ② 运行中出「取消」钮（qr.running 驱动），点击 abort → 请求以 AbortError 落 run 的 catch；
  * ③ 取消静默：不进 runErr 红条（role=alert 不出现）、不占史位、只发 info 档 notify，
  *    busy/取消钮/读秒全部复位，旧预估原样保留（R80 同语义，SqlBridge/DslQueryView 同款）；
  * ④ 读秒：qr.elapsedMs（100ms tick）驱动「预估中 X.Xs」文案，finish 即停回「运行预估」；
- * ⑤ 成功入史（mode/index/ok/took，histPanel535 锚随迁）与非取消失败红条（既有语义）零回退。
+ * ⑤ 成功入史（mode/index/ok/took，histPanel535 锚同步更新）与非取消失败红条（既有语义）零回退。
  *
  * 设施：histPanel535 同款——NModal stub 直渲染 + MonacoEditor stub；api.reindexPreview 可控门
  * （手动 res/rej + signal abort 即以 AbortError reject）；读秒用例局部 fake setInterval/Date.now。
@@ -172,7 +172,7 @@ describe('五百三十八批 W2：ReindexPreview 运行取消 + 读秒', () => {
     expect(notifySpy.mock.calls.some(c => c[0] === 'error'), '取消零 error toast').toBe(false);
     expect(notifySpy.mock.calls.some(c => c[0] === 'info'), 'info 档轻提示在（已取消预估）').toBe(true);
     expect(histStore().length, '取消不占史位（维持首轮那一条）').toBe(histBefore);
-    /* 复位：取消钮退场、运行钮回静息文案、busy 落（读秒停） */
+    /* 复位：取消钮移除、运行钮回静息文案、busy 落（读秒停） */
     expect(textBtn(host, '取消')).toBeUndefined();
     expect(textBtn(host, '运行预估'), '运行钮回静息文案').toBeTruthy();
     expect(host.textContent).not.toContain('预估中');
@@ -202,7 +202,7 @@ describe('五百三十八批 W2：ReindexPreview 运行取消 + 读秒', () => {
     unmount();
   });
 
-  it('成功路径不回退：入史一条 mode/index/ok/took（535 锚随迁），取消钮退场', async () => {
+  it('成功路径不回退：入史一条 mode/index/ok/took（535 锚同步更新），取消钮移除', async () => {
     history.replaceState(null, '', '#/?idx=logs-1');
     const { host, unmount } = await mountView((await import('../views/ReindexPreviewView.vue')).default);
     reindexPreviewFn.mockResolvedValueOnce({ docs: 3 });
@@ -216,7 +216,7 @@ describe('五百三十八批 W2：ReindexPreview 运行取消 + 读秒', () => {
     expect(items[0].ok).toBe(true);
     expect(typeof items[0].took).toBe('number');
     expect(items[0].took).toBeGreaterThanOrEqual(0);
-    /* 完成后取消钮退场（qr.finish） */
+    /* 完成后取消钮移除（qr.finish） */
     expect(textBtn(host, '取消')).toBeUndefined();
     unmount();
   });

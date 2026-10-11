@@ -101,7 +101,7 @@ function findBtn(root: ParentNode, text: string): HTMLButtonElement | undefined 
 
 /* UBQ 预置：?idx= 进 URL（useIdxState 读 location.hash），query 进 sessionStorage 草稿（useDraft） */
 const UBQ_HASH = '#/update-by-query?idx=logs-*';
-/* 草稿治理轮：query 草稿按 集群/索引 维度隔离（UBQ_HASH 带 ?idx=logs-*） */
+/* 草稿：query 草稿按 集群/索引 维度隔离（UBQ_HASH 带 ?idx=logs-*） */
 const UBQ_DRAFT_KEY = draftStorageKey({ route: 'update-by-query', index: () => 'logs-*' }, 'query');
 /* version_conflict 长文样例：friendlyEsError 会收敛掉 version_conflicts 计数明细，
    断言这些片段在 = 面板全文直显（B1 核心性质） */
@@ -180,7 +180,7 @@ describe('G5 UpdateByQueryView：写链路失败全文面板（B1，计划点名
     await settle(3);
     expect(updateByQueryFn).toHaveBeenCalledTimes(1);
     expect(execBtn.disabled, 'in-flight 期间按钮必须禁用').toBe(true);
-    expect(execBtn.textContent, 'in-flight 期间必须出 pending 文案（对齐 Diff 加载按钮本批修法）').toContain('执行中');
+    expect(execBtn.textContent, 'in-flight 期间必须出 pending 文案（对齐 Diff 加载按钮修法）').toContain('执行中');
     execBtn.click();
     await settle(3);
     expect(updateByQueryFn, 'in-flight 期间重复点击不许双发').toHaveBeenCalledTimes(1);

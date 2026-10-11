@@ -3,7 +3,7 @@
  * 563 已交付：useGridSearch 可选 colType 参——date 列且两侧都呈日期形态时第三遍分隔符
  * 归一（/ . 与 - 互认，useGridSearch 内建）；未接线证据：QRT useGridSearch(...) 未传
  * colType——date 列「2024/01/15」搜「2024-01-15」零命中。
- * 本批接线：colType: (ci) => effType(shownCols.value[ci] ?? '')（与列头徽标/统计面同一
+ * 接线：colType: (ci) => effType(shownCols.value[ci] ?? '')（与列头徽标/统计面同一
  * 读取口径）。⚠semPref（es_tbl_sem）开着时 date 列显示被本地化为 dash 形态、kw 走第一遍
  * 即命中——spec 显式关掉语义格式化锁「原始串分隔符归一」第三遍路径。
  * 锁定：

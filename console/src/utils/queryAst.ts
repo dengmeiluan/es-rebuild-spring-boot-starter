@@ -1,12 +1,12 @@
-/* 查询 DSL ↔ 节点树双向翻译（零降级，往返无损硬契约，设计文档 §3.1）。
-   树即 AST：叶子保留原始 body（raw），富表单只是 raw 之上的透镜；
-   未知/非标准形态落 raw，由 GenericNode 递归键值表单编辑——永远没有 JSON 文本块。
-   W2 已富化 sort/_source/highlight/aggs 为一等解析（form/aggKey/presence 形态记忆）。
-   无损契约的适用前提：合法 ES 形态。非法/退化输入按 best-effort 结构化归一，已知裁剪：
-   _source:null→true；sort 非标项（多键/空对象/非标量 inner）；agg 同体双键（aggs+aggregations
-   后者覆盖前者）；agg 非标 body（非对象/多 op 键多余键丢弃）；highlight 字段值非对象归一 {}；
-   meta:null 丢弃。
-   零拷贝取舍：parse 不重造子对象（params/raw 直引原 DSL），parse 后不得 mutate 原 DSL。 */
+/* 查询 DSL ↔ 节点树双向翻译（零降级，往返无损硬契约，设计文档 ）。
+ 树即 AST：叶子保留原始 body（raw），富表单只是 raw 之上的透镜；
+ 未知/非标准形态落 raw，由 GenericNode 递归键值表单编辑——永远没有 JSON 文本块。
+ W2 已富化 sort/_source/highlight/aggs 为一等解析（form/aggKey/presence 形态记忆）。
+ 无损契约的适用前提：合法 ES 形态。非法/退化输入按 best-effort 结构化归一，已知裁剪：
+ _source:null→true；sort 非标项（多键/空对象/非标量 inner）；agg 同体双键（aggs+aggregations
+ 后者覆盖前者）；agg 非标 body（非对象/多 op 键多余键丢弃）；highlight 字段值非对象归一 {}；
+ meta:null 丢弃。
+ 零拷贝取舍：parse 不重造子对象（params/raw 直引原 DSL），parse 后不得 mutate 原 DSL。 */
 import { OPS_META } from './queryAstOps';
 
 export type Occur = 'must' | 'filter' | 'should' | 'must_not';
@@ -275,8 +275,8 @@ function serAggs(list: AggNode[]): Record<string, unknown> {
 }
 
 /* ================= 树不可变操作（组件层唯一编辑入口） =================
-   全部返回新树、不改入参。删除语义：root 命中回退 match_all（root 永不缺失）；
-   bool 子节点直接移除；wrap 子节点置 null（序列化兜底 match_all）。 */
+ 全部返回新树、不改入参。删除语义：root 命中回退 match_all（root 永不缺失）；
+ bool 子节点直接移除；wrap 子节点置 null（序列化兜底 match_all）。 */
 
 export function updateNodeById(root: QueryNode, id: string, fn: (n: QueryNode) => QueryNode): QueryNode {
   if (root.id === id) return fn(root);
@@ -334,7 +334,7 @@ export function insertChild(root: QueryNode, boolId: string, occur: Occur, node:
 }
 
 /* 拖拽移动：dragId → targetBoolId 的 occur 分区末尾。
-   移到自身/后代、root 被拖、target 非 bool 时原样返回。 */
+ 移到自身/后代、root 被拖、target 非 bool 时原样返回。 */
 export function moveNode(root: QueryNode, dragId: string, targetBoolId: string, occur: Occur): QueryNode {
   if (dragId === targetBoolId || root.id === dragId) return root;
   const drag = findNode(root, dragId);
@@ -351,7 +351,7 @@ export function wrapInBool(root: QueryNode, id: string): QueryNode {
 }
 
 /* 解散 bool-in-bool：子 bool 无 params 才允许（有参数解散会静默丢参数，UI 也不给入口）。
-   子句按各自 occur 并入父组原位置；父不是 bool（root/wrap）时原样返回。 */
+ 子句按各自 occur 并入父组原位置；父不是 bool（root/wrap）时原样返回。 */
 export function dissolveBool(root: QueryNode, id: string): QueryNode {
   if (root.type === 'bool') {
     const idx = root.children.findIndex(c => c.node.id === id);

@@ -1,9 +1,9 @@
 /**
- * 二百四十八批：TasksView / TopologyView / TaskTreeView 轮询收编 useAutoRefresh。
+ * 二百四十八批：TasksView / TopologyView / TaskTreeView 轮询合并 useAutoRefresh。
  * 此前三视图各自手搓 setInterval：页面隐藏（后台标签页）与 KeepAlive 失活时照跑不止，
- * 与 DslQueryView 的 useAutoRefresh（P1-4）双轨并存。收编后全站轮询一个内核：
+ * 与 DslQueryView 的 useAutoRefresh（P1-4）双轨并存。合并后全站轮询一个内核：
  * KeepAlive onActivated/onDeactivated + visibilitychange + onBeforeUnmount 全链停续，
- * tick 时再验 guard（loading 中跳过本轮）。
+ * tick 时再验 guard（loading 中跳过）。
  * 源码锁（照 pollerScopeGuard 口径）：useAutoRefresh 接线 + 裸 setInterval 清零。
  */
 import { describe, it, expect } from 'vitest';
@@ -12,7 +12,7 @@ import { join } from 'node:path';
 
 const read = (p: string) => readFileSync(join(__dirname, p), 'utf-8');
 
-describe('三视图轮询收编 useAutoRefresh（248 批）', () => {
+describe('三视图轮询合并 useAutoRefresh（248 批）', () => {
   it('TasksView：useAutoRefresh 接线（ms 读 autoRefresh/intervalMs，guard 验 loading），无裸 setInterval', () => {
     const s = read('../views/TasksView.vue');
     expect(s).toMatch(/const refresher = useAutoRefresh\(load, \{/);

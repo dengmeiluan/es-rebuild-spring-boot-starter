@@ -12,7 +12,7 @@
  *   ⑥DslQueryView：Info/Maximize2/Minimize2；⑦HealthReportView：fmtNum；
  *   ⑧QueryHubView：ScanSearch/Flame/Grid3x3/SlidersHorizontal/Gauge 五图标
  *     （模式图标 icon-map 现役另有其名）；⑨WorkspaceView：Clock。
- * 假阳性甄别记档（勿抄回删）：DevToolsView vFocus=v-focus 指令消费（const 域
+ * 假阳性甄别备案（勿抄回删）：DevToolsView vFocus=v-focus 指令消费（const 域
  * 亦须查 kebab 形态）；N 系与 v 系前缀 import 须查 kebab（n-modal）；template 域死分支
  * 扫描零命中（无字面 false 或被注释条件）不立刀。
  *
@@ -122,7 +122,7 @@ describe('deadScriptTone786 · 刀B .tbl 分层浓度调档（token 化）', () 
     expect(/\.tbl\.zebra tbody tr:nth-child\(even\)\s*\{[^}]*background:\s*var\(--tbl-zebra\)/s.test(c), '.tbl.zebra 须消费 --tbl-zebra').toBe(true);
   });
 
-  it('B4 行 hover 语义不动（--bg2 仍为悬浮档基），784 换装三件完整保留', () => {
+  it('B4 行 hover 语义不动（--bg2 仍为悬浮档基），784 改用三件完整保留', () => {
     const c = strip(css());
     expect(/\.tbl tbody tr:hover\s*\{[^}]*background:\s*var\(--bg2\)/s.test(c), '行 hover 仍走 --bg2').toBe(true);
     expect(/\.tbl tbody tr:hover\s*\{[^}]*inset 3px 0 0 var\(--ac-hi\)/s.test(c), 'hover 品牌青左条保留').toBe(true);

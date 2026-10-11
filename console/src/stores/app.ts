@@ -36,7 +36,7 @@ export const useAppStore = defineStore('app', () => {
       const list = await api.clusterIndices();
       indices.value = Array.isArray(list) ? list : [];
       clusterOk.value = true;
-      loadVersion(); //  §8.4：连接成功后顺带识别版本，供导航级能力降级标注
+      loadVersion(); // 连接成功后顺带识别版本，供导航级能力降级标注
       api.overview().then(o => { clusterSelf.value = o?.self || ''; }).catch(() => {});
       api.clusterHealth().then((h: any) => {
         clusterHealth.value = h?.status || '';
@@ -81,13 +81,13 @@ export const useAppStore = defineStore('app', () => {
   const pickedInfo = computed(() => indices.value.find(i => i.index === pickedIdx.value));
 
   /* 多集群目标——''=宿主；非空= connId（api 层自动带 X-Es-Target 头）
-     列表已按登录角色过滤 minRole（低于档案门槛的连接后端直接不返回），并附 health 探活结果
-     .2：hostVisible=false（纯管理平台形态）时切换器藏掉宿主项，无目标时自动映射首个可见连接 */
+ 列表已按登录角色过滤 minRole（低于档案门槛的连接后端直接不返回），并附 health 探活结果
+ .2：hostVisible=false（纯管理平台形态）时切换器藏掉宿主项，无目标时自动映射首个可见连接 */
   const target = ref<string>(getTarget());
   const targetName = ref<string>(localStorage.getItem('es-console.target.name') || '');
   /* w45:双键撕裂自愈——id 与 name 是两个独立 localStorage 键,部分清理/异常可致
-     「顶栏显示生产集群、实际请求不带 X-Es-Target(打宿主)」的撕裂态,这是用户
-     「明明选了生产还报宿主侧错误」的系统性根源之一。恢复时以 id 为准,name 必须依附 id。 */
+ 「顶栏显示生产集群、实际请求不带 X-Es-Target(打宿主)」的撕裂态,这是用户
+ 「明明选了生产还报宿主侧错误」的系统性根源之一。恢复时以 id 为准,name 必须依附 id。 */
   if (!target.value && targetName.value) {
     targetName.value = '';
     removeStoredRaw(localStorage, 'es-console.target.name');
@@ -136,8 +136,8 @@ export const useAppStore = defineStore('app', () => {
     loadIndices();
   }
 
-  /*  §8.4：当前目标集群的 ES 版本（如 7.10.1）——导航「需 x.x+」降级标注数据源。
-     远端目标优先取连接档案里  回写的版本；档案缺失或宿主目标则 GET / 识别；拿不到留空=不标注（有意降级） */
+  /* 当前目标集群的 ES 版本（如 7.10.1）——导航「需 x.x+」降级标注数据源。
+ 远端目标优先取连接档案里 回写的版本；档案缺失或宿主目标则 GET / 识别；拿不到留空=不标注（有意降级） */
   const esVersion = ref<string>('');
   let verInflight: Promise<void> | null = null;
   function loadVersion(): Promise<void> {
@@ -148,8 +148,8 @@ export const useAppStore = defineStore('app', () => {
     }
     if (verInflight) return verInflight;
     /* 回落弃 raw 透传改 clusterHealth（后端顺带 version）——raw 是 ADMIN 域
-       高危端点，版本识别每次开屏都落一条 HIGH_RISK「raw=GET /」刷审计流水（实报
-       「只是打开页面就出现高危操作」）。共享端点 VIEWER 可读零审计噪声。 */
+ 高危端点，版本识别每次开屏都落一条 HIGH_RISK「raw=GET /」刷审计流水（实报
+ 「只是打开页面就出现高危操作」）。共享端点 VIEWER 可读零审计噪声。 */
     verInflight = api.clusterHealth()
       .then((h: any) => {
         esVersion.value = h?.version || '';
@@ -169,16 +169,16 @@ export const useAppStore = defineStore('app', () => {
   const notifyQueue = ref<NotifyItem[]>([]);
   let nid = 0;
   /* toast 风暴抑制——轮询/重试场景同一错误连环弹（如服务重启期 inspect 连挂），
-     右下角轰炸 + 通知历史刷屏都是垃圾体验。同 kind+文案在窗口期内只弹一次 toast，
-     历史侧则聚合为一条 ×N（见 pushNotifyLog），信息不丢、噪音归零。 */
+ 右下角轰炸 + 通知历史刷屏都是垃圾体验。同 kind+文案在窗口期内只弹一次 toast，
+ 历史侧则聚合为一条 ×N（见 pushNotifyLog），信息不丢、噪音归零。 */
   const TOAST_DEDUP_MS = 8000;
   const lastToastAt = new Map<string, number>();
   function notify(kind: 'success' | 'error' | 'warning' | 'info', msg: string, opts?: { action?: NotifyAction; actions?: NotifyAction[]; duration?: number }) {
     /* 错误类消息全局友好化：ES 原始错误 JSON 提取 reason + 常见场景翻译 + 限长 */
     const shown = kind === 'error' ? friendlyEsError(msg) : msg;
-    /*  + 动作数组化：友好化后原始错误不丢——自动附「复制原始」动作；
-       调用方还可经 opts.actions 追加「跳转」类动作（如查询失败直达诊断页），
-       单 action 入参保持兼容并并入数组头（渲染层见 App.vue toast-acts 多按钮） */
+    /* + 动作数组化：友好化后原始错误不丢——自动附「复制原始」动作；
+ 调用方还可经 opts.actions 追加「跳转」类动作（如查询失败直达诊断页），
+ 单 action 入参保持兼容并并入数组头（渲染层见 App.vue toast-acts 多按钮） */
     const actions: NotifyAction[] = [...(opts?.actions ?? [])];
     if (opts?.action) actions.unshift(opts.action);
     if (kind === 'error' && shown !== msg && !actions.some(a => a.label === '复制原始')) {
@@ -197,8 +197,8 @@ export const useAppStore = defineStore('app', () => {
   function shiftNotify() { notifyQueue.value.shift(); }
 
   /* 慢请求可观测——api 层对 >10s 的成功请求广播 es-console:slow-request
-     （事件桥与 unauthorized/setup-required 同范式，api 层不反依赖 store），此处转发
-     既有 notify warning 档；同 path+文案的轮询重弹由 notify 内建 8s 去重吸收 */
+ （事件桥与 unauthorized/setup-required 同范式，api 层不反依赖 store），此处转发
+ 既有 notify warning 档；同 path+文案的轮询重弹由 notify 内建 8s 去重吸收 */
   if (typeof window !== 'undefined') {
     window.addEventListener('es-console:slow-request', (e: Event) => {
       const d = (e as CustomEvent).detail || {};
@@ -207,7 +207,7 @@ export const useAppStore = defineStore('app', () => {
   }
 
   /* 通知历史——toast 转瞬即逝，错过就永久丢失（尤其 / 的作业失败通知）。
-     落 localStorage 跨刷新可回看；action 回调不可序列化，历史只留 kind/msg/ts */
+ 落 localStorage 跨刷新可回看；action 回调不可序列化，历史只留 kind/msg/ts */
   interface NotifyLogItem { kind: NotifyItem['kind']; msg: string; ts: number; count?: number; firstTs?: number;
     /** 该通知的动作 label 清单（回调不可序列化；历史侧展示徽标提示错过了可操作按钮） */
     actions?: string[] }
@@ -284,8 +284,8 @@ export const useAppStore = defineStore('app', () => {
   function clearFavorites() { favorites.value = []; saveFav(); }
 
   /* 2.5.0 宿主主题跟随：settings.theme 第四档 'host'（跟随宿主明暗）。
-     hostTheme 初始值取 URL 参数（与 index.html 防闪脚本同源），非法/缺省钳回 dark——
-     宿主未接入时按深色兜底，永不出现无主题裸奔。embedded 须先于 settings 声明（默认档判定引用它）。 */
+ hostTheme 初始值取 URL 参数（与 index.html 防闪脚本同源），非法/缺省钳回 dark——
+ 宿主未接入时按深色兜底，永不出现无主题裸奔。embedded 须先于 settings 声明（默认档判定引用它）。 */
   const hostTheme = ref<HostThemeMode>(readUrlHostTheme() ?? 'dark');
   const embedded = typeof window !== 'undefined' && window.parent !== window;
 
@@ -335,7 +335,7 @@ export const useAppStore = defineStore('app', () => {
     setTheme(order[(i + 1) % order.length]);
   }
   /* 宿主热切主题：仅当前档位为 host 时重应用——用户手切其他档即反超，宿主热推不再生效。
-     非法值钳回 dark（与初始化同策略）。 */
+ 非法值钳回 dark（与初始化同策略）。 */
   function setHostTheme(mode: string) {
     hostTheme.value = mode === 'light' ? 'light' : 'dark';
     if (settings.value.theme === 'host') applyTheme();
@@ -376,8 +376,8 @@ export const useAppStore = defineStore('app', () => {
     writeStoredRaw(localStorage, 'es_nav_collapse', settings.value.navCollapse);
   }
   /* 完全隐藏侧栏（dbx Mod+B 对位——查询/索引控制台全屏体验）。
-     独立于图标折叠档：hidden 时侧栏整体移除，主区占满；持久化（dbx 同款跨会话记忆），
-     TopBar 钮与 Mod+B 均可唤回。 */
+ 独立于图标折叠档：hidden 时侧栏整体移除，主区占满；持久化（dbx 同款跨会话记忆），
+ TopBar 钮与 Mod+B 均可唤回。 */
   const navHidden = ref(localStorage.getItem('es_nav_hidden') === '1');
   function setNavHidden(v: boolean) {
     navHidden.value = v;

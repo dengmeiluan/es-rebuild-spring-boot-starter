@@ -13,7 +13,7 @@ const SRC = join(__dirname, '..');
 describe('禁用原因可发现性（479 批）', () => {
   it('Lucene：架构分析/执行钮禁用原因 title', () => {
     const v = readFileSync(join(SRC, 'views/LuceneQueryView.vue'), 'utf-8');
-    /* 561 随迁：两钮 title 改随态三元（SqlConsole 执行钮 525 W10 同语言）——479 契约
+    /* 561 同步更新：两钮 title 改随态三元（SqlConsole 执行钮 525 W10 同语言）——479 契约
        保留在 else 支逐字不动（「请先选择索引」/「请先选择索引并输入查询语句」仍是
        禁用原因唯一文案），条件齐备时出功能描述 */
     expect(v).toContain('<button class="btn ghost sm" :title="index ? \'探测当前索引字段，提前提醒 SQL 失能字段（在 Lucene 里不受影响）\' : \'请先选择索引\'" @click="doSchema"');
@@ -22,7 +22,7 @@ describe('禁用原因可发现性（479 批）', () => {
 
   it('SqlConsole：执行/到 DSL 页禁用原因 title', () => {
     const v = readFileSync(join(SRC, 'views/SqlConsoleView.vue'), 'utf-8');
-    /* 五百二十五批 W10 随迁：执行钮 title 改随态（:title 三元）——空 SQL 档仍是
+    /* 五百二十五批 W10 同步更新：执行钮 title 改随态（:title 三元）——空 SQL 档仍是
        「请输入 SQL 语句」禁用原因文案（479 原契约保留在三元 else 支），有 SQL 时提示快捷键 */
     expect(v).toContain('<button class="btn primary sm" :title="sql.trim() ? \'执行（\' + execHint + \'）\' : \'请输入 SQL 语句\'" @click="doRun"');
     expect(v).toContain('<button class="btn ghost xs" @click="gotoDsl" :disabled="!dslPreview" title="先执行 SQL 转换生成 DSL">');

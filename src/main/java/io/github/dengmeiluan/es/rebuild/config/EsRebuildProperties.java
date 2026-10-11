@@ -38,8 +38,7 @@ public class EsRebuildProperties {
     private String versionFormat = "yyyyMMddHHmmss";
 
     /**
-     * 装配模式（）：
-     * <ul>
+     * 装配模式（* <ul>
      *   <li>{@code client}（默认）—— 业务应用侧：只装索引声明；期望配置端点与自包含单页
      *       由 {@code DesiredStateController} 提供，<b>  才引入</b>，本开关引入时尚不存在，
      *       不装控制台、不装 AOP 切面、不装控制集群解析、不装 ES 管理客户端；</li>
@@ -352,7 +351,7 @@ public class EsRebuildProperties {
         private String userIndexName = "es_console_user";
         /** 控制台操作审计索引名：环形开启时为「日期索引前缀」，关闭时为固定单索引名。 */
         private String opsAuditIndexName = "es_console_ops_audit";
-        /** 20260922 环形保留立法（统一只用 QA ES 单载体）：按日索引 + 双闸清理。 */
+        /** 20260922 环形保留约定（统一只用 QA ES 单载体）：按日索引 + 双闸清理。 */
         private AuditRetention auditRetention = new AuditRetention();
         /**
          * 宿主审计并入开关（裁决<b>默认关</b>）：开启后宿主注册的
@@ -388,7 +387,7 @@ public class EsRebuildProperties {
 
     /**
      * 审计环形保留参数（前缀 {@code es.rebuild.console.auth.audit-retention}，20260922）：
-     * 统一只用 QA ES（控制集群）单载体的环形立法——审计写 {@code <索引名前缀>-yyyy.MM.dd}
+     * 统一只用 QA ES（控制集群）单载体的环形约定——审计写 {@code <索引名前缀>-yyyy.MM.dd}
      * 按日索引，{@link io.github.dengmeiluan.es.rebuild.auth.AuditIndexRetentionSweeper} 按
      * 双闸（超龄 + 总量）整索引删最旧。{@code enabled=false} 一键回到旧固定单索引行为
      * （既不滚动也不清理），是发版期的回退开关。
@@ -452,7 +451,7 @@ public class EsRebuildProperties {
             private String usernameClaim = "sub";
             /** 角色 claim（支持 a.b.c 点分路径；值为数组或逗号串）。 */
             private String rolesClaim = "roles";
-            /** 展示名 claim（，点分路径，如 name / user.nickname）；空 = 不取，顶栏回落 username。 */
+            /** 展示名 claim（点分路径，如 name / user.nickname）；空 = 不取，顶栏回落 username。 */
             private String displayNameClaim = "";
 
             public String getSecret() { return secret; }
@@ -477,7 +476,7 @@ public class EsRebuildProperties {
             private String usernamePath = "username";
             /** 返回 JSON 里角色字段路径（数组或逗号串）。 */
             private String rolesPath = "roles";
-            /** 返回 JSON 里展示名字段路径（）；空 = 不取。 */
+            /** 返回 JSON 里展示名字段路径（；空 = 不取。 */
             private String displayNamePath = "";
             /** 校验结果短缓存秒数（按 token 缓存，降低宿主接口压力）。 */
             private int cacheSeconds = 30;
@@ -639,7 +638,7 @@ public class EsRebuildProperties {
          * <b>属性级</b>转换器接管，抢在本开关注册的 {@code ElasticsearchCustomConversions}
          * 之前生效。对这类字段<b>打开开关什么也不会发生，而且不报错</b> ——
          * 使用者很容易误以为已经修好。这类字段应改 {@code @Field(format = ...)}
-         * 或把实体类型换成 {@code Long} 自行转换。（QA 6.7.2 实测， ）</p>
+         * 或把实体类型换成 {@code Long} 自行转换。（QA 6.7.2 实测）</p>
          *
          * <p>能救的是<b>不带</b>日期注解、而存储形态是 epoch 数值的
          * {@code Timestamp} / {@code Date} / {@code Instant} 字段。</p>

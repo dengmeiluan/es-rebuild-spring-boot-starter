@@ -1,6 +1,6 @@
 /**
  * 六百一十二批（轨3 表格内核消费面）：RT searchable 首消费面接线——IndexHubView docsTbl。
- * 背景：searchable=quickFilter 的 UI 面（546 批 QRT 立法自带 SystemView 示范接线；
+ * 背景：searchable=quickFilter 的 UI 面（546 批 QRT 约定自带 SystemView 示范接线；
  * 547 批平移 RT 后 RT 侧全站零消费面=571-C1 孤立 API 债六批）。IndexHub 文档 tab 是
  * 全站最高频文档浏览面，「可检索」（宪法 B 七能力）在此落地。接线同时让 606 口径
  * （全选/反选=sortedHits 当前视图）在 quickFilter 通道首次产品可达：输词过滤→全选只勾
@@ -12,7 +12,7 @@
  * 1) 接线源码锁（RED→接线后绿）：docsTbl rtTag 含 :searchable="true"（rtTag 提取法=
  *    ihUnify554 同款；qryTbl 不设负锚——下批接线不反锁）；
  * 2) 行为网（先行绿——RT 内核 searchable→quickFilterEff→quickHits→sortedHits→
- *    allChecked 全链 546/547/606 已实现，本批做组合防回归网）：输入框渲染+喂词过滤+
+ *    allChecked 全链 546/547/606 已实现，做组合防回归网）：输入框渲染+喂词过滤+
  *    全选口径+Esc 清词+清词勾选保留+过滤态反选同口径。
  *
  * 挂载样板照抄 aggSelectScope606（裸 createApp + pinia + api mock；点击/输入一律原生
@@ -146,6 +146,6 @@ describe('六百一十二批二：searchable 通道 606 口径组合行为网', 
        亦得全不勾，但路径不同——此处锚定的是 606 sortedHits 口径通道在全站唯一 searchable
        接线下的行为一致性） */
     expect(chkBoxes().slice(1).filter(b => b.checked).length, '反选后全不勾').toBe(0);
-    expect(aggRow()?.querySelector('.rt-agg-sel')?.textContent ?? '', '徽标退场（0 行）').not.toContain('选中');
+    expect(aggRow()?.querySelector('.rt-agg-sel')?.textContent ?? '', '徽标移除（0 行）').not.toContain('选中');
   });
 });

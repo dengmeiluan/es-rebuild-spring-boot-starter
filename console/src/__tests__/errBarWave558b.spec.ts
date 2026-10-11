@@ -1,7 +1,7 @@
 /**
- * 五百五十八批（工蚁C·b 轨4）：红壳收编 err-bar 档 + RawIo 第五波 + 统一件收编。
+ * 五百五十八批（工蚁C·b 轨4）：红壳合并 err-bar 档 + RawIo 第五波 + 统一件合并。
  *
- *  ① 红壳收编 err-bar 档（557 IH ih-qerr 先例，track2Wave557 只读学习）：ProfileFlame .pf-err /
+ *  ① 红壳合并 err-bar 档（557 IH ih-qerr 先例，track2Wave557 只读学习）：ProfileFlame .pf-err /
  *     MatchMatrix .mm-err / BoostTuner .bt-err 三处私造红壳挂全局 err-bar（role=alert 在场，
  *     border/err-soft/radius 三件套退役归 theme.css :554 单源；视图只留顶对齐与落位节奏）；
  *     QueryXray vrErr 面板 .qx-verdict.bad 补 role=alert（verdict 徽标族与 err-bar 同 token 族，
@@ -10,12 +10,12 @@
  *  ② RawIo 第五波三面铺装（546 CASES 字面锁同形态）：SearchTemplates（渲染/执行双响应面双钮，
  *     548 QueryXray 双钮先例）/ DiffEditor（getDoc/putDoc 对比面，/cluster/doc 读写同前缀）/
  *     BoostTuner（searchRaw 调参执行）。⚠ '/cluster/search-raw' 与 ScoreExplain/MatchMatrix
- *     同特征：页域各自取最近一条，跨页互见记档（MatchMatrix 557 头注同口径）。
- *  ③ 统一件收编：ConfigDrift 清单角标 cd-verdict **保形**——本批曾按任务令换装 StatusPill，因
+ *     同特征：页域各自取最近一条，跨页互见备案（MatchMatrix 557 头注同口径）。
+ *  ③ 统一件合并：ConfigDrift 清单角标 cd-verdict **保形**——曾按任务令改用 StatusPill，因
  *     useCurrentIdxWritePages525:210-212 黑名单存量逐字锁互斥，经 Lead 裁决最小回滚（原负锁
- *     StatusPill 不用于 cd-verdict + 正锁原形态在场；五百六十批该 spec 解禁后已随迁换装兑现，
- *     本文件 cd-verdict 锚已随批翻转——正锁 StatusPill 换装形态）；ConfigDrift/
- *     TasksView 两处手写过滤框换装 SearchFilterBar（Esc 清空内建/Enter
+ *     StatusPill 不用于 cd-verdict + 正锁原形态在场；五百六十批该 spec 解禁后已同步更新改用兑现，
+ *     本文件 cd-verdict 锚已随批翻转——正锁 StatusPill 改用形态）；ConfigDrift/
+ *     TasksView 两处手写过滤框改用 SearchFilterBar（Esc 清空内建/Enter
  *     定向转出，胶囊壳三件套归组件单源；tv-kw 类锚随 input-class 保留——sweep524 挂载过滤锁
  *     同路径零迁）。BrowserView bw-search 豁免勿动（547 豁免册既有条目）。
  *  ④ BoostTuner 滑杆权重动态提示（×N 随行值）。
@@ -36,7 +36,7 @@ const df = read('../views/DiffEditorView.vue');
 const cd = read('../views/ConfigDriftView.vue');
 const tv = read('../views/TasksView.vue');
 
-/* ═══════════ ① 红壳收编 err-bar 档 ═══════════ */
+/* ═══════════ ① 红壳合并 err-bar 档 ═══════════ */
 
 describe('558b ①：三面私造红壳挂全局 err-bar（557 IH 先例）', () => {
   const SHELLS = [
@@ -98,7 +98,7 @@ describe('558b ②：RawIo 第五波铺装（546 CASES 字面锁同形态）', (
     expect(st).toContain('openRawIoRender');
     expect(st).toContain('openRawIoSearch');
   });
-  it('三面前缀语义：render-template/search-template/doc 互不混淆（search-raw 跨页互见已记档）', () => {
+  it('三面前缀语义：render-template/search-template/doc 互不混淆（search-raw 跨页互见已备案）', () => {
     const all = ['/cluster/render-template', '/cluster/search-template', '/cluster/doc'];
     expect(new Set(all).size).toBe(all.length);
     expect(st).toContain("ioRecorder.last('/cluster/render-template')");
@@ -107,15 +107,15 @@ describe('558b ②：RawIo 第五波铺装（546 CASES 字面锁同形态）', (
   });
 });
 
-/* ═══════════ ③ 统一件收编 ═══════════ */
+/* ═══════════ ③ 统一件合并 ═══════════ */
 
-describe('558b ③：ConfigDrift 清单角标（五百六十批解禁换装随迁）+ SearchFilterBar 两面收编', () => {
-  it('ConfigDrift 清单角标换装 StatusPill（558b 回滚件随 525:210 解禁由五百六十批兑现：负锁翻转，tone 走 cdVerdictPill 映射）', () => {
-    expect(cd, 'StatusPill 换装在场（tone=cdVerdictPill 映射消费，文案逐字）').toContain('<StatusPill v-if="verdicts[k.indexKey]" class="cd-verdict" :tone="cdVerdictPill(verdicts[k.indexKey])"');
+describe('558b ③：ConfigDrift 清单角标（五百六十批解禁改用同步更新）+ SearchFilterBar 两面合并', () => {
+  it('ConfigDrift 清单角标改用 StatusPill（558b 回滚件随 525:210 解禁由五百六十批兑现：负锁翻转，tone 走 cdVerdictPill 映射）', () => {
+    expect(cd, 'StatusPill 改用在场（tone=cdVerdictPill 映射消费，文案逐字）').toContain('<StatusPill v-if="verdicts[k.indexKey]" class="cd-verdict" :tone="cdVerdictPill(verdicts[k.indexKey])"');
     expect(cd, '手写 .pill 裸挂形态退役（558b 原正锁随批翻转）').not.toContain('class="cd-verdict pill"');
     expect(cd, '外层定位壳保留（absolute right/top，useCurrentIdxWritePages525:211 锁）').toMatch(/\.cd-verdict \{ position: absolute; right: 10px; top: 10px; \}/);
   });
-  it('ConfigDrift/TasksView 过滤框换装 SearchFilterBar（Esc 清空内建/Enter 定向转出）', () => {
+  it('ConfigDrift/TasksView 过滤框改用 SearchFilterBar（Esc 清空内建/Enter 定向转出）', () => {
     expect(cd).toContain('<SearchFilterBar v-model="kw" class="cd-kw-inp" placeholder="搜 indexKey / 别名…" @enter="onHitKey" />');
     expect(cd, '手写过滤框退役').not.toContain('@keydown.enter.prevent="onHitKey"');
     expect(tv).toContain('<SearchFilterBar v-model="kw" class="tv-kw-wrap" input-class="tv-kw" placeholder="过滤 taskId / action / 描述…" />');

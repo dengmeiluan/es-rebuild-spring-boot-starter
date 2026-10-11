@@ -6,13 +6,13 @@
  *
  * ── 13 条死因证据链（785 实勘：全树 grep 字面量+动态拼接前缀逐类甄别）──────
  * ① TemplateGallery .tg-hd-l/-ic/-tt/-sub 四条（原 212~216 区）：页头左组死类族
- *    （PageHeader 收编漏删族——713 G53/715 G56/717 G61/721 G72/727 G86/729 G94
+ *    （PageHeader 合并漏删族——713 G53/715 G56/717 G61/721 G72/727 G86/729 G94
  *    先例链在薄面档轮转期逐页清除，本页 708 首刀早于该方法成型故漏网）。
  *    全 src 树仅 style 段定义处 1 次出现；'tg-' 前缀无任何动态拼接形态
  *    （CmdPalette 的 'tgt-' 是另一命名域）。随删 G6-C 史志注释一条
  *    （它只服务 .tg-hd-tt）。
  * ② SqlConsole .sq-hd-hi（原 633）：孤儿强调样式——sq-hd 家族仅此一条，
- *    模板零 class="sq-hd*" 挂载（页头早已收编 PageHeader），无拼接前缀。
+ *    模板零 class="sq-hd*" 挂载（页头早已合并 PageHeader），无拼接前缀。
  * ③ DiagView .dg-grid/.dg-col/.dg-sk/.dg-chips 四条（原 637/638/644/645）：
  *    模板 class="dg*" 挂载全集实勘不含此四者（布局由 .dg 根容器 flex 流与
  *    .dg-ops-grid 承担）；529 批 900 档注释（原 711）提及 .dg-grid 同步诚实化。
@@ -49,7 +49,7 @@ const hasSel = (code: string, cls: string) =>
 describe('deadClassSweep785 · 全站 scoped 死类残量清零（死规则族第三刀）', () => {
   /* —— A 组：13 死符号任何形态不得回魂（先红主战场） —— */
 
-  it('A1 TemplateGallery tg-hd-l/-ic/-tt/-sub 四死类清零（PageHeader 收编漏删族收官）', () => {
+  it('A1 TemplateGallery tg-hd-l/-ic/-tt/-sub 四死类清零（PageHeader 合并漏删族收官）', () => {
     const code = vue('views/TemplateGalleryView.vue');
     for (const cls of ['tg-hd-l', 'tg-hd-ic', 'tg-hd-tt', 'tg-hd-sub']) {
       expect(hasSel(code, cls), `死类 .${cls} 复发`).toBe(false);

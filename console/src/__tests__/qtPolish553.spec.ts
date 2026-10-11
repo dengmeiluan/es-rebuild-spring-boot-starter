@@ -1,7 +1,7 @@
 /**
  * 五百五十三批：条件树面板头工具行质感升级（用户实报「共 0 条件」胶囊+「过滤条件...」输入框
  * +「折叠全部」「停用全部」文字钮形态简陋廉价，要求大气质感、与页内执行行/工具行质感语言统一）。
- * ①「过滤条件…」裸 input 收编 SearchFilterBar 统一件——547 批三胞胎（wt/fv/tg）后第四胞胎：
+ * ①「过滤条件…」裸 input 合并 SearchFilterBar 统一件——547 批三处（wt/fv/tg）后第四处：
  *   同构判定成立（v-model 过滤词 + Enter 命中导航 + 右侧附加件插槽 + Esc 清空内建）；
  *   qtp 特有 Shift+Enter 反向轮转经组件 @enter 转出的原生 KeyboardEvent.shiftKey 承接；
  *   focus 态 accent 边在视图侧补（.qtp-find:focus-within 对齐 theme.css .inp:focus 范式），
@@ -15,7 +15,7 @@
  * 全源码锚 + createApp 挂载双口径（范式同 queryTreePaneButtons541 / fieldSelectPopup）。
  * 行为锁：折叠 window 广播（BGN_COLLAPSE_EVENT 派发与监听两侧）/ setAllDisabled 树写入
  * / onFindKey 轮转函数体 字面零触（not 改断言——只加不改）。
- * 记档：541 批已有「启用全部」恢复入口（hasDisabled 状态感知循环钮），有停用必有恢复，无缺口。
+ * 备案：541 批已有「启用全部」恢复入口（hasDisabled 状态感知循环钮），有停用必有恢复，无缺口。
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -34,9 +34,9 @@ const bgn = readFileSync(join(__dirname, '../components/builder/BoolGroupNode.vu
 const btnLine = (label: string) =>
   tpl.split('\n').find(l => l.includes('<button') && l.includes(label));
 
-/* ═══════════ ① 过滤输入框：SearchFilterBar 第四胞胎收编 ═══════════ */
-describe('五百五十三批：过滤框收编 SearchFilterBar（第四胞胎）', () => {
-  it('收编锚：v-model filterQ + qtp-find 落位 + placeholder 逐字 + @enter 接线 + 插槽计数', () => {
+/* ═══════════ ① 过滤输入框：SearchFilterBar 第四处合并 ═══════════ */
+describe('五百五十三批：过滤框合并 SearchFilterBar（第四处）', () => {
+  it('合并锚：v-model filterQ + qtp-find 落位 + placeholder 逐字 + @enter 接线 + 插槽计数', () => {
     expect(tpl, 'SearchFilterBar 统一件在场（裸 input 退役；title 提示经 $attrs 透传落根，故锚不锁尾闭合符）')
       .toMatch(/<SearchFilterBar v-model="filterQ" class="qtp-find" placeholder="过滤条件…" @enter="onFindKey"/);
     expect(script, '组件 import 在场').toMatch(/import SearchFilterBar from '\.\.\/SearchFilterBar\.vue';/);
@@ -66,7 +66,7 @@ describe('五百五十三批：折叠/启停循环钮补 icon（.btn sm ghost �
     expect(fold!, 'ghost 档').toMatch(/class="btn sm ghost"/);
     expect(expand!, '展开=ChevronsUp（向上展开语义）').toMatch(/<ChevronsUp :size="11" \/>/);
     expect(fold!, '折叠=ChevronsDown（向下折叠语义）').toMatch(/<ChevronsDown :size="11" \/>/);
-    /* 541 批锚随迁：状态感知表达式同行不破 */
+    /* 541 批锚同步更新：状态感知表达式同行不破 */
     expect(expand!).toMatch(/v-if="anyCollapsed"/);
     expect(fold!).toMatch(/v-else/);
   });
@@ -113,8 +113,8 @@ describe('五百五十三批：行为锁——广播与树写入逻辑字面零�
   it('折叠 window 广播：BGN_COLLAPSE_EVENT 派发侧（QueryTreePane）与监听侧（BoolGroupNode）原样', () => {
     expect(script, '派发字面零触')
       .toContain("window.dispatchEvent(new CustomEvent(BGN_COLLAPSE_EVENT, { detail: { collapsed } }))");
-    expect(script, '541 感知锚随迁').toContain('anyCollapsed.value = collapsed');
-    expect(script, '事件名常量随迁导入').toMatch(/import BoolGroupNode, \{ BGN_COLLAPSE_EVENT \} from '\.\/BoolGroupNode\.vue';/);
+    expect(script, '541 感知锚同步更新').toContain('anyCollapsed.value = collapsed');
+    expect(script, '事件名常量同步更新导入').toMatch(/import BoolGroupNode, \{ BGN_COLLAPSE_EVENT \} from '\.\/BoolGroupNode\.vue';/);
     expect(bgn, '监听侧注册零触').toMatch(/window\.addEventListener\(BGN_COLLAPSE_EVENT, onCollapseEvt\)/);
     expect(bgn, '监听侧处理零触').toMatch(/const onCollapseEvt = \(e: Event\) => \{ collapsed\.value = !!\(e as CustomEvent\)\.detail\?\.collapsed; \}/);
   });
@@ -123,7 +123,7 @@ describe('五百五十三批：行为锁——广播与树写入逻辑字面零�
     expect(script).toContain('function setAllDisabled(disabled: boolean)');
     expect(script).toContain('return { ...x, disabled };');
     expect(script).toContain('setRoot(walk(r));');
-    expect(btnLine('启用全部'), '恢复入口在场（541 批已有，记档无缺口）').toBeTruthy();
+    expect(btnLine('启用全部'), '恢复入口在场（541 批已有，备案无缺口）').toBeTruthy();
   });
 
   it('onFindKey 轮转函数体零触（Shift+Enter 反向语义经 @enter 转出承接）', () => {
@@ -218,7 +218,7 @@ describe('五百五十三批：挂载行为（渲染+质感件功能不断）', 
     expect(host.querySelector('.cn.qtp-hit-cur'), 'Enter 导航落当前命中加重档（@enter 接线验证）').toBeTruthy();
     inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     await settle();
-    expect(inp.value, 'Esc 内建清空（SearchFilterBar 承接，三胞胎同行为）').toBe('');
+    expect(inp.value, 'Esc 内建清空（SearchFilterBar 承接，三处同行为）').toBe('');
     expect(host.querySelector('.cn.qtp-hit'), '清空后高亮恢复').toBeNull();
   });
 });

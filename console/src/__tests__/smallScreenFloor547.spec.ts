@@ -5,7 +5,7 @@
  *  ① ClusterSettingsView .cs-filter   min-width:210px → min-width: min(210px,100%)
  *  ② TaskTreeView      .tt-filter     min-width:220px → min-width: min(220px,100%)
  *  ③ ConfigValidatorView .cv-import .inp width:260px → width: min(260px,100%)
- *     （900 档已有 width:100% 覆盖，本批补 485/375 兜底；.sm-inp 200px 同批同款）
+ *     （900 档已有 width:100% 覆盖，补 485/375 兜底；.sm-inp 200px 同批同款）
  *  ④ AnalysisSettingsView .as-ii      min-width:200px → min-width: min(200px,100%)
  *  ⑤ MatchMatrixView   .mm-stat-nm    900 档宽度降档 200→140（ellipsis 基线兜底不动）
  *  ⑥ DevToolsView      补 900 档（全站最后一个零 @media 主工作页；538 批豁免三文件
@@ -40,16 +40,16 @@ describe('五百四十七批：小屏 485/375 兜底——min(Npx,100%) 钳制�
     expect(src).toMatch(/\.sm-inp \{ width: min\(200px, 100%\); \}/);
     expect(src, '裸 width:260px 应已换 min() 钳制').not.toContain('width: 260px');
     expect(src, '裸 width:200px 应已换 min() 钳制').not.toContain('width: 200px');
-    /* 既有 900 档 width:100% 覆盖仍在（本批是 485/375 前置兜底，不替代 900 档） */
+    /* 既有 900 档 width:100% 覆盖仍在（是 485/375 前置兜底，不替代 900 档） */
     const b900 = block900Of(src);
     expect(b900, 'cv 既有 900 档不得回删').toBeTruthy();
     expect(b900![0]).toContain('.cv-import .inp { width: 100%; }');
   });
 
-  it('④ AnalysisSettingsView .as-ii：随 IndexPicker 退役整删（764 G227 锁随迁），死类不回潮', () => {
+  it('④ AnalysisSettingsView .as-ii：随 IndexPicker 退役整删（764 G227 锁同步更新），死类不回潮', () => {
     const src = srcOf('AnalysisSettingsView');
     /* 547 批原锁 .as-ii min(200px,100%) 钳制——IndexPicker 五百二十五批退役后该输入框
-       类为伴漏删死规则，七百六十四批 G227 整删（六死规则族）；锁随迁为负向锚防回潮，
+       类为伴漏删死规则，七百六十四批 G227 整删（六死规则族）；锁同步更新为负向锚防回潮，
        「裸 min-width:200px 退役」防回潮语义保留 */
     expect(src, '.as-ii 死规则不回潮（模板零引用）').not.toMatch(/\.as-ii\b/);
     expect(src, '裸 min-width:200px 应已换 min() 钳制').not.toContain('min-width: 200px');
@@ -64,19 +64,19 @@ describe('五百四十七批：小屏 485/375 兜底——min(Npx,100%) 钳制�
   });
 });
 
-describe('五百四十七批：DevToolsView 补 900 档（零 @media 主工作页收编，wrap/min 钳制限定）', () => {
+describe('五百四十七批：DevToolsView 补 900 档（零 @media 主工作页合并，wrap/min 钳制限定）', () => {
   const src = srcOf('DevToolsView');
   const b900 = block900Of(src);
 
-  it('900 档在场且非空；562 单轨立法后 .dt-actions 不得再覆写 wrap + .dt-resp-search min() 钳制锚', () => {
+  it('900 档在场且非空；562 单轨约定后 .dt-actions 不得再覆写 wrap + .dt-resp-search min() 钳制锚', () => {
     expect(b900, 'DevToolsView 缺 900 紧凑微调档').toBeTruthy();
     expect(b900![0], '900 档为空壳').toMatch(/\{[^{}]+\}/);
-    /* 五百六十二批随迁（用户实报窄容器堆竖排根治）：wrap 覆写行退役——900 档窄视口下
+    /* 五百六十二批同步更新（用户实报窄容器堆竖排根治）：wrap 覆写行退役——900 档窄视口下
        单轨横滚依旧优于堆竖排（不挤编辑器高度），flex-shrink 守卫与 min() 钳制保留 */
     expect(b900![0]).not.toContain('.dt-actions { flex-wrap: wrap; }');
     expect(b900![0]).toContain('.dt-actions > * { flex-shrink: 0; }');
     expect(b900![0]).toContain('.dt-resp-search input { width: min(150px, 100%); }');
-    /* 557 批锁随迁：桌面档基线宽同步 min() 钳制（529 扫荡口径收编，900 档覆写与之合流；
+    /* 557 批锁同步更新：桌面档基线宽同步 min() 钳制（529 扫荡口径合并，900 档覆写与之合流；
        原定宽 150px 字面退役），桌面档 flex-wrap 已有 dt-actions 换行容许，双层钳不引入高度反例 */
     expect(src).toContain('.dt-resp-search input { width: min(150px, 100%);');
   });
@@ -89,8 +89,8 @@ describe('五百四十七批：DevToolsView 补 900 档（零 @media 主工作�
     expect(b900![0]).not.toContain('dt-out');
   });
 
-  it('focusSurface401 锁定的基线行（562 实报升级：单轨 nowrap+横滚与聚焦钮同行，锁随迁见 dtInsFieldFix562）', () => {
-    /* 五百六十二批随迁（用户实报窄容器堆竖排）：基线行 wrap 升级单轨（543 lrBarSingleTrack 同刀） */
+  it('focusSurface401 锁定的基线行（562 实报升级：单轨 nowrap+横滚与聚焦钮同行，锁同步更新见 dtInsFieldFix562）', () => {
+    /* 五百六十二批同步更新（用户实报窄容器堆竖排）：基线行 wrap 升级单轨（543 lrBarSingleTrack 同刀） */
     expect(src).toMatch(/\.dt-actions \{ display: flex; gap: var\(--sp-1h\); align-items: center; flex-wrap: nowrap; overflow-x: auto; min-width: 0; flex: 1 1 0; \}/);
     expect(src).toMatch(/\.dt-actions > \* \{ white-space: nowrap; flex-shrink: 0; \}/);
   });

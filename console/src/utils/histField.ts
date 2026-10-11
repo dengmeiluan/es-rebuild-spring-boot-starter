@@ -4,7 +4,7 @@
  * 被塞进 date_histogram，ES 直接 400 连坐整个查询。
  */
 
-const EPOCH_MS_MIN = Date.UTC(2000, 0, 1); //  946684800000
+const EPOCH_MS_MIN = Date.UTC(2000, 0, 1); // 946684800000
 const EPOCH_MS_MAX = Date.UTC(2100, 0, 1); // 4102444800000
 const EPOCH_S_MIN = EPOCH_MS_MIN / 1000;
 const EPOCH_S_MAX = EPOCH_MS_MAX / 1000;

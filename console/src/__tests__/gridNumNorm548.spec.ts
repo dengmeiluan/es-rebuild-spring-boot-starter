@@ -4,7 +4,7 @@
  * 第二遍数值归一（仅两侧都「看起来是数字」才比对：千分位形态 ^-?\d{1,3}(,\d{3})+(\.\d+)?$
  * 或纯数字串，去千分位/去空白后 includes）。
  * 保守负例锁实现边界：普通含逗号文本（"a,b"）与非千分位形态（"12,34"）一律不归一。
- * matches/matchSet 同口径：归一命中也进坐标集（388 批一致性契约随迁）。
+ * matches/matchSet 同口径：归一命中也进坐标集（388 批一致性契约同步更新）。
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useGridSearch, normNumStr } from '../composables/useGridSearch';
@@ -79,7 +79,7 @@ describe('useGridSearch 数值双口径（548 批）', () => {
     expect(gs2.matches.value).toEqual([{ ri: 0, ci: 0 }]);
   });
 
-  it('归一命中同步进 matchSet（matches/matchSet 同口径，388 契约随迁）', async () => {
+  it('归一命中同步进 matchSet（matches/matchSet 同口径，388 契约同步更新）', async () => {
     const gs = await search([['1,234']], '1234');
     expect(gs.matchSet.value.has('0:0')).toBe(true);
   });

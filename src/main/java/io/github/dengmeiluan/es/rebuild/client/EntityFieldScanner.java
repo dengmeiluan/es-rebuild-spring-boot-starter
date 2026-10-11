@@ -41,7 +41,7 @@ import java.util.Map;
  *   <tr><th>列</th><th>值</th><th>含义</th></tr>
  *   <tr><td>{@code esType}</td><td>null 且 row 级 {@code mappingParsed==true}</td>
  *       <td>mapping 解析成功、但里面没有这个键 —— 该字段<b>走 dynamic mapping</b>
- *           （spec §9.3 信号⑤，风险判定要用它）</td></tr>
+ *           （spec  信号⑤，风险判定要用它）</td></tr>
  *   <tr><td>{@code esType}</td><td>null 且 row 级 {@code mappingParsed==false}</td>
  *       <td><b>我们不知道</b> —— mappingJson 缺失或没解析成功，<b>不得</b>据此判定 dynamic mapping</td></tr>
  *   <tr><td>{@code esFormat}</td><td>null</td>
@@ -70,7 +70,7 @@ import java.util.Map;
  * 那正是「缺席与合法值同形」的又一次复发。故本类只暴露 {@link #mappingParsed(String)}
  * 由 {@code DesiredStatePayload} 置于 row 级，字段行不再携带该键。</p>
  *
- * <p><b>明确局限</b>（spec §9.3，必须如实对外声明，不许假装完备）：
+ * <p><b>明确局限</b>（spec ，必须如实对外声明，不许假装完备）：
  * <ul>
  *   <li>{@code @Transient} 字段跳过；static / synthetic 字段跳过</li>
  *   <li>只取 {@code getDeclaredFields()}，<b>不含继承字段</b>。实体一般无继承；若有则会漏检</li>
@@ -79,7 +79,7 @@ import java.util.Map;
  *   <li>任何反射或解析失败都不抛，最差返回空列表 —— 一个字段扫不出来不该让整个端点 500</li>
  * </ul>
  *
- * <p>纯静态方法、无 Spring 依赖、<b>零 ES 读取</b>（spec §1.1 业务侧硬约束：
+ * <p>纯静态方法、无 Spring 依赖、<b>零 ES 读取</b>（spec  业务侧硬约束：
  * 只反射 + 解析业务方自己声明的 mappingJson，不连 ES 查真实 mapping）。</p>
  */
 public final class EntityFieldScanner {
@@ -106,7 +106,7 @@ public final class EntityFieldScanner {
                排查；吞异常契约不变（返回 emptyList 控制流零改动）。同族 null 返回点核查：
                sdesVersion() 的 Throwable→null 与 parseProperties() 的 catch→null 均为文档化
                正常路径（前者 jar 无 Implementation-Version 常态、后者契约内解析失败经
-               mappingParsed=false 可辨），维持静默，见 Observability547Test 记档 */
+               mappingParsed=false 可辨），维持静默，见 Observability547Test 备案 */
             LOG.warn("[EntityFieldScanner] getDeclaredFields failed class={}: {}",
                     entityClass.getName(), t.getMessage());
             return Collections.emptyList();
@@ -207,7 +207,7 @@ public final class EntityFieldScanner {
     /**
      * mapping 里该字段的 {@code format} 键；无则 null。
      *
-     * <p><b>为何由后端产出而非前端现取</b>（  裁定四）：它是 spec §9.5 规则 1
+     * <p><b>为何由后端产出而非前端现取</b>（  裁定四）：它是 spec  规则 1
      * {@code SECONDS_IN_FORMATLESS_DATE} 唯一的 mapping 侧输入。若前端为此自行解析一次
      * mappingJson，仓库里就有<b>两个 mapping 解析器</b> —— 它们此刻一致，从此各自演化；
      * 且「后端 {@code mappingParsed=false} 而前端解析成功读出了 format」这种错位状态

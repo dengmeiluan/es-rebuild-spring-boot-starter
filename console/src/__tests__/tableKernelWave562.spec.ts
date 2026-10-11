@@ -1,11 +1,11 @@
 /**
  * 五百六十二批（轨3 表格内核）：数据表格内核本体增量四刀。
  *
- * T1 IP_TYPE_RE 双份字面收编单源——QRT/RT 各持一份本地 `const IP_TYPE_RE = /^ip(_range)?$/;`
+ * T1 IP_TYPE_RE 双份字面合并单源——QRT/RT 各持一份本地 `const IP_TYPE_RE = /^ip(_range)?$/;`
  *    （QRT :1160 / RT :1331）退役，typeTiers 导出 IP_TYPE_RE + isIpType，双内核 isIpCol/
  *    isContainsCol 消费点改引（行为零变化）。
  * T2 ES highlight 渲染下沉 QRT（opt-in）——RT hlHtml 的片段装配（join ' … ' + hlSafe 净化 +
- *    空档短路）收编 highlightSanitize.hlSegment 共用纯函数，RT 一行委托（queryHighlightChain
+ *    空档短路）合并 highlightSanitize.hlSegment 共用纯函数，RT 一行委托（queryHighlightChain
  *    的 `import { hlSafe }`/`function hlHtml`/`v-html="hlHtml(hit, c)"` 字面锁保全）；
  *    QRT 新增 opt-in prop `highlight`（缺省 false 零行为变），开启且 hit 型行带
  *    highlight[col] 片段时走 hlSegment 净化 v-html（.qrt-hl），视觉语言与 RT rt-mark 同形态。
@@ -14,11 +14,11 @@
  *      工具行一起消失）；工具行其余内容（计数条/筛选提示/搜索/刷新/导出钮簇）维持 prefsOn
  *      门控不变（独立壳分支形态，有槽/迁头档才渲染，缺省零增量）。
  *    ② pagerInHead opt-in（缺省 false 保底 DOM 契约零变）：开启且 page/pageSize/total 三参
- *      齐备时分页器寄居 bar-left（RT :25 同款形态），底部 qrt-pgr 行退役（互斥收编在 pagerOn
- *      判定——rtFix552 的 qrt-pgr 行 v-if 字面逐字保全）。消费侧接线下批（本批不传参）。
- * T4 NON_SEMANTIC *_range 族解禁（date_range/number_range 等）——记档不做：typeTiers
- *    「待解禁」记档维持（561 判定：解禁将波及 isRangeCol/区间筛选既有行为面，557/561 行为锁
- *    在，本批不动；本件只锁现状防无记档漂移）。
+ *      齐备时分页器寄居 bar-left（RT :25 同款形态），底部 qrt-pgr 行退役（互斥合并在 pagerOn
+ *      判定——rtFix552 的 qrt-pgr 行 v-if 字面逐字保全）。消费侧接线下批（不传参）。
+ * T4 NON_SEMANTIC *_range 族解禁（date_range/number_range 等）——备案不做：typeTiers
+ *    「待解禁」备案维持（561 判定：解禁将波及 isRangeCol/区间筛选既有行为面，557/561 行为锁
+ *    在，不动；本件只锁现状防无备案漂移）。
  *
  * 挂载样板照抄 tableKernelWave547（裸 createApp + pinia，叠挂勿先 unmount（T39），
  * happy-dom 口径：点击一律 dispatchEvent(new MouseEvent('click'))（el.click 不可靠））。
@@ -84,8 +84,8 @@ afterEach(() => {
   host.innerHTML = '';
 });
 
-/* ═══════════ T1：IP_TYPE_RE 双份字面收编 typeTiers 单源 ═══════════ */
-describe('五百六十二批 T1：IP_TYPE_RE 双份字面收编 typeTiers 单源', () => {
+/* ═══════════ T1：IP_TYPE_RE 双份字面合并 typeTiers 单源 ═══════════ */
+describe('五百六十二批 T1：IP_TYPE_RE 双份字面合并 typeTiers 单源', () => {
   it('纯函数直测：isIpType 判 ip/ip_range 真、近名/缺类型假；IP_TYPE_RE 导出同判', () => {
     expect(isIpType('ip')).toBe(true);
     expect(isIpType('ip_range')).toBe(true);
@@ -194,7 +194,7 @@ describe('五百六十二批 T3①：QRT bar-prepend 槽脱 prefsOn 门控', () 
 
   it('源码锁：主壳 v-if="prefsOn" 字面不动；独立壳分支 v-else-if="hasPrepend || pagerHeadOn" 寄居槽', () => {
     expect(qrt).toContain('<TableShell v-if="prefsOn" bar-class="qrt-bar" bar-r-class="qrt-bar-r">');
-    /* 六百零七批随迁：独立壳条件扩 viewSegOn（内建视图档无 storageKey 通道同样可达，
+    /* 六百零七批同步更新：独立壳条件扩 viewSegOn（内建视图档无 storageKey 通道同样可达，
        pagerInHead 同口径；判别力不变=主壳字面+独立壳结构+先后序三锚保全） */
     expect(qrt).toContain('<TableShell v-else-if="hasPrepend || pagerHeadOn || viewSegOn" bar-class="qrt-bar" bar-r-class="qrt-bar-r">');
     const mainAt = qrt.indexOf('<TableShell v-if="prefsOn"');
@@ -204,12 +204,12 @@ describe('五百六十二批 T3①：QRT bar-prepend 槽脱 prefsOn 门控', () 
 });
 
 describe('五百六十二批 T3②：QRT pagerInHead 分页器迁工具行（opt-in，消费侧下批接线）', () => {
-  it('源码锁：prop 缺省 false；互斥收编在 pagerOn 判定；qrt-pgr 行 v-if 字面逐字保留（rtFix552 锚）', () => {
+  it('源码锁：prop 缺省 false；互斥合并在 pagerOn 判定；qrt-pgr 行 v-if 字面逐字保留（rtFix552 锚）', () => {
     expect(qrt).toContain('pagerInHead?: boolean;');
     expect(qrt).toContain('pagerInHead: false,');
     expect(qrt).toContain('const pagerOn = computed(() => props.pagerInHead !== true && props.page != null && props.pageSize != null && props.total != null);');
     expect(qrt).toContain('const pagerHeadOn = computed(() => props.pagerInHead === true && props.page != null && props.pageSize != null && props.total != null);');
-    /* 六百零七批随迁：pgr 行字面 || hideBody→|| bodyHidden（rtFix552 锚同批换装，判别力不变） */
+    /* 六百零七批同步更新：pgr 行字面 || hideBody→|| bodyHidden（rtFix552 锚同批改用，判别力不变） */
     expect(qrt).toContain('<div v-if="pagerOn && ((!loading && !isEmpty) || bodyHidden)" class="qrt-pgr">');
   });
 
@@ -244,15 +244,15 @@ describe('五百六十二批 T3②：QRT pagerInHead 分页器迁工具行（opt
 });
 
 /* ═══════════ T4 + 缺省零增量总锁 ═══════════ */
-describe('五百六十二批 T4：NON_SEMANTIC *_range 族解禁记档不做（现状锁防无记档漂移）', () => {
-  it('date_range/number_range 维持未收编（待解禁记档维持）；核心豁免五型不收；RE 字面不含 *_range', async () => {
+describe('五百六十二批 T4：NON_SEMANTIC *_range 族解禁备案不做（现状锁防无备案漂移）', () => {
+  it('date_range/number_range 维持未合并（待解禁备案维持）；核心豁免五型不收；RE 字面不含 *_range', async () => {
     const tiers = readFileSync(join(__dirname, '../utils/typeTiers.ts'), 'utf-8');
-    expect(isNonSemanticType('date_range'), '解禁记档不做：date_range 仍不在抑制族').toBe(false);
+    expect(isNonSemanticType('date_range'), '解禁备案不做：date_range 仍不在抑制族').toBe(false);
     expect(isNonSemanticType('number_range'), 'number_range 同上').toBe(false);
     expect(isNonSemanticType('integer'), '豁免核心（数值白名单成员）不收').toBe(false);
     expect(isNonSemanticType('date'), '豁免核心（日期白名单成员）不收').toBe(false);
     expect(tiers).toContain('待解禁');
-    expect(tiers, 'RE 字面无 date_range/number_range（本批不动）').not.toContain('|date_range');
+    expect(tiers, 'RE 字面无 date_range/number_range（不动）').not.toContain('|date_range');
     expect(tiers).not.toContain('|number_range');
   });
 });

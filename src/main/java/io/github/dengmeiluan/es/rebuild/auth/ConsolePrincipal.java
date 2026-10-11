@@ -38,9 +38,9 @@ public class ConsolePrincipal {
     private final boolean fallback;
     /** 是否来自宿主鉴权委托（ {@link ConsoleAuthDelegate}）：凭据归宿主管，控制台不提供改密/退出。 */
     private final boolean delegated;
-    /** 展示名（）：人读友好的姓名/昵称；空 = 前端回落 username。 */
+    /** 展示名（人读友好的姓名/昵称；空 = 前端回落 username。 */
     private final String displayName;
-    /** 宿主自定义属性（）：org/dept/avatar 等，控制台只透传展示不参与鉴权。 */
+    /** 宿主自定义属性（org/dept/avatar 等，控制台只透传展示不参与鉴权。 */
     private final Map<String, String> attributes;
     /**
      * 页面级授权白名单（2.5.0 菜单 SPI，页面 key 集合）。三态语义：

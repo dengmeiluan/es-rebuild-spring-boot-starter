@@ -5,7 +5,7 @@
  * → 模板 v-if/steps 渲染，纯函数照不到。断言取真实 DOM（step 条的 .act 位置 /
  * 对应 step 的卡片可见），不读组件内部 ref —— 读 ref 等于把实现再抄一遍。
  *
- * 键名由 draftStorageKey({route:'adhoc'},'step') 生成（草稿治理轮迁 useScopedDraft 后按 维度隔离）
+ * 键名由 draftStorageKey({route:'adhoc'},'step') 生成（草稿迁 useScopedDraft 后按 维度隔离）
  * （adhoc.step）拼出的**真实 sessionStorage 键**，预置它模拟「离开时停在 step 2」。
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -85,7 +85,7 @@ describe('Task 4 向导 step 持久化', () => {
     sessionStorage.setItem(draftStorageKey({ route: 'adhoc' }, 'step'), '2');
     const { host, actIndex } = await mountWizard();
 
-    // step===2 时「追平策略」分节可见（554 随迁：.card 壳退役改 .ar-sec border-top 分节）
+    // step===2 时「追平策略」分节可见（554 同步更新：.card 壳退役改 .ar-sec border-top 分节）
     expect(host.querySelector('.ar-sec')).not.toBeNull();
     expect(host.querySelector('.strats')).not.toBeNull();
     // step 条第 3 个（index 2）带 act 类
@@ -133,7 +133,7 @@ describe('w24 切页返回续现场', () => {
 
 /* w25：第二病根——浏览器回退带着残留 ?index= 回来不得重置；step0 只输过名字也不被 pickedIdx 覆写 */
 describe('w25 残留 query 与 step0 现场', () => {
-  it('浏览器回退场景:query 一次性消费后被清,推进后再回退不被二次重置', async () => {
+  it('浏览器回移除景:query 一次性消费后被清,推进后再回退不被二次重置', async () => {
     sessionStorage.setItem(draftStorageKey({ route: 'adhoc' }, 'step'), '2');
     const first = await mountWizard({ index: 'ctx_idx' });
     expect(first.actIndex()).toBe(1);      // 首次带上下文:重置到 1(用户带着新意图来)

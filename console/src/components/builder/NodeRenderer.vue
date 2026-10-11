@@ -22,7 +22,7 @@
 
 <script setup lang="ts">
 /* W1：节点分派器——bool→组容器；wrap→包装行；field=null 叶子→通用结构化节点；其余→富表单条件行。
-   inBool 标记父级是否 bool（决定子 bool 是否给「解散」入口）。 */
+ inBool 标记父级是否 bool（决定子 bool 是否给「解散」入口）。 */
 import BoolGroupNode from './BoolGroupNode.vue';
 import WrapNodeRow from './WrapNodeRow.vue';
 import GenericNode from './GenericNode.vue';

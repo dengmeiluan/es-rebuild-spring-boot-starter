@@ -1,7 +1,7 @@
 /**
- * 五百四十七批·轨4（工蚁）：任务 3 master-detail pane 壳治理 · 契约记档。
+ * 五百四十七批·轨4（工蚁）：任务 3 master-detail pane 壳治理 · 契约备案。
  *
- * 535 SqlBridge 三 pane「pane 即容器内容直贴」立法续扫：六 pane 三件套（border+bg+radius）退役，
+ * 535 SqlBridge 三 pane「pane 即容器内容直贴」约定续扫：六 pane 三件套（border+bg+radius）退役，
  * 布局语义（flex/overflow）与 .card padding 载体原样迁入无壳类（内容边距零变动，高度链零触）：
  *   IlmView ilm-list/ilm-detail、TemplatesView tv2-list/tv2-editor、SnapshotsView sv-list、
  *   TasksView tv-tree-card、MappingView mp-fields。
@@ -10,7 +10,7 @@
  * ⚠ 豁免裁决（写进本 spec 防回流）：
  *  - AliasesView .alv-panel **全豁免不动**：写操作面板是功能卡非 master-detail 分节壳，
  *    且带 ac-line 语义边框（「线框纪律」注释自证语义属性）——544 sq-alert/sq-warn 语义卡
- *    「完整壳视觉零变化」豁免与 546 al-lane「工作台功能卡非分节壳」判例同域。
+ *    「完整壳视觉零变化」豁免与 546 al-lane「工作台功能卡非分节壳」先例同域。
  *    备选案（只去 bg/radius 保语义边框）否决：摘 .card 类后 border-color 覆盖失去基线，
  *    需整圈 border 重写，动壳面积大于收益，且写面板仅按需出现（非常驻分节）。
  *  - 在场不动正锁（防误退/防回流）：AdhocRebuildView 六步卡、OverviewView 仪表卡、
@@ -33,7 +33,7 @@ const noShell = (src: string, cls: string, label: string) => {
   expect(body, `${label} 圆角壳不回流`).not.toMatch(/border-radius/);
 };
 
-describe('五百四十七批：六 pane 三件套退役（535 SqlBridge pane 直贴立法续扫）', () => {
+describe('五百四十七批：六 pane 三件套退役（535 SqlBridge pane 直贴约定续扫）', () => {
   it('IlmView ilm-list/ilm-detail 摘卡：模板类退役 + 布局/padding 载体原样迁入', () => {
     const ilm = read('../views/IlmView.vue');
     expect(ilm, 'ilm-list 摘卡').not.toMatch(/class="card ilm-list"/);
@@ -85,12 +85,12 @@ describe('五百四十七批：六 pane 三件套退役（535 SqlBridge pane 直
     noShell(mp, 'mp-fields', 'mp-fields');
   });
 
-  it('AliasesView .alv-panel 壳退役正锁（558 击穿随迁：border-top 分节承接 + ac-line 语义线保形）', () => {
+  it('AliasesView .alv-panel 壳退役正锁（558 击穿同步更新：border-top 分节承接 + ac-line 语义线保形）', () => {
     const alv = read('../views/AliasesView.vue');
-    /* 五百五十八批随迁（击穿者：558 工蚁G——全站最后一个全局 .card 壳退役 → border-top
+    /* 五百五十八批同步更新（击穿者：558 工蚁G——全站最后一个全局 .card 壳退役 → border-top
        分节承接，554 ar-sec 同刀）：547「全豁免」字面改退役形 + ac-line 语义线转 border-top
-       承接（语义边框豁免立法③保形；锁意图=壳形态回归防线） */
-    expect(alv, 'alv-panel 全局 .card 壳退役（558 击穿随迁）').not.toMatch(/class="card alv-panel"/);
+       承接（语义边框豁免约定③保形；锁意图=壳形态回归防线） */
+    expect(alv, 'alv-panel 全局 .card 壳退役（558 击穿同步更新）').not.toMatch(/class="card alv-panel"/);
     expect(alv, 'ac-line 语义线 border-top 承接（558）')
       .toMatch(/\.alv-panel \{ border-top: 1px solid var\(--ac-line\); padding: var\(--sp-3\) 14px; \}/);
   });
@@ -98,42 +98,42 @@ describe('五百四十七批：六 pane 三件套退役（535 SqlBridge pane 直
 
 /* ═══════════ 在场不动正锁（防误退/防回流） ═══════════ */
 
-describe('五百四十七批：功能卡/仪表卡豁免域正锁（546 al-lane 判例同域，防回流）', () => {
+describe('五百四十七批：功能卡/仪表卡豁免域正锁（546 al-lane 先例同域，防回流）', () => {
   it('AdhocRebuildView 六步卡 / OverviewView 仪表卡 / SecurityView 功能卡 / DiagView 观测卡', () => {
     const ar = read('../views/AdhocRebuildView.vue');
-    /* 五百五十四批随迁（击穿者：554 工蚁B2——Adhoc 六卡全局 .card 壳退役 → border-top 分节
+    /* 五百五十四批同步更新（击穿者：554 工蚁B2——Adhoc 六卡全局 .card 壳退役 → border-top 分节
        承接，Xmigrate 551 同刀）：547「在场不动」字面改退役形 + 新分节锚在场 */
-    expect(ar, 'Adhoc .card 壳退役（554 击穿随迁）').not.toMatch(/class="card"/);
+    expect(ar, 'Adhoc .card 壳退役（554 击穿同步更新）').not.toMatch(/class="card"/);
     expect((ar.match(/class="ar-sec"/g) || []).length, '六卡 ar-sec 分节承接 ≥4').toBeGreaterThanOrEqual(4);
-    /* 五百五十四批随迁（击穿者：554 工蚁D——仪表卡/功能卡/观测卡顶层 .card 壳退役 →
+    /* 五百五十四批同步更新（击穿者：554 工蚁D——仪表卡/功能卡/观测卡顶层 .card 壳退役 →
        border-top 分节承接）：547「在场不动」字面改退役形 + 新分节锚在场（ih-card-flush 551 同款） */
     const ov = read('../views/OverviewView.vue');
-    expect(ov, '仪表卡 ov-topo 壳退役（554 击穿随迁）').not.toMatch(/class="card ov-topo"/);
+    expect(ov, '仪表卡 ov-topo 壳退役（554 击穿同步更新）').not.toMatch(/class="card ov-topo"/);
     expect(ov, 'ov-topo 分节锚承接（554）').toMatch(/<div class="ov-topo"/);
     const sec = read('../views/SecurityView.vue');
-    expect(sec, '功能卡壳退役（554 击穿随迁）').not.toMatch(/<div class="card">/);
+    expect(sec, '功能卡壳退役（554 击穿同步更新）').not.toMatch(/<div class="card">/);
     expect(sec, 'me/us 分节锚承接（554）').toMatch(/<div class="me-card">/);
     const dg = read('../views/DiagView.vue');
-    expect(dg, 'DiagView 观测卡壳退役（554 击穿随迁）').not.toMatch(/<div class="card">/);
+    expect(dg, 'DiagView 观测卡壳退役（554 击穿同步更新）').not.toMatch(/<div class="card">/);
     expect(dg, 'dg-ops 分节锚承接（554）').toMatch(/<div class="dg-ops">/);
   });
 
   it('WatcherView wt-card / TopologyView tp-canvas+tp-palette / IndexHubView ih-card-flush', () => {
     const wt = read('../views/WatcherView.vue');
-    /* 五百五十四批随迁（击穿者：554 工蚁D⑨——wt-card 列表项卡带框降层为 border-top 行，
+    /* 五百五十四批同步更新（击穿者：554 工蚁D⑨——wt-card 列表项卡带框降层为 border-top 行，
        slm-card 551 先例）：壳三件套字面改降层形（类名保留 DOM 锚，锁意图=布局骨架回归防线） */
-    expect(wt, 'wt-card 降层 border-top 行（554 击穿随迁；布局骨架零触）')
+    expect(wt, 'wt-card 降层 border-top 行（554 击穿同步更新；布局骨架零触）')
       .toMatch(/\.wt-card \{ display: flex; justify-content: space-between; align-items: flex-start; gap: var\(--sp-3\); padding: var\(--sp-3\) 0; border-top: 1px solid var\(--border-subtle\); \}/);
     const tp = read('../views/TopologyView.vue');
-    /* 五百五十四批随迁：tp-canvas/tp-palette .card 壳退役 → border-top 分节（类名保留） */
-    expect(tp, 'tp-canvas 卡壳退役（554 击穿随迁）').not.toMatch(/class="card tp-canvas"/);
+    /* 五百五十四批同步更新：tp-canvas/tp-palette .card 壳退役 → border-top 分节（类名保留） */
+    expect(tp, 'tp-canvas 卡壳退役（554 击穿同步更新）').not.toMatch(/class="card tp-canvas"/);
     expect(tp, 'tp-canvas 分节锚承接（554）').toMatch(/class="tp-canvas"/);
-    expect(tp, 'tp-palette 卡壳退役（554 击穿随迁）').not.toMatch(/class="card tp-palette"/);
+    expect(tp, 'tp-palette 卡壳退役（554 击穿同步更新）').not.toMatch(/class="card tp-palette"/);
     expect(tp, 'tp-palette 分节锚承接（554）').toMatch(/class="tp-palette"/);
     const ih = read('../views/IndexHubView.vue');
-    /* 五百五十一批随迁（击穿者：551 轨2 刀⑥a——ih-card-flush 大卡壳退役）：
+    /* 五百五十一批同步更新（击穿者：551 轨2 刀⑥a——ih-card-flush 大卡壳退役）：
        547「主卡在场不动」字面改退役形，.ih-ws 分节容器承接（锁意图=pane 壳回归防线） */
-    expect(ih, 'ih-card-flush 主卡退役（551 击穿随迁）').not.toMatch(/class="card ih-card-flush"/);
+    expect(ih, 'ih-card-flush 主卡退役（551 击穿同步更新）').not.toMatch(/class="card ih-card-flush"/);
     expect(ih, 'ih-ws 分节容器承接（551）').toMatch(/<div class="ih-ws">/);
   });
 });

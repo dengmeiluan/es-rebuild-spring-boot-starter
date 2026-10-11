@@ -28,11 +28,11 @@ describe('分栏档位显性化（542 批）', () => {
 });
 
 describe('顶部三行合一（542 批第二刀，用户截图裁决「这三个应该在一行」）', () => {
-  it('dq-build-hd 独立行退役：构建节头并入 dq-toolbar 单行（553 批对调随迁：构建节头先行，场景下拉随后）', () => {
+  it('dq-build-hd 独立行退役：构建节头并入 dq-toolbar 单行（553 批对调同步更新：构建节头先行，场景下拉随后）', () => {
     expect(dq).not.toContain('class="dq-build-hd"');
     expect(dq).not.toMatch(/\.dq-build-hd \{/);
     /* 553 批对调后顺序：构建节头钮 → toolbar-prepend（场景条注入口）→ 模板钮，全在 dq-toolbar 内
-       （用户实报「日常场景应该跟查询构建器位置换一下」，542 原序 prep→build 翻案记档） */
+       （用户实报「日常场景应该跟查询构建器位置换一下」，542 原序 prep→build 修订备案） */
     const tbAt = dq.indexOf('class="dq-toolbar lr-bar"');
     const prepAt = dq.indexOf('<slot name="toolbar-prepend" />');
     const buildAt = dq.indexOf('dq-build-tg');
@@ -74,7 +74,7 @@ describe('执行钮右置（542 批）', () => {
   });
   it('二刀：执行钮是 run-end 最后一个元素（检索参数开关在执行左侧，绝对最右）', () => {
     const endAt = dq.indexOf('<div class="dq-run-end">');
-    /* 五百六十一批随迁：检索参数钮内新增收起态摘要 span（dq-params-sum）使执行钮右移
+    /* 五百六十一批同步更新：检索参数钮内新增收起态摘要 span（dq-params-sum）使执行钮右移
        ~100 字符，切片窗口 4000→4800（序语义不变：paramsTg < jq < runBtn 仍在 run-end 内） */
     const endSlice = dq.slice(endAt, endAt + 4800);
     const paramsTg = endSlice.indexOf('dq-params-tg');
@@ -87,18 +87,18 @@ describe('执行钮右置（542 批）', () => {
     expect(dq).toContain('dq-params-standalone');
     expect(dq).not.toContain('class="dq-params-sec"');
   });
-  it('执行行 run-row 前缀段不承载直方图开关（553 四迁随迁：开关在 run-end 段内 Profile 旁）', () => {
+  it('执行行 run-row 前缀段不承载直方图开关（553 四迁同步更新：开关在 run-end 段内 Profile 旁）', () => {
     const rowSlice = dq.slice(dq.indexOf('<div class="dq-run-row">'), dq.indexOf('dq-run-end'));
     expect(rowSlice).not.toContain('v-model="autoHist"');
   });
 });
 
-describe('直方图开关归宿（542 批→549 三迁→553 四迁随迁；558 五迁随迁：节本体换装 HistogramSection，标题锁随组件承接）', () => {
+describe('直方图开关归宿（542 批→549 三迁→553 四迁同步更新；558 五迁同步更新：节本体改用 HistogramSection，标题锁随组件承接）', () => {
   it('553 批：开关归执行行右组 Profile 旁（用户终审「直方图按钮应该跟 Profile 按钮样式一样，位置一块」；主契约 dqHistHead549.spec）', () => {
     const runRowAt = dq.indexOf('<div class="dq-run-row">');
     const runRow = dq.slice(runRowAt, dq.indexOf('dq-params-standalone'));
     expect(runRow).toContain('v-model="autoHist"');
-    expect(dq, '直方图节本体在场（558 换装统一件承接，标题在组件源）').toContain('<HistogramSection');
+    expect(dq, '直方图节本体在场（558 改用统一件承接，标题在组件源）').toContain('<HistogramSection');
   });
   it('直方图分布折叠节保留在表格区（渲染区跟随开关语义不变）', () => {
     expect(dq).toContain('<HistogramSection');

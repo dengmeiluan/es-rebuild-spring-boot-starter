@@ -6,12 +6,12 @@
  *   2) 徽标底色的 color-mix(… N%) 八档（8/10/12/13/14/15/18/22%）→ -soft token；
  *   3) .pill 补 xs/sm 两档尺寸 + 五档分类色款，消除「没有我要的档位」这条不换的理由。
  *
- * 本轮的静默失效风险比前三轮更隐蔽：
+ * 的静默失效风险比前三轮更隐蔽：
  *   - .pill 的色款是单字母（g/y/r/b/n），漏挂 = 无底色透明胶囊。这正是 R99 前
  *     AliasesView 七处 .p-* 的原始症状，pillColorTrack.spec.ts 已看守 template 侧；
  *     本文件补的是「消费方重新长出局部徽标 CSS」这一面。
  *   - color-mix 的百分比是固定值不随主题变。亮色主题下 22% 的底色比 -soft token
- *     深一倍以上——这是本轮修掉的真实缺陷，不是风格差异。有人重新写一条
+ *     深一倍以上——这是修掉的真实缺陷，不是风格差异。有人重新写一条
  *     color-mix 底色，暗色下几乎看不出差别，亮色下缺陷复发，全量测试毫无反应。
  *
  * 断言全部落在源文本上，与本仓库既有看守同一理由（emptyStatePadding.spec.ts:24-27）：
@@ -42,10 +42,10 @@ const MERGED: Record<string, string[]> = {
   'views/SqlBridgeView.vue': ['br-tag'],
   'views/ConfigDriftView.vue': ['cd-badge'],
   'views/PitScrollView.vue': ['pt-badge'],
-  /* 五百五十二批：SettingsGrid sg-badge/sg-static 换装 StatusPill（静态档 r/默认档 n）——
+  /* 五百五十二批：SettingsGrid sg-badge/sg-static 改用 StatusPill（静态档 r/默认档 n）——
      类名只留 DOM 锚，尺寸/色值禁再自带（FORBIDDEN 看守即对它生效）。 */
   'components/SettingsGrid.vue': ['sg-badge', 'sg-static'],
-  /* 五百四十批：ConfigValidatorView cv-rp-badge 键清退——538 换装 StatusPill 后类全形态清零，
+  /* 五百四十批：ConfigValidatorView cv-rp-badge 键清退——538 改用 StatusPill 后类全形态清零，
      字典项空转（防回潮已由 flattenWave538④「cv-rp-badge 锚类不再现」承接），非漏登记。 */
 };
 
@@ -73,7 +73,7 @@ describe('第四轮：徽标并轨 .pill 防回退', () => {
 
   /* 面二：徽标底色不得回到 color-mix。
      只查 background 位——border-color 的 30/35% 是描边档，与 -soft 底色档是两回事，
-     本轮有意未动（也没有 --*-line 一族 token 可用）。 */
+     有意未动（也没有 --*-line 一族 token 可用）。 */
   it('徽标类的 background 不得用 color-mix（固定百分比在亮色主题下会过深）', () => {
     const bad: string[] = [];
     for (const dir of ['views', 'components', 'components/builder']) {
@@ -174,7 +174,7 @@ describe('第四轮：徽标并轨 .pill 防回退', () => {
      统一到 .35（warn 原主峰即 35%，17 处单档最多）。
 
      只查「混 transparent」这一种写法——混 var(--line)/var(--bd) 的是另一回事
-     （语义色掺进中性描边，不是纯淡化），本轮有意保留，共 11 处。 */
+     （语义色掺进中性描边，不是纯淡化），有意保留，共 11 处。 */
   it('语义色描边不得回到 color-mix(…, transparent)（应走 -line token）', () => {
     const bad: string[] = [];
     for (const dir of ['views', 'components', 'components/builder']) {
@@ -202,9 +202,9 @@ describe('第四轮：徽标并轨 .pill 防回退', () => {
 
   /* 面五：并轨后的消费方模板里，.pill 必须带色款。
      pillColorTrack.spec.ts 看的是「不许出现无定义的 p-* 后缀」，
-     本条看的是另一半：本轮新挂的这些 .pill 每个都真带了色款。
+     本条看的是另一半：新挂的这些 .pill 每个都真带了色款。
      动态色款（:class="x ? 'g' : 'r'"）也要算进来，否则会误判。 */
-  it('本轮并轨的 .pill 挂载点都带色款', () => {
+  it('并轨的 .pill 挂载点都带色款', () => {
     const VALID = ['g', 'y', 'r', 'b', 'n', 'cyan', 'blue', 'violet', 'purple', 'pink'];
     const bad: string[] = [];
     for (const rel of Object.keys(MERGED)) {

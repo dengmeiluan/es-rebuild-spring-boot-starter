@@ -49,8 +49,8 @@
 
 <script setup lang="ts">
 /* W1 ：setting 键补全输入——数据源是静态目录（indexSettingsCatalog，零请求）。
-   交互骨架复刻 FieldPicker：Teleport 弹层 + place() 定位 + ↑↓/Enter/Esc + 点击外部关闭。
-   三态契约：弹层不抢焦点不打断输入；目录无匹配时退化为纯手输（Enter 收面板保留手输值）。 */
+ 交互骨架复刻 FieldPicker：Teleport 弹层 + place() 定位 + ↑↓/Enter/Esc + 点击外部关闭。
+ 三态契约：弹层不抢焦点不打断输入；目录无匹配时退化为纯手输（Enter 收面板保留手输值）。 */
 import { ref, computed } from 'vue';
 import { filterSettings, type SettingEntry } from '../utils/indexSettingsCatalog';
 import { splitMark } from '../composables/useGridSearch';
@@ -69,8 +69,8 @@ const inputEl = ref<HTMLInputElement>();
 const items = computed<SettingEntry[]>(() => filterSettings(props.modelValue || ''));
 
 /* W2 ：弹层骨架下沉 usePopupList（open/cursor/place/onKey/onDocDown/listId）；
-   本组件只留静态目录数据源与 choose 回填；无 enter 透发（onEnter 缺省）、挂载点恒 body（to 缺省）、
-   place 定位参数与 FieldPicker 分歧数值在此显式传入 */
+ 本组件只留静态目录数据源与 choose 回填；无 enter 透发（onEnter 缺省）、挂载点恒 body（to 缺省）、
+ place 定位参数与 FieldPicker 分歧数值在此显式传入 */
 const {
   open, cursor, popStyle, listId, itemId,
   rootEl, listEl, openPanel, close, onKey,
@@ -111,7 +111,7 @@ function choose(key: string) {
 .skp.focus, .skp:focus-within { border-color: var(--ac); }
 .skp-inp { display: block; width: 100%; height: 100%; min-height: 24px; border: none; outline: none; background: transparent; color: inherit; font-size: inherit; padding: 0; font-family: var(--mono, ui-monospace, monospace); }
 
-/* 壳属性（fixed/--z-island/bg/border/shadow/圆角）收编 theme.css .float-pop，本类只留坐标外裁切与字号 */
+/* 壳属性（fixed/--z-island/bg/border/shadow/圆角）合并 theme.css .float-pop，本类只留坐标外裁切与字号 */
 .skp-pop { overflow: hidden; font-size: var(--fs-sm); }
 .skp-hint { padding: var(--sp-3) var(--sp-2h); color: var(--muted); }
 .skp-list { max-height: 260px; overflow: auto; padding: 3px 0; }

@@ -12,9 +12,9 @@
  *      但 `.ld-chart .ld-expand` 后代选择器契约必须保持（liveExpand611 锁）。
  * 负锁一律剥注释后断言（unifyWave561 口径）。
  *
- * 六百三十八批 P1a-2 随迁：五线卡收编进 `components/LiveChartCard.vue`——
+ * 六百三十八批 P1a-2 同步更新：五线卡合并进 `components/LiveChartCard.vue`——
  *   主卡 CSS/模板/悬浮锁改读 CARD；对比卡（.ld-ncmp）仍读 VIEW。
- * 七百八十一批 K3 随迁：节点卡迷你 spark（.ld-spark）退役——迷你高度 CSS 同值锁
+ * 七百八十一批 K3 同步更新：节点卡迷你 spark（.ld-spark）退役——迷你高度 CSS 同值锁
  *   与迷你 viewBox 绑定锁随件删除（SPARK_H 常量留 utils 史志；旧 20 字面负锁保留防回潮）。
  */
 import { describe, it, expect } from 'vitest';
@@ -25,12 +25,12 @@ const read = (p: string) => readFileSync(join(__dirname, '..', p), 'utf-8');
 const codeOf = (p: string) => read(p).replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/<!--[\s\S]*?-->/g, ' ');
 const VIEW = codeOf('views/LiveDashboardView.vue');
 const UTIL = codeOf('utils/sparkChart.ts'); /* 六百三十八批 P1a-1：几何常量/点位函数单源下沉至此 */
-const CARD = codeOf('components/LiveChartCard.vue'); /* 六百三十八批 P1a-2：五线卡收编进组件 */
+const CARD = codeOf('components/LiveChartCard.vue'); /* 六百三十八批 P1a-2：五线卡合并进组件 */
 
 describe('六百二十九批①：图体几何单源（高度三档 + 旧字面零残留）', () => {
   it('三档高度常量在场（主卡 88 / 迷你 24 / 对比卡 120）', () => {
     expect(UTIL, '主卡高常量').toMatch(/export const LD_H = 88;/);
-    expect(UTIL, '迷你高常量').toMatch(/^const SPARK_H = 24;/m)/* 788 刀B 锁随迁：SPARK_H 转模块私有 */;
+    expect(UTIL, '迷你高常量').toMatch(/^const SPARK_H = 24;/m)/* 788 刀B 锁同步更新：SPARK_H 转模块私有 */;
     expect(UTIL, '对比卡宽常量').toMatch(/export const CMP_W = 720;/);
     expect(UTIL, '对比卡高常量').toMatch(/export const CMP_H = 120;/);
     expect(UTIL, '网格档常量').toMatch(/export const PCT_GRID = \[25, 50, 75\];/);
@@ -53,12 +53,12 @@ describe('六百二十九批①：图体几何单源（高度三档 + 旧字面�
     const cmpM = VIEW.match(/\.ld-ncmp-svg \{ width: 100%; height: (\d+)px; display: block; \}/);
     const cmpJs = UTIL.match(/export const CMP_H = (\d+);/);
     expect(cmpM![1], '对比卡 CSS 高度 = CMP_H').toBe(cmpJs![1]);
-    /* 七百八十一批 K3 随迁：迷你 spark CSS 高度锁随件退役（模板 0 引用；
+    /* 七百八十一批 K3 同步更新：迷你 spark CSS 高度锁随件退役（模板 0 引用；
        SPARK_H 常量留 utils 史志，旧 20 字面负锁在下一用例保留防回潮） */
   });
 
   it('旧几何字面零残留（300,64 / viewBox 64 / 阈值线 64-/ hvTop 分母）', () => {
-    /* 主卡（收编进组件）：旧 64 字面零残留 */
+    /* 主卡（合并进组件）：旧 64 字面零残留 */
     expect(CARD, '主卡点串实参').not.toContain('300, 64');
     expect(CARD, '主卡 viewBox 字面').not.toContain('0 0 300 64');
     expect(CARD, '阈值线 y 字面').not.toContain('64 - 64 *');
@@ -78,11 +78,11 @@ describe('六百二十九批①：图体几何单源（高度三档 + 旧字面�
   it('几何从常量派生（viewBox / 点串 / 阈值线 / 命中换算同源）', () => {
     expect(CARD, '主卡 viewBox 绑定').toContain(":viewBox=\"'0 0 300 ' + LD_H\"");
     expect(VIEW, '对比卡 viewBox 绑定').toContain(":viewBox=\"'0 0 720 ' + CMP_H\"");
-    /* 七百八十一批 K3 随迁：迷你 viewBox 绑定锁随迷你 spark 退役删除 */
+    /* 七百八十一批 K3 同步更新：迷你 viewBox 绑定锁随迷你 spark 退役删除 */
     expect(CARD, '命中换算 H 参').toContain('frac, 300, LD_H,');
     expect(CARD, 'hvTop 分母').toContain('/ LD_H * 100');
     expect(CARD, '阈值线 y 派生').toContain('LD_H - LD_H * (threshold / 100)');
-    /* 六百八十一批随迁：折线投影改 sparkPts 单源（622 §9-D4 平滑，catmullRomPath 消费同投影） */
+    /* 六百八十一批同步更新：折线投影改 sparkPts 单源（622 §9-D4 平滑，catmullRomPath 消费同投影） */
     expect(CARD, '折线 pct/abs 单源').toContain("sparkPts(props.series, 300, LD_H, props.mode)");
   });
 });
@@ -110,7 +110,7 @@ describe('六百二十九批②：参考网格 + 底基线（622 §2.3/§2.4）'
   it('网格与基线置于面积之下（声明序即绘制序；622 §2.4 六层剖面）', () => {
     const gridIdx = CARD.indexOf('ld-glines');
     const baseIdx = CARD.indexOf('ld-baseline');
-    /* 六百八十一批随迁：面积 polygon→path.ld-area（622 §9-D4 平滑同曲线面积） */
+    /* 六百八十一批同步更新：面积 polygon→path.ld-area（622 §9-D4 平滑同曲线面积） */
     const polyIdx = CARD.indexOf('path class="ld-area"');
     expect(gridIdx, '网格在场').toBeGreaterThan(-1);
     expect(baseIdx, '基线在场').toBeGreaterThan(-1);
@@ -126,7 +126,7 @@ describe('六百二十九批②：参考网格 + 底基线（622 §2.3/§2.4）'
     expect(CARD, '基线抗拉伸').toContain('vector-effect="non-scaling-stroke" />');
   });
 
-  it('不动 .ld-chart 本体规则（796 随迁：用户令大厂级统一卡壳——分节式 border-top 升 panel 壳，556/629 保形口径同步）', () => {
+  it('不动 .ld-chart 本体规则（796 同步更新：用户令大厂级统一卡壳——分节式 border-top 升 panel 壳，556/629 保形口径同步）', () => {
     expect(VIEW, '视图逐字保形（任务卡）').toContain('.ld-chart { background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-m); padding: var(--sp-3); }');
     expect(CARD, '组件逐字保形（五线卡根）').toContain('.ld-chart { background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-m); padding: var(--sp-3); }');
   });

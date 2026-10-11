@@ -12,7 +12,7 @@ const rt = readFileSync(join(__dirname, '../views/IndexHubView.vue'), 'utf-8');
 const theme = readFileSync(join(__dirname, '../theme.css'), 'utf-8');
 
 describe('可伸缩布局响应式守卫（239 批）', () => {
-  /* 五百三十批随迁：抽屉宽度改三档数据驱动（usePref 记忆，内联 style 承载）——
+  /* 五百三十批同步更新：抽屉宽度改三档数据驱动（usePref 记忆，内联 style 承载）——
      原「单档 clamp(400px,32vw,560px)」静态锁退役，改锁：
      ① .ih-left 保留定位 + 86vw 视口钳制不变量（任何档位都不得溢出视口）；
      ② 三档 CSS 全部带钳制（常规/宽 clamp，吃满=86vw 恰为钳制上限）；
@@ -50,7 +50,7 @@ describe('可伸缩布局响应式守卫（239 批）', () => {
 /* ═══ 五百二十四批追加三锚（W3） ═══
    4) 弹窗 max-width 不变量：src 全扫固定 width ≥300px 的样式/内联行，同行必须带 max-width
       视口钳制（现存合法豁免白名单：InsightRail 侧栏 / NotifyCenter 通知面板 / DslQueryView
-      exp-pop 就地气泡——非弹窗或自有定位契约）；本批收编全站最后一个无钳制弹窗
+      exp-pop 就地气泡——非弹窗或自有定位契约）；合并全站最后一个无钳制弹窗
       （DevTools curl 导入 NModal，width:560px 补 max-width:94vw）；
    5) --vh-offset 不变量：禁新增裸 calc(100vh - Npx)——聚焦态一律走
       calc(100vh - var(--vh-offset, 210px) + Npx) 收敛式（存量白名单仅 CellContextMenu 菜单 16px）；
@@ -91,7 +91,7 @@ describe('五百二十四批：响应式守卫三锚追加', () => {
     for (const e of exemptions) {
       expect(hitsByFile.get(e) ?? 0, `白名单 ${e} 已无 ≥300px 命中，请从豁免清单移除`).toBeGreaterThan(0);
     }
-    /* 本批收编锚定：全站最后一块无钳制弹窗（DevTools curl 导入 NModal）已带 94vw */
+    /* 合并锚定：全站最后一块无钳制弹窗（DevTools curl 导入 NModal）已带 94vw */
     expect(dt524).toMatch(/style="width: 560px; max-width: 94vw"/);
   });
 
@@ -106,14 +106,14 @@ describe('五百二十四批：响应式守卫三锚追加', () => {
         whitelistHits++;
       }
     }
-    /* 防空跑：存量白名单确实在场；本批四处收敛锚定（PIT 预览表 + DevTools 请求/响应面） */
+    /* 防空跑：存量白名单确实在场；四处收敛锚定（PIT 预览表 + DevTools 请求/响应面） */
     expect(whitelistHits).toBeGreaterThan(0);
     expect(pit524).toContain("'calc(100vh - var(--vh-offset, 210px) + 80px)'");
     expect(dt524).toContain("'calc(100vh - var(--vh-offset, 210px) + 120px)'");
     expect(dt524).toContain("'calc(100vh - var(--vh-offset, 210px) + 20px)'");
   });
 
-  it('锚③ AnalyzerLab 五五/四六分屏窄屏（≤1100）回单列堆叠（525 批 lane 重构随迁：duo 档并锁+柄隐藏）', () => {
+  it('锚③ AnalyzerLab 五五/四六分屏窄屏（≤1100）回单列堆叠（525 批 lane 重构同步更新：duo 档并锁+柄隐藏）', () => {
     expect(al524).toMatch(/@media \(max-width: 1100px\) \{\s*\.al-lanes\.split-half, \.al-lanes\.split-4060, \.al-lanes\.duo \{ grid-template-columns: minmax\(0, 1fr\); \}\s*\.al-lanes :deep\(\.split-handle\) \{ display: none; \}\s*\}/);
   });
 });
@@ -124,9 +124,9 @@ describe('五百二十四批：响应式守卫三锚追加', () => {
    两侧数字互为锚，改 900 档（改值/删档）而 901 不同步会静默漏缝（861~900 双判或 901~改后值 漏判）。
    判据（可静态执行）：src 下全部 .vue 与 theme.css 中存在 `max-width: 900px`（豁免清单外）
    ⇒ theme.css 必须存在 `min-width: 901px` 补集。
-   豁免清单初始为空：仅登记「用 900px 但确认与 901 补集锁步无关」的特例（记档范式同锚①白名单）；
+   豁免清单初始为空：仅登记「用 900px 但确认与 901 补集锁步无关」的特例（备案范式同锚①白名单）；
    TopBar 1280/1000、Aliases 760 是其他档位的 max-width 特例，不匹配本扫描正则、不进本清单。
-   补集单源在 theme.css（勿散落视图侧），视图侧若出现 min-width:901px 应收编进 theme.css。 */
+   补集单源在 theme.css（勿散落视图侧），视图侧若出现 min-width:901px 应合并进 theme.css。 */
 describe('五百二十七批：锚④ 901/900 锁步守卫', () => {
   /* 初始为空：尚无「与 901 锁步无关」的 900px 用法登记（登记须附理由，范式同锚①豁免） */
   const LOCKSTEP_EXEMPT_527: string[] = [];
@@ -153,15 +153,15 @@ describe('五百二十七批：锚④ 901/900 锁步守卫', () => {
    弹层 :width prop 视口钳制：锚①只扫 CSS `width:\s*Npx` 行，抓不到 naive 组件的
    `:width="620"` prop 数字绑定（ReconcileReportDrawer 620 抽屉在 ≤620px 视口整条溢出，
    锚①零命中假绿）。同口径扩一条：全站 .vue 的 `:width="N{3+}"`（≥300 才入锁）必须
-   同行带视口钳制证据（drawer-style maxWidth / style max-width）或入豁免单（记档范式同锚①）。
+   同行带视口钳制证据（drawer-style maxWidth / style max-width）或入豁免单（备案范式同锚①）。
    豁免单仅收「popper 就地定位的非抽屉弹层」——n-popover 由 popper flip/shift 就地约束，
    不属抽屉/模态整条溢出事故面；SVG 图形 width 是画布尺寸非弹层，且 <300 不达锁线。
-   ReconcileReportDrawer(620)/QueryHubView(440) 两抽屉本批改 computed 94% 视口钳制，不进豁免单。 */
+   ReconcileReportDrawer(620)/QueryHubView(440) 两抽屉改 computed 94% 视口钳制，不进豁免单。 */
 describe('五百二十八批：锚⑤ 弹层 :width prop 视口钳制', () => {
   const rrd = readFileSync(join(__dirname, '../components/ReconcileReportDrawer.vue'), 'utf-8');
   const qh = readFileSync(join(__dirname, '../views/QueryHubView.vue'), 'utf-8');
 
-  it('锚⑤ :width 数字绑定 ≥300 必须同行带钳制或入豁免单（抽屉类收编 computed 94%）', () => {
+  it('锚⑤ :width 数字绑定 ≥300 必须同行带钳制或入豁免单（抽屉类合并 computed 94%）', () => {
     const exemptions = [
       'views/AliasesView.vue', /* 别名行筛选 n-popover：popper 就地翻转定位，非抽屉 */
       'views/DslQueryView.vue', /* exp-pop 就地气泡（absolute 随锚，同锚①豁免口径） */
@@ -186,7 +186,7 @@ describe('五百二十八批：锚⑤ 弹层 :width prop 视口钳制', () => {
     for (const e of exemptions) {
       expect(hitsByFile.get(e) ?? 0, `豁免 ${e} 已无 ≥300px :width 命中，请从豁免清单移除`).toBeGreaterThan(0);
     }
-    /* 本批收编锚定：两抽屉数字字面量退役改 computed 钳制（94% 视口、原宽为上限） */
+    /* 合并锚定：两抽屉数字字面量退役改 computed 钳制（94% 视口、原宽为上限） */
     expect(rrd).toContain('const drawerW = computed(() => Math.min(620, Math.round(window.innerWidth * 0.94)));');
     expect(qh).toContain('const histDrawerW = computed(() => Math.min(440, Math.round(window.innerWidth * 0.94)));');
     expect(rrd).toContain(':width="drawerW"');

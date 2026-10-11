@@ -1,13 +1,13 @@
 /**
  * 五百四十批 W1（轨1 全站智能提示与高亮）：DSL 字段位排序收口 + 值位类型档（date-math/ip）看守。
  *
- *  A 排序函数收口（本批任务1）：MonacoEditor 本地 orderFieldsByType 与 dslCompletionContext
+ *  A 排序函数收口（任务1）：MonacoEditor 本地 orderFieldsByType 与 dslCompletionContext
  *    orderFieldsByClauseOp 逐行 diff 语义**有差**（亲和族展开维度）——本地直消费
  *    typePriorityForOp 原始序（term 位 type='wildcard' 不命中、range 位 date_nanos 不命中），
  *    共享版走 dslFieldAffinityTypes 族展开（wildcard/constant_keyword/annotated_text/date_nanos 命中）。
  *    按裁走「原样平移」：本地逻辑逐字节等值移入 dslCompletionContext 导出 orderFieldsByTypeForOp
  *    （命名与族展开版区分），MonacoEditor 改 import 删本地；dslFieldPrio538 锁（族展开版）零触碰。
- *  B 值位类型档（本批任务2）：非白名单值串位按字段类型放行静态候选——date 字段→date-math
+ *  B 值位类型档（任务2）：非白名单值串位按字段类型放行静态候选——date 字段→date-math
  *    （now-1d/d、now-1h/h，sqlCompletion.VAL_FORMAT_HINTS date 档同值平移）、ip 字段→点分形态
  *    （192.168.0.1，LuceneInput 538 批 IP_HINTS 先例）。候选只增不改：既有 root/query-type/field/
  *    值位白名单三档与排序契约零变动；表外类型（text/keyword/boolean/数值族）维持既有压制。
@@ -29,7 +29,7 @@ const monacoSrc = readFileSync(join(SRC, 'components/MonacoEditor.vue'), 'utf-8'
 const dccSrc = readFileSync(join(SRC, 'utils/dslCompletionContext.ts'), 'utf-8');
 
 describe('A 排序函数收口：本地 orderFieldsByType → dslCompletionContext.orderFieldsByTypeForOp', () => {
-  it('源锚：MonacoEditor 本地函数退役、消费共享导出；queryAstOps 直连 import 随迁出', () => {
+  it('源锚：MonacoEditor 本地函数退役、消费共享导出；queryAstOps 直连 import 同步更新出', () => {
     expect(monacoSrc).not.toContain('function orderFieldsByType(');
     expect(monacoSrc).toContain('orderFieldsByTypeForOp(props.dslAssist!.fields(), ctx.clause)');
     expect(monacoSrc).not.toContain("from '../utils/queryAstOps'");
@@ -70,7 +70,7 @@ describe('A 排序函数收口：本地 orderFieldsByType → dslCompletionConte
     const twk = [{ path: 't', type: 'text' }, { path: 'w', type: 'wildcard' }, { path: 'k', type: 'keyword' }];
     expect(paths(orderFieldsByTypeForOp(twk, 'term'))).toEqual(['k', 't', 'w']);
     expect(paths(orderFieldsByClauseOp(twk, 'term'))).toEqual(['k', 'w', 't']);
-    /* 548 锁随迁：range 位 date_nanos——原始序已直出 date_nanos（548 B 立法，紧跟 date），
+    /* 548 锁同步更新：range 位 date_nanos——原始序已直出 date_nanos（548 B 约定，紧跟 date），
        两序在此样例上收敛（族展开 date_nanos 排 long 前的既有结论不变）；
        原始序/族展开的语义分界仍由上方 term 位 wildcard 样例承担 */
     const dn = [{ path: 'n', type: 'date_nanos' }, { path: 'c', type: 'long' }];
@@ -87,12 +87,12 @@ describe('B 值位类型档静态表（DSL_VALUE_TYPE_HINTS）与值位字段解
   });
 
   it('分档边界：表外类型不入表（候选只增 date/ip 两档，其余维持压制）', () => {
-    /* 558 批随迁注记：date_nanos 移出本负锁——558 收编 date_nanos/geo_point 两档入
+    /* 558 批同步更新注记：date_nanos 移出本负锁——558 合并 date_nanos/geo_point 两档入
        DSL_VALUE_TYPE_HINTS（540 regime 收窄后不再成立：姊妹面 sqlCompletion 546/547 批、
        LuceneInput 546/554 批已四批扩档，本表与 sqlCompletion/LuceneInput 对齐），
        geo_point 本就不在本清单。其余类型压制钉死保留。 */
     for (const t of ['text', 'keyword', 'boolean', 'long', 'integer', 'double', 'object']) {
-      expect(DSL_VALUE_TYPE_HINTS[t], `类型 ${t} 不在本批档`).toBeUndefined();
+      expect(DSL_VALUE_TYPE_HINTS[t], `类型 ${t} 不在档`).toBeUndefined();
     }
   });
 

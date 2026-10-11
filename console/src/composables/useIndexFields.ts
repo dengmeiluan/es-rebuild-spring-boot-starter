@@ -1,6 +1,6 @@
 /* W1 地基：字段元数据中心——mapping 拉取/拍平/缓存，供 FieldPicker/LuceneInput/Monaco 补全统一消费。
-   模块级缓存 key=集群目标|索引（等价 FieldPicker 原窗口级语义）；失败零降级：loadErr 置位、调用方退化手输。
-   fields 为缓存共享引用，消费方按只读使用（filter/computed 链），禁止原地 sort/splice。 */
+ 模块级缓存 key=集群目标|索引（等价 FieldPicker 原窗口级语义）；失败零降级：loadErr 置位、调用方退化手输。
+ fields 为缓存共享引用，消费方按只读使用（filter/computed 链），禁止原地 sort/splice。 */
 import { ref, watch, type Ref } from 'vue';
 import { api } from '../api';
 import { useAppStore } from '../stores/app';
@@ -25,8 +25,8 @@ function walk(props: any, prefix: string, out: FieldItem[]) {
 }
 
 /* ·实报：字段清单加载失败浮层裸怼千字级后端 ResponseException 原文——
-   压缩为人话短串：抽 status line 状态码+首个 ES reason；未命中形态退 160 字截断。
-   单源在 composable（FieldPicker/补全七消费面白得），导出供行为锁直测。 */
+ 压缩为人话短串：抽 status line 状态码+首个 ES reason；未命中形态退 160 字截断。
+ 单源在 composable（FieldPicker/补全七消费面白得），导出供行为锁直测。 */
 export function compactLoadErr(e: any): string {
   const raw = String(e?.message ?? e);
   const st = raw.match(/status line \[HTTP\/[\d.]+ (\d{3})(?: ([^\]]*))?\]/);
@@ -49,8 +49,8 @@ export function useIndexFields(index: () => string) {
     if (hit) { fields.value = hit; loadErr.value = ''; return; }
     loading.value = true; loadErr.value = '';
     /* 竞态守卫：请求在飞期间索引/集群目标可能已切换。缓存按各自 key 照写（数据本身没错），
-       但 fields/loadErr/loading 仅当本次 reqKey 仍为当前 key 时才回写；已切换则静默丢弃，
-       防止过期响应覆盖新索引字段或掐掉新请求的 loading。 */
+ 但 fields/loadErr/loading 仅当本次 reqKey 仍为当前 key 时才回写；已切换则静默丢弃，
+ 防止过期响应覆盖新索引字段或掐掉新请求的 loading。 */
     const reqKey = key;
     const isCurrent = () => reqKey === (store.target || '@host') + '|' + ((index() || '').trim());
     try {

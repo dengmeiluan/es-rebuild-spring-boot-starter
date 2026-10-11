@@ -19,7 +19,7 @@
 
     <!-- 后：tab 聚焦后 ←/→ 切换标签（重命名输入中豁免，光标语义优先） -->
     <!-- 完整 ARIA tabs 语义（tablist/tab/aria-selected）——修正 453b
-         在 role=button 的 tab 内嵌 input/button 的违规（button 内禁交互子元素） -->
+ 在 role=button 的 tab 内嵌 input/button 的违规（button 内禁交互子元素） -->
     <div class="dt-tabs" role="tablist" aria-label="REST 请求标签" @keydown="onTabsKeydown">
       <!-- 中键关闭（浏览器标签惯例）——多标签高频用户的快速关闭路径 -->
       <!-- 双击标题重命名（自定义名执行不覆盖；Esc 取消）——多标签高频用户区分现场 -->
@@ -54,8 +54,8 @@
           <span class="kbd" style="margin-left:var(--sp-1)">Ctrl⏎</span>
         </button>
         <!-- 常驻文字「运行需 ADMIN 角色」占执行钮位退役 → 图标+tooltip
-             （非 admin 仍可见可读可聚焦，仅省宽度；原文案字面保留在 aria-label/title，
-             permGating 可见性语义锚零漂移） -->
+ （非 admin 仍可见可读可聚焦，仅省宽度；原文案字面保留在 aria-label/title，
+ permGating 可见性语义锚零漂移） -->
         <span v-else class="dt-perm-dim" tabindex="0" role="img" aria-label="运行需 ADMIN 角色"
           title="运行需 ADMIN 角色：运行走 /cluster/raw 透传（方法+路径任意组合），属超管专属通道"><ShieldAlert :size="13" /></span>
         <button v-if="cur.busy" class="btn sm" @click="qr.cancel()"><X :size="12" /> 取消</button>
@@ -63,7 +63,7 @@
           <Copy :size="12" /> curl
         </button>
         <!-- 复制为代码（toJs/toPython 既有能力挂上；切换即复制）。
-             中文备注走 select title（option 字面被 devtoolsCodegen314 逐字锁） -->
+ 中文备注走 select title（option 字面被 devtoolsCodegen314 逐字锁） -->
         <select v-if="cur?.path" class="btn ghost sm" style="width:auto;cursor:pointer"
           title="复制为代码（fetch=前端 JavaScript 脚本 · requests=Python 脚本）" aria-label="复制为代码（fetch=前端 JavaScript 脚本 · requests=Python 脚本）"
           @change="copyAsCode(($event.target as HTMLSelectElement).value); ($event.target as HTMLSelectElement).selectedIndex = 0">
@@ -71,8 +71,8 @@
           <option value="js">JavaScript (fetch)</option>
           <option value="python">Python (requests)</option>
         </select>
-        <!-- W6-T3 复制响应全文：方案 B 补刀迁往响应头常驻（域归属归位=判例；
-             无数据 disabled 而非 v-if 消失——空态行结构恒定，响应头与请求头同构对称）+ curl 导入回填 -->
+        <!-- W6-T3 复制响应全文：方案 B 补刀迁往响应头常驻（域归属归位=先例；
+ 无数据 disabled 而非 v-if 消失——空态行结构恒定，响应头与请求头同构对称）+ curl 导入回填 -->
         <button class="btn ghost sm" @click="curlOpen = true; curlErr = ''" title="粘贴 curl 命令回填请求">
           <ClipboardPaste :size="12" /> 从 curl 导入
         </button>
@@ -80,8 +80,8 @@
 
       <!-- W6：body 区 textarea → Monaco（JSON 高亮/折叠/格式化），dslAssist 按端点语义分档补全 -->
       <!-- P1 workbench：请求/响应进统一可调布局（拖拽/预设/聚焦/Esc），窄屏自动上下堆叠。
-            P1：预设钮文案语义化（DslQueryView L66-67 先例同款）——本页双 pane 即
-           请求/响应，通用「编辑/结果优先」在语义上错位，换「请求优先/响应优先」 -->
+ P1：预设钮文案语义化（DslQueryView L66-67 先例同款）——本页双 pane 即
+ 请求/响应，通用「编辑/结果优先」在语义上错位，换「请求优先/响应优先」 -->
       <WorkbenchLayout :scope="wbScope" :panes="DEVTOOLS_PANES" axis="vertical" mode="search"
         preset-editor-label="请求优先" preset-editor-title="请求区优先（响应收窄）"
         preset-result-label="响应优先" preset-result-title="响应区优先（请求收窄）">
@@ -89,23 +89,23 @@
           <FocusableSurface pane-id="devtools.search.request" title="请求体" :enabled="focusPaneId === 'devtools.search.request'"
             @update:enabled="v => (focusPaneId = v ? 'devtools.search.request' : null)">
             <!-- 竖排标题轨退役后标题语义落 fs-head 行首（横排，扁平语言）。
-                 请求域五钮（插入骨架/格式化/压缩/收藏/清空）自响应工具行迁回
-                 请求 pane 工具行（域归属归位——操作对象都是请求体；响应头只留响应观测族），
-                 .dt-actions/.toolrow 形态零新 CSS（focusSurface401 锁定的规则文本零触） -->
+ 请求域五钮（插入骨架/格式化/压缩/收藏/清空）自响应工具行迁回
+ 请求 pane 工具行（域归属归位——操作对象都是请求体；响应头只留响应观测族），
+ .dt-actions/.toolrow 形态零新 CSS（focusSurface401 锁定的规则文本零触） -->
             <template #actions>
               <!-- ·用户评审选定方案 B（高频前置+溢出收纳）：行上=标题｜分隔线｜插入字段
-                   （主操作实底）/格式化/复制(icon-only)/字号 seg｜spacer｜「⋯」菜单收纳五件
-                   （压缩/骨架/自动格式化开关行/收藏/清空）+分段执行说明（dim 随菜单保留）。
-                   按钮行恒单行自然高，不新增 DOM 行=零高度链触碰；功能 handler 与原按钮同一条路 -->
+ （主操作实底）/格式化/复制(icon-only)/字号 seg｜spacer｜「⋯」菜单收纳五件
+ （压缩/骨架/自动格式化开关行/收藏/清空）+分段执行说明（dim 随菜单保留）。
+ 按钮行恒单行自然高，不新增 DOM 行=零高度链触碰；功能 handler 与原按钮同一条路 -->
               <div class="dt-actions toolrow">
                 <span class="dt-pane-tt">请求体</span>
                 <span class="dt-tb-sep"></span>
                 <!-- W3-T11：端点带 body 骨架时出——直接覆盖现有 body（对齐格式化/清空的无确认交互）；
-                     低频动作迁「⋯」菜单，骨架钮随迁菜单内（条件出现） -->
+ 低频动作迁「⋯」菜单，骨架钮同步更新菜单内（条件出现） -->
                 <!-- 插入字段（insertSnippet expose 全站首消费，MonacoEditor.vue:823/931
-                     只调用零修改）——n-popover 内嵌 FieldPicker（:to="false" 就地渲染，QueryHubView
-                     场景任务判例：弹层与 popover 同子树，clickoutside 不误判）；选中后在请求体 Monaco
-                     光标处插入 "字段名"；_bulk 档是 NDJSON（动作行+文档行成对），禁用并 title 说明 -->
+ 只调用零修改）——n-popover 内嵌 FieldPicker（to="false" 就地渲染，QueryHubView
+ 场景任务先例：弹层与 popover 同子树，clickoutside 不误判）；选中后在请求体 Monaco
+ 光标处插入 "字段名"；_bulk 档是 NDJSON（动作行+文档行成对），禁用并 title 说明 -->
                 <n-popover trigger="click" placement="bottom-start" :width="insFieldPopW" :show-arrow="false"
                   :show="insFieldOpen" @update:show="(v: boolean) => (insFieldOpen = v)">
                   <template #trigger>
@@ -125,7 +125,7 @@
                   <Copy :size="11" />
                 </button>
                 <!-- 编辑器字号三档 seg（dt.font 落盘；请求体与响应只读面同键）。
-                     档位常量收编 utils/editorTiers 单源 -->
+ 档位常量合并 utils/editorTiers 单源 -->
                 <span class="seg dt-font-seg" role="group" aria-label="编辑器字号档">
                   <button v-for="f in EDITOR_FONT_TIERS" :key="f" type="button" :class="{ on: edFont === f }"
                     :title="'编辑器字号 ' + f + 'px'" @click="edFont = f">{{ f }}</button>
@@ -158,27 +158,27 @@
               </div>
             </template>
             <!-- 聚焦态随视口拉伸（404 响应面对称）——此前聚焦后仍是 220px 小条。
-                 裸 90px 偏移折算进 --vh-offset 收敛口径（vh-offset=210px 全站页头+页边距
-                 预留；210-120=90 视觉零变化，聚焦面无页头、tab 条+请求行 ~120px 回加） -->
+ 裸 90px 偏移折算进 --vh-offset 收敛口径（vh-offset=210px 全站页头+页边距
+ 预留；210-120=90 视觉零变化，聚焦面无页头、tab 条+请求行 ~120px 回加） -->
             <!-- @execute 接既有 run——按钮明示 Ctrl⏎ 但光标在请求体内时此前按了无效，
-                 MonacoEditor es-execute action 常驻注册，接上即通（SearchSandboxView 冒泡接线同思路；
-                 run 首行 busy 快照守卫在，键盘路径不绕防重入）。
-                 请求体 lint 静态体检提示条（SearchSandboxView join 串形态同款，随输入
-                 实时重估，零阻塞不拦执行）。：按 body 语义档路由 lint 引擎（search→
-                 lintDsl / _bulk→ndjsonLint / settings→lintSettingsBody / mapping→lintMappingBody /
-                 其他→[]），可定位条目上行内 Monaco marker（DslQueryView W2-2 范式），无行号
-                 可标的降级进底部条（不静默丢）；error 红条单列，warning/hint 黄条并列；
-                 JSON 非法静默 -->
+ MonacoEditor es-execute action 常驻注册，接上即通（SearchSandboxView 冒泡接线同思路；
+ run 首行 busy 快照守卫在，键盘路径不绕防重入）。
+ 请求体 lint 静态体检提示条（SearchSandboxView join 串形态同款，随输入
+ 实时重估，零阻塞不拦执行）。：按 body 语义档路由 lint 引擎（search→
+ lintDsl / _bulk→ndjsonLint / settings→lintSettingsBody / mapping→lintMappingBody /
+ 其他→[]），可定位条目上行内 Monaco marker（DslQueryView W2-2 范式），无行号
+ 可标的降级进底部条（不静默丢）；error 红条单列，warning/hint 黄条并列；
+ JSON 非法静默 -->
             <!-- @execute 改挂段执行入口（Kibana 多请求语义：Ctrl+Enter 只跑光标所在段，
-                 单段体等价全量 run 零漂移）；Shift+Ctrl+Enter 经键面冒泡走全部段。切段只作用于
-                 发送出参——草稿/历史/镜像 body 锁面零触；本标签零高度链语义（不引新 pane） -->
+ 单段体等价全量 run 零漂移）；Shift+Ctrl+Enter 经键面冒泡走全部段。切段只作用于
+ 发送出参——草稿/历史/镜像 body 锁面零触；本标签零高度链语义（不引新 pane） -->
             <MonacoEditor ref="bodyMonacoRef" v-model="cur.body"
               :height="focusPaneId === 'devtools.search.request' ? 'calc(100vh - var(--vh-offset, 210px) + 120px)' : '100%'"
               :language="bodyLang"
               :dsl-assist="dslAssist" :font-size="edFont" class="dt-body-monaco"
               @execute="onBodyExecute" @keydown.shift.ctrl.enter.prevent="runSmart(true)" />
-            <!-- lint 形态壳换装 theme.css .lint-bar 单源（纯类名替换，DOM 保形）；
-                 本地 .dt-lint 只留高度链两钉（531 定高链 flex-shrink + 532 P1-2 max-height 钳制） -->
+            <!-- lint 形态壳改用 theme.css .lint-bar 单源（纯类名替换，DOM 保形）；
+ 本地 .dt-lint 只留高度链两钉（531 定高链 flex-shrink + 532 P1-2 max-height 钳制） -->
             <div v-if="dtLintErrors.length" role="alert" class="lint-bar dt-lint lint-bar-err">
               <span>DSL 检查（错误）：{{ dtLintErrors.map(f => f.message + '（' + f.suggestion + '）').join('；') }}</span>
             </div>
@@ -191,16 +191,16 @@
           <FocusableSurface pane-id="devtools.search.response" title="响应" :enabled="focusPaneId === 'devtools.search.response'"
             @update:enabled="v => (focusPaneId = v ? 'devtools.search.response' : null)">
             <!-- 工具行一体化——dt-actions 从面板体上移入头部行 actions slot,
-                 与聚焦钮同排(「浮在面板线上的孤钮」终态消除);窄容器整行可换行。
-                 请求域五钮迁回请求 pane 工具行（域归属归位），本行只留响应
-                 观测族（标题/重试/RawIo/MetaStrip/响应搜索）；dtLint/err-bar 落位不动 -->
+ 与聚焦钮同排(「浮在面板线上的孤钮」终态消除);窄容器整行可换行。
+ 请求域五钮迁回请求 pane 工具行（域归属归位），本行只留响应
+ 观测族（标题/重试/RawIo/MetaStrip/响应搜索）；dtLint/err-bar 落位不动 -->
             <template #actions>
 <!-- W-C 批：并挂全局 .toolrow（theme.css，.dt-actions 同款形态）。本地 .dt-actions 规则暂留：
-     focusSurface401 看守钉死该 CSS 文本且 >\* nowrap 是本页按钮行专属语义，不在全局兜 -->
+ focusSurface401 看守钉死该 CSS 文本且 >\* nowrap 是本页按钮行专属语义，不在全局兜 -->
 <div class="dt-actions toolrow">
         <!-- 竖排标题轨退役后标题语义落工具行行首（横排，扁平语言）。
-             方案 B 补刀：标题后分隔线与请求头同构；复制响应钮自执行行迁入常驻
-             （无数据 disabled 而非消失——空态行结构恒定，与请求头元素密度对称） -->
+ 方案 B 补刀：标题后分隔线与请求头同构；复制响应钮自执行行迁入常驻
+ （无数据 disabled 而非消失——空态行结构恒定，与请求头元素密度对称） -->
         <span class="dt-pane-tt">响应</span>
         <span class="dt-tb-sep"></span>
         <button class="btn ghost xs" aria-label="复制响应" title="复制响应全文（截断展示时仍取完整原文）" :disabled="!cur.result"
@@ -212,17 +212,17 @@
           <RotateCcw :size="11" /> 重试
         </button>
         <!-- 原始 IO 快查——最近一次 /cluster/raw 请求/响应原文（IndexHub 同款钮形，
-             本页执行走 api.raw 统一封装，记录环按该特征取最近一条） -->
+ 本页执行走 api.raw 统一封装，记录环按该特征取最近一条） -->
         <button class="btn ghost xs" aria-label="查看原始 IO" title="最近一次执行的请求/响应原文（语义分档高亮 + 复制/curl 回放）"
           @click="openRawIo"><Terminal :size="11" /></button>
-        <!-- 状态元信息行换装 MetaStrip 统一件（.dt-status 手写串退役）——
-              §5 语义全保留：不伪造未知 HTTP 码（真实码已知才出徽标段）、took 四档色经
-             tookTone 映射（fast 绿/中 默认亮/slow 橙/veryslow 红，阈值仍走 tookClass 单一出处）、
-             size 走 splitSize 数值+单位弱化（MetaStrip 规则 B）、截断警示 err 档 -->
+        <!-- 状态元信息行改用 MetaStrip 统一件（.dt-status 手写串退役）——
+ 语义全保留：不伪造未知 HTTP 码（真实码已知才出徽标段）、took 四档色经
+ tookTone 映射（fast 绿/中 默认亮/slow 橙/veryslow 红，阈值仍走 tookClass 单一出处）、
+ size 走 splitSize 数值+单位弱化（MetaStrip 规则 B）、截断警示 err 档 -->
         <MetaStrip v-if="cur.result" class="dt-status-ms" :items="statusMeta" />
         <!-- 响应查看档 seg（json/plaintext 双态扩「表格」档）——respLang=json 才出；
-             表格态只替换 dt-out 显示区内容（Monaco v-if 让位），编辑器/输出高度结构零触。
-             放头部工具行不放 dt-out 内：dt-out 是 Monaco height:100% 的直系父，加兄弟行即触高度链 -->
+ 表格态只替换 dt-out 显示区内容（Monaco v-if 让位），编辑器/输出高度结构零触。
+ 放头部工具行不放 dt-out 内：dt-out 是 Monaco height:100% 的直系父，加兄弟行即触高度链 -->
         <span v-if="respLang === 'json'" class="seg dt-resp-seg" role="group" aria-label="响应查看档">
           <button type="button" :class="{ on: !respTbl }" title="JSON 原文（只读编辑器）" @click="respView = 'raw'">JSON</button>
           <button type="button" :class="{ on: !!respTbl }" title="表格视图：顶层数组→行序表、对象→键值两列表（只读，行点击复制该行 JSON）" @click="respView = 'table'">表格</button>
@@ -238,8 +238,8 @@
           </template>
         </span>
         <!-- 多段执行 per-段锚定徽标（seg i/n + ✓/✗ + took；主响应区现行为零触——
-             末段覆写保持，前段响应点徽标载回；chip 形态对齐 dt-hist-chip，横向滚动随 .dt-actions；
-             template 包 v-if 跳过段位空洞——单段先执行高位段时低位暂无锚） -->
+ 末段覆写保持，前段响应点徽标载回；chip 形态对齐 dt-hist-chip，横向滚动随 .dt-actions；
+ template 包 v-if 跳过段位空洞——单段先执行高位段时低位暂无锚） -->
         <div v-if="cur.segRuns?.length" class="dt-segbar" role="group" aria-label="分段执行结果">
           <template v-for="(run, i) in cur.segRuns" :key="i">
             <button v-if="run" type="button" class="dt-seg-run mono"
@@ -251,26 +251,26 @@
       </div>
             </template>
       <!-- 语义色轮：ES 错误不再只靠 Monaco 红边框+纯 JSON dump——friendlyEsError 结构化提取
-           root_cause[0].reason 与已知场景人话（esError.ts 既有能力，此前本页没用上）；
-           原始报错全文仍在下方 Monaco（复制不丢真） -->
+ root_cause[0].reason 与已知场景人话（esError.ts 既有能力，此前本页没用上）；
+ 原始报错全文仍在下方 Monaco（复制不丢真） -->
       <div v-if="cur.errBrief" role="alert" class="err-bar dt-err">
         <b class="dt-err-hd">✗ {{ cur.status ? 'HTTP ' + cur.status : '执行失败' }}</b>
         <span class="dt-err-rs">{{ cur.errBrief }}</span>
         <!-- 提示条三要素审计：原因（HTTP 码 + errBrief 人话）已具备，补重试入口——复用本页 run()
-             重新执行当前 Tab 的方法+路径+body；busy 中禁用防重入（全站 err-bar 范式） -->
+ 重新执行当前 Tab 的方法+路径+body；busy 中禁用防重入（全站 err-bar 范式） -->
         <button class="btn sm" :disabled="cur.busy" @click="run"><RefreshCw :size="12" :class="{ spinning: cur.busy }" /> 重试</button>
       </div>
       <div class="dt-out">
         <!-- W6-T3：裸 pre → 只读 Monaco（json 着色/折叠/Ctrl+F；非 JSON 落 plaintext）——:model-value 单向不回写 -->
         <!-- 聚焦态 Monaco 随视口拉伸——此前固定 260px，放大后下半屏全是空白。
-             裸 190px 偏移折算进 --vh-offset 收敛口径（210-20=190 视觉零变化；
-             聚焦面无页头、tab 条+请求行+余量 ~20px 回加） -->
+ 裸 190px 偏移折算进 --vh-offset 收敛口径（210-20=190 视觉零变化；
+ 聚焦面无页头、tab 条+请求行+余量 ~20px 回加） -->
         <MonacoEditor v-if="cur.result && !respTbl" ref="respMonacoRef" :model-value="cur.result" :language="respLang" :readonly="true"
           :dsl-assist="dtRespAssist" :font-size="edFont"
           :height="focusPaneId === 'devtools.search.response' ? 'calc(100vh - var(--vh-offset, 210px) + 20px)' : '100%'" class="dt-out-monaco" :class="{ err: !cur.ok }" />
         <!-- 表格查看档——顶层数组→行序表（列=各行键并集保持首现序，_cat/* 结构化响应
-             主场景）、对象→键值两列表；只读，行点击/回车复制该行 JSON（数组行=行对象原文，键值行={k:v}）。
-             轻量直渲不引 QueryResultTable（防体量）；显示区内容替换件，dt-out flex 结构与 busy/空态链不动 -->
+ 主场景）、对象→键值两列表；只读，行点击/回车复制该行 JSON（数组行=行对象原文，键值行={k:v}）。
+ 轻量直渲不引 QueryResultTable（防体量）；显示区内容替换件，dt-out flex 结构与 busy/空态链不动 -->
         <div v-else-if="respTbl" class="dt-resp-tbl">
           <table v-if="respTbl.isArr" class="dt-resp-tbl-t">
             <thead><tr><th class="dt-resp-tbl-ix">#</th><th v-for="c in respTbl.cols" :key="c">{{ c }}</th></tr></thead>
@@ -293,11 +293,11 @@
             </tbody>
           </table>
         </div>
-        <!-- G7-C1：执行中占位——不再闪 EmptyState 引导（四态位置 §9.6） -->
+        <!-- G7-C1：执行中占位——不再闪 EmptyState 引导（四态位置 ） -->
         <div v-else-if="cur.busy" class="dt-waiting">执行中，等待集群响应…</div>
         <EmptyState v-else :icon="TerminalSquare" text="输入 REST 请求执行" hint="快捷键 Ctrl+Enter">
-          <!--  §1：空态给下一步动作，一键起步。三个不同参数的 quickRun 靠插槽承载
-               （单 actionText 只能装一个），容器留白仍归 EmptyState -->
+          <!-- 空态给下一步动作，一键起步。三个不同参数的 quickRun 靠插槽承载
+ （单 actionText 只能装一个），容器留白仍归 EmptyState -->
           <button class="btn ghost xs" @click="quickRun('GET', '/_cluster/health')">试试：集群健康</button>
           <button class="btn ghost xs" @click="quickRun('GET', '/_cat/indices?v&format=json')">列出索引</button>
           <button class="btn ghost xs" @click="quickRun('POST', '/_search', SEARCH_SAMPLE)">全局搜 5 条</button>
@@ -308,26 +308,26 @@
       </WorkbenchLayout>
 
       <!-- ⚠ P0 回退（2.9.115 产线事故）：历史曾迁入响应 pane 内折叠区——
-           pane 内容多出恒高 dt-hist 兄弟块后，Monaco host height:100% 与内容自适应父链
-           （wl-body min-height 兜底、pane 拉伸随 wl-body）互为因果形成正反馈环，
-           进入页面即每秒 ~2500px 无限增高（headless 探针实锤 8299→21037 六拍）。
-           回退为直挂 dt-body（2.9.114 稳定形态），hist 展开顶高 dt-body 整页滚为原已知行为；
-           展开列表 max(240px,42vh) 口径保留。教训：pane 内只允许「弹性归一」的子件，
-           恒高兄弟进 pane 前必须过高度环探针。 -->
+ pane 内容多出恒高 dt-hist 兄弟块后，Monaco host height:100% 与内容自适应父链
+ （wl-body min-height 兜底、pane 拉伸随 wl-body）互为因果形成正反馈环，
+ 进入页面即每秒 ~2500px 无限增高（headless 探针实锤 8299→21037 六拍）。
+ 回退为直挂 dt-body（2.9.114 稳定形态），hist 展开顶高 dt-body 整页滚为原已知行为；
+ 展开列表 max(240px,42vh) 口径保留。教训：pane 内只允许「弹性归一」的子件，
+ 恒高兄弟进 pane 前必须过高度环探针。 -->
       <div class="dt-hist" v-if="cur.history?.length || histAll.length" :style="{ '--dt-hist-h': histH }">
         <!-- 历史面板可折叠（辅助信息收起主工作区优先；Chevron 方向随态）；
-             折叠容器保留，行列表换装 QueryHistoryPanel 统一件（存储 key 不动） -->
+ 折叠容器保留，行列表改用 QueryHistoryPanel 统一件（存储 key 不动） -->
         <div class="dt-hist-tt" role="button" tabindex="0" :aria-expanded="histOpen"
           :aria-label="histOpen ? '收起本 Tab 历史' : '展开本 Tab 历史'" title="点击折叠/展开历史"
           @click="histOpen = !histOpen" @keydown.enter.prevent="histOpen = !histOpen" @keydown.space.prevent="histOpen = !histOpen">
           <ChevronDown :size="12" :style="{ transform: histOpen ? '' : 'rotate(-90deg)' }" />
           <History :size="12" /> 本 Tab 历史（{{ cur.history.length }}）
         </div>
-        <!--  P2-3：跨 Tab 汇聚范围切换——交互子件不进 role=button 头行（ARIA
-             嵌套交互禁令，同款教训），作头行紧邻的兄弟行渲染；「全部」档 histRows
-             切汇聚清单（cap100），条目 fill/play 回当前 Tab。
-             行尾并列表限高三档钮（dt.histH useTierCycle；group 语义随之扩为
-             范围+高度两件） -->
+        <!-- P2-3：跨 Tab 汇聚范围切换——交互子件不进 role=button 头行（ARIA
+ 嵌套交互禁令，同款教训），作头行紧邻的兄弟行渲染；「全部」档 histRows
+ 切汇聚清单（cap100），条目 fill/play 回当前 Tab。
+ 行尾并列表限高三档钮（dt.histH useTierCycle；group 语义随之扩为
+ 范围+高度两件） -->
         <div class="dt-hist-scope" role="group" aria-label="历史范围与列表高度">
           <button type="button" class="dt-hist-chip" :class="{ on: histScope === 'tab' }" @click="histScope = 'tab'">本 Tab</button>
           <button type="button" class="dt-hist-chip" :class="{ on: histScope === 'all' }" @click="histScope = 'all'">全部（{{ histAll.length }}）</button>
@@ -335,20 +335,20 @@
             :title="'历史列表限高：' + histH + '（点击循环）'" @click="cycleHistH">高</button>
         </div>
         <div v-show="histOpen" class="dt-hist-list">
-          <!-- per-tab 历史行换装 QueryHistoryPanel——条目字段映射见 histRows（query=「METHOD path」、
-               ts 优先落盘值回解析旧 time 串、ok/took 直通）；actions 窄集 play/fill/copy/del（本页无 rename 存储）；
-               不开 clickable（旧行整行点击=仅填入是为防误重跑写请求，统一件整行=回放执行，安全语义不降级——
-               「仅填入」走 fill 按钮承担）；导入隐藏（面板导入写 queryHistory store，与本页 tab 草稿不同存储）；
-               导出经 export-row 保留 {method,path,body,ts} 互认字段 -->
+          <!-- per-tab 历史行改用 QueryHistoryPanel——条目字段映射见 histRows（query=「METHOD path」、
+ ts 优先落盘值回解析旧 time 串、ok/took 直通）；actions 窄集 play/fill/copy/del（本页无 rename 存储）；
+ 不开 clickable（旧行整行点击=仅填入是为防误重跑写请求，统一件整行=回放执行，安全语义不降级——
+ 「仅填入」走 fill 按钮承担）；导入隐藏（面板导入写 queryHistory store，与本页 tab 草稿不同存储）；
+ 导出经 export-row 保留 {method,path,body,ts} 互认字段 -->
           <!-- actions 窄集加 'fav'——历史行一键转收藏（DslQuery 历史面板 fav 形态
-               同款行级钮），走 store.addFavorite rest 形态既有体系（同 kind+title 覆盖=幂等切换，
-               零新存储键）；QueryHistoryPanel fav 行级门 `!it.mode || it.mode === 'dsl'`，
-               本页条目无 mode 字段天然放行 -->
+ 同款行级钮），走 store.addFavorite rest 形态既有体系（同 kind+title 覆盖=幂等切换，
+ 零新存储键）；QueryHistoryPanel fav 行级门 `!it.mode || it.mode === 'dsl'`，
+ 本页条目无 mode 字段天然放行 -->
           <!-- actions 窄集加 'curl'——历史行一键复制 curl（行级 emit，命令组装归宿主
-               histCurl：copyCurl 既有手法逐字平移）；QueryHistoryPanel 'curl' 行级钮不传零增量，
-               其余宿主零变化 -->
+ histCurl：copyCurl 既有手法逐字平移）；QueryHistoryPanel 'curl' 行级钮不传零增量，
+ 其余宿主零变化 -->
           <!-- actions 窄集加 'newtab'——历史行「回放到新 Tab」（行级仅 emit，
-               mkTab 造签+激活跳转归宿主 histNewTab，consumePrefill 三连同款） -->
+ mkTab 造签+激活跳转归宿主 histNewTab，consumePrefill 三连同款） -->
           <QueryHistoryPanel :items="histRows" :actions="['play', 'fill', 'copy', 'fav', 'curl', 'newtab', 'del']"
             :clearable="histScope === 'tab'" :importable="false" :empty-text="histScope === 'all' ? '暂无跨 Tab 历史' : '暂无本 Tab 历史'"
             :export-row="histExportRow" took-tip="端到端耗时（performance.now 实测，含网络往返）"
@@ -357,15 +357,15 @@
       </div>
     </div>
 
-    <!-- 重置确认收敛全局 askConfirm（ §7 后果前置语义不变，本地 ConfirmModal 宿主退役） -->
+    <!-- 重置确认收敛全局 askConfirm（ 后果前置语义不变，本地 ConfirmModal 宿主退役） -->
 
     <!-- W6-T3：curl 导入弹层——NModal 默认 Teleport 到 body（探针实证：naive 2.43.2 NModal 不支持
-         to="false"——不转发 disabled 给 LazyTeleport，传 false 反致 Invalid Teleport target 内容不渲染；
-         preset=card 带 mask 不绑 clickoutside，无约定 8 的误判关闭面）。
-         补 max-width 94vw 视口钳制——此前全站唯一无钳制弹窗（HotkeyPanel/CmdPalette 同档） -->
+ to="false"——不转发 disabled 给 LazyTeleport，传 false 反致 Invalid Teleport target 内容不渲染；
+ preset=card 带 mask 不绑 clickoutside，无约定 8 的误判关闭面）。
+ 补 max-width 94vw 视口钳制——此前全站唯一无钳制弹窗（HotkeyPanel/CmdPalette 同档） -->
     <NModal v-model:show="curlOpen" preset="card" title="从 curl 导入" style="width: 560px; max-width: 94vw">
       <!-- rows=6 定高退役 → autosize 6~14 行随内容自适应——小窗不再被 14 行顶爆、
-           长 curl 不再滚 6 行微型框（naive autosize 标准 API，无 JsonArea 大改） -->
+ 长 curl 不再滚 6 行微型框（naive autosize 标准 API，无 JsonArea 大改） -->
       <NInput v-model:value="curlText" type="textarea" :autosize="{ minRows: 6, maxRows: 14 }" spellcheck="false"
         placeholder="粘贴完整 curl 命令，例如：&#10;curl -X PUT 'http://es:9200/my-index' -d '{&quot;settings&quot;:{}}'" />
       <!-- 语义色轮：解析失败就地给具体原因（空输入/非 curl 开头/引号未闭合/缺 URL），不再只有一句 toast -->
@@ -392,7 +392,7 @@ import { useAuthStore } from '../stores/auth';
 import { useQueryRun } from '../composables/useQueryRun';
 import { usePref } from '../composables/urlState'; /* ：dt.histOpen 折叠态落盘（usePref 全站既有偏好体系） */
 import { useTierCycle } from '../composables/useTierCycle'; /* ：历史列表限高三档统一件（dt.histH） */
-import { EDITOR_FONT_TIERS } from '../utils/editorTiers'; /* ：字号三档单源收编（DQ/IH 同口径） */
+import { EDITOR_FONT_TIERS } from '../utils/editorTiers'; /* ：字号三档单源合并（DQ/IH 同口径） */
 import EmptyState from '../components/EmptyState.vue';
 import { api, ApiError, ioRecorder, type RawIoRec } from '../api';
 /* fmtTook/tookClass 收口 utils/format 单一出处（本页 505-513 两份复制品退役，阈值不再漂移） */
@@ -404,7 +404,7 @@ import { useTermsSuggest } from '../composables/useTermsSuggest';
 import { useDebounceFn } from '../composables/useDebounceFn';
 import { bodyKindForPath } from '../utils/dslCompletionContext';
 /* dtLint 档路由——search→lintDsl / bulk→ndjsonLint（bulkNdjson 既有件复用不改）/
-   settings→lintSettingsBody / mapping→lintMappingBody；Finding 形态供行内 marker 与底部条共用 */
+ settings→lintSettingsBody / mapping→lintMappingBody；Finding 形态供行内 marker 与底部条共用 */
 import { lintDsl, lintSettingsBody, lintMappingBody, type Finding } from '../utils/dslLint';
 import { ndjsonLint } from '../utils/bulkNdjson';
 import { parseCurl } from '../utils/curlParse';
@@ -412,7 +412,7 @@ import { friendlyEsError } from '../utils/esError';
 import { toJs, toPython } from '../utils/codegen';
 import { stripJsonComments } from '../utils/jsonc';
 /* monaco 命名空间（KeyMod/KeyCode 键位常量）——与 MonacoEditor 同一模块实例，
-   Ctrl+I 宿主接线经 getEditor() expose 出口（组件本体零改，全站黑名单），PainlessLab/SqlConsole 视图同款 import 形态 */
+ Ctrl+I 宿主接线经 getEditor() expose 出口（组件本体零改，全站黑名单），PainlessLab/SqlConsole 视图同款 import 形态 */
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 /* 多请求编辑器切段纯函数（切段只作用于发送出参，草稿/历史/镜像原稿零触） */
 import { splitRequests, locateSegment, type DtSeg } from '../utils/devtoolsSegments';
@@ -420,11 +420,11 @@ import { REST_METHODS, type EsEndpoint } from '../utils/esEndpoints';
 import { redactDraft } from '../composables/useScopedDraft'; /* ：curl 粘贴稿凭据掩埋 */
 /* 重置确认收敛全局 askConfirm（本地 ConfirmModal 宿主退役） */
 import { askConfirm } from '../composables/confirm';
-/* 状态元信息行换装 MetaStrip（.dt-status 手写串退役）；历史行换装 QueryHistoryPanel 统一件 */
+/* 状态元信息行改用 MetaStrip（.dt-status 手写串退役）；历史行改用 QueryHistoryPanel 统一件 */
 import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue';
 import QueryHistoryPanel from '../components/QueryHistoryPanel.vue';
 import RawIoModal from '../components/RawIoModal.vue';
-import FieldPicker from '../components/FieldPicker.vue'; /* ：插入字段弹层字段源（:to="false" 就地渲染） */
+import FieldPicker from '../components/FieldPicker.vue'; /* ：插入字段弹层字段源（to="false" 就地渲染） */
 
 import { useMonacoLocate } from '../composables/useMonacoLocate';
 import WorkbenchLayout, { type WorkbenchPaneSpec } from '../components/WorkbenchLayout.vue';
@@ -433,15 +433,15 @@ import PageHeader from '../components/PageHeader.vue';
 import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 const store = useAppStore();
 /* 权限门禁——DevTools 运行统一走 api.raw（/cluster/raw 透传）=ADMIN 档；
-   编辑/导入/复制响应全角色可用，非 ADMIN 给自述不给扳机 */
+ 编辑/导入/复制响应全角色可用，非 ADMIN 给自述不给扳机 */
 const auth = useAuthStore();
 const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target)); /* ：执行走 raw，管理域按 rest 页勾选 */
 
 /* P1 workbench：布局偏好按 target+route+mode+viewport 档位隔离（不与 query 草稿混用） */
 const wbScope = { target: store.target || 'host', route: '/devtools', mode: 'search', profile: 'standard' as const };
 const DEVTOOLS_PANES: WorkbenchPaneSpec[] = [
-  /* 裁决：竖排标题轨退役（title 置空即不渲染，立法先例）——34px 侧轨
-     与「响应」中缝竖排在视觉上把工作区切碎；标题语义由 fs-head 行首横排 .dt-pane-tt 承接 */
+  /* 裁决：竖排标题轨退役（title 置空即不渲染，约定先例）——34px 侧轨
+ 与「响应」中缝竖排在视觉上把工作区切碎；标题语义由 fs-head 行首横排 .dt-pane-tt 承接 */
   { id: 'devtools.search.request', role: 'request', title: '', minSize: 260, defaultSize: 420, maxSize: 'available', focusable: true, persist: true },
   { id: 'devtools.search.response', role: 'response', title: '', minSize: 300, defaultSize: 560, maxSize: 'available', focusable: true, persist: true },
 ];
@@ -450,7 +450,7 @@ const qr = useQueryRun(); // 长请求读秒 + 取消（ 范式）
 /* 响应截断展示阈值（512KB） */
 const DEVTOOLS_RESP_MAX = 512 * 1024;
 /* URL 即现场轮：tab 工作区落盘 localStorage → sessionStorage（会话级草稿，刷新可恢复、关标签页即弃），
-   key 带集群目标维度同 useScopedDraft 口径——按 tabId 保存的语义不变，切集群不串稿 */
+ key 带集群目标维度同 useScopedDraft 口径——按 tabId 保存的语义不变，切集群不串稿 */
 const DRAFT_KEY = computed(() => `es_devtools_draft:${store.target || 'host'}`);
 /* 搜索定位轮：响应 Monaco 真定位（findMatches + revealLineInCenter + setSelection） */
 const respMonacoRef = ref<InstanceType<typeof MonacoEditor> | null>(null);
@@ -469,11 +469,11 @@ interface Tab {
   /* 大响应防护——result 只存截断展示版，完整原文留在 resultFull（内存，不落盘） */
   resultFull?: string | null; truncated?: boolean;
   /* 多段执行 per-段锚定（Kibana 每请求独立响应位对位）——段位快照数组 +
-     当前回看位；⚠不落盘（writeDraft/恢复侧剥离，与 result 同保密级），切 tab/刷新零回带 */
+ 当前回看位；⚠不落盘（writeDraft/恢复侧剥离，与 result 同保密级），切 tab/刷新零回带 */
   segRuns?: DtSegRun[]; segView?: number;
   /* 语义色轮：历史记录补 ok/took 展示元数据（旧草稿无此二字段→行内不渲染，零降级）；
-     补 ts 落盘（QueryHistoryPanel relTime 需要 epoch；旧草稿无 ts 回解析 time 串）；
-     补 seg 段标识（段执行时=「seg i/n」，全量执行无此字段，旧草稿零降级） */
+ 补 ts 落盘（QueryHistoryPanel relTime 需要 epoch；旧草稿无 ts 回解析 time 串）；
+ 补 seg 段标识（段执行时=「seg i/n」，全量执行无此字段，旧草稿零降级） */
   history: { method: string; path: string; body: string; time: string; ts?: number; ok?: boolean; took?: number; seg?: string }[];
 }
 
@@ -482,11 +482,11 @@ const active = ref(0);
 const cur = computed(() => tabs.value[active.value]);
 
 /* 段执行锚（多段执行每段独立响应位，Kibana 对位）——execOneSeg 落槽、
-   徽标点击经 loadSegRun 载回主响应区；形态见 Tab.segRuns 注 */
+ 徽标点击经 loadSegRun 载回主响应区；形态见 Tab.segRuns 注 */
 interface DtSegRun { label: string; ok: boolean; took: number; status?: number | null; errBrief?: string | null; result: string; resultFull?: string | null; truncated?: boolean }
 
 /* W3-T11：端点目录联动——onEndpoint 记录选中端点（按 tab id 隔离，切 tab 不串），
-   curEp 驱动 method 置灰与 body 骨架；路径不再匹配端点模板（自由文本）即脱钩回全可用（零降级） */
+ curEp 驱动 method 置灰与 body 骨架；路径不再匹配端点模板（自由文本）即脱钩回全可用（零降级） */
 /* 方法全集收口 esEndpoints.REST_METHODS */
 const METHODS = REST_METHODS;
 const pickedEp = ref<Record<string, EsEndpoint>>({});
@@ -510,12 +510,12 @@ function onEndpoint(ep: EsEndpoint) {
 }
 function insertBody() { if (cur.value && curEp.value?.body) cur.value.body = curEp.value.body; }
 
-/*  P1-1：字段源跟请求路径走——/orders/_search 的补全/类型体检吃 orders 的字段
-   （此前恒用 pickedIdx，自由路径请求与补全错位）。dtPathIdx=剥 '?' 后首段。
-   ·实报修正：原「首个非 '_' 段」遍历会把 /_cat/indices 的 cat 子命令
-   indices 误当索引名拉 /indices/_mapping（404）——改首段判定：首个非空段 '_' 开头
-   （_cat/_cluster/_nodes 等系统路径）恒空串回退 pickedIdx，不再从后段抠索引。
-   路径首段是击键级高频源：防抖 400ms 后再拉字段，'o'/'or' 部分串不再逐键发 mappingDetail。 */
+/* P1-1：字段源跟请求路径走——/orders/_search 的补全/类型体检吃 orders 的字段
+ （此前恒用 pickedIdx，自由路径请求与补全错位）。dtPathIdx=剥 '?' 后首段。
+ ·实报修正：原「首个非 '_' 段」遍历会把 /_cat/indices 的 cat 子命令
+ indices 误当索引名拉 /indices/_mapping（404）——改首段判定：首个非空段 '_' 开头
+ （_cat/_cluster/_nodes 等系统路径）恒空串回退 pickedIdx，不再从后段抠索引。
+ 路径首段是击键级高频源：防抖 400ms 后再拉字段，'o'/'or' 部分串不再逐键发 mappingDetail。 */
 const dtPathIdx = computed(() => {
   const seg = (cur.value?.path || '').split('?')[0].split('/').find(Boolean);
   return seg && !seg.startsWith('_') ? seg : '';
@@ -524,19 +524,19 @@ const { fields: dtFields, ensure: ensureDtFields } = useIndexFields(() => dtPath
 const ensureDtFieldsDebounced = useDebounceFn(() => { ensureDtFields(); }, 400);
 watch(() => dtPathIdx.value || store.pickedIdx, () => { ensureDtFieldsDebounced(); }, { immediate: true });
 const dtBodyKind = computed(() => bodyKindForPath(curEp.value?.path ?? cur.value?.path ?? ''));
-/*  P0-2a：body 语言跟档——_bulk 的多行 NDJSON 恒吃 json 语言会被 json worker
-   多根对象全线误报语法红线；切 ndjson（自研 monarch，无 JSON LS 校验）红线消失、高亮保留 */
+/* P0-2a：body 语言跟档——_bulk 的多行 NDJSON 恒吃 json 语言会被 json worker
+ 多根对象全线误报语法红线；切 ndjson（自研 monarch，无 JSON LS 校验）红线消失、高亮保留 */
 const bodyLang = computed(() => ((cur.value?.path || '').includes('_bulk') ? 'ndjson' : 'json'));
 /* dslAssist 闭包在 setup 作用域声明（T14 实证：模板内联字面量走 _ctx 代理，ref 顶层 unwrap 后 .value 取 undefined） */
 /* terms 通道接值位动态候选（658 DqlQueryView 首发姊妹刀）——索引源与 dtFields
-   同源闭包（dtPathIdx||pickedIdx）现调现读：body 索引随 path 变时 suggest 请求跟着走
-   （655 设计记档 §9-4：terms 闭包索引绑定=视图责任）；未选索引/异常恒 resolve [] 零扰动 */
+ 同源闭包（dtPathIdx||pickedIdx）现调现读：body 索引随 path 变时 suggest 请求跟着走
+ （655 设计 -4：terms 闭包索引绑定=视图责任）；未选索引/异常恒 resolve [] 零扰动 */
 const dtTerms = useTermsSuggest(() => dtPathIdx.value || store.pickedIdx || '');
 const dslAssist = { fields: () => dtFields.value, bodyKind: () => dtBodyKind.value, terms: (f: string, p: string) => dtTerms.suggestAsync(f, p) };
 /* 请求体 lint 静态体检。：按 dtBodyKind 路由分派——
-   search→lintDsl / bulk（_bulk→none 档）→ndjsonLint（bulkNdjson 既有件复用不改）/
-   settings→lintSettingsBody / mapping→lintMappingBody / 其他（doc 等）→[]。
-   search/settings/mapping 档 JSON 解析失败静默（格式化按钮的校验已在）；bulk 档吃原文不进 JSON.parse */
+ search→lintDsl / bulk（_bulk→none 档）→ndjsonLint（bulkNdjson 既有件复用不改）/
+ settings→lintSettingsBody / mapping→lintMappingBody / 其他（doc 等）→[]。
+ search/settings/mapping 档 JSON 解析失败静默（格式化按钮的校验已在）；bulk 档吃原文不进 JSON.parse */
 const dtLint = computed<Finding[]>(() => {
   const kind = dtBodyKind.value;
   const body = cur.value?.body || '';
@@ -555,30 +555,30 @@ const dtLint = computed<Finding[]>(() => {
     return [];
   } catch { return []; }
 });
-/*  P0-1：行内 marker 接线（DslQueryView W2-2 成熟范式）——body Monaco ref +
-   watch(dtLint → setMarkers)，severity 映射 info→hint（MonacoEditor setMarkers 结构类型
-   只收 warning/hint/error）。无 anchor 的 finding（bulk 的 ndjson-pair：NDJSON 无键名锚点，
-   '' 锚会误撞文本中的 "%%" 空串形态）不进 findMatches，直接进 unplaced；setMarkers 定位
-   不到的 unplaced 一并降级进底部条——不静默丢。挂载前/测试 stub 无 setMarkers 出口时
-   全量降级底部条（双可选链防 stub 无 expose）。组件卸载 owner 清理由 MonacoEditor
-   onBeforeUnmount 既有兜底承担，此处不重复。 */
+/* P0-1：行内 marker 接线（DslQueryView W2-2 成熟范式）——body Monaco ref +
+ watch(dtLint → setMarkers)，severity 映射 info→hint（MonacoEditor setMarkers 结构类型
+ 只收 warning/hint/error）。无 anchor 的 finding（bulk 的 ndjson-pair：NDJSON 无键名锚点，
+ '' 锚会误撞文本中的 "%%" 空串形态）不进 findMatches，直接进 unplaced；setMarkers 定位
+ 不到的 unplaced 一并降级进底部条——不静默丢。挂载前/测试 stub 无 setMarkers 出口时
+ 全量降级底部条（双可选链防 stub 无 expose）。组件卸载 owner 清理由 MonacoEditor
+ onBeforeUnmount 既有兜底承担，此处不重复。 */
 const bodyMonacoRef = ref<InstanceType<typeof MonacoEditor> | null>(null);
 const lintUnplaced = ref<Finding[]>([]);
 watch(dtLint, (findings) => {
   const mappable = findings.filter(f => f.anchor);
   const r = bodyMonacoRef.value?.setMarkers?.(mappable.map(f => ({ ...f, severity: f.severity === 'info' ? 'hint' as const : f.severity })));
   /* r=undefined（挂载前/测试 stub 无 setMarkers 出口）→ 全量降级底部条不丢；
-     r 在场 → 无锚点条目 + 定位不到的 unplaced 降级，已落 marker 的不再进条 */
+ r 在场 → 无锚点条目 + 定位不到的 unplaced 降级，已落 marker 的不再进条 */
   lintUnplaced.value = r ? [...findings.filter(f => !f.anchor), ...r.unplaced] : findings.slice();
 }, { immediate: true });
 const dtLintErrors = computed(() => lintUnplaced.value.filter(f => f.severity === 'error'));
 const dtLintWarns = computed(() => lintUnplaced.value.filter(f => f.severity === 'warning' || f.severity === 'hint'));
 
 /* ═══ ：Ctrl+I 唤起补全（Kibana 控制台同键，Monaco 默认 Ctrl+Space 之外的第二入口）═══
-   MonacoEditor getEditor() expose 出口接线（组件本体零改；useMonacoLocate respMonacoRef 同通道）。
-   挂载时序：editor 在子组件 onMounted 创建，watch(ref)+nextTick 后置取防 undefined；
-   happy-dom stub 无 getEditor/addCommand 出口 → 守卫跳过（MonacoEditor registerFormatKeybind :814 同口径）。
-   键位已登记 HotkeyPanel「查询与编辑」组。 */
+ MonacoEditor getEditor() expose 出口接线（组件本体零改；useMonacoLocate respMonacoRef 同通道）。
+ 挂载时序：editor 在子组件 onMounted 创建，watch(ref)+nextTick 后置取防 undefined；
+ happy-dom stub 无 getEditor/addCommand 出口 → 守卫跳过（MonacoEditor registerFormatKeybind :814 同口径）。
+ 键位已登记 HotkeyPanel「查询与编辑」组。 */
 watch(bodyMonacoRef, (mc) => {
   if (!mc) return;
   nextTick(() => {
@@ -650,31 +650,31 @@ function doReset() {
   pickedEp.value = {}; /* T11 复审 M3：重置一并清空端点联动残留 */
 }
 /* 落盘剥离 result/resultFull（响应体体积大且时效性强，不持久化）——巨型响应曾把
-   存储逼近 5MB 上限写爆静默失败，标签持久化整体失效；：busy 同不落盘——执行中
-   刷新/关页后恢复 busy:true 会永久卡在「执行中」，落盘前强制复位，恢复侧再兜一层。 */
+ 存储逼近 5MB 上限写爆静默失败，标签持久化整体失效；：busy 同不落盘——执行中
+ 刷新/关页后恢复 busy:true 会永久卡在「执行中」，落盘前强制复位，恢复侧再兜一层。 */
 /* 历史面板折叠态（KeepAlive 切页回来不重置）；：会话内 ref → usePref
-   落盘（dt.histOpen，跨会话记忆；默认 true=首次仍展开，既有行为零变化） */
+ 落盘（dt.histOpen，跨会话记忆；默认 true=首次仍展开，既有行为零变化） */
 const histOpen = usePref('dt.histOpen', true);
 /* 编辑器字号三档落盘（dt.font，默认 12.5=MonacoEditor 组件既有默认零漂移）——
-   请求体 Monaco 与响应只读面同键；MonacoEditor fontSize prop 既有（黑名单零触，纯宿主传参） */
+ 请求体 Monaco 与响应只读面同键；MonacoEditor fontSize prop 既有（黑名单零触，纯宿主传参） */
 const edFont = usePref<number>('dt.font', 12.5);
-/* 本地三档常量退役收编 utils/editorTiers 单源（模板 v-for 直用
-   EDITOR_FONT_TIERS）；fontSize 响应缺角（prop 变更 Monaco 无感知）亦 
-   在 MonacoEditor 补 watch 修复 */
+/* 本地三档常量退役合并 utils/editorTiers 单源（模板 v-for 直用
+ EDITOR_FONT_TIERS）；fontSize 响应缺角（prop 变更 Monaco 无感知）亦 
+ 在 MonacoEditor 补 watch 修复 */
 /* 发送态 auto-format 退出口（dt.autoFmt 落盘，默认开=557 既有行为零变化）——
-   关闭后发送出参直送草稿原稿；宽容格式化仍归手动 format 钮既有路径 */
+ 关闭后发送出参直送草稿原稿；宽容格式化仍归手动 format 钮既有路径 */
 const autoFmt = usePref('dt.autoFmt', true);
 /* 历史列表限高三档（dt.histH useTierCycle 落盘）——首档=2.9.115/119 事故面
-   冻结值 max(240px, 42vh) 零漂移；indexHubDevtools531/devtoolsLint532 冻结 CSS 字面零触
-   （仍在册=缺省档同值），档值经 .dt-hist 容器注入 --dt-hist-h 变量、后置同选择器规则消费。
-   恒高块纪律不变：dt-hist flex-shrink:0，max 变档只改列表自身滚动上限，dt-body 定高链零触。 */
+ 冻结值 max(240px, 42vh) 零漂移；/devtoolsLint532 冻结 CSS 字面零触
+ （仍在册=缺省档同值），档值经 .dt-hist 容器注入 --dt-hist-h 变量、后置同选择器规则消费。
+ 恒高块纪律不变：dt-hist flex-shrink:0，max 变档只改列表自身滚动上限，dt-body 定高链零触。 */
 const HIST_H_TIERS: string[] = ['max(240px, 42vh)', 'max(360px, 56vh)', 'max(480px, 70vh)'];
 const { v: histH, cycle: cycleHistH } = useTierCycle('dt.histH', HIST_H_TIERS);
 
-/*  P2-3：跨 Tab 历史汇聚——per-tab cap50 切 Tab 互不可见，写历史时镜像一份到
-   sessionStorage 键 es_devtools_hist_all:{target}（cap100，条目 method/path/body/ts/ok/took），
-   dt-hist 面板「全部」chip 渲染汇聚清单，条目 fill/play 回当前 Tab。
-   ⚠ dt-hist 直挂 dt-body 落位与 .qhp-list max(240px,42vh) 口径不动（2.9.115 事故位红线） */
+/* P2-3：跨 Tab 历史汇聚——per-tab cap50 切 Tab 互不可见，写历史时镜像一份到
+ sessionStorage 键 es_devtools_hist_all:{target}（cap100，条目 method/path/body/ts/ok/took），
+ dt-hist 面板「全部」chip 渲染汇聚清单，条目 fill/play 回当前 Tab。
+ ⚠ dt-hist 直挂 dt-body 落位与 .qhp-list max(240px,42vh) 口径不动（2.9.115 事故位红线） */
 const HIST_ALL_KEY = computed(() => `es_devtools_hist_all:${store.target || 'host'}`);
 interface HistAllEntry { method: string; path: string; body: string; ts: number; ok: boolean; took: number; }
 const histAll = ref<HistAllEntry[]>([]);
@@ -694,8 +694,8 @@ function mirrorHistAll(e: HistAllEntry) {
 watch(() => store.target, () => { histAll.value = histAllRead(); });
 
 /* 本 Tab 历史清空——面板 clearable 契约（emit('clear')，确认由父做）。
-   仅本 Tab 档开启（「全部」档是跨 Tab 汇聚镜像，按 Tab 清越权，不开放该档清空钮）；
-   确认后清当前 tab history（tabs deep watch 自动冲刷草稿落盘） */
+ 仅本 Tab 档开启（「全部」档是跨 Tab 汇聚镜像，按 Tab 清越权，不开放该档清空钮）；
+ 确认后清当前 tab history（tabs deep watch 自动冲刷草稿落盘） */
 async function askClearTabHist() {
   const t = cur.value;
   if (!t || !t.history?.length) return;
@@ -710,10 +710,10 @@ async function askClearTabHist() {
 }
 
 /* ==== ：原始 IO 快查（响应工具行钮） ====
-   本页执行走 api.raw（/cluster/raw 透传），记录环按该特征取最近一条开弹窗；无记录时空态引导。 */
+ 本页执行走 api.raw（/cluster/raw 透传），记录环按该特征取最近一条开弹窗；无记录时空态引导。 */
 const rawIoShow = ref(false);
 const rawIoRec = ref<RawIoRec | null>(null);
-/* 判空随迁（DslQueryView 550 口径逐字平移）——无记录 notify 引导不开空弹窗 */
+/* 判空同步更新（DslQueryView 550 口径逐字平移）——无记录 notify 引导不开空弹窗 */
 function openRawIo() {
   const rec = ioRecorder.last('/cluster/raw');
   if (!rec) { store.notify('info', '暂无原始 IO 记录，先在本页执行一次操作（记录环近 30 条）再查看'); return; }
@@ -731,7 +731,7 @@ function writeDraft() {
   } catch { /* 隐私模式/存储满容忍 */ }
 }
 /* URL 即现场轮：写入改 300ms 防抖（deep watch 高频击键不再逐次整包序列化）；
-   pagehide/卸载冲刷兜「改完立刻刷新」的防抖尾窗，刷新恢复不丢最后一次编辑 */
+ pagehide/卸载冲刷兜「改完立刻刷新」的防抖尾窗，刷新恢复不丢最后一次编辑 */
 let draftTimer: ReturnType<typeof setTimeout> | null = null;
 function persist() {
   if (draftTimer) clearTimeout(draftTimer);
@@ -763,14 +763,14 @@ onMounted(() => {
   }
   histAll.value = histAllRead(); /* ：跨 Tab 汇聚清单按 target 键水合 */
   consumePrefill();
-  /* 视图级全局执行——工作台任意处 Ctrl+Enter 即跑当前 Tab（DslQueryView 判例平移） */
+  /* 视图级全局执行——工作台任意处 Ctrl+Enter 即跑当前 Tab（DslQueryView 先例平移） */
   window.addEventListener('keydown', onGlobalRunKey);
 });
 /* KeepAlive 白名单再进入仍消费预填（实报「打开不自动填充」根因②）——
-   本页在 KEEP_ALIVE_VIEWS 名单（App.vue line95 明文要求「深链预填在 onActivated 下仍可消费」，
-   入名单时漏执法）；es-console.devtools.open 既有 5 写入方（DslQuery/Watcher/IndexHub/Ilm/
-   CmdPalette）+827 favReplay devtools 分支第 6 写入方，缓存态此前全被吞。键读后即删=与
-   onMounted 双挂载幂等无害 */
+ 本页在 KEEP_ALIVE_VIEWS 名单（App.vue line95 明文要求「深链预填在 onActivated 下仍可消费」，
+ 入名单时漏）；es-console.devtools.open 既有 5 写入方（DslQuery/Watcher/IndexHub/Ilm/
+ CmdPalette）+827 favReplay devtools 分支第 6 写入方，缓存态此前全被吞。键读后即删=与
+ onMounted 双挂载幂等无害 */
 onActivated(() => consumePrefill());
 onBeforeUnmount(() => {
   window.removeEventListener('pagehide', flushDraft);
@@ -778,11 +778,11 @@ onBeforeUnmount(() => {
   flushDraft(); /* 卸载前冲刷防抖尾窗，草稿不丢 */
 });
 
-/* ═══ ：视图级全局执行（DslQueryView onGlobalRunKey 判例平移）═══
-   执行钮/Monaco es-execute action 之外的可发现入口：工作台任意处 Ctrl+Enter 即跑当前 Tab。
-   输入守卫：INPUT/TEXTAREA/SELECT/contentEditable 让路（原生换行/提交语义优先）；
-   Monaco 内已有同名 execute action 且 .monaco-editor 判定让路（不重复触发）；
-   执行中让路防并发重入（run() 首行 busy 快照守卫双保险） */
+/* ═══ ：视图级全局执行（DslQueryView onGlobalRunKey 先例平移）═══
+ 执行钮/Monaco es-execute action 之外的可发现入口：工作台任意处 Ctrl+Enter 即跑当前 Tab。
+ 输入守卫：INPUT/TEXTAREA/SELECT/contentEditable 让路（原生换行/提交语义优先）；
+ Monaco 内已有同名 execute action 且 .monaco-editor 判定让路（不重复触发）；
+ 执行中让路防并发重入（run() 首行 busy 快照守卫双保险） */
 function onGlobalRunKey(e: KeyboardEvent) {
   if (!(e.ctrlKey || e.metaKey) || e.key !== 'Enter') return;
   const t = e.target as HTMLElement | null;
@@ -790,12 +790,12 @@ function onGlobalRunKey(e: KeyboardEvent) {
   if (!cur.value || cur.value.busy) return;
   e.preventDefault();
   /* Shift+Ctrl+Enter=全部段顺序执行（切段只作用于发送出参）；
-     无 Shift=既有全量执行。编辑器内两键由 es-execute（光标段）/键面冒泡（全部段）承接 */
+ 无 Shift=既有全量执行。编辑器内两键由 es-execute（光标段）/键面冒泡（全部段）承接 */
   if (e.shiftKey) void runSmart(true); else run();
 }
 
-/* -f §8.2：跨工具联动入口——命令面板「新开标签」与其他视图（Watcher 等）
-   通过 sessionStorage 预填一个请求后跳转过来，这里统一消费。 */
+/* -f 跨工具联动入口——命令面板「新开标签」与其他视图（Watcher 等）
+ 通过 sessionStorage 预填一个请求后跳转过来，这里统一消费。 */
 function consumePrefill() {
   if (sessionStorage.getItem('es-console.devtools.newtab')) {
     removeStoredRaw(sessionStorage, 'es-console.devtools.newtab');
@@ -816,11 +816,11 @@ function consumePrefill() {
 }
 
 /* run() 前置 auto-format（Kibana「send 时 auto indent」对标，556 设计稿 P2）——
-   合法 JSON 才 pretty；非法/带注释（JSONC）原样不动：严格 JSON.parse 门（不走 stripJsonComments
-   宽容口径——宽容解析会剥注释，DQ「记档不做」同因；宽容路径仍归手动 format 钮既有 :789-793）。
-   发送态格式化只作用于 api.raw 出参（bodyOut），t.body 草稿零触：草稿是 sessionStorage 持久稿，
-   且历史/跨 Tab 汇聚镜像源码锁钉 body: t.body 原稿（devtoolsLint532:310-311）、fill 回填
-   逐字节保形（:279）。非法静默（dtLint 已报，不重复播报） */
+ 合法 JSON 才 pretty；非法/带注释（JSONC）原样不动：严格 JSON.parse 门（不走 stripJsonComments
+ 宽容口径——宽容解析会剥注释，DQ「不做」同因；宽容路径仍归手动 format 钮既有 :789-793）。
+ 发送态格式化只作用于 api.raw 出参（bodyOut），t.body 草稿零触：草稿是 sessionStorage 持久稿，
+ 且历史/跨 Tab 汇聚镜像源码锁钉 body: t.body 原稿（devtoolsLint532:310-311）、fill 回填
+ 逐字节保形（279）。非法静默（dtLint 已报，不重复播报） */
 function tryFormatBody(body: string): string {
   if (!body) return body;
   try { return JSON.stringify(JSON.parse(body), null, 2); } catch { return body; }
@@ -828,34 +828,34 @@ function tryFormatBody(body: string): string {
 
 async function run() {
   /* G7-A1：Ctrl+Enter 键盘路径不受按钮 :disabled 约束——执行体守卫管键盘重入（教训 7，
-     与 G6 观察项 TemplatesView Ctrl+S 同构；busy 期间连按不再并发重发写请求）
-     G7 复审 F1：头部快照 tab 引用——await 期间用户切 tab 后 cur 随 active 漂移，
-     不快照会把结果/历史写进新 tab，且原 tab 的 busy=true 永远无人复位（永久锁死）。
-     网络/响应/历史内核下沉 execSend（全量与段执行共走一条链），
-     本函数=全量语义入口（busy 快照与 autoFmt 出参位置语义不变，557/560 锁面原样） */
+ 与 观察项 TemplatesView Ctrl+S 同构；busy 期间连按不再并发重发写请求）
+ 复审 F1：头部快照 tab 引用——await 期间用户切 tab 后 cur 随 active 漂移，
+ 不快照会把结果/历史写进新 tab，且原 tab 的 busy=true 永远无人复位（永久锁死）。
+ 网络/响应/历史内核下沉 execSend（全量与段执行共走一条链），
+ 本函数=全量语义入口（busy 快照与 autoFmt 出参位置语义不变，557/560 锁面原样） */
   const t = cur.value;
   if (!t || t.busy) return;
   t.busy = true; t.result = null; t.errBrief = null; t.status = null;
   /* send 前置 auto-format（草稿零触，出参进 api.raw）；
-     dt.autoFmt 退出口——关闭后直送草稿原稿（devtoolsLint532 历史/镜像 body:t.body 锁面零触） */
+ dt.autoFmt 退出口——关闭后直送草稿原稿（devtoolsLint532 历史/镜像 body:t.body 锁面零触） */
   const bodyOut = autoFmt.value ? tryFormatBody(t.body) : t.body;
   await execSend(t, bodyOut);
 }
 
 /* 发送/响应/历史共用内核——api.raw 透传、信封解包、截断展示、标题命名、
-   历史与跨 Tab 镜像全部在此（run 全量与段执行唯一分叉=bodyOut 与 segLabel）。
-   segLabel 在场=段执行：历史条目补 seg 标识（「seg i/n」）便于区分段现场；
-   镜像 HistAllEntry 字段零增（跨 Tab 汇聚锁面零触），草稿 t.body 原稿零触。 */
+ 历史与跨 Tab 镜像全部在此（run 全量与段执行唯一分叉=bodyOut 与 segLabel）。
+ segLabel 在场=段执行：历史条目补 seg 标识（「seg i/n」）便于区分段现场；
+ 镜像 HistAllEntry 字段零增（跨 Tab 汇聚锁面零触），草稿 t.body 原稿零触。 */
 async function execSend(t: Tab, bodyOut: string, segLabel?: string) {
   const t0 = performance.now();
   const signal = qr.begin();
   try {
     /* 走 api.raw 统一封装：自动带 context-path 前缀、鉴权头、X-Es-Target 目标头。
-       body 送格式化出参（bodyOut），t.body 草稿原样进历史/镜像 */
+ body 送格式化出参（bodyOut），t.body 草稿原样进历史/镜像 */
     const data = await api.raw(t.method, t.path, bodyOut, signal);
     /* 语义色轮：/cluster/raw 成功回 {status, body} 信封（RestView 读 .status/.body 同款解包）——
-       此前整信封 stringify 进面板，body 变转义字符串且真实 ES 状态码不可见。解包后
-       body 直接进面板/截断/复制链路，status 供 HTTP 徽标语义分档；信封形态不符（防御）保持整包。 */
+ 此前整信封 stringify 进面板，body 变转义字符串且真实 ES 状态码不可见。解包后
+ body 直接进面板/截断/复制链路，status 供 HTTP 徽标语义分档；信封形态不符（防御）保持整包。 */
     const env = data && typeof data === 'object' ? (data as { status?: unknown; body?: unknown }) : null;
     const realStatus = env && typeof env.status === 'number' && env.body !== undefined ? env.status : null;
     let txt = realStatus != null && env ? String(env.body ?? '')
@@ -874,8 +874,8 @@ async function execSend(t: Tab, bodyOut: string, segLabel?: string) {
       t.result = txt; t.resultFull = null; t.truncated = false;
     }
     /* 语义色轮：历史记录补 ok/took（成功态）；：补 ts 落盘（面板 relTime 用）；
-       镜像一份进跨 Tab 汇聚（es_devtools_hist_all，cap100）；
-       段执行条目补 seg 标识（全量执行 segLabel 缺席=字段不落，旧稿零降级） */
+ 镜像一份进跨 Tab 汇聚（es_devtools_hist_all，cap100）；
+ 段执行条目补 seg 标识（全量执行 segLabel 缺席=字段不落，旧稿零降级） */
     t.history = [{ method: t.method, path: t.path, body: t.body,
       time: fmtTime(Date.now()), ts: Date.now(), ok: true, took: t.took, ...(segLabel ? { seg: segLabel } : {}) }, ...(t.history || [])].slice(0, 50);
     mirrorHistAll({ method: t.method, path: t.path, body: t.body, ts: Date.now(), ok: true, took: t.took });
@@ -885,16 +885,16 @@ async function execSend(t: Tab, bodyOut: string, segLabel?: string) {
     persist();
   } catch (e: any) {
     t.ok = false; t.took = Math.round(performance.now() - t0);
-    /* 语义色轮：原始报错全文留在 result（复制不丢真）；「错误：」前缀退场——
-       失败语义由 ✗ 失败 + err-bar 结构化摘要承担，纯 JSON 报错文不再加前缀破坏着色侦测 */
+    /* 语义色轮：原始报错全文留在 result（复制不丢真）；「错误：」前缀移除——
+ 失败语义由 ✗ 失败 + err-bar 结构化摘要承担，纯 JSON 报错文不再加前缀破坏着色侦测 */
     t.result = String(e?.message || e);
     t.status = e instanceof ApiError && Number.isFinite(e.status) ? e.status : null;
     t.errBrief = e?.name === 'AbortError'
       ? '已取消（用户中止本次请求）'
       : friendlyEsError(t.result);
     /* 语义色轮：失败也进历史（ok:false 红点 + 耗时档），重跑链路才覆盖失败现场；：补 ts；
-       失败条目同样镜像进跨 Tab 汇聚（ok:false 红点口径一致）；
-       段执行失败条目同样补 seg 标识（失败现场段位可辨） */
+ 失败条目同样镜像进跨 Tab 汇聚（ok:false 红点口径一致）；
+ 段执行失败条目同样补 seg 标识（失败现场段位可辨） */
     t.history = [{ method: t.method, path: t.path, body: t.body,
       time: fmtTime(Date.now()), ts: Date.now(), ok: false, took: t.took, ...(segLabel ? { seg: segLabel } : {}) }, ...(t.history || [])].slice(0, 50);
     mirrorHistAll({ method: t.method, path: t.path, body: t.body, ts: Date.now(), ok: false, took: t.took });
@@ -902,10 +902,10 @@ async function execSend(t: Tab, bodyOut: string, segLabel?: string) {
 }
 
 /* ═══ ：光标处单请求执行（Kibana 多请求编辑器语义）═══
-   Ctrl+Enter 只执行光标所在段（方法行 method/path + body 切段出参），Shift+Ctrl+Enter 全部段
-   顺序执行；切段只作用于发送出参——草稿持久化/历史 body/镜像 body 原稿零触。
-   单段体等价全量 run()（零行为漂移）；编辑器无光标信息（挂载前/测试 stub 无 getEditor 出口）
-   回退定位到偏移 0（首段）。执行中让路（busy 快照守卫与 run 同构，防并发重入）。 */
+ Ctrl+Enter 只执行光标所在段（方法行 method/path + body 切段出参），Shift+Ctrl+Enter 全部段
+ 顺序执行；切段只作用于发送出参——草稿持久化/历史 body/镜像 body 原稿零触。
+ 单段体等价全量 run()（零行为漂移）；编辑器无光标信息（挂载前/测试 stub 无 getEditor 出口）
+ 回退定位到偏移 0（首段）。执行中让路（busy 快照守卫与 run 同构，防并发重入）。 */
 function editorCursorOffset(): number | null {
   const ed = bodyMonacoRef.value?.getEditor?.();
   if (!ed || typeof ed.getModel !== 'function' || typeof ed.getPosition !== 'function') return null;
@@ -938,13 +938,13 @@ async function execOneSeg(seg: DtSeg, i: number, n: number) {
   const bodyOut = autoFmt.value ? tryFormatBody(seg.text) : seg.text;
   await execSend(t, bodyOut, 'seg ' + (i + 1) + '/' + n);
   /* per-段锚定——每段执行完快照到段位 i（段位稳定，重复执行覆写同槽；
-     主响应区现行为零触：末段覆写语义保持，前段响应在徽标里可回看） */
+ 主响应区现行为零触：末段覆写语义保持，前段响应在徽标里可回看） */
   t.segRuns = [...(t.segRuns || [])];
   t.segRuns[i] = { label: 'seg ' + (i + 1) + '/' + n, ok: t.ok, took: t.took, status: t.status ?? null, errBrief: t.errBrief ?? null, result: t.result || '', resultFull: t.resultFull ?? null, truncated: !!t.truncated };
   t.segView = -1;
 }
 /* 段徽标点击——该段响应载回主响应区（成功段不丢；err-bar/MetaStrip/截断
-   面随字段组回放；active 段高亮，新执行后归零） */
+ 面随字段组回放；active 段高亮，新执行后归零） */
 function loadSegRun(run: DtSegRun, i: number) {
   const t = cur.value;
   if (!t) return;
@@ -953,10 +953,10 @@ function loadSegRun(run: DtSegRun, i: number) {
   t.segView = i;
 }
 
-/* 语义色轮：耗时展示与四档（：fmtTook/tookClass 本地复制品退役，收口 utils/format.ts 单一出处，
-   与 QueryHistoryPanel/TookBadge 同源不再漂移） */
+/* 语义色轮：耗时展示与四档（fmtTook/tookClass 本地复制品退役，收口 utils/format.ts 单一出处，
+ 与 QueryHistoryPanel/TookBadge 同源不再漂移） */
 /* HTTP 状态码分档改回 MetaStrip tone 档——2xx→ok 绿 / 4xx→warn 橙 / 5xx→err 红 / 其余(1xx/3xx)→info
-   （原 .dt-code 软底徽标随 .dt-status 手写串退役，视觉统一为 MetaStrip 纯文本 tone 语言） */
+ （原 .dt-code 软底徽标随 .dt-status 手写串退役，视觉统一为 MetaStrip 纯文本 tone 语言） */
 function codeTone(s: number): 'ok' | 'warn' | 'err' | 'info' {
   if (s >= 200 && s < 300) return 'ok';
   if (s >= 400 && s < 500) return 'warn';
@@ -964,13 +964,13 @@ function codeTone(s: number): 'ok' | 'warn' | 'err' | 'info' {
   return 'info';
 }
 /* took 四档 → MetaStrip tone 映射（fast→ok 绿 / 中→缺省亮 / slow→warn 橙 / veryslow→err 红；
-   'ok' 档原 --tx1 与 MetaStrip 缺省 --tx0 同为中性灰阶一档亮度差，换全串统一 tone 语言） */
+ 'ok' 档原 --tx1 与 MetaStrip 缺省 --tx0 同为中性灰阶一档亮度差，换全串统一 tone 语言） */
 function tookTone(ms: number): 'ok' | 'warn' | 'err' | undefined {
   const c = tookClass(ms);
   return c === 'fast' ? 'ok' : c === 'slow' ? 'warn' : c === 'veryslow' ? 'err' : undefined;
 }
 /* 状态元信息行（成败·HTTP 码·took 四档色·size·截断）适配 MetaStrip items——
-    §5 语义保留：未知 HTTP 码不出段（真实码已知才渲染） */
+ 语义保留：未知 HTTP 码不出段（真实码已知才渲染） */
 const statusMeta = computed<MetaStripItem[]>(() => {
   const t = cur.value;
   if (!t?.result) return [];
@@ -987,15 +987,15 @@ const statusMeta = computed<MetaStripItem[]>(() => {
 
 function loadHist(h: any) { if (!cur.value) return; cur.value.method = h.method; cur.value.path = h.path; cur.value.body = h.body || ''; }
 /* 本 Tab 历史适配 QueryHistoryPanel HistRow 形状——
-   query 行文本=「METHOD path」（面板过滤/复制/copy 动作都吃 query，合并串让旧 method/path 过滤口径等价）；
-   ts 优先取落盘值（旧草稿无 ts 回解析 fmtTime 的 'YYYY-MM-DD HH:mm:ss' 串，解析失败不渲染时间）；
-   id=原数组下标（面板 del 事件回传条目对象，按下标定位删除）。
-    P2-3：histScope='all' 时切跨 Tab 汇聚清单（histAll，cap100；id=汇聚数组下标），
-   条目 method/path/body/ts/ok/took 字段同形，fill/play/del 语义随 scope 分派。 */
+ query 行文本=「METHOD path」（面板过滤/复制/copy 动作都吃 query，合并串让旧 method/path 过滤口径等价）；
+ ts 优先取落盘值（旧草稿无 ts 回解析 fmtTime 的 'YYYY-MM-DD HH:mm:ss' 串，解析失败不渲染时间）；
+ id=原数组下标（面板 del 事件回传条目对象，按下标定位删除）。
+ P2-3：histScope='all' 时切跨 Tab 汇聚清单（histAll，cap100；id=汇聚数组下标），
+ 条目 method/path/body/ts/ok/took 字段同形，fill/play/del 语义随 scope 分派。 */
 const histRows = computed(() => {
   /* time/ts 双可选口径：tab 历史条目有 time（旧稿回解析用），汇聚条目只有落盘 ts；
-     body 摘要行需要 body 字段（tab 历史/汇聚条目两形皆有，注记补齐）；
-     tab 历史条目多 seg（段执行标识），汇聚条目无此字段（镜像锁面零触） */
+ body 摘要行需要 body 字段（tab 历史/汇聚条目两形皆有，注记补齐）；
+ tab 历史条目多 seg（段执行标识），汇聚条目无此字段（镜像锁面零触） */
   const list: { method: string; path: string; body?: string; ts?: number; time?: string; seg?: string }[] = histScope.value === 'all'
     ? histAll.value
     : (cur.value?.history ?? []);
@@ -1004,25 +1004,24 @@ const histRows = computed(() => {
     query: h.method + ' ' + h.path,
     ts: h.ts ?? (Date.parse(String(h.time || '').replace(' ', 'T')) || undefined),
     /* body 截断摘要（面板可选 sub 行）——80 字符截断 + 省略号，title 悬停看全；
-       行对象本体仍经 ...h 携带完整 body（fill/play/curl/导出链零触）。
-       段执行标识不进本行字面（552 黑名单行），seg 前缀在下方第二遍 map 补 */
+ 行对象本体仍经 ...h 携带完整 body（fill/play/curl/导出链零触）。
+ 段执行标识不进本行字面（552 黑名单行），seg 前缀在下方第二遍 map 补 */
     sub: h.body ? (h.body.length > 80 ? h.body.slice(0, 80) + '…' : h.body) : undefined,
   })).map((r, i) => (list[i].seg ? { ...r, sub: [list[i].seg, r.sub].filter(Boolean).join(' · ') } : r));
 });
-/* play=填入并立即执行（原 ▶ 语义）；fill 直接复用 loadHist（：
-   汇聚档条目同字段形态，fill/play 原样回当前 Tab） */
+/* play=填入并立即执行（原 ▶ 语义）；fill 直接复用 loadHist（汇聚档条目同字段形态，fill/play 原样回当前 Tab） */
 function histPlay(h: any) { loadHist(h); run(); }
 /* 历史行一键复制 curl（面板 'curl' action 宿主组装）——copyCurl 既有手法
-   逐字平移（origin=当前页面地址；body 单引号转义），行数据自持 method/path/body */
+ 逐字平移（origin=当前页面地址；body 单引号转义），行数据自持 method/path/body */
 function histCurl(h: any) {
   const c = `curl -X ${h.method} '${window.location.origin}${h.path}'` +
     (h.body ? ` -H 'Content-Type: application/json' -d '${h.body.replace(/'/g, "'\\''")}'` : '');
   copyText(c).then(ok => store.notify(ok ? 'success' : 'error', ok ? 'curl 已复制' : '复制失败'));
 }
-/* 历史行「回放到新 Tab」（面板 'newtab' action 宿主组装）——mkTab 判例造新签
-   承接行自持的 method/path/body，push 后激活跳转+persist（consumePrefill 同款三连）；
-   标题沿用 run 的 path 尾段口径（named 未置，后续执行仍可自动覆盖）；不自动执行——
-   「回放」到填入为止，执行主动权留给用户（与 fill 同语义分档，防误发写请求） */
+/* 历史行「回放到新 Tab」（面板 'newtab' action 宿主组装）——mkTab 先例造新签
+ 承接行自持的 method/path/body，push 后激活跳转+persist（consumePrefill 同款三连）；
+ 标题沿用 run 的 path 尾段口径（named 未置，后续执行仍可自动覆盖）；不自动执行——
+ 「回放」到填入为止，执行主动权留给用户（与 fill 同语义分档，防误发写请求） */
 function histNewTab(h: any) {
   const seg = String(h.path || '').split('?')[0].split('/').filter(Boolean).slice(-2).join('/');
   tabs.value.push(mkTab(seg || undefined, h.method, h.path, h.body || ''));
@@ -1031,7 +1030,7 @@ function histNewTab(h: any) {
   store.notify('success', '已在新标签页填入：' + h.method + ' ' + h.path);
 }
 /* 删除单条历史（面板 del 事件；原 delHist 按索引签名退役，落盘交 tabs deep watch）。
-   汇聚档删除=从 histAll 摘除并同步写回 sessionStorage 镜像 */
+ 汇聚档删除=从 histAll 摘除并同步写回 sessionStorage 镜像 */
 function histDel(h: { id?: string | number }) {
   if (histScope.value === 'all') {
     if (h.id == null) return;
@@ -1044,15 +1043,15 @@ function histDel(h: { id?: string | number }) {
 }
 /* 面板导出行映射——保留 rest 特有字段（{method,path,body,ts} 与 RestView 历史导出互认格式同源） */
 const histExportRow = (h: any) => ({ method: h.method, path: h.path, body: h.body, ts: h.ts, ok: h.ok, took: h.took });
-/* 历史行一键转收藏——与 saveFav 同一 addFavorite rest 形态（saveFav :838 判例），
-   addFavorite 按 kind+title 覆盖更新（store :269），重复收藏幂等不产生重复条目，零新存储键 */
+/* 历史行一键转收藏——与 saveFav 同一 addFavorite rest 形态（saveFav :），
+ addFavorite 按 kind+title 覆盖更新（store :269），重复收藏幂等不产生重复条目，零新存储键 */
 function histFav(h: any) {
   store.addFavorite({ kind: 'rest', title: h.method + ' ' + h.path,
     subtitle: (h.body || '').slice(0, 60),
     payload: { method: h.method, path: h.path, body: h.body }, tags: ['rest', 'devtools'] });
   store.notify('success', '已收藏');
 }
-/*  §1：空态一键起步——填入示例请求并立即执行 */
+/* 空态一键起步——填入示例请求并立即执行 */
 const SEARCH_SAMPLE = '{"size":5,"query":{"match_all":{}}}';
 function quickRun(method: string, path: string, body = '') {
   if (!cur.value) return;
@@ -1061,7 +1060,7 @@ function quickRun(method: string, path: string, body = '') {
 }
 
 /* 格式化/压缩走 JSONC 宽容解析（stripJsonComments 先剥注释）——
-   与 DslQuery/RestView/CreateIndexModal 同口径；带注释/尾逗号不再误报「非合法 JSON」 */
+ 与 DslQuery/RestView/CreateIndexModal 同口径；带注释/尾逗号不再误报「非合法 JSON」 */
 function format() {
   if (!cur.value?.body) return;
   try { cur.value.body = JSON.stringify(JSON.parse(stripJsonComments(cur.value.body)), null, 2); }
@@ -1078,14 +1077,14 @@ const respLang = computed(() => {
   try { JSON.parse(r); return 'json'; } catch { return 'plaintext'; }
 });
 /* 响应只读面 dsl-assist 白得通道——fields 源同 body 口（dtFields 同一 useIndexFields
-   出口）；bodyKind 视 respLang：合法 JSON 响应=文档体档（键位零候选 + field 值位/字段 hover 白得），
-   非 JSON 归 none（provider 按语言挂 json/ndjson，plaintext 模型本就不匹配，档位收口为语义双保险）。
-   闭包在 setup 作用域声明（模板内联对象箭头函数经 _ctx 代理，T14 渗透红灯实证） */
+ 出口）；bodyKind 视 respLang：合法 JSON 响应=文档体档（键位零候选 + field 值位/字段 hover 白得），
+ 非 JSON 归 none（provider 按语言挂 json/ndjson，plaintext 模型本就不匹配，档位收口为语义双保险）。
+ 闭包在 setup 作用域声明（模板内联对象箭头函数经 _ctx 代理，T14 渗透红灯实证） */
 const dtRespAssist = { fields: () => dtFields.value, bodyKind: () => (respLang.value === 'json' ? 'doc' as const : 'none' as const) };
 
 /* 响应表格查看档数据面——respView 切「表格」且 respLang=json 且可解析才有值
-   （标量/解析失败归 null，Monaco 保持原文）；顶层数组→行序表（列=各行键并集保持首现序，
-   _cat/* 结构化响应主场景），对象→键值两列表。轻量直渲，不引 QueryResultTable */
+ （标量/解析失败归 null，Monaco 保持原文）；顶层数组→行序表（列=各行键并集保持首现序，
+ _cat/* 结构化响应主场景），对象→键值两列表。轻量直渲，不引 QueryResultTable */
 interface RespTbl { isArr: boolean; cols: string[]; rows: Array<Record<string, unknown>>; kv: Array<[string, unknown]> }
 const respView = ref<'raw' | 'table'>('raw');
 const respTbl = computed<RespTbl | null>(() => {
@@ -1115,14 +1114,14 @@ function copyRespRow(row: unknown) {
 }
 
 /* W6-T3：curl 导入——parseCurl 纯函数解析回填三字段；识别不了提示且不动手。
-   语义色轮：parseCurl 仅回 null 无原因，纠错提示在调用侧判因——空输入 / 非 curl 开头 /
-   引号未闭合（转义对先剥离再数奇偶；未闭合串曾骗过 tokenizer 把 URL 吃成 '/... 垃圾路径）/
-   缺 URL。弹层就地展示（.il-hint.il-err 全站语言），不改 curlParse.ts 纯函数契约。 */
+ 语义色轮：parseCurl 仅回 null 无原因，纠错提示在调用侧判因——空输入 / 非 curl 开头 /
+ 引号未闭合（转义对先剥离再数奇偶；未闭合串曾骗过 tokenizer 把 URL 吃成 '/... 垃圾路径）/
+ 缺 URL。弹层就地展示（.il-hint.il-err 全站语言），不改 curlParse.ts 纯函数契约。 */
 const curlOpen = ref(false);
 /* curl 粘贴稿草稿化——独立键 es_devtools_curl_draft（不混入主 tabs 包），
-   键形态对齐主 body 的 DRAFT_KEY（:target 合并键，切集群不串稿）；误关弹窗/切页后
-   粘贴现场保留，导入成功才清。凭据掩埋复用 useScopedDraft 体系的 redactDraft
-   （curl -u/-H Authorization 常带密码）。 */
+ 键形态对齐主 body 的 DRAFT_KEY（target 合并键，切集群不串稿）；误关弹窗/切页后
+ 粘贴现场保留，导入成功才清。凭据掩埋复用 useScopedDraft 体系的 redactDraft
+ （curl -u/-H Authorization 常带密码）。 */
 const CURL_DRAFT_KEY = computed(() => `es_devtools_curl_draft:${store.target || 'host'}`);
 const curlText = ref((() => {
   try { return sessionStorage.getItem(CURL_DRAFT_KEY.value) || ''; } catch { return ''; }
@@ -1161,13 +1160,13 @@ function doImportCurl() {
   store.notify('success', 'curl 已导入' + hinted);
 }
 
-/*  P1-3：host 从硬编码 ES_HOST 占位串改当前页面 origin——DevTools 本就走
-   同源 /cluster/raw 透传，复制出的 curl 直接可执行（占位串此前必须手改才能用） */
+/* P1-3：host 从硬编码 ES_HOST 占位串改当前页面 origin——DevTools 本就走
+ 同源 /cluster/raw 透传，复制出的 curl 直接可执行（占位串此前必须手改才能用） */
 function copyCurl() {
   if (!cur.value) return;
   const c = `curl -X ${cur.value.method} '${window.location.origin}${cur.value.path}'` +
     (cur.value.body ? ` -H 'Content-Type: application/json' -d '${cur.value.body.replace(/'/g, "'\\''")}'` : '');
-  copyText(c).then(ok => store.notify(ok ? 'success' : 'error', ok ? 'curl 已复制' : '复制失败')); /*  */
+  copyText(c).then(ok => store.notify(ok ? 'success' : 'error', ok ? 'curl 已复制' : '复制失败')); /* */
 }
 
 /* 复制请求体（请求工具行钮）——成功文案对齐 RawIoModal copyReq「请求体已复制」 */
@@ -1177,15 +1176,15 @@ function copyBody() {
 }
 
 /* ═══ ：插入字段（insertSnippet expose 全站首消费）═══
-   请求工具行 n-popover 内嵌 FieldPicker，字段源与 dslAssist 同源（dtPathIdx || pickedIdx →
-   useIndexFields 缓存共享引用，不重复发请求）。选中后经 bodyMonacoRef 的 insertSnippet expose
-   通道（MonacoEditor.vue:823/931，黑名单件只调用）在光标处 executeEdits 插入 "字段名"；
-   happy-dom stub 无该出口时守卫跳过并如实 notify（不静默假装成功）。弹层开合与输入稿为
-   内存态（一次性插入动作无会话现场语义，不落盘）。 */
+ 请求工具行 n-popover 内嵌 FieldPicker，字段源与 dslAssist 同源（dtPathIdx || pickedIdx →
+ useIndexFields 缓存共享引用，不重复发请求）。选中后经 bodyMonacoRef 的 insertSnippet expose
+ 通道（MonacoEditor.vue:823/931，黑名单件只调用）在光标处 executeEdits 插入 "字段名"；
+ happy-dom stub 无该出口时守卫跳过并如实 notify（不静默假装成功）。弹层开合与输入稿为
+ 内存态（一次性插入动作无会话现场语义，不落盘）。 */
 const insFieldOpen = ref(false);
-/* 插入字段弹层视口钳制（239 守卫锚⑤收编）——naive width prop 类型窄
-   （number|'trigger'），CSS min() 字符串运行时生效但类型不过，改站内 computed 先例
-   形态（QueryHubView histDrawerW 同款 0.94 口径）。 */
+/* 插入字段弹层视口钳制（239 守卫锚⑤合并）——naive width prop 类型窄
+ （number|'trigger'），CSS min() 字符串运行时生效但类型不过，改站内 computed 先例
+ 形态（QueryHubView histDrawerW 同款 0.94 口径）。 */
 const insFieldPopW = computed(() => Math.min(300, Math.round(window.innerWidth * 0.94)));
 const insFieldKw = ref('');
 /* 方案 B：「⋯」溢出菜单开合（菜单内动作选择即关） */
@@ -1220,17 +1219,17 @@ function saveFav() {
 /* 页内不再私加边距，水平节奏由全局 .page 统一供给 */
 .dt-page { padding: 0; position: relative; display: flex; flex-direction: column; min-height: calc(100vh - var(--vh-offset, 210px)); }
 /* ·实报「请求体工具栏高度和响应体工具栏高度不一致」：双 pane 头部
-   统一 min-height（左侧 seg/菜单钮撑高、右侧元素少行矮→编辑器顶边错位）——
-   恒等高 34px 使请求/响应编辑器顶边严格对齐；纯 min-height 零高度链反例（内容恒单行） */
+ 统一 min-height（左侧 seg/菜单钮撑高、右侧元素少行矮→编辑器顶边错位）——
+ 恒等高 34px 使请求/响应编辑器顶边严格对齐；纯 min-height 零高度链反例（内容恒单行） */
 .dt-page :deep(.fs-head) { min-height: 34px; }
 /* 工作区撑满视口剩余——52vh 在高屏仍留底部空白;vh-offset 对齐全站页头预留 */
 .dt-page :deep(.wl) { flex: 1 1 auto; }
 /* 工作区视口高度——此前 wl 高度=内容高（Monaco 220px），宽屏下工作区挤在
-   页面上部、下部大片空白（实报「质感不足」主诉之一）；52vh 起步对齐  vh 族，
-   Monaco 非聚焦高度同步 220/260px→100% 跟随 pane（拖 pane 高即编辑器高）。
-   20260920 重叠根治：52vh 兜底在 dt-body 定高（2.9.116）后成为溢出源——
-   req(31)+52vh(468@900 视口)+hist(167) > dt-body 595，wl-body 顶撑 419>344 盖压历史区；
-   dt-body 定高下 wl flex:1 min-height:0 已兜底，此处归零（高度链 Analyze flex 范式合规）。 */
+ 页面上部、下部大片空白（实报「质感不足」主诉之一）；52vh 起步对齐 vh 族，
+ Monaco 非聚焦高度同步 220/260px→100% 跟随 pane（拖 pane 高即编辑器高）。
+ 20260920 重叠根治：52vh 兜底在 dt-body 定高（2.9.116）后成为溢出源——
+ req(31)+52vh(468@900 视口)+hist(167) > dt-body 595，wl-body 顶撑 419>344 盖压历史区；
+ dt-body 定高下 wl flex:1 min-height:0 已兜底，此处归零（高度链 Analyze flex 范式合规）。 */
 .dt-page :deep(.wl-body) { min-height: 0; }
 .dt-page :deep(.rp-content) { display: flex; flex-direction: column; }
 .dt-page :deep(.fs) { flex: 1 1 auto; }
@@ -1251,41 +1250,41 @@ function saveFav() {
 .dt-tab-add:hover { opacity: 1; }
 
 /* ⚠ P0 根治（2.9.115 产线「编辑框无限扩大」）：dt-body 从 min-height 改确定高度——
-   此前整链只有下限没有定值，Monaco host height:100% 在内容自适应父链里对「恒高兄弟」
-   （dt-lint 提示条 66px/dt-hist 历史 134px/dt-err 错误条）形成每布局遍历 +常数 的正反馈棘轮
-   （hostRO→layoutKick 泵频 ~19 遍/s，实锤 +2540px/s 无上界）。确定高度链落地后
-   Monaco 100% 恒有定解，lint/hist/err 三类兄弟并存全部安全，整类棘轮根除。 */
+ 此前整链只有下限没有定值，Monaco host height:100% 在内容自适应父链里对「恒高兄弟」
+ （dt-lint 提示条 66px/dt-hist 历史 134px/dt-err 错误条）形成每布局遍历 +常数 的正反馈棘轮
+ （hostRO→layoutKick 泵频 ~19 遍/s，实锤 +2540px/s 无上界）。确定高度链落地后
+ Monaco 100% 恒有定解，lint/hist/err 三类兄弟并存全部安全，整类棘轮根除。 */
 .dt-body { padding: var(--sp-3) var(--sp-1); display: flex; flex-direction: column; gap: var(--sp-2); height: calc(100vh - var(--vh-offset, 210px)); }
 /* wl 在确定高度容器内改为可收缩弹性件（原 min-height 视口兜底由 dt-body 的确定高度接管） */
 .dt-body :deep(.wl) { flex: 1 1 auto; min-height: 0; }
 /* 请求行 9 控件同排窄视口必溢出——补换行（row-gap 管换行后行距） */
 .dt-req { display: flex; gap: var(--sp-1h); row-gap: var(--sp-1); align-items: center; flex-wrap: wrap; }
 .dt-method { padding: 5px var(--sp-2); font-family: var(--mono); font-weight: 650; border: 1px solid var(--border); border-radius: var(--r-xs); background: var(--panel); font-size: var(--fs-xs); }
-/* W-C 批：方法色轮迁全局 .m-*（theme.css 末段），本地五条色款删除；历史行 .dt-hist-m.m-* 同批收编 */
+/* W-C 批：方法色轮迁全局 .m-*（theme.css 末段），本地五条色款删除；历史行 .dt-hist-m.m-* 同步合并 */
 .dt-path { flex: 1; padding: 5px var(--sp-2); font-family: var(--mono); font-size: var(--fs-xs); border: 1px solid var(--border); border-radius: var(--r-xs); background: var(--panel); color: var(--fg); }
-/* W-C 批：.dt-body-area 死样式段删除（W6 换装 Monaco 后模板 0 引用，grep 实证）；
-   .dt-tab-ren 保留——双击重命名内联输入模板在用（tabRename440 锁定），非退役残留 */
+/* W-C 批：.dt-body-area 死样式段删除（W6 改用 Monaco 后模板 0 引用，grep 实证）；
+ .dt-tab-ren 保留——双击重命名内联输入模板在用（tabRename440 锁定），非退役残留 */
 /* W6：body Monaco 容器边框——裁决退役（pane 已是容器，编辑器直贴扁平化，
-   与 Kibana 控制台同一语言；分内容由 fs-head border-bottom 分隔承接） */
+ 与 Kibana 控制台同一语言；分内容由 fs-head border-bottom 分隔承接） */
 .dt-body-monaco { overflow: hidden; }
 /* 20260920 重叠根治：lint 提示条（恒高≤88px）与 Monaco(height:100% inline) 在 fs-body
-   内并存时内容溢出 pane（lint 画到 dt-hist 上=文案重叠真凶）——Monaco 弹性化让位：
-   height 覆盖 inline（!important），lint 出现时 Monaco 自动缩短（AnalyzeView monaco-host
-   flex:1 1 0 合规先例；聚焦态 fs 面定高，flex 填充同义  calc 拉伸） */
+ 内并存时内容溢出 pane（lint 画到 dt-hist 上=文案重叠真凶）——Monaco 弹性化让位：
+ height 覆盖 inline（!important），lint 出现时 Monaco 自动缩短（AnalyzeView monaco-host
+ flex:1 1 0 合规先例；聚焦态 fs 面定高，flex 填充同义 calc 拉伸） */
 .dt-body-monaco { height: auto !important; flex: 1 1 auto; min-height: 220px; }
 .dt-lint { flex-shrink: 0; }
 /* lint 形态壳（display/gap/padding/radius/字号/行高 + warn/err 底色）退役 →
-   theme.css .lint-bar/.lint-bar-warn/.lint-bar-err 单源（模板纯类名换装，DOM 保形）。
-   本类只留高度链两钉（theme 单源不含，2.9.115/119 冻结面）：上行 531 定高链恒高兄弟不收缩 +
-   本行 532 P1-2 max-height 钳制 + overflow（lint 条目增多不得撑高压缩 Monaco） */
+ theme.css .lint-bar/.lint-bar-warn/.lint-bar-err 单源（模板纯类名改用，DOM 保形）。
+ 本类只留高度链两钉（theme 单源不含，2.9.115/119 冻结面）：上行 531 定高链恒高兄弟不收缩 +
+ 本行 532 P1-2 max-height 钳制 + overflow（lint 条目增多不得撑高压缩 Monaco） */
 .dt-lint { max-height: 88px; overflow: auto; }
 /* 窄容器（聚焦面/窄屏）不再逐字断行——按钮与状态条 nowrap，容器可换行不叠字 */
-/* ·实报：窄容器按钮换行堆竖排——单轨化（ lrBarSingleTrack 立法同刀）：
-   nowrap+横滚，flex:1 1 0 吃 fs-head 剩余宽与聚焦钮同行、不触容器级换行；row-gap 退役。
-   子项不内断守卫保留（形态，横滚下依然正确）。 */
+/* ·实报：窄容器按钮换行堆竖排——单轨化（ lrBarSingleTrack 约定同刀）：
+ nowrap+横滚，flex:1 1 0 吃 fs-head 剩余宽与聚焦钮同行、不触容器级换行；row-gap 退役。
+ 子项不内断守卫保留（形态，横滚下依然正确）。 */
 .dt-actions { display: flex; gap: var(--sp-1h); align-items: center; flex-wrap: nowrap; overflow-x: auto; min-width: 0; flex: 1 1 0; }
 /* 方案 B：行内分组分隔线 + spacer（溢出菜单靠右）+「⋯」菜单形态
-   （全部既有 token，零新视觉语言；菜单为 popover 内容不参与按钮行高度链） */
+ （全部既有 token，零新视觉语言；菜单为 popover 内容不参与按钮行高度链） */
 .dt-tb-sep { width: 1px; height: 14px; background: var(--line-strong); margin: 0 var(--sp-0); flex: none; }
 .dt-tb-sp { flex: 1; }
 .dt-more-menu { display: flex; flex-direction: column; min-width: 180px; }
@@ -1306,12 +1305,12 @@ function saveFav() {
 .dt-perm-dim { align-self: center; display: inline-flex; color: var(--muted); cursor: help; }
 
 /* 裁决：dt-out 大框退役（border+panel-2 底+radius）——空态时整块空框是
-   「层层容器嵌套」的主源；内容直贴 pane，仅保留布局职责（滚动/弹性占位，高度结构零变动） */
+ 「层层容器嵌套」的主源；内容直贴 pane，仅保留布局职责（滚动/弹性占位，高度结构零变动） */
 .dt-out { min-height: 200px; max-height: none; overflow: auto; flex: 1 1 auto; display: flex; flex-direction: column; }
 /* 聚焦态解除 500px 上限——401 的 calc(100vh-190px) 会被此 max-height 裁回，
-   放大「只高不宽」假象真凶；busy 占位同步拉伸，放大后不再大片空白。
-   W-C 批：常态封顶同批解除（max-height:none）——pane 自带 wl-body 52vh 兜底、dt-out 自身
-   overflow:auto 滚动兜底在，500px 常态小窗与聚焦态高度跳变不再有；聚焦态独立规则保持不动 */
+ 放大「只高不宽」假象真凶；busy 占位同步拉伸，放大后不再大片空白。
+ W-C 批：常态封顶同步解除（max-height:none）——pane 自带 wl-body 52vh 兜底、dt-out 自身
+ overflow:auto 滚动兜底在，500px 常态小窗与聚焦态高度跳变不再有；聚焦态独立规则保持不动 */
 .fs-active .dt-out { max-height: none; min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
 .fs-active .dt-out .dt-out-monaco { flex: 1 1 auto; }
 .fs-active .dt-waiting { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; }
@@ -1321,7 +1320,7 @@ function saveFav() {
 .dt-waiting { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; }
 .dt-out-pre.err { color: var(--danger, var(--err)); }
 /* W6-T3：响应 Monaco 容器边框退役（20260920 扁平化，同 .dt-body-monaco）；err 态保留
-   红框语义信号（原 err 视觉=边框变红，常态无边框后 err 用完整红 border 承接） */
+ 红框语义信号（原 err 视觉=边框变红，常态无边框后 err 用完整红 border 承接） */
 .dt-out-monaco { overflow: hidden; }
 .dt-out-monaco.err { border: 1px solid var(--err); border-radius: var(--r-xs); }
 /* 竖排标题轨退役后的行首横排小标题（fs-head 工具行内，扁平语言） */
@@ -1330,26 +1329,26 @@ function saveFav() {
 .dt-font-seg { flex-shrink: 0; }
 .dt-font-seg button { padding: 0 var(--sp-1h); font-size: var(--fs-xs); line-height: 1.8; }
 /* 搜索定位轮：响应搜索行。
-   工具行「动作|元信息|搜索」轻分组——动作段与元信息段靠 .dt-status-ms
-   margin-left:auto 拉开大间距，搜索段不再用第二个 auto 抢间距，改 border-left 竖线
-   挂在元信息段侧做分区（纯 CSS 分隔，不引新组件；窄屏换行后竖线仍标示搜索段起点） */
+ 工具行「动作|元信息|搜索」轻分组——动作段与元信息段靠 .dt-status-ms
+ margin-left:auto 拉开大间距，搜索段不再用第二个 auto 抢间距，改 border-left 竖线
+ 挂在元信息段侧做分区（纯 CSS 分隔，不引新组件；窄屏换行后竖线仍标示搜索段起点） */
 .dt-resp-search { display: inline-flex; align-items: center; gap: var(--sp-1); border-left: 1px solid var(--border); padding-left: var(--sp-2); }
 /* width:150px → min(150px,100%) 极窄溢出钳制（547 XmigrateView:1291 同款；
-   900 档同值规则保持不变——两档现在同口径，窄容器由 100% 收） */
+ 900 档同值规则保持不变——两档现在同口径，窄容器由 100% 收） */
 .dt-resp-search input { width: min(150px, 100%); padding: var(--sp-0) var(--sp-2); font-size: var(--fs-xs); }
 .dt-resp-mc { font-size: var(--fs-xs); color: var(--muted); min-width: 34px; text-align: center; }
 /* 段执行锚徽标（工具行内横排随 .dt-actions 滚动；chip 形态对齐 dt-hist-chip；
-   on=当前回看段、err=失败段红档；零高度链——徽标行在 fs-head 工具行内不新增 DOM 行） */
+ on=当前回看段、err=失败段红档；零高度链——徽标行在 fs-head 工具行内不新增 DOM 行） */
 .dt-segbar { display: inline-flex; align-items: center; gap: var(--sp-1); border-left: 1px solid var(--border); padding-left: var(--sp-2); }
 .dt-seg-run { font-size: var(--fs-xs); padding: 0 var(--sp-2); border-radius: var(--r-s); border: 1px solid var(--border); background: none; color: var(--muted); cursor: pointer; line-height: 1.6; }
 .dt-seg-run:hover { color: var(--tx0); border-color: var(--accent); }
 .dt-seg-run.on { color: var(--accent); border-color: var(--accent); background: var(--panel); }
 .dt-seg-run.err { color: var(--err); border-color: var(--err); }
 /* .dt-out-monaco.err 二处重复声明合并为上方 :1048 一条（border shorthand 已含
-   border-color，纯去重；err 红框语义零变动） */
+ border-color，纯去重；err 红框语义零变动） */
 
 /* ══ ：响应表格查看档（显示区替换件——Monaco v-if 让位即整体不渲染，高度链零触）。
-   全部贴 theme token（line/panel/tx 族），无新私造壳；档位 seg 形态归全局 .seg（dt-font-seg 同款） ══ */
+ 全部贴 theme token（line/panel/tx 族），无新私造壳；档位 seg 形态归全局 .seg（dt-font-seg 同款） ══ */
 .dt-resp-seg { flex-shrink: 0; }
 .dt-resp-tbl { flex: 1 1 auto; min-height: 0; overflow: auto; }
 .dt-resp-tbl-t { width: 100%; border-collapse: collapse; font-size: var(--fs-xs); }
@@ -1360,35 +1359,35 @@ function saveFav() {
 .dt-resp-tbl-ix { color: var(--muted); }
 
 /* dt-hist 四刀降层（纯视觉层）——①border 壳退役→border-top 分节分隔；
-   ②panel-2 头（.dt-hist-tt 底+border-bottom）退役→sec-t 档行首横排；③chip 行嵌套盒
-   （panel-2 底+border-bottom）退役→行内裸排；④列表内衬退役。
-   ⚠高度结构语义零变动：.dt-hist flex-shrink:0、.qhp-list max(240px,42vh)、dt-body 直挂落位
-   与 .dt-body 定高链一字不动（2.9.115/119 两次事故面，高度字面全部冻结） */
+ ②panel-2 头（.dt-hist-tt 底+border-bottom）退役→sec-t 档行首横排；③chip 行嵌套盒
+ （panel-2 底+border-bottom）退役→行内裸排；④列表内衬退役。
+ ⚠高度结构语义零变动：.dt-hist flex-shrink:0、.qhp-list max(240px,42vh)、dt-body 直挂落位
+ 与 .dt-body 定高链一字不动（2.9.115/119 两次事故面，高度字面全部冻结） */
 .dt-hist { border-top: 1px solid var(--line); margin-top: var(--sp-2); padding-top: var(--sp-1h); flex-shrink: 0; }
 /* .dt-hist-tt 为可点击折叠控件头（role=button/aria-expanded），形态升 sec-t 档（fs-sm/600/tx1）；
-   控件语义豁免标题四档立法同  ih-op-hd 口径 */
+ 控件语义豁免标题四档约定同 ih-op-hd 口径 */
 .dt-hist-tt { padding: var(--sp-0) 0; font-size: var(--fs-sm); font-weight: 600; color: var(--tx1); display: flex; gap: var(--sp-1h); align-items: center; cursor: pointer; }
 .dt-hist-tt:hover { color: var(--tx0); }
-/*  P2-3：汇聚范围 chip 行（头行紧邻兄弟，恒高一行；交互子件不进 role=button 头行）
-   ——：panel-2 底+border-bottom 退役，随分节行内裸排 */
+/* P2-3：汇聚范围 chip 行（头行紧邻兄弟，恒高一行；交互子件不进 role=button 头行）
+ ——：panel-2 底+border-bottom 退役，随分节行内裸排 */
 .dt-hist-scope { display: flex; gap: var(--sp-1h); align-items: center; padding: var(--sp-1h) 0 0; }
 .dt-hist-chip { font-size: var(--fs-xs); padding: 0 var(--sp-2); border-radius: var(--r-s); border: 1px solid var(--border); background: none; color: var(--muted); cursor: pointer; line-height: 1.6; }
 .dt-hist-chip.on { color: var(--accent); border-color: var(--accent); background: var(--panel); }
-/* 折叠区内换装 QueryHistoryPanel。
-   限高统一 max(240px, 42vh) 口径（ clamp(200px,34vh,420px) 退役）——
-   入响应 pane 后与 dt-out（flex 1 1 auto + overflow auto）同列分配，面板不再顶高整页；
-   字面冻结随迁（indexHubDevtools531/devtoolsLint532 锚） */
+/* 折叠区内改用 QueryHistoryPanel。
+ 限高统一 max(240px, 42vh) 口径（ clamp(200px,34vh,420px) 退役）——
+ 入响应 pane 后与 dt-out（flex 1 1 auto + overflow auto）同列分配，面板不再顶高整页；
+ 字面冻结同步更新（/devtoolsLint532 锚） */
 .dt-hist-list { padding: var(--sp-1h) 0 0; }
 .dt-hist-list :deep(.qhp-list) { max-height: max(240px, 42vh); }
 /* 历史列表限高三档消费位（后置同选择器覆盖上行 531 冻结字面——缺省档同值
-   零漂移，冻结行保留在册；--dt-hist-h 由 .dt-hist 容器内联注入，dt.histH useTierCycle）。
-   ⚠恒高块纪律不变：dt-hist flex-shrink:0、dt-body 定高链一字不动（2.9.115/119 冻结面），
-   max 变档只改列表自身滚动上限，不引入任何 height:100% 回路 */
+ 零漂移，冻结行保留在册；--dt-hist-h 由 .dt-hist 容器内联注入，dt.histH useTierCycle）。
+ ⚠恒高块纪律不变：dt-hist flex-shrink:0、dt-body 定高链一字不动（2.9.115/119 冻结面），
+ max 变档只改列表自身滚动上限，不引入任何 height:100% 回路 */
 .dt-hist-list :deep(.qhp-list) { max-height: var(--dt-hist-h, max(240px, 42vh)); }
 
 /* ══ 语义色轮增补：状态码徽标/耗时四档/错误摘要条/busy tab 点（全部走既有 token） ══
-   .dt-code/.dt-took/.dt-size 三段随 .dt-status 手写串退役——HTTP 分档走 MetaStrip tone，
-   took 四档走 tookTone 映射，size 走 splitSize 数值+单位弱化，色值全走 MetaStrip 全局 token */
+ .dt-code/.dt-took/.dt-size 三段随 .dt-status 手写串退役——HTTP 分档走 MetaStrip tone，
+ took 四档走 tookTone 映射，size 走 splitSize 数值+单位弱化，色值全走 MetaStrip 全局 token */
 /* 错误结构化摘要条：全站 .err-bar 容器（err-soft 底 + err-line 边）+ 本页行内密度 */
 .dt-err { margin: 0 0 var(--sp-2); font-size: var(--fs-xs); }
 .dt-err-hd { flex: none; font-variant-numeric: tabular-nums; }
@@ -1396,12 +1395,12 @@ function saveFav() {
 /* tab 执行中脉冲点（dot-pulse 全站活体语言，currentColor 随 --ac） */
 .dt-tab-busy { color: var(--ac); flex: none; }
 
-/* 900 紧凑微调档（§9.3 口径）——全站最后一个零 @media 主工作页补档（
-   豁免三文件至此只剩 Forbidden/NotFound 两个静态页）。只加换行容许与 min() 钳制：
-   pane 堆叠仍归 WorkbenchLayout <1100 JS 档；⚠高度链基础值一字不动（dt-hist 落位字面/
-   dt-lint max 88px 等 2.9.115/119 冻结面，本档禁入），focusSurface401 锁定的基线行不在此覆写 */
+/* 900 紧凑微调档（ 口径）——全站最后一个零 @media 主工作页补档（
+ 豁免三文件至此只剩 Forbidden/NotFound 两个静态页）。只加换行容许与 min() 钳制：
+ pane 堆叠仍归 WorkbenchLayout <1100 JS 档；⚠高度链基础值一字不动（dt-hist 落位字面/
+ dt-lint max 88px 等 2.9.115/119 冻结面，本档禁入），focusSurface401 锁定的基线行不在此覆写 */
 @media (max-width: 900px) {
-  /* .dt-actions wrap 覆写随单轨立法退役（窄视口横滚优于堆竖排，不挤编辑器高度） */
+  /* .dt-actions wrap 覆写随单轨约定退役（窄视口横滚优于堆竖排，不挤编辑器高度） */
   .dt-actions > * { flex-shrink: 0; }
   .dt-resp-search input { width: min(150px, 100%); }
 }

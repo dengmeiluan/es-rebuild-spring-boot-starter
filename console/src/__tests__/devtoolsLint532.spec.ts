@@ -262,7 +262,7 @@ describe('532 P2-3 跨 Tab 历史汇聚（视图级）', () => {
     expect(typeof mirror[0].took).toBe('number');
 
     /* 新 Tab：本 Tab 历史为空，切「全部」chip 后汇聚条目可见。
-       五百六十五批随迁（击穿者：565 件④③——历史工具行行尾并列表限高三档钮）：chip 计数
+       五百六十五批同步更新（击穿者：565 件④③——历史工具行行尾并列表限高三档钮）：chip 计数
        2→3（本Tab/全部/限高），「全部」仍居下标 1，点击选择语义零变 */
     (host.querySelector('.dt-tab-add') as HTMLElement).click();
     await settle(4);

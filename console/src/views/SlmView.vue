@@ -4,23 +4,23 @@
       <PageHeader :icon="ShieldCheck" title="SLM 快照生命周期">
       <template #subtitle>
         <span>分布式定时备份策略 · 策略列表 · 立即执行 · 全局统计</span>
-        <!-- G4 全局统计 tile 墙退役：6 块 slm-stat 压成一条 inline 状态串（数据全保留在此与 :title） -->
-        <!-- G4 全局统计 tile 墙退役后 inline 状态串再收 MetaStrip 统一件（值亮+标签暗+·分隔同构）：
-             RUNNING→ok/其余→warn、成功快照恒 ok、失败>0 err 走组件 tone 档；清理耗时 ms 原值拆段 tip；
-             类名保留 slm-meta——protectThreeState 以此类看守 stats 区在/不在，本页样式只留落位 -->
+        <!-- 全局统计 tile 墙退役：6 块 slm-stat 压成一条 inline 状态串（数据全保留在此与 :title） -->
+        <!-- 全局统计 tile 墙退役后 inline 状态串再收 MetaStrip 统一件（值亮+标签暗+·分隔同构）：
+ RUNNING→ok/其余→warn、成功快照恒 ok、失败>0 err 走组件 tone 档；清理耗时 ms 原值拆段 tip；
+ 类名保留 slm-meta——protectThreeState 以此类看守 stats 区在/不在，本页样式只留落位 -->
         <MetaStrip v-if="available && status" class="slm-meta" :items="slmMeta" :title="'运行状态 ' + statusMode + ' · 总策略数 ' + fmtNum(policyCount) + ' · 成功快照 ' + fmtNum(statTotalTaken) + ' · 失败快照 ' + fmtNum(statTotalFailed) + ' · 保留执行 ' + statRetentionRuns + ' 次 · 保留清理耗时 ' + fmtMs(statRetentionDeletion) + '（' + statRetentionDeletion + ' ms）'" />
       </template>
       <template #actions>
         <div class="slm-hd-r">
           <!-- SLM 执行盯进度——纯手动刷新裸奔收口，接自动刷新
-               （checkbox + AutoRefreshSelect 统一件，SnapshotsView 工具行同款布局） -->
+ （checkbox + AutoRefreshSelect 统一件，SnapshotsView 工具行同款布局） -->
           <label class="slm-auto-lbl">
             <input type="checkbox" v-model="slmAutoRefresh" />
             <span>自动刷新</span>
           </label>
           <AutoRefreshSelect v-if="slmAutoRefresh" v-model:ms="slmIntervalMs" :sizes="[10000, 30000, 60000]" label="自动刷新频率" />
-          <!-- 原始请求/响应快查弹窗（RawIo 第六波，558b 判例同形态；
-               路径子串 '/cluster/slm/'=本页 policies/execute/status 全通道） -->
+          <!-- 原始请求/响应快查弹窗（RawIo 第六波，558b 先例同形态；
+ 路径子串 '/cluster/slm/'=本页 policies/execute/status 全通道） -->
           <button class="btn ghost sm" data-test="raw-io" aria-label="查看原始 IO（SLM）" title="最近一次 SLM 策略/执行/状态请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIo">
             <Terminal :size="12" /> 原始 IO
           </button>
@@ -48,16 +48,16 @@
       <button class="btn sm" @click="loadAll" :disabled="loading">重试</button>
     </div>
 
-    <!-- G4-B2：状态/统计源失败降级提示条——独立于策略列表（G2 多源各立状态位教训），不隐藏已加载策略卡。
-         slm-stats-err 手写 warn 壳收编 EmptyState compact 统一件——语义是
-         「统计不可用」降级提示（IlmView explain 拉取失败判例：文案逐字保留走 :text，重试走
-         action 位，busy 禁用位随组件契约退役）；.slm-stats-err 私造 warn 皮退役（protectThreeState
-         降级提示锚随迁 .empty-state） -->
+    <!-- G4-B2：状态/统计源失败降级提示条——独立于策略列表（ 多源各立状态位教训），不隐藏已加载策略卡。
+ slm-stats-err 手写 warn 壳合并 EmptyState compact 统一件——语义是
+ 「统计不可用」降级提示（IlmView explain 拉取失败先例：文案逐字保留走 :text，重试走
+ action 位，busy 禁用位随组件契约退役）；.slm-stats-err 私造 warn 皮退役（protectThreeState
+ 降级提示锚同步更新 .empty-state） -->
     <EmptyState v-else-if="available && statsErr" compact :icon="AlertTriangle"
       :text="'SLM 状态/统计拉取失败：' + statsErr" action-text="重试" @action="loadAll" />
 
     <div v-if="available" class="slm-list">
-      <!-- G4-B1：首载骨架（loading 初值 true）——加载期间不闪「当前无 SLM 策略」（G1 B3/G2 B6/G3 B1 同构） -->
+      <!-- G4-B1：首载骨架（loading 初值 true）——加载期间不闪「当前无 SLM 策略」（ B3/ B6/ B1 同构） -->
       <div v-if="loading && !policyRows.length" class="slm-sk">
         <SkeletonBox v-for="i in 3" :key="i" height="72px" round />
       </div>
@@ -72,13 +72,13 @@
         <div class="slm-card-l">
           <div class="slm-card-tt"><Calendar :size="12" /> {{ p.name || p.id }}</div>
           <div class="slm-card-sub">仓库 <b>{{ p.repository }}</b> · Cron <code>{{ p.schedule }}</code></div>
-          <!-- slm-card-meta/slm-card-run 两行手写 meta 收编 MetaStrip mini 档
-               （550 sv-repo-meta 判例：值亮+标签暗+·分隔）；indices/保留/上次/下次 四段入 items，
-               上次执行结果点 dot 语义随段迁移（ok/err 色值直传组件 dot 位） -->
+          <!-- slm-card-meta/slm-card-run 两行手写 meta 合并 MetaStrip mini 档
+ （550 sv-repo-meta 先例：值亮+标签暗+·分隔）；indices/保留/上次/下次 四段入 items，
+ 上次执行结果点 dot 语义随段迁移（ok/err 色值直传组件 dot 位） -->
           <MetaStrip class="slm-card-meta" :items="slmCardMeta(p)" />
         </div>
         <div class="slm-card-r">
-          <!--  G132：执行钮 Play 补 spinning（execing 此前只 disabled+文案切换半合规；735 G122 同款） -->
+          <!-- G132：执行钮 Play 补 spinning（execing 此前只 disabled+文案切换半合规；735 G122 同款） -->
           <button v-if="canOps" class="btn pri sm" @click="execNow(p.id)" :disabled="execing === p.id">
             <Play :size="12" :class="{ spinning: execing === p.id }" /> {{ execing === p.id ? '触发中…' : '立即执行' }}
           </button>
@@ -86,7 +86,7 @@
         </div>
       </div>
       <!-- 策略卡右键菜单（复制 id/复制配置/立即执行）。
-           史志修正：原注释多写的第四项从未落地，注释与实现（恒三项）对齐 -->
+ 史志修正：原注释多写的第四项从未落地，注释与实现（恒三项）对齐 -->
       <CellContextMenu v-if="rowMenu" :x="rowMenu.x" :y="rowMenu.y"
         :title="'SLM 策略 ' + (rowMenu.p.name || rowMenu.p.id)" :items="rowMenuItems" @close="rowMenu = null" />
     </div>
@@ -122,7 +122,7 @@ const store = useAppStore();
 /* 权限写门——SLM 立即执行（触发快照）=ops 档写，VIEWER 不可见（卡钮+右键菜单项同门） */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/slm/execute', store.target));
-const loading = ref(true); /* G4：初值 true——首帧即骨架，不闪空态 */
+const loading = ref(true); /* ：初值 true——首帧即骨架，不闪空态 */
 
 /* 原始 IO 三件套（RemoteClusters 557 同款）；判空不开空弹窗 */
 const rawIoShow = ref(false);
@@ -160,10 +160,10 @@ const statRetentionRuns = computed(() => Number(stats.value?.retention_runs || 0
 const statRetentionDeletion = computed(() => Number(stats.value?.retention_deletion_time_millis || 0));
 
 /* 页头状态串 MetaStrip items——原手写串色档映射：RUNNING→ok/其余（含 STOPPED/UNKNOWN）→warn、
-   成功快照恒 ok、失败>0 err；清理耗时是毫秒时长（fmtMs 展示），ms 原值留段 tip */
+ 成功快照恒 ok、失败>0 err；清理耗时是毫秒时长（fmtMs 展示），ms 原值留段 tip */
 const slmMeta = computed<MetaStripItem[]>(() => [
   /* operation_mode 中文主显（slmOpModeZh），英文原值留 tip 保检索；
-     tone 走收口件既有口径（RUNNING→ok/其余 warn），与原手写三元等价 */
+ tone 走收口件既有口径（RUNNING→ok/其余 warn），与原手写三元等价 */
   { value: slmOpModeZh(statusMode.value), label: '运行状态', tone: slmOpModeTone(statusMode.value), tip: statusMode.value },
   { value: fmtNum(policyCount.value), label: '总策略数' },
   { value: fmtNum(statTotalTaken.value), label: '成功快照', tone: 'ok' },
@@ -173,8 +173,8 @@ const slmMeta = computed<MetaStripItem[]>(() => [
 ]);
 
 /* ═══ ：SLM 执行盯进度—— Snapshots/Ilm 同构接 useAutoRefresh ═══
-   「立即执行」触发的是异步快照，纯手动刷新盯不住进度。开关+频率 usePref 记忆；
-   guard 用现有 loading 态防重入（useAutoRefresh tick 时再验）；开关切换立即拉一轮。 */
+ 「立即执行」触发的是异步快照，纯手动刷新盯不住进度。开关+频率 usePref 记忆；
+ guard 用现有 loading 态防重入（useAutoRefresh tick 时再验）；开关切换立即拉一轮。 */
 const slmAutoRefresh = usePref('slm.autoRefresh', false);
 const slmIntervalMs = usePref('slm.intervalMs', 30000);
 const slmRefresher = useAutoRefresh(loadAll, {
@@ -184,15 +184,15 @@ const slmRefresher = useAutoRefresh(loadAll, {
 watch(slmAutoRefresh, (v) => { if (v) loadAll(); slmRefresher.restart(); });
 watch(slmIntervalMs, () => slmRefresher.restart());
 /* setOn(true)=内部意图恒开，实际运行由 ms getter（usePref 开关×间隔）与 guard 决定
-   ——TasksView :455-472 正典范式；内部 on=false 时 restart() 是 no-op，缺这行自动刷新不排表 */
+ ——TasksView :455-472 正典范式；内部 on=false 时 restart() 是 no-op，缺这行自动刷新不排表 */
 slmRefresher.setOn(true);
 
-/* slm-card-meta/slm-card-run 两行手写 meta 收编 MetaStrip mini（550 判例）——
-   本类只留落位外距（rc-card-meta 同款范式），flex/字号/mono/分隔归 .ms 单源；
-   原 .slm-card-run/.dot 结果点规则退役（dot 语义随段迁移，色值直传组件 dot 位） */
+/* slm-card-meta/slm-card-run 两行手写 meta 合并 MetaStrip mini（——
+ 本类只留落位外距（rc-card-meta 同款范式），flex/字号/mono/分隔归 .ms 单源；
+ 原 .slm-card-run/.dot 结果点规则退役（dot 语义随段迁移，色值直传组件 dot 位） */
 function slmCardMeta(p: any): MetaStripItem[] {
   return [
-    /*  G133：indices 段补中文 tip（英文裸 label 留检索；717 G60 双语同款，:title 悬停+help 档） */
+    /* G133：indices 段补中文 tip（英文裸 label 留检索；717 双语同款，:title 悬停+help 档） */
     { value: (p.config?.indices || []).join(', ') || '(all)', label: 'indices', tip: '快照覆盖的索引列表' },
     ...(p.retention ? [{ value: String(p.retention.expire_after || p.retention.min_count || '-'), label: '保留' }] : []),
     {
@@ -206,8 +206,8 @@ function slmCardMeta(p: any): MetaStripItem[] {
 
 async function loadAll() {
   loading.value = true;
-  /* G4-B2：双源各立错误位（G2 DiagView 教训）——策略 HTTP 失败只出 err-bar（不翻 available、旧卡保留），
-     状态/统计失败只出降级提示条（不隐藏策略列表）；成功路径清各自 err 位，loading 必 finally 复位 */
+  /* G4-B2：双源各立错误位（ DiagView 教训）——策略 HTTP 失败只出 err-bar（不翻 available、旧卡保留），
+ 状态/统计失败只出降级提示条（不隐藏策略列表）；成功路径清各自 err 位，loading 必 finally 复位 */
   try {
     try {
       const pol = await api.slmPolicies();
@@ -256,11 +256,11 @@ async function execNow(id: string) {
     const r = await api.slmExecute(id);
     store.notify('success', `已触发：${r.snapshot_name || id}`);
     /* 提交后立即 loadAll() 一次（策略卡最近执行态不等 1200ms 才可见）；
-       1200ms 兜底重刷保留（SLM 侧 last_success 等元数据晚到补偿） */
+ 1200ms 兜底重刷保留（SLM 侧 last_success 等元数据晚到补偿） */
     loadAll();
     setTimeout(loadAll, 1200);
   } catch (e: any) {
-    /* 裸错误串 → friendlyEsError（loadErr/statsErr 臂已修是判例） */
+    /* 裸错误串 → friendlyEsError（loadErr/statsErr 臂已修是先例） */
     store.notify('error', '触发失败：' + friendlyEsError(String(e?.message ?? e)));
   } finally {
     execing.value = '';
@@ -269,7 +269,7 @@ async function execNow(id: string) {
 
 function copyBody(p: any) {
   const body = JSON.stringify(p, null, 2);
-  copyText(body).then(ok => store.notify(ok ? 'success' : 'error', ok ? '策略 JSON 已复制到剪贴板' : '复制失败')); /*  */
+  copyText(body).then(ok => store.notify(ok ? 'success' : 'error', ok ? '策略 JSON 已复制到剪贴板' : '复制失败')); /* */
 }
 
 /* ═══ ：策略卡右键菜单 ═══ */
@@ -288,8 +288,8 @@ const rowMenuItems = computed(() => {
   ];
 });
 
-/* 数值单源退役——fmtMs 本地三元随清理耗时档收编 semFormat duration 单源
-   （展示微差可接受：'1m 30s' → '90.0s'）；ms 原值仍留 slmMeta 段 tip（metaStripAdoption 锚） */
+/* 数值单源退役——fmtMs 本地三元随清理耗时档合并 semFormat duration 单源
+ （展示微差可接受：'1m 30s' → '90.0s'）；ms 原值仍留 slmMeta 段 tip（metaStripAdoption 锚） */
 function fmtMs(ms: number): string {
   return semFormat(ms, 'duration')?.text ?? (ms + ' ms');
 }
@@ -307,25 +307,25 @@ onMounted(loadAll);
 <style scoped>
 .slm-page { padding: var(--sp-4) var(--sp-4) var(--sp-5); }
 .slm-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4); padding-bottom: var(--sp-3); border-bottom: 1px solid var(--border-subtle); }
-/* 页头旧壳左组/图标/标题/副题四条死规则删（PageHeader 收编后同族漏删，
-   模板零引用；页头行基壳与右组钮容器、自动刷新 label 活规则保留——模板消费在场，735 同族） */
+/* 页头旧壳左组/图标/标题/副题四条死规则删（PageHeader 合并后同族漏删，
+ 模板零引用；页头行基壳与右组钮容器、自动刷新 label 活规则保留——模板消费在场，735 同族） */
 .slm-alert { display: flex; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: var(--r-m); margin-bottom: var(--sp-3); color: var(--warn); }
 .slm-alert .btn { margin-left: auto; }
 .slm-alert-tt { font-weight: 650; font-size: var(--fs-md); }
 .slm-alert-sub { font-size: var(--fs-xs); color: var(--text-muted); margin-top: var(--sp-0); }
-/* .slm-stats-err 三条私造 warn 皮规则随 EmptyState compact 收编退役
-   （留白/图标/文案排布归组件；protectThreeState 降级提示锚随迁 .empty-state） */
+/* .slm-stats-err 三条私造 warn 皮规则随 EmptyState compact 合并退役
+ （留白/图标/文案排布归组件；protectThreeState 降级提示锚同步更新 .empty-state） */
 .slm-sk { display: flex; flex-direction: column; gap: var(--sp-3); }
-/* G4 全局统计 tile 墙退役：页头 inline 状态串换装 MetaStrip 统一件——
-   基础形态（flex/b/i/sep/mono/tone 色档）全由组件承担，类名保留（protectThreeState 看守），本页只留落位 */
+/* 全局统计 tile 墙退役：页头 inline 状态串改用 MetaStrip 统一件——
+ 基础形态（flex/b/i/sep/mono/tone 色档）全由组件承担，类名保留（protectThreeState 看守），本页只留落位 */
 .slm-meta { margin-top: 3px; }
 /* 页头工具行多控件排布 + 自动刷新开关 label（.sv-auto-lbl 同款） */
 .slm-hd-r { display: flex; align-items: center; gap: var(--sp-2); }
 .slm-auto-lbl { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-sm); color: var(--tx1); cursor: pointer; }
 .slm-list { display: flex; flex-direction: column; gap: var(--sp-3); }
-/* slm-card 策略行卡壳退役（立法④：panel 底+border-subtle 全框+radius:10px 整块
-   消除 → border-top 分节流，xm-res 547 判例语言）；类名保留（protectThreeState 在场锁消费面），
-   悬停反馈由顶部 hairline 变色承接 */
+/* slm-card 策略行卡壳退役（约定④：panel 底+border-subtle 全框+radius:10px 整块
+ 消除 → border-top 分节流，xm-res 语言）；类名保留（protectThreeState 在场锁消费面），
+ 悬停反馈由顶部 hairline 变色承接 */
 .slm-card { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-3); padding: var(--sp-3) 0; border-top: 1px solid var(--border-subtle); }
 .slm-card:hover { border-color: var(--brand); }
 .slm-card-l { flex: 1; min-width: 0; }
@@ -335,7 +335,7 @@ onMounted(loadAll);
 .slm-card-r { display: flex; gap: var(--sp-2); }
 
 /* 1100 堆叠档（零结构动）——策略卡左信息/右操作与页头双栏在中窄视口挤压，
-   塌纵向堆叠，与 RemoteClusters/Tasks 1100 档同口径 */
+ 塌纵向堆叠，与 RemoteClusters/Tasks 1100 档同口径 */
 @media (max-width: 1100px) {
   .slm-hd { flex-direction: column; align-items: flex-start; gap: var(--sp-2); }
   .slm-card { flex-direction: column; }
@@ -343,7 +343,7 @@ onMounted(loadAll);
 }
 
 /* 900 紧凑微调档（口径，纯样式追加零结构动）——页侧距收一档、
-   页头工具行（自动刷新开关×频率选择）允许换行兜挤压；分栏堆叠归 1100 档不重复 */
+ 页头工具行（自动刷新开关×频率选择）允许换行兜挤压；分栏堆叠归 1100 档不重复 */
 @media (max-width: 900px) {
   .slm-page { padding: var(--sp-3) var(--sp-3) var(--sp-4); }
   .slm-hd-r { flex-wrap: wrap; }

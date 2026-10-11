@@ -3,9 +3,9 @@ import { ref } from 'vue';
 import { writeStoredRaw } from '../utils/safeJson';
 
 /* 跨模式查询历史——六个查询通道共用一份带 mode 维度的历史。
-   此前只有 DSL 有历史（es_query_hist，条目无 mode 字段），其余通道零历史、零跨模式。
-   统一收敛到本 store：localStorage es_query_hist_v2，条目带 mode/query/index/ts，
-   查询工作台（QueryHubView）顶部抽屉回放。语法桥是转换工具非查询，不写入。 */
+ 此前只有 DSL 有历史（es_query_hist，条目无 mode 字段），其余通道零历史、零跨模式。
+ 统一收敛到本 store：localStorage es_query_hist_v2，条目带 mode/query/index/ts，
+ 查询工作台（QueryHubView）顶部抽屉回放。语法桥是转换工具非查询，不写入。 */
 
 interface QueryHistItem {
   id: string;
@@ -13,7 +13,7 @@ interface QueryHistItem {
   query: string;
   index?: string;
   ts: number;
-  took?: number; // 查询耗时（毫秒）-  慢查询回溯与调优对比
+  took?: number; // 查询耗时（毫秒）- 慢查询回溯与调优对比
   /** 上次执行失败标记（false=上次失败）——历史条目红点提示+重试入口语义 */
   ok?: boolean;
 }
@@ -126,7 +126,7 @@ export const useQueryHistoryStore = defineStore('queryHistory', () => {
   }
 
   /* 导入合并（导出闭环的消费方）——按 mode+query+index 去重（已有条目保留；
-     新条目 genId+保留原 ts），合并后按 ts 新→旧排序并裁到上限。返回 { added, skipped } */
+ 新条目 genId+保留原 ts），合并后按 ts 新→旧排序并裁到上限。返回 { added, skipped } */
   function mergeFrom(list: any[]): { added: number; skipped: number } {
     let added = 0, skipped = 0;
     for (const raw of (Array.isArray(list) ? list : [])) {
@@ -143,7 +143,7 @@ export const useQueryHistoryStore = defineStore('queryHistory', () => {
     return { added, skipped };
   }
 
-  /*  按 id 单条删除——此前只有全清，错条/敏感条只能连坐清除 */
+  /* 按 id 单条删除——此前只有全清，错条/敏感条只能连坐清除 */
   function removeOne(id?: string | number) {
     if (id == null) return;
     const i = items.value.findIndex(it => it.id === id);

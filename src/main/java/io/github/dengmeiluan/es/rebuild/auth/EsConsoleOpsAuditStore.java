@@ -35,13 +35,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 控制台操作审计——控制集群 ES 档（， 抽 SPI 后的默认实现）：异步单线程落 ES 索引，
+ * 控制台操作审计——控制集群 ES 档（抽 SPI 后的默认实现）：异步单线程落 ES 索引，
  * 队列满即丢弃（审计不反噬业务可用性）。
  *
  * <p>与重建域的 {@code RebuildAuditStore}（记录索引重建生命周期）互补：本店记录的是
  * <b>控制台人机操作</b>——登录、写操作、高危操作，供安全回溯。</p>
  *
- * <p><b>20260922 环形立法（统一只用 QA ES 单载体）</b>：rollover 开启时写路径按日滚动——
+ * <p><b>20260922 环形约定（统一只用 QA ES 单载体）</b>：rollover 开启时写路径按日滚动——
  * 目标索引为 {@code <前缀>-yyyy.MM.dd}（宿主本地时区日界），首笔落档前惰性幂等建当日索引
  * （显式 keyword/long mapping 契约 + {@code replicas:0} + {@code refresh_interval:30s}，
  * 6.x 目标 typed 形态重试；建失败仅节流告警、文档照写由动态映射兜底——审计不反噬）；
@@ -91,7 +91,7 @@ public class EsConsoleOpsAuditStore implements ConsoleOpsAuditStore {
         this(client, auditIndex, false);
     }
 
-    /** @param rollover true=按日环形（快筛+双闸保留立法形态）；false=旧固定单索引行为。 */
+    /** @param rollover true=按日环形（快筛+双闸保留约定形态）；false=旧固定单索引行为。 */
     public EsConsoleOpsAuditStore(java.util.function.Supplier<RestHighLevelClient> client, String auditIndex,
                                   boolean rollover) {
         this.client = client;

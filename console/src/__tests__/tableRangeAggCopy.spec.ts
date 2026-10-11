@@ -7,7 +7,7 @@
  *    （useColStats.statsOf 口径）+ es_tbl_agg:<dim> 落盘与重挂载恢复；无记忆维度仅内存态；
  * 3) 列头菜单「复制整列值」=过滤后行集单列 TSV（含表头行）；
  * 4) QRT fit 菜单项 prefsOn 门控（无记忆维度不再出空操作项）；
- * 5) 静态锁：RT fit-all 收编共享 fitAll()、两表微调钳位引用 useColFit 共享常量。
+ * 5) 静态锁：RT fit-all 合并共享 fitAll()、两表微调钳位引用 useColFit 共享常量。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createApp, h, nextTick } from 'vue';
@@ -232,7 +232,7 @@ describe('fit 修复静态锁（五百二十批）', () => {
   const qrt = readFileSync(join(__dirname, '../components/QueryResultTable.vue'), 'utf-8');
   const fit = readFileSync(join(__dirname, '../composables/useColFit.ts'), 'utf-8');
 
-  it('RT 格右键 fit-all 收编共享 fitAll()（不再手写循环）；两表微调钳位引用共享常量', () => {
+  it('RT 格右键 fit-all 合并共享 fitAll()（不再手写循环）；两表微调钳位引用共享常量', () => {
     expect(rt.match(/run: \(\) => fitAll\(\)/g)?.length).toBeGreaterThanOrEqual(2);
     expect(rt).toContain('Math.min(COL_W_MAX, Math.max(COL_W_MIN, cur + delta))');
     expect(qrt).toContain('Math.min(COL_W_MAX, Math.max(COL_W_MIN, cur + delta))');

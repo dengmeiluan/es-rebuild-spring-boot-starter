@@ -1,7 +1,7 @@
 /**
  *  W3（轨3 数据表格内核）：remoteSort 消费侧真接线（§6y 遗留收口）。
  *
- * 契约（本批验收锚）：
+ * 契约（验收锚）：
  * ① IndexHubView 文档浏览器（docs tab）接 RT remoteSort 档：remote-sort + @sort-change；
  *    排序变化携 ES sort body 重查当前页（真服务端排序下推，dbx「排序下推」对标）——
  *    RT remote 档只 emit 意图（{f,d:'asc'|'desc'}|null，null=取消），取数归宿主。
@@ -12,7 +12,7 @@
  *    被 DslQueryView 等黑名单消费方读，源码锁锚其字面调用形态——不改 utils/workbench.ts）；
  *    body 形态 [{ f: { order: 'asc'|'desc', unmapped_type: 'long' } }]（unmapped_type 防动态列/
  *    跨分片映射缺失 400，ES 官方同款）。
- * ④ RT remoteSort 档 emit 契约轻量再锚（535 立法随行核）：点表头 emit {f,d}、行序/落盘零触碰。
+ * ④ RT remoteSort 档 emit 契约轻量再锚（535 约定随行核）：点表头 emit {f,d}、行序/落盘零触碰。
  * ⑤ QRT 查询 tab（qryTbl）不接线——DSL 是用户手写，服务端排序下推会与用户 sort 子句冲突。
  *
  * 范围铁律：RT/QRT 内核零改动；DslQueryView（黑名单）缺省路径逐字节不变。
@@ -194,7 +194,7 @@ describe('：IndexHubView 文档浏览器 remoteSort 消费接线（源码锁）
     expect(ih).toMatch(/JSON\.parse\(buildDocsDsl\(docsQ\.value, docsSize\.value, \(docsPage\.value - 1\) \* docsSize\.value\)\)/);
     expect(ih).toMatch(/o\.sort = \[\{ \[docsSort\.value\.f\]: \{ order: docsSort\.value\.d, unmapped_type: 'long' \} \}\];/);
     /* runDocs 消费注入件（api.clusterQuery 第二参 DSL 来自带 sort 版本）。
-       随迁：runDocs 接直方图注入链（useHistAgg 统一件）后改为 bodyObj
+       同步更新：runDocs 接直方图注入链（useHistAgg 统一件）后改为 bodyObj
        可变引用形态——buildDocsDslWithSort() 产物 parse 进 bodyObj（sort 注入不变），
        applyHistToBody 只加 __hist 聚合不动 sort，降级重试两处均 stringify(bodyObj)。
        锁意图原样：带 sort 的产物进重查 body、重查当前页不归 1。 */
@@ -287,7 +287,7 @@ describe('：docs tab 排序下推行为网（真服务端排序重查当前页�
   });
 });
 
-/* ═══════════ 三、RT remoteSort 档 emit 契约锚（535 立法随行核） ═══════════ */
+/* ═══════════ 三、RT remoteSort 档 emit 契约锚（535 约定随行核） ═══════════ */
 describe('：RT remoteSort 档 emit 契约（轻量再锚）', () => {
   it('remoteSort=true 点表头只 emit {f,d}（asc 起步）；本地行序/落盘零触碰', async () => {
     const got: Array<{ f: string; d: 'asc' | 'desc' } | null> = [];

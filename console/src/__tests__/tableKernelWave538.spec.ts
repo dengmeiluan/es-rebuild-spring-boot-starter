@@ -8,13 +8,13 @@
  *    小字 span；wave535/diagTableAgg/healthTablesGraft contains 前缀锁兼容）；RT tfoot 的
  *    chk/act 占位 cell 保位不动；
  * 2) remoteSort 内核侧审计（535 消费侧前置缺口修复）——sortBy/onSort remote 分支纯 emit
- *    535 已锁正确；本轮审计逮住「挂载初读/维度切换重读仍从 LS 恢复本地排序」的残留缺口
+ *    535 已锁正确；审计逮住「挂载初读/维度切换重读仍从 LS 恢复本地排序」的残留缺口
  *    （remoteSort=true + LS 旧排序 → 挂载瞬间本地仍排+箭头在场，违「远端档视觉归宿主」契约）
  *    ——双内核 sortSpec 初始化与维度重读改为 remote 档恒空（客户端档逐字节不变）；
  * 3) --sp 精确等值收口（双内核+双弹层）——padding/margin/gap 系中恰好等于 --sp 档位值
  *    （2/4/6/8/10/12/16/24/32，theme.css:102-103）的 px 字面量归档 var(--sp-N)；
  *    1px 边框/3px/5px/7px/14px 刻意值豁免保字面；width/height/top/left 等 layout 系不收。
- *    反锁：档位值裸 px 计数恒 0（防回潮）+ 豁免字面仍保（防过度收编）。
+ *    反锁：档位值裸 px 计数恒 0（防回潮）+ 豁免字面仍保（防过度合并）。
  * 挂载样板照抄 tableKernelWave534/535（裸 createApp + pinia）。
  */
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -28,16 +28,16 @@ import { useColStats } from '../composables/useColStats';
 
 const qrt = readFileSync(join(__dirname, '../components/QueryResultTable.vue'), 'utf-8');
 const rt = readFileSync(join(__dirname, '../components/ResultTable.vue'), 'utf-8');
-/* 六百零三批随迁：538 T2 remote 恒空守卫锁随机器走 tableSort.useSortChain 新家 */
+/* 六百零三批同步更新：538 T2 remote 恒空守卫锁随机器走 tableSort.useSortChain 新家 */
 const tableSortSrc = readFileSync(join(__dirname, '../composables/tableSort.ts'), 'utf-8');
-/* 554 批工蚁1 随迁：.rt-bar-r 规则自 RT 内核迁 TableShell 壳级（scopeId 不传播死规则迁出），
-   形态代表锚随迁新家（锁意图不变=右簇 gap 的 --sp 收编纪律） */
+/* 554 批工蚁1 同步更新：.rt-bar-r 规则自 RT 内核迁 TableShell 壳级（scopeId 不传播死规则迁出），
+   形态代表锚同步更新新家（锁意图不变=右簇 gap 的 --sp 合并纪律） */
 const shell = readFileSync(join(__dirname, '../components/TableShell.vue'), 'utf-8');
 const cdm = readFileSync(join(__dirname, '../components/ColDetailModal.vue'), 'utf-8');
 const cfp = readFileSync(join(__dirname, '../components/ColFilterPopover.vue'), 'utf-8');
 const ucs = readFileSync(join(__dirname, '../composables/useColStats.ts'), 'utf-8');
 const uar = readFileSync(join(__dirname, '../composables/useAggRow.ts'), 'utf-8');
-/* 五百六十一批随迁：tfoot 聚合行收编 TableAggFoot 片段组件（cnt span/agg 样式字面新家） */
+/* 五百六十一批同步更新：tfoot 聚合行合并 TableAggFoot 片段组件（cnt span/agg 样式字面新家） */
 const aggFootSrc = readFileSync(join(__dirname, '../components/TableAggFoot.vue'), 'utf-8');
 
 const apps: ReturnType<typeof createApp>[] = [];
@@ -88,8 +88,8 @@ describe('五百三十八批 T1：聚合 footer 行补 count 档（Σ/avg 前缀
     for (const src of [qrt, rt]) {
       expect(src).toContain('return s.numeric ? { ...s.numeric, count: s.count } : null;');
     }
-    /* 五百六十一批锚随迁：tfoot 聚合行收编 TableAggFoot 片段组件（prefix 参数化类名）——
-       cnt span 字面随迁组件源（模板形态逐字保形），双内核装配 return 行字面零触 */
+    /* 五百六十一批锚同步更新：tfoot 聚合行合并 TableAggFoot 片段组件（prefix 参数化类名）——
+       cnt span 字面同步更新组件源（模板形态逐字保形），双内核装配 return 行字面零触 */
     expect(aggFootSrc).toMatch(/<span :class="prefix \+ '-agg-cnt'"> · count \{\{ fmtNum\(foot\[c\]\.count\) \}\}<\/span>/);
   });
 
@@ -125,7 +125,7 @@ describe('五百三十八批 T1：聚合 footer 行补 count 档（Σ/avg 前缀
 
 /* ═══════════ 二、remoteSort 内核侧审计（挂载/维度重读残留缺口修复） ═══════════ */
 describe('五百三十八批 T2：remoteSort 审计——remote 档挂载不读排序落盘（sortSpec 恒空）', () => {
-  it('源码锁：remote 档挂载/维度重读恒空守卫（六百零三批随迁=守卫收编 tableSort.useSortChain 机内 init+reload 同口径，双内核只剩 chain 接线；客户端档逐字节不变）', () => {
+  it('源码锁：remote 档挂载/维度重读恒空守卫（六百零三批同步更新=守卫合并 tableSort.useSortChain 机内 init+reload 同口径，双内核只剩 chain 接线；客户端档逐字节不变）', () => {
     expect(tableSortSrc, '机内初始化 remote 恒空（538 审计口径）').toMatch(/opts\.isRemote\(\) \? \[\] : readLs\(\)/);
     expect(tableSortSrc, '机内 reload 同口径（换维度重读守卫）').toMatch(/function reload\(\) \{ sortSpec\.value = opts\.isRemote\(\) \? \[\] : readLs\(\); \}/);
     for (const src of [qrt, rt]) {
@@ -181,9 +181,9 @@ describe('五百三十八批 T3：--sp 收口（档位值 px 归档；豁免值�
   });
 
   it('代表性已收锚：RT/QRT/CDM/CFP 各锁一处（形态防漂移）', () => {
-    /* 554 批随迁：.rt-bar-r 形态锚迁 TableShell（字面扩 nowrap+shrink 纪律，gap 的 --sp 档不变） */
+    /* 554 批同步更新：.rt-bar-r 形态锚迁 TableShell（字面扩 nowrap+shrink 纪律，gap 的 --sp 档不变） */
     expect(shell).toContain('.rt-bar-r, .qrt-bar-r { display: flex; gap: var(--sp-1); align-items: center; flex-wrap: nowrap; flex-shrink: 0; }');
-    /* 五百六十一批随迁：rt-agg-row td 字面新家=TableAggFoot 全局单源（字面逐字保形） */
+    /* 五百六十一批同步更新：rt-agg-row td 字面新家=TableAggFoot 全局单源（字面逐字保形） */
     expect(aggFootSrc).toContain('.rt-agg-row td { background: var(--bg2); border-top: 1px solid var(--line-strong); font-size: var(--fs-xs); padding: var(--sp-1) var(--sp-2); white-space: nowrap; }');
     expect(qrt).toContain('.qrt-tbl th, .qrt-tbl td { padding: var(--sp-1) var(--sp-2); border-bottom: 1px solid var(--line); text-align: left; }');
     expect(qrt).toContain('padding: 5px var(--sp-2h); background: var(--bg1); border: 1px solid var(--line); border-bottom: 0;');
@@ -191,7 +191,7 @@ describe('五百三十八批 T3：--sp 收口（档位值 px 归档；豁免值�
     expect(cfp).toContain('.cfp-row { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-1) var(--sp-2h); border-radius: var(--r-s); font-size: var(--fs-sm); cursor: pointer; }');
   });
 
-  it('豁免锁：1px/3px/5px/14px 刻意值与 layout 系保字面（防过度收编）', () => {
+  it('豁免锁：1px/3px/5px/14px 刻意值与 layout 系保字面（防过度合并）', () => {
     expect(rt, '3px 刻意值保字面').toContain('gap: 3px;');
     expect(rt, '5px 刻意值保字面').toContain('gap: 5px;');
     expect(rt, '14px 刻意值保字面').toContain('gap: 14px;');

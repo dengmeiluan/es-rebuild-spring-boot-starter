@@ -1,7 +1,7 @@
 /**
  * 三百五十批：es_console_qb_split 迁移后遗留键清除——
- * 此前迁移只读不删，localStorage 键永久残留（审计项 10）。
- * 854 批锁随迁：removeItem 裸写收编 removeStoredRaw 单源（写防御域收官），
+ * 此前迁移只读不删，localStorage 键永久残留（ 10）。
+ * 854 批锁同步更新：removeItem 裸写合并 removeStoredRaw 单源（写防御域收官），
  * 断言字面随单源形态更新，锁语义不变（遗留键清除行为在场）。
  */
 import { describe, it, expect } from 'vitest';

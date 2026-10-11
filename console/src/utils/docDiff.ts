@@ -1,6 +1,6 @@
 /* W2-3：同 ID 文档跨索引字段级对比。纯函数、零 Vue 依赖。
-   为什么不复用 DiffEditorView 的 diffLines：那是朴素按行位置比对（a[i] vs b[i]，无 LCS），
-   两个索引的文档键集合与顺序本就不同，行一错位就把后续全部误报为增删。见 spec §4.3。 */
+ 为什么不复用 DiffEditorView 的 diffLines：那是朴素按行位置比对（a[i] vs b[i]，无 LCS），
+ 两个索引的文档键集合与顺序本就不同，行一错位就把后续全部误报为增删。见 spec 。 */
 
 export type DiffKind = 'added' | 'removed' | 'changed' | 'same';
 

@@ -3,7 +3,7 @@
  * G220+G221+G222+G223+G224+G226；741 G148/743 G152/745/747/749/751/753/755/757/760
  * 首刀族同构；Watcher 首例真挂载 spec——视图/组件全真，只 mock ../api 出口）。
  *
- * ① G220（P3 死代码·头号）.wt-hd-l/-ic/-tt/-sub 四死规则（PageHeader 收编漏删族又一例，
+ * ① G220（P3 死代码·头号）.wt-hd-l/-ic/-tt/-sub 四死规则（PageHeader 合并漏删族又一例，
  *    713 G53/715 G56/717 G61/721 G72/727 G86/729 G94/737 G131/741 G147 同族）——修法=四规则
  *    整删；.wt-hd 基础规则与 1100 堆叠档活规则不动（obsStack530 锁不受扰）。
  * ② G221（P3 注释失实·同批小刀）R42 §8.3 注释宣称「过滤词进 URL，刷新/分享后现场可复原」
@@ -14,7 +14,7 @@
  *    双双宣称「computed 纯化、截断标志改由 watch 驱动」，实况 computed 内写
  *    filteredTruncated ref 的 side-effect 且全文件无 watch——修法=落真纯化：
  *    matchedWatches 同源派生，截断标志亦纯 computed（语义不变：无关键字=全量前 100，
- *    有关键字=过滤后前 100）；344/353 两 spec 源码锁随迁。
+ *    有关键字=过滤后前 100）；344/353 两 spec 源码锁同步更新。
  * ④ G223（P3 键盘可达·次刀）metadata popover 触发器裸 code 无 role/tabindex（G208 cd-chip 族）
  *    ——修法=role=button+tabindex=0+Enter 合成 click 走 n-popover trigger 包装层既有通道。
  * ⑤ G224（弱 P3 aria·随批可裁）.wt-list 容器无 role/aria-label（757 G210 族）——
@@ -126,7 +126,7 @@ beforeEach(() => {
 });
 afterEach(() => { while (apps.length) apps.pop()!.unmount(); });
 
-describe('762 A0 挂载不变量负锚（现状即守卫，非本批刀面）', () => {
+describe('762 A0 挂载不变量负锚（现状即守卫，非刀面）', () => {
   it('页头 title+MetaStrip 六段+6 卡+过滤框 placeholder', async () => {
     const host = await mountView();
     expect(host.textContent).toContain('Watcher 告警');
@@ -142,7 +142,7 @@ describe('762 A0 挂载不变量负锚（现状即守卫，非本批刀面）', 
   });
 });
 
-describe('762 G220 四死规则整删（死代码·头号·PageHeader 收编漏删族）', () => {
+describe('762 G220 四死规则整删（死代码·头号·PageHeader 合并漏删族）', () => {
   it('源码锁：.wt-hd-l/-ic/-tt/-sub 四类名 scoped 绝迹（模板本就零引用）', () => {
     expect(src, '.wt-hd-l 死规则须删').not.toMatch(/\.wt-hd-l\b/);
     expect(src, '.wt-hd-ic 死规则须删').not.toMatch(/\.wt-hd-ic\b/);
@@ -172,7 +172,7 @@ describe('762 G221 过滤词口径注释诚实化（行为零改·748 G176/754 G
   });
 });
 
-describe('762 G222 截断标志真纯化（354 批宣称与实况不符→本批落 computed 派生）', () => {
+describe('762 G222 截断标志真纯化（354 批宣称与实况不符→落 computed 派生）', () => {
   it('源码锁：matchedWatches 同源派生+filteredTruncated 纯 computed；computed 内写 ref 绝迹', () => {
     expect(src).toMatch(/const matchedWatches = computed/);
     expect(src).toMatch(/const filteredTruncated = computed\(\(\) => matchedWatches\.value\.length > 100\);/);

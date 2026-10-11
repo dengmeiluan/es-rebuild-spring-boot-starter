@@ -5,13 +5,13 @@
  *    557 真机探针「懒模式冷转换 8s 全白零反馈」根治；骨架定高、零测量链（不参与 pane
  *    高度链正反馈）；KeepAlive 已解析实例重挂 / stamp 强制重挂走缓存不进 loading，
  *    骨架仅首载冷拉取出现（行为网：慢 chunk 拉取期间骨架在场，到位后换真身）。
- * ② AR 四件：探测失败条私造壳收编全局 .err-bar（role=alert + errPreHtml/errMeta 双参 +
+ * ② AR 四件：探测失败条私造壳合并全局 .err-bar（role=alert + errPreHtml/errMeta 双参 +
  *    prepErrRaw 原始对象旁路，XmigrateView :63 同款）；粘贴导入弹窗 pi-ja-wrap 定高
  *    min(60vh,600px) 升 useTierCycle 四档（adhoc.piH，adhoc.pasteH 同范式同族，默认档=原值
  *    零漂移）；收尾报告 .dsl 补 max(240px, 42vh) 滚动钳（站内口径）；内联「用当前索引」钮
- *    退役换 PickCurrentIdxBtn 统一件（557 记档兑现，原函数退役）。
+ *    退役换 PickCurrentIdxBtn 统一件（557 备案兑现，原函数退役）。
  * ③ IH 两件：query tab 未执行就绪空态（DslQueryView :470 同件同文案风格，err→空态互斥
- *    不双显）；ih.drawerW 档循环收编 useTierCycle（k 数组驱动、t/css 查表函数保留按选中
+ *    不双显）；ih.drawerW 档循环合并 useTierCycle（k 数组驱动、t/css 查表函数保留按选中
  *    k 取值、pref 键 ih.drawerW 不变用户档位零迁移）。
  * ④ PickCurrentIdxBtn 契约：自读 store.pickedIdx、空索引不渲染、data-test/title/aria-label
  *    与内联钮逐字、点击 emit('pick')（回填语义归消费方）。
@@ -150,7 +150,7 @@ describe('558 一：QH 六模式 defineAsyncComponent 统一 loadingComponent', 
     expect(qh, '无 loading 的裸形态退役').not.toMatch(/defineAsyncComponent\(\(\) => import/);
   });
 
-  it('骨架件：站内 SkeletonBox 承担 + 弱文提示 + 定高（零测量链注释记档）', () => {
+  it('骨架件：站内 SkeletonBox 承担 + 弱文提示 + 定高（零测量链注释备案）', () => {
     expect(qh).toMatch(/import SkeletonBox from '\.\.\/components\/SkeletonBox\.vue';/);
     expect(qh).toContain("name: 'QhPaneLoading'");
     expect(qh).toContain("h(SkeletonBox");
@@ -158,7 +158,7 @@ describe('558 一：QH 六模式 defineAsyncComponent 统一 loadingComponent', 
     expect(qh).toMatch(/\/\/[^\n]*定高|\/\*[\s\S]*?定高[\s\S]*?\*\//);
   });
 
-  it('行为网：chunk 冷拉取期间骨架在场（delay 后），到位后换真身骨架退场', async () => {
+  it('行为网：chunk 冷拉取期间骨架在场（delay 后），到位后换真身骨架移除', async () => {
     const { mountView: mv } = { mountView: mountView };
     const { host } = await mv((await import('../views/QueryHubView.vue')).default, '/search');
     /* dsl chunk mock 延迟 400ms、delay 200ms——此刻拉取仍在途，骨架必须已顶上 */
@@ -167,17 +167,17 @@ describe('558 一：QH 六模式 defineAsyncComponent 统一 loadingComponent', 
     expect(sk, '拉取期间骨架在场（不再全白）').toBeTruthy();
     expect(sk!.querySelector('.qh-pane-loading-tx')?.textContent).toContain('通道加载中');
     expect(sk!.querySelector('.sk'), '骨架块（SkeletonBox）在场').toBeTruthy();
-    /* 400ms 到位 + 稳定：真身渲染、骨架退场 */
+    /* 400ms 到位 + 稳定：真身渲染、骨架移除 */
     await wait(280);
     await settle();
-    expect(host.querySelector('.qh-pane-loading'), '到位后骨架退场').toBeNull();
+    expect(host.querySelector('.qh-pane-loading'), '到位后骨架移除').toBeNull();
     expect(host.querySelector('.dsl-stub-ok'), '真身渲染').toBeTruthy();
   }, 15000);
 });
 
-/* ═══════════ 二、AR：err-bar 收编 / piH 档 / DSL pre 钳 / 回填钮统一件（源码锁） ═══════════ */
+/* ═══════════ 二、AR：err-bar 合并 / piH 档 / DSL pre 钳 / 回填钮统一件（源码锁） ═══════════ */
 describe('558 二：AR 四件（源码锁）', () => {
-  it('①探测失败条收编全局 .err-bar：role=alert + errPreHtml/errMeta 双参 + prepErrRaw 旁路', () => {
+  it('①探测失败条合并全局 .err-bar：role=alert + errPreHtml/errMeta 双参 + prepErrRaw 旁路', () => {
     expect(ar).toContain('<div v-if="prepErr" role="alert" class="err-bar rise-in ar-probe-err">');
     expect(ar).toContain(`v-html="errPreHtml('探测失败：' + prepErr, errMeta(prepErrRaw))"`);
     expect(ar).toMatch(/const prepErrRaw = ref<unknown>\(null\);/);
@@ -206,7 +206,7 @@ describe('558 二：AR 四件（源码锁）', () => {
     expect(ar).toMatch(/\.dsl \{[^}]*max-height: max\(240px, 42vh\); overflow: auto;/);
   });
 
-  it('④内联「用当前索引」钮退役换统一件：消费标签在场、就地函数退役、Crosshair 随迁', () => {
+  it('④内联「用当前索引」钮退役换统一件：消费标签在场、就地函数退役、Crosshair 同步更新', () => {
     expect(ar).toContain('<PickCurrentIdxBtn @pick="indexName = store.pickedIdx" />');
     expect(ar).toMatch(/import PickCurrentIdxBtn from '\.\.\/components\/PickCurrentIdxBtn\.vue';/);
     expect(ar, '就地覆盖函数退役').not.toMatch(/function useCurrentIdx\(\)/);
@@ -215,7 +215,7 @@ describe('558 二：AR 四件（源码锁）', () => {
   });
 });
 
-/* ═══════════ 三、IH：ready 空态 / drawerW 收编 useTierCycle（源码锁） ═══════════ */
+/* ═══════════ 三、IH：ready 空态 / drawerW 合并 useTierCycle（源码锁） ═══════════ */
 describe('558 三：IH 两件（源码锁）', () => {
   it('①query tab 未执行就绪空态：DQ :470 同件同文案风格，err 互斥（!qryErr）不双显', () => {
     const seg = ih.slice(ih.indexOf(`<template v-else-if="tab === 'query'">`), ih.indexOf('<!-- Settings -->'));
@@ -223,7 +223,7 @@ describe('558 三：IH 两件（源码锁）', () => {
     expect(ih).toMatch(/\bFileSearch\b/);
   });
 
-  it('②ih.drawerW 收编 useTierCycle：k 数组驱动 + 默认档 regular；t/css 查表函数保留按选中 k 取值', () => {
+  it('②ih.drawerW 合并 useTierCycle：k 数组驱动 + 默认档 regular；t/css 查表函数保留按选中 k 取值', () => {
     expect(ih).toContain("const { v: drawerW, cycle: cycleDrawerW } = useTierCycle<DrawerWKey>('ih.drawerW', DRAWER_W_TIERS.map(w => w.k), 'regular');");
     expect(ih).toContain("const drawerWTier = computed(() => DRAWER_W_TIERS.find(w => w.k === drawerW.value) || DRAWER_W_TIERS[0]);");
     expect(ih).toContain('const drawerWCss = computed(() => drawerWTier.value.css);');
@@ -268,7 +268,7 @@ describe('558 四：PickCurrentIdxBtn 契约（自读 pickedIdx / 逐字锚 / �
 
 /* ═══════════ 五、AR 行为网：探测失败条 / piH 档循环 ═══════════ */
 describe('558 五：AR 行为网（err-bar 现场回看 + piH 档循环落盘）', () => {
-  it('探测失败 → 全局 err-bar 在场（role=alert + 探测失败文案 + 重试钮）；重试成功 → 条退场', async () => {
+  it('探测失败 → 全局 err-bar 在场（role=alert + 探测失败文案 + 重试钮）；重试成功 → 条移除', async () => {
     const { host } = await mountView((await import('../views/AdhocRebuildView.vue')).default);
     setInput(host.querySelector<HTMLInputElement>('.ixp-inp')!, 'stub_idx');
     await settle();
@@ -287,7 +287,7 @@ describe('558 五：AR 行为网（err-bar 现场回看 + piH 档循环落盘）
     });
     findBtn(host, '重试')!.click();
     await settle();
-    expect(host.querySelector('.err-bar.ar-probe-err'), '重试成功失败条退场').toBeNull();
+    expect(host.querySelector('.err-bar.ar-probe-err'), '重试成功失败条移除').toBeNull();
   });
 
   it('粘贴导入弹窗：wrapper 高度=默认档（原值零漂移）；点档位钮进下一档并落盘 adhoc.piH', async () => {

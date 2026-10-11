@@ -71,7 +71,7 @@ describe('QRT 内建分页（525 批，可选零破坏）', () => {
     (pgr.querySelector('[aria-label="下一页"]') as HTMLButtonElement).click();
     for (let i = 0; i < 5; i++) { await nextTick(); await Promise.resolve(); }
     expect(onPage).toHaveBeenCalledWith(3);
-    /* 五百七十七批随迁：563/566 批换装后 .pgn-psel=触发钮，点击开 n-popover listbox
+    /* 五百七十七批同步更新：563/566 批改用后 .pgn-psel=触发钮，点击开 n-popover listbox
        （teleport body）→ 点 50/页 选项 emit——旧 select.value/change 路径已退役 */
     (pgr.querySelector('.pgn-psel') as HTMLButtonElement).click();
     for (let i = 0; i < 5; i++) { await nextTick(); await Promise.resolve(); }
@@ -102,7 +102,7 @@ describe('QRT 导出五格式（525 批对齐 RT）', () => {
     expect(qrtSrc).toMatch(/:aria-label="'导出当前视图 Markdown'"/);
     expect(qrtSrc).toMatch(/:aria-label="'导出当前视图 XLSX'"/);
     expect(qrtSrc).toMatch(/:aria-label="'导出表格快照 PNG'"/);
-    /* 五百六十批锚随迁：JSON 第五导出钮（PNG 与行高之间插位不破 291 钮序；矩阵 json 口径） */
+    /* 五百六十批锚同步更新：JSON 第五导出钮（PNG 与行高之间插位不破 291 钮序；矩阵 json 口径） */
     expect(qrtSrc).toMatch(/:aria-label="'导出当前视图 JSON'"/);
     expect(qrtSrc).toMatch(/function exportJson\(\)/);
   });
@@ -150,7 +150,7 @@ describe('宿主接线（525 批）', () => {
   it('LuceneQueryView：表格分页随 QRT 内建（事件回宿主远端分页），顶部分页器只剩 JSON 视图', () => {
     expect(luceneSrc).toMatch(/:hits="hits" :total="total" :total-gte="totalGte" :loading="busy" sortable :took="took" :page="page" :page-size="size" :pager-disabled="busy" @update:page="goPage" @update:page-size="setSize"/);
     expect(luceneSrc).toMatch(/<Pagination v-if="viewMode === 'json'" :page="page"/);
-    /* 五百六十一批随迁：聚焦表格工具行整块退役（seg/JSONL 寄居 QRT bar-prepend、CSV 走
+    /* 五百六十一批同步更新：聚焦表格工具行整块退役（seg/JSONL 寄居 QRT bar-prepend、CSV 走
        内建导出钮、内建分页行既有）——工具可达语义由 QRT 工具行常驻承接（聚焦面内 rt-bar/qrt-bar
        不隐），“表格档专属 focus-tools”字面退役为负锚 */
     expect(luceneSrc, '聚焦表格工具行已退役（功能全进 QRT 常驻工具行）')
@@ -168,14 +168,14 @@ describe('宿主接线（525 批）', () => {
     expect(pfSrc).toMatch(/usePref<EditorHKey>\('pf\.editorH', 's'\)/);
     expect(pfSrc).toMatch(/class="pf-eh"/);
     expect(pfSrc).toMatch(/'pf-h-full': editorH === 'full'/);
-    /* 551 随迁：lint 划线接线补 ref="pfJaRef"（RankDebug rdJaRef 同款，vue 属性序 ref 在 v-model 前）——整条 tag 形态断言意图不变 */
+    /* 551 同步更新：lint 划线接线补 ref="pfJaRef"（RankDebug rdJaRef 同款，vue 属性序 ref 在 v-model 前）——整条 tag 形态断言意图不变 */
     expect(pfSrc).toMatch(/<JsonArea ref="pfJaRef" v-model="dsl" :dsl-assist="dslAssist" :rows="PF_ROWS\[editorH\]" :fill="editorH === 'full'" class="pf-body-ja" @submit="run" \/>/);
     expect(pfSrc).toMatch(/:cols="hotCols" :rows="hotRows"/);
     expect(pfSrc).not.toMatch(/class="pf-tbl"/);
   });
 
   it('SearchTemplatesView：模板源编辑器 Ctrl+Enter 执行（@execute 通道）', () => {
-    /* 五百三十五批锚随迁：行首前插 ref="stMeRef"（lint 划线 setMarkers 消费），@execute 通道语义不变 */
+    /* 五百三十五批锚同步更新：行首前插 ref="stMeRef"（lint 划线 setMarkers 消费），@execute 通道语义不变 */
     expect(tplSrc).toMatch(/<MonacoEditor ref="stMeRef" v-model="source" :height="EDITOR_HEIGHTS\[editorH\]" :dsl-assist="dslAssist" @execute="run" \/>/);
   });
 });

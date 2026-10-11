@@ -62,7 +62,7 @@ vi.mock('../components/MonacoEditor.vue', () => ({
     name: 'MonacoEditor',
     props: ['modelValue', 'language', 'height'],
     emits: ['update:modelValue', 'execute', 'keydown'],
-    /* W6-T3：stub 模板渲 modelValue 文本——响应区换装后「错误全文直显」断言口径不变（原 pre textContent 迁移） */
+    /* W6-T3：stub 模板渲 modelValue 文本——响应区改用后「错误全文直显」断言口径不变（原 pre textContent 迁移） */
     template: '<div class="monaco-stub">{{ modelValue }}</div>',
   },
 }));
@@ -278,7 +278,7 @@ describe('G7 DevToolsView：执行三态与重入守卫', () => {
     const { app, host } = await mountView(DevToolsView, '#/devtools');
     findBtn(host, '执行')!.click();
     await settle();
-    /* W6-T3：响应区 pre 换装只读 Monaco——err 结果区迁移至 .dt-out-monaco.err（容器红框承接原 pre err 视觉），
+    /* W6-T3：响应区 pre 改用只读 Monaco——err 结果区迁移至 .dt-out-monaco.err（容器红框承接原 pre err 视觉），
        pre 形态本身即被替换对象（同 W6 body .dt-body-area 迁移先例） */
     const pre = host.querySelector('.dt-out-monaco.err');
     expect(pre, '失败必须出 err 结果区').toBeTruthy();

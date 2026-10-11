@@ -33,7 +33,7 @@
     >
       <div class="bgn-occur">
         <!-- occur 语义 pill——四色对齐 must/filter/should/must_not 心智（绿/蓝/紫/红），
-             底色用既有 --*-soft token；中文为主 key 弱化 -->
+ 底色用既有 --*-soft token；中文为主 key 弱化 -->
         <span class="bgn-pill" :class="'p-' + o"><i></i>{{ OCCUR_LABEL[o] }}<code>{{ o }}</code></span>
         <span style="flex:1"></span>
         <button class="btn sm ghost" title="在此分区加条件" @click="addClause(o)"><Plus :size="11" /> 条件</button>
@@ -63,15 +63,15 @@
 
 <script lang="ts">
 /* 面板头「折叠全部/展开全部」的 window 广播事件名（同 DRAG_EVENT 模式，
-   事件名常量随本组件导出，QueryTreePane 引用同名常量 dispatch；折叠态仍是组内内存 ref） */
+ 事件名常量随本组件导出，QueryTreePane 引用同名常量 dispatch；折叠态仍是组内内存 ref） */
 export const BGN_COLLAPSE_EVENT = 'qtp-collapse-all';
 </script>
 
 <script setup lang="ts">
 /* W1：bool 组容器——occur 四分区（must/filter/should/must_not）。
-   空分区默认折叠（must 除外），拖拽广播期间全量亮出作落点；可手动固定展开。
-   不可变更新：remove/wrap/dissolve 经 queryAst 树操作函数；add/replace 本地展开新 children
-   （insertChild 会标 arrForm 改变序列化形态，追加语义下不可用）。一切变更 emit 新对象。 */
+ 空分区默认折叠（must 除外），拖拽广播期间全量亮出作落点；可手动固定展开。
+ 不可变更新：remove/wrap/dissolve 经 queryAst 树操作函数；add/replace 本地展开新 children
+ （insertChild 会标 arrForm 改变序列化形态，追加语义下不可用）。一切变更 emit 新对象。 */
 import { ref, computed, watch, inject, onMounted, onBeforeUnmount } from 'vue';
 import { X, Group, Ungroup, Plus, SlidersHorizontal, ChevronDown, ChevronRight, Copy } from 'lucide-vue-next';
 import GenericParams from './GenericParams.vue';
@@ -97,9 +97,9 @@ const showParams = ref(false);
 const dragging = ref(false);
 const pinned = ref<Occur[]>([]);
 /* 整组折叠：【W3b】按 node.id 进 useScopedDraft（sessionStorage）——KeepAlive 淘汰重挂不丢；
-   重解析 nid() 随机出新 id = 天然 stamp，重挂即重置（旧树的折叠残留不串扰新树）。
-   scope.index 借 fieldSearch 模块级当前索引（QueryTreePane/RootExtrasPane 挂载即写），
-   免 props 逐层透传；读不到（直挂测试）回退全局键。 */
+ 重解析 nid() 随机出新 id = 天然 stamp，重挂即重置（旧树的折叠残留不串扰新树）。
+ scope.index 借 fieldSearch 模块级当前索引（QueryTreePane/RootExtrasPane 挂载即写），
+ 免 props 逐层透传；读不到（直挂测试）回退全局键。 */
 const collapseDraft = useScopedDraft(
   'bgn-fold:' + props.node.id,
   { route: 'query-builder', index: () => curFieldSearchIndex() },
@@ -169,9 +169,9 @@ onBeforeUnmount(() => window.removeEventListener(BGN_COLLAPSE_EVENT, onCollapseE
 </script>
 
 <style scoped>
-/*  v2 去卡片化（对标 Linear/Notion/Airtable 过滤器）：组不再有边框/底色/内边距——
-   嵌套 scope 全靠缩进+左引导线表达，层级再深视觉重量恒定；组工具钮平时不可见、
-   组悬停浮现（scope 即悬停区域），条件行悬停才浮出浅底。全程 var(--tr) 微过渡。 */
+/* v2 去卡片化（对标 Linear/Notion/Airtable 过滤器）：组不再有边框/底色/内边距——
+ 嵌套 scope 全靠缩进+左引导线表达，层级再深视觉重量恒定；组工具钮平时不可见、
+ 组悬停浮现（scope 即悬停区域），条件行悬停才浮出浅底。全程 var(--tr) 微过渡。 */
 .bgn { padding: 0; margin: 0; }
 .bgn-hd { display: flex; align-items: center; gap: var(--sp-0); margin: 0 0 var(--sp-0); flex-wrap: wrap;
   opacity: 0; height: 24px; transition: opacity var(--tr); }
@@ -183,7 +183,7 @@ onBeforeUnmount(() => window.removeEventListener(BGN_COLLAPSE_EVENT, onCollapseE
 .bgn-sum { font-family: var(--mono, ui-monospace, monospace); font-size: var(--fs-2xs); color: var(--tx2); user-select: none; }
 .bgn-grip { cursor: grab; color: var(--tx2); font-size: var(--fs-xs); user-select: none; }
 .bgn-params { margin: var(--sp-0) 0 var(--sp-1); padding: var(--sp-2) var(--sp-3); background: var(--bg2); border-radius: var(--r-s); }
-/*  v3.1: git-graph 引导线——同色淡线+顶部圆点（pill 左下角垂下），嵌套层级如提交树 */
+/* v3.1: git-graph 引导线——同色淡线+顶部圆点（pill 左下角垂下），嵌套层级如提交树 */
 .bgn-part { position: relative; border-left: 2px solid var(--line); padding-left: var(--sp-3); margin: var(--sp-1) 0 var(--sp-1) 3px; transition: border-color var(--tr); }
 .bgn:hover > .bgn-part { border-left-color: color-mix(in srgb, var(--tx2) 45%, var(--line)); }
 .bgn-part::before { content: ''; position: absolute; left: -5px; top: 0; width: 8px; height: 8px; border-radius: 50%;
@@ -202,7 +202,7 @@ onBeforeUnmount(() => window.removeEventListener(BGN_COLLAPSE_EVENT, onCollapseE
   padding: var(--sp-0) var(--sp-2h) var(--sp-0) var(--sp-2); border-radius: 999px; }
 .bgn-pill i { width: 7px; height: 7px; border-radius: 50%; flex: none; }
 .bgn-pill code { font-family: var(--mono, ui-monospace, monospace); font-size: var(--fs-2xs); font-weight: 400; opacity: .62; }
-/*  v3.1: git-graph 引导线——分区线降饱和底色，组悬停时加深 */
+/* v3.1: git-graph 引导线——分区线降饱和底色，组悬停时加深 */
 .bgn-pill.p-must { color: var(--c-must, var(--ok)); background: var(--c-must-bg, var(--ok-soft)); }
 .bgn-pill.p-filter { color: var(--c-filter, var(--info)); background: var(--c-filter-bg, var(--info-soft)); }
 .bgn-pill.p-should { color: var(--c-should, var(--violet)); background: var(--c-should-bg, var(--dv-violet-soft)); }

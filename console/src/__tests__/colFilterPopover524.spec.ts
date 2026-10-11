@@ -1,5 +1,5 @@
 /**
- * 五百二十四批：五份同构筛选弹层收编共享 ColFilterPopover（qfp/rfp/bw-fp/pl-afp/afp → cfp 一处壳）。
+ * 五百二十四批：五份同构筛选弹层合并共享 ColFilterPopover（qfp/rfp/bw-fp/pl-afp/afp → cfp 一处壳）。
  * 锁定：
  * 1) 组件契约：头文案「筛选「列」」、清除钮（clear+close 双 emit）、值内搜索（update:kw +
  *    MarkText 命中切 mark）、每值计数、mini-bar（bars）、基数降级提示、区间双输入（set-range）、
@@ -156,7 +156,7 @@ describe('ColFilterPopover 组件契约（五百二十四批）', () => {
     const pop = document.querySelector('.cfp')!;
     pop.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     await tick(2);
-    /* 五百六十八批随迁：Esc 升 document 捕获级单源（colFilterPopoverEsc568）——原五壳
+    /* 五百六十八批同步更新：Esc 升 document 捕获级单源（colFilterPopoverEsc568）——原五壳
        「面板+遮罩双 esc 冒泡 close=2」语义退役，capture 级 stopPropagation 单次 close=1 */
     expect(events['close']?.length, '面板 Esc → close（document 捕获级单源）').toBe(1);
     const mask = document.querySelector('.cfp-mask') as HTMLElement;
@@ -239,16 +239,16 @@ describe('消费端最终 DOM（五百二十四批保命挂载锁）', () => {
     expect(document.querySelector('.cfp')).toBeNull();
   });
 
-  it('Browser：health 漏斗 → 共享壳（529 反转随迁：换 QRT rows 型后走 QRT 通道形态——带值内搜索/mini-bar），勾选过滤+暗状态提示', async () => {
+  it('Browser：health 漏斗 → 共享壳（529 反转同步更新：换 QRT rows 型后走 QRT 通道形态——带值内搜索/mini-bar），勾选过滤+暗状态提示', async () => {
     await mountBrowser();
-    /* 五百二十九批锚随迁：.bw-f-btn 视图宿主钮 → QRT 内建 .qrt-funnel（aria 同字） */
+    /* 五百二十九批锚同步更新：.bw-f-btn 视图宿主钮 → QRT 内建 .qrt-funnel（aria 同字） */
     const funnel = host.querySelector('.qrt-funnel') as HTMLButtonElement;
     expect(funnel.getAttribute('aria-label')).toBe('筛选 健康 列');
     funnel.click();
     await tick(4);
     const pop = document.querySelector('.cfp')!;
     expect(pop, '点击漏斗应弹出共享筛选层').not.toBeNull();
-    /* 五百二十九批锚随迁：筛选「health」→ 筛选「健康」（列名改中文键） */
+    /* 五百二十九批锚同步更新：筛选「health」→ 筛选「健康」（列名改中文键） */
     expect(pop.querySelector('.cfp-hd')!.textContent).toContain('筛选「健康」');
     /* QRT 通道带值内搜索 + mini-bar（内核统一形态；旧 Browser 宿主壳的无搜索/无 mini-bar
        零增量形态随换壳退役） */

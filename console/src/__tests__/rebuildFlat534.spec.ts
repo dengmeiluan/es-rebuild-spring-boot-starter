@@ -1,19 +1,19 @@
 /**
- * 五百三十四批·轨2（工蚁 W2）：AdhocRebuild / Xmigrate / ReindexPreview 扁平化降层 · 契约记档。
+ * 五百三十四批·轨2（工蚁 W2）：AdhocRebuild / Xmigrate / ReindexPreview 扁平化降层 · 契约备案。
  *
  * ① AdhocRebuild：ar-paste/ar-manual 编辑器外框（bg0+border 壳直包编辑器）退役→编辑器直贴；
  *    引导标题升 fs-head 档行首横排；ar-input-tabs 降全局 seg 档（bg2+2px 内衬+小圆角）；
  *    P1：settings/mapping 四编辑框 lint 划线接线（SearchSandboxView 范式：
  *    useDebounceFn 250ms + setMarkers + info→hint 降级；档路由 lintSettingsBody/lintMappingBody）。
  *    ⚠粘贴 Monaco height="min(60vh, 420px)" 字面被 rebuildThreeState/adhocDerivedMapping/
- *    rebuildMigrate531 锁——只去壳不改字面。（五百三十八批随迁：定高字面升 useTierCycle
+ *    rebuildMigrate531 锁——只去壳不改字面。（五百三十八批同步更新：定高字面升 useTierCycle
  *    四档 :height="pasteH"，原字面=档值数组首位默认档保底，本文件高度锁同步换锚。）
  * ② Xmigrate：xm-group/xm-remote border 壳退役→border-top+sec-t（531 去 background 后下半刀）；
  *    xm-src-picked border 盒→inline 行；常规流零高度链。
  *    ⚠rebuildMigrate531 字面锁 .xm-group 531 形态与 900 档 .xm-remote padding——
- *    本批以后置覆盖承接裁决，锁面字面原样保留（rebuildMigrate531 必保绿）。
+ *    以后置覆盖承接裁决，锁面字面原样保留（rebuildMigrate531 必保绿）。
  * ③ ReindexPreview：rp.result 竖排标题「预估结果」退役（title:''+语义落行首 card-t sm，
- *    519 立法补账）；.panel 死类名 ×3 清理；search body lintDsl+setMarkers 接线。
+ *    519 约定补账）；.panel 死类名 ×3 清理；search body lintDsl+setMarkers 接线。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -37,14 +37,14 @@ describe('五百三十四批：AdhocRebuild 编辑器壳退役 + seg 档 + lint 
   it('ar-manual 壳退役，引导标题升 fs-head 档行首横排', () => {
     expect(adhoc, 'ar-manual 壳规则退役').not.toMatch(/\.ar-manual \{[^}]*border/);
     expect(adhoc, 'ar-manual bg 壳不回流').not.toMatch(/\.ar-manual \{[^}]*background/);
-    /* 五百五十批随迁：步骤标题 b→strong 纯语义清理（flattenWave550⑧），选择器随元素随迁，
+    /* 五百五十批同步更新：步骤标题 b→strong 纯语义清理（flattenWave550⑧），选择器随元素同步更新，
        规则体字面零变动（.strat strong 补 font-weight:650 因 b 全站兜底不盖 strong） */
     expect(adhoc).toMatch(/\.ar-paste-hd strong \{ font-size: var\(--fs-md\); font-weight: 650; color: var\(--tx0\); letter-spacing: var\(--ls-tight\); \}/);
     expect(adhoc).toMatch(/\.ar-manual-hd strong \{ font-size: var\(--fs-md\); font-weight: 650; color: var\(--tx0\); letter-spacing: var\(--ls-tight\); \}/);
   });
 
   it('⚠粘贴 Monaco 高度档：useTierCycle 四档（原 min(60vh, 420px) 字面在档值数组首位保底）', () => {
-    /* 五百三十八批随迁：height="min(60vh, 420px)" 定高字面 → :height="pasteH" 档值绑定
+    /* 五百三十八批同步更新：height="min(60vh, 420px)" 定高字面 → :height="pasteH" 档值绑定
        （useTierCycle+usePref 落盘；原字面=档值数组首位=默认档，默认形态高度行为一致，
        档值全部为确定解）。旧 min(200px, 24vh) 档不回流断言原样保留 */
     expect(adhoc).toContain("'min(60vh, 420px)'");
@@ -55,7 +55,7 @@ describe('五百三十四批：AdhocRebuild 编辑器壳退役 + seg 档 + lint 
   });
 
   it('ar-input-tabs 降全局 seg 档（bg2+内衬+--r-m 圆角+bg3 浮起态；border 壳退役）', () => {
-    /* 554 随迁：容器 gap/padding 2px 收口 var(--sp-0)（等值，w10/spSweep540/adhocWave544 同批随迁） */
+    /* 554 同步更新：容器 gap/padding 2px 收口 var(--sp-0)（等值，w10/spSweep540/adhocWave544 同批同步更新） */
     expect(adhoc).toMatch(/\.ar-input-tabs \{ display: inline-flex; gap: var\(--sp-0\); padding: var\(--sp-0\); background: var\(--bg2\); border-radius: var\(--r-m\); margin-bottom: var\(--sp-3\); \}/);
     expect(adhoc, '旧 border 壳不回流').not.toMatch(/\.ar-input-tabs \{[^}]*border:/);
     expect(adhoc).toContain('.ar-input-tabs button.on { background: var(--bg3); color: var(--tx0); box-shadow: 0 1px 3px rgba(0,0,0,.3); font-weight: 600; }');
@@ -82,9 +82,9 @@ describe('五百三十四批：AdhocRebuild 编辑器壳退役 + seg 档 + lint 
     expect(adhoc).toMatch(/function parseArBody\(t: string\): Record<string, unknown> \| null \{/);
   });
 
-  it('⚠随迁声明：531 锁面字面原样保留（Workbench 双栏/pane spec/val-box 弹性档/QRT none）', () => {
-    /* 547 批随迁：两开标签尾部扩 :fill-viewport="false"（向导行动行留首屏，DslQueryView 先例；锁语义不变仍钉双栏声明形态）
-       554 批随迁：两开标签头部补 class="ar-fill-wl"（554-P0 高度档锚，554-P2 rows 驱动后类保留作 DOM 锚） */
+  it('⚠同步更新声明：531 锁面字面原样保留（Workbench 双栏/pane spec/val-box 弹性档/QRT none）', () => {
+    /* 547 批同步更新：两开标签尾部扩 :fill-viewport="false"（向导行动行留首屏，DslQueryView 先例；锁语义不变仍钉双栏声明形态）
+       554 批同步更新：两开标签头部补 class="ar-fill-wl"（554-P0 高度档锚，554-P2 rows 驱动后类保留作 DOM 锚） */
     expect(adhoc).toMatch(/<WorkbenchLayout class="ar-fill-wl" :scope="arEdScope" :panes="AR_ED_PANES" axis="vertical" mode="arEditors" :fill-viewport="false">/);
     expect(adhoc).toMatch(/<WorkbenchLayout class="ar-fill-wl" :scope="arManualScope" :panes="AR_MANUAL_PANES" axis="vertical" mode="arManual" :fill-viewport="false">/);
     expect(adhoc).toMatch(/\.val-box \{[^}]*max-height: max\(240px, 42vh\);/);
@@ -95,8 +95,8 @@ describe('五百三十四批：AdhocRebuild 编辑器壳退役 + seg 档 + lint 
 /* ═══════════ ② XmigrateView ═══════════ */
 describe('五百三十四批：Xmigrate 分节降层（531 去 background 后下半刀）', () => {
   it('xm-group border 壳退役→border-top 分节分隔（534 覆盖行承接；531 死规则 547 批退役）', () => {
-    /* 五百四十七批锁随迁：531 形态字面原为「死规则在场」锁（被下行覆盖压死），
-       547 批将死规则退役删除——断言由「在场」改「退役」，缘由同 rebuildMigrate531 随迁注 */
+    /* 五百四十七批锁同步更新：531 形态字面原为「死规则在场」锁（被下行覆盖压死），
+       547 批将死规则退役删除——断言由「在场」改「退役」，缘由同 rebuildMigrate531 同步更新注 */
     expect(xm).not.toMatch(/\.xm-group \{ margin-bottom: var\(--sp-3\); padding: var\(--sp-2\) var\(--sp-3\); border: 1px solid var\(--line\); border-radius: var\(--r-m\); \}/);
     expect(xm).not.toMatch(/\.xm-group \{[^}]*background/);
     /* 534 覆盖行：读侧以此为准（现行唯一生效形态，cardShellWave547 复锁） */
@@ -121,7 +121,7 @@ describe('五百三十四批：Xmigrate 分节降层（531 去 background 后下
   });
 
   it('常规流零高度链声明：改动只涉 border/底色/圆角/内衬，零 height/min-height 新增', () => {
-    /* 取本批三段改动区（xm-group 覆盖行→xm-g-num、xm-src-picked 注→xm-paste、xm-remote 注→xm-r-list）逐一验 */
+    /* 取三段改动区（xm-group 覆盖行→xm-g-num、xm-src-picked 注→xm-paste、xm-remote 注→xm-r-list）逐一验 */
     const seg = (from: string, to: string) => xm.slice(xm.indexOf(from), xm.indexOf(to));
     for (const [from, to] of [
       ['五百三十四批：分节降层下半刀', '.xm-g-num'],
@@ -137,12 +137,12 @@ describe('五百三十四批：Xmigrate 分节降层（531 去 background 后下
 
 /* ═══════════ ③ ReindexPreviewView ═══════════ */
 describe('五百三十四批：ReindexPreview 竖排标题退役 + panel 清理 + lint 接线', () => {
-  it('rp.result 竖排标题「预估结果」退役（title:\'\')+语义落行首 card-t sm（519 立法补账）', () => {
+  it('rp.result 竖排标题「预估结果」退役（title:\'\')+语义落行首 card-t sm（519 约定补账）', () => {
     expect(rp).toMatch(/\{ id: 'rp\.result', role: 'response', title: '', minSize: 360, defaultSize: 'flex' \}/);
     expect(rp, '竖排标题字面不回流').not.toContain("title: '预估结果'");
     expect(rp).toContain('<div class="rp-hd">');
     expect(rp).toContain('<div class="card-t sm">预估结果</div>');
-    /* freeEditorTiers530 锁面随迁：rp-adv 类挂钮 + 前缀字面 + 空壳 div 不回流 */
+    /* freeEditorTiers530 锁面同步更新：rp-adv 类挂钮 + 前缀字面 + 空壳 div 不回流 */
     expect(rp).toContain('class="btn sm ghost rp-adv"');
     expect(rp).toMatch(/\.rp-adv \{ display: block; margin-left: auto;/);
     expect(rp).not.toContain('<div class="rp-adv">');

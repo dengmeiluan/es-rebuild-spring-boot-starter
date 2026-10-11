@@ -1,6 +1,6 @@
 <template>
   <!-- 相关性实验室互跳导航——六 lab 此前只能回查询工作台再经 popover
-       中转；现页头内置同族切换（当前页禁用高亮，其余一键直达） -->
+ 中转；现页头内置同族切换（当前页禁用高亮，其余一键直达） -->
   <nav class="lab-nav" aria-label="相关性实验室导航">
     <button
       type="button" class="lab-nav-btn lab-home"

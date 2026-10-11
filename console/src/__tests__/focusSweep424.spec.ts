@@ -12,7 +12,7 @@ const tpl = readFileSync(join(__dirname, '../views/SearchTemplatesView.vue'), 'u
 describe('聚焦面推广（424 批）', () => {
   it('PIT 预览表：FocusableSurface 接线+聚焦态高度拉伸', () => {
     expect(pit).toMatch(/<FocusableSurface pane-id="pit\.preview" title="预览表"/);
-    /* 524 批随迁：聚焦态高度对齐 423 收敛口径（--vh-offset 为准回加 80px，与旧裸 130px 等价） */
+    /* 524 批同步更新：聚焦态高度对齐 423 收敛口径（--vh-offset 为准回加 80px，与旧裸 130px 等价） */
     expect(pit).toMatch(/:max-height="focusPaneId === 'pit\.preview' \? 'calc\(100vh - var\(--vh-offset, 210px\) \+ 80px\)' : '40vh'"/);
     expect(pit).toContain("import FocusableSurface from '../components/FocusableSurface.vue';");
   });

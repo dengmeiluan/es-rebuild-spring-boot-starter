@@ -1,10 +1,10 @@
 /**
- * 组件统一收编扫描（静态迁移面断言）：本次迁移的各视图不得残留被收编的本地实现。
+ * 组件统一合并扫描（静态迁移面断言）：本次迁移的各视图不得残留被合并的本地实现。
  * 锁定：
  * ① 四视图（LiveDashboard/Overview/Aliases/Plugins）+ 源头视图 IndexHub 本地 meta CSS 定义退役、模板接 MetaStrip；
  * ② LiveDashboard 自建 .ld-page.fs 全屏壳退役，接 FocusableSurface headless；
  * ③ BrowserView 手搓翻页（上一页/下一页按钮）退役，接 Pagination；深链文档裸 stringify 文本退役，走 highlightJson；
- * ④ Templates/ProfileFlame/DiffEditor/ReindexPreview 裸编辑器（Monaco/textarea）收编 JsonArea；
+ * ④ Templates/ProfileFlame/DiffEditor/ReindexPreview 裸编辑器（Monaco/textarea）合并 JsonArea；
  * ⑤ ReindexPreview 接 WorkbenchLayout + sessionStorage carry 去高级 Reindex；
  * ⑥ ClusterSwitcher 确认统一 askConfirm，useDialog 引用清零；
  * ⑦ Plugins/MappingDesigner 弹窗 z-index token 化，无 1000 字面量。
@@ -27,7 +27,7 @@ const reindexPreview = read('../views/ReindexPreviewView.vue');
 const clusterSwitcher = read('../components/ClusterSwitcher.vue');
 const indexHub = read('../views/IndexHubView.vue');
 
-describe('组件统一收编扫描（迁移面静态断言）', () => {
+describe('组件统一合并扫描（迁移面静态断言）', () => {
   it('四视图本地 meta 定义退役，模板接 MetaStrip 统一件', () => {
     expect(live).not.toMatch(/\.ld-meta[\s{.,:]/);
     expect(overview).not.toMatch(/\.ov-meta[\s{.:]/);
@@ -44,8 +44,8 @@ describe('组件统一收编扫描（迁移面静态断言）', () => {
     expect(indexHub).not.toMatch(/\.ih-meta[\s{.,:]/);
     expect(indexHub).not.toContain('.ih-meta-u');
     expect(indexHub).toContain('<MetaStrip class="ih-meta-pos"');
-    /* 五百三十批随迁：管控跳转带 ?idx= 深链（别名页消费后置顶+强调该索引所在分组）；
-       852 批随迁：深链值 encodeURIComponent（localeEncodeGuard852 E 组同域） */
+    /* 五百三十批同步更新：管控跳转带 ?idx= 深链（别名页消费后置顶+强调该索引所在分组）；
+       852 批同步更新：深链值 encodeURIComponent（localeEncodeGuard852 E 组同域） */
     expect(indexHub).toContain("goto('/aliases?idx=' + encodeURIComponent(cur))");
   });
 
@@ -55,10 +55,10 @@ describe('组件统一收编扫描（迁移面静态断言）', () => {
     expect(live).not.toMatch(/position:\s*fixed;\s*inset:\s*0/);
   });
 
-  it('BrowserView 翻页收编（手写上一页/下一页按钮退役；529 反转：翻页随 QRT 换壳由内核 renderMore 增量渲染接管）', () => {
+  it('BrowserView 翻页合并（手写上一页/下一页按钮退役；529 反转：翻页随 QRT 换壳由内核 renderMore 增量渲染接管）', () => {
     expect(browser).not.toContain('上一页');
     expect(browser).not.toContain('下一页');
-    /* 五百二十九批锚随迁：<Pagination> 视图层退役 → QRT rows 型接线（大索引列表由内核
+    /* 五百二十九批锚同步更新：<Pagination> 视图层退役 → QRT rows 型接线（大索引列表由内核
        MAX_RENDER 增量渲染+「继续渲染」行接管，排序/漏斗作用于全量所见集） */
     expect(browser).toContain('<QueryResultTable');
     expect(browser).toContain('storage-key="browser:indices"');
@@ -71,10 +71,10 @@ describe('组件统一收编扫描（迁移面静态断言）', () => {
     expect(browser).not.toMatch(/>\{\{\s*JSON\.stringify\(linkedDoc/);
   });
 
-  it('四处裸编辑器收编 JsonArea（Templates/ProfileFlame/DiffEditor/ReindexPreview）', () => {
+  it('四处裸编辑器合并 JsonArea（Templates/ProfileFlame/DiffEditor/ReindexPreview）', () => {
     expect(templates).toContain('<JsonArea');
     expect(templates).not.toContain('<MonacoEditor');
-    /* 551 随迁：lint 划线接线补 ref="pfJaRef"（RankDebug rdJaRef 同款，vue 属性序 ref 在 v-model 前）——JsonArea 收编断言意图不变 */
+    /* 551 同步更新：lint 划线接线补 ref="pfJaRef"（RankDebug rdJaRef 同款，vue 属性序 ref 在 v-model 前）——JsonArea 合并断言意图不变 */
     expect(profileFlame).toContain('<JsonArea ref="pfJaRef" v-model="dsl"');
     expect(profileFlame).not.toMatch(/<textarea/);
     expect(diffEditor).toContain('<JsonArea v-model="editedText" fill');

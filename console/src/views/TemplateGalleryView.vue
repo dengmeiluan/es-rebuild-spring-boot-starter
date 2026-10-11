@@ -3,9 +3,9 @@
     <div class="tg-hd">
       <PageHeader :icon="BookOpen" title="DSL 模板画廊" :subtitle="TEMPLATES.length + ' 个即插即用模板 · 一键复制 / 直接送入沙盒 / 直接送 REST 面板'">
         <template #actions>
-          <!-- 三胞胎页头过滤胶囊组件化——SearchFilterBar 统一件，落位类 tg-search
-               透传到组件根；值漂移（bg1/line/6px）随胶囊壳单源归一，Esc 清空内建（原行为等价）。
-               本框无 Enter 接线（原样），命中定位/清除走卡片页自身语义 -->
+          <!-- 页头过滤胶囊组件化——SearchFilterBar 统一件，落位类 tg-search
+ 透传到组件根；值漂移（bg1/line/6px）随胶囊壳单源归一，Esc 清空内建（原行为等价）。
+ 本框无 Enter 接线（原样），命中定位/清除走卡片页自身语义 -->
           <SearchFilterBar v-model="kw" class="tg-search" placeholder="搜索：match / date / agg / 中文关键词都可" />
         </template>
       </PageHeader>
@@ -29,8 +29,8 @@
           </div>
           <div class="tg-c-hd-r">
             <span class="tg-c-cat">{{ t.cat }}</span>
-            <!--  G39：代码区双态展开钮（铁律 C 双态同钮）——紧凑默认截断 18/23 卡，
-                 展开看全模板（铁律 F 信息可达），位置恒定卡头右缘（铁律 B） -->
+            <!-- ：代码区双态展开钮（铁律 C 双态同钮）——紧凑默认截断 18/23 卡，
+ 展开看全模板（铁律 F 信息可达），位置恒定卡头右缘（铁律 B） -->
             <button class="tg-c-expand" :aria-expanded="expanded.has(t.id) ? 'true' : 'false'"
                     :aria-label="expanded.has(t.id) ? '收起代码区' : '展开查看完整模板'"
                     :title="expanded.has(t.id) ? '收起代码区' : '展开查看完整模板'"
@@ -41,13 +41,13 @@
           </div>
         </div>
         <div class="tg-c-desc"><MarkText :text="t.desc" :kw="kw" /></div>
-        <!--  D：裸 JSON 换 highlightJson（pretty(t) 已是 pretty 串，着色 + json-view 全局范式） -->
+        <!-- D：裸 JSON 换 highlightJson（pretty(t) 已是 pretty 串，着色 + json-view 全局范式） -->
         <pre class="tg-c-code json-view" role="button" tabindex="0" title="点击复制模板 JSON" @click="copy(t)" @keydown.enter.prevent="copy(t)" @keydown.space.prevent="copy(t)" v-html="highlightJson(pretty(t))"></pre>
         <div class="tg-c-ft">
           <span class="tg-c-tags">
-            <!-- tag chip 换装 StatusPill 统一件（550 判例同语言）——「危险」语义归
-                 r 档（原 tg-tag-danger err 色档同 token），普通 tag 中性 n 档；tg-tag/tg-tag-danger
-                 私造皮退役；kw 高亮不在 StatusPill 契约内随迁退役（tags 仍在过滤管线，见 filtered） -->
+            <!-- tag chip 改用 StatusPill 统一件（同语言）——「危险」语义归
+ r 档（原 tg-tag-danger err 色档同 token），普通 tag 中性 n 档；tg-tag/tg-tag-danger
+ 私造皮退役；kw 高亮不在 StatusPill 契约内同步更新退役（tags 仍在过滤管线，见 filtered） -->
             <StatusPill v-for="tag in t.tags" :key="tag" :tone="tag === '危险' ? 'r' : 'n'" :label="tag" />
           </span>
           <span class="tg-c-actions">
@@ -62,7 +62,7 @@
           </span>
         </div>
       </div>
-      <!--  §1：纯静态数据，空只可能是过滤造成——直接给清除入口 -->
+      <!-- 纯静态数据，空只可能是过滤造成——直接给清除入口 -->
       <EmptyState
         v-if="filtered.length === 0"
         class="tg-empty"
@@ -86,7 +86,7 @@ import {
 } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { useAppStore } from '../stores/app';
-/* 三胞胎页头过滤胶囊统一件（wt/fv/tg 同场景收编）；Search 图标随胶囊组件化内建 */
+/* 页头过滤胶囊统一件（wt/fv/tg 同场景合并）；Search 图标随胶囊组件化内建 */
 import SearchFilterBar from '../components/SearchFilterBar.vue';
 import MarkText from '../components/MarkText.vue';
 import StatusPill from '../components/StatusPill.vue'; /* ：tag chip 统一件（tg-tag 双档退役） */
@@ -99,14 +99,14 @@ import { writeStoredRaw } from '../utils/safeJson';
 
 const router = useRouter();
 const store = useAppStore();
-/*  §8.3 原设想的 URL 化未实施——实为 useScopedDraft 的 sessionStorage 草稿
-   （同标签页刷新保留、跨标签页不共享、无深链分享； G42 史志注释如实化） */
+/* 原设想的 URL 化未实施——实为 useScopedDraft 的 sessionStorage 草稿
+ （同标签页刷新保留、跨标签页不共享、无深链分享； 史志注释如实化） */
 const kw = useScopedDraft('kw', { route: 'templates-gallery' }, '').text;
 const cat = useScopedDraft('cat', { route: 'templates-gallery' }, '全部').text;
 
-/*  G39：单卡双态展开——紧凑默认 130px 截断 18/23 卡（ 实测最长 32 行
-   仅可见 ~7 行），展开解除上限看全模板；展开属临时浏览态不落盘（刷新回默认紧凑，
-   与筛选/草稿类持久态区分，铁律 B 的「状态不重置」针对持久语义非浏览态） */
+/* ：单卡双态展开——紧凑默认 130px 截断 18/23 卡（ 实测最长 32 行
+ 仅可见 ~7 行），展开解除上限看全模板；展开属临时浏览态不落盘（刷新回默认紧凑，
+ 与筛选/草稿类持久态区分，铁律 B 的「状态不重置」针对持久语义非浏览态） */
 const expanded = ref(new Set<string>());
 function toggleExpand(t: Tpl) {
   const next = new Set(expanded.value);
@@ -172,17 +172,17 @@ function toSandbox(t: Tpl) {
 }
 function toQuery(t: Tpl) {
   writeStoredRaw(sessionStorage, 'es-console.dsl.body', pretty(t));
-  /*  G40：显式 mode=dsl 落点钉死——QueryHub 无 ?mode= 时按 qh.mode 记忆
-     回落上次模式（上次停留沙盒 tab 时本动线被带进沙盒页， 读数实证）；深链
-     mode 优先于记忆，与 toSandbox 显式带 mode 同范式（铁律 B 落点恒定） */
+  /* ：显式 mode=dsl 落点钉死——QueryHub 无 ?mode= 时按 qh.mode 记忆
+ 回落上次模式（上次停留沙盒 tab 时本动线被带进沙盒页， 读数实证）；深链
+ mode 优先于记忆，与 toSandbox 显式带 mode 同范式（铁律 B 落点恒定） */
   router.push({ path: '/search', query: { mode: 'dsl' } });
   store.notify('info', `模板已送入查询工作台：${t.title}`);
 }
 
 /* 模板收藏写侧——收藏夹 kind:'template' 此前全站零写侧（分类 tab 与
-   favReplay 回放分支都在，却无处创建）。收藏后从收藏夹一键回放至搜索沙盒。
-    G41：Star 双态回显+取消通道——aria-pressed+实心态标记已收藏，
-   再点即 removeFavorite（addFavorite 按 kind+title 幂等覆盖，写侧契约不破） */
+ favReplay 回放分支都在，却无处创建）。收藏后从收藏夹一键回放至搜索沙盒。
+ ：Star 双态回显+取消通道——aria-pressed+实心态标记已收藏，
+ 再点即 removeFavorite（addFavorite 按 kind+title 幂等覆盖，写侧契约不破） */
 function isFav(t: Tpl) {
   return store.favorites.some(f => f.kind === 'template' && f.title === t.title);
 }
@@ -206,13 +206,13 @@ function toggleFav(t: Tpl) {
 
 <style scoped>
 /* G6-S1：区块级间距 token 化（--sp-1..6 = 4/8/12/16/24/32）；控件内 padding / 亚阶梯(≤3px) / 行级密排不动。
-   九档等值收口（含半档 --sp-0/-1h/-2h = 2/6/10px），6/10/12px 等值 px 退役；1/3/5px 刻意值保字面 */
+ 九档等值收口（含半档 --sp-0/-1h/-2h = 2/6/10px），6/10/12px 等值 px 退役；1/3/5px 刻意值保字面 */
 .tg-page { display: flex; flex-direction: column; gap: var(--sp-4); }
-/*  E：头部行允许换行——窄屏下 .tg-search（min-width:320px）不再把标题行横向顶爆 */
+/* E：头部行允许换行——窄屏下 .tg-search（min-width:320px）不再把标题行横向顶爆 */
 .tg-hd { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-3); flex-wrap: wrap; }
 /* 值漂移（bg1/line/radius 6px）随胶囊壳组件化归 SearchFilterBar 单源
-   （panel 底+border-subtle+8px）；min-width 320px → min(320px,100%) 极窄溢出钳制
-   （529 带兜底范式）；gap/padding 留本类（padding 对齐现行，高度结构零变动） */
+ （panel 底+border-subtle+8px）；min-width 320px → min(320px,100%) 极窄溢出钳制
+ （529 带兜底范式）；gap/padding 留本类（padding 对齐现行，高度结构零变动） */
 .tg-search { display: flex; align-items: center; gap: var(--sp-1h); padding: 5px var(--sp-2h); min-width: min(320px, 100%); }
 
 .tg-cats { display: flex; gap: var(--sp-2); flex-wrap: wrap; padding-bottom: var(--sp-1); border-bottom: 1px dashed var(--line); }
@@ -222,13 +222,13 @@ function toggleFav(t: Tpl) {
 .tg-cat.on { background: var(--ac-soft); color: var(--ac-hi); border-color: var(--ac-line); font-weight: 600; }
 .tg-cat-cnt { font-size: var(--fs-xs); opacity: .8; padding: 0 var(--sp-1); }
 
-/* G6 核对：卡片网格断点语义由 auto-fill + minmax(340px, 1fr) 内在承担（容器够宽自动多列、不足自动单列），
-   无需 @media 断点——§9.3 双档标准不适用本页 */
+/* 核对：卡片网格断点语义由 auto-fill + minmax(340px, 1fr) 内在承担（容器够宽自动多列、不足自动单列），
+ 无需 @media 断点—— 双档标准不适用本页 */
 .tg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: var(--sp-3); }
-/* tg-card 卡壳退役（立法④：bg1+border+radius:8px 整块消除 → border-top 分节流）；
-   hover 浮起（translateY+shadow）属 chrome 随迁退役，顶部 hairline 变色承接悬停反馈；
-   tg-c-code 代码内容面 bg2 语义保留（540 df 判例 carve-out）；类名保留
-   （qualityThreeState 在场锁消费面） */
+/* tg-card 卡壳退役（约定④：bg1+border+radius:8px 整块消除 → border-top 分节流）；
+ hover 浮起（translateY+shadow）属 chrome 同步更新退役，顶部 hairline 变色承接悬停反馈；
+ tg-c-code 代码内容面 bg2 语义保留（540 df 先例 carve-out）；类名保留
+ （qualityThreeState 在场锁消费面） */
 .tg-card { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-1) 0 var(--sp-3); border-top: 1px solid var(--line); }
 .tg-card:hover { border-color: var(--ac); }
 
@@ -237,7 +237,7 @@ function toggleFav(t: Tpl) {
 .tg-c-ic { color: var(--ac-hi); }
 .tg-c-hd-r { display: flex; align-items: center; gap: var(--sp-1h); }
 .tg-c-cat { font-size: var(--fs-xs); padding: 1px var(--sp-1h); background: var(--bg2); border-radius: 999px; color: var(--tx2); }
-/*  G39：展开钮——轻量图标钮（20px 圆角方块，ghost 同语言）；展开态品牌色 */
+/* ：展开钮——轻量图标钮（20px 圆角方块，ghost 同语言）；展开态品牌色 */
 .tg-c-expand { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: var(--r-xs); background: transparent; border: none; color: var(--tx2); cursor: pointer; padding: 0; }
 .tg-c-expand:hover { color: var(--tx0); background: var(--bg2); }
 .tg-card.open .tg-c-expand { color: var(--ac-hi); }
@@ -245,23 +245,23 @@ function toggleFav(t: Tpl) {
 .tg-c-desc { font-size: var(--fs-xs); color: var(--tx2); }
 .tg-c-code { flex: 1; background: var(--bg2); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-xs); font-family: var(--mono); font-size: var(--fs-xs); max-height: 130px; overflow-y: auto; white-space: pre-wrap; cursor: pointer; line-height: 1.5; margin: 0; color: var(--tx1); }
 .tg-c-code:hover { background: var(--bg0); }
-/*  G39：展开态解除紧凑上限看全模板（铁律 F）；紧凑默认 130px 零触。
-   同排卡片等高随 grid 内在行为（浏览态临时，可接受） */
+/* ：展开态解除紧凑上限看全模板（铁律 F）；紧凑默认 130px 零触。
+ 同排卡片等高随 grid 内在行为（浏览态临时，可接受） */
 .tg-card.open .tg-c-code { max-height: none; }
 
 .tg-c-ft { display: flex; justify-content: space-between; align-items: center; padding-top: var(--sp-1); border-top: 1px dashed var(--line); }
 .tg-c-tags { display: flex; gap: var(--sp-1); flex-wrap: wrap; }
-/* .tg-tag/.tg-tag-danger 私造 chip 皮随 StatusPill 换装退役（550 判例同语言）——
-   普通 tag 中性 n 档、「危险」语义 r 档（err 色 token 同源），色板/胶囊形态归 .pill 单源 */
+/* .tg-tag/.tg-tag-danger 私造 chip 皮随 StatusPill 改用退役（同语言）——
+ 普通 tag 中性 n 档、「危险」语义 r 档（err 色 token 同源），色板/胶囊形态归 .pill 单源 */
 .tg-c-actions { display: flex; gap: var(--sp-1); }
-/*  G41：收藏态视觉——品牌色实心星（aria-pressed 语义配套的卡面回显） */
+/* ：收藏态视觉——品牌色实心星（aria-pressed 语义配套的卡面回显） */
 .tg-fav.on { color: var(--ac-hi); }
 
 /* 版式交由 EmptyState（padding 34px 16px），此处只保留父栅格契约 */
 .tg-empty { grid-column: 1 / -1; }
 
 /* 900 紧凑微调档——页 gap/卡片内距收一档兜密度（网格列数由 auto-fill
-   minmax 内在自适应无需塌列，头行 .tg-hd 已 flex-wrap；：卡壳随分节流退役后横内衬归零） */
+ minmax 内在自适应无需塌列，头行 .tg-hd 已 flex-wrap；：卡壳随分节流退役后横内衬归零） */
 @media (max-width: 900px) {
   .tg-page { gap: var(--sp-3); }
   .tg-card { padding: var(--sp-0) 0 var(--sp-2); }

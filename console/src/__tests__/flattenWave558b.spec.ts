@@ -1,5 +1,5 @@
 /**
- * 五百五十八批(b)·轨4（天罗工蚁B）：扁平化剥壳 + 弹层空态收编 8 面。
+ * 五百五十八批(b)·轨4（天罗工蚁B）：扁平化剥壳 + 弹层空态合并 8 面。
  * 静态源码断言仿 flattenWave556/557 范式（strip 注释后逐字锚 + 组件本体零触防回流）。
  *
  * ① 编辑器外框退役 7 面（IlmView 为 557 已就位核对）：MonacoEditor .monaco-host /
@@ -9,15 +9,15 @@
  *    ⚠analyzeLayout525W4b:35 / sqlLint534:147 / sqlBridgeFlat535:140 逐字锁钉死
  *    「flex: 1 1 0; min-height: 260px; }」原行——该三面剥壳以同选择器独立规则追加
  *    （CSS 声明合并语义等价），不动被锁原文。
- * ② HealthReportView 弹层空态收编：两处 .hr-pop-hint 裸 div 换 EmptyState compact
- *    统一件（557 批 rp-empty/st-list-empty 判例同语言；SearchX 语义图标，
- *    ClusterSettingsView:60 判例同款）——文案逐字保留走 :text 绑定，窄弹层留白
+ * ② HealthReportView 弹层空态合并：两处 .hr-pop-hint 裸 div 换 EmptyState compact
+ *    统一件（557 批 rp-empty/st-list-empty 先例同语言；SearchX 语义图标，
+ *    ClusterSettingsView:60 先例同款）——文案逐字保留走 :text 绑定，窄弹层留白
  *    按原 hint 档收紧（compact 默认 16px 12px 在弹层内喧宾夺主）。
  *    healthArchivePopupPick.spec.ts:108 行为锁随批迁移锚（.hr-pop-hint → .hr-pop .es-text，
  *    该 spec 非禁改件）。
  *
  * 范围铁律：剥壳只动 scoped style（追加 border:none;border-radius:0），模板结构
- * 零变动（HealthReport 空态收编除外）；高度链/flex 语义零变动；禁改件零触。
+ * 零变动（HealthReport 空态合并除外）；高度链/flex 语义零变动；禁改件零触。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -46,7 +46,7 @@ describe('五百五十八批(b)①：编辑器外框退役 8 面（视图侧规�
   it('MappingDesignerView：加字段弹窗 md-mo-body 面 .ja 退壳（md-mo-hd border-bottom + ja-bar 自承分界）', () => {
     expect(srcOf('MappingDesignerView.vue')).toContain('.md-mo-body :deep(.ja) { border: none; border-radius: 0; }');
   });
-  it('IlmView：策略编辑弹窗 ilm-policy-ja 剥壳已在场（557 批先例，本批核对不重做）', () => {
+  it('IlmView：策略编辑弹窗 ilm-policy-ja 剥壳已在场（557 批先例，核对不重做）', () => {
     expect(srcOf('IlmView.vue')).toContain('.ilm-policy-ja { border: none; border-radius: 0; }');
   });
   it('MappingView：新建弹窗两处 Monaco 直挂剥壳（monaco-host 组件根携本视图 scope id，scoped 类规则直接命中）', () => {
@@ -67,9 +67,9 @@ describe('五百五十八批(b)①：编辑器外框退役 8 面（视图侧规�
   });
 });
 
-/* ═══════════ ② HealthReportView 弹层空态收编 EmptyState ═══════════ */
+/* ═══════════ ② HealthReportView 弹层空态合并 EmptyState ═══════════ */
 
-describe('五百五十八批(b)②：HealthReportView 弹层空态收编 EmptyState compact（文案逐字保留）', () => {
+describe('五百五十八批(b)②：HealthReportView 弹层空态合并 EmptyState compact（文案逐字保留）', () => {
   it('两处 hr-pop-hint 裸 div 空态退役（模板消费与样式规则清零）', () => {
     const s = strip(srcOf('HealthReportView.vue'));
     expect(s, 'hr-pop-hint 手写空态清零').not.toMatch(/hr-pop-hint/);

@@ -3,11 +3,11 @@
  *   ① TasksView reindex 行内进度：ES _tasks?detailed 的 status（BulkByScrollTask.Status，
  *      字段名按后端 EsIndexAdmin.getReindexProgress 解析键实地核实）渲染轻量进度——
  *      有 status.total 出「已处理/总数 百分比」+进度条；无 total 只显已处理数；
- *      非 reindex 行不受影响；不逐行打 /progress 端点（同域但 N×轮询成本不划算，记档裁决）。
+ *      非 reindex 行不受影响；不逐行打 /progress 端点（同域但 N×轮询成本不划算，备案裁决）。
  *   ② ReconcileReportDrawer 620 固定宽视口钳制（94% 收口，上限 620）。
  *   ③ BP_STACK 单源：常量本体在 utils/layout.ts，WorkbenchLayout import 引用
  *      （七百九十批：零消费 re-export 兼容层退役），
- *      WorkspaceView matchMedia 常量插值，getViewportProfile 内部档位收编。
+ *      WorkspaceView matchMedia 常量插值，getViewportProfile 内部档位合并。
  * 形态：①挂载行为（静态锁照不出渲染结果）+源码锁；②③源码锁（sweep524/layoutOcclusion 同手法）。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -116,7 +116,7 @@ describe('TasksView reindex 进度渲染（528 批，挂载）', () => {
     app.unmount();
   });
 
-  it('源码锁：status 字段提取口径 + 不逐行打 /progress 端点（可观测断链记档裁决）', () => {
+  it('源码锁：status 字段提取口径 + 不逐行打 /progress 端点（可观测断链备案裁决）', () => {
     /* 字段名实地核实锚（后端 EsIndexAdmin.getReindexProgress 同键）：total/updated/created/deleted */
     expect(tasksSrc).toMatch(/const done = num\(s\.updated\) \+ num\(s\.created\) \+ num\(s\.deleted\);/);
     expect(tasksSrc).toMatch(/const total = num\(s\.total\);/);
@@ -134,8 +134,8 @@ describe('ReconcileReportDrawer 视口钳制（528 批）', () => {
   });
 });
 
-describe('BP_STACK 断点常量单源（528 批收编 utils/layout）', () => {
-  it('常量本体在 layout.ts（BP_STACK/BP_NARROW），getViewportProfile 内部档位收编不裸写', () => {
+describe('BP_STACK 断点常量单源（528 批合并 utils/layout）', () => {
+  it('常量本体在 layout.ts（BP_STACK/BP_NARROW），getViewportProfile 内部档位合并不裸写', () => {
     expect(layoutUtil).toMatch(/export const BP_NARROW = 900;/);
     expect(layoutUtil).toMatch(/export const BP_STACK = 1100;/);
     expect(layoutUtil).toMatch(/width < BP_NARROW/);

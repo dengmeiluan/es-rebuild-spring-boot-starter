@@ -65,7 +65,7 @@ async function editCell(newValue: string) {
 }
 
 describe('编辑提交失败原因透传（136 批）', () => {
-  /* 五百六十六批随迁：RT pend-pop 经 563 方案 A n-popover 真解析（此前组件漏 import
+  /* 五百六十六批同步更新：RT pend-pop 经 563 方案 A n-popover 真解析（此前组件漏 import
      不解析、内容内联平铺=本 spec 旧锁形态）后，「提交全部」在浮层内容内且默认不渲染——
      先点 pend-chip 触发钮开层（真机等价路径），浮层内容挂 body 走 document 级查询 */
   async function openPendPop() {

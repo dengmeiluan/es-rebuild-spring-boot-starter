@@ -7,7 +7,7 @@
  *    单一出处（dslCompletionContext.AFFINITY_FAMILIES.keyword 同表先例），constant_keyword
  *    走 terms-agg 候选（wildcard 保留 LIKE % 静态档——545 表锁）；NUMERIC_HINT_TYPES 并入
  *    token_count；VAL_FORMAT_HINTS 补 geo_point 档。
- *  C LuceneInput：known 表随迁 constant_keyword（token_count 经 NUMERIC_TYPES 同权）。
+ *  C LuceneInput：known 表同步更新 constant_keyword（token_count 经 NUMERIC_TYPES 同权）。
  *  D FieldSelect：选中 keyword 族字段空前缀预载 terms（LuceneInput.choose 551 同范式；
  *    裸挂载无 pinia 零动作，索引语境缺席 suggest 空参早退零请求）。
  *  E SnapshotsView：rename_pattern new RegExp 试编译提示条 + Indices 索引表达式
@@ -284,7 +284,7 @@ describe('C sqlCompletion：KEYWORD_VALUE_TYPES 单一出处 + 三档扩容', ()
     } finally { h.dispose(); __clearSuggestCache(); }
   });
 
-  it('C3 wildcard 列仍走 LIKE % 静态档（族内去 wildcard，545 表锁零随迁回归）', () => {
+  it('C3 wildcard 列仍走 LIKE % 静态档（族内去 wildcard，545 表锁零同步更新回归）', () => {
     const m = makeMonaco();
     const h = ensureSqlCompletion(m.api as any, ctxFn());
     try {
@@ -324,9 +324,9 @@ describe('C sqlCompletion：KEYWORD_VALUE_TYPES 单一出处 + 三档扩容', ()
   });
 
   it('C6 源码锁：族表导出 + 值位分支消费（AGG_VALUE_TYPES）', () => {
-    /* 554 随迁：KEYWORD_VALUE_TYPES 表本体下沉 queryAstOps 零依赖单源（数值族
+    /* 554 同步更新：KEYWORD_VALUE_TYPES 表本体下沉 queryAstOps 零依赖单源（数值族
        NUMERIC_VALUE_TYPES 同批下沉），sqlCompletion 改 re-export——原「export const
-       落在 sqlCompletion」锚随迁为「queryAstOps 定义 + sqlCompletion re-export」，
+       落在 sqlCompletion」锚同步更新为「queryAstOps 定义 + sqlCompletion re-export」，
        值逐字同形（C1 表锁保形）；AGG_VALUE_TYPES 消费锚原样不动 */
     expect(readSrc('utils/queryAstOps.ts')).toContain("export const KEYWORD_VALUE_TYPES = ['keyword', 'wildcard', 'constant_keyword'];");
     const sql = readSrc('utils/sqlCompletion.ts');
@@ -335,7 +335,7 @@ describe('C sqlCompletion：KEYWORD_VALUE_TYPES 单一出处 + 三档扩容', ()
   });
 });
 
-/* ═══ D：LuceneInput known 随迁 constant_keyword + NUMERIC_TYPES 并入 token_count ═══ */
+/* ═══ D：LuceneInput known 同步更新 constant_keyword + NUMERIC_TYPES 并入 token_count ═══ */
 
 const LUCENE_MAPPING = { raw: { properties: {
   cfield: { type: 'constant_keyword' },
@@ -372,7 +372,7 @@ async function type(host: ParentNode, v: string) {
   await settle();
 }
 
-describe('D LuceneInput：known 随迁 constant_keyword + token_count 数值档', () => {
+describe('D LuceneInput：known 同步更新 constant_keyword + token_count 数值档', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     document.body.innerHTML = '';
@@ -385,9 +385,9 @@ describe('D LuceneInput：known 随迁 constant_keyword + token_count 数值档'
   });
   afterEach(() => { while (apps.length) apps.pop()!.unmount(); });
 
-  it('D1 constant_keyword 值位滤空出「无候选值」提示（known 随迁行为面，与既有档同权）', async () => {
-    /* 554 随迁：constant_keyword 值位由「known 兜底滤空提示」升格为 AGG_KEYWORD_TYPES 族表
-       terms-agg 动态候选（LuceneInput keyword 族收口立法）——原「非 keyword 不触发 terms」
+  it('D1 constant_keyword 值位滤空出「无候选值」提示（known 同步更新行为面，与既有档同权）', async () => {
+    /* 554 同步更新：constant_keyword 值位由「known 兜底滤空提示」升格为 AGG_KEYWORD_TYPES 族表
+       terms-agg 动态候选（LuceneInput keyword 族收口约定）——原「非 keyword 不触发 terms」
        契约随批退役；滤空提示语义保留：terms 已回（零桶）且本地过滤为空仍出「暂无」 */
     searchRawFn.mockReset().mockResolvedValue({ aggregations: { suggest: { buckets: [] } } });
     vi.useFakeTimers();
@@ -413,12 +413,12 @@ describe('D LuceneInput：known 随迁 constant_keyword + token_count 数值档'
   });
 
   it('D3 源码锁：known 行补 constant_keyword + NUMERIC_TYPES 行补 token_count', () => {
-    /* 554 随迁：known 行收口 KEYWORD_VALUE_TYPES 族表（constant_keyword 经族表在册，
+    /* 554 同步更新：known 行收口 KEYWORD_VALUE_TYPES 族表（constant_keyword 经族表在册，
        语义扩 geo_point 随权）；NUMERIC_TYPES 表本体下沉 queryAstOps.NUMERIC_VALUE_TYPES
        单源（值逐字同形，token_count 在册）。原契约意图保持：constant_keyword 与
        token_count 均在档，滤空提示/数值静态档随权不变。
-       560 随迁：known 行头部补 `s.field === '_exists_'`、尾部补 t === 'version'
-       （两档 560 立法）——constant_keyword/token_count 既有语义零回退 */
+       560 同步更新：known 行头部补 `s.field === '_exists_'`、尾部补 t === 'version'
+       （两档 560 约定）——constant_keyword/token_count 既有语义零回退 */
     const li = readSrc('components/LuceneInput.vue');
     expect(li).toContain("const known = s.field === '_exists_' || KEYWORD_VALUE_TYPES.includes(t) || t === 'date' || t === 'boolean' || t === 'ip' || t === 'date_nanos' || t === 'text' || t === 'geo_point' || t === 'version' || RANGE_FLAT_TYPES.includes(t) || NUMERIC_TYPES.includes(t);");
     expect(li).toContain('const NUMERIC_TYPES = NUMERIC_VALUE_TYPES;');

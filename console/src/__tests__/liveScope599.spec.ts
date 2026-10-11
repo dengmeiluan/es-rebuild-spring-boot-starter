@@ -131,7 +131,7 @@ describe('五百九十九批：历史趋势口径跟随集群维度', () => {
     }
   });
 
-  it('件 B：单集群态副标题显示集群实名（替代笼统「多集群叠加」；八百一十六批件4 随迁：byNode 默认 true 后集群视图语义以关 byNode 前置保全+补节点叠加态断言）', async () => {
+  it('件 B：单集群态副标题显示集群实名（替代笼统「多集群叠加」；八百一十六批件4 同步更新：byNode 默认 true 后集群视图语义以关 byNode 前置保全+补节点叠加态断言）', async () => {
     const { app, host, pinia } = await mountLive();
     try {
       const appStore = useAppStore(pinia);

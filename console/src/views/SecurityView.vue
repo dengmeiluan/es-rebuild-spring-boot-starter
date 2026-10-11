@@ -10,7 +10,7 @@
     </div>
 
     <div class="sec-grid">
-      <!-- 我的账号。：顶层 .card 壳退役（立法④）→ border-top 分节（xm-res 551 判例同语言） -->
+      <!-- 我的账号。：顶层 .card 壳退役（约定④）→ border-top 分节（xm-res 同语言） -->
       <div class="me-card">
         <div class="card-t"><button class="sec-fold" :class="{ folded: collapsed.me }" :aria-label="collapsed.me ? '展开' : '折叠'" @click="toggleBlock('me')"><ChevronDown :size="14" /></button><UserCircle2 :size="14" /> 我的账号</div>
         <div v-show="!collapsed.me">
@@ -24,7 +24,7 @@
             <span>姓名</span><b>{{ auth.me.displayName }}</b>
           </div>
           <!-- ·语义重构：delegated 用户权限=宿主菜单勾选，角色徽标不再展示；
-               内置登录（独立部署）保留角色徽标与说明 -->
+ 内置登录（独立部署）保留角色徽标与说明 -->
           <div v-if="!auth.me.delegated" class="me-row">
 <span>角色</span>
             <StatusPill :tone="roleTone(auth.me.role)" :label="auth.me.role" />
@@ -40,8 +40,8 @@
               <span>可见 <b>{{ grantSummary.totals.visible }}</b> 页 · 可写 <b>{{ grantSummary.totals.writable }}</b> 页（明细见下）</span>
             </div>
             <!-- grantedPages=null（宿主未启用页面级授权）≠「未下发授权」——
-                 按角色档回落展示：ADMIN=全权；非 ADMIN 保留角色徽标+说明（角色档是 SPI 未
-                 启用部署的唯一裁决，如实展示而不是一律说「未下发」误导） -->
+ 按角色档回落展示：ADMIN=全权；非 ADMIN 保留角色徽标+说明（角色档是 SPI 未
+ 启用部署的唯一裁决，如实展示而不是一律说「未下发」误导） -->
             <template v-else>
               <div class="me-row" v-if="auth.me.role === 'ADMIN'">
 <span>页面授权</span>
@@ -78,12 +78,12 @@
       </div>
 
       <!-- 页面授权总览（delegated+连接模型）——宿主菜单勾选的可视化：
-           每连接一节，页 chips（可写>可见两档），页名从 me.pages 目录解析，未知 key 原样展示 -->
+ 每连接一节，页 chips（可写>可见两档），页名从 me.pages 目录解析，未知 key 原样展示 -->
       <div class="me-card" v-if="grantSummary.connModel && grantSummary.conns.length">
         <div class="card-t"><button class="sec-fold" :class="{ folded: collapsed.grant }" :aria-label="collapsed.grant ? '展开' : '折叠'" @click="toggleBlock('grant')"><ChevronDown :size="14" /></button><ShieldCheck :size="14" /> 页面授权（宿主菜单勾选）</div>
         <div v-show="!collapsed.grant">
         <!-- 补强②（用户产线截图）：超管全键展开后 10 连接行全是重复的
-             「全部页面·可读可写」——聚合为一行汇总，点开才列连接清单 -->
+ 「全部页面·可读可写」——聚合为一行汇总，点开才列连接清单 -->
         <div v-if="allConnsFullGrant" class="pg-agg">
           <b>{{ grantSummary.conns.length }}</b> 个连接 · 每连接全部 {{ pageCatalogTotal }} 页 · 可读可写
           <span class="dim">（宿主超管隐式全权）</span>
@@ -127,16 +127,16 @@
             <button class="btn sm" :disabled="usersLoading" @click="loadUsers">重试</button>
           </div>
           <!-- 修复：骨架/空态/数据三态互斥——原骨架条件「!users.length && !usersErr」
-               在「加载完成但为空」时永真（委托鉴权+无正式账号场景骨架无限转圈、与空态叠加渲染），
-               补 usersLoading 状态区分「在途」与「完成但为空」 -->
+ 在「加载完成但为空」时永真（委托鉴权+无正式账号场景骨架无限转圈、与空态叠加渲染），
+ 补 usersLoading 状态区分「在途」与「完成但为空」 -->
           <div v-if="usersLoading && !users.length" class="sec-skel">
             <SkeletonBox v-for="i in 4" :key="i" height="16px" round style="margin-bottom:9px" :width="(88 - i * 9) + '%'" />
           </div>
           <!-- 用户裸表换 QRT rows 型（同视图审计表 529 先例，先列锚清单再动手）——
-               排序/列漏斗/右键/行导航/导出归内核（宿主 useTableSort 胶水退役）；
-               删除钮走 #row-actions 槽（BrowserView 529 先例）；selectable 行多选通道开（批量场景）；
-               列=中文键（与旧表头逐字同源），更新列落 epoch ms（QRT 数值比较器排序）+
-               #cell-更新 槽 TimeCell abs 还原显示 -->
+ 排序/列漏斗/右键/行导航/导出归内核（宿主 useTableSort 胶水退役）；
+ 删除钮走 #row-actions 槽（BrowserView 529 先例）；selectable 行多选通道开（批量场景）；
+ 列=中文键（与旧表头逐字同源），更新列落 epoch ms（QRT 数值比较器排序）+
+ #cell-更新 槽 TimeCell abs 还原显示 -->
           <QueryResultTable
             v-if="users.length"
             :cols="US_COLS" :rows="usMatrix" sortable
@@ -154,8 +154,8 @@
             </template>
           </QueryResultTable>
           <!-- C3/#13：err-bar 与 empty 互斥——拉取失败时不许伪装成「暂无正式账号」误导管理员重建用户
-               空态给下一步动作（EmptyState 纪律）——一键把角色预置为 ADMIN 并聚焦表单
-               裸 .empty 迁 EmptyState compact（用户管理窄卡），创建 ADMIN 改 actionText 等价保留 -->
+ 空态给下一步动作（EmptyState 纪律）——一键把角色预置为 ADMIN 并聚焦表单
+ 裸 .empty 迁 EmptyState compact（用户管理窄卡），创建 ADMIN 改 actionText 等价保留 -->
           <EmptyState v-else-if="!usersLoading && !usersErr" compact :icon="UserPlus"
             text="暂无正式账号 —— 当前依赖兜底默认账号" action-text="创建 ADMIN" @action="presetAdmin" />
           <div class="divider"></div>
@@ -177,7 +177,7 @@
           <!-- 角色说明从一行长文案结构化为对照清单（可读性） -->
           <div class="role-rows">
             <div v-for="rl in ROLE_ROWS" :key="rl" class="role-row">
-              <!-- role-pill 落位锚类（原 role-tag min-width 对齐语义随迁） -->
+              <!-- role-pill 落位锚类（原 role-tag min-width 对齐语义同步更新） -->
               <StatusPill class="role-pill" :tone="roleTone(rl)" :label="rl" />
               <span class="dim">{{ roleDesc(rl) }}</span>
             </div>
@@ -189,7 +189,7 @@
               <div v-for="g in auth.me.pages.groups" :key="g.id" class="pc-group">
                 <b class="pc-group-name">{{ g.name }}</b>
                 <div class="pc-pages">
-                  <!-- ④ G30 残量收编：控制集群页芯片退役自绘 .pc-page 基座，共用全局 .chip（static 非交互档） -->
+                  <!-- ④ 残量合并：控制集群页芯片退役自绘 .pc-page 基座，共用全局 .chip（static 非交互档） -->
                   <span v-for="p in g.pages" :key="p.key" class="chip static" :title="p.route">
                     {{ p.name }}<span v-if="p.minVer" class="pc-ver">需 {{ p.minVer }}+</span>
                   </span>
@@ -225,7 +225,7 @@
       </div>
       <template v-if="canRebind">
         <div class="divider"></div>
-        <div class="card-t sm">重绑控制集群（高危：新集群需重建账号/连接档案，历史审计不随迁）</div>
+        <div class="card-t sm">重绑控制集群（高危：新集群需重建账号/连接档案，历史审计不同步更新）</div>
         <div class="rebind-row">
           <input v-model.trim="rbUrl" class="ipt mono" placeholder="http://es-host:9200" />
           <input v-model.trim="rbUser" class="ipt" placeholder="用户名（可选）" autocomplete="off" />
@@ -238,16 +238,16 @@
     </div>
       </div>
 
-    <!-- 操作审计（：全量=rank3+；其余角色走 /ops-audit/mine 自助——username 服务端强制）。
-         同上款 .card 壳退役 → border-top 分节 -->
+    <!-- 操作审计（全量=rank3+；其余角色走 /ops-audit/mine 自助——username 服务端强制）。
+ 同上款 .card 壳退役 → border-top 分节 -->
     <div class="audit-card">
             <div class="card-t"><button class="sec-fold" :class="{ folded: collapsed.audit }" :aria-label="collapsed.audit ? '展开' : '折叠'" @click="toggleBlock('audit')"><ChevronDown :size="14" /></button>
 <ScrollText :size="14" /> 操作审计流水
         <span v-if="!canAuditAll" class="dim sm-txt">（仅我的操作 · 全量需 AUDIT_OP/ADMIN）</span>
-        <!--  G21：工具行分组收纳——高频快滤/动作/时间/刷新留明面（可见按钮 ≤5），
-             低频筛选（按用户/集群/URI）与导出（TSV/Markdown）收进 ⋯（复用 ld-hist-more 同语汇） -->
-        <!-- 轨4：审计快滤明面换装 SearchFilterBar 单源（sfbUnify650 锁；639 G21 语义零变）——
-             Esc 清空转组件内建，落位类 sv-adkw 承接原 .sm-ipt 宽度位 -->
+        <!-- ：工具行分组收纳——高频快滤/动作/时间/刷新留明面（可见按钮 ≤5），
+ 低频筛选（按用户/集群/URI）与导出（TSV/Markdown）收进 ⋯（复用 ld-hist-more 同语汇） -->
+        <!-- 轨4：审计快滤明面改用 SearchFilterBar 单源（sfbUnify650 锁；639 语义零变）——
+ Esc 清空转组件内建，落位类 sv-adkw 承接原 .sm-ipt 宽度位 -->
         <SearchFilterBar v-model="adKw" class="sv-adkw" input-class="sm-ipt" placeholder="过滤用户/URI/集群" />
         <template v-if="auth.me">
           <select v-model="fAction" class="ipt sm-ipt sel" @change="loadAudit">
@@ -261,8 +261,8 @@
             <!-- 宿主贡献者动作（打通 宿主 sys_audit_log，SPI 合并） -->
             <option value="HOST_OP">宿主操作（HOST_OP）</option>
           </select>
-          <!-- 「仅看被拒」快捷过滤—— G23 双路径合一：改一次性 shortcut
-               （单设 PAGE_DENIED 不 toggle，select 为单源；on 态仍由 fAction 派生） -->
+          <!-- 「仅看被拒」快捷过滤—— 双路径合一：改一次性 shortcut
+ （单设 PAGE_DENIED 不 toggle，select 为单源；on 态仍由 fAction 派生） -->
           <button class="btn ghost sm" :class="{ on: fAction === 'PAGE_DENIED' }" :title="fAction === 'PAGE_DENIED' ? '已聚焦页面访问被拒（请在动作下拉选「全部动作」退出）' : '只看页面访问被拒（PAGE_DENIED）'" @click="fAction = 'PAGE_DENIED'; loadAudit()">
             <ShieldAlert :size="12" /> 仅看被拒
           </button>
@@ -277,12 +277,12 @@
           <!-- selectable 行多选计数（users 表 :57 同款暗状态可见性） -->
           <span v-if="auditSel.length" class="dim sm-txt">已选 {{ auditSel.length }} 条</span>
         </template>
-        <!--  G21：⋯ 溢出（低频筛选 + 导出）——原生 details 键盘可达（不入 Esc 台账），
-             弹层四要素（bg1 底 + 边框 + 阴影 + r-m）；datalist 随输入同迁弹层内 -->
+        <!-- ：⋯ 溢出（低频筛选 + 导出）——原生 details 键盘可达（不入 Esc 台账），
+ 弹层四要素（bg1 底 + 边框 + 阴影 + r-m）；datalist 随输入同迁弹层内 -->
         <details class="ad-more">
           <summary class="ad-more-sum" aria-label="更多筛选与导出" title="更多选项：按用户/集群/URI 过滤 + TSV/Markdown 导出">⋯</summary>
           <div class="ad-more-pop">
-            <!--  值建议：fUser 挂 datalist（建议=审计索引 by_user terms agg 真实出现过的用户+计数） -->
+            <!-- 值建议：fUser 挂 datalist（建议=审计索引 by_user terms agg 真实出现过的用户+计数） -->
             <input v-if="canAuditAll" v-model.trim="fUser" class="ipt sm-ipt" placeholder="按用户过滤" list="audit-user-suggestions"
               @keyup.enter="loadAudit" @keydown.esc.prevent="fUser = ''" />
             <datalist id="audit-user-suggestions">
@@ -297,7 +297,7 @@
             <datalist id="audit-conn-suggestions">
               <option v-for="s in connSuggestions" :key="s.key" :value="s.key">{{ s.count }}</option>
             </datalist>
-            <!--  值建议补齐：URI 前缀输入挂服务端 uriPrefix 下推（回车/刷新生效）； 挂 datalist（by_uri 真实 Top URI） -->
+            <!-- 值建议补齐：URI 前缀输入挂服务端 uriPrefix 下推（回车/刷新生效）； 挂 datalist（by_uri 真实 Top URI） -->
             <input v-if="canAuditAll" v-model.trim="fUri" class="ipt sm-ipt" placeholder="按 URI 前缀过滤" list="audit-uri-suggestions"
               @keyup.enter="loadAudit" @keydown.esc.prevent="fUri = ''" />
             <datalist id="audit-uri-suggestions">
@@ -322,14 +322,14 @@
         <button class="btn sm" :disabled="auditLoading" @click="loadAudit">重试</button>
       </div>
       <!-- 审计裸表换 QRT rows 型（524 教训先列锚清单再动手）——
-           排序/列漏斗（用户/角色/来源/动作/方法等值 + HTTP·耗时数值区间走 fieldTypes long →
-           内建 isRangeCol）/列选/右键/行导航/导出 CSV·MD·XLSX·PNG 全归内核；
-           kw 快滤（adKw）留视图（与 fAction 服务端过滤 AND 后作 rows 输入端）；
-           524 派生展示列（TimeCell abs/role-tag/act-tag 动作中文/m-* 方法色轮/URI 短显示/
-           HTTP ≥400 红字/详情查看器打开路径）逐条经 #cell-<列名> 作用域槽保真；
-           导出文件名 sec-audit-<exportStamp> 走 export-name（ ops-audit 更名，
-           与页域 security:* 记忆键同前缀），单元格加工走 export-cell；
-           列名用中文键——与旧表头/旧 CSV 表头逐字同源，漏斗 aria「筛选 方法 列」保真 -->
+ 排序/列漏斗（用户/角色/来源/动作/方法等值 + HTTP·耗时数值区间走 fieldTypes long →
+ 内建 isRangeCol）/列选/右键/行导航/导出 CSV·MD·XLSX·PNG 全归内核；
+ kw 快滤（adKw）留视图（与 fAction 服务端过滤 AND 后作 rows 输入端）；
+ 524 派生展示列（TimeCell abs/role-tag/act-tag 动作中文/m-* 方法色轮/URI 短显示/
+ HTTP ≥400 红字/详情查看器打开路径）逐条经 #cell-<列名> 作用域槽保真；
+ 导出文件名 sec-audit-<exportStamp> 走 export-name（ ops-audit 更名，
+ 与页域 security:* 记忆键同前缀），单元格加工走 export-cell；
+ 列名用中文键——与旧表头/旧 CSV 表头逐字同源，漏斗 aria「筛选 方法 列」保真 -->
       <QueryResultTable
         v-if="auditRows.length || auditLoading"
         ref="auditQrt"
@@ -346,8 +346,8 @@
       >
         <template #cell-时间="{ value }"><TimeCell :ts="value" abs /></template>
         <template #cell-用户="{ value }"><span class="mono">{{ value }}</span></template>
-        <!-- 角色列/动作列私造胶囊换装 StatusPill 统一件（roleTone/actTone 映射；
-             动作代码 title 兜底与中文映射 actionZh 语义原样保留，securityReadability 锚随迁保真） -->
+        <!-- 角色列/动作列私造胶囊改用 StatusPill 统一件（roleTone/actTone 映射；
+ 动作代码 title 兜底与中文映射 actionZh 语义原样保留，securityReadability 锚同步更新保真） -->
         <template #cell-角色="{ value }"><StatusPill :tone="roleTone(String(value))" :label="String(value)" /></template>
         <template #cell-动作="{ value }"><StatusPill :tone="actTone(String(value))" :label="actionZh(String(value))" :title="'动作代码：' + value" /></template>
         <!-- W-C 批：HTTP 方法挂全局语义色轮 .m-*（GET 绿/POST 黄/PUT 紫/DELETE 红/HEAD 蓝） -->
@@ -362,17 +362,17 @@
         <template #cell-HTTP="{ value }"><span :class="Number(value) >= 400 ? 'err-txt' : ''">{{ value }}</span></template>
         <template #cell-详情="{ row, value }">
           <!-- 长 detail 可点开完整查看器(截断 2000 字符的详情不再只有 title)；
-               打开路径不变——槽内由矩阵行重建 detailRow（AUDIT_COLS 列序契约） -->
+ 打开路径不变——槽内由矩阵行重建 detailRow（AUDIT_COLS 列序契约） -->
           <button v-if="value" class="btn ghost xs" aria-label="查看完整详情" title="查看完整详情" @click.stop="openDetailCell(row)"><Maximize2 :size="10" /></button>
           <span class="detail-txt" :role="value ? 'button' : undefined" :tabindex="value ? 0 : undefined" @click="value && openDetailCell(row)" @keydown.enter.prevent="value && openDetailCell(row)" @keydown.space.prevent="value && openDetailCell(row)">{{ value || '-' }}</span>
         </template>
       </QueryResultTable>
-      <!--  G28：审计 >200 条可加载更多（复活孤儿 loadMore/auditHasMore/audit-more） -->
+      <!-- ：审计 >200 条可加载更多（复活孤儿 loadMore/auditHasMore/audit-more） -->
       <div v-if="auditHasMore" class="audit-more">
         <button class="btn ghost sm" :disabled="auditLoading || moreLoading" @click="loadMore">{{ moreLoading ? '加载中…' : '加载更多' }}</button>
       </div>
       <!-- 裸 .empty 迁 EmptyState compact（审计卡内嵌窄态）；补
-           !auditLoading 门控——在途骨架与空态互斥（QRT v-if 已含 loadingOps 分支） -->
+ !auditLoading 门控——在途骨架与空态互斥（QRT v-if 已含 loadingOps 分支） -->
       <EmptyState v-if="!auditLoading && !auditRows.length && auth.me && !auditErr" compact :icon="ScrollText"
         text="暂无审计记录" hint="写操作与登录会自动落档到 es_console_ops_audit" />
 
@@ -383,12 +383,12 @@
         </template>
         <MetaStrip class="sec-dv-meta" :items="dvBaseItems" v-if="detailRow" />
         <!-- 富维度元信息行——所属集群（实名+连接 ID）/来源 IP/耗时/记录归属（控制台|宿主）
-             （原始记录经行尾附挂位直达，四维全量；兜底重建路径仍有 cluster 展示位）。
-             手写「·」串收编 MetaStrip items（逐段 v-if 条件随迁进 dvRichItems，
-             模板门控等价改判 items 非空） -->
+ （原始记录经行尾附挂位直达，四维全量；兜底重建路径仍有 cluster 展示位）。
+ 手写「·」串合并 MetaStrip items（逐段 v-if 条件同步更新进 dvRichItems，
+ 模板门控等价改判 items 非空） -->
         <MetaStrip class="sec-dv-meta" :items="dvRichItems" v-if="detailRow && dvRichItems.length" />
         <!-- W-C 批：detail 是自由文本，JSON.parse 试解成功才走 highlightJson（已转义 HTML），失败保持原文 pre；
-             平文分支裸插值收口 errPreHtml v-html（转义安全；含 { 的残缺 JSON 尽力着色） -->
+ 平文分支裸插值收口 errPreHtml v-html（转义安全；含 { 的残缺 JSON 尽力着色） -->
         <pre v-if="detailHtml" class="sec-dv-pre mono json-view" v-html="detailHtml"></pre>
         <pre v-else class="sec-dv-pre mono" v-html="detailPlainHtml"></pre>
       </n-modal>
@@ -406,21 +406,21 @@ import {
   ScrollText, RefreshCw, AlertTriangle, DatabaseZap, Link2, ClipboardList, ChevronDown,
 } from 'lucide-vue-next';
   /* Copy 去别名（天罗W6 顺手修）：审计详情弹窗模板用 <Copy> 但 import 历史上别名 CopyIcon
-     （全模板 0 引用），运行时恒告警 Failed to resolve component */
+ （全模板 0 引用），运行时恒告警 Failed to resolve component */
 
 import PageHeader from '../components/PageHeader.vue';import { api } from '../api';
 /* 两处裸 .empty 迁 EmptyState compact */
 import EmptyState from '../components/EmptyState.vue';
 import SkeletonBox from '../components/SkeletonBox.vue';
-import SearchFilterBar from '../components/SearchFilterBar.vue'; /* 轨4：审计快滤明面换装统一件（sfbUnify650 锁） */
+import SearchFilterBar from '../components/SearchFilterBar.vue'; /* 轨4：审计快滤明面改用统一件（sfbUnify650 锁） */
 import { useAuthStore } from '../stores/auth';
 import { useAppStore } from '../stores/app';
 import { useScopedDraft } from '../composables/useScopedDraft';
-import { usePref } from '../composables/urlState'; /*  G27：审计时间范围落盘（与 LiveDashboard mh2Range 同范式） */
+import { usePref } from '../composables/urlState'; /* ：审计时间范围落盘（与 LiveDashboard mh2Range 同范式） */
 
 /* 审计表换 QRT rows 型——排序/列漏斗（含 HTTP 区间）/列选/右键/导出归内核，
-   宿主漏斗胶水（useColFilters+ColFilterPopover+af-btn）随壳退役（PluginsView 525 W5 同判据）；
-   用户表同批换壳后 useTableSort 全退役，import 随迁删除 */
+ 宿主漏斗胶水（useColFilters+ColFilterPopover+af-btn）随壳退役（PluginsView 525 W5 同判据）；
+ 用户表同步换壳后 useTableSort 全退役，import 同步更新删除 */
 import QueryResultTable from '../components/QueryResultTable.vue';
 import { matrixText } from '../utils/copyMatrix';
 import { askConfirm } from '../composables/confirm';
@@ -429,13 +429,13 @@ import { fmtTimeTz, copyText } from '../utils/format';
 import { highlightJson, prettyJson } from '../utils/jsonc';
 import { errPreHtml } from '../utils/errPre'; /* ：审计详情平文分支 v-html 内核 */
 import TimeCell from '../components/TimeCell.vue';
-import StatusPill from '../components/StatusPill.vue'; /* ：role/act 私造胶囊换装统一件 */
-import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue'; /* ：审计详情 meta 串统一件（sec-dv-meta 手写「·」串收编） */
+import StatusPill from '../components/StatusPill.vue'; /* ：role/act 私造胶囊改用统一件 */
+import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue'; /* ：审计详情 meta 串统一件（sec-dv-meta 手写「·」串合并） */
 
 const auth = useAuthStore();
 const store = useAppStore();
 /* delegated 用户的安全中心语义=展示「宿主菜单勾了什么」而非角色——
-   grantedPages 解析为按连接分组的授权摘要（纯函数见 utils/pageGrants.ts） */
+ grantedPages 解析为按连接分组的授权摘要（纯函数见 utils/pageGrants.ts） */
 import { summarizeGrants } from '../utils/pageGrants';
 const grantSummary = computed(() => summarizeGrants(auth.me?.grantedPages ?? null));
 const connName = (connId: string): string => store.conns.find(c => c.id === connId)?.name || connId;
@@ -489,10 +489,10 @@ const fConnMine = ref(currentConnName());
 function currentConnName(): string {
   return store.conns.find(c => c.id === store.target)?.name || '';
 }
-/*  筛选行深化：URI 前缀服务端下推输入 */
+/* 筛选行深化：URI 前缀服务端下推输入 */
 const fUri = useScopedDraft('uri', { route: 'security' }, '').text;
-/*  值建议：审计索引 terms agg 真实出现值（拉取失败/空=回落硬编码词表，绝不反噬）。
-   users 维度（ by_user 聚合，动作/集群/用户三维建议）；：uris 维度（by_uri 真实 Top URI） */
+/* 值建议：审计索引 terms agg 真实出现值（拉取失败/空=回落硬编码词表，绝不反噬）。
+ users 维度（ by_user 聚合，动作/集群/用户三维建议）；：uris 维度（by_uri 真实 Top URI） */
 const facets = ref<{ actions: { key: string; count?: number }[]; conns: { key: string; count?: number }[]; users: { key: string; count?: number }[]; uris: { key: string; count?: number }[] } | null>(null);
 const connSuggestions = computed(() => facets.value?.conns || []);
 const userSuggestions = computed(() => facets.value?.users || []);
@@ -506,11 +506,11 @@ const auditRows = ref<any[]>([]);
 const auditHasMore = ref(false);
 const AUDIT_PAGE = 200;
 /* 审计表补 loading 骨架态（users 表同款在途/完成区分）+ selectable 行多选通道
-   （users 表同款 @selection-change 接线，批量场景备料） */
+ （users 表同款 @selection-change 接线，批量场景备料） */
 const auditLoading = ref(false);
 /* 巡查：加载更多自有在途 ref——旧守卫错绑 auditLoading（loadMore 从不置位该
-   ref=守卫恒空转），在途双击 fetchAuditPage(同 offset) 双发会重复追加大页行；防重入短路
-   +finally 复位（INTERACTION §4 nuBusy 二道防线惯例） */
+ ref=守卫恒空转），在途双击 fetchAuditPage(同 offset) 双发会重复追加大页行；防重入短路
+ +finally 复位（INTERACTION nuBusy 二道防线惯例） */
 const moreLoading = ref(false);
 const auditSel = ref<unknown[]>([]);
 /* 审计详情查看器(长 detail 完整查看,不再只有 title 截断) */
@@ -532,10 +532,10 @@ function copyDetailView() {
 /* 审计流水 7 列可排序——按用户/动作/HTTP 聚焦排查 */
 /* 审计流水 7 列可排序——按用户/动作/HTTP 聚焦排查 */
 /* 时间范围升级为服务端过滤——fRange 换算 sinceMs 下推 store.search
-   （range clause），「加载更多」offset 累计仍作用于同一过滤集；前端不再二次过滤 */
-const fRange = usePref<'all' | '1h' | '24h' | '7d'>('security.auditRange', 'all'); /*  G27：时间范围落盘，刷新/重进还原 */
+ （range clause），「加载更多」offset 累计仍作用于同一过滤集；前端不再二次过滤 */
+const fRange = usePref<'all' | '1h' | '24h' | '7d'>('security.auditRange', 'all'); /* ：时间范围落盘，刷新/重进还原 */
 
-/*  G26：五区块卡级折叠状态（usePref 落盘，重进还原） */
+/* ：五区块卡级折叠状态（usePref 落盘，重进还原） */
 const collapsed = usePref<Record<string, boolean>>('security.blocks', {});
 function toggleBlock(k: string) { collapsed.value[k] = !collapsed.value[k]; }
 const RANGE_MS: Record<string, number> = { '1h': 3600e3, '24h': 24 * 3600e3, '7d': 7 * 24 * 3600e3 };
@@ -544,15 +544,15 @@ function sinceMsOf(): number | undefined {
   return Date.now() - RANGE_MS[fRange.value];
 }
 /* 审计排序/漏斗归 QRT 内核（es_tbl_sort:security:audit 记忆、列头内建漏斗）
-   ——宿主 useTableSort(auditRows)/useColFilters 胶水退役；：用户表同批换壳，
-   useTableSort 全退役 */
+ ——宿主 useTableSort(auditRows)/useColFilters 胶水退役；：用户表同步换壳，
+ useTableSort 全退役 */
 /* ═══ ：审计 QRT rows 型数据映射 ═══
-   列=中文键（与旧表头/旧导出 CSV 表头逐字同源）；矩阵值标量化：
-   时间列落 epoch ms（QRT 数值比较器对 ISO 串 parseFloat 同年全等会废排序，ms 数值排序
-   语义与旧 localeCompare 一致且更稳），显示/导出经 #cell-时间 槽 TimeCell abs / exportCell
-   fmtTimeTz 还原；用户列=displayName||username（与旧展示/导出口径一致）。 */
+ 列=中文键（与旧表头/旧导出 CSV 表头逐字同源）；矩阵值标量化：
+ 时间列落 epoch ms（QRT 数值比较器对 ISO 串 parseFloat 同年全等会废排序，ms 数值排序
+ 语义与旧 localeCompare 一致且更稳），显示/导出经 #cell-时间 槽 TimeCell abs / exportCell
+ fmtTimeTz 还原；用户列=displayName||username（与旧展示/导出口径一致）。 */
 /* 补全：审计表格做全——事件类型 14 维中可表格化的 12 列全上
-   （IP/耗时/来源 从详情弹层升列；connId 并入集群列、timestamp 为时间列、原始记录行尾附挂不占列） */
+ （IP/耗时/来源 从详情弹层升列；connId 并入集群列、timestamp 为时间列、原始记录行尾附挂不占列） */
 const AUDIT_COLS = ['时间', '用户', '角色', '来源', '动作', '方法', 'URI', '集群', 'IP', 'HTTP', '耗时(ms)', '详情'];
 function tsOf(v: any): number | string {
   if (typeof v === 'number') return v;
@@ -560,8 +560,8 @@ function tsOf(v: any): number | string {
   return Number.isFinite(n) ? n : String(v ?? '');
 }
 /* 审计 kw 客户端快滤：username/uri/集群(connName||connId) includes，大小写不敏感，空串全量；
-   fAction（含 PAGE_DENIED/HOST_OP 芯片）是服务端过滤、先裁数据集；漏斗/排序在 QRT 内核对此行集
-   再滤再排 = AND 叠加；TSV/Markdown 复制（getCsvBlock）与导出同为「所见即所复」 */
+ fAction（含 PAGE_DENIED/HOST_OP 芯片）是服务端过滤、先裁数据集；漏斗/排序在 QRT 内核对此行集
+ 再滤再排 = AND 叠加；TSV/Markdown 复制（getCsvBlock）与导出同为「所见即所复」 */
 const adKw = ref('');
 const adShown = computed(() => {
   const k = adKw.value.trim().toLowerCase();
@@ -573,8 +573,8 @@ const adShown = computed(() => {
     || String(r.connId ?? '').toLowerCase().includes(k));
 });
 /* 集群列（connName 优先实名，缺省回退 connId）——所属集群维度直达审计行；
-   行尾第 10 位附加原始记录（QRT 只渲染 cols 声明列、导出按列裁剪，冗余位零感知），
-   详情查看器从原记录取全维度（IP/耗时/归属），不再受位置化矩阵丢字段之害 */
+ 行尾第 10 位附加原始记录（QRT 只渲染 cols 声明列、导出按列裁剪，冗余位零感知），
+ 详情查看器从原记录取全维度（IP/耗时/归属），不再受位置化矩阵丢字段之害 */
 const auditMatrix = computed<any[][]>(() => adShown.value.map(r => [
   tsOf(r.timestamp), r.displayName || r.username, r.role, r.source || 'console',
   r.action, r.method, r.uri, r.connName || r.connId || '', r.ip || '',
@@ -582,8 +582,8 @@ const auditMatrix = computed<any[][]>(() => adShown.value.map(r => [
 ]));
 /* 导出/复制矩阵单元格加工：时间列还原 fmtTimeTz（旧 CSV 首列口径），其余恒等直出 */
 const auditExportCell = (v: unknown, col: { key: string }) => (col.key === '时间' ? fmtTimeTz(v) : v);
-/* 审计详情查看器打开路径不变（）：槽内优先取行尾附挂的原始记录（全维度），
-   兜底按 AUDIT_COLS 列序重建（集群=index 6、HTTP=7、详情=8——旧数据防御位） */
+/* 审计详情查看器打开路径不变（槽内优先取行尾附挂的原始记录（全维度），
+ 兜底按 AUDIT_COLS 列序重建（集群=index 6、HTTP=7、详情=8——旧数据防御位） */
 const auditQrt = ref<InstanceType<typeof QueryResultTable> | null>(null);
 function openDetailCell(row: any[]) {
   const src = row[12] && typeof row[12] === 'object' ? row[12] : null;
@@ -596,8 +596,8 @@ function openDetailCell(row: any[]) {
 }
 
 /* 用户表换 QRT rows 型（排序/漏斗归内核，宿主 useTableSort 胶水退役）：
-   列=中文键（与旧表头逐字同源）；更新列落 epoch ms（QRT 数值比较器排序，与审计时间列
-   同口径），显示经 #cell-更新 槽 TimeCell abs 还原 */
+ 列=中文键（与旧表头逐字同源）；更新列落 epoch ms（QRT 数值比较器排序，与审计时间列
+ 同口径），显示经 #cell-更新 槽 TimeCell abs 还原 */
 const US_COLS = ['用户名', '角色', '更新'];
 const usMatrix = computed<any[][]>(() => users.value.map(u => [u.username, u.role, tsOf(u.updatedAt)]));
 /* selectable 行多选通道（批量场景）：selection-change 上报原始用户对象数组 */
@@ -605,7 +605,7 @@ const usSel = ref<unknown[]>([]);
 
 /* 控制集群状态 + 重绑 */
 const setup = ref<{ bound: boolean; mode: string; endpoint: string | null; appName: string } | null>(null);
-/* 巡查：loadSetup 在途 ref（刷新安全状态钮守卫+spinning；713 G51 族） */
+/* 巡查：loadSetup 在途 ref（刷新安全状态钮守卫+spinning；713 族） */
 const setupLoading = ref(false);
 async function loadSetup() {
   setupLoading.value = true;
@@ -644,12 +644,12 @@ const ACTION_ZH: Record<string, string> = {
 };
 function actionZh(a: string) { return ACTION_ZH[a] ?? a; }
 
-/* ═══ ：role-tag×4 / act-tag 私造胶囊换装 StatusPill 统一件，tone 映射表记档 ═══
-   原私造配色 → 既有五档映射（色语义就近归档，全档归 theme.css .pill 单源）：
-   · 角色：ADMIN(err 高危全权)→r；OPERATOR(warn 低危写)→y；REBUILD_OP(orange→y 写专项)；
-     VIEWER(只读 read→g)；CLUSTER_OP(ac→b 集群管理)；AUDIT_OP(violet→n 中性观测)
-   · 动作：LOGIN(ok)→g；LOGIN_FAIL(err)→r；WRITE(write 语义→y)；HIGH_RISK(err)→r；
-     PAGE_DENIED(warn→y)；READ(read→g)；PAGE_VIEW/RAW/未知码→n */
+/* ═══ ：role-tag×4 / act-tag 私造胶囊改用 StatusPill 统一件，tone 映射表 ═══
+ 原私造配色 → 既有五档映射（色语义就近归档，全档归 theme.css .pill 单源）：
+ · 角色：ADMIN(err 高危全权)→r；OPERATOR(warn 低危写)→y；REBUILD_OP(orange→y 写专项)；
+ VIEWER(只读 read→g)；CLUSTER_OP(ac→b 集群管理)；AUDIT_OP(violet→n 中性观测)
+ · 动作：LOGIN(ok)→g；LOGIN_FAIL(err)→r；WRITE(write 语义→y)；HIGH_RISK(err)→r；
+ PAGE_DENIED(warn→y)；READ(read→g)；PAGE_VIEW/RAW/未知码→n */
 const ROLE_TONE: Record<string, 'g' | 'y' | 'r' | 'b' | 'n'> = {
   ADMIN: 'r', OPERATOR: 'y', REBUILD_OP: 'y', VIEWER: 'g', CLUSTER_OP: 'b', AUDIT_OP: 'n',
 };
@@ -670,11 +670,11 @@ function shortUri(u: string) {
   return stripped || s;
 }
 
-/* ═══ ：审计详情弹窗两串手写「·」meta 收编 MetaStrip 统一件（items 双源） ═══
-   基础串=用户/方法/URI/HTTP/时间五段（RemoteClusters rc-card-meta 533 判例同构：值亮+标签暗+
-   ·分隔）；方法色档 .m-* 色轮归 MetaStrip tone 语义档就近映射（GET 绿→ok / POST 黄→warn /
-   PUT 紫→info / DELETE 红→err / HEAD 蓝→info；色值归 theme token 单源，映射记档）。
-   富维度串=集群（实名+连接 ID 括号副文案随 label）/IP/耗时/归属，555 四锚语义逐段随迁。 */
+/* ═══ ：审计详情弹窗两串手写「·」meta 合并 MetaStrip 统一件（items 双源） ═══
+ 基础串=用户/方法/URI/HTTP/时间五段（RemoteClusters rc-card-meta 同构：值亮+标签暗+
+ ·分隔）；方法色档 .m-* 色轮归 MetaStrip tone 语义档就近映射（GET 绿→ok / POST 黄→warn /
+ PUT 紫→info / DELETE 红→err / HEAD 蓝→info；色值归 theme token 单源，映射）。
+ 富维度串=集群（实名+连接 ID 括号副文案随 label）/IP/耗时/归属，555 四锚语义逐段同步更新。 */
 const METHOD_TONE: Record<string, 'ok' | 'warn' | 'err' | 'info'> = {
   GET: 'ok', POST: 'warn', PUT: 'info', DELETE: 'err', HEAD: 'info',
 };
@@ -742,8 +742,8 @@ async function doChangePw() {
 async function loadUsers() {
   if (!canManageUsers.value) return;
   /* -A2：失败不再静默吞成空列表，页面级透传 + 重试。
-     修复：usersLoading 状态位——骨架只在「在途」显示，
-     加载完成但为空走空态（委托鉴权+无正式账号时骨架曾无限转圈并叠加空态） */
+ 修复：usersLoading 状态位——骨架只在「在途」显示，
+ 加载完成但为空走空态（委托鉴权+无正式账号时骨架曾无限转圈并叠加空态） */
   usersLoading.value = true;
   try { users.value = await api.auth.users(); usersErr.value = ''; }
   catch (e: any) { users.value = []; usersErr.value = friendlyEsError(String(e?.message ?? e)); }
@@ -753,7 +753,7 @@ async function loadUsers() {
 async function doUpsert() {
   if (nuBusy.value) return; /* ：函数体级防重入（按钮 disabled 之外的第二道防线） */
   /* 用户名已存在 = 更新而非新建：会覆盖对方角色（填了密码还会重置其登录凭证），
-     不许再静默提交——先弹确认拿到管理员点头。点取消不动任何数据。 */
+ 不许再静默提交——先弹确认拿到管理员点头。点取消不动任何数据。 */
   if (users.value.some((u: any) => u.username === nuName.value) && !await askConfirm({
     title: '更新已有用户',
     message: `用户 ${nuName.value} 已存在：将更新其角色${nuPass.value ? '，并重置其密码' : ''}。确认提交？`,
@@ -773,7 +773,7 @@ async function doUpsert() {
   }
 }
 
-/* 提交防重（INTERACTION §4 范式）：删除在途时双击/重入直接短路（同 nuBusy 二道防线惯例） */
+/* 提交防重（INTERACTION 范式）：删除在途时双击/重入直接短路（同 nuBusy 二道防线惯例） */
 const deleting = ref(false);
 async function doDelete(username: string) {
   if (deleting.value) return;
@@ -799,8 +799,8 @@ async function doDelete(username: string) {
 
 async function fetchAuditPage(offset: number): Promise<{ rows: any[]; hasMore: boolean }> {
   /* 全量（rank3+）走 opsAudit；其余角色走 opsAuditMine（username 服务端强制=自己）。
-     R9 全栈优化轮：全量态集群筛选下推（connName 精确服务端过滤）；：URI 前缀下推接活
-     （ 输入挂了但通道缺失的死输入，后端 uriPrefix 形参在案，此处补通透传） */
+ R9 全栈优化轮：全量态集群筛选下推（connName 精确服务端过滤）；：URI 前缀下推接活
+ （ 输入挂了但通道缺失的死输入，后端 uriPrefix 形参在案，此处补通透传） */
   const r = canAuditAll.value
     ? await api.auth.opsAudit(fUser.value || undefined, fAction.value || undefined, AUDIT_PAGE, offset, sinceMsOf(), fConn.value || undefined, fUri.value || undefined)
     : await api.auth.opsAuditMine(fAction.value || undefined, AUDIT_PAGE, offset, sinceMsOf(), fConnMine.value || undefined);
@@ -834,12 +834,12 @@ async function loadMore() {
 }
 
 /* 审计「导出 CSV」按钮随换壳退役——QRT 工具行内建 CSV/MD/XLSX/PNG 接管
-   （export-name → sec-audit-<exportStamp()>.csv，exportStamp 由内核拼装；
-   前缀更名 sec-audit 与页域 security:* 记忆键同源，「语义前缀-本地时间戳」口径不变；
-   行集/列集走内核排序+漏斗所见即所得） */
+ （export-name → sec-audit-<exportStamp()>.csv，exportStamp 由内核拼装；
+ 前缀更名 sec-audit 与页域 security:* 记忆键同源，「语义前缀-本地时间戳」口径不变；
+ 行集/列集走内核排序+漏斗所见即所得） */
 
 /* 天罗W6：审计复制矩阵（copyMatrix TSV）——数据源改走 QRT ref.getCsvBlock()
-   （漏斗筛选+排序+列选所见即所复；单元格已经 exportCell 管道加工=时间列 fmtTimeTz） */
+ （漏斗筛选+排序+列选所见即所复；单元格已经 exportCell 管道加工=时间列 fmtTimeTz） */
 async function copyAuditTsv() {
   const blk = auditQrt.value?.getCsvBlock();
   if (!blk || !blk.rows.length) return;
@@ -849,8 +849,8 @@ async function copyAuditTsv() {
 }
 
 /* 补/208：审计 Markdown 复制（群聊/工单直贴）——行集改走
-   getCsvBlock()（所见即所复）；表头=内核列名（中文键，与旧 | 时间 | 用户 |…| 逐字同源）；
-   动作列中文映射（actionZh）与详情 '-' 兜底在此还原（内核矩阵存原码） */
+ getCsvBlock()（所见即所复）；表头=内核列名（中文键，与旧 | 时间 | 用户 |…| 逐字同源）；
+ 动作列中文映射（actionZh）与详情 '-' 兜底在此还原（内核矩阵存原码） */
 async function copyAuditMd() {
   const blk = auditQrt.value?.getCsvBlock();
   if (!blk || !blk.rows.length) return;
@@ -889,8 +889,8 @@ async function doRebind() {
 
 onMounted(() => { loadUsers(); loadAudit(); loadSetup(); loadFacets(); });
 /* 修复首屏审计/用户列表空——身份探测（probe）是异步的，onMounted 时 isAdmin() 可能
-   还是 false 被静默跳过，靠手动刷新才出数据。身份就绪后自动补拉一次。
-   身份就绪即补拉（任意角色——非审计角色也有「我的操作流水」要看） */
+ 还是 false 被静默跳过，靠手动刷新才出数据。身份就绪后自动补拉一次。
+ 身份就绪即补拉（任意角色——非审计角色也有「我的操作流水」要看） */
 const canAuditAll = computed(() => auth.canAuditAll());
 watch(() => auth.me?.role, (role, old) => {
   if (role && old !== role) { loadUsers(); loadAudit(); }
@@ -898,7 +898,7 @@ watch(() => auth.me?.role, (role, old) => {
 </script>
 
 <style scoped>
-/* §7 页头样式已收敛 PageHeader 组件，本地同值块删除 */
+/* 页头样式已收敛 PageHeader 组件，本地同值块删除 */
 .fb-banner {
   display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-4); padding: var(--sp-2) var(--sp-4);
   font-size: var(--fs-sm); color: var(--warn); border: 1px solid var(--warn-line);
@@ -909,31 +909,31 @@ watch(() => auth.me?.role, (role, old) => {
 @media (max-width: 1100px) { .sec-grid { grid-template-columns: minmax(0, 1fr); } }
 
 /* 天罗W6：scoped .card 重定义整条删除——背景/边框/圆角/内边距与全局 .card（theme.css）
-   同值，仅 10px 圆角离队；删后归档全局（radius 走 --r-l token），不再双轨。
-   .card-title 与全局 .card-t 逐属性等值（gap 8px/--sp-2 同值），改名并轨；
-   .sm 二档同批升 theme.css（与 .card-t 同处），scoped 双档声明随之退役 */
+ 同值，仅 10px 圆角离队；删后归档全局（radius 走 --r-l token），不再双轨。
+ .card-title 与全局 .card-t 逐属性等值（gap 8px/--sp-2 同值），改名并轨；
+ .sm 二档同步升 theme.css（与 .card-t 同处），scoped 双档声明随之退役 */
 .right { margin-left: auto; }
 .divider { border-top: 1px dashed var(--line); margin: var(--sp-3) 0; }
 
-/* 四张顶层 .card 壳（theme.css 三件套）退役 → border-top 分节（立法④；
-   XmigrateView xm-new/xm-res 551 判例同语言），card-t 行首横排标题保留；
-   原卡 padding（14px var(--sp-4)）等值迁入分节（盒模型零变动，高度结构零触） */
+/* 四张顶层 .card 壳（theme.css 三件套）退役 → border-top 分节（约定④；
+ XmigrateView xm-new/xm-res 同语言），card-t 行首横排标题保留；
+ 原卡 padding（14px var(--sp-4)）等值迁入分节（盒模型零变动，高度结构零触） */
 .me-card, .us-card, .ctl-card, .audit-card { border-top: 1px solid var(--border); padding: 14px var(--sp-4); }
 
 .me-rows { display: flex; flex-direction: column; gap: var(--sp-2); }
-/* ④ G30 豁免：.me-row=两栏定义列表（label 左 value 右 space-between 纵排），MetaStrip=inline
-   串（值前标签后）——形态语义不同构，且行内嵌 StatusPill/「模式+说明」双值列超出 MetaStrip item
-   契约；强收=布局语义变更（651「精确等值才收，形态不同构豁免」同族立法，勿再收编） */
+/* ④ 豁免：.me-row=两栏定义列表（label 左 value 右 space-between 纵排），MetaStrip=inline
+ 串（值前标签后）——形态语义不同构，且行内嵌 StatusPill/「模式+说明」双值列超出 MetaStrip item
+ 契约；强收=布局语义变更（651「精确等值才收，形态不同构豁免」同族约定，勿再合并） */
 .me-row { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-2h); font-size: var(--fs-sm); }
 .me-row > span:first-child { color: var(--tx2); flex-shrink: 0; }
 /* 修复：委托账号是长 SSO ID（fs_ou_23627…），不断行会把「用户名」标签挤成竖排——
-   值区允许断行 + 截断显示，hover 看全量 */
+ 值区允许断行 + 截断显示，hover 看全量 */
 .me-row > b { min-width: 0; overflow-wrap: anywhere; word-break: break-all; text-align: right; }
 .w100 { width: 100%; margin-bottom: var(--sp-2); }
 
-/* role-tag 六色 / act-tag 五色私造配色胶囊随 StatusPill 换装退役
-   （色档归 theme.css .pill 五档单源，映射表记档见 script ROLE_TONE/ACT_TONE）；
-   role-pill 只留对照清单落位（原 role-tag 的 min-width 对齐语义随迁，.pill 自带居中） */
+/* role-tag 六色 / act-tag 五色私造配色胶囊随 StatusPill 改用退役
+ （色档归 theme.css .pill 五档单源，映射表见 script ROLE_TONE/ACT_TONE）；
+ role-pill 只留对照清单落位（原 role-tag 的 min-width 对齐语义同步更新，.pill 自带居中） */
 .role-pill { flex-shrink: 0; min-width: 92px; justify-content: center; }
 
 /* 表单行内校验红字（改密二次确认 / 新用户密码最短位） */
@@ -954,20 +954,20 @@ watch(() => auth.me?.role, (role, old) => {
 .page-catalog summary { font-weight: 600; color: var(--tx1); }
 .page-catalog-body { margin-top: var(--sp-2); display: flex; flex-direction: column; gap: var(--sp-2); max-height: 320px; overflow: auto; }
 .pc-group-name { display: block; font-size: var(--fs-xs); color: var(--ac-hi); margin-bottom: var(--sp-1); }
-.pc-pages { display: flex; flex-wrap: wrap; gap: var(--sp-1); } /* 芯片本体已收编全局 .chip.static（④ G30），容器为布局层保留 */
+.pc-pages { display: flex; flex-wrap: wrap; gap: var(--sp-1); } /* 芯片本体已合并全局 .chip.static（④ G30），容器为布局层保留 */
 .pc-ver { color: var(--warn); margin-left: var(--sp-1); }
 
 .audit-card .sm-ipt { width: 140px; margin-left: var(--sp-2); }
 /* 轨4：快滤明面 SFB 落位类（input-class sm-ipt 仅运行时锚，scoped 样式不再命中内层 input） */
 .audit-card .sv-adkw { width: 140px; height: 30px; margin-left: var(--sp-2); padding: 0 var(--sp-2); font-size: var(--fs-sm); }
 
-/*  G26：区块折叠钮（chevron 折叠态 -90°，只动 transform 不触发布局） */
+/* ：区块折叠钮（chevron 折叠态 -90°，只动 transform 不触发布局） */
 .sec-fold { background: transparent; border: none; color: var(--muted); cursor: pointer; padding: 0; display: inline-flex; align-items: center; flex-shrink: 0; }
 .sec-fold:hover { color: var(--tx0); }
 .sec-fold svg { transition: transform var(--dur-fast) var(--ease-out); }
 .sec-fold.folded svg { transform: rotate(-90deg); }
 
-/*  G21：审计工具行 ⋯ 溢出（复用 ld-hist-more 同语汇）；G22 断点兜底 */
+/* ：审计工具行 ⋯ 溢出（复用 ld-hist-more 同语汇）； 断点兜底 */
 .audit-card .card-t { flex-wrap: wrap; row-gap: var(--sp-1); }
 .ad-more { position: relative; flex: 0 0 auto; }
 .ad-more-sum { list-style: none; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border: 1px solid var(--line); border-radius: var(--r-s); background: var(--bg1); color: var(--tx2); font-size: var(--fs-md); line-height: 1; }
@@ -981,14 +981,14 @@ watch(() => auth.me?.role, (role, old) => {
 .uri { max-width: 42vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .detail { max-width: 30vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .audit-more { padding: var(--sp-2) 0; text-align: center; }
-/* act-tag/a-* 五色私造配色随 StatusPill 换装退役（映射表记档见 script） */
+/* act-tag/a-* 五色私造配色随 StatusPill 改用退役（映射表见 script） */
 .err-txt { color: var(--err); }
 .ok-txt { color: var(--ok); }
 
 .ctl-card { margin-bottom: var(--sp-4); }
 .rebind-row { display: grid; grid-template-columns: 1.6fr 1fr 1fr auto; gap: var(--sp-2); align-items: center; }
 /* 两处单行 900 重复档并档为一档（1100+900 两块标准形态）——new-user/rebind-row
-   两规则逐条等值迁移零删规则（responsive900Sweep529 纪律口径：档内非空、无 ≥300px 裸 width） */
+ 两规则逐条等值迁移零删规则（responsive900Sweep529 纪律口径：档内非空、无 ≥300px 裸 width） */
 @media (max-width: 900px) {
   .new-user { grid-template-columns: minmax(0, 1fr); }
   .rebind-row { grid-template-columns: minmax(0, 1fr); }
@@ -996,7 +996,7 @@ watch(() => auth.me?.role, (role, old) => {
 .sec-skel { padding: var(--sp-3) var(--sp-0) var(--sp-1h); }
 
 /* ═══ ：审计列筛选漏斗（.af-btn 全家）随换 QRT 壳退役——漏斗（含 HTTP 数值
-   区间，fieldTypes long → 内建 isRangeCol）归 QRT 内建 .qrt-funnel + ColFilterPopover ═══ */
+ 区间，fieldTypes long → 内建 isRangeCol）归 QRT 内建 .qrt-funnel + ColFilterPopover ═══ */
 .pg-conn + .pg-conn { border-top: 1px solid var(--line); }
 .pg-conn details { padding: var(--sp-1) 0; }
 .pg-conn-sum { cursor: pointer; display: flex; align-items: center; gap: var(--sp-2); list-style: none; }
@@ -1005,8 +1005,8 @@ watch(() => auth.me?.role, (role, old) => {
 .pg-conn details[open] .pg-conn-sum::before { transform: rotate(90deg); }
 .pg-conn-sum:hover { color: var(--tx0); }
 .pg-pages { display: flex; flex-wrap: wrap; gap: var(--sp-1); padding: var(--sp-1) var(--sp-2) 0; }
-/*  G30：页面授权 chip 共用全局 .chip（.chip.static 非交互基座），
-   可写修饰 .pg-w 品牌色保留（.pg-chip 自绘基座退役） */
+/* ：页面授权 chip 共用全局 .chip（.chip.static 非交互基座），
+ 可写修饰 .pg-w 品牌色保留（.pg-chip 自绘基座退役） */
 .pg-w { color: var(--brand); border-color: color-mix(in srgb, var(--brand) 45%, transparent); }
 .pg-w b { font-weight: 600; margin-left: var(--sp-0); }
 .us-card { grid-column: 1 / -1; } /* ：用户管理表格需要全宽（窄列挤压修复） */

@@ -1,22 +1,22 @@
 /**
- * 五百四十批·轨4（工蚁 W4）：全站扁平化扫荡第三波（定向两件 + card 族判断式收尾）· 契约记档。
+ * 五百四十批·轨4（工蚁 W4）：全站扁平化扫荡第三波（定向两件 + card 族判断式收尾）· 契约备案。
  *
  * 仿 flattenWave538 静态源码断言范式（happy-dom 不挂载）：
  * ① 定向两件：IndexOptimizerView .io-preview 大容器框（bg+border+radius）退役 → io-cur/io-recs
  *    538 同款 border-top 分节（io-preview-hd sec-t 行首保；io-preview-code 内容面 bg2 + 240 恒高
- *    随 538 锁原样，本批未触）；UpdateByQueryView .uq-script-hd code-bg 头条退役 → 立法②行首
+ *    随 538 锁原样，未触）；UpdateByQueryView .uq-script-hd code-bg 头条退役 → 约定②行首
  *    横排档（uq-card-hd 538 同语言：border-bottom 分界 + 650/tx1/.02em，muted 弱化档退役）；
  *    .uq-result code-bg 内容面按 .br-err-pre 先例保留（代码内容面底色豁免）。
  * ② card 族扫荡收尾（你域 8 视图逐 hit 判定）：DiffEditorView .df-card / RankDebugView .rd-card /
  *    SynonymsManagerView .sy-card 工作台分节壳 chrome 退役——内容直贴，分界由各自 -card-hd 既有
  *    border-bottom 承接（SqlBridge 535 先例）；布局骨架（flex column / overflow / wide 占位）逐字
  *    保留（等高双栏与收缩防撑破是结构语义非 chrome）。
- * ③ 豁免记档正锁（保留面防误退）：Watcher wt-card / Favorites fv-card 交互卡（hover 态 +
- *    命中/点选态）立法③豁免在场；SqlBridge .br-card 仅 wide 页面级卡（535 裁决，工作台 pane
+ * ③ 豁免备案正锁（保留面防误退）：Watcher wt-card / Favorites fv-card 交互卡（hover 态 +
+ *    命中/点选态）约定③豁免在场；SqlBridge .br-card 仅 wide 页面级卡（535 裁决，工作台 pane
  *    不得回流）；语义边框族（rd-duel-side.win / wt-alert warn 档）在场。
- * ④ 恒高字面冻结：本批纯视觉降层未动任何高度链，所触视图恒高逐字锁现状防回潮
- *    （io-preview-code 240 与 uq-err-msg 120 为 538 锁双源核对，其余为本批所触文件在册恒高）。
- * ⑤ pillSingleTrack MERGED 字典 cv-rp-badge 空键清退：538 换装 StatusPill 后类全形态清零，
+ * ④ 恒高字面冻结：纯视觉降层未动任何高度链，所触视图恒高逐字锁现状防回潮
+ *    （io-preview-code 240 与 uq-err-msg 120 为 538 锁双源核对，其余为所触文件在册恒高）。
+ * ⑤ pillSingleTrack MERGED 字典 cv-rp-badge 空键清退：538 改用 StatusPill 后类全形态清零，
  *    字典项空转（防回潮已由 flattenWave538④ 承接），字典项退役。
  */
 import { describe, it, expect } from 'vitest';
@@ -37,7 +37,7 @@ describe('五百四十批①：io-preview 大容器框退役 / uq-script-hd code
     expect(io, 'io-preview-hd sec-t 行首保在场（538② 分节头不消义）').toMatch(/class="io-preview-hd sec-t"/);
   });
 
-  it('UpdateByQueryView：uq-script-hd code-bg 头条退役 → 立法②行首横排档（uq-card-hd 同语言）', () => {
+  it('UpdateByQueryView：uq-script-hd code-bg 头条退役 → 约定②行首横排档（uq-card-hd 同语言）', () => {
     const uq = read('../views/UpdateByQueryView.vue');
     expect(uq, 'border-bottom 分界承接 + 650/tx1/.02em 行首档（padding 原值不动）').toMatch(
       /\.uq-script-hd \{ display: flex; align-items: center; padding: var\(--sp-2\) var\(--sp-3\); border-bottom: 1px solid var\(--border\); font-size: var\(--fs-xs\); font-weight: 650; color: var\(--tx1\); letter-spacing: \.02em; \}/);
@@ -60,7 +60,7 @@ describe('五百四十批②：工作台分节壳 chrome 退役（分界归 -car
     expect(df, 'df-card 通栏 border/圆角壳不回流').not.toMatch(/\.df-card \{[^}]*border/);
     expect(df, '等高双栏骨架保留（overflow 收缩防撑破 + flex column）')
       .toMatch(/\.df-card \{ overflow: hidden; display: flex; flex-direction: column; \}/);
-    expect(df, 'wide 网格占位随迁保留').toMatch(/\.df-card\.wide \{ grid-column: 1 \/ -1; min-height: 0; \}/);
+    expect(df, 'wide 网格占位同步更新保留').toMatch(/\.df-card\.wide \{ grid-column: 1 \/ -1; min-height: 0; \}/);
     expect(df, '分界由 df-card-hd 既有 border-bottom 承接（SqlBridge 535 先例）')
       .toMatch(/\.df-card-hd \{[^}]*border-bottom: 1px solid var\(--border\);/);
   });
@@ -83,10 +83,10 @@ describe('五百四十批②：工作台分节壳 chrome 退役（分界归 -car
   });
 });
 
-/* ═══════════ ③ 豁免记档正锁（保留面防误退） ═══════════ */
+/* ═══════════ ③ 豁免备案正锁（保留面防误退） ═══════════ */
 
 describe('五百四十批③：交互卡 / 页面级卡 / 语义边框豁免在场（保留面锁定）', () => {
-  it('Watcher wt-card / Favorites fv-card 交互卡豁免：hover 态与命中/点选态在场（立法③豁免）', () => {
+  it('Watcher wt-card / Favorites fv-card 交互卡豁免：hover 态与命中/点选态在场（约定③豁免）', () => {
     const wt = read('../views/WatcherView.vue');
     const fv = read('../views/FavoritesView.vue');
     expect(wt, 'hover 态是列表卡交互语义，壳退役豁免').toMatch(/\.wt-card:hover \{ border-color: var\(--brand\); \}/);
@@ -113,7 +113,7 @@ describe('五百四十批③：交互卡 / 页面级卡 / 语义边框豁免在�
   });
 });
 
-/* ═══════════ ④ 恒高字面冻结（本批零高度改动，锁现状防回潮） ═══════════ */
+/* ═══════════ ④ 恒高字面冻结（零高度改动，锁现状防回潮） ═══════════ */
 
 describe('五百四十批④：所触视图恒高字面冻结（2.9.115/119 事故面口径）', () => {
   it('Optimizer/UBQ：io-preview-code 240 与 uq-err-msg 120 逐字在场（538 锁双源核对）', () => {
@@ -141,7 +141,7 @@ describe('五百四十批④：所触视图恒高字面冻结（2.9.115/119 事�
 /* ═══════════ ⑤ pillSingleTrack MERGED 空键清退 ═══════════ */
 
 describe('五百四十批⑤：pillSingleTrack MERGED 字典 cv-rp-badge 空键清退', () => {
-  it('字典项退役（538 换装 StatusPill 后类全形态清零，键空转；防回潮归 flattenWave538④）', () => {
+  it('字典项退役（538 改用 StatusPill 后类全形态清零，键空转；防回潮归 flattenWave538④）', () => {
     const pill = read('./pillSingleTrack.spec.ts');
     expect(pill, "MERGED 不再含 'cv-rp-badge' 空转键").not.toContain("'cv-rp-badge'");
     expect(read('../views/ConfigValidatorView.vue'), '类本体全形态清零（538④ 同源）').not.toContain('cv-rp-badge');

@@ -1,12 +1,12 @@
 /**
- * 五百三十四批·轨4（工蚁 W4）：全站扁平化扫荡 + 统一组件化（§6v 四刀立法推广面）。
+ * 五百三十四批·轨4（工蚁 W4）：全站扁平化扫荡 + 统一组件化（§6v 四刀约定推广面）。
  * 仿 selectorUnify532 源码锁范式（涉 Monaco 视图一律静态源断言，happy-dom 不挂载）：
  * ① 六 Workbench 视图 pane spec `title: ''` 在场（竖排标题轨退役防回潮，519/DevTools 先例）；
  * ② 六视图 pane 内第一层卡壳类清零（局部壳 bg+border+radius 退役，刀③④）；
  * ③ IndexSettings/Snapshots 空态空框类清零（刀④——空态不留整块空框）；
  * ④ SearchSandbox 卡头标题语义在场（title 置空后单源承接锚，消重不消义）；
  * ⑤ 负向：layoutOcclusionGuard501 锁的 ResizablePane 竖排标题轨 CSS 形态零触碰；
- * ⑥ P1-1 同构确认弹窗壳收编：ModalShell 单源在场，双实现 mask/box 手搓壳清零，
+ * ⑥ P1-1 同构确认弹窗壳合并：ModalShell 单源在场，双实现 mask/box 手搓壳清零，
  *    业务体契约锚（cf-foot/ga-foot/guard 输入/askConfirm 契约）逐块保位。
  */
 import { describe, it, expect } from 'vitest';
@@ -106,10 +106,10 @@ describe('五百三十四批③：空态整块空框清零（IndexSettings/Snaps
     /* EmptyState 统一件仍在场（裸置≠裸文案） */
     expect(isv).toMatch(/<EmptyState/);
     expect(sv).toMatch(/<EmptyState/);
-    /* 五百四十七批锁随迁：本批「失败态整卡（card is-empty）保留」豁免记档被 547 批立法推翻
+    /* 五百四十七批锁同步更新：「失败态整卡（card is-empty）保留」豁免备案被 547 批约定推翻
        （538「空态不留整块空框」续扫——失败态同属空框，EmptyState centered 直贴承接），
-       断言由「整卡在场」改「整卡退役」，执法锚见 emptyFrameZero547 */
-    expect(isv, '失败态整卡随 547 批立法退役（原刀④豁免记档推翻）').not.toMatch(/class="card is-empty"/);
+       断言由「整卡在场」改「整卡退役」，锚见 emptyFrameZero547 */
+    expect(isv, '失败态整卡随 547 批约定退役（原刀④豁免备案推翻）').not.toMatch(/class="card is-empty"/);
   });
 });
 
@@ -123,20 +123,20 @@ describe('五百三十四批④：SearchSandbox 卡头标题单源承接', () =>
   });
 });
 
-/* ═══════════ ⑤ 负向→554 随迁：ResizablePane 竖排标题轨 CSS 退役（501 锚面翻负） ═══════════ */
+/* ═══════════ ⑤ 负向→554 同步更新：ResizablePane 竖排标题轨 CSS 退役（501 锚面翻负） ═══════════ */
 
-describe('五百三十四批⑤→554 随迁：ResizablePane 竖排标题轨退役（layoutOcclusionGuard501 同锚翻负）', () => {
+describe('五百三十四批⑤→554 同步更新：ResizablePane 竖排标题轨退役（layoutOcclusionGuard501 同锚翻负）', () => {
   it('axis-vertical > .rp-title 竖排轨退役（消费端 519/538 批起全量 title:\'\' 清零，死码轨本体随 554 退役；横排 title 头分支保留）', () => {
     const rp = read('../components/ResizablePane.vue');
     expect(rp).not.toMatch(/\.axis-vertical > \.rp-title/);
     expect(rp, '竖排 writing-mode 随轨退役').not.toContain('writing-mode');
-    expect(rp, '横排 title 头分支保留（非竖排轨范式射程，554 记档）').toContain('v-if="title"');
+    expect(rp, '横排 title 头分支保留（非竖排轨范式射程，554 备案）').toContain('v-if="title"');
   });
 });
 
-/* ═══════════ ⑥ P1-1 同构确认弹窗壳收编（ModalShell 单源） ═══════════ */
+/* ═══════════ ⑥ P1-1 同构确认弹窗壳合并（ModalShell 单源） ═══════════ */
 
-describe('五百三十四批⑥：ConfirmModal/GuardedActionButton 壳收编 ModalShell 单源', () => {
+describe('五百三十四批⑥：ConfirmModal/GuardedActionButton 壳合并 ModalShell 单源', () => {
   const cm = read('../components/ConfirmModal.vue');
   const ga = read('../components/GuardedActionButton.vue');
   const ms = read('../components/ModalShell.vue');
@@ -167,7 +167,7 @@ describe('五百三十四批⑥：ConfirmModal/GuardedActionButton 壳收编 Mod
     expect(cm, 'err/warn 语义边框走 --msk-bd').toMatch(/:line="mskLine"/);
     expect(ms).toMatch(/--msk-bd/);
     expect(cm, '宽度档 info 460').toMatch(/width="460px"/);
-    expect(ga, '宽度档散值 480 本批不迁（theme.css 档注记档）').toMatch(/width="480px"/);
+    expect(ga, '宽度档散值 480 不迁（theme.css 档注备案）').toMatch(/width="480px"/);
     expect(cm).toMatch(/emit\('confirm'\)/);
     expect(cm).toMatch(/emit\('update:show', false\)/);
     expect(ga).toMatch(/\(e: 'executed', receipt: any\): void/);

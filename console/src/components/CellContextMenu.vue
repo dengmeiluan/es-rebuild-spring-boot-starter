@@ -1,8 +1,8 @@
 <template>
   <!-- 单元格右键菜单共享组件（RT/QRT 复用；dbx 紧凑风格）——
-       items 由调用方构造（label+icon+danger+run 闭包），组件只管定位/遮罩/关闭；
-       视口碰撞自适应——底部/右侧溢出自动翻转，超长限高内滚，
-       列表首行/末行/右缘右键不再「看不到菜单」（实报：首行右键要滚动才能看全） -->
+ items 由调用方构造（label+icon+danger+run 闭包），组件只管定位/遮罩/关闭；
+ 视口碰撞自适应——底部/右侧溢出自动翻转，超长限高内滚，
+ 列表首行/末行/右缘右键不再「看不到菜单」（实报：首行右键要滚动才能看全） -->
   <teleport to="body">
     <div class="ccm-mask" role="presentation" @click="emit('close')" @contextmenu.prevent="emit('close')" @keydown.esc="emit('close')" tabindex="-1">
       <div ref="menuEl" class="ccm" role="menu" :aria-label="title || '操作菜单'" :style="{ left: pos.x + 'px', top: pos.y + 'px' }" @click.stop @keydown.esc="emit('close')" tabindex="-1">
@@ -39,10 +39,10 @@ function runItem(it: { run: () => void }) {
 }
 
 /* ═══ ：视口碰撞自适应 ═══
-   旧行为：菜单固定落在光标点 (x,y)，右/下溢出直接被视口裁掉。
-   新行为：先落点再 nextTick 实测尺寸——右缘溢出向左翻、底缘溢出向上翻，
-   最终四向钳位（8px 边距，数学收口 utils/popFit 纯函数）；尺寸为 0 的环境
-   （happy-dom）数学上不翻，行为与旧版一致。 */
+ 旧行为：菜单固定落在光标点 (x,y)，右/下溢出直接被视口裁掉。
+ 新行为：先落点再 nextTick 实测尺寸——右缘溢出向左翻、底缘溢出向上翻，
+ 最终四向钳位（8px 边距，数学收口 utils/popFit 纯函数）；尺寸为 0 的环境
+ （happy-dom）数学上不翻，行为与旧版一致。 */
 const menuEl = ref<HTMLElement>();
 const pos = ref({ x: props.x, y: props.y });
 async function adjust() {
@@ -55,8 +55,8 @@ async function adjust() {
 watch(() => [props.x, props.y], adjust, { immediate: true });
 
 /* Esc 关闭（ARIA 菜单惯例）——此前只能点遮罩/执行动作收起；
-   capture 阶段先于 Monaco 等内部消费者，stopPropagation 防泄漏；
-   菜单为条件渲染（打开挂载/关闭卸载），监听随卸载自动移除 */
+ capture 阶段先于 Monaco 等内部消费者，stopPropagation 防泄漏；
+ 菜单为条件渲染（打开挂载/关闭卸载），监听随卸载自动移除 */
 function onKey(e: KeyboardEvent) {
   if (e.key === 'Escape') { e.stopPropagation(); emit('close'); }
 }
@@ -66,7 +66,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey, true));
 
 <style scoped>
 /* 全局右键菜单统一样式（dbx 紧凑风格；RT/QRT 复用）
-   z 字面量收口全局 token——mask=--z-ctx（1200 上下文层）、面板=+1，语义不变 */
+ z 字面量收口全局 token——mask=--z-ctx（1200 上下文层）、面板=+1，语义不变 */
 .ccm-mask { position: fixed; inset: 0; z-index: var(--z-ctx); }
 .ccm { position: fixed; min-width: 168px; padding: var(--sp-1); background: var(--bg1); border: 1px solid var(--line-strong); border-radius: 10px; box-shadow: var(--shadow-pop); z-index: calc(var(--z-ctx) + 1);
   /* 超长按视口限高内滚——再长的菜单也全程可用 */

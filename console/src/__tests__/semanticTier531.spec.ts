@@ -1,15 +1,15 @@
 /**
- * 五百三十一批「状态徽标收编 + 数值单源退役」契约看守（WC 工蚁）。
+ * 五百三十一批「状态徽标合并 + 数值单源退役」契约看守（WC 工蚁）。
  *
  * 三条主契约：
  *  A jobKindTone 收口：LiveDashboardView 本地 jobTone 字典迁 utils/esEnumZh 单源
- *    （与 taskActionTone 口径差异记档：action 串 delete 族出红档 r，kindName 无红档）；
- *  B StatusPill 换装锚：Aliases(7)/Browser(状态槽)/ConfigValidator(sev)/IndexOptimizer
+ *    （与 taskActionTone 口径差异备案：action 串 delete 族出红档 r，kindName 无红档）；
+ *  B StatusPill 改用锚：Aliases(7)/Browser(状态槽)/ConfigValidator(sev)/IndexOptimizer
  *    (io-rec-sv ×3)/LiveDashboard(ld-al-badge+kind 徽标)/Overview(作业状态+en)/HealthReport
  *    (hr 状态)/IndexSettings(gate severity) 源码锚——锚类保名（pillSingleTrack MERGED 同口径），
  *    色值/小字形态归组件单源不回潮；
  *  C semFormat 数值单源退役：Snapshots/Slm fmtMs、ReindexPreview fmtSize+fmtN、
- *    IndexSettings fmtBytes 全部收编 useSemFormat（或 fmtNum）单源，本地实现退役。
+ *    IndexSettings fmtBytes 全部合并 useSemFormat（或 fmtNum）单源，本地实现退役。
  *
  * 附加锚：TasksView tookMs 真值展示（后端 listTasks 已下发，缺失回落 runningMs 折算，
  * ES _tasks 无 finished 概念——完成即消失，非「运行中=-1」）、SystemView QRT fieldTypes
@@ -28,10 +28,10 @@ const esEnumSrc = read('utils/esEnumZh.ts');
 const readView = (name: string) => read(`views/${name}.vue`);
 
 describe('A jobKindTone 收口（utils/esEnumZh 单源）', () => {
-  it('esEnumZh 导出 jobKindTone（五主档签名）与 JobKindTone 类型，口径注释记档', () => {
-    expect(esEnumSrc).toMatch(/^type JobKindTone = 'g' \| 'y' \| 'r' \| 'b' \| 'n';/m)/* 788 刀B 锁随迁：类型转模块私有 */;
+  it('esEnumZh 导出 jobKindTone（五主档签名）与 JobKindTone 类型，口径注释备案', () => {
+    expect(esEnumSrc).toMatch(/^type JobKindTone = 'g' \| 'y' \| 'r' \| 'b' \| 'n';/m)/* 788 刀B 锁同步更新：类型转模块私有 */;
     expect(esEnumSrc).toMatch(/export function jobKindTone\(kind: string\): JobKindTone \{/);
-    /* 口径差异记档在案（与 taskActionTone：kindName 展示名无 delete 语义故无红档） */
+    /* 口径差异备案在案（与 taskActionTone：kindName 展示名无 delete 语义故无红档） */
     expect(esEnumSrc).toContain('taskActionTone');
     expect(esEnumSrc).toContain('kindName');
   });
@@ -67,7 +67,7 @@ describe('A2 sevZh warning 别名（utils/esEnumZh 单源）', () => {
   });
 });
 
-describe('B StatusPill 换装锚（锚类保名，色档归组件单源）', () => {
+describe('B StatusPill 改用锚（锚类保名，色档归组件单源）', () => {
   it('AliasesView：组头四处 + 行内三处（alv-write-badge 锚保留），手写 .pill 裸挂清零', () => {
     const s = readView('AliasesView');
     expect(s).toContain('<StatusPill tone="b" :label="g.rows.length + \' 索引\'" />');
@@ -86,10 +86,10 @@ describe('B StatusPill 换装锚（锚类保名，色档归组件单源）', () 
     expect(s).toContain(':en="indexStatusZh(value) ? value : undefined"');
     expect(s, '.bw-st-en 本地小字类退役（en 归组件 .sp-en）').not.toContain('bw-st-en');
     expect(s).toContain('const BW_TYPES: Record<string, string> = { 文档数: \'long\', 存储: \'bytes\' };');
-    /* 五百三十四批锚随迁（零删用例）：531 批「槽内 bytes 单源+表级语义开关刻意不开」的内核遗留
-       记档，随内核 semRawCols 抑制守卫落地而收编——存储列 bytes 显式标注由内核直出（矩阵/导出/
+    /* 五百三十四批锚同步更新（零删用例）：531 批「槽内 bytes 单源+表级语义开关刻意不开」的内核遗留
+       备案，随内核 semRawCols 抑制守卫落地而合并——存储列 bytes 显式标注由内核直出（矩阵/导出/
        复制恒 raw 口径不变），文档数列入 BW_SEM_RAW_COLS 抑制按值推断，#cell-存储 槽退役 */
-    expect(s, '#cell-存储 槽退役（bytes 显式标注由内核直出，531 记档由 semRawCols 兑现）')
+    expect(s, '#cell-存储 槽退役（bytes 显式标注由内核直出，531 备案由 semRawCols 兑现）')
       .not.toContain('<template #cell-存储');
     expect(s).toContain("const BW_SEM_RAW_COLS = ['文档数'];");
     const qrtTag = s.match(/<QueryResultTable[\s\S]*?>/)![0];
@@ -121,7 +121,7 @@ describe('B StatusPill 换装锚（锚类保名，色档归组件单源）', () 
     expect(live, '.bd/.wn 手写色档退役').not.toMatch(/\.ld-al-badge\.(bd|wn)/);
   });
 
-  it('OverviewView：最近作业状态换 StatusPill+en 档，dot-pulse 呼吸点保留本地（组件无插槽不硬塞——记档）', () => {
+  it('OverviewView：最近作业状态换 StatusPill+en 档，dot-pulse 呼吸点保留本地（组件无插槽不硬塞——备案）', () => {
     const s = readView('OverviewView');
     expect(s).toContain(':tone="jobTone(j.status)"');
     expect(s).toMatch(/return statusColor\(s\) as 'g' \| 'y' \| 'r' \| 'b' \| 'n';/);
@@ -135,37 +135,37 @@ describe('B StatusPill 换装锚（锚类保名，色档归组件单源）', () 
     const s = readView('HealthReportView');
     expect(s).toContain(':tone="statusTone"');
     expect(s).toMatch(/healthPill\(String\(data\.value\?\.summary\?\.status \|\| ''\)\) as 'g' \| 'y' \| 'r'/);
-    /* 五百三十四批锚随迁（healthThreeState 先例，零删用例）：status label 中文化——
-       clusterHealthZh 主显 + 未收录枚举回落原裸串 toUpperCase；原 label 字面锁随换装退役 */
+    /* 五百三十四批锚同步更新（healthThreeState 先例，零删用例）：status label 中文化——
+       clusterHealthZh 主显 + 未收录枚举回落原裸串 toUpperCase；原 label 字面锁随改用退役 */
     expect(s, 'clusterHealthZh 接线在场（esEnumZh 单源别名 healthZh）')
       .toContain("healthZh(String(data.summary?.status || '')) || String(data.summary?.status || '').toUpperCase()");
     expect(s).not.toMatch(/const statCls = computed\(/);
-    /* 七百八十七批锁随迁：786 刀A 删 HealthReport fmtNum 未随迁本行（fmtNum 出锁）——
+    /* 七百八十七批锁同步更新：786 刀A 删 HealthReport fmtNum 未同步更新本行（fmtNum 出锁）——
        786 全量 3 红归因「全在 xmProgress529」漏此条，787 基线归因补账 */
     expect(s).toContain("import { exportStamp, fmtTime, downloadText, copyText, healthPill } from '../utils/format';");
   });
 
-  it('IndexSettingsView：gate severity 裸枚举换 StatusPill+sevZh，g-err/g-warn 手写色档退役（is-kind 锚不在本批面）', () => {
+  it('IndexSettingsView：gate severity 裸枚举换 StatusPill+sevZh，g-err/g-warn 手写色档退役（is-kind 锚不在面）', () => {
     const s = readView('IndexSettingsView');
     expect(s).toContain('<StatusPill class="is-gate-sv" :tone="gateSevPill(gi.severity)" :label="gateSevZh(gi.severity)" />');
     expect(s).toContain("import { sevPill as gateSevPill, sevZh as gateSevZh } from '../utils/esEnumZh';");
     expect(s, 'g-err/g-warn 手写色档退役').not.toMatch(/\.g-(err|warn)/);
-    /* 五百五十批随迁：is-kind 裸 pill 换装 StatusPill 统一件（kindTone 语义映射，flattenWave550⑤），
-       锚随迁到换装形态；is-kind 落位锚类仍在（pillSingleTrack MERGED 看守不变） */
-    expect(s, 'is-kind 行内判定徽标换装锚（550 随迁：pill n 裸形态退役）')
+    /* 五百五十批同步更新：is-kind 裸 pill 改用 StatusPill 统一件（kindTone 语义映射，flattenWave550⑤），
+       锚同步更新到改用形态；is-kind 落位锚类仍在（pillSingleTrack MERGED 看守不变） */
+    expect(s, 'is-kind 行内判定徽标改用锚（550 同步更新：pill n 裸形态退役）')
       .toContain('<StatusPill v-if="kindOf(d.key)" class="is-kind" :tone="kindTone(kindOf(d.key))" :label="kindText(kindOf(d.key))" />');
   });
 });
 
 describe('C semFormat/fmtNum 数值单源退役', () => {
-  it('SnapshotsView：fmtMs 收编 semFormat duration 单源', () => {
+  it('SnapshotsView：fmtMs 合并 semFormat duration 单源', () => {
     const s = readView('SnapshotsView');
     expect(s).toContain("import { semFormat } from '../composables/useSemFormat';");
     expect(s).toMatch(/function fmtMs\(ms: number\): string \{\s*\n\s*return semFormat\(ms, 'duration'\)\?\.text \?\? \(ms \+ ' ms'\);/);
     expect(s, '本地三元实现退役').not.toMatch(/Math\.floor\(ms \/ 60000\)/);
   });
 
-  it('SlmView：fmtMs 收编 semFormat duration 单源（metaStripAdoption 的 ms 原值 tip 锚不受影响）', () => {
+  it('SlmView：fmtMs 合并 semFormat duration 单源（metaStripAdoption 的 ms 原值 tip 锚不受影响）', () => {
     const s = readView('SlmView');
     expect(s).toContain("import { semFormat } from '../composables/useSemFormat';");
     expect(s).toMatch(/return semFormat\(ms, 'duration'\)\?\.text \?\? \(ms \+ ' ms'\);/);
@@ -183,7 +183,7 @@ describe('C semFormat/fmtNum 数值单源退役', () => {
     expect(s, '本地字节档位表退役').not.toMatch(/const u = \['B', 'KB', 'MB', 'GB', 'TB'\]/);
   });
 
-  it('IndexSettingsView：fmtBytes 收编 semFormat bytes 单源', () => {
+  it('IndexSettingsView：fmtBytes 合并 semFormat bytes 单源', () => {
     const s = readView('IndexSettingsView');
     expect(s).toMatch(/return semFormat\(Number\(n\) \|\| 0, 'bytes'\)\?\.text \?\? '0 B';/);
     expect(s, '本地字节档位表退役').not.toMatch(/const units = \['B', 'KB', 'MB', 'GB', 'TB'\]/);
@@ -203,7 +203,7 @@ describe('D 附加契约锚', () => {
     expect(s, '「-1 显 -」兜底退役').not.toContain(": '-' }}");
     expect(s).toContain('{{ tookText(t.tookMs) }}');
     expect(s).toMatch(/return semFormat\(ms, 'duration'\)\?\.text \?\? fmtDur\(ms\);/);
-    /* 口径记档在案：ES _tasks 无 finished 概念，完成即消失 */
+    /* 口径备案在案：ES _tasks 无 finished 概念，完成即消失 */
     expect(s).toContain('ES _tasks 无 finished 概念');
   });
 

@@ -24,15 +24,15 @@
  * ⑧ ETA 进度可见：Adhoc 观测行增「预计剩余」=(total−created−updated)/rate（TookBadge 承载；
  *    速率缺失/非正数不渲染，不冒充）；Xmigrate progressMeta 尾随并入 ETA（MetaStrip value+label
  *    tone=info），同不冒充原则（rateOf 既有差分件、total 未知/余量非正不出）。
- * ⑨ IndexHub 手写胶囊换装 StatusPill：ih-op-risk safe/warn/crit（tone 记档：safe→g/success、
+ * ⑨ IndexHub 手写胶囊改用 StatusPill：ih-op-risk safe/warn/crit（tone 备案：safe→g/success、
  *    warn→y/warning、crit→r/danger）与 ih-sh-node-cnt 计数 chip（中性 tone=n）——锚类名外挂
  *    pill 根（552 sg-badge 先例）以免 spec DOM 锁破，本地色值规则退役归 .pill 单源。
  * ⑩ --sp 微收口：.ar-input-tabs gap/padding 2px → var(--sp-0) 两值全收；.tbl th padding
- *    5px 8px → 5px var(--sp-2)（5px 非档位奇数刻意值保字面）——四锁随迁改锚
+ *    5px 8px → 5px var(--sp-2)（5px 非档位奇数刻意值保字面）——四锁同步更新改锚
  *    （adhocWave544/rebuildFlat534/spSweep540/w10ReduceSteps525，契约行退役改新形）。
  *
- * 随迁锁清单（本批改锚不删例）：adhocEditorsWorkbench411 / adhocManualWorkbench426 /
- * adhocFillViewport547（554-P0 ar-fill-wl 未随迁的既有红，本批一并修锚）、adhocStepPersist
+ * 同步更新锁清单（改锚不删例）：adhocEditorsWorkbench411 / adhocManualWorkbench426 /
+ * adhocFillViewport547（554-P0 ar-fill-wl 未同步更新的既有红，一并修锚）、adhocStepPersist
  * （.card→.ar-sec）、adhocJobsQrt529 + adhocJobsTable524（jobs 卡定位选择器）、adhocWave544 +
  * rebuildFlat534 + spSweep540 + w10ReduceSteps525（⑩契约行）、indexHubQueryTab（④ actions 字面）。
  */
@@ -52,14 +52,14 @@ describe('554 ①：IndexHub 失败态 RawIo 常驻（工具行 Terminal 钮）'
 
   it('docs 检索行常驻 Terminal 钮（失败态有取数入口）', () => {
     expect(docsBar, 'docs 检索行常驻钮').toContain('aria-label="查看原始 IO（检索行）"');
-    /* 五百六十批随迁（击穿者：560 轨2 刀⑤——scope 分流，docs/query 四钮显式传 'query'） */
+    /* 五百六十批同步更新（击穿者：560 轨2 刀⑤——scope 分流，docs/query 四钮显式传 'query'） */
     expect(docsBar, "@click=\"openRawIo('query')\" 接线").toContain("@click=\"openRawIo('query')\"");
   });
   it('query 工具行常驻 Terminal 钮（查询失败态有取数入口）', () => {
     expect(qryBar, 'query 工具行常驻钮').toContain('aria-label="查看原始 IO（查询行）"');
-    expect(qryBar, "@click=\"openRawIo('query')\" 接线（560 随迁同上）").toContain("@click=\"openRawIo('query')\"");
+    expect(qryBar, "@click=\"openRawIo('query')\" 接线（560 同步更新同上）").toContain("@click=\"openRawIo('query')\"");
   });
-  it('RT 内既有两钮零触 + openRawIo 取数特征（560 随迁：query 档单源，ops 档双参回退保 552 由来）', () => {
+  it('RT 内既有两钮零触 + openRawIo 取数特征（560 同步更新：query 档单源，ops 档双参回退保 552 由来）', () => {
     expect(ih).toContain('aria-label="查看原始 IO（文档检索）"');
     expect(ih).toContain('aria-label="查看原始 IO（DSL 查询）"');
     expect(ih).toContain("ioRecorder.last('/cluster/raw') ?? ioRecorder.last('/cluster/query')");
@@ -113,7 +113,7 @@ describe('554 ③：IndexHub 编辑器高度拖柄（ih.qryH 自定态）', () =
 /* ═══ ④ IndexHub 历史面板 curl（宿主组装写剪贴板） ═══ */
 describe('554 ④：IndexHub 历史面板 curl', () => {
   it("actions 加 'curl' + @curl 宿主接线", () => {
-    /* 562 随迁：actions 再加 'newtab'（kibanaWave562 K4，宿主 ihHistNewTab 带 DevTools 新 Tab） */
+    /* 562 同步更新：actions 再加 'newtab'（kibanaWave562 K4，宿主 ihHistNewTab 带 DevTools 新 Tab） */
     expect(ih).toContain(":items=\"histRows\" :actions=\"['play', 'fill', 'copy', 'fav', 'curl', 'newtab', 'del']\"");
     expect(ih).toContain('@curl="histCurl"');
   });
@@ -184,15 +184,15 @@ describe('554 ⑧：ETA 进度可见（速率缺失/非正不渲染）', () => {
   });
 });
 
-/* ═══ ⑨ IndexHub 手写胶囊换装 StatusPill ═══ */
-describe('554 ⑨：IndexHub 胶囊换装 StatusPill（锚类外挂）', () => {
-  it('风险徽标四处换装（safe→g/warn→y/crit→r tone 记档），锚类 ih-op-risk 外挂 pill 根', () => {
+/* ═══ ⑨ IndexHub 手写胶囊改用 StatusPill ═══ */
+describe('554 ⑨：IndexHub 胶囊改用 StatusPill（锚类外挂）', () => {
+  it('风险徽标四处改用（safe→g/warn→y/crit→r tone 备案），锚类 ih-op-risk 外挂 pill 根', () => {
     expect(ih.match(/<StatusPill class="ih-op-risk" tone="g" label="安全" \/>/g)?.length).toBe(1);
     expect(ih.match(/<StatusPill class="ih-op-risk" tone="y"/g)?.length).toBe(2);
     expect(ih.match(/<StatusPill class="ih-op-risk" tone="r" label="不可逆" \/>/g)?.length).toBe(1);
     expect(ih, '手写胶囊形态不回流').not.toContain('ih-op-risk safe');
   });
-  it('分片计数 chip 换装中性 tone，锚类保留', () => {
+  it('分片计数 chip 改用中性 tone，锚类保留', () => {
     expect(ih).toContain('<StatusPill class="ih-sh-node-cnt" tone="n" :label="String(grp.shards.length)" />');
     expect(ih).not.toMatch(/\.ih-op-risk \{ font-size/);
     expect(ih).not.toMatch(/\.ih-sh-node-cnt \{ font-size/);

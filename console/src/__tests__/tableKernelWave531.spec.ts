@@ -1,5 +1,5 @@
 /**
- * 五百三十一批 W-B：表格内核波浪第二浪 + 六表换壳（本批契约记录）。
+ * 五百三十一批 W-B：表格内核波浪第二浪 + 六表换壳（契约记录）。
  * 锁定：
  * 1) QRT rowDrawer 行详情侧拉——缺省关（右键无「行详情」项、无侧拉 DOM，零增量）；
  *    开启后右键出「行详情」→ n-drawer 侧拉整行键值对+逐格复制+「复制整行 JSON」；
@@ -147,13 +147,13 @@ describe('六表换壳（531 批，qrtRowsSwap529 先例范式）', () => {
     expect(v).toMatch(/class="il-hint" :class="csLint\('P', row\[1\]\)!\.level === 'err' \? 'il-err' : 'il-warn'"/);
     /* 头部待下发 pill 换 StatusPill（tone 语义档不变；.cs-bar .pill.g 锚由组件内 .pill 承接） */
     expect(v).toContain(`<StatusPill :tone="countDirty === 0 ? 'g' : 'y'" :label="countDirty + ' 项待下发'" />`);
-    /* 分组行退役换「分组」列 chip（sweep524 .cs-grp td 锚随迁 .cs-grp-chip；
-       五百五十一批随迁：650 字面锁随私造规则退役失效，改锚 StatusPill b 换装形态） */
+    /* 分组行退役换「分组」列 chip（sweep524 .cs-grp td 锚同步更新 .cs-grp-chip；
+       五百五十一批同步更新：650 字面锁随私造规则退役失效，改锚 StatusPill b 改用形态） */
     expect(v).toContain('<StatusPill class="cs-grp-chip" tone="b" :label="String(value)" />');
     expect(v).not.toMatch(/\.cs-tbl/);
   });
 
-  it('ConfigDriftView 差异表：QRT rows 接线+#row-actions 复制差异+900 档（五百六十批 cd-verdict 换装随迁）', () => {
+  it('ConfigDriftView 差异表：QRT rows 接线+#row-actions 复制差异+900 档（五百六十批 cd-verdict 改用同步更新）', () => {
     const v = readView('ConfigDriftView.vue');
     expect(v).toMatch(/:cols="SD_COLS" :rows="sdRows" sortable/);
     expect(v).toContain('storage-key="config-drift:settings"');
@@ -161,7 +161,7 @@ describe('六表换壳（531 批，qrtRowsSwap529 先例范式）', () => {
     expect(v).toContain('<template #row-actions="{ row }">');
     expect(v).toContain(`:aria-label="'复制差异：' + row[0]"`);
     expect(v).toMatch(/const SD_COLS = \['键', '代码值', '线上值'\];/);
-    /* 五百六十批锚随迁：cd-verdict 清单角标换装 StatusPill（原 525 逐字锁豁免面随锁解禁退役，
+    /* 五百六十批锚同步更新：cd-verdict 清单角标改用 StatusPill（原 525 逐字锁豁免面随锁解禁退役，
        558b 回滚件重做兑现）；530 StatusPill 徽标（cd-badge）两族并存口径不变 */
     expect(v).toContain('<StatusPill v-if="verdicts[k.indexKey]" class="cd-verdict" :tone="cdVerdictPill(verdicts[k.indexKey])"');
     expect(v).toContain(`<StatusPill class="cd-badge" :tone="drift.settingsDiff.clean ? 'g' : 'r'"`);
@@ -204,7 +204,7 @@ describe('六表换壳（531 批，qrtRowsSwap529 先例范式）', () => {
     expect(v).toMatch(/:cols="hotCols" :rows="hotRows" sortable/);   /* qrtPagerExportTranspose525 原锚保持 */
     expect(v).toContain('storage-key="flame"');
     expect(v).toMatch(/:field-types="\{ '耗时\(ms\)': 'percent' \}"/);
-    /* 五百三十二批锚随迁：export-name 更名 profile-hotops → profile-flame（页域一致） */
+    /* 五百三十二批锚同步更新：export-name 更名 profile-hotops → profile-flame（页域一致） */
     expect(v).toContain('export-name="profile-flame"');
   });
 

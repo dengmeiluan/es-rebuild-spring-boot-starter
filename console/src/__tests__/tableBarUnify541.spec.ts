@@ -27,7 +27,7 @@ describe('表格工具行合一（541 批 Lead 面）', () => {
   it('RT 内核：hideBody prop 缺省 false——表格体与状态栏随隐藏、工具行常驻', () => {
     expect(rt).toContain('hideBody?: boolean');
     expect(rt).toContain('hideBody: false');
-    /* 六百零九批随迁：守卫字面 !hideBody→!bodyHidden（内核 viewSeg 内建档切换共用同一
+    /* 六百零九批同步更新：守卫字面 !hideBody→!bodyHidden（内核 viewSeg 内建档切换共用同一
        隐藏判定=hideBody ∪ 内建非表格档；判别力不变=体区/状态栏两守卫逐字保全） */
     expect(rt).toMatch(/<div v-show="!bodyHidden" ref="wrapEl" class="rt-wrap scroll-y"/);
     expect(rt).toMatch(/<div class="rt-status" v-show="!bodyHidden">/);
@@ -50,16 +50,16 @@ describe('表格工具行合一（541 批 Lead 面）', () => {
     expect(dq).toContain('dq-json-wrap dq-alt-body');
     expect(dq).toContain('dq-tree-view dq-alt-body');
     expect(dq).toContain('dq-cards scroll-y dq-alt-body');
-    /* 547 批随迁：.card 结果区卡壳退役，alt-body 自成分节——border-top 补回+四角圆角自持
+    /* 547 批同步更新：.card 结果区卡壳退役，alt-body 自成分节——border-top 补回+四角圆角自持
        （原 border-top:0+底圆角是卡壳连体一框耦合形态，随壳退役；rt-bar 顶圆角 deep 规则同批删除）。
-       五百五十一批随迁（击穿者：551 轨2 刀⑦a）：547 独立四边框分节框退役 → border-top 分节
+       五百五十一批同步更新（击穿者：551 轨2 刀⑦a）：547 独立四边框分节框退役 → border-top 分节
        （dt-hist 534 同语言，dt-hist :951 口径；锁意图=三视图容器与工具行连体，类名锚零触） */
     expect(dq).toMatch(/\.dq-alt-body \{ border-top: 1px solid var\(--line\); margin-top: var\(--sp-2\); padding-top: var\(--sp-1h\); \}/);
   });
 });
 
 describe('执行统一容器（541 批）', () => {
-  it('执行行与检索参数同处 dq-run-sec 容器（542 二刀随迁：开关钮在 run-end 执行左侧，展开区独立其下）', () => {
+  it('执行行与检索参数同处 dq-run-sec 容器（542 二刀同步更新：开关钮在 run-end 执行左侧，展开区独立其下）', () => {
     const secAt = dq.indexOf('<div class="dq-run-sec">');
     const runAt = dq.indexOf('<div class="dq-run-row">');
     const paramsAt = dq.indexOf('dq-params-standalone');
@@ -67,7 +67,7 @@ describe('执行统一容器（541 批）', () => {
     expect(runAt).toBeGreaterThan(secAt);
     expect(paramsAt).toBeGreaterThan(runAt);
     /* 展开区在容器内（闭合校验：sec 之后 params 之前无提前闭合）。
-       五百六十一批随迁：.dq-lint-fallback 换装 theme.css .lint-bar 单源（类名锚同步） */
+       五百六十一批同步更新：.dq-lint-fallback 改用 theme.css .lint-bar 单源（类名锚同步） */
     expect(dq.slice(secAt, paramsAt)).not.toContain('lint-bar lint-bar-warn');
   });
 });

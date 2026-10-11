@@ -16,7 +16,7 @@
  *    （DevToolsView histAllRead 的 try+Array.isArray 先例同口径）；
  *  D execQuery 并发重入守卫（行为锁）：执行中二次触发（Monaco @execute / eventBus 路径）不再
  *    重入——clusterQuery 恰一次，执行完释放后可再次执行（window 全局键路径 :1834 既有守卫，
- *    本批补的是 execQuery 体首行）；
+ *    补的是 execQuery 体首行）；
  *  E 源锚：模板 hits 兜底、guard 首行、fieldList 同族守卫、normalizeResp Array.isArray 分流。
  *
  * 挂载范式同 monacoDslAssist.spec ⑧（monaco stub + 真实 naive-ui + memory router）。

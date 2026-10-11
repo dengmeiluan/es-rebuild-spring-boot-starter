@@ -74,7 +74,7 @@ export function parseCatNumber(raw: unknown): number {
  * maxSegments 取值口径（结合 5GB 单段警告）：
  * - 每主分片数据量 < 5GB：可以安全合到 1 段（合出来也不会超过 5GB 死段线）
  * - 每主分片数据量 >= 5GB：按 ceil(shardSize / 5GB) 给目标段数，
- *   保证每段落在 5GB 以下，避免产出永不可回收的巨型死段
+ * 保证每段落在 5GB 以下，避免产出永不可回收的巨型死段
  */
 export function evaluateSegments(input: SegmentInput): SegmentAdvice {
   const { segmentsCount, priShards, replicas, sizeBytes, docsDeleted } = input;

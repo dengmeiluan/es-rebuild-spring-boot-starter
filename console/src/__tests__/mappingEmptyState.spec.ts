@@ -40,9 +40,9 @@ describe('R91b MappingDesigner 空态语义', () => {
   });
 
   it('「索引无字段」分支文案不含「未加载」字样（不误导）', () => {
-    /* 五百二十四批随迁：分支由裸 div 换 EmptyState compact，文案进 text="…" 属性
+    /* 五百二十四批同步更新：分支由裸 div 换 EmptyState compact，文案进 text="…" 属性
        （原 >文本< 提取只适配裸 div 形态），契约不变：含「索引无字段」、不含「未加载」。
-       五百二十五批随迁：分支补 action-text 后原贪婪 [^>]* 会吃进 action-text——
+       五百二十五批同步更新：分支补 action-text 后原贪婪 [^>]* 会吃进 action-text——
        改非贪婪 [\s\S]*? 锚定首个 text 属性 */
     const m = src.match(/!tree\.length && loaded[\s\S]*?\btext="([^"]*)"/);
     expect(m).toBeTruthy();

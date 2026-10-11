@@ -6,11 +6,11 @@
  * setupState 直写〔767-③ 课：FieldPicker usePopupList 弹层手输复杂〕）。
  *
  * ① G245（P3 死代码·头名）bt- 五死类=页头四伴（bt-hd-l/-ic/-sub/-r，PageHeader
- *    收编漏删族——713 G53/715 G56/717 G61/721 G72/727 G86/729 G94/737 G131/741
+ *    合并漏删族——713 G53/715 G56/717 G61/721 G72/727 G86/729 G94/737 G131/741
  *    G147/761 G220/766 G232 同族）+.bt-ii（IndexPicker 退役伴漏删=764 .as-ii/
  *    766 .mm-ii 同款再演）+.ell/.dim scoped 规则各双份重复（QRT cell 段与箭头段
  *    各一份=纯重复）——修法=七规则整删零连锁；bt- 规则块 37→32 恰减五；
- *    flattenWave557 ④ .bt-ii 字面锁随迁（正向锁改负向锚=760 判例死类版）。
+ *    flattenWave557 ④ .bt-ii 字面锁同步更新（正向锁改负向锚=760 先例死类版）。
  * ② G246（P3 铁律 D·次刀）跑基准钮 Anchor 单态→Loader2/Anchor 双态+「跑基准中…」
  *    在途文案（lastMode 门控=共享 busy 下只由本钮发起的执行亮文案，768 G238/
  *    766 G234/770 G241 族）+G246b 随批升格：重跑对比钮「重跑中…」文案通道
@@ -110,7 +110,7 @@ beforeEach(() => {
   searchRawFn.mockReset().mockResolvedValue({ hits: { hits: HITS_A } });
 });
 
-describe('772 A0 挂载不变量负锚（现状即守卫，非本批刀面）', () => {
+describe('772 A0 挂载不变量负锚（现状即守卫，非刀面）', () => {
   it('页头四 action 钮+手动模式默认+空表单四钮锁+引导空态+加字段钮', async () => {
     const { app, host } = await mountBt();
     expect(host.textContent).toContain('Boost 调参沙盒');
@@ -168,7 +168,7 @@ describe('772 G246 跑基准/重跑对比在途态（铁律 D·次刀·768 G238/
     await settle(10);
     expect(baseBtn.disabled, '完成复常解禁').toBe(false);
     expect((baseBtn.textContent || '').replace(/\s+/g, ''), '复常文案').toBe('跑基准');
-    expect(baseBtn.querySelector('.spinning'), 'spinning 退场').toBe(null);
+    expect(baseBtn.querySelector('.spinning'), 'spinning 移除').toBe(null);
     expect(baseBtn.querySelector('[class*="lucide-anchor"]'), 'Anchor 图标复位').toBeTruthy();
     expect(host.querySelectorAll('.bt-right tbody tr').length, 'QRT 表复现').toBe(2);
     app.unmount();

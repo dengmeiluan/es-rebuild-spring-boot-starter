@@ -20,7 +20,7 @@
           </div>
           <div class="pal-list scroll-y">
             <!-- 空态引导审计：过滤无结果补下一步（换关键词/清词重览全量）
-                 裸 .empty 迁 EmptyState compact（命令面板窄容器） -->
+ 裸 .empty 迁 EmptyState compact（命令面板窄容器） -->
             <EmptyState v-if="!rows.length" compact :icon="Search"
               text="无匹配命令" hint="换个更短的关键词，或清空输入查看全部命令" />
             <template v-for="(r, i) in rows" :key="r.c.id">
@@ -99,8 +99,8 @@ const inpRef = ref<HTMLInputElement>();
 
 interface Cmd { id: string; title: string; sub?: string; cat: string; icon: any; action: () => void }
 
-/*  M3：表格域命令派发 + 无人认领提示。广播同步分发（监听器同步执行），
-   可见实例在监听器内即 markHandled；150ms 兜底只对「无任何可见表格实例」的情况触发 */
+/* M3：表格域命令派发 + 无人认领提示。广播同步分发（监听器同步执行），
+ 可见实例在监听器内即 markHandled；150ms 兜底只对「无任何可见表格实例」的情况触发 */
 function dispatchTableCmd(cmd: string) {
   let handled = false;
   window.dispatchEvent(new CustomEvent('table-cmd', { detail: { cmd, markHandled: () => { handled = true; } } }));
@@ -128,7 +128,7 @@ const commands = computed<Cmd[]>(() => {
   const list: Cmd[] = NAV_ITEMS.map(n => ({
     id: 'nav' + n.path,
     title: '前往：' + n.name,
-    /*  §8.4：版本不足的功能在命令面板同步降级提示，与侧边栏徽标一致 */
+    /* 版本不足的功能在命令面板同步降级提示，与侧边栏徽标一致 */
     sub: (n.minVer && store.verBelow(n.minVer) ? `需 ES ${n.minVer}+（当前 ${store.esVersion}） · ` : '') + '快捷键 ' + n.key,
     cat: '页面',
     icon: NAV_ICONS[n.icon] || Database,
@@ -140,15 +140,15 @@ const commands = computed<Cmd[]>(() => {
     { id: 'act-hist', title: '打开查询历史', cat: '动作', icon: History, action: () => { router.push('/search'); store.emit('open-history'); } },
     { id: 'act-export', title: '导出结果为 JSON', cat: '动作', icon: FileDown, action: () => store.emit('export-json') },
     /* 表格域命令——window 广播，仅当前可见表格响应（RT/QRT 自检 offsetParent）。
-        M3：markHandled 协商——可见实例响应即标记，150ms 后无人认领显式提示
-       （此前 JSON/Tree 视图下按导出被 offsetParent 守卫静默吞掉，用户感知为「命令坏了」） */
+ M3：markHandled 协商——可见实例响应即标记，150ms 后无人认领显式提示
+ （此前 JSON/Tree 视图下按导出被 offsetParent 守卫静默吞掉，用户感知为「命令坏了」） */
     { id: 'tbl-export', title: '表格：导出当前视图（CSV）', sub: '作用于当前可见表格（RT/QRT）', cat: '动作', icon: FileDown, action: () => dispatchTableCmd('export') },
     { id: 'tbl-dense', title: '表格：切换密度', sub: '作用于当前可见表格（表格级偏好）', cat: '设置', icon: Rows3, action: () => dispatchTableCmd('dense') },
     { id: 'tbl-reset-widths', title: '表格：重置全部列宽', sub: '作用于当前可见表格（拖拽过的列回原始宽）', cat: '设置', icon: RotateCcw, action: () => dispatchTableCmd('reset-widths') },
     { id: 'act-vars', title: '管理变量 ${var}', cat: '动作', icon: Variable, action: () => { router.push('/search'); store.emit('open-vars'); } },
     { id: 'act-refresh', title: '刷新索引列表', cat: '动作', icon: RefreshCw, action: () => store.loadIndices() },
     /* 显示偏好一键重置（调乱行高/列宽/布局后的救急入口）——
-       只清显示类键；草稿（draft2/dsl.body）/历史/收藏/主题等用户数据不动；刷新后全量生效 */
+ 只清显示类键；草稿（draft2/dsl.body）/历史/收藏/主题等用户数据不动；刷新后全量生效 */
     { id: 'act-reset-prefs', title: '重置全部显示偏好（行高/密度/列宽/冻结/布局/页大小）', sub: '清空后刷新页面生效；草稿与历史不受影响', cat: '设置', icon: Eraser, action: () => {
       const kill: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
@@ -171,8 +171,8 @@ const commands = computed<Cmd[]>(() => {
 
   /* 快捷运维动作（需 picked index） */
   const idx = store.pickedIdx;
-  /*  P0-3：跳转到列——遍历可见表格实例合成「跳转到列 X」命令（面板搜索框
-     即列名过滤，与 dbx 跳列 popover 同构）；动作经注册表定向调用，天然只命中可见实例 */
+  /* P0-3：跳转到列——遍历可见表格实例合成「跳转到列 X」命令（面板搜索框
+ 即列名过滤，与 dbx 跳列 popover 同构）；动作经注册表定向调用，天然只命中可见实例 */
   for (const t of visibleTables()) {
     for (const col of t.entry.cols()) {
       list.push({
@@ -186,16 +186,16 @@ const commands = computed<Cmd[]>(() => {
     }
   }
   /* 补可选第 5 参 action——成功 toast 附动作按钮（AdhocRebuildView
-     confirmSwitch notify action 范式），其余调用方不传零影响 */
+ confirmSwitch notify action 范式），其余调用方不传零影响 */
   const runRaw = async (method: string, path: string, body: string, msg: string,
     action?: { label: string; onClick: () => void }) => {
     try { await api.raw(method, path, body); store.notify('success', msg, action ? { action } : undefined); }
     catch (e: any) { store.notify('error', msg + '失败：' + (e?.message || e)); }
   };
   /* 权限门禁——写/高危命令按角色裁剪（不再展示点了必 403 的命令）；
-     create-doc=OPERATOR(write)；：create-index 命令唯一 canO 消费，端点
-     （POST /cluster/create-index）归 config-validator 页——连接模型按本页写键勾选裁决；
-     runRaw 系走 /cluster/raw=ADMIN 管理域，维持全局角色档 */
+ create-doc=OPERATOR(write)；：create-index 命令唯一 canO 消费，端点
+ （POST /cluster/create-index）归 config-validator 页——连接模型按本页写键勾选裁决；
+ runRaw 系走 /cluster/raw=ADMIN 管理域，维持全局角色档 */
   const canW = auth.canWriteOn(store.target), canO = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target), canA = auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target); /* ：raw 五命令按 rest 页勾选 */
   /* CRUD 里「增」提升为一等公民——新建索引/新建文档直达 */
   if (canO) list.push(
@@ -213,8 +213,8 @@ const commands = computed<Cmd[]>(() => {
       action: () => idx ? router.push({ path: '/indices', query: { idx } }) : router.push('/indices') },
   );
   /* 交互修复：集群/目标切换进面板——此前多集群用户必须移步顶栏切换器，⌘K 搜「切集群」无果。
-     遍历 store.conns 每连接一条；行为对齐 ClusterSwitcher.pickTarget：当前目标 no-op、
-     RED 探活失败先确认，核心动作复用 store.setTarget（切完自动清 picked/recent 并重拉索引） */
+ 遍历 store.conns 每连接一条；行为对齐 ClusterSwitcher.pickTarget：当前目标 no-op、
+ RED 探活失败先确认，核心动作复用 store.setTarget（切完自动清 picked/recent 并重拉索引） */
   for (const c of store.conns) {
     list.push({
       id: 'tgt-' + c.id,
@@ -237,8 +237,8 @@ const commands = computed<Cmd[]>(() => {
     });
   }
   /* 交互修复：当前态命令（有选中索引才出现）——托管重建直达（对齐索引工作区头部钮：
-     goto 自带 store.pick(cur)，AdhocRebuild 从全局选中索引接上下文）、刷新当前索引元信息、
-     数据浏览器直达（BrowserView 消费全局 pickedIdx，跳转即用） */
+ goto 自带 store.pick(cur)，AdhocRebuild 从全局选中索引接上下文）、刷新当前索引元信息、
+ 数据浏览器直达（BrowserView 消费全局 pickedIdx，跳转即用） */
   if (idx) list.push(
     { id: 'ops-adhoc-rebuild-cur', title: '托管重建当前索引', sub: '粘贴期望配置 / 探测 / 校验 / 切换一条龙 · ' + idx, cat: '运维', icon: Rocket,
       action: () => { store.pick(idx); router.push('/adhoc-rebuild'); } },
@@ -262,9 +262,9 @@ const commands = computed<Cmd[]>(() => {
           message: `将对「${idx}」执行 force merge max_num_segments=1：大索引可能长时间占用 IO 且不可中断，建议低峰期执行。`,
           okText: '执行合并',
         })) return;
-        /* 同步等待改异步提交——wait_for_completion=false（BrowserView 560 判例
-           同款：大索引同步 await 会占死前端直到网关超时）；成功文案对齐异步语义 +
-           「看任务」动作直达 /tasks（AdhocRebuildView confirmSwitch notify action 范式） */
+        /* 同步等待改异步提交——wait_for_completion=false（BrowserView 
+ 同款：大索引同步 await 会占死前端直到网关超时）；成功文案对齐异步语义 +
+ 「看任务」动作直达 /tasks（AdhocRebuildView confirmSwitch notify action 范式） */
         runRaw('POST', `/${idx}/_forcemerge?max_num_segments=1&wait_for_completion=false`, '', `任务已提交(异步)：forcemerge ${idx}`,
           { label: '看任务', onClick: () => router.push('/tasks') });
       } },
@@ -280,7 +280,7 @@ const commands = computed<Cmd[]>(() => {
       action: () => router.push('/index-settings') },
     { id: 'ops-open-ilm', title: '打开 ILM 策略', sub: 'phase 时间线 + explain', cat: '运维', icon: Recycle,
       action: () => router.push('/ilm') },
-    /*  */
+    /* */
     { id: 'ops-open-cluster-settings', title: '打开集群设置（persistent/transient）', sub: 'diff 预览 + 下发', cat: '运维', icon: GaugeCircle,
       action: () => router.push('/cluster-settings') },
     { id: 'ops-open-task-tree', title: '打开任务树（可批量 cancel）', sub: '任务层级 + auto refresh', cat: '运维', icon: GitBranch,
@@ -355,7 +355,7 @@ const commands = computed<Cmd[]>(() => {
       action: () => router.push('/doc-diff') },
     { id: 'data-quick-sql', title: '快速 SQL（带入当前索引）', sub: '预填 SELECT 并跳转 SQL 控制台自动执行', cat: 'data', icon: Send,
       action: () => {
-        /*  §8.1：原生 prompt() 废弃，改为预填 + 路由到成熟视图 */
+        /* 原生 prompt() 废弃，改为预填 + 路由到成熟视图 */
         writeStoredRaw(sessionStorage, 'es-console.sql.prefill', store.pickedIdx ? `SELECT * FROM "${store.pickedIdx}" LIMIT 5` : 'SELECT * FROM "my-index" LIMIT 5');
         router.push({ path: '/search', query: { mode: 'sql' } });
       } },
@@ -409,7 +409,7 @@ const commands = computed<Cmd[]>(() => {
     ] : []),
     { id: 'dev-rollover-dry', title: 'Rollover Dry Run（当前索引/别名）', sub: '预填目标并跳转生命周期视图预检', cat: 'dev', icon: Recycle,
       action: () => {
-        /*  §8.1：原生 prompt() 废弃，改为预填 + 路由到成熟视图（Dry Run/条件可视化可编辑） */
+        /* 原生 prompt() 废弃，改为预填 + 路由到成熟视图（Dry Run/条件可视化可编辑） */
         if (store.pickedIdx) writeStoredRaw(sessionStorage, 'es-console.lifecycle.rollover', store.pickedIdx);
         router.push('/lifecycle');
       } },
@@ -492,7 +492,7 @@ const commands = computed<Cmd[]>(() => {
   );
 
   /* 索引命令全量可搜（此前只前 30，大集群搜不到）+ 最近使用置顶 +
-     切换后 toast 附「打开索引工作区」直达，形成「搜→切→看」闭环 */
+ 切换后 toast 附「打开索引工作区」直达，形成「搜→切→看」闭环 */
   const recSet = new Set(store.recentIdx);
   const recFirst = [
     ...store.recentIdx.map(n => store.indices.find(i => i.index === n)).filter(x => !!x) as typeof store.indices,
@@ -513,7 +513,7 @@ const commands = computed<Cmd[]>(() => {
       },
     });
     /* -D5：索引名直达三动作——输索引名即出查询/Mapping/Settings，省一次进页面再选索引。
-       深链沿  约定：目标页 useIdxState 消费 ?idx=；查询页跟 pickedIdx，先 pick 再跳 */
+ 深链沿 约定：目标页 useIdxState 消费 ?idx=；查询页跟 pickedIdx，先 pick 再跳 */
     const iname = idxItem.index;
     list.push(
       { id: 'idx-q-' + iname, title: '查询 ' + iname, sub: '直达查询工作台', cat: '索引', icon: Search,
@@ -522,8 +522,8 @@ const commands = computed<Cmd[]>(() => {
         action: () => { store.pick(iname); router.push({ path: '/mapping-designer', query: { idx: iname } }); } },
       { id: 'idx-s-' + iname, title: 'Settings ' + iname, sub: '直达索引设置（热更）', cat: '索引', icon: Sliders,
         action: () => { store.pick(iname); router.push({ path: '/index-settings', query: { idx: iname } }); } },
-      /* 「索引+tab」深链收尾（§5.6 债务项）——输索引名直达工作区具体 tab；
-         ?idx&tab 通道 IndexHub useUrlState('tab') 现成消费，纯 palette 注入零视图改动 */
+      /* 「索引+tab」深链收尾（ 债务项）——输索引名直达工作区具体 tab；
+ ?idx&tab 通道 IndexHub useUrlState('tab') 现成消费，纯 palette 注入零视图改动 */
       { id: 'idx-hub-' + iname, title: '工作区 ' + iname, sub: '索引工作区 · 文档', cat: '索引', icon: Database,
         action: () => { store.pick(iname); router.push({ path: '/indices', query: { idx: iname, tab: 'docs' } }); } },
       { id: 'idx-shards-' + iname, title: '分片 ' + iname, sub: '索引工作区 · 分片诊断', cat: '索引', icon: LayoutGrid,

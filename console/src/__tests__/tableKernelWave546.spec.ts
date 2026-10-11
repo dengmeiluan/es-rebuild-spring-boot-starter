@@ -2,12 +2,12 @@
  * 五百四十六批 W3（轨3 表格内核）：quickFilter / refresh 的工具行内建 opt-in UI。
  *
  * 背景：530 批 W-B 给 QRT（531 平移 RT）立了 quickFilter 单向 prop（跨可见列 contains
- * 过滤链），但全站 0 接线——没有输入 UI，能力悬空。本批立法内建 UI opt-in：
+ * 过滤链），但全站 0 接线——没有输入 UI，能力悬空。约定内建 UI opt-in：
  * ① `searchable?: boolean`（缺省 false=无输入框，全站零增量）：true 时工具行（bar-left，
  *    与既有钮同排）内建搜索输入框，双绑驱动既有 quickFilter 过滤链——quickFilter 是单向
  *    prop，内部 ref 合成：输入非空以输入为准，空输入回落外部 quickFilter 播种值
  *    （既有 prop 契约不破）；Esc 清词；placeholder 中文。
- * ② `refreshable?: boolean`（缺省 false 零增量；QRT 专属，RT 记档不动）：工具行刷新钮，
+ * ② `refreshable?: boolean`（缺省 false 零增量；QRT 专属，RT 备案不动）：工具行刷新钮，
  *    点击只 emit 'refresh' 意图（事件名对齐 RT 既有 refresh；525 分页同构：取数归宿主）。
  * ③ QRT 工具行寄居 storageKey 记忆启用的 qrt-bar（prefsOn）——接线宿主须同传 storageKey。
  * ④ SystemView 示范接线：searchable + refreshable + @refresh="run"（重跑当前查询）。

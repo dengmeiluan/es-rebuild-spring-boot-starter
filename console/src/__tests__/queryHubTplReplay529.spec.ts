@@ -151,7 +151,7 @@ beforeEach(() => {
 });
 afterEach(() => { apps.forEach(a => a.unmount()); apps.length = 0; });
 
-/* ═══ ① 源码锁（改通道键名/落点必须在此随迁） ═══ */
+/* ═══ ① 源码锁（改通道键名/落点必须在此同步更新） ═══ */
 describe('529 W-B 源码锁：replay template 分支与接收口', () => {
   it('QueryHubView：template 分支=一次性 carry + 跨页 push + 提前 return', () => {
     const v = readFileSync(join(__dirname, '../views/QueryHubView.vue'), 'utf-8');

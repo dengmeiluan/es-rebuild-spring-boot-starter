@@ -1,7 +1,7 @@
 /**
  * 六百五十三批：轨3 列布局 preset 消费面接线（⑥ 652 头号候选落地件）。
  * 652 内核（useTablePrefs 的 presets/savePreset/applyPreset/deletePreset，行为契约
- * useTablePrefsPreset652.spec）本批落工具行：新共享件 TablePresetMenu（ColPicker
+ * useTablePrefsPreset652.spec）落工具行：新共享件 TablePresetMenu（ColPicker
  * 同款「单钮+弹层」收纳范式，铁律 C 禁平铺枚举），RT/QRT 双表 bar-right 列宽后接线。
  * 锁定（三层）：
  *  A 源码锁：双表接线四 prop + btnCls 形制 + 位次（列宽后、bar-extra 前——既有钮
@@ -95,7 +95,7 @@ describe('653 批 A 源码锁：双表接线与铁律 C 收纳', () => {
       expect(seg).toContain(':apply="applyPreset"');
       expect(seg).toContain(':del="deletePreset"');
       expect(seg).toContain(`btn-cls="${cls}"`);
-      /* 835 批随迁：列宽重置收编「视图 ⋯」聚合菜单——位次锚改视图聚合钮（列宽项在其菜单内） */
+      /* 835 批同步更新：列宽重置合并「视图 ⋯」聚合菜单——位次锚改视图聚合钮（列宽项在其菜单内） */
       const view = src.indexOf('aria-label="视图设置"');
       const extra = src.indexOf('<slot name="bar-extra"');
       expect(view).toBeGreaterThan(-1);
@@ -138,7 +138,7 @@ describe('653 批 B 行为锁：TablePresetMenu 受控契约', () => {
     expect(calls.save).toEqual(['窄列']);
     expect((document.querySelector('.tpm-inp') as HTMLInputElement).value, '成功清词').toBe('');
     expect(names()).toEqual(['窄列']);
-    expect(document.querySelector('.tpm-none'), '空态退场').toBeNull();
+    expect(document.querySelector('.tpm-none'), '空态移除').toBeNull();
     /* 失败：输入保留（可修正），名册不动 */
     saveOk = false;
     await typeIn('.tpm-inp', '另一方案');

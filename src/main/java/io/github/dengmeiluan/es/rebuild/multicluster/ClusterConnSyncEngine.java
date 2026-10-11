@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 连接中心 ES 连接自动同步引擎(连接中心自动同步批):周期把 {@link ClusterConnContributor}
- * 贡献的连接 upsert 进 {@link ConnStore}。语义(详见 spec §6/§7):
+ * 贡献的连接 upsert 进 {@link ConnStore}。语义(详见 spec /):
  * <ul>
  *   <li><b>三层去重</b>:cc- 前缀确定性 id 幂等域 / 源内「映射后 env 分桶 + 节点集交集」判重 /
  *       新建前与手工域交集冲突跳过(手工优先,零触碰);</li>
@@ -227,7 +227,7 @@ public class ClusterConnSyncEngine {
 
     /**
      * 同步一轮。synchronized:周期调度与手动触发互斥。
-     * spec §7.4/url 缺失条跳过进 skipped;指纹比对经 get(id)(明文密码)+ list 视图(name/env/minRole)。
+     * spec /url 缺失条跳过进 skipped;指纹比对经 get(id)(明文密码)+ list 视图(name/env/minRole)。
      */
     public synchronized ClusterConnSyncReport runOnce(String trigger) {
         long start = System.currentTimeMillis();
@@ -235,7 +235,7 @@ public class ClusterConnSyncEngine {
                 .trigger(trigger == null ? "scheduled" : trigger);
         if (contributorBroken) {
             rep.contributorBroken(true)
-                    .note("ClusterConnContributor 曾抛错,本进程已永久降级,本轮跳过");
+                    .note("ClusterConnContributor 曾抛错,本进程已永久降级,跳过");
             return finish(rep, start);
         }
         List<ContributedEsCluster> raw;
@@ -412,7 +412,7 @@ public class ClusterConnSyncEngine {
             }
         }
 
-        // E. STALE 扫描:同步域内不在本轮 contributed 的 → 标记保留(裁决:不自动删)
+        // E. STALE 扫描:同步域内不在 contributed 的 → 标记保留(裁决:不自动删)
         for (Map.Entry<String, Map<String, Object>> en : syncDomain.entrySet()) {
             if (presentIds.contains(en.getKey())) {
                 continue;

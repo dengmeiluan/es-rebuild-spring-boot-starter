@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 
-/* R130 全站 UI 升级轮守卫：把本轮踩坑固化为自动门禁——
+/* R130 全站 UI 升级轮守卫：把踩坑固化为自动门禁——
    每条曾经的事故都必须有一条防它复发的断言。 */
 
 const SRC = join(__dirname, '../..', 'src');
@@ -23,7 +23,7 @@ describe('R130 全站 UI 守卫', () => {
       const s = readFileSync(f, 'utf-8');
       // auto-fit/auto-fill 的轨道列表里不允许再出现 1fr/auto 等弹性值（非法→整条声明被丢弃）
       // 精确匹配「minmax(...) 闭合后再追加弹性轨道」——minmax 内部的 , 1fr) 是合法的
-      // 529 批随迁：minmax 内允许一层嵌套括号（min(320px,100%) 防极窄溢出先例），
+      // 529 批同步更新：minmax 内允许一层嵌套括号（min(320px,100%) 防极窄溢出先例），
       // 旧 [^)]* 会把 min() 的闭合误当 minmax 闭合、把合法嵌套形态误报为非法
       const m = s.match(/repeat\(\s*(?:auto-fit|auto-fill)\s*,\s*minmax\((?:[^()]|\([^()]*\))*\)\s*,\s*(?:1fr|auto)\s*\)/g);
       if (m) bad.push(f + ' → ' + m[0].slice(0, 80));
@@ -102,11 +102,11 @@ describe('R130 全站 UI 守卫', () => {
     expect(s).toContain('border-radius: var(--r-s)');
   });
 
-  it('⑥ 参数条 chip 化不回退：RootExtrasPane 必须是横向 chips（不得退回垂直折叠清单；582 随迁 563「page」chip 退役）', () => {
+  it('⑥ 参数条 chip 化不回退：RootExtrasPane 必须是横向 chips（不得退回垂直折叠清单；582 同步更新 563「page」chip 退役）', () => {
     const s = readFileSync(join(SRC, 'components/builder/RootExtrasPane.vue'), 'utf-8');
     expect(s).toContain('rx-chips');
     expect(s).toContain("toggle('aggs')");
-    /* 五百八十二批随迁：563 批用户实报「无效控制」清扫退役 page chip（6→5）——数量阈随迁，
+    /* 五百八十二批同步更新：563 批用户实报「无效控制」清扫退役 page chip（6→5）——数量阈同步更新，
        并补五颗具名 chip 锁（防进一步缩水成空壳也过） */
     expect(s.match(/class="rx-chip"/g)!.length).toBeGreaterThanOrEqual(5);
     for (const k of ['sort', 'src', 'hl', 'aggs', 'ex']) {

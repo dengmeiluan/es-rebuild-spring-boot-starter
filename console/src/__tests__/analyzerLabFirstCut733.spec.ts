@@ -1,14 +1,14 @@
 /**
  * 七百三十三批：AnalyzerLab 首刀五小刀（R114；R113 裁决表 G109+G110+G111+G112+G113）。
  *
- * ① G109（P3 死代码·头号）PageHeader 收编后页头左组/图标/标题/副题/右组五条死规则删
+ * ① G109（P3 死代码·头号）PageHeader 合并后页头左组/图标/标题/副题/右组五条死规则删
  *    （styleSheets 各 1 命中+DOM 0 引用双实锚；713 G53/715 G56/717 G61/721 G72/
  *    727 G86/729 G94 同族）——页头行活规则保留（模板 :3 唯一消费）。
  * ② G110（P3 铁律 D 在途可感知）全部试跑钮 Play/加载 text 字段钮 FolderSearch/
  *    lane 试跑钮 Play 三钮补 spinning+文案切换（729 G95/731 G104 同款；lane 级
  *    busy 行在场而触发钮半缺=730 G104 同形态）。
  * ③ G111（P3 加载态三段式）字段清单在途窗显示「暂无字段清单」误导 → busy 行
- *    「加载字段中…」在场+空态退场（加载/错误/空/有值四态互斥）。
+ *    「加载字段中…」在场+空态移除（加载/错误/空/有值四态互斥）。
  * ④ G112（P3 铁律 F）lane MetaStrip tokens 段补中文 tip「分词结果条数」
  *    （G55/G60/G74/G79/G87/G101 同族；tip 走 MetaStrip :title 悬停通道+help 档）。
  * ⑤ G113（P3 铁律 B 高频两跳）analyzer 输入 Enter 直达该列试跑
@@ -192,7 +192,7 @@ describe('733 G110 三钮在途可感知（铁律 D；729 G95/731 G104 同款）
 });
 
 describe('733 G111 字段清单加载态三段式（在途「加载字段中…」不再误显空态）', () => {
-  it('在途窗 busy 行在场+「暂无字段清单」退场；完成后字段卡上位', async () => {
+  it('在途窗 busy 行在场+「暂无字段清单」移除；完成后字段卡上位', async () => {
     localStorage.setItem('es_picked', 'probe-a');
     const host = await mountView();
     expect(host.textContent).toContain('暂无字段清单'); // 起手（未加载）空态在场

@@ -23,13 +23,13 @@ describe('Lucene JSON 视图内查找（374 批，304 遗留收尾）', () => {
   it('查找条 UI：输入+命中计数+清除钮；表格体消费 jsonHits', () => {
     expect(v).toMatch(/<div class="lc-json-find" v-if="hits\.length">/);
     expect(v).toMatch(/v-model="jsonKw"/);
-    /* 五百六十二批随迁：手写 input 换装 SearchFilterBar 统一件（Esc 清空组件内建承接，
+    /* 五百六十二批同步更新：手写 input 改用 SearchFilterBar 统一件（Esc 清空组件内建承接，
        行为等价 filterEscClear379 口径）——input 独立 aria-label 属性退役，placeholder
        经组件内建兼作 aria-label（原「JSON 视图内查找」语义入 placeholder 逐字保留） */
     expect(v).toMatch(/placeholder="在 JSON 视图内查找（_id\/字段值）…"/);
     expect(v).toMatch(/\{\{ jsonHits\.length \}\}\/\{\{ hits\.length \}\} 条/);
     expect(v).toMatch(/<button v-if="jsonKw" class="btn ghost xs" aria-label="清除 JSON 视图查找" @click="jsonKw = ''">✕<\/button>/);
-    /* 五百二十一批随迁：命中行加底色类 + aria-current（_id 套 MarkText），tr 键声明不变 */
+    /* 五百二十一批同步更新：命中行加底色类 + aria-current（_id 套 MarkText），tr 键声明不变 */
     expect(v).toMatch(/<tr v-for="h in jsonHits" :key="h\._id" :class="\{ 'lc-hit-row': !!jsonMarkKw \}" :aria-current="jsonMarkKw \? 'true' : undefined">/);
   });
 

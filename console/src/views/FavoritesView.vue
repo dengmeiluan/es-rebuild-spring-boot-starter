@@ -7,7 +7,7 @@
   <Download :size="12" /> 导出 JSON
 </button>
 <!-- 导入键盘可达——input 摘 display:none 换全局 .sr-only 保持可聚焦；
-     label 加 tabindex/role 可 Tab 到位，Enter 触发文件选择（原键盘用户完全无法触发） -->
+ label 加 tabindex/role 可 Tab 到位，Enter 触发文件选择（原键盘用户完全无法触发） -->
 <label class="btn ghost sm" style="cursor:pointer" tabindex="0" role="button" @keydown.enter.prevent="importInput?.click()" @keydown.space.prevent="importInput?.click()">
   <Upload :size="12" /> 导入
   <input ref="importInput" type="file" class="sr-only" @change="importFile" accept="application/json" />
@@ -24,9 +24,9 @@
         <component :is="c.ic" :size="12" /> {{ c.l }}
         <span class="fv-tab-c">{{ counts[c.k] }}</span>
       </button>
-      <!-- 三胞胎页头过滤胶囊组件化——SearchFilterBar 统一件，落位类 fv-search
-           透传到组件根（flex:1/min-width/margin-left:auto 落位照常）；Enter 走组件 enter 事件、
-           Esc 清空内建（原行为等价），HitNav/全选 label 附加件走默认插槽原位 -->
+      <!-- 页头过滤胶囊组件化——SearchFilterBar 统一件，落位类 fv-search
+ 透传到组件根（flex:1/min-width/margin-left:auto 落位照常）；Enter 走组件 enter 事件、
+ Esc 清空内建（原行为等价），HitNav/全选 label 附加件走默认插槽原位 -->
       <SearchFilterBar v-model="kw" class="fv-search" input-class="fv-search-i" placeholder="搜索标题 / 副标题 / tag…" @enter="onHitKey">
         <!-- 搜索定位：命中计数 + 上/下一个（Enter/Shift+Enter 在搜索框接线） -->
         <HitNav :count="filtered.length" :current="hitCur" compact @next="hitNext" @prev="hitPrev" />
@@ -47,7 +47,7 @@
     <EmptyState v-if="filtered.length === 0 && items.length === 0" :icon="Star"
       text="当前无收藏项"
       hint="任何 DSL 查询 / REST 请求 / 模板均可「⭐ 收藏」，跨会话恢复。">
-      <!--  §1：空态给下一步动作 -->
+      <!-- 空态给下一步动作 -->
       <button class="btn sm pri" @click="router.push('/search')">去查询工作台跑一条 →</button>
       <!-- 指向页用注册名（/devtools=Dev Tools），与 /rest（REST 直连）区分 -->
       <button class="btn sm ghost" @click="router.push('/devtools')">去 Dev Tools 多标签控制台 →</button>
@@ -70,9 +70,9 @@
             <MarkText :text="it.title" :kw="kw" />
           </div>
           <div class="fv-card-sub" v-if="it.subtitle"><MarkText :text="it.subtitle" :kw="kw" /></div>
-          <!-- fv-card-meta 手写 meta 行收编 MetaStrip mini 档（550 判例）；
-               tag chip 同件再进一步——自插槽收编 items text 纯文本段（#前缀随段并入，
-               ·分隔节奏归组件；fv-tag 私造 chip 皮退役，550 sv-repo 徽章收编同语言） -->
+          <!-- fv-card-meta 手写 meta 行合并 MetaStrip mini 档（；
+ tag chip 同件再进一步——自插槽合并 items text 纯文本段（#前缀随段并入，
+ ·分隔节奏归组件；fv-tag 私造 chip 皮退役，550 sv-repo 徽章合并同语言） -->
           <MetaStrip class="fv-card-meta" :items="fvCardMeta(it)">
             <!-- 重放去向前置可见——「打开」去哪个视图不用点了才知道 -->
             <span class="fv-dest">→ {{ replayTarget(it).label }}</span>
@@ -94,14 +94,14 @@
     </div>
 
     <!-- 本地偏好备份（记忆性轴收口）——列选/列宽/密度/草稿等偏好一键带走；
-         白名单严格限定本站键前缀（同源 iframe 下 localStorage 与宿主共享，禁通配） -->
+ 白名单严格限定本站键前缀（同源 iframe 下 localStorage 与宿主共享，禁通配） -->
     <details class="fv-prefs" v-if="items.length === 0 || filtered.length > 0">
       <summary><Database :size="12" /> 本地偏好备份 <span class="fv-prefs-n mono">{{ prefKeys.length }} 键</span></summary>
       <div class="fv-prefs-body">
         <span class="fv-prefs-tip">列选/列宽/密度/草稿/查询偏好等本地设置。导入按白名单合并（同键覆盖），不会触碰宿主页面数据。</span>
         <button class="btn sm ghost" :disabled="!prefKeys.length" @click="exportPrefs"><Download :size="11" /> 导出偏好</button>
         <!-- 导入偏好键盘可达（头部「导入」11-13 行同款修法）——input 摘 display:none
-             换全局 .sr-only 保持可聚焦，label 加 tabindex/role 可 Tab 到位，Enter 触发文件选择 -->
+ 换全局 .sr-only 保持可聚焦，label 加 tabindex/role 可 Tab 到位，Enter 触发文件选择 -->
         <label class="btn sm ghost" style="cursor:pointer" tabindex="0" role="button" @keydown.enter.prevent="prefsInput?.click()" @keydown.space.prevent="prefsInput?.click()">
           <Upload :size="11" /> 导入偏好
           <input ref="prefsInput" type="file" class="sr-only" @change="importPrefs" accept="application/json" />
@@ -118,12 +118,12 @@
 import { ref, computed, type Ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { Star, Download, Upload, Trash2, Copy, Play, Code2, Terminal, Map as MapIcon, BookOpen, Database } from 'lucide-vue-next';
-/* 三胞胎页头过滤胶囊统一件（wt/fv/tg 同场景收编）；Search 图标随胶囊组件化内建，本页 import 随迁退役 */
+/* 页头过滤胶囊统一件（wt/fv/tg 同场景合并）；Search 图标随胶囊组件化内建，本页不再单独引图标 */
 import SearchFilterBar from '../components/SearchFilterBar.vue';
 
 import PageHeader from '../components/PageHeader.vue';import { useAppStore } from '../stores/app';
 import MarkText from '../components/MarkText.vue';
-import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue'; /* ：fv-card-meta 统一件（时间戳段）；：tag 段收编 items */
+import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue'; /* ：fv-card-meta 统一件（时间戳段）；：tag 段合并 items */
 
 import { askConfirm } from '../composables/confirm';
 import { useScopedDraft } from '../composables/useScopedDraft';
@@ -137,7 +137,7 @@ import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 const router = useRouter();
-/*  §8.3：类型/关键词过滤进 URL */
+/* 类型/关键词过滤进 URL */
 const kind = useScopedDraft('kind', { route: 'favorites' }, 'all').text as Ref<'all' | 'dsl' | 'rest' | 'route' | 'template'>;
 const kw = useScopedDraft('kw', { route: 'favorites' }, '').text;
 
@@ -175,7 +175,7 @@ const { current: hitCur, next: hitNext, prev: hitPrev } = useHitLocate(() => fil
 function onHitKey(e: KeyboardEvent) { if (e.shiftKey) hitPrev(); else hitNext(); }
 
 /* 批量选择+批量删除——200 条上限下逐条删太累（对齐 RT 勾选范式；
-   勾选态按 id 集合，过滤切换不丢勾） */
+ 勾选态按 id 集合，过滤切换不丢勾） */
 const selected = ref<Set<string>>(new Set());
 function toggleSel(id: string) {
   const next = new Set(selected.value);
@@ -216,12 +216,12 @@ function kindLabel(k: string) {
 function fmtTs(ts: number) {
   try { return fmtTime(ts); } catch { return String(ts); }
 }
-/* 卡片 meta items（时间戳值段 + tag text 纯文本段）——tag 收编 MetaStrip mini 档
-   （550 sv-repo 徽章判例同语言；#前缀随段并入暗色文本，kv 过滤仍吃 tags 原数组不受影响；
-   fv-tag 私造 chip 皮退役，flattenWave551 锚随迁） */
+/* 卡片 meta items（时间戳值段 + tag text 纯文本段）——tag 合并 MetaStrip mini 档
+ （550 sv-repo 徽章先例同语言；#前缀随段并入暗色文本，kv 过滤仍吃 tags 原数组不受影响；
+ fv-tag 私造 chip 皮退役， 锚同步更新） */
 function fvCardMeta(it: any): MetaStripItem[] {
-  /*  G87：时间戳段补段级中文 tip（715 G55/717 G60/721 G74/724 G79 同族；
-     tip 走 :title 悬停通道+help 档，备注不进可见文本） */
+  /* ：时间戳段补段级中文 tip（715 G55/717 G60/721 G74/724 同族；
+ tip 走 :title 悬停通道+help 档，备注不进可见文本） */
   return [{ value: fmtTs(it.ts), tip: '收藏时间' }, ...(it.tags || []).map((t: string) => ({ text: '#' + t }))];
 }
 function preview(payload: any): string {
@@ -236,11 +236,11 @@ function replay(it: any) {
 
 function copyPayload(it: any) {
   const s = typeof it.payload === 'string' ? it.payload : JSON.stringify(it.payload, null, 2);
-  copyText(s).then(ok => store.notify(ok ? 'success' : 'error', ok ? '内容已复制' : '复制失败')); /*  */
+  copyText(s).then(ok => store.notify(ok ? 'success' : 'error', ok ? '内容已复制' : '复制失败')); /* */
 }
 /* 单条删除补确认门（批量删除 warn 门已落位，单条此前直删无门）。
-   开 dismissable——收藏仅本地数据非数据资产，critical/guardText 不适用（ W10 参数）；
-   勾「本次会话不再询问」后本会话内单删不再逐次弹窗（Adhoc doAbort 首开同款用法） */
+ 开 dismissable——收藏仅本地数据非数据资产，critical/guardText 不适用（ W10 参数）；
+ 勾「本次会话不再询问」后本会话内单删不再逐次弹窗（Adhoc doAbort 首开同款用法） */
 async function del(id: string) {
   const it = items.value.find(x => x.id === id);
   if (!await askConfirm({
@@ -275,7 +275,7 @@ function importFile(e: Event) {
       const arr = JSON.parse(String(r.result));
       if (!Array.isArray(arr)) throw new Error('格式错误：需要 JSON 数组');
       /* 导入反馈诚实化——addFavorite 按 kind+title 幂等覆盖，重导同一份
-         导出文件时 N 条全是「覆盖」而非「新增」，笼统「已导入 N 条」有误导性 */
+ 导出文件时 N 条全是「覆盖」而非「新增」，笼统「已导入 N 条」有误导性 */
       let added = 0;
       let updated = 0;
       let skipped = 0;
@@ -294,7 +294,7 @@ function importFile(e: Event) {
       store.notify('success', `已导入：${parts.join('，')}`);
     } catch (err: any) {
       /* 裸串「导入失败：」+ err.message（JSON.parse 英文 SyntaxError 直出）换人话
-         ——主文案讲人话，原始 message 括注保真可查证（toast 无 secondary 档，括注即次行） */
+ ——主文案讲人话，原始 message 括注保真可查证（toast 无 secondary 档，括注即次行） */
       store.notify('error', '不是合法的收藏 JSON 文件（原始错误：' + err.message + '）');
     }
   };
@@ -302,8 +302,8 @@ function importFile(e: Event) {
 }
 
 /* ═══ ：本地偏好备份（记忆性轴收口）═══
-   白名单严格限定本站键前缀——es console 以 iframe 嵌宿主，同源 localStorage 共享，
-   绝不可按「非本站即删」或全量导入，波及宿主页面数据。 */
+ 白名单严格限定本站键前缀——es console 以 iframe 嵌宿主，同源 localStorage 共享，
+ 绝不可按「非本站即删」或全量导入，波及宿主页面数据。 */
 const PREF_KEY_RE = /^(es-console\.pref\.|es-console\.draft\.|es-console\.jobs\.seen|es_cols:|es_tbl_|es_pager_size$|es_recent_idx$|es_console_ihub_w$)/;
 const prefKeys = computed(() => Object.keys(localStorage).filter(k => PREF_KEY_RE.test(k)));
 function exportPrefs() {
@@ -350,8 +350,8 @@ async function clearPrefs() {
 
 <style scoped>
 .fv-page { padding: var(--sp-4) var(--sp-4) var(--sp-5); }
-/* 本地偏好备份折叠卡。轨4：dashed 大容器框退役（立法④）——
-   框三件消除，border-top 分节承接（556 ws-w / 554 hr-sec 同语言），类名保留作挂载锚 */
+/* 本地偏好备份折叠卡。轨4：dashed 大容器框退役（约定④）——
+ 框三件消除，border-top 分节承接（556 ws-w / 554 hr-sec 同语言），类名保留作挂载锚 */
 .fv-prefs { margin-top: var(--sp-4); border-top: 1px solid var(--line); padding-top: var(--sp-2); }
 .fv-prefs summary { display: flex; align-items: center; gap: var(--sp-1h); cursor: pointer; font-size: var(--fs-sm); color: var(--tx2); }
 .fv-prefs summary:hover { color: var(--tx1); }
@@ -360,7 +360,7 @@ async function clearPrefs() {
 .fv-prefs-tip { font-size: var(--fs-xs); color: var(--tx2); flex: 1 1 260px; }
 .fv-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-4); padding-bottom: var(--sp-3); border-bottom: 1px solid var(--border-subtle); }
 /* 删 -hd-ic/-hd-tt/-hd-sub 死规则（页头已由 PageHeader 接管，模板 0 引用）；
-   -hd 左右组后缀族两条同族漏删回补删除（PageHeader actions 插槽接管，模板 0 引用） */
+ -hd 左右组后缀族两条同族漏删回补删除（PageHeader actions 插槽接管，模板 0 引用） */
 .fv-tabs { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-3); flex-wrap: wrap; }
 .fv-tab { display: flex; align-items: center; gap: var(--sp-1); padding: var(--sp-1) var(--sp-3); background: var(--bg2); border: 1px solid var(--line); color: var(--tx1); border-radius: 16px; cursor: pointer; font-size: var(--fs-sm); transition: all var(--tr); }
 .fv-tab:hover { border-color: var(--line-strong); color: var(--tx0); }
@@ -368,15 +368,15 @@ async function clearPrefs() {
 .fv-tab.act { background: var(--ac-soft); color: var(--ac-hi); border-color: var(--ac-line); font-weight: 600; }
 .fv-tab-c { padding: 0 var(--sp-1); background: var(--hl-strong); border-radius: var(--r-m); font-size: var(--fs-xs); }
 /* 胶囊壳三件套（panel 底/border-subtle 弱边/8px 圆角）随组件化归
-   SearchFilterBar 单源，本类只留落位与内衬（padding 对齐现行，高度结构零变动）；
-   .fv-search-i 裸输入形态归组件 .sfb-i 单源（inputClass 保留类名锚） */
+ SearchFilterBar 单源，本类只留落位与内衬（padding 对齐现行，高度结构零变动）；
+ .fv-search-i 裸输入形态归组件 .sfb-i 单源（inputClass 保留类名锚） */
 .fv-search { flex: 1; min-width: 180px; margin-left: auto; display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-1) var(--sp-3); }
 /* ·件B（实报「收藏夹在大屏电脑面前的比例不对」）：单列全宽行在
-   1600px 内容宽下过宽过扁、动作钮组与内容漂移两端——双列栅格恢复卡身比例（~760px/列）；
-   <1100 回落单列。纯 CSS：勾选/过滤/HitNav/批量行为零变化；行内结构（chk|内容|动作）不动 */
+ 1600px 内容宽下过宽过扁、动作钮组与内容漂移两端——双列栅格恢复卡身比例（~760px/列）；
+ <1100 回落单列。纯 CSS：勾选/过滤/HitNav/批量行为零变化；行内结构（chk|内容|动作）不动 */
 .fv-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3); align-items: start; }
-/* fv-card 列表项卡带框降层为 border-top 行（立法④；slm-card 551 先例：
-   panel 底+全框+radius 整块消除，悬停反馈由顶部 hairline 变色承接）；类名保留作 DOM 锚 */
+/* fv-card 列表项卡带框降层为 border-top 行（约定④；slm-card 551 先例：
+ panel 底+全框+radius 整块消除，悬停反馈由顶部 hairline 变色承接）；类名保留作 DOM 锚 */
 .fv-card { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-3); padding: var(--sp-3) 0; border-top: 1px solid var(--border-subtle); }
 /* 批量选择——勾选框、选中态、浮动操作栏（对齐 rt-float 范式） */
 .fv-chk { margin-top: 3px; flex-shrink: 0; }
@@ -391,8 +391,8 @@ async function clearPrefs() {
 .fv-card-sub { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 3px; }
 /* 本类只留落位外距（flex/字号/分隔归 .ms 单源，rc-card-meta 同款范式） */
 .fv-card-meta { margin-top: var(--sp-2); }
-/* .fv-tag 私造 chip 皮随 tag 段收编 MetaStrip items 退役（550 sv-repo 同语言；
-   文案「#tag」逐字保留，形态归组件 .ms-t 暗色段单源） */
+/* .fv-tag 私造 chip 皮随 tag 段合并 MetaStrip items 退役（550 sv-repo 同语言；
+ 文案「#tag」逐字保留，形态归组件 .ms-t 暗色段单源） */
 .fv-dest { padding: 1px var(--sp-2); background: var(--ac-soft); color: var(--ac-hi); border-radius: 3px; font-size: var(--fs-xs); }
 .fv-card-body { margin-top: var(--sp-2); font-size: var(--fs-xs); }
 .fv-card-body summary { cursor: pointer; color: var(--text-muted); }
@@ -404,8 +404,8 @@ async function clearPrefs() {
 .btn.danger:hover:not(:disabled) { background: var(--err-soft); }
 
 /* 900 紧凑微调档——页侧距与卡片内距收窄（--sp-4→--sp-3 / 卡内 --sp-3 --sp-4→
-   --sp-2h --sp-3）；收藏卡「内容+右钮组（flex-shrink:0 三钮）」窄容器补 wrap，钮组整排落到次行。
-   .fv-tabs 基础态已 flex-wrap、预览 pre 已 overflow-x:auto，横滚兜底不在此重复 */
+ --sp-2h --sp-3）；收藏卡「内容+右钮组（flex-shrink:0 三钮）」窄容器补 wrap，钮组整排落到次行。
+ .fv-tabs 基础态已 flex-wrap、预览 pre 已 overflow-x:auto，横滚兜底不在此重复 */
 @media (max-width: 1100px) {
   .fv-list { grid-template-columns: 1fr; }
 }

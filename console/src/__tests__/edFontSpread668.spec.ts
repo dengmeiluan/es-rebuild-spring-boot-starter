@@ -1,18 +1,18 @@
 /**
  * 六百六十八批：DevTools edFont 字号档真机缺角修复 + DQ/IH 铺开（⑥667 候选②落地）。
  *
- * 还原记档（667-C1 纪律）：「565 砍件」转述代号在 565 提交信息与旧任务书 565 时点
- * 版本中零命中=无记档本体（603-C1/651 件D 先例）——可考源头=560 批「DevTools 字号档
- * dt.font 三 seg」立法。开工侦察实锤真缺陷：MonacoEditor 响应链只有
+ * 还原备案（667-C1 纪律）：「565 砍件」转述代号在 565 提交信息与旧任务书 565 时点
+ * 版本中零命中=无备案本体（603-C1/651 件D 先例）——可考源头=560 批「DevTools 字号档
+ * dt.font 三 seg」约定。开工侦察实锤真缺陷：MonacoEditor 响应链只有
  * modelValue/readonly/language/theme 四 watch，无 fontSize watch（560 探针 F 段只断言
  * seg UI 在场+钮文案，从未验证渲染字号）→ 档位点击后 Monaco 渲染字号不变，仅挂载
- * 初值（偏好还原）生效。本批=响应缺角修复（watch fontSize→updateOptions，readOnly
+ * 初值（偏好还原）生效。=响应缺角修复（watch fontSize→updateOptions，readOnly
  * watch 同款范式）+字号档铺 DQ（dq.font）/IH（ih.font）双主编辑面。
  *
  * 锁面：视图源锚（usePref 键/seg 标记/:font-size 接线）+JsonArea 薄透传契约
  * （533 analyzers/660 terms 同款可选 prop 先例，缺席=内层缺省档零增量）+
- * editorTiers 单源收编（DevTools 本地 ED_FONT_TIERS 常量退役，轨4 同场景同单源）。
- * 随迁双锁（随实现同批翻转）：track2Wave560-exec ED_FONT_TIERS 字面→单源消费形态、
+ * editorTiers 单源合并（DevTools 本地 ED_FONT_TIERS 常量退役，轨4 同场景同单源）。
+ * 同步更新双锁（随实现同批翻转）：track2Wave560-exec ED_FONT_TIERS 字面→单源消费形态、
  * indexHubQueryTab IH editorTiers import 行扩 EDITOR_FONT_TIERS。
  */
 import { describe, it, expect } from 'vitest';
@@ -39,7 +39,7 @@ describe('668 A：MonacoEditor 字号响应缺角修复（560 真缺陷本体）
   });
 });
 
-describe('668 B：editorTiers 字号档单源收编（轨4 同场景同单源）', () => {
+describe('668 B：editorTiers 字号档单源合并（轨4 同场景同单源）', () => {
   it('B1 EDITOR_FONT_TIERS 三档常量出 utils/editorTiers 单源', () => {
     expect(tiersSrc).toContain('export const EDITOR_FONT_TIERS: number[] = [12.5, 14, 16];');
   });
@@ -53,7 +53,7 @@ describe('668 B：editorTiers 字号档单源收编（轨4 同场景同单源）
   });
 });
 
-describe('668 C：DevTools 既有字号档面随迁复核（560 立法面零触）', () => {
+describe('668 C：DevTools 既有字号档面同步更新复核（560 约定面零触）', () => {
   it("C1 usePref('dt.font', 12.5) 与 :font-size 双面接线原样", () => {
     expect(dt).toContain("usePref<number>('dt.font', 12.5)");
     expect((dt.match(/:font-size="edFont"/g) ?? []).length).toBe(2);
@@ -77,7 +77,7 @@ describe('668 D：DQ 主编辑器铺开（dq.font）', () => {
     expect(dq).toContain('dqFont === f');
     expect(dq).toContain('v-for="f in EDITOR_FONT_TIERS"');
   });
-  it('D4 DQ import 收编共享常量（editorTiers 单源）', () => {
+  it('D4 DQ import 合并共享常量（editorTiers 单源）', () => {
     expect(dq).toContain("import { EDITOR_H_TIERS, EDITOR_FONT_TIERS, type EditorHKey } from '../utils/editorTiers';");
   });
   it('D5 seg 尺寸锚（scoped CSS dt-font-seg 同形）', () => {
@@ -100,7 +100,7 @@ describe('668 E：IH 查询 tab 编辑器铺开（ih.font）', () => {
     expect(ih).toContain('ihFont === f');
     expect(ih).toContain('v-for="f in EDITOR_FONT_TIERS"');
   });
-  it('E4 IH import 行扩员（随迁 indexHubQueryTab ⑤ 锁同字面）', () => {
+  it('E4 IH import 行扩员（同步更新 indexHubQueryTab ⑤ 锁同字面）', () => {
     expect(ih).toContain("import { EDITOR_HEIGHTS, EDITOR_H_TIERS, EDITOR_FONT_TIERS, type EditorHKey } from '../utils/editorTiers';");
   });
   it('E5 seg 尺寸锚（scoped CSS dt-font-seg 同形）', () => {

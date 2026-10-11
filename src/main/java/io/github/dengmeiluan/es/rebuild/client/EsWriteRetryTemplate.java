@@ -109,7 +109,7 @@ public class EsWriteRetryTemplate {
     }
 
     /**
-     * 重试 WARN 按 action 键 60s 节流（）：窗口首条全量；窗口内仅累计；
+     * 重试 WARN 按 action 键 60s 节流（窗口首条全量；窗口内仅累计；
      * 窗口尾（下一窗口首败）先汇总上一窗累计「xN」一条再落本窗首条。
      * 只动日志，重试/退避/抛出契约零改动。
      */

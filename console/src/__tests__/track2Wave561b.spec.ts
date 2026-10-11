@@ -4,7 +4,7 @@
  *     行级仅 emit，新 Tab 组装+激活跳转归宿主 histNewTab）；缺省不传不渲染（queryHistoryPanel
  *     「未配置按钮不渲染」口径零破坏）；DevToolsView 面板用法传 newtab。
  *  ② DT 请求体「插入字段」钮——insertSnippet expose 全站首消费（MonacoEditor.vue 黑名单只调用）；
- *     n-popover 内嵌 FieldPicker（:to="false"，QueryHubView 场景任务判例）；_bulk 档禁用。
+ *     n-popover 内嵌 FieldPicker（:to="false"，QueryHubView 场景任务先例）；_bulk 档禁用。
  *  ③ AR 手动模式「拉取源配置」——显式用户动作 + askConfirm 确认覆盖；拉取优先吃向导步骤①
  *     已探测的 prep 快照（零网络），缺探测现场 api.clusterInspect 补拉；pretty 后填入两框。
  *  ④ Xm 行菜单「以此作业新建迁移」——job doc 自持 sourceIndex/destIndex/remoteEndpoint 回填，
@@ -14,7 +14,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /* ── QHP 挂载面：对齐 queryHistoryPanel.spec 既有 harness（useRoute mock + api mock）；
    视图挂载用真 createRouter——部分 mock 保全量导出，仅替换组合式 API。mockRoute 为共享
-   可变对象（视图读 route.query.xxx 需要字段在场，adhocRebuildView:2019 watch 判例） ── */
+   可变对象（视图读 route.query.xxx 需要字段在场，adhocRebuildView:2019 watch 先例） ── */
 const mockRoute = vi.hoisted(() => ({ path: '/devtools', query: {} as Record<string, unknown> }));
 vi.mock('vue-router', async (importOriginal) => {
   const actual = await importOriginal<any>();
@@ -185,7 +185,7 @@ describe('561b ①：DevToolsView 面板传 newtab + histNewTab 落新 Tab', () 
     expect(dt).toContain(":actions=\"['play', 'fill', 'copy', 'fav', 'curl', 'newtab', 'del']\"");
     expect(dt).toContain('@newtab="histNewTab"');
   });
-  it('histNewTab=mkTab(method/path/body) + 激活跳转 + persist（mkTab/consumePrefill 判例）', () => {
+  it('histNewTab=mkTab(method/path/body) + 激活跳转 + persist（mkTab/consumePrefill 先例）', () => {
     expect(dt).toMatch(/function histNewTab\(h: any\) \{[\s\S]*?mkTab\(/);
     expect(dt).toMatch(/histNewTab[\s\S]{0,300}active\.value = tabs\.value\.length - 1;/);
     expect(dt).toMatch(/histNewTab[\s\S]{0,400}persist\(\);/);

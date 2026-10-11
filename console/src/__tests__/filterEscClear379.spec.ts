@@ -27,13 +27,13 @@ describe('过滤框 Esc 清空统一（379 批）', () => {
   it('抽查五处：Esc 绑定与 v-model 变量一致', () => {
     const cases: [string, string, string][] = [
       /* v3.0.1:IndexHub 抽屉搜索框 Esc 升级两级语义(词非空清词/已空关抽屉),走 onKwEsc,单独断言 */
-      /* 五百六十批锚随迁：IlmView/ClusterSettingsView 两处过滤框换装 SearchFilterBar（Esc 清空
+      /* 五百六十批锚同步更新：IlmView/ClusterSettingsView 两处过滤框改用 SearchFilterBar（Esc 清空
          由组件内建承接，行为等价；flattenWave560 锁其接线形态），抽查案例替换为仍持手写
          Esc 绑定的 RestView searchExpr / SecurityView adKw（同形态等价锚）。
-         五百六十一批锚随迁：BrowserView bw-search 换装 SearchFilterBar（547 豁免册条目由
-         561 收编立法推翻，Esc 清空由组件内建承接行为等价），抽查案例替换为仍持手写
+         五百六十一批锚同步更新：BrowserView bw-search 改用 SearchFilterBar（547 豁免册条目由
+         561 合并约定推翻，Esc 清空由组件内建承接行为等价），抽查案例替换为仍持手写
          Esc 绑定的 BoostTunerView fieldKw（同形态等价锚）。
-         六百五十批锚随迁：BoostTunerView fieldKw/SecurityView adKw 两面自造过滤框换装
+         六百五十批锚同步更新：BoostTunerView fieldKw/SecurityView adKw 两面自造过滤框改用
          SearchFilterBar（sfbUnify650 锁，Esc 清空转组件内建行为等价），抽查案例替换为仍持
          手写 Esc 绑定的 DslQueryView saveName / SecurityView fUser（同形态等价锚；
          fUser 为 v-model.trim 形态，正则放行 .trim 修饰符） */
@@ -66,25 +66,25 @@ describe('过滤框 Esc 清空统一（379 批）', () => {
     for (const f of views) {
       n += (readFileSync(f, 'utf-8').match(/@keydown\.esc\.prevent="\w+ = ''"/g) ?? []).length;
     }
-    /* 五百四十七批锁随迁：三胞胎页头过滤胶囊（WatcherView kw/FavoritesView kw/
+    /* 五百四十七批锁同步更新：三处页头过滤胶囊（WatcherView kw/FavoritesView kw/
        TemplateGalleryView kw）组件化迁 SearchFilterBar——views 字面绑定 20→17，
        Esc 清空由组件内建承接（update:modelValue('') 行为等价），守卫口径扩组件内
        @keydown.esc.prevent 1 处，合计 18 仍满足下界（行为锚见 searchFilterBar547）。
-       五百六十批随迁：六面过滤框换装 SearchFilterBar（IlmView ilm-input/TemplatesView tv2/
+       五百六十批同步更新：六面过滤框改用 SearchFilterBar（IlmView ilm-input/TemplatesView tv2/
        SearchTemplatesView st-list-filter/AliasesView alv-input/TaskTreeView tt-filter/
        ClusterSettingsView cs-filter，全站第 6~11 胞收官）——views 字面绑定 18→12，
-       Esc 清空仍由组件内建承接，合计 12+1=13，下界随迁 18→13（行为锚 flattenWave560）。
-       五百六十一批随迁：SFB 收编最后两面（AnalysisSettingsView as-filter-ipt/
+       Esc 清空仍由组件内建承接，合计 12+1=13，下界同步更新 18→13（行为锚 flattenWave560）。
+       五百六十一批同步更新：SFB 合并最后两面（AnalysisSettingsView as-filter-ipt/
        IndexSettingsView is-raw-filter，第 15~16 胞）——两面原输入框均无手写 Esc 绑定
-       （计数册缺席胞），换装后 Esc 清空由组件内建补齐：views 字面绑定 11 持平，
+       （计数册缺席胞），改用后 Esc 清空由组件内建补齐：views 字面绑定 11 持平，
        合计 11+2=13 实跑持平，下界 13 不动（行为锚 rawioWave561）。
-       五百六十二批随迁：LuceneQueryView lc-json-find 手写查找件换装 SearchFilterBar
-       （374 批手写件收编）——views 字面绑定 11→10，Esc 清空由组件内建承接
-       （update:modelValue('') 行为等价），合计 10+2=12，下界随迁 13→12。
-       六百五十批随迁：四面自造过滤框换装 SearchFilterBar（BoostTunerView fieldKw/
+       五百六十二批同步更新：LuceneQueryView lc-json-find 手写查找件改用 SearchFilterBar
+       （374 批手写件合并）——views 字面绑定 11→10，Esc 清空由组件内建承接
+       （update:modelValue('') 行为等价），合计 10+2=12，下界同步更新 13→12。
+       六百五十批同步更新：四面自造过滤框改用 SearchFilterBar（BoostTunerView fieldKw/
        DslQueryView aggKw+cardsKw/SecurityView adKw，sfbUnify650 锁；MappingFieldTree
        为 components 域不计 views 册）——views 字面绑定实测 13→9，Esc 清空由组件内建
-       承接（update:modelValue('') 行为等价），合计 9+2=11，下界随迁 12→11 */
+       承接（update:modelValue('') 行为等价），合计 9+2=11，下界同步更新 12→11 */
     const sfb = readFileSync(join(__dirname, '../components/SearchFilterBar.vue'), 'utf-8');
     n += (sfb.match(/@keydown\.esc\.prevent/g) ?? []).length;
     expect(n).toBeGreaterThanOrEqual(11);

@@ -1,9 +1,9 @@
 /**
  * 五百六十一批：内核小件+三视图表格头收口源码锚与行为锁。
- * ① remote 直选收口：QRT emitRemoteSort 补 directDir 可选参数（RT 535 判例平移），
+ * ① remote 直选收口：QRT emitRemoteSort 补 directDir 可选参数（RT 535 先例平移），
  *    directSort remote 档改走同一收口（行为等价：事件名/载荷逐字保形）——补 QRT 直选
  *    行为锁（列头菜单「升序/降序」直发，535 只锁了 RT 半边）；
- * ② 三段同构块收编片段组件（TableAggFoot/TableFilteredHint/TableQSearch/TableRefreshBtn，
+ * ② 三段同构块合并片段组件（TableAggFoot/TableFilteredHint/TableQSearch/TableRefreshBtn，
  *    类名 prefix 参数化、DOM 逐字节）——双内核接线源码锚+片段组件行为复验（agg tfoot/
  *    筛选提示/内建搜索/刷新钮四件在 535/534/546/547/551/552 既有行为锁零改锚，本文件只锁
  *    组件化新面）；
@@ -51,7 +51,7 @@ beforeEach(() => {
 });
 
 /* ═══════════ 一、① remote 直选收口 ═══════════ */
-describe('五百六十一批①：远端直选与表头点击同一收口（六百零三批随迁=emitRemoteSort 收编 tableSort.useSortChain 机内，锁随机器走新家）', () => {
+describe('五百六十一批①：远端直选与表头点击同一收口（六百零三批同步更新=emitRemoteSort 合并 tableSort.useSortChain 机内，锁随机器走新家）', () => {
   it('源码锁：双内核单入口委托状态机；直选/循环/远端意图镜像分支全在机内单一出处', () => {
     expect(qrt, 'QRT 表头点击单入口委托').toContain('chain.sortBy(name, undefined, shift)');
     expect(qrt, 'QRT 右键直选同一收口（dir 1|-1 归一字符串后委托）').toContain("chain.sortBy(col, dir === 1 ? 'asc' : 'desc')");
@@ -78,8 +78,8 @@ describe('五百六十一批①：远端直选与表头点击同一收口（六�
   });
 });
 
-/* ═══════════ 二、② 三段同构块收编片段组件 ═══════════ */
-describe('五百六十一批②：bar-left/tfoot 同构段收编片段组件（DOM 逐字节）', () => {
+/* ═══════════ 二、② 三段同构块合并片段组件 ═══════════ */
+describe('五百六十一批②：bar-left/tfoot 同构段合并片段组件（DOM 逐字节）', () => {
   it('源码锁：四片段组件在场且双内核同款接线（props 传差异位）', () => {
     for (const f of ['TableAggFoot.vue', 'TableFilteredHint.vue', 'TableQSearch.vue', 'TableRefreshBtn.vue']) {
       expect(readComp(f).length, f + ' 在场').toBeGreaterThan(0);
@@ -88,7 +88,7 @@ describe('五百六十一批②：bar-left/tfoot 同构段收编片段组件（D
     expect(qrt).toContain('span-cls="qrt-filtered mono" fmode-cls="qrt-fmode mono" clear-cls="qrt-filtered-clear"');
     expect(rt).toContain('<TableFilteredHint :active="activeFilterCount" :shown="filteredHits.length" :total="hits.length"');
     expect(rt).toContain('span-cls="rt-filtered mono" fmode-cls="rt-fmode mono" clear-cls="rt-filtered-clear"');
-    /* 六百二十一批随迁：@enter 桥接滚动下一命中行接线（单框双效，TableQSearch 定向转 emit） */
+    /* 六百二十一批同步更新：@enter 桥接滚动下一命中行接线（单框双效，TableQSearch 定向转 emit） */
     expect(qrt).toContain('<TableQSearch :on="searchable" q-cls="qrt-qsearch" v-model:kw="searchableKw" @enter="bridgeNext" />');
     expect(rt).toContain('<TableQSearch :on="searchable" q-cls="rt-qsearch" v-model:kw="searchableKw" @enter="bridgeNext" />');
     expect(qrt).toContain('<TableRefreshBtn :on="refreshable" btn-cls="qrt-tool-btn" @refresh="emit(\'refresh\')" />');
@@ -97,14 +97,14 @@ describe('五百六十一批②：bar-left/tfoot 同构段收编片段组件（D
     expect(rt).toMatch(/<TableAggFoot v-if="aggOn" prefix="rt" :cols="visibleCols" :foot="aggFoot" :spark="aggSpark"/);
   });
 
-  it('源码锁：迁出段内核反锚（tfoot/提示 span/搜索框字面退役防双份漂移；弹层槽 fmode 留内核）（五百六十五批随迁：QRT 手搓槽钮退役——fmode 字面单源再收编 ColFilterPopover 内建 chip，反锚翻「QRT 不再手搓」防双份漂移）（五百六十七批随迁：RT 手搓槽钮对称退役——反锚同翻「RT 不再手搓」，双内核 fmode 单源闭环）', () => {
+  it('源码锁：迁出段内核反锚（tfoot/提示 span/搜索框字面退役防双份漂移；弹层槽 fmode 留内核）（五百六十五批同步更新：QRT 手搓槽钮退役——fmode 字面单源再合并 ColFilterPopover 内建 chip，反锚翻「QRT 不再手搓」防双份漂移）（五百六十七批同步更新：RT 手搓槽钮对称退役——反锚同翻「RT 不再手搓」，双内核 fmode 单源闭环）', () => {
     expect(qrt, 'QRT 内核不再持有 tfoot 聚合模板（迁 TableAggFoot）').not.toContain('<tfoot v-if="aggOn">');
     expect(rt, 'RT 内核同退役').not.toContain('<tfoot v-if="aggOn">');
     expect(qrt, 'QRT 提示行 span 字面退役（迁 TableFilteredHint）').not.toContain('<span v-if="activeFilterCount" class="qrt-filtered mono">');
     expect(rt, 'RT 同退役').not.toContain('<span v-if="activeFilterCount" class="rt-filtered mono">');
-    /* 五百六十五批随迁：QRT 手搓 fmode 钮退役（同串迁移 filterModeToggle561 行为锚原样通过），
-       单一出处再收编 ColFilterPopover 内建 chip——QRT 只留接线、不再手搓（防双份漂移反锚保真）
-       五百六十七批随迁：RT 半边对称落地，双内核手搓槽钮字面同退役 */
+    /* 五百六十五批同步更新：QRT 手搓 fmode 钮退役（同串迁移 filterModeToggle561 行为锚原样通过），
+       单一出处再合并 ColFilterPopover 内建 chip——QRT 只留接线、不再手搓（防双份漂移反锚保真）
+       五百六十七批同步更新：RT 半边对称落地，双内核手搓槽钮字面同退役 */
     expect(qrt, 'QRT 手搓槽钮字面退役').not.toMatch(/class="qrt-fmode mono"/);
     expect(qrt, 'QRT 改走内建 chip 接线（prop 在场）').toContain(':filter-mode="filterModeLive"');
     expect(rt, 'RT 手搓槽钮字面对称退役').not.toMatch(/class="rt-fmode mono"/);
@@ -134,9 +134,9 @@ describe('五百六十一批②：bar-left/tfoot 同构段收编片段组件（D
 /* ═══════════ 三、③ hideBody 退聚焦（rtFix552 对称件） ═══════════ */
 describe('五百六十一批③：QRT hideBody→true 自动退出聚焦（RT 552 对称件平移）', () => {
   it('源码锁：watch(bodyHidden) 在场且只在聚焦中触发', () => {
-    /* 六百零七批随迁：QRT watch 源升 bodyHidden（hideBody ∪ 内建 viewSeg 非表格档——
+    /* 六百零七批同步更新：QRT watch 源升 bodyHidden（hideBody ∪ 内建 viewSeg 非表格档——
        内建档切换同样退聚焦，561 语义全覆盖）
-       六百零九批随迁：RT 半边对称升 bodyHidden（viewSeg=false 时源≡hideBody 行为等值
+       六百零九批同步更新：RT 半边对称升 bodyHidden（viewSeg=false 时源≡hideBody 行为等值
        零回归；双内核 watch 源自此同字面） */
     expect(qrt).toMatch(/watch\(bodyHidden, h => \{ if \(h && focused\.value\) focused\.value = false; \}\);/);
     expect(rt).toMatch(/watch\(bodyHidden, h => \{ if \(h && focused\.value\) focused\.value = false; \}\);/);

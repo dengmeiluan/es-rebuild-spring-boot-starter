@@ -7,13 +7,13 @@
  *   contains），非表格档=死 UI 占位（cards 档与 dq-cards-kw 过滤卡片框同病双框）；
  * ② 图3 特写：分页器 .pgn-pos「/ 500」无 nowrap，工具行挤压时 span 内部折行
  *   （"/"一行"500"一行）=分页器两行高→整条工具行撑高；
- * ③ 图2 表格档：左簇计数条（rt-info/qrt-coln，554 立法的 ellipsis 收缩缓冲）被吸干到
+ * ③ 图2 表格档：左簇计数条（rt-info/qrt-coln，554 约定的 ellipsis 收缩缓冲）被吸干到
  *   「2…」近零宽=信息丢失——554 收缩序里快滤框恒 160px 固宽不让位，缓冲独木难支。
  *
  * 三刀（1 接线+2 声明，纯前端零 Java）：
  * · 件1 双框合一：DQ resultTbl :searchable="view === 'table'"——快滤框表格档唯一在场
- *   （json 档 dq-json-find / cards 档 dq-cards-kw 各自伴生；tree 档无伴生搜索=记档候选）；
- *   表格档行为零变，切档往返 kw 状态保留（铁律 B 状态不重置）；锁随迁 rtSearchable614
+ *   （json 档 dq-json-find / cards 档 dq-cards-kw 各自伴生；tree 档无伴生搜索=备案候选）；
+ *   表格档行为零变，切档往返 kw 状态保留（铁律 B 状态不重置）；锁同步更新 rtSearchable614
  *   it2（614 原锁=接线存在性，接线仍真，档位收窄）。
  * · 件2 分页器防折：.pgn-pos white-space:nowrap——span min-content 抬到全串宽，
  *   flex min-width:auto 链使 .pgn 有效不可压折（撑高根除）；挤压改道既有设计缓冲

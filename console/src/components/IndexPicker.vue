@@ -19,7 +19,7 @@
         @keydown="onKey"
       />
       <!-- v5 回归实测：.stop 必须带——clear 会同步移除本钮（v-if="modelValue"），mousedown 冒泡到
-           document 时 target 已 detach，onDocDown 的 contains(detached)=false 会误判「点外」关掉刚开的弹层 -->
+ document 时 target 已 detach，onDocDown 的 contains(detached)=false 会误判「点外」关掉刚开的弹层 -->
       <button aria-label="清空" v-if="modelValue" class="ixp-x" title="清空" tabindex="-1" @mousedown.prevent.stop="clear">
         <X :size="11" />
       </button>
@@ -27,8 +27,8 @@
 
     <Teleport :to="teleportTo" :disabled="inplace">
       <!-- 弹层默认 Teleport 在 body 下：mousedown 需 .stop，否则 document 层 onDocDown 会先关面板导致 click 选项丢失。
-           to="false" 时 Teleport disabled → 就地渲染在 .ixp 根内（嵌 naive popover 场景：弹层与 popover 同子树，
-           clickoutside 不再误判关 popover 导致 click 丢失） -->
+ to="false" 时 Teleport disabled → 就地渲染在 .ixp 根内（嵌 naive popover 场景：弹层与 popover 同子树，
+ clickoutside 不再误判关 popover 导致 click 丢失） -->
       <transition name="pop">
         <div v-if="open" class="ixp-pop float-pop" :class="{ inplace }" :style="popStyle" @mousedown.prevent.stop>
         <!-- 全局选中联动：一键带入当前侧栏选中的索引 -->
@@ -72,8 +72,8 @@
 </template>
 
 <script setup lang="ts">
-/* -e §8.5：统一索引选择器——全站禁止裸 index input。
-   自动补全集群真实索引+别名、与全局选中(pickedIdx)联动、键盘导航、docs/size 元信息。 */
+/* -e 统一索引选择器——全站禁止裸 index input。
+ 自动补全集群真实索引+别名、与全局选中(pickedIdx)联动、键盘导航、docs/size 元信息。 */
 import { ref, computed, watch } from 'vue';
 import { Database, X, MousePointerClick } from 'lucide-vue-next';
 import { useAppStore } from '../stores/app';
@@ -91,7 +91,7 @@ const props = withDefaults(defineProps<{
   syncGlobal?: boolean;
   width?: string;
   /** 弹层挂载点：默认 'body'（Teleport 现状，全体既有消费方零影响）；
-     传 false 就地渲染在 .ixp 根内（absolute 随根定位，不跑 place() 的 fixed 坐标计算） */
+ 传 false 就地渲染在 .ixp 根内（absolute 随根定位，不跑 place() 的 fixed 坐标计算） */
   to?: string | false;
 }>(), { allowWildcard: false, syncGlobal: false, to: 'body' });
 
@@ -104,8 +104,8 @@ const loading = ref(false);
 type Item = { kind: 'index' | 'alias'; name: string; health?: string; meta: string; aliases: string[] };
 
 /* 弹层骨架下沉 usePopupList（与 FieldPicker 同款）：open/cursor/place/onKey/onDocDown/listId/to 双模式。
-   place 参数保留本组件原数值（300/280/300，与骨架默认 280/260/280 不同，须显式传）；
-   Tab 联动「使用当前选中」是本组件特有分支，骨架不含，见下方 onKey wrapper。 */
+ place 参数保留本组件原数值（300/280/300，与骨架默认 280/260/280 不同，须显式传）；
+ Tab 联动「使用当前选中」是本组件特有分支，骨架不含，见下方 onKey wrapper。 */
 const {
   open, cursor, popStyle, teleportTo, inplace, listId, itemId,
   rootEl, listEl, openPanel, close, onKey: popupOnKey,
@@ -127,8 +127,8 @@ const idxCount = computed(() => store.indices.length);
 const aliasCount = computed(() => aliasEntries(clusterKey.value).length);
 
 /* v3.0.0 提示纠错：通配符/逗号多目标形态（仅 allowWildcard 场景合法）——
-   此前候选空时主线文案仍是「没有匹配」，用户以为输入非法；实际这类输入
-   不走候选层、Enter 直接交给 ES 解析。识别为 wildcardish 后换中性口径。 */
+ 此前候选空时主线文案仍是「没有匹配」，用户以为输入非法；实际这类输入
+ 不走候选层、Enter 直接交给 ES 解析。识别为 wildcardish 后换中性口径。 */
 const wildcardish = computed(() =>
   props.allowWildcard && /[*?,]|^_all$/.test((props.modelValue || '').trim()),
 );
@@ -158,7 +158,7 @@ function onInput(e: Event) {
 }
 
 /* 展开时补拉索引清单（store 无数据才拉；force = 失败重试钮强制重拉）。
-   loadIndices 自吞错误不抛（finally 里 loading 必复位），失败的外部可见信号见 loadFailed */
+ loadIndices 自吞错误不抛（finally 里 loading 必复位），失败的外部可见信号见 loadFailed */
 async function fetchIndices(force = false) {
   if (force || (!store.indices.length && !store.loadingIndices)) {
     loading.value = true;
@@ -167,7 +167,7 @@ async function fetchIndices(force = false) {
 }
 
 /* 加载失败态：loadIndices 吞错不抛，非 401 失败的外部可见信号是 clusterOk===false
-   （401 → null，走登录引导不判失败）；有旧数据时列表仍可显，不顶掉 */
+ （401 → null，走登录引导不判失败）；有旧数据时列表仍可显，不顶掉 */
 const loadFailed = computed(() => store.clusterOk === false && !store.indices.length);
 
 function choose(name: string) {
@@ -204,7 +204,7 @@ watch(() => store.target, () => { close(); });
 .ixp-x { display: inline-flex; border: none; background: none; color: var(--muted); cursor: pointer; padding: 1px; border-radius: var(--r-xs); }
 .ixp-x:hover { color: inherit; background: var(--hover); }
 
-/* 壳属性（fixed/--z-island/bg/border/shadow/圆角）收编 theme.css .float-pop，本类只留坐标外裁切与字号 */
+/* 壳属性（fixed/--z-island/bg/border/shadow/圆角）合并 theme.css .float-pop，本类只留坐标外裁切与字号 */
 .ixp-pop { overflow: hidden; font-size: var(--fs-sm); }
 /* 就地模式：absolute 随 .ixp 根（position:relative）定位；渲染在 popover 子树内天然随父 stacking context，无需 9000 z-index */
 .ixp-pop.inplace { position: absolute; top: 100%; left: 0; min-width: 100%; z-index: 10; }

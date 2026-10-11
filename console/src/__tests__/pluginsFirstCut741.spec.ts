@@ -162,7 +162,7 @@ describe('741 A0 挂载不变量负锚（现状即守卫）', () => {
 });
 
 describe('741 G147 页头刷新钮在途窗 spinning（铁律 D·737 G132 同族）', () => {
-  it('二拉在途窗 disabled（既有）+spinning（G147 病灶：修前零）；完成复常；期间已加载矩阵不退场（状态不重置）', async () => {
+  it('二拉在途窗 disabled（既有）+spinning（G147 病灶：修前零）；完成复常；期间已加载矩阵不移除（状态不重置）', async () => {
     const host = await mountView();
     expect(qrtOf(host, 0).querySelectorAll('tbody tr').length, '首拉已呈现矩阵').toBe(4);
     pluginsMatrixFn.mockImplementation(() => new Promise<any>(res => { loadRes.push(res); }));
@@ -172,7 +172,7 @@ describe('741 G147 页头刷新钮在途窗 spinning（铁律 D·737 G132 同族
     expect(reload.disabled, '防重入既有').toBe(true);
     expect(reload.querySelector('.spinning'), 'G147 病灶：在途窗零 spinning').toBeTruthy();
     /* busy && available（首拉已成功）→骨架屏分支不接管，已加载矩阵保留（D1 刷新链既有负锚） */
-    expect(qrtOf(host, 0).querySelectorAll('tbody tr').length, '在途窗矩阵不退场').toBe(4);
+    expect(qrtOf(host, 0).querySelectorAll('tbody tr').length, '在途窗矩阵不移除').toBe(4);
     relLoad(PLUGINS_OK);
     await settle();
     expect(reload.disabled, '完成复常').toBe(false);
@@ -190,7 +190,7 @@ describe('741 G147 页头刷新钮在途窗 spinning（铁律 D·737 G132 同族
     expect(host.querySelector('.pl-loading'), '空态重拉=骨架屏顶替（R45 §1 既有）').toBeTruthy();
     relLoad({ ...PLUGINS_OK, available: false, reason: 'ES 7.10 API 边界：只读探针超时' });
     await settle();
-    expect(host.querySelector('.pl-loading'), '完成后骨架退场').toBeNull();
+    expect(host.querySelector('.pl-loading'), '完成后骨架移除').toBeNull();
   });
 });
 
@@ -251,7 +251,7 @@ describe('741 G149 列头中文语义 tip（铁律 F·717 G60 双语同款；col
   });
 });
 
-describe('741 G150 指南弹窗 aria 最小刀（569 ModalShell 立法的壳契约三行）', () => {
+describe('741 G150 指南弹窗 aria 最小刀（569 ModalShell 约定的壳契约三行）', () => {
   it('空开：.pl-mo-b role=dialog+aria-modal=true+aria-label=插件安装指南；关钮 aria-label', async () => {
     const host = await mountView();
     findBtn(host, /安装指南/).click();

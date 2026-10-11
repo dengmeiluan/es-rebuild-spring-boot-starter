@@ -19,6 +19,6 @@ describe('SnapshotsView CSV 导出（一百零一批）', () => {
   it('列结构与文件名（仓库维度）+ BOM', () => {
     expect(src).toContain("const head = ['snapshot', 'state', 'start_time', 'duration_ms', 'indices_count', 'indices']");
     expect(src).toMatch(/snapshots-\$\{currentRepo\.value \|\| 'repo'\}-\$\{exportStamp\(\)\}\.csv/); /* 255 批时间戳 */
-    expect(src).toMatch(/csvText\(head,/); /* 434 批：组装收编 csvText */
+    expect(src).toMatch(/csvText\(head,/); /* 434 批：组装合并 csvText */
   });
 });

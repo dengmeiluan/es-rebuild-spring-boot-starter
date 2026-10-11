@@ -1,4 +1,4 @@
-/* 五百四十七批 W5（轨5 全栈）：errMeta 铺装二视图——DiagView / TaskTreeView 错误面换装
+/* 五百四十七批 W5（轨5 全栈）：errMeta 铺装二视图——DiagView / TaskTreeView 错误面改用
  * errPreHtml+errMeta 双参（范式先例：BoostTuner/MatchMatrix 等 534 收口波 15 视图；
  * errMeta 帮手契约见 errEndpoint534）。要求：
  *  ① friendlyEsError 通道与原错误文案语义不回退——错误原文全文仍在，仅头部追加
@@ -78,7 +78,7 @@ beforeEach(() => {
 });
 
 describe('五百四十七批：errMeta 铺装源码锚（errPreHtml+errMeta 双参 + 原始对象旁路在场）', () => {
-  it('DiagView：双错误条 v-html 双参换装、import 在场、双源旁路 + firstMetaRaw 选喂', () => {
+  it('DiagView：双错误条 v-html 双参改用、import 在场、双源旁路 + firstMetaRaw 选喂', () => {
     expect(diagSrc).toContain("import { errPreHtml, errMeta } from '../utils/errPre';");
     expect(diagSrc).toMatch(/v-html="errPreHtml\(loadErr, errMeta\(loadErrRaw\)\)"/);
     expect(diagSrc).toMatch(/v-html="errPreHtml\(opsErr, errMeta\(opsErrRaw\)\)"/);
@@ -93,7 +93,7 @@ describe('五百四十七批：errMeta 铺装源码锚（errPreHtml+errMeta 双�
     expect(diagSrc).toContain("'观测数据拉取失败：'");
   });
 
-  it('TaskTreeView：err-bar 双参换装、loadErrRaw 旁路透传、成功清 raw、文案不回退', () => {
+  it('TaskTreeView：err-bar 双参改用、loadErrRaw 旁路透传、成功清 raw、文案不回退', () => {
     expect(ttSrc).toContain("import { errPreHtml, errMeta } from '../utils/errPre';");
     expect(ttSrc).toMatch(/v-html="errPreHtml\(loadErr, errMeta\(loadErrRaw\)\)"/);
     expect(ttSrc).toContain('const loadErrRaw = ref<unknown>(null);');

@@ -51,7 +51,7 @@ describe('C 未知字段提示附编辑距离最近候选', () => {
   it('「最接近：xxx」在場 + ≤2 才附（dslLint unknown-field 同口径防噪音）+ editDistance 单源 import', () => {
     expect(li).toContain("import { editDistance } from '../utils/editDistance';");
     expect(li).toContain("let best = ''; let bestD = 3; /* >2 即弃（防噪音） */");
-    /* 五百六十一批随迁：条目升级 {msg, level} 双档（软提示 warn 档），msg 字面零迁移 */
+    /* 五百六十一批同步更新：条目升级 {msg, level} 双档（软提示 warn 档），msg 字面零迁移 */
     expect(li).toContain("out.push({ msg: `未知字段「${f}」（不在当前索引字段清单${bestD <= 2 ? `，最接近：${best}` : ''}）`, level: 'warn' });");
   });
 });

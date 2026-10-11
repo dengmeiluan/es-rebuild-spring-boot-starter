@@ -2,7 +2,7 @@
  * R130 一百九十七批：KeepAlive/常驻内存审计 + PIT 缓冲上限保护。
  * 审计结论（防重扫）：KeepAlive 六页定时器/监听配对健康；liveMonitor 序列全部
  * pushCapped(120)+nodeSeries 未见键清理；PitScroll 拉取计时器 finally 清理。
- * 唯一真实风险：PIT buffer 深分页全量驻内存无上限——本批加 BUFFER_MAX(20 万条)
+ * 唯一真实风险：PIT buffer 深分页全量驻内存无上限——加 BUFFER_MAX(20 万条)
  * 达限自动暂停（不 reset），导出清空后可继续。源码锁。
  */
 import { describe, it, expect } from 'vitest';

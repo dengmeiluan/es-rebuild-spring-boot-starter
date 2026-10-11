@@ -167,7 +167,7 @@ describe('分词结果可读性（一百八十一批）', () => {
   const read = (p: string) => readFileSync(join(__dirname, p), 'utf-8');
   it('列头中文主名（QRT 列名键）；词性代码转「中文 原代码」双写；未知代码原样', () => {
     const s = read('../views/AnalyzeView.vue');
-    /* 五百二十九批锚随迁：th 内 av-th-en 英文小字随 QRT 换壳退役——列头由列名键渲染，
+    /* 五百二十九批锚同步更新：th 内 av-th-en 英文小字随 QRT 换壳退役——列头由列名键渲染，
        中文主名保真（AV_TOKEN_COLS 中文键），英文原文由 Markdown 复制表头/槽内原码延续 */
     expect(s).toMatch(/const AV_TOKEN_COLS = \['#', '词元', '序位', '字符区间', '词性', '长度'\]/);
     expect(s).toMatch(/const POS_ZH: Record<string, string>/);

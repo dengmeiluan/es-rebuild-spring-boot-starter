@@ -9,16 +9,16 @@
  * ⚠661-C1 纪律：「挂了 assist」≠「fields 拉到了」——每面 A 锚含 ensure 调用链在场断言
  *   （PitScroll/ProfileFlame/MatchMatrix=fields 闭包内 lazy ensure 形态；
  *   UpdateByQuery/ReindexAdvanced/ReindexPreview=watch immediate 形态，528/554 范式）。
- * SearchTemplatesView（模板源参数化值位语义）另议维持；零语义面裁决记档 661 已闭册。
+ * SearchTemplatesView（模板源参数化值位语义）另议维持；零语义面裁决备案 661 已闭册。
  *   A 源锚（readFileSync 字面锁，661 spec A 段同范式）：六面 import/实例/闭包+fields 源+ensure 链。
  *   B 挂载冒烟（661 B 段范式，六面均挂载即渲无须先造条件）：六视图 terms 注入真达
  *     JsonArea→MonacoEditor——动态恰 json+ndjson 两份且无 triggerCharacters（655-C1 安全位：
  *     dslRegs ['"'] 过滤器不认=monacoDslAssist 计数零扰动）+主签名 ['"'] 恰 2 不回归。
  *     ⚠UpdateByQuery/ReindexAdvanced 另有 painless 面（骨架补全签名 ['[', '.'] 长度 2≠1 且
  *     首字符非 '"'）——dynRegs/quoteRegs 过滤器天然不误捕，计数断言安全（655-C1 同理）。
- *   C 下界计数锁（650-C2 计数册实测口径）：全站视图 terms 闭包 ≥15（661 后 9+本批 6），
+ *   C 下界计数锁（650-C2 计数册实测口径）：全站视图 terms 闭包 ≥15（661 后 9+ 6），
  *     三程后续批（SearchTemplates 另议/Monaco 三程低优收尾）只增不减。
- * 随迁（650-C3 全目录 grep 实证）：零——六面 assist 行无 spec 直锁（模板行锁
+ * 同步更新（650-C3 全目录 grep 实证）：零——六面 assist 行无 spec 直锁（模板行锁
  *     freeEditorTiers530/rebuildFlat534/qrtPagerExportTranspose525 锁模板属性名零触；
  *     monacoLanguagePenetration ②④⑤ 行为锁 fields/bodyKind 函数与 search 档语义，
  *     terms 追加零回退；assistLintWave533 ra 锁 ref/watch/lint 链零触）。
@@ -273,7 +273,7 @@ describe('662 批 B 挂载冒烟：六视图动态通道真达 + 主签名不回
 
 /* ---------- C 下界计数锁（650-C2 计数册口径） ---------- */
 describe('662 批 C 全站 terms 闭包下界计数', () => {
-  it('C1 全站视图 terms 闭包 ≥15（658+660 四面+661 五面+本批六面；三程后续批只增不减）', () => {
+  it('C1 全站视图 terms 闭包 ≥15（658+660 四面+661 五面+六面；三程后续批只增不减）', () => {
     const dir = join(__dirname, '../views');
     const files = readdirSync(dir).filter(f => f.endsWith('.vue'));
     let n = 0;

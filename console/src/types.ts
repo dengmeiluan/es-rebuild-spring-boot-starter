@@ -17,7 +17,7 @@ export interface SearchHit {
   _score: number | null;
   _source: Record<string, any>;
   /** ES highlight 结果（字段→片段数组，片段内含 pre/post_tags 包裹的 <em> 等标签）；
-      渲染侧必须净化（只放行 em/mark，其余转义），见 ResultTable.hlSafe */
+ 渲染侧必须净化（只放行 em/mark，其余转义），见 ResultTable.hlSafe */
   highlight?: Record<string, string[]>;
 }
 
@@ -28,6 +28,6 @@ export interface SearchResp {
   hits: SearchHit[];
   aggregations?: Record<string, any>;
   took?: number;
-  /**  P1-7：分片统计（failed/timed_out>0=部分失败，结果可能不完整，UI 出黄条） */
+  /** P1-7：分片统计（failed/timed_out>0=部分失败，结果可能不完整，UI 出黄条） */
   shards?: { total?: number; failed?: number; timed_out?: number } | null;
 }

@@ -301,7 +301,7 @@ describe('HistoryChart 图卡组件', () => {
     cleanup();
   });
 
-  it('统计区文本含「当前/最大/均值」；数值走 unit 格式化单源（799 随迁：「当前」升行② hc-cur 28px 大数，统计条保最大/均值）', async () => {
+  it('统计区文本含「当前/最大/均值」；数值走 unit 格式化单源（799 同步更新：「当前」升行② hc-cur 28px 大数，统计条保最大/均值）', async () => {
     const { host, cleanup } = await mountChart(base);
     const t = host.querySelector('.hc-stats')!.textContent!;
     const cur = host.querySelector('.hc-cur')!.textContent!;
@@ -352,7 +352,7 @@ describe('HistoryChart 图卡组件', () => {
     }
     await new Promise(r => setTimeout(r, 0));
     expect(h2.textContent).toContain('暂无采样');
-    // 图例 chips 保留（可恢复显示），统计条随空态退场
+    // 图例 chips 保留（可恢复显示），统计条随空态移除
     expect(h2.querySelectorAll('.hc-chip')).toHaveLength(2);
     expect(h2.querySelector('.hc-stats')).toBeNull();
     c2();
@@ -368,7 +368,7 @@ describe('source-lock：api.ts 监控指标读侧契约面', () => {
     expect(apiSrc).toMatch(/monitorMetrics: \(p: \{ connId\?: string; connName\?: string; scope\?: string; fromMs\?: number; toMs\?: number;/);
     expect(apiSrc).toContain('get<{ records: MonitorMetricsRecord[] }>(`/monitor-metrics?${q(p)}`)');
   });
-  it('降采样 interval 可选参数在案（缺省=原始逐点现状；带上=date_histogram 降采样桶）；R31 agg 聚合方式随迁', () => {
+  it('降采样 interval 可选参数在案（缺省=原始逐点现状；带上=date_histogram 降采样桶）；R31 agg 聚合方式同步更新', () => {
     expect(apiSrc).toMatch(/size\?: number; from\?: number; interval\?: string; agg\?: string \}\)/);
   });
 });
@@ -381,7 +381,7 @@ describe('source-lock：LiveDashboardView 历史趋势分区', () => {
   it('取数与序列构建接线：monitorMetrics( 调用 + buildSeries( 使用 + scope 双态（集群/节点下钻）', () => {
     expect(view).toContain('monitorMetrics(');
     expect(view).toContain('buildSeries(');
-    // 升级随迁：scope 由固定 'cluster' 变 nodeMode 单源双态（原字面量断言随之改形）
+    // 升级同步更新：scope 由固定 'cluster' 变 nodeMode 单源双态（原字面量断言随之改形）
     expect(view).toMatch(/scope: nodeMode\.value \? 'node' : 'cluster'/);
   });
   it('HistoryChart 统一件接线 + 「按节点查看」下钻开关（nodeMode 单源；palette 单源传入）', () => {
@@ -733,7 +733,7 @@ describe('R31 聚合修真与分片卡', () => {
     expect(view).toContain('connName: clusterFilter.value || undefined');
   });
   it('R42 Top 索引卡：监控明细单容器视图+集群模式渲染+api 通道（对标阿里云 Index 索引行）', () => {
-    /* 800 随迁：三面板收编「监控明细」单容器——Top 索引=detailTab 首视图（字面锚迁语义等价形态） */
+    /* 800 同步更新：三面板合并「监控明细」单容器——Top 索引=detailTab 首视图（字面锚迁语义等价形态） */
     expect(view).toContain("detailTab === 'top' && !nodeMode");
     expect(view).toContain('暂无索引速率快照（首轮采集基线建立后出数）');
     expect(apiSrc).toContain("monitorTopIndexes: (connId?: string) => get<{ records: any[] }>(`/monitor-metrics/top-indexes?${q({ connId })}`)");
@@ -743,7 +743,7 @@ describe('R31 聚合修真与分片卡', () => {
     expect(view).toContain("{ field: 'qps', label: 'QPS', unit: '/s', onlyClusterMode: true }");
     expect(view).toContain("(!m.onlyClusterMode || !nodeMode.value)");
   });
-  it('R48 导出对称补全（802 随迁：平铺双钮收 ⋯ 菜单=copyDetail 分发；三导出函数仍在视图侧）', () => {
+  it('R48 导出对称补全（802 同步更新：平铺双钮收 ⋯ 菜单=copyDetail 分发；三导出函数仍在视图侧）', () => {
     expect(view).toContain("copyDetail('tsv')");
     expect(view).toMatch(/copyAlertHist\(fmt\)/);
     expect(view).toMatch(/detailTab\.value === 'slow'[^}]{0,60}copySlow\(fmt\)/);
@@ -759,11 +759,11 @@ describe('R31 聚合修真与分片卡', () => {
     expect(view).toContain('CPU 使用趋势');
     expect(view).toContain('磁盘使用趋势');
     /* R64 窗长切换：折线消费统一经 winSlice 截尾单源（留视图）。
-       六百三十八批随迁：五线卡折线收编 LiveChartCard——winSlice 留视图、折线公式进组件 */
+       六百三十八批同步更新：五线卡折线合并 LiveChartCard——winSlice 留视图、折线公式进组件 */
     expect(view, 'winSlice 截尾留视图').toMatch(/winSlice\((cpuSeries|diskSeries)\)/);
-    /* 六百八十一批随迁：折线公式 sparklinePointsPct→sparkPts 单源（622 §9-D4 平滑同投影） */
+    /* 六百八十一批同步更新：折线公式 sparklinePointsPct→sparkPts 单源（622 §9-D4 平滑同投影） */
     expect(cardSrc, '折线公式进组件').toContain('sparkPts(props.series, 300, LD_H, props.mode)');
-    expect(sparkSrc, '几何常量值锁（随迁至 utils/sparkChart.ts 单源）').toContain('export const LD_H = 88;');
+    expect(sparkSrc, '几何常量值锁（同步更新至 utils/sparkChart.ts 单源）').toContain('export const LD_H = 88;');
     expect(view).toContain('.ld-charts { grid-template-columns: repeat(3, 1fr); }');
     expect(view).toContain('font-variant-numeric: tabular-nums');
   });
@@ -772,7 +772,7 @@ describe('R31 聚合修真与分片卡', () => {
     expect(view).toContain('function shortNode(name: string): string {');
     expect(view).toContain(':title="n.nodeName || n.connId || \'\'"');
   });
-  it('R47 Top 索引导出通道（802 随迁：⋯ 菜单 copyDetail 分发；matrixText 单源保持）', () => {
+  it('R47 Top 索引导出通道（802 同步更新：⋯ 菜单 copyDetail 分发；matrixText 单源保持）', () => {
     expect(view).toMatch(/detailTab\.value === 'top'[^}]{0,60}copyTop\(fmt\)/);
     expect(view).toContain("matrixText({ rows, cols, getVal: (row: any[], c: string) => String(row[cols.indexOf(c)] ?? '') }, fmt)");
   });
@@ -794,13 +794,13 @@ describe('R31 聚合修真与分片卡', () => {
     expect(view).toContain('guard: () => !histLoading.value');
   });
   it('R37 等级分布计数 chips（对标阿里云报警概览等级分布）', () => {
-    /* 800 随迁：等级分布计数迁「监控明细」头部 meta 位（语义保留） */
+    /* 800 同步更新：等级分布计数迁「监控明细」头部 meta 位（语义保留） */
     expect(view).toContain('ld-detail-meta');
     expect(view).toContain('const alertCounts = computed(');
     expect(view).toContain("if (a.level === 'CRIT') crit++; else if (a.level === 'WARN') warn++; else info++;");
   });
   it('R36 慢请求面板：rank3 门+阈值偏好+审计下推（对标阿里云慢查询日志 tab）', () => {
-    /* 六百三十四批随迁（633-C2 同律）+800 随迁（单容器视图内三段式语义保留）：
+    /* 六百三十四批同步更新（633-C2 同律）+800 同步更新（单容器视图内三段式语义保留）：
        权限门「视图恒可选 + 内部 v-if」，无权限渲染 .ld-stale 说明条（禁止静默消失）。 */
     expect(view).toContain("detailTab === 'slow'");
     expect(view).toContain('v-if="auth.canAuditAll()"');
@@ -810,7 +810,7 @@ describe('R31 聚合修真与分片卡', () => {
     expect(view).toContain('时间窗内无 ≥ 阈值的慢请求');
   });
   it('R35 告警历史面板：视图切换+三态筛选+指标中文化映射（对标阿里云报警概览）', () => {
-    /* 782 Z1 随迁+800 随迁（单容器 detailTab='alert' 视图；计数源=alertHistRows 治漂移语义保留）；
+    /* 782 Z1 同步更新+800 同步更新（单容器 detailTab='alert' 视图；计数源=alertHistRows 治漂移语义保留）；
        Z2 级别列 StatusPill 单源 */
     expect(view).toContain("detailTab === 'alert'");
     expect(view).toContain('alertHistRows');

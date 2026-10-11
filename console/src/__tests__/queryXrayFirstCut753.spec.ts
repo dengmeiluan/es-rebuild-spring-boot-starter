@@ -132,7 +132,7 @@ describe('753 A0 挂载不变量负锚（现状即守卫）', () => {
 });
 
 describe('753 G190 透视/取证双钮在途窗 spinning+文案（铁律 D·751 G185 同族）', () => {
-  it('透视链：在途窗 disabled（既有）+spinning+「透视中…」（G190 病灶：修前零）；复常三通道退场+结论呈现', async () => {
+  it('透视链：在途窗 disabled（既有）+spinning+「透视中…」（G190 病灶：修前零）；复常三通道移除+结论呈现', async () => {
     const host = await mountView();
     const btn = runBtn(host);
     expect(btn.disabled, 'es_picked 已种 → 透视钮解禁').toBe(false);
@@ -144,13 +144,13 @@ describe('753 G190 透视/取证双钮在途窗 spinning+文案（铁律 D·751 
     expect((btn.textContent || '').includes('透视中…'), 'G190 病灶：文案恒「透视」').toBe(true);
     pendingVq[0](VQ_OK);
     await settle(8);
-    expect(btn.querySelector('.spinning'), '复常 spinning 退场').toBeFalsy();
+    expect(btn.querySelector('.spinning'), '复常 spinning 移除').toBeFalsy();
     expect(btn.disabled, '复常解禁').toBe(false);
     expect((btn.textContent || '').includes('透视中…'), '复常文案回退').toBe(false);
     expect(host.textContent).toContain('查询合法');
   });
 
-  it('取证链：在途窗 disabled（既有）+spinning+「取证中…」（G190 病灶：修前零）；复常退场+字段卡呈现', async () => {
+  it('取证链：在途窗 disabled（既有）+spinning+「取证中…」（G190 病灶：修前零）；复常移除+字段卡呈现', async () => {
     const host = await mountView();
     await gotoTvTab(host);
     const idInp = host.querySelector('input.qx-ii.wide') as HTMLInputElement;
@@ -166,7 +166,7 @@ describe('753 G190 透视/取证双钮在途窗 spinning+文案（铁律 D·751 
     expect((btn.textContent || '').includes('取证中…'), 'G190 病灶：文案恒「取证」').toBe(true);
     pendingTv[0](TV_OK);
     await settle(12);
-    expect(btn.querySelector('.spinning'), '复常 spinning 退场').toBeFalsy();
+    expect(btn.querySelector('.spinning'), '复常 spinning 移除').toBeFalsy();
     expect((btn.textContent || '').includes('取证中…'), '复常文案回退').toBe(false);
     expect(host.textContent).toContain('title');
     expect(host.textContent).toContain('doc_count');

@@ -14,7 +14,7 @@ describe('BoostTuner 可调工作台（408 批）', () => {
     expect(v).toMatch(/<WorkbenchLayout :scope="btScope" :panes="BT_PANES" axis="vertical" mode="tuner">/);
     expect(v).toContain('<template #pane-boosttuner-params>');
     expect(v).toContain('<template #pane-boosttuner-result>');
-    /* 五百三十四批轨4锚随迁：竖排标题轨退役（§6v 刀①）——title 文本锁逐字映射为 title: ''，
+    /* 五百三十四批轨4锚同步更新：竖排标题轨退役（§6v 刀①）——title 文本锁逐字映射为 title: ''，
        参数侧语义由 bt-card-hd「搜索词 · 字段权重」横排承接，尺寸字面零变动 */
     expect(v).toMatch(/id: 'boosttuner\.params', role: 'request', title: '', minSize: 300, defaultSize: 360, collapsible: true/);
     expect(v).toMatch(/id: 'boosttuner\.result', role: 'response', title: '', minSize: 340, defaultSize: 'flex'/);

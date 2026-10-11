@@ -5,7 +5,7 @@
  *    新建 utils/devtoolsSegments.ts 纯函数（splitRequests 空行与 // 注释行分界切段 +
  *    locateSegment 光标定位）；Ctrl+Enter 只执行光标所在段，Shift+Ctrl+Enter 执行全部段；
  *    切段只作用于发送出参——草稿持久化/历史 body/镜像 body 锁面保形；历史记录补 seg i/n 标识。
- * K2 AdhocRebuildView 五编辑面 Ctrl+I（IndexHubView 1453 动态 import 判例平移）+ 粘贴区
+ * K2 AdhocRebuildView 五编辑面 Ctrl+I（IndexHubView 1453 动态 import 先例平移）+ 粘贴区
  *    Monaco @execute="applyPaste" + 按钮 kbd 提示。
  * K3 IndexHubView docs tab 检索行补历史钮；历史面板并显 lucene 行（lucene 回放走 docsQ）。
  * K4 DslQueryView/IndexHubView 历史面板补 'newtab'（_prefill 通道带到 DevTools 新 Tab）。
@@ -314,7 +314,7 @@ describe('562 K1：段执行行为网（裸 createApp 挂载）', () => {
 
 /* ═══════════ K2：AdhocRebuildView 五编辑面 Ctrl+I + 粘贴区 @execute ═══════════ */
 describe('562 K2：AdhocRebuildView Ctrl+I 五面 + 粘贴区执行', () => {
-  it('wireCtrlI 宿主接线（IndexHub 1453 动态 import 判例平移）+ 五面全接', () => {
+  it('wireCtrlI 宿主接线（IndexHub 1453 动态 import 先例平移）+ 五面全接', () => {
     expect(ar).toContain('function wireCtrlI(host: Ref<CtrlIHost | null>) {');
     expect(ar).toContain("void import('monaco-editor/esm/vs/editor/editor.api').then((m) => {");
     expect(ar).toContain('ed.addCommand(m.KeyMod.CtrlCmd | m.KeyCode.KeyI, () => {');
@@ -378,7 +378,7 @@ describe('562 K4：DslQueryView/IndexHubView 历史面板 newtab（_prefill 通�
 
 /* ═══════════ K5：AdhocRebuildView 监控步行尾原始 IO 钮 ═══════════ */
 describe('562 K5：AdhocRebuildView step4 card-t 行尾原始 IO 钮（监控轮询现场）', () => {
-  it('执行监控 card-t 行尾 Terminal 钮 → openRawIo（:423 判例同形；中止钮 .right 语义零触）', () => {
+  it('执行监控 card-t 行尾 Terminal 钮 → openRawIo（:423 先例同形；中止钮 .right 语义零触）', () => {
     const step4 = ar.slice(ar.indexOf('<div v-if="step === 4"'), ar.indexOf('<!-- 最近作业 -->'));
     expect(step4).toContain('@click="openRawIo"');
     expect(step4).toContain('监控轮询');
@@ -416,7 +416,7 @@ describe('562 K7：DslQueryView 文档双弹窗 Ctrl+I（docModalHeightsAssist �
     expect(dq).toMatch(/watch\(newDocOpen, \(o\) => \{ if \(o\) nextTick\(\(\) => wireDocModalCtrlI\(\(\) => newDocText\.value\)\); \}\);/);
   });
   it('弹窗高度字面零变动（两 Monaco 标签随 561 批 useTierCycle 形态原样；裸定高不回潮）', () => {
-    /* 六百六十九批随迁（击穿者：件B 弹窗字号档 :font-size 复用 dqFont，高度字面零变动
+    /* 六百六十九批同步更新（击穿者：件B 弹窗字号档 :font-size 复用 dqFont，高度字面零变动
        锁意图零触；edFontModal669.spec D 段同锚） */
     expect(dq).toContain('<MonacoEditor v-if="docEditMode" v-model="docEditText" :height="docH" :font-size="dqFont" />');
     expect(dq).toContain('<MonacoEditor v-model="newDocText" :height="docHNew" :font-size="dqFont" />');

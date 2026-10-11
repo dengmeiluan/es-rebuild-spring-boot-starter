@@ -7,13 +7,13 @@
  *      => 右项缺失给补法、分隔符混用给裁决口径；与既有 badLines 九类硬错互补——
  *      badLines 说「哪错了」，本函数说「怎么改」；只对确定可修形态说话）。
  *  B 视图接线源码锁（readSrc 字面，556 批先例）：
- *    - SearchTemplatesView：highlightDslJson(rendered) 换装（搜索 DSL 语义分档，
+ *    - SearchTemplatesView：highlightDslJson(rendered) 改用（搜索 DSL 语义分档，
  *      QUERY_SNIPPETS/ROOT_KEYS 键真实命中）+ paramFixHints 纠错建议块接线；
- *    - SynonymsManagerView：highlightDslJson(previewBody) 换装（analysis 语义键
+ *    - SynonymsManagerView：highlightDslJson(previewBody) 改用（analysis 语义键
  *      ANALYSIS_PARAM_ZH 命中 filter/type 等）+ badFixHints 建议条接线；
  *    - RemoteClusters/ClusterSettings/ConfigValidator 三视图维持 highlightJson
- *      字面（记档裁决：cluster settings/remote 键不在语义表，分档零收益，
- *      严禁生造——词表扩容后下批随迁）。
+ *      字面（备案裁决：cluster settings/remote 键不在语义表，分档零收益，
+ *      严禁生造——词表扩容后下批同步更新）。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -75,9 +75,9 @@ describe('五百六十三批 A2：synonymFixHint 坏行纠错建议', () => {
 });
 
 describe('五百六十三批 B：视图接线源码锁', () => {
-  it('SearchTemplatesView：highlightDslJson 换装 + 参数纠错建议块接线', () => {
-    /* 六百零七批随迁：import 行扩 prettyJson（内建视图档 json 档数据源 co-import，
-       577-C1 完整新字面随迁——判别力不变=highlightDslJson 换装在场+rendered 消费锚） */
+  it('SearchTemplatesView：highlightDslJson 改用 + 参数纠错建议块接线', () => {
+    /* 六百零七批同步更新：import 行扩 prettyJson（内建视图档 json 档数据源 co-import，
+       577-C1 完整新字面同步更新——判别力不变=highlightDslJson 改用在场+rendered 消费锚） */
     expect(st).toContain("import { highlightDslJson, prettyJson } from '../utils/jsonc'");
     expect(st).toContain('highlightDslJson(rendered)');
     expect(st).toContain("from '../utils/inputAdvice'");
@@ -85,14 +85,14 @@ describe('五百六十三批 B：视图接线源码锁', () => {
     expect(st).not.toContain('highlightJson('); /* 旧单参出口退役不残留 */
   });
 
-  it('SynonymsManagerView：highlightDslJson 换装 + 坏行建议条接线', () => {
+  it('SynonymsManagerView：highlightDslJson 改用 + 坏行建议条接线', () => {
     expect(sy).toContain("import { highlightDslJson } from '../utils/jsonc'");
     expect(sy).toContain('highlightDslJson(previewBody)');
     expect(sy).toContain('synonymFixHint');
     expect(sy).not.toContain('highlightJson(');
   });
 
-  it('RemoteClusters/ClusterSettings/ConfigValidator：维持 highlightJson 字面（记档裁决防生造）', () => {
+  it('RemoteClusters/ClusterSettings/ConfigValidator：维持 highlightJson 字面（备案裁决防生造）', () => {
     expect(rc).toContain('highlightJson(');
     expect(cs).toContain('highlightJson(');
     expect(cv).not.toContain('highlightDslJson');

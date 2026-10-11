@@ -34,7 +34,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 多集群连接存储（）：把「自定义 ES 连接串」持久化到<b>控制集群</b>内部索引
+ * 多集群连接存储（把「自定义 ES 连接串」持久化到<b>控制集群</b>内部索引
  * {@code es_console_conn}，密码只在服务端流转——列表/详情接口一律脱敏，前端永远拿不到明文。
  *
  * <p>与 {@link RemoteClusterConn}（xmigrate 一次性连接，用完即弃）互补：本店保存的是
@@ -140,10 +140,10 @@ public class EsConnStore implements ConnStore {
      * @param url              连接串 {@code http(s)://[user:pass@]host[:port]}（必填）
      * @param username         独立传的用户名（优先于 url 内嵌）
      * @param password         独立传的密码；<b>编辑时留空 = 保留旧密码</b>
-     * @param minRole          访问本连接的最低角色（）；空 = VIEWER
-     * @param connectTimeoutMs 独立连接超时（）；null = 用全局默认
-     * @param socketTimeoutMs  独立读超时（）；null = 用全局默认
-     * @param env              环境标识（）：PROD/STAGING/QA/DEV；空 = 未标注。纯展示字段，
+     * @param minRole          访问本连接的最低角色（；空 = VIEWER
+     * @param connectTimeoutMs 独立连接超时（；null = 用全局默认
+     * @param socketTimeoutMs  独立读超时（；null = 用全局默认
+     * @param env              环境标识（PROD/STAGING/QA/DEV；空 = 未标注。纯展示字段，
      *                         前端据此给切换器/顶栏着色警示（生产红色）；不影响连接指纹与长连接重建
      * @return 脱敏视图
      */
@@ -271,7 +271,7 @@ public class EsConnStore implements ConnStore {
             LOG.info("[EsConnStore] conn id={} esVersion -> {}", id.trim(), esVersion.trim());
         } catch (Exception e) {
             /* debug→WARN——「探活到新版本但 ES 档案写不进」的低频真异常无痕
-               则版本不刷新无从排查；只修了 JdbcConnStore 同名方法漏了 ES 店，本批补齐
+               则版本不刷新无从排查；只修了 JdbcConnStore 同名方法漏了 ES 店，补齐
                同一句式。吞异常契约不变（版本是增强信息，绝不影响探活主流程） */
             LOG.warn("[EsConnStore] updateVersion failed id={}: {}", id, e.getMessage());
         }

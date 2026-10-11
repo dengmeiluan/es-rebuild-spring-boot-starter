@@ -1,9 +1,9 @@
 /**
- * 五百三十四批·轨2（工蚁 W2）：DevToolsView dt-hist 四刀降层 + 预设钮文案语义化 · 契约记档。
+ * 五百三十四批·轨2（工蚁 W2）：DevToolsView dt-hist 四刀降层 + 预设钮文案语义化 · 契约备案。
  *
  * ① dt-hist 四刀降层（纯视觉层）：border 壳退役→border-top 分节分隔；panel-2 头退役→
  *    sec-t 档行首横排；chip 行嵌套盒（panel-2 底+border-bottom）退役→行内裸排；列表内衬退役。
- * ② ⚠高度结构语义零变动随迁声明（indexHubDevtools531/devtoolsLint532 锚）：
+ * ② ⚠高度结构语义零变动同步更新声明（indexHubDevtools531/devtoolsLint532 锚）：
  *    .dt-hist flex-shrink:0 / .qhp-list max(240px,42vh) / .dt-body 定高链 / dt-hist 直挂 dt-body
  *    落位 / histCollapse444 折叠控件形态 / devtoolsLint532 22 例关键字面（mirrorHistAll 双行、
  *    lint 档路由 import 面）逐条在场——dt-hist 是 2.9.115/119 两次事故面，高度字面全部冻结。
@@ -27,7 +27,7 @@ describe('五百三十四批：dt-hist 四刀降层（源码锁）', () => {
     expect(dt).toMatch(/\.dt-hist-tt \{ padding: var\(--sp-0\) 0; font-size: var\(--fs-sm\); font-weight: 600; color: var\(--tx1\);/);
     expect(dt, 'panel-2 头底色不回流').not.toMatch(/\.dt-hist-tt \{[^}]*background/);
     expect(dt, '头行 border-bottom 不回流').not.toMatch(/\.dt-hist-tt \{[^}]*border-bottom/);
-    /* histCollapse444 同源锚：折叠控件语义形态随迁零改 */
+    /* histCollapse444 同源锚：折叠控件语义形态同步更新零改 */
     expect(dt).toMatch(/<div class="dt-hist-tt" role="button" tabindex="0" :aria-expanded="histOpen"/);
   });
 
@@ -41,20 +41,20 @@ describe('五百三十四批：dt-hist 四刀降层（源码锁）', () => {
   });
 });
 
-describe('五百三十四批：高度结构语义零变动随迁声明（2.9.115/119 事故面冻结）', () => {
+describe('五百三十四批：高度结构语义零变动同步更新声明（2.9.115/119 事故面冻结）', () => {
   it('⚠恒高兄弟红线：.dt-hist flex-shrink:0 + .qhp-list max(240px, 42vh) 字面冻结', () => {
     expect(dt).toMatch(/\.dt-hist \{[^}]*flex-shrink: 0; \}/);
     expect(dt).toContain('.dt-hist-list :deep(.qhp-list) { max-height: max(240px, 42vh); }');
-    expect(dt, 'clamp 旧档不回流（531 立法）').not.toContain('clamp(200px, 34vh, 420px)');
+    expect(dt, 'clamp 旧档不回流（531 约定）').not.toContain('clamp(200px, 34vh, 420px)');
   });
 
-  it('⚠dt-body 定高链随迁声明（indexHubDevtools531 P0 根治锚逐字在场）', () => {
+  it('⚠dt-body 定高链同步更新声明（indexHubDevtools531 P0 根治锚逐字在场）', () => {
     expect(dt).toContain('.dt-body { padding: var(--sp-3) var(--sp-1); display: flex; flex-direction: column; gap: var(--sp-2); height: calc(100vh - var(--vh-offset, 210px)); }');
     expect(dt).toContain('.dt-body :deep(.wl) { flex: 1 1 auto; min-height: 0; }');
     expect(dt).toContain('正反馈棘轮');
   });
 
-  it('⚠dt-hist 直挂 dt-body 落位随迁声明（</WorkbenchLayout> 之后）', () => {
+  it('⚠dt-hist 直挂 dt-body 落位同步更新声明（</WorkbenchLayout> 之后）', () => {
     const wlEndAt = dt.indexOf('</WorkbenchLayout>');
     const histAt = dt.indexOf('class="dt-hist"');
     expect(histAt).toBeGreaterThan(wlEndAt);

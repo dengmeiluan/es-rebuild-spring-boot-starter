@@ -31,8 +31,8 @@ describe('聚焦面双态钮（401 批）', () => {
 
 describe('DevTools 响应区配套（401 批）', () => {
   it('dt-actions 换行策略：562 实报升级单轨（nowrap+横滚与聚焦钮同行；子项不逐字断保留）', () => {
-    /* 五百二十七批随迁：gap 收 --sp 半档；五百六十二批随迁（用户实报窄容器堆竖排）：
-       容器「可换行」升级为单轨（543 批 lrBarSingleTrack 立法同刀），行为锁见 dtInsFieldFix562 */
+    /* 五百二十七批同步更新：gap 收 --sp 半档；五百六十二批同步更新（用户实报窄容器堆竖排）：
+       容器「可换行」升级为单轨（543 批 lrBarSingleTrack 约定同刀），行为锁见 dtInsFieldFix562 */
     expect(dt).toMatch(/\.dt-actions \{ display: flex; gap: var\(--sp-1h\); align-items: center; flex-wrap: nowrap; overflow-x: auto; min-width: 0; flex: 1 1 0; \}/);
     expect(dt).toMatch(/\.dt-actions > \* \{ white-space: nowrap; flex-shrink: 0; \}/);
   });
@@ -42,7 +42,7 @@ describe('DevTools 响应区配套（401 批）', () => {
   });
 
   /* 五百零一批：普通态 260px→'100%' 跟随 pane（pane 52vh 起步，工作区不再挤在页面上部）
-     524 批随迁：裸 190px 折算进 --vh-offset 收敛口径（210-20=190 视觉零变化） */
+     524 批同步更新：裸 190px 折算进 --vh-offset 收敛口径（210-20=190 视觉零变化） */
   it('聚焦态 Monaco 拉伸：响应面高度随视口，普通态跟随 pane（100%）', () => {
     expect(dt).toMatch(/:height="focusPaneId === 'devtools\.search\.response' \? 'calc\(100vh - var\(--vh-offset, 210px\) \+ 20px\)' : '100%'"/);
   });
@@ -54,7 +54,7 @@ describe('DevTools 响应区配套（401 批）', () => {
   });
 
   /* 五百零一批：普通态 220px→'100%'（405 对称拉伸语义升级为「跟随 pane」）
-     524 批随迁：裸 90px 折算进 --vh-offset 收敛口径（210-120=90 视觉零变化） */
+     524 批同步更新：裸 90px 折算进 --vh-offset 收敛口径（210-120=90 视觉零变化） */
   it('405 补：请求体聚焦态对称拉伸（与 404 响应面同款，普通态跟随 pane）', () => {
     expect(dt).toMatch(/:height="focusPaneId === 'devtools\.search\.request' \? 'calc\(100vh - var\(--vh-offset, 210px\) \+ 120px\)' : '100%'"/);
   });

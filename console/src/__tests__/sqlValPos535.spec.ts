@@ -65,7 +65,7 @@ beforeEach(() => { setActivePinia(createPinia()); });
 
 /* ═══ R1：③ 平铺字段词位上下文加权（候选集不变，仅提供序分档） ═══ */
 describe('535 R1：③ 词位上下文加权', () => {
-  /* 551 随迁：A3 Promise 化——③ 词位 provider 返回 Promise（④ keyword 档先例），
+  /* 551 同步更新：A3 Promise 化——③ 词位 provider 返回 Promise（④ keyword 档先例），
      断言 await 后取回填；try/finally 保 dispose（防断言抛错泄漏模块级单例殃及后续用例注册） */
   const labelsOf = (r: any) => (r.suggestions as any[]).map(s => s.label);
 
@@ -144,7 +144,7 @@ describe('535 R2：值位扩容', () => {
       const cases: Array<[string, string[], string]> = [
         ["SELECT * FROM orders WHERE created >= '", ['now-1d/d', 'now-1h/h'], 'date'],
         ['SELECT * FROM orders WHERE flag = ', ['true', 'false'], 'boolean'],
-        /* 551 随迁：ip 档补 CIDR 形态档（LuceneInput IP_HINTS 姊妹面同批对齐），点分示例不动 */
+        /* 551 同步更新：ip 档补 CIDR 形态档（LuceneInput IP_HINTS 姊妹面同批对齐），点分示例不动 */
         ['SELECT * FROM orders WHERE ip = ', ['192.168.0.1', '192.168.0.0/24'], 'ip'],
         ['SELECT * FROM orders WHERE amount = ', ['100'], 'double'],
       ];

@@ -13,10 +13,10 @@ import { ApiError } from '../api';
  *     现存 9 处 @media 全部定性：4 处 prefers-reduced-motion 豁免 + 5 处布局档互锚
  *     （901 补集锁步 responsiveGuard239 锚④ / 900 全站窄容器档 / 1920 超宽居中 queryWorkbenchW1
  *     逐字锚 / TopBar 1100·1000 adaptiveFullstack550 逐字锚、BP_STACK·BP_COMPACT 与
- *     utils/layout.ts 断点常量单源互锚）。容器查询迁移否决：断 JS↔CSS 锁步单源立法
+ *     utils/layout.ts 断点常量单源互锚）。容器查询迁移否决：断 JS↔CSS 锁步单源约定
  *     （layout.ts:5-9），且 TopBar/App 是视口级 chrome 非内容容器。此处锁计数恒定，
  *     新增 @media 必须先过分类裁决再改本 spec。
- *  ② --sp 残量收编：theme.css 精确等值（4/8/12/16/24 与半档 2/6/10）px 收 var(--sp-*)；
+ *  ② --sp 残量合并：theme.css 精确等值（4/8/12/16/24 与半档 2/6/10）px 收 var(--sp-*)；
  *     刻意值（34px 空态契约/14px 垂直留白/奇数微调/1px 微衬）保字面；三行逐字锁
  *     （.kbd.inline=kbdUnify429、.chip.xs=themeDiscipline525、.focus-tools=focusVisual451）不收。
  *  ③ 错误体消费面：HTTP 401/403/404/409/502 映射补位（KNOWN 尾部追加——ES error.type
@@ -24,9 +24,9 @@ import { ApiError } from '../api';
  *     trace 提取审计结论：后端信封（EsErrorMapper.body）无 trace 字段可提，宿主
  *     GlobalWebExceptionHandler 的 traceId 拍平路径已在源头被 EsErrorMapper 挡住——无缺口。
  *  ④ useAutoRefresh 语义复核：11 消费面 setOn(true) 逐点核查结论——10 面合规
- *     （watches→restart 或逐 load restart 或 setOn(v>0)）；XmigrateView 违例记档
+ *     （watches→restart 或逐 load restart 或 setOn(v>0)）；XmigrateView 违例备案
  *     （ms getter 动态依赖 RUNNING 态但 loadJobs/doResume 后无 restart，首 RUNNING 跃迁
- *     后轮询不启动——消费面在 views 黑名单，只记档不改）。本 describe 反锁 composable
+ *     后轮询不启动——消费面在 views 黑名单，只备案不改）。本 describe 反锁 composable
  *     侧契约（0=不启动/隐藏页短路/卸载停表/restart 重估 ms）——契约本身零缺口。 */
 
 const srcOf = (rel: string) => readFileSync(join(__dirname, '..', rel), 'utf-8');
@@ -66,7 +66,7 @@ describe('五百五十六批 ①：@media 分类裁决反锁（独占文件，78
   });
 });
 
-describe('五百五十六批 ②：theme.css --sp 精确等值收编（刻意值与逐字锁保字面）', () => {
+describe('五百五十六批 ②：theme.css --sp 精确等值合并（刻意值与逐字锁保字面）', () => {
   it('档位等值行已收 var(--sp-*)（混合行非档位刻值保字面）', () => {
     const s = srcOf('theme.css');
     expect(s, '.tbl th 8px/10px').toMatch(/\.tbl th \{[^}]*padding: var\(--sp-2\) var\(--sp-2h\);/);
@@ -89,7 +89,7 @@ describe('五百五十六批 ②：theme.css --sp 精确等值收编（刻意值
     expect(s, '.toolrow 6px/4px').toMatch(/\.toolrow \{ display: flex; gap: var\(--sp-1h\); align-items: center; flex-wrap: wrap; row-gap: var\(--sp-1\); \}/);
   });
 
-  it('compact 密度档等值收编（3px 刻意保字面）', () => {
+  it('compact 密度档等值合并（3px 刻意保字面）', () => {
     const s = srcOf('theme.css');
     expect(s).toMatch(/\[data-density="compact"\] \.tbl th \{ padding: var\(--sp-1\) var\(--sp-2\);/);
     expect(s).toMatch(/\[data-density="compact"\] \.tbl td \{ padding: 3px var\(--sp-2\);/);
@@ -98,7 +98,7 @@ describe('五百五十六批 ②：theme.css --sp 精确等值收编（刻意值
     expect(s).toMatch(/\[data-density="compact"\] \.btn\.sm \{ padding: var\(--sp-0\) var\(--sp-1h\);/);
   });
 
-  it('逐字锁三行不收编（kbdUnify429/themeDiscipline525/focusVisual451 锚定保字面）', () => {
+  it('逐字锁三行不合并（kbdUnify429/themeDiscipline525/focusVisual451 锚定保字面）', () => {
     const s = srcOf('theme.css');
     expect(s).toMatch(/\.kbd\.inline \{ display: inline-block; padding: 1px 4px; font-size: var\(--fs-xs\); background: var\(--hl\); border-radius: 2px; margin-left: 3px; \}/);
     expect(s).toMatch(/\.chip\.xs\s*\{\s*padding:\s*1px 6px;\s*border-radius:\s*var\(--r-s\);\s*\}/);
@@ -113,20 +113,20 @@ describe('五百五十六批 ②：theme.css --sp 精确等值收编（刻意值
       const s = srcOf(f);
       const hits = [...s.matchAll(/(?:padding|margin|gap|row-gap|column-gap)[a-z-]*\s*:\s*([^;}]+)/g)]
         .filter(m => /(?:^|[^-\w.,])(?:2|4|6|8|10|12|16|24|32)px/.test(m[1]) && !m[1].includes('calc('));
-      expect(hits, `${f} 出现档位裸 px（应收 var(--sp-*) 或记档）`).toEqual([]);
+      expect(hits, `${f} 出现档位裸 px（应收 var(--sp-*) 或备案）`).toEqual([]);
     }
   });
 
-  it('五百五十七批扩锚：components 三件 --sp 精确等值收编（同行刻意值保字面随迁在册）', () => {
+  it('五百五十七批扩锚：components 三件 --sp 精确等值合并（同行刻意值保字面同步更新在册）', () => {
     const li = srcOf('components/LuceneInput.vue');
     expect(li, '.li-inp 6px/10px 双等值').toMatch(/\.li-inp \{[^}]*padding: var\(--sp-1h\) var\(--sp-2h\);/);
-    /* 560 随迁：.li-syntax/.li-item 横向 8px/10px 精确等值收 var(--sp-2)/var(--sp-2h)
-       （spSweep545 头注③整文件保字面记档翻案收编），gap:5px 与 3px/5px 纵向仍保字面 */
+    /* 560 同步更新：.li-syntax/.li-item 横向 8px/10px 精确等值收 var(--sp-2)/var(--sp-2h)
+       （spSweep545 头注③整文件保字面备案修订合并），gap:5px 与 3px/5px 纵向仍保字面 */
     expect(li, '.li-syntax margin-top 4px 等值；gap:5px/3px 纵向保字面，8px 横向已收 sp-2')
       .toMatch(/\.li-syntax \{ display: flex; align-items: center; gap: 5px; margin-top: var\(--sp-1\); padding: 3px var\(--sp-2\);/);
     expect(li, '.li-hint 12px/10px 双等值').toMatch(/\.li-hint \{ padding: var\(--sp-3\) var\(--sp-2h\);/);
     expect(li, '.li-item 5px 纵向保字面，10px 横向已收 sp-2h').toMatch(/\.li-item \{ display: flex; align-items: center; gap: var\(--sp-2\); padding: 5px var\(--sp-2h\); cursor: pointer; \}/);
-    expect(srcOf('components/QueryHistoryPanel.vue'), '.qhp-empty 34px 空态契约保字面/16px 等值（flattenWave554 st-list-empty 先例，spSweep538 抽查锚随迁）')
+    expect(srcOf('components/QueryHistoryPanel.vue'), '.qhp-empty 34px 空态契约保字面/16px 等值（flattenWave554 st-list-empty 先例，spSweep538 抽查锚同步更新）')
       .toMatch(/\.qhp-empty \{ padding: 34px var\(--sp-4\);/);
     expect(srcOf('components/ExplainTree.vue'), '.xt-row 6px 等值/3px 微衬与 calc 链保字面')
       .toMatch(/\.xt-row \{[^}]*padding: 3px var\(--sp-1h\) 3px calc\(6px \+ var\(--xt-depth\) \* 14px\);/);
@@ -158,7 +158,7 @@ describe('五百五十六批 ③：错误体消费面——HTTP 状态映射（4
     const out = friendlyEsError('HTTP 502');
     expect(out).toContain('不可达');
   });
-  it('位置立法：ES error.type 同串共存时叶叶优先（HTTP 档列 KNOWN 尾不抢翻译）', () => {
+  it('位置约定：ES error.type 同串共存时叶叶优先（HTTP 档列 KNOWN 尾不抢翻译）', () => {
     const raw = 'ResponseException: method [POST], host [http://10.0.0.1:9200], URI [/idx/_delete_by_query], '
       + 'status line [HTTP/1.1 502 Bad Gateway] {"error":{"root_cause":[{"type":"circuit_breaking_exception",'
       + '"reason":"Parent circuit breaker is open"}]}}';
@@ -200,7 +200,7 @@ describe('五百五十六批 ③b：错误消费面既有契约反锁（errMeta/
   });
 });
 
-describe('五百五十六批 ④：useAutoRefresh 语义复核（composable 契约反锁；消费面违例记档见头注）', () => {
+describe('五百五十六批 ④：useAutoRefresh 语义复核（composable 契约反锁；消费面违例备案见头注）', () => {
   beforeEach(() => { vi.useFakeTimers(); });
   afterEach(() => { vi.useRealTimers(); document.body.innerHTML = ''; });
 

@@ -8,7 +8,7 @@
  *  endpoint 前缀全站独占性：Reindex 高级='/cluster/reindex-advanced'、别名图写通道=
  *  '/cluster/alias-actions'（GET /cluster/aliases 会被 IndexHub 顶掉，勿用）、Mapping 设计器
  *  写通道='/cluster/mapping-put'（GET mapping-detail 被 IndexHub/AnalyzerLab 污染，勿用）、
- *  打分解剖='/cluster/search-raw'、排名侦探='/cluster/explain-doc'（已知限制记档：runAb 对决
+ *  打分解剖='/cluster/search-raw'、排名侦探='/cluster/explain-doc'（已知限制备案：runAb 对决
  *  双发 Promise.all，ioRecorder.last 只见后完成者——通常 B 文档；A 文档原文仍在环内更早记录，
  *  特征锁定单条语义不变）、查询 X 光双通道='/cluster/validate-query' + '/cluster/term-vectors'。
  */

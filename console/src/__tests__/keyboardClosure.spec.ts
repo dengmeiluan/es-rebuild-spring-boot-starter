@@ -17,7 +17,7 @@ const kernel = readFileSync(join(SRC, 'composables/useRowNav.ts'), 'utf-8');
 
 describe('键盘闭环：输入焦点让路 + 跨层串扰隔离', () => {
   it('RT 网格键处理：编辑键/导航键在输入焦点下归还浏览器（Delete/Backspace 分支前有守卫）', () => {
-    /* 六百一十二批随迁：窗口 2000→2600——Esc 分支补输入态让路守卫（t0，searchable 接线
+    /* 六百一十二批同步更新：窗口 2000→2600——Esc 分支补输入态让路守卫（t0，searchable 接线
        后「过滤→全选→Esc 清词」动线下 Esc 冒泡 clearSel 静默清勾选的状态重置违例修复）
        函数体增长把 Delete 分支推出旧窗口，扩窗保判别力（守卫先于 Delete 分支断言原样） */
     const gridFn = rt.slice(rt.indexOf('function onGridKeydown'), rt.indexOf('function onGridKeydown') + 2600);

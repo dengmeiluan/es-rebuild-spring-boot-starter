@@ -1,20 +1,20 @@
 /**
- * 五百五十六批·轨4（全站扁平化扫荡+去重复·残面清零）。554 立法四范式续扫，工蚁独占 30 视图域。
+ * 五百五十六批·轨4（全站扁平化扫荡+去重复·残面清零）。554 约定四范式续扫，工蚁独占 30 视图域。
  *
- * 改动（立法④大容器框退役：壳三件套 bg+整框+radius 退役，分界 border-top 承接，
- * padding 等值迁入盒模型零变动——mp-sec 554 判例同语言；flex 主轴不变，删的是框不是布局）：
+ * 改动（约定④大容器框退役：壳三件套 bg+整框+radius 退役，分界 border-top 承接，
+ * padding 等值迁入盒模型零变动——mp-sec 554 先例同语言；flex 主轴不变，删的是框不是布局）：
  *   ① WorkspaceView .ws-cfg（页面级配置面板容器，ra-card 已退形态同类）
  *   ② WorkspaceView .ws-w（网格部件分节单元，ov-cell 554 终态同类；ws-w-empty 空态
  *      不再被整块空框包裹——「空态不留整块空框」正中）
  *   ③ LiveDashboardView .ld-chart（监控网格分节单元 ×3，ov-cell 同类；类名锚保留，
  *      obsStack530 的 class="ld-chart" 与网格结构锁不受影响）
  *   ④ RemoteClustersView .rc-self（本集群信息条；同页 rc-card 列表项 551 已 border-top 行，
- *      全框信息条构成同页双标——MappingView 554「同页双标根治」判例）
+ *      全框信息条构成同页双标——MappingView 554「同页双标根治」先例）
  *
- * 【豁免记档（实勘定性，合法保留，禁改）】
+ * 【豁免备案（实勘定性，合法保留，禁改）】
  *   - AliasesView .alv-panel：paneShellWave547 + cardPrimitiveVerdict547 双正锁「全豁免不动」
  *     （写操作面板=ac-line 语义边框功能卡，备选案已否决）——class="card alv-panel" 正锁快照。
- *   - ConfigValidatorView .cv-tpl：flattenWave538 正锁「可点击交互卡豁免保留（立法③）」。
+ *   - ConfigValidatorView .cv-tpl：flattenWave538 正锁「可点击交互卡豁免保留（约定③）」。
  *   - ConfigDriftView .cd-verdict pill：componentUnify530 正锁「清单角标因黑名单 spec 源码锁
  *     绕开」——形态已归 theme.css .pill 单源。
  *   - SqlBridgeView .br-card：535 批注释明文「壳仅页面级 wide 卡（err 面板/对比表）保留」
@@ -46,7 +46,7 @@ const rd = (p: string) => readFileSync(join(__dirname, p), 'utf-8');
 /* 剥 CSS/HTML 注释：注释里的字面不算数（lrBarSingleTrack/emptyStatePadding 同一教训） */
 const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/<!--[\s\S]*?-->/g, ' ');
 
-/* 五百五十七批：MonacoEditor mock（qxTvTools525:23 同款形态）——RemoteClustersView 本批补铺
+/* 五百五十七批：MonacoEditor mock（qxTvTools525:23 同款形态）——RemoteClustersView 补铺
    RawIoModal 后模块图引入 MonacoEditor→monaco-editor，happy-dom 真初始化挂起超 5s 墙；
    挂载用例只断 rc-self 锚/.card 壳零命中，Monaco 桩对断言语义零影响（ModalShell show=false
    时 slot 不渲染，弹窗本体不出现） */
@@ -134,7 +134,7 @@ beforeEach(() => {
 
 /* ═══════════ ①② WorkspaceView：ws-cfg / ws-w 两壳退役 ═══════════ */
 
-describe('五百五十六批①②：WorkspaceView ws-cfg/ws-w 大容器框退役（立法④）', () => {
+describe('五百五十六批①②：WorkspaceView ws-cfg/ws-w 大容器框退役（约定④）', () => {
   it('ws-cfg 壳三件套退役 → border-top 分节（padding/margin 等值迁入盒模型零变动）', () => {
     const t = strip(wsSrc);
     expect(t, 'ws-cfg 新形态（border-top 分节）').toMatch(
@@ -172,8 +172,8 @@ describe('五百五十六批①②：WorkspaceView ws-cfg/ws-w 大容器框退�
 
 /* ═══════════ ③ LiveDashboardView：ld-chart 退壳 ═══════════ */
 
-describe('五百五十六批③：LiveDashboardView ld-chart 网格分节退壳（796 随迁：用户令大厂级统一卡壳）', () => {
-  it('ld-chart 796 终态=panel 壳（与节点卡/CollapsePanel/LiveChartCard 同语言；556 分节口径随用户三/四令升级推翻记档）', () => {
+describe('五百五十六批③：LiveDashboardView ld-chart 网格分节退壳（796 同步更新：用户令大厂级统一卡壳）', () => {
+  it('ld-chart 796 终态=panel 壳（与节点卡/CollapsePanel/LiveChartCard 同语言；556 分节口径随用户三/四令升级推翻备案）', () => {
     const t = strip(liveSrc);
     expect(t, 'ld-chart 796 新形态（panel 壳）').toMatch(
       /\.ld-chart \{ background: var\(--panel\); border: 1px solid var\(--border\); border-radius: var\(--r-m\); padding: var\(--sp-3\); \}/);
@@ -219,13 +219,13 @@ describe('五百五十六批④：RemoteClustersView rc-self 信息条退壳（�
 /* ═══════════ ⑤⑥ 独占域四范式负锁（防回流）+ 豁免快照 ═══════════ */
 
 describe('五百五十六批⑤：独占域竖排轨负锁（writing-mode / rp-title 零命中）', () => {
-  it('30 视图 writing-mode 竖排死码零命中（立法①）', () => {
+  it('30 视图 writing-mode 竖排死码零命中（约定①）', () => {
     for (const v of TRACK_VIEWS) {
       expect(strip(src(v)), `${v}.vue writing-mode 零命中`).not.toMatch(/writing-mode/);
     }
   });
 
-  it('30 视图 rp-title 竖排标题轨零命中（立法①；BulkEditorView 注释行剥除后不计）', () => {
+  it('30 视图 rp-title 竖排标题轨零命中（约定①；BulkEditorView 注释行剥除后不计）', () => {
     for (const v of TRACK_VIEWS) {
       expect(strip(src(v)), `${v}.vue rp-title 零命中`).not.toMatch(/rp-title/);
     }
@@ -235,18 +235,18 @@ describe('五百五十六批⑤：独占域竖排轨负锁（writing-mode / rp-t
 describe('五百五十六批⑥：全局 .card 壳类消费清零（豁免快照）+ card-t 横排标题保留', () => {
   it('30 视图全局 .card 壳类消费零命中（554 原版正则：独立 card token；本类名锚 cv-card/be-card-hd 等不误伤）', () => {
     for (const v of TRACK_VIEWS) {
-      /* 五百五十八批随迁（击穿者：558 工蚁G——alv-panel 全站最后一个全局 .card 壳退役）：
+      /* 五百五十八批同步更新（击穿者：558 工蚁G——alv-panel 全站最后一个全局 .card 壳退役）：
          AliasesView 回归主断言，豁免 continue 退役，30 视图全量零消费 */
       expect(strip(src(v)), `${v}.vue 全局 .card 壳类零消费`).not.toMatch(/class="(?:[^"]* )?card(?: [^"]*)?"/);
     }
   });
 
-  it('AliasesView alv-panel 退役正锁（558 击穿随迁：豁免快照随壳退役改防回流锁）', () => {
+  it('AliasesView alv-panel 退役正锁（558 击穿同步更新：豁免快照随壳退役改防回流锁）', () => {
     const s = src('AliasesView');
-    /* 五百五十八批随迁（击穿者：558 工蚁G）：547 双正锁豁免字面改退役形 + ac-line 语义线
+    /* 五百五十八批同步更新（击穿者：558 工蚁G）：547 双正锁豁免字面改退役形 + ac-line 语义线
        border-top 承接锚（原 padding/border-color 覆写随壳退役，语义保形） */
     expect(s, 'alv-panel 全局 .card 壳不回流（558）').not.toMatch(/class="card alv-panel"/);
-    expect(s, 'ac-line 语义线 border-top 承接（语义边框豁免立法保形）')
+    expect(s, 'ac-line 语义线 border-top 承接（语义边框豁免约定保形）')
       .toMatch(/\.alv-panel \{ border-top: 1px solid var\(--ac-line\); padding: var\(--sp-3\) 14px; \}/);
   });
 

@@ -4,16 +4,16 @@
  * 纯函数零请求；纠错建议只对「确定可修」的形态给改法，拿不准不说话（宁缺毋滥，
  * 防误报噪音盖过真问题）。
  *
- * 消费面（本批接线）：
- *  - SearchTemplatesView 参数值输入（jsonShapeAdvice）——coerce 对 JSON 形态失败静默
- *    按字符串下发的盲区就地可见；
- *  - SynonymsManagerView 坏行提示旁（synonymFixHint）——与既有 badLines 九类硬错互补：
- *    badLines 说「哪错了」，本函数说「怎么改」。
+ * 消费面（接线）：
+ * - SearchTemplatesView 参数值输入（jsonShapeAdvice）——coerce 对 JSON 形态失败静默
+ * 按字符串下发的盲区就地可见；
+ * - SynonymsManagerView 坏行提示旁（synonymFixHint）——与既有 badLines 九类硬错互补：
+ * badLines 说「哪错了」，本函数说「怎么改」。
  */
 
 /** JSON 形态纠错建议：值以 { [ 开头但解析失败时给人话原因与修法；其余一律空串
- *  （普通字符串/数字/布尔是参数输入的合法主形态，零打扰）。落因优先级：中文引号 →
- *  中文冒号 → 尾随逗号 → 括号不平衡 → 兜底（点破「会按字符串下发」的静默盲区）。 */
+ * （普通字符串/数字/布尔是参数输入的合法主形态，零打扰）。落因优先级：中文引号 →
+ * 中文冒号 → 尾随逗号 → 括号不平衡 → 兜底（点破「会按字符串下发」的静默盲区）。 */
 export function jsonShapeAdvice(v: string): string {
   const t = (v ?? '').trim();
   if (!t || !/^[{[]/.test(t)) return '';
@@ -31,9 +31,9 @@ export function jsonShapeAdvice(v: string): string {
 }
 
 /** 同义词坏行纠错建议：只对「确定可修」形态给一句改法；无建议空串。全角标点给半角
- *  改写结果（，、→, ：→: ＝→=，超长截断防提示条撑爆）；=> 右项缺失给补法示例；
- *  「,」与「=>」混用给裁决口径（与 badLines 检出原因一一对应，badLines 说哪错、
- *  这里说怎么改）。注释行/空行/健康行零打扰。 */
+ * 改写结果（→, ：→: ＝→=，超长截断防提示条撑爆）；=> 右项缺失给补法示例；
+ * 「,」与「=>」混用给裁决口径（与 badLines 检出原因一一对应，badLines 说哪错、
+ * 这里说怎么改）。注释行/空行/健康行零打扰。 */
 export function synonymFixHint(line: string): string {
   const s = (line ?? '').trim();
   if (!s || s.startsWith('#')) return '';

@@ -1,7 +1,7 @@
-/*  P2-8：文档 diff 多目标扩展——RT 多选 2-3 篇一键对比、基准可换。
-   复用 Wave 2 底座 diffDocFields（MISSING 哨兵 + dot-path walk，spec §4.3 已锁），
-   这里只做「逐目标两两对比 → 按 path 合并成一张行表」的薄合并层；
-   换基准=调用方换入参重算（纯前端零请求）。 */
+/* P2-8：文档 diff 多目标扩展——RT 多选 2-3 篇一键对比、基准可换。
+ 复用 Wave 2 底座 diffDocFields（MISSING 哨兵 + dot-path walk，spec 已锁），
+ 这里只做「逐目标两两对比 → 按 path 合并成一张行表」的薄合并层；
+ 换基准=调用方换入参重算（纯前端零请求）。 */
 import { diffDocFields, type DiffKind, type FieldDiff } from './docDiff';
 
 export interface MultiDocDiffRow {
@@ -25,7 +25,7 @@ interface MultiDocDiff {
 }
 
 /** base + 1~2 目标 → 合并行表。逐 target 调 diffDocFields 再按 path 归并，
-    字段并集、路径字母序（底座同款排序，多表归并后仍稳定）。 */
+ 字段并集、路径字母序（底座同款排序，多表归并后仍稳定）。 */
 export function docDiffMulti(base: unknown, targets: unknown[]): MultiDocDiff {
   const perTarget: FieldDiff[][] = targets.map(t => diffDocFields(base, t));
   const pathIdx = new Map<string, MultiDocDiffRow>();

@@ -228,7 +228,7 @@ public class JdbcConnStore implements ConnStore {
         } catch (Exception e) {
             /* debug→WARN——schema 建不出来是<b>持续性</b>失败（宿主库不可用期间
                每轮探活回写都会再败），比单次 UPDATE 失败更该留痕（裁决时明确暂缓本臂，
-               本批收口，句式与下方 UPDATE 臂 WARN 同源）。吞异常契约不变（版本是增强信息，
+               收口，句式与下方 UPDATE 臂 WARN 同源）。吞异常契约不变（版本是增强信息，
                绝不影响探活主流程） */
             LOG.warn("[JdbcConnStore] updateVersion ensureSchema failed: {}", e.getMessage());
             return; // 版本是增强信息，绝不影响探活主流程

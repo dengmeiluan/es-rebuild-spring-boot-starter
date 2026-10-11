@@ -3,25 +3,25 @@
  * ① StatusPill 统一件——五 tone 语义档 + 缺省 n + en 英文小字档 + title 兜底；
  * ② useLinkCarry——sessionStorage 一次性 carry（es-console.link.{key}），取后即焚、异常吞掉；
  * ③ useDebounceFn——缺省 250ms 防抖，连发只跑最后一次，卸载自动清理；
- * ④ 八视图换装静态锁（AnalysisSettings/BulkEditor/ConfigDrift/Plugins/Rest/SearchSandbox/Snapshots/System）。
+ * ④ 八视图改用静态锁（AnalysisSettings/BulkEditor/ConfigDrift/Plugins/Rest/SearchSandbox/Snapshots/System）。
  *
- * 【待收编清单】其余视图的裸 es-console.link.* 写法（本轮不属 W-D 独占面，逐个 lane 收编时换 useLinkCarry）：
- *   - views/AnalyzerLabView.vue ✅531 已收编（useLinkCarry('analyzer')）
- *   - views/BoostTunerView.vue ✅531 已收编（接收侧 useLinkCarry('boost')）
- *   - views/DslQueryView.vue ✅531 已收编（rankdebug/xray 发送侧）
- *   - views/IndexHubView.vue ✅531 已收编（rankdebug/xray 发送侧）
- *   - views/MatchMatrixView.vue ✅531 已收编（boost 发送侧）
- *   - views/ScoreExplainView.vue ✅531 已收编（rankdebug/xray 发送侧）
- *   - views/QueryXrayView.vue ✅531 已收编（analyzer 发送 + xray 接收侧）
- *   - views/RankDebugView.vue（唯一遗留：接收侧裸实现，下批收编）
+ * 【待合并清单】其余视图的裸 es-console.link.* 写法（不属 W-D 独占面，逐个 lane 合并时换 useLinkCarry）：
+ *   - views/AnalyzerLabView.vue ✅531 已合并（useLinkCarry('analyzer')）
+ *   - views/BoostTunerView.vue ✅531 已合并（接收侧 useLinkCarry('boost')）
+ *   - views/DslQueryView.vue ✅531 已合并（rankdebug/xray 发送侧）
+ *   - views/IndexHubView.vue ✅531 已合并（rankdebug/xray 发送侧）
+ *   - views/MatchMatrixView.vue ✅531 已合并（boost 发送侧）
+ *   - views/ScoreExplainView.vue ✅531 已合并（rankdebug/xray 发送侧）
+ *   - views/QueryXrayView.vue ✅531 已合并（analyzer 发送 + xray 接收侧）
+ *   - views/RankDebugView.vue（唯一遗留：接收侧裸实现，下批合并）
  * 另外 BulkEditorView 的 es-console.bulk.carry 键前缀不同且写侧在 favReplay（favReplayCarry.spec 看守），
- * 不属 es-console.link.* 收编面，保持原样。
- * 【换装进度 531 批更新】状态徽标层（StatusPill 换装）在八视图（上表）基础上再收十四视图：
+ * 不属 es-console.link.* 合并面，保持原样。
+ * 【改用进度 531 批更新】状态徽标层（StatusPill 改用）在八视图（上表）基础上再收十四视图：
  *   Aliases/Browser/ConfigValidator/IndexOptimizer/LiveDashboard/Overview/Tasks/HealthReport/
  *   Snapshots/Slm/ReindexPreview/IndexSettings/System（部分为槽内徽标/徽标档位收口）——
- *   契约锚归 semanticTier531.spec（jobKindTone 收口 + 换装锚 + semFormat 退役锚）。
- * 【531 批换装第二梯队】Adhoc(13 处)/Xmigrate/IndexHub(5 处)/PitScroll 等深优视图徽标
- *   同批收编，锚归 rebuildMigrate531/indexHubDevtools531/queryAssist 各 spec。
+ *   契约锚归 semanticTier531.spec（jobKindTone 收口 + 改用锚 + semFormat 退役锚）。
+ * 【531 批改用第二梯队】Adhoc(13 处)/Xmigrate/IndexHub(5 处)/PitScroll 等深优视图徽标
+ *   同批合并，锚归 rebuildMigrate531/indexHubDevtools531/queryAssist 各 spec。
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -64,7 +64,7 @@ describe('StatusPill 统一件', () => {
     app.unmount();
   });
 
-  it('en 有值渲染英文小字档（sp-en，sv-st-en 范式收编）', async () => {
+  it('en 有值渲染英文小字档（sp-en，sv-st-en 范式合并）', async () => {
     const StatusPill = (await import('../components/StatusPill.vue')).default;
     const { host, app } = await mountComp(StatusPill, { tone: 'g', label: '成功', en: 'SUCCESS' });
     const en = host.querySelector('.sp-en')!;
@@ -179,18 +179,18 @@ describe('useDebounceFn 统一件', () => {
   });
 });
 
-describe('八视图换装静态锁', () => {
-  /* 五百五十批随迁：syn/flt 两枚随后收口 StatusPill 统一件（550 裁定推翻本例「形态不等价保留」
-     记档——theme.css 无 .tag 原语可作替代面，统一件是唯一收口；锚随迁到换装形态，as-badge 锚类
-     保留。本例剩余断言 tk 换装与 import 锚不变。详见 flattenWave550⑤ */
-  it('AnalysisSettingsView：tk 徽标换 StatusPill（tone=y）；syn/flt 徽标 550 随迁同件收口', () => {
+describe('八视图改用静态锁', () => {
+  /* 五百五十批同步更新：syn/flt 两枚随后收口 StatusPill 统一件（550 裁定推翻本例「形态不等价保留」
+     备案——theme.css 无 .tag 原语可作替代面，统一件是唯一收口；锚同步更新到改用形态，as-badge 锚类
+     保留。本例剩余断言 tk 改用与 import 锚不变。详见 flattenWave550⑤ */
+  it('AnalysisSettingsView：tk 徽标换 StatusPill（tone=y）；syn/flt 徽标 550 同步更新同件收口', () => {
     const s = read('views/AnalysisSettingsView.vue');
     expect(s).toContain('<StatusPill v-if="(cfg as any)?.tokenizer" tone="y"');
     expect(s).toContain("import StatusPill from '../components/StatusPill.vue'");
     expect(s).not.toContain('.as-badge.tok');
-    expect(s, 'syn 换装锚（550 随迁：裸 pill b 形态退役）')
+    expect(s, 'syn 改用锚（550 同步更新：裸 pill b 形态退役）')
       .toContain('<StatusPill v-if="isSynonymFilter(cfg)" class="as-badge syn" tone="b"');
-    expect(s, 'flt 换装锚（550 随迁：violet 裸形态退役）')
+    expect(s, 'flt 改用锚（550 同步更新：violet 裸形态退役）')
       .toContain('<StatusPill v-if="(cfg as any)?.filter?.length" class="as-badge flt" tone="b"');
   });
 
@@ -202,21 +202,21 @@ describe('八视图换装静态锁', () => {
     expect(s).not.toContain('class="pill g"');
   });
 
-  it('ConfigDriftView：两枚 cd-badge 结论徽标换 StatusPill，42px spinner 换 SkeletonBox；五百六十批清单角标亦换装（558b 回滚件解禁重做）', () => {
+  it('ConfigDriftView：两枚 cd-badge 结论徽标换 StatusPill，42px spinner 换 SkeletonBox；五百六十批清单角标亦改用（558b 回滚件解禁重做）', () => {
     const s = read('views/ConfigDriftView.vue');
     expect(s).toContain('<StatusPill class="cd-badge" :tone="drift.settingsDiff.clean ? \'g\' : \'r\'"');
     expect(s).toContain('<StatusPill class="cd-badge" :tone="drift.mappingEqual ? \'g\' : \'r\'"');
     expect(s).not.toContain('.cd-badge.ok');
     expect(s).toContain('<SkeletonBox circle :width="42" :height="42" class="cd-loading-sk" />');
     expect(s).toContain('正在拉取对象清单…');
-    /* 五百六十批锚随迁：清单角标换装 StatusPill（原 530 批绕开裁决随 useCurrentIdxWritePages525
+    /* 五百六十批锚同步更新：清单角标改用 StatusPill（原 530 批绕开裁决随 useCurrentIdxWritePages525
        逐字锁解禁退役，558b 回滚件重做兑现）——tone 走 cdVerdictPill 映射消费 */
     expect(s).toContain('<StatusPill v-if="verdicts[k.indexKey]" class="cd-verdict" :tone="cdVerdictPill(verdicts[k.indexKey])"');
   });
 
   it('PluginsView：矩阵行状态徽标换 StatusPill，pl-mx-badge 锚保留', () => {
     const s = read('views/PluginsView.vue');
-    /* 五百六十一批随迁：矩阵表换 QRT rows 型——StatusPill 判据入 #cell-插件 槽（row[0] 查 summary），
+    /* 五百六十一批同步更新：矩阵表换 QRT rows 型——StatusPill 判据入 #cell-插件 槽（row[0] 查 summary），
        形态/文案保形（pl-mx-badge 锚保留） */
     expect(s).toContain('<StatusPill v-if="mxComplete(String(row[0]))" tone="g" label="✅ 完整" class="pl-mx-badge" />');
     expect(s).toContain(`:label="'⚠ 缺 ' + (nodeCount - (mxSummary(String(row[0]))?.count ?? 0)) + ' 台'"`);

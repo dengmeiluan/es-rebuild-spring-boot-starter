@@ -1,5 +1,5 @@
 /**
- * 五百六十八批：ColFilterPopover Esc 收口升 document 捕获级（566 Pagination 立法范式推广；
+ * 五百六十八批：ColFilterPopover Esc 收口升 document 捕获级（566 Pagination 约定范式推广；
  * 宪法铁律 D1#5「开弹层→Esc→焦点回触发器」；568 Esc 巡查批头号件，567 真机实锚）。
  *
  * 缺陷两 面（567-C2 ① 之延伸）：
@@ -9,7 +9,7 @@
  * 2) .cfp-kw / .cfp-range-in 输入框 `@keydown.stop` 掐断冒泡——焦点在输入框内按 Esc 同样
  *    关不掉（比 567 记录还多一层的加重面）。
  *
- * 立法形态（照 pagerEscClose566 / CellContextMenu 417 范式）：挂载（=开层，消费方条件渲染）
+ * 约定形态（照 pagerEscClose566 / CellContextMenu 417 范式）：挂载（=开层，消费方条件渲染）
  * 即存触发时焦点（漏斗钮），document 捕获级收 Esc：stopPropagation+close+焦点回触发钮；
  * 卸载兜底摘监听；mask/panel 元素级 @keydown.esc 退役（单源化——capture 先于 target，
  * 元素级在双路径下已不可达，留着即双源）。五通道消费方（QRT/RT/Browser/Plugins/Security）

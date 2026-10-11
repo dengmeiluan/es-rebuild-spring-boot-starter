@@ -67,7 +67,7 @@ describe('表格空态文案终扫（一百七十二批）', () => {
     const es = read('../components/EmptyState.vue');
     expect(es).toMatch(/compact\?: boolean/);
     expect(es).toMatch(/es-compact/);
-    /* OverviewView：拓扑条/双 Top10/作业列表 四处真空态收编（进行态骨架保留） */
+    /* OverviewView：拓扑条/双 Top10/作业列表 四处真空态合并（进行态骨架保留） */
     const ov = read('../views/OverviewView.vue');
     expect(ov).toMatch(/<EmptyState v-else compact :icon="Network" text="暂无分片信息"/);
     expect(ov).toMatch(/<EmptyState v-if="!topBySize\.length" compact :icon="HardDrive"/);
@@ -78,15 +78,15 @@ describe('表格空态文案终扫（一百七十二批）', () => {
     const rv = read('../views/RestView.vue');
     expect((rv.match(/<EmptyState/g) || []).length).toBe(1);
     expect(rv).not.toMatch(/class="empty"/);
-    /* BrowserView：两支真空态收编；五百四十七批锁随迁——进行态裸 .empty 收口 SkeletonBox
+    /* BrowserView：两支真空态合并；五百四十七批锁同步更新——进行态裸 .empty 收口 SkeletonBox
        （theme.css .empty 最后非表格消费退役），语义 label 逐字保留（原 G7-B2 口径的
-       「保留」改「骨架收口」，执法锚见 emptyFrameZero547） */
+       「保留」改「骨架收口」，锚见 emptyFrameZero547） */
     const bv = read('../views/BrowserView.vue');
     expect(bv).toMatch(/<EmptyState v-else-if="!filtered\.length && store\.indices\.length" compact :icon="Search"/);
     expect(bv).toMatch(/<EmptyState v-else-if="!filtered\.length && !store\.loadingIndices" compact :icon="Boxes"/);
     expect(bv).toMatch(/store\.loadingIndices && !store\.indices\.length" aria-label="正在拉取索引列表">/);
     expect(bv).toMatch(/<SkeletonBox height="30px" round/);
-    /* ClusterSettingsView：失败重试+过滤致空 两处收编 */
+    /* ClusterSettingsView：失败重试+过滤致空 两处合并 */
     const cs = read('../views/ClusterSettingsView.vue');
     expect(cs).toMatch(/<EmptyState v-else-if="loadErr" :icon="AlertTriangle" text="集群设置拉取失败"/);
     expect(cs).toMatch(/<EmptyState v-if="!groups\.length" compact :icon="SearchX"/);

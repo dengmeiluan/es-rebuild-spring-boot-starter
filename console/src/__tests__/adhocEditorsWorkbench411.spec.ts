@@ -11,14 +11,14 @@ const v = readFileSync(join(__dirname, '../views/AdhocRebuildView.vue'), 'utf-8'
 
 describe('AdhocRebuild 对照可调工作台（411 批）', () => {
   it('WorkbenchLayout 接入：settings/mapping 双 pane 均可折叠', () => {
-    /* 547 批随迁：开标签尾部扩 :fill-viewport="false"（向导行动行留首屏；锁语义不变仍钉双栏声明形态）
-       554 批随迁：开标签头部补 class="ar-fill-wl"（554-P0 高度档锚，554-P2 rows 驱动后类保留作 DOM 锚） */
+    /* 547 批同步更新：开标签尾部扩 :fill-viewport="false"（向导行动行留首屏；锁语义不变仍钉双栏声明形态）
+       554 批同步更新：开标签头部补 class="ar-fill-wl"（554-P0 高度档锚，554-P2 rows 驱动后类保留作 DOM 锚） */
     expect(v).toMatch(/<WorkbenchLayout class="ar-fill-wl" :scope="arEdScope" :panes="AR_ED_PANES" axis="vertical" mode="arEditors" :fill-viewport="false">/);
     expect(v).toContain('<template #pane-adhoc-settings>');
     expect(v).toContain('<template #pane-adhoc-mapping>');
-    /* w80 批随迁：sized+flex 混合（settings 数值档 320、mapping 吃 flex）——两组全 flex
+    /* w80 批同步更新：sized+flex 混合（settings 数值档 320、mapping 吃 flex）——两组全 flex
        时中缝拖不动（两侧互相让位），settings 改数值档恢复拖拽语义。
-       535 批 W4 随迁：竖排标题轨退役（519 立法/DevToolsView 先例）——title 文本锁逐字映射为
+       535 批 W4 同步更新：竖排标题轨退役（519 约定/DevToolsView 先例）——title 文本锁逐字映射为
        title: ''（置空即不渲染），标题语义落 pane 行首横排 sec-t 档 */
     expect(v).toMatch(/id: 'adhoc\.settings', role: 'request', title: '', minSize: 260, defaultSize: 320, collapsible: true/);
     expect(v).toMatch(/id: 'adhoc\.mapping', role: 'response', title: '', minSize: 260, defaultSize: 'flex', collapsible: true/);

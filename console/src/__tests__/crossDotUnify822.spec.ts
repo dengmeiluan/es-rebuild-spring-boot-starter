@@ -4,7 +4,7 @@
  * Phase 0 全站静态扫（border-radius 2/3px 小元素×语义过滤）：图例色键方点两处漂移——
  *   MappingView .mp-leg-dot（donut 图例色键 8px radius 2px）+ LifecycleView .lc-legend i（phase 图例
  *   色键 10px radius 2px）vs 全站圆点语言（MetaStrip .ms-dot/StatusPill/监控三族 chips/ld-ok-chip 全 50%）。
- * 豁免记档：TopologyView .tp-swatch 维持方形=形态随指称物（拓扑分片格=方块，swatch 镜像实际形状）；
+ * 豁免备案：TopologyView .tp-swatch 维持方形=形态随指称物（拓扑分片格=方块，swatch 镜像实际形状）；
  *   bar 填充族（dg-bar/agg-track/ring-bar）radius 3px=条形填充正确形态非色键。
  */
 import { describe, it, expect } from 'vitest';
@@ -39,7 +39,7 @@ const liveSrc2 = readFileSync(join(__dirname, '../views/LiveDashboardView.vue'),
 describe('件3：对比/Top 悬浮读出补弹层四要素（=hc-tip 同语言；「不应该是悬浮小卡片吗」）', () => {
   it('B1 源码锁：.ld-hv 卡片壳（bg1 底+border+shadow+r-s+padding）+tip 行白空间不折', () => {
     const s = strip(liveSrc2);
-    expect(s).toMatch(/\.ld-hv \{[^}]*background:\s*var\(--bg2\)/); /* 八百二十六批C2 随迁：bg1→bg2 对齐 hc-tip 基准 */
+    expect(s).toMatch(/\.ld-hv \{[^}]*background:\s*var\(--bg2\)/); /* 八百二十六批C2 同步更新：bg1→bg2 对齐 hc-tip 基准 */
     expect(s).toMatch(/\.ld-hv \{[^}]*border:\s*1px solid var\(--border\)/);
     expect(s).toMatch(/\.ld-hv \{[^}]*box-shadow:\s*var\(--shadow-m\)/);
     expect(s).toMatch(/\.ld-hv \{[^}]*border-radius:\s*var\(--r-s\)/);

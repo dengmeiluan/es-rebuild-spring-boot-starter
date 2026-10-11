@@ -181,12 +181,12 @@ describe('751 G184 maxSegments input aria-label（弱 P3 aria·三行刀）', ()
     const i = host.querySelector('.io-seg-in') as HTMLInputElement;
     expect(i, 'maxSegments input 在场').toBeTruthy();
     expect(i.getAttribute('aria-label'), 'G184 病灶：无 aria-label（修前红）').toBe('目标段数 maxSegments');
-    expect(i.closest('label'), 'span 兄弟文本非 label 关联（形态记档）').toBeNull();
+    expect(i.closest('label'), 'span 兄弟文本非 label 关联（形态备案）').toBeNull();
   });
 });
 
 describe('751 G185 force_merge 在途窗 spinning（铁律 D·747 G161 族一行刀）', () => {
-  it('确认合并→在途窗 svg.spinning+disabled+「合并中…」；复常三通道退场+复拉', async () => {
+  it('确认合并→在途窗 svg.spinning+disabled+「合并中…」；复常三通道移除+复拉', async () => {
     const host = await mountView();
     const fm = findBtn(host, /执行force_merge/);
     const mx = host.querySelector('.io-seg-in') as HTMLInputElement;
@@ -216,7 +216,7 @@ describe('751 G185 force_merge 在途窗 spinning（铁律 D·747 G161 族一行
     expect(fm.querySelector('svg')?.classList.contains('spinning'), 'G185 病灶：Layers 无 spinning（修前红）').toBe(true);
     pendFM[0]({ acknowledged: true, taskId: 'task-751-fm' });
     await settle(16);
-    expect(fm.querySelector('svg')?.classList.contains('spinning'), '复常 spinning 退场').toBe(false);
+    expect(fm.querySelector('svg')?.classList.contains('spinning'), '复常 spinning 移除').toBe(false);
     expect((fm.textContent || '').replace(/\s+/g, ''), '复常文案回退').toContain('执行force_merge');
     expect(fm.disabled, '复常解禁').toBe(false);
     expect(indexSettingsFn.mock.calls.length, '合并后复拉（scan 收敛链）').toBe(2);

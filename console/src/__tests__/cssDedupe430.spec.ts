@@ -1,7 +1,7 @@
 /**
  * 四百三十批：重复 CSS 规则系统性收口——跨视图重复扫描（提取各视图 scoped 样式
  * 逐规则比对）发现的两大簇：
- * ① .pg-progress 定位规则×5（415 引入时的自创重复）→ 收编 theme.css 单一出处；
+ * ① .pg-progress 定位规则×5（415 引入时的自创重复）→ 合并 theme.css 单一出处；
  * ② 本地 spinner 定义×13 视图（.spin animation: rot / animation: spin 两种来源，
  *    含 @keyframes spin 本地定义）→ 类名统一 spinning、规则/keyframes 删除，
  *    全部走 theme.css 全局 .spinning（428 已建）。

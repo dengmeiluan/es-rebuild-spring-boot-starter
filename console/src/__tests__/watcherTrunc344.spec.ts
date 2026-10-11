@@ -9,8 +9,8 @@ const v = readFileSync(join(__dirname, '../views/WatcherView.vue'), 'utf-8');
 
 describe('Watcher 截断/编辑/空态（344 批）', () => {
   it('截断提示+filteredTruncated 状态', () => {
-    /* 762 G222 锁随迁：ref(false) 初值+computed 内置位 → matchedWatches 同源纯 computed
-       派生（354 批宣称的纯化本批落地；行为语义不变，watcherFirstCut762 双分支行为链守卫） */
+    /* 762 G222 锁同步更新：ref(false) 初值+computed 内置位 → matchedWatches 同源纯 computed
+       派生（354 批宣称的纯化落地；行为语义不变，watcherFirstCut762 双分支行为链守卫） */
     expect(v).toMatch(/const matchedWatches = computed/);
     expect(v).toContain('watch 较多，已显示前 100 个');
     expect(v).toMatch(/const filteredTruncated = computed\(\(\) => matchedWatches\.value\.length > 100\);/);

@@ -1,13 +1,13 @@
 /**
  * 六百三十四批【概览】质感第一刀：627 批 R75 差距 G12/G13/G14 同批落码（全前端零 Java）。
  *
- *  G12 拆胞满编：ov-grid 自 3 胞 → 4 胞（「健康分布」「最近作业」分家）——1600 四列立法下
+ *  G12 拆胞满编：ov-grid 自 3 胞 → 4 胞（「健康分布」「最近作业」分家）——1600 四列约定下
  *      原 3 胞令第 4 列整列空置；拆胞后四列满编。3 列区间（1101~1599）4 胞会余 1 胞孤悬
  *      次行左侧 → 「最近作业」整行横跨（同时治作业列被压 1/3 宽的拥挤）。
  *  G13 筛选行紧凑横排：`.ov-mh-filters .inp` 容器级宽度约束——theme.css `.inp` width:100%
  *      全局下容器无宽度约束，三件曾各吃一整行（~430px 纵向堆叠）。
  *  G14 健康词汇单源：KPI 集群状态 / 健康分布 / MH 状态 pill / 状态 option 四处接
- *      `CLUSTER_HEALTH_ZH`（esEnumZh 单源；HealthReportView #cell-health 534 立法同源），
+ *      `CLUSTER_HEALTH_ZH`（esEnumZh 单源；HealthReportView #cell-health 534 约定同源），
  *      raw 枚举留 title/tip 保检索——原三形态（小写 green / 大写 RED / GREEN）不统一。
  *
  *  判据=源码锁：happy-dom 无布局计算、scoped style 不参与计算，列宽/同行/横向位置类
@@ -34,7 +34,7 @@ describe('六百三十四批 G12：概览网格拆胞满编', () => {
     expect(strip(ov), '健康分布仍为胞头档').toContain('<div class="card-t"><Activity :size="13" /> 健康分布</div>');
   });
 
-  it('拆胞不动网格立法（obsStack530 基线锁原样：基 3 列 + 1600 四列）', () => {
+  it('拆胞不动网格约定（obsStack530 基线锁原样：基 3 列 + 1600 四列）', () => {
     expect(ov).toMatch(/\.ov-grid \{ display: grid; grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
     expect(ov).toMatch(/@media \(min-width: 1600px\) \{\s*\n\s*\.ov-grid \{ grid-template-columns: repeat\(4, minmax\(0, 1fr\)\); \}/);
   });
@@ -70,7 +70,7 @@ describe('六百三十四批 G14：健康词汇 CLUSTER_HEALTH_ZH 单源接线',
     expect(ov).toMatch(/tip: String\(clusterHealth\.value\?\.status \|\| ''\)\.toUpperCase\(\)/);
   });
 
-  it('预警条：中文主体 + 原枚举括注（533 立法同语言）', () => {
+  it('预警条：中文主体 + 原枚举括注（533 约定同语言）', () => {
     expect(ov).toContain("集群状态 ${clusterHealthZh('red')}（RED）");
     expect(ov).toContain("集群状态 ${clusterHealthZh('yellow')}（YELLOW）");
     expect(strip(ov), '裸英文预警主体退役').not.toContain('集群状态 RED');
@@ -112,7 +112,7 @@ describe('六百三十四批：拆胞/接线回归护栏（既有锁零迁移面
   });
 
   it('扁平化禁令不回潮（本地 meta 定义 / ov-h-dot / ov-st-en 三负锁）', () => {
-    /* 剥注释口径：历史记档注释里的类名字面不算数（unifyWave561 codeOf / flattenWave554 strip 同一教训） */
+    /* 剥注释口径：历史备案注释里的类名字面不算数（unifyWave561 codeOf / flattenWave554 strip 同一教训） */
     expect(strip(ov)).not.toMatch(/\.ov-meta[\s{.:]/);
     expect(strip(ov)).not.toContain('ov-h-dot');
     expect(strip(ov)).not.toContain('ov-st-en');

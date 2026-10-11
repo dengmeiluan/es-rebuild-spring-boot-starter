@@ -6,7 +6,7 @@
  * ① DslQueryView  P1-7 有「部分分片失败黄条」（shardsHint 统一口径：_shards.failed/
  *    timed_out>0 = 结果可能不完整，诚实呈现），IndexHub docs/query 两 tab 的检索响应同结构
  *    （api.clusterQuery 裸透传，运行时字段 _shards；类型侧 types.ts SearchResp.shards 是 
- *    预留消费位）却无同款提示——本批补齐：独立 computed×2 + 独立黄条块×2（role=status，
+ *    预留消费位）却无同款提示——补齐：独立 computed×2 + 独立黄条块×2（role=status，
  *    .ih-partial 新类名，扁平样式 warn 色+warn-soft 底+--r-s 圆角、无新壳边框；可关闭）。
  *    独立块插 HistogramSection 与 err-bar/RT 之间，不进 ih-qerr 既有 v-if/v-else-if 链
  *    （上游锁面零触），高度链零触（内容增量不进 min-height 链）。
@@ -14,7 +14,7 @@
  *    消费位补齐；rtTag 切片锁 :144-148 只增属性行安全；命名 ih- 前缀不撞既有名）。
  * ③ HotkeyPanel「查询工作台编辑器补全」Ctrl+I 行——前工蚁 B1 已落（本 spec 只补锚）。
  * ④ DslQueryView Ctrl+I addCommand——同前工蚁 B1 已落（本 spec 只补锚）。
- *    ⚠  Ctrl+I 落点随 DslQueryView 在途态，若对方波重排需随迁（readFileSync 只读锚）。
+ *    ⚠  Ctrl+I 落点随 DslQueryView 在途态，若对方波重排需同步更新（readFileSync 只读锚）。
  *
  * 设施：ihUnify554 同款 monaco stub + 只 mock ../api + 裸 createApp 挂载（行为网）；
  * 源码锚全部走新建切片（本 describe 自有区间），不插入既有顺序锁区间。
@@ -167,7 +167,7 @@ afterEach(() => {
 });
 
 /* ═══════════ ① 一：部分分片失败黄条——源码锚（新建切片，不进既有锁区间） ═══════════ */
-describe('561 ①：IH 部分分片失败黄条（DQ shardsHint 判例同口径，docs/query 独立 computed）', () => {
+describe('561 ①：IH 部分分片失败黄条（DQ shardsHint 先例同口径，docs/query 独立 computed）', () => {
   it('统一件接线：shardsHint 导入 + 两独立 computed（query 读直通 _shards / docs 读旁路 ref）', () => {
     expect(ih).toContain("import { shardsHint } from '../utils/shardsHint';");
     expect(ih).toMatch(/const qryPartialHint = computed\(\(\) => shardsHint\(\(qryResp\.value as any\)\?._shards \?\? null\)\);/);
@@ -275,7 +275,7 @@ describe('561 ②：docs/query 两 RT export-name（ih-docs / ih-qry，命名不
 
 /* ═══════════ ③：HotkeyPanel Ctrl+I「查询工作台编辑器补全」行（B1 已落件补锚） ═══════════ */
 describe('561 ③：HotkeyPanel「查询工作台编辑器补全」Ctrl+I 行（B1 已完成件，零触碰补锚）', () => {
-  it('登记行字面在场 + 记档注释', () => {
+  it('登记行字面在场 + 备案注释', () => {
     expect(hkp).toContain("{ keys: ['Ctrl', 'I'], desc: '查询工作台编辑器补全' }");
     expect(hkp).toContain('查询工作台 DSL 编辑器 Ctrl+I 补全登记');
   });
@@ -283,7 +283,7 @@ describe('561 ③：HotkeyPanel「查询工作台编辑器补全」Ctrl+I 行（
 
 /* ═══════════ ④：DslQueryView Ctrl+I addCommand（B1 已落件补锚） ═══════════ */
 describe('561 ④：DslQueryView Ctrl+I addCommand（B1 已写入，readFileSync 只读锚）', () => {
-  /* ⚠  Ctrl+I 落点随 DslQueryView 在途态，若对方波重排需随迁 */
+  /* ⚠  Ctrl+I 落点随 DslQueryView 在途态，若对方波重排需同步更新 */
   it('addCommand(KeyMod.CtrlCmd | KeyCode.KeyI) → triggerSuggest 接线字面在场', () => {
     expect(dqv).toContain('ed.addCommand(m.KeyMod.CtrlCmd | m.KeyCode.KeyI, () => {');
     expect(dqv).toContain("ed.trigger('', 'editor.action.triggerSuggest', null);");

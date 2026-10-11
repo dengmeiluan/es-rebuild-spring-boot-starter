@@ -26,7 +26,7 @@ describe('HealthReport 报告对比（202→218 升级）', () => {
   });
   it('对比卡接线：archive>=2 出卡，基准/对照弹层选择器 + 得分差徽标 + 完全一致正向反馈', () => {
     expect(src).toMatch(/v-if="archive\.length >= 2" class="hr-diff"/);
-    /* usePopupList 弹层换装后：pickBase/pickCmp 仍为存档下标，点选回填 + 输入过滤；
+    /* usePopupList 弹层改用后：pickBase/pickCmp 仍为存档下标，点选回填 + 输入过滤；
        原生 select 的 v-model.number 接线退役 */
     expect(src).toContain('function chooseBase(o: ArchOpt) { pickBase.value = o.i;');
     expect(src).toContain('function chooseCmp(o: ArchOpt) { pickCmp.value = o.i;');

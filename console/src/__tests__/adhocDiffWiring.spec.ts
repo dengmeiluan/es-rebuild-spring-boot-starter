@@ -95,7 +95,7 @@ async function mountWizard() {
   /** 粘贴一份期望配置并 pick */
   const paste = async (mappingJson: string | null) => {
     /* ux2 Task 9：pasteRaw 换 Monaco——驱动迁移 stub cap emit（w80:130px 定高→min(200px,24vh)
-       弹性档随迁；531 批升 min(60vh, 420px) 视口弹性档随迁；JsonArea 触点 Task 10 才换） */
+       弹性档同步更新；531 批升 min(60vh, 420px) 视口弹性档同步更新；JsonArea 触点 Task 10 才换） */
     const cap = monacoCaps.find(c => c.props.height === 'min(60vh, 420px)');
     expect(cap, 'pasteRaw Monaco（min(60vh, 420px)）必须在位').toBeTruthy();
     cap!.emit('update:modelValue', JSON.stringify({
@@ -131,7 +131,7 @@ async function mountWizard() {
       这里只做真实用户动作——点该行的 Eye 按钮，触发 watchJob(jobId)
       （step→4 + api.adhoc.status 回填 job.value）。全程不碰组件内部 ref。 */
   const openJob = async (jobId = 'test-job') => {
-    /* 五百二十九批 W-B 随迁：最近作业表换 QRT rows 壳（table.qrt-tbl）——行选择器随迁，
+    /* 五百二十九批 W-B 同步更新：最近作业表换 QRT rows 壳（table.qrt-tbl）——行选择器同步更新，
        「找到含 jobId 的行 → 点查看详情（Eye）」语义与断言不变（table.tbl 仍归轮次表）。 */
     const rows = [...host.querySelectorAll('table.tbl tbody tr, table.qrt-tbl tbody tr')];
     const row = rows.find(tr => (tr.textContent || '').includes(jobId));
@@ -257,7 +257,7 @@ describe('Task 3 diff 表分区渲染', () => {
   };
 
   const overridePrepare = () => {
-    /* w80 随迁：pickPaste 粘贴成功即自动 doPrepare（幂等游标防重复）——原 mockResolvedValueOnce
+    /* w80 同步更新：pickPaste 粘贴成功即自动 doPrepare（幂等游标防重复）——原 mockResolvedValueOnce
        会被自动探测消耗掉、手动「探测」回落默认实现（ACTUAL），分区断言的 fixture 侧随之失真；
        改挂持续 implementation，自动/手动两条探测路径同源同值 */
     prepareFn.mockReset();

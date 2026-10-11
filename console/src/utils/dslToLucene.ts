@@ -1,7 +1,7 @@
 /* 语法桥：从 translated DSL 抽取 Lucene query_string（启发式）。
-   纯函数零依赖——从 SqlBridgeView 抽出，供 DSL/Lucene 工具栏内联复用。
-   识别 bool(must/filter/should/must_not) + term/match/match_phrase/range/wildcard/exists/match_all，
-   无法识别的叶子子句静默跳过；整体无命中回退 '*'。 */
+ 纯函数零依赖——从 SqlBridgeView 抽出，供 DSL/Lucene 工具栏内联复用。
+ 识别 bool(must/filter/should/must_not) + term/match/match_phrase/range/wildcard/exists/match_all，
+ 无法识别的叶子子句静默跳过；整体无命中回退 '*'。 */
 
 function leaf(n: any): string {
   if (!n || typeof n !== 'object') return '';

@@ -16,7 +16,7 @@ describe('adhocFillViewport547 · Adhoc 工作台摘视口兜底', () => {
   const adhoc = src('views/AdhocRebuildView.vue');
 
   it('双 WorkbenchLayout 均显式 :fill-viewport="false"（手动模式+审编模式）', () => {
-    /* 554 批随迁：开标签头部补 class="ar-fill-wl"（554-P0 高度档锚，554-P2 rows 驱动后类保留作 DOM 锚） */
+    /* 554 批同步更新：开标签头部补 class="ar-fill-wl"（554-P0 高度档锚，554-P2 rows 驱动后类保留作 DOM 锚） */
     expect(adhoc, '手动模式工作台摘兜底').toContain(
       '<WorkbenchLayout class="ar-fill-wl" :scope="arManualScope" :panes="AR_MANUAL_PANES" axis="vertical" mode="arManual" :fill-viewport="false">',
     );

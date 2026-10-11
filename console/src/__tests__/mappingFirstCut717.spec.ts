@@ -150,7 +150,7 @@ describe('G60 源码锁：三段 tip 字面落 pickedMeta', () => {
   });
 });
 
-describe('G61：两条死规则退役（PageHeader 收编后遗留，模板 0 元素）', () => {
+describe('G61：两条死规则退役（PageHeader 合并后遗留，模板 0 元素）', () => {
   it('⑤ 源码锁：页头右组修饰与 sm 后缀窄档零残留；活规则 .md-ii 保留+「保留」史志注释退役', () => {
     const v = readFileSync(join(__dirname, '../views/MappingDesignerView.vue'), 'utf-8');
     expect(v, '页头右组 flex 修饰死规则必须退役（713 G53/715 G56 同族）')
@@ -164,7 +164,7 @@ describe('G61：两条死规则退役（PageHeader 收编后遗留，模板 0 �
 });
 
 describe('G62：加载钮 spinner 语义（busy 在途可感知，713 G51 同族）', () => {
-  it('⑥ 行为：加载在途窗图标 spinning+钮 disabled；复常后退场+enabled', async () => {
+  it('⑥ 行为：加载在途窗图标 spinning+钮 disabled；复常后移除+enabled', async () => {
     let resolveDetail: (v: any) => void = () => {};
     mappingDetailFn.mockImplementation(() => new Promise<any>(res => { resolveDetail = res; }));
     const { host } = await mountView();
@@ -180,7 +180,7 @@ describe('G62：加载钮 spinner 语义（busy 在途可感知，713 G51 同族
     expect(inFlight.disabled, '在途窗 disabled（busy 守卫防连点）').toBe(true);
     expect(inFlight.spin, '在途窗图标 spinning（G62 病灶=R97 时点零旋转）').toBe(true);
     expect(done.disabled, '复常后 enabled').toBe(false);
-    expect(done.spin, '复常后 spinning 退场').toBe(false);
+    expect(done.spin, '复常后 spinning 移除').toBe(false);
   });
 
   it('⑦ 源码锁：加载钮图标 spinning 绑 busy', () => {

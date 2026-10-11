@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 多集群监控快照落库器（20260922 统一只用 QA ES 单载体立法·批4）：服务端定时任务按轮把
+ * 多集群监控快照落库器（20260922 统一只用 QA ES 单载体约定·批4）：服务端定时任务按轮把
  * 全部连接的探活快照落 {@code es_console_monitor-yyyy.MM.dd} 日期索引——
  * <b>服务端调度器是唯一写入方，用户页面轮询只做读取展示、永不构成入库路径</b>
  * （多用户多页面不会造成重复落库，也不会因「没人开页面」而出现数据空洞）。

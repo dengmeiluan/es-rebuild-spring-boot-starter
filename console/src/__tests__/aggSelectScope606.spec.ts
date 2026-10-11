@@ -1,8 +1,8 @@
 /**
- * 六百零六批：全选/反选口径收口——RT 对齐 QRT「当前视图全部行」立法语义（轨3 双内核同构）。
+ * 六百零六批：全选/反选口径收口——RT 对齐 QRT「当前视图全部行」约定语义（轨3 双内核同构）。
  * 背景：RT allChecked/toggleAll/invertSel 三函数旧口径=props.hits 全量（含被列筛掉/quickFilter
  * 滤掉的不可见行），QRT 同族=allSel/toggleAllSel 基于 sortedRows 当前视图（其全选钮
- * aria-label「全选当前视图行」+title「当前视图全部行」=已立法话术）。分裂后果=筛态全选后
+ * aria-label「全选当前视图行」+title「当前视图全部行」=已约定话术）。分裂后果=筛态全选后
  * 勾选集含不可见行：批量删除 emit 全量 N（确认框「文档数 N」）而导出/复制选中行走可见交集 K
  * （currentExportRows 已收口）——同份勾选四条链两种口径；「反选」按钮 title 写「反选当前页」
  * 代码却遍历全量 hits（连自家话术都对不上）。

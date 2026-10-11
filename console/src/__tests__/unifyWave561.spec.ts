@@ -1,36 +1,36 @@
 /**
- * 五百六十一批扫尾换装——源码契约看守（searchFilterBar547/metaStripAdoption 同款范式）。
+ * 五百六十一批扫尾改用——源码契约看守（searchFilterBar547/metaStripAdoption 同款范式）。
  * 判据（斥候勘明锚点，动手前实读 4 件 props 契约核实）：
  *   1) SearchFilterBar 第 15/16 胞：AnalysisSettingsView .as-filter-bar / BrowserView .bw-search
- *      （547「异形豁免册」bw 条目由本批收编立法推翻）——胶囊壳三件套与内建 Search 图标归组件
- *      单源，落位类透传组件根，input padding-left:30px 违规随迁退役；Esc 清空内建承接
- *      （filterEscClear379 锚随迁）；
- *   2) 状态圆点四胞退役→MetaStrip dot 形态单源（判例 DiagView dgMeta dot: 色值直传）：
+ *      （547「异形豁免册」bw 条目由合并约定推翻）——胶囊壳三件套与内建 Search 图标归组件
+ *      单源，落位类透传组件根，input padding-left:30px 违规同步更新退役；Esc 清空内建承接
+ *      （filterEscClear379 锚同步更新）；
+ *   2) 状态圆点四胞退役→MetaStrip dot 形态单源（先例 DiagView dgMeta dot: 色值直传）：
  *      BrowserView .bw-hdot（tab+表格槽两处）/HealthReportView .hr-hdot/OverviewView .ov-h-dot/
  *      LiveDashboardView .ld-node-tone；
- *   3) tag 三胞胎退役：FavoritesView .fv-tag（收编 MetaStrip items text 段，550 sv-repo 判例）/
+ *   3) tag 三处退役：FavoritesView .fv-tag（合并 MetaStrip items text 段，550 sv-repo 先例）/
  *      TemplateGalleryView .tg-tag+.tg-tag-danger（StatusPill，危险→r 档）/ConfigValidatorView
  *      .cv-tag（StatusPill n 档）；ScoreExplainView .se-mq-chip 同批顺带（MetaStrip mini）；
- *   4) 红壳收编：ScoreExplainView .se-err 私造红壳→theme.css .err-bar（body/pre/acts 留作槽）/
- *      AnalyzeView .av-err（err-bar 基座，本批并行面终态同锁）/SlmView .slm-stats-err warn 壳→
- *      EmptyState compact+action 重试（IlmView explain 判例）；.se-empty-sub 裸 div→EmptyState
+ *   4) 红壳合并：ScoreExplainView .se-err 私造红壳→theme.css .err-bar（body/pre/acts 留作槽）/
+ *      AnalyzeView .av-err（err-bar 基座，并行面终态同锁）/SlmView .slm-stats-err warn 壳→
+ *      EmptyState compact+action 重试（IlmView explain 先例）；.se-empty-sub 裸 div→EmptyState
  *      compact；
  *   5) DiagView .dg-tip 裸 div 五处→EmptyState compact（失败档带 action 重试、空态不带——
- *      532 批本文件判例对齐）；SearchTemplatesView .st-list 容器壳剥壳（立法④）+
- *      st-list 空态死码规则立删（flattenWave554/557/spSweep551 锚随迁）；
+ *      532 批本文件先例对齐）；SearchTemplatesView .st-list 容器壳剥壳（约定④）+
+ *      st-list 空态死码规则立删（flattenWave554/557/spSweep551 锚同步更新）；
  *   6) 死类 panel 删类名（TaskTreeView/ClusterSettingsView 六处，全站零样式定义零视觉）。
- * 负锁一律剥注释后断言（flattenWave556 口径：历史记档注释里的字面不算数）。
+ * 负锁一律剥注释后断言（flattenWave556 口径：历史备案注释里的字面不算数）。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const read = (p: string) => readFileSync(join(__dirname, '..', p), 'utf-8');
-/* 剥 CSS/HTML 注释：负锁防历史记档字面误命中（flattenWave556 同一教训） */
+/* 剥 CSS/HTML 注释：负锁防历史备案字面误命中（flattenWave556 同一教训） */
 const codeOf = (p: string) => read(p).replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/<!--[\s\S]*?-->/g, ' ');
 
-describe('五百六十一批①：SearchFilterBar 第 15/16 胞换装', () => {
-  it('AnalysisSettingsView：as-filter-bar 换装（落位透传 + input-class 锚 + 清除钮走插槽）', () => {
+describe('五百六十一批①：SearchFilterBar 第 15/16 胞改用', () => {
+  it('AnalysisSettingsView：as-filter-bar 改用（落位透传 + input-class 锚 + 清除钮走插槽）', () => {
     const s = codeOf('views/AnalysisSettingsView.vue');
     expect(s, '统一件接线（v-model/落位类/input-class 锚/placeholder 逐字；插入属性容忍）')
       .toMatch(/<SearchFilterBar v-model="filterKw"[^>]*class="as-filter-bar" input-class="as-filter-ipt" placeholder="过滤 analyzer\/tokenizer\/filter…">/);
@@ -41,7 +41,7 @@ describe('五百六十一批①：SearchFilterBar 第 15/16 胞换装', () => {
       .toContain('.as-filter-bar { gap: var(--sp-1h); margin-bottom: var(--sp-3); padding: var(--sp-1h) var(--sp-2h); }');
   });
 
-  it('BrowserView：bw-search 换装（547 豁免条目推翻；min() 钳制与 900 档独占行随迁）', () => {
+  it('BrowserView：bw-search 改用（547 豁免条目推翻；min() 钳制与 900 档独占行同步更新）', () => {
     const s = codeOf('views/BrowserView.vue');
     expect(s, '统一件接线（v-model/落位类/placeholder 逐字）')
       .toContain('<SearchFilterBar v-model="kw" class="bw-search" placeholder="搜索索引名…" />');
@@ -49,7 +49,7 @@ describe('五百六十一批①：SearchFilterBar 第 15/16 胞换装', () => {
     expect(s, 'inline padding-left:30px 违规退役').not.toContain('padding-left:30px');
     expect(s, '落位与内衬归本类（min(240px,100%) 钳制保形 + padding 对齐 .inp 原值）')
       .toContain('.bw-search { width: min(240px, 100%); padding: var(--sp-1h) var(--sp-2h); }');
-    expect(s, '900 档独占行随迁').toMatch(/@media \(max-width: 900px\)[\s\S]*\.bw-search \{ flex: 0 0 100%; \}/);
+    expect(s, '900 档独占行同步更新').toMatch(/@media \(max-width: 900px\)[\s\S]*\.bw-search \{ flex: 0 0 100%; \}/);
   });
 });
 
@@ -70,11 +70,11 @@ describe('五百六十一批②：状态圆点四胞退役→MetaStrip dot 形�
     expect(s, 'inline 化落位规则在场').toContain('.seg .bw-tab-ms { display: inline-flex; margin-right: 5px; vertical-align: 1px; }');
   });
 
-  it('HealthReportView：#cell-health 色点换装（dot+value 段，中文主显文案不变，title 留槽级 span）', () => {
+  it('HealthReportView：#cell-health 色点改用（dot+value 段，中文主显文案不变，title 留槽级 span）', () => {
     const s = codeOf('views/HealthReportView.vue');
     expect(s).toContain('<MetaStrip :items="[{ dot: healthColor(String(value || \'\')), value: healthZh(value) || value }]" />');
     expect(s, '槽级 span title 兜底保留').toMatch(/<span class="hr-cell-health" :title="String\(value \?\? ''\)">/);
-    expect(s, 'hd-g/y/r 三档色规则随迁退役').not.toMatch(/\.hd-(g|y|r) \{/);
+    expect(s, 'hd-g/y/r 三档色规则同步更新退役').not.toMatch(/\.hd-(g|y|r) \{/);
   });
 
   it('OverviewView / LiveDashboardView：色点接线（色值直传 dot 位，LiveDashboard 走 nodeToneDot 映射）', () => {
@@ -85,8 +85,8 @@ describe('五百六十一批②：状态圆点四胞退役→MetaStrip dot 形�
   });
 });
 
-describe('五百六十一批③：tag 三胞胎 + 命中子句 chip 收编', () => {
-  it('FavoritesView：fv-tag 收编 MetaStrip items text 段（#前缀随段并入，550 sv-repo 判例）', () => {
+describe('五百六十一批③：tag 三处 + 命中子句 chip 合并', () => {
+  it('FavoritesView：fv-tag 合并 MetaStrip items text 段（#前缀随段并入，550 sv-repo 先例）', () => {
     const s = codeOf('views/FavoritesView.vue');
     expect(s, 'items 派生函数接线').toContain('<MetaStrip class="fv-card-meta" :items="fvCardMeta(it)">');
     expect(s, 'tag text 段派生（#前缀随段并入）').toContain("({ text: '#' + t })");
@@ -94,19 +94,19 @@ describe('五百六十一批③：tag 三胞胎 + 命中子句 chip 收编', () 
     expect(s, 'fv-dest 重放目标 chip 保留走插槽').toContain('class="fv-dest"');
   });
 
-  it('TemplateGalleryView：tg-tag 双档换装 StatusPill（危险→r 档、普通→n 档）', () => {
+  it('TemplateGalleryView：tg-tag 双档改用 StatusPill（危险→r 档、普通→n 档）', () => {
     const s = codeOf('views/TemplateGalleryView.vue');
     expect(s).toContain('<StatusPill v-for="tag in t.tags" :key="tag" :tone="tag === \'危险\' ? \'r\' : \'n\'" :label="tag" />');
     expect(s, 'tg-tag/tg-tag-danger 私造皮退役').not.toContain('tg-tag');
   });
 
-  it('ConfigValidatorView：cv-tag 换装 StatusPill n 档', () => {
+  it('ConfigValidatorView：cv-tag 改用 StatusPill n 档', () => {
     const s = codeOf('views/ConfigValidatorView.vue');
     expect(s).toContain('<StatusPill v-for="tag in t.tags" :key="tag" tone="n" :label="tag" />');
     expect(s, 'cv-tag 私造皮退役').not.toContain('cv-tag');
   });
 
-  it('ScoreExplainView：se-mq-chip 收编 MetaStrip mini（引导词保留，value 亮色段）', () => {
+  it('ScoreExplainView：se-mq-chip 合并 MetaStrip mini（引导词保留，value 亮色段）', () => {
     const s = codeOf('views/ScoreExplainView.vue');
     expect(s).toContain('<MetaStrip :items="h.matched_queries.map((m: string) => ({ value: m }))" />');
     expect(s, '「命中子句：」引导词保留').toContain('命中子句：<MetaStrip');
@@ -114,8 +114,8 @@ describe('五百六十一批③：tag 三胞胎 + 命中子句 chip 收编', () 
   });
 });
 
-describe('五百六十一批④：红壳收编 err-bar / EmptyState', () => {
-  it('ScoreExplainView：se-err 私造红壳退役收编 err-bar（结构留作槽）', () => {
+describe('五百六十一批④：红壳合并 err-bar / EmptyState', () => {
+  it('ScoreExplainView：se-err 私造红壳退役合并 err-bar（结构留作槽）', () => {
     const s = codeOf('views/ScoreExplainView.vue');
     expect(s, '私造红壳四件套退役').not.toMatch(/\.se-err \{/);
     expect(s, '失败面板走 err-bar 基座（role=alert + rise-in 语义）').toMatch(/role="alert" class="err-bar rise-in"/);
@@ -124,7 +124,7 @@ describe('五百六十一批④：红壳收编 err-bar / EmptyState', () => {
     expect(s, '.se-err-acts 行动槽保留').toMatch(/\.se-err-acts \{/);
   });
 
-  it('ScoreExplainView：se-empty-sub 裸 div 收编 EmptyState compact（文案逐字保留）', () => {
+  it('ScoreExplainView：se-empty-sub 裸 div 合并 EmptyState compact（文案逐字保留）', () => {
     const s = codeOf('views/ScoreExplainView.vue');
     expect(s).toContain('<EmptyState v-else compact :icon="Info" text="此 hit 无 _explanation（检查 explain:true 是否被覆盖）" />');
     expect(s, '裸占位类退役').not.toContain('se-empty-sub');
@@ -138,7 +138,7 @@ describe('五百六十一批④：红壳收编 err-bar / EmptyState', () => {
     /* 重试路径=重跑主钮（threeStateContract WHITELIST「重跑即重试」口径），本面无独立重试钮 */
   });
 
-  it('SlmView：slm-stats-err warn 壳收编 EmptyState compact+action（语义=统计不可用，IlmView 判例）', () => {
+  it('SlmView：slm-stats-err warn 壳合并 EmptyState compact+action（语义=统计不可用，IlmView 先例）', () => {
     const s = codeOf('views/SlmView.vue');
     expect(s, 'EmptyState compact 接线（文案逐字走 :text，action 重试）')
       .toMatch(/<EmptyState v-else-if="available && statsErr" compact :icon="AlertTriangle"\s*:text="'SLM 状态\/统计拉取失败：' \+ statsErr" action-text="重试" @action="loadAll" \/>/);
@@ -164,7 +164,7 @@ describe('五百六十一批⑤：DiagView dg-tip 五处→EmptyState compact', 
 });
 
 describe('五百六十一批⑥：SearchTemplatesView st-list 剥壳 + 死码立删', () => {
-  it('st-list 容器壳退役（立法④：border+radius 消除，overflow/flex/max-height 骨架零触）', () => {
+  it('st-list 容器壳退役（约定④：border+radius 消除，overflow/flex/max-height 骨架零触）', () => {
     const s = codeOf('views/SearchTemplatesView.vue');
     expect(s).toContain('.st-list { overflow: hidden; display: flex; flex-direction: column; max-height: calc(100vh - var(--vh-offset, 210px) + 50px); }');
     expect(s, 'border+radius 壳不回流').not.toMatch(/\.st-list \{[^}]*border/);

@@ -184,24 +184,24 @@ describe('W10 视图落点源码锁', () => {
     const v = read('views/AdhocRebuildView.vue');
     expect(v).toContain('max-height: max(240px, 42vh);');
     expect(v).not.toContain('max-height: 320px');
-    /* 五百五十八批随迁：粘贴导入弹窗定高字面退役→adhoc.piH 四档 useTierCycle（:style 绑定，
+    /* 五百五十八批同步更新：粘贴导入弹窗定高字面退役→adhoc.piH 四档 useTierCycle（:style 绑定，
        默认档 min(60vh,600px) 与原定高零漂移） */
     expect(v).toContain(':style="{ height: piH }"');
     expect(v).toContain("'min(60vh, 600px)'");
     expect(v).toContain('<JsonArea');
     expect(v).not.toContain(':rows="12"');
-    /* th 字重回全局 600 基线：页内不再覆写 400（554 随迁：padding 8px 收 var(--sp-2)，5px 奇数保字面） */
+    /* th 字重回全局 600 基线：页内不再覆写 400（554 同步更新：padding 8px 收 var(--sp-2)，5px 奇数保字面） */
     expect(v).toMatch(/\.tbl th \{ text-align: left; padding: 5px var\(--sp-2\); color: var\(--tx2\); border-bottom: 1px solid var\(--line\); \}/);
     expect(v).not.toContain('font-weight: 400; border-bottom');
     expect(v).toContain("content: '· '; opacity: .45;");
     /* .val-sev 类定义与模板引用均已退役（注释里的退役说明可提及字样） */
     expect(v).not.toContain('.val-sev {');
     expect(v).not.toContain('class="val-sev"');
-    /* 五百三十一批随迁：severity 手滚 .pill+sevPill 换装 StatusPill（sevZh 中文主体+en 英文小字；
+    /* 五百三十一批同步更新：severity 手滚 .pill+sevPill 改用 StatusPill（sevZh 中文主体+en 英文小字；
        tone 色档经 sevTone 字面量收窄，口径 err→r/warn→y/info→b 不变） */
     expect(v).toContain('<StatusPill :tone="sevTone(iss.severity)" :label="sevZh(iss.severity)" :en="iss.severity" />');
     /* 五百二十五批 W4：sevPill 收口 utils/esEnumZh（error→r / warn→y / info→b / 兜底 n），
-       本地实现体退役——随迁锁 import 接线与不回潮。
+       本地实现体退役——同步更新锁 import 接线与不回潮。
        五百二十八批：jobStatusZh 状态中文接线走独立 import 行，本行锁形不变 */
     expect(v).toContain("import { sevPill } from '../utils/esEnumZh'");
     expect(v).not.toMatch(/function sevPill\(/);
@@ -228,8 +228,8 @@ describe('W10 视图落点源码锁', () => {
     expect(v).toContain("execActions([{ add }], `别名 ${add.alias} → ${add.index} 已创建`, { stayOpen: true })");
     expect(v).toMatch(/cAlias\.value = ''; cWrite\.value = false; cRouting\.value = ''; cFilter\.value = '';/);
     expect(v).toContain('cAliasEl.value?.focus();');
-    /* 五百二十七批：inplace 定位收编 theme.css .float-pop.inplace 基座档——scoped 拷贝退役
-       （HealthReportView .hr-pop.inplace 收编先例；基座在场由 themeDiscipline525 正面锚看守） */
+    /* 五百二十七批：inplace 定位合并 theme.css .float-pop.inplace 基座档——scoped 拷贝退役
+       （HealthReportView .hr-pop.inplace 合并先例；基座在场由 themeDiscipline525 正面锚看守） */
     expect(v, '.alv-pop.inplace scoped 拷贝必须退役（归 theme.css 基座）').not.toMatch(/\.alv-pop\.inplace\s*\{/);
   });
 

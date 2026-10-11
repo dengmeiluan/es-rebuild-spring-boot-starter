@@ -1,7 +1,7 @@
 /**
  * 五百六十三批（531 遗留件①收口）：filterMode OR 档内核层余量三件。
  * 此前 534/552/556/560/561 已把组合档接进双内核（filterRows mode 参数/useFilterMode/
- * TableFilteredHint/弹层槽注入），本批收口内核共享层余量：
+ * TableFilteredHint/弹层槽注入），收口内核共享层余量：
  * 1) OR/AND 语义出 useColFilters 闭包成导出纯函数 filterRowsPure（spec 全锁双档语义：
  *    等值∪区间∪包含三档、空选集列剔除、零生效列恒等回落同引用）——filterRows 委托之，
  *    534 源码锁 filterRows 签名行与 556 三档 OR 运行时锚保真；

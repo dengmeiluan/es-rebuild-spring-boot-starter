@@ -1,7 +1,7 @@
 /**
  * 四百三十二批：REST 方法全集常量收口——DevTools/RestView 各自定义
  * ['GET','POST','PUT','DELETE','HEAD']（CSS 重复收口 428-431 的 JS 同族）。
- * 收编 utils/esEndpoints.ts 导出 REST_METHODS（端点目录的天然归宿），两视图消费。
+ * 合并 utils/esEndpoints.ts 导出 REST_METHODS（端点目录的天然归宿），两视图消费。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';

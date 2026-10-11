@@ -172,7 +172,7 @@ describe('QRT 按值语义档（527 契约：rows 型 fieldTypes 缺列采样推
     /* title 恒 raw（铁律不涉） */
     expect(tds[1].getAttribute('title')).toBe('2024-01-02T03:04:05Z');
     /* 类型徽标/双层列头：五百二十八批 Lead 裁决扩权（解除 171 批「无映射整体单层」承诺）
-       ——rows 型按值采样档也出徽标，headers 随徽标文本拼接（原 76 批精确断言随扩权随迁） */
+       ——rows 型按值采样档也出徽标，headers 随徽标文本拼接（原 76 批精确断言随扩权同步更新） */
     const headers = [...host.querySelectorAll('thead th')].map(th => th.textContent?.trim());
     expect(headers).toEqual(['#', 'ddate', 'ndouble', 'mix']);
   });

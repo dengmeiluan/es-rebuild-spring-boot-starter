@@ -1,8 +1,8 @@
 /**
- * 五百二十四批（W3）：响应式收编守卫——SplitHandle 双栏拖拽推广 + 空态收编 + vh 弹性档。
+ * 五百二十四批（W3）：响应式合并守卫——SplitHandle 双栏拖拽推广 + 空态合并 + vh 弹性档。
  *   ① TemplatesView：列表/编辑器分栏 SplitHandle+usePref（templates.leftW，0=自动
  *      minmax(280px,380px)）、窄屏 .tv2-editor 480px 定高改 vh 弹性档、模板名 datalist
- *      收编 usePopupList 轻量形态（挂载验证候选渲染与点选回填）；
+ *      合并 usePopupList 轻量形态（挂载验证候选渲染与点选回填）；
  *   ② TaskTreeView：任务列表/详情分栏 SplitHandle+usePref（tasktree.leftW；不碰 ?taskId=
  *      深链消费与过滤逻辑）；空态多分支 EmptyState compact（文案逐字保留——clusterThreeState
  *      挂载锁口径；加载骨架分支保留 tt-empty 原样，ilmEmpty307 字面锁不迁）；
@@ -86,7 +86,7 @@ beforeEach(() => {
   templatesFn.mockReset();
 });
 
-describe('524 批：TemplatesView 分栏拖拽 + datalist 收编', () => {
+describe('524 批：TemplatesView 分栏拖拽 + datalist 合并', () => {
   it('源码锁：SplitHandle 接线 --tv2-left-w + usePref，窄屏柄隐藏 + 编辑器 vh 弹性档', () => {
     expect(tpl).toContain('grid-template-columns: var(--tv2-left-w, minmax(280px, 380px)) 11px minmax(0, 1fr)');
     expect(tpl).toContain("const tv2LeftW = usePref('templates.leftW', 0);");
@@ -163,17 +163,17 @@ describe('524 批：TaskTreeView 分栏拖拽 + 空态 EmptyState compact', () =
   });
 });
 
-describe('524 批：RankDebug / ConfigValidator 收编', () => {
-  it('RankDebug .rd-tree 定高改 max(280px, 42vh) 弹性档（528 批随迁：padding 8px 收编 var(--sp-2) 兼容形态）', () => {
+describe('524 批：RankDebug / ConfigValidator 合并', () => {
+  it('RankDebug .rd-tree 定高改 max(280px, 42vh) 弹性档（528 批同步更新：padding 8px 合并 var(--sp-2) 兼容形态）', () => {
     expect(rd).toMatch(/\.rd-tree \{ padding: (?:8px|var\(--sp-2\)); max-height: max\(280px, 42vh\); overflow: auto; \}/);
   });
 
-  it('ConfigValidator importIndex 接 useIdxState（写类页无 follow）+ sev 徽标换装（525 批随迁；531 批再收 StatusPill）', () => {
+  it('ConfigValidator importIndex 接 useIdxState（写类页无 follow）+ sev 徽标改用（525 批同步更新；531 批再收 StatusPill）', () => {
     expect(cv).toContain('const importIndex = useIdxState();');
     expect(cv).toMatch(/import \{ usePref, useIdxState \} from '\.\.\/composables\/urlState';/);
-    /* 525 批随迁：.cv-iss-sev 换装全局 .pill 语义档后瘦身为布局壳（字号/字重形态归 .pill 单一出处），
-       原「font-weight: 650 字重锁」随形态上收退役，改锁换装形态与壳不回潮。
-       五百三十一批锚随迁：severity 裸英文枚举再收 StatusPill+sevZh（中文标签），tone 档仍走
+    /* 525 批同步更新：.cv-iss-sev 改用全局 .pill 语义档后瘦身为布局壳（字号/字重形态归 .pill 单一出处），
+       原「font-weight: 650 字重锁」随形态上收退役，改锁改用形态与壳不回潮。
+       五百三十一批锚同步更新：severity 裸英文枚举再收 StatusPill+sevZh（中文标签），tone 档仍走
        同源 cvSevPill（=esEnumZh.sevPill），裸 pill 字面拼接不回潮 */
     expect(cv).toMatch(/<StatusPill class="cv-iss-sev" :tone="cvSevPill\(/);
     expect(cv).toMatch(/:label="cvSevZh\(iss\.severity\)"/);

@@ -4,12 +4,12 @@ import { join } from 'node:path';
 import { createApp, h, nextTick } from 'vue';
 import SplitHandle from '../components/SplitHandle.vue';
 
-// ·族3 泛 keydown 域收口（826 立法②记档域开刀）。
+// ·族3 泛 keydown 域收口（826 约定②备案域开刀）。
 // Phase 0：全站泛 @keydown（无键位修饰符）37 站点/22 文件三路斥候逐 handler 裁决——
 // 26 处泛 handler：豁免 24（combobox 输入框 14 + 原生 button roving 容器 2 + Monaco
 // 编辑器 Ctrl 组合键面 3 + tabindex=-1 region 地标 2 + 输入框显式放行/纯导航 3）+
 // 真缺口 2（SplitHandle onKeydown Enter 激活而 Space 不理；DevTools .dt-tab role=tab
-// 有 .enter 无 .space——826 population（role=button）之外的新发现面）+轻缺口 1 记档
+// 有 .enter 无 .space——826 population（role=button）之外的新发现面）+轻缺口 1 备案
 // 豁免（IndexHub .ih-list 滚层容器 Enter 激活而 Space 落滚动：滚层 Space=滚动是平台
 // 惯例，行级 role=button 已双键齐备，内核加 Space 反伤滚动习惯）。
 // .stop 纯冒泡修饰符 7 处豁免（输入框防全局快捷键劫持语义）+注释误抓 2 处排除。
@@ -17,7 +17,7 @@ import SplitHandle from '../components/SplitHandle.vue';
 // role=separator tabindex=0 激活键契约对称，R/Enter 既有形态零回退）+件2 .dt-tab 补
 // @keydown.space.self.prevent（.self 守卫=renaming input 冒泡放行——内嵌输入容器的
 // 激活键孪生必须 .self：.prevent 无条件执行，renaming 态按空格会被冒泡级 .prevent
-// 吞掉=字符无法输入）。立法：role=tab 激活键契约=Enter+Space（WAI-ARIA tabs
+// 吞掉=字符无法输入）。约定：role=tab 激活键契约=Enter+Space（WAI-ARIA tabs
 // pattern），826 全域守卫 population 扩员 role=tab（tablist 容器无激活契约不入）。
 
 const rd = (p: string) => readFileSync(join(__dirname, p), 'utf-8');
@@ -90,10 +90,10 @@ describe('spaceGuard829 全域守卫：role=tab 激活键双通道（826 populat
   });
 });
 
-describe('spaceGuard829 豁免立法锁', () => {
-  it('useRowNav 内核滚层 Space=滚动豁免记档（829 裁决：禁 Space 激活分支回潮）', () => {
+describe('spaceGuard829 豁免约定锁', () => {
+  it('useRowNav 内核滚层 Space=滚动豁免备案（829 裁决：禁 Space 激活分支回潮）', () => {
     const v = rd('../composables/useRowNav.ts');
-    expect(v).toContain('裁决'); // 豁免立法注释锚
+    expect(v).toContain('裁决'); // 豁免约定注释锚
     expect(v).not.toMatch(/e\.key === ' '/); // 负向锁：滚层容器 Space 保持平台滚动语义
   });
 });

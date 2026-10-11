@@ -235,7 +235,7 @@ public class EsStackContractValidator {
             // 裁决（三态之②回退误导类）：探测失败 = 宿主栈错配检测整段跳过，
             // 启动期一次性冷路径 WARN 留痕（Observability554Test 反锁）；null 契约不变。
             LOG.warn("[EsStackContract] 栈契约检测跳过：sdes RequestFactory 字节流读取失败（{}）"
-                    + "—— 本轮无法校验宿主 sdes 与 ES 客户端的 XContentType 签名配套",
+                    + "—— 无法校验宿主 sdes 与 ES 客户端的 XContentType 签名配套",
                     t.getMessage(), t);
             return null;
         } finally {

@@ -1,5 +1,5 @@
 /**
- * R130 第四十八批：ResultTable 键盘行导航守卫（Xmigrate 范式收编）。
+ * R130 第四十八批：ResultTable 键盘行导航守卫（Xmigrate 范式合并）。
  * 锁定：
  * 1) 容器获焦后 ArrowDown/ArrowUp 移动高亮行（rt-row-focus class 随 focusIdx 移动）；
  * 2) Home/End 跳首末行；

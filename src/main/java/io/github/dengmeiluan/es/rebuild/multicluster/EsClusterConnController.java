@@ -42,7 +42,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 多集群连接管理端点（）：{@code /internal/es/index/clusters}。
+ * 多集群连接管理端点（{@code /internal/es/index/clusters}。
  *
  * <p>路径设计说明：挂在 {@code /internal/es/index/**} 下天然被控制台鉴权拦截器覆盖；
  * {@code clusters}（复数）刻意避开 {@link EsTargetInterceptor} 的 {@code /cluster/} 白名单——
@@ -129,8 +129,8 @@ public class EsClusterConnController {
         if (prober == null) {
             r.put("status", "UNKNOWN");
             r.put("error", "探活已禁用（es.rebuild.console.conn-probe-enabled=false）");
-            /* 补 code+endpoint（additive，:191 PROBE_FAILED 判例同口径）。
-               裁决记档：error 字段保留 string 只 additive——前端 ConnHealth.error 契约是
+            /* 补 code+endpoint（additive，:191 PROBE_FAILED 先例同口径）。
+               裁决备案：error 字段保留 string 只 additive——前端 ConnHealth.error 契约是
                string|null，ClusterSwitcher.probeConn 直接渲染「探活失败：${h.error}」，
                改 boolean 信封会破前端展示，故既有键零改动 */
             r.put("code", "PROBE_DISABLED");
@@ -248,7 +248,7 @@ public class EsClusterConnController {
         return syncEngine == null ? null : syncEngine.lastReport();
     }
 
-    /** 手动触发一轮同步(同步执行完返回本轮报告,与周期调度 synchronized 互斥);引擎未启用显式报错。 */
+    /** 手动触发一轮同步(同步执行完返回报告,与周期调度 synchronized 互斥);引擎未启用显式报错。 */
     @PostMapping("sync/run")
     public ClusterConnSyncReport syncRun() {
         if (syncEngine == null) {

@@ -17,7 +17,7 @@ describe('ConfigDrift 可调工作台（407 批）', () => {
     expect(v).toMatch(/<WorkbenchLayout v-else-if="keys\.length" :scope="cdScope" :panes="CD_PANES" axis="vertical" mode="drift">/);
     expect(v).toContain('<template #pane-configdrift-list>');
     expect(v).toContain('<template #pane-configdrift-detail>');
-    /* 五百三十四批轨4锚随迁：竖排标题轨退役（§6v 刀①）——title 文本锁逐字映射为 title: ''，
+    /* 五百三十四批轨4锚同步更新：竖排标题轨退役（§6v 刀①）——title 文本锁逐字映射为 title: ''，
        「对象清单」语义落 cd-list-head 行首横排 cd-list-tt（刀②），尺寸字面零变动 */
     expect(v).toMatch(/id: 'configdrift\.list', role: 'request', title: '', minSize: 200, defaultSize: 260, collapsible: true/);
     expect(v).toMatch(/id: 'configdrift\.detail', role: 'response', title: '', minSize: 320, defaultSize: 'flex'/);

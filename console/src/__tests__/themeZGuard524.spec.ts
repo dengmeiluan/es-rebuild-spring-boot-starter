@@ -7,12 +7,12 @@
  *   ① var(--z-*)
  *   ② calc(var(--z-*) ± N)
  *   ③ ≤100 的整数局部小值（含负值）
- * 之外的取值只能进白名单（现存合法存量，收编后应趋零）。
+ * 之外的取值只能进白名单（现存合法存量，合并后应趋零）。
  * 三位数新字面（9000/1200/9999…）回潮即红。
  *
- * 524 批收编记录：八处 .xx-pop 浮岛壳（fxp/ixp/li/skp/fs/epi/alv/hr）已挂 .float-pop
+ * 524 批合并记录：八处 .xx-pop 浮岛壳（fxp/ixp/li/skp/fs/epi/alv/hr）已挂 .float-pop
  * 消费 var(--z-island)，App.vue .route-bar 的 9999 黑户档注册为 --z-routebar；
- * 第九处漏网 .st-id-pop（SearchTemplatesView 模板名弹层）由 Lead 收尾同款收编，白名单归零。
+ * 第九处漏网 .st-id-pop（SearchTemplatesView 模板名弹层）由 Lead 收尾同款合并，白名单归零。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -31,11 +31,11 @@ function collectVueCss(dir: string, out: string[] = []): string[] {
 }
 
 /* 唯一豁免入口：现存合法存量（file=相对 src 的 posix 路径，value=归一化后的字面值）。
-   ⚠ 收编完成时必须同步删除对应条目——下方第二条 it 会强制名单与源码双向一致，
+   ⚠ 合并完成时必须同步删除对应条目——下方第二条 it 会强制名单与源码双向一致，
    防死条目烂在名单里让 9000 回潮不报红。 */
 const Z_LITERAL_WHITELIST: Array<{ file: string; value: string }> = [
   /* 524 批收尾已归零：第九处 .st-id-pop 曾在此豁免，Lead 收尾已挂 .float-pop 消费 var(--z-island)。
-     新豁免须写明理由，收编后同步删条目（下方双向一致 it 强制）。 */
+     新豁免须写明理由，合并后同步删条目（下方双向一致 it 强制）。 */
 ];
 
 /* ① 形态允许等值数字回退（var(--z-drawer, 251) 等，IndexHubView 既有范式）：
@@ -77,14 +77,14 @@ describe('themeZGuard524：全站 z-index 档位看守（白名单制）', () =>
     ].join('\n')).toEqual([]);
   });
 
-  it('白名单条目必须仍指向真实存在的存量（收编完成后同步删条目，防名单腐烂）', () => {
+  it('白名单条目必须仍指向真实存在的存量（合并完成后同步删条目，防名单腐烂）', () => {
     for (const w of Z_LITERAL_WHITELIST) {
       const text = readFileSync(join(SRC_ROOT, w.file), 'utf-8');
-      expect(text, `白名单条目 ${w.file} z-index: ${w.value} 已不在源码中——该浮层已收编，请同步删除本条目`).toContain(`z-index: ${w.value}`);
+      expect(text, `白名单条目 ${w.file} z-index: ${w.value} 已不在源码中——该浮层已合并，请同步删除本条目`).toContain(`z-index: ${w.value}`);
     }
   });
 
-  it('524 批收编锚：八处 .xx-pop 浮岛壳已挂 .float-pop（原类名保留作坐标/尺寸锚）', () => {
+  it('524 批合并锚：八处 .xx-pop 浮岛壳已挂 .float-pop（原类名保留作坐标/尺寸锚）', () => {
     const shells: Array<[string, string]> = [
       ['components/FieldPicker.vue', 'class="fxp-pop float-pop"'],
       ['components/IndexPicker.vue', 'class="ixp-pop float-pop"'],
@@ -102,7 +102,7 @@ describe('themeZGuard524：全站 z-index 档位看守（白名单制）', () =>
     /* HealthReportView 一处壳类、两处挂载点 */
     const hr = readFileSync(join(SRC_ROOT, 'views/HealthReportView.vue'), 'utf-8');
     expect(hr.match(/class="hr-pop float-pop"/g)?.length, 'HealthReportView 基准/对照两处弹层都须挂 .float-pop').toBe(2);
-    /* 壳字面随收编清零：八文件不再有 fixed+9000 手写壳 */
+    /* 壳字面随合并清零：八文件不再有 fixed+9000 手写壳 */
     for (const file of [...shells.map(s => s[0]), 'views/HealthReportView.vue']) {
       const text = readFileSync(join(SRC_ROOT, file), 'utf-8');
       expect(text, `${file} 仍有 z-index: 9000 手写壳残留`).not.toContain('z-index: 9000');

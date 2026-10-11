@@ -10,14 +10,14 @@
  *   ④ RestView 同路径渗透回归：Enter 选中回填，面板关 Enter 透发执行（裸 Enter 语义保留）；
  *   ⑥ T10 评审固化：弹层开着 Ctrl+Enter 先 choose 回填再冒泡触发宿主 run（选中即执行）；
  *   ⑦ tab 切换 v-model 跟随 tab 数据（EndpointPathInput 受控，父写 modelValue 输入框跟新）。
- *   W6（body 换装 Monaco + 端点语义补全）：
+ *   W6（body 改用 Monaco + 端点语义补全）：
  *   ⑧ DevToolsView body 区 textarea 消失、MonacoEditor stub 在位且收到 dslAssist（fields/bodyKind 均函数）；
  *   ⑨ DevToolsView bodyKind 随端点派生——_settings→settings、_bulk→none、自由路径→search；
- *   ⑩ format/minify/insertBody/清空按钮换装后仍操作 cur.body（经 stub modelValue/emit 断言）；
+ *   ⑩ format/minify/insertBody/清空按钮改用后仍操作 cur.body（经 stub modelValue/emit 断言）；
  *   ⑪ RestView MonacoEditor 收到 dslAssist 且 bodyKind 随 path 派生（/_settings→settings）。
- *   （W6 换装后既有 ③ 的 .dt-body-area 断言迁移至 stub modelValue——textarea 形态本身即被替换对象。）
+ *   （W6 改用后既有 ③ 的 .dt-body-area 断言迁移至 stub modelValue——textarea 形态本身即被替换对象。）
  *   W6-T3（响应阅读升级 + curl 导入）：
- *   ⑫ 响应区裸 pre 换装只读 Monaco（:model-value 单向），language 按内容侦测（合法 JSON→json / 非 JSON→plaintext）；
+ *   ⑫ 响应区裸 pre 改用只读 Monaco（:model-value 单向），language 按内容侦测（合法 JSON→json / 非 JSON→plaintext）；
  *   ⑬ 「复制响应」按钮调 copyText(cur.result)（navigator.clipboard.writeText spy 等效断言）；
  *   ⑭ curl 导入弹层（NModal Teleport body，查 document.body——探针实证 naive 2.43.2 NModal 不支持
  *      :to=false）：合法 curl 回填 method/path/body 并关弹层；非法文本 notify warning 且三字段不动。
@@ -110,7 +110,7 @@ function findBtn(root: ParentNode, text: string): HTMLButtonElement | undefined 
 
 /* EndpointPathInput 弹层 Teleport 在 body 下，统一查 document.body */
 const pop = () => document.body.querySelector('.epi-pop');
-/* 五百七十七批随迁：563 批低频动作收「更多动作」⋯菜单（铁律 C）——n-popover 内容
+/* 五百七十七批同步更新：563 批低频动作收「更多动作」⋯菜单（铁律 C）——n-popover 内容
    teleport 到 body 且 :show 受控（关态不渲染，566-C2 形态），菜单项断言一律先开菜单
    再查 document.body；菜单项点击自带 moreOpen=false 关层，下一步操作前再开（幂等） */
 const moreBtn = (host: ParentNode) => host.querySelector<HTMLButtonElement>('button[aria-label="更多动作"]');
@@ -194,7 +194,7 @@ describe('W3-T11 DevToolsView 智能补全渗透', () => {
     for (const m of ['GET', 'POST', 'PUT', 'DELETE', 'HEAD']) expect(optDisabled(m), `自由文本 ${m}`).toBe(false);
   });
 
-  it('③ 端点带 body 出「插入 body 骨架」→ 点击填入 snippet；未选端点不出按钮（577 随迁 ⋯ 菜单形态）', async () => {
+  it('③ 端点带 body 出「插入 body 骨架」→ 点击填入 snippet；未选端点不出按钮（577 同步更新 ⋯ 菜单形态）', async () => {
     const { host } = await mountView(DevToolsView, '#/devtools');
     /* 563 批骨架钮收进 ⋯ 菜单——开菜单后断言不在场（关态不渲染=恒真，570-C2 教训：开层断言才有效） */
     await openMore(host);
@@ -314,7 +314,7 @@ describe('W3-T11 RestView 智能补全渗透', () => {
 describe('W6 DevTools/Rest body 智能渗透', () => {
   it('⑧ DevToolsView：body 区 textarea 消失、MonacoEditor stub 在位且收到 dslAssist', async () => {
     const { host } = await mountView(DevToolsView, '#/devtools');
-    expect(host.querySelector('textarea.dt-body-area'), 'body textarea 必须已换装').toBeNull();
+    expect(host.querySelector('textarea.dt-body-area'), 'body textarea 必须已改用').toBeNull();
     expect(host.querySelector('.monaco-stub'), 'body MonacoEditor stub 必须在位').toBeTruthy();
     const cap = lastCap();
     expect(cap, 'body Monaco 必须捕获 props').toBeTruthy();
@@ -344,12 +344,12 @@ describe('W6 DevTools/Rest body 智能渗透', () => {
     expect(lastCap().props.dslAssist.bodyKind(), '自由文本必须回 search 档').toBe('search');
   });
 
-  it('⑩ DevToolsView：format/minify/insertBody/清空按钮换装后仍操作 cur.body（577 随迁 ⋯ 菜单路径）', async () => {
+  it('⑩ DevToolsView：format/minify/insertBody/清空按钮改用后仍操作 cur.body（577 同步更新 ⋯ 菜单路径）', async () => {
     const { host } = await mountView(DevToolsView, '#/devtools');
     /* 种子合法 JSON body——经 stub v-model emit 通道写入（等价真实编辑器键入） */
     lastCap().emit('update:modelValue', '{"a":1,"b":[1,2]}');
     await settle(3);
-    /* 格式化=常驻工具行钮（563 收编后唯一留在 ⋯ 菜单外的 body 操作钮） */
+    /* 格式化=常驻工具行钮（563 合并后唯一留在 ⋯ 菜单外的 body 操作钮） */
     findBtn(host, '格式化')!.click();
     await settle(3);
     expect(lastCap().props.modelValue, '格式化必须含换行缩进').toContain('\n');
@@ -394,7 +394,7 @@ describe('W6 DevTools/Rest body 智能渗透', () => {
 
 describe('W6-T3 响应阅读与 curl 导入', () => {
   /* body/response 两枚 Monaco 按 dslAssist+readonly 区分：body 有 assist 可写；
-     525 批随迁——响应面也挂 dtRespAssist（只读白得通道）但 readonly=true，据此判别。
+     525 批同步更新——响应面也挂 dtRespAssist（只读白得通道）但 readonly=true，据此判别。
      响应枚随 v-if 重挂（重跑 result=null 卸载 → 新值重挂新捕获），取最后一枚只读捕获 */
   const bodyCap = () => monacoCaps.find(c => c.props.dslAssist && !c.props.readonly);
   const respCap = () => { const l = monacoCaps.filter(c => c.props.readonly); return l[l.length - 1]; };
@@ -403,7 +403,7 @@ describe('W6-T3 响应阅读与 curl 导入', () => {
     const { host } = await mountView(DevToolsView, '#/devtools');
     findBtn(host, '执行')!.click();
     await settle();
-    expect(host.querySelector('pre.dt-out-pre'), '响应区裸 pre 必须已换装 Monaco').toBeNull();
+    expect(host.querySelector('pre.dt-out-pre'), '响应区裸 pre 必须已改用 Monaco').toBeNull();
     const rc = respCap();
     expect(rc, 'run 成功后响应 Monaco 必须已挂载').toBeTruthy();
     expect(rc.props.readonly, '响应 Monaco 必须只读（:model-value 单向不回写）').toBe(true);
@@ -418,10 +418,10 @@ describe('W6-T3 响应阅读与 curl 导入', () => {
     expect(respCap().props.modelValue).toBe('plain text, not json');
   });
 
-  it('⑬ 复制响应按钮调 copyText(cur.result)（577 随迁：563 改常驻图标钮 aria-label 形态）', async () => {
+  it('⑬ 复制响应按钮调 copyText(cur.result)（577 同步更新：563 改常驻图标钮 aria-label 形态）', async () => {
     const clipSpy = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
     const { host } = await mountView(DevToolsView, '#/devtools');
-    /* 563 批空态行结构恒定立法：复制响应钮常驻不消失，无数据 disabled（纯图标+aria-label） */
+    /* 563 批空态行结构恒定约定：复制响应钮常驻不消失，无数据 disabled（纯图标+aria-label） */
     const copyBtn = () => host.querySelector<HTMLButtonElement>('button[aria-label="复制响应"]');
     expect(copyBtn(), '复制响应钮常驻在位').toBeTruthy();
     expect(copyBtn()!.disabled, '无响应时必须 disabled 而非消失').toBe(true);

@@ -2,7 +2,7 @@
  * 550 批轨1：智能提示四件（TDD 先行，实现前全红）——
  *  A JsonTree 外部高亮通道：highlightKw prop（tools 私有 kw 空时回落，缺省 undefined 零变化，
  *    对齐 maxChildren 惯例）+ LuceneQueryView JSON 视图 _source 接线
- *    （回收 548 E2 记档：共享件通道已开，_source 侧高亮补齐）；
+ *    （回收 548 E2 备案：共享件通道已开，_source 侧高亮补齐）；
  *  B boost ^ 三层识别（真 bug 修复）：`status^2:ok` 此前误报「未知字段「2」」、
  *    `status:ok^2` 值位补全滤空——luceneContext 判段前剥尾部 ^2/^2.5（field 段前缀 /
  *    value 段字段名与值前缀），LuceneInput 语法检查⑥正则放宽；
@@ -10,7 +10,7 @@
  *    （LuceneInput / FieldSelect / FieldPicker，徽标文案统一「近似」）；
  *  D text 值段子字段推荐：text 字段值位出「{field}.keyword」建议项（fields 清单确有
  *    子字段时，形态对齐既有静态档），hint known 表补 text 档 +「.keyword 子字段」文案
- *    （luceneValTiers538 / sqlLuceneTiers546 双字面锁随迁在原文件，注明「550 随迁」）。
+ *    （luceneValTiers538 / sqlLuceneTiers546 双字面锁同步更新在原文件，注明「550 同步更新」）。
  *
  * mount 范式：JsonTree 直挂（jsonTreeCap 同款）；LuceneInput 走 luceneInput.spec 范式
  * （createApp+h+pinia+router，只 mock ../api 出口）；源码锁参照 dqHeightUnify549 风格。
@@ -155,7 +155,7 @@ describe('A JsonTree highlightKw 外部高亮通道', () => {
     expect(host.querySelectorAll('mark.jt-mark').length, 'tools kw 清空 → 回落外部词高亮恢复').toBeGreaterThan(0);
   });
 
-  it('源锚：prop/effKw 定义 + 三处消费 + LuceneQueryView _source 接线（548 E2 记档回收）', () => {
+  it('源锚：prop/effKw 定义 + 三处消费 + LuceneQueryView _source 接线（548 E2 备案回收）', () => {
     const jt = readFileSync(join(SRC, 'components/JsonTree.vue'), 'utf-8');
     const lqv = readFileSync(join(SRC, 'views/LuceneQueryView.vue'), 'utf-8');
     expect(jt).toContain('highlightKw?: string;');
@@ -247,7 +247,7 @@ describe('C fuzzy「近似」徽标', () => {
     expect(fs).toContain('<i v-if="r.hit!.fuzzy" class="fs-fuzzy">近似</i>');
     expect(fp).toContain('<i v-if="r.f!.fuzzy" class="fxp-fuzzy">近似</i>');
     expect(fp).toContain('type: h.type, fuzzy: h.fuzzy');
-    /* 550 收口随迁：margin-left 4px→var(--sp-1)（spSweep538 components 档位纪律），视觉零变 */
+    /* 550 收口同步更新：margin-left 4px→var(--sp-1)（spSweep538 components 档位纪律），视觉零变 */
     const style = 'font-size: var(--fs-2xs); color: var(--warn); font-style: normal; margin-left: var(--sp-1);';
     expect(li).toContain(`.li-fuzzy { ${style} }`);
     expect(fs).toContain(`.fs-fuzzy { ${style} }`);
@@ -281,17 +281,17 @@ describe('D text 值段子字段推荐', () => {
     expect(pop()!.querySelector('.li-hint')!.textContent).toContain('.keyword 子字段');
   });
 
-  it('源锚：text 分支行 + known 行补 text + 提示文案（双字面锁随迁：luceneValTiers538 / sqlLuceneTiers546）', () => {
+  it('源锚：text 分支行 + known 行补 text + 提示文案（双字面锁同步更新：luceneValTiers538 / sqlLuceneTiers546）', () => {
     const li = readFileSync(join(SRC, 'components/LuceneInput.vue'), 'utf-8');
     expect(li).toContain("if (t === 'text') {");
     expect(li).toContain("const kwPath = s.field + '.keyword';");
     expect(li).toContain('fields.value.some(f => f.path === kwPath)');
-    /* 552 随迁：known 行补 t === 'constant_keyword' 档（keyword 族值语义，
+    /* 552 同步更新：known 行补 t === 'constant_keyword' 档（keyword 族值语义，
        sqlCompletion.KEYWORD_VALUE_TYPES 同族，滤空提示随档同权），既有各档仍逐字不动。
-       554 随迁：known 行收口 KEYWORD_VALUE_TYPES 族表（keyword/wildcard/constant_keyword
+       554 同步更新：known 行收口 KEYWORD_VALUE_TYPES 族表（keyword/wildcard/constant_keyword
        三档经族表在册）+ geo_point 新档随权——text 档与 .keyword 提示文案锚原样不动。
-       560 随迁：known 行头部补 `s.field === '_exists_'`、尾部补 t === 'version'
-       （两档 560 立法，滤空提示随权）——text 档既有语义零回退 */
+       560 同步更新：known 行头部补 `s.field === '_exists_'`、尾部补 t === 'version'
+       （两档 560 约定，滤空提示随权）——text 档既有语义零回退 */
     expect(li).toContain("const known = s.field === '_exists_' || KEYWORD_VALUE_TYPES.includes(t) || t === 'date' || t === 'boolean' || t === 'ip' || t === 'date_nanos' || t === 'text' || t === 'geo_point' || t === 'version' || RANGE_FLAT_TYPES.includes(t) || NUMERIC_TYPES.includes(t);");
     expect(li).toContain('text → 建议用 .keyword 子字段精确匹配');
   });

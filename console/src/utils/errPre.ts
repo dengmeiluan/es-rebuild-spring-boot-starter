@@ -8,24 +8,24 @@
  * 件③：JSON 现场高亮 highlightJson → highlightDslJson（DSL 语义键 j-clause
  * 分档；span 只换类名不改文本，textContent 与旧实现逐字一致，全文回看语义零变）。
  * 四处错误面（QueryXray:72/ScoreExplain:65/BoostTuner:107/SearchSandbox:129 经 errPre）
- * 自动随迁语义分档。
+ * 自动同步更新语义分档。
  *
  * （纯增量，向后兼容）：可选第二参 meta——错误链一眼可辨。
- *  - code：错误码徽标（LOCK_CONFLICT/ES_ERROR…），warn 档内联样式（theme.css 不在本批
- *    改动面，自包含零外依赖）；类名 ep-err-code 留作主题钩子。
- *  - endpoint：后端本批新增的失败端点（如 "GET /internal/es/console/..."）——有则显示在
- *    顶部「失败于 …」行，无则不显（兼容旧后端）；类名 ep-err-endpoint。
- *  meta 两个字段一律过 escHtml（与正文同安全级）；既有十余处单参调用零改动。
+ * - code：错误码徽标（LOCK_CONFLICT/ES_ERROR…），warn 档内联样式（theme.css 不在
+ * 改动面，自包含零外依赖）；类名 ep-err-code 留作主题钩子。
+ * - endpoint：后端新增的失败端点（如 "GET /internal/es/console/..."）——有则显示在
+ * 顶部「失败于 …」行，无则不显（兼容旧后端）；类名 ep-err-endpoint。
+ * meta 两个字段一律过 escHtml（与正文同安全级）；既有十余处单参调用零改动。
  *
  * （纯增量，向后兼容）：errMeta(err) 帮手——调用方不再手拼 meta。
  * ApiError 实例（api.ts 五百三十三/透传 code/endpoint）直接读两字段；
  * 普通 Error/字符串兼容降级：无 code/endpoint 的对象出空 meta（errPreHtml 对空 meta
- * 输出与单参一致，见 errPre524 批锚），null/undefined 也不抛。双参换装由 Lead 收口波
- * 统一接线，本批只落帮手本体。
+ * 输出与单参一致，见 errPre524 批锚），null/undefined 也不抛。双参改用由 Lead 收口波
+ * 统一接线，只落帮手本体。
  */
 import { highlightDslJson } from './jsonc';
 /* 私造 escHtml 退役——三连转义（& < > → 实体）与 highlightSanitize.escapeHtml
-   逐字等价（ IntegrationGuide/DiagView 同判例），收编单源防第四份漂移 */
+ 逐字等价（ IntegrationGuide/DiagView 同先例），合并单源防第四份漂移 */
 import { escapeHtml } from './highlightSanitize';
 import { ApiError } from '../api';
 
@@ -42,9 +42,9 @@ interface ErrPreMeta {
 export function errPreHtml(err: string, meta?: ErrPreMeta): string {
   const t = err ?? '';
   /* 件③：highlightJson → highlightDslJson——JSON 现场升 DSL 语义分档
-     （DSL 语义键 j-clause、普通键 j-key），span 只换类名不改文本，textContent 与
-     highlightJson 输出逐字一致（jsonc 头注自证），全文回看语义与既有消费零扰动；
-     QueryXray/ScoreExplain/BoostTuner/SearchSandbox 四处错误面经本函数自动随迁。 */
+ （DSL 语义键 j-clause、普通键 j-key），span 只换类名不改文本，textContent 与
+ highlightJson 输出逐字一致（jsonc 头注自证），全文回看语义与既有消费零扰动；
+ QueryXray/ScoreExplain/BoostTuner/SearchSandbox 四处错误面经本函数自动同步更新。 */
   const body = t.includes('{') ? highlightDslJson(t) : escapeHtml(t);
   if (!meta) return body;
   const head: string[] = [];
@@ -55,9 +55,9 @@ export function errPreHtml(err: string, meta?: ErrPreMeta): string {
   return head.length ? `<span class="ep-err-head">${head.join(' ')}</span>\n${body}` : body;
 }
 
-/** 错误对象 → errPre meta 的统一组装（双参换装帮手，消费方一行接线）。
- *  ApiError 走 instanceof 精确分支；其它 Error 实例按鸭子类型读 code/endpoint（后端
- *  500 之类无业务码 → 空串回退，errPreHtml 对空值不显行）；字符串/未知类型出空 meta。 */
+/** 错误对象 → errPre meta 的统一组装（双参改用帮手，消费方一行接线）。
+ * ApiError 走 instanceof 精确分支；其它 Error 实例按鸭子类型读 code/endpoint（后端
+ * 500 之类无业务码 → 空串回退，errPreHtml 对空值不显行）；字符串/未知类型出空 meta。 */
 export function errMeta(err: unknown): ErrPreMeta {
   if (!err || typeof err !== 'object') return {};
   const e = err as Partial<ApiError>;

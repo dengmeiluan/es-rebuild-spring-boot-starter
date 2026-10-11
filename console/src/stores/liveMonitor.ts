@@ -9,13 +9,13 @@ import { useAppStore } from './app';
 import { useAuthStore } from './auth';
 
 /**
- *  全局实时采样器：趋势序列/告警状态机从 LiveDashboardView 组件态提升为常驻 store——
+ * 全局实时采样器：趋势序列/告警状态机从 LiveDashboardView 组件态提升为常驻 store——
  * 此前挂在组件里，切页即销毁、回来重新「采样中约 10s 后出图」，趋势永远攒不起来。
  * 现在首次进大屏后采样器全局常驻（切页不停、参与告警持续时长累计），并以 sessionStorage
  * 快照按目标集群隔离持久化，页面刷新后趋势窗口无缝接续。
  */
 
-/** 告警是状态对象非日志行（ §2）——按语义 key 聚合，每 tick diff 更新/新建/转恢复 */
+/** 告警是状态对象非日志行（——按语义 key 聚合，每 tick diff 更新/新建/转恢复 */
 export interface LiveAlert {
   key: string; severity: 'warn' | 'bad'; title: string;
   num: number; unit: string; peak: number; threshold: string;
@@ -24,7 +24,7 @@ export interface LiveAlert {
 
 const SNAP_PREFIX = 'es-console.live.snapshot:';
 /** 快照超过该时长视为陈旧（趋势断层没有延续价值），丢弃重采。
-   A：localStorage 持久化后拉长到 30 分钟——短时间关浏览器重开仍可续接趋势 */
+ A：localStorage 持久化后拉长到 30 分钟——短时间关浏览器重开仍可续接趋势 */
 const SNAP_TTL_MS = 30 * 60 * 1000;
 /** 序列上限（240 点：5s 前台 ≈ 20 分钟窗口，15s 背景 ≈ 60 分钟）——A 拉长窗口； 窗长偏好在其内截取展示 */
 const MAX_POINTS = 240;
@@ -38,7 +38,7 @@ interface NodeSeries { heap: number[]; cpu: number[]; disk: number[]; qps: numbe
  * 每节点吞吐差分——ΔqueryTotal/ΔindexTotal ÷ dt 秒推入 nodeSeries[name].qps/idx
  * （brief 已带 per-node 计数器，此前只做集群合计差分=「个体负载」不可见）。
  * prev=null（首轮/切集群后）只记基线不推序列（差分宁缺毋假）；无基线的新节点跳过；
- * dtSec<=0 防除零。返回本轮基线（调用方存作下轮 prev）。
+ * dtSec<=0 防除零。返回基线（调用方存作下轮 prev）。
  */
 export function pushNodeRateSeries(
   prev: Map<string, { q: number; i: number }> | null,
@@ -68,12 +68,12 @@ export const useLiveMonitorStore = defineStore('liveMonitor', () => {
   /* 页面白名单感知（pending-tasks 属诊断页端点，无 diag 权限的角色轮询必 403） */
   const auth = useAuthStore();
 
-  /*  §8.3：采样间隔是个人偏好，跨会话保留 */
+  /* 采样间隔是个人偏好，跨会话保留 */
   const intervalMs = usePref('live.intervalMs', 5000);
   /* 趋势窗长偏好（点数）——展示窗在采样上限内截取，对标阿里云时间控件的多档体验 */
   const windowPts = usePref('live.windowPts', 120);
   /* 暂停态同步记忆——用户暂停排查问题时刷新/重进不应又跑起来
-     （与 intervalMs 同为「大屏工作状态」口径）；默认 running 不落盘 */
+ （与 intervalMs 同为「大屏工作状态」口径）；默认 running 不落盘 */
   const running = usePref('live.running', true);
 
   const health = ref<any>(null);
@@ -83,13 +83,13 @@ export const useLiveMonitorStore = defineStore('liveMonitor', () => {
   const qpsSeries = ref<number[]>([]);
   const indexRateSeries = ref<number[]>([]);
   const heapSeries = ref<number[]>([]);
-  /*  实时走势扩展：CPU/磁盘 均值序列（与 heap 同口径=数据节点均值；响应「很多东西没有实时走势图」实报） */
+  /* 实时走势扩展：CPU/磁盘 均值序列（与 heap 同口径=数据节点均值；响应「很多东西没有实时走势图」实报） */
   const cpuSeries = ref<number[]>([]);
   const diskSeries = ref<number[]>([]);
 /* A：每节点水位历史（name → {heap,cpu,disk,qps,idx} 序列），节点卡 mini spark/节点对比卡用；随 snapshot 持久化 */
 const nodeSeries = ref<Record<string, NodeSeries>>({});
   /* ②任务卡走势：运行任务数会话窗序列（视图 watch 推送；任务为全局口径，
-     切目标集群**不清位**——与按集群隔离的 qps/heap 序列相反，勿加进 watch(app.target) 清位） */
+ 切目标集群**不清位**——与按集群隔离的 qps/heap 序列相反，勿加进 watch(app.target) 清位） */
   const jobCountSeries = ref<number[]>([]);
   /* 每点的真实采样时刻——大屏内外采样频率不同，窗口跨度不能再用「点数 × 间隔」估算 */
   const sampleTs = ref<number[]>([]);
@@ -158,7 +158,7 @@ const nodeSeries = ref<Record<string, NodeSeries>>({});
   });
   const avgHeap = avgPct('heapPct');
   const avgCpu = avgPct('cpuPct');
-  /*  磁盘均值：diskUsedPct 定义在下方，此处内联同式（total/free → 占比） */
+  /* 磁盘均值：diskUsedPct 定义在下方，此处内联同式（total/free → 占比） */
   const avgDisk = computed(() => {
     const src = dataNodes.value.length ? dataNodes.value : nodes.value;
     if (!src.length) return 0;
@@ -211,10 +211,10 @@ const nodeSeries = ref<Record<string, NodeSeries>>({});
   async function tick() {
     try {
       /* 无 diag 页权限时跳过 pending-tasks 采样（保留 0 值）——
-         无权限角色每采样周期 403 会往审计流刷 PAGE_DENIED 心跳。
-         连接键感知——grantedPages 为 conn:{id}:{page} 形态时裸 includes
-         恒 false（连接模型用户有 diag 授权也被静默跳过=能力反向丢失）；按当前目标解析
-         有效页集判定（与 router.effectivePagesForTarget 同构）。 */
+ 无权限角色每采样周期 403 会往审计流刷 PAGE_DENIED 心跳。
+ 连接键感知——grantedPages 为 conn:{id}:{page} 形态时裸 includes
+ 恒 false（连接模型用户有 diag 授权也被静默跳过=能力反向丢失）；按当前目标解析
+ 有效页集判定（与 router.effectivePagesForTarget 同构）。 */
       const eff = effectivePagesForTarget(auth.grantedPages, app.target || 'host');
       const canDiag = eff == null || eff.has('diag');
       const [h, ns, pt] = await Promise.all([
@@ -252,7 +252,7 @@ const nodeSeries = ref<Record<string, NodeSeries>>({});
 
       reconcileAlerts();
       snapshot();
-    } catch { /* 轮询单次失败容忍：obsStale 会在 3 个周期后点亮「观测中断」横幅（ §8.2 有意降级） */ }
+    } catch { /* 轮询单次失败容忍：obsStale 会在 3 个周期后点亮「观测中断」横幅（ 有意降级） */ }
   }
 
   // 当前 tick 应处于告警态的状况集合；严重度随当前值动态升降级
@@ -264,9 +264,9 @@ const nodeSeries = ref<Record<string, NodeSeries>>({});
       if (cpu > 85) out.push({ key: `cpu:${n.name}`, severity: 'warn', title: `节点 ${n.name} CPU`, num: Math.round(cpu), unit: '%', threshold: '85%' });
       if (disk > 90) out.push({ key: `disk:${n.name}`, severity: 'bad', title: `节点 ${n.name} 磁盘`, num: Math.round(disk), unit: '%', threshold: '90%' });
     }
-    /*  信噪比：未分配分片按根因分流，避免与 status 告警重复、避免把单节点常态当告警——
-       red 已由 status 条目覆盖（主分片不可用）；yellow 且多数据节点 = 副本真丢了，才值得告警；
-       yellow 且单数据节点 = 副本无处放置的拓扑常态，不产告警条目。 */
+    /* 信噪比：未分配分片按根因分流，避免与 status 告警重复、避免把单节点常态当告警——
+ red 已由 status 条目覆盖（主分片不可用）；yellow 且多数据节点 = 副本真丢了，才值得告警；
+ yellow 且单数据节点 = 副本无处放置的拓扑常态，不产告警条目。 */
     const ua = unassignedShards.value;
     const dataNodes = Number(health.value?.number_of_data_nodes || 0);
     if (ua > 0 && health.value?.status === 'yellow' && dataNodes > 1) {
@@ -303,7 +303,7 @@ const nodeSeries = ref<Record<string, NodeSeries>>({});
   }
 
   /* A：每节点水位序列（heap/cpu/disk 即时值+qps/idx 吞吐差分）——消失节点删除（防内存/快照泄漏）；
-     旧快照缺 qps/idx 键在此补齐（restore 兼容） */
+ 旧快照缺 qps/idx 键在此补齐（restore 兼容） */
   function pushNodeSeries() {
     const seen = new Set<string>();
     for (const n of nodes.value) {
@@ -344,7 +344,7 @@ const nodeSeries = ref<Record<string, NodeSeries>>({});
     }
   }
 
-  //  §6：页面后台挂起时暂停轮询，回前台立即刷新一次再恢复定时器
+  // 页面后台挂起时暂停轮询，回前台立即刷新一次再恢复定时器
   function onVisChange() {
     if (document.hidden) {
       if (timer) { clearInterval(timer); timer = null; }
@@ -366,7 +366,7 @@ const nodeSeries = ref<Record<string, NodeSeries>>({});
   /* 切目标集群：旧集群序列/告警全部失效（防跨集群串数据），换新集群自己的快照续采 */
   watch(() => app.target, () => {
     qpsSeries.value = []; indexRateSeries.value = []; heapSeries.value = [];
-    /* CPU/磁盘均值序列同批清位——漏清会在切集群后把旧集群走势串进新集群卡（跨集群串数据） */
+    /* CPU/磁盘均值序列同步清位——漏清会在切集群后把旧集群走势串进新集群卡（跨集群串数据） */
     cpuSeries.value = []; diskSeries.value = []; sampleTs.value = [];
     nodeSeries.value = {};
     /* 切集群清吞吐差分基线——漏清会把旧集群计数器差分串进新集群（587 同款防线） */

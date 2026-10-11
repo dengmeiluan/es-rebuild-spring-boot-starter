@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 控制台操作审计——PAGE_DENIED 去重聚合装饰层（，架构修复）。
+ * 控制台操作审计——PAGE_DENIED 去重聚合装饰层（架构修复）。
  *
  * <p><b>缺陷背景</b>：VIEWER 用户停留在无权限页面时，页面轮询（诊断/迁移/重建列表）
  * 每分钟对同一 URI 反复 403，拦截器逐条落 PAGE_DENIED 审计——审计流被同质心跳刷屏，

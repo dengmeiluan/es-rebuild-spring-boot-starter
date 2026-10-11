@@ -4,7 +4,7 @@
  *     字段 hover 全不注册；只读面补全天然无扰，hover「type · path」白得：
  *     BulkEditor(ndjson, none 档) / SqlBridge DSL 面(json, doc 档静音语义) /
  *     IndexHub 只读文档预览(doc 档) / DevTools 响应面(视 respLang doc/none)；
- *   任务二 MetaStrip 手写 sep 收编——IndexHub ih-meta-sep / Plugins pl-strip-sep 视图侧退役，
+ *   任务二 MetaStrip 手写 sep 合并——IndexHub ih-meta-sep / Plugins pl-strip-sep 视图侧退役，
  *     TasksView kinds join 串拆 text 项进 items（ksep/join 全删归组件节奏）；
  *   任务三 filterable——TasksView 节点过滤 + XmigrateView 两处连接档案下拉（大集合无过滤不可用）；
  *   任务四 IndexHubView 文档编辑弹窗——Ctrl/Cmd+S=saveDoc 键盘路径 + JsonArea rows=14 定高
@@ -21,7 +21,7 @@ const read = (p: string) => readFileSync(join(__dirname, '..', p), 'utf-8');
 describe('525 任务一：dsl-assist 白得通道（四处 Monaco 面）', () => {
   it('BulkEditorView：ndjson body 挂 beDslAssist（none 档补全静音 + hover 白得），fields 源接 useIndexFields', () => {
     const be = read('views/BulkEditorView.vue');
-    /* 五百七十三批字面随迁：height 静态 "100%" 已收编弹性档位绑定（EDITOR_HEIGHTS[editorH]
+    /* 五百七十三批字面同步更新：height 静态 "100%" 已合并弹性档位绑定（EDITOR_HEIGHTS[editorH]
        持久化范式），dsl-assist/execute 挂载语义不变 */
     expect(be, 'ndjson body 面必须挂 dsl-assist').toContain('<MonacoEditor v-model="body" language="ndjson" :height="EDITOR_HEIGHTS[editorH]" :dsl-assist="beDslAssist" @execute="doSubmit" />');
     expect(be, '_bulk 体语义：none 档（补全静音，DevTools _bulk 端点同档）').toContain("bodyKind: () => 'none' as const");
@@ -39,7 +39,7 @@ describe('525 任务一：dsl-assist 白得通道（四处 Monaco 面）', () =>
 
   it('IndexHubView：只读文档预览挂同构 assist（doc 档），fields 复用同页查询口 ihDslAssist', () => {
     const ih = read('views/IndexHubView.vue');
-    /* 六百六十九批随迁（击穿者：件B 弹窗字号档——尾追 :font-size="ihFont"，assist 契约
+    /* 六百六十九批同步更新（击穿者：件B 弹窗字号档——尾追 :font-size="ihFont"，assist 契约
        锁意图零触；edFontModal669.spec E1 同锚） */
     expect(ih).toMatch(/<MonacoEditor :model-value="docEditText" language="json" :readonly="true" height="min\(60vh,420px\)"\s*:dsl-assist="\{ fields: ihDslAssist\.fields, bodyKind: \(\) => 'doc' \}" :font-size="ihFont" \/>/);
   });
@@ -51,7 +51,7 @@ describe('525 任务一：dsl-assist 白得通道（四处 Monaco 面）', () =>
   });
 });
 
-describe('525 任务二：MetaStrip 手写 sep 收编（视图侧退役，归组件自动 .ms-sep）', () => {
+describe('525 任务二：MetaStrip 手写 sep 合并（视图侧退役，归组件自动 .ms-sep）', () => {
   it('IndexHubView：ih-meta-sep 模板与 CSS 全退役（别名段插槽保留）', () => {
     const ih = read('views/IndexHubView.vue');
     expect(ih, '手写 sep 必须退役').not.toMatch(/class="ih-meta-sep"/);
@@ -66,7 +66,7 @@ describe('525 任务二：MetaStrip 手写 sep 收编（视图侧退役，归组
     expect(pl, '图例段必须保留在默认插槽').toContain('<span class="pl-hint">✅ = 已装 · ❌ = 未装</span>');
   });
 
-  it('TasksView：同一条 MetaStrip 三种 · 来源混串收编——kinds 拆 text 项进 items，ksep/join 插槽全删', () => {
+  it('TasksView：同一条 MetaStrip 三种 · 来源混串合并——kinds 拆 text 项进 items，ksep/join 插槽全删', () => {
     const tv = read('views/TasksView.vue');
     expect(tv, 'kinds 必须拆 text 项进 items').toContain('...actionKinds.value.slice(0, 3).map((k: string) => ({ text: k })),');
     expect(tv, '手写 ksep 必须退役').not.toMatch(/class="tv-meta-ksep"/);
@@ -119,7 +119,7 @@ describe('525 任务五 + 任务六', () => {
   it('SqlBridgeView：结果条删线保底色（.br-result 无 border-top，ok/err 背景差保留）', () => {
     const br = read('views/SqlBridgeView.vue');
     expect(br, '.br-result 基类必须无 border-top').not.toMatch(/\.br-result \{[^}]*border-top/);
-    /* 五百二十七批随迁：padding 收 --sp 半档（6px 12px → --sp-1h --sp-3），ok 底色/字号语义不变 */
+    /* 五百二十七批同步更新：padding 收 --sp 半档（6px 12px → --sp-1h --sp-3），ok 底色/字号语义不变 */
     expect(br, 'ok 色块底保留').toMatch(/\.br-result \{ padding: var\(--sp-1h\) var\(--sp-3\); font-size: var\(--fs-xs\); background: var\(--ok-soft\); color: var\(--ok\); \}/);
     expect(br, 'err 分支背景差保留（同基类治，无自有线）').toContain('.br-result.err { background: var(--err-soft); color: var(--err); }');
   });

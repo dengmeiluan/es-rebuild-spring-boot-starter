@@ -8,8 +8,8 @@
         <button class="btn sm ghost" @click="toggle(row.key)">{{ collapsed.has(row.key) ? '▸' : '▾' }} {{ row.key }} {{ row.kind === 'array' ? '[' + (row.val as any[]).length + ']' : '{…}' }}</button>
         <div v-show="!collapsed.has(row.key)" class="gp-sub">
           <!-- 【W3b】字段键的数组值（multi_match.fields / query_string.fields 形态）：
-               子表逐项渲染 FieldSelect——数组项键是序号字符串，把序号名单传下去复用既有
-               isFieldKey 通道；非字段键的数组子表不传（现状裸键值表零降级） -->
+ 子表逐项渲染 FieldSelect——数组项键是序号字符串，把序号名单传下去复用既有
+ isFieldKey 通道；非字段键的数组子表不传（现状裸键值表零降级） -->
           <GenericParams :value="row.val as Record<string, unknown> | unknown[]" :depth="depth + 1" :path-prefix="pathPrefix + row.key + '.'"
                          :field-keys="childFieldKeys(row)" :fields="fields" :types="types" :type-priority="typePriority"
                          @update="setChild(row.key, $event)" />
@@ -19,7 +19,7 @@
         <option v-for="o in schemaOpt(row.key)" :key="o" :value="o">{{ o }}</option>
       </select>
       <!-- 字段键行渲染 FieldSelect（rank/分组/类型徽标/mark 全套，同 ClauseNode）；
-           fields 为空（无字段源）回落普通输入，零降级 -->
+ fields 为空（无字段源）回落普通输入，零降级 -->
       <FieldSelect v-else-if="isFieldKey(row.key)" class="gp-fs"
                    :model-value="String(row.val)" :fields="fields" :types="types" :type-priority="typePriority"
                    @update:model-value="setChild(row.key, $event)" />
@@ -39,8 +39,8 @@
 
 <script setup lang="ts">
 /* W1：递归键值表——零降级的最后兜底。任何 JSON 对象都渲染成结构化行：
-   标量按类型给控件（数字框容忍非数字字符串提交并标黄，设计文档 §6），
-   对象/数组逐级展开。schema 具名参数优先渲染为 enum/number 控件。 */
+ 标量按类型给控件（数字框容忍非数字字符串提交并标黄，设计文档 ），
+ 对象/数组逐级展开。schema 具名参数优先渲染为 enum/number 控件。 */
 import { ref, computed } from 'vue';
 import { X } from 'lucide-vue-next';
 import FieldSelect from './FieldSelect.vue';
@@ -57,8 +57,8 @@ const props = withDefaults(defineProps<{
   fields?: string[];
   types?: Record<string, string>;
   /** 字段键行 FieldSelect 的类型置顶——调用方按算子/聚合场景传入
-   *  （ClauseNode term/terms/prefix→keyword、range→date/数值族；排序行已有 typeFilter SORTABLE_TYPES 范式）。
-   *  缺省空 = FieldSelect 归一 null 纯 rank 平铺，既有调用方零增量。 */
+ * （ClauseNode term/terms/prefix→keyword、range→date/数值族；排序行已有 typeFilter SORTABLE_TYPES 范式）。
+ * 缺省空 = FieldSelect 归一 null 纯 rank 平铺，既有调用方零增量。 */
   typePriority?: string[];
 }>(), { schema: () => [], depth: 0, pathPrefix: '', fieldKeys: () => [], fields: () => [], types: () => ({}), typePriority: () => [] });
 const emit = defineEmits<{ (e: 'update', v: Record<string, unknown> | unknown[]): void }>();

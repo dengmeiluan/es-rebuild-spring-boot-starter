@@ -1,7 +1,7 @@
-/* 681 批【概览】R75 差距 G17 解锁（记档低优，用户令全开刀）：.ov-topo-nodes 节点条横向溢出
+/* 681 批【概览】R75 差距 G17 解锁（备案低优，用户令全开刀）：.ov-topo-nodes 节点条横向溢出
  * （节点多放不下）时无「可横滚」视觉暗示。落一刀最小修复：
  *  · 溢出判定抽纯函数 evalTopoClip(sw, cw) = sw > cw + 1（+1 容差——亚像素取整抖动不误报）。
- *    589 判例：happy-dom 布局宽度恒 0，纯函数 + 类绑定才可测，组件仅持 ref 消费。
+ *    589 先例：happy-dom 布局宽度恒 0，纯函数 + 类绑定才可测，组件仅持 ref 消费。
  *  · topoClip=true 渲染真元素 .ov-topo-fade（v-if，勿 ::after——可测性优先），右缘 40px
  *    渐隐 linear-gradient(to right, transparent, --bg0)（终点色=分区所在页面底色，554 扁平化
  *    后本区无自绘底），pointer-events:none 不挡点击/滚轮。G17 语义=「暗示可滚」不是「遮数据」。
@@ -9,8 +9,8 @@
  *    shards 异步到达晚于 onMounted（v-if 此时未挂绑），ref 挂绑即补检，否则首屏判定恒 false。
  *
  * 挂载骨架照抄 adhocProgressUi565（api mock + createApp + pinia + memory router；项目不依赖
- * @vue/test-utils，monitorHistoryPanel 判例「OverviewView 全量挂载过重」由 api 全桩化解）。
- * 布局宽度走 Element.prototype scrollWidth/clientWidth 定向桩（happy-dom 恒 0，589 判例同源）。
+ * @vue/test-utils，monitorHistoryPanel 先例「OverviewView 全量挂载过重」由 api 全桩化解）。
+ * 布局宽度走 Element.prototype scrollWidth/clientWidth 定向桩（happy-dom 恒 0，589 先例同源）。
  * 家族复跑（'ov-topo' × 'OverviewView' 交集全列）：flattenWave554 / cardPrimitiveVerdict547 /
  * paneShellWave547 / overviewA11y369 / overviewPolish634。
  */
@@ -48,9 +48,9 @@ import OverviewView, { evalTopoClip } from '../views/OverviewView.vue';
 const ov = readFileSync(join(__dirname, '../views/OverviewView.vue'), 'utf-8');
 const settle = async (n = 12) => { for (let i = 0; i < n; i++) { await nextTick(); await Promise.resolve(); } };
 
-/* ── 布局桩：happy-dom scrollWidth/clientWidth 恒 0（589 判例）→ 原型 getter 定向覆写，用后还原。
+/* ── 布局桩：happy-dom scrollWidth/clientWidth 恒 0（589 先例）→ 原型 getter 定向覆写，用后还原。
    两属性在 happy-dom 不同一层（scrollWidth=Element.prototype / clientWidth=HTMLElement.prototype，
-   查找序近者先命中）——按 owner 定向 patch，勿假定同层（681 实测判例） ── */
+   查找序近者先命中）——按 owner 定向 patch，勿假定同层（681 实测先例） ── */
 const dims = { sw: 0, cw: 0 };
 let restoreFns: Array<() => void> = [];
 function stubLayoutProp(prop: 'scrollWidth' | 'clientWidth') {
@@ -143,7 +143,7 @@ describe('681 批 G17：topoClip 接线（真挂载，fade 元素在场性）', 
     expect(host.querySelector('.ov-topo-fade')).toBeNull();
   });
 
-  it('resize 监听双向接线：由放得下转溢出现身、回放得下退场', async () => {
+  it('resize 监听双向接线：由放得下转溢出现身、回放得下移除', async () => {
     stubScrollDims(300, 300);
     const { host } = await mountView();
     expect(host.querySelector('.ov-topo-fade')).toBeNull();
@@ -154,7 +154,7 @@ describe('681 批 G17：topoClip 接线（真挂载，fade 元素在场性）', 
     stubScrollDims(300, 300);
     window.dispatchEvent(new Event('resize'));
     await settle();
-    expect(host.querySelector('.ov-topo-fade'), '回放得下后退场').toBeNull();
+    expect(host.querySelector('.ov-topo-fade'), '回放得下后移除').toBeNull();
   });
 
   it('卸载清理：unmount 后 resize 不再触达（无异常即过）+ 移除监听源码锚在场', async () => {

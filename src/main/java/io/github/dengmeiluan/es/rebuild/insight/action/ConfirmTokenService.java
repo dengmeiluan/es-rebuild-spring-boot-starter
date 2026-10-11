@@ -71,10 +71,10 @@ public class ConfirmTokenService {
     /**
      * 校验：格式合法 && 未过期 && HMAC 一致（含参数未被篡改）。
      *
-     * <p>记档（零代码行为变更）：本方法两处 {@code catch → return false}
+     * <p>备案（零代码行为变更）：本方法两处 {@code catch → return false}
      * （token Base64 解码失败、过期时间/签名段解码失败）是 <b>fail-closed 安全臂</b>，
      * 刻意维持静默 —— 拒绝会经调用方的 HTTP 4xx 响应对用户响亮（失败链不缺响度），
-     * 服务端再落 WARN 即对同一次恶意/损坏 token 重复告警（刷屏）。属 三态立法
+     * 服务端再落 WARN 即对同一次恶意/损坏 token 重复告警（刷屏）。属 三态约定
      * 之①判据臂范畴，不追加日志。</p>
      */
     public boolean verify(String actionId, Map<String, Object> params, String token) {

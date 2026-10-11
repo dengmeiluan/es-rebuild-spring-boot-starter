@@ -15,7 +15,7 @@ describe('聚焦态操作可达（450 批）', () => {
     expect(pit).toMatch(/<div v-if="focusPaneId === 'pit\.preview'" class="focus-tools">[\s\S]*?exportJsonl[\s\S]*?exportCsv/);
   });
 
-  it('DslQuery 聚焦态工具可达：视图 seg+分页器寄居 RT 工具行（552 批随迁 541 现行形态）', () => {
+  it('DslQuery 聚焦态工具可达：视图 seg+分页器寄居 RT 工具行（552 批同步更新 541 现行形态）', () => {
     /* 541 批：dq-res-bar/独立分页器退役——视图 seg+Pagination 寄居 RT 自带工具行
        (#bar-prepend)，聚焦面（FS）内 rt-bar 常驻 → 聚焦态切视图/翻页原生可达
        （锁意图不变=聚焦态工具可达）；552 批起 hideBody→true（切 JSON/Tree）时 RT 自动

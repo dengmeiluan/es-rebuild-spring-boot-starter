@@ -1,11 +1,11 @@
 /**
  * 五百六十五批件②：QRT onSort 入口 sortableGuard 短路接线（563 批余量收口——
  * semanticGuard.typeTierSuppressed / tableSort.sortableGuard 纯函数出口已就绪，QRT 消费侧缺位）。
- * 未接线证据：QRT onSort（本批前 :897）无任何抑制守卫——binary/_source 等「显式非语义」列
+ * 未接线证据：QRT onSort（前 :897）无任何抑制守卫——binary/_source 等「显式非语义」列
  * 点击照落 sortSpec（raw doc/密文比较排序语义 VOID）。
- * 本批接线：sortableGuard((c) => effType(c)) 在 onSort 入口短路（effType=显式 fieldTypes ∪
+ * 接线：sortableGuard((c) => effType(c)) 在 onSort 入口短路（effType=显式 fieldTypes ∪
  * 按值采样推断，与 useColStats fieldType 先例同读取口径）；本地/remote 双档同守——短路即
- * 不落 sortSpec/不落盘/不 emit 远端意图。豁免口径 semanticGuard 记档：_id/_index/_score/
+ * 不落 sortSpec/不落盘/不 emit 远端意图。豁免口径 semanticGuard 备案：_id/_index/_score/
  * _seq_no 排序有语义不收。
  * 锁定：
  * 1) binary 显式类型列点击排序不产生 sort 态（行序不变/th 不亮 on/无 aria-sort/零落盘）；

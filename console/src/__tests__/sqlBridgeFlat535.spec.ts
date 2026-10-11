@@ -1,10 +1,10 @@
 /**
  * 五百三十五批：SqlBridge 面残面四件套契约看守。
- *  T1 三 pane 卡壳退役（四刀立法③④）：pane 即容器内容直贴，分界由 .br-card-hd 既有
+ *  T1 三 pane 卡壳退役（四刀约定③④）：pane 即容器内容直贴，分界由 .br-card-hd 既有
  *     border-bottom 承接；.br-card 仅页面级 wide 卡（err 面板/对比表）保留。
  *     ⚠高度链承重墙等效迁移：.br-pane 保 height:100%+flex column（rp-content 已拉伸定高），
- *     monaco-host 直挂原 flex 字面（sqlLint534:145 锚随换装迁移，本件双锁防回退）。
- *  T2 竖排标题轨退役（刀①②）：BRIDGE_PANES title 置空即不渲染（519 批立法），标题语义落
+ *     monaco-host 直挂原 flex 字面（sqlLint534:145 锚随改用迁移，本件双锁防回退）。
+ *  T2 竖排标题轨退役（刀①②）：BRIDGE_PANES title 置空即不渲染（519 批约定），标题语义落
  *     各 pane 行首横排 br-title（sec-t 档，DevTools 0b130b92 同款）。
  *  T3 页内查询历史（§6u 遗留补齐）：此前只写不显——open-hist 钮 + NModal + QueryHistoryPanel
  *     （mode=sql 单档过滤与 SqlConsole 共池，Lead 裁决；actions 四件/导入清空关闭）；
@@ -138,7 +138,7 @@ describe('A SqlBridge 降层与标题轨（535 批 T1/T2）', () => {
   it('高度链承重墙等效迁移：br-pane 保 height:100%+flex column，monaco-host 直挂原 flex 字面', () => {
     expect(v).toContain('.br-pane { height: 100%; display: flex; flex-direction: column; }');
     expect(v).toContain('.br-pane > :deep(.monaco-host) { flex: 1 1 0; min-height: 260px; }');
-    /* 旧承重选择器不残留（sqlLint534:145 锚已随迁 .br-pane 换装） */
+    /* 旧承重选择器不残留（sqlLint534:145 锚已同步更新 .br-pane 改用） */
     expect(v).not.toContain('.br-card { height: 100% }');
     expect(v).not.toContain('.br-card > :deep(.monaco-host)');
   });
@@ -149,14 +149,14 @@ describe('A SqlBridge 降层与标题轨（535 批 T1/T2）', () => {
       expect(seg, slot + ' pane 根换 br-pane').toContain('<div class="br-pane">');
       expect(seg, slot + ' 不再挂 br-card 壳').not.toContain('class="br-card"');
     }
-    /* 五百六十二批随迁：失败面板脱 .br-card 卡壳 → 全局 .err-bar 形态承载（558b pf-err
-       判例，role=alert 在场）；对比表页面级 br-card 卡与 .br-card 壳规则保留不动 */
+    /* 五百六十二批同步更新：失败面板脱 .br-card 卡壳 → 全局 .err-bar 形态承载（558b pf-err
+       先例，role=alert 在场）；对比表页面级 br-card 卡与 .br-card 壳规则保留不动 */
     expect(v, '失败面板 err-bar 直贴（562 脱卡壳）').toContain('role="alert" class="err-bar br-err"');
     expect(v, '对比表页面级卡保留').toContain('<div class="br-card wide">');
     expect(v).toMatch(/\.br-card \{ background: var\(--card-bg\); border: 1px solid var\(--border\); border-radius: var\(--r-m\); overflow: hidden; display: flex; flex-direction: column; \}/);
   });
 
-  it('竖排标题轨退役：三 title 置空即不渲染（519 立法）；标题语义落行首横排 br-title（sec-t 档）', () => {
+  it('竖排标题轨退役：三 title 置空即不渲染（519 约定）；标题语义落行首横排 br-title（sec-t 档）', () => {
     expect(v, 'SQL/DSL/Lucene 竖排轨不残留').not.toMatch(/title: '(SQL|DSL|Lucene)'/);
     expect((v.match(/title: ''/g) ?? []).length, '三 pane 全置空').toBe(3);
     expect(v, 'br-title 升 sec-t 档（tx1+加重，muted 弱化档退役）')

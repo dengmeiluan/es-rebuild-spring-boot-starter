@@ -16,8 +16,8 @@ import { describe, expect, it } from 'vitest';
  * 整文件死组件 0；模板域死分支复查三形态〔literal-false/const-gate/true-gate-else〕
  *   零命中=786 后第二轮，维持低收益观察档。
  * 刀A=BP_STACK re-export 整行删+WorkbenchLayout 史志注释尾句诚实化
- *   +双文本锁前置随迁（workbenchStackBp527:30+tasksProgress528:145
- *   export 形态断言→import 消费形态断言=787-C2 立法）；
+ *   +双文本锁前置同步更新（workbenchStackBp527:30+tasksProgress528:145
+ *   export 形态断言→import 消费形态断言=787-C2 约定）；
  * 刀B=HostRawView/RemoteConn 去 export 关键字（typecheck 0=零漏判铁证）。 */
 
 const rd = (p: string) => readFileSync(resolve(__dirname, p), 'utf8');

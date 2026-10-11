@@ -3,10 +3,10 @@
  *
  * 背景：563 四刀（0ab23b78）把原生 select 换 n-popover 受控弹层且漏 import NPopover
  * （组件不解析、触发钮不渲染、四枚选项胶囊裸平铺在工具行——indexHubQueryTab ② 随之红，
- * 该债已随本批补 import + 契约随迁偿还）；但 Esc 关层语义在受控 :show 下悬空，
- * 本批补 document 捕获级 Esc 监听：关层 + 焦点还给触发钮 + 卸载兜底摘监听。
+ * 该债已随补 import + 契约同步更新偿还）；但 Esc 关层语义在受控 :show 下悬空，
+ * 补 document 捕获级 Esc 监听：关层 + 焦点还给触发钮 + 卸载兜底摘监听。
  *
- * naive-ui 用真的（indexHubQueryTab 五百六十六批随迁判例：happy-dom 下 n-popover
+ * naive-ui 用真的（indexHubQueryTab 五百六十六批同步更新先例：happy-dom 下 n-popover
  * 触发钮/选项胶囊均可渲染交互）。
  */
 import { describe, it, expect } from 'vitest';
@@ -36,7 +36,7 @@ describe('分页弹层 Esc 收口（五百六十六批；铁律 D1#5）', () => 
   it('开层→Esc→关层+焦点回触发钮；aria-expanded 全程受控', async () => {
     const { host, unmount } = await mountPager();
     const psel = host.querySelector<HTMLButtonElement>('.pgn-psel');
-    expect(psel, '触发钮必须渲染（NPopover 已解析——563 四刀漏 import 判例在册）').toBeTruthy();
+    expect(psel, '触发钮必须渲染（NPopover 已解析——563 四刀漏 import 先例在册）').toBeTruthy();
     expect(psel!.getAttribute('aria-expanded')).toBe('false');
 
     psel!.click();

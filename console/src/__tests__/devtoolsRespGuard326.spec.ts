@@ -13,7 +13,7 @@ const v = readFileSync(join(__dirname, '../views/DevToolsView.vue'), 'utf-8');
 describe('DevTools 大响应防护（326 批）', () => {
   it('persist 剥离 result/resultFull/busy（501 批补 busy：执行中刷新即永久卡死）', () => {
     /* v3.0.1 可重入性:合并单草稿对象,busy/result 剥离契约不变。
-       五百六十五批随迁（击穿者：565 件⑤——剥离面扩 segRuns/segView 段锚，与 result 同保密级） */
+       五百六十五批同步更新（击穿者：565 件⑤——剥离面扩 segRuns/segView 段锚，与 result 同保密级） */
     expect(v).toMatch(/JSON\.stringify\(\{\s*active: active\.value,\s*tabs: tabs\.value\.map\(t => \(\{ \.\.\.t, result: null, resultFull: null, busy: false, segRuns: \[\], segView: -1 \}\)\)/);
   });
   it('截断展示+完整原文留内存+复制取全文', () => {

@@ -52,9 +52,9 @@ describe('五百五十五批：审计维度丰富（集群列/records 线缆/HOS
     expect(sec).toContain('<option value="HOST_OP">宿主操作（HOST_OP）</option>');
   });
 
-  it('详情弹层富维度元信息行（集群/IP/耗时/宿主贡献）——五百五十七批 MetaStrip 收编锚随迁', () => {
+  it('详情弹层富维度元信息行（集群/IP/耗时/宿主贡献）——五百五十七批 MetaStrip 合并锚同步更新', () => {
     /* 五百五十七批：模板手写「·」插值随 MetaStrip items 化迁移（dvRichItems 计算属性逐段条件），
-       四维语义锚按新形态字面化（行为零变：逐段 v-if 条件随迁） */
+       四维语义锚按新形态字面化（行为零变：逐段 v-if 条件同步更新） */
     expect(sec).toContain("value: String(r.cluster), label: '集群'");
     expect(sec).toContain("value: String(r.ip), label: 'IP'");
     expect(sec).toContain("value: String(r.costMs), unit: 'ms', label: '耗时'");

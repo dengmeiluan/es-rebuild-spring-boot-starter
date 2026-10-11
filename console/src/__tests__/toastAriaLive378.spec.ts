@@ -1,6 +1,6 @@
 /**
  * 三百七十八批：toast 屏幕阅读器播报通道——naive-ui notification 源码零 aria/role
- * （本批实测 grep 源码确认），视觉 toast 对读屏用户完全静默。
+ * （实测 grep 源码确认），视觉 toast 对读屏用户完全静默。
  * 修：NotifyConsumer 挂 sr-only aria-live 双容器——error 走 assertive/role=alert
  * 即时打断，其余 polite/role=status；不能 display:none（aria-live 对隐藏元素静默），
  * theme.css 补 .sr-only 视觉隐藏工具类。

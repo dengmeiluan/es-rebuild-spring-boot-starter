@@ -18,14 +18,14 @@ import { describe, expect, it } from 'vitest';
  *     queryHub.ts:15 注释=文案词非消费）→ export 私有化（790 RemoteSourceFields
  *     interface 私有化同构）；router 读锁面 5 spec（aliasMapCoverage491/
  *     contractDepsGuard394/navChipGuard412/overviewLiveEntry700/routerTargets）
- *     全无 NavItem 断言=零锁随迁面（787-C2 锁预扫已过）；
+ *     全无 NavItem 断言=零锁同步更新面（787-C2 锁预扫已过）；
  *   · pageAllowed=spec 孤儿豁免（pageAccess.spec.ts 真 import 直采=788-C1
  *     测试资产保全口径，同 791 get/post）；
  *   · 产品活 8 不动：IndexCat/SearchHit/SearchResp（types）+NAV_GROUPS/NAV_ITEMS/
  *     effectivePagesForTarget/pageDeniedRedirect/router（router）。
  * 刀A=JobStatus+RiskLevel 整删；刀B=NavItem 去 export 关键字。
  * readFileSync 文本锁面：queryHighlightChain.spec:114 锁 SearchHit.highlight 字段
- *   （删除面零交集，无需随迁）。 */
+ *   （删除面零交集，无需同步更新）。 */
 
 const rd = (p: string) => readFileSync(resolve(__dirname, p), 'utf8');
 
@@ -66,9 +66,9 @@ describe('七百九十二批：边角文件域死导出清零（真死 2 整删+
     expect(routerSrc).toMatch(/^export const router = createRouter\(/m);
   });
 
-  it('B3 边角零 export 记档锚：main.ts/env.d.ts 维持零 export 面（App.vue 790 口径）', () => {
+  it('B3 边角零 export 备案锚：main.ts/env.d.ts 维持零 export 面（App.vue 790 口径）', () => {
     expect(rd('../main.ts')).not.toMatch(/^\s*export\s/m);
-    /* env.d.ts=纯 ambient declare（declare const 非导出符号），本批记档不动 */
+    /* env.d.ts=纯 ambient declare（declare const 非导出符号），备案不动 */
     expect(rd('../env.d.ts')).not.toMatch(/^\s*export\s/m);
   });
 });

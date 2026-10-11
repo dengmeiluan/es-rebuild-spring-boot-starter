@@ -1,13 +1,13 @@
 /**
- *  轨4（工蚁 F）：「用当前索引」内联回填钮收编 PickCurrentIdxBtn 统一件 +
- * UpdateByQueryView ubq.scriptH 私造高度档收编 useTierCycle。
+ *  轨4（工蚁 F）：「用当前索引」内联回填钮合并 PickCurrentIdxBtn 统一件 +
+ * UpdateByQueryView ubq.scriptH 私造高度档合并 useTierCycle。
  *
  * ① 四视图（BulkEditorView / ConfigValidatorView / IndexOptimizerView / UpdateByQueryView）
  *    逐字重复的内联回填钮（525/范式）退役，换消费统一件 PickCurrentIdxBtn（工蚁 C
  *    并行落件；AdhocRebuildView 同批归 C）：组件内聚 Crosshair 图标 / btn ghost sm 样式 /
  *    data-test="use-current-idx" / title 文案，props 无、emit 'pick'——落点回填仍由各页
  *    @pick 显式写自身 useIdxState（ 写类页不开 follow 口径不变，行为等值迁移）。
- *    ⚠ 记档（558 实证）：组件文件落盘前 vite:import-analysis 在解析层硬失败（Failed to
+ *    ⚠ 备案（558 实证）：组件文件落盘前 vite:import-analysis 在解析层硬失败（Failed to
  *    resolve import），vi.mock 打桩无法越过解析层——挂载/行为用例改 describe.skipIf(组件
  *    在场才跑)，工蚁 C 组件合并后自动激活，且激活后直吃真实组件（不打桩，收口保真）；
  *    落盘前的红绿由源码锁 + useTierCycle 直连行为用例承载。
@@ -103,8 +103,8 @@ beforeEach(() => {
   clusterInspectFn.mockClear();
 });
 
-/* ═══════════ ① 四视图收编（源码锁，不依赖组件落盘） ═══════════ */
-describe('四视图回填钮收编 PickCurrentIdxBtn 统一件（，源码锁）', () => {
+/* ═══════════ ① 四视图合并（源码锁，不依赖组件落盘） ═══════════ */
+describe('四视图回填钮合并 PickCurrentIdxBtn 统一件（，源码锁）', () => {
   const PICK_VIEWS = [
     { f: 'BulkEditorView', bind: 'index' },
     { f: 'ConfigValidatorView', bind: 'importIndex' },
@@ -192,8 +192,8 @@ describe.skipIf(!compReady)('四视图 @pick 点击回填落点（挂载；558 �
   });
 });
 
-/* ═══════════ ③ ubq.scriptH 收编 useTierCycle ═══════════ */
-describe('UpdateByQueryView ubq.scriptH 收编 useTierCycle（）', () => {
+/* ═══════════ ③ ubq.scriptH 合并 useTierCycle ═══════════ */
+describe('UpdateByQueryView ubq.scriptH 合并 useTierCycle（）', () => {
   it('源码锁：useTierCycle 键名档值原样平移（零迁移），私造三件套退役', () => {
     const s = read('../views/UpdateByQueryView.vue');
     expect(s, '机械平移：const { v, cycle } = useTierCycle(\'ubq.scriptH\', 原TIERS)').toMatch(/const \{ v: scriptH, cycle: cycleScriptH \} = useTierCycle\('ubq\.scriptH', SCRIPT_H_TIERS\)/);

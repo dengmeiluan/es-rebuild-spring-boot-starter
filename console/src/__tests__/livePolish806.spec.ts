@@ -5,7 +5,7 @@
  * 件1 节点卡：水位条 8→12px+85/90 阈值刻度双标+超档 tone 色；tp/load 合一行收尾；卡壳 r-m+
  * hover 青强调；区块头节点/告警汇总。件2 历史图底座：网格三线+Y 中档三刻度（对齐 802 Top 曲线）。
  * 件3 对比面归流：794 fixed 悬浮面板（用户令推翻）→ .ld-nodes 区内联容器同页面语言（800 单容器同构）。
- * 挂载 spec 静态 import 视图（805-C1 立法）。
+ * 挂载 spec 静态 import 视图（805-C1 约定）。
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';

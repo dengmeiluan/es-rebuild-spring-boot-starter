@@ -10,7 +10,7 @@
  *   ΔqueryTotal/ΔindexTotal ÷ dt 秒推入 nodeSeries[name].qps/idx——prev=null（首轮/切集群后）
  *   只记基线不推（差分宁缺毋假纪律）；无基线的新节点跳过；dtSec<=0 防除零。
  * ②对比卡扩五档：Heap/CPU/磁盘（pct 固定刻度+阈值线+悬浮带 %）+QPS/写入（abs 峰值地板
- *   刻度+无阈值线+悬浮 toFixed(1) 无 %）——sparkHoverAt 双模式 589 已立法，此处首条 abs 消费面。
+ *   刻度+无阈值线+悬浮 toFixed(1) 无 %）——sparkHoverAt 双模式 589 已约定，此处首条 abs 消费面。
  * ③节点卡第四行 load：load_average['1m'] 两位小数；缺省节点整行不渲染（诚实缺省）。
  * ④切集群清 nodeRatePrev 基线（587 跨集群串数据同款防线）。
  */
@@ -134,7 +134,7 @@ describe('五百九十五批②：对比卡 QPS/写入档 + 节点卡 load 行',
     try {
       seed(useLiveMonitorStore(pinia));
       await settle();
-      /* 794 件1 随迁：对比面悬浮面板化（默认关）——断言前点入口钮开面板 */
+      /* 794 件1 同步更新：对比面悬浮面板化（默认关）——断言前点入口钮开面板 */
       (host.querySelector('.ld-ncmp-entry') as HTMLButtonElement)?.click();
       await settle();
       const segs = [...host.querySelectorAll('.ld-ncmp-panel .seg button')] as HTMLButtonElement[];
@@ -150,7 +150,7 @@ describe('五百九十五批②：对比卡 QPS/写入档 + 节点卡 load 行',
       cmp.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
       await settle(4);
 
-      /* 切 QPS：阈值线退场（无固定阈值语义），悬浮行值无 % */
+      /* 切 QPS：阈值线移除（无固定阈值语义），悬浮行值无 % */
       const qpsBtn = segs.find(b => b.textContent!.trim() === 'QPS')!;
       qpsBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await settle();

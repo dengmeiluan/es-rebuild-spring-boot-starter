@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * 控制集群解析器（）：控制面（登录用户/连接档案/审计/作业/锁）到底存到哪台 ES。
+ * 控制集群解析器（控制面（登录用户/连接档案/审计/作业/锁）到底存到哪台 ES。
  *
  * <p>解析优先级（controlMode=auto）：</p>
  * <ol>
@@ -253,7 +253,7 @@ public class ControlClusterResolver {
         }
     }
 
-    // ---------------- 探活失败 WARN 节流（，包内可见便于单测） ----------------
+    // ---------------- 探活失败 WARN 节流（包内可见便于单测） ----------------
 
     /**
      * 探活失败节流 WARN（三态：首败 WARN／连败仅累计静默／恢复成功重臂——与 

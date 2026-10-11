@@ -8,12 +8,12 @@
  *    高频参数中文词表（12~15 个，表外键回落空串）；
  *  C highlightSanitize escapeHtml 三连转义导出单源 + hlSafe 放行段并档 RT 超集
  *    （<em>/<mark> 可带双引号 class；大小写/单引号变体仍 fail-closed）+ DiagView/
- *    IntegrationGuide 本地三连收编源锚；
+ *    IntegrationGuide 本地三连合并源锚；
  *  D indexSettingsCatalog：CLUSTER_SETTINGS_CATALOG 补 logger.org.elasticsearch.discovery、
  *    SETTINGS_CATALOG 动态段补 unassigned.node_left.delayed_timeout/max_refresh_listeners、
  *    静态段补 sort.field/sort.order（目录键去 index. 前缀口径，normKey 消费零视图改动）；
  *  E AnalysisSettingsView 参数释义消费 + 两处裸 err 并轨 friendlyEsError 源锚；
- *  F DiagView escapeHtml 收编 + allocation-explain/hot-threads 两处裸 err 并轨 +
+ *  F DiagView escapeHtml 合并 + allocation-explain/hot-threads 两处裸 err 并轨 +
  *    .dg-stuck 死样式退役源锚；
  *  G QueryXrayView runTv catch 补 tvErr 内联 + 两处 toast friendly 源锚；
  *  H ScoreExplainView/SearchSandboxView toast friendly 源锚；
@@ -175,7 +175,7 @@ describe('B dslCompletionContext 内置组件三表 + 参数中文词表（560�
   });
   it('ANALYSIS_PARAM_ZH：高频参数词表（560 钉 ≥12，561 扩容至 24）且任务点名键全在册；表外键回落空串语义（消费侧 find 兜底）', () => {
     expect(Object.keys(ANALYSIS_PARAM_ZH).length).toBeGreaterThanOrEqual(12);
-    /* 561 随迁（击穿者：561 工蚁2，词表按任务扩容 10 键：ngram/edge_ngram/shingle/
+    /* 561 同步更新（击穿者：561 工蚁2，词表按任务扩容 10 键：ngram/edge_ngram/shingle/
        pattern_replace/stemmer 族参数）——560 批 12~15 规模钉面随任务升级：上限放宽到 25
        （24+1 余量同 560 批风格），560 点名键与中文释义断言零改 */
     expect(Object.keys(ANALYSIS_PARAM_ZH).length).toBeLessThanOrEqual(25);
@@ -210,7 +210,7 @@ describe('C highlightSanitize escapeHtml 单源 + hlSafe em/mark 并档（560）
     expect(hlSafe('<MARK>y</MARK>')).not.toContain('<MARK');
   });
 
-  it('DiagView/IntegrationGuide 本地三连收编（import 单源，本地 function 退役）', () => {
+  it('DiagView/IntegrationGuide 本地三连合并（import 单源，本地 function 退役）', () => {
     const dg = read('views/DiagView.vue');
     const ig = read('components/IntegrationGuide.vue');
     expect(dg).toContain("import { escapeHtml } from '../utils/highlightSanitize';");

@@ -2,10 +2,10 @@ import { ref, type Ref } from 'vue';
 import type * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 
 /* 搜索定位（search locate）Monaco 档：外层搜索框驱动编辑器真定位。
-   — model.findMatches 取全部命中（文本序）；
-   — revealLineInCenter + setPosition + setSelection 滚到对应行列并选中；
-   — 大文本/重复命中/空文本/编辑器未挂载（懒渲染）都安全：找不到就静默等待下次跳转。
-   与原生 Ctrl+F 互补：本 composable 提供 UI 级「命中计数 + 当前序号 + 上/下导航」。 */
+ — model.findMatches 取全部命中（文本序）；
+ — revealLineInCenter + setPosition + setSelection 滚到对应行列并选中；
+ — 大文本/重复命中/空文本/编辑器未挂载（懒渲染）都安全：找不到就静默等待下次跳转。
+ 与原生 Ctrl+F 互补：本 composable 提供 UI 级「命中计数 + 当前序号 + 上/下导航」。 */
 
 type EditorLike = monaco.editor.IStandaloneCodeEditor | null | undefined;
 

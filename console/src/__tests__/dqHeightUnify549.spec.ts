@@ -5,7 +5,7 @@
  *   dq-main 34vh 高但编辑器只 200px，余下全变空白带；拖柄调 dq-main 时编辑器不动（拉伸没用），
  *   拖完落盘无重置入口（回不去）。根治=高度链合一：Monaco 在 pane 内 flex 填满，
  *   S/M/L/满 档位改为驱动 dq-main 高度档，拖柄=自定义态，点档位钮=重置入口。
- * ②条件树/编辑器独占态：0 宽 pane 还原柄孤立悬在屏幕右缘（异物）——542 批已立法
+ * ②条件树/编辑器独占态：0 宽 pane 还原柄孤立悬在屏幕右缘（异物）——542 批已约定
  *   工具行 seg 常驻还原，柄的还原职责退役，独占态整栏无柄。
  * ③表格无「顶满当前页」快捷入口（RT 内建放大是全局聚焦面，语义不同）——
  *   表格工具行加「顶满」toggle（收起构建区，表格吃满本页 flex）。
@@ -43,14 +43,14 @@ describe('高度链合一（549 批，用户实报「拉伸没用/回不去了�
     expect(dq, '档位钮 on 判据含非自定义态').toMatch(/editorH === eh\.k && dqMainH <= 0/);
     expect(dq, '点档位钮清自定义高度').toMatch(/@click="editorH = eh\.k; dqMainH = 0"/);
   });
-  it('queryWorkbenchW1 的 34vh 字面锁已随迁（本 spec 承接高度链契约）', () => {
-    /* 原锁 queryWorkbenchW1.spec:101 断言 height: max(260px, 34vh) 在场——随本批退役改锚 */
+  it('queryWorkbenchW1 的 34vh 字面锁已同步更新（本 spec 承接高度链契约）', () => {
+    /* 原锁 queryWorkbenchW1.spec:101 断言 height: max(260px, 34vh) 在场——随退役改锚 */
     expect(dq).not.toContain('max(260px, 34vh)');
   });
 });
 
 describe('独占态柄隐藏（549 批，用户实报「孤立拖柄」）', () => {
-  it('WorkbenchLayout：独占态（maximizedId 在场）整栏无柄——还原走工具行 seg（542 立法）', () => {
+  it('WorkbenchLayout：独占态（maximizedId 在场）整栏无柄——还原走工具行 seg（542 约定）', () => {
     expect(wl).toMatch(/:last="stacked \|\| isLastPane\(i\) \|\| maximizedId != null"/);
   });
 });

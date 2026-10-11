@@ -134,7 +134,7 @@ beforeEach(() => {
 });
 afterEach(() => { while (apps.length) apps.pop()!.unmount(); });
 
-describe('775 A0 挂载不变量负锚（现状即守卫，非本批刀面）', () => {
+describe('775 A0 挂载不变量负锚（现状即守卫，非刀面）', () => {
   it('页头四既有钮+双栏编辑器+引导空态', async () => {
     const { app, host } = await mountView();
     expect(host.textContent).toContain('索引配置校验器');
@@ -199,7 +199,7 @@ describe('775 G250 快速 Lint/校验+Dry-run/拉取钮在途态（铁律 D·次
     await settle(10);
     expect(lintBtn.disabled, '完成复常解禁').toBe(false);
     expect((lintBtn.textContent || '').replace(/\s+/g, ''), '复常文案').toBe('快速Lint');
-    expect(lintBtn.querySelector('.spinning'), 'spinning 退场').toBe(null);
+    expect(lintBtn.querySelector('.spinning'), 'spinning 移除').toBe(null);
     expect(lintBtn.querySelector('[class*="lucide-play"]'), 'Play 图标复位').toBeTruthy();
     app.unmount();
   });
@@ -219,7 +219,7 @@ describe('775 G250 快速 Lint/校验+Dry-run/拉取钮在途态（铁律 D·次
     releaseValidate(REPORT_OK, true);
     await settle(10);
     expect((dryBtn.textContent || '').replace(/\s+/g, ''), '复常文案').toBe('校验+Dry-run');
-    expect(dryBtn.querySelector('.spinning'), 'spinning 退场').toBe(null);
+    expect(dryBtn.querySelector('.spinning'), 'spinning 移除').toBe(null);
     expect(dryBtn.querySelector('[class*="lucide-flask-conical"]'), 'FlaskConical 图标复位').toBeTruthy();
     app.unmount();
   });
@@ -246,7 +246,7 @@ describe('775 G250 快速 Lint/校验+Dry-run/拉取钮在途态（铁律 D·次
     await settle(4);
     const fetchBtn2 = findBtn(host, /拉取\s*settings/);
     expect((fetchBtn2.textContent || '').replace(/\s+/g, ''), '复常文案').toContain('拉取settings');
-    expect(fetchBtn2.querySelector('.spinning'), 'spinning 退场').toBe(null);
+    expect(fetchBtn2.querySelector('.spinning'), 'spinning 移除').toBe(null);
     expect(fetchBtn2.querySelector('[class*="lucide-download"]'), 'Download 图标复位').toBeTruthy();
     app.unmount();
   });

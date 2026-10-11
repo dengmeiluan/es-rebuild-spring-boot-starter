@@ -87,7 +87,7 @@ describe('CurrentIdxChip（五百二十五批）', () => {
     await settle();
     expect(store.pickedIdx).toBe('');
     expect(localStorage.getItem('es_picked')).toBe('');
-    expect(host.querySelector('.cic'), '清空后整件退场').toBeNull();
+    expect(host.querySelector('.cic'), '清空后整件移除').toBeNull();
   });
 
   it('复制深链钮：copyText 收到含 ?idx= 的 URL（hash 路由形态），成功走 notify success', async () => {

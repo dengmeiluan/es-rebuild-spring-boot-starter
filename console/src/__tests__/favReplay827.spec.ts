@@ -10,7 +10,7 @@ import { replayFavorite, replayTarget } from '../utils/favReplay';
 // 根因②DevToolsView consumePrefill 只挂 onMounted 而 DevToolsView 在 KEEP_ALIVE_VIEWS 白名单
 // =缓存实例再进入不消费——es-console.devtools.open 既有 5 写入方（DslQuery/Watcher/IndexHub/
 // Ilm/CmdPalette）预填在缓存态全被吞（App.vue 白名单注释 line95「深链预填在 onActivated 下仍可
-// 消费」的入名单漏执法）。
+// 消费」的入名单漏）。
 // 全类清点（826 批⑥在案）：9 支 carry 键消费方余 7 支全在位=A4 全类守卫锚固化。
 
 const rd = (p: string) => readFileSync(join(__dirname, p), 'utf-8');
@@ -76,7 +76,7 @@ describe('favReplay827 devtools 分支（实报根因①）', () => {
   });
 });
 
-describe('favReplay827 KeepAlive 预填执法（实报根因②）', () => {
+describe('favReplay827 KeepAlive 预填（实报根因②）', () => {
   it('B1 DevToolsView consumePrefill 挂 onActivated（白名单再进入仍消费）', () => {
     const v = rd('../views/DevToolsView.vue');
     expect(v).toMatch(/onActivated\(\s*\(\)\s*=>\s*\{?\s*consumePrefill\(\)\s*\}?\s*\)/);

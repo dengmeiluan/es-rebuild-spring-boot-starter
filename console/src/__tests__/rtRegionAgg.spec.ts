@@ -1,5 +1,5 @@
 /**
- * 二百二十七批：RT 选区聚合（summarize 收编 + 框选自动聚合）。
+ * 二百二十七批：RT 选区聚合（summarize 合并 + 框选自动聚合）。
  * 锁定：
  * 1) Ctrl+点两格数值 → 状态栏 Σ/avg/min/max/count（aggStats 走 summarize 的行为回归）；
  * 2) 框选区域 → 浮动条直读 Σ 与数值占比（无需 Ctrl+点击）；

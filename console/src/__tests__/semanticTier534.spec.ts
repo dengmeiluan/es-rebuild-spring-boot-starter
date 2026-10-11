@@ -1,5 +1,5 @@
 /**
- * 五百三十四批「语义档」源锚（工蚁 W5）：SlmView / WatcherView 页头状态中文主显换装。
+ * 五百三十四批「语义档」源锚（工蚁 W5）：SlmView / WatcherView 页头状态中文主显改用。
  *
  * 断言落在源文本上（semanticTier531/533 同理由：happy-dom 不参与 scoped <style> 与
  * MetaStrip 插值计算，渲染后断言是死断言）：

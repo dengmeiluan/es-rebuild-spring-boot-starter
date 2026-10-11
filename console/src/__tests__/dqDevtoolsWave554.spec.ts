@@ -1,15 +1,15 @@
 /**
- * 五百五十四批·四页重造轨 B1（DslQuery + DevTools）· 契约记档。
+ * 五百五十四批·四页重造轨 B1（DslQuery + DevTools）· 契约备案。
  *
  * ① (P1) DQ RawIo 常驻入口——此前钮在 RT #bar-extra 仅 resp 在场渲染，查询失败
  *    （queryErr、resp=null）全页无取数入口；工具行右段 .dq-tb-r 常驻 Terminal 钮
  *    （打开同一 RawIoModal，openRawIo 取数逻辑零触；RT 结果行钮保留成功态就地快查）。
- * ② (P2) DQ 错误面板降层——私造 .dq-err 四边框壳+独立标题行退役，收编全局 .err-bar
+ * ② (P2) DQ 错误面板降层——私造 .dq-err 四边框壳+独立标题行退役，合并全局 .err-bar
  *    范式（theme.css :553）+ errPreHtml/errMeta 双参（XmigrateView :60 先例）；
- *    重试钮与 pre max(240px,42vh) 钳制保留（531 口径冻结面，queryFlat534 字面锁随迁）。
+ *    重试钮与 pre max(240px,42vh) 钳制保留（531 口径冻结面，queryFlat534 字面锁同步更新）。
  * ③ (P2) DQ 历史/保存面板 actions 加 'curl'——QueryHistoryPanel 行级 emit（552 先例），
  *    命令组装归宿主：行自持 query/index 组 POST /{idx}/_search -d 写剪贴板
- *    （DevToolsView histCurl 先例手法平移；savedRows 映射随迁补 index）。
+ *    （DevToolsView histCurl 先例手法平移；savedRows 映射同步更新补 index）。
  * ④ (P2) DevTools 请求域工具迁位——插入骨架/格式化/压缩/收藏/清空五钮自响应 pane
  *    #actions 迁回请求 pane #actions（域归属归位）；响应头只留响应观测族
  *    （标题/重试/RawIo/MetaStrip/响应搜索）；dtLint/err-bar 落位不动。
@@ -39,7 +39,7 @@ describe('554 ①：DQ RawIo 常驻入口（工具行右段）', () => {
   });
 });
 
-describe('554 ②：DQ 错误面板收编全局 .err-bar 范式', () => {
+describe('554 ②：DQ 错误面板合并全局 .err-bar 范式', () => {
   it('err-bar 形在场（role=alert 377 守卫），私造壳标题行退役', () => {
     expect(dq).toContain('<div v-if="queryErr" role="alert" class="err-bar dq-err">');
     expect(dq, '独立标题行退役').not.toContain('查询失败（详情）');
@@ -53,7 +53,7 @@ describe('554 ②：DQ 错误面板收编全局 .err-bar 范式', () => {
   });
   it('重试钮与 pre max(240px,42vh) 钳制保留；壳框归全局不再自持', () => {
     expect(dq).toMatch(/:disabled="running" @click="runQuery">重试</);
-    expect(dq, '531 口径冻结面（queryFlat534 随迁保形）').toMatch(/\.dq-err pre \{[^}]*max-height: max\(240px, 42vh\);/);
+    expect(dq, '531 口径冻结面（queryFlat534 同步更新保形）').toMatch(/\.dq-err pre \{[^}]*max-height: max\(240px, 42vh\);/);
     const rule = dq.slice(dq.indexOf('.dq-err {'), dq.indexOf('}', dq.indexOf('.dq-err {')));
     expect(rule, '壳描边不回流（err-line 归全局 .err-bar 承担）').not.toContain('border');
     expect(rule, '壳内衬不回流').not.toContain('padding');
@@ -64,12 +64,12 @@ describe('554 ②：DQ 错误面板收编全局 .err-bar 范式', () => {
 
 describe('554 ③：DQ 历史/保存面板行级 curl', () => {
   it('历史面板 actions 加 curl + @curl 接线', () => {
-    /* 562 随迁（击穿者：kibanaWave562 K4——历史行带到 DevTools 新 Tab）：actions 加 'newtab'，
+    /* 562 同步更新（击穿者：kibanaWave562 K4——历史行带到 DevTools 新 Tab）：actions 加 'newtab'，
        面板行级仅 emit、_prefill 组装归宿主 histNewTab（openInDevTools 通道） */
     expect(dq).toMatch(/:actions="\['play', 'fill', 'copy', 'fav', 'curl', 'newtab', 'del'\]"/);
     expect(dq).toContain('@curl="histCurl"');
   });
-  it('保存面板 actions 加 curl（行自持 index：savedRows 映射随迁补 index）', () => {
+  it('保存面板 actions 加 curl（行自持 index：savedRows 映射同步更新补 index）', () => {
     expect(dq).toMatch(/:actions="\['play', 'copy', 'rename', 'curl', 'del'\]"/);
     expect(dq).toContain('const savedRows = computed(() => savedQueries.value.map(sq => ({ name: sq.name, query: sq.dsl, index: sq.idx, ts: sq.ts })));');
   });
@@ -85,10 +85,10 @@ describe('554 ③：DQ 历史/保存面板行级 curl', () => {
 describe('554 ④：DevTools 请求域工具迁位', () => {
   const reqPane = dt.slice(dt.indexOf('#pane-devtools-search-request'), dt.indexOf('#pane-devtools-search-response'));
   const respPane = dt.slice(dt.indexOf('#pane-devtools-search-response'), dt.indexOf('</WorkbenchLayout>'));
-  it('五钮居请求 pane（格式化常驻 + 低频四钮收「⋯」菜单，577 批随迁 563 收编形态）', () => {
+  it('五钮居请求 pane（格式化常驻 + 低频四钮收「⋯」菜单，577 批同步更新 563 合并形态）', () => {
     expect(reqPane).toContain('dt-pane-tt">请求体</span>');
-    /* 五百七十七批随迁：563 批低频动作收 ⋯ 菜单（铁律 C 多按钮合一），菜单项 @click 自带
-       moreOpen = false 关层语义——闭合引号后移，旧子串锚 @click="insertBody" 失配（572-C2 字面随迁） */
+    /* 五百七十七批同步更新：563 批低频动作收 ⋯ 菜单（铁律 C 多按钮合一），菜单项 @click 自带
+       moreOpen = false 关层语义——闭合引号后移，旧子串锚 @click="insertBody" 失配（572-C2 字面同步更新） */
     expect(reqPane).toContain('@click="insertBody(); moreOpen = false"');
     expect(reqPane).toContain('@click="format"');
     expect(reqPane).toContain('@click="minify(); moreOpen = false"');
@@ -107,7 +107,7 @@ describe('554 ④：DevTools 请求域工具迁位', () => {
     }
   });
   it('dtLint 降级条与 err-bar dt-err 落位不动', () => {
-    /* 五百六十一批随迁：lint 形态壳换装 theme.css .lint-bar 单源（.dt-lint 只留高度链钉） */
+    /* 五百六十一批同步更新：lint 形态壳改用 theme.css .lint-bar 单源（.dt-lint 只留高度链钉） */
     expect(reqPane).toContain('lint-bar-err');
     expect(dt).toContain('class="err-bar dt-err"');
   });

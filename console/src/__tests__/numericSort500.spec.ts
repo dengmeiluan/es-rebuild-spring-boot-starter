@@ -27,13 +27,13 @@ describe('排序比较器数值感知（v3.0.0 N5 纠错）', () => {
     expect(Number.isNaN(numeric({ a: 1 }))).toBe(true);
   });
 
-  it('ResultTable 已接入数值感知比较（源码结构断言：弱 typeof 比较形态移除；五百六十批随迁=比较器收编 compareVals 单源，numeric 经其双试生效；五百六十七批随迁=RT 半边对称件 sortableGuard 并入同一 import；六百零三批随迁=useSortChain 并入同一 import）', () => {
+  it('ResultTable 已接入数值感知比较（源码结构断言：弱 typeof 比较形态移除；五百六十批同步更新=比较器合并 compareVals 单源，numeric 经其双试生效；五百六十七批同步更新=RT 半边对称件 sortableGuard 并入同一 import；六百零三批同步更新=useSortChain 并入同一 import）', () => {
     expect(rt).toContain("import { compareVals, sortableGuard, useSortChain } from '../composables/tableSort'");
     expect(rt).toContain('const r = compareVals(va, vb)');
     expect(rt).not.toContain("typeof va === 'number' && typeof vb === 'number' ? va - vb : String(va)");
   });
 
-  it('行为直测：数字型字符串列按数值序（compareVals 单源直演；六百零三批随迁——useTableSort 僵尸壳退役，数值序契约锁 compareVals 本体）', () => {
+  it('行为直测：数字型字符串列按数值序（compareVals 单源直演；六百零三批同步更新——useTableSort 僵尸壳退役，数值序契约锁 compareVals 本体）', () => {
     const vals = ['100', '20', '3'];
     const sorted = vals.slice().sort((a, b) => compareVals(a, b));
     expect(sorted).toEqual(['3', '20', '100']);

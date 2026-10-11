@@ -1,6 +1,6 @@
 /**
  * 五百五十八批工蚁A（轨1 智能提示高亮）hintWave558：五件行为看守。
- *  A monacoJsonQuickFix agg-interval-key 废弃 interval 分支翻案出改名 CodeAction：
+ *  A monacoJsonQuickFix agg-interval-key 废弃 interval 分支修订出改名 CodeAction：
  *    消息拆废弃键名（「使用已废弃的 "interval" 键」）→ 锚后右扫整段改名 "calendar_interval"
  *    （script-inline 同款形态，日历语义为建议文案首选的保守侧）；双缺分支维持零 action；
  *  B monacoJsonQuickFix 513 前导逗号删除：marker 所在行 trimStart 以 ',' 开头 → 删该前导
@@ -8,12 +8,12 @@
  *    仍零 action；',,' 双逗号安全子集零扰动）；
  *  C esError KNOWN 六高频错误码中文映射（query_shard / mapper_parsing / action_request_
  *    validation / document_parsing / rejected_execution / too_many_buckets；叶子先于
- *    包装型命中，527 位置立法）+ HTTP 400/500/503 兜底（556 批五码扩容，叶子优先零扰动）；
+ *    包装型命中，527 位置约定）+ HTTP 400/500/503 兜底（556 批五码扩容，叶子优先零扰动）；
  *  D dslLint 两盲区：① FIELD_CLAUSES 收 exists——{"field":x} 值位字段引用进 unknown-field
  *    口径（root-bare-clause 顺带覆盖根层裸 exists）；② AGG_FIELD_METRICS 判定域 field 值
  *    复用 unknown-field 口径（aggs.terms.field 拼错静默空桶）；零 ctx 两件零回归；
  *  E dslCompletionContext DSL_VALUE_TYPE_HINTS 补 date_nanos + geo_point 两档
- *    （dslValueTiers540 B 段负锁随迁翻案——540 regime 收窄，与 sqlCompletion/LuceneInput
+ *    （dslValueTiers540 B 段负锁同步更新修订——540 regime 收窄，与 sqlCompletion/LuceneInput
  *    姊妹面对齐；detail 与 values 逐字同源平移）。
  *
  * stub 范式：A/B 段照 quickFixDslLint534 / codeActionQuickFix（vi.hoisted caps + editor.api
@@ -114,7 +114,7 @@ function applyEdits(doc: string, edits: { textEdit: { range: any; text: string }
 beforeAll(() => { ensureJsonQuickFixes(); ensureDslLintQuickFixes(); });
 beforeEach(() => { caps.markers = []; caps.filter = null; });
 
-/* ═══ A：agg-interval-key 废弃 interval 分支翻案出改名 action ═══ */
+/* ═══ A：agg-interval-key 废弃 interval 分支修订出改名 action ═══ */
 describe('558 A：agg-interval-key 废弃 interval → interval 改名 calendar_interval', () => {
   it('正向：消息拆废弃键名右扫整段改名，合成即合法 DSL', () => {
     const doc = '{"date_histogram": {"interval": "1h"}}';
@@ -133,7 +133,7 @@ describe('558 A：agg-interval-key 废弃 interval → interval 改名 calendar_
     expect(() => JSON.parse(after)).not.toThrow();
   });
 
-  it('负向：双缺分支维持零 action（557 记档不扩）/ 文档无废弃键字面零 action（宁缺勿错）', () => {
+  it('负向：双缺分支维持零 action（557 备案不扩）/ 文档无废弃键字面零 action（宁缺勿错）', () => {
     /* 双缺消息：拆不出「使用已废弃的 "…" 键」→ null */
     caps.markers = [dslMarkerAt(2, 18)];
     recordDslLintMarkers(URI_STR, [dslEntry(2, 18, 'agg-interval-key', 'date_histogram 缺时间间隔键：需写 calendar_interval 或 fixed_interval 之一（旧 "interval" 已废弃）')]);
@@ -192,27 +192,27 @@ describe('558 C：esError 六高频错误码中文映射 + HTTP 兜底三码', (
     expect(friendlyEsError('mapper_parsing_exception: failed to parse field [ts]')).not.toContain('mapping 解析失败');
   });
 
-  it('位置立法（527 先例）：叶子原因先于包装型命中，不被泛文案吞掉', () => {
+  it('位置约定（527 先例）：叶子原因先于包装型命中，不被泛文案吞掉', () => {
     const raw = '{"error":{"root_cause":[{"type":"query_shard_exception","reason":"Failed to parse query [x]"}],"type":"search_phase_execution_exception","reason":"all shards failed"}}';
     const out = friendlyEsError(raw);
     expect(out).toContain('查询构建错误');
     expect(out).not.toContain('查询执行失败');
     /* parsing_exception 泛串是 mapper_parsing_exception / document_parsing_exception 的子串：
-       不前置立法会被泛文案吞掉——子串共存时叶子赢 */
+       不前置约定会被泛文案吞掉——子串共存时叶子赢 */
     const raw2 = '{"error":{"type":"mapper_parsing_exception","reason":"failed to parse"}}';
     expect(friendlyEsError(raw2)).toContain('mapping 解析失败');
     expect(friendlyEsError(raw2)).not.toContain('DSL 解析失败');
   });
 
-  it('HTTP 400/500/503 兜底映射；既有叶子映射优先零扰动（556 立法延续）', () => {
+  it('HTTP 400/500/503 兜底映射；既有叶子映射优先零扰动（556 约定延续）', () => {
     expect(friendlyEsError('HTTP 400')).toContain('400');
     expect(friendlyEsError('HTTP 500')).toContain('500');
     expect(friendlyEsError('HTTP 503')).toContain('503');
-    /* body 带 ES error.type 时叶子先命中先赢（KNOWN 尾部立法） */
+    /* body 带 ES error.type 时叶子先命中先赢（KNOWN 尾部约定） */
     expect(friendlyEsError('HTTP 400 index_not_found_exception')).toContain('索引不存在');
   });
 
-  it('ctx 前缀重拼：组装态消息「id: 原因」结构共存（commitFailReason 立法同源）', () => {
+  it('ctx 前缀重拼：组装态消息「id: 原因」结构共存（commitFailReason 约定同源）', () => {
     /* 组装态消息（notify 会整条再喂 friendlyEsError）：泛 parsing_exception 命中点在
        'mapper_' 词中，前缀剥离到不了 id 的 ASCII 冒号 → 「a: 」结构自然保留 */
     const out = friendlyEsError('失败 1 条（已保留待重试）— a: mapper_parsing_exception: failed to parse field [name]');
@@ -266,7 +266,7 @@ describe('558 D②：AGG_FIELD_METRICS 判定域 field 值复用 unknown-field �
 });
 
 /* ═══ E：DSL_VALUE_TYPE_HINTS 补 date_nanos + geo_point 两档 ═══ */
-describe('558 E：DSL_VALUE_TYPE_HINTS 姊妹面对齐两档（540 负锁随迁翻案）', () => {
+describe('558 E：DSL_VALUE_TYPE_HINTS 姊妹面对齐两档（540 负锁同步更新修订）', () => {
   it('date_nanos / geo_point 档与 sqlCompletion VAL_FORMAT_HINTS 同值同形', () => {
     expect(DSL_VALUE_TYPE_HINTS.date_nanos).toEqual({ detail: 'date-math 格式提示 · date_nanos', values: ['now-1d/d', 'now-1h/h'] });
     expect(DSL_VALUE_TYPE_HINTS.geo_point).toEqual({ detail: '字面提示 · geo_point', values: ['40.71,-74.01'] });

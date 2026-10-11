@@ -20,7 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * ES 服务端版本能力矩阵（）：版本感知架构的唯一判定入口。
+ * ES 服务端版本能力矩阵（版本感知架构的唯一判定入口。
  *
  * <p>连接档案在探活/测试连接时记录服务端 {@code version.number}（如 {@code 6.8.23} /
  * {@code 7.10.1} / {@code 8.17.0}），数据面需要按版本分叉的请求（mapping type、

@@ -5,18 +5,18 @@
         <button class="btn sm ghost" @click="load"><RefreshCw :size="12" :class="{ spin: loading }" /> 刷新</button>
       </template>
 
-      <!-- .rr-err 私造红壳（err 色/err-soft 底/radius/padding）收编全局 .err-bar
-           形态（theme.css :554 单源，558b pf-err 判例；err-bar 自带 margin-bottom 与原值同档），
-           rr-err 锚保留；重试钮走 .err-bar .btn 右靠档 + role=alert 语义补齐 -->
+      <!-- .rr-err 私造红壳（err 色/err-soft 底/radius/padding）合并全局 .err-bar
+ 形态（theme.css :554 单源，558b pf-err 先例；err-bar 自带 margin-bottom 与原值同档），
+ rr-err 锚保留；重试钮走 .err-bar .btn 右靠档 + role=alert 语义补齐 -->
       <div v-if="loadErr" role="alert" class="err-bar rr-err">
 {{ loadErr }}
         <button class="btn sm ghost" @click="load">重试</button>
       </div>
 
       <!-- 手写 rr-tbl 换壳 QRT rows 型——自造状态漏斗/kw 过滤门控/手写 copyMatrix
-           全退役，过滤收口内核 quickFilter（显示与导出同源走 sortedRows，viewRows「所见即所复制」
-           锁语义天然继承）；导出 CSV/MD/XLSX/PNG 与右键复制矩阵归内核（状态列导出人话值与旧
-           copyMatrix 同口径，说明列恒 raw 原文）。空态/骨架走内核 empty-text/empty-hint/loading。 -->
+ 全退役，过滤收口内核 quickFilter（显示与导出同源走 sortedRows，viewRows「所见即所复制」
+ 锁语义天然继承）；导出 CSV/MD/XLSX/PNG 与右键复制矩阵归内核（状态列导出人话值与旧
+ copyMatrix 同口径，说明列恒 raw 原文）。空态/骨架走内核 empty-text/empty-hint/loading。 -->
       <template v-else>
         <div v-if="rows.length" class="rr-tip">
           只补新增字段,绝不修改/删除既有映射;类型冲突 fail-closed,需走
@@ -37,12 +37,12 @@
           :empty-hint="RR_EMPTY_HINT"
         >
           <!-- 状态列 #cell- 槽保 StatusPill 语义：rows 携人话状态值（quickFilter 中文可命中、
-               导出与旧 copyMatrix 同口径），tone 由 STATUS_TONE 反查（STATUS_TEXT 值全站唯一） -->
+ 导出与旧 copyMatrix 同口径），tone 由 STATUS_TONE 反查（STATUS_TEXT 值全站唯一） -->
           <template #cell-状态="{ value }">
             <StatusPill :tone="STATUS_TONE[value] ?? 'n'" :label="value" />
           </template>
           <!-- 索引列：原纯 MarkText 断链 → 补 goHub 跳转芯片（XmigrateView 目标索引芯片同范式，
-               /indices?idx= 直达索引工作区；IndexHub 经 useIdxState 消费 ?idx=，无携带键需求） -->
+ /indices?idx= 直达索引工作区；IndexHub 经 useIdxState 消费 ?idx=，无携带键需求） -->
           <template #cell-索引="{ value }">
             <span class="mono" :title="value">{{ value }}</span>
             <button class="rr-go" :aria-label="'打开索引工作区：' + value" title="打开索引工作区" @click.stop="gotoHub(value)"><ExternalLink :size="11" /></button>
@@ -71,7 +71,7 @@ const props = defineProps<{ show: boolean }>();
 const emit = defineEmits<{ (e: 'update:show', v: boolean): void }>();
 
 /* 620 固定宽无视口钳制（≤620px 视口整条溢出）——按视口 94% 收口，
-   上限仍 620（大屏观感不变）；本站纯 SPA，window 直读无 SSR 顾虑 */
+ 上限仍 620（大屏观感不变）；本站纯 SPA，window 直读无 SSR 顾虑 */
 const drawerW = computed(() => Math.min(620, Math.round(window.innerWidth * 0.94)));
 
 const router = useRouter();
@@ -108,14 +108,14 @@ function shortReason(reason?: string) {
 }
 
 /* 换壳 QRT rows 型——列名与旧表头逐字同源；状态列携 statusText 人话值
-   （quickFilter 中文可命中、内核导出与旧 copyMatrix「状态人话列」同口径）、
-   索引/说明携原文（说明显示 shortReason 走 #cell- 槽，title/导出/复制恒 raw） */
+ （quickFilter 中文可命中、内核导出与旧 copyMatrix「状态人话列」同口径）、
+ 索引/说明携原文（说明显示 shortReason 走 #cell- 槽，title/导出/复制恒 raw） */
 const RR_COLS = ['状态', '索引', '说明'];
 const RR_EMPTY_HINT = '本宿主以 client 模式接入且启动期对账开启时，每次应用启动会自动按 @Mapping/@Field 期望补全已有索引的新增字段，结果在这里汇总';
 const rrMatrix = computed<(string)[][]>(() =>
   rows.value.map(r => [statusText(r.status), r.index, String(r.reason || '')]));
 /* tone 反查表：rows 携人话值，StatusPill tone 由 statusText(statusPill 判据) 构建时定档；
-   STATUS_TEXT 值两两互异（'索引缺失'/'索引缺失（强制档）' 亦不同串），未收录状态回落 'n' */
+ STATUS_TEXT 值两两互异（'索引缺失'/'索引缺失（强制档）' 亦不同串），未收录状态回落 'n' */
 const STATUS_TONE = Object.fromEntries(
   Object.keys(STATUS_TEXT).map(k => [STATUS_TEXT[k], statusPill(k)]),
 ) as Record<string, 'g' | 'y' | 'r' | 'n'>;
@@ -131,7 +131,7 @@ async function load() {
       addedCount: x.addedCount, conflictCount: x.conflictCount,
     }));
   } catch (e: any) {
-    /*  A：ES 错误友好化——裸 message 换全站 friendlyEsError 口径 */
+    /* A：ES 错误友好化——裸 message 换全站 friendlyEsError 口径 */
     loadErr.value = friendlyEsError(String(e?.message ?? e));
   } finally {
     loading.value = false;
@@ -144,7 +144,7 @@ watch(() => props.show, v => { if (v) { kw.value = ''; load(); } });
 
 <style scoped>
 .rr-tip { font-size: var(--fs-xs); color: var(--tx2); background: var(--bg2); border-radius: var(--r-s); padding: var(--sp-2) var(--sp-2h); margin-bottom: var(--sp-2h); line-height: 1.7; }
-/* .rr-err 私造红壳随收编 .err-bar 单源退役（margin-bottom 与 err-bar 自带值同档） */
+/* .rr-err 私造红壳随合并 .err-bar 单源退役（margin-bottom 与 err-bar 自带值同档） */
 /* 漏斗 chips/rr-none 随换壳退役，工具行只留 quick-filter 输入（kernel 过滤收口） */
 .rr-tools { display: flex; align-items: center; gap: var(--sp-1h); margin-bottom: var(--sp-2); }
 .rr-kw { width: 200px; height: 24px; }

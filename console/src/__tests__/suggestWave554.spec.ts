@@ -255,8 +255,8 @@ describe('B LuceneInput keyword 族收口 + geo_point 档', () => {
     expect(li).toContain("if (AGG_KEYWORD_TYPES.includes(fieldType(it.text))) suggest(it.text, '');");
     expect(li).toContain("const GEO_HINTS = ['40.71,-74.01'];");
     expect(li).toContain("if (t === 'geo_point') return GEO_HINTS.filter(h => !p || h.toLowerCase().startsWith(p)).map(withSegs);");
-    /* 560 随迁：known 行头部补 `s.field === '_exists_'`、尾部补 t === 'version'
-       （两档 560 立法，滤空提示随权）——既有各族档/静态档语义零回退 */
+    /* 560 同步更新：known 行头部补 `s.field === '_exists_'`、尾部补 t === 'version'
+       （两档 560 约定，滤空提示随权）——既有各族档/静态档语义零回退 */
     expect(li).toContain("const known = s.field === '_exists_' || KEYWORD_VALUE_TYPES.includes(t) || t === 'date' || t === 'boolean' || t === 'ip' || t === 'date_nanos' || t === 'text' || t === 'geo_point' || t === 'version' || RANGE_FLAT_TYPES.includes(t) || NUMERIC_TYPES.includes(t);");
   });
 
@@ -408,7 +408,7 @@ describe('E sqlCompletion ④ text 子字段档', () => {
 describe('F dslAssist 挂载即 ensure（SearchSandboxView immediate 范式）', () => {
   it('F1 源码锁：QueryXrayView watch immediate ensure + 两视图 fields() 纯读', () => {
     expect(qx, '挂载即 ensure（index 变化跟随重拉）').toContain('watch(index, () => { void ensureAssistFields(); }, { immediate: true });');
-    expect(qx, 'dslAssist fields() 惰性 ensure 退役为纯读（661 随迁：terms 闭包同行追加，纯读语义零回退）').toContain('const dslAssist = { fields: () => assistFields.value, terms: (f: string, p: string) => qxTerms.suggestAsync(f, p) };');
-    expect(rd, 'dslAssist fields() 纯读（ensure 已由既有 watch immediate 承担；661 随迁：terms 闭包同行追加）').toContain('const dslAssist = { fields: () => assistFields.value, terms: (f: string, p: string) => rdTerms.suggestAsync(f, p) };');
+    expect(qx, 'dslAssist fields() 惰性 ensure 退役为纯读（661 同步更新：terms 闭包同行追加，纯读语义零回退）').toContain('const dslAssist = { fields: () => assistFields.value, terms: (f: string, p: string) => qxTerms.suggestAsync(f, p) };');
+    expect(rd, 'dslAssist fields() 纯读（ensure 已由既有 watch immediate 承担；661 同步更新：terms 闭包同行追加）').toContain('const dslAssist = { fields: () => assistFields.value, terms: (f: string, p: string) => rdTerms.suggestAsync(f, p) };');
   });
 });

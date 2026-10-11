@@ -27,8 +27,8 @@ describe('useTablePrefs 前缀冻结模型（236 批 P2-4）', () => {
     expect(rt).toMatch(/label: freezeN\.value > 1 \? `取消冻结（前 \$\{freezeN\.value\} 列）` : '取消冻结'/);
     expect(rt).toMatch(/'rt-col-frozen': isFrozenCol\(c\)/);
     expect(rt).toMatch(/:style="frozenStyle\(c\)"/);
-    /* 五百六十批锚随迁：装配收编 useColFit.frozenStyleOf 单源（锁意图不变——基数 98=标识列
-       勾选 46+序号 52 以常参注入；FROZEN_DEFAULT_W=180 共用常量随迁单源，组件本地声明退役） */
+    /* 五百六十批锚同步更新：装配合并 useColFit.frozenStyleOf 单源（锁意图不变——基数 98=标识列
+       勾选 46+序号 52 以常参注入；FROZEN_DEFAULT_W=180 共用常量同步更新单源，组件本地声明退役） */
     expect(rt).toMatch(/frozenStyleOf\(visibleCols\.value, colWidths\.value, col, freezeN\.value, 98, true\)/);
     expect(rt).toMatch(/import \{[^}]*frozenStyleOf[^}]*\} from '\.\.\/composables\/useColFit'/);
   });
@@ -37,7 +37,7 @@ describe('useTablePrefs 前缀冻结模型（236 批 P2-4）', () => {
     expect(qrt).toMatch(/'qrt-col-frozen': prefsOn && isFrozenCol\(c\)/);
     expect(qrt).toMatch(/'qrt-col-frozen': prefsOn && isFrozenCol\(shownCols\[ci\]\)/);
     expect(qrt).toMatch(/:style="prefsOn \? frozenStyle\(c\) : undefined"/);
-    /* 五百六十批锚随迁：装配收编 useColFit.frozenStyleOf 单源（锁意图不变——基数 52=序号列
+    /* 五百六十批锚同步更新：装配合并 useColFit.frozenStyleOf 单源（锁意图不变——基数 52=序号列
        常参注入、prefsOn 门控透传） */
     expect(qrt).toMatch(/frozenStyleOf\(visibleCols\.value, colWidths\.value, col, freezeN\.value, 52, prefsOn\.value\)/);
     expect(qrt).toContain("key: 'freeze-col', label: '冻结到此列'");

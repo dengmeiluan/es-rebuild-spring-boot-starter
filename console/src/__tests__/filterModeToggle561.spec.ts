@@ -1,7 +1,7 @@
 /**
  * ：QRT/RT filterMode 组合档切换行为锚（轨5 斥候缺口补齐——组件行为 spec
  * 此前零 fmode 弹层槽切换锚/RT 提示行切换锚/prop 动态跟随锚；534 只锁 QRT 提示行钮
- * 与 OR 播种）。本批 bar-left 筛选态提示 span 收编 TableFilteredHint 片段组件，行为锁
+ * 与 OR 播种）。 bar-left 筛选态提示 span 合并 TableFilteredHint 片段组件，行为锁
  * 随组件化复验（DOM 能力等价：类名/文案/渲染条件零变动）。
  * 锁定：
  * 1) RT 提示行切换钮 AND→OR 就地翻转（QRT 534 已锁，RT 半边补齐）+ 行集/计数同步；

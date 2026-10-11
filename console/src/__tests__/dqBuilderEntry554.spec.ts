@@ -95,7 +95,7 @@ describe('C：行为零变化（红线）', () => {
     /* 入口钮不在执行行作用域内（26px 控制线机制零触；height 26px 是 dq-toolbar 侧独立声明） */
     expect(dq).not.toMatch(/\.dq-run-row[^{]*\.dq-build-tg/);
   });
-  it('构建节头先行顺序锁随迁不破（542 三行合一+553 E 对调）', () => {
+  it('构建节头先行顺序锁同步更新不破（542 三行合一+553 E 对调）', () => {
     const tbAt = dq.indexOf('class="dq-toolbar lr-bar"');
     const buildAt = dq.indexOf('dq-build-tg');
     const prepAt = dq.indexOf('<slot name="toolbar-prepend" />');

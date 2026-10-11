@@ -469,7 +469,7 @@ public class AdhocRebuildJob {
     }
 
     public void addRound(Map<String, Object> round) {
-        // 轮次耗时透出。本轮起点=上一轮 markMs（无轮次回退 startedAt）；
+        // 轮次耗时透出。起点=上一轮 markMs（无轮次回退 startedAt）；
         // service 按时间顺序 append，markMs 单调递增故差值非负，clamp 兜底时钟回拨，
         // 保证 rounds[] 元素恒含 roundTookMs>=0（收口在本模型：五个 append 调用点自动生效）
         long start = lastRoundMarkMs();
@@ -480,7 +480,7 @@ public class AdhocRebuildJob {
         rounds.add(Collections.unmodifiableMap(round));
     }
 
-    /** 最近一轮的 markMs（无轮次返回 0）——roundTookMs 的本轮起点依据 */
+    /** 最近一轮的 markMs（无轮次返回 0）——roundTookMs 的起点依据 */
     private long lastRoundMarkMs() {
         synchronized (rounds) {
             if (rounds.isEmpty()) {

@@ -3,7 +3,7 @@
  *  A 五参数裸 input（slices / requests_per_second / scroll / timeout / wait_for_active_shards）
  *    接 useInputLint 既有正则（SLICES_RE / RPS_RE / TIME_RE；wfas 无既有正则内联 all/整数）
  *    ——@blur 失焦校验出 .il-hint + 输入即清 watch + label/input :title 中文释义
- *    （UpdateByQueryView :52/:68 姊妹面判例口径，hint msg 逐字同源）；
+ *    （UpdateByQueryView :52/:68 姊妹面先例口径，hint msg 逐字同源）；
  *  B .ra-result 双色横幅分档单源化——err 档挂 theme.css .err-bar（role=alert），
  *    ok 档素底（去 border/radius 双写，保 ok-soft 语义绿）；
  *  C .ra-lint 私有三件套退役 → theme.css 单源 .lint-bar/.lint-bar-warn/.lint-bar-err
@@ -55,7 +55,7 @@ describe('A 五参数 il-hint 校验接线（561 批）', () => {
 });
 
 describe('B ra-result 横幅分档单源（561 批）', () => {
-  it('err 档挂 theme.css .err-bar + role=alert；ok 档 .ra-result（单节点三元换装）', () => {
+  it('err 档挂 theme.css .err-bar + role=alert；ok 档 .ra-result（单节点三元改用）', () => {
     expect(src).toContain(`:class="result?.error ? 'err-bar' : 'ra-result'"`);
     expect(src).toContain(`:role="result?.error ? 'alert' : undefined"`);
   });
@@ -71,14 +71,14 @@ describe('B ra-result 横幅分档单源（561 批）', () => {
 });
 
 describe('C ra-lint 私有规则退役换 lint-bar 单源（561 批）', () => {
-  it('四处体检条换装 lint-bar-err/-warn（err×2 warn×2，role 语义保形）', () => {
+  it('四处体检条改用 lint-bar-err/-warn（err×2 warn×2，role 语义保形）', () => {
     expect(count(src, 'class="lint-bar lint-bar-err"')).toBe(2);
     expect(count(src, 'class="lint-bar lint-bar-warn"')).toBe(2);
     expect(count(src, 'class="ra-lint')).toBe(0);
   });
 
   it('.ra-lint 私有样式三件套退役（scoped style 零规则残留）', () => {
-    expect(style).not.toMatch(/^\.ra-lint/m); /* 退役记档注释可留，CSS 规则必须清零 */
+    expect(style).not.toMatch(/^\.ra-lint/m); /* 退役备案注释可留，CSS 规则必须清零 */
     expect(src).toContain('.lint-bar');
   });
 });

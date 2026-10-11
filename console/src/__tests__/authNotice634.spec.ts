@@ -22,18 +22,18 @@ const codeOf = (p: string) => read(p).replace(/\/\*[\s\S]*?\*\//g, ' ').replace(
 const VIEW = codeOf('views/LiveDashboardView.vue');
 
 describe('六百三十四批：慢请求节权限静默修复', () => {
-  it('外层容器恒渲染（800 随迁：慢请求收编「监控明细」单容器=ld-detail 恒渲染，静默消失根治语义保留）', () => {
+  it('外层容器恒渲染（800 同步更新：慢请求合并「监控明细」单容器=ld-detail 恒渲染，静默消失根治语义保留）', () => {
     expect(VIEW, '旧形态（v-if 门整节）已退役').not.toContain('v-if="auth.canAuditAll()" class="ld-hist-hist"');
     expect(VIEW, '单容器恒渲染').toMatch(/<div class="ld-detail">/);
   });
 
-  it('权限判定下沉内部：授权分支保留原控件与面板（零行为变更；800 随迁=视图内部 v-if）', () => {
+  it('权限判定下沉内部：授权分支保留原控件与面板（零行为变更；800 同步更新=视图内部 v-if）', () => {
     expect(VIEW, '内部授权分支').toContain('v-if="auth.canAuditAll()"');
-    /* 800 随迁：慢请求视图=detailTab==='slow' 内部分支（首开懒加载 ensureDetailLoad 保语义） */
+    /* 800 同步更新：慢请求视图=detailTab==='slow' 内部分支（首开懒加载 ensureDetailLoad 保语义） */
     expect(VIEW, '慢请求视图仍在授权分支内').toContain("detailTab === 'slow'");
     expect(VIEW, '耗时阈值输入保留').toContain('v-model.number="slowThresholdMs"');
-    expect(VIEW, '导出通道保留（802 随迁：⋯ 菜单 copyDetail 分发）').toMatch(/detailTab\.value === 'slow'[^}]{0,60}copySlow\(fmt\)/);
-    /* 784 随迁：三表换装全站 .tbl（tbl zebra 前缀）；慢请求表格保留断言随新类形态 */
+    expect(VIEW, '导出通道保留（802 同步更新：⋯ 菜单 copyDetail 分发）').toMatch(/detailTab\.value === 'slow'[^}]{0,60}copySlow\(fmt\)/);
+    /* 784 同步更新：三表改用全站 .tbl（tbl zebra 前缀）；慢请求表格保留断言随新类形态 */
     expect(VIEW, '慢请求表格保留').toContain('<table class="tbl zebra ld-hist-hist-t">');
   });
 

@@ -22,8 +22,8 @@
     </header>
     <div v-show="!collapsed" class="rp-content"><slot /></div>
     <!-- 被分栏独占隐藏的 pane（handleMaxLabel 在场即互覆盖参与者）保留柄——
-         0 宽 pane+11px 柄=右缘细条，柄上档位钮激活态常显=唯一还原入口（否则独占后无法切回）。
-         手动折叠（title 轨场景）无 handleMaxLabel，柄照旧隐藏。 -->
+ 0 宽 pane+11px 柄=右缘细条，柄上档位钮激活态常显=唯一还原入口（否则独占后无法切回）。
+ 手动折叠（title 轨场景）无 handleMaxLabel，柄照旧隐藏。 -->
     <SplitHandle
       v-if="!last && (!collapsed || handleMaxLabel)"
       :axis="axis"
@@ -80,8 +80,8 @@ const emit = defineEmits<{
 
 const paneStyle = computed(() => {
   /* 折叠塌缩——此前 collapsed 只清 min-width，paneStyle 的 width 原值仍在，
-     折叠后留下一个「空壳面板+竖排标题轨+孤立折叠钮」（实报「按钮分布在线上」）；
-     现塌缩到标题轨宽（vertical 34px / horizontal 34px），旁边 pane 由 fill/flex 自动补位。 */
+ 折叠后留下一个「空壳面板+竖排标题轨+孤立折叠钮」（实报「按钮分布在线上」）；
+ 现塌缩到标题轨宽（vertical 34px / horizontal 34px），旁边 pane 由 fill/flex 自动补位。 */
   if (props.collapsed) {
     return props.axis === 'vertical'
       ? { width: '34px', minWidth: '34px', maxWidth: '34px' }
@@ -117,10 +117,10 @@ const paneStyle = computed(() => {
   border-bottom: 1px solid var(--line);
 }
 /* axis-vertical 竖排标题轨死码退役（ v2 刻意竖排设计随 519/全部 pane spec
-   title:'' 消费清零而失活；layoutOcclusionGuard501/flattenWave534⑤ 字面锁随迁翻负）。
-   边界记档：只退役「竖排轨」——横排 title 头分支与 .rp-title/.rp-toggle 基础档保留
-   （horizontal 轴 dormant 路径 + WorkbenchPaneSpec title 契约未来消费，非本范式射程；
-   WorkbenchLayout wl-restore-rail 独占还原轨同理豁免，见该文件 554 记档）。 */
+ title:'' 消费清零而失活；layoutOcclusionGuard501/⑤ 字面锁同步更新翻负）。
+ 边界：只退役「竖排轨」——横排 title 头分支与 .rp-title/.rp-toggle 基础档保留
+ （horizontal 轴 dormant 路径 + WorkbenchPaneSpec title 契约未来消费，非本范式射程；
+ WorkbenchLayout wl-restore-rail 独占还原轨同理豁免，见该文件 ）。 */
 .rp-content { flex: 1 1 auto; min-width: 0; min-height: 0; overflow: auto; }
 .rp-toggle {
   display: inline-flex;

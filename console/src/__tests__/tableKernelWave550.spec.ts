@@ -1,7 +1,7 @@
 /**
  * 五百五十批（轨3 表格内核）：last(kind) 执行卡 + RT 内建分页 pagerOn + 互斥约定固化。
  *
- * ① last(kind)（547 批记档「下批执行卡」兑现）：
+ * ① last(kind)（547 批备案「下批执行卡」兑现）：
  *    - RawIoRec.kind? 字段 + recordIo 第 8 可选参 + request init ioKind 通道（内部消费，
  *      解构剥离不进公开 fetch 语义——参照 signal 透传形态）；
  *    - ioRecorder.last(pathSub?, kind?) 双参：kind 在场二段过滤 r.kind===kind，未命中回
@@ -13,10 +13,10 @@
  * ② RT 内建分页 pagerOn（QRT 525 批 :561 三参齐备形态逐字平移）：page/pageSize 可选参 +
  *    既有 total 三参齐备才在工具行（rt-bar bar-left）渲染内建 Pagination，翻页/改页大小只
  *    emit（update:page / update:pageSize）给宿主（远端契约同 QRT），取数/切片归宿主。
- *    ═══ 互斥约定（本批固化，消费侧下批执行时必须遵守）═══
+ *    ═══ 互斥约定（固化，消费侧下批执行时必须遵守）═══
  *    宿主 bar-prepend 寄居 Pagination 档（DslQueryView/IndexHubView 现状）不传 page 系
  *    props（三参不齐 → pagerOn 恒 false → 内建档天然不出）；内建档（传齐三参）不寄居——
- *    同一表格同时出现两套分页器是回归事故，由宿主自行二选一。本批不改任何宿主。
+ *    同一表格同时出现两套分页器是回归事故，由宿主自行二选一。不改任何宿主。
  *
  * 设施：rawIo545 / tableKernelWave547 同款（fetch stub 走真实 request 内核；裸 createApp
  * 直挂 pinia 无 router；happy-dom 口径：点击一律 dispatchEvent(new MouseEvent('click'))）。
@@ -76,14 +76,14 @@ describe('五百五十批①：last(pathSub, kind) 双参过滤', () => {
     expect(hit, 'kind 过滤命中执行链记录').toBeTruthy();
     expect(hit!.url).toContain('/cluster/sql/query');
     expect(hit!.kind).toBe('sql');
-    expect(ioRecorder.last('/cluster/sql/')!.url, '单参=路径过滤语义不变（translate 在场即命中——546 记档的误中背景，双参即修复）').toContain('/cluster/sql/translate');
+    expect(ioRecorder.last('/cluster/sql/')!.url, '单参=路径过滤语义不变（translate 在场即命中——546 备案的误中背景，双参即修复）').toContain('/cluster/sql/translate');
     expect(ioRecorder.last('/cluster/other', 'x')!.url).toContain('/cluster/other');
   });
 
   it('未命中回 null 不回退：路径内只有未打标/异标记录时 kind 查询不得回退到未打标档', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 200 })));
     await post('/cluster/sql/translate', '{}'); /* 只有未打标 */
-    expect(ioRecorder.last('/cluster/sql/', 'sql'), '未命中不回退（547 记档口径）').toBeNull();
+    expect(ioRecorder.last('/cluster/sql/', 'sql'), '未命中不回退（547 备案口径）').toBeNull();
     expect(ioRecorder.last('/cluster/other', 'sql'), '异标不回退').toBeNull();
     expect(ioRecorder.last('/nowhere'), '既有 last 未命中语义不变').toBeNull();
   });
@@ -119,7 +119,7 @@ describe('五百五十批①：SqlConsoleView openRawIo 546 find 补丁退役', 
     expect(sqlSrc).toContain("ioRecorder.last('/cluster/sql/', 'sql')");
   });
 
-  it('548 判空形态零触碰（adhocReattach548 锁随迁后的另一半）：notify→return→开弹窗逐字保留', () => {
+  it('548 判空形态零触碰（adhocReattach548 锁同步更新后的另一半）：notify→return→开弹窗逐字保留', () => {
     expect(sqlSrc).toContain("if (!rec) { store.notify('info', '暂无原始 IO 记录，先在本页执行一次操作（记录环近 30 条）再查看'); return; }");
     expect(sqlSrc).toMatch(/return; \}\s*rawIoRec\.value = rec;\s*rawIoShow\.value = true;/);
   });
@@ -216,7 +216,7 @@ describe('五百五十批②：RT pagerOn 行为锁 + 互斥约定', () => {
     expect(next, '下一页钮在场').toBeTruthy();
     await clickIt(next);
     expect(pageGot, '点击下一页 → update:page 意图').toEqual([3]);
-    /* 五百七十七批随迁：563/566 批换装后 .pgn-psel=触发钮（aria-haspopup=listbox），点击开
+    /* 五百七十七批同步更新：563/566 批改用后 .pgn-psel=触发钮（aria-haspopup=listbox），点击开
        n-popover listbox（teleport body）→ 点选项 emit——旧 select.value/change 路径已退役 */
     const sel = host.querySelector<HTMLButtonElement>('.pgn-psel')!;
     expect(sel, '页大小触发钮在场').toBeTruthy();

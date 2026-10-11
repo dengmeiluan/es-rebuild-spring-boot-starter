@@ -96,7 +96,7 @@ beforeEach(() => {
   mappingDetailFn.mockReset().mockResolvedValue(MAPPING);
 });
 
-describe('A hl() 注入通道退役 + MarkText 收编（源锚）', () => {
+describe('A hl() 注入通道退役 + MarkText 合并（源锚）', () => {
   it('v-html 零残留（全站最后一处高亮注入面收口）', () => {
     expect(fp).not.toContain('v-html');
   });

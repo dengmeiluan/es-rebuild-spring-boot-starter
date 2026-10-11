@@ -1,17 +1,17 @@
 /* W2 ：弹层列表 headless 骨架——FieldPicker/SettingsKeyInput 双实例同构抽取（行为保持型重构）。
-   抽取面（两组件现状骨架交集，行为零增量下沉）：
-     open/cursor 状态与 openPanel/close 语义；↑↓ 钳位导航 + scrollToCur；
-     place() fixed 定位（minWidth/上下翻转阈值参数化——两实例数值分歧：280/260/280 与 340/280/300）；
-     onKey 骨架：IME isComposing 守卫 → Esc 关层 → 面板关时 ↑↓ 开层 → 面板关时 Enter 透发（onEnter 可选）
-       → ↑↓ 移 cursor → Enter 三段语义（有候选→onChoose 委托；无候选→收面板+onEnter 透发）；
-     onDocDown 点击外部关闭（document mousedown 注册/注销随组件生命周期，内部收口不暴露）；
-     listId 实例级唯一 id（aria combobox 关联，前缀参数化保持各实例命名语义）；
-     Teleport 挂载点双模式（teleport|inplace——通用约定 8 容器边界载体；FieldPicker 现有 :to prop 逻辑下沉，
-     缺省 'body' 即 SettingsKeyInput 现状）。
-   分歧面（留组件侧，不进骨架）：
-     items 数据源/过滤排序、行渲染与 hint 行、choose 具体回填（v-model/picked emit）、onInput 的 emit 部分、
-     FieldPicker multi 段逻辑（applySeg）与 ensure 拉数（走 onOpen 钩子）、SettingsKeyInput 无 enter 透发
-     （onEnter 缺省即不透发）。模板外壳不抽：各组件 hint 态与行渲染分歧大，留 ~18 行重复是可接受代价。 */
+ 抽取面（两组件现状骨架交集，行为零增量下沉）：
+ open/cursor 状态与 openPanel/close 语义；↑↓ 钳位导航 + scrollToCur；
+ place() fixed 定位（minWidth/上下翻转阈值参数化——两实例数值分歧：280/260/280 与 340/280/300）；
+ onKey 骨架：IME isComposing 守卫 → Esc 关层 → 面板关时 ↑↓ 开层 → 面板关时 Enter 透发（onEnter 可选）
+ → ↑↓ 移 cursor → Enter 三段语义（有候选→onChoose 委托；无候选→收面板+onEnter 透发）；
+ onDocDown 点击外部关闭（document mousedown 注册/注销随组件生命周期，内部收口不暴露）；
+ listId 实例级唯一 id（aria combobox 关联，前缀参数化保持各实例命名语义）；
+ Teleport 挂载点双模式（teleport|inplace——通用约定 8 容器边界载体；FieldPicker 现有 :to prop 逻辑下沉，
+ 缺省 'body' 即 SettingsKeyInput 现状）。
+ 分歧面（留组件侧，不进骨架）：
+ items 数据源/过滤排序、行渲染与 hint 行、choose 具体回填（v-model/picked emit）、onInput 的 emit 部分、
+ FieldPicker multi 段逻辑（applySeg）与 ensure 拉数（走 onOpen 钩子）、SettingsKeyInput 无 enter 透发
+ （onEnter 缺省即不透发）。模板外壳不抽：各组件 hint 态与行渲染分歧大，留 ~18 行重复是可接受代价。 */
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 
 /** place() 定位参数：两实例分歧数值（FieldPicker 280/260/280 为默认；SettingsKeyInput 显式传 340/280/300） */
@@ -35,7 +35,7 @@ type PopupListOpts<T> = {
   onOpen?: () => void;
   /** 弹层挂载点：非空 string = Teleport 目标；false/空 = 就地渲染（跳过 place 的 fixed 坐标计算）。缺省 'body' */
   to?: () => string | false;
-  /** 自定义定位锚点；返回 null/undefined 时本轮跳过定位。缺省使用 rootEl */
+  /** 自定义定位锚点；返回 null/undefined 时跳过定位。缺省使用 rootEl */
   anchor?: () => HTMLElement | null | undefined;
   /** listId 前缀（保持各实例 aria id 命名语义：fxp-/skp-），默认 'pl' */
   idPrefix?: string;
@@ -64,9 +64,9 @@ export function usePopupList<T>(opts: PopupListOpts<T>) {
   const itemId = (i: number) => listId + '-' + i;
 
   /* v3.0.0 纠错：候选集异步缩短（terms 回来/字段清单异步收窄）时高亮可能悬空——
-     onInput 已复位 0 的组件不受影响，但 async 数据源（LuceneInput 值段/FieldPicker ensure）
-     到位发生在输入之后，cursor 指向已消失项造成高亮错位（Enter 有 undefined 守卫不误选，
-     视觉错）。watch 钳位到合法区间。 */
+ onInput 已复位 0 的组件不受影响，但 async 数据源（LuceneInput 值段/FieldPicker ensure）
+ 到位发生在输入之后，cursor 指向已消失项造成高亮错位（Enter 有 undefined 守卫不误选，
+ 视觉错）。watch 钳位到合法区间。 */
   watch(cursor, (c) => {
     const n = opts.items().length;
     if (n === 0) { if (c !== 0) cursor.value = 0; return; }
@@ -125,7 +125,7 @@ export function usePopupList<T>(opts: PopupListOpts<T>) {
   }
 
   /* 点击外部关闭：弹层 Teleport 在 body 下时，弹层自身 mousedown 需 .prevent.stop（模板侧既有处理），
-     否则这里的 document 层判定会先关面板导致 click 选项丢失 */
+ 否则这里的 document 层判定会先关面板导致 click 选项丢失 */
   function onDocDown(e: MouseEvent) {
     if (!rootEl.value?.contains(e.target as Node)) open.value = false;
   }

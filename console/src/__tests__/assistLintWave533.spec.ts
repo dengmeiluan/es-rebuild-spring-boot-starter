@@ -3,7 +3,7 @@
  *
  * 五件事：
  *  A 五视图 setMarkers 挂法锚——RankDebug/ScoreExplain/Aliases(filter)/ReindexAdvanced
- *    (srcQuery+body 两路)/QueryXray：lint computed/banner 已有但编辑器内零划线，本批补
+ *    (srcQuery+body 两路)/QueryXray：lint computed/banner 已有但编辑器内零划线，补
  *    ref + watch + setMarkers（SearchSandboxView 524 批范式：debounce → info 降级 hint →
  *    jaRef.value?.setMarkers?.；banner 保留双通道）；
  *  B RankDebug 手写 sessionStorage 'es-console.link.rankdebug' 三连退役换 useLinkCarry
@@ -73,17 +73,17 @@ describe('A 五视图 setMarkers 挂法锚（banner 保留双通道）', () => {
 
   it('QueryXrayView：dsl-assist 之外补 lintDsl 一路（JSON 非法静默清 markers）', () => {
     expect(qx).toMatch(/<JsonArea ref="qxJaRef" v-model="dsl"/);
-    /* 五百六十二批随迁（击穿者：562 工蚁1——qxLint computed 单源收编，Finding 闭包类型退役，import 收敛单符号） */
+    /* 五百六十二批同步更新（击穿者：562 工蚁1——qxLint computed 单源合并，Finding 闭包类型退役，import 收敛单符号） */
     expect(qx).toContain("import { lintDsl } from '../utils/dslLint'");
-    /* 五百六十二批随迁（击穿者：562 工蚁1——qxLint computed 单源收编，setMarkers 消费 qxLint 全量，降级映射行内联） */
+    /* 五百六十二批同步更新（击穿者：562 工蚁1——qxLint computed 单源合并，setMarkers 消费 qxLint 全量，降级映射行内联） */
     expect(qx).toContain('qxJaRef.value?.setMarkers?.(qxLint.value.map(');
     expect(qx).toContain(DOWNGRADE_LINE);
-    /* 五百六十二批随迁（同上：lintDsl 求值收进 qxLint computed，return 形态+行内条全量兜底） */
+    /* 五百六十二批同步更新（同上：lintDsl 求值收进 qxLint computed，return 形态+行内条全量兜底） */
     expect(qx).toContain('return lintDsl(JSON.parse(dsl.value || \'\'), { fields: assistFields.value });');
   });
 });
 
-describe('B RankDebug useLinkCarry 收编（手写 sessionStorage 三连退役）', () => {
+describe('B RankDebug useLinkCarry 合并（手写 sessionStorage 三连退役）', () => {
   it('负向：字面键名 es-console.link.rankdebug 不得回潮（统一件内拼前缀）', () => {
     expect(rd).not.toContain('es-console.link.rankdebug');
   });
@@ -99,20 +99,20 @@ describe('B RankDebug useLinkCarry 收编（手写 sessionStorage 三连退役�
 });
 
 describe('C RD/SE 编辑器三档高度循环（红线：不引入 height:100% 结构）', () => {
-  it('RD_ED_H_TIERS 三档 + useTierCycle(\'rd.edH\') 收编 + 「高」钮；.rd-card-ed 规则体无 height', () => {
+  it('RD_ED_H_TIERS 三档 + useTierCycle(\'rd.edH\') 合并 + 「高」钮；.rd-card-ed 规则体无 height', () => {
     expect(rd).toContain("RD_ED_H_TIERS = ['max(260px, 42vh)', 'max(340px, 56vh)', 'max(440px, 72vh)']");
-    /* 五百五十八批随迁（击穿者：558 工蚁G——三件套收编 useTierCycle 单源）：键声明字面改接线锚 */
+    /* 五百五十八批同步更新（击穿者：558 工蚁G——三件套合并 useTierCycle 单源）：键声明字面改接线锚 */
     expect(rd).toContain("useTierCycle('rd.edH', RD_ED_H_TIERS)");
     expect(rd).toContain('data-test="rd-ed-h"');
     /* 规则体逐字锁：高度走模板 :style 内联，CSS 只留布局骨架（height:100% 红线） */
     expect(rd).toMatch(/\.rd-card-ed \{ display: flex; flex-direction: column; flex: none; \}/);
   });
 
-  it('SE_ED_H_TIERS 起档 max(300px, 42vh) + useTierCycle(\'se.edH\') 收编；.se-card 规则体无 height', () => {
+  it('SE_ED_H_TIERS 起档 max(300px, 42vh) + useTierCycle(\'se.edH\') 合并；.se-card 规则体无 height', () => {
     expect(se).toContain("SE_ED_H_TIERS = ['max(300px, 42vh)', 'max(390px, 56vh)', 'max(500px, 72vh)']");
     expect(se).toContain("useTierCycle('se.edH', SE_ED_H_TIERS)");
     expect(se).toContain('data-test="se-ed-h"');
-    /* 五百五十四批随迁（击穿者：554 工蚁D⑧——se-card 编辑器外框退役）：框壳字面改退役形，
+    /* 五百五十四批同步更新（击穿者：554 工蚁D⑧——se-card 编辑器外框退役）：框壳字面改退役形，
        布局骨架（flex 纵向/flex:none/overflow）与「规则体无 height」锁意图零触 */
     expect(se).toMatch(/\.se-card \{ border: 0; border-radius: 0; overflow: hidden; display: flex; flex-direction: column; flex: none; \}/);
   });

@@ -19,7 +19,7 @@ describe('PIT _shard_doc 兼容性提示（四十一批）', () => {
   });
 
   it('非该错误的拉取失败仍走 error 通道（不误伤）', () => {
-    /* 五百六十批随迁：error 臂收编 friendlyEsError 单源翻译（前缀逐字保留，语义=非 _shard_doc
+    /* 五百六十批同步更新：error 臂合并 friendlyEsError 单源翻译（前缀逐字保留，语义=非 _shard_doc
        错误仍走 error 通道不变）；warning 指引臂零触 */
     expect(src.includes("store.notify('error', '拉取失败：' + friendlyEsError(msg))")).toBe(true);
   });

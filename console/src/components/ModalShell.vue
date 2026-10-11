@@ -1,11 +1,11 @@
-<!-- 轨4 P1-1：同构确认弹窗共享壳（原 ConfirmModal/GuardedActionButton 双实现
-     的 mask+box 结构与 CSS 收编单源——两组件首行「同构确认弹窗双实现」注释的壳层在此合流，
-     业务体（图标/文案/守卫输入/facts/askConfirm 契约/foot 按钮组）仍归消费方；
-     focusTrap/Enter 接管语义仍由消费方 window keydown 自持（boxRef 容器含 foot，逐块对照零回归）。
-     语义边框（err 红/warn 琥珀档）走 --msk-bd 变量：prop 传入经内联样式落 box，CSS 变量
-     免消费方 :deep（scoped 安全；命名避用 *-line 尾缀——pillSingleTrack 的 -soft/-line
-     token 守卫要求该尾缀必须在 theme.css 双主题定义，壳内局部变量不属 token 族）。宽度档约定 --dlg-w：small 340 / info 460 / confirm 560 /
-     large 640（档注见 theme.css --z-confirm 段），消费方经 width prop 传入，本批不迁散值。 -->
+<!-- 同构确认弹窗共享壳（原 ConfirmModal/GuardedActionButton 双实现
+ 的 mask+box 结构与 CSS 合并单源——两组件首行「同构确认弹窗双实现」注释的壳层在此合流，
+ 业务体（图标/文案/守卫输入/facts/askConfirm 契约/foot 按钮组）仍归消费方；
+ focusTrap/Enter 接管语义仍由消费方 window keydown 自持（boxRef 容器含 foot，逐块对照零回归）。
+ 语义边框（err 红/warn 琥珀档）走 --msk-bd 变量：prop 传入经内联样式落 box，CSS 变量
+ 免消费方 :deep（scoped 安全；命名避用 *-line 尾缀——pillSingleTrack 的 -soft/-line
+ token 守卫要求该尾缀必须在 theme.css 双主题定义，壳内局部变量不属 token 族）。宽度档约定 --dlg-w：small 340 / info 460 / confirm 560 /
+ large 640（档注见 theme.css --z-confirm 段），消费方经 width prop 传入，不迁散值。 -->
 <template>
   <teleport to="body">
     <transition name="pop">
@@ -40,15 +40,15 @@ const boxStyle = computed<Record<string, string>>(() => {
   return s;
 });
 
-/* Esc 收口升 document 捕获级（566 Pagination / 568 ColFilterPopover 立法推广；
-   568 弹层台账 B 档头号——壳 mask 元素级修饰符依赖 mask 持焦点收键，第三消费方 RawIoModal
-   零键盘接管，焦点在页面任意处按 Esc 关不掉=真缺陷）。本壳是常驻组件（prop 控显隐），
-   与 CFP「挂载即开层」不同：开层（show→true）才存触发时焦点并挂捕获级监听，收 Escape 即
-   stopPropagation+emit close（单源化：ConfirmModal/GAB 自持收键分支同步退役，其 @close
-   与原分支调用的 cancel/close 是同一函数，语义逐字等价）；关层（show→false）摘监听+焦点
-   回触发时焦点（还档=关层伴随效果，拒关场景如 GAB 执行中 close 自拒、show 不变则焦点
-   不动）；卸载兜底摘监听（CellContextMenu 417 挂/摘配对同款）。
-   源码锁 modalShellEsc569⑦：mask 可聚焦占位与元素级收键形态不得回流本文件。 */
+/* Esc 收口升 document 捕获级（566 Pagination / 568 ColFilterPopover 约定推广；
+ 568 弹层台账 B 档头号——壳 mask 元素级修饰符依赖 mask 持焦点收键，第三消费方 RawIoModal
+ 零键盘接管，焦点在页面任意处按 Esc 关不掉=真缺陷）。本壳是常驻组件（prop 控显隐），
+ 与 CFP「挂载即开层」不同：开层（show→true）才存触发时焦点并挂捕获级监听，收 Escape 即
+ stopPropagation+emit close（单源化：ConfirmModal/GAB 自持收键分支同步退役，其 @close
+ 与原分支调用的 cancel/close 是同一函数，语义逐字等价）；关层（show→false）摘监听+焦点
+ 回触发时焦点（还档=关层伴随效果，拒关场景如 GAB 执行中 close 自拒、show 不变则焦点
+ 不动）；卸载兜底摘监听（CellContextMenu 417 挂/摘配对同款）。
+ 源码锁 modalShellEsc569⑦：mask 可聚焦占位与元素级收键形态不得回流本文件。 */
 let escPrevFocus: HTMLElement | null = null;
 function onDocEsc(e: KeyboardEvent) {
   if (e.key !== 'Escape') return;
@@ -72,7 +72,7 @@ onBeforeUnmount(() => {
 });
 
 /* 消费方焦点陷阱（trapTabKey）与 Enter 接管的 contains 判定仍以「含全部按钮的容器」为界——
-   消费方自带内层容器 ref（语义与原 boxRef 逐字等价），boxEl 仅供对照/调试备用 */
+ 消费方自带内层容器 ref（语义与原 boxRef 逐字等价），boxEl 仅供对照/调试备用 */
 const boxEl = ref<HTMLElement>();
 defineExpose({ boxEl });
 </script>

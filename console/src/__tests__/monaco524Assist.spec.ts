@@ -5,12 +5,12 @@
  *    field 值位白名单出字段候选（Value kind + W5-1 filterText/sortText 双关）；
  *    DiffEditorView（dfEditedAssist）/IndexHubView（docEdit）消费迁移源码锁。
  * ② painless 语言 assist：dslAssist 在档时 painless 补全 +1、hover +1（签名互不串档——
- *    json/ndjson 的 dslRegs 恒 2 既有契约不回归、hoverRegs 由 monacoDslAssist.spec 随迁 2→3）；
+ *    json/ndjson 的 dslRegs 恒 2 既有契约不回归、hoverRegs 由 monacoDslAssist.spec 同步更新 2→3）；
  *    四骨架 snippet（ctx['字段']='值' / doc['字段'].value / params.x / emit）；
  *    painlessFieldAt 纯函数（脱离 Monaco 可断言）；painless hover doc['f']/ctx['f'] → 「type · path」
  *    （fields() 闭包内惰性现调，注册期零预载——519 fieldPickerPenetration 计数契约）。
  * ③ JsonArea setMarkers 透传（真实 JsonArea + 真实 MonacoEditor，editor.api mock 带模型能力）；
- *    SearchSandboxView lint 全档展示（error 红条并列）/划线注入/IndexPicker 收编源码锁。
+ *    SearchSandboxView lint 全档展示（error 红条并列）/划线注入/IndexPicker 合并源码锁。
  *
  * stub 范式照抄 monacoDslAssist.spec（Monaco 在 happy-dom 必炸——editor.api 全 mock，
  * 直接调捕获的 provider 断言 suggestions/hover；纯函数走直接 import）。
@@ -239,7 +239,7 @@ describe('524 ① BodyKind doc 档', () => {
     expect(v).not.toContain("bodyKind: () => 'search' as const");
   });
 
-  it('IndexHubView 迁移源码锁：docEdit bodyKind \'doc\'（\'none\' 过渡态不回潮；525 批 rows=14 定高改 fill 视口档随迁）', () => {
+  it('IndexHubView 迁移源码锁：docEdit bodyKind \'doc\'（\'none\' 过渡态不回潮；525 批 rows=14 定高改 fill 视口档同步更新）', () => {
     const v = readFileSync(join(__dirname, '../views/IndexHubView.vue'), 'utf-8');
     expect(v).toContain('<JsonArea v-model="docEditText" fill :dsl-assist="{ fields: ihDslAssist.fields, bodyKind: () => \'doc\' }" />');
     expect(v).not.toContain("bodyKind: () => 'none'");
@@ -369,7 +369,7 @@ describe('524 ③ JsonArea setMarkers 透传 + SearchSandboxView lint 全档', (
     const v = readFileSync(join(__dirname, '../views/SearchSandboxView.vue'), 'utf-8');
     /* error 红条并列展示（terms-scalar 等 error 档不再被吞）+ warning/hint/info 黄条 */
     expect(v).toContain('v-if="lintErrors.length"');
-    /* 五百六十一批随迁：ss-lint 族换装 theme.css .lint-bar 单源 */
+    /* 五百六十一批同步更新：ss-lint 族改用 theme.css .lint-bar 单源 */
     expect(v).toMatch(/lintErrors\.length[\s\S]{0,200}lint-bar-err/);
     expect(v).toContain('v-if="lintWarns.length"');
     expect(v).toContain("f.severity === 'error'");

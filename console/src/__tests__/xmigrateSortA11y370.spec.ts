@@ -17,7 +17,7 @@ describe('Xmigrate 排序表头键盘可达（370 批，529 随壳迁 QRT）', (
     expect(v, '作业表必须以 sortable 启用内核排序表头').toMatch(
       /<QueryResultTable v-else-if="jobs\.length" ref="qrtRef" :cols="XM_COLS" :rows="jobRows" sortable/,
     );
-    /* 五百五十二批随迁（击穿者：tableKernelWave552 ② QRT syncSort 平移）——模板 aria-sort
+    /* 五百五十二批同步更新（击穿者：tableKernelWave552 ② QRT syncSort 平移）——模板 aria-sort
        改读显示链 dispChain（本地档=sortSpec 原语义逐字节不变，remote+syncSort 接线档由宿主
        回填驱动），锁意图=aria-sort 机制在位不破 */
     expect(qrt, '内核表头 aria-sort').toContain(':aria-sort="sortable && chainCount > 0 && dispChain[0].f === c');

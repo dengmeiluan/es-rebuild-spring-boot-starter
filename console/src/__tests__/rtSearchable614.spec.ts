@@ -2,7 +2,7 @@
  * 六百一十四批（轨3 表格内核消费面二批）：searchable 消费面扩展——IH qryTbl + DQ resultTbl。
  *
  * 背景：612 批首消费面 IndexHub docsTbl 接线时明注「qryTbl 不设负锚——下批接线不反锁」；
- * 本批落 ⑥-1 同链余量两行：查询 tab（qryTbl）与查询工作台（resultTbl）同接
+ * 落 ⑥-1 同链余量两行：查询 tab（qryTbl）与查询工作台（resultTbl）同接
  * :searchable="true"（宪法 B「可检索」七能力铺到两大高频结果面；606 口径
  * 「全选/反选=sortedHits 当前视图」随接线在两面产品可达）。
  *
@@ -38,14 +38,14 @@ describe('六百一十四批：searchable 消费面扩展（qryTbl+resultTbl）'
     expect(rtTag(ih, 'qryTbl')).toContain(':searchable="true"');
   });
 
-  /* 八百二十四批锁随迁：恒真接线退役（双搜索框合一——json 档 dq-json-find/cards 档
+  /* 八百二十四批锁同步更新：恒真接线退役（双搜索框合一——json 档 dq-json-find/cards 档
      dq-cards-kw 伴生，快滤管线只作用于表格行，非表格档死 UI）；接线仍真、档位收窄
-     表格档，本锁语义=接线存在性随迁为档位接线锁 */
-  it('DQ resultTbl 档位接线 :searchable="view === \'table\'"（824 随迁：双框合一）', () => {
+     表格档，本锁语义=接线存在性同步更新为档位接线锁 */
+  it('DQ resultTbl 档位接线 :searchable="view === \'table\'"（824 同步更新：双框合一）', () => {
     expect(rtTag(dq, 'resultTbl')).toContain(":searchable=\"view === 'table'\"");
   });
 
-  it('540 W3 决策钉（804 随迁·用户八令推翻：DQ 结果表已接 remote-sort——「排序真实查询语句命中」20261008 16:13 实报；IH qryTbl 维持不接）', () => {
+  it('540 W3 决策钉（804 同步更新·用户八令推翻：DQ 结果表已接 remote-sort——「排序真实查询语句命中」20261008 16:13 实报；IH qryTbl 维持不接）', () => {
     expect(rtTag(ih, 'qryTbl')).not.toMatch(/\bremote-sort\b/);
     expect(rtTag(ih, 'qryTbl')).not.toContain('sync-sort');
     expect(rtTag(dq, 'resultTbl')).toMatch(/\bremote-sort\b/);

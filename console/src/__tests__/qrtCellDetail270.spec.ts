@@ -1,5 +1,5 @@
 /**
- * 二百七十批：QRT 单元格详情「查看完整值」（RT 229 批 P0-2 同款收编）——
+ * 二百七十批：QRT 单元格详情「查看完整值」（RT 229 批 P0-2 同款合并）——
  * 右键详情弹层（JsonTree tools+maxChildren/maxStrLen 防 MB 级值），两表右键菜单对齐。
  */
 import { describe, it, expect } from 'vitest';

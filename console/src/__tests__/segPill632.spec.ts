@@ -9,7 +9,7 @@
  *      激活钮 `.on` 的**自持背景退役**（由 pill 接管），实现「真·滑动」而非「换底快闪」；
  *   3) 不动 `.seg` 基类字面（responsiveGuard239 锁 `.seg{display:inline-flex;flex-wrap:wrap`），
  *      `.ld-seg` 只做**增量**修饰（class 并存，不改既有 `class="seg"`）。
- *   823 批锁随迁注记：--dur-scene（场景档）已退役——632 立法后三周零消费（编排动画未落地），
+ *   823 批锁同步更新注记：--dur-scene（场景档）已退役——632 约定后三周零消费（编排动画未落地），
  *      在场断言组同步收缩；防回潮锚=deadTokenGuard823 A2。
  * 负锁剥注释（unifyWave561 口径）。
  */
@@ -40,7 +40,7 @@ describe('六百三十二批①：时长/缓动令牌（theme.css，零 @media /
 describe('六百三十二批②：seg 滑动指示器（LiveDashboardView 两处 seg）', () => {
   it('滑块元素 + 等宽钮 + .on 自持背景退役（pill 接管）', () => {
     const pills = VIEW.match(/class="seg-thumb"/g) ?? [];
-    expect(pills.length, '三处 seg 各一枚滑块（800 随迁：+监控明细 ld-detail-seg）').toBe(3);
+    expect(pills.length, '三处 seg 各一枚滑块（800 同步更新：+监控明细 ld-detail-seg）').toBe(3);
     expect(VIEW, '滑块 aria-hidden').toMatch(/class="seg-thumb"[^>]*aria-hidden="true"/);
     expect(VIEW, '滑块 style 由 segPillStyle 驱动').toMatch(/seg-thumb" :style="segPillStyle\(/);
     expect(VIEW, '等宽钮修饰').toMatch(/\.ld-seg button \{ position: relative; z-index: 1; flex: 1 1 0;/);

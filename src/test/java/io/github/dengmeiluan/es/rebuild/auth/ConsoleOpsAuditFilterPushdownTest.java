@@ -38,7 +38,7 @@ public class ConsoleOpsAuditFilterPushdownTest {
 
     private static ConsoleOpsAuditQuery fullQuery() {
         return ConsoleOpsAuditQuery.builder()
-                .username("deng_test_x1").action("HIGH_RISK")
+                .username("test-user-1").action("HIGH_RISK")
                 .fromMs(100L).toMs(200L)
                 .connId("7bdac680").connName("腾讯云QA")
                 .role("ADMIN").method("POST").httpStatus(403)
@@ -52,7 +52,7 @@ public class ConsoleOpsAuditFilterPushdownTest {
     public void buildSearchBody_全维筛选落bool_filter() throws Exception {
         String body = EsConsoleOpsAuditStore.buildSearchBody(fullQuery());
         assertTrue(body.contains("\"bool\":{\"filter\":["));
-        assertTrue(body.contains("{\"term\":{\"username\":\"deng_test_x1\"}}"));
+        assertTrue(body.contains("{\"term\":{\"username\":\"test-user-1\"}}"));
         assertTrue(body.contains("{\"term\":{\"action\":\"HIGH_RISK\"}}"));
         assertTrue(body.contains("{\"term\":{\"connId\":\"7bdac680\"}}"));
         assertTrue(body.contains("{\"term\":{\"connName\":\"腾讯云QA\"}}"));
@@ -173,7 +173,7 @@ public class ConsoleOpsAuditFilterPushdownTest {
         assertEquals(Long.valueOf(200L), out.get(0).getTimestamp());
         assertEquals("host", out.get(1).getSource());
         Object[] args = got.get();
-        assertEquals("deng_test_x1", args[0]);
+        assertEquals("test-user-1", args[0]);
         assertEquals("HIGH_RISK", args[1]);
         assertEquals(33, args[2]);
         assertEquals(7, args[3]);
@@ -193,7 +193,7 @@ public class ConsoleOpsAuditFilterPushdownTest {
         };
         legacyOnly.search(fullQuery());
         Object[] args = got.get();
-        assertEquals("deng_test_x1", args[0]);
+        assertEquals("test-user-1", args[0]);
         assertEquals("HIGH_RISK", args[1]);
         assertEquals(33, args[2]);
         assertEquals(7, args[3]);

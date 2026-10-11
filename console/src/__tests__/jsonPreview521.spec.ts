@@ -2,7 +2,7 @@
  * 五百二十一批：裸 JSON 预览/原始响应统一 highlightJson 高亮收口（静态守卫，同 374/302 范式）。
  *  ① CreateIndexModal 请求预览：computed highlightJson(previewText) + 既有 json-view 类（SnapshotsView 同款）；
  *  ② LifecycleView rollover/move 原始响应：JSON 分支走 highlightJson（v-html），
- *     五百二十五批随迁：「错误：」前缀判型退役——失败路径前缀退场直接存原始错误全文，
+ *     五百二十五批同步更新：「错误：」前缀判型退役——失败路径前缀移除直接存原始错误全文，
  *     判型改 resultLooksErr 稳判（JSON.parse + error 键），错误分支换 errPreHtml v-html 全文。
  */
 import { describe, it, expect } from 'vitest';
@@ -20,15 +20,15 @@ describe('CreateIndexModal 请求预览高亮（521 批）', () => {
   });
 });
 
-describe('LifecycleView 原始响应高亮收口（521 批；五百二十五批稳判 + errPreHtml 随迁）', () => {
-  it('rollover：JSON 分支 highlightJson（json-view + v-html），错误分支 errPreHtml 全文（前缀退场）', () => {
+describe('LifecycleView 原始响应高亮收口（521 批；五百二十五批稳判 + errPreHtml 同步更新）', () => {
+  it('rollover：JSON 分支 highlightJson（json-view + v-html），错误分支 errPreHtml 全文（前缀移除）', () => {
     /* 五百二十五批：判型走 resultLooksErr 稳判（parse 成功且含 error 键 = 错误 JSON，parse 失败 = 平文错误） */
     expect(lc).toMatch(/const rolloverResultIsErr = computed\(\(\) => resultLooksErr\(rolloverResult\.value\)\);/);
     expect(lc).toContain("'error' in (o as Record<string, unknown>)");
     expect(lc).toMatch(/const rolloverResultHtml = computed\(\(\) =>\s*\n\s*rolloverResultIsErr\.value \? errPreHtml\(rolloverResult\.value\) : highlightJson\(rolloverResult\.value\)\);/);
     expect(lc).toMatch(/<pre v-if="rolloverResultIsErr" class="lc-result" v-html="rolloverResultHtml"><\/pre>/);
     expect(lc).toMatch(/<pre v-else class="lc-result json-view" v-html="rolloverResultHtml"><\/pre>/);
-    /* 五百二十五批：失败路径前缀退场——不再写「错误：」前缀 */
+    /* 五百二十五批：失败路径前缀移除——不再写「错误：」前缀 */
     expect(lc).not.toContain("rolloverResult.value = '错误：'");
   });
 

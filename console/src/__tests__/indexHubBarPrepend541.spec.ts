@@ -3,10 +3,10 @@
  *（与查询工作台 DslQueryView 同语言——「翻页统一在表格头」）。
  * 位置一：docs tab 文档浏览表（docsPage/docsTotalPages/docsSize）→ <ResultTable ref="docsTbl">；
  * 位置二：query tab 查询表（qryPage/qryTotalPages/qrySize）→ <ResultTable ref="qryTbl">。
- * 锁定：两处槽在场且 Pagination 寄居槽内（props 值恒等随迁）+ 旧外挂行退役；
- *   五百五十四批随迁（击穿者：视图形式切换 seg 接线）——RT 接 :hide-body=非表格档
+ * 锁定：两处槽在场且 Pagination 寄居槽内（props 值恒等同步更新）+ 旧外挂行退役；
+ *   五百五十四批同步更新（击穿者：视图形式切换 seg 接线）——RT 接 :hide-body=非表格档
  *   （表格体隐藏、工具行常驻），分页器随 DQ 同款 v-if 仅表格/卡片档在场（JSON/Tree 无翻页语义）。
- * 注：docsPager262/workbenchParity402 的存在性正则按值恒等随迁后应继续命中（本文件末尾并锁）。
+ * 注：docsPager262/workbenchParity402 的存在性正则按值恒等同步更新后应继续命中（本文件末尾并锁）。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -27,7 +27,7 @@ describe('IndexHubView 分页器寄居 RT 工具行（541 批 #bar-prepend）', 
     expect(dStart, 'docs RT 消费标签存在（防空跑）').toBeGreaterThan(-1);
     const dTag = src.slice(dStart, src.indexOf('</ResultTable>', dStart));
     expect(dTag).toContain('<template #bar-prepend>');
-    /* 554 批随迁：JSON/Tree 档无翻页语义，Pagination 带视图档 v-if 前缀（DQ 同款），props 值恒等 */
+    /* 554 批同步更新：JSON/Tree 档无翻页语义，Pagination 带视图档 v-if 前缀（DQ 同款），props 值恒等 */
     expect(dTag).toContain('<Pagination v-if="docsView !== \'json\' && docsView !== \'tree\'"');
     expect(dTag).toContain(':page="docsPage" :total-pages="docsTotalPages" :page-size="docsSize"');
     expect(dTag).toContain(':disabled="docsLoading" @update:page="goDocsPage" @update:page-size="setDocsSize"');
@@ -54,12 +54,12 @@ describe('IndexHubView 分页器寄居 RT 工具行（541 批 #bar-prepend）', 
     expect(qryBar, 'query 工具行（执行/取消/DevTools/历史/高度档保留）不再挂 Pagination').not.toContain('<Pagination');
   });
 
-  it('既有存在性正则继续命中（docsPager262/workbenchParity402 值恒等随迁）', () => {
+  it('既有存在性正则继续命中（docsPager262/workbenchParity402 值恒等同步更新）', () => {
     expect(src).toMatch(/<Pagination v-if="docsView !== 'json' && docsView !== 'tree'"\s*\n\s+:page="docsPage" :total-pages="docsTotalPages" :page-size="docsSize"/);
     expect(src).toContain('es_pager_size');
   });
 
-  it('五百五十四批随迁：两 RT 接视图 seg + hide-body=非表格档（表格体隐藏、工具行常驻）', () => {
+  it('五百五十四批同步更新：两 RT 接视图 seg + hide-body=非表格档（表格体隐藏、工具行常驻）', () => {
     expect(src, 'docs RT hideBody 消费').toContain(':hide-body="docsView !== \'table\'"');
     expect(src, 'query RT hideBody 消费').toContain(':hide-body="qryView !== \'table\'"');
     expect(src.match(/<div class="seg ih-view-seg">/g)?.length, '两处视图 seg 在场').toBe(2);

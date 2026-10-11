@@ -82,7 +82,7 @@ describe('C 无倾向直通与源锚', () => {
   });
 
   it('dslCompletionContext 消费 queryAstOps.typePriorityForOp（链上首次接线，单一出处）', () => {
-    /* 554 随迁：queryAstOps 单行导入扩为多导入（KEYWORD_VALUE_TYPES/NUMERIC_VALUE_TYPES
+    /* 554 同步更新：queryAstOps 单行导入扩为多导入（KEYWORD_VALUE_TYPES/NUMERIC_VALUE_TYPES
        族表单源同批接入 AFFINITY_FAMILIES）——typePriorityForOp 自 queryAstOps 导入锚意保形 */
     expect(dcc).toContain("import { typePriorityForOp, KEYWORD_VALUE_TYPES, NUMERIC_VALUE_TYPES } from './queryAstOps';");
   });

@@ -2,7 +2,7 @@
  * 六百零六批·R66 G5 自定义时间档收官（对标阿里云基础监控「自定义」时间档——R27 清单最后未闭项）。
  *
  * 现状：历史趋势时间档仅 1h~14d 六个固定档；阿里云另有「自定义」档（起止时间）。
- * 后端 monitor-metrics 的 fromMs/toMs 通道早已在案（api.monitorMetrics 形参）——本批纯前端：
+ * 后端 monitor-metrics 的 fromMs/toMs 通道早已在案（api.monitorMetrics 形参）——纯前端：
  * ①时间档下拉加「自定义」选项，选中后现出起止 datetime-local 输入（type 原生控件=键盘可达）；
  * ②rangeMs 单源 computed：custom 档解析起止（非法/缺省端点回落 now），非 custom 档维持
  *   MH_RANGE_MS 固定窗——曲线/告警/慢请求三处消费点同窗语义不变；

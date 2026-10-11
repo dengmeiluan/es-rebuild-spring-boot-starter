@@ -1,5 +1,5 @@
 /* B：索引列表元信息排序（纯函数，单测直测）。
-   7 种元信息 × 升/降，客户端排；缺字段/不可解析恒沉底（升/降都不做「反向置顶」）。 */
+ 7 种元信息 × 升/降，客户端排；缺字段/不可解析恒沉底（升/降都不做「反向置顶」）。 */
 import { parseBytes } from './format';
 
 export type IndexSortKey =
@@ -34,7 +34,7 @@ function sortValue(a: any, key: IndexSortKey): { v: number | string; missing: bo
 }
 
 /** 返回新数组（不 mutate 入参）。缺字段/不可解析恒沉底，非缺失项按升/降比。
-   Schwartzian：先 map 出每行排序键（n 次解析），再 sort（避免比较器里 O(n log n) 次重复 parseBytes）。 */
+ Schwartzian：先 map 出每行排序键（n 次解析），再 sort（避免比较器里 O(n log n) 次重复 parseBytes）。 */
 export function sortIndices<T extends Record<string, any>>(list: T[], key: IndexSortKey, dir: 'asc' | 'desc'): T[] {
   const sign = dir === 'desc' ? -1 : 1;
   return list

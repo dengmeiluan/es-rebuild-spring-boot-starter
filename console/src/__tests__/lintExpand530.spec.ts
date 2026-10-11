@@ -227,9 +227,9 @@ describe('五百三十批：typePriorityForOp 下沉（ClauseNode 消费同源�
     expect(typePriorityForOp('prefix')).toEqual(['keyword']);
     expect(typePriorityForOp('wildcard')).toEqual(['keyword']);
     expect(typePriorityForOp('range'))
-      /* 五百四十五批随迁：数值族九口径对齐（531 记档 unsigned_long 补员，queryAstOps NUM
-         与本表同源九种；轨1 dslValueTiers545 立法，排序链 range/ORDER BY 随之置顶）
-         548 锁随迁：序补 date_nanos（紧跟 date，opsForType date 分支并档同批）；原契约意图
+      /* 五百四十五批同步更新：数值族九口径对齐（531 备案 unsigned_long 补员，queryAstOps NUM
+         与本表同源九种；轨1 dslValueTiers545 约定，排序链 range/ORDER BY 随之置顶）
+         548 锁同步更新：序补 date_nanos（紧跟 date，opsForType date 分支并档同批）；原契约意图
          保持——date 族置顶、数值族相对次序零变动 */
       .toEqual(['date', 'date_nanos', 'long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float', 'unsigned_long']);
   });
@@ -240,14 +240,14 @@ describe('五百三十批：typePriorityForOp 下沉（ClauseNode 消费同源�
     expect(typePriorityForOp('multi_match')).toEqual(['text', 'keyword']);
     expect(typePriorityForOp('query_string')).toEqual(['text', 'keyword']);
     expect(typePriorityForOp('exists')).toEqual([]);
-    /* 535 批 R4 随迁：fuzzy 由 [] 改新档 ['keyword','text']（与 OPS_META.types 对齐；
+    /* 535 批 R4 同步更新：fuzzy 由 [] 改新档 ['keyword','text']（与 OPS_META.types 对齐；
        ClauseNode 值候选档 includes('keyword') 随之放行，历史值 datalist 白得） */
     expect(typePriorityForOp('fuzzy')).toEqual(['keyword', 'text']);
     expect(typePriorityForOp('regexp')).toEqual(['keyword', 'text']);
     expect(typePriorityForOp('no_such_op')).toEqual([]);
   });
 
-  /* 535 批 R4：match_phrase_prefix 补档随迁（并入 match 系 → ['text','keyword']） */
+  /* 535 批 R4：match_phrase_prefix 补档同步更新（并入 match 系 → ['text','keyword']） */
   it('match_phrase_prefix → text+keyword（535 补档）', () => {
     expect(typePriorityForOp('match_phrase_prefix')).toEqual(['text', 'keyword']);
   });

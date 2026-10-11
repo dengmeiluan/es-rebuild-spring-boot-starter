@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 连接健康探针（）：周期性并发 ping 全部已存连接档案，结果驻留内存供
+ * 连接健康探针（周期性并发 ping 全部已存连接档案，结果驻留内存供
  * 列表接口附带 health 字段——前端顶栏/连接管理页据此渲染 GREEN/RED 状态点，
  * 故障集群在切换前就能被看见，而不是切过去才报错。
  *
@@ -170,7 +170,7 @@ public class ConnHealthProber {
         return unknown;
     }
 
-    /** worker 线程内的真实 ping：GET / 测连通与时延，顺带解析服务端版本回写档案（）。 */
+    /** worker 线程内的真实 ping：GET / 测连通与时延，顺带解析服务端版本回写档案（。 */
     private Map<String, Object> pingOnce(String connId) {
         long t0 = System.currentTimeMillis();
         try {

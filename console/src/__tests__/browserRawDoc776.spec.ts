@@ -95,7 +95,7 @@ beforeEach(() => {
   });
 });
 
-describe('776 A0 挂载不变量负锚（现状即守卫，非本批刀面）', () => {
+describe('776 A0 挂载不变量负锚（现状即守卫，非刀面）', () => {
   it('工具条七件+QRT 8 列+计数行+三行渲染（健康档差分）', async () => {
     await mountBrowser();
     const bar = host.querySelector('.bw-bar')!;
@@ -147,7 +147,7 @@ describe('776 G253 文档卡原始响应轻形态（铁律 F·头名；768 G240/
     expect(tx, '_source 嵌套在完整响应内（业务字段仍在场）').toContain('钛合金轴承');
   });
 
-  it('G253c 再点复位：pressed=false+回 _source 视图（元数据退场）', async () => {
+  it('G253c 再点复位：pressed=false+回 _source 视图（元数据移除）', async () => {
     await mountBrowser('#/browser?idx=orders-v9&doc=doc-776-1');
     rawBtn()!.click(); await settle(6);
     rawBtn()!.click(); await settle(6);

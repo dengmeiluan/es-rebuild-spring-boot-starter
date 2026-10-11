@@ -13,14 +13,14 @@ export type MonitorSeriesField =
   | 'gcYoungPerMin' /* R8 GC 差分（仅节点下钻图卡） */
   | 'searchLatencyMs' | 'indexingLatencyMs' /* R9 慢查询代理指标 */
   | 'load1m' | 'diskReadKbS' | 'diskWriteKbS' | 'diskReadIops' | 'diskWriteIops'
-  | 'tpSearchActive' | 'tpSearchQueue' /*  节点深耕（仅节点下钻图卡） */
-  | 'shards' | 'primaryShards' /*  分片总数/主分片数（G3 对标阿里云集群级指标卡） */
-  | 'indices' /*  索引数量（对标阿里云集群级「索引数量」卡；cluster doc 既有键，AGG_METRIC_FIELDS 既有） */
-  | 'tpWriteActive' | 'tpWriteQueue' | 'docsDeleted' /*  对标阿里云线程池 Rows 写入侧+被标记删除文档（仅节点下钻图卡） */
-  | 'ioUtilPct' | 'gcYoungTimeMs' | 'gcOldTimeMs' /*  IOUtil%+GC 耗时（差分测点，仅节点下钻图卡；对标阿里云 IOUtil/节点 Young·Old GC 耗时） */
-  | 'heapUsedMb' /*  对标阿里云「节点 Old 区使用」锯齿形态：heap_used_in_bytes→MB（仅节点下钻图卡） */
-  | 'fielddataMb' /*  对标阿里云 JVM 组「fielddata 内存使用」（查询抖动经典根因，仅节点下钻图卡） */
-  | 'netRxKbS' | 'netTxKbS'; /*  内部传输吞吐（G7，transport 差分，仅节点下钻图卡） */
+  | 'tpSearchActive' | 'tpSearchQueue' /* 节点深耕（仅节点下钻图卡） */
+  | 'shards' | 'primaryShards' /* 分片总数/主分片数（ 对标阿里云集群级指标卡） */
+  | 'indices' /* 索引数量（对标阿里云集群级「索引数量」卡；cluster doc 既有键，AGG_METRIC_FIELDS 既有） */
+  | 'tpWriteActive' | 'tpWriteQueue' | 'docsDeleted' /* 对标阿里云线程池 Rows 写入侧+被标记删除文档（仅节点下钻图卡） */
+  | 'ioUtilPct' | 'gcYoungTimeMs' | 'gcOldTimeMs' /* IOUtil%+GC 耗时（差分测点，仅节点下钻图卡；对标阿里云 IOUtil/节点 Young·Old GC 耗时） */
+  | 'heapUsedMb' /* 对标阿里云「节点 Old 区使用」锯齿形态：heap_used_in_bytes→MB（仅节点下钻图卡） */
+  | 'fielddataMb' /* 对标阿里云 JVM 组「fielddata 内存使用」（查询抖动经典根因，仅节点下钻图卡） */
+  | 'netRxKbS' | 'netTxKbS'; /* 内部传输吞吐（G7，transport 差分，仅节点下钻图卡） */
 
 /**
  * 把采样行按集群分组并抽取指定指标序列。
@@ -111,7 +111,7 @@ export function intervalFor(range: string): string {
 }
 
 /** fixed_interval 字符串（'1m'/'5m'/'1h'…）→ 毫秒；非法回落 5m=300000。
- *   637-C2 抽出：周期档（1m/5m/15m/30m/1h）的断档阈值需按「生效桶宽」而非范围推导。 */
+ * 抽出：周期档（1m/5m/15m/30m/1h）的断档阈值需按「生效桶宽」而非范围推导。 */
 export function fixedIntervalMs(interval: string): number {
   const m = /^(\d+)([smhd])$/.exec(interval);
   return m ? Number(m[1]) * INTERVAL_UNIT_MS[m[2]!] : 300_000;
@@ -122,7 +122,7 @@ export function intervalMsFor(range: string): number {
   return fixedIntervalMs(intervalFor(range));
 }
 
-/* ═══ 周期档「原始逐点」安全窗（） ═══
+/* ═══ 周期档「原始逐点」安全窗（═══
  * 原始查询路径（不传 interval 时）在服务端钳 size=3000 且按时间升序返回：窗口越宽越先取满
  * 前 3000 行 → 图右端最新点被挡在窗外（曲线「停在过去」）。采集默认 60s ⇒ 3000 行 ≈ 50h，
  * 故 span 超过此跨度时「原始逐点」不安全，须回落按范围降采样。 */
@@ -136,10 +136,10 @@ export function rawPeriodSafe(spanMs: number): boolean {
 /**
  * 断档感知折线：单序列 → 多段 polyline points 字符串（每段形同 polylinePoints 的 attr）。
  * - 坐标口径与 polylinePoints 同一（pad=0）：x 域=全体点时间范围 [tMin,tMax]、
- *   y 域=全体点 max×1.1 留白（≤0 回 1 防除零）——段与段共享同一坐标系；
+ * y 域=全体点 max×1.1 留白（≤0 回 1 防除零）——段与段共享同一坐标系；
  * - gapMs 传入时相邻两点 Δt > gapMs 即断开（降采样空桶=集群失联未采，连成一段会画出
- *   未发生的骤降/回升假线）；缺省 undefined 永不断开（行为与 polylinePoints 单段一致）；
- *   Δt==gapMs 不断（严格大于才断）；
+ * 未发生的骤降/回升假线）；缺省 undefined 永不断开（行为与 polylinePoints 单段一致）；
+ * Δt==gapMs 不断（严格大于才断）；
  * - 空/单点（及断开后不足 2 点的尾段）画不出线，返回 [] 由调用方圆点形态兜底。
  */
 export function polylineSegments(points: SeriesPoint[], W: number, H: number, gapMs?: number): string[] {
@@ -208,7 +208,7 @@ export function polylinePoints(series: NamedSeries[], W: number, H: number, pad 
  * - 同一 connId|metric 键只保留 timestamp 最新一条（告警状态机语义：一条状况一个条目）；
  * - 最新一条 recovered:true 即该键已恢复，从活跃集剔除（恢复事件不留活跃条）；
  * - 输出按 timestamp 降序（最新状况排前）；非法输入（缺 timestamp/metric）逐条剔除，
- *   空/全非法回空数组。
+ * 空/全非法回空数组。
  */
 export function activeAlerts(records: MonitorAlertDoc[]): MonitorAlertDoc[] {
   const latest = new Map<string, MonitorAlertDoc>();
@@ -224,8 +224,8 @@ export function activeAlerts(records: MonitorAlertDoc[]): MonitorAlertDoc[] {
 }
 
 /** RED 时段色带：连续的 status='red' 采样（间隔 ≤gapMs 视为同一时段）合并为 [from,to] 区间。
- *  20260923 R2：断链轮采集器落 status=red 指标 doc（无指标字段）——图表据此画红色背景带，
- *  把「没采到」和「集群红了」区分开（断档折线语义由 polylineSegments 的 gapMs 承担）。 */
+ * 20260断链轮采集器落 status=red 指标 doc（无指标字段）——图表据此画红色背景带，
+ * 把「没采到」和「集群红了」区分开（断档折线语义由 polylineSegments 的 gapMs 承担）。 */
 export function redBands(
   records: MonitorMetricsRecord[],
   gapMs = 3 * 60 * 1000,
@@ -247,7 +247,7 @@ export function redBands(
 }
 
 /** R4 节点一览：scope=node 采样按 nodeName 取每节点最新一条（降序时间优先），节点名排序输出。
- *  节点名缺省回落 connId；输入乱序容错。LiveDashboardView 节点下钻表格消费。 */
+ * 节点名缺省回落 connId；输入乱序容错。LiveDashboardView 节点下钻表格消费。 */
 export function latestByNode(records: MonitorMetricsRecord[]): MonitorMetricsRecord[] {
   const latest = new Map<string, MonitorMetricsRecord>();
   for (const r of records || []) {
@@ -261,10 +261,10 @@ export function latestByNode(records: MonitorMetricsRecord[]): MonitorMetricsRec
 }
 
 /** R5 磁盘水位线性外推（最小二乘）：对每集群 diskUsedPct 序列拟合 v=a+b·x（x=起采后天数），
- *  预测达到 thresholdPct 的时点。斜率≤0（平稳/回落）→ days=null 不预测；已达阈值 → days=0；
- *  预测段最长外推 horizonMs（调用方给 30d），points=从最后一个实测点到预测终点的两点虚线段
- *  （返回形态兼容 NamedSeries——HistoryChart forecast prop 直接消费）。
- *  时间轴归一到「天」再拟合——epoch 毫秒平方会击穿双精度安全区。 */
+ * 预测达到 thresholdPct 的时点。斜率≤0（平稳/回落）→ days=null 不预测；已达阈值 → days=0；
+ * 预测段最长外推 horizonMs（调用方给 30d），points=从最后一个实测点到预测终点的两点虚线段
+ * （返回形态兼容 NamedSeries——HistoryChart forecast prop 直接消费）。
+ * 时间轴归一到「天」再拟合——epoch 毫秒平方会击穿双精度安全区。 */
 export function diskForecast(
   series: NamedSeries[],
   thresholdPct: number,
@@ -311,8 +311,8 @@ export function capRows<T>(rows: T[], cap: number): { rows: T[]; hidden: number 
   return { rows: shown, hidden: Math.max(0, rows.length - shown.length) };
 }
 
-/**  探活历史健康摘要：按集群聚合窗口内 RED 次数/采样总数/最慢时延（ms）。
- *  输入为探活快照行（connName/status/latencyMs），输出按 RED 次数降序、名称升序。 */
+/** 探活历史健康摘要：按集群聚合窗口内 RED 次数/采样总数/最慢时延（ms）。
+ * 输入为探活快照行（connName/status/latencyMs），输出按 RED 次数降序、名称升序。 */
 export function probeDigest(
   records: MonitorMetricsRecord[],
 ): { name: string; total: number; reds: number; worstMs: number | null }[] {

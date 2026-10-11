@@ -2,7 +2,7 @@
  * 七百四十三批：RankDebug 首刀四小刀（R124；R123 裁决表 G152+G153+G155+G154）。
  *
  * ① G152（P3 死代码·头号）页头旧壳左组/图标/右组三死规则（742 S-G1 双实锚：
- *    styleSheets 1+1+1+DOM 0 引用；PageHeader 收编族漏删第 13 演）——三删+自然语言注记。
+ *    styleSheets 1+1+1+DOM 0 引用；PageHeader 合并族漏删第 13 演）——三删+自然语言注记。
  * ② G153（P3 铁律 D）审问钮 Play/开战钮 Swords 在途窗 disabled 既有而零 spinning
  *    （742 S-G2 三读实锚；737 G132/741 G147 同族）——修法=图标补 spinning 全局类。
  * ③ G155（P3 文案卫生）空态 hint 指引「点『诊断』」而按钮实文「审问它」（742 S-G4
@@ -161,7 +161,7 @@ describe('743 G152 三死规则清零（P3 死代码·头号）', () => {
 });
 
 describe('743 G153 审问/开战钮在途窗 spinning（铁律 D·737 G132 同族）', () => {
-  it('审问链：在途窗 disabled（既有）+spinning（G153 病灶：修前零）+骨架屏；复常 spinning 退场+verdict 呈现', async () => {
+  it('审问链：在途窗 disabled（既有）+spinning（G153 病灶：修前零）+骨架屏；复常 spinning 移除+verdict 呈现', async () => {
     const host = await mountView();
     setInput(host, '要审问的文档', 'doc-a');
     await settle(4);
@@ -173,7 +173,7 @@ describe('743 G153 审问/开战钮在途窗 spinning（铁律 D·737 G132 同�
     expect(host.querySelector('.rd-loading'), '骨架屏在场（R45 §1 既有）').toBeTruthy();
     pending[0](EXPLAIN_OK);
     await settle(8);
-    expect(btn.querySelector('.spinning'), '复常退场').toBeFalsy();
+    expect(btn.querySelector('.spinning'), '复常移除').toBeFalsy();
     expect(btn.disabled, '复常解禁').toBe(false);
     expect(host.textContent).toContain('命中了！得分 1.8734');
   });
@@ -194,7 +194,7 @@ describe('743 G153 审问/开战钮在途窗 spinning（铁律 D·737 G132 同�
     pending[0](EXPLAIN_OK);
     pending[1]({ matched: false, explanation: null });
     await settle(8);
-    expect(btn.querySelector('.spinning'), '复常退场').toBeFalsy();
+    expect(btn.querySelector('.spinning'), '复常移除').toBeFalsy();
     expect(host.textContent).toContain('分差');
   });
 });

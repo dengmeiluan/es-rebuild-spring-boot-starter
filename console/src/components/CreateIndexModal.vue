@@ -44,21 +44,21 @@
       </div>
       <template v-if="advOpen">
         <!-- 两个 Monaco 接 dsl-assist（结构化 JSON 语境非 search body，fields 空数组——
-             补全按通用检查降级，不误导字段候选）；：bodyKind 显式分档
-             （MonacoEditor 缺省 ?? 'search' 会冒充查询体——settings/mapping 目录现成，各归各位） -->
+ 补全按通用检查降级，不误导字段候选）；：bodyKind 显式分档
+ （MonacoEditor 缺省 ?? 'search' 会冒充查询体——settings/mapping 目录现成，各归各位） -->
         <div class="cim-adv-lb">Settings JSON <span class="cim-adv-sub">与上方表单深合并，同键以此处为准</span></div>
-        <!--  P1-1：档路由静态 lint 划线挂点（lintSettingsBody，见 script queueCimSettingsMarkers） -->
+        <!-- P1-1：档路由静态 lint 划线挂点（lintSettingsBody，见 script queueCimSettingsMarkers） -->
         <MonacoEditor ref="cimSettingsMonaco" v-model="advSettings" height="120px" :dsl-assist="{ fields: () => [], bodyKind: () => 'settings' }" />
         <div v-if="advSettingsErr" class="cim-jsonerr">{{ advSettingsErr }}</div>
         <div class="cim-adv-lb">Mapping JSON <span class="cim-adv-sub">7.x typeless 直传；6.x 后端自动包 _doc</span></div>
-        <!--  P1-1：档路由静态 lint 划线挂点（lintMappingBody，见 script queueCimMappingMarkers） -->
+        <!-- P1-1：档路由静态 lint 划线挂点（lintMappingBody，见 script queueCimMappingMarkers） -->
         <MonacoEditor ref="cimMappingMonaco" v-model="advMapping" height="150px" :dsl-assist="{ fields: () => [], bodyKind: () => 'mapping' }" />
         <div v-if="advMappingErr" class="cim-jsonerr">{{ advMappingErr }}</div>
       </template>
 
       <!-- 最终请求预览（可视化确认，不用猜合并结果）；
-           裸 JSON → highlightJson 高亮（SnapshotsView 同款范式，输出已转义 v-html 安全）；
-           复制请求钮 + 预览高度三档 usePref 记忆（默认 200） -->
+ 裸 JSON → highlightJson 高亮（SnapshotsView 同款范式，输出已转义 v-html 安全）；
+ 复制请求钮 + 预览高度三档 usePref 记忆（默认 200） -->
       <div class="cim-adv-toggle" role="button" tabindex="0" :aria-expanded="previewOpen" @click="previewOpen = !previewOpen" @keydown.enter.prevent="previewOpen = !previewOpen" @keydown.space.prevent="previewOpen = !previewOpen">
         <component :is="previewOpen ? ChevronDown : ChevronRight" :size="13" />
         请求预览
@@ -91,8 +91,8 @@ import { ref, computed, watch, nextTick } from 'vue';
 import { NModal } from 'naive-ui';
 import { Plus, CheckCircle2, XCircle, AlertTriangle, ChevronDown, ChevronRight, Copy } from 'lucide-vue-next';
 import MonacoEditor from './MonacoEditor.vue';
-import { lintSettingsBody, lintMappingBody } from '../utils/dslLint'; /*  P1-1：档路由静态 lint */
-import { useDebounceFn } from '../composables/useDebounceFn'; /*  P1-1：划线防抖统一件 */
+import { lintSettingsBody, lintMappingBody } from '../utils/dslLint'; /* P1-1：档路由静态 lint */
+import { useDebounceFn } from '../composables/useDebounceFn'; /* P1-1：划线防抖统一件 */
 import { api } from '../api';
 import { useAppStore } from '../stores/app';
 import { tryParse, highlightJson } from '../utils/jsonc';
@@ -102,7 +102,7 @@ import { usePref } from '../composables/urlState';
 import { useModalEnter } from '../composables/useModalEnter';
 
 /* 新建索引统一入口。此前 createIndex 全站唯一入口藏在配置实验室三层深，
-   「增」是 CRUD 里的二等公民——这里做成可复用组件挂 IndexHub / Browser / 命令面板。 */
+ 「增」是 CRUD 里的二等公民——这里做成可复用组件挂 IndexHub / Browser / 命令面板。 */
 
 const props = defineProps<{ show: boolean }>();
 const emit = defineEmits<{ (e: 'update:show', v: boolean): void; (e: 'created', name: string): void }>();
@@ -119,10 +119,10 @@ const advSettings = ref('{\n}');
 const advMapping = ref('{\n  "properties": {\n  }\n}');
 const creating = ref(false);
 
-/* ═══  P1-1：档路由静态 lint（高级配置双编辑器划线通道） ═══
-   lintSettingsBody/lintMappingBody 直接 import 纯函数消费（DevTools dtLint 档路由同源）；
-   非法 JSON 静默返 []，setMarkers([]) 即清旧划线（DevTools 同契约）。零请求、零阻塞，
-   提交门仍是既有 advSettingsErr/advMappingErr 合法性链路。 */
+/* ═══ P1-1：档路由静态 lint（高级配置双编辑器划线通道） ═══
+ lintSettingsBody/lintMappingBody 直接 import 纯函数消费（DevTools dtLint 档路由同源）；
+ 非法 JSON 静默返 []，setMarkers([]) 即清旧划线（DevTools 同契约）。零请求、零阻塞，
+ 提交门仍是既有 advSettingsErr/advMappingErr 合法性链路。 */
 const cimSettingsMonaco = ref<InstanceType<typeof MonacoEditor> | null>(null);
 const cimMappingMonaco = ref<InstanceType<typeof MonacoEditor> | null>(null);
 const queueCimSettingsMarkers = useDebounceFn(() => {
@@ -146,19 +146,19 @@ watch(() => props.show, async (v) => {
 const ILLEGAL = /[\\/*?"<>|,# :]/;
 interface Check { t: string; lv: 'ok' | 'err' | 'warn' }
 const checks = computed<Check[]>(() => {
-  const n = name.value;
-  const out: Check[] = [];
-  const push = (pass: boolean, okT: string, errT: string, warn = false) =>
-    out.push(pass ? { t: okT, lv: 'ok' } : { t: errT, lv: warn ? 'warn' : 'err' });
-  push(n === n.toLowerCase(), '全小写', '必须全小写（含大写字母不被 ES 接受）');
-  push(!ILLEGAL.test(n), '无非法字符', '含非法字符（\\ / * ? " < > | 空格 , # :）');
-  push(!/^[-_+]/.test(n), '开头合法', '不能以 - _ + 开头');
-  push(n !== '.' && n !== '..', '非保留名', '不能是 . 或 ..');
-  push(new TextEncoder().encode(n).length < 255, '长度合规', '超过 255 字节上限');
-  const dup = store.indices.some(i => i.index === n);
-  push(!dup, '名称未被占用', '同名索引已存在（后端也会拒绝）');
-  if (n.startsWith('.')) out.push({ t: '以 . 开头将被视为系统/隐藏索引，请确认这是有意为之', lv: 'warn' });
-  return out;
+ const n = name.value;
+ const out: Check[] = [];
+ const push = (pass: boolean, okT: string, errT: string, warn = false) =>
+ out.push(pass ? { t: okT, lv: 'ok' } : { t: errT, lv: warn ? 'warn' : 'err' });
+ push(n === n.toLowerCase(), '全小写', '必须全小写（含大写字母不被 ES 接受）');
+ push(!ILLEGAL.test(n), '无非法字符', '含非法字符（\\ / * ? " < > | 空格 , # :）');
+ push(!/^[-_+]/.test(n), '开头合法', '不能以 - _ + 开头');
+ push(n !== '.' && n !== '..', '非保留名', '不能是 . 或 ..');
+ push(new TextEncoder().encode(n).length < 255, '长度合规', '超过 255 字节上限');
+ const dup = store.indices.some(i => i.index === n);
+ push(!dup, '名称未被占用', '同名索引已存在（后端也会拒绝）');
+ if (n.startsWith('.')) out.push({ t: '以 . 开头将被视为系统/隐藏索引，请确认这是有意为之', lv: 'warn' });
+ return out;
 });
 const nameOk = computed(() => !!name.value && !checks.value.some(c => c.lv === 'err'));
 
@@ -206,7 +206,7 @@ const previewText = computed(() => {
   return txt;
 });
 /* 预览裸 JSON → highlightJson 着色（jsonc399 契约：输出先 HTML 转义，v-html 无注入面；
-   非_JSON 前后缀（PUT 行/别名行）正则不命中原样保留，着色容错） */
+ 非_JSON 前后缀（PUT 行/别名行）正则不命中原样保留，着色容错） */
 const previewHtml = computed(() => highlightJson(previewText.value));
 /* 预览高度 usePref（默认 200=原封顶值），number input 直绑自动落盘 */
 const previewH = usePref('cim.previewH', 200);
@@ -228,7 +228,7 @@ async function doCreate() {
       try {
         await api.aliasActions(JSON.stringify({ actions: [{ add: { index: idx, alias: al } }] }));
       } catch (e: any) {
-        /*  A：ES 错误友好化——别名挂载失败原因可读化 */
+        /* A：ES 错误友好化——别名挂载失败原因可读化 */
         store.notify('warning', `索引已创建，但别名 ${al} 挂载失败：` + friendlyEsError(String(e?.message ?? e)));
       }
     }
@@ -238,21 +238,21 @@ async function doCreate() {
     emit('update:show', false);
     name.value = ''; alias.value = '';
   } catch (e: any) {
-    /*  A：ES 错误友好化（创建失败原因可读化） */
+    /* A：ES 错误友好化（创建失败原因可读化） */
     store.notify('error', '创建失败：' + friendlyEsError(String(e?.message ?? e)));
   } finally {
     creating.value = false;
   }
 }
 /* 新建索引弹窗 Enter=创建（doCreate 自带 canSubmit+creating 双重防重入，
-   无需外部 can 闸；名称是单行 INPUT，settings/mapping 编辑器是 TEXTAREA 天然放行） */
+ 无需外部 can 闸；名称是单行 INPUT，settings/mapping 编辑器是 TEXTAREA 天然放行） */
 useModalEnter(computed(() => props.show), doCreate);
 </script>
 
 <style scoped>
-/* 编辑器外框退役（立法③）——monaco-host 是 MonacoEditor 根、携本组件
-   scope id，本弹窗仅 Settings/Mapping 两处直挂 Monaco，scoped 裸类规则直接命中
-   （MappingView 弹窗判例）；cim-adv-lb 标签行自承分界 */
+/* 编辑器外框退役（约定③）——monaco-host 是 MonacoEditor 根、携本组件
+ scope id，本弹窗仅 Settings/Mapping 两处直挂 Monaco，scoped 裸类规则直接命中
+ （MappingView 弹窗先例）；cim-adv-lb 标签行自承分界 */
 .monaco-host { border: none; border-radius: 0; }
 .cim { display: flex; flex-direction: column; gap: var(--sp-2h); }
 .cim-row { display: flex; align-items: center; gap: var(--sp-2); }

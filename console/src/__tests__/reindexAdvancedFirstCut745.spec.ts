@@ -4,7 +4,7 @@
  *
  * G157（P3 死代码·头号）：裸 textarea 退役伴漏删的组合规则死半支剥除——两条 input
  *   组合规则各含一无模板引用的死选择器半支，剥除后活半支成单选择器规则（死名单唯一，
- *   模板 0 引用双实锚；713/715/717 PageHeader 收编族先例链的「组合规则半支」新形态）。
+ *   模板 0 引用双实锚；713/715/717 PageHeader 合并族先例链的「组合规则半支」新形态）。
  * G156（P3 铁律 F·次刀）：结果 MetaStrip total/created/updated 三段裸 label 补中文 tip
  *   （:title 悬停通道+help 档；英文 label 留检索悬浮层中文语义，G55/G60/G133 双语同款）。
  * G159（P3 铁律 F）：op_type/version_type/conflicts/refresh/wait_for_completion 五 select
@@ -12,7 +12,7 @@
  *   （对齐同页 561 批 slices 等五参数口径，一页两标准归一）。
  * G160（P3 意图与实现不符·随批裁决刀）：DraftBadge 草稿恢复徽标恒不可见——恢复回填
  *   与挂载首拍 body 快照都是程序化写，却经 refs watch 深写草稿对象触发 restored 翻
- *   false，徽标首渲染前即退场（单字段范式无此链=范式差异）。修法=挂载初始化期守卫。
+ *   false，徽标首渲染前即移除（单字段范式无此链=范式差异）。修法=挂载初始化期守卫。
  * G158（弱 P3 aria 随批可裁）：.ra-tabs 容器补 role=group+aria-label+双 .ra-tab
  *   :aria-pressed（739 G142/743 G154 族三行）。
  */
@@ -227,7 +227,7 @@ describe('745 G159：五 select label 中文释义 + version_type 两选项中�
 });
 
 /* ═══════════ G160 DraftBadge 草稿恢复徽标 wiring（行为刀三锚） ═══════════ */
-describe('745 G160：草稿恢复徽标 wiring 修复（挂载在场→用户编辑退场→清除退场）', () => {
+describe('745 G160：草稿恢复徽标 wiring 修复（挂载在场→用户编辑移除→清除移除）', () => {
   it('锚1：非默认稿挂载 → 表单值恢复（既有行为不回归）+ 徽标在场（修前恒不可见）', async () => {
     sessionStorage.setItem(RA_FORM_KEY, JSON.stringify({ ...FORM_ALL_DEF, srcSize: '777', destIndex: 'orders-v9' }));
     const { app, host } = await mountRA();
@@ -244,23 +244,23 @@ describe('745 G160：草稿恢复徽标 wiring 修复（挂载在场→用户编
     app.unmount();
   });
 
-  it('锚2：用户真实编辑 → 徽标退场（程序化回填不算编辑）', async () => {
+  it('锚2：用户真实编辑 → 徽标移除（程序化回填不算编辑）', async () => {
     sessionStorage.setItem(RA_FORM_KEY, JSON.stringify({ ...FORM_ALL_DEF, srcSize: '777', destIndex: 'orders-v9' }));
     const { app, host } = await mountRA();
     expect(host.querySelector('.draft-badge'), '编辑前徽标在场前置').toBeTruthy();
     const sizeInput = Array.from(host.querySelectorAll<HTMLInputElement>('input')).find(i => i.placeholder === '1000')!;
     setInput(sizeInput, '888');
     await settle();
-    expect(host.querySelector('.draft-badge'), '用户编辑后徽标必须退场').toBeNull();
+    expect(host.querySelector('.draft-badge'), '用户编辑后徽标必须移除').toBeNull();
     app.unmount();
   });
 
-  it('锚3：清除钮 → 徽标退场 + 草稿键清空（DraftBadge 双态收口）', async () => {
+  it('锚3：清除钮 → 徽标移除 + 草稿键清空（DraftBadge 双态收口）', async () => {
     sessionStorage.setItem(RA_FORM_KEY, JSON.stringify({ ...FORM_ALL_DEF, srcSize: '777', destIndex: 'orders-v9' }));
     const { app, host } = await mountRA();
     Array.from(host.querySelectorAll<HTMLButtonElement>('.draft-badge button')).find(b => b.textContent?.includes('清除'))!.click();
     await settle();
-    expect(host.querySelector('.draft-badge'), '清除后徽标退场').toBeNull();
+    expect(host.querySelector('.draft-badge'), '清除后徽标移除').toBeNull();
     expect(sessionStorage.getItem(RA_FORM_KEY), '草稿键必须清空').toBeNull();
     app.unmount();
   });

@@ -1,7 +1,7 @@
 /**
  * 五百二十四批：IndexHub 查询 tab 补全字段源换代 + 翻页（P0 行为网）。
  *
- * 契约（本批验收锚）：
+ * 契约（验收锚）：
  * ① 字段源换代：查询 tab JsonArea 的 dslAssist.fields 挂 useIndexFields（mappingDetail
  *    出口）——嵌套 a.b 与 multi-field .keyword 全量在场（原 fieldTypesMap 顶层遍历缺席）；
  *    doPrepare 同款「同点预载」= loadDetail 时 ensureIhFields()；
@@ -237,7 +237,7 @@ describe('IndexHub 查询 tab：字段源换代 + 翻页（524 批）', () => {
     expect(body2.from, '第二页 from=20').toBe(20);
     expect(body2.size).toBe(20);
     /* 页大小改动回写共享键 es_pager_size（与 docs tab/DslQueryView 一次调节一致）。
-       五百六十六批随迁：563 四刀把原生 select 换 n-popover 横排胶囊弹窗（且漏 import
+       五百六十六批同步更新：563 四刀把原生 select 换 n-popover 横排胶囊弹窗（且漏 import
        NPopover 致触发钮不渲染，本文件 ② 随之红——补 import 后恢复），交互契约同步
        select change → 触发钮点开浮层 + 点选选项胶囊（pickSize 回写）。 */
     const psel = host.querySelector<HTMLButtonElement>('.pgn-psel');
@@ -266,9 +266,9 @@ describe('IndexHub 查询 tab：字段源换代 + 翻页（524 批）', () => {
        高度 min(60vh,420px)：视口弹性、原 420px 兜底；编辑态 JsonArea 补字段补全
        （fields 透传同页查询口 ihDslAssist，bodyKind 'doc'——五百二十四批 doc 档在档，
        键位零候选、field 值位白名单出字段候选；五百三十批临时 'none' 随 doc 档落地升档）。
-       五百二十五批随迁：查看态 Monaco 也挂同构 dsl-assist（只读面 hover 白得）；
+       五百二十五批同步更新：查看态 Monaco 也挂同构 dsl-assist（只读面 hover 白得）；
        编辑态 rows=14 定高退役 → fill + 外包 min(60vh,420px)（两态同口径） */
-    /* 六百六十九批随迁（击穿者：件B 弹窗字号档——查看 Monaco 尾追 :font-size="ihFont"
+    /* 六百六十九批同步更新（击穿者：件B 弹窗字号档——查看 Monaco 尾追 :font-size="ihFont"
        同页同键，dsl-assist 契约锁意图零触；edFontModal669.spec E1 同锚） */
     expect(v).toMatch(/<MonacoEditor :model-value="docEditText" language="json" :readonly="true" height="min\(60vh,420px\)"\s*:dsl-assist="\{ fields: ihDslAssist\.fields, bodyKind: \(\) => 'doc' \}" :font-size="ihFont" \/>/);
     expect(v).not.toContain('<pre class="ih-doc-json"');
@@ -278,11 +278,11 @@ describe('IndexHub 查询 tab：字段源换代 + 翻页（524 批）', () => {
        （ih.editorH）+ 档位钮组；满档保留 42vh 视口弹性，JsonArea fill 保持 */
     expect(v).toMatch(/\.ih-dsl-wrap \{ display: flex; flex-direction: column; \}/);
     expect(v).toMatch(/\.ih-dsl-wrap\.ih-h-full \{ min-height: max\(168px, 42vh\); \}/);
-    /* 六百六十八批随迁：import 行扩 EDITOR_FONT_TIERS（字号三档单源，edFontSpread668 E4 同锚） */
+    /* 六百六十八批同步更新：import 行扩 EDITOR_FONT_TIERS（字号三档单源，edFontSpread668 E4 同锚） */
     expect(v).toContain("import { EDITOR_HEIGHTS, EDITOR_H_TIERS, EDITOR_FONT_TIERS, type EditorHKey } from '../utils/editorTiers';");
     expect(v).toContain("usePref<EditorHKey>('ih.editorH', 's')");
     expect(v).toContain('aria-label="编辑器高度档位"');
-    /* 五百三十二批锚随迁：JsonArea 补 ref="dslJaRef"（lintDsl 划线注入口，PitScrollView 同款） */
+    /* 五百三十二批锚同步更新：JsonArea 补 ref="dslJaRef"（lintDsl 划线注入口，PitScrollView 同款） */
     expect(v).toContain('<JsonArea ref="dslJaRef" v-model="dsl" fill :dsl-assist="ihDslAssist"');
     /* ④ riOpts 动态并入当前值的实现锚 */
     expect(v).toMatch(/riOpts = computed/);
@@ -299,20 +299,20 @@ describe('IndexHub 查询 tab 页内历史接线（535 批 W3）', () => {
     expect(v).toContain('<button class="btn sm ghost" data-test="open-hist" @click="histOpen = true" title="查询历史"><History :size="11" /> 历史</button>');
     /* NModal + QueryHistoryPanel（SqlConsoleView 528 范式；导入/清空关闭） */
     expect(v).toMatch(/<n-modal v-model:show="histOpen" preset="card" title="查询历史（索引工作区）"/);
-    /* 550 随迁：actions 加 'fav'（IH fav 闭环，track2Wave550 批）——QueryHistoryPanel 行级门
+    /* 550 同步更新：actions 加 'fav'（IH fav 闭环，track2Wave550 批）——QueryHistoryPanel 行级门
        `!it.mode || it.mode === 'dsl'` 下本页 histRows（恒 mode='dsl'）星标钮全行可达。
-       554 随迁：actions 加 'curl'（面板 552 内建行级钮，宿主 histCurl 组装 POST {index}/_search）
-       562 随迁（击穿者：kibanaWave562 K3/K4——docs 检索历史入口闭环）：actions 加 'newtab'
+       554 同步更新：actions 加 'curl'（面板 552 内建行级钮，宿主 histCurl 组装 POST {index}/_search）
+       562 同步更新（击穿者：kibanaWave562 K3/K4——docs 检索历史入口闭环）：actions 加 'newtab'
        （561b 内建行级钮，带到 DevTools 新 Tab 组装归宿主 ihHistNewTab）+ histRows 并显
        lucene 行 + :show-mode="true"（mode 徽标区分 DSL/Lucene） */
     expect(v).toContain(":items=\"histRows\" :actions=\"['play', 'fill', 'copy', 'fav', 'curl', 'newtab', 'del']\" :clearable=\"false\" :importable=\"false\" :show-mode=\"true\"");
     expect(v).toContain('@play="h => replayIhHist(h, true)" @fill="h => replayIhHist(h, false)" @del="h => qh.removeOne(h.id)"');
     /* mode=dsl 单档全量，不做 index 过滤（Lead 裁决简单优先）——整句字面锁定，无 index 维度。
-       562 随迁：并显 lucene 行（docs 检索历史 546 批只写不显，kibanaWave562 K3 入口闭环） */
+       562 同步更新：并显 lucene 行（docs 检索历史 546 批只写不显，kibanaWave562 K3 入口闭环） */
     expect(v).toContain("const histRows = computed(() => qh.items.filter(i => i.mode === 'dsl' || i.mode === 'lucene'));");
     /* 回放=回填 dsl 草稿+runDslNew——必须走 runDsl 既有 JSON 合法性门与 from/size 注入草稿路径，
        不得绕过（push 存的是编辑器原文，回放安全）。
-       562 随迁：lucene 行分派 docsQ 草稿路径（runDocsNew 既有链），dsl 行原门零触 */
+       562 同步更新：lucene 行分派 docsQ 草稿路径（runDocsNew 既有链），dsl 行原门零触 */
     expect(v).toMatch(/function replayIhHist\(row: \{ query: string; mode\?: string \}, runIt: boolean\) \{/);
     expect(v).toContain("if (row.mode === 'lucene') {");
     expect(v).toMatch(/dsl\.value = row\.query;\s*histOpen\.value = false;\s*if \(runIt\) runDslNew\(\);/);

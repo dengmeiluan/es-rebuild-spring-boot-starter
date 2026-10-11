@@ -22,7 +22,7 @@
  *    伴生 .mft-type 字段类型徽标色卡是活的（MappingFieldTree/FieldPicker/
  *    ColPicker/LuceneInput/FieldSelect 五组件消费），保留。
  * ④ .scroll-x / .tbl-wrap / .card > .tbl（原 R66 窄容器 @media 区块，783 实勘整块退役）：
- *    「.tbl-wrap 半支活」的 781 记档是误判——全站模板零裸 .tbl-wrap 挂载，三个近似命中
+ *    「.tbl-wrap 半支活」的 781 备案是误判——全站模板零裸 .tbl-wrap 挂载，三个近似命中
  *    （av-tk-tbl-wrap / lc-tbl-wrap / ddm-tbl-wrap）都是复合类名，CSS 按 token 整串匹配
  *    不命中 .tbl-wrap 选择器；.card > .tbl 直插形态同样全站零（819 注释点名的
  *    「安全中心审计流水」782 批已换 QRT 壳）。窄容器表横滚由表格内核（QRT/RT 自带）
@@ -30,7 +30,7 @@
  *
  * ── 断言口径（按字面理解，不要外推）─────────────────────────────
  * 落在源文本上（happy-dom 不计算 scoped/theme.css 样式，渲染数值断言是死断言）。
- * 正则「任何形态」=后代/组合/伪类/链式全命中（780-C1 判例：顶层 {, 形态漏网
+ * 正则「任何形态」=后代/组合/伪类/链式全命中（780-C1 先例：顶层 {, 形态漏网
  * 整一轮）；尾界 (?![\w-]) 防 .qrt-sort-i / .ih-t-docs 一类前缀近亲误伤。
  */
 import { describe, it, expect } from 'vitest';
@@ -51,7 +51,7 @@ describe('theme.css 死全局族看守（四族已退役）', () => {
     const css = strip(readFileSync(join(srcDir, 'theme.css'), 'utf8'));
     expect(
       /th\.sortable/.test(css),
-      'theme.css 仍有 th.sortable 选择器；手写裸表排序表头已被 QRT（.qrt-tbl 自带四态）换装收编，这条规则恒空匹配，留着就是照抄复发入口',
+      'theme.css 仍有 th.sortable 选择器；手写裸表排序表头已被 QRT（.qrt-tbl 自带四态）改用合并，这条规则恒空匹配，留着就是照抄复发入口',
     ).toBe(false);
   });
 
@@ -156,7 +156,7 @@ describe('theme.css 死全局族看守（四族已退役）', () => {
   it('theme.css 仍保留 .tbl th.sortable 的同区块活邻居（键盘可达/工具类不受族退役波及）', () => {
     const css = strip(readFileSync(join(srcDir, 'theme.css'), 'utf8'));
     expect(css, 'v3.0.0 键盘可达 focus 环误删——该规则若在族内一并退役须同步核 QRT scoped 焦点样式').toMatch(/th\.sortable:focus-visible|:focus-visible/);
-    expect(css, '.dim/.sm-txt 工具类丢失（431 批收编、多视图在用）').toMatch(/\.dim\s*\{/);
+    expect(css, '.dim/.sm-txt 工具类丢失（431 批合并、多视图在用）').toMatch(/\.dim\s*\{/);
   });
 
   it('App.vue 仍保留 th.sortable 键盘可达委托（JS 域，服务 QRT 表头）', () => {

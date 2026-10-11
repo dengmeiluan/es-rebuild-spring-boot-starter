@@ -56,7 +56,7 @@ public class AuditFacetsStoreTest {
         RestHighLevelClient client = EsFakeClients.scripted(req -> "{\"aggregations\":{"
                 + "\"by_action\":{\"buckets\":[{\"key\":\"LOGIN\",\"doc_count\":9}]},"
                 + "\"by_conn\":{\"buckets\":[{\"key\":\"腾讯云QA\",\"doc_count\":7}]},"
-                + "\"by_user\":{\"buckets\":[{\"key\":\"deng_test_x1\",\"doc_count\":5},"
+                + "\"by_user\":{\"buckets\":[{\"key\":\"test-user-1\",\"doc_count\":5},"
                 + "{\"key\":\"viewer_test\",\"doc_count\":2}]},"
                 + "\"by_uri\":{\"buckets\":[{\"key\":\"/index/_search\",\"doc_count\":11},"
                 + "{\"key\":\"/auth/login\",\"doc_count\":4}]}}}");
@@ -65,7 +65,7 @@ public class AuditFacetsStoreTest {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> users = (List<Map<String, Object>>) out.get("users");
         assertEquals("users 键在响应契约内", 2, users.size());
-        assertEquals("deng_test_x1", users.get(0).get("key"));
+        assertEquals("test-user-1", users.get(0).get("key"));
         assertEquals(5L, users.get(0).get("count"));
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> uris = (List<Map<String, Object>>) out.get("uris");

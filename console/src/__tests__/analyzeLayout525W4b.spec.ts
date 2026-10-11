@@ -59,11 +59,11 @@ describe('525 AnalyzeView：stacked 坍缩修复 + 结果区纵缝 + assist 接�
     /* 惰性触发挂在 fields()（补全触发才拉，挂载零请求） */
     expect(analyze).toMatch(/void ensureAssistFields\(\); void loadAnalyzerNames\(\);/);
   });
-  it('④ Token 表数值三列右对齐 + title 原值（529 反转随迁：fieldTypes double → 内核 num-col 右对齐+徽标，title 走 #cell- 槽）', () => {
-    /* 五百二十九批锚随迁：th class=num 三列 / .av-tk-tbl td.num 右对齐 CSS 退役——
+  it('④ Token 表数值三列右对齐 + title 原值（529 反转同步更新：fieldTypes double → 内核 num-col 右对齐+徽标，title 走 #cell- 槽）', () => {
+    /* 五百二十九批锚同步更新：th class=num 三列 / .av-tk-tbl td.num 右对齐 CSS 退役——
        右对齐与双层列头徽标改由 QRT fieldTypes 显式 double（num-col）承担 */
     expect(analyze).toMatch(/const AV_TOKEN_TYPES: Record<string, string> = \{ 序位: 'double', 字符区间: 'double', 长度: 'double' \}/);
-    /* title 原值锚随迁：r.t.* → #cell- 槽 value（ES 原始字段名可查证语义不变） */
+    /* title 原值锚同步更新：r.t.* → #cell- 槽 value（ES 原始字段名可查证语义不变） */
     expect(analyze).toMatch(/:title="'position=' \+ value"/);
     expect(analyze).toMatch(/:title="'start_offset=' \+ String\(value\)\.split\('-'\)\[0\] \+ ' · end_offset=' \+ String\(value\)\.split\('-'\)\[1\]"/);
     expect(analyze).toMatch(/:title="'length=' \+ value"/);
@@ -77,9 +77,9 @@ describe('525 AnalyzerLabView：输入行数 + 清单限高档 + lane 连续可�
     expect(lab).toMatch(/usePref<string>\('al\.taH', ''\)/);
     expect(lab).not.toMatch(/rows="3"/);
   });
-  it('⑥ 字段清单限高 al.fieldsH 三档（558 收编 useTierCycle），CSS 写死 280px 退役', () => {
-    /* 五百五十八批随迁（击穿者：558 工蚁G——三件套收编 useTierCycle 单源）：
-       usePref 声明字面改收编接线锚（默认档 280 显式传参零迁） */
+  it('⑥ 字段清单限高 al.fieldsH 三档（558 合并 useTierCycle），CSS 写死 280px 退役', () => {
+    /* 五百五十八批同步更新（击穿者：558 工蚁G——三件套合并 useTierCycle 单源）：
+       usePref 声明字面改合并接线锚（默认档 280 显式传参零迁） */
     expect(lab).toMatch(/useTierCycle\('al\.fieldsH', FIELDS_H_TIERS, 280\)/);
     expect(lab).toMatch(/const FIELDS_H_TIERS = \[280, 420, 600\];/);
     expect(lab).toMatch(/data-al-flds-h/);
@@ -109,7 +109,7 @@ describe('525 AnalyzerLabView：输入行数 + 清单限高档 + lane 连续可�
     expect(lab).toMatch(/\.al-lanes\.split-half, \.al-lanes\.split-4060, \.al-lanes\.duo \{ grid-template-columns: minmax\(0, 1fr\); \}/);
     expect(lab).toMatch(/\.al-lanes :deep\(\.split-handle\) \{ display: none; \}/);
   });
-  it('⑧ lane 头/尾统一「线」语言：两处底色退役，分隔线保留（528 批随迁：padding 收编 var(--sp-*) 兼容形态）', () => {
+  it('⑧ lane 头/尾统一「线」语言：两处底色退役，分隔线保留（528 批同步更新：padding 合并 var(--sp-*) 兼容形态）', () => {
     expect(lab).toMatch(/\.al-lane-hd \{ display: flex; justify-content: space-between; align-items: center; padding: (?:8px|var\(--sp-2\)) (?:12px|var\(--sp-3\)); border-bottom: 1px solid var\(--border\); \}/);
     expect(lab).toMatch(/\.al-lane-result \{ padding: (?:10px|var\(--sp-2h\)) (?:12px|var\(--sp-3\)); border-top: 1px solid var\(--border\); min-height: 80px; \}/);
     expect(lab).not.toMatch(/\.al-lane-hd \{[^}]*background/);

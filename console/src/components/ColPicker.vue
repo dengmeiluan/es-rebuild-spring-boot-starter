@@ -12,7 +12,7 @@
       <div class="col-pick-row">
         <button class="btn sm ghost" @click="emit('update:selected', cols.slice())">全选</button>
         <!-- 「前 N」N 值偏好（usePref 全站记忆）——−/＋ 只调 N 落盘，
-             「前 N」按当前 N 应用；默认 6 保持既有行为 -->
+ 「前 N」按当前 N 应用；默认 6 保持既有行为 -->
         <button class="btn sm ghost" @click="emit('update:selected', cols.slice(0, firstN))">前 {{ firstN }}</button>
         <button class="btn sm ghost cp-n-step" aria-label="减少默认列数" title="减少「前 N」的 N" :disabled="firstN <= 1" @click="firstN = Math.max(1, firstN - 1)">−</button>
         <button class="btn sm ghost cp-n-step" aria-label="增加默认列数" title="增加「前 N」的 N" :disabled="firstN >= 30" @click="firstN = Math.min(30, firstN + 1)">＋</button>
@@ -20,13 +20,13 @@
       <label v-for="c in filtered" :key="c" class="col-pick-item">
         <input type="checkbox" :checked="selected.includes(c)" @change="toggle(c)" />
         <!-- 可选类型徽标（FieldPicker.vue:51 同语言——.mft-type 全站色卡 data-t 分色）；
-             types 不传/缺该字段键=不出徽标，零增量向后兼容 -->
+ types 不传/缺该字段键=不出徽标，零增量向后兼容 -->
         <span v-if="types?.[c]" class="cp-type mono mft-type" :data-t="types[c]">{{ types[c] }}</span>
         <span class="mono"><MarkText :text="c" :kw="kw" /></span>
         <!-- 选中项行内 ▲▼ 微调钮（selected 序=visibleCols 显示序，dbx 列管理
-             对位）——点击 emit update:selected 全量新序（受控回写，父层 useTablePrefs 既有
-             es_cols watch 自动落盘零新键）；首/末边界禁用；.stop.prevent 防误触行内勾选。
-             xxs 微档防溢出（theme.css .btn.xxs 20px） -->
+ 对位）——点击 emit update:selected 全量新序（受控回写，父层 useTablePrefs 既有
+ es_cols watch 自动落盘零新键）；首/末边界禁用；.stop.prevent 防误触行内勾选。
+ xxs 微档防溢出（theme.css .btn.xxs 20px） -->
         <span v-if="selected.includes(c)" class="cp-mv">
           <button class="btn xxs ghost cp-mv-btn" aria-label="上移" title="上移" :disabled="c === selected[0]"
             @click.stop.prevent="move(c, -1)">▲</button>
@@ -49,19 +49,19 @@ import { Columns3, Crosshair } from 'lucide-vue-next';
 import MarkText from './MarkText.vue';
 import { usePref } from '../composables/urlState';
 
-/*  列选择器收编为共享件——ResultTable（col-pick）与 QueryResultTable
-   （qpick）此前各持一份同构模板+样式，抽此组件后两表共用。
-   受控组件：列集合/选中集合由父给（即 useTablePrefs 的 allCols/visibleCols），
-   变更以整组数组回吐（父直接落 useTablePrefs 的持久化 watch）。 */
+/* 列选择器合并为共享件——ResultTable（col-pick）与 QueryResultTable
+ （qpick）此前各持一份同构模板+样式，抽此组件后两表共用。
+ 受控组件：列集合/选中集合由父给（即 useTablePrefs 的 allCols/visibleCols），
+ 变更以整组数组回吐（父直接落 useTablePrefs 的持久化 watch）。 */
 const props = defineProps<{
   /** 全量列集合（渲染与「全选/前 6」的基准） */
   cols: string[];
   /** 当前显示列（受控） */
   selected: string[];
-  /** 触发钮文字标签（：dbx 工具栏图标+文字语言，不传则纯图标） */
+  /** 触发钮文字标签（dbx 工具栏图标+文字语言，不传则纯图标） */
   label?: string;
   /** 字段类型映射（可选）：传则清单行字段名旁出 .mft-type 色卡类型徽标；
-      缺省 undefined=零增量（不传不出徽标）。ResultTable/QueryResultTable 的 fieldTypes/typeTiers 可直传 */
+ 缺省 undefined=零增量（不传不出徽标）。ResultTable/QueryResultTable 的 fieldTypes/typeTiers 可直传 */
   types?: Record<string, string>;
 }>();
 
@@ -76,7 +76,7 @@ const kw = ref('');
 watch(open, () => { kw.value = ''; });
 
 /* 「前 N」N 值偏好（全站共享的操作习惯，非数据语义故不按维度）——
-   usePref 落盘 es-console.pref.table.firstn，默认 6 与既有硬编码行为一致 */
+ usePref 落盘 es-console.pref.table.firstn，默认 6 与既有硬编码行为一致 */
 const firstN = usePref<number>('table.firstn', 6);
 
 const filtered = computed(() => {
@@ -92,7 +92,7 @@ function toggle(c: string) {
 }
 
 /* 选中列序微调——selected 序与父层 visibleCols（显示序）同源，相邻交换后
-   整组回吐（受控契约：不原地变异）；越界静默（按钮边界禁用为主，函数兜底） */
+ 整组回吐（受控契约：不原地变异）；越界静默（按钮边界禁用为主，函数兜底） */
 function move(c: string, dir: -1 | 1) {
   const next = props.selected.slice();
   const i = next.indexOf(c);
@@ -111,11 +111,11 @@ function move(c: string, dir: -1 | 1) {
 .col-pick-none { padding: var(--sp-2h); text-align: center; color: var(--tx2); font-size: var(--fs-sm); }
 .cp-label { font-size: var(--fs-sm); }
 /* 类型徽标布局档（色卡颜色走 theme.css 全站 .mft-type[data-t]，冷门类型回落 :where
-   specificity 0 同 FieldPicker/LuceneInput 口径；布局声明照 .fxp-type 平移、紧凑无 min-width） */
+ specificity 0 同 FieldPicker/LuceneInput 口径；布局声明照 .fxp-type 平移、紧凑无 min-width） */
 .cp-type { flex: none; font-size: var(--fs-2xs); padding: 0 5px; border-radius: var(--r-xs); line-height: 16px; }
 :where(.cp-type) { color: var(--muted); background: var(--hl); }
 /* ▲▼ 重排钮布局档——行尾右贴、不挤字段名（.mono 名 span 弹性占位）；
-   spacing 走 --sp 档表（spSweep538 防回潮锁），height/line-height/font-size 属形状系保字面 */
+ spacing 走 --sp 档表（ 防回潮锁），height/line-height/font-size 属形状系保字面 */
 .cp-mv { flex: none; display: inline-flex; gap: var(--sp-0); margin-left: auto; }
-.cp-mv-btn { padding: 0 var(--sp-1); line-height: 16px; height: 16px; font-size: var(--fs-2xs); } /* ：裸 10px 换 theme.css 立法档 --fs-2xs（同值）；16px 形状系不动 */
+.cp-mv-btn { padding: 0 var(--sp-1); line-height: 16px; height: 16px; font-size: var(--fs-2xs); } /* ：裸 10px 换 theme.css 约定档 --fs-2xs（同值）；16px 形状系不动 */
 </style>

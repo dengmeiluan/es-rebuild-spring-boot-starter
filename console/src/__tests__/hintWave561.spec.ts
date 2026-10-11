@@ -4,22 +4,22 @@
  *  A sqlCompletion 值位④零预载根治：冷缓存（curFields 空）走 ensureCurFields 再分派
  *    （551 批 ③分支 A3 同款 Promise 归一 + token 取消口），keyword/静态/text 三支收口
  *    dispatchValue 单函数；暖缓存维持同步快返（sqlValPos535「同步快返零请求」既有契约保形）。
- *  B ⚠范围记档（本 spec 不锁）：任务 3「date 值位补绝对日期字面」两面均因非随迁锁回退——
- *    a) VAL_FORMAT_HINTS.date values 追加 '2026-08-01'：三处非随迁锁击穿
+ *  B ⚠范围备案（本 spec 不锁）：任务 3「date 值位补绝对日期字面」两面均因非同步更新锁回退——
+ *    a) VAL_FORMAT_HINTS.date values 追加 '2026-08-01'：三处非同步更新锁击穿
  *       （sqlDateNanosTier547:109 toEqual 表锁 / sqlValPos535:153 与 hintWave557:323
  *       候选 toEqual），任何「date 值位多出一档」的变体都破其中至少一处；
  *    b) BETWEEN 特化扩 date/date_nanos 族：suggestWave551:338「非数值族 BETWEEN 不变形：
- *       date 列仍 date-math」为非随迁语义锁，与扩档直接互斥。
- *    按 560 批 ConfigDrift 判例「不新增红灯」两面延后，解禁随迁四锁后再立法。
+ *       date 列仍 date-math」为非同步更新语义锁，与扩档直接互斥。
+ *    按 560 批 ConfigDrift 先例「不新增红灯」两面延后，解禁同步更新四锁后再约定。
  *  C LuceneInput 值位 keyword terms 精确前缀置顶（sqlCompletion 558 先例同款稳定排序；
- *    suggestWave554:252 非随迁锁留档保绿，luceneValTiers538:63 随迁新字面）。
+ *    suggestWave554:252 非同步更新锁留档保绿，luceneValTiers538:63 同步更新新字面）。
  *  D role=alert 三处补齐：QueryXray tvErr 错误条 / AnalyzerLab al-err 与 al-fld-err。
  *  E jsonc.highlightDslJson：DSL 语义键 j-clause 档（键源 dslCompletionContext 既有导出
  *    只读 import，单源不重复造表）+ theme.css .j-clause 色档 + BoostTuner/SearchSandbox
- *    两消费面换装（span 包裹不改 textContent，boostMgmt525:112 / sandboxHlSafe500 兼容）。
+ *    两消费面改用（span 包裹不改 textContent，boostMgmt525:112 / sandboxHlSafe500 兼容）。
  *  F LuceneQueryView 架构分析/执行两钮动态 title（479 禁用原因契约保留在 else 支）。
  *  G ensureCurFields 去 void 包装直返 Promise（SqlConsole/SqlBridge）+ toast 裸串并轨
- *    friendlyEsError + errPreHtml 双参换装（xm-err 549 范式）。
+ *    friendlyEsError + errPreHtml 双参改用（xm-err 549 范式）。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -145,7 +145,7 @@ describe('561 A：sqlCompletion 值位④冷缓存 ensure 分派', () => {
   });
 });
 
-/* ═══ C：LuceneInput 值位精确前缀置顶（源锚：554 锁行随迁后新字面） ═══ */
+/* ═══ C：LuceneInput 值位精确前缀置顶（源锚：554 锁行同步更新后新字面） ═══ */
 describe('561 C：LuceneInput keyword 值位精确前缀置顶', () => {
   it('filter 后接稳定排序（sqlCompletion 558 先例同款字面）在場', () => {
     const li = read('components/LuceneInput.vue');
@@ -201,7 +201,7 @@ describe('561 E：jsonc.highlightDslJson（DSL 语义键 j-clause 档）', () =>
     expect(theme).toContain('.j-bool { color: #f472b6; }');
   });
 
-  it('两消费面换装：BoostTuner bt-dsl 与 SearchSandbox raw 面走 highlightDslJson', () => {
+  it('两消费面改用：BoostTuner bt-dsl 与 SearchSandbox raw 面走 highlightDslJson', () => {
     const bt = read('views/BoostTunerView.vue');
     const sb = read('views/SearchSandboxView.vue');
     expect(bt).toContain("import { highlightDslJson } from '../utils/jsonc';");
@@ -244,7 +244,7 @@ describe('561 G：契约与错误通道收口', () => {
     expect(br).toContain(`'转换失败：' + friendlyEsError(String(e?.message ?? e))`);
   });
 
-  it('errPreHtml 双参换装：SqlBridge convErrRaw 旁路 + QueryXray ex.error 双参（xm-err 549 范式）', () => {
+  it('errPreHtml 双参改用：SqlBridge convErrRaw 旁路 + QueryXray ex.error 双参（xm-err 549 范式）', () => {
     const br = read('views/SqlBridgeView.vue');
     const qx = read('views/QueryXrayView.vue');
     expect(br).toMatch(/v-html="errPreHtml\(convErr, errMeta\(convErrRaw\)\)"/);
@@ -253,5 +253,5 @@ describe('561 G：契约与错误通道收口', () => {
     expect(qx).toMatch(/v-html="errPreHtml\(ex\.error \|\| '-', errMeta\(ex\)\)"/);
   });
 
-  /* 561 批记档:SearchSandboxView .ss-err 收编 err-bar 系并行 lane 在途件,本批 HOLD,解禁后随 class="err-bar ss-err" 断言回补（ss-err-pre 锚在 layoutOcclusionGuard501 既有锁面,无随迁需要） */
+  /* 561 批备案:SearchSandboxView .ss-err 合并 err-bar 系并行 lane 在途件, HOLD,解禁后随 class="err-bar ss-err" 断言回补（ss-err-pre 锚在 layoutOcclusionGuard501 既有锁面,无同步更新需要） */
 });

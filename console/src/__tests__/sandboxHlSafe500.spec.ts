@@ -3,7 +3,7 @@
  * 背景：ES highlight 片段是文档内容直出的 HTML，此前裸 v-html 渲染=存储型注入面
  * （文档含 <img onerror> 即进 DOM）。净化口径=整段转义后只放行本页 auto-highlight
  * 注入的受控标签 <em class="hl">（pre_tags 是页面常量，非文档可控）。
- * 558b 随迁：hlSafe 单源迁 utils/highlightSanitize（SearchSandboxView 改 import 消费，
+ * 558b 同步更新：hlSafe 单源迁 utils/highlightSanitize（SearchSandboxView 改 import 消费，
  * 逻辑逐字平移），本件从源码正则抽取改为直接 import 单源验证；断言逐字保留。
  */
 import { describe, it, expect } from 'vitest';

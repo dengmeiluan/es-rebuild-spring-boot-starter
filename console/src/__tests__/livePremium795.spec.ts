@@ -9,8 +9,8 @@
  * 件3 节点卡视觉升档：水位条 4→6px 圆角轨道+节点名字重 650。
  * 件4 页面节奏：区块间距 --sp-3→--sp-4（疏密对比=区块间疏+卡间维持密）+stagger 入场
  *    delay 拉档+PageHeader subtitle 精简（细节收 title 悬浮）。
- * 执法边界：只动 spacing/font-weight/border-left/height/字号档；布局属性零动画；
- * 高度哨兵=C 档新基线记档（间距升档自然增长）。
+ * 边界：只动 spacing/font-weight/border-left/height/字号档；布局属性零动画；
+ * 高度哨兵=C 档新基线备案（间距升档自然增长）。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -43,7 +43,7 @@ describe('件2：告警横条语义色边', () => {
 });
 
 describe('件3：节点卡视觉升档', () => {
-  it('P4 节点名 650 字重+水位轨道在场（源码锁；稿 6px 笔误=现状 8px 已达标记档；八百零六批件1 用户令升档 8→12px=卡内主视觉+85/90 阈值刻度）', () => {
+  it('P4 节点名 650 字重+水位轨道在场（源码锁；稿 6px 笔误=现状 8px 已达标备案；八百零六批件1 用户令升档 8→12px=卡内主视觉+85/90 阈值刻度）', () => {
     const s = strip(liveSrc);
     expect(s).toMatch(/\.ld-bar[^{]*\{[^}]*height:\s*12px/);
     expect(s).toMatch(/\.ld-node-name b[^{]*\{[^}]*font-weight:\s*650/);

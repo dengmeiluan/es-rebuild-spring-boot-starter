@@ -6,7 +6,7 @@
  * 3) 已显式给出「复制原始」时不重复注入；success 不注入；
  * 4) DslQueryView 失败路径源码锁：msg 传原始错误（吃 friendlyEsError 管线）+「查看诊断」
  *    直达 /diag——旧文案「查询失败」经友好化原样返回 shown===msg，恰好绕过自动 action
- *    （全站唯一光杆错误 toast），本批根治。
+ *    （全站唯一光杆错误 toast），根治。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';

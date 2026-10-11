@@ -93,7 +93,7 @@ describe('G46：reset 后部件数值补拉（隐藏期挂载零拉取 → 重�
     seedLayout(['tasks', 'remote', 'health']);
     await mountView();
     await flush();
-    /* 前置态先验（709-C1 立法）：隐藏期挂载 refreshAll 条件跳过——病灶复现地基 */
+    /* 前置态先验（709-C1 约定）：隐藏期挂载 refreshAll 条件跳过——病灶复现地基 */
     expect(api.taskDetail, '隐藏期挂载不拉任务').not.toHaveBeenCalled();
     expect(api.remoteClusters, '隐藏期挂载不拉远程').not.toHaveBeenCalled();
     expect(api.healthReport, '隐藏期挂载不拉体检').not.toHaveBeenCalled();

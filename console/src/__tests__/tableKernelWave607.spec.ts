@@ -1,7 +1,7 @@
 /**
- * 六百零七批（轨3 表格内核）：QRT 内建视图档 opt-in（viewSeg）——dbx 差距 #2 收编
+ * 六百零七批（轨3 表格内核）：QRT 内建视图档 opt-in（viewSeg）——dbx 差距 #2 合并
  * （「展示形式统一在表格头」内核化：RT 541/QRT 547 hideBody 壳层此前只服务消费方自造
- * seg（DQ/IH 两份重复实现），本批把 seg+alt 体收进内核 opt-in，与 pagerInHead 同范式）。
+ * seg（DQ/IH 两份重复实现），把 seg+alt 体收进内核 opt-in，与 pagerInHead 同范式）。
  *
  * 五件套：
  *  ① viewSeg opt-in（缺省 false 保底 DOM 契约零变）：true 时工具行 bar-left 最前内建
@@ -13,9 +13,9 @@
  *  ③ viewPrefKey 提供时 usePref 落盘（跨会话记忆，es-console.pref.* 命名空间）；数据
  *     缺席的持久化档位诚实回落表格（偏好保留不回写）。
  *  ④ 独立壳分支条件扩 viewSegOn（无 storageKey 通道 seg 同样可达，pagerInHead 同口径）。
- *  ⑤ 首消费面 SearchTemplatesView 接线源码锁（571-C1：立法批必须自带首个消费面；
+ *  ⑤ 首消费面 SearchTemplatesView 接线源码锁（571-C1：约定批必须自带首个消费面；
  *     DQ/IH 既有实现迁移与 RT 对称件待 ihUnify554 冻结面解锁，接线下批）。
- *  随迁（本批同车）：rtFix552 ④/tableKernelWave547 ③ 的 QRT 守卫字面 !hideBody→
+ *  同步更新（同车）：rtFix552 ④/tableKernelWave547 ③ 的 QRT 守卫字面 !hideBody→
  *  !bodyHidden、tableKernelWave561 ③ QRT watch 字面（RT 半边不动）。
  *
  * 挂载样板照抄 tableKernelWave562（裸 createApp + pinia，叠挂勿先 unmount（T39），
@@ -101,7 +101,7 @@ describe('六百零七批二：viewSeg 分段出档与 alt 体', () => {
     expect(alt!.textContent).toContain('K607-JSON-ENVELOPE');
     await clickIt(segBtn('表格')!);
     expect(host.querySelector('.qrt-wrap'), '回表格档体回归').toBeTruthy();
-    expect(host.querySelector('.qrt-alt-body'), 'alt 体区退场').toBeNull();
+    expect(host.querySelector('.qrt-alt-body'), 'alt 体区移除').toBeNull();
   });
   it('Tree/卡片档体渲染+卡片 open-doc 透传宿主', async () => {
     const seen: any[] = [];
@@ -147,7 +147,7 @@ describe('六百零七批四：独立壳通道与源码锁', () => {
     expect(host.querySelector('.qrt-bar'), '独立壳工具行在场').toBeTruthy();
     expect(host.querySelector('.qrt-view-seg'), 'seg 寄居独立壳').toBeTruthy();
   });
-  it('源码锁：props/computed/watch/守卫换装/AltHitsViews 单源/独立壳条件全套', () => {
+  it('源码锁：props/computed/watch/守卫改用/AltHitsViews 单源/独立壳条件全套', () => {
     expect(qrt).toContain('viewSeg?: boolean;');
     expect(qrt).toContain('viewPrefKey?: string;');
     expect(qrt).toContain('jsonHtml?: string;');

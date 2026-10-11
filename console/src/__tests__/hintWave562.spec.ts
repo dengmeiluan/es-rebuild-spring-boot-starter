@@ -2,7 +2,7 @@
  * 五百六十二批（轨1 智能提示与高亮·工蚁1）：hintWave562 —— 红先行锁面。
  *
  *  A RankDebugView：:57/:107 两处 rd-verdict bad 失败面板补 role=alert（读屏可播报；
- *    vrErr/tvErr/al-err 558/561 先例同款）+ .rd-lint 私造三条随 561 lint-bar 单源立法换装
+ *    vrErr/tvErr/al-err 558/561 先例同款）+ .rd-lint 私造三条随 561 lint-bar 单源约定改用
  *    （rd-lint 锚类保留并存，scoped 私造形态退役）。
  *  B QueryXrayView：本页 lint 只有 setMarkers 编辑器划线单通道 → 补行内 lint 兜底条
  *    （error 档 role=alert / warn 档 role=status，theme.css lint-bar 单源勿私造 CSS；
@@ -11,10 +11,10 @@
  *  C sqlCompletion VAL_FORMAT_HINTS 补 date_range（复用 date 档 date-math values 通道）/
  *    ip_range（复用 ip 档 CIDR values 通道）；LuceneInput 值位分支+known 行补 range 族
  *    （integer/long/float/double_range→数值区间形态、date_range→date-math、ip_range→CIDR）
- *    +flattened（通配形态）。既有字面锁 6 处随迁（known 行/luceneJsonFind374/379 下界）。
+ *    +flattened（通配形态）。既有字面锁 6 处同步更新（known 行/luceneJsonFind374/379 下界）。
  *  D BoostTunerView kwCandidates 补「已敲前缀恰为候选全文时置顶」精确排序
  *    （sqlCompletion 558 / LuceneInput 561 先例同款一行稳定 sort）。
- *  E LuceneQueryView :237-242 JSON 视图查找手写件换装 SearchFilterBar 统一件
+ *  E LuceneQueryView :237-242 JSON 视图查找手写件改用 SearchFilterBar 统一件
  *    （ss-hits-find 561 先例同款窄栏胶囊；计数/清除入 slot；Esc 清空组件内建承接）。
  *  F SearchSandboxView explain/profile/auto-highlight 三 checkbox 补中文 title 释义。
  *  G dslCompletionContext 新增 ANALYZER_COMPONENT_ZH 组件名中文释义表（esEnumZh 黑名单
@@ -41,14 +41,14 @@ const ss = read('views/SearchSandboxView.vue');
 const al = read('views/AnalyzerLabView.vue');
 const li = read('components/LuceneInput.vue');
 
-/* ═══ A：RankDebugView role=alert ×2 + .rd-lint 换装 lint-bar 单源 ═══ */
-describe('562 A：RankDebugView 两失败面板 role=alert + lint 条单源换装', () => {
+/* ═══ A：RankDebugView role=alert ×2 + .rd-lint 改用 lint-bar 单源 ═══ */
+describe('562 A：RankDebugView 两失败面板 role=alert + lint 条单源改用', () => {
   it('whyErr / abErr 两处 rd-verdict bad 面板补 role="alert"', () => {
     expect(rd).toContain('<div v-if="!busy && whyErr" role="alert" class="rd-verdict bad">');
     expect(rd).toContain('<div v-if="!busy && abErr" role="alert" class="rd-verdict bad">');
   });
 
-  it('.rd-lint 私造条换装 theme.css lint-bar 单源（rd-lint 锚类保留并存，双档各自 role）', () => {
+  it('.rd-lint 私造条改用 theme.css lint-bar 单源（rd-lint 锚类保留并存，双档各自 role）', () => {
     expect(rd).toContain('<div v-if="rdLintErrors.length" role="alert" class="rd-lint lint-bar lint-bar-err">');
     expect(rd).toContain('<div v-else-if="rdLintWarns.length" role="status" class="rd-lint lint-bar lint-bar-warn">');
   });
@@ -170,15 +170,15 @@ describe('562 D：BoostTunerView kwCandidates 精确前缀置顶', () => {
   });
 });
 
-/* ═══ E：LuceneQueryView JSON 查找换装 SearchFilterBar ═══ */
-describe('562 E：LuceneQueryView JSON 视图查找换装 SearchFilterBar', () => {
+/* ═══ E：LuceneQueryView JSON 查找改用 SearchFilterBar ═══ */
+describe('562 E：LuceneQueryView JSON 视图查找改用 SearchFilterBar', () => {
   it('统一件接线：import + 窄栏胶囊落位类 + placeholder 兼 aria-label（lc-json-find 374 锚容器保留）', () => {
     expect(lc).toContain("import SearchFilterBar from '../components/SearchFilterBar.vue';");
     expect(lc).toContain('<div class="lc-json-find" v-if="hits.length">');
     expect(lc).toContain('<SearchFilterBar v-model="jsonKw" class="lc-json-find-bar" placeholder="在 JSON 视图内查找（_id/字段值）…">');
   });
 
-  it('计数/清除入 slot 胶囊内右翼（374 计数/清除锚语义随迁）', () => {
+  it('计数/清除入 slot 胶囊内右翼（374 计数/清除锚语义同步更新）', () => {
     expect(lc).toContain('{{ jsonHits.length }}/{{ hits.length }} 条');
     expect(lc).toContain('<button v-if="jsonKw" class="btn ghost xs" aria-label="清除 JSON 视图查找" @click="jsonKw = \'\'">✕</button>');
   });

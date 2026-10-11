@@ -1,7 +1,7 @@
 /**
  * 五百三十四批·轨2（工蚁 W2）：IndexHub 执行可取消+读秒（P0-A）· 行为网。
  *
- * 契约（本批验收锚）：
+ * 契约（验收锚）：
  * ① runDocs/runDsl 补 useQueryRun（DslQueryView L96-99/L817-820 范式同款）：
  *    AbortController signal 传 api.clusterQuery 第四参；100ms tick 读秒
  *    「执行中 X.Xs」句式；取消钮入既有工具行；取消=AbortError 不进错误红条。
@@ -241,14 +241,14 @@ describe('IndexHub 文档 tab：可取消+读秒（五百三十四批 P0-A）', 
 });
 
 describe('行级执行（ops raw）同款接线（五百三十四批 P0-A · 源码锁）', () => {
-  it('opsQr signal 传 api.raw + 执行钮 busy 换字 + 瞬时取消钮；idx 快照守卫随迁零改', () => {
+  it('opsQr signal 传 api.raw + 执行钮 busy 换字 + 瞬时取消钮；idx 快照守卫同步更新零改', () => {
     expect(ih).toContain('const opsQr = useQueryRun();');
     expect(ih).toContain('const signal = opsQr.begin();');
     expect(ih).toContain('await api.raw(method, path, undefined, signal);');
     expect(ih).toMatch(/v-if="opsKey === `\/\$\{cur\}\/_refresh`"/);
     expect(ih).toMatch(/@click="opsQr\.cancel\(\)"/);
     expect(ih).toMatch(/\{\{ opsKey === `\/\$\{cur\}\/_refresh` \? '执行中 ' \+ \(opsQr\.elapsedMs\.value \/ 1000\)\.toFixed\(1\) \+ 's' : '执行' \}\}/);
-    /* 既有 idx 快照竞态守卫随迁零改（runDocs/runDsl 三处 + loadDetail） */
+    /* 既有 idx 快照竞态守卫同步更新零改（runDocs/runDsl 三处 + loadDetail） */
     expect(ih).toMatch(/if \(idx !== cur\.value\) return; \/\/ 途中切索引：丢弃过期响应/);
     expect(ih).toMatch(/if \(idx === cur\.value\) docsLoading\.value = false;/);
     expect(ih).toMatch(/if \(idx === cur\.value\) qryLoading\.value = false;/);

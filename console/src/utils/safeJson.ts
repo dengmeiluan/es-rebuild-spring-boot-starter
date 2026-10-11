@@ -1,9 +1,9 @@
 /* JSON 长整型精度保真。
-   致命病灶：ES 文档里 19 位 long ID（如雪花 ID 2018093000000045300）超过
-   Number.MAX_SAFE_INTEGER（9007199254740991），原生 JSON.parse 在解析瞬间就把
-   尾数抹成 0——表格展示、复制、乃至「读出→编辑→回写」全链路都是失真数据，
-   回写即数据污染。根治：解析前把超安全范围的整数字面量加引号转字符串，
-   数值保真；ES 的 long 字段接受字符串数字写入，回写无害。 */
+ 致命病灶：ES 文档里 19 位 long ID（如雪花 ID 2018093000000045300）超过
+ Number.MAX_SAFE_INTEGER（9007199254740991），原生 JSON.parse 在解析瞬间就把
+ 尾数抹成 0——表格展示、复制、乃至「读出→编辑→回写」全链路都是失真数据，
+ 回写即数据污染。根治：解析前把超安全范围的整数字面量加引号转字符串，
+ 数值保真；ES 的 long 字段接受字符串数字写入，回写无害。 */
 
 const INT_RE = /-?\d{16,}/; // 快速预检：16 位以下整数必然安全，绝大多数响应走零开销通道
 
@@ -72,10 +72,10 @@ export function parseJsonSafe(text: string): any {
 }
 
 /** 存储通道防御性读取。
-   localStorage/sessionStorage 由用户环境共有，任意文本皆可入内——裸
-   JSON.parse 挂载期一崩全屏。坏 JSON/形态不符/键缺失一律回落 fallback；
-   isShape 缺省恒真，数组/对象消费方传 Array.isArray 等谓词
-   （parse 不抛不代表形态对——非数组/非对象字面量一律按记录损坏回落）。 */
+ localStorage/sessionStorage 由用户环境共有，任意文本皆可入内——裸
+ JSON.parse 挂载期一崩全屏。坏 JSON/形态不符/键缺失一律回落 fallback；
+ isShape 缺省恒真，数组/对象消费方传 Array.isArray 等谓词
+ （parse 不抛不代表形态对——非数组/非对象字面量一律按记录损坏回落）。 */
 export function readStoredJson<T>(
   storage: Pick<Storage, 'getItem'>,
   key: string,
@@ -93,9 +93,9 @@ export function readStoredJson<T>(
 }
 
 /** 存储通道防御性写入（readStoredJson 的写侧对称件）。
-   setItem/removeItem 在隐私模式/配额满（QuotaExceededError）会抛——共享内核的
-   偏好/草稿/收藏回放/token 写盘失败不得打断主流程：吞掉异常回执布尔，
-   内存态照常可用（存储不可用 ≠ 功能不可用）。 */
+ setItem/removeItem 在隐私模式/配额满（QuotaExceededError）会抛——共享内核的
+ 偏好/草稿/收藏回放/token 写盘失败不得打断主流程：吞掉异常回执布尔，
+ 内存态照常可用（存储不可用 ≠ 功能不可用）。 */
 export function writeStoredRaw(
   storage: Pick<Storage, 'setItem'>,
   key: string,

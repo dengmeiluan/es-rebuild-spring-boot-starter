@@ -10,7 +10,7 @@
  *    '/cluster/health-report'（本页单一 GET 通道，无读写端点混淆面）。
  * ② G264（P3 铁律 D·裁决不立刀）主钮「开始体检」RefreshCcw spin+「扫描中…」
  *    双态既有合规；err-bar 重试钮纯文本+run() 入口清型（runErr='' 起手清）=
- *    778 立法适用页（重试起手容器即卸载，刀面渲染不可见）；在途反馈由
+ *    778 约定适用页（重试起手容器即卸载，刀面渲染不可见）；在途反馈由
  *    hr-load 进度条+主钮 spin 承接——本组只做现状守卫锁豁免语义。
  * ③ G265（弱 P3 aria/铁律 F 弱刀·随批可裁）hr-load 在途区无 role=status
  *    （G224/G229/G235 异步状态语义族；776 bw-foot 同族）+hero 行「Pending Tasks」
@@ -58,7 +58,7 @@ vi.mock('../api', async (importOriginal) => {
   };
 });
 
-/* Monaco 内核 happy-dom canvas 崩统一 stub（735 批课立法；743/745/747/755/777/778
+/* Monaco 内核 happy-dom canvas 崩统一 stub（735 批课约定；743/745/747/755/777/778
    spec 同款）——本页经 RawIoModal 两分节只读查看器引入 */
 vi.mock('../components/MonacoEditor.vue', () => ({
   default: {
@@ -186,7 +186,7 @@ describe('779 G263 RawIo 三件套（铁律 F·头名·778 G259 同构）', () =
   });
 });
 
-describe('779 G264 在途族现状守卫（主钮双态既有+重试豁免=778 立法锁）', () => {
+describe('779 G264 在途族现状守卫（主钮双态既有+重试豁免=778 约定锁）', () => {
   it('主钮双态现状守卫：在途窗 disabled+icon spin+「扫描中…」→复常双复位', async () => {
     const host = await mountView();
     const btn = findBtn(host, /开始体检/);
@@ -200,11 +200,11 @@ describe('779 G264 在途族现状守卫（主钮双态既有+重试豁免=778 �
     releaseReport();
     await settle(8);
     expect(btn.disabled, '复常解禁').toBe(false);
-    expect(btn.querySelector('[class~="spin"]'), '复常 spin 退场').toBeFalsy();
+    expect(btn.querySelector('[class~="spin"]'), '复常 spin 移除').toBeFalsy();
     expect((btn.textContent || '').replace(/\s+/g, ''), '复常文案复位').toContain('开始体检');
   });
 
-  it('重试链豁免口径守卫（778 立法）：失败 err-bar→点重试→入口清即退场+hr-load 承接', async () => {
+  it('重试链豁免口径守卫（778 约定）：失败 err-bar→点重试→入口清即移除+hr-load 承接', async () => {
     const host = await mountView();
     findBtn(host, /开始体检/).click();
     await settle(4);
@@ -217,7 +217,7 @@ describe('779 G264 在途族现状守卫（主钮双态既有+重试豁免=778 �
     const retry = findBtn(host, /重试/, errBar!);
     retry.click();
     await settle(4);
-    expect(host.querySelector('.err-bar'), '重试起手入口清即退场（runErr=\'\' 起手清=778 立法）').toBeFalsy();
+    expect(host.querySelector('.err-bar'), '重试起手入口清即移除（runErr=\'\' 起手清=778 约定）').toBeFalsy();
     expect(host.querySelector('.hr-load'), '在途反馈由 hr-load 进度条承接').toBeTruthy();
     releaseReport();
     await settle(8);
@@ -252,7 +252,7 @@ describe('779 G266 干净面负向锁（527 批已清死类不回潮）', () => 
   it('原始 IO 钮恰一个+退役类名不回潮', async () => {
     const host = await mountView();
     expect(host.querySelectorAll('.hr-hd-r button').length, '页头动作组=四钮（复制 MD/导出/原始 IO/开始体检）').toBe(4);
-    /* 行首规则定义锚：527 批删除记档注释中的字面（760 课① 注释域自伤族）不算回潮 */
+    /* 行首规则定义锚：527 批删除备案注释中的字面（760 课① 注释域自伤族）不算回潮 */
     expect(/^\.hr-hd-(?:l|ic|tt|sub)\s*\{/m.test(src), '527 批退役死类不回潮').toBe(false);
   });
 });

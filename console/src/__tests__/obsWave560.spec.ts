@@ -1,11 +1,11 @@
-/* 五百六十批轨5【错误语义收编+进度可见】八件看守。
+/* 五百六十批轨5【错误语义合并+进度可见】八件看守。
  *
  * 治理本体：六写路径裸 err（e.message 直出）→ friendlyEsError 单源翻译
- * （BoostTunerView w80 判例口径 friendlyEsError(String(e?.message ?? e))，中文前缀保留）；
+ * （BoostTunerView w80 先例口径 friendlyEsError(String(e?.message ?? e))，中文前缀保留）；
  * DQ jqError 死状态（写了 ref 但模板零渲染点）补行内提示；
- * DQ 工具行窄屏静默裁切：overflow:hidden 为 dqBuilderEntry554 在途锁域，本批记档回退；
+ * DQ 工具行窄屏静默裁切：overflow:hidden 为 dqBuilderEntry554 在途锁域，备案回退；
  * Snapshots 恢复/创建提交后进度可见（立即补刷+文案指路）；
- * Browser ForceMerge 同步等待改异步提交（wait_for_completion=false，对齐 IndexHub 判例）；
+ * Browser ForceMerge 同步等待改异步提交（wait_for_completion=false，对齐 IndexHub 先例）；
  * Slm 触发后双刷（立即 + 1200ms 兜底）。
  *
  * 走源文本匹配理由同 lrBarSingleTrack.spec.ts:26-29：happy-dom 下 scoped <style>
@@ -22,7 +22,7 @@ const read = (f: string) => strip(readFileSync(join(views, f), 'utf-8'));
 
 const FFE = "friendlyEsError(String(e?.message ?? e))";
 
-describe('obsWave560：DslQueryView 六写路径错误收编', () => {
+describe('obsWave560：DslQueryView 六写路径错误合并', () => {
   const dq = read('DslQueryView.vue');
 
   it('六处 catch 臂全部接线 friendlyEsError 单源（中文前缀保留）', () => {
@@ -42,8 +42,8 @@ describe('obsWave560：DslQueryView 六写路径错误收编', () => {
     }
   });
 
-  it('catch 臂不再残留裸 e.message 直出 notify（六路径收编后不得回退）', () => {
-    /* 六处收编点所在行不得再出现裸串拼接（失败原因可读化后裸串回退=治理失效） */
+  it('catch 臂不再残留裸 e.message 直出 notify（六路径合并后不得回退）', () => {
+    /* 六处合并点所在行不得再出现裸串拼接（失败原因可读化后裸串回退=治理失效） */
     const lines = dq.split('\n');
     for (const ln of lines) {
       if (ln.includes("store.notify('error'") && /e\?\.message \|\| e/.test(ln)) {
@@ -60,7 +60,7 @@ describe('obsWave560：DslQueryView 六写路径错误收编', () => {
       '渲染点必须输出 jqError 文本本体').toBe(true);
   });
 
-  it('工具行窄屏裁切：overflow:hidden 记档保留（dqBuilderEntry554 在途锁域，回退裁决）', () => {
+  it('工具行窄屏裁切：overflow:hidden 备案保留（dqBuilderEntry554 在途锁域，回退裁决）', () => {
     const rule = /(?:^|[\s,}])\.dq-toolbar \.lr-bar-l\s*\{([^}]*)\}/m.exec(dq);
     expect(rule, '.dq-toolbar .lr-bar-l 规则消失了').toBeTruthy();
     expect(/overflow\s*:\s*hidden/.test(rule![1]),
@@ -79,7 +79,7 @@ describe('obsWave560：SnapshotsView 提交后进度可见', () => {
     expect(/restoreOpen\.value = false;\s*\n\s*loadSnapshots\(\);/.test(body),
       '恢复提交成功关闭弹窗后必须立即 loadSnapshots() 一次（IN_PROGRESS 行级进度可见）').toBe(true);
     expect(/loadSnapshots, 1500\)/.test(sv),
-      '创建侧既有 1500ms 单发兜底形态不动（本批不为恢复造定时器）').toBe(true);
+      '创建侧既有 1500ms 单发兜底形态不动（不为恢复造定时器）').toBe(true);
   });
 
   it('doRestore 成功文案补「进度见列表行」指路', () => {
@@ -96,12 +96,12 @@ describe('obsWave560：SnapshotsView 提交后进度可见', () => {
       '1500ms 单发兜底保留（IN_PROGRESS 快照元数据晚到补偿）').toBe(true);
   });
 
-  it('doCreate 裸 err 接线 friendlyApiError（571 随迁：560 原锁 friendlyEsError 口径，571 三消费面接线升级 code 优先单源）', () => {
+  it('doCreate 裸 err 接线 friendlyApiError（571 同步更新：560 原锁 friendlyEsError 口径，571 三消费面接线升级 code 优先单源）', () => {
     expect(sv.includes("'创建失败：' + friendlyApiError(e)"),
-      '创建失败必须 friendlyApiError 口径（560 doRestore 已修是判例；571 升级 code 优先）').toBe(true);
+      '创建失败必须 friendlyApiError 口径（560 doRestore 已修是先例；571 升级 code 优先）').toBe(true);
   });
 
-  it('sv-input 换装 SearchFilterBar 统一件（placeholder 逐字保留，559 TasksView tv-kw 判例）', () => {
+  it('sv-input 改用 SearchFilterBar 统一件（placeholder 逐字保留，559 TasksView tv-kw 先例）', () => {
     expect(sv.includes("import SearchFilterBar from '../components/SearchFilterBar.vue'"),
       '必须导入 SearchFilterBar 统一件').toBe(true);
     expect(/<SearchFilterBar v-model="filter"/.test(sv),
@@ -109,23 +109,23 @@ describe('obsWave560：SnapshotsView 提交后进度可见', () => {
     expect(/placeholder="按名字过滤"/.test(sv),
       'placeholder 逐字保留（兼作 aria-label）').toBe(true);
     expect(/input-class="sv-kw"/.test(sv),
-      'sv-kw 纯锚类随 input-class 保留在 input 上（tv-kw 判例形态，胶囊壳归组件单源）').toBe(true);
+      'sv-kw 纯锚类随 input-class 保留在 input 上（tv-kw 先例形态，胶囊壳归组件单源）').toBe(true);
     expect(/@enter="onHitKey"/.test(sv),
       'Enter 定向转出接线 onHitKey（HitNav Shift+Enter 前/后语义经 SFB @enter 保留）').toBe(true);
     expect(/<input v-model="filter" placeholder="按名字过滤" class="sv-input/.test(sv),
-      '手写过滤框必须退役（换装后不得残留裸 input 形态）').toBe(false);
+      '手写过滤框必须退役（改用后不得残留裸 input 形态）').toBe(false);
   });
 });
 
-describe('obsWave560：BrowserView ForceMerge 异步化+错误收编', () => {
+describe('obsWave560：BrowserView ForceMerge 异步化+错误合并', () => {
   const br = read('BrowserView.vue');
 
-  it('ForceMerge 提交改 wait_for_completion=false（对齐 IndexHubView 异步判例）', () => {
+  it('ForceMerge 提交改 wait_for_completion=false（对齐 IndexHubView 异步先例）', () => {
     expect(/_forcemerge\?max_num_segments=1&wait_for_completion=false/.test(br),
       'ForceMerge POST 必须带 wait_for_completion=false（同步等待大索引会占死前端）').toBe(true);
   });
 
-  it('响应含 taskId 时 notify 指路任务页（响应处理形态对齐 IndexOptimizerView 判例）', () => {
+  it('响应含 taskId 时 notify 指路任务页（响应处理形态对齐 IndexOptimizerView 先例）', () => {
     const body = /async function askFm\([\s\S]*?\n\}/.exec(br)?.[0] ?? '';
     expect(body, 'askFm 函数体必须存在').toBeTruthy();
     expect(/taskId/.test(body) && body.includes('已提交后台执行'),
@@ -140,7 +140,7 @@ describe('obsWave560：BrowserView ForceMerge 异步化+错误收编', () => {
   });
 });
 
-describe('obsWave560：SlmView 触发后双刷+错误收编', () => {
+describe('obsWave560：SlmView 触发后双刷+错误合并', () => {
   const slm = read('SlmView.vue');
 
   it('execNow 成功臂：立即 loadAll() + 1200ms 兜底重刷保留', () => {
@@ -154,11 +154,11 @@ describe('obsWave560：SlmView 触发后双刷+错误收编', () => {
 
   it('触发失败裸 err 接线 friendlyEsError', () => {
     expect(slm.includes("'触发失败：' + " + FFE),
-      'execNow 触发失败必须 friendlyEsError 口径（本文件其余臂已修是判例）').toBe(true);
+      'execNow 触发失败必须 friendlyEsError 口径（本文件其余臂已修是先例）').toBe(true);
   });
 });
 
-describe('obsWave560：PitScrollView 三处裸 err 收编', () => {
+describe('obsWave560：PitScrollView 三处裸 err 合并', () => {
   const pit = read('PitScrollView.vue');
 
   it('PIT 开启/关闭/拉取失败三处接线 friendlyEsError（log 留痕原文不动）', () => {

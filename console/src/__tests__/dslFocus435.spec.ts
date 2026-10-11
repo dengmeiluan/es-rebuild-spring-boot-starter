@@ -12,14 +12,14 @@ import { join } from 'node:path';
 const v = readFileSync(join(__dirname, '../views/DslQueryView.vue'), 'utf-8');
 const rt = readFileSync(join(__dirname, '../components/ResultTable.vue'), 'utf-8');
 
-describe('DslQuery 结果区聚焦（435 批，516 批收编表格内建）', () => {
+describe('DslQuery 结果区聚焦（435 批，516 批合并表格内建）', () => {
   it('视图层包装退役，放大由 RT 内建承担', () => {
     /* 旧视图层接线必须拆干净 */
     expect(v).not.toContain('dq.workspace');
     expect(v).not.toContain('<FocusableSurface');
     expect(v).not.toContain('focusPaneId');
     /* DSL_PANES 的 workspace pane focusable 语义保留（435 批原契约） */
-    /* 539 批随迁：pane 行追加互覆盖 maximizable/maxName（focusable 语义保留） */
+    /* 539 批同步更新：pane 行追加互覆盖 maximizable/maxName（focusable 语义保留） */
     expect(v).toMatch(/\{ id: 'query-builder\.workspace', role: 'workspace', minSize: 360, defaultSize: 'flex', focusable: true, maximizable: true, maxName: '编辑器' \},/);
     /* RT 内建：FS 包根 + rt-bar 内建放大钮 */
     expect(rt).toMatch(/<FocusableSurface pane-id="rt\.table" title="结果表" headless :enabled="focused"/);

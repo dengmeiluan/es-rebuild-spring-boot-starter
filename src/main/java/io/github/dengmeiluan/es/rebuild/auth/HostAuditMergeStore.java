@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 控制台审计——宿主贡献合并装饰层（）：查询时把宿主
+ * 控制台审计——宿主贡献合并装饰层（查询时把宿主
  * {@link ConsoleAuditContributor} 的记录并入 {@link ConsoleOpsAuditStore} 的查询结果，
  * 按 timestamp 倒序全局排序后裁剪到 size，来源标记 {@code source=host}；写入路径纯透传
  * （宿主记录不进控制台存储，各归其主，删除/保留策略互不绑架）。

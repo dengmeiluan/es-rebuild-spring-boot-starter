@@ -1,5 +1,5 @@
 /**
- * 五百三十八批·轨4（工蚁 W4）：全站扁平化扫荡第二波（八视图残面）· 契约记档。
+ * 五百三十八批·轨4（工蚁 W4）：全站扁平化扫荡第二波（八视图残面）· 契约备案。
  *
  * 仿 devtoolsFlatten534 三件套范式（静态源码断言，happy-dom 不挂载）：
  * ① 壳退役负锁字典：PitScroll pt-card / UBQ uq-card（+uq-card-bd 框中框内衬）模板类清零；
@@ -8,11 +8,11 @@
  *    （ld-alerts 535 W6 先例），chrome 规则（bg/通栏 border/radius）禁回流；
  *    RestView/SystemView 全局 .card 消费清零（退役入册）。
  * ② 正锁：各页行首横排卡头 / fs-head 分界在场（pt-card-hd / uq-card-hd / io-seg accent /
- *    cv-rp-hd / ld-alerts-tt），PainlessLab 535 批「分界归 fs-head border-bottom」立法承接。
- * ③ 恒高字面冻结：本批纯视觉降层未动任何高度链——pt-logs 200 / pt-num fs-num-l /
+ *    cv-rp-hd / ld-alerts-tt），PainlessLab 535 批「分界归 fs-head border-bottom」约定承接。
+ * ③ 恒高字面冻结：纯视觉降层未动任何高度链——pt-logs 200 / pt-num fs-num-l /
  *    uq-qcard 280 / io-preview-code 240 / cv-grid 42vh 定行 / rt-resp-scroll calc 链 /
  *    system QRT calc 链 / be-result-row 间距载体 逐字锁现状防回潮。
- * ④ StatusPill 换装锁：cv-rp-badge 手写 ok/err 徽标全形态清零 + StatusPill 消费在场 +
+ * ④ StatusPill 改用锁：cv-rp-badge 手写 ok/err 徽标全形态清零 + StatusPill 消费在场 +
  *    cv-iss-sev 既有锚不动（componentUnify530 口径），呼吸图标随统一件化退役。
  */
 import { describe, it, expect } from 'vitest';
@@ -31,8 +31,8 @@ const SHELL_CLASS_GONE: Record<string, RegExp[]> = {
   SystemView: [/class="card[" ]/],
 };
 
-describe('五百三十八批①：模板壳类清零（§6v 立法①防回潮）', () => {
-  it('pt-card / uq-card / 全局 .card 模板消费清零（wide 网格占位随 pt-sec/uq-sec 随迁）', () => {
+describe('五百三十八批①：模板壳类清零（§6v 约定①防回潮）', () => {
+  it('pt-card / uq-card / 全局 .card 模板消费清零（wide 网格占位随 pt-sec/uq-sec 同步更新）', () => {
     for (const [view, regexes] of Object.entries(SHELL_CLASS_GONE)) {
       const s = read(`../views/${view}.vue`);
       for (const re of regexes) {
@@ -41,10 +41,10 @@ describe('五百三十八批①：模板壳类清零（§6v 立法①防回潮�
     }
     const pt = read('../views/PitScrollView.vue');
     const uq = read('../views/UpdateByQueryView.vue');
-    expect(pt, 'pt-sec 分节类在场（wide 随迁）').toMatch(/class="pt-sec wide pt-logs"/);
+    expect(pt, 'pt-sec 分节类在场（wide 同步更新）').toMatch(/class="pt-sec wide pt-logs"/);
     expect(pt).toMatch(/\.pt-sec \{ border-top: 1px solid var\(--border\); padding-top: var\(--sp-1h\); \}/);
     expect(pt).toMatch(/\.pt-sec\.wide \{ grid-column: 1 \/ -1; \}/);
-    expect(uq, 'uq-sec 分节类在场（wide/qcard 随迁）').toMatch(/class="uq-sec wide uq-qcard"/);
+    expect(uq, 'uq-sec 分节类在场（wide/qcard 同步更新）').toMatch(/class="uq-sec wide uq-qcard"/);
     expect(uq).toMatch(/\.uq-sec \{ border-top: 1px solid var\(--border\); display: flex; flex-direction: column; gap: var\(--sp-2\); \}/);
     expect(uq).toMatch(/\.uq-sec\.wide \{ grid-column: 1 \/ -1; \}/);
   });
@@ -76,11 +76,11 @@ describe('五百三十八批①：模板壳类清零（§6v 立法①防回潮�
     expect(cv, 'cv-import 底色/描边/圆角不回流').not.toMatch(/\.cv-import \{[^}]*(background|border-radius)/);
     expect(cv).toMatch(/\.cv-report \{ border-top: 1px solid var\(--border\); padding-top: var\(--sp-2\); \}/);
     expect(cv, 'cv-report 通栏 border/圆角不回流').not.toMatch(/\.cv-report \{[^}]*border-radius/);
-    expect(cv, 'cv-tpl 模板小卡=可点击交互卡豁免保留（立法③）').toMatch(
+    expect(cv, 'cv-tpl 模板小卡=可点击交互卡豁免保留（约定③）').toMatch(
       /\.cv-tpl \{ padding: var\(--sp-3\); background: var\(--card-bg\); border: 1px solid var\(--border\); border-radius: var\(--r-m\); cursor: pointer;/);
   });
 
-  it('be-result-b / be-fail-item 项级小框降层（be-card-hd 逐字锚不在本批面）', () => {
+  it('be-result-b / be-fail-item 项级小框降层（be-card-hd 逐字锚不在面）', () => {
     const be = read('../views/BulkEditorView.vue');
     expect(be).toMatch(/\.be-result-b \{ flex: 1; text-align: center; padding: var\(--sp-2\) 0; font-size: var\(--fs-xs\); color: var\(--muted\); \}/);
     expect(be, 'be-result-b 描边/圆角不回流').not.toMatch(/\.be-result-b \{[^}]*border/);
@@ -90,7 +90,7 @@ describe('五百三十八批①：模板壳类清零（§6v 立法①防回潮�
 
   it('ld-alerts-tt 头条本体漏面补刀：panel-2 底块退役（535 W6 只退了外框）', () => {
     const ld = read('../views/LiveDashboardView.vue');
-    /* 八百一十七批件1 随迁：区块标题升 sec-t 立法档 fs-xs→fs-sm（四区同档；用户令「统一设计语言」） */
+    /* 八百一十七批件1 同步更新：区块标题升 sec-t 约定档 fs-xs→fs-sm（四区同档；用户令「统一设计语言」） */
     expect(ld).toMatch(/\.ld-alerts-tt \{ padding: var\(--sp-2\) var\(--sp-3\); font-size: var\(--fs-sm\); font-weight: 600; border-bottom: 1px solid var\(--border\);/);
     expect(ld, 'panel-2 头条底色不回流').not.toMatch(/\.ld-alerts-tt \{[^}]*background/);
   });
@@ -104,11 +104,11 @@ function pt_rules_gone(s: string): boolean {
 /* ═══════════ ② 行首横排卡头 / fs-head 分界正锁 ═══════════ */
 
 describe('五百三十八批②：卡头行首横排档在场（刀②语义承接）', () => {
-  it('PitScrollView：pt-card-hd 四头条在场（527 批已并轨 650 档，本批只退壳不动头）', () => {
+  it('PitScrollView：pt-card-hd 四头条在场（527 批已并轨 650 档，只退壳不动头）', () => {
     const pt = read('../views/PitScrollView.vue');
     expect((pt.match(/class="pt-card-hd"/g) || []).length, '四张分节各一头条').toBe(4);
-    /* 五百五十批随迁：卡头并 fs-head 行首横排档（uq-card-hd 本批同语言判例，flattenWave550②），
-       旧 fs-sm 卡头档字面随迁为新档逐字；四头条数与分节结构零变动 */
+    /* 五百五十批同步更新：卡头并 fs-head 行首横排档（uq-card-hd 同语言先例，flattenWave550②），
+       旧 fs-sm 卡头档字面同步更新为新档逐字；四头条数与分节结构零变动 */
     expect(pt).toMatch(/\.pt-card-hd \{ display: flex; align-items: center; justify-content: space-between; gap: var\(--sp-2\); padding: 5px var\(--sp-2\); border-bottom: 1px solid var\(--border\); font-size: var\(--fs-xs\); font-weight: 650; color: var\(--tx1\); letter-spacing: \.02em; \}/);
   });
 
@@ -132,7 +132,7 @@ describe('五百三十八批②：卡头行首横排档在场（刀②语义承�
   });
 });
 
-/* ═══════════ ③ 恒高字面冻结（本批零高度改动，锁现状防回潮） ═══════════ */
+/* ═══════════ ③ 恒高字面冻结（零高度改动，锁现状防回潮） ═══════════ */
 
 describe('五百三十八批③：恒高字面冻结（2.9.115/119 事故面口径）', () => {
   it('PitScroll：日志滚动钳制 / 28px 大数字档 / QRT 聚焦 calc 链逐字在场', () => {
@@ -172,9 +172,9 @@ describe('五百三十八批③：恒高字面冻结（2.9.115/119 事故面口�
   });
 });
 
-/* ═══════════ ④ StatusPill 换装锁（cv-rp-badge → 统一件） ═══════════ */
+/* ═══════════ ④ StatusPill 改用锁（cv-rp-badge → 统一件） ═══════════ */
 
-describe('五百三十八批④：cv-rp-badge 换装 StatusPill 统一件', () => {
+describe('五百三十八批④：cv-rp-badge 改用 StatusPill 统一件', () => {
   it('手写 ok/err 徽标全形态清零（模板锚类 + 三条 CSS 规则 + 呼吸图标 import）', () => {
     const cv = read('../views/ConfigValidatorView.vue');
     expect(cv, 'cv-rp-badge 锚类不再现').not.toContain('cv-rp-badge');

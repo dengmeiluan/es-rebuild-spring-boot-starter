@@ -6,8 +6,8 @@
  *    零 spinning、连点可重复触发 reload-analyzers」（R99 D6 读数铁证：同页加载钮
  *    同窗双 true 对照=两钮语义不对称）；热重载钮 Zap 图标补 spinning 绑 busy
  *    （BulkEditor Send 图标 spinning 先例——非刷新图标在途旋转全站既有语言）。
- * ② G67（P3 死代码）六条死样式规则清——PageHeader 收编后遗留的页头左组标题后缀族
- *    四条 + 表单壳收编后遗留的表单行修饰两条（713 G53/714 G56/715 G56/717 G61 同族；
+ * ② G67（P3 死代码）六条死样式规则清——PageHeader 合并后遗留的页头左组标题后缀族
+ *    四条 + 表单壳合并后遗留的表单行修饰两条（713 G53/714 G56/715 G56/717 G61 同族；
  *    R99 D9 通杀扫描 44 条 sy-* 规则 0 命中 9 条、人工剔除伪元素/伪类/条件渲染 3 条
  *    =真死 6）；活锚 .sy-hd（外距）/ .sy-hd-r（预览卡头钮组）/ .sy-ii（输入框）保留。
  *
@@ -21,7 +21,7 @@ import { createRouter, createMemoryHistory } from 'vue-router';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-/* MonacoEditor stub：本批不划线面，最小化桩（Monaco 真实件在 happy-dom 不可挂） */
+/* MonacoEditor stub：不划线面，最小化桩（Monaco 真实件在 happy-dom 不可挂） */
 vi.mock('../components/MonacoEditor.vue', () => ({
   default: {
     name: 'MonacoEditor',
@@ -80,7 +80,7 @@ vi.mock('../api', async (importOriginal) => {
   };
 });
 
-/* 下发链走 askConfirm 直通（确认弹层壳另有 525/rawioWave561 家族覆盖，本批只验 busy 链） */
+/* 下发链走 askConfirm 直通（确认弹层壳另有 525/rawioWave561 家族覆盖，只验 busy 链） */
 vi.mock('../composables/confirm', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../composables/confirm')>();
   return { ...actual, askConfirm: () => Promise.resolve(true) };

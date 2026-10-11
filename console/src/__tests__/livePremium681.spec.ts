@@ -1,7 +1,7 @@
 /**
  * 六百八十一批（用户令「全开刀」）：622 稿残项落码——D1 身份色仲裁 / D2 悬浮阻尼 /
  * D4 曲线平滑 / D5 卡级时间锚 / §3.2 按下反馈（五条全取稿内推荐案 a）+ 件B G'2
- * KPI 串窄档节奏（台账 R77 记档项）。
+ * KPI 串窄档节奏（台账 R77 备案项）。
  *
  * 判据：
  *   D4 曲线平滑：Catmull-Rom t=0.5 立方贝塞尔近似（sparkChart 单源），控制点逐轴钳位
@@ -15,7 +15,7 @@
  *   §3.2 按下反馈：.ld-expand 与 .ld-seg 按钮 ：active 缩档（transform-only 不触发布局）；
  *   件B G'2：MetaStrip 行距档 row-gap --sp-2（900 档两行换行的分隔节奏；列距 7px 刻意值
  *     保字面——651「精确等值才收」同律）。
- * 随迁：liveWindow604（主卡 polyline points→path.ld-line d）/liveVisual597（polygon→.ld-area
+ * 同步更新：liveWindow604（主卡 polyline points→path.ld-line d）/liveVisual597（polygon→.ld-area
  *   +sparkArea 源码锁→catmullRomAreaPath），本 spec 不重复其断言只锚新形态。
  */
 import { describe, it, expect } from 'vitest';

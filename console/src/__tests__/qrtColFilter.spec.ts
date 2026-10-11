@@ -158,7 +158,7 @@ describe('QRT 列头筛选漏斗（一百六十九批）', () => {
   });
 });
 
-describe('QRT 筛选漏斗源码锁（一百六十九批，五百二十四批壳收编随迁）', () => {
+describe('QRT 筛选漏斗源码锁（一百六十九批，五百二十四批壳合并同步更新）', () => {
   const qrt = readFileSync(join(__dirname, '../components/QueryResultTable.vue'), 'utf-8');
   const cfpCss = readFileSync(join(__dirname, '../components/ColFilterPopover.vue'), 'utf-8').split('<style scoped>')[1] ?? '';
 

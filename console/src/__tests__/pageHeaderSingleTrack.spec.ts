@@ -58,7 +58,7 @@ describe('页头单轨（.page-head 旧路径已退役）', () => {
       const src = strip(readFileSync(path, 'utf8'));
       expect(
         /\.page-head(?![\w-])/.test(src),
-        `${f} 样式里仍有 .page-head 选择器；页头类名已统一为 PageHeader 的 .ph，这是收编前遗留的死规则（含后代/伪类/链式形态）`,
+        `${f} 样式里仍有 .page-head 选择器；页头类名已统一为 PageHeader 的 .ph，这是合并前遗留的死规则（含后代/伪类/链式形态）`,
       ).toBe(false);
     });
   }
@@ -86,7 +86,7 @@ describe('页头单轨（.page-head 旧路径已退役）', () => {
     expect(/ph-ic/.test(src), 'PageHeader 丢了图标位').toBe(true);
   });
 
-  /* 收敛结果的正向锚：本轮转换的 9 个 view 必须都真的在用 PageHeader。
+  /* 收敛结果的正向锚：转换的 9 个 view 必须都真的在用 PageHeader。
      只有否定断言时，把 <PageHeader> 整段删掉也能让上面全绿。 */
   const CONVERTED = [
     'AdhocRebuildView.vue', 'BulkEditorView.vue', 'IndexHubView.vue',

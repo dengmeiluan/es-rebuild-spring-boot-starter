@@ -1,12 +1,12 @@
 /**
  * 五百六十七批件②：RT sortBy 入口 sortableGuard 短路接线（565 批件② QRT 半边的
  * RT 对称件——semanticGuard.typeTierSuppressed / tableSort.sortableGuard 纯函数出口已就绪，
- * RT 消费侧缺位）。未接线证据：RT sortBy（本批前）无任何抑制守卫——binary/_source 等
+ * RT 消费侧缺位）。未接线证据：RT sortBy（前）无任何抑制守卫——binary/_source 等
  * 「显式非语义」列点击照落 sortSpec（raw doc/密文比较排序语义 VOID）。
- * 本批接线：sortableGuard((c) => props.fieldTypes?.[c]) 在 sortBy 入口短路（RT 类型源=
+ * 接线：sortableGuard((c) => props.fieldTypes?.[c]) 在 sortBy 入口短路（RT 类型源=
  * 显式 fieldTypes，无采样推断链——无类型列不抑制「零增量缺省」与 QRT effType 缺省口径
  * 自洽）；本地/remote 双档同守——短路即不落 sortSpec/不落盘/不 emit 远端意图。
- * 豁免口径 semanticGuard 记档：_id/_index/_score/_seq_no 排序有语义不收。
+ * 豁免口径 semanticGuard 备案：_id/_index/_score/_seq_no 排序有语义不收。
  * 锁定：
  * 1) binary 显式类型列点击排序不产生 sort 态（行序不变/无 aria-sort/零落盘）；
  * 2) _source 元字段列（按名抑制）点击排序同上；

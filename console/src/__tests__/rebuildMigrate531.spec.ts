@@ -4,7 +4,7 @@
  * A AdhocRebuildView：
  *   ① 中文接线锚——stageZh（job.stage 监控步/最近作业双点）、sevZh（校验报告 severity）、
  *     roundZh（轮次 r.phase，Lead 收口新增轮次域映射，未收录回退原英文）；
- *   ② 13 处手滚 pill → StatusPill 换装锚（锚类 ar-st-funnel/ar-st-en/sm 外挂保留，
+ *   ② 13 处手滚 pill → StatusPill 改用锚（锚类 ar-st-funnel/ar-st-en/sm 外挂保留，
  *     tone 走 statusTone/sevTone/stagePill 字面量收窄）；
  *   ③ step0 结构序锚——索引名行（card-t+row+探测失败条）在双 Tab 编辑器之前（先选索引再贴配置）；
  *   ④ 弹性档锚——粘贴配置 Monaco min(60vh, 420px) / 校验报告 val-box max(240px, 42vh) /
@@ -12,7 +12,7 @@
  *   ⑤ 900 紧凑微调档在场（工具行 wrap/侧距收窄，档内零 ≥300px 裸 width）。
  *
  * B XmigrateView：
- *   ⑥ 状态 cell 换装 StatusPill（xmStatusZh 中文主显 + en 英文小字；n 档兜底——
+ *   ⑥ 状态 cell 改用 StatusPill（xmStatusZh 中文主显 + en 英文小字；n 档兜底——
  *     未命中枚举回显原文并进 title；RUNNING dot-pulse 随装退役）；
  *   ⑦ 进度 meta 手滚 mono 串 → MetaStrip（items+tone 分档：运行中 info/完成 ok；
  *     「N/T（P%）」「迁移中 N 条（总量未知）」文案对位）；
@@ -110,19 +110,19 @@ describe('531 A：AdhocRebuildView 中文接线（源码锚）', () => {
     expect(adhoc).toContain('<StatusPill class="sm" :tone="stagePill(row[4])"');
   });
 
-  it('sevZh 接线校验报告；roundZh 接线轮次表（552 随迁：换装 StatusPill b，未收录回退原英文）', () => {
+  it('sevZh 接线校验报告；roundZh 接线轮次表（552 同步更新：改用 StatusPill b，未收录回退原英文）', () => {
     expect(adhoc).toContain(':label="sevZh(iss.severity)"');
-    /* 轮次 phase：五百五十二批私造壳退役换装 StatusPill b——roundZh 命中即中文，
+    /* 轮次 phase：五百五十二批私造壳退役改用 StatusPill b——roundZh 命中即中文，
        未收录新枚举回退原英文（label 兜底），英文小字随组件 en 档回显 */
     expect(adhoc).toContain('<StatusPill tone="b" :label="roundZh(r.phase) || r.phase" :en="roundZh(r.phase) ? r.phase : undefined" />');
-    /* 轮次私造壳/小字样式随换装全退役（状态+轮次 pill 小字视觉全归 StatusPill .sp-en） */
+    /* 轮次私造壳/小字样式随改用全退役（状态+轮次 pill 小字视觉全归 StatusPill .sp-en） */
     expect(adhoc).not.toContain('ph-tag');
     expect(adhoc).not.toMatch(/^\.ar-st-en \{/m);
   });
 });
 
-/* ═══ A② StatusPill 换装锚（13 处手滚 pill 退役） ═══ */
-describe('531 A：AdhocRebuildView StatusPill 换装（源码锚）', () => {
+/* ═══ A② StatusPill 改用锚（13 处手滚 pill 退役） ═══ */
+describe('531 A：AdhocRebuildView StatusPill 改用（源码锚）', () => {
   it('统一件接线 + tone 字面量收窄包装在位', () => {
     expect(adhoc).toContain("import StatusPill from '../components/StatusPill.vue'");
     expect(adhoc).toMatch(/function statusTone\(s: any\): 'g' \| 'y' \| 'r' \| 'b' \| 'n'/);
@@ -130,7 +130,7 @@ describe('531 A：AdhocRebuildView StatusPill 换装（源码锚）', () => {
     expect(adhoc).toMatch(/function stagePill\(s: any\): 'y' \| 'n'/);
   });
 
-  it('校验报告/监控步卡头（状态+stage+锁安全四徽标）/作业表（漏斗+四徽标+stage）全数换装', () => {
+  it('校验报告/监控步卡头（状态+stage+锁安全四徽标）/作业表（漏斗+四徽标+stage）全数改用', () => {
     /* 211 校验报告 severity */
     expect(adhoc).toContain('<StatusPill :tone="sevTone(iss.severity)" :label="sevZh(iss.severity)" :en="iss.severity" />');
     /* 393 监控步作业状态（.ar-st-en 锚外挂）+ 400-403 锁安全四徽标（含 title） */
@@ -143,7 +143,7 @@ describe('531 A：AdhocRebuildView StatusPill 换装（源码锚）', () => {
     expect(adhoc).toContain('<StatusPill class="ar-st-funnel ar-st-en" :tone="statusTone(row[3])"');
     expect(adhoc).toContain('role="button" tabindex="0"');
     expect(adhoc).toMatch(/:aria-pressed="jobStatusFilter === funnelKey\(row\[3\]\) \? 'true' : 'false'"/);
-    /* 手滚形态零残留（换装勿留双份） */
+    /* 手滚形态零残留（改用勿留双份） */
     expect(adhoc).not.toContain('class="pill r" title=');
     expect(adhoc).not.toContain('class="pill y" title=');
     expect(adhoc).not.toContain('class="pill n" title=');
@@ -156,7 +156,7 @@ describe('531 A：AdhocRebuildView StatusPill 换装（源码锚）', () => {
     ]);
     const View = (await import('../views/AdhocRebuildView.vue')).default;
     const { app, host } = await mountView(View);
-    /* 554 随迁：.card 壳退役改 .ar-sec border-top 分节（定位语义=含作业表工具行的分节，不变） */
+    /* 554 同步更新：.card 壳退役改 .ar-sec border-top 分节（定位语义=含作业表工具行的分节，不变） */
     const card = [...host.querySelectorAll('.ar-sec')].find(c => c.querySelector('.ar-jobs-tools'))!;
     const row = card.querySelector('tbody tr')!;
     expect(row.textContent).toContain('运行中');
@@ -208,7 +208,7 @@ describe('531 A：AdhocRebuildView 结构序与弹性档（源码锚）', () => 
   });
 
   it('弹性档三式：粘贴 Monaco useTierCycle 四档（原 min(60vh, 420px) 保底） / val-box max(240px, 42vh) / QRT max-height none', () => {
-    /* 五百三十八批随迁：height="min(60vh, 420px)" 定高字面 → :height="pasteH" 档值绑定
+    /* 五百三十八批同步更新：height="min(60vh, 420px)" 定高字面 → :height="pasteH" 档值绑定
        （useTierCycle+usePref 落盘，原字面=档值数组首位=默认档，默认形态高度行为不变） */
     expect(adhoc).toContain("'min(60vh, 420px)'");
     expect(adhoc).toContain(':height="pasteH"');
@@ -232,8 +232,8 @@ describe('531 A：AdhocRebuildView 结构序与弹性档（源码锚）', () => 
 });
 
 /* ═══ B⑥⑦⑧⑨ XmigrateView ═══ */
-describe('531 B：XmigrateView 换装与排序（源码锚）', () => {
-  it('状态 cell 换装 StatusPill：中文主显 + en 小字 + n 档兜底（未命中枚举回显原文进 title）', () => {
+describe('531 B：XmigrateView 改用与排序（源码锚）', () => {
+  it('状态 cell 改用 StatusPill：中文主显 + en 小字 + n 档兜底（未命中枚举回显原文进 title）', () => {
     expect(xm).toContain("import StatusPill from '../components/StatusPill.vue'");
     expect(xm).toContain(':label="statusZh(rowJob(row)?.status) || String(rowJob(row)?.status ?? \'\')"');
     expect(xm).toContain(':en="statusZh(rowJob(row)?.status) ? rowJob(row)?.status : undefined"');
@@ -267,7 +267,7 @@ describe('531 B：XmigrateView 换装与排序（源码锚）', () => {
   it('QRT fieldTypes 数值/日期列 + xm-group 去 background + 900 档查漏', () => {
     expect(xm).toContain(":field-types=\"{ 进度: 'long', 冲突: 'long', 错误: 'long', 发起: 'date' }\"");
     /* xm-group：去 background 降视觉重量，边框/编号语义保留。
-       五百四十七批锁随迁：531 字面形（margin-bottom:var(--sp-3)…border-radius:var(--r-m)）
+       五百四十七批锁同步更新：531 字面形（margin-bottom:var(--sp-3)…border-radius:var(--r-m)）
        自 534 批起就是被覆盖行压死的死规则，547 批将其退役删除——断言由「在场」改「退役」；
        现行生效形态（border-top 分节覆盖行）改由 rebuildFlat534:97 与 cardShellWave547 正锁 */
     expect(xm).not.toMatch(/\.xm-group \{ margin-bottom: var\(--sp-3\); padding: var\(--sp-2\) var\(--sp-3\); border: 1px solid var\(--line\); border-radius: var\(--r-m\); \}/);
@@ -280,7 +280,7 @@ describe('531 B：XmigrateView 换装与排序（源码锚）', () => {
     expect(block, '900 档在场').toBeTruthy();
     expect(block![0]).toContain('.xm-actions { flex-wrap: wrap; gap: var(--sp-2); }');
     expect(block![0]).toContain('.xm-remote { padding: var(--sp-2); }');
-    /* --sp 裸 px 收编（2px → --sp-0 半档）。五百五十一批随迁（击穿者：551 轨2 刀①——
+    /* --sp 裸 px 合并（2px → --sp-0 半档）。五百五十一批同步更新（击穿者：551 轨2 刀①——
        新建迁移 .card 壳退役，草稿行落位 margin 承接壳 padding，盒模型等值） */
     expect(xm).toMatch(/\.xm-p-obs \{[^}]*margin-top: var\(--sp-0\);/);
     expect(xm).toMatch(/\.xm-draft-row \{ margin: var\(--sp-2\) var\(--sp-4\) var\(--sp-2\); \}/);

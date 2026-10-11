@@ -27,7 +27,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.nio.charset.StandardCharsets;
 
 /**
- * 目标集群拦截器（）：把请求头 {@code X-Es-Target: <connId>} 绑定到
+ * 目标集群拦截器（把请求头 {@code X-Es-Target: <connId>} 绑定到
  * {@link EsClientRouter} 的 ThreadLocal，数据面操作即刻切到目标集群。
  *
  * <p><b>白名单语义</b>：只有数据面通道（URI 含 {@code /cluster/}、{@code /insight}、

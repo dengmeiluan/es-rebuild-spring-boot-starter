@@ -1,6 +1,6 @@
 /**
  * R130 三十二批：ColPicker 共享列选组件守卫。
- * 背景：col-pick（ResultTable）与 qpick（QueryResultTable）两份同构模板/样式收编为此组件。
+ * 背景：col-pick（ResultTable）与 qpick（QueryResultTable）两份同构模板/样式合并为此组件。
  * 锁定（受控组件契约）：
  * 1) 勾选/取消一列 → emit update:selected 整组新数组（不原地变异，父直接落 useTablePrefs 持久化）；
  * 2) 「全选/前 6」按 cols 基准 emit；

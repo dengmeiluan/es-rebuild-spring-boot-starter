@@ -1,5 +1,5 @@
 /**
- * 五百四十六批·轨4（工蚁 W4）：全站扁平化扫荡第六波 · 契约记档。
+ * 五百四十六批·轨4（工蚁 W4）：全站扁平化扫荡第六波 · 契约备案。
  *
  * 仿 flattenWave545/544 静态源码断言范式（happy-dom 不挂载）：
  * ① PluginsView pl-card ×2 壳三件套退役 → border-top 分节（545 lc-panel/pl-panel 同语言；
@@ -8,8 +8,8 @@
  * ② AnalyzerLabView al-card ×3 壳三件套退役 → border-top 分节（al-card-hd 既有
  *    border-bottom 承接）；al-fld-err（:41）err 语义变体豁免保留——err 行内错误条非卡面，
  *    摘 al-card 类保原形（hr-hero 545 同判：语义边框/语义色是保留面）；**:49 空态卡整块
- *    空框纠正**——538 立法「空态不留整块空框」，EmptyState 直贴不再包 al-card 容器；
- *    al-lane 对比列卡豁免正锁（lane 是工作台功能卡非分节壳，545 ra-card 判例同域）。
+ *    空框纠正**——538 约定「空态不留整块空框」，EmptyState 直贴不再包 al-card 容器；
+ *    al-lane 对比列卡豁免正锁（lane 是工作台功能卡非分节壳，545 ra-card 先例同域）。
  * ③ BrowserView 表外 .card 壳（style="padding:0;overflow:hidden" 包 QRT）退役 → 538
  *    SystemView .sy-res 同语言 border-top 分节（bw 承接类 bw-res；QRT 本就全出血）；
  *    弹窗/悬浮卡（pl-mo-b/bw-linked-doc）等对话框语义壳豁免不在扫荡域。
@@ -44,9 +44,9 @@ describe('五百四十六批①：pl-card 壳三件套退役（545 lc-panel 同�
       .not.toMatch(/\.pl-card \{[^}]*overflow/);
   });
 
-  it('五百六十一批随迁：pl-matrix 豁免翻案——矩阵表亦换 QRT rows 型（双表双 storageKey）；指南弹窗壳豁免', () => {
+  it('五百六十一批同步更新：pl-matrix 豁免修订——矩阵表亦换 QRT rows 型（双表双 storageKey）；指南弹窗壳豁免', () => {
     const pl = read('../views/PluginsView.vue');
-    expect(pl, '矩阵表换 QRT rows 型（545 豁免翻案：cols=nodeNames 直映射可表达）').toContain('storage-key="plugins:matrix"');
+    expect(pl, '矩阵表换 QRT rows 型（545 豁免修订：cols=nodeNames 直映射可表达）').toContain('storage-key="plugins:matrix"');
     expect(pl, 'raw 记录表仍寄居 QRT 内核（ref 随宿主导出退役，负锁翻正锁）').toContain('storage-key="plugins:raw"');
     expect(pl, 'pl-matrix-wrap 滚动容器退役（60vh 高度链经 max-height prop 传内核）')
       .not.toContain('.pl-matrix-wrap');
@@ -78,7 +78,7 @@ describe('五百四十六批②：al-card 壳三件套退役；al-fld-err 豁免
       .toMatch(/\.al-fld-err \{ padding: var\(--sp-2h\) var\(--sp-3\); display: flex; align-items: center; gap: var\(--sp-2h\); font-size: var\(--fs-xs\); color: var\(--err\); \}/);
   });
 
-  it('空态卡整块空框纠正（538 立法「空态不留整块空框」）：EmptyState 直贴，无 al-card 包壳', () => {
+  it('空态卡整块空框纠正（538 约定「空态不留整块空框」）：EmptyState 直贴，无 al-card 包壳', () => {
     const al = read('../views/AnalyzerLabView.vue');
     expect(al, '字段清单空态 EmptyState 直贴').toMatch(/<EmptyState v-else compact/);
     expect(al, '空态不再包 al-card 容器（整块空框纠正）').not.toMatch(/<div v-else class="al-card">/);
@@ -86,10 +86,10 @@ describe('五百四十六批②：al-card 壳三件套退役；al-fld-err 豁免
     expect(al).toContain('填写索引后点「加载 text 字段」');
   });
 
-  it('al-lane 容器壳退役正锁（558 击穿随迁：546 豁免判例收编，border-top 分节承接）', () => {
+  it('al-lane 容器壳退役正锁（558 击穿同步更新：546 豁免先例合并，border-top 分节承接）', () => {
     const al = read('../views/AnalyzerLabView.vue');
-    /* 五百五十八批随迁（击穿者：558 工蚁G——al-lane 容器壳（border+card-bg+radius）退役
-       → border-top 分节承接，立法④）：546 豁免正锁字面改退役形 + 分节锚在场
+    /* 五百五十八批同步更新（击穿者：558 工蚁G——al-lane 容器壳（border+card-bg+radius）退役
+       → border-top 分节承接，约定④）：546 豁免正锁字面改退役形 + 分节锚在场
        （锁意图=壳形态回归防线；消费面 token 胶囊区零语义变动） */
     expect(al, 'lane 壳三件套不回流（558 退役）')
       .not.toMatch(/\.al-lane \{[^}]*background: var\(--card-bg\)/);

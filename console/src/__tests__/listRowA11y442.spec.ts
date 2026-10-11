@@ -40,7 +40,7 @@ describe('列表行键盘可达收口（442 批）', () => {
 
   it('核心三处锚定：IndexHub 索引行/ConfigDrift 清单/QueryHistoryPanel 历史项', () => {
     /* 五百三十一批：「选完即收」退役（选中不自动关抽屉，支持跨索引反复对比）——Enter 触发
-       表达式同批随迁去掉 listOpen = false，role/tabindex 键盘可达契约不变 */
+       表达式同批同步更新去掉 listOpen = false，role/tabindex 键盘可达契约不变 */
     expect(readFileSync(join(SRC, 'views/IndexHubView.vue'), 'utf-8')).toMatch(/role="button" tabindex="0" @keydown\.enter\.prevent="select\(idx\.index\)"/);
     expect(readFileSync(join(SRC, 'views/ConfigDriftView.vue'), 'utf-8')).toMatch(/role="button" tabindex="0" @keydown\.enter\.prevent="loadDrift\(k\.indexKey\)"/);
     expect(readFileSync(join(SRC, 'components/QueryHistoryPanel.vue'), 'utf-8')).toMatch(/role="button" tabindex="0" @keydown\.enter\.prevent="clickable && \$emit\('play', it\)"/);

@@ -1,11 +1,11 @@
 /**
- * 五百六十一批：视图内搜索 mark 内核收编 utils/respMark 单源。
+ * 五百六十一批：视图内搜索 mark 内核合并 utils/respMark 单源。
  * ① 行为锁：markHtmlAll/escapeRe（RestView.markHtml 与 DslQueryView.jsonMarkedHtml
- *    同构实现的公共内核——jsonFindEscape500 批 H2/H4 行为锁随迁单源）；
+ *    同构实现的公共内核——jsonFindEscape500 批 H2/H4 行为锁同步更新单源）；
  * ② 双视图改引源码锚：两视图本地实现退役、只 import 单源；类名 j-mark/j-mark-cur 与
  *    data-hit-idx 属性逐字保形；
- * ③ 同批单源收编：errPre.ts 私造 escHtml 退役 → highlightSanitize.escapeHtml（560 批
- *    IntegrationGuide 判例，三连转义逐字等价换装）。
+ * ③ 同批单源合并：errPre.ts 私造 escHtml 退役 → highlightSanitize.escapeHtml（560 批
+ *    IntegrationGuide 先例，三连转义逐字等价改用）。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -19,7 +19,7 @@ const rest = src('views/RestView.vue');
 const dsl = src('views/DslQueryView.vue');
 const errPre = src('utils/errPre.ts');
 
-describe('respMark 单源：escapeRe 行为（jsonFindEscape500 H4 随迁）', () => {
+describe('respMark 单源：escapeRe 行为（jsonFindEscape500 H4 同步更新）', () => {
   it('元字符关键字转义后正则命中（含 . { } ( 的搜索词不丢命中）', () => {
     const re = new RegExp(escapeRe('a.b(c)'), 'gi');
     expect('x a.b(c) y'.match(re)).toEqual(['a.b(c)']);
@@ -70,7 +70,7 @@ describe('respMark 单源：markHtmlAll 行为', () => {
   });
 });
 
-describe('双视图改引源码锚（单源收编后本地实现退役）', () => {
+describe('双视图改引源码锚（单源合并后本地实现退役）', () => {
   it('RestView：import markHtmlAll，计数（cur=0）与渲染（hitCur）两路同源', () => {
     expect(rest).toContain("import { markHtmlAll } from '../utils/respMark';");
     expect(rest).toContain('markHtmlAll(displayHtml.value, searchKw.value, 0).count');
@@ -84,13 +84,13 @@ describe('双视图改引源码锚（单源收编后本地实现退役）', () =
     expect(dsl).toContain('markHtmlAll(jsonViewHtml.value, jsonKw.value.trim(), 0).count');
     expect(dsl).toContain('markHtmlAll(jsonViewHtml.value, jsonKw.value.trim(), jsonFindCur.value).html');
     expect(dsl).not.toContain('function jsonHitsInHtml');
-    /* jsonFindEscape500 H2 后半随迁：当前命中 querySelector 定位串仍在视图（滚动链） */
+    /* jsonFindEscape500 H2 后半同步更新：当前命中 querySelector 定位串仍在视图（滚动链） */
     expect(dsl).toContain('data-hit-idx="${jsonFindCur.value}"');
     expect(dsl).not.toContain('${"${n}"}');
     expect(dsl).not.toContain('${"${jsonFindCur.value}"}');
   });
 
-  it('jsonFindEscape500 H2 前半随迁单源：mark 串是真插值（respMark 源）', () => {
+  it('jsonFindEscape500 H2 前半同步更新单源：mark 串是真插值（respMark 源）', () => {
     expect(respMarkSrc).toContain('data-hit-idx="${count}"');
     expect(respMarkSrc).not.toContain('${"${count}"}');
   });
@@ -101,7 +101,7 @@ describe('双视图改引源码锚（单源收编后本地实现退役）', () =
   });
 });
 
-describe('同批单源收编：errPre escHtml → highlightSanitize.escapeHtml', () => {
+describe('同批单源合并：errPre escHtml → highlightSanitize.escapeHtml', () => {
   it('errPre.ts 改引单源（本地 function escHtml 退役）', () => {
     expect(errPre).toContain("import { escapeHtml } from './highlightSanitize';");
     expect(errPre).not.toContain('function escHtml');

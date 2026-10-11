@@ -9,7 +9,7 @@
  *  C 注册表随 setMarkers 语义同步：全量替换不叠加、clearDslLintMarkers 清理、
  *    注册表缺席时 marker.code 后缀兜底；卸载清理源锚；
  *  D 既有 owner='json' 四码链路零触碰（过滤面 owner=json、528 行为不变）；
- *  E MonacoEditor/JsonArea 契约随迁源锚（code 前缀 + record/clear + 类型加 rule 可选）。
+ *  E MonacoEditor/JsonArea 契约同步更新源锚（code 前缀 + record/clear + 类型加 rule 可选）。
  *
  * stub 范式同 codeActionQuickFix.spec（vi.hoisted caps + editor.api mock）；注册表经
  * recordDslLintMarkers 直填（MonacoEditor.setMarkers 同一写入面，组件级行为由源锚锁定）。
@@ -184,7 +184,7 @@ describe('A 规则→fix 白名单九条（行为逐条）', () => {
 
 describe('B 负向：二义/建议类零 action', () => {
   it('agg-interval-key（日历 vs 固定二义）与 match-all/deep-paging 等建议类零 action', () => {
-    /* 558 批随迁注记（557 root-bare-clause 先例同款）：废弃 interval 分支已翻案出
+    /* 558 批同步更新注记（557 root-bare-clause 先例同款）：废弃 interval 分支已修订出
        「interval 改为 calendar_interval」改名 action（正样移 hintWave558 A 段），本行
        保留转证据闸负样——样例文档 '{"anchor": {}}' 无 '"interval"' 字面，验证改名分支
        的宁缺勿错闸（字面不在场零 action），规则级「废弃 interval 零 action」旧钉废止。 */
@@ -272,7 +272,7 @@ describe('D 既有 json 四码链路零触碰', () => {
   });
 });
 
-describe('E MonacoEditor / JsonArea 契约随迁源锚', () => {
+describe('E MonacoEditor / JsonArea 契约同步更新源锚', () => {
   it('MonacoEditor setMarkers：marker code 前缀 + 注册表随写/卸载清理 + 泛型补 rule 可选', () => {
     const me = read('components/MonacoEditor.vue');
     expect(me).toContain("code: { value: LINT_OWNER + ':' + (f.rule ?? ''), target: model.uri },");
@@ -282,7 +282,7 @@ describe('E MonacoEditor / JsonArea 契约随迁源锚', () => {
     expect(me).toContain('rule?: string;');
   });
 
-  it('JsonArea MarkerFinding 类型随迁：rule 可选（15+ 消费点签名不变）', () => {
+  it('JsonArea MarkerFinding 类型同步更新：rule 可选（15+ 消费点签名不变）', () => {
     const ja = read('components/JsonArea.vue');
     expect(ja).toContain('nth: number; rule?: string };');
   });

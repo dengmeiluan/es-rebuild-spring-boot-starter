@@ -1,11 +1,11 @@
 /**
- * 五百五十八批：DQ 直方图分节换装 HistogramSection 统一件（553 遗留双形态收口）。
+ * 五百五十八批：DQ 直方图分节改用 HistogramSection 统一件（553 遗留双形态收口）。
  * 552 批组件化时「DQ 侧同位替换下批做」——DslQueryView 页内联节与本组件并存两批，
- * 本批 DQ 换装 <HistogramSection toggle-slot="host">，双形态差异归一：
+ *  DQ 改用 <HistogramSection toggle-slot="host">，双形态差异归一：
  * ① 开关落位分叉根治：toggleSlot 'head'（节头内建，IH 消费点默认，零变动）| 'host'
  *    （组件不渲染开关，由宿主执行行承载——DQ 553 终审落位：执行行 Profile 旁）；
- * ② 节头 meta 手写「·」串收编 MetaStrip（557 DQ 侧收编形态归一组件源，IH 同享）；
- * ③ 552 ⑥ 节头形态三件（标题不吃满弹性+meta 省略号+行尾弹性占位）随换装归一组件。
+ * ② 节头 meta 手写「·」串合并 MetaStrip（557 DQ 侧合并形态归一组件源，IH 同享）；
+ * ③ 552 ⑥ 节头形态三件（标题不吃满弹性+meta 省略号+行尾弹性占位）随改用归一组件。
  * 红线：高度结构语义零变动——节壳/节头/图体三层 DOM 高度链等值（六拍哨兵收口验）：
  * margin-bottom 归组件 scoped 同值承担；DQ 侧 .dq-hist-sec, .dq-partial flex-shrink:0
  * 高度链锁保形（scoped 规则命中子组件根，直方图/黄条不参与收缩语义零触）。
@@ -69,7 +69,7 @@ describe('①toggleSlot 开关落位 prop（558 分叉根治）', () => {
     await nextTick();
     expect(host.querySelector('.dq-bar-hist'), 'host 档开关退役').toBeNull();
     expect(host.querySelector('.dq-hist-none'), '无时间字段标注随开关同退').toBeNull();
-    expect(host.querySelector('.dq-hist-sec'), '节壳恒在场（549 立法）').toBeTruthy();
+    expect(host.querySelector('.dq-hist-sec'), '节壳恒在场（549 约定）').toBeTruthy();
     expect(host.querySelector('.dq-sec-tg')!.textContent, '节头标题照常').toContain('直方图分布');
     expect(host.querySelector('.dq-sec-meta')!.textContent, 'meta 照常').toContain('2 桶');
     expect(host.querySelector('.dq-sec-meta')!.textContent, '刷选段照常').toContain('已刷选 a → b');
@@ -84,8 +84,8 @@ describe('①toggleSlot 开关落位 prop（558 分叉根治）', () => {
   });
 });
 
-describe('②DQ 换装 HistogramSection（558，页内联节退役）', () => {
-  it('换装标签在场：toggle-slot="host"+数据链 props 原样直喂（brush 交互链保形）', () => {
+describe('②DQ 改用 HistogramSection（558，页内联节退役）', () => {
+  it('改用标签在场：toggle-slot="host"+数据链 props 原样直喂（brush 交互链保形）', () => {
     const hsAt = dq.indexOf('<HistogramSection');
     expect(hsAt, 'DQ 含 <HistogramSection').toBeGreaterThan(-1);
     const tag = dq.slice(hsAt, dq.indexOf('/>', hsAt));
@@ -100,7 +100,7 @@ describe('②DQ 换装 HistogramSection（558，页内联节退役）', () => {
   });
   it('页内联节壳/图体退役：dq-hist-sec div 与 AggBarChart 直引出清（组件承接）', () => {
     expect(dq, '内联节壳退役').not.toContain('<div class="dq-hist-sec">');
-    expect(dq, 'AggBarChart 直引退役（模板引用随换装入组件）').not.toContain('<AggBarChart');
+    expect(dq, 'AggBarChart 直引退役（模板引用随改用入组件）').not.toContain('<AggBarChart');
   });
   it('开关留执行行（553 终审落位零触）：run-row 切片 v-model="autoHist"+Profile 同款胶囊', () => {
     const runRowAt = dq.indexOf('<div class="dq-run-row">');

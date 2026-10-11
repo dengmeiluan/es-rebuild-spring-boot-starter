@@ -78,10 +78,10 @@ import { join } from 'node:path';
 import { useAppStore } from '../stores/app';
 import { __clearFieldCache } from '../composables/useIndexFields';
 
-/* 五百四十五批锁随迁：QueryHubView 场景任务 5 条行为锁字面化后不再挂载视图本体——
+/* 五百四十五批锁同步更新：QueryHubView 场景任务 5 条行为锁字面化后不再挂载视图本体——
    542 批二刀「日常场景改 n-popover 下拉」致 inline 行挂载路径退役，且本 spec 因
    QueryHubView KeepAlive 内注释的 dev 编译错自 542 起 0-test 死收集（545 批热修复活）
-   无人随迁；按锁随迁纪律把意图转源码字面锁，语义锚点分锁于模板分派与 queryHub.ts 任务定义 */
+   无人同步更新；按锁同步更新纪律把意图转源码字面锁，语义锚点分锁于模板分派与 queryHub.ts 任务定义 */
 const qhSrc = readFileSync(join(__dirname, '../views/QueryHubView.vue'), 'utf-8');
 const qhUtils = readFileSync(join(__dirname, '../utils/queryHub.ts'), 'utf-8');
 
@@ -170,8 +170,8 @@ describe('W1 Task 4 FieldPicker 渗透点', () => {
     expect(itemNames(), 'text 型 beta 必须被可排序过滤滤掉').toEqual([]);
   });
 
-  /* ==== 五百四十五批锁随迁（字面化）：下列 5 条原为挂载行为锁（inline 任务行驱动），
-     542 批二刀 popover 化后挂载路径退役+死收集期无人随迁；意图逐条转源码字面锁 ==== */
+  /* ==== 五百四十五批锁同步更新（字面化）：下列 5 条原为挂载行为锁（inline 任务行驱动），
+     542 批二刀 popover 化后挂载路径退役+死收集期无人同步更新；意图逐条转源码字面锁 ==== */
 
   it('场景任务「查字段缺失」：字段语义任务行渲染 FieldPicker 并回填 taskInput；切索引重拉', () => {
     expect(qhSrc, '字段名任务必须 FieldPicker 分派且 v-model 回填 taskInput')

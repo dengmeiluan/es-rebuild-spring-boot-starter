@@ -1,7 +1,7 @@
 /**
  * 六百六十批（轨1 · Monaco DSL 值位动态候选消费面二程）：
  * 658 批 DqlQueryView 首发的姊妹刀——DevTools / IndexHub（DSL 查询 tab）/ Rest 三面接线
- * （⑥659 头号候选；655 设计记档 §9-4：DevTools body 索引随 path 变，terms 闭包索引绑定
+ * （⑥659 头号候选；655 设计备案 §9-4：DevTools body 索引随 path 变，terms 闭包索引绑定
  * 是视图责任，与 fields() 同源闭包现调现读）。
  *   A 源锚（readFileSync 字面锁，658 spec A 段同范式）：
  *     A1 DevToolsView——useTermsSuggest 实例（索引源=dtPathIdx||pickedIdx，与 dtFields 同源）
@@ -16,7 +16,7 @@
  *     B2 terms 在场→整体透传真达内层 Monaco：动态恰 json+ndjson 两份且无 triggerCharacters
  *        （655-C1 安全位：dslRegs ['"'] 过滤器不认=monacoDslAssist 计数零扰动）+主签名不回归；
  *     B3 卸载 dispose 全量对称（JsonArea→MonacoEditor 既有 dispose 链白得）。
- * 本批零随迁预判：三视图 dslAssist 行无 spec 字面锚（650-C3 全 __tests__ 目录 grep 实证）；
+ * 零同步更新预判：三视图 dslAssist 行无 spec 字面锚（650-C3 全 __tests__ 目录 grep 实证）；
  * assistLintWave533:133 的 analyzers 锁是 toContain 形态，同行追加 terms? 不破。
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';

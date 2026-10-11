@@ -145,7 +145,7 @@ describe('ux2 Task 9 六视图换壳渗透', () => {
     /* find 钉特征不用下标——JsonArea Task 10 换 Monaco 后 caps 总数变，本断言不返工 */
     const cap = monacoCaps.find(c => c.props.language === 'painless');
     expect(cap, 'scriptSource Monaco（painless）必须在位').toBeTruthy();
-    expect(cap!.props.height).toBe('max(110px, 42vh)'); /* 528 批 W-C：28vh 收编 42vh 弹性档+usePref 三档（SCRIPT_H_TIERS 首档） */
+    expect(cap!.props.height).toBe('max(110px, 42vh)'); /* 528 批 W-C：28vh 合并 42vh 弹性档+usePref 三档（SCRIPT_H_TIERS 首档） */
     /* 五百二十四批：painless 面接 assist——fields 与 query 口同源（uqQueryAssist 同一 useIndexFields 出口） */
     expect(typeof cap!.props.dslAssist?.fields).toBe('function');
   });
@@ -154,7 +154,7 @@ describe('ux2 Task 9 六视图换壳渗透', () => {
     await mountView(ReindexAdvancedView, '#/reindex-advanced');
     const cap = monacoCaps.find(c => c.props.language === 'painless');
     expect(cap, 'scriptSource Monaco（painless）必须在位').toBeTruthy();
-    expect(cap!.props.height).toBe('max(110px, 42vh)'); /* 528 批 W-C：28vh→42vh 三档循环首档（⑤ 同口径随迁） */
+    expect(cap!.props.height).toBe('max(110px, 42vh)'); /* 528 批 W-C：28vh→42vh 三档循环首档（⑤ 同口径同步更新） */
     /* 五百二十四批：painless 面接 assist——fields 与源 query 口同源（raQueryAssist 出口） */
     expect(typeof cap!.props.dslAssist?.fields).toBe('function');
   });

@@ -19,19 +19,19 @@
 </div>
 
     <!-- 编辑卡高度 usePref('mm.taH') 持久化（qx.taH 范式）——CSS resize 原生拖拽结束
-         （pointerup）把实高落盘，下次进页恢复；默认 200px 对齐原 min-height 固定档 -->
+ （pointerup）把实高落盘，下次进页恢复；默认 200px 对齐原 min-height 固定档 -->
     <div class="mm-card" :style="{ height: taH }" @pointerup="saveTaH">
       <div class="mm-card-hd"><FileJson :size="12" /> Query（bool 组合 + 各子句 "_name"）
         <!-- 原始 IO 快查——本页最近一次矩阵执行（search-raw）请求/响应原文（ioRecorder 记录环；
-             QueryXray 卡头钮同位范式；与 548 ScoreExplain 同特征属页域各自取最近一条，跨页互见记档） -->
+ QueryXray 卡头钮同位范式；与 548 ScoreExplain 同特征属页域各自取最近一条，跨页互见） -->
         <button class="btn ghost sm" style="margin-left:auto" data-test="raw-io" aria-label="查看原始 IO（矩阵执行）" title="最近一次矩阵执行请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIo"><Terminal :size="12" /> 原始 IO</button>
       </div>
-      <!--  P0-1：编辑器划线通道挂点（banner 保留双通道，见 script queueMmLintMarkers） -->
+      <!-- P0-1：编辑器划线通道挂点（banner 保留双通道，见 script queueMmLintMarkers） -->
       <JsonArea ref="mmJaRef" v-model="dsl" :dsl-assist="dslAssist" :rows="6" fill />
       <!-- lintDsl 静态体检提示条（SearchSandboxView join 串形态同款，随输入实时重估，
-           零阻塞不拦执行）——error 红条单列（结构必错 ES 直接拒绝），warning/hint 黄条并列；
-           JSON 非法静默（JsonArea 圆点已报） -->
-      <!-- lint 条换装 theme.css .lint-bar 单源（纯类名替换，DOM 保形） -->
+ 零阻塞不拦执行）——error 红条单列（结构必错 ES 直接拒绝），warning/hint 黄条并列；
+ JSON 非法静默（JsonArea 圆点已报） -->
+      <!-- lint 条改用 theme.css .lint-bar 单源（纯类名替换，DOM 保形） -->
       <div v-if="mmLintErrors.length" role="alert" class="lint-bar lint-bar-err">
         <span>DSL 检查（错误）：{{ mmLintErrors.map(f => f.message + '（' + f.suggestion + '）').join('；') }}</span>
       </div>
@@ -41,9 +41,9 @@
     </div>
 
     <!-- 失败内联面板：错误现场留存 + 重试（原仅 toast，一闪而过）。
-         私造红壳（border+err-soft+radius，样式 :mm-err 段）退役，收编全局
-         err-bar 形态（role=alert 在场，theme.css :554 单源；557 IH ih-qerr 先例）——
-         重试钮走既有 run 逻辑原样保留，文案逻辑零触 -->
+ 私造红壳（border+err-soft+radius，样式 :mm-err 段）退役，合并全局
+ err-bar 形态（role=alert 在场，theme.css :554 单源；557 IH ih-qerr 先例）——
+ 重试钮走既有 run 逻辑原样保留，文案逻辑零触 -->
     <div v-if="runErr" role="alert" class="err-bar mm-err">
       <AlertCircle :size="14" />
       <div class="mm-err-body">
@@ -65,18 +65,18 @@
         <span class="mm-stat-nm" :title="c.name">{{ c.name }}</span>
         <span class="mm-stat-bar-wrap"><span class="mm-stat-bar" :style="{ width: c.pct + '%' }" /></span>
         <b>{{ c.count }}/{{ hits.length }}</b>
-        <!-- mm-dead-tag err 色私造标签换装 StatusPill 统一件（err→r 档；
-               告警三角图标随统一件无图标位退役，550 BookText 同判） -->
+        <!-- mm-dead-tag err 色私造标签改用 StatusPill 统一件（err→r 档；
+ 告警三角图标随统一件无图标位退役，550 BookText 同判） -->
         <StatusPill v-if="c.count === 0" tone="r" label="没起作用" />
       </div>
     </div>
 
     <!-- 手写 mm-tbl 命中矩阵换壳 QRT rows 型——useTableSort 表头/sticky 左两列/
-         手写 CSV 导出全退役，排序/列筛选/冻结/列管理/导出五格式/复制矩阵归内核
-         （storage-key="mm" 记忆启用；「冻结左两列」= 内核冻结能力，首访缺省冻结前 2 列
-         对齐旧 sticky #/_id 行为，见 setup 冻结记忆播种；max-height 沿用 --vh-offset 口径迁 prop）。
-         子句 ✔/· 走 #cell- 动态槽保色档；_id 列补查询 X 光下钻芯片（useLinkCarry('xray') 现成键）；
-         得分列 #cell- 槽保 3 位小数显示（title/复制/导出恒 raw 全精度，内核契约）。 -->
+ 手写 CSV 导出全退役，排序/列筛选/冻结/列管理/导出五格式/复制矩阵归内核
+ （storage-key="mm" 记忆启用；「冻结左两列」= 内核冻结能力，首访缺省冻结前 2 列
+ 对齐旧 sticky #/_id 行为，见 setup 冻结记忆播种；max-height 沿用 --vh-offset 口径迁 prop）。
+ 子句 ✔/· 走 #cell- 动态槽保色档；_id 列补查询 X 光下钻芯片（useLinkCarry('xray') 现成键）；
+ 得分列 #cell- 槽保 3 位小数显示（title/复制/导出恒 raw 全精度，内核契约）。 -->
     <QueryResultTable v-if="hits.length" :cols="mmCols" :rows="mmRows" sortable
       storage-key="mm" :field-types="{ 得分: 'double' }"
       max-height="calc(100vh - var(--vh-offset, 210px) - 210px)"
@@ -111,7 +111,7 @@ import RawIoModal from '../components/RawIoModal.vue';
 import { useAppStore } from '../stores/app';
 import { useIdxState, usePref } from '../composables/urlState';
 import { friendlyEsError } from '../utils/esError'; /* ：runErr 人话化 */
-import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-html 内核；534 收口波：双参换装（errMeta 旁路） */
+import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-html 内核；534 收口波：双参改用（errMeta 旁路） */
 import { useScopedDraft } from '../composables/useScopedDraft';
 import { useLinkCarry } from '../composables/useLinkCarry'; /* ：跨页一次性值携带统一件 */
 import { useIndexFields } from '../composables/useIndexFields';
@@ -119,7 +119,7 @@ import { useTermsSuggest } from '../composables/useTermsSuggest'; /* ：值位�
 import CurrentIdxChip from '../components/CurrentIdxChip.vue';
 import JsonArea from '../components/JsonArea.vue';
 import { lintDsl } from '../utils/dslLint'; /* ：DSL 静态体检 */
-import { useDebounceFn } from '../composables/useDebounceFn'; /*  P0-1：划线防抖统一件 */
+import { useDebounceFn } from '../composables/useDebounceFn'; /* P0-1：划线防抖统一件 */
 import QueryResultTable from '../components/QueryResultTable.vue';
 import StatusPill from '../components/StatusPill.vue'; /* ：死子句警示徽标统一件 */ /* ：矩阵表换壳 */
 import EmptyState from '../components/EmptyState.vue';
@@ -130,21 +130,21 @@ const store = useAppStore();
 /* 目标索引进 URL——刷新/分享链接可复原（可重入） */
 const index = useIdxState({ follow: true });
 /* 编辑卡高度记忆（usePref('mm.taH')，qx.taH 同款）——卡片 resize:vertical 原生拖拽
-   结束时读实高落盘（内容变化不改容器高，Monaco 内滚，故只需 pointerup 一个时机） */
+ 结束时读实高落盘（内容变化不改容器高，Monaco 内滚，故只需 pointerup 一个时机） */
 const taH = usePref<string>('mm.taH', '200px');
 function saveTaH(e: PointerEvent) {
   const h = Math.round((e.currentTarget as HTMLElement).getBoundingClientRect().height);
   if (h > 0) taH.value = h + 'px';
 }
 /* Query 接 dsl-assist——fields 闭包现调现读（DslQueryView 同范式）。
-   fields() 侧惰性 ensure：补全触发才拉 mapping（挂载零请求），cache 命中后直读；
-   不 await 零降级，失败仅无候选 */
+ fields() 侧惰性 ensure：补全触发才拉 mapping（挂载零请求），cache 命中后直读；
+ 不 await 零降级，失败仅无候选 */
 const { fields: assistFields, ensure: ensureAssistFields } = useIndexFields(() => index.value);
 /* 值位动态候选接线（661 范式照抄）——useTermsSuggest 实例+terms 闭包，索引源与 fields 同源现调现读 */
 const mmTerms = useTermsSuggest(() => index.value);
 const dslAssist = { fields: () => { if (!assistFields.value.length) ensureAssistFields(); return assistFields.value; }, terms: (f: string, p: string) => mmTerms.suggestAsync(f, p) };
 /* lint ctx 字段表与 dsl-assist 同源——挂载即 ensure（UpdateByQueryView immediate
-   范式，只读 mapping 请求、失败零降级），fields 空=类型系规则自动跳过，零 ctx 规则始终生效 */
+ 范式，只读 mapping 请求、失败零降级），fields 空=类型系规则自动跳过，零 ctx 规则始终生效 */
 watch(index, () => { void ensureAssistFields(); }, { immediate: true });
 /* lintDsl 静态体检（UpdateByQueryView 最简接线同款）——JSON 解析失败静默不阻塞 */
 const mmLint = computed(() => {
@@ -156,7 +156,7 @@ const mmLintWarns = computed(() => mmLint.value.filter(f => f.severity === 'warn
 const busy = ref(false);
 const hits = ref<any[]>([]);
 const runErr = ref(''); // 执行失败全文，供内联面板回看
-/* 534 收口波双参换装：原始错误对象旁路留存（catch 压串丢 code/endpoint，喂 errMeta 用） */
+/* 534 收口波双参改用：原始错误对象旁路留存（catch 压串丢 code/endpoint，喂 errMeta 用） */
 const runErrRaw = ref<unknown>(null);
 /* 错误面板首行人话；runErr 全文保留进 pre 回看 */
 const friendlyErr = computed(() => (runErr.value ? friendlyEsError(runErr.value) : ''));
@@ -175,16 +175,16 @@ const DEFAULT_DSL = JSON.stringify({
     },
   },
 }, null, 2);
-/* →草稿治理轮：DSL 草稿迁 useScopedDraft（按 集群/索引 隔离），行为不变 */
+/* →草稿：DSL 草稿迁 useScopedDraft（按 集群/索引 隔离），行为不变 */
 const dsl = useScopedDraft('dsl', {
   route: 'match-matrix',
 
   index: () => index.value,
 }, DEFAULT_DSL).text;
 
-/*  P0-1：banner→划线双通道（既有 banner 提示条保留）——SearchSandboxView 
-   范式逐字：useDebounceFn 250ms + info 降级 hint；mmLint 非法 JSON 静默返 []，setMarkers([])
-   即清旧划线。（置于 dsl 声明之后：watch 源同体，TDZ 顺序与 SearchSandboxView 一致） */
+/* P0-1：banner→划线双通道（既有 banner 提示条保留）——SearchSandboxView 
+ 范式逐字：useDebounceFn 250ms + info 降级 hint；mmLint 非法 JSON 静默返 []，setMarkers([])
+ 即清旧划线。（置于 dsl 声明之后：watch 源同体，TDZ 顺序与 SearchSandboxView 一致） */
 const mmJaRef = ref<InstanceType<typeof JsonArea> | null>(null);
 const queueMmLintMarkers = useDebounceFn(() => {
   mmJaRef.value?.setMarkers?.(mmLint.value.map(f => ({ ...f, severity: f.severity === 'info' ? 'hint' as const : f.severity })));
@@ -237,9 +237,9 @@ const clauseNames = computed(() => {
 });
 
 /* ═══ ：矩阵表换壳 QRT rows 型 ═══
-   列=序号（内核内建）+_id+得分+子句名（与旧表头同源）；rows 携原始值：
-   _id 字符串、得分全精度 number（显示 3 位小数走 #cell- 槽，title/复制/导出恒 raw）、
-   子列 ✔/· 字符串（#cell- 动态槽只管色档显示，导出/复制值与旧表格字符一致）。 */
+ 列=序号（内核内建）+_id+得分+子句名（与旧表头同源）；rows 携原始值：
+ _id 字符串、得分全精度 number（显示 3 位小数走 #cell- 槽，title/复制/导出恒 raw）、
+ 子列 ✔/· 字符串（#cell- 动态槽只管色档显示，导出/复制值与旧表格字符一致）。 */
 const mmCols = computed(() => ['_id', '得分', ...clauseNames.value]);
 const mmRows = computed<(string | number)[][]>(() =>
   hits.value.map(h => {
@@ -252,15 +252,15 @@ const mmRows = computed<(string | number)[][]>(() =>
   }));
 
 /* 「冻结左两列」对齐旧 sticky #/_id 行为：内核冻结走 es_tbl_freeze_n:mm 记忆（prefsOn 门控，
-   列头菜单「冻结到此列/取消冻结」读写），首访无记忆时播种 2 列；用户显式取消（写入 '0'）
-   后不再代劳。setup 先于子组件 QRT 的 useTablePrefs 读档执行，首挂即生效。 */
+ 列头菜单「冻结到此列/取消冻结」读写），首访无记忆时播种 2 列；用户显式取消（写入 '0'）
+ 后不再代劳。setup 先于子组件 QRT 的 useTablePrefs 读档执行，首挂即生效。 */
 if (localStorage.getItem('es_tbl_freeze_n:mm') == null) {
   writeStoredRaw(localStorage, 'es_tbl_freeze_n:mm', '2');
 }
 
 /* _id 列下钻接「查询 X 光」（useLinkCarry('xray') 现成键——{index,id} 与
-   DslQueryView/ScoreExplain 发送侧同键同构；QueryXrayView 接收后自动切词频取证并开查，
-   不造新页） */
+ DslQueryView/ScoreExplain 发送侧同键同构；QueryXrayView 接收后自动切词频取证并开查，
+ 不造新页） */
 const xrayCarry = useLinkCarry<{ index: string; id: string }>('xray');
 function gotoXray(id?: string) {
   if (!id) return;
@@ -314,7 +314,7 @@ function firstKeyword(): string {
   } catch { return ''; }
 }
 /* 手写 sessionStorage.setItem 换 useLinkCarry 统一件——键名与 payload 结构逐字保持
-   （es-console.link.boost={index,keyword}），消费端零感 */
+ （es-console.link.boost={index,keyword}），消费端零感 */
 const boostCarry = useLinkCarry<{ index: string; keyword: string }>('boost');
 function gotoBoost() {
   boostCarry.send({ index: index.value, keyword: firstKeyword() });
@@ -322,8 +322,8 @@ function gotoBoost() {
 }
 
 /* 原始 IO 快查（546/548 同款三件套）——特征 /cluster/search-raw（本页唯一出口
-   searchRaw，run 请求+matrix 响应同条记录）；判空 rec=null（本页还没跑过矩阵）时 notify 引导，
-   不开空弹窗 */
+ searchRaw，run 请求+matrix 响应同条记录）；判空 rec=null（本页还没跑过矩阵）时 notify 引导，
+ 不开空弹窗 */
 const rawIoShow = ref(false);
 const rawIoRec = ref<RawIoRec | null>(null);
 function openRawIo() {
@@ -337,38 +337,38 @@ function openRawIo() {
 <style scoped>
 /* min-height:100% 让页面吃满 .page 可滚区（默认只有内容高，实测下方空出 540px 纯死白） */
 .mm-page { display: flex; flex-direction: column; gap: var(--sp-3); min-height: 100%; }
-/* 页头私有标题/操作类随 PageHeader 收编分批退役（-tt/-sub ；残余三伴
-    G232 补删——模板 0 引用纯删零连锁；史志不复述死类全名防源码锁自伤 705-C1） */
+/* 页头私有标题/操作类随 PageHeader 合并分批退役（-tt/-sub ；残余三伴
+ G232 补删——模板 0 引用纯删零连锁；史志不复述死类全名防源码锁自伤 ） */
 .mm-hd { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
-/*  G232：IndexPicker 退役伴漏删的选择器规则补删（换 CurrentIdxChip 只读件） */
+/* G232：IndexPicker 退役伴漏删的选择器规则补删（换 CurrentIdxChip 只读件） */
 /* 编辑器卡片高度：原 flex:1 吃满剩余 + min-height:200px 固定 → 改可调档
-   （height 由 :style mm.taH 承接，resize:vertical 原生拖拽 + pointerup 落盘记忆）；
-   min-height 保留作拖拽下限。flex:none 后卡片不再吃满剩余高，结果表格随内容上移。 */
-.mm-card { overflow: hidden; display: flex; flex-direction: column; flex: none; min-height: 200px; resize: vertical; } /* ：编辑器外框退役（立法③）——border+radius 壳退掉，分界归 mm-card-hd border-bottom；布局/拖拽语义（flex:none/resize/min-height）与脚本段零触 */
+ （height 由 :style mm.taH 承接，resize:vertical 原生拖拽 + pointerup 落盘记忆）；
+ min-height 保留作拖拽下限。flex:none 后卡片不再吃满剩余高，结果表格随内容上移。 */
+.mm-card { overflow: hidden; display: flex; flex-direction: column; flex: none; min-height: 200px; resize: vertical; } /* ：编辑器外框退役（约定③）——border+radius 壳退掉，分界归 mm-card-hd border-bottom；布局/拖拽语义（flex:none/resize/min-height）与脚本段零触 */
 /* JsonArea 自身已是 flex 纵向容器；只在本视图内接线让它随卡片长高，不改共享组件 */
 .mm-card :deep(.ja) { flex: 1; min-height: 0; border: none; border-radius: 0; }
 .mm-card-hd { display: flex; align-items: center; gap: var(--sp-1h); padding: var(--sp-2) var(--sp-2h); font-size: var(--fs-xs); font-weight: 650; border-bottom: 1px solid var(--border); }
 /* lint 体检提示条私有形态（display/gap/padding/radius/字号/行高 + warn/err 底色）
-   退役 → theme.css .lint-bar 单源（模板纯类名换装，DOM 保形） */
+ 退役 → theme.css .lint-bar 单源（模板纯类名改用，DOM 保形） */
 /* 删 .mm-ta 死定高规则（模板已用 JsonArea，0 引用） */
 /* .mm-err 私造红壳（border+err-soft+radius+err 色）退役 → 全局 .err-bar 形态
-   （role=alert，theme.css :554 单源；557 IH .ih-qerr 先例）。本组只留多行面板顶对齐
-   （icon+body 富内容不随 err-bar 居中）与落位节奏（mm-page gap 已担间距，抵掉 err-bar 自带
-   margin-bottom）；spSweep540/544/545/551 字面锁行随收编退役，其 spec 随迁 */
+ （role=alert，theme.css :554 单源；557 IH .ih-qerr 先例）。本组只留多行面板顶对齐
+ （icon+body 富内容不随 err-bar 居中）与落位节奏（mm-page gap 已担间距，抵掉 err-bar 自带
+ margin-bottom）；/544/545/551 字面锁行随合并退役，其 spec 同步更新 */
 .mm-err { align-items: flex-start; margin-bottom: 0; }
 .mm-err-body { flex: 1; min-width: 0; }
 .mm-err-pre { margin: var(--sp-1h) 0 0; font-family: var(--mono); font-size: var(--fs-xs); white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow: auto; } /* ：删死 fallback */
 .mm-err-acts { margin-top: var(--sp-2); }
-.mm-busy { display: flex; align-items: center; justify-content: center; gap: var(--sp-1h); padding: 14px var(--sp-4); font-size: var(--fs-xs); color: var(--muted); } /* ：6px→--sp-1h、16px→--sp-4 收编（14px 无档位刻值保字面；spSweep540/544/551 锚随迁） */
+.mm-busy { display: flex; align-items: center; justify-content: center; gap: var(--sp-1h); padding: 14px var(--sp-4); font-size: var(--fs-xs); color: var(--muted); } /* ：6px→--sp-1h、16px→--sp-4 合并（14px 无档位刻值保字面；/544/551 锚同步更新） */
 .mm-stats { display: flex; flex-direction: column; gap: var(--sp-1); }
 .mm-stat { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); }
 .mm-stat.dead { opacity: .85; }
 .mm-stat-nm { flex: none; width: 200px; font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* ：删死 fallback */
 .mm-stat-bar-wrap { flex: 1; max-width: 300px; height: 7px; border-radius: var(--r-xs); background: var(--bg2); overflow: hidden; }
 .mm-stat-bar { display: block; height: 100%; background: var(--ok); border-radius: var(--r-xs); }
-/* .mm-dead-tag 私造样式随 StatusPill r 换装退役（色档归 .pill 单源）；⚠spSweep540/544/545 字面锁行（.mm-err/.mm-busy）原样未触 */
+/* .mm-dead-tag 私造样式随 StatusPill r 改用退役（色档归 .pill 单源）；⚠/544/545 字面锁行（.mm-err/.mm-busy）原样未触 */
 /* mm-tbl 全家随换壳退役（排序/sticky/导出归内核）；max-height 口径迁
-   QRT max-height prop（仍 calc(100vh - var(--vh-offset,210px) - 210px)，裸 420px 不回潮） */
+ QRT max-height prop（仍 calc(100vh - var(--vh-offset,210px) - 210px)，裸 420px 不回潮） */
 .ell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* 子句命中格色档（#cell- 槽承接）：✔ 实色 600 / · 弱化，格内居中对齐旧 .c */
 .mm-cl { display: block; text-align: center; }
@@ -383,9 +383,9 @@ function openRawIo() {
 }
 .mm-id-go:hover { color: var(--ac-hi); border-color: var(--ac-line); background: var(--ac-soft); }
 /* 900 紧凑微调档（iframe 宿主 ~866px 口径）——单列纵 flex 页 + .mm-hd 本就
-   flex-wrap，只需把页头 gap 收一档（PageHeader actions 自行换行，无需结构动）。
-   .mm-stat-nm 裸 200px 在 900 档降档 140px（ellipsis 基线兜底不动，
-   485/375 极窄档不再挤掉统计条/进度列）；宽度降档不属 height 链，与换壳锁无涉 */
+ flex-wrap，只需把页头 gap 收一档（PageHeader actions 自行换行，无需结构动）。
+ .mm-stat-nm 裸 200px 在 900 档降档 140px（ellipsis 基线兜底不动，
+ 485/375 极窄档不再挤掉统计条/进度列）；宽度降档不属 height 链，与换壳锁无涉 */
 @media (max-width: 900px) {
   .mm-hd { gap: var(--sp-2); }
   .mm-stat-nm { width: 140px; }

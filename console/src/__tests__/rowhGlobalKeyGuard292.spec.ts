@@ -24,7 +24,7 @@ describe('行高/密度全局键守卫（292 批）', () => {
     const bad: string[] = [];
     for (const f of walk(join(SRC, 'views')).concat(walk(join(SRC, 'components'))).concat(walk(join(SRC, 'composables')))) {
       const s = readFileSync(f, 'utf-8');
-      /* 852 批随迁：写侧走 writeStoredRaw 单源后，扫描器两形态同捕（裸 setItem 与单源调用） */
+      /* 852 批同步更新：写侧走 writeStoredRaw 单源后，扫描器两形态同捕（裸 setItem 与单源调用） */
       for (const m of s.matchAll(/(?:setItem\(\s*|writeStoredRaw\(\s*[^,]+,\s*)'(es_tbl_rowh:|es_tbl_dense:)/g)) {
         bad.push(`${f} → ${m[1]}`);
       }

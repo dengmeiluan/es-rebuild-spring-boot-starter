@@ -39,7 +39,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 内置控制台账号服务（）：账号存 ES 索引 {@code es_console_user}，无任何外部依赖。
+ * 内置控制台账号服务（账号存 ES 索引 {@code es_console_user}，无任何外部依赖。
  *
  * <p>核心语义（与用户约定一致）：<b>用户索引里一个账号都没有时，用兜底默认账号
  * {@code admin / es-console}（可配置）登录，角色 ADMIN；一旦 ES 里建立了任何账号，

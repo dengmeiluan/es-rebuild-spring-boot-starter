@@ -1,17 +1,17 @@
 /**
- * 五百六十五批·轨2 W2 件③：alt 三视图抽共享件 AltHitsViews.vue（DQ 换装落地）。
+ * 五百六十五批·轨2 W2 件③：alt 三视图抽共享件 AltHitsViews.vue（DQ 改用落地）。
  *
  *  背景：DslQueryView 与 IndexHubView docs/query 的 json/tree/cards 三视图体逐字重复三处，
  *  抽 components/AltHitsViews.vue（view/jsonHtml/treeData/hits + @open-doc 契约）。
  *
- *  换装范围记档（前提边界，非缩水）：
- *  · DslQueryView：三处换装落地——包裹 div 留在宿主（dq-json-wrap/dq-tree-view/dq-cards 类串
+ *  改用范围备案（前提边界，非缩水）：
+ *  · DslQueryView：三处改用落地——包裹 div 留在宿主（dq-json-wrap/dq-tree-view/dq-cards 类串
  *    与 --dq-view-cap 高度链是 track2Wave551:135-137 黑名单 + queryWorkbenchW1/workbenchParity402
  *    字面锁面，包裹层类名/CSS 零触；高度变量随包裹层原样透传，56vh 现值不变），
- *    三视图体内脏（pre.json-view / JsonTree / 卡片行）进共享件；卡片样式随迁组件 scoped。
+ *    三视图体内脏（pre.json-view / JsonTree / 卡片行）进共享件；卡片样式同步更新组件 scoped。
  *  · IndexHubView docs/query 两处：555~657 间因 ihUnify554 黑名单 DOM 冻结+工作树 11 M
- *    残留未清跳过（原记档「留给锁随迁批」）；658 接管提交 9e999d7e 后黑名单制度性清零，
- *    667 批解冻收口换装落地（六分支内脏进共享件、包裹层 v-show 容器留宿主；锁随迁见
+ *    残留未清跳过（原备案「留给锁同步更新批」）；658 接管提交 9e999d7e 后黑名单制度性清零，
+ *    667 批解冻收口改用落地（六分支内脏进共享件、包裹层 v-show 容器留宿主；锁同步更新见
  *    ihUnify554 二段/四段与本件 it4 翻转；新扫描锁 ihAltShare667）。
  */
 import { describe, it, expect, afterEach } from 'vitest';
@@ -42,13 +42,13 @@ describe('565 件③：AltHitsViews 共享件接线（源码锁）', () => {
     expect(dq).toMatch(/\.dq-cards \{ display: grid; grid-template-columns: repeat\(auto-fill, minmax\(240px, 1fr\)\); gap: var\(--sp-2h\); max-height: var\(--dq-view-cap\); flex: 1 1 auto; min-height: 0; \}/);
   });
 
-  it('卡片内脏样式随迁组件 scoped（宿主侧死规则退役）', () => {
+  it('卡片内脏样式同步更新组件 scoped（宿主侧死规则退役）', () => {
     const av = readFileSync(join(__dirname, '../components/AltHitsViews.vue'), 'utf-8');
     expect(av).toContain('.dq-card { background: var(--bg2); border: 1px solid var(--line); border-radius: var(--r-m); padding: var(--sp-2h) var(--sp-3); cursor: pointer; transition: border var(--tr), transform var(--tr); }');
-    expect(dq, '宿主侧卡片内脏样式退役（随迁组件）').not.toContain('.dq-card-id {');
+    expect(dq, '宿主侧卡片内脏样式退役（同步更新组件）').not.toContain('.dq-card-id {');
   });
 
-  it('IndexHubView docs/query 已换装共享件（667 解冻收口；包裹层 v-show 容器留宿主零触）', () => {
+  it('IndexHubView docs/query 已改用共享件（667 解冻收口；包裹层 v-show 容器留宿主零触）', () => {
     expect(ih).toContain("import AltHitsViews from '../components/AltHitsViews.vue';");
     expect(ih).toContain('<AltHitsViews view="json" :json-html="docsJsonHtml" />');
     expect(ih).toContain('<AltHitsViews view="tree" :tree-data="docsAltData" />');

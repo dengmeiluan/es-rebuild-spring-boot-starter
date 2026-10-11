@@ -6,7 +6,7 @@
  * ④ 工具行 DSL→Lucene 钮（dslToLucene 直连 + CmdPalette r30 既有 lucene.q 出口）；
  * ⑤ deleteByQuery 异步化（wait_for_completion=false + taskId 引导 + api.progress 三态中文）；
  * ⑥ 文档弹窗两处 Monaco 定高接 useTierCycle（dq.docH/dq.docHNew，首档=原值零漂移）；
- * ⑦ .dq-lint-fallback 换装 theme.css .lint-bar 单源。
+ * ⑦ .dq-lint-fallback 改用 theme.css .lint-bar 单源。
  * 附：LuceneInput syntaxIssues 双档升级源码锚（硬伤 error 红/软提示 warn 黄，渲染拼接口径不变）。
  */
 import { describe, it, expect } from 'vitest';
@@ -54,22 +54,22 @@ describe('② dq-params-tg 收起态摘要', () => {
 describe('③ 卡片视图/terms 桶行 kw 快滤（宿主侧过滤）', () => {
   it('cardsKw 过滤卡片集（_id/_source 值含子串；kw 空即全量），卡片 v-for 换 cardHits', () => {
     expect(dq).toMatch(/const cardHits = computed\(\(\) => \{/);
-    /* 五百六十五批随迁（击穿者：565 件③ alt 体换装 AltHitsViews 统一件）——卡片 v-for
+    /* 五百六十五批同步更新（击穿者：565 件③ alt 体改用 AltHitsViews 统一件）——卡片 v-for
        迁组件内（h in hits），宿主侧消费锚等价迁到共享件 cards 档绑定（过滤集仍 cardHits，
        「原始 resp.hits 不回流」锁意不变） */
     expect(dq).toMatch(/<AltHitsViews view="cards" :hits="cardHits" @open-doc="openDoc" \/>/);
     expect(dq).not.toMatch(/v-for="h in resp\.hits"/);
   });
 
-  it('cards kw 输入胞在 bar-prepend 仅卡片档在场（650 批换装 SearchFilterBar：Esc 清空内建；561 负锁翻正）', () => {
+  it('cards kw 输入胞在 bar-prepend 仅卡片档在场（650 批改用 SearchFilterBar：Esc 清空内建；561 负锁翻正）', () => {
     expect(dq).toMatch(/<div v-if="view === 'cards'" class="dq-cards-kw">/);
-    /* 六百五十批随迁：SFB 换装落位（sfbUnify650 锁）——561 批「统一件归其他批次改造」预告兑现，
+    /* 六百五十批同步更新：SFB 改用落位（sfbUnify650 锁）——561 批「统一件归其他批次改造」预告兑现，
        「不引 SearchFilterBar」负锁翻正为在场正锁；外胞 div+计数 span 结构锁意不变 */
     expect(dq).toMatch(/<SearchFilterBar v-model="cardsKw" class="dq-cards-kw-sfb mono" input-class="dq-cards-kw-i" placeholder="过滤卡片（_id \/ 字段值）…" \/>/);
     expect(dq).toContain('SearchFilterBar');
   });
 
-  it('terms 桶行走 termsAggsView 过滤（全空聚合节隐去），kw 输入胞 Esc 清空（650 批换装 SFB 内建）', () => {
+  it('terms 桶行走 termsAggsView 过滤（全空聚合节隐去），kw 输入胞 Esc 清空（650 批改用 SFB 内建）', () => {
     expect(dq).toMatch(/const termsAggsView = computed\(\(\) => \{/);
     expect(dq).toMatch(/v-for="a in termsAggsView"/);
     expect(dq).toMatch(/<SearchFilterBar v-model="aggKw" class="dq-agg-kw mono" placeholder="过滤聚合桶…" \/>/);
@@ -105,7 +105,7 @@ describe('⑤ deleteByQuery 异步化（wait_for_completion=false + 进度三态
     expect(dq).toMatch(/@click="dbqTaskId = ''"/);
   });
 
-  it('三态中文（进行中 x/y / 已完成 / 查不到降级；ReindexAdvanced 557 判例同口径）', () => {
+  it('三态中文（进行中 x/y / 已完成 / 查不到降级；ReindexAdvanced 557 先例同口径）', () => {
     expect(dq).toMatch(/const dbqProgText = computed\(\(\) => \{/);
     expect(dq).toContain("'查不到进度（任务可能已过期或 taskId 无效）'");
     expect(dq).toMatch(/'已完成' \+ counts/);
@@ -127,8 +127,8 @@ describe('⑥ 文档弹窗两处 Monaco 定高接 useTierCycle（dq.docH/dq.docH
   });
 
   it('两处编辑器绑档值 + 档钮在场（title 实时回显当前档）', () => {
-    /* 六百六十九批随迁（击穿者：件B 弹窗字号档——同页同键 :font-size 复用 dqFont/dt.font
-       560 立法先例，高度档值锁意图零触；本体锚 edFontModal669.spec D 段） */
+    /* 六百六十九批同步更新（击穿者：件B 弹窗字号档——同页同键 :font-size 复用 dqFont/dt.font
+       560 约定先例，高度档值锁意图零触；本体锚 edFontModal669.spec D 段） */
     expect(dq).toContain('<MonacoEditor v-if="docEditMode" v-model="docEditText" :height="docH" :font-size="dqFont" />');
     expect(dq).toContain('<MonacoEditor v-model="newDocText" :height="docHNew" :font-size="dqFont" />');
     expect(dq).toMatch(/:title="'编辑器高度档：' \+ docH \+ '（点击循环）'"/);
@@ -141,7 +141,7 @@ describe('⑥ 文档弹窗两处 Monaco 定高接 useTierCycle（dq.docH/dq.docH
   });
 });
 
-describe('⑦ .dq-lint-fallback 换装 theme.css .lint-bar 单源', () => {
+describe('⑦ .dq-lint-fallback 改用 theme.css .lint-bar 单源', () => {
   it('视图侧私造壳退役，类换 lint-bar lint-bar-warn（内层 dq-lint-item 文案形态不动）', () => {
     expect(dq).toContain('class="lint-bar lint-bar-warn"');
     expect(dq).not.toContain('dq-lint-fallback');

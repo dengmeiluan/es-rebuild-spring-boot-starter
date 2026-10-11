@@ -16,26 +16,26 @@
  * 按约定只扩文件清单不加新断言。
  *
  * 五百三十三批扩容：15 视图纳入（当时 900 档未全覆盖页清单外的 18 视图列为不入册名单，
- * 其中 7 个系 529/531 历史批次已在清单；其余 11 个虽部分含 900 档按当时边界暂缓）。本清单
- * 即历史各批次的并集记录，非永久封阻——后续批次逐批收编（534 批见下）。
+ * 其中 7 个系 529/531 历史批次已在清单；其余 11 个虽部分含 900 档按当时边界）。本清单
+ * 即历史各批次的并集记录，非永久封阻——后续批次逐批合并（534 批见下）。
  * ReindexAdvancedView 虽有 900 档但暂不入册：其档为单行写法，与本 spec 的多行块提取正则
  * （block900Of）不兼容，且该文件不在 534 批 owned 清单。
  *
  * 五百三十四批扩容：9 视图纯入册（AdhocRebuild/Aliases/IndexHub/IndexOptimizer/
  * IndexSettings/LiveDashboard/ProfileFlame/Security/System/Xmigrate 中实测与 block900Of
- * 兼容的 9 个——SecurityView 的 900 档是两处单行写法，与 ReindexAdvanced 同因暂缓，
+ * 兼容的 9 个——SecurityView 的 900 档是两处单行写法，与 ReindexAdvanced 同因，
  * 待其 owned 工蚁把档改多行后入册）。纪律：只扩文件清单不加新断言。
  *
  * 五百三十五批扩容：5 视图纯入册（SearchTemplates/Slm/TemplateGallery/Topology/Watcher
- * ——533 批暂缓名单中实测与 block900Of 兼容者，多行档逐个核过非空且无 ≥300px 裸 width）。
- * LuceneQuery/ReindexAdvanced/Security 维持暂缓不入册（单行档与提取正则不兼容）。
+ * ——533 批名单中实测与 block900Of 兼容者，多行档逐个核过非空且无 ≥300px 裸 width）。
+ * LuceneQuery/ReindexAdvanced/Security 维持不入册（单行档与提取正则不兼容）。
  *
- * 五百三十八批扩容：MatchMatrixView 纯入册（本批补 900 档——单列纵 flex 页 + .mm-hd 本就
+ * 五百三十八批扩容：MatchMatrixView 纯入册（补 900 档——单列纵 flex 页 + .mm-hd 本就
  * flex-wrap，档内只收页头 gap 一档，与 528 W-E「只加 CSS 零结构动」同口径）。
- * 豁免记档（零 @media 文件；538 批时为三文件，五百五十一批勘误——DevToolsView 已于 547 批
+ * 豁免备案（零 @media 文件；538 批时为三文件，五百五十一批勘误——DevToolsView 已于 547 批
  * 补 900 档并随勘误入册，现仅余两文件，同 531 批五视图不入册口径）：
  * ForbiddenView/NotFoundView = 静态居中页，无分栏可塌、无固定宽可收，补 900 档无对象；
- * （勘误记档：DevToolsView 原「pane 堆叠由 WorkbenchLayout <1100 JS 档兜底，无 CSS 档必要」
+ * （勘误备案：DevToolsView 原「pane 堆叠由 WorkbenchLayout <1100 JS 档兜底，无 CSS 档必要」
  * 裁决于 547 批被推翻补档——全站最后一个零 @media 主工作页，实测与 block900Of 提取正则
  * 兼容，故随五百五十一批勘误入册断言面。） */
 import { describe, it, expect } from 'vitest';
@@ -57,26 +57,26 @@ const VIEWS_531 = [
   'LifecycleView', 'FavoritesView', 'PluginsView', 'AnalysisSettingsView',
 ] as const;
 
-/* 五百三十三批：非黑名单且含 900 档的漏网视图收编（13 既有 + 2 本批补档） */
+/* 五百三十三批：非黑名单且含 900 档的漏网视图合并（13 既有 + 2 补档） */
 const VIEWS_533 = [
   'BoostTunerView', 'BrowserView', 'ClusterSettingsView', 'ConfigDriftView', 'HealthReportView',
   'OverviewView', 'QueryHubView', 'QueryXrayView', 'ReindexPreviewView',
   'RemoteClustersView', 'SnapshotsView', 'TaskTreeView', 'TasksView', 'TemplatesView', 'WorkspaceView',
 ] as const;
 
-/* 五百三十四批：900 档既有视图纯入册 9 个（SecurityView 单行档与提取正则不兼容暂缓，见头注） */
+/* 五百三十四批：900 档既有视图纯入册 9 个（SecurityView 单行档与提取正则不兼容，见头注） */
 const VIEWS_534 = [
   'AdhocRebuildView', 'AliasesView', 'IndexHubView', 'IndexOptimizerView', 'IndexSettingsView',
   'LiveDashboardView', 'ProfileFlameView', 'SystemView', 'XmigrateView',
 ] as const;
 
 /* 五百三十五批：900 档既有视图纯入册 5 个（多行档实测兼容；LuceneQuery/ReindexAdvanced/
-   Security 单行档维持暂缓，见头注） */
+   Security 单行档维持，见头注） */
 const VIEWS_W9 = [
   'SearchTemplatesView', 'SlmView', 'TemplateGalleryView', 'TopologyView', 'WatcherView',
 ] as const;
 
-/* 五百三十八批：MatchMatrixView 本批补 900 档后入册 */
+/* 五百三十八批：MatchMatrixView 补 900 档后入册 */
 const VIEWS_538 = ['MatchMatrixView'] as const;
 
 /* 五百四十七批补档 + 五百五十一批勘误入册：DevToolsView（原三文件豁免成员，547 批补 900 档） */

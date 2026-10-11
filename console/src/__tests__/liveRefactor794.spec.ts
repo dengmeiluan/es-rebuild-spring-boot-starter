@@ -138,7 +138,7 @@ describe('件1：节点对比悬浮面板化（真悬浮）', () => {
 });
 
 describe('件2：Top 索引曲线化', () => {
-  /* 800 随迁：Top 面板收编进「监控明细」单容器（ld-detail）——开容器（默认 tab=Top） */
+  /* 800 同步更新：Top 面板合并进「监控明细」单容器（ld-detail）——开容器（默认 tab=Top） */
   async function openTop() {
     const toggle = hostEl!.querySelector('.ld-detail-toggle') as HTMLButtonElement | null;
     toggle?.click();
@@ -148,7 +148,7 @@ describe('件2：Top 索引曲线化', () => {
     await settle(20);
   }
 
-  it('B1 默认曲线视图：多索引曲线 path 在场（八百二十八批 polyline→path 平滑随迁）', async () => {
+  it('B1 默认曲线视图：多索引曲线 path 在场（八百二十八批 polyline→path 平滑同步更新）', async () => {
     await openTop();
     const panel = hostEl!.querySelector('.ld-detail-body');
     expect(panel, '监控明细容器展开（800 单容器形态）').toBeTruthy();

@@ -5,7 +5,7 @@
  * 点位公式**把「指针在卡宽内的分数位置」换算成最近采样点命中（序号/十字线 x/圆点 y/原值/
  * 采样时刻），保证十字线与圆点钉在曲线上而不是悬在半空。视图只负责把命中结果摆进
  * HTML 绝对定位层（十字线/圆点/读出不进 SVG——preserveAspectRatio=none 非等比缩放
- * 会把圆拉成椭圆、文字变形，HistoryChart 立法同源）。
+ * 会把圆拉成椭圆、文字变形，HistoryChart 约定同源）。
  */
 
 export interface SparkHoverHit {
@@ -24,11 +24,11 @@ export interface SparkHoverHit {
 }
 
 /**
- * @param data   采样序列（≥2 点才有悬停意义）
- * @param ts     每点采样时刻（与 data 等长最佳；缺位回 0）
- * @param fracX  指针在卡宽内的分数位置（越界钳 0-1，NaN 归 0）
- * @param W H    viewBox 尺寸（与折线同一坐标系）
- * @param mode   'pct'=0-100 固定刻度（越界值钳位）/ 'abs'=max(...data,1) 地板缩放
+ * @param data 采样序列（≥2 点才有悬停意义）
+ * @param ts 每点采样时刻（与 data 等长最佳；缺位回 0）
+ * @param fracX 指针在卡宽内的分数位置（越界钳 0-1，NaN 归 0）
+ * @param W H viewBox 尺寸（与折线同一坐标系）
+ * @param mode 'pct'=0-100 固定刻度（越界值钳位）/ 'abs'=max(...data,1) 地板缩放
  */
 export function sparkHoverAt(
   data: number[],
@@ -49,13 +49,13 @@ export function sparkHoverAt(
   return { i, x: i * (W / (n - 1)), y, frac, v, t: ts[i] ?? 0 };
 }
 
-/* ── （622 §9-D2）：悬浮层跟随阻尼 ──
+/* ── （622 -D2）：悬浮层跟随阻尼 ──
  * 显示位置按帧向指针目标收敛（k=0.35 约四帧收敛，「跟手但不抖」折点）；
  * 首中直钉（无动画起点——liveHover589 的 frac=0 确定性断言依赖此语义）；
  * k=0（reduced-motion，组件以 matchMedia 直伞传入）退化为直钉——theme.css 全局
  * 兜底只覆盖 CSS transition，JS rAF 须自伞；不入 @media 块（633/adaptive556 同律）。 */
 
-/** 阻尼系数（622 §9-D2 推荐案 a：约 4 帧收敛；k=0.5 快扫仍「跳」，k=0.25 起拖影）。 */
+/** 阻尼系数（622 -D2 推荐案 a：约 4 帧收敛；k=0.5 快扫仍「跳」，k=0.25 起拖影）。 */
 export const HOVER_DAMP_K = 0.35;
 
 /** 单帧指数收敛：cur 向 target 走 k 比例。 */

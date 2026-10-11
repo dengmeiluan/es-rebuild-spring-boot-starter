@@ -1,7 +1,7 @@
 /**
  * R130 一百八十七批：DiagView 节点行右键菜单（E 组逐表过 dbx 清单）。
- * 五百二十五批 W5 随迁：节点表换 QRT rows 型，自建行 contextmenu+CellContextMenu 胶水退役，
- * 功能由内核承接——本文件随迁锁定新终态：
+ * 五百二十五批 W5 同步更新：节点表换 QRT rows 型，自建行 contextmenu+CellContextMenu 胶水退役，
+ * 功能由内核承接——本文件同步更新锁定新终态：
  * 1) QRT 内建单元格右键菜单：复制值（=原「复制节点名/资源信息」的逐格通道）、复制行 JSON
  *    （=原 facts 串的全量资源信息）、整表 TSV、排序、列管理；
  * 2) 「按此节点采热线程」直达由 row-actions 注入钮承接（原节点名点击与菜单 hot 项语义）；
@@ -14,7 +14,7 @@ import { join } from 'node:path';
 
 const src = readFileSync(join(__dirname, '../views/DiagView.vue'), 'utf-8');
 
-describe('DiagView 节点行右键菜单（一百八十七批→五百二十五批 W5 随迁）', () => {
+describe('DiagView 节点行右键菜单（一百八十七批→五百二十五批 W5 同步更新）', () => {
   it('采热直达换 row-actions 注入钮（aria 全名可达，行尾常驻入口）', () => {
     expect(src).toMatch(/<template #row-actions="\{ row \}">/);
     expect(src).toMatch(/:aria-label="'按节点 ' \+ \(row\[0\] \|\| ''\) \+ ' 采热线程'"/);

@@ -151,7 +151,7 @@ describe('747 A0 挂载不变量负锚（现状即守卫）', () => {
 });
 
 describe('747 G161 运行钮在途窗 spinning（铁律 D·743 G153 同族）', () => {
-  it('运行链：在途窗 disabled（既有）+spinning（G161 病灶：修前零）；复常 spinning 退场+骨架屏→tokens 呈现', async () => {
+  it('运行链：在途窗 disabled（既有）+spinning（G161 病灶：修前零）；复常 spinning 移除+骨架屏→tokens 呈现', async () => {
     const host = await mountView();
     const btn = findBtn(host, /运行/);
     expect(btn.querySelector('.spinning'), '负锚：待机零 spinning').toBeFalsy();
@@ -163,19 +163,19 @@ describe('747 G161 运行钮在途窗 spinning（铁律 D·743 G153 同族）', 
     expect(host.querySelector('.av-tokens'), '骨架屏在场（既有）').toBeTruthy();
     releaseAnalyze({ tokens: TOKENS_9 });
     await settle(8);
-    expect(btn.querySelector('.spinning'), '复常退场').toBeFalsy();
+    expect(btn.querySelector('.spinning'), '复常移除').toBeFalsy();
     expect(btn.disabled, '复常解禁').toBe(false);
     expect(host.textContent).toContain('9 tokens');
   });
 
-  it('失败链复常：spinning 退场+err-bar 呈现（不落死转）', async () => {
+  it('失败链复常：spinning 移除+err-bar 呈现（不落死转）', async () => {
     const host = await mountView();
     const btn = findBtn(host, /运行/);
     btn.click();
     await settle(4);
     pending[0](Promise.reject(new Error('index_not_found_exception')));
     await settle(8);
-    expect(btn.querySelector('.spinning'), '失败复常退场').toBeFalsy();
+    expect(btn.querySelector('.spinning'), '失败复常移除').toBeFalsy();
     expect(host.querySelector('.err-bar'), '错误条在场').toBeTruthy();
   });
 });

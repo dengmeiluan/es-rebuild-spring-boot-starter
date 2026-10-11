@@ -834,7 +834,7 @@ describe('W6 bodyKind 分派', () => {
 describe('W3 字段 hover provider', () => {
   it('json+ndjson+painless 各注册一份（524 批扩 painless），dispose 随卸载全量；dslAssist 缺席零 hover 注册', () => {
     const { app } = mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
-    /* 五百二十四批随迁：dslAssist 在档时 painless 语言加挂四骨架补全 + 字段 hover 各一份——
+    /* 五百二十四批同步更新：dslAssist 在档时 painless 语言加挂四骨架补全 + 字段 hover 各一份——
        hoverRegs 按「无 triggerCharacters」签名过滤，json/ndjson/painless hover 各 1 共 3；
        painless 补全 provider 签名 ['[', '.'] 不进 dslRegs（恰 ['"'] 过滤）也不进 hoverRegs */
     expect(hoverRegs().length).toBe(3);

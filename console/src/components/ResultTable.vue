@@ -1,22 +1,22 @@
 <template>
   <FocusableSurface pane-id="rt.table" title="结果表" headless :enabled="focused" @update:enabled="focused = $event">
-  <!-- 裁决「放大/查找直接集成在表格上」:FocusableSurface 收编为表格内建——
-       放大钮内建在 rt-bar 工具簇末尾,消费方不再各自包 FS/接 focusPaneId(此前 4 视图各自接线的
-       不一致根源);headless 模式 fs-body 链路靠 data-flex-fill 保高度,聚焦态整表铺满,
-       工具行(查找/导出/行高/列选)随行可达。⚠本注释必须在 FS 内:根级注释=fragment 根,T39 卸载断裂 -->
+  <!-- 裁决「放大/查找直接集成在表格上」:FocusableSurface 合并为表格内建——
+ 放大钮内建在 rt-bar 工具簇末尾,消费方不再各自包 FS/接 focusPaneId(此前 4 视图各自接线的
+ 不一致根源);headless 模式 fs-body 链路靠 data-flex-fill 保高度,聚焦态整表铺满,
+ 工具行(查找/导出/行高/列选)随行可达。⚠本注释必须在 FS 内:根级注释=fragment 根,T39 卸载断裂 -->
   <div ref="rootEl" class="rt" :class="{ dense: rowH === 'compact', cozy: rowH === 'cozy', 'rt-nav-on': tblFocus, 'is-hscrolled': hScrolled }" data-flex-fill tabindex="-1"
        role="region" aria-label="查询结果表格（Tab 聚焦后：↑↓ 行导航、Ctrl+F 查找、Enter 打开文档）"
        @keydown="onGridKeydown" @focus="tblFocus = true" @blur="tblFocus = false">
     <!-- 工具条 -->
-    <!-- 容器结构随壳收编 TableShell（卡头语言单一出处），类名经 props 注入、
-         内容经槽注入，DOM 与既有逐字节一致（守卫锚内核源码字面量，钮组不进壳） -->
+    <!-- 容器结构随壳合并 TableShell（卡头语言单一出处），类名经 props 注入、
+ 内容经槽注入，DOM 与既有逐字节一致（守卫锚内核源码字面量，钮组不进壳） -->
     <TableShell bar-class="rt-bar" bar-r-class="rt-bar-r">
       <template #bar-left>
         <!-- 内建视图档分段（QRT 607 对称件）——seg 寄居 bar-left 最前（RT 单壳
-             无独立壳通道，恒可达，寄居位在消费方 bar-prepend 槽之前）；数据驱动出档：
-             jsonHtml/treeData/cardHits 提供哪档出哪档，表格档恒在；aria-pressed 可达。
-             缺省 viewSeg=false 不渲染（全站零增量；DQ/IH 既有自造 seg 消费面迁移=
-             ihUnify554 冻结面解锁后接线批执行） -->
+ 无独立壳通道，恒可达，寄居位在消费方 bar-prepend 槽之前）；数据驱动出档：
+ jsonHtml/treeData/cardHits 提供哪档出哪档，表格档恒在；aria-pressed 可达。
+ 缺省 viewSeg=false 不渲染（全站零增量；DQ/IH 既有自造 seg 消费面迁移=
+ 冻结面解锁后接线批执行） -->
         <div v-if="viewSegOn" class="seg rt-view-seg" role="group" aria-label="展示形式">
           <button type="button" :class="{ on: effView === 'table' }" :aria-pressed="effView === 'table'" @click="altView = 'table'">表格</button>
           <button v-if="jsonHtml != null" type="button" :class="{ on: effView === 'json' }" :aria-pressed="effView === 'json'" @click="altView = 'json'">JSON</button>
@@ -24,41 +24,41 @@
           <button v-if="cardHits != null" type="button" :class="{ on: effView === 'cards' }" :aria-pressed="effView === 'cards'" @click="altView = 'cards'">卡片</button>
         </div>
         <!-- bar-prepend 槽（bar-left 最前）——消费方把视图切换 seg/分页器寄居进
-             表格自带工具行（「翻页、展示形式统一在表格头」裁决），卡外/卡上独立条退役。 -->
+ 表格自带工具行（「翻页、展示形式统一在表格头」裁决），卡外/卡上独立条退役。 -->
         <slot name="bar-prepend" />
-        <!-- 内建分页（QRT  :561 三参齐备形态平移）——page/pageSize/total
-             三参齐备（pagerOn）才渲染内建 Pagination，翻页/改页大小只 emit 给宿主
-             （update:page / update:pageSize），取数/切片归宿主（远端契约同 QRT 525）。
-             ⚠互斥约定（消费侧批裁决执行）：宿主 bar-prepend 寄居 Pagination 档
-             （DslQueryView/IndexHubView 现状）不传 page 系 props（三参不齐内建档不出），
-             内建档不寄居——同一表格双分页器是回归事故，槽与内建共存由宿主自行二选一。 -->
+        <!-- 内建分页（QRT :561 三参齐备形态平移）——page/pageSize/total
+ 三参齐备（pagerOn）才渲染内建 Pagination，翻页/改页大小只 emit 给宿主
+ （update:page / update:pageSize），取数/切片归宿主（远端契约同 QRT 525）。
+ ⚠互斥约定（消费侧批裁决执行）：宿主 bar-prepend 寄居 Pagination 档
+ （DslQueryView/IndexHubView 现状）不传 page 系 props（三参不齐内建档不出），
+ 内建档不寄居——同一表格双分页器是回归事故，槽与内建共存由宿主自行二选一。 -->
         <!-- pagerDisabled 透传（QRT 525 同名 prop 对位——宿主执行中禁用分页器） -->
         <Pagination v-if="pagerOn" :page="pagerPage" :total-pages="pagerTotalPages" :page-size="pagerSize" :disabled="pagerDisabled"
           @update:page="emit('update:page', $event)" @update:page-size="emit('update:pageSize', $event)" />
         <!-- 工具行容器化（dbx 表格卡头语言）——命中数/操作钮/导出菜单收进与表格连体的卡头，
-             不再是悬空的散排一行；导出菜单 = 标题+右注脚说明+紧凑 item，与触发钮视觉连接 -->
+ 不再是悬空的散排一行；导出菜单 = 标题+右注脚说明+紧凑 item，与触发钮视觉连接 -->
         <span class="rt-info mono">{{ hits.length }}/{{ fmtNum(total) }}<template v-if="totalGte">+</template><template v-if="took != null && took >= 0"> · <TookBadge :ms="took" /></template><template v-if="renderTruncated"> · 已渲染前 {{ renderHits.length }} 行（导出不受影响）</template><template v-if="totalGte">（命中数为下界）</template></span>
-        <!--  P0-4：筛选态提示（暗状态可见性——有筛选时行数与清除入口常驻，QRT 同款）；
-             组合档切换钮（AND=全部命中 / OR=任一列命中，就地翻转零跳转）
-             同构段收编 TableFilteredHint 片段组件（QRT 同款单一出处，DOM 逐字节） -->
+        <!-- P0-4：筛选态提示（暗状态可见性——有筛选时行数与清除入口常驻，QRT 同款）；
+ 组合档切换钮（AND=全部命中 / OR=任一列命中，就地翻转零跳转）
+ 同构段合并 TableFilteredHint 片段组件（QRT 同款单一出处，DOM 逐字节） -->
         <TableFilteredHint :active="activeFilterCount" :shown="filteredHits.length" :total="hits.length"
           :mode="filterModeLive" span-cls="rt-filtered mono" fmode-cls="rt-fmode mono" clear-cls="rt-filtered-clear"
           @toggle-mode="toggleFilterMode" @clear="clearAllFilters" />
-        <!--  W3：searchable 内建搜索框（与既有钮同排；双绑驱动既有 quickFilter
-             过滤链——命中数即滤后所见）；Esc 清词。缺省 false 不渲染（全站零增量）
-             同构段收编 TableQSearch 片段组件（QRT 同款单一出处，DOM 逐字节） -->
+        <!-- W3：searchable 内建搜索框（与既有钮同排；双绑驱动既有 quickFilter
+ 过滤链——命中数即滤后所见）；Esc 清词。缺省 false 不渲染（全站零增量）
+ 同构段合并 TableQSearch 片段组件（QRT 同款单一出处，DOM 逐字节） -->
         <!-- ·单框双效：@enter 桥接滚动下一命中行（620 稿 D2，TableQSearch 定向转 emit） -->
         <TableQSearch :on="searchable" q-cls="rt-qsearch" v-model:kw="searchableKw" @enter="bridgeNext" />
-        <!-- refreshable 刷新钮内建 RT（撤销 「G2 为 QRT 专属」记档）——
-             形制逐字对齐 QRT 546 同款钮：只 emit 'refresh' 意图，取数归宿主（提交链同事件名）。
-             缺省 false 不渲染（全站零增量）
-             同构段收编 TableRefreshBtn 片段组件（QRT 同款单一出处，DOM 逐字节） -->
+        <!-- refreshable 刷新钮内建 RT（撤销 「 为 QRT 专属」）——
+ 形制逐字对齐 QRT 546 同款钮：只 emit 'refresh' 意图，取数归宿主（提交链同事件名）。
+ 缺省 false 不渲染（全站零增量）
+ 同构段合并 TableRefreshBtn 片段组件（QRT 同款单一出处，DOM 逐字节） -->
         <TableRefreshBtn :on="refreshable" btn-cls="rt-tool-btn" @refresh="emit('refresh')" />
-        <!--  P0-1：结果内查找（Ctrl+F，dbx Grid SearchBar 对位）——
-             命中格琥珀底+当前命中落位；截断时仅覆盖已渲染前 N 行（≈ 提示，所见即所搜）
-             ·单框双效（620 稿 D1~D5 裁决）：searchable 档 HitNav 挂载点退役——
-             查找并入常驻快筛框（输入即过滤+行内 mark 点亮，词桥见脚本层）；非 searchable
-             档原样保留（「表格必有查找」立法不回退，546 缺省零增量不破） -->
+        <!-- P0-1：结果内查找（Ctrl+F，dbx Grid SearchBar 对位）——
+ 命中格琥珀底+当前命中落位；截断时仅覆盖已渲染前 N 行（≈ 提示，所见即所搜）
+ ·单框双效（620 稿 D1~D5 裁决）：searchable 档 HitNav 挂载点退役——
+ 查找并入常驻快筛框（输入即过滤+行内 mark 点亮，词桥见脚本层）；非 searchable
+ 档原样保留（「表格必有查找」约定不回退，546 缺省零增量不破） -->
         <template v-if="searchOpen && !searchable">
           <HitNav v-model="searchKw" :count="searchMatches.length" :current="searchCur"
                   placeholder="结果内查找…" @next="searchNext" @prev="searchPrev" @keydown.esc.stop="closeSearch" />
@@ -67,8 +67,8 @@
       </template>
       <template #bar-right>
         <!-- 待提交轻量 chip（dbx 风格）——仅徽标数字，点开气泡才见操作。
-             ·实报「这个不应该直接全部在表头」：placement 改 top-end 向上弹——
-             弹层向下展开会盖住表格列头（bottom-end 形态） -->
+ ·实报「这个不应该直接全部在表头」：placement 改 top-end 向上弹——
+ 弹层向下展开会盖住表格列头（bottom-end 形态） -->
         <n-popover v-if="pending.size" trigger="click" placement="top-end" :show="pendOpen" @update:show="pendOpen = $event">
           <template #trigger>
             <button class="pend-chip" :class="{ committing }" title="待提交更改——点开预览/提交/撤销">
@@ -83,7 +83,7 @@
             <template v-else>
               <div class="pend-pop-list">
                 <!-- 方案 A：逐条变更明细（行 id × 字段：旧值→新值，单条撤销）——
-                     最多展示 3 条，超出折叠「… 共 N 处」；数据源 pending(Map<id,Map<field,{old,new}>>) -->
+ 最多展示 3 条，超出折叠「… 共 N 处」；数据源 pending(Map<id,Map<field,{old,new}>>) -->
                 <div v-for="it in pendItems" :key="it.id + ':' + it.field" class="pend-pop-item">
                   <span class="pend-pop-fld mono" :title="it.id + ' × ' + it.field">{{ it.field }}</span>
                   <span class="pend-pop-vals mono"><s>{{ jstr(it.oldVal) }}</s><span class="pend-pop-arr">→</span>{{ jstr(it.newVal) }}</span>
@@ -102,7 +102,7 @@
           </div>
         </n-popover>
         <!-- 一键提交迷你钮（chip 旁直达，免去点开气泡的两击；
-             表格聚焦时 Ctrl+S / Ctrl+Enter 同效） -->
+ 表格聚焦时 Ctrl+S / Ctrl+Enter 同效） -->
         <button v-if="pending.size" class="pend-mini-commit" :disabled="committing"
                 title="提交全部待提交更改（表格聚焦时 Ctrl+S / Ctrl+Enter 同效）"
                 @click="commitPending()">
@@ -110,7 +110,7 @@
         </button>
         <span class="rt-bar-div" role="separator" />
         <!-- 导出唯一入口——一键按默认格式直出（默认 CSV 可在右键菜单切换，记住为偏好）；
-             格式清单从主界面彻底退场（用户裂开点：菜单不该常驻出现） -->
+ 格式清单从主界面彻底移除（用户裂开点：菜单不该常驻出现） -->
         <button class="btn sm ghost rt-exp-btn" :title="`导出${selected.size ? `选中 ${selected.size} 行` : '当前页'}为 ${expFmt.toUpperCase()}（右键单元格可切换默认格式）`" :disabled="!hits.length" @click="exportRows(expFmt)">
           <FileDown :size="13" />
           <span class="rt-exp-btn-t">导出</span>
@@ -121,8 +121,8 @@
           <Camera :size="13" /> 快照
         </button>
         <!-- 工具钮全部「图标+文字」自解释（dbx 工具栏语言，纯图标让人猜是散落感根源） -->
-        <!-- 行高三档循环 + 列宽重置双钮收编「视图 ⋯」聚合钮（行高改显式三选带
-             当前档 ✓，比连点循环可预期；列宽重置=低频破坏性弱操作，菜单底项+分隔线隔离） -->
+        <!-- 行高三档循环 + 列宽重置双钮合并「视图 ⋯」聚合钮（行高改显式三选带
+ 当前档 ✓，比连点循环可预期；列宽重置=低频破坏性弱操作，菜单底项+分隔线隔离） -->
         <span class="menu-wrap">
           <button aria-label="视图设置" class="btn sm ghost rt-tool-btn" :class="{ on: viewMenuOpen }"
             aria-haspopup="menu" :aria-expanded="viewMenuOpen" title="视图：行高、列宽"
@@ -144,11 +144,11 @@
             </button>
           </div>
         </span>
-        <!--  列选收编 ColPicker 共享件（与 QueryResultTable 同一实现）；
-             types 透传（工蚁3 契约）——弹层字段名旁类型徽标与列头徽标同源 -->
+        <!-- 列选合并 ColPicker 共享件（与 QueryResultTable 同一实现）；
+ types 透传（工蚁3 契约）——弹层字段名旁类型徽标与列头徽标同源 -->
         <ColPicker :cols="allCols" :selected="visibleCols" label="列选" :types="fieldTypes" @update:selected="visibleCols = $event" @locate="locateCol" />
         <!-- 列布局方案收纳（TablePresetMenu 单钮+弹层，铁律 C）——652 内核
-             preset 三操作消费面；ColPicker 同款共享件，位次=列宽后（291 钮序锁兼容追加） -->
+ preset 三操作消费面；ColPicker 同款共享件，位次=列宽后（291 钮序锁兼容追加） -->
         <TablePresetMenu :presets="presets" :save="savePreset" :apply="applyPreset" :del="deletePreset" btn-cls="rt-tool-btn" />
         <!-- v3.0.1:消费方注入位——落在工具簇末尾,与导出/列宽同排 -->
         <slot name="bar-extra" />
@@ -173,16 +173,16 @@
 
     <!-- 表格 -->
     <!-- hideBody（缺省 false 零增量）——消费方实现 JSON/Tree/卡片视图时
-         表格体隐藏、工具行（bar）常驻：视图切换 seg 寄居 bar-prepend，展示形式切换不再
-         连工具行一起消失（查询工作台/索引工作台同一语言）。 -->
+ 表格体隐藏、工具行（bar）常驻：视图切换 seg 寄居 bar-prepend，展示形式切换不再
+ 连工具行一起消失（查询工作台/索引工作台同一语言）。 -->
     <!-- 回顶锚点壳——.rt-backtop 此前锚 .rt 整卡底沿（absolute right/bottom），
-         压住流内最后一行 .rt-status 右端控件（「转置/单行自动」checkbox，实报遮挡）；
-         .rt-wrap 是滚动容器不能直接做定位壳（absolute 子级随滚动），外包本壳承接定位，
-         回顶钮锚壳底=滚动视口底，状态栏留壳后流内不再被盖。类名/right/bottom 值零变
-         （backTop258 行为锁零触、tableBarUnify541 rt-wrap 开标签字面零触） -->
+ 压住流内最后一行 .rt-status 右端控件（「转置/单行自动」checkbox，实报遮挡）；
+ .rt-wrap 是滚动容器不能直接做定位壳（absolute 子级随滚动），外包本壳承接定位，
+ 回顶钮锚壳底=滚动视口底，状态栏留壳后流内不再被盖。类名/right/bottom 值零变
+ （backTop258 行为锁零触、tableBarUnify541 rt-wrap 开标签字面零触） -->
     <div class="rt-wrap-shell">
-    <!-- 守卫换装 !hideBody→!bodyHidden（hideBody ∪ 内建 viewSeg 非表格档；
-         viewSeg=false 时两值恒等≡原契约零回归） -->
+    <!-- 守卫改用 !hideBody→!bodyHidden（hideBody ∪ 内建 viewSeg 非表格档；
+ viewSeg=false 时两值恒等≡原契约零回归） -->
     <div v-show="!bodyHidden" ref="wrapEl" class="rt-wrap scroll-y" @scroll.passive="onWrapScroll">
       <table class="tbl rt-tbl zebra" v-if="!loading && !effTranspose" v-show="!quickEmpty">
         <thead>
@@ -200,8 +200,8 @@
               @keydown="onColMenuKey($event, c)"
               tabindex="0" @keydown.enter.prevent.stop="sortBy(c)" @keydown.space.prevent.stop="sortBy(c)">
               <!-- 列头双层结构（dbx 语言）——上行=列名+排序态，下行=类型徽标（蓝）
-                   链内列显示方向箭头，多键时带优先级序号
-                    P1-6：name 绑 draggable 列拖拽（避让右缘 resize 柄；冻结列 dragstart 里禁） -->
+ 链内列显示方向箭头，多键时带优先级序号
+ P1-6：name 绑 draggable 列拖拽（避让右缘 resize 柄；冻结列 dragstart 里禁） -->
               <span class="rt-th-in">
                 <span class="rt-th-name" :class="{ 'rt-drag-src': colDragCol === c }" draggable="true"
                   :title="isFrozenCol(c) ? '冻结列不可拖动（先取消冻结再移动）' : '拖动重排此列'"
@@ -214,9 +214,9 @@
                 </span>
                 <span class="rt-th-sub"><span v-if="props.fieldTypes?.[c]" class="rt-th-type" :class="typeCls(props.fieldTypes[c])">{{ props.fieldTypes[c] }}</span></span>
               </span>
-              <!--  P0-4：列头筛选漏斗（QRT 同款；激活实色高亮；stop 防触发排序）；
-                   激活并集口径 funnelOn（等值∪区间∪包含，QRT 552 同构收尾——
-                   此前只认等值勾选，区间/包含档生效漏斗不亮是暗状态可见性缺口） -->
+              <!-- P0-4：列头筛选漏斗（QRT 同款；激活实色高亮；stop 防触发排序）；
+ 激活并集口径 funnelOn（等值∪区间∪包含，QRT 552 同构收尾——
+ 此前只认等值勾选，区间/包含档生效漏斗不亮是暗状态可见性缺口） -->
               <button class="rt-funnel" :class="{ on: funnelOn(c) }" :aria-label="'筛选 ' + c + ' 列'" title="筛选此列"
                 @click.stop="openFilter($event, c)" @keydown.stop>
 <Filter :size="10" />
@@ -230,8 +230,8 @@
         </thead>
         <tbody>
           <!-- 大结果集渲染保护——超 MAX_RENDER 只渲染前 N 行（万行 DOM 会拖死交互），
-               排序/勾选/导出仍作用于全量；行尾内嵌提示引导用导出取全量。
-               W7：template v-for 包行+行内展开行（key 移至 template，渲染结果不变） -->
+ 排序/勾选/导出仍作用于全量；行尾内嵌提示引导用导出取全量。
+ W7：template v-for 包行+行内展开行（key 移至 template，渲染结果不变） -->
           <template v-for="(hit, ri) in renderHits" :key="hit._id">
           <!-- tr class 改数组形态——第二位接 rowClass 契约（undefined 时零附加，渲染不变） -->
           <tr :class="[{ sel: selected.has(hit._id), 'rt-row-focus': tblFocus && !editing && ri === focusIdx }, rowCls(hit, ri)]">
@@ -283,11 +283,11 @@
                 <!-- epoch 毫秒人性化显示（title/copy 保留原始值）；空值灰 ∅；单击复制 -->
                 <span class="rt-val" :class="cellCls(displayVal(hit, c))" v-if="!cellText(displayVal(hit, c))"><span class="rt-null">∅</span></span>
                 <!-- W-A：ES highlight 片段优先（normalizeResp 透传）——片段是 ES 直出 HTML，
-                     经 hlSafe 净化（只放行 em/mark 标签，其余转义为纯文本）后才进 v-html -->
+ 经 hlSafe 净化（只放行 em/mark 标签，其余转义为纯文本）后才进 v-html -->
                 <span class="rt-val rt-hl" v-else-if="hlHtml(hit, c)" v-html="hlHtml(hit, c)"></span>
                 <span class="rt-val" :class="cellCls(displayVal(hit, c))" v-else-if="epochText(displayVal(hit, c))">{{ epochText(displayVal(hit, c)) }}</span>
                 <!-- W7：长 JSON 对象折叠预览 chip——首键短预览+{…}N 键；点击开既有单元格详情弹窗
-                     （不引入第二套展开态）；title 恒 raw 全串（铁律） -->
+ （不引入第二套展开态）；title 恒 raw 全串（铁律） -->
                 <button v-else-if="objChip(displayVal(hit, c))" class="rt-json-chip" :title="cellTitle(hit, c)"
                         :aria-label="'查看 ' + c + ' 完整值（对象 ' + (objChip(displayVal(hit, c))?.n ?? 0) + ' 键）'"
                         @click.stop="cellDetail = { hit, col: c }">
@@ -295,9 +295,9 @@
                   <span class="rt-json-chip-n mono">{…}{{ objChip(displayVal(hit, c))?.n }} 键</span>
                 </button>
                 <span class="rt-val" :class="cellCls(displayVal(hit, c))" v-else>
-                  <!--  P0-1：命中格文本切 mark（splitMark 纯函数，无 v-html）
-                       W7：非命中分支走 semText 语义显示（date 本地化/数值千分位；关闭回落原样）；
-                       命中分支同口径切分，保「所见即所搜」对齐 -->
+                  <!-- P0-1：命中格文本切 mark（splitMark 纯函数，无 v-html）
+ W7：非命中分支走 semText 语义显示（date 本地化/数值千分位；关闭回落原样）；
+ 命中分支同口径切分，保「所见即所搜」对齐 -->
                   <template v-if="isSearchHit(ri, ci)"><template v-for="(seg, si) in splitMark(semText(displayVal(hit, c), c), searchDeferred)" :key="si"><mark v-if="seg.m" class="rt-mark">{{ seg.t }}</mark><template v-else>{{ seg.t }}</template></template></template>
                   <template v-else>{{ semText(displayVal(hit, c), c) }}</template>
                 </span>
@@ -324,21 +324,21 @@
             </td>
           </tr>
           <!-- W7：行内展开详情行——完整行嵌 JsonTree（防爆炸参数与详情弹窗同款 200/4000）；
-               随壳收编 TableExpandRow（QRT 同构段单一出处），DOM 逐字节不变 -->
+ 随壳合并 TableExpandRow（QRT 同构段单一出处），DOM 逐字节不变 -->
           <TableExpandRow :open="expandedRows.has(rowKey(hit, ri))" :colspan="visibleCols.length + 3"
             :label="rowKey(hit, ri)" :label-title="hit._id" :data="rowSource(hit)" @close="toggleRowExpand(rowKey(hit, ri))" />
           </template>
           <!-- 筛选后空集提示行（QRT 79 行同款文案同款逃生口）——
-               此前筛选把行集清空后 tbody 直接空白，无提示无出路 -->
+ 此前筛选把行集清空后 tbody 直接空白，无提示无出路 -->
           <tr v-if="activeFilterCount && !filteredHits.length && !renderTruncated" class="rt-trunc-row">
             <td :colspan="visibleCols.length + 3">
               筛选条件无匹配行——点列头筛选图标可清除
             </td>
           </tr>
           <!-- 截断保护提示行（渲染尾）——排序/勾选/导出仍作用于全量；
-               QRT 增量渲染平移——ref=sentinel 供滚动到底自动续渲（脚本
-               truncSentinel watch）+「继续渲染下 2000 行」钮（按钮兜底/显式触发），行数口径
-               随 renderHits.length 动态（续渲后 2000→4000→…不再失真） -->
+ QRT 增量渲染平移——ref=sentinel 供滚动到底自动续渲（脚本
+ truncSentinel watch）+「继续渲染下 2000 行」钮（按钮兜底/显式触发），行数口径
+ 随 renderHits.length 动态（续渲后 2000→4000→…不再失真） -->
           <tr v-if="renderTruncated" ref="truncSentinel" class="rt-trunc-row">
             <td :colspan="visibleCols.length + 3">
               已渲染前 {{ renderHits.length }} 行（共 {{ sortedHits.length }} 行命中排序与筛选）
@@ -348,10 +348,10 @@
           </tr>
         </tbody>
         <!-- 聚合 footer 行（列头菜单「聚合行」开关，默认关，es_tbl_agg:<dim> 记忆）——
-             数值列 Σ/avg 复用 useColStats.statsOf 口径（过滤后行集，与列详情弹窗同一数字）；
-             冻结列 sticky 经既有 rt-col-frozen 机制同步（frozenStyle 内联 left 一致）
-             同构段收编 TableAggFoot 片段组件（QRT 同款单一出处；chk/act 占位
-             cell 由组件 prefix==='rt' 分支承接，DOM 逐字节；样式随迁组件全局单源） -->
+ 数值列 Σ/avg 复用 useColStats.statsOf 口径（过滤后行集，与列详情弹窗同一数字）；
+ 冻结列 sticky 经既有 rt-col-frozen 机制同步（frozenStyle 内联 left 一致）
+ 同构段合并 TableAggFoot 片段组件（QRT 同款单一出处；chk/act 占位
+ cell 由组件 prefix==='rt' 分支承接，DOM 逐字节；样式同步更新组件全局单源） -->
         <TableAggFoot v-if="aggOn" prefix="rt" :cols="visibleCols" :foot="aggFoot" :spark="aggSpark"
           :dist="aggDist"
           :empty-pct="aggEmptyPct" :frozen-of="(c) => isFrozenCol(c)" :style-of="(c) => frozenStyle(c)"
@@ -359,8 +359,8 @@
       </table>
 
       <!-- Transpose 转置视图： P1-3 多行版——解除 hits===1 限制，
-           字段名做左固定列（sticky+min-width 铁律），前 N 条文档做横向列（档位记忆）；
-           转置态只读镜像（无编辑/框选绑定） -->
+ 字段名做左固定列（sticky+min-width 铁律），前 N 条文档做横向列（档位记忆）；
+ 转置态只读镜像（无编辑/框选绑定） -->
       <table v-else-if="!loading" class="tbl rt-tbl rt-transposed">
         <thead>
           <tr>
@@ -376,29 +376,29 @@
           </tr>
         </tbody>
       </table>
-      <!--  W-A：骨架/空态链参数化（QRT 同款形态）——行数/行高/高度/文案
-           由 props 注入，缺省=既有现状（ 5 行 26px 60vh）。copywritingGuard294 锁
-           text="无数据" 口径：默认值 emptyText:'无数据'（withDefaults），串在此注释互锚 -->
+      <!-- W-A：骨架/空态链参数化（QRT 同款形态）——行数/行高/高度/文案
+ 由 props 注入，缺省=既有现状（ 5 行 26px 60vh）。copywritingGuard294 锁
+ text="无数据" 口径：默认值 emptyText:'无数据'（withDefaults），串在此注释互锚 -->
       <template v-if="loading">
         <div class="rt-loading" :style="{ maxHeight }">
           <SkeletonBox v-for="i in skeletonRows" :key="i" :height="skeletonH" round style="margin-bottom:var(--sp-1h)" />
         </div>
       </template>
       <EmptyState v-else-if="!hits.length" :icon="Inbox" :text="emptyText" :hint="emptyHint" />
-      <!--  W-B：quickFilter 生效且过滤后 0 行并入空态链（QRT 同款；
-           文案走既有 emptyText/emptyHint；上一行 rtLoadingSkeleton268 锁字面零触碰） -->
+      <!-- W-B：quickFilter 生效且过滤后 0 行并入空态链（QRT 同款；
+ 文案走既有 emptyText/emptyHint；上一行 rtLoadingSkeleton268 锁字面零触碰） -->
       <EmptyState v-else-if="quickActive && !quickHits.length" :icon="Inbox" :text="emptyText" :hint="emptyHint" />
     </div>
     <!-- 长列表回顶——滚过一屏出现悬浮钮，点击丝滑归位（2000 行渲染下
-         滚到底再滚回是最频繁的痛点操作）；：随壳收编 TableBacktop，class 透传 DOM 不变；
-         移入 rt-wrap-shell 定位壳（rt-wrap 之后兄弟），锚滚动视口底沿不再盖壳外状态栏 -->
+ 滚到底再滚回是最频繁的痛点操作）；：随壳合并 TableBacktop，class 透传 DOM 不变；
+ 移入 rt-wrap-shell 定位壳（rt-wrap 之后兄弟），锚滚动视口底沿不再盖壳外状态栏 -->
     <TableBacktop v-if="showTop" class="rt-backtop" aria-label="回到顶部" title="回到顶部" @top="backToTop" />
     </div>
 
     <!-- 内建 alt 视图体（viewSeg 非表格档）——AltHitsViews 单源三档（565 共享件，
-         勿再造壳=注执行），容器=border-top 分节+滚动区（QRT 607 同语言），maxHeight
-         与骨架一口径无新高度链；卡片档网格容器（ih-cards 同构）+@open-doc 透传宿主。
-         表格档（缺省/回落）恒不渲染（零增量） -->
+ 勿再造壳=注执行），容器=border-top 分节+滚动区（QRT 607 同语言），maxHeight
+ 与骨架一口径无新高度链；卡片档网格容器（ih-cards 同构）+@open-doc 透传宿主。
+ 表格档（缺省/回落）恒不渲染（零增量） -->
     <div v-if="viewSegOn && effView !== 'table'" class="rt-alt-body scroll-y" :class="{ 'is-cards': effView === 'cards' }" :style="{ maxHeight }">
       <AltHitsViews v-if="effView === 'json'" view="json" :json-html="jsonHtml" />
       <AltHitsViews v-else-if="effView === 'tree'" view="tree" :tree-data="treeData" />
@@ -406,7 +406,7 @@
     </div>
 
     <!-- 状态栏：聚合 + 选中（bodyHidden=hideBody∪内建非表格档时与表格体一并隐藏——
-         操作提示只对表格视图有意义） -->
+ 操作提示只对表格视图有意义） -->
     <div class="rt-status" v-show="!bodyHidden">
       <template v-if="aggStats">
         <span class="rt-stat">Σ {{ fmtNum(aggStats.sum) }}</span>
@@ -418,14 +418,14 @@
       </template>
       <span v-else class="rt-stat-hint">{{ canWrite ? '双击编辑 · Shift+点击范围选 · Ctrl+点击数值聚合' : 'Shift+点击范围选 · Ctrl+点击数值聚合' }}</span>
       <!-- 行导航快捷键提示迁状态栏（实报「点击的时候表格表头布局变形了」——
-           原在工具行 inline 占布局，表格获焦即插入把视图 seg/分页器挤换行；状态栏空间独立
-           且只对表格视图有意义，形态/类名零触碰=可发现性语义与 rtRowNav 行为锁保留） -->
+ 原在工具行 inline 占布局，表格获焦即插入把视图 seg/分页器挤换行；状态栏空间独立
+ 且只对表格视图有意义，形态/类名零触碰=可发现性语义与 rtRowNav 行为锁保留） -->
       <span v-if="tblFocus && hits.length" class="rt-kbd-hint mono" title="表格已获焦：↑↓ 切换行、Home/End 跳首末行、Enter 打开文档、Ctrl+C 复制行 JSON、Ctrl+F 结果内查找、Delete/Backspace 删除勾选行（有确认）、Esc 清勾选/清框选">↑↓ Home/End · Enter ⌫ · Ctrl+F</span>
       <div style="flex:1"></div>
       <label class="rt-transpose" title="转置视图：字段为行、文档为列">
         <input type="checkbox" :checked="transpose" @change="toggleTranspose" /> 转置
       </label>
-      <!--  P1-3：转置行数档位（前 N 条文档做横向列） -->
+      <!-- P1-3：转置行数档位（前 N 条文档做横向列） -->
       <select v-if="transpose" class="rt-t-n mono" :value="transposeN" title="转置显示的文档行数"
         @change="setTransposeN(Number(($event.target as HTMLSelectElement).value))">
         <option v-for="n in transposeNs" :key="n" :value="n">{{ n }} 行</option>
@@ -449,7 +449,7 @@
     </transition>
 
     <!-- 框选区域浮动栏（dbx 选区语言——框完即可复制矩阵，TSV 含表头行）；
-         框选自动聚合直读（Σ/avg/数值占比） -->
+ 框选自动聚合直读（Σ/avg/数值占比） -->
     <transition name="pop">
       <div v-if="region && !regionAnchor" class="rt-float">
         <span class="rt-float-n">已框选 <b>{{ (region.ri2 - region.ri1 + 1) * (region.ci2 - region.ci1 + 1) }}</b> 格<span v-if="regionSummary">（数值 {{ regionSummary.numCount }}/{{ regionSummary.count }}）</span></span>
@@ -482,23 +482,23 @@
       </template>
     </n-modal>
 
-    <!--  P0-2：单元格详情弹层（dbx CellDetail 对位）——
-         完整值嵌 JsonTree（tools 自带搜索/复制）；maxChildren/maxStrLen 防 MB 级值拖死弹层 -->
+    <!-- P0-2：单元格详情弹层（dbx CellDetail 对位）——
+ 完整值嵌 JsonTree（tools 自带搜索/复制）；maxChildren/maxStrLen 防 MB 级值拖死弹层 -->
     <n-modal v-model:show="detailOpen" preset="card" title="单元格详情" style="width:680px;max-width:92vw" :bordered="false">
       <div class="rt-d-meta mono">{{ detailMeta }}</div>
       <JsonTree :data="detailData" tools :max-children="200" :max-str-len="4000" />
     </n-modal>
 
-    <!--  P0-4：列筛选弹层；：壳收编共享件 ColFilterPopover
-         （五处同构壳一处实现），useColFilters 逻辑零改动；
-         mask 定位+fitPopupPos 碰撞自适应随组件 fit 内建（语义平移不变）；
-         组合档切换钮（AND/OR 就地翻转，与提示行同钮）
-         contains 档接入（QRT 552 对称件）——isContainsCol 守卫门控
-         （非语义类型/ip 列无文本包含语义不出包含行），@set-contains 接线 useColFilters
-         件③：组合档钮换内建 chip（件③ QRT 半边的 RT 对称件）——
-         default 槽手搓钮退役，popover :filter-mode prop 内建 cfp-hd 头部 chip
-         （cfp-fmode，aria/title 与 561 行为锚同语汇）；.rt-fmode 样式保留
-         （TableFilteredHint 提示行第二注入位同消费，非孤儿） -->
+    <!-- P0-4：列筛选弹层；：壳合并共享件 ColFilterPopover
+ （五处同构壳一处实现），useColFilters 逻辑零改动；
+ mask 定位+fitPopupPos 碰撞自适应随组件 fit 内建（语义平移不变）；
+ 组合档切换钮（AND/OR 就地翻转，与提示行同钮）
+ contains 档接入（QRT 552 对称件）——isContainsCol 守卫门控
+ （非语义类型/ip 列无文本包含语义不出包含行），@set-contains 接线 useColFilters
+ 件③：组合档钮换内建 chip（件③ QRT 半边的 RT 对称件）——
+ default 槽手搓钮退役，popover :filter-mode prop 内建 cfp-hd 头部 chip
+ （cfp-fmode，aria/title 与 561 行为锚同语汇）；.rt-fmode 样式保留
+ （TableFilteredHint 提示行第二注入位同消费，非孤儿） -->
     <ColFilterPopover
       v-if="filterPop"
       :col="filterPop.col" :x="filterPop.x" :y="filterPop.y" fit
@@ -515,13 +515,13 @@
       @set-contains="(v) => filterPop && setContainsFilter(filterPop.col, v)"
       @close="filterPop = null"
     />
-    <!--  P2-3：列详情弹层（轻量统计版）；：弹窗形态与统计内核
-         下沉共享件（ColDetailModal + useColStats），QRT 同批接入同一弹窗 -->
+    <!-- P2-3：列详情弹层（轻量统计版）；：弹窗形态与统计内核
+ 下沉共享件（ColDetailModal + useColStats），QRT 同步接入同一弹窗 -->
     <ColDetailModal v-model:show="colDetailOpen" :stats="colDetailStats" :label-of="filters.labelOf" />
 
-    <!--  W3：rowDrawer 行详情侧拉平移 RT（QRT  W-B 同款，行为逐字对齐）——
-         整行键值对 + 逐格复制 + 页脚「复制整行 JSON」（copyRowJson 同一口径）；
-         仅 rowDrawer prop 开启且右键「行详情」后可达，缺省整块零渲染（零增量） -->
+    <!-- W3：rowDrawer 行详情侧拉平移 RT（QRT W-B 同款，行为逐字对齐）——
+ 整行键值对 + 逐格复制 + 页脚「复制整行 JSON」（copyRowJson 同一口径）；
+ 仅 rowDrawer prop 开启且右键「行详情」后可达，缺省整块零渲染（零增量） -->
     <n-drawer v-model:show="rdwOpen" :width="rdwW" placement="right">
       <n-drawer-content title="行详情" closable>
         <div v-if="rdwRow" class="rt-rdw-body">
@@ -552,8 +552,8 @@
       :items="colMenuItems"
       @close="colMenu = null"
     />
-    <!-- TableBacktop 迁往 rt-wrap-shell 定位壳内（原位锚 .rt 整卡底沿盖状态栏，翻案记档） -->
-    <!--  P2-8：文档对比弹窗——多选 2~3 篇右键直达，基准可换；传所属索引名芯片 -->
+    <!-- TableBacktop 迁往 rt-wrap-shell 定位壳内（原位锚 .rt 整卡底沿盖状态栏，修订） -->
+    <!-- P2-8：文档对比弹窗——多选 2~3 篇右键直达，基准可换；传所属索引名芯片 -->
     <DocDiffModal v-model:show="docDiffShow" :hits="docDiffHits" :base-idx="docDiffBase" :index="index" @base="docDiffBase = $event" />
   </div>
   </FocusableSurface>
@@ -585,26 +585,26 @@ import { useAuthStore } from '../stores/auth';
 import { useTablePrefs } from '../composables/useTablePrefs';
 import { useRowNav } from '../composables/useRowNav';
 import { useGridSearch, splitMark } from '../composables/useGridSearch';
-/*  W-A：TableShell 第二刀——渲染截断/聚合底行随壳收编共享 composable，
-   typeCls/NUMERIC_TYPES_RE 语义档收 utils/typeTiers 单一出处（QRT 同源） */
+/* W-A：TableShell 第二刀——渲染截断/聚合底行随壳合并共享 composable，
+ typeCls/NUMERIC_TYPES_RE 语义档收 utils/typeTiers 单一出处（QRT 同源） */
 import { useRenderMore, MAX_RENDER } from '../composables/useRenderMore';
 import { useAggRow } from '../composables/useAggRow';
 import { typeCls, NUMERIC_TYPES_RE, RANGE_DATE_RE, isNonSemanticType, rangePlaceholderTxt, isIpType } from '../utils/typeTiers';
 /* 聚合行迷你走势（零依赖纯 SVG 组件复用，QRT 同源）——随 tfoot
-   收编 TableAggFoot 片段组件（内核模板不再直用，import 随迁） */
+ 合并 TableAggFoot 片段组件（内核模板不再直用，import 同步更新） */
 import TableAggFoot from './TableAggFoot.vue';
-import AltHitsViews from './AltHitsViews.vue'; /* ：alt 三视图体共享件单源（565 立法，内建视图档消费，勿再造壳） */
-/* bar-left 同构段三件收编（筛选态提示/内建搜索/刷新钮——QRT 同款单一出处） */
+import AltHitsViews from './AltHitsViews.vue'; /* ：alt 三视图体共享件单源（内建视图档消费，勿再造壳） */
+/* bar-left 同构段三件合并（筛选态提示/内建搜索/刷新钮——QRT 同款单一出处） */
 import TableFilteredHint from './TableFilteredHint.vue';
 import TableQSearch from './TableQSearch.vue';
 import TableRefreshBtn from './TableRefreshBtn.vue';
 import { useColFilters, useFilterMode, quickFilterRows } from '../composables/useColFilters';
 import { useColStats } from '../composables/useColStats';
-/*  W-B：语义格式化共享件（bytes/duration/percent 三型，纯函数；QRT 同源） */
+/* W-B：语义格式化共享件（bytes/duration/percent 三型，纯函数；QRT 同源） */
 import { semFormat } from '../composables/useSemFormat';
 import { useColFit, COL_W_MIN, COL_W_MAX, frozenStyleOf } from '../composables/useColFit';
-/* 比较器收编 tableSort.compareVals 单源（numeric 双试+沉底+localeCompare 兜底；
-   numeric() 科学计数/时长新档经此双内核生效） */
+/* 比较器合并 tableSort.compareVals 单源（numeric 双试+沉底+localeCompare 兜底；
+ numeric() 科学计数/时长新档经此双内核生效） */
 import { compareVals, sortableGuard, useSortChain } from '../composables/tableSort';
 import { useColDrag } from '../composables/useColDrag';
 import { registerTable, unregisterTable } from '../utils/tableRegistry';
@@ -616,17 +616,17 @@ import { buildDsl, buildExistsDsl } from '../utils/dslFromCell';
 import { buildBulkNdjson } from '../utils/bulkNdjson';
 import { summarize } from '../utils/summarize';
 import { matrixText } from '../utils/copyMatrix';
-/* XLSX 双 sheet 装配收编 exportSheets.buildExportSheets 单源（QRT 同源） */
+/* XLSX 双 sheet 装配合并 exportSheets.buildExportSheets 单源（QRT 同源） */
 import { buildExportSheets } from '../utils/exportSheets';
-/* （立牌兑现）：highlight 净化收编 highlightSanitize.hlSafe 单源
-   （本地同构定义退役；白名单 em|mark 超集由单源并档承载，RT 行为零变化）。
-   ⚠下方 `import { hlSafe }` 行有 queryHighlightChain 源码锁（`import { hlSafe } from
-   '../utils/highlightSanitize'` 字面）逐字保全； T2 装配单源 hlSegment
-   另行一行引入（净化仍单源 hlSafe，本文件 hlHtml 已改一行委托 hlSegment——hlSafe
-   在本文件不再直接调用，保留行系锁面要求）。 */
+/* （立牌兑现）：highlight 净化合并 highlightSanitize.hlSafe 单源
+ （本地同构定义退役；白名单 em|mark 超集由单源并档承载，RT 行为零变化）。
+ ⚠下方 `import { hlSafe }` 行有 queryHighlightChain 源码锁（`import { hlSafe } from
+ '../utils/highlightSanitize'` 字面）逐字保全； T2 装配单源 hlSegment
+ 另行一行引入（净化仍单源 hlSafe，本文件 hlHtml 已改一行委托 hlSegment——hlSafe
+ 在本文件不再直接调用，保留行系锁面要求）。 */
 import { hlSafe } from '../utils/highlightSanitize';
-/*  T2：片段装配（join ' … ' + 净化 + 空档短路）收编 hlSegment 单源——
-   QRT highlight opt-in（新增）同源调用 */
+/* T2：片段装配（join ' … ' + 净化 + 空档短路）合并 hlSegment 单源——
+ QRT highlight opt-in（新增）同源调用 */
 import { hlSegment } from '../utils/highlightSanitize';
 import type { SearchHit } from '../types';
 
@@ -643,68 +643,68 @@ const props = withDefaults(defineProps<{
   took?: number | null;
   /** 字段类型映射（列名→ES 类型）——列头下方灰字类型徽标（dbx 学习） */
   fieldTypes?: Record<string, string>;
-  /**  P1-7：命中数为下界（ES track_total_hits 截断 relation=gte）——计数后加 + 标注 */
+  /** P1-7：命中数为下界（ES track_total_hits 截断 relation=gte）——计数后加 + 标注 */
   totalGte?: boolean;
   /** 内置 loading 骨架（QRT 四态互斥同款——骨架优先于空态/表格）；
-      宿主不再各自手搓骨架（IndexHub 外部骨架收编） */
+ 宿主不再各自手搓骨架（IndexHub 外部骨架合并） */
   loading?: boolean;
   /** 内建放大（FocusableSurface）开关——默认开，嵌入式窄容器可关 */
   focusable?: boolean;
-  /**  W-D 契约：行级条件色档——返回值追加到每个数据行 tr class（空格拼接，
-      与既有 sel/焦点类并存）；undefined/null/空串跳过。row=当前渲染 hit，index=渲染行序。
-      缺省零增量 */
+  /** W-D 契约：行级条件色档——返回值追加到每个数据行 tr class（空格拼接，
+ 与既有 sel/焦点类并存）；undefined/null/空串跳过。row=当前渲染 hit，index=渲染行序。
+ 缺省零增量 */
   rowClass?: (row: any, index: number) => string | undefined;
-  /**  W-D 契约：导出加工——exportName=下载文件名主段（缺省维持 index- 现状）；
-      exportCell=导出/复制矩阵单元格值加工（仅 exportRows 矩阵分支/matrixText 管道消费，
-      不改表格显示；JSON 文档导出恒 raw）。两者缺省均零增量 */
+  /** W-D 契约：导出加工——exportName=下载文件名主段（缺省维持 index- 现状）；
+ exportCell=导出/复制矩阵单元格值加工（仅 exportRows 矩阵分支/matrixText 管道消费，
+ 不改表格显示；JSON 文档导出恒 raw）。两者缺省均零增量 */
   exportName?: string;
   exportCell?: (value: unknown, col: { key: string }, row: any) => unknown;
-  /*  W-B：语义渲染扩展开关（bytes/duration/percent，共享件 useSemFormat）——
-     命中显示格式化 text（title/复制/导出恒 raw）；与既有 es_tbl_sem pref 层叠加不互斥；
-     缺省不传=全链零变化 */
+  /* W-B：语义渲染扩展开关（bytes/duration/percent，共享件 useSemFormat）——
+ 命中显示格式化 text（title/复制/导出恒 raw）；与既有 es_tbl_sem pref 层叠加不互斥；
+ 缺省不传=全链零变化 */
   semOn?: boolean;
-  /* ═══  W-B：内核三件补齐（QRT 同款平移，全缺省零增量）═══
-     quickFilter=跨可见列 contains 过滤（与既有列筛选 AND 叠加；生效且 0 行并入空态链）；
-     selectable=selection-change 事件通道（勾选态仍归既有 selected，仅补 emit）；
-     exportRowFilter=导出行级过滤（矩阵三格式 CSV/MD/XLSX 收口；JSON 文档导出恒 raw） */
+  /* ═══ W-B：内核三件补齐（QRT 同款平移，全缺省零增量）═══
+ quickFilter=跨可见列 contains 过滤（与既有列筛选 AND 叠加；生效且 0 行并入空态链）；
+ selectable=selection-change 事件通道（勾选态仍归既有 selected，仅补 emit）；
+ exportRowFilter=导出行级过滤（矩阵三格式 CSV/MD/XLSX 收口；JSON 文档导出恒 raw） */
   quickFilter?: string;
   selectable?: boolean;
   exportRowFilter?: (row: unknown) => boolean;
-  /*  W3：searchable 内建搜索框 opt-in（quickFilter 的 UI 面；QRT 同款平移）——
-     true 时工具行（bar-left，与既有钮同排）内建搜索输入框，双绑驱动既有 quickFilter 过滤链
-     （内部 ref 合成：输入非空以输入为准，空输入回落外部 quickFilter 播种值，prop 契约不破）；
-     Esc 清词；缺省 false=无输入框（全站零增量）。
-     refreshable 同款 opt-in（撤销 「refreshable 不加（G2 为 QRT 专属）」
-     记档，对齐 QRT opt-in 形态）——true 时工具行刷新钮（形制逐字对齐 QRT 546 同款），
-     点击只 emit 'refresh'（事件通道与提交链发射点既有，取数归宿主）；缺省 false 零增量 */
+  /* W3：searchable 内建搜索框 opt-in（quickFilter 的 UI 面；QRT 同款平移）——
+ true 时工具行（bar-left，与既有钮同排）内建搜索输入框，双绑驱动既有 quickFilter 过滤链
+ （内部 ref 合成：输入非空以输入为准，空输入回落外部 quickFilter 播种值，prop 契约不破）；
+ Esc 清词；缺省 false=无输入框（全站零增量）。
+ refreshable 同款 opt-in（撤销 「refreshable 不加（ 为 QRT 专属）」
+ ，对齐 QRT opt-in 形态）——true 时工具行刷新钮（形制逐字对齐 QRT 546 同款），
+ 点击只 emit 'refresh'（事件通道与提交链发射点既有，取数归宿主）；缺省 false 零增量 */
   searchable?: boolean;
   refreshable?: boolean;
-  /*  W3：rowDrawer 行详情侧拉平移 RT（QRT 同款）——开启时单元格右键菜单增
-     「行详情」项，侧拉抽屉展示整行键值对+逐格复制+「复制整行 JSON」；缺省 false 零增量 */
+  /* W3：rowDrawer 行详情侧拉平移 RT（QRT 同款）——开启时单元格右键菜单增
+ 「行详情」项，侧拉抽屉展示整行键值对+逐格复制+「复制整行 JSON」；缺省 false 零增量 */
   rowDrawer?: boolean;
-  /*  W3：semRawCols 显式非语义类型抑制守卫（QRT 同款）——命中列名跳过 semFormat
-     「按值推断」链（≥1000 判 ms / 0..1 判 percent 误伤面），显式 fieldTypes 标注不受影响；
-     缺省 undefined 全链零增量 */
+  /* W3：semRawCols 显式非语义类型抑制守卫（QRT 同款）——命中列名跳过 semFormat
+ 「按值推断」链（≥1000 判 ms / 0..1 判 percent 误伤面），显式 fieldTypes 标注不受影响；
+ 缺省 undefined 全链零增量 */
   semRawCols?: string[];
-  /*  W3：filterMode 跨列筛选组合档——'AND'（缺省）既有行为逐字节不变，
-     'OR'=任一筛选列命中即保留（跨列并集档）；prop 播种运行档，弹层/提示行切换钮就地翻转 */
+  /* W3：filterMode 跨列筛选组合档——'AND'（缺省）既有行为逐字节不变，
+ 'OR'=任一筛选列命中即保留（跨列并集档）；prop 播种运行档，弹层/提示行切换钮就地翻转 */
   filterMode?: 'AND' | 'OR';
   /* remoteSort 远端排序契约（dbx 对标，分页同构——只 emit 意图、
-     排序/取数归宿主）。缺省 false=客户端排序逐字节不变；true 时表头排序入口（点击/键盘/
-     右键直选）不改本地行序，只 emit 'sort-change'（载荷 {f,d:'asc'|'desc'}，null=取消排序）；
-     多键链是本地排序特性，远端档塌缩为单键三态（升→降→取消） */
+ 排序/取数归宿主）。缺省 false=客户端排序逐字节不变；true 时表头排序入口（点击/键盘/
+ 右键直选）不改本地行序，只 emit 'sort-change'（载荷 {f,d:'asc'|'desc'}，null=取消排序）；
+ 多键链是本地排序特性，远端档塌缩为单键三态（升→降→取消） */
   remoteSort?: boolean;
-  /* ═══  W3：syncSort 宿主权威排序态回填（立法遗留：remote 档表头箭头回显通道）═══
-     remote 档箭头此前只随内部意图态 remoteSortCur（用户点击三态循环），宿主无从回填/重置——
-     切索引清了 docsSort 内核箭头仍停旧态。接线后：有值→回填 remoteSortCur（箭头/aria-sort
-     同步该态，此后用户点击仍走既有三态循环只 emit 意图）；null=清态（箭头清+循环基点清）。
-     d 按立法契约收 1|-1，内核归一 'asc'|'desc'（535 公共契约）。缺省 undefined=未接线零增量
-     （不读不写 remoteSortCur，remote 未接线档箭头恒 hint/aria-sort 恒无）；本地（客户端）档
-     不消费本 prop——箭头权威仍是 sortSpec。与「remote 档挂载不读排序落盘」
-     正交兼容：回填只走 prop 不触 LS。 */
+  /* ═══ W3：syncSort 宿主权威排序态回填（约定遗留：remote 档表头箭头回显通道）═══
+ remote 档箭头此前只随内部意图态 remoteSortCur（用户点击三态循环），宿主无从回填/重置——
+ 切索引清了 docsSort 内核箭头仍停旧态。接线后：有值→回填 remoteSortCur（箭头/aria-sort
+ 同步该态，此后用户点击仍走既有三态循环只 emit 意图）；null=清态（箭头清+循环基点清）。
+ d 按约定契约收 1|-1，内核归一 'asc'|'desc'（535 公共契约）。缺省 undefined=未接线零增量
+ （不读不写 remoteSortCur，remote 未接线档箭头恒 hint/aria-sort 恒无）；本地（客户端）档
+ 不消费本 prop——箭头权威仍是 sortSpec。与「remote 档挂载不读排序落盘」
+ 正交兼容：回填只走 prop 不触 LS。 */
   syncSort?: { f: string; d: 1 | -1 } | null;
-  /**  W-A：空态骨架链参数化（QRT 同款形态对齐）——骨架行数/行高/容器
-      maxHeight/空态文案缺省维持现状，各调用点不传=行为零变化 */
+  /** W-A：空态骨架链参数化（QRT 同款形态对齐）——骨架行数/行高/容器
+ maxHeight/空态文案缺省维持现状，各调用点不传=行为零变化 */
   skeletonRows?: number;
   skeletonH?: string;
   maxHeight?: string;
@@ -713,26 +713,26 @@ const props = withDefaults(defineProps<{
   /* 表格体隐藏（工具行常驻）——JSON/Tree/卡片视图消费方置 true */
   hideBody?: boolean;
   /* ═══ ：内建分页（QRT 三参齐备形态平移）═══
-     page/pageSize 可选参 + 既有 total 三参齐备（pagerOn computed）才在工具行 bar-left 渲染
-     内建 Pagination；缺省不传=恒 false 无分页器（全站零增量）。与 #bar-prepend 寄居
-     Pagination 的宿主档互斥（宿主二选一，约定见模板注与 tableKernelWave550 spec）。
-     远端契约：翻页/改页大小只 emit（update:page / update:pageSize），取数归宿主。 */
+ page/pageSize 可选参 + 既有 total 三参齐备（pagerOn computed）才在工具行 bar-left 渲染
+ 内建 Pagination；缺省不传=恒 false 无分页器（全站零增量）。与 #bar-prepend 寄居
+ Pagination 的宿主档互斥（宿主二选一，约定见模板注与 spec）。
+ 远端契约：翻页/改页大小只 emit（update:page / update:pageSize），取数归宿主。 */
   page?: number;
   pageSize?: number;
   /* 分页器禁用（宿主执行中传 running/busy）——QRT 525 同名 prop 逐字对位；
-     透传内建 Pagination :disabled（缺省 false 零增量） */
+ 透传内建 Pagination :disabled（缺省 false 零增量） */
   pagerDisabled?: boolean;
   /* ═══ ：内建视图档 opt-in（QRT 607 对称件，缺省全站零增量）═══
-     viewSeg=true → 工具行 bar-left 最前内建 表格/JSON/Tree/卡片 分段（RT 单壳无独立壳
-     通道，恒可达）；非表格档表格体隐藏（hideBody 语义内化进 bodyHidden——工具行常驻、
-     547 立法不破）、内建 alt 体区渲染 AltHitsViews（565 共享件单源，DQ/IH 自造 seg+
-     hideBody 退役由消费面迁移批执行——ihUnify554 冻结面解锁后接线）。
-     viewPrefKey 提供时档位 usePref 落盘（跨会话记忆，es-console.pref.* 命名空间）；缺省仅
-     内存态——KeepAlive 下组件实例常驻，状态不重置。
-     alt 三档数据源=数据驱动出档（提供哪档出哪档，表格档恒在）：jsonHtml=高亮 pretty HTML
-     （宿主 markHtmlAll/highlightDslJson 链产出，DQ/IH 同构）；treeData=行集
-     （{_id,..._source}，JsonTree tools 档）；cardHits=卡片行集（@open-doc 透传宿主开文档，
-     RT open-doc 通道既有）。 */
+ viewSeg=true → 工具行 bar-left 最前内建 表格/JSON/Tree/卡片 分段（RT 单壳无独立壳
+ 通道，恒可达）；非表格档表格体隐藏（hideBody 语义内化进 bodyHidden——工具行常驻、
+ 不破）、内建 alt 体区渲染 AltHitsViews（565 共享件单源，DQ/IH 自造 seg+
+ hideBody 退役由消费面迁移批执行—— 冻结面解锁后接线）。
+ viewPrefKey 提供时档位 usePref 落盘（跨会话记忆，es-console.pref.* 命名空间）；缺省仅
+ 内存态——KeepAlive 下组件实例常驻，状态不重置。
+ alt 三档数据源=数据驱动出档（提供哪档出哪档，表格档恒在）：jsonHtml=高亮 pretty HTML
+ （宿主 markHtmlAll/highlightDslJson 链产出，DQ/IH 同构）；treeData=行集
+ （{_id,..._source}，JsonTree tools 档）；cardHits=卡片行集（@open-doc 透传宿主开文档，
+ RT open-doc 通道既有）。 */
   viewSeg?: boolean;
   viewPrefKey?: string;
   jsonHtml?: string;
@@ -745,8 +745,8 @@ const props = withDefaults(defineProps<{
   maxHeight: '60vh',
   emptyText: '无数据',
   emptyHint: '调整查询条件或切换索引后重查',
-  /*  W3：rowDrawer 侧拉缺省关；filterMode 组合档缺省 'AND'（既有行为逐字节不变）；
-     remoteSort 远端排序缺省关（客户端排序逐字节不变） */
+  /* W3：rowDrawer 侧拉缺省关；filterMode 组合档缺省 'AND'（既有行为逐字节不变）；
+ remoteSort 远端排序缺省关（客户端排序逐字节不变） */
   rowDrawer: false,
   hideBody: false,
   /* refreshable 缺省关（对齐 QRT opt-in 形态，全站零增量） */
@@ -777,11 +777,11 @@ onBeforeUnmount(() => {
   document.removeEventListener('keydown', onDocMenusEsc);
 });
 /* ═══ ：内建视图档状态机（QRT 607 对称件）═══
-   altView=用户档位（viewPrefKey 提供时 usePref 落盘跨会话记忆，缺省仅内存态——KeepAlive
-   下组件实例常驻，状态不重置）；effView=数据驱动生效档——持久化/手选档位的数据源缺席时
-   诚实回落表格（偏好保留不回写，数据重回即恢复）；bodyHidden=宿主 hideBody ∪ 内建非表格
-   档（547 hideBody 语义内化，561 退聚焦 watch 源随之升级——viewSeg=false 时 bodyHidden≡
-   hideBody 行为等值零回归） */
+ altView=用户档位（viewPrefKey 提供时 usePref 落盘跨会话记忆，缺省仅内存态——KeepAlive
+ 下组件实例常驻，状态不重置）；effView=数据驱动生效档——持久化/手选档位的数据源缺席时
+ 诚实回落表格（偏好保留不回写，数据重回即恢复）；bodyHidden=宿主 hideBody ∪ 内建非表格
+ 档（547 hideBody 语义内化，561 退聚焦 watch 源随之升级——viewSeg=false 时 bodyHidden≡
+ hideBody 行为等值零回归） */
 const viewSegOn = computed(() => props.viewSeg === true);
 const altView: Ref<'table' | 'json' | 'tree' | 'cards'> = props.viewPrefKey
   ? usePref<'table' | 'json' | 'tree' | 'cards'>(props.viewPrefKey, 'table')
@@ -793,17 +793,17 @@ const effView = computed<'table' | 'json' | 'tree' | 'cards'>(() => {
   if (v === 'cards' && props.cardHits == null) return 'table';
   return v;
 });
-/* hideBody ∪ 内建非表格档——内建档切换共用同一隐藏判定（工具行常驻=547 立法不破） */
+/* hideBody ∪ 内建非表格档——内建档切换共用同一隐藏判定（工具行常驻=不破） */
 const bodyHidden = computed(() => props.hideBody === true || (viewSegOn.value && effView.value !== 'table'));
 /* 卡片档 AltHitsViews SearchHit 契约桥——本地 Hit._score 可选，补缺省 null（结构补全非类型断言） */
 const cardHitsAdapted = computed(() => props.cardHits?.map(h => ({ ...h, _score: h._score ?? null })));
 
 /* 非表格视图自动退出聚焦——Tree/JSON/卡片内容是宿主里 RT 的兄弟节点，
-   聚焦面（fs-active fixed 不透明覆盖层）之下不可见，放大态切视图只剩 rt-bar 全屏白
-   （实报）。与 Esc 退出同语义（「聚焦态可切视图」记档翻案：聚焦态仅表格）；
-   只在 false→true 流转且聚焦中触发（immediate 缺省不触发，初始 hideBody=true 挂载零影响）。
-   watch 源升 bodyHidden（hideBody ∪ 内建非表格档）——内建档切换同样自动退
-   聚焦（QRT 607 同款）；viewSeg=false 时源≡hideBody 行为等值零回归 */
+ 聚焦面（fs-active fixed 不透明覆盖层）之下不可见，放大态切视图只剩 rt-bar 全屏白
+ （实报）。与 Esc 退出同语义（「聚焦态可切视图」修订：聚焦态仅表格）；
+ 只在 false→true 流转且聚焦中触发（immediate 缺省不触发，初始 hideBody=true 挂载零影响）。
+ watch 源升 bodyHidden（hideBody ∪ 内建非表格档）——内建档切换同样自动退
+ 聚焦（QRT 607 同款）；viewSeg=false 时源≡hideBody 行为等值零回归 */
 watch(bodyHidden, h => { if (h && focused.value) focused.value = false; });
 const emit = defineEmits<{
   (e: 'open-doc', hit: SearchHit): void;
@@ -814,10 +814,10 @@ const emit = defineEmits<{
   (e: 'xray-hit', hit: SearchHit): void;
   /* W7：以单元格值过滤并重查——事件只发不路由，重查/跳转由消费端（DqlQueryView 等）接线 */
   (e: 'filter-hit', p: { field: string; value: any; op: 'term' | 'match' }): void;
-  /*  W-B：selectable 行多选通道（rows=选中 hit 原始对象数组，sortedHits 序） */
+  /* W-B：selectable 行多选通道（rows=选中 hit 原始对象数组，sortedHits 序） */
   (e: 'selection-change', rows: unknown[]): void;
   /* remoteSort 远端排序意图（只 emit 不取数；null=取消排序回宿主原始序；
-     载荷方向 'asc'|'desc' 与 QRT 同一公共契约——RT SortKey 本形态即字符串直发） */
+ 载荷方向 'asc'|'desc' 与 QRT 同一公共契约——RT SortKey 本形态即字符串直发） */
   (e: 'sort-change', s: { f: string; d: 'asc' | 'desc' } | null): void;
   /* 内建分页意图（Pagination 透传，翻页/改页大小取数归宿主——QRT 525 同款公共契约） */
   (e: 'update:page', p: number): void;
@@ -825,29 +825,29 @@ const emit = defineEmits<{
 }>();
 
 const store = useAppStore();
-/* ═══ ：内建分页渲染判定与换算（QRT  :561-564 三参齐备形态逐字平移）═══
-   page/pageSize/total 三参齐备才出内建分页器（可选参缺省=恒 false 零增量）；totalPages 由
-   total/pageSize 换算（QRT 同式）。 */
+/* ═══ ：内建分页渲染判定与换算（QRT :561-564 三参齐备形态逐字平移）═══
+ page/pageSize/total 三参齐备才出内建分页器（可选参缺省=恒 false 零增量）；totalPages 由
+ total/pageSize 换算（QRT 同式）。 */
 const pagerOn = computed(() => props.page != null && props.pageSize != null && props.total != null);
 const pagerPage = computed(() => props.page ?? 1);
 const pagerSize = computed(() => props.pageSize ?? 20);
 const pagerTotalPages = computed(() => Math.max(1, Math.ceil((props.total ?? 0) / Math.max(1, pagerSize.value))));
 /* 权限门禁——就地编辑需 OPERATOR+(update-document 普通写档)；
-   语义升格：删文档/批删（delete-by-id 共享写端点）连接模型按写键放行、
-   静态模型按 canWriteOn 回落档位—— canOps 改走 canEndpoint（canWrite 不变） */
+ 语义升格：删文档/批删（delete-by-id 共享写端点）连接模型按写键放行、
+ 静态模型按 canWriteOn 回落档位—— canOps 改走 canEndpoint（canWrite 不变） */
 const auth = useAuthStore();
 /* ·实报打通：canWrite 镜像后端连接授权写门语义（conn:{target}:w:* 在场
-   即按连接授权裁决，跳过全局角色门）——此前只看全局角色，被授予连接写档的同事双击编辑
-   静默无效（后端会放行，前端不让进=「权限给了却无法操作」）。：ops(删文档)
-   同源升级 canWriteOn；改走 canEndpoint（delete-by-id 归属页精确写键裁决）。 */
+ 即按连接授权裁决，跳过全局角色门）——此前只看全局角色，被授予连接写档的同事双击编辑
+ 静默无效（后端会放行，前端不让进=「权限给了却无法操作」）。：ops(删文档)
+ 同源升级 canWriteOn；改走 canEndpoint（delete-by-id 归属页精确写键裁决）。 */
 const canWrite = computed(() => auth.canWriteOn(store.target));
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/delete-by-id', store.target));
 
 /* ═══ 列 ═══
-    P1-5：dot-path 嵌套列展平——顶层 plain object 字段展开一层子字段为
-   「a.b」列（dbx Mongo 文档网格同手法；此前嵌套对象只能看 JSON 截断串）。
-   列集=顶层键（原序）+ 子键列（排后），子列经 ColPicker 勾选才显示；取值统一走
-   getSourceVal（dot-path 感知）。 */
+ P1-5：dot-path 嵌套列展平——顶层 plain object 字段展开一层子字段为
+ 「a.b」列（dbx Mongo 文档网格同手法；此前嵌套对象只能看 JSON 截断串）。
+ 列集=顶层键（原序）+ 子键列（排后），子列经 ColPicker 勾选才显示；取值统一走
+ getSourceVal（dot-path 感知）。 */
 const allCols = computed(() => {
   const top: string[] = [], sub: string[] = [];
   const seenTop = new Set<string>(), seenSub = new Set<string>();
@@ -878,7 +878,7 @@ function getSourceVal(h: SearchHit, col: string): any {
   return cur;
 }
 
-/* ═══  W-D 契约 ═══ */
+/* ═══ W-D 契约 ═══ */
 /* 行级条件色档：返回值追加到数据行 tr class（空格拼接）；undefined/null/空串跳过 */
 function rowCls(row: any, ri: number): string | undefined {
   const c = props.rowClass?.(row, ri);
@@ -898,8 +898,8 @@ function xExpCell(r: SearchHit, c: string): any {
 const selected = ref<Set<string>>(new Set());
 /* auto-fit 测量根（组件根节点，供右键「此列适应内容」遍历单元格） */
 const rootEl = ref<HTMLElement | null>(null);
-/*  表格交互：长值单元格展开态——单击含「…」的截断单元格切到全宽多行显示
-   （与 copyCell 冲突消解：展开态下再点 = 复制全文；再次点击收起） */
+/* 表格交互：长值单元格展开态——单击含「…」的截断单元格切到全宽多行显示
+ （与 copyCell 冲突消解：展开态下再点 = 复制全文；再次点击收起） */
 const expandedCells = ref<Set<string>>(new Set());
 function toggleExpand(hit: SearchHit, c: string) {
   const k = cellKey(hit._id, c);
@@ -908,10 +908,10 @@ function toggleExpand(hit: SearchHit, c: string) {
   expandedCells.value = n;
 }
 /* ═══ W7：行内展开详情行（dbx 行展开对位）═══
-   rowKey=_id（ri 兜底，空 _id 行不串行）；free 多行展开；
-   Esc=全部收起（裁决：全收而非逐个——逐个收起需记录收起序、状态面更大，全收一键回干净表，
-   单行精确收走行钮/菜单/E）；Enter 语义保持既有「打开文档弹窗」不变（任务裁决记录）；
-   详情嵌 JsonTree，防爆参数与单元格详情弹窗同款 max-children=200/max-str-len=4000 */
+ rowKey=_id（ri 兜底，空 _id 行不串行）；free 多行展开；
+ Esc=全部收起（裁决：全收而非逐个——逐个收起需记录收起序、状态面更大，全收一键回干净表，
+ 单行精确收走行钮/菜单/E）；Enter 语义保持既有「打开文档弹窗」不变（任务裁决记录）；
+ 详情嵌 JsonTree，防爆参数与单元格详情弹窗同款 max-children=200/max-str-len=4000 */
 const expandedRows = ref<Set<string>>(new Set());
 function rowKey(h: SearchHit, ri: number): string { return h._id || ('ri:' + ri); }
 function toggleRowExpand(k: string) {
@@ -923,7 +923,7 @@ function rowSource(h: SearchHit): Record<string, any> { return { _id: h._id, ...
 let lastChkIdx = -1;
 
 /* ═══ 偏好记忆（列选/密度/列宽）—— 迁移到 useTablePrefs，
-   与 QueryResultTable 共用同一实现（复用闭环）；列选重置时同步清勾选与 shift 锚 ═══ */
+ 与 QueryResultTable 共用同一实现（复用闭环）；列选重置时同步清勾选与 shift 锚 ═══ */
 const dimension = computed(() => props.storageKey || props.index || null);
 const {
   on: prefsOn, visibleCols, colWidths, colStyle, startResize, resetColWidth, resetColWidths,
@@ -935,23 +935,23 @@ const {
 } = useTablePrefs(dimension, allCols, {
   onColsReset: () => { selected.value.clear(); lastChkIdx = -1; },
 });
-/*  P1-3：转置渲染行集（前 N 条文档做横向列；N 档位记忆） */
+/* P1-3：转置渲染行集（前 N 条文档做横向列；N 档位记忆） */
 const transposeHits = computed(() => sortedHits.value.slice(0, transposeN.value));
-/*  P1-3：单条结果自动进入转置视图（dbx/DBeaver 单行自动 Record 对位） */
+/* P1-3：单条结果自动进入转置视图（dbx/DBeaver 单行自动 Record 对位） */
 const autoTranspose = usePref('rt.autotranspose', false) as Ref<boolean>;
 const effTranspose = computed(() => transpose.value || (autoTranspose.value && props.hits.length === 1));
-/*  P1-6：列拖拽重排（draggable 绑列头 name；冻结列禁拖/目标位钳 1） */
+/* P1-6：列拖拽重排（draggable 绑列头 name；冻结列禁拖/目标位钳 1） */
 const { dragging: colDragging, dragCol: colDragCol, overCol: colDragOver, overPlace: colDragPlace,
   onDragStart, onDragOver, onDrop, onDragEnd, isClickSuppressed } = useColDrag({
   cols: visibleCols,
   frozenFirst: () => freezeFirst.value,
 });
 /* /：冻结首业务列——宽表横向滚动时行身份不丢（标识列 98px 后 sticky） */
-/* ═══  P2-4：前缀多列冻结（「冻结到此列」）═══
-   sticky left 动态 = 标识列 98px + 前缀列宽累加；铁律：冻结列强制 min-width 锁死
-   （未拖过宽的冻结列默认 180px），保证 left 与实际渲染宽度精确一致不遮字。
-   装配收编 useColFit.frozenStyleOf 单源（QRT 同源；基数 98=标识列
-   勾选 46+序号 52 以常参注入，非冻结档 undefined 回落 colStyle 既有兜底）。 */
+/* ═══ P2-4：前缀多列冻结（「冻结到此列」）═══
+ sticky left 动态 = 标识列 98px + 前缀列宽累加；铁律：冻结列强制 min-width 锁死
+ （未拖过宽的冻结列默认 180px），保证 left 与实际渲染宽度精确一致不遮字。
+ 装配合并 useColFit.frozenStyleOf 单源（QRT 同源；基数 98=标识列
+ 勾选 46+序号 52 以常参注入，非冻结档 undefined 回落 colStyle 既有兜底）。 */
 const isFrozenCol = (c: string) => {
   const idx = visibleCols.value.indexOf(c);
   return idx > -1 && idx < freezeN.value;
@@ -960,15 +960,15 @@ function frozenStyle(col: string): Record<string, string> | undefined {
   return frozenStyleOf(visibleCols.value, colWidths.value, col, freezeN.value, 98, true) ?? colStyle(col);
 }
 
-/* exportOpen 随 ▾ 菜单退场——格式切换收进单元格右键菜单（隐藏且可发现） */
+/* exportOpen 随 ▾ 菜单移除——格式切换收进单元格右键菜单（隐藏且可发现） */
 const pendOpen = ref(false);
 
-/* ═══ 排序（ ：按索引/存储键维度记忆——重查不丢、切索引重读，
-   与列选/列宽/密度同口径；排序列被列选关掉则清空排序，「所见即所序」。
-   多列排序——Shift+点列头=追加/翻转次键（链长 ≤3），普通点击仍单键三态；
-   存储:es_tbl_sort:<dim>:m 存 JSON 链，同时维护旧 :f/:d（链首）向后兼容旧版本读侧。
-   状态机收编 composables/tableSort.useSortChain 单源（560 记档大件）——
-   三态循环/次键链/直选/远端意图/回填/落盘全机单一出处，此处只留守卫薄壳与行序应用点 ═══ */
+/* ═══ 排序（按索引/存储键维度记忆——重查不丢、切索引重读，
+ 与列选/列宽/密度同口径；排序列被列选关掉则清空排序，「所见即所序」。
+ 多列排序——Shift+点列头=追加/翻转次键（链长 ≤3），普通点击仍单键三态；
+ 存储:es_tbl_sort:<dim>:m 存 JSON 链，同时维护旧 :f/:d（链首）向后兼容旧版本读侧。
+ 状态机合并 composables/tableSort.useSortChain 单源（大件）——
+ 三态循环/次键链/直选/远端意图/回填/落盘全机单一出处，此处只留守卫薄壳与行序应用点 ═══ */
 const chain = useSortChain({
   lsBase: () => 'es_tbl_sort:' + (props.storageKey || props.index),
   isRemote: () => props.remoteSort,
@@ -977,48 +977,48 @@ const chain = useSortChain({
 });
 const sortSpec = chain.sortSpec;
 /* 模板辅助：链内方向/序号（aria-sort 仅链首——HTML aria-sort 单值语义）。
-   起读「显示链」dispChain：本地档=sortSpec 原语义；remote+syncSort 接线档=
-   remoteSortCur 单键镜像；remote 未接线档维持恒空=箭头恒 hint/aria-sort 恒无（零增量）。
-   行序/落盘仍只认 sortSpec（remote 档恒空，538 口径不变）——显示与数据分轨。 */
+ 起读「显示链」dispChain：本地档=sortSpec 原语义；remote+syncSort 接线档=
+ remoteSortCur 单键镜像；remote 未接线档维持恒空=箭头恒 hint/aria-sort 恒无（零增量）。
+ 行序/落盘仍只认 sortSpec（remote 档恒空，538 口径不变）——显示与数据分轨。 */
 const dispChain = chain.dispChain;
 const chainCount = chain.chainCount;
 const chainHas = chain.chainHas;
 const chainDir = chain.chainDir;
 const chainOrd = chain.chainOrd;
 /* 回填 watch：有值=回填显示镜像（方向 1|-1 归一 'asc'|'desc' 在机内）；null=清态（箭头+循环
-   基点同清，此后点击 asc 重启）；undefined=未接线不生效零增量。回填只动显示态镜像，
-   sortSpec/行序/落盘零触碰（538 口径不变）。immediate：宿主携态挂载（记忆恢复）首渲即回显。 */
+ 基点同清，此后点击 asc 重启）；undefined=未接线不生效零增量。回填只动显示态镜像，
+ sortSpec/行序/落盘零触碰（538 口径不变）。immediate：宿主携态挂载（记忆恢复）首渲即回显。 */
 watch(() => props.syncSort, (s) => {
   if (s === undefined || !props.remoteSort) return;
   chain.applySync(s);
 }, { immediate: true });
 /* 件②：显式非语义列排序抑制（tableSort.sortableGuard 单源出口接线，件②
-   QRT 半边的 RT 对称件）——binary 等 18 型+_source 列点击排序语义 VOID，入口短路不落态；
-   _id/_index/_score/_seq_no 排序有语义豁免（semanticGuard 记档口径）。RT 类型源=显式
-   fieldTypes（无采样推断链），无类型列不抑制——零增量缺省与 QRT effType 缺省口径自洽。 */
+ QRT 半边的 RT 对称件）——binary 等 18 型+_source 列点击排序语义 VOID，入口短路不落态；
+ _id/_index/_score/_seq_no 排序有语义豁免（semanticGuard 口径）。RT 类型源=显式
+ fieldTypes（无采样推断链），无类型列不抑制——零增量缺省与 QRT effType 缺省口径自洽。 */
 const sortGuard = sortableGuard((c) => props.fieldTypes?.[c]);
 /* 薄壳守卫后委托状态机（单源）：remote 档机内只 emit 意图（多键链是本地特性，
-   塌缩单键）；directDir 供右键「升序/降序」直选（ dbx 语义）。 */
+ 塌缩单键）；directDir 供右键「升序/降序」直选（ dbx 语义）。 */
 function sortBy(c: string, directDir?: 'asc' | 'desc', shift = false) {
-  /*  P1-6：列拖拽 drop 后紧随的 click 不当排序处理（dbx 教训：300ms 双保险） */
+  /* P1-6：列拖拽 drop 后紧随的 click 不当排序处理（dbx 教训：300ms 双保险） */
   if (isClickSuppressed()) return;
   /* 件②：显式非语义列短路（本地/remote 双档同守——不落 sortSpec/不落盘/
-     不 emit 远端意图；右键 directDir 直选同经此入口一并受守） */
+ 不 emit 远端意图；右键 directDir 直选同经此入口一并受守） */
   if (!sortGuard(c)) return;
   chain.sortBy(c, directDir, shift);
 }
-/* 切索引/换存储键：重读该维度的排序记忆；横向滚动位归零（）见下方 wrapEl 声明处的 watch；
-   W7：行内展开态一并清（_id 跨维度可能撞键）。：remote 档重读同样跳过（恒空） */
+/* 切索引/换存储键：重读该维度的排序记忆；横向滚动位归零（见下方 wrapEl 声明处的 watch；
+ W7：行内展开态一并清（_id 跨维度可能撞键）。：remote 档重读同样跳过（恒空） */
 watch(() => props.storageKey || props.index, () => {
   chain.reload();
   expandedRows.value = new Set();
 });
 /* 排序列被列选关掉/该索引无此列：从链中剔除该键（单键时=清空），避免「排序仍在生效但箭头不可见」的暗状态。
-   immediate——挂载时持久化链与列选本就不一致（跨会话残留）也要立刻剔除 */
+ immediate——挂载时持久化链与列选本就不一致（跨会话残留）也要立刻剔除 */
 watch(visibleCols, (vc) => { chain.pruneTo(vc); }, { immediate: true });
-/* ═══  P0-4：列值筛选（useColFilters 下沉共享）——「RT 待收编」欠账补齐。
-   管线=先筛后排序（筛选基数小排序才便宜）；筛选变化连带清框选（ri:ci 坐标键随行集错位；
-   RT 的展开/聚合是 id::field 稳定键不受影响）；暗状态守卫（隐藏列自动清）内置 ═══ */
+/* ═══ P0-4：列值筛选（useColFilters 下沉共享）——「RT 待合并」欠账补齐。
+ 管线=先筛后排序（筛选基数小排序才便宜）；筛选变化连带清框选（ri:ci 坐标键随行集错位；
+ RT 的展开/聚合是 id::field 稳定键不受影响）；暗状态守卫（隐藏列自动清）内置 ═══ */
 const filters = useColFilters({
   rows: () => props.hits,
   getVal: (h: SearchHit, col: string) => getSourceVal(h, col),
@@ -1026,24 +1026,24 @@ const filters = useColFilters({
   cols: () => visibleCols.value,
 });
 /* ═══ ：解构补齐 rangeOn/containsOn/setContainsFilter（漏斗激活并集+contains 档，
-   QRT 552:904 对称件收尾——此前 RT 漏斗只认等值勾选，区间/包含生效不亮是暗状态缺口）═══ */
+ QRT 552:904 对称件收尾——此前 RT 漏斗只认等值勾选，区间/包含生效不亮是暗状态缺口）═══ */
 const { colFilters, rangeFilters, containsFilters, activeFilterCount, normVal, toggleFilterVal, setRangeFilter, rangeOn, containsOn, setContainsFilter, clearFilter, clearAllFilters, filterRows } = filters;
 /* 漏斗激活高亮并集口径——等值勾选 ∪ 区间 ∪ 包含（任一生效即点亮；QRT 552 同构） */
 function funnelOn(c: string): boolean {
   return !!(colFilters.value[c]?.length || rangeOn(rangeFilters.value[c]) || containsOn(c));
 }
 /* 包含档入口守卫——非语义类型（binary/geo_point/nested/object…）与 ip 列
-   无文本包含语义，弹层不出包含行；无显式类型列不抑制（QRT 552 'name' 口径自洽）
-    T1：抑制判据随迁 typeTiers.isIpType 单源 */
+ 无文本包含语义，弹层不出包含行；无显式类型列不抑制（QRT 552 'name' 口径自洽）
+ T1：抑制判据同步更新 typeTiers.isIpType 单源 */
 function isContainsCol(c: string): boolean {
   const t = props.fieldTypes?.[c];
   if (!t) return true;
   return !isNonSemanticType(t) && !isIpType(t);
 }
-/* ═══  W3：filterMode 跨列筛选组合档 ═══
-   prop 播种运行档（缺省 'AND'）；筛选弹层/提示行切换钮就地翻转；prop 变化跟随播种。
-   管线在 useColFilters.filterRows（mode 参数收口，缺省 'AND' 逐字节不变）。
-   三件套收编 useColFilters.useFilterMode 单源（QRT 同款接线）。 */
+/* ═══ W3：filterMode 跨列筛选组合档 ═══
+ prop 播种运行档（缺省 'AND'）；筛选弹层/提示行切换钮就地翻转；prop 变化跟随播种。
+ 管线在 useColFilters.filterRows（mode 参数收口，缺省 'AND' 逐字节不变）。
+ 三件套合并 useColFilters.useFilterMode 单源（QRT 同款接线）。 */
 const { filterModeLive, toggleFilterMode } = useFilterMode(props);
 const filteredHits = computed(() => filterRows(props.hits, filterModeLive.value));
 /* 框选是 ri:ci 坐标键——筛选变化行集错位，必须连带清 */
@@ -1051,7 +1051,7 @@ watch(colFilters, () => { region.value = null; }, { deep: true });
 const filterPop = ref<{ col: string; x: number; y: number } | null>(null);
 const filterKw = ref('');
 const fvals = computed(() => filters.filterVals(filterPop.value?.col ?? '', filterKw.value));
-/* mini-bar 归一/碰撞定位/开层聚焦随壳收编 ColFilterPopover，此处只留开层状态 */
+/* mini-bar 归一/碰撞定位/开层聚焦随壳合并 ColFilterPopover，此处只留开层状态 */
 function openFilter(e: MouseEvent, col: string) {
   openFilterAt(col, e.clientX, e.clientY);
 }
@@ -1061,7 +1061,7 @@ function openFilterAt(col: string, x: number, y: number) {
 }
 
 /* 数值列自动右对齐（dbx 语言——数字列右对齐+tabular-nums，可读性）。
-   采样前 50 行，列内 number 值占比 ≥60% 判定为数值列 */
+ 采样前 50 行，列内 number 值占比 ≥60% 判定为数值列 */
 const numericCols = computed(() => {
   const s = new Set<string>();
   const sample = sortedHits.value.slice(0, 50);
@@ -1081,29 +1081,29 @@ const numericCols = computed(() => {
   return s;
 });
 /* 区间筛选列判定——fieldTypes 数值/日期型优先（类型徽标同源正则），
-   无映射回落 numericCols 采样口径（ 60% 数值占比）；纯文本/keyword 列不出区间输入。
-    W-A：数值族正则改引 typeTiers.NUMERIC_TYPES_RE（原 RANGE_NUM_RE 同值退役）。
-   显式非语义类型更早短路（binary/geo_point 等永无区间语义；显式优先序不动）。
-   RANGE_DATE_RE 字面收编 typeTiers 单源（本函数本体 545 源码锁逐字钉死，
-   只改判据引用不改形） */
+ 无映射回落 numericCols 采样口径（ 60% 数值占比）；纯文本/keyword 列不出区间输入。
+ W-A：数值族正则改引 typeTiers.NUMERIC_TYPES_RE（原 RANGE_NUM_RE 同值退役）。
+ 显式非语义类型更早短路（binary/geo_point 等永无区间语义；显式优先序不动）。
+ RANGE_DATE_RE 字面合并 typeTiers 单源（本函数本体 545 源码锁逐字钉死，
+ 只改判据引用不改形） */
 function isRangeCol(c: string): boolean {
   const t = props.fieldTypes?.[c];
   if (t && isNonSemanticType(t)) return false;
   if (t) return NUMERIC_TYPES_RE.test(t) || RANGE_DATE_RE.test(t);
   return numericCols.value.has(c);
 }
-/* 占位文案单源收编 typeTiers.rangePlaceholderTxt（原双份逐字退役，行为等值） */
+/* 占位文案单源合并 typeTiers.rangePlaceholderTxt（原双份逐字退役，行为等值） */
 function rangePlaceholder(col: string, side: 'min' | 'max'): string {
   return rangePlaceholderTxt(props.fieldTypes?.[col], side);
 }
-/* ═══  W-B：quickFilter 跨可见列 contains 过滤（QRT 同款平移）═══
-   与既有列筛选 AND 叠加（filterRows 之后追加，不改 useColFilters 管线）；
-   匹配口径=可见列原始值文本（getSourceVal，null 视作 '-' 与 QRT fullText 同语言）小写包含；
-   不传/空白=恒等回落（quickHits 即 filteredHits 同引用，零增量）；
-   生效且 0 行 → 空态链补充分支（文案走既有 emptyText/emptyHint，rtLoadingSkeleton268
-   锁的 <EmptyState v-else-if="!hits.length"> 字面零触碰）。
-    W3：取词收口改走 quickFilterEff——非 searchable 档恒等于 props.quickFilter
-   （既有通道逐字节回落）；searchable 档内建输入框非空以输入为准、空输入回落外部播种值。 */
+/* ═══ W-B：quickFilter 跨可见列 contains 过滤（QRT 同款平移）═══
+ 与既有列筛选 AND 叠加（filterRows 之后追加，不改 useColFilters 管线）；
+ 匹配口径=可见列原始值文本（getSourceVal，null 视作 '-' 与 QRT fullText 同语言）小写包含；
+ 不传/空白=恒等回落（quickHits 即 filteredHits 同引用，零增量）；
+ 生效且 0 行 → 空态链补充分支（文案走既有 emptyText/emptyHint，rtLoadingSkeleton268
+ 锁的 <EmptyState v-else-if="!hits.length"> 字面零触碰）。
+ W3：取词收口改走 quickFilterEff——非 searchable 档恒等于 props.quickFilter
+ （既有通道逐字节回落）；searchable 档内建输入框非空以输入为准、空输入回落外部播种值。 */
 const searchableKw = ref('');
 const quickFilterEff = computed<string | undefined>(() => {
   if (!props.searchable) return props.quickFilter;
@@ -1116,26 +1116,26 @@ function rtCellFullText(v: unknown): string {
   if (typeof v === 'object') return JSON.stringify(v);
   return String(v);
 }
-/* 过滤装配收编 useColFilters.quickFilterRows 单源（QRT 同款接线）——
-   匹配口径=getSourceVal + rtCellFullText（QRT 是 qColVal + fullText），getVal/fullOf
-   参数化保两内核行为差；空白词恒等回落（同引用）在单源内保真 */
+/* 过滤装配合并 useColFilters.quickFilterRows 单源（QRT 同款接线）——
+ 匹配口径=getSourceVal + rtCellFullText（QRT 是 qColVal + fullText），getVal/fullOf
+ 参数化保两内核行为差；空白词恒等回落（同引用）在单源内保真 */
 const quickHits = computed<SearchHit[]>(() =>
   quickFilterRows(filteredHits.value, quickFilterEff.value, visibleCols.value, (h, c) => getSourceVal(h, c), rtCellFullText));
 const quickEmpty = computed(() => quickActive.value && !quickHits.value.length);
 
 const sortedHits = computed(() => {
-  /*  P0-4：排序基座从 props.hits 改 filteredHits——先筛后排序，
-     「已筛选 N 列 · M/K 行」与排序/导出行序同管线（所见即所序+所筛）。
-      W-B：基座再接 quickFilter（quickHits ⊆ filteredHits，AND 叠加语义；
-     不传 quickFilter 时两者同引用，行为零变化） */
+  /* P0-4：排序基座从 props.hits 改 filteredHits——先筛后排序，
+ 「已筛选 N 列 · M/K 行」与排序/导出行序同管线（所见即所序+所筛）。
+ W-B：基座再接 quickFilter（quickHits ⊆ filteredHits，AND 叠加语义；
+ 不传 quickFilter 时两者同引用，行为零变化） */
   if (!sortSpec.value.length) return quickHits.value;
   const spec = sortSpec.value;
   return [...quickHits.value].sort((a, b) => {
     for (const { f, d } of spec) {
       const va = a._source[f], vb = b._source[f];
-      /* 比较器收编 tableSort.compareVals 单源（此前内联 numeric 双试同口径平移）——
-         千分位/单位之外新档科学计数（1e6）/时长（ms|s）按值；沉底档（null/undefined/''）
-         方向无关恒沉底（对齐旧 va==null 恒 return 1 语义），非空档乘方向 */
+      /* 比较器合并 tableSort.compareVals 单源（此前内联 numeric 双试同口径平移）——
+ 千分位/单位之外新档科学计数（1e6）/时长（ms|s）按值；沉底档（null/undefined/''）
+ 方向无关恒沉底（对齐旧 va==null 恒 return 1 语义），非空档乘方向 */
       const blank = va == null || va === '' || vb == null || vb === '';
       const r = compareVals(va, vb);
       if (r !== 0) return blank ? r : r * (d === 'asc' ? 1 : -1);
@@ -1145,34 +1145,34 @@ const sortedHits = computed(() => {
 });
 
 /* ═══ ：大结果集渲染保护（G 组评估落地）═══
-   评估结论：虚拟滚动工程量大且与就地编辑/框选/勾选交互冲突；采用「渲染截断+导出引导」——
-   超 MAX_RENDER 只渲染前 N 行（万行 DOM 拖死滚动/勾选/编辑交互），排序/勾选/导出仍作用于
-   全量（exportRows 走 sortedHits/currentExportRows），行尾内嵌提示引导导出取全量。
-    W-A：内核逻辑随壳收编 useRenderMore（QRT 同构段单一出处）——MAX_RENDER/
-   renderLimit/watch 重置/截断判定/renderMore/IntersectionObserver 哨兵（rootMargin 80px）
-   全在 composable；此处只接线（sortedHits 行源 + rootEl IO 根惰性 getter），行集重命名
-   renderHits 保  M1「键盘导航钳位」既有引用面，模板截断行/文案/按钮保位不动
-   （rtRenderMore525 锚随迁内核接线+composable）。 */
+ 评估结论：虚拟滚动工程量大且与就地编辑/框选/勾选交互冲突；采用「渲染截断+导出引导」——
+ 超 MAX_RENDER 只渲染前 N 行（万行 DOM 拖死滚动/勾选/编辑交互），排序/勾选/导出仍作用于
+ 全量（exportRows 走 sortedHits/currentExportRows），行尾内嵌提示引导导出取全量。
+ W-A：内核逻辑随壳合并 useRenderMore（QRT 同构段单一出处）——MAX_RENDER/
+ renderLimit/watch 重置/截断判定/renderMore/IntersectionObserver 哨兵（rootMargin 80px）
+ 全在 composable；此处只接线（sortedHits 行源 + rootEl IO 根惰性 getter），行集重命名
+ renderHits 保 M1「键盘导航钳位」既有引用面，模板截断行/文案/按钮保位不动
+ （rtRenderMore525 锚同步更新内核接线+composable）。 */
 const { rows: renderHits, truncated: renderTruncated, renderMore, truncSentinel } =
   useRenderMore(() => sortedHits.value, () => rootEl.value);
 
 /* ═══ 多选（全选/shift范围/反选/Esc）——selected/lastChkIdx 声明已前移至列 watch 之前 ═══ */
-/*  W-B：selection-change 事件通道（QRT selectable 同款平移）——勾选态单一
-   事实源仍是既有 selected: Set<_id>，selectable 开启时任何勾选变化 emit 原始 hit 数组
-   （sortedHits 序，与导出/复制行序同源）；缺省 false 事件静默（零增量）。
-   watch 统一接线：onChkClick/toggleAll/invertSel/clearSel/clearSelected 全部走
-   Set 重建赋值，一处 watch 全覆盖，不逐函数插入。 */
+/* W-B：selection-change 事件通道（QRT selectable 同款平移）——勾选态单一
+ 事实源仍是既有 selected: Set<_id>，selectable 开启时任何勾选变化 emit 原始 hit 数组
+ （sortedHits 序，与导出/复制行序同源）；缺省 false 事件静默（零增量）。
+ watch 统一接线：onChkClick/toggleAll/invertSel/clearSel/clearSelected 全部走
+ Set 重建赋值，一处 watch 全覆盖，不逐函数插入。 */
 const emitSelection = () => {
   if (!props.selectable) return;
   emit('selection-change', sortedHits.value.filter(h => selected.value.has(h._id)));
 };
 watch(selected, () => emitSelection());
-/* 全选/反选口径收口——QRT 同族 allSel/toggleAllSel 立法语义「当前视图全部行」
-   （其全选钮 aria-label 明写）的 RT 对称件。旧口径=props.hits 全量：筛选/quickFilter 态点
-   全选会把不可见行勾进 selected，批量删除/复制 _id/口径徽标按全量 N 而导出/复制选中行走
-   currentExportRows 可见交集 K——同份勾选四条链两种口径。收口到 sortedHits（当前视图：
-   列筛选∩quickFilter∩排序同管线）后无筛选零变化（sortedHits≡hits 同引用链），勾选动作
-   与全部消费链自动一致。 */
+/* 全选/反选口径收口——QRT 同族 allSel/toggleAllSel 约定语义「当前视图全部行」
+ （其全选钮 aria-label 明写）的 RT 对称件。旧口径=props.hits 全量：筛选/quickFilter 态点
+ 全选会把不可见行勾进 selected，批量删除/复制 _id/口径徽标按全量 N 而导出/复制选中行走
+ currentExportRows 可见交集 K——同份勾选四条链两种口径。收口到 sortedHits（当前视图：
+ 列筛选∩quickFilter∩排序同管线）后无筛选零变化（sortedHits≡hits 同引用链），勾选动作
+ 与全部消费链自动一致。 */
 const allChecked = computed(() => sortedHits.value.length > 0 && sortedHits.value.every(h => selected.value.has(h._id)));
 
 function onChkClick(e: MouseEvent, ri: number) {
@@ -1202,8 +1202,8 @@ function invertSel() {
 }
 function clearSel() { selected.value = new Set(); region.value = null; } /* ：Esc 连带清框选区 */
 /* Delete/Backspace=批量删除勾选行——仍走父组件 askBatchDel 确认链（防呆闭环），
-   编辑中（editing）不接管（防把输入框内容删格外的语义）；
-   rank3+ 才放行（delete-by-id=CLUSTER 档，VIEWER 按 Del 不再触发 403） */
+ 编辑中（editing）不接管（防把输入框内容删格外的语义）；
+ rank3+ 才放行（delete-by-id=CLUSTER 档，VIEWER 按 Del 不再触发 403） */
 function onDeleteKey() {
   if (editing.value || !selected.value.size || !canOps.value) return;
   emit('batch-delete', [...selected.value]);
@@ -1216,23 +1216,23 @@ async function copyIds() {
 }
 /* 默认导出格式（usePref 记忆；切换入口在单元格右键菜单——主界面零菜单） */
 const expFmt = usePref('rt.export.fmt', 'csv') as Ref<'json' | 'csv' | 'md' | 'xlsx'>;
-/*  P2 引入、收编 useTablePrefs（RT/QRT 同内核同循环序） */
+/* P2 引入、合并 useTablePrefs（RT/QRT 同内核同循环序） */
 function exportRows(fmt: 'json' | 'csv' | 'md' | 'xlsx') {
   /* 有勾选只导选中；无勾选导当前页全部（免去「先全选再导」的绕路）。
-     行序取 sortedHits（与表格所见一致）——此前用 props.hits 原始序，
-     排序后导出的文件行序与界面不符（28 批在 SQL 通道修过同款，RT 漏网）。
-     行集逻辑抽 currentExportRows，与 getExportRows expose 共用。
-     新增 Markdown 表格格式（dbx 五格式对齐——文档/聊天里直贴）。 */
+ 行序取 sortedHits（与表格所见一致）——此前用 props.hits 原始序，
+ 排序后导出的文件行序与界面不符（28 批在 SQL 通道修过同款，RT 漏网）。
+ 行集逻辑抽 currentExportRows，与 getExportRows expose 共用。
+ 新增 Markdown 表格格式（dbx 五格式对齐——文档/聊天里直贴）。 */
   const rows0 = currentExportRows();
-  /*  W-B：exportRowFilter 行级过滤——矩阵三格式（CSV/MD/XLSX）同一行源收口
-     （exportCell 只加工格、此只筛行）；JSON 文档导出恒 raw（与 exportCell「JSON 文档语义
-     不加工」同裁决）。缺省 undefined=全量导出现状不变 */
+  /* W-B：exportRowFilter 行级过滤——矩阵三格式（CSV/MD/XLSX）同一行源收口
+ （exportCell 只加工格、此只筛行）；JSON 文档导出恒 raw（与 exportCell「JSON 文档语义
+ 不加工」同裁决）。缺省 undefined=全量导出现状不变 */
   const rows = fmt !== 'json' && props.exportRowFilter
     ? rows0.filter(r => props.exportRowFilter!(r))
     : rows0;
   /* XLSX 分支（xlsxMini 手写零依赖——数据 sheet + meta sheet 记录来源）
-     双 sheet 装配收编 exportSheets.buildExportSheets 单源（QRT 同款装配；
-     差异字段「索引/范围」以 meta0 前置行参数化，导出时间/行数在单源内追加） */
+ 双 sheet 装配合并 exportSheets.buildExportSheets 单源（QRT 同款装配；
+ 差异字段「索引/范围」以 meta0 前置行参数化，导出时间/行数在单源内追加） */
   if (fmt === 'xlsx') {
     const cols = visibleCols.value;
     const [sheet, meta] = buildExportSheets(
@@ -1251,12 +1251,12 @@ function exportRows(fmt: 'json' | 'csv' | 'md' | 'xlsx') {
     content = JSON.stringify(rows.map(r => ({ _id: r._id, ...r._source })), null, 2);
     mime = 'application/json'; ext = 'json';
   } else if (fmt === 'md') {
-    /*  M3：csv/md 列集从 allCols 改 visibleCols——矩阵语义所见即所得，
-       与剪贴板复制组（visibleCols）同口径（此前「文件含隐藏列、剪贴板不含」自相矛盾）；
-       json 分支保持 _id+全 _source 文档语义（程序处理用整文档，与矩阵导出有意分工）。
-       私造 esc 管道退役收编 copyMatrix.matrixText('md') 单源（QRT 同款）——
-       '_id' 以首列注入，值管道仍走 xExpCell（exportCell 加工+对象串化），转义口径
-       （| 与换行折空格）在 copyMatrix 铁律内统一（新增 \r 同折，CSV/Excel 直贴防破行） */
+    /* M3：csv/md 列集从 allCols 改 visibleCols——矩阵语义所见即所得，
+ 与剪贴板复制组（visibleCols）同口径（此前「文件含隐藏列、剪贴板不含」自相矛盾）；
+ json 分支保持 _id+全 _source 文档语义（程序处理用整文档，与矩阵导出有意分工）。
+ 私造 esc 管道退役合并 copyMatrix.matrixText('md') 单源（QRT 同款）——
+ '_id' 以首列注入，值管道仍走 xExpCell（exportCell 加工+对象串化），转义口径
+ （| 与换行折空格）在 copyMatrix 铁律内统一（新增 \r 同折，CSV/Excel 直贴防破行） */
     const cols = visibleCols.value;
     content = matrixText({
       rows,
@@ -1278,8 +1278,8 @@ function exportRows(fmt: 'json' | 'csv' | 'md' | 'xlsx') {
 }
 
 /* ═══ ：命令面板表格域命令（window 'table-cmd' 广播）═══
-   仅当前可见实例响应——offsetParent 检查区分同页双表与 KeepAlive 后台缓存页
-   （T30：DOM 仍在树上，不可见实例必须静默丢弃防误响应）。 */
+ 仅当前可见实例响应——offsetParent 检查区分同页双表与 KeepAlive 后台缓存页
+ （T30：DOM 仍在树上，不可见实例必须静默丢弃防误响应）。 */
 function onTableCmd(e: Event) {
   const detail = (e as CustomEvent<{ cmd?: string; col?: string; markHandled?: () => void }>)?.detail;
   const cmd = detail?.cmd;
@@ -1287,8 +1287,8 @@ function onTableCmd(e: Event) {
   const root = rootEl.value;
   const op = root && (root as HTMLElement).offsetParent;
   /* 真实浏览器：display:none 链下 offsetParent=null；happy-dom：未实现为 undefined。
-     两者都视为「不可见」静默丢弃，只有真实可见实例响应。
-      M3：可见实例响应前标记 handled——命令面板据此在无可见表格时显式提示 */
+ 两者都视为「不可见」静默丢弃，只有真实可见实例响应。
+ M3：可见实例响应前标记 handled——命令面板据此在无可见表格时显式提示 */
   if (!root || op === null || op === undefined) return;
   detail.markHandled?.();
   if (cmd === 'dense') cycleRowH();
@@ -1300,9 +1300,9 @@ window.addEventListener('table-cmd', onTableCmd);
 onBeforeUnmount(() => window.removeEventListener('table-cmd', onTableCmd));
 
 /* ═══ ：Ctrl+F 稳定接管（实报「不稳定展示/弹浏览器原生查找」）═══
-   此前 Ctrl+F 只在表格根获焦时生效——焦点在页面任意处时落到浏览器原生查找。
-   现在 document 捕获级接管：本表可见 + 非输入态 + 未被其他表处理 → 打开表内查找。
-   输入态（INPUT/TEXTAREA/SELECT/富文本/Monaco）让路；多表同屏由 defaultPrevented 仲裁。 */
+ 此前 Ctrl+F 只在表格根获焦时生效——焦点在页面任意处时落到浏览器原生查找。
+ 现在 document 捕获级接管：本表可见 + 非输入态 + 未被其他表处理 → 打开表内查找。
+ 输入态（INPUT/TEXTAREA/SELECT/富文本/Monaco）让路；多表同屏由 defaultPrevented 仲裁。 */
 function onDocFind(e: KeyboardEvent) {
   if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
   if (e.key.toLowerCase() !== 'f') return;
@@ -1326,7 +1326,7 @@ function displayVal(hit: SearchHit, field: string) {
 function cellText(v: any): string {
   if (v == null) return '';
   /* 60→160——与 QRT MAX_CELL 同口径（此前同是 RT 的两个工作台
-     截断观感不一致；超长仍可单击展开/「查看完整值」） */
+ 截断观感不一致；超长仍可单击展开/「查看完整值」） */
   if (typeof v === 'object') return trunc(JSON.stringify(v), 160);
   return trunc(v, 160);
 }
@@ -1334,17 +1334,17 @@ function cellTitle(hit: SearchHit, c: string): string {
   const v = getSourceVal(hit, c);
   return typeof v === 'string' ? v : JSON.stringify(v);
 }
-/*  表格交互：epoch 毫秒人性化显示——13 位数字落在 2008~2049 年区间才转换
-   （19 位雪花 ID / 订单号不会误伤）；title/copy 始终保留原始值 */
+/* 表格交互：epoch 毫秒人性化显示——13 位数字落在 2008~2049 年区间才转换
+ （19 位雪花 ID / 订单号不会误伤）；title/copy 始终保留原始值 */
 function epochText(v: any): string | null {
   return epochMsText(v);
 }
-/*  表格交互：截断值单击=展开/收起全宽多行
-   v3.0.0：Enter 键盘路径同入口——e 兼容 MouseEvent|KeyboardEvent（函数体不读指针字段）。
-   ·裁决：单击自动复制退役——「单击就复制不对，我本来想复制值进去，
-   那不就还要复制一次吗」：自动复制在「复制外部值→双击编辑→粘贴进单元格」流中覆盖
-   剪贴板（双击的 click 先于 dblclick，粘贴得到旧值）。复制保留显式路径：右键菜单
-   「复制值/复制 JSON」、Ctrl+C 行复制、列头复制整列、hover 行内钮。 */
+/* 表格交互：截断值单击=展开/收起全宽多行
+ v3.0.0：Enter 键盘路径同入口——e 兼容 MouseEvent|KeyboardEvent（函数体不读指针字段）。
+ ·裁决：单击自动复制退役——「单击就复制不对，我本来想复制值进去，
+ 那不就还要复制一次吗」：自动复制在「复制外部值→双击编辑→粘贴进单元格」流中覆盖
+ 剪贴板（双击的 click 先于 dblclick，粘贴得到旧值）。复制保留显式路径：右键菜单
+ 「复制值/复制 JSON」、Ctrl+C 行复制、列头复制整列、hover 行内钮。 */
 function onCellClick(e: MouseEvent | KeyboardEvent, hit: SearchHit, c: string) {
   if (suppressClick) return; /* ：框选拖出后的那次 click 不当单击处理 */
   if (editing.value) return; /* 编辑态直通：input 内选区/粘贴回归原生语义 */
@@ -1368,8 +1368,8 @@ function cellCls(v: any): string {
   return '';
 }
 /* ═══ W7：长 JSON 单元格折叠预览（plain object）——首键短预览+{…}N 键 chip 形态，
-   点击开既有单元格详情弹窗（detailOpen 通道，不引入第二套展开态）；
-   数组/空对象不折叠（回落既有截断串）；title 恒 raw 全串（cellTitle 铁律不涉）═══ */
+ 点击开既有单元格详情弹窗（detailOpen 通道，不引入第二套展开态）；
+ 数组/空对象不折叠（回落既有截断串）；title 恒 raw 全串（cellTitle 铁律不涉）═══ */
 function objChip(v: any): { label: string; n: number } | null {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
   const keys = Object.keys(v);
@@ -1380,29 +1380,29 @@ function objChip(v: any): { label: string; n: number } | null {
 }
 
 /* ═══ W-A：ES highlight 片段净化与渲染 ═══
-   片段是文档内容直出的 HTML（存储型注入面：<img onerror> 即进 DOM）。
-   （立牌兑现）：净化函数收编 utils/highlightSanitize.hlSafe 单源
-   （本地同构定义退役，行为零变化——整段转义后只放行高亮标签 <em>/<mark>（可带 class
-   属性）；pre_tags 若配了其他标签（<b> 等）保持转义纯文本，失败闭合（fail-closed））。 */
+ 片段是文档内容直出的 HTML（存储型注入面：<img onerror> 即进 DOM）。
+ （立牌兑现）：净化函数合并 utils/highlightSanitize.hlSafe 单源
+ （本地同构定义退役，行为零变化——整段转义后只放行高亮标签 <em>/<mark>（可带 class
+ 属性）；pre_tags 若配了其他标签（<b> 等）保持转义纯文本，失败闭合（fail-closed）。 */
 /** 该行该列的 highlight 片段（已净化，空串=无片段回落普通渲染）
- *   T2：装配（join ' … ' + hlSafe 净化 + 空档短路）收编
- *  highlightSanitize.hlSegment 单源一行委托（QRT highlight opt-in 同源；行为零变化，
- *  函数名/v-html 出口有 queryHighlightChain 源码锁保全） */
+ * T2：装配（join ' … ' + hlSafe 净化 + 空档短路）合并
+ * highlightSanitize.hlSegment 单源一行委托（QRT highlight opt-in 同源；行为零变化，
+ * 函数名/v-html 出口有 queryHighlightChain 源码锁保全） */
 function hlHtml(hit: SearchHit, c: string): string {
   return hlSegment(hit.highlight?.[c]);
 }
-/*  P2-1：ES 类型 → 语义色类—— W-A 抽 utils/typeTiers 单一出处
-   （QRT 同源），本文件 import 引入；样式 .rt-th-type.rt-ty-* 留本文件 scoped */
+/* P2-1：ES 类型 → 语义色类—— W-A 抽 utils/typeTiers 单一出处
+ （QRT 同源），本文件 import 引入；样式 .rt-th-type.rt-ty-* 留本文件 scoped */
 
 /* ═══ W7：语义格式化显示层（usePref 全局键 es_tbl_sem，默认开）═══
-   只动「显示」：复制/导出/cellTitle 恒 raw 原文（铁律不涉）；关闭即回落既有渲染。
-   ① date 类型字段（fieldTypes 判；epoch 毫秒走既有 epochText 通道）ISO 串 → 本地
-      「YYYY-MM-DD HH:mm:ss」；② 数值列（numericCols 采样口径）fmtNum 千分位
-      （右对齐经既有 num-col 类）；③ ip 列等宽（ip-col 类，字段类型或列名兜底判）。
-    W-B：内部 ref 更名 semPref 让位同名 prop semOn（语义渲染扩展开关，
-   见 semText/semToneCls；pref 层与 prop 层叠加不互斥） */
+ 只动「显示」：复制/导出/cellTitle 恒 raw 原文（铁律不涉）；关闭即回落既有渲染。
+ ① date 类型字段（fieldTypes 判；epoch 毫秒走既有 epochText 通道）ISO 串 → 本地
+ 「YYYY-MM-DD HH:mm:ss」；② 数值列（numericCols 采样口径）fmtNum 千分位
+ （右对齐经既有 num-col 类）；③ ip 列等宽（ip-col 类，字段类型或列名兜底判）。
+ W-B：内部 ref 更名 semPref 让位同名 prop semOn（语义渲染扩展开关，
+ 见 semText/semToneCls；pref 层与 prop 层叠加不互斥） */
 const semPref = usePref('es_tbl_sem', true) as Ref<boolean>;
-/*  T1：IP_TYPE_RE 本地字面退役改引 typeTiers.isIpType（单源，行为零变化） */
+/* T1：IP_TYPE_RE 本地字面退役改引 typeTiers.isIpType（单源，行为零变化） */
 const IP_NAME_RE = /(^|_)(ip|ipv4|ipv6)$/i;
 function isIpCol(c: string): boolean {
   const t = props.fieldTypes?.[c];
@@ -1418,11 +1418,11 @@ function localDateTime(d: Date): string {
   return `${d.getFullYear()}-${P2(d.getMonth() + 1)}-${P2(d.getDate())} ${P2(d.getHours())}:${P2(d.getMinutes())}:${P2(d.getSeconds())}`;
 }
 /* 显示层文本：semOn 扩展（ W-B：bytes/duration/percent 命中显示 useSemFormat
-   格式化 text，title/复制/导出恒 raw）→ semPref 开→date 本地化/数值千分位，否则回落 cellText（恒截断 160 防撑爆）
-   semRawCols 命中列 noInfer 抑制「按值推断」（显式 fieldTypes 标注不受影响）
-   显式非语义类型（binary/dense_vector/histogram… 16 型族）同效抑制——
-   守卫并上 if 条件位（semFormat 调用字面 534 源码锁钉死改旁不改锚；行为等价于 noInfer
-   并上 isNonSemanticType：非语义型永不在 useSemFormat 显式标注白名单内；QRT displayText 同款） */
+ 格式化 text，title/复制/导出恒 raw）→ semPref 开→date 本地化/数值千分位，否则回落 cellText（恒截断 160 防撑爆）
+ semRawCols 命中列 noInfer 抑制「按值推断」（显式 fieldTypes 标注不受影响）
+ 显式非语义类型（binary/dense_vector/histogram… 16 型族）同效抑制——
+ 守卫并上 if 条件位（semFormat 调用字面 534 源码锁钉死改旁不改锚；行为等价于 noInfer
+ 并上 isNonSemanticType：非语义型永不在 useSemFormat 显式标注白名单内；QRT displayText 同款） */
 const semRawSet = computed(() => new Set(props.semRawCols ?? []));
 function semText(v: any, c: string): string {
   if (props.semOn && !isNonSemanticType(props.fieldTypes?.[c])) {
@@ -1437,20 +1437,20 @@ function semText(v: any, c: string): string {
   if (typeof v === 'number' && numericCols.value.has(c)) return fmtNum(v);
   return cellText(v);
 }
-/*  W-B：semOn 命中分档类（percent 三档 tone → rt-sem-g/y/r；bytes/duration 无档）——
-   未命中/未开 prop 返回空对象（零增量；类名新空间不触既有锚）。
-   semRawCols 命中列 noInfer 抑制按值推断（percent 误判档随之失效）。
-   显式非语义类型同守卫（557 semText 对称；tone 分档随推断一起沉默） */
+/* W-B：semOn 命中分档类（percent 三档 tone → rt-sem-g/y/r；bytes/duration 无档）——
+ 未命中/未开 prop 返回空对象（零增量；类名新空间不触既有锚）。
+ semRawCols 命中列 noInfer 抑制按值推断（percent 误判档随之失效）。
+ 显式非语义类型同守卫（557 semText 对称；tone 分档随推断一起沉默） */
 function semToneCls(v: any, c: string): Record<string, boolean> {
   if (!props.semOn || v === null || v === undefined || isNonSemanticType(props.fieldTypes?.[c])) return {};
   const f = semFormat(v, props.fieldTypes?.[c] ?? '', { noInfer: semRawSet.value.has(c) });
   return f?.tone ? { ['rt-sem-' + f.tone]: true } : {};
 }
 
-/* ═══  P0-1：结果内查找（Ctrl+F）═══
-   搜索范围钉死 renderHits×visibleCols（所见即所搜，截断时 HitNav 旁 ≈ 提示）；
-   匹配口径=显示文本（epoch 人性化后的所见即所搜）；命中格琥珀底+mark 切分，
-   当前命中 scrollIntoView 落位（dbx Grid SearchBar 交互：Enter 下一个/Shift+Enter 上一个）。 */
+/* ═══ P0-1：结果内查找（Ctrl+F）═══
+ 搜索范围钉死 renderHits×visibleCols（所见即所搜，截断时 HitNav 旁 ≈ 提示）；
+ 匹配口径=显示文本（epoch 人性化后的所见即所搜）；命中格琥珀底+mark 切分，
+ 当前命中 scrollIntoView 落位（dbx Grid SearchBar 交互：Enter 下一个/Shift+Enter 上一个）。 */
 const {
   kw: searchKw, open: searchOpen, deferred: searchDeferred,
   matches: searchMatches, matchSet: searchMatchSet,
@@ -1464,8 +1464,8 @@ const {
     return h && c ? (epochText(displayVal(h, c)) ?? semText(displayVal(h, c), c)) : '';
   },
   /* 件④：date 列第三遍归一接线（件④ QRT 半边的 RT 对称件，
-     useGridSearch 可选 colType 消费）——date 列且 kw/格文本都呈日期形态时分隔符归一
-     （/ . 与 - 互认）；fieldTypes 与列头徽标同一读取口径，非 date 列零行为变化 */
+ useGridSearch 可选 colType 消费）——date 列且 kw/格文本都呈日期形态时分隔符归一
+ （/ . 与 - 互认）；fieldTypes 与列头徽标同一读取口径，非 date 列零行为变化 */
   colType: (ci) => props.fieldTypes?.[visibleCols.value[ci] ?? ''],
 });
 function isSearchHit(ri: number, ci: number) { return searchMatchSet.value.has(ri + ':' + ci); }
@@ -1489,7 +1489,7 @@ watch(searchCur, async () => {
 });
 async function openSearch() {
   /* ·单框双效（D4）：searchable 档=聚焦常驻快筛框（独立查找条已并入）；
-     非 searchable 档走 229 原路（表格必有查找立法不回退） */
+ 非 searchable 档走 229 原路（表格必有查找约定不回退） */
   if (props.searchable) {
     (rootEl.value?.querySelector('.rt-qsearch-inp') as HTMLInputElement | null)?.focus();
     return;
@@ -1509,12 +1509,12 @@ function closeSearch() {
   prevHitCurEl = null;
 }
 /* ═══ ·单框双效（620 稿 D1~D5 裁决）：searchable 档查找并入快筛框 ═══
-   词桥：快筛词驱动 useGridSearch（150ms 防抖出 matchSet/mark）——同一词一条口径，
-   输入即过滤（quickFilterEff 既有链，全量 hits）+行内 mark 点亮（哪段命中可见）；
-   清词即时清生效词（不等防抖，closeSearch 语义等值平移）；非 searchable 档框不在场
-   本桥空转（HitNav 自持输入不受扰）。
-   Enter 桥接（D2）：过滤后所见行皆命中行，行级滚动到下一命中行（回绕；宽表横向
-   滚动场景的行级定位；hit-cur 落位语义留给非 searchable 档 HitNav）。 */
+ 词桥：快筛词驱动 useGridSearch（150ms 防抖出 matchSet/mark）——同一词一条口径，
+ 输入即过滤（quickFilterEff 既有链，全量 hits）+行内 mark 点亮（哪段命中可见）；
+ 清词即时清生效词（不等防抖，closeSearch 语义等值平移）；非 searchable 档框不在场
+ 本桥空转（HitNav 自持输入不受扰）。
+ Enter 桥接（D2）：过滤后所见行皆命中行，行级滚动到下一命中行（回绕；宽表横向
+ 滚动场景的行级定位；hit-cur 落位语义留给非 searchable 档 HitNav）。 */
 watch(searchableKw, (v) => {
   searchKw.value = v;
   if (!v.trim()) searchDeferred.value = '';
@@ -1528,10 +1528,10 @@ function bridgeNext() {
   if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'center' });
 }
 /* Ctrl+F 打开；搜索开着时 Esc 先关搜索（不落到 clearSel）。收口唯一 keydown 入口：
-   处理完自身语义后转交行导航内核（Vue 模板同元素不允许重复 @keydown 属性）。
-   Delete/Backspace 与 Esc 的原语义在 onGridKeydown 尾部分派 */
+ 处理完自身语义后转交行导航内核（Vue 模板同元素不允许重复 @keydown 属性）。
+ Delete/Backspace 与 Esc 的原语义在 onGridKeydown 尾部分派 */
 function onGridKeydown(e: KeyboardEvent) {
-  /*  P2-9：Ctrl+Z 撤销待提交——编辑框内不接管（Monaco/输入框文本撤销优先） */
+  /* P2-9：Ctrl+Z 撤销待提交——编辑框内不接管（Monaco/输入框文本撤销优先） */
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
     const t = e.target as HTMLElement | null;
     if (t?.tagName === 'INPUT' || t?.tagName === 'TEXTAREA') return;
@@ -1551,10 +1551,10 @@ function onGridKeydown(e: KeyboardEvent) {
     return;
   }
   /* W7：Esc=收起全部行内展开（裁决：全收）；无展开才落清勾选/框选。
-     输入态让路——searchable 内建搜索框（TableQSearch）接线后「过滤→
-     全选→Esc 清词」动线下 Esc 冒泡到此被 clearSel 静默清空勾选=状态重置违例（铁律 B
-     「状态不重置」）；输入框 Esc 归还自持语义（搜索框清词/行内编辑归还浏览器），
-     非输入态网格 Esc 语义不变（清勾选/框选/收展开原样） */
+ 输入态让路——searchable 内建搜索框（TableQSearch）接线后「过滤→
+ 全选→Esc 清词」动线下 Esc 冒泡到此被 clearSel 静默清空勾选=状态重置违例（铁律 B
+ 「状态不重置」）；输入框 Esc 归还自持语义（搜索框清词/行内编辑归还浏览器），
+ 非输入态网格 Esc 语义不变（清勾选/框选/收展开原样） */
   if (e.key === 'Escape') {
     const t0 = e.target as HTMLElement | null;
     if (t0 && (t0.tagName === 'INPUT' || t0.tagName === 'TEXTAREA' || t0.tagName === 'SELECT' || t0.isContentEditable)) return;
@@ -1562,17 +1562,17 @@ function onGridKeydown(e: KeyboardEvent) {
     clearSel(); return;
   }
   /* 键盘闭环守卫：输入焦点（查找框 HitNav/行内编辑/勾选列筛选等）下，编辑键与导航键
-     归还浏览器——此前查找框里 Backspace 冒泡到这里被拦截成「删除勾选行」
-     （preventDefault 吃掉退格 + canOps 时误触批量删除确认链），
-     ↑↓/Home/End/Ctrl+C/F2 同样被网格语义截胡，输入框键盘闭环断裂 */
+ 归还浏览器——此前查找框里 Backspace 冒泡到这里被拦截成「删除勾选行」
+ （preventDefault 吃掉退格 + canOps 时误触批量删除确认链），
+ ↑↓/Home/End/Ctrl+C/F2 同样被网格语义截胡，输入框键盘闭环断裂 */
   const tgt = e.target as HTMLElement | null;
   if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT' || tgt.isContentEditable)) return;
   /* 待提交一键提交（键盘路径）——表格聚焦且有 pending 时 Ctrl+S / Ctrl+Enter
-     直提 commitPending（此前提交必须鼠标两击：点 chip 开气泡→点「提交全部」）。
-     输入态让路守卫照抄上方既有短路（历史坑：查找框 Backspace 被网格语义截胡）——
-     行内编辑框的 Enter 提交单格、查找框回车跳命中，均先于此分支 return 不被接管；
-     Ctrl+S 无 pending 时也吞掉（防浏览器保存页面对话框弹出）。本分支必须在 onRowNavKey
-     之前 return：useRowNav 的 Enter 不查 ctrlKey，Ctrl+Enter 否则会误触发「打开文档」 */
+ 直提 commitPending（此前提交必须鼠标两击：点 chip 开气泡→点「提交全部」）。
+ 输入态让路守卫照抄上方既有短路（历史坑：查找框 Backspace 被网格语义截胡）——
+ 行内编辑框的 Enter 提交单格、查找框回车跳命中，均先于此分支 return 不被接管；
+ Ctrl+S 无 pending 时也吞掉（防浏览器保存页面对话框弹出）。本分支必须在 onRowNavKey
+ 之前 return：useRowNav 的 Enter 不查 ctrlKey，Ctrl+Enter 否则会误触发「打开文档」 */
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key.toLowerCase() === 's' || e.key === 'Enter')) {
     e.preventDefault();
     if (pending.value.size) void commitPending();
@@ -1580,7 +1580,7 @@ function onGridKeydown(e: KeyboardEvent) {
   }
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); onDeleteKey(); return; }
   /* F2=编辑焦点行首列（Excel F2 惯例）——此前键盘无路径进入行内编辑，
-     只能双击；编辑态中 F2 不接管（落到 onRowNavKey 被 guard 拦下） */
+ 只能双击；编辑态中 F2 不接管（落到 onRowNavKey 被 guard 拦下） */
   if (e.key === 'F2' && !editing.value && focusIdx.value >= 0) {
     const h = renderHits.value[focusIdx.value];
     const col = visibleCols.value[0];
@@ -1594,9 +1594,9 @@ function onGridKeydown(e: KeyboardEvent) {
   onRowNavKey(e);
 }
 
-/* ═══  P0-2：单元格详情弹层 ═══
-   完整值嵌 JsonTree（tools 自带搜索定位/复制全文）；对象用原值、标量包列名键统一成树；
-   maxChildren=200/maxStrLen=4000 防 MB 级值拖死弹层（全文复制走 JsonTree 工具条不受伤） */
+/* ═══ P0-2：单元格详情弹层 ═══
+ 完整值嵌 JsonTree（tools 自带搜索定位/复制全文）；对象用原值、标量包列名键统一成树；
+ maxChildren=200/maxStrLen=4000 防 MB 级值拖死弹层（全文复制走 JsonTree 工具条不受伤） */
 const cellDetail = ref<{ hit: SearchHit; col: string } | null>(null);
 const detailOpen = computed({
   get: () => !!cellDetail.value,
@@ -1621,10 +1621,10 @@ const detailMeta = computed(() => {
   return `${d.col} · _id ${d.hit._id}${t ? ' · ' + t : ''} · ${kind}`;
 });
 
-/* ═══  W3：rowDrawer 行详情侧拉平移 RT（QRT  W-B 同款，行为逐字对齐）═══
-   入口=单元格右键菜单「行详情」项（props.rowDrawer 门控，缺省 false 无项零增量）；
-   面板=整行 visibleCols 键值对 + 逐格复制 + 页脚「复制整行 JSON」（copyRowJson 同一口径）；
-   行身份存 hit 引用（_id 稳定，重排序不位移），ri 只供「第 N 行」文案。 */
+/* ═══ W3：rowDrawer 行详情侧拉平移 RT（QRT W-B 同款，行为逐字对齐）═══
+ 入口=单元格右键菜单「行详情」项（props.rowDrawer 门控，缺省 false 无项零增量）；
+ 面板=整行 visibleCols 键值对 + 逐格复制 + 页脚「复制整行 JSON」（copyRowJson 同一口径）；
+ 行身份存 hit 引用（_id 稳定，重排序不位移），ri 只供「第 N 行」文案。 */
 const rdwRow = ref<{ hit: SearchHit; ri: number } | null>(null);
 const rdwOpen = computed({
   get: () => !!rdwRow.value,
@@ -1648,7 +1648,7 @@ const pendingCount = computed(() => {
   return n;
 });
 /* 方案 A：变更明细前 3 条（行 id × 字段 旧值→新值，单条撤销）——
-   超出折叠计数（「… 共 N 处」）；jstr 统一对象序列化展示 */
+ 超出折叠计数（「… 共 N 处」）；jstr 统一对象序列化展示 */
 const pendItems = computed(() => {
   const out: Array<{ id: string; field: string; oldVal: any; newVal: any }> = [];
   pending.value.forEach((fields, id) => {
@@ -1670,15 +1670,15 @@ function pendingCell(id: string, field: string) {
 const wrapEl = ref<HTMLElement | null>(null);
 const showTop = ref(false);
 /* 横向滚动态可视化——冻结列(sticky+不透明背景)会把滚入其下方的普通列
-   开头盖住（冻结窗格语义），此前无任何视觉反馈，用户以为「渲染遮挡缺字」。
-   scrollLeft>0 时给冻结缘加投影，明示「下方有内容」。 */
+ 开头盖住（冻结窗格语义），此前无任何视觉反馈，用户以为「渲染遮挡缺字」。
+ scrollLeft>0 时给冻结缘加投影，明示「下方有内容」。 */
 const hScrolled = ref(false);
 function onWrapScroll() {
   const el = wrapEl.value;
   if (el) { showTop.value = el.scrollTop > 600; hScrolled.value = el.scrollLeft > 0; }
 }
 /* 切索引/换存储键时横向滚动位归零——新维度回列首，防止上一维度
-   的 scrollLeft 残留让新结果集一打开就是「列首被冻结层盖住」的假遮挡态 */
+ 的 scrollLeft 残留让新结果集一打开就是「列首被冻结层盖住」的假遮挡态 */
 watch(() => props.storageKey || props.index, () => {
   const el = wrapEl.value;
   if (el) { el.scrollLeft = 0; hScrolled.value = false; }
@@ -1688,14 +1688,14 @@ function backToTop() {
   if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
   showTop.value = false;
 }
-/* 键盘行导航（Xmigrate 范式收编）——表格获焦后 ↑↓/Home/End 移动高亮行；
-   内核收编 useRowNav 共享 composable（QueryResultTable 同批接入，逻辑零变化）；
-   输入框聚焦时（行内编辑/搜索）不接管（guard）；排序/翻页导致行集变化时自动钳位。
-   Enter=打开焦点行文档、Ctrl+C=复制焦点行 JSON（Xmigrate 同语义，
-   复制列集=visibleCols 所见即所得）。 */
-/*  M1：行集钳位 renderHits——此前行集=sortedHits 全量、渲染只 2000 行，
-   ↓ 走过 2000 行后高亮挂在不存在的 DOM 上（高亮消失）、Enter/Ctrl+C 却仍对不可见行生效；
-   现「所见即所导航」：截断时键盘导航只作用于已渲染的前 N 行（55 批滚动跟随欠账一并收口） */
+/* 键盘行导航（Xmigrate 范式合并）——表格获焦后 ↑↓/Home/End 移动高亮行；
+ 内核合并 useRowNav 共享 composable（QueryResultTable 同步接入，逻辑零变化）；
+ 输入框聚焦时（行内编辑/搜索）不接管（guard）；排序/翻页导致行集变化时自动钳位。
+ Enter=打开焦点行文档、Ctrl+C=复制焦点行 JSON（Xmigrate 同语义，
+ 复制列集=visibleCols 所见即所得）。 */
+/* M1：行集钳位 renderHits——此前行集=sortedHits 全量、渲染只 2000 行，
+ ↓ 走过 2000 行后高亮挂在不存在的 DOM 上（高亮消失）、Enter/Ctrl+C 却仍对不可见行生效；
+ 现「所见即所导航」：截断时键盘导航只作用于已渲染的前 N 行（55 批滚动跟随欠账一并收口） */
 const { focusIdx, tblFocus, onRowNavKey } = useRowNav(
   computed(() => renderHits.value.length),
   {
@@ -1704,16 +1704,16 @@ const { focusIdx, tblFocus, onRowNavKey } = useRowNav(
     onCopy: (i) => { const h = renderHits.value[i]; if (h) copyRowJson(h); },
   },
 );
-/*  M1：滚动跟随（QRT 62 批同款收编）——↑↓ 走出视口自动 nearest 跟随，
-   不打断当前视野；编辑输入框聚焦时不抢滚（focusIdx 推进被 guard 拦截） */
+/* M1：滚动跟随（QRT 62 批同款合并）——↑↓ 走出视口自动 nearest 跟随，
+ 不打断当前视野；编辑输入框聚焦时不抢滚（focusIdx 推进被 guard 拦截） */
 watch(focusIdx, (i) => {
   if (i < 0 || !tblFocus.value) return;
   const tr = rootEl.value?.querySelector('tbody tr:nth-child(' + (i + 1) + ')') as HTMLElement | null;
   tr?.scrollIntoView?.({ block: 'nearest' });
 });
 
-/* 行复制组装收编为函数——键盘 Ctrl+C（）与 hover 行内钮共用同一口径
-   （列集=visibleCols 所见即所得） */
+/* 行复制组装合并为函数——键盘 Ctrl+C（与 hover 行内钮共用同一口径
+ （列集=visibleCols 所见即所得） */
 function copyRowJson(h: SearchHit) {
   const row: Record<string, any> = { _id: h._id };
   for (const c of visibleCols.value) row[c] = h._source?.[c] ?? null;
@@ -1724,8 +1724,8 @@ const editing = ref<{ id: string; field: string; value: string } | null>(null);
 const editInp = ref<HTMLInputElement[]>();
 async function startEdit(hit: SearchHit, field: string) {
   /* OPERATOR+ 才能就地编辑(update-document=普通写档)——
-     VIEWER 双击静默不进编辑态(提示文案已按角色切换,不会误以为坏掉)。
-     连接级写授权由 canWriteOn 镜像后端写门语义(见 canWrite 定义) */
+ VIEWER 双击静默不进编辑态(提示文案已按角色切换,不会误以为坏掉)。
+ 连接级写授权由 canWriteOn 镜像后端写门语义(见 canWrite 定义) */
   if (!canWrite.value) return;
   const cur = displayVal(hit, field);
   editing.value = {
@@ -1737,10 +1737,10 @@ async function startEdit(hit: SearchHit, field: string) {
 }
 
 /* 编辑态 Tab=提交当前并打开同行下一可编辑字段（Shift+Tab=上一字段；
-   行尾跨到下一行首列，行首反向跨到上一行末列，表边界停住不回卷）——dbx/Excel 内联编辑标配。
-   数据丢失根治：旧实现指望 blur 提交，但 blur 触发时 editing 已被换成下一格
-   状态——applyEdit 读到的是新格未变的值直接早退，旧格已敲的修改被静默丢弃；现改为
-   Tab 键内先同步 applyEdit 提交当前格（此刻 editing 仍是旧格），再 setTimeout(0) 开下一格。 */
+ 行尾跨到下一行首列，行首反向跨到上一行末列，表边界停住不回卷）——dbx/Excel 内联编辑标配。
+ 数据丢失根治：旧实现指望 blur 提交，但 blur 触发时 editing 已被换成下一格
+ 状态——applyEdit 读到的是新格未变的值直接早退，旧格已敲的修改被静默丢弃；现改为
+ Tab 键内先同步 applyEdit 提交当前格（此刻 editing 仍是旧格），再 setTimeout(0) 开下一格。 */
 function tabEdit(back: boolean) {
   const e = editing.value; if (!e) return;
   applyEdit();
@@ -1759,9 +1759,9 @@ function tabEdit(back: boolean) {
   }
   setTimeout(() => startEdit(nextHit, nextCol), 0);
 }
-/*  M6：中文输入法组字守卫——组字中的 Enter 是候选确认不是提交
-   （此前组字确认会误触发 applyEdit 把拼音串存进 pending；dbx 在 IME 上修过三轮：
-   v0.5.62/v0.5.64/v0.6.6，同类坑）。Esc 提交路径无需守卫（Esc 本就是取消语义） */
+/* M6：中文输入法组字守卫——组字中的 Enter 是候选确认不是提交
+ （此前组字确认会误触发 applyEdit 把拼音串存进 pending；dbx 在 IME 上修过三轮：
+ v0.5.62/v0.5.64/v0.6.6，同类坑）。Esc 提交路径无需守卫（Esc 本就是取消语义） */
 const imeComposing = ref(false);
 function onEditEnter() { if (imeComposing.value) return; applyEdit(); }
 function applyEdit() {
@@ -1780,11 +1780,11 @@ function applyEdit() {
   }
   if (JSON.stringify(oldVal) === JSON.stringify(newVal)) {
     /* ·实报「二次编辑没变化」：显示与编辑初值基准是 displayVal
-       （pending 在场读 pending.newVal），本短路的比对基准却是 _source 原值——
-       pending 在场时把值改回原值（最自然的「改回去」）被静默吞掉且 pending 残留，
-       格子纹丝不动，编辑路径到达不了撤销。短路分支区分两态：pending 在场=撤销
-       语义，接 revertOne（撤销钮同款单格 API）徽标减数+显示回原值；不在场=真
-       无操作短路维持。undoStack 残留条目由 undoLastPending 在场检查自动跳过。 */
+ （pending 在场读 pending.newVal），本短路的比对基准却是 _source 原值——
+ pending 在场时把值改回原值（最自然的「改回去」）被静默吞掉且 pending 残留，
+ 格子纹丝不动，编辑路径到达不了撤销。短路分支区分两态：pending 在场=撤销
+ 语义，接 revertOne（撤销钮同款单格 API）徽标减数+显示回原值；不在场=真
+ 无操作短路维持。undoStack 残留条目由 undoLastPending 在场检查自动跳过。 */
     if (pending.value.get(e.id)?.has(e.field)) {
       revertOne(e.id, e.field);
       store.notify('success', `已撤销 ${e.field} 修改，恢复原值`);
@@ -1794,7 +1794,7 @@ function applyEdit() {
   if (!pending.value.has(e.id)) pending.value.set(e.id, new Map());
   pending.value.get(e.id)!.set(e.field, { oldVal, newVal });
   pending.value = new Map(pending.value);
-  /*  P2-9：应用序推栈（Ctrl+Z 撤销链） */
+  /* P2-9：应用序推栈（Ctrl+Z 撤销链） */
   undoStack.value.push({ id: e.id, field: e.field });
 }
 function revertOne(id: string, field: string) {
@@ -1807,7 +1807,7 @@ function revertOne(id: string, field: string) {
 }
 function revertAll() { pending.value = new Map(); lastFailed.value.clear(); undoStack.value = []; }
 
-/* ═══  P2-7：待提交变更导出 bulk NDJSON（审计/复现/重放）═══ */
+/* ═══ P2-7：待提交变更导出 bulk NDJSON（审计/复现/重放）═══ */
 function copyBulkNdjson() {
   const changes = [...pending.value.entries()].map(([id, fields]) => ({
     id,
@@ -1828,9 +1828,9 @@ async function snapshotPng() {
   store.notify(ok ? 'success' : 'error', ok ? '表格快照已下载（PNG）' : '快照生成失败');
 }
 
-/* ═══  P2-9：编辑待提交 Ctrl+Z 栈式撤销（dbx Mod+Z 对位）═══
-   栈存「应用序」的 id::field——撤销时从栈尾找最近一个仍在 pending 的项回退
-   （已提交成功/已手动撤销的项跳过不回退）；Ctrl+Z 在编辑框内不接管（文本撤销优先） */
+/* ═══ P2-9：编辑待提交 Ctrl+Z 栈式撤销（dbx Mod+Z 对位）═══
+ 栈存「应用序」的 id::field——撤销时从栈尾找最近一个仍在 pending 的项回退
+ （已提交成功/已手动撤销的项跳过不回退）；Ctrl+Z 在编辑框内不接管（文本撤销优先） */
 const undoStack = ref<Array<{ id: string; field: string }>>([]);
 function undoLastPending() {
   while (undoStack.value.length) {
@@ -1854,7 +1854,7 @@ async function commitPending() {
   committing.value = true;
   const entries = [...pending.value.entries()];
   /* 失败原因透传——只报 id 不知道为什么失败（mapping 冲突/类型错是高频原因），
-     收集「id + 服务端原因摘要」，通知带前 3 条完整明细 */
+ 收集「id + 服务端原因摘要」，通知带前 3 条完整明细 */
   const failures: string[] = [];
   const failureTips: string[] = [];
   let done = 0;
@@ -1885,7 +1885,7 @@ async function commitPending() {
 }
 
 /* ═══ ：拖拽框选单元格区域（dbx 灵魂操作）——左键从格内拖出矩形，
-   松开完成选区；浮动条一键复制 TSV/清除。纯点击（无位移）不启动，单击复制/双击编辑不受影响。 ═══ */
+ 松开完成选区；浮动条一键复制 TSV/清除。纯点击（无位移）不启动，单击复制/双击编辑不受影响。 ═══ */
 const regionAnchor = ref<{ ri: number; ci: number } | null>(null);
 const region = ref<{ ri1: number; ri2: number; ci1: number; ci2: number } | null>(null);
 let suppressClick = false;
@@ -1952,9 +1952,9 @@ function toggleAggCell(hit: SearchHit, field: string) {
   aggCells.value = new Set(aggCells.value);
 }
 const aggStats = computed(() => {
-  /* 统计收编 utils/summarize（单趟 reduce 求 min/max）——此前
-     Math.min(...nums)/Math.max(...nums) 的展开参数在万级聚合集会 RangeError；
-     全非数值时仍返回 null（状态栏显示操作提示分支） */
+  /* 统计合并 utils/summarize（单趟 reduce 求 min/max）——此前
+ Math.min(...nums)/Math.max(...nums) 的展开参数在万级聚合集会 RangeError；
+ 全非数值时仍返回 null（状态栏显示操作提示分支） */
   const vals: number[] = [];
   aggCells.value.forEach(k => {
     const [id, field] = k.split('::');
@@ -1967,7 +1967,7 @@ const aggStats = computed(() => {
 });
 
 /* 框选区域自动聚合（dbx 选区底栏语言）——框完即显 Σ/avg/数值占比，
-   无需先 Ctrl+点击。与 aggCells（Ctrl+点散选）并存，计算层同走 summarize */
+ 无需先 Ctrl+点击。与 aggCells（Ctrl+点散选）并存，计算层同走 summarize */
 const regionSummary = computed(() => {
   const r = region.value;
   if (!r) return null;
@@ -1983,7 +1983,7 @@ const regionSummary = computed(() => {
   return summarize(vals);
 });
 
-/* ═══ Transpose（ ：开关偏好按维度记忆，经 useTablePrefs） ═══ */
+/* ═══ Transpose（开关偏好按维度记忆，经 useTablePrefs） ═══ */
 
 /* 换索引/换数据时清理状态 */
 watch(() => props.index, () => {
@@ -1994,7 +1994,7 @@ watch(() => props.index, () => {
 });
 
 /* 精确清理勾选：父组件删除成功后调用——传 ids 则只剔除已删文档、保留其余跨页勾选，
-   不传则清空全部。避免「删除成功后勾选残留幽灵 id」导致后续批量操作误伤 */
+ 不传则清空全部。避免「删除成功后勾选残留幽灵 id」导致后续批量操作误伤 */
 function clearSelected(ids?: string[]) {
   if (!ids || !ids.length) { selected.value = new Set(); return; }
   const next = new Set(selected.value);
@@ -2002,19 +2002,19 @@ function clearSelected(ids?: string[]) {
   selected.value = next;
 }
 /* 导出行集统一出口——排序序（sortedHits）+ 勾选过滤（有勾选只导选中），
-   内部 exportRows 与外部消费方（DslQueryView 导出本页）共用同一语义，防两入口割裂 */
+ 内部 exportRows 与外部消费方（DslQueryView 导出本页）共用同一语义，防两入口割裂 */
 function currentExportRows(): SearchHit[] {
   return selected.value.size
     ? sortedHits.value.filter(h => selected.value.has(h._id))
     : sortedHits.value;
 }
-/*  P1-4：待提交编辑暴露——自动刷新 guard 据此挂起（编辑挂起时不重放查询） */
+/* P1-4：待提交编辑暴露——自动刷新 guard 据此挂起（编辑挂起时不重放查询） */
 function hasPending(): boolean { return pending.value.size > 0; }
 defineExpose({ clearSel, revertAll, clearSelected, getExportRows: currentExportRows, hasPending, captureLayout, applyLayout });
 
-/* ═══  P2-8：文档对比 ═══
-   勾选 2~3 行 → 右键「文档对比」直达弹窗；行集走 currentExportRows（勾选+排序序），
-   基准默认第一篇，弹窗内 chips 换基准纯前端重算。 */
+/* ═══ P2-8：文档对比 ═══
+ 勾选 2~3 行 → 右键「文档对比」直达弹窗；行集走 currentExportRows（勾选+排序序），
+ 基准默认第一篇，弹窗内 chips 换基准纯前端重算。 */
 const docDiffShow = ref(false);
 const docDiffHits = ref<SearchHit[]>([]);
 const docDiffBase = ref(0);
@@ -2026,10 +2026,10 @@ function openDocDiff() {
   docDiffShow.value = true;
 }
 
-/* ═══  P2-11：布局一体快照 ═══
-   「保存的搜索」的布局半边——排序链+列筛选（运行态）与列选/列宽/冻结/转置/密度/行高
-   （偏好态）整体进出。偏好 ref 写入即被 useTablePrefs 落盘，恢复即持久；
-   applyLayout 对脏数据逐项防御（坏形状跳过不炸），返回是否至少恢复了一项。 */
+/* ═══ P2-11：布局一体快照 ═══
+ 「保存的搜索」的布局半边——排序链+列筛选（运行态）与列选/列宽/冻结/转置/密度/行高
+ （偏好态）整体进出。偏好 ref 写入即被 useTablePrefs 落盘，恢复即持久；
+ applyLayout 对脏数据逐项防御（坏形状跳过不炸），返回是否至少恢复了一项。 */
 function captureLayout() {
   return {
     sort: sortSpec.value.map(s => ({ ...s })),
@@ -2066,7 +2066,7 @@ function applyLayout(l: any): boolean {
     touched = true;
   }
   /* dense 布尔退役——rowH 缺席的旧保存布局把 dense=true 映射为
-     compact 档（向后兼容），新布局一律直接带 rowH */
+ compact 档（向后兼容），新布局一律直接带 rowH */
   if (l.rowH === 'compact' || l.rowH === 'standard' || l.rowH === 'cozy') { setRowH(l.rowH); touched = true; }
   else if (typeof l.dense === 'boolean') {
     const nxt: 'compact' | 'standard' = l.dense ? 'compact' : 'standard';
@@ -2076,26 +2076,26 @@ function applyLayout(l: any): boolean {
 }
 
 /* ═══ ：单元格右键菜单（dbx 风格）——复制值/复制 _id/复制整行 JSON/按此列排序。
-   teleport 自绘菜单（n-dropdown 懒渲染在 happy-dom 不可测，自绘 div 可挂载断言）；
-   菜单打开时监听一次全局 click/esc 关闭；列排序复用 sortBy 三态循环。 ═══ */
+ teleport 自绘菜单（n-dropdown 懒渲染在 happy-dom 不可测，自绘 div 可挂载断言）；
+ 菜单打开时监听一次全局 click/esc 关闭；列排序复用 sortBy 三态循环。 ═══ */
 const cellMenu = ref<{ x: number; y: number; hit: SearchHit; col: string; ri: number } | null>(null);
 function openCellMenu(e: MouseEvent, hit: SearchHit, col: string, ri: number) {
   cellMenu.value = { x: e.clientX, y: e.clientY, hit, col, ri };
 }
 /* 列头右键=列管理菜单（不用先瞄单元格；复用同一 CellContextMenu 实例） */
 const colMenu = ref<{ x: number; y: number; col: string } | null>(null);
-/* ═══  P2-3：列详情卡（dbx 列详情对位，轻量统计版）═══
-   统计内核下沉 useColStats、弹窗下沉 ColDetailModal 共享件（QRT 同批接入）；
-   口径=当前筛选后的行集（所见即所析）；labelOf 与筛选弹层同一函数 */
+/* ═══ P2-3：列详情卡（dbx 列详情对位，轻量统计版）═══
+ 统计内核下沉 useColStats、弹窗下沉 ColDetailModal 共享件（QRT 同步接入）；
+ 口径=当前筛选后的行集（所见即所析）；labelOf 与筛选弹层同一函数 */
 const colDetail = ref<string | null>(null);
 const colDetailOpen = computed({
   get: () => !!colDetail.value,
   set: (v: boolean) => { if (!v) colDetail.value = null; },
 });
 /* 统计行基（dbx 行选聚合对位）——选中行集在场=「选中∩过滤后」，
-   无选中=过滤后全量（缺省零增量）。useColStats 无缓存（statsOf 每次现算 rows()），
-   行基动态切换全链 Σ/avg/count/med/spark/dist/空值率自动跟随；列详情弹窗同源同基=
-   与聚合行同一数字（「所见即所析」口径的行选延伸） */
+ 无选中=过滤后全量（缺省零增量）。useColStats 无缓存（statsOf 每次现算 rows()），
+ 行基动态切换全链 Σ/avg/count/med/spark/dist/空值率自动跟随；列详情弹窗同源同基=
+ 与聚合行同一数字（「所见即所析」口径的行选延伸） */
 const aggBaseRows = computed<any[]>(() => selected.value.size
   ? filteredHits.value.filter(h => selected.value.has(h._id))
   : filteredHits.value);
@@ -2108,15 +2108,15 @@ const colStats = useColStats({
 const colDetailStats = computed(() => (colDetail.value ? colStats.statsOf(colDetail.value) : null));
 
 /* ═══ ：聚合 footer 行（列头菜单「聚合行」开关）═══
-   开关落盘 es_tbl_agg:<dim>（useTablePrefs 键体系旁）；数值列 Σ/avg 复用
-   useColStats.statsOf 口径（rows=过滤后行集，与列详情弹窗同一数字，所见即所析）。
-    W-A：readAggPref/aggOn/toggleAggRow/aggFoot 随壳收编 useAggRow
-   （QRT 同构段单一出处；唯一差列源 visibleCols → 参数 renderCols），
-   模板 tfoot（含 chk/act 占位 cell）保位不动（healthTablesGraft 挂载级行为锁零改锚）。
-   AggNum 补 count 档（statsOf().count 非空值计数，同一 statsOf 调用
-   零增量取字段）——tfoot「Σ … · avg …」前缀之后 append（wave535 contains 前缀锁兼容） */
-/*  T1：count 装配基座——538 源码锁 toContain 逐字节锚定 return 行（552 不得改动）。
-   median 档在 useAggRow 装配层由 wrapper 并入（QRT 同构） */
+ 开关落盘 es_tbl_agg:<dim>（useTablePrefs 键体系旁）；数值列 Σ/avg 复用
+ useColStats.statsOf 口径（rows=过滤后行集，与列详情弹窗同一数字，所见即所析）。
+ W-A：readAggPref/aggOn/toggleAggRow/aggFoot 随壳合并 useAggRow
+ （QRT 同构段单一出处；唯一差列源 visibleCols → 参数 renderCols），
+ 模板 tfoot（含 chk/act 占位 cell）保位不动（healthTablesGraft 挂载级行为锁零改锚）。
+ AggNum 补 count 档（statsOf().count 非空值计数，同一 statsOf 调用
+ 零增量取字段）——tfoot「Σ … · avg …」前缀之后 append（wave535 contains 前缀锁兼容） */
+/* T1：count 装配基座——538 源码锁 toContain 逐字节锚定 return 行（552 不得改动）。
+ median 档在 useAggRow 装配层由 wrapper 并入（QRT 同构） */
 function numericOfCount(c: string) {
   const t = props.fieldTypes?.[c];
   if (t && isNonSemanticType(t)) return null;
@@ -2127,18 +2127,18 @@ const { aggOn, toggleAggRow, aggFoot, aggSpark, aggDist } = useAggRow(
   dimension,
   () => visibleCols.value,
   /* median 并入（statsOf 复算一次取 median——基座 538 源码锁逐字节钉死不可动；
-     复算纯读无副作用，aggOn 非默认档才有开销；QRT/RT 同构） */
+ 复算纯读无副作用，aggOn 非默认档才有开销；QRT/RT 同构） */
   (c) => { const n = numericOfCount(c); return n ? { ...n, median: colStats.statsOf(c).median ?? undefined } : null; },
   /* 迷你走势数据源（useColStats.seriesOf 同硬口径；显式非语义类型同守卫不出） */
   (c) => { const t = props.fieldTypes?.[c]; if (t && isNonSemanticType(t)) return null; return colStats.seriesOf(c); },
   /* 件①：值分布数据源接线（件① QRT 半边的 RT 对称件）——useColStats.dist
-     直连（utils/distBins 单源，与列详情弹窗分布段同语汇）；守卫列（binary 等 18 型+_source）
-     useColStats 层天然 null 不出，数值点 <2 列 null */
+ 直连（utils/distBins 单源，与列详情弹窗分布段同语汇）；守卫列（binary 等 18 型+_source）
+ useColStats 层天然 null 不出，数值点 <2 列 null */
   (c) => colStats.statsOf(c).dist,
 );
 /* tfoot 空值率档数据源（aggFoot 在场=数值列口径）。：取整口径
-   下沉 useColStats.emptyPctOf 单源（QRT/RT 双份内联退役换调用，QRT 同构）；空值率不塞
-   538 源码锁钉死的 numericOfCount 装配层，仍从 statsOf 另取 */
+ 下沉 useColStats.emptyPctOf 单源（QRT/RT 双份内联退役换调用，QRT 同构）；空值率不塞
+ 538 源码锁钉死的 numericOfCount 装配层，仍从 statsOf 另取 */
 const aggEmptyPct = computed<Record<string, number>>(() => {
   const out: Record<string, number> = {};
   if (!aggOn.value) return out;
@@ -2149,8 +2149,8 @@ const aggEmptyPct = computed<Record<string, number>>(() => {
   return out;
 });
 /* tfoot 口径徽标——「选中 N 行」；交集小于选中数（部分选中行被列筛掉/
-   行集收缩）时「选中 K/N 行」（K=参与聚合的交集行数），诚实反映口径不静默回退；
-   无选中 null=零渲染 */
+ 行集收缩）时「选中 K/N 行」（K=参与聚合的交集行数），诚实反映口径不静默回退；
+ 无选中 null=零渲染 */
 const aggSelHint = computed<string | null>(() => {
   if (!selected.value.size) return null;
   const k = aggBaseRows.value.length;
@@ -2160,7 +2160,7 @@ function openColMenu(e: MouseEvent, col: string) {
   colMenu.value = { x: e.clientX, y: e.clientY, col };
 }
 /* 列头键盘菜单（键盘可达闭环）——ContextMenu 键 / Shift+F10 打开列管理，
-   坐标取列头矩形（无鼠标坐标）。enter/space 排序快捷键在本函数里直接放行 */
+ 坐标取列头矩形（无鼠标坐标）。enter/space 排序快捷键在本函数里直接放行 */
 function onColMenuKey(e: KeyboardEvent, col: string) {
   if (e.key !== 'ContextMenu' && !(e.key === 'F10' && e.shiftKey)) return;
   e.preventDefault();
@@ -2170,19 +2170,19 @@ function onColMenuKey(e: KeyboardEvent, col: string) {
 const colMenuItems = computed(() => {
   const m = colMenu.value; if (!m) return [];
   return [
-    /*  P2-3：列详情（类型/去重/空值/统计/高频值） */
+    /* P2-3：列详情（类型/去重/空值/统计/高频值） */
     { key: 'col-detail', label: '列详情', icon: Search, run: () => { colDetail.value = m.col; } },
     /* 列头右键补排序直选+复制列名（dbx 列头菜单语言——列操作主场在列头） */
     { key: 'sort-asc', label: '升序排序', icon: ArrowUp, run: () => sortBy(m.col, 'asc') },
     { key: 'sort-desc', label: '降序排序', icon: ArrowDown, run: () => sortBy(m.col, 'desc') },
-    /*  P0-4：筛选此列直达（列头漏斗同能力，菜单位更顺手） */
+    /* P0-4：筛选此列直达（列头漏斗同能力，菜单位更顺手） */
     { key: 'filter-col', label: '筛选此列', icon: Filter, run: () => { openFilterAt(m.col, m.x, m.y); } },
     { key: 'copy-col-name', label: '复制列名', icon: Copy, run: async () => {
       const ok = await copyText(m.col);
       store.notify(ok ? 'success' : 'error', ok ? '已复制列名' : '复制失败');
     } },
-    /* 复制表头（TSV）—— P2 记档放弃项落地（QRT 同款平移）；空行集走
-       matrixText 只出表头行（copyMatrix 口径铁律「表头行必含」），列=visibleCols 所见即所复 */
+    /* 复制表头（TSV）—— P2 放弃项落地（QRT 同款平移）；空行集走
+ matrixText 只出表头行（copyMatrix 口径铁律「表头行必含」），列=visibleCols 所见即所复 */
     { key: 'copy-head-tsv', label: '复制表头（TSV）', icon: ClipboardList, run: async () => {
       const ok = await copyText(matrixText({ rows: [], cols: visibleCols.value, getVal: () => null }, 'tsv'));
       store.notify(ok ? 'success' : 'error', ok ? `已复制表头 ${visibleCols.value.length} 列（TSV）` : '复制失败');
@@ -2194,8 +2194,8 @@ const colMenuItems = computed(() => {
       store.notify(ok ? 'success' : 'error', ok ? `已复制 ${m.col} 整列 ${rows.length} 行` : '复制失败');
     } },
     /* 复制整表 JSON—— QRT 单侧落地的对称件（QRT 同款平移）；
-       行集=sortedHits（与区域复制/导出行序同源），列=visibleCols 所见即所复，值=raw
-       （getSourceVal 原值——JSON 档不做显示加工，与「复制行 JSON」同语义）；零新键零持久化 */
+ 行集=sortedHits（与区域复制/导出行序同源），列=visibleCols 所见即所复，值=raw
+ （getSourceVal 原值——JSON 档不做显示加工，与「复制行 JSON」同语义）；零新键零持久化 */
     { key: 'copy-table-json', label: '复制整表 JSON', icon: Braces, run: async () => {
       const rows = sortedHits.value;
       const ok = await copyText(matrixText({ rows, cols: visibleCols.value, getVal: (h, c) => getSourceVal(h, c) }, 'json'));
@@ -2209,7 +2209,7 @@ const colMenuItems = computed(() => {
       visibleCols.value = [m.col, ...visibleCols.value.filter(c => c !== m.col)];
     } },
     /* /：冻结窗格； P2-4 升级前缀多列——「冻结到此列」
-       保持列序冻结 0..idx 全部（不再强制置首），「取消冻结」整组解除 */
+ 保持列序冻结 0..idx 全部（不再强制置首），「取消冻结」整组解除 */
     isFrozenCol(m.col)
       ? { key: 'unfreeze-col', label: freezeN.value > 1 ? `取消冻结（前 ${freezeN.value} 列）` : '取消冻结', icon: Pin, run: () => setFreezeN(0) }
       : { key: 'freeze-col', label: '冻结到此列', icon: Pin, run: () => {
@@ -2223,10 +2223,10 @@ const colMenuItems = computed(() => {
     /* 聚合 footer 行开关（默认关；状态落盘 es_tbl_agg:<dim>） */
     { key: 'toggle-agg', label: aggOn.value ? '聚合行：开 ✓' : '聚合行：关', icon: Table, run: () => toggleAggRow() },
     /* W7：语义格式化开关（默认开；usePref 全局键 es_tbl_sem 记忆——只动显示层，
-       复制/导出/title 恒 raw） */
+ 复制/导出/title 恒 raw） */
     { key: 'toggle-sem', label: semPref.value ? '语义格式化：开 ✓' : '语义格式化：关', icon: Table, run: () => { semPref.value = !semPref.value; } },
     /* reset-order 补 prefsOn 门控（与 QRT:1329 同款对称收口）——无记忆模式
-       （dimension 缺）下 visibleCols 写了无处落=假菜单项，随 hide/fit 同口径门控退役 */
+ （dimension 缺）下 visibleCols 写了无处落=假菜单项，随 hide/fit 同口径门控退役 */
     ...(prefsOn.value ? [{ key: 'reset-order', label: '重置列序', icon: RotateCcw, run: () => {
       const cur = new Set(visibleCols.value);
       visibleCols.value = allCols.value.filter(c => cur.has(c));
@@ -2234,7 +2234,7 @@ const colMenuItems = computed(() => {
   ];
 });
 /* fit 逻辑提取复用（单列/全列共用）；：内核下沉 useColFit
-   （与 QRT 同一实现；RT 前置标识列=勾选+序号 2 列，测量含列头名 口径） */
+ （与 QRT 同一实现；RT 前置标识列=勾选+序号 2 列，测量含列头名 口径） */
 const { fitCol, fitAll } = useColFit({
   rootEl: () => rootEl.value,
   cols: () => visibleCols.value,
@@ -2243,15 +2243,15 @@ const { fitCol, fitAll } = useColFit({
   setWidth: (col, w) => { colWidths.value = { ...colWidths.value, [col]: w }; },
 });
 /* v3.0.0：拖拽柄键盘微调列宽（role=slider 的 ←/→，与拖拽/双击同一写入口）；
-   钳位引用 useColFit 共享常量——与双击自适应同源，不再互相反缩 */
+ 钳位引用 useColFit 共享常量——与双击自适应同源，不再互相反缩 */
 function nudgeColWidth(col: string, delta: number) {
   const cur = colWidths.value[col] ?? 160;
   colWidths.value = { ...colWidths.value, [col]: Math.min(COL_W_MAX, Math.max(COL_W_MIN, cur + delta)) };
 }
 function closeCellMenu() { cellMenu.value = null; }
 /* 复制为 DSL（term/match/ids 按类型路由，规则见 utils/dslFromCell）。
-   值口径与 copyCell 一致取 displayVal（pending 未提交值优先）。
-   扩 exists：字段存在性检索（空值排查语义），不依赖格值 */
+ 值口径与 copyCell 一致取 displayVal（pending 未提交值优先）。
+ 扩 exists：字段存在性检索（空值排查语义），不依赖格值 */
 function menuCopyDsl(kind: 'auto' | 'ids' | 'exists') {
   const m = cellMenu.value; if (!m) return;
   closeCellMenu();
@@ -2270,7 +2270,7 @@ function menuCopyDsl(kind: 'auto' | 'ids' | 'exists') {
     store.notify(ok ? 'success' : 'error', ok ? `已复制 ${field} 的查询 DSL` : '复制失败'));
 }
 /* 勾选行同列值 → terms/ids 查询。行集=currentExportRows（勾选+排序序），
-   值取 _source 原始值（与 copySelRows 口径一致），null/空串剔除 */
+ 值取 _source 原始值（与 copySelRows 口径一致），null/空串剔除 */
 function menuCopySelTerms() {
   const m = cellMenu.value; if (!m) return;
   closeCellMenu();
@@ -2290,10 +2290,10 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onGlobalClose);
 });
 
-/* ═══  P0-3：跳转到列（dbx GoToColumn 对位）═══
-   tableRegistry 注册（命令面板合成「跳转到列 X」命令的候选源+定向调用）；
-   隐藏列先自动显示再跳（dbx 同款）；目标列头闪烁 1.4s 自动熄灭；
-   冻结列天然可见只闪不滚（scrollIntoView 对 sticky inline 方向 no-op，行为正确无需特判） */
+/* ═══ P0-3：跳转到列（dbx GoToColumn 对位）═══
+ tableRegistry 注册（命令面板合成「跳转到列 X」命令的候选源+定向调用）；
+ 隐藏列先自动显示再跳（dbx 同款）；目标列头闪烁 1.4s 自动熄灭；
+ 冻结列天然可见只闪不滚（scrollIntoView 对 sticky inline 方向 no-op，行为正确无需特判） */
 const flashCol = ref('');
 let flashTimer: ReturnType<typeof setTimeout> | null = null;
 function locateCol(col: string) {
@@ -2323,11 +2323,11 @@ const cellMenuItems = computed(() => {
   const m = cellMenu.value; if (!m) return [];
   return [
     { key: 'copy-val', label: '复制值', icon: Copy, run: () => void copyCell(m.hit, m.col) },
-    /*  P0-2：单元格详情——完整值弹层（JSON 树/搜索/复制），不再只能看截断串 */
+    /* P0-2：单元格详情——完整值弹层（JSON 树/搜索/复制），不再只能看截断串 */
     { key: 'detail-cell', label: '查看完整值', icon: Search, run: () => { cellDetail.value = { hit: m.hit, col: m.col }; } },
     /* W7：行内展开详情（与操作列钮/E 键同态：expandedRows） */
     { key: 'expand-row', label: expandedRows.value.has(rowKey(m.hit, m.ri)) ? '收起此行' : '展开此行', icon: ChevronDown, run: () => { toggleRowExpand(rowKey(m.hit, m.ri)); } },
-    /*  W3：行详情侧拉入口平移 RT（QRT 同款；props.rowDrawer 门控缺省 false 无项零增量） */
+    /* W3：行详情侧拉入口平移 RT（QRT 同款；props.rowDrawer 门控缺省 false 无项零增量） */
     ...(props.rowDrawer ? [{ key: 'row-drawer', label: '行详情', icon: Search, run: () => { rdwRow.value = { hit: m.hit, ri: m.ri }; } }] : []),
     /* 复制列名（dbx 列操作语言） */
     { key: 'copy-col-name', label: '复制列名', icon: Copy, run: async () => {
@@ -2346,10 +2346,10 @@ const cellMenuItems = computed(() => {
     /* 排序两项直选（dbx 语言——升/降分开，免去循环三态猜测） */
     { key: 'sort-asc', label: '升序排序', icon: ArrowUp, run: () => sortBy(m.col, 'asc') },
     { key: 'sort-desc', label: '降序排序', icon: ArrowDown, run: () => sortBy(m.col, 'desc') },
-    /*  P0-4：筛选此列直达（QRT 同款；弹层落在右键位置） */
+    /* P0-4：筛选此列直达（QRT 同款；弹层落在右键位置） */
     { key: 'filter-col', label: '筛选此列', icon: Filter, run: () => { openFilterAt(m.col, m.x, m.y); } },
     /* W7：以此值过滤并重查——只 emit 'filter-hit'（field/value/op），op 由 fieldTypes 判：
-       text→match（分词字段 term 查不到）、其余（含 keyword/无映射）→term；路由归消费端 */
+ text→match（分词字段 term 查不到）、其余（含 keyword/无映射）→term；路由归消费端 */
     ...(displayVal(m.hit, m.col) != null
       ? [{ key: 'filter-hit', label: '以此值过滤并重查', icon: Filter, run: () => {
           emit('filter-hit', {
@@ -2360,7 +2360,7 @@ const cellMenuItems = computed(() => {
         } }]
       : []),
     /* 复制为 DSL 组（dbx 复制 extractor 的 ES 语义对位）——
-       _id 走 ids、text 字段走 match（term 查不到分词字段）、其余走 term；类型路由见 dslFromCell */
+ _id 走 ids、text 字段走 match（term 查不到分词字段）、其余走 term；类型路由见 dslFromCell */
     ...(m.col === '_id'
       ? [{ key: 'dsl-ids', label: '复制为 ids 查询', icon: Braces, sep: true, run: () => menuCopyDsl('ids') }]
       : (props.fieldTypes?.[m.col] === 'text'
@@ -2372,10 +2372,10 @@ const cellMenuItems = computed(() => {
       : []),
     { key: 'export-view', label: `导出当前视图（${expFmt.value.toUpperCase()}）`, icon: FileDown, sep: true, run: () => exportRows(expFmt.value) },
     /* 整表复制（当前页）为 TSV——行集=currentExportRows（无勾选=当前页全量、
-       有勾选=勾选集，与导出钮同语义），格式化走 copySelRows/copyMatrix 同一口径 */
+ 有勾选=勾选集，与导出钮同语义），格式化走 copySelRows/copyMatrix 同一口径 */
     { key: 'copy-table-tsv', label: '复制整表（当前页）为 TSV', icon: ClipboardList, run: () => void copySelRows('tsv') },
     /* 列管理直达（dbx 右键标配）——隐藏/置首都落在 visibleCols 上，
-       经 useTablePrefs watch 自动落盘，恢复走列选器 */
+ 经 useTablePrefs watch 自动落盘，恢复走列选器 */
     { key: 'hide-col', label: '隐藏此列', icon: EyeOff, sep: true, run: () => {
       if (visibleCols.value.length <= 1) { store.notify('error', '至少保留一列'); return; }
       visibleCols.value = visibleCols.value.filter(c => c !== m.col);
@@ -2383,26 +2383,26 @@ const cellMenuItems = computed(() => {
     { key: 'pin-col', label: '此列置首', icon: Pin, run: () => {
       visibleCols.value = [m.col, ...visibleCols.value.filter(c => c !== m.col)];
     } },
-    /* 此列适应内容——去重收编 fitCol（列头右键 同源函数） */
+    /* 此列适应内容——去重合并 fitCol（列头右键 同源函数） */
     { key: 'fit-col', label: '此列适应内容', icon: MoveHorizontal, run: () => fitCol(m.col) },
-    /* 格右键补「全列适应内容」——此前只有列头右键有（），入口不对称；
-       改调共享 fitAll()（此前手写 for 循环与内核重复） */
+    /* 格右键补「全列适应内容」——此前只有列头右键有（入口不对称；
+ 改调共享 fitAll()（此前手写 for 循环与内核重复） */
     { key: 'fit-all', label: '全列适应内容', icon: MoveHorizontal, run: () => fitAll() },
     /* 勾选行复制组（与导出三格式语义对齐，走剪贴板免下载——聊天/Excel 直贴）。
-       行集=currentExportRows（勾选集合+排序行序），列=visibleCols（所见即所得） */
+ 行集=currentExportRows（勾选集合+排序行序），列=visibleCols（所见即所得） */
     ...(selected.value.size ? [
       { key: 'copy-sel-tsv', label: `复制 ${selected.value.size} 行为 TSV`, icon: ClipboardList, sep: true, run: () => void copySelRows('tsv') },
       { key: 'copy-sel-md', label: `复制 ${selected.value.size} 行为 Markdown`, icon: ClipboardList, run: () => void copySelRows('md') },
       { key: 'copy-sel-json', label: `复制 ${selected.value.size} 行为 JSON`, icon: ClipboardList, run: () => void copySelRows('json') },
       /* 勾选行同列值 → terms 查询（dbx IN 列表的 ES 对位；_id 列自动走 ids） */
       { key: 'copy-sel-terms', label: `复制 ${selected.value.size} 行为 terms 查询（${m.col}）`, icon: Braces, run: () => menuCopySelTerms() },
-      /*  P2-8：文档对比（Kibana Compare selected 对位）——勾 2~3 篇右键直达，字段级 diff 基准可换 */
+      /* P2-8：文档对比（Kibana Compare selected 对位）——勾 2~3 篇右键直达，字段级 diff 基准可换 */
       ...(selected.value.size >= 2 && selected.value.size <= 3
         ? [{ key: 'doc-diff', label: `文档对比（${selected.value.size} 篇）`, icon: GitCompareArrows, run: () => openDocDiff() }]
         : []),
     ] : []),
     /* 默认导出格式切换收进右键菜单（主界面只留「⬇ 导出」一键直出）——
-       点选即设为默认（usePref 记忆），导出钮立即按新格式生效 */
+ 点选即设为默认（usePref 记忆），导出钮立即按新格式生效 */
     { key: 'fmt-csv', label: `导出格式：CSV${expFmt.value === 'csv' ? ' ✓' : ''}`, icon: Table, sep: true, run: () => setExpFmt('csv') },
     { key: 'fmt-xlsx', label: `导出格式：XLSX${expFmt.value === 'xlsx' ? ' ✓' : ''}`, icon: Table, run: () => setExpFmt('xlsx') },
     { key: 'fmt-json', label: `导出格式：JSON${expFmt.value === 'json' ? ' ✓' : ''}`, icon: Braces, run: () => setExpFmt('json') },
@@ -2417,8 +2417,8 @@ function setExpFmt(fmt: 'json' | 'csv' | 'md' | 'xlsx') {
 }
 
 /* 勾选行复制——TSV=表格直贴（Excel/飞书），MD=文档/聊天，JSON=数组。
-   格式化下沉共享 copyMatrix（与框选复制同源内核；行为/通知文案不变——
-   json 分支保持 _id+全 _source 文档语义， M3：矩阵=visibleCols、文档=全量，有意分工） */
+ 格式化下沉共享 copyMatrix（与框选复制同源内核；行为/通知文案不变——
+ json 分支保持 _id+全 _source 文档语义， M3：矩阵=visibleCols、文档=全量，有意分工） */
 async function copySelRows(fmt: 'tsv' | 'md' | 'json') {
   const rows = currentExportRows();
   const text = matrixText({
@@ -2439,25 +2439,25 @@ async function copySelRows(fmt: 'tsv' | 'md' | 'json') {
 .fs { display: flex; flex-direction: column; }
 .fs:not(.fs-active) { height: 100%; }
 /* 工具行容器化（dbx 表格卡头）——与表格连成一张卡：卡头带底边框无下圆角，
-   rt-wrap 去顶边框圆角，视觉一体不再是悬空散排 */
-/*  工蚁1：显式单行纪律——勾选态反选钮（bar-right 尾部）使右簇变宽后，收缩
-   压力曾全落在左簇文本 item（rt-info min-content=单字宽）→ 文本折行把工具行撑成两行、
-   右簇溢出「反选」孤立悬挂。nowrap 立法+左簇文本项 ellipsis 吸收（rt-info）+防折
-   （rt-filtered）；右簇 flex+shrink:0 纪律住 TableShell 全局 style（内核 scoped 因
-   scopeId 不传播永不命中壳内部元素——原 .rt-bar-r 内核规则即此死规则，迁出，
-   字面新家见 TableShell，tableKernelWave538 形态锚随迁）。缺省态 DOM 逐字节不变。 */
+ rt-wrap 去顶边框圆角，视觉一体不再是悬空散排 */
+/* 工蚁1：显式单行纪律——勾选态反选钮（bar-right 尾部）使右簇变宽后，收缩
+ 压力曾全落在左簇文本 item（rt-info min-content=单字宽）→ 文本折行把工具行撑成两行、
+ 右簇溢出「反选」孤立悬挂。nowrap 约定+左簇文本项 ellipsis 吸收（rt-info）+防折
+ （rt-filtered）；右簇 flex+shrink:0 纪律住 TableShell 全局 style（内核 scoped 因
+ scopeId 不传播永不命中壳内部元素——原 .rt-bar-r 内核规则即此死规则，迁出，
+ 字面新家见 TableShell， 形态锚同步更新）。缺省态 DOM 逐字节不变。 */
 .rt-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); padding: 5px var(--sp-2h); background: var(--bg1); border: 1px solid var(--line); border-bottom: 0; border-radius: var(--r-m) var(--r-m) 0 0; flex-wrap: nowrap; }
 /* 554 工蚁1：左簇收缩缓冲——极限窄档优先牺牲计数文本完整性（省略号），保按钮全可达 */
 .rt-info { font-size: var(--fs-sm); color: var(--tx2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* 渲染截断提示行（弱化灰字，不抢数据视觉） */
 .rt-trunc-row td { text-align: center; color: var(--tx2); font-size: var(--fs-xs); padding: var(--sp-2); background: var(--bg1); }
-/*  工蚁1：.rt-bar-r 规则迁出—— TableShell 收编后此规则因 scopeId 不
-   传播而从未命中（死规则），生效面住壳全局 style（单源，QRT 同址），勿搬回内核 */
+/* 工蚁1：.rt-bar-r 规则迁出—— TableShell 合并后此规则因 scopeId 不
+ 传播而从未命中（死规则），生效面住壳全局 style（单源，QRT 同址），勿搬回内核 */
 /* 分组分隔线（dbx 工具栏：操作按语义分组，组间竖线） */
 .rt-bar-div { width: 1px; height: 14px; background: var(--line); margin: 0 3px; flex-shrink: 0; }
 /* 内建视图档（QRT 607 对称件）——seg 寄居 bar-left（.seg 站内单源不重造皮，
-   只加 nowrap 防换行）；alt 体区=border-top 分节+滚动区（QRT 607 同语言），卡片档网格
-   容器（ih-cards 同构） */
+ 只加 nowrap 防换行）；alt 体区=border-top 分节+滚动区（QRT 607 同语言），卡片档网格
+ 容器（ih-cards 同构） */
 .rt-view-seg { flex-wrap: nowrap; }
 .rt-alt-body { border-top: 1px solid var(--line); margin-top: var(--sp-2); padding-top: var(--sp-1h); }
 .rt-alt-body.is-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--sp-2h); align-content: start; }
@@ -2468,7 +2468,7 @@ async function copySelRows(fmt: 'tsv' | 'md' | 'json') {
 .rt-tool-btn { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-sm); }
 .rt-col-n { font-size: var(--fs-2xs); color: var(--tx2); font-variant-numeric: tabular-nums; }
 
-/* rt-pending 独立条已并入 rt-bar（）；降级为轻量 chip+气泡（用户反馈：警告条喧宾夺主） */
+/* rt-pending 独立条已并入 rt-bar（；降级为轻量 chip+气泡（用户反馈：警告条喧宾夺主） */
 .pend-chip { display: inline-flex; align-items: center; gap: var(--sp-1); padding: var(--sp-0) var(--sp-2); border-radius: 99px; font-size: var(--fs-xs); color: var(--warn); background: var(--warn-soft); border: 1px solid var(--warn-line); cursor: pointer; }
 .pend-chip:hover { border-color: var(--warn); }
 .pend-chip.committing { color: var(--tx2); background: var(--bg2); border-color: var(--line); cursor: default; }
@@ -2478,8 +2478,8 @@ async function copySelRows(fmt: 'tsv' | 'md' | 'json') {
 .pend-mini-commit:hover { border-color: var(--warn); }
 .pend-mini-commit:disabled { opacity: .55; cursor: not-allowed; }
 /* 方案 A：竖排文字动作列表退役→「变更明细卡+主次动作行」(设计稿 A 帧)：
-   头部计数徽标+首条 docId；明细逐条「字段 旧值(s 删除线)→新值+单条撤销」；底部动作行
-   预览/NDJSON icon/全部撤销/提交全部(pri 实底唯一主钮)。宽 360px。 */
+ 头部计数徽标+首条 docId；明细逐条「字段 旧值(s 删除线)→新值+单条撤销」；底部动作行
+ 预览/NDJSON icon/全部撤销/提交全部(pri 实底唯一主钮)。宽 360px。 */
 .pend-pop { width: 360px; max-width: 94vw; }
 .pend-pop-hd { display: flex; align-items: center; gap: var(--sp-1h); font-size: var(--fs-sm); font-weight: 650; color: var(--tx1); padding: var(--sp-1) var(--sp-1h) var(--sp-2); border-bottom: 1px solid var(--line); }
 .pend-pop-n { color: var(--ac-hi); background: var(--ac-soft); border-radius: 99px; padding: 0 var(--sp-2); font-size: var(--fs-xs); }
@@ -2500,8 +2500,8 @@ async function copySelRows(fmt: 'tsv' | 'md' | 'json') {
 .pend-pop-foot { display: flex; align-items: center; gap: var(--sp-1); padding: var(--sp-1) var(--sp-1h) var(--sp-1h); border-top: 1px solid var(--line); background: var(--bg2); }
 .pend-pop-sp { flex: 1; }
 .pend-pop-act:disabled { opacity: .55; cursor: not-allowed; }
-/* rt-export-pop/rt-exp-split/rt-exp-caret 等随 ▾ 菜单退场删除——格式切换收进右键菜单 */
-/* .rt-ctx* 死样式删除（ CellContextMenu 收编后模板零引用，删前已 grep 全仓确认） */
+/* rt-export-pop/rt-exp-split/rt-exp-caret 等随 ▾ 菜单移除删除——格式切换收进右键菜单 */
+/* .rt-ctx* 死样式删除（ CellContextMenu 合并后模板零引用，删前已 grep 全仓确认） */
 
 .rt-loading { overflow: auto; padding: var(--sp-2h); border: 1px solid var(--line); border-top: 0; border-radius: 0 0 var(--r-m) var(--r-m); background: var(--bg1); }
 /* 内置加载骨架（QRT qrt-loading 同语言） */
@@ -2514,13 +2514,13 @@ async function copySelRows(fmt: 'tsv' | 'md' | 'json') {
 }
 .rt-backtop:hover { color: var(--ac-hi); border-color: var(--ac-line); }
 /* 回顶定位壳（滚动视口外的 absolute 锚）——rt-wrap 自身是滚动容器，
-   absolute 子级会随内容滚走，定位壳必须套在外面；min-height:0 接替 rt-wrap
-   在 .rt（flex column）里的收缩职责。
-   ·实报④：flex:1→flex:0 1 auto——分页 10/页 只渲染 10 行时壳强制
-   吃满结果区，表格下方大片空白（横滚条与提示行飘在容器底沿）。改「贴合内容+上限收缩」：
-   数据少壳高=内容高（状态栏/横滚条贴到最后一行下面），数据多被 flex-shrink 压回可用
-   空间、rt-wrap 内部滚动不变；回顶 absolute 锚与 thead 吸顶零触。高度红线自证：
-   壳高由内容（行数×行高）决定，内容不因壳高变化=无正反馈回路。QRT 根非 flex 不适用记档。 */
+ absolute 子级会随内容滚走，定位壳必须套在外面；min-height:0 接替 rt-wrap
+ 在 .rt（flex column）里的收缩职责。
+ ·实报④：flex:1→flex:0 1 auto——分页 10/页 只渲染 10 行时壳强制
+ 吃满结果区，表格下方大片空白（横滚条与提示行飘在容器底沿）。改「贴合内容+上限收缩」：
+ 数据少壳高=内容高（状态栏/横滚条贴到最后一行下面），数据多被 flex-shrink 压回可用
+ 空间、rt-wrap 内部滚动不变；回顶 absolute 锚与 thead 吸顶零触。高度红线自证：
+ 壳高由内容（行数×行高）决定，内容不因壳高变化=无正反馈回路。QRT 根非 flex 不适用。 */
 .rt-wrap-shell { position: relative; flex: 0 1 auto; min-height: 0; display: flex; }
 .rt-wrap { flex: 1; min-width: 0; overflow: auto; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 var(--r-m) var(--r-m); background: var(--bg1); }
 /* v3.0.1:列数少的宽索引在宽屏下表格不满容器(右侧死空间观感)——min-width 兜底拉满 */
@@ -2540,8 +2540,8 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
 /* 列头类型徽标（dbx 学习：列名下灰字类型，keyword/text/long…） */
 /* 类型徽标蓝色语义（dbx 类型=信息蓝，区别于灰注释）；未排序 ⇅ 弱提示 */
 .rt-th-type { font-size: var(--fs-2xs); font-weight: 400; color: var(--info); opacity: .85; }
-/*  P2-1：类型语义着色简化版（五类——数值蓝/日期琥珀/布尔绿/文本中性/keyword 青；
-   dbx 有 9 类方案管理，简化为内置一套不做管理面） */
+/* P2-1：类型语义着色简化版（五类——数值蓝/日期琥珀/布尔绿/文本中性/keyword 青；
+ dbx 有 9 类方案管理，简化为内置一套不做管理面） */
 .rt-th-type.rt-ty-num { color: var(--info); }
 .rt-th-type.rt-ty-date { color: var(--warn); }
 .rt-th-type.rt-ty-bool { color: var(--ok); }
@@ -2552,9 +2552,9 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
 .rt-th-sort-hint { color: var(--tx2); opacity: .45; }
 .rt-th-in:hover .rt-th-sort-hint, th.rt-th:hover .rt-th-sort-hint { opacity: .8; }
 /* 操作列横排 nowrap——竖排时 showRelevance/canOps 的按钮数量差异会把行高
-   撑到 2~3 倍（实报「同一索引，索引工作区与查询工作台行高不一致」：查询工作台
-   show-relevance 开启多两个取证钮，竖排溢出撑行）。横排高度恒为单钮高，行高
-   完全由行高档位（compact/standard/cozy）决定，与任意 props 组合无关。 */
+ 撑到 2~3 倍（实报「同一索引，索引工作区与查询工作台行高不一致」：查询工作台
+ show-relevance 开启多两个取证钮，竖排溢出撑行）。横排高度恒为单钮高，行高
+ 完全由行高档位（compact/standard/cozy）决定，与任意 props 组合无关。 */
 .rt-act { white-space: nowrap; position: relative; }
 .rt-act .btn { vertical-align: middle; }
 .rt-cell { max-width: 320px; min-width: 40px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: copy; } /* ：260→320 与 QRT 同口径 */
@@ -2569,12 +2569,12 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
 .rt.dense .rt-tbl :deep(td), .rt.dense .rt-tbl :deep(th) { padding-top: 3px; padding-bottom: 3px; }
 /* 紧凑档关斑马纹（QRT 同惯例——行距过密时条纹反成噪音） */
 .rt.dense .rt-tbl tbody tr:nth-child(even) { background: transparent; }
-/*  P2：行高三档——cozy 宽松档 */
+/* P2：行高三档——cozy 宽松档 */
 .rt.cozy .rt-tbl :deep(td), .rt.cozy .rt-tbl :deep(th) { padding-top: var(--sp-3); padding-bottom: var(--sp-3); }
 .rt-cell.pended { background: var(--warn-soft); box-shadow: inset 2px 0 0 var(--warn); }
 /* 拖拽框选区域高亮（dbx 选区语言——蓝 soft 底+品牌描边） */
 .rt-cell.rt-region { background: var(--info-soft); box-shadow: inset 0 0 0 1px var(--info-line); }
-/*  P2-2：十字准星简化版——行 hover 带已有，格 hover 加信息色光环（行列交叉感） */
+/* P2-2：十字准星简化版——行 hover 带已有，格 hover 加信息色光环（行列交叉感） */
 .rt-cell.rt-cell:hover { box-shadow: inset 0 0 0 1px var(--info-line); }
 .rt-cell.agg-sel { background: var(--ac-soft); }
 .rt-val { font-family: var(--mono); font-size: var(--fs-sm); }
@@ -2582,48 +2582,48 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
 .rt-edit { width: 100%; padding: var(--sp-0) var(--sp-1h); font-size: var(--fs-sm); background: var(--bg0); border: 1px solid var(--ac-line); border-radius: var(--r-xs); color: var(--tx0); outline: none; }
 tr.sel td { background: var(--ac-soft); }
 
-/*  P0-1：结果内查找——命中格琥珀底、当前命中焦点环（.hit-cur 运行时挂摘）、
-   文本级 mark 切分高亮；截断 ≈ 提示弱化灰字 */
+/* P0-1：结果内查找——命中格琥珀底、当前命中焦点环（.hit-cur 运行时挂摘）、
+ 文本级 mark 切分高亮；截断 ≈ 提示弱化灰字 */
 .rt-cell.rt-hit { background: var(--warn-soft); }
 .rt-cell.rt-hit-cur { box-shadow: inset 0 0 0 2px var(--warn); }
 /* v3.0.0 纠错：num-col 样式补齐——的「数值列自动右对齐」computed+挂类俱在，
-   但 .num-col 类样式从未定义（三链断在最后一环），数字列一直左对齐 */
+ 但 .num-col 类样式从未定义（三链断在最后一环），数字列一直左对齐 */
 .rt-cell.num-col { text-align: right; font-variant-numeric: tabular-nums; }
 .rt-val mark.rt-mark { background: var(--warn); color: var(--tx-on-strong); border-radius: 2px; padding: 0 1px; }
 /* W-A：ES highlight 片段（hlSafe 净化后仅存 em/mark）——与 rt-mark/MarkText 同视觉语言 */
 .rt-hl em, .rt-hl mark { font-style: normal; background: var(--warn); color: var(--tx-on-strong); border-radius: 2px; padding: 0 1px; }
 .rt-search-note { font-size: var(--fs-2xs); color: var(--tx2); }
-/*  P0-2：单元格详情弹层元信息行 */
+/* P0-2：单元格详情弹层元信息行 */
 .rt-d-meta { font-size: var(--fs-xs); color: var(--tx2); margin-bottom: var(--sp-2); }
-/* ═══  W3：rowDrawer 行详情侧拉内容排版（QRT qrt-rdw 同款语言；仅 prop 开启后可达）═══ */
+/* ═══ W3：rowDrawer 行详情侧拉内容排版（QRT qrt-rdw 同款语言；仅 prop 开启后可达）═══ */
 .rt-rdw-meta { font-size: var(--fs-xs); color: var(--tx2); padding: var(--sp-1h) var(--sp-2); margin-bottom: var(--sp-2); background: var(--bg2); border-radius: var(--r-s); }
 .rt-rdw-row { display: flex; align-items: flex-start; gap: var(--sp-2); padding: 5px var(--sp-0); border-bottom: 1px dashed var(--line); font-size: var(--fs-xs); }
 .rt-rdw-k { flex-shrink: 0; min-width: 110px; max-width: 40%; color: var(--ac-hi); overflow-wrap: anywhere; font-family: var(--mono); }
 .rt-rdw-v { flex: 1; min-width: 0; overflow-wrap: anywhere; white-space: pre-wrap; font-family: var(--mono); }
 /* rt-cd 系列详情样式随弹窗迁入共享件 ColDetailModal（类名不变） */
-/*  P0-4：列头漏斗（QRT qrt-funnel 同语言）+筛选态提示+筛选弹层 */
+/* P0-4：列头漏斗（QRT qrt-funnel 同语言）+筛选态提示+筛选弹层 */
 .rt-funnel { position: absolute; right: 8px; top: 3px; display: inline-flex; align-items: center; padding: 1px; background: none; border: 0; color: var(--tx2); opacity: .45; cursor: pointer; }
 .rt-funnel:hover { opacity: .85; color: var(--info); }
 .rt-funnel.on { opacity: 1; color: var(--info); }
-/* 554 工蚁1：nowrap 立法迁 TableFilteredHint 单源（bar-left 筛选态提示随 561 收编片段组件；
-   弹层槽第二注入位的 .rt-fmode 规则留内核——两注入位共用类名、片段组件持同款复制） */
-/*  W3：searchable 内建搜索框样式随 561 收编 TableQSearch 全局单源（迁出勿搬回） */
-/*  W3：筛选组合档切换钮（提示行/筛选弹层共用，AND/OR 就地翻转） */
+/* 554 工蚁1：nowrap 约定迁 TableFilteredHint 单源（bar-left 筛选态提示随 561 合并片段组件；
+ 弹层槽第二注入位的 .rt-fmode 规则留内核——两注入位共用类名、片段组件持同款复制） */
+/* W3：searchable 内建搜索框样式随 561 合并 TableQSearch 全局单源（迁出勿搬回） */
+/* W3：筛选组合档切换钮（提示行/筛选弹层共用，AND/OR 就地翻转） */
 .rt-fmode { border: 1px solid var(--line); background: transparent; color: var(--info); cursor: pointer; font-size: var(--fs-2xs); border-radius: 3px; padding: 0 var(--sp-1); line-height: 1.4; }
 .rt-fmode:hover { border-color: var(--info); }
-/* 筛选弹层壳样式（.rfp-* 全家）随壳收编共享件 ColFilterPopover（cfp-*），
-   z 字面量 1200/1201 同步收口 var(--z-ctx)/calc(var(--z-ctx)+1) */
-/* 聚合 footer 行（tfoot）样式系随 561 收编 TableAggFoot 全局单源（原 scoped
-   规则打不中片段元素，迁出勿搬回；冻结 sticky/hScrolled 投影同迁） */
-/*  P0-3：跳转到列——目标列头闪烁（1400ms 自动熄灭） */
+/* 筛选弹层壳样式（.rfp-* 全家）随壳合并共享件 ColFilterPopover（cfp-*），
+ z 字面量 1200/1201 同步收口 var(--z-ctx)/calc(var(--z-ctx)+1) */
+/* 聚合 footer 行（tfoot）样式系随 561 合并 TableAggFoot 全局单源（原 scoped
+ 规则打不中片段元素，迁出勿搬回；冻结 sticky/hScrolled 投影同迁） */
+/* P0-3：跳转到列——目标列头闪烁（1400ms 自动熄灭） */
 .rt-th.rt-col-flash { animation: rt-col-flash-kf 1.4s ease-out; }
 @keyframes rt-col-flash-kf { 0%, 60% { background: var(--info-soft); box-shadow: inset 0 0 0 2px var(--info); } 100% { background: transparent; } }
-/*  P1-6：列拖拽——拖动源半透明、落点插入指示条（before 左缘/after 右缘） */
+/* P1-6：列拖拽——拖动源半透明、落点插入指示条（before 左缘/after 右缘） */
 .rt-th-name[draggable="true"] { cursor: grab; }
 .rt-th-name.rt-drag-src { opacity: .4; }
 .rt-th.rt-drop-before { box-shadow: inset 3px 0 0 var(--info); }
 .rt-th.rt-drop-after { box-shadow: inset -3px 0 0 var(--info); }
-/*  P1-3：多行转置——字段名列左固定（sticky left 必配 min-width 铁律）、值列 pre-wrap */
+/* P1-3：多行转置——字段名列左固定（sticky left 必配 min-width 铁律）、值列 pre-wrap */
 .rt-transposed .rt-t-field, .rt-transposed .rt-t-key { position: sticky; left: 0; z-index: 1; background: var(--bg2); box-shadow: inset -1px 0 0 var(--line); text-align: left; }
 .rt-transposed .rt-t-field { min-width: 140px; }
 .rt-transposed .rt-t-key { min-width: 120px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2631,17 +2631,17 @@ tr.sel td { background: var(--ac-soft); }
 .rt-t-n { height: 22px; font-size: var(--fs-xs); background: var(--bg2); border: 1px solid var(--line); border-radius: var(--r-xs); color: var(--tx1); }
 
 /* ═══ ：冻结标识列（chk+序号 sticky 左缘，dbx/Excel 冻结窗格）——
-   宽表横向滚动时行身份（勾选/序号）不滚走。border-collapse 下 sticky 自带边框会丢，
-   右分隔线用 box-shadow 画；背景必须不透明，且 hover/选中/焦点行三态同步。
-   修复：min-width 锁死列宽——table-layout:auto 会把 width 建议值压缩
-   （idx 列实际渲染 ~40px），而 sticky left:46px 是硬编码，冻结层右缘(46+52=98px)
-   越过数据列真实起点(86px)，不透明背景遮住首列左侧 1-2 个字符（dm.→m.、com.→om.）。
-   min-width 是 auto 布局的硬约束，保证实际列宽 ≥ 冻结定位常量。 ═══ */
+ 宽表横向滚动时行身份（勾选/序号）不滚走。border-collapse 下 sticky 自带边框会丢，
+ 右分隔线用 box-shadow 画；背景必须不透明，且 hover/选中/焦点行三态同步。
+ 修复：min-width 锁死列宽——table-layout:auto 会把 width 建议值压缩
+ （idx 列实际渲染 ~40px），而 sticky left:46px 是硬编码，冻结层右缘(46+52=98px)
+ 越过数据列真实起点(86px)，不透明背景遮住首列左侧 1-2 个字符（dm.→m.、com.→om.）。
+ min-width 是 auto 布局的硬约束，保证实际列宽 ≥ 冻结定位常量。 ═══ */
 .rt-tbl th.rt-chk, .rt-tbl th.rt-idx, .rt-tbl td.rt-chk, .rt-tbl td.rt-idx { box-sizing: border-box; position: sticky; z-index: 1; box-shadow: inset -1px 0 0 var(--line); }
 /* 横向滚动态（is-hscrolled）——冻结缘向右投梯度阴影，明示普通列正被盖在冻结层下
-   （冻结窗格语义的视觉反馈；此前被盖内容无任何提示，用户以为渲染缺字）。
-   阴影用深灰蓝 rgba(15,23,42,.16) 而非纯黑 .38：纯黑高不透明度在浅色主题下糊成一团，
-   深灰蓝两套主题都可感知且不脏。 */
+ （冻结窗格语义的视觉反馈；此前被盖内容无任何提示，用户以为渲染缺字）。
+ 阴影用深灰蓝 rgba(15,23,42,.16) 而非纯黑 .38：纯黑高不透明度在浅色主题下糊成一团，
+ 深灰蓝两套主题都可感知且不脏。 */
 .rt.is-hscrolled .rt-tbl th.rt-chk, .rt.is-hscrolled .rt-tbl td.rt-chk,
 .rt.is-hscrolled .rt-tbl th.rt-idx, .rt.is-hscrolled .rt-tbl td.rt-idx { box-shadow: inset -1px 0 0 var(--line-strong), 8px 0 10px -6px rgba(15, 23, 42, .16); }
 .rt.is-hscrolled .rt-tbl th.rt-col-frozen, .rt.is-hscrolled .rt-tbl td.rt-col-frozen { box-shadow: inset -1px 0 0 var(--line-strong), 8px 0 10px -6px rgba(15, 23, 42, .16); }
@@ -2651,11 +2651,11 @@ tr.sel td { background: var(--ac-soft); }
 .rt-tbl th.rt-chk, .rt-tbl th.rt-idx { z-index: 3; }
 .rt-tbl td.rt-chk, .rt-tbl td.rt-idx { background: var(--bg2); }
 /* ═══ /：冻结首业务列（freezeFirst）═══
-   sticky left=98px（勾选 46+序号 52 标识列已锁宽，前缀精确）；
-   底色不透明三态同步：常态 bg1 / 行 hover bg2 / 行选中·焦点 ac-soft；
-   th 双轴 top+left，z-index 3 与标识列表头同级。 ═══ */
-/*  P2-4 升级：left 由 frozenStyle 内联按前缀宽度动态计算（多列冻结），
-   CSS 只保留 sticky 定位模式/层级/右缘分隔线 */
+ sticky left=98px（勾选 46+序号 52 标识列已锁宽，前缀精确）；
+ 底色不透明三态同步：常态 bg1 / 行 hover bg2 / 行选中·焦点 ac-soft；
+ th 双轴 top+left，z-index 3 与标识列表头同级。 ═══ */
+/* P2-4 升级：left 由 frozenStyle 内联按前缀宽度动态计算（多列冻结），
+ CSS 只保留 sticky 定位模式/层级/右缘分隔线 */
 .rt-tbl th.rt-col-frozen, .rt-tbl td.rt-col-frozen {
   position: sticky; z-index: 3;
   box-shadow: inset -1px 0 0 var(--line-strong);
@@ -2668,19 +2668,19 @@ tr.sel td { background: var(--ac-soft); }
 .rt tbody tr.sel td.rt-chk, .rt tbody tr.sel td.rt-idx,
 .rt tbody tr.rt-row-focus td.rt-chk, .rt tbody tr.rt-row-focus td.rt-idx { background: var(--ac-soft); }
 /* hover 行内快捷钮（dbx 悬浮行内钮）——复制行 JSON 常驻会挤占操作列，
-   hover 才现身，移出行消失 */
+ hover 才现身，移出行消失 */
 /* hover 快捷复制钮绝对定位浮现行尾空白——绝不参与文档流：
-   曾经 display:none→inline-flex 插在 Eye 和 Trash 之间，hover 行时把删除钮挤右移一位，
-   用户瞄准「第二个钮」按下去成了复制（实报「删除按钮悬浮变成复制按钮」）。
-   对齐 QRT 的 qrt-row-copy 成熟写法：absolute + opacity/pointer-events 显隐（不占流、可淡入）。 */
+ 曾经 display:none→inline-flex 插在 Eye 和 Trash 之间，hover 行时把删除钮挤右移一位，
+ 用户瞄准「第二个钮」按下去成了复制（实报「删除按钮悬浮变成复制按钮」）。
+ 对齐 QRT 的 qrt-row-copy 成熟写法：absolute + opacity/pointer-events 显隐（不占流、可淡入）。 */
 .rt-row-copy {
   position: absolute; left: calc(100% + 3px); top: 50%; transform: translateY(-50%);
   opacity: 0; pointer-events: none; transition: opacity .12s;
 }
 .rt-tbl tbody tr:hover .rt-row-copy { opacity: 1; pointer-events: auto; }
 
-/* ═══ W7：行内展开详情行——随壳收编 TableExpandRow，
-   .rt-expand 系样式迁 TableShell.vue 单一出处（此前与本文件逐字重复的双份定义）═══ */
+/* ═══ W7：行内展开详情行——随壳合并 TableExpandRow，
+ .rt-expand 系样式迁 TableShell.vue 单一出处（此前与本文件逐字重复的双份定义）═══ */
 /* W7：操作列展开钮（常驻小钮，与查看文档钮同排） */
 .rt-row-expand { display: inline-flex; align-items: center; justify-content: center; }
 /* ═══ W7：长 JSON 折叠预览 chip（点击开单元格详情弹窗）═══ */
@@ -2690,7 +2690,7 @@ tr.sel td { background: var(--ac-soft); }
 .rt-json-chip-n { color: var(--tx2); flex-shrink: 0; }
 /* W7：ip 列等宽（.rt-val 本就 mono，类语义显式化+防后续视觉回归漂移） */
 .rt-cell.ip-col .rt-val { font-family: var(--mono); }
-/* ═══  W-B：semOn 语义分档色（pill 五档语言）——仅 semOn prop 开且命中 percent 分档上类，缺省零类零增量 ═══ */
+/* ═══ W-B：semOn 语义分档色（pill 五档语言）——仅 semOn prop 开且命中 percent 分档上类，缺省零类零增量 ═══ */
 .rt-cell.rt-sem-g, .rt-cell.rt-sem-g .rt-val { color: var(--ok); }
 .rt-cell.rt-sem-y, .rt-cell.rt-sem-y .rt-val { color: var(--warn); }
 .rt-cell.rt-sem-r, .rt-cell.rt-sem-r .rt-val { color: var(--err); }
@@ -2707,7 +2707,7 @@ tr.sel td { background: var(--ac-soft); }
 .rt-transpose { display: flex; align-items: center; gap: 5px; font-size: var(--fs-xs); cursor: pointer; }
 
 /* 浮动栏从「悬浮胶囊」改为「卡尾状态栏」（dbx 状态栏语言）——
-   不再悬浮遮挡数据行；与卡头/表格连体（贴表格底部，上圆角 0 下圆角随卡） */
+ 不再悬浮遮挡数据行；与卡头/表格连体（贴表格底部，上圆角 0 下圆角随卡） */
 .rt-float {
   position: static; transform: none; margin-top: -1px;
   display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-1) var(--sp-2h);

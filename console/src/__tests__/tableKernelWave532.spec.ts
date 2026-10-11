@@ -13,12 +13,12 @@
  * 挂载样板照抄 tableKernelWave531（裸 createApp + pinia；ReconcileReportDrawer 真挂验证
  * quickFilter 过滤/goHub 跳转/StatusPill 语义）。
  *
- * 六百七十五批随迁（674-C1 复诊收口，基线红清零收官；纯 spec 随迁零产品码）：
+ * 六百七十五批同步更新（674-C1 复诊收口，基线红清零收官；纯 spec 同步更新零产品码）：
  * ①IH qryTbl 锚随 667~669 IH 演进形态改写（ref 与 v-else-if 间入列 export-name="ih-qry" 行）；
  * ②DQ 文档弹窗高度锁随 561 usePref('dq.popH')→useTierCycle('dq.docH') 机制升级改写
- *   （取值锁承接 674 件B 同源形态，629-C2 随迁补取值锁）+669 :font-size 同页同键契约入锁；
- * ③.dq-card 描边降层锁随 667 换装迁 AltHitsViews 共享件（卡片内脏五件样式逐值同源）。
- * 随迁后本件显式入库（667 ihUnify554 显式入库先例形态），⑤ 基线新 clone 可复现。
+ *   （取值锁承接 674 件B 同源形态，629-C2 同步更新补取值锁）+669 :font-size 同页同键契约入锁；
+ * ③.dq-card 描边降层锁随 667 改用迁 AltHitsViews 共享件（卡片内脏五件样式逐值同源）。
+ * 同步更新后本件显式入库（667 ihUnify554 显式入库先例形态），⑤ 基线新 clone 可复现。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createApp, h, nextTick, ref } from 'vue';
@@ -48,7 +48,7 @@ import ReconcileReportDrawer from '../components/ReconcileReportDrawer.vue';
 
 const readView = (name: string) => readFileSync(join(__dirname, '../views', name), 'utf-8');
 const rrd = readFileSync(join(__dirname, '../components/ReconcileReportDrawer.vue'), 'utf-8');
-const ahv = readFileSync(join(__dirname, '../components/AltHitsViews.vue'), 'utf-8'); /* 675 随迁：.dq-card 系 667 换装迁 AltHitsViews */
+const ahv = readFileSync(join(__dirname, '../components/AltHitsViews.vue'), 'utf-8'); /* 675 同步更新：.dq-card 系 667 改用迁 AltHitsViews */
 const mmv = readView('MatchMatrixView.vue');
 const dq = readView('DslQueryView.vue');
 const diag = readView('DiagView.vue');
@@ -184,7 +184,7 @@ describe('五百三十二批 rrd 运行时：内核 quickFilter + goHub 芯片�
 /* ═══════════ 三、loading 接线渗透（五表源码锁） ═══════════ */
 describe('五百三十二批 loading 接线渗透', () => {
   it('DslQueryView RT：:loading="running"（268 批内建骨架启用，首查白板根治）', () => {
-    /* 541 批随迁：v-show 切视图语义演进为 hide-body（工具行常驻），:loading 保留 */
+    /* 541 批同步更新：v-show 切视图语义演进为 hide-body（工具行常驻），:loading 保留 */
     expect(dq).toMatch(/<ResultTable ref="resultTbl"\s*\n\s+:hide-body="view !== 'table'"\s*\n\s+:loading="running"/);
   });
   it('DiagView：QRT loading 期间常挂（空时段落蒸发根治）+ v-else EmptyState + export-name', () => {
@@ -198,7 +198,7 @@ describe('五百三十二批 loading 接线渗透', () => {
     expect(sec).toContain('const auditSel = ref<unknown[]>([]);');
   });
   it('IndexHubView qryTbl：:loading（docsTbl 对称）', () => {
-    /* 675 随迁（674-C1 复诊）：667~669 IH 演进在 ref 与 v-else-if 间入列 export-name="ih-qry" 行 */
+    /* 675 同步更新（674-C1 复诊）：667~669 IH 演进在 ref 与 v-else-if 间入列 export-name="ih-qry" 行 */
     expect(ih).toMatch(/<ResultTable ref="qryTbl"\s*\n\s+export-name="ih-qry"\s*\n\s+v-else-if="qryResp"[^>]*\n\s*:loading="qryLoading"/);
   });
   it('ProfileFlameView：:loading="busy"（semOn 形态核对后不接，见源内注）', () => {
@@ -232,13 +232,13 @@ describe('五百三十二批杂项锚', () => {
     expect(ih).toMatch(/watch\(dsl, \(\) => queueDslLint\(\), \{ immediate: true \}\);/);
     expect(ih).toMatch(/severity: f\.severity === 'info' \? 'hint' as const/); /* info→hint 降级口（PitScrollView 同款） */
   });
-  it('DslQueryView：文档弹窗编辑器高度 useTierCycle(dq.docH) 三档循环（561 机制升级随迁）+ 弹窗字号同页同键（669）+ dq-card 描边降层（667 换装 AltHitsViews）', () => {
-    /* 675 随迁（674-C1 复诊）：usePref('dq.popH') 单值 → useTierCycle('dq.docH') 三档循环，取值锁承接 674 件B 同源字面形态 */
+  it('DslQueryView：文档弹窗编辑器高度 useTierCycle(dq.docH) 三档循环（561 机制升级同步更新）+ 弹窗字号同页同键（669）+ dq-card 描边降层（667 改用 AltHitsViews）', () => {
+    /* 675 同步更新（674-C1 复诊）：usePref('dq.popH') 单值 → useTierCycle('dq.docH') 三档循环，取值锁承接 674 件B 同源字面形态 */
     expect(dq).toContain("const DOC_H_TIERS: string[] = ['min(60vh,420px)', 'min(70vh,560px)', 'min(80vh,700px)'];");
     expect(dq).toContain("useTierCycle('dq.docH', DOC_H_TIERS)");
-    /* 669 批件B：文档弹窗 Monaco :font-size 复用 dq.font（同页同键立法先例） */
+    /* 669 批件B：文档弹窗 Monaco :font-size 复用 dq.font（同页同键约定先例） */
     expect(dq).toMatch(/<MonacoEditor v-if="docEditMode" v-model="docEditText" :height="docH" :font-size="dqFont" \/>/);
-    /* 667 批换装：卡片内脏五件样式 .dq-card 系逐值同源迁 AltHitsViews 共享件，描边降层语义锁随迁 */
+    /* 667 批改用：卡片内脏五件样式 .dq-card 系逐值同源迁 AltHitsViews 共享件，描边降层语义锁同步更新 */
     expect(ahv).toMatch(/\.dq-card \{ background: var\(--bg2\); border: 1px solid var\(--line\); border-radius: var\(--r-m\);/);
     expect(ahv).toMatch(/\.dq-card:hover \{ border-color: var\(--ac-line\);/);
   });

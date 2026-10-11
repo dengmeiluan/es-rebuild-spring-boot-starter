@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 日期索引环形清理器（20260922 统一只用 QA ES 单载体立法）：对多个「{@code <前缀>-yyyy.MM.dd}」
+ * 日期索引环形清理器（20260922 统一只用 QA ES 单载体约定）：对多个「{@code <前缀>-yyyy.MM.dd}」
  * 日期索引族（审计 + 监控快照，合计共用一个总量上限——对应「监控+审计 ≤30GB」原始诉求）按
  * <b>双闸</b>执行整索引删除——①超龄闸：严格早于 {@code today-maxDays} 的日期索引删；
  * ②总量闸：各族 {@code store.size} 合计超上限时从最旧日期删起（跨族按日期同轮），直至 ≤ 上限。

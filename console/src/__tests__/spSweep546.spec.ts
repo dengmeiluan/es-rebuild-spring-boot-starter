@@ -1,10 +1,10 @@
 /* 五百四十六批 W5(轨5):三处残量收口防回潮反锁——
  * ① TaskTreeView:30 模板内联骨架 gap:10px → var(--sp-2h)(全站最后一处精确等值 --sp 残量;
- *    档表 theme.css:103 --sp-2h=10px,纯等值;ilmEmpty307 锚随迁为双形态);
+ *    档表 theme.css:103 --sp-2h=10px,纯等值;ilmEmpty307 锚同步更新为双形态);
  * ② AliasesView .alv-groups minmax(400px,1fr) → minmax(min(400px,100%),1fr)
  *    (375px 手机实锤横向溢出唯一修复;照 AnalysisSettingsView 531 批 min() 同款先例;
  *    auto-fill 网格嵌套 min() 合法,900 档不动——min() 本身即响应式钳制);
- * ③ theme.css 全局兜底 b { font-weight: 650; }(themeDiscipline525 立法 650 上限,
+ * ③ theme.css 全局兜底 b { font-weight: 650; }(themeDiscipline525 约定 650 上限,
  *    全站 105 处裸 <b> 默认 bold≈700 越线,一行兜底全站收口,与 545 批 CSS 700→650 同语言;
  *    组件局部显式规则特异性更高不受影响,themeDiscipline525 五个典型位 650 断言不回退)。 */
 import { describe, it, expect } from 'vitest';

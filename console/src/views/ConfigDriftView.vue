@@ -4,21 +4,21 @@
       <PageHeader :icon="GitCompareArrows" title="配置漂移检测" subtitle="代码 @Setting/@Mapping vs 线上索引实际配置 —— 双侧归一化后逐键对比，防止「代码已改、线上没动」两张皮" /><button class="btn ghost sm" @click="loadKeys" :disabled="loadingKeys">
         <RefreshCw :size="12" :class="{ spinning: loadingKeys }" /> 刷新
       </button><!-- 原始 IO 快查入口——
-           漂移检测 drift?indexKey= 请求/响应原文直达；无记录不开空弹窗（toast 引导） -->
+ 漂移检测 drift?indexKey= 请求/响应原文直达；无记录不开空弹窗（toast 引导） -->
       <button class="btn ghost sm" title="最近一次漂移检测（drift?indexKey=）请求/响应原文（复制/curl 回放）" @click="openRawIo">
         <Terminal :size="12" /> 原始 IO
       </button>
     </div>
 
-    <!-- G6-B4：err-bar 独立于数据互斥链顶置（G2/G3 教训）——原「失败 EmptyState」困在链内：
-         有旧 keys 刷新失败时 body 分支获胜，loadErr 无渲染出口退化为仅 toast；现与旧清单并存 -->
+    <!-- G6-B4：err-bar 独立于数据互斥链顶置（G2/ 教训）——原「失败 EmptyState」困在链内：
+ 有旧 keys 刷新失败时 body 分支获胜，loadErr 无渲染出口退化为仅 toast；现与旧清单并存 -->
     <div v-if="loadErr" role="alert" class="err-bar rise-in">
       对象清单拉取失败：{{ loadErr }}
       <button class="btn sm" @click="loadKeys" :disabled="loadingKeys"><RefreshCw :size="12" :class="{ spinning: loadingKeys }" /> 重试</button>
     </div>
 
-    <!--  §1/§5：加载中 / 真无 provider 两态（失败态由上方 err-bar 承担）——失败绝不伪装成「无 provider」。
-          W-D：42px 手写 spinner 换 SkeletonBox circle 统一件（loading 占位归骨架屏单源），文案逐字保留 -->
+    <!-- /加载中 / 真无 provider 两态（失败态由上方 err-bar 承担）——失败绝不伪装成「无 provider」。
+ W-D：42px 手写 spinner 换 SkeletonBox circle 统一件（loading 占位归骨架屏单源），文案逐字保留 -->
     <div v-if="keys.length === 0 && loadingKeys" class="cd-loading">
       <SkeletonBox circle :width="42" :height="42" class="cd-loading-sk" />
       <div class="cd-loading-tt">正在拉取对象清单…</div>
@@ -31,13 +31,13 @@
     <WorkbenchLayout v-else-if="keys.length" :scope="cdScope" :panes="CD_PANES" axis="vertical" mode="drift">
       <template #pane-configdrift-list>
       <!-- 左：对象清单（轨4：竖排轨退役，语义落行首横排 cd-list-tt——刀②）。
-            G210：容器补 role=group 语义（G47/G142/G154 族） -->
+ G210：容器补 role=group 语义（G47/G142/G154 族） -->
       <div class="cd-list" role="group" aria-label="对象清单">
         <div class="cd-list-head">
           <span class="cd-list-tt">对象清单</span>
-          <!-- 手写过滤框换装 SearchFilterBar 统一件（过滤词源 kw 绑定原样零触；
-               Esc 清空内建、Enter 定向转出 @enter=onHitKey 与 Favorites/TemplateGallery/Watcher
-               三消费方同契约；胶囊壳三件套归组件单源，cd-kw-inp 落位类挂根只留 flex/高度内衬） -->
+          <!-- 手写过滤框改用 SearchFilterBar 统一件（过滤词源 kw 绑定原样零触；
+ Esc 清空内建、Enter 定向转出 @enter=onHitKey 与 Favorites/TemplateGallery/Watcher
+ 三消费方同契约；胶囊壳三件套归组件单源，cd-kw-inp 落位类挂根只留 flex/高度内衬） -->
           <SearchFilterBar v-model="kw" class="cd-kw-inp" placeholder="搜 indexKey / 别名…" @enter="onHitKey" />
           <!-- 搜索定位：命中计数 + 上/下一个（Enter/Shift+Enter 在搜索框接线） -->
           <HitNav :count="filteredKeys.length" :current="hitCur" compact @next="hitNext" @prev="hitPrev" />
@@ -54,8 +54,8 @@
          role="button" tabindex="0" @keydown.enter.prevent="loadDrift(k.indexKey)" @keydown.space.prevent="loadDrift(k.indexKey)">
           <div class="cd-item-key" :title="k.indexKey"><MarkText :text="k.indexKey" :kw="kw" /></div>
           <div class="cd-item-alias" :title="k.alias"><MarkText :text="k.alias" :kw="kw" /></div>
-          <!-- 清单角标换装 StatusPill 统一件（558b 回滚件解禁重做——525:210 逐字锁
-               已随迁；tone 走 cdVerdictPill 映射消费，文案逐字；.cd-verdict 外挂定位壳保留） -->
+          <!-- 清单角标改用 StatusPill 统一件（558b 回滚件解禁重做——525:210 逐字锁
+ 已同步更新；tone 走 cdVerdictPill 映射消费，文案逐字；.cd-verdict 外挂定位壳保留） -->
           <StatusPill v-if="verdicts[k.indexKey]" class="cd-verdict" :tone="cdVerdictPill(verdicts[k.indexKey])"
             :label="verdicts[k.indexKey] === 'clean' ? '一致' : verdicts[k.indexKey] === 'drift' ? '漂移' : '缺失'" />
         </div>
@@ -67,7 +67,7 @@
       </div>
       </template>
       <template #pane-configdrift-detail>
-      <!-- 右：漂移详情（ §1：检测中 / 失败可重试 / 未点选 三态） -->
+      <!-- 右：漂移详情（ 检测中 / 失败可重试 / 未点选 三态） -->
       <div class="cd-detail">
         <div v-if="driftBusy" class="cd-progress">
           <RefreshCw :size="28" class="spinning" />
@@ -79,8 +79,8 @@
           <button class="btn sm" @click="loadDrift(picked)" :disabled="driftBusy"><RefreshCw :size="12" :class="{ spinning: driftBusy }" /> 重试</button>
         </div>
         <!-- 只有这一支是真空态（未点选、无内容），交给 EmptyState 统一留白；
-             上面两支是进行态 / 失败态（动态错误原因 + 重试），语义上不是空态，
-             故保留自有 class，仅把 60px 大留白压到仓库惯例的 24px -->
+ 上面两支是进行态 / 失败态（动态错误原因 + 重试），语义上不是空态，
+ 故保留自有 class，仅把 60px 大留白压到仓库惯例的 24px -->
         <EmptyState v-else-if="!drift" :icon="MousePointer" text="点选左侧索引开始检测" />
         <template v-else>
           <div v-if="!drift.liveExists" class="cd-missing">
@@ -101,15 +101,15 @@
             </div>
 
             <!-- settings 漂移摘要（轨4：.cd-card 壳退役——pane 即容器内容直贴，
-                 分界由 cd-card-hd border-bottom 承接，刀③④） -->
+ 分界由 cd-card-hd border-bottom 承接，刀③④） -->
             <div class="cd-sec">
               <div class="cd-card-hd">
                 <span>settings 漂移 <em>{{ drift.physicalIndex }}</em></span>
                 <div class="cd-hd-acts">
                   <button class="btn ghost xs" @click="copyStr(drift.codeSettings, '代码 settings')"><Copy :size="10" /> 代码</button>
                   <button class="btn ghost xs" @click="copyStr(drift.liveSettings, '线上 settings')"><Copy :size="10" /> 线上</button>
-                  <!--  W-D：settings 结论徽标换装 StatusPill（ok/err 文字档=g/r 语义档同 token 收敛，
-                       cd-badge 锚保留；文案逐字）。清单角标一枚因 useCurrentIdxWritePages525 源码锁绕开不换 -->
+                  <!-- W-D：settings 结论徽标改用 StatusPill（ok/err 文字档=g/r 语义档同 token 收敛，
+ cd-badge 锚保留；文案逐字）。清单角标一枚因 useCurrentIdxWritePages525 源码锁绕开不换 -->
                   <StatusPill class="cd-badge" :tone="drift.settingsDiff.clean ? 'g' : 'r'"
                     :label="drift.settingsDiff.clean ? '完全一致' : '存在漂移'" />
                 </div>
@@ -122,8 +122,8 @@
                   </button>
                 </div>
                 <!-- settings 差异裸表换 QRT rows 型（qrtRowsSwap529 先例）——
-                     键排序/右键/导出归内核；行级「复制差异」走 #row-actions 槽（aria 保真）；
-                     代码/线上值 c-add/c-del 色档经 #cell- 槽保真 -->
+ 键排序/右键/导出归内核；行级「复制差异」走 #row-actions 槽（aria 保真）；
+ 代码/线上值 c-add/c-del 色档经 #cell- 槽保真 -->
                 <QueryResultTable
                   v-if="drift.settingsDiff.different.length"
                   :cols="SD_COLS" :rows="sdRows" sortable
@@ -177,7 +177,7 @@
                   <button class="btn ghost xs" @click="copyStr(drift.codeMapping, '代码 mapping')"><Copy :size="10" /> 代码</button>
                   <button class="btn ghost xs" @click="copyStr(drift.liveMapping, '线上 mapping')"><Copy :size="10" /> 线上</button>
                   <button v-if="!drift.mappingEqual" class="btn ghost xs" @click="copyDiff"><Copy :size="10" /> diff</button>
-                  <!--  W-D：mapping 结论徽标换装 StatusPill（同上，差异数文案逐字） -->
+                  <!-- W-D：mapping 结论徽标改用 StatusPill（同上，差异数文案逐字） -->
                   <StatusPill class="cd-badge" :tone="drift.mappingEqual ? 'g' : 'r'"
                     :label="drift.mappingEqual ? '完全一致' : ('+' + diffStat.add + ' / −' + diffStat.del)" />
                 </div>
@@ -202,7 +202,7 @@
       </div>
       </template>
     </WorkbenchLayout>
-    <!--  G206：原始 IO 快查弹窗（ModalShell 壳，Esc/遮罩关闭随壳） -->
+    <!-- G206：原始 IO 快查弹窗（ModalShell 壳，Esc/遮罩关闭随壳） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
   </div>
 </template>
@@ -215,12 +215,12 @@ import { GitCompareArrows, RefreshCw, MousePointer, AlertTriangle, Copy, Wrench,
 import PageHeader from '../components/PageHeader.vue';import EmptyState from '../components/EmptyState.vue';
 import MarkText from '../components/MarkText.vue';
 import HitNav from '../components/HitNav.vue';
-import SkeletonBox from '../components/SkeletonBox.vue'; /*  W-D：loading 占位统一件 */
-import StatusPill from '../components/StatusPill.vue'; /*  W-D：结论徽标统一件 */
+import SkeletonBox from '../components/SkeletonBox.vue'; /* W-D：loading 占位统一件 */
+import StatusPill from '../components/StatusPill.vue'; /* W-D：结论徽标统一件 */
 import SearchFilterBar from '../components/SearchFilterBar.vue'; /* ：清单过滤胶囊统一件 */
 import QueryResultTable from '../components/QueryResultTable.vue'; /* ：settings 差异表换壳 */
 import WorkbenchLayout, { type WorkbenchPaneSpec } from '../components/WorkbenchLayout.vue';
-import RawIoModal from '../components/RawIoModal.vue'; /*  G206：原始 IO 快查弹窗（755 G200 同构） */
+import RawIoModal from '../components/RawIoModal.vue'; /* G206：原始 IO 快查弹窗（755 G200 同构） */
 import { api, ioRecorder, type RawIoRec } from '../api';
 import { useScopedDraft } from '../composables/useScopedDraft';
 import { useAppStore } from '../stores/app';
@@ -232,8 +232,8 @@ import { friendlyEsError } from '../utils/esError';
 const store = useAppStore();
 
 /* 清单+详情可调工作台声明（清单可折叠，拖拽/预设/记忆由 WorkbenchLayout 统一负责）。
-   轨4：竖排标题轨退役（§6v 刀①）——「对象清单」落 cd-list-head 行首横排、
-   「漂移详情」由详情侧 cd-card-hd 横排头承接 */
+ 轨4：竖排标题轨退役（v 刀①）——「对象清单」落 cd-list-head 行首横排、
+ 「漂移详情」由详情侧 cd-card-hd 横排头承接 */
 const cdScope = { target: store.target || 'host', route: '/config-drift', mode: 'drift', profile: 'standard' as const };
 const CD_PANES: WorkbenchPaneSpec[] = [
   { id: 'configdrift.list', role: 'request', title: '', minSize: 200, defaultSize: 260, collapsible: true },
@@ -252,19 +252,19 @@ const driftErr = ref('');
 /* 每个 indexKey 的检测结论缓存：clean / drift / missing */
 const verdicts = ref<Record<string, string>>({});
 const scanningAll = ref(false);
-/*  W4：verdict pill 档归正 .pill 五主档单字母——原 drift→err / missing→warn
-   是别名档越轨（theme.css .pill.err/.pill.warn 与 r/y 同 token，展示等价）；
-   clean 走 .g 正面绿不变（pill 无 .ok 档）。 */
+/* W4：verdict pill 档归正 .pill 五主档单字母——原 drift→err / missing→warn
+ 是别名档越轨（theme.css .pill.err/.pill.warn 与 r/y 同 token，展示等价）；
+ clean 走 .g 正面绿不变（pill 无 .ok 档）。 */
 const CD_VERDICT_PILL: Record<string, string> = { clean: 'g', drift: 'r', missing: 'y' };
 /* fallback 未知档落 n 中性兜底；映射经 cdVerdictPill 消费进 StatusPill :tone
-   （558b 曾按任务令换装因 525:210 黑名单锁互斥回滚，本批锁解禁随迁后重做兑现）。 */
+ （558b 曾按任务令改用因 525:210 黑名单锁互斥回滚，锁解禁同步更新后重做兑现）。 */
 const cdVerdictPill = (v: string) => (CD_VERDICT_PILL[v] || 'n') as 'g' | 'r' | 'y' | 'n';
 
 /* 搜索定位：对象清单关键字过滤走 useScopedDraft 会话草稿（不进 URL——刷新页即失、
-   会话内切回页面恢复；本页进 URL 可重入的是 ?key= 选中键〔useUrlState〕，与过滤词
-   是两条通道，754 G202/748 G176 同款注释诚实化）——
-   命中口径：indexKey / 别名文本；当前已加载详情的对象额外匹配其「代码(期望) / 线上(实际)」
-   配置全文（settings + mapping），键值级差异不用展开也能一击搜到所在对象 */
+ 会话内切回页面恢复；本页进 URL 可重入的是 ?key= 选中键〔useUrlState〕，与过滤词
+ 是两条通道，754 G202/748 G176 同款注释诚实化）——
+ 命中口径：indexKey / 别名文本；当前已加载详情的对象额外匹配其「代码(期望) / 线上(实际)」
+ 配置全文（settings + mapping），键值级差异不用展开也能一击搜到所在对象 */
 const kw = useScopedDraft('kw', { route: 'config-drift' }, '').text;
 const driftHaystack = computed(() => {
   const d = drift.value;
@@ -290,8 +290,8 @@ async function scanAllVerdicts() {
   scanningAll.value = true;
   try {
     /* 单键失败静默跳过改计数——失败键名入册，M>0 换 warn 档「N 成功 / M 失败
-       (首 3 键…)」；失败键 verdict 不写（保持无结论态，徽标 v-if 分支与三态消费方零动），
-       全部成功仍走 success 原文案 */
+ (首 3 键…)」；失败键 verdict 不写（保持无结论态，徽标 v-if 分支与三态消费方零动），
+ 全部成功仍走 success 原文案 */
     const failedKeys: string[] = [];
     await Promise.all(keys.value.map(async (k: any) => {
       try {
@@ -332,16 +332,16 @@ async function loadDrift(indexKey: string) {
     verdicts.value[indexKey] = !r.liveExists ? 'missing'
       : (r.settingsDiff?.clean && r.mappingEqual) ? 'clean' : 'drift';
   } catch (e: any) {
-    /*  A：ES 错误友好化——driftErr 与下方 toast 同源走 friendly 口径 */
+    /* A：ES 错误友好化——driftErr 与下方 toast 同源走 friendly 口径 */
     driftErr.value = friendlyEsError(String(e?.message ?? e));
     store.notify('error', '检测失败：' + driftErr.value);
   } finally { driftBusy.value = false; }
 }
 
-/*  G206：原始 IO 快查（755 G200/747 G162 三件套同构）——按本页
-   检测端点取记录环最近一条；'/config-lab/drift?' 含查询串前缀，与
-   /config-lab/drift/keys 清单端点互不混淆（755 '/cluster/tasks?' 前缀锚镜像）；
-   判空 rec=null 时 notify 引导，不开空弹窗 */
+/* G206：原始 IO 快查（755 G200/747 G162 三件套同构）——按本页
+ 检测端点取记录环最近一条；'/config-lab/drift?' 含查询串前缀，与
+ /config-lab/drift/keys 清单端点互不混淆（755 '/cluster/tasks?' 前缀锚镜像）；
+ 判空 rec=null 时 notify 引导，不开空弹窗 */
 const rawIoShow = ref(false);
 const rawIoRec = ref<RawIoRec | null>(null);
 function openRawIo() {
@@ -358,14 +358,14 @@ async function copyStr(s: string, label: string) {
 }
 
 /* ═══ ：settings 差异表 QRT rows 型数据映射 ═══
-   列=中文键；行=键/代码值/线上值三标量（键排序/漏斗/右键/导出归内核，
-   行级复制差异走 #row-actions 槽）。 */
+ 列=中文键；行=键/代码值/线上值三标量（键排序/漏斗/右键/导出归内核，
+ 行级复制差异走 #row-actions 槽）。 */
 const SD_COLS = ['键', '代码值', '线上值'];
 const sdRows = computed<any[][]>(() =>
   (drift.value?.settingsDiff?.different ?? []).map((d: any) => [d.key, d.code, d.live]));
 
 /* 一键复制修复 DSL——different 键按代码侧值组装 PUT /<idx>/_settings body
-   （扁平 settings 键原样透传；结构性漂移仍由 verdictInfo.cta「去重建」承接，两者不冲突） */
+ （扁平 settings 键原样透传；结构性漂移仍由 verdictInfo.cta「去重建」承接，两者不冲突） */
 function copyFixDsl() {
   const dv = drift.value;
   const d = dv?.settingsDiff;
@@ -420,7 +420,7 @@ const verdictInfo = computed(() => {
   };
 });
 /* -13：Ops 操作台已退役，漂移看完转「托管重建」；AdhocRebuildView 收 ?index=（索引名/别名），
-   不是 indexKey —— 用 drift.alias 预填，拿不到就空手进页让用户自己选 */
+ 不是 indexKey —— 用 drift.alias 预填，拿不到就空手进页让用户自己选 */
 function goRebuild() {
   const alias = drift.value?.alias;
   router.push(alias ? { path: '/adhoc-rebuild', query: { index: alias } } : '/adhoc-rebuild');
@@ -444,8 +444,8 @@ const NsGroups = defineComponent({
       }
       return [...m.entries()].map(([ns, ks]) => ({ ns, ks })).sort((a, b) => b.ks.length - a.ks.length);
     });
-    /*  G208：chip 键盘可达（cd-item 行同款 keydown.enter）——
-       Enter 触发与鼠标点击同一动作；原 span onClick 仅鼠标可达 */
+    /* G208：chip 键盘可达（cd-item 行同款 keydown.enter）——
+ Enter 触发与鼠标点击同一动作；原 span onClick 仅鼠标可达 */
     const onChipKey = (fn: () => void) => (e: KeyboardEvent) => {
       if (e.key === 'Enter') { e.preventDefault(); fn(); }
     };
@@ -545,28 +545,28 @@ onMounted(async () => {
 /* G6-S1：区块级间距 token 化（--sp-1..6 = 4/8/12/16/24/32）；控件内 padding / 亚阶梯(≤3px) / 行级密排不动 */
 .cd-page { padding: var(--sp-3) var(--sp-4) var(--sp-5); }
 .cd-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); }
-/*  W-F：.cd-hd-l/.cd-hd-ic/.cd-hd-tt/.cd-hd-sub 死规则删除（页头已迁 §7 PageHeader） */
+/* W-F：.cd-hd-l/.cd-hd-ic/.cd-hd-tt/.cd-hd-sub 死规则删除（页头已迁 PageHeader） */
 
 /* 加载中态专属样式（非空态）：与 EmptyState 视觉刻意区分——
-   转圈图标 42px + 居中，不带 hint/行动按钮；padding 对齐仓库 24px 惯例，不再是 60px 大留白 */
+ 转圈图标 42px + 居中，不带 hint/行动按钮；padding 对齐仓库 24px 惯例，不再是 60px 大留白 */
 .cd-loading { text-align: center; padding: var(--sp-5) var(--sp-4); color: var(--muted); }
-/*  W-D：SkeletonBox circle 占位居中（原 RefreshCw 块级随文本居中，.sk 是块级需 margin auto） */
+/* W-D：SkeletonBox circle 占位居中（原 RefreshCw 块级随文本居中，.sk 是块级需 margin auto） */
 .cd-loading-sk { margin: 0 auto; }
 
 .cd-loading-tt { font-size: var(--fs-lg); margin: var(--sp-3) 0 var(--sp-1); color: var(--fg); }
 
 /* 固定 minmax grid 退役——双栏布局交给 WorkbenchLayout（拖拽/预设/记忆/窄屏堆叠）；
-   .cd-list/cd-detail 保持内容样式，宽度与堆叠由 pane spec + stacked 档接管。
-   轨4：cd-list pane 内第一层壳三件套退役（534 立法①残面漏收补刀；540 df-card
-   同语言）——pane 即容器内容直贴，类名保留作模板锚（qualityThreeState 挂载断言在册）；
-   cd-list-head bg2 头条底色随壳退役（540 uq-script-hd 同语言：分界归既有 border-bottom 承接） */
+ .cd-list/cd-detail 保持内容样式，宽度与堆叠由 pane spec + stacked 档接管。
+ 轨4：cd-list pane 内第一层壳三件套退役（①残面漏收补刀；540 df-card
+ 同语言）——pane 即容器内容直贴，类名保留作模板锚（qualityThreeState 挂载断言在册）；
+ cd-list-head bg2 头条底色随壳退役（540 uq-script-hd 同语言：分界归既有 border-bottom 承接） */
 .cd-list { overflow: hidden; }
 .cd-list-head { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--border); }
 /* 轨4：竖排轨「对象清单」语义落行首横排（fs-head 语言，DevTools .dt-pane-tt 同款） */
 .cd-list-tt { font-size: var(--fs-xs); font-weight: 650; color: var(--tx1); letter-spacing: .02em; flex-shrink: 0; }
-/* 类随换装挂 SearchFilterBar 根——手写输入框皮（bg1 底/line 边/6px 圆角/
-   outline/:focus）退役归组件 .sfb 胶囊壳单源，本类只留落位（行内 flex:1）与高度内衬
-   （24px 对齐现行；padding/字号对齐现行，FavoritesView「padding 留视图」同口径） */
+/* 类随改用挂 SearchFilterBar 根——手写输入框皮（bg1 底/line 边/6px 圆角/
+ outline/:focus）退役归组件 .sfb 胶囊壳单源，本类只留落位（行内 flex:1）与高度内衬
+ （24px 对齐现行；padding/字号对齐现行，FavoritesView「padding 留视图」同口径） */
 .cd-kw-inp {
   flex: 1; min-width: 0; height: 24px; box-sizing: border-box; padding: 0 var(--sp-2);
   font-size: var(--fs-xs);
@@ -578,22 +578,22 @@ onMounted(async () => {
 /* 当前命中对象行：柔底 + 左侧强调条 + 焦点环（.hit-cur 由 useHitScroll 运行时挂/摘） */
 .cd-item.hit-cur { background: var(--ac-soft) !important; box-shadow: inset 3px 0 0 var(--ac-hi), var(--focus-ring); }
 .cd-none { cursor: default; font-size: var(--fs-xs); color: var(--muted); display: flex; align-items: center; flex-wrap: wrap; }
-/* G6-S3：清单项长键名/别名省略三件套 + :title 全名可达（§9.5）；
-   hasv 时右 padding 给 absolute 结论徽章让位，防压字 */
+/* G6-S3：清单项长键名/别名省略三件套 + :title 全名可达（；
+ hasv 时右 padding 给 absolute 结论徽章让位，防压字 */
 .cd-item-key, .cd-item-alias { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cd-item.hasv { padding-right: calc(var(--sp-6) + var(--sp-4)); }
 .cd-item-key { font-size: var(--fs-sm); font-weight: 600; }
 .cd-item-alias { font-size: var(--fs-xs); color: var(--muted); font-family: var(--mono); }
-/* verdict 徽标挂全局 .pill 语义档；：换装 StatusPill 统一件（色板/胶囊
-   形态/字号字重全归组件内 .pill 单源），.cd-verdict 只留角标定位壳（absolute right/top）；
-    W-F：10px 字面量被 useCurrentIdxWritePages525 源码锁逐字锁定，豁免 --sp 收编 */
+/* verdict 徽标挂全局 .pill 语义档；：改用 StatusPill 统一件（色板/胶囊
+ 形态/字号字重全归组件内 .pill 单源），.cd-verdict 只留角标定位壳（absolute right/top）；
+ W-F：10px 字面量被 useCurrentIdxWritePages525 源码锁逐字锁定，豁免 --sp 合并 */
 .cd-verdict { position: absolute; right: 10px; top: 10px; }
 
 .cd-detail { min-width: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
 /* 进行态 / 失败态专属（真空态已走 EmptyState）。
-   原 .cd-hint 是 60px 20px 大留白，且类名不含 empty 而绕过了防回退看守的命名约定；
-   这里对齐仓库惯例（IndexHubView 16px / BrowserView 与 IlmView 24px）压到 24px，
-   并改名 .cd-progress 以免进行态再被误读成空态。 */
+ 原 .cd-hint 是 60px 20px 大留白，且类名不含 empty 而绕过了防回退看守的命名约定；
+ 这里对齐仓库惯例（IndexHubView 16px / BrowserView 与 IlmView 24px）压到 24px，
+ 并改名 .cd-progress 以免进行态再被误读成空态。 */
 .cd-progress { text-align: center; padding: var(--sp-5) var(--sp-4); color: var(--muted); font-size: var(--fs-sm); display: flex; flex-direction: column; gap: var(--sp-3); align-items: center; }
 .cd-missing { display: flex; gap: var(--sp-2); align-items: center; padding: var(--sp-3) var(--sp-4); font-size: var(--fs-sm); color: var(--warning); background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: var(--r-m); }
 
@@ -608,14 +608,14 @@ onMounted(async () => {
 .cd-vb-tx span { font-size: var(--fs-xs); color: var(--muted); }
 
 /* 轨4：.cd-card 壳规则（bg+border+radius+overflow）退役——pane 即容器，
-   内容直贴；分界由 cd-card-hd border-bottom 承接（§6v 刀③④），cd-detail flex 链零变动。
-   cd-verdict 徽标本体不动（useCurrentIdxWritePages525/semanticTier531 锚面） */
-/*  W-F：卡头 400 失序归位 650（口径 B 卡头档；条状壳保留，em 副文本 400 保留） */
+ 内容直贴；分界由 cd-card-hd border-bottom 承接（v 刀③④），cd-detail flex 链零变动。
+ cd-verdict 徽标本体不动（useCurrentIdxWritePages525/ 锚面） */
+/* W-F：卡头 400 失序归位 650（口径 B 卡头档；条状壳保留，em 副文本 400 保留） */
 .cd-card-hd { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--border); font-size: var(--fs-sm); font-weight: 650; }
 .cd-card-hd em { font-style: normal; font-weight: 400; font-size: var(--fs-xs); color: var(--muted); font-family: var(--mono); margin-left: var(--sp-1h); }
 .cd-hd-acts { display: flex; align-items: center; gap: var(--sp-2); }
-/*  W-F：.cd-badge 空规则删除； W-D：ok/err 子档色规则随 StatusPill 换装退役
-   （g/r 语义档同 token 单源），类名保留作 pillSingleTrack/useCurrentIdxWritePages525 测试锚 */
+/* W-F：.cd-badge 空规则删除； W-D：ok/err 子档色规则随 StatusPill 改用退役
+ （g/r 语义档同 token 单源），类名保留作 pillSingleTrack/useCurrentIdxWritePages525 测试锚 */
 
 .cd-sd { padding: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-3); }
 /* .cd-tbl/.cd-row-cp 随差异表换 QRT 壳退役（表头/行语言归内核单一出处） */
@@ -623,9 +623,9 @@ onMounted(async () => {
 .c-add { color: var(--success); }
 .c-del { color: var(--err); }
 
-/* 分桶。：三桶壳退役（立法④；ws-w 556 终态同语言）——border+radius 8 整块消除，
-   border-top 分节承接（ ar-sec 同刀）；内容 padding 迁入盒模型等值；三桶均 v-if 门控，
-   空态不留整块空框 */
+/* 分桶。：三桶壳退役（约定④；ws-w 556 终态同语言）——border+radius 8 整块消除，
+ border-top 分节承接（ ar-sec 同刀）；内容 padding 迁入盒模型等值；三桶均 v-if 门控，
+ 空态不留整块空框 */
 .cd-bucket { border-top: 1px solid var(--border); padding: var(--sp-2) var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-2); }
 .cd-bucket.dim { opacity: .92; background: var(--hl-soft); }
 .cd-bucket-hd { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
@@ -637,7 +637,7 @@ onMounted(async () => {
 
 :deep(.cd-ns) { display: flex; gap: 5px; flex-wrap: wrap; align-items: flex-start; }
 :deep(.cd-ns-g) { display: flex; flex-direction: column; gap: var(--sp-1); max-width: 100%; }
-/* 轨4：子键组 dashed 盒退役（立法④）——gap/padding 缩进分组语义保留 */
+/* 轨4：子键组 dashed 盒退役（约定④）——gap/padding 缩进分组语义保留 */
 :deep(.cd-ns-kids) { display: flex; gap: var(--sp-1); flex-wrap: wrap; padding: var(--sp-1h) var(--sp-2); }
 :deep(.cd-chip) { font-size: var(--fs-xs); font-family: var(--mono); padding: 1px 7px; border-radius: var(--r-m); cursor: pointer; transition: background var(--tr); }
 :deep(.cd-chip:hover) { background: var(--hl); }
@@ -662,7 +662,7 @@ onMounted(async () => {
 /* 1100px 自制断点退役——窄屏堆叠由 WorkbenchLayout stacked 档自动处理。 */
 
 /* 宿主 iframe 最窄 ~866px 档（ProfileFlame 524 同口径）——页头/结论横幅
-   窄屏换行；档内禁 ≥300px 裸 width（仓规），全文禁 901px+ 倒挂 min-width 档 */
+ 窄屏换行；档内禁 ≥300px 裸 width（仓规），全文禁 901px+ 倒挂 min-width 档 */
 @media (max-width: 900px) {
   .cd-hd { flex-direction: column; align-items: stretch; gap: var(--sp-2); }
   .cd-verdict-bar { flex-wrap: wrap; }

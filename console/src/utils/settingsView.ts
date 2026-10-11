@@ -79,11 +79,11 @@ export function filterSettingRows(rows: SettingRow[], kw: string): SettingRow[] 
 }
 
 /* ═══ ：静态键判定单源 ═══
-   ES 静态 index settings 清单（建索引后不可改，改了要么被拒要么需重建生效）。
-   动态键（number_of_replicas/refresh_interval 等）不入列。匹配口径：全 key 相等，
-   或剥掉 index. 前缀后相等——带前缀（IndexHub）与不带（部分调用方）两种行口径都命中。
-   自 SettingsGrid 收编（行内「静态」徽标）+ MappingView 折叠节头「静态 M」摘要共用，
-   防两处清单漂移。 */
+ ES 静态 index settings 清单（建索引后不可改，改了要么被拒要么需重建生效）。
+ 动态键（number_of_replicas/refresh_interval 等）不入列。匹配口径：全 key 相等，
+ 或剥掉 index. 前缀后相等——带前缀（IndexHub）与不带（部分调用方）两种行口径都命中。
+ 自 SettingsGrid 合并（行内「静态」徽标）+ MappingView 折叠节头「静态 M」摘要共用，
+ 防两处清单漂移。 */
 const STATIC_KEYS = new Set([
   'number_of_shards', 'number_of_routing_shards', 'routing_partition_size',
   'codec', 'codec_compression_level', 'check_on_startup', 'store.type',

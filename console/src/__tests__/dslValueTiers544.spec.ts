@@ -5,14 +5,14 @@
  *    字面数字整 1/浮 1.5、boolean true/false；detail 与 date/ip 档同形 '字面提示 · <type>'）。
  *    **有意不扩共享表 DSL_VALUE_TYPE_HINTS**：dslValueTiers540 B 段把表内容钉死 date/ip 两档
  *    （keyword/boolean/long/integer/double toBeUndefined 断言）、C 段把 term/keyword 与 range/数值
- *    值位压制钉死，且 540 记档「date-math·ip 外值形态（产品裁决）」——':' 值位 regime 冻结；
- *    本批黑名单外不可改 540，故形态档仅数组元素位链路消费（先查共享表再查姊妹表）。
+ *    值位压制钉死，且 540 备案「date-math·ip 外值形态（产品裁决）」——':' 值位 regime 冻结；
+ *    黑名单外不可改 540，故形态档仅数组元素位链路消费（先查共享表再查姊妹表）。
  *  B 数组元素位字段解析姊妹纯函数 dslArrayElemFieldAt：值数组的元素串位没有「当前键」，
  *    字段=数组属主键（"terms": { "<field>": [ "x", "<光标" ）→ ownerKey ∈ 叶子子句才出字段；
  *    must/ids/_source/sort 等非字段值数组 → null 维持压制。dslValueFieldAt 本体零改动。
  *  C MonacoEditor 行为：terms 值数组续元素位（["x", "<光标）出类型档候选——该位现状是错档
- *    （query-type 的 QUERY_SNIPPETS 落进值数组），本批归位；首元素位（["<光标）是 540 契约 spec
- *    既有断言钉死的压制面（dslValueTiers540 黑名单外不可改），不在本批解锁面。
+ *    （query-type 的 QUERY_SNIPPETS 落进值数组），归位；首元素位（["<光标）是 540 契约 spec
+ *    既有断言钉死的压制面（dslValueTiers540 黑名单外不可改），不在解锁面。
  *
  * MonacoEditor 行为断言走 monaco stub 挂载（dslValueTiers540 同范式）；纯函数/源锚静态断言不挂 Monaco。
  */
@@ -44,9 +44,9 @@ describe('源锚：数组续元素位键链口 + 消费侧姊妹解析分派', (
 /* ---------- 值位形态档（姊妹表；共享表钉死不动） ---------- */
 describe('A 值位形态档（DSL_ARRAY_ELEM_TYPE_HINTS 姊妹表）', () => {
   it('共享表 DSL_VALUE_TYPE_HINTS 钉 date/ip 两档（540 B 段契约，558 批后为子集）', () => {
-    /* 558 批随迁注记：date_nanos 移出本负锁（本锁是 540 B 段的同源衍生钉）——558 批
-       收编 date_nanos/geo_point 两档入共享表，与 sqlCompletion/LuceneInput 姊妹面对齐
-       （540 regime 收窄后不再成立，dslValueTiers540 同批注记翻案）；date/ip 档内容
+    /* 558 批同步更新注记：date_nanos 移出本负锁（本锁是 540 B 段的同源衍生钉）——558 批
+       合并 date_nanos/geo_point 两档入共享表，与 sqlCompletion/LuceneInput 姊妹面对齐
+       （540 regime 收窄后不再成立，dslValueTiers540 同批注记修订）；date/ip 档内容
        逐字不变，其余类型压制钉死保留。 */
     expect(DSL_VALUE_TYPE_HINTS.date).toEqual({ detail: 'date-math 格式提示 · date', values: ['now-1d/d', 'now-1h/h'] });
     expect(DSL_VALUE_TYPE_HINTS.ip).toEqual({ detail: '字面提示 · ip', values: ['192.168.0.1'] });
@@ -73,9 +73,9 @@ describe('A 值位形态档（DSL_ARRAY_ELEM_TYPE_HINTS 姊妹表）', () => {
     expect(DSL_ARRAY_ELEM_TYPE_HINTS.boolean).toEqual({ detail: '字面提示 · boolean', values: ['true', 'false'] });
   });
 
-  it('分档边界：姊妹表表外类型不入表（含亲和族第九种 unsigned_long——本批点名八类型）', () => {
+  it('分档边界：姊妹表表外类型不入表（含亲和族第九种 unsigned_long——点名八类型）', () => {
     for (const t of ['text', 'annotated_text', 'date_nanos', 'unsigned_long', 'constant_keyword', 'object', 'alias']) {
-      expect(DSL_ARRAY_ELEM_TYPE_HINTS[t], `类型 ${t} 不在本批档`).toBeUndefined();
+      expect(DSL_ARRAY_ELEM_TYPE_HINTS[t], `类型 ${t} 不在档`).toBeUndefined();
     }
   });
 });

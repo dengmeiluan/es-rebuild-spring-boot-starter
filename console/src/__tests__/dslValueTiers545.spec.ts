@@ -107,7 +107,7 @@ describe('545 A：SQL 值位 wildcard 档（LIKE % 形态）', () => {
     expect(VAL_FORMAT_HINTS.keyword, 'keyword 走 terms agg 动态候选，不入静态表').toBeUndefined();
     expect(VAL_FORMAT_HINTS.date).toEqual({ detail: 'date-math 格式提示 · date', values: ['now-1d/d', 'now-1h/h'] });
     expect(VAL_FORMAT_HINTS.boolean).toEqual({ detail: '字面提示 · boolean', values: ['true', 'false'] });
-    /* 551 随迁：ip 档补 CIDR 形态档（LuceneInput IP_HINTS 姊妹面同批对齐）——detail 与点分示例不动 */
+    /* 551 同步更新：ip 档补 CIDR 形态档（LuceneInput IP_HINTS 姊妹面同批对齐）——detail 与点分示例不动 */
     expect(VAL_FORMAT_HINTS.ip).toEqual({ detail: '字面提示 · ip', values: ['192.168.0.1', '192.168.0.0/24'] });
     expect(VAL_FORMAT_HINTS.double).toEqual({ detail: '数值示例 · double', values: ['100'] });
   });
@@ -116,7 +116,7 @@ describe('545 A：SQL 值位 wildcard 档（LIKE % 形态）', () => {
 /* ═══ B：数值族九口径对齐（unsigned_long 补员） ═══ */
 describe('545 B：unsigned_long 九族口径对齐', () => {
   it('typePriorityForOp(range)：date 置顶 + 数值族九种（补 unsigned_long，既有八种次序零变动）', () => {
-    /* 548 锁随迁：range 序补 date_nanos（紧跟 date 位置，opsForType date 分支并档同批立法）；
+    /* 548 锁同步更新：range 序补 date_nanos（紧跟 date 位置，opsForType date 分支并档同批约定）；
        原契约意图保持——date 族置顶、数值族九种相对次序零变动 */
     expect(typePriorityForOp('range')).toEqual([
       'date', 'date_nanos', 'long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float', 'unsigned_long',

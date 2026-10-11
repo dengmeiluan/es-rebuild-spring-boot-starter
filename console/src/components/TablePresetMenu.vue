@@ -1,10 +1,10 @@
 <template>
   <!-- 列布局方案共享件（轨3 preset 消费面，⑥ 652 头号候选落地）——
-       ColPicker 同款「单钮+弹层」收纳范式（铁律 C：save/apply/delete 收进弹层，
-       工具行不新增平铺枚举钮）；弹层壳按 563 立法 raw+自绘四要素（白底/边框/阴影/圆角，
-       .pgn-psize-pop 同配方）；Esc 收口按 566 范式两段（非空清词→空关层+焦点回触发钮，
-       铁律 D1#5）。内核=useTablePrefs 652 三操作（受控：presets 名册由父传入，操作结果
-       经父 ref 回写）。RT（btn-cls=rt-tool-btn）/QRT（qrt-tool-btn）双消费，位次=列宽后。 -->
+ ColPicker 同款「单钮+弹层」收纳范式（铁律 C：save/apply/delete 收进弹层，
+ 工具行不新增平铺枚举钮）；弹层壳按 raw+自绘四要素（白底/边框/阴影/圆角，
+ .pgn-psize-pop 同配方）；Esc 收口按 566 范式两段（非空清词→空关层+焦点回触发钮，
+ 铁律 D1#5）。内核=useTablePrefs 652 三操作（受控：presets 名册由父传入，操作结果
+ 经父 ref 回写）。RT（btn-cls=rt-tool-btn）/QRT（qrt-tool-btn）双消费，位次=列宽后。 -->
   <n-popover trigger="click" placement="bottom-end" :show-arrow="false" raw :show="open" @update:show="open = $event">
     <template #trigger>
       <button ref="btnEl" type="button" class="btn sm ghost" :class="btnCls"
@@ -16,7 +16,7 @@
       </button>
     </template>
     <!-- v-if 随 open 即时摘除：raw+受控档下 naive 离场 transition 在 happy-dom 无
-         transitionend，DOM 滞留会让「关层」语义不确定（653-B 行为锁实证） -->
+ transitionend，DOM 滞留会让「关层」语义不确定（653-B 行为锁实证） -->
     <div v-if="open" class="tpm-pop" aria-label="列布局方案">
       <div class="tpm-hd">列布局方案<b class="tpm-n mono">{{ presets.length }}</b><span class="tpm-hd-t">列选/列宽/行高/转置/冻结快照</span></div>
       <div class="tpm-save">
@@ -73,8 +73,8 @@ function doDel(p: string) {
 }
 
 /* 范式：弹层 Esc 收口（宪法铁律 D1#5「开弹层→Esc→焦点回触发器」）——
-   show 受控 naive 不自带关层；开层挂 document 捕获级监听，两段语义（输入非空先
-   清词=输入框内 Esc 清词惯例，空则关层并还焦点触发钮）；卸载兜底摘监听。 */
+ show 受控 naive 不自带关层；开层挂 document 捕获级监听，两段语义（输入非空先
+ 清词=输入框内 Esc 清词惯例，空则关层并还焦点触发钮）；卸载兜底摘监听。 */
 function onEsc(e: KeyboardEvent) {
   if (e.key !== 'Escape') return;
   e.stopPropagation();
@@ -94,7 +94,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc, true));
 </script>
 
 <style scoped>
-/* 563 立法浮层壳四要素：白底(bg1)+边框+阴影+圆角(r-m)——.pgn-psize-pop 同配方 */
+/* 浮层壳四要素：白底(bg1)+边框+阴影+圆角(r-m)——.pgn-psize-pop 同配方 */
 .tpm-pop {
   display: flex; flex-direction: column; gap: var(--sp-1h); min-width: 252px;
   background: var(--bg1); border: 1px solid var(--line-strong); border-radius: var(--r-m);

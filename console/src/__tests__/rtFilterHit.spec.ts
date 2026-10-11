@@ -113,7 +113,7 @@ describe('RT 以此值过滤并重查（W7 filter-hit）', () => {
     ctxOnCell('hole');
     await tick();
     expect(menuItem('以此值过滤并重查'), '空值格不应出 filter-hit 项').toBeFalsy();
-    /* 既有项文案逐字保留（契约随迁锚点） */
+    /* 既有项文案逐字保留（契约同步更新锚点） */
     ctxOnCell('age');
     await tick();
     expect(menuItem('复制值')).toBeTruthy();

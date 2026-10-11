@@ -1,5 +1,5 @@
 /* Mapping 字段树的领域逻辑——拍平、折叠可见性、查询 DSL 污染检测。
-   与视图解耦：MappingView 与索引工作区 Mapping Tab 共用一份口径（单测锁契约）。 */
+ 与视图解耦：MappingView 与索引工作区 Mapping Tab 共用一份口径（单测锁契约）。 */
 
 export interface MappingRow {
   /** 完整点分路径，如 query.bool.must */
@@ -20,8 +20,8 @@ export interface MappingRow {
 }
 
 /** 把 ES mapping 的 properties 递归拍平为行数组（先序，父在子前）。
- *  multi-fields（fields.*）不再压缩进 attrs 文本被截断，而是产出为可折叠子行——
- *  它们本就是可查询的真实路径（如 title.keyword），理应层级展示。 */
+ * multi-fields（fields.*）不再压缩进 attrs 文本被截断，而是产出为可折叠子行——
+ * 它们本就是可查询的真实路径（如 title.keyword），理应层级展示。 */
 export function flattenMapping(props: Record<string, any> | null | undefined): MappingRow[] {
   const out: MappingRow[] = [];
   const attrsOf = (d: any): string => {
@@ -74,7 +74,7 @@ const DSL_MARKERS = new Set([
 const DSL_ROOTS = new Set(['query', 'sort', 'aggs', 'aggregations', 'post_filter', 'highlight', 'collapse']);
 
 /** 检测「查询 DSL 被当文档写入、dynamic mapping 固化」的疑似污染顶层字段。
- *  口径保守：顶层名在 DSL_ROOTS 内、自身是 object、且子树 ≥2 个节点名命中 DSL 关键词。 */
+ * 口径保守：顶层名在 DSL_ROOTS 内、自身是 object、且子树 ≥2 个节点名命中 DSL 关键词。 */
 export function detectDslPollution(props: Record<string, any> | null | undefined): string[] {
   const hits: string[] = [];
   for (const [name, def] of Object.entries(props || {})) {

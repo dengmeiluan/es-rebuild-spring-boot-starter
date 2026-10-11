@@ -29,8 +29,8 @@ describe('R26 审计值建议收口（username datalist / uriPrefix 通道 / 去
     expect(apiSrc).toContain("users: { key: string; count?: number }[]; uris: { key: string; count?: number }[] }>('/auth/audit-facets')");
   });
 
-  it('uriPrefix 通道：opsAudit 第 7 参 + 查询串透传 + fetchAuditPage 携 fUri（R23 死输入接活；582 随迁 R36 三参追加）', () => {
-    /* 五百八十二批随迁（577-C1 闭合锚漂）：R36 慢请求面板在 uriPrefix 后追加
+  it('uriPrefix 通道：opsAudit 第 7 参 + 查询串透传 + fetchAuditPage 携 fUri（R23 死输入接活；582 同步更新 R36 三参追加）', () => {
+    /* 五百八十二批同步更新（577-C1 闭合锚漂）：R36 慢请求面板在 uriPrefix 后追加
        minCostMs/fromMs/toMs 三参——旧字面「uriPrefix?: string) =>」闭括号失配 */
     expect(apiSrc).toContain('connName?: string, uriPrefix?: string, minCostMs?: number, fromMs?: number, toMs?: number) =>');
     expect(apiSrc).toContain('q({ username, action, size, from, since, connName, uriPrefix, minCostMs, fromMs, toMs })');

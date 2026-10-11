@@ -65,7 +65,7 @@ import { useAppStore } from '../stores/app';
 import { copyText } from '../utils/format';
 
 /**
- *  顶栏身份组件：displayName 优先展示（宿主委托身份的 username 常是不可读哈希），
+ * 顶栏身份组件：displayName 优先展示（宿主委托身份的 username 常是不可读哈希），
  * 长哈希自动缩略；点开可见完整身份档案（角色解释/来源/宿主属性）。
  */
 const auth = useAuthStore();

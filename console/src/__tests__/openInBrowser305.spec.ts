@@ -62,8 +62,8 @@ describe('行→文档深链（305 批）', () => {
     expect(card, '深链文档详情卡应渲染').toBeTruthy();
     expect(card.textContent).toContain('doc-1');
     expect(card.textContent).toContain('"name"');
-    /* 776 锁随迁：卡头新增 FileJson 原始响应钮（G253）后「卡内第一钮=关闭」隐含锚失效——
-       按 aria-label 取关闭钮（775 flattenWave557 锁随迁同款） */
+    /* 776 锁同步更新：卡头新增 FileJson 原始响应钮（G253）后「卡内第一钮=关闭」隐含锚失效——
+       按 aria-label 取关闭钮（775 flattenWave557 锁同步更新同款） */
     ([...card.querySelectorAll('button')] as HTMLButtonElement[])
       .find(b => b.getAttribute('aria-label') === '关闭文档详情')!.click();
     await tick();

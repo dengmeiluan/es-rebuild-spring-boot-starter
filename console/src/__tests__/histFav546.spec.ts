@@ -117,8 +117,8 @@ describe('A QueryHistoryPanel fav action（行为锁）', () => {
   });
 
   it('源锚：fav 在 actions 枚举与 emits 契约在册（Star 图标钮接 $emit）', () => {
-    /* 五百五十二批随迁（击穿者：552 轨2 刀③——actions 联合类型加 'curl'，行级仅 emit、
-       组装归宿主）：枚举字面随迁六成员形，fav 在册语义零回退 */
+    /* 五百五十二批同步更新（击穿者：552 轨2 刀③——actions 联合类型加 'curl'，行级仅 emit、
+       组装归宿主）：枚举字面同步更新六成员形，fav 在册语义零回退 */
     expect(panelSrc).toContain("'play' | 'fill' | 'copy' | 'curl' | 'del' | 'rename' | 'fav'");
     expect(panelSrc).toContain("(e: 'fav', it: HistRow): void;");
     expect(panelSrc).toContain('@click="$emit(\'fav\', it)"');
@@ -127,10 +127,10 @@ describe('A QueryHistoryPanel fav action（行为锁）', () => {
 
 describe('B DslQueryView 宿主接线（源锚）', () => {
   it('历史弹窗 actions 加 fav + @fav=favHistRow；favHistRow=行 DSL 装编辑器 + 跨索引跟随 + 既有保存弹窗链', () => {
-    /* 五百五十四批随迁（击穿者：554 B1 刀③——DQ 历史/保存面板 actions 加 'curl'，
+    /* 五百五十四批同步更新（击穿者：554 B1 刀③——DQ 历史/保存面板 actions 加 'curl'，
        QueryHistoryPanel 行级仅 emit、curl 组装归宿主 histCurl；fav 在册语义零回退，
        七动作序=552 DevTools 六动作形同构 'curl' 置 del 前）
-       五百六十二批随迁（击穿者：kibanaWave562 K4——DQ 历史行带到 DevTools 新 Tab）：
+       五百六十二批同步更新（击穿者：kibanaWave562 K4——DQ 历史行带到 DevTools 新 Tab）：
        actions 加 'newtab'，_prefill 组装归宿主 histNewTab */
     expect(dslSrc).toContain("['play', 'fill', 'copy', 'fav', 'curl', 'newtab', 'del']");
     expect(dslSrc).toContain('@fav="favHistRow"');

@@ -23,7 +23,7 @@ describe('文档表真分页统一（）', () => {
 
   it('IndexHubView 源码锁：Pagination 接线+共享键+旧范式退役', () => {
     const v = read('../views/IndexHubView.vue');
-    /* 随迁：JSON/Tree 档无翻页语义，Pagination 带视图档 v-if 前缀（DQ 同款），
+    /* 同步更新：JSON/Tree 档无翻页语义，Pagination 带视图档 v-if 前缀（DQ 同款），
        props 值恒等（from/size 真检索语义零触） */
     expect(v).toMatch(/<Pagination v-if="docsView !== 'json' && docsView !== 'tree'"\s*\n\s+:page="docsPage" :total-pages="docsTotalPages" :page-size="docsSize"/);
     expect(v).toMatch(/es_pager_size/);
@@ -36,9 +36,9 @@ describe('文档表真分页统一（）', () => {
 
   it('两工作台页大小同源：DslQueryView 读写同键 es_pager_size', () => {
     const dq = read('../views/DslQueryView.vue');
-    /* 收编 usePagerSize 统一件后契约随迁：读写+档位钳制（越档/坏值回落 20、旧 ihub.docsSize
+    /* 合并 usePagerSize 统一件后契约同步更新：读写+档位钳制（越档/坏值回落 20、旧 ihub.docsSize
        兼容读）归统一件，视图不再裸读写 es_pager_size */
-    /* 随迁（击穿者：562 实报 size 与分页档脱节——import 增补 PAGER_SIZES
+    /* 同步更新（击穿者：562 实报 size 与分页档脱节——import 增补 PAGER_SIZES
        档位单源，执行窗口同步块见 dqSizePagerSync562） */
     expect(dq).toMatch(/import \{ usePagerSize, PAGER_SIZES \} from '\.\.\/composables\/usePagerSize';/);
     expect(dq).toMatch(/const \{ size: pageSize, set: writePageSize \} = usePagerSize\(\);/);

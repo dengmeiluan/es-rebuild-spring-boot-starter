@@ -1,6 +1,6 @@
 /**
  * 二百三十二批 P1-4：useAutoRefresh 生命周期收口。
- * 锁定：setOn 后按 ms 周期触发；guard=false 跳过本轮；ms=0 不启动；
+ * 锁定：setOn 后按 ms 周期触发；guard=false 跳过；ms=0 不启动；
  * KeepAlive deactivated 停 / activated 续；页面隐藏（visibilitychange）停、恢复续；
  * 卸载后不再触发；setOn(false) 立即停。
  * 组件环境用 KeepAlive 包裹 dummy 组件（onActivated/onDeactivated 需要实例）。

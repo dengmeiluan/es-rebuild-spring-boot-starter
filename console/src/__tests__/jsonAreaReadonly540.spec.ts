@@ -3,11 +3,11 @@
  *
  * 背景：538 批裁决「Xmigrate pre→JsonArea 不做」两理由——①JsonArea 无 readonly 通道；
  * ②Xmigrate 的 pre 是「随内容生长至 max-height 封顶」而 JsonArea 是定高模型，非确定解。
- * 本批补 ①（readonly prop 缺省 false=既有行为零感知），并重估 ②：
+ * 补 ①（readonly prop 缺省 false=既有行为零感知），并重估 ②：
  * rows=min(内容行数,封顶行数) → height=rows*19+16 是纯内容函数（无 DOM 测量、无回写回路），
  * 「随内容生长至封顶」存在确定解，故 Xmigrate 源配置预览接线（拖拽落盘 cfgMaxH 通道随 pre 退役，
- * __tests__ 全量 grep 无 cfgMaxH/xm-cfg-pre/cfgPreview 既有锁——无锁记档）。
- * MonacoEditor 内层 readOnly 契约（含运行时 watch）既有，本批只做 JsonArea 薄透传。
+ * __tests__ 全量 grep 无 cfgMaxH/xm-cfg-pre/cfgPreview 既有锁——无锁备案）。
+ * MonacoEditor 内层 readOnly 契约（含运行时 watch）既有，只做 JsonArea 薄透传。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -87,7 +87,7 @@ describe('540 批：JsonArea readonly 通道', () => {
   });
 });
 
-/* ── Xmigrate 源配置预览 pre→JsonArea readonly 接线（静态契约记档：无既有锁，本 spec 即锁） ── */
+/* ── Xmigrate 源配置预览 pre→JsonArea readonly 接线（静态契约备案：无既有锁，本 spec 即锁） ── */
 const XM_SRC = join(__dirname, '../views/XmigrateView.vue');
 
 describe('540 批：Xmigrate 源配置预览 pre→JsonArea readonly 接线', () => {
@@ -103,7 +103,7 @@ describe('540 批：Xmigrate 源配置预览 pre→JsonArea readonly 接线', ()
     expect(xm.match(/<JsonArea /g)?.length, 'mapping/settings 两路接线').toBe(2);
     expect(xm, 'readonly 通道（编辑禁用的锚）').toContain(' readonly ');
     expect(xm, '封顶行数常量在场（≈原 cfgMaxH 默认 200px：10*19+16=206px）').toMatch(/XM_CFG_CAP_ROWS = 10/);
-    /* 五百五十二批随迁（击穿者：552 轨2 刀⑥——封顶 10 改 useTierCycle 三档 10/20/40 落盘键
+    /* 五百五十二批同步更新（击穿者：552 轨2 刀⑥——封顶 10 改 useTierCycle 三档 10/20/40 落盘键
        xm.cfgRows，默认档 10=原封顶值）：Math.min 尾参随档位化改档值 ref（cfgCapRows.value），
        锁意图=行数=min(内容行数,档值) 纯内容函数——无 DOM 测量、无回写回路
        （红线：高度棘轮/循环扩大不触）零回退 */
@@ -113,7 +113,7 @@ describe('540 批：Xmigrate 源配置预览 pre→JsonArea readonly 接线', ()
 
   it('cfgMaxH 拖拽落盘通道随 pre 退役（saveCfgH/usePref 预览稿不回流）', () => {
     expect(xm, 'saveCfgH 随 pre 退役').not.toContain('saveCfgH');
-    expect(xm, "xm.cfgMaxH 偏好稿退役（无既有消费方，无锁记档）").not.toContain('xm.cfgMaxH');
+    expect(xm, "xm.cfgMaxH 偏好稿退役（无既有消费方，无锁备案）").not.toContain('xm.cfgMaxH');
     expect(xm, '@pointerup 拖拽落盘锚不回流').not.toContain('@pointerup="saveCfgH"');
   });
 });

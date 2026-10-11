@@ -308,8 +308,8 @@ describe('五百五十二批 B：median/emptyRate + contains 档', () => {
     expect(host.querySelector('.qrt-bar')!.textContent).toContain('已筛选 1 列');
   });
 
-  it('⑥ ColFilterPopover：缺省（未传 contains）弹层零变化——无包含输入行（554 随迁：原以 RT 为「未传 contains」载体；554 起 RT 通道接入 contains（isContainsCol 守卫门控），载体缺省零增量语义改由共享件直挂锁定，并随迁补 RT 守卫面；例不删）', async () => {
-    /* 载体随迁：共享件直挂（Browser/Plugins/Security 通道同形态——不传 contains），
+  it('⑥ ColFilterPopover：缺省（未传 contains）弹层零变化——无包含输入行（554 同步更新：原以 RT 为「未传 contains」载体；554 起 RT 通道接入 contains（isContainsCol 守卫门控），载体缺省零增量语义改由共享件直挂锁定，并同步更新补 RT 守卫面；例不删）', async () => {
+    /* 载体同步更新：共享件直挂（Browser/Plugins/Security 通道同形态——不传 contains），
        锁定 552 原意图「未传 contains=无包含行」的壳缺省零增量 */
     const cfpHost = document.createElement('div');
     document.body.appendChild(cfpHost);
@@ -328,7 +328,7 @@ describe('五百五十二批 B：median/emptyRate + contains 档', () => {
     expect(pop2, '弹层打开').toBeTruthy();
     expect(pop2.querySelector('input[aria-label="name 包含文本筛选"]'), '未传 contains=无包含行（五通道零增量，原 552 意图保真）').toBeNull();
     lastUnmount();
-    /* 554 随迁补面：RT 通道已接 contains——显式非语义类型（binary）仍无包含行（守卫门控）；
+    /* 554 同步更新补面：RT 通道已接 contains——显式非语义类型（binary）仍无包含行（守卫门控）；
        untyped 列照出包含行（QRT 552:292 'name' 自洽对称件，行为锁随接入翻正） */
     const HITS = [
       { _id: 'a', _source: { name: 'banana', blob: 'AAAA' } }, { _id: 'b', _source: { name: 'apple', blob: 'BBBB' } },

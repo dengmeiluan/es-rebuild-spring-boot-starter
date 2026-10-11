@@ -179,7 +179,7 @@ public class ConsoleAuthInterceptorAuditContextTest {
         ConsoleAuthInterceptor it = interceptor(audit);
         Map<String, Object> attrs = new HashMap<>();
         attrs.put(ConsoleAuthInterceptor.ATTR_PRINCIPAL, new ConsolePrincipal(
-                "fs_ou_admin", ConsoleRole.ADMIN, false, true, "邓美銮", null, null));
+                "fs_ou_admin", ConsoleRole.ADMIN, false, true, "测试用户", null, null));
         attrs.put(ConsoleAuthInterceptor.ATTR_START_MS, System.currentTimeMillis() - 42);
         attrs.put(ConsoleAuthInterceptor.ATTR_RAW_SUMMARY, "POST /idx/_delete");
 
@@ -201,7 +201,7 @@ public class ConsoleAuthInterceptorAuditContextTest {
         ConsoleAuthInterceptor it = interceptor(audit);
         Map<String, Object> attrs = new HashMap<>();
         attrs.put(ConsoleAuthInterceptor.ATTR_PRINCIPAL, new ConsolePrincipal(
-                "fs_ou_admin", ConsoleRole.ADMIN, false, true, "邓美銮", null, null));
+                "fs_ou_admin", ConsoleRole.ADMIN, false, true, "测试用户", null, null));
         attrs.put(ConsoleAuthInterceptor.ATTR_START_MS, System.currentTimeMillis());
         attrs.put(ConsoleAuthInterceptor.ATTR_RAW_SUMMARY, "DELETE /idx-001");
         it.afterCompletion(stubRequest("POST", "/internal/es/index/cluster/raw", new HashMap<>(), attrs),

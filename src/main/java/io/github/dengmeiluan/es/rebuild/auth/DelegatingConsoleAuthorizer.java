@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * 组合鉴权器（）：宿主委托先行、内置账号兜底。
+ * 组合鉴权器（宿主委托先行、内置账号兜底。
  *
  * <p>宿主注册 {@link ConsoleAuthDelegate}（如 宿主 校验 X-Es-Host-Token）后，
  * 每个请求先问 delegate；返回 null（本请求不带宿主凭证）则回落内置

@@ -971,7 +971,7 @@ public class EsRebuildAutoConfiguration {
                 }
             return new JdbcConsoleOpsAuditStore(ds);
         }
-        /* 20260922 统一只用 QA ES 单载体立法：环形开启时按日索引写（快筛+双闸保留仅在 ES 档承诺） */
+        /* 20260922 统一只用 QA ES 单载体约定：环形开启时按日索引写（快筛+双闸保留仅在 ES 档承诺） */
         return new EsConsoleOpsAuditStore(controlClusterResolver::client, properties.getConsole().getAuth().getOpsAuditIndexName(),
                 properties.getConsole().getAuth().getAuditRetention().isEnabled());
     }

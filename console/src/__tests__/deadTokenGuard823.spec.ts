@@ -14,9 +14,9 @@
  * --panel-hover  迁入 2.2.7 原始遗留零引用（panel-2/hover 活）
  *
  * ── 断言口径（按字面理解，不要外推）────────────────────────────────
- * 引用集含 var(--x) 与 '--x' 字符串动态注入两形态（815-C1 DECL 12 族立法同源）。
- * 豁免名单 EXEMPT 恒空：未来有意立储备 token 须在此立法（token+批次+意图注释），
- * 无立法的死定义一律删——git 历史可捞。
+ * 引用集含 var(--x) 与 '--x' 字符串动态注入两形态（815-C1 DECL 12 族约定同源）。
+ * 豁免名单 EXEMPT 恒空：未来有意立储备 token 须在此约定（token+批次+意图注释），
+ * 无约定的死定义一律删——git 历史可捞。
  */
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
@@ -36,7 +36,7 @@ const sources = walk(srcDir).map(p => readFileSync(p, 'utf-8'));
 const EXEMPT = new Set<string>([]);
 
 describe('token 定义死链守卫（theme.css 定义集 ⊆ 全站引用集 ∪ 豁免）', () => {
-  it('A1 死 token 定义集为空（新储备 token 须入 EXEMPT 立法）', () => {
+  it('A1 死 token 定义集为空（新储备 token 须入 EXEMPT 约定）', () => {
     const used = new Set<string>();
     for (const src of sources) {
       for (const m of src.matchAll(/var\(\s*(--[\w-]+)/g)) if (m[1]) used.add(m[1]);

@@ -1,8 +1,8 @@
 <template>
   <Teleport to="body">
     <!-- 不用 <transition>：类名推进依赖 rAF，Monaco 初始化等重任务阻塞主线程时
-         过渡会卡死在 enter-from，留下 opacity:0 的透明遮罩永久拦截整页点击。
-         改 CSS animation（样式系统驱动，不依赖 rAF 回调），离场直接卸载。 -->
+ 过渡会卡死在 enter-from，留下 opacity:0 的透明遮罩永久拦截整页点击。
+ 改 CSS animation（样式系统驱动，不依赖 rAF 回调），离场直接卸载。 -->
     <div v-if="auth.showLogin" class="lo-mask">
         <div class="lo-card">
           <div class="lo-brand">
@@ -62,7 +62,7 @@ async function doLogin() {
     }
   } catch (e: any) {
     /* 裸 e.message → friendlyEsError 一行收口（与全站错误面板同口径；
-       friendly 未命中时回落原文，再兜底「登录失败」） */
+ friendly 未命中时回落原文，再兜底「登录失败」） */
     error.value = friendlyEsError(String(e?.message ?? e)) || '登录失败';
   } finally {
     loading.value = false;

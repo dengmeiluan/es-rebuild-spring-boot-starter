@@ -34,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 配置式宿主鉴权委托（）：{@code es.rebuild.console.auth.delegate.*} 纯 properties
+ * 配置式宿主鉴权委托（{@code es.rebuild.console.auth.delegate.*} 纯 properties
  * 即可对接宿主凭据体系，不写一行 Java——与  代码 SPI（{@link ConsoleAuthDelegate}）
  * 同一插槽，代码 SPI 优先（AutoConfiguration 用 {@code @ConditionalOnMissingBean} 让位）。
  *
@@ -157,7 +157,7 @@ public class PropertiesAuthDelegate implements ConsoleAuthDelegate {
             int code = conn.getResponseCode();
             if (code < 200 || code >= 300) {
                 // debug→节流 WARN——401/5xx 等故障此前无痕（交回内置鉴权运营无从排查）；
-                // 401 高频回退场景复用 exception 臂节流器防刷屏（首条留痕，60s 内不再重复告警）
+                // 401 高频回移除景复用 exception 臂节流器防刷屏（首条留痕，60s 内不再重复告警）
                 long now = System.currentTimeMillis();
                 long last = lastEndpointWarnAt.get();
                 if (now - last > WARN_THROTTLE_MS && lastEndpointWarnAt.compareAndSet(last, now)) {

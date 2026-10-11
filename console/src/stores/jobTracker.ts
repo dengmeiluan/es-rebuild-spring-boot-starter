@@ -9,7 +9,7 @@ import { useAuthStore } from './auth';
 import { friendlyEsError } from '../utils/esError';
 
 /**
- *  全局作业跟踪器：长耗时作业（托管重建 / 跨集群迁移）的进度轮询原先各自绑在视图里
+ * 全局作业跟踪器：长耗时作业（托管重建 / 跨集群迁移）的进度轮询原先各自绑在视图里
  * （AdhocRebuildView、XmigrateView 的 setInterval + onBeforeUnmount clearInterval），
  * 一切页轮询就断、作业跑完也没人告诉你——提交一个几十分钟的迁移只能守着页面。
  *
@@ -18,7 +18,7 @@ import { friendlyEsError } from '../utils/esError';
  */
 
 /** 统一后的作业视图——四类来源字段不同（adhoc 有 stage，xmigrate 有 migrated/total，
- *  estask/snapshot 是吞进的集群级 reindex 任务与进行中快照），在此归一 */
+ * estask/snapshot 是吞进的集群级 reindex 任务与进行中快照），在此归一 */
 interface TrackedJob {
   id: string;
   kind: 'adhoc' | 'xmigrate' | 'estask' | 'snapshot';
@@ -65,12 +65,12 @@ export const useJobTrackerStore = defineStore('jobTracker', () => {
   /* 已通知过的作业，防刷新/重挂载重复弹 */
   let notified = new Set<string>();
   /* 见过在跑作业的人读标签：蒸发提醒时作业已不在清单里（接口失败的几轮还会把
-     jobs 里的条目冲掉），不缓存就只能退化成 jobId，用户对不上号 */
+ jobs 里的条目冲掉），不缓存就只能退化成 jobId，用户对不上号 */
   let seenLabels: Record<string, string> = {};
   let timer: any = null;
   let started = false;
   /* 连接模型「无授权连接」态的轮询全停告知——只弹一次（用户感知层：
-     此前该形态下数据面请求裸奔 403 刷审计流，现改为不发请求+明说原因） */
+ 此前该形态下数据面请求裸奔 403 刷审计流，现改为不发请求+明说原因） */
   let pollSilentNotified = false;
 
   function seenKey() { return SEEN_PREFIX; }
@@ -137,9 +137,9 @@ export const useJobTrackerStore = defineStore('jobTracker', () => {
   }
 
   /* 集群级来源两条——/cluster/tasks?detailed 的 RUNNING reindex 任务与
-     /cluster/snapshot/status 的 IN_PROGRESS 快照。键名按后端 EsIndexAdmin.listTasks
-     （taskId/action/startTimeMillis/status=BulkByScrollTask.Status）与 _snapshot/_status
-     透传（snapshots[].snapshot/repository/state/shards_stats）实地核实，非凭记忆编造 */
+ /cluster/snapshot/status 的 IN_PROGRESS 快照。键名按后端 EsIndexAdmin.listTasks
+ （taskId/action/startTimeMillis/status=BulkByScrollTask.Status）与 _snapshot/_status
+ 透传（snapshots[].snapshot/repository/state/shards_stats）实地核实，非凭记忆编造 */
 
   /** reindex description（JSON 串）→「源 → 目标」人读标签；非 JSON 回退 taskId */
   function reindexLabel(t: any): string {
@@ -194,22 +194,22 @@ export const useJobTrackerStore = defineStore('jobTracker', () => {
 
   async function poll() {
     /* 两类作业各自容忍失败：403（角色不足看迁移）/404（未装 adhoc）不该让整块跟踪瘫掉。
-       权限感知——页面白名单不含对应页时，本角色对这两个轮询端点必然 403，
-       继续打只会每周期往审计流刷 PAGE_DENIED（同质心跳刷屏）。无权限的通道直接跳过
-       （保留上一轮视图），后端审计聚合层（DedupConsoleOpsAuditStore）兜底。
-       连接键感知——grantedPages 为 conn:{connId}:{page} 形态（宿主连接
-       菜单模型）时，裸 includes 恒 false（有授权被静默跳过），且旧 wantData 不看页面
-       授权（snapshots 页未授权照样每 20s 裸打=产线 PAGE_DENIED 循环主源）。改为按
-       当前目标解析有效页集（与 router.effectivePagesForTarget/后端 EnvPagesResolver
-       同构）判定；快照通道额外受 snapshots 页授权约束。 */
+ 权限感知——页面白名单不含对应页时，本角色对这两个轮询端点必然 403，
+ 继续打只会每周期往审计流刷 PAGE_DENIED（同质心跳刷屏）。无权限的通道直接跳过
+ （保留上一轮视图），后端审计聚合层（DedupConsoleOpsAuditStore）兜底。
+ 连接键感知——grantedPages 为 conn:{connId}:{page} 形态（宿主连接
+ 菜单模型）时，裸 includes 恒 false（有授权被静默跳过），且旧 wantData 不看页面
+ 授权（snapshots 页未授权照样每 20s 裸打=产线 PAGE_DENIED 循环主源）。改为按
+ 当前目标解析有效页集（与 router.effectivePagesForTarget/后端 EnvPagesResolver
+ 同构）判定；快照通道额外受 snapshots 页授权约束。 */
     const granted = auth.grantedPages; // null=页面授权未启用（全放行）
     const eff = effectivePagesForTarget(granted, app.target || 'host');
     const can = (pageKey: string) => eff == null || eff.has(pageKey);
     const wantAdhoc = can('adhoc-rebuild');
     const wantXm = can('xmigrate');
     /* 数据面通道（reindex 任务/快照跟随 X-Es-Target）：连接模型须目标已钉选（授权就绪
-       门+autoPickConnTarget 保证就绪后才放行）；宿主隐藏或非连接模型沿用 hostVisible 语义。
-       reindex 任务=共享端点（无页面归属，角色门 VIEWER+ 恒过）；快照=snapshots 页面门。 */
+ 门+autoPickConnTarget 保证就绪后才放行）；宿主隐藏或非连接模型沿用 hostVisible 语义。
+ reindex 任务=共享端点（无页面归属，角色门 VIEWER+ 恒过）；快照=snapshots 页面门。 */
     const connModel = granted != null && granted.some(k => k.startsWith('conn:'));
     const dataReady = !!app.target || (!!app.hostVisible && !connModel);
     const wantSnaps = dataReady && can('snapshots');
@@ -245,8 +245,8 @@ export const useJobTrackerStore = defineStore('jobTracker', () => {
   }
 
   /** 终态跃迁检测：见过在跑 → 现在结束 → 弹一次通知并记入「最近完成」。
-   *  新增 tsOk/snOk——estask/snapshot 两条通道的消失判定（响应成功才算真结束，
-   *  网断/403 那轮静默保留，与 adhoc/xm 同纪律） */
+ * 新增 tsOk/snOk——estask/snapshot 两条通道的消失判定（响应成功才算真结束，
+ * 网断/403 那轮静默保留，与 adhoc/xm 同纪律） */
   function reconcile(next: TrackedJob[], adOk: boolean, xmOk: boolean, tsOk: boolean, snOk: boolean) {
     let dirty = false;
     for (const j of next) {
@@ -263,22 +263,22 @@ export const useJobTrackerStore = defineStore('jobTracker', () => {
       dirty = true;
       const ok = isOk(j.status);
       /* 失败通知直接带原因——后端本来就有字段（adhoc.error / xm.message），
-         只说「结束于 FAILED」还得跳页展开找原因，白白多一步。
-         原因先在这里友好化再拼接：否则 app.notify 对 error 类消息的全句友好化
-         会命中 ES 异常关键字把整句替换掉，作业名上下文全丢 */
+ 只说「结束于 FAILED」还得跳页展开找原因，白白多一步。
+ 原因先在这里友好化再拼接：否则 app.notify 对 error 类消息的全句友好化
+ 会命中 ES 异常关键字把整句替换掉，作业名上下文全丢 */
       const why = !ok && j.reason ? '：' + friendlyEsError(j.reason, 90) : '';
       app.notify(ok ? 'success' : 'error',
         `${j.kindName}「${j.label}」${ok ? '已完成' : '结束于 ' + j.status + why}`,
         { action: { label: '查看', onClick: () => router.push(j.route) }, duration: ok ? 6000 : 0 });
     }
     /* 在跑作业从清单里消失的检测。adhoc 作业是内存态（宿主重启即丢，见 AdhocRebuildJob 注释），
-       发布重启时正在跑的重建会无声蒸发——用户还以为在跑。只在该类接口本轮确实成功时才判定消失，
-       接口失败（403/网断）不算。xmigrate 持久化在 ES，只是可能被 30 条窗口挤出清单，不是蒸发，静默放手。 */
+ 发布重启时正在跑的重建会无声蒸发——用户还以为在跑。只在该类接口确实成功时才判定消失，
+ 接口失败（403/网断）不算。xmigrate 持久化在 ES，只是可能被 30 条窗口挤出清单，不是蒸发，静默放手。 */
     const ids = new Set(next.map(j => j.id));
     for (const id of [...seenRunning]) {
       if (ids.has(id)) continue;
       /* estask/snapshot 的完成=从列表消失（_tasks 与 _status 都只列进行中），
-         通道成功即判完成：记入最近完成 + 弹一次 success 通知（「作业跑完告诉你」语义延伸） */
+ 通道成功即判完成：记入最近完成 + 弹一次 success 通知（「作业跑完告诉你」语义延伸） */
       if (id.startsWith('es-task:') || id.startsWith('snap:')) {
         const ok = id.startsWith('es-task:') ? tsOk : snOk;
         if (!ok) continue;
@@ -345,8 +345,8 @@ export const useJobTrackerStore = defineStore('jobTracker', () => {
   }
 
   /* 作业清单不随目标集群变：托管重建与跨集群迁移的端点恒在宿主控制面
-     （App.vue 的 HOST_ONLY 已声明 /adhoc-rebuild、/xmigrate 为宿主专属视图），
-     因此切目标时既不清空也不换快照 key——否则会把在跑作业「跟丢」。 */
+ （App.vue 的 HOST_ONLY 已声明 /adhoc-rebuild、/xmigrate 为宿主专属视图），
+ 因此切目标时既不清空也不换快照 key——否则会把在跑作业「跟丢」。 */
 
   return { jobs, running, runningCount, overallPct, recentDone, recentFailed, probed, start, poll, clearDone };
 });

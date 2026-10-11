@@ -28,7 +28,7 @@
         <span class="cs-item-sub mono">{{ c.host }}:{{ c.port }}</span>
         <Check v-if="store.target === c.id" :size="12" class="cs-check" />
       </div>
-      <!--  B：裸空态迁 EmptyState compact（原 .cs-empty 裸文案同文案语义不变，窄弹层走紧凑档） -->
+      <!-- B：裸空态迁 EmptyState compact（原 .cs-empty 裸文案同文案语义不变，窄弹层走紧凑档） -->
       <EmptyState v-if="!visibleConns.length" compact :icon="Globe"
         :text="canAdmin ? (store.hostVisible ? '尚无自定义连接——点下方「管理连接…」添加第一个连接' : '尚无集群连接，请先在下方「管理连接」添加') : '暂无可用集群，请联系管理员在角色中授权'" />
       <div class="cs-sep"></div>
@@ -41,10 +41,10 @@
 
   <!-- 连接管理弹窗 -->
   <!-- 单框双效后续·深度质感重造（623 设计稿 v3 D1~D7 裁决「开始推进」）——
-       骨架=720px+max-height 恒不超屏（头部/排序/双折叠节固定，唯一滚动区=连接列表，滚动条常显）；
-       列表与表单双折叠节互让空间；行卡=双层网格（主行身份/次行地址/右锚状态）+grip 拖拽手动排序
-       （自动切「手动」第四档+Ctrl+↑/↓ 键盘可达，597 connSort 扩档不替换）+hover-reveal 图标操作
-       （触屏 pointer:coarse 恒常显兜底，507 先例） -->
+ 骨架=720px+max-height 恒不超屏（头部/排序/双折叠节固定，唯一滚动区=连接列表，滚动条常显）；
+ 列表与表单双折叠节互让空间；行卡=双层网格（主行身份/次行地址/右锚状态）+grip 拖拽手动排序
+ （自动切「手动」第四档+Ctrl+↑/↓ 键盘可达，597 connSort 扩档不替换）+hover-reveal 图标操作
+ （触屏 pointer:coarse 恒常显兜底，507 先例） -->
   <n-modal v-model:show="manageOpen" preset="card" content-style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden"
     style="width:720px;max-width:94vw;max-height:86vh;display:flex;flex-direction:column" :bordered="false">
     <template #header>集群连接管理 <span class="cm-cnt mono">{{ visibleConns.length }} 连接<template v-if="errCount"> · <b>{{ errCount }} 异常</b></template></span></template>
@@ -94,7 +94,7 @@
                 :title="probingId === c.id ? '探活中…' : '立即探活：GET / 测连通与时延'" :aria-label="'立即探活：' + c.name">
                 <Activity :size="13" :class="{ spinning: probingId === c.id }" />
               </button>
-              <!-- ⋯ 次级菜单退役改图标直出（hover-reveal；ADMIN 门控不变随迁 permGating） -->
+              <!-- ⋯ 次级菜单退役改图标直出（hover-reveal；ADMIN 门控不变同步更新 permGating） -->
               <template v-if="canAdmin">
                 <button class="cm-icob" :disabled="testingId === c.id" @click="testExisting(c.id)" title="测试连接（含认证）" :aria-label="'测试连接：' + c.name"><PlugZap :size="13" /></button>
                 <button class="cm-icob" @click="editConn(c)" title="编辑" :aria-label="'编辑连接：' + c.name"><Pencil :size="13" /></button>
@@ -196,7 +196,7 @@
   </n-modal>
 
   <!-- 卡片次级菜单改 NPopover 锚定按钮(placement left-start)——CellContextMenu 挂 body
-       在抽屉场景会盖到抽屉外的页面(观感「飘出去」);naive 弹层随按钮定位永在抽屉内 -->
+ 在抽屉场景会盖到抽屉外的页面(观感「飘出去」);naive 弹层随按钮定位永在抽屉内 -->
 </template>
 
 <script setup lang="ts">
@@ -215,19 +215,19 @@ import { useModalEnter } from '../composables/useModalEnter';
 import { friendlyEsError } from '../utils/esError';
 import EmptyState from './EmptyState.vue';
 import StatusPill from './StatusPill.vue';
-/* 连通测试结果 status 换装 StatusPill——healthPill tone 档（全等小写匹配，
-   后端 GREEN/YELLOW/RED 大写须先归一）+ clusterHealthZh 中文主显（esEnumZh 单源） */
+/* 连通测试结果 status 改用 StatusPill——healthPill tone 档（全等小写匹配，
+ 后端 GREEN/YELLOW/RED 大写须先归一）+ clusterHealthZh 中文主显（esEnumZh 单源） */
 import { healthPill } from '../utils/format';
 import { clusterHealthZh } from '../utils/esEnumZh';
 
 const store = useAppStore();
 /* 连接档案管理（新增/编辑/删除/测试=ADMIN，/clusters/ 写与 test 均在超管清单）——
-   非 ADMIN 保留查看/切换/探活（probe= VIEWER 豁免），不再展示必 403 的管理入口 */
+ 非 ADMIN 保留查看/切换/探活（probe= VIEWER 豁免），不再展示必 403 的管理入口 */
 const auth = useAuthStore();
 const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/clusters/save', store.target)); /* 连接档案管理按连接勾选（写键持有人=管理者）；静态模型回落 ADMIN 档 */
 /* 列表排序——默认 status（异常置顶），可切 name/latency；usePref 跨会话记忆。
-   增第四档「手动」（623 设计稿 D3/D4 裁决）——manualOrder 落盘跨会话记忆；
-   sortedConns 传 manualOrder 给 sortConns（非手动档忽略该参） */
+ 增第四档「手动」（623 设计稿 D3/D4 裁决）——manualOrder 落盘跨会话记忆；
+ sortedConns 传 manualOrder 给 sortConns（非手动档忽略该参） */
 const sortMode = usePref<SortMode>('cs.sort', 'status');
 const manualOrder = usePref<string[]>('cs.manualOrder', []);
 const sortedConns = computed(() => sortConns(visibleConns.value, normalizeSortMode(sortMode.value), manualOrder.value));
@@ -237,10 +237,10 @@ const sortOptions: [SortMode, string][] = [['status', '状态'], ['name', '名�
 const listFoldOpen = ref(true);
 const formOpen = ref(false);
 const formFoldEl = ref<HTMLElement | null>(null);
-/* 头部摘要 chip（623 稿 §4）：N 连接 · M 异常 */
+/* 头部摘要 chip（623 稿 ）：N 连接 · M 异常 */
 const errCount = computed(() => visibleConns.value.filter(c => c.health?.status === 'RED').length);
 /* 拖拽与键盘移位共用落位——moveInOrder 纯函数（connSort 单源）；
-   非手动档下先以当前可视序播种 manualOrder 再切档（拖到哪/移到哪所见即所得） */
+ 非手动档下先以当前可视序播种 manualOrder 再切档（拖到哪/移到哪所见即所得） */
 const dragId = ref('');
 function seedManualFromView() {
   manualOrder.value = sortedConns.value.map(c => c.id);
@@ -300,7 +300,7 @@ const ENV_OPTS = [
 ] as const;
 const curEnv = computed(() => store.conns.find(c => c.id === store.target)?.env || '');
 function envTip(env: string) {
-  /*  S2：与后端 env-role-cap 默认建议对齐——PROD 连接封顶只读 */
+  /* S2：与后端 env-role-cap 默认建议对齐——PROD 连接封顶只读 */
   if (env === 'PROD') return '生产环境：已封顶只读，写操作在当前环境不可用';
   return `环境标识：${env}`;
 }
@@ -328,7 +328,7 @@ function hdotTip(h?: ConnHealth) {
   if (h.status === 'GREEN') return `探活正常 · ${h.latencyMs}ms`;
   return `最近探活失败：${h.error || '未知错误'}`;
 }
-/* 服务端版本——档案持久化值优先，其次本轮探活内存值 */
+/* 服务端版本——档案持久化值优先，其次探活内存值 */
 function verOf(c: ClusterConnView) {
   return c.esVersion || c.health?.version || '';
 }
@@ -338,7 +338,7 @@ async function pickTarget(id: string, name: string) {
   if (id === store.target) return;
   const c = store.conns.find(x => x.id === id);
   // RED 集群仍可切（可能刚恢复/探活口径偏差），但前置告知，避免用户对满屏超时一头雾水。
-  // 确认统一走 askConfirm 全局服务（原 naive dialog 警告弹层孤例收编）
+  // 确认统一走 askConfirm 全局服务（原 naive dialog 警告弹层孤例合并）
   if (c?.health?.status === 'RED') {
     const ok = await askConfirm({
       title: '目标集群最近探活失败',
@@ -364,13 +364,13 @@ async function probeConn(c: ClusterConnView) {
     if (h.status === 'GREEN') store.notify('success', `「${c.name}」连通正常 · ${h.latencyMs}ms`);
     else store.notify('warning', `「${c.name}」探活失败：${h.error || '未知错误'}`);
   } catch (e: any) {
-    /*  A：ES 错误友好化（探活失败原因可读化） */
+    /* A：ES 错误友好化（探活失败原因可读化） */
     store.notify('error', '探活请求失败: ' + friendlyEsError(String(e?.message ?? e)));
   } finally { probingId.value = ''; }
 }
 
 /* 非 admin 按连接菜单授权过滤可见连接(grantedPages conn:{id}:{page} 键推导);
-   admin 全量管理。visibleConns 供列表与切换菜单共用。 */
+ admin 全量管理。visibleConns 供列表与切换菜单共用。 */
 const grantedConnIds = computed(() => {
   const gp = auth.grantedPages;
   if (canAdmin.value || gp == null) return null;
@@ -407,7 +407,7 @@ function editConn(c: any) {
     connectTimeoutMs: c.connectTimeoutMs ?? '', socketTimeoutMs: c.socketTimeoutMs ?? '',
     env: c.env || '', authType: c.authType || 'BASIC',
   };
-  /* 编辑自动展开表单折叠节并滚至表单（623 稿 §6 状态机） */
+  /* 编辑自动展开表单折叠节并滚至表单（623 稿 状态机） */
   formOpen.value = true;
   void nextTick(() => formFoldEl.value?.scrollIntoView({ block: 'nearest' }));
 }
@@ -426,7 +426,7 @@ async function testExisting(id: string) {
     if (r.ok) store.notify('success', `「${store.conns.find(x => x.id === id)?.name || '连接'}」连通正常 · v${r.version} · ${r.nodes} 节点`);
     else store.notify('warning', `连接失败：${r.message || '未知错误'}`);
   } catch (e: any) {
-    /*  A：ES 错误友好化（测试连接失败原因可读化） */
+    /* A：ES 错误友好化（测试连接失败原因可读化） */
     store.notify('error', '测试请求失败: ' + friendlyEsError(String(e?.message ?? e)));
   } finally { testingId.value = ''; }
 }
@@ -442,7 +442,7 @@ async function testForm() {
       password: form.value.password || undefined,
       authType: form.value.authType || undefined,
     });
-  } catch (e: any) { /*  A：ES 错误友好化 */ testResult.value = { ok: false, message: friendlyEsError(String(e?.message ?? e)) }; }
+  } catch (e: any) { /* A：ES 错误友好化 */ testResult.value = { ok: false, message: friendlyEsError(String(e?.message ?? e)) }; }
   finally { testingForm.value = false; }
 }
 
@@ -473,7 +473,7 @@ async function saveConn() {
     testResult.value = null;
     await store.loadConns();
   } catch (e: any) {
-    /*  A：ES 错误友好化（保存连接失败原因可读化） */
+    /* A：ES 错误友好化（保存连接失败原因可读化） */
     store.notify('error', '保存失败: ' + friendlyEsError(String(e?.message ?? e)));
   } finally { saving.value = false; }
 }
@@ -492,13 +492,13 @@ async function delConn(c: any) {
     store.notify('success', '连接已删除');
     await store.loadConns(); // 若删的是当前目标，loadConns 内部会自动回落宿主
   } catch (e: any) {
-    /*  A：ES 错误友好化（删除连接失败原因可读化） */
+    /* A：ES 错误友好化（删除连接失败原因可读化） */
     store.notify('error', '删除失败: ' + friendlyEsError(String(e?.message ?? e)));
   }
 }
 
-/*  D2 触屏兜底：粗指针下操作钮恒常显——本组件在 adaptSweep563 豁免册（媒体查询
-   须经裁决迁册后才能新增），改 matchMedia + is-coarse 类 */
+/* D2 触屏兜底：粗指针下操作钮恒常显——本组件在 adaptSweep563 豁免册（媒体查询
+ 须经裁决迁册后才能新增），改 matchMedia + is-coarse 类 */
 const coarse = ref(false);
 onMounted(() => {
   const mq = matchMedia('(pointer: coarse)');
@@ -539,7 +539,7 @@ onMounted(() => store.loadConns());
 /* 服务端版本徽章（探活自动识别） */
 .cs-ver { flex-shrink: 0; padding: 1px 5px; font-size: var(--fs-xs); font-weight: 600; color: var(--ac-hi); background: var(--ac-soft); border: 1px solid var(--ac-line); border-radius: 3px; }
 .cs-check { color: var(--ac-hi); flex-shrink: 0; }
-/*  B：.cs-empty 裸空态退役迁 EmptyState compact，本地样式随迁删除 */
+/* B：.cs-empty 裸空态退役迁 EmptyState compact，本地样式同步更新删除 */
 .cs-sep { height: 1px; margin: var(--sp-1) var(--sp-0); background: var(--line); }
 .cs-item.manage { color: var(--tx2); }
 .cs-item.manage:hover { color: var(--tx1); }
@@ -566,23 +566,23 @@ onMounted(() => store.loadConns());
 .cm-fold.open .cm-fold-bd { display: block; }
 .cm-fold-list { border: 0; background: none; }
 .cm-fold-list .cm-fold-hd { padding: 0 0 var(--sp-1h); }
-/* 列表保底（用户产线实报「连接列表被挤没」）——原 min-height:0 意味列表可被无条件压扁，
-   表单节 flex-shrink:0 吃满固有高后，全部高度亏空只能由列表承担（真机 1842×937 实测列表仅剩 151px、
-   10 个连接只有 2 行可见；视口高 800px 时仅 34px、0 行完整可见，末行被横切成半看着像被下卡片压住）。
-   保底 = 折叠头 ~32px + 3 行卡（~63px/行）→ 表单无论开合，列表恒有 3 个连接可见可点。 */
+/* 列表保底（使用反馈「连接列表被挤没」）——原 min-height:0 意味列表可被无条件压扁，
+ 表单节 flex-shrink:0 吃满固有高后，全部高度亏空只能由列表承担（真机 1842×937 实测列表仅剩 151px、
+ 10 个连接只有 2 行可见；视口高 800px 时仅 34px、0 行完整可见，末行被横切成半看着像被下卡片压住）。
+ 保底 = 折叠头 ~32px + 3 行卡（~63px/行）→ 表单无论开合，列表恒有 3 个连接可见可点。 */
 .cm-fold-list.open { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 222px; }
 .cm-fold-list .cm-fold-bd { min-height: 0; flex: 1; }
 .cm-fold-list.open .cm-fold-bd { display: flex; flex-direction: column; }
 /* 让位方改「表单」——列表保底之后，高度亏空由表单折叠节收缩承担并自滚
-   （此前表单 flex-shrink:0 恒不让位，正是列表被挤没的直接原因；唯一滚动区语义由「列表独有」
-   扩为「列表 + 表单体两处」，列表滚动条常显不变）。 */
+ （此前表单 flex-shrink:0 恒不让位，正是列表被挤没的直接原因；唯一滚动区语义由「列表独有」
+ 扩为「列表 + 表单体两处」，列表滚动条常显不变）。 */
 .cm-fold-form.open { display: flex; flex-direction: column; min-height: 0; flex-shrink: 1; }
 .cm-fold-form.open .cm-fold-hd { flex-shrink: 0; }
 .cm-fold-form.open .cm-fold-bd { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-top: var(--sp-2); }
 /* 表单自滚后主按钮不得滚出视野——操作行钉住表单滚动区底缘（同底色遮挡滚过内容，
-   不新增色值） */
+ 不新增色值） */
 .cm-fold-form.open .cm-form-ops { position: sticky; bottom: 0; background: var(--bg2); }
-/* 双层行卡——主行身份/次行地址/右锚状态/悬停操作（623 稿 §3 解剖学） */
+/* 双层行卡——主行身份/次行地址/右锚状态/悬停操作（623 稿 解剖学） */
 .cm-row {
   display: grid; grid-template-columns: 14px minmax(0, 1fr) auto;
   grid-template-areas: "grip main aux" "grip sub ops";
@@ -608,7 +608,7 @@ onMounted(() => store.loadConns());
 .cm-row-sub { grid-area: sub; display: flex; align-items: center; gap: var(--sp-2); min-width: 0; margin-top: var(--sp-0); }
 .cm-row-ep { font-size: var(--fs-2xs); color: var(--tx2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* 操作图标 hover-reveal（507 先例）——「立即探活」文字钮与 ⋯ 次级菜单在此退役
-   （permGating 门控语义随迁：探活全角色，三管理钮 canAdmin）；触屏兜底走 matchMedia+is-coarse 类（本组件在 adaptSweep563 豁免册：媒体查询须经裁决迁册后才能新增） */
+ （permGating 门控语义同步更新：探活全角色，三管理钮 canAdmin）；触屏兜底走 matchMedia+is-coarse 类（本组件在 adaptSweep563 豁免册：媒体查询须经裁决迁册后才能新增） */
 .cm-row-ops { grid-area: ops; display: flex; gap: var(--sp-1); justify-self: end; opacity: 0; transition: opacity .12s ease-out; }
 .cm-row:hover .cm-row-ops, .cm-row:focus-within .cm-row-ops { opacity: 1; }
 .is-coarse .cm-row-ops { opacity: 1; }
@@ -617,7 +617,7 @@ onMounted(() => store.loadConns());
 .cm-icob:hover { background: var(--bg3); color: var(--tx0); }
 .cm-icob.danger:hover { color: var(--err); border-color: var(--err-line); }
 .cm-icob:disabled { opacity: .5; cursor: not-allowed; }
-/* 头部摘要 chip + 手动档提示（623 稿 §4） */
+/* 头部摘要 chip + 手动档提示（623 稿 ） */
 .cm-cnt { font-size: var(--fs-2xs); color: var(--tx2); background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 0 var(--sp-2); margin-left: var(--sp-2); }
 .cm-cnt b { color: var(--err); }
 .cm-sort-hint { font-size: var(--fs-2xs); color: var(--ac-hi); margin-left: auto; }

@@ -34,14 +34,14 @@ public class ConsoleOpsAuditDocShapeTest {
     @Test
     public void buildDoc_全维事件落档四富维度与source齐全() {
         Map<String, Object> doc = EsConsoleOpsAuditStore.buildDoc(ConsoleOpsAuditEvent.builder()
-                .username("deng_test_x1").displayName("邓美銮测试1").role("VIEWER")
+                .username("test-user-1").displayName("测试用户一").role("VIEWER")
                 .method("GET").uri("/internal/es/index/overview")
                 .action("PAGE_DENIED").httpStatus(403).detail("page=overview")
                 .connId("3556353a").connName("腾讯云UAT")
                 .ip("203.0.113.9").costMs(7L)
                 .build());
-        assertEquals("deng_test_x1", doc.get("username"));
-        assertEquals("邓美銮测试1", doc.get("displayName"));
+        assertEquals("test-user-1", doc.get("username"));
+        assertEquals("测试用户一", doc.get("displayName"));
         assertEquals("PAGE_DENIED", doc.get("action"));
         assertEquals(403, doc.get("httpStatus"));
         assertEquals("3556353a", doc.get("connId"));

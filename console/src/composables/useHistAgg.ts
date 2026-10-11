@@ -1,12 +1,12 @@
 /* 直方图注入链统一件（裁决「直方图和 Profile 的组件应该是同一套，
-   且位置是同一套」的注入侧收编）——此前整条链内联在 DslQueryView execQuery（:894-965）：
-   autoHist 开时 pickHistField 选字段 → buildHistAgg 分档聚合体注入 __hist → ES 拒绝
-   （histBrokenIdx session 拉黑）剥聚合降级重试一次不连坐主查询 → hits 值形态二次嗅探。
-   本件把状态（桶/偏好/拉黑）与链路动作收成 composable，消费方：
-   — IndexHubView docs/query 两 tab（本批接线，偏好键 ih.docs.* / ih.qry.*）；
-   — DslQueryView 同位替换下批做（届时偏好键传 'query' 前缀，行为零变化）。
-   字段裁决纯函数零改直消费（utils/histField.ts：isDateLikeValue/sniffDateField/
-   pickHistField/buildHistAgg，/ 立法在彼处）。 */
+ 且位置是同一套」的注入侧合并）——此前整条链内联在 DslQueryView execQuery（894-965）：
+ autoHist 开时 pickHistField 选字段 → buildHistAgg 分档聚合体注入 __hist → ES 拒绝
+ （histBrokenIdx session 拉黑）剥聚合降级重试一次不连坐主查询 → hits 值形态二次嗅探。
+ 本件把状态（桶/偏好/拉黑）与链路动作收成 composable，消费方：
+ — IndexHubView docs/query 两 tab（接线，偏好键 ih.docs.* / ih.qry.*）；
+ — DslQueryView 同位替换下批做（届时偏好键传 'query' 前缀，行为零变化）。
+ 字段裁决纯函数零改直消费（utils/histField.ts：isDateLikeValue/sniffDateField/
+ pickHistField/buildHistAgg，/ 约定在彼处）。 */
 import { computed, ref, watch } from 'vue';
 import { usePref } from './urlState';
 import { buildHistAgg, pickHistField, sniffDateField } from '../utils/histField';
@@ -39,7 +39,7 @@ interface HistAggOptions {
 
 export function useHistAgg(opts: HistAggOptions) {
   /* 偏好态：键由调用方前缀派生（IndexHub ih.docs. 与 ih.qry. 前缀，DQ 下批传 query. 前缀），
-     直方图默认开（DQ 同默认）；折叠节默认展开（histSecOpen 避让历史面板 histOpen 语义随迁） */
+ 直方图默认开（DQ 同默认）；折叠节默认展开（histSecOpen 避让历史面板 histOpen 语义同步更新） */
   const autoHist = usePref<boolean>(opts.prefPrefix + '.autoHist', true);
   const histSecOpen = usePref<boolean>(opts.prefPrefix + '.histSecOpen', true);
 
@@ -59,7 +59,7 @@ export function useHistAgg(opts: HistAggOptions) {
   /* 裁决「无时间索引要有提示」：mapping 已加载且无 date 字段 → 开关旁即时标注 */
   const histNoDateField = computed(() => !!opts.mappingKnown?.() && !(opts.mappingDates?.() || []).length);
 
-  /* 20260920 直方图可见性自证：执行了查询但无直方图时给出原因（消静默，DQ 文案链逐字随迁） */
+  /* 20260920 直方图可见性自证：执行了查询但无直方图时给出原因（消静默，DQ 文案链逐字同步更新） */
   const histWhy = computed(() => {
     if (!hasResult() || histBuckets.value.length) return '';
     if (!autoHist.value) return '直方图开关未勾选——勾选后执行查询将自动注入聚合';
@@ -91,10 +91,10 @@ export function useHistAgg(opts: HistAggOptions) {
   }
 
   /**
-   * 请求组装处注入：autoHist 开、当前索引未被拉黑、body 非数组标量、
-   * 自带 date_histogram（含 auto_date_histogram 字样，DQ cleaned.includes 同判据）不叠加时，
-   * 注入 __hist 并返回 true（调用方凭此在 ES 拒绝时走降级重试）。
-   */
+ * 请求组装处注入：autoHist 开、当前索引未被拉黑、body 非数组标量、
+ * 自带 date_histogram（含 auto_date_histogram 字样，DQ cleaned.includes 同判据）不叠加时，
+ * 注入 __hist 并返回 true（调用方凭此在 ES 拒绝时走降级重试）。
+ */
   function applyHistToBody(body: Record<string, unknown>): boolean {
     histField.value = '';
     if (!body || typeof body !== 'object' || Array.isArray(body)) return false;
@@ -133,7 +133,7 @@ export function useHistAgg(opts: HistAggOptions) {
   }
 
   /* 响应回填：从 aggregations.__hist 取桶（降级重试后的裸响应天然无 __hist → 清桶），
-     并记录自带聚合供 histWhy 判据 */
+ 并记录自带聚合供 histWhy 判据 */
   function onResp(resp: unknown): void {
     queried = true;
     const aggs = (resp as { aggregations?: unknown } | null | undefined)?.aggregations;

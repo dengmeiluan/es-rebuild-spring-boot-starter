@@ -7,7 +7,7 @@
  * - 点击→该卡切 ld-chart-full 态（position:fixed 覆盖视口 92%，背景遮罩；
  *   SVG viewBox 自适应天然放大=零内容重复渲染的最优解）
  * - Esc（window 捕获级，放大态挂载/还原摘卸）与还原钮双通道退出
- * - 打开时存触发钮焦点，关闭还焦（FocusableSurface 立法同语言）
+ * - 打开时存触发钮焦点，关闭还焦（FocusableSurface 约定同语言）
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -115,10 +115,10 @@ describe('六百一十一批：实时六卡单卡放大全屏', () => {
   it('源码锁：ld-expand 钮+ld-chart-full 态+Esc window 捕获级+遮罩类', () => {
     const t = strip(liveSrc);
     const c = strip(cardSrc);
-    expect(c, '放大钮类（收编进组件）').toContain('ld-expand');
-    expect(c, '全屏态类（收编进组件）').toContain('ld-chart-full');
+    expect(c, '放大钮类（合并进组件）').toContain('ld-expand');
+    expect(c, '全屏态类（合并进组件）').toContain('ld-chart-full');
     expect(t, '遮罩类（留视图 body 级）').toContain('ld-chart-mask');
-    expect(t, 'Esc window 捕获级（留视图；566/568 立法形态）').toMatch(/addEventListener\('keydown', \w+, true\)|addEventListener\("keydown", \w+, true\)/);
+    expect(t, 'Esc window 捕获级（留视图；566/568 约定形态）').toMatch(/addEventListener\('keydown', \w+, true\)|addEventListener\("keydown", \w+, true\)/);
     expect(t, '五线卡展开接线（留视图）').toMatch(/@expand="toggleExpand\('/);
   });
 });

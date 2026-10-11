@@ -27,7 +27,7 @@ vi.mock('../api', async (importOriginal) => {
 
 import ResultTable from '../components/ResultTable.vue';
 import type { SearchHit } from '../types';
-/* 五百六十批随迁：RT 本地 hlSafe 定义退役收编 utils/highlightSanitize 单源（559 立牌兑现），
+/* 五百六十批同步更新：RT 本地 hlSafe 定义退役合并 utils/highlightSanitize 单源（559 立牌兑现），
    本件从 RT 源码抽取求值改为直接 import 单源验证；下方行为断言逐字保留 */
 import { hlSafe } from '../utils/highlightSanitize';
 
@@ -94,7 +94,7 @@ describe('ResultTable highlight 渲染与净化（挂载）', () => {
   });
 });
 
-describe('hlSafe 净化口径（五百六十批随迁：单源 import 直验，断言逐字保留）', () => {
+describe('hlSafe 净化口径（五百六十批同步更新：单源 import 直验，断言逐字保留）', () => {
   it('受控 <em>/<mark> 放行；大小写/事件属性/伪标签维持转义', () => {
     expect(hlSafe('前<em>词</em>后')).toBe('前<em>词</em>后');
     expect(hlSafe('a<mark class="hl">b</mark>c')).toBe('a<mark class="hl">b</mark>c');
@@ -124,7 +124,7 @@ describe('链路上游接线（源码静态锁定）', () => {
   it('ResultTable 单元格 v-html 只走 hlSafe/hlHtml 净化出口', () => {
     /* 视图本体的 v-html（JSON 视图语法高亮）是既有通道，不在此断言；本次修复的
        highlight 渲染全部收口在 ResultTable 的 hlHtml（内含 hlSafe 净化）。
-       五百六十批随迁：hlSafe 本地定义退役收编单源 import（净化函数本体归
+       五百六十批同步更新：hlSafe 本地定义退役合并单源 import（净化函数本体归
        utils/highlightSanitize，行为断言在本文件上方 describe 逐字保留） */
     const rt = readFileSync(join(__dirname, '../components/ResultTable.vue'), 'utf-8');
     expect(rt).toContain('v-html="hlHtml(hit, c)"');

@@ -187,7 +187,7 @@ describe('G2-B3/C2 HealthReportView：runErr 互斥 + 全局 pill', () => {
     expect(host.querySelector('.hr-hero'), '报告评分卡必须渲染').toBeTruthy();
     /* 五百二十五批 W5：双表换 QRT rows 型（纯文本壳），.pill.r/.y/.g 色档随之退役——
        health 值照常渲染于 QRT 表（.qrt-tbl），局部 pill-red 双轨不回潮的守卫保留；
-       五百三十三批：#cell-health 换 clusterHealthZh 中文主显（raw 在 title），锚随换装迁移 */
+       五百三十三批：#cell-health 换 clusterHealthZh 中文主显（raw 在 title），锚随改用迁移 */
     expect(host.querySelector('table.qrt-tbl'), '不健康索引表必须是 QRT（.qrt-tbl）').toBeTruthy();
     const healthCell = [...host.querySelectorAll('table.qrt-tbl tbody td')]
       .find(td => { const t = td.textContent?.trim() || ''; return t === 'red' || t === '异常'; });

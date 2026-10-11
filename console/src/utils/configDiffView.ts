@@ -1,25 +1,25 @@
 /* -9 修复：configDiff 的**呈现层**纯函数（标签 / 提示 / 该不该比对）。
-   从 AdhocRebuildView.vue 模板里提出来，唯一目的是让它们可被断言 ——
-   评审 I-4：「KIND_LABEL 与 added 提示挂载点零测试看守」，而挂载点
-   （v-else-if="row.kind === 'added'"）正是当初写反过的地方，
-   常量自等式（expect(KIND_LABEL.added).toBe('期望有…')）抓不到它。
+ 从 AdhocRebuildView.vue 模板里提出来，唯一目的是让它们可被断言 ——
+ 评审 I-4：「KIND_LABEL 与 added 提示挂载点零测试看守」，而挂载点
+ （v-else-if="row.kind === 'added'"）正是当初写反过的地方，
+ 常量自等式（expect(KIND_LABEL.added).toBe('期望有…')）抓不到它。
 
-   === 本文件的主命题：区分「没有提供」与「提供了一个空值」 ===
-   C-1 的根因不是少了一个 if，而是用 {} 这个**合法值**表示「缺席」。
-   {} 既可能是「用户没粘贴任何期望」，也可能是「期望确实是空对象」，
-   一旦混同，diffConfig 就会把整棵 actual 判成 removed，
-   界面于是断言「你的期望里没有这些字段」—— 而用户根本没提供期望。
+ === 本文件的主命题：区分「没有提供」与「提供了一个空值」 ===
+ C-1 的根因不是少了一个 if，而是用 {} 这个**合法值**表示「缺席」。
+ {} 既可能是「用户没粘贴任何期望」，也可能是「期望确实是空对象」，
+ 一旦混同，diffConfig 就会把整棵 actual 判成 removed，
+ 界面于是断言「你的期望里没有这些字段」—— 而用户根本没提供期望。
 
-   本项目第三次撞这个坑（Wave 2 docDiff 的 MISSING 哨兵、 walk 把缺席侧
-   退化成 {}）。所以这里不打补丁，而是把「缺席」提升成类型上的一等公民：
-   parseExpectedMapping 返回 null 表示缺席，shouldDiff 据此裁决，
-   缺席永远不进 diffConfig —— 不产出行，而不是产出一屏方向错误的行。 */
+ 本项目第三次撞这个坑（Wave 2 docDiff 的 MISSING 哨兵、 walk 把缺席侧
+ 退化成 {}）。所以这里不打补丁，而是把「缺席」提升成类型上的一等公民：
+ parseExpectedMapping 返回 null 表示缺席，shouldDiff 据此裁决，
+ 缺席永远不进 diffConfig —— 不产出行，而不是产出一屏方向错误的行。 */
 
 import type { ConfigDiffKind, ConfigDiffRow } from './configDiff';
 
-/* kind 是  已评审的契约不改，但 added/removed 两个词对使用者天然歧义
-   （"added" 听起来像"新出现的"，实际是"期望有、实际没有"），界面一律显示人话。
-   brief 本身就把这对语义写反过一次，故本表由 diffConfig 真实输出驱动的断言看守。 */
+/* kind 是 已评审的契约不改，但 added/removed 两个词对使用者天然歧义
+ （"added" 听起来像"新出现的"，实际是"期望有、实际没有"），界面一律显示人话。
+ brief 本身就把这对语义写反过一次，故本表由 diffConfig 真实输出驱动的断言看守。 */
 const KIND_LABEL: Record<ConfigDiffKind, string> = {
   added: '期望有，实际没有',
   removed: '实际有，期望没有',
@@ -83,9 +83,9 @@ export function isBenignDefault(row: Pick<ConfigDiffRow, 'kind' | 'path' | 'expe
  * 把「期望侧 mapping 文本」解析成可比对的对象；**缺席返回 null**。
  *
  * 缺席的三种来源，语义上完全一致（都是「业务侧没有声明 mapping」）：
- *   ① 用户压根没粘贴          → 文本为 ''
- *   ② 粘了但该索引 mappingJson 为 null → pickPaste 置 ''（ 裁定 null 原样透传）
- *   ③ 粘了一份空白/纯空格文本  → trim 后为 ''
+ * ① 用户压根没粘贴 → 文本为 ''
+ * ② 粘了但该索引 mappingJson 为 null → pickPaste 置 ''（ 裁定 null 原样透传）
+ * ③ 粘了一份空白/纯空格文本 → trim 后为 ''
  * 三者都不该产出 diff —— 没有期望就没有「期望 vs 实际」这回事。
  *
  * 解析失败同样返回 null 而不是 {}：坏 JSON 不是「期望为空」，
@@ -98,7 +98,7 @@ export function parseExpectedMapping(text: string | null | undefined): Record<st
   try {
     const v = JSON.parse(s);
     /* 顶层必须是对象。数组/标量/null 不是 mapping，交给 diffConfig 会走它的
-       「顶层不是对象」分支产出一条无路径的行，对使用者毫无意义。 */
+ 「顶层不是对象」分支产出一条无路径的行，对使用者毫无意义。 */
     return typeof v === 'object' && v !== null && !Array.isArray(v)
       ? (v as Record<string, unknown>)
       : null;

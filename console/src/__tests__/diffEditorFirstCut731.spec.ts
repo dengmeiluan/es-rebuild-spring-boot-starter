@@ -7,7 +7,7 @@
  * ② G101（P3 铁律 F）MetaStrip version/seq_no/pt 三段裸英文 label 补段级中文 tip
  *    （G55/G60/G74/G79/G87 同族；tip 走 MetaStrip :title 悬停通道+help 档）。
  * ③ G102（P3 铁律 C）PUT 覆盖/_update partial/Painless script 三模式钮平铺
- *    .btn.ghost.xs.act 零 aria-pressed 零 role=group → .seg 分段控件收编
+ *    .btn.ghost.xs.act 零 aria-pressed 零 role=group → .seg 分段控件合并
  *    （QRT qrt-view-seg 单源范式）+死规则随刀退役。
  * ④ G103（P3 铁律 B）_id 输入 Enter 直达加载/对比（高频两跳；isCompare 分支 fetchCompare）。
  * ⑤ G104（P3 铁律 D 在途可感知）提交钮 Send spinning+「提交中…」+加载钮 Download
@@ -194,7 +194,7 @@ describe('731 G101 MetaStrip 三段中文 tip（铁律 F；G55/G60/G74/G79/G87 �
   });
 });
 
-describe('731 G102 三模式钮 seg 分段控件收编（铁律 C；QRT 单源范式）', () => {
+describe('731 G102 三模式钮 seg 分段控件合并（铁律 C；QRT 单源范式）', () => {
   it('role=group+aria-label+三钮 aria-pressed+点击切换 on 态', async () => {
     const host = await mountDf({ id: 'doc1' });
     const seg = host.querySelector('.df-mode-seg');
@@ -296,12 +296,12 @@ describe('731 G104 三钮在途可感知（铁律 D；729 G95 同款）', () => 
     expect(cmpBtn.querySelector('.spinning'), 'G104 病灶：cmpBusy 窗 Play 零 spinning').toBeTruthy();
     rel.forEach(fn => fn());
     await settle();
-    expect(cmpBtn.querySelector('.spinning'), '完成复常 spinning 退场').toBeNull();
+    expect(cmpBtn.querySelector('.spinning'), '完成复常 spinning 移除').toBeNull();
     expect(host2.querySelector('.df-cmp-sum')!.textContent, '对比链完成渲染（a≠b 有差异）').toContain('共');
   });
 });
 
-describe('731 渲染负锚（删除/换装零误伤守卫，现状即守卫）', () => {
+describe('731 渲染负锚（删除/改用零误伤守卫，现状即守卫）', () => {
   it('tip 不进可见文本 + 双卡/diff 行结构/已修改徽标零回归', async () => {
     const host = await mountDf({ id: 'doc1', carry: EDITED_CARRY });
     host.querySelectorAll('.ms-i').forEach(i => {

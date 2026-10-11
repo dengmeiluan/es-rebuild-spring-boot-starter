@@ -14,7 +14,7 @@ const V = (n: string) => readFileSync(join(__dirname, '../views', n), 'utf-8');
 describe('Esc 收起路径守卫（418 批）', () => {
   it('ConfirmModal：Esc 取消（五百六十九批起由 ModalShell 壳层捕获级单源承接，@close=cancel 同函数等价）', () => {
     const ms = C('ModalShell.vue');
-    expect(ms, '壳层 document 捕获级收键在场（566/568 立法范式）').toContain("document.addEventListener('keydown', onDocEsc, true)");
+    expect(ms, '壳层 document 捕获级收键在场（566/568 约定范式）').toContain("document.addEventListener('keydown', onDocEsc, true)");
     expect(ms).toMatch(/e\.key !== 'Escape'\) return;/);
     expect(ms).toMatch(/stopPropagation\(\);\s*emit\('close'\);/);
     const s = C('ConfirmModal.vue');

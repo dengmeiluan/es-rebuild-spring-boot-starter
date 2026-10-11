@@ -1,6 +1,6 @@
 /**
  * R130 第八十二批：收藏回放 carry 键契约闭环（死键修复）。
- * 背景：favReplay 的 bulk/ubq 分支仍写草稿治理轮前的旧命名空间
+ * 背景：favReplay 的 bulk/ubq 分支仍写草稿前的旧命名空间
  *   `es-console.draft.bulk-editor.body` / `es-console.draft.update-by-query.query`——
  *   两视图草稿键早已迁 draft2（按集群/索引隔离），旧键无任何消费方：
  *   回放提示「已恢复」但编辑器是空的（notify 撒谎 + R54 同族漏网）。
@@ -21,7 +21,7 @@ const ubqSrc = readFileSync(join(SRC, 'views/UpdateByQueryView.vue'), 'utf-8');
 
 describe('收藏回放 carry 键契约（八十二批）', () => {
   it('favReplay 写新 carry 键，旧死键清零（无任何 setItem 写旧命名空间）', () => {
-    /* 852 批随迁：写侧走 writeStoredRaw 单源（storageWriteGuard852 同域），键契约不变 */
+    /* 852 批同步更新：写侧走 writeStoredRaw 单源（storageWriteGuard852 同域），键契约不变 */
     expect(replaySrc).toMatch(/writeStoredRaw\(sessionStorage, 'es-console\.bulk\.carry', p\.body\)/);
     expect(replaySrc).toMatch(/writeStoredRaw\(sessionStorage, 'es-console\.ubq\.carry', p\.body\)/);
     /* 注释可提及历史键名,但禁止任何对旧命名空间的写入 */

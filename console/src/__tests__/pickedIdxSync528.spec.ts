@@ -3,7 +3,7 @@
  *
  * ① AdhocRebuildView：索引名草稿与全局选中是两份状态（写类向导不开 useIdxState follow，
  *    R61 口径）——pickedIdx 真实变化且草稿为空 → 回填（只补空，不覆写用户稿）；
- *    「用当前索引」小钮显式覆盖（有稿时仍在）；轮询收编 useAutoRefresh（源码锁，
+ *    「用当前索引」小钮显式覆盖（有稿时仍在）；轮询合并 useAutoRefresh（源码锁，
  *    间隔沿用 2000ms，document.hidden 裸守卫与裸 setInterval 退役）；4 处裸拼
  *    '失败：'+(e?.message||e) → friendlyEsError（源码锁）。
  * ② IlmView：explain 索引 useUrlState('idx') → useIdxState({follow:true})——同键 ?idx=
@@ -192,13 +192,13 @@ describe('AdhocRebuildView：索引名草稿与全局选中（528 批）', () =>
   });
 });
 
-describe('AdhocRebuildView：轮询收编 useAutoRefresh + friendlyEsError（528 批，源码锁）', () => {
+describe('AdhocRebuildView：轮询合并 useAutoRefresh + friendlyEsError（528 批，源码锁）', () => {
   const s = read('../views/AdhocRebuildView.vue');
   it('轮询接线 useAutoRefresh（2000ms 沿用），document.hidden 裸守卫与裸 setInterval 清零', () => {
     expect(s).toMatch(/const jobPoller = useAutoRefresh\(/);
     expect(s).toMatch(/ms: \(\) => \(pollJobId\.value \? 2000 : 0\)/);
     expect(s).toMatch(/guard: \(\) => !!pollJobId\.value/);
-    /* 五百六十批随迁：document.hidden 禁令收窄到作业轮询段（useAutoRefresh 全链停续语义不变）——
+    /* 五百六十批同步更新：document.hidden 禁令收窄到作业轮询段（useAutoRefresh 全链停续语义不变）——
        blockTimer 补 visibilitychange 守卫（jobTracker onVisChange 范式，hidden 不空转）是合法新用，
        blockTicker 1s 心跳本就与本契约无关（下行同口径） */
     const pollSec = s.slice(s.indexOf('const jobPoller = useAutoRefresh('), s.indexOf('jobPoller.setOn(true);'));
@@ -236,7 +236,7 @@ describe('IlmView：explain 索引并轨 useIdxState({follow:true})（528 批）
 
 /* ═══════════ ③ ConfigValidatorView ═══════════ */
 describe('ConfigValidatorView：导入起点回填 pickedIdx（528 批）', () => {
-  it('532 换装随迁：页内选择器退役换 chip+回填统一件；picked 空拉取禁用；picked 就位点钮显式固定→拉取解禁', async () => {
+  it('532 改用同步更新：页内选择器退役换 chip+回填统一件；picked 空拉取禁用；picked 就位点钮显式固定→拉取解禁', async () => {
     const View = (await import('../views/ConfigValidatorView.vue')).default;
     // 无 picked：chip/回填钮双不渲染，导入起点空（拉取恒禁用）
     const w0 = await mountView(View);
@@ -278,7 +278,7 @@ describe('ConfigValidatorView：导入起点回填 pickedIdx（528 批）', () =
 });
 
 /* ═══════════ ④ ReindexPreviewView ═══════════ */
-describe('ReindexPreviewView：源索引 useIdxState({follow:true})（528 批；525 批 chip 随迁）', () => {
+describe('ReindexPreviewView：源索引 useIdxState({follow:true})（528 批；525 批 chip 同步更新）', () => {
   it('顶栏切索引 → 源 chip 跟随（页内 IndexPicker 已退役换只读 CurrentIdxChip）', async () => {
     const View = (await import('../views/ReindexPreviewView.vue')).default;
     const w = await mountView(View);
@@ -286,7 +286,7 @@ describe('ReindexPreviewView：源索引 useIdxState({follow:true})（528 批；
     w.store.pick('rp_idx');
     await settle();
     await wait(20);
-    /* 525 随迁：不再断言 .ixp-inp 输入值——只读 chip 回显 pickedIdx（.cic-nm 文本） */
+    /* 525 同步更新：不再断言 .ixp-inp 输入值——只读 chip 回显 pickedIdx（.cic-nm 文本） */
     expect(w.host.querySelector('.rp-bar .cic-nm')?.textContent).toBe('rp_idx');
     w.unmount();
   });

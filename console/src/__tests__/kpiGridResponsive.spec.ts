@@ -6,7 +6,7 @@
  *   kpi 族（Aliases/Diag/Ilm/Snapshots/Tasks/Topology）：repeat(4, 1fr) / repeat(5, 1fr)
  *     —— 列数写死。TopologyView 5 列且 sub 行是「主 12 · 副 24」这类长文本，
  *        窄屏必然压到溢出或换行错位。
- * 同仓库两种写法并存、且正确的那套已有三处先例，故本轮把 kpi 族并轨到 auto-fit。
+ * 同仓库两种写法并存、且正确的那套已有三处先例，故把 kpi 族并轨到 auto-fit。
  *
  * 复发方式很具体：下一个人加指标卡时照着旁边那行 `repeat(4, 1fr)` 抄一份。
  * 全量测试对此毫无反应——宽屏下 4 列确实好看，

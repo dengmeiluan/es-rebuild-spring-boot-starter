@@ -11,7 +11,7 @@ const v = readFileSync(join(__dirname, '../views/LuceneQueryView.vue'), 'utf-8')
 
 describe('Lucene 工具行换行策略（464 批）', () => {
   it('lc-hd-r 容器可换行+子项 nowrap', () => {
-    /* 五百二十七批随迁：gap/row-gap 收 --sp 半档（6px→--sp-1h、4px→--sp-1），换行语义不变 */
+    /* 五百二十七批同步更新：gap/row-gap 收 --sp 半档（6px→--sp-1h、4px→--sp-1），换行语义不变 */
     expect(v).toContain('.lc-hd-r { display: flex; gap: var(--sp-1h); flex-wrap: wrap; row-gap: var(--sp-1); align-items: center; }');
     expect(v).toContain('.lc-hd-r > * { white-space: nowrap; flex-shrink: 0; }');
   });

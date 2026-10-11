@@ -1,11 +1,11 @@
 <template>
   <div class="ahr">
     <!-- 副标题与步条叙事对齐（Xmigrate w80「副标题与编号同步」同病异治——
-         本页两套口径是真并存而非断链：步条是向导 UI 五步，四阶段是作业内部 ES 侧流程，
-         动态副标题会丢四阶段总览，故选低成本标注对应关系） -->
+ 本页两套口径是真并存而非断链：步条是向导 UI 五步，四阶段是作业内部 ES 侧流程，
+ 动态副标题会丢四阶段总览，故选低成本标注对应关系） -->
     <PageHeader :icon="Hammer" title="托管重建" subtitle="无 provider · 任意逻辑索引名 · 向导五步编排 · 作业内走 ES 四阶段：建新 → 全量 → 追平 → 切换" />
-    <!--  P2：执行进度条（ind-bar 全站范式；preparing/validating/starting 三链任一在途即点亮，
-         绝对定位零高度占位，读秒仍在钮面 既有形态零触） -->
+    <!-- P2：执行进度条（ind-bar 全站范式；preparing/validating/starting 三链任一在途即点亮，
+ 绝对定位零高度占位，读秒仍在钮面 既有形态零触） -->
     <div class="ar-progress ind-bar" :class="{ on: preparing || validating || starting }"></div>
     <div v-if="draftRestored" class="ar-draft-row">
       <DraftBadge @clear="clearDrafts" />
@@ -14,8 +14,8 @@
     <!-- 步骤条 -->
     <div class="steps">
       <!-- F1：作业执行中（RUNNING，含停在 AWAIT_CONFIRM 挡写的时刻）时，执行监控 chip
-           反向可点——从任意步骤一键回监控步。否则用户从监控步回看配置后就被困在
-           前四步，AWAIT_CONFIRM 的阻断横幅（渲染在 step 4）也将永远看不见。 -->
+ 反向可点——从任意步骤一键回监控步。否则用户从监控步回看配置后就被困在
+ 前四步，AWAIT_CONFIRM 的阻断横幅（渲染在 step 4）也将永远看不见。 -->
       <div v-for="(s, i) in STEPS" :key="i" class="step"
            :class="{ act: step === i, done: step > i, locked: isTerminal, retmon: canReturnToMonitor(i) }"
            :title="canReturnToMonitor(i) ? '作业执行中——点此返回执行监控' : undefined"
@@ -31,28 +31,28 @@
       </div>
     </div>
 
-    <!--  W3：运行中作业重挂提示（非阻断）——job 为内存态，刷新后 resumeScene 把
-         step>3 钳回 3，运行中作业失联，唯一回路是下方最近作业表 Eye 钮。仅在 step0（首页）
-         且最近作业存在 RUNNING 作业时出现；「回到监控」复用既有 watchJob（不自造轮询），
-         切回监控步（step=4）后本条随条件隐没。既有 class/状态机分支零触碰（547 卡壳正锁与
-         adhocStateMachine/adhocStepPersist 裁决锁兼容：本条是裁决之后数据面的纯新增显示）。 -->
+    <!-- W3：运行中作业重挂提示（非阻断）——job 为内存态，刷新后 resumeScene 把
+ step>3 钳回 3，运行中作业失联，唯一回路是下方最近作业表 Eye 钮。仅在 step0（首页）
+ 且最近作业存在 RUNNING 作业时出现；「回到监控」复用既有 watchJob（不自造轮询），
+ 切回监控步（step=4）后本条随条件隐没。既有 class/状态机分支零触碰（547 卡壳正锁与
+ adhocStateMachine/adhocStepPersist 裁决锁兼容：本条是裁决之后数据面的纯新增显示）。 -->
     <div v-if="showReattachHint" class="ar-reattach-hint" data-test="adhoc-reattach-hint" role="status">
       <span>检测到运行中的重建作业 <span class="mono">{{ runningAdhocJob?.jobId }}</span>，可在下方最近作业中点详情回监控</span>
       <button class="btn ghost sm" data-test="adhoc-reattach-go" title="回到该作业的执行监控（与最近作业表「查看任务详情」同一链路）" @click="reattachToRunning"><Eye :size="12" /> 回到监控</button>
     </div>
 
     <!-- ① 选索引。结构序：索引名行上移到双 Tab 编辑器上方——先选索引再贴配置
-         才是实际操作顺序（原序双 Tab 在前、索引名压底，与流程相反）。纯模板位移，
-         状态机/草稿键零触碰（adhocStateMachine/adhocStepPersist 口径不变）。 -->
-    <!--  P2：全局 .card 壳退役 → border-top 分节（ar-sec，Xmigrate 551 同刀；五步卡+最近作业卡六处同批） -->
+ 才是实际操作顺序（原序双 Tab 在前、索引名压底，与流程相反）。纯模板位移，
+ 状态机/草稿键零触碰（adhocStateMachine/adhocStepPersist 口径不变）。 -->
+    <!-- P2：全局 .card 壳退役 → border-top 分节（ar-sec，Xmigrate 551 同刀；五步卡+最近作业卡六处同步） -->
     <div v-if="step === 0" class="ar-sec">
       <div class="card-t">选择要重建的逻辑索引名（别名或物理索引名均可）</div>
       <div ref="idxRowEl" class="row" :class="{ 'ar-highlight': highlightIdxInput }">
         <IndexPicker v-model="indexName" placeholder="如 bond_index（别名）或 bond_index_v1（物理索引）" width="100%" @picked="doPrepare" />
         <!-- 「用当前索引」一键回填：草稿与顶栏全局选中是两份状态（写类视图不开 useIdxState
-             follow， 白名单口径），小钮把当前全局索引进草稿；有稿时钮仍在，点击显式覆盖。
-             内联钮换装 PickCurrentIdxBtn 统一件（557 记档兑现；空索引不渲染、
-             data-test/title 逐字锚由组件保真透传，回填语义归本消费方） -->
+ follow， 白名单口径），小钮把当前全局索引进草稿；有稿时钮仍在，点击显式覆盖。
+ 内联钮改用 PickCurrentIdxBtn 统一件（兑现；空索引不渲染、
+ data-test/title 逐字锚由组件保真透传，回填语义归本消费方） -->
         <PickCurrentIdxBtn @pick="indexName = store.pickedIdx" />
         <button class="btn primary" :disabled="!indexName || preparing" @click="doPrepare">
           <Loader2 v-if="preparing" :size="13" class="spinning" /><Search v-else :size="13" /> 探测
@@ -63,10 +63,10 @@
         </button>
       </div>
       <!-- 探测失败内联错误条（对齐 ar-risk-err 范式）：toast 一闪即逝，prep=null 后这里曾是裸空白。
-           私造错误壳收编全局 .err-bar + errPreHtml/errMeta 双参（XmigrateView :63
-           同款：prepErrRaw 原始对象旁路，code/endpoint 徽标一眼可辨）。结构序锁
-           `<div v-if="prepErr" class="ar-probe-err">` 随批记档于本注释——本条位置（先于双 Tab）
-           即原锁锚位置，断言面待随迁批换锚 -->
+ 私造错误壳合并全局 .err-bar + errPreHtml/errMeta 双参（XmigrateView :63
+ 同款：prepErrRaw 原始对象旁路，code/endpoint 徽标一眼可辨）。结构序锁
+ `<div v-if="prepErr" class="ar-probe-err">` 随批于本注释——本条位置（先于双 Tab）
+ 即原锁锚位置，断言面待同步更新批换锚 -->
       <div v-if="prepErr" role="alert" class="err-bar rise-in ar-probe-err">
         <span v-html="errPreHtml('探测失败：' + prepErr, errMeta(prepErrRaw))"></span>
         <button class="btn ghost sm" :disabled="!indexName || preparing" @click="doPrepare">重试</button>
@@ -90,10 +90,10 @@
           <strong>粘贴期望配置</strong>
           <span class="hint">业务应用 → desired-state.html → 「复制期望配置」→ 贴到这里</span>
           <!-- 期望配置页外链钮（宿主 client 侧 DesiredStateController 自包含单页，
-               与 api EP 同前缀 /internal/es/index）——此前只有文案，业务同事找不到入口 -->
+ 与 api EP 同前缀 /internal/es/index）——此前只有文案，业务同事找不到入口 -->
           <button type="button" class="btn ghost xs" @click="openDesiredState"><ExternalLink :size="11" /> 打开期望配置页</button>
           <!-- 四档高度循环钮（ConfigValidatorView data-cv-issues-h 同款范式）——
-               title 实时回显当前档，点击切下一档末档回首档，usePref 落盘 -->
+ title 实时回显当前档，点击切下一档末档回首档，usePref 落盘 -->
           <button type="button" class="btn ghost xs" data-ar-paste-h :title="'粘贴区高度档：' + pasteH + '（点击循环）'" @click="cyclePasteH">高</button>
         </div>
         <MonacoEditor ref="pasteMcRef" v-model="pasteRaw" language="json" :height="pasteH" :dsl-assist="pasteAssist" @execute="applyPaste" /><!-- ：ref + @execute="applyPaste"（弹窗 JsonArea @submit 同语义先例——Ctrl+Enter 即解析；：height 定高字面升四档 :height="pasteH" 循环（默认档=原 min(60vh, 420px) 保底，见 PASTE_H_TIERS； min(200px,24vh)→视口弹性档、 W4 补 dsl-assist 的沿革不变）——不传 bodyKind（期望配置形态任意，挂 settings/mapping 档必误导）、不挂 lint；Ctrl+I 唤起补全经 pasteMcRef 宿主接线 -->
@@ -117,27 +117,27 @@
           <strong>直接写期望的 settings / mapping</strong>
           <span class="hint">知道索引该怎么配就怎么写，不需要业务侧 JSON</span>
           <!-- 拉取源配置——与审编步「粘贴导入」互补双入口（粘贴=外部期望，这里=源现状）：
-               拉取优先吃向导步骤①已探测的源索引 settings/mapping（prep 快照，零网络），缺探测时
-               现场 api.clusterInspect 补拉；显式用户动作 + askConfirm 确认覆盖后才写两框
-               （挂载初值/自动链零触——adhocManualWorkbench426/draftGovernance 口径） -->
+ 拉取优先吃向导步骤①已探测的源索引 settings/mapping（prep 快照，零网络），缺探测时
+ 现场 api.clusterInspect 补拉；显式用户动作 + askConfirm 确认覆盖后才写两框
+ （挂载初值/自动链零触——adhocManualWorkbench426/draftGovernance 口径） -->
           <button type="button" class="btn ghost xs" data-ar-pull-src aria-label="拉取源配置"
             title="拉取源索引当前的 settings / mapping 覆盖下方两框（覆盖前需确认）" @click="pullSourceToManual">
             <Download :size="11" /> 拉取源配置
           </button>
-          <!--  P1：编辑框高度档循环钮（形态抄本页 paste 档钮；与审编卡头钮同一落盘键 adhoc.edH） -->
+          <!-- P1：编辑框高度档循环钮（形态抄本页 paste 档钮；与审编卡头钮同一落盘键 adhoc.edH） -->
           <button type="button" class="btn ghost xs" data-ar-ed-h :title="'编辑框高度档：' + edRows + ' 行（点击循环）'" @click="cycleEdRows">高</button>
         </div>
         <!-- 手动模式对照双栏接可调工作台（411 同款语义收口） -->
         <!-- fill-viewport=false 摘视口 min-height 兜底——向导「目标物理索引名/校验」行动行不被推出首屏（DslQueryView 先例），编辑区高度交 pane 内容自撑。
-              P2 高度档接管：四 JsonArea 摘 fill 改 rows 驱动（adhoc.edH 档值 8/16/28/44，
-             height=rows*19+16 纯内容函数确定解）——P0 时代的 fill 链整体退役（塌陷成因随之消失），
-             pane 高度复归内容自撑，行动行留首屏裁决在低档位下依旧成立（ar-fill-wl 定高档退役） -->
+ P2 高度档接管：四 JsonArea 摘 fill 改 rows 驱动（adhoc.edH 档值 8/16/28/44，
+ height=rows*19+16 纯内容函数确定解）——P0 时代的 fill 链整体退役（塌陷成因随之消失），
+ pane 高度复归内容自撑，行动行留首屏裁决在低档位下依旧成立（ar-fill-wl 定高档退役） -->
         <WorkbenchLayout class="ar-fill-wl" :scope="arManualScope" :panes="AR_MANUAL_PANES" axis="vertical" mode="arManual" :fill-viewport="false">
           <template #pane-adhoc-manual-settings>
           <div class="ed-col">
             <div class="ar-manual-lb">
 settings <span class="dim">索引设置</span>
-              <!-- 已填/留空私造胶囊换装 StatusPill n 档（色档归 pill 单源） -->
+              <!-- 已填/留空私造胶囊改用 StatusPill n 档（色档归 pill 单源） -->
               <StatusPill v-if="manualSettings.trim()" tone="n" label="✓ 已填" />
               <StatusPill v-else tone="n" label="留空 = 沿用源索引" />
             </div>
@@ -186,7 +186,7 @@ mapping <span class="dim">字段映射</span>
           <div class="p-row">
 <span>时间字段候选</span>
             <!-- 候选串改可点 chip（点击预选为追平时间字段；选中态高亮）——
-                 此前纯文本 join('、') 只可读不可选，INCREMENTAL 用户得回下拉再选一遍 -->
+ 此前纯文本 join('、') 只可读不可选，INCREMENTAL 用户得回下拉再选一遍 -->
             <span v-if="prep.timeFieldCandidates?.length" class="ar-tf-chips">
               <button v-for="c in prep.timeFieldCandidates" :key="c.field" type="button"
                 class="chip mono ar-tf-chip" :class="{ on: timeField === c.field }"
@@ -209,11 +209,11 @@ mapping <span class="dim">字段映射</span>
           <ClipboardPaste :size="12" /> 粘贴导入
         </button>
         <!-- 审编卡头原始 IO 钮——校验走 /config-lab/validate（不在 /adhoc-rebuild/
-             记录特征下），openRawIo 取数扩 config-lab 回退链；判空 notify 口径归其既有单源 -->
+ 记录特征下），openRawIo 取数扩 config-lab 回退链；判空 notify 口径归其既有单源 -->
         <button class="btn ghost sm" aria-label="查看原始 IO（审编校验）" title="最近一次校验（config-lab validate）或探测接口调用的请求/响应原文" @click="openRawIo">
           <Terminal :size="12" /> 原始 IO
         </button>
-        <!--  P1：编辑框高度档循环钮（与手动模式 hd 钮同一落盘键 adhoc.edH） -->
+        <!-- P1：编辑框高度档循环钮（与手动模式 hd 钮同一落盘键 adhoc.edH） -->
         <button type="button" class="btn ghost sm" data-ar-ed-h :title="'编辑框高度档：' + edRows + ' 行（点击循环）'" @click="cycleEdRows"><UnfoldVertical :size="12" /> 高度</button>
       </div>
       <!-- stripDsl 预剔除结果常驻展示——toast 会消散，审编现场必须能随时看到「向导替你改了什么」 -->
@@ -234,7 +234,7 @@ mapping <span class="dim">字段映射</span>
         <div class="ed-col">
           <div class="ed-label">
 mapping <span class="dim">字段映射</span>
-            <!-- 注解推导私造胶囊换装 StatusPill b 档（ 来源标明语义走 title 随迁） -->
+            <!-- 注解推导私造胶囊改用 StatusPill b 档（ 来源标明语义走 title 同步更新） -->
             <StatusPill v-if="mappingFromDerived" tone="b" label="来自注解推导"
                   title="业务侧实体没有 @Mapping，这份来自 starter 对实体注解的推导（payload 的 derivedMappingJson），也是重建实际会应用的那份" />
           </div>
@@ -249,7 +249,7 @@ mapping <span class="dim">字段映射</span>
         <button v-if="prep?.suggestedDest" class="btn ghost xs" title="回填探测建议的目标索引名" @click="destIndex = prep.suggestedDest">用建议名</button>
       </div>
       <!-- sem-rm 智能纠错：目标物理索引名即时红字——非法字符/大写（同 Xmigrate idxNameProblem 口径）；
-           目标=源物理名（直连模式）＝「切换即删源本身」的核武级配错，必须在启动前看见 -->
+ 目标=源物理名（直连模式）＝「切换即删源本身」的核武级配错，必须在启动前看见 -->
       <div v-if="destNameErr" role="alert" class="ar-dest-err">⚠ {{ destNameErr }}</div>
 
       <!-- 内嵌三层校验 —— 不过不放行（ERROR 阻断，WARN/INFO 提示） -->
@@ -266,7 +266,7 @@ mapping <span class="dim">字段映射</span>
         </div>
         <div v-for="(iss, i) in valReport.issues" :key="i" class="val-iss">
           <!-- severity 裸枚举 → sevZh 中文主体 + 英文小字 en 档（ W10 的
-               .pill+sevPill 手滚形态换装 StatusPill 统一件；tone 色档口径不变：err→r/warn→y/info→b） -->
+ .pill+sevPill 手滚形态改用 StatusPill 统一件；tone 色档口径不变：err→r/warn→y/info→b） -->
           <StatusPill :tone="sevTone(iss.severity)" :label="sevZh(iss.severity)" :en="iss.severity" />
           <span class="mono dim">{{ iss.code }}</span>
           <span><span v-if="iss.path" class="mono val-path">{{ iss.path }}</span>{{ iss.message }}<span v-if="iss.suggestion" class="dim"> — {{ iss.suggestion }}</span></span>
@@ -316,14 +316,14 @@ mapping <span class="dim">字段映射</span>
         <input v-model.number="bufferMs" type="number" min="0" class="ipt num" @blur="clampBufferMs" @keydown.enter="strategyNextEnter" />
       </div>
       <!-- +1：INCREMENTAL 必选时间字段的常驻红字（对齐 needIndexForManual 形态：
-           选上即熄）——此前只靠「下一步」钮禁用，用户不知道被什么拦住 -->
+ 选上即熄）——此前只靠「下一步」钮禁用，用户不知道被什么拦住 -->
       <div v-if="strategy === 'INCREMENTAL' && !timeField" class="ar-paste-err ar-manual-idx-miss">← 增量追平必须指定时间字段：按它做 range reindex 收敛增量；候选为空说明索引无时间字段，请改用写阻断或直切策略</div>
       <label class="chk"><input type="checkbox" v-model="deleteOldIndex" /> 切换成功后删除旧物理索引（默认保留只读，验证无误后再手动清理更稳妥）</label>
       <!-- 切换前人工确认门。开启后作业会停在 AWAIT_CONFIRM 等人放行 -->
       <label class="chk"><input type="checkbox" v-model="pauseBeforeSwitch" /> 切换前等待人工确认（作业停在 AWAIT_CONFIRM，确认后才翻别名）</label>
 
-      <!--  / spec §4.2：无 timeField 时 WRITE_BLOCK 会全程挡写（AdhocRebuildService:235 earlyBlock），
-           窗口不是「一轮追平」而是「全量 reindex 全程」，大索引可能几十分钟。必须让人看见再决定。 -->
+      <!-- / spec 无 timeField 时 WRITE_BLOCK 会全程挡写（AdhocRebuildService:235 earlyBlock），
+ 窗口不是「一轮追平」而是「全量 reindex 全程」，大索引可能几十分钟。必须让人看见再决定。 -->
       <div v-if="needAckFullBlock" class="ar-warn-window">
         <TriangleAlert :size="13" />
         <b>该索引未指定时间字段 —— 业务写入将在整个重建期间被阻断</b>
@@ -337,7 +337,7 @@ mapping <span class="dim">字段映射</span>
       </div>
 
       <!-- 期望（粘贴来的）vs 实际（ES 读回）字段级比对。
-            P2：分节标题升 .sec-t 档（行首横排 fs-sm/600/tx1，选择器限 .ar-diff/.report 两区） -->
+ P2：分节标题升 .sec-t 档（行首横排 fs-sm/600/tx1，选择器限 .ar-diff/.report 两区） -->
       <div v-if="cfgDiff.length" class="ar-diff">
         <div class="ed-label sec-t">
           期望 vs 实际（mapping）
@@ -350,9 +350,9 @@ mapping <span class="dim">字段映射</span>
         <table class="tbl">
           <thead><tr><th>路径</th><th>类别</th><th>期望</th><th>实际</th><th>说明</th></tr></thead>
           <tbody>
-            <!-- kind 是  已评审的契约不动，但界面不显示 raw kind：
-                 added/removed 对使用者天然歧义，必须给人话标签。
-                 -9 / I-4：标签与提示已提成纯函数并由断言看守，模板只做调用。 -->
+            <!-- kind 是 已评审的契约不动，但界面不显示 raw kind：
+ added/removed 对使用者天然歧义，必须给人话标签。
+ -9 / I-4：标签与提示已提成纯函数并由断言看守，模板只做调用。 -->
             <!-- 真差异区始终展开。 -->
             <tr v-for="row in cfgParts.real" :key="'r-' + row.path" class="cd-real" :class="'cd-' + row.kind">
               <td class="cd-path mono">{{ row.path }}</td>
@@ -383,9 +383,9 @@ mapping <span class="dim">字段映射</span>
         </table>
       </div>
 
-      <!--  / ：date 兼容风险报告。与 configDiff 同屏（spec §9.9）。
-           +1：源/目标类型对比行（destTypeRisks）并轨同一区块展示
-           （mergeRiskRows 已按档位/字段排序，error 前置）。 -->
+      <!-- / ：date 兼容风险报告。与 configDiff 同屏（spec ）。
+ +1：源/目标类型对比行（destTypeRisks）并轨同一区块展示
+ （mergeRiskRows 已按档位/字段排序，error 前置）。 -->
       <div v-if="displayRiskRows.length || riskErr || riskBusy" class="ar-risk">
         <div class="ar-risk-hd">
           <ShieldAlert :size="13" />
@@ -395,7 +395,7 @@ mapping <span class="dim">字段映射</span>
             <template v-if="riskBusy">正在采样…</template>
             <template v-else>
               <!-- 修订四：取样口径必须露出来。一份不说明自己怎么取样的报告，
-                   读者会默认它是随机的 —— 这次恰好对，下次不一定对。 -->
+ 读者会默认它是随机的 —— 这次恰好对，下次不一定对。 -->
               基于 {{ sampledCount }} 条样本<template v-if="samplingMode">（取样方式：{{ samplingMode }}）</template>
               —— 结论只表示「这 {{ sampledCount }} 条中未发现」，不代表全量无风险
             </template>
@@ -403,8 +403,8 @@ mapping <span class="dim">字段映射</span>
         </div>
         <div v-if="riskErr" class="ar-risk-err">{{ riskErr }}</div>
         <div v-for="(r, i) in displayRiskRows" :key="i" class="ar-risk-row" :class="r.level">
-          <!-- level 裸英文 → sevZh 中文（warning 别名同批补齐）；row class 保留原
-               枚举供 ar-risk 档着色；'ok' 全清行 sevZh 回落「建议」失真，单独给「无风险」 -->
+          <!-- level 裸英文 → sevZh 中文（warning 别名同步补齐）；row class 保留原
+ 枚举供 ar-risk 档着色；'ok' 全清行 sevZh 回落「建议」失真，单独给「无风险」 -->
           <span class="ar-risk-lv">{{ r.level === 'ok' ? '无风险' : sevZh(r.level) }}</span>
           <code>{{ r.field || '（全索引）' }}</code>
           <span class="ar-risk-code">{{ r.code }}</span>
@@ -444,8 +444,8 @@ mapping <span class="dim">字段映射</span>
       <div v-if="!isTerminal" class="row">
         <button class="btn ghost" @click="step = 2"><ChevronLeft :size="13" /> 上一步</button>
         <!-- -9 / I-1：canStart 一并接到**执行按钮**上。步骤条只允许回退、
-             doValidateConfig 只从 1→2，故这是防御深度而非补漏；但「知悉全程挡写」
-             这个门本就该守在真正扣扳机的地方，而不只是守在翻页处。 -->
+ doValidateConfig 只从 1→2，故这是防御深度而非补漏；但「知悉全程挡写」
+ 这个门本就该守在真正扣扳机的地方，而不只是守在翻页处。 -->
         <button v-if="canOps" class="btn primary" :disabled="starting || (!prep?.isAlias && !confirmDirectSwap) || !canStart" @click="doStart">
           <Loader2 v-if="starting" :size="13" class="spinning" /><Play v-else :size="13" /> {{ starting ? '启动中 ' + startSecs + 's' : '启动托管重建' }}
         </button>
@@ -457,21 +457,21 @@ mapping <span class="dim">字段映射</span>
     <div v-if="step === 4" class="ar-sec">
       <div class="card-t">
 执行监控
-        <StatusPill v-if="job" class="ar-st-en" :tone="statusTone(job.status)" :label="jobStatusZh(job.status) || String(job.status)" :en="jobStatusZh(job.status) ? job.status : undefined" /><!-- ：手滚 pill 换装 StatusPill（en 英文小字组件化；.ar-st-en 锚类外挂保留——小字视觉由组件 sp-en 承担；起轮次徽标小字亦归组件，本页不再自携小字样式） --><!-- ：状态枚举加中文名（esEnumZh.jobStatusZh 收口；英文枚举小字保留在后，XmigrateView 同范式；数据/条件行不动） -->
+        <StatusPill v-if="job" class="ar-st-en" :tone="statusTone(job.status)" :label="jobStatusZh(job.status) || String(job.status)" :en="jobStatusZh(job.status) ? job.status : undefined" /><!-- ：手滚 pill 改用 StatusPill（en 英文小字组件化；.ar-st-en 锚类外挂保留——小字视觉由组件 sp-en 承担；起轮次徽标小字亦归组件，本页不再自携小字样式） --><!-- ：状态枚举加中文名（esEnumZh.jobStatusZh 收口；英文枚举小字保留在后，XmigrateView 同范式；数据/条件行不动） -->
         <span v-if="job" class="dim sm-txt">阶段：<StatusPill class="sm" :tone="stagePill(job.stage)" :label="stageZh(job.stage) || String(job.stage)" :en="stageZh(job.stage) ? job.stage : undefined" /></span><!-- ：stage 裸枚举 → stageZh 中文 + 英文小字（Lead 十 stage 契约接线；w80：stage 裸串→pill 徽标同谱系） -->
         <!-- 锁安全徽标（后端 toMap 透出 gateOutcome/lockActive/switchedWithoutLock，
-             此前前端不显=锁保护盲区：lock.enabled=false 与锁正常工作在界面上无法区分）。
-             switchedWithoutLock=true（无锁切换，数据一致性风险）最重，与 lockActive=false 互斥显
-             （切换已发生时锁是否在保护已无意义）；gateOutcome 非 CONFIRMED（TIMED_OUT 超时自动
-             解除阻断 / ABORTED 人工中止）=门结局非人工确认放行。数据/条件行零改动，纯加显。 -->
+ 此前前端不显=锁保护盲区：lock.enabled=false 与锁正常工作在界面上无法区分）。
+ switchedWithoutLock=true（无锁切换，数据一致性风险）最重，与 lockActive=false 互斥显
+ （切换已发生时锁是否在保护已无意义）；gateOutcome 非 CONFIRMED（TIMED_OUT 超时自动
+ 解除阻断 / ABORTED 人工中止）=门结局非人工确认放行。数据/条件行零改动，纯加显。 -->
         <StatusPill v-if="job && job.switchedWithoutLock" tone="r" label="无锁切换" title="失锁后仍执行了别名切换——另一实例可能在切换窗口内继续写源索引，数据一致性需人工核对" />
         <StatusPill v-else-if="job && job.lockActive === false" tone="y" label="锁保护未生效" title="分布式锁未生效（lock.enabled=false 或未抢到锁）——本次重建没有跨实例互斥保护，请确认没有其他实例在同时重建同一索引" />
         <StatusPill v-if="job && job.gateOutcome === 'TIMED_OUT'" tone="y" label="确认超时" title="确认门超时：超时方赢得竞争，写阻断已自动解除、别名切换未执行" />
         <StatusPill v-else-if="job && job.gateOutcome === 'ABORTED'" tone="n" label="门已中止" title="确认门以人工中止告终——写阻断已解除、别名切换未执行" />
-        <!-- 监控步行尾原始 IO 钮（:423 执行分节判例同形）——监控轮询现场
-             （/adhoc-rebuild/ 记录环）此前在 step4 无取数入口；中止钮在场时其 .right
-             margin-left:auto 独占行尾推进，本钮不叠加 auto（防双 auto 平分剩余空间挤移中止钮），
-             非 RUNNING（中止钮缺席）时本钮自持 margin-left:auto 补行尾位 -->
+        <!-- 监控步行尾原始 IO 钮（423 执行分节先例同形）——询现场
+ （/adhoc-rebuild/ 记录环）此前在 step4 无取数入口；中止钮在场时其 .right
+ margin-left:auto 独占行尾推进，本钮不叠加 auto（防双 auto 平分剩余空间挤移中止钮），
+ 非 RUNNING（中止钮缺席）时本钮自持 margin-left:auto 补行尾位 -->
         <button class="btn ghost sm" :style="(canOps && job?.status === 'RUNNING') ? '' : 'margin-left:auto'" aria-label="查看原始 IO（监控轮询）" title="最近一次托管重建接口调用的请求/响应原文（含监控轮询现场）" @click="openRawIo"><Terminal :size="12" /></button>
         <button v-if="canOps && job?.status === 'RUNNING'" class="btn ghost sm danger right" title="中止作业：删除半成品新索引、回滚到原索引，已迁移的数据丢弃" :disabled="aborting" @click="doAbort"><CircleStop :size="12" /> 中止</button>
       </div>
@@ -501,25 +501,25 @@ mapping <span class="dim">字段映射</span>
               <span class="dim">{{ reindexPct(job) }}%</span>
             </span>
           </div>
-          <!--  J1 配套：/status 顶层 docs 级进度三字段（total/created/updated，
-               Java AdhocRebuildJobProgressTest 契约：awaitTask 轮询 ReindexProgress 单源刷新、
-               终态保留末次采样）行内小字消费——currentProgress 兼容路径之外的第二通道，
-               追平轮间隙/终态也可见末次计数；字段缺省（旧后端/未进入 reindex 阶段）整行
-               不渲染 = 零增量向后兼容（不冒充 0） -->
+          <!-- J1 配套：/status 顶层 docs 级进度三字段（total/created/updated，
+ Java AdhocRebuildJobProgressTest 契约：awaitTask 轮询 ReindexProgress 单源刷新、
+ 终态保留末次采样）行内小字消费——currentProgress 兼容路径之外的第二通道，
+ 追平轮间隙/终态也可见末次计数；字段缺省（旧后端/未进入 reindex 阶段）整行
+ 不渲染 = 零增量向后兼容（不冒充 0） -->
           <div class="p-row" v-if="job.total != null && job.created != null" data-test="adhoc-docs-progress">
             <span>已写</span>
             <span class="mono">{{ fmtNum(job.created) }} / {{ fmtNum(job.total) }}<template v-if="job.updated != null">（更新 {{ fmtNum(job.updated) }}）</template></span>
           </div>
-          <!--  W3：速率观测行（XmigrateView rateOf 范式移植，Xm 文件零触碰）——
-               Σcreated 对监控轮询相邻两次采样的时间差分出 docs/s（差分 ≤0 不出，不冒充速率）；
-               已耗时随既有轮询刷新（终态取后端 tookMs），零新增定时器。轮次表零触碰（有锁）。 -->
+          <!-- W3：速率观测行（XmigrateView rateOf 范式移植，Xm 文件零触碰）——
+ Σcreated 对询相邻两次采样的时间差分出 docs/s（差分 ≤0 不出，不冒充速率）；
+ 已耗时随既有轮询刷新（终态取后端 tookMs），零新增定时器。轮次表零触碰（有锁）。 -->
           <div class="p-row" v-if="job.currentProgress" data-test="adhoc-rate">
             <span>速率观测</span>
             <span class="dim">
               <template v-if="reindexRate != null"><span class="mono">{{ fmtNum(reindexRate) }} docs/s</span> · </template>
               <template v-if="jobElapsedMs != null">已耗时 <TookBadge :ms="jobElapsedMs" title="自作业启动起的已耗时（随监控轮询刷新；终态取后端 tookMs 收尾值）" /></template>
               <template v-else>已耗时 —</template>
-              <!--  P2：预计剩余 ETA——速率缺失/非正、余量非正不渲染（不冒充） -->
+              <!-- P2：预计剩余 ETA——速率缺失/非正、余量非正不渲染（不冒充） -->
               <template v-if="reindexEtaMs != null"> · 预计剩余 <TookBadge :ms="reindexEtaMs" title="预计剩余 =（total − created − updated）/ 速率（估算值，随监控轮询采样刷新；速率缺失时不显示）" /></template>
             </span>
           </div>
@@ -529,13 +529,13 @@ mapping <span class="dim">字段映射</span>
           <thead><tr><th>轮次</th><th>阶段</th><th>总计</th><th>已建</th><th>已更新</th><th>冲突跳过</th></tr></thead>
           <tbody>
             <tr v-for="r in job.rounds" :key="r.round + r.phase">
-              <td>{{ r.round }}</td><td><StatusPill tone="b" :label="roundZh(r.phase) || r.phase" :en="roundZh(r.phase) ? r.phase : undefined" /></td><!-- ：r.phase 裸枚举 → roundZh 中文接线（Lead 收口实地核 addRound 四值 FULL/CATCHUP/CATCHUP_BLOCKED/FINAL 全收录）。：轮次阶段私造胶囊换装 StatusPill b 档——未收录新枚举回退原英文（label 兜底），en 英文小字归组件 sp-en -->
+              <td>{{ r.round }}</td><td><StatusPill tone="b" :label="roundZh(r.phase) || r.phase" :en="roundZh(r.phase) ? r.phase : undefined" /></td><!-- ：r.phase 裸枚举 → roundZh 中文接线（Lead 收口实地核 addRound 四值 FULL/CATCHUP/CATCHUP_BLOCKED/FINAL 全收录）。：轮次阶段私造胶囊改用 StatusPill b 档——未收录新枚举回退原英文（label 兜底），en 英文小字归组件 sp-en -->
               <td>{{ r.total != null ? fmtNum(r.total) : '-' }}</td><td>{{ r.created != null ? fmtNum(r.created) : '-' }}</td><td>{{ r.updated != null ? fmtNum(r.updated) : '-' }}</td><td>{{ r.versionConflicts != null ? fmtNum(r.versionConflicts) : '-' }}</td>
             </tr>
           </tbody>
-          <!--  W1：Σ 聚合行（DiagView/HealthReportView 523 聚合行同语言：bg2 底+顶部分隔线，
-               数值右对齐）——追平收敛一眼判读：Σcreated+Σupdated 应趋近 Σtotal；ΣversionConflicts
-               高涨=全量期间源仍在被写（增量策略下的正常现象，写阻断策略下应恒 0） -->
+          <!-- W1：Σ 聚合行（DiagView/HealthReportView 523 聚合行同语言：bg2 底+顶部分隔线，
+ 数值右对齐）——追平收敛一眼判读：Σcreated+Σupdated 应趋近 Σtotal；ΣversionConflicts
+ 高涨=全量期间源仍在被写（增量策略下的正常现象，写阻断策略下应恒 0） -->
           <tfoot class="ar-rounds-agg">
             <tr class="ar-rounds-agg-row">
               <td class="mono ar-agg-lb" aria-hidden="true">Σ</td>
@@ -558,7 +558,7 @@ mapping <span class="dim">字段映射</span>
           <pre v-if="job.report.suggestedBackfillDsl" class="mono dsl" v-html="backfillHtml"></pre><!-- ：裸 pre → highlightJson 高亮（先 pretty，输出已转义） -->
         </div>
         <!-- w80：SUCCEEDED 后「去查询验证」常驻钮——此前只挂在确认切换 toast 的 action 上（12s 即逝），
-             错过就得手动找索引。目标优先作业回传，回落向导内 destIndex/建议名（深链同 doConfirmSwitch 的 toast action） -->
+ 错过就得手动找索引。目标优先作业回传，回落向导内 destIndex/建议名（深链同 doConfirmSwitch 的 toast action） -->
         <button v-if="job.status === 'SUCCEEDED'" class="btn primary next" data-test="go-verify"
                 :title="'在查询工作台打开「' + (verifiedTarget || '目标索引') + '」验证数据'"
                 @click="goVerifyFromJob"><Search :size="13" /> 去查询验证</button>
@@ -567,16 +567,16 @@ mapping <span class="dim">字段映射</span>
     </div>
 
     <!-- 最近作业 -->
-    <!--  W1：工具行 kw 过滤（jobId/逻辑名/状态，命中 MarkText 高亮）+
-         状态 pill 漏斗（点状态只看该状态，再点取消）+ matrixText TSV/MD 复制（锚在 524 spec）。
-          W-B：裸表换 QRT rows 型（525 W5 HealthReport/SqlBridge 同判据）——表头排序/
-         列选/列宽记忆/单元格右键菜单/导出四格式（CSV/MD/XLSX/PNG）/按值类型徽标/tfoot 聚合行
-         归内核白得；过滤职责仍在宿主（kw+状态漏斗算好 visibleJobs 单一行集喂 :rows，
-         所见即所复，与 TSV/MD 导出同一行集）。cell 形态迁 #cell-<col> 作用域槽：jobId 复制芯片/
-         MarkText 命中高亮/状态 pill 漏斗/stage pill/TimeCell；行操作迁 #row-actions。
-         形态随迁不回退：状态 cell 接 jobStatusZh 中文+英文小字（.ar-st-en，监控步
-         同范式）；锁安全徽标（switchedWithoutLock 红 / lockActive 黄 / gateOutcome 徽）——
-         后端 toMap 对 jobs 列表行同样透出三字段（AdhocRebuildJob.toMap），监控步同语义。 -->
+    <!-- W1：工具行 kw 过滤（jobId/逻辑名/状态，命中 MarkText 高亮）+
+ 状态 pill 漏斗（点状态只看该状态，再点取消）+ matrixText TSV/MD 复制（锚在 524 spec）。
+ W-B：裸表换 QRT rows 型（525 W5 HealthReport/SqlBridge 同判据）——表头排序/
+ 列选/列宽记忆/单元格右键菜单/导出四格式（CSV/MD/XLSX/PNG）/按值类型徽标/tfoot 聚合行
+ 归内核白得；过滤职责仍在宿主（kw+状态漏斗算好 visibleJobs 单一行集喂 :rows，
+ 所见即所复，与 TSV/MD 导出同一行集）。cell 形态迁 #cell-<col> 作用域槽：jobId 复制芯片/
+ MarkText 命中高亮/状态 pill 漏斗/stage pill/TimeCell；行操作迁 #row-actions。
+ 形态同步更新不回退：状态 cell 接 jobStatusZh 中文+英文小字（.ar-st-en，监控步
+ 同范式）；锁安全徽标（switchedWithoutLock 红 / lockActive 黄 / gateOutcome 徽）——
+ 后端 toMap 对 jobs 列表行同样透出三字段（AdhocRebuildJob.toMap），监控步同语义。 -->
     <div class="ar-sec" v-if="allJobs.length">
       <div class="card-t">
 <History :size="14" /> 最近作业
@@ -585,9 +585,9 @@ mapping <span class="dim">字段映射</span>
         <button aria-label="刷新任务列表" class="btn ghost sm" :style="visibleJobs.length ? '' : 'margin-left:auto'" :disabled="jobsLoading" @click="loadJobs" title="刷新任务列表"><RefreshCw :size="12" :class="{ spinning: jobsLoading }" /></button>
       </div>
       <div class="ar-jobs-tools">
-        <!-- kw 过滤换装 SearchFilterBar 统一件（559 TasksView tv-kw 判例；placeholder 逐字保留，
-             Esc 清空/Enter 语义内建；ar-jobs-kw 类锚随 input-class 保留在 input 上——524/529 挂载过滤锁同路径零迁，
-             落位宽度随换装迁 wrap 根） -->
+        <!-- kw 过滤改用 SearchFilterBar 统一件（559 TasksView tv-kw 先例；placeholder 逐字保留，
+ Esc 清空/Enter 语义内建；ar-jobs-kw 类锚随 input-class 保留在 input 上——524/529 挂载过滤锁同路径零迁，
+ 落位宽度随改用迁 wrap 根） -->
         <SearchFilterBar v-model="jobKw" class="ar-jobs-kw-wrap" input-class="ar-jobs-kw" placeholder="过滤：jobId / 逻辑名 / 状态" />
         <button v-if="jobKw || jobStatusFilter" class="btn ghost xs" @click="clearJobFilters" title="清除过滤条件，恢复完整清单">清除过滤</button>
         <span v-if="jobKw || jobStatusFilter" class="dim ar-jobs-hit">{{ visibleJobs.length }}/{{ allJobs.length }} 条命中</span>
@@ -601,10 +601,10 @@ mapping <span class="dim">字段映射</span>
         </template>
         <template #cell-logicalName="{ row }"><span class="mono"><MarkText :text="row[1]" :kw="jobKw" /></span></template>
         <template #cell-status="{ row }">
-          <!--  W1：状态 pill 兼作漏斗——点击只看该状态（aria-pressed 表达按下态），再点取消。
-               换装 StatusPill：role/tabindex/aria-pressed/键盘经 attrs 落根（单根透传），
-               锚类 ar-st-funnel/ar-st-en 外挂保留；中文主体+英文小字 en 档组件化（MarkText 两处随装
-               退役——英文枚举不再吃过滤词高亮，524 spec 同批改锚） -->
+          <!-- W1：状态 pill 兼作漏斗——点击只看该状态（aria-pressed 表达按下态），再点取消。
+ 改用 StatusPill：role/tabindex/aria-pressed/键盘经 attrs 落根（单根透传），
+ 锚类 ar-st-funnel/ar-st-en 外挂保留；中文主体+英文小字 en 档组件化（MarkText 两处随装
+ 退役——英文枚举不再吃过滤词高亮，524 spec 同步改锚） -->
           <StatusPill class="ar-st-funnel ar-st-en" :tone="statusTone(row[3])"
                 :label="jobStatusZh(String(row[3] ?? '')) || String(row[3] ?? '')"
                 :en="jobStatusZh(String(row[3] ?? '')) ? String(row[3] ?? '') : undefined"
@@ -627,7 +627,7 @@ mapping <span class="dim">字段映射</span>
     </div>
 
     <!-- 粘贴导入——原始 JSON 一手进，识别只拆壳不改值（校准铁律）。
-         与 Mapping 页「原始 JSON → 复制全部」形成跨页闭环：复制 → 跳托管重建 → 粘贴 → 秒拆双框 -->
+ 与 Mapping 页「原始 JSON → 复制全部」形成跨页闭环：复制 → 跳托管重建 → 粘贴 → 秒拆双框 -->
     <n-modal v-model:show="pasteImportOpen" preset="card"
              title="粘贴导入 — 识别并拆填 settings / mapping" style="width:680px;max-width:94vw" :bordered="false">
       <div class="pi-hint">
@@ -635,15 +635,15 @@ mapping <span class="dim">字段映射</span>
         纯 mapping / settings 片段。只拆壳、不改值，与粘贴原文严格一致。贴入后
         <b>Ctrl+Enter</b>（或点下方按钮）解析并填入。
       </div>
-      <!-- 裸 textarea 收编 JsonArea——与审编框同一编辑内核（JSON 高亮/合法性圆点/
-           格式化·压缩·复制工具条），粘贴导入现场获得同款校验反馈。Ctrl+Enter 走 MonacoEditor
-           既有 es-execute action → JsonArea submit 事件 → doPasteImport，与原
-           @keydown.enter.ctrl.prevent 行为等价；Esc 关弹窗由 NModal 自身 closeOnEsc 承接
-           （footer「取消」同路）。placeholder prop 为 JsonArea 签名保留项（Monaco 无占位渲染），
-           操作引导文案由上方 pi-hint 承担。 -->
-      <!--  W10：JsonArea rows 定高退役 → fill + 弹性 wrapper（min(60vh, 600px)：
-           大屏随视口撑高粘贴区、≥1000px 视口 600px 封顶；小窗按 60vh 收缩不撑破弹窗）。
-           定高字面升 adhoc.piH 四档（useTierCycle，首位=原值零漂移），档位钮在弹窗 footer -->
+      <!-- 裸 textarea 合并 JsonArea——与审编框同一编辑内核（JSON 高亮/合法性圆点/
+ 格式化·压缩·复制工具条），粘贴导入现场获得同款校验反馈。Ctrl+Enter 走 MonacoEditor
+ 既有 es-execute action → JsonArea submit 事件 → doPasteImport，与原
+ @keydown.enter.ctrl.prevent 行为等价；Esc 关弹窗由 NModal 自身 closeOnEsc 承接
+ （footer「取消」同路）。placeholder prop 为 JsonArea 签名保留项（Monaco 无占位渲染），
+ 操作引导文案由上方 pi-hint 承担。 -->
+      <!-- W10：JsonArea rows 定高退役 → fill + 弹性 wrapper（min(60vh, 600px)：
+ 大屏随视口撑高粘贴区、≥1000px 视口 600px 封顶；小窗按 60vh 收缩不撑破弹窗）。
+ 定高字面升 adhoc.piH 四档（useTierCycle，首位=原值零漂移），档位钮在弹窗 footer -->
       <div class="pi-ja-wrap" :style="{ height: piH }">
         <JsonArea
           ref="pasteJaEl" v-model="pasteImportText" fill
@@ -661,7 +661,7 @@ mapping <span class="dim">字段映射</span>
       <template #footer>
         <div style="display:flex;justify-content:flex-end;gap:var(--sp-2)">
           <!-- 粘贴区高度四档循环钮（adhoc.pasteH data-ar-paste-h 同范式，
-               title 实时回显当前档，点击切下一档末档回首档） -->
+ title 实时回显当前档，点击切下一档末档回首档） -->
           <button type="button" class="btn ghost sm" data-ar-pi-h style="margin-right:auto"
                   :title="'粘贴区高度档：' + piH + '（点击循环）'" @click="cyclePiH">高</button>
           <button class="btn" @click="pasteImportOpen = false">取消</button>
@@ -682,14 +682,14 @@ mapping <span class="dim">字段映射</span>
 import { ref, computed, watch, onMounted, onActivated, onBeforeUnmount, nextTick, type Ref } from 'vue';
 import { NModal } from 'naive-ui'; /* 粘贴导入弹窗——不 import 会被当原生 custom element 渲染（named slot 全丢） */
 import { fmtNum, copyText, statusColor } from '../utils/format';
-import { sevPill } from '../utils/esEnumZh'; /*  W4：severity pill 档收口 esEnumZh（本地 sevPill 退役） */
+import { sevPill } from '../utils/esEnumZh'; /* W4：severity pill 档收口 esEnumZh（本地 sevPill 退役） */
 import { jobStatusZh } from '../utils/esEnumZh'; /* ：jobStatusZh 作业状态中文接线（独立 import 行——既有 sevPill import 行被两处 spec 逐字锁，一字不动） */
 import { sevZh, stageZh, roundZh } from '../utils/esEnumZh'; /* ：severity/stage/轮次 phase 中文接线（Lead 跨工蚁契约；独立行——上两行被 spec 逐字锁） */
 import { highlightJson } from '../utils/jsonc'; /* ：backfill DSL 高亮 */
 import { friendlyApiError } from '../utils/esError'; /* ：裸 e.message 友好化 */
-import { errPreHtml, errMeta } from '../utils/errPre'; /* ：探测失败条双参换装（XmigrateView :63 / errMetaPave547 口径） */
+import { errPreHtml, errMeta } from '../utils/errPre'; /* ：探测失败条双参改用（XmigrateView :63 / errMetaPave547 口径） */
 import { indexNameProblem } from '../utils/indexNameRule'; /* 索引名硬规则共享口径（ReindexAdvanced 同源） */
-import { matrixText } from '../utils/copyMatrix'; /*  W1：最近作业 TSV/MD 导出（RT/QRT 共用矩阵内核） */
+import { matrixText } from '../utils/copyMatrix'; /* W1：最近作业 TSV/MD 导出（RT/QRT 共用矩阵内核） */
 import { useRoute, useRouter } from 'vue-router';
 import {
   Hammer, Search, ChevronRight, ChevronLeft, Play, Loader2,
@@ -703,7 +703,7 @@ import WorkbenchLayout, { type WorkbenchPaneSpec } from '../components/Workbench
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
 import IndexPicker from '../components/IndexPicker.vue';
-import PickCurrentIdxBtn from '../components/PickCurrentIdxBtn.vue'; /* ：「用当前索引」回填钮统一件（557 记档兑现） */
+import PickCurrentIdxBtn from '../components/PickCurrentIdxBtn.vue'; /* ：「用当前索引」回填钮统一件（兑现） */
 import { askConfirm } from '../composables/confirm';
 /* 校验/启动两链执行读秒+竞态作废（IndexHub 三链 P0-A 同范式统一件） */
 import { useQueryRun } from '../composables/useQueryRun';
@@ -712,24 +712,24 @@ import { useAutoRefresh } from '../composables/useAutoRefresh';
 import DraftBadge from '../components/DraftBadge.vue';
 import JsonArea from '../components/JsonArea.vue';
 import TimeCell from '../components/TimeCell.vue';
-import MarkText from '../components/MarkText.vue'; /*  W1：最近作业过滤命中高亮（全站 <mark> 统一件） */
+import MarkText from '../components/MarkText.vue'; /* W1：最近作业过滤命中高亮（全站 <mark> 统一件） */
 import TookBadge from '../components/TookBadge.vue'; /* ：校验耗时四档语义徽标 */
 import { diffConfig, diffConfigSummary, type ConfigDiffRow } from '../utils/configDiff';
 import { kindLabel, kindNote, parseExpectedMapping, shouldDiffMapping, partitionDiffRows } from '../utils/configDiffView';
 import { assessDateRisks, assessFieldNameMismatch, mergeRiskRows, type RiskRow } from '../utils/dateRisk';
 import MonacoEditor from '../components/MonacoEditor.vue';
-import QueryResultTable from '../components/QueryResultTable.vue'; /*  W-B：最近作业表换 QRT rows 型（排序/列选/右键/导出四格式/按值徽标归内核） */
-import SearchFilterBar from '../components/SearchFilterBar.vue'; /* ：最近作业 kw 过滤胶囊统一件（559 TasksView tv-kw 判例） */
+import QueryResultTable from '../components/QueryResultTable.vue'; /* W-B：最近作业表换 QRT rows 型（排序/列选/右键/导出四格式/按值徽标归内核） */
+import SearchFilterBar from '../components/SearchFilterBar.vue'; /* ：最近作业 kw 过滤胶囊统一件（559 TasksView tv-kw 先例） */
 /* 原始请求/响应快查弹窗（探测/托管重建执行共用，ioRecorder 记录环取数） */
 import RawIoModal from '../components/RawIoModal.vue';
-import StatusPill from '../components/StatusPill.vue'; /* ：手滚 pill 换装统一件（componentUnify530 范式；tone/label/en?/title? 四项契约） */
+import StatusPill from '../components/StatusPill.vue'; /* ：手滚 pill 改用统一件（ 范式；tone/label/en?/title? 四项契约） */
 import { parseEsConfigPaste, pastePreviewLines, type ParsedEsConfig } from '../utils/esConfigPaste';
 import { useIndexFields } from '../composables/useIndexFields';
-/*  P1：settings/mapping 四编辑框 lint 划线——lintSettingsBody/lintMappingBody 纯函数
-   只消费 dslLint 既有出口（禁改 dslLint）；防抖统一件（SearchSandboxView 同款） */
+/* P1：settings/mapping 四编辑框 lint 划线——lintSettingsBody/lintMappingBody 纯函数
+ 只消费 dslLint 既有出口（禁改 dslLint）；防抖统一件（SearchSandboxView 同款） */
 import { lintSettingsBody, lintMappingBody, type Finding } from '../utils/dslLint';
 import { useDebounceFn } from '../composables/useDebounceFn';
-/*  W2：pasteRaw 高度档循环统一件（useTierCycle 三件套：档值数组+usePref+cycle） */
+/* W2：pasteRaw 高度档循环统一件（useTierCycle 三件套：档值数组+usePref+cycle） */
 import { useTierCycle } from '../composables/useTierCycle';
 import { removeStoredRaw } from '../utils/safeJson';
 
@@ -742,16 +742,16 @@ const STEPS = ['选索引', '审编 settings/mapping', '追平策略', '确认�
 const store = useAppStore();
 
 /* 期望配置页外链（宿主 client 侧 /internal/es/index/desired-state.html 自包含单页，
-   与 api 请求同 EP 前缀、同集群目标）——步①「业务应用 → desired-state.html」此前只有文案无入口 */
+ 与 api 请求同 EP 前缀、同集群目标）——步①「业务应用 → desired-state.html」此前只有文案无入口 */
 function openDesiredState() { window.open(EP + '/desired-state.html', '_blank', 'noopener'); }
 
 /* 原始 IO 快查——探测（评估）与托管重建（执行）分节共用，
-   取记录环最近一条 /adhoc-rebuild/ 记录开弹窗。
-    W3 判空口径统一（546 裁决=notify 不开空弹窗，rawIoPave546 六视图同款
-   形态随迁）：无记录 notify 引导并返回，不再以空 rec 开弹窗（EmptyState 仍归 RawIoModal
-   自身兜底）；last('/adhoc-rebuild/') 特征子串逐字保留（rawIo545 spec 字面锁）。
-   步②审编校验走 /config-lab/validate（不在 /adhoc-rebuild/ 特征下）——
-   last 取数扩回退链：托管链无记录时回落 config-lab 记录（rawIo545 锁随迁） */
+ 取记录环最近一条 /adhoc-rebuild/ 记录开弹窗。
+ W3 判空口径统一（546 裁决=notify 不开空弹窗，rawIoPave546 六视图同款
+ 形态同步更新）：无记录 notify 引导并返回，不再以空 rec 开弹窗（EmptyState 仍归 RawIoModal
+ 自身兜底）；last('/adhoc-rebuild/') 特征子串逐字保留（rawIo545 spec 字面锁）。
+ 步②审编校验走 /config-lab/validate（不在 /adhoc-rebuild/ 特征下）——
+ last 取数扩回退链：托管链无记录时回落 config-lab 记录（rawIo545 锁同步更新） */
 const rawIoShow = ref(false);
 const rawIoRec = ref<RawIoRec | null>(null);
 function openRawIo() {
@@ -767,9 +767,9 @@ const arEdScope = { target: store.target || 'host', route: '/adhoc', mode: 'arEd
 /* 手动模式 settings/mapping 对照（与 411 自动派生模式同款语义） */
 const arManualScope = { ...arEdScope, mode: 'arManual' };
 /* w80:sized+flex 混合——两组全 flex pane 时中缝拖不动(两侧互相让位),settings 给数值档、
-   mapping 吃 flex,柄拖动语义恢复(BE_PANES 参数 260/编辑 flex 同构先例)。
-    W4：竖排标题轨退役（519 立法/DevToolsView 先例）——title 置空即不渲染，
-   settings/mapping 标题语义落各 pane 行首横排（.ar-manual-lb / .ed-col .ed-label，sec-t 档） */
+ mapping 吃 flex,柄拖动语义恢复(BE_PANES 参数 260/编辑 flex 同构先例)。
+ W4：竖排标题轨退役（/DevToolsView 先例）——title 置空即不渲染，
+ settings/mapping 标题语义落各 pane 行首横排（.ar-manual-lb / .ed-col .ed-label，sec-t 档） */
 const AR_MANUAL_PANES: WorkbenchPaneSpec[] = [
   { id: 'adhoc.manual-settings', role: 'request', title: '', minSize: 260, defaultSize: 320, collapsible: true },
   { id: 'adhoc.manual-mapping', role: 'response', title: '', minSize: 260, defaultSize: 'flex', collapsible: true },
@@ -779,62 +779,62 @@ const AR_ED_PANES: WorkbenchPaneSpec[] = [
   { id: 'adhoc.mapping', role: 'response', title: '', minSize: 260, defaultSize: 'flex', collapsible: true },
 ];
 /* 权限门禁——托管重建发起/中止/确认切换=REBUILD 档（rank3+）；
-   只读角色可看向导与监控（评估/探测是只读 POST），不给出扳机 */
+ 只读角色可看向导与监控（评估/探测是只读 POST），不给出扳机 */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/adhoc-rebuild/start', store.target));
-/* 草稿治理轮：向导全程草稿（按集群目标隔离）。粘贴/审编/表单字段挂载时读一次、
-   之后只写不读——切页/失焦/重挂载后现场可复原；doPrepare/校验/prepare 失败不清稿
-   （机制保证：只有显式 reset 或改回默认值才清）。 */
+/* 草稿：向导全程草稿（按集群目标隔离）。粘贴/审编/表单字段挂载时读一次、
+ 之后只写不读——切页/失焦/重挂载后现场可复原；doPrepare/校验/prepare 失败不清稿
+ （机制保证：只有显式 reset 或改回默认值才清）。 */
 /* w45:向导草稿不按集群隔离——粘贴的期望配置/索引名/策略/步骤是用户意图,与顶栏目标
-   无关;此前按 target 分键,「host 态粘贴→切生产→稿消失→反复重粘」正是体感最差的来源。
-   集群相关风险由 w44 的「Dry-run 实测于:<集群>」行自查。 */
+ 无关;此前按 target 分键,「host 态粘贴→切生产→稿消失→反复重粘」正是体感最差的来源。
+ 集群相关风险由 w44 的「Dry-run 实测于:<集群>」行自查。 */
 const adhocScope = { route: 'adhoc' };
 const indexName = useScopedDraft('index-name', adhocScope).text;
 /* 草稿与顶栏全局选中是两份状态（写类视图不开 useIdxState follow， 白名单口径）。
-   「初始化回填」刻意不做 setup 一次性读——那会把「全新进入」误判成「有现场」
-   （adjudicateEntry 的 hasRestoredScene 以 indexName 非空为据，w29 P2 的开新流程
-   契约会被静默改道 resumeScene）；全新进入的全局回落已由 adjudicateEntry ③ 承担。
-   这里只补「进页后/空稿时」的缝隙：pickedIdx 真实变化且草稿为空 → 回填（只补空，
-   用户已输/已恢复的稿永不覆写，w29 P6 同一条红线）。 */
+ 「初始化回填」刻意不做 setup 一次性读——那会把「全新进入」误判成「有现场」
+ （adjudicateEntry 的 hasRestoredScene 以 indexName 非空为据，w29 P2 的开新流程
+ 契约会被静默改道 resumeScene）；全新进入的全局回落已由 adjudicateEntry ③ 承担。
+ 这里只补「进页后/空稿时」的缝隙：pickedIdx 真实变化且草稿为空 → 回填（只补空，
+ 用户已输/已恢复的稿永不覆写，w29 P6 同一条红线）。 */
 watch(() => store.pickedIdx, (v) => {
   if (v && !indexName.value) indexName.value = v;
 });
 /* 「用当前索引」钮的显式覆盖语义（有稿时也在，点击即以顶栏选中为准）随钮迁入
-   PickCurrentIdxBtn 统一件——本视图只承接 @pick 回填（换装，就地函数退役） */
+ PickCurrentIdxBtn 统一件——本视图只承接 @pick 回填（改用，就地函数退役） */
 /* +1：审编步与手动模式四个编辑框挂 dsl-assist——字段源并轨 useIndexFields
-   全站字段源标准（源索引视角：嵌套 a.b.c 与 multi-field 全量在场），bodyKind 按
-   settings/mapping 分档（MappingView mpMappingAssist/mpSettingsAssist 先例）。
-   字段清单在 doPrepare 探测时同点预载（幂等+缓存，失败零降级=无候选）。
-   四个 assist 对象 setup 作用域常量声明——模板内联对象箭头经 _ctx 代理每次渲染换引用，
-   Monaco provider 会反复重注册（IndexHub 渗透 spec 红灯实证）。 */
+ 全站字段源标准（源索引视角：嵌套 a.b.c 与 multi-field 全量在场），bodyKind 按
+ settings/mapping 分档（MappingView mpMappingAssist/mpSettingsAssist 先例）。
+ 字段清单在 doPrepare 探测时同点预载（幂等+缓存，失败零降级=无候选）。
+ 四个 assist 对象 setup 作用域常量声明——模板内联对象箭头经 _ctx 代理每次渲染换引用，
+ Monaco provider 会反复重注册（IndexHub 渗透 spec 红灯实证）。 */
 const { fields: arIdxFields, ensure: ensureArFields } = useIndexFields(() => indexName.value);
 const arAssistFields = () => arIdxFields.value;
 const arSettingsAssist = { fields: arAssistFields, bodyKind: () => 'settings' as const };
 const arMappingAssist = { fields: arAssistFields, bodyKind: () => 'mapping' as const };
 const arManualSettingsAssist = { fields: arAssistFields, bodyKind: () => 'settings' as const };
 const arManualMappingAssist = { fields: arAssistFields, bodyKind: () => 'mapping' as const };
-/*  W4：粘贴区 Monaco 补全（轨1 残面 R6）——只挂字段候选不传 bodyKind：
-   粘贴的是业务期望配置，settings/mapping 形态任意，挂档必误导；lint 也不挂（原文保持零侵入，
-   四 JsonArea 框已各自 lint）。字段源并轨 arAssistFields（doPrepare 探测时同点预载） */
+/* W4：粘贴区 Monaco 补全（轨1 残面 R6）——只挂字段候选不传 bodyKind：
+ 粘贴的是业务期望配置，settings/mapping 形态任意，挂档必误导；lint 也不挂（原文保持零侵入，
+ 四 JsonArea 框已各自 lint）。字段源并轨 arAssistFields（doPrepare 探测时同点预载） */
 const pasteAssist = { fields: arAssistFields };
-/* ═══  W2：粘贴编辑器四档高度循环（useTierCycle 三件套 + usePref 落盘，
-   ConfigValidatorView 535 W9 同款范式）═══
-   默认档=原 min(60vh, 420px) 字面保底（改动前后默认形态高度行为一致），档值升序循环、
-   全部为确定解（CSS min() 定高直接绑定，无 min-height 叠加、无 height:100%+静态兄弟）；
-   大粘贴场景（千行 mapping）随档撑高，落盘刷新/回页保持 */
+/* ═══ W2：粘贴编辑器四档高度循环（useTierCycle 三件套 + usePref 落盘，
+ ConfigValidatorView 535 W9 同款范式）═══
+ 默认档=原 min(60vh, 420px) 字面保底（改动前后默认形态高度行为一致），档值升序循环、
+ 全部为确定解（CSS min() 定高直接绑定，无 min-height 叠加、无 height:100%+静态兄弟）；
+ 大粘贴场景（千行 mapping）随档撑高，落盘刷新/回页保持 */
 const PASTE_H_TIERS: string[] = ['min(60vh, 420px)', 'min(70vh, 560px)', 'min(80vh, 700px)', 'min(92vh, 860px)'];
 const { v: pasteH, cycle: cyclePasteH } = useTierCycle('adhoc.pasteH', PASTE_H_TIERS);
 /* ═══ ：粘贴导入弹窗 JsonArea 四档高度循环（useTierCycle 统一件，adhoc.pasteH
-   同范式同族：60/70/80/92vh 梯，px 封顶随原 600 档同谱系 120px 步进）═══
-   默认档=原 min(60vh, 600px) 字面保底（525 W10 弹性档默认形态零漂移），大粘贴场景随档撑高，
-   usePref 落盘（adhoc.piH），刷新/回开弹窗保持 */
+ 同范式同族：60/70/80/92vh 梯，px 封顶随原 600 档同谱系 120px 步进）═══
+ 默认档=原 min(60vh, 600px) 字面保底（525 W10 弹性档默认形态零漂移），大粘贴场景随档撑高，
+ usePref 落盘（adhoc.piH），刷新/回开弹窗保持 */
 const PI_H_TIERS: string[] = ['min(60vh, 600px)', 'min(70vh, 720px)', 'min(80vh, 840px)', 'min(92vh, 960px)'];
 const { v: piH, cycle: cyclePiH } = useTierCycle('adhoc.piH', PI_H_TIERS);
-/* ═══  P1：settings/mapping 四编辑框高度档（useTierCycle 统一件，pasteH/xm.cfgRows 同范式）═══
-   原 rows=8/14 写死且 fill 态下 rows 纯装饰（height:100% 接管）——四页唯一高度锁死编辑面。
-   本批四框摘 fill 改 rows 驱动：档值 8/16/28/44 循环，Monaco 高度=rows*19+16 纯内容函数确定解
-   （红线：档位驱动 rows、禁 rAF 反馈，零触）；默认 16 档 ≈ 原 40vh 视口弹性档视觉，
-   双入口（手动 hd「高」+ 审编卡头「高度」）同一落盘键 adhoc.edH，四框同档联动 */
+/* ═══ P1：settings/mapping 四编辑框高度档（useTierCycle 统一件，pasteH/xm.cfgRows 同范式）═══
+ 原 rows=8/14 写死且 fill 态下 rows 纯装饰（height:100% 接管）——四页唯一高度锁死编辑面。
+ 四框摘 fill 改 rows 驱动：档值 8/16/28/44 循环，Monaco 高度=rows*19+16 纯内容函数确定解
+ （红线：档位驱动 rows、禁 rAF 反馈，零触）；默认 16 档 ≈ 原 40vh 视口弹性档视觉，
+ 双入口（手动 hd「高」+ 审编卡头「高度」）同一落盘键 adhoc.edH，四框同档联动 */
 const ED_ROWS_TIERS = [8, 16, 28, 44];
 const { v: edRows, cycle: cycleEdRows } = useTierCycle('adhoc.edH', ED_ROWS_TIERS, 16);
 const settingsDraft = useScopedDraft('settings', adhocScope);
@@ -850,11 +850,11 @@ const pasteRaw = pasteDraft.text;
 const manualSettings = useScopedDraft('manual-settings', adhocScope).text;
 const manualMapping = useScopedDraft('manual-mapping', adhocScope).text;
 
-/* ═══  P1：settings/mapping 四编辑框 lint 划线接线（SearchSandboxView 范式逐字）═══
-   useDebounceFn 250ms + JsonArea setMarkers 透传口 + info→hint 降级（MonacoEditor 结构类型
-   只收 warning/hint/error）；档路由：settings 框→lintSettingsBody、mapping 框→lintMappingBody
-   （dslLint 纯函数只消费）；非法 JSON 不 lint——JsonArea 合法性圆点已报。四框共用一条防抖
-   尾值队列（任一框击键 250ms 后四框统一重估，空框静默清 marker） */
+/* ═══ P1：settings/mapping 四编辑框 lint 划线接线（SearchSandboxView 范式逐字）═══
+ useDebounceFn 250ms + JsonArea setMarkers 透传口 + info→hint 降级（MonacoEditor 结构类型
+ 只收 warning/hint/error）；档路由：settings 框→lintSettingsBody、mapping 框→lintMappingBody
+ （dslLint 纯函数只消费）；非法 JSON 不 lint——JsonArea 合法性圆点已报。四框共用一条防抖
+ 尾值队列（任一框击键 250ms 后四框统一重估，空框静默清 marker） */
 const setJaRef = ref<InstanceType<typeof JsonArea> | null>(null);
 const mapJaRef = ref<InstanceType<typeof JsonArea> | null>(null);
 const manualSetJaRef = ref<InstanceType<typeof JsonArea> | null>(null);
@@ -862,11 +862,11 @@ const manualMapJaRef = ref<InstanceType<typeof JsonArea> | null>(null);
 /* 粘贴区 Monaco ref（K2 五编辑面 Ctrl+I 第一面；@execute 见模板） */
 const pasteMcRef = ref<InstanceType<typeof MonacoEditor> | null>(null);
 
-/* ═══ ：五编辑面 Ctrl+I 唤起补全（IndexHubView 1453 判例平移，Kibana 控制台同键）═══
-   经 getEditor expose 出口（MonacoEditor 组件本体 / JsonArea 转发通道）拿内层 Monaco——组件零触。
-   monaco 包走回调内动态 import：本页行为锁 spec（adhocDiffWiring 等）vi.mock MonacoEditor
-   「斩断 monaco 导入链」不能被静态链拉进真 monaco。happy-dom stub 无 getEditor/addCommand
-   出口 → 守卫跳过（DevToolsView 557 判例同口径）。 */
+/* ═══ ：五编辑面 Ctrl+I 唤起补全（IndexHubView 1平移，Kibana 控制台同键）═══
+ 经 getEditor expose 出口（MonacoEditor 组件本体 / JsonArea 转发通道）拿内层 Monaco——组件零触。
+ monaco 包走回调内动态 import：本页行为锁 spec（adhocDiffWiring 等）vi.mock MonacoEditor
+ 「斩断 monaco 导入链」不能被静态链拉进真 monaco。happy-dom stub 无 getEditor/addCommand
+ 出口 → 守卫跳过（DevToolsView 同口径）。 */
 type CtrlIHost = { getEditor?: () => any };
 function wireCtrlI(host: Ref<CtrlIHost | null>) {
   watch(host, (mc) => {
@@ -909,11 +909,11 @@ watch([settingsJson, mappingJson, manualSettings, manualMapping], () => queueArL
 
 const highlightIdxInput = ref(false);
 /* F2：索引选择行容器——applyManual 缺索引名时滚动定位的可靠锚点。
-   原先全仓 querySelector 依赖的 .xm-idx-focus-target 根本不存在（恒 miss 后
-   落到 document 级 .row .inp，而本视图输入框类是 ipt/ixp-inp，落点不可控）。 */
+ 原先全仓 querySelector 依赖的 .xm-idx-focus-target 根本不存在（恒 miss 后
+ 落到 document 级 .row .inp，而本视图输入框类是 ipt/ixp-inp，落点不可控）。 */
 const idxRowEl = ref<HTMLElement | null>(null);
 /* F2：索引名缺失的常驻红字。toast 10s 即消、新手找不到要看哪里；
-   模板条件带 !indexName —— 一旦填上名字立即熄灭，不需要额外 watch */
+ 模板条件带 !indexName —— 一旦填上名字立即熄灭，不需要额外 watch */
 const needIndexForManual = ref(false);
 /* w69:双 Tab 模式切换 */
 const inputMode = ref<'paste' | 'manual'>('paste');
@@ -931,9 +931,9 @@ function copyJobId(id: string) {
 }
 
 /* 向导 step 落 sessionStorage，切页返回不再弹回流程起点。
-   注：草稿治理轮已迁 useScopedDraft（按集群目标隔离），旧 useDraft 通道已删。
-   带 route.query.index 显式进入时 applyRouteContext 仍会重置流程（见其早返回），
-   持久化只在裸路径返回时复原离开时的步骤。 */
+ 注：草稿已迁 useScopedDraft（按集群目标隔离），旧 useDraft 通道已删。
+ 带 route.query.index 显式进入时 applyRouteContext 仍会重置流程（见其早返回），
+ 持久化只在裸路径返回时复原离开时的步骤。 */
 const stepDraft = useScopedDraft('step', adhocScope, '0').text;
 const step = computed({
   get: () => Number(stepDraft.value) || 0,
@@ -953,18 +953,18 @@ const stripNote = ref('');
 /* 审编步内嵌校验 —— ERROR 不放行，防止带病配置进入重建 */
 const validating = ref(false);
 /* ═══ ：校验/启动两执行链接 useQueryRun（IndexHub 三链 P0-A 同范式）═══
-   api.adhoc.start/api.configLab.validate 签名无 signal 参（api.ts 本批禁改），signal 落
-   「竞态丢弃」消费：begin 即作废上一轮控制器（queryRunRace382 竞态语义随身）——
-   旧轮响应返回时 signal.aborted 置位即丢弃，不写状态不推进 step，防旧覆盖新
-   （审编步 Enter/主钮连触场景）。控制面无手动取消钮：abort 只断前端等待而后端可能
-   已受理，取消面仅保留竞态丢弃，读秒照显（valSecs/startSecs 消费）。 */
+ api.adhoc.start/api.configLab.validate 签名无 signal 参（api.ts 禁改），signal 落
+ 「竞态丢弃」消费：begin 即作废上一轮控制器（queryRunRace382 竞态语义随身）——
+ 旧轮响应返回时 signal.aborted 置位即丢弃，不写状态不推进 step，防旧覆盖新
+ （审编步 Enter/主钮连触场景）。控制面无手动取消钮：abort 只断前端等待而后端可能
+ 已受理，取消面仅保留竞态丢弃，读秒照显（valSecs/startSecs 消费）。 */
 const valQr = useQueryRun();
 const startQr = useQueryRun();
 const valSecs = computed(() => (valQr.elapsedMs.value / 1000).toFixed(1));
 const startSecs = computed(() => (startQr.elapsedMs.value / 1000).toFixed(1));
 /* w41:校验报告也进草稿——此前是内存态,切页/重挂载即丢,用户回来要重点校验才能再看报告
-   (「又要重新点」的真正来源)。报告只读展示用,持久化后回来即见失败原因。
-   用 {report} 包装:T extends object 不接受 null,包一层保持可空语义。 */
+ (「又要重新点」的真正来源)。报告只读展示用,持久化后回来即见失败原因。
+ 用 {report} 包装:T extends object 不接受 null,包一层保持可空语义。 */
 const valReportDraft = useScopedDraftState<{ report: any }>('val-report', adhocScope, { report: null });
 const valReport = computed({
   get: () => valReportDraft.state.value.report,
@@ -972,8 +972,8 @@ const valReport = computed({
 });
 
 /* 状态徽标统一 pill+statusColor（自造 st-tag/st-* 色档退役）。
-    W4：本页两档扩展（SUCCEEDED 补 g / ABORTED 中性 n）已上提进
-   format.ts statusColor 枚举，jobStatusColor 页内特例退役——调用处直连 statusColor。 */
+ W4：本页两档扩展（SUCCEEDED 补 g / ABORTED 中性 n）已上提进
+ format.ts statusColor 枚举，jobStatusColor 页内特例退役——调用处直连 statusColor。 */
 
 /* 建议回补 DSL 裸 pre → highlightJson 高亮（先 pretty；输出已转义，v-html 安全） */
 const backfillHtml = computed(() => {
@@ -1017,15 +1017,15 @@ async function doValidateConfig(advance: boolean) {
 }
 
 /* w80:追平缓冲/破坏性选项并入草稿(与 step/strategy 同稿口径)——此前 bufferMs/deleteOldIndex/
-   confirmDirectSwap/pauseBeforeSwitch/expectedFromPaste 是内存 ref,刷新续场后「切换前人工确认门」
-   无声关闭(粘贴流 pickPaste 置 pauseBeforeSwitch=true,刷新即丢),用户在不知情下自动翻别名。 */
+ confirmDirectSwap/pauseBeforeSwitch/expectedFromPaste 是内存 ref,刷新续场后「切换前人工确认门」
+ 无声关闭(粘贴流 pickPaste 置 pauseBeforeSwitch=true,刷新即丢),用户在不知情下自动翻别名。 */
 const bufferMsDraft = useScopedDraft('buffer-ms', adhocScope, '120000');
 const bufferMs = computed<number>({
   get: () => { const n = Number(bufferMsDraft.text.value); return Number.isFinite(n) && n >= 0 ? n : 120000; },
   set: (v: number) => { bufferMsDraft.text.value = String(v); },
 });
 /* +1：追平缓冲失焦钳制——负数/非数字一律归 0（min=0 挡 UI 步进，
-   手输负值由这里兜住，后端按 ms 等待，负值语义不明） */
+ 手输负值由这里兜住，后端按 ms 等待，负值语义不明） */
 function clampBufferMs() {
   const n = Number(bufferMs.value);
   bufferMs.value = Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
@@ -1048,16 +1048,16 @@ const pauseBeforeSwitch = computed<boolean>({
   set: (v: boolean) => { pauseSwitchDraft.text.value = v ? '1' : ''; },
 });
 
-/*  / spec §4.2：无 timeField 的 WRITE_BLOCK 走 earlyBlock 全程挡写
-   （AdhocRebuildService:235），窗口 = 全量 reindex 全程，必须二次确认才放行。 */
+/* / spec 无 timeField 的 WRITE_BLOCK 走 earlyBlock 全程挡写
+ （AdhocRebuildService:235），窗口 = 全量 reindex 全程，必须二次确认才放行。 */
 const ackFullBlock = ref(false);
 const needAckFullBlock = computed(() => strategy.value === 'WRITE_BLOCK' && !timeField.value);
 const canStart = computed(() => !needAckFullBlock.value || ackFullBlock.value);
 
 /* sem-rm 智能纠错：目标物理索引名即时校验——非法字符/大写走 utils/indexNameRule 共享口径
-   （ReindexAdvanced destIndexErr 同源）；直连模式下目标=源物理名意味着切换将删除源索引
-   本身（核武级配错），即时红字前置警示。
-   别名形态下同名不拦（物理名=别名名的场景由别名探测卡已有 warn 语义覆盖）。 */
+ （ReindexAdvanced destIndexErr 同源）；直连模式下目标=源物理名意味着切换将删除源索引
+ 本身（核武级配错），即时红字前置警示。
+ 别名形态下同名不拦（物理名=别名名的场景由别名探测卡已有 warn 语义覆盖）。 */
 const destNameErr = computed(() => {
   const name = destIndex.value.trim();
   if (!name) return '';
@@ -1068,16 +1068,16 @@ const destNameErr = computed(() => {
 });
 
 /* -9 / I-1：改动阻断窗口的两个输入（strategy / timeField）后，上一轮的「已知悉」失效。
-   场景：用户在无 timeField 下勾了「接受全程挡写」，回退到策略步选了个 timeField
-   （窗口从「全量 reindex 全程」缩到「一轮追平」），又把它清空 —— 此时窗口重新变回
-   全程，而 ackFullBlock 仍是 true，警示条一闪而过、按钮直接可点。
-   人确认的是「这个大小的窗口我接受」，不是「以后所有窗口我都接受」；
-   输入一变，那份确认就不再对应当前事实，必须重新征得。
-   （reset() 里的复位是另一回事，那是「再来一轮」的整体清场，管不到同一轮内的改动。） */
+ 场景：用户在无 timeField 下勾了「接受全程挡写」，回退到策略步选了个 timeField
+ （窗口从「全量 reindex 全程」缩到「一轮追平」），又把它清空 —— 此时窗口重新变回
+ 全程，而 ackFullBlock 仍是 true，警示条一闪而过、按钮直接可点。
+ 人确认的是「这个大小的窗口我接受」，不是「以后所有窗口我都接受」；
+ 输入一变，那份确认就不再对应当前事实，必须重新征得。
+ （reset() 里的复位是另一回事，那是「再来一轮」的整体清场，管不到同一轮内的改动。） */
 watch([strategy, timeField], () => { ackFullBlock.value = false; });
 
-/*  粘贴解析。硬要求：失败必须给出具体原因，且不清空用户已填的表单、不静默回落——
-   静默失败会让人以为预填成功了，拿着旧的 settings 去执行重建。 */
+/* 粘贴解析。硬要求：失败必须给出具体原因，且不清空用户已填的表单、不静默回落——
+ 静默失败会让人以为预填成功了，拿着旧的 settings 去执行重建。 */
 const pasteErr = ref('');
 const pasteWarn = ref('');   // 警告独立于错误，二者可并存
 const pastePicked = ref('');
@@ -1086,23 +1086,23 @@ const pasteIdx = ref(-1);
 /* w80：自动探测幂等游标——同一 alias 只在粘贴选中时自动 doPrepare 一次（见 pickPaste 尾注） */
 let lastAutoPreparedAlias = '';
 /* #68：粘贴来的期望 mapping 原文，与 mappingJson 分开存。
-   mappingJson 是**审编框**——未粘贴时 doPrepare 会把源索引现状写进去，
-   届时它装的是「实际」而不是「期望」。拿它当期望会得到一屏假 same。
-   这一份只由 pickPaste 写入，缺席时为 ''，语义单一。
-   w80：入草稿——它是 cfgDiff 的期望侧源头，刷新续场后丢失会静默变出一屏假 same。 */
+ mappingJson 是**审编框**——未粘贴时 doPrepare 会把源索引现状写进去，
+ 届时它装的是「实际」而不是「期望」。拿它当期望会得到一屏假 same。
+ 这一份只由 pickPaste 写入，缺席时为 ''，语义单一。
+ w80：入草稿——它是 cfgDiff 的期望侧源头，刷新续场后丢失会静默变出一屏假 same。 */
 const expectedFromPaste = useScopedDraft('expected-mapping', adhocScope).text;
 /* 本条 mapping 是否来自注解推导（而非业务侧 @Mapping 原文）。
-   只影响提示文案与界面标记，不改审编框内容的用法。 */
+ 只影响提示文案与界面标记，不改审编框内容的用法。 */
 const mappingFromDerived = ref(false);
 
 /* ═══ ：手动模式「拉取源配置」（与审编步「粘贴导入」互补双入口）═══
-   粘贴导入是「外部期望」，这里是「源现状」：优先吃向导步骤①已探测的 prep 快照
-   （prep.settingsJson/mappingJson，零网络），未探测（或探测回 null）时现场
-   api.clusterInspect(indexName, 0) 补拉——DslQueryView preloadMapping 同通道；
-   解包对齐 ConfigValidatorView doImport（settings/mappings 按索引名键控，取首键）。
-   显式用户动作 + askConfirm 确认覆盖：确认通过才写 manualSettings/manualMapping 两个
-   草稿 ref（挂载初值与自动预填链零触碰——adhocManualWorkbench426/draftGovernance 口径），
-   pretty 口径与 doPrepare 预填一致（prettyJson）。 */
+ 粘贴导入是「外部期望」，这里是「源现状」：优先吃向导步骤①已探测的 prep 快照
+ （prep.settingsJson/mappingJson，零网络），未探测（或探测回 null）时现场
+ api.clusterInspect(indexName, 0) 补拉——DslQueryView preloadMapping 同通道；
+ 解包对齐 ConfigValidatorView doImport（settings/mappings 按索引名键控，取首键）。
+ 显式用户动作 + askConfirm 确认覆盖：确认通过才写 manualSettings/manualMapping 两个
+ 草稿 ref（挂载初值与自动预填链零触碰——adhocManualWorkbench426/draftGovernance 口径），
+ pretty 口径与 doPrepare 预填一致（prettyJson）。 */
 async function pullSourceToManual() {
   if (!indexName.value) { store.notify('warning', '先在上方选择要重建的索引名，才能拉取源配置'); return; }
   const ok = await askConfirm({
@@ -1149,8 +1149,8 @@ function applyManual() {
   if (m) mappingJson.value = prettyJson(m);
   if (!indexName.value) {
     /* F2/w77:滚动到索引输入框 + 高亮边框 — 引导式修正而非仅弹 toast(toast 10s 即消,新手找不到要看哪里)。
-       首选本组件的索引选择行（ref 锚点,落点确定）;
-       document 级两条链按 F2 要求保留为兜底(选择器修复为「索引选择区输入框」路径)。 */
+ 首选本组件的索引选择行（ref 锚点,落点确定）;
+ document 级两条链按 F2 要求保留为兜底(选择器修复为「索引选择区输入框」路径)。 */
     const el = idxRowEl.value?.querySelector('input')
       || document.querySelector('.ar-input-tabs')?.nextElementSibling?.querySelector('.inp')
       || document.querySelector('.row .inp');
@@ -1188,20 +1188,20 @@ function applyPaste() {
     return;
   }
   /* -9 / M-1：settingsJson 缺失是**警告**不是错误，与 mappingJson 同构。
-     核实结论（IndexMetaRegistry:95-98 readAnnotationPath）：实体没有 @Setting 时
-     getSettingPath 返回 null → readAnnotationPath 直接返回 null → payload 里
-     settingsJson 就是 null（RebuildableIndexMeta:44 的注释也明写「可能为 null」）。
-     即「有 @Mapping 但没 @Setting」是完全合法的实体形态，而原来的 !settingsJson
-     会把它整条**拒绝**，人只能回去手抄 —— 粘贴入口对一类合法输入直接关门。
-     ""（空文件）同理。两者都退化成「按 ES 默认建索引」，
-     与 mappingJson 为 null 的处置一致，故降级为警告（由 pickPaste 逐条产出）。 */
+ 核实结论（IndexMetaRegistry:95-98 readAnnotationPath）：实体没有 @Setting 时
+ getSettingPath 返回 null → readAnnotationPath 直接返回 null → payload 里
+ settingsJson 就是 null（RebuildableIndexMeta:44 的注释也明写「可能为 null」）。
+ 即「有 @Mapping 但没 @Setting」是完全合法的实体形态，而原来的 !settingsJson
+ 会把它整条**拒绝**，人只能回去手抄 —— 粘贴入口对一类合法输入直接关门。
+ ""（空文件）同理。两者都退化成「按 ES 默认建索引」，
+ 与 mappingJson 为 null 的处置一致，故降级为警告（由 pickPaste 逐条产出）。 */
   pasteList.value = list as Array<Record<string, any>>;
   pickPaste(0);
 }
 
 /* ═══ ：步骤②「粘贴导入」——原始 JSON 一手进，识别只拆壳不改值 ═══
-   与 Mapping 页「原始 JSON → 复制全部」形成跨页闭环：复制 → 跳托管重建 → 粘贴 → 秒拆双框。
-   不走 applyPaste 的业务侧期望配置链路（那条要求 alias 字段），这里是**索引配置原文**直通审编框。 */
+ 与 Mapping 页「原始 JSON → 复制全部」形成跨页闭环：复制 → 跳托管重建 → 粘贴 → 秒拆双框。
+ 不走 applyPaste 的业务侧期望配置链路（那条要求 alias 字段），这里是**索引配置原文**直通审编框。 */
 const pasteImportOpen = ref(false);
 const pasteImportText = ref('');
 /* 裸 textarea 退役，ref 换 JsonArea 实例——聚焦走其 expose 的 focus()（转发 Monaco） */
@@ -1227,7 +1227,7 @@ function doPasteImport() {
 }
 
 /* Mapping 页「发送到托管重建」直通消费——sessionStorage 契约（REBUILD_HANDOFF_KEY），
-   零剪贴板参与必然成功；直达审编步并自动解析拆填。mounted 与 KeepAlive activated 双口消费。 */
+ 零剪贴板参与必然成功；直达审编步并自动解析拆填。mounted 与 KeepAlive activated 双口消费。 */
 const REBUILD_HANDOFF_KEY = 'es-console.rebuild-paste';
 function consumeRebuildHandoff() {
   let raw: string | null = null;
@@ -1242,7 +1242,7 @@ function consumeRebuildHandoff() {
   store.notify('success', '已从 Mapping 页直通导入：' + (r.notes || []).join('；') + '；建议点「仅校验」确认后再继续');
 }
 
-/** 缺失判定：null / undefined / 纯空白都算「业务侧没声明」，与  的 null 透传同构 */
+/** 缺失判定：null / undefined / 纯空白都算「业务侧没声明」，与 的 null 透传同构 */
 function isAbsent(v: unknown): boolean {
   return v == null || String(v).trim() === '';
 }
@@ -1253,34 +1253,34 @@ function pickPaste(i: number) {
   pasteIdx.value = i;
   indexName.value = String(r.alias);
   /* -9 / M-1：settingsJson 可能为 null（实体无 @Setting）。
-     不能直接 String(r.settingsJson) —— String(null) 是字符串 "null"，
-     会被当成一份内容为 null 的配置塞进表单，再送进校验/重建。
-     与 mappingJson 的处置对称：缺失即空串，让人看到「这里没有配置」。 */
+ 不能直接 String(r.settingsJson) —— String(null) 是字符串 "null"，
+ 会被当成一份内容为 null 的配置塞进表单，再送进校验/重建。
+ 与 mappingJson 的处置对称：缺失即空串，让人看到「这里没有配置」。 */
   settingsJson.value = isAbsent(r.settingsJson) ? '' : prettyJson(String(r.settingsJson));
   /* mapping 三态。业务侧无 @Mapping 时，starter 会把**注解推导**出的那份放进
-     payload 的 derivedMappingJson —— 它才是重建实际会应用的 mapping
-     （IndexNameResolver.resolveMappingJson 第②级）。宿主 没有接入方的实体类、
-     无法自己推导，只能用这份。不读它的话，这里会退化成「没有 mapping」，
-     doPrepare 随后把**源索引现状**写进审编框，代码声明的字段类型就静默丢了。 */
+ payload 的 derivedMappingJson —— 它才是重建实际会应用的 mapping
+ （IndexNameResolver.resolveMappingJson 第②级）。宿主 没有接入方的实体类、
+ 无法自己推导，只能用这份。不读它的话，这里会退化成「没有 mapping」，
+ doPrepare 随后把**源索引现状**写进审编框，代码声明的字段类型就静默丢了。 */
   mappingFromDerived.value = isAbsent(r.mappingJson) && !isAbsent(r.derivedMappingJson);
   const effectiveMapping = isAbsent(r.mappingJson) ? r.derivedMappingJson : r.mappingJson;
   mappingJson.value = isAbsent(effectiveMapping) ? '' : prettyJson(String(effectiveMapping));
   /* #68：期望侧另存一份。与 mappingJson 同源同值，但**不会**被 doPrepare 的预填覆盖，
-     故 cfgDiff 永远拿的是「业务侧声明」而不是「ES 现状」。
-     缺席仍是 ''（isAbsent 已把 null / 空白归一），C-1 的 null 判据照常生效。 */
+ 故 cfgDiff 永远拿的是「业务侧声明」而不是「ES 现状」。
+ 缺席仍是 ''（isAbsent 已把 null / 空白归一），C-1 的 null 判据照常生效。 */
   expectedFromPaste.value = mappingJson.value;
   strategy.value = 'WRITE_BLOCK';
   pauseBeforeSwitch.value = true;   // 粘贴流默认开人工确认门
   pastePicked.value = String(r.indexKey || r.alias);
   /* 「未声明 mapping / settings」是**警告**不是错误：预填其实成功了。塞进 pasteErr 会因
-     模板里 err/ok 互斥而把「已预填」藏掉，使用者看到红字会判定粘贴失败、而表单已被改写——
-     那是撒谎的界面。 裁定 mappingJson 为 null 原样透传，此路径必然会走到；
-     settingsJson 同样可能为 null（IndexMetaRegistry:95-98，实体无 @Setting），见 M-1。
-     两条警告可并存 —— 逐条产出而不是在 applyPaste 里拼一次，
-     否则数组多选时切到另一条会把警告冲掉，人以为这条没问题。 */
+ 模板里 err/ok 互斥而把「已预填」藏掉，使用者看到红字会判定粘贴失败、而表单已被改写——
+ 那是撒谎的界面。 裁定 mappingJson 为 null 原样透传，此路径必然会走到；
+ settingsJson 同样可能为 null（IndexMetaRegistry:95-98，实体无 @Setting），见 M-1。
+ 两条警告可并存 —— 逐条产出而不是在 applyPaste 里拼一次，
+ 否则数组多选时切到另一条会把警告冲掉，人以为这条没问题。 */
   pasteWarn.value = [
     /* 三态。原来只分「有/无 mappingJson」，把「无 @Mapping 但有注解推导」也
-       说成「将由 ES 动态推断」—— 那是假话，重建会用推导出的那份。 */
+ 说成「将由 ES 动态推断」—— 那是假话，重建会用推导出的那份。 */
     mappingFromDerived.value
       ? '提示：该索引未声明 @Mapping，已采用业务侧注解推导的 mapping（payload 的 derivedMappingJson）—— 它就是重建实际会应用的那份，请照常审阅'
       : isAbsent(r.mappingJson)
@@ -1292,9 +1292,9 @@ function pickPaste(i: number) {
   ].filter(Boolean).join('；');
   loadDateRisks(r);
   /* w80：粘贴成功即自动探测——pasteIdx 已置位，doPrepare 的「粘贴优先」守卫会保住
-     刚填入的期望配置，只补 prep（源物理名/文档数/时间字段候选）。
-     幂等守卫：同一 alias 只自动探一次，重复点击同一 chip / 多条清单来回切不重复打探测；
-     换 alias（多索引清单另选）或 reset 清场后重新粘贴才再探。手动「探测」钮不受限。 */
+ 刚填入的期望配置，只补 prep（源物理名/文档数/时间字段候选）。
+ 幂等守卫：同一 alias 只自动探一次，重复点击同一 chip / 多条清单来回切不重复打探测；
+ 换 alias（多索引清单另选）或 reset 清场后重新粘贴才再探。手动「探测」钮不受限。 */
   const alias = String(r.alias);
   if (alias !== lastAutoPreparedAlias) {
     lastAutoPreparedAlias = alias;
@@ -1302,10 +1302,10 @@ function pickPaste(i: number) {
   }
 }
 
-/* ── ：date 兼容风险报告（）──────────────────────────────────
-   粘贴的 payload 带 fields / mappingParsed / sdesVersion，加上 ES 侧的存储形态采样，
-   就能查  实测矩阵给出精确判定。判定全在 utils/dateRisk 的纯函数里，此处只负责
-   **取数与展示** —— 不在这里解析 mapping、不在这里排序、不在这里编文案。 */
+/* ── ：date 兼容风险报告（──────────────────────────────────
+ 粘贴的 payload 带 fields / mappingParsed / sdesVersion，加上 ES 侧的存储形态采样，
+ 就能查 实测矩阵给出精确判定。判定全在 utils/dateRisk 的纯函数里，此处只负责
+ **取数与展示** —— 不在这里解析 mapping、不在这里排序、不在这里编文案。 */
 const riskRows = ref<RiskRow[]>([]);
 const sampledCount = ref(0);
 const samplingMode = ref('');
@@ -1319,12 +1319,12 @@ async function loadDateRisks(picked: Record<string, any>) {
   samplingMode.value = '';
   const fields = Array.isArray(picked.fields) ? picked.fields : [];
   /* mappingParsed 是 **row 级**（DesiredStatePayload:40），不在 fields 上。
-     缺席时按 false 处理：那会让依赖 mapping 的规则走「测不出」降级，
-     而不是静默当成「mapping 读懂了」—— 后者会把一堆判定伪装成已确认。 */
+ 缺席时按 false 处理：那会让依赖 mapping 的规则走「测不出」降级，
+ 而不是静默当成「mapping 读懂了」—— 后者会把一堆判定伪装成已确认。 */
   /* w26：体检判定必须与**实际采用的期望 mapping** 同源 —— pickPaste 已在
-     mappingJson 缺席时回落 derivedMappingJson(注解推导,同样是重建会应用的那份),
-     若仍拿 payload 的原始 mappingParsed=false,会把「derived 明明可用」误报成
-     全字段测不出(80 字段刷屏的根因)。据此重算:采用文本能解析出对象型 properties 即可用。 */
+ mappingJson 缺席时回落 derivedMappingJson(注解推导,同样是重建会应用的那份),
+ 若仍拿 payload 的原始 mappingParsed=false,会把「derived 明明可用」误报成
+ 全字段测不出(80 字段刷屏的根因)。据此重算:采用文本能解析出对象型 properties 即可用。 */
   const adoptedMappingText = isAbsent(picked.mappingJson)
     ? (isAbsent(picked.derivedMappingJson) ? '' : String(picked.derivedMappingJson))
     : String(picked.mappingJson);
@@ -1334,11 +1334,11 @@ async function loadDateRisks(picked: Record<string, any>) {
     mappingParsed = !!(v && typeof v === 'object' && !Array.isArray(v) && typeof v.properties === 'object');
   } catch { /* 采用文本解析失败 → 维持 false,由 dateRisk 的 per-index 汇总条如实说明 */ }
   /* w27:文本也必须同源传 adopted —— w26 只同源了 mappingParsed 却仍把原始 null 喂给
-     判定器,「mapping 可用但零键」的假象让每字段刷 2 条假警告(DYNAMIC/FIELD_NAME)。 */
+ 判定器,「mapping 可用但零键」的假象让每字段刷 2 条假警告(DYNAMIC/FIELD_NAME)。 */
   const mappingJson = adoptedMappingText || null;
 
   /* 移交一：**两个函数都要调**。FIELD_NAME_MISMATCH 只由 assessFieldNameMismatch 产出，
-     只调 assessDateRisks 会让  §5 的原始案例整类从界面上消失。合并与排序见 mergeRiskRows。 */
+ 只调 assessDateRisks 会让 的原始案例整类从界面上消失。合并与排序见 mergeRiskRows。 */
   const nameMismatches = assessFieldNameMismatch({ mappingJson, mappingParsed, fields });
 
   if (!picked.alias) {
@@ -1355,7 +1355,7 @@ async function loadDateRisks(picked: Record<string, any>) {
         mappingParsed,
         fields,
         /* 端点的 forms（计数树）→ 判定函数的 forms。端点另有一棵 samples 树装样例值，
-           两者**不可混淆**（dateRisk.ts 顶注专门拆开过这个命名）。 */
+ 两者**不可混淆**（dateRisk.ts 顶注专门拆开过这个命名）。 */
         forms: r?.forms || {},
         sdesVersion: picked.sdesVersion ?? null,
       }),
@@ -1363,7 +1363,7 @@ async function loadDateRisks(picked: Record<string, any>) {
     );
   } catch (e: any) {
     /* 采样失败不阻断粘贴流程，但必须说清「判定不完整」，不许静默当成无风险。
-       不依赖采样的那几条（字段名对不齐等）照常展示。 */
+ 不依赖采样的那几条（字段名对不齐等）照常展示。 */
     riskRows.value = mergeRiskRows([], nameMismatches);
     riskErr.value = '采样失败，无法判定存储形态：' + friendlyApiError(e);
   } finally {
@@ -1372,22 +1372,22 @@ async function loadDateRisks(picked: Record<string, any>) {
 }
 
 /* 期望 vs 实际比对。prepare 返回源索引现状，与粘贴来的期望做字段级 diff。
-   注意 prep.mappingJson 已由 EsIndexAdmin.getMapping → unwrapTypeLayer 剥掉 6.x 的
-   type 包层（EsIndexAdmin:165，EsResponseShapeTest 锁定），两侧同为 typeless
-   {"properties":...}，此处**不要**再做任何 _doc 处理，否则整棵 mapping 会坍缩。
+ 注意 prep.mappingJson 已由 EsIndexAdmin.getMapping → unwrapTypeLayer 剥掉 6.x 的
+ type 包层（EsIndexAdmin:165，EsResponseShapeTest 锁定），两侧同为 typeless
+ {"properties":...}，此处**不要**再做任何 _doc 处理，否则整棵 mapping 会坍缩。
 
-   #68：cfgDiff 由「期望文本 + 探测结果」派生（见下方 computeDiffRows 顶注），
-   不再是一个要靠调用点记得写的 ref —— 粘贴与探测无论谁先谁后都自动重算。 */
+ #68：cfgDiff 由「期望文本 + 探测结果」派生（见下方 computeDiffRows 顶注），
+ 不再是一个要靠调用点记得写的 ref —— 粘贴与探测无论谁先谁后都自动重算。 */
 const cfgDiff = computed<ConfigDiffRow[]>(() => computeDiffRows(expectedFromPaste.value, prep.value));
 const cfgSum = computed(() => diffConfigSummary(cfgDiff.value));
 
 /* 分区呈现——真差异默认展开、等价噪声默认折叠。
-   分区逻辑在 partitionDiffRows（，已测），此处只持有开合状态。 */
+ 分区逻辑在 partitionDiffRows（已测），此处只持有开合状态。 */
 const cfgParts = computed(() => partitionDiffRows(cfgDiff.value));
 const benignOpen = ref(false);
 
 /* kind→人话标签、added 提示挂载点已提到 utils/configDiffView.ts 并由真实
-   diffConfig 输出驱动的断言看守（-9 / I-4）。模板直接调 kindLabel / kindNote。 */
+ diffConfig 输出驱动的断言看守（-9 / I-4）。模板直接调 kindLabel / kindNote。 */
 
 function fmtVal(v: unknown): string {
   if (v === undefined) return '—';
@@ -1395,46 +1395,46 @@ function fmtVal(v: unknown): string {
 }
 
 /* -9 / C-1：没有期望就没有「期望 vs 实际」这回事。
-   原实现在未粘贴时用 {} 当期望，与 ES 读回的整棵 mapping 比，产出几十上百条
-   kind:'removed'，类别列写着「实际有，期望没有」—— 用户根本没提供任何期望，
-   界面却断言「你的期望里没有这些字段」。
+ 原实现在未粘贴时用 {} 当期望，与 ES 读回的整棵 mapping 比，产出几十上百条
+ kind:'removed'，类别列写着「实际有，期望没有」—— 用户根本没提供任何期望，
+ 界面却断言「你的期望里没有这些字段」。
 
-   根因不是少一个 if，而是用 {} 这个**合法值**表示「缺席」：{} 既可能是
-   「没提供」也可能是「期望确实为空」。故判据取 parseExpectedMapping 返回的
-   null（缺席），而不是「粘贴过没有」—— 粘了但该索引 mappingJson 为 null 时
-   pasteIdx >= 0 成立而期望仍缺席，用 pasteIdx 当判据 C-1 会原样复发。
-   详见 utils/configDiffView.ts 顶注。
+ 根因不是少一个 if，而是用 {} 这个**合法值**表示「缺席」：{} 既可能是
+ 「没提供」也可能是「期望确实为空」。故判据取 parseExpectedMapping 返回的
+ null（缺席），而不是「粘贴过没有」—— 粘了但该索引 mappingJson 为 null 时
+ pasteIdx >= 0 成立而期望仍缺席，用 pasteIdx 当判据 C-1 会原样复发。
+ 详见 utils/configDiffView.ts 顶注。
 
-   #68 / 次因：原实现是「computeDiff(p) 写 cfgDiff.value」，且**唯一**调用点在
-   doPrepare 里。于是「先探测、后粘贴」这个完全自然的顺序恒不出行且界面零提示 ——
-   期望侧后到，而没有任何东西会再算一次。修法不是补一个 watch 去追平两份状态
-   （那等于把「何时重算」继续交给调用点记牢），而是把 cfgDiff 改成 computed：
-   它由 mappingJson（期望）与 prep（实际）**共同派生**，两侧谁后到都会自动重算，
-   顺序不再可能出错。少一个可写状态，也就少一处能忘记同步的地方。
+ #68 / 次因：原实现是「computeDiff(p) 写 cfgDiff.value」，且**唯一**调用点在
+ doPrepare 里。于是「先探测、后粘贴」这个完全自然的顺序恒不出行且界面零提示 ——
+ 期望侧后到，而没有任何东西会再算一次。修法不是补一个 watch 去追平两份状态
+ （那等于把「何时重算」继续交给调用点记牢），而是把 cfgDiff 改成 computed：
+ 它由 mappingJson（期望）与 prep（实际）**共同派生**，两侧谁后到都会自动重算，
+ 顺序不再可能出错。少一个可写状态，也就少一处能忘记同步的地方。
 
-   #68 / 派生化暴露出的一个**旧顺序在偷偷承担**的语义：未粘贴时 doPrepare 会把源索引
-   现状**写进 mappingJson 这同一个框**（它既是「期望输入框」又是「预填结果框」）。
-   老代码靠「在覆盖之**前**算一次」躲开，即顺序本身充当了判据。改成派生后这层保护没了：
-   覆盖后期望文本 == 实际文本，会渲染出一整屏 kind:'same' —— 用户没提供任何期望，
-   界面却报「你的期望与实际完全一致」，与 C-1 同类（拿一个并非期望的合法值冒充期望）。
-   故判据显式化为 expectedFromPaste：**只有粘贴来的那份文本才是期望**。
-   它与 C-1 的 null 判据是**与**的关系，不是替代 —— 粘了但该索引 mappingJson 为 null 时
-   仍须缺席（ 的 null 透传路径，e2e 5-4 在跑）。 */
+ #68 / 派生化暴露出的一个**旧顺序在偷偷承担**的语义：未粘贴时 doPrepare 会把源索引
+ 现状**写进 mappingJson 这同一个框**（它既是「期望输入框」又是「预填结果框」）。
+ 老代码靠「在覆盖之**前**算一次」躲开，即顺序本身充当了判据。改成派生后这层保护没了：
+ 覆盖后期望文本 == 实际文本，会渲染出一整屏 kind:'same' —— 用户没提供任何期望，
+ 界面却报「你的期望与实际完全一致」，与 C-1 同类（拿一个并非期望的合法值冒充期望）。
+ 故判据显式化为 expectedFromPaste：**只有粘贴来的那份文本才是期望**。
+ 它与 C-1 的 null 判据是**与**的关系，不是替代 —— 粘了但该索引 mappingJson 为 null 时
+ 仍须缺席（ 的 null 透传路径，e2e 5-4 在跑）。 */
 function computeDiffRows(expectText: string, p: any): ConfigDiffRow[] {
   const expectMapping = parseExpectedMapping(expectText);
   if (!shouldDiffMapping(expectMapping)) return [];
   /* 实际侧缺席（源索引无 mapping）退化成 {} 是**对的**：此时「期望有、实际没有」
-     确实成立，added 行是真话。与期望侧缺席不对称，因为不对称的是语义本身。 */
+ 确实成立，added 行是真话。与期望侧缺席不对称，因为不对称的是语义本身。 */
   const actualMapping = parseExpectedMapping(String(p?.mappingJson ?? '')) ?? {};
   return diffConfig(expectMapping, actualMapping);
 }
 
 /* ── +1：源/目标 mapping 叶子级类型对比 ──────────────────────────
-   探测后（prep 在场）用 useIndexFields(源) 与审编框 mappingJson 逐叶对比：
-   源字段在目标缺失 / 类型变更 → 以 RiskRow 结构进既有 ar-risk 区（warning 档）；
-   目标已置 dynamic:false 且有缺失时升 error（写入将吃 strict 映射拒绝，不只是降级）。
-   mappingJson 为空（目标由 ES 动态推断）或不合法时静默不出行——非法 JSON 由
-   校验步红字负责，这里不重复播报。对比行数封顶 100，防整树缺席刷屏。 */
+ 探测后（prep 在场）用 useIndexFields(源) 与审编框 mappingJson 逐叶对比：
+ 源字段在目标缺失 / 类型变更 → 以 RiskRow 结构进既有 ar-risk 区（warning 档）；
+ 目标已置 dynamic:false 且有缺失时升 error（写入将吃 strict 映射拒绝，不只是降级）。
+ mappingJson 为空（目标由 ES 动态推断）或不合法时静默不出行——非法 JSON 由
+ 校验步红字负责，这里不重复播报。对比行数封顶 100，防整树缺席刷屏。 */
 function targetLeafTypes(text: string): { types: Map<string, string>; dynamicOff: boolean } | null {
   let root: any;
   try { root = JSON.parse(text); } catch { return null; }
@@ -1495,14 +1495,14 @@ const starting = ref(false);
 const job = ref<any>(null);
 
 /* w80：阶段徽标档——推进中（含 AWAIT_CONFIRM 等待放行）pill y 醒目；
-   终态阶段 pill n 中性（作业终态本身已由状态 pill 承担色语义，阶段不抢戏） */
+ 终态阶段 pill n 中性（作业终态本身已由状态 pill 承担色语义，阶段不抢戏） */
 function stagePill(s: any): 'y' | 'n' {
   const v = String(s || '').toUpperCase();
   return ['DONE', 'SUCCEEDED', 'FAILED', 'ABORTED'].includes(v) ? 'n' : 'y';
 }
 
 /* StatusPill tone 字面量收窄（BulkEditorView statusPillCls 同法）——
-   statusColor/sevPill 返回 string，StatusPill 契约 tone 为五档联合，消费处显式收窄 */
+ statusColor/sevPill 返回 string，StatusPill 契约 tone 为五档联合，消费处显式收窄 */
 function statusTone(s: any): 'g' | 'y' | 'r' | 'b' | 'n' {
   return statusColor(s) as 'g' | 'y' | 'r' | 'b' | 'n';
 }
@@ -1510,12 +1510,12 @@ function sevTone(s: any): 'g' | 'y' | 'r' | 'b' | 'n' {
   return sevPill(s) as 'g' | 'y' | 'r' | 'b' | 'n';
 }
 
-/*  W4：校验报告 severity → .pill 档映射收口 utils/esEnumZh 的 sevPill
-   （error→r / warn→y / info→b / 兜底 n，critical→r），本地实现退役；
-   ConfigValidatorView cvSevPill（err/warn/info 别名档）同批并入同源。 */
+/* W4：校验报告 severity → .pill 档映射收口 utils/esEnumZh 的 sevPill
+ （error→r / warn→y / info→b / 兜底 n，critical→r），本地实现退役；
+ ConfigValidatorView cvSevPill（err/warn/info 别名档）同步并入同源。 */
 
 /* w80：SUCCEEDED 常驻「去查询验证」的数据源——优先作业回传的新索引名，
-   回落向导内目标名/建议名（与 doConfirmSwitch toast action 同一深链口径） */
+ 回落向导内目标名/建议名（与 doConfirmSwitch toast action 同一深链口径） */
 const verifiedTarget = computed(() =>
   job.value?.newIndex || job.value?.targetIndex || destIndex.value || prep.value?.suggestedDest || '');
 function goVerifyFromJob() {
@@ -1531,10 +1531,10 @@ function reindexPct(j: any): number {
   return Math.min(100, Math.round((p.created || 0) / p.total * 100));
 }
 
-/* ═══  W3：全量进度速率观测（XmigrateView rateOf 范式移植，Xm 文件零触碰）═══
-   Σcreated 对时间差分：采样源=既有 useAutoRefresh 监控轮询（2s 一拍，零新增定时器）——
-   watch currentProgress.created 相邻两次采样，差值/时间差 = docs/s；差分 ≤0（未推进/回读
-   抖动）不出，不冒充速率。jobId 变更即重置采样基线（换作业不串差）。 */
+/* ═══ W3：全量进度速率观测（XmigrateView rateOf 范式移植，Xm 文件零触碰）═══
+ Σcreated 对时间差分：采样源=既有 useAutoRefresh 询（2s 一拍，零新增定时器）——
+ watch currentProgress.created 相邻两次采样，差值/时间差 = docs/s；差分 ≤0（未推进/回读
+ 抖动）不出，不冒充速率。jobId 变更即重置采样基线（换作业不串差）。 */
 const rateSample = ref<{ ts: number; created: number } | null>(null);
 const reindexRate = ref<number | null>(null);
 let rateJid: unknown = null;
@@ -1551,9 +1551,9 @@ watch(() => [job.value?.jobId, job.value?.currentProgress?.created] as const, ([
   rateSample.value = { ts: now, created };
 });
 
-/* ═══  P2：预计剩余 ETA=(total−created−updated)/rate（速率观测行尾随段）═══
-   速率=reindexRate 既有差分件；速率缺失/非正数、total 缺席、余量非正一律不出（不冒充）；
-   结果 ms 交 TookBadge 四档语义徽标，随监控轮询采样刷新 */
+/* ═══ P2：预计剩余 ETA=(total−created−updated)/rate（速率观测行尾随段）═══
+ 速率=reindexRate 既有差分件；速率缺失/非正数、total 缺席、余量非正一律不出（不冒充）；
+ 结果 ms 交 TookBadge 四档语义徽标，随询采样刷新 */
 const reindexEtaMs = computed<number | null>(() => {
   const p = job.value?.currentProgress;
   if (!p?.total || reindexRate.value == null || reindexRate.value <= 0) return null;
@@ -1562,8 +1562,8 @@ const reindexEtaMs = computed<number | null>(() => {
   return Math.round((remain / reindexRate.value) * 1000);
 });
 
-/* 已耗时：运行中=now-startedAt（随监控轮询刷新，无自建心跳）；终态取后端 tookMs
-   （finishedAt-startedAt，口径；-1/缺席 → 不冒充，走 '—' 档），终态后不再增长撒谎 */
+/* 已耗时：运行中=now-startedAt（随询刷新，无自建心跳）；终态取后端 tookMs
+ （finishedAt-startedAt，口径；-1/缺席 → 不冒充，走 '—' 档），终态后不再增长撒谎 */
 const jobElapsedMs = computed<number | null>(() => {
   const j = job.value;
   const raw = j?.startedAt;
@@ -1574,9 +1574,9 @@ const jobElapsedMs = computed<number | null>(() => {
   return Math.max(0, Date.now() - started);
 });
 const allJobs = ref<any[]>([]);
-/* 轮询收编 useAutoRefresh（Xmigrate 同范式）：KeepAlive 失活/页面隐藏/
-   卸载全链停续，取代裸 setInterval + 手写可见性守卫；间隔沿用 2000ms。
-   pollJobId 非空 =「有在跑的作业要盯」= ms>0；tick 内见到终态即置空停表。 */
+/* 轮询合并 useAutoRefresh（Xmigrate 同范式）：KeepAlive 失活/页面隐藏/
+ 卸载全链停续，取代裸 setInterval + 手写可见性守卫；间隔沿用 2000ms。
+ pollJobId 非空 =「有在跑的作业要盯」= ms>0；tick 内见到终态即置空停表。 */
 const pollJobId = ref('');
 const jobPoller = useAutoRefresh(async () => {
   const id = pollJobId.value;
@@ -1585,7 +1585,7 @@ const jobPoller = useAutoRefresh(async () => {
     job.value = await api.adhoc.status(id);
     if (job.value.status !== 'RUNNING') {
       /* w80：终态不在页内 notify——全局 jobTracker 对同一终态跃迁已发通知（见过在跑→终态弹一次），
-         页内再弹一次是双 toast。这里只停表 + 刷最近作业列表，状态行由上方 pill 呈现终态 */
+ 页内再弹一次是双 toast。这里只停表 + 刷最近作业列表，状态行由上方 pill 呈现终态 */
       stopPolling();
       loadJobs();
     }
@@ -1600,13 +1600,13 @@ const TERMINAL = new Set(['SUCCEEDED', 'DONE', 'FAILED', 'ABORTED']);
 const isTerminal = computed(() => !!job.value && TERMINAL.has(job.value.status));
 
 /* F1：作业执行中。status === 'RUNNING' 已涵盖 AWAIT_CONFIRM——后端等确认门时只翻
-   stage（AdhocRebuildService:691 setStage(AWAIT_CONFIRM)）不翻 status，前端轮询也
-   正是以 status==='RUNNING' 持续，此刻业务写入可能正被阻断，更得留一条回监控的出路。 */
+ stage（AdhocRebuildService:691 setStage(AWAIT_CONFIRM)）不翻 status，前端轮询也
+ 正是以 status==='RUNNING' 持续，此刻业务写入可能正被阻断，更得留一条回监控的出路。 */
 const hasRunningJob = computed(() => !!job.value && job.value.status === 'RUNNING');
 
-/* F1：步骤条点击。回退照旧（RUNNING 时回退可用是 adhocDiffWiring  的既有契约）；
-   前向只放行「执行监控」一步——作业在跑时它是用户在任何位置都能一键回去的家。
-   其余前向步骤仍锁：未经探测/校验不得跳页，流程不可倒灌。 */
+/* F1：步骤条点击。回退照旧（RUNNING 时回退可用是 adhocDiffWiring 的既有契约）；
+ 前向只放行「执行监控」一步——作业在跑时它是用户在任何位置都能一键回去的家。
+ 其余前向步骤仍锁：未经探测/校验不得跳页，流程不可倒灌。 */
 function onStepChipClick(i: number) {
   if (isTerminal.value) return;
   if (i < step.value) { step.value = i; return; }
@@ -1614,7 +1614,7 @@ function onStepChipClick(i: number) {
 }
 
 /* 键盘可达：与 onStepChipClick 同一套放行规则——回退步与「返回执行监控」chip
-   才是 button（Tab 可达、Enter/Space 触发），其余步骤 tabindex=-1 不进 Tab 序 */
+ 才是 button（Tab 可达、Enter/Space 触发），其余步骤 tabindex=-1 不进 Tab 序 */
 function stepInteractive(i: number): boolean {
   if (isTerminal.value) return false;
   return i < step.value || canReturnToMonitor(i);
@@ -1637,15 +1637,15 @@ async function doPrepare() {
   try {
     prep.value = await api.adhoc.prepare(indexName.value);
     /* 粘贴来的期望配置**优先于**源索引预填。若在此无条件覆盖，
-       使用者刚粘贴的 settings/mapping 会被源索引现状悄悄冲掉，
-       他却以为正拿着业务侧声明的配置去重建——静默回落到旧配置正是本 Task 要堵的。 */
+ 使用者刚粘贴的 settings/mapping 会被源索引现状悄悄冲掉，
+ 他却以为正拿着业务侧声明的配置去重建——静默回落到旧配置正是本 Task 要堵的。 */
     if (pasteIdx.value < 0) {
       settingsJson.value = prettyJson(prep.value.settingsJson || '');
       mappingJson.value = prettyJson(prep.value.mappingJson || '');
     }
     /* A3：destIndex / timeField 只覆写「自动填充」的值（空，或仍等于上一轮建议——
-       说明用户没碰过）。手改过的目标名/时间字段不许被再次探测冲掉，
-       与上方「粘贴来的期望优先于源索引预填」是同一条红线。 */
+ 说明用户没碰过）。手改过的目标名/时间字段不许被再次探测冲掉，
+ 与上方「粘贴来的期望优先于源索引预填」是同一条红线。 */
     const sugDest = prep.value.suggestedDest || '';
     if (!destIndex.value || destIndex.value === lastPrepDest) destIndex.value = sugDest;
     lastPrepDest = sugDest;
@@ -1666,21 +1666,21 @@ async function doPrepare() {
   }
 }
 
-/* ═══  W10：timeField 智能预填（预填兼防呆）═══
-   此前时间字段只在 doPrepare/resumeScene 探测点补位；策略步把策略切回 INCREMENTAL 时
-   timeField 常为空，「下一步」被禁+红字拦截（:346 门），用户得回下拉手动选。
-   现落进 INCREMENTAL 档且字段为空时自动预填首位候选（候选唯一/首位=最佳，用户仍可改/清）。
-   只盯 INCREMENTAL：WRITE_BLOCK 无 timeField 的「全程挡写警告+已知悉」是确认门语义
-   （needAckFullBlock/ackFullBlock， §4.2），预填会把它静默短路——零触碰。 */
+/* ═══ W10：timeField 智能预填（预填兼防呆）═══
+ 此前时间字段只在 doPrepare/resumeScene 探测点补位；策略步把策略切回 INCREMENTAL 时
+ timeField 常为空，「下一步」被禁+红字拦截（346 门），用户得回下拉手动选。
+ 现落进 INCREMENTAL 档且字段为空时自动预填首位候选（候选唯一/首位=最佳，用户仍可改/清）。
+ 只盯 INCREMENTAL：WRITE_BLOCK 无 timeField 的「全程挡写警告+已知悉」是确认门语义
+ （needAckFullBlock/ackFullBlock），预填会把它静默短路——零触碰。 */
 watch(() => [strategy.value, prep.value?.timeFieldCandidates] as const, () => {
   if (strategy.value !== 'INCREMENTAL' || timeField.value) return;
   const first = prep.value?.timeFieldCandidates?.[0]?.field;
   if (first) timeField.value = first;
 }, { immediate: true });
 
-/*  W10：步卡内单行 input Enter=该步主钮（无 form 包装，轻量函数分派）。
-   守卫与主钮 disabled 逐一对应，disabled 时 Enter 静默（与钮同语义）；步骤条 chips
-   既有 Enter/Space 键盘口径（adhocStepA11y/）不在此列、零触碰。 */
+/* W10：步卡内单行 input Enter=该步主钮（无 form 包装，轻量函数分派）。
+ 守卫与主钮 disabled 逐一对应，disabled 时 Enter 静默（与钮同语义）；步骤条 chips
+ 既有 Enter/Space 键盘口径（adhocStepA11y/）不在此列、零触碰。 */
 function destIndexEnter() {
   if (!validating.value) void doValidateConfig(true); /* 审编步主钮「校验并继续」 */
 }
@@ -1707,8 +1707,8 @@ async function doStart() {
       pauseBeforeSwitch: pauseBeforeSwitch.value,
     });
     /* 旧轮竞态丢弃——启动是控制面写操作，丢弃响应时提示以作业列表为准
-       （后端可能已受理，UI 不假装未发生） */
-    if (signal.aborted) { store.notify('warning', '本轮启动响应已作废（后端可能已受理，以作业列表为准）'); return; }
+ （后端可能已受理，UI 不假装未发生） */
+    if (signal.aborted) { store.notify('warning', '启动响应已作废（后端可能已受理，以作业列表为准）'); return; }
     job.value = r.job;
     step.value = 4;
     startPolling(r.jobId);
@@ -1734,8 +1734,8 @@ function stopPolling() {
 
 async function doAbort() {
   if (!job.value || aborting.value) return;
-  /*  W10：本点全站首批开 dismissable（调试期反复起停作业的高频中低风险 warn 确认，
-     勾「本次会话不再询问」后本会话内中止不再逐次弹窗）。critical 确认门（删除旧索引）零触碰。 */
+  /* W10：本点全站首批开 dismissable（调试期反复起停作业的高频中低风险 warn 确认，
+ 勾「本次会话不再询问」后本会话内中止不再逐次弹窗）。critical 确认门（删除旧索引）零触碰。 */
   if (!await askConfirm({
     level: 'warn',
     title: '中止重建作业',
@@ -1749,13 +1749,13 @@ async function doAbort() {
 }
 
 /* AWAIT_CONFIRM 期间业务写入正在被阻断，秒数必须自己跳动——
-   静止的数字会让人低估已经挡了多久。
+ 静止的数字会让人低估已经挡了多久。
 
-   -9 / I-2：原来接的是 useNow —— 那是  为「Xm 前」建的**分钟级**共享心跳
-   （composables/useNow.ts:13 是 setInterval(..., 30000)），显示秒数会「7 秒」
-   静止 30 秒再跳到「37 秒」，注释写着要跳动而实现没做到。
-   useNow 的 30s 绝不能改：它是全站共享单例，NotifyCenter/DslQuery/History 三处在用，
-   改成 1s 等于给全站白加 30 倍无谓重渲染。故本视图自建局部 1s 心跳。 */
+ -9 / I-2：原来接的是 useNow —— 那是 为「Xm 前」建的**分钟级**共享心跳
+ （composables/useNow.ts:13 是 setInterval(..., 30000)），显示秒数会「7 秒」
+ 静止 30 秒再跳到「37 秒」，注释写着要跳动而实现没做到。
+ useNow 的 30s 绝不能改：它是全站共享单例，NotifyCenter/DslQuery/History 三处在用，
+ 改成 1s 等于给全站白加 30 倍无谓重渲染。故本视图自建局部 1s 心跳。 */
 const blockNow = ref(Date.now());
 let blockTimer: any = null;
 
@@ -1777,9 +1777,9 @@ const blockedSec = computed(() => {
 });
 
 /* 心跳的开关与「阻断横幅是否在渲染」绑定同一个条件（job.stage === 'AWAIT_CONFIRM'），
-   而不是散在 5 处 job.value 赋值点上逐个 start/stop —— 那种写法漏掉任何一处
-   都会留下一个跑着的定时器，且漏没漏看不出来。watch 保证二者不可能分叉：
-   横幅在 ⇔ 心跳在。stage 离开 AWAIT_CONFIRM（确认/中止/失败）即停表。 */
+ 而不是散在 5 处 job.value 赋值点上逐个 start/stop —— 那种写法漏掉任何一处
+ 都会留下一个跑着的定时器，且漏没漏看不出来。watch 保证二者不可能分叉：
+ 横幅在 ⇔ 心跳在。stage 离开 AWAIT_CONFIRM（确认/中止/失败）即停表。 */
 watch(
   () => job.value?.stage === 'AWAIT_CONFIRM',
   (blocked) => { blocked ? startBlockTicker() : stopBlockTicker(); },
@@ -1787,8 +1787,8 @@ watch(
 );
 
 /* 页面隐藏不空转（stores/jobTracker.ts onVisChange 范式）——业务写入被阻断的读秒
-   是给人看的，页面隐藏时 1s 心跳空转纯属浪费：hidden 停表，回前台且横幅仍在（AWAIT_CONFIRM）
-   时重启并重取基点（blockedSec 由 awaitConfirmSince 重算，秒数不因停表失真）。卸载清理见下。 */
+ 是给人看的，页面隐藏时 1s 心跳空转纯属浪费：hidden 停表，回前台且横幅仍在（AWAIT_CONFIRM）
+ 时重启并重取基点（blockedSec 由 awaitConfirmSince 重算，秒数不因停表失真）。卸载清理见下。 */
 function onBlockVisChange() {
   if (document.hidden) { stopBlockTicker(); return; }
   if (job.value?.stage === 'AWAIT_CONFIRM') startBlockTicker();
@@ -1811,8 +1811,8 @@ async function doConfirmSwitch() {
   confirming.value = true;
   try {
     job.value = await api.adhoc.confirmSwitch(job.value.jobId);
-    /*  联动性：切换成功 toast 带「去查询验证」动作——重建完成后第一步就是验证数据，
-       一键跳查询工作台（带索引深链），免手动导航 */
+    /* 联动性：切换成功 toast 带「去查询验证」动作——重建完成后第一步就是验证数据，
+ 一键跳查询工作台（带索引深链），免手动导航 */
     const newIndex = job.value?.newIndex || job.value?.targetIndex || '';
     store.notify('success', '已确认切换', {
       duration: 12000,
@@ -1839,9 +1839,9 @@ async function loadJobs() {
   try { allJobs.value = await api.adhoc.jobs(); } catch (e: any) { allJobs.value = []; store.notify('warning', '作业列表拉取失败：' + friendlyApiError(e)); } finally { jobsLoading.value = false; }
 }
 
-/* ═══  W1：最近作业表内核（kw 过滤 + 状态漏斗 + matrixText 导出）═══
-   过滤只动显示与导出行集（visibleJobs），allJobs 仍是刷新拉取的完整清单——
-   过滤绝不吞数据：n/m 命中数与「清除过滤」钮在过滤生效时始终可见。 */
+/* ═══ W1：最近作业表内核（kw 过滤 + 状态漏斗 + matrixText 导出）═══
+ 过滤只动显示与导出行集（visibleJobs），allJobs 仍是刷新拉取的完整清单——
+ 过滤绝不吞数据：n/m 命中数与「清除过滤」钮在过滤生效时始终可见。 */
 const jobKw = ref('');
 const jobStatusFilter = ref('');
 function funnelKey(s: any): string {
@@ -1863,17 +1863,17 @@ function clearJobFilters() {
   jobKw.value = '';
   jobStatusFilter.value = '';
 }
-/*  W-B：最近作业表 QRT rows 型矩阵——列序=JOB_COLS（#cell-<col> 槽按列名接线），
-   行集仍收口 visibleJobs（kw+状态漏斗过滤后单一来源，表格显示与 TSV/MD 导出所见即所复）。
-   数值/epoch 以原始值进矩阵：排序/Σ/采样类型徽标由内核按值口径处理，显示层由槽接管。
-   尾追 tookMs 耗时列（后端 toMap 既有字段；运行中 -1/缺席 null 原值进矩阵，
-   显示层 #cell-tookMs 分档） */
+/* W-B：最近作业表 QRT rows 型矩阵——列序=JOB_COLS（#cell-<col> 槽按列名接线），
+ 行集仍收口 visibleJobs（kw+状态漏斗过滤后单一来源，表格显示与 TSV/MD 导出所见即所复）。
+ 数值/epoch 以原始值进矩阵：排序/Σ/采样类型徽标由内核按值口径处理，显示层由槽接管。
+ 尾追 tookMs 耗时列（后端 toMap 既有字段；运行中 -1/缺席 null 原值进矩阵，
+ 显示层 #cell-tookMs 分档） */
 const JOB_COLS = ['jobId', 'logicalName', 'strategy', 'status', 'stage', 'startedAt', 'tookMs'];
 const jobsMatrix = computed<any[][]>(() => visibleJobs.value.map(j => [
   j.jobId ?? null, j.logicalName ?? null, j.strategy ?? null, j.status ?? null, j.stage ?? null, j.startedAt ?? null, j.tookMs ?? null,
 ]));
 /* 矩阵行只有七列（尾追 tookMs）：锁安全徽标/job 附加字段从 allJobs 原行对象取
-   （后端 toMap 行级透出 gateOutcome/lockActive/switchedWithoutLock；作业量级小，find 足够） */
+ （后端 toMap 行级透出 gateOutcome/lockActive/switchedWithoutLock；作业量级小，find 足够） */
 function jobOf(row: any[]): any {
   return allJobs.value.find(j => String(j?.jobId) === String(row?.[0])) || {};
 }
@@ -1888,7 +1888,7 @@ async function exportJobsMatrix(fmt: 'tsv' | 'md') {
   const ok = await copyText(matrixText({ rows, cols, getVal: (r: any, c: string) => r[c] ?? '' }, fmt));
   store.notify(ok ? 'success' : 'error', ok ? `已复制 ${rows.length} 行作业（${fmt.toUpperCase()}）` : '复制失败');
 }
-/* 轮次表 Σ（null 不计入；全 null 显示 '-'，不冒充 0——fmtNum 的  口径同源） */
+/* 轮次表 Σ（null 不计入；全 null 显示 '-'，不冒充 0——fmtNum 的 口径同源） */
 function roundSum(k: string): string {
   let has = false, s = 0;
   for (const r of job.value?.rounds || []) {
@@ -1910,13 +1910,13 @@ function watchJob(jobId: string) {
   });
 }
 
-/* ═══  W3：运行中作业重挂提示（job 内存态，刷新后 resumeScene 把 step>3 钳回 3，
-   运行中作业失联，唯一回路=最近作业表 Eye 钮）═══
-   扫 allJobs（api.adhoc.jobs() 的既有消费形态）复用既有 running 判据 status==='RUNNING'
-   （hasRunningJob/监控轮询同一字面判据，勿自造）；仅在 step0（首页）在场。「回到监控」复用
-   既有 watchJob（拉状态+startPolling 一条龙，不自造轮询），切回后 step=4 本条随条件隐没。
-   resumeScene 既有 step 裁决零触碰（adhocStateMachine/adhocStepPersist 锁）；onMounted 的
-   loadJobs 既有拉取即为数据源，无需新增扫描点。 */
+/* ═══ W3：运行中作业重挂提示（job 内存态，刷新后 resumeScene 把 step>3 钳回 3，
+ 运行中作业失联，唯一回路=最近作业表 Eye 钮）═══
+ 扫 allJobs（api.adhoc.jobs() 的既有消费形态）复用既有 running 判据 status==='RUNNING'
+ （hasRunningJob/询同一字面判据，勿自造）；仅在 step0（首页）在场。「回到监控」复用
+ 既有 watchJob（拉状态+startPolling 一条龙，不自造轮询），切回后 step=4 本条随条件隐没。
+ resumeScene 既有 step 裁决零触碰（adhocStateMachine/adhocStepPersist 锁）；onMounted 的
+ loadJobs 既有拉取即为数据源，无需新增扫描点。 */
 const runningAdhocJob = computed<any>(() => allJobs.value.find(j => j?.status === 'RUNNING') || null);
 const showReattachHint = computed(() => step.value === 0 && !!runningAdhocJob.value);
 function reattachToRunning() {
@@ -1933,7 +1933,7 @@ function reset() {
   confirmDirectSwap.value = false;
   stripNote.value = '';
   /* 粘贴态与确认门一并复位，否则「再来一次」会带着上一轮的期望配置和
-     已勾选的全程挡写知悉，人以为是新的一轮 */
+ 已勾选的全程挡写知悉，人以为是新的一轮 */
   pasteRaw.value = '';
   pasteErr.value = '';
   pasteWarn.value = '';
@@ -1941,8 +1941,8 @@ function reset() {
   pasteList.value = [];
   pasteIdx.value = -1;
   /* #68：清期望源头即可，cfgDiff 是派生量会自己回到 []（prep 也已置 null）。
-     原来这里是 cfgDiff.value = []，那是「手工同步派生状态」的最后一处，
-     一并去掉才谈得上「少一处能忘记同步的地方」。 */
+ 原来这里是 cfgDiff.value = []，那是「手工同步派生状态」的最后一处，
+ 一并去掉才谈得上「少一处能忘记同步的地方」。 */
   expectedFromPaste.value = '';
   ackFullBlock.value = false;
   pauseBeforeSwitch.value = false;
@@ -1951,8 +1951,8 @@ function reset() {
   /* F2：「再来一次」整体清场一并熄掉索引名缺失红字 */
   needIndexForManual.value = false;
   /* 风险报告是 loadDateRisks 写入的**非派生**状态（它带一次网络取数，
-     做不成 computed），故必须在这里显式清 —— 否则「再来一轮」会把上一个索引的
-     风险结论留在屏幕上，配着新索引的名字。 */
+ 做不成 computed），故必须在这里显式清 —— 否则「再来一轮」会把上一个索引的
+ 风险结论留在屏幕上，配着新索引的名字。 */
   riskRows.value = [];
   riskErr.value = '';
   sampledCount.value = 0;
@@ -1960,8 +1960,8 @@ function reset() {
 }
 
 /* 热Setting页「转零停机重建」携带 {index, pendingSettings} 上下文预填。
-   pendingSettings 为扁平 dot-key 变更集，合并进 prepare 预填的 settingsJson.index；
-   上下文损坏时静默忽略，向导零影响。 */
+ pendingSettings 为扁平 dot-key 变更集，合并进 prepare 预填的 settingsJson.index；
+ 上下文损坏时静默忽略，向导零影响。 */
 async function applyRouteContext() {
   /* 无显式 ?index= 时回退读全局选中索引——IndexHub 等入口走 store.pick 不传 query，否则落到空向导 */
   const qIndex = typeof route.query.index === 'string' ? route.query.index : (store.pickedIdx || '');
@@ -1970,7 +1970,7 @@ async function applyRouteContext() {
   await doPrepare();
   if (!prep.value) return;
   /* Mapping 页污染警示条「去零停机重建」携带 stripDsl=污染根清单——
-     预剔除这些字段并置 dynamic:false（不防复染的重建等于白做），审编步人工确认后才进重建 */
+ 预剔除这些字段并置 dynamic:false（不防复染的重建等于白做），审编步人工确认后才进重建 */
   const qStrip = typeof route.query.stripDsl === 'string' ? route.query.stripDsl : '';
   if (qStrip && mappingJson.value) {
     try {
@@ -2021,26 +2021,26 @@ function setDotted(obj: any, dotPath: string, v: any) {
   if (v === null) delete cur[leaf]; else cur[leaf] = v;
 }
 
-/* 草稿治理轮（w24）：切页返回不再弹回第一步。三态：
-   ① 显式 ?index= 上下文（热Setting/Mapping 页转入）→ 按上下文开新流程（用户带着新意图来，旧稿让位）；
-   ② 无 query 但有可恢复草稿（step>0 的向导现场）→ 续现场：保步骤，静默重拉 prep 重建服务端派生态，
-      审编/策略等用户编辑稿一律不覆写（doPrepare 的覆写路径只在显式开流时走）；
-   ③ 全新进入（无 query 无稿）→ 维持旧行为回落全局选中索引预填。 */
+/* 草稿（w24）：切页返回不再弹回第一步。三态：
+ ① 显式 ?index= 上下文（热Setting/Mapping 页转入）→ 按上下文开新流程（用户带着新意图来，旧稿让位）；
+ ② 无 query 但有可恢复草稿（step>0 的向导现场）→ 续现场：保步骤，静默重拉 prep 重建服务端派生态，
+ 审编/策略等用户编辑稿一律不覆写（doPrepare 的覆写路径只在显式开流时走）；
+ ③ 全新进入（无 query 无稿）→ 维持旧行为回落全局选中索引预填。 */
 /* 进入裁决(整页导航与 SPA 内重入共用):
-   ① 显式 ?index= 上下文(且非同索引返回) → 按上下文开新流程,用后即清 query;
-   ② 有现场(到过 step≥1 或 step0 输过索引名) → 续现场;
-   ③ 全新 → 回落全局选中索引预填。 */
+ ① 显式 ?index= 上下文(且非同索引返回) → 按上下文开新流程,用后即清 query;
+ ② 有现场(到过 step≥1 或 step0 输过索引名) → 续现场;
+ ③ 全新 → 回落全局选中索引预填。 */
 function adjudicateEntry() {
   const hasQueryCtx = typeof route.query.index === 'string' && !!route.query.index;
   const hasRestoredScene = step.value > 0 || !!indexName.value;
   /* w27:同一个索引的 query 重入 = 用户从原入口回来看现场,不是新意图 —— 不重置;
-     换了索引才是带着新意图来,才走上下文重置。 */
+ 换了索引才是带着新意图来,才走上下文重置。 */
   const sameIndexReturn = hasQueryCtx && hasRestoredScene
     && String(route.query.index) === indexName.value && step.value > 1;
   if (hasQueryCtx && !sameIndexReturn) {
     applyRouteContext().then(() => {
       /* 一次性上下文用后即清(同 dsl.carry 惯例):浏览器回退/侧栏返回不再带着旧 query
-         重复触发重置——这正是「切页回来跳回第一步」的第二病根。 */
+ 重复触发重置——这正是「切页回来跳回第一步」的第二病根。 */
       router.replace({ query: {} }).catch(() => {});
     });
   } else if (hasRestoredScene) resumeScene();
@@ -2057,19 +2057,19 @@ onMounted(() => {
 });
 
 /* w29:SPA 内点带 ?index= 的链接进入时组件已挂载、onMounted 不再跑——此前 query 完全无响应。
-   仅在 query.index 「从空到有」或「值变化」时裁决;消费后的清空(有→无)不触发。
-   同索引返回仍由 sameIndexReturn 保护,不会被这条 watch 意外重置。 */
+ 仅在 query.index 「从空到有」或「值变化」时裁决;消费后的清空(有→无)不触发。
+ 同索引返回仍由 sameIndexReturn 保护,不会被这条 watch 意外重置。 */
 watch(() => route.query.index, (nv, ov) => {
   if (nv === ov) return;
   if (typeof nv === 'string' && nv) adjudicateEntry();
 });
 
 /* 续现场：执行监控步（job 为内存态、跨页不存）钳回确认预览；step>0 时 prep 必须补拉——
-   后续步骤的源物理名/文档数等展示都依赖它。只填 prep，不碰任何用户编辑稿。 */
+ 后续步骤的源物理名/文档数等展示都依赖它。只填 prep，不碰任何用户编辑稿。 */
 async function resumeScene() {
   if (step.value > 3) step.value = 3;
   /* w27:riskRows/pasteList 是内存态,重挂载即失——体检结果「第一回有、第二回没了」的根因。
-     现场还在(pasteList 有选中项)时重跑采样体检,让回到向导的人始终看到同一份风险报告。 */
+ 现场还在(pasteList 有选中项)时重跑采样体检,让回到向导的人始终看到同一份风险报告。 */
   if (pasteIdx.value >= 0 && pasteList.value[pasteIdx.value] && !riskRows.value.length && !riskBusy.value) {
     loadDateRisks(pasteList.value[pasteIdx.value]);
   }
@@ -2084,7 +2084,7 @@ async function resumeScene() {
     }
   }
   /* 只补空、不覆写：用户没编辑过的字段从 prep 回填(等价首次预填),
-     编辑过的草稿(粘贴/手改)原样保留——与 doPrepare 的「粘贴优先」同一条红线。 */
+ 编辑过的草稿(粘贴/手改)原样保留——与 doPrepare 的「粘贴优先」同一条红线。 */
   if (prep.value) {
     if (!settingsJson.value) settingsJson.value = prettyJson(prep.value.settingsJson || '');
     if (!mappingJson.value) mappingJson.value = prettyJson(prep.value.mappingJson || '');
@@ -2093,18 +2093,18 @@ async function resumeScene() {
   }
 }
 /* 两个定时器都必须随组件卸载停掉 —— 卸载后还在跑的 setInterval 是泄漏，
-   且 blockNow 每秒写一次会让已销毁组件的 computed 继续被触发。
-   visibilitychange 监听一并摘除（与注册同生命周期）。 */
+ 且 blockNow 每秒写一次会让已销毁组件的 computed 继续被触发。
+ visibilitychange 监听一并摘除（与注册同生命周期）。 */
 onBeforeUnmount(() => { stopPolling(); stopBlockTicker(); document.removeEventListener('visibilitychange', onBlockVisChange); });
 </script>
 
 <style scoped>
 /* 页根改 flex+gap 承担区块间距（原 .card margin-bottom:14px 随局部重声明一并退役）；
-   页头/草稿徽标行/步骤条的旧 margin-bottom 同步归零，避免与 gap 双重叠加 */
+ 页头/草稿徽标行/步骤条的旧 margin-bottom 同步归零，避免与 gap 双重叠加 */
 .ahr { display: flex; flex-direction: column; gap: var(--sp-4); position: relative; }
 .ahr > .ph { margin-bottom: 0; }
-/*  P2：执行进度条（ind-bar 全站范式，DevTools dt-progress 同款 absolute 零高度占位
-   纯 CSS 动画）——preparing/validating/starting 三执行链任一在途即点亮 */
+/* P2：执行进度条（ind-bar 全站范式，DevTools dt-progress 同款 absolute 零高度占位
+ 纯 CSS 动画）——preparing/validating/starting 三执行链任一在途即点亮 */
 .ar-progress { position: absolute; top: 0; left: 0; right: 0; color: var(--ac); }
 /* 索引芯片（xm-idx-go 同款） */
 .ad-idx-go {
@@ -2114,7 +2114,7 @@ onBeforeUnmount(() => { stopPolling(); stopBlockTicker(); document.removeEventLi
   background: var(--bg1); color: var(--tx2); cursor: pointer; transition: all .12s;
 }
 .ad-idx-go:hover { color: var(--ac-hi); border-color: var(--ac-line); background: var(--ac-soft); }
-/* 草稿治理轮：恢复徽标行（间距归 .ahr 页 gap，仅保留左侧对齐缩进） */
+/* 草稿：恢复徽标行（间距归 .ahr 页 gap，仅保留左侧对齐缩进） */
 .ar-draft-row { margin: 0 0 0 var(--sp-0); }
 
 /* 页头四件套已收敛 PageHeader 组件（.ph 系列，--sp token 版），本地旧值块删除 */
@@ -2128,17 +2128,17 @@ onBeforeUnmount(() => { stopPolling(); stopBlockTicker(); document.removeEventLi
 .step.retmon { cursor: pointer; border: 1px dashed var(--info-line); }
 .step.retmon:hover { background: var(--bg1); }
 /* sem-rm：当前步走 ac 语义档（运行中→ac 标准）——品牌柔底+描边+实心序号圆，
-   与 done(ok 绿)/待办(中性灰) 构成三态语言；retmon 虚线 info 蓝保持导航提示 */
+ 与 done(ok 绿)/待办(中性灰) 构成三态语言；retmon 虚线 info 蓝保持导航提示 */
 .step.act { color: var(--ac); background: var(--ac-soft); border: 1px solid var(--ac-line); font-weight: 600; }
 .step.act .s-num { background: var(--ac); border-color: var(--ac); color: var(--bg0); font-weight: 650; }
 .s-num { display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border-radius: 50%; border: 1px solid currentColor; font-size: var(--fs-xs); }
 .s-arrow { color: var(--tx2); margin-left: var(--sp-1); }
 
 /* 卡壳与卡头走 theme.css 全局 .card/.card-t（radius 归 --r-l、卡头归 13px/650）：
-   卡片间距由 .ahr 页 gap 承担，不再用 margin-bottom 散值 */
+ 卡片间距由 .ahr 页 gap 承担，不再用 margin-bottom 散值 */
 /* 卡壳退壳（ P2，Xmigrate 551 先例同刀）：六个步卡/作业卡全局 .card 壳
-   （border+bg+radius，theme.css:375）退役 → border-top 分节；卡留白由 .ar-sec 落位 padding 承接，
-   语义边框（危险操作描边等）豁免保留；页根 .ahr flex gap 继续承担区块间距 */
+ （border+bg+radius，theme.css:375）退役 → border-top 分节；卡留白由 .ar-sec 落位 padding 承接，
+ 语义边框（危险操作描边等）豁免保留；页根 .ahr flex gap 继续承担区块间距 */
 .ar-sec { border-top: 1px solid var(--border); padding: var(--sp-3) var(--sp-4); }
 .right { margin-left: auto; }
 .row { display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-2h) 0; flex-wrap: wrap; }
@@ -2163,66 +2163,66 @@ onBeforeUnmount(() => { stopPolling(); stopBlockTicker(); document.removeEventLi
 
 /* 固定等分 grid 退役——对照双栏交给 WorkbenchLayout（拖拽/预设/记忆/窄屏堆叠） */
 
-/*  P2：.ed-label 基础档退役——类型归全局 .sec-t（.ar-diff/.report 分节标题挂类升档，
-   行首横排 fs-sm/600/tx1），本类只留落位；.ed-col pane 标题走下方既有升档规则不波及 */
+/* P2：.ed-label 基础档退役——类型归全局 .sec-t（.ar-diff/.report 分节标题挂类升档，
+ 行首横排 fs-sm/600/tx1），本类只留落位；.ed-col pane 标题走下方既有升档规则不波及 */
 .ed-label { margin-bottom: var(--sp-1); }
-/*  W4：AR_ED 竖排标题轨退役随刀——pane 内 settings/mapping 行首标题升 sec-t 档
-   （fs-sm/600/tx1，.ar-manual-lb 同档）；作用域限 .ed-col（pane 实例），.ar-diff 的 .ed-label 不受影响 */
+/* W4：AR_ED 竖排标题轨退役随之——pane 内 settings/mapping 行首标题升 sec-t 档
+ （fs-sm/600/tx1，.ar-manual-lb 同档）；作用域限 .ed-col（pane 实例），.ar-diff 的 .ed-label 不受影响 */
 .ed-col .ed-label { font-size: var(--fs-sm); font-weight: 600; color: var(--tx1); }
 /* ed-col 吃满 pane：slot 直接落在 ResizablePane 的 .rp-content（display:block，无 flex 上下文，
-   data-flex-fill/flex:1 均无效——曾因此编辑器塌到 5px 完全无法编辑）。block 父层用 height:100%
-   直取 rp-content 确定高度，JsonArea fill 模式内 monaco-host flex:1 跟随。 */
+ data-flex-fill/flex:1 均无效——曾因此编辑器塌到 5px 完全无法编辑）。block 父层用 height:100%
+ 直取 rp-content 确定高度，JsonArea fill 模式内 monaco-host flex:1 跟随。 */
 .ed-col { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-/* JsonArea .ja 外框视图侧退壳（557 判例：border:none/radius:0 独立规则追加，
-   JsonArea 组件零触）——手动/审编四框在 .ed-col pane 内、粘贴导入框在弹窗 .pi-ja-wrap 内
-   （NModal teleport 到 body，类锚与内容同渲染树，scoped :deep 经祖先类命中）。
-   卡内卡双层描边根治；背景/圆点/工具条等组件内语义零触 */
+/* JsonArea .ja 外框视图侧退壳（border:none/radius:0 独立规则追加，
+ JsonArea 组件零触）——手动/审编四框在 .ed-col pane 内、粘贴导入框在弹窗 .pi-ja-wrap 内
+ （NModal teleport 到 body，类锚与内容同渲染树，scoped :deep 经祖先类命中）。
+ 卡内卡双层描边根治；背景/圆点/工具条等组件内语义零触 */
 .ed-col :deep(.ja) { border: none; border-radius: 0; box-shadow: none; }
 .pi-ja-wrap :deep(.ja) { border: none; border-radius: 0; box-shadow: none; }
-/*  P2：ar-fill-wl 定高档（554-P0 为 fill 链补的 max(280px,40vh) 宿主确定档）随
-   高度档退役——四 JsonArea 已摘 fill 改 rows 驱动（Monaco 高度=rows*19+16 纯内容函数，
-   无 height:100% 解析路径，塌陷成因整体消失），pane 高度交内容自撑复归 547 裁决；
-   类保留作 DOM 锚（411/426/547 随迁锚字面） */
+/* P2：ar-fill-wl 定高档（554-P0 为 fill 链补的 max(280px,40vh) 宿主确定档）随
+ 高度档退役——四 JsonArea 已摘 fill 改 rows 驱动（Monaco 高度=rows*19+16 纯内容函数，
+ 无 height:100% 解析路径，塌陷成因整体消失），pane 高度交内容自撑复归 547 裁决；
+ 类保留作 DOM 锚（411/426/锚字面） */
 /* 标明这份 mapping 来自注解推导而非业务侧 @Mapping 原文。
-   推导徽标换装 StatusPill b 档（ 语义走组件 title 随迁），私造规则退役。 */
+ 推导徽标改用 StatusPill b 档（ 语义走组件 title 同步更新），私造规则退役。 */
 /* w80：.ta 裸 textarea 死样式删除（textarea 已退役 JsonArea/Monaco，模板零引用） */
 
 .strats { display: flex; flex-direction: column; gap: var(--sp-2); }
 .strat { display: flex; gap: var(--sp-2h); padding: var(--sp-2h) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); cursor: pointer; }
 .strat.sel { border-color: var(--ac-hi); background: var(--ac-soft); }
 .strat.dis { opacity: .45; cursor: not-allowed; }
-.strat strong { font-size: var(--fs-sm); color: var(--tx0); font-weight: 650; } /* ：步骤标题 b→strong 语义清理；b 全站 650 兜底不盖 strong，字重随迁本规则保视觉零变化 */
+.strat strong { font-size: var(--fs-sm); color: var(--tx0); font-weight: 650; } /* ：步骤标题 b→strong 语义清理；b 全站 650 兜底不盖 strong，字重同步更新本规则保视觉零变化 */
 .strat p { margin: 3px 0 0; font-size: var(--fs-xs); color: var(--tx2); line-height: 1.5; }
 .chk { display: flex; align-items: center; gap: 7px; font-size: var(--fs-sm); color: var(--tx1); margin: var(--sp-2h) 0; cursor: pointer; }
 
 /* 自造 st-tag/st-running/st-succeeded/st-done/st-failed/st-aborted 徽标系统退役——
-   状态 pill 统一走 theme.css 全局 .pill + utils/statusColor（ W4：
-   SUCCEEDED/ABORTED 语义档已上提进 statusColor 枚举本身）。
-   轮次阶段标签（info 私造底）亦换装 StatusPill b 档，规则随之退役。 */
+ 状态 pill 统一走 theme.css 全局 .pill + utils/statusColor（ W4：
+ SUCCEEDED/ABORTED 语义档已上提进 statusColor 枚举本身）。
+ 轮次阶段标签（info 私造底）亦改用 StatusPill b 档，规则随之退役。 */
 /* 状态枚举英文小字（中文主体后缀，XmigrateView .xm-st-en 同款）。
-   换装 StatusPill 后，监控步/作业表状态 pill 的小字视觉由组件 .sp-en 承担
-   （.ar-st-en 仅作 DOM 锚外挂于 pill 根）；起轮次徽标小字亦归组件，本页
-   不再自携小字样式 */
+ 改用 StatusPill 后，监控步/作业表状态 pill 的小字视觉由组件 .sp-en 承担
+ （.ar-st-en 仅作 DOM 锚外挂于 pill 根）；起轮次徽标小字亦归组件，本页
+ 不再自携小字样式 */
 
 .tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); margin-top: var(--sp-2); }
-/*  W10：font-weight:400 页内覆写删除——表头字重回 theme.css 全局 .tbl th 600 基线
-   （Security 同款由 W9 处理）；本行其余紧凑档（padding/边框）保留，布局零漂移。
-    P2：--sp 收口——8px 归 var(--sp-2)（5px 非档位奇数刻意值保字面；
-   w10ReduceSteps525/adhocWave544/spSweep540 三锁随迁改锚） */
+/* W10：font-weight:400 页内覆写删除——表头字重回 theme.css 全局 .tbl th 600 基线
+ （Security 同款由 W9 处理）；本行其余紧凑档（padding/边框）保留，布局零漂移。
+ P2：--sp 收口——8px 归 var(--sp-2)（5px 非档位奇数刻意值保字面；
+ w10ReduceSteps525/adhocWave544/ 三锁同步更新改锚） */
 .tbl th { text-align: left; padding: 5px var(--sp-2); color: var(--tx2); border-bottom: 1px solid var(--line); }
 .tbl td { padding: 5px var(--sp-2); border-bottom: 1px dashed var(--line); }
 .danger { color: var(--err); }
 
-/*  W1：最近作业工具行（kw 过滤 + 清除 + 命中数） */
+/* W1：最近作业工具行（kw 过滤 + 清除 + 命中数） */
 .ar-jobs-tools { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-2); flex-wrap: wrap; }
 /* width:240px → min(240px,100%) 极窄溢出钳制（547 XmigrateView:1291 同款；
-   900 档 100% 独占行不变；换装 SFB 后类锚随 input-class 留在 input 上） */
+ 900 档 100% 独占行不变；改用 SFB 后类锚随 input-class 留在 input 上） */
 .ar-jobs-kw { width: min(240px, 100%); }
-/* SFB 胶囊壳落位宽（TasksView tv-kw-wrap 判例；box-sizing 含壳边框） */
+/* SFB 胶囊壳落位宽（TasksView tv-kw-wrap 先例；box-sizing 含壳边框） */
 .ar-jobs-kw-wrap { width: min(240px, 100%); box-sizing: border-box; }
 .ar-jobs-hit { font-size: var(--fs-xs); }
-/*  W-B：.ar-jobs-nomatch 空态行随裸表退役——过滤空集由 QRT EmptyState
-   （emptyText/emptyHint 动态分档）承担，换壳勿留双份 */
+/* W-B：.ar-jobs-nomatch 空态行随裸表退役——过滤空集由 QRT EmptyState
+ （emptyText/emptyHint 动态分档）承担，换壳勿留双份 */
 /* 状态 pill 漏斗：可点（漏斗语义）+ 按下态描边（该状态筛选中） */
 .pill.ar-st-funnel { cursor: pointer; }
 .pill.ar-st-funnel[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ac-line); }
@@ -2241,19 +2241,19 @@ onBeforeUnmount(() => { stopPolling(); stopBlockTicker(); document.removeEventLi
 }
 
 /* 内嵌校验面板。：260px 定高 → max(240px, 42vh) 弹性档（同 .ar-diff 42vh 站内口径：
-   大屏随视口撑高报告可视区，240px 保底）。 W4：bg0+四边 border 圆角壳退役（卡中卡降层）
-   → border-top 分节（xm-group 同刀），内容直贴卡片流；max(240px, 42vh) 滚动钳制口径原样保留 */
+ 大屏随视口撑高报告可视区，240px 保底）。 W4：bg0+四边 border 圆角壳退役（卡中卡降层）
+ → border-top 分节（xm-group 同刀），内容直贴卡片流；max(240px, 42vh) 滚动钳制口径原样保留 */
 .val-box { margin: var(--sp-2h) 0; padding: var(--sp-2h) 0 0; border: 0; border-top: 1px solid var(--line); max-height: max(240px, 42vh); overflow: auto; }
 .val-hd { display: flex; align-items: baseline; gap: var(--sp-2h); margin-bottom: var(--sp-1h); font-size: var(--fs-sm); font-weight: 600; color: var(--tx1); }
 .val-iss { display: flex; gap: var(--sp-2); align-items: baseline; padding: 3px 0; font-size: var(--fs-sm); line-height: 1.5; }
-/*  W10：.val-sev 基础块+三档色块退役——severity 徽标统一 .pill（theme.css 423 起），
-   基础档（尺寸/圆角/配色）全由 .pill 承担，本文件只保留 flex 行内不被压缩的布局属性 */
+/* W10：.val-sev 基础块+三档色块退役——severity 徽标统一 .pill（theme.css 423 起），
+ 基础档（尺寸/圆角/配色）全由 .pill 承担，本文件只保留 flex 行内不被压缩的布局属性 */
 .val-iss .pill { flex-shrink: 0; }
 .val-path { color: var(--info); margin-right: var(--sp-1h); font-size: var(--fs-xs); }
-/* bg0+border+radius 独立代码盒退役 → 柔底承接（uq-result 540 判例：内容面
-   bg2 豁免可保底色，去 border+radius 卡中卡降层；pre 排版/换行语义零触）。
-   补 max(240px, 42vh) 滚动钳（.val-box/.ar-diff 同站内口径）——backfill DSL
-   超长时容器内滚动，不再把收尾报告撑出页高 */
+/* bg0+border+radius 独立代码盒退役 → 柔底承接（uq-result ：内容面
+ bg2 豁免可保底色，去 border+radius 卡中卡降层；pre 排版/换行语义零触）。
+ 补 max(240px, 42vh) 滚动钳（.val-box/.ar-diff 同站内口径）——backfill DSL
+ 超长时容器内滚动，不再把收尾报告撑出页高 */
 .dsl { margin: var(--sp-2) 0 0; padding: var(--sp-2h) var(--sp-3); background: var(--bg2); border: 0; font-size: var(--fs-xs); white-space: pre-wrap; max-height: max(240px, 42vh); overflow: auto; }
 
 
@@ -2261,14 +2261,14 @@ onBeforeUnmount(() => { stopPolling(); stopBlockTicker(); document.removeEventLi
 /* w68:手动输入折叠区 */
 /* w69:双 Tab 输入模式切换 */
 /* 双 Tab 输入模式降全局 seg 档（theme.css .seg 形态：bg2 底+2px 内衬+小 gap+
-   --r-m 圆角，on 态 bg3 浮起）——border+通栏大圆角壳与按钮常驻底色退役。
-   rebuildMigrate531 字面锁 `<div class="ar-input-tabs">`，故以本地规则对齐 seg 档而非挂全局类。
-    P2：--sp 收口——容器行 gap/padding 2px 同为 --sp-0 等值（原 534 契约整行锁
-   随迁改锚，w10/adhocWave544/spSweep540 同批随迁） */
+ --r-m 圆角，on 态 bg3 浮起）——border+通栏大圆角壳与按钮常驻底色退役。
+ 字面锁 `<div class="ar-input-tabs">`，故以本地规则对齐 seg 档而非挂全局类。
+ P2：--sp 收口——容器行 gap/padding 2px 同为 --sp-0 等值（原 534 契约整行锁
+ 同步更新改锚，w10/adhocWave544/ 同步同步更新） */
 .ar-input-tabs { display: inline-flex; gap: var(--sp-0); padding: var(--sp-0); background: var(--bg2); border-radius: var(--r-m); margin-bottom: var(--sp-3); }
 .ar-input-tabs button {
-  /*  W4：--sp 精确等值收口（4=--sp-1、12=--sp-3）；容器行 gap/padding 2px 同为
-     --sp-0 等值，但 rebuildFlat534:49 逐字锁 + 本批对该 spec 仅追加权限 → 保字面（锁面优先） */
+  /* W4：--sp 精确等值收口（4=--sp-1、12=--sp-3）；容器行 gap/padding 2px 同为
+ --sp-0 等值，但 rebuildFlat534:49 逐字锁 + 对该 spec 仅追加权限 → 保字面（锁面优先） */
   padding: var(--sp-1) var(--sp-3); border: 0; background: transparent; color: var(--tx1);
   font-size: var(--fs-sm); font-weight: 500; cursor: pointer; transition: all var(--tr);
   border-radius: var(--r-s); font-family: var(--font);
@@ -2281,38 +2281,38 @@ onBeforeUnmount(() => { stopPolling(); stopBlockTicker(); document.removeEventLi
 @keyframes ar-pulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--ac) 15%, transparent); } }
 
 /* ar-manual 编辑器外框（bg0+border 壳直包 Workbench 双编辑器）退役——内容直贴
-   卡片流（扁平语言）；引导标题升 fs-head 档（card-t 同档 fs-md/650）行首横排 */
+ 卡片流（扁平语言）；引导标题升 fs-head 档（card-t 同档 fs-md/650）行首横排 */
 .ar-manual-hd { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2h); }
-.ar-manual-hd strong { font-size: var(--fs-md); font-weight: 650; color: var(--tx0); letter-spacing: var(--ls-tight); } /* ：b→strong 选择器随迁 */
+.ar-manual-hd strong { font-size: var(--fs-md); font-weight: 650; color: var(--tx0); letter-spacing: var(--ls-tight); } /* ：b→strong 选择器同步更新 */
 /* 固定等分 grid 退役——对照双栏交给 WorkbenchLayout。
-   行首已填/留空徽标换装 StatusPill n 档，私造规则退役（色档归 pill 单源） */
+ 行首已填/留空徽标改用 StatusPill n 档，私造规则退役（色档归 pill 单源） */
 .ar-manual-lb { display: flex; align-items: center; gap: var(--sp-1h); font-size: var(--fs-sm); color: var(--tx1); margin-bottom: var(--sp-1); font-weight: 600; }
 .ar-manual-act { display: flex; align-items: center; gap: var(--sp-2h); margin-top: var(--sp-2h); }
 /* F2：索引名缺失常驻红字（颜色复用 .ar-paste-err） */
 .ar-manual-idx-miss { margin-top: var(--sp-2); font-size: var(--fs-sm); font-weight: 600; }
 
 /* ar-paste 编辑器外框（bg0+border 壳直包 Monaco）退役——Monaco 直贴卡片流；
-   ⚠Monaco height="min(60vh, 420px)" 字面被 rebuildThreeState/adhocDerivedMapping/
-   rebuildMigrate531 锁，只去壳不改字面；引导标题升 fs-head 档行首横排 */
+ ⚠Monaco height="min(60vh, 420px)" 字面被 rebuildThreeState/adhocDerivedMapping/
+ 锁，只去壳不改字面；引导标题升 fs-head 档行首横排 */
 .ar-paste { margin-bottom: var(--sp-3); }
 .ar-paste-hd { display: flex; align-items: center; gap: var(--sp-1h); margin-bottom: var(--sp-2); }
-.ar-paste-hd strong { font-size: var(--fs-md); font-weight: 650; color: var(--tx0); letter-spacing: var(--ls-tight); } /* ：b→strong 选择器随迁 */
+.ar-paste-hd strong { font-size: var(--fs-md); font-weight: 650; color: var(--tx0); letter-spacing: var(--ls-tight); } /* ：b→strong 选择器同步更新 */
 .ar-paste-hd .hint { color: var(--tx2); font-size: var(--fs-xs); margin-left: auto; }
 .ar-paste-act { display: flex; align-items: center; gap: var(--sp-2h); margin-top: var(--sp-2); flex-wrap: wrap; }
 /* 三态必须三色：解析失败(红) / 成功但无 mapping(琥珀) / 成功(绿)。
-   err 与 warn 同色会让「失败」和「成功但要留意」长得一样，拆 pasteWarn 就白拆了。 */
+ err 与 warn 同色会让「失败」和「成功但要留意」长得一样，拆 pasteWarn 就白拆了。 */
 .ar-paste-err { color: var(--err); font-size: var(--fs-sm); }
 .ar-paste-warn { color: var(--warn); font-size: var(--fs-sm); }
 .ar-paste-ok { color: var(--ok); font-size: var(--fs-sm); }
 .ar-paste-list { display: flex; flex-wrap: wrap; gap: var(--sp-1h); margin-top: var(--sp-2); }
 
-/*  / ：date 兼容风险报告（与 .ar-diff 同款分区样式，不再是卡中卡） */
+/* / ：date 兼容风险报告（与 .ar-diff 同款分区样式，不再是卡中卡） */
 .ar-risk { margin-top: var(--sp-3); }
 .ar-risk-hd { display: flex; align-items: center; gap: var(--sp-1h); margin-bottom: var(--sp-2); }
 .ar-risk-hd .hint { color: var(--tx2); font-size: var(--fs-xs); margin-left: auto; }
 .ar-risk-err { color: var(--err); font-size: var(--fs-sm); margin-bottom: var(--sp-2); }
 /* 私造错误壳退役（border/err-soft/radius/排版归 theme.css .err-bar 单源，
-   557 IH .ih-qerr 同刀），类名保留作 DOM 锚，只留落位 margin */
+ 557 IH .ih-qerr 同刀），类名保留作 DOM 锚，只留落位 margin */
 .ar-probe-err { margin-top: var(--sp-2h); }
 .ar-risk-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-1h);
   padding: var(--sp-1h) 0; border-top: 1px solid var(--line); font-size: var(--fs-sm); }
@@ -2323,14 +2323,14 @@ onBeforeUnmount(() => { stopPolling(); stopBlockTicker(); document.removeEventLi
 .ar-risk-code { color: var(--tx2); font-size: var(--fs-xs); font-family: var(--mono, ui-monospace, monospace); }
 .ar-risk-reason { flex: 1 1 100%; color: var(--tx1); line-height: 1.5; }
 /* 等宽 + 可选中：人要复制这段照着改代码，不许截断、不许禁选。
-   bg0+border+radius 独立代码盒退役 → 柔底承接（.dsl 同刀，uq-result 540 判例；
-   user-select:text 可选中语义零触） */
+ bg0+border+radius 独立代码盒退役 → 柔底承接（.dsl 同刀，uq-result ；
+ user-select:text 可选中语义零触） */
 .ar-risk-fix { flex: 1 1 100%; margin: var(--sp-1) 0 0; padding: var(--sp-2); background: var(--bg2);
   border: 0; white-space: pre-wrap;
   word-break: break-word; user-select: text; font-size: var(--fs-xs); line-height: 1.5;
   font-family: var(--mono, ui-monospace, monospace); }
 
-/*  / spec §4.2：全程挡写警告 */
+/* / spec 全程挡写警告 */
 .ar-warn-window {
   display: flex; align-items: center; gap: var(--sp-2h); flex-wrap: wrap; margin-top: var(--sp-2h); padding: var(--sp-2) var(--sp-3);
   border-radius: var(--r-s); font-size: var(--fs-sm);
@@ -2347,7 +2347,7 @@ onBeforeUnmount(() => { stopPolling(); stopBlockTicker(); document.removeEventLi
   background: var(--warn-soft);
 }
 
-/*  W3：运行中作业重挂提示条（info 语义软档，非阻断；.ar-await 同族形态降 info 档） */
+/* W3：运行中作业重挂提示条（info 语义软档，非阻断；.ar-await 同族形态降 info 档） */
 .ar-reattach-hint {
   display: flex; align-items: center; gap: var(--sp-2h); flex-wrap: wrap; padding: var(--sp-2) var(--sp-3);
   border-radius: var(--r-s); font-size: var(--fs-sm);
@@ -2357,10 +2357,10 @@ onBeforeUnmount(() => { stopPolling(); stopBlockTicker(); document.removeEventLi
 .ar-reattach-hint .btn { margin-left: auto; flex-shrink: 0; }
 
 /* 期望 vs 实际 diff 表。 W10：320px 定高档退役 → max(240px, 42vh) 弹性档
-   （大屏随视口撑高 diff 可视区；240px 保底同 indexHub/RankDebug 42vh 档站内口径） */
+ （大屏随视口撑高 diff 可视区；240px 保底同 indexHub/RankDebug 42vh 档站内口径） */
 .ar-diff { margin-top: var(--sp-3); max-height: max(240px, 42vh); overflow: auto; }
 /* diff 表可上百行：容器内滚动时表头吸顶。作用域限定 .ar-diff 内（同 DiagView .dg-nodes 范式），
-   本文件其余 .tbl（轮次表/最近作业表）不受影响；底色须不透明，否则滚动内容穿透粘顶行 */
+ 本文件其余 .tbl（轮次表/最近作业表）不受影响；底色须不透明，否则滚动内容穿透粘顶行 */
 .ar-diff .tbl th { position: sticky; top: 0; background: var(--bg2); z-index: 1; }
 /* 期望 vs 实际 diff 表——值列弹性吃满表宽（fixed 布局，弃固定 max-width 压缩） */
 .ar-diff .tbl { table-layout: fixed; }
@@ -2378,22 +2378,22 @@ onBeforeUnmount(() => { stopPolling(); stopBlockTicker(); document.removeEventLi
 
 /* ═══ ：粘贴导入弹窗 ═══ */
 /* bg2+radius 小卡退役（556 设计稿——弹窗内卡中卡根治）→ 行内弱文
-   （.ih-tip 同语言：fs-xs/tx2，IndexHubView .ih-tip 先例）；模板壳与引导文案零触 */
+ （.ih-tip 同语言：fs-xs/tx2，IndexHubView .ih-tip 先例）；模板壳与引导文案零触 */
 .pi-hint { font-size: var(--fs-xs); color: var(--tx2); line-height: 1.5; margin-bottom: var(--sp-2); }
-/*  W10：粘贴编辑区弹性档（原 rows=12→244px 定高退役）——JsonArea fill 吃满
-   wrapper。：定高字面退役 → :style 绑 adhoc.piH 四档（首位=原 min(60vh, 600px)
-   零漂移；档位钮在弹窗 footer，data-ar-pi-h），大粘贴场景随档撑高 */
+/* W10：粘贴编辑区弹性档（原 rows=12→244px 定高退役）——JsonArea fill 吃满
+ wrapper。：定高字面退役 → :style 绑 adhoc.piH 四档（首位=原 min(60vh, 600px)
+ 零漂移；档位钮在弹窗 footer，data-ar-pi-h），大粘贴场景随档撑高 */
 .pi-ja-wrap { display: flex; flex-direction: column; }
 .pi-preview { display: flex; flex-wrap: wrap; gap: var(--sp-1) 14px; margin-top: var(--sp-1h); padding: var(--sp-1h) var(--sp-2h); border-radius: var(--r-s); font-size: var(--fs-xs); }
 .pi-preview.ok { background: var(--ok-line); color: var(--tx1); }
 .pi-preview.bad { background: var(--err-soft); color: var(--err); }
-/*  W10：sep 弱化对齐全站 .meta-strip .sep 口径（opacity .45） */
+/* W10：sep 弱化对齐全站 .meta-strip .sep 口径（opacity .45） */
 .pi-pl::before { content: '· '; opacity: .45; }
 /* .pi-ta 三条规则随裸 textarea 退役——编辑区由 JsonArea（.ja 外壳 + monaco-host）承担 */
 
-/* 900 紧凑微调档（§9.3 口径；529 W-D 十五视图同范式）——双 Tab 与侧板
-   侧距收窄、作业表工具行 kw 独占一行（.ar-jobs-tools 已 wrap；对照双栏单列归
-   WorkbenchLayout 内部窄屏堆叠，本页无裸 grid 分栏）。档内零 ≥300px 裸 width */
+/* 900 紧凑微调档（ 口径；529 W-D 十五视图同范式）——双 Tab 与侧板
+ 侧距收窄、作业表工具行 kw 独占一行（.ar-jobs-tools 已 wrap；对照双栏单列归
+ WorkbenchLayout 内部窄屏堆叠，本页无裸 grid 分栏）。档内零 ≥300px 裸 width */
 @media (max-width: 900px) {
   .ar-input-tabs button { padding: var(--sp-2h) var(--sp-2); }
   .ar-jobs-kw { width: 100%; }

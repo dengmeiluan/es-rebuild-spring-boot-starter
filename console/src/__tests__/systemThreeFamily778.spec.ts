@@ -209,7 +209,7 @@ describe('778 G260 三钮在途双态（铁律 D·次刀）', () => {
     releaseInspect();
     await settle(8);
     expect(btn.disabled, '复常解禁').toBe(false);
-    expect(btn.querySelectorAll('[class*="spinning"]').length, '复常 spinning 退场').toBe(0);
+    expect(btn.querySelectorAll('[class*="spinning"]').length, '复常 spinning 移除').toBe(0);
   });
 
   it('执行钮 Loader2/Play 双态：在途窗 Loader2 让位 Play+「执行中…」+disabled→复常 Play 复位（G260 刀面）', async () => {
@@ -229,13 +229,13 @@ describe('778 G260 三钮在途双态（铁律 D·次刀）', () => {
     releaseQuery();
     await settle(8);
     expect(btn.querySelectorAll('[class*="lucide-play"]').length, '复常 Play 复位').toBe(1);
-    expect(btn.querySelectorAll('[class*="lucide-loader"]').length, '复常 Loader2 退场').toBe(0);
+    expect(btn.querySelectorAll('[class*="lucide-loader"]').length, '复常 Loader2 移除').toBe(0);
     expect(btn.disabled, '复常解禁').toBe(false);
     expect((btn.textContent || '').replace(/\s+/g, '')).not.toContain('执行中');
     expect(host.querySelectorAll('.sy-qrt tbody tr').length, '表再现').toBe(3);
   });
 
-  it('查询失败重试链现状守卫：err-bar 在场→重试在途=骨架条承接+err-bar 入口清退场→复常表再现（777 G256 spinning 刀在「入口清型」页面豁免记档）', async () => {
+  it('查询失败重试链现状守卫：err-bar 在场→重试在途=骨架条承接+err-bar 入口清移除→复常表再现（777 G256 spinning 刀在「入口清型」页面豁免备案）', async () => {
     const host = await mountView();
     releaseInspect();
     failQuery(); /* 首查失败 → err-bar */
@@ -248,15 +248,15 @@ describe('778 G260 三钮在途双态（铁律 D·次刀）', () => {
     await settle(4);
     /* run() 入口清旧错误条（注释在案：避免重试进行中与 running 骨架同屏）→err-bar 即卸载、
        在途反馈由 running 骨架条承接=产品语义闭环；重试钮 spinning 刀不可见（778 裁决豁免） */
-    expect(host.querySelector('.err-bar'), '在途窗 err-bar 入口清退场（775-C1 容器收起口径）').toBeFalsy();
+    expect(host.querySelector('.err-bar'), '在途窗 err-bar 入口清移除（775-C1 容器收起口径）').toBeFalsy();
     expect(host.querySelectorAll('.sk').length, 'running 骨架条在场（SkeletonBox .sk×6）').toBe(6);
     releaseQuery();
     await settle(8);
-    expect(host.querySelector('.err-bar'), '复常 err-bar 退场').toBeFalsy();
+    expect(host.querySelector('.err-bar'), '复常 err-bar 移除').toBeFalsy();
     expect(host.querySelectorAll('.sy-qrt tbody tr').length, '表再现').toBe(3);
   });
 
-  it('inspect 失败重试链现状守卫：横幅在场→重试在途=横幅入口清退场（在途反馈由页头刷新钮 spinning 承接）→复常 MetaStrip 复现', async () => {
+  it('inspect 失败重试链现状守卫：横幅在场→重试在途=横幅入口清移除（在途反馈由页头刷新钮 spinning 承接）→复常 MetaStrip 复现', async () => {
     const host = await mountView();
     failInspect(); /* 首拉失败 → sy-inspect-err */
     releaseQuery();
@@ -269,10 +269,10 @@ describe('778 G260 三钮在途双态（铁律 D·次刀）', () => {
     await settle(4);
     /* loadInspect() 入口 inspectErr='' →横幅即卸载；在途窗反馈=页头刷新钮 spinning
        （loading 共享）——纯文本钮文案通道刀不可见（778 裁决豁免） */
-    expect(host.querySelector('.sy-inspect-err'), '在途窗横幅入口清退场（775-C1 容器收起口径）').toBeFalsy();
+    expect(host.querySelector('.sy-inspect-err'), '在途窗横幅入口清移除（775-C1 容器收起口径）').toBeFalsy();
     releaseInspect();
     await settle(8);
-    expect(host.querySelector('.sy-inspect-err'), '复常横幅退场').toBeFalsy();
+    expect(host.querySelector('.sy-inspect-err'), '复常横幅移除').toBeFalsy();
     expect((host.textContent || '').replace(/\s+/g, ''), 'MetaStrip 复现').toContain('es_rebuild_sys_lock');
   });
 });

@@ -5,11 +5,11 @@
 import { ROOT_KEYS, QUERY_SNIPPETS, AGG_SNIPPETS, ANALYSIS_PARAM_ZH } from './dslCompletionContext';
 
 /* 件①：字符串感知注释扫描抽出为导出单源（stripJsonComments 的扫描内核平移，
-   消费方=monacoJsonQuickFix json provider 自扫注释出「删除注释」quickfix——MonacoEditor
-   setDiagnosticsOptions({ allowComments, comments:'ignore' }) 下 JSON worker 永不产注释
-   marker，的 comments quickfix 无 lint 源是死代码，自扫复活面）。
-   返回字符串（"…"，含 \\ 转义）之外的全部注释区间（offset，end 不含界外字符）：
-   // 行注释止于换行前（不含 \n）；块注释区间含 /* 与 *\/ 定界符；未闭合钳制到文末。 */
+ 消费方=monacoJsonQuickFix json provider 自扫注释出「删除注释」quickfix——MonacoEditor
+ setDiagnosticsOptions({ allowComments, comments:'ignore' }) 下 JSON worker 永不产注释
+ marker，的 comments quickfix 无 lint 源是死代码，自扫复活面）。
+ 返回字符串（"…"，含 \\ 转义）之外的全部注释区间（offset，end 不含界外字符）：
+ // 行注释止于换行前（不含 \n）；块注释区间含 /* 与 *\/ 定界符；未闭合钳制到文末。 */
 export function findCommentRanges(src: string): { start: number; end: number }[] {
   const ranges: { start: number; end: number }[] = [];
   let i = 0;
@@ -45,7 +45,7 @@ export function findCommentRanges(src: string): { start: number; end: number }[]
 
 export function stripJsonComments(src: string): string {
   /* 件①：改消费 findCommentRanges 单源（区间拼装与旧逐字符拼非注释字符
-     逐字等价，devtoolsJsonc311 行为锁保形） */
+ 逐字等价，devtoolsJsonc311 行为锁保形） */
   const ranges = findCommentRanges(src);
   if (!ranges.length) return src;
   let out = '';
@@ -82,11 +82,11 @@ export function highlightJson(text: string): string {
 }
 
 /* DSL 语义键表（highlightDslJson 的 j-clause 着色域）——键源收口 dslCompletionContext
-   既有导出只读 import（单源不重复造表）：ROOT_KEYS 根层键（query/sort/aggs/_source/highlight/
-   from/size/track_total_hits）、QUERY_SNIPPETS 查询子句类型（match/term/terms/range/exists/
-   wildcard/bool…）、AGG_SNIPPETS 聚合类型（含 aggs 嵌套入口）、ANALYSIS_PARAM_ZH 分析参数键；
-   另补 bool 容器内部键 must/should/must_not/filter（bool 骨架 snippet 中的容器键，该文件
-   无独立导出——filter 与 ANALYSIS_PARAM_ZH 交集自然去重）。 */
+ 既有导出只读 import（单源不重复造表）：ROOT_KEYS 根层键（query/sort/aggs/_source/highlight/
+ from/size/track_total_hits）、QUERY_SNIPPETS 查询子句类型（match/term/terms/range/exists/
+ wildcard/bool…）、AGG_SNIPPETS 聚合类型（含 aggs 嵌套入口）、ANALYSIS_PARAM_ZH 分析参数键；
+ 另补 bool 容器内部键 must/should/must_not/filter（bool 骨架 snippet 中的容器键，该文件
+ 无独立导出——filter 与 ANALYSIS_PARAM_ZH 交集自然去重）。 */
 const DSL_SEMANTIC_KEYS: ReadonlySet<string> = new Set([
   ...ROOT_KEYS,
   ...Object.keys(QUERY_SNIPPETS),
@@ -95,10 +95,10 @@ const DSL_SEMANTIC_KEYS: ReadonlySet<string> = new Set([
   'must', 'should', 'must_not', 'filter',
 ]);
 
-/** DSL 语义高亮（）：复用既有语法遍正则（highlightJson）后做第二遍键位查表——
- *  键名命中 DSL 语义表的 j-key 升级 j-clause（语义色与普通键区分），词表外键维持 j-key。
- *  span 只换类名不改文本，textContent 与 highlightJson 输出逐字一致（errPre/bt-dsl/raw 面
- *  既有 textContent 消费零扰动）；转义安全性与 highlightJson 同内核。 */
+/** DSL 语义高亮（复用既有语法遍正则（highlightJson）后做第二遍键位查表——
+ * 键名命中 DSL 语义表的 j-key 升级 j-clause（语义色与普通键区分），词表外键维持 j-key。
+ * span 只换类名不改文本，textContent 与 highlightJson 输出逐字一致（errPre/bt-dsl/raw 面
+ * 既有 textContent 消费零扰动）；转义安全性与 highlightJson 同内核。 */
 export function highlightDslJson(text: string): string {
   return highlightJson(text).replace(
     /<span class="j-key">("(?:[^"\\]|\\.)*")(:?)<\/span>/g,

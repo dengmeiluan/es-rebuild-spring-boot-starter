@@ -1,7 +1,7 @@
 /* 五百五十一批 W5(轨5 自适应与全栈):useAutoRefresh 接线全域审计反锁(零产品码改动,纯反锁)。
  * 口径:useAutoRefresh 是全站自动刷新单源(composables/useAutoRefresh.ts:18 暴露 setOn,
  * 间隔变更经 setOn 重启定时器);裸 setInterval 自拉轮询会绕开该单源(页隐藏不暂停/间隔
- * 变更不生效/卸载泄漏),248 批收编后 views 内应只剩本地秒表/读秒类计时器。
+ * 变更不生效/卸载泄漏),248 批合并后 views 内应只剩本地秒表/读秒类计时器。
  *
  * ① 11 消费点 12 接线双锚在场(readFileSync 源码锁各文件含 useAutoRefresh( 与 .setOn():
  *    IlmView/AdhocRebuildView(双接线:jobPoller+手动档)/DslQueryView(watch 档)/OverviewView/
@@ -12,11 +12,11 @@
  *    文件即红(新轮询必须走 useAutoRefresh)。
  * ③(五百五十七批扩锚)XmigrateView 轮询启停同源反锁——ms getter 只在 start() 采样一次
  *    (useAutoRefresh 契约「间隔变更由调用方重启」):零 RUNNING 挂载→首作业转 RUNNING 后
- *    轮询永不启动、RUNNING 中→转终态永不停表(556 记档件)。修复形态=hasRunningJob
+ *    轮询永不启动、RUNNING 中→转终态永不停表(556 备案件)。修复形态=hasRunningJob
  *    computed + watch → xmRefresher.restart() 双向接线(OverviewView 每轮 restart 先例),
  *    拆任一半边即红;不新增 setOn(锚①总数仍 12 守恒)。
  *
- * 豁免记档(views 外 4 处,不在断言面):composables/useQueryRun.ts:23 读秒器(查询耗时显示)/
+ * 豁免备案(views 外 4 处,不在断言面):composables/useQueryRun.ts:23 读秒器(查询耗时显示)/
  * composables/useNow.ts:13 单例心跳(30s now 广播,全站共享时钟单源)/stores/jobTracker.ts:307
  * 作业轮询器(ACTIVE/IDLE 双频调度)/stores/liveMonitor.ts:259 live 指标轮询器(effectiveMs
  * 自适应)——四者均为 store/composable 级全局单例或短生命周期读秒,非视图轮询,维持豁免。 */

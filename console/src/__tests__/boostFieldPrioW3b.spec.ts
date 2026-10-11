@@ -78,7 +78,7 @@ describe('BoostTuner 字段权重行 text/keyword 置顶（W3b）', () => {
     await settle();
     const groups = Array.from(document.body.querySelectorAll<HTMLElement>('.fxp-gh')).map(el => el.textContent || '');
     const items = Array.from(document.body.querySelectorAll<HTMLElement>('.fxp-item .fxp-name')).map(el => el.textContent || '');
-    /* 558b 随迁：组头人话词面升级（GH_LABEL→FIELD_TYPE_ZH 兜底），text→文本 */
+    /* 558b 同步更新：组头人话词面升级（GH_LABEL→FIELD_TYPE_ZH 兜底），text→文本 */
     expect(groups[0], 'text 组头置顶').toBe('文本 字段');
     expect(items[0], 'z_text（text）先于 a_kw（keyword），字母序反转可辨置顶').toContain('z_text');
     expect(items).toContain('a_kw');
@@ -87,7 +87,7 @@ describe('BoostTuner 字段权重行 text/keyword 置顶（W3b）', () => {
   it('死 CSS .bt-hd-tt 退役；字重 700/800 收敛 650（源码锁）', () => {
     const v = readFileSync(join(__dirname, '../views/BoostTunerView.vue'), 'utf-8');
     expect(v, '模板零引用的死选择器删除').not.toContain('.bt-hd-tt');
-    /* 五百二十五批随迁：权重行 v-for 改过滤行集 x={f,i}（行级停用/名字过滤），v-model 变量随之 */
+    /* 五百二十五批同步更新：权重行 v-for 改过滤行集 x={f,i}（行级停用/名字过滤），v-model 变量随之 */
     expect(v).toMatch(/<FieldPicker v-model="x\.f\.name" :index="index" placeholder="字段名" class="bt-fname" :type-priority="\['text', 'keyword'\]" @picked="onTune" \/>/);
     expect(v, '无 700/800 残留').not.toMatch(/font-weight: *(700|800)\b/);
     expect(v).toMatch(/\.bt-new \{[^}]*font-weight: 650/);

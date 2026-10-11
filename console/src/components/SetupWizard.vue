@@ -30,7 +30,7 @@
                 <span>连通成功：<b class="mono">{{ testResult.clusterName }}</b>
                   · v{{ testResult.version }}
                   <!-- status 裸 GREEN/YELLOW/RED 换 StatusPill（中文主显 + en 英文小字；
-                       tone 走 healthPill——全等小写匹配，后端大写枚举先归一） -->
+ tone 走 healthPill——全等小写匹配，后端大写枚举先归一） -->
                   <template v-if="testResult.status"> · <StatusPill :tone="healthPill(testResult.status.toLowerCase())" :label="clusterHealthZh(testResult.status) || testResult.status" :en="testResult.status" /> · {{ testResult.nodes }} 节点</template>
                 </span>
               </template>
@@ -72,8 +72,8 @@ import { DatabaseZap, PlugZap, Link2, Loader2, Info, CheckCircle2, XCircle } fro
 import { api } from '../api';
 import { friendlyEsError } from '../utils/esError';
 import StatusPill from './StatusPill.vue';
-/* 连通成功 status 换装 StatusPill——healthPill tone 档 + clusterHealthZh 中文
-   （esEnumZh 单源），与 ClusterSwitcher 连通测试结果同口径 */
+/* 连通成功 status 改用 StatusPill——healthPill tone 档 + clusterHealthZh 中文
+ （esEnumZh 单源），与 ClusterSwitcher 连通测试结果同口径 */
 import { healthPill } from '../utils/format';
 import { clusterHealthZh } from '../utils/esEnumZh';
 
@@ -95,7 +95,7 @@ async function doTest() {
     testResult.value = await api.setup.test({ url: url.value, username: username.value || undefined, password: password.value || undefined });
   } catch (e: any) {
     // 403 ALREADY_BOUND（并发绑定）等：直接展示并建议刷新
-    /*  A：ES 错误友好化——裸 message 换全站 friendlyEsError 口径 */
+    /* A：ES 错误友好化——裸 message 换全站 friendlyEsError 口径 */
     error.value = '测试失败：' + friendlyEsError(String(e?.message ?? e));
   } finally {
     testing.value = false;
@@ -111,16 +111,16 @@ async function doApply() {
     // 绑定成功：整页刷新，让全部存储走新控制集群重新初始化
     window.location.reload();
   } catch (e: any) {
-    /*  A：ES 错误友好化（同上款口径） */
+    /* A：ES 错误友好化（同上款口径） */
     error.value = '绑定失败：' + friendlyEsError(String(e?.message ?? e));
     applying.value = false;
   }
 }
 
-/*  W10：Enter 一键串联——表单内按 Enter 此前被 disabled 提交钮静默吃掉
-   （disabled submit 按钮会阻断浏览器隐式提交），用户输完地址必须回头鼠标点「测试连接」。
-   分派：无测试结果 → doTest；已 ok → doApply（再按 Enter 即绑定）。提交钮 disabled
-   语义保留给鼠标路径；@keydown.enter.prevent 在 input 上显式接管，跨浏览器一致。 */
+/* W10：Enter 一键串联——表单内按 Enter 此前被 disabled 提交钮静默吃掉
+ （disabled submit 按钮会阻断浏览器隐式提交），用户输完地址必须回头鼠标点「测试连接」。
+ 分派：无测试结果 → doTest；已 ok → doApply（再按 Enter 即绑定）。提交钮 disabled
+ 语义保留给鼠标路径；@keydown.enter.prevent 在 input 上显式接管，跨浏览器一致。 */
 function onSubmit() {
   if (!url.value || testing.value || applying.value) return;
   if (!testResult.value?.ok) void doTest();

@@ -1,7 +1,7 @@
 /* 五百六十五批件①：注释 quickfix 复活（自扫注释范围，不强依赖 diagnostics）。
  *  背景：MonacoEditor.vue setDiagnosticsOptions({ allowComments: true, comments: 'ignore' })，
  *  JSON worker 永不产注释 marker——561 批在 monacoJsonQuickFix 写的「Comments are not
- *  allowed → 删除注释」quickfix 是死代码（无 lint 源）。本批 jsonc 抽出 findCommentRanges
+ *  allowed → 删除注释」quickfix 是死代码（无 lint 源）。 jsonc 抽出 findCommentRanges
  *  （字符串感知扫描单源），json provider 对当前模型自扫注释范围，有注释即出「删除注释」。
  *  锁面：
  *   A findCommentRanges：字符串内 // 不误报（URL/转义引号内）、// 与块注释区间正确、

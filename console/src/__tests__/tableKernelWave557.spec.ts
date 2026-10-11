@@ -94,7 +94,7 @@ async function openColMenu(root: HTMLElement, col: string) {
 
 /* ═══════════ 一、typeTiers 8 型扩容（①） ═══════════ */
 describe('五百五十七批 ①：NON_SEMANTIC_TYPES_RE 扩容 8 型', () => {
-  it('16 型逐型真值：既有 8 型不回退 + 新 8 型收编', () => {
+  it('16 型逐型真值：既有 8 型不回退 + 新 8 型合并', () => {
     const EXISTING = ['binary', 'nested', 'object', 'geo_point', 'geo_shape', 'attachment', 'flattened', 'join'];
     const ADDED = ['point', 'shape', 'dense_vector', 'sparse_vector', 'percolator', 'completion', 'histogram', 'aggregate_metric_double'];
     for (const t of [...EXISTING, ...ADDED]) {
@@ -109,7 +109,7 @@ describe('五百五十七批 ①：NON_SEMANTIC_TYPES_RE 扩容 8 型', () => {
     }
   });
 
-  it('源码锚：typeTiers 新字面在场（16 型全量；五百六十一批并 ip_range → 17 型随迁）', () => {
+  it('源码锚：typeTiers 新字面在场（16 型全量；五百六十一批并 ip_range → 17 型同步更新）', () => {
     expect(typeTiers).toContain('/^(binary|nested|object|geo_point|geo_shape|attachment|flattened|join|point|shape|dense_vector|sparse_vector|percolator|completion|histogram|aggregate_metric_double|ip_range)$/');
   });
 });

@@ -2,8 +2,8 @@
  * 七百二十九批：ProfileFlame 首刀两小刀（R110；R109 裁决表头号 G94+G95）。
  *
  * ① G94（P3 死代码）三条死样式规则清（713 G53/715 G56/717 G61/721 G72/727 G86 同族；
- *    R109 grep 实锚模板 0 引用）：页头收编后左组/图标色两条同族漏删+IndexPicker
- *    收编后手写输入框孤儿一条；活锚 .pf-hd（页头壳）/.pf-inputs（工具条承接线）保留。
+ *    R109 grep 实锚模板 0 引用）：页头合并后左组/图标色两条同族漏删+IndexPicker
+ *    合并后手写输入框孤儿一条；活锚 .pf-hd（页头壳）/.pf-inputs（工具条承接线）保留。
  * ② G95（P3 铁律 D 在途可感知）分析钮 Play 图标 spinning 绑 busy+文案「分析中…」切换
  *    （721 G73 ScoreExplain 同款修法；R109 读数=busy 只 disabled 页面零 spinner；
  *    722 G81 豁免口径=纯文本钮无图标可挂，本页 Play 图标在场不满足豁免前提）。
@@ -162,7 +162,7 @@ beforeEach(() => {
 afterEach(() => { apps.forEach(a => a.unmount()); apps.length = 0; });
 
 describe('729 G95 分析钮在途可感知（铁律 D；721 G73 同款修法）', () => {
-  it('在途窗双读：disabled=true + Play 图标 spinning + 文本换装「分析中…」；完成复常双 false', async () => {
+  it('在途窗双读：disabled=true + Play 图标 spinning + 文本改用「分析中…」；完成复常双 false', async () => {
     let release: (() => void) | null = null;
     searchDslFn.mockImplementation(() => new Promise<any>(res => { release = () => res(PROFILE_MULTI); }));
     const host = await mountPf();
@@ -192,10 +192,10 @@ describe('729 源码锁', () => {
 
   it('G94 源码锁：三条死规则零残留 + 活锚保留', () => {
     const v = readFileSync(join(__dirname, '../views/ProfileFlameView.vue'), 'utf-8');
-    /* 页头收编同族漏删两条（活锚 .pf-hd 不在锁面） */
+    /* 页头合并同族漏删两条（活锚 .pf-hd 不在锁面） */
     expect(v).not.toMatch(/\.pf-hd-l\b/);
     expect(v).not.toMatch(/\.pf-hd-ic\b/);
-    /* IndexPicker 收编后手写输入框孤儿（\b 防 .pf-inputs 活类误伤） */
+    /* IndexPicker 合并后手写输入框孤儿（\b 防 .pf-inputs 活类误伤） */
     expect(v).not.toMatch(/\.pf-inp\b/);
     /* 活锚两件 */
     expect(v).toContain('.pf-hd {');

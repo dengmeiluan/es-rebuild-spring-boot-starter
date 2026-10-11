@@ -1,7 +1,7 @@
 /**
  * 七百三十五批：Lifecycle 首刀五小刀（R116；R115 裁决表 G120+G121+G122+G123+G124）。
  *
- * ① G120（P3 死代码·头号）PageHeader 收编后页头旧壳四条死规则删（styleSheets 各 1 命中
+ * ① G120（P3 死代码·头号）PageHeader 合并后页头旧壳四条死规则删（styleSheets 各 1 命中
  *    合计 4+模板 0 引用双实锚；活锚副题行/右组钮容器保留；713 G53/715 G56/717 G61/
  *    721 G72/727 G86/729 G94/733 G109 先例链）。
  * ② G121（P3 铁律 D·族内最重形态）Dry Run 预检/执行 Rollover 两钮补 roPending 守卫
@@ -16,7 +16,7 @@
  *
  * 驱动方式照 analyzerLabFirstCut733（vue-router 轻 mock + 只 mock ../api）+
  * protectThreeState 的 ilm 端点分桶；askConfirm 全程 mock 放行（确认门行为归
- * protectThreeState/probe 域，本批只锁在途窗与回填链）。
+ * protectThreeState/probe 域，只锁在途窗与回填链）。
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -155,14 +155,14 @@ describe('735 A0 挂载不变量负锚（现状即守卫）', () => {
 });
 
 describe('735 G124 回填链 explain 补发（R115 A0 实锚：修前回填后零发）', () => {
-  it('es_picked 回填 moveIndex → explain 即发+curStepInfo 在场+六输入换装', async () => {
+  it('es_picked 回填 moveIndex → explain 即发+curStepInfo 在场+六输入改用', async () => {
     localStorage.setItem('es_picked', 'probe-lc');
     const host = await mountView();
     await settle(6);
     expect(ilmExplainFn, 'G124 病灶：回填同步赋值早于 watch 注册——explain 零发').toHaveBeenCalledWith('probe-lc');
     expect(host.textContent, '当前所处行在场（修前 curstep 恒空）').toContain('当前所处：warm / shrink / wait_for_shard');
     const curInp = host.querySelectorAll<HTMLInputElement>('input.lc-inp-sm')[0];
-    expect(curInp.value, 'curPhase 随 explain 换装').toBe('warm');
+    expect(curInp.value, 'curPhase 随 explain 改用').toBe('warm');
   });
 
   it('改值触发预填链不回归（watch 路径守卫：抽出共用函数后仍发）', async () => {

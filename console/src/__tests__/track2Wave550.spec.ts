@@ -4,13 +4,13 @@
  *    （@refresh 已在 547 批接线；refreshable 为 547 批 RT 内建 prop，缺省 false 零增量）。
  * ② DevTools histOpen 落盘：ref(true) → usePref('dt.histOpen', true)（444 批折叠态跨会话记忆，
  *    默认仍开=既有行为零变化；devtoolsFlatten534/histCollapse444 的折叠交互锚不受影响）。
- * ③ DslQueryView openRawIo 判空：无记录 notify 引导不开空弹窗（Adhoc 546 口径随迁，
+ * ③ DslQueryView openRawIo 判空：无记录 notify 引导不开空弹窗（Adhoc 546 口径同步更新，
  *    rawIoPave546 十五视图同款文案）。
  * ④ IndexHub query tab 错误人话化：qryErr 走 friendlyEsError（docs tab 534 同款口径）。
  * ⑤ Xmigrate checkpoint 观测段：sliceStatus 聚合「已完成 x/y 片」；有 FAILED/ABORTED 切片
  *    附「中断于 slice N（共 M 片）」——并入既有 progressMeta 输出链（MetaStrip 消费），
  *    不新增独立行容器；后端零改（sliceStatus Map 既有数据），旧 JSON 静默降级。
- * ⑥ Xmigrate errMeta 三处：checkErr/startErr/loadErr err-bar 双参换装
+ * ⑥ Xmigrate errMeta 三处：checkErr/startErr/loadErr err-bar 双参改用
  *    （errMetaPave547 TaskTreeView 口径：xxxErrRaw 原始对象旁路 + 成功/开跑清 raw + 文案不回退）。
  * ⑦ IndexHub query tab fav 闭环：面板 actions 加 'fav' + @fav=favHistRow 直写 es_query_saved
  *    （QueryHubView 546 favHistRow 复制适配——共享件与 QueryHubView 零改；IH 行 mode 恒 'dsl'
@@ -54,11 +54,11 @@ describe('550 轨2 ②：DevTools histOpen 落盘（usePref dt.histOpen，默认
   });
 });
 
-describe('550 轨2 ③：DslQueryView openRawIo 判空（Adhoc 546 口径随迁）', () => {
+describe('550 轨2 ③：DslQueryView openRawIo 判空（Adhoc 546 口径同步更新）', () => {
   it('无记录 notify 引导并返回，不再以空 rec 开弹窗', () => {
-    /* 五百五十一批随迁（击穿者：551 轨2 刀⑦c——Profile 态双特征回退）：
+    /* 五百五十一批同步更新（击穿者：551 轨2 刀⑦c——Profile 态双特征回退）：
        单特征取数改 last('/cluster/query') ?? last('/cluster/profile')，判空文案零触。
-       五百六十五批随迁（击穿者：565 件①——二段特征链扩容五写路径动作）：
+       五百六十五批同步更新（击穿者：565 件①——二段特征链扩容五写路径动作）：
        全函数体正则退役（五段链逐字面不再适配单函数形状），改锚三段语义等价面：
        首段 551 双特征行（551 黑名单 toContain 锁同面）+ 判空文案（550 原面）+
        rec2 承接首段空档的链首（rawIoReach565 行为锁同域） */
@@ -96,7 +96,7 @@ describe('550 轨2 ⑤：Xmigrate checkpoint 观测段（sliceStatus 聚合，�
   });
 });
 
-describe('550 轨2 ⑥：Xmigrate errMeta 三处双参换装（errMetaPave547 TaskTreeView 口径）', () => {
+describe('550 轨2 ⑥：Xmigrate errMeta 三处双参改用（errMetaPave547 TaskTreeView 口径）', () => {
   it('import 在场 + 三条 err-bar v-html 双参', () => {
     expect(xm).toContain("import { errPreHtml, errMeta } from '../utils/errPre';");
     expect(xm).toMatch(/v-html="errPreHtml\(checkErr, errMeta\(checkErrRaw\)\)"/);
@@ -113,7 +113,7 @@ describe('550 轨2 ⑥：Xmigrate errMeta 三处双参换装（errMetaPave547 Ta
     expect(xm).toMatch(/checkErr\.value = '';\s*\n\s*checkErrRaw\.value = null;/);
     expect(xm).toMatch(/startErr\.value = '';\s*\n\s*startErrRaw\.value = null;/);
     expect(xm).toMatch(/loadErr\.value = '';\s*\n\s*loadErrRaw\.value = null;/);
-    /* friendlyApiError 通道不回退（errMetaPave547 ①；571 随迁：550 原锁 friendlyEsError 口径，571 三消费面接线升级 code 优先单源） */
+    /* friendlyApiError 通道不回退（errMetaPave547 ①；571 同步更新：550 原锁 friendlyEsError 口径，571 三消费面接线升级 code 优先单源） */
     expect(xm).toContain("checkErr.value = '连接失败：' + friendlyApiError(e)");
     expect(xm).toContain("startErr.value = '启动失败：' + friendlyApiError(e)");
     expect(xm).toContain("loadErr.value = '加载迁移作业失败：' + friendlyApiError(e)");
@@ -122,8 +122,8 @@ describe('550 轨2 ⑥：Xmigrate errMeta 三处双参换装（errMetaPave547 Ta
 
 describe('550 轨2 ⑦：IndexHub query tab fav 闭环（QueryHub 546 favHistRow 复制适配）', () => {
   it('面板 actions 加 fav + @fav 接线', () => {
-    /* 554 随迁：actions 再加 'curl'（track2Wave554 ④，宿主 histCurl 组装）——fav/curl 皆面板内建行级钮
-       562 随迁：actions 再加 'newtab'（kibanaWave562 K4，宿主 ihHistNewTab 带 DevTools 新 Tab） */
+    /* 554 同步更新：actions 再加 'curl'（track2Wave554 ④，宿主 histCurl 组装）——fav/curl 皆面板内建行级钮
+       562 同步更新：actions 再加 'newtab'（kibanaWave562 K4，宿主 ihHistNewTab 带 DevTools 新 Tab） */
     expect(ih).toContain(":items=\"histRows\" :actions=\"['play', 'fill', 'copy', 'fav', 'curl', 'newtab', 'del']\"");
     expect(ih).toContain('@fav="favHistRow"');
   });

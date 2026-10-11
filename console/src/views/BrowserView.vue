@@ -5,9 +5,9 @@
       <div class="bw-ld-hd">
         <span class="mono">文档 {{ linkedDoc.id }}</span>
         <div class="bw-ld-acts">
-          <!--  G253（铁律 F 轻形态）：GET _doc 完整响应可达——_index/_id/_version/
-               _found 元数据与 _source 业务字段分轨切换（768 G240/Mapping 「原始 JSON」同构，
-               不引完整 RawIoModal 三件套：本卡数据源单一 _doc GET 无多端点切换诉求） -->
+          <!-- G253（铁律 F 轻形态）：GET _doc 完整响应可达——_index/_id/_version/
+ _found 元数据与 _source 业务字段分轨切换（768 G240/Mapping 「原始 JSON」同构，
+ 不引完整 RawIoModal 三件套：本卡数据源单一 _doc GET 无多端点切换诉求） -->
           <button class="btn ghost xs" :aria-pressed="rawView ? 'true' : 'false'" aria-label="查看原始响应"
             title="查看 GET /_doc 完整响应（含 _index/_id/_version/_found 元数据）" @click="rawView = !rawView">
             <FileJson :size="11" />
@@ -18,29 +18,29 @@
       <!-- highlightJson 范式（jsonc.ts 输出专用 v-html）：文档 JSON 语法着色，裸 stringify 文本退役 -->
       <pre class="json-view bw-ld-body" v-html="linkedDocHtml"></pre>
     </div>
-    <!-- 工具条（：HitNav 定位条/排序下拉/方向钮随表换 QRT 壳退役——
-         搜索定位归 QRT Ctrl+F 网格查找（命中计数 n/n + Enter 导航 + 当前命中高亮），
-         排序归 QRT 列头点击（es_tbl_sort:browser:indices 记忆）；bw 搜索框只承担
-         行过滤 + MarkText 命中源，900 档 .bw-search 独占行形态（528 W-E）不变 -->
+    <!-- 工具条（HitNav 定位条/排序下拉/方向钮随表换 QRT 壳退役——
+ 搜索定位归 QRT Ctrl+F 网格查找（命中计数 n/n + Enter 导航 + 当前命中高亮），
+ 排序归 QRT 列头点击（es_tbl_sort:browser:indices 记忆）；bw 搜索框只承担
+ 行过滤 + MarkText 命中源，900 档 .bw-search 独占行形态（528 W-E）不变 -->
     <div class="bw-bar">
-      <!-- bw-search 换装 SearchFilterBar 统一件（全站第 16 胞）——547「异形豁免册」
-           条目由本批收编立法推翻：胶囊壳三件套与 Search 内建图标归组件单源（bw-search-ic 绝对
-           定位图标与 inline padding-left:30px 违规随迁退役），Esc 清空由组件内建承接（行为等价，
-           filterEscClear379 锚随迁）；落位类 bw-search 透传组件根（min(240px,100%) 钳制与 900 档
-           独占行随迁，searchLocate「.bw-search input」后代选择器路径零迁） -->
+      <!-- bw-search 改用 SearchFilterBar 统一件（全站第 16 胞）——547「异形豁免册」
+ 条目由合并约定推翻：胶囊壳三件套与 Search 内建图标归组件单源（bw-search-ic 绝对
+ 定位图标与 inline padding-left:30px 违规同步更新退役），Esc 清空由组件内建承接（行为等价，
+ filterEscClear379 锚同步更新）；落位类 bw-search 透传组件根（min(240px,100%) 钳制与 900 档
+ 独占行同步更新，searchLocate「.bw-search input」后代选择器路径零迁） -->
       <SearchFilterBar v-model="kw" class="bw-search" placeholder="搜索索引名…" />
       <div class="seg">
         <button v-for="h in healthTabs" :key="h.k" :class="{ on: healthF === h.k }" :aria-pressed="healthF === h.k" @click="healthF = h.k">
-          <!-- 健康 tab 色点换装 MetaStrip dot 形态单源（DiagView dgMeta 判例）——
-               .bw-hdot 私造圆点退役，8px 圆点形态归组件 .ms-dot 单源；inline 化挂 .bw-tab-ms
-               （块级 .ms 在非 flex 按钮内会折行，落位随段语义归本类） -->
+          <!-- 健康 tab 色点改用 MetaStrip dot 形态单源（DiagView dgMeta 先例）——
+ .bw-hdot 私造圆点退役，8px 圆点形态归组件 .ms-dot 单源；inline 化挂 .bw-tab-ms
+ （块级 .ms 在非 flex 按钮内会折行，落位随段语义归本类） -->
           <MetaStrip v-if="h.dot" class="bw-tab-ms" :items="[{ dot: h.dot }]" />{{ h.t }}
         </button>
       </div>
       <button class="btn sm" :disabled="store.loadingIndices" @click="reload">
         <RefreshCw :size="12" :class="{ spinning: store.loadingIndices }" /> 刷新
       </button>
-      <!-- w72:跨页闭环 — 浏览中直接跳索引工作区（: 从空态分支迁出，正常态恒可见） -->
+      <!-- w72:跨页闭环 — 浏览中直接跳索引工作区（从空态分支迁出，正常态恒可见） -->
       <button v-if="store.pickedIdx" class="btn ghost sm" @click="goHub(store.pickedIdx)"
         title="在索引工作区打开当前选中索引（一站式文档/查询/配置）">
         <LayoutGrid :size="12" /> 工作区:{{ store.pickedIdx.slice(0, 20) }}
@@ -50,9 +50,9 @@
         <Plus :size="12" /> 新建索引
       </button>
       <!-- 索引列表 CSV 导出（运维对账/容量盘点）
-           补 Markdown 双通道（群聊直贴，与 节点表同口径）
-           行集/列集改走 QRT ref.getCsvBlock()（列漏斗+排序所见即所得），
-           列序/表头经 EXPORT 映射保旧契约（英文键七列、不含操作列） -->
+ 补 Markdown 双通道（群聊直贴，与 节点表同口径）
+ 行集/列集改走 QRT ref.getCsvBlock()（列漏斗+排序所见即所得），
+ 列序/表头经 EXPORT 映射保旧契约（英文键七列、不含操作列） -->
       <button class="btn ghost sm" :disabled="!filtered.length" title="导出索引列表为 CSV（跟随过滤）" @click="exportCsv">
         <FileDown :size="12" /> CSV
       </button>
@@ -61,15 +61,15 @@
       </button>
     </div>
 
-    <!-- 表格（：裸表换 QRT rows 型——524 教训先列锚清单再动手）：
-         排序（列头点击+Shift 多键）/health·状态等值漏斗/列选/列宽/右键单元格菜单/
-         键盘行导航/Ctrl+F 查找/聚合行/语义渲染/导出 CSV·MD·XLSX·PNG 全归内核
-         （browser:indices 维度记忆）；行选中之 .bw-picked 走 rowClass 契约；
-         528 W-E 两项新形态不得回退：状态列 indexStatusZh 中文主显+英文小字（起
-         StatusPill en 档组件化，.sp-en 由统一件承担）走 #cell-状态 槽逐字保真；健康点/索引名链接+MarkText/操作列五钮走作用域槽；
-         视图 FocusableSurface 包壳退役（QRT 内建 FS pane-id=qrt.table 接管放大） -->
+    <!-- 表格（裸表换 QRT rows 型——524 教训先列锚清单再动手）：
+ 排序（列头点击+Shift 多键）/health·状态等值漏斗/列选/列宽/右键单元格菜单/
+ 键盘行导航/Ctrl+F 查找/聚合行/语义渲染/导出 CSV·MD·XLSX·PNG 全归内核
+ （browser:indices 维度记忆）；行选中之 .bw-picked 走 rowClass 契约；
+ 528 W-E 两项新形态不得回退：状态列 indexStatusZh 中文主显+英文小字（起
+ StatusPill en 档组件化，.sp-en 由统一件承担）走 #cell-状态 槽逐字保真；健康点/索引名链接+MarkText/操作列五钮走作用域槽；
+ 视图 FocusableSurface 包壳退役（QRT 内建 FS pane-id=qrt.table 接管放大） -->
     <!-- 表外 .card 壳（padding:0/overflow:hidden 内联随壳退役）→ .bw-res
-         border-top 分节——538 SystemView .sy-res 同语言（QRT 本就全出血，分节由 gap 承担间距） -->
+ border-top 分节——538 SystemView .sy-res 同语言（QRT 本就全出血，分节由 gap 承担间距） -->
     <div class="bw-res">
       <!-- --vh-offset 的 210px fallback 删除（theme.css :root 已定义 210px，避免两处漂移） -->
       <QueryResultTable
@@ -83,16 +83,16 @@
         :row-class="bwRowClass"
         max-height="calc(100vh - var(--vh-offset) + 38px)"
       >
-        <!-- 健康色点换装 MetaStrip dot 形态单源（.bw-hdot.lg 私造圆点退役）——
-             胞内仍是纯色点无文字（DOM 逐字保形），title 兜底随段级 tip 承接 -->
+        <!-- 健康色点改用 MetaStrip dot 形态单源（.bw-hdot.lg 私造圆点退役）——
+ 胞内仍是纯色点无文字（DOM 逐字保形），title 兜底随段级 tip 承接 -->
         <template #cell-健康="{ value }"><MetaStrip :items="[{ dot: healthColor(value), tip: String(value ?? '') }]" /></template>
         <template #cell-索引="{ value }"><span class="bw-name mono" title="打开索引工作区（文档/查询/配置/分片/运维一站式）" tabindex="0" role="button" @keydown.enter.prevent="goHub(value)" @keydown.space.prevent="goHub(value)" @click="goHub(value)"><MarkText :text="value" :kw="String(kw || '')" /></span></template>
-        <template #cell-状态="{ value }"><!-- ：换装 StatusPill（indexStatusZh 中文主显+en 英文小字档组件化，原本地小字类随迁退役，en 小字形态归组件 .sp-en 单源，qrtRowsSwap529 锚同批改锁） --><StatusPill :tone="value === 'open' ? 'g' : 'n'" :label="indexStatusZh(value) || (value || '')" :en="indexStatusZh(value) ? value : undefined" /></template>
+        <template #cell-状态="{ value }"><!-- ：改用 StatusPill（indexStatusZh 中文主显+en 英文小字档组件化，原本地小字类同步更新退役，en 小字形态归组件 .sp-en 单源，qrtRowsSwap529 锚同步改锁） --><StatusPill :tone="value === 'open' ? 'g' : 'n'" :label="indexStatusZh(value) || (value || '')" :en="indexStatusZh(value) ? value : undefined" /></template>
         <template #cell-创建时间="{ value }"><span class="mono dim" :title="value">{{ fmtDate(value) }}</span></template>
         <!-- #cell-存储 槽退役——「槽内 bytes 单源」随内核 semRawCols
-             显式非语义类型抑制守卫落地平移为表级 sem-on + 存储:bytes 显式标注消费
-             （带单位字节串 '1.2mb' 由内核 bytes 档直出「1.2 MB」，title/导出/复制恒 raw；
-             文档数经 BW_SEM_RAW_COLS 抑制按值推断，见该常量注） -->
+ 显式非语义类型抑制守卫落地平移为表级 sem-on + 存储:bytes 显式标注消费
+ （带单位字节串 '1.2mb' 由内核 bytes 档直出「1.2 MB」，title/导出/复制恒 raw；
+ 文档数经 BW_SEM_RAW_COLS 抑制按值推断，见该常量注） -->
         <template #cell-操作="{ row }">
           <div class="bw-acts" @click.stop>
             <button aria-label="索引工作区（文档/查询/配置/分片/运维）" class="btn sm" title="索引工作区（文档/查询/配置/分片/运维）" @click="goHub(row[1])"><Boxes :size="11" /></button>
@@ -103,15 +103,15 @@
           </div>
         </template>
         <!-- 「复制行信息」随行右键菜单退役改走 QRT 行尾注入位（hover 与行复制钮同排）：
-             单行事实串模板逐字保真（browserExportMd 源码锁） -->
+ 单行事实串模板逐字保真（browserExportMd 源码锁） -->
         <template #row-actions="{ row }">
           <button class="btn ghost xs" aria-label="复制行信息" title="复制行信息" @click.stop="copyRowInfo(row)"><ClipboardCopy :size="11" /></button>
         </template>
       </QueryResultTable>
-      <!--  §1：加载/过滤无结果/集群无索引 三态分开，不留空白不误导。
-           加载态裸 .empty（theme.css 全局 .empty 的最后非表格消费）退役——
-           SkeletonBox 骨架收口（SystemView:65 先例），语义 label 逐字保留；DocDiffModal
-           表格 td.empty 属表格语义豁免不动 -->
+      <!-- 加载/过滤无结果/集群无索引 三态分开，不留空白不误导。
+ 加载态裸 .empty（theme.css 全局 .empty 的最后非表格消费）退役——
+ SkeletonBox 骨架收口（SystemView:65 先例），语义 label 逐字保留；DocDiffModal
+ 表格 td.empty 属表格语义豁免不动 -->
       <div v-if="store.loadingIndices && !store.indices.length" aria-label="正在拉取索引列表">
         <SkeletonBox height="30px" round style="margin-bottom:var(--sp-3)" />
         <SkeletonBox v-for="i in 5" :key="i" height="20px" round style="margin-bottom:var(--sp-2)" />
@@ -122,11 +122,11 @@
         hint="集群无索引或拉取失败，点击右上角「刷新」重试" />
     </div>
 
-    <!-- 计数行（：分页随换壳退役——大索引列表由 QRT renderMore 增量渲染接管
-         （MAX_RENDER=2000 首批 + 「继续渲染」行），排序/漏斗作用于全量所见集；
-         「已筛选 N 列」暗状态提示与一键全清由 QRT 工具行内建（.qrt-filtered）接管） -->
-    <!--  G254b：计数行 role=status——索引列表/过滤后行数变化=异步结果到达语义公告
-         （G224/G229/G235 族） -->
+    <!-- 计数行（分页随换壳退役——大索引列表由 QRT renderMore 增量渲染接管
+ （MAX_RENDER=2000 首批 + 「继续渲染」行），排序/漏斗作用于全量所见集；
+ 「已筛选 N 列」暗状态提示与一键全清由 QRT 工具行内建（.qrt-filtered）接管） -->
+    <!-- G254b：计数行 role=status——索引列表/过滤后行数变化=异步结果到达语义公告
+ （G224/G229/G235 族） -->
     <div class="bw-foot mono" role="status">
       <span>{{ filtered.length }} / {{ store.indices.length }} 个索引</span>
     </div>
@@ -155,9 +155,9 @@ import { highlightJson } from '../utils/jsonc';
 import { askConfirm } from '../composables/confirm';
 import CreateIndexModal from '../components/CreateIndexModal.vue';
 /* 索引裸表换 QRT rows 型——排序（含方向翻转+记忆）/列漏斗/列选/列宽/
-   右键单元格菜单/Ctrl+F 搜索定位/分页增量渲染/导出五格式归内核；宿主胶水
-   （useColFilters+ColFilterPopover+useHitLocate+HitNav+Pagination+CellContextMenu+
-   ColPicker+FocusableSurface 包壳）随壳退役（PluginsView 525 W5 同判据） */
+ 右键单元格菜单/Ctrl+F 搜索定位/分页增量渲染/导出五格式归内核；宿主胶水
+ （useColFilters+ColFilterPopover+useHitLocate+HitNav+Pagination+CellContextMenu+
+ ColPicker+FocusableSurface 包壳）随壳退役（PluginsView 525 W5 同判据） */
 import QueryResultTable from '../components/QueryResultTable.vue';
 import MetaStrip from '../components/MetaStrip.vue'; /* ：健康色点 dot 形态单源（bw-hdot 四胞之一） */
 import SearchFilterBar from '../components/SearchFilterBar.vue'; /* ：bw-search 过滤胶囊统一件（第 16 胞） */
@@ -174,17 +174,17 @@ const canForceMerge = computed(() => auth.canEndpoint('admin', 'POST', '/interna
 /* （兵蚁 MUST-FIX）：新建索引实调 POST /cluster/create-index（归 config-validator 页），与删索引(indices) 分属两页——canCreateIdx 独立裁决 */
 const canCreateIdx = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target));
 
-/*  §8.3：搜索词/健康过滤进 URL，刷新与分享后现场可复原 */
+/* 搜索词/健康过滤进 URL，刷新与分享后现场可复原 */
 const kw = useUrlState('kw');
 /* ?idx=&doc= 深链——QRT「在数据浏览器打开此文档」的落点；
-   doc 消费即清（newdoc 同模式防刷新重灌），索引经 useIdxState 语义落到 store.pickedIdx */
+ doc 消费即清（newdoc 同模式防刷新重灌），索引经 useIdxState 语义落到 store.pickedIdx */
 const docLink = useUrlState('doc');
 /* ?idx= 落 pickedIdx（useIdxState 写侧语义；只消费不 follow——浏览器的选中是用户自己的） */
 const idxLink = useUrlState('idx');
 if (idxLink.value && idxLink.value !== store.pickedIdx) store.pick(idxLink.value);
 const healthF = useUrlState('health', 'all') as Ref<'all' | 'green' | 'yellow' | 'red'>;
 /* browser.sortBy/sortReversed 偏好退役——排序归 QRT 列头点击，
-   方向/键记忆走 es_tbl_sort:browser:indices（内核 readSortLs/persistSort 同一口径） */
+ 方向/键记忆走 es_tbl_sort:browser:indices（内核 readSortLs/persistSort 同一口径） */
 
 const healthTabs = [
   { k: 'all', t: '全部', dot: '' },
@@ -194,19 +194,19 @@ const healthTabs = [
 ] as const;
 
 /* ═══ ：QRT rows 型数据映射 ═══
-   列=中文键（与旧表头逐字同源，漏斗 aria「筛选 健康 列」保真）；矩阵值标量化：
-   文档数落 number（fieldTypes long → 内建数值右对齐/千分位/区间筛选）、存储/分片保
-   旧展示串、创建时间保原始串（#cell-创建时间 槽 fmtDate 展示，旧口径不变）；
-   操作列矩阵值占位空串（展示/导出经槽与 EXPORT 映射处理）。 */
+ 列=中文键（与旧表头逐字同源，漏斗 aria「筛选 健康 列」保真）；矩阵值标量化：
+ 文档数落 number（fieldTypes long → 内建数值右对齐/千分位/区间筛选）、存储/分片保
+ 旧展示串、创建时间保原始串（#cell-创建时间 槽 fmtDate 展示，旧口径不变）；
+ 操作列矩阵值占位空串（展示/导出经槽与 EXPORT 映射处理）。 */
 const BW_COLS = ['健康', '索引', '状态', '文档数', '存储', '分片', '创建时间', '操作'];
 /* semOn 语义渲染扩展按列收口——存储列显式 bytes 档（值域单源 useSemFormat），
-   文档数列恒 long（数值/千分位/区间口径），绝不配 bytes/percent——qrtRowsSwap529 千分位锁
-   与「文档数≠字节数」语义双看守。起表级 sem-on 开启（「刻意不开」的两处
-   记档理由由 semRawCols 守卫解除，见模板 #cell-存储 退役注） */
+ 文档数列恒 long（数值/千分位/区间口径），绝不配 bytes/percent——qrtRowsSwap529 千分位锁
+ 与「文档数≠字节数」语义双看守。起表级 sem-on 开启（「刻意不开」的两处
+ 理由由 semRawCols 守卫解除，见模板 #cell-存储 退役注） */
 const BW_TYPES: Record<string, string> = { 文档数: 'long', 存储: 'bytes' };
 /* semRawCols 显式非语义类型抑制守卫——文档数（计数列，≥1000 裸数字会被
-   useSemFormat 按值推断判 ms 显「12.3s」）显式抑制「按值推断」链，显示走既有数值链
-   （千分位/右对齐/区间筛选/导出全不受影响）；存储列 bytes 为显式语义标注，不受抑制影响 */
+ useSemFormat 按值推断判 ms 显「12.3s」）显式抑制「按值推断」链，显示走既有数值链
+ （千分位/右对齐/区间筛选/导出全不受影响）；存储列 bytes 为显式语义标注，不受抑制影响 */
 const BW_SEM_RAW_COLS = ['文档数'];
 const bwMatrix = computed<any[][]>(() => filtered.value.map(i => [
   i.health ?? null, i.index, i.status ?? null, Number(i['docs.count'] || 0),
@@ -217,7 +217,7 @@ function bwRowClass(row: any[]): string | undefined {
   return row[1] === store.pickedIdx ? 'bw-picked' : undefined;
 }
 /* 矩阵行 → IndexCat 还原（操作钮/复制行信息/确认弹窗 facts 复用旧函数体）。
-   矩阵数值化仅文档数（排序/右对齐需要），还原回旧接口的字符串形态 */
+ 矩阵数值化仅文档数（排序/右对齐需要），还原回旧接口的字符串形态 */
 function rowToIdx(row: any[]): IndexCat {
   const [pri, rep] = String(row[5] || '0/0').split('/');
   return {
@@ -232,7 +232,7 @@ const bwQrt = ref<InstanceType<typeof QueryResultTable> | null>(null);
 onMounted(() => {
   if (!store.indices.length) store.loadIndices();
   /* 深链消费——pickedIdx 已由 useIdxState 落定，doc 非空即打开文档查看。
-     消费即清防刷新重灌；文档内容经既有 _source 展示通道（读原文档塞进详情区） */
+ 消费即清防刷新重灌；文档内容经既有 _source 展示通道（读原文档塞进详情区） */
   const docId = (docLink.value || '').trim();
   if (docId && store.pickedIdx) {
     void openLinkedDoc(store.pickedIdx, docId);
@@ -241,9 +241,9 @@ onMounted(() => {
   }
 });
 /* 深链打开文档：拉原文档 → 弹详情（highlightJson 范式着色展示；json-view 全局类管排版，
-   v-html 仅消费 utils/jsonc 的 highlightJson 输出——转义安全）。
-    G253：完整响应留存 raw 字段（元数据与 _source 分轨）+rawView 切换
-   （重开卡复位 _source 精简视图） */
+ v-html 仅消费 utils/jsonc 的 highlightJson 输出——转义安全）。
+ G253：完整响应留存 raw 字段（元数据与 _source 分轨）+rawView 切换
+ （重开卡复位 _source 精简视图） */
 const linkedDoc = ref<{ id: string; src: any; raw: any } | null>(null);
 const rawView = ref(false);
 const linkedDocHtml = computed(() =>
@@ -254,7 +254,7 @@ async function openLinkedDoc(idx: string, id: string) {
     linkedDoc.value = { id, src: r?._source ?? r ?? null, raw: r ?? null };
     rawView.value = false;
   } catch (e: any) {
-    /* 裸错误串 → friendlyEsError（错误语义收编单源） */
+    /* 裸错误串 → friendlyEsError（错误语义合并单源） */
     store.notify('error', '打开文档失败：' + friendlyEsError(String(e?.message ?? e)));
   }
 }
@@ -264,7 +264,7 @@ function reload() { store.loadIndices(); }
 const createOpen = ref(false);
 
 /* 天罗W6：过滤管线——filteredBase=kw+健康 tab（漏斗/排序在 QRT 内核对此行集叠加，
-   与旧「漏斗候选行集=filteredBase」口径一致）；宿主 useColFilters 胶水退役 */
+ 与旧「漏斗候选行集=filteredBase」口径一致）；宿主 useColFilters 胶水退役 */
 const filteredBase = computed(() => {
   let list = store.indices.slice();
   const k = kw.value.trim().toLowerCase();
@@ -276,8 +276,8 @@ const filtered = computed(() => filteredBase.value);
 
 /* →：点索引名→索引工作区（文档/查询/配置/分片/运维操作一站式） */
 /* 索引列表 CSV 导出（运维对账/容量盘点）——行集/列集改走
-   QRT ref.getCsvBlock()（列漏斗+排序+列选所见即所得），列序/表头经 EXPORT 映射保旧契约
-   （英文键七列、不含操作列；存储 '-' 兜底与旧 CSV 的空串兜底差异记档：空值列出 '-'） */
+ QRT ref.getCsvBlock()（列漏斗+排序+列选所见即所得），列序/表头经 EXPORT 映射保旧契约
+ （英文键七列、不含操作列；存储 '-' 兜底与旧 CSV 的空串兜底差异：空值列出 '-'） */
 const EXPORT_HEAD = ['index', 'health', 'status', 'docs.count', 'store.size', 'shards', 'creation.date'];
 const EXPORT_SRC = ['索引', '健康', '状态', '文档数', '存储', '分片', '创建时间'];
 function exportCsv() {
@@ -286,7 +286,7 @@ function exportCsv() {
   const idxs = EXPORT_SRC.map(c => blk.head.indexOf(c));
   downloadText(
     `browser-indices-${exportStamp()}.csv`,
-    /* CSV 组装收编 utils csvText（BOM+表头+行矩阵单一出处） */
+    /* CSV 组装合并 utils csvText（BOM+表头+行矩阵单一出处） */
     csvText(EXPORT_HEAD, blk.rows.map(r => idxs.map(i => r[i]))),
     'text/csv;charset=utf-8',
   );
@@ -294,7 +294,7 @@ function exportCsv() {
 }
 
 /* 索引清单 Markdown 复制（与 CSV 同数据、群聊/工单直贴——对齐 节点表双通道）
-   行集改走 getCsvBlock()；表头/列序（六列、无创建时间）逐字保真 */
+ 行集改走 getCsvBlock()；表头/列序（六列、无创建时间）逐字保真 */
 async function exportMd() {
   const blk = bwQrt.value?.getCsvBlock();
   if (!blk || !blk.rows.length) return;
@@ -311,7 +311,7 @@ async function exportMd() {
 }
 
 /* 复制行信息（单行事实串，回应「这个索引多大/什么时候建的」类问答）——
-   入口随行右键菜单退役改走 QRT #row-actions 行尾注入位，事实串模板逐字保真 */
+ 入口随行右键菜单退役改走 QRT #row-actions 行尾注入位，事实串模板逐字保真 */
 async function copyRowInfo(row: any[]) {
   const i = rowToIdx(row);
   const line = `${i.index}: health=${i.health} status=${i.status} docs=${i['docs.count'] || 0} store=${i['store.size'] || '-'} shards=${i.pri || 0}/${i.rep || 0} created=${i['creation.date.string'] || '-'}`;
@@ -326,10 +326,10 @@ function openIdx(name: string) {
 
 function goHub(name: string) {
   /* y3 修复:深链 ?idx= 被剥成裸 #/indices——此前先 pick(name) 再 push,IndexHub 首次挂载时
-     useIdxState→useUrlState('idx', pickedIdx) 的 defVal=name 与 query 值相同,其
-     onActivated writeBack 走「默认值不占 URL」分支 usp.delete('idx'),hash 丢 idx。
-  改为:push 前先把 pickedIdx 清空(挂载时 defVal=''≠query 值,writeBack 走 set 分支保留深链),
-     本处不再 pick,顶栏由 IndexHub 的 useIdxState 深链上行 pick(state.value) 恢复( 官方通道)。 */
+ useIdxState→useUrlState('idx', pickedIdx) 的 defVal=name 与 query 值相同,其
+ onActivated writeBack 走「默认值不占 URL」分支 usp.delete('idx'),hash 丢 idx。
+ 改为:push 前先把 pickedIdx 清空(挂载时 defVal=''≠query 值,writeBack 走 set 分支保留深链),
+ 本处不再 pick,顶栏由 IndexHub 的 useIdxState 深链上行 pick(state.value) 恢复( 官方通道)。 */
   if (store.pickedIdx) store.pick('');
   router.push({ path: '/indices', query: { idx: name } });
 }
@@ -339,7 +339,7 @@ function goMapping(name: string) {
 }
 
 /* ForceMerge——：本地 ConfirmModal（warn/okText 等价迁移），确认通过后原 doFm 执行体原样内联。
-   操作列槽行内钮经 askFmRow 适配（矩阵行 → IndexCat）后复用原函数体 */
+ 操作列槽行内钮经 askFmRow 适配（矩阵行 → IndexCat）后复用原函数体 */
 async function askFm(idx: IndexCat) {
   const okGo = await askConfirm({
     title: 'ForceMerge 段合并',
@@ -350,8 +350,8 @@ async function askFm(idx: IndexCat) {
   if (!okGo) return;
   try {
     /* 同步等待改异步提交——大索引 forcemerge 同步 await 会占死前端
-       （IndexHubView wait_for_completion=false 判例）；响应含 taskId 时指路任务页
-       （IndexOptimizerView 判例响应处理形态），无 taskId 维持原成功文案 */
+ （IndexHubView wait_for_completion=false 先例）；响应含 taskId 时指路任务页
+ （IndexOptimizerView 先例响应处理形态），无 taskId 维持原成功文案 */
     const r: any = await api.raw('POST', `/${idx.index}/_forcemerge?max_num_segments=1&wait_for_completion=false`);
     if (r?.taskId) {
       store.notify('success', `已提交后台执行：${idx.index} ForceMerge（taskId=${r.taskId}，去任务页看进度）`);
@@ -365,7 +365,7 @@ async function askFm(idx: IndexCat) {
 function askFmRow(row: any[]) { return askFm(rowToIdx(row)); }
 
 /* 删除——：本地 ConfirmModal（critical + guardText=索引名 + okText 等价迁移；
-   正文里的索引名/文档数/store.size 改走 facts 具名行） */
+ 正文里的索引名/文档数/store.size 改走 facts 具名行） */
 async function askDel(idx: IndexCat) {
   const okGo = await askConfirm({
     title: '删除索引',
@@ -386,7 +386,7 @@ async function askDel(idx: IndexCat) {
     if (store.pickedIdx === idx.index) store.pick('');
     store.loadIndices();
   } catch (e: any) {
-    /* 裸错误串 → friendlyEsError（索引删除高危路径，w80 判例全站兜底） */
+    /* 裸错误串 → friendlyEsError（索引删除高危路径，w80 先例全站兜底） */
     store.notify('error', '删除失败: ' + friendlyEsError(String(e?.message ?? e)));
   }
 }
@@ -398,23 +398,23 @@ function askDelRow(row: any[]) { return askDel(rowToIdx(row)); }
 /* 窄屏工具条允许换行，避免挤压 */
 .bw-bar { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; row-gap: var(--sp-1); }
 /* width:240px → min(240px,100%) 极窄溢出钳制（XmigrateView .xm-jobs-kw 同款范式，
-   900 档 100% 独占行不变） */
-/* bw-search 换装 SearchFilterBar——胶囊壳/内建图标归组件单源，本类只留落位
-   （min(240px,100%) 钳制与 900 档独占行随迁，responsive900Sweep529 锚保形）与内衬
-   （padding 对齐 .inp 原值 6px/10px，高度链零变动） */
+ 900 档 100% 独占行不变） */
+/* bw-search 改用 SearchFilterBar——胶囊壳/内建图标归组件单源，本类只留落位
+ （min(240px,100%) 钳制与 900 档独占行同步更新，responsive900Sweep529 锚保形）与内衬
+ （padding 对齐 .inp 原值 6px/10px，高度链零变动） */
 .bw-search { width: min(240px, 100%); padding: var(--sp-1h) var(--sp-2h); }
-/* .bw-hdot/.bw-hdot.lg 私造圆点退役——健康 tab 与 #cell-健康 槽两处换装
-   MetaStrip dot 形态单源（DiagView dgMeta 判例），8px 圆点形态归组件 .ms-dot；
-   .bw-tab-ms 只承担落位：inline 化防块级 .ms 在非 flex 按钮内折行 + 原点右距 5px 随迁 */
+/* .bw-hdot/.bw-hdot.lg 私造圆点退役——健康 tab 与 #cell-健康 槽两处改用
+ MetaStrip dot 形态单源（DiagView dgMeta 先例），8px 圆点形态归组件 .ms-dot；
+ .bw-tab-ms 只承担落位：inline 化防块级 .ms 在非 flex 按钮内折行 + 原点右距 5px 同步更新 */
 .seg .bw-tab-ms { display: inline-flex; margin-right: 5px; vertical-align: 1px; }
 .bw-name { color: var(--ac-hi); cursor: pointer; font-size: var(--fs-sm); }
 .bw-name:hover { text-decoration: underline; }
 /* 表外 .card 壳退役 → 538 SystemView .sy-res 同语言 border-top 分节
-   （表格皮归 QRT 内建；父级 .bw flex gap 承担与工具条的间距） */
+ （表格皮归 QRT 内建；父级 .bw flex gap 承担与工具条的间距） */
 .bw-res { border-top: 1px solid var(--border); }
 .bw-linked-doc {
-  /* 局部层级注释（）：z:60 是视图内悬浮卡档（低于 --z-popover 1150/右键菜单 --z-ctx 1200），
-     只需盖过本页表格与聚焦面（--z-focus 300），不归全局 z token——升档反而会压住筛选/右键浮层 */
+  /* 局部层级注释（z:60 是视图内悬浮卡档（低于 --z-popover 1150/右键菜单 --z-ctx 1200），
+ 只需盖过本页表格与聚焦面（--z-focus 300），不归全局 z token——升档反而会压住筛选/右键浮层 */
   position: fixed; right: 24px; bottom: 24px; z-index: 60;
   width: 460px; max-width: 44vw; max-height: 60vh;
   display: flex; flex-direction: column;
@@ -422,32 +422,32 @@ function askDelRow(row: any[]) { return askDel(rowToIdx(row)); }
   box-shadow: var(--shadow-pop);
 }
 .bw-ld-hd { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-1h) var(--sp-2h); border-bottom: 1px solid var(--line); font-size: var(--fs-xs); color: var(--tx1); }
-/*  G253：卡头动作组（原始响应双态钮+关闭钮） */
+/* G253：卡头动作组（原始响应双态钮+关闭钮） */
 .bw-ld-acts { display: flex; align-items: center; gap: var(--sp-1); }
 .bw-ld-body { margin: 0; padding: var(--sp-2h); overflow: auto; flex: 1; font-size: var(--fs-xs); line-height: 1.5; color: var(--tx0); }
 /* .bw-picked 行选中高亮改走 QRT rowClass 契约——类挂在内核 tr 上，
-   视图 scoped 样式须经 :deep 穿透（!important 压过内核斑马纹/hover 行底） */
+ 视图 scoped 样式须经 :deep 穿透（!important 压过内核斑马纹/hover 行底） */
 .bw :deep(.bw-picked) { background: var(--ac-soft) !important; }
 .bw-acts { display: flex; gap: var(--sp-1); }
 /* y3：列宽拖拽柄（.bw-rs 全家）随换 QRT 壳退役——列宽归内核 qrt-rs（es_tbl_cols 记忆） */
 /* y3：分页条（.bw-foot 计数行保留；翻页/已筛选提示随换壳退役——翻页由 QRT renderMore
-   增量渲染接管、「已筛选 N 列」由 QRT 工具行 .qrt-filtered 接管） */
+ 增量渲染接管、「已筛选 N 列」由 QRT 工具行 .qrt-filtered 接管） */
 .bw-foot { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-2); flex-wrap: wrap; font-size: var(--fs-xs); color: var(--tx2); text-align: right; }
 /* 窄容器：固定列宽合计 748px，挤压索引名列——创建时间列降级隐藏（CSV/Markdown 导出仍含全字段）。
-   1280 独档并入 1100 全站档；：列头随壳进内核，藏列改 :deep data-col 选择器 */
+ 1280 独档并入 1100 全站档；：列头随壳进内核，藏列改 :deep data-col 选择器 */
 @media (max-width: 1100px) {
   .bw :deep([data-col="创建时间"]) { display: none; }
 }
 
 /* ═══ 天罗W6：health/status 列筛选漏斗（.bw-f-btn/.bw-flt-on/.bw-flt-clear 全家）
-   随换 QRT 壳退役——漏斗归 QRT 内建 .qrt-funnel + ColFilterPopover（含值内搜索/mini-bar），
-   暗状态提示归 QRT 工具行 .qrt-filtered（.bw-hit-cur/useHitLocate 定位态同步退役，
-   搜索定位归 QRT Ctrl+F 网格查找） ═══ */
-/* 状态中文主显后的英文枚举小字随 StatusPill 换装退役
-   （en 小字形态归组件 .sp-en 单源；XmigrateView .xm-st-en 是其自有样式不在此列） */
-/* 900 紧凑微调档（§9.3 口径）——工具行元素已随 .bw-bar wrap，此处让
-   搜索框独占一行（窄视口 240px 定宽挤占命中导航/健康过滤的可用行宽）；表格横滚兜底
-   在内核 .qrt-wrap，不在此重复造 */
+ 随换 QRT 壳退役——漏斗归 QRT 内建 .qrt-funnel + ColFilterPopover（含值内搜索/mini-bar），
+ 暗状态提示归 QRT 工具行 .qrt-filtered（.bw-hit-cur/useHitLocate 定位态同步退役，
+ 搜索定位归 QRT Ctrl+F 网格查找） ═══ */
+/* 状态中文主显后的英文枚举小字随 StatusPill 改用退役
+ （en 小字形态归组件 .sp-en 单源；XmigrateView .xm-st-en 是其自有样式不在此列） */
+/* 900 紧凑微调档（ 口径）——工具行元素已随 .bw-bar wrap，此处让
+ 搜索框独占一行（窄视口 240px 定宽挤占命中导航/健康过滤的可用行宽）；表格横滚兜底
+ 在内核 .qrt-wrap，不在此重复造 */
 @media (max-width: 900px) {
   .bw-search { flex: 0 0 100%; }
 }

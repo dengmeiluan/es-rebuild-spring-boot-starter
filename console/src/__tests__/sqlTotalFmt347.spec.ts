@@ -8,9 +8,9 @@ import { join } from 'node:path';
 const v = readFileSync(join(__dirname, '../views/SqlConsoleView.vue'), 'utf-8');
 
 describe('SqlConsole 计数口径（347 批）', () => {
-  /* 五百一十九批：结果行「N 行 × M 列」手写串换装 MetaStrip 统一件，
-     本守卫随迁——fmtNum 千分位口径不变（resultMeta computed 单一出处）+ 模板 MetaStrip 接线在场 */
-  it('结果行 fmtNum 化（MetaStrip 收编后口径不变）', () => {
+  /* 五百一十九批：结果行「N 行 × M 列」手写串改用 MetaStrip 统一件，
+     本守卫同步更新——fmtNum 千分位口径不变（resultMeta computed 单一出处）+ 模板 MetaStrip 接线在场 */
+  it('结果行 fmtNum 化（MetaStrip 合并后口径不变）', () => {
     expect(v).toContain('{ value: fmtNum(rows.value.length), label: \'行\' }');
     expect(v).toContain('{ value: fmtNum(cols.value.length), label: \'列\' }');
     expect(v).toContain('<MetaStrip :items="resultMeta" />');

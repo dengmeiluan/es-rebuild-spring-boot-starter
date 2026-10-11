@@ -105,7 +105,7 @@ describe('HealthReportView 基准/对照弹层选择器', () => {
     cmp.value = '不存在的存档';
     cmp.dispatchEvent(new Event('input'));
     await settle();
-    /* 五百五十八批(b)：hr-pop-hint 裸 div 空态收编 EmptyState compact（flattenWave558b）——
+    /* 五百五十八批(b)：hr-pop-hint 裸 div 空态合并 EmptyState compact（flattenWave558b）——
        锚随批迁移 .hr-pop-hint → .hr-pop .es-text（EmptyState 文本行），文案语义不变 */
     expect(document.querySelector('.hr-pop .es-text')?.textContent).toContain('没有匹配');
     cmp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));

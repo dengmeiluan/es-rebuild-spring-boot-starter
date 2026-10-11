@@ -8,7 +8,7 @@
  * ② G80（P3 文案卫生）建议区值内嵌「# ES 7.x+」注释字面清理——slices 展示值
  *    'auto  # ES 7.x+ 自动按分片切' 把 # 注释符+解释语塞进 mono 值里（与括号解释语义重复），
  *    修法=值归 'auto'+注释语义并入既有括号；「建议 batch size」裸英文补中文备注（每批文档数）。
- * ③ G81（P3 观察·豁免记档）运行钮零 spinning——纯文本钮无图标可挂，读秒换装
+ * ③ G81（P3 观察·豁免备案）运行钮零 spinning——纯文本钮无图标可挂，读秒改用
  *    「预估中 X.Xs」+取消钮+busy 守卫既有=在途可感知已覆盖（铁律 D），加图标反伤位置恒定。
  *
  * 驱动方式照 reindexCancel538（NModal stub 直渲染 + MonacoEditor stub + api mock
@@ -143,7 +143,7 @@ describe('724 G79 MetaStrip 四段中文 tip（铁律 F）', () => {
     expect(seg4!.getAttribute('title'), 'G79 病灶：段4 目标预估 bytes 无段级备注').toBe('目标索引预估体积（符合过滤 doc × 平均单文档体积）');
     /* help 档四段全挂（cursor:help 悬停可达） */
     for (const el of items) expect(el.classList.contains('help'), 'tip 段挂 MetaStrip help 档').toBe(true);
-    /* 容器级 :title 兜底全文不破（519 收编既有通道） */
+    /* 容器级 :title 兜底全文不破（519 合并既有通道） */
     const strip = host.querySelector<HTMLElement>('.rp-meta-pos');
     expect(strip!.getAttribute('title')).toContain('符合过滤的 doc');
   });

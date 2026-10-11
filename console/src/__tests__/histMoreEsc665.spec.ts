@@ -6,7 +6,7 @@
  * 只有点击 summary 一条路，铁律 D1#5「开弹层→Esc→焦点回触发器」张力（664-C2：646
  * 探针 s2c 是 log 读数不进 VERDICT，缺口以「已验证」假象流传）。
  *
- * 修复（566 立法范式落 .ld-hist-more 专属）：开层（toggle open）挂 window 捕获级
+ * 修复（566 约定范式落 .ld-hist-more 专属）：开层（toggle open）挂 window 捕获级
  * keydown（onHistMoreEsc），Esc 关层+焦点回 summary；关层摘卸+处理体内防御性摘卸
  * （双保险：程序化 open 变更的 toggle 事件在个别环境不派发时仍不泄漏）；卸载摘卸
  * （onBeforeUnmount 对称）。628 注释「details 无需 document 捕获级 Esc 接线」就此
@@ -129,7 +129,7 @@ describe('六百六十五批：⋯浮层（.ld-hist-more）Esc 收口', () => {
     expect(t, 'details 接线（ref+@toggle，class 原位保 628/637 锁）')
       .toContain('<details ref="histMoreEl" class="ld-hist-more" @toggle="onHistMoreToggle">');
     expect(t, 'summary 焦点锚').toContain('ref="histMoreSumEl"');
-    expect(t, 'window 捕获级挂载（566 立法形态）')
+    expect(t, 'window 捕获级挂载（566 约定形态）')
       .toContain("window.addEventListener('keydown', onHistMoreEsc, true)");
     expect(t, 'window 捕获级摘卸')
       .toContain("window.removeEventListener('keydown', onHistMoreEsc, true)");

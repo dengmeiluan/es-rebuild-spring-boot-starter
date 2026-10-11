@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 控制索引幂等初始化（）：向导绑定控制集群时把控制面三索引建出来——
+ * 控制索引幂等初始化（向导绑定控制集群时把控制面三索引建出来——
  * 对标 Kibana 首次连接 ES 自建 {@code .kibana} 系统索引的行为。
  *
  * <p>幂等语义：索引已存在（{@code resource_already_exists_exception}）视为成功；

@@ -1,7 +1,7 @@
 /**
  * 七百批②·任务卡走势（R56 遗留「任务卡走势缓做」收口；用户令「观察出来的都优化」）。
  *
- * 现状：运行中任务卡只有当前计数+清单，无走势。本批=store 增 jobCountSeries（会话窗
+ * 现状：运行中任务卡只有当前计数+清单，无走势。=store 增 jobCountSeries（会话窗
  * MAX_POINTS 截尾+快照持久化续采）；视图 watch runningJobs.length 推送；卡头右侧
  * compact spark（abs 档 sparklinePoints，<2 点不画=宁缺毋假）。
  * ⚠任务数是全局口径（jobTracker 不分集群）——切目标集群**不清位**（与 qps/heap 等

@@ -4,9 +4,9 @@
 <template #subtitle>
         <span class="lc-hd-sub">
           ILM 阶段甘特 · 手动 rollover · move-to-step · start/stop ·
-          <!-- 页头状态徽标换装 StatusPill 统一件（全站最后一个私造状态胶囊收编；
-               meta-err/meta-ok/meta-warn 文本档退役——err→r/warn→y/ok→g 语义映射，:title 全文兜底不变；
-               STOPPED 是人为暂停语义仍走 y 档，r 档只留给 stsErr 拉取失败，口径不变） -->
+          <!-- 页头状态徽标改用 StatusPill 统一件（全站最后一个私造状态胶囊合并；
+ meta-err/meta-ok/meta-warn 文本档退役——err→r/warn→y/ok→g 语义映射，:title 全文兜底不变；
+ STOPPED 是人为暂停语义仍走 y 档，r 档只留给 stsErr 拉取失败，口径不变） -->
           <StatusPill v-if="stsErr" tone="r" label="状态拉取失败" :title="stsErr" />
           <StatusPill v-else :tone="ilmSts?.operation_mode === 'RUNNING' ? 'g' : 'y'" :label="ilmSts?.operation_mode || '—'" />
         </span>
@@ -16,7 +16,7 @@
 <button class="btn ghost sm" @click="load" :disabled="busy">
             <RefreshCw :size="12" :class="{ spinning: busy }" /> 刷新
           </button>
-          <!--  G122：双钮补 spinning（ilmOpPending 此前只 disabled 半合规；733 G110 同款） -->
+          <!-- G122：双钮补 spinning（ilmOpPending 此前只 disabled 半合规；733 G110 同款） -->
           <button v-if="canOps" class="btn ghost sm" @click="ilmStart" :disabled="ilmOpPending">
             <PlayCircle :size="12" :class="{ spinning: ilmOpPending }" /> Start ILM
           </button>
@@ -43,17 +43,17 @@
           :title="'条件编辑框高度档：' + roH + ' 行'" @click="cycleRoH">高</button>
       </div>
       <div class="lc-rollover">
-        <!-- 「用当前索引」回填钮收编 PickCurrentIdxBtn 统一件（558 五视图判例：
-             data-test/title 逐字锚由组件保真；@pick 显式覆盖口，草稿仅空时自动回填语义不变
-             （:272 先例——写类表单不 follow，要换目标由用户点钮/显式改输入）） -->
+        <!-- 「用当前索引」回填钮合并 PickCurrentIdxBtn 统一件（558 五视图先例：
+ data-test/title 逐字锚由组件保真；@pick 显式覆盖口，草稿仅空时自动回填语义不变
+ （272 先例——写类表单不 follow，要换目标由用户点钮/显式改输入） -->
         <div class="lc-idx-row">
           <IndexPicker v-model="rolloverAlias" placeholder="别名（写入 alias 或 data stream）" />
           <PickCurrentIdxBtn @pick="rolloverAlias = store.pickedIdx" />
         </div>
         <!-- W4c：conditions 非 search body——bodyKind 显式 'none'（原缺省走 search 档冒充，补全按通用检查降级） -->
         <!-- rows=4 定高 → 三档行数循环（JsonArea 既有 rows 写法，默认档 4 行不变），
-             useTierCycle('lifecycle.roH') 跨会话记忆；下方挂 lintClause 零 ctx 结构体检提示条
-             （提示条渲染形态与 alv-lint/ra-lint 同构，零阻塞不拦执行） -->
+ useTierCycle('lifecycle.roH') 跨会话记忆；下方挂 lintClause 零 ctx 结构体检提示条
+ （提示条渲染形态与 alv-lint/ra-lint 同构，零阻塞不拦执行） -->
         <JsonArea ref="roJaRef" v-model="rolloverCond" :dsl-assist="{ fields: () => [], bodyKind: () => 'none' }" :rows="roH" placeholder="{ &quot;conditions&quot;: { &quot;max_docs&quot;: 100000, &quot;max_age&quot;: &quot;7d&quot;, &quot;max_size&quot;: &quot;50gb&quot; } }" />
         <div v-if="roLintErrors.length" role="alert" class="lc-lint lc-lint-err">
           <span>DSL 检查（错误）：{{ roLintErrors.map(f => f.message + '（' + f.suggestion + '）').join('；') }}</span>
@@ -62,8 +62,8 @@
           <span>DSL 检查：{{ roLintWarns.map(f => f.message + '（' + f.suggestion + '）').join('；') }}</span>
         </div>
         <div class="lc-actions">
-          <!--  G121：roPending 守卫+spinning+文案切换（修前无守卫连点可重复触发；
-               dry/run 分档让触发钮各自换装，互斥共用一档防并发，729 G95/731 G104/733 G110 同款） -->
+          <!-- G121：roPending 守卫+spinning+文案切换（修前无守卫连点可重复触发；
+ dry/run 分档让触发钮各自改用，互斥共用一档防并发，729 G95/731 G104/733 G110 同款） -->
           <button class="btn ghost sm" @click="doRollover(true)" :disabled="!rolloverAlias.trim() || roPending !== null">
             <Search :size="12" :class="{ spinning: roPending === 'dry' }" /> {{ roPending === 'dry' ? '预检中…' : 'Dry Run 预检' }}
           </button>
@@ -71,7 +71,7 @@
             <Rocket :size="12" :class="{ spinning: roPending === 'run' }" /> {{ roPending === 'run' ? '执行中…' : '执行 Rollover' }}
           </button>
           <!-- 原始 IO 快查——本页最近一次 rollover（含 dry-run）请求/响应原文
-               （ioRecorder 记录环；下方「原始响应」details 的快查姊妹钮，545 Adhoc 判例 margin-left:auto） -->
+ （ioRecorder 记录环；下方「原始响应」details 的快查姊妹钮，545 Adhoc 先例 margin-left:auto） -->
           <button class="btn ghost sm" style="margin-left:auto" data-test="raw-io" aria-label="查看原始 IO（Rollover）" title="最近一次 Rollover（含 Dry-run）请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIoRollover"><Terminal :size="12" /> 原始 IO</button>
         </div>
         <!-- 结构化结果：真实 rollover 展示新旧索引切换 + 跳转；dry-run 展示条件命中 -->
@@ -90,7 +90,7 @@
           </div>
         </div>
         <!-- 原始响应裸 pre → highlightJson 高亮收口（json-view 全站范式）；
-             错误分支换 errPreHtml v-html（前缀退场后全文含 { 走 highlightJson、否则转义平文） -->
+ 错误分支换 errPreHtml v-html（前缀移除后全文含 { 走 highlightJson、否则转义平文） -->
         <details v-if="rolloverResult" class="lc-raw">
           <summary>原始响应</summary>
           <pre v-if="rolloverResultIsErr" class="lc-result" v-html="rolloverResultHtml"></pre>
@@ -104,11 +104,11 @@
         <GitBranch :size="12" /> ILM 阶段甘特（{{ policies.length }} 个策略）
         <span class="lc-sub">水平条按 min_age 时序排列</span>
       </div>
-      <!-- G4：首载骨架 → 真空 EmptyState（与 loadErr 互斥，失败不是空） → 甘特；err-bar 在页顶链外 -->
+      <!-- ：首载骨架 → 真空 EmptyState（与 loadErr 互斥，失败不是空） → 甘特；err-bar 在页顶链外 -->
       <div v-if="busy && !policies.length" class="lc-sk">
         <SkeletonBox v-for="i in 3" :key="i" height="30px" round />
       </div>
-      <!--  §1：空态给下一步动作（S6 归位 EmptyState 三件套）——去 ILM 控制中心看能力探测与创建入口 -->
+      <!-- 空态给下一步动作（S6 归位 EmptyState 三件套）——去 ILM 控制中心看能力探测与创建入口 -->
       <EmptyState
         v-else-if="!policies.length && !loadErr"
         :icon="Layers"
@@ -118,9 +118,9 @@
         @action="router.push('/ilm')"
       />
       <!-- 甘特条/图例 phase 中文化（phaseZh 单源，IlmView explain 徽章「中文主体+
-           英文小字」双语范式参照）。条内宽度二选一裁定（目测记档）：bar 最窄 8%（fmtPolicies
-           widthPct 下限）× track 约 600px ≈ 48px，中文「删除/冻结」1-2 字（≤24px）比英文裸串
-           （delete 6 字符 mono ≈ 43px）更窄——条内亦收中文不溢出，title 恒双语「中文（english）」兜底 -->
+ 英文小字」双语范式参照）。条内宽度二选一裁定（目测）：bar 最窄 8%（fmtPolicies
+ widthPct 下限）× track 约 600px ≈ 48px，中文「删除/冻结」1-2 字（≤24px）比英文裸串
+ （delete 6 字符 mono ≈ 43px）更窄——条内亦收中文不溢出，title 恒双语「中文（english）」兜底 -->
       <div v-else-if="policies.length" class="lc-gantt">
         <div v-for="p in policies" :key="p.name" class="lc-gantt-row">
           <div class="lc-gantt-label" :title="p.name">{{ p.name }}</div>
@@ -149,16 +149,16 @@
         <span class="lc-sub">POST /_ilm/move/&lt;index&gt;</span>
       </div>
       <div class="lc-move">
-        <!-- 同 rollover——PickCurrentIdxBtn 收编（@pick 显式覆盖口） -->
+        <!-- 同 rollover——PickCurrentIdxBtn 合并（@pick 显式覆盖口） -->
         <div class="lc-idx-row">
           <IndexPicker v-model="moveIndex" placeholder="索引名" />
           <PickCurrentIdxBtn @pick="moveIndex = store.pickedIdx" />
         </div>
         <div v-if="curStepInfo" class="lc-curstep">{{ curStepInfo }}（已自动预填，可改）</div>
         <!-- phase/action 四输入挂 datalist 候选（phase 值域=esEnumZh ILM_PHASE_ZH
-             五键、action 值域=新增 ILM_ACTION_ZH 官方九动作，二者是闭词汇域稳挂）；step 是随
-             策略/动作组合而异的开放域（complete 等 cryptic 标识），值域不稳记档不挂下拉。
-             六 input 各补 :title 中文释义（phase/action 候选域双语，step 说明预填通道） -->
+ 五键、action 值域=新增 ILM_ACTION_ZH 官方九动作，二者是闭词汇域稳挂）；step 是随
+ 策略/动作组合而异的开放域（complete 等 cryptic 标识），值域不稳不挂下拉。
+ 六 input 各补 :title 中文释义（phase/action 候选域双语，step 说明预填通道） -->
         <datalist id="ilm-phase-opts"><option v-for="(zh, k) in ILM_PHASE_ZH" :key="k" :value="k">{{ zh }}</option></datalist>
         <datalist id="ilm-action-opts"><option v-for="(zh, k) in ILM_ACTION_ZH" :key="k" :value="k">{{ zh }}</option></datalist>
         <div class="lc-move-row">
@@ -174,12 +174,12 @@
           <input v-model="nextStep" placeholder="step 名" class="lc-inp-sm" :title="'ILM 内部 step 标识（随策略与动作组合而异，候选域不稳未挂下拉；选索引后自动预填当前值）'" />
         </div>
         <div class="lc-actions">
-          <!--  G123：推进钮补 mvPending 守卫+spinning+文案（随 G121 同修同验） -->
+          <!-- G123：推进钮补 mvPending 守卫+spinning+文案（随 G121 同修同验） -->
           <button v-if="canOps" class="btn primary sm" @click="doMove" :disabled="!moveIndex.trim() || mvPending">
             <FastForward :size="12" :class="{ spinning: mvPending }" /> {{ mvPending ? '推进中…' : '推进' }}
           </button>
           <!-- 原始 IO 快查（explain 通道）——选索引自动预填的 ilm/explain 记录
-               （data-test 双钮第②钮，548 QueryXray raw-io-tv 先例；explain 为只读预检全角色可用） -->
+ （data-test 双钮第②钮，548 QueryXray raw-io-tv 先例；explain 为只读预检全角色可用） -->
           <button class="btn ghost sm" style="margin-left:auto" data-test="raw-io-lc-explain" aria-label="查看原始 IO（ILM explain）" title="最近一次 ILM explain（选索引自动预填当前 step）请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIoExplain"><Terminal :size="12" /> 原始 IO</button>
         </div>
         <!-- 同 rollover——JSON 响应走 highlightJson；：错误分支换 errPreHtml v-html -->
@@ -205,17 +205,17 @@ import RawIoModal from '../components/RawIoModal.vue';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
 import IndexPicker from '../components/IndexPicker.vue';
-import PickCurrentIdxBtn from '../components/PickCurrentIdxBtn.vue'; /* ：「用当前索引」回填钮统一件（558 判例） */
+import PickCurrentIdxBtn from '../components/PickCurrentIdxBtn.vue'; /* ：「用当前索引」回填钮统一件（*/
 import { askConfirm } from '../composables/confirm';
 import { useScopedDraft, useScopedDraftState } from '../composables/useScopedDraft';
 import JsonArea from '../components/JsonArea.vue';
 import EmptyState from '../components/EmptyState.vue';
 import SkeletonBox from '../components/SkeletonBox.vue';
-import StatusPill from '../components/StatusPill.vue'; /* ：状态徽标统一件（全站最后一个私造胶囊收编） */
+import StatusPill from '../components/StatusPill.vue'; /* ：状态徽标统一件（全站最后一个私造胶囊合并） */
 import { friendlyEsError } from '../utils/esError';
 import { highlightJson } from '../utils/jsonc';
 import { errPreHtml } from '../utils/errPre'; /* ：错误分支 pre v-html 内核 */
-import { useTierCycle } from '../composables/useTierCycle'; /* ：编辑框高度档记忆；收编 */
+import { useTierCycle } from '../composables/useTierCycle'; /* ：编辑框高度档记忆；合并 */
 import { lintClause } from '../utils/dslLint'; /* ：rollover 条件结构体检 */
 import { phaseZh, ILM_PHASE_ZH, ILM_ACTION_ZH } from '../utils/esEnumZh'; /* ：甘特/图例 phase 中文（esEnumZh 单源）；：move 弹窗 datalist 候选域 */
 import { useDebounceFn } from '../composables/useDebounceFn'; /* ：划线注入防抖统一件 */
@@ -223,35 +223,35 @@ import { removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 /* 权限门禁——ILM 起停/rollover/move step=/cluster/ilm/start|stop|move、/cluster/rollover=CLUSTER 档（rank3+）；
-   甘特图/explain/dry-run（只读预检）全角色可用 */
+ 甘特图/explain/dry-run（只读预检）全角色可用 */
 const auth = useAuthStore();
 const canOps = computed(() => auth.can('ops'));
 const router = useRouter();
-const busy = ref(true); /* G4：初值 true——首帧即骨架，不闪「无策略」空态 */
-const ilmOpPending = ref(false); /* G4 复审 M4：start/stop 写操作防重入——in-flight 期间按钮禁用 + 重入直接返回，杜绝双击双发 */
-/*  G121/G123：rollover 与 move 写操作在途档（铁律 D 在途可感知）——
-   rollover 按 dry/run 分档（触发钮文案/图标各自换装），互斥共用一档防并发；move 单档 */
+const busy = ref(true); /* ：初值 true——首帧即骨架，不闪「无策略」空态 */
+const ilmOpPending = ref(false); /* 复审 M4：start/stop 写操作防重入——in-flight 期间按钮禁用 + 重入直接返回，杜绝双击双发 */
+/* G121/G123：rollover 与 move 写操作在途档（铁律 D 在途可感知）——
+ rollover 按 dry/run 分档（触发钮文案/图标各自改用），互斥共用一档防并发；move 单档 */
 const roPending = ref<'dry' | 'run' | null>(null);
 const mvPending = ref(false);
 const ilmSts = ref<any>(null);
 const policies = ref<any[]>([]);
 const loadErr = ref('');  /* 策略源失败（err-bar 页顶独立） */
-const stsErr = ref('');   /* 状态徽标源失败（页头记名降级）——双源各立错误位（G2 教训） */
+const stsErr = ref('');   /* 状态徽标源失败（页头记名降级）——双源各立错误位（ 教训） */
 
 /* 操作参数进草稿——别名/条件/六项 phase-action-step 切页/刷新不丢 */
 const rolloverAlias = useScopedDraft('rollover-alias', { route: 'lifecycle' }, '').text;
 const rolloverCond = useScopedDraft('rollover-cond', { route: 'lifecycle' }, '{\n  "conditions": {\n    "max_docs": 100000,\n    "max_age": "7d",\n    "max_size": "50gb"\n  }\n}').text;const rolloverResult = ref('');
 const rolloverInfo = ref<any>(null);
 /* 条件编辑框高度三档行数循环 + usePref 跨会话记忆（ra.scriptH 同款形态；
-   走 JsonArea 既有 rows 写法，默认档 4 行不变）。
-   TIERS+usePref+手写 cycle 三件套收编 useTierCycle 单源
-   （lifecycle.roH 键不变=已存档位零迁移；默认档=首位，defVal 缺省；cycle 语义等值） */
+ 走 JsonArea 既有 rows 写法，默认档 4 行不变）。
+ TIERS+usePref+手写 cycle 三件套合并 useTierCycle 单源
+ （lifecycle.roH 键不变=已存档位零迁移；默认档=首位，defVal 缺省；cycle 语义等值） */
 const RO_H_TIERS = [4, 10, 18];
 const { v: roH, cycle: cycleRoH } = useTierCycle('lifecycle.roH', RO_H_TIERS);
 /* rollover 条件 lintClause 零 ctx 结构体检——实地核形态：该 JSON 是 rollover 完整 body
-   （{conditions:{…}} 包裹）非 search body 也非裸查询子句，lintDsl 根级规则（root-key-typo 等）
-   必误报 conditions，走裸子句出口（skipRoot 跳根级 search-body 规则、键级规则全保留）零误报；
-   fields 传 []（无 mapping 语义，纯结构规则）；JSON 非法静默（JsonArea 圆点已报） */
+ （{conditions:{…}} 包裹）非 search body 也非裸查询子句，lintDsl 根级规则（root-key-typo 等）
+ 必误报 conditions，走裸子句出口（skipRoot 跳根级 search-body 规则、键级规则全保留）零误报；
+ fields 传 []（无 mapping 语义，纯结构规则）；JSON 非法静默（JsonArea 圆点已报） */
 const roLint = computed(() => {
   try { return lintClause(JSON.parse(rolloverCond.value || ''), { fields: [] }); }
   catch { return []; }
@@ -259,19 +259,19 @@ const roLint = computed(() => {
 const roLintErrors = computed(() => roLint.value.filter(f => f.severity === 'error'));
 const roLintWarns = computed(() => roLint.value.filter(f => f.severity === 'warning' || f.severity === 'hint'));
 /* lint findings 同步注入编辑器划线（SearchSandboxView canonical 挂法：JsonArea
-   ref + watch 输入 → 防抖 setMarkers；severity info→hint 降级——MonacoEditor marker 档只收
-   warning/hint/error；JSON 非法时 roLint 为空即无划线，圆点报错通道不变）。
-   下方 lc-lint 行内提示条 banner 保留，行内条与划线双轨并存 */
+ ref + watch 输入 → 防抖 setMarkers；severity info→hint 降级——MonacoEditor marker 档只收
+ warning/hint/error；JSON 非法时 roLint 为空即无划线，圆点报错通道不变）。
+ 下方 lc-lint 行内提示条 banner 保留，行内条与划线双轨并存 */
 const roJaRef = ref<InstanceType<typeof JsonArea> | null>(null);
 const queueRoLintMarkers = useDebounceFn(() => {
   roJaRef.value?.setMarkers?.(roLint.value.map(f => ({ ...f, severity: f.severity === 'info' ? 'hint' as const : f.severity })));
 }, 250);
 watch(rolloverCond, () => { queueRoLintMarkers(); }, { immediate: true });
 /* 原始响应裸 pre → highlightJson 高亮（输出已转义，v-html 安全）。
-   「错误：」前缀判型退役（消脆弱前缀）——doRollover/doMove 失败路径改为
-   直接存原始错误全文（前缀退场，DevToolsView 语义色轮同口径：前缀会破坏着色侦测），
-   判型改稳判：JSON.parse 成功且含 error 键 = ES 错误 JSON；parse 失败 = 错误平文；
-   parse 成功无 error 键 = 成功响应。 */
+ 「错误：」前缀判型退役（消脆弱前缀）——doRollover/doMove 失败路径改为
+ 直接存原始错误全文（前缀移除，DevToolsView 语义色轮同口径：前缀会破坏着色侦测），
+ 判型改稳判：JSON.parse 成功且含 error 键 = ES 错误 JSON；parse 失败 = 错误平文；
+ parse 成功无 error 键 = 成功响应。 */
 function resultLooksErr(s: string): boolean {
   if (!s) return false;
   try {
@@ -285,7 +285,7 @@ const rolloverResultHtml = computed(() =>
   rolloverResultIsErr.value ? errPreHtml(rolloverResult.value) : highlightJson(rolloverResult.value));
 
 /* W4c：moveIndex 并入既有 move-form 草稿（此前游离 ref，切页/刷新独丢）——
-   computed 桥接，模板/watch/确认文案真相读写零改动 */
+ computed 桥接，模板/watch/确认文案真相读写零改动 */
 const moveForm = useScopedDraftState('move-form', { route: 'lifecycle' }, {
   moveIndex: '',
   curPhase: 'hot', curAction: 'complete', curStep: 'complete',
@@ -296,13 +296,13 @@ const moveIndex = computed({
   set: (v: string) => { moveForm.value.moveIndex = v; },
 });
 /* 一次性回填顶栏选中（对齐 Xmigrate 口径）：仅空时回填——不改用户已输/草稿恢复值；
-   写类视图不做持续 follow（ 白名单口径，防「A 的 move 目标被顶栏切换悄悄改掉」），
-   要换目标由用户显式改输入 */
+ 写类视图不做持续 follow（ 白名单口径，防「A 的 move 目标被顶栏切换悄悄改掉」），
+ 要换目标由用户显式改输入 */
 if (!moveForm.value.moveIndex && store.pickedIdx) {
   moveForm.value.moveIndex = store.pickedIdx;
-  /*  G124：回填是同步赋值且早于下方 watch 注册——watch 看不到这次变更，
-     回填链上 explain 零发/六输入保持默认（ A0 实锚）；显式补发预填。
-     KeepAlive 重挂不重跑 setup=不重触；草稿恢复值不自动预填语义不变 */
+  /* G124：回填是同步赋值且早于下方 watch 注册——watch 看不到这次变更，
+ 回填链上 explain 零发/六输入保持默认（ A0 实锚）；显式补发预填。
+ KeepAlive 重挂不重跑 setup=不重触；草稿恢复值不自动预填语义不变 */
   prefillCurStep(store.pickedIdx);
 }
 const curPhase = computed({ get: () => moveForm.value.curPhase as string, set: (v: string) => { moveForm.value.curPhase = v; } });
@@ -319,8 +319,8 @@ const moveResultHtml = computed(() =>
 const curStepInfo = ref('');
 
 /* 选索引后预填当前 ILM step（ilm/explain 已有）：phase/action/step 是 cryptic 内部标识，手填易错。
-   G124：抽出共用函数供 watch 与一次性回填两路调用（回填同步赋值早于 watch 注册，
-   watch 恒看不到那次变更——回填处显式补发） */
+ G124：抽出共用函数供 watch 与一次性回填两路调用（回填同步赋值早于 watch 注册，
+ watch 恒看不到那次变更——回填处显式补发） */
 function prefillCurStep(i: string) {
   api.ilmExplain(i).then((r: any) => {
     const info = r?.indices?.[i] || r;
@@ -352,9 +352,9 @@ function parseAge(s: string | undefined): number {
 function fmtPolicies(raw: any) {
   const list: any[] = [];
   /* G4-A1：后端契约是数组 [{name, policy, ...}]（EsIndexAdmin.listIlmPolicies 把策略名塞进 row.name）——
-     此前 Object.entries(数组) 把下标当策略名，甘特标签全部渲染成 0/1/2…
-     复审 M1/M2：删不可达的映射兼容分支（同仓后端恒定数组、api 类型 get<any[]>）；
-     name 缺失兜底带下标——空串会空甘特 label 且 :key 碰撞 */
+ 此前 Object.entries(数组) 把下标当策略名，甘特标签全部渲染成 0/1/2…
+ 复审 M1/M2：删不可达的映射兼容分支（同仓后端恒定数组、api 类型 get<any[]>）；
+ name 缺失兜底带下标——空串会空甘特 label 且 :key 碰撞 */
   const entries: [string, any][] = (Array.isArray(raw) ? raw : [])
     .map((row: any, i: number) => [String(row?.name || `(未命名#${i})`), row]);
   for (const [name, def] of entries) {
@@ -381,8 +381,8 @@ function fmtPolicies(raw: any) {
 async function load() {
   busy.value = true;
   try {
-    /* G4：双源各立错误位，不再 .catch(() => null/[]) 静默吞错（§8.2 禁静默 +  伪装空态）——
-       策略失败出 err-bar（保留旧甘特），状态失败页头记名；成功路径清各自 err 位 */
+    /* ：双源各立错误位，不再 .catch(() => null/[]) 静默吞错（ 禁静默 + 伪装空态）——
+ 策略失败出 err-bar（保留旧甘特），状态失败页头记名；成功路径清各自 err 位 */
     const [sts, pols] = await Promise.all([
       api.ilmStatus().then(r => { stsErr.value = ''; return r; })
         .catch((e: any) => {
@@ -402,8 +402,8 @@ async function load() {
   } finally { busy.value = false; }
 }
 
-/* G4-B5：原无 catch——失败是 unhandled rejection 零反馈；手动写操作 toast 透传即达标（G1/G3 裁定），重跑即重试
-   复审 M4：ilmOpPending 防重入——in-flight 期间重入直接返回（配合按钮 :disabled），finally 复位 */
+/* G4-B5：原无 catch——失败是 unhandled rejection 零反馈；手动写操作 toast 透传即达标（G1/ 裁定），重跑即重试
+ 复审 M4：ilmOpPending 防重入——in-flight 期间重入直接返回（配合按钮 :disabled），finally 复位 */
 async function ilmStart() {
   if (ilmOpPending.value) return;
   ilmOpPending.value = true;
@@ -447,8 +447,8 @@ async function doRollover(dryRun: boolean) {
     if (dryRun) store.notify('success', 'Dry Run 完成');
     else store.notify('success', 'Rollover 完成');
   } catch (e: any) {
-    /* 「错误：」前缀退场（DevToolsView 语义色轮口径）——判型已改 resultLooksErr 稳判，
-       前缀不再需要且会破坏 errPreHtml 的 JSON 着色侦测 */
+    /* 「错误：」前缀移除（DevToolsView 语义色轮口径）——判型已改 resultLooksErr 稳判，
+ 前缀不再需要且会破坏 errPreHtml 的 JSON 着色侦测 */
     rolloverResult.value = String(e?.message || e);
     store.notify('error', 'Rollover 失败：' + friendlyEsError(String(e?.message ?? e))); /* ：裸 err → friendlyEsError（前缀保留） */
   } finally { roPending.value = null; }
@@ -475,14 +475,14 @@ async function doMove() {
     if (r?.available === false) store.notify('warning', '不可用：' + (r.reason || ''));
     else store.notify('success', '已推进');
   } catch (e: any) {
-    /* 「错误：」前缀退场（同 doRollover——判型稳判后前缀破坏着色侦测） */
+    /* 「错误：」前缀移除（同 doRollover——判型稳判后前缀破坏着色侦测） */
     moveResult.value = String(e?.message || e);
     store.notify('error', '迁移步骤失败：' + friendlyEsError(String(e?.message ?? e))); /* ：同上 */
   } finally { mvPending.value = false; }
 }
 
 onMounted(() => {
-  /*  §8.1：命令面板「Rollover Dry Run」预填接收 */
+  /* 命令面板「Rollover Dry Run」预填接收 */
   const prefill = sessionStorage.getItem('es-console.lifecycle.rollover');
   if (prefill) {
     removeStoredRaw(sessionStorage, 'es-console.lifecycle.rollover');
@@ -492,8 +492,8 @@ onMounted(() => {
 });
 
 /* 原始 IO 快查（548 QueryXray 双钮先例）——rollover / ilm explain 两通道各取各的
-   记录（前缀互不混淆）；判空 rec=null 时 notify 引导，不开空弹窗。共用同一弹窗宿主
-   rawIoShow/rawIoRec，先后点开互不残留 */
+ 记录（前缀互不混淆）；判空 rec=null 时 notify 引导，不开空弹窗。共用同一弹窗宿主
+ rawIoShow/rawIoRec，先后点开互不残留 */
 const rawIoShow = ref(false);
 const rawIoRec = ref<RawIoRec | null>(null);
 function openRawIoRollover() {
@@ -512,26 +512,26 @@ function openRawIoExplain() {
 
 <style scoped>
 .lc-page { padding: var(--sp-2) var(--sp-3); }
-/* 页头旧壳四条死规则删（PageHeader 收编后同族漏删，模板零引用；
-   副题行与右组钮容器两条活规则保留——模板消费在场，733 同族） */
+/* 页头旧壳四条死规则删（PageHeader 合并后同族漏删，模板零引用；
+ 副题行与右组钮容器两条活规则保留——模板消费在场，733 同族） */
 .lc-hd-sub { font-size: var(--fs-xs); color: var(--muted); }
-/* 状态 b 换装 StatusPill 统一件（胶囊观感/色档归组件单源），本页无值色胶水 */
+/* 状态 b 改用 StatusPill 统一件（胶囊观感/色档归组件单源），本页无值色胶水 */
 .lc-hd-r { display: flex; gap: var(--sp-2); }
 
 /* 轨4：lc-panel 面板壳（bg+border+radius）退役 → io-cur/io-recs 538 同款
-   border-top 分节（原 margin-bottom 间距载体原样保留）；lc-panel-tt 行首横排档不动 */
+ border-top 分节（原 margin-bottom 间距载体原样保留）；lc-panel-tt 行首横排档不动 */
 .lc-panel { border-top: 1px solid var(--line); padding-top: var(--sp-2); margin-bottom: var(--sp-3); }
 .lc-panel-tt { font-size: var(--fs-xs); font-weight: 600; display: flex; gap: var(--sp-2); align-items: center; margin-bottom: var(--sp-2); }
 .lc-panel-tt .lc-sub { font-weight: 400; color: var(--muted); font-size: var(--fs-xs); margin-left: var(--sp-2); }
 
 .lc-rollover, .lc-move { display: flex; flex-direction: column; gap: var(--sp-2); }
 /* lc-idx-row——IndexPicker 与 PickCurrentIdxBtn 同行横排（AdhocRebuild idxRowEl
-   同款形态；width="100%" 内联宽由 flex:1 承接，满宽行为等值零变动） */
+ 同款形态；width="100%" 内联宽由 flex:1 承接，满宽行为等值零变动） */
 .lc-idx-row { display: flex; align-items: center; gap: var(--sp-1h); }
 .lc-idx-row :deep(.ixp) { flex: 1; min-width: 0; }
-/* rollover 辅助编辑器外框退役（立法③；RankDebugView rd-card-ed 判例同语言）——
-   JsonArea 自带 border+radius 壳退掉，分节流分界已归 lc-panel border-top；
-   rows 三档定高不随容器伸缩，不接 flex 链（rd 判例的 flex:1 属其编辑卡弹性语境） */
+/* rollover 辅助编辑器外框退役（约定③；RankDebugView rd-card-ed 先例同语言）——
+ JsonArea 自带 border+radius 壳退掉，分节流分界已归 lc-panel border-top；
+ rows 三档定高不随容器伸缩，不接 flex 链（rd 先例的 flex:1 属其编辑卡弹性语境） */
 .lc-rollover :deep(.ja) { border: none; border-radius: 0; }
 /* rollover 条件 lint 体检提示条（.alv-lint 同构）；行数档走 JsonArea 既有 rows 写法，无容器层 */
 .lc-lint { display: flex; flex-direction: column; gap: var(--sp-0); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-s); font-size: var(--fs-xs); line-height: 1.5; }
@@ -573,8 +573,8 @@ function openRawIoExplain() {
 .lc-move-row > span { width: 60px; }
 
 /* 900 紧凑微调档——页侧距 --sp-3 收 --sp-2；面板标题行（标题+长副题+高度档钮）
-   与 move-step 输入行（标签+三输入框）窄容器补 wrap（gap 同轴生效，换行行距免调）。
-   本页无宽表，甘特 track flex:1 自收缩，无需横滚兜底 */
+ 与 move-step 输入行（标签+三输入框）窄容器补 wrap（gap 同轴生效，换行行距免调）。
+ 本页无宽表，甘特 track flex:1 自收缩，无需横滚兜底 */
 @media (max-width: 900px) {
   .lc-page { padding: var(--sp-2); }
   .lc-panel-tt { flex-wrap: wrap; }

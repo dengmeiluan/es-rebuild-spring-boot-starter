@@ -11,7 +11,7 @@ const qrt = read('../components/QueryResultTable.vue');
 
 describe('表格基础样式守卫（295 批）', () => {
   it('宽松档 12px 两表一致；紧凑档 RT 3px/QRT 2px 各自基线不漂移', () => {
-    /* 五百三十八批 --sp 等值收口随迁：cozy 宽松档 12px=--sp-3 恒等替换（值语义零变更，档位锚不漂移） */
+    /* 五百三十八批 --sp 等值收口同步更新：cozy 宽松档 12px=--sp-3 恒等替换（值语义零变更，档位锚不漂移） */
     expect(rt).toMatch(/\.rt\.cozy .*padding-top: var\(--sp-3\)/);
     expect(qrt).toMatch(/\.qrt-tbl\.cozy th, \.qrt-tbl\.cozy td \{ padding-top: var\(--sp-3\); padding-bottom: var\(--sp-3\); \}/);
     expect(rt).toContain('.rt.dense .rt-tbl :deep(td), .rt.dense .rt-tbl :deep(th) { padding-top: 3px');

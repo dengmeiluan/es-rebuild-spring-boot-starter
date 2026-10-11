@@ -1,29 +1,29 @@
 /**
  * 六百二十一批：轨4 单源化（非 RT/QRT 工具行的自造过滤框 → SearchFilterBar 统一件）。
- * 判据（547/553/559/560/561 换装谱系同款范式）：
+ * 判据（547/553/559/560/561 改用谱系同款范式）：
  *   1) QueryHistoryPanel .qhp-filter：裸 input（.inp 手写皮 + 独立高度/字号内衬）→
  *      SearchFilterBar 第 17 胞；落位/内衬归 .qhp-sfb（组件根，父 scoped 样式照常命中），
  *      inputclass 保留 .qhp-filter 锚（queryHistoryPanel.spec 运行时锚零迁移）；
  *      Esc 清空由组件内建承接（原裸 input 无 Esc 语义 = 增量）。
  *   2) HotkeyPanel .hk-filter：裸 input（.ipt 手写皮）→ 第 18 胞；**Esc 层级契约保形**——
  *      原 @keydown.esc.stop.prevent 的 .stop 不可丢（丢则 Esc 冒泡到 window onKey 与
- *      .hk-mask 元素级 handler，过滤框内按 Esc 会连面板一起关掉）；换装后在组件根补
+ *      .hk-mask 元素级 handler，过滤框内按 Esc 会连面板一起关掉）；改用后在组件根补
  *      @keydown.esc.stop（SearchFilterBar 内建只 .prevent 不 .stop，冒泡到达根时拦断）。
  *   3) ColDetailModal .rt-cd-kw：裸 input（自造胶囊皮 + focus 边框）→ 第 19 胞；
  *      topTotal>20 门控与 mono 字面锚随 inputclass 保形（colStatsTopTotal525 /
  *      tableKernelOffBl558b 运行时锚零迁移）；自造 focus 边框由 --ac-line 焦点环承接。
- * 负锁一律剥注释后断言（flattenWave556 口径：历史记档注释里的字面不算数）。
+ * 负锁一律剥注释后断言（flattenWave556 口径：历史备案注释里的字面不算数）。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const read = (p: string) => readFileSync(join(__dirname, '..', p), 'utf-8');
-/* 剥 CSS/HTML 注释：负锁防历史记档字面误命中（unifyWave561 同口径） */
+/* 剥 CSS/HTML 注释：负锁防历史备案字面误命中（unifyWave561 同口径） */
 const codeOf = (p: string) => read(p).replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/<!--[\s\S]*?-->/g, ' ');
 
-describe('六百二十一批①：SearchFilterBar 第 17/18/19 胞换装（源码契约）', () => {
-  it('QueryHistoryPanel：qhp-filter 换装（落位类 qhp-sfb + input-class 锚 + 裸 input 退役）', () => {
+describe('六百二十一批①：SearchFilterBar 第 17/18/19 胞改用（源码契约）', () => {
+  it('QueryHistoryPanel：qhp-filter 改用（落位类 qhp-sfb + input-class 锚 + 裸 input 退役）', () => {
     const s = codeOf('components/QueryHistoryPanel.vue');
     expect(s, '统一件接线（v-model/落位类/input-class 锚/placeholder 逐字）')
       .toContain('<SearchFilterBar v-model="kw" class="qhp-sfb" input-class="qhp-filter" placeholder="过滤：查询文本 / 索引名" />');
@@ -33,7 +33,7 @@ describe('六百二十一批①：SearchFilterBar 第 17/18/19 胞换装（源�
       .toContain('.qhp-sfb { flex: 1; min-width: 0; height: 26px; font-size: var(--fs-sm); padding: 0 var(--sp-2); }');
   });
 
-  it('HotkeyPanel：hk-filter 换装 + Esc 层级 .stop 保形（面板误关防回归）', () => {
+  it('HotkeyPanel：hk-filter 改用 + Esc 层级 .stop 保形（面板误关防回归）', () => {
     const s = codeOf('components/HotkeyPanel.vue');
     expect(s, '统一件接线（placeholder 逐字保留 + 根级 Esc .stop 保形）')
       .toMatch(/<SearchFilterBar v-model="hkKw"[\s\S]{0,220}?placeholder="过滤快捷键（描述 \/ 键名，Esc 清空）"[\s\S]{0,140}?@keydown\.esc\.stop \/>/);
@@ -44,9 +44,9 @@ describe('六百二十一批①：SearchFilterBar 第 17/18/19 胞换装（源�
       .toContain('.hk-filter { margin: var(--sp-1h) 0 var(--sp-0); font-size: var(--fs-xs); }');
   });
 
-  it('ColDetailModal：rt-cd-kw 换装（topTotal>20 门控 + mono 锚 + 焦点环承接）', () => {
+  it('ColDetailModal：rt-cd-kw 改用（topTotal>20 门控 + mono 锚 + 焦点环承接）', () => {
     const s = codeOf('components/ColDetailModal.vue');
-    expect(s, '统一件接线（v-if 门控与 mono 字面锚随迁）')
+    expect(s, '统一件接线（v-if 门控与 mono 字面锚同步更新）')
       .toContain('<SearchFilterBar v-if="stats.topTotal > 20" v-model="kw" class="rt-cd-kw-wrap" input-class="rt-cd-kw mono" placeholder="过滤高频值…" />');
     expect(s, '裸 input 退役').not.toMatch(/<input v-if="stats\.topTotal > 20" v-model="kw" class="rt-cd-kw mono"/);
     expect(s, '统一件 import 在场').toMatch(/import SearchFilterBar from '\.\/SearchFilterBar\.vue';/);
@@ -146,7 +146,7 @@ describe('六百二十一批②：挂载级零回归（壳结构 + 过滤行为 
     const inp = document.body.querySelector('.rt-cd-kw') as HTMLInputElement;
     expect(inp, 'topTotal>20 出 kw 过滤（525 批契约）').toBeTruthy();
     expect(inp.tagName).toBe('INPUT');
-    expect(inp.classList.contains('mono'), 'mono 字面锚随迁').toBe(true);
+    expect(inp.classList.contains('mono'), 'mono 字面锚同步更新').toBe(true);
     expect(inp.closest('.sfb'), '锚 input 在胶囊壳内（单源结构）').toBeTruthy();
     inp.value = 'v3';
     inp.dispatchEvent(new Event('input', { bubbles: true }));

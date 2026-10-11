@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
 /**
- * 控制台鉴权拦截器（）：覆盖 {@code /internal/es/index/**} 与 {@code /internal/es/xmigrate/**}。
+ * 控制台鉴权拦截器（覆盖 {@code /internal/es/index/**} 与 {@code /internal/es/xmigrate/**}。
  *
  * <p>分级规则（傻瓜化默认，无需配置）：</p>
  * <ul>
@@ -59,12 +59,11 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
     /** request attribute：已认证身份，供 auth controller / 审计复用。 */
     public static final String ATTR_PRINCIPAL = "es.console.principal";
 
-    /** request attribute：拦截器入口时刻（毫秒）——审计耗时维度（）。 */
+    /** request attribute：拦截器入口时刻（毫秒）——审计耗时维度（。 */
     static final String ATTR_START_MS = "es.console.audit.startMs";
 
     /** request attribute：raw 透传执行摘要（"GET /_cat/indices" 形态）——由 /cluster/raw
-     *  端点解析请求体后回填，afterCompletion 落入 HIGH_RISK detail（：
-     *  高危操作从「零法证」到「谁对哪个集群执行了什么」）。 */
+     *  端点解析请求体后回填，afterCompletion 落入 HIGH_RISK detail（*  高危操作从「零法证」到「谁对哪个集群执行了什么」）。 */
     public static final String ATTR_RAW_SUMMARY = "es.console.raw.summary";
 
     /** 免鉴权路径（登录本身 +  Setup 状态查询）。 */
@@ -167,7 +166,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
     private final io.github.dengmeiluan.es.rebuild.multicluster.ConnStore connStore;
     /** connName 解析失败 WARN 节流计数（实例级——拦截器产线单例）。 */
     private final AtomicLong lastConnNameWarnAt = new AtomicLong(0);
-    /* 委托令牌首见登记（会话 LOGIN 审计去重，）——LRU 封顶防长期运行膨胀；
+    /* 委托令牌首见登记（会话 LOGIN 审计去重）——LRU 封顶防长期运行膨胀；
        令牌即会话标识（宿主 会话期内令牌稳定，换发即新会话）。 */
     private final java.util.Map<String, Long> seenDelegateTokens =
             java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<String, Long>(16, 0.75f, false) {
@@ -366,7 +365,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
     }
 
     /**
-     * 审计事件组装（）：目标集群（connId/connName）+来源 IP+耗时三维采集单点。
+     * 审计事件组装（目标集群（connId/connName）+来源 IP+耗时三维采集单点。
      * connId 取 X-Es-Target（"host"/空=无连接上下文→null）；connName 经 ConnStore 实名，
      * 查不到留 null；耗时覆盖拒绝（preHandle 记录点）与写完成（afterCompletion）两路。
      */

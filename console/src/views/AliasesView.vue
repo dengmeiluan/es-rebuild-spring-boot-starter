@@ -10,10 +10,10 @@
     <!-- 顶栏 -->
     <div class="alv-bar lr-bar">
       <div class="alv-bar-l lr-bar-l">
-        <!-- 手写过滤框换装 SearchFilterBar 统一件（全站第 9 胞；558 cd-kw-inp 判例：
-             v-model 接原 query 零触、placeholder 逐字保留、Esc 清空/Enter 检索（onHitKey）
-             内建语义对齐；alv-kw-wrap 落位类挂根（flex/max-width 随迁），alv-input 类锚随
-             input-class 保留在 input 上（w5IndexWorkspace530 挂载锁同路径）） -->
+        <!-- 手写过滤框改用 SearchFilterBar 统一件（全站第 9 胞；558 cd-kw-inp 先例：
+ v-model 接原 query 零触、placeholder 逐字保留、Esc 清空/Enter 检索（onHitKey）
+ 内建语义对齐；alv-kw-wrap 落位类挂根（flex/max-width 同步更新），alv-input 类锚随
+ input-class 保留在 input 上（w5IndexWorkspace530 挂载锁同路径） -->
         <SearchFilterBar v-model="query" class="alv-kw-wrap" input-class="alv-input" placeholder="过滤 alias / index 名（支持子串）" @enter="onHitKey" />
         <!-- 搜索定位：命中计数 + 上/下一个（Enter/Shift+Enter 在过滤框接线） -->
         <HitNav :count="groups.length" :current="hitCur" compact @next="hitNext" @prev="hitPrev" />
@@ -37,9 +37,9 @@
     </div>
 
     <!-- 写操作面板（新建 / 原子切换）。
-         全站最后一个全局 .card 壳退役（立法④：border+底色+radius 整块消除）
-         → border-top 分节承接（ ar-sec 同刀）；alv-panel 品牌弱化线语义保形转
-         border-top-color=var(--ac-line)；card-t 行首横排保留 -->
+ 全站最后一个全局 .card 壳退役（约定④：border+底色+radius 整块消除）
+ → border-top 分节承接（ ar-sec 同刀）；alv-panel 品牌弱化线语义保形转
+ border-top-color=var(--ac-line)；card-t 行首横排保留 -->
     <div v-if="panel" class="alv-panel">
       <div class="card-t">
         <component :is="panel.mode === 'create' ? Plus : ArrowLeftRight" :size="13" style="color:var(--ac)" />
@@ -52,13 +52,13 @@
         <div class="alv-form">
           <label class="alv-f"><span>别名</span><input v-model="cAlias" ref="cAliasEl" class="alv-fi" placeholder="my-alias" @keydown.enter="cAlias && cIndex && !acting && doCreate()" />
             <!-- 别名输入智能纠错（useInputLint 出数据，.il-hint 提示条样式全站单一出处 theme.css）——
-                 非法字符 err + 重名 warn（对照现有别名列表）；别名允许大写，故不套 indexNameRule -->
+ 非法字符 err + 重名 warn（对照现有别名列表）；别名允许大写，故不套 indexNameRule -->
             <div v-if="cAliasHint" class="il-hint" :class="'il-' + cAliasLevel">{{ cAliasHint }}</div>
           </label>
           <label class="alv-f"><span>物理索引</span>
-            <!-- 「用当前索引」回填钮收编 PickCurrentIdxBtn 统一件（558 五视图判例：
-                 data-test/title/aria 逐字锚由组件保真透传，回填语义归消费方——openCreate 既有
-                 pickedIdx 预填之上补显式覆盖口； 不 follow 口径不变） -->
+            <!-- 「用当前索引」回填钮合并 PickCurrentIdxBtn 统一件（558 五视图先例：
+ data-test/title/aria 逐字锚由组件保真透传，回填语义归消费方——openCreate 既有
+ pickedIdx 预填之上补显式覆盖口； 不 follow 口径不变） -->
             <div class="alv-idx-row">
               <IndexPicker v-model="cIndex" placeholder="my-index-v1" />
               <PickCurrentIdxBtn @pick="cIndex = store.pickedIdx" />
@@ -75,11 +75,11 @@
               :title="'filter 编辑框高度档：' + filterH + ' 行'" @click.prevent="cycleFilterH">高</button>
           </div>
           <!-- filter JsonArea 接 dsl-assist（bodyKind 'search'——filter 就是查询子句组合，
-               DevTools「仅 search 档」门控同款）+ lintDsl 体检提示条（fields 源=新建面板选中的物理索引）；
-               w10 reset 行与脚本判定不动，只加 prop 与 lint 显示。
-               rows=3 定高 → 三档行数循环（JsonArea 既有 rows 写法，默认档 3 行不变） -->
+ DevTools「仅 search 档」门控同款）+ lintDsl 体检提示条（fields 源=新建面板选中的物理索引）；
+ w10 reset 行与脚本判定不动，只加 prop 与 lint 显示。
+ rows=3 定高 → 三档行数循环（JsonArea 既有 rows 写法，默认档 3 行不变） -->
           <JsonArea ref="filterJaRef" v-model="cFilter" :rows="filterH" :dsl-assist="filterAssist" placeholder="留空不设 filtered alias，例 {&quot;term&quot;:{&quot;status&quot;:1}}" />
-          <!-- lint 条换装 theme.css .lint-bar 单源（纯类名替换，DOM 保形） -->
+          <!-- lint 条改用 theme.css .lint-bar 单源（纯类名替换，DOM 保形） -->
           <div v-if="filterLintErrors.length" role="alert" class="lint-bar lint-bar-err">
             <span>DSL 检查（错误）：{{ filterLintErrors.map(f => f.message + '（' + f.suggestion + '）').join('；') }}</span>
           </div>
@@ -94,9 +94,9 @@
 
       <template v-else>
         <div class="alv-form">
-          <!-- 「从」侧换装 usePopupList 弹层（与「到」侧 IndexPicker 对称的输入+候选形态）；
-               候选限定为已绑该别名的索引（IndexPicker 读全集群清单无法限定候选源），
-               label 带索引名（WRITE 标记同旧 option 文案） -->
+          <!-- 「从」侧改用 usePopupList 弹层（与「到」侧 IndexPicker 对称的输入+候选形态）；
+ 候选限定为已绑该别名的索引（IndexPicker 读全集群清单无法限定候选源），
+ label 带索引名（WRITE 标记同旧 option 文案） -->
           <label class="alv-f"><span>从（解绑）</span>
             <div class="alv-swfrom" ref="sfRootEl">
               <input class="alv-fi" :value="sfKw || swFrom" placeholder="选择已绑索引" spellcheck="false" autocomplete="off"
@@ -132,35 +132,35 @@
       </template>
     </div>
 
-    <!-- §7 写操作本地 ConfirmModal 宿主退役，收敛全局 askConfirm（App.vue 唯一宿主；
-         原白屏 pre-line 换行的 body 改单句 message，facts 具名行语义原样保留） -->
+    <!-- 写操作本地 ConfirmModal 宿主退役，收敛全局 askConfirm（App.vue 唯一宿主；
+ 原白屏 pre-line 换行的 body 改单句 message，facts 具名行语义原样保留） -->
 
     <!-- 别名管控右键菜单(CellContextMenu 共享件,操作聚合到右键)
-         y1 运行时修复:原先误嵌在「新建面板 create 分支」内,面板一关右键菜单就永不渲染——
-         移到根级(组件 teleport 到 body,树位置不影响布局),与 SnapshotsView 同构 -->
+ y1 运行时修复:原先误嵌在「新建面板 create 分支」内,面板一关右键菜单就永不渲染——
+ 移到根级(组件 teleport 到 body,树位置不影响布局),与 SnapshotsView 同构 -->
     <CellContextMenu v-if="aliasMenu" :x="aliasMenu.x" :y="aliasMenu.y" :title="aliasMenu.g.alias"
       :items="aliasMenuItems" @close="aliasMenu = null" />
     <CellContextMenu v-if="rowMenu" :x="rowMenu.x" :y="rowMenu.y" :title="rowMenu.index"
       :items="rowMenuItems" @close="rowMenu = null" />
 
-    <!-- 主区：按 alias 聚合分组（ §1：加载/失败/过滤隐藏/真无四态分明） -->
+    <!-- 主区：按 alias 聚合分组（ 加载/失败/过滤隐藏/真无四态分明） -->
     <div v-if="loading && !groups.length" class="alv-groups">
       <SkeletonBox v-for="i in 4" :key="i" height="88px" round />
     </div>
-    <!-- 三分支旧范式 .empty 换装 EmptyState compact（props 照 ClusterSettingsView/LuceneQueryView 邻页用法）；
-         重试/清除过滤收编 actionText 槽，文案原样保留；图标 AlertTriangle/SearchX/Link2 按语义选（均已 import/SearchX 新增） -->
+    <!-- 三分支旧范式 .empty 改用 EmptyState compact（props 照 ClusterSettingsView/LuceneQueryView 邻页用法）；
+ 重试/清除过滤合并 actionText 槽，文案原样保留；图标 AlertTriangle/SearchX/Link2 按语义选（均已 import/SearchX 新增） -->
     <EmptyState v-else-if="loadErr" compact :icon="AlertTriangle" text="别名图拉取失败" :hint="loadErr" action-text="重试" @action="load" />
     <EmptyState v-else-if="!groups.length && rows.length" compact :icon="SearchX"
       :text="`无匹配 alias（共 ${aliasCount} 个，被当前关键字隐藏）`" action-text="清除过滤" @action="query = ''" />
     <EmptyState v-else-if="!groups.length" compact :icon="Link2" text="集群没有任何别名" hint="可点右上角「新建别名」创建第一个绑定" />
     <div v-else class="alv-groups">
       <!-- write 异常仅保留这一处（原 KPI alert 卡与警示卡两处拆分 → 通栏并入列表区头部，
-           不再是独立横幅层；writeIssues 派生自分组的别名必有成员组，故随列表分支渲染不会丢） -->
+ 不再是独立横幅层；writeIssues 派生自分组的别名必有成员组，故随列表分支渲染不会丢） -->
       <div v-if="writeIssues.length" class="alv-warn-head">
         <div class="alv-warn-t sec-t"><AlertTriangle :size="13" style="color:var(--warn)" /> 需关注的 write 异常（{{ writeIssues.length }}）</div>
         <div v-for="w in writeIssues" :key="w.alias" class="alv-warn-row">
           <span class="mono">{{ w.alias }}</span>
-          <!-- alv-warn-tag 纯 warn 色私造胶囊换装 StatusPill 统一件（warn→y 语义档） -->
+          <!-- alv-warn-tag 纯 warn 色私造胶囊改用 StatusPill 统一件（warn→y 语义档） -->
           <StatusPill tone="y" :label="w.reason" />
           <span class="mono alv-warn-idxs" :title="w.indices.join(', ')">{{ w.indices.join(' , ') }}</span>
         </div>
@@ -170,8 +170,8 @@
           <div class="alv-g-hd-l">
             <Link2 :size="13" class="alv-g-ic" />
             <span class="mono alv-g-alias" :title="g.alias"><MarkText :text="g.alias" :kw="query" /></span>
-            <!-- 五处手写 pill 换装 StatusPill 统一件（色档/tone 语义归组件单源，
-                 原 .pill b/r/n/g 裸挂退役； 前「p-* 无色胶囊」旧症一并随组件化封死） -->
+            <!-- 五处手写 pill 改用 StatusPill 统一件（色档/tone 语义归组件单源，
+ 原 .pill b/r/n/g 裸挂退役； 前「p-* 无色胶囊」旧症一并随组件化封死） -->
             <StatusPill tone="b" :label="g.rows.length + ' 索引'" />
             <StatusPill v-if="g.writeCount > 1" tone="r" label="多写" title="别名下有多个 is_write_index=true，不合规" />
             <StatusPill v-else-if="g.writeCount === 0 && g.rows.length > 1" tone="n" label="只读" title="未指定 write index：跨索引聚合的只读用法（常态）；如需通过该别名写入，请先「设写」" />
@@ -198,14 +198,14 @@
                 <span class="alv-arrow-tip">▸</span>
               </span>
               <span class="mono alv-arrow-idx" :title="'打开索引工作区：' + r.index" tabindex="0" role="button" @keydown.enter.prevent="goHub(r.index)" @keydown.space.prevent="goHub(r.index)" @click="goHub(r.index)"><MarkText :text="r.index" :kw="query" /></span>
-              <!-- 行内 write 徽标换装 StatusPill（alv-write-badge 锚类保留在外层） -->
+              <!-- 行内 write 徽标改用 StatusPill（alv-write-badge 锚类保留在外层） -->
               <StatusPill v-if="r.isWriteIndex === true" tone="g" label="可写" class="alv-write-badge" />
               <StatusPill v-else-if="r.isWriteIndex === false" tone="b" label="只读" class="alv-write-badge" />
               <StatusPill v-else tone="n" label="-" class="alv-write-badge" />
               <template v-if="showFilter">
-                <!-- rt/filter 手写 meta 片收编 MetaStrip mini 档（550 sv-repo-meta 判例）——
-                     rt 值段入 items（title→tip 随迁）；filter 段是 popover 触发器（交互语义）走默认插槽；
-                     bg2 胶囊底私造样式随迁删除（形态归 .ms 单源） -->
+                <!-- rt/filter 手写 meta 片合并 MetaStrip mini 档（550 sv-repo-meta 先例）——
+ rt 值段入 items（title→tip 同步更新）；filter 段是 popover 触发器（交互语义）走默认插槽；
+ bg2 胶囊底私造样式同步更新删除（形态归 .ms 单源） -->
                 <MetaStrip v-if="r.routing || r.filter" class="alv-rowmeta" :items="r.routing ? [{ value: r.routing, label: 'rt', tip: 'index_routing' }] : []">
                   <n-popover v-if="r.filter" trigger="click" placement="bottom" :width="320">
                     <template #trigger>
@@ -229,11 +229,11 @@
             </div>
           </template>
           <!-- 大组折叠展开钮。：去掉 !query.trim() 门控——过滤词非空时 shownRows
-               已自动全量展开，此前景象在「折叠/全量」间突变且无任何控件可见；门控去掉后过滤态
-               恒有展开/收起钮（此时点击只是预置折叠意图，清空过滤词后生效）。
-               门控恢复 !query.trim()——过滤态下点击只换文案、行数不变（shownRows
-               因过滤恒全量，折叠意图无处落地），钮与实际行为脱节困惑；改为过滤态直接不出钮
-               （shownRows 仍恒全量，所见即所得），非过滤态折叠钮行为照旧。 -->
+ 已自动全量展开，此前景象在「折叠/全量」间突变且无任何控件可见；门控去掉后过滤态
+ 恒有展开/收起钮（此时点击只是预置折叠意图，清空过滤词后生效）。
+ 门控恢复 !query.trim()——过滤态下点击只换文案、行数不变（shownRows
+ 因过滤恒全量，折叠意图无处落地），钮与实际行为脱节困惑；改为过滤态直接不出钮
+ （shownRows 仍恒全量，所见即所得），非过滤态折叠钮行为照旧。 -->
           <button v-if="!query.trim() && g.rows.length > ROW_LIMIT" class="btn xs ghost" style="align-self:flex-start;margin-top:var(--sp-1)"
             @click="toggleGroup(g)">
             {{ expandedGroups.has(g.alias) ? '收起' : `展开全部 ${g.rows.length} 个索引` }}
@@ -265,12 +265,12 @@ import { useScopedDraft } from '../composables/useScopedDraft';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
 import IndexPicker from '../components/IndexPicker.vue';
-import PickCurrentIdxBtn from '../components/PickCurrentIdxBtn.vue'; /* ：「用当前索引」回填钮统一件（558 判例） */
+import PickCurrentIdxBtn from '../components/PickCurrentIdxBtn.vue'; /* ：「用当前索引」回填钮统一件（*/
 import SearchFilterBar from '../components/SearchFilterBar.vue'; /* ：顶栏过滤胶囊统一件 */
 import JsonArea from '../components/JsonArea.vue';
 import { useIndexFields } from '../composables/useIndexFields';
 import { useTermsSuggest } from '../composables/useTermsSuggest'; /* ：值位动态候选（660 范式） */
-import { useTierCycle } from '../composables/useTierCycle'; /* ：filter 编辑框高度档记忆；收编 */
+import { useTierCycle } from '../composables/useTierCycle'; /* ：filter 编辑框高度档记忆；合并 */
 import { useInputLint, patternRule, dupRule } from '../composables/useInputLint'; /* ：别名输入智能纠错 */
 import { useDebounceFn } from '../composables/useDebounceFn'; /* ：lint 划线防抖统一件 */
 import { lintClause } from '../utils/dslLint'; /* ：filter DSL 静态体检；：裸子句出口换 lintClause */
@@ -291,12 +291,12 @@ const router = useRouter();
 const route = useRoute();
 const store = useAppStore();
 /* 权限门禁——alias 写操作（新建/切换/设写/解绑）全走 /cluster/alias-actions=CLUSTER 档，
-   rank3+ 可见；VIEWER/OPERATOR 只读观测（不再给会 403 的按钮） */
+ rank3+ 可见；VIEWER/OPERATOR 只读观测（不再给会 403 的按钮） */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/alias-actions', store.target));
 
 /* 原始 IO 快查（546 六页同款三件套）——/cluster/alias-actions 写通道独占
-   （GET /cluster/aliases 会被 IndexHub 顶掉，勿用）；判空 rec=null 时 notify 引导，不开空弹窗 */
+ （GET /cluster/aliases 会被 IndexHub 顶掉，勿用）；判空 rec=null 时 notify 引导，不开空弹窗 */
 const rawIoShow = ref(false);
 const rawIoRec = ref<RawIoRec | null>(null);
 function openRawIo() {
@@ -316,10 +316,10 @@ const query = useScopedDraft('q', { route: 'aliases' }, '').text;
 const showFilter = ref(false);
 
 /* ═══ ：深链消费 /aliases?idx=<索引名>（索引工作区「管控」/页头「别名」入口直达）═══
-   ① 过滤词预填该索引名（过滤是子串匹配，别名/索引名含该串的分组都保留）；
-   ② 成员含该索引的分组置顶 + 命中强调条（QRT hit-cur 游标同款视觉语言）；
-   ③ 消费后 router.replace 清掉 ?idx 参（history 栈不留参，刷新不重放深链），
-     deepIdx 保留到离开本页——强调条持续标记「此行来自哪里」 */
+ ① 过滤词预填该索引名（过滤是子串匹配，别名/索引名含该串的分组都保留）；
+ ② 成员含该索引的分组置顶 + 命中强调条（QRT hit-cur 游标同款视觉语言）；
+ ③ 消费后 router.replace 清掉 ?idx 参（history 栈不留参，刷新不重放深链），
+ deepIdx 保留到离开本页——强调条持续标记「此行来自哪里」 */
 const deepIdx = ref('');
 const isDeepHit = (g: Group) => !!deepIdx.value && g.rows.some(r => r.index === deepIdx.value);
 function consumeDeepIdx() {
@@ -332,7 +332,7 @@ function consumeDeepIdx() {
 }
 
 /* 大别名组行折叠——300 索引的别名组全量渲染卡死滚动；默认前 12 条+展开钮。
-   展开集合按 alias 存（跨过滤/刷新保留展开意图），搜索过滤时自动全量（找东西别折叠）。 */
+ 展开集合按 alias 存（跨过滤/刷新保留展开意图），搜索过滤时自动全量（找东西别折叠）。 */
 const ROW_LIMIT = 12;
 const expandedGroups = ref<Set<string>>(new Set());
 function shownRows(g: Group) {
@@ -379,7 +379,7 @@ const groups = computed<Group[]>(() => {
     out.push({ alias, rows: rs, writeCount: rs.filter(r => r.isWriteIndex === true).length });
   });
   /* 深链置顶——成员含深链索引的分组排最前（其余仍按别名字典序），
-     深链诉求是「看这个索引挂在哪些别名下」，命中组不该被字典序埋进长列表中部 */
+ 深链诉求是「看这个索引挂在哪些别名下」，命中组不该被字典序埋进长列表中部 */
   const deepFirst = (g: Group) => (isDeepHit(g) ? 0 : 1);
   return out.sort((a, b) => deepFirst(a) - deepFirst(b) || a.alias.localeCompare(b.alias));
 });
@@ -388,7 +388,7 @@ const aliasCount = computed(() => new Set(rows.value.map(r => r.alias)).size);
 const indexCount = computed(() => new Set(rows.value.map(r => r.index)).size);
 
 /* 页头元信息串（MetaStrip 统一件）：原整条 :title 全文拆到各段 tip；
-   write 异常计数并入「多索引 alias」段 tip 兜底（其组必为多索引组的子集，语义相承） */
+ write 异常计数并入「多索引 alias」段 tip 兜底（其组必为多索引组的子集，语义相承） */
 const hdMeta = computed<MetaStripItem[]>(() => [
   { label: '别名', value: fmtNum(aliasCount.value), tip: `别名 ${fmtNum(aliasCount.value)}（全集群 alias，排除 . 开头系统）` },
   { label: '物理索引', value: fmtNum(indexCount.value), tip: `物理索引 ${fmtNum(indexCount.value)}（被 alias 指向的物理数）` },
@@ -410,16 +410,16 @@ const writeIssues = computed(() => {
     if (g.writeCount > 1) {
       out.push({ alias: g.alias, reason: '多个 write=true', indices: g.rows.filter(r => r.isWriteIndex).map(r => r.index) });
     }
-    /*  信噪比：多索引别名「未设 write」不再计入异常——时间分片/跨索引聚合的只读别名
-       本来就不设 is_write_index（集群常态，QA 环境 103/133 全中）。写入失败是使用侧问题，
-       别名面板把常态当告警只会淹没真正的「多写」违规。分组行上仍以中性「只读」徽标标注。 */
+    /* 信噪比：多索引别名「未设 write」不再计入异常——时间分片/跨索引聚合的只读别名
+ 本来就不设 is_write_index（集群常态，QA 环境 103/133 全中）。写入失败是使用侧问题，
+ 别名面板把常态当告警只会淹没真正的「多写」违规。分组行上仍以中性「只读」徽标标注。 */
   }
   return out;
 });
 
 function pickIndex(idx: string) {
-  /*  F-2 去噪：浏览别名图时逐行点击高频触发，成功 toast 连弹是打扰——
-     顶栏选中态本身即是即时反馈（索引名高亮+docs 变化），无需文字确认 */
+  /* F-2 去噪：浏览别名图时逐行点击高频触发，成功 toast 连弹是打扰——
+ 顶栏选中态本身即是即时反馈（索引名高亮+docs 变化），无需文字确认 */
   store.pick(idx);
 }
 
@@ -428,9 +428,9 @@ const panel = ref<null | { mode: 'create' | 'switch'; alias: string }>(null);
 const acting = ref(false);
 const cAlias = ref(''); const cIndex = ref(''); const cWrite = ref(false); const cRouting = ref(''); const cFilter = ref('');
 /* 别名输入智能纠错（useInputLint 只出数据，.il-hint 提示条样式全站单一出处 theme.css）——
-   ① 非法字符 err：patternRule 负类字符集（, : * " < > / \ 空格）；
-   ② 重名 warn：dupRule 对照现有别名列表（put 覆盖语义，warn 不阻断）。
-   别名允许大写（ES alias 命名无小写约束），禁套 indexNameRule */
+ ① 非法字符 err：patternRule 负类字符集（, : * " < > / \ 空格）；
+ ② 重名 warn：dupRule 对照现有别名列表（put 覆盖语义，warn 不阻断）。
+ 别名允许大写（ES alias 命名无小写约束），禁套 indexNameRule */
 const cAliasLint = useInputLint([
   patternRule(/^[^,:*"<>/\\ ]+$/, '别名含非法字符（, : * " < > / \\ 空格）'),
   dupRule(() => new Set(rows.value.map(r => r.alias)), '别名'),
@@ -438,40 +438,40 @@ const cAliasLint = useInputLint([
 const { hint: cAliasHint, level: cAliasLevel, check: cAliasCheck } = cAliasLint;
 watch(cAlias, v => { cAliasCheck(v); });
 /* filter DSL 静态体检 + 补全白得——bodyKind 固定 'search'（filter 就是查询子句组合）；
-   fields 源=新建面板当前选中的物理索引 cIndex（useIndexFields 惰性缓存，SqlBridge/DslQuery 同范式）；
-   lint 空串/非法 JSON 静默（「留空不设」是常态不报噪音）。error 红条单列、warning/hint 黄条并列
-   （RestView rtLint 同款接线）。 */
-/* ·661-C1：fields 实拉 ensure 补线——528 起仅解构 fields 未 ensure（useIndexFields
-   无自动拉取，ensure 须显式调用），字段/词项候选在此面恒空的存量缺角真机实证（probe-661 s6
-   mapping 零请求）；554 SearchSandbox watch immediate 范式补齐 */
+ fields 源=新建面板当前选中的物理索引 cIndex（useIndexFields 惰性缓存，SqlBridge/DslQuery 同范式）；
+ lint 空串/非法 JSON 静默（「留空不设」是常态不报噪音）。error 红条单列、warning/hint 黄条并列
+ （RestView rtLint 同款接线）。 */
+/* ·：fields 实拉 ensure 补线——528 起仅解构 fields 未 ensure（useIndexFields
+ 无自动拉取，ensure 须显式调用），字段/词项候选在此面恒空的存量缺角真机实证（probe-661 s6
+ mapping 零请求）；554 SearchSandbox watch immediate 范式补齐 */
 const { fields: filterFields, ensure: ensureFilterFields } = useIndexFields(() => cIndex.value);
 watch(cIndex, () => { void ensureFilterFields(); }, { immediate: true });
 /* terms 闭包接线——索引源=cIndex（新建面板选中物理索引）与 filterFields 同源；
-   filter=查询子句组合（ search 档语义），动态值位候选成立 */
+ filter=查询子句组合（ search 档语义），动态值位候选成立 */
 const alvTerms = useTermsSuggest(() => cIndex.value);
 const filterAssist = { fields: () => filterFields.value, bodyKind: (): BodyKind => 'search', terms: (f: string, p: string) => alvTerms.suggestAsync(f, p) };
 /* lintDsl → lintClause（裸子句出口，skipRoot 跳根级规则）——filter 本身就是查询子句，
-   裸子句语义零误报（形如 {"term":{…}} 的 filter 在 lintDsl 会撞 root-bare-clause 假红） */
+ 裸子句语义零误报（形如 {"term":{…}} 的 filter 在 lintDsl 会撞 root-bare-clause 假红） */
 const filterLint = computed(() => {
   try { return lintClause(JSON.parse(cFilter.value || '')); } catch { return []; }
 });
 const filterLintErrors = computed(() => filterLint.value.filter(f => f.severity === 'error'));
 const filterLintWarns = computed(() => filterLint.value.filter(f => f.severity === 'warning' || f.severity === 'hint'));
 /* lint findings 注入编辑器划线（SearchSandboxView 范式：debounce 250ms 防每敲一键
-   全量 findMatches；info 降级 hint——MonacoEditor marker 档只收 warning/hint/error；
-   lintClause findings 与 setMarkers 同形，上方 banner 提示条保留双通道）。 */
+ 全量 findMatches；info 降级 hint——MonacoEditor marker 档只收 warning/hint/error；
+ lintClause findings 与 setMarkers 同形，上方 banner 提示条保留双通道）。 */
 const filterJaRef = ref<InstanceType<typeof JsonArea> | null>(null);
 const queueFilterLintMarkers = useDebounceFn(() => {
   filterJaRef.value?.setMarkers?.(filterLint.value.map(f => ({ ...f, severity: f.severity === 'info' ? 'hint' as const : f.severity })));
 }, 250);
 watch(cFilter, () => { queueFilterLintMarkers(); }, { immediate: true });
 /* filter 编辑框高度三档行数循环 + usePref 跨会话记忆（ra.scriptH 同款形态；
-   走 JsonArea 既有 rows 写法，默认档 3 行不变）。
-   TIERS+usePref+手写 cycle 三件套收编 useTierCycle 单源
-   （aliases.filterH 键不变=已存档位零迁移；默认档=首位，defVal 缺省；cycle 语义等值） */
+ 走 JsonArea 既有 rows 写法，默认档 3 行不变）。
+ TIERS+usePref+手写 cycle 三件套合并 useTierCycle 单源
+ （aliases.filterH 键不变=已存档位零迁移；默认档=首位，defVal 缺省；cycle 语义等值） */
 const FILTER_H_TIERS = [3, 9, 16];
 const { v: filterH, cycle: cycleFilterH } = useTierCycle('aliases.filterH', FILTER_H_TIERS);
-/*  W10：连续录入重聚焦锚点（create 成功后清空输入并回焦别名框） */
+/* W10：连续录入重聚焦锚点（create 成功后清空输入并回焦别名框） */
 const cAliasEl = ref<HTMLInputElement | null>(null);
 const swFrom = ref(''); const swTo = ref(''); const swWrite = ref(true);
 
@@ -481,7 +481,7 @@ const panelRows = computed(() => {
 });
 
 /* 「从」侧弹层候选（usePopupList）：已绑该别名的索引，输入过滤+rank（精确>前缀>包含，IndexPicker 同口径）；
-   回填 swFrom（index 串），与 doSwitch 的确认链零改动 */
+ 回填 swFrom（index 串），与 doSwitch 的确认链零改动 */
 const sfKw = ref('');
 const sfItems = computed(() => {
   const k = sfKw.value.trim().toLowerCase();
@@ -520,8 +520,8 @@ async function execActions(actions: any[], okMsg: string, opts?: { stayOpen?: bo
     const r: any = await api.aliasActions(JSON.stringify({ actions }));
     if (r?.error) throw new Error(r.message);
     store.notify('success', okMsg);
-    /*  W10：stayOpen 仅 create 连续录入使用——面板保留，清输入/重聚焦由调用方做；
-       其余模式（switch/setWrite/unbind）行为不变：成功即收面板 */
+    /* W10：stayOpen 仅 create 连续录入使用——面板保留，清输入/重聚焦由调用方做；
+ 其余模式（switch/setWrite/unbind）行为不变：成功即收面板 */
     if (!opts?.stayOpen) panel.value = null;
     await load();
     return true;
@@ -538,12 +538,12 @@ async function doCreate() {
   if (cRouting.value.trim()) add.routing = cRouting.value.trim();
   if (cFilter.value.trim()) {
     try { add.filter = JSON.parse(cFilter.value); }
-    /* 裸 e.message（浏览器原生 JSON 解析文案）收编 friendlyEsError（:522 别名操作失败同源口径） */
+    /* 裸 e.message（浏览器原生 JSON 解析文案）合并 friendlyEsError（522 别名操作失败同源口径） */
     catch (e: any) { store.notify('error', 'filter DSL 解析失败：' + friendlyEsError(String(e?.message ?? e))); return; }
   }
-  /*  W10：连续录入——create 成功后面板保留，清空输入并重聚焦别名框；
-     批量建 N 个别名不再「关面板→点新建」×N（每轮 -2 击）。物理索引刻意保留：
-     同批别名通常指向同一索引；失败时（返回 false）输入原样保留可改可重提。 */
+  /* W10：连续录入——create 成功后面板保留，清空输入并重聚焦别名框；
+ 批量建 N 个别名不再「关面板→点新建」×N（每轮 -2 击）。物理索引刻意保留：
+ 同步别名通常指向同一索引；失败时（返回 false）输入原样保留可改可重提。 */
   const ok = await execActions([{ add }], `别名 ${add.alias} → ${add.index} 已创建`, { stayOpen: true });
   if (!ok) return;
   cAlias.value = ''; cWrite.value = false; cRouting.value = ''; cFilter.value = '';
@@ -552,8 +552,8 @@ async function doCreate() {
 }
 
 /* 原本地 pending-action 宿主（cfmOpen/cfm/同名 askConfirm 包装，与全局服务遮蔽）整体退役——
-   三类写操作改 await 全局 askConfirm（动态 title/okText/facts 全支持，level 沿用原 warn）；
-   原 body 里的 \n（pre-line 渲染）改单句 message，信息量等价 */
+ 三类写操作改 await 全局 askConfirm（动态 title/okText/facts 全支持，level 沿用原 warn）；
+ 原 body 里的 \n（pre-line 渲染）改单句 message，信息量等价 */
 
 async function doSwitch() {
   const alias = panel.value!.alias;
@@ -612,8 +612,8 @@ function goHub(name: string) {
 }
 
 /* ═══ ：别名管控右键菜单（交互拉满——操作聚合到右键，主界面减负）═══
-   组头右键 = 别名级操作（复制别名名/成员清单/切换/详情/查询）；
-   成员行右键 = 索引级操作（复制索引名/工作区/查询/设写/解绑，danger 分层同既有按钮）。 */
+ 组头右键 = 别名级操作（复制别名名/成员清单/切换/详情/查询）；
+ 成员行右键 = 索引级操作（复制索引名/工作区/查询/设写/解绑，danger 分层同既有按钮）。 */
 const aliasMenu = ref<{ x: number; y: number; g: Group } | null>(null);
 function openAliasMenu(e: MouseEvent, g: Group) {
   aliasMenu.value = { x: e.clientX, y: e.clientY, g };
@@ -676,18 +676,18 @@ watch(() => route.query.idx, v => { if (v) consumeDeepIdx(); });
 /* min-height:100% 让页面吃满 .page 可滚区（默认只有内容高，实测下方空出 626px 死白） */
 .alv { display: flex; flex-direction: column; gap: var(--sp-3); min-height: 100%; }
 /* .alv-bar 空规则死类删除（骨架职责已归 .lr-bar，模板挂载点与 lr-bar 骨架类保留）；
-   .alv-title（fs-md/600）为页头接管后的死规则随标题四档收编一并退役 */
+ .alv-title（fs-md/600）为页头接管后的死规则随标题四档合并一并退役 */
 .alv-fi { background: var(--bg1); border: 1px solid var(--line); border-radius: var(--r-s); padding: 5px 9px; color: var(--tx0); font-size: var(--fs-sm); outline: 0; min-width: 180px; }
-/* alv-input 手写皮随换装退役归 SearchFilterBar 胶囊壳单源（bg1 底/line 边/
-   r-s 圆角/:focus 描边）——alv-input 类锚随 input-class 保留在 input 上作挂载锁路径；
-   落位（flex:1/max-width:320px）与内衬（padding/字号对齐现行，高度结构零变动）迁 alv-kw-wrap */
+/* alv-input 手写皮随改用退役归 SearchFilterBar 胶囊壳单源（bg1 底/line 边/
+ r-s 圆角/:focus 描边）——alv-input 类锚随 input-class 保留在 input 上作挂载锁路径；
+ 落位（flex:1/max-width:320px）与内衬（padding/字号对齐现行，高度结构零变动）迁 alv-kw-wrap */
 .alv-kw-wrap { flex: 1; max-width: 320px; padding: var(--sp-1h) var(--sp-2h); font-size: var(--fs-sm); }
 .alv-chk { display: flex; align-items: center; gap: 5px; font-size: var(--fs-sm); color: var(--tx1); cursor: pointer; user-select: none; }
 /* 「物理索引」表单行——IndexPicker 与 PickCurrentIdxBtn 同行横排 */
 .alv-idx-row { display: flex; align-items: center; gap: var(--sp-1h); }
 .alv-idx-row :deep(.ixp) { flex: 1; min-width: 0; }
-/* filter JsonArea 外框视图侧退壳（立法③；LifecycleView .lc-rollover 同语言）——
-   组件本体零触，alv-panel border-top 分节已承接分界 */
+/* filter JsonArea 外框视图侧退壳（约定③；LifecycleView .lc-rollover 同语言）——
+ 组件本体零触，alv-panel border-top 分节已承接分界 */
 .alv-f-block :deep(.ja) { border: none; border-radius: 0; }
 
 /* KPI 大卡墙退役：页头 inline 元信息串（MetaStrip 统一件；本视图只承担落位间距） */
@@ -705,23 +705,23 @@ watch(() => route.query.idx, v => { if (v) consumeDeepIdx(); });
   padding: 5px 0; font-size: var(--fs-sm); border-bottom: 1px dashed var(--warn-line);
 }
 .alv-warn-row:last-child { border-bottom: 0; }
-/* alv-warn-tag 私造样式随 StatusPill 换装退役（色档归 .pill y 单源） */
+/* alv-warn-tag 私造样式随 StatusPill 改用退役（色档归 .pill y 单源） */
 .alv-warn-idxs { font-size: var(--fs-xs); color: var(--tx1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* flex:1 吃掉页面剩余高度，但 align-content:start 让卡片保持内容高、不被拉长
-   —— 别名卡片高度必须跟随其索引条目数，拉伸会造出空洞卡片。
-   这里要的只是「容器占满、卡片不变形」，消除的是容器下方的死白。 */
+ —— 别名卡片高度必须跟随其索引条目数，拉伸会造出空洞卡片。
+ 这里要的只是「容器占满、卡片不变形」，消除的是容器下方的死白。 */
 /* 轨道下限挂 min(400px,100%) 钳制（AnalysisSettingsView 同款先例）——
-   375px 手机视口下裸 400px 下限撑破容器实锤横向溢出，min() 让轨道在极窄容器收缩到 100% */
+ 375px 手机视口下裸 400px 下限撑破容器实锤横向溢出，min() 让轨道在极窄容器收缩到 100% */
 .alv-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(400px, 100%), 1fr)); gap: var(--sp-2); flex: 1; align-content: start; }
 .alv-group { padding: var(--sp-2) 0 var(--sp-3); overflow: hidden; }
-/*  D2 去卡片化：组不再套 .card 壳（审计判「卡套行」），改分节式——组间 hairline 分隔，
-   组内箭头行自带引导线视觉；.card 的阴影/圆角在多列卡阵中制造视觉噪音 */
+/* D2 去卡片化：组不再套 .card 壳（审计判「卡套行」），改分节式——组间 hairline 分隔，
+ 组内箭头行自带引导线视觉；.card 的阴影/圆角在多列卡阵中制造视觉噪音 */
 .alv-group + .alv-group { border-top: 1px solid var(--line); }
 /* 三种空态（拉取失败 / 被过滤空 / 真无别名）在剩余区里居中。
-   用 margin:auto 而不是父级 justify-content:center——后者在可滚容器里会裁掉溢出内容顶部。
-   三分支换装 EmptyState compact 后选择器随迁（EmptyState 根类 .empty-state，
-   子组件根节点带本组件 scoped 属性，子选择器照常命中） */
+ 用 margin:auto 而不是父级 justify-content:center——后者在可滚容器里会裁掉溢出内容顶部。
+ 三分支改用 EmptyState compact 后选择器同步更新（EmptyState 根类 .empty-state，
+ 子组件根节点带本组件 scoped 属性，子选择器照常命中） */
 .alv > .empty-state { margin: auto; }
 .alv-g-hd {
   display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2);
@@ -733,8 +733,8 @@ watch(() => route.query.idx, v => { if (v) consumeDeepIdx(); });
 .alv-g-hd-r > .btn { flex: none; white-space: nowrap; }
 .alv-g-ic { color: var(--ac-hi); }
 /* 长别名（如 qa_sentiment_news_published）必须走截断而不是挤压兄弟节点：
-   min-width:0 + ellipsis 让它成为唯一可收缩项，全名由 title 悬浮显示。
-   实测未截断时它把右侧「N 索引」压成竖排（一个字一行：1/索/引，30x54），按钮也被挤重叠。 */
+ min-width:0 + ellipsis 让它成为唯一可收缩项，全名由 title 悬浮显示。
+ 实测未截断时它把右侧「N 索引」压成竖排（一个字一行：1/索/引，30x54），按钮也被挤重叠。 */
 .alv-g-alias { font-weight: 600; font-size: var(--fs-sm); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* 徽标与计数不参与收缩：flex 默认允许 shrink，长别名一挤就把「1 索引」逼成竖排 */
 .alv-g-hd-l > .pill { flex: none; white-space: nowrap; }
@@ -758,8 +758,8 @@ watch(() => route.query.idx, v => { if (v) consumeDeepIdx(); });
 .alv-arrow-idx { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xs); color: var(--tx0); cursor: pointer; }
 .alv-arrow-idx:hover { color: var(--ac-hi); text-decoration: underline; }
 .alv-write-badge { flex-shrink: 0; font-size: var(--fs-xs) !important; padding: 1px var(--sp-1h) !important; }
-/* alv-meta bg2 胶囊私造样式随 MetaStrip 收编退役（形态归 .ms 单源）；
-   本类只留行内落位（不参与收缩同 alv-write-badge），filter 触发器 hover/指针交互态保留 */
+/* alv-meta bg2 胶囊私造样式随 MetaStrip 合并退役（形态归 .ms 单源）；
+ 本类只留行内落位（不参与收缩同 alv-write-badge），filter 触发器 hover/指针交互态保留 */
 .alv-rowmeta { flex-shrink: 0; }
 /* filter 全文 popover 触发徽标（原 title 悬停改点击弹层） */
 .alv-meta-filter { cursor: pointer; }
@@ -769,37 +769,37 @@ watch(() => route.query.idx, v => { if (v) consumeDeepIdx(); });
 
 /* 写操作面板 */
 /* 写操作面板：品牌色弱化为半透明线（线框纪律：不再整圈实色 --ac 边框）。
-   全局 .card 壳退役（立法④：border+底色+radius 整块消除）→ border-top
-   分节承接（ ar-sec 同刀）；品牌弱化线语义保形，border-color: var(--ac-line)
-   转 border-top 分节线色；卡留白由本类 padding 承接（原 .card padding 随壳退役） */
+ 全局 .card 壳退役（约定④：border+底色+radius 整块消除）→ border-top
+ 分节承接（ ar-sec 同刀）；品牌弱化线语义保形，border-color: var(--ac-line)
+ 转 border-top 分节线色；卡留白由本类 padding 承接（原 .card padding 随壳退役） */
 .alv-panel { border-top: 1px solid var(--ac-line); padding: var(--sp-3) 14px; }
 /* card-t 行首横排保留（theme.css .card-t 全局档在场，类名不随壳退役） */
 .alv-panel .card-t { display: flex; align-items: center; gap: var(--sp-1h); }
 .alv-flex { flex: 1; }
 .alv-form { display: flex; align-items: flex-end; gap: var(--sp-3); flex-wrap: wrap; margin-top: var(--sp-2); }
 /* min-width:0 让 flex 子项可收缩（默认 auto 被 .alv-fi 的 180px 顶住）；
-   flex:1 1 200px 让折行后字段等分长满行宽而非各自为战。
-   注意：866px 实测并不折行（表单可用宽 740px 刚好排下 4 控件），
-   折行阈值实测为 <=760px。本规则的实际收益是行内宽度再分配
-   （700px 下末行字段 186->574），不是消除折行。 */
+ flex:1 1 200px 让折行后字段等分长满行宽而非各自为战。
+ 注意：866px 实测并不折行（表单可用宽 740px 刚好排下 4 控件），
+ 折行阈值实测为 <=760px。本规则的实际收益是行内宽度再分配
+ （700px 下末行字段 186->574），不是消除折行。 */
 .alv-f { display: flex; flex-direction: column; gap: var(--sp-1); font-size: var(--fs-xs); color: var(--tx2); min-width: 0; flex: 1 1 200px; }
 .alv-f-block { width: 100%; margin-top: var(--sp-2); }
 /* filter 编辑框高度档——标题行（钮右靠）；行数档走 JsonArea 既有 rows 写法，无容器层 */
 .alv-f-hd { display: flex; align-items: center; gap: var(--sp-1); }
 .alv-fi { background: var(--bg1); border: 1px solid var(--line); border-radius: var(--r-s); padding: 5px 9px; color: var(--tx0); font-size: var(--fs-sm); outline: 0; min-width: 180px; }
 /* filter DSL lint 体检提示条私有形态（display/gap/margin-top/padding/radius/
-   字号/行高 + warn/err 底色）退役 → theme.css .lint-bar 单源（模板纯类名换装，DOM 保形；
-   margin-top 随单源归 --sp-2 档，落位节奏全站归一） */
+ 字号/行高 + warn/err 底色）退役 → theme.css .lint-bar 单源（模板纯类名改用，DOM 保形；
+ margin-top 随单源归 --sp-2 档，落位节奏全站归一） */
 .alv-fi:focus { border-color: var(--ac); }
 /* .alv-fta 死规则随编辑器外框退役删除（filter 编辑器早已 JsonArea 化，
-   模板 grep 0 引用实证——bg1+border+radius 外框形态不回流，flattenWave551① 源码锁） */
+ 模板 grep 0 引用实证——bg1+border+radius 外框形态不回流，① 源码锁） */
 .alv-sw-arrow { font-size: var(--fs-xl); color: var(--tx2); padding-bottom: var(--sp-1h); }
 /* 「从」侧弹层（usePopupList）：输入复用 .alv-fi 皮，弹层 Teleport 到 body */
 .alv-swfrom { position: relative; display: flex; }
-/* 壳属性（fixed/--z-island/bg/border/shadow/圆角）收编 theme.css .float-pop，本类只留坐标外裁切与字号
-   .alv-pop.inplace scoped 拷贝退役换挂 theme.css .float-pop.inplace 基座
-   （absolute/top:100%/left:0/min-width:100%；HealthReportView .hr-pop.inplace 收编先例，
-   模板 class 已是 float-pop 链，inplace 行为不变——z 回落基座的 --z-island 档） */
+/* 壳属性（fixed/--z-island/bg/border/shadow/圆角）合并 theme.css .float-pop，本类只留坐标外裁切与字号
+ .alv-pop.inplace scoped 拷贝退役换挂 theme.css .float-pop.inplace 基座
+ （absolute/top:100%/left:0/min-width:100%；HealthReportView .hr-pop.inplace 合并先例，
+ 模板 class 已是 float-pop 链，inplace 行为不变——z 回落基座的 --z-island 档） */
 .alv-pop { overflow: hidden; font-size: var(--fs-sm); }
 .alv-pop-list { max-height: 200px; overflow: auto; padding: 3px 0; }
 .alv-pop-item { display: flex; align-items: center; gap: var(--sp-2); padding: 5px var(--sp-2h); cursor: pointer; }
@@ -811,15 +811,15 @@ watch(() => route.query.idx, v => { if (v) consumeDeepIdx(); });
 .alv-danger:hover { color: var(--err, var(--err)); }
 
 /* 实测 iframe 可用宽 ~866px，固定栏宽在此崩塌。
-   断点归一 §9.3 标准值 1100（堆叠语义）。 */
+ 断点归一 标准值 1100（堆叠语义）。 */
 @media (max-width: 1100px) {
   .alv-warn-row { grid-template-columns: minmax(0, 1fr); }
   /* 塌栏后独占满宽，不必再截断——让违规索引名完整可见 */
   .alv-warn-idxs { white-space: normal; overflow: visible; text-overflow: clip; }
 }
 
-/* 760 野断点并档——原  实测豁免档（DESIGN_SPEC §9 附 A）按全站 900/1100 双档纪律
-   收编（BrowserView 1280→1100 并档先例）：「折行后复选框独占整行」规则并入 900 档，760 块删除 */
+/* 760 野断点并档——原 实测豁免档按全站 900/1100 双档纪律
+ 合并（BrowserView 1280→1100 并档先例）：「折行后复选框独占整行」规则并入 900 档，760 块删除 */
 @media (max-width: 900px) {
   .alv-form > .alv-chk { flex: 1 0 100%; }
 }

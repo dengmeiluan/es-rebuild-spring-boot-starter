@@ -2,7 +2,7 @@
  * 六百批·值位候选类型精化收尾——FieldSelect/ClauseNode 接 useTermsSuggest 第二参 types
  * （轨1 宪法锚点「值位候选时延」五消费面接线 3/5→5/5 收口；五百六十五批件②三处先例同范式）。
  *
- * 背景：useTermsSuggest 可选第二参 types（563 立法）让候选展示值按 rankTermsByType
+ * 背景：useTermsSuggest 可选第二参 types（563 约定）让候选展示值按 rankTermsByType
  * 类型精化排序（date 字段 ISO 形态排前、数值形态排前，缓存/stash 仍存 ES 权威序）。
  * 565 批已接线 LuceneInput/BoostTuner/sqlCompletion 三处；FieldSelect（字段选择器选中
  * keyword 族即空前缀预载）与 ClauseNode（条件树值位 datalist 双源之 terms-agg 源）两处

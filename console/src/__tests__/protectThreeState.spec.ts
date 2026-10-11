@@ -199,8 +199,8 @@ describe('G4 SlmView：首载骨架与双源分错', () => {
     slmStatusFn.mockResolvedValue({ available: false, reason: 'boom' });
     const { app, host } = await mountView(SlmView);
     expect(host.querySelector('.slm-card'), '策略源成功必须出策略卡').toBeTruthy();
-    /* 五百六十一批随迁：slm-stats-err 手写 warn 壳收编 EmptyState compact 统一件
-       （IlmView explain 判例）——降级提示条锚随迁 .empty-state（本场景唯一空态件） */
+    /* 五百六十一批同步更新：slm-stats-err 手写 warn 壳合并 EmptyState compact 统一件
+       （IlmView explain 先例）——降级提示条锚同步更新 .empty-state（本场景唯一空态件） */
     expect(host.querySelector('.empty-state'), '统计源失败必须出降级提示条').toBeTruthy();
     expect(host.textContent).toContain('SLM 状态/统计拉取失败');
     expect(host.querySelector('.slm-meta'), '统计区失败时不渲染').toBeNull();
@@ -216,7 +216,7 @@ describe('G4 SlmView：首载骨架与双源分错', () => {
     const spy = vi.spyOn(store, 'notify');
     findBtn(host.querySelector('.slm-hd-r') as HTMLElement, '刷新')!.click();
     await settle();
-    expect(host.querySelector('.empty-state'), '统计 HTTP 失败必须出降级提示条（561 批 EmptyState 收编锚随迁）').toBeTruthy();
+    expect(host.querySelector('.empty-state'), '统计 HTTP 失败必须出降级提示条（561 批 EmptyState 合并锚同步更新）').toBeTruthy();
     expect(host.querySelector('.slm-card'), '策略卡不被统计源失败拖累').toBeTruthy();
     expect(spy.mock.calls.some(c => c[0] === 'error' && String(c[1]).includes('slm/status')),
       '统计源失败必须 notify error 透传').toBe(true);
@@ -263,9 +263,9 @@ describe('G4 LifecycleView：数组契约 / 分源错误 / 写操作反馈', () 
     expect(host.textContent, '状态源失败必须页头记名（不再静默显 —）').toContain('状态拉取失败');
     expect(host.querySelector('.lc-gantt-label')?.textContent, '策略源成功甘特必须渲染').toBe('orders-hot');
     /* 第十批：自造 good/warn/bad 类收口全局 meta-* 语义档，b.bad → b.meta-err（:title 可达语义不变）。
-       五百五十批随迁：meta-err b 再换装 StatusPill 统一件（err→r 语义映射，flattenWave550①），
+       五百五十批同步更新：meta-err b 再改用 StatusPill 统一件（err→r 语义映射，flattenWave550①），
        :title 仍随统一件透传，可达语义不变 */
-    expect(host.querySelector('.lc-hd-sub .pill.r')?.getAttribute('title'), '状态失败全文必须 :title 可达（§9.5，复审 M5；550 随迁 .pill.r 锚）').toContain('timeout');
+    expect(host.querySelector('.lc-hd-sub .pill.r')?.getAttribute('title'), '状态失败全文必须 :title 可达（§9.5，复审 M5；550 同步更新 .pill.r 锚）').toContain('timeout');
     expect(host.querySelector('.err-bar'), '策略源成功不出 err-bar').toBeNull();
     app.unmount();
   });

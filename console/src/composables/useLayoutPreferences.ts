@@ -27,8 +27,8 @@ interface LayoutSnapshot {
 
 const EMPTY_SNAPSHOT = (): LayoutSnapshot => ({ version: 1, updatedAt: 0, panes: {} });
 
-/*  v2: 偏好 key 版本升 v2——v1 里存着 560px 窄树宽，加宽默认(680)对存量用户
-   会被旧偏好覆盖；升版本即全部视图布局一次性回新 defaultSize，代价可接受 */
+/* v2: 偏好 key 版本升 v2——v1 里存着 560px 窄树宽，加宽默认(680)对存量用户
+ 会被旧偏好覆盖；升版本即全部视图布局一次性回新 defaultSize，代价可接受 */
 export function layoutStorageKey(scope: LayoutScope): string {
   return `es-console.layout.v2:${scope.target || 'host'}:${scope.route}:${scope.mode}:${scope.profile}`;
 }

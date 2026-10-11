@@ -1,12 +1,12 @@
-/* 视图/组件层存储通道写入防御看守（853 批·852 kernel 层立法的视图层收编件）。
+/* 视图/组件层存储通道写入防御看守（853 批·852 kernel 层约定的视图层合并件）。
  *
  * 852 批 G 系看守域=kernel（composables/stores/utils + api.ts + router.ts），
- * 视图/组件层 89 位点/32 文件记档下批（853 实勘口径=剥注释后代码域，与 852
- * 记档吻合）；853 批全量收编进 utils/safeJson 单源
+ * 视图/组件层 89 位点/32 文件备案下批（853 实勘口径=剥注释后代码域，与 852
+ * 备案吻合）；853 批全量合并进 utils/safeJson 单源
  * （writeStoredRaw/removeStoredRaw——try+吞异常+回执布尔），本守卫把看守域
  * 扩满全站：
  *  - G3：views/+components/ 裸写恒零（全站最后一个裸写域清零，无正面清单）。
- *  - G4：33 收编文件单源接线在场 + safeJson import 在场（文件集冻结，只减不增）。
+ *  - G4：33 合并文件单源接线在场 + safeJson import 在场（文件集冻结，只减不增）。
  *  - W9：视图层代表链行为锁——SideNav 组折叠持久化，配额抛写环境下不外抛、
  *        内存态照常翻转、存储值保持旧值（存储不可用 ≠ 交互不可用）。
  *
@@ -27,7 +27,7 @@ const stripComments = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace
 const RAW_OP = /(localStorage|sessionStorage)\.(setItem|removeItem)\(/;
 const WIRING = /(writeStoredRaw|removeStoredRaw)\(/;
 
-/* 853 收编文件集（时点实勘 89 位点/32 文件，剥注释代码域口径；只减不增） */
+/* 853 合并文件集（时点实勘 89 位点/32 文件，剥注释代码域口径；只减不增） */
 const COLLECTED = [
   'views/DslQueryView.vue',
   'views/QueryHubView.vue',
@@ -92,7 +92,7 @@ describe('viewStorageGuard853 · 视图/组件层存储写入防御', () => {
 
   /* —— G 组：全站看守（853 起视图/组件层入域） —— */
 
-  it('G3 views/components 裸写恒零（853 收编后全站最后裸写域清零）', () => {
+  it('G3 views/components 裸写恒零（853 合并后全站最后裸写域清零）', () => {
     const files: string[] = [];
     const walk = (d: string) => {
       for (const f of readdirSync(d)) {
@@ -115,7 +115,7 @@ describe('viewStorageGuard853 · 视图/组件层存储写入防御', () => {
     expect(dirty, '视图/组件层裸写复燃（须走 writeStoredRaw/removeStoredRaw 单源）：\n' + dirty.join('\n')).toEqual([]);
   });
 
-  it('G4 收编文件集冻结：32 文件单源接线 + safeJson import 在场', () => {
+  it('G4 合并文件集冻结：32 文件单源接线 + safeJson import 在场', () => {
     for (const f of COLLECTED) {
       const code = read(f);
       expect(code, `${f} 缺 safeJson import`).toContain("from '../utils/safeJson'");

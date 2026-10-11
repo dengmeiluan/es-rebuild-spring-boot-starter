@@ -1,5 +1,5 @@
 /**
- * 五百三十二批（工蚁4）：重复索引选择器收编 + 编辑器弹性档。
+ * 五百三十二批（工蚁4）：重复索引选择器合并 + 编辑器弹性档。
  *
  * ① 8 视图 IndexPicker 退役面（grep 防回潮）：PitScrollView / IndexSettingsView / IndexOptimizerView /
  *    BulkEditorView / UpdateByQueryView / ConfigValidatorView 页内选择器换只读 CurrentIdxChip
@@ -44,7 +44,7 @@ describe('五百三十二批：8 视图 IndexPicker 退役面（防回潮）', (
     }
   });
 
-  it('写类四视图「用当前索引」回填钮收编 PickCurrentIdxBtn 统一件（558 批改锚；R61 不 follow 口径随注释保留）；IndexSettings 回填钮退役', () => {
+  it('写类四视图「用当前索引」回填钮合并 PickCurrentIdxBtn 统一件（558 批改锚；R61 不 follow 口径随注释保留）；IndexSettings 回填钮退役', () => {
     for (const f of ['IndexOptimizerView', 'BulkEditorView', 'UpdateByQueryView', 'ConfigValidatorView']) {
       const s = read(`../views/${f}.vue`);
       expect(s, `${f} 必须消费 PickCurrentIdxBtn 统一件（写类页 target 显式桥）`).toMatch(/<PickCurrentIdxBtn @pick=/);
@@ -87,10 +87,10 @@ describe('五百三十二批：Monaco 塌缩兜底（P0 红线）+ 弹性档 use
     expect(be, '四档钮组在场').toMatch(/EDITOR_H_TIERS/);
   });
 
-  it('弹性档三键在场：bulk.edH（usePref）/ rest.edH / sys.edH（558 收编 useTierCycle）', () => {
+  it('弹性档三键在场：bulk.edH（usePref）/ rest.edH / sys.edH（558 合并 useTierCycle）', () => {
     expect(read('../views/BulkEditorView.vue')).toMatch(/usePref<EditorHKey>\('bulk\.edH', 'full'\)/);
-    /* 五百五十八批随迁（击穿者：558 工蚁G——rest/sys 两键三件套收编 useTierCycle 单源）：
-       usePref 键声明字面改收编接线锚（bulk.edH 未收编仍走 usePref；档值与 100% 兜底零迁） */
+    /* 五百五十八批同步更新（击穿者：558 工蚁G——rest/sys 两键三件套合并 useTierCycle 单源）：
+       usePref 键声明字面改合并接线锚（bulk.edH 未合并仍走 usePref；档值与 100% 兜底零迁） */
     expect(read('../views/RestView.vue')).toMatch(/useTierCycle\('rest\.edH', REST_ED_H_TIERS\)/);
     expect(read('../views/SystemView.vue')).toMatch(/useTierCycle\('sys\.edH', SYS_ED_H_TIERS\)/);
     expect(read('../views/RestView.vue'), 'RestView 100% 档 min-height 兜底保留').toMatch(/\.rt-body-wrap > \.rt-body-ed \{ min-height: max\(180px, 42vh\); \}/);
@@ -144,7 +144,7 @@ vi.mock('../components/MonacoEditor.vue', () => ({
   },
 }));
 
-/* 六百四十八批（G'4，判例 647-C3 ③ 落地）：视图动态 import 上提出 it 计时预算。实测该行为
+/* 六百四十八批（G'4，先例 647-C3 ③ 落地）：视图动态 import 上提出 it 计时预算。实测该行为
    用例静默机独跑 4387ms（5s 默认阈贴线），大头是 it 内首触 PitScrollView 视图图（naive-ui
    实模块经 importOriginal）的 transform——负载窗口即越 5s 恒超时（647 三连复演）。上提到
    文件收集期执行：vi.mock 已提升 mock 面不变；本行置于三 pit mock const 与全部 vi.mock
@@ -200,7 +200,7 @@ afterEach(() => { document.body.innerHTML = ''; });
 
 describe('五百三十二批：PitScrollView 卸载停拉取循环（行为）', () => {
   it('开 PIT → 拉取循环在跑 → 卸载：pitClose 必调，且 pitSearch 在卸载后停止（in-flight 最多 +1）', async () => {
-    /* 五百七十七批随迁：mountView 内部 location.hash = opts.hash || '#/' 会覆盖前置赋值——
+    /* 五百七十七批同步更新：mountView 内部 location.hash = opts.hash || '#/' 会覆盖前置赋值——
        旧写法先 set hash 再裸调 mountView，深链 ?idx= 被抹成 '#/'，pickedIdx 永不就位（chip
        恒不渲染）。深链改走 mountView opts.hash 通道（与该 helper 其余用例同款）。 */
     const { host, unmount } = await mountView(PitScrollView, { hash: '#/?idx=logs-1' });
@@ -223,7 +223,7 @@ describe('五百三十二批：PitScrollView 卸载停拉取循环（行为）',
     const after = pitSearchFn.mock.calls.length;
     expect(pitCloseFn, '卸载即关 PIT').toHaveBeenCalledWith('pit-1');
     expect(after - before, '卸载后循环必须停（in-flight 请求最多再 +1）').toBeLessThanOrEqual(1);
-  }, 8000); /* 六百四十八批 G'4：单点放宽（判例 647-C3 ③ 立法 6000~8000 档取顶）——real-timer
+  }, 8000); /* 六百四十八批 G'4：单点放宽（先例 647-C3 ③ 约定 6000~8000 档取顶）——real-timer
                行为锁在负载窗口的保险带，与 import 上提双保险；禁全局调大 testTimeout
                （会掩盖真挂死），仅此用例生效。 */
 });

@@ -4,9 +4,9 @@ import { join } from 'node:path';
 import { createApp, h, nextTick } from 'vue';
 import ExplainTree from '../components/ExplainTree.vue';
 
-// 八百二十六批·族3 Space 键双通道全矿收口（823 预扫记档域开刀）——role="button" 站点
+// 八百二十六批·族3 Space 键双通道全矿收口（823 预扫备案域开刀）——role="button" 站点
 // Enter+Space 双通道补齐（WAI-ARIA button 契约=Enter 与 Space 都激活；812 批三件套
-// 只立 Enter=契约半覆盖，823 预扫实证 48 处缺记档留批）。刀面=48 站点/37 文件：
+// 只立 Enter=契约半覆盖，823 预扫实证 48 处缺备案留批）。刀面=48 站点/37 文件：
 // 内联表达式形态 15（CreateIndexModal×2+ExplainTree+DevTools×2+IndexSettings×2+
 // LuceneQuery+Mapping pre+ProfileFlame+SqlConsole+TemplateGallery+Watcher+Xmigrate+
 // Security 动态 :role 三元形态）+方法调用形态 33（AltHitsViews/DocDiffModal×2/
@@ -14,10 +14,10 @@ import ExplainTree from '../components/ExplainTree.vue';
 // AdhocRebuild×3/Aliases/AnalysisSettings/Browser/ConfigDrift/ConfigValidator/DslQuery/
 // Favorites×2/Ilm/IndexHub×2/LiveDashboard×2/PainlessLab/SearchTemplates/Snapshots/
 // TemplateGallery/Templates/Topology/Xmigrate——两形态判据同一：键位修饰符显式
-// .enter 而无 .space 即缺口，handler 表达式形态无关=守卫立法从严）。
-// 立法豁免①：role="link" 单通道 Enter，不加 Space（ARIA link 契约=Enter 激活，
+// .enter 而无 .space 即缺口，handler 表达式形态无关=守卫约定从严）。
+// 约定豁免①：role="link" 单通道 Enter，不加 Space（ARIA link 契约=Enter 激活，
 // Space 保留页面滚动语义）——Mapping a.mp-link×2 + MetaStrip 动态 link 在豁免域。
-// 立法豁免②：无 .enter 修饰的泛 @keydown="fn" 域（键位在 handler 内部裁决）文本
+// 约定豁免②：无 .enter 修饰的泛 @keydown="fn" 域（键位在 handler 内部裁决）文本
 // 不可判定，不入本守卫 population，逐 handler 人工裁决留后续批/实报通道。
 
 const rd = (p: string) => readFileSync(join(__dirname, p), 'utf-8');
@@ -104,7 +104,7 @@ describe('spaceGuard826 全域守卫', () => {
     return text.slice(i, j + 1);
   }
 
-  it('views+components 全域零 role=button「有 Enter 无 Space」硬形态（无 .enter 修饰的泛 keydown 域豁免=立法②）', () => {
+  it('views+components 全域零 role=button「有 Enter 无 Space」硬形态（无 .enter 修饰的泛 keydown 域豁免=约定②）', () => {
     const offenders: string[] = [];
     for (const base of ['../views', '../components']) {
       for (const f of walk(join(__dirname, base))) {
@@ -118,7 +118,7 @@ describe('spaceGuard826 全域守卫', () => {
           const roleAttr = raw.match(/\b(?::role|role)\s*=\s*"([^"]*)"/);
           if (!roleAttr) continue;
           const rv = roleAttr[1];
-          // 静态 role="button" 或动态三元真值支 'button'（link 形态豁免=立法①）
+          // 静态 role="button" 或动态三元真值支 'button'（link 形态豁免=约定①）
           const isButton = rv === 'button' || (rv.includes("'button'") && !rv.includes("'link'"));
           if (!isButton) continue;
           const pairs = [...raw.matchAll(/(?:@|v-on:)([\w.:-]*keydown[\w.:-]*)\s*=\s*"([^"]*)"/g)]
@@ -133,7 +133,7 @@ describe('spaceGuard826 全域守卫', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('link 豁免域：Mapping mp-link 双链不携带 Space 通道（ARIA link=Enter 单通道立法①）', () => {
+  it('link 豁免域：Mapping mp-link 双链不携带 Space 通道（ARIA link=Enter 单通道约定①）', () => {
     const v = rd('../views/MappingView.vue');
     const links = v.match(/<a class="mp-link"[^>]*>/g) || [];
     expect(links.length).toBe(2);

@@ -42,7 +42,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 控制集群 Setup 端点（）：{@code /internal/es/index/setup}。
+ * 控制集群 Setup 端点（{@code /internal/es/index/setup}。
  *
  * <p>与 Kibana 首连体验对齐：宿主无 ES（NONE 模式）时前端弹首连向导，
  * 用户录入控制集群连接串 → test 探测 → apply 绑定（幂等初始化控制索引 + 本地自举档案）。</p>

@@ -1,7 +1,7 @@
 /**
  * 五百三十五批 W5（轨3 表格内核增量+SqlConsole 接线）。
  * 锁定：
- * 1) T1「复制表头（TSV）」——534 批 P2 记档放弃项落地：双内核列头菜单追加 copy-head-tsv
+ * 1) T1「复制表头（TSV）」——534 批 P2 备案放弃项落地：双内核列头菜单追加 copy-head-tsv
  *    （空行集走 matrixText 只出表头行，copyMatrix「表头行必含」铁律），列源 QRT=shownCols、
  *    RT=visibleCols；裁决：单元格菜单不加（表头复制归属列头菜单主场，整表 TSV 已含表头行）；
  * 2) T2 tfoot 聚合行补 min~max 小字（append-only）——AggNum 四值 528 批起即齐算，此前只印
@@ -12,7 +12,7 @@
  *    本地行序/排序落盘零触碰；载荷方向双内核归一 'asc'|'desc'；
  * 4) T4 SqlConsoleView §6w 半边接线源码锁——sem-on+ :sem-raw-cols="sqlSemRawCols"
  *    （无 type 列 ∪ 名含 ( 或 * 的聚合/桶列入抑制集），sortable 保位、无静态 storage-key；
- * 5) T5 SqlConsoleView errPre 双参换装——errMeta(runErrObj) 旁路（catch 压串行为不动，
+ * 5) T5 SqlConsoleView errPre 双参改用——errMeta(runErrObj) 旁路（catch 压串行为不动，
  *    原始错误对象留存读 code/endpoint）。
  * 挂载样板照抄 tableKernelWave534/cellMenuColMgmt（裸 createApp + pinia；CellContextMenu
  * 自绘可挂载断言；剪贴板 mock 同款）。
@@ -139,7 +139,7 @@ describe('五百三十五批 T2：聚合 footer 行补 min~max（Σ/avg 前缀�
 
 /* ═══════════ 三、T3 remoteSort 远端排序契约 ═══════════ */
 describe('五百三十五批 T3：remoteSort prop（缺省关=客户端排序逐字节不变）', () => {
-  it('源码锁：双内核可选 prop+缺省 false+sort-change emit 声明+排序入口单入口委托（六百零三批随迁=remote 分支收编状态机机内）', () => {
+  it('源码锁：双内核可选 prop+缺省 false+sort-change emit 声明+排序入口单入口委托（六百零三批同步更新=remote 分支合并状态机机内）', () => {
     for (const [src, entry] of [[qrt, 'onSort'], [rt, 'sortBy']] as const) {
       expect(src).toMatch(/remoteSort\?: boolean;/);
       expect(src).toMatch(/remoteSort: false,/);
@@ -148,7 +148,7 @@ describe('五百三十五批 T3：remoteSort prop（缺省关=客户端排序逐
     }
     expect(qrt, 'QRT 表头点击单入口委托状态机').toContain('chain.sortBy(name, undefined, shift)');
     expect(rt, 'RT 表头点击单入口委托状态机').toContain('chain.sortBy(c, directDir, shift)');
-    /* 五百六十一批锚随迁→六百零三批二次随迁：QRT directSort 直选委托状态机（dir 1|-1 归一
+    /* 五百六十一批锚同步更新→六百零三批二次同步更新：QRT directSort 直选委托状态机（dir 1|-1 归一
        字符串后入机），直发/循环/镜像全在 tableSort.useSortChain 机内单一出处 */
     expect(qrt).toContain("chain.sortBy(col, dir === 1 ? 'asc' : 'desc')");
     expect(tableSortSrc, '远端意图分支机内单源').toMatch(/if \(opts\.isRemote\(\)\) \{/);
@@ -224,8 +224,8 @@ describe('五百三十五批 T4：SqlConsoleView sem-on+semRawCols 接线（源�
   });
 });
 
-/* ═══════════ 五、T5 SqlConsoleView errPre 双参换装 ═══════════ */
-describe('五百三十五批 T5：SqlConsoleView errPre 双参换装（errMeta 旁路）', () => {
+/* ═══════════ 五、T5 SqlConsoleView errPre 双参改用 ═══════════ */
+describe('五百三十五批 T5：SqlConsoleView errPre 双参改用（errMeta 旁路）', () => {
   it('源码锁：双参调用+压串行为不动的原始对象旁路+帮手 import', () => {
     expect(sqlConsole).toContain('errPreHtml(runErr, errMeta(runErrObj))');
     expect(sqlConsole).toContain('runErrObj.value = e;');

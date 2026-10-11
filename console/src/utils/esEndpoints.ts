@@ -1,5 +1,5 @@
 /* W3：ES 7.10 常用端点静态目录（D3：静态维护前端，随版本升级审查）。
-   {index} 为索引槽位——由动态清单插值；body 为该端点骨架 snippet。 */
+ {index} 为索引槽位——由动态清单插值；body 为该端点骨架 snippet。 */
 export type EsEndpoint = { methods: string[]; path: string; doc: string; body?: string };
 
 /* REST 方法全集收口（DevTools/RestView 此前各自定义） */

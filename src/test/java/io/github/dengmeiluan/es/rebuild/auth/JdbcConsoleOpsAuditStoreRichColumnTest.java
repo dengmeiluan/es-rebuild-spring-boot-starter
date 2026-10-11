@@ -171,7 +171,7 @@ public class JdbcConsoleOpsAuditStoreRichColumnTest {
 
     private static ConsoleOpsAuditEvent ev() {
         return ConsoleOpsAuditEvent.builder()
-                .username("deng_test_x1").displayName("邓美銮测试1").role("VIEWER")
+                .username("test-user-1").displayName("测试用户一").role("VIEWER")
                 .method("GET").uri("/internal/es/index/overview")
                 .action("PAGE_DENIED").httpStatus(403).detail("page=overview")
                 .connId("3556353a").connName("腾讯云UAT").ip("203.0.113.9").costMs(7L)
@@ -215,7 +215,7 @@ public class JdbcConsoleOpsAuditStoreRichColumnTest {
 
         /* 查询回读富维度 */
         Map<String, Object> row = new LinkedHashMap<>();
-        row.put("ts", 123L); row.put("username", "deng_test_x1"); row.put("role_name", "VIEWER");
+        row.put("ts", 123L); row.put("username", "test-user-1"); row.put("role_name", "VIEWER");
         row.put("method", "GET"); row.put("uri", "/overview"); row.put("action_name", "PAGE_DENIED");
         row.put("http_status", 403); row.put("conn_id", "3556353a"); row.put("conn_name", "腾讯云UAT");
         row.put("ip", "203.0.113.9"); row.put("cost_ms", 7L);

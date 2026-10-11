@@ -28,7 +28,7 @@ const xbJobsFn = vi.fn();
 const xbConnectCheckFn = vi.fn();
 const xbStartFn = vi.fn();
 const xbDestIndicesFn = vi.fn();
-const xbPreflightFn = vi.fn(); /* 五百二十五批 W4：启动确认收编 askConfirm 后 openStartConfirm 先行 await preflight——stub 挡真实 fetch */
+const xbPreflightFn = vi.fn(); /* 五百二十五批 W4：启动确认合并 askConfirm 后 openStartConfirm 先行 await preflight——stub 挡真实 fetch */
 const keysFn = vi.fn();
 const clustersListFn = vi.fn();
 const clusterIndicesFn = vi.fn();
@@ -260,7 +260,7 @@ describe('G3-B3 XmigrateView：启动失败内联面板', () => {
     await settle(2);
     findBtn(host, '启动迁移')!.click();
     await settle(3);
-    /* 五百二十五批 W4：启动确认收编全局 askConfirm（本 spec 的 confirm 服务是 mock、
+    /* 五百二十五批 W4：启动确认合并全局 askConfirm（本 spec 的 confirm 服务是 mock、
        resolve true 直接放行）——直挂 ConfirmModal 的 .cf-mask 形态退役，「必须过确认」
        锁定改 askConfirm 调用计数（下方 ReindexAdvanced 用例同款口径） */
     expect(askConfirmFn, '启动必须过 askConfirm 确认').toHaveBeenCalledTimes(1);
@@ -285,7 +285,7 @@ describe('G3-B3 XmigrateView：启动失败内联面板', () => {
     expect(host.querySelector('.xm-start-err')).toBeTruthy();
     findBtn(host.querySelector('.xm-start-err') as HTMLElement, '重试')!.click();
     await settle(3);
-    /* 五百二十五批 W4：收编后确认形态=askConfirm 调用——重试必须重走一次（计数 2） */
+    /* 五百二十五批 W4：合并后确认形态=askConfirm 调用——重试必须重走一次（计数 2） */
     expect(askConfirmFn, '重试必须重走确认（写操作不旁路）').toHaveBeenCalledTimes(2);
     app.unmount();
   });
@@ -358,11 +358,11 @@ describe('G3-B4 ReindexAdvancedView：提交失败内联全文 + 重试', () => 
     await settle(2);
     findBtn(host, '开始 Reindex')!.click();
     await settle();
-    expect(host.querySelector('.err-bar'), '失败必须出 err 结果面板').toBeTruthy(); /* 561 批随迁：err 档收编 theme.css .err-bar 单源 */
+    expect(host.querySelector('.err-bar'), '失败必须出 err 结果面板').toBeTruthy(); /* 561 批同步更新：err 档合并 theme.css .err-bar 单源 */
     const full = host.querySelector('.ra-err-full');
     expect(full, '失败全文必须内联展示').toBeTruthy();
     expect(full!.textContent).toContain('索引不存在（index_not_found）');
-    const retryBtn = findBtn(host.querySelector('.err-bar') as HTMLElement, '重试'); /* 561 批随迁同上 */
+    const retryBtn = findBtn(host.querySelector('.err-bar') as HTMLElement, '重试'); /* 561 批同步更新同上 */
     expect(retryBtn, '失败面板必须含重试按钮').toBeTruthy();
     retryBtn!.click();
     await settle();
@@ -373,7 +373,7 @@ describe('G3-B4 ReindexAdvancedView：提交失败内联全文 + 重试', () => 
 });
 
 describe('G3-B5/C6 ReindexPreviewView：runErr 互斥 + 0 命中分档', () => {
-  /* 五百二十五批随迁：页内 IndexPicker 退役换只读 CurrentIdxChip（选索引唯一入口=顶栏）——
+  /* 五百二十五批同步更新：页内 IndexPicker 退役换只读 CurrentIdxChip（选索引唯一入口=顶栏）——
      源索引改经 store.pick 驱动（useIdxState follow 下行跟随，chip 回显） */
   async function pickSource(host: HTMLElement) {
     const { useAppStore } = await import('../stores/app');
@@ -410,7 +410,7 @@ describe('G3-B5/C6 ReindexPreviewView：runErr 互斥 + 0 命中分档', () => {
     await pickSource(host);
     findBtn(host, '运行预估')!.click();
     await settle();
-    expect(host.querySelector('.rp-meta-pos'), '首跑成功必须出预估元信息行(五百一十九批收编 MetaStrip 统一件)').toBeTruthy();
+    expect(host.querySelector('.rp-meta-pos'), '首跑成功必须出预估元信息行(五百一十九批合并 MetaStrip 统一件)').toBeTruthy();
     reindexPreviewFn.mockRejectedValue(new Error('timeout'));
     findBtn(host, '运行预估')!.click();
     await settle();

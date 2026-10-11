@@ -5,14 +5,14 @@
  * 背景：responsive900Sweep529 台账——ForbiddenView/NotFoundView（静态页豁免）、
  * LuceneQueryView（单栏 flex 自然自适应豁免）已裁，SearchSandboxView 552 批出册
  * 后零 @media（pane 堆叠归 WorkbenchLayout <1100 JS 档、lr-bar wrap 兜底在档）。
- * 本批实裁其布局：全页零 grid-template-columns（单列化无对象），但 .ss-editor/
+ * 实裁其布局：全页零 grid-template-columns（单列化无对象），但 .ss-editor/
  * .ss-result 两卡头（.card-t 全局档 flex 无 wrap）内工具群在 900 下横排挤压
  * （编辑器卡头=快捷键提示文案+构建器钮；结果卡头=Response+seg 五视图钮+原始 IO
  * +聚焦钮）——裁定补 900 微调档：两卡头允许 wrap（§9.3 口径，只加 CSS 零结构动，
  * 528 W-E「wrap 换行」同款）；pane 堆叠/进度条/snips/hit 头均已有 wrap 或 JS 档
  * 兜底，不重复收。
  *
- * 入册记档：responsive900Sweep529 清单归册主维护，本批不扩该 spec（VIEWS_531 注
+ * 入册备案：responsive900Sweep529 清单归册主维护，不扩该 spec（VIEWS_531 注
  * 已记 552 出册因由）；本 spec 独立锁补档在场 + 豁免检查逻辑（无多列 grid=
  * 自适应安全的证明面）。
  */
@@ -32,7 +32,7 @@ describe('五百六十五批④：SearchSandbox 900 档实裁（补档）', () =
   });
 
   it('豁免检查逻辑：布局零 grid-template-columns 声明（单列化无对象，档只做 wrap 即自适应安全）', () => {
-    expect(ss, '本页无多列 grid 布局规则（注释记档字样不计），不需要单列化断点')
+    expect(ss, '本页无多列 grid 布局规则（注释备案字样不计），不需要单列化断点')
       .not.toMatch(/grid-template-columns\s*:/);
   });
 

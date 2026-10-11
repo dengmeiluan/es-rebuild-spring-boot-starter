@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
  *   迁移串〕——ReturnType 别名与 Ref 别名均为「声明即终点」形态）。
  * 刀A=真死 2 type 整删+type Ref import 孤儿清理；
  * 刀B=内部活 20 处去 export 关键字（typecheck 0=零漏判铁证）；
- * 文本锁 1 把前置随迁（tableKernelWave534:97 export interface SemFmtOpts→^interface 行锚）。 */
+ * 文本锁 1 把前置同步更新（tableKernelWave534:97 export interface SemFmtOpts→^interface 行锚）。 */
 
 const C = (f: string) => readFileSync(resolve(__dirname, '../composables/' + f), 'utf8');
 

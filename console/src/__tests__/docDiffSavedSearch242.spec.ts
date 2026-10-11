@@ -60,7 +60,7 @@ describe('DocDiffModal（P2-8 文档对比）', () => {
     apps.push(app);
     await flush();
 
-    /* 五百六十六批随迁：DocDiffModal 补 import NModal 后为真模态（teleport 到 body），
+    /* 五百六十六批同步更新：DocDiffModal 补 import NModal 后为真模态（teleport 到 body），
        内容查询走 document 级（旧内联平铺=组件未解析的坏形态） */
     const rows = [...document.querySelectorAll('.ddm-tbl tbody tr')];
     const byPath = new Map(rows.map(r => [r.querySelector('td.p')?.textContent, r]));

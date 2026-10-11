@@ -6,7 +6,7 @@
  * 同质心跳刷屏（产线实证：每分钟 3 条、无限重复）。
  * 修复：①轮询器权限感知——白名单不含对应页时跳过该请求（本文件锁定）；
  * ②后端 DedupConsoleOpsAuditStore 聚合兜底（Java 单测覆盖）。
- * 五百五十七批（锁随迁+扩员）：grantedPages 为连接键形态（conn:{id}:{page}，宿主
+ * 五百五十七批（锁同步更新+扩员）：grantedPages 为连接键形态（conn:{id}:{page}，宿主
  * 连接菜单模型）时裸 includes 恒 false——①有授权被静默跳过（能力反向丢失）②快照通道
  * 不看 snapshots 页授权每 20s 裸打（产线 81,572 条 PAGE_DENIED 的循环主源）。改为
  * effectivePagesForTarget 按当前目标解析有效页集判定；连接模型数据面须目标钉选；

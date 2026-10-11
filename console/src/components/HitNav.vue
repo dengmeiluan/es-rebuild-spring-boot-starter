@@ -33,8 +33,8 @@ import { computed } from 'vue';
 import { ChevronUp, ChevronDown } from 'lucide-vue-next';
 
 /* 搜索定位导航条：命中计数 + 上一个/下一个。可内嵌搜索输入（v-model:modelValue），
-   也可只挂计数+按钮（调用方复用自己已有的输入框，Enter/Shift+Enter 由调用方接线）。
-   ~24px 高，直接塞进现有工具条。 */
+ 也可只挂计数+按钮（调用方复用自己已有的输入框，Enter/Shift+Enter 由调用方接线）。
+ ~24px 高，直接塞进现有工具条。 */
 const props = withDefaults(defineProps<{
   /** 命中总数 */
   count: number;

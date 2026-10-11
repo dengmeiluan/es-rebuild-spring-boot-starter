@@ -1,15 +1,15 @@
 /* ux2 语言能力层：sql 官方 contribution + lucene/painless/ndjson/synonyms 四个自研 monarch。
-   ensureLanguages() 幂等（模块级 flag）——MonacoEditor onMounted 每实例调用，重复零开销。
-   token 全用标准名/复用 json 系 token 名（string.key.json 等）→ 既有 es-dark/es-light 主题规则自动生效。
-   monarch 规则一律消费式正则（无 lookahead）：键名规则连冒号一起吃下着 key 色。
-   ndjson 独立语言不挂 JSON LS——多根对象不会被 json diagnostics 整片误报（高亮有、校验无）。 */
+ ensureLanguages() 幂等（模块级 flag）——MonacoEditor onMounted 每实例调用，重复零开销。
+ token 全用标准名/复用 json 系 token 名（string.key.json 等）→ 既有 es-dark/es-light 主题规则自动生效。
+ monarch 规则一律消费式正则（无 lookahead）：键名规则连冒号一起吃下着 key 色。
+ ndjson 独立语言不挂 JSON LS——多根对象不会被 json diagnostics 整片误报（高亮有、校验无）。 */
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import 'monaco-editor/esm/vs/basic-languages/sql/sql.contribution'; // 官方 SQL 高亮（模块加载即自注册）
 
 let done = false;
 
 /* lucene/painless/ndjson 共用括号配置：bracketPairColorization 与 autoClosingBrackets
-  （'languageDefined'）都读语言配置——不给则自研语言无自动闭合/无括号对着色。 */
+ （'languageDefined'）都读语言配置——不给则自研语言无自动闭合/无括号对着色。 */
 const BRACKET_CONF: monaco.languages.LanguageConfiguration = {
   brackets: [['{', '}'], ['[', ']'], ['(', ')']],
   autoClosingPairs: [
@@ -27,7 +27,7 @@ export function ensureLanguages() {
   done = true;
 
   /* lucene query_string：字段名（word+: 含冒号整体）、布尔/范围操作符、短语串、
-     区间括号、通配 *?、模糊 ~n、boost ^n、_exists_、ISO 日期 */
+ 区间括号、通配 *?、模糊 ~n、boost ^n、_exists_、ISO 日期 */
   monaco.languages.register({ id: 'lucene' });
   monaco.languages.setMonarchTokensProvider('lucene', {
     tokenizer: {
@@ -69,14 +69,14 @@ export function ensureLanguages() {
       ],
       comment: [
         [/[^/*]+/, 'comment'],
-        [/\*\//, 'comment', '@pop'],
-        [/[/*]/, 'comment'],
-      ],
-    },
-  });
-  monaco.languages.setLanguageConfiguration('painless', BRACKET_CONF);
+ [/\*\//, 'comment', '@pop'],
+ [/[/*]/, 'comment'],
+ ],
+ },
+ });
+ monaco.languages.setLanguageConfiguration('painless', BRACKET_CONF);
 
-  /* ndjson：json 系 token 名复用（吃既有主题规则），独立语言不挂 JSON LS */
+ /* ndjson：json 系 token 名复用（吃既有主题规则），独立语言不挂 JSON LS */
   monaco.languages.register({ id: 'ndjson' });
   monaco.languages.setMonarchTokensProvider('ndjson', {
     tokenizer: {

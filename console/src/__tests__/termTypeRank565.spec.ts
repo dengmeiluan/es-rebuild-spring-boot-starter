@@ -1,11 +1,11 @@
 /* 五百六十五批件②：useTermsSuggest types 工厂参全站接线（类型感知排序落地）。
- *  背景：fieldSearch.rankTermsByType + useTermsSuggest 可选第二参 types 已 563 立法，
+ *  背景：fieldSearch.rankTermsByType + useTermsSuggest 可选第二参 types 已 563 约定，
  *  但全站零接线（563 批头注称消费方全在黑名单已过时——LuceneInput/BoostTuner/sqlCompletion
- *  均非黑名单）。本批三处接线，types 是可选参：不传时行为逐字节不变（563 C 段锁面不回退）。
+ *  均非黑名单）。三处接线，types 是可选参：不传时行为逐字节不变（563 C 段锁面不回退）。
  *  锁面：
  *   A 源码锁：三消费方 useTermsSuggest 调用补第二参 types（字段类型源各随其字段段逻辑）；
  *   B 行为断言：rankTermsByType 真函数——date 字段值位 ISO 形态排前、epoch 殿后；
- *     不传 types 原序（缺省零行为，563 立法契约复锁）。 */
+ *     不传 types 原序（缺省零行为，563 约定契约复锁）。 */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';

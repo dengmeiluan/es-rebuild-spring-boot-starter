@@ -11,7 +11,7 @@
  *      且 readStoredJson 接线在场（防「删守卫保绿」）。
  * B 组：全站看守——扫 src 全树（排除 __tests__），「JSON.parse( 与 getItem(
  *      同行且近 6 行（含自身）无 try」判脏，存量=0。
- *      盲区诚实记档：多行间接形态（raw 先存、parse 另行）不在本看守域——
+ *      盲区诚实备案：多行间接形态（raw 先存、parse 另行）不在本看守域——
  *      全站该形态存量均已带 try（851 实勘 useScopedDraft/jobTracker/liveMonitor/
  *      queryHistory/reportArchive/urlState/HealthReportView 七处正面在册），
  *      回潮防线=TDD 评审纪律；本看守锁的是 851 病灶的同行形态族。

@@ -102,7 +102,7 @@ describe('索引名跳转芯片化（247 批）', () => {
       ] as any,
       'onUpdate:show': (v: boolean) => { /* 父侧 v-model */ },
     });
-    /* 五百六十六批随迁：NModal 真解析后 teleport 到 body */
+    /* 五百六十六批同步更新：NModal 真解析后 teleport 到 body */
     const chip = document.querySelector('.ddm-idx') as HTMLElement;
     expect(chip?.textContent, '芯片应展示索引名').toContain('diff-idx');
     chip.click();

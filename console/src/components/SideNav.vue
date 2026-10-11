@@ -10,7 +10,7 @@
       </div>
     </div>
 
-    <!--  丝滑收展：常驻 DOM，收起时高度/透明度连续过渡——v-if 抽走 31px 是「往上顶」的元凶 -->
+    <!-- 丝滑收展：常驻 DOM，收起时高度/透明度连续过渡——v-if 抽走 31px 是「往上顶」的元凶 -->
     <div class="nav-search" :class="{ hid: store.navIcon }">
       <Search :size="13" class="nav-search-ic" />
       <input
@@ -207,7 +207,7 @@ const footTitle = computed(() => {
   return `集群健康：${h}${un > 0 ? ` · 未分配分片 ${un}` : ''}`;
 });
 
-/*  图标态：文字全隐，tooltip 是唯一可读入口——名称+快捷键都要在 title 里给全 */
+/* 图标态：文字全隐，tooltip 是唯一可读入口——名称+快捷键都要在 title 里给全 */
 function itemTip(item: { name: string; key?: string }) {
   return item.key ? `${item.name} · 快捷键 ${item.key}` : item.name;
 }
@@ -292,7 +292,7 @@ function itemTip(item: { name: string; key?: string }) {
   flex: 1; font-size: var(--fs-sm); font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   transition: opacity var(--nav-tr);
 }
-/*  §8.4：版本能力降级徽标——入口级预警不禁止，悬停解释原因 */
+/* 版本能力降级徽标——入口级预警不禁止，悬停解释原因 */
 .nav-ver {
   flex-shrink: 0; font-size: var(--fs-2xs); line-height: 1; padding: var(--sp-1);
   border-radius: var(--r-s); color: var(--warn); background: var(--warn-soft, var(--warn-line));
@@ -317,8 +317,8 @@ function itemTip(item: { name: string; key?: string }) {
 .dot.c-err { background: var(--err); box-shadow: var(--glow-m) var(--err); }
 
 /* ── / 图标折叠态：866px iframe 里 208px 侧栏吃掉 1/4 宽度，收成 56px 纯图标轨。
-    丝滑化：所有元素常驻 DOM，高度/透明度/宽度全程同步插值（同一时长同一缓动），
-   彻底消灭 v-if 抽行导致的「往上顶」跳变；尊重 reduced-motion（theme.css 全局已压缩动效）。 */
+ 丝滑化：所有元素常驻 DOM，高度/透明度/宽度全程同步插值（同一时长同一缓动），
+ 彻底消灭 v-if 抽行导致的「往上顶」跳变；尊重 reduced-motion（theme.css 全局已压缩动效）。 */
 .snav { --nav-tr: 240ms cubic-bezier(.25, .8, .3, 1); transition: width var(--nav-tr); will-change: width; }
 .snav.icon { width: 56px; }
 .snav.icon .brand { justify-content: center; padding: var(--sp-3) 0 var(--sp-3); }

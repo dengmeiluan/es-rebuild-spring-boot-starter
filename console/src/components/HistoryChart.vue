@@ -1,16 +1,16 @@
 <template>
   <!-- 监控历史趋势图卡统一件（对标阿里云监控图卡；LiveDashboard 历史趋势分区消费）。
-       分层策略：SVG（viewBox 600x220 preserveAspectRatio=none 拉伸）只画随数据缩放的
-       渐变面积/折线/阈值虚线（vector-effect=non-scaling-stroke 保线宽不随拉伸变形）；
-       Y 轴刻度/十字线/最近点圆点/tooltip 全在 HTML 绝对定位层——文本与圆不被非等比
-       拉伸变形。图例 chips 点击切换序列可见性：隐藏序列不画线、不进 tooltip/统计，
-       色号按 name 排序位锚定不换色。折线/面积走 polylineSegments 分段渲染：gapMs 传入即
-       断档感知（相邻点 Δt 超阈值断线——降采样空桶=集群失联未采时段，不画跨档假线/假面）。
-       纯 SVG+HTML，不引第三方图表库。 -->
+ 分层策略：SVG（viewBox 600x220 preserveAspectRatio=none 拉伸）只画随数据缩放的
+ 渐变面积/折线/阈值虚线（vector-effect=non-scaling-stroke 保线宽不随拉伸变形）；
+ Y 轴刻度/十字线/最近点圆点/tooltip 全在 HTML 绝对定位层——文本与圆不被非等比
+ 拉伸变形。图例 chips 点击切换序列可见性：隐藏序列不画线、不进 tooltip/统计，
+ 色号按 name 排序位锚定不换色。折线/面积走 polylineSegments 分段渲染：gapMs 传入即
+ 断档感知（相邻点 Δt 超阈值断线——降采样空桶=集群失联未采时段，不画跨档假线/假面）。
+ 纯 SVG+HTML，不引第三方图表库。 -->
   <div class="hc">
     <!-- 799 件2（用户五令「大厂级」：历史五图卡头与六卡 KPI 语言对齐）——
-         行① 标题+单位（小灰）+最大/均值（右浮小字）；行② 当前值 28px 大数
-         （色=首可见序列身份色，与六卡 curColor 同构；多序列叠加语义=聚合当前值）。 -->
+ 行① 标题+单位（小灰）+最大/均值（右浮小字）；行② 当前值 28px 大数
+ （色=首可见序列身份色，与六卡 curColor 同构；多序列叠加语义=聚合当前值）。 -->
     <div class="hc-hd">
       <span class="hc-top">
         <span class="hc-tt">{{ title }}<em v-if="unit" class="hc-unit">{{ unit }}</em></span>
@@ -25,9 +25,9 @@
     <div ref="plotEl" class="hc-plot" :style="plotStyle" @pointermove="onMove" @pointerleave="onLeave">
       <template v-if="hasVisible">
         <!-- 件2：.hc-canvas 内壳=绘图域整体右移让出左刻度列（36px）——线和文字不遮挡。
-             Y 三刻度锚 .hc-plot 左列（0..32px 右对齐）；十字线/圆点/tooltip 的 % 域随 canvas 对齐零错位。
-             〔内勘正：初版把三刻度也裹进 canvas——整体右移后相对几何不变=线与文字仍重叠
-               （真机探针 S2 gap=-32 铁证）；刻度留在 plot 左列才真让位〕 -->
+ Y 三刻度锚 .hc-plot 左列（0..32px 右对齐）；十字线/圆点/tooltip 的 % 域随 canvas 对齐零错位。
+ 〔内勘正：初版把三刻度也裹进 canvas——整体右移后相对几何不变=线与文字仍重叠
+ （真机探针 S2 gap=-32 铁证）；刻度留在 plot 左列才真让位〕 -->
         <span class="hc-ymax">{{ fmtV(yMaxV) }}</span>
         <!-- 件2：Y 中档三刻度（75/50/25%——与 ymax/yzero 合成五档，802 topYTicks 同构语言） -->
         <span v-for="(v, i) in hcYMid" :key="'ym' + i" class="hc-yt" :style="{ top: HC_YT_POS[i] }" aria-hidden="true">{{ fmtV(v) }}</span>
@@ -41,22 +41,22 @@
             </linearGradient>
           </defs>
           <!-- 件2：横向网格三线（25/50/75% 虚线——对齐 802 Top 曲线底座语言，治「白板图」；
-               画在序列之下（声明序即绘制序），vector-effect 保线宽不随拉伸变形 -->
+ 画在序列之下（声明序即绘制序），vector-effect 保线宽不随拉伸变形 -->
           <line v-for="gy in HC_GRID" :key="'hg' + gy" class="hc-grid" x1="0" x2="600"
             :y1="(PLOT_H * (1 - gy)).toFixed(1)" :y2="(PLOT_H * (1 - gy)).toFixed(1)" vector-effect="non-scaling-stroke" />
           <template v-for="(s, i) in visibleSeries" :key="s.name">
             <!-- 状态色带（RED 时段背景带，画在面积/折线之下——声明序即绘制序）：
-                 断链轮采集器落 status=red doc（无指标字段=折线在此断档），色带把
-                 「没采到」与「集群红了」在视觉上区分开 -->
+ 断链轮采集器落 status=red doc（无指标字段=折线在此断档），色带把
+ 「没采到」与「集群红了」在视觉上区分开 -->
             <rect v-for="(b, bi) in bandRects" :key="'band' + bi" class="hc-band" :x="b.x" :y="0"
               :width="b.w" :height="PLOT_H"><title>{{ b.label }}</title></rect>
-            <!--  告警事件条：与色带同层的窄竖条（level 染色 CRIT err/WARN wn），title=事件文案——
-                 事件轴收敛进色带体系（宽时段=色带，瞬时点=窄条），替代顶部菱形散标记 -->
+            <!-- 告警事件条：与色带同层的窄竖条（level 染色 CRIT err/WARN wn），title=事件文案——
+ 事件轴收敛进色带体系（宽时段=色带，瞬时点=窄条），替代顶部菱形散标记 -->
             <rect v-for="(e, ei) in eventRects" :key="'ev' + ei" class="hc-evband" :x="e.x" :y="0"
               :width="e.w" :height="PLOT_H" :fill="e.color" opacity="0.15"><title>{{ e.title }}</title></rect>
             <!-- 面积画在折线之下：先 area 后 line 的声明序即绘制序。
-                 折线/面积同走 polylineSegments 分段单源：无 gapMs=单段（与旧整线形态一致）；
-                 断档感知（gapMs 传入）下每段独立落底闭合——断档处不连线、不造跨档填充假面 -->
+ 折线/面积同走 polylineSegments 分段单源：无 gapMs=单段（与旧整线形态一致）；
+ 断档感知（gapMs 传入）下每段独立落底闭合——断档处不连线、不造跨档填充假面 -->
             <path v-for="(d, di) in areaSegs(s)" :key="'a' + di" class="hc-area" :d="d" :fill="'url(#' + gidOf(i) + ')'" />
             <!-- 折线平滑统一——段内 Catmull-Rom（六卡同款），段间断开语义由 polylineSegments 保留 -->
             <path v-for="(d, pi) in lineSegPaths(s)" :key="'l' + pi" class="hc-line" :d="d" fill="none"
@@ -82,7 +82,7 @@
               <span class="hc-tip-nm">{{ r.name }}</span>
               <b>{{ r.text }}</b>
             </div>
-            <!--  tooltip 富化：窗口内告警事件行（level 色+完整文案） -->
+            <!-- tooltip 富化：窗口内告警事件行（level 色+完整文案） -->
             <div v-for="(a, ai) in hoverAlerts" :key="'al' + ai" class="hc-tip-row hc-tip-al">
               <i :style="{ background: a.color }" aria-hidden="true" />
               <span class="hc-tip-nm">{{ a.label }}</span>
@@ -132,7 +132,7 @@ const props = defineProps<{
   /** 序列调色板（NamedSeries 无色字段：按 name 排序位轮替取色，色号锚定不随显隐变化） */
   palette?: string[];
   /** 断档感知桶距（ms）：相邻点 Δt > gapMs 即断线（降采样空桶=集群失联未采，不画跨档假线）；
-      缺省 undefined 永不断开——单段渲染，行为与分段改造前一致 */
+ 缺省 undefined 永不断开——单段渲染，行为与分段改造前一致 */
   gapMs?: number;
   /** R5 外推预测段（磁盘水位等）：同色 dashed 虚线（无面积、不出 tooltip），name 对应实线序列 */
   forecast?: NamedSeries[];
@@ -140,9 +140,9 @@ const props = defineProps<{
   note?: string;
   /** RED 时段色带（视图层由 redBands(records) 从 status='red' 采样合成；label=悬停原生提示） */
   statusBands?: { from: number; to: number; label?: string }[];
-  /**  tooltip 告警窗口参数化：悬停命中窗=域宽×windowPct（缺省 0.02，随图域自适应） */
+  /** tooltip 告警窗口参数化：悬停命中窗=域宽×windowPct（缺省 0.02，随图域自适应） */
   tooltipWindowPct?: number;
-  /**  告警事件标记（图域内竖直位置固定顶部的菱形点，title=事件文案；域外自动跳过） */
+  /** 告警事件标记（图域内竖直位置固定顶部的菱形点，title=事件文案；域外自动跳过） */
   events?: { t: number; label: string; level?: string }[];
 }>();
 
@@ -200,8 +200,8 @@ function py(v: number): number {
   return PLOT_H - (v / yMaxV.value) * PLOT_H;
 }
 /* ═══ 折线/面积分段渲染（polylineSegments 单源，坐标口径与旧 linePath 一致）：
-   无 gapMs=单段；断档感知下每段独立落底闭合（断档处既不连线也不造填充假面）。
-   段缓存按序列名收一次，面积/折线两组 v-for 共读，不重复计算 */
+ 无 gapMs=单段；断档感知下每段独立落底闭合（断档处既不连线也不造填充假面）。
+ 段缓存按序列名收一次，面积/折线两组 v-for 共读，不重复计算 */
 const segCache = computed(() => {
   const m = new Map<string, string[]>();
   for (const s of visibleSeries.value) m.set(s.name, polylineSegments(s.points, PLOT_W, PLOT_H, props.gapMs));
@@ -263,9 +263,9 @@ const thresholdY = computed<number | null>(() => {
 });
 const thLabelTop = computed(() => (thresholdY.value != null ? ((thresholdY.value / PLOT_H) * 100).toFixed(2) + '%' : ''));
 
-/* ═══  告警事件收敛进色带体系：事件从顶部菱形改为与 RED 色带同层的窄竖条
-   （level 染色 CRIT err/WARN wn，同域钳制，title=事件文案悬停可见）——
-   色带（宽时段）与事件条（瞬时点）同一视觉语言，层级/透明度/落位单源 ═══ */
+/* ═══ 告警事件收敛进色带体系：事件从顶部菱形改为与 RED 色带同层的窄竖条
+ （level 染色 CRIT err/WARN wn，同域钳制，title=事件文案悬停可见）——
+ 色带（宽时段）与事件条（瞬时点）同一视觉语言，层级/透明度/落位单源 ═══ */
 const eventRects = computed(() => {
   const events = props.events;
   if (!events || !events.length || dom.value.span <= 0) return [];
@@ -362,8 +362,8 @@ const tipTime = computed(() => {
 });
 const tipRows = computed(() => hoverPts.value.map(d => ({ name: d.name, color: colorOf(d.name), text: fmtV(d.p.v) })));
 
-/*  tooltip 富化：悬停时刻附近（±2% 域宽）的告警事件并入 tooltip（level 色+文案）——
-   事件窄条可见但细节有限，悬停即读完整事件；无命中不渲染额外行 */
+/* tooltip 富化：悬停时刻附近（±2% 域宽）的告警事件并入 tooltip（level 色+文案）——
+ 事件窄条可见但细节有限，悬停即读完整事件；无命中不渲染额外行 */
 const hoverAlerts = computed(() => {
   if (hoverFrac.value == null || dom.value.span <= 0 || !props.events?.length) return [];
   const t = dom.value.tMin + hoverFrac.value * dom.value.span;
@@ -409,20 +409,20 @@ const plotStyle = computed(() => (props.height ? { height: props.height + 'px' }
   .hc-plot { height: 140px; }
 }
 /* 件2：绘图域右移 36px 让出左刻度列——线和文字互相遮挡根治
-   （canvas 含 svg/十字线/圆点/tooltip；Y 三刻度在 canvas 外锚 plot，见下） */
+ （canvas 含 svg/十字线/圆点/tooltip；Y 三刻度在 canvas 外锚 plot，见下） */
 .hc-canvas { position: absolute; top: 0; bottom: 0; left: 36px; right: 0; }
 .hc-svg { width: 100%; height: 100%; display: block; }
 /* 件2：横向网格虚线（802 .ld-grid 同款 3-4 虚线+弱化透明度） */
 .hc-grid { stroke: var(--tx2); stroke-opacity: .18; stroke-dasharray: 3 4; }
 .hc-band { fill: var(--err); opacity: .08; }
-/*  告警事件菱形标记：顶部落位，level 染色（CRIT err/WARN wn/默认 tx2） */
+/* 告警事件菱形标记：顶部落位，level 染色（CRIT err/WARN wn/默认 tx2） */
 /* R5 外推预测虚线 */
 .hc-fc { pointer-events: none; }
 
 /* Y 轴两只刻度（HTML 层不被拉伸变形）；X 轴三只时间标注在图区之下。
-   件2：Y 中档三刻度（75/50/25% 位，translateY 居中锚格线）。
-   件2：三刻度锚 .hc-plot 左列 0..32px 右对齐（canvas 36px 起=4px 间隙，
-   刻度真让位列内、线永不入列——内勘正：裹进 canvas 等于没让位） */
+ 件2：Y 中档三刻度（75/50/25% 位，translateY 居中锚格线）。
+ 件2：三刻度锚 .hc-plot 左列 0..32px 右对齐（canvas 36px 起=4px 间隙，
+ 刻度真让位列内、线永不入列——内勘正：裹进 canvas 等于没让位） */
 .hc-ymax, .hc-yzero { position: absolute; left: 0; width: 32px; text-align: right; font-size: var(--fs-2xs); color: var(--tx2); font-family: var(--mono); line-height: 1.2; pointer-events: none; }
 .hc-yt { position: absolute; left: 0; width: 32px; text-align: right; font-size: var(--fs-2xs); color: var(--tx2); font-family: var(--mono); line-height: 1.2; transform: translateY(-50%); pointer-events: none; }
 .hc-ymax { top: 0; }
@@ -445,7 +445,7 @@ const plotStyle = computed(() => (props.height ? { height: props.height + 'px' }
 .hc-tip-row i { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .hc-tip-nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--tx1); }
 .hc-tip-row b { color: var(--tx0); font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 600; }
-/*  tooltip 富化行：告警事件（level 色+完整文案） */
+/* tooltip 富化行：告警事件（level 色+完整文案） */
 .hc-tip-al .hc-tip-nm { color: var(--wn); }
 
 /* 图例 chips：色点+名称；隐藏档灰化+划线（色号不变） */

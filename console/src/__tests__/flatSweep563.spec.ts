@@ -1,5 +1,5 @@
 /**
- * 五百六十三批·轨4（轨4道侣·全站扁平化扫荡）：第七波残量清账 · 契约记档。
+ * 五百六十三批·轨4（轨4道侣·全站扁平化扫荡）：第七波残量清账 · 契约备案。
  *
  * 仿 flattenWave546 静态源码断言范式（happy-dom 不挂载）。534 轨4 开账以来七波扫荡后，
  * 30 views 独占域残量清单（全量审计记 docs/GOAL-534-563-FLAT-SWEEP.md）：
@@ -12,13 +12,13 @@
  * ③ SnapshotsView sv-prog 行内进度面板框三件退役——bg1 面保留作分组语义
  *    （.sv-tl-row 无底色；obsProgress533 挂载锁只锚 .sv-prog-fill 不涉壳）。
  * ④ ConfigDriftView cd-ns-kids 子键组 dashed 盒退役——gap/padding 缩进分组语义保留。
- * ⑤ OverviewView ov-job-time 手写「:title=fmtTime + relTime(…, now)」收编 R99 TimeCell
- *    统一件（列内相对+悬浮绝对同构）；孤儿 import（fmtTime/relTime/useNow）随迁清除。
+ * ⑤ OverviewView ov-job-time 手写「:title=fmtTime + relTime(…, now)」合并 R99 TimeCell
+ *    统一件（列内相对+悬浮绝对同构）；孤儿 import（fmtTime/relTime/useNow）同步更新清除。
  *
- * 范围铁律：纯 CSS chrome 退役 + 组件单源收编——模板结构/高度链（定高字面/max-height/
+ * 范围铁律：纯 CSS chrome 退役 + 组件单源合并——模板结构/高度链（定高字面/max-height/
  * vh 档）零变动；语义边框（err/warn/info 警示条）与浮层壳（bw-ld/sv-tl-json/tp-tip）
  * 豁免保留； PitScrollView pt-card-hd 四头条（flattenWave538/550 锁）与 PluginsView
- * pl-mo-b（flattenWave546 豁免册）本批禁动已记档。
+ * pl-mo-b（flattenWave546 豁免册）禁动已备案。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -91,15 +91,15 @@ describe('五百六十三批③④：sv-prog 框三件退役 / cd-ns-kids dashed
   });
 });
 
-/* ═══════════ ⑤ OverviewView 作业时间收编 TimeCell 单源 ═══════════ */
+/* ═══════════ ⑤ OverviewView 作业时间合并 TimeCell 单源 ═══════════ */
 
-describe('五百六十三批⑤：ov-job-time 收编 TimeCell 统一件（R99 列内相对+悬浮绝对）', () => {
-  it('OverviewView：TimeCell 换装在场（ov-job-time 锚类随迁）；手写 relTime 退役', () => {
+describe('五百六十三批⑤：ov-job-time 合并 TimeCell 统一件（R99 列内相对+悬浮绝对）', () => {
+  it('OverviewView：TimeCell 改用在场（ov-job-time 锚类同步更新）；手写 relTime 退役', () => {
     const ov = read('../views/OverviewView.vue');
-    expect(ov, 'TimeCell 单源换装在场（锚类保留，相对+绝对语义归组件）')
+    expect(ov, 'TimeCell 单源改用在场（锚类保留，相对+绝对语义归组件）')
       .toMatch(/<TimeCell class="ov-job-time" :ts="j\.updateTime \|\| j\.createTime" \/>/);
     expect(ov, '手写 relTime 时间位退役').not.toMatch(/relTime\(j\.updateTime/);
-    expect(ov, '孤儿 import 随迁（relTime 不再被本页消费）')
+    expect(ov, '孤儿 import 同步更新（relTime 不再被本页消费）')
       .not.toMatch(/import \{[^}]*\brelTime\b[^}]*\} from '\.\.\/utils\/format'/);
   });
 });

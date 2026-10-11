@@ -54,11 +54,11 @@ describe('552 ②：IndexHubView ops tab 原始 IO 补口（/cluster/raw 通道�
 
   it('ops 分节行尾 Terminal 钮在场（canOps || canAdmin 门禁）', () => {
     expect(opsSec, 'ops 分节 Terminal 钮').toContain('aria-label="查看原始 IO（运维操作）"');
-    /* 五百六十批随迁（击穿者：560 轨2 刀⑤——scope 分流，ops 行尾钮显式传 'ops'） */
+    /* 五百六十批同步更新（击穿者：560 轨2 刀⑤——scope 分流，ops 行尾钮显式传 'ops'） */
     expect(opsSec, "@click=\"openRawIo('ops')\" 接线").toContain("@click=\"openRawIo('ops')\"");
     expect(opsSec, '与行级执行同权门禁').toContain('v-if="canOps || canAdmin"');
   });
-  it("openRawIo 取数特征（560 随迁：scope 分流后 ops 档保留双参回退先 /cluster/raw 后 query），判空口径逐字平移", () => {
+  it("openRawIo 取数特征（560 同步更新：scope 分流后 ops 档保留双参回退先 /cluster/raw 后 query），判空口径逐字平移", () => {
     expect(ih).toContain("? (ioRecorder.last('/cluster/raw') ?? ioRecorder.last('/cluster/query'))");
     expect(ih).toContain('暂无原始 IO 记录，先在本页执行一次操作（记录环近 30 条）再查看');
   });
@@ -144,8 +144,8 @@ describe('552 ③：QueryHistoryPanel 可选 curl action（行为锁）', () => 
     expect(host.querySelector('[aria-label="复制为 curl"]'), '无 curl 配置不出钮').toBeNull();
   });
   it('源码锚：actions 联合类型 + emit 契约 + 行级钮对齐 play/fill/copy 形态', () => {
-    /* 五百六十一批随迁（击穿者：561 B2 刀①——actions 联合类型末位加 'newtab'，行级仅 emit、
-       mkTab+激活跳转归宿主 histNewTab）：枚举字面随迁，curl 在册语义零回退 */
+    /* 五百六十一批同步更新（击穿者：561 B2 刀①——actions 联合类型末位加 'newtab'，行级仅 emit、
+       mkTab+激活跳转归宿主 histNewTab）：枚举字面同步更新，curl 在册语义零回退 */
     expect(qhp).toMatch(/actions\?: \('play' \| 'fill' \| 'copy' \| 'curl' \| 'del' \| 'rename' \| 'fav' \| 'newtab'\)\[\];/);
     expect(qhp).toMatch(/\(e: 'curl', it: HistRow\): void;/);
     expect(qhp).toMatch(/<button v-if="actions\.includes\('curl'\)" aria-label="复制为 curl" class="btn xs ghost" title="复制为 curl" @click="\$emit\('curl', it\)">/);
@@ -155,7 +155,7 @@ describe('552 ③：QueryHistoryPanel 可选 curl action（行为锁）', () => 
 /* ═══ ④ DevToolsView 宿主接线（curl 组装 + body 截断摘要） ═══ */
 describe('552 ④：DevToolsView 历史行 curl 接线 + body 截断摘要', () => {
   it("actions 窄集加 'curl'（六动作形）+ @curl=histCurl 接线", () => {
-    /* 五百六十一批随迁（击穿者：561 B2 刀①——actions 窄集加 'newtab' 回放到新 Tab，
+    /* 五百六十一批同步更新（击穿者：561 B2 刀①——actions 窄集加 'newtab' 回放到新 Tab，
        面板行级仅 emit、mkTab+激活跳转归宿主 histNewTab）：六动作形随字面迁为七动作形 */
     expect(dt).toContain(`:actions="['play', 'fill', 'copy', 'fav', 'curl', 'newtab', 'del']"`);
     expect(dt).toContain('@curl="histCurl"');

@@ -3,27 +3,27 @@
  *
  * 用户产线实报：
  * ① IndexHub docs/query 两 tab 的 RT 工具行没有视图形式切换 seg（DslQueryView 有）——
- *    能力不一致。本批给两处 RT 接同款 seg（表格/JSON/Tree/卡片四档，DQ 卡片档有实现
+ *    能力不一致。给两处 RT 接同款 seg（表格/JSON/Tree/卡片四档，DQ 卡片档有实现
  *    故四档全上）+ RT hideBody（缺省 false 零增量，552 rtFix552 非表格视图自动退聚焦），
- *    JSON/Tree/卡片渲染体= DQ 最小集逐字平移（jsonFind 高亮搜索链是 DQ 视图域增强不随迁）；
+ *    JSON/Tree/卡片渲染体= DQ 最小集逐字平移（jsonFind 高亮搜索链是 DQ 视图域增强不同步更新）；
  * ② 「顶满」钮= DQ 本页级收起构建区（buildCollapsed）——IndexHub docs/query 无构建区
- *    （query tab 编辑器高度档是另一套受锁高度链），语义不适用，记档不做（负锚看守）；
+ *    （query tab 编辑器高度档是另一套受锁高度链），语义不适用，备案不做（负锚看守）；
  * ③ 直方图两页识别不一致（同索引 DQ 38 桶、IndexHub「未识别到可作直方图的字段」）根因：
  *    a) 首查不等字段源到位——DQ preloadMapping().then(firstRun)（mapping 先行），IndexHub
  *       runDocs/runDsl 与 ensureIhFields 并行赛跑，首查 mappingDates 空沿 → __hist 不注入；
  *    b) DQ 有「二次嗅探重放」（mapping 不可用时响应回来后从 hits 值形态补嗅探重放一次），
- *       IndexHub 552 批接线时记档未接（sniffFromHits 出口闲置）。
+ *       IndexHub 552 批接线时备案未接（sniffFromHits 出口闲置）。
  *    修正：runDocs/runDsl 注入前 await ensureIhFields()（DQ 等位语义）+ 响应后二次嗅探
  *    重放链（sniffFromHits → injectField → 重放 → onResp(r2)，失败走既有降级拉黑）。
  *
- * 契约（本批验收锚）：
+ * 契约（验收锚）：
  * 一、docs/query 两 RT 接视图 seg（bar-prepend 内，DQ 同款四档）+ hideBody=非表格档；
  * 二、偏好落盘 usePref 键 ih.docs.view / ih.qry.view（与 DQ useScopedDraft 键分开）；
  * 三、alt 渲染体三档在场（JSON=高亮 pretty 信封、Tree=JsonTree tools、卡片=openDoc 点开）；
  * 四、直方图：两链字段源等位（await ensureIhFields）+ 二次嗅探重放（sniffFromHits/injectField/
  *     onResp(r2)）；行为网：字段源拒（403）时首查裸查、响应后按 hits 值形态重放带 __hist
- *     查询回填直方图桶（与 DQ deng_test_x1 产线实锤同链）；
- * 五、顶满钮负锚：两处 bar-prepend 无「顶满」（语义不适用记档不做，防后续误加）。
+ *     查询回填直方图桶（与 DQ 同链）；
+ * 五、顶满钮负锚：两处 bar-prepend 无「顶满」（语义不适用备案不做，防后续误加）。
  * 设施：tableKernelWave540 同款 monaco stub + 只 mock ../api + 裸 createApp 挂载。
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -205,23 +205,23 @@ describe('554 一：docs/query 两 RT 接视图形式切换 seg（DQ 同款四�
 
 /* ═══════════ 二、alt 渲染体三档（DQ 最小集逐字平移） ═══════════ */
 describe('554 二：JSON/Tree/卡片渲染体（docs docsRan 域 + query qryResp 域）', () => {
-  it('docs：JSON=高亮 pretty 信封（AltHitsViews 入参）、Tree=行集入参、卡片=全量命中+openDoc（667 换装随迁：内脏入共享件，包裹层容器类保形）', () => {
+  it('docs：JSON=高亮 pretty 信封（AltHitsViews 入参）、Tree=行集入参、卡片=全量命中+openDoc（667 改用同步更新：内脏入共享件，包裹层容器类保形）', () => {
     const seg = ih.slice(ih.indexOf("tab === 'docs'"), ih.indexOf("tab === 'query'"));
-    /* 六百六十七批随迁（击穿者：IH alt 体换装 AltHitsViews 统一件）——内脏 DOM 入组件，
+    /* 六百六十七批同步更新（击穿者：IH alt 体改用 AltHitsViews 统一件）——内脏 DOM 入组件，
        包裹层 v-show 容器类与入参绑定保形（json=信封/tree=行集/cards=全量命中+openDoc） */
     expect(seg).toMatch(/<div v-show="docsView === 'json'" class="scroll-y ih-json-wrap ih-alt-body">\s*<AltHitsViews view="json" :json-html="docsJsonHtml" \/>/);
     expect(seg).toContain('<AltHitsViews view="tree" :tree-data="docsAltData" />');
     expect(seg).toMatch(/<div v-show="docsView === 'cards'" class="ih-cards ih-alt-body">/);
     expect(seg).toContain('<AltHitsViews view="cards" :hits="docsHits" @open-doc="openDoc" />');
   });
-  it('query：三档同构（qryView 驱动；667 换装随迁同 docs 域）', () => {
+  it('query：三档同构（qryView 驱动；667 改用同步更新同 docs 域）', () => {
     const seg = ih.slice(ih.indexOf('<template v-else-if="tab === \'query\'">'), ih.indexOf('<!-- Settings -->'));
     expect(seg).toMatch(/<div v-show="qryView === 'json'" class="scroll-y ih-json-wrap ih-alt-body">\s*<AltHitsViews view="json" :json-html="qryJsonHtml" \/>/);
     expect(seg).toContain('<AltHitsViews view="tree" :tree-data="qryAltData" />');
     expect(seg).toMatch(/<div v-show="qryView === 'cards'" class="ih-cards ih-alt-body">/);
     expect(seg).toContain('<AltHitsViews view="cards" :hits="qryResp.hits" @open-doc="openDoc" />');
   });
-  it('渲染源：AltHitsViews 共享件（667 换装）+ prettyJson/highlightJson（utils/jsonc）导入在场；42 字截断导入随内脏退役', () => {
+  it('渲染源：AltHitsViews 共享件（667 改用）+ prettyJson/highlightJson（utils/jsonc）导入在场；42 字截断导入随内脏退役', () => {
     expect(ih).toMatch(/import AltHitsViews from '\.\.\/components\/AltHitsViews\.vue';/);
     expect(ih).toMatch(/import \{ stripJsonComments, prettyJson, highlightJson \} from '\.\.\/utils\/jsonc';/);
     expect(ih, '42 字截断导入随卡片内脏迁共享件（667）').not.toMatch(/\btrunc\b/);
@@ -361,16 +361,16 @@ describe('554 四：视图 seg 行为网（点击切档 + hideBody 隐表格体 
   });
 });
 
-/* ═══════════ 五、顶满钮负锚（语义不适用记档不做） ═══════════ */
+/* ═══════════ 五、顶满钮负锚（语义不适用备案不做） ═══════════ */
 describe('554 五：顶满钮负锚（IndexHub docs/query 无构建区，语义不适用）', () => {
   const stripComments = (s: string) => s.replace(/<!--[\s\S]*?-->/g, '');
-  it('两处 bar-prepend 标记层无「顶满」钮（注释记档除外；DQ buildCollapsed 是本页级收起构建区，IndexHub 无对应物）', () => {
+  it('两处 bar-prepend 标记层无「顶满」钮（注释备案除外；DQ buildCollapsed 是本页级收起构建区，IndexHub 无对应物）', () => {
     const dTag = stripComments(rtTag(ih, 'docsTbl'));
     const qTag = stripComments(rtTag(ih, 'qryTbl'));
     expect(dTag, 'docs 工具行无顶满接线').not.toMatch(/顶满|buildCollapsed|dq-fillpage/);
     expect(qTag, 'query 工具行无顶满接线').not.toMatch(/顶满|buildCollapsed|dq-fillpage/);
     expect(ih, '不引 DQ 构建区折叠态').not.toMatch(/const buildCollapsed/);
-    /* 裁决记档在场（可追溯）：顶满语义不适用的说明保留在 bar-prepend 注释里 */
+    /* 裁决备案在场（可追溯）：顶满语义不适用的说明保留在 bar-prepend 注释里 */
     expect(ih).toContain('「顶满」钮不接');
   });
 });

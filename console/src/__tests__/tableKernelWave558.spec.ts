@@ -4,7 +4,7 @@
  * 1) emptyPctOf 单源下沉——useColStats 新增出口（emptyRate×100 后 Math.round 取整 %，
  *    与 双内核 tfoot「· 空值率 N%」内联实现逐字语义等值），QRT/RT aggEmptyPct
  *    双份退役换调用（口径单源化）；538 源码锁（numericOfCount 装配 return 行 / count 档）
- *    零触碰——只动 aggEmptyPct 档，append 锁随迁确认；
+ *    零触碰——只动 aggEmptyPct 档，append 锁同步更新确认；
  * 2) RT 列头右键菜单补「复制整表 JSON」（ QRT 单侧漂移的对称件）——照 QRT 同款
  *    形态：行集=sortedHits（与区域复制/导出行序同源）、列=visibleCols 所见即所复、
  *    值=raw（getSourceVal，JSON 档不做显示加工），走既有 copyMatrix json 管道
@@ -83,12 +83,12 @@ describe(' T1：useColStats.emptyPctOf（emptyRate×100 后 Math.round 取整 %�
     expect(useColStats({ ...base, rows: () => rows8 }).emptyPctOf('v'), '1/8=12.5 半值向上').toBe(13);
   });
 
-  it('源码锚：双内核 aggEmptyPct 退役换调用 emptyPctOf；内联实现退场；538 锁随迁确认', () => {
+  it('源码锚：双内核 aggEmptyPct 退役换调用 emptyPctOf；内联实现移除；538 锁同步更新确认', () => {
     expect(ucs).toContain('function emptyPctOf');
     for (const [name, src] of [['QRT', qrt], ['RT', rt]] as const) {
       expect(src, `${name} aggEmptyPct 换调用单源出口`).toContain('out[c] = colStats.emptyPctOf(c);');
       expect(src, `${name} 内联 Math.round 实现已退役`).not.toContain('Math.round((colStats.statsOf(c).emptyRate ?? 0) * 100)');
-      /* 源码锁逐字在场（tableKernelWave538:85）——本批零触碰的随迁确认 */
+      /* 源码锁逐字在场（tableKernelWave538:85）——零触碰的同步更新确认 */
       expect(src, `${name} numericOfCount 装配 return 行 538 锁不动`).toContain('return s.numeric ? { ...s.numeric, count: s.count } : null;');
     }
   });

@@ -1,5 +1,5 @@
 /**
- * R130 第六十八批：RestView 收藏入口收编（收藏体系写侧闭环）。
+ * R130 第六十八批：RestView 收藏入口合并（收藏体系写侧闭环）。
  * 背景：favReplay 的通用 rest 分支（读侧）早已实现——写 RestView 草稿键并跳回 /rest；
        但 RestView 一直没有「收藏」动作（写侧），收藏夹空态「任何 REST 请求均可收藏」
        的声明对 /rest 不成立——与 64 批 IndexHub qry→实验室联动「读侧已有写侧缺」同构。

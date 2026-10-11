@@ -13,8 +13,8 @@
  *    实锚=钮 dis 唯一通道；746 G161/765 G234/766 G234 族）——修法=Loader2 v-if
  *    busy + Wand2 v-else 双态+「转换中…」文案+重试钮对称双态（⚠重试钮在 err-bar
  *    面板内、doAll 起手清 convErr→面板随 busy 卸载，busy 态挂载不可观测=766 G234
- *    同判例，源码锁锚对称，挂载在途断言只锚常驻页头钮）+doAll 起手 busy 守卫
- *    （G213 键盘通道判例同构——⌘⏎ Monaco execute 绕过钮 disabled，runSql 起手
+ *    同先例，源码锁锚对称，挂载在途断言只锚常驻页头钮）+doAll 起手 busy 守卫
+ *    （G213 键盘通道先例同构——⌘⏎ Monaco execute 绕过钮 disabled，runSql 起手
  *    已有对称守卫，同页两函数归一）。试跑钮已合规（qr 读秒+取消钮）不列刀。
  * ③ G239（弱 P3 aria·随批可裁）对比表无 caption+结果条无 role=status（G210/G224/
  *    G229/G235 族）——修法=sr-only caption（视觉零变化高度零影响）+role=status
@@ -111,7 +111,7 @@ beforeEach(() => {
   sqlLenientFn.mockReset().mockResolvedValue({ rows: [[1, 'a'], [2, 'b']], columns: ['id', 'name'] });
 });
 
-describe('768 A0 挂载不变量负锚（现状即守卫，非本批刀面）', () => {
+describe('768 A0 挂载不变量负锚（现状即守卫，非刀面）', () => {
   it('页头三 action 钮+三 pane 标题+对比表 10 行×4 列+结果/预览零渲染', async () => {
     const { app, host } = await mountBr();
     expect(btnOf(host, '历史'), '历史钮').toBeTruthy();
@@ -163,13 +163,13 @@ describe('768 G238 一键全转换钮在途态（铁律 D·次刀·746 G161 spin
     await settle(10);
     expect(btn.disabled, '完成复常解禁').toBe(false);
     expect(btn.textContent, '复常文案').toContain('一键全转换');
-    expect(btn.querySelector('.spinning'), 'spinning 退场').toBe(null);
+    expect(btn.querySelector('.spinning'), 'spinning 移除').toBe(null);
     /* 766 探针课（lucide 类名带 -icon 后缀）再演：Wand2 数字名转 kebab 带 -2- 段，
        token 精确匹配踩不到——图标类断言用 class*= 包形态（后缀形态免疫） */
     expect(btn.querySelector('[class*="lucide-wand"]'), 'Wand2 图标复位').toBeTruthy();
     app.unmount();
   });
-  it('源码锁：重试钮对称双态（busy 态随 err-bar 卸载不可观测——源码对称防未来保形漏配）+doAll 起手 busy 守卫（G213 键盘通道判例：⌘⏎ Monaco execute 绕过钮 disabled）', () => {
+  it('源码锁：重试钮对称双态（busy 态随 err-bar 卸载不可观测——源码对称防未来保形漏配）+doAll 起手 busy 守卫（G213 键盘通道先例：⌘⏎ Monaco execute 绕过钮 disabled）', () => {
     expect(src, '页头钮双态（Loader2/Wand2 互换+在途文案）')
       .toMatch(/<Loader2 v-if="busy" :size="12" class="spinning" \/><Wand2 v-else :size="12" \/> \{\{ busy \? '转换中…' : '一键全转换' \}\}/);
     expect(src, '重试钮对称双态（Loader2+在途文案）')

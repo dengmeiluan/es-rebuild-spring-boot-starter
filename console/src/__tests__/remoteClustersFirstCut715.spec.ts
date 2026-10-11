@@ -4,7 +4,7 @@
  * - G55（P3 铁律 F）：metaOf 四段 label 英文裸词无中文备注——seeds/proxy/
  *   initial_timeout 三段悬停零备注，skip_unavailable 仅 true 段有 tip（容忍断连），
  *   false 段悬停零备注 → 四段 tip 中文备注补齐（true 段既有 warn tone+文案零触）。
- * - G56（P3 死代码）：.rc-hd-l/-ic/-tt/-sub 四类死样式族——模板已收编 PageHeader
+ * - G56（P3 死代码）：.rc-hd-l/-ic/-tt/-sub 四类死样式族——模板已合并 PageHeader
  *   无对应元素（713 批 .pl-hd 五类同族先例，PluginsView 五百二十七批 W-F 同款删除）。
  *
  * 设施：clusterThreeState 范式（api 出口可变 mock+settle 链）；种子=714 probe 同款

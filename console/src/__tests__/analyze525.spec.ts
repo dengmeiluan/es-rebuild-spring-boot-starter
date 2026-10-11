@@ -12,7 +12,7 @@
  * ③ setLineMarkers 契约：行号直射 Warning marker（绕开 setMarkers 的 findMatches 锚点定位），
  *    owner 透传（多 lint 源互不清、与 JSON 诊断 owner 'json' 分离）、行覆盖整行
  *    （endColumn=getLineMaxColumn）、model 缺席早退、owners 随组件卸载清空。
- * ④ monaco 注册计数契约随迁点名：analyze 档不加新语言 provider——json+ndjson 的
+ * ④ monaco 注册计数契约同步更新点名：analyze 档不加新语言 provider——json+ndjson 的
  *    dslAssist 补全恒 2、painless 补全 1、hover（json/ndjson/painless）各 1，524 前后同值。
  *
  * stub 范式照抄 monaco524Assist.spec（editor.api 全 mock + provider 直调断言）。
@@ -308,7 +308,7 @@ describe('525 setLineMarkers 契约（MonacoEditor expose）', () => {
   });
 });
 
-describe('525 monaco 注册计数契约随迁点名（analyze 档不加新 provider）', () => {
+describe('525 monaco 注册计数契约同步更新点名（analyze 档不加新 provider）', () => {
   it('dslAssist 在档：json+ndjson 补全恒 2、painless 补全 1、hover json/ndjson/painless 各 1——524 前后同值', () => {
     mountEditor({ modelValue: '{}', dslAssist: AZ_ASSIST });
     expect(completionRegs('json').length).toBe(1);

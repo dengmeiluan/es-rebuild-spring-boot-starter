@@ -11,9 +11,9 @@
  *  修法：首段（query??profile，track2Wave551 黑名单锁面）零触，二段链扩容五特征；
  *  判空口径不变（五段全未命中才 notify 引导）。
  *
- *  ⚠IndexHubView 同项跳过记档（前提不成立，不硬改）：track2Wave551.spec:72（黑名单禁改）
+ *  ⚠IndexHubView 同项跳过备案（前提不成立，不硬改）：track2Wave551.spec:72（黑名单禁改）
  *  正则把 openRawIo 全函数体逐字冻结（scope 三元两分支到 rawIoShow=true 逐段钉死），
- *  query 分支扩任何特征串即击穿黑名单锁——IH 侧扩容留给锁随迁批。
+ *  query 分支扩任何特征串即击穿黑名单锁——IH 侧扩容留给锁同步更新批。
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createApp, h, nextTick } from 'vue';
@@ -53,7 +53,7 @@ describe('565 件①：DslQueryView openRawIo 特征链扩容（源码锁）', (
     expect(fn).toContain("if (!rec2) { store.notify('info', '暂无原始 IO 记录，先在本页执行一次操作（记录环近 30 条）再查看'); return; }");
   });
 
-  it('IndexHubView 保持 scope 双参现状（扩容跳过记档：黑名单 551:72 全函数体冻结）', () => {
+  it('IndexHubView 保持 scope 双参现状（扩容跳过备案：黑名单 551:72 全函数体冻结）', () => {
     const ih = readFileSync(join(__dirname, '../views/IndexHubView.vue'), 'utf-8');
     expect(ih).toContain("? (ioRecorder.last('/cluster/raw') ?? ioRecorder.last('/cluster/query'))");
   });

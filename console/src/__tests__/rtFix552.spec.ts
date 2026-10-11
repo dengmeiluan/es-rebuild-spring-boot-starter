@@ -13,7 +13,7 @@
  * ② 放大（⤢聚焦面）后切 Tree/JSON 视图主体空白——Tree/JSON 内容是宿主（DslQueryView）
  *    里 RT 的兄弟节点，FS fs-active（fixed inset 不透明覆盖层）之下不可见，面内只剩
  *    rt-bar 全屏白。根治=RT 内建 watch：hideBody false→true 且聚焦中 → 自动退出聚焦
- *    （与 Esc 退出同语义；541 批「聚焦态可切视图」记档翻案：聚焦态仅表格）。FS 零改动；
+ *    （与 Esc 退出同语义；541 批「聚焦态可切视图」备案修订：聚焦态仅表格）。FS 零改动；
  *    RT expose 无 focused（1862 行），行为锁走 FS 联动单测（fs-active/data-focused-pane）。
  *
  * 挂载样板照抄 tableKernelWave535/backTop258（裸 createApp + pinia；happy-dom 点击一律
@@ -89,7 +89,7 @@ beforeEach(() => {
 describe('五百五十二批 ①：rt-wrap-shell 定位壳（回顶锚点下移，状态栏不再被盖）', () => {
   it('RT 源码锁：壳在场+模板序（壳开标签→rt-wrap→TableBacktop→壳闭标签）+状态栏留壳后流内', () => {
     const shellAt = rt.indexOf('<div class="rt-wrap-shell">');
-    /* 六百零九批随迁：守卫字面 !hideBody→!bodyHidden（内核 viewSeg 内建档切换共用同一
+    /* 六百零九批同步更新：守卫字面 !hideBody→!bodyHidden（内核 viewSeg 内建档切换共用同一
        隐藏判定=hideBody ∪ 内建非表格档；判别力不变=结构锚逐字保全） */
     const wrapAt = rt.indexOf('<div v-show="!bodyHidden" ref="wrapEl" class="rt-wrap scroll-y"');
     const backtopAt = rt.indexOf('<TableBacktop v-if="showTop" class="rt-backtop"');
@@ -105,7 +105,7 @@ describe('五百五十二批 ①：rt-wrap-shell 定位壳（回顶锚点下移�
   });
 
   it('RT CSS 锁：壳=relative+min-height:0+flex 布局（562 实报④ flex:1→flex:0 1 auto 贴合内容，见 rtAutoFit562）；rt-wrap 补 min-width:0；backtop 仍 right/bottom 锚值', () => {
-    /* 五百六十二批随迁（用户实报分页 10/页 下方大片空白）：壳改贴内容+上限收缩，
+    /* 五百六十二批同步更新（用户实报分页 10/页 下方大片空白）：壳改贴内容+上限收缩，
        回顶锚点/状态栏流内位置语义不变 */
     expect(rt).toMatch(/\.rt-wrap-shell \{ position: relative; flex: 0 1 auto; min-height: 0; display: flex; \}/);
     expect(rt).toMatch(/\.rt-wrap \{ flex: 1; min-width: 0; overflow: auto;/);
@@ -129,7 +129,7 @@ describe('五百五十二批 ①：rt-wrap-shell 定位壳（回顶锚点下移�
 /* ═══════════ ② hideBody watch 自动退出聚焦（RT，FS 联动行为锁） ═══════════ */
 describe('五百五十二批 ②：hideBody false→true 自动退出聚焦（放大后切 JSON/Tree 不再全屏白）', () => {
   it('源码锁：watch(bodyHidden) + focused.value = false（与 Esc 退出同语义）', () => {
-    /* 六百零九批随迁：watch 源升 bodyHidden（hideBody ∪ 内建 viewSeg 非表格档——内建档
+    /* 六百零九批同步更新：watch 源升 bodyHidden（hideBody ∪ 内建 viewSeg 非表格档——内建档
        切换同样退聚焦；viewSeg=false 时源≡hideBody 行为等值零回归，QRT 607 同款对称） */
     expect(rt).toMatch(/watch\(bodyHidden/);
     expect(rt).toMatch(/focused\.value = false/);
@@ -157,7 +157,7 @@ describe('五百五十二批 ②：hideBody false→true 自动退出聚焦（�
 describe('五百五十二批 ④：QRT 同病同修（backtop 整卡锚盖住 qrt-pgr 分页行右端）', () => {
   it('QRT 源码锁：壳在场+三分支链随壳（保 v-else-if 相邻）+backtop 在壳内+qrt-pgr 留壳后流内', () => {
     const shellAt = qrt.indexOf('<div class="qrt-wrap-shell">');
-    /* 六百零七批随迁：守卫字面 !hideBody→!bodyHidden（内核 viewSeg 内建档切换共用同一
+    /* 六百零七批同步更新：守卫字面 !hideBody→!bodyHidden（内核 viewSeg 内建档切换共用同一
        隐藏判定=hideBody ∪ 内建非表格档；判别力不变=结构锚逐字保全） */
     const chainAt = qrt.indexOf('<template v-if="loading && !bodyHidden">');
     const wrapAt = qrt.indexOf('<div v-else-if="!bodyHidden" ref="wrapRef" class="qrt-wrap"');

@@ -24,10 +24,10 @@ const indexSettings = read('../views/IndexSettingsView.vue');
 const reindexPreview = read('../views/ReindexPreviewView.vue');
 
 describe('五百三十批①：编辑框高度三档循环（ra.scriptH 形态）', () => {
-  it('AliasesView：useTierCycle(aliases.filterH) 收编接线 + TIERS 档值（558 击穿随迁：三件套收编单源）', () => {
-    /* 五百五十八批随迁（击穿者：558 工蚁G——TIERS+usePref+手写 cycle 三件套收编
+  it('AliasesView：useTierCycle(aliases.filterH) 合并接线 + TIERS 档值（558 击穿同步更新：三件套合并单源）', () => {
+    /* 五百五十八批同步更新（击穿者：558 工蚁G——TIERS+usePref+手写 cycle 三件套合并
        composables/useTierCycle 单源，adhoc.edH 554 同件）：usePref 键声明与手写循环
-       退役，字面改收编接线锚（pref key/档值/消费点 rows 绑定零迁） */
+       退役，字面改合并接线锚（pref key/档值/消费点 rows 绑定零迁） */
     expect(aliases).toContain("useTierCycle('aliases.filterH', FILTER_H_TIERS)");
     expect(aliases).toContain('FILTER_H_TIERS');
     expect(aliases).toMatch(/const \{ v: filterH, cycle: cycleFilterH \} = useTierCycle\(/);
@@ -39,8 +39,8 @@ describe('五百三十批①：编辑框高度三档循环（ra.scriptH 形态�
     expect(aliases).toContain('data-test="alv-filter-h"');
   });
 
-  it('LifecycleView：useTierCycle(lifecycle.roH) 收编接线 + TIERS 档值（558 击穿随迁）', () => {
-    /* 五百五十八批随迁（击穿者：558 工蚁G，aliases.filterH 同刀）：字面改收编接线锚 */
+  it('LifecycleView：useTierCycle(lifecycle.roH) 合并接线 + TIERS 档值（558 击穿同步更新）', () => {
+    /* 五百五十八批同步更新（击穿者：558 工蚁G，aliases.filterH 同刀）：字面改合并接线锚 */
     expect(lifecycle).toContain("useTierCycle('lifecycle.roH', RO_H_TIERS)");
     expect(lifecycle).toContain('RO_H_TIERS');
     expect(lifecycle).toMatch(/const \{ v: roH, cycle: cycleRoH \} = useTierCycle\(/);
@@ -52,9 +52,9 @@ describe('五百三十批①：编辑框高度三档循环（ra.scriptH 形态�
     expect(lifecycle).toContain('data-test="lc-ro-h"');
   });
 
-  it('ReindexAdvancedView：ra.queryH + 既有 ra.scriptH 收编 useTierCycle（558 击穿随迁）', () => {
-    /* 五百五十八批随迁（击穿者：558 工蚁G，aliases.filterH 同刀）：两处 usePref 键声明
-       与手写循环退役，字面改收编接线锚（script/query 两档键与档值零迁） */
+  it('ReindexAdvancedView：ra.queryH + 既有 ra.scriptH 合并 useTierCycle（558 击穿同步更新）', () => {
+    /* 五百五十八批同步更新（击穿者：558 工蚁G，aliases.filterH 同刀）：两处 usePref 键声明
+       与手写循环退役，字面改合并接线锚（script/query 两档键与档值零迁） */
     expect(reindexAdv).toContain("useTierCycle('ra.queryH', QUERY_H_TIERS)");
     expect(reindexAdv).toContain('QUERY_H_TIERS');
     expect(reindexAdv).toMatch(/const \{ v: queryH, cycle: cycleQueryH \} = useTierCycle\(/);
@@ -113,7 +113,7 @@ describe('五百三十批③：lintClause 消费', () => {
     expect(aliases).toContain("import { lintClause } from '../utils/dslLint'");
     expect(aliases).toMatch(/return lintClause\(JSON\.parse\(cFilter\.value \|\| ''\)\)/);
     expect(aliases).not.toMatch(/lintDsl\(JSON\.parse\(cFilter/);
-    /* 五百六十一批随迁：alv-lint 族换装 theme.css .lint-bar 单源 */
+    /* 五百六十一批同步更新：alv-lint 族改用 theme.css .lint-bar 单源 */
     expect(aliases).toContain('class="lint-bar lint-bar-err"');
     expect(aliases).toContain('class="lint-bar lint-bar-warn"');
   });
@@ -129,7 +129,7 @@ describe('五百三十批③：lintClause 消费', () => {
 
 describe('五百三十批④：嵌套框冗余清', () => {
   it('IndexSettingsView：ir-card 卡壳三降一（单卡三分节），三节文案语义全保留', () => {
-    /* 五百五十四批随迁：残壳 .card 摘除（552 is-form 同页收尾），ir-card 类名保留作分节锚 */
+    /* 五百五十四批同步更新：残壳 .card 摘除（552 is-form 同页收尾），ir-card 类名保留作分节锚 */
     expect((indexSettings.match(/class="ir-card"/g) || []).length).toBe(1);
     expect(indexSettings).not.toMatch(/class="card ir-card"/);
     expect(indexSettings).toContain('<Activity :size="13" /> 变更总览');

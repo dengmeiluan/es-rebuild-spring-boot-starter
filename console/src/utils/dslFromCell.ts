@@ -26,7 +26,7 @@ export function buildDsl(field: string, values: unknown[], fieldType?: string): 
 }
 
 /* exists 查询——字段存在性检索语义（buildDsl 剔空值的反面：
-   找的就是「这列有没有值」）。任意业务列可用（含 text）；_id 恒存在无意义不出项 */
+ 找的就是「这列有没有值」）。任意业务列可用（含 text）；_id 恒存在无意义不出项 */
 export function buildExistsDsl(field: string): Record<string, any> | null {
   if (!field || field === '_id') return null;
   return { exists: { field } };

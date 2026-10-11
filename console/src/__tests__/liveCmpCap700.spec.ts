@@ -2,7 +2,7 @@
  * 七百批①·对比卡悬浮读出超长防护（R56 观察项「对比读出>8 节点截断」收口）。
  *
  * 现状：节点对比卡悬浮读出层 v-for 全量列节点行——节点数多（>8）时 tip 纵向失控
- * （图例已有隐藏 chips，但悬浮瞬态读出无防护）。本批=capRows 纯函数单源（utils/
+ * （图例已有隐藏 chips，但悬浮瞬态读出无防护）。=capRows 纯函数单源（utils/
  * monitorSeries）+视图 cmpRowsCapped 接线+尾行「+K 节点」聚合（title 兜底全列名）。
  */
 import { describe, it, expect } from 'vitest';

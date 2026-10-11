@@ -1,12 +1,12 @@
 /**
  * 五百三十四批：布局自适应源码锁（全源码锁，零挂载）。
  * 锁三件事：
- * ① 本批补 900 紧凑微调档的 5 视图（SearchTemplates/Topology/TemplateGallery/Slm/Watcher）
+ * ① 补 900 紧凑微调档的 5 视图（SearchTemplates/Topology/TemplateGallery/Slm/Watcher）
  *    档在场且非空（responsive900Sweep529 同口径：多行块提取正则兼容写法，防回删防空壳档）；
  * ② WorkspaceView .ws-grid auto-fit minmax 自适应列（固定 3 列退役），且 ≤1100/≤900 压列档
  *    不回归（auto-fit 只接管宽档，窄档压列仍由断点承担）；
- * ③ 900 档纪律口径随迁：档内无 ≥300px 裸 width、视图侧无 min-width:901px（responsiveGuard239
- *    锚①④同源，本批新增档不得破例）。
+ * ③ 900 档纪律口径同步更新：档内无 ≥300px 裸 width、视图侧无 min-width:901px（responsiveGuard239
+ *    锚①④同源，新增档不得破例）。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';

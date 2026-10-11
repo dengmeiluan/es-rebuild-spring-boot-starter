@@ -1,7 +1,7 @@
 /**
  * 五百六十批（工蚁C）：轨2 执行体验深化 —— 源码锁（track2Wave557 范式）。
  *
- * ① DevToolsView 全局执行：onGlobalRunKey 挂 window keydown（DslQueryView :2041-2048 判例平移，
+ * ① DevToolsView 全局执行：onGlobalRunKey 挂 window keydown（DslQueryView :2041-2048 先例平移，
  *    INPUT/TEXTAREA/SELECT/contentEditable/.monaco-editor 让路 + 执行中让路）；onMounted 注册/
  *    onBeforeUnmount 摘除（现成对）。
  * ② DevToolsView 编辑器字号三档：usePref('dt.font', 12.5) + 请求体/响应 Monaco :font-size="edFont"
@@ -10,11 +10,11 @@
  *    （只动发送出参 bodyOut；历史/镜像 body:t.body 原稿锁面零触）。
  * ④ DevToolsView 「复制请求体」钮（请求工具行，成功文案对齐 RawIoModal「请求体已复制」）。
  * ⑤ AdhocRebuildView：报告节头「复制回补 DSL」/ 时间字段候选可点 chip / 目标索引「用建议名」。
- * ⑥ AdhocRebuildView：JsonArea .ja 外框视图侧退壳（.ed-col 四框 + 弹窗 .pi-ja-wrap，557 判例）。
+ * ⑥ AdhocRebuildView：JsonArea .ja 外框视图侧退壳（.ed-col 四框 + 弹窗 .pi-ja-wrap，557 先例）。
  * ⑦ AdhocRebuildView：blockTimer visibilitychange 守卫（hidden 不空转，jobTracker onVisChange 范式）。
  * ⑧ XmigrateView：.xm-group grid-column 全宽纵排（.xm-cfg-grid 双列保留；独立规则追加锁面零触）；
  *    启动行读秒（AdhocRebuildView :433 范式，SqlBridge starting 布尔与 qr 并存互斥口径）。
- * ⑨ ar-jobs-kw / xm-jobs-kw 换装 SearchFilterBar（559 TasksView tv-kw 判例；placeholder 逐字保留，
+ * ⑨ ar-jobs-kw / xm-jobs-kw 改用 SearchFilterBar（559 TasksView tv-kw 先例；placeholder 逐字保留，
  *    kw 类锚随 input-class 留在 input 上——524/529 挂载过滤锁同路径零迁）。
  * ⑩ HotkeyPanel「查询与编辑」组加两行（DevTools 全局执行任意焦点 / IH query 编辑器补全）。
  */
@@ -29,7 +29,7 @@ const xm = read('../views/XmigrateView.vue');
 const hk = read('../components/HotkeyPanel.vue');
 
 /* ═══ 一、DevToolsView 全局执行键 ═══ */
-describe('560 ①：DevToolsView 全局执行（DslQueryView onGlobalRunKey 判例平移）', () => {
+describe('560 ①：DevToolsView 全局执行（DslQueryView onGlobalRunKey 先例平移）', () => {
   const mountedBody = dt.slice(dt.indexOf('onMounted(() => {'), dt.indexOf('onBeforeUnmount(() => {'));
   const unmountBody = dt.slice(dt.indexOf('onBeforeUnmount(() => {'));
 
@@ -54,9 +54,9 @@ describe('560 ①：DevToolsView 全局执行（DslQueryView onGlobalRunKey 判�
 describe('560 ②：DevToolsView 编辑器字号三档（dt.font，MonacoEditor 零触纯宿主传参）', () => {
   const reqPane = dt.slice(dt.indexOf('#pane-devtools-search-request'), dt.indexOf('#pane-devtools-search-response'));
 
-  it("usePref('dt.font', 12.5) + 三档常量单源消费（668 随迁：editorTiers 收编）+ seg 消费", () => {
+  it("usePref('dt.font', 12.5) + 三档常量单源消费（668 同步更新：editorTiers 合并）+ seg 消费", () => {
     expect(dt).toContain("usePref<number>('dt.font', 12.5)");
-    /* 六百六十八批随迁：本地 ED_FONT_TIERS 字面退役→共享 EDITOR_FONT_TIERS 消费
+    /* 六百六十八批同步更新：本地 ED_FONT_TIERS 字面退役→共享 EDITOR_FONT_TIERS 消费
        （DQ dq.font/IH ih.font 同口径；本体锚迁移至 edFontSpread668.spec B 段） */
     expect(dt).toContain('v-for="f in EDITOR_FONT_TIERS"');
     expect(reqPane).toContain('edFont === f');
@@ -82,10 +82,10 @@ describe('560 ③：DevToolsView dt.autoFmt 退出口（条件 format 分支，�
     expect(runBody).toContain('api.raw(t.method, t.path, bodyOut, signal)');
   });
 
-  it('开关钮居请求 pane ⋯ 菜单（menuitemcheckbox aria-checked 态 + 落盘键接线，577 批随迁 563 收编形态）', () => {
+  it('开关钮居请求 pane ⋯ 菜单（menuitemcheckbox aria-checked 态 + 落盘键接线，577 批同步更新 563 合并形态）', () => {
     const reqPane = dt.slice(dt.indexOf('#pane-devtools-search-request'), dt.indexOf('#pane-devtools-search-response'));
     expect(reqPane).toContain('@click="autoFmt = !autoFmt"');
-    /* 五百七十七批随迁：563 批开关收 ⋯ 菜单换装 menuitemcheckbox——aria-pressed → :aria-checked 态锚 */
+    /* 五百七十七批同步更新：563 批开关收 ⋯ 菜单改用 menuitemcheckbox——aria-pressed → :aria-checked 态锚 */
     expect(reqPane).toContain('menuitemcheckbox');
     expect(reqPane).toContain(':aria-checked="autoFmt');
   });
@@ -128,7 +128,7 @@ describe('560 ⑤：AdhocRebuildView 复制回补 DSL / 时间字段 chip / 用�
 });
 
 /* ═══ 六、AdhocRebuildView JsonArea .ja 外框退壳 ═══ */
-describe('560 ⑥：AdhocRebuildView JsonArea .ja 外框视图侧退壳（557 判例，组件零触）', () => {
+describe('560 ⑥：AdhocRebuildView JsonArea .ja 外框视图侧退壳（557 先例，组件零触）', () => {
   it('.ed-col 四框 + 弹窗 .pi-ja-wrap 两独立 :deep 规则（border/box-shadow none）', () => {
     expect(ar).toContain('.ed-col :deep(.ja) { border: none; border-radius: 0; box-shadow: none; }');
     expect(ar).toContain('.pi-ja-wrap :deep(.ja) { border: none; border-radius: 0; box-shadow: none; }');
@@ -169,8 +169,8 @@ describe('560 ⑧：XmigrateView 三步向导全宽纵排 + 启动行读秒', ()
   });
 });
 
-/* ═══ 九、ar-jobs-kw / xm-jobs-kw 换装 SearchFilterBar ═══ */
-describe('560 ⑨：ar-jobs-kw / xm-jobs-kw 换装 SearchFilterBar 统一件（559 tv-kw 判例）', () => {
+/* ═══ 九、ar-jobs-kw / xm-jobs-kw 改用 SearchFilterBar ═══ */
+describe('560 ⑨：ar-jobs-kw / xm-jobs-kw 改用 SearchFilterBar 统一件（559 tv-kw 先例）', () => {
   it('AR：SFB 接线 + placeholder 逐字保留 + kw 类锚随 input-class 留在 input', () => {
     expect(ar).toMatch(/import SearchFilterBar from '\.\.\/components\/SearchFilterBar\.vue';/);
     expect(ar).toContain('input-class="ar-jobs-kw"');
@@ -185,7 +185,7 @@ describe('560 ⑨：ar-jobs-kw / xm-jobs-kw 换装 SearchFilterBar 统一件（5
     expect(xm).toMatch(/<SearchFilterBar v-model="jobKw"/);
   });
 
-  it('落位宽度随换装迁 wrap 根（min(240px,100%) + 900 档 100% 独占行）', () => {
+  it('落位宽度随改用迁 wrap 根（min(240px,100%) + 900 档 100% 独占行）', () => {
     expect(ar).toContain('.ar-jobs-kw-wrap { width: min(240px, 100%); box-sizing: border-box; }');
     expect(xm).toContain('.xm-jobs-kw-wrap { width: min(240px, 100%); box-sizing: border-box; }');
     const arBlock = ar.match(/@media \(max-width: 900px\) \{[\s\S]*?\n\}/);

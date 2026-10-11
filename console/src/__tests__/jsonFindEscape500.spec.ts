@@ -12,20 +12,20 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const dsl = readFileSync(join(__dirname, '../views/DslQueryView.vue'), 'utf-8');
-/* 五百六十一批随迁：mark 内核（escapeRe/markHtmlAll）收编 utils/respMark 单源——
-   H2 mark 串与 H4 escapeRe 字符类两处源锚随迁单源文件（原 RestView 源锚随单源退役移除） */
+/* 五百六十一批同步更新：mark 内核（escapeRe/markHtmlAll）合并 utils/respMark 单源——
+   H2 mark 串与 H4 escapeRe 字符类两处源锚同步更新单源文件（原 RestView 源锚随单源退役移除） */
 const respMark = readFileSync(join(__dirname, '../utils/respMark.ts'), 'utf-8');
 
 describe('JSON 视图内搜索：正则与定位链（v3.0.0 纠错）', () => {
   it('H2: jsonMarkedHtml 的 data-hit-idx 必须是真插值（禁止 ${"..." 字面量形态）', () => {
-    /* 五百六十一批随迁：mark 串产本体的 ${n} → 单源 markHtmlAll 内 ${count} */
+    /* 五百六十一批同步更新：mark 串产本体的 ${n} → 单源 markHtmlAll 内 ${count} */
     expect(respMark).toContain('data-hit-idx="${count}"');
     expect(dsl).toContain('data-hit-idx="${jsonFindCur.value}"');
     expect(dsl).not.toContain('${"${n}"}');
     expect(dsl).not.toContain('${"${jsonFindCur.value}"}');
   });
 
-  it('H4: escapeRe 字符类必须是标准写法（[\\]\\\\ 而非 [\\\\]\\\\；五百六十一批随迁单源锚）', () => {
+  it('H4: escapeRe 字符类必须是标准写法（[\\]\\\\ 而非 [\\\\]\\\\；五百六十一批同步更新单源锚）', () => {
     expect(respMark).toContain("kw.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')");
     expect(respMark).not.toContain('[\\\\]\\\\]/g');
   });

@@ -20,7 +20,7 @@ package io.github.dengmeiluan.es.rebuild.auth;
  * 控制台操作审计——结构化查询对象（20260922 快筛批）：快筛维度的 SPI 载体，
  * 与 {@link ConsoleOpsAuditEvent} 落档维度一一对应，全部过滤语义下推存储档
  * （ES 档=bool.filter 的 term/range/prefix/wildcard；JDBC 档维持基线三过滤，
- * 统一只用 ES 单载体立法后新筛选能力仅在 ES 档承诺）。
+ * 统一只用 ES 单载体约定后新筛选能力仅在 ES 档承诺）。
  *
  * <p><b>契约</b>：null/空串维度 = 不过滤；{@code size} 实现侧钳制 ≤500；
  * {@code fromMs/toMs} 为毫秒 epoch 闭区间；{@code kw} 对 detail 做包含匹配

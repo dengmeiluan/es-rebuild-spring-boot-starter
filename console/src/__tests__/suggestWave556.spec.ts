@@ -3,10 +3,10 @@
  *  A useTermsSuggest 首轮时延形态：同步候选即刻回填（TTL 同 key 命中即完成不进防抖 /
  *    宽前缀缓存本地滤上移同步段 / 新增 localStorage 词项持久档 stash 按前缀同步回填），
  *    词项请求 fire-and-forget，到达后权威刷新（同步候选只承担防抖等待期；补后混入
- *    与既有「响应=suggestions 精确值」契约冲突，评估后不采，记档）；
+ *    与既有「响应=suggestions 精确值」契约冲突，评估后不采，备案）；
  *  B 四查询面值位/字段位类型盲区补档：SearchSandboxView snippets 补 boolean 字面量与
  *    ip 区间两片段、LuceneQueryView TEMPLATES 补 ip 段模板（SORTABLE_TYPES 补
- *    date_nanos/ip 受 suggestWave548 E1 源码锁字面约束，记档待下批随锁更新）；
+ *    date_nanos/ip 受 suggestWave548 E1 源码锁字面约束，备案待下批随锁更新）；
  *  C monacoJsonQuickFix 规则→fix 白名单补三条：agg-size-default（terms 体收尾插
  *    "size": 20）/ collapse-structure（标量子集包对象）/ highlight-fields（fields 标量
  *    包数组；缺 fields 分支无修复价值零 action）——quickFixDslLint534 B 段负向锁形态
@@ -106,7 +106,7 @@ describe('A useTermsSuggest 首轮同步候选', () => {
     expect(searchRawFn, '同步回填零网络').not.toHaveBeenCalled();
   });
 
-  it('A2 词项到达后二次刷新：同步候选退位、权威 top20 接管（补后混入与既有精确值契约冲突，记档不采）', async () => {
+  it('A2 词项到达后二次刷新：同步候选退位、权威 top20 接管（补后混入与既有精确值契约冲突，备案不采）', async () => {
     localStorage.setItem(STASH_KEY, JSON.stringify(['active', 'audit']));
     searchRawFn.mockResolvedValue(aggResp('active-x'));
     const out = withSetup(() => 'logs-x');
@@ -317,7 +317,7 @@ describe('D esEnumZh 字段类型词表', () => {
     const g = groupByLabel([{ path: 't', type: 'date_nanos', rank: 1, segs: [{ t: 't', m: false }], i: 0 }]);
     expect(g[0].label).toBe('日期 字段');
     /* 既有组头零回退（fieldSelectPopup / boostFieldPrioW3b 锁面）。
-       558b 随迁：组头人话词面升级（GH_LABEL→FIELD_TYPE_ZH 兜底），keyword→精确值 */
+       558b 同步更新：组头人话词面升级（GH_LABEL→FIELD_TYPE_ZH 兜底），keyword→精确值 */
     const g2 = groupByLabel([{ path: 'x', type: 'keyword', rank: 1, segs: [], i: 0 }]);
     expect(g2[0].label).toBe('精确值 字段');
   });

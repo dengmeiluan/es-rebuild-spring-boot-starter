@@ -4,7 +4,7 @@
     <CellContextMenu v-if="rowMenu" :x="rowMenu.x" :y="rowMenu.y"
       :title="'字段 ' + rowMenu.f.path" :items="rowMenuItems" @close="rowMenu = null" />
     <!-- 查询 DSL 污染警示——mapping 里出现 query.bool.* 是「查询体被当文档写入」的铁证，
-         不识别它，用户会以为是业务字段甚至以为控制台显示坏了 -->
+ 不识别它，用户会以为是业务字段甚至以为控制台显示坏了 -->
     <div v-if="pollutedRoots.length" class="mft-warn">
       <ShieldAlert :size="13" style="flex-shrink:0" />
       <span>
@@ -16,16 +16,16 @@
         {{ pollutedCollapsed ? '展开查看' : '折叠这些字段' }}
       </button>
       <!-- 警示闭环——只告知「需零停机重建」不给入口是把用户扔在半路；
-           直达托管重建并携带污染根清单，向导侧自动剔除 + dynamic:false 防复染 -->
+ 直达托管重建并携带污染根清单，向导侧自动剔除 + dynamic:false 防复染 -->
       <button v-if="index" class="btn sm warn" style="flex-shrink:0" @click="gotoRebuild">
         <Hammer :size="12" /> 去零停机重建
       </button>
     </div>
 
     <div class="mft-bar">
-      <!-- 轨4：手作绝对图标过滤胞换装 SearchFilterBar 单源（sfbUnify650 锁）——
-           壳三件套+图标归组件（padding-left:30px 内联 hack 退役），Esc 清空内建承接
-           （原裸 input 无 Esc 语义=补课），Enter 定位轮转经 @enter 接线语义等价 -->
+      <!-- 轨4：手作绝对图标过滤胞改用 SearchFilterBar 单源（sfbUnify650 锁）——
+ 壳三件套+图标归组件（padding-left:30px 内联 hack 退役），Esc 清空内建承接
+ （原裸 input 无 Esc 语义=补课），Enter 定位轮转经 @enter 接线语义等价 -->
       <SearchFilterBar v-model="kwLocal" class="mft-sfb" placeholder="过滤字段名 / 类型 / analyzer…" @enter="onHitKey" />
       <!-- 搜索定位：命中计数 + 上/下一个（输入框复用上面的过滤框，Enter/Shift+Enter 接线） -->
       <HitNav :count="hitIdxMap.size" :current="hitCur" compact @next="hitNext" @prev="hitPrev" />
@@ -46,7 +46,7 @@
           >
             <td class="mono mft-cell">
               <!-- 缩进导线——纯 paddingLeft 的层级在深树里肉眼难对齐，竖导线才读得出父子归属。
-                   搜索态保留导线：祖先是真实结构行（不再是灰显路径前缀），层级依旧一眼可辨 -->
+ 搜索态保留导线：祖先是真实结构行（不再是灰显路径前缀），层级依旧一眼可辨 -->
               <span v-for="i in f.depth" :key="i" class="mft-guide"></span>
               <!-- object 行可折叠；搜索态强制展开命中子树（折叠集被绕过），不再出折叠钮 -->
               <button v-if="f.hasChildren && !searching" class="mft-fold" :aria-label="collapsed.has(f.path) ? '展开子字段' : '收起子字段'" @click="toggle(f.path)">
@@ -55,11 +55,11 @@
               <span v-else-if="f.depth" class="mft-tree">└</span>
               <span class="mft-name" :title="f.path + '（点击复制路径 · 右键更多操作）'" tabindex="0" role="button" @keydown.enter.prevent="copyPath(f.path)" @keydown.space.prevent="copyPath(f.path)" @click="copyPath(f.path)"
                 @contextmenu.prevent="openRowMenu($event, f)"><!--
-                --><template v-for="(seg, si) in hlSegs(f.name)" :key="si"><!--
-                  --><mark v-if="seg.hit" class="mft-mark">{{ seg.t }}</mark><!--
-                  --><template v-else>{{ seg.t }}</template><!--
-                --></template><!--
-              --></span>
+ --><template v-for="(seg, si) in hlSegs(f.name)" :key="si"><!--
+ --><mark v-if="seg.hit" class="mft-mark">{{ seg.t }}</mark><!--
+ --><template v-else>{{ seg.t }}</template><!--
+ --></template><!--
+ --></span>
               <!-- multi-field 不再压在 attrs 文本里被截断，层级化子行 + 显式徽标 -->
               <span v-if="f.multi" class="mft-mf" title="multi-field（fields.*）：同一段数据的另一种索引方式，查询时用完整路径引用">多字段</span>
               <span v-if="f.hasChildren && collapsed.has(f.path) && !searching" class="mft-count" tabindex="0" role="button" :aria-label="'展开 ' + f.path + ' 的 ' + childCount(f.path) + ' 个子字段'" @keydown.enter.prevent="toggle(f.path)" @keydown.space.prevent="toggle(f.path)" @click="toggle(f.path)">
@@ -70,16 +70,16 @@
             <td><span class="chip mono mft-type" :data-t="f.type">{{ f.type }}</span></td>
             <td class="mono mft-attrs" :title="f.attrs">
 <!--
-              分析器组件名一键验证——名字点击=组件本体快验（/analyze）；
-              text 字段行另给「字段验证」= 真实写入链路（/analyzer-lab field 通道，真实样本+三链路并排）
-            --><template v-for="(seg, si) in attrTokens(f.attrs)" :key="si">
+ 分析器组件名一键验证——名字点击=组件本体快验（/analyze）；
+ text 字段行另给「字段验证」= 真实写入链路（/analyzer-lab field 通道，真实样本+三链路并排）
+ --><template v-for="(seg, si) in attrTokens(f.attrs)" :key="si">
 <!--
-              --><span v-if="si > 0" class="mft-attr-sep">, </span><!--
-              --><template v-if="seg.kind"><span class="mft-attr-k">{{ seg.k }}: </span><a class="mft-attr-link" role="link" tabindex="0" :title="'验证「' + seg.v + '」的分词效果'" @click="goAnalyze(seg.kind!, seg.v!)" @keydown.enter.prevent="goAnalyze(seg.kind!, seg.v!)">{{ seg.v }}</a></template><!--
-              --><template v-else>{{ seg.raw }}</template><!--
-            -->
+ --><span v-if="si > 0" class="mft-attr-sep">, </span><!--
+ --><template v-if="seg.kind"><span class="mft-attr-k">{{ seg.k }}: </span><a class="mft-attr-link" role="link" tabindex="0" :title="'验证「' + seg.v + '」的分词效果'" @click="goAnalyze(seg.kind!, seg.v!)" @keydown.enter.prevent="goAnalyze(seg.kind!, seg.v!)">{{ seg.v }}</a></template><!--
+ --><template v-else>{{ seg.raw }}</template><!--
+ -->
 </template><!--
-              --><button v-if="f.type === 'text' && f.path" class="btn sm ghost mft-try" title="按字段验证：真实样本 + field/analyzer/search_analyzer 三链路并排"
+ --><button v-if="f.type === 'text' && f.path" class="btn sm ghost mft-try" title="按字段验证：真实样本 + field/analyzer/search_analyzer 三链路并排"
                     @click="goFieldLab(f.path)">
 字段验证
 </button>
@@ -105,7 +105,7 @@ import { flattenMapping, detectDslPollution, visibleRows, descendantCount, type 
 import { copyText } from '../utils/format';
 /* 两处裸 .empty 迁 EmptyState compact */
 import EmptyState from './EmptyState.vue';
-import SearchFilterBar from './SearchFilterBar.vue'; /* 轨4：手作绝对图标过滤胞换装统一件（sfbUnify650 锁） */
+import SearchFilterBar from './SearchFilterBar.vue'; /* 轨4：手作绝对图标过滤胞改用统一件（sfbUnify650 锁） */
 /* 搜索命中排序统一 rank 口径（精确>前缀>包含，与 FieldPicker/FieldSelect 同源） */
 import { searchFields } from '../utils/fieldSearch';
 import CellContextMenu from './CellContextMenu.vue';
@@ -118,7 +118,7 @@ import { splitMark } from '../composables/useGridSearch';
 import HitNav from './HitNav.vue';
 
 /* Mapping 字段树统一组件——MappingView 与索引工作区 Mapping Tab 共用。
-   核心主张：嵌套可折叠（默认收起深树）、搜索显全路径、点击复制路径、DSL 污染显式警示。 */
+ 核心主张：嵌套可折叠（默认收起深树）、搜索显全路径、点击复制路径、DSL 污染显式警示。 */
 const props = withDefaults(defineProps<{
   /** ES mapping 的 properties 对象（多物理索引时视图侧先合并） */
   properties: Record<string, any> | null | undefined;
@@ -134,10 +134,10 @@ const store = useAppStore();
 const router = useRouter();
 
 /* ═══ ：分析器联动（定义/引用 → 一键验证闭环）═══
-   attrs 属性摘要拆段：分词语义键（analyzer/search_analyzer/normalizer/tokenizer/filter/char_filter）
-   的值渲染为可点名字，点击跳 /analyze 预填并自动执行（组件本体快验）；
-   text 字段行附「字段验证」跳 /analyzer-lab?field=<path>（真实写入链路，嵌套/multi-field
-   路径整体交给 ES 解析——search_analyzer 实际生效链只有 ES 自己知道）。 */
+ attrs 属性摘要拆段：分词语义键（analyzer/search_analyzer/normalizer/tokenizer/filter/char_filter）
+ 的值渲染为可点名字，点击跳 /analyze 预填并自动执行（组件本体快验）；
+ text 字段行附「字段验证」跳 /analyzer-lab?field=<path>（真实写入链路，嵌套/multi-field
+ 路径整体交给 ES 解析——search_analyzer 实际生效链只有 ES 自己知道）。 */
 interface AttrSeg { raw: string; k?: string; v?: string; kind?: string }
 const ANALYZE_KIND: Record<string, string> = {
   analyzer: 'analyzer', search_analyzer: 'analyzer', normalizer: 'normalizer',
@@ -159,8 +159,8 @@ function goFieldLab(path: string) {
 }
 
 /* 污染警示→托管重建闭环：携带索引名与污染根清单，向导侧预剔除并设防复染。
-   托管重建恒定作用于宿主集群——数据面在远程目标时，宿主未必有同名同构索引，
-   不拦一道会把用户带进「向导预填与本页所见不一致」的迷惑现场 */
+ 托管重建恒定作用于宿主集群——数据面在远程目标时，宿主未必有同名同构索引，
+ 不拦一道会把用户带进「向导预填与本页所见不一致」的迷惑现场 */
 async function gotoRebuild() {
   if (store.isRemote && !await askConfirm({
     title: '托管重建作用于宿主集群',
@@ -173,7 +173,7 @@ async function gotoRebuild() {
 }
 
 /* 过滤词：受控/自治双模。自治分支走会话草稿(按索引作用域)——
-   切页签/切菜单/iframe 重建回到本页时过滤词不再丢( 产线实测痛点) */
+ 切页签/切菜单/iframe 重建回到本页时过滤词不再丢( 用户实测痛点) */
 const kwDraft = useScopedDraft(
   'filter', { route: 'indices-mapping', index: () => props.index || '' }, '');
 const kwLocal = computed({
@@ -220,11 +220,11 @@ function rowMatch(f: MappingRow, k: string): boolean {
 }
 
 /* 搜索态：保祖先过滤——节点自身或任一后代命中则保留，命中节点的全部祖先保留为结构行
-   （TaskTreeView filteredRoots 同款先例：结构上下文不丢，用户不再在深树里迷失） */
+ （TaskTreeView filteredRoots 同款先例：结构上下文不丢，用户不再在深树里迷失） */
 /* 命中行排序接 fieldSearch.searchFields 统一 rank 口径（精确=0 > 前缀=1 > 包含=2，
-   同级字母序）——此前按 mapping 原序，最相关的精确/前缀命中可能淹没在深树尾部。
-   仅重排命中行先后并让祖先结构行跟随各自命中链输出，树形展示结构（层级导线）不变；
-   type/attrs-only 命中（path 不含关键字）searchFields 不收录，统一归包含档殿后。 */
+ 同级字母序）——此前按 mapping 原序，最相关的精确/前缀命中可能淹没在深树尾部。
+ 仅重排命中行先后并让祖先结构行跟随各自命中链输出，树形展示结构（层级导线）不变；
+ type/attrs-only 命中（path 不含关键字）searchFields 不收录，统一归包含档殿后。 */
 const searchedRows = computed<MappingRow[]>(() => {
   const k = kwLocal.value.trim().toLowerCase();
   if (!k) return [];
@@ -271,9 +271,9 @@ const { current: hitCur, next: hitNext, prev: hitPrev } = useHitLocate(() => hit
 function onHitKey(e: KeyboardEvent) { if (e.shiftKey) hitPrev(); else hitNext(); }
 
 /* 字段名命中片段拆分（模板 <mark> 渲染，插值天然转义，无 v-html 注入面——JsonTree renderHl 同款口径）。
-   手写 while 切分退役收口 useGridSearch.splitMark 单源（JsonTree renderHl 先例，
-   全站第四份纯文本切分实现归一）；返回结构保形 {t,hit}（模板消费点零变更），splitMark 的
-   {t,m} 纯映射；数值归一二遍白得（两侧同数字形态整段 mark），字面切分行为零漂移。 */
+ 手写 while 切分退役收口 useGridSearch.splitMark 单源（JsonTree renderHl 先例，
+ 全站第四份纯文本切分实现归一）；返回结构保形 {t,hit}（模板消费点零变更），splitMark 的
+ {t,m} 纯映射；数值归一二遍白得（两侧同数字形态整段 mark），字面切分行为零漂移。 */
 function hlSegs(name: string): { t: string; hit: boolean }[] {
   const k = kwLocal.value.trim().toLowerCase();
   return splitMark(name, k).map(s => ({ t: s.t, hit: s.m }));
@@ -312,7 +312,7 @@ async function copyPath(path: string) {
   background: var(--warn-soft); border-radius: var(--r-m);
 }
 .mft-bar { display: flex; align-items: center; gap: var(--sp-2); }
-/* 轨4：过滤胞换装 SFB 落位类（壳三件套+图标归组件单源，原手作绝对图标壳双规则退役） */
+/* 轨4：过滤胞改用 SFB 落位类（壳三件套+图标归组件单源，原手作绝对图标壳双规则退役） */
 .mft-sfb { position: relative; flex: 1; height: 30px; padding: 0 var(--sp-2h); font-size: var(--fs-sm); }
 .mft-cell { white-space: nowrap; }
 /* 层级竖导线——每深一层一条，父子归属一眼可辨 */
@@ -332,7 +332,7 @@ async function copyPath(path: string) {
 /* 搜索定位：命中片段 <mark>（与 JsonTree .jt-mark 同一视觉语言，纯 token 无硬编码色） */
 .mft-mark { background: var(--warn); color: var(--tx-on-strong); border-radius: 2px; padding: 0 1px; }
 /* v3.0.0 纠错：命中行整行柔底——rowMatch 口径含 type/attrs 命中（关键字打在类型/分析器上时
-   字段名无 <mark> 可看），此前命中行与上下文行完全同款，用户看不出该行为何被列为命中 */
+ 字段名无 <mark> 可看），此前命中行与上下文行完全同款，用户看不出该行为何被列为命中 */
 tr.mft-hit td { background: var(--warn-soft); }
 /* 搜索态的结构祖先行：不为命中、只作路径上下文，整体降一档存在感 */
 .mft-struct .mft-name { color: var(--tx1); }

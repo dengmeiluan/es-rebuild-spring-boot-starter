@@ -23,9 +23,9 @@ const SRC = join(__dirname, '..');
 
 describe('图标尺寸下限（420 批）', () => {
   it('三处标签图标 9→10', () => {
-    /* 550 随迁：AnalysisSettingsView 的 BookText 徽标随 syn/flt 徽标 StatusPill 收编退役（flattenWave550）
+    /* 550 同步更新：AnalysisSettingsView 的 BookText 徽标随 syn/flt 徽标 StatusPill 合并退役（flattenWave550）
        ——原 9→10 尺寸锁随退役失效，改锚退役负锁（防复活）+其余两处
-       551 随迁：MatchMatrixView 的 TriangleAlert 随 mm-dead-tag StatusPill 收编退役（flattenWave551）
+       551 同步更新：MatchMatrixView 的 TriangleAlert 随 mm-dead-tag StatusPill 合并退役（flattenWave551）
        ——同款改锚退役负锁（防复活） */
     const as = readFileSync(join(SRC, 'views/AnalysisSettingsView.vue'), 'utf-8');
     expect(as).not.toContain('<BookText');

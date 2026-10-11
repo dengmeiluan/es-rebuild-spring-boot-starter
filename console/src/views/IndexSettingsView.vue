@@ -1,18 +1,18 @@
 <template>
   <div class="is">
     <PageHeader :icon="Sliders" title="索引设置（热更）" subtitle="动态设置热更新，静态项需 close/open" />
-    <!-- 顶栏。：card 壳退役（立法③）——裸 lr-bar 行直贴页面流，border-bottom 分界 -->
+    <!-- 顶栏。：card 壳退役（约定③）——裸 lr-bar 行直贴页面流，border-bottom 分界 -->
     <div class="is-bar lr-bar">
       <div class="is-bar-l lr-bar-l">
         <!-- 页内 IndexPicker 退役换 CurrentIdxChip 只读件（「选索引」唯一入口收敛顶栏）——
-             useIdxState follow:true + 脏态 guard（diffCount>0 暂停跟随）与顶栏同源，chip 即当前索引；
-             「用当前索引」回填钮随 chip 即当前索引退役（无第二份 target 可回填） -->
+ useIdxState follow:true + 脏态 guard（diffCount>0 暂停跟随）与顶栏同源，chip 即当前索引；
+ 「用当前索引」回填钮随 chip 即当前索引退役（无第二份 target 可回填） -->
         <CurrentIdxChip />
         <span v-if="lastReload" class="is-time mono">读取于 {{ lastReload }}</span>
       </div>
       <div class="is-bar-r lr-bar-r">
-        <!--  三态保存：全动态→护栏按钮；含静态/非法→禁用；Insight 降级→旧直存（智能死了，功能不能死）；
-             保存=CLUSTER 档写操作，rank3+ 可见（两个出口同档） -->
+        <!-- 三态保存：全动态→护栏按钮；含静态/非法→禁用；Insight 降级→旧直存（智能死了，功能不能死）；
+ 保存=CLUSTER 档写操作，rank3+ 可见（两个出口同档） -->
         <GuardedActionButton
           v-if="canOps && canGuardedSave"
           action-id="apply-index-settings"
@@ -30,9 +30,9 @@
         <button aria-label="刷新设置" class="btn sm ghost" @click="loadSettings" :disabled="!index || loading" title="刷新设置">
           <RefreshCw :size="12" :class="{ spinning: loading }" />
         </button>
-        <!-- 原始请求/响应快查弹窗（RawIo 第六波，558b 判例同形态；
-             路径子串 '/cluster/index-settings'=本页 GET 读取 + PUT /update 热更同前缀，
-             IndexOptimizerView 同串跨页互见记档：各取各自最近一条） -->
+        <!-- 原始请求/响应快查弹窗（RawIo 第六波，558b 先例同形态；
+ 路径子串 '/cluster/index-settings'=本页 GET 读取 + PUT /update 热更同前缀，
+ IndexOptimizerView 同串跨页互见：各取各自最近一条） -->
         <button aria-label="查看原始 IO（索引设置读写）" class="btn sm ghost" data-test="raw-io" title="最近一次索引 settings 读取/热更请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIo">
           <Terminal :size="12" /> 原始 IO
         </button>
@@ -40,7 +40,7 @@
     </div>
 
     <!-- 轨4（刀④）：空态整块空框退役——EmptyState 裸置（DevToolsView:824 空态
-         flex 居中无框范式），不再给「未选索引」留 bg1+border+radius 空壳 -->
+ flex 居中无框范式），不再给「未选索引」留 bg1+border+radius 空壳 -->
     <EmptyState
       v-if="!index"
       centered
@@ -51,18 +51,18 @@
 
     <template v-else-if="loading && !form">
       <!-- 骨架壳（card + padding:var(--sp-4) 内联）退役——骨架裸置
-           （SystemView:65 先例，538「空态不留整块空框」加载态同判）；.is flex gap 承担与顶栏间距 -->
+ （SystemView:65 先例，538「空态不留整块空框」加载态同判）；.is flex gap 承担与顶栏间距 -->
       <div>
         <SkeletonBox v-for="i in 8" :key="i" height="34px" round style="margin-bottom:var(--sp-2)" />
       </div>
     </template>
 
-    <!--  双栏：左侧表单+diff，右侧 InsightRail 现场分析（窄屏折到底部） -->
+    <!-- 双栏：左侧表单+diff，右侧 InsightRail 现场分析（窄屏折到底部） -->
     <div v-else-if="form" class="is-main">
       <div class="is-left">
         <!-- 快捷调节表单。
-             card 壳退役（visual-judge 同页双标实锤=右列 is-custom/is-diff 已
-             border-top 分节而本分节仍是圆角子卡）——立法④裸分节，card-t 行首横排维持 -->
+ card 壳退役（visual-judge 同页双标实锤=右列 is-custom/is-diff 已
+ border-top 分节而本分节仍是圆角子卡）——约定④裸分节，card-t 行首横排维持 -->
         <div class="is-form">
           <div class="card-t"><Zap :size="13" /> 热参数（点击即可动态生效）</div>
           <div class="is-rows">
@@ -121,7 +121,7 @@
             </div>
           </div>
 
-          <!--  任意 setting 入口（静态项如 number_of_shards / analysis.* 也可提，右侧实时判定去向） -->
+          <!-- 任意 setting 入口（静态项如 number_of_shards / analysis.* 也可提，右侧实时判定去向） -->
           <div class="is-custom">
             <div class="is-custom-head">
               <span class="is-custom-title sec-t">自定义 setting</span>
@@ -149,53 +149,53 @@
                   <ArrowRight :size="11" style="color:var(--tx2)" />
                   <span class="mono is-diff-new" :title="'新值'">{{ d.new === '' ? '（清除）' : d.new }}</span>
                   <!-- 裸 .pill n is-kind 徽标收口 StatusPill（kind→tone 语义映射：
-                       DYNAMIC→g/STATIC→y/其余→r，k-* 手写文字色档随换装退役，色归 tone 单源；
-                       is-kind 锚类保留——pillSingleTrack MERGED 看守） -->
+ DYNAMIC→g/STATIC→y/其余→r，k-* 手写文字色档随改用退役，色归 tone 单源；
+ is-kind 锚类保留——pillSingleTrack MERGED 看守） -->
                   <StatusPill v-if="kindOf(d.key)" class="is-kind" :tone="kindTone(kindOf(d.key))" :label="kindText(kindOf(d.key))" />
                 </div>
                 <div v-for="(gi, gj) in issuesOf(d.key)" :key="gj" class="is-gate">
                   <!-- severity 裸枚举 + g-err/g-warn 手写色档 → StatusPill+sevZh
-                       （tone 走 sevPill 五主档单源；中文标签 严重/警告/建议） -->
+ （tone 走 sevPill 五主档单源；中文标签 严重/警告/建议） -->
                   <StatusPill class="is-gate-sv" :tone="gateSevPill(gi.severity)" :label="gateSevZh(gi.severity)" />
                   {{ gi.message }}
                   <span v-if="gi.suggestion" class="is-gate-sug">{{ gi.suggestion }}</span>
                 </div>
               </div>
             </div>
-            <!-- 裸 .empty 迁 EmptyState compact（diff 分区窄容器；死类 is-narrow 随迁删除） -->
+            <!-- 裸 .empty 迁 EmptyState compact（diff 分区窄容器；死类 is-narrow 同步更新删除） -->
             <EmptyState v-else compact :icon="GitCompare" text="暂无变更" />
           </div>
         </div>
 
-        <!-- 完整原始 settings。：残壳 .card 退役（立法④，552 只退了 is-form 本刀收尾）
-             → border-top 分节（is-form/is-diff 同页同语言），card-t 行首横排 x=0 对齐 -->
+        <!-- 完整原始 settings。：残壳 .card 退役（约定④，552 只退了 is-form 本次收尾）
+ → border-top 分节（is-form/is-diff 同页同语言），card-t 行首横排 x=0 对齐 -->
         <div class="is-raw">
           <div class="is-raw-hd">
             <div class="card-t" role="button" tabindex="0" :aria-expanded="showRaw" @click="showRaw = !showRaw" @keydown.enter.prevent="showRaw = !showRaw" @keydown.space.prevent="showRaw = !showRaw" style="cursor:pointer">
               <FileJson :size="13" /> 完整 settings（含默认值） {{ showRaw ? '▾' : '▸' }}
             </div>
             <!-- raw 面补臂——键/值过滤 + 复制全部 + 点击全选兜底（MappingView 原始 JSON 同款范式）。
-                 手写过滤框换装 SearchFilterBar 统一件（第 16 胞收官；558b tv-kw 判例：
-                 v-model 接原 ref 零触、placeholder 逐字保留兼作 aria-label、Esc 清空内建补齐——
-                 原框无手写 Esc 绑定，filterEscClear379 计数册缺席胞；is-raw-kw-wrap 落位类挂根，
-                 is-raw-filter 锚随 input-class 保留在 input 上；data-test=is-raw-kw 点名锚） -->
+ 手写过滤框改用 SearchFilterBar 统一件（第 16 胞收官；558b tv-kw 先例：
+ v-model 接原 ref 零触、placeholder 逐字保留兼作 aria-label、Esc 清空内建补齐——
+ 原框无手写 Esc 绑定，filterEscClear379 计数册缺席胞；is-raw-kw-wrap 落位类挂根，
+ is-raw-filter 锚随 input-class 保留在 input 上；data-test=is-raw-kw 点名锚） -->
             <template v-if="showRaw">
               <SearchFilterBar v-model="rawFilter" data-test="is-raw-kw" class="is-raw-kw-wrap" input-class="is-raw-filter" placeholder="过滤键或值（如 refresh）" />
               <button class="btn sm ghost" title="复制完整 settings（不受过滤影响）" @click="copyRawSettings"><Copy :size="11" /> 复制全部</button>
             </template>
           </div>
           <!-- W-C 批：完整 settings 走 highlightJson 范式（转义安全 v-html）；
-               点击全选——复制被浏览器策略拦时 Ctrl+C 零门槛兜底 -->
+ 点击全选——复制被浏览器策略拦时 Ctrl+C 零门槛兜底 -->
           <pre v-if="showRaw" ref="rawPreEl" class="mono json-view is-raw-pre" role="button" tabindex="0" title="点击全选，Ctrl+C 复制" @click="selectAllRaw" @keydown.enter.prevent="selectAllRaw" @keydown.space.prevent="selectAllRaw" v-html="filteredRawHtml"></pre>
         </div>
       </div>
 
-      <!--  现场分析栏（降级铁律：degraded 时整栏静默收起） -->
+      <!-- 现场分析栏（降级铁律：degraded 时整栏静默收起） -->
       <InsightRail :loading="analyzing" :degraded="insightDegraded" :empty="!impact">
         <template v-if="impact">
           <!-- 三张 ir-card 卡壳降为单卡三分节（嵌套框冗余清）——分节标题走全局 .sec-t 档，
-               分节间上边框分隔；三节显隐条件（常驻/hasStatic/hasIllegal）与全部文案语义原样保留。
-               残壳 .card 退役（立法④）→ border-top 分节（同页 is-form 同语言） -->
+ 分节间上边框分隔；三节显隐条件（常驻/hasStatic/hasIllegal）与全部文案语义原样保留。
+ 残壳 .card 退役（约定④）→ border-top 分节（同页 is-form 同语言） -->
           <div class="ir-card">
             <div class="ir-sec">
               <div class="sec-t ir-sec-t"><Activity :size="13" /> 变更总览</div>
@@ -209,8 +209,8 @@
             <div v-if="impact.hasStatic" class="ir-sec">
               <div class="sec-t ir-sec-t"><Hammer :size="13" /> 就地重建预估</div>
               <template v-if="impact.rebuildEstimate && !impact.rebuildEstimate.error">
-                <!-- 三行 ir-kv 手写 meta 行收编 MetaStrip mini 档（550 判例；
-                     数值 mono+tabular 归 .ms 单源，文案语义原样） -->
+                <!-- 三行 ir-kv 手写 meta 行合并 MetaStrip mini 档（；
+ 数值 mono+tabular 归 .ms 单源，文案语义原样） -->
                 <MetaStrip class="ir-kvs" :items="[
                   { value: fmtNum(impact.rebuildEstimate.docCount), label: '文档数' },
                   { value: fmtBytes(impact.rebuildEstimate.sizeBytes), label: '主分片体积' },
@@ -234,11 +234,11 @@
       </InsightRail>
     </div>
 
-    <!--  §1：拉取失败后 form 为空——不留白屏，给原因与重试。
-         失败态整卡（card is-empty 空框）退役——EmptyState centered 直贴
-         （538 立法「空态不留整块空框」，AnalyzerLabView:49 是 546 先例）；文案保留原样
-         （含 loadErr 动态拼接），重试走 EmptyState action 位（flattenWave534 的
-         「失败态整卡豁免记档」由本批立法推翻，彼处锁随迁） -->
+    <!-- 拉取失败后 form 为空——不留白屏，给原因与重试。
+ 失败态整卡（card is-empty 空框）退役——EmptyState centered 直贴
+ （「空态不留整块空框」，AnalyzerLabView:49 是 546 先例）；文案保留原样
+ （含 loadErr 动态拼接），重试走 EmptyState action 位（ 的
+ 「失败态整卡豁免」由约定推翻，彼处锁同步更新） -->
     <EmptyState v-else centered :icon="AlertTriangle"
       :text="'settings 拉取失败' + (loadErr ? '：' + loadErr : '')"
       action-text="重试" @action="loadSettings" />
@@ -278,7 +278,7 @@ import EmptyState from '../components/EmptyState.vue';
 import StatusPill from '../components/StatusPill.vue'; /* ：gate severity 徽标统一件 */
 import MetaStrip from '../components/MetaStrip.vue'; /* ：ir-kv meta 行统一件 */
 /* gate severity 档位/中文标签收口 esEnumZh 单源（sevPill/sevZh——
-   ERROR→r、WARN→y、INFO→b；critical→严重 / warn→警告 / 其余→建议），g-err/g-warn 手写色档退役 */
+ ERROR→r、WARN→y、INFO→b；critical→严重 / warn→警告 / 其余→建议），g-err/g-warn 手写色档退役 */
 import { sevPill as gateSevPill, sevZh as gateSevZh } from '../utils/esEnumZh';
 /* bytes 档单源（重建体积预估 fmtBytes） */
 import { semFormat } from '../composables/useSemFormat';
@@ -286,7 +286,7 @@ import { useInputLint, patternRule, TIME_RE } from '../composables/useInputLint'
 
 const store = useAppStore();
 /* 权限门禁——settings 热更=/cluster/index-settings/update|update-settings=CLUSTER 档（rank3+）；
-   读取/分析全角色可用，两个保存出口（护栏/降级直存）同档 */
+ 读取/分析全角色可用，两个保存出口（护栏/降级直存）同档 */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/index-settings/update', store.target));
 const router = useRouter();
@@ -302,14 +302,14 @@ function openRawIo() {
 }
 
 /* 目标索引进 URL——刷新/分享链接可复原（可重入）。
-   follow:true + 脏态 guard——diffCount>0（有未保存变更）时暂停跟随，
-   防顶栏切索引把「A 的表单」指到 B；保存/重载后 diffCount 归零，跟随自然恢复。
-   「选中即拉取」由 watch(index) 承接（guard 内跳过），页内 IndexPicker @picked 随退役走 */
+ follow:true + 脏态 guard——diffCount>0（有未保存变更）时暂停跟随，
+ 防顶栏切索引把「A 的表单」指到 B；保存/重载后 diffCount 归零，跟随自然恢复。
+ 「选中即拉取」由 watch(index) 承接（guard 内跳过），页内 IndexPicker @picked 随退役走 */
 const index = useIdxState({ follow: () => diffCount.value === 0 });
 const raw = ref<any>(null);
 /* W-C 批：完整 settings JSON 高亮（highlightJson 输出已转义）；
-   raw 面补臂——过滤词命中键/值的点键路径重排 JSON，空词=全文；
-   「复制全部」恒复制完整原文（不受过滤影响） */
+ raw 面补臂——过滤词命中键/值的点键路径重排 JSON，空词=全文；
+ 「复制全部」恒复制完整原文（不受过滤影响） */
 const rawFilter = ref('');
 const rawPreEl = ref<HTMLElement | null>(null);
 const rawText = computed(() => (raw.value ? JSON.stringify(raw.value, null, 2) : ''));
@@ -368,11 +368,11 @@ const loadErr = ref('');
 const saving = ref(false);
 const lastReload = ref('');
 /* raw 展开态落 usePref 跨会话记忆（key 沿用 is_ 前缀惯例）。
-   任务提及的「含默认值/仅显式」过滤态本页不存在（该状态在 MappingView/ClusterSettingsView），未越界新建 */
+ 任务提及的「含默认值/仅显式」过滤态本页不存在（该状态在 MappingView/ClusterSettingsView），未越界新建 */
 const showRaw = usePref('is_showraw', false);
 
-/*  自定义 setting 行（任意键，静态变更入口） */
-/* 草稿治理轮：自定义 settings 行草稿（写类视图，按 集群/索引 隔离——A 索引的行不串到 B） */
+/* 自定义 setting 行（任意键，静态变更入口） */
+/* 草稿：自定义 settings 行草稿（写类视图，按 集群/索引 隔离——A 索引的行不串到 B） */
 const customRowsDraft = useScopedDraftState<{ key: string; value: string }[]>('custom-rows', {
   route: 'index-settings',
 
@@ -387,7 +387,7 @@ const formDraft = useScopedDraftState<Record<string, any>>('hot-form', {
 }, {});
 watch(form, v => { if (v) formDraft.state.value = { ...v }; }, { deep: true });
 
-/*  现场分析状态：impact=分析结果；degraded=Insight 接口异常（整栏收起+徽标静默，功能零影响） */
+/* 现场分析状态：impact=分析结果；degraded=Insight 接口异常（整栏收起+徽标静默，功能零影响） */
 const impact = ref<any>(null);
 const analyzing = ref(false);
 const insightDegraded = ref(false);
@@ -451,7 +451,7 @@ async function loadSettings() {
 }
 
 /* 「选中即拉取」改 watch(index) 承接——跟随改值不经过页内选择器
-   @picked（已退役），必须 watch 驱动拉取；diffCount>0（脏态）时跳过，保存后恢复 */
+ @picked（已退役），必须 watch 驱动拉取；diffCount>0（脏态）时跳过，保存后恢复 */
 watch(index, (v) => {
   if (!v || diffCount.value > 0) return;
   loadSettings();
@@ -476,7 +476,7 @@ function normKey(k: string): string {
 }
 
 /* 自定义 setting 行值输入悬停 :title=目录中文释义+示例（SETTINGS_CATALOG
-   单源，normKey 去 index. 前缀口径与后端一致；目录外键回落空串零扰动） */
+ 单源，normKey 去 index. 前缀口径与后端一致；目录外键回落空串零扰动） */
 function customHint(k: string): string {
   const s = SETTINGS_CATALOG.find(e => e.key === normKey(k));
   return s ? `${s.desc}｜示例：${s.example}` : '';
@@ -492,7 +492,7 @@ const diffList = computed(() => {
       out.push({ key: k, old: ori, new: cur });
     }
   }
-  //  自定义行同通道进 diff（与表单键重复时以表单为准）
+  // 自定义行同通道进 diff（与表单键重复时以表单为准）
   for (const r of customRows.value) {
     const k = normKey(r.key);
     if (!k) continue;
@@ -513,7 +513,7 @@ const changesFlat = computed(() => {
   return out;
 });
 
-/* ----------------  实时行内判定（800ms 防抖 + seq 防乱序） ---------------- */
+/* ---------------- 实时行内判定（800ms 防抖 + seq 防乱序） ---------------- */
 
 watch(diffList, () => {
   if (impactTimer) window.clearTimeout(impactTimer);
@@ -551,7 +551,7 @@ function kindOf(key: string): string {
 function kindText(kind: string) {
   return kind === 'DYNAMIC' ? '可热更' : kind === 'STATIC' ? '需重建' : '非法';
 }
-/* kind→StatusPill tone 语义映射（换装伴生；DYNAMIC 可热更=g/STATIC 需重建=y/其余非法=r） */
+/* kind→StatusPill tone 语义映射（改用伴生；DYNAMIC 可热更=g/STATIC 需重建=y/其余非法=r） */
 function kindTone(kind: string): 'g' | 'y' | 'r' {
   return kind === 'DYNAMIC' ? 'g' : kind === 'STATIC' ? 'y' : 'r';
 }
@@ -568,13 +568,13 @@ const illegalItems = computed(() => (impact.value?.items || []).filter((x: any) 
 function firstSuggestion(it: any): string {
   return it?.gateIssues?.[0]?.suggestion || '';
 }
-/* 数值单源退役——fmtBytes 本地字节三元收编 semFormat bytes 单源
-   （1024 进制档位制；空/异常值回落 '0 B'，展示档位以单源为准） */
+/* 数值单源退役——fmtBytes 本地字节三元合并 semFormat bytes 单源
+ （1024 进制档位制；空/异常值回落 '0 B'，展示档位以单源为准） */
 function fmtBytes(n: any): string {
   return semFormat(Number(n) || 0, 'bytes')?.text ?? '0 B';
 }
 
-/* ----------------  三态保存 ---------------- */
+/* ---------------- 三态保存 ---------------- */
 
 /** 全部 DYNAMIC 且 Insight 正常 → 护栏按钮（estimate→confirmToken→execute→回执） */
 const canGuardedSave = computed(() =>
@@ -620,7 +620,7 @@ async function save() {
     store.notify('success', `已热更 ${diffCount.value} 项：${index.value}`);
     await loadSettings();
   } catch (e: any) {
-    /*  w80 判例平移：裸 e.message → friendlyEsError（同 loadSettings 口径） */
+    /* w80 先例平移：裸 e.message → friendlyEsError（同 loadSettings 口径） */
     store.notify('error', '热更失败：' + friendlyEsError(String(e?.message ?? e)));
   } finally {
     saving.value = false;
@@ -647,16 +647,16 @@ function coerce(v: any): any {
 <style scoped>
 .is { display: flex; flex-direction: column; gap: var(--sp-3); }
 /* 轨4（刀④）：空态空壳规则（bg1+border+radius）随模板类退役——空态不留
-   整块空框，EmptyState 裸置；：失败态整卡 .is-empty 规则随之退役
-   （失败态改 EmptyState centered 直贴，留白归组件单源，原 34px 契约由组件承担） */
+ 整块空框，EmptyState 裸置；：失败态整卡 .is-empty 规则随之退役
+ （失败态改 EmptyState centered 直贴，留白归组件单源，原 34px 契约由组件承担） */
 /* card 壳退役——裸行只留竖距与分界线，横距归页面流（与卡/空态同缘对齐） */
 .is-bar { padding: var(--sp-3) 0; border-bottom: 1px solid var(--line); }
-/* .is-title（fs-sm/650）为 PageHeader 接管后的死规则，随标题四档收编退役 */
+/* .is-title（fs-sm/650）为 PageHeader 接管后的死规则，随标题四档合并退役 */
 .is-time { font-size: var(--fs-xs); color: var(--tx2); }
 /* 工具行尺寸统一：GAB 根按钮（.btn.pri 默认号）对齐全行 sm 基准（GAB 多根组件 class 不透传，行内对齐） */
 .is-bar-r :deep(.btn.pri) { padding: 3px var(--sp-2); font-size: var(--fs-xs); }
 
-/*  双栏 */
+/* 双栏 */
 .is-main { display: flex; gap: var(--sp-3); align-items: flex-start; }
 .is-left { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
 @media (max-width: 1100px) {
@@ -682,12 +682,12 @@ function coerce(v: any): any {
   .is-custom-row .is-input:first-child { grid-column: 1 / -1; }
 }
 
-/*  自定义 setting。：卡中卡子框（bg0+dashed+radius）退役（立法④）——
-   border-top 分节流，is-diff 裁决逐字参照系；内缩随分节流下放 head/rows 自携 --sp-4 */
+/* 自定义 setting。：卡中卡子框（bg0+dashed+radius）退役（约定④）——
+ border-top 分节流，is-diff 裁决逐字参照系；内缩随分节流下放 head/rows 自携 --sp-4 */
 .is-custom { margin-top: var(--sp-3); padding-top: var(--sp-3); border-top: 1px solid var(--line); }
 .is-custom-head { display: flex; align-items: center; gap: var(--sp-3); margin: 0 var(--sp-4); }
 /* 分节标题档归位——.is-custom-title 形态（fs-sm/650/tx0 自造）换挂全局弱分节
-   .sec-t（fs-sm/600/tx1），本类只留落位（行内 flex 头中的 flex-shrink） */
+ .sec-t（fs-sm/600/tx1），本类只留落位（行内 flex 头中的 flex-shrink） */
 .is-custom-title { flex-shrink: 0; }
 .is-custom-tip { font-size: var(--fs-xs); color: var(--tx2); flex: 1; }
 .is-custom-row { display: grid; grid-template-columns: minmax(180px, 320px) minmax(0, 1fr) auto; gap: var(--sp-2); margin: var(--sp-2) var(--sp-4) 0; align-items: center; }
@@ -704,34 +704,34 @@ function coerce(v: any): any {
 .is-diff-old { color: var(--tx2); text-decoration: line-through; min-width: 0; overflow-wrap: anywhere; }
 .is-diff-new { color: var(--ok); font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
 
-/*  行内判定徽标。：徽标本体换装 StatusPill（k-dynamic/k-static/k-illegal
-   手写文字色档随换装退役，色归 tone 单源；.is-kind 只留落位锚） */
+/* 行内判定徽标。：徽标本体改用 StatusPill（k-dynamic/k-static/k-illegal
+ 手写文字色档随改用退役，色归 tone 单源；.is-kind 只留落位锚） */
 .is-kind { margin-left: auto; flex-shrink: 0; }
 .is-gate { font-size: var(--fs-xs); color: var(--tx1); padding: 0 0 var(--sp-1) var(--sp-3); }
-/* g-err/g-warn 手写色档随 gate severity 换装 StatusPill 退役（色归 tone 单源），
-   .is-gate-sv 只留落位间距 */
+/* g-err/g-warn 手写色档随 gate severity 改用 StatusPill 退役（色归 tone 单源），
+ .is-gate-sv 只留落位间距 */
 .is-gate-sv { margin-right: var(--sp-1); }
 .is-gate-sug { color: var(--tx2); margin-left: var(--sp-2); }
 
 /* raw 面头行——标题占主位，过滤框/复制钮右靠；pre 前距由头行 padding-bottom 承担 */
 /* .card 壳退役 → border-top 分节（is-form 同页同语言：行首 x=0 对齐，
-   竖距 var(--sp-3) 与 .is-left gap 同档承接壳原 14px 前距） */
+ 竖距 var(--sp-3) 与 .is-left gap 同档承接壳原 14px 前距） */
 .is-raw { padding: var(--sp-3) 0 0; border-top: 1px solid var(--border); }
 .is-raw-hd { display: flex; align-items: center; gap: var(--sp-2); padding-bottom: var(--sp-2h); }
 .is-raw-hd .card-t { flex: 1; min-width: 0; margin-bottom: 0; }
-/* 类随换装挂 SearchFilterBar 根——手写输入框皮（is-input bg2 底/line 边/4px 圆角）
-   退役归组件 .sfb 胶囊壳单源，本类只留落位（200px→min(200px,100%) 极窄钳制随迁）与高度内衬
-   （26px 对齐现行，高度链零动）；is-raw-filter 锚经 input-class 保留在 input 上（无遗留样式） */
+/* 类随改用挂 SearchFilterBar 根——手写输入框皮（is-input bg2 底/line 边/4px 圆角）
+ 退役归组件 .sfb 胶囊壳单源，本类只留落位（200px→min(200px,100%) 极窄钳制同步更新）与高度内衬
+ （26px 对齐现行，高度链零动）；is-raw-filter 锚经 input-class 保留在 input 上（无遗留样式） */
 .is-raw-kw-wrap { width: min(200px, 100%); flex-shrink: 0; box-sizing: border-box; height: 26px; padding: 0 var(--sp-2); font-size: var(--fs-sm); }
 /* 完整 settings 预上限随视口弹性（460px 定高在大屏仍要内层滚动且下方留大片空白）；
-   --vh-offset 为全站页头预留口径（theme.css :root=210px），按 BrowserView/MappingView 先例不写
-   本地 fallback，避免两处漂移 */
+ --vh-offset 为全站页头预留口径（theme.css :root=210px），按 BrowserView/MappingView 先例不写
+ 本地 fallback，避免两处漂移 */
 .is-raw pre { max-height: calc(100vh - var(--vh-offset)); overflow: auto; padding: var(--sp-3) var(--sp-4); margin: 0; font-size: var(--fs-xs); white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; }
 /* scoped .empty 覆盖随「暂无变更」空态迁 EmptyState compact 一并退役，留白归组件 */
 
-/*  InsightRail 卡片。：三卡降单卡三分节——.ir-card .card-t 卡头规则随卡壳退役，
-   分节标题走全局 .sec-t 档（flex 排布/间距归 ir-sec-t），分节间上边框分隔。
-   残壳 .card 退役 → border-top 分节 hairline（is-form 同页同语言） */
+/* InsightRail 卡片。：三卡降单卡三分节——.ir-card .card-t 卡头规则随卡壳退役，
+ 分节标题走全局 .sec-t 档（flex 排布/间距归 ir-sec-t），分节间上边框分隔。
+ 残壳 .card 退役 → border-top 分节 hairline（is-form 同页同语言） */
 .ir-card { padding: var(--sp-3); border-top: 1px solid var(--border); }
 .ir-sec + .ir-sec { margin-top: var(--sp-3); padding-top: var(--sp-3); border-top: 1px solid var(--line); }
 .ir-sec-t { display: flex; align-items: center; gap: var(--sp-1h); margin-bottom: var(--sp-2); }
@@ -742,7 +742,7 @@ function coerce(v: any): any {
 .c-dyn { color: var(--ok); }
 .c-sta { color: var(--warn); }
 .c-ill { color: var(--err); }
-/* ir-kv 三条私造行样式随 MetaStrip 收编退役（形态归 .ms 单源） */
+/* ir-kv 三条私造行样式随 MetaStrip 合并退役（形态归 .ms 单源） */
 .ir-est-err { font-size: var(--fs-xs); color: var(--warn); padding: var(--sp-1) 0; }
 .ir-note { font-size: var(--fs-xs); color: var(--tx2); margin: var(--sp-2) 0; line-height: 1.5; }
 .ir-btn { width: 100%; justify-content: center; }

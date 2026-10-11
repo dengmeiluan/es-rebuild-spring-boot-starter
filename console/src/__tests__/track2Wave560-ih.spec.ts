@@ -3,7 +3,7 @@
  *
  * ① JsonArea getEditor 转发：defineExpose 增 getEditor（MonacoEditor :931 已 expose，
  *    组件零触）——父面拿内层 Monaco 实例的统一出口，全站多宿主（AR/IH/Doc）共用，纯增量；
- * ② IndexHub query tab Ctrl+I 唤起补全：DevToolsView 557 判例逐字平移（watch(ref)+
+ * ② IndexHub query tab Ctrl+I 唤起补全：DevToolsView 557 先例逐字平移（watch(ref)+
  *    nextTick 后置取 + happy-dom stub 守卫），键经 JsonArea getEditor 转发通道；
  * ③ docs/query 两 tab cURL 快速复制：docs 档包 buildDocsDslWithSort()（源码锁钉
  *    buildDocsDsl 调用字面，原函数不改）、query 档用编辑器 DSL 原文，histCurl 手法组串，
@@ -15,7 +15,7 @@
  *    /cluster/query，'ops'（运维行尾钮）先 /cluster/raw 后 query 双回退（552 双参由来保留）；
  *    判空 notify 文案随 scope 分档。
  * ⑥ alt 体 max-height 局部变量化（--ih-alt-cap 单点，值零变）+ query/doc 两处 JsonArea
- *    :deep 退壳（557 ST/559 判例：视图侧独立规则，组件本体零触）。
+ *    :deep 退壳（557 ST/559 先例：视图侧独立规则，组件本体零触）。
  *
  * 源码锁口径（assistLintWave533 同理由）：happy-dom 不参与 scoped <style>/Monaco 内核
  * 计算，接线形态契约落源文本最稳。
@@ -43,7 +43,7 @@ describe('560 ①：JsonArea getEditor 转发', () => {
   });
 });
 
-/* ═══ ② query tab Ctrl+I 唤起补全（DevToolsView 557 判例平移） ═══ */
+/* ═══ ② query tab Ctrl+I 唤起补全（DevToolsView 557 先例平移） ═══ */
 describe('560 ②：IndexHub Ctrl+I 补全接线', () => {
   it('monaco 包动态 import（测试面斩链兼容）+ watch(dslJaRef)+nextTick 后置取', () => {
     /* 动态而非静态：track2Wave558 等 vi.mock MonacoEditor「斩断 monaco 导入链」的
@@ -53,7 +53,7 @@ describe('560 ②：IndexHub Ctrl+I 补全接线', () => {
     expect(ih).toMatch(/watch\(dslJaRef, \(ja\) => \{/);
     expect(ih).toContain('const ed = ja.getEditor?.();');
   });
-  it('addCommand 键位 CtrlCmd|KeyI + stub 守卫 + triggerSuggest（判例平移）', () => {
+  it('addCommand 键位 CtrlCmd|KeyI + stub 守卫 + triggerSuggest（先例平移）', () => {
     expect(ih).toMatch(/if \(!ed \|\| typeof ed\.addCommand !== 'function'\) return;/);
     expect(ih).toContain('ed.addCommand(m.KeyMod.CtrlCmd | m.KeyCode.KeyI, () => {');
     expect(ih).toContain("ed.trigger('', 'editor.action.triggerSuggest', null);");
@@ -101,12 +101,12 @@ describe('560 ④：settingsH/mapH 高度档位', () => {
 
 /* ═══ ⑤ RawIo 取数特征 scope 分流 ═══ */
 describe('560 ⑤：openRawIo scope 分流', () => {
-  it('签名加参 + ops 双回退（552 双参由来）+ query 四特征链（669 随迁）', () => {
-    /* 随迁（击穿者：件A 特征链扩容—— DQ 侧五写路径扩容时 IH 被冻结
-       记档，解冻后 query 档补齐 query→profile→update-document→delete-by-id 四特征回退；
+  it('签名加参 + ops 双回退（552 双参由来）+ query 四特征链（669 同步更新）', () => {
+    /* 同步更新（击穿者：件A 特征链扩容—— DQ 侧五写路径扩容时 IH 被冻结
+       备案，解冻后 query 档补齐 query→profile→update-document→delete-by-id 四特征回退；
        ops 双参/签名/调用点分流/判空分档零触；本体锚 rawIoChain669.spec A1。
-       ⚠随迁漏扫自省：669 家族快验未含本 spec（650-C3 全目录 grep 纪律执行不到位），
-       全量第 5 红抓出后随迁——随迁扫描必须全目录 openRawIo 裸词三族锁清点） */
+       ⚠同步更新漏扫自省：669 家族快验未含本 spec（650-C3 全目录 grep 纪律执行不到位），
+       全量第 5 红抓出后同步更新——同步更新扫描必须全目录 openRawIo 裸词三族锁清点） */
     expect(ih).toMatch(/function openRawIo\(scope: 'query' \| 'ops' = 'query'\) \{/);
     expect(ih).toMatch(/scope === 'ops'\s*\? \(ioRecorder\.last\('\/cluster\/raw'\) \?\? ioRecorder\.last\('\/cluster\/query'\)\)\s*: \(ioRecorder\.last\('\/cluster\/query'\)\s*\?\? ioRecorder\.last\('\/cluster\/profile'\)\s*\?\? ioRecorder\.last\('\/cluster\/update-document'\)\s*\?\? ioRecorder\.last\('\/cluster\/delete-by-id'\)\)/);
   });

@@ -7,7 +7,7 @@
  *    空前缀 suggest 预载（TTL 缓存白得 548 A2 宽前缀本地滤）；IP_HINTS 补 CIDR 形态
  *    （sqlCompletion D1 姊妹面同批对齐）；
  *  C BoostTuner：kwField 变化空前缀预载 kwSuggest(f,'')（kwField 非空时）；
- *    .bt-drop-chip 手写 warn-soft 徽标换装 StatusPill tone="y"（550 批 is-kind/syn/flt 先例）；
+ *    .bt-drop-chip 手写 warn-soft 徽标改用 StatusPill tone="y"（550 批 is-kind/syn/flt 先例）；
  *  D sqlCompletion：VAL_FORMAT_HINTS ip 档补 CIDR；BETWEEN 语境数值族出 '10 AND 20' 区间
  *    形态（LuceneInput NUM_HINTS '[10 TO 20]' 同语义）；② ensure / ③ ensureCurFields 两处
  *    fire-and-forget 改 Promise 链（④ keyword 档同款先例，token 取消弃回填）；
@@ -171,7 +171,7 @@ describe('B1 LuceneInput values-loading 档（terms 飞行中弹层不闪关）'
     const li = readSrc('components/LuceneInput.vue');
     expect(li).toContain("'no-match' | 'no-values' | 'values-loading' | null");
     expect(li).toContain(`<div v-else-if="hint === 'values-loading'" class="li-hint">正在加载候选值…</div>`);
-    /* 554 随迁：飞行中档类型门槛随 keyword 族收口（AGG_KEYWORD_TYPES，constant_keyword
+    /* 554 同步更新：飞行中档类型门槛随 keyword 族收口（AGG_KEYWORD_TYPES，constant_keyword
        同出加载占位）——items 空门槛防收窄误入档的契约意图保形 */
     expect(li).toMatch(/suggesting\.value && !items\.value\.length && AGG_KEYWORD_TYPES\.includes\(fieldType\(s\.field\)\)/);
   });
@@ -208,7 +208,7 @@ describe('B2 choose 字段后空前缀预载（TTL 缓存白得）', () => {
   });
 
   it('源码锁：choose 侧 keyword 门槛 + 空前缀调用在場', () => {
-    /* 554 随迁：choose 侧 keyword 本名门槛收口 AGG_KEYWORD_TYPES 族表
+    /* 554 同步更新：choose 侧 keyword 本名门槛收口 AGG_KEYWORD_TYPES 族表
        （KEYWORD_VALUE_TYPES 去 wildcard，constant_keyword 选中同预载）——空前缀调用锚不变 */
     const li = readSrc('components/LuceneInput.vue');
     expect(li).toContain("if (AGG_KEYWORD_TYPES.includes(fieldType(it.text))) suggest(it.text, '');");
@@ -229,13 +229,13 @@ describe('B3 IP_HINTS 补 CIDR 形态（sqlCompletion D1 姊妹面同批对齐�
   });
 });
 
-/* ═══ C：BoostTuner kwField 预载 + 掉出徽标换装 StatusPill ═══ */
+/* ═══ C：BoostTuner kwField 预载 + 掉出徽标改用 StatusPill ═══ */
 
-describe('C BoostTunerView kwField 预载 + bt-drop-chip 换装 StatusPill', () => {
-  it('源码锁：kwField 变化空前缀预载（非空门槛）+ StatusPill tone="y" 换装 + 手写色档退役', () => {
+describe('C BoostTunerView kwField 预载 + bt-drop-chip 改用 StatusPill', () => {
+  it('源码锁：kwField 变化空前缀预载（非空门槛）+ StatusPill tone="y" 改用 + 手写色档退役', () => {
     const bt = readSrc('views/BoostTunerView.vue');
     expect(bt, 'kwField 变化空前缀预载（kwField 非空时）').toContain('watch(kwField, f => { if (f) kwSuggest(f, \'\'); });');
-    expect(bt, '掉出徽标换装 StatusPill（550 is-kind/syn/flt 先例，bt-drop-chip 锚保留）')
+    expect(bt, '掉出徽标改用 StatusPill（550 is-kind/syn/flt 先例，bt-drop-chip 锚保留）')
       .toContain('<StatusPill v-for="d in dropped" :key="d" class="bt-drop-chip" tone="y" :label="d" />');
     expect(bt, 'StatusPill 统一件 import 在场').toContain("import StatusPill from '../components/StatusPill.vue';");
     expect(bt, '手写 warn-soft 色档退役（色归 tone 单源）').not.toMatch(/\.bt-drop-chip \{[^}]*warn-soft/);
@@ -307,7 +307,7 @@ describe('D1 sqlCompletion ip 档补 CIDR', () => {
     } finally { h.dispose(); vi.restoreAllMocks(); }
   });
 
-  it('表锁：VAL_FORMAT_HINTS.ip 双档定形（551 随迁）', () => {
+  it('表锁：VAL_FORMAT_HINTS.ip 双档定形（551 同步更新）', () => {
     expect(VAL_FORMAT_HINTS.ip).toEqual({ detail: '字面提示 · ip', values: ['192.168.0.1', '192.168.0.0/24'] });
   });
 });

@@ -1,6 +1,6 @@
 /**
  * R130 一百三十二批：BrowserView 索引列表右键菜单（CellContextMenu 第三场景）。
- * 五百二十九批反转随迁：裸表换 QRT rows 型——行级右键随壳退役，菜单能力按 QRT 消费形态映射：
+ * 五百二十九批反转同步更新：裸表换 QRT rows 型——行级右键随壳退役，菜单能力按 QRT 消费形态映射：
  *   旧「复制索引名」→ QRT 单元格右键「复制值」（索引名格原值入剪贴板，同一剪贴板结果）；
  *   旧「打开索引工作区/DSL 查询/查看 Mapping/ForceMerge/删除索引」→ #cell-操作 槽五钮逐字保真；
  *   旧「复制行信息」→ #row-actions 行尾注入位（browserExportMd 锁）。
@@ -64,7 +64,7 @@ beforeEach(() => {
 function menuButtons(): HTMLButtonElement[] {
   return [...document.querySelectorAll('.ccm-mask .ccm-it')] as HTMLButtonElement[];
 }
-/* 五百二十九批锚随迁：tr contextmenu → QRT 单元格 contextmenu（落在「索引」列格上） */
+/* 五百二十九批锚同步更新：tr contextmenu → QRT 单元格 contextmenu（落在「索引」列格上） */
 async function openCellMenu() {
   const td = [...host.querySelectorAll('table.qrt-tbl tbody tr td')]
     .find(t => t.textContent?.includes('idx-rt')) as HTMLElement;

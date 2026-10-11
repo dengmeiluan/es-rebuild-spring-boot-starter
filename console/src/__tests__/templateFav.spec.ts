@@ -1,5 +1,5 @@
 /**
- * R130 第六十九批：模板收藏写侧收编（收藏夹 kind:'template' 此前全站零写侧——
+ * R130 第六十九批：模板收藏写侧合并（收藏夹 kind:'template' 此前全站零写侧——
  * 分类 tab 与 favReplay 回放分支（case 'template' → 搜索沙盒）都在，TemplateGallery
  * 却无处创建）。锁定 TemplateGallery 每个模板卡片出「⭐」收藏钮，点击后：
  * 1) favorites 增 1 条 kind:'template'、payload 为 JSON 字符串（favReplay 同态消费）；

@@ -1,17 +1,17 @@
 /**
- * 五百六十一批（工蚁D2·轨4 收尾）：私造红壳/手写空态收编 + --danger 别名退役 + export-name 补名。
+ * 五百六十一批（工蚁D2·轨4 收尾）：私造红壳/手写空态合并 + --danger 别名退役 + export-name 补名。
  *
- *  ① AnalyzeView .av-err 私造红壳收编 err-bar（theme.css :554 单源，role=alert 在场；
- *     558b pf-err 判例）——padding/err-soft/radius 三件套退役，.av-err 只留多行富内容
- *     顶对齐与落位节奏；threeStateContract 白名单描述串随迁（av-err→err-bar，仅描述无断言）；
- *  ② IndexOptimizerView .io-good 手写空态收编 EmptyState compact（立法④ 空态不留整块色框，
- *     Workspace/Plugins 560 批判例）；force_merge toast 纯文本「去任务页看进度」升格 notify
+ *  ① AnalyzeView .av-err 私造红壳合并 err-bar（theme.css :554 单源，role=alert 在场；
+ *     558b pf-err 先例）——padding/err-soft/radius 三件套退役，.av-err 只留多行富内容
+ *     顶对齐与落位节奏；threeStateContract 白名单描述串同步更新（av-err→err-bar，仅描述无断言）；
+ *  ② IndexOptimizerView .io-good 手写空态合并 EmptyState compact（约定④ 空态不留整块色框，
+ *     Workspace/Plugins 560 批先例）；force_merge toast 纯文本「去任务页看进度」升格 notify
  *     action「看任务」（AdhocRebuild confirmSwitch 范式，文本与 action 去重）；
  *  ③ FavoritesView 两处导入失败裸串人话化（「不是合法的收藏 JSON 文件」/「文件无法读取，
  *     请重试」，原始 message 括注保真）；ConfigDrift scanAllVerdicts 单键失败静默 catch 改
  *     计数（M>0 换 warn 档「N 成功 / M 失败(首 3 键…)」，失败键 verdict 不写三态）；
- *  ④ --danger deprecated 别名退役：本批四文件七处消费换 var(--err)（theme.css :163 定义行
- *     保留——SqlConsole .sq-alert 禁收编面与 DevTools/LuceneQuery 他工蚁面仍在消费）；
+ *  ④ --danger deprecated 别名退役：四文件七处消费换 var(--err)（theme.css :163 定义行
+ *     保留——SqlConsole .sq-alert 禁合并面与 DevTools/LuceneQuery 他工蚁面仍在消费）；
  *  ⑤ export-name 七表补名（527 契约纯属性增量，缺省回落 table-export-* 不动；命名避开
  *     tableKernelWave532 等已锁名）。
  *
@@ -39,9 +39,9 @@ const st = read('../views/SearchTemplatesView.vue');
 const theme = read('../theme.css');
 const threeState = read('./threeStateContract.spec.ts');
 
-/* ═══════════ ① AnalyzeView 红壳收编 err-bar（558b pf-err 判例）═══════════ */
+/* ═══════════ ① AnalyzeView 红壳合并 err-bar（558b pf-err 先例）═══════════ */
 
-describe('561①：AnalyzeView .av-err 私造红壳收编 err-bar', () => {
+describe('561①：AnalyzeView .av-err 私造红壳合并 err-bar', () => {
   it('role=alert 在场 + err-bar 类挂载（v-if="err" 条件保形）', () => {
     expect(av).toContain('<div v-if="err" role="alert" class="err-bar av-err">');
   });
@@ -53,14 +53,14 @@ describe('561①：AnalyzeView .av-err 私造红壳收编 err-bar', () => {
     expect(s, '私造 padding 不回流').not.toMatch(/\.av-err \{[^}]*padding/);
     expect(s, 'err 色字面不回流（色归 err-bar 单源）').not.toMatch(/\.av-err \{[^}]*color: var\(--err\)/);
   });
-  it('threeStateContract 白名单描述串随迁（av-err→err-bar，描述性文本无断言）', () => {
+  it('threeStateContract 白名单描述串同步更新（av-err→err-bar，描述性文本无断言）', () => {
     expect(threeState).toContain("'AnalyzeView.vue': '手动运行型工作台，err-bar 面板内联透传，重跑即重试'");
   });
 });
 
-/* ═══════════ ② IndexOptimizerView 手写空态收编 + toast action ═══════════ */
+/* ═══════════ ② IndexOptimizerView 手写空态合并 + toast action ═══════════ */
 
-describe('561②：IndexOptimizerView .io-good 收编 EmptyState compact + force_merge toast action', () => {
+describe('561②：IndexOptimizerView .io-good 合并 EmptyState compact + force_merge toast action', () => {
   it('io-good 手写空态退役 → EmptyState compact（文案逐字；EmptyState import 在场）', () => {
     const s = strip(io);
     expect(s).toContain('<EmptyState v-if="recs.length === 0" compact :icon="CheckCircle2" text="索引参数已符合推荐配置，无需调整" />');
@@ -68,7 +68,7 @@ describe('561②：IndexOptimizerView .io-good 收编 EmptyState compact + force
     expect(s, 'EmptyState import 在场').toContain("import EmptyState from '../components/EmptyState.vue'");
   });
   it('force_merge toast 升格 notify action（561「看任务」→ 562 升格「查看任务树」带 taskId 深链，TasksView route.query.taskId 命中高亮白得）', () => {
-    /* 五百六十二批随迁（击穿者：562 工蚁5——toast action 升格 taskId 深链，/tasks 消费端零新契约） */
+    /* 五百六十二批同步更新（击穿者：562 工蚁5——toast action 升格 taskId 深链，/tasks 消费端零新契约） */
     expect(io).toMatch(/store\.notify\('success', `force_merge 任务已提交：\$\{target\.value\} → \$\{n\} 段（taskId=\$\{r\?\.taskId\}）`, \{\s*duration: 12000,\s*action: \{ label: '查看任务树', onClick: \(\) => \{ router\.push\(\{ path: '\/tasks', query: \{ taskId: r\?\.taskId \} \}\); \} \},\s*\}\);/);
     expect(strip(io), '纯文本指引退役（与 action 去重；注释字面不算数）').not.toContain('去任务页看进度');
   });
@@ -93,15 +93,15 @@ describe('561③：FavoritesView 导入失败人话化 + ConfigDrift scanAllVerd
   });
 });
 
-/* ═══════════ ④ --danger deprecated 别名退役（本批面） ═══════════ */
+/* ═══════════ ④ --danger deprecated 别名退役（面） ═══════════ */
 
-describe('561④：--danger 消费退役——本批四文件 var(--danger) 清零', () => {
+describe('561④：--danger 消费退役——四文件 var(--danger) 清零', () => {
   it('七处消费换 var(--err)：ConfigDrift/BulkEditor/PainlessLab/Workspace 源文本不含 var(--danger)', () => {
     for (const [n, s] of [['ConfigDriftView', cd], ['BulkEditorView', be], ['PainlessLabView', pl], ['WorkspaceView', ws]] as const) {
       expect(s.includes('var(--danger)'), n + ' 不再消费 var(--danger)').toBe(false);
     }
   });
-  it('theme.css 定义行保留（--danger: var(--err) 别名在他人工蚁/禁收编面退役前仍需存在）', () => {
+  it('theme.css 定义行保留（--danger: var(--err) 别名在他人工蚁/禁合并面退役前仍需存在）', () => {
     expect(theme).toMatch(/--danger: var\(--err\);/);
   });
 });

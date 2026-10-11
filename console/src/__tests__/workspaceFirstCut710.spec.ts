@@ -9,7 +9,7 @@
  *   （708 TemplateGallery toQuery 同范式对称件；深链 mode 优先于记忆）。
  * - G47：配置面板行 checkbox 无 label 关联 + select/grab 无 aria（R90 读数全 null）
  *   → checkbox/select 按部件名 aria-label，grab 装饰字 aria-hidden。
- * - G48：配置面板无 Esc 收口（R90 openAfterEsc=true）→ 本批裁决收口：window 捕获级
+ * - G48：配置面板无 Esc 收口（R90 openAfterEsc=true）→ 裁决收口：window 捕获级
  *   Esc（665 ld-hist-more 同范式）+焦点回「编辑布局」钮+弹层让路守卫
  *   （.msk-box/.cf 在开时 Esc 归弹层单源不抢）。
  */
@@ -64,7 +64,7 @@ async function mountView() {
 
 async function flush(n = 4) { for (let i = 0; i < n; i++) { await nextTick(); await Promise.resolve(); } }
 
-/** 开配置面板并等渲染（入口态先验：709-C1 立法——面板开才有行可操作） */
+/** 开配置面板并等渲染（入口态先验：709-C1 约定——面板开才有行可操作） */
 async function openCfg() {
   const btn = [...host.querySelectorAll('button')].find(b => (b.textContent || '').includes('编辑布局')) as HTMLButtonElement;
   expect(btn, '「编辑布局」钮在场').toBeTruthy();

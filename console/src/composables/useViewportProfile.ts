@@ -21,7 +21,7 @@ export function useViewportProfile(target?: ResizeTarget): {
   const update = (nextWidth: number, nextHeight: number) => {
     if (disposed) return;
     /* 元素不可见（display:none/iframe 隐藏）时 rect 归零——忽略之，保持上次实测尺寸：
-       否则宿主切页签的瞬间布局按 0 宽重排、切回再弹回，肉眼可见的跳动/闪烁 */
+ 否则宿主切页签的瞬间布局按 0 宽重排、切回再弹回，肉眼可见的跳动/闪烁 */
     if (nextWidth < 1 && nextHeight < 1) return;
     width.value = Number.isFinite(nextWidth) ? Math.max(0, nextWidth) : 0;
     height.value = Number.isFinite(nextHeight) ? Math.max(0, nextHeight) : 0;

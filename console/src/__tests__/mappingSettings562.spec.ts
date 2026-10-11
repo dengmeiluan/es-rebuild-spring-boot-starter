@@ -11,7 +11,7 @@
  * - usePref('mp.settingsCollapsed') 缺省 false（展开——用户诉求就是「看见」；对照
  *   DslQuery buildCollapsed 缺省 true 因构建区体量大）
  * - 类型分布环图留右栏（体量小、窄栏适配）；mp-side 内不再有 SettingsGrid
- * - isStaticSettingKey 自 SettingsGrid 收编 utils/settingsView 单源（节头静态摘要与
+ * - isStaticSettingKey 自 SettingsGrid 合并 utils/settingsView 单源（节头静态摘要与
  *   行内徽标共用一套清单，防漂移）
  */
 import { describe, it, expect } from 'vitest';
@@ -49,10 +49,10 @@ describe('五百六十二批：Mapping 页 Settings 上下全宽折叠节', () =
     expect(s, '计数 chip').toMatch(/mp-set-n[^>]*>\{\{ settingsRows\.length \}\}/);
     expect(s, '静态摘要').toMatch(/静态 \{\{ staticCount \}\}/);
     expect(s, 'aria 展开/收起语义').toMatch(/aria-expanded="!setCollapsed"/);
-    expect(s, '含默认值钮在节头右侧（兄弟位非嵌套；五百六十四批随迁：中间插入档位循环钮，窗口放宽）').toMatch(/mp-set-sp[\s\S]{0,900}含默认值/);
+    expect(s, '含默认值钮在节头右侧（兄弟位非嵌套；五百六十四批同步更新：中间插入档位循环钮，窗口放宽）').toMatch(/mp-set-sp[\s\S]{0,900}含默认值/);
   });
 
-  it('isStaticSettingKey 单源收编 utils/settingsView，SettingsGrid 改引共用', () => {
+  it('isStaticSettingKey 单源合并 utils/settingsView，SettingsGrid 改引共用', () => {
     const g = read('../components/SettingsGrid.vue');
     expect(g, 'SettingsGrid 引单源').toMatch(/import \{[^}]*isStaticSettingKey[^}]*\} from '\.\.\/utils\/settingsView'/);
     expect(g, '本地清单退役').not.toContain('const STATIC_KEYS = new Set');

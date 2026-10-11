@@ -7,11 +7,11 @@
  *    MetaStrip help 档 cursor:help，备注不进可见文本）。
  * ② G72（P3 死代码）五类死样式规则清（713 G53/714 G56/715 G56/717 G61/719 G67 同族；
  *    R101 D9 通杀扫描 43 条 se-* 规则 0 命中 13、人工剔除条件渲染/伪类=真死 5 类）：
- *    页头收编遗留的左组/图标色/右钮组修饰（含 900 档换行变体）+IndexPicker 退役
+ *    页头合并遗留的左组/图标色/右钮组修饰（含 900 档换行变体）+IndexPicker 退役
  *    伴漏的输入框孤儿+_source 旧 pre 形态修饰（JsonTree 渲染 .jtree 非 pre）；
  *    活锚 .se-hd（页头壳）/.se-src+.se-src summary（_source 折叠）/.se-hit-hd 900 档保留。
  * ③ G73（P3 随刀增强）执行钮 Play 图标 spinning 绑 busy（713 G51/717 G62/719 G66
- *    spinner 语义同族；busy 守卫+文本换装「执行中…」既有，spinning 补齐在途旋转语言）。
+ *    spinner 语义同族；busy 守卫+文本改用「执行中…」既有，spinning 补齐在途旋转语言）。
  *
  * 驱动方式照 dslValueWire661（monaco ESM 全 stub + api mock 挂载冒烟）+
  * synonymsFirstCut719（行为在途窗双读 + 源码锁 + 渲染负锚三段式）。
@@ -180,7 +180,7 @@ describe('721 G74 max_score 中文备注（铁律 F）', () => {
 });
 
 describe('721 G73 执行钮在途 spinning（随刀增强，713 G51/717 G62/719 G66 同族）', () => {
-  it('在途窗双读：disabled=true + Play 图标 spinning + 文本换装「执行中…」；完成复常双 false', async () => {
+  it('在途窗双读：disabled=true + Play 图标 spinning + 文本改用「执行中…」；完成复常双 false', async () => {
     let release: (() => void) | null = null;
     searchRawFn.mockImplementation(() => new Promise<any>(res => { release = () => res(SEARCH_OK); }));
     const host = await mountSe();
@@ -209,7 +209,7 @@ describe('721 源码锁', () => {
 
   it('G72 源码锁：五类死规则零残留（含 900 档变体）+ 活锚保留', () => {
     const v = readFileSync(join(__dirname, '../views/ScoreExplainView.vue'), 'utf-8');
-    /* 页头收编遗留三族（左组/图标色/右钮组；活锚 .se-hd 不在锁面） */
+    /* 页头合并遗留三族（左组/图标色/右钮组；活锚 .se-hd 不在锁面） */
     expect(v).not.toMatch(/\.se-hd-l\b/);
     expect(v).not.toMatch(/\.se-hd-ic\b/);
     expect(v, '基础+900 档换行变体双形态一并清零').not.toMatch(/\.se-hd-r\b/);
