@@ -1190,12 +1190,15 @@ function gotoBrowser(t: any) {
   if (t.connId) setTargetId(t.connId);
   router.push({ path: '/browser', query: { idx: t.index } });
 }
+let topSeq = 0;
 async function loadTop() {
   if (nodeMode.value) { topRows.value = []; return; }
+  const seq = ++topSeq; // 世代计数：窗/筛选/明细档重入使旧拍作废（含会话累积段，旧拍不得推序列）
   const targets = clusterFilter.value ? [clusterFilter.value] : clusterList.value.slice(0, 10);
   try {
     const perCluster = clusterFilter.value ? 8 : 3; /* ：合并视图每集群 Top 3 压缩同源重复（多档案同物理集群），选定单集群保留完整 Top 8 */
     const rs = await Promise.all(targets.map(c => api.monitorTopIndexes(c).catch(() => ({ records: [] }))));
+    if (seq !== topSeq) return; // 旧拍回包丢弃：topRows 与序列累积整段跳过（新拍自会写入）
     topRows.value = rs.flatMap((r, i) => (r?.records || []).slice(0, perCluster).map((x: any) => ({ ...x, cluster: targets[i] })));
     /* 合并视图按索引名去重（.kibana_1 等同名系统索引跨集群重复是主要噪声；
  保留首个=速率最高的集群；选定单集群视图不受影响） */
@@ -1217,7 +1220,7 @@ async function loadTop() {
       const arr = topIdxSeries.value[k];
       if (arr.length > cap) arr.splice(0, arr.length - cap);
     }
-  } catch { topRows.value = []; }
+  } catch { if (seq === topSeq) topRows.value = []; }
 }
 /* Top 索引导出：TSV（表格粘贴）/MD（群聊工单直贴）双形态，matrixText 单源 */
 async function copyTop(fmt: 'tsv' | 'md') {
@@ -1264,18 +1267,24 @@ function slowCostTone(costMs: number | null | undefined): '' | 'ld-cost-warn' | 
   if (v >= thr * 1.5) return 'ld-cost-warn';
   return '';
 }
+let slowSeq = 0;
 async function loadSlow() {
   if (!auth.canAuditAll()) return;
+  const seq = ++slowSeq; // 世代计数：窗/阈值重入使旧拍作废
   slowLoading.value = true;
   try {
     const fromMs = rangeMs.value.from;
     const r = await api.auth.opsAudit(undefined, undefined, 100, 0, undefined, undefined, undefined,
       Number.isFinite(Number(slowThresholdMs.value)) ? Number(slowThresholdMs.value) : 1000, fromMs, rangeMs.value.to);
+    if (seq !== slowSeq) return; // 旧拍慢请求回包丢弃
     const thr = Number.isFinite(Number(slowThresholdMs.value)) ? Number(slowThresholdMs.value) : 1000;
     slowRows.value = (r?.records || []).filter((x: any) => (x.costMs ?? 0) >= thr);
     slowErr.value = '';
-  } catch (e: any) { slowErr.value = friendlyEsError(String(e?.message ?? e)); }
-  finally { slowLoading.value = false; }
+  } catch (e: any) {
+    if (seq !== slowSeq) return; // 旧拍失败不得覆盖新拍错误位
+    slowErr.value = friendlyEsError(String(e?.message ?? e));
+  }
+  finally { if (seq === slowSeq) slowLoading.value = false; } // 过期回包不熄新拍在途 spinner
 }
 /* 历史自动刷新（对标阿里云自动刷新开关）：复用 useAutoRefresh 全生命周期
  （页面隐藏/KeepAlive 失活自动停续），tick guard=加载中互斥；偏好记忆 live.histAuto 默认关 */
@@ -1416,12 +1425,17 @@ const HIST_CHARTS: { field: MonitorSeriesField; label: string; unit: string; onl
   { field: 'fielddataMb', label: 'fielddata 内存', unit: 'MB', onlyNodeMode: true },
 ];
 
+let histSeq = 0;
 async function loadHist() {
+  const seq = ++histSeq; // 世代计数：时间窗/集群筛选/节点模式/聚合档任一重入都使旧拍全链作废
   /* R7 服务端告警并行拉取：时间窗与曲线取数同域（ 事件标记与图卡时间轴对齐），
  先发不 await（不阻塞曲线取数），独立失败静默（空集=「无活动告警」） */
   const histFromMs = rangeMs.value.from;
   void api.monitorAlerts(100, histFromMs, rangeMs.value.to)
-    .then(res => { srvAlerts.value = res?.records || []; })
+    .then(res => {
+      if (seq !== histSeq) return; // 旧拍告警标记不得覆盖新窗
+      srvAlerts.value = res?.records || [];
+    })
     .catch(() => {});
   histLoading.value = true; histErr.value = '';
   try {
@@ -1434,6 +1448,7 @@ async function loadHist() {
       interval: mh2Interval.value, /* 降采样桶记录；空桶字段缺省由 buildSeries 剔点天然消化 */
       agg: mhAgg.value, /* 聚合方式下推（avg|max） */
     });
+    if (seq !== histSeq) return; // 旧拍曲线回包丢弃
     let records: MonitorMetricsRecord[] = res?.records || [];
     if (nodeMode.value) {
       /* 节点下钻：connName 映射 nodeName 后复用 buildSeries 单源（序列名=节点名，
@@ -1444,10 +1459,12 @@ async function loadHist() {
     }
     hist.value = records;
   } catch (e: any) {
+    if (seq !== histSeq) return; // 旧拍失败不得覆盖新窗错误位
     histErr.value = friendlyEsError(String(e?.message ?? e));
   } finally {
-    histLoading.value = false;
+    if (seq === histSeq) histLoading.value = false; // 过期回包不熄新拍在途 spinner
   }
+  if (seq !== histSeq) return; // 旧拍不再拉治理条（新拍自会拉）
   /* R6 治理条独立拉取（失败静默隐藏，不影响曲线） */
   try {
     ring.value = await api.ringUsage();

@@ -1320,16 +1320,18 @@ const termsSuggest = useTermsSuggest(() => store.pickedIdx);
 const dslAssist = { fields: () => idxFields.value, terms: (f: string, p: string) => termsSuggest.suggestAsync(f, p) };
 async function preloadMapping() {
   if (!store.pickedIdx) return;
+  const idx = store.pickedIdx; // 选择源快照：切索引 watch/执行链/挂载链共用本函数，回包身份以此裁决
   ensureIdxFields(); // 并轨字段源同点预载（不 await——零降级，失败仅 builder 无候选）
   mappingState.value = 'loading';
   try {
-    const r = await api.clusterInspect(store.pickedIdx, 1);
+    const r = await api.clusterInspect(idx, 1);
+    if (store.pickedIdx !== idx) return; // 连切索引：旧索引回包丢弃，不得顶掉新索引字段
     const fields: string[] = [];
     const dates: string[] = [];
     const types: Record<string, string> = {};
     mappingProps.value = null;
-    for (const idx of Object.keys(r?.mappings || {})) {
-      const props = (r as any).mappings[idx]?.properties;
+    for (const idxKey of Object.keys(r?.mappings || {})) {
+      const props = (r as any).mappings[idxKey]?.properties;
       const got = walkMappingTypes(props);
       fields.push(...got.fields);
       dates.push(...got.dates);
@@ -1340,7 +1342,10 @@ async function preloadMapping() {
     mappingDateFields.value = [...new Set(dates)];
     mappingFieldTypes.value = types;
     mappingState.value = 'ok';
-  } catch { mappingState.value = 'err'; /* inspect 失败不阻塞字段面板，但要如实告知可重试 */ }
+  } catch {
+    if (store.pickedIdx !== idx) return; // 旧索引的失败不得把新索引 loading 打成 err
+    mappingState.value = 'err'; /* inspect 失败不阻塞字段面板，但要如实告知可重试 */
+  }
 }
 const fieldList = computed(() => {
   const set = new Set<string>(mappingFields.value);

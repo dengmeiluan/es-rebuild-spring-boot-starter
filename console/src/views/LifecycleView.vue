@@ -323,6 +323,7 @@ const curStepInfo = ref('');
  watch 恒看不到那次变更——回填处显式补发） */
 function prefillCurStep(i: string) {
   api.ilmExplain(i).then((r: any) => {
+    if (moveIndex.value.trim() !== i) return; // 输入已改：旧索引预填慢包丢弃（预填值直进推进请求体，回跳即错发）
     const info = r?.indices?.[i] || r;
     if (!info?.phase) return;
     curPhase.value = info.phase || 'hot';

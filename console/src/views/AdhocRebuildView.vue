@@ -1589,7 +1589,9 @@ const jobPoller = useAutoRefresh(async () => {
   const id = pollJobId.value;
   if (!id) return;
   try {
-    job.value = await api.adhoc.status(id);
+    const j = await api.adhoc.status(id);
+    if (pollJobId.value !== id) return; // 轮询目标已切：旧拍回包不得覆盖新作业状态
+    job.value = j;
     if (job.value.status !== 'RUNNING') {
       /* w80：终态不在页内 notify——全局 jobTracker 对同一终态跃迁已发通知（见过在跑→终态弹一次），
  页内再弹一次是双 toast。这里只停表 + 刷最近作业列表，状态行由上方 pill 呈现终态 */
@@ -1736,6 +1738,7 @@ function startPolling(jobId: string) {
 
 function stopPolling() {
   pollJobId.value = '';
+  watchSeq += 1; // 离开监控步/reset 后，在途 watchJob 回包整体过期——旧作业回包不得复活轮询
   jobPoller.stop();
 }
 
@@ -1905,13 +1908,17 @@ function roundSum(k: string): string {
   return has ? fmtNum(s) : '-';
 }
 
+let watchSeq = 0;
 function watchJob(jobId: string) {
+  const seq = ++watchSeq; // Eye 连点竞态锚：旧作业回包按世代丢弃（job 写点/轮询劫持/失败踢回三面同口径）
   step.value = 4;
   /* 失败兜底——此前请求失败静默，监控步整块空白用户被困 */
   api.adhoc.status(jobId).then(j => {
+    if (seq !== watchSeq) return; // 旧作业慢包不得顶掉新作业监控
     job.value = j;
     if (j.status === 'RUNNING') startPolling(jobId);
   }).catch((e: any) => {
+    if (seq !== watchSeq) return; // 旧作业失败不得把新监控页踢回首页
     store.notify('error', '拉取作业状态失败：' + friendlyApiError(e));
     step.value = 1;
   });
