@@ -8,6 +8,7 @@ import { copyText } from '../utils/format';
 import { verLt } from '../utils/version';
 import { readUrlHostTheme } from '../utils/hostTheme';
 import type { HostThemeMode } from '../utils/hostTheme';
+import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 
 export const useAppStore = defineStore('app', () => {
   /* 索引 */
@@ -70,10 +71,10 @@ export const useAppStore = defineStore('app', () => {
 
   function pick(idx: string) {
     pickedIdx.value = idx;
-    localStorage.setItem('es_picked', idx);
+    writeStoredRaw(localStorage, 'es_picked', idx);
     if (idx) {
       recentIdx.value = [idx, ...recentIdx.value.filter(x => x !== idx)].slice(0, 8);
-      localStorage.setItem(RECENT_KEY, JSON.stringify(recentIdx.value));
+      writeStoredRaw(localStorage, RECENT_KEY, JSON.stringify(recentIdx.value));
     }
   }
 
@@ -89,7 +90,7 @@ export const useAppStore = defineStore('app', () => {
      「明明选了生产还报宿主侧错误」的系统性根源之一。恢复时以 id 为准,name 必须依附 id。 */
   if (!target.value && targetName.value) {
     targetName.value = '';
-    try { localStorage.removeItem('es-console.target.name'); } catch { /* 忽略 */ }
+    removeStoredRaw(localStorage, 'es-console.target.name');
   }
   const conns = ref<ClusterConnView[]>([]);
   const isRemote = computed(() => !!target.value);
@@ -127,10 +128,10 @@ export const useAppStore = defineStore('app', () => {
     target.value = id;
     targetName.value = id ? name : '';
     setTargetId(id);
-    localStorage.setItem('es-console.target.name', targetName.value);
+    writeStoredRaw(localStorage, 'es-console.target.name', targetName.value);
     pick(''); // 切集群后旧 picked 索引大概率不存在，清空避免误导
     recentIdx.value = []; // ：最近索引同理随集群失效，避免跨集群误导
-    localStorage.removeItem(RECENT_KEY);
+    removeStoredRaw(localStorage, RECENT_KEY);
     esVersion.value = ''; // 版本随目标失效，等 loadIndices 成功后重新识别
     loadIndices();
   }
@@ -230,17 +231,17 @@ export const useAppStore = defineStore('app', () => {
       notifyLog.value.unshift({ kind, msg, ts: Date.now(), actions: actionLabels });
       if (notifyLog.value.length > NLOG_MAX) notifyLog.value.length = NLOG_MAX;
     }
-    try { localStorage.setItem(NLOG_KEY, JSON.stringify(notifyLog.value)); } catch { /* 存储满容忍 */ }
+    writeStoredRaw(localStorage, NLOG_KEY, JSON.stringify(notifyLog.value));
   }
   /* 未读只计 error/warning：成功类不值得亮红点逼人点开 */
   const notifyUnread = computed(() => notifyLog.value.filter(n => n.ts > notifySeenTs.value && (n.kind === 'error' || n.kind === 'warning')).length);
   function markNotifySeen() {
     notifySeenTs.value = Date.now();
-    try { localStorage.setItem(NSEEN_KEY, String(notifySeenTs.value)); } catch { /* 同上 */ }
+    writeStoredRaw(localStorage, NSEEN_KEY, String(notifySeenTs.value));
   }
   function clearNotifyLog() {
     notifyLog.value = [];
-    try { localStorage.removeItem(NLOG_KEY); } catch { /* 同上 */ }
+    removeStoredRaw(localStorage, NLOG_KEY);
   }
 
   /* 全局事件总线（轻量）：CmdPalette 动作 → 视图 */
@@ -263,7 +264,7 @@ export const useAppStore = defineStore('app', () => {
     try { return JSON.parse(localStorage.getItem(FAV_KEY) || '[]') as Favorite[]; }
     catch { return []; }
   }
-  function saveFav() { localStorage.setItem(FAV_KEY, JSON.stringify(favorites.value)); }
+  function saveFav() { writeStoredRaw(localStorage, FAV_KEY, JSON.stringify(favorites.value)); }
   function addFavorite(f: Omit<Favorite, 'id' | 'ts'> & { id?: string }): Favorite {
     const id = f.id || `fav-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
     const rec: Favorite = { id, ts: Date.now(), ...f };
@@ -325,7 +326,7 @@ export const useAppStore = defineStore('app', () => {
   applyTheme();
   function setTheme(t: 'dark' | 'light' | 'auto' | 'host') {
     settings.value.theme = t;
-    localStorage.setItem('es_theme', t);
+    writeStoredRaw(localStorage, 'es_theme', t);
     applyTheme();
   }
   function cycleTheme() {
@@ -341,11 +342,11 @@ export const useAppStore = defineStore('app', () => {
   }
 
   function saveSettings() {
-    localStorage.setItem('es_hist_size', String(settings.value.histSize));
-    localStorage.setItem('es_auto_agg', settings.value.autoAgg ? '1' : '0');
-    localStorage.setItem('es_code_lang', settings.value.defaultLang);
-    localStorage.setItem('es_density', settings.value.density);
-    localStorage.setItem('es_theme', settings.value.theme);
+    writeStoredRaw(localStorage, 'es_hist_size', String(settings.value.histSize));
+    writeStoredRaw(localStorage, 'es_auto_agg', settings.value.autoAgg ? '1' : '0');
+    writeStoredRaw(localStorage, 'es_code_lang', settings.value.defaultLang);
+    writeStoredRaw(localStorage, 'es_density', settings.value.density);
+    writeStoredRaw(localStorage, 'es_theme', settings.value.theme);
     applyDensity();
     applyTheme();
   }
@@ -372,7 +373,7 @@ export const useAppStore = defineStore('app', () => {
   function toggleNav() {
     /* 从当前实际形态取反并固化，符合「我点了就该变」的直觉（不留 auto 反弹） */
     settings.value.navCollapse = navIcon.value ? 'off' : 'on';
-    localStorage.setItem('es_nav_collapse', settings.value.navCollapse);
+    writeStoredRaw(localStorage, 'es_nav_collapse', settings.value.navCollapse);
   }
   /* 完全隐藏侧栏（dbx Mod+B 对位——查询/索引控制台全屏体验）。
      独立于图标折叠档：hidden 时侧栏整体移除，主区占满；持久化（dbx 同款跨会话记忆），
@@ -380,7 +381,7 @@ export const useAppStore = defineStore('app', () => {
   const navHidden = ref(localStorage.getItem('es_nav_hidden') === '1');
   function setNavHidden(v: boolean) {
     navHidden.value = v;
-    localStorage.setItem('es_nav_hidden', v ? '1' : '0');
+    writeStoredRaw(localStorage, 'es_nav_hidden', v ? '1' : '0');
   }
   function toggleNavHidden() {
     setNavHidden(!navHidden.value);

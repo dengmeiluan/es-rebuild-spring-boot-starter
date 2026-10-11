@@ -1,4 +1,5 @@
 import { ref, type Ref } from 'vue';
+import { writeStoredRaw } from '../utils/safeJson';
 
 /* 页大小共享记忆统一件——es_pager_size 全站同键（ IndexHub docs 表 /
    查询 tab 已用此键；DslQueryView 、LuceneQueryView 遗留清、
@@ -30,7 +31,7 @@ export function readPagerSize(opts?: PagerSizeOpts): number {
 
 /** 写共享页大小（一次调节全站生效；per-view 的 legacyKey/def 不参与写侧） */
 export function writePagerSize(v: number): void {
-  localStorage.setItem(KEY, String(v || DEF));
+  writeStoredRaw(localStorage, KEY, String(v || DEF));
 }
 
 /** 页大小记忆 Ref：set 时同步落共享键，翻页/重查副作用由调用方按表接线 */

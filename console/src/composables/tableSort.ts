@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue';
 import { typeTierSuppressed } from '../utils/semanticGuard';
+import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 
 /* 横切设施——通用表格列排序。
    numeric()：把 "1.2gb" / "95%" / "3,943" 等展示值还原为可比较数值；非数值返回 NaN。
@@ -83,13 +84,13 @@ export function useSortChain(opts: UseSortChainOpts) {
     const base = opts.lsBase();
     if (!base) return;
     if (sortSpec.value.length) {
-      localStorage.setItem(base + ':m', JSON.stringify(sortSpec.value));
-      localStorage.setItem(base + ':f', sortSpec.value[0].f);
-      localStorage.setItem(base + ':d', sortSpec.value[0].d);
+      writeStoredRaw(localStorage, base + ':m', JSON.stringify(sortSpec.value));
+      writeStoredRaw(localStorage, base + ':f', sortSpec.value[0].f);
+      writeStoredRaw(localStorage, base + ':d', sortSpec.value[0].d);
     } else {
-      localStorage.removeItem(base + ':m');
-      localStorage.removeItem(base + ':f');
-      localStorage.removeItem(base + ':d');
+      removeStoredRaw(localStorage, base + ':m');
+      removeStoredRaw(localStorage, base + ':f');
+      removeStoredRaw(localStorage, base + ':d');
     }
   }
 

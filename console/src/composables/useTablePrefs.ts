@@ -1,4 +1,5 @@
 import { ref, computed, watch, type Ref } from 'vue';
+import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 
 /*  表格态偏好记忆（列选/密度/列宽三件套），从 ResultTable 的
    索引维度口径（T21）抽出，供轻量只读表（QueryResultTable）复用；ResultTable
@@ -44,7 +45,7 @@ export function useTablePrefs(
   const rowH = ref<RowH>(readRowH(dimension.value));
   function setRowH(v: RowH) {
     rowH.value = v;
-    localStorage.setItem('es_tbl_rowh', v);
+    writeStoredRaw(localStorage, 'es_tbl_rowh', v);
   }
   /* 行高三档循环+档位中文名收编进内核——RT/QRT 工具条同一颗「行高」钮
      同一循环序（紧凑→标准→宽松）；此前 RT 本地实现、QRT 只有 dense 两态且钮是僵尸
@@ -56,7 +57,7 @@ export function useTablePrefs(
   }
   function toggleDense() {
     dense.value = !dense.value;
-    localStorage.setItem('es_tbl_dense', dense.value ? '1' : '0');
+    writeStoredRaw(localStorage, 'es_tbl_dense', dense.value ? '1' : '0');
   }
 
   /* ── 列选 ── */
@@ -79,14 +80,14 @@ export function useTablePrefs(
   }
   watch(allCols, restoreCols, { immediate: true });
   function persistCols() {
-    if (dimension.value) localStorage.setItem('es_cols:' + dimension.value, JSON.stringify(visibleCols.value));
+    if (dimension.value) writeStoredRaw(localStorage, 'es_cols:' + dimension.value, JSON.stringify(visibleCols.value));
   }
   watch(visibleCols, persistCols, { deep: true });
   /* ── 转置（ ：ResultTable 单文档平铺查看偏好，T21 同口径第四件） ── */
   const transpose = ref(readFlag(dimension.value));
   function toggleTranspose() {
     transpose.value = !transpose.value;
-    if (dimension.value) localStorage.setItem('es_tbl_transpose:' + dimension.value, transpose.value ? '1' : '0');
+    if (dimension.value) writeStoredRaw(localStorage, 'es_tbl_transpose:' + dimension.value, transpose.value ? '1' : '0');
   }
   function readFlag(d: string | null): boolean {
     if (!d) return false;
@@ -105,7 +106,7 @@ export function useTablePrefs(
   function setTransposeN(n: number) {
     if (!TRANSPOSE_N.includes(n)) return;
     transposeN.value = n;
-    if (dimension.value) localStorage.setItem('es_tbl_transpose_n:' + dimension.value, String(n));
+    if (dimension.value) writeStoredRaw(localStorage, 'es_tbl_transpose_n:' + dimension.value, String(n));
   }
 
   /* ── 列宽（拖拽表头右缘调整，双击柄重置；按维度持久化+恢复） ── */
@@ -144,7 +145,7 @@ export function useTablePrefs(
     return w ? { width: w + 'px', maxWidth: w + 'px', minWidth: w + 'px' } : undefined;
   }
   watch(colWidths, (v) => {
-    if (dimension.value) localStorage.setItem('es_tbl_w:' + dimension.value, JSON.stringify(v));
+    if (dimension.value) writeStoredRaw(localStorage, 'es_tbl_w:' + dimension.value, JSON.stringify(v));
   }, { deep: true });
 
   /* ── 维度切换（换索引/换存储键）：全部偏好整体重读该维度记忆 ── */
@@ -172,7 +173,7 @@ export function useTablePrefs(
   const freezeFirst = computed(() => freezeN.value > 0);
   function setFreezeN(n: number) {
     freezeN.value = Math.max(0, n);
-    if (dimension.value) localStorage.setItem('es_tbl_freeze_n:' + dimension.value, String(freezeN.value));
+    if (dimension.value) writeStoredRaw(localStorage, 'es_tbl_freeze_n:' + dimension.value, String(freezeN.value));
   }
   function toggleFreezeFirst() {
     setFreezeN(freezeN.value > 0 ? 0 : 1);
@@ -222,10 +223,10 @@ export function useTablePrefs(
       transposeN: transposeN.value,
       freezeN: freezeN.value,
     };
-    localStorage.setItem(presetSlotKey(d, name), JSON.stringify(snap));
+    writeStoredRaw(localStorage, presetSlotKey(d, name), JSON.stringify(snap));
     const next = readPresets(d).filter(n => n !== name);
     next.push(name);
-    localStorage.setItem(presetListKey(d), JSON.stringify(next));
+    writeStoredRaw(localStorage, presetListKey(d), JSON.stringify(next));
     presets.value = next;
     return true;
   }
@@ -243,9 +244,9 @@ export function useTablePrefs(
     colWidths.value = { ...snap.widths };
     setRowH(snap.rowH);
     dense.value = !!snap.dense;
-    localStorage.setItem('es_tbl_dense', dense.value ? '1' : '0');
+    writeStoredRaw(localStorage, 'es_tbl_dense', dense.value ? '1' : '0');
     transpose.value = !!snap.transpose;
-    localStorage.setItem('es_tbl_transpose:' + d, transpose.value ? '1' : '0');
+    writeStoredRaw(localStorage, 'es_tbl_transpose:' + d, transpose.value ? '1' : '0');
     setTransposeN(snap.transposeN); // 档位外值被 guard 丢弃=安全
     setFreezeN(snap.freezeN);
     return true;
@@ -256,8 +257,8 @@ export function useTablePrefs(
     const list = readPresets(d);
     if (!list.includes(name)) return false;
     const next = list.filter(n => n !== name);
-    localStorage.setItem(presetListKey(d), JSON.stringify(next));
-    localStorage.removeItem(presetSlotKey(d, name));
+    writeStoredRaw(localStorage, presetListKey(d), JSON.stringify(next));
+    removeStoredRaw(localStorage, presetSlotKey(d, name));
     presets.value = next;
     return true;
   }

@@ -1,5 +1,5 @@
 /** API 层：fetch 封装 + 全部后端端点 */
-import { parseJsonSafe } from './utils/safeJson';
+import { parseJsonSafe, writeStoredRaw, removeStoredRaw } from './utils/safeJson';
 /* 宿主可能配了 servlet context-path（如 宿主的 context-path）。
    console 固定挂在 {ctx}/console/ 下且路由是 hash 模式，pathname 不含页内路由，
    故从 pathname 截取 /console/ 之前的段即为 context-path（bond-basic 等无 ctx 宿主得 ''，行为不变）。 */
@@ -13,8 +13,8 @@ const XB = `${CTX}/internal/es/xmigrate`;
 /* ==================== ：控制台鉴权 token ==================== */
 const TOKEN_KEY = 'es-console.auth.token';
 export const getToken = () => localStorage.getItem(TOKEN_KEY) || '';
-export const setToken = (t: string) => localStorage.setItem(TOKEN_KEY, t);
-export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+export const setToken = (t: string) => writeStoredRaw(localStorage, TOKEN_KEY, t);
+export const clearToken = () => removeStoredRaw(localStorage, TOKEN_KEY);
 /** 鉴权头（裸 fetch 场景复用，如 hotThreads） */
 const authHeaders = (): Record<string, string> => {
   const t = getToken();
@@ -35,8 +35,8 @@ const hostHeaders = (): Record<string, string> =>
 const TARGET_KEY = 'es-console.target';
 export const getTarget = () => localStorage.getItem(TARGET_KEY) || '';
 export const setTargetId = (id: string) => {
-  if (id) localStorage.setItem(TARGET_KEY, id);
-  else localStorage.removeItem(TARGET_KEY);
+  if (id) writeStoredRaw(localStorage, TARGET_KEY, id);
+  else removeStoredRaw(localStorage, TARGET_KEY);
 };
 const targetHeaders = (): Record<string, string> => {
   const t = getTarget();

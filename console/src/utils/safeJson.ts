@@ -91,3 +91,32 @@ export function readStoredJson<T>(
     return fallback;
   }
 }
+
+/** 存储通道防御性写入（readStoredJson 的写侧对称件）。
+   setItem/removeItem 在隐私模式/配额满（QuotaExceededError）会抛——共享内核的
+   偏好/草稿/收藏回放/token 写盘失败不得打断主流程：吞掉异常回执布尔，
+   内存态照常可用（存储不可用 ≠ 功能不可用）。 */
+export function writeStoredRaw(
+  storage: Pick<Storage, 'setItem'>,
+  key: string,
+  value: string,
+): boolean {
+  try {
+    storage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function removeStoredRaw(
+  storage: Pick<Storage, 'removeItem'>,
+  key: string,
+): boolean {
+  try {
+    storage.removeItem(key);
+    return true;
+  } catch {
+    return false;
+  }
+}

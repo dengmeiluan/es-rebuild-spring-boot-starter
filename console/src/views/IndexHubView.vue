@@ -51,7 +51,7 @@
                    别名（带 ?idx= 深链直达该索引分组）与 Mapping 为纯读入口一并上头部
                    （Mapping 原入口只藏在 tab tip 小字里，2 击） -->
               <button class="btn sm" @click="goto('/index-settings')"><Sliders :size="11" /> 改 Setting</button>
-              <button class="btn sm" @click="goto('/aliases?idx=' + cur)"><Link2 :size="11" /> 别名</button>
+              <button class="btn sm" @click="goto('/aliases?idx=' + encodeURIComponent(cur))"><Link2 :size="11" /> 别名</button>
               <button class="btn sm" @click="goto('/mapping')"><FolderTree :size="11" /> Mapping</button>
               <button v-if="canRebuild" class="btn sm" @click="goto('/adhoc-rebuild')"><Hammer :size="11" /> 重建</button>
               <!-- 头部「删除索引」入口退役（与运维操作危险区双入口收敛）——
@@ -67,7 +67,7 @@
                 <i>别名</i>
                 <template v-if="curAliases.length"><b>{{ curAliases.slice(0, 3).map(a => a.alias).join('、') }}</b><span v-if="curAliases.length > 3" class="dim"> +{{ curAliases.length - 3 }}</span></template>
                 <span v-else class="dim">无</span>
-                <a class="ih-link" role="link" tabindex="0" @click="goto('/aliases?idx=' + cur)" @keydown.enter.prevent="goto('/aliases?idx=' + cur)">管控</a>
+                <a class="ih-link" role="link" tabindex="0" @click="goto('/aliases?idx=' + encodeURIComponent(cur))" @keydown.enter.prevent="goto('/aliases?idx=' + encodeURIComponent(cur))">管控</a>
               </span>
             </MetaStrip>
           </div>
@@ -1698,7 +1698,7 @@ function favHistRow(it: { mode?: string; query: string; index?: string; ts?: num
     const r = JSON.parse(localStorage.getItem('es_query_saved') || '[]');
     if (Array.isArray(r)) saved = r;
   } catch { /* 坏值按空处理 */ }
-  const name = '收藏 ' + new Date(it.ts ?? Date.now()).toLocaleString();
+  const name = '收藏 ' + new Date(it.ts ?? Date.now()).toLocaleString('zh-CN', { hour12: false });
   if (saved.some(s => s.name === name)) { store.notify('info', '同名收藏已存在，未重复写入'); return; }
   saved.unshift({ dsl: it.query, ts: it.ts ?? Date.now(), idx: it.index, name });
   try {

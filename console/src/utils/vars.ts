@@ -2,6 +2,7 @@
  * Console Variables：${var} 插值（Kibana Console 同款）。
  * 规则：带引号 "${var}" → 字符串替换；裸 ${var} → 尝试 JSON.parse（数组/对象/数字注入），失败按字符串。
  */
+import { writeStoredRaw } from './safeJson';
 const KEY = 'es_vars';
 
 export function loadVars(): Record<string, string> {
@@ -9,7 +10,7 @@ export function loadVars(): Record<string, string> {
 }
 
 export function saveVars(vars: Record<string, string>) {
-  localStorage.setItem(KEY, JSON.stringify(vars));
+  writeStoredRaw(localStorage, KEY, JSON.stringify(vars));
 }
 
 export function applyVars(text: string, vars?: Record<string, string>): string {

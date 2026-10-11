@@ -44,8 +44,9 @@ describe('组件统一收编扫描（迁移面静态断言）', () => {
     expect(indexHub).not.toMatch(/\.ih-meta[\s{.,:]/);
     expect(indexHub).not.toContain('.ih-meta-u');
     expect(indexHub).toContain('<MetaStrip class="ih-meta-pos"');
-    /* 五百三十批随迁：管控跳转带 ?idx= 深链（别名页消费后置顶+强调该索引所在分组） */
-    expect(indexHub).toContain("goto('/aliases?idx=' + cur)");
+    /* 五百三十批随迁：管控跳转带 ?idx= 深链（别名页消费后置顶+强调该索引所在分组）；
+       852 批随迁：深链值 encodeURIComponent（localeEncodeGuard852 E 组同域） */
+    expect(indexHub).toContain("goto('/aliases?idx=' + encodeURIComponent(cur))");
   });
 
   it('LiveDashboard 全屏壳统一 FocusableSurface headless（自建 .ld-page.fs 退役）', () => {

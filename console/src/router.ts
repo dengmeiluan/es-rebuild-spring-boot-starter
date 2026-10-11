@@ -3,6 +3,7 @@ import { legacyRedirect, LEGACY_QUERY_PATHS } from './utils/queryHub';
 import { useAuthStore } from './stores/auth';
 import { useAppStore } from './stores/app';
 import pagesContract from '../../src/main/resources/META-INF/es-console-pages.json';
+import { writeStoredRaw, removeStoredRaw } from './utils/safeJson';
 
 /* 侧边栏分组与导航项（2.5.0 起）从页面契约 es-console-pages.json 派生——
    契约是 Java 拦截器 / 本前端 / 宿主菜单注册器三端的唯一事实源，禁止回到手工维护（防漂移）。
@@ -188,7 +189,7 @@ router.onError((err, to) => {
   const msg = String((err as any)?.message || err);
   if (!/dynamically imported module|Loading chunk|module script failed/i.test(msg)) return;
   if (sessionStorage.getItem(CHUNK_RETRY_KEY) === '1') return;
-  sessionStorage.setItem(CHUNK_RETRY_KEY, '1');
+  writeStoredRaw(sessionStorage, CHUNK_RETRY_KEY, '1');
   if (to?.fullPath) location.hash = to.fullPath;
   location.reload();
 });
@@ -203,7 +204,7 @@ router.beforeEach((to) => {
 /* 标签页标题随页面切换，多开标签可区分 */
 router.afterEach((to) => {
   /* 导航成功即清自愈标记，下次部署后仍可再自愈 */
-  sessionStorage.removeItem(CHUNK_RETRY_KEY);
+  removeStoredRaw(sessionStorage, CHUNK_RETRY_KEY);
   const item = NAV_ITEMS.find(n => n.path === to.path);
   document.title = (item ? item.name + ' · ' : '') + 'ES Console';
 });

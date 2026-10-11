@@ -21,8 +21,9 @@ const ubqSrc = readFileSync(join(SRC, 'views/UpdateByQueryView.vue'), 'utf-8');
 
 describe('收藏回放 carry 键契约（八十二批）', () => {
   it('favReplay 写新 carry 键，旧死键清零（无任何 setItem 写旧命名空间）', () => {
-    expect(replaySrc).toMatch(/sessionStorage\.setItem\('es-console\.bulk\.carry', p\.body\)/);
-    expect(replaySrc).toMatch(/sessionStorage\.setItem\('es-console\.ubq\.carry', p\.body\)/);
+    /* 852 批随迁：写侧走 writeStoredRaw 单源（storageWriteGuard852 同域），键契约不变 */
+    expect(replaySrc).toMatch(/writeStoredRaw\(sessionStorage, 'es-console\.bulk\.carry', p\.body\)/);
+    expect(replaySrc).toMatch(/writeStoredRaw\(sessionStorage, 'es-console\.ubq\.carry', p\.body\)/);
     /* 注释可提及历史键名,但禁止任何对旧命名空间的写入 */
     expect(replaySrc).not.toMatch(/setItem\('es-console\.draft\./);
   });

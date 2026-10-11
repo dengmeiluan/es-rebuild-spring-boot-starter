@@ -1,5 +1,6 @@
 import { ref, computed, watch, type Ref, type ComputedRef } from 'vue';
 import type { DistBin } from '../utils/distBins';
+import { writeStoredRaw } from '../utils/safeJson';
 
 /* ═══  W-A：TableShell 第二刀——双内核「聚合 footer 行」开关与 Σ/avg 底行单一出处 ═══
    QRT（）≡ RT（）逐字同构段抽取；唯一差=列源（QRT shownCols vs RT visibleCols）
@@ -37,7 +38,7 @@ export function useAggRow(
   watch(dimension, (d) => { aggOn.value = readAggPref(d); });
   function toggleAggRow() {
     aggOn.value = !aggOn.value;
-    if (dimension.value) localStorage.setItem('es_tbl_agg:' + dimension.value, aggOn.value ? '1' : '0');
+    if (dimension.value) writeStoredRaw(localStorage, 'es_tbl_agg:' + dimension.value, aggOn.value ? '1' : '0');
   }
   /* 数值列 Σ/avg 底行数据（列=renderCols 所见即所聚合，与列详情弹窗同一数字） */
   const aggFoot = computed<Record<string, AggNum> | null>(() => {

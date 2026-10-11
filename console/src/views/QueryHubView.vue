@@ -354,7 +354,7 @@ function favHistRow(it: { mode?: string; query: string; index?: string; ts?: num
     const r = JSON.parse(localStorage.getItem('es_query_saved') || '[]');
     if (Array.isArray(r)) saved = r;
   } catch { /* 坏值按空处理 */ }
-  const name = '收藏 ' + new Date(it.ts ?? Date.now()).toLocaleString();
+  const name = '收藏 ' + new Date(it.ts ?? Date.now()).toLocaleString('zh-CN', { hour12: false });
   if (saved.some(s => s.name === name)) { store.notify('info', '同名收藏已存在，未重复写入'); return; }
   saved.unshift({ dsl: it.query, ts: it.ts ?? Date.now(), idx: it.index, name });
   try {
