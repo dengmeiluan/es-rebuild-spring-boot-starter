@@ -1,3 +1,5 @@
+import { removeStoredRaw, writeStoredRaw } from '../utils/safeJson';
+
 /**
  *  W-D：跨页一次性值携带（link-carry）统一件。
  * 键约定 es-console.link.{key}，sessionStorage 承载，JSON 序列化，取后即焚
@@ -8,7 +10,7 @@ export function useLinkCarry<T>(key: string) {
   const K = 'es-console.link.' + key;
 
   function send(v: T): void {
-    try { sessionStorage.setItem(K, JSON.stringify(v)); } catch { /* 存储不可用：静默 */ }
+    writeStoredRaw(sessionStorage, K, JSON.stringify(v));
   }
 
   function receive(): T | null {
@@ -16,7 +18,7 @@ export function useLinkCarry<T>(key: string) {
       const raw = sessionStorage.getItem(K);
       if (raw == null) return null;
       /* 先焚再解：解析失败值也不得残留，防下一次进入误吃陈稿 */
-      sessionStorage.removeItem(K);
+      removeStoredRaw(sessionStorage, K);
       return JSON.parse(raw) as T;
     } catch { return null; }
   }

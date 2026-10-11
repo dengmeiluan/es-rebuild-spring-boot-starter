@@ -1,3 +1,5 @@
+import { writeStoredRaw } from '../utils/safeJson';
+
 import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
 import { api } from '../api';
@@ -86,11 +88,9 @@ export const useJobTrackerStore = defineStore('jobTracker', () => {
   }
 
   function persist() {
-    try {
-      sessionStorage.setItem(seenKey(), JSON.stringify({
-        running: [...seenRunning], notified: [...notified], labels: seenLabels, done: recentDone.value,
-      }));
-    } catch { /* 存储满/隐私模式容忍 */ }
+    writeStoredRaw(sessionStorage, seenKey(), JSON.stringify({
+      running: [...seenRunning], notified: [...notified], labels: seenLabels, done: recentDone.value,
+    }));
   }
 
   restore();

@@ -1,6 +1,7 @@
 import { ref, watch, onActivated, type Ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAppStore } from '../stores/app';
+import { writeStoredRaw } from '../utils/safeJson';
 
 /*  §8.3：横切设施——URL 状态同步 + 偏好持久化。
    useUrlState：把视图关键状态写进 hash query，刷新/分享后现场可复原；
@@ -82,7 +83,7 @@ export function usePref<T>(key: string, defVal: T): Ref<T> {
   } catch { /* 坏值回落默认 */ }
   const state = ref(init) as Ref<T>;
   watch(state, v => {
-    try { localStorage.setItem(lsKey, JSON.stringify(v)); } catch { /* 存储满/隐私模式容忍 */ }
+    writeStoredRaw(localStorage, lsKey, JSON.stringify(v));
   }, { deep: true });
   return state;
 }

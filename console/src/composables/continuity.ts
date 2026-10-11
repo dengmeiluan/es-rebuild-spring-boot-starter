@@ -1,4 +1,5 @@
 import { NAV_ITEMS } from '../router';
+import { writeStoredRaw } from '../utils/safeJson';
 
 /* 工作现场恢复——路由每次切换都记录「最后停留的现场」（fullPath 含 query，
    配合全站 URL 即现场的约定，query/idx/草稿键都在里面）。
@@ -15,8 +16,7 @@ export function saveLastRoute(fullPath: string) {
   const path = fullPath.split('?')[0];
   if (path === '/' || path === '/overview') return;
   const name = NAV_ITEMS.find(n => n.path === path)?.name || path;
-  try { localStorage.setItem(LAST_KEY, JSON.stringify({ fullPath, name, ts: Date.now() } satisfies LastRoute)); }
-  catch { /* 存储满/隐私模式容忍 */ }
+  writeStoredRaw(localStorage, LAST_KEY, JSON.stringify({ fullPath, name, ts: Date.now() } satisfies LastRoute));
 }
 
 export function readLastRoute(): LastRoute | null {

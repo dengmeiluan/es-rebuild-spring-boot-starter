@@ -4,6 +4,7 @@
    （splitMark 纯函数复用，不开 v-html 注入面，同 MarkText 手法）。
    rank 规则（FieldPicker 既有语义原样下沉）：精确=0 > 前缀=1 > 包含=2，同级字母序。 */
 import { ref } from 'vue';
+import { writeStoredRaw } from './safeJson';
 /* 件⑤：splitMark 改从 utils/markSeg 引（原反向 import composables/useGridSearch
    的依赖倒挂退役；useGridSearch re-export 同一函数引用，行为零漂移） */
 import { splitMark } from './markSeg';
@@ -155,7 +156,7 @@ export function loadRecentFields(idx: string): string[] {
 export function rememberRecentField(idx: string, field: string): void {
   const key = recentKeyOf(idx);
   const next = [field, ...readArr(key).filter(x => x !== field)].slice(0, RECENT_CAP);
-  try { localStorage.setItem(key, JSON.stringify(next)); } catch { /* 隐私模式/存储满：记忆失败不影响选择 */ }
+  writeStoredRaw(localStorage, key, JSON.stringify(next));
 }
 /** 最近使用的一个字段（defaultLeaf 记忆用）；无记录 null */
 export function lastRecentField(idx: string): string | null {

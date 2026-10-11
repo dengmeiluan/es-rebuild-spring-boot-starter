@@ -1,3 +1,5 @@
+import { writeStoredRaw } from '../utils/safeJson';
+
 /* W2 值建议：keyword 字段 terms agg top 20（searchRaw 出口，D2 首选分支成立）。
    300ms 防抖 + 序号守卫（in-flight 切换丢弃旧响应）+ TTL 5min 缓存（上限 200 条：超限时先清过期、再逐最旧）；失败静默（不打断输入流）。
    prefix 按 Lucene RegExp 元字符转义后拼 include；空前缀整体省略 include（语义=top 20 by doc_count，省高基数字段的正则求值）。
@@ -47,7 +49,7 @@ function readStash(key: string): string[] {
   } catch { return []; }
 }
 function writeStash(key: string, values: string[]) {
-  try { localStorage.setItem(key, JSON.stringify(values.slice(0, STASH_CAP))); } catch { /* 持久档失败不影响主流程 */ }
+  writeStoredRaw(localStorage, key, JSON.stringify(values.slice(0, STASH_CAP)));
 }
 
 /* 工厂可选第二参 types——字段类型表读源（消费方持有字段表时传入，

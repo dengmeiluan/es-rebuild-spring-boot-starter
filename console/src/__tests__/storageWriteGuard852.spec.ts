@@ -12,10 +12,12 @@
  * W 组：行为锁——配额抛写环境下内核写路径零抛、内存态照常推进（七链抽针：
  *       单源单元 + app/useTablePrefs/usePagerSize/vars/api/favReplay）。
  * G 组：全站看守——kernel 层（composables/stores/utils + api.ts + router.ts）
- *       裸写文件集合冻结=已护 11 文件正面清单（多行/同行 try 在册）；
- *       九矿文件裸写恒零 + 单源接线在场；新 kernel 文件不得引入裸写。
+ *       裸写文件集合恒零（原 11 文件正面清单已随 854 批收编清零、豁免面
+ *       退役）；九矿文件裸写恒零 + 单源接线在场；新 kernel 文件不得引入。
  *       视图/组件层 89 位点/32 文件已随 853 批收编单源，看守由
- *       viewStorageGuard853 G3（views/components 裸写恒零）承接。
+ *       viewStorageGuard853 G3（views/components 裸写恒零）承接；
+ *       kernel 残量 11 文件 18 位点已随 854 批收编，看守由
+ *       kernelStorageGuard854 G 组（kernel 裸写恒零+W 组四链行为锁）承接。
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
@@ -68,20 +70,11 @@ const MINE_FILES = [
   'utils/vars.ts',
 ];
 
-/* 已护正面清单（852 时点实勘：全部 try 在册）——kernel 层裸写文件只减不增 */
-const FROZEN_GUARDED = [
-  'composables/confirm.ts',
-  'composables/continuity.ts',
-  'composables/urlState.ts',
-  'composables/useLayoutPreferences.ts',
-  'composables/useLinkCarry.ts',
-  'composables/useScopedDraft.ts',
-  'composables/useTermsSuggest.ts',
-  'utils/fieldSearch.ts',
-  'stores/queryHistory.ts',
-  'stores/liveMonitor.ts',
-  'stores/jobTracker.ts',
-];
+/* 已护正面清单（852 时点实勘 11 文件 try 在册）——854 批已全部收编
+ * writeStoredRaw/removeStoredRaw 单源（剥壳 15+保壳换芯 1+直换 2），清单清零、
+ * 豁免面退役：下方 G2 断言语义随之升格为「kernel 层裸写文件集合恒零」，看守
+ * 由 kernelStorageGuard854 G 组常驻承接（W 组行为锁四链抽针同在彼处）。 */
+const FROZEN_GUARDED: string[] = [];
 
 describe('storageWriteGuard852 · 存储通道写入防御', () => {
   beforeEach(() => {

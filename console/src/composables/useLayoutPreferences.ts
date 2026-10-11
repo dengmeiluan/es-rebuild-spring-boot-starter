@@ -5,6 +5,7 @@ import {
   type PaneConstraint,
   type ViewportProfile,
 } from '../utils/layout';
+import { removeStoredRaw, writeStoredRaw } from '../utils/safeJson';
 
 export interface LayoutScope {
   target: string;
@@ -85,24 +86,16 @@ export function createLayoutPreferences(
     }
     /* 迁移成功或确认无旧值后清除遗留键（此前只读不删，localStorage 永久残留） */
     if (legacyRaw != null || migrated) {
-      try { localStorage.removeItem('es_console_qb_split'); } catch { /* 隐私模式容忍 */ }
+      removeStoredRaw(localStorage, 'es_console_qb_split');
     }
   }
 
   function persist(next: LayoutSnapshot) {
-    try {
-      localStorage.setItem(key, JSON.stringify(next));
-    } catch {
-      // Private mode or quota exhaustion leaves the reactive in-memory state usable.
-    }
+    writeStoredRaw(localStorage, key, JSON.stringify(next));
   }
 
   function writeSnapshot(storageKey: string, next: LayoutSnapshot) {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(next));
-    } catch {
-      // Storage errors are intentionally non-blocking for the console.
-    }
+    writeStoredRaw(localStorage, storageKey, JSON.stringify(next));
   }
 
   function readLegacySplit(): string | null {
@@ -133,7 +126,7 @@ export function createLayoutPreferences(
 
   function reset() {
     snapshot.value = EMPTY_SNAPSHOT();
-    try { localStorage.removeItem(key); } catch { /* in-memory reset still applies */ }
+    removeStoredRaw(localStorage, key);
   }
 
   return { key, snapshot, setPane, restorePane, reset };

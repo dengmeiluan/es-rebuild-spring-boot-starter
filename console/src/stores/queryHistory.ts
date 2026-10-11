@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
+import { writeStoredRaw } from '../utils/safeJson';
 
 /* 跨模式查询历史——六个查询通道共用一份带 mode 维度的历史。
    此前只有 DSL 有历史（es_query_hist，条目无 mode 字段），其余通道零历史、零跨模式。
@@ -57,7 +58,7 @@ function migrateIfNeeded(): QueryHistItem[] | null {
   } catch { /* 坏 v2 按空处理，允许迁移 */ }
 
   /* 标记已尝试迁移（无论旧数据是否可用），避免坏旧值导致每次 load 重试 */
-  try { localStorage.setItem(MIGRATED_KEY, '1'); } catch { /* 存储满容忍 */ }
+  writeStoredRaw(localStorage, MIGRATED_KEY, '1');
 
   try {
     const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || '[]');
@@ -76,7 +77,7 @@ function migrateIfNeeded(): QueryHistItem[] | null {
     }
     if (!mapped.length) return null;
     const out = mapped.slice(0, MAX);
-    localStorage.setItem(KEY, JSON.stringify(out));
+    writeStoredRaw(localStorage, KEY, JSON.stringify(out));
     return out;
   } catch { return null; }
 }
@@ -98,7 +99,7 @@ export const useQueryHistoryStore = defineStore('queryHistory', () => {
   const items = ref<QueryHistItem[]>(load());
 
   function persist() {
-    try { localStorage.setItem(KEY, JSON.stringify(items.value)); } catch { /* 存储满容忍 */ }
+    writeStoredRaw(localStorage, KEY, JSON.stringify(items.value));
   }
 
   /** 记录一次查询执行：同 mode+query+index 去重（移到最前并刷新 ts），否则 unshift 新条目，上限 100 */

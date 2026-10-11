@@ -1,4 +1,5 @@
 import { reactive } from 'vue';
+import { writeStoredRaw } from '../utils/safeJson';
 
 /**
  *  §8.1：全局确认服务——原生 window.confirm() 全站禁用后的唯一替代。
@@ -58,8 +59,7 @@ export function isConfirmSkipped(title: string): boolean {
 }
 
 export function rememberConfirmSkip(title: string): void {
-  try { sessionStorage.setItem(SKIP_PREFIX + confirmTitleHash(title), '1'); }
-  catch { /* 存储满/隐私模式：跳过失效退回逐次确认，不打扰主流程 */ }
+  writeStoredRaw(sessionStorage, SKIP_PREFIX + confirmTitleHash(title), '1');
 }
 
 let resolver: ((v: boolean) => void) | null = null;

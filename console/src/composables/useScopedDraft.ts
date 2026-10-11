@@ -1,4 +1,5 @@
 import { ref, watch, type Ref } from 'vue';
+import { removeStoredRaw, writeStoredRaw } from '../utils/safeJson';
 
 /* 草稿持久化统一机制（全控制台治理轮）：
    — 维度隔离：key = route + target + index + mode + field，切集群/索引不串稿；
@@ -43,10 +44,8 @@ function readRaw(key: string): string | null {
   try { return sessionStorage.getItem(key); } catch { return null; }
 }
 function writeRaw(key: string, v: string | null): void {
-  try {
-    if (v == null) sessionStorage.removeItem(key);
-    else sessionStorage.setItem(key, v);
-  } catch { /* 存储满/隐私模式容忍：内存态仍可用 */ }
+  if (v == null) removeStoredRaw(sessionStorage, key);
+  else writeStoredRaw(sessionStorage, key, v);
 }
 
 interface ScopedDraft {

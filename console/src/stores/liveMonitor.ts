@@ -1,3 +1,5 @@
+import { writeStoredRaw } from '../utils/safeJson';
+
 import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
 import { api } from '../api';
@@ -133,17 +135,15 @@ const nodeSeries = ref<Record<string, NodeSeries>>({});
   }
 
   function snapshot() {
-    try {
-      localStorage.setItem(snapKey(), JSON.stringify({
-        at: Date.now(),
-        qps: qpsSeries.value, idx: indexRateSeries.value, heap: heapSeries.value,
-        cpu: cpuSeries.value, disk: diskSeries.value, ts: sampleTs.value,
-        nodeSeries: nodeSeries.value,
-        jobCount: jobCountSeries.value,
-        lq: lastSampleQ, li: lastSampleI, lt: lastSampleT,
-        alerts: [...alertsMap.value.values()],
-      }));
-    } catch { /* 存储满/隐私模式容忍 */ }
+    writeStoredRaw(localStorage, snapKey(), JSON.stringify({
+      at: Date.now(),
+      qps: qpsSeries.value, idx: indexRateSeries.value, heap: heapSeries.value,
+      cpu: cpuSeries.value, disk: diskSeries.value, ts: sampleTs.value,
+      nodeSeries: nodeSeries.value,
+      jobCount: jobCountSeries.value,
+      lq: lastSampleQ, li: lastSampleI, lt: lastSampleT,
+      alerts: [...alertsMap.value.values()],
+    }));
   }
 
   restore();
