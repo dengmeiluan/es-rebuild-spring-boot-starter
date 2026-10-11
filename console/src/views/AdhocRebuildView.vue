@@ -1313,6 +1313,11 @@ const riskBusy = ref(false);
 const riskErr = ref('');
 
 async function loadDateRisks(picked: Record<string, any>) {
+  /* 切换竞态守卫：守卫锚=选中粘贴对象的**身份**（pasteIdx 数值跨 applyPaste 轮会复用，
+   值比对会被「重贴后仍选第 0 条」骗过）。chip 连切/整单重贴/reset 清场后，旧采样回包
+   落定时选中已漂移则整包丢弃——成功/catch/finally 三支同口径；过期支跳过 finally
+   复位，故 reset 侧须显式清 riskBusy（防采样钮卡死）。 */
+  const stillPicked = () => pasteList.value[pasteIdx.value] === picked;
   riskRows.value = [];
   riskErr.value = '';
   sampledCount.value = 0;
@@ -1348,6 +1353,7 @@ async function loadDateRisks(picked: Record<string, any>) {
   riskBusy.value = true;
   try {
     const r = await api.dateForms(String(picked.alias), 50);
+    if (!stillPicked()) return;
     sampledCount.value = Number(r?.sampled || 0);
     samplingMode.value = String(r?.sampling || '');
     riskRows.value = mergeRiskRows(
@@ -1362,12 +1368,13 @@ async function loadDateRisks(picked: Record<string, any>) {
       nameMismatches,
     );
   } catch (e: any) {
+    if (!stillPicked()) return;
     /* 采样失败不阻断粘贴流程，但必须说清「判定不完整」，不许静默当成无风险。
  不依赖采样的那几条（字段名对不齐等）照常展示。 */
     riskRows.value = mergeRiskRows([], nameMismatches);
     riskErr.value = '采样失败，无法判定存储形态：' + friendlyApiError(e);
   } finally {
-    riskBusy.value = false;
+    if (stillPicked()) riskBusy.value = false;
   }
 }
 
@@ -1952,11 +1959,13 @@ function reset() {
   needIndexForManual.value = false;
   /* 风险报告是 loadDateRisks 写入的**非派生**状态（它带一次网络取数，
  做不成 computed），故必须在这里显式清 —— 否则「再来一轮」会把上一个索引的
- 风险结论留在屏幕上，配着新索引的名字。 */
+ 风险结论留在屏幕上，配着新索引的名字。riskBusy 同理须在此显式清：
+ 在途采样被清场后，其守卫式 finally 会认定「已不是选中项」而跳过复位。 */
   riskRows.value = [];
   riskErr.value = '';
   sampledCount.value = 0;
   samplingMode.value = '';
+  riskBusy.value = false;
 }
 
 /* 热Setting页「转零停机重建」携带 {index, pendingSettings} 上下文预填。

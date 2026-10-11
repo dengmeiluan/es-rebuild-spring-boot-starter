@@ -237,8 +237,10 @@ function pick(n: TN) {
   fetchDetail(n.taskId);
 }
 async function fetchDetail(id: string) {
-  try { detail.value = await api.taskDetail(id); }
-  catch { detail.value = null; }
+  /* 切节点竞态守卫：回包落定时选中已漂移（连点两节点/深链直选被 pick 覆盖）则整包丢弃，
+   成功/catch/finally 三支同口径——慢包后到不得顶掉新选中节点的详情 */
+  try { const d = await api.taskDetail(id); if (id !== activeId.value) return; detail.value = d; }
+  catch { if (id !== activeId.value) return; detail.value = null; }
 }
 const detailStr = computed(() => JSON.stringify(detail.value, null, 2));
 /* W-C 批：highlightJson 输出为已转义 HTML，是全站唯一允许 v-html 的通道 */

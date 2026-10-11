@@ -270,19 +270,26 @@ const cmpSummary = computed(() => diffSummary(fieldDiffs.value));
 
 async function fetchCompare() {
   if (!index.value.trim() || !idxB.value.trim() || !id.value.trim()) return;
+  /* 切参竞态守卫：Enter 通道无 busy 拦截（高频两跳），发请求前拍三参快照，
+   回包落时任一参数已漂移（改 _id 再按 Enter）则整包丢弃——成功/catch/finally
+   三支同口径，慢包后到不得把对比结果回跳到旧参数，过期支也不提前熄 spinner */
+  const snap = { idx: index.value, b: idxB.value, id: id.value };
+  const stale = () => snap.idx !== index.value || snap.b !== idxB.value || snap.id !== id.value;
   cmpBusy.value = true; cmpErr.value = '';
   try {
     const [a, b] = await Promise.all([
-      api.getDoc(index.value, id.value),
-      api.getDoc(idxB.value, id.value),
+      api.getDoc(snap.idx, snap.id),
+      api.getDoc(snap.b, snap.id),
     ]);
+    if (stale()) return;
     original.value = a; originalSource.value = a._source || {};
     docB.value = b;
   } catch (e: any) {
+    if (stale()) return;
     /* 失败要给原因 + 可重试，不要伪装成「无差异」。：并轨 friendlyEsError */
     cmpErr.value = friendlyEsError(String(e?.message ?? e));
     docB.value = null;
-  } finally { cmpBusy.value = false; }
+  } finally { if (!stale()) cmpBusy.value = false; }
 }
 
 async function doFetch() {

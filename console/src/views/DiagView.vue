@@ -520,13 +520,20 @@ async function loadHot(nodeId?: string) {
   await nextTick();
   if (hotDetailsRef.value) hotDetailsRef.value.open = true;
   try { hotDetailsRef.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch { /* jsdom 等无实现环境静默跳过 */ }
+  /* 切节点竞态守卫：行内采样钮不带 disabled（可连点换目标），回包落定时
+ hotNode 已漂移（连点两节点）则整包丢弃——成功/catch/finally 三支同口径，
+ 慢包后到不得顶掉新节点的采样文本，过期支也不得提前熄掉在途 spinner */
+  const picked = nodeId || '';
   try {
-    hotThreads.value = await api.hotThreads(3, '500ms', 'cpu', nodeId);
+    const r = await api.hotThreads(3, '500ms', 'cpu', nodeId);
+    if (picked !== hotNode.value) return;
+    hotThreads.value = r;
     store.notify('success', `Hot Threads 采样完成${nodeId ? `（节点 ${nodeId}）` : ''}，结果见下方热线程区`);
   } catch (e: any) {
+    if (picked !== hotNode.value) return;
     store.notify('error', 'hot-threads: ' + friendlyEsError(String(e?.message ?? e))); /* ：裸 err 并轨 */
   } finally {
-    loadingHot.value = false;
+    if (picked === hotNode.value) loadingHot.value = false;
   }
 }
 
