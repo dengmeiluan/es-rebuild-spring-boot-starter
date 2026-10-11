@@ -148,6 +148,7 @@ import { lintDsl } from '../utils/dslLint';
 import { useDebounceFn } from '../composables/useDebounceFn';
 /* 运行读秒+可取消统一件（ 范式，SqlBridge 535 T4 同款接线） */
 import { useQueryRun } from '../composables/useQueryRun';
+import { writeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 const router = useRouter();
@@ -182,7 +183,7 @@ function goAdvanced() {
   const body: any = { source: { index: source.value } };
   const q = tryParse(queryBody.value);
   if (q != null) body.source.query = q;
-  sessionStorage.setItem('es-console.reindex-advanced.body', JSON.stringify(body, null, 2));
+  writeStoredRaw(sessionStorage, 'es-console.reindex-advanced.body', JSON.stringify(body, null, 2));
   router.push('/reindex-advanced');
 }
 

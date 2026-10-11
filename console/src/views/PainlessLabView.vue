@@ -149,6 +149,7 @@ import { stripJsonComments, highlightJson } from '../utils/jsonc';
 /* errMeta 随双参换装接入（utils/errPre 帮手只读复用） */
 import { errPreHtml, errMeta } from '../utils/errPre';
 import { copyText } from '../utils/format';
+import { writeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 /* 权限门禁——stored script 保存/删除=/cluster/scripts/put|delete=CLUSTER 档（rank3+）；
@@ -332,7 +333,7 @@ async function deleteStored(id: string) {
 function injectUbq() {
   try {
     const payload = { script: { source: source.value, lang: 'painless', params: JSON.parse(params.value || '{}') } };
-    sessionStorage.setItem('es-console.ubq.injected', JSON.stringify(payload));
+    writeStoredRaw(sessionStorage, 'es-console.ubq.injected', JSON.stringify(payload));
     store.notify('success', '已注入，跳转 UpdateByQuery 面板…');
     router.push('/update-by-query');
   } catch { store.notify('warning', 'params JSON 无效'); }

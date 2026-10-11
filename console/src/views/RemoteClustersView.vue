@@ -98,6 +98,7 @@ import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue';
 import { friendlyEsError } from '../utils/esError';
 import { highlightJson } from '../utils/jsonc';
 import { copyText } from '../utils/format';
+import { writeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 const router = useRouter();
@@ -161,8 +162,8 @@ function ccsQuery(name: string) {
     index: `${name}:*`,
     body: JSON.stringify(body, null, 2),
   };
-  sessionStorage.setItem('es-console.sandbox.body', payload.body);
-  sessionStorage.setItem('es-console.sandbox.index', payload.index);
+  writeStoredRaw(sessionStorage, 'es-console.sandbox.body', payload.body);
+  writeStoredRaw(sessionStorage, 'es-console.sandbox.index', payload.index);
   store.notify('info', `已生成 CCS 跨集群查询：index=${name}:*`);
   router.push({ path: '/search', query: { mode: 'sandbox' } });
 }

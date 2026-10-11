@@ -430,6 +430,7 @@ import { useMonacoLocate } from '../composables/useMonacoLocate';
 import WorkbenchLayout, { type WorkbenchPaneSpec } from '../components/WorkbenchLayout.vue';
 import FocusableSurface from '../components/FocusableSurface.vue';
 import PageHeader from '../components/PageHeader.vue';
+import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 const store = useAppStore();
 /* 权限门禁——DevTools 运行统一走 api.raw（/cluster/raw 透传）=ADMIN 档；
    编辑/导入/复制响应全角色可用，非 ADMIN 给自述不给扳机 */
@@ -645,7 +646,7 @@ async function reset() {
   doReset();
 }
 function doReset() {
-  sessionStorage.removeItem(DRAFT_KEY.value); tabs.value = [mkTab()]; active.value = 0;
+  removeStoredRaw(sessionStorage, DRAFT_KEY.value); tabs.value = [mkTab()]; active.value = 0;
   pickedEp.value = {}; /* T11 复审 M3：重置一并清空端点联动残留 */
 }
 /* 落盘剥离 result/resultFull（响应体体积大且时效性强，不持久化）——巨型响应曾把
@@ -687,7 +688,7 @@ function histAllRead(): HistAllEntry[] {
 function mirrorHistAll(e: HistAllEntry) {
   const next = [e, ...histAll.value].slice(0, 100);
   histAll.value = next;
-  try { sessionStorage.setItem(HIST_ALL_KEY.value, JSON.stringify(next)); } catch { /* 存储满容忍 */ }
+  writeStoredRaw(sessionStorage, HIST_ALL_KEY.value, JSON.stringify(next));
 }
 /* 切集群目标：汇聚清单按新 key 重新水合（键带 target 维度，与 DRAFT_KEY 同口径） */
 watch(() => store.target, () => { histAll.value = histAllRead(); });
@@ -723,7 +724,7 @@ function openRawIo() {
 function writeDraft() {
   try {
     /* segRuns/segView 段锚剥离（与 result 同保密级，恢复侧零回带） */
-    sessionStorage.setItem(DRAFT_KEY.value, JSON.stringify({
+    writeStoredRaw(sessionStorage, DRAFT_KEY.value, JSON.stringify({
       active: active.value,
       tabs: tabs.value.map(t => ({ ...t, result: null, resultFull: null, busy: false, segRuns: [], segView: -1 })),
     }));
@@ -797,14 +798,14 @@ function onGlobalRunKey(e: KeyboardEvent) {
    通过 sessionStorage 预填一个请求后跳转过来，这里统一消费。 */
 function consumePrefill() {
   if (sessionStorage.getItem('es-console.devtools.newtab')) {
-    sessionStorage.removeItem('es-console.devtools.newtab');
+    removeStoredRaw(sessionStorage, 'es-console.devtools.newtab');
     tabs.value.push(mkTab(undefined, 'GET', '/', ''));
     active.value = tabs.value.length - 1;
     persist();
   }
   const raw = sessionStorage.getItem('es-console.devtools.open');
   if (!raw) return;
-  sessionStorage.removeItem('es-console.devtools.open');
+  removeStoredRaw(sessionStorage, 'es-console.devtools.open');
   try {
     const p = JSON.parse(raw);
     tabs.value.push(mkTab(p.title, p.method || 'GET', p.path || '/', p.body || ''));
@@ -1035,7 +1036,7 @@ function histDel(h: { id?: string | number }) {
   if (histScope.value === 'all') {
     if (h.id == null) return;
     histAll.value = histAll.value.filter((_, k) => k !== h.id);
-    try { sessionStorage.setItem(HIST_ALL_KEY.value, JSON.stringify(histAll.value)); } catch { /* 存储满容忍 */ }
+    writeStoredRaw(sessionStorage, HIST_ALL_KEY.value, JSON.stringify(histAll.value));
     return;
   }
   const t = cur.value; if (!t || h.id == null) return;
@@ -1128,8 +1129,8 @@ const curlText = ref((() => {
 })());
 watch(curlText, v => {
   try {
-    if (v) sessionStorage.setItem(CURL_DRAFT_KEY.value, redactDraft(v));
-    else sessionStorage.removeItem(CURL_DRAFT_KEY.value);
+    if (v) writeStoredRaw(sessionStorage, CURL_DRAFT_KEY.value, redactDraft(v));
+    else removeStoredRaw(sessionStorage, CURL_DRAFT_KEY.value);
   } catch { /* 存储满/隐私模式容忍 */ }
 });
 const curlErr = ref('');

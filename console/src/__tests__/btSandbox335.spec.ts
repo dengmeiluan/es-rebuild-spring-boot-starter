@@ -12,7 +12,7 @@ describe('送入搜索沙盒（335 批）', () => {
   it('按钮+函数+会话契约', () => {
     expect(v).toContain('> 送入沙盒');
     expect(v).toMatch(/function toSandbox\(\)/);
-    expect(v).toMatch(/sessionStorage\.setItem\('es-console\.sandbox\.body', JSON\.stringify\(builtQuery\.value, null, 2\)\)/);
+    expect(v).toMatch(/writeStoredRaw\(sessionStorage, 'es-console\.sandbox\.body', JSON\.stringify\(builtQuery\.value, null, 2\)\)/);
     expect(v).toMatch(/router\.push\(\{ path: '\/search', query: \{ mode: 'sandbox' \} \}\)/);
   });
 });

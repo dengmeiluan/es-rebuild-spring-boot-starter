@@ -187,6 +187,7 @@ import { permDeniedAdvice } from '../utils/esErrorAdvice'; /* W4c：三视图同
 import { ndjsonLint as ndjsonLintOf } from '../utils/bulkNdjson';
 import MonacoEditor from '../components/MonacoEditor.vue';
 import { useIndexFields } from '../composables/useIndexFields';
+import { removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 
@@ -233,7 +234,7 @@ const body = useScopedDraft('body', {
 const bulkCarry = sessionStorage.getItem('es-console.bulk.carry');
 if (bulkCarry) {
   body.value = bulkCarry;
-  sessionStorage.removeItem('es-console.bulk.carry');
+  removeStoredRaw(sessionStorage, 'es-console.bulk.carry');
 }
 const submitting = ref(false);
 const result = ref<any>(null);

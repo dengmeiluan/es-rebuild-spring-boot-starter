@@ -216,6 +216,7 @@ import MarkText from '../components/MarkText.vue';
 import MetaStrip from '../components/MetaStrip.vue';
 import TookBadge from '../components/TookBadge.vue';
 import type { MetaStripItem } from '../components/MetaStrip.vue';
+import { removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 /* 权限写门——保存/删除模板（putStoredScript/deleteStoredScript 集群写）=ops 档，VIEWER 不可见 */
@@ -534,7 +535,7 @@ function consumeSourceCarry() {
   let raw: string | null = null;
   try { raw = sessionStorage.getItem(ST_SOURCE_CARRY); } catch { return; }
   if (!raw) return;
-  sessionStorage.removeItem(ST_SOURCE_CARRY);
+  removeStoredRaw(sessionStorage, ST_SOURCE_CARRY);
   source.value = prettify(raw);
   const isTplSnapshot = /\{\{/.test(raw);
   store.notify('success', isTplSnapshot

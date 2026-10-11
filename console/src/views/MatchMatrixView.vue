@@ -123,6 +123,7 @@ import { useDebounceFn } from '../composables/useDebounceFn'; /*  P0-1：划线�
 import QueryResultTable from '../components/QueryResultTable.vue';
 import StatusPill from '../components/StatusPill.vue'; /* ：死子句警示徽标统一件 */ /* ：矩阵表换壳 */
 import EmptyState from '../components/EmptyState.vue';
+import { writeStoredRaw } from '../utils/safeJson';
 
 const router = useRouter();
 const store = useAppStore();
@@ -254,7 +255,7 @@ const mmRows = computed<(string | number)[][]>(() =>
    列头菜单「冻结到此列/取消冻结」读写），首访无记忆时播种 2 列；用户显式取消（写入 '0'）
    后不再代劳。setup 先于子组件 QRT 的 useTablePrefs 读档执行，首挂即生效。 */
 if (localStorage.getItem('es_tbl_freeze_n:mm') == null) {
-  localStorage.setItem('es_tbl_freeze_n:mm', '2');
+  writeStoredRaw(localStorage, 'es_tbl_freeze_n:mm', '2');
 }
 
 /* _id 列下钻接「查询 X 光」（useLinkCarry('xray') 现成键——{index,id} 与

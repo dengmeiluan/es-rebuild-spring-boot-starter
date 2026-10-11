@@ -219,6 +219,7 @@ import { useTierCycle } from '../composables/useTierCycle'; /* ：编辑框高�
 import { lintClause } from '../utils/dslLint'; /* ：rollover 条件结构体检 */
 import { phaseZh, ILM_PHASE_ZH, ILM_ACTION_ZH } from '../utils/esEnumZh'; /* ：甘特/图例 phase 中文（esEnumZh 单源）；：move 弹窗 datalist 候选域 */
 import { useDebounceFn } from '../composables/useDebounceFn'; /* ：划线注入防抖统一件 */
+import { removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 /* 权限门禁——ILM 起停/rollover/move step=/cluster/ilm/start|stop|move、/cluster/rollover=CLUSTER 档（rank3+）；
@@ -484,7 +485,7 @@ onMounted(() => {
   /*  §8.1：命令面板「Rollover Dry Run」预填接收 */
   const prefill = sessionStorage.getItem('es-console.lifecycle.rollover');
   if (prefill) {
-    sessionStorage.removeItem('es-console.lifecycle.rollover');
+    removeStoredRaw(sessionStorage, 'es-console.lifecycle.rollover');
     rolloverAlias.value = prefill;
   }
   load();

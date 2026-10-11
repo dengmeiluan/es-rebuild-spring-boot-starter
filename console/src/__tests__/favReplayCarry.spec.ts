@@ -31,12 +31,12 @@ describe('收藏回放 carry 键契约（八十二批）', () => {
   it('BulkEditorView 消费 carry 并转入 body 草稿（一次性）', () => {
     expect(bulkSrc).toMatch(/sessionStorage\.getItem\('es-console\.bulk\.carry'\)/);
     expect(bulkSrc).toMatch(/body\.value = bulkCarry/);
-    expect(bulkSrc).toMatch(/sessionStorage\.removeItem\('es-console\.bulk\.carry'\)/);
+    expect(bulkSrc).toMatch(/removeStoredRaw\(sessionStorage, 'es-console\.bulk\.carry'\)/);
   });
 
   it('UpdateByQueryView 消费 carry（取 .query 入草稿，一次性）', () => {
     expect(ubqSrc).toMatch(/sessionStorage\.getItem\('es-console\.ubq\.carry'\)/);
     expect(ubqSrc).toMatch(/queryStr\.value = JSON\.stringify\(q, null, 2\)/);
-    expect(ubqSrc).toMatch(/sessionStorage\.removeItem\('es-console\.ubq\.carry'\)/);
+    expect(ubqSrc).toMatch(/removeStoredRaw\(sessionStorage, 'es-console\.ubq\.carry'\)/);
   });
 });

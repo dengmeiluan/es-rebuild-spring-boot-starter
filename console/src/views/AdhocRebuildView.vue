@@ -731,6 +731,7 @@ import { lintSettingsBody, lintMappingBody, type Finding } from '../utils/dslLin
 import { useDebounceFn } from '../composables/useDebounceFn';
 /*  W2：pasteRaw 高度档循环统一件（useTierCycle 三件套：档值数组+usePref+cycle） */
 import { useTierCycle } from '../composables/useTierCycle';
+import { removeStoredRaw } from '../utils/safeJson';
 
 /* 预填即 pretty：压缩单行 JSON 对人审阅障碍极大 */
 function prettyJson(s: string): string {
@@ -1232,7 +1233,7 @@ function consumeRebuildHandoff() {
   let raw: string | null = null;
   try { raw = sessionStorage.getItem(REBUILD_HANDOFF_KEY); } catch { return; }
   if (!raw) return;
-  sessionStorage.removeItem(REBUILD_HANDOFF_KEY);
+  removeStoredRaw(sessionStorage, REBUILD_HANDOFF_KEY);
   const r = parseEsConfigPaste(raw);
   if (!r.ok) { store.notify('error', r.error || '直通内容无法识别'); return; }
   if (r.settings) settingsJson.value = prettyJson(JSON.stringify(r.settings));

@@ -208,6 +208,7 @@ import { highlightJson } from '../utils/jsonc'; /* ：原始文档/patch 预览�
 import { diffDocFields, diffSummary, type FieldDiff } from '../utils/docDiff';
 import { fmtTime } from '../utils/format';
 import { friendlyEsError } from '../utils/esError';
+import { removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 /* 权限门禁——PUT 覆盖/_update=/cluster/doc(/update)=普通写档（OPERATOR+，文档编辑属角色定义低危写）；
@@ -370,7 +371,7 @@ function diffToScript(): string {
 onMounted(() => {
   /* 收藏重放带回的编辑稿（一次性 carry 键）——拉取最新版后恢复，直接呈现 diff */
   const carry = sessionStorage.getItem('es-console.doc-diff.carry.source');
-  sessionStorage.removeItem('es-console.doc-diff.carry.source');
+  removeStoredRaw(sessionStorage, 'es-console.doc-diff.carry.source');
   if (isCompare.value) { fetchCompare(); return; }   // 只读对比走独立拉取，不碰 patch 的编辑稿恢复
   if (index.value.trim() && id.value.trim()) {
     doFetch().then(() => {

@@ -212,6 +212,7 @@ import { useIndexFields } from '../composables/useIndexFields';
 import { ensureSqlCompletion, type SqlCompletionCtx } from '../utils/sqlCompletion';
 import { lintSql } from '../utils/sqlLint'; /*  P0-3：SQL 静态 lint */
 import { useDebounceFn } from '../composables/useDebounceFn'; /*  P0-3：划线防抖统一件 */
+import { writeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 const router = useRouter();
@@ -413,8 +414,8 @@ function gotoQuery() {
 }
 function gotoLucene() {
   if (!lucene.value) return;
-  sessionStorage.setItem('es-console.lucene.q', lucene.value);
-  if (store.pickedIdx) sessionStorage.setItem('es-console.lucene.index', store.pickedIdx);
+  writeStoredRaw(sessionStorage, 'es-console.lucene.q', lucene.value);
+  if (store.pickedIdx) writeStoredRaw(sessionStorage, 'es-console.lucene.index', store.pickedIdx);
   router.push({ path: '/search', query: { mode: 'lucene' } });
 }
 

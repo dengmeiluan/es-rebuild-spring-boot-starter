@@ -18,7 +18,7 @@ describe('查询历史失败标记（274 批）', () => {
     expect(store).toMatch(/ok\?: boolean;/);
   });
   it('DslQueryView：失败双路标记+成功翻转红点+histRows 透传', () => {
-    expect(dq).toMatch(/h0\.ok = false; localStorage\.setItem\(HIST_KEY/);
+    expect(dq).toMatch(/h0\.ok = false; writeStoredRaw\(localStorage, HIST_KEY/);
     expect(dq).toMatch(/h0\?\.ok === false\) \{ h0\.ok = true;/);
     expect(dq).toMatch(/push\('dsl', dsl\.value, store\.pickedIdx, -1, false\)/);
     expect(dq).toMatch(/ts: h\.ts, ok: h\.ok \}/);

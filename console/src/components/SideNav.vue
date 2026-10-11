@@ -90,7 +90,7 @@
 
 <script setup lang="ts">
 import { STARTER_VERSION } from '../data/integrationGuide';
-import { readStoredJson } from '../utils/safeJson';
+import { readStoredJson, writeStoredRaw } from '../utils/safeJson';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import {
   Search, X,
@@ -166,7 +166,7 @@ watch(() => route.path, (p) => {
   const g = NAV_ITEMS.find(i => i.path === p)?.group;
   if (g && collapsed.value[g]) {
     collapsed.value[g] = false;
-    localStorage.setItem(LS_KEY, JSON.stringify(collapsed.value));
+    writeStoredRaw(localStorage, LS_KEY, JSON.stringify(collapsed.value));
   }
 }, { immediate: true });
 
@@ -183,7 +183,7 @@ onMounted(() => window.addEventListener('keydown', onSlashKey));
 onBeforeUnmount(() => window.removeEventListener('keydown', onSlashKey));
 function toggleGroup(id: string) {
   collapsed.value[id] = !collapsed.value[id];
-  localStorage.setItem(LS_KEY, JSON.stringify(collapsed.value));
+  writeStoredRaw(localStorage, LS_KEY, JSON.stringify(collapsed.value));
 }
 
 /* 底栏状态改报真实集群健康——连接成功不等于集群正常（yellow/red 必须如实露出） */

@@ -17,8 +17,8 @@ const cmdSrc = readFileSync(join(SRC, 'components/CmdPalette.vue'), 'utf-8');
 
 describe('DSL 镜像 index 契约（七十五批）', () => {
   it('写侧：DslQueryView 镜像 body 与 index 同写', () => {
-    expect(dslSrc).toMatch(/sessionStorage\.setItem\('es-console\.dsl\.body', v\)/);
-    expect(dslSrc).toMatch(/sessionStorage\.setItem\('es-console\.dsl\.index', store\.pickedIdx\)/);
+    expect(dslSrc).toMatch(/writeStoredRaw\(sessionStorage, 'es-console\.dsl\.body', v\)/);
+    expect(dslSrc).toMatch(/writeStoredRaw\(sessionStorage, 'es-console\.dsl\.index', store\.pickedIdx\)/);
   });
 
   it('消费侧：三命令 index 均镜像优先、pickedIdx 兜底（防错配回潮）', () => {

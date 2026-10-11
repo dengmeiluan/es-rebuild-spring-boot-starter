@@ -147,6 +147,7 @@ import SkeletonBox from '../components/SkeletonBox.vue';
 import CurrentIdxChip from '../components/CurrentIdxChip.vue';
 import StatusPill from '../components/StatusPill.vue'; /* ：版本门槛徽标统一件 */
 import { QUERY_MODES, DEFAULT_MODE, normalizeMode, QUICK_TASKS, encodeDslParam, type QuickTask } from '../utils/queryHub';
+import { writeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 const router = useRouter();
@@ -272,27 +273,27 @@ function replay(it: { mode?: string; query: string; index?: string }) {
   if (!m) return; // 无模式标记的历史条目无法跨模式回放（ HistRow 口径）
   const idx = it.index || '';
   if (m === 'dsl') {
-    sessionStorage.setItem('es-console.dsl.carry', it.query);
-    if (idx) sessionStorage.setItem('es-console.dsl.carry.index', idx);
+    writeStoredRaw(sessionStorage, 'es-console.dsl.carry', it.query);
+    if (idx) writeStoredRaw(sessionStorage, 'es-console.dsl.carry.index', idx);
   } else if (m === 'sql') {
-    sessionStorage.setItem('es-console.sql.prefill', it.query);
+    writeStoredRaw(sessionStorage, 'es-console.sql.prefill', it.query);
     /*  SQL 回放补索引上下文跟随（dsl/lucene/sandbox/pit 分支同款）——
        否则原在索引 A 执行的 SQL 会在当前选中索引上回放，上下文错配 */
     if (idx) store.pick(idx);
   } else if (m === 'lucene') {
-    sessionStorage.setItem('es-console.lucene.q', it.query);
-    if (idx) sessionStorage.setItem('es-console.lucene.index', idx);
+    writeStoredRaw(sessionStorage, 'es-console.lucene.q', it.query);
+    if (idx) writeStoredRaw(sessionStorage, 'es-console.lucene.index', idx);
   } else if (m === 'sandbox') {
-    localStorage.setItem('ss_dsl_body', it.query);
+    writeStoredRaw(localStorage, 'ss_dsl_body', it.query);
     if (idx) store.pick(idx);
   } else if (m === 'pit') {
     /* PIT 回放补 filter/sort 预填——queryHistory 条目形状扩展（store 文件）不在本批
        文件清单，降级 sessionStorage 直传：filter 用历史条目原文（准确）；sort/order 用
        pit 执行时写的 es-console.pit.carry 快照转运为 es-console.pit.prefill（仅本次回放消费，
        PitScrollView onMounted 读走即删，普通重挂载不误吃）；无快照时退化为只带 filter（此前现状） */
-    sessionStorage.setItem('es-console.pit.filter', it.query || '');
+    writeStoredRaw(sessionStorage, 'es-console.pit.filter', it.query || '');
     const carry = sessionStorage.getItem('es-console.pit.carry');
-    if (carry) sessionStorage.setItem('es-console.pit.prefill', carry);
+    if (carry) writeStoredRaw(sessionStorage, 'es-console.pit.prefill', carry);
     if (idx) store.pick(idx);
   } else if (m === 'template') {
     /*  W-B（§6q 遗留）：template 通道回放=跨页跳搜索模板中心——template 不是
@@ -303,7 +304,7 @@ function replay(it: { mode?: string; query: string; index?: string }) {
        search-templates.carry 即删）；条目 query= push 的 rendered||source 快照，
        模板源快照/渲染产物双形态由页内既有防呆承担（占位符参数表单+run() 参数防呆），
        这里只管如实送达——与 favReplay bulk.carry/ubq.carry 跨页 carry 同构。 */
-    sessionStorage.setItem('es-console.search-templates.carry', it.query || '');
+    writeStoredRaw(sessionStorage, 'es-console.search-templates.carry', it.query || '');
     if (idx) store.pick(idx); /* 执行上下文跟随（sql/sandbox/pit 分支同款），进页 useIdxState(follow) 接住 */
     router.push('/search-templates');
     store.notify('success', '模板查询已送到搜索模板中心的源草稿');
@@ -358,7 +359,7 @@ function favHistRow(it: { mode?: string; query: string; index?: string; ts?: num
   if (saved.some(s => s.name === name)) { store.notify('info', '同名收藏已存在，未重复写入'); return; }
   saved.unshift({ dsl: it.query, ts: it.ts ?? Date.now(), idx: it.index, name });
   try {
-    localStorage.setItem('es_query_saved', JSON.stringify(saved));
+    writeStoredRaw(localStorage, 'es_query_saved', JSON.stringify(saved));
     store.notify('success', '已转收藏（保存的搜索）——到查询工作台 DSL 页「保存的搜索」查看');
   } catch {
     store.notify('error', '收藏写入失败（本地存储空间不足）');

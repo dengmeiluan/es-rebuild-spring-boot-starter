@@ -203,6 +203,7 @@ import { highlightJson } from '../utils/jsonc';
 import MappingFieldTree from '../components/MappingFieldTree.vue';
 import SettingsGrid from '../components/SettingsGrid.vue';
 import type { BodyKind } from '../utils/dslCompletionContext';
+import { writeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 const auth = useAuthStore();
@@ -379,7 +380,7 @@ async function copyRaw() {
    必然成功）。落地端 AdhocRebuildView 在 mounted/activated 消费并自动解析拆填。 */
 const REBUILD_HANDOFF_KEY = 'es-console.rebuild-paste';
 function sendToRebuild() {
-  sessionStorage.setItem(REBUILD_HANDOFF_KEY, rawJson.value);
+  writeStoredRaw(sessionStorage, REBUILD_HANDOFF_KEY, rawJson.value);
   rawOpen.value = false;
   router.push('/adhoc-rebuild');
 }

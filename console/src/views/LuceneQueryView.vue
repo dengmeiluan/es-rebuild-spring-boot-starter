@@ -327,6 +327,7 @@ import { useIndexFieldTypes } from '../composables/useIndexFieldTypes';
 import { useRouter } from 'vue-router';
 import { encodeDslParam } from '../utils/queryHub';
 import { exportStamp, copyText, fmtTime, downloadText, totalOf, fmtNum, csvCell, fmtCell } from '../utils/format';
+import { removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 const router = useRouter();
@@ -440,9 +441,9 @@ const TEMPLATES = [
 
 onMounted(() => {
   const carry = sessionStorage.getItem('es-console.lucene.q');
-  if (carry) { qs.value = carry; sessionStorage.removeItem('es-console.lucene.q'); }
+  if (carry) { qs.value = carry; removeStoredRaw(sessionStorage, 'es-console.lucene.q'); }
   const ci = sessionStorage.getItem('es-console.lucene.index');
-  if (ci) { index.value = ci; sessionStorage.removeItem('es-console.lucene.index'); }
+  if (ci) { index.value = ci; removeStoredRaw(sessionStorage, 'es-console.lucene.index'); }
 });
 
 async function doRun() {

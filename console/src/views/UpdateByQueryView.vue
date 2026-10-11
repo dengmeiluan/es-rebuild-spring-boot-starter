@@ -226,6 +226,7 @@ import { useIndexFields } from '../composables/useIndexFields'; /* ：lint 字�
 import { useTermsSuggest } from '../composables/useTermsSuggest'; /* ：值位动态候选（661 范式） */
 import { useTierCycle } from '../composables/useTierCycle'; /* ：脚本面高度档循环统一件 */
 import MonacoEditor from '../components/MonacoEditor.vue';
+import { removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 /* 权限门禁——UBQ/DBQ=/cluster/update-by-query|delete-by-query=REBUILD 档（rank3+）；
@@ -272,7 +273,7 @@ if (ubqCarry && ubqCarry.trim()) {
     const q = JSON.parse(ubqCarry).query;
     if (q) queryStr.value = JSON.stringify(q, null, 2);
   } catch { queryStr.value = ubqCarry; }
-  sessionStorage.removeItem('es-console.ubq.carry');
+  removeStoredRaw(sessionStorage, 'es-console.ubq.carry');
 }
 const estimateN = ref<number | null>(null);
 const estimating = ref(false);

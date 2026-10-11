@@ -158,7 +158,7 @@ import { useQueryRun } from '../composables/useQueryRun';
 /* 历史换装 QueryHistoryPanel 后 relTime/fmtTime/exportStamp/downloadText 随本地实现退役 */
 import { copyText } from '../utils/format';
 import { jq } from '../utils/minijq';
-import { parseJsonSafe, readStoredJson } from '../utils/safeJson';
+import { readStoredJson, parseJsonSafe, writeStoredRaw } from '../utils/safeJson';
 /* respErr 上色走 highlightJson（jsonc.ts 单一出处）；并 errPreHtml/friendlyEsError */
 import { stripJsonComments, highlightJson } from '../utils/jsonc';
 import { errPreHtml, errMeta } from '../utils/errPre';
@@ -232,7 +232,7 @@ const { v: restEdH, cycle: cycleRestEdH } = useTierCycle('rest.edH', REST_ED_H_T
 interface HistItem { method: string; path: string; body: string; ts: number }
 /* 脏值防御读取：手改/残留坏 JSON 不得炸 Rest 页挂载 */
 const history = ref<HistItem[]>(readStoredJson(localStorage, 'es_rest_hist', [], Array.isArray));
-function persistHist() { localStorage.setItem('es_rest_hist', JSON.stringify(history.value.slice(0, 30))); }
+function persistHist() { writeStoredRaw(localStorage, 'es_rest_hist', JSON.stringify(history.value.slice(0, 30))); }
 
 /* 历史适配 QueryHistoryPanel HistRow——query=「METHOD path」（面板过滤按 query/index/name
    includes，合并串让旧 method/path 双口径过滤等价），id=原数组下标供删除定位；存储 key es_rest_hist 不动 */

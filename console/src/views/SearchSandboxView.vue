@@ -296,6 +296,7 @@ import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-
 /* 结果信息行统一件化：MetaStrip 承接 hits 段、TookBadge 承接 took 四档语义徽标 */
 import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue';
 import TookBadge from '../components/TookBadge.vue';
+import { removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 const router = useRouter();
@@ -556,8 +557,8 @@ onMounted(() => {
   const draftKey = draftStorageKey({ route: 'search-sandbox', index: () => indexName.value }, 'dsl');
   const legacy = sessionStorage.getItem('es-console.sandbox.body') || localStorage.getItem('ss_dsl_body');
   if (legacy && !sessionStorage.getItem(draftKey)) dslBody.value = legacy;
-  sessionStorage.removeItem('es-console.sandbox.body');
-  localStorage.removeItem('ss_dsl_body');
+  removeStoredRaw(sessionStorage, 'es-console.sandbox.body');
+  removeStoredRaw(localStorage, 'ss_dsl_body');
 });
 
 /* Explain 树递归组件（内部定义，显式 any 打破自引用类型推断） */

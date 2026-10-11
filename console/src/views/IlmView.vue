@@ -250,6 +250,7 @@ import SearchFilterBar from '../components/SearchFilterBar.vue'; /* ：页头过
 import HitNav from '../components/HitNav.vue';
 import { useHitLocate } from '../composables/useHitNav';
 import { useModalEnter } from '../composables/useModalEnter';
+import { writeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 /* 权限门禁——ILM 策略保存/删除与 move step=rank3 档
@@ -279,7 +280,7 @@ const SAMPLE_ILM_BODY = JSON.stringify({
   },
 }, null, 2);
 function createSample() {
-  sessionStorage.setItem('es-console.devtools.open', JSON.stringify({
+  writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
     title: 'ILM 示例策略', method: 'PUT', path: '/_ilm/policy/sample-policy', body: SAMPLE_ILM_BODY,
   }));
   router.push('/devtools');
@@ -461,7 +462,7 @@ onMounted(() => {
 /* explain API 带参跳 DevTools（_prefill 会话契约，run:true 直达结果） */
 function explainToDevtools() {
   if (!explainIndex.value) return;
-  sessionStorage.setItem('es-console.devtools.open', JSON.stringify({
+  writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
     title: 'explain/' + explainIndex.value, method: 'GET',
     path: '/' + encodeURIComponent(explainIndex.value) + '/_ilm/explain', run: true,
   }));

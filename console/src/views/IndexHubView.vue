@@ -789,6 +789,7 @@ import { parseBytes } from '../utils/format';
 import { lintDsl } from '../utils/dslLint'; /* ：查询 tab JsonArea 划线体检（只消费既有出口） */
 import { shardsHint } from '../utils/shardsHint'; /* ：部分分片失败黄条（DQ .dq-partial 判例同件同口径） */
 import { useQueryRun } from '../composables/useQueryRun'; /*  P0-A：执行读秒+可取消（ 范式统一件） */
+import { writeStoredRaw } from '../utils/safeJson';
 
 const router = useRouter();
 const store = useAppStore();
@@ -1549,7 +1550,7 @@ function goQryPage(p: number) {
 function openQryInDevTools() {
   if (!qryResp.value) return;
   const idxPath = cur.value ? `/${cur.value}/_search` : '/_search';
-  sessionStorage.setItem('es-console.devtools.open', JSON.stringify({
+  writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
     title: cur.value || '_search',
     method: 'POST',
     path: idxPath,
@@ -1674,7 +1675,7 @@ function ihHistNewTab(h: { query?: string; index?: string; mode?: string }) {
   const idxPath = (h.index ? '/' + h.index : '') + '/_search';
   let body = h.query || '';
   try { body = JSON.stringify(JSON.parse(stripJsonComments(body)), null, 2); } catch { /* 非 JSON 原样带过去 */ }
-  sessionStorage.setItem('es-console.devtools.open', JSON.stringify({
+  writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
     title: h.index || '_search',
     method: 'POST',
     path: idxPath,
@@ -1702,7 +1703,7 @@ function favHistRow(it: { mode?: string; query: string; index?: string; ts?: num
   if (saved.some(s => s.name === name)) { store.notify('info', '同名收藏已存在，未重复写入'); return; }
   saved.unshift({ dsl: it.query, ts: it.ts ?? Date.now(), idx: it.index, name });
   try {
-    localStorage.setItem('es_query_saved', JSON.stringify(saved));
+    writeStoredRaw(localStorage, 'es_query_saved', JSON.stringify(saved));
     store.notify('success', '已转收藏（保存的搜索）——到查询工作台 DSL 页「保存的搜索」查看');
   } catch {
     store.notify('error', '收藏写入失败（本地存储空间不足）');

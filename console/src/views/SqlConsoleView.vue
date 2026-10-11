@@ -258,6 +258,7 @@ import { useIndexFields } from '../composables/useIndexFields';
 import { ensureSqlCompletion, type SqlCompletionCtx } from '../utils/sqlCompletion';
 import { lintSql } from '../utils/sqlLint'; /*  P0-3：SQL 静态 lint */
 import { useDebounceFn } from '../composables/useDebounceFn'; /*  P0-3：划线防抖统一件 */
+import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 const router = useRouter();
@@ -373,14 +374,14 @@ async function probeSqlTargets() {
     }));
     sqlCapable.value = hits.filter((x): x is { id: string; name: string } => !!x);
     try {
-      sessionStorage.setItem(PROBE_CACHE_KEY, JSON.stringify({ ts: Date.now(), exclude: store.target, hits: sqlCapable.value, n: probedN.value }));
+      writeStoredRaw(sessionStorage, PROBE_CACHE_KEY, JSON.stringify({ ts: Date.now(), exclude: store.target, hits: sqlCapable.value, n: probedN.value }));
     } catch { /* 存储满容忍 */ }
   } finally { probing.value = false; probed.value = true; }
 }
 function switchAndRerun(c: { id: string; name: string }) {
   /*  切 target 会按 key 整页重挂载，直接 doRun 的结果会写进已卸载的旧实例——
      改走 prefill 键，新实例 onMounted 消费后自动执行（与命令面板快速 SQL 同一链路） */
-  sessionStorage.setItem('es-console.sql.prefill', sql.value);
+  writeStoredRaw(sessionStorage, 'es-console.sql.prefill', sql.value);
   store.setTarget(c.id, c.name);
   store.notify('success', `已切换到「${c.name}」，正在重跑 SQL`);
 }
@@ -460,7 +461,7 @@ onMounted(() => {
   sqlCompletion = ensureSqlCompletion(monaco, sqlCtx);
   const prefill = sessionStorage.getItem('es-console.sql.prefill');
   if (prefill) {
-    sessionStorage.removeItem('es-console.sql.prefill');
+    removeStoredRaw(sessionStorage, 'es-console.sql.prefill');
     sql.value = prefill;
     doRun();
   }

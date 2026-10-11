@@ -69,6 +69,6 @@ describe('五百三十四批 P1：历史条目补 took', () => {
     expect(dq).toContain('const histRows = computed(() => history.value.map(h => ({ query: h.dsl, index: h.idx, took: h.took, ts: h.ts, ok: h.ok })));');
     expect(dq).toMatch(/ts: h\.ts, ok: h\.ok \}/);
     /* 274 批红点翻转随迁零改 */
-    expect(dq).toContain("if (h0?.ok === false) { h0.ok = true; localStorage.setItem(HIST_KEY, JSON.stringify(history.value)); }");
+    expect(dq).toContain("if (h0?.ok === false) { h0.ok = true; writeStoredRaw(localStorage, HIST_KEY, JSON.stringify(history.value)); }");
   });
 });

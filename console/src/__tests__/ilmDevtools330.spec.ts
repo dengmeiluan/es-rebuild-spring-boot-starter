@@ -12,6 +12,6 @@ describe('Ilm explain 带参跳转（330 批）', () => {
     expect(v).toContain('<TerminalSquare :size="11" /> Dev Tools');
     expect(v).toMatch(/function explainToDevtools\(\)/);
     expect(v).toMatch(/path: '\/' \+ encodeURIComponent\(explainIndex\.value\) \+ '\/_ilm\/explain', run: true/);
-    expect(v).toContain("sessionStorage.setItem('es-console.devtools.open'");
+    expect(v).toContain("writeStoredRaw(sessionStorage, 'es-console.devtools.open'");
   });
 });

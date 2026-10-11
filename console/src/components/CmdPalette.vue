@@ -72,7 +72,7 @@ import { NAV_ITEMS } from '../router';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
 import { aliasForTitle } from '../utils/cmdAlias';
-import { readStoredJson } from '../utils/safeJson';
+import { readStoredJson, writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 import { askConfirm } from '../composables/confirm';
 /* 裸 .empty 迁 EmptyState compact */
 import EmptyState from './EmptyState.vue';
@@ -156,7 +156,7 @@ const commands = computed<Cmd[]>(() => {
         if (!k) continue;
         if (k.startsWith('es_tbl_') || k === 'es_density' || k === 'es_pager_size' || k.startsWith('es-console.layout.v2') || k.startsWith('es_console_qb_split')) kill.push(k);
       }
-      kill.forEach(k => localStorage.removeItem(k));
+      kill.forEach(k => removeStoredRaw(localStorage, k));
       store.notify('success', `已重置 ${kill.length} 项显示偏好，刷新页面后生效`);
     } },
     { id: 'set-theme-dark', title: '主题：深色', sub: '强制使用深色主题', cat: '设置', icon: Moon, action: () => store.setTheme('dark') },
@@ -356,30 +356,30 @@ const commands = computed<Cmd[]>(() => {
     { id: 'data-quick-sql', title: '快速 SQL（带入当前索引）', sub: '预填 SELECT 并跳转 SQL 控制台自动执行', cat: 'data', icon: Send,
       action: () => {
         /*  §8.1：原生 prompt() 废弃，改为预填 + 路由到成熟视图 */
-        sessionStorage.setItem('es-console.sql.prefill', store.pickedIdx ? `SELECT * FROM "${store.pickedIdx}" LIMIT 5` : 'SELECT * FROM "my-index" LIMIT 5');
+        writeStoredRaw(sessionStorage, 'es-console.sql.prefill', store.pickedIdx ? `SELECT * FROM "${store.pickedIdx}" LIMIT 5` : 'SELECT * FROM "my-index" LIMIT 5');
         router.push({ path: '/search', query: { mode: 'sql' } });
       } },
     /* 开发者工具 / 拓扑 / 火焰图 / 实时大屏 / painless / 生命周期 */
     { id: 'dev-devtools', title: 'Dev Tools 多标签编辑器', sub: 'Kibana 风格 · 多标签持久化 · Ctrl+Enter', cat: 'dev', icon: TerminalSquare,
       action: () => router.push('/devtools') },
     { id: 'dev-devtools-new-tab', title: 'Dev Tools 新开标签', sub: '直接打开一个空 GET / 请求', cat: 'dev', icon: TerminalSquare,
-      action: () => { sessionStorage.setItem('es-console.devtools.newtab', '1'); router.push('/devtools'); } },
+      action: () => { writeStoredRaw(sessionStorage, 'es-console.devtools.newtab', '1'); router.push('/devtools'); } },
     { id: 'dev-flame', title: 'Profile 火焰图', sub: 'DSL profile 递归展开 · 热力条 · Top10 慢操作', cat: 'dev', icon: Flame,
       action: () => router.push('/profile-flame') },
     { id: 'dev-flame-current', title: '把当前 DSL 送去火焰图分析', sub: '带 profile=true 重跑', cat: 'dev', icon: Flame,
       action: () => {
         const body = sessionStorage.getItem('es-console.dsl.body') || localStorage.getItem('es-console.dsl.body') || '';
         if (!body.trim()) { store.notify('warning', 'DSL 查询页尚无 body'); return; }
-        sessionStorage.setItem('es-console.flame.body', body);
+        writeStoredRaw(sessionStorage, 'es-console.flame.body', body);
         /* flame.index 同取 DSL 镜像的所属索引 */
         const idx = sessionStorage.getItem('es-console.dsl.index') || store.pickedIdx;
-        if (idx) sessionStorage.setItem('es-console.flame.index', idx);
+        if (idx) writeStoredRaw(sessionStorage, 'es-console.flame.index', idx);
         router.push('/profile-flame');
       } },
     { id: 'dev-live', title: '实时监控大屏', sub: '轮询 nodes-stats · Sparkline QPS/写入/heap', cat: 'dev', icon: MonitorSpeaker,
       action: () => router.push('/live') },
     { id: 'dev-live-fs', title: '实时大屏 · 全屏切换', sub: '进入沉浸式监控模式', cat: 'dev', icon: Maximize2,
-      action: () => { sessionStorage.setItem('es-console.live.fullscreen', '1'); router.push('/live'); } },
+      action: () => { writeStoredRaw(sessionStorage, 'es-console.live.fullscreen', '1'); router.push('/live'); } },
     { id: 'dev-painless', title: 'Painless 脚本沙盒', sub: '试跑 · 6 模板 · stored CRUD · UBQ 注入', cat: 'dev', icon: FlaskConical,
       action: () => router.push('/painless-lab') },
     { id: 'dev-lifecycle', title: 'ILM 生命周期视图', sub: '甘特图 phase · rollover Dry Run · move step', cat: 'dev', icon: Layers,
@@ -410,7 +410,7 @@ const commands = computed<Cmd[]>(() => {
     { id: 'dev-rollover-dry', title: 'Rollover Dry Run（当前索引/别名）', sub: '预填目标并跳转生命周期视图预检', cat: 'dev', icon: Recycle,
       action: () => {
         /*  §8.1：原生 prompt() 废弃，改为预填 + 路由到成熟视图（Dry Run/条件可视化可编辑） */
-        if (store.pickedIdx) sessionStorage.setItem('es-console.lifecycle.rollover', store.pickedIdx);
+        if (store.pickedIdx) writeStoredRaw(sessionStorage, 'es-console.lifecycle.rollover', store.pickedIdx);
         router.push('/lifecycle');
       } },
     { id: 'dev-nodes-brief', title: '节点简要统计（后台）', sub: 'heap/cpu/disk 一览 · toast 摘要', cat: 'dev', icon: GaugeCircle,
@@ -444,10 +444,10 @@ const commands = computed<Cmd[]>(() => {
         try {
           const obj = JSON.parse(body);
           const lc = dslToLucene(obj);
-          sessionStorage.setItem('es-console.lucene.q', lc);
+          writeStoredRaw(sessionStorage, 'es-console.lucene.q', lc);
           /* lucene.index 同取 DSL 镜像的所属索引 */
           const idx = sessionStorage.getItem('es-console.dsl.index') || store.pickedIdx;
-          if (idx) sessionStorage.setItem('es-console.lucene.index', idx);
+          if (idx) writeStoredRaw(sessionStorage, 'es-console.lucene.index', idx);
           router.push({ path: '/search', query: { mode: 'lucene' } });
         } catch (e: any) { store.notify('error', '解析失败：' + (e?.message || e)); }
       } },
@@ -626,7 +626,7 @@ function move(d: number) {
 function run(cmd?: Cmd) {
   if (!cmd) return;
   recent.value = [cmd.id, ...recent.value.filter(id => id !== cmd.id)].slice(0, 8);
-  localStorage.setItem('es_cmd_recent', JSON.stringify(recent.value));
+  writeStoredRaw(localStorage, 'es_cmd_recent', JSON.stringify(recent.value));
   close();
   cmd.action();
 }

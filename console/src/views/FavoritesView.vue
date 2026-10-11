@@ -133,6 +133,7 @@ import { replayFavorite, replayTarget } from '../utils/favReplay';
 import EmptyState from '../components/EmptyState.vue';
 import HitNav from '../components/HitNav.vue';
 import { useHitLocate } from '../composables/useHitNav';
+import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 const router = useRouter();
@@ -324,7 +325,7 @@ function importPrefs(e: Event) {
       let skipped = 0;
       for (const [k, v] of Object.entries(dump as Record<string, string | null>)) {
         if (!PREF_KEY_RE.test(k)) { skipped++; continue; }
-        localStorage.setItem(k, String(v ?? ''));
+        writeStoredRaw(localStorage, k, String(v ?? ''));
         applied++;
       }
       store.notify('success', `已导入 ${applied} 个偏好键，刷新页面生效${skipped ? `（跳过非本站键 ${skipped} 个）` : ''}`);
@@ -342,7 +343,7 @@ async function clearPrefs() {
     message: `将删除 ${prefKeys.value.length} 个偏好键（列选/列宽/密度/草稿/查询偏好），恢复默认值。建议先「导出偏好」备份。`,
     okText: '清空偏好',
   })) return;
-  for (const k of prefKeys.value) localStorage.removeItem(k);
+  for (const k of prefKeys.value) removeStoredRaw(localStorage, k);
   store.notify('success', '本地偏好已清空，刷新页面生效');
 }
 </script>

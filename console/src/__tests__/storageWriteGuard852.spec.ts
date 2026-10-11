@@ -14,8 +14,8 @@
  * G 组：全站看守——kernel 层（composables/stores/utils + api.ts + router.ts）
  *       裸写文件集合冻结=已护 11 文件正面清单（多行/同行 try 在册）；
  *       九矿文件裸写恒零 + 单源接线在场；新 kernel 文件不得引入裸写。
- *       盲区诚实记档：视图/组件层 89 位点/32 文件为页域爆炸半径，852 记档
- *       下批收编，不在本看守域。
+ *       视图/组件层 89 位点/32 文件已随 853 批收编单源，看守由
+ *       viewStorageGuard853 G3（views/components 裸写恒零）承接。
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';

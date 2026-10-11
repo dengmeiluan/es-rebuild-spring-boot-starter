@@ -272,6 +272,7 @@ import { usePopupList } from '../composables/usePopupList';
 import { highlightJson } from '../utils/jsonc';
 import QueryResultTable from '../components/QueryResultTable.vue'; /*  W5：双表换 QRT rows 型 */
 import { metricTone } from '../utils/metricThresholds'; /*  W-F：节点表行级水位档（hotCls 语义回收，阈值单一真源） */
+import { writeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 const router = useRouter();
@@ -423,7 +424,7 @@ async function run() {
   runErr.value = '';
   try {
     data.value = await api.healthReport();
-    try { sessionStorage.setItem(SS_KEY, JSON.stringify(data.value)); } catch { /* 容量满容忍 */ }
+    writeStoredRaw(sessionStorage, SS_KEY, JSON.stringify(data.value));
     /* 多份存档——落 localStorage 环形档并重置默认对比对（基准=次新/对照=最新）；
        sessionStorage SS_KEY 仍写（ 刷新复原语义不变），PREV_KEY 单份对比退役 */
     archive.value = pushReport(localStorage, data.value);

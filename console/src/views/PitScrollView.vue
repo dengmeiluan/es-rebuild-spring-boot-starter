@@ -172,6 +172,7 @@ import { useTermsSuggest } from '../composables/useTermsSuggest'; /* ：值位�
 import JsonArea from '../components/JsonArea.vue';
 /* filter DSL 前置闸 + lintDsl 划线（SearchSandboxView 用法同款） */
 import { lintDsl } from '../utils/dslLint';
+import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 /* 目标索引进 URL——刷新/分享链接可复原（可重入）；
@@ -236,10 +237,10 @@ watch(filterDsl, () => queuePtLint(), { immediate: true });
    仅回放路径有键，普通进入/重挂载零影响；坏快照静默忽略（sort/order 保持草稿值） */
 onMounted(() => {
   const pf = sessionStorage.getItem('es-console.pit.filter');
-  if (pf !== null) { filterDsl.value = pf; sessionStorage.removeItem('es-console.pit.filter'); }
+  if (pf !== null) { filterDsl.value = pf; removeStoredRaw(sessionStorage, 'es-console.pit.filter'); }
   const carry = sessionStorage.getItem('es-console.pit.prefill');
   if (carry) {
-    sessionStorage.removeItem('es-console.pit.prefill');
+    removeStoredRaw(sessionStorage, 'es-console.pit.prefill');
     try {
       const c = JSON.parse(carry);
       if (typeof c.sort === 'string') sortField.value = c.sort;
@@ -305,7 +306,7 @@ async function doOpen() {
        QueryHubView.replay(pit) 把快照转运为 es-console.pit.prefill，PitScrollView onMounted
        读走即删；普通进入/重挂载不消费，同会话内回放即对应最近一次执行的现场 */
     try {
-      sessionStorage.setItem('es-console.pit.carry', JSON.stringify({
+      writeStoredRaw(sessionStorage, 'es-console.pit.carry', JSON.stringify({
         filter: filterDsl.value, sort: sortField.value.trim(), order: sortOrder.value.v,
       }));
     } catch { /* 存储满/隐私模式：回放退化为只带索引（现状），不影响执行 */ }

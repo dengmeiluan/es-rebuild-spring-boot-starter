@@ -156,6 +156,7 @@ import { useScopedDraft } from '../composables/useScopedDraft';
 import { askConfirm } from '../composables/confirm';
 import { fmtTimeTz } from '../utils/format';
 import { BP_NARROW, BP_STACK } from '../utils/layout'; /* ：响应式列数断点单源（与下方 CSS 档互锚） */
+import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 
@@ -195,7 +196,7 @@ const hOk = computed(() => hResult.value?.checks?.filter((c: any) => c.level ===
 const hStatus = computed(() => hResult.value?.summary?.status?.toUpperCase() || '-');
 
 function scoreCls(s: number) { return s >= 85 ? 'good' : s >= 60 ? 'warn' : 'bad'; }
-function persist() { localStorage.setItem(LS_KEY, JSON.stringify(layout.value)); }
+function persist() { writeStoredRaw(localStorage, LS_KEY, JSON.stringify(layout.value)); }
 function loadLayout() {
   try {
     const raw = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
@@ -210,7 +211,7 @@ async function reset() {
     message: '将清除当前自定义布局（卡片开关与排序）并恢复默认，不影响任何集群数据。',
     okText: '恢复默认',
   })) return;
-  localStorage.removeItem(LS_KEY);
+  removeStoredRaw(localStorage, LS_KEY);
   loadLayout();
   /*  G46：重置恢复默认全 on 后复用 refreshAll 补拉——此前隐藏期挂载
      条件跳过拉取，重置后卡面数值 0/null 陈旧须手点「全部刷新」（ 修法原文） */

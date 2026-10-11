@@ -97,7 +97,7 @@ describe('五百三十批②：DevTools curl 粘贴稿草稿化', () => {
 
   it('粘贴稿写入走 redactDraft 凭据掩埋，导入成功清稿', () => {
     expect(devtools).toContain("import { redactDraft } from '../composables/useScopedDraft'");
-    expect(devtools).toMatch(/sessionStorage\.setItem\(CURL_DRAFT_KEY\.value, redactDraft\(v\)\)/);
+    expect(devtools).toMatch(/writeStoredRaw\(sessionStorage, CURL_DRAFT_KEY\.value, redactDraft\(v\)\)/);
     expect(devtools).toMatch(/curlText\.value = '';[^\n]*导入成功清粘贴稿/);
   });
 

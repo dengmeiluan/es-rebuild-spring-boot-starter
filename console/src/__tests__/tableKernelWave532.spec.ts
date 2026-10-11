@@ -125,7 +125,7 @@ describe('五百三十二批两换壳：ReconcileReportDrawer + MatchMatrixView 
   it('mm：QRT 在场 + storage-key=mm + 冻结播种 + mm-tbl/useTableSort/手写 CSV 退役', () => {
     expect(mmv).toMatch(/<QueryResultTable v-if="hits\.length" :cols="mmCols" :rows="mmRows" sortable\s*\n\s*storage-key="mm" :field-types="\{ 得分: 'double' \}"/);
     expect(mmv).toContain("if (localStorage.getItem('es_tbl_freeze_n:mm') == null) {");
-    expect(mmv).toContain("localStorage.setItem('es_tbl_freeze_n:mm', '2')");
+    expect(mmv).toContain("writeStoredRaw(localStorage, 'es_tbl_freeze_n:mm', '2')");
     expect(mmv).not.toMatch(/<table class="mm-tbl"/);
     expect(mmv).not.toMatch(/\.mm-tbl-wrap/);
     expect(mmv).not.toContain("from '../composables/tableSort'");

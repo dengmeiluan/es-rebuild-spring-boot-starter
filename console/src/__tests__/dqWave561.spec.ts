@@ -80,8 +80,8 @@ describe('④ 工具行 DSL→Lucene 钮（CmdPalette r30 既有出口同线）'
   it('dslToLucene 纯函数直连 + es-console.lucene.q/index 会话键 + 跳 Lucene 通道', () => {
     expect(dq).toContain("import { dslToLucene } from '../utils/dslToLucene';");
     expect(dq).toMatch(/function openInLucene\(\)/);
-    expect(dq).toContain("sessionStorage.setItem('es-console.lucene.q', dslToLucene(obj))");
-    expect(dq).toContain("sessionStorage.setItem('es-console.lucene.index', store.pickedIdx)");
+    expect(dq).toContain("writeStoredRaw(sessionStorage, 'es-console.lucene.q', dslToLucene(obj))");
+    expect(dq).toContain("writeStoredRaw(sessionStorage, 'es-console.lucene.index', store.pickedIdx)");
     expect(dq).toContain("router.push({ path: '/search', query: { mode: 'lucene' } })");
     expect(dq).toMatch(/DSL 不是合法 JSON（已剥离注释后校验），无法翻译/);
   });

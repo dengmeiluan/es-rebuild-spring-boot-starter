@@ -130,7 +130,7 @@ describe('550 轨2 ⑦：IndexHub query tab fav 闭环（QueryHub 546 favHistRow
   it('favHistRow 直写 es_query_saved：同名去重 + notify 反馈 + 非 dsl 行门控', () => {
     expect(ih).toContain('function favHistRow');
     expect(ih).toContain("localStorage.getItem('es_query_saved')");
-    expect(ih).toContain("localStorage.setItem('es_query_saved', JSON.stringify(saved))");
+    expect(ih).toContain("writeStoredRaw(localStorage, 'es_query_saved', JSON.stringify(saved))");
     expect(ih).toContain('同名收藏已存在，未重复写入');
     expect(ih).toContain('已转收藏（保存的搜索）——到查询工作台 DSL 页「保存的搜索」查看');
     expect(ih).toContain('收藏写入失败（本地存储空间不足）');

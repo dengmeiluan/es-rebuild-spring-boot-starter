@@ -156,14 +156,14 @@ describe('529 W-B 源码锁：replay template 分支与接收口', () => {
   it('QueryHubView：template 分支=一次性 carry + 跨页 push + 提前 return', () => {
     const v = readFileSync(join(__dirname, '../views/QueryHubView.vue'), 'utf-8');
     expect(v).toMatch(/m === 'template'/);
-    expect(v).toMatch(/sessionStorage\.setItem\('es-console\.search-templates\.carry', it\.query \|\| ''\)/);
+    expect(v).toMatch(/writeStoredRaw\(sessionStorage, 'es-console\.search-templates\.carry', it\.query \|\| ''\)/);
     expect(v).toMatch(/router\.push\('\/search-templates'\)/);
     expect(v).toMatch(/es-console\.search-templates\.carry', it\.query \|\| ''\);\s*if \(idx\) store\.pick\(idx\);[\s\S]*?return;/);
   });
   it('SearchTemplatesView：接收端 onMounted 消费（读走即删），只预填 source 草稿', () => {
     const v = readFileSync(join(__dirname, '../views/SearchTemplatesView.vue'), 'utf-8');
     expect(v).toMatch(/const ST_SOURCE_CARRY = 'es-console\.search-templates\.carry';/);
-    expect(v).toMatch(/sessionStorage\.removeItem\(ST_SOURCE_CARRY\)/);
+    expect(v).toMatch(/removeStoredRaw\(sessionStorage, ST_SOURCE_CARRY\)/);
     expect(v).toMatch(/source\.value = prettify\(raw\);/);
     expect(v).toMatch(/onMounted\(consumeSourceCarry\)/);
     /* 313 批 push 签名 / 528 批页内双形态裁决零触碰（姊妹锁原样在位） */

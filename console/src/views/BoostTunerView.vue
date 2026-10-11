@@ -200,6 +200,7 @@ import { useIdxState } from '../composables/urlState';
 /* 裸 sessionStorage 接收换 useLinkCarry 统一件（530 W-D 遗留清单收编，
    键 es-console.link.boost 与 payload {index,keyword} 逐字保持，发送方 MatchMatrix 零改） */
 import { useLinkCarry } from '../composables/useLinkCarry';
+import { writeStoredRaw } from '../utils/safeJson';
 
 const SIZE = 20;
 const store = useAppStore();
@@ -383,7 +384,7 @@ async function exportDsl() {
    沙盒四通道回放兜底已消费该键（w78）；与 TemplateGallery toSandbox 同范式 */
 function toSandbox() {
   if (!canRun.value) return;
-  sessionStorage.setItem('es-console.sandbox.body', JSON.stringify(builtQuery.value, null, 2));
+  writeStoredRaw(sessionStorage, 'es-console.sandbox.body', JSON.stringify(builtQuery.value, null, 2));
   router.push({ path: '/search', query: { mode: 'sandbox' } });
   store.notify('info', '调参 DSL 已送入搜索沙盒');
 }

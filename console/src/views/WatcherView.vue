@@ -136,6 +136,7 @@ import HitNav from '../components/HitNav.vue';
 import MarkText from '../components/MarkText.vue';
 import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue'; /* 页头执行统计串统一件 */
 import { useHitLocate } from '../composables/useHitNav';
+import { writeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 const router = useRouter();
@@ -265,7 +266,7 @@ function copyBody(w: any) {
 
 /* -f §8.2：跨工具联动——在 DevTools 里打开该 watch 定义，改完直接 PUT 回去 */
 function toDevTools(w: any) {
-  sessionStorage.setItem('es-console.devtools.open', JSON.stringify({
+  writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
     title: 'watch/' + w._id, method: 'GET', path: '/_watcher/watch/' + encodeURIComponent(w._id), run: true,
   }));
   router.push('/devtools');
@@ -278,7 +279,7 @@ function toDevToolsSample() {
     input: { search: { request: { indices: ['*'], body: { query: { match_all: {} } } } } },
     actions: { log: { action: { logging: { text: 'watch fired' } } } },
   }, null, 2);
-  sessionStorage.setItem('es-console.devtools.open', JSON.stringify({
+  writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
     title: 'watch/sample', method: 'PUT', path: '/_watcher/watch/sample', body, run: false,
   }));
   router.push('/devtools');
@@ -287,7 +288,7 @@ function toDevToolsSample() {
 /* PUT 编辑变体——GET 现定义入 body，改完直接 PUT 回写（免手工复制粘贴） */
 function toDevToolsEdit(w: any) {
   const body = JSON.stringify(w.watch ?? w, null, 2);
-  sessionStorage.setItem('es-console.devtools.open', JSON.stringify({
+  writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
     title: 'watch/' + w._id + ' 编辑', method: 'PUT',
     path: '/_watcher/watch/' + encodeURIComponent(w._id), body, run: false,
   }));

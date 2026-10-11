@@ -870,8 +870,8 @@ watch(autoHist, (on) => { if (on) histBrokenIdx.delete(store.pickedIdx); });
    原 localStorage['es_dsl:<idx>'] 写侧退役（草稿持久化归 useScopedDraft），本 watch 只留镜像。 */
 watch(dsl, (v) => {
   try {
-    sessionStorage.setItem('es-console.dsl.body', v);
-    if (store.pickedIdx) sessionStorage.setItem('es-console.dsl.index', store.pickedIdx);
+    writeStoredRaw(sessionStorage, 'es-console.dsl.body', v);
+    if (store.pickedIdx) writeStoredRaw(sessionStorage, 'es-console.dsl.index', store.pickedIdx);
   } catch { /* 存储满容忍 */ }
 }, { immediate: true });
 
@@ -988,7 +988,7 @@ function tcConvert() {
 
 function qwSessionKey() { return 'es-console.qw.session:' + (store.target || 'host') + ':' + (store.pickedIdx || ''); }
 function saveQwSession(d: string) {
-  try { sessionStorage.setItem(qwSessionKey(), d); } catch { /* 存储满容忍 */ }
+  writeStoredRaw(sessionStorage, qwSessionKey(), d);
 }
 function restoreQwSession(): boolean {
   if (!store.pickedIdx) return false;
@@ -1241,7 +1241,7 @@ async function execQuery(recordHist = false) {
       useQueryHistoryStore().push('dsl', dsl.value, store.pickedIdx, took);
       const h0 = history.value.find(h => h.dsl === dsl.value && h.idx === store.pickedIdx);
       if (h0 && took != null) h0.took = took; /* 534 P1：耗时回填（pushHistory 先记后补口径） */
-      if (h0?.ok === false) { h0.ok = true; localStorage.setItem(HIST_KEY, JSON.stringify(history.value)); } /* ：重试成功翻转红点 */
+      if (h0?.ok === false) { h0.ok = true; writeStoredRaw(localStorage, HIST_KEY, JSON.stringify(history.value)); } /* ：重试成功翻转红点 */
       saveQwSession(dsl.value);
     }
   } catch (e: any) {
@@ -1255,7 +1255,7 @@ async function execQuery(recordHist = false) {
       if (recordHist) {
         try {
           const h0 = history.value.find(h => h.dsl === dsl.value && h.idx === store.pickedIdx);
-          if (h0) { h0.ok = false; localStorage.setItem(HIST_KEY, JSON.stringify(history.value)); }
+          if (h0) { h0.ok = false; writeStoredRaw(localStorage, HIST_KEY, JSON.stringify(history.value)); }
           useQueryHistoryStore().push('dsl', dsl.value, store.pickedIdx, -1, false);
         } catch { /* 历史失败不阻塞错误提示 */ }
       }
@@ -1930,7 +1930,7 @@ function pushHistory(d: string) {
   if (history.value[0]?.dsl === d && history.value[0]?.idx === store.pickedIdx) return;
   history.value.unshift({ dsl: d, ts: Date.now(), idx: store.pickedIdx });
   history.value = history.value.slice(0, store.settings.histSize);
-  localStorage.setItem(HIST_KEY, JSON.stringify(history.value));
+  writeStoredRaw(localStorage, HIST_KEY, JSON.stringify(history.value));
 }
 function replayHist(hst: HistItem, run: boolean) {
   dsl.value = hst.dsl;
@@ -1940,12 +1940,13 @@ function replayHist(hst: HistItem, run: boolean) {
 }
 function removeHis(i: number) {
   history.value.splice(i, 1);
-  localStorage.setItem(HIST_KEY, JSON.stringify(history.value));
+  writeStoredRaw(localStorage, HIST_KEY, JSON.stringify(history.value));
 }
 
 /*  历史面板收编 QueryHistoryPanel 共享件——旧条目形状（dsl/idx）映射为组件行（query/index），
    事件按 ts+文本反查原条目，回放/删除仍走本视图既有逻辑 */
 import QueryHistoryPanel from '../components/QueryHistoryPanel.vue';
+import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 const histRows = computed(() => history.value.map(h => ({ query: h.dsl, index: h.idx, took: h.took, ts: h.ts, ok: h.ok })));
 function histIdxOf(row: { query: string; ts?: number }): number {
   return history.value.findIndex(h => h.dsl === row.query && (row.ts === undefined || h.ts === row.ts));
@@ -2023,7 +2024,7 @@ async function askClearHist() {
   });
   if (!ok) return;
   history.value = [];
-  localStorage.setItem(HIST_KEY, JSON.stringify(history.value));
+  writeStoredRaw(localStorage, HIST_KEY, JSON.stringify(history.value));
 }
 const saveOpen = ref(false);
 const saveName = ref('');
@@ -2031,7 +2032,7 @@ const saveName = ref('');
 function openInDevTools() {
   if (!resp.value) return;
   const idxPath = store.pickedIdx ? `/${store.pickedIdx}/_search` : '/_search';
-  sessionStorage.setItem('es-console.devtools.open', JSON.stringify({
+  writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
     title: store.pickedIdx || '_search',
     method: 'POST',
     path: idxPath,
@@ -2046,7 +2047,7 @@ function histNewTab(h: { query: string; index?: string }) {
   const idxPath = (h.index ? '/' + h.index : '') + '/_search';
   let body = h.query || '';
   try { body = JSON.stringify(JSON.parse(stripJsonComments(body)), null, 2); } catch { /* 非 JSON 原样带过去 */ }
-  sessionStorage.setItem('es-console.devtools.open', JSON.stringify({
+  writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
     title: h.index || '_search',
     method: 'POST',
     path: idxPath,
@@ -2107,7 +2108,7 @@ async function confirmSave() {
   renameTarget = null;
   store.notify('success', (existing ? '已覆盖「' + name + '」' : '已保存') + (layout ? '（含表格布局：排序/筛选/列选）' : ''));
 }
-function persistSaved() { localStorage.setItem(SAVED_KEY, JSON.stringify(savedQueries.value)); }
+function persistSaved() { writeStoredRaw(localStorage, SAVED_KEY, JSON.stringify(savedQueries.value)); }
 
 /* ═══ 代码生成 / 导入导出 / 分享 ═══ */
 const langs = [
@@ -2142,8 +2143,8 @@ function importDsl() {
 function openInLucene() {
   const obj = tryParse(applyVars(stripJsonComments(dsl.value)));
   if (!obj) { store.notify('error', 'DSL 不是合法 JSON（已剥离注释后校验），无法翻译'); return; }
-  sessionStorage.setItem('es-console.lucene.q', dslToLucene(obj));
-  if (store.pickedIdx) sessionStorage.setItem('es-console.lucene.index', store.pickedIdx);
+  writeStoredRaw(sessionStorage, 'es-console.lucene.q', dslToLucene(obj));
+  if (store.pickedIdx) writeStoredRaw(sessionStorage, 'es-console.lucene.index', store.pickedIdx);
   router.push({ path: '/search', query: { mode: 'lucene' } });
 }
 
@@ -2291,7 +2292,7 @@ function protectDraftBeforeOverride(incoming: string) {
      （挂载时已从新键/一次性迁移载入）；默认模板视同无稿不暂存（对齐旧「无持久稿」语义）。 */
   const cur = dsl.value;
   if (!cur || cur === incoming || cur === DEFAULT_DSL) return;
-  try { sessionStorage.setItem('es-console.dsl.prev', JSON.stringify({ idx: store.pickedIdx, dsl: cur })); } catch { /* 存储满容忍 */ }
+  writeStoredRaw(sessionStorage, 'es-console.dsl.prev', JSON.stringify({ idx: store.pickedIdx, dsl: cur }));
   store.notify('info', '已载入新查询，你之前编辑的 DSL 已暂存', {
     action: { label: '恢复我的 DSL', onClick: () => { dsl.value = cur; runQuery(); } },
     duration: 10000,
@@ -2349,8 +2350,8 @@ onMounted(() => {
   /* 收藏夹/命令面板重放通道（一次性 carry 键，用后即删）——此前重放只有写侧无读侧 */
   const carry = sessionStorage.getItem('es-console.dsl.carry');
   const carryIdx = sessionStorage.getItem('es-console.dsl.carry.index');
-  sessionStorage.removeItem('es-console.dsl.carry');
-  sessionStorage.removeItem('es-console.dsl.carry.index');
+  removeStoredRaw(sessionStorage, 'es-console.dsl.carry');
+  removeStoredRaw(sessionStorage, 'es-console.dsl.carry.index');
   if (carry != null) {
     if (carryIdx && carryIdx !== store.pickedIdx) { suppressIdxDslLoad = true; store.pick(carryIdx); }
     protectDraftBeforeOverride(carry);

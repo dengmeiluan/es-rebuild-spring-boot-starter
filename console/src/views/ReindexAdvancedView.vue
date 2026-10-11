@@ -312,6 +312,7 @@ import DraftBadge from '../components/DraftBadge.vue'; /* ：草稿恢复徽标�
 import { highlightJson } from '../utils/jsonc'; /* ：原始响应高亮 */
 import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue'; /* ：结果指标串统一件 */
 import TookBadge from '../components/TookBadge.vue'; /* ：took 四档语义徽标 */
+import { removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 const router = useRouter();
@@ -678,7 +679,7 @@ onMounted(async () => {
     rawBody.value = carry;
     bodyTouched.value = true; // G3-A1：外部注入 body 是权威内容，表单改动不覆写
     showBody.value = true;
-    sessionStorage.removeItem('es-console.reindex-advanced.body');
+    removeStoredRaw(sessionStorage, 'es-console.reindex-advanced.body');
   } else {
     rawBody.value = JSON.stringify(buildBody(), null, 2);
   }

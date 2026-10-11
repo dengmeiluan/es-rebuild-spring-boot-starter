@@ -121,6 +121,7 @@ import {
   TerminalSquare, PartyPopper,
 } from 'lucide-vue-next';
 import { GOTO_TARGETS } from '../utils/hotkeys';
+import { writeStoredRaw } from '../utils/safeJson';
 
 /* -13：首启引导里的 goto 示例原是硬编码「g h = 历史」——HistoryView 已退役，
    属于和速查面板同一类的「撒谎的界面」。改为从登记表取前三条，不再手工维护。 */
@@ -167,7 +168,7 @@ function go(path: string, _label: string) {
   router.push(path);
 }
 function finish(skipped: boolean) {
-  if (dontShow.value) localStorage.setItem(LS_KEY, '1');
+  if (dontShow.value) writeStoredRaw(localStorage, LS_KEY, '1');
   show.value = false;
   if (!skipped) store.notify?.('success', '欢迎面板已关闭，可通过 ⌘K → “重看引导” 再次呼出');
 }
