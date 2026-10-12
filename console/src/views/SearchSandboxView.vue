@@ -264,7 +264,7 @@ import PageHeader from '../components/PageHeader.vue';
 /* 四处裸 .empty 迁 EmptyState compact */
 import EmptyState from '../components/EmptyState.vue';
 import { useAppStore } from '../stores/app';
-import { useScopedDraft, draftStorageKey } from '../composables/useScopedDraft';
+import { useScopedDraft } from '../composables/useScopedDraft';
 import { useQueryHistoryStore } from '../stores/queryHistory';
 import { useQueryRun } from '../composables/useQueryRun';
 import { useIdxState } from '../composables/urlState';
@@ -296,7 +296,7 @@ import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-
 /* 结果信息行统一件化：MetaStrip 承接 hits 段、TookBadge 承接 took 四档语义徽标 */
 import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue';
 import TookBadge from '../components/TookBadge.vue';
-import { removeStoredRaw } from '../utils/safeJson';
+import { removeStoredRaw, writeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 const router = useRouter();
@@ -551,14 +551,25 @@ function onEditorKey(e: KeyboardEvent) {
  此前额外挂了 window 级监听，与编辑器监听叠加会一次触发两回 run()，已移除。 */
 onMounted(() => {
   if (!store.indices.length) store.loadIndices();
-  /* w78:四通道回放兜底——favReplay/模板库/远程集群写 sessionStorage「es-console.sandbox.body」、
- QueryHub 写 localStorage「ss_dsl_body」，而草稿治理后沙盒只读 draft2 键，四条通道全是死信箱。
- 此处消费端按优先级读一次即清：已有 draft2 草稿（用户旧稿）优先，legacy 不覆盖之 */
-  const draftKey = draftStorageKey({ route: 'search-sandbox', index: () => indexName.value }, 'dsl');
-  const legacy = sessionStorage.getItem('es-console.sandbox.body') || localStorage.getItem('ss_dsl_body');
-  if (legacy && !sessionStorage.getItem(draftKey)) dslBody.value = legacy;
+  /* 五个送达入口（历史回放/收藏/模板库/远程集群/BoostTuner）经一次性通道送达沙盒：
+   es-console.sandbox.body 与 ss_dsl_body（sessionStorage；localStorage 旧落点残留读后清不再消费）。
+   送达必达——非默认旧稿先暂存（es-console.sandbox.prev + toast 一键找回）再覆盖，
+   与 DSL 页回放的覆盖保护同语义 */
+  const legacy = sessionStorage.getItem('es-console.sandbox.body') || sessionStorage.getItem('ss_dsl_body');
   removeStoredRaw(sessionStorage, 'es-console.sandbox.body');
+  removeStoredRaw(sessionStorage, 'ss_dsl_body');
   removeStoredRaw(localStorage, 'ss_dsl_body');
+  if (legacy) {
+    const cur = dslBody.value;
+    if (cur && cur !== legacy && cur !== DEFAULT_DSL) {
+      writeStoredRaw(sessionStorage, 'es-console.sandbox.prev', JSON.stringify({ idx: indexName.value, dsl: cur }));
+      store.notify('info', '已载入新查询，你之前编辑的 DSL 已暂存', {
+        action: { label: '恢复我的 DSL', onClick: () => { dslBody.value = cur; } },
+        duration: 10000,
+      });
+    }
+    dslBody.value = legacy;
+  }
 });
 
 /* Explain 树递归组件（内部定义，显式 any 打破自引用类型推断） */

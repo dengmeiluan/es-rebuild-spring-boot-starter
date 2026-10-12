@@ -284,7 +284,7 @@ function replay(it: { mode?: string; query: string; index?: string }) {
     writeStoredRaw(sessionStorage, 'es-console.lucene.q', it.query);
     if (idx) writeStoredRaw(sessionStorage, 'es-console.lucene.index', idx);
   } else if (m === 'sandbox') {
-    writeStoredRaw(localStorage, 'ss_dsl_body', it.query);
+    writeStoredRaw(sessionStorage, 'ss_dsl_body', it.query);
     if (idx) store.pick(idx);
   } else if (m === 'pit') {
     /* PIT 回放补 filter/sort 预填——queryHistory 条目形状扩展（store 文件）不在
