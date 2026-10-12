@@ -140,7 +140,7 @@ function tick() {
   if (!alive) return;
   const v = damp.frame();
   if (v !== null) dispFrac.value = v;
-  if (!damp.settled) scheduleTick();
+  if (!damp.settled) rafId = scheduleTick();
 }
 function scheduleTick(): number {
   const raf = typeof requestAnimationFrame === 'function'

@@ -1,4 +1,4 @@
-import { computed, ref, watch, type ComputedRef, type Ref } from 'vue';
+import { computed, getCurrentScope, onScopeDispose, ref, watch, type ComputedRef, type Ref } from 'vue';
 import { getViewportProfile, type ViewportProfile } from '../utils/layout';
 
 type ResizeTarget = Ref<HTMLElement | undefined>;
@@ -95,5 +95,7 @@ export function useViewportProfile(target?: ResizeTarget): {
     stopWindowFallback();
   };
 
+  /* 调用方漏调 dispose 时随宿主作用域卸载兜底回收（幂等，手动 dispose 并存无害；作用域外调用跳过） */
+  if (getCurrentScope()) onScopeDispose(dispose);
   return { width, height, profile, dispose };
 }
