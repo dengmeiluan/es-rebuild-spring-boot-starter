@@ -5,7 +5,7 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
-## [Unreleased]
+## [1.0.3]
 
 ### 新增
 
@@ -19,6 +19,15 @@
   缺驱动时回落 `control-es` 并 WARN；standalone 默认启用 sqlite 档
 - standalone 首启体验契约：未绑定控制集群时登录以 `409 SETUP_REQUIRED` 优雅引导（先 Setup
   后登录，无死锁）；README 明示默认凭据 `admin / es-console`（仅用户索引为空时生效）与公网暴露安全指引
+- 常驻线程池生命周期守卫：内置五处线程池/执行器补齐关闭策略，随 Spring 上下文关停释放
+  （`ExecutorLifecycleGuardTest` 常驻看守）
+
+### 修复
+
+- 实时监控「节点对比」卡悬浮读数与十字线共用同一数据窗——读数头部时刻不再滞后于指针位置
+- 表格 XLSX 导出 meta「导出时间」改本地时（原 UTC 串在东八区比本地钟慢 8 小时），
+  与导出文件名时间戳同源可互核
+- 查询编辑器 Ctrl+I 智能补全的动态模块加载失败不再产生未处理异常（四条接线兜底补齐）
 
 ## [1.0.2]
 
