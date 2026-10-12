@@ -158,7 +158,8 @@ describe('buildExportSheets 双 sheet 装配单源（五百六十批）', () => 
     expect(meta.rows[0]).toEqual(['索引', 'idx-1']);
     expect(meta.rows[1]).toEqual(['范围', '当前页']);
     expect(meta.rows[2]?.[0]).toBe('导出时间');
-    expect(String(meta.rows[2]?.[1])).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    /* 八百六十三批：导出时间改走 exportStamp 本地时命名档（UTC ISO 比本地钟慢 8 小时，见 exportStampMeta863） */
+    expect(String(meta.rows[2]?.[1])).toMatch(/^\d{8}-\d{6}$/);
     expect(meta.rows[3]).toEqual(['行数', 2]);
   });
 
