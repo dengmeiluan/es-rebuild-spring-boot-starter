@@ -5,6 +5,14 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.5]
+
+### 修复
+
+- 监控页悬浮读出在鼠标快速移出图表后不再残留——新增坐标巡检兜底（悬浮激活期间
+  鼠标离开图区即收起十字线与读数，不依赖可能丢失的 mouseleave 事件），六卡/
+  节点对比/Top 索引三条悬浮链统一接
+
 ## [1.0.4]
 
 ### 修复
