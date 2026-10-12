@@ -5,6 +5,14 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.4]
+
+### 修复
+
+- 实时监控六张走势卡的悬浮十字线/读出直钉跟随指针——原阻尼滑行（每帧收敛 65%）
+  在低帧率环境拖影成倍放大，读数始终落在指针后方；圆点抖动本就由线性插值消化，
+  阻尼只剩拖影，四条悬浮链统一「指针在哪、读出在哪」
+
 ## [1.0.3]
 
 ### 新增
