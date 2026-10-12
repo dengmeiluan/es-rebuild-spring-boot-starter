@@ -24,7 +24,7 @@
       </span>
       <b class="ld-chart-cur ld-chart-kpi" :key="curKey" :style="{ color: curColor }" :title="curTitle">{{ curText }}</b>
     </div>
-    <div class="ld-svgwrap" @mousemove="onMove" @mouseleave="onLeave">
+    <div ref="wrapEl" class="ld-svgwrap" @mousemove="onMove" @mouseleave="onLeave">
       <svg v-if="series.length > 1" :viewBox="'0 0 300 ' + LD_H" class="ld-svg" preserveAspectRatio="none">
         <defs>
           <linearGradient :id="gid" x1="0" y1="0" x2="0" y2="1">
@@ -81,6 +81,7 @@ import SkeletonBox from './SkeletonBox.vue';
 import { LD_H, PCT_GRID, sparkPts, catmullRomPath, catmullRomAreaPath } from '../utils/sparkChart';
 import { sparkHoverAt, createHoverDamp, lineYAtFrac, type SparkHoverHit } from '../utils/sparkHover';
 import { fmtTime } from '../utils/format';
+import { useHoverEscape } from '../composables/useHoverEscape';
 
 const props = defineProps<{
   title: string;
@@ -171,6 +172,19 @@ function onLeave() {
     rafId = null;
   }
 }
+/* mouseleave 在快速移出/重渲竞态下会丢，悬浮态残留（命中的点
+ 停在鼠标早已离开的位置）——坐标巡检兜底：悬浮期间任一移动落在图区外即清。 */
+const wrapEl = ref<HTMLElement | null>(null);
+useHoverEscape(
+  () => hit.value != null,
+  (e) => {
+    const el = wrapEl.value;
+    if (!el) return true;
+    const r = el.getBoundingClientRect();
+    return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+  },
+  onLeave,
+);
 onUnmounted(() => { alive = false; });
 
 /* 显示位分数（阻尼滑行值；直钉/未滑行时=命中 frac）；读出内容仍取目标采样点真值 */

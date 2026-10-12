@@ -140,7 +140,7 @@
           <button type="button" class="ld-ncmp-close" aria-label="收起节点对比" title="收起（Esc）" @click="closeCmpPanel">✕</button>
         </div>
         <template v-if="cmpHasData">
-          <div class="ld-cmp-plot">
+          <div ref="cmpPlotEl" class="ld-cmp-plot">
             <svg :viewBox="'0 0 720 ' + CMP_H" class="ld-ncmp-svg" preserveAspectRatio="none">
               <g v-if="cmpMode === 'pct'" class="ld-glines" aria-hidden="true">
                 <line v-for="g in PCT_GRID" :key="'g' + g" x1="0" x2="720" :y1="CMP_H - CMP_H * (g / 100)" :y2="CMP_H - CMP_H * (g / 100)" vector-effect="non-scaling-stroke" />
@@ -436,7 +436,7 @@
                 <button type="button" :class="{ on: topView === 'table' }" :aria-pressed="topView === 'table'" @click="topView = 'table'">表格</button>
               </span>
             </div>
-            <div v-if="topView === 'curve'" class="ld-cmp-plot ld-top-plot" @mousemove="onTopMove($event)" @mouseleave="onTopLeave()">
+            <div v-if="topView === 'curve'" ref="topPlotEl" class="ld-cmp-plot ld-top-plot" @mousemove="onTopMove($event)" @mouseleave="onTopLeave()">
               <template v-if="topHasData">
                 <svg :viewBox="'0 0 720 ' + CMP_H" class="ld-ncmp-svg" preserveAspectRatio="none" aria-hidden="true">
                   <!-- 件1：横向网格线四档（全局 max 同坐标系底座） -->
@@ -634,6 +634,7 @@ import CollapsePanel from '../components/CollapsePanel.vue'; /* Z1：三表可�
  utils/sparkChart.ts 单源（P1a-1）；此处经 import 引入，模板与悬浮换算照常使用。 */
 /* 走势卡悬浮命中纯函数（十字线/圆点/读出钉在曲线上，点位公式与 sparklinePoints(Pct) 同源） */
 import { sparkHoverAt, type SparkHoverHit } from '../utils/sparkHover';
+import { useHoverEscape } from '../composables/useHoverEscape';
 import { friendlyEsError } from '../utils/esError';
 import { usePref } from '../composables/urlState';
 import { setTargetId } from '../api';
@@ -979,6 +980,19 @@ function onCmpMove(e: MouseEvent) {
   cmpHit.value = hit ? { ...hit, y: y ?? 0 } : null;
 }
 function onCmpLeave() { cmpHit.value = null; }
+/* 悬浮残留兜底（mouseleave 丢失场景）——鼠标坐标出图区即清。 */
+const cmpPlotEl = ref<HTMLElement | null>(null);
+const topPlotEl = ref<HTMLElement | null>(null);
+useHoverEscape(
+  () => cmpHit.value != null,
+  (e) => {
+    const el = cmpPlotEl.value;
+    if (!el) return true;
+    const r = el.getBoundingClientRect();
+    return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+  },
+  onCmpLeave,
+);
 /* 读出行：各节点在该时刻的值——pct 档整数化带 %（对齐节点卡形态），abs 档 toFixed(1) 裸值；
  序列短于该时刻的行不列 */
 const cmpRows = computed(() => {
@@ -1127,6 +1141,16 @@ function onTopMove(e: MouseEvent) {
   topHit.value = topRes ? { ...topRes, y: y ?? 0 } : null;
 }
 function onTopLeave() { topHit.value = null; }
+useHoverEscape(
+  () => topHit.value != null,
+  (e) => {
+    const el = topPlotEl.value;
+    if (!el) return true;
+    const r = el.getBoundingClientRect();
+    return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+  },
+  onTopLeave,
+);
 const topReadRows = computed(() => {
   const hit = topHit.value;
   if (!hit) return [];
