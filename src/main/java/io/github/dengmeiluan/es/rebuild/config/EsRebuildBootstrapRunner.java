@@ -24,8 +24,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 
-import java.util.concurrent.Executors;
-
 /**
  * M6 启动 IO 异步化：把 starter 的 ES store ensureIndex 调用从 @PostConstruct
  * 移到 ApplicationReadyEvent 之后异步执行。
@@ -51,11 +49,9 @@ public class EsRebuildBootstrapRunner {
 
     @EventListener(ApplicationReadyEvent.class)
     public void onReady() {
-        Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "es-rebuild-bootstrap");
-            t.setDaemon(true);
-            return t;
-        }).submit(this::ensureAllIndices);
+        Thread t = new Thread(this::ensureAllIndices, "es-rebuild-bootstrap");
+        t.setDaemon(true);
+        t.start();
     }
 
     private void ensureAllIndices() {

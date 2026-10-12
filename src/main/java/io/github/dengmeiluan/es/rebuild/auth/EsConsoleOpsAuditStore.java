@@ -24,6 +24,8 @@ import org.elasticsearch.client.RestHighLevelClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.PreDestroy;
+
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -106,6 +108,12 @@ public class EsConsoleOpsAuditStore implements ConsoleOpsAuditStore {
                 },
                 new ThreadPoolExecutor.DiscardPolicy());
         this.executor.allowCoreThreadTimeOut(true);
+    }
+
+    /** 上下文关停：停收新审计，队列中已提交记录自然落盘（daemon 线程不阻 JVM 退出）。 */
+    @PreDestroy
+    public void shutdown() {
+        executor.shutdown();
     }
 
     /** 记一笔操作（异步，永不抛）。：唯一写入口为富事件。 */

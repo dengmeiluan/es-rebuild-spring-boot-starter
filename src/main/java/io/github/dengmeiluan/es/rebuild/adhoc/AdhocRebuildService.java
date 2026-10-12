@@ -29,6 +29,8 @@ import org.elasticsearch.client.RestHighLevelClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.PreDestroy;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -583,6 +585,12 @@ public class AdhocRebuildService {
     }
 
     // ------------------------------------------------------------------ worker
+
+    /** 上下文关停：不再接新任务、在途作业自然收尾（daemon 线程不阻 JVM 退出）。 */
+    @PreDestroy
+    public void shutdown() {
+        worker.shutdown();
+    }
 
     private void run(AdhocRebuildJob job, String settingsJson, String mappingJson) {
         // target-aware adhoc：fail closed——远程目标的连接档案已删时，绝不回落宿主执行

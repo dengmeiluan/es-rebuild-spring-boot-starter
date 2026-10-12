@@ -19,6 +19,7 @@ package io.github.dengmeiluan.es.rebuild.auth;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.PreDestroy;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -69,6 +70,12 @@ public class JdbcConsoleOpsAuditStore implements ConsoleOpsAuditStore {
                 },
                 new ThreadPoolExecutor.DiscardPolicy());
         this.executor.allowCoreThreadTimeOut(true);
+    }
+
+    /** 上下文关停：停收新审计，队列中已提交记录自然落库（daemon 线程不阻 JVM 退出）。 */
+    @PreDestroy
+    public void shutdown() {
+        executor.shutdown();
     }
 
     /** 记一笔操作（异步，永不抛）。：唯一写入口为富事件；旧表兼容：优先富列插入，
