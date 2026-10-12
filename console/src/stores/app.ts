@@ -261,7 +261,10 @@ export const useAppStore = defineStore('app', () => {
   const FAV_KEY = 'es-console.favorites.v1';
   const favorites = ref<Favorite[]>(loadFav());
   function loadFav(): Favorite[] {
-    try { return JSON.parse(localStorage.getItem(FAV_KEY) || '[]') as Favorite[]; }
+    try {
+      const arr = JSON.parse(localStorage.getItem(FAV_KEY) || '[]') as Favorite[];
+      return Array.isArray(arr) ? arr : [];
+    }
     catch { return []; }
   }
   function saveFav() { writeStoredRaw(localStorage, FAV_KEY, JSON.stringify(favorites.value)); }

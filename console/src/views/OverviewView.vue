@@ -370,6 +370,7 @@ function useCountUp(target: () => number, dur = 700) {
     };
     raf = requestAnimationFrame(step);
   }, { immediate: true });
+  onUnmounted(() => { cancelAnimationFrame(raf); });
   return display;
 }
 const idxCountAnim = useCountUp(() => store.indices.length);
