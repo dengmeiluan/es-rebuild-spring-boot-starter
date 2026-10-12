@@ -111,10 +111,11 @@ describe('六百八十一批 D2：悬浮阻尼（k=0.35，首中直钉）', () =
     expect(lineYAtFrac([0, 10], 0.5, 100, 'abs')).toBeCloseTo(50);
   });
 
-  it('组件接线：阻尼单源 + reduce 归零（matchMedia 直伞，非 @media 块）', () => {
+  it('组件接线：阻尼单源 + 直钉（八百六十七批：拖影退役，接线恒 createHoverDamp(0)）', () => {
     expect(CARD).toContain('createHoverDamp');
-    expect(CARD).toContain('HOVER_DAMP_K');
-    expect(CARD).toMatch(/prefers-reduced-motion/);
+    /* 八百六十七批随迁：阻尼拖影与实报「悬浮不跟手+卡顿」相悖，接线直钉化——
+ 常量与 dampStep 数学锁保留（sparkHover 纯函数面契约不变），接线锁移交
+ liveHoverDirect867（createHoverDamp(0)+反形态双锁） */
     expect(HOVER_DAMP_K).toBe(0.35);
   });
 });

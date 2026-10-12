@@ -79,7 +79,7 @@ import { ref, computed, onUnmounted } from 'vue';
 import { Minimize2, Maximize2 } from 'lucide-vue-next';
 import SkeletonBox from './SkeletonBox.vue';
 import { LD_H, PCT_GRID, sparkPts, catmullRomPath, catmullRomAreaPath } from '../utils/sparkChart';
-import { sparkHoverAt, createHoverDamp, HOVER_DAMP_K, lineYAtFrac, type SparkHoverHit } from '../utils/sparkHover';
+import { sparkHoverAt, createHoverDamp, lineYAtFrac, type SparkHoverHit } from '../utils/sparkHover';
 import { fmtTime } from '../utils/format';
 
 const props = defineProps<{
@@ -125,12 +125,12 @@ const yTop = computed(() => {
   return mx >= 100 ? String(Math.round(mx)) : mx.toFixed(1);
 });
 
-/* （622 -D2）：悬浮层阻尼跟随——显示位按帧收敛、首中直钉、reduce 直钉；
- hit 保持指针目标真值（读出文本=采样点数据），只有十字线/圆点/读出的 x 做
- 「跟手不抖」滑行，圆点 y 走相邻采样线性插值（钉线）。rAF 只在悬停未收敛期跑。 */
-const reduceMotion = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-  && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const damp = createHoverDamp(reduceMotion ? 0 : HOVER_DAMP_K);
+/* 悬浮读出直钉（用户复验「悬浮点不跟鼠标点+卡顿」定谳）：阻尼滑行（k=0.35 四帧
+ 收敛）的拖影在低帧率环境（远程桌面/高负载）成倍放大=读出永远落在指针后方；
+ 圆点 y 的抖动已由 lineYAtFrac 线性插值钉线消化，阻尼只剩拖影——工厂传 0=恒直钉
+ （与对比卡/顶部图两条悬浮链的即时直钉语义对齐，四链统一「指针在哪、读出在哪」；
+ reduce 档行为本就是直钉，条件分支随之合并）。k=0 时 settled 恒真，rAF 不再循环。 */
+const damp = createHoverDamp(0);
 const dispFrac = ref<number | null>(null);
 let rafId: number | null = null;
 let alive = true;
