@@ -971,7 +971,11 @@ function onCmpMove(e: MouseEvent) {
   const base = cmpSeries.value.find(s => s.data.length > 1);
   /* 件1：Y 向跟手（指针 y 相对图区钳位） */
   const y = rect ? Math.min(Math.max(e.clientY - rect.top, 14), rect.height - 14) : 0;
-  const hit = base ? sparkHoverAt(base.data, sampleTs.value, frac, CMP_W, CMP_H, cmpMode.value) : null;
+  /* ts 与 data 同窗右对齐（LiveChartCard tsWin 同语义）：data 是 winSlice 截尾窗，
+ 直接传全量 sampleTs 会让读出头部时刻取到窗前采样点——十字线在窗内、时刻停在窗外
+ （线上反馈「悬浮点不跟鼠标点」根因）；按数据长度右对齐切片保同域 */
+  const tsWin = base ? sampleTs.value.slice(Math.max(0, sampleTs.value.length - base.data.length)) : [];
+  const hit = base ? sparkHoverAt(base.data, tsWin, frac, CMP_W, CMP_H, cmpMode.value) : null;
   cmpHit.value = hit ? { ...hit, y: y ?? 0 } : null;
 }
 function onCmpLeave() { cmpHit.value = null; }
