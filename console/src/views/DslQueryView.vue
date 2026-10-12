@@ -785,7 +785,7 @@ watch(monacoRef, (mc) => {
       ed.addCommand(m.KeyMod.CtrlCmd | m.KeyCode.KeyI, () => {
         ed.trigger('', 'editor.action.triggerSuggest', null);
       });
-    });
+    }).catch(() => { /* 测试 stub 面/包缺失时静默：补全仍有 Ctrl+Space 既有键 */ });
   });
 }, { immediate: true });
 /* ═══ W-A：编辑器高度四档（usePref 记忆，同 profileOn/autoHist 体系）═══
