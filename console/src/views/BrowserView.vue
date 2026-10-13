@@ -405,8 +405,11 @@ function askDelRow(row: any[]) { return askDel(rowToIdx(row)); }
 .bw-search { width: min(240px, 100%); padding: var(--sp-1h) var(--sp-2h); }
 /* .bw-hdot/.bw-hdot.lg 私造圆点退役——健康 tab 与 #cell-健康 槽两处改用
  MetaStrip dot 形态单源（DiagView dgMeta 先例），8px 圆点形态归组件 .ms-dot；
- .bw-tab-ms 只承担落位：inline 化防块级 .ms 在非 flex 按钮内折行 + 原点右距 5px 同步更新 */
-.seg .bw-tab-ms { display: inline-flex; margin-right: 5px; vertical-align: 1px; }
+ seg 钮升 flex 结构居中（对称对齐：色点垂直居中由 align-items:center 结构承担，
+ vertical-align:1px 手调补偿退役）；.bw-tab-ms 只承担圆点右距（--sp-1 与
+ HistoryChart .hc-chip 色点间距同口径） */
+.seg button { display: inline-flex; align-items: center; }
+.seg .bw-tab-ms { display: inline-flex; margin-right: var(--sp-1); }
 .bw-name { color: var(--ac-hi); cursor: pointer; font-size: var(--fs-sm); }
 .bw-name:hover { text-decoration: underline; }
 /* 表外 .card 壳退役 → 538 SystemView .sy-res 同语言 border-top 分节

@@ -2053,9 +2053,13 @@ async function askDelIndex() {
 /* v3.0.1 实报「贴左一点点很小气」:加宽至 32vw(400-560px),与视口留 16px 呼吸位,大圆角+深阴影提质感 */
 .ih-drawer { position: fixed; left: 16px; top: 16px; bottom: 16px; z-index: var(--z-drawer, 251); border-radius: var(--r-l); overflow: hidden; box-shadow: var(--shadow-pop); background: var(--bg0); } /* ：557 摘壳时「bg0 直贴」注释声称但声明从未落位——面板底一直透 mask 半透明（亮色 35% 灰黑=实报「亮色主体看不清」真凶），补 bg0 兑现注释语义，遮罩回归关闭+层级本职 */
 /* 折叠钮（ih-lbar 头部）+ 折叠恢复竖条 */
-/* 健康过滤 chips 换行收纳（窄列不再横向溢出截断 red） */
+/* 健康过滤 chips 换行收纳（窄列不再横向溢出截断 red）；
+ seg 钮 flex 结构居中（对称对齐：与 BrowserView 健康 seg 同律，
+ 色点垂直居中由 align-items:center 结构承担，inline 基线搁置退役） */
 .ih-seg-wrap { flex-wrap: wrap; row-gap: var(--sp-1); }
 .ih-seg-wrap > button { margin-right: var(--sp-1); }
+.ih-seg button { display: inline-flex; align-items: center; }
+.ih-seg .ih-hdot { margin-right: var(--sp-1); }
 .ih-collapse-btn { display: inline-flex; align-items: center; padding: var(--sp-0); border: 0; background: none; color: var(--tx2); cursor: pointer; border-radius: var(--r-xs); flex-shrink: 0; }
 .ih-collapse-btn:hover { color: var(--tx0); background: var(--bg2); }
 /* 放大/还原双态钮实装（与折叠钮同款视觉、独立语义类 spec 选择器隔离）；on 态随选中语言走品牌色 */
@@ -2117,7 +2121,8 @@ async function askDelIndex() {
 .ih-row.ih-kb-focus { background: var(--ac-soft); box-shadow: inset 3px 0 0 var(--ac-hi); }
 .ih-kbd-hint { margin-left: var(--sp-2); font-size: var(--fs-2xs); color: var(--tx2); opacity: .85; }
 .ih-lfoot { padding-top: var(--sp-2); font-size: var(--fs-xs); color: var(--tx2); text-align: right; border-top: 1px solid var(--line); margin-top: var(--sp-2); }
-.ih-hdot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+/* 健康色点 8px=全站圆点单源（MetaStrip .ms-dot / HistoryChart .hc-chip 同径） */
+.ih-hdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .ih-hdot.lg { width: 10px; height: 10px; }
 
 /* 右详情 */

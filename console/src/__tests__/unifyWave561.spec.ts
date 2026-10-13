@@ -67,7 +67,10 @@ describe('五百六十一批②：状态圆点四胞退役→MetaStrip dot 形�
       .toContain('<MetaStrip v-if="h.dot" class="bw-tab-ms" :items="[{ dot: h.dot }]" />');
     expect(s, '表格健康槽仍是纯色点无文字（DOM 逐字保形），title 走段级 tip')
       .toContain('<MetaStrip :items="[{ dot: healthColor(value), tip: String(value ?? \'\') }]" />');
-    expect(s, 'inline 化落位规则在场').toContain('.seg .bw-tab-ms { display: inline-flex; margin-right: 5px; vertical-align: 1px; }');
+    expect(s, '落位规则在场（seg 钮 flex 结构居中+圆点右距 --sp-1；vertical-align 手调补偿退役）')
+      .toContain('.seg .bw-tab-ms { display: inline-flex; margin-right: var(--sp-1); }');
+    expect(s, 'seg 钮 flex 结构居中（色点垂直居中由 align-items 承担）')
+      .toContain('.seg button { display: inline-flex; align-items: center; }');
   });
 
   it('HealthReportView：#cell-health 色点改用（dot+value 段，中文主显文案不变，title 留槽级 span）', () => {

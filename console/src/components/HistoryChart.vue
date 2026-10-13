@@ -22,7 +22,7 @@
     </div>
     <div v-if="note" class="hc-note">{{ note }}</div>
 
-    <div ref="plotEl" class="hc-plot" :style="plotStyle" @pointermove="onMove" @pointerleave="onLeave">
+    <div class="hc-plot" :style="plotStyle">
       <template v-if="hasVisible">
         <!-- 件2：.hc-canvas 内壳=绘图域整体右移让出左刻度列（36px）——线和文字不遮挡。
  Y 三刻度锚 .hc-plot 左列（0..32px 右对齐）；十字线/圆点/tooltip 的 % 域随 canvas 对齐零错位。
@@ -32,7 +32,10 @@
         <!-- 件2：Y 中档三刻度（75/50/25%——与 ymax/yzero 合成五档，802 topYTicks 同构语言） -->
         <span v-for="(v, i) in hcYMid" :key="'ym' + i" class="hc-yt" :style="{ top: HC_YT_POS[i] }" aria-hidden="true">{{ fmtV(v) }}</span>
         <span class="hc-yzero">0</span>
-        <div class="hc-canvas">
+        <!-- 指针命中域=绘图域本体（.hc-canvas）：hoverFrac 必须对 canvas 矩形取分数，
+	 若对 .hc-plot 全宽取值则左刻度列 36px 计入分母——十字线/圆点/tooltip 整体
+	 右偏（左缘最大 36px，右缘归零），即实报「鼠标实际位置与点位置对不上」根因 -->
+        <div ref="canvasEl" class="hc-canvas" @pointermove="onMove" @pointerleave="onLeave">
         <svg class="hc-svg" viewBox="0 0 600 220" preserveAspectRatio="none" aria-hidden="true">
           <defs>
             <linearGradient v-for="(s, i) in visibleSeries" :key="'g' + s.name" :id="gidOf(i)" x1="0" y1="0" x2="0" y2="1">
@@ -306,12 +309,14 @@ function fmtV(v: number): string {
   return props.fmt ? props.fmt(v) : fmtUnit(v, props.unit);
 }
 
-/* ═══ 悬停十字线 + 最近点高亮 + tooltip（HTML 层，x=指针分数 → 时间域 → 各序列最近点） ═══ */
-const plotEl = ref<HTMLElement | null>(null);
+/* ═══ 悬停十字线 + 最近点高亮 + tooltip（HTML 层，x=指针分数 → 时间域 → 各序列最近点）
+ 分数取自绘图域 .hc-canvas（36px 右移后的真域），与十字线/圆点/tooltip 的定位父级同源
+ ——对 .hc-plot 全宽取分数会把左刻度列计入域，悬浮装配整体右偏最大 36px ═══ */
+const canvasEl = ref<HTMLElement | null>(null);
 const hoverFrac = ref<number | null>(null);
 const hoverY = ref<number | null>(null);
 function onMove(e: PointerEvent) {
-  const el = plotEl.value;
+  const el = canvasEl.value;
   if (!el) return;
   const r = el.getBoundingClientRect();
   if (r.width <= 0) return;
