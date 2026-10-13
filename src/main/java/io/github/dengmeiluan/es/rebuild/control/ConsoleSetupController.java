@@ -169,7 +169,15 @@ public class ConsoleSetupController {
             conn = parseConn(body);
         } catch (IllegalArgumentException e) {
             r.put("ok", false);
-            r.put("message", e.getMessage());
+            // URL 解析失败属请求形态错误：与本方法外层探测臂及 advice 路径错误体同轨——
+            // 同 advice 对 IAE 的 BAD_REQUEST 同码；ok/message 既有键保留、HTTP 200 形态
+            // 不变（前端消费零破坏）；endpoint 无 web 上下文时宁缺勿炸不输出该键
+            r.put("code", "BAD_REQUEST");
+            r.put("message", e.getMessage() == null ? "连接串解析失败" : e.getMessage());
+            String endpoint = EsErrorMapper.endpointOf(currentRequest());
+            if (endpoint != null) {
+                r.put("endpoint", endpoint);
+            }
             return r;
         }
         try (RestHighLevelClient probe = clientFactory.build(conn)) {
