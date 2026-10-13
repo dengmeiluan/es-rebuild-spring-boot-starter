@@ -133,16 +133,25 @@ export function rawPeriodSafe(spanMs: number): boolean {
   return Number.isFinite(spanMs) && spanMs > 0 && spanMs <= MH_RAW_SPAN_MS;
 }
 
+/** 多序列同图的共享坐标系（tMin/tMax 时间域 + yMax 值域上限，坐标映射直接采用） */
+export interface PolyDomain {
+  tMin: number;
+  tMax: number;
+  yMax: number;
+}
+
 /**
  * 断档感知折线：单序列 → 多段 polyline points 字符串（每段形同 polylinePoints 的 attr）。
- * - 坐标口径与 polylinePoints 同一（pad=0）：x 域=全体点时间范围 [tMin,tMax]、
- * y 域=全体点 max×1.1 留白（≤0 回 1 防除零）——段与段共享同一坐标系；
+ * - 坐标域：domain 传入即共享域（多序列同图必传——与调用方十字线/悬浮点的映射同源，
+ * 否则各线按自身点建域被各自拉伸满宽满高，曲线视觉位置与悬浮读数错位，同刻 x 不对齐）；
+ * 缺省按本序列自身点建域（x 域=自身时间范围、y 域=自身 max×1.1 留白，≤0 回 1 防除零）
+ * ——单序列消费方两种口径等价，形态不变；段与段共享同一坐标系；
  * - gapMs 传入时相邻两点 Δt > gapMs 即断开（降采样空桶=集群失联未采，连成一段会画出
  * 未发生的骤降/回升假线）；缺省 undefined 永不断开（行为与 polylinePoints 单段一致）；
  * Δt==gapMs 不断（严格大于才断）；
  * - 空/单点（及断开后不足 2 点的尾段）画不出线，返回 [] 由调用方圆点形态兜底。
  */
-export function polylineSegments(points: SeriesPoint[], W: number, H: number, gapMs?: number): string[] {
+export function polylineSegments(points: SeriesPoint[], W: number, H: number, gapMs?: number, domain?: PolyDomain): string[] {
   if (!points || points.length < 2 || W <= 0 || H <= 0) return [];
   let maxV = 0;
   let tMin = Infinity;
@@ -152,8 +161,10 @@ export function polylineSegments(points: SeriesPoint[], W: number, H: number, ga
     if (p.t < tMin) tMin = p.t;
     if (p.t > tMax) tMax = p.t;
   }
-  const yMax = maxV > 0 ? maxV * 1.1 : 1;
-  const span = tMax - tMin;
+  const dMin = domain ? domain.tMin : tMin;
+  const dMax = domain ? domain.tMax : tMax;
+  const yMax = domain ? domain.yMax : maxV > 0 ? maxV * 1.1 : 1;
+  const span = dMax - dMin;
   const segs: string[] = [];
   let cur: string[] = [];
   let prevT = NaN;
@@ -162,7 +173,7 @@ export function polylineSegments(points: SeriesPoint[], W: number, H: number, ga
       segs.push(cur.join(' '));
       cur = [];
     }
-    const u = span > 0 ? (p.t - tMin) / span : 0;
+    const u = span > 0 ? (p.t - dMin) / span : 0;
     cur.push(`${(u * W).toFixed(1)},${(H - (p.v / yMax) * H).toFixed(1)}`);
     prevT = p.t;
   }

@@ -206,12 +206,16 @@ function px(t: number): number {
 function py(v: number): number {
   return PLOT_H - (v / yMaxV.value) * PLOT_H;
 }
-/* ═══ 折线/面积分段渲染（polylineSegments 单源，坐标口径与旧 linePath 一致）：
- 无 gapMs=单段；断档感知下每段独立落底闭合（断档处既不连线也不造填充假面）。
- 段缓存按序列名收一次，面积/折线两组 v-for 共读，不重复计算 */
+/* ═══ 折线/面积分段渲染（polylineSegments 单源）：
+ 多序列同图必须传共享域（时间域=dom、值域=yMaxV，与十字线/悬浮点映射 px/py 同源）
+ ——各线若按自身点建域会被各自拉伸满宽满高，曲线视觉位置与悬浮读数错位。
+ 无 gapMs=单段（与旧整线形态一致）；断档感知下每段独立落底闭合（断档处
+ 不连线、不造跨档填充假面）。段缓存按序列名收一次，面积/折线两组 v-for 共读，
+ 不重复计算 */
 const segCache = computed(() => {
   const m = new Map<string, string[]>();
-  for (const s of visibleSeries.value) m.set(s.name, polylineSegments(s.points, PLOT_W, PLOT_H, props.gapMs));
+  const domain = { tMin: dom.value.tMin, tMax: dom.value.tMax, yMax: yMaxV.value };
+  for (const s of visibleSeries.value) m.set(s.name, polylineSegments(s.points, PLOT_W, PLOT_H, props.gapMs, domain));
   return m;
 });
 
