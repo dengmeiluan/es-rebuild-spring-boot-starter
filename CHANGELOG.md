@@ -5,6 +5,18 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.6]
+
+### 修复
+
+- 监控历史趋势图（Heap %/CPU % 等多序列卡）悬浮十字线/最近点圆点/tooltip 与鼠标
+  实际位置错位——36px 左刻度列让位改造后指针分数仍按图区全宽取值，悬浮装配整体
+  右偏（左缘最大 36px 向右缘收敛）；指针命中域改挂绘图域本体，命中域=绘图域=
+  定位父级三者同源零漂移
+- 索引浏览/索引工作区健康筛选 chips 色点对称对齐——BrowserView 手调
+  vertical-align 魔法数与 IndexHubView 基线搁置两套口径统一为 seg 钮 flex 结构
+  居中（图例 chips 同语言），圆点右距归 --sp-1、尺寸归全站 8px 单源
+
 ## [1.0.5]
 
 ### 修复
