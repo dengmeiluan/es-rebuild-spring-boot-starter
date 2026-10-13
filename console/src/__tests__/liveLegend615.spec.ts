@@ -84,7 +84,8 @@ describe('六百一十五批：节点对比卡交互修复', () => {
       (host.querySelector('.ld-ncmp-entry') as HTMLButtonElement)?.click();
       await settle();
       const cmp = host.querySelector('.ld-ncmp-panel')!;
-      cmp.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 0 }));
+      /* 877 同步更新：悬浮监听下沉绘图域 .ld-cmp-plot，派发目标随之 */
+      (cmp.querySelector('.ld-cmp-plot') as HTMLElement).dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 0 }));
       await settle(4);
       const hv = cmp.querySelector('.ld-hv')!;
       expect(hv.className).toContain('ld-hv-stack');
@@ -107,7 +108,8 @@ describe('六百一十五批：节点对比卡交互修复', () => {
       expect(cmp.querySelectorAll('path').length, '9 条折线（八百二十八批 polyline→path 平滑同步更新）').toBe(9);
       expect(cmp.querySelectorAll('.ld-ncmp-panel .ld-ncmp-leg-b').length, '常驻图例退役').toBe(0);
       /* 悬浮出读出层：行尾 × 隐藏钮（CMP_TIP_CAP=8 截断 → 8 钮+聚合行） */
-      cmp.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 0 }));
+      /* 877 同步更新：悬浮监听下沉绘图域 .ld-cmp-plot，派发目标随之 */
+      (cmp.querySelector('.ld-cmp-plot') as HTMLElement).dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 0 }));
       await settle(4);
       const hv = cmp.querySelector('.ld-hv')!;
       const row1 = [...hv.querySelectorAll('.ld-ncmp-tip-r')].find(r => r.textContent!.includes('n-1')) as HTMLElement;
@@ -115,7 +117,8 @@ describe('六百一十五批：节点对比卡交互修复', () => {
       await settle();
       expect(cmp.querySelectorAll('path').length, '隐藏后 8 条').toBe(8);
       /* 悬浮行同步过滤 */
-      cmp.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 0 }));
+      /* 877 同步更新：悬浮监听下沉绘图域 .ld-cmp-plot，派发目标随之 */
+      (cmp.querySelector('.ld-cmp-plot') as HTMLElement).dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 0 }));
       await settle(4);
       const hv2 = cmp.querySelector('.ld-hv')!;
       expect(hv2.textContent).not.toContain('n-1');

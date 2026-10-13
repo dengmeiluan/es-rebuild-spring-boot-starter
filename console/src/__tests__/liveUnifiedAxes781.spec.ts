@@ -198,7 +198,8 @@ describe('K2 节点对比悬浮化 + 轴系', () => {
 
   it('悬浮读出行尾 × 隐藏节点 + 头部「已隐藏 N ▸ 恢复」一键复原', async () => {
     const c = await cmp();
-    c.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 0 }));
+    /* 877 同步更新：悬浮监听下沉绘图域 .ld-cmp-plot（面板域监听=读出恒坠约 40px 病灶退役） */
+    (c.querySelector('.ld-cmp-plot') as HTMLElement).dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 0 }));
     await settle(4);
     const hv = c.querySelector('.ld-hv.ld-hv-stack')!;
     /* 八百二十五批同步更新：CMP_TIP_CAP 8→24（用户实报「+1 节点…看不完整」）→9 节点全量读出+尾行零在场

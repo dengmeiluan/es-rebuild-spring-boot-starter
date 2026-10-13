@@ -13,7 +13,7 @@
  （色=首可见序列身份色，与六卡 curColor 同构；多序列叠加语义=聚合当前值）。 -->
     <div class="hc-hd">
       <span class="hc-top">
-        <span class="hc-tt">{{ title }}<em v-if="unit" class="hc-unit">{{ unit }}</em></span>
+        <span class="hc-tt">{{ title }}<em v-if="unit && !unitDup" class="hc-unit">{{ unit }}</em></span>
         <span v-if="hasVisible" class="hc-stats">
           最大 <b>{{ fmtV(stats.max) }}</b> · 均值 <b>{{ fmtV(stats.avg) }}</b>
         </span>
@@ -151,6 +151,10 @@ const props = defineProps<{
 
 /* ═══ 色号锚定 ═══ */
 const PALETTE = ['var(--dv-blue)', 'var(--ok)', 'var(--wn)', 'var(--err)', 'var(--ac)'];
+/* 标题已含单位串时 em 不重复渲染（877 全量扫描定谳）：HIST_CHARTS 六处调用点违
+ 「title 已含单位则 unit 省略」调用约定（如 label'Heap %'+unit'%' → 「Heap % %」双写），
+ 防重收敛为组件级正确性——调用侧漏省不再出双单位，Y 轴/tooltip 的 unit 格式化不受影响 */
+const unitDup = computed(() => !!props.unit && props.title.includes(props.unit));
 const sortedNames = computed(() => props.series.map(s => s.name).sort());
 function colorOf(name: string): string {
   const pal = props.palette || PALETTE;

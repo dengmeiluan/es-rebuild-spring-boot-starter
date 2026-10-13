@@ -144,10 +144,10 @@ describe('五百九十五批②：对比卡 QPS/写入档 + 节点卡 load 行',
       /* Heap 档（默认）：阈值线在场 */
       expect(cmp.querySelector('line[stroke-dasharray]'), 'pct 档阈值线在场').toBeTruthy();
       /* 悬浮 Heap：行值带 % */
-      cmp.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 0 }));
+      (cmp.querySelector('.ld-cmp-plot') as HTMLElement).dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 0 })); /* 877：派发目标随监听下沉绘图域 */
       await settle(4);
       expect(cmp.querySelector('.ld-hv')!.textContent).toContain('%');
-      cmp.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
+      (cmp.querySelector('.ld-cmp-plot') as HTMLElement).dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
       await settle(4);
 
       /* 切 QPS：阈值线移除（无固定阈值语义），悬浮行值无 % */
@@ -155,12 +155,12 @@ describe('五百九十五批②：对比卡 QPS/写入档 + 节点卡 load 行',
       qpsBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await settle();
       expect(cmp.querySelector('line[stroke-dasharray]'), 'abs 档无阈值线').toBeNull();
-      cmp.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 0 }));
+      (cmp.querySelector('.ld-cmp-plot') as HTMLElement).dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 0 })); /* 877：派发目标随监听下沉绘图域 */
       await settle(4);
       const hv = cmp.querySelector('.ld-hv')!;
       expect(hv.textContent).toContain('30'); /* qps 首点 30 */
       expect(hv.textContent).not.toContain('%');
-      cmp.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
+      (cmp.querySelector('.ld-cmp-plot') as HTMLElement).dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
       await settle(4);
     } finally {
       app.unmount();

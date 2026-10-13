@@ -93,7 +93,8 @@ describe('liveHoverTsWin864 · 对比卡悬浮时刻与十字线同窗', () => {
       await settle();
       const cmp = host.querySelector('.ld-ncmp-panel');
       expect(cmp, '节点对比叠加卡在场').toBeTruthy();
-      cmp!.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 0 }));
+      /* 877 同步更新：悬浮监听下沉绘图域 .ld-cmp-plot，派发目标随之 */
+      (cmp!.querySelector('.ld-cmp-plot') as HTMLElement).dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 0 }));
       await settle(4);
       const t = cmp!.querySelector('.ld-hv-t')?.textContent?.trim();
       expect(t, '读出头部时刻在场').toBeTruthy();

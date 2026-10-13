@@ -563,7 +563,10 @@ function openRawIoExplain() {
 .lc-gantt-bar.ph-delete { background: var(--dv-slate); }
 
 .lc-legend { display: flex; gap: var(--sp-3); padding: var(--sp-2) var(--sp-1); font-size: var(--fs-xs); color: var(--muted); }
-.lc-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 3px; vertical-align: -1px; } /* ：phase 色键圆点归一（全站 dot 语言；StatusPill 同构） */
+/* 877 对称对齐：色点垂直居中由 align-items 结构承担（BrowserView 健康 seg 同律），
+ inline 基线 + vertical-align:-1px 手调补偿退役；点距归 --sp-1 token */
+.lc-legend span { display: inline-flex; align-items: center; gap: var(--sp-1); }
+.lc-legend i { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; } /* ：phase 色键圆点归一（全站 dot 语言；StatusPill 同构） */
 .lc-legend .ph-hot { background: var(--err); }
 .lc-legend .ph-warm { background: var(--warn); }
 .lc-legend .ph-cold { background: var(--dv-blue); }

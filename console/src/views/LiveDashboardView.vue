@@ -127,8 +127,7 @@
       <!-- 件3：对比面内联容器（页面流 .ld-nodes 区内；panel 壳与节点卡/六卡同语言；
  头部行=题+恢复钮+seg 五档+✕；图区内容原样迁移——悬浮读出 mousemove/mouseleave
  保留=十字线语义不丢） -->
-      <div v-if="cmpPanelOpen" class="ld-ncmp-panel" aria-label="节点对比"
-        @mousemove="onCmpMove($event)" @mouseleave="onCmpLeave()">
+      <div v-if="cmpPanelOpen" class="ld-ncmp-panel" aria-label="节点对比">
         <div class="ld-ncmp-hd">
           <span class="ld-ncmp-tt">节点对比</span>
           <button v-if="hiddenNodes.length" type="button" class="ld-ncmp-restore" title="恢复全部已隐藏节点" @click="hiddenNodes = []">已隐藏 {{ hiddenNodes.length }} ▸ 恢复</button>
@@ -140,7 +139,12 @@
           <button type="button" class="ld-ncmp-close" aria-label="收起节点对比" title="收起（Esc）" @click="closeCmpPanel">✕</button>
         </div>
         <template v-if="cmpHasData">
-          <div ref="cmpPlotEl" class="ld-cmp-plot">
+          <!-- 悬浮命中域=绘图域本体（877 全量扫描定谳）：监听原挂 .ld-ncmp-panel（含头部行/
+ X 轴/图例的整个面板），面板 padding+头部高度计入 y 原点=读出恒坠约 40px，面板全宽计入
+ frac 分母=X 向右偏——即实站残差「对比卡 tooltip 垂直 ~50px 偏差」。下沉到 .ld-cmp-plot
+ 后命中域=量测域(currentTarget)=定位父级三者同体，与 Top 卡 .ld-top-plot 正例同构，
+ useHoverEscape 的图区矩形巡检也随之同域 -->
+          <div ref="cmpPlotEl" class="ld-cmp-plot" @mousemove="onCmpMove($event)" @mouseleave="onCmpLeave()">
             <svg :viewBox="'0 0 720 ' + CMP_H" class="ld-ncmp-svg" preserveAspectRatio="none">
               <g v-if="cmpMode === 'pct'" class="ld-glines" aria-hidden="true">
                 <line v-for="g in PCT_GRID" :key="'g' + g" x1="0" x2="720" :y1="CMP_H - CMP_H * (g / 100)" :y2="CMP_H - CMP_H * (g / 100)" vector-effect="non-scaling-stroke" />
@@ -1985,7 +1989,9 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 .ld-hist-ntab-r { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: var(--sp-2); padding: var(--sp-1) var(--sp-2); font-size: var(--fs-xs); }
 .ld-hist-ntab-r[role='row']:first-child { background: var(--bg2); color: var(--tx2); font-size: var(--fs-2xs); }
 .ld-hist-ntab-r + .ld-hist-ntab-r { border-top: 1px solid var(--border); }
-.ld-hist-ntab-r [role='cell']:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+/* 数值列共轴（877 对称对齐扫描）：列头与数值同右轴——原列头贴列左缘/数值贴列右缘，
+ 1fr 拉宽列后头值隔半列空白（用户圈图实报）；节点名首列保持左对齐 */
+.ld-hist-ntab-r [role='cell']:not(:first-child), .ld-hist-ntab-r [role='columnheader']:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
 .ld-hist-ntab-r .mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* 797 件1（令大厂级统一卡壳）：历史五图分节式 border-top 退役→panel 壳
  （与六卡 .ld-chart/节点卡/CollapsePanel 同语言=全站卡壳统一协调）；

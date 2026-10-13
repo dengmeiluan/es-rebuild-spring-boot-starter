@@ -506,7 +506,9 @@ function cellEnter(e: MouseEvent, s: Shard) {
   tip.value = {
     s,
     x: Math.min(e.clientX - r.left, Math.max(0, host.clientWidth - 190)),
-    y: e.clientY - r.top,
+    /* 877 对称对齐：absolute tip 锚 padding-box 而量测是 border-box——border-top 计入
+ 原点=恒定 1px 下坠，clientTop 修正（cellFocus 同律） */
+    y: e.clientY - r.top - host.clientTop,
   };
 }
 
@@ -522,7 +524,7 @@ function cellFocus(e: FocusEvent, s: Shard) {
   tip.value = {
     s,
     x: Math.min(r.left - hr.left + r.width / 2, Math.max(0, host.clientWidth - 190)),
-    y: r.top - hr.top + r.height / 2,
+    y: r.top - hr.top - host.clientTop + r.height / 2,
   };
 }
 function cellBlur(s: Shard) {

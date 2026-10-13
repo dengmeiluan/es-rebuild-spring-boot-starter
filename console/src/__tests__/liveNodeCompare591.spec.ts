@@ -150,8 +150,9 @@ describe('五百九十一批：实时区节点对比叠加图接线', () => {
       (host.querySelector('.ld-ncmp-entry') as HTMLButtonElement)?.click();
       await settle();
       const wrap = host.querySelector('.ld-ncmp-panel')!;
-      /* happy-dom rect 恒 0 → frac=0 → 命中 i=0：各行值=各序列首点 */
-      wrap.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 0 }));
+      /* happy-dom rect 恒 0 → frac=0 → 命中 i=0：各行值=各序列首点。
+       877 同步更新：悬浮监听下沉绘图域 .ld-cmp-plot，派发目标随之 */
+      (wrap.querySelector('.ld-cmp-plot') as HTMLElement).dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 0 }));
       await settle(4);
       const hv = wrap.querySelector('.ld-hv');
       expect(hv, '悬浮读出层在场').toBeTruthy();
@@ -160,7 +161,7 @@ describe('五百九十一批：实时区节点对比叠加图接线', () => {
       expect(hv!.textContent).toContain('28%');
       expect(hv!.textContent).toContain('32%');
       expect(wrap.querySelector('.ld-xline'), '十字线在场').toBeTruthy();
-      wrap.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
+      (wrap.querySelector('.ld-cmp-plot') as HTMLElement).dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
       await settle(4);
       expect(wrap.querySelector('.ld-hv'), '离场读出收起').toBeNull();
       expect(wrap.querySelector('.ld-xline'), '离场十字线收起').toBeNull();

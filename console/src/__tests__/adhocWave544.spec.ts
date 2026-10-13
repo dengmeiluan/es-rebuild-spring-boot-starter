@@ -38,7 +38,10 @@ describe('五百四十三批：AdhocRebuildView 表格内核穿透评估备案',
   const src = read('../views/AdhocRebuildView.vue');
 
   it('裸 .tbl 恰两处（cfgDiff diff 表 + rounds 轮次表），jobs 表已 QRT 在场', () => {
-    expect(src.split('<table class="tbl"').length - 1, '本页裸表恒两处——迁一补锚，全迁改本锁').toBe(2);
+    /* 877 同步更新：rounds 表挂 .ar-rounds 修饰类（tbody 数字列与 Σ 共右轴的对齐钩子），
+     裸表计数口径改为 .tbl 前缀——仍恒两处，迁一补锚，全迁改本锁 */
+    expect(src.split('<table class="tbl').length - 1, '本页裸表恒两处——迁一补锚，全迁改本锁').toBe(2);
+    expect(src).toContain('<table class="tbl ar-rounds"');
     expect(src).toContain('<QueryResultTable :cols="JOB_COLS"');
   });
 

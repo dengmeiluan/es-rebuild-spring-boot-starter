@@ -525,7 +525,7 @@ mapping <span class="dim">字段映射</span>
           </div>
           <div class="p-row" v-if="job.error"><span>错误</span><span class="err-txt">{{ job.error }}</span></div>
         </div>
-        <table class="tbl" v-if="job.rounds?.length">
+        <table class="tbl ar-rounds" v-if="job.rounds?.length">
           <thead><tr><th>轮次</th><th>阶段</th><th>总计</th><th>已建</th><th>已更新</th><th>冲突跳过</th></tr></thead>
           <tbody>
             <tr v-for="r in job.rounds" :key="r.round + r.phase">
@@ -2242,6 +2242,9 @@ onBeforeUnmount(() => { stopPolling(); stopBlockTicker(); document.removeEventLi
 /* 状态 pill 漏斗：可点（漏斗语义）+ 按下态描边（该状态筛选中） */
 .pill.ar-st-funnel { cursor: pointer; }
 .pill.ar-st-funnel[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ac-line); }
+/* 877 对称对齐：tbody 数字列与 tfoot Σ 同右轴（QRT num-col 全站语言：表头左/数值右/
+聚合右）——原表体左对齐致 Σ 与其所合计的数字不共纵轴；阶段胶囊列（第 2 列）除外 */
+.ar-rounds tbody td:nth-child(1), .ar-rounds tbody td:nth-child(n+3) { text-align: right; font-variant-numeric: tabular-nums; }
 /* 轮次表 Σ 聚合行（DiagView dg-agg 同语言：bg2 底+顶部分隔线，数值右对齐） */
 .ar-rounds-agg-row td { background: var(--bg2); border-top: 1px solid var(--line-strong); white-space: nowrap; padding: 5px var(--sp-2); font-size: var(--fs-xs); }
 .ar-agg-lb { color: var(--tx2); }
