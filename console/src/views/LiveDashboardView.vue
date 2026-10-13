@@ -149,8 +149,9 @@
               <g v-if="cmpMode === 'pct'" class="ld-glines" aria-hidden="true">
                 <line v-for="g in PCT_GRID" :key="'g' + g" x1="0" x2="720" :y1="CMP_H - CMP_H * (g / 100)" :y2="CMP_H - CMP_H * (g / 100)" vector-effect="non-scaling-stroke" />
               </g>
-              <!-- 折线平滑统一（Catmull-Rom 单源；pct/abs 档 sparkPts 同源） -->
-              <path v-for="s in cmpSeries" :key="s.name" :d="catmullRomPath(sparkPts(s.data, CMP_W, CMP_H, cmpMetric === 'qps' || cmpMetric === 'idx' ? 'abs' : 'pct'), CMP_W, CMP_H)" fill="none" :stroke="s.color" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
+              <!-- 折线平滑统一（Catmull-Rom 单源；pct/abs 档 sparkPts 同源）；
+ abs 档传全体可见节点共享 max（cmpScaleMax）——各线横向可比且与 Y 顶刻度同域 -->
+              <path v-for="s in cmpSeries" :key="s.name" :d="catmullRomPath(sparkPts(s.data, CMP_W, CMP_H, cmpMetric === 'qps' || cmpMetric === 'idx' ? 'abs' : 'pct', cmpScaleMax), CMP_W, CMP_H)" fill="none" :stroke="s.color" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
               <line v-if="cmpWarn !== null" x1="0" :y1="CMP_H - CMP_H * (cmpWarn / 100)" x2="720" :y2="CMP_H - CMP_H * (cmpWarn / 100)" stroke="var(--err)" stroke-dasharray="4 2" vector-effect="non-scaling-stroke" />
             </svg>
             <span class="ld-yt ld-yt-top" aria-hidden="true">{{ cmpYTop }}</span>
@@ -1017,10 +1018,16 @@ const cmpRowsCapped = computed(() => capRows(cmpRows.value, CMP_TIP_CAP));
 /* K2：对比卡轴系——X 轴 3 锚取窗切片（与主卡 tsWin 同口径）；
  Y 顶刻度 pct=固定 100 / abs=全序列窗峰值（与 sparklinePoints 的 max(...data,1) 地板刻度同域） */
 const cmpTs = computed(() => winSlice(sampleTs.value));
-const cmpYTop = computed(() => {
-  if (cmpMode.value === 'pct') return '100';
+/* abs 档全体可见节点共享 max（对比曲线归一与 Y 顶刻度单源同读——各线横向可比，
+ 按刻度读峰高不再失真）；pct 档固定 0-100 刻度天然共享，sparkPts 不消费该值 */
+const cmpScaleMax = computed(() => {
   let mx = 1;
   for (const s of cmpSeries.value) for (const v of s.data) if (v > mx) mx = v;
+  return mx;
+});
+const cmpYTop = computed(() => {
+  if (cmpMode.value === 'pct') return '100';
+  let mx = cmpScaleMax.value;
   return mx >= 100 ? String(Math.round(mx)) : mx.toFixed(1);
 });
 

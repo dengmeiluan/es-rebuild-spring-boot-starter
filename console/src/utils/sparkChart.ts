@@ -54,10 +54,13 @@ function sparkArea(data: number[], W: number, H: number, mode: 'pct' | 'abs' = '
 
 export interface Pt { x: number; y: number; }
 
-/** 折线同公式投影成点列（sparklinePoints(Pct) 的结构化版，供平滑路径消费）。 */
-export function sparkPts(data: number[], W: number, H: number, mode: 'pct' | 'abs'): Pt[] {
+/** 折线同公式投影成点列（sparklinePoints(Pct) 的结构化版，供平滑路径消费）。
+ * 可选 scaleMax 与 sparklinePoints 同款：abs 档多折线同坐标系时传全局 max
+ * （各线横向可比且与 Y 刻度同源；缺省按本序列自身 max 归一，单序列消费方形态不变）；
+ * pct 档固定 0-100 刻度天然共享，scaleMax 不参与换算。 */
+export function sparkPts(data: number[], W: number, H: number, mode: 'pct' | 'abs', scaleMax?: number): Pt[] {
   if (!data.length) return [];
-  const mx = Math.max(...data, 1);
+  const mx = mode === 'abs' && scaleMax != null && scaleMax > 0 ? scaleMax : Math.max(...data, 1);
   const step = data.length > 1 ? W / (data.length - 1) : 0;
   return data.map((v, i) => ({
     x: i * step,
