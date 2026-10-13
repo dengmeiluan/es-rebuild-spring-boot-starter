@@ -665,7 +665,7 @@ import { useQueryHistoryStore } from '../stores/queryHistory';
 import { stripJsonComments, tryParse, prettyJson, highlightJson } from '../utils/jsonc';
 import { friendlyEsError } from '../utils/esError'; /* ：六写路径裸 err 合并单源翻译 */
 import { loadVars, saveVars, applyVars } from '../utils/vars';
-import { useUrlState, usePref } from '../composables/urlState';
+import { useUrlState, readHashQuery, usePref } from '../composables/urlState';
 import { askConfirm } from '../composables/confirm';
 import { generate, type CodeLang } from '../utils/codegen';
 import { jq } from '../utils/minijq';
@@ -2163,7 +2163,7 @@ function openInLucene() {
  URL 未变化就不重复弹（success 类全局刻意不去重（连续复制场景），此处局部防抖）。 */
 let lastBuilderToastAt = 0;
 function openInBuilder() {
-  const usp = new URLSearchParams(location.hash.split('?')[1] || '');
+  const usp = readHashQuery();
   usp.set('dsl', encodeDslParam(dsl.value));
   if (store.pickedIdx) usp.set('idx', store.pickedIdx);
   usp.set('mode', 'dsl');
@@ -2369,7 +2369,7 @@ onMounted(() => {
     window.addEventListener('keydown', onGlobalRunKey);
     return;
   }
-  const usp = new URLSearchParams(location.hash.split('?')[1] || '');
+  const usp = readHashQuery();
   const sharedDsl = usp.get('dsl');
   if (sharedDsl) {
     try {

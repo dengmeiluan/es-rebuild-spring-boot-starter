@@ -137,7 +137,7 @@ import {
 import { useAppStore } from '../stores/app';
 import { RELEVANCE_LABS } from '../utils/relevanceLabs';
 import { useQueryHistoryStore } from '../stores/queryHistory';
-import { useUrlState, usePref } from '../composables/urlState';
+import { useUrlState, readHashQuery, usePref } from '../composables/urlState';
 import { askConfirm } from '../composables/confirm';
 import QueryHistoryPanel from '../components/QueryHistoryPanel.vue';
 import FieldPicker from '../components/FieldPicker.vue';
@@ -193,7 +193,7 @@ const COMP: Record<string, any> = {
 const mode = useUrlState('mode', DEFAULT_MODE);
 /* 惯用通道记忆：侧边栏裸进（无 ?mode=）时回到上次用的模式；深链指定的 mode 优先 */
 const lastMode = usePref('qh.mode', DEFAULT_MODE);
-if (!new URLSearchParams(location.hash.split('?')[1] || '').get('mode') && lastMode.value !== mode.value) {
+if (!readHashQuery().get('mode') && lastMode.value !== mode.value) {
   mode.value = normalizeMode(lastMode.value);
 }
 const modeK = computed(() => normalizeMode(mode.value));
@@ -223,7 +223,7 @@ let activatedEver = false;
 onActivated(() => {
   /* 首次挂载也会触发 activated——首次的深链由 onMounted 链路负责,这里必须跳过,否则双重消费(两次执行查询) */
   if (!activatedEver) { activatedEver = true; return; }
-  const usp = new URLSearchParams(location.hash.split('?')[1] || '');
+  const usp = readHashQuery();
   const wantsDsl = usp.get('dsl') || sessionStorage.getItem('es-console.dsl.carry');
   if (wantsDsl) {
     mode.value = 'dsl';
@@ -250,7 +250,7 @@ function applyTask(t: QuickTask) {
   }
   const dsl = t.build(input);
   /* 先落 ?dsl=（分享契约同 DslQueryView），再切 dsl 模式重挂载读取 */
-  const usp = new URLSearchParams(location.hash.split('?')[1] || '');
+  const usp = readHashQuery();
   usp.set('dsl', encodeDslParam(dsl));
   if (store.pickedIdx) usp.set('idx', store.pickedIdx);
   usp.set('mode', 'dsl');

@@ -7,7 +7,7 @@ import { writeStoredRaw } from '../utils/safeJson';
  useUrlState：把视图关键状态写进 hash query，刷新/分享后现场可复原；
  usePref：用户偏好落 localStorage（命名空间 es-console.pref.*），跨会话记忆。 */
 
-function readHashQuery(): URLSearchParams {
+export function readHashQuery(): URLSearchParams {
   return new URLSearchParams(location.hash.split('?')[1] || '');
 }
 
