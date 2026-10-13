@@ -120,7 +120,7 @@ public class MonitorMetricsStore {
     private void warnUsageThrottled(String where, Exception e) {
         usageWarnCount.incrementAndGet();
         if (usageWarnCount.get() == 1) {
-            LOG.warn("[es-console-monitor] {}（首次，后续失败仅累计不再打）：{}", where, e.getMessage());
+            LOG.warn("[es-console-monitor] {}（首次，后续失败仅累计不再打）：{}", where, e.getMessage(), e);
         }
     }
 

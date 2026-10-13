@@ -135,7 +135,7 @@ public class EsRebuildLockStore implements RebuildLockStore {
             return acquired;
         } catch (IOException e) {
             // 锁操作 I/O 失败：无法确认是否有人持锁，保守失败（宁可不开始，也不并发开两个重建）
-            logger.error("[RebuildLock] tryAcquire failed indexKey={}: {}", indexKey, e.getMessage());
+            logger.error("[RebuildLock] tryAcquire failed indexKey={}: {}", indexKey, e.getMessage(), e);
             throw new IllegalStateException("获取重建锁失败 indexKey=" + indexKey, e);
         }
     }

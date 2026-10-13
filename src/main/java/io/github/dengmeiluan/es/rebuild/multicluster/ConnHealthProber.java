@@ -113,7 +113,7 @@ public class ConnHealthProber {
             long skips = skipRoundCount.incrementAndGet();
             if (skips == 1) {
                 LOG.warn("[ConnHealthProber] skip round, connStore unavailable（首次，后续失败仅累计不再打）: {}",
-                        e.getMessage());
+                        e.getMessage(), e);
             }
             return;
         }

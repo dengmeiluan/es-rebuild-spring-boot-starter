@@ -197,7 +197,7 @@ public class MonitorSnapshotRecorder {
     private void warnThrottled(String where, Exception e) {
         long failures = failureCount.incrementAndGet();
         if (failures == 1) {
-            LOG.warn("[es-console-monitor] {}（首次，后续失败仅累计不再打）：{}", where, e.getMessage());
+            LOG.warn("[es-console-monitor] {}（首次，后续失败仅累计不再打）：{}", where, e.getMessage(), e);
         }
     }
 }

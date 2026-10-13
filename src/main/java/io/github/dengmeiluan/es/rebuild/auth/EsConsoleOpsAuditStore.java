@@ -213,7 +213,7 @@ public class EsConsoleOpsAuditStore implements ConsoleOpsAuditStore {
     private void warnAuditDrop(String where, Exception e) {
         long drops = dropCount.incrementAndGet();
         if (drops == 1) {
-            LOG.warn("[es-console-audit] {}（首次，后续失败仅累计不再打）：{}", where, e.getMessage());
+            LOG.warn("[es-console-audit] {}（首次，后续失败仅累计不再打）：{}", where, e.getMessage(), e);
         }
     }
 

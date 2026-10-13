@@ -805,7 +805,7 @@ public class CrossClusterMigrateService {
             logger.info("[CrossClusterMigrateService] restore settings dest={} -> {}", dest, restore);
         } catch (Exception e) {
             logger.error("[CrossClusterMigrateService] restore settings FAILED dest={}（请人工核对 refresh/replicas）: {}",
-                    dest, e.getMessage());
+                    dest, e.getMessage(), e);
         }
     }
 
