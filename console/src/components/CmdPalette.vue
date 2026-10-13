@@ -335,7 +335,7 @@ const commands = computed<Cmd[]>(() => {
       action: () => router.push('/reindex-advanced') },
     { id: 'ops-fav-current-dsl', title: '收藏当前 DSL', sub: '把当前查询页 body 存到收藏夹', cat: 'ops', icon: Star,
       action: () => {
-        const body = sessionStorage.getItem('es-console.dsl.body') || localStorage.getItem('es-console.dsl.body') || '';
+        const body = sessionStorage.getItem('es-console.dsl.body') || '';
         if (!body.trim()) { store.notify('warning', '当前查询页无可收藏内容'); return; }
         /* index 取 DSL 镜像的所属索引（别页收藏时 pickedIdx 可能已切换） */
         const idx = sessionStorage.getItem('es-console.dsl.index') || store.pickedIdx;
@@ -368,7 +368,7 @@ const commands = computed<Cmd[]>(() => {
       action: () => router.push('/profile-flame') },
     { id: 'dev-flame-current', title: '把当前 DSL 送去火焰图分析', sub: '带 profile=true 重跑', cat: 'dev', icon: Flame,
       action: () => {
-        const body = sessionStorage.getItem('es-console.dsl.body') || localStorage.getItem('es-console.dsl.body') || '';
+        const body = sessionStorage.getItem('es-console.dsl.body') || '';
         if (!body.trim()) { store.notify('warning', 'DSL 查询页尚无 body'); return; }
         writeStoredRaw(sessionStorage, 'es-console.flame.body', body);
         /* flame.index 同取 DSL 镜像的所属索引 */
