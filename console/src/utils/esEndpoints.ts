@@ -64,7 +64,7 @@ export function filterEndpoints(kw: string): EsEndpoint[] {
   };
   return ES_ENDPOINTS
     .map(e => ({ e, r: rank(e.path) }))
-    .filter(x => x.r < 2 || x.e.doc.includes(kw || ''))
+    .filter(x => x.r < 2 || x.e.doc.toLowerCase().includes(k))
     .sort((a, b) => a.r - b.r || a.e.path.localeCompare(b.e.path))
     .map(x => x.e).slice(0, 30);
 }
