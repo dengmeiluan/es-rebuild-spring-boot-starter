@@ -48,9 +48,12 @@ public class EsRebuildProperties {
      * 「变重」必须显式声明，避免宿主稀里糊涂背上整个控制面。
      */
     private String mode = "client";
-    /*  P2-4 v2：连接环境页面模板（纯 grantedPages 同构）——
-       键=连接 env（PROD/STAGING/QA/DEV），值=页面 key 白名单集合；
-       默认空=不启用（未配置 env 原样透传，向后兼容）。语义详见 EnvPagesResolver。 */
+    /**
+     * 连接环境页面模板（与宿主 grantedPages 同一套页面 key 白名单结构）——
+     * 键=连接 env（PROD/STAGING/QA/DEV），值=页面 key 白名单集合；
+     * 默认空=不启用（未配置 env 原样透传，向后兼容）。语义详见
+     * {@link io.github.dengmeiluan.es.rebuild.auth.EnvPagesResolver}。
+     */
     private java.util.Map<String, java.util.Set<String>> envPages = new java.util.HashMap<>();
 
     public java.util.Map<String, java.util.Set<String>> getEnvPages() { return envPages; }
@@ -194,7 +197,9 @@ public class EsRebuildProperties {
          * （本类刻意不设 {@code enabled}，避免两个开关语义重叠）。校验要求 {@code >= 1}。</p>
          */
         private int maxAttempts = 5;
+        /** 首次退避毫秒；须 ≤ {@link #maxBackoffMs}（越界在启动校验处拒绝）。 */
         private long initBackoffMs = 500L;
+        /** 退避上限毫秒（指数退避逐次翻倍后封顶于此）。 */
         private long maxBackoffMs = 8_000L;
 
         public int getMaxAttempts() { return maxAttempts; }
