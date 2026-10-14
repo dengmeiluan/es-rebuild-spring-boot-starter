@@ -5,6 +5,19 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.14]
+
+### 新增
+
+- Top 索引宽度参数化：`/monitor-metrics/top-indexes` 端点加 `limit` 参数
+  （缺省 8 兼容旧前端，钳 1..20；快照层截断宽度 8→20），曲线视图新增
+  Top N 选择（8/12/16/20，偏好跨会话记忆）
+- 索引级查询延迟曲线：Top 采样快照新增每索引查询延迟（Δquery_time ÷
+  Δquery_count，ms/次），指标切换扩展第三档「查询延迟」——对标阿里云
+  「索引端到端查询延迟」；无查询增量的拍保持上一拍读数（不落 0 假谷）
+- 节点对比面板新增「仅 master」视角：只对比 master 角色节点（role 口径与
+  节点汇总同源）——主节点的堆/磁盘水位是集群稳定性的关键少数
+
 ## [1.0.13]
 
 ### 新增
