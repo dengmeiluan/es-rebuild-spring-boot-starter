@@ -17,6 +17,8 @@
     <div class="ld-chart-tt">
       <span class="ld-chart-tt-top">
         {{ title }}<em v-if="window" class="ld-chart-th">近 {{ window }}</em><em v-if="threshold != null" class="ld-chart-th">阈值 {{ threshold }}%</em>
+        <!-- 窗内峰值/均值（历史卡 hc-stats 同语言）：窄刺数据鼠标难以停驻刺顶，峰值直读 -->
+        <span v-if="series.length > 1" class="ld-chart-stats">最大 <b>{{ statMax }}</b> · 均值 <b>{{ statAvg }}</b></span>
         <button class="ld-expand" type="button" :aria-label="expanded ? '还原' : '展开'" :title="expanded ? '还原' : '展开'" @click.stop="$emit('expand')">
           <Minimize2 v-if="expanded" :size="12" />
           <Maximize2 v-else :size="12" />
@@ -104,6 +106,21 @@ defineEmits<{ expand: [] }>();
 
 /* 网格仅百分比语义卡（Heap/CPU/磁盘）；绝对值卡（QPS/写入）不画等分网格（622 诚实原则） */
 const showGrid = computed(() => props.mode === 'pct');
+
+/* 窗内峰值/均值（HistoryChart .hc-stats 同语言）：pct 档整数百分比（钳 100）、
+ abs 档 ≥100 取整否则一位小数（与 yTop 同规则）——每张实时卡的最高点一眼直读 */
+const statMax = computed(() => {
+  const arr = props.series;
+  if (arr.length < 2) return '';
+  const mx = props.mode === 'pct' ? Math.min(100, Math.max(...arr)) : Math.max(...arr);
+  return props.mode === 'pct' ? Math.round(mx) + '%' : mx >= 100 ? String(Math.round(mx)) : mx.toFixed(1);
+});
+const statAvg = computed(() => {
+  const arr = props.series;
+  if (arr.length < 2) return '';
+  const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
+  return props.mode === 'pct' ? Math.round(avg) + '%' : avg >= 100 ? String(Math.round(avg)) : avg.toFixed(1);
+});
 
 /* （622 -D4）：平滑路径——折线与渐变面积同曲线（钳位在 sparkChart 单源内） */
 const lineD = computed(() => catmullRomPath(sparkPts(props.series, 300, LD_H, props.mode), 300, LD_H));
@@ -233,7 +250,10 @@ const timeText = computed(() => hit.value && hit.value.t ? fmtTime(hit.value.t) 
 /* 件1：两行制卡头——行① 标题+窗标注+展开钮（右浮）；行② KPI 大数
  （28px 区块大数档；margin-left:auto 退役=大数左对齐主视觉；mono+tabular 跳动不抖宽） */
 .ld-chart-tt-top { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); color: var(--muted); }
-.ld-chart-tt-top .ld-expand { margin-left: auto; }
+/* 统计条推右承担原展开钮的 auto 落位；展开钮改常规间距（HistoryChart .hc-stats 同语言） */
+.ld-chart-stats { margin-left: auto; font-size: var(--fs-2xs); color: var(--tx2); font-family: var(--mono); white-space: nowrap; }
+.ld-chart-stats b { color: var(--tx0); font-weight: 600; font-variant-numeric: tabular-nums; }
+.ld-chart-tt-top .ld-expand { margin-left: var(--sp-1); }
 .ld-chart-cur { display: block; font-family: var(--mono); font-size: var(--fs-num-l); font-weight: 650; font-variant-numeric: tabular-nums; line-height: 1.25; margin: var(--sp-0) 0 var(--sp-1); }
 .ld-chart-th { font-size: var(--fs-2xs); font-style: normal; color: var(--muted); }
 .ld-svg { width: 100%; height: 88px; display: block; }
