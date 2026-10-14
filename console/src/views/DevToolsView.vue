@@ -14,6 +14,7 @@
         <button class="btn ghost sm" @click="reset" title="清空全部">
           <RotateCcw :size="12" /> 重置
         </button>
+        <button class="btn ghost sm" title="查看当前身份在本页与当前连接下允许的操作（与后端拦截器判定同源）" @click="permOpen = true"><Shield :size="12" /> 我的权限</button>
       </template>
     </PageHeader>
 
@@ -377,6 +378,7 @@
 
     <!-- 原始 IO 快查弹窗（IndexHub/查询工作台同款共享件） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
+    <PermModal v-model:show="permOpen" :target="store.target" />
   </div>
 </template>
 
@@ -384,8 +386,9 @@
 import { ref, computed, onMounted, onActivated, onBeforeUnmount, watch, nextTick } from 'vue';
 import {
   TerminalSquare, Plus, X, Play, Copy, AlignJustify, Minimize2, Star, Eraser, History, RotateCcw, Braces, ClipboardPaste,
-  ChevronDown, RefreshCw, ShieldAlert, Terminal, ListPlus, Ellipsis, Check,
+  ChevronDown, RefreshCw, ShieldAlert, Terminal, ListPlus, Ellipsis, Check, Shield,
 } from 'lucide-vue-next';
+import PermModal from '../components/PermModal.vue';
 import { NModal, NInput, NPopover } from 'naive-ui';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
@@ -435,6 +438,7 @@ const store = useAppStore();
 /* 权限门禁——DevTools 运行统一走 api.raw（/cluster/raw 透传）=ADMIN 档；
  编辑/导入/复制响应全角色可用，非 ADMIN 给自述不给扳机 */
 const auth = useAuthStore();
+const permOpen = ref(false);
 const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target)); /* ：执行走 raw，管理域按 rest 页勾选 */
 
 /* P1 workbench：布局偏好按 target+route+mode+viewport 档位隔离（不与 query 草稿混用） */

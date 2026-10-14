@@ -9,6 +9,7 @@
 <button class="btn ghost sm" @click="loadStored" :disabled="storedLoading">
           <RefreshCw :size="12" :class="{ spinning: storedLoading }" /> 刷新
         </button>
+        <button class="btn ghost sm" title="查看当前身份在本页与当前连接下允许的操作（与后端拦截器判定同源）" @click="permOpen = true"><Shield :size="12" /> 我的权限</button>
       </template>
     </PageHeader>
 
@@ -119,6 +120,7 @@
 
     <!-- 原始 IO 弹窗（宿主受控开关；rec 取本页最近一条 painless/execute 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
+    <PermModal v-model:show="permOpen" :target="store.target" />
   </div>
 </template>
 
@@ -127,11 +129,12 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { usePref } from '../composables/urlState';
 import { useTierCycle } from '../composables/useTierCycle'; /* ：painless.outH/railW 三件套合并 */
 import EmptyState from '../components/EmptyState.vue';
-import { FlaskConical, RefreshCw, Save, Play, X, Send, Copy, Terminal, AlertCircle } from 'lucide-vue-next';
+import { FlaskConical, RefreshCw, Save, Play, X, Send, Copy, Terminal, AlertCircle, Shield } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
 import RawIoModal from '../components/RawIoModal.vue';
+import PermModal from '../components/PermModal.vue';
 import { friendlyEsError } from '../utils/esError';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
@@ -155,6 +158,7 @@ const store = useAppStore();
 /* 权限门禁——stored script 保存/删除=/cluster/scripts/put|delete=CLUSTER 档（rank3+）；
  试跑 execute 是只读模拟（READONLY_POST），全角色可用 */
 const auth = useAuthStore();
+const permOpen = ref(false);
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/scripts/put', store.target));
 const router = useRouter();
 
