@@ -281,6 +281,8 @@ const timeText = computed(() => hit.value && hit.value.t ? fmtTime(hit.value.t) 
 @media (max-width: 900px) {
   .ld-svg { height: 110px; }
   .ld-svg-wait { height: 110px; }
+  /* 窄档卡头收纳统计条（标题/窗口/阈值/按钮已满行；历史卡 stats 空间宽裕保留） */
+  .ld-chart-stats { display: none; }
 }
 /* K1：X 轴时间行——图区之下独立行（与折线零叠压；HistoryChart .hc-xaxis
  同语言）。ld-ta-l/-m/-r 类名保留为锚（681 D5/684 墙域锁面），落位由 flex 承担 */

@@ -35,7 +35,11 @@
         <!-- 指针命中域=绘图域本体（.hc-canvas）：hoverFrac 必须对 canvas 矩形取分数，
 	 若对 .hc-plot 全宽取值则左刻度列 36px 计入分母——十字线/圆点/tooltip 整体
 	 右偏（左缘最大 36px，右缘归零），即实报「鼠标实际位置与点位置对不上」根因 -->
-        <div ref="canvasEl" class="hc-canvas" @pointermove="onMove" @pointerleave="onLeave">
+        <!-- 键盘步进（铁律 B 键盘可达）：focus 即显十字线，←/→ 逐采样步进（比鼠标更易
+         停驻窄刺顶点）、Home/End 跳两端、Esc 收十字线——无鼠标场景的读数通道 -->
+        <div ref="canvasEl" class="hc-canvas" tabindex="0" role="img"
+          :aria-label="title + '：' + visibleSeries.length + ' 个序列，方向键逐采样读数'"
+          @pointermove="onMove" @pointerleave="onLeave" @focus="onFocus" @blur="onBlur" @keydown="onKeydown">
         <svg class="hc-svg" viewBox="0 0 600 220" preserveAspectRatio="none" aria-hidden="true">
           <defs>
             <!-- 渐变只跟随 areaSeries（单序列常态/hover 高亮序列）——多序列常态零面积：
@@ -389,6 +393,29 @@ function onMove(e: PointerEvent) {
 }
 function onLeave() { hoverFrac.value = null; hoverY.value = null; }
 
+/* 键盘步进：focus 显中点十字线；←/→ 步长=1 采样桶（全序列最大点数的倒数——
+ 比鼠标更容易停驻窄刺顶点），Home/End 跳两端，Esc 收线；blur 全收 */
+function onFocus() {
+  if (hoverFrac.value == null) hoverFrac.value = 0.5;
+}
+function onBlur() { hoverFrac.value = null; hoverY.value = null; }
+function onKeydown(e: KeyboardEvent) {
+  if (dom.value.span <= 0 || !hasVisible.value) return;
+  let points = 0;
+  for (const s of visibleSeries.value) points = Math.max(points, s.points.length);
+  const step = points > 1 ? 1 / (points - 1) : 0.1;
+  const cur = hoverFrac.value ?? 0.5;
+  if (e.key === 'ArrowLeft') hoverFrac.value = Math.max(0, cur - step);
+  else if (e.key === 'ArrowRight') hoverFrac.value = Math.min(1, cur + step);
+  else if (e.key === 'Home') hoverFrac.value = 0;
+  else if (e.key === 'End') hoverFrac.value = 1;
+  else if (e.key === 'Escape') { hoverFrac.value = null; return; }
+  else return;
+  e.preventDefault();
+  /* 键盘读数 Y 向无指针：tooltip 回落顶部锚（tipStyle 的 hoverY-null 分支） */
+  hoverY.value = null;
+}
+
 function nearestOf(points: SeriesPoint[], t: number): SeriesPoint {
   let best = points[0]!;
   for (const p of points) if (Math.abs(p.t - t) < Math.abs(best.t - t)) best = p;
@@ -509,6 +536,8 @@ const plotStyle = computed(() => (props.height ? { height: props.height + 'px' }
 /* 件2：绘图域右移 36px 让出左刻度列——线和文字互相遮挡根治
  （canvas 含 svg/十字线/圆点/tooltip；Y 三刻度在 canvas 外锚 plot，见下） */
 .hc-canvas { position: absolute; top: 0; bottom: 0; left: 36px; right: 0; }
+/* 键盘焦点环（方向键步进读数的可达性信号；内嵌不外扩） */
+.hc-canvas:focus-visible { outline: 1px solid var(--ac-line); outline-offset: -1px; }
 .hc-svg { width: 100%; height: 100%; display: block; }
 /* 网格与主卡 .ld-glines 同语言（--line 实线 1px；旧 tx2 虚线=「白板图」底噪） */
 .hc-grid { stroke: var(--line); stroke-width: 1; }
