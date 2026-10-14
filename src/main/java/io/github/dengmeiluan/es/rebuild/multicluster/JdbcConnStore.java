@@ -230,7 +230,7 @@ public class JdbcConnStore implements ConnStore {
                每轮探活回写都会再败），比单次 UPDATE 失败更该留痕（裁决时明确暂缓本臂，
                收口，句式与下方 UPDATE 臂 WARN 同源）。吞异常契约不变（版本是增强信息，
                绝不影响探活主流程） */
-            LOG.warn("[JdbcConnStore] updateVersion ensureSchema failed: {}", e.getMessage());
+            LOG.warn("[JdbcConnStore] updateVersion ensureSchema failed: {}", e.getMessage(), e);
             return; // 版本是增强信息，绝不影响探活主流程
         }
         try (Connection c = dataSource.getConnection();
@@ -245,7 +245,7 @@ public class JdbcConnStore implements ConnStore {
         } catch (SQLException e) {
             /* debug→WARN——「探活到新版本但档案写不进」的低频真异常，无痕则
                版本不刷新无从排查；吞异常契约不变（增强信息绝不影响探活主流程） */
-            LOG.warn("[JdbcConnStore] updateVersion failed id={}: {}", id, e.getMessage());
+            LOG.warn("[JdbcConnStore] updateVersion failed id={}: {}", id, e.getMessage(), e);
         }
     }
 
@@ -274,7 +274,7 @@ public class JdbcConnStore implements ConnStore {
         try {
             ensureSchema();
         } catch (Exception e) {
-            LOG.warn("[JdbcConnStore] markSyncState ensureSchema failed: {}", e.getMessage());
+            LOG.warn("[JdbcConnStore] markSyncState ensureSchema failed: {}", e.getMessage(), e);
             return;
         }
         try (Connection c = dataSource.getConnection();
@@ -287,7 +287,7 @@ public class JdbcConnStore implements ConnStore {
             ps.setString(2, id.trim());
             ps.executeUpdate();
         } catch (SQLException e) {
-            LOG.warn("[JdbcConnStore] markSyncState failed id={}: {}", id, e.getMessage());
+            LOG.warn("[JdbcConnStore] markSyncState failed id={}: {}", id, e.getMessage(), e);
         }
     }
 

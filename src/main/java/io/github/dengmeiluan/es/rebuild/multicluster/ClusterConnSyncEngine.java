@@ -107,7 +107,7 @@ public class ClusterConnSyncEngine {
                 try {
                     runOnce("scheduled");
                 } catch (Exception e) {
-                    LOG.warn("[ConnSync] scheduled round failed: {}", e.getMessage());
+                    LOG.warn("[ConnSync] scheduled round failed: {}", e.getMessage(), e);
                 }
             }
         }, initialDelaySeconds, intervalSeconds, TimeUnit.SECONDS);
@@ -395,7 +395,7 @@ public class ClusterConnSyncEngine {
                     try {
                         prober.probeOne(id); // 保存即探:状态点秒级可见
                     } catch (Exception pe) {
-                        LOG.debug("[ConnSync] probeOne failed id={}: {}", id, pe.getMessage());
+                        LOG.debug("[ConnSync] probeOne failed id={}: {}", id, pe.getMessage(), pe);
                     }
                 }
                 if (existing == null) {

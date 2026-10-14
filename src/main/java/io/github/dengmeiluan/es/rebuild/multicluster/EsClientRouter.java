@@ -189,7 +189,7 @@ public class EsClientRouter {
                 old.close();
                 LOG.info("[EsClientRouter] closed client for conn={}", connId);
             } catch (Exception e) {
-                LOG.warn("[EsClientRouter] close client failed conn={}: {}", connId, e.getMessage());
+                LOG.warn("[EsClientRouter] close client failed conn={}: {}", connId, e.getMessage(), e);
             }
         }
     }

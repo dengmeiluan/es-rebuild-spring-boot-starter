@@ -273,7 +273,7 @@ public class EsConnStore implements ConnStore {
             /* debug→WARN——「探活到新版本但 ES 档案写不进」的低频真异常无痕
                则版本不刷新无从排查；只修了 JdbcConnStore 同名方法漏了 ES 店，补齐
                同一句式。吞异常契约不变（版本是增强信息，绝不影响探活主流程） */
-            LOG.warn("[EsConnStore] updateVersion failed id={}: {}", id, e.getMessage());
+            LOG.warn("[EsConnStore] updateVersion failed id={}: {}", id, e.getMessage(), e);
         }
     }
 
@@ -301,7 +301,7 @@ public class EsConnStore implements ConnStore {
             req.setJsonEntity(MAPPER.writeValueAsString(src));
             controlClient.get().getLowLevelClient().performRequest(req);
         } catch (Exception e) {
-            LOG.warn("[EsConnStore] markSyncState failed id={}: {}", id, e.getMessage());
+            LOG.warn("[EsConnStore] markSyncState failed id={}: {}", id, e.getMessage(), e);
         }
     }
 
