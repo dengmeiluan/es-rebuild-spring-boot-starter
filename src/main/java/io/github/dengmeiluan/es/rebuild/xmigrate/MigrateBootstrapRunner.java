@@ -46,7 +46,7 @@ public class MigrateBootstrapRunner {
                 jobStore.ensureIndex();
                 tracker.sweepInterrupted(running);
             } catch (Exception e) {
-                logger.warn("[MigrateBootstrapRunner] bootstrap failed: {}", e.getMessage());
+                logger.warn("[MigrateBootstrapRunner] bootstrap failed: {}", e.getMessage(), e);
             }
         }, "es-xmigrate-bootstrap");
         t.setDaemon(true);

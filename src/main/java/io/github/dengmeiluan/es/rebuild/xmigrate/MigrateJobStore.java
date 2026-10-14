@@ -62,7 +62,7 @@ public class MigrateJobStore {
                 logger.info("[MigrateJobStore] migrate job index created: {}", coordinates.getIndexName());
             }
         } catch (Exception e) {
-            logger.warn("[MigrateJobStore] ensureIndex failed (rely on auto-create on first write): {}", e.getMessage());
+            logger.warn("[MigrateJobStore] ensureIndex failed (rely on auto-create on first write): {}", e.getMessage(), e);
         }
     }
 

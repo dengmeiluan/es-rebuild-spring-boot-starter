@@ -227,7 +227,7 @@ public class CrossClusterMigrateService {
         } catch (java.io.IOException e) {
             // 预检失败不阻断启动，仅不展示 dest 警告（静默降级补 WARN，运维留痕）
             logger.warn("[CrossClusterMigrateService] preflight indexExists failed dest={}: {}",
-                    req.getDestIndex(), e.getMessage());
+                    req.getDestIndex(), e.getMessage(), e);
         }
         out.put("destExists", destExists);
         return out;
@@ -475,7 +475,7 @@ public class CrossClusterMigrateService {
                     try {
                         localAdmin.forceMerge(dest, 1);
                     } catch (Exception e) {
-                        logger.warn("[CrossClusterMigrateService] forceMerge failed dest={}: {}", dest, e.getMessage());
+                        logger.warn("[CrossClusterMigrateService] forceMerge failed dest={}: {}", dest, e.getMessage(), e);
                     }
                 }
                 waitGreenQuietly(dest);
@@ -746,7 +746,7 @@ public class CrossClusterMigrateService {
             captured.put(K_FLUSH_THRESHOLD, readFlat(idx, K_FLUSH_THRESHOLD, "512mb"));
         } catch (Exception e) {
             // 取不到则用 ES 默认作还原兜底，确保收尾不会把索引留在调优态
-            logger.warn("[CrossClusterMigrateService] captureSettings 失败 dest={}，用默认值兜底还原: {}", dest, e.getMessage());
+            logger.warn("[CrossClusterMigrateService] captureSettings 失败 dest={}，用默认值兜底还原: {}", dest, e.getMessage(), e);
             captured.put(K_REFRESH, "1s");
             captured.put(K_REPLICAS, "1");
             captured.put(K_TRANSLOG_DURABILITY, "request");
@@ -813,7 +813,7 @@ public class CrossClusterMigrateService {
         try {
             localClient.get().indices().refresh(new RefreshRequest(dest), RequestOptions.DEFAULT);
         } catch (Exception e) {
-            logger.warn("[CrossClusterMigrateService] refresh failed dest={}: {}", dest, e.getMessage());
+            logger.warn("[CrossClusterMigrateService] refresh failed dest={}: {}", dest, e.getMessage(), e);
         }
     }
 
@@ -824,7 +824,7 @@ public class CrossClusterMigrateService {
             req.addParameter("timeout", "120s");
             localClient.get().getLowLevelClient().performRequest(req);
         } catch (Exception e) {
-            logger.warn("[CrossClusterMigrateService] waitGreen dest={} 未达 green（继续）: {}", dest, e.getMessage());
+            logger.warn("[CrossClusterMigrateService] waitGreen dest={} 未达 green（继续）: {}", dest, e.getMessage(), e);
         }
     }
 
@@ -881,7 +881,7 @@ public class CrossClusterMigrateService {
             Object cnt = root.get("count");
             return cnt instanceof Number ? ((Number) cnt).longValue() : null;
         } catch (Exception e) {
-            logger.warn("[CrossClusterMigrateService] countRemote failed index={}: {}", index, e.getMessage());
+            logger.warn("[CrossClusterMigrateService] countRemote failed index={}: {}", index, e.getMessage(), e);
             return null;
         }
     }
@@ -962,7 +962,7 @@ public class CrossClusterMigrateService {
         try {
             client.close();
         } catch (Exception e) {
-            logger.debug("[CrossClusterMigrateService] close remote client ignore: {}", e.getMessage());
+            logger.debug("[CrossClusterMigrateService] close remote client ignore: {}", e.getMessage(), e);
         }
     }
 }

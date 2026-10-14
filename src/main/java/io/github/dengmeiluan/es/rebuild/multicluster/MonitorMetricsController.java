@@ -90,12 +90,15 @@ public class MonitorMetricsController {
 
     /**
      *  最新 Top 索引快照（对标阿里云 Grafana Index 索引行）：取带 topIndexes 的最新
-     * cluster doc，返回 {index,qps,idxRate,storeMb}×≤8；无快照（首次采集/索引全静）回空数组。
+     * cluster doc，返回 {index,qps,idxRate,storeMb,latencyMs}×≤limit；无快照（首次采集/
+     * 索引全静）回空数组。limit 缺省 8（兼容旧前端），上限 20=快照层截断宽度。
      */
     @GetMapping("top-indexes")
-    public Map<String, Object> topIndexes(@RequestParam(required = false) String connName) {
+    public Map<String, Object> topIndexes(@RequestParam(required = false) String connName,
+                                          @RequestParam(required = false, defaultValue = "8") Integer limit) {
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("records", store.searchTopIndexes(connName));
+        out.put("records", store.searchTopIndexes(connName,
+                Math.max(1, Math.min(limit == null ? 8 : limit, 20))));
         return Collections.unmodifiableMap(out);
     }
 }

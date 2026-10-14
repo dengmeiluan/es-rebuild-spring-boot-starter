@@ -479,9 +479,10 @@ public class MonitorMetricsStore {
 
     /**
      *  最新 Top 索引快照（可选连接过滤）：取带 topIndexes 字段的最新 cluster doc，
-     * 返回其 topIndexes 数组（index/qps/idxRate/storeMb ×≤8）；无快照 → 空列表。
+     * 返回其 topIndexes 数组（index/qps/idxRate/storeMb/latencyMs ×≤limit，896 批 limit 参数化+
+     * 查询延迟字段）；无快照 → 空列表。
      */
-    public List<Map<String, Object>> searchTopIndexes(String connName) {
+    public List<Map<String, Object>> searchTopIndexes(String connName, int limit) {
         try {
             Request req = new Request("POST", "/" + indexPrefix + "-*/_search");
             req.setJsonEntity(buildTopBody(connName));
@@ -499,7 +500,7 @@ public class MonitorMetricsStore {
                     out.add((Map<String, Object>) o);
                 }
             }
-            return out;
+            return out.size() > limit ? new ArrayList<>(out.subList(0, limit)) : out;
         } catch (ResponseException e) {
             if (e.getResponse().getStatusLine().getStatusCode() == 404) {
                 return new ArrayList<>();

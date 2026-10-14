@@ -385,7 +385,7 @@ public class MonitorMetricsStoreTest {
                 + "{\"_source\":{\"timestamp\":2000,\"kind\":\"metrics\",\"scope\":\"cluster\","
                 + "\"topIndexes\":[{\"index\":\"idx_a\",\"qps\":10.0,\"idxRate\":5.0,\"storeMb\":100.0}]}}]}}");
         MonitorMetricsStore store = new MonitorMetricsStore(() -> client, PREFIX);
-        List<Map<String, Object>> out = store.searchTopIndexes("a");
+        List<Map<String, Object>> out = store.searchTopIndexes("a", 8);
         assertEquals(1, out.size());
         assertEquals("idx_a", out.get(0).get("index"));
         assertEquals(10.0, ((Number) out.get(0).get("qps")).doubleValue(), 0.0001);
@@ -398,7 +398,7 @@ public class MonitorMetricsStoreTest {
                     "{\"error\":{\"type\":\"index_not_found_exception\"}}");
         });
         MonitorMetricsStore store = new MonitorMetricsStore(() -> client, PREFIX);
-        assertTrue(store.searchTopIndexes(null).isEmpty());
+        assertTrue(store.searchTopIndexes(null, 8).isEmpty());
     }
 
 

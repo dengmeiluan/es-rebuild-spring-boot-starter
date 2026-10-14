@@ -94,7 +94,7 @@ public final class FormatlessDateFields {
             // 解析失败静默空清单（「真的没有」与「解析不了」合流）——debug 留痕可追，
             // 空清单返回契约不变（调用方文案仍不可把空清单表述为「已确认无风险」）
             LOG.debug("[FormatlessDateFields] 日期字段扫描失败返回空清单：{}: {}",
-                    e.getClass().getSimpleName(), e.getMessage());
+                    e.getClass().getSimpleName(), e.getMessage(), e);
             return Collections.emptyList();
         }
     }

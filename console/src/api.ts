@@ -453,7 +453,7 @@ export const api = {
 
   /* R7 服务端告警（GET /monitor-alerts，VIEWER 只读；timestamp 降序，recovered:true=恢复事件） */
   /* 最新 Top 索引快照（对标阿里云 Index 索引行）：{index,qps,idxRate,storeMb}×≤8 */
-  monitorTopIndexes: (connId?: string) => get<{ records: any[] }>(`/monitor-metrics/top-indexes?${q({ connId })}`),
+  monitorTopIndexes: (connId?: string, limit?: number) => get<{ records: any[] }>(`/monitor-metrics/top-indexes?${q({ connId, limit })}`),
   monitorAlerts: (size = 50, fromMs?: number, toMs?: number) => get<{ records: MonitorAlertDoc[] }>(`/monitor-alerts?${q({ size, fromMs, toMs })}`),
 
   /* 集群监控历史趋势(GET /monitor-metrics,VIEWER 只读;scope=cluster 多集群叠加;

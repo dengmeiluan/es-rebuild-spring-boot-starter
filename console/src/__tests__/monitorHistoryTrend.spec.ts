@@ -733,10 +733,11 @@ describe('R31 聚合修真与分片卡', () => {
     expect(view).toContain('connName: clusterFilter.value || undefined');
   });
   it('R42 Top 索引卡：监控明细单容器视图+集群模式渲染+api 通道（对标阿里云 Index 索引行）', () => {
-    /* 800 同步更新：三面板合并「监控明细」单容器——Top 索引=detailTab 首视图（字面锚迁语义等价形态） */
+    /* 800 同步更新：三面板合并「监控明细」单容器——Top 索引=detailTab 首视图（字面锚迁语义等价形态）；
+       896 批同步更新：api 通道加 limit 参数（Top N 宽度参数化，服务端钳 1..20） */
     expect(view).toContain("detailTab === 'top' && !nodeMode");
     expect(view).toContain('暂无索引速率快照（首轮采集基线建立后出数）');
-    expect(apiSrc).toContain("monitorTopIndexes: (connId?: string) => get<{ records: any[] }>(`/monitor-metrics/top-indexes?${q({ connId })}`)");
+    expect(apiSrc).toContain("monitorTopIndexes: (connId?: string, limit?: number) => get<{ records: any[] }>(`/monitor-metrics/top-indexes?${q({ connId, limit })}`)");
   });
   it('R39 onlyClusterMode：集群专属卡节点下钻时隐藏（真机走查发现 QPS/耗时等挂假空态）', () => {
     expect(view).toContain('onlyClusterMode?: boolean');
@@ -781,7 +782,8 @@ describe('R31 聚合修真与分片卡', () => {
     expect(view).toContain('topRows.value = topRows.value.filter(t => (seen.has(t.index) ? false : (seen.add(t.index), true)));');
   });
   it('R45 走查修复：合并视图每集群 Top 3 压缩同源重复+阈值 0 不被 falsy 吞掉', () => {
-    expect(view).toContain('const perCluster = clusterFilter.value ? 8 : 3;');
+    /* 896 批同步更新：单集群档宽度参数化 topLimit（默认 8），合并档压缩语义保留 */
+    expect(view).toContain('const perCluster = clusterFilter.value ? topLimit.value : 3;');
     expect(view).toContain('Number.isFinite(Number(slowThresholdMs.value)) ? Number(slowThresholdMs.value) : 1000');
   });
   it('R44 布局质感：头部下拉约束内容宽（全局 .inp width:100% 竖排缺陷修复锚）', () => {

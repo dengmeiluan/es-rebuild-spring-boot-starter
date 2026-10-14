@@ -943,8 +943,11 @@ public class ClusterMetricsCollector {
     /**
      *  per-index 速率差分 + Top 选取（静态=测点）：每索引 查询 QPS/写入速率（计数差 ÷ Δt秒，
      * 首轮/新索引/回退/Δt≤0 → 该索引无速率不入选）；有效样本（qps&gt;0 或 idxRate&gt;0）按
-     * qps+idxRate 降序取 Top 8，附 primaries 存储折 MB。对标阿里云 Grafana Index 索引行。
+     * qps+idxRate 降序取前 {@value #TOP_SNAPSHOT_LIMIT}，附 primaries 存储折 MB 与每索引
+     * 查询延迟（Δquery_time ÷ Δquery_count，ms/次——读侧按 limit 再截断）。对标阿里云 Grafana Index 索引行。
      */
+    static final int TOP_SNAPSHOT_LIMIT = 20;
+
     static List<Map<String, Object>> buildTopIndexes(Map<String, Object> indexStats,
                                                      IndexBaseline prev, long ts) {
         List<Map<String, Object>> out = new ArrayList<>();
@@ -962,8 +965,8 @@ public class ClusterMetricsCollector {
             Long iT = counterOrNull(leaf(node, "total.indexing.index_total"));
             Long store = counterOrNull(leaf(node, "primaries.store.size_in_bytes"));
             Long[] p = prev == null ? null : prev.counters.get(name);
-            Double qps = perSecond(qT, p == null ? null : p[0], dtMs);
-            Double idxRate = perSecond(iT, p == null ? null : p[1], dtMs);
+            Double qps = perSecond(qT, slot(p, 0), dtMs);
+            Double idxRate = perSecond(iT, slot(p, 1), dtMs);
             boolean hasRate = (qps != null && qps > 0) || (idxRate != null && idxRate > 0);
             if (!hasRate) {
                 continue;
@@ -973,12 +976,19 @@ public class ClusterMetricsCollector {
             item.put("qps", qps == null ? 0.0 : Math.round(qps * 10.0) / 10.0);
             item.put("idxRate", idxRate == null ? 0.0 : Math.round(idxRate * 10.0) / 10.0);
             item.put("storeMb", store == null ? 0.0 : Math.round(store / 1048576.0 * 10.0) / 10.0);
+            /*  索引级查询延迟：Δquery_time ÷ Δquery_count（ms/次；计数 0/缺基线/回退省略——
+                对标阿里云「索引端到端查询延迟」，读侧第三指标档） */
+            Long qtMs = counterOrNull(leaf(node, "total.search.query_time_in_millis"));
+            Long latency = msPerCount(qtMs, slot(p, 2), qT, slot(p, 0));
+            if (latency != null) {
+                item.put("latencyMs", latency);
+            }
             out.add(item);
         }
         out.sort((a, b) -> Double.compare(
                 ((Number) b.get("qps")).doubleValue() + ((Number) b.get("idxRate")).doubleValue(),
                 ((Number) a.get("qps")).doubleValue() + ((Number) a.get("idxRate")).doubleValue()));
-        return out.size() > 8 ? new ArrayList<>(out.subList(0, 8)) : out;
+        return out.size() > TOP_SNAPSHOT_LIMIT ? new ArrayList<>(out.subList(0, TOP_SNAPSHOT_LIMIT)) : out;
     }
 
     /**  per-index 计数基线（静态=测点）：按当前索引集重建——旧索引键自然清理；
@@ -995,7 +1005,9 @@ public class ClusterMetricsCollector {
             Map<?, ?> node = (Map<?, ?>) en.getValue();
             counters.put(String.valueOf(en.getKey()), new Long[]{
                     counterOrNull(leaf(node, "total.search.query_total")),
-                    counterOrNull(leaf(node, "total.indexing.index_total"))});
+                    counterOrNull(leaf(node, "total.indexing.index_total")),
+                    /*  槽 2：query_time_in_millis（索引级查询延迟差分光标，对标阿里云端到端延迟） */
+                    counterOrNull(leaf(node, "total.search.query_time_in_millis"))});
         }
         return new IndexBaseline(ts, counters);
     }
@@ -1004,7 +1016,7 @@ public class ClusterMetricsCollector {
     public static final class IndexBaseline {
         /** 基线时刻（毫秒 epoch）。 */
         public final long timestampMs;
-        /** indexName → [search.query_total, indexing.index_total]。 */
+        /** indexName → [search.query_total, indexing.index_total, search.query_time_in_millis]。 */
         public final Map<String, Long[]> counters;
 
         /** 差分测点构造（生产路径走 {@link #nextIndexCounters}）。 */

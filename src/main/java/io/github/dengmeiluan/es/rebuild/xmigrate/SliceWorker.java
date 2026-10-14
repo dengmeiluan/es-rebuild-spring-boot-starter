@@ -276,7 +276,7 @@ public class SliceWorker implements Runnable {
         } catch (Exception e) {
             /* debug→WARN——低频真异常路径（远端断连/网关 4xx），失败即 scroll
                上下文在远端残留到 keep-alive 到期（资源泄漏），留痕可查；吞异常契约不变 */
-            logger.warn("[SliceWorker] clearScroll 失败（scroll 上下文残留，远端 keep-alive 到期后自清）: {}", e.getMessage());
+            logger.warn("[SliceWorker] clearScroll 失败（scroll 上下文残留，远端 keep-alive 到期后自清）: {}", e.getMessage(), e);
         }
     }
 

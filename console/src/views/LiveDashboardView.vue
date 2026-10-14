@@ -130,6 +130,10 @@
       <div v-if="cmpPanelOpen" class="ld-ncmp-panel" aria-label="节点对比">
         <div class="ld-ncmp-hd">
           <span class="ld-ncmp-tt">节点对比</span>
+          <!-- 896 #10 主节点专项视角：仅看 master（role 口径与区块头 nodesSummary 同源） -->
+          <label class="ld-ncmp-master" title="只对比 master 角色节点（集群稳定性关键少数）">
+            <input type="checkbox" v-model="cmpOnlyMaster" /> 仅 master
+          </label>
           <button v-if="hiddenNodes.length" type="button" class="ld-ncmp-restore" title="恢复全部已隐藏节点" @click="hiddenNodes = []">已隐藏 {{ hiddenNodes.length }} ▸ 恢复</button>
           <span class="seg ld-seg" role="group" aria-label="节点对比指标">
             <span class="seg-thumb" :style="segPillStyle(CMP_METRICS.length, cmpMetricIdx)" aria-hidden="true" />
@@ -478,14 +482,24 @@
                 <button type="button" :class="{ on: topView === 'table' }" :aria-pressed="topView === 'table'" @click="topView = 'table'">表格</button>
               </span>
             </div>
-            <!-- 指标切换 seg（写入/查询双支同源会话序列，895 对标阿里云 index bulk 写入 tps/index 查询 qps 双卡） -->
+            <!-- 指标切换 seg（写入/查询/延迟三支同源会话序列，895 对标阿里云 index bulk 写入 tps/index 查询 qps/索引端到端查询延迟三卡）+ Top N 宽度选择 -->
             <div v-if="topView === 'curve'" class="ld-top-metric">
               <span class="seg ld-seg" role="group" aria-label="Top 曲线指标">
-                <span class="seg-thumb" :style="segPillStyle(2, topMetric === 'idx' ? 0 : 1)" aria-hidden="true" />
+                <span class="seg-thumb" :style="segPillStyle(3, ['idx', 'qps', 'lat'].indexOf(topMetric))" aria-hidden="true" />
                 <button type="button" :class="{ on: topMetric === 'idx' }" :aria-pressed="topMetric === 'idx'" @click="topMetric = 'idx'">写入速率</button>
                 <button type="button" :class="{ on: topMetric === 'qps' }" :aria-pressed="topMetric === 'qps'" @click="topMetric = 'qps'">查询 QPS</button>
+                <button type="button" :class="{ on: topMetric === 'lat' }" :aria-pressed="topMetric === 'lat'" @click="topMetric = 'lat'">查询延迟</button>
               </span>
-              <span class="ld-top-metric-unit mono">{{ topMetric === 'idx' ? 'doc/秒' : '次/秒' }}</span>
+              <span class="ld-top-metric-unit mono">{{ topMetric === 'idx' ? 'doc/秒' : topMetric === 'qps' ? '次/秒' : 'ms/次' }}</span>
+              <span class="ld-top-metric-sp"></span>
+              <label class="ld-top-limit" title="快照拉取宽度（服务端 limit 参数，上限 20）">
+                Top <select v-model.number="topLimit" class="inp sm" aria-label="Top 索引数量">
+                  <option :value="8">8</option>
+                  <option :value="12">12</option>
+                  <option :value="16">16</option>
+                  <option :value="20">20</option>
+                </select>
+              </label>
             </div>
             <div v-if="topView === 'curve'" ref="topPlotEl" class="ld-cmp-plot ld-top-plot" @mousemove="onTopMove($event)" @mouseleave="onTopLeave()">
               <template v-if="topHasData">
@@ -981,7 +995,13 @@ function cmpColorOf(name: string): string {
   const i = sortedNodes.value.findIndex(n => String(n.name || n.nodeId) === name);
   return CMP_PALETTE[(i < 0 ? 0 : i) % CMP_PALETTE.length];
 }
-const cmpSeries = computed(() => sortedNodes.value
+/* 896 #10 主节点专项视角：对比面板可切「仅 master」——三主节点集群混看 data/master
+ 时 master 水位（堆/磁盘）才是集群稳定性的关键少数；role 口径与 nodesSummary 同源 */
+const cmpOnlyMaster = ref(false);
+const cmpScopeNodes = computed(() => cmpOnlyMaster.value
+  ? sortedNodes.value.filter(n => (n.roles || []).includes('master'))
+  : sortedNodes.value);
+const cmpSeries = computed(() => cmpScopeNodes.value
   .filter(n => !hiddenNodes.value.includes(String(n.name || n.nodeId)))
   .map((n: any) => ({
     name: String(n.name || n.nodeId),
@@ -990,7 +1010,7 @@ const cmpSeries = computed(() => sortedNodes.value
   })));
 /* 件1：图例 chips 行（全节点常驻——色点+名+当前值+点击显隐=hc-chip 同语言；
  「为什么仍然是这个效果」根治=对比曲线值不再只藏悬浮读出） */
-const cmpChips = computed(() => sortedNodes.value.map((n: any) => {
+const cmpChips = computed(() => cmpScopeNodes.value.map((n: any) => {
   const name = String(n.name || n.nodeId);
   const data = winSlice(nodeSeriesFor(name, cmpMetric.value));
   const last = data.length ? data[data.length - 1] : null;
@@ -1170,22 +1190,25 @@ const alertHistRows = computed(() => srvAlerts.value
  行内索引名可点下钻（ 闭环保留）。 */
 const topRows = ref<any[]>([]);
 const topView = usePref<'curve' | 'table'>('ld.topView', 'curve');
-/* 895/896：双指标会话序列（写入 idxRate + 查询 qps 同源累积，快照字段本就双份）——
- topMetric 切换曲线读哪支，统计表随指标换算（对标阿里云 index bulk 写入 tps/index 查询 qps 双卡） */
-const topMetric = usePref<'idx' | 'qps'>('ld.topMetric', 'idx');
-const topIndexSeries = ref<Record<string, { idx: number[]; qps: number[] }>>({});
+/* 896：三指标会话序列（写入 idxRate + 查询 qps + 查询延迟 lat 同源累积，快照同源）——
+ topMetric 切换曲线读哪支，统计表随指标换算（对标阿里云 index bulk 写入 tps/index 查询 qps/
+ 索引端到端查询延迟三卡）；topLimit=快照拉取宽度参数化（服务端 limit 钳 1..20） */
+const topMetric = usePref<'idx' | 'qps' | 'lat'>('ld.topMetric', 'idx');
+const topLimit = usePref<number>('ld.topLimit', 8);
+const topIndexSeries = ref<Record<string, { idx: number[]; qps: number[]; lat: number[] }>>({});
 const topTsArr = ref<number[]>([]);
-/* 当前曲线集=最新快照 Top8（按当前指标排序，与统计表同序）映射到会话累积序列；色按排序位锚定 */
+/* 当前曲线集=最新快照 Top N（按当前指标排序，与统计表同序）映射到会话累积序列；色按排序位锚定 */
 const topCurves = computed(() => {
   const metric = topMetric.value;
   return topRows.value
     .slice()
     .sort((a: any, b: any) => (Number(b?.[metric]) || 0) - (Number(a?.[metric]) || 0))
-    .slice(0, 8)
+    .slice(0, topLimit.value)
     .map((t: any, i: number) => {
       const k = t.cluster + '|' + t.index;
-      const rec = topIndexSeries.value[k] || { idx: [], qps: [] };
-      return { key: k, name: t.index, cluster: t.cluster, connId: t.connId, cur: Number(t[metric]) || 0, color: CMP_PALETTE[i % CMP_PALETTE.length], data: metric === 'idx' ? rec.idx : rec.qps };
+      const rec = topIndexSeries.value[k] || { idx: [], qps: [], lat: [] };
+      const data = metric === 'idx' ? rec.idx : metric === 'qps' ? rec.qps : rec.lat;
+      return { key: k, name: t.index, cluster: t.cluster, connId: t.connId, cur: Number(t[metric]) || 0, color: CMP_PALETTE[i % CMP_PALETTE.length], data };
     });
 });
 /* 逐序列窗内统计（阿里云 min/max/avg/current 表同形态）：按当前指标值降序 */
@@ -1294,8 +1317,8 @@ async function loadTop() {
   const seq = ++topSeq; // 世代计数：窗/筛选/明细档重入使旧拍作废（含会话累积段，旧拍不得推序列）
   const targets = clusterFilter.value ? [clusterFilter.value] : clusterList.value.slice(0, 10);
   try {
-    const perCluster = clusterFilter.value ? 8 : 3; /* ：合并视图每集群 Top 3 压缩同源重复（多档案同物理集群），选定单集群保留完整 Top 8 */
-    const rs = await Promise.all(targets.map(c => api.monitorTopIndexes(c).catch(() => ({ records: [] }))));
+    const perCluster = clusterFilter.value ? topLimit.value : 3; /* ：合并视图每集群 Top 3 压缩同源重复（多档案同物理集群），选定单集群按 Top N 宽度拉全 */
+    const rs = await Promise.all(targets.map(c => api.monitorTopIndexes(c, topLimit.value).catch(() => ({ records: [] }))));
     if (seq !== topSeq) return; // 旧拍回包丢弃：topRows 与序列累积整段跳过（新拍自会写入）
     topRows.value = rs.flatMap((r, i) => (r?.records || []).slice(0, perCluster).map((x: any) => ({ ...x, cluster: targets[i] })));
     /* 合并视图按索引名去重（.kibana_1 等同名系统索引跨集群重复是主要噪声；
@@ -1305,20 +1328,24 @@ async function loadTop() {
       topRows.value = topRows.value.filter(t => (seen.has(t.index) ? false : (seen.add(t.index), true)));
     }
     /* 件2 会话累积：本拍所有在榜索引推序列（掉榜索引保留已积序列=曲线连续不断头）；
-     写入/查询双支同源累积（topMetric 只决定读哪支） */
+     写入/查询/延迟三支同源累积（topMetric 只决定读哪支） */
     const now = Date.now();
     topTsArr.value.push(now);
     for (const t of topRows.value) {
       const k = t.cluster + '|' + t.index;
-      const rec = topIndexSeries.value[k] || (topIndexSeries.value[k] = { idx: [], qps: [] });
+      const rec = topIndexSeries.value[k] || (topIndexSeries.value[k] = { idx: [], qps: [], lat: [] });
       rec.idx.push(Number(t.idxRate) || 0);
       rec.qps.push(Number(t.qps) || 0);
+      /*  延迟缺失（该拍无查询增量）= 保持上一拍读数（延迟语义：无流量时延住在原地，
+       落 0 会制造「延迟归零」假尖谷） */
+      rec.lat.push(t.latencyMs == null ? (rec.lat.length ? rec.lat[rec.lat.length - 1]! : 0) : Number(t.latencyMs));
     }
     const cap = Number(windowPts.value) || 60;
     if (topTsArr.value.length > cap) topTsArr.value.splice(0, topTsArr.value.length - cap);
     for (const rec of Object.values(topIndexSeries.value)) {
       if (rec.idx.length > cap) rec.idx.splice(0, rec.idx.length - cap);
       if (rec.qps.length > cap) rec.qps.splice(0, rec.qps.length - cap);
+      if (rec.lat.length > cap) rec.lat.splice(0, rec.lat.length - cap);
     }
   } catch { if (seq === topSeq) topRows.value = []; }
 }
@@ -1439,7 +1466,7 @@ watch(nodeMode, (nm) => { if (nm && detailTab.value === 'top') detailTab.value =
  watch 置于 clusterFilter/nodeMode 声明后（getter 立即求值撞后置声明 TDZ 的教训）；
  每拍快照落 topRows 同时累积 per-index 序列（窗长钳制 windowPts） */
 watch(() => sampleTs.value.length, () => { if (detailShows('top') && !nodeMode.value) void loadTop(); });
-watch([windowPts, () => clusterFilter.value, () => nodeMode.value], () => {
+watch([windowPts, () => clusterFilter.value, () => nodeMode.value, topLimit], () => {
   if (nodeMode.value) { topIndexSeries.value = {}; topTsArr.value = []; }
   if (detailShows('top')) void loadTop();
 });
@@ -1807,9 +1834,12 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 .ld-grid { stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; opacity: .75; }
 .ld-xt { position: absolute; bottom: 2px; transform: translateX(-50%); font-size: var(--fs-2xs); color: var(--tx2); font-family: var(--mono); pointer-events: none; }
 .ld-top-legend { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-4); margin: var(--sp-1) 2px var(--sp-2); }
-/* 指标切换行（写入/查询 seg + 单位标注）：曲线区上方一行 */
+/* 指标切换行（写入/查询/延迟 seg + 单位标注 + Top N 宽度）：曲线区上方一行 */
 .ld-top-metric { display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-1) 2px; }
 .ld-top-metric-unit { font-size: var(--fs-2xs); color: var(--tx2); }
+.ld-top-metric-sp { flex: 1 1 auto; }
+.ld-top-limit { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-2xs); color: var(--tx2); }
+.ld-top-limit .inp { width: auto; min-width: 0; padding: 1px var(--sp-1); }
 /* 逐序列窗内统计表（阿里云 min/max/avg/current 同形态）：紧凑行距，数值右对齐 */
 .ld-top-stats { margin: var(--sp-1) 2px var(--sp-2); font-size: var(--fs-2xs); }
 .ld-top-stats th, .ld-top-stats td { padding: var(--sp-0) var(--sp-1); white-space: nowrap; }
@@ -1832,6 +1862,9 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 .ld-top-plot { margin: var(--sp-1) 0 var(--sp-2); }
 .ld-top-hv { min-width: 150px; }
 .ld-ncmp-hd { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+/* 主节点专项视角 toggle（896 #10）：checkbox 紧贴标题，fs-2xs 不抢 seg 主操作 */
+.ld-ncmp-master { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-2xs); color: var(--tx2); cursor: pointer; white-space: nowrap; }
+.ld-ncmp-master:hover { color: var(--tx0); }
 .ld-ncmp-tt { font-size: var(--fs-sm); font-weight: 600; color: var(--tx1); } /* 件3：容器头升档=与监控明细孪生容器同语言（muted 卡级色退役） */
 .ld-ncmp-hd .seg { margin-left: auto; }
 .ld-ncmp-svg { width: 100%; height: 120px; display: block; }
