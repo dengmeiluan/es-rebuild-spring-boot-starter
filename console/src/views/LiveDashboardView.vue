@@ -150,13 +150,22 @@
  useHoverEscape 的图区矩形巡检也随之同域 -->
           <div ref="cmpPlotEl" class="ld-cmp-plot" @mousemove="onCmpMove($event)" @mouseleave="onCmpLeave()">
             <svg :viewBox="'0 0 720 ' + CMP_H" class="ld-ncmp-svg" preserveAspectRatio="none">
+              <defs>
+                <!-- 联动面积渐变（hover 节点唯一；stop 色随节点身份色，896 同 HistoryChart 档） -->
+                <linearGradient id="cmpAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" :stop-color="cmpArea ? cmpArea.color : 'transparent'" stop-opacity="0.2" />
+                  <stop offset="1" :stop-color="cmpArea ? cmpArea.color : 'transparent'" stop-opacity="0" />
+                </linearGradient>
+              </defs>
               <g v-if="cmpMode === 'pct'" class="ld-glines" aria-hidden="true">
                 <line v-for="g in PCT_GRID" :key="'g' + g" x1="0" x2="720" :y1="CMP_H - CMP_H * (g / 100)" :y2="CMP_H - CMP_H * (g / 100)" vector-effect="non-scaling-stroke" />
               </g>
+              <!-- 联动面积（hover 节点唯一渐变面积，画在折线之下；polygon 不触 path 计数锁） -->
+              <polygon v-if="cmpArea" class="ld-ncmp-area" :points="cmpArea.points" fill="url(#cmpAreaGrad)" />
               <!-- 折线平滑统一（Catmull-Rom 单源；pct/abs 档 sparkPts 同源）；
  abs 档传全体可见节点共享 max（cmpScaleMax）——各线横向可比且与 Y 顶刻度同域；
  联动高亮（HistoryChart hc-line 同语言）：图例 chip/读出行 hover→该节点线升亮、其余退灰
-（不加面积元素——对比卡 path 计数被 591/615 锁面反锁，dim/升亮纯 CSS 档） -->
+（不加面积 path——对比卡 path 计数被 591/615 锁面反锁，面积走 polygon） -->
               <path v-for="s in cmpSeries" :key="s.name" :class="cmpHotActive ? (s.name === cmpHot ? 'is-hot' : 'is-dim') : ''" :d="catmullRomPath(sparkPts(s.data, CMP_W, CMP_H, cmpMetric === 'qps' || cmpMetric === 'idx' ? 'abs' : 'pct', cmpScaleMax), CMP_W, CMP_H)" fill="none" :stroke="s.color" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
               <line v-if="cmpWarn !== null" x1="0" :y1="CMP_H - CMP_H * (cmpWarn / 100)" x2="720" :y2="CMP_H - CMP_H * (cmpWarn / 100)" stroke="var(--err)" stroke-dasharray="4 2" vector-effect="non-scaling-stroke" />
             </svg>
@@ -164,6 +173,8 @@
             <span v-for="g in (cmpMode === 'pct' ? PCT_GRID : [])" :key="'cyt' + g" class="ld-yt ld-yt-mid" :style="{ top: (100 - g) + '%' }" aria-hidden="true">{{ g }}</span>
             <span class="ld-yt ld-yt-bot" aria-hidden="true">0</span>
             <span v-if="cmpWarn !== null" class="ld-thv" :style="{ top: (100 - cmpWarn) + '%' }" aria-hidden="true">{{ cmpWarn }}</span>
+            <!-- 末端呼吸点（联动 hot 节点；HTML 层定位防拉伸变形，历史卡 hc-pulse 同语言） -->
+            <span v-if="cmpPulseDot" class="ld-ncmp-pulse" :style="{ left: cmpPulseDot.left, top: cmpPulseDot.top, background: cmpPulseDot.color }" aria-hidden="true" />
             <template v-if="cmpHit">
               <span class="ld-xline" :style="{ left: cmpLeft(cmpHit.frac) }" aria-hidden="true" />
               <span class="ld-yline" :style="{ top: (cmpHit.y || 0).toFixed(1) + 'px' }" aria-hidden="true" />
@@ -1027,6 +1038,23 @@ const cmpHasData = computed(() => cmpSeries.value.some(s => s.data.length > 1));
  focus → 该节点曲线升亮、其余退灰；hot 只命中可见序列（隐藏节点 chip 悬停不全场退灰） */
 const cmpHot = ref<string | null>(null);
 const cmpHotActive = computed(() => !!cmpHot.value && cmpSeries.value.some(s => s.name === cmpHot.value));
+/* 联动面积+末端呼吸点（896 补齐历史卡同款三件套的最后一块）：hover 节点时该序列
+ 画唯一渐变面积（polygon 锚点折线+底边闭合——不触 path 计数锁 591/615）并挂末端
+ 呼吸点，其余序列退灰——多序列图一眼聚焦单节点 */
+const cmpArea = computed(() => {
+  const s = cmpSeries.value.find(x => x.name === cmpHot.value);
+  if (!s || s.data.length < 2) return null;
+  const pts = sparkPts(s.data, CMP_W, CMP_H, cmpMode.value, cmpScaleMax.value);
+  const poly = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  return { points: `${CMP_W},${CMP_H} ${poly} 0,${CMP_H}`, color: s.color };
+});
+const cmpPulseDot = computed(() => {
+  const s = cmpSeries.value.find(x => x.name === cmpHot.value);
+  if (!s || s.data.length < 2) return null;
+  const pts = sparkPts(s.data, CMP_W, CMP_H, cmpMode.value, cmpScaleMax.value);
+  const p = pts[pts.length - 1];
+  return { left: (p.x / CMP_W * 100).toFixed(2) + '%', top: (p.y / CMP_H * 100).toFixed(2) + '%', color: s.color };
+});
 const cmpHit = ref<SparkHoverHit | null>(null);
 const cmpMode = computed<'pct' | 'abs'>(() => CMP_METRICS.find(m => m.k === cmpMetric.value)?.mode ?? 'pct');
 const cmpWarn = computed<number | null>(() => CMP_METRICS.find(m => m.k === cmpMetric.value)?.warn ?? null);
@@ -1873,6 +1901,11 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 .ld-ncmp-svg path { transition: stroke-width .12s ease-out, opacity .12s ease-out; }
 .ld-ncmp-svg path.is-dim { opacity: .15; }
 .ld-ncmp-svg path.is-hot { stroke-width: 2.25; }
+/* 联动面积+末端呼吸点（896 补齐历史卡三件套；polygon 不触 path 计数锁 591/615） */
+.ld-ncmp-area { pointer-events: none; }
+.ld-ncmp-pulse { position: absolute; width: 6px; height: 6px; border-radius: 50%; transform: translate(-50%, -50%); animation: ld-ncmp-pulse 2.4s ease-out infinite; pointer-events: none; }
+@keyframes ld-ncmp-pulse { 0% { transform: translate(-50%, -50%) scale(1); opacity: .85; } 75% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .ld-ncmp-pulse { animation: none; } }
 /* K2：图例退役后的头部恢复钮（软底+品牌描边，fv-tab.act 同语言）——
  （图例 chip 点选随常驻图例退役，隐藏/恢复唯一通道=读出行尾 ×+本钮 */
 .ld-ncmp-restore { font-size: var(--fs-2xs); color: var(--ac-hi); background: var(--ac-soft); border: 1px solid var(--ac-line); border-radius: 99px; padding: 1px var(--sp-2); cursor: pointer; }
