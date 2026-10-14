@@ -123,7 +123,7 @@ public class GuardedActionExecutor {
             // 补 WARN——高危动作审计丢失此前全静默=审计黑洞无痕
             // （护栏动作本身低频且高危，逐条直 WARN 不节流）
             LOG.warn("[GuardedActionExecutor] 护栏动作审计序列化/落档失败 actionId={}（审计流水丢失，"
-                    + "回执照常返回）: {}", receipt.getActionId(), e.getMessage());
+                    + "回执照常返回）: {}", receipt.getActionId(), e.getMessage(), e);
         }
     }
 }

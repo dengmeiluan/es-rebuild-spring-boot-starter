@@ -808,7 +808,7 @@ public class EsRebuildAutoConfiguration {
                 logger.info("[Store] sqlite 档：作业+审计落 {}", db);
                 return io.github.dengmeiluan.es.rebuild.store.SqliteStores.buildDataSource(db);
             } catch (java.io.IOException e) {
-                logger.warn("es.rebuild.console.store=sqlite 建库失败（{}），回落 control-es 档", e.getMessage());
+                logger.warn("es.rebuild.console.store=sqlite 建库失败（{}），回落 control-es 档", e.getMessage(), e);
                 return null;
             }
         }

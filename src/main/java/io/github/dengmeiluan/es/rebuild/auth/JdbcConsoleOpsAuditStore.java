@@ -123,7 +123,7 @@ public class JdbcConsoleOpsAuditStore implements ConsoleOpsAuditStore {
             } catch (SQLException e) {
                 // 列缺失/权限不足：永久降级旧列（后续 INSERT 不再踩富列），本次降级重试
                 richColumns = false;
-                LOG.info("[es-console-audit-jdbc] 富列不可用（{}），永久回退旧 9 列落档", e.getMessage());
+                LOG.info("[es-console-audit-jdbc] 富列不可用（{}），永久回退旧 9 列落档", e.getMessage(), e);
             }
         }
         try (Connection c = dataSource.getConnection();
@@ -285,7 +285,7 @@ public class JdbcConsoleOpsAuditStore implements ConsoleOpsAuditStore {
                     richColumns = true;
                 } catch (SQLException e) {
                     richColumns = false;
-                    LOG.info("[es-console-audit-jdbc] 富列探测失败（{}），按旧 9 列运行", e.getMessage());
+                    LOG.info("[es-console-audit-jdbc] 富列探测失败（{}），按旧 9 列运行", e.getMessage(), e);
                 }
                 schemaReady = true;
                 LOG.info("[JdbcConsoleOpsAuditStore] schema ready: {} (richColumns={})", TABLE, richColumns);

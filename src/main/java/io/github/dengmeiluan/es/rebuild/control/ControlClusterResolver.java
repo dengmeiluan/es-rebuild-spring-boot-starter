@@ -291,7 +291,7 @@ public class ControlClusterResolver {
         try {
             client.close();
         } catch (Exception e) {
-            LOG.warn("[ControlClusterResolver] close old control client failed: {}", e.getMessage());
+            LOG.warn("[ControlClusterResolver] close old control client failed: {}", e.getMessage(), e);
         }
     }
 }

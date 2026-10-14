@@ -365,7 +365,7 @@ public class InternalEsIndexRebuildController {
         } catch (Exception e) {
             // 原 catch(Exception ignore) 整段静默——本次高危审计将缺执行摘要
             // 且无痕（审计链断点）。低频用户路径直接 WARN 不节流；回填失败不影响执行契约不变
-            log.warn("[es-console-raw] 审计摘要回填失败(本次高危审计缺执行摘要): {}", e.getMessage());
+            log.warn("[es-console-raw] 审计摘要回填失败(本次高危审计缺执行摘要): {}", e.getMessage(), e);
         }
         return esIndexAdmin.raw(req.get("method"), req.get("path"), req.get("body"));
     }

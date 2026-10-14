@@ -124,7 +124,7 @@ public class IndexConfigValidator {
                 }
             } catch (Exception cleanup) {
                 logger.warn("[IndexConfigValidator] dry-run 临时索引清理失败（可按前缀 {} 手动清理）: {}",
-                        DRYRUN_PREFIX, cleanup.getMessage());
+                        DRYRUN_PREFIX, cleanup.getMessage(), cleanup);
             }
         }
     }

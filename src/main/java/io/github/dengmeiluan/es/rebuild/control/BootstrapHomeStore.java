@@ -104,7 +104,7 @@ public class BootstrapHomeStore {
             conn.validate();
             return conn;
         } catch (Exception e) {
-            LOG.warn("[BootstrapHomeStore] 自举档案损坏或不可读（将进入 Setup 流程）: {} - {}", file, e.getMessage());
+            LOG.warn("[BootstrapHomeStore] 自举档案损坏或不可读（将进入 Setup 流程）: {} - {}", file, e.getMessage(), e);
             return null;
         }
     }
@@ -141,7 +141,7 @@ public class BootstrapHomeStore {
         try {
             Files.deleteIfExists(homeDir.resolve(HOME_FILE));
         } catch (IOException e) {
-            LOG.warn("[BootstrapHomeStore] 删除自举档案失败: {}", e.getMessage());
+            LOG.warn("[BootstrapHomeStore] 删除自举档案失败: {}", e.getMessage(), e);
         }
     }
 

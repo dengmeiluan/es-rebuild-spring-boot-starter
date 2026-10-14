@@ -180,6 +180,6 @@ public final class SdesCompat {
         LOG.warn("[SdesCompat] 注解成员 {}() 的值读不出：实体 class 的编译期 spring-data-elasticsearch "
                         + "与运行期形态不一致（4.0.x 单值 ↔ 4.2.x+ 数组）。该项按 \"{}\" 上报，"
                         + "不会被误报成「未声明」。修法：用与运行期同一 sdes 版本重新编译实体所在模块。原始报文：{}",
-                method, UNREADABLE, cause.getMessage());
+                method, UNREADABLE, cause.getMessage(), cause);
     }
 }

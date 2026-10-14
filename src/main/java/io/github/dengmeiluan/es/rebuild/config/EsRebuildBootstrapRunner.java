@@ -81,7 +81,7 @@ public class EsRebuildBootstrapRunner {
         try {
             ok = Boolean.TRUE.equals(action.call());
         } catch (Exception e) {
-            logger.warn("[EsRebuildBootstrapRunner] {} ensureIndex threw: {}", tag, e.getMessage());
+            logger.warn("[EsRebuildBootstrapRunner] {} ensureIndex threw: {}", tag, e.getMessage(), e);
             return;
         }
         if (ok) {

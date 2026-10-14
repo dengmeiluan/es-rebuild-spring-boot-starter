@@ -186,7 +186,7 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
                    =用户锁死且零日志（登录失败与「建号后兜底失效」从外表无法分辨）；拒绝语义
                    本身不变（吞异常契约：校验失败一律 null），只补留痕与 username 上下文 */
                 LOG.warn("[es-console-auth] 兜底 token 因用户索引 IO 失败被按无效拒绝 username={}：{}",
-                        username, e.getMessage());
+                        username, e.getMessage(), e);
                 return null;
             }
         }

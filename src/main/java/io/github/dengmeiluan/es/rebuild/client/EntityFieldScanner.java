@@ -108,7 +108,7 @@ public final class EntityFieldScanner {
                正常路径（前者 jar 无 Implementation-Version 常态、后者契约内解析失败经
                mappingParsed=false 可辨），维持静默，见 Observability547Test 备案 */
             LOG.warn("[EntityFieldScanner] getDeclaredFields failed class={}: {}",
-                    entityClass.getName(), t.getMessage());
+                    entityClass.getName(), t.getMessage(), t);
             return Collections.emptyList();
         }
         for (java.lang.reflect.Field f : declared) {

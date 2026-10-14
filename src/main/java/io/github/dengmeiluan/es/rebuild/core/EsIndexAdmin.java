@@ -2085,7 +2085,7 @@ public class EsIndexAdmin {
                  * 也走此路径，WARN 即「列表为空的原因留痕」）；低频（仅 Watcher 面板打开触发），
                  * 单条 WARN 不刷屏。字段名照抄本方法外层 catch 的 reason 形态。 */
                 logger.warn("[EsIndexAdmin] .watches 列表读取失败，watches 置空（watcher 主体统计不受影响）: {}",
-                        ignore.getMessage());
+                        ignore.getMessage(), ignore);
                 out.put("watches", java.util.Collections.emptyMap());
                 out.put("reason", ignore.getMessage());
             }
@@ -2124,7 +2124,7 @@ public class EsIndexAdmin {
              * 正常而本端 name/version 静默缺列时无从排查。只加日志、不动返回结构：
              * remotes/count/localClusterName 形态是前端 RemoteClustersView 消费面，禁改。 */
             logger.warn("[EsIndexAdmin] remoteClusters 本端信息（GET /）读取失败，localClusterName/localVersion 缺省: {}",
-                    ex.getMessage());
+                    ex.getMessage(), ex);
         }
         return out;
     }
