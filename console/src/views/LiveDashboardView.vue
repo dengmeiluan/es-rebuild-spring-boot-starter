@@ -157,6 +157,7 @@
               <line v-if="cmpWarn !== null" x1="0" :y1="CMP_H - CMP_H * (cmpWarn / 100)" x2="720" :y2="CMP_H - CMP_H * (cmpWarn / 100)" stroke="var(--err)" stroke-dasharray="4 2" vector-effect="non-scaling-stroke" />
             </svg>
             <span class="ld-yt ld-yt-top" aria-hidden="true">{{ cmpYTop }}</span>
+            <span v-for="g in (cmpMode === 'pct' ? PCT_GRID : [])" :key="'cyt' + g" class="ld-yt ld-yt-mid" :style="{ top: (100 - g) + '%' }" aria-hidden="true">{{ g }}</span>
             <span class="ld-yt ld-yt-bot" aria-hidden="true">0</span>
             <span v-if="cmpWarn !== null" class="ld-thv" :style="{ top: (100 - cmpWarn) + '%' }" aria-hidden="true">{{ cmpWarn }}</span>
             <template v-if="cmpHit">
@@ -166,7 +167,7 @@
                 <span class="ld-hv-t">{{ cmpHit.t ? fmtTime(cmpHit.t) : '' }}</span>
                 <span v-for="r in cmpRowsCapped.rows" :key="r.name" class="ld-ncmp-tip-r"
                   @mouseenter="cmpHot = r.name" @mouseleave="cmpHot = null">
-                  <i :style="{ background: r.color }" /><b>{{ r.name }}</b><em>{{ r.v }}</em>
+                  <i :style="{ background: r.color }" /><b :title="r.name">{{ shortNode(r.name) }}</b><em>{{ r.v }}</em>
                   <button type="button" class="ld-ncmp-hide" :aria-label="'隐藏节点 ' + r.name + ' 的曲线'" title="隐藏该节点曲线（头部可一键恢复）" @click.stop="toggleNode(r.name)">×</button>
                 </span>
                 <span v-if="cmpRowsCapped.hidden" class="ld-ncmp-tip-r ld-ncmp-tip-more"
@@ -187,7 +188,7 @@
             :aria-pressed="!c.off" :title="(c.off ? '点击显示 ' : '点击隐藏 ') + c.name + ' 的曲线'" @click="toggleNode(c.name)"
             @mouseenter="cmpHot = c.name" @mouseleave="cmpHot = null"
             @focus="cmpHot = c.name" @blur="cmpHot = null">
-            <i :style="{ background: c.color }" aria-hidden="true" />{{ c.name }}<em class="mono">{{ c.cur }}</em>
+            <i :style="{ background: c.color }" aria-hidden="true" />{{ shortNode(c.name) }}<em class="mono">{{ c.cur }}</em>
           </button>
         </div>
         <!-- 件1：svg-wait 因 chips 常驻隔断 v-else 链改显式 v-if -->
@@ -1784,6 +1785,8 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 .ld-yt { position: absolute; left: 0; font-size: var(--fs-2xs); color: var(--tx1); font-family: var(--mono); line-height: 1.2; pointer-events: none; }
 .ld-yt-top { top: 0; }
 .ld-yt-bot { bottom: 0; }
+/* 中档刻度贴 pct 网格线（对比卡；主卡 .ld-yt-mid 同语言，历史卡 .hc-yt 同语言） */
+.ld-yt-mid { transform: translateY(-50%); }
 .ld-thv { position: absolute; right: 0; transform: translateY(-50%); font-size: var(--fs-2xs); color: var(--err); font-family: var(--mono); pointer-events: none; background: var(--bg1); padding: 0 var(--sp-0); }
 .ld-xaxis { display: flex; justify-content: space-between; margin-top: var(--sp-1); font-size: var(--fs-2xs); color: var(--tx2); font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .ld-ta { pointer-events: none; }

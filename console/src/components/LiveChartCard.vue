@@ -53,8 +53,10 @@
         <line v-if="threshold != null" x1="0" :y1="LD_H - LD_H * (threshold / 100)" x2="300" :y2="LD_H - LD_H * (threshold / 100)" stroke="var(--err)" stroke-dasharray="4 2" vector-effect="non-scaling-stroke" />
       </svg>
       <!-- K1：Y 轴左缘双刻度（HTML 层不随拉伸变形；HistoryChart .hc-ymax/.hc-yzero 同语言）
- + 阈值虚线右缘贴行标值（.hc-thlabel 同语言，底色抠线） -->
+       + 阈值虚线右缘贴行标值（.hc-thlabel 同语言，底色抠线）
+       + 中档三刻度（893 统一语言：pct 卡网格 25/50/75 线已有，刻度随线可读） -->
       <span v-if="series.length > 1" class="ld-yt ld-yt-top" aria-hidden="true">{{ yTop }}</span>
+      <span v-for="g in (showGrid ? PCT_GRID : [])" :key="'yt' + g" class="ld-yt ld-yt-mid" :style="{ top: (100 - g) + '%' }" aria-hidden="true">{{ g }}</span>
       <span v-if="series.length > 1" class="ld-yt ld-yt-bot" aria-hidden="true">0</span>
       <span v-if="threshold != null" class="ld-thv" :style="{ top: (100 - threshold) + '%' }" aria-hidden="true">{{ threshold }}</span>
       <template v-if="hit">
@@ -289,6 +291,8 @@ const timeText = computed(() => hit.value && hit.value.t ? fmtTime(hit.value.t) 
 .ld-yt { position: absolute; left: 0; font-size: var(--fs-2xs); color: var(--tx1); font-family: var(--mono); line-height: 1.2; pointer-events: none; }
 .ld-yt-top { top: 0; }
 .ld-yt-bot { bottom: 0; }
+/* 中档刻度贴网格线（25/50/75 线位=75%/50%/25% 高度，translateY 居中锚线；历史卡 .hc-yt 同语言） */
+.ld-yt-mid { transform: translateY(-50%); }
 /* 阈值行标签：右缘贴线居中+底色抠线（.hc-thlabel 同语言） */
 .ld-thv { position: absolute; right: 0; transform: translateY(-50%); font-size: var(--fs-2xs); color: var(--err); font-family: var(--mono); pointer-events: none; background: var(--bg1); padding: 0 var(--sp-0); }
 /* （622 ）：按下反馈——transform-only 不触发布局（--dur-fast 微交互档） */
