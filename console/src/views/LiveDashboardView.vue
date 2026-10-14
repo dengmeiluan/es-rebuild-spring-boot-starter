@@ -161,6 +161,7 @@
             <span v-if="cmpWarn !== null" class="ld-thv" :style="{ top: (100 - cmpWarn) + '%' }" aria-hidden="true">{{ cmpWarn }}</span>
             <template v-if="cmpHit">
               <span class="ld-xline" :style="{ left: cmpLeft(cmpHit.frac) }" aria-hidden="true" />
+              <span class="ld-yline" :style="{ top: (cmpHit.y || 0).toFixed(1) + 'px' }" aria-hidden="true" />
               <div class="ld-hv ld-hv-stack" :style="{ left: cmpLeft(cmpHit.frac), top: (cmpHit.y || 0).toFixed(1) + 'px', transform: cmpShift(cmpHit.frac) + ' translateY(-50%)' }" role="status">
                 <span class="ld-hv-t">{{ cmpHit.t ? fmtTime(cmpHit.t) : '' }}</span>
                 <span v-for="r in cmpRowsCapped.rows" :key="r.name" class="ld-ncmp-tip-r"
@@ -489,6 +490,7 @@
                 <span v-for="(xt, i) in topXTs" :key="'xt' + i" class="ld-xt" :style="{ left: TOP_XT_POS[i] }" aria-hidden="true">{{ xt }}</span>
                 <template v-if="topHit">
                   <span class="ld-xline" :style="{ left: topLeft(topHit.frac) }" aria-hidden="true" />
+                  <span class="ld-yline" :style="{ top: (topHit.y || 0).toFixed(1) + 'px' }" aria-hidden="true" />
                   <div class="ld-hv ld-hv-stack ld-top-hv" :style="{ left: topLeft(topHit.frac), top: (topHit.y || 0).toFixed(1) + 'px', transform: topShift(topHit.frac) + ' translateY(-50%)' }" role="status">
                     <span class="ld-hv-t">{{ topHit.t ? fmtTime(topHit.t) : '' }}</span>
                     <span v-for="r in topReadRows" :key="r.key" class="ld-ncmp-tip-r">
@@ -1790,6 +1792,8 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
  ——781 年代起读出容器无壳裸奔（实报「不应该是悬浮小卡片吗」根治） */
 /* C1：十字线规则补位（族3/4 .ld-xline 781 年代起无规则=悬浮十字线不可见 bug；对齐族1/2 1px tx2@.45） */
 .ld-xline { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--tx2); opacity: .45; pointer-events: none; }
+/* 横向十字线（对比卡/Top 卡；HistoryChart .hc-yline 同语言）——双线交点=指针位置 */
+.ld-yline { position: absolute; left: 0; right: 0; height: 1px; background: var(--tx2); opacity: .45; pointer-events: none; }
 .ld-hv { position: absolute; z-index: 3; /* C2：壳对齐 hc-tip（bg2+fs-2xs） */ background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r-s); box-shadow: var(--shadow-m); padding: var(--sp-1) var(--sp-2); pointer-events: none;; font-size: var(--fs-2xs); }
 .ld-hv-stack { flex-direction: column; align-items: stretch; gap: var(--sp-0); min-width: 150px; max-height: 260px; overflow-y: auto; } /* ：全量显示滚动兜底（>24 行极端集群） */
 .ld-ncmp-tip-r { display: flex; align-items: center; gap: var(--sp-1); white-space: nowrap; }

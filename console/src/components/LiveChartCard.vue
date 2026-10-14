@@ -57,6 +57,7 @@
       <span v-if="threshold != null" class="ld-thv" :style="{ top: (100 - threshold) + '%' }" aria-hidden="true">{{ threshold }}</span>
       <template v-if="hit">
         <span class="ld-xline" :style="{ left: leftPct }" aria-hidden="true" />
+        <span class="ld-yline" :style="{ top: (hoverY ?? 0).toFixed(1) + 'px' }" aria-hidden="true" />
         <span class="ld-dot" :style="{ left: leftPct, top: topPct, background: color }" aria-hidden="true" />
         <div class="ld-hv" :style="{ left: leftPct, transform: shift }" role="status">
           <span class="ld-hv-t">{{ timeText }}</span><b>{{ valueText }}</b>
@@ -152,10 +153,13 @@ function scheduleTick(): number {
 /* 悬浮命中：单卡自持命中态（五卡此前在视图共享 hovers 记录，合并后各卡独立）；
  happy-dom 下 getBoundingClientRect 恒 0 → frac=0 → 命中首点（liveHover589 确定性锚）。 */
 const hit = ref<SparkHoverHit | null>(null);
+/* 指针 y（相对图区）——横向十字线 top（HistoryChart hc-yline 同语言：双线交点=指针位置） */
+const hoverY = ref<number | null>(null);
 function onMove(e: MouseEvent) {
   const el = e.currentTarget as HTMLElement | null;
   const rect = el?.getBoundingClientRect();
   const frac = rect && rect.width > 0 ? (e.clientX - rect.left) / rect.width : 0;
+  hoverY.value = rect ? Math.min(Math.max(e.clientY - rect.top, 0), rect.height) : null;
   const tw = tsWin.value;
   hit.value = sparkHoverAt(props.series, tw, frac, 300, LD_H, props.mode);
   damp.move(frac);
@@ -164,6 +168,7 @@ function onMove(e: MouseEvent) {
 }
 function onLeave() {
   hit.value = null;
+  hoverY.value = null;
   damp.clear();
   dispFrac.value = null;
   if (rafId !== null) {
@@ -239,6 +244,8 @@ const timeText = computed(() => hit.value && hit.value.t ? fmtTime(hit.value.t) 
 /* 悬浮详情层——十字线/圆点/读出走 HTML 绝对定位层（圆点/文本不进 SVG 防变形） */
 .ld-svgwrap { position: relative; }
 .ld-xline { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--tx2); opacity: .45; pointer-events: none; }
+/* 横向十字线（HistoryChart .hc-yline 同语言）——双线交点=指针位置 */
+.ld-yline { position: absolute; left: 0; right: 0; height: 1px; background: var(--tx2); opacity: .45; pointer-events: none; }
 .ld-dot { position: absolute; width: 6px; height: 6px; border-radius: 50%; border: 2px solid var(--bg2); transform: translate(-50%, -50%); pointer-events: none; }
 .ld-hv { position: absolute; top: var(--sp-1); z-index: 2; pointer-events: none; display: flex; align-items: baseline; gap: var(--sp-1); background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r-s); box-shadow: var(--shadow-m); padding: 0 var(--sp-1); font-size: var(--fs-2xs); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .ld-hv-t { color: var(--tx2); font-family: var(--mono); }

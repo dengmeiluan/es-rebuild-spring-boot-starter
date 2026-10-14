@@ -438,7 +438,10 @@ const tipTime = computed(() => {
   const t = dom.value.tMin + hoverFrac.value * dom.value.span;
   return hmLabel(t);
 });
-const tipRows = computed(() => hoverPts.value.map(d => ({ name: d.name, color: colorOf(d.name), text: fmtV(d.p.v) })));
+/* tooltip 行按当前值降序——多序列叠图一眼先读到最高的序列（Grafana tooltip 同语言） */
+const tipRows = computed(() => hoverPts.value
+  .map(d => ({ name: d.name, color: colorOf(d.name), v: d.p.v, text: fmtV(d.p.v) }))
+  .sort((a, b) => b.v - a.v));
 
 /* tooltip 富化：悬停时刻附近（±2% 域宽）的告警事件并入 tooltip（level 色+文案）——
  事件窄条可见但细节有限，悬停即读完整事件；无命中不渲染额外行 */
