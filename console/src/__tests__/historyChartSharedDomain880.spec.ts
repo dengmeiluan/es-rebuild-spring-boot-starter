@@ -61,7 +61,10 @@ describe('polylineSegments 共享域实参（多序列同图坐标同源）', ()
 });
 
 describe('挂载级行为锚：悬浮圆点与曲线共享域坐标重合（用户实报缺陷的直接守卫）', () => {
-  it('S5 时间域错位两序列：悬浮点落在共享域真实坐标（而非各自拉伸后的视觉位置）', async () => {
+  /* 892 批同步更新：圆点从「吸附最近采样点」升级为「十字线 x + 曲线在该 x 处的
+     线性插值高度」（贴线语义，主卡 lineYAtFrac 同语言；用户复报「点无法到达最高点」，
+     采样点 x 与十字线错位=圆点不在指针位置）。域外序列不再出圆点（曲线不在=无高度可贴）。 */
+  it('S5 时间域错位两序列：圆点贴十字线 x 与共享域插值高度（而非各自拉伸后的视觉位置）', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const app = createApp(HistoryChart, {
@@ -80,17 +83,17 @@ describe('挂载级行为锚：悬浮圆点与曲线共享域坐标重合（用�
       const spy = vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({
         left: 0, top: 0, width: 600, height: 220, right: 600, bottom: 220, x: 0, y: 0, toJSON: () => ({}),
       } as DOMRect);
-      /* frac=0.25 → t=50：a 命中首点 (t=0,v=10)、b 命中 t=100 点 (v=1)；
-         共享域 yMaxV=max(10,2)*1.1=11 → a 圆点 top=(220-200)/220=9.09%、b 圆点 left=300/600=50%、top=(220-20)/220=90.91%；
-         修复前 b 曲线按自身域画在 x=0（left=0%），与圆点 50% 错位满宽一半 */
+      /* frac=0.25 → t=50：a 在 t∈[0,100] 段内线性插值 v=5 → 共享域 yMaxV=max(10,2)*1.1=11
+         → 圆点 left=25.00%、top=(220-(5/11)*220)/220=(220-100)/220=54.55%；
+         b 的时间域 [100,200] 不含 t=50（曲线不在）→ 不出圆点；
+         修复前 b 曲线按自身域画在 x=0（left=0%），与十字线 50% 错位满宽一半 */
       canvas.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 150, clientY: 100 }));
       await nextTick();
       await nextTick();
       const dots = [...host.querySelectorAll<HTMLElement>('.hc-dot')];
-      expect(dots.length, '两序列各一悬浮圆点').toBe(2);
-      const byLeft = new Map(dots.map(d => [d.style.left, d.style.top]));
-      expect(byLeft.get('0.00%')).toBe('9.09%');
-      expect(byLeft.get('50.00%')).toBe('90.91%');
+      expect(dots.length, '仅时间域覆盖十字线的序列出圆点').toBe(1);
+      expect(dots[0]!.style.left).toBe('25.00%');
+      expect(dots[0]!.style.top).toBe('54.55%');
       void spy;
     } finally {
       app.unmount();

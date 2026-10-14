@@ -77,7 +77,10 @@ const clampPt = (p: Pt, W: number, H: number): Pt => ({
   y: Math.min(H, Math.max(0, p.y)),
 });
 
-/** Catmull-Rom → 立方贝塞尔路径：M 首点 + 每段一条 C（n-1 段）；n<1 空串、n=1 直钉。 */
+/** Catmull-Rom → 立方贝塞尔路径：M 首点 + 每段一条 C（n-1 段）；n<1 空串、n=1 直钉。
+ * 控制点 y 额外钳进本段两端锚点的 y 区间——曲线永不画出高于数据峰/低于数据谷的
+ * 过冲弧（视觉极值=数据极值，悬浮圆点沿曲线必达最高/最低点；旧钳位只保曲线不出
+ * 图体，陡峰处控制点越锚=视觉峰高于任何采样点，十字线圆点「到不了最高点」）。 */
 export function catmullRomPath(pts: Pt[], W: number, H: number): string {
   const n = pts.length;
   if (!n) return '';
@@ -90,6 +93,10 @@ export function catmullRomPath(pts: Pt[], W: number, H: number): string {
     const pD = i + 2 <= n - 1 ? pts[i + 2] : pC;
     const c1 = clampPt({ x: pB.x + (pC.x - pA.x) / 6, y: pB.y + (pC.y - pA.y) / 6 }, W, H);
     const c2 = clampPt({ x: pC.x - (pD.x - pB.x) / 6, y: pC.y - (pD.y - pB.y) / 6 }, W, H);
+    const yLo = Math.min(pB.y, pC.y);
+    const yHi = Math.max(pB.y, pC.y);
+    c1.y = Math.min(yHi, Math.max(yLo, c1.y));
+    c2.y = Math.min(yHi, Math.max(yLo, c2.y));
     d += ` C ${f1(c1.x)},${f1(c1.y)} ${f1(c2.x)},${f1(c2.y)} ${f1(pC.x)},${f1(pC.y)}`;
   }
   return d;

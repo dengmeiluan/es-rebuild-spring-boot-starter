@@ -85,6 +85,8 @@
         <span v-if="pulseDot" class="hc-dot hc-pulse" :style="{ left: pulseDot.left, top: pulseDot.top, background: pulseDot.color }" aria-hidden="true" />
         <template v-if="hoverFrac != null">
           <span class="hc-xline" :style="{ left: (hoverFrac * 100).toFixed(2) + '%' }" aria-hidden="true" />
+          <!-- 横向十字线（top 跟指针 y）——竖线对 x、横线对 y，交点即指针位置；读数/圆点贴线 -->
+          <span class="hc-yline" :style="{ top: (hoverY ?? 0).toFixed(1) + 'px' }" aria-hidden="true" />
           <span v-for="d in hoverDots" :key="'hd' + d.name" class="hc-dot" :style="{ left: d.left, top: d.top, background: d.color }" aria-hidden="true" />
           <div class="hc-tip" :style="tipStyle" role="status">
             <div class="hc-tip-t">{{ tipTime }}</div>
@@ -375,17 +377,44 @@ function nearestOf(points: SeriesPoint[], t: number): SeriesPoint {
   for (const p of points) if (Math.abs(p.t - t) < Math.abs(best.t - t)) best = p;
   return best;
 }
+/* 十字线 x 处的曲线高度（相邻采样点线性插值）——悬浮圆点贴线语义（主卡 lineYAtFrac
+ 同语言）：指针沿曲线移动时圆点恒在线上、必达视觉峰顶（过冲已被 catmullRomPath
+ 控制点钳位根治，曲线视觉极值=数据极值）。断档区间（Δt>3×gapMs）曲线断开=无高度
+ 可贴返回 null；指针落在序列时间域之外同理（该序列不出圆点，tooltip 仍显最近点真值）。 */
+function curveYAtT(points: SeriesPoint[], tq: number): number | null {
+  const n = points.length;
+  if (!n) return null;
+  if (tq < points[0]!.t || tq > points[n - 1]!.t) return null;
+  for (let i = 0; i < n - 1; i++) {
+    const a = points[i]!;
+    const b = points[i + 1]!;
+    if (tq >= a.t && tq <= b.t) {
+      if (props.gapMs != null && b.t - a.t > props.gapMs * 3) return null;
+      const f = b.t === a.t ? 0 : (tq - a.t) / (b.t - a.t);
+      return a.v + (b.v - a.v) * f;
+    }
+  }
+  return null;
+}
 const hoverPts = computed(() => {
   if (hoverFrac.value == null || dom.value.span <= 0) return [];
   const t = dom.value.tMin + hoverFrac.value * dom.value.span;
   return visibleSeries.value.filter(s => s.points.length).map(s => ({ name: s.name, p: nearestOf(s.points, t) }));
 });
-const hoverDots = computed(() => hoverPts.value.map(d => ({
-  name: d.name,
-  left: ((px(d.p.t) / PLOT_W) * 100).toFixed(2) + '%',
-  top: ((py(d.p.v) / PLOT_H) * 100).toFixed(2) + '%',
-  color: colorOf(d.name),
-})));
+/* 圆点位置=（十字线 x，曲线在该 x 处的插值高度）——贴线而非吸附最近采样点
+ （采样点 x 与十字线错位=「圆点不在指针位置/到不了峰顶」体感根源） */
+const hoverDots = computed(() => {
+  if (hoverFrac.value == null || dom.value.span <= 0) return [];
+  const tq = dom.value.tMin + hoverFrac.value * dom.value.span;
+  const left = (hoverFrac.value * 100).toFixed(2) + '%';
+  const out: { name: string; left: string; top: string; color: string }[] = [];
+  for (const s of visibleSeries.value) {
+    const v = curveYAtT(s.points, tq);
+    if (v == null) continue;
+    out.push({ name: s.name, left, top: ((py(v) / PLOT_H) * 100).toFixed(2) + '%', color: colorOf(s.name) });
+  }
+  return out;
+});
 const soloDots = computed(() => visibleSeries.value.filter(s => s.points.length === 1).map(s => ({
   name: s.name,
   left: ((px(s.points[0]!.t) / PLOT_W) * 100).toFixed(2) + '%',
@@ -487,8 +516,10 @@ const plotStyle = computed(() => (props.height ? { height: props.height + 'px' }
 /* 阈值小字：右缘对齐虚线同高 */
 .hc-thlabel { position: absolute; right: 0; transform: translateY(-50%); font-size: var(--fs-2xs); color: var(--err); font-family: var(--mono); pointer-events: none; }
 
-/* 十字线与最近点圆点（恒亮单点同形态）：圆点描边用底色隔离曲线 */
+/* 十字线与最近点圆点（恒亮单点同形态）：圆点描边用底色隔离曲线。
+ 横竖双线交点=指针位置（横线 top 跟 hoverY，与 tooltip Y 向跟手同源） */
 .hc-xline { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--tx2); opacity: .45; pointer-events: none; }
+.hc-yline { position: absolute; left: 0; right: 0; height: 1px; background: var(--tx2); opacity: .45; pointer-events: none; }
 .hc-dot { position: absolute; width: 8px; height: 8px; border-radius: 50%; transform: translate(-50%, -50%); border: 1.5px solid var(--bg); pointer-events: none; }
 /* 末端呼吸点（主卡 ld-line-pulse 同语言；transform/opacity 合成层动画，reduced-motion 豁免） */
 .hc-pulse { animation: hc-dot-pulse 2.4s ease-out infinite; }
