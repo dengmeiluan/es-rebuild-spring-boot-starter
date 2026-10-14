@@ -59,11 +59,6 @@ public class EsRebuildProperties {
     public java.util.Map<String, java.util.Set<String>> getEnvPages() { return envPages; }
 
     public void setEnvPages(java.util.Map<String, java.util.Set<String>> envPages) { this.envPages = envPages; }
-    /**  P2-4：连接环境 → 角色上限（env-role-cap）。键=连接 env（PROD/STAGING/QA/DEV），
-     *  值=ConsoleRole 名（如 VIEWER）；未配置的环境不封顶（向后兼容）。声明式插拔：删配置即回滚。 */
-    /* 默认启用环境封顶档位——生产/预发只读、QA 到重建、DEV 全开
-       （用户需求：生产大多数只读、测试环境放开）。宿主可在 application.yml
-       覆盖 es-rebuild.env-role-cap 同键调整档位；置空 Map 即完全关闭该特性。 */
 
 
     private Retry retry = new Retry();

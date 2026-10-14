@@ -656,6 +656,8 @@ export const api = {
   auth: {
     login: (username: string, password: string) => post<any>('/auth/login', { username, password }),
     me: () => get<any>('/auth/me'),
+    /* 我的权限面：当前身份 × 目标连接的逐页读/写判定 + raw 档 + 共享写档（后端判定与拦截器同源） */
+    permissions: (target?: string) => get<any>(`/auth/permissions?${q({ target })}`),
     changePassword: (oldPassword: string, newPassword: string) =>
       post<any>('/auth/change-password', { oldPassword, newPassword }),
     users: () => get<any[]>('/auth/users'),

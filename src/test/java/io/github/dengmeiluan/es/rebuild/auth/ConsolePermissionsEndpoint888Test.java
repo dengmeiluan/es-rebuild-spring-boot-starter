@@ -1,0 +1,298 @@
+/*
+ * Copyright 2026 Meiluan Deng
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package io.github.dengmeiluan.es.rebuild.auth;
+
+import io.github.dengmeiluan.es.rebuild.config.EsRebuildProperties;
+import io.github.dengmeiluan.es.rebuild.multicluster.ConnStore;
+import io.github.dengmeiluan.es.rebuild.xmigrate.RemoteClusterConn;
+import org.junit.Test;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.WriteListener;
+import java.io.ByteArrayOutputStream;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Proxy;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+/**
+ * 「我的权限面」端点契约：当前身份 × 目标连接的逐页读/写判定 + raw 直连档 + 共享写档。
+ *
+ * <p>判定序列必须与 {@link ConsoleAuthInterceptor#preHandle} 的门序同源（页面门 → 连接写门 →
+ * 角色门），判定原子复用拦截器的静态口径（requiredRole/isReadonlyPost/isAdminUri）与
+ * {@link EnvPagesResolver}；对拍用例以同一身份桩直接驱动真拦截器，锁「端点说拒绝 ⇔ 拦截器拒绝」
+ * 的两口径等价，防判定漂移。</p>
+ */
+public class ConsolePermissionsEndpoint888Test {
+
+    /* ---------------- 桩设施（PageAuthTest 同范式：JDK 动态代理，仓内无 mockito） ---------------- */
+
+    private static HttpServletRequest stubRequest(ConsolePrincipal principal, String targetHeader) {
+        Map<String, Object> attrs = new HashMap<>();
+        attrs.put(ConsoleAuthInterceptor.ATTR_PRINCIPAL, principal);
+        InvocationHandler h = (proxy, m, args) -> {
+            switch (m.getName()) {
+                case "getAttribute": return attrs.get(args[0]);
+                case "getHeader": return "X-Es-Target".equals(args[0]) ? targetHeader : null;
+                case "getMethod": return "GET";
+                default: throw new UnsupportedOperationException(m.getName());
+            }
+        };
+        return (HttpServletRequest) Proxy.newProxyInstance(
+                ConsolePermissionsEndpoint888Test.class.getClassLoader(),
+                new Class<?>[]{HttpServletRequest.class}, h);
+    }
+
+    /** 对拍用响应桩：捕获 status + body。 */
+    private static class StubResponse {
+        int status = 200;
+        final ByteArrayOutputStream body = new ByteArrayOutputStream();
+        final HttpServletResponse proxy;
+
+        StubResponse() {
+            InvocationHandler h = (p, m, args) -> {
+                switch (m.getName()) {
+                    case "setStatus": status = (Integer) args[0]; return null;
+                    case "getStatus": return status;
+                    case "setContentType": case "setCharacterEncoding": return null;
+                    case "getOutputStream":
+                        return new ServletOutputStream() {
+                            @Override public void write(int b) { body.write(b); }
+                            @Override public boolean isReady() { return true; }
+                            @Override public void setWriteListener(WriteListener l) { }
+                        };
+                    default: throw new UnsupportedOperationException(m.getName());
+                }
+            };
+            proxy = (HttpServletResponse) Proxy.newProxyInstance(
+                    ConsolePermissionsEndpoint888Test.class.getClassLoader(),
+                    new Class<?>[]{HttpServletResponse.class}, h);
+        }
+
+        String bodyText() { return new String(body.toByteArray(), StandardCharsets.UTF_8); }
+    }
+
+    /** 对拍用请求桩：method/uri/attribute/target 头。 */
+    private static HttpServletRequest stubAuthRequest(ConsolePrincipal principal, String method, String uri, String target) {
+        Map<String, Object> attrs = new HashMap<>();
+        attrs.put(ConsoleAuthInterceptor.ATTR_PRINCIPAL, principal);
+        InvocationHandler h = (proxy, m, args) -> {
+            switch (m.getName()) {
+                case "getRequestURI": return uri;
+                case "getContextPath": return "";
+                case "getServletPath": return "";
+                case "getPathInfo": return null;
+                case "getMethod": return method;
+                case "getQueryString": return null;
+                case "getAttribute": return attrs.get(args[0]);
+                case "setAttribute": attrs.put((String) args[0], args[1]); return null;
+                case "getHeader": return "X-Es-Target".equals(args[0]) ? target : null;
+                case "getRemoteAddr": return "10.1.2.3";
+                default: throw new UnsupportedOperationException(m.getName());
+            }
+        };
+        return (HttpServletRequest) Proxy.newProxyInstance(
+                ConsolePermissionsEndpoint888Test.class.getClassLoader(),
+                new Class<?>[]{HttpServletRequest.class}, h);
+    }
+
+    private static ConsolePrincipal delegatedAs(ConsoleRole role, Set<String> grantedPages) {
+        return new ConsolePrincipal("host-u1", role, false, true, "宿主用户", null, grantedPages);
+    }
+
+    private static ConsolePrincipal builtin(ConsoleRole role) {
+        return new ConsolePrincipal("local-u1", role, false);
+    }
+
+    /** 连接档案桩：c1=PROD 环境、实名「生产集群」。 */
+    private static ConnStore connStoreWithProd() {
+        return new ConnStore() {
+            @Override public List<Map<String, Object>> list() { return Collections.emptyList(); }
+            @Override public RemoteClusterConn get(String id) {
+                if ("c1".equals(id)) {
+                    RemoteClusterConn conn = new RemoteClusterConn();
+                    conn.setEnv("PROD");
+                    return conn;
+                }
+                return null;
+            }
+            @Override public String getName(String id) { return "c1".equals(id) ? "生产集群" : null; }
+            @Override public String getVersion(String id) { return null; }
+            @Override public Map<String, Object> save(String id, String name, String url, String username,
+                    String password, String minRole, Integer connectTimeoutMs, Integer socketTimeoutMs, String env) {
+                throw new UnsupportedOperationException();
+            }
+            @Override public void delete(String id) { }
+            @Override public void updateVersion(String id, String version) { }
+        };
+    }
+
+    private static ConsolePermissionsController ctrl() {
+        ConnStore store = connStoreWithProd();
+        return new ConsolePermissionsController(ConsolePageCatalog.load(),
+                new EnvPagesResolver(store, new EsRebuildProperties()), store, true);
+    }
+
+    private static ConsolePermissionsController ctrlWithProps(EsRebuildProperties props) {
+        ConnStore store = connStoreWithProd();
+        return new ConsolePermissionsController(ConsolePageCatalog.load(),
+                new EnvPagesResolver(store, props), store, true);
+    }
+
+    private static Map<String, Object> call(ConsolePermissionsController c, ConsolePrincipal p, String target) {
+        return c.permissions(stubRequest(p, "host".equals(target) ? null : target), target);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> pageOf(Map<String, Object> resp, String key) {
+        for (Map<String, Object> g : (List<Map<String, Object>>) resp.get("groups")) {
+            for (Map<String, Object> pg : (List<Map<String, Object>>) g.get("pages")) {
+                if (key.equals(pg.get("key"))) {
+                    return pg;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static Set<String> set(String... items) {
+        return new HashSet<>(java.util.Arrays.asList(items));
+    }
+
+    /* ---------------- 判定矩阵 ---------------- */
+
+    @Test
+    public void 连接模型_只读键_rest可读不可写_raw档关闭() {
+        Map<String, Object> resp = call(ctrl(), delegatedAs(ConsoleRole.VIEWER,
+                set("conn:c1:rest", "conn:c1:search")), "c1");
+        assertEquals(Boolean.TRUE, resp.get("connModel"));
+        assertEquals(Boolean.FALSE, resp.get("rawAllowed"));
+        assertEquals(Boolean.FALSE, resp.get("sharedWriteAllowed"));
+        Map<String, Object> rest = pageOf(resp, "rest");
+        assertEquals(Boolean.TRUE, rest.get("read"));
+        assertEquals(Boolean.FALSE, rest.get("write"));
+        assertEquals("WRITE_DENIED", rest.get("writeDeny"));
+    }
+
+    @Test
+    public void 连接模型_带rest写键_写放行_raw档开启() {
+        Map<String, Object> resp = call(ctrl(), delegatedAs(ConsoleRole.VIEWER,
+                set("conn:c1:rest", "conn:c1:w:rest")), "c1");
+        assertEquals(Boolean.TRUE, resp.get("rawAllowed"));
+        assertEquals(Boolean.TRUE, pageOf(resp, "rest").get("write"));
+        assertNull(pageOf(resp, "rest").get("writeDeny"));
+    }
+
+    @Test
+    public void 连接模型_未授权页_不可读() {
+        Map<String, Object> resp = call(ctrl(), delegatedAs(ConsoleRole.VIEWER,
+                set("conn:c1:rest")), "c1");
+        Map<String, Object> indices = pageOf(resp, "indices");
+        assertEquals(Boolean.FALSE, indices.get("read"));
+        assertEquals("PAGE_DENIED", indices.get("writeDeny"));
+    }
+
+    @Test
+    public void 静态模型_页面门不启用_全页可读_写走角色档() {
+        Map<String, Object> resp = call(ctrl(), builtin(ConsoleRole.VIEWER), "host");
+        assertEquals(Boolean.FALSE, resp.get("connModel"));
+        assertEquals(Boolean.FALSE, resp.get("pageGateActive"));
+        assertEquals(Boolean.TRUE, pageOf(resp, "rest").get("read"));
+        // rest 页唯一端点 /cluster/raw 是 ADMIN 档 → VIEWER 不可写
+        assertEquals(Boolean.FALSE, pageOf(resp, "rest").get("write"));
+        assertEquals(Boolean.FALSE, resp.get("rawAllowed"));
+    }
+
+    @Test
+    public void 静态模型_ADMIN_raw档开启() {
+        Map<String, Object> resp = call(ctrl(), builtin(ConsoleRole.ADMIN), "host");
+        assertEquals(Boolean.TRUE, resp.get("rawAllowed"));
+        assertEquals(Boolean.TRUE, pageOf(resp, "rest").get("write"));
+    }
+
+    @Test
+    public void env模板收缩_静态键页集未入模板页不可读() {
+        // env 模板收缩只作用于纯静态键授权（conn 键授权=宿主按连接明示，与 env 模板双轨不收缩——
+        // EnvPagesResolver.effectivePages 同口径），故本用例用静态键形态。
+        EsRebuildProperties props = new EsRebuildProperties();
+        props.setEnvPages(Collections.singletonMap("PROD", new HashSet<>(Collections.singletonList("overview"))));
+        Map<String, Object> resp = call(ctrlWithProps(props), delegatedAs(ConsoleRole.VIEWER,
+                set("rest", "overview")), "c1");
+        assertEquals(Boolean.FALSE, resp.get("connModel"));
+        assertEquals(Boolean.TRUE, resp.get("envPagesApplied"));
+        // rest 静态读键在手但被 PROD 模板收缩 → 不可读
+        assertEquals(Boolean.FALSE, pageOf(resp, "rest").get("read"));
+        assertEquals(Boolean.TRUE, pageOf(resp, "overview").get("read"));
+    }
+
+    @Test
+    public void host目标_连接维度档位关闭() {
+        Map<String, Object> resp = call(ctrl(), delegatedAs(ConsoleRole.VIEWER,
+                set("conn:c1:w:rest")), "host");
+        assertEquals("host", resp.get("target"));
+        assertNull(resp.get("connName"));
+        assertEquals(Boolean.FALSE, resp.get("sharedWriteAllowed"));
+    }
+
+    /* ---------------- 对拍锁：端点判定 ⇔ 真拦截器 preHandle 同裁 ---------------- */
+
+    @Test
+    public void 对拍锁_rest写拒绝与拦截器WRITE_DENIED同裁() throws Exception {
+        ConsolePrincipal p = delegatedAs(ConsoleRole.VIEWER, set("conn:c1:rest", "conn:c1:search"));
+        Map<String, Object> resp = call(ctrl(), p, "c1");
+        assertEquals(Boolean.FALSE, resp.get("rawAllowed"));
+
+        // 同一身份桩驱动真拦截器：POST /cluster/raw 必须同样被拒（WRITE_DENIED）
+        ConsoleAuthInterceptor it = interceptor(p);
+        StubResponse sr = new StubResponse();
+        boolean pass = it.preHandle(stubAuthRequest(p, "POST", "/internal/es/index/cluster/raw", "c1"),
+                sr.proxy, new Object());
+        assertFalse("拦截器应拒绝（WRITE_DENIED）", pass);
+        assertTrue(sr.bodyText().contains("WRITE_DENIED"));
+    }
+
+    /* ---------------- 拦截器桩装配（PageAuthTest 同构） ---------------- */
+
+    private static class CapturingAudit implements ConsoleOpsAuditStore {
+        @Override public void record(ConsoleOpsAuditEvent event) { }
+        @Override public java.util.List<ConsoleOpsAuditEvent> search(String u, String a, int size, int from, Long sinceMs) {
+            return Collections.emptyList();
+        }
+    }
+
+    private static ConsoleAuthInterceptor interceptor(ConsolePrincipal principal) {
+        EsConsoleAuthorizer authorizer = req -> principal;
+        io.github.dengmeiluan.es.rebuild.control.ControlClusterResolver resolver =
+                new io.github.dengmeiluan.es.rebuild.control.ControlClusterResolver(null, null, null, null, null, "auto") {
+                    @Override public boolean bound() { return true; }
+                };
+        return new ConsoleAuthInterceptor(authorizer, new CapturingAudit(), resolver, ConsolePageCatalog.load(),
+                true, new EnvPagesResolver(connStoreWithProd(), new EsRebuildProperties()), connStoreWithProd());
+    }
+}

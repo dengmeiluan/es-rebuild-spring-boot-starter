@@ -1090,6 +1090,19 @@ public class EsRebuildAutoConfiguration {
         }
 
         @Bean
+        @ConditionalOnMissingBean
+        @ConditionalOnBean(io.github.dengmeiluan.es.rebuild.auth.EnvPagesResolver.class)
+        @ConditionalOnProperty(prefix = "es.rebuild", name = "web-enabled", matchIfMissing = true)
+        public io.github.dengmeiluan.es.rebuild.auth.ConsolePermissionsController consolePermissionsController(
+                ConsolePageCatalog consolePageCatalog,
+                io.github.dengmeiluan.es.rebuild.auth.EnvPagesResolver envPagesResolver,
+                io.github.dengmeiluan.es.rebuild.multicluster.ConnStore connStore,
+                EsRebuildProperties properties) {
+            return new io.github.dengmeiluan.es.rebuild.auth.ConsolePermissionsController(consolePageCatalog,
+                    envPagesResolver, connStore, properties.getConsole().getPageAuth().isEnabled());
+        }
+
+        @Bean
         @ConditionalOnMissingBean(ConsoleAuthDelegate.class)
         @ConditionalOnProperty(prefix = "es.rebuild.console.auth.delegate", name = "mode")
         public ConsoleAuthDelegate propertiesAuthDelegate(EsRebuildProperties properties) {

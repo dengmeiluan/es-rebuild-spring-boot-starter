@@ -36,6 +36,7 @@
         </button>
         <button class="btn sm ghost rt-hist-btn" :disabled="!path.trim()" title="收藏当前请求（方法+路径+body），可在收藏夹一键回放至本页" @click="saveFav"><Star :size="12" /> 收藏</button>
         <button class="btn sm ghost rt-hist-btn" @click="histOpen = true"><History :size="12" /> 历史</button>
+        <button class="btn sm ghost rt-hist-btn" title="查看当前身份在本页与当前连接下允许的操作（与后端拦截器判定同源）" @click="permOpen = true"><Shield :size="12" /> 我的权限</button>
       </div>
       <!-- body（W6：dslAssist 按端点/path 语义分档补全）。
  lintDsl 静态体检提示条（SearchSandboxView join 串形态同款，随输入实时重估，
@@ -133,6 +134,7 @@
 
     <!-- 原始 IO 弹窗（宿主受控开关；rec 取该页最近一条 /cluster/raw 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
+    <PermModal v-model:show="permOpen" :target="store.target" />
   </div>
 </template>
 
@@ -141,9 +143,10 @@ import { ref, computed, watch, nextTick } from 'vue';
 import { NModal } from 'naive-ui';
 import EmptyState from '../components/EmptyState.vue';
 import StatusPill from '../components/StatusPill.vue'; /* W-D：响应状态徽标统一件 */
-import { Send, History, Copy, Zap, RefreshCw, Braces, X, Star, Terminal } from 'lucide-vue-next';
+import { Send, History, Copy, Zap, RefreshCw, Braces, X, Star, Terminal, Shield } from 'lucide-vue-next';
 
-import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
+import PageHeader from '../components/PageHeader.vue';
+import PermModal from '../components/PermModal.vue';import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环） */
 import RawIoModal from '../components/RawIoModal.vue';
 import { useAppStore } from '../stores/app';
@@ -219,6 +222,7 @@ import { askConfirm } from '../composables/confirm';
 
 const searchExpr = ref('');
 const histOpen = ref(false);
+const permOpen = ref(false);
 
 const hasBody = computed(() => method.value !== 'GET' && method.value !== 'HEAD');
 
