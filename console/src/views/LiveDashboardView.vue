@@ -150,8 +150,10 @@
                 <line v-for="g in PCT_GRID" :key="'g' + g" x1="0" x2="720" :y1="CMP_H - CMP_H * (g / 100)" :y2="CMP_H - CMP_H * (g / 100)" vector-effect="non-scaling-stroke" />
               </g>
               <!-- 折线平滑统一（Catmull-Rom 单源；pct/abs 档 sparkPts 同源）；
- abs 档传全体可见节点共享 max（cmpScaleMax）——各线横向可比且与 Y 顶刻度同域 -->
-              <path v-for="s in cmpSeries" :key="s.name" :d="catmullRomPath(sparkPts(s.data, CMP_W, CMP_H, cmpMetric === 'qps' || cmpMetric === 'idx' ? 'abs' : 'pct', cmpScaleMax), CMP_W, CMP_H)" fill="none" :stroke="s.color" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
+ abs 档传全体可见节点共享 max（cmpScaleMax）——各线横向可比且与 Y 顶刻度同域；
+ 联动高亮（HistoryChart hc-line 同语言）：图例 chip/读出行 hover→该节点线升亮、其余退灰
+（不加面积元素——对比卡 path 计数被 591/615 锁面反锁，dim/升亮纯 CSS 档） -->
+              <path v-for="s in cmpSeries" :key="s.name" :class="cmpHotActive ? (s.name === cmpHot ? 'is-hot' : 'is-dim') : ''" :d="catmullRomPath(sparkPts(s.data, CMP_W, CMP_H, cmpMetric === 'qps' || cmpMetric === 'idx' ? 'abs' : 'pct', cmpScaleMax), CMP_W, CMP_H)" fill="none" :stroke="s.color" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
               <line v-if="cmpWarn !== null" x1="0" :y1="CMP_H - CMP_H * (cmpWarn / 100)" x2="720" :y2="CMP_H - CMP_H * (cmpWarn / 100)" stroke="var(--err)" stroke-dasharray="4 2" vector-effect="non-scaling-stroke" />
             </svg>
             <span class="ld-yt ld-yt-top" aria-hidden="true">{{ cmpYTop }}</span>
@@ -161,7 +163,8 @@
               <span class="ld-xline" :style="{ left: cmpLeft(cmpHit.frac) }" aria-hidden="true" />
               <div class="ld-hv ld-hv-stack" :style="{ left: cmpLeft(cmpHit.frac), top: (cmpHit.y || 0).toFixed(1) + 'px', transform: cmpShift(cmpHit.frac) + ' translateY(-50%)' }" role="status">
                 <span class="ld-hv-t">{{ cmpHit.t ? fmtTime(cmpHit.t) : '' }}</span>
-                <span v-for="r in cmpRowsCapped.rows" :key="r.name" class="ld-ncmp-tip-r">
+                <span v-for="r in cmpRowsCapped.rows" :key="r.name" class="ld-ncmp-tip-r"
+                  @mouseenter="cmpHot = r.name" @mouseleave="cmpHot = null">
                   <i :style="{ background: r.color }" /><b>{{ r.name }}</b><em>{{ r.v }}</em>
                   <button type="button" class="ld-ncmp-hide" :aria-label="'隐藏节点 ' + r.name + ' 的曲线'" title="隐藏该节点曲线（头部可一键恢复）" @click.stop="toggleNode(r.name)">×</button>
                 </span>
@@ -180,7 +183,9 @@
  常驻=有节点即显示，不随 cmpHasData 条件块） -->
         <div class="ld-cmp-legend">
           <button v-for="c in cmpChips" :key="c.name" type="button" class="ld-cmp-lg" :class="{ off: c.off }"
-            :aria-pressed="!c.off" :title="(c.off ? '点击显示 ' : '点击隐藏 ') + c.name + ' 的曲线'" @click="toggleNode(c.name)">
+            :aria-pressed="!c.off" :title="(c.off ? '点击显示 ' : '点击隐藏 ') + c.name + ' 的曲线'" @click="toggleNode(c.name)"
+            @mouseenter="cmpHot = c.name" @mouseleave="cmpHot = null"
+            @focus="cmpHot = c.name" @blur="cmpHot = null">
             <i :style="{ background: c.color }" aria-hidden="true" />{{ c.name }}<em class="mono">{{ c.cur }}</em>
           </button>
         </div>
@@ -393,6 +398,36 @@
         </span>
         <span v-if="!srvActive.length" class="ld-ok-chip"><i aria-hidden="true" />无活动告警</span>
       </div>
+      <!-- ══ 版面动线（20261014：「筛选按钮距离监控图非常遥远」根治）：历史趋势图卡网格上移——
+ 筛选头/告警条之后紧接图卡（操作动线=选范围→看曲线零滚动），监控明细/节点最新水位
+ 下沉为次级区块（明细=收起态诊断工具，水位表=即时值快照，均非趋势主视图）。══ -->
+      <div v-if="histErr" role="alert" class="err-bar">
+        历史趋势加载失败：{{ histErr }}
+        <button class="btn xs" @click="loadHist">重试</button>
+      </div>
+      <!-- 分组空态——「组 × 观察口径」交集为空时（如集群模式选「节点磁盘指标」，
+ 或节点下钻选「集群指标」）不渲染空白栅格，给出可行动说明。独立类名不与图卡级空态
+ （ld-hist-clean / HistoryChart 内「暂无采样」）混淆。 -->
+      <EmptyState v-if="!histCharts.length" class="ld-hist-empty" compact
+        :icon="MonitorSpeaker" :text="histGroupEmpty" />
+      <div class="ld-hist-grid">
+        <div v-for="c in histCharts" :key="c.field" class="ld-hist-cell">
+          <!-- 断档行为验证点：相邻桶 Δt 恒=桶距（intervalMsFor(mh2Range)），≤3×桶距恒连线；
+ 集群失联未采的时段桶为空值字段（buildSeries 已剔点），相邻留存点 Δt 超过
+ 3×桶距即断线——不画跨断档假线（gapMs 缺省=永不断，本区恒传）。
+ 拒绝图健康态一句话代替恒零空卡（出现非零自动浮出图卡） -->
+          <template v-if="!(allClean && (c.field === 'writeRejected' || c.field === 'searchRejected'))">
+            <HistoryChart :title="c.label" :unit="c.unit" :series="c.series" :forecast="c.forecast" :note="c.note" :threshold="c.threshold"
+              :palette="HIST_COLORS" :gap-ms="mh2GapMs" :status-bands="statusBands"
+              :events="chartEvents" />
+          </template>
+          <div v-else class="ld-hist-clean">采样时段内无拒绝</div>
+          <!-- 加载态：骨架蒙层盖图区（保留上轮数据防闪烁），沿用 SkeletonBox 统一件 -->
+          <div v-if="histLoading" class="ld-hist-load" aria-hidden="true">
+            <SkeletonBox height="150px" width="72%" round />
+          </div>
+        </div>
+      </div>
       <!-- ══ ：监控明细单容器（用户六令实报 20261008 13:18「top写入索引为什么不跟下面的
  监控在一块，这严重违反了我想要的设计」）——根因=Top 索引/慢请求/告警历史三条独立
  CollapsePanel 收起条视觉分离；改法=三面板整合为一个壳（.ld-detail）+seg 三视图切换
@@ -552,10 +587,6 @@
           </template>
         </div>
       </div>
-      <div v-if="histErr" role="alert" class="err-bar">
-        历史趋势加载失败：{{ histErr }}
-        <button class="btn xs" @click="loadHist">重试</button>
-      </div>
       <!-- R4 节点一览（仅节点下钻模式）：每节点最新水位的紧凑表——图卡看趋势，本表看「现在」 -->
       <div v-if="nodeMode && nodeRows.length" class="ld-hist-ntab" role="table" aria-label="节点最新水位">
         <div class="ld-hist-ntab-t sec-t">节点最新水位</div>
@@ -568,29 +599,6 @@
           <span class="mono" role="cell">{{ fmtN(n.heapUsedPct) }}</span>
           <span class="mono" role="cell">{{ fmtN(n.cpuPct) }}</span>
           <span class="mono" role="cell">{{ fmtN(n.diskUsedPct) }}</span>
-        </div>
-      </div>
-      <!-- 分组空态——「组 × 观察口径」交集为空时（如集群模式选「节点磁盘指标」，
- 或节点下钻选「集群指标」）不渲染空白栅格，给出可行动说明。独立类名不与图卡级空态
- （ld-hist-clean / HistoryChart 内「暂无采样」）混淆。 -->
-      <EmptyState v-if="!histCharts.length" class="ld-hist-empty" compact
-        :icon="MonitorSpeaker" :text="histGroupEmpty" />
-      <div class="ld-hist-grid">
-        <div v-for="c in histCharts" :key="c.field" class="ld-hist-cell">
-          <!-- 断档行为验证点：相邻桶 Δt 恒=桶距（intervalMsFor(mh2Range)），≤3×桶距恒连线；
- 集群失联未采的时段桶为空值字段（buildSeries 已剔点），相邻留存点 Δt 超过
- 3×桶距即断线——不画跨断档假线（gapMs 缺省=永不断，本区恒传）。
- 拒绝图健康态一句话代替恒零空卡（出现非零自动浮出图卡） -->
-          <template v-if="!(allClean && (c.field === 'writeRejected' || c.field === 'searchRejected'))">
-            <HistoryChart :title="c.label" :unit="c.unit" :series="c.series" :forecast="c.forecast" :note="c.note" :threshold="c.threshold"
-              :palette="HIST_COLORS" :gap-ms="mh2GapMs" :status-bands="statusBands"
-              :events="chartEvents" />
-          </template>
-          <div v-else class="ld-hist-clean">采样时段内无拒绝</div>
-          <!-- 加载态：骨架蒙层盖图区（保留上轮数据防闪烁），沿用 SkeletonBox 统一件 -->
-          <div v-if="histLoading" class="ld-hist-load" aria-hidden="true">
-            <SkeletonBox height="150px" width="72%" round />
-          </div>
         </div>
       </div>
     </div>
@@ -967,6 +975,10 @@ const cmpChips = computed(() => sortedNodes.value.map((n: any) => {
   };
 }));
 const cmpHasData = computed(() => cmpSeries.value.some(s => s.data.length > 1));
+/* 联动高亮（质感分层，HistoryChart hotName 同语言）：图例 chip/悬浮读出行 hover 或键盘
+ focus → 该节点曲线升亮、其余退灰；hot 只命中可见序列（隐藏节点 chip 悬停不全场退灰） */
+const cmpHot = ref<string | null>(null);
+const cmpHotActive = computed(() => !!cmpHot.value && cmpSeries.value.some(s => s.name === cmpHot.value));
 const cmpHit = ref<SparkHoverHit | null>(null);
 const cmpMode = computed<'pct' | 'abs'>(() => CMP_METRICS.find(m => m.k === cmpMetric.value)?.mode ?? 'pct');
 const cmpWarn = computed<number | null>(() => CMP_METRICS.find(m => m.k === cmpMetric.value)?.warn ?? null);
@@ -1754,6 +1766,11 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 .ld-ncmp-tt { font-size: var(--fs-sm); font-weight: 600; color: var(--tx1); } /* 件3：容器头升档=与监控明细孪生容器同语言（muted 卡级色退役） */
 .ld-ncmp-hd .seg { margin-left: auto; }
 .ld-ncmp-svg { width: 100%; height: 120px; display: block; }
+/* 联动高亮（HistoryChart .hc-line 同语言）：hot 节点线升亮（1.5→2.25px）、其余退灰——
+ stroke-width/opacity 走合成层过渡不触发布局；不加面积元素（path 计数 591/615 锁面） */
+.ld-ncmp-svg path { transition: stroke-width .12s ease-out, opacity .12s ease-out; }
+.ld-ncmp-svg path.is-dim { opacity: .15; }
+.ld-ncmp-svg path.is-hot { stroke-width: 2.25; }
 /* K2：图例退役后的头部恢复钮（软底+品牌描边，fv-tab.act 同语言）——
  （图例 chip 点选随常驻图例退役，隐藏/恢复唯一通道=读出行尾 ×+本钮 */
 .ld-ncmp-restore { font-size: var(--fs-2xs); color: var(--ac-hi); background: var(--ac-soft); border: 1px solid var(--ac-line); border-radius: 99px; padding: 1px var(--sp-2); cursor: pointer; }
@@ -1990,7 +2007,7 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 /* 「按节点查看」下钻开关：未选定集群置灰（无具体集群就没有节点序列） */
 .ld-hist-node { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-xs); color: var(--tx1); cursor: pointer; user-select: none; }
 .ld-hist-node:has(input:disabled) { opacity: .5; cursor: not-allowed; }
-.ld-hist-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3); } /* B1：与六卡同档 */
+.ld-hist-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3); margin-bottom: var(--sp-4); } /* B1：与六卡同档；下距=与下沉明细容器的分节呼吸（重排后 grid→detail 相邻） */
 /* R4 节点一览紧凑表：四列网格行（节点名 mono，水位数值右对齐表列） */
 .ld-hist-ntab { border: 1px solid var(--border); border-radius: var(--r-s); overflow: hidden; }
 .ld-hist-ntab-r { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: var(--sp-2); padding: var(--sp-1) var(--sp-2); font-size: var(--fs-xs); }

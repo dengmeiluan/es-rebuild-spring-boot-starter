@@ -38,16 +38,18 @@
         <div ref="canvasEl" class="hc-canvas" @pointermove="onMove" @pointerleave="onLeave">
         <svg class="hc-svg" viewBox="0 0 600 220" preserveAspectRatio="none" aria-hidden="true">
           <defs>
-            <linearGradient v-for="(s, i) in visibleSeries" :key="'g' + s.name" :id="gidOf(i)" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" :stop-color="colorOf(s.name)" stop-opacity="0.12" />
+            <!-- 渐变只跟随 areaSeries（单序列常态/hover 高亮序列）——多序列常态零面积：
+                 九层渐变互相叠加=图面浑浊的根源；单层 0.2 渐变=主卡 LiveChartCard 同档质感 -->
+            <linearGradient v-for="(s, i) in areaSeries" :key="'g' + s.name" :id="gidOf(i)" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" :stop-color="colorOf(s.name)" stop-opacity="0.2" />
               <stop offset="1" :stop-color="colorOf(s.name)" stop-opacity="0" />
             </linearGradient>
           </defs>
-          <!-- 件2：横向网格三线（25/50/75% 虚线——对齐 802 Top 曲线底座语言，治「白板图」；
+          <!-- 件2：横向网格三线（25/50/75%——主卡 .ld-glines 同语言实线；治「白板图」；
  画在序列之下（声明序即绘制序），vector-effect 保线宽不随拉伸变形 -->
           <line v-for="gy in HC_GRID" :key="'hg' + gy" class="hc-grid" x1="0" x2="600"
             :y1="(PLOT_H * (1 - gy)).toFixed(1)" :y2="(PLOT_H * (1 - gy)).toFixed(1)" vector-effect="non-scaling-stroke" />
-          <template v-for="(s, i) in visibleSeries" :key="s.name">
+          <template v-for="s in visibleSeries" :key="s.name">
             <!-- 状态色带（RED 时段背景带，画在面积/折线之下——声明序即绘制序）：
  断链轮采集器落 status=red doc（无指标字段=折线在此断档），色带把
  「没采到」与「集群红了」在视觉上区分开 -->
@@ -57,13 +59,17 @@
  事件轴收敛进色带体系（宽时段=色带，瞬时点=窄条），替代顶部菱形散标记 -->
             <rect v-for="(e, ei) in eventRects" :key="'ev' + ei" class="hc-evband" :x="e.x" :y="0"
               :width="e.w" :height="PLOT_H" :fill="e.color" opacity="0.15"><title>{{ e.title }}</title></rect>
-            <!-- 面积画在折线之下：先 area 后 line 的声明序即绘制序。
- 折线/面积同走 polylineSegments 分段单源：无 gapMs=单段（与旧整线形态一致）；
- 断档感知（gapMs 传入）下每段独立落底闭合——断档处不连线、不造跨档填充假面 -->
-            <path v-for="(d, di) in areaSegs(s)" :key="'a' + di" class="hc-area" :d="d" :fill="'url(#' + gidOf(i) + ')'" />
-            <!-- 折线平滑统一——段内 Catmull-Rom（六卡同款），段间断开语义由 polylineSegments 保留 -->
-            <path v-for="(d, pi) in lineSegPaths(s)" :key="'l' + pi" class="hc-line" :d="d" fill="none"
-              :stroke="colorOf(s.name)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
+            <!-- 面积只随 areaSeries：单序列常态（主卡形态）或 hover 高亮序列（联动聚焦）——
+             声明序保持 band→area→line（monitorHistoryTrend 锁：色带画在数据之下）；
+             断档分段语义保留（每段独立落底闭合，不造跨档假面） -->
+            <template v-for="(as, ai) in areaSeries" :key="'aw' + as.name">
+              <path v-for="(d, di) in areaSegs(as)" :key="'a' + as.name + di" class="hc-area" :d="d" :fill="'url(#' + gidOf(ai) + ')'" />
+            </template>
+            <!-- 折线平滑统一——段内 Catmull-Rom（六卡同款），段间断开语义由 polylineSegments 保留；
+             线宽 1.5px=主卡/对比卡同律；hover 联动：hot 序列升亮、其余退灰（is-dim/is-hot） -->
+            <path v-for="(d, pi) in lineSegPaths(s)" :key="'l' + pi" class="hc-line"
+              :class="hotActive ? (s.name === hotName ? 'is-hot' : 'is-dim') : ''" :d="d" fill="none"
+              :stroke="colorOf(s.name)" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
           </template>
           <!-- R5 外推预测段：同色 dashed（无面积、不出 tooltip），从最后实测点外推到阈值/地平线 -->
           <polyline v-for="f in forecastSegs" :key="'f' + f.name" class="hc-fc" :points="f.attr" fill="none"
@@ -75,6 +81,8 @@
         <span v-if="thLabelTop" class="hc-thlabel" :style="{ top: thLabelTop }">{{ fmtV(threshold!) }}</span>
         <!-- 单点序列画不出线：以恒亮圆点呈现（悬停圆点同形态） -->
         <span v-for="d in soloDots" :key="'solo' + d.name" class="hc-dot" :style="{ left: d.left, top: d.top, background: d.color }" aria-hidden="true" />
+        <!-- 质感件：末端呼吸点（单序列常态/hover 高亮序列；HTML 层定位=不被 preserveAspectRatio 拉伸变形，主卡 ld-line-pulse 同语言） -->
+        <span v-if="pulseDot" class="hc-dot hc-pulse" :style="{ left: pulseDot.left, top: pulseDot.top, background: pulseDot.color }" aria-hidden="true" />
         <template v-if="hoverFrac != null">
           <span class="hc-xline" :style="{ left: (hoverFrac * 100).toFixed(2) + '%' }" aria-hidden="true" />
           <span v-for="d in hoverDots" :key="'hd' + d.name" class="hc-dot" :style="{ left: d.left, top: d.top, background: d.color }" aria-hidden="true" />
@@ -99,9 +107,12 @@
     </div>
 
     <div v-if="series.length" class="hc-legend">
+      <!-- hover/focus 联动高亮（Datadog 图例语言）：chip 悬停/键盘聚焦→图内该序列唯一面积+升亮、其余退灰 -->
       <button v-for="s in series" :key="'lg' + s.name" type="button" class="hc-chip" :class="{ off: hidden.has(s.name) }"
         :aria-pressed="!hidden.has(s.name)" :title="(hidden.has(s.name) ? '点击显示 ' : '点击隐藏 ') + s.name"
-        @click="toggleVisible(s.name)">
+        @click="toggleVisible(s.name)"
+        @mouseenter="hotName = s.name" @mouseleave="hotName = null"
+        @focus="hotName = s.name" @blur="hotName = null">
         <i :style="{ background: colorOf(s.name) }" aria-hidden="true" />{{ s.name }}
       </button>
     </div>
@@ -172,6 +183,31 @@ function toggleVisible(name: string) {
 }
 const visibleSeries = computed(() => props.series.filter(s => !hidden.value.has(s.name)));
 const hasVisible = computed(() => visibleSeries.value.some(s => s.points.length > 0));
+
+/* ═══ 质感分层（曲线质感对齐顶部主卡档）═══
+ 多序列常态零面积——九层渐变互相叠加=图面浑浊根源；层次靠联动高亮：
+ 图例 chip hover/键盘 focus → hotName → 该序列唯一面积渐变（主卡同档 0.2）+ 线升亮，
+ 其余序列退灰（is-dim）——Datadog/Grafana 图例联动语言。单序列=主卡形态（常态带面积）。 */
+const hotName = ref<string | null>(null);
+/* hot 只有命中「可见序列」才生效（隐藏序列的 chip 悬停不触发全场退灰） */
+const hotActive = computed(() => !!hotName.value && visibleSeries.value.some(s => s.name === hotName.value));
+const areaSeries = computed<NamedSeries[]>(() => {
+  const vis = visibleSeries.value.filter(s => s.points.length > 0);
+  if (vis.length <= 1) return vis;
+  const hot = vis.find(s => s.name === hotName.value);
+  return hot ? [hot] : [];
+});
+/* 末端呼吸点：与面积同源序列的最后采样点（HTML 层百分比定位，不被 SVG 拉伸变形） */
+const pulseDot = computed(() => {
+  const s = areaSeries.value[0];
+  if (!s || !s.points.length) return null;
+  const last = s.points[s.points.length - 1]!;
+  return {
+    left: ((px(last.t) / PLOT_W) * 100).toFixed(2) + '%',
+    top: ((py(last.v) / PLOT_H) * 100).toFixed(2) + '%',
+    color: colorOf(s.name),
+  };
+});
 
 /* ═══ 坐标域与点位换算（viewBox 固定 600x220，preserveAspectRatio=none 拉伸） ═══ */
 const PLOT_W = 600;
@@ -425,12 +461,18 @@ const plotStyle = computed(() => (props.height ? { height: props.height + 'px' }
  （canvas 含 svg/十字线/圆点/tooltip；Y 三刻度在 canvas 外锚 plot，见下） */
 .hc-canvas { position: absolute; top: 0; bottom: 0; left: 36px; right: 0; }
 .hc-svg { width: 100%; height: 100%; display: block; }
-/* 件2：横向网格虚线（802 .ld-grid 同款 3-4 虚线+弱化透明度） */
-.hc-grid { stroke: var(--tx2); stroke-opacity: .18; stroke-dasharray: 3 4; }
+/* 网格与主卡 .ld-glines 同语言（--line 实线 1px；旧 tx2 虚线=「白板图」底噪） */
+.hc-grid { stroke: var(--line); stroke-width: 1; }
 .hc-band { fill: var(--err); opacity: .08; }
 /* 告警事件菱形标记：顶部落位，level 染色（CRIT err/WARN wn/默认 tx2） */
 /* R5 外推预测虚线 */
 .hc-fc { pointer-events: none; }
+
+/* 联动高亮（质感分层）：hot 序列线升亮（1.5→2px）、其余退灰——
+ stroke-width/opacity 走合成层过渡，不触发布局 */
+.hc-line { transition: stroke-width .12s ease-out, opacity .12s ease-out; }
+.hc-line.is-dim { opacity: .15; }
+.hc-line.is-hot { stroke-width: 2; }
 
 /* Y 轴两只刻度（HTML 层不被拉伸变形）；X 轴三只时间标注在图区之下。
  件2：Y 中档三刻度（75/50/25% 位，translateY 居中锚格线）。
@@ -448,6 +490,10 @@ const plotStyle = computed(() => (props.height ? { height: props.height + 'px' }
 /* 十字线与最近点圆点（恒亮单点同形态）：圆点描边用底色隔离曲线 */
 .hc-xline { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--tx2); opacity: .45; pointer-events: none; }
 .hc-dot { position: absolute; width: 8px; height: 8px; border-radius: 50%; transform: translate(-50%, -50%); border: 1.5px solid var(--bg); pointer-events: none; }
+/* 末端呼吸点（主卡 ld-line-pulse 同语言；transform/opacity 合成层动画，reduced-motion 豁免） */
+.hc-pulse { animation: hc-dot-pulse 2.4s ease-out infinite; }
+@keyframes hc-dot-pulse { 0% { transform: translate(-50%, -50%) scale(1); opacity: .85; } 75% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .hc-pulse { animation: none; } }
 
 /* tooltip：绝对定位层不随 SVG 拉伸；pointer-events none 防闪 */
 .hc-tip { position: absolute; top: var(--sp-2); z-index: 2; pointer-events: none; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r-s); box-shadow: var(--shadow-m); padding: var(--sp-1) var(--sp-2); font-size: var(--fs-2xs); min-width: 120px; max-width: 280px; } /* 件2：放宽=九节点长名少截断 */
