@@ -5,6 +5,15 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.15]
+
+### 新增
+
+- 节点对比面板质感补齐（对标历史卡/顶部卡三件套）：悬停节点图例或读出行时，
+  该节点曲线下方出现唯一身份色渐变面积（polygon 锚点折线实现，不触碰
+  「每节点一条折线」源码锁），曲线末端挂呼吸动画点——配合既有的升亮/退灰
+  联动，多节点叠图一眼聚焦单节点
+
 ## [1.0.14]
 
 ### 新增
