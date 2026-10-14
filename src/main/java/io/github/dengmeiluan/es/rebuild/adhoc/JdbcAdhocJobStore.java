@@ -110,7 +110,7 @@ public class JdbcAdhocJobStore implements AdhocJobStore {
             }
         } catch (Exception e) {
             logger.warn("[es-rebuild-adhoc-jdbc] 落作业失败（忽略，不反噬重建）：jobId={} {}",
-                    job == null ? null : job.getJobId(), e.getMessage());
+                    job == null ? null : job.getJobId(), e.getMessage(), e);
         }
     }
 
@@ -171,7 +171,7 @@ public class JdbcAdhocJobStore implements AdhocJobStore {
                 ps.executeUpdate();
             }
         } catch (SQLException e) {
-            logger.warn("[es-rebuild-adhoc-jdbc] 删除作业失败（忽略）：jobId={} {}", jobId, e.getMessage());
+            logger.warn("[es-rebuild-adhoc-jdbc] 删除作业失败（忽略）：jobId={} {}", jobId, e.getMessage(), e);
         }
     }
 
@@ -201,7 +201,7 @@ public class JdbcAdhocJobStore implements AdhocJobStore {
         } catch (Exception e) {
             // 反序列化失败不致命：至少返回带 jobId 的骨架，列表/查看仍能显示 id。
             logger.warn("[es-rebuild-adhoc-jdbc] payload 反序列化失败，返回骨架：jobId={} {}",
-                    jobId, e.getMessage());
+                    jobId, e.getMessage(), e);
         }
         return job;
     }

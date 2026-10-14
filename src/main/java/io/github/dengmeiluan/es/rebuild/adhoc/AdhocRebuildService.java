@@ -435,7 +435,7 @@ public class AdhocRebuildService {
             try {
                 targetEsVersion = router.currentEsVersion();
             } catch (Exception e) {
-                logger.warn("[AdhocRebuild] host version probe failed: {}", e.getMessage());
+                logger.warn("[AdhocRebuild] host version probe failed: {}", e.getMessage(), e);
             }
         }
 
@@ -566,7 +566,7 @@ public class AdhocRebuildService {
             try (EsClientRouter.TargetScope ignored = router == null ? null : router.openScope(job.getTargetId())) {
                 perform("POST", "/_tasks/" + taskId + "/_cancel", null);
             } catch (Exception e) {
-                logger.warn("[AdhocRebuild] cancel task {} failed: {}", taskId, e.getMessage());
+                logger.warn("[AdhocRebuild] cancel task {} failed: {}", taskId, e.getMessage(), e);
             }
         }
         return job.toMap();
@@ -1101,7 +1101,7 @@ public class AdhocRebuildService {
             Map<String, Object> root = MAPPER.readValue(mappingJson, Map.class);
             collectTimeFields("", root.get("properties"), out);
         } catch (Exception e) {
-            logger.warn("[AdhocRebuild] parse mapping for timeField candidates failed: {}", e.getMessage());
+            logger.warn("[AdhocRebuild] parse mapping for timeField candidates failed: {}", e.getMessage(), e);
         }
         return out;
     }

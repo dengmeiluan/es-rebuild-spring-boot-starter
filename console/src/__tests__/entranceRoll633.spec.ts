@@ -8,9 +8,12 @@
  *   2) **数值 roll**：`@keyframes ld-roll`（opacity + translateY 7px，只动 transform/opacity
  *      不触发布局），挂在 `.ld-page .ld-chart-cur`；六处当前值靠 `:key` 绑定数值
  *      （值变才换节点 → 才重放动画；值不变不抖）；
- *   3) **降级**：不在视图内新增 `prefers-reduced-motion` 块——theme.css 全局兜底
- *      （`*{transition-duration:.01ms!important}`）已覆盖纯 transition/animation 形态
- *      （adaptive556 计数锁，625-C1/632-C1 同律）。
+ *   3) **降级**：视图内 reduced-motion 块仅允许 pulse 终帧隐形类豁免（恰 1 处）——
+ *      纯 transition/animation 时长压缩由 theme.css 全局兜底覆盖（`*{transition-duration:
+ *      .01ms!important}`，adaptive556 计数锁，625-C1/632-C1 同律）；但呼吸点类 keyframes
+ *      100% 帧=opacity:0，全局兜底 .01ms 停帧会让降级态停在隐形帧（端点消失），须
+ *      `animation: none` 停在可见基态（LiveChartCard `.ld-line-pulse` / HistoryChart
+ *      `.hc-pulse` 组件域同构先例）。白名单外新增即红。
  * 负锁剥注释（unifyWave561 口径）。
  */
 import { describe, it, expect } from 'vitest';
@@ -55,8 +58,10 @@ describe('六百三十三批①：按区入场编排（622 §3.3）', () => {
     expect(stBlock, '入场初态无布局属性').not.toMatch(/height|width|margin|padding/);
   });
 
-  it('视图内不新增 reduced-motion 块（theme.css 全局兜底已覆盖；625-C1/632-C1 同律）', () => {
-    expect((VIEW.match(/prefers-reduced-motion/g) ?? []).length, '视图零 reduced-motion 字面').toBe(0);
+  it('视图内 reduced-motion 块仅 pulse 终帧隐形豁免（恰 1 处；全局兜底停帧=端点隐形，须 none 停可见基态）', () => {
+    const pulse = VIEW.match(/@media \(prefers-reduced-motion: reduce\) \{ \.ld-ncmp-pulse \{ animation: none; \} \}/g) ?? [];
+    expect(pulse.length, '呼吸点降级块恰 1 处（keyframes 100% 帧 opacity:0，兜底 .01ms 停帧不可见）').toBe(1);
+    expect((VIEW.match(/prefers-reduced-motion/g) ?? []).length, '白名单外零新增 reduced-motion 字面').toBe(1);
   });
 });
 

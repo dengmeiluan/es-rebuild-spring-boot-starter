@@ -143,7 +143,7 @@ public class EsAdhocJobStore implements AdhocJobStore {
             client.get().getLowLevelClient().performRequest(req);
         } catch (Exception e) {
             logger.warn("[es-rebuild-adhoc-es] 落作业失败（忽略，不反噬重建）：jobId={} {}",
-                    job.getJobId(), e.getMessage());
+                    job.getJobId(), e.getMessage(), e);
         }
     }
 
@@ -215,7 +215,7 @@ public class EsAdhocJobStore implements AdhocJobStore {
             Request req = new Request("DELETE", "/" + jobIndex + "/" + DOC_TYPE + "/" + jobId + "?refresh=true");
             client.get().getLowLevelClient().performRequest(req);
         } catch (Exception e) {
-            logger.warn("[es-rebuild-adhoc-es] 删除作业失败（忽略）：jobId={} {}", jobId, e.getMessage());
+            logger.warn("[es-rebuild-adhoc-es] 删除作业失败（忽略）：jobId={} {}", jobId, e.getMessage(), e);
         }
     }
 
@@ -276,7 +276,7 @@ public class EsAdhocJobStore implements AdhocJobStore {
         } catch (Exception e) {
             // 反序列化失败不致命：至少返回带 jobId 的骨架，列表/查看仍能显示 id。
             logger.warn("[es-rebuild-adhoc-es] payload 反序列化失败，返回骨架：jobId={} {}",
-                    jobId, e.getMessage());
+                    jobId, e.getMessage(), e);
         }
         return job;
     }
