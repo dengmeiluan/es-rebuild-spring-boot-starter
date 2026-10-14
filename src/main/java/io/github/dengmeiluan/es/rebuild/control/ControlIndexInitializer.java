@@ -97,7 +97,7 @@ public class ControlIndexInitializer {
             return mode;
         } catch (Exception e) {
             LOG.warn("[ControlIndexInitializer] 候选集群版本探测失败，按「未知」处理"
-                    + "（typeless 首发 + 400 后 typed 重试）: {}", e.getMessage());
+                    + "（typeless 首发 + 400 后 typed 重试）: {}", e.getMessage(), e);
             return EsVersionCaps.MappingTypeMode.UNKNOWN;
         }
     }

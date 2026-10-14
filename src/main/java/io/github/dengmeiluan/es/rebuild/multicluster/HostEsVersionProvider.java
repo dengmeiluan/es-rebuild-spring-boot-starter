@@ -182,7 +182,7 @@ public class HostEsVersionProvider {
             return String.valueOf(number).trim();
         } catch (Exception e) {
             // 不硬失败、不假装知道：保持未知 + 下次调用重试
-            LOG.warn("[HostEsVersion] 宿主版本探测失败，保持「未知」并在下次调用重试（不假装 7.x）: {}", e.getMessage());
+            LOG.warn("[HostEsVersion] 宿主版本探测失败，保持「未知」并在下次调用重试（不假装 7.x）: {}", e.getMessage(), e);
             return null;
         }
     }

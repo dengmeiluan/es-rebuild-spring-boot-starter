@@ -116,7 +116,7 @@ public class EsRebuildLockStore implements RebuildLockStore {
             return true;
         } catch (Exception e) {
             // 旁路：建索引失败不阻断启动；首次 tryAcquire 时由 ES 报错给运维明确提示
-            logger.warn("[RebuildLock] ensureIndex failed (will fail at first acquire if auto_create_index disabled): {}", e.getMessage());
+            logger.warn("[RebuildLock] ensureIndex failed (will fail at first acquire if auto_create_index disabled): {}", e.getMessage(), e);
             return false;
         }
     }
@@ -208,7 +208,7 @@ public class EsRebuildLockStore implements RebuildLockStore {
                     logger.warn("[RebuildLock] renew I/O 失败 x{}（{}s 窗口聚合）",
                             suppressed, RENEW_WARN_THROTTLE_MS / 1000);
                 }
-                logger.warn("[RebuildLock] renew I/O 失败 indexKey={}: {}", indexKey, e.getMessage());
+                logger.warn("[RebuildLock] renew I/O 失败 indexKey={}: {}", indexKey, e.getMessage(), e);
             }
             return false;
         }
@@ -230,7 +230,7 @@ public class EsRebuildLockStore implements RebuildLockStore {
                 logger.info("[RebuildLock] released indexKey={}", indexKey);
             }
         } catch (Exception e) {
-            logger.warn("[RebuildLock] release failed indexKey={}: {}", indexKey, e.getMessage());
+            logger.warn("[RebuildLock] release failed indexKey={}: {}", indexKey, e.getMessage(), e);
         }
     }
 
@@ -244,7 +244,7 @@ public class EsRebuildLockStore implements RebuildLockStore {
             port.deleteAny(lockIndex, indexKey);
             logger.warn("[RebuildLock] FORCE released indexKey={} by={} (owner-check bypassed)", indexKey, owner);
         } catch (Exception e) {
-            logger.warn("[RebuildLock] forceRelease failed indexKey={}: {}", indexKey, e.getMessage());
+            logger.warn("[RebuildLock] forceRelease failed indexKey={}: {}", indexKey, e.getMessage(), e);
         }
     }
 
@@ -262,7 +262,7 @@ public class EsRebuildLockStore implements RebuildLockStore {
             return new RebuildLock((String) src.get(FIELD_OWNER), toLong(src.get(FIELD_ACQUIRE_TIME)),
                     toLong(src.get(FIELD_EXPIRE_TIME)), doc.seqNo(), doc.primaryTerm());
         } catch (Exception e) {
-            logger.warn("[RebuildLock] get failed indexKey={}: {}", indexKey, e.getMessage());
+            logger.warn("[RebuildLock] get failed indexKey={}: {}", indexKey, e.getMessage(), e);
             return null;
         }
     }

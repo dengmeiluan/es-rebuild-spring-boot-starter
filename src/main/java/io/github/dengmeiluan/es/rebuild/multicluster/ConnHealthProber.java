@@ -87,7 +87,7 @@ public class ConnHealthProber {
                 probeAll();
             } catch (Exception e) {
                 // 探活是观测面，任何异常只记日志，绝不外溢影响调度
-                LOG.warn("[ConnHealthProber] probeAll failed: {}", e.getMessage());
+                LOG.warn("[ConnHealthProber] probeAll failed: {}", e.getMessage(), e);
             }
         }, 10, intervalSeconds, TimeUnit.SECONDS);
         LOG.info("[ConnHealthProber] started, interval={}s", intervalSeconds);

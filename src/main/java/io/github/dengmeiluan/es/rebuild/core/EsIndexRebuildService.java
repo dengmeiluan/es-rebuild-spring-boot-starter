@@ -289,7 +289,7 @@ public class EsIndexRebuildService {
                     }
                 }
             } catch (Exception e) {
-                logger.warn("[health] indexKey={} probe failed: {}", key, e.getMessage());
+                logger.warn("[health] indexKey={} probe failed: {}", key, e.getMessage(), e);
             }
         }
 

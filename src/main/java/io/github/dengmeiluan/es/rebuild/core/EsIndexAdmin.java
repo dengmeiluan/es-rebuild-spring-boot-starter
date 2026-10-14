@@ -658,7 +658,7 @@ public class EsIndexAdmin {
                 }
             }
         } catch (Exception e) {
-            logger.warn("[EsIndexAdmin] scripted_metric detection failed for {}, fallback to sampling: {}", index, e.getMessage());
+            logger.warn("[EsIndexAdmin] scripted_metric detection failed for {}, fallback to sampling: {}", index, e.getMessage(), e);
         }
 
         // Fallback：样本检测（抽 30 条）
@@ -677,7 +677,7 @@ public class EsIndexAdmin {
             }
             logger.info("[EsIndexAdmin] detectArrayFields via sampling for {}: found {} array fields", index, arrayFields.size());
         } catch (Exception e) {
-            logger.warn("[EsIndexAdmin] sampling detection also failed for {}: {}", index, e.getMessage());
+            logger.warn("[EsIndexAdmin] sampling detection also failed for {}: {}", index, e.getMessage(), e);
         }
         return arrayFields;
     }
