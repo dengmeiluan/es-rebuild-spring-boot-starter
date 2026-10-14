@@ -163,6 +163,12 @@ public class MonitorMetricsStoreTest {
         assertTrue(body.contains("\"gcOldTimeMsMax\":{\"max\":{\"field\":\"gcOldTimeMs\"}}"));
         assertTrue(body.contains("\"gcOldTimeMsMin\":{\"min\":{\"field\":\"gcOldTimeMs\"}}"));
         assertTrue(body.contains("\"tpSearchActiveAvg\":{\"avg\":{\"field\":\"tpSearchActive\"}}"));
+        /* 896 批 Wave B 新字段聚合随迁（漏扩防回流显式锚） */
+        assertTrue(body.contains("\"docsTotalAvg\":{\"avg\":{\"field\":\"docsTotal\"}}"));
+        assertTrue(body.contains("\"tpForceMergeRejectedAvg\":{\"avg\":{\"field\":\"tpForceMergeRejected\"}}"));
+        assertTrue(body.contains("\"osMemUsedPctAvg\":{\"avg\":{\"field\":\"osMemUsedPct\"}}"));
+        assertTrue(body.contains("\"fsAvailMbAvg\":{\"avg\":{\"field\":\"fsAvailMb\"}}"));
+        assertTrue(body.contains("\"esCpuPctAvg\":{\"avg\":{\"field\":\"esCpuPct\"}}"));
         assertTrue(body.contains("\"primaryShardsAvg\":{\"avg\":{\"field\":\"primaryShards\"}}"));
         /* 「漏扩 AGG 致三卡恒空」同类坑防回流锚：逐字段全覆盖（Min/Max 子聚合数＝AGG 键数） */
         assertEquals("三值同返逐字段全覆盖：Min 子聚合数＝AGG 键数（漏扩即红）",

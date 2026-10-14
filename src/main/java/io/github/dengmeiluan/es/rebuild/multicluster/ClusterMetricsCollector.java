@@ -165,6 +165,13 @@ public class ClusterMetricsCollector {
             + "\"snapshotFailed\":{\"type\":\"long\"},"
             + "\"snapshotsTotal\":{\"type\":\"long\"},"
             + "\"snapshotFailedDelta\":{\"type\":\"long\"},"
+            + "\"docsTotal\":{\"type\":\"long\"},"
+            + "\"tpForceMergeActive\":{\"type\":\"long\"},"
+            + "\"tpForceMergeQueue\":{\"type\":\"long\"},"
+            + "\"tpForceMergeRejected\":{\"type\":\"long\"},"
+            + "\"osMemUsedPct\":{\"type\":\"double\"},"
+            + "\"fsAvailMb\":{\"type\":\"double\"},"
+            + "\"esCpuPct\":{\"type\":\"double\"},"
             + "\"topIndexes\":{\"type\":\"object\",\"enabled\":false}"
             + "}}";
 
@@ -293,8 +300,23 @@ public class ClusterMetricsCollector {
         } catch (Exception ignore) {
             /* 索引指标缺省 */
         }
+        /*  可搜索文档总数：/_cluster/stats 轻量拉取（失败/旧版本无端点 → 静默缺省） */
+        Map<String, Object> clusterStats = null;
+        try {
+            Request csReq = new Request("GET", "/_cluster/stats");
+            csReq.addParameter("filter_path", "indices.docs.count");
+            clusterStats = getJson(target, csReq);
+        } catch (Exception ignore) {
+            /* 文档总数缺省 */
+        }
         List<Map<String, Object>> docs = new ArrayList<>();
         Map<String, Object> clusterDoc = buildClusterDoc(conn, health, stats, lastCounters.get(connId), ts);
+        if (clusterStats != null) {
+            Number docsTotal = numOrNull(leaf(clusterStats, "indices.docs.count"));
+            if (docsTotal != null) {
+                clusterDoc.put("docsTotal", docsTotal.longValue());
+            }
+        }
         IndexBaseline prevIdx = lastIndexCounters.get(connId);
         List<Map<String, Object>> topIndexes = buildTopIndexes(idxStats, prevIdx, ts);
         IndexBaseline newIdxBaseline = nextIndexCounters(idxStats, ts);
@@ -388,6 +410,8 @@ public class ClusterMetricsCollector {
                 + "nodes.*.jvm.gc.collectors.old.collection_time_in_millis,"
                 + "nodes.*.thread_pool.search.active,nodes.*.thread_pool.search.queue,"
                 + "nodes.*.thread_pool.index.active,nodes.*.thread_pool.index.queue,"
+                + "nodes.*.thread_pool.force_merge.active,nodes.*.thread_pool.force_merge.queue,nodes.*.thread_pool.force_merge.rejected,"
+                + "nodes.*.os.mem.used_percent,nodes.*.fs.total.available_in_bytes,nodes.*.process.cpu.percent,"
                 + "nodes.*.transport.rx_size_in_bytes,nodes.*.transport.tx_size_in_bytes");
         return req;
     }
@@ -562,6 +586,29 @@ public class ClusterMetricsCollector {
             if (tpWriteQueue != null) {
                 doc.put("tpWriteQueue", tpWriteQueue);
             }
+            /*  对标阿里云 Force Merge 线程池三件：运行/排队即时值（rejected 累积计数走差分槽 11） */
+            Long tpFmActive = counterOrNull(leaf(node, "thread_pool.force_merge.active"));
+            if (tpFmActive != null) {
+                doc.put("tpForceMergeActive", tpFmActive);
+            }
+            Long tpFmQueue = counterOrNull(leaf(node, "thread_pool.force_merge.queue"));
+            if (tpFmQueue != null) {
+                doc.put("tpForceMergeQueue", tpFmQueue);
+            }
+            /*  对标阿里云「节点内存使用率_总」与「剩余可用存储空间」「CPU 双口径之 ES 业务进程」：
+               OS 侧即时值（字段缺省=版本/平台不支持，静默省略） */
+            Double osMem = numOrNull(leaf(node, "os.mem.used_percent"));
+            if (osMem != null) {
+                doc.put("osMemUsedPct", osMem);
+            }
+            Double fsAvail = numOrNull(leaf(node, "fs.total.available_in_bytes"));
+            if (fsAvail != null) {
+                doc.put("fsAvailMb", Math.round(fsAvail / 1048576.0 * 10.0) / 10.0);
+            }
+            Double esCpu = numOrNull(leaf(node, "process.cpu.percent"));
+            if (esCpu != null) {
+                doc.put("esCpuPct", esCpu);
+            }
             Long docsDeleted = counterOrNull(leaf(node, "indices.docs.deleted"));
             if (docsDeleted != null) {
                 doc.put("docsDeleted", docsDeleted);
@@ -638,6 +685,14 @@ public class ClusterMetricsCollector {
                 if (oldTime != null) {
                     doc.put("gcOldTimeMs", oldTime);
                 }
+                /*  Force Merge 线程池拒绝增量（槽 11 差分，每轮增量次数，与集群级 deltaRejected 同口径；
+                   deltaRejected 二参是 primitive long——cur 缺失先短路，防拆箱 NPE 反噬采集主链路） */
+                Long fmCur = counterOrNull(leaf(node, "thread_pool.force_merge.rejected"));
+                Long fmRejectedDelta = fmCur == null ? null
+                        : deltaRejected(slot(prev, 11), fmCur);
+                if (fmRejectedDelta != null) {
+                    doc.put("tpForceMergeRejected", fmRejectedDelta);
+                }
             }
             docs.add(doc);
         }
@@ -695,7 +750,8 @@ public class ClusterMetricsCollector {
          * nodeName → [young collection_count, old collection_count,
          * disk read_kilobytes, disk write_kilobytes, disk read_operations, disk write_operations,
          * transport rx_size_in_bytes, transport tx_size_in_bytes,
-         * io_time_in_millis, young collection_time_in_millis, old collection_time_in_millis]（ 扩员）；
+         * io_time_in_millis, young collection_time_in_millis, old collection_time_in_millis,
+         * force_merge rejected]（ 扩员）；
          * null=该计数缺失，不参与差分。
          */
         public final Map<String, Long[]> collectors;
@@ -760,7 +816,9 @@ public class ClusterMetricsCollector {
                     /*  槽扩员：io_time_in_millis（IOUtil%）+Young/Old collection_time_in_millis（GC 耗时） */
                     counterOrNull(leaf(node, "fs.io_stats.total.io_time_in_millis")),
                     counterOrNull(leaf(node, "jvm.gc.collectors.young.collection_time_in_millis")),
-                    counterOrNull(leaf(node, "jvm.gc.collectors.old.collection_time_in_millis"))});
+                    counterOrNull(leaf(node, "jvm.gc.collectors.old.collection_time_in_millis")),
+                    /*  槽 11：force_merge rejected 累积计数（tpForceMergeRejected 每轮增量差分基线） */
+                    counterOrNull(leaf(node, "thread_pool.force_merge.rejected"))});
         }
         return new GcBaseline(ts, collectors);
     }
@@ -844,8 +902,12 @@ public class ClusterMetricsCollector {
      * 首轮（无基线）/回退（节点重启计数归零→负值）→ null（省略，宁缺毋假与速率差分同一口径）；
      * 增量 0 是有效信息（无拒绝），照落。
      */
-    static Long deltaRejected(Long previous, long current) {
-        if (previous == null || current < previous.longValue()) {
+    /** 基线槽位越界安全读：短槽位基线（旧构造/新扩槽前）返回 null=不参与差分。 */
+    static Long slot(Long[] prev, int i) {
+        return prev != null && prev.length > i ? prev[i] : null;
+    }
+
+    static Long deltaRejected(Long previous, long current) {        if (previous == null || current < previous.longValue()) {
             return null;
         }
         return Long.valueOf(current - previous.longValue());

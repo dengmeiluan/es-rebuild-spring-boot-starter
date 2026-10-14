@@ -20,7 +20,12 @@ export type MonitorSeriesField =
   | 'ioUtilPct' | 'gcYoungTimeMs' | 'gcOldTimeMs' /* IOUtil%+GC 耗时（差分测点，仅节点下钻图卡；对标阿里云 IOUtil/节点 Young·Old GC 耗时） */
   | 'heapUsedMb' /* 对标阿里云「节点 Old 区使用」锯齿形态：heap_used_in_bytes→MB（仅节点下钻图卡） */
   | 'fielddataMb' /* 对标阿里云 JVM 组「fielddata 内存使用」（查询抖动经典根因，仅节点下钻图卡） */
-  | 'netRxKbS' | 'netTxKbS'; /* 内部传输吞吐（G7，transport 差分，仅节点下钻图卡） */
+  | 'netRxKbS' | 'netTxKbS' /* 内部传输吞吐（G7，transport 差分，仅节点下钻图卡） */
+  | 'docsTotal' /* 可搜索文档总数（_cluster/stats docs.count，cluster doc 专属；对标阿里云索引指标组） */
+  | 'tpForceMergeActive' | 'tpForceMergeQueue' | 'tpForceMergeRejected' /* Force Merge 线程池三件（rejected 差分，仅节点下钻图卡；对标阿里云线程池组） */
+  | 'osMemUsedPct' /* OS 侧内存使用率%（区别于 JVM heap，仅节点下钻图卡；对标阿里云「内存使用率_总」） */
+  | 'fsAvailMb' /* 剩余可用存储 MB（fs.total.available 换算，仅节点下钻图卡；对标阿里云「剩余可用存储空间」） */
+  | 'esCpuPct'; /* ES 业务进程 CPU%（process.cpu.percent，区别于 OS 总 CPU，仅节点下钻图卡；对标阿里云「CPU使用率_ES业务」） */
 
 /**
  * 把采样行按集群分组并抽取指定指标序列。

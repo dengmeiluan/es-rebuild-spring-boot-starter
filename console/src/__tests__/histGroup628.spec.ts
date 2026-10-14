@@ -22,7 +22,7 @@ import type { MonitorSeriesField } from '../utils/monitorSeries';
 const read = (p: string) => readFileSync(join(__dirname, '..', p), 'utf-8');
 const codeOf = (p: string) => read(p).replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/<!--[\s\S]*?-->/g, ' ');
 
-/** 30 个历史图卡字段（与 monitorSeries.MonitorSeriesField union 逐字同集） */
+/** 37 个历史图卡字段（与 monitorSeries.MonitorSeriesField union 逐字同集；896 批 Wave B +7） */
 const ALL_FIELDS: MonitorSeriesField[] = [
   'qps', 'indexRate', 'heapUsedPct', 'cpuPct', 'diskUsedPct',
   'writeRejected', 'searchRejected', 'gcYoungPerMin',
@@ -32,6 +32,8 @@ const ALL_FIELDS: MonitorSeriesField[] = [
   'tpWriteActive', 'tpWriteQueue', 'docsDeleted',
   'ioUtilPct', 'gcYoungTimeMs', 'gcOldTimeMs', 'heapUsedMb', 'fielddataMb',
   'netRxKbS', 'netTxKbS',
+  'docsTotal', 'tpForceMergeActive', 'tpForceMergeQueue', 'tpForceMergeRejected',
+  'osMemUsedPct', 'fsAvailMb', 'esCpuPct',
 ];
 
 const METRIC_KEYS = HIST_GROUPS.filter(g => g.key !== 'overview').map(g => g.key) as HistGroupKey[];
@@ -66,10 +68,10 @@ describe('六百二十八批①：分组单源纯函数（utils/histGroups.ts）
     });
   });
 
-  it('组间为「划分」：各族字段数之和 = 30（无重复无遗漏）', () => {
+  it('组间为「划分」：各族字段数之和 = ALL_FIELDS 长度（无重复无遗漏；896 批 30→37）', () => {
     const total = METRIC_KEYS.reduce(
       (n, k) => n + ALL_FIELDS.filter(f => HIST_GROUP_OF[f] === k).length, 0);
-    expect(total).toBe(30);
+    expect(total).toBe(ALL_FIELDS.length);
   });
 
   it('inHistGroup：overview 恒真（pass-through=零行为变更）；组内真、跨组假', () => {

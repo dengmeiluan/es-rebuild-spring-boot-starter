@@ -331,7 +331,9 @@ public class MonitorMetricsStore {
             "tpWriteActive", "tpWriteQueue", "docsDeleted", "fielddataMb",
             "ioUtilPct", "gcYoungTimeMs", "gcOldTimeMs", "heapUsedMb",
             "primaryShards", "nodesMissing",
-            "snapshotFailed", "snapshotsTotal", "snapshotFailedDelta"};
+            "snapshotFailed", "snapshotsTotal", "snapshotFailedDelta",
+            "docsTotal", "tpForceMergeActive", "tpForceMergeQueue", "tpForceMergeRejected",
+            "osMemUsedPct", "fsAvailMb", "esCpuPct"};
 
     /**
      * 聚合查询体组装（包内可见=测点；变异锚：纯过滤场景产物不含 {@code "must"}）。

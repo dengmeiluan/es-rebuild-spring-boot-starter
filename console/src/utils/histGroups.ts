@@ -47,28 +47,31 @@ export const HIST_GROUPS: HistGroup[] = [
   { key: 'thread', label: '线程池指标', short: '线程池' },
 ];
 
-/** 卡 → 组 的外挂映射。`Record<MonitorSeriesField, …>` 保证编译期 30 项全覆盖（新增指标必须同步分组）。 */
+/** 卡 → 组 的外挂映射。`Record<MonitorSeriesField, …>` 保证编译期全覆盖（新增指标必须同步分组）。 */
 export const HIST_GROUP_OF: Record<MonitorSeriesField, HistMetricGroupKey> = {
   /* 集群指标（6）：吞吐/耗时/分片骨架 */
   qps: 'cluster', indexRate: 'cluster',
   searchLatencyMs: 'cluster', indexingLatencyMs: 'cluster',
   shards: 'cluster', primaryShards: 'cluster',
-  /* 索引指标（2）：索引数量 + 被标记删除文档 */
-  indices: 'index', docsDeleted: 'index',
-  /* 节点资源（4）：利用率 + load */
+  /* 索引指标（3）：索引数量 + 被标记删除文档 + 可搜索文档总数 */
+  indices: 'index', docsDeleted: 'index', docsTotal: 'index',
+  /* 节点资源（6）：利用率 + load + OS 内存 + ES 业务 CPU */
   heapUsedPct: 'node-res', cpuPct: 'node-res', diskUsedPct: 'node-res', load1m: 'node-res',
+  osMemUsedPct: 'node-res', esCpuPct: 'node-res',
   /* 节点网络（2） */
   netRxKbS: 'node-net', netTxKbS: 'node-net',
-  /* 节点磁盘（5）：带宽 ×2 + IOPS ×2 + IOUtil */
+  /* 节点磁盘（6）：带宽 ×2 + IOPS ×2 + IOUtil + 剩余可用存储 */
   diskReadKbS: 'node-disk', diskWriteKbS: 'node-disk',
   diskReadIops: 'node-disk', diskWriteIops: 'node-disk', ioUtilPct: 'node-disk',
+  fsAvailMb: 'node-disk',
   /* 节点 JVM（5）：GC 频次/耗时 ×3 + Heap 用量 + fielddata */
   gcYoungPerMin: 'node-jvm', gcYoungTimeMs: 'node-jvm', gcOldTimeMs: 'node-jvm',
   heapUsedMb: 'node-jvm', fielddataMb: 'node-jvm',
-  /* 线程池（6）：拒绝 ×2 + 搜索/写入 活跃·排队 ×4 */
+  /* 线程池（9）：拒绝 ×2 + 搜索/写入/force_merge 活跃·排队·拒绝 */
   writeRejected: 'thread', searchRejected: 'thread',
   tpSearchActive: 'thread', tpSearchQueue: 'thread',
   tpWriteActive: 'thread', tpWriteQueue: 'thread',
+  tpForceMergeActive: 'thread', tpForceMergeQueue: 'thread', tpForceMergeRejected: 'thread',
 };
 
 /** 该指标是否属于当前分组。`overview` 恒真（pass-through = 零行为变更的默认档）。 */

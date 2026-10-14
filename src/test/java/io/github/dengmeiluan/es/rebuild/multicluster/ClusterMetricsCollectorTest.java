@@ -1053,5 +1053,87 @@ public class ClusterMetricsCollectorTest {
         assertNull("计数回退省略", ClusterMetricsCollector.msPerOp(1250L, 0L, 50L, 100L));
         assertNull("零次查询省略", ClusterMetricsCollector.msPerOp(1250L, 0L, 0L, 100L));
     }
+
+    /* ═══ 896 批：force_merge 线程池三件 / OS 内存 / 剩余存储 / ES 业务 CPU / 集群可搜索文档总数 ═══ */
+
+    /** Wave B 罐头：n1 带 force_merge(active=1,queue=2,rejected=7)、os 内存 71.5%、剩余存储 50GiB、ES 业务 CPU 12.5%。 */
+    private static final String STATS_WAVEB_JSON = "{\"nodes\":{\"n1\":{\"name\":\"node-1\","
+            + "\"thread_pool\":{\"force_merge\":{\"active\":1,\"queue\":2,\"rejected\":7}},"
+            + "\"os\":{\"mem\":{\"used_percent\":71.5},\"cpu\":{\"percent\":3}},"
+            + "\"process\":{\"cpu\":{\"percent\":12.5}},"
+            + "\"fs\":{\"total\":{\"total_in_bytes\":252000000000,\"free_in_bytes\":49000000000,"
+            + "\"available_in_bytes\":53687091200}}}}}";
+
+    @org.junit.Test
+    public void buildNodeDocs_waveB_即时值直读_首轮无差分() throws Exception {
+        List<Map<String, Object>> docs = ClusterMetricsCollector.buildNodeDocs(
+                Collections.singletonMap("connName", "QA"), json(STATS_WAVEB_JSON), 5000L, null);
+        assertEquals(1, docs.size());
+        Map<String, Object> doc = docs.get(0);
+        assertEquals("force_merge 运行即时值", 1L, doc.get("tpForceMergeActive"));
+        assertEquals("force_merge 排队即时值", 2L, doc.get("tpForceMergeQueue"));
+        assertEquals("OS 内存使用率", 71.5, (Double) doc.get("osMemUsedPct"), 0.0001);
+        assertEquals("剩余可用存储 MB", 51200.0, (Double) doc.get("fsAvailMb"), 0.0001);
+        assertEquals("ES 业务进程 CPU%", 12.5, (Double) doc.get("esCpuPct"), 0.0001);
+        assertFalse("首轮无基线 → rejected 差分缺省", doc.containsKey("tpForceMergeRejected"));
+    }
+
+    @org.junit.Test
+    public void tpForceMergeRejected_差分两轮() throws Exception {
+        ClusterMetricsCollector.GcBaseline prev = ClusterMetricsCollector.nextGcBaseline(
+                json(STATS_WAVEB_JSON), 5000L);
+        List<Map<String, Object>> docs = ClusterMetricsCollector.buildNodeDocs(
+                Collections.singletonMap("connName", "QA"),
+                json("{\"nodes\":{\"n1\":{\"name\":\"node-1\","
+                        + "\"thread_pool\":{\"force_merge\":{\"active\":0,\"queue\":0,\"rejected\":9}}}}}"),
+                11000L, prev);
+        Map<String, Object> doc = docs.get(0);
+        assertEquals("rejected 9-7=每轮增量 2", 2L, doc.get("tpForceMergeRejected"));
+        assertFalse("active/queue 归零也如实落即时值", doc.get("tpForceMergeActive") == null);
+    }
+
+    @org.junit.Test
+    public void collectOnce_waveB_docsTotal落档() throws Exception {
+        List<String> posts = new CopyOnWriteArrayList<>();
+        List<String> bodies = new CopyOnWriteArrayList<>();
+        RestHighLevelClient target = EsFakeClients.scripted(req -> {
+            if (req.getEndpoint().contains("_cluster/health")) {
+                return HEALTH_SINGLE_JSON;
+            }
+            if (req.getEndpoint().contains("_nodes/stats")) {
+                return STATS_WAVEB_JSON;
+            }
+            if (req.getEndpoint().contains("_cluster/stats")) {
+                return "{\"indices\":{\"docs\":{\"count\":123456}}}";
+            }
+            throw EsFakeClients.responseException(400, "{}");
+        });
+        RestHighLevelClient control = EsFakeClients.scripted(req -> {
+            if ("PUT".equals(req.getMethod())) {
+                return "{\"acknowledged\":true}";
+            }
+            if ("POST".equals(req.getMethod())) {
+                posts.add(req.getEndpoint());
+                bodies.add(req.getEntity() == null ? ""
+                        : org.apache.http.util.EntityUtils.toString(req.getEntity()));
+                return "{\"result\":\"created\"}";
+            }
+            throw EsFakeClients.responseException(400, "{}");
+        });
+        ClusterMetricsCollector collector = new ClusterMetricsCollector(
+                connStoreOf(Collections.singletonList(conn("c1", "腾讯云QA", "QA"))),
+                connId -> target, () -> control, "es_console_monitor", 60);
+        collector.collectOnce();
+        boolean clusterDocHasDocsTotal = false;
+        for (String body : bodies) {
+            for (String line : body.split("\n")) {
+                if (line.contains("\"scope\":\"cluster\"") && line.contains("\"docsTotal\":123456")) {
+                    clusterDocHasDocsTotal = true;
+                }
+            }
+        }
+        assertTrue("cluster doc 落可搜索文档总数", clusterDocHasDocsTotal);
+        assertFalse("无 POST 视为失败批次", posts.isEmpty());
+    }
 }
 

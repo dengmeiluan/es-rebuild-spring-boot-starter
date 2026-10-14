@@ -478,6 +478,15 @@
                 <button type="button" :class="{ on: topView === 'table' }" :aria-pressed="topView === 'table'" @click="topView = 'table'">表格</button>
               </span>
             </div>
+            <!-- 指标切换 seg（写入/查询双支同源会话序列，895 对标阿里云 index bulk 写入 tps/index 查询 qps 双卡） -->
+            <div v-if="topView === 'curve'" class="ld-top-metric">
+              <span class="seg ld-seg" role="group" aria-label="Top 曲线指标">
+                <span class="seg-thumb" :style="segPillStyle(2, topMetric === 'idx' ? 0 : 1)" aria-hidden="true" />
+                <button type="button" :class="{ on: topMetric === 'idx' }" :aria-pressed="topMetric === 'idx'" @click="topMetric = 'idx'">写入速率</button>
+                <button type="button" :class="{ on: topMetric === 'qps' }" :aria-pressed="topMetric === 'qps'" @click="topMetric = 'qps'">查询 QPS</button>
+              </span>
+              <span class="ld-top-metric-unit mono">{{ topMetric === 'idx' ? 'doc/秒' : '次/秒' }}</span>
+            </div>
             <div v-if="topView === 'curve'" ref="topPlotEl" class="ld-cmp-plot ld-top-plot" @mousemove="onTopMove($event)" @mouseleave="onTopLeave()">
               <template v-if="topHasData">
                 <svg :viewBox="'0 0 720 ' + CMP_H" class="ld-ncmp-svg" preserveAspectRatio="none" aria-hidden="true">
@@ -502,12 +511,28 @@
               </template>
               <div v-else class="ld-svg-wait">采样中，打开面板起逐拍累积（实时曲线不回溯历史）…</div>
             </div>
-            <!-- 件1：常显图例（色点+索引名+当前速率；曲线颜色↔索引映射不再仅 hover 可见） -->
+            <!-- 件1：常显图例（色点+索引名+当前值；曲线颜色↔索引映射不再仅 hover 可见） -->
             <div v-if="topView === 'curve' && topHasData" class="ld-top-legend" aria-label="Top 索引曲线图例">
-              <span v-for="s in topCurves" :key="'lg' + s.key" class="ld-top-lg" :title="s.name + '（' + s.cluster + '）当前写入速率'">
+              <span v-for="s in topCurves" :key="'lg' + s.key" class="ld-top-lg" :title="s.name + '（' + s.cluster + '）当前' + (topMetric === 'idx' ? '写入速率' : '查询 QPS')">
                 <i :style="{ background: s.color }" /><b>{{ s.name }}</b><em>{{ fmtNum(s.cur) }}</em>
               </span>
             </div>
+            <!-- 逐序列窗内统计表（阿里云 min/max/avg/current 同形态）：按当前指标当前值降序 -->
+            <table v-if="topView === 'curve' && topStatRows.length" class="tbl zebra ld-top-stats">
+              <thead>
+                <tr><th>索引</th><th>集群</th><th>最小</th><th>最大</th><th>均值</th><th>当前</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="r in topStatRows" :key="'st' + r.key">
+                  <td class="mono" :title="r.name">{{ r.name }}</td>
+                  <td>{{ r.cluster }}</td>
+                  <td class="mono num">{{ fmtNum(r.min) }}</td>
+                  <td class="mono num">{{ fmtNum(r.max) }}</td>
+                  <td class="mono num">{{ fmtNum(r.avg) }}</td>
+                  <td class="mono num"><b>{{ fmtNum(r.cur) }}</b></td>
+                </tr>
+              </tbody>
+            </table>
             <table v-if="topView === 'table'" class="tbl zebra ld-hist-hist-t">
               <thead>
                 <tr><th>集群</th><th>索引</th><th>查询 QPS</th><th>写入速率(doc/秒)</th><th>存储(MB)</th></tr>
@@ -1145,14 +1170,33 @@ const alertHistRows = computed(() => srvAlerts.value
  行内索引名可点下钻（ 闭环保留）。 */
 const topRows = ref<any[]>([]);
 const topView = usePref<'curve' | 'table'>('ld.topView', 'curve');
-const topIdxSeries = ref<Record<string, number[]>>({});
+/* 895/896：双指标会话序列（写入 idxRate + 查询 qps 同源累积，快照字段本就双份）——
+ topMetric 切换曲线读哪支，统计表随指标换算（对标阿里云 index bulk 写入 tps/index 查询 qps 双卡） */
+const topMetric = usePref<'idx' | 'qps'>('ld.topMetric', 'idx');
+const topIndexSeries = ref<Record<string, { idx: number[]; qps: number[] }>>({});
 const topTsArr = ref<number[]>([]);
-/* 当前曲线集=最新快照 Top8（按写入速率排序，与表格同序）映射到会话累积序列；色按排序位锚定 */
-const topCurves = computed(() => topRows.value
-  .slice()
-  .sort((a: any, b: any) => (Number(b?.idxRate) || 0) - (Number(a?.idxRate) || 0))
-  .slice(0, 8)
-  .map((t: any, i: number) => ({ key: t.cluster + '|' + t.index, name: t.index, cluster: t.cluster, connId: t.connId, cur: Number(t.idxRate) || 0, color: CMP_PALETTE[i % CMP_PALETTE.length], data: topIdxSeries.value[t.cluster + '|' + t.index] || [] })));
+/* 当前曲线集=最新快照 Top8（按当前指标排序，与统计表同序）映射到会话累积序列；色按排序位锚定 */
+const topCurves = computed(() => {
+  const metric = topMetric.value;
+  return topRows.value
+    .slice()
+    .sort((a: any, b: any) => (Number(b?.[metric]) || 0) - (Number(a?.[metric]) || 0))
+    .slice(0, 8)
+    .map((t: any, i: number) => {
+      const k = t.cluster + '|' + t.index;
+      const rec = topIndexSeries.value[k] || { idx: [], qps: [] };
+      return { key: k, name: t.index, cluster: t.cluster, connId: t.connId, cur: Number(t[metric]) || 0, color: CMP_PALETTE[i % CMP_PALETTE.length], data: metric === 'idx' ? rec.idx : rec.qps };
+    });
+});
+/* 逐序列窗内统计（阿里云 min/max/avg/current 表同形态）：按当前指标值降序 */
+const topStatRows = computed(() => topCurves.value
+  .filter(s => s.data.length)
+  .map(s => {
+    const vals = s.data;
+    const sum = vals.reduce((a, b) => a + b, 0);
+    return { key: s.key, name: s.name, cluster: s.cluster, min: Math.min(...vals), max: Math.max(...vals), avg: sum / vals.length, cur: s.cur };
+  })
+  .sort((a, b) => b.cur - a.cur));
 const topHasData = computed(() => topCurves.value.some(s => s.data.length > 1));
 /* 悬浮读出（sparkHoverAt 同源，abs 档） */
 const topHit = ref<SparkHoverHit | null>(null);
@@ -1260,19 +1304,21 @@ async function loadTop() {
       const seen = new Set<string>();
       topRows.value = topRows.value.filter(t => (seen.has(t.index) ? false : (seen.add(t.index), true)));
     }
-    /* 件2 会话累积：本拍所有在榜索引推序列（掉榜索引保留已积序列=曲线连续不断头） */
+    /* 件2 会话累积：本拍所有在榜索引推序列（掉榜索引保留已积序列=曲线连续不断头）；
+     写入/查询双支同源累积（topMetric 只决定读哪支） */
     const now = Date.now();
     topTsArr.value.push(now);
     for (const t of topRows.value) {
       const k = t.cluster + '|' + t.index;
-      const arr = topIdxSeries.value[k] || (topIdxSeries.value[k] = []);
-      arr.push(Number(t.idxRate) || 0);
+      const rec = topIndexSeries.value[k] || (topIndexSeries.value[k] = { idx: [], qps: [] });
+      rec.idx.push(Number(t.idxRate) || 0);
+      rec.qps.push(Number(t.qps) || 0);
     }
     const cap = Number(windowPts.value) || 60;
     if (topTsArr.value.length > cap) topTsArr.value.splice(0, topTsArr.value.length - cap);
-    for (const k of Object.keys(topIdxSeries.value)) {
-      const arr = topIdxSeries.value[k];
-      if (arr.length > cap) arr.splice(0, arr.length - cap);
+    for (const rec of Object.values(topIndexSeries.value)) {
+      if (rec.idx.length > cap) rec.idx.splice(0, rec.idx.length - cap);
+      if (rec.qps.length > cap) rec.qps.splice(0, rec.qps.length - cap);
     }
   } catch { if (seq === topSeq) topRows.value = []; }
 }
@@ -1394,7 +1440,7 @@ watch(nodeMode, (nm) => { if (nm && detailTab.value === 'top') detailTab.value =
  每拍快照落 topRows 同时累积 per-index 序列（窗长钳制 windowPts） */
 watch(() => sampleTs.value.length, () => { if (detailShows('top') && !nodeMode.value) void loadTop(); });
 watch([windowPts, () => clusterFilter.value, () => nodeMode.value], () => {
-  if (nodeMode.value) { topIdxSeries.value = {}; topTsArr.value = []; }
+  if (nodeMode.value) { topIndexSeries.value = {}; topTsArr.value = []; }
   if (detailShows('top')) void loadTop();
 });
 const MH_RANGE_MS: Record<string, number> = { '1h': 3.6e6, '6h': 2.16e7, '24h': 8.64e7, '3d': 2.592e8, '7d': 6.048e8, '14d': 1.2096e9 };
@@ -1465,18 +1511,30 @@ const HIST_CHARTS: { field: MonitorSeriesField; label: string; unit: string; onl
   { field: 'primaryShards', label: '主分片数', unit: '', onlyClusterMode: true },
   /* 对标阿里云集群级「索引数量」：cluster doc 既有键（AGG_METRIC_FIELDS 同在），此前未画卡 */
   { field: 'indices', label: '索引数量', unit: '', onlyClusterMode: true },
+  /* 可搜索文档总数（_cluster/stats docs.count，896 批 Wave B；对标阿里云索引指标组） */
+  { field: 'docsTotal', label: '可搜索文档总数', unit: '', onlyClusterMode: true },
   /* 对标阿里云线程池 Rows（写入侧）+被标记删除文档：force_merge 需求判定信号（docsDeleted 持续走高=该 merge 了） */
   { field: 'tpWriteActive', label: '写入线程池活跃', unit: '', onlyNodeMode: true },
   { field: 'tpWriteQueue', label: '写入线程池排队', unit: '', onlyNodeMode: true },
+  /* 对标阿里云 Force Merge 线程池三件（896 批 Wave B）：merge 风暴/拒绝前兆观测 */
+  { field: 'tpForceMergeActive', label: 'Force Merge 运行', unit: '', onlyNodeMode: true },
+  { field: 'tpForceMergeQueue', label: 'Force Merge 排队', unit: '', onlyNodeMode: true },
+  { field: 'tpForceMergeRejected', label: 'Force Merge 拒绝', unit: '', onlyNodeMode: true },
   { field: 'docsDeleted', label: '被标记删除文档', unit: '', onlyNodeMode: true },
   /* 对标阿里云 IOUtil(%) 与「节点 Young/Old GC 耗时(ms)」：差分测点三卡 */
   { field: 'ioUtilPct', label: 'IOUtil', unit: '%', onlyNodeMode: true },
   { field: 'gcYoungTimeMs', label: 'Young GC 耗时', unit: 'ms', onlyNodeMode: true },
   { field: 'gcOldTimeMs', label: 'Old GC 耗时', unit: 'ms', onlyNodeMode: true },
+  /* Old GC 频次（gcOldPerMin 字段既有未画卡；G1 旧代采集器≈FullGC 口径，对标阿里云 FullGc 次数） */
+  { field: 'gcOldPerMin', label: 'Old GC 频次', unit: '', onlyNodeMode: true },
   /* 对标阿里云 JVM 组「Old 区使用」锯齿形态：堆字节量 MB 直读 GC 回收幅度 */
   { field: 'heapUsedMb', label: 'Heap 使用（MB）', unit: 'MB', onlyNodeMode: true },
   /* 对标阿里云 JVM 组「fielddata 内存使用」：查询抖动经典根因观测 */
   { field: 'fielddataMb', label: 'fielddata 内存', unit: 'MB', onlyNodeMode: true },
+  /* 896 批 Wave B：OS 侧内存%（区别 JVM heap）/ ES 业务进程 CPU%（区别 OS 总 CPU）/ 剩余可用存储 */
+  { field: 'osMemUsedPct', label: '内存使用率（OS）', unit: '%', onlyNodeMode: true },
+  { field: 'esCpuPct', label: 'CPU 使用率（ES 业务）', unit: '%', onlyNodeMode: true },
+  { field: 'fsAvailMb', label: '剩余可用存储', unit: 'MB', onlyNodeMode: true },
 ];
 
 let histSeq = 0;
@@ -1749,6 +1807,14 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 .ld-grid { stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; opacity: .75; }
 .ld-xt { position: absolute; bottom: 2px; transform: translateX(-50%); font-size: var(--fs-2xs); color: var(--tx2); font-family: var(--mono); pointer-events: none; }
 .ld-top-legend { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-4); margin: var(--sp-1) 2px var(--sp-2); }
+/* 指标切换行（写入/查询 seg + 单位标注）：曲线区上方一行 */
+.ld-top-metric { display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-1) 2px; }
+.ld-top-metric-unit { font-size: var(--fs-2xs); color: var(--tx2); }
+/* 逐序列窗内统计表（阿里云 min/max/avg/current 同形态）：紧凑行距，数值右对齐 */
+.ld-top-stats { margin: var(--sp-1) 2px var(--sp-2); font-size: var(--fs-2xs); }
+.ld-top-stats th, .ld-top-stats td { padding: var(--sp-0) var(--sp-1); white-space: nowrap; }
+.ld-top-stats td:first-child { max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
+.ld-top-stats .num { text-align: right; font-variant-numeric: tabular-nums; }
 /* 件1：Top 图例升胶囊 chip 族（与 ld-cmp-lg/hc-chip 同语言——border+r-s+圆点 50%+hover；
  802 旧代裸列表〔方色点/min-width 178〕退役；dot/name/cur 三件结构保留=802 A4 锁兼容）。
  批内勘正：旧代 em 残留规则退役（单规则=cmp 同字面 tx0/600/tabular）+非点击 span 摘

@@ -347,6 +347,16 @@ export interface MonitorMetricsRecord {
   netRxKbS?: number; netTxKbS?: number;
   /** 快照状态：SLM 累计执行/失败数 + 新增失败（首轮/回退省略，0 照落；集群 doc 专属） */
   snapshotFailed?: number; snapshotsTotal?: number; snapshotFailedDelta?: number;
+  /** 集群可搜索文档总数（_cluster/stats docs.count，cluster doc 专属） */
+  docsTotal?: number;
+  /** Force Merge 线程池：运行/排队即时值 + 每轮拒绝增量（node doc 专属；rejected 首轮/回退省略） */
+  tpForceMergeActive?: number; tpForceMergeQueue?: number; tpForceMergeRejected?: number;
+  /** OS 侧内存使用率%（os.mem.used_percent，区别于 JVM heap；node doc 专属） */
+  osMemUsedPct?: number;
+  /** 节点剩余可用存储 MB（fs.total.available_in_bytes 换算；node doc 专属） */
+  fsAvailMb?: number;
+  /** ES 业务进程 CPU%（process.cpu.percent，区别于 OS 总 CPU；node doc 专属） */
+  esCpuPct?: number;
 }
 /* R7 服务端告警读侧（GET /monitor-alerts，timestamp 降序；recovered:true=恢复事件——
  * 活跃集由 utils/monitorSeries 的 activeAlerts 单源推导，此处只描述单条形态） */
