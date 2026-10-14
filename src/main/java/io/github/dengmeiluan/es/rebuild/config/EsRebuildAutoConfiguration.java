@@ -1061,6 +1061,16 @@ public class EsRebuildAutoConfiguration {
     }
 
         @Bean
+        @ConditionalOnMissingBean
+        @ConditionalOnProperty(prefix = "es.rebuild.console.auth", name = "enabled", matchIfMissing = true)
+        public EnvPagesResolver envPagesResolver(ConnStore connStore, EsRebuildProperties properties) {
+            // 类上的 @Component 在真实运行环境不参与装配（starter 组件一律走显式 @Bean，宿主/独立
+            // 部署都不扫本包路径）——权限自查端点的装配条件锚定本类型，此 @Bean 即其唯一
+            // 容器注册来源；拦截器与端点必须共用同一实例，不得各自 new
+            return new EnvPagesResolver(connStore, properties);
+        }
+
+        @Bean
         @ConditionalOnMissingBean(EsConsoleAuthorizer.class)
         @ConditionalOnProperty(prefix = "es.rebuild.console.auth", name = "enabled", matchIfMissing = true)
         public BuiltinConsoleAuthService builtinConsoleAuthService(ControlClusterResolver controlClusterResolver,
@@ -1117,7 +1127,8 @@ public class EsRebuildAutoConfiguration {
                 EsConsoleAuthorizer esConsoleAuthorizer, ConsoleOpsAuditStore consoleOpsAuditStore,
                 ControlClusterResolver controlClusterResolver, ConnStore connStore,
                 ObjectProvider<ConsoleAuthDelegate> delegateProvider,
-                ConsolePageCatalog consolePageCatalog, EsRebuildProperties properties) {
+                ConsolePageCatalog consolePageCatalog, EnvPagesResolver envPagesResolver,
+                EsRebuildProperties properties) {
             // 宿主注册 ConsoleAuthDelegate 则组合之——委托先行（iframe 嵌入带宿主凭证）、内置兜底（独立开页登录）
             ConsoleAuthDelegate delegate = delegateProvider.getIfAvailable();
             EsConsoleAuthorizer effective = delegate == null ? esConsoleAuthorizer
@@ -1129,7 +1140,6 @@ public class EsRebuildAutoConfiguration {
                 logger.warn("控制台页面级授权已关闭（es.rebuild.console.page-auth.enabled=false），"
                         + "回退纯角色档拦截；宿主下发的 grantedPages 将被忽略");
             }
-            EnvPagesResolver envPagesResolver = new EnvPagesResolver(connStore, properties);
             ConsoleAuthInterceptor interceptor = new ConsoleAuthInterceptor(effective, consoleOpsAuditStore,
                     controlClusterResolver, consolePageCatalog, pageAuthEnabled, envPagesResolver, connStore);
             return new org.springframework.web.servlet.config.annotation.WebMvcConfigurer() {

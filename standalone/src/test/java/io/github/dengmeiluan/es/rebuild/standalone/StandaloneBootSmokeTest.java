@@ -63,6 +63,11 @@ class StandaloneBootSmokeTest {
                 rest.getForEntity("http://localhost:" + port + "/internal/es/index/auth/me", String.class);
         assertNotEquals(404, auth.getStatusCodeValue(), "auth route must be mapped");
 
+        // 3b) 权限自查端点装配在位（404=装配缺失；未登录 401 才是预期拒绝形态）
+        ResponseEntity<String> perms =
+                rest.getForEntity("http://localhost:" + port + "/internal/es/index/auth/permissions", String.class);
+        assertNotEquals(404, perms.getStatusCodeValue(), "permissions endpoint must be wired");
+
         // 4) 首启体验契约：未绑定控制集群时登录必须优雅 409 引导先 Setup（不是异常栈/500）
         ResponseEntity<String> login = rest.postForEntity(
                 "http://localhost:" + port + "/internal/es/index/auth/login",
