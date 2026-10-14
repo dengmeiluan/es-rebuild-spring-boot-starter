@@ -10,7 +10,7 @@ export interface NamedSeries { name: string; points: SeriesPoint[] }
 export type MonitorSeriesField =
   | 'qps' | 'indexRate' | 'heapUsedPct' | 'cpuPct' | 'diskUsedPct'
   | 'writeRejected' | 'searchRejected'
-  | 'gcYoungPerMin' /* R8 GC 差分（仅节点下钻图卡） */
+  | 'gcYoungPerMin' | 'gcOldPerMin' /* R8 GC 差分（仅节点下钻图卡；Old GC≈FullGC 口径） */
   | 'searchLatencyMs' | 'indexingLatencyMs' /* R9 慢查询代理指标 */
   | 'load1m' | 'diskReadKbS' | 'diskWriteKbS' | 'diskReadIops' | 'diskWriteIops'
   | 'tpSearchActive' | 'tpSearchQueue' /* 节点深耕（仅节点下钻图卡） */

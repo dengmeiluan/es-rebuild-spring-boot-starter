@@ -40,7 +40,7 @@ describe('六百三十二批①：时长/缓动令牌（theme.css，零 @media /
 describe('六百三十二批②：seg 滑动指示器（LiveDashboardView 两处 seg）', () => {
   it('滑块元素 + 等宽钮 + .on 自持背景退役（pill 接管）', () => {
     const pills = VIEW.match(/class="seg-thumb"/g) ?? [];
-    expect(pills.length, '三处 seg 各一枚滑块（800 同步更新：+监控明细 ld-detail-seg）').toBe(3);
+    expect(pills.length, '四处 seg 各一枚滑块（800 +监控明细 ld-detail-seg；896 +Top 指标切换 seg 同构）').toBe(4);
     expect(VIEW, '滑块 aria-hidden').toMatch(/class="seg-thumb"[^>]*aria-hidden="true"/);
     expect(VIEW, '滑块 style 由 segPillStyle 驱动').toMatch(/seg-thumb" :style="segPillStyle\(/);
     expect(VIEW, '等宽钮修饰').toMatch(/\.ld-seg button \{ position: relative; z-index: 1; flex: 1 1 0;/);

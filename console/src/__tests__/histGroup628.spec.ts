@@ -33,7 +33,7 @@ const ALL_FIELDS: MonitorSeriesField[] = [
   'ioUtilPct', 'gcYoungTimeMs', 'gcOldTimeMs', 'heapUsedMb', 'fielddataMb',
   'netRxKbS', 'netTxKbS',
   'docsTotal', 'tpForceMergeActive', 'tpForceMergeQueue', 'tpForceMergeRejected',
-  'osMemUsedPct', 'fsAvailMb', 'esCpuPct',
+  'osMemUsedPct', 'fsAvailMb', 'esCpuPct', 'gcOldPerMin',
 ];
 
 const METRIC_KEYS = HIST_GROUPS.filter(g => g.key !== 'overview').map(g => g.key) as HistGroupKey[];

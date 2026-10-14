@@ -1511,12 +1511,12 @@ const HIST_CHARTS: { field: MonitorSeriesField; label: string; unit: string; onl
   { field: 'primaryShards', label: '主分片数', unit: '', onlyClusterMode: true },
   /* 对标阿里云集群级「索引数量」：cluster doc 既有键（AGG_METRIC_FIELDS 同在），此前未画卡 */
   { field: 'indices', label: '索引数量', unit: '', onlyClusterMode: true },
-  /* 可搜索文档总数（_cluster/stats docs.count，896 批 Wave B；对标阿里云索引指标组） */
+  /* 可搜索文档总数（_cluster/stats docs.count，Wave B；对标阿里云索引指标组） */
   { field: 'docsTotal', label: '可搜索文档总数', unit: '', onlyClusterMode: true },
   /* 对标阿里云线程池 Rows（写入侧）+被标记删除文档：force_merge 需求判定信号（docsDeleted 持续走高=该 merge 了） */
   { field: 'tpWriteActive', label: '写入线程池活跃', unit: '', onlyNodeMode: true },
   { field: 'tpWriteQueue', label: '写入线程池排队', unit: '', onlyNodeMode: true },
-  /* 对标阿里云 Force Merge 线程池三件（896 批 Wave B）：merge 风暴/拒绝前兆观测 */
+  /* 对标阿里云 Force Merge 线程池三件（Wave B）：merge 风暴/拒绝前兆观测 */
   { field: 'tpForceMergeActive', label: 'Force Merge 运行', unit: '', onlyNodeMode: true },
   { field: 'tpForceMergeQueue', label: 'Force Merge 排队', unit: '', onlyNodeMode: true },
   { field: 'tpForceMergeRejected', label: 'Force Merge 拒绝', unit: '', onlyNodeMode: true },
@@ -1531,7 +1531,7 @@ const HIST_CHARTS: { field: MonitorSeriesField; label: string; unit: string; onl
   { field: 'heapUsedMb', label: 'Heap 使用（MB）', unit: 'MB', onlyNodeMode: true },
   /* 对标阿里云 JVM 组「fielddata 内存使用」：查询抖动经典根因观测 */
   { field: 'fielddataMb', label: 'fielddata 内存', unit: 'MB', onlyNodeMode: true },
-  /* 896 批 Wave B：OS 侧内存%（区别 JVM heap）/ ES 业务进程 CPU%（区别 OS 总 CPU）/ 剩余可用存储 */
+  /* Wave B：OS 侧内存%（区别 JVM heap）/ ES 业务进程 CPU%（区别 OS 总 CPU）/ 剩余可用存储 */
   { field: 'osMemUsedPct', label: '内存使用率（OS）', unit: '%', onlyNodeMode: true },
   { field: 'esCpuPct', label: 'CPU 使用率（ES 业务）', unit: '%', onlyNodeMode: true },
   { field: 'fsAvailMb', label: '剩余可用存储', unit: 'MB', onlyNodeMode: true },

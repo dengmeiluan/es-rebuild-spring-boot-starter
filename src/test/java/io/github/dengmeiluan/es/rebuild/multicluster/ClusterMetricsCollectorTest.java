@@ -1054,7 +1054,7 @@ public class ClusterMetricsCollectorTest {
         assertNull("零次查询省略", ClusterMetricsCollector.msPerOp(1250L, 0L, 0L, 100L));
     }
 
-    /* ═══ 896 批：force_merge 线程池三件 / OS 内存 / 剩余存储 / ES 业务 CPU / 集群可搜索文档总数 ═══ */
+    /* ═══ force_merge 线程池三件 / OS 内存 / 剩余存储 / ES 业务 CPU / 集群可搜索文档总数 ═══ */
 
     /** Wave B 罐头：n1 带 force_merge(active=1,queue=2,rejected=7)、os 内存 71.5%、剩余存储 50GiB、ES 业务 CPU 12.5%。 */
     private static final String STATS_WAVEB_JSON = "{\"nodes\":{\"n1\":{\"name\":\"node-1\","

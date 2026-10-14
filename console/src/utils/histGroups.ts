@@ -65,7 +65,7 @@ export const HIST_GROUP_OF: Record<MonitorSeriesField, HistMetricGroupKey> = {
   diskReadIops: 'node-disk', diskWriteIops: 'node-disk', ioUtilPct: 'node-disk',
   fsAvailMb: 'node-disk',
   /* 节点 JVM（5）：GC 频次/耗时 ×3 + Heap 用量 + fielddata */
-  gcYoungPerMin: 'node-jvm', gcYoungTimeMs: 'node-jvm', gcOldTimeMs: 'node-jvm',
+  gcYoungPerMin: 'node-jvm', gcOldPerMin: 'node-jvm', gcYoungTimeMs: 'node-jvm', gcOldTimeMs: 'node-jvm',
   heapUsedMb: 'node-jvm', fielddataMb: 'node-jvm',
   /* 线程池（9）：拒绝 ×2 + 搜索/写入/force_merge 活跃·排队·拒绝 */
   writeRejected: 'thread', searchRejected: 'thread',
