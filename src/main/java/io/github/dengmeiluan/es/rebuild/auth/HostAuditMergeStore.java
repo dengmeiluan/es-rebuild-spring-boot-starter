@@ -87,7 +87,7 @@ public class HostAuditMergeStore implements ConsoleOpsAuditStore {
             } catch (Exception e) {
                 /* 宿主贡献者故障：WARN 一次性留痕 + 本次起降级为仅控制台记录（红线：不反噬） */
                 contributorBroken = true;
-                LOG.warn("[es-console-audit] 宿主审计贡献者查询失败（首次，此后降级不再尝试）：{}", e.getMessage());
+                LOG.warn("[es-console-audit] 宿主审计贡献者查询失败（首次，此后降级不再尝试）：{}", e.getMessage(), e);
             }
         }
         merged.sort((a, b) -> {

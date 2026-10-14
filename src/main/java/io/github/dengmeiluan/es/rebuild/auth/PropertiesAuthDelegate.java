@@ -185,7 +185,7 @@ public class PropertiesAuthDelegate implements ConsoleAuthDelegate {
             long last = lastEndpointWarnAt.get();
             if (now - last > WARN_THROTTLE_MS && lastEndpointWarnAt.compareAndSet(last, now)) {
                 LOG.warn("[PropertiesAuthDelegate] endpoint 校验接口异常（交回内置鉴权，{}s 内不再重复告警）: {}",
-                        WARN_THROTTLE_MS / 1000, e.getMessage());
+                        WARN_THROTTLE_MS / 1000, e.getMessage(), e);
             }
             return null;
         }

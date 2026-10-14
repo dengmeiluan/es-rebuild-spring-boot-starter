@@ -243,7 +243,7 @@ public class ClusterConnSyncEngine {
             raw = contributor.contribute();
         } catch (Exception e) {
             contributorBroken = true;
-            LOG.warn("[ConnSync] ClusterConnContributor.contribute() 抛错,本进程永久降级: {}", e.getMessage());
+            LOG.warn("[ConnSync] ClusterConnContributor.contribute() 抛错,本进程永久降级: {}", e.getMessage(), e);
             rep.contributorBroken(true).note("contribute() 抛错: " + e.getMessage());
             return finish(rep, start);
         }

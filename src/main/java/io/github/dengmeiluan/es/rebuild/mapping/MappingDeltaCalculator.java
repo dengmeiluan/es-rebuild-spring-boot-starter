@@ -110,7 +110,7 @@ public final class MappingDeltaCalculator {
             long last = lastParseWarnAt.get();
             if (now - last > WARN_THROTTLE_MS && lastParseWarnAt.compareAndSet(last, now)) {
                 LOG.warn("[MappingDeltaCalculator] mapping JSON 解析失败（delta 记 unparsed，{}s 内不再重复告警）：{}: {}",
-                        WARN_THROTTLE_MS / 1000, e.getClass().getSimpleName(), e.getMessage());
+                        WARN_THROTTLE_MS / 1000, e.getClass().getSimpleName(), e.getMessage(), e);
             }
             return null;
         }

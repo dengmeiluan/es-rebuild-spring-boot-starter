@@ -385,7 +385,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                 long last = lastConnNameWarnAt.get();
                 if (now - last > WARN_THROTTLE_MS && lastConnNameWarnAt.compareAndSet(last, now)) {
                     LOG.warn("[ConsoleAuthInterceptor] 审计集群实名解析失败 connId={}（审计 connName 留空，"
-                            + "{}s 内不再重复告警）: {}", targetId.trim(), WARN_THROTTLE_MS / 1000, e.getMessage());
+                            + "{}s 内不再重复告警）: {}", targetId.trim(), WARN_THROTTLE_MS / 1000, e.getMessage(), e);
                 }
             }
         }
