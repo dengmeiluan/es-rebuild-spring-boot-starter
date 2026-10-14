@@ -110,12 +110,14 @@
 
     <div v-if="series.length" class="hc-legend">
       <!-- hover/focus 联动高亮（Datadog 图例语言）：chip 悬停/键盘聚焦→图内该序列唯一面积+升亮、其余退灰 -->
+      <!-- 峰值标注：chip 内直接给出该序列全窗最大值——窄刺峰（1-2 桶宽）鼠标难以
+       精确停驻，最高点读数不必再追逐十字线（峰值口径与卡头 stats.max 单序列同源） -->
       <button v-for="s in series" :key="'lg' + s.name" type="button" class="hc-chip" :class="{ off: hidden.has(s.name) }"
-        :aria-pressed="!hidden.has(s.name)" :title="(hidden.has(s.name) ? '点击显示 ' : '点击隐藏 ') + s.name"
+        :aria-pressed="!hidden.has(s.name)" :title="(hidden.has(s.name) ? '点击显示 ' : '点击隐藏 ') + s.name + '（峰 ' + peakOf(s.name) + '）'"
         @click="toggleVisible(s.name)"
         @mouseenter="hotName = s.name" @mouseleave="hotName = null"
         @focus="hotName = s.name" @blur="hotName = null">
-        <i :style="{ background: colorOf(s.name) }" aria-hidden="true" />{{ s.name }}
+        <i :style="{ background: colorOf(s.name) }" aria-hidden="true" />{{ s.name }}<em class="hc-chip-peak">{{ peakOf(s.name) }}</em>
       </button>
     </div>
     <div v-if="hasVisible" class="hc-xaxis">
@@ -210,6 +212,21 @@ const pulseDot = computed(() => {
     color: colorOf(s.name),
   };
 });
+
+/* 图例 chip 峰值（该序列全窗最大）：每次计算后按序列名缓存（序列点集随取数整体替换，
+ 以引用变化为失效依据足够）；降采样窄刺峰鼠标停不住，最高点读数走图例直读 */
+const peakCache = computed(() => {
+  const m = new Map<string, string>();
+  for (const s of props.series) {
+    let mx = -Infinity;
+    for (const p of s.points) if (p.v > mx) mx = p.v;
+    m.set(s.name, s.points.length ? fmtV(mx) : '—');
+  }
+  return m;
+});
+function peakOf(name: string): string {
+  return peakCache.value.get(name) ?? '—';
+}
 
 /* ═══ 坐标域与点位换算（viewBox 固定 600x220，preserveAspectRatio=none 拉伸） ═══ */
 const PLOT_W = 600;
@@ -547,6 +564,8 @@ const plotStyle = computed(() => (props.height ? { height: props.height + 'px' }
 .hc-chip:hover { border-color: var(--muted); color: var(--tx0); }
 .hc-chip i { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .hc-chip.off { opacity: .45; text-decoration: line-through; }
+/* chip 峰值标注（对比卡 em.cur 同语言）：mono 表列数字、弱化色不抢序列名 */
+.hc-chip-peak { font-style: normal; font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--tx2); margin-left: var(--sp-1); }
 
 /* 空态铺满图区（EmptyState compact 只承担内容，落位归本类） */
 .hc-empty { position: absolute; inset: 0; justify-content: center; }
