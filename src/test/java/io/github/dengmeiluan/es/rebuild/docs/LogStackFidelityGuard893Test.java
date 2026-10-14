@@ -54,7 +54,7 @@ import static org.junit.Assert.assertTrue;
  * （四标签在主源码全站唯一，已核）。解析按「参数段不含拉丁分号」的近似口径（消息文本含
  * 分号会截断解析，误差方向是漏报不误伤）。</p>
  */
-public class LogStackFidelityGuard894Test {
+public class LogStackFidelityGuard893Test {
 
     /** 跨行日志调用：.级别( 参数 ); */
     private static final Pattern LOG_CALL = Pattern.compile(
