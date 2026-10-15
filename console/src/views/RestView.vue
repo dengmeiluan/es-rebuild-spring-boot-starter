@@ -494,7 +494,10 @@ function openRawIo() {
  独立追加——rt-body-ed 即 MonacoEditor 根、携本视图 scope id，scoped 类规则直接命中；
  上方 rt-ed-hd 工具行自承分界）；538 min-height 锚行零触 */
 .rt-body-wrap > .rt-body-ed { border: none; border-radius: 0; }
+/* 动作组成组贴右：auto 只打组头（收藏），历史/我的权限相邻成员收紧——
+ flex 多 auto margin 均分剩余空间会把三钮等距散列（宽视口实测各 175px 间距） */
 .rt-hist-btn { margin-left: auto; }
+.rt-hist-btn + .rt-hist-btn { margin-left: 0; }
 /* 历史弹窗体改用 QueryHistoryPanel——.rt-hist-bar/.rt-hist 系本地行样式随自写实现退役
  （过滤/计数/行布局/相对时间全由面板 qhp-* 承接） */
 .rt-spacer { flex: 1; }
@@ -503,8 +506,8 @@ function openRawIo() {
 /* 响应条 6 控件同排窄视口必溢出——同请求行补换行 */
 .rt-resp-bar { display: flex; align-items: center; gap: var(--sp-3); row-gap: var(--sp-1); margin-bottom: var(--sp-2); flex-wrap: wrap; }
 .rt-resp-scroll { max-height: calc(100vh - var(--vh-offset, 210px) + 120px); }
-/* 搜索定位轮：当前命中可见焦点态 + 命中序号按钮组 */
-:deep(.j-mark-cur) { background: var(--dv-orange); color: var(--bg0); border-radius: 2px; box-shadow: var(--focus-ring); }
+/* 搜索定位轮：当前命中可见焦点态 + 命中序号按钮组
+ （cur 完整规则在下方 .json-view 段——须带前缀压过 .j-mark 的 color:inherit） */
 .rt-hn { display: inline-flex; gap: var(--sp-0); }
 .rt-err-pre { color: var(--err); }
 /* friendly 人话标题行（pre 保留全文，双轨范式） */
@@ -517,6 +520,10 @@ function openRawIo() {
 .rt-search { width: 130px; height: 26px; font-size: var(--fs-xs); }
 .rt-mc { font-size: var(--fs-xs); color: var(--tx2); }
 .json-view :deep(.j-mark) { background: var(--warn-soft); color: inherit; border-radius: 2px; padding: 0 1px; }
+/* 当前命中前景色彩底深字（--tx-on-strong 家族口径）——须带 .json-view 前缀压过
+ .j-mark 的 color:inherit（同 0,3,0 特异度靠源序取胜，故置其后），否则命中文字
+ 继承语法色（key 蓝压橙底可读性差，与查询工作台同元素渲染不一致） */
+.json-view :deep(.j-mark-cur) { background: var(--dv-orange); color: var(--tx-on-strong); border-radius: 2px; box-shadow: var(--focus-ring); }
 
 /* 900 紧凑微调档（Workbench 五视图之五）——请求/响应两卡水平侧距 --sp-4 收 --sp-3；
  请求行/响应条/snippet 行 已带 flex-wrap，窄容器换行不重叠，不在此重复 */
