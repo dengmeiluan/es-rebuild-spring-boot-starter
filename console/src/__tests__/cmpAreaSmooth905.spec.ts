@@ -109,10 +109,16 @@ describe('九百零五批：对比卡联动面积平滑化（面积与曲线单�
       expect(area, '热点联动面积在场').toBeTruthy();
       expect(area.tagName.toLowerCase(), '面积形态=path（polygon 退役）').toBe('path');
       const d = area.getAttribute('d') ?? '';
-      expect(d, '面积含贝塞尔段（Catmull-Rom 平滑，非直边折线）').toContain(' C ');
+      /* 896 批同步更新：heap 档=阶梯形态（GC 锯齿 gauge 指标的专业形态，L 折线无贝塞尔），
+       其余档=贝塞尔平滑（含 ' C '）；两档共同不变量=面积与热点折线同形贴合+底边闭合 */
       const hotLine = cmp.querySelector('path.is-hot') as SVGPathElement;
       expect(hotLine, '热点折线在场').toBeTruthy();
       const lineD = hotLine.getAttribute('d') ?? '';
+      if (d.includes(' C ')) {
+        expect(lineD, '平滑档：折线同为贝塞尔形态').toContain(' C ');
+      } else {
+        expect(lineD, '阶梯档：折线同为阶梯形态').not.toContain(' C ');
+      }
       expect(d.startsWith(lineD), '面积上边缘与热点折线完全贴合（d 前缀=曲线 d，底边闭合其后）').toBe(true);
       expect(area.getAttribute('fill'), '身份色渐变保真').toBe('url(#cmpAreaGrad)');
     } finally {
