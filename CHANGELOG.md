@@ -5,6 +5,13 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.21]
+
+### 修复
+
+- 阈值标签防竖排遮挡：右缘「80%」阈值标签声明 nowrap 并加面板底色抠线，
+  窄可用宽度下不再折行成竖条与阈值虚线交叠（全屏展开态实测场景）
+
 ## [1.0.20]
 
 ### 新增
