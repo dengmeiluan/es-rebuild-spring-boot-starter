@@ -166,14 +166,19 @@
  abs 档传全体可见节点共享 max（cmpScaleMax）——各线横向可比且与 Y 顶刻度同域；
  联动高亮（HistoryChart hc-line 同语言）：图例 chip/读出行 hover→该节点线升亮、其余退灰；
  联动面积同走 catmullRomAreaPath 单源（面积上边缘=同一条平滑曲线，六卡/历史卡面积同语言）；
- 面积同走 catmullRomAreaPath 单源（面积上边缘=同一条平滑曲线，六卡/历史卡面积同语言） -->
-              <path v-for="s in cmpSeries" :key="s.name" :class="cmpHotActive ? (s.name === cmpHot ? 'is-hot' : 'is-dim') : ''" :d="catmullRomPath(sparkPts(s.data, CMP_W, CMP_H, cmpMetric === 'qps' || cmpMetric === 'idx' ? 'abs' : 'pct', cmpScaleMax), CMP_W, CMP_H)" fill="none" :stroke="s.color" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
+ 面积同走 catmullRomAreaPath 单源（面积上边缘=同一条平滑曲线，六卡/历史卡面积同语言）；
+ 对比卡曲线豁免过冲钳位（overshoot=true，896：多序列叠图丝滑优先——陡变段保持全张力
+ 圆弧不退化成直角；极值语义由图例峰值直读承担） -->
+              <path v-for="s in cmpSeries" :key="s.name" :class="cmpHotActive ? (s.name === cmpHot ? 'is-hot' : 'is-dim') : ''" :d="catmullRomPath(sparkPts(s.data, CMP_W, CMP_H, cmpMetric === 'qps' || cmpMetric === 'idx' ? 'abs' : 'pct', cmpScaleMax), CMP_W, CMP_H, { overshoot: true })" fill="none" :stroke="s.color" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
               <line v-if="cmpWarn !== null" x1="0" :y1="CMP_H - CMP_H * (cmpWarn / 100)" x2="720" :y2="CMP_H - CMP_H * (cmpWarn / 100)" stroke="var(--err)" stroke-dasharray="4 2" vector-effect="non-scaling-stroke" />
             </svg>
             <span class="ld-yt ld-yt-top" aria-hidden="true">{{ cmpYTop }}</span>
             <span v-for="g in (cmpMode === 'pct' ? PCT_GRID : [])" :key="'cyt' + g" class="ld-yt ld-yt-mid" :style="{ top: (100 - g) + '%' }" aria-hidden="true">{{ g }}</span>
             <span class="ld-yt ld-yt-bot" aria-hidden="true">0</span>
             <span v-if="cmpWarn !== null" class="ld-thv" :style="{ top: (100 - cmpWarn) + '%' }" aria-hidden="true">{{ cmpWarn }}</span>
+            <!-- 末端常驻采样点（每序列一颗 3px 实心点，右缘成列=「看得到点」；hover 节点呼吸点单独叠放） -->
+            <span v-for="s in cmpSeries" v-show="s.data.length > 1" :key="'dot' + s.name" class="ld-ncmp-enddot"
+              :style="{ top: cmpEndDotOf(s).top, background: s.color }" aria-hidden="true" />
             <!-- 末端呼吸点（联动 hot 节点；HTML 层定位防拉伸变形，历史卡 hc-pulse 同语言） -->
             <span v-if="cmpPulseDot" class="ld-ncmp-pulse" :style="{ left: cmpPulseDot.left, top: cmpPulseDot.top, background: cmpPulseDot.color }" aria-hidden="true" />
             <template v-if="cmpHit">
@@ -1060,6 +1065,12 @@ const cmpPulseDot = computed(() => {
   const p = pts[pts.length - 1];
   return { left: (p.x / CMP_W * 100).toFixed(2) + '%', top: (p.y / CMP_H * 100).toFixed(2) + '%', color: s.color };
 });
+/* 末端常驻采样点位置（每序列末锚点；x 恒右缘，y=该序列当前值——「看得到点」） */
+function cmpEndDotOf(s: { data: number[] }): { top: string } {
+  const pts = sparkPts(s.data, CMP_W, CMP_H, cmpMode.value, cmpScaleMax.value);
+  if (!pts.length) return { top: '50%' };
+  return { top: (pts[pts.length - 1].y / CMP_H * 100).toFixed(2) + '%' };
+}
 const cmpHit = ref<SparkHoverHit | null>(null);
 const cmpMode = computed<'pct' | 'abs'>(() => CMP_METRICS.find(m => m.k === cmpMetric.value)?.mode ?? 'pct');
 const cmpWarn = computed<number | null>(() => CMP_METRICS.find(m => m.k === cmpMetric.value)?.warn ?? null);
@@ -1908,6 +1919,8 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 .ld-ncmp-svg path.is-hot { stroke-width: 2.25; }
 /* 联动面积+末端呼吸点（896 补齐历史卡三件套；polygon 不触 path 计数锁 591/615） */
 .ld-ncmp-area { pointer-events: none; }
+/* 末端常驻采样点：3px 实心色点钉右缘（x=100%），y 随各序列当前值——曲线末端「看得到点」 */
+.ld-ncmp-enddot { position: absolute; right: 0; width: 5px; height: 5px; border-radius: 50%; transform: translate(50%, -50%); pointer-events: none; box-shadow: 0 0 0 1.5px var(--bg1); }
 .ld-ncmp-pulse { position: absolute; width: 6px; height: 6px; border-radius: 50%; transform: translate(-50%, -50%); animation: ld-ncmp-pulse 2.4s ease-out infinite; pointer-events: none; }
 @keyframes ld-ncmp-pulse { 0% { transform: translate(-50%, -50%) scale(1); opacity: .85; } 75% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .ld-ncmp-pulse { animation: none; } }
