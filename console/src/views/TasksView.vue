@@ -75,7 +75,7 @@
         <button v-if="flatList.length" class="btn sm ghost" style="margin-left:auto" @click="copyTasksMd" title="复制任务列表为 Markdown（群聊/工单直贴）">
           <ClipboardList :size="11" /> Markdown
         </button>
-        <button class="btn sm ghost" @click="expandAll = !expandAll">
+        <button class="btn sm ghost" @click="toggleExpandAll">
           {{ expandAll ? '折叠全部' : '展开全部' }}
         </button>
       </div>
@@ -477,6 +477,13 @@ const tvMeta = computed<MetaStripItem[]>(() => [
   { value: actionKinds.value.length, label: 'Action 类型' },
   ...actionKinds.value.slice(0, 3).map((k: string) => ({ text: k })),
 ]);
+
+/* 展开/折叠全部统一入口：翻转时同步清按需展开集——单节点收起留下的
+   expandedIds 残留会让折叠全部后子树仍展开 */
+function toggleExpandAll() {
+  expandAll.value = !expandAll.value;
+  expandedIds.value = new Set();
+}
 
 function toggleExpand(id: string) {
   if (expandAll.value) {
