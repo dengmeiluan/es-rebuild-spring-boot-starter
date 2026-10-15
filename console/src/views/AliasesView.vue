@@ -786,7 +786,6 @@ watch(() => route.query.idx, v => { if (v) consumeDeepIdx(); });
 .alv-f-block { width: 100%; margin-top: var(--sp-2); }
 /* filter 编辑框高度档——标题行（钮右靠）；行数档走 JsonArea 既有 rows 写法，无容器层 */
 .alv-f-hd { display: flex; align-items: center; gap: var(--sp-1); }
-.alv-fi { background: var(--bg1); border: 1px solid var(--line); border-radius: var(--r-s); padding: 5px 9px; color: var(--tx0); font-size: var(--fs-sm); outline: 0; min-width: 180px; }
 /* filter DSL lint 体检提示条私有形态（display/gap/margin-top/padding/radius/
  字号/行高 + warn/err 底色）退役 → theme.css .lint-bar 单源（模板纯类名改用，DOM 保形；
  margin-top 随单源归 --sp-2 档，落位节奏全站归一） */
@@ -808,7 +807,7 @@ watch(() => route.query.idx, v => { if (v) consumeDeepIdx(); });
 .alv-sw-hint { font-size: var(--fs-xs); color: var(--tx2); margin-top: var(--sp-2); }
 .alv-sw-hint code { background: var(--bg2); padding: 0 var(--sp-1); border-radius: 3px; }
 .alv-panel-act { margin-top: var(--sp-2h); display: flex; gap: var(--sp-2); }
-.alv-danger:hover { color: var(--err, var(--err)); }
+.alv-danger:hover { color: var(--err); }
 
 /* 实测 iframe 可用宽 ~866px，固定栏宽在此崩塌。
  断点归一 标准值 1100（堆叠语义）。 */
