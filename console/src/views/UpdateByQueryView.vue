@@ -380,7 +380,7 @@ function doFav() {
     title: `${mode.value === 'update' ? 'UpdateByQuery' : 'DeleteByQuery'} @${fmtTime(Date.now())}`,
     subtitle: `${index.value} · ${estimateN.value !== null ? estimateN.value + ' docs' : '未预估'}`,
     payload: { mode: mode.value, index: index.value, body: bodyStr.value },
-    tags: [mode.value === 'update' ? 'ubq' : 'dbq', 'r28'],
+    tags: [mode.value === 'update' ? 'ubq' : 'dbq'],
   });
   store.notify('success', '已收藏');
 }

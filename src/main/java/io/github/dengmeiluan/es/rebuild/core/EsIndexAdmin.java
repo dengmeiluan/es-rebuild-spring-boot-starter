@@ -2328,6 +2328,8 @@ public class EsIndexAdmin {
         try {
             return performSqlVersionAware("?format=json", body);
         } catch (Exception ex) {
+            /* 查询级失败（列名/语法错）说明端点健在，异常直传错误通道，不得冒充「接口不可用」 */
+            if (isSqlQueryLevelFailure(ex)) throw ex;
             /* 商业版才有 SQL，降级不抛 500 */
             Map<String, Object> fallback = new java.util.LinkedHashMap<>();
             fallback.put("available", false);
@@ -2335,6 +2337,20 @@ public class EsIndexAdmin {
             fallback.put("hint", "当前集群未启用 _sql 接口（OSS/未授权），请使用 DSL 查询面板");
             return fallback;
         }
+    }
+
+    /**
+     * ES SQL 查询级失败甄别——verification/parsing 形态的 400 说明 _sql 端点健在、
+     * 是查询本身写错（列名不存在/语法错误），必须异常直传错误通道（前端错误面板可回看
+     * 全文+重试），不得落「available=false + 未启用 _sql 提示」的能力降级误导。
+     * 端点真不可用的形态（405 双路径 / 403 / 连接拒绝）不在此列，降级语义保留。
+     */
+    private static boolean isSqlQueryLevelFailure(Exception ex) {
+        if (!(ex instanceof org.elasticsearch.client.ResponseException)) return false;
+        int sc = ((org.elasticsearch.client.ResponseException) ex).getResponse().getStatusLine().getStatusCode();
+        if (sc != 400) return false;
+        String msg = String.valueOf(ex.getMessage());
+        return msg.contains("verification_exception") || msg.contains("parsing_exception");
     }
 
     /**
@@ -2590,6 +2606,8 @@ public class EsIndexAdmin {
             /* 经版本感知 SQL 路径（6.x 是 /_xpack/sql） */
             return performSqlVersionAware("?format=json", finalBody);
         } catch (Exception ex) {
+            /* 查询级失败直传错误通道（同 sqlQuery 甄别），不得冒充「接口不可用」 */
+            if (isSqlQueryLevelFailure(ex)) throw ex;
             Map<String, Object> out = new java.util.LinkedHashMap<>();
             out.put("available", false);
             out.put("reason", ex.getMessage());

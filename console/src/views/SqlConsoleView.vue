@@ -22,11 +22,14 @@
  push mode=sql 历史（此前页内零出口 -->
         <button class="btn ghost sm" data-test="open-hist" @click="histOpen = true" title="查询历史"><History :size="12" /> 历史</button>
         <!-- W10：title 随态——空 SQL 保持禁用原因可发现性（契约），
- 有 SQL 时提示快捷键（execHint 单一出处，⌘/Ctrl 不再写死） -->
+        有 SQL 时提示快捷键（execHint 单一出处，⌘/Ctrl 不再写死）。
+        「执行中」读秒标签只随执行链（qr.running）：字段体检/转 DSL/分页等旁路操作
+        共享 busy 但不走 useQueryRun，误显读秒会把陈旧耗时挂到无关操作头上 -->
         <button class="btn primary sm" :title="sql.trim() ? '执行（' + execHint + '）' : '请输入 SQL 语句'" @click="doRun" :disabled="!sql.trim() || busy">
-          <Play :size="12" /> {{ busy ? '执行中（' + (qr.elapsedMs.value / 1000).toFixed(1) + 's）…' : '执行' }} <span class="kbd inline">{{ execHint }}</span>
+          <Play :size="12" /> {{ qr.running.value ? '执行中（' + (qr.elapsedMs.value / 1000).toFixed(1) + 's）…' : '执行' }} <span class="kbd inline">{{ execHint }}</span>
         </button>
-        <button v-if="busy" class="btn sm" @click="qr.cancel()"><XCircle :size="12" /> 取消</button>
+        <!-- 取消只对执行链有意义（qr.begin 签发的 signal）；旁路 busy 期间出现死取消钮=示能谎言 -->
+        <button v-if="qr.running.value" class="btn sm" @click="qr.cancel()"><XCircle :size="12" /> 取消</button>
       </template>
     </PageHeader>
 
@@ -493,8 +496,10 @@ function sqlCtx(): SqlCompletionCtx {
 let sqlCompletion: { dispose(): void } | null = null;
 
 /* 字段体检 */
+/* 目标索引提取走 FROM 锚定——SELECT 列表的引号串是列名（如 SELECT "status" … FROM "idx"），
+ 全文首个引号串会把列名当索引用，字段体检/历史推导随之错位 */
 function indexOf(): string {
-  const m = /"([^"]+)"/.exec(sql.value);
+  const m = /\bFROM\s+"([^"]+)"/i.exec(sql.value);
   return (m && m[1]) || store.pickedIdx || '';
 }
 async function doSchema() {
@@ -557,7 +562,7 @@ function doFav() {
   store.addFavorite({
     kind: 'rest', title: `SQL @${fmtTime(Date.now())}`,
     subtitle: sql.value.slice(0, 100), payload: { sql: sql.value, fetchSize: fetchSize.value },
-    tags: ['sql', 'r28'],
+    tags: ['sql'],
   });
   store.notify('success', '已收藏 SQL');
 }

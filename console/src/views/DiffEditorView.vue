@@ -445,7 +445,7 @@ function doFav() {
   store.addFavorite({
     kind: 'rest', title: `Doc ${index.value}/${id.value}`,
     subtitle: `edit @ ${fmtTime(Date.now())}`,
-    payload: { index: index.value, id: id.value, source: editedText.value }, tags: ['doc', 'r28'],
+    payload: { index: index.value, id: id.value, source: editedText.value }, tags: ['doc'],
   });
   store.notify('success', '已收藏');
 }

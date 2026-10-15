@@ -301,7 +301,7 @@ function doFav() {
   store.addFavorite({
     kind: 'rest', title: `Bulk @${fmtTime(Date.now())}`,
     subtitle: `${opsCount.value} 条操作 → ${index.value || '<no-index>'}`,
-    payload: { index: index.value, refresh: refresh.value, body: body.value }, tags: ['bulk', 'r28'],
+    payload: { index: index.value, refresh: refresh.value, body: body.value }, tags: ['bulk'],
   });
   store.notify('success', '已收藏当前 Bulk 配置');
 }
