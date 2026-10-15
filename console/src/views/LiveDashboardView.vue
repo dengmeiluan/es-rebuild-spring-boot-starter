@@ -165,8 +165,9 @@
               <!-- 折线平滑统一（Catmull-Rom 单源；pct/abs 档 sparkPts 同源）；
  abs 档传全体可见节点共享 max（cmpScaleMax）——各线横向可比且与 Y 顶刻度同域；
  联动高亮（HistoryChart hc-line 同语言）：图例 chip/读出行 hover→该节点线升亮、其余退灰；
- 联动面积同走 catmullRomAreaPath 单源（面积上边缘=同一条平滑曲线，六卡/历史卡面积同语言） -->
-              <path v-for="s in cmpSeries" :key="s.name" :class="cmpHotActive ? (s.name === cmpHot ? 'is-hot' : 'is-dim') : ''" :d="catmullRomPath(sparkPts(s.data, CMP_W, CMP_H, cmpMetric === 'qps' || cmpMetric === 'idx' ? 'abs' : 'pct', cmpScaleMax), CMP_W, CMP_H)" fill="none" :stroke="s.color" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
+ 联动面积同走 catmullRomAreaPath 单源（面积上边缘=同一条平滑曲线，六卡/历史卡面积同语言）；
+ Heap 档例外走阶梯线（GC 锯齿 gauge 指标的专业形态，面积同档阶梯化） -->
+              <path v-for="s in cmpSeries" :key="s.name" :class="cmpHotActive ? (s.name === cmpHot ? 'is-hot' : 'is-dim') : ''" :d="cmpMetric === 'heap' ? stepPath(sparkPts(s.data, CMP_W, CMP_H, 'pct', cmpScaleMax), CMP_W, CMP_H) : catmullRomPath(sparkPts(s.data, CMP_W, CMP_H, cmpMetric === 'qps' || cmpMetric === 'idx' ? 'abs' : 'pct', cmpScaleMax), CMP_W, CMP_H)" fill="none" :stroke="s.color" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
               <line v-if="cmpWarn !== null" x1="0" :y1="CMP_H - CMP_H * (cmpWarn / 100)" x2="720" :y2="CMP_H - CMP_H * (cmpWarn / 100)" stroke="var(--err)" stroke-dasharray="4 2" vector-effect="non-scaling-stroke" />
             </svg>
             <span class="ld-yt ld-yt-top" aria-hidden="true">{{ cmpYTop }}</span>
@@ -692,7 +693,7 @@ import { buildSeries, capRows, diskForecast, intervalFor, fixedIntervalMs, rawPe
 /* 分组导航单源（对标阿里云「分组」实测 9 项；我方收敛 8 组）。
  映射外挂于 utils（不写进 HIST_CHARTS 条目）→ 不触碰 monitorHistoryTrend 对条目字面的逐字锁。 */
 import { HIST_GROUPS, inHistGroup, histGroupLabel, type HistGroupKey } from '../utils/histGroups';
-import { catmullRomPath, catmullRomAreaPath, sparkPts, CMP_W, CMP_H, PCT_GRID, type Pt, sparklinePoints, sparklinePointsPct } from '../utils/sparkChart'; /* P1a-1 单源下沉； K2 增 PCT_GRID（对比卡 pct 网格）/SPARK_H 随迷你 spark 退役移出 */
+import { catmullRomPath, catmullRomAreaPath, sparkPts, stepPts, stepPath, stepAreaPath, CMP_W, CMP_H, PCT_GRID, type Pt, sparklinePoints, sparklinePointsPct } from '../utils/sparkChart'; /* P1a-1 单源下沉； K2 增 PCT_GRID（对比卡 pct 网格）/SPARK_H 随迷你 spark 退役移出 */
 import LiveChartCard from '../components/LiveChartCard.vue'; /* P1a-2：实时走势主卡统一件 */
 import CollapsePanel from '../components/CollapsePanel.vue'; /* Z1：三表可展开外壳统一件（组件性头名） */
 
@@ -1046,7 +1047,9 @@ const cmpArea = computed(() => {
   const s = cmpSeries.value.find(x => x.name === cmpHot.value);
   if (!s || s.data.length < 2) return null;
   const pts = sparkPts(s.data, CMP_W, CMP_H, cmpMode.value, cmpScaleMax.value);
-  return { d: catmullRomAreaPath(pts, CMP_W, CMP_H), color: s.color };
+  /*  Heap=GC 锯齿 gauge 指标 → 阶梯形态（step-after，台阶=采样格点、悬崖=真实回收，
+   杂乱毛刺变整齐台阶节奏，Datadog/Grafana 惯例）；CPU/磁盘连续指标保持平滑 */
+  return { d: cmpMetric.value === 'heap' ? stepAreaPath(pts, CMP_W, CMP_H) : catmullRomAreaPath(pts, CMP_W, CMP_H), color: s.color };
 });
 const cmpPulseDot = computed(() => {
   const s = cmpSeries.value.find(x => x.name === cmpHot.value);

@@ -108,3 +108,42 @@ export function catmullRomAreaPath(pts: Pt[], W: number, H: number): string {
   if (!line) return '';
   return `${line} L ${f1(W)},${f1(H)} L 0.0,${f1(H)} Z`;
 }
+
+/** step-after 阶梯点列：每采样保持到下一采样点（水平推进→垂直跳变）——
+ *  GC 锯齿这类 gauge 指标的专业形态（Datadog/Grafana 惯例）：台阶=采样格点、
+ *  悬崖=真实回收，杂乱毛刺变成整齐的台阶节奏，无需抹平真实瞬变。 */
+export function stepPts(pts: Pt[]): Pt[] {
+  const out: Pt[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    if (i > 0) {
+      out.push({ x: pts[i].x, y: pts[i - 1].y });
+    }
+    out.push({ x: pts[i].x, y: pts[i].y });
+  }
+  return out;
+}
+
+/** 阶梯折线路径：stepPts 的 path 形态（M+L 折线，阶梯无需平滑）。 */
+export function stepPath(pts: Pt[], W: number, H: number): string {
+  if (!pts.length) return '';
+  if (pts.length === 1) return `M ${f1(pts[0].x)},${f1(pts[0].y)}`;
+  const steps = stepPts(pts);
+  let d = `M ${f1(steps[0].x)},${f1(steps[0].y)}`;
+  for (let i = 1; i < steps.length; i++) {
+    d += ` L ${f1(steps[i].x)},${f1(steps[i].y)}`;
+  }
+  void W;
+  void H;
+  return d;
+}
+
+/** 阶梯面积路径：同阶梯折线 + 闭到图底两角（hover 联动面积在阶梯档与折线同形态）。 */
+export function stepAreaPath(pts: Pt[], W: number, H: number): string {
+  if (!pts.length) return '';
+  const steps = stepPts(pts);
+  let d = `M ${f1(steps[0].x)},${f1(steps[0].y)}`;
+  for (let i = 1; i < steps.length; i++) {
+    d += ` L ${f1(steps[i].x)},${f1(steps[i].y)}`;
+  }
+  return `${d} L ${f1(W)},${f1(H)} L 0.0,${f1(H)} Z`;
+}
