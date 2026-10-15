@@ -181,9 +181,13 @@
               :style="{ top: cmpEndDotOf(s).top, background: s.color }" aria-hidden="true" />
             <!-- 末端呼吸点（联动 hot 节点；HTML 层定位防拉伸变形，历史卡 hc-pulse 同语言） -->
             <span v-if="cmpPulseDot" class="ld-ncmp-pulse" :style="{ left: cmpPulseDot.left, top: cmpPulseDot.top, background: cmpPulseDot.color }" aria-hidden="true" />
-            <template v-if="cmpHit">
-              <span class="ld-xline" :style="{ left: cmpLeft(cmpHit.frac) }" aria-hidden="true" />
-              <span class="ld-yline" :style="{ top: (cmpHit.y || 0).toFixed(1) + 'px' }" aria-hidden="true" />
+                <template v-if="cmpHit">
+                  <span class="ld-xline" :style="{ left: cmpLeft(cmpHit.frac) }" aria-hidden="true" />
+                  <span class="ld-yline" :style="{ top: (cmpHit.y || 0).toFixed(1) + 'px' }" aria-hidden="true" />
+                  <!-- 悬浮贴线圆点（HistoryChart hoverDots 同语言）：每可见序列在十字线 x 处
+                   的曲线上各钉一颗色点——滑动时「点在曲线上」可见，不再只有光秃秃的十字线 -->
+                  <span v-for="s in cmpSeries" :key="'cd' + s.name" class="ld-ncmp-hoverdot"
+                    :style="{ left: cmpLeft(cmpHit.frac), top: cmpDotTop(s), background: s.color }" aria-hidden="true" />
               <div class="ld-hv ld-hv-stack" :style="{ left: cmpLeft(cmpHit.frac), top: (cmpHit.y || 0).toFixed(1) + 'px', transform: cmpShift(cmpHit.frac) + ' translateY(-50%)' }" role="status">
                 <span class="ld-hv-t">{{ cmpHit.t ? fmtTime(cmpHit.t) : '' }}</span>
                 <span v-for="r in cmpRowsCapped.rows" :key="r.name" class="ld-ncmp-tip-r"
@@ -705,7 +709,7 @@ import CollapsePanel from '../components/CollapsePanel.vue'; /* Z1：三表可�
 /* 几何常量（LD_H/SPARK_H/CMP_W/CMP_H/PCT_GRID）与点位纯函数已下沉
  utils/sparkChart.ts 单源（P1a-1）；此处经 import 引入，模板与悬浮换算照常使用。 */
 /* 走势卡悬浮命中纯函数（十字线/圆点/读出钉在曲线上，点位公式与 sparklinePoints(Pct) 同源） */
-import { sparkHoverAt, type SparkHoverHit } from '../utils/sparkHover';
+import { sparkHoverAt, lineYAtFrac, type SparkHoverHit } from '../utils/sparkHover';
 import { useHoverEscape } from '../composables/useHoverEscape';
 import { friendlyEsError } from '../utils/esError';
 import { usePref } from '../composables/urlState';
@@ -1065,6 +1069,11 @@ const cmpPulseDot = computed(() => {
   const p = pts[pts.length - 1];
   return { left: (p.x / CMP_W * 100).toFixed(2) + '%', top: (p.y / CMP_H * 100).toFixed(2) + '%', color: s.color };
 });
+/* 悬浮贴线圆点的 y：该序列在十字线 frac 处的插值高度（lineYAtFrac 单源，主卡同款） */
+function cmpDotTop(s: { data: number[] }): string {
+  const y = lineYAtFrac(s.data, cmpHit.value ? cmpHit.value.frac : 0, CMP_H, cmpMode.value);
+  return (y / CMP_H * 100).toFixed(2) + '%';
+}
 /* 末端常驻采样点位置（每序列末锚点；x 恒右缘，y=该序列当前值——「看得到点」） */
 function cmpEndDotOf(s: { data: number[] }): { top: string } {
   const pts = sparkPts(s.data, CMP_W, CMP_H, cmpMode.value, cmpScaleMax.value);
@@ -1919,6 +1928,8 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 .ld-ncmp-svg path.is-hot { stroke-width: 2.25; }
 /* 联动面积+末端呼吸点（896 补齐历史卡三件套；polygon 不触 path 计数锁 591/615） */
 .ld-ncmp-area { pointer-events: none; }
+/* 悬浮贴线圆点（每可见序列一颗；HistoryChart hc-dot 同语言，色点描边隔离曲线） */
+.ld-ncmp-hoverdot { position: absolute; width: 8px; height: 8px; border-radius: 50%; transform: translate(-50%, -50%); border: 1.5px solid var(--bg); pointer-events: none; }
 /* 末端常驻采样点：3px 实心色点钉右缘（x=100%），y 随各序列当前值——曲线末端「看得到点」 */
 .ld-ncmp-enddot { position: absolute; right: 0; width: 5px; height: 5px; border-radius: 50%; transform: translate(50%, -50%); pointer-events: none; box-shadow: 0 0 0 1.5px var(--bg1); }
 .ld-ncmp-pulse { position: absolute; width: 6px; height: 6px; border-radius: 50%; transform: translate(-50%, -50%); animation: ld-ncmp-pulse 2.4s ease-out infinite; pointer-events: none; }
