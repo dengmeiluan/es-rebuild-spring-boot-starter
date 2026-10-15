@@ -9,6 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { movingAverage } from '../utils/sparkChart';
 
 const hcSrc = readFileSync(join(__dirname, '../components/HistoryChart.vue'), 'utf-8');
 const liveSrc = readFileSync(join(__dirname, '../views/LiveDashboardView.vue'), 'utf-8');
@@ -37,5 +38,21 @@ describe('件2：对比卡/Top 卡折线平滑', () => {
   it('B2 pct 档同步平滑（sparkPts mode 参数保留）', () => {
     const s = strip(liveSrc);
     expect(s).toMatch(/catmullRomPath\(sparkPts\([^)]*'pct'[^)]*\)/s);
+  });
+});
+
+describe('899 续：对比序列滑动平均（GC 锯齿降噪，观感对齐分钟级历史卡）', () => {
+  it('C1 窗口 5 滑动平均：毛刺磨平、首段取可得样本', () => {
+    /* [0,0,0,30,0] 突刺 30 → 平滑后 0,0,0,7.5,6（突刺摊到 5 点窗） */
+    expect(movingAverage([0, 0, 0, 30, 0], 5)).toEqual([0, 0, 0, 7.5, 6]);
+    expect(movingAverage([10, 20, 30], 5)).toEqual([10, 15, 20]);
+  });
+  it('C2 恒值序列不变；长度不缩', () => {
+    expect(movingAverage([50, 50, 50, 50, 50, 50], 5)).toEqual([50, 50, 50, 50, 50, 50]);
+    expect(movingAverage([1, 2, 3], 5)).toHaveLength(3);
+  });
+  it('C3 视图接线：cmpSeries data 走 winSlice(movingAverage(...))', () => {
+    const s = strip(liveSrc);
+    expect(s).toContain('winSlice(movingAverage(nodeSeriesFor(n.name, cmpMetric.value)))');
   });
 });

@@ -170,14 +170,15 @@ describe('K2 节点对比悬浮化 + 轴系', () => {
     expect(c.querySelector('.ld-thv')!.textContent).toBe('80');
   });
 
-  it('abs 档（QPS）：无网格无阈值标签，顶刻度=窗峰值', async () => {
+  it('abs 档（QPS）：无网格无阈值标签，顶刻度=窗峰值（899 续滑动平均后=均值窗峰值）', async () => {
     const c = await cmp();
     const segBtn = [...c.querySelectorAll('.ld-seg button')].find(b => b.textContent!.includes('QPS')) as HTMLElement;
     segBtn.click();
     await settle();
     expect(c.querySelectorAll('svg .ld-glines line').length).toBe(0);
     expect(c.querySelector('.ld-thv')).toBeNull();
-    expect(c.querySelector('.ld-yt-top')!.textContent).toBe('3.0');
+    /* 种子 qps=[1,2,3] → 5 窗滑动平均 [1,1.5,2] → 顶刻度=均值后窗峰值 2.0 */
+    expect(c.querySelector('.ld-yt-top')!.textContent).toBe('2.0');
     expect(c.querySelector('.ld-yt-bot')!.textContent).toBe('0');
   });
 
