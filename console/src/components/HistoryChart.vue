@@ -580,7 +580,7 @@ const plotStyle = computed(() => (props.height ? { height: props.height + 'px' }
 .hc-xaxis { display: flex; justify-content: space-between; margin-top: var(--sp-1); font-size: var(--fs-2xs); color: var(--tx2); font-family: var(--mono); font-variant-numeric: tabular-nums; } /* 件2：数字等宽=与 ld-xaxis 同语言 */
 
 /* 阈值小字：右缘对齐虚线同高 */
-.hc-thlabel { position: absolute; right: 0; transform: translateY(-50%); font-size: var(--fs-2xs); color: var(--err); font-family: var(--mono); pointer-events: none; }
+.hc-thlabel { position: absolute; right: 0; transform: translateY(-50%); font-size: var(--fs-2xs); color: var(--err); font-family: var(--mono); pointer-events: none; white-space: nowrap; background: var(--panel); padding: 0 var(--sp-0); }
 
 /* 十字线与最近点圆点（恒亮单点同形态）：圆点描边用底色隔离曲线。
  横竖双线交点=指针位置（横线 top 跟 hoverY，与 tooltip Y 向跟手同源） */
