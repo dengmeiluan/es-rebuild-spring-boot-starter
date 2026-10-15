@@ -5,6 +5,15 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.18]
+
+### 变更
+
+- 节点对比卡 Heap 档改为 step-after 阶梯线（GC 锯齿这类 gauge 指标的专业形态：
+  台阶=采样格点、悬崖=真实回收），5s 采样下原始折线的杂乱毛刺变成整齐的台阶
+  节奏；CPU/磁盘/QPS/写入档保持平滑曲线；悬浮联动高亮面积与折线同走阶梯形态，
+  贴合不穿帮
+
 ## [1.0.17]
 
 ### 修复
