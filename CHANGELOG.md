@@ -5,6 +5,16 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.20]
+
+### 新增
+
+- 图卡展开（放大）能力全站统一：历史趋势卡（37 张）、节点对比面板、Top 索引
+  曲线全部获得与顶部 KPI 卡同款的全屏展开——历史卡卡头新增展开钮（hc-full
+  fixed 覆盖），节点对比面板头部 seg 旁新增展开钮（ld-ncmp-full），Top 曲线
+  工具行新增展开钮（ld-top-full 包层）；全部接入同一 expandedCard 状态机、
+  body 遮罩与 Esc/再点还原链路
+
 ## [1.0.19]
 
 ### 新增
