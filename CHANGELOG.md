@@ -5,6 +5,15 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.17]
+
+### 修复
+
+- 控制台前端构建产物的版本契约守卫：面板徽标版本在构建期从 pom 注入，
+  此前 pom 升版后若未重跑前端构建，旧产物会带着旧版本号打进包（面板左下角
+  徽标停旧版）；新增契约测试钉住「产物烧录版本=pom 版本、无旧版本残留」，
+  并随本版重新构建同步 1.0.17
+
 ## [1.0.16]
 
 ### 修复
