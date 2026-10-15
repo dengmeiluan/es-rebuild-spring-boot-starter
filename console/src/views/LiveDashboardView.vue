@@ -160,12 +160,12 @@
               <g v-if="cmpMode === 'pct'" class="ld-glines" aria-hidden="true">
                 <line v-for="g in PCT_GRID" :key="'g' + g" x1="0" x2="720" :y1="CMP_H - CMP_H * (g / 100)" :y2="CMP_H - CMP_H * (g / 100)" vector-effect="non-scaling-stroke" />
               </g>
-              <!-- 联动面积（hover 节点唯一渐变面积，画在折线之下；polygon 不触 path 计数锁） -->
-              <polygon v-if="cmpArea" class="ld-ncmp-area" :points="cmpArea.points" fill="url(#cmpAreaGrad)" />
+              <!-- 联动面积（hover 节点唯一渐变面积，画在折线之下）；平滑面积 path 与曲线单源贴合（仅热点联动时渲染，不在折线计数场景） -->
+              <path v-if="cmpArea" class="ld-ncmp-area" :d="cmpArea.d" fill="url(#cmpAreaGrad)" />
               <!-- 折线平滑统一（Catmull-Rom 单源；pct/abs 档 sparkPts 同源）；
  abs 档传全体可见节点共享 max（cmpScaleMax）——各线横向可比且与 Y 顶刻度同域；
- 联动高亮（HistoryChart hc-line 同语言）：图例 chip/读出行 hover→该节点线升亮、其余退灰
-（不加面积 path——对比卡 path 计数被 591/615 锁面反锁，面积走 polygon） -->
+ 联动高亮（HistoryChart hc-line 同语言）：图例 chip/读出行 hover→该节点线升亮、其余退灰；
+ 联动面积同走 catmullRomAreaPath 单源（面积上边缘=同一条平滑曲线，六卡/历史卡面积同语言） -->
               <path v-for="s in cmpSeries" :key="s.name" :class="cmpHotActive ? (s.name === cmpHot ? 'is-hot' : 'is-dim') : ''" :d="catmullRomPath(sparkPts(s.data, CMP_W, CMP_H, cmpMetric === 'qps' || cmpMetric === 'idx' ? 'abs' : 'pct', cmpScaleMax), CMP_W, CMP_H)" fill="none" :stroke="s.color" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
               <line v-if="cmpWarn !== null" x1="0" :y1="CMP_H - CMP_H * (cmpWarn / 100)" x2="720" :y2="CMP_H - CMP_H * (cmpWarn / 100)" stroke="var(--err)" stroke-dasharray="4 2" vector-effect="non-scaling-stroke" />
             </svg>
@@ -692,7 +692,7 @@ import { buildSeries, capRows, diskForecast, intervalFor, fixedIntervalMs, rawPe
 /* 分组导航单源（对标阿里云「分组」实测 9 项；我方收敛 8 组）。
  映射外挂于 utils（不写进 HIST_CHARTS 条目）→ 不触碰 monitorHistoryTrend 对条目字面的逐字锁。 */
 import { HIST_GROUPS, inHistGroup, histGroupLabel, type HistGroupKey } from '../utils/histGroups';
-import { catmullRomPath, sparkPts, CMP_W, CMP_H, PCT_GRID, type Pt, sparklinePoints, sparklinePointsPct } from '../utils/sparkChart'; /* P1a-1 单源下沉； K2 增 PCT_GRID（对比卡 pct 网格）/SPARK_H 随迷你 spark 退役移出 */
+import { catmullRomPath, catmullRomAreaPath, sparkPts, CMP_W, CMP_H, PCT_GRID, type Pt, sparklinePoints, sparklinePointsPct } from '../utils/sparkChart'; /* P1a-1 单源下沉； K2 增 PCT_GRID（对比卡 pct 网格）/SPARK_H 随迷你 spark 退役移出 */
 import LiveChartCard from '../components/LiveChartCard.vue'; /* P1a-2：实时走势主卡统一件 */
 import CollapsePanel from '../components/CollapsePanel.vue'; /* Z1：三表可展开外壳统一件（组件性头名） */
 
@@ -1038,15 +1038,15 @@ const cmpHasData = computed(() => cmpSeries.value.some(s => s.data.length > 1));
  focus → 该节点曲线升亮、其余退灰；hot 只命中可见序列（隐藏节点 chip 悬停不全场退灰） */
 const cmpHot = ref<string | null>(null);
 const cmpHotActive = computed(() => !!cmpHot.value && cmpSeries.value.some(s => s.name === cmpHot.value));
-/* 联动面积+末端呼吸点（896 补齐历史卡同款三件套的最后一块）：hover 节点时该序列
- 画唯一渐变面积（polygon 锚点折线+底边闭合——不触 path 计数锁 591/615）并挂末端
- 呼吸点，其余序列退灰——多序列图一眼聚焦单节点 */
+/* 联动面积+末端呼吸点（历史卡同款三件套）：hover 节点时该序列
+ 画唯一渐变面积（catmullRomAreaPath 平滑面积=上边缘与折线同一曲线+底边闭合，
+ 六卡 ld-area/历史卡 hc-area 单源同语言——旧 polygon 直边与平滑曲线不贴合，
+ 波动处面积边穿出缩进即「不丝滑」体感）并挂末端呼吸点，其余序列退灰——多序列图一眼聚焦单节点 */
 const cmpArea = computed(() => {
   const s = cmpSeries.value.find(x => x.name === cmpHot.value);
   if (!s || s.data.length < 2) return null;
   const pts = sparkPts(s.data, CMP_W, CMP_H, cmpMode.value, cmpScaleMax.value);
-  const poly = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
-  return { points: `${CMP_W},${CMP_H} ${poly} 0,${CMP_H}`, color: s.color };
+  return { d: catmullRomAreaPath(pts, CMP_W, CMP_H), color: s.color };
 });
 const cmpPulseDot = computed(() => {
   const s = cmpSeries.value.find(x => x.name === cmpHot.value);
