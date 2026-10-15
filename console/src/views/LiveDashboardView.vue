@@ -127,7 +127,7 @@
       <!-- 件3：对比面内联容器（页面流 .ld-nodes 区内；panel 壳与节点卡/六卡同语言；
  头部行=题+恢复钮+seg 五档+✕；图区内容原样迁移——悬浮读出 mousemove/mouseleave
  保留=十字线语义不丢） -->
-      <div v-if="cmpPanelOpen" class="ld-ncmp-panel" aria-label="节点对比">
+      <div v-if="cmpPanelOpen" class="ld-ncmp-panel" :class="{ 'ld-ncmp-full': expandedCard === 'cmp' }" aria-label="节点对比">
         <div class="ld-ncmp-hd">
           <span class="ld-ncmp-tt">节点对比</span>
           <!-- 896 #10 主节点专项视角：仅看 master（role 口径与区块头 nodesSummary 同源） -->
@@ -140,6 +140,12 @@
             <button v-for="m in CMP_METRICS" :key="m.k" type="button" :class="{ on: cmpMetric === m.k }"
               :aria-pressed="cmpMetric === m.k" @click="cmpMetric = m.k">{{ m.label }}</button>
           </span>
+          <!-- 展开钮（能力与顶部卡/历史卡统一；全屏态面板 fixed 覆盖视口） -->
+          <button type="button" class="ld-ncmp-expand" :aria-label="expandedCard === 'cmp' ? '还原' : '展开'" :title="expandedCard === 'cmp' ? '还原' : '展开'"
+            @click="toggleExpand('cmp')">
+            <Minimize2 v-if="expandedCard === 'cmp'" :size="12" />
+            <Maximize2 v-else :size="12" />
+          </button>
           <button type="button" class="ld-ncmp-close" aria-label="收起节点对比" title="收起（Esc）" @click="closeCmpPanel">✕</button>
         </div>
         <template v-if="cmpHasData">
@@ -446,7 +452,8 @@
           <template v-if="!(allClean && (c.field === 'writeRejected' || c.field === 'searchRejected'))">
             <HistoryChart :title="c.label" :unit="c.unit" :series="c.series" :forecast="c.forecast" :note="c.note" :threshold="c.threshold"
               :palette="HIST_COLORS" :gap-ms="mh2GapMs" :status-bands="statusBands"
-              :events="chartEvents" />
+              :events="chartEvents"
+              :expanded="expandedCard === 'hist:' + c.field" @expand="toggleExpand('hist:' + c.field)" />
           </template>
           <div v-else class="ld-hist-clean">采样时段内无拒绝</div>
           <!-- 加载态：骨架蒙层盖图区（保留上轮数据防闪烁），沿用 SkeletonBox 统一件 -->
@@ -502,9 +509,17 @@
                 <button type="button" :class="{ on: topView === 'curve' }" :aria-pressed="topView === 'curve'" @click="topView = 'curve'">曲线</button>
                 <button type="button" :class="{ on: topView === 'table' }" :aria-pressed="topView === 'table'" @click="topView = 'table'">表格</button>
               </span>
+              <span class="ld-top-metric-sp"></span>
+              <!-- 展开钮（能力与顶部卡/历史卡统一；曲线区包层 fixed 全屏） -->
+              <button v-if="topView === 'curve'" type="button" class="ld-ncmp-expand" :aria-label="expandedCard === 'top' ? '还原' : '展开'" :title="expandedCard === 'top' ? '还原' : '展开'"
+                @click="toggleExpand('top')">
+                <Minimize2 v-if="expandedCard === 'top'" :size="12" />
+                <Maximize2 v-else :size="12" />
+              </button>
             </div>
             <!-- 指标切换 seg（写入/查询/延迟三支同源会话序列，895 对标阿里云 index bulk 写入 tps/index 查询 qps/索引端到端查询延迟三卡）+ Top N 宽度选择 -->
-            <div v-if="topView === 'curve'" class="ld-top-metric">
+            <div v-if="topView === 'curve'" class="ld-top-wrap" :class="{ 'ld-top-full': expandedCard === 'top' }">
+            <div class="ld-top-metric">
               <span class="seg ld-seg" role="group" aria-label="Top 曲线指标">
                 <span class="seg-thumb" :style="segPillStyle(3, ['idx', 'qps', 'lat'].indexOf(topMetric))" aria-hidden="true" />
                 <button type="button" :class="{ on: topMetric === 'idx' }" :aria-pressed="topMetric === 'idx'" @click="topMetric = 'idx'">写入速率</button>
@@ -568,6 +583,7 @@
                 </tr>
               </tbody>
             </table>
+            </div>
             <table v-if="topView === 'table'" class="tbl zebra ld-hist-hist-t">
               <thead>
                 <tr><th>集群</th><th>索引</th><th>查询 QPS</th><th>写入速率(doc/秒)</th><th>存储(MB)</th></tr>
@@ -953,8 +969,10 @@ function toggleNode(name: string) {
   if (i >= 0) hiddenNodes.value.splice(i, 1);
   else hiddenNodes.value.push(name);
 }
-const expandedCard = ref<'qps' | 'idx' | 'heap' | 'cpu' | 'disk' | null>(null);
-function toggleExpand(key: 'qps' | 'idx' | 'heap' | 'cpu' | 'disk') {
+/* 展开键放宽为字符串（896 能力统一）：顶部卡五档 + 历史卡 'hist:<field>' +
+ 节点对比 'cmp' + Top 曲线 'top'——同一状态机/遮罩/Esc 链路 */
+const expandedCard = ref<string | null>(null);
+function toggleExpand(key: string) {
   expandedCard.value = expandedCard.value === key ? null : key;
 }
 function onExpandEsc(e: KeyboardEvent) {
@@ -1842,6 +1860,12 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 /* 件3：fixed 浮层退役（令推翻 794 悬浮形态）——迁 .ld-nodes 区页面流内联
  容器：panel 壳与节点卡/六卡同语言（--panel 底+r-m），shadow/宽度钳制随浮层语义退役 */
 .ld-ncmp-panel { margin-bottom: var(--sp-2); background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-m); padding: var(--sp-2) var(--sp-3) var(--sp-3); }
+/* 全屏展开态（LiveChartCard ld-chart-full 同语言）：面板 fixed 覆盖视口，图域随宽自适应 */
+.ld-ncmp-panel.ld-ncmp-full { position: fixed; inset: 4vh 4vw; z-index: var(--z-ctx); margin-bottom: 0; box-shadow: var(--shadow-m); }
+/* 展开钮（ld-expand 同语言） */
+.ld-ncmp-expand { background: transparent; border: none; color: var(--muted); cursor: pointer; padding: var(--sp-0); display: inline-flex; align-items: center; transition: transform var(--dur-fast) var(--ease-out); }
+.ld-ncmp-expand:hover { color: var(--tx0); }
+.ld-ncmp-expand:active { transform: scale(.92); }
 .ld-ncmp-panel .ld-ncmp-svg { height: 150px; }
 /* 件1：图例 chips 行（hc-chip 同语言：色点+名+当前值 mono；off=划线灰化，色号不换） */
 .ld-cmp-legend { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-2); margin-top: var(--sp-2); }
@@ -1913,6 +1937,9 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 /* ══ 件2：Top 索引曲线视图（曲线/表格双 seg+读出层复用 ld-hv-stack 语汇）══ */
 .ld-top-viewseg { margin-left: var(--sp-2); }
 .ld-top-plot { margin: var(--sp-1) 0 var(--sp-2); }
+/* Top 曲线区全屏展开态（能力与顶部卡/历史卡/对比卡统一）：包层 fixed 覆盖视口，绘图域吃满 */
+.ld-top-wrap.ld-top-full { position: fixed; inset: 4vh 4vw; z-index: var(--z-ctx); background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-m); box-shadow: var(--shadow-m); padding: var(--sp-3); overflow: auto; }
+.ld-top-wrap.ld-top-full .ld-top-plot { height: calc(100vh - 24vh - 180px); }
 .ld-top-hv { min-width: 150px; }
 .ld-ncmp-hd { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
 /* 主节点专项视角 toggle（896 #10）：checkbox 紧贴标题，fs-2xs 不抢 seg 主操作 */

@@ -7,7 +7,7 @@
  色号按 name 排序位锚定不换色。折线/面积走 polylineSegments 分段渲染：gapMs 传入即
  断档感知（相邻点 Δt 超阈值断线——降采样空桶=集群失联未采时段，不画跨档假线/假面）。
  纯 SVG+HTML，不引第三方图表库。 -->
-  <div class="hc">
+  <div class="hc" :class="{ 'hc-full': expanded }">
     <!-- 799 件2（用户五令「大厂级」：历史五图卡头与六卡 KPI 语言对齐）——
  行① 标题+单位（小灰）+最大/均值（右浮小字）；行② 当前值 28px 大数
  （色=首可见序列身份色，与六卡 curColor 同构；多序列叠加语义=聚合当前值）。 -->
@@ -17,6 +17,11 @@
         <span v-if="hasVisible" class="hc-stats">
           最大 <b>{{ fmtV(stats.max) }}</b> · 均值 <b>{{ fmtV(stats.avg) }}</b>
         </span>
+        <!-- 展开钮（LiveChartCard ld-expand 同语言）：全卡放大，能力与顶部卡统一 -->
+        <button type="button" class="hc-expand" :aria-label="expanded ? '还原' : '展开'" :title="expanded ? '还原' : '展开'" @click.stop="$emit('expand')">
+          <Minimize2 v-if="expanded" :size="12" />
+          <Maximize2 v-else :size="12" />
+        </button>
       </span>
       <b v-if="hasVisible" class="hc-cur" :style="{ color: colorOf(visibleSeries[0]?.name || '') }" title="当前值（可见序列聚合最新点）">{{ fmtV(stats.cur) }}</b>
     </div>
@@ -132,7 +137,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Activity } from 'lucide-vue-next';
+import { Activity, Maximize2, Minimize2 } from 'lucide-vue-next';
 
 import EmptyState from './EmptyState.vue';
 import { yMaxOf, timeTicks, fmtUnit, polylineSegments, type NamedSeries, type SeriesPoint } from '../utils/monitorSeries';
@@ -166,7 +171,11 @@ const props = defineProps<{
   tooltipWindowPct?: number;
   /** 告警事件标记（图域内竖直位置固定顶部的菱形点，title=事件文案；域外自动跳过） */
   events?: { t: number; label: string; level?: string }[];
+  /** 全屏展开态（视图层 expandedCard 键控；能力与顶部 KPI 卡统一） */
+  expanded?: boolean;
 }>();
+
+defineEmits<{ expand: [] }>();
 
 /* ═══ 色号锚定 ═══ */
 const PALETTE = ['var(--dv-blue)', 'var(--ok)', 'var(--wn)', 'var(--err)', 'var(--ac)'];
@@ -519,6 +528,14 @@ const plotStyle = computed(() => (props.height ? { height: props.height + 'px' }
 
 <style scoped>
 .hc { min-width: 0; }
+/* 全屏展开态（LiveChartCard ld-chart-full 同语言：卡原地 fixed 覆盖视口，遮罩由
+ 视图 body.ld-chart-mask 承担）——绘图域/图例/统计随视口自适应，能力与顶部卡统一 */
+.hc.hc-full { position: fixed; inset: 4vh 4vw; z-index: var(--z-ctx); background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-m); box-shadow: var(--shadow-m); padding: var(--sp-3); overflow: auto; }
+.hc.hc-full .hc-plot { height: calc(100vh - 24vh - 120px); }
+/* 展开钮（LiveChartCard ld-expand 同语言）：弱化色小钮 hover 提亮 */
+.hc-expand { margin-left: var(--sp-1); background: transparent; border: none; color: var(--muted); cursor: pointer; padding: var(--sp-0); display: inline-flex; align-items: center; transition: transform var(--dur-fast) var(--ease-out); }
+.hc-expand:hover { color: var(--tx0); }
+.hc-expand:active { transform: scale(.92); }
 /* 799 件2：卡头两行制 KPI 与六卡同构（行① 标题+统计/行② 28px 当前值大数） */
 .hc-hd { margin-bottom: var(--sp-2); }
 .hc-top { display: flex; align-items: baseline; gap: var(--sp-2); }

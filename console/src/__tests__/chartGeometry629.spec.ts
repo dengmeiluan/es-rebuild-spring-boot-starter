@@ -138,8 +138,8 @@ describe('六百二十九批③：展开钮入头行（618 §0 病灶 #3 修）'
     expect(siblings.length, '兄弟块形态清零').toBe(0);
     expect(CARD, '按钮仍在 .ld-chart-tt 头行内').toMatch(/<div class="ld-chart-tt">[\s\S]*?<button class="ld-expand"/);
     expect(CARD, '展开钮单源（组件模板 1 枚）').toMatch(/<button class="ld-expand"/);
-    const wirings = VIEW.match(/@expand="toggleExpand\('/g) ?? [];
-    expect(wirings.length, '五线卡各传展开接线').toBe(5);
+    const wirings = VIEW.match(/toggleExpand\('/g) ?? [];
+    expect(wirings.length, '展开接线数=顶部五线卡+历史卡+对比卡+Top（914 能力统一）').toBe(8);
     expect(CARD, '放大态类保留（liveExpand611 锚）').toContain('ld-chart-full');
   });
 });
