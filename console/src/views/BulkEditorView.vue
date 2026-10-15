@@ -1,6 +1,6 @@
 <template>
   <div class="be-page">
-    <!-- 统一页头：PageHeader 组件（.ph 系列），本地 .be-hd-* 已删（.be-hd-r 为文件特有的右组修饰，保留） -->
+    <!-- 统一页头：PageHeader 组件（.ph 系列），本地 .be-hd-* 族删除（右侧动作组由 #actions 槽承接） -->
     <PageHeader :icon="Rows3" title="Bulk 批量文档编辑器" subtitle="NDJSON 直编 · index / create / update / delete 一次性 · 500ms 语法预校验 · 结果分组">
         <template #actions>
 <!-- 手写 be-stat 串改用 MetaStrip 统一件（值亮+标签暗+·分隔；ops 数/行结构错全保留，结构错走 err 档） -->
@@ -252,8 +252,9 @@ const opsCount = computed(() => {
   }
   return n;
 });
-/* 配对校验消费纯函数（utils/bulkNdjson） */
-const ndjsonLint = computed(() => ndjsonLintOf(String(body || '')));
+/* 配对校验消费纯函数（utils/bulkNdjson）——body 是 Ref，模板外必须 .value 解引用
+ （String(ref) 恒 "[object Object]"，校验对象永久失真） */
+const ndjsonLint = computed(() => ndjsonLintOf(String(body.value || '')));
 const lineErr = computed(() => {
   let n = 0;
   for (const l of body.value.split('\n')) {
@@ -355,8 +356,7 @@ function openRawIo() {
 
 <style scoped>
 .be-page { padding: var(--sp-3) var(--sp-4) var(--sp-5); }
-/* 页头已收敛 PageHeader 组件，本地 .be-hd/.be-hd-l/.be-hd-ic/.be-hd-tt/.be-hd-sub 删除 */
-.be-hd-r { display: flex; gap: var(--sp-2); align-items: center; }
+/* 页头已收敛 PageHeader 组件，本地 .be-hd/.be-hd-l/.be-hd-ic/.be-hd-tt/.be-hd-sub/.be-hd-r 删除 */
 /* .be-stat 保留（结果卡头 took 包装仍在用）；.be-stat-err 随页头 stat 串
  MetaStrip 化退役（结构错走 MetaStrip tone:'err'） */
 .be-stat { font-size: var(--fs-xs); color: var(--muted); }

@@ -17,12 +17,15 @@ export function useViewportProfile(target?: ResizeTarget): {
   let observed: HTMLElement | undefined;
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
   let disposed = false;
+  let fallbackActive = false;
 
   const update = (nextWidth: number, nextHeight: number) => {
     if (disposed) return;
-    /* 元素不可见（display:none/iframe 隐藏）时 rect 归零——忽略之，保持上次实测尺寸：
- 否则宿主切页签的瞬间布局按 0 宽重排、切回再弹回，肉眼可见的跳动/闪烁 */
-    if (nextWidth < 1 && nextHeight < 1) return;
+    /* 元素未完成布局（任一维 <1：display:none/iframe 隐藏的整零、路由过渡期
+ 高已解析宽未解析的半零中间矩形）时忽略之，保持上次实测尺寸——否则宿主切页签
+ 的瞬间布局按 0 宽重排、切回再弹回，肉眼可见的跳动/闪烁；半零更会把对应维钉 0
+（观察元素后窗口兜底已停，下一拍全量矩形送达前无自愈通道） */
+    if (nextWidth < 1 || nextHeight < 1) return;
     width.value = Number.isFinite(nextWidth) ? Math.max(0, nextWidth) : 0;
     height.value = Number.isFinite(nextHeight) ? Math.max(0, nextHeight) : 0;
   };
@@ -45,7 +48,8 @@ export function useViewportProfile(target?: ResizeTarget): {
   };
 
   const useWindowFallback = () => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && !fallbackActive) {
+      fallbackActive = true;
       window.addEventListener('resize', onWindowResize);
       updateFromWindow();
     }
@@ -55,6 +59,7 @@ export function useViewportProfile(target?: ResizeTarget): {
     if (typeof window !== 'undefined') window.removeEventListener('resize', onWindowResize);
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = undefined;
+    fallbackActive = false;
   };
 
   const observe = (element?: HTMLElement) => {
@@ -62,10 +67,14 @@ export function useViewportProfile(target?: ResizeTarget): {
     observer?.disconnect();
     observed = element;
     if (observer && element) {
-      stopWindowFallback();
       observer.observe(element);
       const rect = element.getBoundingClientRect();
       update(rect.width, rect.height);
+      /* 兜底监听常驻：RO 首拍送达缺席的环境（嵌入容器/后台渲染节流）里，
+ 元素测量一旦落在未完成布局的中间矩形上就再无重测入口=冻结。任何一次窗口
+ resize 都经 onWindowResize 重测元素矩形（非窗口尺寸）=自愈入口，RO 仍是
+ 元素尺寸变化的主通道；重测质量由 update 的未完成布局守卫兜住 */
+      useWindowFallback();
     } else {
       if (element) {
         const rect = element.getBoundingClientRect();

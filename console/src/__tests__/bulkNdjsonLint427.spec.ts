@@ -12,7 +12,9 @@ const v = readFileSync(join(__dirname, '../views/BulkEditorView.vue'), 'utf-8');
 
 describe('NDJSON 配对即时校验（427 批）', () => {
   it('lint 消费纯函数（443 批抽至 utils/bulkNdjson，行为单测在彼处）', () => {
-    expect(v).toMatch(/const ndjsonLint = computed\(\(\) => ndjsonLintOf\(String\(body \|\| ''\)\)\);/);
+    /* body 是 Ref：模板外必须 .value 解引用——旧锁 String(body || '') 恒收
+       "[object Object]" 一行，配对 lint 永久报「1 行不是合法 JSON」且真实内容永不参与校验 */
+    expect(v).toMatch(/const ndjsonLint = computed\(\(\) => ndjsonLintOf\(String\(body\.value \|\| ''\)\)\);/);
     expect(v).toContain("import { ndjsonLint as ndjsonLintOf } from '../utils/bulkNdjson';");
   });
 

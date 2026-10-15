@@ -83,6 +83,10 @@ describe('deadClassSweep785 · 全站 scoped 死类残量清零（死规则族�
     expect(hasSel(vue('views/AdhocRebuildView.vue'), 'cd-same'), '死类 .cd-same 复发（same 行永不渲染，样式恒空匹配）').toBe(false);
   });
 
+  it('A8 BulkEditor be-hd-r 死类清零（页头并入 PageHeader 后右组修饰零挂载，规则与滞留「保留」头注随刀清）', () => {
+    expect(hasSel(vue('views/BulkEditorView.vue'), 'be-hd-r'), '死类 .be-hd-r 复发（模板零挂载，样式恒空匹配）').toBe(false);
+  });
+
   /* —— B 组：相邻活类正向锚（防全删绿；规则形态断言非宽松 includes） —— */
 
   it('B1 TemplateGallery 活锚 .tg-hd / .tg-search 规则在场', () => {
@@ -123,6 +127,12 @@ describe('deadClassSweep785 · 全站 scoped 死类残量清零（死规则族�
     for (const cls of ['cd-added', 'cd-removed', 'cd-changed', 'cd-conflict']) {
       expect(new RegExp('\\.' + cls + '\\s+\\.cd-kind').test(code), `.${cls} .cd-kind 活锚丢失`).toBe(true);
     }
+  });
+
+  it('B8 BulkEditor 活锚 .be-card-hd / .be-stat 规则在场（A8 只清 be-hd-r 孤儿，家族活类不动）', () => {
+    const code = strip(vue('views/BulkEditorView.vue'));
+    expect(/\.be-card-hd\s*\{/.test(code), '.be-card-hd 活锚丢失').toBe(true);
+    expect(/\.be-stat\s*\{/.test(code), '.be-stat 活锚丢失').toBe(true);
   });
 
   /* —— C 组：结构锚 —— */
