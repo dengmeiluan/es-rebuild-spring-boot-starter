@@ -29,7 +29,7 @@
         <dependency>
             <groupId>io.github.dengmeiluan</groupId>
             <artifactId>es-rebuild-spring-boot-starter</artifactId>
-            <version>1.0.15</version>
+            <version>1.0.16</version>
         </dependency>
         <!-- 嵌入式宿主自带的运行时栈（starter 对这三件是 provided——版本决定权在宿主） -->
         <dependency>
