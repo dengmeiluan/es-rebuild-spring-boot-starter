@@ -203,7 +203,6 @@
           <label>来源：</label>
           <span class="mono">{{ currentRepo }} / {{ restoreTarget.snapshot }}</span>
           <!-- W-D：state→色档随主列表同走 StatusPill tone（此前恢复向导各态恒绿违反「失败=err」全站口径的缺陷已随改用收敛） -->
-          <!-- W-D：state→色档随主列表同走 StatusPill tone（此前恢复向导各态恒绿违反「失败=err」全站口径的缺陷已随改用收敛） -->
           <StatusPill class="mono" style="margin-left:var(--sp-2)" :tone="stateTone(restoreTarget.state)"
             :label="snapshotStateZh(restoreTarget.state) || (restoreTarget.state || '')"
             :en="snapshotStateZh(restoreTarget.state) ? restoreTarget.state : undefined" />
@@ -756,11 +755,16 @@ async function doRestore() {
   try {
     await api.snapshotRestore(currentRepo.value, restoreTarget.value.snapshot, restorePreview.value);
     /* 成功反馈带「去查询验证」动作（写类视图验证去處；目标索引按 rename 规则推导：
- 配了 rename_replacement 则首索引名替换前缀，否则原名；异步执行后可查） */
+ 配了 rename_replacement 则首索引名替换前缀，否则原名；异步执行后可查）。
+ 推导是尽力服务：rename 正则 lint 只提示不阻断提交，坏正则由 ES 侧裁决——
+ 推导自身抛错只降级为不带深链的成功通知，不得把已提交成功的恢复误报成失败 */
     const firstIdx = restoreTarget.value.indices?.[0];
-    const verifyIdx = firstIdx && restoreRenameReplacement.value.trim() && restoreRenamePattern.value.trim()
-      ? firstIdx.replace(new RegExp(restoreRenamePattern.value), restoreRenameReplacement.value)
-      : firstIdx;
+    let verifyIdx: string | undefined = firstIdx;
+    if (firstIdx && restoreRenameReplacement.value.trim() && restoreRenamePattern.value.trim()) {
+      try {
+        verifyIdx = firstIdx.replace(new RegExp(restoreRenamePattern.value), restoreRenameReplacement.value);
+      } catch { /* 坏 pattern：放弃深链推导，成功语义不变 */ }
+    }
     store.notify('success', '恢复已提交（异步）：' + restoreTarget.value.snapshot
       + '，进度见列表行' /* ：补进度指路（恢复是异步任务，列表行有行级进度） */, {
       duration: 8000,
