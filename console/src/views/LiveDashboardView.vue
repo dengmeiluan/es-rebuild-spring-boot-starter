@@ -155,6 +155,9 @@
  后命中域=量测域(currentTarget)=定位父级三者同体，与 Top 卡 .ld-top-plot 正例同构，
  useHoverEscape 的图区矩形巡检也随之同域 -->
           <div ref="cmpPlotEl" class="ld-cmp-plot" @mousemove="onCmpMove($event)" @mouseleave="onCmpLeave()">
+            <!-- 绘图域内壳（896 让位统一）：left 36px 让出 Y 刻度列——svg 与全部 % 定位层
+             （悬浮点/十字线/读出/末端点列）同域，曲线不再横穿刻度文字 -->
+            <div class="ld-cmp-inner">
             <svg :viewBox="'0 0 720 ' + CMP_H" class="ld-ncmp-svg" preserveAspectRatio="none">
               <defs>
                 <!-- 联动面积渐变（hover 节点唯一；stop 色随节点身份色，896 同 HistoryChart 档） -->
@@ -172,15 +175,11 @@
  abs 档传全体可见节点共享 max（cmpScaleMax）——各线横向可比且与 Y 顶刻度同域；
  联动高亮（HistoryChart hc-line 同语言）：图例 chip/读出行 hover→该节点线升亮、其余退灰；
  联动面积同走 catmullRomAreaPath 单源（面积上边缘=同一条平滑曲线，六卡/历史卡面积同语言）；
- 面积同走 catmullRomAreaPath 单源（面积上边缘=同一条平滑曲线，六卡/历史卡面积同语言）；
  对比卡曲线豁免过冲钳位（overshoot=true，896：多序列叠图丝滑优先——陡变段保持全张力
  圆弧不退化成直角；极值语义由图例峰值直读承担） -->
               <path v-for="s in cmpSeries" :key="s.name" :class="cmpHotActive ? (s.name === cmpHot ? 'is-hot' : 'is-dim') : ''" :d="catmullRomPath(sparkPts(s.data, CMP_W, CMP_H, cmpMetric === 'qps' || cmpMetric === 'idx' ? 'abs' : 'pct', cmpScaleMax), CMP_W, CMP_H, { overshoot: true })" fill="none" :stroke="s.color" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
               <line v-if="cmpWarn !== null" x1="0" :y1="CMP_H - CMP_H * (cmpWarn / 100)" x2="720" :y2="CMP_H - CMP_H * (cmpWarn / 100)" stroke="var(--err)" stroke-dasharray="4 2" vector-effect="non-scaling-stroke" />
             </svg>
-            <span class="ld-yt ld-yt-top" aria-hidden="true">{{ cmpYTop }}</span>
-            <span v-for="g in (cmpMode === 'pct' ? PCT_GRID : [])" :key="'cyt' + g" class="ld-yt ld-yt-mid" :style="{ top: (100 - g) + '%' }" aria-hidden="true">{{ g }}</span>
-            <span class="ld-yt ld-yt-bot" aria-hidden="true">0</span>
             <span v-if="cmpWarn !== null" class="ld-thv" :style="{ top: (100 - cmpWarn) + '%' }" aria-hidden="true">{{ cmpWarn }}</span>
             <!-- 末端常驻采样点（每序列一颗 3px 实心点，右缘成列=「看得到点」；hover 节点呼吸点单独叠放） -->
             <span v-for="s in cmpSeries" v-show="s.data.length > 1" :key="'dot' + s.name" class="ld-ncmp-enddot"
@@ -205,6 +204,10 @@
                   :title="'其余 ' + cmpRowsCapped.hidden + ' 节点：' + cmpRows.slice(CMP_TIP_CAP).map(r => r.name).join('、') + '（行尾 × 可隐藏节点减行）'">+{{ cmpRowsCapped.hidden }} 节点…</span>
               </div>
             </template>
+            </div>
+            <span class="ld-yt ld-yt-top" aria-hidden="true">{{ cmpYTop }}</span>
+            <span v-for="g in (cmpMode === 'pct' ? PCT_GRID : [])" :key="'cyt' + g" class="ld-yt ld-yt-mid" :style="{ top: (100 - g) + '%' }" aria-hidden="true">{{ g }}</span>
+            <span class="ld-yt ld-yt-bot" aria-hidden="true">0</span>
           </div>
           <div class="ld-xaxis" aria-hidden="true">
             <span class="ld-ta">{{ fmtTime(cmpTs[0]) }}</span>
@@ -538,6 +541,8 @@
               </label>
             </div>
             <div v-if="topView === 'curve'" ref="topPlotEl" class="ld-cmp-plot ld-top-plot" @mousemove="onTopMove($event)" @mouseleave="onTopLeave()">
+              <!-- 绘图域内壳（896 让位统一）：left 36px 让出 Y 刻度列 -->
+              <div class="ld-cmp-inner">
               <template v-if="topHasData">
                 <svg :viewBox="'0 0 720 ' + CMP_H" class="ld-ncmp-svg" preserveAspectRatio="none" aria-hidden="true">
                   <!-- 件1：横向网格线四档（全局 max 同坐标系底座） -->
@@ -558,8 +563,9 @@
                     </span>
                   </div>
                 </template>
-              </template>
-              <div v-else class="ld-svg-wait">采样中，打开面板起逐拍累积（实时曲线不回溯历史）…</div>
+                </template>
+                <div v-else class="ld-svg-wait">采样中，打开面板起逐拍累积（实时曲线不回溯历史）…</div>
+              </div>
             </div>
             <!-- 件1：常显图例（色点+索引名+当前值；曲线颜色↔索引映射不再仅 hover 可见） -->
             <div v-if="topView === 'curve' && topHasData" class="ld-top-legend" aria-label="Top 索引曲线图例">
@@ -1103,11 +1109,14 @@ const cmpMode = computed<'pct' | 'abs'>(() => CMP_METRICS.find(m => m.k === cmpM
 const cmpWarn = computed<number | null>(() => CMP_METRICS.find(m => m.k === cmpMetric.value)?.warn ?? null);
 function onCmpMove(e: MouseEvent) {
   const el = e.currentTarget as HTMLElement | null;
-  const rect = el?.getBoundingClientRect();
+  /* frac 分母=绘图域内壳（36px 让位后与 wrap 差一列），用 wrap 宽会把命中整体压小 */
+  const inner = el?.querySelector('.ld-cmp-inner');
+  const rect = (inner ?? el)?.getBoundingClientRect();
+  const wrap = el?.getBoundingClientRect();
   const frac = rect && rect.width > 0 ? (e.clientX - rect.left) / rect.width : 0;
   const base = cmpSeries.value.find(s => s.data.length > 1);
   /* 件1：Y 向跟手（指针 y 相对图区钳位） */
-  const y = rect ? Math.min(Math.max(e.clientY - rect.top, 14), rect.height - 14) : 0;
+  const y = wrap ? Math.min(Math.max(e.clientY - wrap.top, 14), wrap.height - 14) : 0;
   /* ts 与 data 同窗右对齐（LiveChartCard tsWin 同语义）：data 是 winSlice 截尾窗，
  直接传全量 sampleTs 会让读出头部时刻取到窗前采样点——十字线在窗内、时刻停在窗外
  （线上反馈「悬浮点不跟鼠标点」根因）；按数据长度右对齐切片保同域 */
@@ -1296,7 +1305,9 @@ const topHasData = computed(() => topCurves.value.some(s => s.data.length > 1));
 const topHit = ref<SparkHoverHit | null>(null);
 function onTopMove(e: MouseEvent) {
   const el = e.currentTarget as HTMLElement | null;
-  const rect = el?.getBoundingClientRect();
+  /* frac 分母=绘图域内壳（36px 让位后与 wrap 差一列），用 wrap 宽会把命中整体压小 */
+  const inner = el?.querySelector('.ld-cmp-inner');
+  const rect = (inner ?? el)?.getBoundingClientRect();
   const frac = rect && rect.width > 0 ? (e.clientX - rect.left) / rect.width : 0;
   const base = topCurves.value.find(s => s.data.length > 1);
   /* 件1：Y 向跟手（指针 y 相对图区钳位） */
@@ -1968,9 +1979,11 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 .ld-ncmp-restore:hover { color: var(--ac); }
 /* 图区包裹层：轴刻度/十字线/读出的定位上下文（与图同宽） */
 .ld-cmp-plot { position: relative; }
+/* 绘图域内壳（896 让位统一）：left 36px 让出 Y 刻度列——svg 与全部 % 定位层同域 */
+.ld-cmp-inner { position: absolute; inset: 0 0 0 36px; }
 .ld-glines line { stroke: var(--line); stroke-width: 1; }
 /* 轴系（LiveChartCard 781 同语言：Y 左缘双刻度 tx1 提亮+阈值右缘贴行+X 图下独立行 3 锚） */
-.ld-yt { position: absolute; left: 0; font-size: var(--fs-2xs); color: var(--tx1); font-family: var(--mono); line-height: 1.2; pointer-events: none; }
+.ld-yt { position: absolute; left: 0; width: 32px; text-align: right; font-size: var(--fs-2xs); color: var(--tx1); font-family: var(--mono); line-height: 1.2; pointer-events: none; } /* 右对齐贴绘图域左缘（36px 让位列内，LiveChartCard .ld-yt 同语言） */
 .ld-yt-top { top: 0; }
 .ld-yt-bot { bottom: 0; }
 /* 中档刻度贴 pct 网格线（对比卡；主卡 .ld-yt-mid 同语言，历史卡 .hc-yt 同语言） */
