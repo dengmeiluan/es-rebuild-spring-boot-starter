@@ -1978,9 +1978,11 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 .ld-ncmp-restore { font-size: var(--fs-2xs); color: var(--ac-hi); background: var(--ac-soft); border: 1px solid var(--ac-line); border-radius: 99px; padding: 1px var(--sp-2); cursor: pointer; }
 .ld-ncmp-restore:hover { color: var(--ac); }
 /* 图区包裹层：轴刻度/十字线/读出的定位上下文（与图同宽） */
-.ld-cmp-plot { position: relative; }
-/* 绘图域内壳（896 让位统一）：left 36px 让出 Y 刻度列——svg 与全部 % 定位层同域 */
+.ld-cmp-plot { position: relative; height: 150px; }
+/* 绘图域内壳（896 让位统一）：left 36px 让出 Y 刻度列——svg 与全部 % 定位层同域；
+ plot 显式高度承托 absolute 内壳（svg 脱文档流后防塌陷溢出压下方内容） */
 .ld-cmp-inner { position: absolute; inset: 0 0 0 36px; }
+.ld-cmp-inner .ld-ncmp-svg { height: 100%; }
 .ld-glines line { stroke: var(--line); stroke-width: 1; }
 /* 轴系（LiveChartCard 781 同语言：Y 左缘双刻度 tx1 提亮+阈值右缘贴行+X 图下独立行 3 锚） */
 .ld-yt { position: absolute; left: 0; width: 32px; text-align: right; font-size: var(--fs-2xs); color: var(--tx1); font-family: var(--mono); line-height: 1.2; pointer-events: none; } /* 右对齐贴绘图域左缘（36px 让位列内，LiveChartCard .ld-yt 同语言） */
