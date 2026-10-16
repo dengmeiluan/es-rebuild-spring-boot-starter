@@ -5,9 +5,10 @@
  jsonFind 定位链 querySelector/scrollTop）；view=tree 渲染 JsonTree tools 档；
  view=cards 渲染卡片行（前 5 字段+42 截断，@open-doc 交宿主开文档）。
  包裹 div（视图容器类/高度 cap 变量）留在宿主——高度链与视图分档 v-show 归宿主管。 -->
-  <!-- json：高亮 pretty 信封只读（v-html 由宿主 markHtmlAll 链产出；类名 json-view=theme 全局档） -->
+  <!-- json：高亮 pretty 信封只读（v-html 由宿主 markHtmlAll 链产出；类名 json-view=theme 全局档）
+   点击文档块（j-doc-block）→ open-doc-at(idx)：宿主映射回 SearchHit 走 openDoc 抽屉 -->
   <template v-if="view === 'json'">
-    <pre v-if="view === 'json'" ref="preEl" class="json-view" v-html="jsonHtml"></pre>
+    <pre v-if="view === 'json'" ref="preEl" class="json-view" v-html="jsonHtml" @click="onPreClick"></pre>
     <!-- 文档导航条（914 能力矩阵统一）：JSON/Tree 档的文档触达——遍历+打开走
      open-doc-at 与表格/卡片同一 openDoc 抽屉（看原始 JSON/编辑/保存全链复用） -->
     <div v-if="docCount" class="ah-docnav">
@@ -59,6 +60,18 @@ const emit = defineEmits<{
 
 /* json 档文档导航游标（宿主在 open-doc-at 里消费） */
 const docCursor = ref(0);
+/* json 档点击委托：文档块（j-doc-block）→ open-doc-at(块序)——宿主映射回 SearchHit。
+ 哨兵由宿主 jsonViewHtml 在 pretty 文本期注入（markHtmlAll 文本分轨保留、后转 span） */
+function onPreClick(e: MouseEvent) {
+  const t = (e.target as HTMLElement).closest('[data-doc-i]');
+  if (t) {
+    const i = Number(t.getAttribute('data-doc-i'));
+    if (Number.isFinite(i)) {
+      docCursor.value = i;
+      emit('open-doc-at', i);
+    }
+  }
+}
 
 /* json 形态 pre 元素出口：宿主 jsonFind 命中定位（querySelector data-hit-idx）与
  滚动位归零（scrollTop=0）经此承接——旧 ref="jsonBox" 直挂 pre 的链等价迁移 */
@@ -77,6 +90,9 @@ defineExpose({ preEl });
 .ah-nav-btn:disabled { opacity: .4; cursor: not-allowed; }
 .ah-nav-open { background: transparent; border: 1px solid var(--ac-line); border-radius: var(--r-s); color: var(--ac-hi); cursor: pointer; padding: 0 var(--sp-2); line-height: 1.8; font-size: var(--fs-2xs); }
 .ah-nav-open:hover { background: var(--ac-soft); }
+/* json 档文档块（点击开文档的可点域）：pointer 光标+左缘细条指示 */
+.json-view :deep(.j-doc-block) { display: block; cursor: pointer; border-left: 2px solid transparent; padding-left: var(--sp-1h); margin-left: calc(-1 * var(--sp-1h)); }
+.json-view :deep(.j-doc-block:hover) { border-left-color: var(--ac); background: var(--hl-soft, rgba(127, 127, 127, .08)); }
 /* 卡片内脏样式同步更新自 DslQueryView（类名逐字保形—— 等 DOM 查询按 .dq-card
  取数不受宿主/组件作用域迁移影响；dq-card-id/-row/-k/-v 四件同步同步更新） */
 .dq-card { background: var(--bg2); border: 1px solid var(--line); border-radius: var(--r-m); padding: var(--sp-2h) var(--sp-3); cursor: pointer; transition: border var(--tr), transform var(--tr); }
