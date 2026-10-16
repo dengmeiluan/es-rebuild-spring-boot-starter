@@ -332,12 +332,16 @@ const filteredRawHtml = computed(() => {
   }
   return highlightJson(JSON.stringify(hit, null, 2));
 });
-/* 点击 JSON 区全选（MappingView selectAllRaw 同款：复制兜底第一步，Ctrl+C 走系统剪贴板） */
+/* 点击 JSON 区全选（MappingView selectAllRaw 同款：复制兜底第一步，Ctrl+C 走系统剪贴板）。
+ 事件派发通道取 currentTarget；复制失败 toast 的动作以构造事件直调本函数（无派发=
+ currentTarget 为空），回落 rawPreEl 真身，全选兜底不落空 */
 function selectAllRaw(e: MouseEvent | KeyboardEvent) {
+  const el = (e.currentTarget as Node | null) ?? rawPreEl.value;
+  if (!el) return;
   const sel = window.getSelection();
   const range = document.createRange();
   if (!sel || !range) return;
-  range.selectNodeContents(e.currentTarget as Node);
+  range.selectNodeContents(el);
   sel.removeAllRanges();
   sel.addRange(range);
 }

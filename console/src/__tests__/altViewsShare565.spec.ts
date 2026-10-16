@@ -28,7 +28,7 @@ const ih = readFileSync(join(__dirname, '../views/IndexHubView.vue'), 'utf-8');
 describe('565 件③：AltHitsViews 共享件接线（源码锁）', () => {
   it('DslQueryView import + 三视图分支各挂一件（json/tree/cards 绑定契约；914 能力矩阵统一同步更新：json/tree 档 +doc-count/open-doc-at 文档导航）', () => {
     expect(dq).toContain("import AltHitsViews from '../components/AltHitsViews.vue';");
-    expect(dq).toMatch(/<AltHitsViews ref="jsonBox" view="json" :json-html="jsonMarkedHtml" :doc-count="resp\?\.hits\?\.length \?\? 0" @open-doc-at="i => resp && openDoc\(resp\.hits\[i\]\)" \/>/);
+    expect(dq).toMatch(/<AltHitsViews ref="jsonBox" view="json" :json-html="jsonMarkedHtml" :doc-count="resp\?\.hits\?\.length \?\? 0" :doc-ids="resp\?\.hits\?\.map\(h => h\._id\) \?\? \[\]" @open-doc-at="i => resp && openDoc\(resp\.hits\[i\]\)"/);
     expect(dq).toMatch(/<AltHitsViews view="tree" :tree-data="jqResult !== null \? jqResult : \(resp\.hits \|\| \[\]\)\.map\(h => \(\{ _id: h\._id, \.\.\.h\._source \}\)\)" :doc-count=/);
     expect(dq).toMatch(/<AltHitsViews view="cards" :hits="cardHits" @open-doc="openDoc" \/>/);
   });
@@ -138,26 +138,30 @@ describe('565 件③：AltHitsViews 三形态渲染（行为锁）', () => {
     expect(n).toBe(1);
   });
 
-  it('914 能力矩阵统一：json/tree 档渲染文档导航条（遍历+打开）', async () => {
+  it('914 能力矩阵统一：json/tree 档渲染文档导航条（_id 下拉直达+遍历+打开）', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const app = createApp(() =>
-      h(AltHitsViews, { view: 'json', jsonHtml: '{"hits":[]}', docCount: 3, onOpenDocAt: (i: number) => { (window as any).__opened = i; } })
+      h(AltHitsViews, { view: 'json', jsonHtml: '{"hits":[]}', docCount: 3, docIds: ['doc-a', 'doc-b', 'doc-c'], onOpenDocAt: (i: number) => { (window as any).__opened = i; } })
     );
     app.mount(host);
     try {
       await nextTick();
       const nav = host.querySelector('.ah-docnav')!;
       expect(nav, '导航条在场').toBeTruthy();
-      expect(nav.textContent).toContain('1 / 3');
-      const btns = [...nav.querySelectorAll('button')];
-      btns[1]!.click();
+      /* _id 直达下拉在场（选项=docIds；缺省游标 0） */
+      const sel = nav.querySelector('.ah-docnav-sel') as HTMLSelectElement;
+      expect(sel, '_id 下拉在场').toBeTruthy();
+      expect(sel.value).toBe('0');
+      expect([...sel.options].map(o => o.textContent)).toEqual(['doc-a', 'doc-b', 'doc-c']);
+      /* 选第 2 项（游标随动）→「打开文档」携带该下标 */
+      sel.value = '1';
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
       await nextTick();
-      expect(nav.textContent).toContain('2 / 3');
-      const open = [...host.querySelectorAll('button')].find(b => (b.textContent || '').includes('打开文档'))!;
+      const open = [...nav.querySelectorAll('button')].find(b => (b.textContent || '').includes('打开文档'))!;
       open.click();
       await nextTick();
-      expect((window as any).__opened).toBe(1);
+      expect((window as any).__opened, 'open-doc-at 携带选中下标 1').toBe(1);
     } finally {
       app.unmount();
       host.remove();

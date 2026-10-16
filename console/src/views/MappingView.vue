@@ -388,12 +388,16 @@ function sendToRebuild() {
 }
 
 /* 点击 JSON 区全选：兜底复制路径的第一步（后续 Ctrl+C 走系统剪贴板，不受 JS 权限约束）
- v3.0.0：Enter 键盘路径同入口——e 兼容 MouseEvent|KeyboardEvent（只读 currentTarget） */
+ v3.0.0：Enter 键盘路径同入口——e 兼容 MouseEvent|KeyboardEvent（只读 currentTarget）。
+ 事件派发通道取 currentTarget；复制失败 toast 的动作以构造事件直调本函数（无派发=
+ currentTarget 为空），回落 rawPreEl 真身，全选兜底不落空 */
 function selectAllRaw(e: MouseEvent | KeyboardEvent) {
+  const el = (e.currentTarget as Node | null) ?? rawPreEl.value;
+  if (!el) return;
   const sel = window.getSelection();
   const range = document.createRange();
   if (!sel || !range) return;
-  range.selectNodeContents(e.currentTarget as Node);
+  range.selectNodeContents(el);
   sel.removeAllRanges();
   sel.addRange(range);
 }
