@@ -1569,15 +1569,15 @@ function rawRespObj() {
   return { total: resp.value.total, took: resp.value.took, hits: { hits: resp.value.hits }, aggregations: resp.value.aggregations };
 }
 const jsonViewHtml = computed(() => {
-  /* 信封形态（jq 未启用）：逐文档段拼接——每段前置哨兵 \u0000DOC{i}\u0000，
-   highlightJson 之后转 j-doc-block（点击块=打开该文档走 openDoc 抽屉，914 能力
-   矩阵贯通）。jq 行集形态无信封块结构，保持整包 pretty 不做块标记 */
+  /* 信封形态（jq 未启用）：逐文档独立高亮+块 span 包裹（j-doc-block，点击开该文档
+   走 openDoc 抽屉，914 能力矩阵贯通）——每段独立 tokenize，无跨段哨兵失效问题 */
   if (jqResult.value === null && resp.value) {
     const hits = resp.value.hits || [];
-    const head = prettyJson({ total: resp.value.total, took: resp.value.took }).slice(1, -1);
-    const body = hits.map((h, i) => `\u0000DOC${i}\u0000` + prettyJson(h._source)).join(',\n');
-    const text = `{\n${head},\n"hits": [\n${body}\n]}\n`;
-    return highlightJson(text).replace(/\u0000DOC(\d+)\u0000/g, '<span class="j-doc-block" data-doc-i="$1">');
+    const head = highlightJson(prettyJson({ total: resp.value.total, took: resp.value.took }));
+    const blocks = hits
+      .map((h, i) => `<span class="j-doc-block" data-doc-i="${i}">` + highlightJson(prettyJson(h._source)) + '</span>')
+      .join(',\n');
+    return `${head},\n"hits": [\n${blocks}\n]`;
   }
   const data = jqResult.value !== null ? jqResult.value : rawRespObj();
   return highlightJson(prettyJson(data));
