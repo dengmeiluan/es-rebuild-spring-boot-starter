@@ -5,7 +5,7 @@
     <component :is="icon" :size="compact ? 18 : 26" class="es-icon" />
     <div class="es-text">{{ text }}</div>
     <div v-if="hint" class="es-hint">{{ hint }}</div>
-    <button v-if="actionText" class="btn sm" @click="$emit('action')">{{ actionText }}</button>
+    <button v-if="actionText" class="btn sm" :disabled="actionDisabled" @click="$emit('action')">{{ actionText }}</button>
     <!-- -F2 逃生舱：props 表达不了的内容（多按钮 / 多行 <pre> / 行内 <kbd>）放这里。
  只承载「内容」，不承载「容器」——padding、居中、图标仍由本组件决定，
  调用方无法通过插槽绕开统一留白。v-if 同 hint/actionText：
@@ -21,6 +21,9 @@ withDefaults(defineProps<{
   text: string;         /* 一句话说明现状 */
   hint?: string;        /* 可选：下一步指引 */
   actionText?: string;  /* 可选：行动按钮文案，配 @action */
+  /** 可选：动作在途禁用（防连点重复下发；异步进度可感知）。
+   undefined=不禁用——布尔属性绑 undefined 时不落 disabled，存量调用零触 */
+  actionDisabled?: boolean;
   /** E3：页面级空态垂直居中（min-height 撑到视口内容区高度）——
  修「先在顶栏选择一个索引」贴页面顶部的突兀形态；默认 false 不影响存量 */
   centered?: boolean;

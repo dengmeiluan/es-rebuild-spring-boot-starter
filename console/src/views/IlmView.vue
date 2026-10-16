@@ -169,9 +169,9 @@
           </div>
         </div>
 
-        <!-- Explain 拉取失败：内联失败面板 + 重试，不回落引导空态 -->
+        <!-- Explain 拉取失败：内联失败面板 + 重试，不回落引导空态；重试在途禁用（防连点双发，进度可感知） -->
         <EmptyState v-else-if="explainIndex && explainErr" :icon="RefreshCw" text="explain 拉取失败"
-          :hint="'索引 ' + explainIndex + '：' + explainErr" action-text="重试" @action="loadExplain" />
+          :hint="'索引 ' + explainIndex + '：' + explainErr" action-text="重试" :action-disabled="explainLoading" @action="loadExplain" />
 
         <!-- -F2 逃生舱：引导列表经默认插槽承载（内容归 EmptyState 留白体系） -->
         <EmptyState v-else :icon="Recycle" text="选择左侧策略查看 Phase 时间线与 Explain">
@@ -288,11 +288,24 @@ function createSample() {
 
 /* ILM 策略编辑器：新建/编辑/删除（此前策略变更只能去 REST 手写 JSON） */
 const policyEditOpen = ref(false);
-/* 策略编辑草稿——写一半的 policyBody 切页/刷新不再丢 */
-const policyName = useScopedDraft('policy-name', { route: 'ilm' }, '').text;
-const policyBody = useScopedDraft('policy-body', { route: 'ilm' }, '').text;
+/* 策略编辑草稿——只服务新建会话：写一半的 body/名在关弹窗重开、切页回来、刷新后都回显
+ （useScopedDraft 挂载读一次）；编辑会话体恒取自源策略，走独立 ref 不写新建稿，
+ 编辑取消后新建不被带出编辑体 */
+const newPolicyName = useScopedDraft('policy-name', { route: 'ilm' }, '').text;
+const newPolicyBody = useScopedDraft('policy-body', { route: 'ilm' }, '').text;
+const editPolicyName = ref('');
+const editPolicyBody = ref('');
 const policyBusy = ref(false);
 const editingName = ref(''); // 非空 = 编辑既有策略；空 = 新建
+/* 模板/校验的绑定面按会话域转发（v-model 双向各落各域） */
+const policyName = computed({
+  get: () => (editingName.value ? editPolicyName : newPolicyName).value,
+  set: (v: string) => { (editingName.value ? editPolicyName : newPolicyName).value = v; },
+});
+const policyBody = computed({
+  get: () => (editingName.value ? editPolicyBody : newPolicyBody).value,
+  set: (v: string) => { (editingName.value ? editPolicyBody : newPolicyBody).value = v; },
+});
 /* 表单校验审计：策略体 JSON 实时合法性（纯展示）——空体/解析失败给出具体原因，
  与 保存按钮禁用门、savePolicy 内兜底校验同口径（ReindexAdvanced bodyJsonErr 同构） */
 const policyJsonErr = computed(() => {
@@ -302,14 +315,14 @@ const policyJsonErr = computed(() => {
 });
 function openNewPolicy() {
   editingName.value = '';
-  policyName.value = '';
-  policyBody.value = SAMPLE_ILM_BODY;
+  /* 半成品稿优先回显，空稿才落示例体；保存成功即清稿（savePolicy），不会带出已保存的旧策 */
+  if (!policyBody.value.trim()) policyBody.value = SAMPLE_ILM_BODY;
   policyEditOpen.value = true;
 }
 function openEditPolicy(p: any) {
   editingName.value = p.name;
-  policyName.value = p.name;
-  policyBody.value = JSON.stringify({ policy: p.policy }, null, 2);
+  editPolicyName.value = p.name;
+  editPolicyBody.value = JSON.stringify({ policy: p.policy }, null, 2);
   policyEditOpen.value = true;
 }
 async function savePolicy() {
@@ -320,6 +333,7 @@ async function savePolicy() {
   try {
     await api.ilmPolicyPut(policyName.value.trim(), JSON.stringify(parsed));
     store.notify('success', `策略 ${policyName.value} 已保存`);
+    if (!editingName.value) { newPolicyName.value = ''; newPolicyBody.value = ''; } // 新建稿随保存消费
     policyEditOpen.value = false;
     loadPolicies();
   } catch (e: any) {
