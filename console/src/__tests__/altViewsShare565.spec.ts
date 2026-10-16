@@ -137,4 +137,30 @@ describe('565 件③：AltHitsViews 三形态渲染（行为锁）', () => {
     await nextTick();
     expect(n).toBe(1);
   });
+
+  it('914 能力矩阵统一：json/tree 档渲染文档导航条（遍历+打开）', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const app = createApp(() =>
+      h(AltHitsViews, { view: 'json', jsonHtml: '{"hits":[]}', docCount: 3, onOpenDocAt: (i: number) => { (window as any).__opened = i; } })
+    );
+    app.mount(host);
+    try {
+      await nextTick();
+      const nav = host.querySelector('.ah-docnav')!;
+      expect(nav, '导航条在场').toBeTruthy();
+      expect(nav.textContent).toContain('1 / 3');
+      const btns = [...nav.querySelectorAll('button')];
+      btns[1]!.click();
+      await nextTick();
+      expect(nav.textContent).toContain('2 / 3');
+      const open = [...host.querySelectorAll('button')].find(b => (b.textContent || '').includes('打开文档'))!;
+      open.click();
+      await nextTick();
+      expect((window as any).__opened).toBe(1);
+    } finally {
+      app.unmount();
+      host.remove();
+    }
+  });
 });

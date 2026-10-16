@@ -81,9 +81,9 @@ st = st.replace(b_5_921, '');
 const h6 = st.slice(st.indexOf('## ⑥ 下一批')).indexOf(EOL) >= 0 ? st.match(/## ⑥ 下一批[^\n]*/)[0] + EOL : null;
 if (!h6) throw new Error('⑥ header');
 st = st.replace(h6, h6 + P6HEAD + P6ITEM);
-// ⑥ 删除 923 时点段（原样整体，含其后的空行→保留 ⑦ 节头前结构）
-if (!st.includes(b_6_923_clean)) throw new Error('⑥923 remove drift');
-st = st.replace(b_6_923_clean, '');
+// ⑥ 删除 923 时点段（原始块整删——块尾直接接 ⑦ 节头无空行）
+if (!st.includes(b_6_923)) throw new Error('⑥923 remove drift');
+st = st.replace(b_6_923, '');
 // ⑦ 演行插入（节头后）
 const h7 = '## ⑦ 历史归档' + EOL;
 if (!st.includes(h7)) throw new Error('⑦ header');
