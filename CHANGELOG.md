@@ -5,6 +5,14 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.24]
+
+### 新增
+
+- JSON 视图文档块点击触达（能力矩阵贯通收口）：每个命中的 JSON 块可点击，
+  点击即打开该文档的抽屉（树视图预览 / Monaco 编辑 raw JSON / 保存全量
+  覆盖）——与表格、卡片同一 openDoc 链路；块级 hover 高亮辅助定位
+
 ## [1.0.23]
 
 ### 修复
