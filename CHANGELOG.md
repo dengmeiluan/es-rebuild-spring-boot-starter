@@ -5,6 +5,13 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.26]
+
+### 新增
+
+- 查询工作台 JSON 视图文档块点击：每个命中的 JSON 块可点击，点击即打开该
+  文档抽屉（树视图预览 / Monaco 编辑 raw JSON / 保存）——四视图文档触达统一
+
 ## [1.0.25]
 
 ### 修复
