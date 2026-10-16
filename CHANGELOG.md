@@ -5,6 +5,20 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.22]
+
+### 修复
+
+- PIT 开启（Point-in-Time）失败甄别：keepAlive 格式错误、索引不存在等请求级
+  错误不再误报成「集群不支持 PIT」，直传错误面板可回看全文并重试；仅旧版本 ES
+  无此端点或连接不可达时才维持「能力不可用」提示
+- PIT 深分页排序指引可执行：部分 ES 版本对显式 _shard_doc 排序返回 400 时，
+  原指引「清空 sort field 后重新拉取」实际无效（清空后仍回退同一排序形态、
+  同样 400）；指引改为「在 sort field 选一个可排序字段（date/keyword 等）后
+  重新拉取」，该路径已实测分页推进正常
+- PIT 预览 CSV 导出收编全站单一出处：表头引号转义/BOM/换行统一，含引号列名
+  不再产出破格文件；空值 ∅ 与对象 JSON 序列化语义不变
+
 ## [1.0.21]
 
 ### 修复
