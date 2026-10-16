@@ -14,7 +14,9 @@ const src = readFileSync(join(__dirname, '../views/PitScrollView.vue'), 'utf-8')
 describe('PIT _shard_doc 兼容性提示（四十一批）', () => {
   it('catch 分支识别 _shard_doc + No mapping found 并给 warn 指引', () => {
     expect(src.includes("msg.includes('_shard_doc') && msg.includes('No mapping found')")).toBe(true);
-    expect(src.includes('清空「sort field」后重新拉取')).toBe(true);
+    /* 指引措辞随批更新：旧「清空 sort field」是死循环（清空后仍回退 _shard_doc 同一 400），
+       改指「选可排序字段」——实测该路径分页推进（pitSortGuide921 锁定） */
+    expect(src.includes('在「sort field」选一个可排序字段（date/keyword 等）后重新拉取')).toBe(true);
     expect(src.includes("store.notify('warning', tip)")).toBe(true);
   });
 

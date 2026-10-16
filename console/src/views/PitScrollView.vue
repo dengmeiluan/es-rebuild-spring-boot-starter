@@ -158,7 +158,7 @@ import { useAppStore } from '../stores/app';
 import { useQueryHistoryStore } from '../stores/queryHistory';
 import { useIdxState } from '../composables/urlState';
 import { useScopedDraft, useScopedDraftState } from '../composables/useScopedDraft';
-import { exportStamp, fmtTime, downloadText, csvCell, fmtCell } from '../utils/format';
+import { exportStamp, fmtTime, downloadText, fmtCell, csvText } from '../utils/format';
 import { friendlyEsError } from '../utils/esError'; /* ：三处裸 err 合并单源翻译 */
 import CurrentIdxChip from '../components/CurrentIdxChip.vue'; /* ：页内选择器退役换只读 chip */
 import FieldPicker from '../components/FieldPicker.vue';
@@ -387,6 +387,8 @@ async function doStart() {
         size: batchSize.value.v,
         query,
         pit: { id: pitId.value, keep_alive: keepAlive.value.trim() || '5m' },
+        /* sort 恒显式（空档回退 _shard_doc=canonical；省略会让 hits 丢排序值、
+         search_after 断链原地重拉），部分版本对显式 _shard_doc 400 时走 catch 指引 */
         sort: [{ [sortField.value.trim() || '_shard_doc']: { order: sortOrder.value.v } }],
         track_total_hits: fetched.value === 0,
       };
@@ -427,7 +429,7 @@ async function doStart() {
     /* 部分 ES 版本（如 7.10.0/7.10.1）对 body pit 的显式 _shard_doc 排序返回
  400 No mapping found——非 console 问题，给出可行动指引而非裸错误 */
     if (msg.includes('_shard_doc') && msg.includes('No mapping found')) {
-      const tip = '当前 ES 版本不支持 _shard_doc 排序：清空「sort field」后重新拉取即可（PIT 顺序由服务端保证，不影响导出完整性）';
+      const tip = '当前 ES 版本不支持 _shard_doc 排序：在「sort field」选一个可排序字段（date/keyword 等）后重新拉取（深分页需稳定排序键，不影响导出完整性）';
       log('err', '拉取失败：' + msg);
       log('warn', tip);
       store.notify('warning', tip);
@@ -449,18 +451,16 @@ function exportJsonl() {
   store.notify('success', `已导出 ${buffer.value.length} 条 JSONL`);
 }
 
-/* CSV 导出——与 JSONL 同数据源（全量 buffer），列=_id+_source 键并集
- （稀疏文档不丢列），csvCell 转义 + BOM，Excel 直开 */
+/* CSV 导出——与 JSONL 同数据源（全量 buffer），列=_id+_source 键并集（稀疏文档不丢列）；
+ csvText 单源组装（表头/单元格转义+BOM 统一，Browser/MatchMatrix/Security/Snapshots 同源） */
 function exportCsv() {
   if (!buffer.value.length) return;
   const colsSet = new Set<string>(['_id']);
   for (const h of buffer.value) for (const k of Object.keys(h._source ?? {})) colsSet.add(k);
   const cols = [...colsSet];
-  const head = cols.map(c => `"${c}"`).join(',');
-  const body = buffer.value
-    .map(h => cols.map(c => csvCell(fmtCell(c === '_id' ? h._id ?? null : (h._source ?? {})[c] ?? null))).join(','))
-    .join('\n');
-  downloadText(`pit-${index.value}-${exportStamp()}.csv`, head + '\n' + body, 'text/csv;charset=utf-8', { bom: true });
+  /* 单元格语义保真：fmtCell 先行（空值 ∅/对象 JSON 序列化），csvText 内部只做引号转义 */
+  const rows = buffer.value.map(h => cols.map(c => fmtCell(c === '_id' ? h._id ?? null : (h._source ?? {})[c] ?? null)));
+  downloadText(`pit-${index.value}-${exportStamp()}.csv`, csvText(cols, rows), 'text/csv;charset=utf-8');
   store.notify('success', `已导出 ${buffer.value.length} 条 CSV`);
 }
 

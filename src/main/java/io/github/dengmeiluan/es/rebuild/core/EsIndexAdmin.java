@@ -2647,12 +2647,29 @@ public class EsIndexAdmin {
             return performJson("POST", "/" + index + "/_pit?keep_alive="
                     + java.net.URLEncoder.encode(ka, "UTF-8"), null);
         } catch (Exception ex) {
-            Map<String, Object> out = new java.util.LinkedHashMap<>();
-            out.put("available", false);
-            out.put("reason", ex.getMessage());
-            out.put("hint", "当前集群不支持 Point-in-Time（需 ES 7.10+），可回退到 scroll");
-            return out;
+            /* 请求级失败（keep_alive 解析 400/索引不存在 404）说明 _pit 端点健在，异常直传
+             错误通道（前端错误面板可回看全文+重试），不得冒充「集群不支持 PIT」；
+             端点缺失与连接类异常才落能力降级 */
+            if (isPitCapabilityLevelFailure(ex)) {
+                Map<String, Object> out = new java.util.LinkedHashMap<>();
+                out.put("available", false);
+                out.put("reason", ex.getMessage());
+                out.put("hint", "当前集群不支持 Point-in-Time（需 ES 7.10+），可回退到 scroll");
+                return out;
+            }
+            throw ex;
         }
+    }
+
+    /**
+     * PIT 能力级失败甄别——只有「端点真不在」（旧版本 ES 对未知路径回 400 no handler
+     * found for uri）与连接类异常（非 ResponseException）维持 available=false 能力降级；
+     * 其余 ResponseException（keep_alive 解析 400/索引不存在 404 等请求级形态）一律异常
+     * 直传错误通道。甄别方向宁漏勿误——只把明确能力级形态留在降级，其余直传。
+     */
+    private static boolean isPitCapabilityLevelFailure(Exception ex) {
+        if (!(ex instanceof org.elasticsearch.client.ResponseException)) return true;
+        return String.valueOf(ex.getMessage()).contains("no handler found for uri");
     }
 
     /** PIT + search_after 分页：body 包含 pit.id、sort、可选 search_after 。 */

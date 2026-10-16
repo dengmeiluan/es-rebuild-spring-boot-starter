@@ -42,7 +42,7 @@ describe('Lucene/PIT CSV 导出对齐（七十六批）', () => {
     expect(pitSrc).toMatch(/@click="exportCsv" :disabled="!buffer\.length"/);
     expect(pitSrc).toMatch(/for \(const k of Object\.keys\(h\._source \?\? \{\}\)\) colsSet\.add\(k\)/);
     expect(pitSrc).toMatch(/pit-\$\{index\.value\}-\$\{exportStamp\(\)\}\.csv/); /* 255 批时间戳 */
-    expect(pitSrc).toMatch(/text\/csv;charset=utf-8', \{ bom: true \}/);
+    expect(pitSrc).toMatch(/csvText\(cols, rows\)/); /* csvText 单源收编：表头/BOM/换行统一，行为锁细节见 pitCsvChannel921 */
   });
 
   it('八十九批：Lucene 导出文件名带索引上下文（JSONL/CSV，对齐 RT/PIT 命名）', () => {
