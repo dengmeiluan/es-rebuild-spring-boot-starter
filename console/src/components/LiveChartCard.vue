@@ -60,11 +60,13 @@
       <span v-if="series.length > 1" class="ld-yt ld-yt-bot" aria-hidden="true">0</span>
       <span v-if="threshold != null" class="ld-thv" :style="{ top: (100 - threshold) + '%' }" aria-hidden="true">{{ threshold }}</span>
       <template v-if="hit">
-        <span class="ld-xline" :style="{ left: leftPct }" aria-hidden="true" />
-        <span class="ld-yline" :style="{ top: (hoverY ?? 0).toFixed(1) + 'px' }" aria-hidden="true" />
-        <span class="ld-dot" :style="{ left: leftPct, top: topPct, background: color }" aria-hidden="true" />
-        <div class="ld-hv" :style="{ left: leftPct, transform: shift }" role="status">
-          <span class="ld-hv-t">{{ timeText }}</span><b>{{ valueText }}</b>
+        <div class="ld-hitlayer">
+          <span class="ld-xline" :style="{ left: leftPct }" aria-hidden="true" />
+          <span class="ld-yline" :style="{ top: (hoverY ?? 0).toFixed(1) + 'px' }" aria-hidden="true" />
+          <span class="ld-dot" :style="{ left: leftPct, top: topPct, background: color }" aria-hidden="true" />
+          <div class="ld-hv" :style="{ left: leftPct, transform: shift }" role="status">
+            <span class="ld-hv-t">{{ timeText }}</span><b>{{ valueText }}</b>
+          </div>
         </div>
       </template>
     </div>
@@ -176,9 +178,13 @@ const hit = ref<SparkHoverHit | null>(null);
 const hoverY = ref<number | null>(null);
 function onMove(e: MouseEvent) {
   const el = e.currentTarget as HTMLElement | null;
-  const rect = el?.getBoundingClientRect();
+  /* frac 分母=绘图域（svg）而非含让位刻度列的 wrap——右移后两者差 36px，
+   用 wrap 宽会把 frac 整体压小（命中点系统性左偏） */
+  const svg = el?.querySelector('.ld-svg');
+  const rect = (svg ?? el)?.getBoundingClientRect();
   const frac = rect && rect.width > 0 ? (e.clientX - rect.left) / rect.width : 0;
-  hoverY.value = rect ? Math.min(Math.max(e.clientY - rect.top, 0), rect.height) : null;
+  const wrap = el?.getBoundingClientRect();
+  hoverY.value = wrap ? Math.min(Math.max(e.clientY - wrap.top, 0), wrap.height) : null;
   const tw = tsWin.value;
   hit.value = sparkHoverAt(props.series, tw, frac, 300, LD_H, props.mode);
   damp.move(frac);
@@ -264,7 +270,11 @@ const timeText = computed(() => hit.value && hit.value.t ? fmtTime(hit.value.t) 
 .ld-glines line { stroke: var(--line); stroke-width: 1; }
 .ld-baseline { stroke: var(--line-strong); stroke-width: 1; }
 /* 悬浮详情层——十字线/圆点/读出走 HTML 绝对定位层（圆点/文本不进 SVG 防变形） */
-.ld-svgwrap { position: relative; }
+/* 绘图域右移让出左刻度列（HistoryChart .hc-canvas left:36px 同语言）——
+ 曲线不再横穿 Y 轴刻度文字（多档刻度后遮挡暴露）；刻度列 32px 右对齐贴域 */
+.ld-svgwrap { position: relative; padding-left: 36px; }
+/* 悬浮层（十字线/圆点/读数）锚绘图域：left 36px 起，% 定位与 frac 同域零错位 */
+.ld-hitlayer { position: absolute; top: 0; bottom: 0; left: 36px; right: 0; pointer-events: none; }
 .ld-xline { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--tx2); opacity: .45; pointer-events: none; }
 /* 横向十字线（HistoryChart .hc-yline 同语言）——双线交点=指针位置 */
 .ld-yline { position: absolute; left: 0; right: 0; height: 1px; background: var(--tx2); opacity: .45; pointer-events: none; }
@@ -290,7 +300,7 @@ const timeText = computed(() => hit.value && hit.value.t ? fmtTime(hit.value.t) 
 .ld-ta { pointer-events: none; }
 /* K1：Y 轴左缘双刻度（HTML 层不被拉伸变形；tx1 提亮可读=实报「轴信息
  不可读」对策；HistoryChart .hc-ymax/.hc-yzero 同语言） */
-.ld-yt { position: absolute; left: 0; font-size: var(--fs-2xs); color: var(--tx1); font-family: var(--mono); line-height: 1.2; pointer-events: none; }
+.ld-yt { position: absolute; left: 0; width: 32px; text-align: right; font-size: var(--fs-2xs); color: var(--tx1); font-family: var(--mono); line-height: 1.2; pointer-events: none; } /* 右对齐贴绘图域左缘（36px 让位列内，HistoryChart .hc-yt 同语言） */
 .ld-yt-top { top: 0; }
 .ld-yt-bot { bottom: 0; }
 /* 中档刻度贴网格线（25/50/75 线位=75%/50%/25% 高度，translateY 居中锚线；历史卡 .hc-yt 同语言） */

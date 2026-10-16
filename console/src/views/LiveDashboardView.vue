@@ -1957,8 +1957,8 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 .ld-ncmp-area { pointer-events: none; }
 /* 悬浮贴线圆点（每可见序列一颗；HistoryChart hc-dot 同语言，色点描边隔离曲线） */
 .ld-ncmp-hoverdot { position: absolute; width: 8px; height: 8px; border-radius: 50%; transform: translate(-50%, -50%); border: 1.5px solid var(--bg); pointer-events: none; }
-/* 末端常驻采样点：3px 实心色点钉右缘（x=100%），y 随各序列当前值——曲线末端「看得到点」 */
-.ld-ncmp-enddot { position: absolute; right: 0; width: 5px; height: 5px; border-radius: 50%; transform: translate(50%, -50%); pointer-events: none; box-shadow: 0 0 0 1.5px var(--bg1); }
+/* 末端常驻采样点：点心钉图区右缘外 4px（面板 padding 内），与曲线终点分离不叠压 */
+.ld-ncmp-enddot { position: absolute; right: -4px; width: 5px; height: 5px; border-radius: 50%; transform: translate(50%, -50%); pointer-events: none; box-shadow: 0 0 0 1.5px var(--bg1); }
 .ld-ncmp-pulse { position: absolute; width: 6px; height: 6px; border-radius: 50%; transform: translate(-50%, -50%); animation: ld-ncmp-pulse 2.4s ease-out infinite; pointer-events: none; }
 @keyframes ld-ncmp-pulse { 0% { transform: translate(-50%, -50%) scale(1); opacity: .85; } 75% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .ld-ncmp-pulse { animation: none; } }
