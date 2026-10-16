@@ -487,10 +487,10 @@
  W1·402 字面锁面零触，56vh 现值不变；卡片内脏样式同步更新组件 scoped）。
  json 件 ref="jsonBox" 承接 preEl expose——jsonFind 定位链等价迁移 -->
           <div v-show="view === 'json'" class="scroll-y dq-json-wrap dq-alt-body">
-            <AltHitsViews ref="jsonBox" view="json" :json-html="jsonMarkedHtml" />
+            <AltHitsViews ref="jsonBox" view="json" :json-html="jsonMarkedHtml" :doc-count="resp?.hits?.length ?? 0" @open-doc-at="i => resp && openDoc(resp.hits[i])" />
           </div>
           <div v-show="view === 'tree'" class="scroll-y dq-tree-view dq-alt-body">
-            <AltHitsViews view="tree" :tree-data="jqResult !== null ? jqResult : (resp.hits || []).map(h => ({ _id: h._id, ...h._source }))" />
+            <AltHitsViews view="tree" :tree-data="jqResult !== null ? jqResult : (resp.hits || []).map(h => ({ _id: h._id, ...h._source }))" :doc-count="jqResult !== null ? jqResult.length : (resp?.hits || []).length" @open-doc-at="i => { const rows = jqResult !== null ? jqResult : (resp?.hits || []).map(h => ({ _id: h._id, ...h._source })); const row = rows[i]; if (row) openDoc({ _id: String(row._id ?? ''), _index: '', score: 1, _score: 1, _source: row } as SearchHit) }" />
           </div>
           <div v-show="view === 'cards'" class="dq-cards scroll-y dq-alt-body">
             <!-- 卡片集走 cardHits 快滤（kw 空即全量）；565 改用共享件 -->

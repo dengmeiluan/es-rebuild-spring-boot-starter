@@ -13,9 +13,11 @@
 <!-- 两钮 title 改随态三元（SqlConsole 执行钮 525 W10 同语言）——479 禁用原因
  契约保留在 else 支（缺索引/缺查询词仍见禁用原因），条件齐备时出功能描述 -->
 <!-- 字段体检在途双通道（spinning+「体检中…」）+主执行钮补 Play spinning
- （文案切换既有）+重试钮 文案通道——G161 族，803 池①横切 -->
+ （文案切换既有）+重试钮 文案通道——G161 族，803 池①横切。在途示能各随其链
+ （SqlConsole 同语言）：体检示能随 schemaBusy、执行读秒/取消钮随 qr.running，
+ 互斥闸门（disabled）保持共享 busy -->
 <button class="btn ghost sm" :title="index ? '探测当前索引字段，提前提醒 SQL 失能字段（在 Lucene 里不受影响）' : '请先选择索引'" @click="doSchema" :disabled="!index || busy">
-  <ShieldAlert :size="12" :class="{ spinning: busy }" /> {{ busy ? '体检中…' : '字段体检' }}
+  <ShieldAlert :size="12" :class="{ spinning: schemaBusy }" /> {{ schemaBusy ? '体检中…' : '字段体检' }}
 </button>
 <button class="btn ghost sm" @click="showSyntax = !showSyntax">
   <BookOpen :size="12" /> 语法手册
@@ -30,9 +32,9 @@
   <Star :size="12" /> 收藏
 </button>
 <button class="btn primary sm" :title="index && qs.trim() ? '执行 Lucene 查询' : '请先选择索引并输入查询语句'" @click="doRun" :disabled="!index || !qs.trim() || busy">
-  <Play :size="12" :class="{ spinning: busy }" /> {{ busy ? '执行中（' + (qr.elapsedMs.value / 1000).toFixed(1) + 's）…' : '执行' }} <span class="kbd inline">⏎</span>
+  <Play :size="12" :class="{ spinning: qr.running.value }" /> {{ qr.running.value ? '执行中（' + (qr.elapsedMs.value / 1000).toFixed(1) + 's）…' : '执行' }} <span class="kbd inline">⏎</span>
 </button>
-<button v-if="busy" class="btn sm" @click="qr.cancel()"><X :size="12" /> 取消</button>
+<button v-if="qr.running.value" class="btn sm" @click="qr.cancel()"><X :size="12" /> 取消</button>
         </div>
       </template>
       </PageHeader>
@@ -397,6 +399,8 @@ const totalShards = ref(0);
 const successfulShards = ref(0);
 const warnings = ref<string[]>([]);
 const busy = ref(false);
+/* 字段体检链自有在途位：执行钮读秒/取消钮随执行链（qr.running），体检示能随本链 */
+const schemaBusy = ref(false);
 const qr = useQueryRun(); // 长查询读秒 + 取消（ 范式）
 const showSyntax = ref(false);
 /* 三态契约状态位：searched 区分「未执行/已执行」，runErr 持错误全文供内联面板回看 */
@@ -447,7 +451,9 @@ onMounted(() => {
 });
 
 async function doRun() {
-  if (!index.value.trim() || !qs.value.trim()) return;
+  /* 再入守卫：执行钮 disabled 挡不住 Enter/历史回放/改页大小通道——旧请求被
+   begin() 作废后其 finally 会提前熄灭在途示能，第二跑全程无进度无取消 */
+  if (!index.value.trim() || !qs.value.trim() || busy.value || qr.running.value) return;
   busy.value = true; runErr.value = ''; runErrRaw.value = null;
   const signal = qr.begin();
   try {
@@ -500,19 +506,21 @@ function openRawIo() {
 
 async function doSchema() {
   if (!index.value.trim()) return;
-  busy.value = true;
+  busy.value = true; schemaBusy.value = true;
   try {
     const r: any = await api.resolveSchema(index.value.trim());
     warnings.value = r?.warnings || [];
     store.notify(warnings.value.length ? 'warning' : 'success',
       warnings.value.length ? `${warnings.value.length} 项 SQL 失能字段（Lucene 不受影响）` : '无 SQL 限制风险');
   } catch (e: any) { /* ：裸串并轨 friendlyEsError */ store.notify('error', '体检失败：' + friendlyEsError(String(e?.message ?? e))); }
-  finally { busy.value = false; }
+  finally { busy.value = false; schemaBusy.value = false; }
 }
 
-/* 查询现场已全量在 URL（idx/q/sort/order），复制链接即可分享复现 */
+/* 查询现场已全量在 URL（idx/q/sort/order），复制链接即可分享复现。
+ 剪贴板被拒时同样要有反馈（域内双分支口径），不得静默 */
 async function copyLink() {
-  if (await copyText(location.href)) store.notify('success', '链接已复制，打开即复现当前查询');
+  const ok = await copyText(location.href);
+  store.notify(ok ? 'success' : 'error', ok ? '链接已复制，打开即复现当前查询' : '复制失败');
 }
 
 /* W4-T14：在构建器中打开——互转通道只收 DSL（?dsl= base64），lucene 文本包装 query_string

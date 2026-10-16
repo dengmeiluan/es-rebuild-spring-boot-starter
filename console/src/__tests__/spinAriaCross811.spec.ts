@@ -37,9 +37,9 @@ describe('811 件1：半合规页在途可感知（G161 族·同图标 spinning 
     expect(ss).toContain(`{{ running ? '重试中…' : '重试' }}`);
   });
 
-  it('LuceneQuery 主钮补 spinning+字段体检钮双通道+重试钮文案通道', () => {
-    expect(lq).toContain(`<Play :size="12" :class="{ spinning: busy }" />`);
-    expect(lq).toContain(`<ShieldAlert :size="12" :class="{ spinning: busy }" /> {{ busy ? '体检中…' : '字段体检' }}`);
+  it('LuceneQuery 主钮补 spinning+字段体检钮双通道+重试钮文案通道（在途示能各随其链）', () => {
+    expect(lq).toContain(`<Play :size="12" :class="{ spinning: qr.running.value }" />`);
+    expect(lq).toContain(`<ShieldAlert :size="12" :class="{ spinning: schemaBusy }" /> {{ schemaBusy ? '体检中…' : '字段体检' }}`);
     expect(lq).toContain(`{{ busy ? '重试中…' : '重试' }}`);
   });
 

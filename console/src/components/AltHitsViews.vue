@@ -6,7 +6,18 @@
  view=cards 渲染卡片行（前 5 字段+42 截断，@open-doc 交宿主开文档）。
  包裹 div（视图容器类/高度 cap 变量）留在宿主——高度链与视图分档 v-show 归宿主管。 -->
   <!-- json：高亮 pretty 信封只读（v-html 由宿主 markHtmlAll 链产出；类名 json-view=theme 全局档） -->
-  <pre v-if="view === 'json'" ref="preEl" class="json-view" v-html="jsonHtml"></pre>
+  <template v-if="view === 'json'">
+    <pre v-if="view === 'json'" ref="preEl" class="json-view" v-html="jsonHtml"></pre>
+    <!-- 文档导航条（914 能力矩阵统一）：JSON/Tree 档的文档触达——遍历+打开走
+     open-doc-at 与表格/卡片同一 openDoc 抽屉（看原始 JSON/编辑/保存全链复用） -->
+    <div v-if="docCount" class="ah-docnav">
+      <span class="ah-docnav-lb">文档</span>
+      <button type="button" class="ah-nav-btn" title="上一条文档" :disabled="docCursor <= 0" @click="docCursor = Math.max(0, docCursor - 1)">‹</button>
+      <span class="ah-docnav-pos mono">{{ Math.min(docCursor + 1, docCount) }} / {{ docCount }}</span>
+      <button type="button" class="ah-nav-btn" title="下一条文档" :disabled="docCursor >= docCount - 1" @click="docCursor = Math.min(docCount - 1, docCursor + 1)">›</button>
+      <button type="button" class="ah-nav-open" @click="emit('open-doc-at', docCursor)">打开文档</button>
+    </div>
+  </template>
   <!-- tree：JsonTree 统一件 tools 档（DQ 旧体逐字平移） -->
   <JsonTree v-else-if="view === 'tree'" :data="treeData" tools />
   <!-- cards：卡片行（DQ 旧体逐字平移——_id 行 + 前 5 字段行 + 42 截断；点开文档走宿主） -->
@@ -36,9 +47,18 @@ defineProps<{
   treeData?: unknown;
   /** cards 形态：卡片行集（DQ 传 cardHits 快滤集；kw 过滤留在宿主） */
   hits?: SearchHit[];
+  /** json/tree 档的文档总数（>0 时渲染导航条；cards 档点击即达不需要） */
+  docCount?: number;
 }>();
 
-const emit = defineEmits<{ (e: 'open-doc', hit: SearchHit): void }>();
+const emit = defineEmits<{
+  (e: 'open-doc', hit: SearchHit): void;
+  /** json/tree 档文档导航条的「打开」：携带当前遍历下标，宿主映射回 SearchHit 走同一 openDoc 抽屉 */
+  (e: 'open-doc-at', idx: number): void;
+}>();
+
+/* json 档文档导航游标（宿主在 open-doc-at 里消费） */
+const docCursor = ref(0);
 
 /* json 形态 pre 元素出口：宿主 jsonFind 命中定位（querySelector data-hit-idx）与
  滚动位归零（scrollTop=0）经此承接——旧 ref="jsonBox" 直挂 pre 的链等价迁移 */
@@ -47,6 +67,16 @@ defineExpose({ preEl });
 </script>
 
 <style scoped>
+/* 文档导航条（914 能力矩阵统一）：json/tree 档的文档触达——遍历+打开走 open-doc-at
+ 与表格/卡片同一 openDoc 抽屉（原始 JSON 查看/编辑/保存全链复用） */
+.ah-docnav { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-1) var(--sp-2); margin-bottom: var(--sp-1); background: var(--bg2); border: 1px solid var(--line); border-radius: var(--r-s); }
+.ah-docnav-lb { font-size: var(--fs-2xs); color: var(--tx2); }
+.ah-docnav-pos { font-size: var(--fs-2xs); color: var(--tx1); font-variant-numeric: tabular-nums; }
+.ah-nav-btn { background: transparent; border: 1px solid var(--line); border-radius: var(--r-s); color: var(--tx1); cursor: pointer; padding: 0 var(--sp-1h); line-height: 1.6; font-size: var(--fs-xs); }
+.ah-nav-btn:hover:not(:disabled) { border-color: var(--ac-line); color: var(--tx0); }
+.ah-nav-btn:disabled { opacity: .4; cursor: not-allowed; }
+.ah-nav-open { background: transparent; border: 1px solid var(--ac-line); border-radius: var(--r-s); color: var(--ac-hi); cursor: pointer; padding: 0 var(--sp-2); line-height: 1.8; font-size: var(--fs-2xs); }
+.ah-nav-open:hover { background: var(--ac-soft); }
 /* 卡片内脏样式同步更新自 DslQueryView（类名逐字保形—— 等 DOM 查询按 .dq-card
  取数不受宿主/组件作用域迁移影响；dq-card-id/-row/-k/-v 四件同步同步更新） */
 .dq-card { background: var(--bg2); border: 1px solid var(--line); border-radius: var(--r-m); padding: var(--sp-2h) var(--sp-3); cursor: pointer; transition: border var(--tr), transform var(--tr); }

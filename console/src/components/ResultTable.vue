@@ -400,8 +400,9 @@
  与骨架一口径无新高度链；卡片档网格容器（ih-cards 同构）+@open-doc 透传宿主。
  表格档（缺省/回落）恒不渲染（零增量） -->
     <div v-if="viewSegOn && effView !== 'table'" class="rt-alt-body scroll-y" :class="{ 'is-cards': effView === 'cards' }" :style="{ maxHeight }">
-      <AltHitsViews v-if="effView === 'json'" view="json" :json-html="jsonHtml" />
-      <AltHitsViews v-else-if="effView === 'tree'" view="tree" :tree-data="treeData" />
+      <!-- 文档导航条（914 能力矩阵统一）：json/tree 档触达与表格/卡片同一 open-doc 链 -->
+      <AltHitsViews v-if="effView === 'json'" view="json" :json-html="jsonHtml" :doc-count="props.hits.length" @open-doc-at="i => { const h = props.hits[i]; if (h) emit('open-doc', h) }" />
+      <AltHitsViews v-else-if="effView === 'tree'" view="tree" :tree-data="treeData" :doc-count="props.hits.length" @open-doc-at="i => { const h = props.hits[i]; if (h) emit('open-doc', h) }" />
       <AltHitsViews v-else view="cards" :hits="cardHitsAdapted" @open-doc="emit('open-doc', $event)" />
     </div>
 

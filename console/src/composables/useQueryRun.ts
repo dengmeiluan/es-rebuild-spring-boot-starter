@@ -16,6 +16,9 @@ export function useQueryRun() {
  在网络上继续跑且响应照常返回，后到即覆盖新结果（连查/改参快查竞态）；
  abort 后旧 fetch 以 AbortError reject，视图 catch 分支丢弃，不写状态 */
     abortCtl?.abort();
+    /* 连查形态下旧计时器句柄先清再起新表：句柄被覆盖即泄漏，泄漏表会在
+ finish 后继续用旧起点覆写 elapsedMs（finish 只清最新句柄） */
+    if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = 0; }
     abortCtl = new AbortController();
     elapsedMs.value = 0;
     running.value = true;

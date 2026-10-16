@@ -26,10 +26,10 @@ const ih = readFileSync(join(__dirname, '../views/IndexHubView.vue'), 'utf-8');
 /* ═══════════ 源码锁：三消费面接线形态 ═══════════ */
 
 describe('565 件③：AltHitsViews 共享件接线（源码锁）', () => {
-  it('DslQueryView import + 三视图分支各挂一件（json/tree/cards 绑定契约）', () => {
+  it('DslQueryView import + 三视图分支各挂一件（json/tree/cards 绑定契约；914 能力矩阵统一同步更新：json/tree 档 +doc-count/open-doc-at 文档导航）', () => {
     expect(dq).toContain("import AltHitsViews from '../components/AltHitsViews.vue';");
-    expect(dq).toMatch(/<AltHitsViews ref="jsonBox" view="json" :json-html="jsonMarkedHtml" \/>/);
-    expect(dq).toMatch(/<AltHitsViews view="tree" :tree-data="jqResult !== null \? jqResult : \(resp\.hits \|\| \[\]\)\.map\(h => \(\{ _id: h\._id, \.\.\.h\._source \}\)\)" \/>/);
+    expect(dq).toMatch(/<AltHitsViews ref="jsonBox" view="json" :json-html="jsonMarkedHtml" :doc-count="resp\?\.hits\?\.length \?\? 0" @open-doc-at="i => resp && openDoc\(resp\.hits\[i\]\)" \/>/);
+    expect(dq).toMatch(/<AltHitsViews view="tree" :tree-data="jqResult !== null \? jqResult : \(resp\.hits \|\| \[\]\)\.map\(h => \(\{ _id: h\._id, \.\.\.h\._source \}\)\)" :doc-count=/);
     expect(dq).toMatch(/<AltHitsViews view="cards" :hits="cardHits" @open-doc="openDoc" \/>/);
   });
 
