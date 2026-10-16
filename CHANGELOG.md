@@ -5,6 +5,15 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.23]
+
+### 修复
+
+- 实时 KPI 卡绘图域右移 36px 让出 Y 轴刻度列（刻度右对齐贴域，历史卡同语言），
+  曲线/面积不再横穿刻度文字；悬浮命中（frac）改按绘图域取值，右移后零偏移；
+  十字线/圆点/读数包进悬浮层与绘图域同域
+- 节点对比末端采样点列右移 4px 至图区外，与曲线终点分离不再叠压
+
 ## [1.0.22]
 
 ### 修复
