@@ -22,8 +22,19 @@
       <button type="button" class="ah-nav-open" @click="emit('open-doc-at', docCursor)">打开文档</button>
     </div>
   </template>
-  <!-- tree：JsonTree 统一件 tools 档（DQ 旧体逐字平移） -->
-  <JsonTree v-else-if="view === 'tree'" :data="treeData" tools />
+  <!-- tree：JsonTree 统一件 tools 档（DQ 旧体逐字平移）+ 文档导航条（914 能力矩阵统一：tree 档同享文档触达） -->
+  <template v-else-if="view === 'tree'">
+    <JsonTree :data="treeData" tools />
+    <div v-if="docCount" class="ah-docnav">
+      <span class="ah-docnav-lb">文档</span>
+      <button type="button" class="ah-nav-btn" title="上一条文档" :disabled="docCursor <= 0" @click="docCursor = Math.max(0, docCursor - 1)">‹</button>
+      <select v-model.number="docCursor" class="ah-docnav-sel mono" :title="docIdList[docCursor] || ''" aria-label="选择文档（按 _id）">
+        <option v-for="(d, i) in docIdList" :key="i" :value="i">{{ d || '#' + (i + 1) }}</option>
+      </select>
+      <button type="button" class="ah-nav-btn" title="下一条文档" :disabled="docCursor >= docCount - 1" @click="docCursor = Math.min(docCount - 1, docCursor + 1)">›</button>
+      <button type="button" class="ah-nav-open" @click="emit('open-doc-at', docCursor)">打开文档</button>
+    </div>
+  </template>
   <!-- cards：卡片行（DQ 旧体逐字平移——_id 行 + 前 5 字段行 + 42 截断；点开文档走宿主） -->
   <template v-else-if="view === 'cards'">
     <div v-for="h in hits" :key="h._id" class="dq-card" @click="emit('open-doc', h)" role="button" tabindex="0" @keydown.enter.prevent="emit('open-doc', h)" @keydown.space.prevent="emit('open-doc', h)">

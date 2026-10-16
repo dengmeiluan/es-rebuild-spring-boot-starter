@@ -5,6 +5,13 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.27]
+
+### 新增
+
+- Tree 档（节点结构视图）补齐文档导航条（‹ ›/ _id 下拉/打开文档）——
+  与 JSON/卡片档同享文档触达（914 能力矩阵统一收口）
+
 ## [1.0.26]
 
 ### 新增
