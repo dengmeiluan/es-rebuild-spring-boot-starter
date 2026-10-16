@@ -14,7 +14,10 @@
     <div v-if="docCount" class="ah-docnav">
       <span class="ah-docnav-lb">文档</span>
       <button type="button" class="ah-nav-btn" title="上一条文档" :disabled="docCursor <= 0" @click="docCursor = Math.max(0, docCursor - 1)">‹</button>
-      <span class="ah-docnav-pos mono">{{ Math.min(docCursor + 1, docCount) }} / {{ docCount }}</span>
+      <!-- _id 直达下拉（914 续）：按 id 精确选择（与卡片 kw 快滤同效），选中即当前遍历位 -->
+      <select v-model.number="docCursor" class="ah-docnav-sel mono" :title="docIdList[docCursor] || ''" aria-label="选择文档（按 _id）">
+        <option v-for="(d, i) in docIdList" :key="i" :value="i">{{ d || '#' + (i + 1) }}</option>
+      </select>
       <button type="button" class="ah-nav-btn" title="下一条文档" :disabled="docCursor >= docCount - 1" @click="docCursor = Math.min(docCount - 1, docCursor + 1)">›</button>
       <button type="button" class="ah-nav-open" @click="emit('open-doc-at', docCursor)">打开文档</button>
     </div>
@@ -34,12 +37,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import JsonTree from './JsonTree.vue';
 import { trunc } from '../utils/format';
 import type { SearchHit } from '../types';
 
-defineProps<{
+const props = defineProps<{
   /** 渲染形态：json / tree / cards（调用方按自身视图档各挂一件） */
   view: 'json' | 'tree' | 'cards';
   /** json 形态：高亮 pretty HTML（宿主 markHtmlAll/respMark 链产出） */
@@ -50,6 +53,8 @@ defineProps<{
   hits?: SearchHit[];
   /** json/tree 档的文档总数（>0 时渲染导航条；cards 档点击即达不需要） */
   docCount?: number;
+  /** json/tree 档的 _id 列表（与 docCount 同序；导航条下拉直达的选项源，缺省回落序号） */
+  docIds?: string[];
 }>();
 
 const emit = defineEmits<{
@@ -60,6 +65,12 @@ const emit = defineEmits<{
 
 /* json 档文档导航游标（宿主在 open-doc-at 里消费） */
 const docCursor = ref(0);
+/* 下拉选项源：docIds 缺席/长度不齐时回落序号占位（与 docCount 对齐） */
+const docIdList = computed(() => {
+  const n = props.docCount || 0;
+  const ids = props.docIds;
+  return Array.from({ length: n }, (_, i) => (ids && ids[i]) || '#' + (i + 1));
+});
 /* json 档点击委托：文档块（j-doc-block）→ open-doc-at(块序)——宿主映射回 SearchHit。
  哨兵由宿主 jsonViewHtml 在 pretty 文本期注入（markHtmlAll 文本分轨保留、后转 span） */
 function onPreClick(e: MouseEvent) {
@@ -90,6 +101,9 @@ defineExpose({ preEl });
 .ah-nav-btn:disabled { opacity: .4; cursor: not-allowed; }
 .ah-nav-open { background: transparent; border: 1px solid var(--ac-line); border-radius: var(--r-s); color: var(--ac-hi); cursor: pointer; padding: 0 var(--sp-2); line-height: 1.8; font-size: var(--fs-2xs); }
 .ah-nav-open:hover { background: var(--ac-soft); }
+/* _id 直达下拉（mono 短显，title 悬停全量） */
+.ah-docnav-sel { max-width: 220px; background: var(--bg1); border: 1px solid var(--line); border-radius: var(--r-s); color: var(--tx1); font-size: var(--fs-2xs); padding: 1px var(--sp-1); cursor: pointer; }
+.ah-docnav-sel:hover { border-color: var(--ac-line); }
 /* json 档文档块（点击开文档的可点域）：pointer 光标+左缘细条指示 */
 .json-view :deep(.j-doc-block) { display: block; cursor: pointer; border-left: 2px solid transparent; padding-left: var(--sp-1h); margin-left: calc(-1 * var(--sp-1h)); }
 .json-view :deep(.j-doc-block:hover) { border-left-color: var(--ac); background: var(--hl-soft, rgba(127, 127, 127, .08)); }
