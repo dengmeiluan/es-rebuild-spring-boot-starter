@@ -138,8 +138,9 @@
           <span class="ms-i ms-t"><i>took</i> <TookBadge :ms="tookMs" /></span>
         </MetaStrip>
         <!-- 手写 accordion 退役换 QRT——查找/列拖拽/单元格详情/导出/增量渲染全量继承 -->
-        <!-- 结果表聚焦放大（423 同款推广）——v-if 上移表面层防 v-else 断链 -->
-        <FocusableSurface v-if="hits.length" pane-id="tpl.result" title="结果表" :enabled="focusPaneId === 'tpl.result'"
+        <!-- 结果表聚焦放大（423 同款推广）——v-if 上移表面层防 v-else 断链；
+ 门控=ran（执行过查询即呈现，0 命中走 QRT 内建「无命中」空态），开屏引导只在未执行时 -->
+        <FocusableSurface v-if="ran" pane-id="tpl.result" title="结果表" :enabled="focusPaneId === 'tpl.result'"
           @update:enabled="v => (focusPaneId = v ? 'tpl.result' : null)">
           <!-- W8：满高口径合并 --vh-offset（标准偏移 210px），聚焦态结果区无页头工具条故回补 delta 60px（等价旧值 150px） -->
           <QueryResultTable :hits="hits as any" :total="totalHits" :total-gte="totalGte" :max-height="focusPaneId === 'tpl.result' ? 'calc(100vh - var(--vh-offset, 210px) + 60px)' : '60vh'" :storage-key="'tpl:' + (curId || 'x')" export-name="tpl-result" :focusable="false"
@@ -148,7 +149,7 @@
         </FocusableSurface>
         <!-- 迁移遗留的 display:none 空 pre 死元素清除 -->
         <EmptyState
-          v-if="!rendered && !hits.length"
+          v-if="!rendered && !ran"
           :icon="LayoutTemplate"
           text="把常用查询存成模板，业务方只填参数不碰 DSL"
           hint="「预览渲染」看最终 DSL，「执行查询」直接出结果"
@@ -281,6 +282,9 @@ const paramValues = useScopedDraftState<Record<string, string>>('params', { rout
 const rendered = ref('');
 const hits = ref<any[]>([]);
 const tookMs = ref(-1);
+/* 执行过查询（含 0 命中）——结果面门控锚：0 命中由 QRT 内建空态呈现，
+ 开屏引导只在未执行且未渲染时出现（pick/newTemplate 复位） */
+const ran = ref(false);
 const totalHits = ref(0);
 const totalGte = ref(false);
 /* st-meta 手写串适配 MetaStrip items（took 徽标走默认插槽，SearchSandboxView 同款） */
@@ -380,7 +384,7 @@ async function load() {
 function pick(t: { id: string; source: string }) {
   curId.value = t.id;
   source.value = prettify(t.source);
-  rendered.value = ''; hits.value = []; tookMs.value = -1;
+  rendered.value = ''; hits.value = []; tookMs.value = -1; ran.value = false;
 }
 function prettify(s: string) {
   try { return JSON.stringify(JSON.parse(s), null, 2); } catch { return s; }
@@ -388,7 +392,7 @@ function prettify(s: string) {
 function newTemplate() {
   curId.value = '';
   source.value = DEFAULT_TPL();
-  rendered.value = ''; hits.value = []; tookMs.value = -1;
+  rendered.value = ''; hits.value = []; tookMs.value = -1; ran.value = false;
 }
 
 async function save() {
@@ -461,6 +465,7 @@ async function run() {
     totalHits.value = t.value;
     totalGte.value = t.gte;
     hits.value = r.hits?.hits || [];
+    ran.value = true;
     if (!hits.value.length) store.notify('warning', '查询无命中');
     /* 成功执行写入跨模式查询历史（mode=template，query=渲染后 DSL 摘要）——
  模板执行从此可在查询工作台回放，不再黑盒一次性 */
@@ -474,8 +479,9 @@ async function run() {
 }
 
 async function copyRendered() {
-  await copyText(rendered.value);
-  store.notify('success', '已复制 DSL');
+  /* 反馈随 copyText 真值（页内历史回放 replayTplRow 同语言：假成功比失败更误导） */
+  const ok = await copyText(rendered.value);
+  store.notify(ok ? 'success' : 'error', ok ? '已复制 DSL' : '复制失败');
 }
 
 /* ══ ：页内历史回放裁决（）══
@@ -556,9 +562,10 @@ load();
 /* 中列 420px 钉死改 44% 弹性——宽屏中列跟随变宽（窄屏仍由 min 320px 保底） */
 .st-body { display: grid; grid-template-columns: minmax(150px, 200px) minmax(320px, 44%) minmax(0, 1fr); gap: var(--sp-3); flex: 1; min-height: 0; align-items: start; }
 /* st-list 列表容器壳剥壳（约定④：border+radius 容器退役，内容直贴）——
- 分界由 .st-list-hd 既有 border-bottom 承接；overflow+flex+max-height 骨架逐字保留
- （收缩防撑破是结构语义非 chrome，as-card 同语言） */
-.st-list { overflow: hidden; display: flex; flex-direction: column; max-height: calc(100vh - var(--vh-offset, 210px) + 50px); }
+ 分界由 .st-list-hd 既有 border-bottom 承接；flex+max-height 骨架保留
+ （收缩防撑破是结构语义非 chrome，as-card 同语言）；overflow-y:auto 供模板
+ 超出可视高度时滚动可达（hidden 把溢出条目整体剪成不可达，列表多时下方模板消失） */
+.st-list { overflow-y: auto; display: flex; flex-direction: column; max-height: calc(100vh - var(--vh-offset, 210px) + 50px); }
 .st-list-hd { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-2) var(--sp-2h); font-size: var(--fs-xs); font-weight: 650; border-bottom: 1px solid var(--border); }
 /* st-list 侧栏空态死码规则退役（已清模板消费，随立删；
  /557「34px var(--sp-4)」源码锁与 豁免册锚同步更新负锁化） */

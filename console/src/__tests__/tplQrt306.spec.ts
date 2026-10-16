@@ -10,7 +10,7 @@ const v = readFileSync(join(__dirname, '../views/SearchTemplatesView.vue'), 'utf
 
 describe('模板结果换 QRT（306 批）', () => {
   it('QRT 接线+手写 accordion 清零', () => {
-    expect(v).toMatch(/<FocusableSurface v-if="hits\.length" pane-id="tpl\.result" title="结果表"/); /* 424 批：v-if 上移表面层 */
+    expect(v).toMatch(/<FocusableSurface v-if="ran" pane-id="tpl\.result" title="结果表"/); /* 424 批：v-if 上移表面层；931 批随迁：门控 hits.length→ran（0 命中走 QRT 内建空态） */
     expect(v).toMatch(/<QueryResultTable :hits="hits as any" :total="totalHits" :total-gte="totalGte" :max-height=/);
     expect(v).not.toMatch(/class="st-hit"/);
     expect(v).not.toMatch(/function fmtScore/);

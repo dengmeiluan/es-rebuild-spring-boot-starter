@@ -18,7 +18,7 @@ describe('聚焦面推广（424 批）', () => {
   });
 
   it('搜索模板结果表：v-if 上移表面层（防 v-else 断链）+聚焦态拉伸', () => {
-    expect(tpl).toMatch(/<FocusableSurface v-if="hits\.length" pane-id="tpl\.result" title="结果表"/);
+    expect(tpl, '931 批随迁：门控 hits.length→ran（0 命中走 QRT 内建空态）').toMatch(/<FocusableSurface v-if="ran" pane-id="tpl\.result" title="结果表"/);
     expect(tpl).toMatch(/:max-height="focusPaneId === 'tpl\.result' \? 'calc\(100vh - var\(--vh-offset, 210px\) \+ 60px\)' : '60vh'"/);
     expect(tpl).toContain("import FocusableSurface from '../components/FocusableSurface.vue';");
   });
