@@ -156,7 +156,7 @@
             <span class="hr-name">{{ c.name }}</span>
             <span class="hr-msg">{{ c.message }}</span>
             <!-- 检查项复制（critical/warn 正是贴工单内容） -->
-            <button class="btn ghost xs" style="margin-left:auto;flex:none" :aria-label="'复制检查项：' + c.name"
+            <button class="btn ghost xs" :aria-label="'复制检查项：' + c.name"
               title="复制此检查项（级别+名称+详情）" @click="copyCheck(c)">
 <ClipboardCopy :size="10" />
 </button>
@@ -467,6 +467,9 @@ const diffItems = computed(() => {
   /* 数值型变化附变化率（↑/↓ 徽标，可视化拉满）；非数值/缺失不判 */
   const out: { k: string; old: string; new: string; pct?: string; up?: boolean }[] = [];
   for (const k of keys) {
+    /* 生成时间是报告元数据非集群状态：排除出对比——否则任何两份报告恒有 ≥1 项变化，
+     「完全一致」的正向反馈永不出现 */
+    if (k === 'generatedAt') continue;
     if (!(k in a)) { out.push({ k, old: '', new: b[k] }); continue; }
     if (!(k in b)) { out.push({ k, old: a[k], new: '' }); continue; }
     if (a[k] !== b[k]) out.push({ k, old: a[k], new: b[k] });
@@ -678,7 +681,11 @@ async function copyReportMd() {
 
 .hr-checks { display: flex; flex-direction: column; gap: var(--sp-1); }
 /* info 级不再整行 bg2 填充（线框纪律：仅 warn/critical 着色），基础行透明 */
-.hr-check { display: grid; grid-template-columns: 24px minmax(120px, 160px) minmax(0, 1fr); gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); font-size: var(--fs-sm); border-radius: var(--r-xs); }
+/* 检查项行 4 列：模板 4 子项（图标/名称/详情/复制按钮），3 列模板下第 4 项自动放置
+ 掉进「第 2 行第 1 栏」=24px 图标轨道（≤900 档同形态缺陷已按量尺修正，宽档同病）——
+ 尾部 auto 轨道把按钮收进同一行行尾；对齐走规则（grid 语境下 flex 内联口吻失效） */
+.hr-check { display: grid; grid-template-columns: 24px minmax(120px, 160px) minmax(0, 1fr) auto; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); font-size: var(--fs-sm); border-radius: var(--r-xs); }
+.hr-check > .btn { align-self: center; justify-self: end; }
 .hr-check.lv-critical { background: var(--err-soft); color: var(--err); }
 .hr-check.lv-warn { background: var(--warn-soft); color: var(--warn); }
 .hr-check.lv-info { color: var(--tx2); }
