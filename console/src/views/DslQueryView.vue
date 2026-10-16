@@ -481,7 +481,6 @@
               </button>
               <button v-if="canOps" class="btn sm danger rt-tool-btn" @click="askDeleteByQuery" title="按当前 query 删除"><Trash2 :size="13" /> 按查询删除</button>
             </template>
-          </ResultTable>
           <!-- alt 三视图体改用 AltHitsViews 统一件（与 IH docs/query 逐字重复
  三处的收口件；包裹 div 留宿主——类串与 --dq-view-cap 高度链是 551 黑名单/
  W1·402 字面锁面零触，56vh 现值不变；卡片内脏样式同步更新组件 scoped）。
@@ -496,6 +495,7 @@
             <!-- 卡片集走 cardHits 快滤（kw 空即全量）；565 改用共享件 -->
             <AltHitsViews view="cards" :hits="cardHits" @open-doc="openDoc" />
           </div>
+          </ResultTable>
         </div>
       </div>
 
