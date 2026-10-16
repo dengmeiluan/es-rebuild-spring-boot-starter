@@ -245,7 +245,7 @@ describe('沙盒 explain/profile 空态示能矛盾', () => {
         : { took: 5, hits: { total: { value: 1 }, hits: [{ _id: 'a', _index: 'i1', _source: {}, _score: 1.0 }] } },
     ));
     const { host } = await mountView(SearchSandboxView);
-    const ssHost = host.querySelector('.ss') as HTMLElement & { __vueParentComponent?: { setupState: Record<string, { value: unknown }> } };
+    const ssHost = host.querySelector('.ss') as HTMLElement & { __vueParentComponent?: { setupState: Record<string, any> } };
     ssHost.__vueParentComponent!.setupState.dslBody = '{"size":0,"aggs":{"by_x":{"terms":{"field":"f"}}}}';
     btnByText(host, '搜索').click();
     await settle();
