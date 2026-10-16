@@ -406,6 +406,11 @@
       <AltHitsViews v-else view="cards" :hits="cardHitsAdapted" @open-doc="emit('open-doc', $event)" />
     </div>
 
+    <!-- 宿主自有备选视图体插槽（914 能力矩阵统一）：hideBody 时本表格体隐藏、
+ 宿主 alt 视图经此插槽随放大容器全屏显示（放大态四视图不再空白）——
+ 不受 bodyHidden 控制（显隐归宿主 v-show 自管） -->
+    <slot />
+
     <!-- 状态栏：聚合 + 选中（bodyHidden=hideBody∪内建非表格档时与表格体一并隐藏——
  操作提示只对表格视图有意义） -->
     <div class="rt-status" v-show="!bodyHidden">

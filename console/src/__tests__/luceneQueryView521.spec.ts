@@ -28,7 +28,7 @@ describe('Lucene JSON 视图命中行标记（521 批）', () => {
 
 describe('Lucene 页大小合并 usePagerSize（521 批，遗留清零二批参数化同步更新）', () => {
   it('合并共享件：读钳制+共享写，不再本地直写 es_pager_size', () => {
-    expect(v).toMatch(/import \{ usePagerSize \} from '\.\.\/composables\/usePagerSize';/);
+    expect(v).toMatch(/import \{ usePagerSize, PAGER_SIZES \} from '\.\.\/composables\/usePagerSize';/);
     expect(v).toMatch(/const \{ size, set: setSharedSize \} = usePagerSize\(\{ legacyKey: 'lucene\.size', def: 50 \}\);/);
     expect(v).toMatch(/function setSize\(v: number\) \{\n {2}setSharedSize\(v\);/);
     expect(v).not.toMatch(/localStorage\.setItem\('es_pager_size'/);

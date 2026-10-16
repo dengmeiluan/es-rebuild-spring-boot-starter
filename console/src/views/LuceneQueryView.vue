@@ -59,7 +59,7 @@
             </label>
             <!-- 558b 批：size/from/order 裸 label 补中文释义 title（悬停可读，纯属性追加） -->
             <label class="lc-inp"><span title="每页返回条数 · 上限 10000">size</span>
-              <input v-model.number="size" type="number" min="1" max="10000" class="lc-ii sm" />
+              <input :value="size" type="number" min="1" max="10000" class="lc-ii sm" @change="onSizeInput" />
             </label>
             <label class="lc-inp"><span title="跳过条数 · 翻页偏移">from</span>
               <input v-model.number="from" type="number" min="0" class="lc-ii sm" />
@@ -323,7 +323,7 @@ import { friendlyEsError } from '../utils/esError';
 /* 错误面板 pre v-html 内核（DslQueryView 消费先例同款） */
 import { errPreHtml, errMeta } from '../utils/errPre';
 import { useUrlState, useIdxState, usePref } from '../composables/urlState';
-import { usePagerSize } from '../composables/usePagerSize';
+import { usePagerSize, PAGER_SIZES } from '../composables/usePagerSize';
 import { useQueryRun } from '../composables/useQueryRun';
 import { useIndexFieldTypes } from '../composables/useIndexFieldTypes';
 import { useRouter } from 'vue-router';
@@ -358,6 +358,21 @@ const qs = useUrlState('q', '*');
 const { size, set: setSharedSize } = usePagerSize({ legacyKey: 'lucene.size', def: 50 });
 function setSize(v: number) {
   setSharedSize(v);
+  from.value = 0;
+  if (searched.value) doRun();
+}
+/* header size 输入单点收敛（此前 v-model 裸绑=不钳制/不归页/不重查/不写共享键的
+ 第二口径）：档位值走 setSize 全套（与分页器/IndexHub 同语义）；非档位值=
+ 会话内自由取值（ES 上限 10000；DslQuery PAGER_SIZES.includes 同判据——非档位
+ 不参与共享分页契约），归页 1+重查照做、不写共享键防毒化（读侧钳制会静默丢弃） */
+function onSizeInput(e: Event) {
+  const el = e.target as HTMLInputElement;
+  const raw = el.value.trim();
+  const n = Math.floor(Number(raw));
+  if (raw === '' || !Number.isFinite(n)) { el.value = String(size.value); return; }
+  const clamped = Math.min(10000, Math.max(1, n));
+  if (PAGER_SIZES.includes(clamped)) { setSize(clamped); return; }
+  size.value = clamped;
   from.value = 0;
   if (searched.value) doRun();
 }

@@ -5,6 +5,14 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.25]
+
+### 修复
+
+- 查询工作台放大态切视图不再空白：JSON/Tree/卡片三档视图体移入放大容器
+  （ResultTable 默认插槽）——放大（全屏）态下切换任意视图即所见即所得，
+  不再出现「表格档放大正常、其余档全屏空白」的割裂
+
 ## [1.0.24]
 
 ### 新增
