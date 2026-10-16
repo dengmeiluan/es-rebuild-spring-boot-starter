@@ -450,6 +450,8 @@ async function doRun() {
       dslPreview.value = JSON.stringify(r, null, 2);
     }).catch(() => { /* translate 失败不干扰查询结果 */ });
   } catch (e: any) {
+    /* 主动取消不报失败（DslQueryView 取消甄别同语义）：轻提示即返，错误面板留给真失败 */
+    if (e?.name === 'AbortError') { store.notify('info', `已取消查询（${(qr.elapsedMs.value / 1000).toFixed(1)}s）`); return; }
     runErr.value = String(e?.message || e);
     runErrObj.value = e; /* ：原始错误对象旁路留存（压串前的 ApiError 供 errMeta） */
     /* toast 裸串并轨 friendlyEsError（vrErr 面板 口径，obsWave560 FFE 同范式） */

@@ -395,6 +395,8 @@ async function doSend() {
     history.value.unshift({ method: method.value, path: path.value.trim(), body: body.value, ts: Date.now() });
     persistHist();
   } catch (e: any) {
+    /* 主动取消不报失败（DslQueryView 取消甄别同语义）：轻提示即返，「请求失败」态留给真失败 */
+    if (e?.name === 'AbortError') { store.notify('info', `已取消请求（${(qr.elapsedMs.value / 1000).toFixed(1)}s）`); return; }
     respErr.value = e?.message || String(e);
     respErrRaw.value = e; /* 534 收口波：原始对象旁路（errMeta 读 code/endpoint，压串时丢失） */
   } finally {

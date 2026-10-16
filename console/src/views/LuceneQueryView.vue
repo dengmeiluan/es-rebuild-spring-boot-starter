@@ -465,6 +465,8 @@ async function doRun() {
     /* 记录查询耗时 */
     useQueryHistoryStore().push('lucene', qs.value.trim(), index.value.trim() || undefined, took.value || undefined);
   } catch (e: any) {
+    /* 主动取消不报失败（DslQueryView 取消甄别同语义）：轻提示即返，错误面板留给真失败 */
+    if (e?.name === 'AbortError') { store.notify('info', `已取消查询（${(qr.elapsedMs.value / 1000).toFixed(1)}s）`); return; }
     runErr.value = String(e?.message || e); /* 原文留 pre 全文回看；人话由 friendlyRunErr 派生 */
     runErrRaw.value = e; /* 534 收口波：原始对象旁路（errMeta 读 code/endpoint，压串时丢失） */
     /* toast 裸串并轨 friendlyEsError */

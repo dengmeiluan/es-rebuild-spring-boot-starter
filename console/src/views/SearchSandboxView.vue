@@ -190,7 +190,9 @@
 
           <!-- agg 视图 -->
           <div v-else-if="view === 'agg'" class="ss-agg">
-            <JsonTree :data="response.aggregations" tools />
+            <JsonTree v-if="response.aggregations" :data="response.aggregations" tools />
+            <!-- 视图保留语义下的空态兜底（停在 agg 重跑无 aggs 查询时不再空渲染） -->
+            <EmptyState v-else compact :icon="PieChart" text="无聚合数据" hint="DSL 需包含 aggs 聚合才有结果" />
           </div>
 
           <!-- explain 视图：整棵 hits[0]._explanation -->
@@ -205,14 +207,20 @@
               <ExplainTree :node="hits[0]._explanation" />
             </div>
             <!-- 裸 .empty 迁 EmptyState compact -->
-            <EmptyState v-else compact :icon="Sigma" text="无 explain 数据" hint="需勾选 explain 且有命中" />
+            <!-- 视图钮点击已自动勾选对应请求选项：旧响应无载荷时空态改示「重新搜索后生效」
+ + 一键重跑（不再提示去勾选与状态矛盾）；无命中时重跑也无数据，维持原文案 -->
+            <EmptyState v-else compact :icon="Sigma" text="无 explain 数据"
+              :hint="opts.explain && hits.length ? '已勾选 explain，重新搜索后生效' : '需勾选 explain 且有命中'"
+              :action-text="opts.explain && hits.length ? '立即重新搜索' : undefined" @action="run" />
           </div>
 
           <!-- profile 视图：分片耗时（勾选 profile 后端已返回，此前只能去 raw 翻） -->
           <div v-else-if="view === 'profile'" class="ss-profile">
             <JsonTree v-if="response.profile" :data="response.profile" tools />
             <!-- 裸 .empty 迁 EmptyState compact -->
-            <EmptyState v-else compact :icon="Activity" text="无 profile 数据" hint="需勾选 profile 且有命中" />
+            <EmptyState v-else compact :icon="Activity" text="无 profile 数据"
+              :hint="opts.profile ? '已勾选 profile，重新搜索后生效' : '需勾选 profile 且有命中'"
+              :action-text="opts.profile ? '立即重新搜索' : undefined" @action="run" />
           </div>
 
           <!-- raw 视图 -->
@@ -498,13 +506,16 @@ async function run() {
     }, signal);
     response.value = r;
     took.value = r?.took ?? null;
-    view.value = 'hits';
-    // 命中为 0 但有 aggs -> 自动切 aggs
+    /* 视图保留用户当前选择（重跑动线：explain/profile 空态重跑钮执行后留在原视图看新载荷）；
+     「命中 0 且有 aggs 自动切 agg」引导保留 */
     if (!hits.value.length && hasAgg.value) view.value = 'agg';
     /* 执行成功记跨模式历史（原始 Request DSL + 目标索引，留空=全集群） */
     /* 记录查询耗时 */
     useQueryHistoryStore().push('sandbox', dslBody.value, indexName.value.trim() || undefined, took.value ?? undefined);
   } catch (e: any) {
+    /* 主动取消不报失败（useQueryRun 契约「abort 后视图 catch 分支丢弃」；DslQueryView 取消甄别同语义）：
+     轻提示即返，错误面板与 error toast 留给真失败 */
+    if (e?.name === 'AbortError') { store.notify('info', `已取消搜索（${(qr.elapsedMs.value / 1000).toFixed(1)}s）`); return; }
     runErr.value = String(e?.message || e);
     runErrRaw.value = e; /* 534 收口波：原始对象旁路（errMeta 读 code/endpoint，压串时丢失） */
     store.notify('error', '搜索失败：' + friendlyEsError(String(e?.message ?? e))); /* ：面板 friendlyRunErr 已友好，toast 裸串并轨（BoostTunerView:347 口径） */
