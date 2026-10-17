@@ -115,8 +115,9 @@ describe('562 K1：DevToolsView run 链升级（切段只作用于发送出参�
     expect(dt).toContain('function onBodyExecute() { void runSmart(false); }');
     expect(dt).toContain('async function runSmart(all: boolean) {');
     expect(dt).toMatch(/if \(segs\.length <= 1\) \{ await run\(\); return; \}/);
-    expect(dt).toMatch(/await execOneSeg\(segs\[i\], i, segs\.length\);/);
-    expect(dt).toContain('async function execOneSeg(seg: DtSeg, i: number, n: number) {');
+    /* 942 随迁：段执行升格取消断链（execOneSeg 返回 boolean，false=取消 break） */
+    expect(dt).toMatch(/await execOneSeg\(segs\[i\], i, segs\.length\)\)\) break; \}/);
+    expect(dt).toContain('async function execOneSeg(seg: DtSeg, i: number, n: number): Promise<boolean> {');
     expect(dt).toMatch(/'seg ' \+ \(i \+ 1\) \+ '\/' \+ n/);
     expect(dt).toMatch(/function editorCursorOffset\(\): number \| null \{/);
     expect(dt).toMatch(/locateSegment\(t\.body \|\| '', off == null \? 0 : off\)/);
@@ -129,7 +130,8 @@ describe('562 K1：DevToolsView run 链升级（切段只作用于发送出参�
   });
 
   it('执行历史写链补 segLabel 透传（execSend(t, bodyOut, segLabel?)），镜像锁面零触', () => {
-    expect(dt).toContain('async function execSend(t: Tab, bodyOut: string, segLabel?: string) {');
+    /* 942 随迁：签名升格返回 Promise<boolean>（false=用户取消丢弃，段执行断链通道）；segLabel 透传与镜像写链零触 */
+    expect(dt).toContain('async function execSend(t: Tab, bodyOut: string, segLabel?: string): Promise<boolean> {');
     expect(dt).toMatch(/await execSend\(t, bodyOut\);/);
     expect(dt).toMatch(/await execSend\(t, bodyOut, 'seg ' \+ \(i \+ 1\) \+ '\/' \+ n\);/);
     expect(dt).toContain('...(segLabel ? { seg: segLabel } : {})');

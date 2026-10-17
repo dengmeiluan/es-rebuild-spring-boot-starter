@@ -34,8 +34,9 @@ describe('565 件⑤：段执行锚定接线（源码锁）', () => {
   });
   it('execOneSeg 段位快照 + runSmart(all) 起跑清锚；562 段执行三件套签名零触', () => {
     expect(dt).toContain('t.segRuns[i] = { label: \'seg \' + (i + 1) + \'/\' + n,');
-    expect(dt).toMatch(/if \(all\) \{\s*(?:\/\*[^\n]*\*\/\s*)?t\.segRuns = \[\]; t\.segView = -1;\s*for \(let i = 0; i < segs\.length; i\+\+\) await execOneSeg\(segs\[i\], i, segs\.length\);/);
-    expect(dt).toContain('async function execOneSeg(seg: DtSeg, i: number, n: number) {');
+    /* 942 随迁：循环体升格「取消即断链」（execOneSeg 返回 boolean，false=取消不进锚）；起跑清锚语义零触 */
+    expect(dt).toMatch(/if \(all\) \{\s*(?:\/\*[^\n]*\*\/\s*)?t\.segRuns = \[\]; t\.segView = -1;\s*for \(let i = 0; i < segs\.length; i\+\+\) \{ if \(!\(await execOneSeg\(segs\[i\], i, segs\.length\)\)\) break; \}/);
+    expect(dt).toContain('async function execOneSeg(seg: DtSeg, i: number, n: number): Promise<boolean> {');
     expect(dt).toMatch(/await execSend\(t, bodyOut, 'seg ' \+ \(i \+ 1\) \+ '\/' \+ n\);/);
   });
   it('响应工具行段徽标组（i/n+状态+took，点击回看）+ loadSegRun 回放主响应区', () => {

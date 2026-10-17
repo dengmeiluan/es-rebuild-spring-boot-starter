@@ -11,7 +11,7 @@
         <button class="btn ghost sm" @click="addTab">
           <Plus :size="12" /> 新 Tab
         </button>
-        <button class="btn ghost sm" @click="reset" title="清空全部">
+        <button class="btn ghost sm" :disabled="resetting" @click="reset" title="清空全部">
           <RotateCcw :size="12" /> 重置
         </button>
         <button class="btn ghost sm" title="查看当前身份在本页与当前连接下允许的操作（与后端拦截器判定同源）" @click="permOpen = true"><Shield :size="12" /> 我的权限</button>
@@ -638,16 +638,23 @@ function closeTab(i: number) {
   if (tabs.value.length === 0) tabs.value.push(mkTab());
   persist();
 }
-/* 重置确认收敛全局 askConfirm（等价改写：warn 级 + 后果前置文案 + okText「清空全部」） */
+/* 重置确认收敛全局 askConfirm（等价改写：warn 级 + 后果前置文案 + okText「清空全部」）。
+ 互斥闸置位前移到确认窗之前：确认窗挂起期间重置钮禁用，二击不再穿透双开确认窗
+ （confirm.ts 全局单例覆写会把第一开按取消静默收掉）；取消/确认路径 try/finally 复位防闸死 */
+const resetting = ref(false);
 async function reset() {
-  const ok = await askConfirm({
-    title: '重置 Dev Tools',
-    message: `将关闭全部 ${tabs.value.length} 个标签并清空各自的请求与历史（仅本地记录，不影响集群），不可恢复。`,
-    level: 'warn',
-    okText: '清空全部',
-  });
-  if (!ok) return;
-  doReset();
+  if (resetting.value) return;
+  resetting.value = true;
+  try {
+    const ok = await askConfirm({
+      title: '重置 Dev Tools',
+      message: `将关闭全部 ${tabs.value.length} 个标签并清空各自的请求与历史（仅本地记录，不影响集群），不可恢复。`,
+      level: 'warn',
+      okText: '清空全部',
+    });
+    if (!ok) return;
+    doReset();
+  } finally { resetting.value = false; }
 }
 function doReset() {
   removeStoredRaw(sessionStorage, DRAFT_KEY.value); tabs.value = [mkTab()]; active.value = 0;
@@ -700,17 +707,24 @@ watch(() => store.target, () => { histAll.value = histAllRead(); });
 /* 本 Tab 历史清空——面板 clearable 契约（emit('clear')，确认由父做）。
  仅本 Tab 档开启（「全部」档是跨 Tab 汇聚镜像，按 Tab 清越权，不开放该档清空钮）；
  确认后清当前 tab history（tabs deep watch 自动冲刷草稿落盘） */
+/* 确认链互斥闸与 reset 同口径：置位前移到确认窗之前，二击不再穿透双开（清空钮在
+ QueryHistoryPanel 内部无闸面，闸收执行体本体=唯一可靠通道）；try/finally 复位防闸死 */
+const clearingHist = ref(false);
 async function askClearTabHist() {
+  if (clearingHist.value) return;
   const t = cur.value;
   if (!t || !t.history?.length) return;
-  const ok = await askConfirm({
-    title: '清空本 Tab 历史',
-    message: `将删除本 Tab 的全部 ${t.history.length} 条请求历史记录，此操作不可撤销。`,
-    level: 'warn',
-    okText: '清空',
-  });
-  if (!ok) return;
-  t.history = [];
+  clearingHist.value = true;
+  try {
+    const ok = await askConfirm({
+      title: '清空本 Tab 历史',
+      message: `将删除本 Tab 的全部 ${t.history.length} 条请求历史记录，此操作不可撤销。`,
+      level: 'warn',
+      okText: '清空',
+    });
+    if (!ok) return;
+    t.history = [];
+  } finally { clearingHist.value = false; }
 }
 
 /* ==== ：原始 IO 快查（响应工具行钮） ====
@@ -850,7 +864,7 @@ async function run() {
  历史与跨 Tab 镜像全部在此（run 全量与段执行唯一分叉=bodyOut 与 segLabel）。
  segLabel 在场=段执行：历史条目补 seg 标识（「seg i/n」）便于区分段现场；
  镜像 HistAllEntry 字段零增（跨 Tab 汇聚锁面零触），草稿 t.body 原稿零触。 */
-async function execSend(t: Tab, bodyOut: string, segLabel?: string) {
+async function execSend(t: Tab, bodyOut: string, segLabel?: string): Promise<boolean> {
   const t0 = performance.now();
   const signal = qr.begin();
   try {
@@ -888,14 +902,18 @@ async function execSend(t: Tab, bodyOut: string, segLabel?: string) {
     if (seg && !t.named) t.title = seg;
     persist();
   } catch (e: any) {
+    /* 取消通道甄别先于失败渲染链：用户主动取消=info 轻提示带耗时（DslQueryView 同语言），
+ 丢弃处理——不进错误条、不写失败历史与汇聚镜像；返回 false 供段执行断链 */
+    if (e?.name === 'AbortError') {
+      store.notify('info', '已取消（' + (qr.elapsedMs.value / 1000).toFixed(1) + 's）');
+      return false;
+    }
     t.ok = false; t.took = Math.round(performance.now() - t0);
     /* 语义色轮：原始报错全文留在 result（复制不丢真）；「错误：」前缀移除——
  失败语义由 ✗ 失败 + err-bar 结构化摘要承担，纯 JSON 报错文不再加前缀破坏着色侦测 */
     t.result = String(e?.message || e);
     t.status = e instanceof ApiError && Number.isFinite(e.status) ? e.status : null;
-    t.errBrief = e?.name === 'AbortError'
-      ? '已取消（用户中止本次请求）'
-      : friendlyEsError(t.result);
+    t.errBrief = friendlyEsError(t.result);
     /* 语义色轮：失败也进历史（ok:false 红点 + 耗时档），重跑链路才覆盖失败现场；：补 ts；
  失败条目同样镜像进跨 Tab 汇聚（ok:false 红点口径一致）；
  段执行失败条目同样补 seg 标识（失败现场段位可辨） */
@@ -903,6 +921,7 @@ async function execSend(t: Tab, bodyOut: string, segLabel?: string) {
       time: fmtTime(Date.now()), ts: Date.now(), ok: false, took: t.took, ...(segLabel ? { seg: segLabel } : {}) }, ...(t.history || [])].slice(0, 50);
     mirrorHistAll({ method: t.method, path: t.path, body: t.body, ts: Date.now(), ok: false, took: t.took });
   } finally { t.busy = false; qr.finish(); }
+  return true;
 }
 
 /* ═══ ：光标处单请求执行（Kibana 多请求编辑器语义）═══
@@ -925,27 +944,30 @@ async function runSmart(all: boolean) {
   const segs = splitRequests(t.body || '');
   if (segs.length <= 1) { await run(); return; }
   if (all) {
-    /* 全量重跑=全量重锚（起跑清段锚，回看位归零） */
+    /* 全量重跑=全量重锚（起跑清段锚，回看位归零）；取消即断链（余段不再起跑） */
     t.segRuns = []; t.segView = -1;
-    for (let i = 0; i < segs.length; i++) await execOneSeg(segs[i], i, segs.length);
+    for (let i = 0; i < segs.length; i++) { if (!(await execOneSeg(segs[i], i, segs.length))) break; }
+    /* useQueryRun.cancel 只中止当前在途 fetch（逐段 begin 新建控制器），断链靠返回值透传 */
     return;
   }
   const off = editorCursorOffset();
   const at = Math.min(Math.max(locateSegment(t.body || '', off == null ? 0 : off), 0), segs.length - 1);
   await execOneSeg(segs[at], at, segs.length);
 }
-async function execOneSeg(seg: DtSeg, i: number, n: number) {
+async function execOneSeg(seg: DtSeg, i: number, n: number): Promise<boolean> {
   const t = cur.value;
-  if (!t || t.busy) return;
+  if (!t || t.busy) return false;
   t.busy = true; t.result = null; t.errBrief = null; t.status = null;
   /* 段出参同吃 autoFmt 退出口（560 口径）；t.body 草稿原稿零触 */
   const bodyOut = autoFmt.value ? tryFormatBody(seg.text) : seg.text;
-  await execSend(t, bodyOut, 'seg ' + (i + 1) + '/' + n);
+  const done = await execSend(t, bodyOut, 'seg ' + (i + 1) + '/' + n);
+  if (!done) return false; /* 取消段不进锚（丢弃口径一致） */
   /* per-段锚定——每段执行完快照到段位 i（段位稳定，重复执行覆写同槽；
  主响应区现行为零触：末段覆写语义保持，前段响应在徽标里可回看） */
   t.segRuns = [...(t.segRuns || [])];
   t.segRuns[i] = { label: 'seg ' + (i + 1) + '/' + n, ok: t.ok, took: t.took, status: t.status ?? null, errBrief: t.errBrief ?? null, result: t.result || '', resultFull: t.resultFull ?? null, truncated: !!t.truncated };
   t.segView = -1;
+  return true;
 }
 /* 段徽标点击——该段响应载回主响应区（成功段不丢；err-bar/MetaStrip/截断
  面随字段组回放；active 段高亮，新执行后归零） */
@@ -1318,11 +1340,9 @@ function saveFav() {
 .fs-active .dt-out { max-height: none; min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
 .fs-active .dt-out .dt-out-monaco { flex: 1 1 auto; }
 .fs-active .dt-waiting { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; }
-.dt-out-pre { margin: 0; padding: var(--sp-3); font-family: var(--mono); font-size: var(--fs-xs); color: var(--fg); white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; }
 .dt-waiting { padding: var(--sp-3); font-size: var(--fs-xs); color: var(--muted); }
 /* 非聚焦态等待占位同样随 dt-out 拉伸居中（555 行仅聚焦态） */
 .dt-waiting { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; }
-.dt-out-pre.err { color: var(--danger, var(--err)); }
 /* W6-T3：响应 Monaco 容器边框退役（20260920 扁平化，同 .dt-body-monaco）；err 态保留
  红框语义信号（原 err 视觉=边框变红，常态无边框后 err 用完整红 border 承接） */
 .dt-out-monaco { overflow: hidden; }
