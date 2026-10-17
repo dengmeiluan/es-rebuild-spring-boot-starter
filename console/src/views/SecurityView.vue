@@ -751,16 +751,17 @@ async function loadUsers() {
 }
 
 async function doUpsert() {
-  if (nuBusy.value) return; /* ：函数体级防重入（按钮 disabled 之外的第二道防线） */
-  /* 用户名已存在 = 更新而非新建：会覆盖对方角色（填了密码还会重置其登录凭证），
- 不许再静默提交——先弹确认拿到管理员点头。点取消不动任何数据。 */
-  if (users.value.some((u: any) => u.username === nuName.value) && !await askConfirm({
-    title: '更新已有用户',
-    message: `用户 ${nuName.value} 已存在：将更新其角色${nuPass.value ? '，并重置其密码' : ''}。确认提交？`,
-    okText: '更新用户',
-  })) return;
+  if (nuBusy.value) return; /* 函数体级防重入（按钮 disabled 之外的第二道防线） */
+  /* 闸置位先于确认窗——确认窗挂起期间保存钮已禁用，二击不穿透双开确认窗（双发写动作） */
   nuBusy.value = true;
   try {
+    /* 用户名已存在 = 更新而非新建：会覆盖对方角色（填了密码还会重置其登录凭证），
+     不许再静默提交——先弹确认拿到管理员点头。点取消不动任何数据（finally 复位）。 */
+    if (users.value.some((u: any) => u.username === nuName.value) && !await askConfirm({
+      title: '更新已有用户',
+      message: `用户 ${nuName.value} 已存在：将更新其角色${nuPass.value ? '，并重置其密码' : ''}。确认提交？`,
+      okText: '更新用户',
+    })) return;
     await api.auth.upsertUser(nuName.value, nuPass.value || undefined, nuRole.value);
     store.notify('success', `用户 ${nuName.value} 已保存`);
     nuName.value = ''; nuPass.value = '';
@@ -773,19 +774,20 @@ async function doUpsert() {
   }
 }
 
-/* 提交防重（INTERACTION 范式）：删除在途时双击/重入直接短路（同 nuBusy 二道防线惯例） */
+/* 提交防重（INTERACTION 范式）：删除在途时双击/重入直接短路（同 nuBusy 二道防线惯例）；
+   闸置位先于确认窗——critical 确认窗挂起期间行内删除钮已禁用，二击不穿透双发 */
 const deleting = ref(false);
 async function doDelete(username: string) {
   if (deleting.value) return;
-  if (!await askConfirm({
-    title: '删除用户',
-    level: 'critical',
-    guardText: username,
-    message: `将删除用户「${username}」，其登录态立即失效；操作审计记录会保留，但账号本身不可恢复。输入用户名以确认。`,
-    okText: '删除用户',
-  })) return;
   deleting.value = true;
   try {
+    if (!await askConfirm({
+      title: '删除用户',
+      level: 'critical',
+      guardText: username,
+      message: `将删除用户「${username}」，其登录态立即失效；操作审计记录会保留，但账号本身不可恢复。输入用户名以确认。`,
+      okText: '删除用户',
+    })) return;
     await api.auth.deleteUser(username);
     store.notify('success', `用户 ${username} 已删除`);
     loadUsers();
@@ -869,21 +871,28 @@ async function copyAuditMd() {
 }
 
 async function doRebind() {
-  if (!await askConfirm({
-    title: '重绑控制集群',
-    level: 'critical', guardText: 'REBIND',
-    message: `将控制集群重绑到 ${rbUrl.value}：新集群上幂等初始化控制索引；现有用户/连接档案/审计不会自动迁移，重绑后可能需重新登录建号。输入 REBIND 确认。`,
-    okText: '重绑集群',
-  })) return;
+  /* 在途互斥闸：闸读收本体首行+置位先于确认窗——确认窗挂起期间重绑钮已禁用，
+     二击不穿透双发（重绑是集群级高危写）；取消/失败路径 finally 复位防闸死，
+     成功路径保持置位至 reload（提交已落定，不再接受二次发起） */
+  if (rbBusy.value) return;
   rbBusy.value = true;
+  let submitted = false;
   try {
+    if (!await askConfirm({
+      title: '重绑控制集群',
+      level: 'critical', guardText: 'REBIND',
+      message: `将控制集群重绑到 ${rbUrl.value}：新集群上幂等初始化控制索引；现有用户/连接档案/审计不会自动迁移，重绑后可能需重新登录建号。输入 REBIND 确认。`,
+      okText: '重绑集群',
+    })) return;
     await api.setup.rebind({ url: rbUrl.value, username: rbUser.value || undefined, password: rbPass.value || undefined });
+    submitted = true;
     store.notify('success', '控制集群已重绑，即将刷新页面');
     setTimeout(() => window.location.reload(), 800);
   } catch (e: any) {
     /* ES 错误友好化（同上款口径） */
     store.notify('error', '重绑失败：' + friendlyEsError(String(e?.message ?? e)));
-    rbBusy.value = false;
+  } finally {
+    if (!submitted) rbBusy.value = false;
   }
 }
 
@@ -979,7 +988,6 @@ watch(() => auth.me?.role, (role, old) => {
 .ad-more-acts { display: flex; justify-content: flex-end; gap: var(--sp-2); padding-top: var(--sp-1); border-top: 1px solid var(--line); }
 
 .uri { max-width: 42vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.detail { max-width: 30vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .audit-more { padding: var(--sp-2) 0; text-align: center; }
 /* act-tag/a-* 五色私造配色随 StatusPill 改用退役（映射表见 script） */
 .err-txt { color: var(--err); }
