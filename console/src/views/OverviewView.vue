@@ -178,13 +178,16 @@
     <div class="ov-cell ov-mh">
       <div class="card-t"><Activity :size="13" /> 集群监控历史
         <span class="ov-mh-sub">服务端定时快照 · 环形保留</span>
+        <!-- 「上次自动」置于弹性占位条之前：提示出现/消失/变宽全部由占位条吸收，
+ 右侧动作组（实时监控/自动/TSV/MD/刷新）钉在右缘零位移——占位条之后的行尾放置
+ 会被占位条放大成整组平移（真机量尺实测） -->
+        <span v-if="mhAuto && mhAutoAt" class="dim sm-txt" style="white-space:nowrap" title="上次自动刷新时间">上次自动 {{ fmtTime(mhAutoAt) }}</span>
         <span style="flex:1"></span>
         <!-- ③ 复盘收口（ Phase 0 最后一项活口）：运行时指标**入口**缺位补入口——
  两页分工约定定案：概览=历史回看+探活（/monitor-history），实时监控页=运行时指标（/live）；
  指标本体不搬防重复建设（G16「全站单源一致性」同族裁决） -->
         <button class="btn sm ghost" title="进入实时监控大屏：QPS / 写入 / Heap / CPU / 磁盘实时走势、节点对比、挂墙模式" @click="router.push('/live')"><Gauge :size="11" /> 实时监控</button>
         <label class="ov-mh-auto" title="自动刷新（60s）"><input v-model="mhAuto" type="checkbox" /> 自动</label>
-        <span v-if="mhAuto && mhAutoAt" class="dim sm-txt" title="上次自动刷新时间">上次自动 {{ fmtTime(mhAutoAt) }}</span>
         <!-- 导出：TSV/MD 复制走 QRT getCsvBlock 单源（表头自动继承列名，所见即所复） -->
         <button class="btn sm ghost" :disabled="!mhRows.length" title="复制当前筛选结果为 TSV（Excel/飞书直贴）" @click="copyMonitorTsv">TSV</button>
         <button class="btn sm ghost" :disabled="!mhRows.length" title="复制当前筛选结果为 Markdown（群聊/工单直贴）" @click="copyMonitorMd">MD</button>
@@ -251,7 +254,7 @@ export function evalTopoClip(sw: number, cw: number): boolean {
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useAutoRefresh } from '../composables/useAutoRefresh';
 import { useRouter } from 'vue-router';
-import { AlertTriangle, HardDrive, FileText, Activity, History, Network, AlertOctagon, Gauge, RotateCw } from 'lucide-vue-next';
+import { HardDrive, FileText, Activity, History, Network, AlertOctagon, Gauge, RotateCw } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';
 import EmptyState from '../components/EmptyState.vue';
@@ -566,7 +569,8 @@ watch(mhConnOfTarget, (id) => { if (id) mhConn.value = id; }, { immediate: true 
 const mhStatus = ref('');
 /* 大盘联动：与 LiveDashboardView 历史趋势共享同一偏好键——一处改档两处同步 */
 const mhRange = usePref<string>('live.histRange', '24h');
-const mhAuto = ref(false);
+/* 开关走 usePref 落盘：重进页面还原（与 mhRange 同域口径） */
+const mhAuto = usePref('overview.mhAuto', false);
 const mhAutoAt = ref<number | null>(null); /* ：自动刷新 tick 时间戳（可视反馈） */
 const mhRows = ref<MonitorRow[]>([]);
 const mhQrt = ref<InstanceType<typeof QueryResultTable> | null>(null);
@@ -625,9 +629,13 @@ const mhMatrix = computed(() => mhRows.value.map(r => [
   r.latencyMs ?? '-', r.esVersion || '-', r.error || '',
 ]));
 function mhTone(s: string): 'g' | 'r' | 'n' { return s === 'GREEN' ? 'g' : s === 'RED' ? 'r' : 'n'; }
-/* 筛选变化即重查；自动刷新 60s（useAutoRefresh 统一停续：后台标签页/KeepAlive 失活不空转） */
+/* 筛选变化即重查；自动刷新 60s（useAutoRefresh 统一停续：后台标签页/KeepAlive 失活不空转）。
+ refresher 捕获 + setOn 接线（DiagView diagRefresher 同型）——实例被丢弃时内部 on 恒 false，
+ interval 永不创建，「自动」勾选成空摆设 */
 watch([mhConn, mhStatus, mhRange], () => { void loadHistory(); });
-useAutoRefresh(() => { mhAutoAt.value = Date.now(); void loadHistory(); }, { ms: () => (mhAuto.value ? 60000 : 0) });
+const mhRefresher = useAutoRefresh(() => { mhAutoAt.value = Date.now(); void loadHistory(); }, { ms: () => (mhAuto.value ? 60000 : 0) });
+watch(mhAuto, (v) => { if (v) void loadHistory(); mhRefresher.restart(); });
+mhRefresher.setOn(true);
 onMounted(loadHistory);
 </script>
 
