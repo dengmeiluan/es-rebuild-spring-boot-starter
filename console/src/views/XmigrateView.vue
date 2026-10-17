@@ -218,10 +218,12 @@
 <ListTodo :size="13" /> 迁移作业
         <!-- Markdown 复制与 TSV 并存（跟催场景贴群聊，Excel 场景走 TSV）——
  换壳 QRT 后仍走宿主 copyText（QRT 内建导出是下载文件，贴群场景要剪贴板）；
- 行序经 qrtRef.getSortedRows() 取排序后行集（所见即所复，见 exportRows） -->
-        <button v-if="jobs.length" class="btn sm ghost" style="margin-left:auto" @click="exportMd" title="复制当前视图为 Markdown 表（群聊/工单直贴）"><ClipboardList :size="11" /> Markdown</button>
-        <button v-if="jobs.length" class="btn sm ghost" @click="exportTsv" title="复制当前视图为 TSV（Excel 可直接粘贴）"><ClipboardCopy :size="11" /> 导出 TSV</button>
-        <button aria-label="刷新任务列表" class="btn sm ghost" :style="jobs.length ? '' : 'margin-left:auto'" @click="loadJobs" title="刷新任务列表"><RefreshCw :size="11" /></button>
+ 行序经 qrtRef.getSortedRows() 取排序后行集（所见即所复，见 exportRows）。
+ 无作业时两导出钮 disabled 而非条件消失（工具行结构恒定）；margin-left:auto
+ 恒定钉在 Markdown 钮上，刷新钮不再随作业数条件推右（位置恒定） -->
+        <button class="btn sm ghost" style="margin-left:auto" :disabled="!jobs.length" @click="exportMd" title="复制当前视图为 Markdown 表（群聊/工单直贴）"><ClipboardList :size="11" /> Markdown</button>
+        <button class="btn sm ghost" :disabled="!jobs.length" @click="exportTsv" title="复制当前视图为 TSV（Excel 可直接粘贴）"><ClipboardCopy :size="11" /> 导出 TSV</button>
+        <button aria-label="刷新任务列表" class="btn sm ghost" @click="loadJobs" title="刷新任务列表"><RefreshCw :size="11" /></button>
       </div>
       <!-- W1：作业表工具行——kw 过滤（状态/目标索引/源索引）；过滤绝不吞数据，
  n/m 命中数与清除钮可见。：排序/Σ 聚合/列管理交 QRT 内核（storage-key 记忆） -->
@@ -684,40 +686,47 @@ const preflight = ref<any>(null); // 启动前预检（dest 是否已存在）
  dismissable 会话跳过——同 title 下后续作业的删数据警示不得被静默吞掉）。
  destExists 统一取 destExistsSafe（preflight 缺席时用 hostIndices 兜底）。 */
 async function openStartConfirm() {
-  preflight.value = null;
+  /* 闸读收本体首行+置位前移到第一个 await 之前：preflight 与确认窗挂起期间启动钮
+ 即禁用，二击不再穿透双开确认窗（确认服务是全局单例，二次请求会把先开的弹层按取消
+ 静默收掉）；取消路径由 finally 复位防闸死，成功路径随 doStart 完成统一复位 */
+  if (starting.value) return;
+  starting.value = true;
   try {
-    preflight.value = await api.xb.preflight({ sourceIndex: form.value.sourceIndex, destIndex: form.value.destIndex });
-  } catch {
-    /* F3：预检失败不阻断启动，但不能静默——用户须知道弹层警告此刻是降级口径
- （以界面已有数据为准），而不是「确认过没有风险」 */
-    store.notify('warning', 'preflight 请求失败，确认弹层的警告将以界面已有数据为准');
-  }
-  const srcDesc = srcConnId.value
-    ? (pickedConn.value?.name + '（' + pickedConn.value?.scheme + '://' + pickedConn.value?.host + ':' + pickedConn.value?.port + '）')
-    : (conn.value.scheme + '://' + conn.value.host + ':' + conn.value.port);
-  /* 警告分支逐字保留原弹层三分支文案（原 <b> 强调在纯文本 message 中降为文字语义） */
-  let warn = '';
-  if (form.value.destCreateMode === 'REBUILD') {
-    warn = `⚠ 删旧重建模式:目标索引 ${form.value.destIndex} 及其全部数据将被删除,然后按源结构重建并全量迁入。此操作不可撤销!`;
-  } else if (destExistsSafe.value) {
-    warn = `目标索引 ${form.value.destIndex} 已存在:同名文档将被跳过,结果是合并而非重建。如需清空重来,请改选「删旧重建」模式。`;
-  } else if (form.value.destCreateMode === 'NONE' && !destExistsSafe.value) {
-    warn = `⚠ 目标索引 ${form.value.destIndex} 尚不存在——将以动态映射自动创建（mapping 可能不符合预期）,建议改用「按源结构建」。`;
-  }
-  /* facts 抽出调用块（confirmAudit 六百字符扫描窗内保持可审计形态） */
-  const facts = [
-    { label: '源集群', value: srcDesc },
-    { label: '源索引', value: form.value.sourceIndex },
-    { label: '目标索引', value: form.value.destIndex },
-  ];
-  if (!await askConfirm({
-    title: '启动跨集群迁移',
-    message: `将从 ${srcDesc} 的 ${form.value.sourceIndex} 搬运到本集群 ${form.value.destIndex}。` + (warn ? ' ' + warn : ''),
-    level: 'warn',
-    okText: '启动',
-    facts,
-  })) return;
-  await doStart();
+    preflight.value = null;
+    try {
+      preflight.value = await api.xb.preflight({ sourceIndex: form.value.sourceIndex, destIndex: form.value.destIndex });
+    } catch {
+      /* F3：预检失败不阻断启动，但不能静默——用户须知道弹层警告此刻是降级口径
+   （以界面已有数据为准），而不是「确认过没有风险」 */
+      store.notify('warning', 'preflight 请求失败，确认弹层的警告将以界面已有数据为准');
+    }
+    const srcDesc = srcConnId.value
+      ? (pickedConn.value?.name + '（' + pickedConn.value?.scheme + '://' + pickedConn.value?.host + ':' + pickedConn.value?.port + '）')
+      : (conn.value.scheme + '://' + conn.value.host + ':' + conn.value.port);
+    /* 警告分支逐字保留原弹层三分支文案（原 <b> 强调在纯文本 message 中降为文字语义） */
+    let warn = '';
+    if (form.value.destCreateMode === 'REBUILD') {
+      warn = `⚠ 删旧重建模式:目标索引 ${form.value.destIndex} 及其全部数据将被删除,然后按源结构重建并全量迁入。此操作不可撤销!`;
+    } else if (destExistsSafe.value) {
+      warn = `目标索引 ${form.value.destIndex} 已存在:同名文档将被跳过,结果是合并而非重建。如需清空重来,请改选「删旧重建」模式。`;
+    } else if (form.value.destCreateMode === 'NONE' && !destExistsSafe.value) {
+      warn = `⚠ 目标索引 ${form.value.destIndex} 尚不存在——将以动态映射自动创建（mapping 可能不符合预期）,建议改用「按源结构建」。`;
+    }
+    /* facts 抽出调用块（confirmAudit 六百字符扫描窗内保持可审计形态） */
+    const facts = [
+      { label: '源集群', value: srcDesc },
+      { label: '源索引', value: form.value.sourceIndex },
+      { label: '目标索引', value: form.value.destIndex },
+    ];
+    if (!await askConfirm({
+      title: '启动跨集群迁移',
+      message: `将从 ${srcDesc} 的 ${form.value.sourceIndex} 搬运到本集群 ${form.value.destIndex}。` + (warn ? ' ' + warn : ''),
+      level: 'warn',
+      okText: '启动',
+      facts,
+    })) return;
+    await doStart();
+  } finally { starting.value = false; }
 }
 /* F4：ES 索引名硬规则前置校验——非法字符 \ / ? " < > | , # 与大写字母在启动前
  用人话拦下，不等 bulk 跑一半才报难懂的 invalid_index_name_exception。
@@ -740,9 +749,9 @@ const canStart = computed(() =>
   (form.value.destCreateMode !== 'FROM_ENTITY' || form.value.indexKey) &&
   !idxNameError.value);
 async function doStart() {
-  /* 互斥口径照 SqlBridgeView（starting 布尔 + qr.running 双查）——在途重入直接短路 */
-  if (starting.value || qr.running.value) return;
-  starting.value = true;
+  /* starting 闸已收 openStartConfirm 本体（唯一调用点，置位前移到确认窗之前）——
+ 此处只保留 qr 运行态防御查；starting 置位/复位由外层 try/finally 统一承担 */
+  if (qr.running.value) return;
   startErr.value = '';
   startErrRaw.value = null;
   qr.begin(); /* ：读秒计时（start 无 signal 参，不接竞态丢弃） */
@@ -768,7 +777,7 @@ async function doStart() {
     startErrRaw.value = e;
     store.notify('error', startErr.value);
   }
-  finally { starting.value = false; qr.finish(); }
+  finally { qr.finish(); }
 }
 
 /* 作业列表 */
@@ -1067,7 +1076,7 @@ function exportRows(): any[] {
 /* 导出可见作业为 TSV（Excel 可直接粘贴） */
 async function exportTsv() {
   const rows = exportRows();
-  if (!rows.length) return;
+  if (!rows.length) { store.notify('warning', '无表格结果可导出'); return; }
   const header = ['jobId', 'status', 'destIndex', 'sourceIndex', 'remoteEndpoint', 'migrated', 'total', 'pct', 'conflicts', 'errors', 'createTime'];
   const lines = [header.join('\t')];
   for (const j of rows) {
@@ -1084,7 +1093,7 @@ async function exportTsv() {
 /* 迁移任务 Markdown 表（群聊/工单跟催直贴；行序=QRT 排序后所见即所得） */
 async function exportMd() {
   const rows = exportRows();
-  if (!rows.length) return;
+  if (!rows.length) { store.notify('warning', '无表格结果可导出'); return; }
   const esc = (v: any) => String(v ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ');
   const md = [
     '| jobId | 状态 | 目标索引 | 迁移/总量 | 进度 | 冲突 | 错误 |',
@@ -1128,17 +1137,28 @@ const resumeOpen = ref(false);
 const resumeConn = ref<any>({ scheme: 'http', host: '', port: 9200, username: '', password: '' });
 const resumeConnId = ref('');
 /* W4：中止确认直挂 ConfirmModal 合并 askConfirm——warn 级白得
- dismissable（已有 3s 撤销窗兜底、已搬运数据保留，适合会话级防呆） */
+ dismissable（已有 3s 撤销窗兜底、已搬运数据保留，适合会话级防呆）。
+ 闸读收本体首行+置位前移到确认窗之前：挂起期间中止钮即禁用，二击不再穿透双开确认窗；
+ 取消路径 finally 复位防闸死——提交路径 submitted 守护外层不复位，aborting 钉到
+ API 落定（复位权在撤销回调与延时回调） */
 async function askAbort(j: any) {
-  actJob.value = j;
-  if (!await askConfirm({
-    title: '中止迁移',
-    message: `将中止作业 ${j.jobId} 并还原目标索引 settings。已搬运数据保留。确认后仍有 3 秒撤销窗。`,
-    level: 'warn',
-    okText: '中止',
-    dismissable: true,
-  })) return;
-  await doAbort();
+  if (aborting.value) return;
+  aborting.value = true;
+  let submitted = false;
+  try {
+    actJob.value = j;
+    if (!await askConfirm({
+      title: '中止迁移',
+      message: `将中止作业 ${j.jobId} 并还原目标索引 settings。已搬运数据保留。确认后仍有 3 秒撤销窗。`,
+      level: 'warn',
+      okText: '中止',
+      dismissable: true,
+    })) return;
+    await doAbort();
+    submitted = true;
+  } finally {
+    if (!submitted) aborting.value = false;
+  }
 }
 function askResume(j: any) {
   actJob.value = j;
@@ -1148,16 +1168,15 @@ function askResume(j: any) {
   resumeConnId.value = (m && store.conns.find(c => c.scheme === m[1] && c.host === m[2] && String(c.port) === m[3])?.id) || '';
   resumeOpen.value = true;
 }
-/* 提交防重：doAbort 是「3s 撤销窗 + 延时下发」，aborting 从确认起钉住到 API 落定（撤销即复位），
- 双击确认/重复开弹窗不会重复排第二个 setTimeout；中止钮 :disabled+spinning 与页内 checking 式反馈同形 */
+/* aborting 闸收 askAbort 本体（置位前移到确认窗之前，唯一调用点已闸）：生命周期按
+ 「从确认起钉住到 API 落定（含 3s 撤销窗）」——复位权在撤销回调、延时回调与外层取消
+ 分支；双击确认/重复开弹窗不会重复排第二个 setTimeout；中止钮 :disabled+spinning 同形 */
 const aborting = ref(false);
 async function doAbort() {
-  if (aborting.value) return;
   const job = actJob.value;
   if (!job) return;
   const jobId = job.jobId;
   let cancelled = false;
-  aborting.value = true;
   store.notify('info', `将于 3s 后中止 ${jobId}`, {
     duration: 3000,
     action: { label: '撤销', onClick: () => { cancelled = true; aborting.value = false; store.notify('info', '已撤销中止'); } }

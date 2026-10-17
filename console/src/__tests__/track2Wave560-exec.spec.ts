@@ -162,8 +162,16 @@ describe('560 ⑧：XmigrateView 三步向导全宽纵排 + 启动行读秒', ()
     expect(xm).toMatch(/starting \? '启动中 ' \+ startSecs \+ 's' : '启动迁移'/);
     expect(xm).toMatch(/import \{ useQueryRun \} from '\.\.\/composables\/useQueryRun';/);
     expect(xm).toMatch(/const startSecs = computed\(\(\) => \(qr\.elapsedMs\.value \/ 1000\)\.toFixed\(1\)\);/);
+    /* starting 闸收 openStartConfirm 本体（置位前移到确认窗之前）——内层旧双查
+    （starting.value || qr.running.value）随前移退役（保留会短路死），互斥口径升格
+    不退役：闸读/置位前移锁在确认链执行体，doStart 保留 qr 运行态防御查 */
+    const gateBody = xm.slice(xm.indexOf('async function openStartConfirm()'), xm.indexOf('async function doStart()'));
+    expect(gateBody, '启动闸收确认链本体首行').toContain('if (starting.value) return;');
+    expect(gateBody.indexOf('starting.value = true;'), '置位先于第一个 await')
+      .toBeLessThan(gateBody.indexOf('api.xb.preflight'));
     const startBody = xm.slice(xm.indexOf('async function doStart()'), xm.indexOf('/* 作业列表 */'));
-    expect(startBody, '互斥口径照 SqlBridge（starting 布尔与 qr.running 并存双查）').toContain('if (starting.value || qr.running.value) return;');
+    expect(startBody).toContain('if (qr.running.value) return;');
+    expect(startBody, '内层旧双查随闸前移退役').not.toContain('starting.value = true;');
     expect(startBody).toContain('qr.begin();');
     expect(startBody).toContain('qr.finish();');
   });
