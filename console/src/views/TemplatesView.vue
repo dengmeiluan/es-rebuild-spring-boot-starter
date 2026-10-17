@@ -334,20 +334,25 @@ function cancel() {
 watch(tab, () => cancel());
 
 async function save() {
+  /* 保存钮/编辑器快捷键/全局快捷键三通道共用的在途互斥闸；键盘事件冒泡使一次
+     按键先后触发两条通道，闸收在本体且置位必须先于任何 await（含覆盖确认窗） */
+  if (saving.value) return;
+  /* 写权限随执行体检查而非按钮可见性——快捷键路径不经按钮 */
+  if (!canOps.value) { store.notify('error', '当前身份无模板写权限'); return; }
   const name = newMode.value ? newName.value.trim() : selected.value?.name;
   if (!name) { store.notify('error', '请填写模板名称'); return; }
-  /* 覆盖同名模板会整体替换其 body，需二次确认 */
+  /* 覆盖同名模板会整体替换其 body，需二次确认；取消路径由 finally 复位 */
   const exists = (tab.value === 'index' ? indexTemplates.value : componentTemplates.value).some(t => t.name === name);
-  if (exists) {
-    const okOverwrite = await askConfirm({
-      title: '覆盖已有模板',
-      message: `模板「${name}」已存在，保存将整体替换其内容。确认覆盖？`,
-      okText: '覆盖',
-    });
-    if (!okOverwrite) return;
-  }
   saving.value = true;
   try {
+    if (exists) {
+      const okOverwrite = await askConfirm({
+        title: '覆盖已有模板',
+        message: `模板「${name}」已存在，保存将整体替换其内容。确认覆盖？`,
+        okText: '覆盖',
+      });
+      if (!okOverwrite) return;
+    }
     await api.putTemplate(name, tab.value, editBody.value);
     store.notify('success', `${tab.value === 'index' ? '索引' : '组件'}模板已保存：${name}`);
     await load();
