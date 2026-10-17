@@ -34,16 +34,16 @@ describe('667 一：IH import 共享件 + 两域六分支接线（源码锁）',
   it('import AltHitsViews 在场（565 DQ 同款路径）', () => {
     expect(ih).toContain("import AltHitsViews from '../components/AltHitsViews.vue';");
   });
-  it('docs 域三分支：json=高亮信封入参 / tree=行集入参 / cards=全量命中+openDoc', () => {
+  it('docs 域三分支：json=高亮信封入参 / tree=行集入参 / cards=全量命中+openDoc（导航条接线随 934 对齐）', () => {
     const seg = domainSlice(ih, "tab === 'docs'", "tab === 'query'");
-    expect(seg).toContain('<AltHitsViews view="json" :json-html="docsJsonHtml" />');
-    expect(seg).toContain('<AltHitsViews view="tree" :tree-data="docsAltData" />');
+    expect(seg).toContain('<AltHitsViews view="json" :json-html="docsJsonHtml" :doc-count="docsHits.length"');
+    expect(seg).toContain('<AltHitsViews view="tree" :tree-data="docsAltData" :doc-count="docsAltData.length"');
     expect(seg).toContain('<AltHitsViews view="cards" :hits="docsHits" @open-doc="openDoc" />');
   });
-  it('query 域三分支同构（qryJsonHtml/qryAltData/qryResp.hits）', () => {
+  it('query 域三分支同构（qryJsonHtml/qryAltData/qryResp.hits；导航条接线随 934 对齐）', () => {
     const seg = domainSlice(ih, '<template v-else-if="tab === \'query\'">', '<!-- Settings -->');
-    expect(seg).toContain('<AltHitsViews view="json" :json-html="qryJsonHtml" />');
-    expect(seg).toContain('<AltHitsViews view="tree" :tree-data="qryAltData" />');
+    expect(seg).toContain('<AltHitsViews view="json" :json-html="qryJsonHtml" :doc-count="qryResp?.hits?.length ?? 0"');
+    expect(seg).toContain('<AltHitsViews view="tree" :tree-data="qryAltData" :doc-count="qryAltData.length"');
     expect(seg).toContain('<AltHitsViews view="cards" :hits="qryResp.hits" @open-doc="openDoc" />');
   });
 });

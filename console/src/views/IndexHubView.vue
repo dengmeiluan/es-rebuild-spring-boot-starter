@@ -191,21 +191,21 @@
                       <Info :size="13" />
                     </button>
                   </template>
+                  <!-- alt 三视图体（json/tree/cards 三档，表格档=表格体本体）——随默认插槽
+                       入表格容器，放大态四视图同屏（与查询工作台同语言）；包裹层 v-show
+                       容器类与高度链留宿主零触，max-height 56vh 三视图一口径（.ih-* 见样式区）。
+                       json/tree 档挂文档导航条（遍历/_id 直达下拉/打开/编辑直达），编辑直达
+                       仅 tree 档亮钮（editable 已接线 edit-doc-at） -->
+                  <div v-show="docsView === 'json'" class="scroll-y ih-json-wrap ih-alt-body">
+                    <AltHitsViews view="json" :json-html="docsJsonHtml" :doc-count="docsHits.length" :doc-ids="docsHits.map(h => h._id)" @open-doc-at="i => { const h = docsHits[i]; if (h) openDoc(h) }" @edit-doc-at="i => { const h = docsHits[i]; if (h) openDoc(h, true) }" />
+                  </div>
+                  <div v-show="docsView === 'tree'" class="scroll-y ih-tree-view ih-alt-body">
+                    <AltHitsViews view="tree" :tree-data="docsAltData" :doc-count="docsAltData.length" :doc-ids="docsAltData.map(r => String(r._id ?? ''))" editable @open-doc-at="i => openAltDocAt(docsAltData, i)" @edit-doc-at="i => openAltDocAt(docsAltData, i, true)" />
+                  </div>
+                  <div v-show="docsView === 'cards'" class="ih-cards ih-alt-body">
+                    <AltHitsViews view="cards" :hits="docsHits" @open-doc="openDoc" />
+                  </div>
                 </ResultTable>
-                <!-- 替换视图体（DQ 同款四档 seg）；三视图体内脏
-                     改用 AltHitsViews 统一件（包裹层 v-show 容器类与
-                     高度链留宿主零触，内脏单源与 DQ/RT/QRT 同件；jsonFind 高亮搜索链
-                     是 DQ 视图域增强，本页不含）。hideBody 只隐表格体，工具行常驻，alt 体随 v-show 分档；
-                     max-height 56vh 三视图一口径（ vh 统一族，.ih-* 见样式区，表格/编辑器高度链零触） -->
-                <div v-show="docsView === 'json'" class="scroll-y ih-json-wrap ih-alt-body">
-                  <AltHitsViews view="json" :json-html="docsJsonHtml" />
-                </div>
-                <div v-show="docsView === 'tree'" class="scroll-y ih-tree-view ih-alt-body">
-                  <AltHitsViews view="tree" :tree-data="docsAltData" />
-                </div>
-                <div v-show="docsView === 'cards'" class="ih-cards ih-alt-body">
-                  <AltHitsViews view="cards" :hits="docsHits" @open-doc="openDoc" />
-                </div>
               </template>
               <div v-else-if="docsErr" role="alert" class="err-bar rise-in ih-docs-err">
                 <!-- 裸插值升级 errPreHtml+errMeta 双参（docsErrRaw 原始对象旁路；
@@ -343,21 +343,19 @@
                     <Info :size="13" />
                   </button>
                 </template>
-              </ResultTable>
-              <!-- query tab 替换视图体（docs tab 同款三档；改用
-                   AltHitsViews 统一件同 docs 域；qryResp 在场域内 v-show 分档，与 RT
-                   v-else-if 链解耦不破链） -->
-              <template v-if="qryResp">
+                <!-- alt 三视图体（docs tab 同款）——随默认插槽入表格容器，放大态四视图
+                     同屏；json/tree 档挂文档导航条（遍历/_id 直达/打开/编辑直达，与查询
+                     工作台同口径），随 RT 的 qryResp 守卫在场，原独立包裹层摘除 -->
                 <div v-show="qryView === 'json'" class="scroll-y ih-json-wrap ih-alt-body">
-                  <AltHitsViews view="json" :json-html="qryJsonHtml" />
+                  <AltHitsViews view="json" :json-html="qryJsonHtml" :doc-count="qryResp?.hits?.length ?? 0" :doc-ids="qryResp?.hits?.map(h => h._id) ?? []" @open-doc-at="i => { const h = qryResp?.hits?.[i]; if (h) openDoc(h) }" @edit-doc-at="i => { const h = qryResp?.hits?.[i]; if (h) openDoc(h, true) }" />
                 </div>
                 <div v-show="qryView === 'tree'" class="scroll-y ih-tree-view ih-alt-body">
-                  <AltHitsViews view="tree" :tree-data="qryAltData" />
+                  <AltHitsViews view="tree" :tree-data="qryAltData" :doc-count="qryAltData.length" :doc-ids="qryAltData.map(r => String(r._id ?? ''))" editable @open-doc-at="i => openAltDocAt(qryAltData, i)" @edit-doc-at="i => openAltDocAt(qryAltData, i, true)" />
                 </div>
                 <div v-show="qryView === 'cards'" class="ih-cards ih-alt-body">
                   <AltHitsViews view="cards" :hits="qryResp.hits" @open-doc="openDoc" />
                 </div>
-              </template>
+              </ResultTable>
               <!-- query tab 未执行就绪空态（DslQueryView :470 同件同文案风格）——
                    此前 err-bar→RT v-if/v-else-if 链在未执行态漏空白，首进无引导；
                    v-else-if="!qryErr" 与失败态互斥不双显（DQ 同链位） -->
@@ -1749,11 +1747,19 @@ const docEditText = ref('');
  style 覆盖 static style 的 height 位（Vue 合并规则动态优先）。 */
 const DOC_H_TIERS: string[] = ['min(60vh,420px)', 'min(70vh,560px)', 'min(80vh,700px)'];
 const { v: docH, cycle: cycleDocH } = useTierCycle('ih.docH', DOC_H_TIERS);
-function openDoc(hit: SearchHit) {
+function openDoc(hit: SearchHit, goEdit = false) {
   activeDoc.value = hit;
   docEditText.value = JSON.stringify(hit._source, null, 2);
-  docEditMode.value = false;
+  docEditMode.value = goEdit;
   docOpen.value = true;
+}
+/* tree 档导航条直达（行集 = _id 与源字段平铺）：重组回 SearchHit 时把行首 _id 剥出
+ _source（元数据字段写回文档体会被 ES 拒收），保存链仍走 updateDocument + 当前索引名 */
+function openAltDocAt(rows: Array<Record<string, any>>, i: number, goEdit = false) {
+  const row = rows[i];
+  if (!row) return;
+  const { _id, ...src } = row;
+  openDoc({ _id: String(_id ?? ''), _index: cur.value, score: 1, _score: 1, _source: src } as SearchHit, goEdit);
 }
 async function copyDoc() {
   if (await copyText(docEditText.value)) store.notify('success', '文档 JSON 已复制');

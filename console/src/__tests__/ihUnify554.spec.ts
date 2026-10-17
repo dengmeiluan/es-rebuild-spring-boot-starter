@@ -208,16 +208,17 @@ describe('554 二：JSON/Tree/卡片渲染体（docs docsRan 域 + query qryResp
   it('docs：JSON=高亮 pretty 信封（AltHitsViews 入参）、Tree=行集入参、卡片=全量命中+openDoc（667 改用同步更新：内脏入共享件，包裹层容器类保形）', () => {
     const seg = ih.slice(ih.indexOf("tab === 'docs'"), ih.indexOf("tab === 'query'"));
     /* 六百六十七批同步更新（击穿者：IH alt 体改用 AltHitsViews 统一件）——内脏 DOM 入组件，
-       包裹层 v-show 容器类与入参绑定保形（json=信封/tree=行集/cards=全量命中+openDoc） */
-    expect(seg).toMatch(/<div v-show="docsView === 'json'" class="scroll-y ih-json-wrap ih-alt-body">\s*<AltHitsViews view="json" :json-html="docsJsonHtml" \/>/);
-    expect(seg).toContain('<AltHitsViews view="tree" :tree-data="docsAltData" />');
+       包裹层 v-show 容器类与入参绑定保形（json=信封/tree=行集/cards=全量命中+openDoc）；
+       文档导航条接线（934 能力矩阵对齐：json/tree 档 +doc-count/doc-ids/打开/编辑直达） */
+    expect(seg).toMatch(/<div v-show="docsView === 'json'" class="scroll-y ih-json-wrap ih-alt-body">\s*<AltHitsViews view="json" :json-html="docsJsonHtml" :doc-count="docsHits\.length"/);
+    expect(seg).toContain('<AltHitsViews view="tree" :tree-data="docsAltData" :doc-count="docsAltData.length"');
     expect(seg).toMatch(/<div v-show="docsView === 'cards'" class="ih-cards ih-alt-body">/);
     expect(seg).toContain('<AltHitsViews view="cards" :hits="docsHits" @open-doc="openDoc" />');
   });
   it('query：三档同构（qryView 驱动；667 改用同步更新同 docs 域）', () => {
     const seg = ih.slice(ih.indexOf('<template v-else-if="tab === \'query\'">'), ih.indexOf('<!-- Settings -->'));
-    expect(seg).toMatch(/<div v-show="qryView === 'json'" class="scroll-y ih-json-wrap ih-alt-body">\s*<AltHitsViews view="json" :json-html="qryJsonHtml" \/>/);
-    expect(seg).toContain('<AltHitsViews view="tree" :tree-data="qryAltData" />');
+    expect(seg).toMatch(/<div v-show="qryView === 'json'" class="scroll-y ih-json-wrap ih-alt-body">\s*<AltHitsViews view="json" :json-html="qryJsonHtml" :doc-count="qryResp\?\.hits\?\.length \?\? 0"/);
+    expect(seg).toContain('<AltHitsViews view="tree" :tree-data="qryAltData" :doc-count="qryAltData.length"');
     expect(seg).toMatch(/<div v-show="qryView === 'cards'" class="ih-cards ih-alt-body">/);
     expect(seg).toContain('<AltHitsViews view="cards" :hits="qryResp.hits" @open-doc="openDoc" />');
   });

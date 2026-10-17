@@ -50,8 +50,8 @@ describe('565 件③：AltHitsViews 共享件接线（源码锁）', () => {
 
   it('IndexHubView docs/query 已改用共享件（667 解冻收口；包裹层 v-show 容器留宿主零触）', () => {
     expect(ih).toContain("import AltHitsViews from '../components/AltHitsViews.vue';");
-    expect(ih).toContain('<AltHitsViews view="json" :json-html="docsJsonHtml" />');
-    expect(ih).toContain('<AltHitsViews view="tree" :tree-data="docsAltData" />');
+    expect(ih).toContain('<AltHitsViews view="json" :json-html="docsJsonHtml" :doc-count="docsHits.length"');
+    expect(ih).toContain('<AltHitsViews view="tree" :tree-data="docsAltData" :doc-count="docsAltData.length"');
     expect(ih).toContain('<AltHitsViews view="cards" :hits="docsHits" @open-doc="openDoc" />');
     expect(ih).toContain('<AltHitsViews view="cards" :hits="qryResp.hits" @open-doc="openDoc" />');
     expect(ih, '包裹层容器类留宿主（track2Wave560-ih CSS 锁零触）').toContain('ih-json-wrap ih-alt-body');

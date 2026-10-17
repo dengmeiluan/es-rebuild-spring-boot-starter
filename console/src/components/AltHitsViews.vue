@@ -8,9 +8,8 @@
   <!-- json：高亮 pretty 信封只读（v-html 由宿主 markHtmlAll 链产出；类名 json-view=theme 全局档）
    点击文档块（j-doc-block）→ open-doc-at(idx)：宿主映射回 SearchHit 走 openDoc 抽屉 -->
   <template v-if="view === 'json'">
-    <pre v-if="view === 'json'" ref="preEl" class="json-view" v-html="jsonHtml" @click="onPreClick"></pre>
-    <!-- 文档导航条（914 能力矩阵统一）：JSON/Tree 档的文档触达——遍历+打开走
-     open-doc-at 与表格/卡片同一 openDoc 抽屉（看原始 JSON/编辑/保存全链复用） -->
+    <!-- 文档导航条前置：滚动容器里内容先行会把导航条沉底（长结果滚不到底），
+     顶部常驻才是可达的遍历/直达入口 -->
     <div v-if="docCount" class="ah-docnav">
       <span class="ah-docnav-lb">文档</span>
       <button type="button" class="ah-nav-btn" title="上一条文档" :disabled="docCursor <= 0" @click="docCursor = Math.max(0, docCursor - 1)">‹</button>
@@ -20,12 +19,13 @@
       </select>
       <button type="button" class="ah-nav-btn" title="下一条文档" :disabled="docCursor >= docCount - 1" @click="docCursor = Math.min(docCount - 1, docCursor + 1)">›</button>
       <button type="button" class="ah-nav-open" @click="emit('open-doc-at', docCursor)">打开文档</button>
+      <button v-if="editable" type="button" class="ah-nav-open ah-nav-edit" title="打开该文档并直接进入编辑（Monaco 编辑 raw JSON 后保存）" @click="emit('edit-doc-at', docCursor)">编辑文档</button>
     </div>
+    <pre v-if="view === 'json'" ref="preEl" class="json-view" v-html="jsonHtml" @click="onPreClick"></pre>
   </template>
-  <!-- tree：JsonTree 统一件 tools 档（DQ 旧体逐字平移）+ 文档导航条（914 能力矩阵统一：tree 档同享文档触达）
-   + 「编辑文档」直达（openDoc 抽屉的 Monaco 编辑）——tree 档不再只读 -->
+  <!-- tree：文档导航条前置（同 json 档）+ JsonTree 统一件 tools 档（DQ 旧体逐字平移）；
+   「编辑文档」直达 openDoc 抽屉的 Monaco 编辑——tree 档不再只读 -->
   <template v-else-if="view === 'tree'">
-    <JsonTree :data="treeData" tools />
     <div v-if="docCount" class="ah-docnav">
       <span class="ah-docnav-lb">文档</span>
       <button type="button" class="ah-nav-btn" title="上一条文档" :disabled="docCursor <= 0" @click="docCursor = Math.max(0, docCursor - 1)">‹</button>
@@ -34,8 +34,9 @@
       </select>
       <button type="button" class="ah-nav-btn" title="下一条文档" :disabled="docCursor >= docCount - 1" @click="docCursor = Math.min(docCount - 1, docCursor + 1)">›</button>
       <button type="button" class="ah-nav-open" @click="emit('open-doc-at', docCursor)">打开文档</button>
-      <button type="button" class="ah-nav-open ah-nav-edit" title="打开该文档并直接进入编辑（Monaco 编辑 raw JSON 后保存）" @click="emit('edit-doc-at', docCursor)">编辑文档</button>
+      <button v-if="editable" type="button" class="ah-nav-open ah-nav-edit" title="打开该文档并直接进入编辑（Monaco 编辑 raw JSON 后保存）" @click="emit('edit-doc-at', docCursor)">编辑文档</button>
     </div>
+    <JsonTree :data="treeData" tools />
   </template>
   <!-- cards：卡片行（DQ 旧体逐字平移——_id 行 + 前 5 字段行 + 42 截断；点开文档走宿主） -->
   <template v-else-if="view === 'cards'">
@@ -68,6 +69,9 @@ const props = defineProps<{
   docCount?: number;
   /** json/tree 档的 _id 列表（与 docCount 同序；导航条下拉直达的选项源，缺省回落序号） */
   docIds?: string[];
+  /** tree 档「编辑文档」直达开关：仅宿主接线了 edit-doc-at 时开启；
+   * 缺省关=无编辑链的宿主不渲染该钮（能力如实呈现，不留点了没反应的死钮） */
+  editable?: boolean;
 }>();
 
 const emit = defineEmits<{

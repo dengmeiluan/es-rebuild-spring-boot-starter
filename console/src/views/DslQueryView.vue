@@ -490,7 +490,7 @@
             <AltHitsViews ref="jsonBox" view="json" :json-html="jsonMarkedHtml" :doc-count="resp?.hits?.length ?? 0" :doc-ids="resp?.hits?.map(h => h._id) ?? []" @open-doc-at="i => resp && openDoc(resp.hits[i])" />
           </div>
           <div v-show="view === 'tree'" class="scroll-y dq-tree-view dq-alt-body">
-            <AltHitsViews view="tree" :tree-data="jqResult !== null ? jqResult : (resp.hits || []).map(h => ({ _id: h._id, ...h._source }))" :doc-count="jqResult !== null ? jqResult.length : (resp?.hits || []).length" :doc-ids="jqResult !== null ? jqResult.map((r: any) => String(r._id ?? '')) : (resp?.hits || []).map(h => h._id)" @open-doc-at="i => { const rows = jqResult !== null ? jqResult : (resp?.hits || []).map(h => ({ _id: h._id, ...h._source })); const row = rows[i]; if (row) openDoc({ _id: String(row._id ?? ''), _index: '', score: 1, _score: 1, _source: row } as SearchHit) }" @edit-doc-at="i => { const rows = jqResult !== null ? jqResult : (resp?.hits || []).map(h => ({ _id: h._id, ...h._source })); const row = rows[i]; if (row) openDoc({ _id: String(row._id ?? ''), _index: '', score: 1, _score: 1, _source: row } as SearchHit, true) }" />
+            <AltHitsViews view="tree" :tree-data="jqResult !== null ? jqResult : (resp.hits || []).map(h => ({ _id: h._id, ...h._source }))" :doc-count="jqResult !== null ? jqResult.length : (resp?.hits || []).length" :doc-ids="jqResult !== null ? jqResult.map((r: any) => String(r._id ?? '')) : (resp?.hits || []).map(h => h._id)" editable @open-doc-at="i => openTreeDocAt(i)" @edit-doc-at="i => openTreeDocAt(i, true)" />
           </div>
           <div v-show="view === 'cards'" class="dq-cards scroll-y dq-alt-body">
             <!-- 卡片集走 cardHits 快滤（kw 空即全量）；565 改用共享件 -->
@@ -1659,6 +1659,15 @@ function openDoc(hit: SearchHit, goEdit = false) {
   docEditText.value = prettyJson(hit._source);
   docEditMode.value = goEdit;
   docOpen.value = true;
+}
+/* tree 档导航条的打开/编辑直达：行集 = _id 与源字段平铺，重组回 SearchHit 时把行首 _id
+ 剥出 _source（元数据字段写回文档体会被 ES 拒收），其余字段原样进编辑稿 */
+function openTreeDocAt(i: number, goEdit = false) {
+  const rows = jqResult.value !== null ? jqResult.value : (resp.value?.hits || []).map(h => ({ _id: h._id, ...h._source }));
+  const row = rows[i] as Record<string, any> | undefined;
+  if (!row) return;
+  const { _id, ...src } = row;
+  openDoc({ _id: String(_id ?? ''), _index: '', score: 1, _score: 1, _source: src } as SearchHit, goEdit);
 }
 /* 结果表相关性调试入口：带当前 index+_id+dsl 送去排名侦探 / 查询 X 光（复用实验室 sessionStorage 契约）。
  手写 sessionStorage.setItem 换 useLinkCarry 统一件——键名与 payload 结构逐字保持
