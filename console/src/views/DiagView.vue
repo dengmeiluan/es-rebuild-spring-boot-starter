@@ -108,7 +108,7 @@
           <div class="dg-sec-t sec-t">
 <Hourglass :size="12" /> Pending Cluster Tasks（{{ pending.length }}）
             <!-- pending tasks Markdown 复制（带出体系——master 队列堆积排障贴群） -->
-            <button v-if="pending.length" class="btn sm ghost" style="margin-left:auto" @click.prevent="copyPending" title="复制 pending tasks 为 Markdown（群聊/工单直贴）"><ClipboardCopy :size="11" /> Markdown</button>
+            <button class="btn sm ghost" :disabled="!pending.length" style="margin-left:auto" @click.prevent="copyPending" title="复制 pending tasks 为 Markdown（群聊/工单直贴）"><ClipboardCopy :size="11" /> Markdown</button>
           </div>
           <div v-if="pending.length" class="dg-pending">
             <div v-for="(p, i) in pending" :key="i" class="dg-pending-row">
@@ -131,7 +131,7 @@
               <RefreshCw :size="10" :class="{ spinning: loadingAlloc }" /> 探测
             </button>
             <!-- allocation explain 复制（工单直达） -->
-            <button v-if="allocation" class="btn sm ghost" @click="copyAllocMd" title="复制分片诊断 Markdown">
+            <button class="btn sm ghost" :disabled="!allocation" @click="copyAllocMd" title="复制分片诊断 Markdown">
               <FileDown :size="10" /> 复制
             </button>
           </div>
@@ -176,7 +176,7 @@
         <summary>
           <Flame :size="12" /> Hot Threads 采样（点击展开，采样时约 500ms）
           <!-- 热线程原始文本复制（性能排障贴群/工单一手材料） -->
-          <button v-if="hotThreads" class="btn sm ghost" @click.prevent="copyHot" title="复制热线程原始文本"><Copy :size="10" /> 复制</button>
+          <button class="btn sm ghost" :disabled="!hotThreads" @click.prevent="copyHot" title="复制热线程原始文本"><Copy :size="10" /> 复制</button>
           <button class="btn sm ghost" @click.prevent="loadHot()" :disabled="loadingHot">
             <RefreshCw :size="10" :class="{ spinning: loadingHot }" /> 采样
           </button>
@@ -253,14 +253,10 @@ const loadErrRaw = ref<unknown>(null);
 /* 多源聚合错误 → errMeta 用原始对象：优先 ApiError（带 code/endpoint），退而首错 */
 const firstMetaRaw = (raws: unknown[]): unknown =>
   raws.find(e => { const m = errMeta(e); return Boolean(m.code || m.endpoint); }) ?? raws[0] ?? null;
-/* G2-B1：首帧即 loading（ RemoteClusters 范式）——health 未回期间卡死作业卡出骨架，
- 不依赖 onMounted 同步置位才不闪「无卡死作业」绿勾 */
-const loading = ref(true);
 
 async function load() {
   /* -A2：双源失败记名聚合（对齐 Workspace ），页面级透传 + 重试
  -13：原第三源 /diagnostics 已随 SPI 能力矩阵一并退役，不再拉取 */
-  loading.value = true;
   const fails: string[] = [];
   const raws: unknown[] = []; /* ：原始对象旁路（firstMetaRaw 选喂 errMeta） */
   try { health.value = await api.health(); } catch (e: any) { raws.push(e); fails.push('health（' + friendlyEsError(String(e?.message ?? e)) + '）'); }
@@ -268,7 +264,6 @@ async function load() {
   loadErr.value = fails.length ? '诊断数据拉取失败：' + fails.join('、') : '';
   loadErrRaw.value = firstMetaRaw(raws);
   if (fails.length) store.notify('error', loadErr.value);
-  loading.value = false;
 }
 /* 进页即自动拉节点资源/pending tasks，免手动点刷新留大片空白 */
 /* 观测区（节点/pending/allocation）可选自动刷新——useAutoRefresh
@@ -409,16 +404,19 @@ const loadingOps = ref(false);
 const loadingAlloc = ref(false);
 const retrying = ref(false);
 /* 诊断现场一键重试——_cluster/reroute?retry_failed=true（CmdPalette 同款命令
- 前移到看到未分配原因的现场）；askConfirm warn 门控（集群级分配动作） */
+ 前移到看到未分配原因的现场）；askConfirm warn 门控（集群级分配动作）。
+ 互斥闸收函数本体首行+置位前移到确认窗之前：确认窗挂起期间钮面即禁用，
+ 确认窗内二击不得穿透闸二次下发集群级动作；取消路径走 finally 复位防闸死 */
 async function retryFailedAlloc() {
-  if (!await askConfirm({
-    title: '重试失败分片分配',
-    level: 'warn',
-    message: '将对集群下发 _cluster/reroute?retry_failed=true，对所有因节点离线等原因分配失败的分片重新触发分配。若根因未消除（如磁盘水位/缺失副本），分片会再次分配失败。',
-    okText: '提交重试',
-  })) return;
+  if (retrying.value) return;
   retrying.value = true;
   try {
+    if (!await askConfirm({
+      title: '重试失败分片分配',
+      level: 'warn',
+      message: '将对集群下发 _cluster/reroute?retry_failed=true，对所有因节点离线等原因分配失败的分片重新触发分配。若根因未消除（如磁盘水位/缺失副本），分片会再次分配失败。',
+      okText: '提交重试',
+    })) return;
     await api.raw('POST', '/_cluster/reroute?retry_failed=true', '{}');
     store.notify('success', '已提交 retry_failed=true，稍后重新探测');
     setTimeout(loadAllocation, 1500);
@@ -639,8 +637,9 @@ async function copyPending() {
 .dg-meta-link { cursor: pointer; }
 .dg-meta-link:hover b { text-decoration: underline; }
 
-/* G2-C7：原内联样式收 scoped（频率下拉改用 AutoRefreshSelect 统一件，.dg-int-sel 残留删除） */
-.dg-auto-lbl { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-sm); color: var(--tx1); cursor: pointer; margin-left: auto; }
+/* G2-C7：原内联样式收 scoped（频率下拉改用 AutoRefreshSelect 统一件，.dg-int-sel 残留删除）；
+ 标签禁收缩（常态档卡头拥挤时「自动刷新」四字被压成竖排，与 1100 档 flex:none 同款） */
+.dg-auto-lbl { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-sm); color: var(--tx1); cursor: pointer; margin-left: auto; flex: none; }
 /* 卡死横幅四条死样式规则退役（随卡墙 KPI 退役后模板零引用，删前 grep 全仓确认） */
 .dg-okline { display: flex; align-items: center; gap: var(--sp-2); color: var(--tx1); font-size: var(--fs-sm); padding: var(--sp-2) 0; }
 /* .dg-tip/.dg-tip.pad 裸占位规则随五处 EmptyState compact 合并退役
@@ -697,10 +696,12 @@ async function copyPending() {
 
 
 /* G2-C6：双栏堆叠归一 标准值 1100（ TaskTreeView C6 同构），窄屏不再左右互挤 */
-@media (max-width: 1100px) {
-  .dg-ops-grid { grid-template-columns: 1fr; }
+/* 卡头换行提档：卡头三子块（元信息串+操作组+标签）自然总宽 ~1180px，1280 常态档
+ 容器 ~1144px 放不下，强压操作组「自动刷新」标签成竖排——换行规则从 1100 档上移，
+ 1440 以上单行放得下（1600 实测容器 ~1300px） */
+@media (max-width: 1440px) {
   /* 窄屏卡头换行：.card-t 全局 flex 无 wrap，一行塞「标题+元信息串+操作组」会把
- 「自动刷新」标签和元信息 span 压成逐字竖排（量尺抓到）——元信息串整行下落、
+ 「自动刷新」标签和元信息 span 压成逐字竖排——元信息串整行下落、
  操作组可换行、inline 子项禁收缩 */
   .card-t { flex-wrap: wrap; row-gap: var(--sp-1); }
   .dg-meta { flex-basis: 100%; order: 5; }
@@ -709,6 +710,10 @@ async function copyPending() {
   .dg-meta :deep(.ms-i) { flex: none; }
   .dg-ops-act { margin-left: 0; flex-wrap: wrap; }
   .dg-auto-lbl { flex: none; }
+}
+
+@media (max-width: 1100px) {
+  .dg-ops-grid { grid-template-columns: 1fr; }
 }
 
 /* 900 紧凑微调档（ 口径；q 遗留补齐，W-D）——本页无自身分栏

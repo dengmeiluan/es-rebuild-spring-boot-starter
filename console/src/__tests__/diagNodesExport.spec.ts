@@ -34,8 +34,8 @@ describe('Diag 节点资源导出（134 批）', () => {
 });
 
 describe('Diag 热线程复制（138 批）', () => {
-  it('复制按钮接线（有采样才显示）+原始文本保真复制', () => {
-    expect(src).toMatch(/<button v-if="hotThreads" class="btn sm ghost" @click\.prevent="copyHot"/);
+  it('复制按钮接线（无采样禁用恒在场）+原始文本保真复制', () => {
+    expect(src).toMatch(/<button class="btn sm ghost" :disabled="!hotThreads" @click\.prevent="copyHot"/);
     expect(src).toMatch(/async function copyHot\(\)/);
     expect(src).toMatch(/await copyText\(hotThreads\.value\)/);
     expect(src).toContain('热线程文本已复制');
@@ -43,8 +43,8 @@ describe('Diag 热线程复制（138 批）', () => {
 });
 
 describe('Diag pending tasks Markdown 复制（一百八十批）', () => {
-  it('复制按钮接线（有 task 才显示）+三列表（priority/source/queue）', () => {
-    expect(src).toMatch(/<button v-if="pending\.length" class="btn sm ghost" style="margin-left:auto" @click\.prevent="copyPending"/);
+  it('复制按钮接线（无 task 禁用恒在场）+三列表（priority/source/queue）', () => {
+    expect(src).toMatch(/<button class="btn sm ghost" :disabled="!pending\.length" style="margin-left:auto" @click\.prevent="copyPending"/);
     expect(src).toMatch(/async function copyPending\(\)/);
     expect(src).toContain('| priority | source | time_in_queue |');
     expect(src).toContain('p.time_in_queue || (p.time_in_queue_millis + \'ms\')');
