@@ -36,8 +36,27 @@ describe('934 文档编辑直达矩阵（源码锁）', () => {
     expect(ih.match(/editable @open-doc-at="i => openAltDocAt\(/g)?.length ?? 0, 'tree editable 直达两处').toBe(2);
   });
 
-  it('ResultTable 内建 alt 档仅打开链（无编辑链宿主不渲染编辑钮）', () => {
-    expect(rt).not.toContain('editable');
+  it('ResultTable：行内编辑钮受 editable 开关（edit-doc emit），内建 alt 档仅打开链', () => {
+    expect(rt).toMatch(/editable\?: boolean;/);
+    expect(rt).toContain('<button v-if="editable" aria-label="编辑文档"');
+    expect(rt).toContain("(e: 'edit-doc', hit: SearchHit): void;");
+    /* 内建 alt 档（无编辑链宿主经 RT 消费的 JSON/Tree）不传 editable=不渲染编辑钮 */
     expect(rt, '内建 alt 档仅打开链').toMatch(/@open-doc-at="i => \{ const h = props\.hits\[i\]; if \(h\) emit\('open-doc', h\) \}"/);
+  });
+
+  it('渲染数据直达（935 续）：JsonTree 行挂 data-jid，AltHitsViews 三档委托单击开/双击编辑', () => {
+    const jt = read('../components/JsonTree.vue');
+    expect(jt, '树行携带点分路径（委托按首段定位文档）').toContain("'data-jid': id");
+    expect(ah).toContain('class="ah-tree-body" @click="onTreeClick" @dblclick="onTreeDblClick"');
+    expect(ah).toMatch(/function treeDocIndexOf\(e: MouseEvent\): number/);
+    expect(ah).toMatch(/\/\^\(\\d\+\)\(\?:\\\._id\)\?\$\/\.exec\(row\.getAttribute\('data-jid'\)/);
+    expect(ah).toMatch(/<pre v-if="view === 'json'" ref="preEl" class="json-view" v-html="jsonHtml" @click="onPreClick" @dblclick="onPreDblClick"/);
+    expect(ah).toContain('@dblclick="editable && emit(\'edit-doc\', h)"');
+    /* 宿主表格行内编辑直达接线（两工作台 + RT 行钮） */
+    expect(dq).toMatch(/editable @edit-doc="h => openDoc\(h, true\)"/);
+    expect(ih.match(/editable @edit-doc="h => openDoc\(h, true\)"/g)?.length ?? 0, 'IH 两处 ResultTable 行内编辑接线').toBe(2);
+    expect(dq).toContain('<AltHitsViews view="cards" :hits="cardHits" editable @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />');
+    /* IH json 信封逐文档块化（j-doc-block 与查询工作台同款） */
+    expect(ih).toContain('`<span class="j-doc-block" data-doc-i="${i}">`');
   });
 });

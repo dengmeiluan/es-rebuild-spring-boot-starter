@@ -38,13 +38,13 @@ describe('667 一：IH import 共享件 + 两域六分支接线（源码锁）',
     const seg = domainSlice(ih, "tab === 'docs'", "tab === 'query'");
     expect(seg).toContain('<AltHitsViews view="json" :json-html="docsJsonHtml" :doc-count="docsHits.length"');
     expect(seg).toContain('<AltHitsViews view="tree" :tree-data="docsAltData" :doc-count="docsAltData.length"');
-    expect(seg).toContain('<AltHitsViews view="cards" :hits="docsHits" @open-doc="openDoc" />');
+    expect(seg).toContain('<AltHitsViews view="cards" :hits="docsHits" editable @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />');
   });
   it('query 域三分支同构（qryJsonHtml/qryAltData/qryResp.hits；导航条接线随 934 对齐）', () => {
     const seg = domainSlice(ih, '<template v-else-if="tab === \'query\'">', '<!-- Settings -->');
     expect(seg).toContain('<AltHitsViews view="json" :json-html="qryJsonHtml" :doc-count="qryResp?.hits?.length ?? 0"');
     expect(seg).toContain('<AltHitsViews view="tree" :tree-data="qryAltData" :doc-count="qryAltData.length"');
-    expect(seg).toContain('<AltHitsViews view="cards" :hits="qryResp.hits" @open-doc="openDoc" />');
+    expect(seg).toContain('<AltHitsViews view="cards" :hits="qryResp.hits" editable @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />');
   });
 });
 

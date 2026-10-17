@@ -147,6 +147,8 @@ const JNode: any = defineComponent({
             const leaf = isObj ? null : leafText(v);
             return h('div', {
               class: 'jrow', key,
+              /* 点分路径（先序 DFS 同序）：宿主层「渲染数据直达」委托按首段定位文档 */
+              'data-jid': id,
               ...(hitIdx != null ? { 'data-hit-idx': String(hitIdx) } : {}),
             }, [
               h('div', { class: 'jline' }, [

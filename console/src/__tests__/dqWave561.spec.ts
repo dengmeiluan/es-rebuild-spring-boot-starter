@@ -56,8 +56,8 @@ describe('③ 卡片视图/terms 桶行 kw 快滤（宿主侧过滤）', () => {
     expect(dq).toMatch(/const cardHits = computed\(\(\) => \{/);
     /* 五百六十五批同步更新（击穿者：565 件③ alt 体改用 AltHitsViews 统一件）——卡片 v-for
        迁组件内（h in hits），宿主侧消费锚等价迁到共享件 cards 档绑定（过滤集仍 cardHits，
-       「原始 resp.hits 不回流」锁意不变） */
-    expect(dq).toMatch(/<AltHitsViews view="cards" :hits="cardHits" @open-doc="openDoc" \/>/);
+       「原始 resp.hits 不回流」锁意不变）；935 续加 editable 双击编辑直达（渲染数据直达矩阵） */
+    expect(dq).toMatch(/<AltHitsViews view="cards" :hits="cardHits" editable @open-doc="openDoc" @edit-doc="h => openDoc\(h, true\)" \/>/);
     expect(dq).not.toMatch(/v-for="h in resp\.hits"/);
   });
 

@@ -21,10 +21,11 @@
       <button type="button" class="ah-nav-open" @click="emit('open-doc-at', docCursor)">打开文档</button>
       <button v-if="editable" type="button" class="ah-nav-open ah-nav-edit" title="打开该文档并直接进入编辑（Monaco 编辑 raw JSON 后保存）" @click="emit('edit-doc-at', docCursor)">编辑文档</button>
     </div>
-    <pre v-if="view === 'json'" ref="preEl" class="json-view" v-html="jsonHtml" @click="onPreClick"></pre>
+    <pre v-if="view === 'json'" ref="preEl" class="json-view" v-html="jsonHtml" @click="onPreClick" @dblclick="onPreDblClick"></pre>
   </template>
   <!-- tree：文档导航条前置（同 json 档）+ JsonTree 统一件 tools 档（DQ 旧体逐字平移）；
-   「编辑文档」直达 openDoc 抽屉的 Monaco 编辑——tree 档不再只读 -->
+   渲染数据直达：单击文档行/该文档 _id 行=打开、双击（editable）=直达编辑；
+   「编辑文档」钮（editable）走导航条同一 edit-doc-at 通道——tree 档不再只读 -->
   <template v-else-if="view === 'tree'">
     <div v-if="docCount" class="ah-docnav">
       <span class="ah-docnav-lb">文档</span>
@@ -36,11 +37,14 @@
       <button type="button" class="ah-nav-open" @click="emit('open-doc-at', docCursor)">打开文档</button>
       <button v-if="editable" type="button" class="ah-nav-open ah-nav-edit" title="打开该文档并直接进入编辑（Monaco 编辑 raw JSON 后保存）" @click="emit('edit-doc-at', docCursor)">编辑文档</button>
     </div>
-    <JsonTree :data="treeData" tools />
+    <div class="ah-tree-body" @click="onTreeClick" @dblclick="onTreeDblClick">
+      <JsonTree :data="treeData" tools />
+    </div>
   </template>
-  <!-- cards：卡片行（DQ 旧体逐字平移——_id 行 + 前 5 字段行 + 42 截断；点开文档走宿主） -->
+  <!-- cards：卡片行（DQ 旧体逐字平移——_id 行 + 前 5 字段行 + 42 截断；单击点开文档，
+   双击（editable）直达编辑——与 json/tree 档同一交互语言） -->
   <template v-else-if="view === 'cards'">
-    <div v-for="h in hits" :key="h._id" class="dq-card" @click="emit('open-doc', h)" role="button" tabindex="0" @keydown.enter.prevent="emit('open-doc', h)" @keydown.space.prevent="emit('open-doc', h)">
+    <div v-for="h in hits" :key="h._id" class="dq-card" @click="emit('open-doc', h)" @dblclick="editable && emit('edit-doc', h)" role="button" tabindex="0" @keydown.enter.prevent="emit('open-doc', h)" @keydown.space.prevent="emit('open-doc', h)">
       <div class="dq-card-id mono" :title="h._id">{{ h._id }}</div>
       <div v-for="f in Object.keys(h._source).slice(0, 5)" :key="f" class="dq-card-row">
         <span class="dq-card-k mono" :title="f">{{ f }}</span>
@@ -70,7 +74,8 @@ const props = defineProps<{
   /** json/tree 档的 _id 列表（与 docCount 同序；导航条下拉直达的选项源，缺省回落序号） */
   docIds?: string[];
   /** tree 档「编辑文档」直达开关：仅宿主接线了 edit-doc-at 时开启；
-   * 缺省关=无编辑链的宿主不渲染该钮（能力如实呈现，不留点了没反应的死钮） */
+   * 缺省关=无编辑链的宿主不渲染该钮（能力如实呈现，不留点了没反应的死钮）。
+   * 同一开关统辖「渲染数据直达编辑」：json 块/树文档行/卡片的双击编辑 */
   editable?: boolean;
 }>();
 
@@ -80,6 +85,8 @@ const emit = defineEmits<{
   (e: 'open-doc-at', idx: number): void;
   /** 「编辑文档」直达：打开该文档并直接进入编辑模式（宿主 openDoc(hit, true)） */
   (e: 'edit-doc-at', idx: number): void;
+  /** cards 档双击直达编辑（editable 开关统辖）：携带整行，宿主 openDoc(hit, true) */
+  (e: 'edit-doc', hit: SearchHit): void;
 }>();
 
 /* json 档文档导航游标（宿主在 open-doc-at 里消费） */
@@ -100,6 +107,46 @@ function onPreClick(e: MouseEvent) {
       docCursor.value = i;
       emit('open-doc-at', i);
     }
+  }
+}
+/* json 档双击直达编辑（editable 统辖）：同一块命中判定，走 edit-doc-at */
+function onPreDblClick(e: MouseEvent) {
+  if (!props.editable) return;
+  const t = (e.target as HTMLElement).closest('[data-doc-i]');
+  if (t) {
+    const i = Number(t.getAttribute('data-doc-i'));
+    if (Number.isFinite(i)) {
+      docCursor.value = i;
+      emit('edit-doc-at', i);
+    }
+  }
+}
+
+/* tree 档渲染数据直达：点击行 data-jid 的首段=文档序（JsonTree 先序 DFS 与行集同序），
+ 首层文档行（jid=`N`）与该文档 `_id` 行（jid=`N._id`）作为触达锚；折叠箭头/预览的
+ 点击是展开语义不参与。单击=打开、双击（editable）=直达编辑，游标同步导航条 */
+function treeDocIndexOf(e: MouseEvent): number {
+  const row = (e.target as HTMLElement).closest('.jrow');
+  if (!row) return -1;
+  const m = /^(\d+)(?:\._id)?$/.exec(row.getAttribute('data-jid') || '');
+  if (!m) return -1;
+  const i = Number(m[1]);
+  return i >= 0 && i < (props.docCount || 0) ? i : -1;
+}
+function onTreeClick(e: MouseEvent) {
+  if ((e.target as HTMLElement).closest('.jarr, .j-prev')) return;
+  const i = treeDocIndexOf(e);
+  if (i >= 0) {
+    docCursor.value = i;
+    emit('open-doc-at', i);
+  }
+}
+function onTreeDblClick(e: MouseEvent) {
+  if (!props.editable) return;
+  const i = treeDocIndexOf(e);
+  if (i >= 0) {
+    docCursor.value = i;
+    emit('edit-doc-at', i);
   }
 }
 
@@ -126,6 +173,9 @@ defineExpose({ preEl });
 /* json 档文档块（点击开文档的可点域）：pointer 光标+左缘细条指示 */
 .json-view :deep(.j-doc-block) { display: block; cursor: pointer; border-left: 2px solid transparent; padding-left: var(--sp-1h); margin-left: calc(-1 * var(--sp-1h)); }
 .json-view :deep(.j-doc-block:hover) { border-left-color: var(--ac); background: var(--hl-soft, rgba(127, 127, 127, .08)); }
+/* tree 档渲染数据直达 affordance：行 hover 柔底（单击开文档/双击编辑的触达域反馈） */
+.ah-tree-body :deep(.jrow) { border-radius: 3px; }
+.ah-tree-body :deep(.jrow:hover) { background: var(--hl-soft, rgba(127, 127, 127, .06)); }
 /* 卡片内脏样式同步更新自 DslQueryView（类名逐字保形—— 等 DOM 查询按 .dq-card
  取数不受宿主/组件作用域迁移影响；dq-card-id/-row/-k/-v 四件同步同步更新） */
 .dq-card { background: var(--bg2); border: 1px solid var(--line); border-radius: var(--r-m); padding: var(--sp-2h) var(--sp-3); cursor: pointer; transition: border var(--tr), transform var(--tr); }

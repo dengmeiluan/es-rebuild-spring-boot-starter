@@ -165,6 +165,7 @@
                   :searchable="true"
                   :sync-sort="docsSortSync"
                   @sort-change="onDocsSortChange"
+                  editable @edit-doc="h => openDoc(h, true)"
                   @open-doc="openDoc" @delete-doc="askDelDoc" @batch-delete="askBatchDel" @refresh="runDocs"
                 >
                   <!-- 分页器寄居表格工具行（#bar-prepend，与查询工作台 DslQueryView 同语言）
@@ -197,13 +198,13 @@
                        json/tree 档挂文档导航条（遍历/_id 直达下拉/打开/编辑直达），编辑直达
                        仅 tree 档亮钮（editable 已接线 edit-doc-at） -->
                   <div v-show="docsView === 'json'" class="scroll-y ih-json-wrap ih-alt-body">
-                    <AltHitsViews view="json" :json-html="docsJsonHtml" :doc-count="docsHits.length" :doc-ids="docsHits.map(h => h._id)" @open-doc-at="i => { const h = docsHits[i]; if (h) openDoc(h) }" @edit-doc-at="i => { const h = docsHits[i]; if (h) openDoc(h, true) }" />
+                    <AltHitsViews view="json" :json-html="docsJsonHtml" :doc-count="docsHits.length" :doc-ids="docsHits.map(h => h._id)" editable @open-doc-at="i => { const h = docsHits[i]; if (h) openDoc(h) }" @edit-doc-at="i => { const h = docsHits[i]; if (h) openDoc(h, true) }" />
                   </div>
                   <div v-show="docsView === 'tree'" class="scroll-y ih-tree-view ih-alt-body">
                     <AltHitsViews view="tree" :tree-data="docsAltData" :doc-count="docsAltData.length" :doc-ids="docsAltData.map(r => String(r._id ?? ''))" editable @open-doc-at="i => openAltDocAt(docsAltData, i)" @edit-doc-at="i => openAltDocAt(docsAltData, i, true)" />
                   </div>
                   <div v-show="docsView === 'cards'" class="ih-cards ih-alt-body">
-                    <AltHitsViews view="cards" :hits="docsHits" @open-doc="openDoc" />
+                    <AltHitsViews view="cards" :hits="docsHits" editable @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />
                   </div>
                 </ResultTable>
               </template>
@@ -316,6 +317,7 @@
                 :hits="qryResp.hits" :total="qryResp.total" :took="qryResp.took" :index="cur" :total-gte="qryResp.totalGte" show-relevance
                 :field-types="fieldTypesMap"
                 :searchable="true"
+                editable @edit-doc="h => openDoc(h, true)"
                 @open-doc="openDoc" @delete-doc="askDelDoc" @batch-delete="askBatchDel" @refresh="runDsl"
                 @explain-hit="whyHit" @xray-hit="xrayHit"
               >
@@ -347,13 +349,13 @@
                      同屏；json/tree 档挂文档导航条（遍历/_id 直达/打开/编辑直达，与查询
                      工作台同口径），随 RT 的 qryResp 守卫在场，原独立包裹层摘除 -->
                 <div v-show="qryView === 'json'" class="scroll-y ih-json-wrap ih-alt-body">
-                  <AltHitsViews view="json" :json-html="qryJsonHtml" :doc-count="qryResp?.hits?.length ?? 0" :doc-ids="qryResp?.hits?.map(h => h._id) ?? []" @open-doc-at="i => { const h = qryResp?.hits?.[i]; if (h) openDoc(h) }" @edit-doc-at="i => { const h = qryResp?.hits?.[i]; if (h) openDoc(h, true) }" />
+                  <AltHitsViews view="json" :json-html="qryJsonHtml" :doc-count="qryResp?.hits?.length ?? 0" :doc-ids="qryResp?.hits?.map(h => h._id) ?? []" editable @open-doc-at="i => { const h = qryResp?.hits?.[i]; if (h) openDoc(h) }" @edit-doc-at="i => { const h = qryResp?.hits?.[i]; if (h) openDoc(h, true) }" />
                 </div>
                 <div v-show="qryView === 'tree'" class="scroll-y ih-tree-view ih-alt-body">
                   <AltHitsViews view="tree" :tree-data="qryAltData" :doc-count="qryAltData.length" :doc-ids="qryAltData.map(r => String(r._id ?? ''))" editable @open-doc-at="i => openAltDocAt(qryAltData, i)" @edit-doc-at="i => openAltDocAt(qryAltData, i, true)" />
                 </div>
                 <div v-show="qryView === 'cards'" class="ih-cards ih-alt-body">
-                  <AltHitsViews view="cards" :hits="qryResp.hits" @open-doc="openDoc" />
+                  <AltHitsViews view="cards" :hits="qryResp.hits" editable @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />
                 </div>
               </ResultTable>
               <!-- query tab 未执行就绪空态（DslQueryView :470 同件同文案风格）——
@@ -1263,7 +1265,13 @@ const docsPartialHint = computed(() => shardsHint(docsShards.value));
 /* alt 视图数据源（DQ 同构：Tree= {_id, ..._source} 行集；JSON=响应信封高亮
    pretty 文本——jsonFind 高亮搜索链是 DQ 视图域增强不同步更新，IndexHub JSON 档=只读） */
 const docsAltData = computed(() => docsHits.value.map(h => ({ _id: h._id, ...h._source })));
-const docsJsonHtml = computed(() => highlightJson(prettyJson({ total: docsTotal.value, took: docsTook.value, hits: docsHits.value })));
+/* json 信封逐文档块化（j-doc-block data-doc-i，与查询工作台同款）——渲染数据直达的
+ 点击委托按块定位文档；head 保留 total/took 摘要 */
+const docsJsonHtml = computed(() => {
+  const head = highlightJson(prettyJson({ total: docsTotal.value, took: docsTook.value }));
+  const blocks = docsHits.value.map((h, i) => `<span class="j-doc-block" data-doc-i="${i}">` + highlightJson(prettyJson(h._source)) + '</span>').join(',\n');
+  return `${head},\n"hits": [\n${blocks}\n]`;
+});
 
 /* ═══ ：docs tab 直方图注入链接线（useHistAgg 统一件，DQ execQuery :894-965 同链）═══
    autoHist 开时 runDocs body 注入 __hist；ES 拒绝剥聚合降级重试一次（不连坐主查询）+ session
@@ -1443,14 +1451,18 @@ const qryErr = ref('');
 /* 原始错误对象旁路（docsErrRaw 同款；DslQueryView queryErrRaw 同源） */
 const qryErrRaw = ref<unknown>(null);
 const qryLoading = ref(false);
-/* alt 视图数据源（docs tab 同构；JSON 信封带 aggregations——qryResp 是完整响应） */
+/* alt 视图数据源（docs tab 同构；JSON 信封带 aggregations——qryResp 是完整响应）。
+ json 信封逐文档块化（j-doc-block data-doc-i，docs tab 同款）——点击委托按块定位 */
 const qryAltData = computed(() => (qryResp.value?.hits || []).map(h => ({ _id: h._id, ...h._source })));
-const qryJsonHtml = computed(() => highlightJson(prettyJson({
-  total: qryResp.value?.total || 0,
-  took: qryResp.value?.took ?? -1,
-  hits: { hits: qryResp.value?.hits || [] },
-  aggregations: qryResp.value?.aggregations,
-})));
+const qryJsonHtml = computed(() => {
+  const head = highlightJson(prettyJson({
+    total: qryResp.value?.total || 0,
+    took: qryResp.value?.took ?? -1,
+    aggregations: qryResp.value?.aggregations,
+  }));
+  const blocks = (qryResp.value?.hits || []).map((h, i) => `<span class="j-doc-block" data-doc-i="${i}">` + highlightJson(prettyJson(h._source)) + '</span>').join(',\n');
+  return `${head},\n"hits": { "hits": [\n${blocks}\n] }`;
+});
 /* 部分分片失败黄条（docs tab 同判据）——runDsl 装配 { ...r } 直通含 _shards
    （api.clusterQuery 裸透传未归一，类型侧 SearchResp.shards 为 预留消费位）；
    failed/timed_out>0 出黄条，可关闭，新响应自动重现（DQ watch 同款） */

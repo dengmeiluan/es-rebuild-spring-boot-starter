@@ -306,6 +306,7 @@
             </td>
             <td class="rt-act">
               <button aria-label="查看文档" class="btn sm ghost" title="查看文档" @click="emit('open-doc', hit)"><Eye :size="12" /></button>
+              <button v-if="editable" aria-label="编辑文档" class="btn sm ghost" title="打开该文档并直接进入编辑（Monaco 编辑 raw JSON 后保存）" @click="emit('edit-doc', hit)"><Pencil :size="12" /></button>
               <!-- W7：行内展开详情钮（ChevronRight/Down）——free 多行展开，Esc 全收（E=焦点行同款） -->
               <button class="btn sm ghost rt-row-expand" :aria-label="expandedRows.has(rowKey(hit, ri)) ? '收起此行详情' : '展开此行详情'"
                 :title="expandedRows.has(rowKey(hit, ri)) ? '收起此行详情（Esc 全部收起）' : '展开此行详情（焦点行按 E）'"
@@ -685,6 +686,9 @@ const props = withDefaults(defineProps<{
  点击只 emit 'refresh'（事件通道与提交链发射点既有，取数归宿主）；缺省 false 零增量 */
   searchable?: boolean;
   refreshable?: boolean;
+  /* 行内编辑直达开关：true 时操作列增「编辑文档」钮（emit 'edit-doc'，宿主 openDoc(hit, true)
+   直入编辑态）；缺省 false=无编辑链的宿主零增量、不渲染死钮 */
+  editable?: boolean;
   /* W3：rowDrawer 行详情侧拉平移 RT（QRT 同款）——开启时单元格右键菜单增
  「行详情」项，侧拉抽屉展示整行键值对+逐格复制+「复制整行 JSON」；缺省 false 零增量 */
   rowDrawer?: boolean;
@@ -813,6 +817,7 @@ const cardHitsAdapted = computed(() => props.cardHits?.map(h => ({ ...h, _score:
 watch(bodyHidden, h => { if (h && focused.value) focused.value = false; });
 const emit = defineEmits<{
   (e: 'open-doc', hit: SearchHit): void;
+  (e: 'edit-doc', hit: SearchHit): void;
   (e: 'delete-doc', hit: SearchHit): void;
   (e: 'batch-delete', ids: string[]): void;
   (e: 'refresh'): void;
