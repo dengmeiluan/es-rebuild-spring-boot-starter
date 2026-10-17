@@ -306,6 +306,10 @@ function reloadAll() { loadInspect(); run(); }
 onMounted(reloadAll);
 
 async function run() {
+  /* 在途一律忽略（闸收进函数本体才覆盖全部触发通道）：按钮 disabled 只护住钮面，
+   编辑器 Ctrl+回车与表格刷新钮直达此处——并发双发交错完成时，旧包慢到会覆写新包，
+   旧包失败落在后还会把新包的成功结果清成错误条 */
+  if (running.value) return;
   let parsed: any;
   try { parsed = JSON.parse(dsl.value); } catch (e: any) { store.notify('error', 'DSL JSON 非法: ' + e.message); return; }
   const size = Math.min(parsed.size || 50, 100);
