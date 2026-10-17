@@ -842,7 +842,7 @@ async function loadMore() {
  （漏斗筛选+排序+列选所见即所复；单元格已经 exportCell 管道加工=时间列 fmtTimeTz） */
 async function copyAuditTsv() {
   const blk = auditQrt.value?.getCsvBlock();
-  if (!blk || !blk.rows.length) return;
+  if (!blk || !blk.rows.length) { store.notify('warning', '无表格结果可导出'); return; }
   const head = blk.head;
   const ok = await copyText(matrixText({ rows: blk.rows, cols: head, getVal: (row: any[], c: string) => row[head.indexOf(c)] }, 'tsv'));
   store.notify(ok ? 'success' : 'error', ok ? `已复制 ${blk.rows.length} 条审计记录（TSV）` : '复制失败');
@@ -853,7 +853,7 @@ async function copyAuditTsv() {
  动作列中文映射（actionZh）与详情 '-' 兜底在此还原（内核矩阵存原码） */
 async function copyAuditMd() {
   const blk = auditQrt.value?.getCsvBlock();
-  if (!blk || !blk.rows.length) return;
+  if (!blk || !blk.rows.length) { store.notify('warning', '无表格结果可导出'); return; }
   const head = blk.head;
   const ai = head.indexOf('动作');
   const di = head.indexOf('详情');

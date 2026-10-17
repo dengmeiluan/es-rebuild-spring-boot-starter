@@ -599,7 +599,7 @@ async function loadHistory() {
 /* 导出：TSV/MD 复制走 QRT getCsvBlock 单源（表头自动继承列名，所见即所复） */
 async function copyMonitorTsv() {
   const blk = mhQrt.value?.getCsvBlock();
-  if (!blk || !blk.rows.length) return;
+  if (!blk || !blk.rows.length) { store.notify('warning', '无表格结果可导出'); return; }
   const head = blk.head;
   const ok = await copyText(matrixText({ rows: blk.rows, cols: head, getVal: (row: any[], c: string) => row[head.indexOf(c)] }, 'tsv'));
   store.notify(ok ? 'success' : 'error', ok ? `已复制 ${blk.rows.length} 条监控快照（TSV）` : '复制失败');
@@ -607,7 +607,7 @@ async function copyMonitorTsv() {
 
 async function copyMonitorMd() {
   const blk = mhQrt.value?.getCsvBlock();
-  if (!blk || !blk.rows.length) return;
+  if (!blk || !blk.rows.length) { store.notify('warning', '无表格结果可导出'); return; }
   const head = blk.head;
   const md = [
     '| ' + head.join(' | ') + ' |',

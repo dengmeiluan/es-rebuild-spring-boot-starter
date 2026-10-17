@@ -556,7 +556,7 @@ function queueMsText(p: any): string {
  按列名就地回填；Markdown 走剪贴板（工单直贴）、CSV 走 BOM 下载（中文列头 Excel 直开）双通道不变 */
 function exportNodes(fmt: 'csv' | 'md') {
   const blk = nodesQrt.value?.getCsvBlock();
-  if (!blk || !blk.rows.length) return;
+  if (!blk || !blk.rows.length) { store.notify('warning', '无表格结果可导出'); return; }
   const head = blk.head;
   const rows = blk.rows.map(r => head.map((c, ci) => {
     const v = r[ci];

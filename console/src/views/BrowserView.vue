@@ -40,8 +40,9 @@
       <button class="btn sm" :disabled="store.loadingIndices" @click="reload">
         <RefreshCw :size="12" :class="{ spinning: store.loadingIndices }" /> 刷新
       </button>
-      <!-- w72:跨页闭环 — 浏览中直接跳索引工作区（从空态分支迁出，正常态恒可见） -->
-      <button v-if="store.pickedIdx" class="btn ghost sm" @click="goHub(store.pickedIdx)"
+      <!-- w72:跨页闭环 — 浏览中直接跳索引工作区；钮恒在场（无选中 disabled 不消失，
+ 选中态切换不挪动后续钮位=位置恒定） -->
+      <button :disabled="!store.pickedIdx" class="btn ghost sm" @click="goHub(store.pickedIdx)"
         title="在索引工作区打开当前选中索引（一站式文档/查询/配置）">
         <LayoutGrid :size="12" /> 工作区:{{ store.pickedIdx.slice(0, 20) }}
       </button>
@@ -282,7 +283,8 @@ const EXPORT_HEAD = ['index', 'health', 'status', 'docs.count', 'store.size', 's
 const EXPORT_SRC = ['索引', '健康', '状态', '文档数', '存储', '分片', '创建时间'];
 function exportCsv() {
   const blk = bwQrt.value?.getCsvBlock();
-  if (!blk || !blk.rows.length) return;
+  /* 空行集（内核列漏斗叠加筛空）报真不静默——同动线在查询页已有同款话术 */
+  if (!blk || !blk.rows.length) { store.notify('warning', '无表格结果可导出'); return; }
   const idxs = EXPORT_SRC.map(c => blk.head.indexOf(c));
   downloadText(
     `browser-indices-${exportStamp()}.csv`,
@@ -297,7 +299,7 @@ function exportCsv() {
  行集改走 getCsvBlock()；表头/列序（六列、无创建时间）逐字保真 */
 async function exportMd() {
   const blk = bwQrt.value?.getCsvBlock();
-  if (!blk || !blk.rows.length) return;
+  if (!blk || !blk.rows.length) { store.notify('warning', '无表格结果可导出'); return; }
   const MD_SRC = ['索引', '健康', '状态', '文档数', '存储', '分片'];
   const idxs = MD_SRC.map(c => blk.head.indexOf(c));
   const esc = (v: any) => String(v ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ');
