@@ -951,14 +951,22 @@ function progressMeta(j: any): MetaStripItem[] {
   }, ...(cp ? [cp] : []), ...(eta ? [eta] : [])];
 }
 
+/* 世代守卫：刷新/重试/操作成功回调/轮询 tick/深链多通道可并发入列，每拍入列即
+ 取得唯一落案权——慢拍旧回包不得覆写新拍列表、旧拍失败不得把新拍成功面改写成
+ 错误条、骨架闸只归最新拍收（互斥裸闸不可用：会拦死首载与深链 reentry） */
+let jobsSeq = 0;
 async function loadJobs() {
   // 后端异常/权限不足时可能回 null/对象，归一成数组防 jobRows 展开报错
+  const seq = ++jobsSeq;
   jobsLoading.value = true;
   try {
-    const r = await api.xb.jobs(30); jobs.value = Array.isArray(r) ? r : [];
+    const r = await api.xb.jobs(30);
+    if (seq !== jobsSeq) return; // 已有更新拍入列：本拍整拍作废，不动任何状态
+    jobs.value = Array.isArray(r) ? r : [];
     loadErr.value = '';
     loadErrRaw.value = null;
   } catch (e: any) {
+    if (seq !== jobsSeq) return; // 旧拍失败同样丢弃：不得把新拍成功面改写成失败
     /* toast 轰炸防御——轮询修好后后端故障期会每 3s 轰一次 notify；改仅首败
  toast（OverviewView:202-），err-bar 常驻承担可见性。loadErr 语义=失败
  标记：下一轮成功复位（上方 try 内既有 ''），恢复后再遇新故障才再报 */
@@ -966,7 +974,7 @@ async function loadJobs() {
     loadErr.value = '加载迁移作业失败：' + friendlyApiError(e);
     loadErrRaw.value = e; /* ：原始对象旁路（errMeta 读 code/endpoint） */
     if (firstFail) store.notify('error', loadErr.value);
-  } finally { jobsLoading.value = false; }
+  } finally { if (seq === jobsSeq) jobsLoading.value = false; }
 }
 /* ?jobId= 深链读侧（此前跳转裸 push('/xmigrate') 只能落作业表顶部——526 遗留收口）。
  读侧三口范式同 AdhocRebuildView ?index=：① 挂载 ② onActivated（KeepAlive 回流口——本页暂不在
@@ -975,10 +983,15 @@ async function loadJobs() {
  （行未渲染/被 kw 过滤时静默跳过——locateJobRow 既有语义）；消费后历史 replace 只摘 jobId——
  刷新/回退不再重定位（AdhocRebuild 一次性上下文用后即清同款） */
 const route = useRoute();
+/* 消费口世代：挂载/KeepAlive 回流/watch 三口可并发入列，旧口在 await loadJobs 期间
+ 被新口顶替后，定位与摘链权整体让位（行高亮与 URL 清理都只归最新口） */
+let dlSeq = 0;
 async function consumeJobDeepLink() {
   const q = route.query.jobId;
   const jobId = Array.isArray(q) ? String(q[0] ?? '') : q != null ? String(q) : '';
+  const seq = ++dlSeq;
   await loadJobs();
+  if (seq !== dlSeq) return; // 已有更新消费口入列：定位与摘链权让位
   if (!jobId) return;
   locateJobRow(jobId);
   const rest = { ...route.query };

@@ -21,8 +21,14 @@ export const useAppStore = defineStore('app', () => {
   const clusterHealth = ref<string>('');
   const clusterUnassigned = ref(0);
 
+  /* 世代守卫：懒载口/切连接口可并发入列，每拍入列即取得唯一落案权（拍序捕获前移到
+ 首个 await 之前）——切集群后旧集群的慢回包不得把索引清单/健康面写进新集群上下文；
+ 互斥裸闸不可用：会吞掉 setTarget 切连接的新拍 */
+  let indicesSeq = 0;
   async function loadIndices() {
+    const seq = ++indicesSeq;
     await ensureSetup();
+    if (seq !== indicesSeq) return; // 已有更新拍入列：本拍整拍作废
     // .2：宿主隐藏且尚未选中连接：不发数据面请求（后端会 403 HOST_DISABLED），保持未知态等引导
     if (!hostVisible.value && !target.value) {
       indices.value = [];
@@ -34,6 +40,7 @@ export const useAppStore = defineStore('app', () => {
     loadingIndices.value = true;
     try {
       const list = await api.clusterIndices();
+      if (seq !== indicesSeq) return; // 旧拍迟到：清单/健康面/版本识别整拍丢弃
       indices.value = Array.isArray(list) ? list : [];
       clusterOk.value = true;
       loadVersion(); // 连接成功后顺带识别版本，供导航级能力降级标注
@@ -46,6 +53,7 @@ export const useAppStore = defineStore('app', () => {
         // 保留 picked（可能是别名），不强制清空
       }
     } catch (e: any) {
+      if (seq !== indicesSeq) return; // 旧拍失败同样丢弃：不得改写新拍成功面
       if (e?.status === 401) {
         // 未登录导致的 401：登录遮罩已在引导，不误报“集群连接失败”，保持未知态
         clusterOk.value = null;
@@ -55,7 +63,7 @@ export const useAppStore = defineStore('app', () => {
         notify('error', '加载索引列表失败: ' + (e?.message || e));
       }
     } finally {
-      loadingIndices.value = false;
+      if (seq === indicesSeq) loadingIndices.value = false;
     }
   }
 
