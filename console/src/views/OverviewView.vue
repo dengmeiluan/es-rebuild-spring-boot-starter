@@ -11,7 +11,7 @@
       </template>
 <template #actions>
 <span style="flex:1"></span>
-      <button class="btn sm ghost" @click="load"><RotateCw :size="11" /> 刷新</button>
+      <button class="btn sm ghost" :disabled="ovLoading" @click="load"><RotateCw :size="11" /> 刷新</button>
       </template>
     </PageHeader>
 
@@ -297,6 +297,10 @@ const isActiveStage = (s: string) => !!s && !/DONE|FAIL|CANCEL|SUCCESS|COMPLETE/
  此前裸 setInterval 只挂 onBeforeUnmount，后台标签页/KeepAlive 失活照跑 */
 const hasActiveJob = computed(() => (overview.value?.indices || [] as any[]).some((i: any) => i?.job && isActiveStage(i.job.stage)));
 async function load() {
+  /* 在途互斥闸：闸读收本体首行（执行闸族既有形态）——头部刷新钮与 5s 轮询
+ tick 在慢拍在途窗内的叠加拍被闸挡（useAutoRefresh「跳过不补跑」契约语义），双拍
+ 并发回包交错落笔与进度位早熄（首拍 finally 复位次拍仍在途）随之消除 */
+  if (ovLoading.value) return;
   /* 禁止静默吞错——失败记入错误条，轮询时不重复 toast 轰炸。
  三接口并行——此前串行 await，一个慢接口全体骨架陪跪；配合 api 层 60s 超时兜底，
  骨架屏最长停留 = 最慢单接口，永挂路径封死 */

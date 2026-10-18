@@ -263,7 +263,7 @@
           </select>
           <!-- 「仅看被拒」快捷过滤—— 双路径合一：改一次性 shortcut
  （单设 PAGE_DENIED 不 toggle，select 为单源；on 态仍由 fAction 派生） -->
-          <button class="btn ghost sm" :class="{ on: fAction === 'PAGE_DENIED' }" :title="fAction === 'PAGE_DENIED' ? '已聚焦页面访问被拒（请在动作下拉选「全部动作」退出）' : '只看页面访问被拒（PAGE_DENIED）'" @click="fAction = 'PAGE_DENIED'; loadAudit()">
+          <button class="btn ghost sm" :disabled="auditLoading" :class="{ on: fAction === 'PAGE_DENIED' }" :title="fAction === 'PAGE_DENIED' ? '已聚焦页面访问被拒（请在动作下拉选「全部动作」退出）' : '只看页面访问被拒（PAGE_DENIED）'" @click="fAction = 'PAGE_DENIED'; loadAudit()">
             <ShieldAlert :size="12" /> 仅看被拒
           </button>
           <!-- 补/210:时间范围过滤(排障高频——最近1h/24h/7d,作用于已拉取范围) -->
@@ -273,7 +273,7 @@
             <option value="24h">最近 24 小时</option>
             <option value="7d">最近 7 天</option>
           </select>
-          <button class="btn ghost sm" @click="loadAudit"><RefreshCw :size="12" /> 刷新</button>
+          <button class="btn ghost sm" :disabled="auditLoading" @click="loadAudit"><RefreshCw :size="12" /> 刷新</button>
           <!-- selectable 行多选计数（users 表 :57 同款暗状态可见性） -->
           <span v-if="auditSel.length" class="dim sm-txt">已选 {{ auditSel.length }} 条</span>
         </template>
@@ -813,6 +813,10 @@ async function fetchAuditPage(offset: number): Promise<{ rows: any[]; hasMore: b
 
 async function loadAudit() {
   if (!auth.me) return;
+  /* 在途互斥闸：闸读收本体首行（loadMore 的 moreLoading 短路同形收敛）——九通道
+ 执行体（两下拉/仅看被拒/刷新/筛选回车/重试/挂载/角色切换）在途窗内的叠加拍被闸挡，
+ 旧筛选慢包后到顶掉新筛选结果的双拍交错随之消除 */
+  if (auditLoading.value) return;
   auditLoading.value = true;
   try {
     const { rows, hasMore } = await fetchAuditPage(0);

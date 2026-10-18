@@ -227,7 +227,10 @@ public class JdbcConsoleOpsAuditStore implements ConsoleOpsAuditStore {
         return b.build();
     }
 
-    /** 首次使用建表（幂等）；role/action 是部分数据库保留字，列名统一加 _name 后缀避开。 */
+    /** 首次使用建表（幂等）；role/action 是部分数据库保留字，列名统一加 _name 后缀避开。
+     *  自增主键按库方言分支：SQLite（standalone 默认本地档）只认
+     *  {@code INTEGER PRIMARY KEY AUTOINCREMENT}，其余（MySQL 等）保持
+     *  {@code BIGINT PRIMARY KEY AUTO_INCREMENT}——固定单一方言会让全新实例首查即 500。 */
     private void ensureSchema() {
         if (schemaReady) {
             return;
@@ -236,8 +239,20 @@ public class JdbcConsoleOpsAuditStore implements ConsoleOpsAuditStore {
             if (schemaReady) {
                 return;
             }
+            String idColumn;
+            try (Connection mc = dataSource.getConnection()) {
+                String product = mc.getMetaData().getDatabaseProductName();
+                idColumn = product != null && product.toLowerCase().contains("sqlite")
+                        ? "id INTEGER PRIMARY KEY AUTOINCREMENT"
+                        : "id BIGINT PRIMARY KEY AUTO_INCREMENT";
+            } catch (SQLException e) {
+                throw new IllegalStateException("审计建表方言探测失败: " + e.getMessage(), e);
+            } catch (RuntimeException e) {
+                /* 元数据不可得（受限连接代理/驱动裁剪）按既有 MySQL 形态继续，成败交由下方 DDL 裁决 */
+                idColumn = "id BIGINT PRIMARY KEY AUTO_INCREMENT";
+            }
             String ddl = "CREATE TABLE IF NOT EXISTS " + TABLE + " ("
-                    + "id BIGINT PRIMARY KEY AUTO_INCREMENT,"
+                    + idColumn + ","
                     + "ts BIGINT NOT NULL,"
                     + "username VARCHAR(128),"
                     + "display_name VARCHAR(128),"

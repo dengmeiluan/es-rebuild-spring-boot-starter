@@ -62,7 +62,7 @@
  裸插值换 errPreHtml+errMeta 双参（TaskTreeView 547 口径） -->
             <div v-if="checkErr" role="alert" class="err-bar rise-in xm-conn-err">
               <span class="xm-err-txt" v-html="errPreHtml(checkErr, errMeta(checkErrRaw))"></span>
-              <button class="btn sm" @click="check"><RefreshCw :size="12" /> 重试</button>
+              <button class="btn sm" :disabled="checking" @click="check"><RefreshCw :size="12" /> 重试</button>
             </div>
           </div>
 
@@ -618,6 +618,9 @@ function connBody() {
   return c;
 }
 async function check() {
+  /* 在途互斥闸：闸读收本体首行——fetchCfg 复用 checking 做闸（拉取在途直接短路）
+ 既有形态在本体收敛，失败面板重试钮同拍双击的两拍 connectCheck 随之消除 */
+  if (checking.value) return;
   if (!srcConnId.value && !conn.value.host) { store.notify('warning', '先填 host'); return; }
   checking.value = true;
   checkErr.value = '';

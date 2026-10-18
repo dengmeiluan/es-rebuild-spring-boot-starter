@@ -44,6 +44,17 @@ class StandaloneBootSmokeTest {
     @Autowired
     private TestRestTemplate rest;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private io.github.dengmeiluan.es.rebuild.auth.ConsoleOpsAuditStore auditStore;
+
+    @org.junit.jupiter.api.Test
+    public void sqliteAuditStoreFreshBootSearchWorks() {
+        /* 全新 SQLite 档首查审计=首用建表路径——方言错配（MySQL 自增 DDL 落 SQLite）
+           曾让该路径 500，审计页整页瘫；此守门锁「空环境起服即可审计」。 */
+        assertTrue(auditStore.search(null, null, 10, 0, null).isEmpty(),
+                "fresh sqlite audit search must answer (empty) without schema errors");
+    }
+
     @Test
     public void bootsFullCapabilityWithoutHost() {
         // 1) 控制面活着且未绑定（NONE → Setup 向导待首连）
