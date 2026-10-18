@@ -422,7 +422,7 @@
       </div>
       <!-- R7 服务端告警条：/monitor-alerts 活跃告警 chips（CRIT 红/WARN 黄/INFO 中性，title 带时间+阈值；
  头部同排已拥挤（治理条+双筛选+下钻+刷新），独立成行——chips 多条时随 flex-wrap 自然换行）。
- 全无=小灰字「无活动告警」，与实时告警区同语汇；拉取失败静默缺席，不打扰图表 -->
+ 拉取失败静默缺席，不打扰图表 -->
       <!-- 件6：空告警整行不渲染（与实时告警区「无活动告警」胶囊重复=页面元素零重复；
  有 CRIT/WARN chips 时保留行） -->
       <div v-if="srvActive.length" class="ld-hist-alerts" role="status" aria-label="服务端告警">
@@ -432,7 +432,6 @@
           <span class="mono">{{ a.metric }}={{ srvAlertVal(a.value) }}</span>
           <span v-if="a.message" class="ld-hist-al-msg">{{ a.message }}</span>
         </span>
-        <span v-if="!srvActive.length" class="ld-ok-chip"><i aria-hidden="true" />无活动告警</span>
       </div>
       <!-- ══ 版面动线（20261014：「筛选按钮距离监控图非常遥远」根治）：历史趋势图卡网格上移——
  筛选头/告警条之后紧接图卡（操作动线=选范围→看曲线零滚动），监控明细/节点最新水位
@@ -497,7 +496,7 @@
           </span>
           <!-- 件2：导出 ⋯ 收纳（三视图共用+按 detailTab 分发；Esc=window 捕获级 665 范式） -->
           <details ref="detailMoreEl" class="ld-detail-more" @toggle="onDetailMoreToggle">
-            <summary aria-label="更多操作" title="导出当前视图">⋯</summary>
+            <summary ref="detailMoreSumEl" aria-label="更多操作" title="导出当前视图">⋯</summary>
             <div class="ld-detail-more-menu" role="menu">
               <button type="button" role="menuitem" :disabled="!detailCanExport" @click="copyDetail('tsv')">复制 TSV</button>
               <button type="button" role="menuitem" :disabled="!detailCanExport" @click="copyDetail('md')">复制 MD</button>
@@ -724,9 +723,8 @@ import { buildSeries, capRows, diskForecast, intervalFor, fixedIntervalMs, rawPe
 /* 分组导航单源（对标阿里云「分组」实测 9 项；我方收敛 8 组）。
  映射外挂于 utils（不写进 HIST_CHARTS 条目）→ 不触碰 monitorHistoryTrend 对条目字面的逐字锁。 */
 import { HIST_GROUPS, inHistGroup, histGroupLabel, type HistGroupKey } from '../utils/histGroups';
-import { catmullRomPath, catmullRomAreaPath, sparkPts, movingAverage, CMP_W, CMP_H, PCT_GRID, type Pt, sparklinePoints, sparklinePointsPct } from '../utils/sparkChart'; /* P1a-1 单源下沉； K2 增 PCT_GRID（对比卡 pct 网格）/SPARK_H 随迷你 spark 退役移出 */
+import { catmullRomPath, catmullRomAreaPath, sparkPts, movingAverage, CMP_W, CMP_H, PCT_GRID, type Pt, sparklinePoints } from '../utils/sparkChart'; /* P1a-1 单源下沉； K2 增 PCT_GRID（对比卡 pct 网格）/SPARK_H 随迷你 spark 退役移出 */
 import LiveChartCard from '../components/LiveChartCard.vue'; /* P1a-2：实时走势主卡统一件 */
-import CollapsePanel from '../components/CollapsePanel.vue'; /* Z1：三表可展开外壳统一件（组件性头名） */
 
 /* 几何常量（LD_H/SPARK_H/CMP_W/CMP_H/PCT_GRID）与点位纯函数已下沉
  utils/sparkChart.ts 单源（P1a-1）；此处经 import 引入，模板与悬浮换算照常使用。 */
@@ -1335,11 +1333,6 @@ const topReadRows = computed(() => {
 });
 const topLeft = (frac: number) => (frac * 100).toFixed(2) + '%';
 const topShift = (frac: number) => frac > 0.72 ? 'translateX(calc(-100% - 10px))' : 'translateX(10px)';
-const topYTop = computed(() => {
-  let mx = 0;
-  for (const s of topCurves.value) for (const v of s.data) if (v > mx) mx = v;
-  return mx ? String(Math.ceil(mx)) : '';
-});
 /* ══ 件1：Top 曲线图表底座（截图实报「不符合」=白板图根治；对标 Grafana time series）══
  网格线四档+Y 中间刻度（全局 max 同坐标系——多折线各按自身 max 归一是 794 既有形态，
  底座刻度要有意义必须全局 scaleMax，sparklinePoints 可选参零破坏既有消费面）+X 时间三锚。 */
@@ -1367,15 +1360,21 @@ const topXTs = computed(() => {
 });
 /* ══ 件2：导出 ⋯ 收纳（铁律 C：低频动作收菜单；三视图共用一个 details+按 detailTab 分发）══ */
 const detailMoreEl = ref<HTMLDetailsElement | null>(null);
+const detailMoreSumEl = ref<HTMLElement | null>(null);
 function onDetailMoreToggle() {
   if (detailMoreEl.value?.open) window.addEventListener('keydown', onDetailMoreEsc, true);
   else window.removeEventListener('keydown', onDetailMoreEsc, true);
 }
+/* Esc 收口对齐同页 .ld-hist-more 形态：截断传播（全屏态下防事件落进 document 捕获级
+ 退全屏监听=一次 Esc 关两层）+焦点回触发钮；卸载摘卸对称防开着层时卸载泄漏 */
 function onDetailMoreEsc(e: KeyboardEvent) {
   if (e.key !== 'Escape' || !detailMoreEl.value?.open) return;
+  e.stopPropagation();
   detailMoreEl.value.open = false;
+  detailMoreSumEl.value?.focus();
   window.removeEventListener('keydown', onDetailMoreEsc, true);
 }
+onBeforeUnmount(() => window.removeEventListener('keydown', onDetailMoreEsc, true));
 function copyDetail(fmt: 'tsv' | 'md') {
   if (detailMoreEl.value?.open) detailMoreEl.value.open = false;
   if (detailTab.value === 'top') copyTop(fmt);
@@ -1549,7 +1548,9 @@ watch(nodeMode, (nm) => { if (nm && detailTab.value === 'top') detailTab.value =
  每拍快照落 topRows 同时累积 per-index 序列（窗长钳制 windowPts） */
 watch(() => sampleTs.value.length, () => { if (detailShows('top') && !nodeMode.value) void loadTop(); });
 watch([windowPts, () => clusterFilter.value, () => nodeMode.value, topLimit], () => {
-  if (nodeMode.value) { topIndexSeries.value = {}; topTsArr.value = []; }
+  /* 清场即世代推进：在途集群拍 Top 回包已越过发起时的节点态早退，seq 不推进则回包
+   照写 topRows 并重推刚清空的会话序列（旧拍穿透清场） */
+  if (nodeMode.value) { topSeq++; topIndexSeries.value = {}; topTsArr.value = []; }
   if (detailShows('top')) void loadTop();
 });
 const MH_RANGE_MS: Record<string, number> = { '1h': 3.6e6, '6h': 2.16e7, '24h': 8.64e7, '3d': 2.592e8, '7d': 6.048e8, '14d': 1.2096e9 };
