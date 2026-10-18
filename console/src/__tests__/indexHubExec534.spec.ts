@@ -248,10 +248,13 @@ describe('行级执行（ops raw）同款接线（五百三十四批 P0-A · 源
     expect(ih).toMatch(/v-if="opsKey === `\/\$\{cur\}\/_refresh`"/);
     expect(ih).toMatch(/@click="opsQr\.cancel\(\)"/);
     expect(ih).toMatch(/\{\{ opsKey === `\/\$\{cur\}\/_refresh` \? '执行中 ' \+ \(opsQr\.elapsedMs\.value \/ 1000\)\.toFixed\(1\) \+ 's' : '执行' \}\}/);
-    /* 既有 idx 快照竞态守卫同步更新零改（runDocs/runDsl 三处 + loadDetail） */
+    /* 既有 idx 快照竞态守卫同步更新零改（runDocs/runDsl 三处 + loadDetail）。
+       945 批随批升格：finally 清场由 idx 条件升世代守卫形态（raceGuard858 谱系）——
+       idx 条件在「切索引后旧拍返回」时恒假，qryLoading 永久卡死（执行/重试钮永久
+       disabled 无自愈）；世代形态=过期拍零写零播，当前拍照常清场 */
     expect(ih).toMatch(/if \(idx !== cur\.value\) return; \/\/ 途中切索引：丢弃过期响应/);
-    expect(ih).toMatch(/if \(idx === cur\.value\) docsLoading\.value = false;/);
-    expect(ih).toMatch(/if \(idx === cur\.value\) qryLoading\.value = false;/);
+    expect(ih).toMatch(/if \(seq === docsSeq\) \{\s*docsLoading\.value = false;\s*docsQr\.finish\(\);\s*\}/);
+    expect(ih).toMatch(/if \(seq === qrySeq\) \{\s*qryLoading\.value = false;\s*qryQr\.finish\(\);\s*\}/);
     expect(ih).toContain('if (idx !== cur.value) return; // 加载途中切了索引：丢弃过期响应');
     /* queryRunRace382 竞态语义随身：begin 即作废上一轮（useQueryRun 统一件内建，源码锁 import 面） */
     expect(ih).toContain("import { useQueryRun } from '../composables/useQueryRun';");

@@ -1345,8 +1345,14 @@ const docsQLint = computed(() => {
   return '';
 });
 
+/* 检索世代守卫（raceGuard858 同款）：docsQr.begin() 作废旧拍是连查合法通道（切索引
+   自动重拉/排序变更/历史回放都直调本函数，不加本体闸），过期拍的 AbortError 与用户
+   主动取消同形——按世代甄别：当前拍=真取消（播报），过期拍=静默丢弃；loading 与
+   finish 同收世代（过期拍 finish 会清掉在途新拍的 AbortController=新拍取消钮失效） */
+let docsSeq = 0;
 async function runDocs() {
   if (!cur.value) return;
+  const seq = ++docsSeq;
   docsLoading.value = true;
   const idx = cur.value;
   const signal = docsQr.begin(); /*  P0-A：signal 传 post() init；取消以 AbortError 落此 */
@@ -1406,8 +1412,9 @@ async function runDocs() {
        真机实证空串条目会每次进环刷屏，故仅显式词检索留痕 */
     if (docsQ.value.trim()) useQueryHistoryStore().push('lucene', docsQ.value, idx, r.took);
   } catch (e: any) {
-    /*  P0-A：用户主动取消不算错误（DslQueryView  同语义），不进 docsErr 红条 */
-    if (e?.name === 'AbortError') { store.notify('info', '已取消检索'); }
+    /*  P0-A：用户主动取消不算错误（DslQueryView  同语义），不进 docsErr 红条；
+       被新拍 begin 作废的过期拍静默（假「已取消」播报退役=世代双支甄别） */
+    if (e?.name === 'AbortError') { if (seq === docsSeq) store.notify('info', '已取消检索'); }
     else {
       docsErr.value = '文档检索失败：' + friendlyEsError(String(e?.message ?? e));
       docsErrRaw.value = e; /* ：原始对象旁路（errMeta 读 code/endpoint） */
@@ -1415,8 +1422,7 @@ async function runDocs() {
       if (docsQ.value.trim()) useQueryHistoryStore().push('lucene', docsQ.value, idx, -1, false); /* 失败也标记（红点口径）；空词不入历史同上 */
     }
   } finally {
-    if (idx === cur.value) docsLoading.value = false;
-    docsQr.finish();
+    if (seq === docsSeq) { docsLoading.value = false; docsQr.finish(); }
   }
 }
 
@@ -1569,13 +1575,21 @@ function openQryInDevTools() {
   }));
   router.push('/devtools');
 }
-/* 新查询语义——页码归第 1 页再执行（翻页器 goQryPage 保留页码），docs tab 同款 */
+/* 新查询语义——页码归第 1 页且立即执行（翻页器 goQryPage 保留页码），docs tab runDocsNew
+   同款形态；归页与执行是「并」不是「或」（异或旧形态在非首页只拨页码零请求，执行钮/
+   Ctrl+Enter/历史回放三通道都要点两次才真正执行） */
 function runDslNew() {
-  if (qryPage.value !== 1) qryPage.value = 1;
-  else void runDsl();
+  qryPage.value = 1;
+  void runDsl();
 }
+/* 查询世代守卫（raceGuard858 同款，与 docs 链同构）：本体闸（qryLoading）保证同刻
+   至多一拍在途，世代与闸等价但形态统一，且finally 清场不再挂 idx 条件——
+   切索引后旧拍返回时 idx===cur 恒假，qryLoading 永久卡死（执行/重试钮永久 disabled、
+   取消钮常驻，query 链无 docs 链的自动重拉自愈路径） */
+let qrySeq = 0;
 async function runDsl() {
   if (!cur.value || qryLoading.value) return;
+  const seq = ++qrySeq;
   let bodyObj: any = null;
   try { bodyObj = JSON.parse(dsl.value); } catch { store.notify('warning', 'DSL 不是合法 JSON，先修好再执行'); return; }
   qryLoading.value = true;
@@ -1638,8 +1652,9 @@ async function runDsl() {
     /* 跨模式查询历史接线（DslQueryView 同款 push 形态）——就地 DSL 不再断链 */
     useQueryHistoryStore().push('dsl', dsl.value, cur.value, r.took);
   } catch (e: any) {
-    /*  P0-A：用户主动取消不算错误，不进 qryErr 红条（DslQueryView  同语义） */
-    if (e?.name === 'AbortError') { store.notify('info', '已取消查询'); }
+    /*  P0-A：用户主动取消不算错误，不进 qryErr 红条（DslQueryView  同语义）；
+       过期拍静默（世代双支，与 docs 链同构） */
+    if (e?.name === 'AbortError') { if (seq === qrySeq) store.notify('info', '已取消查询'); }
     else {
       /* 错误人话化——docs tab 534 同款口径（裸 e.message 是 ES 原始串一坨，
          friendlyEsError 提 reason/映射常见场景），模板 ih-qerr 形态保持 */
@@ -1649,8 +1664,7 @@ async function runDsl() {
       useQueryHistoryStore().push('dsl', dsl.value, cur.value, -1, false); /* ：失败也标记（红点口径） */
     }
   } finally {
-    if (idx === cur.value) qryLoading.value = false;
-    qryQr.finish();
+    if (seq === qrySeq) { qryLoading.value = false; qryQr.finish(); }
   }
 }
 
@@ -1938,7 +1952,13 @@ async function copyShardLocate(node: string, s: any) {
  手写 readIhRowH/cycleRowH/IH_ROWH_LABEL 退役；行高是全局阅读偏好（口径），
  维度传 null 即纯全局档，左列表与 RT/QRT 工具行同一颗钮同一份记忆 */
 const { rowH, rowHLabel, cycleRowH } = useTablePrefs(ref<string | null>(null), ref<string[]>([]));
+/* 行级执行世代守卫（raceGuard858 同款，与 docs/qry 链同构）：执行钮无 disabled 面，
+   双击/换操作连点即双在途——过期拍的 AbortError 与用户取消同形，按世代甄别播报；
+   opsKey 与 finish 同收世代（过期拍清 opsKey 会让在途新拍的执行钮文案回「执行」、
+   取消钮消失，过期拍 finish 会清掉新拍的 AbortController） */
+let opsSeq = 0;
 async function opRaw(method: string, path: string, okMsg: string, reloadList = false) {
+  const seq = ++opsSeq;
   opsKey.value = path; /* P0-A：行级执行读秒锚（执行钮文案换字+瞬时取消钮） */
   try {
     const signal = opsQr.begin();
@@ -1946,12 +1966,11 @@ async function opRaw(method: string, path: string, okMsg: string, reloadList = f
     store.notify('success', okMsg + '：' + cur.value);
     if (reloadList) store.loadIndices();
   } catch (e: any) {
-    /* 用户主动取消不算错误（AbortError 由 opsQr.cancel() 触发） */
-    if (e?.name === 'AbortError') store.notify('info', '已取消操作');
+    /* 用户主动取消不算错误（AbortError 由 opsQr.cancel() 触发）；过期拍静默 */
+    if (e?.name === 'AbortError') { if (seq === opsSeq) store.notify('info', '已取消操作'); }
     else store.notify('error', '操作失败: ' + (e?.message || e));
   } finally {
-    opsKey.value = '';
-    opsQr.finish();
+    if (seq === opsSeq) { opsKey.value = ''; opsQr.finish(); }
   }
 }
 async function askForceMerge() {
