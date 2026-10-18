@@ -121,6 +121,7 @@
  现场 api.clusterInspect 补拉；显式用户动作 + askConfirm 确认覆盖后才写两框
  （挂载初值/自动链零触——adhocManualWorkbench426/draftGovernance 口径） -->
           <button type="button" class="btn ghost xs" data-ar-pull-src aria-label="拉取源配置"
+            :disabled="pullingSrc"
             title="拉取源索引当前的 settings / mapping 覆盖下方两框（覆盖前需确认）" @click="pullSourceToManual">
             <Download :size="11" /> 拉取源配置
           </button>
@@ -580,9 +581,11 @@ mapping <span class="dim">字段映射</span>
     <div class="ar-sec" v-if="allJobs.length">
       <div class="card-t">
 <History :size="14" /> 最近作业
-        <button v-if="visibleJobs.length" class="btn ghost sm" style="margin-left:auto" @click="exportJobsMatrix('md')" title="复制当前视图为 Markdown 表（群聊/工单直贴）"><ClipboardList :size="12" /> Markdown</button>
-        <button v-if="visibleJobs.length" class="btn ghost sm" @click="exportJobsMatrix('tsv')" title="复制当前视图为 TSV（Excel 可直接粘贴）"><ClipboardCopy :size="12" /> 导出 TSV</button>
-        <button aria-label="刷新任务列表" class="btn ghost sm" :style="visibleJobs.length ? '' : 'margin-left:auto'" :disabled="jobsLoading" @click="loadJobs" title="刷新任务列表"><RefreshCw :size="12" :class="{ spinning: jobsLoading }" /></button>
+        <!-- 导出两钮恒在场 disabled 联动过滤行集（exportEmptyGuard936 口径：无数据 disabled 而非 v-if 消失；
+     过滤筛零行时按钮保持座位，铁律 B 位置恒定）。导出函数内空集另有 warning 报真兜底。 -->
+        <button class="btn ghost sm" style="margin-left:auto" :disabled="!visibleJobs.length" @click="exportJobsMatrix('md')" title="复制当前视图为 Markdown 表（群聊/工单直贴）"><ClipboardList :size="12" /> Markdown</button>
+        <button class="btn ghost sm" :disabled="!visibleJobs.length" @click="exportJobsMatrix('tsv')" title="复制当前视图为 TSV（Excel 可直接粘贴）"><ClipboardCopy :size="12" /> 导出 TSV</button>
+        <button aria-label="刷新任务列表" class="btn ghost sm" :disabled="jobsLoading" @click="loadJobs" title="刷新任务列表"><RefreshCw :size="12" :class="{ spinning: jobsLoading }" /></button>
       </div>
       <div class="ar-jobs-tools">
         <!-- kw 过滤改用 SearchFilterBar 统一件（559 TasksView tv-kw 先例；placeholder 逐字保留，
@@ -1103,32 +1106,41 @@ const mappingFromDerived = ref(false);
  显式用户动作 + askConfirm 确认覆盖：确认通过才写 manualSettings/manualMapping 两个
  草稿 ref（挂载初值与自动预填链零触碰——adhocManualWorkbench426/draftGovernance 口径），
  pretty 口径与 doPrepare 预填一致（prettyJson）。 */
+const pullingSrc = ref(false);
 async function pullSourceToManual() {
   if (!indexName.value) { store.notify('warning', '先在上方选择要重建的索引名，才能拉取源配置'); return; }
-  const ok = await askConfirm({
-    title: '拉取源配置到手动编辑框',
-    message: `将用源索引「${indexName.value}」当前的 settings / mapping 覆盖两个手动编辑框（已填内容会被覆盖）。`,
-    level: 'warn',
-    okText: '覆盖填入',
-  });
-  if (!ok) return;
-  let sRaw = prep.value?.settingsJson || '';
-  let mRaw = prep.value?.mappingJson || '';
-  if (!sRaw && !mRaw) {
-    try {
-      const r = await api.clusterInspect(indexName.value, 0);
-      const firstIdx = Object.keys(r?.settings || {})[0] || Object.keys(r?.mappings || {})[0];
-      if (!firstIdx) throw new Error('未取到索引配置');
-      sRaw = JSON.stringify(r.settings?.[firstIdx] || {});
-      mRaw = JSON.stringify(r.mappings?.[firstIdx] || {});
-    } catch (e: any) {
-      store.notify('error', '拉取源配置失败：' + (friendlyApiError(e) || '索引不存在或不可达'));
-      return;
+  /* 闸置位前移到确认窗之前（xmigrateGateExport941 同族口径）：确认窗+clusterInspect 在途全程拉取钮
+     :disabled="pullingSrc" 即禁用，二击不再穿透双开确认窗；取消路径由 finally 复位防闸死。 */
+  if (pullingSrc.value) return;
+  pullingSrc.value = true;
+  try {
+    const ok = await askConfirm({
+      title: '拉取源配置到手动编辑框',
+      message: `将用源索引「${indexName.value}」当前的 settings / mapping 覆盖两个手动编辑框（已填内容会被覆盖）。`,
+      level: 'warn',
+      okText: '覆盖填入',
+    });
+    if (!ok) return;
+    let sRaw = prep.value?.settingsJson || '';
+    let mRaw = prep.value?.mappingJson || '';
+    if (!sRaw && !mRaw) {
+      try {
+        const r = await api.clusterInspect(indexName.value, 0);
+        const firstIdx = Object.keys(r?.settings || {})[0] || Object.keys(r?.mappings || {})[0];
+        if (!firstIdx) throw new Error('未取到索引配置');
+        sRaw = JSON.stringify(r.settings?.[firstIdx] || {});
+        mRaw = JSON.stringify(r.mappings?.[firstIdx] || {});
+      } catch (e: any) {
+        store.notify('error', '拉取源配置失败：' + (friendlyApiError(e) || '索引不存在或不可达'));
+        return;
+      }
     }
+    manualSettings.value = prettyJson(sRaw);
+    manualMapping.value = prettyJson(mRaw);
+    store.notify('success', '已拉取源索引配置填入手动编辑框，可继续修改后「应用并进入审编」');
+  } finally {
+    pullingSrc.value = false;
   }
-  manualSettings.value = prettyJson(sRaw);
-  manualMapping.value = prettyJson(mRaw);
-  store.notify('success', '已拉取源索引配置填入手动编辑框，可继续修改后「应用并进入审编」');
 }
 
 function applyManual() {
@@ -1638,13 +1650,21 @@ const strategyLabel = computed(() =>
   strategy.value === 'INCREMENTAL' ? 'A · 增量追平'
     : strategy.value === 'WRITE_BLOCK' ? 'B · 写阻断窗口' : 'C · 直切 + 回补报告');
 
+/* prepare 世代守卫（本文件 watchJob watchSeq 同语言）：探测钮 disabled 是单通道闸，
+ IndexPicker @picked 通道绕闸——探测在途换索引再探即双在途，无世代守卫时旧包后到
+ 覆写新 prep、旧失败 catch 把新成功 prep 清成 null。成功/catch/finally 三支同口径
+ （raceGuard858 同款）：过期支整体丢弃且跳过 finally 复位（新在途轮持闸），reset 侧显式清场。 */
+let prepSeq = 0;
 async function doPrepare() {
   preparing.value = true;
+  const seq = ++prepSeq;
   prepErr.value = '';
   prepErrRaw.value = null;
   ensureArFields(); /* +1：补全字段源同点预载（dsl-assist 候选 + 源/目标类型对比共用） */
   try {
-    prep.value = await api.adhoc.prepare(indexName.value);
+    const p = await api.adhoc.prepare(indexName.value);
+    if (seq !== prepSeq) return;
+    prep.value = p;
     /* 粘贴来的期望配置**优先于**源索引预填。若在此无条件覆盖，
  使用者刚粘贴的 settings/mapping 会被源索引现状悄悄冲掉，
  他却以为正拿着业务侧声明的配置去重建——静默回落到旧配置正是本 Task 要堵的。 */
@@ -1664,6 +1684,7 @@ async function doPrepare() {
     if (!timeField.value || timeField.value === lastPrepTimeField) timeField.value = sugTf;
     lastPrepTimeField = sugTf;
   } catch (e: any) {
+    if (seq !== prepSeq) return;
     /* 裸 e.message → friendlyEsError（toast 与内联错误条同用一份人话文案） */
     const msg = friendlyApiError(e) || '探测失败';
     store.notify('error', msg);
@@ -1671,7 +1692,7 @@ async function doPrepare() {
     prepErrRaw.value = e; /* ：原始对象旁路（喂 errMeta 读 code/endpoint） */
     prep.value = null;
   } finally {
-    preparing.value = false;
+    if (seq === prepSeq) preparing.value = false;
   }
 }
 
@@ -1744,17 +1765,22 @@ function stopPolling() {
 
 async function doAbort() {
   if (!job.value || aborting.value) return;
-  /* W10：本点全站首批开 dismissable（调试期反复起停作业的高频中低风险 warn 确认，
- 勾「本次会话不再询问」后本会话内中止不再逐次弹窗）。critical 确认门（删除旧索引）零触碰。 */
-  if (!await askConfirm({
-    level: 'warn',
-    title: '中止重建作业',
-    message: '将中止当前作业并 best-effort 取消 ES 侧 reindex task：已写入新索引的数据会保留，作业不可恢复继续，需重新发起。',
-    okText: '中止作业',
-    dismissable: true,
-  })) return;
+  /* 闸置位前移到确认窗之前（xmigrateGateExport941 同族口径）：确认窗挂起期中止钮
+     :disabled="aborting" 即禁用，二击不再穿透双开确认窗（confirm.ts 全局单例覆写会把
+     第一开按取消静默收掉）；取消路径由 finally 复位防闸死。 */
   aborting.value = true;
-  try { job.value = await api.adhoc.abort(job.value.jobId); } catch (e: any) { store.notify('error', friendlyApiError(e) || '中止失败'); } /* ：裸 e.message → friendlyEsError */
+  try {
+    /* W10：本点全站首批开 dismissable（调试期反复起停作业的高频中低风险 warn 确认，
+     勾「本次会话不再询问」后本会话内中止不再逐次弹窗）。critical 确认门（删除旧索引）零触碰。 */
+    if (!await askConfirm({
+      level: 'warn',
+      title: '中止重建作业',
+      message: '将中止当前作业并 best-effort 取消 ES 侧 reindex task：已写入新索引的数据会保留，作业不可恢复继续，需重新发起。',
+      okText: '中止作业',
+      dismissable: true,
+    })) return;
+    job.value = await api.adhoc.abort(job.value.jobId);
+  } catch (e: any) { store.notify('error', friendlyApiError(e) || '中止失败'); } /* ：裸 e.message → friendlyEsError */
   finally { aborting.value = false; }
 }
 
@@ -1806,23 +1832,26 @@ function onBlockVisChange() {
 document.addEventListener('visibilitychange', onBlockVisChange);
 
 async function doConfirmSwitch() {
-  /* 删除旧物理索引不可逆——勾选后切换确认必须过 critical 门 */
-  if (deleteOldIndex.value) {
-    const okDel = await askConfirm({
-      level: 'critical',
-      title: '将删除旧物理索引',
-      message: `切换成功后会物理删除旧索引「${indexName.value}」及其全部数据，不可恢复。输入旧索引名以确认。`,
-      guardText: indexName.value,
-      okText: '确认切换并删除',
-    });
-    if (!okDel) return;
-  }
+  /* 闸读收本体首行+置位前移（templateSaveGate937 口径：确认窗 await 在闸读之前=闸形同虚设）——critical
+     确认窗须手输旧索引名、挂起窗口长，确认切换钮 :disabled="confirming" 在窗期即禁用，
+     二击不再穿透双开确认窗；取消路径由 finally 复位防闸死。 */
   if (!job.value || confirming.value) return;
   confirming.value = true;
   try {
+    /* 删除旧物理索引不可逆——勾选后切换确认必须过 critical 门 */
+    if (deleteOldIndex.value) {
+      const okDel = await askConfirm({
+        level: 'critical',
+        title: '将删除旧物理索引',
+        message: `切换成功后会物理删除旧索引「${indexName.value}」及其全部数据，不可恢复。输入旧索引名以确认。`,
+        guardText: indexName.value,
+        okText: '确认切换并删除',
+      });
+      if (!okDel) return;
+    }
     job.value = await api.adhoc.confirmSwitch(job.value.jobId);
     /* 联动性：切换成功 toast 带「去查询验证」动作——重建完成后第一步就是验证数据，
- 一键跳查询工作台（带索引深链），免手动导航 */
+     一键跳查询工作台（带索引深链），免手动导航 */
     const newIndex = job.value?.newIndex || job.value?.targetIndex || '';
     store.notify('success', '已确认切换', {
       duration: 12000,
@@ -1890,10 +1919,11 @@ function jobOf(row: any[]): any {
 /* 过滤空集的空态分档（QRT EmptyState 接管旧 nomatch 行）：真无作业 ≠ 过滤无命中 */
 const jobsEmptyText = computed(() =>
   (jobKw.value.trim() || jobStatusFilter.value) ? '无匹配作业（过滤生效中）' : '暂无作业记录');
-/* 最近作业 TSV/MD 复制（XmigrateView exportTsv/exportMd 同手法；行集=过滤后所见即所复） */
+/* 最近作业 TSV/MD 复制（XmigrateView exportTsv/exportMd 同手法；行集=过滤后所见即所复。
+ 空集 warning 报真（exportEmptyGuard936 同款话术）——恒在场 disabled 的程序化兜底，不造第二措辞） */
 async function exportJobsMatrix(fmt: 'tsv' | 'md') {
   const rows = visibleJobs.value;
-  if (!rows.length) return;
+  if (!rows.length) { store.notify('warning', '无表格结果可导出'); return; }
   const cols = ['jobId', 'logicalName', 'strategy', 'status', 'stage', 'startedAt', 'tookMs'];
   const ok = await copyText(matrixText({ rows, cols, getVal: (r: any, c: string) => r[c] ?? '' }, fmt));
   store.notify(ok ? 'success' : 'error', ok ? `已复制 ${rows.length} 行作业（${fmt.toUpperCase()}）` : '复制失败');
@@ -1941,6 +1971,10 @@ function reattachToRunning() {
 function reset() {
   stopPolling();
   step.value = 0;
+  /* 清场显式失效在途 prepare 世代：在途回包被守卫整体丢弃；其守卫式 finally 会跳过
+     过期复位，preparing 须在此显式清（raceGuard858 reset 清 riskBusy 同款，防探测钮卡死） */
+  prepSeq += 1;
+  preparing.value = false;
   prep.value = null;
   job.value = null;
   valReport.value = null;
@@ -2090,13 +2124,18 @@ async function resumeScene() {
     loadDateRisks(pasteList.value[pasteIdx.value]);
   }
   if (!prep.value && indexName.value) {
+    /* 与 doPrepare 同一条世代守卫：挂载续场的补拉在途时用户手动探测，慢回包不得覆写新 prep */
+    const seq = ++prepSeq;
     preparing.value = true;
     try {
-      prep.value = await api.adhoc.prepare(indexName.value);
+      const p = await api.adhoc.prepare(indexName.value);
+      if (seq !== prepSeq) return;
+      prep.value = p;
     } catch {
+      if (seq !== prepSeq) return;
       prep.value = null; /* 目标不可达等：保留现场可看，续走时 doPrepare/doStart 自会再报 */
     } finally {
-      preparing.value = false;
+      if (seq === prepSeq) preparing.value = false;
     }
   }
   /* 只补空、不覆写：用户没编辑过的字段从 prep 回填(等价首次预填),
