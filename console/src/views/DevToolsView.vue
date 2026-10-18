@@ -64,8 +64,10 @@
           <Copy :size="12" /> curl
         </button>
         <!-- 复制为代码（toJs/toPython 既有能力挂上；切换即复制）。
- 中文备注走 select title（option 字面被 devtoolsCodegen314 逐字锁） -->
-        <select v-if="cur?.path" class="btn ghost sm" style="width:auto;cursor:pointer"
+ 中文备注走 select title（option 字面被 devtoolsCodegen314 逐字锁）；
+ 恒在场 disabled 非条件消失——无路径时整颗控件撤位会让同排「从 curl 导入」左移
+ （空态行结构恒定），与同排复制 curl 钮恒在场同口径 -->
+        <select :disabled="!cur?.path" class="btn ghost sm" style="width:auto;cursor:pointer"
           title="复制为代码（fetch=前端 JavaScript 脚本 · requests=Python 脚本）" aria-label="复制为代码（fetch=前端 JavaScript 脚本 · requests=Python 脚本）"
           @change="copyAsCode(($event.target as HTMLSelectElement).value); ($event.target as HTMLSelectElement).selectedIndex = 0">
           <option value="" disabled selected>代码</option>

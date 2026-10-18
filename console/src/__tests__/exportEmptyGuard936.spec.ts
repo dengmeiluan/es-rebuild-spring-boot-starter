@@ -99,6 +99,10 @@ describe('导出空集报真（Browser 行为锚）', () => {
   it('CSV 空行集（内核漏斗筛空）报 warning 不再静默', async () => {
     const { store } = await mountBrowser();
     const spy = vi.spyOn(store, 'notify');
+    /* 九百四十七批随迁：导出双钮合并「导出 ▾」菜单——开菜单 settle 后注入 bwQrt 桩
+     （模板 ref 随重渲染重绑，先注桩会被真实例顶掉），再点 CSV 格式项 */
+    barBtn('导出')!.click();
+    await settle();
     ss().bwQrt = { getCsvBlock: emptyBlk };
     barBtn('CSV')!.click();
     await settle();
@@ -108,6 +112,9 @@ describe('导出空集报真（Browser 行为锚）', () => {
   it('Markdown 空行集报 warning 不再静默', async () => {
     const { store } = await mountBrowser();
     const spy = vi.spyOn(store, 'notify');
+    /* 九百四十七批随迁：开菜单 settle 后注桩，再点 Markdown 格式项 */
+    barBtn('导出')!.click();
+    await settle();
     ss().bwQrt = { getCsvBlock: emptyBlk };
     barBtn('Markdown')!.click();
     await settle();
@@ -117,6 +124,9 @@ describe('导出空集报真（Browser 行为锚）', () => {
   it('非空行集 CSV 正常导出（防过修守卫）', async () => {
     const { store } = await mountBrowser();
     const spy = vi.spyOn(store, 'notify');
+    /* 九百四十七批随迁：开菜单 settle 后注桩，再点 CSV 格式项 */
+    barBtn('导出')!.click();
+    await settle();
     ss().bwQrt = { getCsvBlock: oneRowBlk };
     barBtn('CSV')!.click();
     await settle();
@@ -124,12 +134,11 @@ describe('导出空集报真（Browser 行为锚）', () => {
     expect(spy).toHaveBeenCalledWith('success', expect.stringContaining('已导出'));
   });
 
-  it('宿主过滤空时导出钮 disabled（现状守卫不回退）', async () => {
+  it('宿主过滤空时导出钮 disabled（现状守卫不回退；九百四十七批聚合触发钮恒在场）', async () => {
     await mountBrowser();
     ss().kw = 'zzz-no-match';
     await settle();
-    expect(barBtn('CSV')!.disabled).toBe(true);
-    expect(barBtn('Markdown')!.disabled).toBe(true);
+    expect(barBtn('导出')!.disabled).toBe(true);
   });
 });
 

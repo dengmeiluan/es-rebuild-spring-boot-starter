@@ -50,16 +50,29 @@
       <button v-if="canCreateIdx" class="btn sm pri" @click="createOpen = true">
         <Plus :size="12" /> 新建索引
       </button>
-      <!-- 索引列表 CSV 导出（运维对账/容量盘点）
- 补 Markdown 双通道（群聊直贴，与 节点表同口径）
- 行集/列集改走 QRT ref.getCsvBlock()（列漏斗+排序所见即所得），
- 列序/表头经 EXPORT 映射保旧契约（英文键七列、不含操作列） -->
-      <button class="btn ghost sm" :disabled="!filtered.length" title="导出索引列表为 CSV（跟随过滤）" @click="exportCsv">
-        <FileDown :size="12" /> CSV
-      </button>
-      <button class="btn ghost sm" :disabled="!filtered.length" title="复制索引列表为 Markdown（群聊/工单直贴）" @click="exportMd">
-        <ClipboardCopy :size="12" /> Markdown
-      </button>
+      <!-- 导出双通道合并「导出 ▾」聚合菜单（查询结果表导出聚合同语言）：
+ CSV 下载与 Markdown 复制是同一对象（索引清单）的同类导出枚举，平铺双钮退役收进
+ 菜单（常驻按钮 5→4）；触发钮落在原 CSV 位（位置恒定），空行集恒在场 disabled
+ 非消失；内核级空集（列漏斗筛空）报真 warning 保留在 exportCsv/exportMd 本体。
+ 行集/列集走 QRT ref.getCsvBlock()（列漏斗+排序所见即所得），列序/表头经 EXPORT
+ 映射保旧契约（英文键七列、不含操作列） -->
+      <span class="menu-wrap">
+        <button class="btn ghost sm" :class="{ on: bwExpOpen }" :disabled="!filtered.length"
+          aria-label="导出" aria-haspopup="menu" :aria-expanded="bwExpOpen"
+          title="导出索引列表（CSV 下载 / Markdown 复制）" @click.stop="bwExpOpen = !bwExpOpen">
+          <FileDown :size="12" /> 导出 ▾
+        </button>
+        <div v-if="bwExpOpen" class="bw-menu" role="menu" aria-label="导出索引列表">
+          <button class="bw-mi" role="menuitem" aria-label="导出索引列表 CSV"
+            title="导出索引列表 CSV（跟随过滤）" @click="exportCsv(); closeBwExp()">
+            <span class="bw-mi-f">CSV</span> 索引列表下载
+          </button>
+          <button class="bw-mi" role="menuitem" aria-label="复制索引列表 Markdown"
+            title="复制索引列表为 Markdown（群聊/工单直贴）" @click="exportMd(); closeBwExp()">
+            <span class="bw-mi-f">MD</span> 索引列表 Markdown
+          </button>
+        </div>
+      </span>
     </div>
 
     <!-- 表格（裸表换 QRT rows 型——524 教训先列锚清单再动手）：
@@ -138,7 +151,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, type Ref } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, type Ref } from 'vue';
 import { useRouter } from 'vue-router';
 import EmptyState from '../components/EmptyState.vue';
 import SkeletonBox from '../components/SkeletonBox.vue'; /* ：加载态骨架收口 */
@@ -177,6 +190,19 @@ const canCreateIdx = computed(() => auth.canEndpoint('ops', 'POST', '/internal/e
 
 /* 搜索词/健康过滤进 URL，刷新与分享后现场可复原 */
 const kw = useUrlState('kw');
+/* 导出聚合菜单（导出 ▾）状态——Esc/点外关闭；开层挂 document 监听、卸载摘卸对称 */
+const bwExpOpen = ref(false);
+function closeBwExp() { bwExpOpen.value = false; }
+function onDocBwClick(e: Event) {
+  if (!(e.target as HTMLElement | null)?.closest('.menu-wrap')) closeBwExp();
+}
+function onDocBwEsc(e: KeyboardEvent) { if (e.key === 'Escape') closeBwExp(); }
+document.addEventListener('click', onDocBwClick);
+document.addEventListener('keydown', onDocBwEsc);
+onBeforeUnmount(() => {
+  document.removeEventListener('click', onDocBwClick);
+  document.removeEventListener('keydown', onDocBwEsc);
+});
 /* ?idx=&doc= 深链——QRT「在数据浏览器打开此文档」的落点；
  doc 消费即清（newdoc 同模式防刷新重灌），索引经 useIdxState 语义落到 store.pickedIdx */
 const docLink = useUrlState('doc');
@@ -399,6 +425,13 @@ function askDelRow(row: any[]) { return askDel(rowToIdx(row)); }
 .bw { display: flex; flex-direction: column; gap: var(--sp-3); height: 100%; }
 /* 窄屏工具条允许换行，避免挤压 */
 .bw-bar { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; row-gap: var(--sp-1); }
+/* 导出聚合菜单（导出 ▾）——浮层四要素（白底 bg1/边框/阴影 --shadow-pop/圆角 r-m），
+ 查询结果表 qrt-menu 同配方；menu-wrap 定位壳承接 absolute 展开 */
+.menu-wrap { position: relative; flex: none; }
+.bw-menu { position: absolute; top: calc(100% + var(--sp-1)); right: 0; z-index: 60; background: var(--bg1); border: 1px solid var(--line-strong); border-radius: var(--r-m); box-shadow: var(--shadow-pop); padding: var(--sp-1h); min-width: 200px; }
+.bw-mi { display: flex; align-items: center; gap: var(--sp-2); width: 100%; padding: var(--sp-1h) var(--sp-2h); border: 0; background: transparent; border-radius: var(--r-s); color: var(--tx1); font-size: var(--fs-xs); cursor: pointer; text-align: left; white-space: nowrap; }
+.bw-mi:hover { background: var(--bg2); color: var(--tx0); }
+.bw-mi-f { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--ac-hi); width: var(--sp-5); flex-shrink: 0; }
 /* width:240px → min(240px,100%) 极窄溢出钳制（XmigrateView .xm-jobs-kw 同款范式，
  900 档 100% 独占行不变） */
 /* bw-search 改用 SearchFilterBar——胶囊壳/内建图标归组件单源，本类只留落位

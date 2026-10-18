@@ -1976,6 +1976,10 @@ function reset() {
   prepSeq += 1;
   preparing.value = false;
   prep.value = null;
+  /* 探测失败红条一并入清场清单：清场后红条配着新一轮的干净表单滞留屏上
+     （探测失败态与粘贴失败态 pasteErr 同域同律，失败结论不陪下一轮） */
+  prepErr.value = '';
+  prepErrRaw.value = null;
   job.value = null;
   valReport.value = null;
   confirmDirectSwap.value = false;

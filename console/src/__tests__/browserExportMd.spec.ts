@@ -13,9 +13,9 @@ import { join } from 'node:path';
 const src = readFileSync(join(__dirname, '../views/BrowserView.vue'), 'utf-8');
 
 describe('BrowserView 过 dbx 清单（一百八十四批）', () => {
-  it('工具区双通道：CSV 下载 + Markdown 复制', () => {
-    expect(src).toMatch(/@click="exportCsv"/);
-    expect(src).toMatch(/@click="exportMd"/);
+  it('工具区双通道：CSV 下载 + Markdown 复制（九百四十七批合并「导出 ▾」菜单项形态）', () => {
+    expect(src).toMatch(/@click="exportCsv\(\); closeBwExp\(\)"/);
+    expect(src).toMatch(/@click="exportMd\(\); closeBwExp\(\)"/);
     expect(src).toMatch(/async function exportMd\(\)/);
     expect(src).toMatch(/\| 索引 \| 健康 \| 状态 \| 文档数 \| 存储 \| 分片 \|/);
   });

@@ -96,7 +96,7 @@ beforeEach(() => {
 });
 
 describe('776 A0 挂载不变量负锚（现状即守卫，非刀面）', () => {
-  it('工具条七件+QRT 8 列+计数行+三行渲染（健康档差分）', async () => {
+  it('工具条六件+QRT 8 列+计数行+三行渲染（健康档差分）', async () => {
     await mountBrowser();
     const bar = host.querySelector('.bw-bar')!;
     expect(bar, 'bw-bar 在场').toBeTruthy();
@@ -107,8 +107,9 @@ describe('776 A0 挂载不变量负锚（现状即守卫，非刀面）', () => 
     const btnText = [...bar.querySelectorAll('button')].map(b => b.textContent || '');
     expect(btnText.some(t => t.includes('刷新')), '刷新钮').toBe(true);
     expect(btnText.some(t => t.includes('新建索引')), '新建索引钮（未登录态 canEndpoint 放行）').toBe(true);
-    expect(btnText.some(t => t.includes('CSV')), 'CSV 导出钮').toBe(true);
-    expect(btnText.some(t => t.includes('Markdown')), 'Markdown 复制钮').toBe(true);
+    /* 九百四十七批随迁：CSV/Markdown 平铺双钮合并「导出 ▾」聚合菜单（菜单关闭态
+     只验触发钮在场；两格式项可达性归 browserExportMenu947 行为锁） */
+    expect(btnText.some(t => t.includes('导出')), '导出聚合触发钮').toBe(true);
     const ths = [...host.querySelectorAll('.bw-res table thead th')];
     /* 8 数据列+QRT row-actions 注入尾列=9（现状即守卫以实际为准） */
     expect(ths.length, 'QRT 八数据列+行尾注入列').toBe(9);
