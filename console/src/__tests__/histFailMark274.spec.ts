@@ -20,7 +20,7 @@ describe('查询历史失败标记（274 批）', () => {
   it('DslQueryView：失败双路标记+成功翻转红点+histRows 透传', () => {
     expect(dq).toMatch(/h0\.ok = false; writeStoredRaw\(localStorage, HIST_KEY/);
     expect(dq).toMatch(/h0\?\.ok === false\) \{ h0\.ok = true;/);
-    expect(dq).toMatch(/push\('dsl', dsl\.value, store\.pickedIdx, -1, false\)/);
+    expect(dq).toMatch(/push\('dsl', dsl\.value, idx, -1, false\)/); /* idx=execQuery 选择源快照（执行链世代守卫随迁：快照即执行时的 pickedIdx，防切索引在途拍把失败标记记错索引） */
     expect(dq).toMatch(/ts: h\.ts, ok: h\.ok \}/);
   });
   it('面板失败红点渲染', () => {

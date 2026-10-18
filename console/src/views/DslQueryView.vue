@@ -519,7 +519,7 @@
           <button class="btn sm" @click="docEditMode = !docEditMode">{{ docEditMode ? '预览' : '编辑' }}</button>
           <!-- 编辑器高度档钮（dq.docH useTierCycle 循环，title 实时回显当前档） -->
           <button v-if="docEditMode" class="btn sm ghost" :title="'编辑器高度档：' + docH + '（点击循环）'" @click="cycleDocH">高</button>
-          <button v-if="docEditMode" class="btn sm pri" @click="saveDoc" title="全量替换该文档的 _source">保存（全量覆盖 _source）</button>
+          <button v-if="docEditMode" class="btn sm pri" :disabled="docSaving" @click="saveDoc" title="全量替换该文档的 _source">保存（全量覆盖 _source）</button>
         </div>
       </template>
       <!-- 弹窗编辑器定高改视口弹性：min(60vh, 原值兜底)——矮屏不再顶出视口要滚两层，
@@ -1116,6 +1116,12 @@ function onHitsSortChange(s: { f: string; d: 'asc' | 'desc' } | null) {
   void execQuery();
 }
 
+/* 查询执行世代守卫（与 IndexHubView 检索三链同构）：切索引后旧拍返回时，无身份判别的
+   回包会把旧索引数据写进新索引现场（结果表 index 已切、hits 还是旧索引的），跨模式历史
+   push 读 store.pickedIdx 当前值也会记错索引——回包落地按「选择源快照+世代」判别丢弃；
+   AbortError 双支甄别（当前拍=真取消播报；过期拍=静默）与 finally 世代清场同批统一
+   （世代与本体闸等价，防御未来新拍通道绕闸时被旧拍清掉 AbortController）。 */
+let runSeq = 0;
 async function execQuery(recordHist = false) {
   if (running.value) return; /* ：并发重入守卫——Monaco @execute 与 RT @refresh 路径此前无守卫，连按 Ctrl+Enter 会覆盖 abortCtl 丢请求（window 全局键路径 onGlobalRunKey 已有同款守卫） */
   if (!store.pickedIdx) return;
@@ -1125,6 +1131,8 @@ async function execQuery(recordHist = false) {
     return;
   }
   running.value = true;
+  const seq = ++runSeq;
+  const idx = store.pickedIdx;
   queryErr.value = '';
   queryErrRaw.value = null;
   jqResult.value = null;
@@ -1145,7 +1153,7 @@ async function execQuery(recordHist = false) {
     const obj = tryParse(cleaned) || {};
     // 该索引直方图聚合已被 ES 拒过（字段类型不支持）则本 session 不再注入
     let injectedHist = false;
-    if (autoHist.value && !histBrokenIdx.has(store.pickedIdx) && !cleaned.includes('date_histogram')) {
+    if (autoHist.value && !histBrokenIdx.has(idx) && !cleaned.includes('date_histogram')) {
       const dateField = guessDateField();
       if (dateField) {
         obj.aggs = obj.aggs || {};
@@ -1178,16 +1186,18 @@ async function execQuery(recordHist = false) {
     const bodyJson = JSON.stringify(obj);
     try {
       if (profileOn.value) {
-        const raw = await api.profile(store.pickedIdx, bodyJson, abortCtl.signal);
+        const raw = await api.profile(idx, bodyJson, abortCtl.signal);
         const parsed = tryParse(typeof raw === 'string' ? raw : JSON.stringify(raw));
+        if (idx !== store.pickedIdx || seq !== runSeq) return;
         resp.value = normalizeResp(parsed);
         if (parsed?.profile?.shards?.[0]?.searches?.[0]?.query?.[0]) {
           profileTree.value = parsed.profile.shards[0].searches[0].query[0];
           profileTotal.value = profileTree.value.time_in_nanos || 1;
         }
       } else {
-        /* 过 normalizeResp 归一——此前裸赋值，缺 hits 键（mock/后端异常形态）直落模板炸 .map（544 交接 prod 炸点） */
-        resp.value = normalizeResp(await api.clusterQuery(store.pickedIdx, bodyJson, 100, abortCtl.signal));
+        const r = await api.clusterQuery(idx, bodyJson, 100, abortCtl.signal);
+        if (idx !== store.pickedIdx || seq !== runSeq) return;
+        resp.value = normalizeResp(r);
       }
     } catch (e: any) {
       // 我们自动注入的辅助直方图聚合失败不许连坐主查询——剥掉 __hist 降级重试一次
@@ -1197,17 +1207,20 @@ async function execQuery(recordHist = false) {
       if (!Object.keys(obj.aggs).length) delete obj.aggs;
       const bareJson = JSON.stringify(obj);
       if (profileOn.value) {
-        const raw = await api.profile(store.pickedIdx, bareJson, abortCtl.signal);
+        const raw = await api.profile(idx, bareJson, abortCtl.signal);
         const parsed = tryParse(typeof raw === 'string' ? raw : JSON.stringify(raw));
+        if (idx !== store.pickedIdx || seq !== runSeq) return;
         resp.value = normalizeResp(parsed);
         if (parsed?.profile?.shards?.[0]?.searches?.[0]?.query?.[0]) {
           profileTree.value = parsed.profile.shards[0].searches[0].query[0];
           profileTotal.value = profileTree.value.time_in_nanos || 1;
         }
       } else {
-        resp.value = normalizeResp(await api.clusterQuery(store.pickedIdx, bareJson, 100, abortCtl.signal));
+        const r = await api.clusterQuery(idx, bareJson, 100, abortCtl.signal);
+        if (idx !== store.pickedIdx || seq !== runSeq) return;
+        resp.value = normalizeResp(r);
       }
-      histBrokenIdx.add(store.pickedIdx);
+      histBrokenIdx.add(idx);
       brushField = '';
       store.notify('info', '直方图聚合不适用于该索引（字段类型不支持），已自动降级为纯查询');
     }
@@ -1216,7 +1229,7 @@ async function execQuery(recordHist = false) {
  （epoch 毫秒/秒/ISO 串），命中则自动重放一次带 __hist 的查询（不重复记历史；重放失败
  走既有降级拉黑，天然收敛无死循环）。常见日期字段（issueTime/createTime 等）均为
  epoch 毫秒可画。 */
-    if (!injectedHist && autoHist.value && resp.value && !histBrokenIdx.has(store.pickedIdx)) {
+    if (!injectedHist && autoHist.value && resp.value && !histBrokenIdx.has(idx)) {
       const sniffed = sniffDateField(resp.value.hits as any);
       if (sniffed) {
         const obj2 = tryParse(cleaned) || {};
@@ -1225,10 +1238,10 @@ async function execQuery(recordHist = false) {
         obj2.from = (page.value - 1) * pageSize.value;
         obj2.size = pageSize.value;
         try {
-          const r2 = await api.clusterQuery(store.pickedIdx, JSON.stringify(obj2), 100, abortCtl.signal);
-          /* 同过 normalizeResp 双形态归一——clusterQuery 返回 Java 转换形态
- （hits 已是行数组），归一函数按行数组形态透传 rows（ES 双层包裹口径不受影响）；
- 此前裸赋值在缺 hits 键时直落模板炸 .map（544 交接 prod 炸点同族） */
+          const r2 = await api.clusterQuery(idx, JSON.stringify(obj2), 100, abortCtl.signal);
+          /* 过 normalizeResp 归一——缺 hits 键（mock/后端异常形态）直落模板炸 .map（544 交接 prod 炸点）；
+             回包同样过身份判别（重放在途窗内切索引=旧响应不落新现场） */
+          if (idx !== store.pickedIdx || seq !== runSeq) return;
           resp.value = normalizeResp(r2);
         } catch {
           histBrokenIdx.add(store.pickedIdx);
@@ -1240,38 +1253,40 @@ async function execQuery(recordHist = false) {
     /* 记录查询耗时用于慢查询回溯与调优对比 */
     if (recordHist) {
       const took = resp.value?.took;
-      useQueryHistoryStore().push('dsl', dsl.value, store.pickedIdx, took);
-      const h0 = history.value.find(h => h.dsl === dsl.value && h.idx === store.pickedIdx);
+      useQueryHistoryStore().push('dsl', dsl.value, idx, took);
+      const h0 = history.value.find(h => h.dsl === dsl.value && h.idx === idx);
       if (h0 && took != null) h0.took = took; /* 耗时回填（pushHistory 先记后补口径） */
       if (h0?.ok === false) { h0.ok = true; writeStoredRaw(localStorage, HIST_KEY, JSON.stringify(history.value)); } /* ：重试成功翻转红点 */
       saveQwSession(dsl.value);
     }
   } catch (e: any) {
     if (e?.name === 'AbortError') {
-      // 用户主动取消：不算错误，给个轻提示即可
-      store.notify('info', `已取消查询（${(elapsedMs.value / 1000).toFixed(1)}s）`);
-    } else {
+      // 用户主动取消：不算错误，给个轻提示即可；被切索引作废的过期拍静默（双支甄别）
+      if (seq === runSeq) store.notify('info', `已取消查询（${(elapsedMs.value / 1000).toFixed(1)}s）`);
+    } else if (idx === store.pickedIdx && seq === runSeq) {
       queryErr.value = e?.message || String(e);
       queryErrRaw.value = e; /* ：原始对象旁路（errMeta 读 code/endpoint） */
       /* 失败也标记历史（旧历史条目+跨模式 store 双路 ok:false 红点）——重试有入口，失败不该消失 */
       if (recordHist) {
         try {
-          const h0 = history.value.find(h => h.dsl === dsl.value && h.idx === store.pickedIdx);
+          const h0 = history.value.find(h => h.dsl === dsl.value && h.idx === idx);
           if (h0) { h0.ok = false; writeStoredRaw(localStorage, HIST_KEY, JSON.stringify(history.value)); }
-          useQueryHistoryStore().push('dsl', dsl.value, store.pickedIdx, -1, false);
+          useQueryHistoryStore().push('dsl', dsl.value, idx, -1, false);
         } catch { /* 历史失败不阻塞错误提示 */ }
       }
       /* 失败 toast 行动化——msg 传原始错误（friendlyEsError 翻译+
- 自动「复制原始」），再并「查看诊断」直达 /diag；旧文案「查询失败」两字经
- 友好化原样返回，恰好绕过了自动 action（shown===msg），是全站唯一光杆错误 toast */
+   自动「复制原始」），再并「查看诊断」直达 /diag；旧文案「查询失败」两字经
+   友好化原样返回，恰好绕过了自动 action（shown===msg），是全站唯一光杆错误 toast */
       store.notify('error', queryErr.value, {
         actions: [{ label: '查看诊断', onClick: () => { router.push('/diag'); } }],
       });
     }
   } finally {
-    running.value = false;
-    abortCtl = null;
-    if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = 0; }
+    if (seq === runSeq) {
+      running.value = false;
+      abortCtl = null;
+      if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = 0; }
+    }
   }
 }
 
@@ -1683,15 +1698,20 @@ function gotoXray(hit: SearchHit) {
   xrayCarry.send({ index: store.pickedIdx, id: hit._id });
   router.push('/query-xray');
 }
+/* 文档保存在途闸（与 saveNewDoc 的 newDocSaving 同域同口径）：闸收本体首行、置位
+   前移到第一个 await 之前（在途窗内连点只发一次），try/finally 全包裹复位防闸死 */
+const docSaving = ref(false);
 async function saveDoc() {
-  if (!activeDoc.value) return;
+  if (!activeDoc.value || docSaving.value) return;
   if (!tryParse(docEditText.value)) { store.notify('error', 'JSON 不合法'); return; }
+  docSaving.value = true;
   try {
     await api.updateDocument(store.pickedIdx, activeDoc.value._id, docEditText.value);
     store.notify('success', '文档已更新');
     docOpen.value = false;
     runQuery();
   } catch (e: any) { store.notify('error', '更新文档失败：' + friendlyEsError(String(e?.message ?? e))); }
+  finally { docSaving.value = false; }
 }
 
 /* ═══ ：新建/克隆文档（CRUD 里「增」此前全站无入口） ═══ */
@@ -2541,8 +2561,6 @@ onBeforeUnmount(() => {
 .dq-run-row .dq-params-tg { height: var(--ctl-h); }
 .dq-run-sec .dq-run-row { margin-top: 0; }
 .dq-run-row { display: flex; align-items: center; gap: 14px; }
-/* 20260920 二轮：检索参数独立可折叠块（虚线开关暗示可展开；展开内容限高自滚防撑爆结果区） */
-.dq-params-sec { flex-shrink: 0; }
 /* 20260920 二轮：检索参数开关钮进执行行（执行左侧）。：节头钮 border+bg2 小卡
  档退役 → 对齐 .dq-sec-tg 无框档。：无框档被用户终审「太廉价不美观无质感」
  修订——升细描边胶囊（bg1 实底+1px 线+圆角+激活柔底，与 .dq-eh-btn/顶栏按钮同语言），
@@ -2555,8 +2573,8 @@ onBeforeUnmount(() => {
 /* width:100% 铺满统一容器（原误嵌 run-row 只占内容宽，移出后保底声明） */
 .dq-params-body { width: 100%; padding-top: var(--sp-1h); max-height: max(240px, 30vh); overflow: auto; }
 /* 节头开关基类（同检索参数开关语言：实线节头+chevron）。：直方图节头改用
- HistogramSection 后本基类在 DQ 仅构建入口钮本地继承（组件侧自持同源副本）；
- .dq-sec-meta 基规则随 557 节头 meta 改用组件退役 */
+   HistogramSection 后本基类在 DQ 仅构建入口钮本地继承（组件侧自持同源副本）；
+   .dq-sec-meta 基规则随 557 节头 meta 改用组件退役 */
 .dq-sec-tg { display: flex; align-items: center; gap: var(--sp-1); width: 100%; font-size: var(--fs-xs); font-weight: 600; color: var(--tx1); background: none; border: none; padding: var(--sp-1) 0; cursor: pointer; text-align: left; }
 /* 构建器入口大气化（实报「不够大气美观、没凸显重要能力」）——553 六
  检索参数终审胶囊语言同族（细描边+bg1 实底+激活柔底）。.dq-sec-tg 基类为直方图
