@@ -507,7 +507,7 @@ function openRawIo() {
 .rt-resp { padding: var(--sp-3) var(--sp-4); border-top: 1px solid var(--border); }
 /* 响应条 6 控件同排窄视口必溢出——同请求行补换行 */
 .rt-resp-bar { display: flex; align-items: center; gap: var(--sp-3); row-gap: var(--sp-1); margin-bottom: var(--sp-2); flex-wrap: wrap; }
-.rt-resp-scroll { max-height: calc(100vh - var(--vh-offset, 210px) + 120px); }
+.rt-resp-scroll { max-height: calc(100vh - var(--vh-offset) + 120px); }
 /* 搜索定位轮：当前命中可见焦点态 + 命中序号按钮组
  （cur 完整规则在下方 .json-view 段——须带前缀压过 .j-mark 的 color:inherit） */
 .rt-hn { display: inline-flex; gap: var(--sp-0); }

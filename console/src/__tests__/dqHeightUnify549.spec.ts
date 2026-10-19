@@ -33,7 +33,7 @@ describe('高度链合一（549 批，用户实报「拉伸没用/回不去了�
     expect(dq).toMatch(/s: '260px'/);
     expect(dq).toMatch(/m: 'max\(360px, 40vh\)'/);
     expect(dq).toMatch(/l: 'max\(480px, 56vh\)'/);
-    expect(dq).toMatch(/full: 'max\(360px, calc\(100vh - var\(--vh-offset, 210px\) - 380px\)\)'/);
+    expect(dq).toMatch(/full: 'max\(360px, calc\(100vh - var\(--vh-offset\) - 380px\)\)'/);
   });
   it('dq-main 高度恒由内联 style 承接（CSS 固定 34vh 档退役=空白带根治）', () => {
     expect(dq.match(/\.dq-main \{[^}]*\}/)?.[0], 'CSS 不再定高').not.toMatch(/height:\s*max\(260px,\s*34vh\)/);

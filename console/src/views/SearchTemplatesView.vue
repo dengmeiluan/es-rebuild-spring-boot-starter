@@ -143,7 +143,7 @@
         <FocusableSurface v-if="ran" pane-id="tpl.result" title="结果表" :enabled="focusPaneId === 'tpl.result'"
           @update:enabled="v => (focusPaneId = v ? 'tpl.result' : null)">
           <!-- W8：满高口径合并 --vh-offset（标准偏移 210px），聚焦态结果区无页头工具条故回补 delta 60px（等价旧值 150px） -->
-          <QueryResultTable :hits="hits as any" :total="totalHits" :total-gte="totalGte" :max-height="focusPaneId === 'tpl.result' ? 'calc(100vh - var(--vh-offset, 210px) + 60px)' : '60vh'" :storage-key="'tpl:' + (curId || 'x')" export-name="tpl-result" :focusable="false"
+          <QueryResultTable :hits="hits as any" :total="totalHits" :total-gte="totalGte" :max-height="focusPaneId === 'tpl.result' ? 'calc(100vh - var(--vh-offset) + 60px)' : '60vh'" :storage-key="'tpl:' + (curId || 'x')" export-name="tpl-result" :focusable="false"
             empty-text="无命中" empty-hint="调整模板参数后重试"
             view-seg view-pref-key="tpl.result.view" :json-html="stJsonHtml" :tree-data="stTreeData" />
         </FocusableSurface>
@@ -565,7 +565,7 @@ load();
  分界由 .st-list-hd 既有 border-bottom 承接；flex+max-height 骨架保留
  （收缩防撑破是结构语义非 chrome，as-card 同语言）；overflow-y:auto 供模板
  超出可视高度时滚动可达（hidden 把溢出条目整体剪成不可达，列表多时下方模板消失） */
-.st-list { overflow-y: auto; display: flex; flex-direction: column; max-height: calc(100vh - var(--vh-offset, 210px) + 50px); }
+.st-list { overflow-y: auto; display: flex; flex-direction: column; max-height: calc(100vh - var(--vh-offset) + 50px); }
 .st-list-hd { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-2) var(--sp-2h); font-size: var(--fs-xs); font-weight: 650; border-bottom: 1px solid var(--border); }
 /* st-list 侧栏空态死码规则退役（已清模板消费，随立删；
  /557「34px var(--sp-4)」源码锁与 豁免册锚同步更新负锁化） */
@@ -618,7 +618,7 @@ load();
 /* 参数纠错建议块落位（独立块内容增量；形态归 .il-hint 单源） */
 .st-param-warns { display: flex; flex-direction: column; gap: var(--sp-0); padding: 0 var(--sp-2h) var(--sp-1h); }
 .st-actions { display: flex; gap: var(--sp-2); padding: var(--sp-2) var(--sp-2h); border-top: 1px dashed var(--border); }
-.st-right { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; overflow: auto; max-height: calc(100vh - var(--vh-offset, 210px) + 50px); }
+.st-right { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; overflow: auto; max-height: calc(100vh - var(--vh-offset) + 50px); }
 .st-pre { margin: 0; padding: var(--sp-2h); font-size: var(--fs-xs); font-family: var(--mono); overflow: auto; max-height: 320px; }
 /* 手写串样式随 MetaStrip/TookBadge 改用退役，只留落位 padding（字号/mono 由统一件承担）。
  took 手写 sep 退役（MetaStrip 有默认插槽自动渲染 .ms-sep）、插槽段类名换组件档

@@ -55,7 +55,7 @@ defineEmits<{ (e: 'action'): void }>();
 @keyframes es-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 /* E3：页面级空态垂直居中——min-height 撑到视口内容区高度
  （100vh - 顶栏/导航/参数条基准 210px），「先选索引」不再贴页面顶部 */
-.empty-state.es-centered { min-height: calc(100vh - var(--vh-offset, 210px)); justify-content: center; }
+.empty-state.es-centered { min-height: calc(100vh - var(--vh-offset)); justify-content: center; }
 /* 紧凑档——窄容器留白减半、图标缩小（组件级统一，替代散落裸 div） */
 .empty-state.es-compact { padding: var(--sp-4) var(--sp-3); gap: 5px; }
 .empty-state.es-compact .es-text { font-size: var(--fs-sm); }

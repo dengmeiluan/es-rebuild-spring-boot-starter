@@ -57,7 +57,7 @@ function editDistance(a: string, b: string): number {
 
 <style scoped>
 /* W8：视口口径合并 --vh-offset（标准偏移 210px）；404 页无顶栏工具条，回补 delta 90px（等价旧值 120px） */
-.nf-page { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - var(--vh-offset, 210px) + 90px); }
+.nf-page { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - var(--vh-offset) + 90px); }
 /* 空态/留白契约：padding 走全站空态契约 34px（theme.css .empty 注释明令），不再用大留白档。
  16px 收 --sp-4（34px 契约值保字面；/551 锚同步更新） */
 .nf-card { text-align: center; padding: 34px var(--sp-4); max-width: 480px; }

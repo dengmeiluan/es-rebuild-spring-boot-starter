@@ -170,7 +170,7 @@ describe('五百六十一批⑥：SearchTemplatesView st-list 剥壳 + 死码立
   it('st-list 容器壳退役（约定④：border+radius 消除，flex/max-height 骨架零触）', () => {
     const s = codeOf('views/SearchTemplatesView.vue');
     expect(s, '931 批随迁：overflow:hidden 剪裁换 overflow-y:auto（溢出条目滚动可达，防撑破 max-height 零触）')
-      .toContain('.st-list { overflow-y: auto; display: flex; flex-direction: column; max-height: calc(100vh - var(--vh-offset, 210px) + 50px); }');
+      .toContain('.st-list { overflow-y: auto; display: flex; flex-direction: column; max-height: calc(100vh - var(--vh-offset) + 50px); }');
     expect(s, 'border+radius 壳不回流').not.toMatch(/\.st-list \{[^}]*border/);
     expect(s, '分界由 st-list-hd border-bottom 承接').toMatch(/\.st-list-hd \{[^}]*border-bottom: 1px solid var\(--border\);/);
   });

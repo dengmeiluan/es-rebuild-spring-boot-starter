@@ -49,7 +49,7 @@ describe('五百三十四批：高度结构语义零变动同步更新声明（2
   });
 
   it('⚠dt-body 定高链同步更新声明（indexHubDevtools531 P0 根治锚逐字在场）', () => {
-    expect(dt).toContain('.dt-body { padding: var(--sp-3) var(--sp-1); display: flex; flex-direction: column; gap: var(--sp-2); height: calc(100vh - var(--vh-offset, 210px)); }');
+    expect(dt).toContain('.dt-body { padding: var(--sp-3) var(--sp-1); display: flex; flex-direction: column; gap: var(--sp-2); height: calc(100vh - var(--vh-offset)); }');
     expect(dt).toContain('.dt-body :deep(.wl) { flex: 1 1 auto; min-height: 0; }');
     expect(dt).toContain('正反馈棘轮');
   });

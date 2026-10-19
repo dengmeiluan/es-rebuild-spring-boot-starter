@@ -318,7 +318,7 @@ function gotoXray(h: any) {
  took 手写 sep 退役（MetaStrip 有默认插槽自动渲染 .ms-sep）、插槽段类名换组件档
  ms-i/ms-t——同族 scoped 样式同步删除（形态单一出处归组件） */
 .se-meta { padding: 0 var(--sp-0); }
-.se-right { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; overflow: auto; max-height: calc(100vh - var(--vh-offset, 210px) + 50px); }
+.se-right { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; overflow: auto; max-height: calc(100vh - var(--vh-offset) + 50px); }
 /* 空态在整片右栏里居中。用 margin:auto 而不是父级 justify-content:center ——
  后者在 overflow:auto 容器里会把溢出内容的顶部裁掉、滚不回去。 */
 /* flex:1 吃掉编辑器下方的剩余高度（margin:auto 只负责在其中居中）——

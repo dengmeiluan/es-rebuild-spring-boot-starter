@@ -127,7 +127,7 @@
  （与旧裸 130px 等价：210-80=130，视觉零变化，口径归 token 防两处漂移） -->
           <!-- loading（busy 骨架，QRT 既有 prop 默认 false）+ row-drawer 行详情开
  （hit 型行右键「行详情」， W-B 侧拉） -->
-          <QueryResultTable :hits="preview" :total="total" :total-gte="totalGte" :loading="busy" row-drawer sortable :max-height="focusPaneId === 'pit.preview' ? 'calc(100vh - var(--vh-offset, 210px) + 80px)' : '40vh'" empty-text="开启滚动后这里显示预览（最近 100 条）" :storage-key="index ? 'pit:' + index : undefined" :focusable="false" :field-types="fieldTypes" export-name="pit-preview" />
+          <QueryResultTable :hits="preview" :total="total" :total-gte="totalGte" :loading="busy" row-drawer sortable :max-height="focusPaneId === 'pit.preview' ? 'calc(100vh - var(--vh-offset) + 80px)' : '40vh'" empty-text="开启滚动后这里显示预览（最近 100 条）" :storage-key="index ? 'pit:' + index : undefined" :focusable="false" :field-types="fieldTypes" export-name="pit-preview" />
         </FocusableSurface>
       </div>
 

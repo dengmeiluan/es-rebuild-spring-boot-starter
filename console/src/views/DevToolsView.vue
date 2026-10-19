@@ -176,7 +176,7 @@
  单段体等价全量 run 零漂移）；Shift+Ctrl+Enter 经键面冒泡走全部段。切段只作用于
  发送出参——草稿/历史/镜像 body 锁面零触；本标签零高度链语义（不引新 pane） -->
             <MonacoEditor ref="bodyMonacoRef" v-model="cur.body"
-              :height="focusPaneId === 'devtools.search.request' ? 'calc(100vh - var(--vh-offset, 210px) + 120px)' : '100%'"
+              :height="focusPaneId === 'devtools.search.request' ? 'calc(100vh - var(--vh-offset) + 120px)' : '100%'"
               :language="bodyLang"
               :dsl-assist="dslAssist" :font-size="edFont" class="dt-body-monaco"
               @execute="onBodyExecute" @keydown.shift.ctrl.enter.prevent="runSmart(true)" />
@@ -270,7 +270,7 @@
  聚焦面无页头、tab 条+请求行+余量 ~20px 回加） -->
         <MonacoEditor v-if="cur.result && !respTbl" ref="respMonacoRef" :model-value="cur.result" :language="respLang" :readonly="true"
           :dsl-assist="dtRespAssist" :font-size="edFont"
-          :height="focusPaneId === 'devtools.search.response' ? 'calc(100vh - var(--vh-offset, 210px) + 20px)' : '100%'" class="dt-out-monaco" :class="{ err: !cur.ok }" />
+          :height="focusPaneId === 'devtools.search.response' ? 'calc(100vh - var(--vh-offset) + 20px)' : '100%'" class="dt-out-monaco" :class="{ err: !cur.ok }" />
         <!-- 表格查看档——顶层数组→行序表（列=各行键并集保持首现序，_cat/* 结构化响应
  主场景）、对象→键值两列表；只读，行点击/回车复制该行 JSON（数组行=行对象原文，键值行={k:v}）。
  轻量直渲不引 QueryResultTable（防体量）；显示区内容替换件，dt-out flex 结构与 busy/空态链不动 -->
@@ -1245,7 +1245,7 @@ function saveFav() {
 <style scoped>
 /* G7-C6：区块级间距 token 化（--sp-1..6 = 4/8/12/16/24/32）；控件内 padding / tab·历史行级密排 / 亚阶梯不动 */
 /* 页内不再私加边距，水平节奏由全局 .page 统一供给 */
-.dt-page { padding: 0; position: relative; display: flex; flex-direction: column; min-height: calc(100vh - var(--vh-offset, 210px)); }
+.dt-page { padding: 0; position: relative; display: flex; flex-direction: column; min-height: calc(100vh - var(--vh-offset)); }
 /* ·实报「请求体工具栏高度和响应体工具栏高度不一致」：双 pane 头部
  统一 min-height（左侧 seg/菜单钮撑高、右侧元素少行矮→编辑器顶边错位）——
  恒等高 34px 使请求/响应编辑器顶边严格对齐；纯 min-height 零高度链反例（内容恒单行） */
@@ -1282,7 +1282,7 @@ function saveFav() {
  （dt-lint 提示条 66px/dt-hist 历史 134px/dt-err 错误条）形成每布局遍历 +常数 的正反馈棘轮
  （hostRO→layoutKick 泵频 ~19 遍/s，实锤 +2540px/s 无上界）。确定高度链落地后
  Monaco 100% 恒有定解，lint/hist/err 三类兄弟并存全部安全，整类棘轮根除。 */
-.dt-body { padding: var(--sp-3) var(--sp-1); display: flex; flex-direction: column; gap: var(--sp-2); height: calc(100vh - var(--vh-offset, 210px)); }
+.dt-body { padding: var(--sp-3) var(--sp-1); display: flex; flex-direction: column; gap: var(--sp-2); height: calc(100vh - var(--vh-offset)); }
 /* wl 在确定高度容器内改为可收缩弹性件（原 min-height 视口兜底由 dt-body 的确定高度接管） */
 .dt-body :deep(.wl) { flex: 1 1 auto; min-height: 0; }
 /* 请求行 9 控件同排窄视口必溢出——补换行（row-gap 管换行后行距） */

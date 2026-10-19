@@ -90,14 +90,14 @@ describe('P0 高度链：WorkbenchLayout fillViewport + DslQueryView 自建链',
     expect(wlSrc).toMatch(/fillViewport: true,/);
     /* 兜底开关走类：min-height 仅缺省时生效 */
     expect(wlSrc).toMatch(/'wl-viewport-bounded': !fillViewport/);
-    expect(wlSrc).toMatch(/\.wl \{ min-height: calc\(100vh - var\(--vh-offset, 210px\)\); \}/);
+    expect(wlSrc).toMatch(/\.wl \{ min-height: calc\(100vh - var\(--vh-offset\)\); \}/);
     expect(wlSrc).toMatch(/\.wl\.wl-viewport-bounded \{ min-height: 0; \}/);
   });
 
   it('DslQueryView：传 fill-viewport=false + 定高 flex 链（549 批高度链合一同步更新：dq-main 高度恒由内联 style 承接 DQ_MAIN_H 档位值/拖柄自定义 px，CSS 定高退役；结果区保底 320）', () => {
     expect(dqSrc).toMatch(/:fill-viewport="false"/);
     /* 五百三十四批同步更新二：dq-fill 只减全局 vh-offset（本页 chrome 进 flex 收缩链，不再手算预算） */
-    expect(dqSrc).toMatch(/\.dq\.dq-fill \{ height: calc\(100vh - var\(--vh-offset, 210px\)\); \}/);
+    expect(dqSrc).toMatch(/\.dq\.dq-fill \{ height: calc\(100vh - var\(--vh-offset\)\); \}/);
     /* 五百四十九批：34vh CSS 定高退役（与编辑器档位双轨分裂=空白带真凶），新契约=DQ_MAIN_H 四档；
        flex-shrink:0=声明高不被结果区内容挤压（真机 P3/P4 实证 shrink:1 恒被压回 min-height） */
     expect(dqSrc).toMatch(/\.dq-main \{ display: flex; gap: 0; align-items: stretch; flex: 0 0 auto; min-height: 220px; \}/);
@@ -151,7 +151,7 @@ describe('P0 高度链：WorkbenchLayout fillViewport + DslQueryView 自建链',
        五百六十一批同步更新：聚焦态全屏高口径随表格头收口移交 QRT 内建聚焦面（FS headless
        .fs-active 链 max-height:none 承接，宿主 max-height 恒 '100%'）——宿主 80px 表达式退役为负锁 */
     expect(lcSrc).not.toMatch(/calc\(100vh - 130px\)/);
-    expect(lcSrc).not.toMatch(/calc\(100vh - var\(--vh-offset, 210px\) \+ 80px\)/);
+    expect(lcSrc).not.toMatch(/calc\(100vh - var\(--vh-offset\) \+ 80px\)/);
     expect(lcSrc).toMatch(/max-height="100%"/);
   });
 });

@@ -79,7 +79,7 @@
  得分列 #cell- 槽保 3 位小数显示（title/复制/导出恒 raw 全精度，内核契约）。 -->
     <QueryResultTable v-if="hits.length" :cols="mmCols" :rows="mmRows" sortable
       storage-key="mm" :field-types="{ 得分: 'double' }"
-      max-height="calc(100vh - var(--vh-offset, 210px) - 210px)"
+      max-height="calc(100vh - var(--vh-offset) - 210px)"
       export-name="match-matrix" empty-text="无命中文档">
       <template #cell-_id="{ value }">
         <span class="mono ell" :title="value">{{ value }}</span>

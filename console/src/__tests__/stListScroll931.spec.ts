@@ -18,7 +18,7 @@ describe('侧栏列表滚动通道（九百三十一批）', () => {
     expect(v, '.st-list 须含 overflow-y:auto（模板超出可视高度可滚动可达）')
       .toMatch(/\.st-list \{[^}]*overflow-y: auto;/);
     expect(v, '防撑破 max-height 骨架零触')
-      .toMatch(/\.st-list \{[^}]*max-height: calc\(100vh - var\(--vh-offset, 210px\) \+ 50px\);/);
+      .toMatch(/\.st-list \{[^}]*max-height: calc\(100vh - var\(--vh-offset\) \+ 50px\);/);
     expect(v, '壳不回流').not.toMatch(/\.st-list \{[^}]*border/);
   });
 });

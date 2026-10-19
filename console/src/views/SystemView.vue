@@ -92,7 +92,7 @@
         row-drawer
         searchable refreshable
         :hide-body="view !== 'table'"
-        max-height="calc(100vh - var(--vh-offset, 210px) + 150px)"
+        max-height="calc(100vh - var(--vh-offset) + 150px)"
         empty-text="查询完成但无数据" empty-hint="调整上方查询 DSL（缩小/放宽匹配条件）后点「执行」重跑"
         @refresh="run">
         <template #bar-prepend>
@@ -112,7 +112,7 @@
           <button class="btn ghost sm" style="margin-left:auto" @click="resQrt?.copyTableJson()"><Braces :size="11" /> 复制整表 JSON</button>
         </template>
       </QueryResultTable>
-      <div v-show="view === 'json'" class="scroll-y" style="max-height:calc(100vh - var(--vh-offset, 210px) + 190px);padding:var(--sp-3) var(--sp-4)">
+      <div v-show="view === 'json'" class="scroll-y" style="max-height:calc(100vh - var(--vh-offset) + 190px);padding:var(--sp-3) var(--sp-4)">
         <pre class="json-view" v-html="jsonHtml"></pre>
       </div>
     </div>

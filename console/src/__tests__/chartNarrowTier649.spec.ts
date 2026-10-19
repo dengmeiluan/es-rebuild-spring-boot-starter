@@ -68,7 +68,7 @@ describe('六百四十九批 G' + "'1" + '：900 窄档主卡图高档位化', (
 
   it('放大态不受档位影响（.ld-chart-full calc 高度逐字保留）', () => {
     expect(CARD, '放大态高度规则在场').toContain(
-      '.ld-chart-full .ld-svg { height: calc(100vh - var(--vh-offset, 210px)); }',
+      '.ld-chart-full .ld-svg { height: calc(100vh - var(--vh-offset)); }',
     );
   });
 });

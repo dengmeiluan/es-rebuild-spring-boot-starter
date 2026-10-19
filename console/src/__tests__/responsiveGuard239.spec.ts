@@ -53,7 +53,7 @@ describe('可伸缩布局响应式守卫（239 批）', () => {
       exp-pop 就地气泡——非弹窗或自有定位契约）；合并全站最后一个无钳制弹窗
       （DevTools curl 导入 NModal，width:560px 补 max-width:94vw）；
    5) --vh-offset 不变量：禁新增裸 calc(100vh - Npx)——聚焦态一律走
-      calc(100vh - var(--vh-offset, 210px) + Npx) 收敛式（存量白名单仅 CellContextMenu 菜单 16px）；
+      calc(100vh - var(--vh-offset) + Npx) 收敛式（存量白名单仅 CellContextMenu 菜单 16px）；
    6) AnalyzerLab 五五/四六分屏窄屏（≤1100 标准断点）回单列堆叠。 */
 const SRC = join(__dirname, '..');
 const listVue = (dir: string): string[] =>
@@ -102,15 +102,15 @@ describe('五百二十四批：响应式守卫三锚追加', () => {
       const rel = relOf(f);
       for (const line of readFileSync(f, 'utf-8').split('\n')) {
         if (!/calc\(100vh - \d+px\)/.test(line)) continue;
-        expect(vhWhitelist, `${rel} 出现裸 vh 偏移（应折算 var(--vh-offset, 210px) 口径）：${line.trim()}`).toContain(rel);
+        expect(vhWhitelist, `${rel} 出现裸 vh 偏移（应折算 var(--vh-offset) 口径）：${line.trim()}`).toContain(rel);
         whitelistHits++;
       }
     }
     /* 防空跑：存量白名单确实在场；四处收敛锚定（PIT 预览表 + DevTools 请求/响应面） */
     expect(whitelistHits).toBeGreaterThan(0);
-    expect(pit524).toContain("'calc(100vh - var(--vh-offset, 210px) + 80px)'");
-    expect(dt524).toContain("'calc(100vh - var(--vh-offset, 210px) + 120px)'");
-    expect(dt524).toContain("'calc(100vh - var(--vh-offset, 210px) + 20px)'");
+    expect(pit524).toContain("'calc(100vh - var(--vh-offset) + 80px)'");
+    expect(dt524).toContain("'calc(100vh - var(--vh-offset) + 120px)'");
+    expect(dt524).toContain("'calc(100vh - var(--vh-offset) + 20px)'");
   });
 
   it('锚③ AnalyzerLab 五五/四六分屏窄屏（≤1100）回单列堆叠（525 批 lane 重构同步更新：duo 档并锁+柄隐藏）', () => {

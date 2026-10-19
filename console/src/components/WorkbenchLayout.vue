@@ -326,7 +326,7 @@ function paneSlotName(id: string) { return `pane-${id.split('.').join('-')}`; }
 .wl { display: flex; flex-direction: column; min-width: 0; min-height: 0; flex: 1 1 auto; }
 /* 统一架构——WorkbenchLayout 自带视口撑满下限(8 视图统一生效,不再逐视图补),
  flex:1 1 auto 在有高度链的父容器里跟随伸展,无高度链的父容器里按 min-height 兜底 */
-.wl { min-height: calc(100vh - var(--vh-offset, 210px)); }
+.wl { min-height: calc(100vh - var(--vh-offset)); }
 /* fillViewport=false：宿主自建确定高度链，视口兜底退役（min-height 撑满会把常规流兄弟
  节点（结果区）顶出视口）；其余 8 视图缺省仍兜底 */
 .wl.wl-viewport-bounded { min-height: 0; }

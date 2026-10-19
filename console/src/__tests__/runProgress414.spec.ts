@@ -14,7 +14,7 @@ describe('执行进度条范式统一（414 批）', () => {
   it('DevTools 局部进度条接入且带 cur 守卫', () => {
     expect(dt).toMatch(/<div v-if="cur" class="dt-progress ind-bar" :class="\{ on: cur\.busy \}"><\/div>/);
     expect(dt).toMatch(/\.dt-progress \{ position: absolute; top: 0; left: 0; right: 0; color: var\(--ac\); \}/);
-    expect(dt).toMatch(/\.dt-page \{ padding: 0; position: relative; display: flex; flex-direction: column; min-height: calc\(100vh - var\(--vh-offset, 210px\)\); \}/);
+    expect(dt).toMatch(/\.dt-page \{ padding: 0; position: relative; display: flex; flex-direction: column; min-height: calc\(100vh - var\(--vh-offset\)\); \}/);
   });
 
   it('DslQuery 同款在场（范式双锚）', () => {

@@ -44,7 +44,7 @@ describe('DevTools 响应区配套（401 批）', () => {
   /* 五百零一批：普通态 260px→'100%' 跟随 pane（pane 52vh 起步，工作区不再挤在页面上部）
      524 批同步更新：裸 190px 折算进 --vh-offset 收敛口径（210-20=190 视觉零变化） */
   it('聚焦态 Monaco 拉伸：响应面高度随视口，普通态跟随 pane（100%）', () => {
-    expect(dt).toMatch(/:height="focusPaneId === 'devtools\.search\.response' \? 'calc\(100vh - var\(--vh-offset, 210px\) \+ 20px\)' : '100%'"/);
+    expect(dt).toMatch(/:height="focusPaneId === 'devtools\.search\.response' \? 'calc\(100vh - var\(--vh-offset\) \+ 20px\)' : '100%'"/);
   });
 
   it('404 补：聚焦态解除 dt-out 500px 上限（否则 calc 高度被裁回，放大假拉伸）+busy 占位同步拉伸', () => {
@@ -56,6 +56,6 @@ describe('DevTools 响应区配套（401 批）', () => {
   /* 五百零一批：普通态 220px→'100%'（405 对称拉伸语义升级为「跟随 pane」）
      524 批同步更新：裸 90px 折算进 --vh-offset 收敛口径（210-120=90 视觉零变化） */
   it('405 补：请求体聚焦态对称拉伸（与 404 响应面同款，普通态跟随 pane）', () => {
-    expect(dt).toMatch(/:height="focusPaneId === 'devtools\.search\.request' \? 'calc\(100vh - var\(--vh-offset, 210px\) \+ 120px\)' : '100%'"/);
+    expect(dt).toMatch(/:height="focusPaneId === 'devtools\.search\.request' \? 'calc\(100vh - var\(--vh-offset\) \+ 120px\)' : '100%'"/);
   });
 });

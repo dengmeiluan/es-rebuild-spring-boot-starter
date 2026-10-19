@@ -250,7 +250,7 @@ const timeText = computed(() => hit.value && hit.value.t ? fmtTime(hit.value.t) 
 .ld-chart:not(.ld-chart-full):hover { background: var(--bg2); border-color: var(--tx2); }
 /* 单卡放大全屏态——卡原地 fixed 覆盖视口（SVG 自适应放大），遮罩由视图 body.ld-chart-mask 承担 */
 .ld-chart.ld-chart-full { position: fixed; inset: 4vh 4vw; z-index: var(--z-ctx); background: var(--panel); border: 1px solid var(--border); box-shadow: var(--shadow-m); }
-.ld-chart-full .ld-svg { height: calc(100vh - var(--vh-offset, 210px)); } /* ：放大态 SVG 高度自适应（--vh-offset 口径=responsiveGuard239 白名单） */
+.ld-chart-full .ld-svg { height: calc(100vh - var(--vh-offset)); } /* ：放大态 SVG 高度自适应（--vh-offset 口径=responsiveGuard239 白名单） */
 .ld-chart-full .ld-chart-cur { font-size: var(--fs-num-l); } /* 放大态当前值同步升档（28px 区块大数） */
 .ld-expand { margin-left: var(--sp-1); background: transparent; border: none; color: var(--muted); cursor: pointer; padding: var(--sp-0); display: inline-flex; align-items: center; } /* ：2px→var(--sp-0) 精确等值合并（spResidue590 锁），渲染零变化 */
 .ld-expand:hover { color: var(--tx1); }

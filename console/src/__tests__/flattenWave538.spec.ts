@@ -139,7 +139,7 @@ describe('五百三十八批③：恒高字面冻结（2.9.115/119 事故面口�
     const pt = read('../views/PitScrollView.vue');
     expect(pt).toContain('.pt-logs { max-height: 200px; overflow: auto; }');
     expect(pt).toMatch(/\.pt-num \{ font-size: var\(--fs-num-l\); font-weight: 650;/);
-    expect(pt).toContain(`'calc(100vh - var(--vh-offset, 210px) + 80px)' : '40vh'`);
+    expect(pt).toContain(`'calc(100vh - var(--vh-offset) + 80px)' : '40vh'`);
   });
 
   it('UBQ：qcard min-height 280 定高字面 / 错误全文 120px 限高逐字在场', () => {
@@ -159,9 +159,9 @@ describe('五百三十八批③：恒高字面冻结（2.9.115/119 事故面口�
   it('Rest/System：响应滚动 calc 链 / body 编辑器 42vh 兜底 / QRT calc 链逐字在场', () => {
     const rt = read('../views/RestView.vue');
     const sy = read('../views/SystemView.vue');
-    expect(rt).toContain('.rt-resp-scroll { max-height: calc(100vh - var(--vh-offset, 210px) + 120px); }');
+    expect(rt).toContain('.rt-resp-scroll { max-height: calc(100vh - var(--vh-offset) + 120px); }');
     expect(rt, 'selectorUnify532 锚随批冻结').toContain('.rt-body-wrap > .rt-body-ed { min-height: max(180px, 42vh); }');
-    expect(sy).toContain('max-height="calc(100vh - var(--vh-offset, 210px) + 150px)"');
+    expect(sy).toContain('max-height="calc(100vh - var(--vh-offset) + 150px)"');
   });
 
   it('BulkEditor：be-result-row 间距载体原样（三格降层后唯一间距源）', () => {

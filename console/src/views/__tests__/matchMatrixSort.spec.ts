@@ -5,7 +5,7 @@
  *    键盘路径 Enter/Space 触发 + aria-sort 由内核渲染）；
  * 2) 子句列（✔/·）随内核一并可排（旧手写壳「子句列不挂排序」差异随壳退役）；
  * 3) 统计条 clauseStats 仍按全量 hits 计（排序不改统计——内核排序不动宿主 hits）；
- * 4) 源码锁：max-height 走 var(--vh-offset, 210px) token（裸 420px 不回潮，迁 max-height
+ * 4) 源码锁：max-height 走 var(--vh-offset) token（裸 420px 不回潮，迁 max-height
  *    prop）+ mm-tbl/useTableSort 退役不回潮 + 冻结左两列播种 + xray 下钻 carry。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -120,7 +120,7 @@ describe('MatchMatrix 矩阵表排序（天罗W6 立；532 换壳 QRT 内核随�
 
   it('源码锁：max-height 归档 --vh-offset 迁 QRT prop（裸 420px 不回潮）+ mm-tbl/useTableSort 退役 + 冻结播种 + xray 下钻', () => {
     const src = readFileSync(join(__dirname, '../MatchMatrixView.vue'), 'utf-8');
-    expect(src).toMatch(/max-height="calc\(100vh - var\(--vh-offset, 210px\) - 210px\)"/);
+    expect(src).toMatch(/max-height="calc\(100vh - var\(--vh-offset\) - 210px\)"/);
     expect(src).not.toContain('calc(100vh - 420px)');
     expect(src, '手写 mm-tbl 裸表不回潮').not.toMatch(/<table class="mm-tbl"/);
     expect(src).not.toContain("from '../composables/tableSort'");

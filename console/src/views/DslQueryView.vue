@@ -802,7 +802,7 @@ const DQ_MAIN_H: Record<EditorHKey, string> = {
   m: 'max(360px, 40vh)',
   l: 'max(480px, 56vh)',
   /* 满=视口高减顶部工具行/执行行/直方图节头/表格保底预算（dq-result min 320 仍可读） */
-  full: 'max(360px, calc(100vh - var(--vh-offset, 210px) - 380px))',
+  full: 'max(360px, calc(100vh - var(--vh-offset) - 380px))',
 };
 const editorH = usePref<EditorHKey>('query.editorH', 's');
 /* 编辑器字号三档（dq.font 落盘，默认 12.5=MonacoEditor 组件既有默认零漂移；
@@ -2490,7 +2490,7 @@ onBeforeUnmount(() => {
  +工具条两排 ≈ 350px），硬编码预留屡次失真——改为只减全局 vh-offset，本页 chrome 全部
  进 flex 收缩链（工具条/场景/执行行 flex-shrink:0，dq-main 可收缩 0 1，dq-result
  min-height 320 保底），高度分配由 flex 实时求解，不再手算预算。 */
-.dq.dq-fill { height: calc(100vh - var(--vh-offset, 210px)); }
+.dq.dq-fill { height: calc(100vh - var(--vh-offset)); }
 .dq-progress { position: absolute; top: calc(-1 * var(--sp-4)); left: calc(-1 * var(--sp-5)); right: calc(-1 * var(--sp-5)); color: var(--ac); }
 /* 三行合一后强单行——lr-bar 的 wrap 在按钮总量增大后会把工具行折两行（真机 98px 实测）；
  nowrap+子段不收缩保单行，窄屏溢出由按钮 ghost 化/图标化自然让位（不再回退双行形态） */

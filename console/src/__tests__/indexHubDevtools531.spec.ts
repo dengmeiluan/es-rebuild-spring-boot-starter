@@ -166,7 +166,7 @@ describe('DevTools 历史落位 + 权限图标（五百三十一批；⚠hist �
   });
 
   it('P0 根治锚：dt-body 确定高度链（height calc(100vh-vh-offset)）+ wl 可收缩；棘轮教训注释在场', () => {
-    expect(dt).toContain('.dt-body { padding: var(--sp-3) var(--sp-1); display: flex; flex-direction: column; gap: var(--sp-2); height: calc(100vh - var(--vh-offset, 210px)); }');
+    expect(dt).toContain('.dt-body { padding: var(--sp-3) var(--sp-1); display: flex; flex-direction: column; gap: var(--sp-2); height: calc(100vh - var(--vh-offset)); }');
     expect(dt).toContain('.dt-body :deep(.wl) { flex: 1 1 auto; min-height: 0; }');
     expect(dt).toContain('正反馈棘轮');
   });
