@@ -68,10 +68,16 @@ async function mountTp() {
   return { app, host };
 }
 
-/* 按节点名定位组（g 无标识类，经 .tp-node-name 文本反查最近 g） */
+/* 按节点名定位组（g 无标识类，经 .tp-node-name 文本反查最近 g；
+   953 随迁：名字 text 现内嵌 <title> 全名兜底子元素，textContent 会并入
+   title 文本——只取直接文本子节点才是可见名） */
 function nodeGroup(host: HTMLElement, name: string): SVGGElement | null {
   const t = Array.from(host.querySelectorAll<SVGElement>('.tp-node-name'))
-    .find(el => (el.textContent || '').trim() === name);
+    .find(el => Array.from(el.childNodes)
+      .filter(n => n.nodeType === 3)
+      .map(n => n.textContent ?? '')
+      .join('')
+      .trim() === name);
   return (t?.closest('g') as SVGGElement) || null;
 }
 

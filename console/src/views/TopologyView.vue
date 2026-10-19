@@ -62,7 +62,7 @@
           <!-- 节点名（单节点副本未分配是拓扑常态，分组标签不打 ⚠） -->
           <text :x="12" :y="18" class="tp-node-name">
             <template v-if="g.node === '__UNASSIGNED__'">{{ uaAbnormal ? '⚠ 未分配' : '未分配（常态）' }}</template>
-            <template v-else>{{ g.node }}</template>
+            <template v-else>{{ g.nameFit }}<title>{{ g.node }}</title></template>
           </text>
           <!-- （/ 留存）：角色徽标（名字行右端对齐；master 走品牌青
  高亮档，roles.includes('master')=选主候选口径；ES 角色术语英文保留 口径） -->
@@ -252,6 +252,19 @@ const GAP = 4;
 const COLS = Math.floor((NODE_W - 24 + GAP) / (CELL + GAP)); // 每行分片格数
 const NODE_MARGIN = 16;
 
+/* 节点名×角色标签同行避撞：SVG 文本无自动省略，长主机名与右锚角色串
+ y=18 同行相向绘制中段必撞——估宽截断名字：--fs-sm mono 600 ≈7.4/字符、
+ --fs-xs mono ≈6.6/字符（viewBox 单位与渲染缩放无关），全名进 <title> 悬浮兜底 */
+const TP_NAME_CHAR_W = 7.4;
+const TP_ROLE_CHAR_W = 6.6;
+function fitNodeName(name: string, roleTxt: string, isMaster: boolean): string {
+  const roleChars = (isMaster ? 'master' : '') + (isMaster && roleTxt ? ' · ' : '') + roleTxt;
+  const roleW = roleChars.length * TP_ROLE_CHAR_W;
+  const maxChars = Math.max(4, Math.floor((NODE_W - 24 - roleW) / TP_NAME_CHAR_W));
+  if (name.length <= maxChars) return name;
+  return name.slice(0, maxChars - 1) + '…';
+}
+
 /* 过滤后分片 */
 const filtered = computed<Shard[]>(() => {
   if (!filterIndex.value) return shards.value;
@@ -265,6 +278,8 @@ interface NodeGroup {
   /* ：磁盘水位+角色维（nodes-stats-brief 按 name merge；diskPct null=无数据回落） */
   diskPct?: number | null; diskUsedBytes?: number; diskTotalBytes?: number;
   isMaster?: boolean; roleTxt?: string;
+  /* 估宽截断后的展示名（全名= node，<title> 兜底） */
+  nameFit?: string;
   /* 节点头高：有磁盘行 68 / 无 44（分片矩阵起点与组高随让位） */
   headH: number;
 }
@@ -276,7 +291,7 @@ const layout = computed<NodeGroup[]>(() => {
     const key = s.state === 'UNASSIGNED' ? '__UNASSIGNED__' : (s.node || '__UNASSIGNED__');
     let g = byNode.get(key);
     if (!g) {
-      g = { node: key, ip: s.ip, shards: [], storeBytes: 0, x: 0, y: 0, h: 0, headH: 44, diskPct: null };
+      g = { node: key, ip: s.ip, shards: [], storeBytes: 0, x: 0, y: 0, h: 0, headH: 44, diskPct: null, nameFit: key };
       const nb = briefMap.get(key);
       if (nb && key !== '__UNASSIGNED__') {
         const total = Number(nb.diskTotal || 0), free = Number(nb.diskFree || 0);
@@ -288,6 +303,7 @@ const layout = computed<NodeGroup[]>(() => {
         const roles: string[] = Array.isArray(nb.roles) ? nb.roles.map(String) : [];
         g.isMaster = roles.includes('master');
         g.roleTxt = roles.filter(r => r !== 'master').slice(0, 2).join(' · ');
+        g.nameFit = fitNodeName(g.node, g.roleTxt ?? '', !!g.isMaster);
       }
       byNode.set(key, g);
     }
