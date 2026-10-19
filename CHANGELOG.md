@@ -5,6 +5,13 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.30]
+
+### 修复
+
+- 拓扑页长主机名节点不再与角色标签文字重叠：名称超出卡片宽度时按预算截断
+  （省略号收尾），悬浮节点名可看完整主机名；短名称与未分配卡片不受影响
+
 ## [1.0.29]
 
 ### 修复
