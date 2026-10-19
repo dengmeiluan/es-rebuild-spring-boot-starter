@@ -1915,7 +1915,7 @@ body.ld-chart-mask::after { content: ''; position: fixed; top: 0; right: 0; bott
 .ld-detail-more > summary { list-style: none; display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; border: 1px solid var(--border); border-radius: var(--r-s); color: var(--tx2); font-size: var(--fs-sm); font-weight: 650; cursor: pointer; user-select: none; }
 .ld-detail-more > summary::-webkit-details-marker { display: none; }
 .ld-detail-more[open] > summary { color: var(--ac); border-color: var(--ac); }
-.ld-detail-more-menu { position: absolute; right: 0; top: calc(100% + var(--sp-1)); z-index: 30; min-width: 132px; padding: var(--sp-1); background: var(--bg2, var(--panel)); border: 1px solid var(--border); border-radius: var(--r-m); box-shadow: 0 6px 18px rgba(0, 0, 0, .35); }
+.ld-detail-more-menu { position: absolute; right: 0; top: calc(100% + var(--sp-1)); z-index: 30; min-width: 132px; padding: var(--sp-1); background: var(--bg2, var(--panel)); border: 1px solid var(--border); border-radius: var(--r-m); box-shadow: var(--shadow-pop); }
 .ld-detail-more-menu button { display: block; width: 100%; text-align: left; background: none; border: none; color: var(--tx0); font-size: var(--fs-xs); padding: 6px 10px; border-radius: var(--r-s); cursor: pointer; }
 .ld-detail-more-menu button:not(:disabled):hover { background: var(--hl-soft, rgba(127, 127, 127, .12)); }
 .ld-detail-more-menu button:disabled { opacity: .45; cursor: not-allowed; }

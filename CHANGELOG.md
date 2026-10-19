@@ -5,6 +5,13 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.31]
+
+### 修复
+
+- 实时大屏明细「⋯」浮层的阴影并入全局弹层阴影令牌：浅/深主题切换时阴影深浅随
+  主题联动，与历史「⋯」浮层、导出菜单的弹层质感保持一致，不再使用固定深色阴影
+
 ## [1.0.30]
 
 ### 修复
