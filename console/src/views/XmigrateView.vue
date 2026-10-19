@@ -179,6 +179,11 @@
           <!-- 预览行数三档循环钮（useTierCycle 消费形态照抄 IlmView 宽/CV 高钮）——
  10/20/40 落盘键 xm.cfgRows，默认档 10=540 封顶值既有视觉零变化 -->
           <button class="btn sm ghost" :title="'配置预览行数档：' + cfgCapRows + ' 行（点击切换）'" @click="cycleCfgRows">行数</button>
+          <!-- 拉取失败内联面板（连接检查失败面板同族形态）：全文可回看+原始对象旁路+重试 -->
+          <div v-if="cfgErr" role="alert" class="err-bar rise-in xm-cfg-err">
+            <span class="xm-err-txt" v-html="errPreHtml(cfgErr, errMeta(cfgErrRaw))"></span>
+            <button class="btn sm" :disabled="checking" @click="fetchCfg"><RefreshCw :size="12" /> 重试</button>
+          </div>
           <template v-if="cfgPreview">
             <div class="xm-cfg-grid">
               <!-- P2：分节标题升 .sec-t 档（.xm-g-hd 先例同款，形态归全局单源）。
@@ -640,6 +645,8 @@ async function check() {
 
 /* 源配置预览 */
 const cfgPreview = ref<any>(null);
+const cfgErr = ref(''); // 拉取失败内联面板状态位（连接检查失败面板同族形态）
+const cfgErrRaw = ref<unknown>(null); // ：原始错误对象旁路（catch 压串丢 code/endpoint，喂 errMeta）
 /* W2：配置预览文本体——prettyJson 兜底原文（解析失败回显原串，校验圆点诚实报非法）；
  highlightJson v-html 通道随裸 pre 退役（Monaco 自带高亮）。封顶 10 行
  （10*19+16=206px ≈ 原 cfgMaxH 默认 200px）；cfgRows=min(内容行数,封顶) 纯内容函数，
@@ -656,10 +663,17 @@ function cfgRows(text: string) { return Math.min(text.split('\n').length, cfgCap
 async function fetchCfg() {
   if (checking.value) return; /* 提交防重：复用连接检查的 checking 状态位，拉取在途直接短路 */
   checking.value = true;
+  cfgErr.value = '';
+  cfgErrRaw.value = null;
   try {
     cfgPreview.value = await api.xb.fetchConfig(srcConnId.value ? {} : connBody(), form.value.sourceIndex, srcConnId.value || undefined);
-  } catch (e: any) { store.notify('error', '拉取失败: ' + friendlyApiError(e)); } /* w80：裸 e.message → friendlyEsError */
-  finally { checking.value = false; }
+  } catch (e: any) {
+    /* 失败与连接检查同款内联面板：全文可回看+原始对象旁路，toast 同步保留
+   （w80：裸 e.message → friendlyApiError） */
+    cfgErr.value = '拉取失败：' + friendlyApiError(e);
+    cfgErrRaw.value = e;
+    store.notify('error', cfgErr.value);
+  } finally { checking.value = false; }
 }
 
 /* 原始 IO 快查（预览分节）——取记录环最近一条 /xmigrate/ 记录
@@ -1245,6 +1259,7 @@ useModalEnter(resumeOpen, doResume, () => !resuming.value);
 .xm-new-t { padding: var(--sp-3) var(--sp-4) 0; }
 .xm-sk { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); }
 .xm-conn-err { margin-top: var(--sp-2); }
+.xm-cfg-err { margin-top: var(--sp-2); }
 /* 壳 padding 退役，左右落位 margin 承接（err 红框语义零触，只动定位） */
 .xm-start-err { margin: var(--sp-3) var(--sp-4) 0; }
 .xm-src-pick { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3); }

@@ -12,7 +12,8 @@
  *    （DevToolsView histCurl 先例手法平移；savedRows 映射同步更新补 index）。
  * ④ (P2) DevTools 请求域工具迁位——插入骨架/格式化/压缩/收藏/清空五钮自响应 pane
  *    #actions 迁回请求 pane #actions（域归属归位）；响应头只留响应观测族
- *    （标题/重试/RawIo/MetaStrip/响应搜索）；dtLint/err-bar 落位不动。
+ *    （标题/RawIo/MetaStrip/响应搜索）；dtLint/err-bar 落位不动。
+ *    （后续同步更新：失败重试唯一入口落 err-bar，工具行失败态重试钮退役防回潮锁同处。）
  * ⑤ (P2 微) .dq-split-seg button padding 10px → var(--sp-2h)（token 同值 10px，零视觉变化）；
  *    3px 刻意值保字面。
  */
@@ -96,12 +97,15 @@ describe('554 ④：DevTools 请求域工具迁位', () => {
     expect(reqPane).toContain("@click=\"cur.body = ''; cur.result = null; moreOpen = false\"");
     expect(reqPane.indexOf('请求体</span>'), '标题行首').toBeLessThan(reqPane.indexOf('@click="format"'));
   });
-  it('响应 pane #actions 只留观测族（标题/重试/RawIo/MetaStrip/响应搜索）', () => {
+  it('响应 pane #actions 只留观测族（标题/RawIo/MetaStrip/响应搜索），失败重试唯一入口落 err-bar', () => {
     expect(respPane).toContain('dt-pane-tt">响应</span>');
     expect(respPane).toContain('@click="openRawIo"');
     expect(respPane).toContain('<MetaStrip');
     expect(respPane).toContain('dt-resp-search');
-    expect(respPane).toMatch(/v-if="cur\.result && !cur\.ok"[\s\S]*?@click="run"/);
+    /* 同步更新（失败重试入口收敛）：入口断言改锁 err-bar 域；工具行旧形态防回潮 */
+    expect(dt.slice(dt.indexOf('class="err-bar dt-err"'), dt.indexOf('class="dt-out"')))
+      .toMatch(/:disabled="cur\.busy" @click="run"/);
+    expect(respPane).not.toMatch(/v-if="cur\.result && !cur\.ok"[^>]*@click="run"/);
     for (const gone of ['@click="format"', '@click="minify"', '@click="saveFav"', '@click="insertBody"', "@click=\"cur.body = ''; cur.result = null\""]) {
       expect(respPane, `请求域钮撤离响应头：${gone}`).not.toContain(gone);
     }

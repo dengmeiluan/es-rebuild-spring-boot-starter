@@ -210,10 +210,6 @@
           @click="copyText(cur.resultFull || cur.result || '').then(ok => store.notify(ok ? 'success' : 'error', ok ? '响应已复制（完整原文）' : '复制失败'))">
           <Copy :size="11" />
         </button>
-        <!-- G7-C3：失败态显式重试——重跑 run()（busy 守卫 + :disabled 双保险，确认门本页不涉及） -->
-        <button v-if="cur.result && !cur.ok" class="btn ghost xs" @click="run" :disabled="cur.busy">
-          <RotateCcw :size="11" /> 重试
-        </button>
         <!-- 原始 IO 快查——最近一次 /cluster/raw 请求/响应原文（IndexHub 同款钮形，
  本页执行走 api.raw 统一封装，记录环按该特征取最近一条） -->
         <button class="btn ghost xs" aria-label="查看原始 IO" title="最近一次执行的请求/响应原文（语义分档高亮 + 复制/curl 回放）"
