@@ -690,9 +690,12 @@ pre.json-view { margin: 0; font: var(--fs-sm)/1.6 var(--mono); white-space: pre-
 /* 应用内密码框（非登录）：type=text + 圆点遮罩，避免浏览器密码管理器误识别自动填充 */
 .pw-mask { -webkit-text-security: disc; }
 
-/* 尊重系统减弱动效偏好 */
+/* 尊重系统减弱动效偏好。transition-property 必须一并钉 none：只缩 duration 时
+   transition-property 隐式取初始值 all，布局属性（flex/height/min-height）变化仍会
+   创建过渡对象，在渲染冻结/节流环境（后台标签）下停在起点值形成面板塌缩假象；
+   显式无过渡后属性变化即时落定。 */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; transition-property: none !important; }
 }
 
 /* 亮色主题（:root[data-theme="light"] 启用） */
