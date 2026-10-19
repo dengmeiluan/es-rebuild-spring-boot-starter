@@ -47,7 +47,10 @@ describe('Diag pending tasks Markdown 复制（一百八十批）', () => {
     expect(src).toMatch(/<button class="btn sm ghost" :disabled="!pending\.length" style="margin-left:auto" @click\.prevent="copyPending"/);
     expect(src).toMatch(/async function copyPending\(\)/);
     expect(src).toContain('| priority | source | time_in_queue |');
-    expect(src).toContain('p.time_in_queue || (p.time_in_queue_millis + \'ms\')');
+    /* 九百五十九批：time_in_queue 与 time_in_queue_millis 两字段全缺时落
+       '-' 占位（与视图单元格 semFormat 兜底同语言）；"undefinedms" 裸拼形态退役 */
+    expect(src).toContain("p.time_in_queue || (p.time_in_queue_millis != null ? p.time_in_queue_millis + 'ms' : '-')");
+    expect(src, '"undefinedms" 裸拼形态退役').not.toContain("(p.time_in_queue_millis + 'ms')");
     expect(src).toContain('个 pending task（Markdown）');
   });
 });

@@ -196,7 +196,13 @@ function closeBwExp() { bwExpOpen.value = false; }
 function onDocBwClick(e: Event) {
   if (!(e.target as HTMLElement | null)?.closest('.menu-wrap')) closeBwExp();
 }
-function onDocBwEsc(e: KeyboardEvent) { if (e.key === 'Escape') closeBwExp(); }
+/* Esc 收起浮层：深链文档卡与导出菜单同一收起通道（卡为深链打开、无页面内触发器，收卡即完整语义） */
+function onDocBwEsc(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    linkedDoc.value = null;
+    closeBwExp();
+  }
+}
 document.addEventListener('click', onDocBwClick);
 document.addEventListener('keydown', onDocBwEsc);
 onBeforeUnmount(() => {

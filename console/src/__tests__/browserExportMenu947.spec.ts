@@ -122,7 +122,9 @@ describe('九百四十七批 A 源码锁：导出 ▾ 聚合形态', () => {
     expect(src).toMatch(/\.bw-menu\s*\{[^}]*box-shadow:/);
     expect(src, 'menu-wrap 定位壳').toMatch(/\.menu-wrap\s*\{[^}]*position:\s*relative/);
     expect(src, '点外收口（menu-wrap 域外点击即关）').toContain("closest('.menu-wrap')");
-    expect(src, 'Esc 收口').toContain("if (e.key === 'Escape') closeBwExp()");
+    /* 九百五十九批随迁：Esc 收口通道扩深链文档卡（linkedDoc 一并收起），
+       closeBwExp() 调用仍在场=菜单收口语义不漂 */
+    expect(src, 'Esc 收口').toMatch(/if \(e\.key === 'Escape'\) \{\s*\n\s*linkedDoc\.value = null;\s*\n\s*closeBwExp\(\);\s*\n\s*\}/);
     expect(src).toMatch(/onBeforeUnmount\(\(\) => \{\s*document\.removeEventListener\('click', onDocBwClick\);\s*document\.removeEventListener\('keydown', onDocBwEsc\);\s*\}\)/);
   });
 });

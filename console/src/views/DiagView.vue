@@ -612,7 +612,7 @@ async function copyPending() {
     '| priority | source | time_in_queue |',
     '| --- | --- | --- |',
     ...pending.value.map((p: any) =>
-      `| ${esc(p.priority)} | ${esc(p.source)} | ${esc(p.time_in_queue || (p.time_in_queue_millis + 'ms'))} |`),
+      `| ${esc(p.priority)} | ${esc(p.source)} | ${esc(p.time_in_queue || (p.time_in_queue_millis != null ? p.time_in_queue_millis + 'ms' : '-'))} |`),
   ].join('\n');
   const ok = await copyText(md);
   store.notify(ok ? 'success' : 'error', ok ? `已复制 ${pending.value.length} 个 pending task（Markdown）` : '复制失败');
