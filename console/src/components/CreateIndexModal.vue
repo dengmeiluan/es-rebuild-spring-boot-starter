@@ -6,7 +6,7 @@
       <div class="cim-row">
         <label class="cim-lb">索引名 <span class="cim-req">*</span></label>
         <input ref="nameRef" v-model="name" class="inp mono" placeholder="如 my-index-2026"
-          style="flex:1" @keydown.enter="canSubmit && doCreate()" />
+          style="flex:1" @keydown.enter="canSubmit && canCreate && doCreate()" />
       </div>
       <div v-if="name" class="cim-checks">
         <div v-for="c in checks" :key="c.t" class="cim-check" :class="c.lv">
@@ -29,7 +29,8 @@
         </div>
         <div class="cim-row" style="flex:1">
           <label class="cim-lb">别名（可选）</label>
-          <input v-model="alias" class="inp mono" placeholder="创建后原子挂载" style="flex:1" />
+          <input v-model="alias" class="inp mono" placeholder="创建后原子挂载" style="flex:1"
+            :disabled="!canAlias" title="别名挂载需别名管理权限" />
         </div>
       </div>
       <div class="cim-tip">
@@ -78,7 +79,7 @@
         <span v-if="creating" class="cim-tip" style="margin:0">正在创建…</span>
         <div style="flex:1"></div>
         <button class="btn" @click="emit('update:show', false)">取消</button>
-        <button class="btn pri" :disabled="!canSubmit || creating" @click="doCreate">
+        <button class="btn pri" :disabled="!canSubmit || creating || !canCreate" @click="doCreate">
           <Plus :size="13" /> 创建索引
         </button>
       </div>
@@ -95,6 +96,7 @@ import { lintSettingsBody, lintMappingBody } from '../utils/dslLint'; /* P1-1：
 import { useDebounceFn } from '../composables/useDebounceFn'; /* P1-1：划线防抖统一件 */
 import { api } from '../api';
 import { useAppStore } from '../stores/app';
+import { useAuthStore } from '../stores/auth';
 import { tryParse, highlightJson } from '../utils/jsonc';
 import { friendlyEsError } from '../utils/esError';
 import { copyText } from '../utils/format';
@@ -108,6 +110,11 @@ const props = defineProps<{ show: boolean }>();
 const emit = defineEmits<{ (e: 'update:show', v: boolean): void; (e: 'created', name: string): void }>();
 
 const store = useAppStore();
+/* 新建索引落 /cluster/create-index（属 config-validator 页）、别名挂载落 /cluster/alias-actions
+ （属 aliases 页）——两个端点分属不同页键，conn 模型下必须各判各的门 */
+const auth = useAuthStore();
+const canCreate = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target));
+const canAlias = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/alias-actions', store.target));
 const nameRef = ref<HTMLInputElement>();
 const name = ref('');
 const shards = ref(1);
@@ -216,6 +223,10 @@ async function copyRequest() {
 }
 
 async function doCreate() {
+  /* 执行体收口：深链 ?create=1 / 命令面板 / Enter 通道同汇入本函数，点位隐藏挡不住旁路 */
+  if (!canCreate.value) { store.notify('warning', '新建索引需索引创建权限'); return; }
+  /* 别名挂载是第二步独立写端点——无别名权限时先拦，避免索引建成后 alias 403 的半成品 */
+  if (alias.value.trim() && !canAlias.value) { store.notify('warning', '别名挂载需别名管理权限'); return; }
   if (!canSubmit.value || creating.value) return;
   creating.value = true;
   const idx = name.value.trim();

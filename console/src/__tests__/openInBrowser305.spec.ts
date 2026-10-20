@@ -19,6 +19,8 @@ vi.mock('../api', async (importOriginal) => {
       clusterHealth: () => Promise.resolve({}),
       clusterIndices: () => Promise.resolve([{ index: 'idx-a', health: 'green', status: 'open', 'docs.count': 1 }]),
       raw: vi.fn(() => Promise.resolve({ _id: 'doc-1', _source: { name: 'x' } })),
+      /* 963：深链文档卡改走 GET /cluster/doc（VIEWER 可读），不再借道 ADMIN raw */
+      getDoc: vi.fn(() => Promise.resolve({ _id: 'doc-1', _source: { name: 'x' } })),
       setup: { ...actual.api.setup, status: () => Promise.resolve({ bound: true, mode: 'x', endpoint: null, appName: 't', hostVisible: true }) },
     },
   };

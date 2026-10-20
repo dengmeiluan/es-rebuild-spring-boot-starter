@@ -15,13 +15,18 @@ import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { NButton, NResult } from 'naive-ui';
 import { useAuthStore } from '../stores/auth';
+import { useAppStore } from '../stores/app';
+import { pageAllowed } from '../router';
 
 const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
+const store = useAppStore();
 const pageName = computed(() => String(route.query.name || '该页面'));
-/* 概览页不可达时（全拒 [] 或白名单不含 overview）「回到概览」会被守卫再拦回本页（自跳转死胡同）——仅文案引导，不渲染 CTA */
-const showHome = computed(() => auth.grantedPages == null || auth.grantedPages.includes('overview'));
+/* 概览页不可达时（全拒 [] / 白名单不含 overview / 当前连接无 overview 键）「回到概览」会被守卫再拦回本页
+ （自跳转死胡同）——仅文案引导，不渲染 CTA。963：判定复用 pageAllowed（与守卫/侧栏同一真源，
+ 兼容 conn:{id}:overview 键——旧裸 includes('overview') 对连接模型恒 false，会误藏可达的回站入口）。 */
+const showHome = computed(() => auth.isAdmin() || pageAllowed(auth.grantedPages, '/overview', store.target));
 function goHome() { router.replace('/'); }
 </script>
 

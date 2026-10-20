@@ -43,7 +43,7 @@ describe('安全中心深度改造（一百八十八批）', () => {
 
   it('空态「创建 ADMIN」直达（预置角色+聚焦）', () => {
     /* 第十批收尾同步更新：裸 .empty 按钮迁 EmptyState compact，actionText/@action 仍直达 presetAdmin（正向锁语义不变） */
-    expect(src).toMatch(/<EmptyState v-else-if="!usersLoading && !usersErr" compact :icon="UserPlus"\s*\n\s*text="暂无正式账号 —— 当前依赖兜底默认账号" action-text="创建 ADMIN" @action="presetAdmin" \/>/);
+    expect(src).toMatch(/<EmptyState v-else-if="!usersLoading && !usersErr" compact :icon="UserPlus"\s*\n\s*text="暂无正式账号 —— 当前依赖兜底默认账号" :action-text="canAssignAdmin \? '创建 ADMIN' : undefined" @action="presetAdmin" \/>/);
     expect(src).toContain('function presetAdmin()');
     expect(src).toContain('nuRole.value = ');
     expect(src).toContain('nuNameRef.value?.focus()');

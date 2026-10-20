@@ -153,7 +153,8 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     private static ConsolePrincipal delegated(Set<String> grantedPages) {
-        return new ConsolePrincipal("host-u1", ConsoleRole.ADMIN, false, true, "宿主用户", null, grantedPages);
+        /* 页面门语义测试用 VIEWER：ADMIN 是全局超管、会整体豁免页面门（见超管放行用例）。 */
+        return new ConsolePrincipal("host-u1", ConsoleRole.VIEWER, false, true, "宿主用户", null, grantedPages);
     }
 
     /** 可指定角色的委托身份（超管域优先裁决用例——conn 模型用户恒非 ADMIN）。 */
@@ -240,28 +241,31 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
-    public void 管理域放开_security读键可见用户列表_无键仍PAGE_DENIED() throws Exception {
+    public void 用户管理按security页读写键_无键PAGE_DENIED() throws Exception {
         CapturingAudit audit = new CapturingAudit();
-        /* 语义升格：users 归属 security 页（pages.json apiPrefixes），读按页读键
-           可见（用户列表）——的 ADMIN 一刀切拦截随「管理域放开」退役；写操作仍须
-           w:security 写键（本文件「users 归 security 页_写键放行_无写键仍拒」用例钉死） */
-        ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
+        // security 读键可看用户列表（页面门按页读键裁决）
+        ConsoleAuthInterceptor viewer = interceptor(delegatedAs(ConsoleRole.VIEWER,
                 new HashSet<>(Arrays.asList("conn:c1:security", "conn:c1:overview"))), true, audit);
-        /* 真实前端形态：api.ts 全局附带 X-Es-Target（security 读键按该 target 组 effectivePages） */
-        assertTrue(it.preHandle(stubRequest("GET", "/internal/es/index/auth/users",
+        assertTrue(viewer.preHandle(stubRequest("GET", "/internal/es/index/auth/users",
                 java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
-        /* 负锚（判别力保留）：无任何键的 conn 模型用户 GET /auth/users → PAGE_DENIED */
-        ConsoleAuthInterceptor it2 = interceptor(delegatedAs(ConsoleRole.VIEWER,
-                new HashSet<>(Arrays.asList("conn:c1:overview"))), true, audit);
-        StubResponse resp2 = new StubResponse();
-        assertFalse(it2.preHandle(stubRequest("GET", "/internal/es/index/auth/users",
-                java.util.Collections.singletonMap("X-Es-Target", "c1")), resp2.proxy, null));
-        assertEquals(403, resp2.status);
-        assertEquals("PAGE_DENIED", audit.action);
-        /* ops-audit 移出 security 页归属——回归共享端点走角色门（rank3），
-           conn 读键不再放行 VIEWER 的全量审计（auth/users 同款收权） */
+
+        // 无 security 键：页面不可见 → PAGE_DENIED
+        StubResponse denied = new StubResponse();
+        ConsoleAuthInterceptor noKey = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Collections.singletonList("conn:c1:overview"))), true, audit);
+        assertFalse(noKey.preHandle(stubRequest("GET", "/internal/es/index/auth/users",
+                java.util.Collections.singletonMap("X-Es-Target", "c1")), denied.proxy, null));
+        assertEquals(403, denied.status);
+        assertTrue("body=" + denied.bodyText(), denied.bodyText().contains("\"page\":\"security\""));
+
+        // 委托 ADMIN 无任何页面键也可看（超管全局）
+        ConsoleAuthInterceptor admin = interceptor(delegatedAs(ConsoleRole.ADMIN,
+                new HashSet<>(Collections.singletonList("conn:c1:rest"))), true, audit);
+        assertTrue(admin.preHandle(stubRequest("GET", "/internal/es/index/auth/users",
+                java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+        /* ops-audit 无页面归属，走角色门 rank3——conn 读键不再放行 VIEWER 的全量审计 */
         StubResponse respAudit = new StubResponse();
-        assertFalse(it.preHandle(stubRequest("GET", "/internal/es/index/auth/ops-audit",
+        assertFalse(viewer.preHandle(stubRequest("GET", "/internal/es/index/auth/ops-audit",
                 java.util.Collections.singletonMap("X-Es-Target", "c1")), respAudit.proxy, null));
         assertEquals(403, respAudit.status);
         assertTrue(respAudit.bodyText().contains("\"required\""));
@@ -423,50 +427,63 @@ public class ConsoleAuthInterceptorPageAuthTest {
        strict 双因子开关整体退役（角色门在连接模型下不复辟）。 */
 
     @Test
-    public void 打通_conn写键VIEWER_共享低危写端点放行_表格编辑提交() throws Exception {
+    public void 打通_共享写要求真实页面写键_表格编辑提交() throws Exception {
         CapturingAudit audit = new CapturingAudit();
-        // 断点锚（实报场景）：VIEWER + docs 页写键 + POST update-partial（共享端点）→ 放行
+        // 表格编辑（POST update-partial）由 search/indices 等页面真实使用：持 search 页写键放行
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
-                new HashSet<>(Arrays.asList("conn:c1:docs", "conn:c1:w:docs"))), true, audit);
+                new HashSet<>(Arrays.asList("conn:c1:search", "conn:c1:w:search"))), true, audit);
         assertTrue(it.preHandle(stubRequest("POST", "/internal/es/index/cluster/update-partial",
                 java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
         assertNull("打通放行不得落拒绝审计", audit.action);
     }
 
     @Test
-    public void 打通_仅读键无写键_共享写端点维持角色门403() throws Exception {
+    public void 共享写_仅读键无写键_映射端点WRITE_DENIED() throws Exception {
         CapturingAudit audit = new CapturingAudit();
-        // 只授 docs 读键（无 w: 键）：共享写端点仍落角色门——收紧面不因打通扩大
+        // 只授 search 读键（无 w: 键）：映射共享写端点不再回落角色门，直接 WRITE_DENIED
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
-                new HashSet<>(Arrays.asList("conn:c1:docs"))), true, audit);
+                new HashSet<>(Arrays.asList("conn:c1:search"))), true, audit);
         StubResponse resp = new StubResponse();
         assertFalse(it.preHandle(stubRequest("POST", "/internal/es/index/cluster/update-partial",
                 java.util.Collections.singletonMap("X-Es-Target", "c1")), resp.proxy, null));
         assertEquals(403, resp.status);
-        assertTrue(resp.bodyText().contains("\"required\":\"OPERATOR\""));
+        assertTrue(resp.bodyText().contains("WRITE_DENIED"));
     }
 
     @Test
-    public void 连接勾选即权限_写键放行共享高危档deleteById() throws Exception {
+    public void 共享高危档deleteById_须search或indices写键_optimizer写键不放行() throws Exception {
         CapturingAudit audit = new CapturingAudit();
-        // 584 语义升格：delete-by-id（删文档，CLUSTER→REBUILD_OP 共享端点）不再限 OPERATOR 档——
-        // 连接菜单勾了写（任意 w: 键）即可做，角色档在连接模型下不参与裁决
-        ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
-                new HashSet<>(Arrays.asList("conn:c1:docs", "conn:c1:w:docs"))), true, audit);
-        assertTrue(it.preHandle(stubRequest("POST", "/internal/es/index/cluster/delete-by-id",
+        ConsoleAuthInterceptor allow = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:search", "conn:c1:w:search"))), true, audit);
+        assertTrue(allow.preHandle(stubRequest("POST", "/internal/es/index/cluster/delete-by-id",
                 java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
         assertNull(audit.action);
+
+        StubResponse cross = new StubResponse();
+        ConsoleAuthInterceptor deny = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:optimizer", "conn:c1:w:optimizer"))), true, audit);
+        assertFalse(deny.preHandle(stubRequest("POST", "/internal/es/index/cluster/delete-by-id",
+                java.util.Collections.singletonMap("X-Es-Target", "c1")), cross.proxy, null));
+        assertEquals(403, cross.status);
+        assertTrue(cross.bodyText().contains("WRITE_DENIED"));
     }
 
     @Test
-    public void 连接勾选即权限_写键放行共享ilmPolicy写端点() throws Exception {
+    public void 共享ilmPolicy_须ilm写键_其他页写键不放行() throws Exception {
         CapturingAudit audit = new CapturingAudit();
-        // PUT /cluster/ilm/policy（CLUSTER→REBUILD_OP 共享端点）：同语义放行
-        ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
-                new HashSet<>(Arrays.asList("conn:c1:docs", "conn:c1:w:docs"))), true, audit);
-        assertTrue(it.preHandle(stubRequest("PUT", "/internal/es/index/cluster/ilm/policy",
+        ConsoleAuthInterceptor allow = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:ilm", "conn:c1:w:ilm"))), true, audit);
+        assertTrue(allow.preHandle(stubRequest("PUT", "/internal/es/index/cluster/ilm/policy",
                 java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
         assertNull(audit.action);
+
+        StubResponse cross = new StubResponse();
+        ConsoleAuthInterceptor deny = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:search", "conn:c1:w:search"))), true, audit);
+        assertFalse(deny.preHandle(stubRequest("PUT", "/internal/es/index/cluster/ilm/policy",
+                java.util.Collections.singletonMap("X-Es-Target", "c1")), cross.proxy, null));
+        assertEquals(403, cross.status);
+        assertTrue(cross.bodyText().contains("WRITE_DENIED"));
     }
 
     /* ------------- ·管理域放开（裁决「管理域放」）：raw/users 归属菜单页按勾选裁决 -------------
@@ -485,50 +502,60 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
-    public void 管理域放开_users归security页_写键放行_无写键仍拒() throws Exception {
+    public void 用户管理_security写键可管理普通账号_ADMIN授予由服务层防提权() throws Exception {
         CapturingAudit audit = new CapturingAudit();
-        // 有 security 写键：用户管理（POST /auth/users/upsert）放行
-        ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
+        // security 页写键：用户管理放行（ADMIN 角色授予/改写由 BuiltinConsoleAuthService 拦截）
+        ConsoleAuthInterceptor writer = interceptor(delegatedAs(ConsoleRole.VIEWER,
                 new HashSet<>(Arrays.asList("conn:c1:security", "conn:c1:w:security"))), true, audit);
-        assertTrue(it.preHandle(stubRequest("POST", "/internal/es/index/auth/users/upsert",
+        assertTrue(writer.preHandle(stubRequest("POST", "/internal/es/index/auth/users/upsert",
                 java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
-        // 仅读键（无 w:security）：写请求 WRITE_DENIED（页面门接管，不再是 ADMIN 一刀切）
-        ConsoleAuthInterceptor it2 = interceptor(delegatedAs(ConsoleRole.VIEWER,
-                new HashSet<>(Arrays.asList("conn:c1:security"))), true, audit);
-        StubResponse resp2 = new StubResponse();
-        assertFalse(it2.preHandle(stubRequest("POST", "/internal/es/index/auth/users/upsert",
-                java.util.Collections.singletonMap("X-Es-Target", "c1")), resp2.proxy, null));
-        assertEquals(403, resp2.status);
-        assertTrue(resp2.bodyText().contains("WRITE_DENIED"));
+
+        // 仅读键：WRITE_DENIED
+        StubResponse denied = new StubResponse();
+        ConsoleAuthInterceptor reader = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Collections.singletonList("conn:c1:security"))), true, audit);
+        assertFalse(reader.preHandle(stubRequest("POST", "/internal/es/index/auth/users/upsert",
+                java.util.Collections.singletonMap("X-Es-Target", "c1")), denied.proxy, null));
+        assertEquals(403, denied.status);
+        assertTrue(denied.bodyText().contains("WRITE_DENIED"));
+
+        // 委托 ADMIN 无 w:security 也可管理（超管全局）
+        ConsoleAuthInterceptor admin = interceptor(delegatedAs(ConsoleRole.ADMIN,
+                new HashSet<>(Collections.singletonList("conn:c1:rest"))), true, audit);
+        assertTrue(admin.preHandle(stubRequest("POST", "/internal/es/index/auth/users/upsert",
+                java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
     }
 
-    /* ------------- ·系统管理端点也按连接勾选放开（裁决「rebind/clusters 这个也要」）-------------
-       语义：conn 模型写键持有人（hasAnyWriteKey）=宿主授过写权的管理者，可管理连接档案
-       （save/delete/sync）与重绑控制集群（rebind）；无写键维持 403（负锚保判别力）。 */
-    @Test
-    public void 系统管理放开_写键持有人可管连接档案() throws Exception {
-        CapturingAudit audit = new CapturingAudit();
-        ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
-                new HashSet<>(Arrays.asList("conn:c1:rest", "conn:c1:w:rest", "conn:c1:security", "conn:c1:w:security"))), true, audit);
-        assertTrue(it.preHandle(stubRequest("POST", "/internal/es/index/clusters/save",
-                java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
-        assertNull(audit.action);
-    }
+    /* ------------- 系统管理（连接档案/重绑/用户库）ADMIN 角色专属，连接写键不放行 ------------- */
 
     @Test
-    public void 系统管理放开_写键持有人可重绑控制集群() throws Exception {
+    public void 系统管理_连接写键不再放行连接档案与重绑_ADMIN可() throws Exception {
         CapturingAudit audit = new CapturingAudit();
-        ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
-                new HashSet<>(Arrays.asList("conn:c1:rest", "conn:c1:w:rest"))), true, audit);
-        assertTrue(it.preHandle(stubRequest("POST", "/internal/es/index/setup/rebind",
+        HashSet<String> writeKeys = new HashSet<>(Arrays.asList(
+                "conn:c1:rest", "conn:c1:w:rest", "conn:c1:security", "conn:c1:w:security"));
+        ConsoleAuthInterceptor viewer = interceptor(delegatedAs(ConsoleRole.VIEWER, writeKeys), true, audit);
+        StubResponse save = new StubResponse();
+        assertFalse(viewer.preHandle(stubRequest("POST", "/internal/es/index/clusters/save",
+                java.util.Collections.singletonMap("X-Es-Target", "c1")), save.proxy, null));
+        assertEquals(403, save.status);
+        assertTrue(save.bodyText().contains("\"required\":\"ADMIN\""));
+        StubResponse rebind = new StubResponse();
+        assertFalse(viewer.preHandle(stubRequest("POST", "/internal/es/index/setup/rebind",
+                java.util.Collections.singletonMap("X-Es-Target", "c1")), rebind.proxy, null));
+        assertEquals(403, rebind.status);
+
+        ConsoleAuthInterceptor admin = interceptor(delegatedAs(ConsoleRole.ADMIN,
+                new HashSet<>(Collections.singletonList("conn:c1:rest"))), true, audit);
+        assertTrue(admin.preHandle(stubRequest("POST", "/internal/es/index/clusters/save",
                 java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
-        assertNull(audit.action);
+        assertTrue(admin.preHandle(stubRequest("POST", "/internal/es/index/setup/rebind",
+                java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
     }
 
     @Test
     public void 系统管理无写键_维持ADMIN角色档403_负锚() throws Exception {
         CapturingAudit audit = new CapturingAudit();
-        // 仅读键（无任意 w: 键）：系统管理端点维持 ADMIN 档拒绝（静态/连接模型同语义）
+        // 仅读键：系统管理端点维持 ADMIN 档拒绝（静态/连接模型同语义）
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
                 new HashSet<>(Arrays.asList("conn:c1:rest", "conn:c1:security"))), true, audit);
         StubResponse resp = new StubResponse();
@@ -540,6 +567,31 @@ public class ConsoleAuthInterceptorPageAuthTest {
         assertFalse(it.preHandle(stubRequest("POST", "/internal/es/index/setup/rebind",
                 java.util.Collections.singletonMap("X-Es-Target", "c1")), resp2.proxy, null));
         assertEquals(403, resp2.status);
+    }
+
+    @Test
+    public void 超管全局放行_无页面与连接写键也能读写() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        // 仅 rest 读键的委托 ADMIN：页面白名单/连接写键都不应拖累超管
+        ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.ADMIN,
+                new HashSet<>(Collections.singletonList("conn:c1:rest"))), true, audit);
+        Map<String, String> target = java.util.Collections.singletonMap("X-Es-Target", "c1");
+        assertTrue(it.preHandle(stubRequest("POST", "/internal/es/index/cluster/delete-index", target),
+                new StubResponse().proxy, null));
+        assertTrue(it.preHandle(stubRequest("POST", "/internal/es/index/cluster/update-partial", target),
+                new StubResponse().proxy, null));
+        assertTrue(it.preHandle(stubRequest("GET", "/internal/es/index/cluster/templates", target),
+                new StubResponse().proxy, null));
+    }
+
+    @Test
+    public void 委托VIEWER_连接探活不被系统管理门误杀() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Collections.singletonList("conn:c1:rest"))), true, audit);
+        assertTrue(it.preHandle(stubRequest("POST", "/internal/es/index/clusters/c1/probe",
+                java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+        assertNull(audit.action);
     }
 
     @Test
@@ -569,40 +621,39 @@ public class ConsoleAuthInterceptorPageAuthTest {
     @Test
     public void 打通_target错配_c1写键救不了c2的共享写请求() throws Exception {
         CapturingAudit audit = new CapturingAudit();
-        // hasAnyWriteKey 按 targetId 查（conn:{target}:w: 前缀）：c1 的写键对 c2 的请求无效
+        // 共享写页面键按 targetId 精确匹配：c1 的 search 写键对 c2 的请求无效
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
-                new HashSet<>(Arrays.asList("conn:c1:docs", "conn:c1:w:docs"))), true, audit);
+                new HashSet<>(Arrays.asList("conn:c1:search", "conn:c1:w:search"))), true, audit);
         StubResponse resp = new StubResponse();
         assertFalse(it.preHandle(stubRequest("POST", "/internal/es/index/cluster/update-partial",
                 java.util.Collections.singletonMap("X-Es-Target", "c2")), resp.proxy, null));
         assertEquals(403, resp.status);
-        assertTrue(resp.bodyText().contains("\"required\":\"OPERATOR\""));
-        assertNull("角色门拒绝走 deny()，打通分支未命中不得落共享写审计", audit.action);
+        assertTrue(resp.bodyText().contains("WRITE_DENIED"));
+        assertEquals("WRITE_DENIED", audit.action);
     }
 
     @Test
-    public void 打通_共享低危写桶成员逐一放行锚() throws Exception {
+    public void 打通_共享写桶成员按归属页写键逐一放行_未登记端点回落角色门() throws Exception {
         CapturingAudit audit = new CapturingAudit();
-        // 桶成员=pageOf==null（契约核实共享）且 requiredRole==OPERATOR（不在 rank3/readonly/admin 清单）的写端点
+        // 文档 CRUD 归 search/indices；任务取消归 tasks/task-tree
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
-                new HashSet<>(Arrays.asList("conn:c1:docs", "conn:c1:w:docs"))), true, audit);
+                new HashSet<>(Arrays.asList("conn:c1:search", "conn:c1:w:search",
+                        "conn:c1:tasks", "conn:c1:w:tasks"))), true, audit);
         Map<String, String> target = java.util.Collections.singletonMap("X-Es-Target", "c1");
-        // 表格编辑·整文档更新（InternalEsIndexRebuildController:226）
         assertTrue(it.preHandle(stubRequest("POST", "/internal/es/index/cluster/update-document", target),
                 new StubResponse().proxy, null));
-        // 文档写入·新建（:746）
         assertTrue(it.preHandle(stubRequest("POST", "/internal/es/index/cluster/doc", target),
                 new StubResponse().proxy, null));
-        // 文档更新（:754）
         assertTrue(it.preHandle(stubRequest("POST", "/internal/es/index/cluster/doc/update", target),
                 new StubResponse().proxy, null));
-        // 任务取消（:375）
         assertTrue(it.preHandle(stubRequest("POST", "/internal/es/index/cluster/tasks/cancel", target),
                 new StubResponse().proxy, null));
-        // 洞察预估（InsightController actions/{actionId}/estimate；任务原列 /insight/estimate 无此端点）
-        assertTrue(it.preHandle(stubRequest("POST", "/internal/es/index/insight/actions/a1/estimate", target),
-                new StubResponse().proxy, null));
-        assertNull("桶成员放行不得落拒绝审计", audit.action);
+        /* 未登记共享写（洞察动作）不再吃任意写键：回落角色门，VIEWER 403 */
+        StubResponse insight = new StubResponse();
+        assertFalse(it.preHandle(stubRequest("POST", "/internal/es/index/insight/actions/a1/estimate", target),
+                insight.proxy, null));
+        assertEquals(403, insight.status);
+        assertTrue(insight.bodyText().contains("\"required\":\"OPERATOR\""));
     }
 
     @Test
@@ -623,7 +674,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
         CapturingAudit audit = new CapturingAudit();
         // GET 本就 VIEWER 放行（requiredRole=VIEWER 先于一切），打通分支只动写路径——防回归
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
-                new HashSet<>(Arrays.asList("conn:c1:docs", "conn:c1:w:docs"))), true, audit);
+                new HashSet<>(Arrays.asList("conn:c1:search", "conn:c1:w:search"))), true, audit);
         assertTrue(it.preHandle(stubRequest("GET", "/internal/es/index/cluster/indices",
                 java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
         assertNull("读请求放行不得落拒绝审计", audit.action);

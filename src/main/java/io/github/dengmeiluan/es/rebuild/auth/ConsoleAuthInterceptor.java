@@ -59,6 +59,9 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
     /** request attribute：已认证身份，供 auth controller / 审计复用。 */
     public static final String ATTR_PRINCIPAL = "es.console.principal";
 
+    /** request attribute：归一化路径（canonicalize 后），供 afterCompletion 审计口径复用。 */
+    public static final String ATTR_NORMALIZED_PATH = "es.console.normalizedPath";
+
     /** request attribute：拦截器入口时刻（毫秒）——审计耗时维度（。 */
     static final String ATTR_START_MS = "es.console.audit.startMs";
 
@@ -89,6 +92,10 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                重建写端点，原先落缺省 OPERATOR，升 rank3 */
             "/reindex-advanced",
             "/xmigrate/start", "/xmigrate/resume", "/xmigrate/abort",
+            /* 迁移探测面（连接自检/取源配置/变量解析/预检）接受任意连接串并让服务端建连，
+               属 SSRF/环境变量读取面——与迁移写同档 rank3，不再对 VIEWER 开放。 */
+            "/xmigrate/connect-check", "/xmigrate/fetch-config", "/xmigrate/resolve-preview",
+            "/xmigrate/preflight",
             /* 裸词 "/adhoc-rebuild" 退役（危险级重划）——adhoc 的 GET（任务列表/
                就绪检查）是观测面，裸 contains 把静态模型 VIEWER 也拦在门外（历史 403 噪声源）；
                写动词逐一列出即可覆盖全部写端点（start/abort/confirm-switch）。 */
@@ -112,7 +119,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             "/cluster/synonyms-upsert", "/cluster/reload-analyzers");
 
     private static final List<String> AUDIT_KEYWORDS = Arrays.asList(
-            "/auth/ops-audit");
+            "/auth/ops-audit", "/auth/audit-facets");
 
     /* 仅超管:用户管理 + raw 透传 + 系统管理(requiredRole 档位/审计分级用) */
     private static final List<String> ADMIN_KEYWORDS = Arrays.asList(
@@ -120,10 +127,8 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             "/cluster/raw",
             "/setup/rebind",  //  重绑控制集群（高危：控制面数据归属切换）
             "/clusters/");  //  多集群连接保存/删除/测试（凭据流转）；GET /clusters 列表脱敏，VIEWER 可读
-    /** ·管理域放开（裁决「管理域放」）：连接模型下按菜单勾选裁决的收口子集——
-     *  只有这两类端点没有菜单页勾选项可对应（连接档案=授权体系载体/重绑=控制面归属切换），
-     *  维持 ADMIN 专属；raw 与 users 已归属 rest/security 页（pages.json apiPrefixes），
-     *  由页面门按读键可见+写键 WRITE_DENIED 自然接管。 */
+    /** 系统管理层（重绑/连接档案）：ADMIN 角色专属。用户管理归 security 页写键，
+     *  由页面门裁决；账号服务再限制非 ADMIN 不得授予/修改/删除 ADMIN（防提权）。 */
     private static final List<String> SYSTEM_ADMIN_KEYWORDS = Arrays.asList(
             "/setup/rebind",
             "/clusters/");
@@ -133,6 +138,8 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             "/config-lab/validate");
 
     private static boolean isSystemAdminUri(String uri) {
+        // 探活是只读观测（POST 但零副作用），不受系统管理 ADMIN 门约束（requiredRole 特判 VIEWER）
+        if (uri != null && uri.endsWith("/probe")) return false;
         for (String kw : SYSTEM_ADMIN_KEYWORDS) {
             if (uri.contains(kw)) return true;
         }
@@ -149,8 +156,61 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             "/cluster/search-dsl", "/cluster/search-raw", "/cluster/search-template", "/cluster/render-template",
             "/cluster/validate-query", "/cluster/explain-doc", "/cluster/allocation-explain",
             "/cluster/analyze", "/cluster/reindex-preview",
-            "/cluster/sql/", "/cluster/pit/", "/cluster/painless/execute",
-            "/xmigrate/connect-check", "/xmigrate/resolve-preview", "/xmigrate/fetch-config");
+            "/cluster/sql", "/cluster/pit/", "/cluster/painless/execute",
+            "/insight/settings-impact");
+
+    /**
+     * 共享写端点 → 合法页面写键归属（conn 模型）。
+     *
+     * <p>这些端点没有独占的页面前缀（文档 CRUD/任务取消/ILM 策略等被多页复用），原实现
+     * 按“任意写键”放行——持 optimizer 写键即可删文档/取消重建任务/改 ILM 策略。
+     * 改为：必须持有至少一个真实使用该端点的页面写键；未登记的共享写回落角色门（保守）。
+     * 前端 auth.canEndpoint 必须镜像同一张表（防“看得见点不了/看不见能直调”）。</p>
+     */
+    private static final java.util.Map<String, List<String>> SHARED_WRITE_PAGES;
+    static {
+        java.util.Map<String, List<String>> m = new java.util.LinkedHashMap<>();
+        m.put("/cluster/doc/update", Arrays.asList("search", "indices", "doc-diff", "browser"));
+        m.put("/cluster/doc", Arrays.asList("search", "indices", "doc-diff", "browser"));
+        m.put("/cluster/update-document", Arrays.asList("search", "indices", "doc-diff", "browser"));
+        m.put("/cluster/update-partial", Arrays.asList("search", "indices", "doc-diff", "browser"));
+        m.put("/cluster/delete-by-id", Arrays.asList("search", "indices"));
+        m.put("/cluster/delete-by-query", Arrays.asList("search", "update-by-query"));
+        m.put("/cluster/tasks/cancel", Arrays.asList("tasks", "task-tree"));
+        m.put("/cluster/ilm/policy", java.util.Collections.singletonList("ilm"));
+        m.put("/cluster/index-settings/update", Arrays.asList("index-settings", "indices", "optimizer"));
+        m.put("/cluster/reload-analyzers", Arrays.asList("analysis-settings", "synonyms"));
+        m.put("/cluster/reroute", Arrays.asList("cluster-settings", "diag"));
+        m.put("/cluster/scripts/put", Arrays.asList("search-templates", "painless-lab"));
+        m.put("/cluster/scripts/delete", Arrays.asList("search-templates", "painless-lab"));
+        SHARED_WRITE_PAGES = java.util.Collections.unmodifiableMap(m);
+    }
+
+    /** 最长片段匹配的共享写页面集合；无登记返回 null（调用方回落角色门）。 */
+    static List<String> sharedWritePages(String path) {
+        List<String> best = null;
+        int bestLen = -1;
+        for (java.util.Map.Entry<String, List<String>> e : SHARED_WRITE_PAGES.entrySet()) {
+            if (path.contains(e.getKey()) && e.getKey().length() > bestLen) {
+                best = e.getValue();
+                bestLen = e.getKey().length();
+            }
+        }
+        return best;
+    }
+
+    /** conn 模型下是否持有任一共享写端点的合法页面写键（权限面板 sharedWriteAllowed 用）。 */
+    static boolean hasSharedWriteGrant(String targetId, java.util.Set<String> grantedPages) {
+        if (targetId == null || targetId.isEmpty() || grantedPages == null) return false;
+        for (List<String> pages : SHARED_WRITE_PAGES.values()) {
+            for (String page : pages) {
+                if (grantedPages.contains(EnvPagesResolver.CONN_KEY_PREFIX + targetId + ":w:" + page)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
     /** 矩阵参数（每个路径段的 {@code ;...}）：与 Spring UrlPathHelper.removeSemicolonContent 同口径。 */
     private static final Pattern MATRIX_PARAM = Pattern.compile(";[^/]*");
@@ -198,13 +258,16 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         // （pageOf 失配误判「共享端点」放行、/%72ebuild 逃 ADMIN 提档）
         String path = normalizePath(request);
         if (path == null) {
-            // 畸形路径（非法 % 序列/UTF-8 解码失败）fail-closed：非授权事件，不落 PAGE_DENIED 审计
+            // 畸形路径（非法 % 序列/UTF-8 解码失败/.. 越界）fail-closed：非授权事件，不落 PAGE_DENIED 审计
             deny(response, 400, "{\"code\":\"BAD_PATH\",\"message\":\"请求路径非法：无法解码或含非法 % 序列\"}");
             return false;
         }
+        request.setAttribute(ATTR_NORMALIZED_PATH, path);
         //  SETUP 短路：未绑定控制集群时，除 setup 三端点外统一 409（前端据此弹首连向导）
         if (!resolver.bound()) {
-            if (path.contains("/setup/status") || path.contains("/setup/test") || path.contains("/setup/apply")
+            if ("/internal/es/index/setup/status".equals(path)
+                    || "/internal/es/index/setup/test".equals(path)
+                    || "/internal/es/index/setup/apply".equals(path)
                     || "OPTIONS".equalsIgnoreCase(request.getMethod())) {
                 return true;
             }
@@ -251,21 +314,19 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
            (写请求须 conn:{target}:w:{page} 写键),短路角色门——菜单授权即权限,无二次推导。
            静态 key(无 conn: 前缀)=全局页,对所有连接生效,仍受 env 模板收缩;无 conn 键=现状行为。 */
         if (pageAuthEnabled && principal.isDelegated() && principal.getGrantedPages() != null) {
-            /* 超管域优先裁决 × 管理域放开:前置拦截收窄为系统管理子集
-               (重绑/连接档案——无菜单勾选项对应且是授权载体,维持 ADMIN 专属);raw/users 已
-               归属 rest/security 页(pages.json apiPrefixes),由页面门按读键可见+写键
-               WRITE_DENIED 自然接管——连接菜单勾选即权限,角色档不再一刀切。 */
-            /* ·系统管理端点也按连接勾选放开（裁决「rebind/clusters 这个也要」）：
-               conn 模型写键持有人（hasAnyWriteKey）=宿主授过写权的管理者，系统管理写请求
-               （重绑/连接档案 save/delete/sync）豁免 ADMIN 一刀切——纯勾选语义，零角色。 */
-            boolean sysAdminWritable = !"GET".equalsIgnoreCase(request.getMethod())
-                    && !"OPTIONS".equalsIgnoreCase(request.getMethod())
-                    && envPagesResolver.inConnModel(principal.getGrantedPages())
-                    && envPagesResolver.hasAnyWriteKey(
-                            request.getHeader("X-Es-Target"), principal.getGrantedPages());
-            if (isSystemAdminUri(path) && !sysAdminWritable && !principal.getRole().atLeast(ConsoleRole.ADMIN)) {
-                deny(response, 403, "{\"code\":\"FORBIDDEN\",\"message\":\"该操作属管理员专属（用户管理/原始透传等），页面授权不放行\",\"required\":\"ADMIN\"}");
-                return false;
+            /* 超管域优先裁决：用户管理/重绑/连接档案是授权载体本身，任何连接写键都不放行；
+               必须 ADMIN 角色；ADMIN 不受页面写键限制（全局管理权）。 */
+            if (isSystemAdminUri(path)) {
+                if (!principal.getRole().atLeast(ConsoleRole.ADMIN)) {
+                    deny(response, 403, "{\"code\":\"FORBIDDEN\",\"message\":\"该操作属管理员专属（用户管理/连接档案/重绑），连接页面授权不放行\",\"required\":\"ADMIN\"}");
+                    return false;
+                }
+                return true;
+            }
+            /* 超级管理员是全局权限：不受宿主页面白名单/连接写键限制（“有权限的人不能被门禁拖懒”）。
+               非 ADMIN 仍严格走页面/连接写键门。 */
+            if (principal.getRole().atLeast(ConsoleRole.ADMIN)) {
+                return true;
             }
             String targetId = request.getHeader("X-Es-Target");
             boolean targetIsConn = targetId != null && !targetId.isEmpty() && !"host".equalsIgnoreCase(targetId.trim());
@@ -296,16 +357,23 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                     return true;
                 }
             }
-            /* 无页面归属的共享写端点:默认走角色门(不短路)——保守,不扩大拒绝面。
-               语义升格(裁决「按照角色菜单配置的勾选来,按照真正的连接权限菜单
-               spi 来」):conn 模型下勾选即权限——持该连接任意写键(conn:{tid}:w:*)即放行全部
-               共享写端点(表格编辑/文档增删/任务取消/ilm policy/delete-by-id 等),角色档在
-               连接模型下不再参与裁决;ADMIN_KEYWORDS 管理域(raw/users/clusters 等)已在前面
-               超管域优先裁决拦截——连接菜单没有这些勾选项,管理域永不按连接写键放行。 */
-            if (writeReq && targetIsConn
-                    && envPagesResolver.inConnModel(principal.getGrantedPages())
-                    && envPagesResolver.hasAnyWriteKey(targetId, principal.getGrantedPages())) {
-                return true;
+            /* 无页面归属的共享写端点：必须持有真实使用该端点的页面写键（共享端点被多页
+               复用，不能按“任意写键”放行——optimizer 写键不应能删文档/改 ILM 策略）。
+               未登记共享写回落角色门（保守）；已登记但无对应页写键直接 WRITE_DENIED。 */
+            if (writeReq && targetIsConn && envPagesResolver.inConnModel(principal.getGrantedPages())) {
+                List<String> allowedPages = sharedWritePages(path);
+                if (allowedPages != null) {
+                    for (String pageKey : allowedPages) {
+                        if (envPagesResolver.writeAllowed(targetId, pageKey, principal.getGrantedPages())) {
+                            return true;
+                        }
+                    }
+                    opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
+                            "WRITE_DENIED", 403, "conn=" + targetId + " sharedPages=" + String.join(",", allowedPages)));
+                    deny(response, 403, "{\"code\":\"WRITE_DENIED\",\"message\":\"暂无该共享写端点的页面写权限（需 "
+                            + jsonEscape(String.join("/", allowedPages)) + " 之一），请联系管理员授权\"}");
+                    return false;
+                }
             }
         }
         ConsoleRole required = requiredRole(request.getMethod(), path);
@@ -336,6 +404,12 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             return;
         }
         String uri = stripContextPath(request);
+        // 归一化路径优先（preHandle 已 canonicalize）——避免 /cluster/sql/../raw 之流在审计口径露出裸形；
+        // 测试直调 afterCompletion（无 preHandle）时 attr 缺失，回落 raw 剥 context 口径
+        Object normalizedPath = request.getAttribute(ATTR_NORMALIZED_PATH);
+        if (normalizedPath instanceof String) {
+            uri = (String) normalizedPath;
+        }
         // -C1：只读查询类 POST（含 /probe 探活）与 GET 同策略，不算 WRITE
         if (isReadonlyPost(uri)) {
             /* ·可审计补全：执行类只读 POST（painless 脚本执行/analyze 分词验证/
@@ -459,15 +533,21 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
     }
 
     /**
-     * 授权判定专用路径归一化：剥 contextPath → 剥 servletPath → %XX 单趟解码（UTF-8）→ 去每段矩阵参数。
+     * 授权判定专用路径归一化：剥 contextPath → 剥 servletPath → %XX 单趟解码（UTF-8）→ 去每段矩阵参数
+     * → canonicalize（折叠 {@code .}/{@code ..} 与重复斜杠）。
      *
      * <p><b>先解码后剥矩阵参数</b>：{@code %3B}（编码分号）经容器解码 + Spring removeSemicolonContent
      * 后照样路由到 controller，顺序反过来会让 {@code /cluster/bulk%3Bx=y} 漏出页面门。</p>
      *
-     * <p>只服务 preHandle 授权判定；afterCompletion 审计保持 {@link #stripContextPath} 的 raw 口径不变。
-     * 归一化只会让变形路径被正确识别（单调变严），不会让原本拒绝的变放行。</p>
+     * <p><b>canonicalize 必须在解码之后</b>：{@code %2e%2e} 解码后才是 {@code ..}；同时拒绝反斜杠与
+     * NUL（Tomcat 之外容器的路径分隔歧义），{@code ..} 越过根直接 fail-closed。
+     * 白名单/高危清单/页面归属全部使用归一化结果，{@code /auth/login/../users/upsert} 不再能
+     * 借白名单 contains 短路。</p>
      *
-     * @return 归一化路径；非法 % 序列 / UTF-8 解码失败返回 {@code null}（调用方必须 fail-closed）
+     * <p>归一化只会让变形路径被正确识别（单调变严），不会让原本拒绝的变放行。</p>
+     *
+     * @return 归一化路径；非法 % 序列 / UTF-8 解码失败 / 反斜杠 / NUL / {@code ..} 越界返回
+     *         {@code null}（调用方必须 fail-closed）
      */
     static String normalizePath(HttpServletRequest request) {
         String path = request.getRequestURI();
@@ -491,7 +571,45 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         if (path == null) {
             return null;
         }
-        return MATRIX_PARAM.matcher(path).replaceAll("");
+        return canonicalizePath(MATRIX_PARAM.matcher(path).replaceAll(""));
+    }
+
+    /**
+     * 路径 canonicalize（fail-closed）：拒绝 {@code \} 与 NUL；按 {@code /} 分段丢弃空段与 {@code .}，
+     * {@code ..} 弹栈（栈空=越过根，返回 null）；重建为以 {@code /} 开头、段间单斜杠、无尾部斜杠的路径。
+     * 根路径返回 {@code /}。
+     */
+    static String canonicalizePath(String path) {
+        if (path == null || path.indexOf('\\') >= 0 || path.indexOf('\0') >= 0) {
+            return null;
+        }
+        java.util.ArrayDeque<String> segments = new java.util.ArrayDeque<>();
+        int start = 0;
+        int len = path.length();
+        while (start <= len) {
+            int slash = path.indexOf('/', start);
+            int end = slash < 0 ? len : slash;
+            String segment = path.substring(start, end);
+            if (segment.isEmpty() || ".".equals(segment)) {
+                // 空段（//）与 . 直接丢弃
+            } else if ("..".equals(segment)) {
+                if (segments.isEmpty()) {
+                    return null; // 越过根：拒绝（不回绕到根，防白名单/页面门被归一化制造命中）
+                }
+                segments.removeLast();
+            } else {
+                segments.addLast(segment);
+            }
+            if (slash < 0) {
+                break;
+            }
+            start = slash + 1;
+        }
+        StringBuilder sb = new StringBuilder(path.length());
+        for (String segment : segments) {
+            sb.append('/').append(segment);
+        }
+        return sb.length() == 0 ? "/" : sb.toString();
     }
 
     /**
@@ -585,9 +703,13 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         return false;
     }
 
-    private static boolean isWhitelisted(String uri) {
+    /** 白名单精确匹配（不再 endsWith/contains——{@code /auth/login/../users/upsert} 曾借此短路鉴权）。 */
+    static boolean isWhitelisted(String uri) {
+        if (uri == null) {
+            return false;
+        }
         for (String w : WHITELIST) {
-            if (uri.endsWith(w) || uri.contains(w)) {
+            if (uri.equals(w)) {
                 return true;
             }
         }

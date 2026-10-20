@@ -151,7 +151,7 @@
       <!-- err-bar 存在时不再显示「无快照」空态，两者互斥（失败不是空）
  裸 .empty 迁 EmptyState compact，创建快照按钮改 actionText 等价保留 -->
       <EmptyState v-else-if="!loadErr" compact :icon="History" text="当前 repo 无快照，或过滤无匹配"
-        action-text="创建快照" @action="openCreate" />
+        :action-text="canOps ? '创建快照' : undefined" @action="openCreate" />
     </div>
 
     <!-- 创建向导（补 max-width:92vw 窄屏守卫，SecurityView 审计弹窗先例） -->
@@ -209,7 +209,7 @@
         </div>
         <div class="sv-form-row">
           <label>Indices：</label>
-          <input v-model="restoreIndices" class="sv-input" :placeholder="'留空恢复全部（' + (restoreTarget.indices?.length || 0) + ' 个）'" />
+          <input v-model="restoreIndices" class="sv-input" :placeholder="mustSpecifyRestoreIndices ? '必填：显式指定业务索引（不可含控制面索引）' : '留空恢复全部（' + (restoreTarget.indices?.length || 0) + ' 个）'" />
           <!-- 索引表达式校验提示条（创建向导同款） -->
           <div v-if="restoreIndicesHint" class="il-hint" :class="'il-' + restoreIndicesLevel">{{ restoreIndicesHint }}</div>
         </div>
@@ -240,7 +240,7 @@
       <template #footer>
         <div style="display:flex; justify-content:flex-end; gap:var(--sp-2)">
           <button class="btn ghost sm" @click="restoreOpen = false">取消</button>
-          <button class="btn primary sm" @click="doRestore" :disabled="restoring">
+          <button class="btn primary sm" @click="doRestore" :disabled="restoring || (mustSpecifyRestoreIndices && !restoreIndices.trim())">
             <Undo2 :size="11" /> {{ restoring ? '提交中…' : '开始恢复（异步）' }}
           </button>
         </div>
@@ -559,6 +559,8 @@ const createPartial = ref(false);
 const creating = ref(false);
 
 function openCreate() {
+  /* 空态 actionText 之外的第二道门：任何入口（含 EmptyState 事件）都不得为只读用户打开提交面 */
+  if (!canOps.value) { store.notify('warning', '快照操作需要 CLUSTER_OP/ADMIN 角色'); return; }
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   createName.value = `snap-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
@@ -581,6 +583,7 @@ const createPreview = computed(() => {
 });
 
 async function doCreate() {
+  if (!canOps.value) { store.notify('warning', '快照操作需要 CLUSTER_OP/ADMIN 角色'); return; }
   if (creating.value) return; /* 提交防重（同 doRestore）：在途时双击/Enter 重复下发直接短路 */
   if (!currentRepo.value || !createName.value) return;
   // 真实提交前强制确认：快照创建会占用仓库存储并触发集群 IO
@@ -619,6 +622,8 @@ async function doCreate() {
 const restoreOpen = ref(false);
 const restoreTarget = ref<any>(null);
 const restoreIndices = ref('');
+/* 非 ADMIN 必须显式指定业务索引：restore-all 会覆盖控制面索引（后端 restoreSnapshotGuarded 同口径） */
+const mustSpecifyRestoreIndices = computed(() => !auth.can('admin'));
 const restoreRenamePattern = ref('');
 const restoreRenameReplacement = ref('');
 const restoreIncludeGlobalState = ref(false);
@@ -707,6 +712,7 @@ const snapMenuItems = computed(() => {
 
 /* 删除快照（过期快照清理，此前只能去 REST 手删） */
 async function doDeleteSnapshot(s: any) {
+  if (!canOps.value) { store.notify('warning', '快照操作需要 CLUSTER_OP/ADMIN 角色'); return; }
   if (!await askConfirm({
     title: '删除快照',
     level: 'critical', guardText: s.snapshot,
@@ -735,6 +741,11 @@ const restorePreview = computed(() => {
 });
 
 async function doRestore() {
+  if (!canOps.value) { store.notify('warning', '快照操作需要 CLUSTER_OP/ADMIN 角色'); return; }
+  if (mustSpecifyRestoreIndices.value && !restoreIndices.value.trim()) {
+    store.notify('warning', '恢复需显式指定业务索引（不允许恢复全部，防覆盖控制面索引）');
+    return;
+  }
   if (restoring.value) return; /* ：函数体级防重入 */
   if (!currentRepo.value || !restoreTarget.value) return;
   // 恢复为高危操作：可能创建/覆盖索引，critical 级输入守卫并讲清 rename 规则
@@ -783,8 +794,8 @@ async function doRestore() {
 
 /* 表单弹窗 Enter=提交——创建/恢复均内置二次确认（askConfirm），等价点击主按钮；
  can 门与主按钮 disabled 同口径（creating/restoring 在途不放行，防 Enter 重复下发） */
-useModalEnter(createOpen, doCreate, () => !creating.value);
-useModalEnter(restoreOpen, doRestore);
+useModalEnter(createOpen, doCreate, () => canOps.value && !creating.value);
+useModalEnter(restoreOpen, doRestore, () => canOps.value);
 </script>
 
 <style scoped>

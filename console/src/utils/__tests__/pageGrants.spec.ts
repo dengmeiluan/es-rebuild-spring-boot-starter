@@ -99,8 +99,10 @@ describe('五百九十八批：SecurityView 结构锁（delegated 下角色概�
     expect(src).toContain("{ 'pg-w': g.writable.includes(p) }");
     expect(src).toContain('点击连接行展开逐页明细');
   });
-  it('用户管理区定位为内置账号（独立部署），canManageUsers 走 users 端点 security 页勾选', () => {
+  it('用户管理区定位为内置账号（独立部署），security 页写键可管理普通账号，ADMIN 授予仅超管', () => {
     expect(src).toContain('用户管理（内置账号 · 独立部署登录用）');
-    expect(src).toContain("auth.canEndpoint('admin', 'POST', '/internal/es/index/auth/users/upsert', store.target)");
+    expect(src).toContain("const canManageUsers = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/auth/users/upsert', store.target));");
+    expect(src).toContain("const canAssignAdmin = computed(() => auth.can('admin'));");
+    expect(src).toContain('<option v-if="canAssignAdmin" value="ADMIN">');
   });
 });

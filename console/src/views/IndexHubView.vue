@@ -166,7 +166,7 @@
                   :searchable="true"
                   :sync-sort="docsSortSync"
                   @sort-change="onDocsSortChange"
-                  editable @edit-doc="h => openDoc(h, true)"
+                  :editable="canWrite" @edit-doc="h => openDoc(h, true)"
                   @open-doc="openDoc" @delete-doc="askDelDoc" @batch-delete="askBatchDel" @refresh="runDocs"
                 >
                   <!-- 分页器寄居表格工具行（#bar-prepend，与查询工作台 DslQueryView 同语言）
@@ -199,13 +199,13 @@
                        json/tree 档挂文档导航条（遍历/_id 直达下拉/打开/编辑直达），编辑直达
                        仅 tree 档亮钮（editable 已接线 edit-doc-at） -->
                   <div v-show="docsView === 'json'" class="scroll-y ih-json-wrap ih-alt-body">
-                    <AltHitsViews view="json" :json-html="docsJsonHtml" :doc-count="docsHits.length" :doc-ids="docsHits.map(h => h._id)" editable @open-doc-at="i => { const h = docsHits[i]; if (h) openDoc(h) }" @edit-doc-at="i => { const h = docsHits[i]; if (h) openDoc(h, true) }" />
+                    <AltHitsViews view="json" :json-html="docsJsonHtml" :doc-count="docsHits.length" :doc-ids="docsHits.map(h => h._id)" :editable="canWrite" @open-doc-at="i => { const h = docsHits[i]; if (h) openDoc(h) }" @edit-doc-at="i => { const h = docsHits[i]; if (h) openDoc(h, true) }" />
                   </div>
                   <div v-show="docsView === 'tree'" class="scroll-y ih-tree-view ih-alt-body">
-                    <AltHitsViews view="tree" :tree-data="docsAltData" :doc-count="docsAltData.length" :doc-ids="docsAltData.map(r => String(r._id ?? ''))" editable @open-doc-at="i => openAltDocAt(docsAltData, i)" @edit-doc-at="i => openAltDocAt(docsAltData, i, true)" />
+                    <AltHitsViews view="tree" :tree-data="docsAltData" :doc-count="docsAltData.length" :doc-ids="docsAltData.map(r => String(r._id ?? ''))" :editable="canWrite" @open-doc-at="i => openAltDocAt(docsAltData, i)" @edit-doc-at="i => openAltDocAt(docsAltData, i, true)" />
                   </div>
                   <div v-show="docsView === 'cards'" class="ih-cards ih-alt-body">
-                    <AltHitsViews view="cards" :hits="docsHits" editable @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />
+                    <AltHitsViews view="cards" :hits="docsHits" :editable="canWrite" @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />
                   </div>
                 </ResultTable>
               </template>
@@ -318,7 +318,7 @@
                 :hits="qryResp.hits" :total="qryResp.total" :took="qryResp.took" :index="cur" :total-gte="qryResp.totalGte" show-relevance
                 :field-types="fieldTypesMap"
                 :searchable="true"
-                editable @edit-doc="h => openDoc(h, true)"
+                :editable="canWrite" @edit-doc="h => openDoc(h, true)"
                 @open-doc="openDoc" @delete-doc="askDelDoc" @batch-delete="askBatchDel" @refresh="runDsl"
                 @explain-hit="whyHit" @xray-hit="xrayHit"
               >
@@ -350,13 +350,13 @@
                      同屏；json/tree 档挂文档导航条（遍历/_id 直达/打开/编辑直达，与查询
                      工作台同口径），随 RT 的 qryResp 守卫在场，原独立包裹层摘除 -->
                 <div v-show="qryView === 'json'" class="scroll-y ih-json-wrap ih-alt-body">
-                  <AltHitsViews view="json" :json-html="qryJsonHtml" :doc-count="qryResp?.hits?.length ?? 0" :doc-ids="qryResp?.hits?.map(h => h._id) ?? []" editable @open-doc-at="i => { const h = qryResp?.hits?.[i]; if (h) openDoc(h) }" @edit-doc-at="i => { const h = qryResp?.hits?.[i]; if (h) openDoc(h, true) }" />
+                  <AltHitsViews view="json" :json-html="qryJsonHtml" :doc-count="qryResp?.hits?.length ?? 0" :doc-ids="qryResp?.hits?.map(h => h._id) ?? []" :editable="canWrite" @open-doc-at="i => { const h = qryResp?.hits?.[i]; if (h) openDoc(h) }" @edit-doc-at="i => { const h = qryResp?.hits?.[i]; if (h) openDoc(h, true) }" />
                 </div>
                 <div v-show="qryView === 'tree'" class="scroll-y ih-tree-view ih-alt-body">
-                  <AltHitsViews view="tree" :tree-data="qryAltData" :doc-count="qryAltData.length" :doc-ids="qryAltData.map(r => String(r._id ?? ''))" editable @open-doc-at="i => openAltDocAt(qryAltData, i)" @edit-doc-at="i => openAltDocAt(qryAltData, i, true)" />
+                  <AltHitsViews view="tree" :tree-data="qryAltData" :doc-count="qryAltData.length" :doc-ids="qryAltData.map(r => String(r._id ?? ''))" :editable="canWrite" @open-doc-at="i => openAltDocAt(qryAltData, i)" @edit-doc-at="i => openAltDocAt(qryAltData, i, true)" />
                 </div>
                 <div v-show="qryView === 'cards'" class="ih-cards ih-alt-body">
-                  <AltHitsViews view="cards" :hits="qryResp.hits" editable @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />
+                  <AltHitsViews view="cards" :hits="qryResp.hits" :editable="canWrite" @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />
                 </div>
               </ResultTable>
               <!-- query tab 未执行就绪空态（DslQueryView :470 同件同文案风格）——
@@ -555,8 +555,9 @@
       </template>
     </div>
 
-    <!-- 新建索引（?create=1 深链可直开，创建成功即选中联动右侧 360 详情） -->
-    <CreateIndexModal :show="createOpen === '1'" @update:show="v => createOpen = v ? '1' : ''" @created="onCreated" />
+    <!-- 新建索引（?create=1 深链可直开，创建成功即选中联动右侧 360 详情）；
+         无创建权限彻底卸载组件，深链 ?create=1 也开不出表单（点位隐藏挡不住深链） -->
+    <CreateIndexModal v-if="canCreateIdx" :show="createOpen === '1'" @update:show="v => createOpen = v ? '1' : ''" @created="onCreated" />
 
     <!--  W4：删除索引/单条文档/批量文档三处直挂 ConfirmModal 退役，
          合并全局 askConfirm（askDelIndex/askDelDoc/askBatchDel）；facts 具名行、
@@ -575,7 +576,7 @@
         <MonacoEditor :model-value="docEditText" language="json" :readonly="true" height="min(60vh,420px)"
           :dsl-assist="{ fields: ihDslAssist.fields, bodyKind: () => 'doc' }" :font-size="ihFont" />
         <div class="ih-docs-bar" style="margin-top:var(--sp-2h)">
-          <button class="btn sm pri" @click="docEditMode = true"><Pencil :size="11" /> 编辑</button>
+          <button v-if="canWrite" class="btn sm pri" @click="docEditMode = true"><Pencil :size="11" /> 编辑</button>
           <button class="btn sm ghost" @click="copyDoc"><Copy :size="11" /> 复制 JSON</button>
         </div>
       </template>
@@ -1832,6 +1833,8 @@ const qryTbl = ref<InstanceType<typeof ResultTable> | null>(null);
 /* W4：单条文档删除合并 askConfirm（直挂 ConfirmModal 退役）——
  facts 具名行沿用口径（索引/文档 ID），正文只留动作语句 */
 async function askDelDoc(hit: SearchHit) {
+  /* 执行体首行守卫——行内删除钮/Del 键/右键菜单同汇入本函数，点位隐藏挡不住键盘旁路 */
+  if (!canOps.value) { store.notify('warning', '删除需专项或 ADMIN 角色'); return; }
   if (!await askConfirm({
     title: '删除文档',
     message: '将删除该文档，不可恢复。',
@@ -1854,6 +1857,7 @@ async function askDelDoc(hit: SearchHit) {
 
 /* W4：批量文档删除合并 askConfirm——critical 守卫（输入文档数）语义原样 */
 async function askBatchDel(ids: string[]) {
+  if (!canOps.value) { store.notify('warning', '删除需专项或 ADMIN 角色'); return; }
   if (!await askConfirm({
     title: '批量删除文档',
     message: '将删除选中的文档，不可恢复。',
@@ -1961,6 +1965,8 @@ const { rowH, rowHLabel, cycleRowH } = useTablePrefs(ref<string | null>(null), r
    取消钮消失，过期拍 finish 会清掉新拍的 AbortController） */
 let opsSeq = 0;
 async function opRaw(method: string, path: string, okMsg: string, reloadList = false) {
+  /* raw 系全走 /cluster/raw（ADMIN 域）——行级执行钮无 disabled 面，守卫落执行体 */
+  if (!canAdmin.value) { store.notify('warning', '原始透传需 ADMIN 角色'); return; }
   const seq = ++opsSeq;
   opsKey.value = path; /* P0-A：行级执行读秒锚（执行钮文案换字+瞬时取消钮） */
   try {
@@ -1977,6 +1983,7 @@ async function opRaw(method: string, path: string, okMsg: string, reloadList = f
   }
 }
 async function askForceMerge() {
+  if (!canAdmin.value) { store.notify('warning', '原始透传需 ADMIN 角色'); return; }
   if (!await askConfirm({
     title: 'ForceMerge 段合并',
     message: `将对 ${cur.value} 执行 force merge max_num_segments=1：大索引可能长时间占用 IO 且不可中断，建议低峰期执行。`,
@@ -1985,6 +1992,7 @@ async function askForceMerge() {
   opRaw('POST', `/${cur.value}/_forcemerge?max_num_segments=1&wait_for_completion=false`, 'ForceMerge 任务已提交（异步）');
 }
 async function askClose() {
+  if (!canAdmin.value) { store.notify('warning', '原始透传需 ADMIN 角色'); return; }
   if (!await askConfirm({
     title: '关闭索引',
     message: `关闭后 ${cur.value} 不可读写（数据保留，可随时重新打开），依赖此索引的业务查询会立刻报错。`,
@@ -1996,6 +2004,7 @@ async function askClose() {
  有意关闭的索引被误打开后，依赖方查询/写入会恢复打到它；虽然可逆（再关掉），但来回
  折腾且中间窗口可能产生脏写，warn 确认讲清后果即可。 */
 async function askOpen() {
+  if (!canAdmin.value) { store.notify('warning', '原始透传需 ADMIN 角色'); return; }
   if (!await askConfirm({
     title: '打开索引',
     message: `${cur.value} 将恢复读写，依赖此索引的业务查询/写入会立即恢复打到它。若它此前是被有意关闭的（如隔离问题数据），请先确认故障已处理。`,
@@ -2019,6 +2028,7 @@ watch(settings, () => {
   repDraft.value = settingOf('number_of_replicas') || '1';
 });
 async function applySetting(body: Record<string, any>, okMsg: string) {
+  if (!canSettings.value) { store.notify('warning', '索引设置需专项角色'); return; }
   try {
     await api.updateIndexSettings(cur.value, JSON.stringify(body));
     store.notify('success', okMsg + '：' + cur.value);
@@ -2048,6 +2058,7 @@ async function unblock() {
  facts 具名行 label 集与 BrowserView askDel 同款，别名段在场时追加「别名指向」行；
  别名后果语句留正文（askConfirm message 为纯文本，原 warn 色强调以文字保全语义） */
 async function askDelIndex() {
+  if (!canOps.value) { store.notify('warning', '删除需专项或 ADMIN 角色'); return; }
   const idx = cur.value;
   /* facts 抽出调用块（confirmAudit 六百字符扫描窗内保持可审计形态） */
   const facts = [

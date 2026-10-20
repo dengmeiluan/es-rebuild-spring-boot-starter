@@ -50,7 +50,7 @@
 
       <template v-if="panel.mode === 'create'">
         <div class="alv-form">
-          <label class="alv-f"><span>别名</span><input v-model="cAlias" ref="cAliasEl" class="alv-fi" placeholder="my-alias" @keydown.enter="cAlias && cIndex && !acting && doCreate()" />
+          <label class="alv-f"><span>别名</span><input v-model="cAlias" ref="cAliasEl" class="alv-fi" placeholder="my-alias" @keydown.enter="canOps && cAlias && cIndex && !acting && doCreate()" />
             <!-- 别名输入智能纠错（useInputLint 出数据，.il-hint 提示条样式全站单一出处 theme.css）——
  非法字符 err + 重名 warn（对照现有别名列表）；别名允许大写，故不套 indexNameRule -->
             <div v-if="cAliasHint" class="il-hint" :class="'il-' + cAliasLevel">{{ cAliasHint }}</div>
@@ -88,7 +88,7 @@
           </div>
         </label>
         <div class="alv-panel-act">
-          <button class="btn sm primary" @click="doCreate" :disabled="!cAlias || !cIndex || acting"><Save :size="11" /> 创建</button>
+          <button v-if="canOps" class="btn sm primary" @click="doCreate" :disabled="!cAlias || !cIndex || acting"><Save :size="11" /> 创建</button>
         </div>
       </template>
 
@@ -515,6 +515,8 @@ function openSwitch(g: Group) {
 }
 
 async function execActions(actions: any[], okMsg: string, opts?: { stayOpen?: boolean }): Promise<boolean> {
+  /* 四类写操作最终都汇入这里——执行体首行收口，按钮 v-if 之外无旁路 */
+  if (!canOps.value) { store.notify('warning', '别名写操作需专项或 ADMIN 角色'); return false; }
   acting.value = true;
   try {
     const r: any = await api.aliasActions(JSON.stringify({ actions }));
@@ -533,6 +535,7 @@ async function execActions(actions: any[], okMsg: string, opts?: { stayOpen?: bo
 }
 
 async function doCreate() {
+  if (!canOps.value) { store.notify('warning', '别名写操作需专项或 ADMIN 角色'); return; }
   const add: any = { index: cIndex.value.trim(), alias: cAlias.value.trim() };
   if (cWrite.value) add.is_write_index = true;
   if (cRouting.value.trim()) add.routing = cRouting.value.trim();
@@ -556,6 +559,7 @@ async function doCreate() {
  原 body 里的 \n（pre-line 渲染）改单句 message，信息量等价 */
 
 async function doSwitch() {
+  if (!canOps.value) { store.notify('warning', '别名写操作需专项或 ADMIN 角色'); return; }
   const alias = panel.value!.alias;
   const okGo = await askConfirm({
     title: '原子切换别名指向',
@@ -574,6 +578,7 @@ async function doSwitch() {
 }
 
 async function setWrite(g: Group, idx: string) {
+  if (!canOps.value) { store.notify('warning', '别名写操作需专项或 ADMIN 角色'); return; }
   const okGo = await askConfirm({
     title: '切换 write index',
     level: 'warn',
@@ -587,6 +592,7 @@ async function setWrite(g: Group, idx: string) {
 }
 
 async function unbind(alias: string, index: string) {
+  if (!canOps.value) { store.notify('warning', '别名写操作需专项或 ADMIN 角色'); return; }
   const okGo = await askConfirm({
     title: '解绑别名',
     level: 'warn',

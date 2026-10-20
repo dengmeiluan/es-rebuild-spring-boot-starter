@@ -306,7 +306,7 @@
             </td>
             <td class="rt-act">
               <button aria-label="查看文档" class="btn sm ghost" title="查看文档" @click="emit('open-doc', hit)"><Eye :size="12" /></button>
-              <button v-if="editable" aria-label="编辑文档" class="btn sm ghost" title="打开该文档并直接进入编辑（Monaco 编辑 raw JSON 后保存）" @click="emit('edit-doc', hit)"><Pencil :size="12" /></button>
+              <button v-if="editable && canWrite" aria-label="编辑文档" class="btn sm ghost" title="打开该文档并直接进入编辑（Monaco 编辑 raw JSON 后保存）" @click="emit('edit-doc', hit)"><Pencil :size="12" /></button>
               <!-- W7：行内展开详情钮（ChevronRight/Down）——free 多行展开，Esc 全收（E=焦点行同款） -->
               <button class="btn sm ghost rt-row-expand" :aria-label="expandedRows.has(rowKey(hit, ri)) ? '收起此行详情' : '展开此行详情'"
                 :title="expandedRows.has(rowKey(hit, ri)) ? '收起此行详情（Esc 全部收起）' : '展开此行详情（焦点行按 E）'"
@@ -851,7 +851,7 @@ const auth = useAuthStore();
  即按连接授权裁决，跳过全局角色门）——此前只看全局角色，被授予连接写档的同事双击编辑
  静默无效（后端会放行，前端不让进=「权限给了却无法操作」）。：ops(删文档)
  同源升级 canWriteOn；改走 canEndpoint（delete-by-id 归属页精确写键裁决）。 */
-const canWrite = computed(() => auth.canWriteOn(store.target));
+const canWrite = computed(() => auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/update-partial', store.target));
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/delete-by-id', store.target));
 
 /* ═══ 列 ═══
@@ -1776,6 +1776,7 @@ function tabEdit(back: boolean) {
 const imeComposing = ref(false);
 function onEditEnter() { if (imeComposing.value) return; applyEdit(); }
 function applyEdit() {
+  if (!canWrite.value) return;
   const e = editing.value;
   if (!e) return;
   editing.value = null;
@@ -1862,6 +1863,7 @@ const commitProgress = ref('');
 /* 上次提交失败的项（id::field）——气泡里红标，重试前心里有数；撤销/成功即清 */
 const lastFailed = ref<Set<string>>(new Set());
 async function commitPending() {
+  if (!canWrite.value) { store.notify('warning', '当前身份无文档写权限'); return; }
   committing.value = true;
   const entries = [...pending.value.entries()];
   /* 失败原因透传——只报 id 不知道为什么失败（mapping 冲突/类型错是高频原因），

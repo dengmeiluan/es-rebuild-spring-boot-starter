@@ -34,6 +34,7 @@ const DOC_FULL = {
 };
 
 const rawFn = vi.fn();
+const getDocFn = vi.fn();
 vi.mock('../api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api')>();
   return {
@@ -44,6 +45,7 @@ vi.mock('../api', async (importOriginal) => {
       clusterHealth: () => Promise.resolve({}),
       clusterIndices: () => Promise.resolve(INDICES),
       raw: (...a: any[]) => rawFn(...a),
+      getDoc: (...a: any[]) => getDocFn(...a),
       setup: { ...actual.api.setup, status: () => Promise.resolve({ bound: true, mode: 'x', endpoint: null, appName: 't', hostVisible: true }) },
     },
   };
@@ -93,6 +95,8 @@ beforeEach(() => {
     if (String(path).includes('_doc/')) return JSON.parse(JSON.stringify(DOC_FULL));
     return { acknowledged: true };
   });
+  /* 963：深链文档卡改走 VIEWER 可读的 GET /cluster/doc（api.getDoc），raw 是 ADMIN 域 */
+  getDocFn.mockReset().mockImplementation(async (_idx: string, _id: string) => JSON.parse(JSON.stringify(DOC_FULL)));
 });
 
 describe('776 A0 挂载不变量负锚（现状即守卫，非刀面）', () => {
@@ -122,8 +126,9 @@ describe('776 A0 挂载不变量负锚（现状即守卫，非刀面）', () => 
 describe('776 G253 文档卡原始响应轻形态（铁律 F·头名；768 G240/Mapping R84 同构）', () => {
   it('G253a 深链开卡：_source 精简视图（业务字段在场+元数据不可见）+FileJson 钮 aria-pressed=false', async () => {
     await mountBrowser('#/browser?idx=orders-v9&doc=doc-776-1');
-    expect(rawFn, 'openLinkedDoc 走 api.raw GET _doc').toHaveBeenCalledTimes(1);
-    expect(rawFn.mock.calls[0][1]).toContain('/orders-v9/_doc/doc-776-1');
+    expect(getDocFn, 'openLinkedDoc 走 api.getDoc（GET /cluster/doc）').toHaveBeenCalledTimes(1);
+    expect(getDocFn.mock.calls[0][0]).toBe('orders-v9');
+    expect(getDocFn.mock.calls[0][1]).toBe('doc-776-1');
     const card = host.querySelector('.bw-linked-doc');
     expect(card, '深链文档卡开').toBeTruthy();
     expect(host.querySelector('.bw-ld-hd')!.textContent).toContain('doc-776-1');

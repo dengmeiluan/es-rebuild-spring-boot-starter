@@ -19,19 +19,23 @@ package io.github.dengmeiluan.es.rebuild.web;
 import io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthInterceptor;
 import io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal;
 import io.github.dengmeiluan.es.rebuild.auth.ConsoleRole;
+import io.github.dengmeiluan.es.rebuild.auth.EnvPagesResolver;
 import io.github.dengmeiluan.es.rebuild.multicluster.ConnStore;
 import io.github.dengmeiluan.es.rebuild.xmigrate.CrossClusterMigrateService;
 import io.github.dengmeiluan.es.rebuild.xmigrate.MigrateJobES;
 import io.github.dengmeiluan.es.rebuild.xmigrate.MigrateRequest;
 import io.github.dengmeiluan.es.rebuild.xmigrate.RemoteClusterConn;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,10 +55,15 @@ public class CrossClusterMigrateController {
 
     private final CrossClusterMigrateService migrateService;
     private final ConnStore connStore;
+    private final EnvPagesResolver envPagesResolver;
+    private final boolean pageAuthEnabled;
 
-    public CrossClusterMigrateController(CrossClusterMigrateService migrateService, ConnStore connStore) {
+    public CrossClusterMigrateController(CrossClusterMigrateService migrateService, ConnStore connStore,
+                                         EnvPagesResolver envPagesResolver, boolean pageAuthEnabled) {
         this.migrateService = migrateService;
         this.connStore = connStore;
+        this.envPagesResolver = envPagesResolver;
+        this.pageAuthEnabled = pageAuthEnabled;
     }
 
     /** 旧集群连通性自检 + 列出旧集群索引。connId 非空时用已存档案（body 可传 {}）。 */
@@ -62,6 +71,7 @@ public class CrossClusterMigrateController {
     public List<Map<String, Object>> connectCheck(@RequestBody RemoteClusterConn conn,
                                                   @RequestParam(required = false) String connId,
                                                   HttpServletRequest request) {
+        requireSourceWrite(connId, request);
         return migrateService.connectCheck(pick(conn, connId, request));
     }
 
@@ -76,13 +86,15 @@ public class CrossClusterMigrateController {
 
     /** 迁移前预检：目标索引是否已存在（已存在则同名文档将跳过、结果是合并），供启动确认弹层前置警告。 */
     @PostMapping("preflight")
-    public Map<String, Object> preflight(@RequestBody MigrateRequest request) {
+    public Map<String, Object> preflight(@RequestBody MigrateRequest request, HttpServletRequest http) {
+        requireSourceWrite(request.getSrcConnId(), http);
         return migrateService.preflight(request);
     }
 
     /** 发起迁移（异步），返回 jobId。srcConnId 非空时服务端注入已存档案为源连接。 */
     @PostMapping("start")
     public Map<String, Object> start(@RequestBody MigrateRequest request, HttpServletRequest http) {
+        requireSourceWrite(request.getSrcConnId(), http);
         if (request.getSrcConnId() != null && !request.getSrcConnId().trim().isEmpty()) {
             request.setConn(storedConn(request.getSrcConnId(), http));
         }
@@ -99,19 +111,34 @@ public class CrossClusterMigrateController {
                                            @RequestParam String sourceIndex,
                                            @RequestParam(required = false) String connId,
                                            HttpServletRequest request) {
+        requireSourceWrite(connId, request);
         return migrateService.fetchSourceConfig(pick(conn, connId, request), sourceIndex);
     }
 
-    /** 进度快照。 */
+    /** 进度快照（连接模型：只允许作业源连接的写键持有人）。 */
     @GetMapping("progress")
-    public MigrateJobES progress(@RequestParam String jobId) {
-        return migrateService.progress(jobId);
+    public MigrateJobES progress(@RequestParam String jobId, HttpServletRequest request) {
+        MigrateJobES job = migrateService.progress(jobId);
+        requireJobSource(job, request);
+        return job;
     }
 
-    /** 近期迁移作业列表。 */
+    /** 近期迁移作业列表（连接模型：只列源连接写键可达的作业）。 */
     @GetMapping("jobs")
-    public List<MigrateJobES> jobs(@RequestParam(required = false, defaultValue = "20") int limit) {
-        return migrateService.jobs(limit);
+    public List<MigrateJobES> jobs(@RequestParam(required = false, defaultValue = "20") int limit,
+                                   HttpServletRequest request) {
+        List<MigrateJobES> all = migrateService.jobs(limit);
+        if (!connModel(request)) return all;
+        ConsolePrincipal principal = principal(request);
+        List<MigrateJobES> visible = new ArrayList<>();
+        for (MigrateJobES job : all) {
+            if (job.getSrcConnId() != null && !job.getSrcConnId().trim().isEmpty()
+                    && envPagesResolver.writeAllowed(job.getSrcConnId().trim(), "xmigrate",
+                            principal.getGrantedPages())) {
+                visible.add(job);
+            }
+        }
+        return visible;
     }
 
     /**
@@ -128,15 +155,63 @@ public class CrossClusterMigrateController {
     public Map<String, Object> resume(@RequestParam String jobId, @RequestBody RemoteClusterConn conn,
                                       @RequestParam(required = false) String connId,
                                       HttpServletRequest request) {
+        MigrateJobES job = migrateService.progress(jobId);
+        requireJobSource(job, request);
+        if (connModel(request) && job.getSrcConnId() != null && !job.getSrcConnId().trim().isEmpty()) {
+            if (connId == null || !job.getSrcConnId().trim().equals(connId.trim())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "续跑必须使用该作业的源连接档案 " + job.getSrcConnId());
+            }
+        }
+        requireSourceWrite(connId, request);
         migrateService.resume(jobId, pick(conn, connId, request));
         return ok("jobId", jobId);
     }
 
-    /** 中止。 */
+    /** 中止（连接模型：只允许作业源连接的写键持有人）。 */
     @PostMapping("abort")
-    public Map<String, Object> abort(@RequestParam String jobId) {
+    public Map<String, Object> abort(@RequestParam String jobId, HttpServletRequest request) {
+        MigrateJobES job = migrateService.progress(jobId);
+        requireJobSource(job, request);
         migrateService.abort(jobId);
         return ok("aborted", jobId);
+    }
+
+    /** 连接模型下源连接档案必须有该连接的迁移写键；手输连接不绑定档案（仍受当前页 rank3 门）。 */
+    private void requireSourceWrite(String connId, HttpServletRequest request) {
+        if (!connModel(request) || connId == null || connId.trim().isEmpty()) return;
+        ConsolePrincipal principal = principal(request);
+        if (!envPagesResolver.writeAllowed(connId.trim(), "xmigrate", principal.getGrantedPages())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "暂无源连接档案 " + connId.trim() + " 的迁移写权限");
+        }
+    }
+
+    /** 连接模型下作业必须记录源连接档案，且操作者持有该档案的迁移写键；旧版/手输作业不下放。 */
+    private void requireJobSource(MigrateJobES job, HttpServletRequest request) {
+        if (!connModel(request)) return;
+        String src = job == null ? null : job.getSrcConnId();
+        if (src == null || src.trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "该迁移作业未记录源连接档案，连接模型下不可操作");
+        }
+        requireSourceWrite(src, request);
+    }
+
+    private boolean connModel(HttpServletRequest request) {
+        if (!pageAuthEnabled || envPagesResolver == null) return false;
+        ConsolePrincipal principal = principal(request);
+        // ADMIN 是全局超管：不受源连接写键/作业过滤限制
+        if (principal != null && principal.getRole().atLeast(io.github.dengmeiluan.es.rebuild.auth.ConsoleRole.ADMIN)) {
+            return false;
+        }
+        return principal != null && principal.isDelegated() && principal.getGrantedPages() != null
+                && envPagesResolver.inConnModel(principal.getGrantedPages());
+    }
+
+    private static ConsolePrincipal principal(HttpServletRequest request) {
+        Object attr = request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+        return attr instanceof ConsolePrincipal ? (ConsolePrincipal) attr : null;
     }
 
     private static Map<String, Object> ok(String key, Object value) {

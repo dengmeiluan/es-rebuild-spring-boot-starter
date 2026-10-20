@@ -20,7 +20,7 @@ describe('934 文档编辑直达矩阵（源码锁）', () => {
   });
 
   it('DslQueryView：tree 档 editable 直达 + 重组剥行首 _id', () => {
-    expect(dq).toContain('editable @open-doc-at="i => openTreeDocAt(i)" @edit-doc-at="i => openTreeDocAt(i, true)" />');
+    expect(dq).toContain(':editable="canWrite" @open-doc-at="i => openTreeDocAt(i)" @edit-doc-at="i => openTreeDocAt(i, true)" />');
     expect(dq).toContain('<AltHitsViews view="tree"');
     expect(dq).toMatch(/function openTreeDocAt\(i: number, goEdit = false\)/);
     expect(dq, '行首 _id 剥出 _source（元数据字段不可写回文档体）').toMatch(/const \{ _id, \.\.\.src \} = row;/);
@@ -33,12 +33,12 @@ describe('934 文档编辑直达矩阵（源码锁）', () => {
     expect(ih).toMatch(/function openAltDocAt\(rows: Array<Record<string, any>>, i: number, goEdit = false\)/);
     expect(ih, '行首 _id 剥出 _source').toMatch(/const \{ _id, \.\.\.src \} = row;/);
     expect(ih.match(/@edit-doc-at=/g)?.length ?? 0, 'docs/qry 的 json+tree 四档接线数').toBe(4);
-    expect(ih.match(/editable @open-doc-at="i => openAltDocAt\(/g)?.length ?? 0, 'tree editable 直达两处').toBe(2);
+    expect(ih.match(/:editable="canWrite" @open-doc-at="i => openAltDocAt\(/g)?.length ?? 0, 'tree editable 直达两处（963：editable 随 canWrite）').toBe(2);
   });
 
   it('ResultTable：行内编辑钮受 editable 开关（edit-doc emit），内建 alt 档仅打开链', () => {
     expect(rt).toMatch(/editable\?: boolean;/);
-    expect(rt).toContain('<button v-if="editable" aria-label="编辑文档"');
+    expect(rt).toContain('<button v-if="editable && canWrite" aria-label="编辑文档"');
     expect(rt).toContain("(e: 'edit-doc', hit: SearchHit): void;");
     /* 内建 alt 档（无编辑链宿主经 RT 消费的 JSON/Tree）不传 editable=不渲染编辑钮 */
     expect(rt, '内建 alt 档仅打开链').toMatch(/@open-doc-at="i => \{ const h = props\.hits\[i\]; if \(h\) emit\('open-doc', h\) \}"/);
@@ -53,9 +53,9 @@ describe('934 文档编辑直达矩阵（源码锁）', () => {
     expect(ah).toMatch(/<pre v-if="view === 'json'" ref="preEl" class="json-view" v-html="jsonHtml" @click="onPreClick" @dblclick="onPreDblClick"/);
     expect(ah).toContain('@dblclick="editable && emit(\'edit-doc\', h)"');
     /* 宿主表格行内编辑直达接线（两工作台 + RT 行钮） */
-    expect(dq).toMatch(/editable @edit-doc="h => openDoc\(h, true\)"/);
-    expect(ih.match(/editable @edit-doc="h => openDoc\(h, true\)"/g)?.length ?? 0, 'IH 两处 ResultTable 行内编辑接线').toBe(2);
-    expect(dq).toContain('<AltHitsViews view="cards" :hits="cardHits" editable @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />');
+    expect(dq).toMatch(/:editable="canWrite" @edit-doc="h => openDoc\(h, true\)"/);
+    expect(ih.match(/:editable="canWrite" @edit-doc="h => openDoc\(h, true\)"/g)?.length ?? 0, 'IH 两处 ResultTable 行内编辑接线（963：editable 随 canWrite）').toBe(2);
+    expect(dq).toContain('<AltHitsViews view="cards" :hits="cardHits" :editable="canWrite" @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />');
     /* IH json 信封逐文档块化（j-doc-block 与查询工作台同款） */
     expect(ih).toContain('`<span class="j-doc-block" data-doc-i="${i}">`');
   });

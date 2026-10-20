@@ -159,7 +159,7 @@
  限高可滚 + 重试重跑 doSubmit；与结果卡互斥（失败清旧结果，不残留上次成功伪装） -->
       <div v-if="submitErr" role="alert" class="err-bar rise-in uq-err">
         <span class="uq-err-msg">{{ submitErr }}</span>
-        <button class="btn sm" @click="doSubmit" :disabled="submitting || !index.trim() || !queryStr.trim()">重试</button>
+        <button v-if="canOps" class="btn sm" @click="doSubmit" :disabled="submitting || !index.trim() || !queryStr.trim()">重试</button>
       </div>
       <div v-else-if="result" class="uq-sec wide">
         <div class="uq-card-hd">
@@ -387,6 +387,8 @@ function doFav() {
 
 /* z5 轮：403 补下一步建议——W4c 起收敛 utils/esErrorAdvice 单一出处（三视图文案逐字等价） */
 async function doSubmit() {
+  /* 权限执行体首行门（按钮 v-if 之外的 Ctrl+Enter/重试通道）：批量写需专项或 ADMIN */
+  if (!canOps.value) { store.notify('warning', '批量写需专项或 ADMIN 角色'); return; }
   /* @execute(Grave/Ctrl+Enter) 与重试按钮不经执行钮 disabled，此处必须自防重入 */
   if (submitting.value) return;
   /* z5 轮实测缺口：执行钮 :disabled 有 !queryStr 门，但 Monaco Ctrl+Enter 路径不经按钮——

@@ -136,11 +136,10 @@ describe('五百七十四批·RestView raw 透传三态行为锁（VIEWER 不可
   });
 });
 
-/* ═══ 五百七十七批·TasksView conn 写键行为锁：canWriteOn(store.target) 连接感知真通 DOM ═══
-   背景：575 批后端已放行 conn 模型下持 conn:{tid}:w:* 写键的用户（飞书授权恒 VIEWER）调
-   共享低危写端点（含 /cluster/tasks/cancel）；前端 Cancel 钮门控升 canWriteOn(store.target)
-   后，「有权限但看不到按钮」的镜像面必须收口。行为级四态（源码锁抓不住计算属性写错恒假）：
-   写键在场可见 / 仅读键不可见 / 静态模型回落 VIEWER 不可见（零破坏）/ OPERATOR 正向证明。 */
+/* ═══ 五百七十七批·TasksView conn 写键行为锁：canEndpoint(tasks/cancel) 连接感知真通 DOM ═══
+   背景：后端共享写端点按真实归属页写键放行（task cancel → tasks/task-tree）；前端 Cancel 钮
+   门控走 canEndpoint(tasks/cancel) 后，「有权限但看不到按钮」的镜像面必须收口。行为级四态：
+   归属页写键在场可见 / 仅读键不可见 / 静态模型回落 VIEWER 不可见（零破坏）/ OPERATOR 正向证明。 */
 
 /* TasksView 任务行形状（照 clusterThreeState TV_TASK：load() map 补 runningMs/tookMs） */
 const TV_TASK = {
@@ -166,7 +165,8 @@ async function mountTasksWithGrants(role: 'VIEWER' | 'OPERATOR' | 'ADMIN', grant
   apps.push(app);
   const auth = useAuthStore(pinia);
   auth.me = { username: 'u-' + role.toLowerCase(), role, fallback: false, grantedPages };
-  /* conn 目标侧：canWriteOn(store.target) 的 target=X-Es-Target（连接 id），内拼 conn:c1: 前缀裁决 */
+  /* conn 目标侧：canEndpoint(tasks/cancel, store.target) 的 target=X-Es-Target（连接 id），
+     共享端点按 tasks/task-tree 归属页写键裁决 */
   useAppStore(pinia).target = 'c1';
   await settle();
   return host;
@@ -176,15 +176,15 @@ const cancelBtnIn = (host: HTMLElement) =>
   !!Array.from(host.querySelectorAll('.tv-node button')).find((b) => (b.textContent || '').includes('取消'));
 
 describe('五百七十七批·TasksView conn 写键行为锁（VIEWER+连接写键可见 Cancel，连接感知通 DOM）', () => {
-  it('VIEWER + grantedPages 含 conn:c1:w:*（写键在场）：任务行 Cancel 钮可见（镜像 575 后端放行面）', async () => {
+  it('VIEWER + grantedPages 含 conn:c1:w:tasks（归属页写键）：任务行 Cancel 钮可见（镜像后端放行面）', async () => {
     tasksFn.mockResolvedValue([TV_TASK]);
-    const host = await mountTasksWithGrants('VIEWER', ['conn:c1:docs', 'conn:c1:w:docs']);
-    expect(cancelBtnIn(host), 'VIEWER+连接写键应看到 Cancel 钮').toBe(true);
+    const host = await mountTasksWithGrants('VIEWER', ['conn:c1:tasks', 'conn:c1:w:tasks']);
+    expect(cancelBtnIn(host), 'VIEWER+任务页写键应看到 Cancel 钮').toBe(true);
   });
 
-  it('VIEWER + grantedPages 仅读键（conn:c1:docs 无 w:）：Cancel 钮不可见（w: 键不在场即拒）', async () => {
+  it('VIEWER + grantedPages 仅读键（conn:c1:tasks 无 w:）：Cancel 钮不可见（w: 键不在场即拒）', async () => {
     tasksFn.mockResolvedValue([TV_TASK]);
-    const host = await mountTasksWithGrants('VIEWER', ['conn:c1:docs']);
+    const host = await mountTasksWithGrants('VIEWER', ['conn:c1:tasks']);
     expect(cancelBtnIn(host), '仅读键不应看到 Cancel 钮').toBe(false);
   });
 

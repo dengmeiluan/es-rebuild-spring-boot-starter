@@ -64,7 +64,7 @@
         <div class="lc-actions">
           <!-- G121：roPending 守卫+spinning+文案切换（修前无守卫连点可重复触发；
  dry/run 分档让触发钮各自改用，互斥共用一档防并发，729 G95/731 G104/733 G110 同款） -->
-          <button class="btn ghost sm" @click="doRollover(true)" :disabled="!rolloverAlias.trim() || roPending !== null">
+          <button v-if="canOps" class="btn ghost sm" @click="doRollover(true)" :disabled="!rolloverAlias.trim() || roPending !== null">
             <Search :size="12" :class="{ spinning: roPending === 'dry' }" /> {{ roPending === 'dry' ? '预检中…' : 'Dry Run 预检' }}
           </button>
           <button v-if="canOps" class="btn primary sm" @click="doRollover(false)" :disabled="!rolloverAlias.trim() || roPending !== null">
@@ -223,9 +223,9 @@ import { removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 /* 权限门禁——ILM 起停/rollover/move step=/cluster/ilm/start|stop|move、/cluster/rollover=CLUSTER 档（rank3+）；
- 甘特图/explain/dry-run（只读预检）全角色可用 */
+ 甘特图/explain 全角色可用；本页写门统一按 lifecycle 页 start 端点做连接感知裁决 */
 const auth = useAuthStore();
-const canOps = computed(() => auth.can('ops'));
+const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/ilm/start', store.target));
 const router = useRouter();
 const busy = ref(true); /* ：初值 true——首帧即骨架，不闪「无策略」空态 */
 const ilmOpPending = ref(false); /* 复审 M4：start/stop 写操作防重入——in-flight 期间按钮禁用 + 重入直接返回，杜绝双击双发 */
@@ -406,6 +406,7 @@ async function load() {
 /* G4-B5：原无 catch——失败是 unhandled rejection 零反馈；手动写操作 toast 透传即达标（G1/ 裁定），重跑即重试
  复审 M4：ilmOpPending 防重入——in-flight 期间重入直接返回（配合按钮 :disabled），finally 复位 */
 async function ilmStart() {
+  if (!canOps.value) { store.notify('warning', 'ILM 操作需要 CLUSTER_OP/ADMIN 角色'); return; }
   if (ilmOpPending.value) return;
   ilmOpPending.value = true;
   try {
@@ -417,6 +418,7 @@ async function ilmStart() {
   } finally { ilmOpPending.value = false; }
 }
 async function ilmStop() {
+  if (!canOps.value) { store.notify('warning', 'ILM 操作需要 CLUSTER_OP/ADMIN 角色'); return; }
   if (ilmOpPending.value) return;
   if (!await askConfirm({ title: '停止 ILM 引擎', level: 'warn', okText: '停止引擎', message: '所有索引的生命周期策略将暂停推进（rollover/收缩/删除等动作不再触发），可随时重新启动恢复。' })) return;
   if (ilmOpPending.value) return; /* 确认等待期间另一写操作可能已开始 */
@@ -431,6 +433,8 @@ async function ilmStop() {
 }
 
 async function doRollover(dryRun: boolean) {
+  /* Dry Run 同样走 /cluster/rollover（rank3 写端点）——按钮 v-if 之外执行体单源守卫 */
+  if (!canOps.value) { store.notify('warning', 'ILM 操作需要 CLUSTER_OP/ADMIN 角色'); return; }
   if (roPending.value) return; /* G121：入口防重入（dry-run 无确认门更要挡连点） */
   // 非 dry-run 会真实创建新索引并切换别名，强制确认
   if (!dryRun && !await askConfirm({
@@ -456,6 +460,7 @@ async function doRollover(dryRun: boolean) {
 }
 
 async function doMove() {
+  if (!canOps.value) { store.notify('warning', 'ILM 操作需要 CLUSTER_OP/ADMIN 角色'); return; }
   if (mvPending.value) return; /* G123：入口防重入 */
   // ILM move-step 为高危操作：跳步可能直接触发收缩/删除等动作，critical 级输入守卫
   if (!await askConfirm({

@@ -156,6 +156,6 @@ describe('948 刀③：check() 执行闸（源码锁）', () => {
     expect(body.indexOf('if (checking.value) return;'), '闸读先于校验置位')
       .toBeLessThan(body.indexOf('checking.value = true;'));
     expect(src, '重试钮守卫').toContain(
-      '<button class="btn sm" :disabled="checking" @click="check"><RefreshCw :size="12" /> 重试</button>');
+      '<button v-if="canOps" class="btn sm" :disabled="checking" @click="check"><RefreshCw :size="12" /> 重试</button>');
   });
 });

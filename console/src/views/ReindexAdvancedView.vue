@@ -570,6 +570,8 @@ const finalQs = computed(() => {
 });
 
 async function submit() {
+  /* 权限执行体首行门（按钮 v-if 之外的键盘/深链/重试通道）：Monaco Ctrl+Enter @submit 同受此门 */
+  if (!canOps.value) { store.notify('warning', 'Reindex 需专项或 ADMIN 角色'); return; }
   if (running.value) return; /* 提交防重（INTERACTION 范式）：在途时双击/重试重复下发直接短路 */
   if (!destIndex.value) { store.notify('warning', '请填目标索引 dest.index'); return; }
   /* sem-rm 智能纠错：dest 名硬规则 / 源=目标同名 / 手编 body JSON 非法——与 srcQueryErr 同构的前置阻断（G3-A2 先例） */

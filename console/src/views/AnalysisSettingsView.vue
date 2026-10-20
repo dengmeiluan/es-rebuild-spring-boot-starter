@@ -16,7 +16,7 @@
 <button class="btn ghost sm" @click="doLoad" :disabled="!index || busy">
   <RefreshCw :size="12" :class="{ spinning: busy }" /> 加载
 </button>
-<button v-if="canOps" class="btn ghost sm" @click="doReload" :disabled="!index || busy">
+<button v-if="canReload" class="btn ghost sm" @click="doReload" :disabled="!index || busy">
   <Zap :size="12" /> 热重载搜索分词器
 </button>
 <button v-if="canOps" class="btn sm pri" @click="doSave" :disabled="!index || !loaded || busy || !hasChanges">
@@ -153,6 +153,8 @@ const store = useAppStore();
 /* 权限写门——热重载/保存 analysis 均为写操作，VIEWER 不显示入口 */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/analysis-update', store.target));
+/* 热重载实调 /cluster/reload-analyzers（属 analysis-settings 页）——与保存分属两端点，各自判门 */
+const canReload = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/reload-analyzers', store.target));
 /* 目标索引进 URL——刷新/分享链接可复原（可重入） */
 const index = useIdxState({ follow: true });
 const busy = ref(false);
@@ -305,6 +307,7 @@ async function doLoad() {
 }
 
 async function doSave() {
+  if (!canOps.value) { store.notify('warning', '保存 Analysis 配置需专项角色'); return; }
   if (!index.value.trim()) return;
   /* close→更新→open 期间索引不可读写，属服务中断型写操作——必须二次确认 */
   const okGo = await askConfirm({
@@ -325,6 +328,7 @@ async function doSave() {
 }
 
 async function doReload() {
+  if (!canReload.value) { store.notify('warning', '热重载搜索分词器需专项角色'); return; }
   if (!index.value.trim()) return;
   busy.value = true;
   try {

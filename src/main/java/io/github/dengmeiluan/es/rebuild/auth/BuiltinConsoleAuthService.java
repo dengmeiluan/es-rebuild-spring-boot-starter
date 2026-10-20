@@ -228,6 +228,16 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
         }
         username = username.trim();
         Map<String, Object> existing = findUser(username);
+        /* 防提权：security 页写键持有人可管理普通账号，但不得授予/改写 ADMIN 账号 */
+        if (actor != null && !actor.getRole().atLeast(ConsoleRole.ADMIN)) {
+            if (role == ConsoleRole.ADMIN) {
+                throw new IllegalArgumentException("仅 ADMIN 可授予 ADMIN 角色");
+            }
+            if (existing != null
+                    && ConsoleRole.parse(String.valueOf(existing.get("role"))) == ConsoleRole.ADMIN) {
+                throw new IllegalArgumentException("仅 ADMIN 可修改 ADMIN 账号");
+            }
+        }
         Map<String, Object> doc = new LinkedHashMap<>();
         doc.put("username", username);
         doc.put("role", role.name());
@@ -276,13 +286,17 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
         upsertUser(actor, actor.getUsername(), newPassword, ConsoleRole.parse(String.valueOf(user.get("role"))));
     }
 
-    /** 删除用户（保护最后一个 ADMIN）。 */
-    public void deleteUser(String username) throws IOException {
+    /** 删除用户（保护最后一个 ADMIN；非 ADMIN 不得删除 ADMIN 账号）。 */
+    public void deleteUser(String username, ConsolePrincipal actor) throws IOException {
         Map<String, Object> existing = findUser(username);
         if (existing == null) {
             return;
         }
-        if (ConsoleRole.parse(String.valueOf(existing.get("role"))) == ConsoleRole.ADMIN && countAdmins() <= 1) {
+        ConsoleRole existingRole = ConsoleRole.parse(String.valueOf(existing.get("role")));
+        if (actor != null && !actor.getRole().atLeast(ConsoleRole.ADMIN) && existingRole == ConsoleRole.ADMIN) {
+            throw new IllegalArgumentException("仅 ADMIN 可删除 ADMIN 账号");
+        }
+        if (existingRole == ConsoleRole.ADMIN && countAdmins() <= 1) {
             throw new IllegalStateException("不能删除最后一个 ADMIN 账号");
         }
         perform("DELETE", "/" + userIndex + "/_doc/" + urlEncode(username) + "?refresh=true", null);

@@ -105,7 +105,7 @@
  不再让上一次成功的「✓ 全部成功」在新失败之后残留伪装 -->
       <div v-if="submitErr" role="alert" class="err-bar rise-in be-err">
         Bulk 提交失败：{{ submitErr }}
-        <button class="btn sm" @click="doSubmit" :disabled="submitting || opsCount === 0"><RefreshCw :size="12" :class="{ spinning: submitting }" /> 重试</button>
+        <button v-if="canOps" class="btn sm" @click="doSubmit" :disabled="submitting || opsCount === 0"><RefreshCw :size="12" :class="{ spinning: submitting }" /> 重试</button>
       </div>
       <div class="be-result-card" v-else-if="result">
         <div class="be-card-hd">
@@ -307,6 +307,8 @@ function doFav() {
 }
 /* z5 轮：403 补下一步建议——W4c 起收敛 utils/esErrorAdvice 单一出处（三视图文案逐字等价） */
 async function doSubmit() {
+  /* 权限执行体首行门（按钮 v-if 之外的 Ctrl+Enter/重试通道）：批量写需专项或 ADMIN */
+  if (!canOps.value) { store.notify('warning', '批量写需专项或 ADMIN 角色'); return; }
   /* ux2 quality：@execute(Ctrl+Enter) 不经按钮 :disabled——入口补上按钮原有双门（submitting/opsCount），
  防在途重入（confirm 间隙连发）与空档提交（0 条空调用 api.bulk）。同构先例：PainlessLab run 的 busy 门。 */
   if (submitting.value || opsCount.value === 0) return;

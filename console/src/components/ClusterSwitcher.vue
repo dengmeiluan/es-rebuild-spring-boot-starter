@@ -224,7 +224,7 @@ const store = useAppStore();
 /* 连接档案管理（新增/编辑/删除/测试=ADMIN，/clusters/ 写与 test 均在超管清单）——
  非 ADMIN 保留查看/切换/探活（probe= VIEWER 豁免），不再展示必 403 的管理入口 */
 const auth = useAuthStore();
-const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/clusters/save', store.target)); /* 连接档案管理按连接勾选（写键持有人=管理者）；静态模型回落 ADMIN 档 */
+const canAdmin = computed(() => auth.can('admin')); /* 连接档案/探活配置=系统管理域：ADMIN 角色专属，连接写键不放行 */
 /* 列表排序——默认 status（异常置顶），可切 name/latency；usePref 跨会话记忆。
  增第四档「手动」（623 设计稿 D3/D4 裁决）——manualOrder 落盘跨会话记忆；
  sortedConns 传 manualOrder 给 sortConns（非手动档忽略该参） */
@@ -372,8 +372,11 @@ async function probeConn(c: ClusterConnView) {
 /* 非 admin 按连接菜单授权过滤可见连接(grantedPages conn:{id}:{page} 键推导);
  admin 全量管理。visibleConns 供列表与切换菜单共用。 */
 const grantedConnIds = computed(() => {
+  if (canAdmin.value) return null;
   const gp = auth.grantedPages;
-  if (canAdmin.value || gp == null) return null;
+  if (gp == null) return null;
+  /* 静态键模型（无 conn: 前缀）对所有连接生效——不得因“未列 conn id”把连接全藏掉 */
+  if (!gp.some(g => g.startsWith('conn:'))) return null;
   const ids = new Set<string>();
   for (const g of gp) {
     const m = g.match(/^conn:([^:]+):/);
@@ -419,6 +422,7 @@ function cancelForm() {
 }
 
 async function testExisting(id: string) {
+  if (!canAdmin.value) return; /* 963 执行体守卫：连接档案测试=clusters 管理域（模板已隐藏，直调再兜一层） */
   /* 已存连接的测试反馈 toast 化（原写入共享 testResult 区，渲染在列表顶部易被忽略） */
   testingId.value = id;
   try {
@@ -432,6 +436,7 @@ async function testExisting(id: string) {
 }
 
 async function testForm() {
+  if (!canAdmin.value) return; /* 963 执行体守卫（表单测试同属 clusters 管理域） */
   testingForm.value = true;
   testResult.value = null;
   try {
@@ -447,6 +452,7 @@ async function testForm() {
 }
 
 async function saveConn() {
+  if (!canAdmin.value) return; /* 963 执行体守卫：连接档案保存=clusters 管理域（Enter 通道同汇入此处） */
   /* URL 前置校验（提交前拦——必须 http(s):// 开头且带端口，免得服务端报错绕一圈） */
   const url = form.value.url.trim();
   if (!/^https?:\/\/.+/.test(url) || !/:\d+/.test(url.replace(/^https?:\/\//, '').split('/')[0])) {
@@ -477,10 +483,11 @@ async function saveConn() {
     store.notify('error', '保存失败: ' + friendlyEsError(String(e?.message ?? e)));
   } finally { saving.value = false; }
 }
-/* 连接表单弹窗 Enter=保存（can 与主按钮 disabled 同口径——name/url 必填且非保存中） */
-useModalEnter(manageOpen, saveConn, () => !!form.value.name && !!form.value.url && !saving.value);
+/* 连接表单弹窗 Enter=保存（can 与主按钮 disabled 同口径——canAdmin 门 + name/url 必填且非保存中） */
+useModalEnter(manageOpen, saveConn, () => canAdmin.value && !!form.value.name && !!form.value.url && !saving.value);
 
 async function delConn(c: any) {
+  if (!canAdmin.value) return; /* 963 执行体守卫：删除连接档案=clusters 管理域 */
   if (!await askConfirm({
     level: 'warn',
     title: '删除集群连接',

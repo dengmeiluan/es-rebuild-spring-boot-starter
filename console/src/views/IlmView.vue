@@ -156,7 +156,7 @@
                 <span class="chip mono" :style="{ background: PHASE_COLORS[info.phase], color: 'var(--tx-on-strong)' }"><!-- ：phase 枚举加中文名（esEnumZh.phaseZh；英文小字保留在后，色档不动） --><template v-if="phaseZh(info.phase)">{{ phaseZh(info.phase) }}<span class="ilm-ph-en">{{ info.phase }}</span></template><template v-else>{{ info.phase }}</template></span>
                 <span class="ilm-ex-l" style="margin-left:14px">action</span><span class="mono">{{ info.action }}</span>
                 <span class="ilm-ex-l" style="margin-left:14px">step</span><span class="mono">{{ info.step }}</span>
-                <button v-if="canOps && isRetryable(info)" class="btn xs ghost" style="margin-left:14px" :disabled="retrying" @click="doRetryStep(info)"><RefreshCw :size="11" /> 重试 step</button>
+                <button v-if="canMove && isRetryable(info)" class="btn xs ghost" style="margin-left:14px" :disabled="retrying" @click="doRetryStep(info)"><RefreshCw :size="11" /> 重试 step</button>
               </div>
               <div v-if="info.age" class="ilm-ex-line">
                 <span class="ilm-ex-l">age</span><span class="mono">{{ info.age }}</span>
@@ -258,6 +258,8 @@ const store = useAppStore();
  偏低档，待后端加固，前端先按角色意图收口；move/start/stop 本就在 CLUSTER 档） */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/ilm/policy', store.target));
+/* 「重试 step」实调 /cluster/ilm/move（rank3）——按真实端点单独裁决，不复用策略写门（两页端点可能分别授权） */
+const canMove = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/ilm/move', store.target));
 const router = useRouter();
 
 /* 原始 IO 三件套（RemoteClusters 557 同款）；判空不开空弹窗 */
@@ -326,6 +328,7 @@ function openEditPolicy(p: any) {
   policyEditOpen.value = true;
 }
 async function savePolicy() {
+  if (!canOps.value) { store.notify('warning', 'ILM 策略变更需要 CLUSTER_OP/ADMIN 角色'); return; }
   if (!policyName.value.trim()) { store.notify('error', '策略名不能为空'); return; }
   let parsed: any;
   try { parsed = JSON.parse(policyBody.value); } catch { store.notify('error', '策略 JSON 不合法'); return; }
@@ -342,10 +345,11 @@ async function savePolicy() {
 }
 /* 策略编辑弹窗 Enter=保存（can 与主按钮 disabled 同口径；Monaco 内是
  TEXTAREA，tagName 检查天然放行，Enter 换行不受接管影响） */
-useModalEnter(policyEditOpen, savePolicy, () => !policyBusy.value);
+useModalEnter(policyEditOpen, savePolicy, () => canOps.value && !policyBusy.value);
 /* 提交防重（INTERACTION 范式）：删除在途时双击/重入直接短路 */
 const deleting = ref(false);
 async function deletePolicy(name: string) {
+  if (!canOps.value) { store.notify('warning', 'ILM 策略变更需要 CLUSTER_OP/ADMIN 角色'); return; }
   if (deleting.value) return;
   if (!await askConfirm({
     title: '删除 ILM 策略',
@@ -510,6 +514,7 @@ function isRetryable(info: any): boolean {
 /* 提交防重：ilm/move 是写操作，重试在途时双击/Enter 重复下发直接短路 */
 const retrying = ref(false);
 async function doRetryStep(info: any) {
+  if (!canMove.value) { store.notify('warning', 'ILM 移步需要 CLUSTER_OP/ADMIN 角色'); return; }
   if (retrying.value) return;
   const idx = explainIndex.value;
   if (!idx) return;

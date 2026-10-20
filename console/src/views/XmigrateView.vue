@@ -55,14 +55,14 @@
               <span class="xm-hdot" :class="hdotCls(pickedConn?.health)"></span>
               <span class="mono">{{ pickedConn?.scheme }}://{{ pickedConn?.host }}:{{ pickedConn?.port }}</span>
               <span class="xm-tip" style="margin:0">凭据由服务端从连接档案取用，明文不经前端</span>
-              <button class="btn sm" style="margin-left:auto" :disabled="checking" @click="check"><PlugZap :size="12" /> {{ checking ? '检查中…' : '连接检查' }}</button>
+              <button v-if="canOps" class="btn sm" style="margin-left:auto" :disabled="checking" @click="check"><PlugZap :size="12" /> {{ checking ? '检查中…' : '连接检查' }}</button>
             </div>
 
             <!-- G3-B2：连接检查失败内联面板（全文+重试）——不再仅 toast 后索引区消隐、失败现场归零。
  裸插值换 errPreHtml+errMeta 双参（TaskTreeView 547 口径） -->
             <div v-if="checkErr" role="alert" class="err-bar rise-in xm-conn-err">
               <span class="xm-err-txt" v-html="errPreHtml(checkErr, errMeta(checkErrRaw))"></span>
-              <button class="btn sm" :disabled="checking" @click="check"><RefreshCw :size="12" /> 重试</button>
+              <button v-if="canOps" class="btn sm" :disabled="checking" @click="check"><RefreshCw :size="12" /> 重试</button>
             </div>
           </div>
 
@@ -172,7 +172,7 @@
  退役，__tests__ 全量 grep 无该偏好稿/裸 pre 类名的既有锁（无锁）；
  每块新增复制钮（裸 pre 时代无复制入口），Monaco 自带高亮与 JSON 校验圆点 -->
         <div v-if="form.destCreateMode === 'COPY_FROM_SOURCE'" class="xm-cfg">
-          <button class="btn sm" :disabled="!form.sourceIndex || checking" @click="fetchCfg"><FileDown :size="11" /> {{ checking ? '拉取中…' : '拉取源 mapping/settings 预览' }}</button>
+          <button v-if="canOps" class="btn sm" :disabled="!form.sourceIndex || checking" @click="fetchCfg"><FileDown :size="11" /> {{ checking ? '拉取中…' : '拉取源 mapping/settings 预览' }}</button>
           <!-- 原始 IO 钮上移 .xm-actions 行常驻渲染——钮原被本分节 COPY_FROM_SOURCE
  v-if 包裹，NONE/FROM_ENTITY/REBUILD 三档模式下连接检查/启动迁移 IO 都入记录环
  （'/xmigrate/'）却全页无取数入口；钮形/aria/特征串零触（rawIo545 锁保全） -->
@@ -182,7 +182,7 @@
           <!-- 拉取失败内联面板（连接检查失败面板同族形态）：全文可回看+原始对象旁路+重试 -->
           <div v-if="cfgErr" role="alert" class="err-bar rise-in xm-cfg-err">
             <span class="xm-err-txt" v-html="errPreHtml(cfgErr, errMeta(cfgErrRaw))"></span>
-            <button class="btn sm" :disabled="checking" @click="fetchCfg"><RefreshCw :size="12" /> 重试</button>
+            <button v-if="canOps" class="btn sm" :disabled="checking" @click="fetchCfg"><RefreshCw :size="12" /> 重试</button>
           </div>
           <template v-if="cfgPreview">
             <div class="xm-cfg-grid">
@@ -198,7 +198,7 @@
  裸插值换 errPreHtml+errMeta 双参（TaskTreeView 547 口径） -->
         <div v-if="startErr" role="alert" class="err-bar rise-in xm-start-err">
           <span class="xm-err-txt" v-html="errPreHtml(startErr, errMeta(startErrRaw))"></span>
-          <button class="btn sm" @click="openStartConfirm"><RotateCcw :size="12" /> 重试</button>
+          <button v-if="canOps" class="btn sm" @click="openStartConfirm"><RotateCcw :size="12" /> 重试</button>
         </div>
 
         <div class="xm-actions">
@@ -320,8 +320,8 @@
         </template>
         <!-- 行级行动注入位（原「操作」列合并）：中止/续跑/去查询验证/复制错误样本/作业行菜单 -->
         <template #row-actions="{ row }">
-          <button aria-label="中止迁移：停止拉取，目标索引已写入的数据保留（不自动清理）" v-if="canOps && rowJob(row)?.status === 'RUNNING'" class="btn sm danger" title="中止迁移：停止拉取，目标索引已写入的数据保留（不自动清理）" :disabled="aborting" @click.stop="askAbort(rowJob(row))"><OctagonX :size="11" :class="{ spinning: aborting }" /></button>
-          <button aria-label="断点续跑" v-if="canOps && ['FAILED','ABORTED','INTERRUPTED'].includes(rowJob(row)?.status ?? '')" class="btn sm" @click.stop="askResume(rowJob(row))" title="断点续跑"><RotateCcw :size="11" /></button>
+          <button aria-label="中止迁移：停止拉取，目标索引已写入的数据保留（不自动清理）" v-if="canJobOps(rowJob(row)) && rowJob(row)?.status === 'RUNNING'" class="btn sm danger" title="中止迁移：停止拉取，目标索引已写入的数据保留（不自动清理）" :disabled="aborting" @click.stop="askAbort(rowJob(row))"><OctagonX :size="11" :class="{ spinning: aborting }" /></button>
+          <button aria-label="断点续跑" v-if="canJobOps(rowJob(row)) && ['FAILED','ABORTED','INTERRUPTED'].includes(rowJob(row)?.status ?? '')" class="btn sm" @click.stop="askResume(rowJob(row))" title="断点续跑"><RotateCcw :size="11" /></button>
           <!-- 联动性：迁移完成一键去查询工作台验证目标索引（对齐托管重建「去查询验证」深链） -->
           <button aria-label="去查询验证：在查询工作台打开目标索引" v-if="rowJob(row)?.status === 'DONE' && rowJob(row)?.destIndex" class="btn sm" :title="'验证迁移结果：在查询工作台打开「' + rowJob(row)?.destIndex + '」'" @click.stop="goVerify(rowJob(row))"><SearchCheck :size="11" /></button>
           <!-- 错误样本全量复制（诚实口径）——展开详情降维 JsonTree 后复制入口上移行尾 -->
@@ -358,7 +358,7 @@
       <template #footer>
         <div style="display:flex;justify-content:flex-end;gap:var(--sp-2)">
           <button class="btn" @click="resumeOpen = false">取消</button>
-          <button class="btn pri" :disabled="resuming" @click="doResume">续跑</button>
+          <button v-if="canJobOps(actJob)" class="btn pri" :disabled="resuming" @click="doResume">续跑</button>
         </div>
       </template>
     </n-modal>
@@ -418,7 +418,16 @@ import JsonArea from '../components/JsonArea.vue'; /* W2：源配置预览只读
 const store = useAppStore();
 /* 权限门禁——迁移发起/中止/续跑=/xmigrate/start|abort|resume=REBUILD 档（rank3+） */
 const auth = useAuthStore();
-const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/xmigrate/start', store.target));
+const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/xmigrate/start', srcConnId.value || store.target));
+/* 作业操作按作业源连接写键裁决（后端按 job.srcConnId 校验）；旧版/手输作业在连接模型下不展示操作 */
+const canJobOps = (job: any): boolean => {
+  if (!job) return false;
+  if (auth.isAdmin()) return true;
+  const src = job.srcConnId ? String(job.srcConnId).trim() : '';
+  const connModel = auth.grantedPages != null && auth.grantedPages.some(g => g.startsWith('conn:'));
+  if (!src && connModel) return false;
+  return auth.canEndpoint('ops', 'POST', '/internal/es/xmigrate/abort', src || store.target);
+};
 const router = useRouter();
 /* 目标索引直达索引工作区 */
 /* 错误样本全量复制（诚实口径） */
@@ -623,6 +632,8 @@ function connBody() {
   return c;
 }
 async function check() {
+  /* 探测面（服务端按任意连接串建连）与迁移写同档 rank3——按钮 v-if 之外的直调也收口 */
+  if (!canOps.value) { store.notify('warning', '迁移探测需专项或 ADMIN 角色'); return; }
   /* 在途互斥闸：闸读收本体首行——fetchCfg 复用 checking 做闸（拉取在途直接短路）
  既有形态在本体收敛，失败面板重试钮同拍双击的两拍 connectCheck 随之消除 */
   if (checking.value) return;
@@ -661,6 +672,7 @@ const XM_CFG_CAP_ROWS = 10;
 const { v: cfgCapRows, cycle: cycleCfgRows } = useTierCycle('xm.cfgRows', [XM_CFG_CAP_ROWS, 20, 40], XM_CFG_CAP_ROWS);
 function cfgRows(text: string) { return Math.min(text.split('\n').length, cfgCapRows.value); }
 async function fetchCfg() {
+  if (!canOps.value) { store.notify('warning', '迁移探测需专项或 ADMIN 角色'); return; }
   if (checking.value) return; /* 提交防重：复用连接检查的 checking 状态位，拉取在途直接短路 */
   checking.value = true;
   cfgErr.value = '';
@@ -703,6 +715,8 @@ const preflight = ref<any>(null); // 启动前预检（dest 是否已存在）
  dismissable 会话跳过——同 title 下后续作业的删数据警示不得被静默吞掉）。
  destExists 统一取 destExistsSafe（preflight 缺席时用 hostIndices 兜底）。 */
 async function openStartConfirm() {
+  /* 权限执行体首行门：放在 preflight/确认窗之前——无权限者不得看到预检与启动弹层 */
+  if (!canOps.value) { store.notify('warning', '迁移操作需专项或 ADMIN 角色'); return; }
   /* 闸读收本体首行+置位前移到第一个 await 之前：preflight 与确认窗挂起期间启动钮
  即禁用，二击不再穿透双开确认窗（确认服务是全局单例，二次请求会把先开的弹层按取消
  静默收掉）；取消路径由 finally 复位防闸死，成功路径随 doStart 完成统一复位 */
@@ -766,6 +780,8 @@ const canStart = computed(() =>
   (form.value.destCreateMode !== 'FROM_ENTITY' || form.value.indexKey) &&
   !idxNameError.value);
 async function doStart() {
+  /* 权限执行体首行门（启动钮/重试钮之外的深链/程序化通道） */
+  if (!canOps.value) { store.notify('warning', '迁移操作需专项或 ADMIN 角色'); return; }
   /* starting 闸已收 openStartConfirm 本体（唯一调用点，置位前移到确认窗之前）——
  此处只保留 qr 运行态防御查；starting 置位/复位由外层 try/finally 统一承担 */
   if (qr.running.value) return;
@@ -1203,6 +1219,8 @@ function askResume(j: any) {
  分支；双击确认/重复开弹窗不会重复排第二个 setTimeout；中止钮 :disabled+spinning 同形 */
 const aborting = ref(false);
 async function doAbort() {
+  /* 权限执行体首行门（行级中止钮已有 v-if，此处覆盖菜单/程序化通道） */
+  if (!canJobOps(actJob.value)) { store.notify('warning', '迁移操作需专项或 ADMIN 角色'); return; }
   const job = actJob.value;
   if (!job) return;
   const jobId = job.jobId;
@@ -1228,6 +1246,8 @@ async function copyJobId(id: string) {
 /* 提交防重（INTERACTION 范式）：续跑是写操作，在途时双击/Enter 重复下发直接短路 */
 const resuming = ref(false);
 async function doResume() {
+  /* 权限执行体首行门（续跑钮已有 v-if，此处覆盖弹窗 Enter/程序化通道） */
+  if (!canJobOps(actJob.value)) { store.notify('warning', '迁移操作需专项或 ADMIN 角色'); return; }
   if (resuming.value) return;
   resumeOpen.value = false;
   resuming.value = true;
@@ -1243,7 +1263,7 @@ async function doResume() {
 }
 /* 续跑凭据弹窗 Enter=提交（can 门与主按钮 disabled 同口径——resuming 在途不放行，
  原注释「首行即关弹窗天然防连按」不够：resume 已关但 API 在途时再按 Enter 仍会重复下发） */
-useModalEnter(resumeOpen, doResume, () => !resuming.value);
+useModalEnter(resumeOpen, doResume, () => !resuming.value && canJobOps(actJob.value));
 </script>
 
 <style scoped>

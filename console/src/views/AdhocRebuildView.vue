@@ -275,10 +275,10 @@ mapping <span class="dim">字段映射</span>
       </div>
 
       <div class="row">
-        <button class="btn ghost" :disabled="validating" @click="doValidateConfig(false)">
+        <button v-if="canOps" class="btn ghost" :disabled="validating || !canValidate" title="校验需配置校验页写权限" @click="doValidateConfig(false)">
           <Loader2 v-if="validating" :size="13" class="spinning" /><ShieldCheck v-else :size="13" /> 仅校验
         </button>
-        <button class="btn primary" :disabled="validating" @click="doValidateConfig(true)">
+        <button v-if="canOps" class="btn primary" :disabled="validating || !canValidate" title="校验需配置校验页写权限" @click="doValidateConfig(true)">
           <Loader2 v-if="validating" :size="13" class="spinning" /><ChevronRight v-else :size="13" /> {{ validating ? '校验中 ' + valSecs + 's' : '校验并继续：选择追平策略' }}
         </button>
       </div>
@@ -785,6 +785,8 @@ const AR_ED_PANES: WorkbenchPaneSpec[] = [
  只读角色可看向导与监控（评估/探测是只读 POST），不给出扳机 */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/adhoc-rebuild/start', store.target));
+/* 校验独立权限面：配置校验页写端点（可能与 start 的 ops 档不同权） */
+const canValidate = computed(() => auth.canEndpoint('write', 'POST', '/internal/es/index/config-lab/validate', store.target));
 /* 草稿：向导全程草稿（按集群目标隔离）。粘贴/审编/表单字段挂载时读一次、
  之后只写不读——切页/失焦/重挂载后现场可复原；doPrepare/校验/prepare 失败不清稿
  （机制保证：只有显式 reset 或改回默认值才清）。 */
@@ -994,6 +996,8 @@ async function copyBackfillDsl() {
 }
 
 async function doValidateConfig(advance: boolean) {
+  /* 权限执行体首行门：覆盖 Enter/程序化通道（按钮 v-if 之外） */
+  if (!canValidate.value) { store.notify('warning', '校验需配置校验页写权限'); return; }
   validating.value = true;
   const signal = valQr.begin(); /* ：begin 即作废上一轮（queryRunRace382 竞态语义随身） */
   try {
@@ -1719,6 +1723,8 @@ function strategyNextEnter() {
 }
 
 async function doStart() {
+  /* 权限执行体首行门（启动钮已有 v-if，此处覆盖 Enter/程序化通道） */
+  if (!canOps.value) { store.notify('warning', '重建操作需专项或 ADMIN 角色'); return; }
   /* sem-rm 智能纠错：目标名硬规则未过不放行（红字常驻审编步，这里兜底防绕过） */
   if (destNameErr.value) { store.notify('error', '目标索引名校验未通过——已阻止启动：' + destNameErr.value); return; }
   starting.value = true;
@@ -1764,6 +1770,8 @@ function stopPolling() {
 }
 
 async function doAbort() {
+  /* 权限执行体首行门（中止钮已有 v-if，此处覆盖程序化通道） */
+  if (!canOps.value) { store.notify('warning', '重建操作需专项或 ADMIN 角色'); return; }
   if (!job.value || aborting.value) return;
   /* 闸置位前移到确认窗之前（xmigrateGateExport941 同族口径）：确认窗挂起期中止钮
      :disabled="aborting" 即禁用，二击不再穿透双开确认窗（confirm.ts 全局单例覆写会把
@@ -1832,6 +1840,8 @@ function onBlockVisChange() {
 document.addEventListener('visibilitychange', onBlockVisChange);
 
 async function doConfirmSwitch() {
+  /* 权限执行体首行门（确认切换钮已有 v-if，此处覆盖深链/程序化通道） */
+  if (!canOps.value) { store.notify('warning', '重建操作需专项或 ADMIN 角色'); return; }
   /* 闸读收本体首行+置位前移（templateSaveGate937 口径：确认窗 await 在闸读之前=闸形同虚设）——critical
      确认窗须手输旧索引名、挂起窗口长，确认切换钮 :disabled="confirming" 在窗期即禁用，
      二击不再穿透双开确认窗；取消路径由 finally 复位防闸死。 */

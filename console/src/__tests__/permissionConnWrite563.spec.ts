@@ -91,8 +91,9 @@ describe('584 批:页面级连接感知门 canPage(conn 模型勾选即权限)',
 
 /* ═══ 五百八十八批:端点级单一权限入口 canEndpoint——apiPrefixes 镜像后端 pageOf 行为锁 ═══
    me.pages 每页下发 apiPrefixes(端点归属页前缀表),前端最长前缀匹配 path→pageKey;
-   conn 模型:命中页→精确写键 conn:{tid}:w:{pageKey};未命中(共享端点)→任意写键在场即放行;
-   静态模型(grantedPages=null)回落 canCap;admin 管理域不走连接分支;me=null 恒放行。
+   conn 模型:命中页→精确写键 conn:{tid}:w:{pageKey};未命中共享端点→须持有真实使用该端点的
+   页面写键（SHARED_WRITE_PAGE_KEYS，镜像后端）；未登记共享写回落角色档;静态模型(grantedPages=null)
+   回落 canCap;admin 管理域不走连接分支;me=null 恒放行。
    视图只传按钮真实调用的端点路径,零 pageKey 硬编码(586 错位根治)。 */
 describe('588 批:端点级单一权限入口 canEndpoint(apiPrefixes 最长前缀匹配)', () => {
   beforeEach(() => setActivePinia(createPinia()));
@@ -114,10 +115,15 @@ describe('588 批:端点级单一权限入口 canEndpoint(apiPrefixes 最长前�
     auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['conn:c1:indices'], pages: pagesWithPrefixes };
     expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/snapshot/delete', 'c1')).toBe(false);
   });
-  it('conn 模型:未命中页(共享端点)但任意写键在场→放行', () => {
+  it('conn 模型:共享端点按归属页写键放行（delete-by-id 认 search/indices）', () => {
     const auth = useAuthStore();
-    auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['conn:c1:docs', 'conn:c1:w:docs'], pages: pagesWithPrefixes };
+    auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['conn:c1:indices', 'conn:c1:w:indices'], pages: pagesWithPrefixes };
     expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/delete-by-id', 'c1')).toBe(true);
+  });
+  it('conn 模型:别的页写键不外溢到共享端点（optimizer 写键不能删文档）', () => {
+    const auth = useAuthStore();
+    auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['conn:c1:optimizer', 'conn:c1:w:optimizer'], pages: pagesWithPrefixes };
+    expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/delete-by-id', 'c1')).toBe(false);
   });
   it('静态模型(grantedPages=null):回落 canCap(VIEWER 拒,REBUILD_OP 过)', () => {
     const auth = useAuthStore();
@@ -129,6 +135,22 @@ describe('588 批:端点级单一权限入口 canEndpoint(apiPrefixes 最长前�
   it('me=null(后端未启用鉴权):恒放行(既有语义)', () => {
     const auth = useAuthStore();
     expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/delete-index', 'c1')).toBe(true);
+  });
+  it('ADMIN 全局放行：无页面写键/无连接写键仍可读写（超管不被门禁拖累）', () => {
+    const auth = useAuthStore();
+    auth.me = { username: 'root', role: 'ADMIN', fallback: false, grantedPages: ['conn:c1:rest'], pages: pagesWithPrefixes };
+    expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/delete-index', 'c1')).toBe(true);
+    expect(auth.canWriteOn('c1')).toBe(true);
+    expect(auth.canPage('ops', 'indices', 'c1')).toBe(true);
+    expect(auth.canSeeConn('c2')).toBe(true);
+  });
+  it('canSeeConn：conn 模型只看授权连接；静态/ADMIN 看全部', () => {
+    const auth = useAuthStore();
+    auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['conn:c1:rest'] };
+    expect(auth.canSeeConn('c1')).toBe(true);
+    expect(auth.canSeeConn('c2')).toBe(false);
+    auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['overview'] };
+    expect(auth.canSeeConn('c2')).toBe(true);
   });
   it('五百九十批·管理域放开：admin 也走连接分支——raw 归 rest 页，勾 rest 写键即裁决（588 旧锚随语义升格改写）', () => {
     const auth = useAuthStore();

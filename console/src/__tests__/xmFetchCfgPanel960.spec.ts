@@ -133,7 +133,7 @@ describe('fetchCfg 失败内联面板（源码锁）', () => {
     expect(body).toContain("store.notify('error', cfgErr.value)");
     expect(src).toContain('v-html="errPreHtml(cfgErr, errMeta(cfgErrRaw))"');
     expect(src).toContain(
-      '<button class="btn sm" :disabled="checking" @click="fetchCfg"><RefreshCw :size="12" /> 重试</button>');
+      '<button v-if="canOps" class="btn sm" :disabled="checking" @click="fetchCfg"><RefreshCw :size="12" /> 重试</button>');
     expect(src).toContain('.xm-cfg-err { margin-top: var(--sp-2); }');
   });
 });

@@ -157,7 +157,7 @@
  空态给下一步动作（EmptyState 纪律）——一键把角色预置为 ADMIN 并聚焦表单
  裸 .empty 迁 EmptyState compact（用户管理窄卡），创建 ADMIN 改 actionText 等价保留 -->
           <EmptyState v-else-if="!usersLoading && !usersErr" compact :icon="UserPlus"
-            text="暂无正式账号 —— 当前依赖兜底默认账号" action-text="创建 ADMIN" @action="presetAdmin" />
+            text="暂无正式账号 —— 当前依赖兜底默认账号" :action-text="canAssignAdmin ? '创建 ADMIN' : undefined" @action="presetAdmin" />
           <div class="divider"></div>
           <div class="card-t sm">新建 / 更新用户</div>
           <div class="new-user">
@@ -169,7 +169,7 @@
               <option value="REBUILD_OP">REBUILD_OP（重建/迁移/回滚专项）</option>
               <option value="CLUSTER_OP">CLUSTER_OP（索引/集群管理专项）</option>
               <option value="AUDIT_OP">AUDIT_OP（审计日志查看专项）</option>
-              <option value="ADMIN">ADMIN（超管·全权+用户管理）</option>
+              <option v-if="canAssignAdmin" value="ADMIN">ADMIN（超管·全权+用户管理）</option>
             </select>
             <button class="btn primary sm" :disabled="!nuName || nuPassInvalid || nuBusy" @click="doUpsert"><UserPlus :size="12" /> 保存</button>
             <div v-if="nuPassInvalid" class="ipt-err new-user-err">密码最少 6 位（留空提交 = 只改角色）</div>
@@ -459,8 +459,9 @@ const allConnsFullGrant = computed(() =>
   grantSummary.value.connModel && grantSummary.value.conns.length > 0
     && grantSummary.value.conns.every(g => isFullGrant(g)));
 /* ·管理域放开：用户管理归 security 页写勾选（POST /auth/users/upsert 归属 security 页），重绑/连接档案维持 ADMIN */
-const canManageUsers = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/auth/users/upsert', store.target));
-const canRebind = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/setup/rebind', store.target)); /* ：重绑按连接勾选放开（conn 写键持有人）；delegated 排除保留（重绑钮仅内置登录场景展示） */
+const canManageUsers = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/auth/users/upsert', store.target)); /* security 页写键可管理普通账号；ADMIN 角色全局可 */
+const canAssignAdmin = computed(() => auth.can('admin')); /* 只有 ADMIN 可授予/修改/删除 ADMIN 账号（后端同口径防提权） */
+const canRebind = computed(() => auth.can('admin')); /* 重绑控制集群属系统管理域：ADMIN 角色专属 */
 
 const pwOld = ref('');
 const pwNew = ref('');
@@ -499,7 +500,9 @@ const userSuggestions = computed(() => facets.value?.users || []);
 const uriSuggestions = computed(() => facets.value?.uris || []);
 const BASE_AUDIT_ACTIONS = new Set(['LOGIN', 'LOGIN_FAIL', 'WRITE', 'HIGH_RISK', 'PAGE_DENIED', 'HOST_OP']);
 const actionSuggestions = computed(() => (facets.value?.actions || []).filter(a => !BASE_AUDIT_ACTIONS.has(a.key)));
+/* 963：audit-facets 归全量审计档（rank3+）——低权不拉必 403 的端点，建议词表随之为空 */
 async function loadFacets() {
+  if (!canAuditAll.value) { facets.value = null; return; }
   try { facets.value = await api.auth.auditFacets(); } catch { facets.value = null; }
 }
 const auditRows = ref<any[]>([]);
@@ -708,6 +711,7 @@ const dvRichItems = computed<MetaStripItem[]>(() => {
 /* 空态直达：预置 ADMIN 角色 + 聚焦用户名输入框 */
 const nuNameRef = ref<HTMLInputElement | null>(null);
 function presetAdmin() {
+  if (!canAssignAdmin.value) return;
   nuRole.value = 'ADMIN';
   nextTick(() => nuNameRef.value?.focus());
 }
@@ -751,6 +755,14 @@ async function loadUsers() {
 }
 
 async function doUpsert() {
+  if (!canManageUsers.value) return; /* 963 执行体守卫：用户管理=security 页写键（模板已隐藏，直调/键盘路径再兜一层） */
+  if (!canAssignAdmin.value) {
+    const target = users.value.find((u: any) => u.username === nuName.value);
+    if (nuRole.value === 'ADMIN' || target?.role === 'ADMIN') {
+      store.notify('error', '仅 ADMIN 可授予/修改 ADMIN 账号');
+      return;
+    }
+  }
   if (nuBusy.value) return; /* 函数体级防重入（按钮 disabled 之外的第二道防线） */
   /* 闸置位先于确认窗——确认窗挂起期间保存钮已禁用，二击不穿透双开确认窗（双发写动作） */
   nuBusy.value = true;
@@ -778,6 +790,14 @@ async function doUpsert() {
    闸置位先于确认窗——critical 确认窗挂起期间行内删除钮已禁用，二击不穿透双发 */
 const deleting = ref(false);
 async function doDelete(username: string) {
+  if (!canManageUsers.value) return; /* 963 执行体守卫（同上款：行内删除钮之外的第二道门） */
+  if (!canAssignAdmin.value) {
+    const target = users.value.find((u: any) => u.username === username);
+    if (target?.role === 'ADMIN') {
+      store.notify('error', '仅 ADMIN 可删除 ADMIN 账号');
+      return;
+    }
+  }
   if (deleting.value) return;
   deleting.value = true;
   try {
@@ -875,6 +895,7 @@ async function copyAuditMd() {
 }
 
 async function doRebind() {
+  if (!canRebind.value) return; /* 963 执行体守卫：重绑=setup/rebind 连接级高危写，无权限直调也拦 */
   /* 在途互斥闸：闸读收本体首行+置位先于确认窗——确认窗挂起期间重绑钮已禁用，
      二击不穿透双发（重绑是集群级高危写）；取消/失败路径 finally 复位防闸死，
      成功路径保持置位至 reload（提交已落定，不再接受二次发起） */
@@ -900,7 +921,7 @@ async function doRebind() {
   }
 }
 
-onMounted(() => { loadUsers(); loadAudit(); loadSetup(); loadFacets(); });
+onMounted(() => { loadUsers(); loadAudit(); loadSetup(); if (canAuditAll.value) loadFacets(); });
 /* 修复首屏审计/用户列表空——身份探测（probe）是异步的，onMounted 时 isAdmin() 可能
  还是 false 被静默跳过，靠手动刷新才出数据。身份就绪后自动补拉一次。
  身份就绪即补拉（任意角色——非审计角色也有「我的操作流水」要看） */
@@ -908,6 +929,9 @@ const canAuditAll = computed(() => auth.canAuditAll());
 watch(() => auth.me?.role, (role, old) => {
   if (role && old !== role) { loadUsers(); loadAudit(); }
 });
+/* 963：建议词表随全量审计档同步——身份就绪/升档补拉 audit-facets（低权端点必 403，降档即清空）。
+   独立 watch 而非并入上方 role watch：档位是角色派生物，canViewAllAudit 映射变化（AUDIT_OP 等）也要跟随 */
+watch(canAuditAll, (v) => { if (v) loadFacets(); else facets.value = null; });
 </script>
 
 <style scoped>

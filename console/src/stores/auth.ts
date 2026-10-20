@@ -71,6 +71,14 @@ export const useAuthStore = defineStore('auth', () => {
   });
 
   const isAdmin = () => me.value?.role === 'ADMIN';
+  /* 连接元数据可见性：ADMIN/未启用鉴权/静态键模型看全部；conn 模型只看授权连接，防未授权连接名/host 外泄 */
+  const canSeeConn = (connId: string): boolean => {
+    if (me.value == null || isAdmin()) return true;
+    const gp = me.value.grantedPages;
+    if (!Array.isArray(gp)) return true;
+    if (!gp.some(g => g.startsWith('conn:'))) return true;
+    return gp.some(g => g.startsWith('conn:' + connId + ':'));
+  };
   const atLeastOperator = () => me.value?.role === 'ADMIN' || me.value?.role === 'OPERATOR';
   /* 能力门禁统一入口（镜像后端拦截器 rank 语义）——危险按钮「不展示」都走 can()，
  语义真源在 utils/capability.ts；安全边界始终在后端，这里是体验层防误点。
@@ -95,6 +103,7 @@ export const useAuthStore = defineStore('auth', () => {
     return gp.some(g => g.startsWith(prefix + 'w:'));
   };
   const canWriteOn = (targetId: string | null | undefined): boolean => {
+    if (isAdmin()) return true; /* 超管全局写权：不受连接写键缺失拖累 */
     const conn = connWriteResolved(targetId);
     if (conn !== null) return conn;
     return can('write');
@@ -105,6 +114,7 @@ export const useAuthStore = defineStore('auth', () => {
  非连接上下文回落全局角色档 canCap；admin 是管理域（连接菜单无对应勾选项）不走连接分支。 */
   const canPage = (cap: ConsoleCap, pageKey: string, targetId: string | null | undefined) => {
     if (me.value == null) return true;
+    if (isAdmin()) return true; /* 超管全局页面权：页面白名单/连接键不拖累 */
     const gp = me.value.grantedPages;
     const isConn = Array.isArray(gp) && gp.some(g => g.startsWith('conn:'));
     if (isConn && targetId && cap !== 'admin') {
@@ -117,13 +127,45 @@ export const useAuthStore = defineStore('auth', () => {
  （最长前缀匹配→归属页），conn 模型按精确 conn:{tid}:w:{pageKey} 裁决；未命中（共享
  端点）按任意写键；静态模型回落 canCap；admin 管理域不走连接分支。视图只传按钮真实
  调用的端点路径，零 pageKey 硬编码（586 错位根治）。 */
-  const READONLY_POST_KEYWORDS = ['/cluster/query', '/cluster/profile', '/cluster/count', '/cluster/search-dsl', '/cluster/search-raw', '/cluster/search-template', '/cluster/render-template', '/cluster/validate-query', '/cluster/explain-doc', '/cluster/allocation-explain', '/cluster/analyze', '/cluster/reindex-preview', '/cluster/sql/', '/cluster/pit/', '/cluster/painless/execute', '/xmigrate/connect-check', '/xmigrate/resolve-preview', '/xmigrate/fetch-config'];
+  /* 963：与后端 ConsoleAuthInterceptor.isReadonlyPost 对齐——sql 关键词去尾斜杠（裸 /cluster/sql 也命中）；
+     insight/settings-impact 为只读评估端点新增入册 */
+  const READONLY_POST_KEYWORDS = ['/cluster/query', '/cluster/profile', '/cluster/count', '/cluster/search-dsl', '/cluster/search-raw', '/cluster/search-template', '/cluster/render-template', '/cluster/validate-query', '/cluster/explain-doc', '/cluster/allocation-explain', '/cluster/analyze', '/cluster/reindex-preview', '/cluster/sql', '/cluster/pit/', '/cluster/painless/execute', '/insight/settings-impact'];
+  /* 963：共享写端点 → 合法页面写键（与后端 ConsoleAuthInterceptor.SHARED_WRITE_PAGES 同源）。
+     原先“任意写键”放行会让 optimizer 写键持有人删文档/取消任务/改 ILM 策略。 */
+  const SHARED_WRITE_PAGE_KEYS: Record<string, string[]> = {
+    '/cluster/doc/update': ['search', 'indices', 'doc-diff', 'browser'],
+    '/cluster/doc': ['search', 'indices', 'doc-diff', 'browser'],
+    '/cluster/update-document': ['search', 'indices', 'doc-diff', 'browser'],
+    '/cluster/update-partial': ['search', 'indices', 'doc-diff', 'browser'],
+    '/cluster/delete-by-id': ['search', 'indices'],
+    '/cluster/delete-by-query': ['search', 'update-by-query'],
+    '/cluster/tasks/cancel': ['tasks', 'task-tree'],
+    '/cluster/ilm/policy': ['ilm'],
+    '/cluster/index-settings/update': ['index-settings', 'indices', 'optimizer'],
+    '/cluster/reload-analyzers': ['analysis-settings', 'synonyms'],
+    '/cluster/reroute': ['cluster-settings', 'diag'],
+    '/cluster/scripts/put': ['search-templates', 'painless-lab'],
+    '/cluster/scripts/delete': ['search-templates', 'painless-lab'],
+  };
+  const sharedWritePageKeys = (path: string): string[] | null => {
+    let best: string[] | null = null;
+    let bestLen = -1;
+    for (const [frag, keys] of Object.entries(SHARED_WRITE_PAGE_KEYS)) {
+      if (path.includes(frag) && frag.length > bestLen) { best = keys; bestLen = frag.length; }
+    }
+    return best;
+  };
   const canEndpoint = (cap: ConsoleCap, method: string, path: string, targetId: string | null | undefined) => {
     if (me.value == null) return true;
+    if (isAdmin()) return true; /* 超管全局端点权：与后端 ADMIN 页面门豁免镜像 */
     const gp = me.value.grantedPages;
     const isConn = Array.isArray(gp) && gp.some(g => g.startsWith('conn:'));
     if (!(isConn && targetId)) return canCap(me.value.role, cap);
-    if (method.toUpperCase() !== 'GET' && !READONLY_POST_KEYWORDS.some(kw => path.includes(kw))) {
+    /* 963：只读 POST=清单命中 或 后端三条精确尾缀（index/query、index/system-query、探活 probe）——
+       尾缀端点无页归属，误判写会走精确写键把读动作也拦掉 */
+    if (method.toUpperCase() !== 'GET'
+      && !READONLY_POST_KEYWORDS.some(kw => path.includes(kw))
+      && !path.endsWith('/index/query') && !path.endsWith('/index/system-query') && !path.endsWith('/probe')) {
       /* 写语义：页命中→精确写键；共享→任意写键 */
       const pages = me.value.pages?.groups?.flatMap(g => g.pages) ?? [];
       let best: { key: string; len: number } | null = null;
@@ -132,10 +174,13 @@ export const useAuthStore = defineStore('auth', () => {
         if (hit && pre.length > (best?.len ?? 0)) best = { key: p.key, len: pre.length };
       }
       if (best) return gp!.includes('conn:' + targetId + ':w:' + best.key);
-      return gp!.some(g => g.startsWith('conn:' + targetId + ':w:'));
+      /* 共享写：须持有真实使用该端点的页面写键；未登记共享写回落角色档（后端角色门） */
+      const sharedPages = sharedWritePageKeys(path);
+      if (sharedPages) return sharedPages.some(k => gp!.includes('conn:' + targetId + ':w:' + k));
+      return canCap(me.value.role, cap);
     }
     return true; /* 读请求：conn 模型页面门读键即过（与后端 effectivePages 语义一致） */
   };
 
-  return { me, showLogin, probed, probe, login, logout, requireLogin, isAdmin, atLeastOperator, grantedPages, can, canWriteOn, canPage, canEndpoint, connWriteResolved, canAuditAll };
+  return { me, showLogin, probed, probe, login, logout, requireLogin, isAdmin, canSeeConn, atLeastOperator, grantedPages, can, canWriteOn, canPage, canEndpoint, connWriteResolved, canAuditAll };
 });

@@ -28,9 +28,9 @@ const ih = readFileSync(join(__dirname, '../views/IndexHubView.vue'), 'utf-8');
 describe('565 件③：AltHitsViews 共享件接线（源码锁）', () => {
   it('DslQueryView import + 三视图分支各挂一件（json/tree/cards 绑定契约；914 能力矩阵统一同步更新：json/tree 档 +doc-count/open-doc-at 文档导航）', () => {
     expect(dq).toContain("import AltHitsViews from '../components/AltHitsViews.vue';");
-    expect(dq).toMatch(/<AltHitsViews ref="jsonBox" view="json" :json-html="jsonMarkedHtml" :doc-count="resp\?\.hits\?\.length \?\? 0" :doc-ids="resp\?\.hits\?\.map\(h => h\._id\) \?\? \[\]" editable @open-doc-at="i => resp && openDoc\(resp\.hits\[i\]\)"/);
+    expect(dq).toMatch(/<AltHitsViews ref="jsonBox" view="json" :json-html="jsonMarkedHtml" :doc-count="resp\?\.hits\?\.length \?\? 0" :doc-ids="resp\?\.hits\?\.map\(h => h\._id\) \?\? \[\]" :editable="canWrite" @open-doc-at="i => resp && openDoc\(resp\.hits\[i\]\)"/);
     expect(dq).toMatch(/<AltHitsViews view="tree" :tree-data="jqResult !== null \? jqResult : \(resp\.hits \|\| \[\]\)\.map\(h => \(\{ _id: h\._id, \.\.\.h\._source \}\)\)" :doc-count=/);
-    expect(dq).toMatch(/<AltHitsViews view="cards" :hits="cardHits" editable @open-doc="openDoc" @edit-doc="h => openDoc\(h, true\)" \/>/);
+    expect(dq).toMatch(/<AltHitsViews view="cards" :hits="cardHits" :editable="canWrite" @open-doc="openDoc" @edit-doc="h => openDoc\(h, true\)" \/>/);
   });
 
   it('包裹层类串与 --dq-view-cap 高度链零触（track2Wave551 黑名单 + W1/402 锁面保形）', () => {
@@ -52,8 +52,8 @@ describe('565 件③：AltHitsViews 共享件接线（源码锁）', () => {
     expect(ih).toContain("import AltHitsViews from '../components/AltHitsViews.vue';");
     expect(ih).toContain('<AltHitsViews view="json" :json-html="docsJsonHtml" :doc-count="docsHits.length"');
     expect(ih).toContain('<AltHitsViews view="tree" :tree-data="docsAltData" :doc-count="docsAltData.length"');
-    expect(ih).toContain('<AltHitsViews view="cards" :hits="docsHits" editable @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />');
-    expect(ih).toContain('<AltHitsViews view="cards" :hits="qryResp.hits" editable @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />');
+    expect(ih).toContain('<AltHitsViews view="cards" :hits="docsHits" :editable="canWrite" @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />');
+    expect(ih).toContain('<AltHitsViews view="cards" :hits="qryResp.hits" :editable="canWrite" @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />');
     expect(ih, '包裹层容器类留宿主（track2Wave560-ih CSS 锁零触）').toContain('ih-json-wrap ih-alt-body');
     expect(ih).toContain('ih-cards ih-alt-body');
   });

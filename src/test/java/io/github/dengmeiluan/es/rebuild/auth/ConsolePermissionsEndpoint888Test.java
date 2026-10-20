@@ -260,6 +260,53 @@ public class ConsolePermissionsEndpoint888Test {
         assertEquals(Boolean.FALSE, resp.get("sharedWriteAllowed"));
     }
 
+    @Test
+    public void 权限面写档_GET_only页不误报_真实写端点页按角色() {        Map<String, Object> admin = call(ctrl(), builtin(ConsoleRole.ADMIN), "host");
+        /* overview/diag 只有 GET/只读 POST——不得披露 write（否则宿主下发的 w: 键会解锁共享写端点） */
+        assertNull(pageOf(admin, "overview").get("write"));
+        assertNull(pageOf(admin, "diag").get("write"));
+        assertEquals(Boolean.TRUE, pageOf(admin, "indices").get("write"));
+        assertEquals(Boolean.TRUE, pageOf(admin, "security").get("write"));
+        assertEquals(Boolean.TRUE, pageOf(admin, "rest").get("write"));
+
+        Map<String, Object> operator = call(ctrl(), builtin(ConsoleRole.OPERATOR), "host");
+        assertNull(pageOf(operator, "overview").get("write"));
+        assertEquals(Boolean.FALSE, pageOf(operator, "indices").get("write"));
+        assertEquals(Boolean.FALSE, pageOf(operator, "rest").get("write"));
+        assertEquals(Boolean.FALSE, pageOf(operator, "cluster-settings").get("write"));
+        assertEquals(Boolean.FALSE, pageOf(operator, "config-validator").get("write"));
+    }
+
+    @Test
+    public void 共享写档_按归属页写键_无共享端点页不越权() {
+        assertEquals(Boolean.FALSE, call(ctrl(), delegatedAs(ConsoleRole.VIEWER,
+                set("conn:c1:overview", "conn:c1:w:overview")), "c1").get("sharedWriteAllowed"));
+        assertEquals(Boolean.TRUE, call(ctrl(), delegatedAs(ConsoleRole.VIEWER,
+                set("conn:c1:search", "conn:c1:w:search")), "c1").get("sharedWriteAllowed"));
+    }
+
+    @Test
+    public void 超管全局权限面_无页面写键也读写全开() {
+        Map<String, Object> resp = call(ctrl(), delegatedAs(ConsoleRole.ADMIN,
+                set("conn:c1:rest")), "c1");
+        assertEquals(Boolean.TRUE, resp.get("rawAllowed"));
+        assertEquals(Boolean.TRUE, resp.get("sharedWriteAllowed"));
+        assertEquals(Boolean.TRUE, pageOf(resp, "indices").get("read"));
+        assertEquals(Boolean.TRUE, pageOf(resp, "indices").get("write"));
+        assertEquals(Boolean.TRUE, pageOf(resp, "security").get("read"));
+    }
+
+    @Test
+    public void env模板_混合静态conn_静态页仍收缩_conn页保留() {
+        EsRebuildProperties props = new EsRebuildProperties();
+        props.setEnvPages(Collections.singletonMap("PROD", new HashSet<>(Collections.singletonList("overview"))));
+        Map<String, Object> resp = call(ctrlWithProps(props), delegatedAs(ConsoleRole.VIEWER,
+                set("conn:c1:search", "conn:c1:w:search", "rest", "overview")), "c1");
+        assertEquals(Boolean.FALSE, pageOf(resp, "rest").get("read"));
+        assertEquals(Boolean.TRUE, pageOf(resp, "overview").get("read"));
+        assertEquals(Boolean.TRUE, pageOf(resp, "search").get("read"));
+    }
+
     /* ---------------- 对拍锁：端点判定 ⇔ 真拦截器 preHandle 同裁 ---------------- */
 
     @Test

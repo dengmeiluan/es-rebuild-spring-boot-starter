@@ -69,6 +69,284 @@ public class EsIndexAdmin {
         this.clientRouter = clientRouter;
     }
 
+    /* ============================================================================
+     * 控制面索引保护（963）：用户库/审计/连接档案/监控等控制索引与数据面同集群时，
+     * 通用数据端点（查询 / 文档 CRUD / 批量写 / mapping / settings / reindex / SQL / 模板 / ILM）
+     * 不得触达 es_console_*——否则 VIEWER 可读用户哈希与审计、OPERATOR 可篡改审计/伪造用户。
+     * ADMIN raw 是唯一逃生通道（performUnguarded），不在此守卫范围。
+     * ============================================================================ */
+
+    /** 控制面索引前缀（用户库/审计/连接档案/监控/校验临时索引）。 */
+    static final String CONTROL_INDEX_PREFIX = "es_console_";
+    /** 配置校验临时索引：校验器创建后即删，允许其经 EsIndexAdmin 走建/删/存在性检查。 */
+    static final String VALIDATE_INDEX_PREFIX = "es_console_validate_";
+
+    /** 宿主可配置的控制索引实名（用户库/审计/连接档案/监控），由自动装配注入。 */
+    private volatile Set<String> extraControlIndexNames = Collections.emptySet();
+
+    /** 注入控制索引实名（大小写归一、去空；默认前缀之外的宿主自定义名）。 */
+    public void setExtraControlIndexNames(java.util.Collection<String> names) {
+        java.util.Set<String> out = new java.util.LinkedHashSet<>();
+        if (names != null) {
+            for (String n : names) {
+                if (n != null && !n.trim().isEmpty()) out.add(n.trim().toLowerCase(Locale.ROOT));
+            }
+        }
+        this.extraControlIndexNames = Collections.unmodifiableSet(out);
+    }
+
+    private boolean isControlIndexName(String n) {
+        if (n == null || n.isEmpty()) return false;
+        if (n.startsWith(CONTROL_INDEX_PREFIX)
+                || n.equals("es_rebuild_adhoc_job")
+                || n.startsWith("es_rebuild_adhoc_job-")
+                || n.endsWith("_es_rebuild_lock")
+                || n.endsWith("_es_xmigrate_job")) {
+            return true;
+        }
+        for (String x : extraControlIndexNames) {
+            if (n.equals(x) || n.startsWith(x + "-") || n.startsWith(x + ".")) return true;
+        }
+        return false;
+    }
+
+    /** 通配字面量前缀是否可能覆盖任一控制索引名（含宿主自定义名）。 */
+    private boolean couldMatchControl(String literal) {
+        if (literal == null || literal.isEmpty()) return true;
+        if (CONTROL_INDEX_PREFIX.startsWith(literal)
+                || "es_rebuild_adhoc_job".startsWith(literal)
+                || "_es_rebuild_lock".startsWith(literal)
+                || "_es_xmigrate_job".startsWith(literal)) {
+            return true;
+        }
+        for (String x : extraControlIndexNames) {
+            if (x.startsWith(literal)) return true;
+        }
+        return false;
+    }
+
+    private org.elasticsearch.client.Response performGuarded(org.elasticsearch.client.Request req) throws IOException {
+        guardControlPath(req.getEndpoint());
+        return restHighLevelClient().getLowLevelClient().performRequest(req);
+    }
+
+    /** ADMIN raw 专用：绕过控制索引守卫（应急逃生通道）。 */
+    private org.elasticsearch.client.Response performUnguarded(org.elasticsearch.client.Request req) throws IOException {
+        return restHighLevelClient().getLowLevelClient().performRequest(req);
+    }
+
+    /**
+     * 低层请求路径守卫：首段是控制索引、或其通配模式可能命中控制索引时拒绝。
+     * 系统 API（首段 {@code _}）不在此判定；需要时由调用方显式 guardIndexPattern（如 _cat/shards）。
+     */
+    void guardControlPath(String path) {
+        if (path == null || !path.startsWith("/")) return;
+        int q = path.indexOf('?');
+        String p = q < 0 ? path : path.substring(0, q);
+        int slash = p.indexOf('/', 1);
+        String first = slash < 0 ? p.substring(1) : p.substring(1, slash);
+        if (first.isEmpty() || "_all".equalsIgnoreCase(first)) {
+            if (first.isEmpty()) return;
+            throw new IllegalArgumentException("不允许对全量索引执行该操作（控制面索引不可触达）：_all");
+        }
+        if (first.startsWith("_")) return;
+        String decoded;
+        try {
+            decoded = java.net.URLDecoder.decode(first, "UTF-8");
+        } catch (Exception e) {
+            // 非法编码无法判定真实目标——fail-closed（不存在需要非法 % 序列的合法索引路径）
+            throw new IllegalArgumentException("索引路径编码非法，已拒绝：" + first);
+        }
+        String lower = decoded.toLowerCase(Locale.ROOT);
+        if ("_all".equals(lower) || "*".equals(lower)) {
+            throw new IllegalArgumentException("不允许对全量索引执行该操作（控制面索引不可触达）：" + decoded);
+        }
+        if (lower.contains("..") || lower.indexOf('/') >= 0 || lower.indexOf('\\') >= 0) {
+            throw new IllegalArgumentException("索引路径含目录穿越片段，已拒绝：" + first);
+        }
+        if (lower.indexOf('*') >= 0 || lower.indexOf('?') >= 0 || lower.indexOf(',') >= 0) {
+            guardIndexPattern(lower);
+        } else {
+            guardIndexName(lower);
+        }
+    }
+
+    /** 精确索引名守卫；校验器临时索引放行（只用于建/删/存在性检查）。 */
+    void guardIndexName(String name) {
+        if (name == null) return;
+        String n = name.trim().toLowerCase(Locale.ROOT);
+        if (n.isEmpty() || n.startsWith(VALIDATE_INDEX_PREFIX)) return;
+        if ("_all".equals(n) || "*".equals(n)) {
+            throw new IllegalArgumentException("不允许对全量索引执行该操作（控制面索引不可触达）：" + name);
+        }
+        if (n.contains("..") || n.indexOf('/') >= 0 || n.indexOf('\\') >= 0) {
+            throw new IllegalArgumentException("索引名含目录穿越片段，已拒绝：" + name);
+        }
+        if (isControlIndexName(n)) {
+            throw new IllegalArgumentException("控制面索引不对通用数据接口开放：" + name);
+        }
+    }
+
+    /**
+     * 索引通配模式守卫：{@code *}/{@code _all}/空字面量前缀，以及字面量前缀能覆盖
+     * 控制索引名的模式（{@code es_*}、{@code e*}、宿主自定义名前缀）一律拒绝——
+     * 防止“查全部”把控制索引带出。
+     */
+    void guardIndexPattern(String pattern) {
+        if (pattern == null) return;
+        for (String raw : pattern.split(",")) {
+            String p = raw.trim().toLowerCase(Locale.ROOT);
+            if (p.startsWith("-")) p = p.substring(1).trim();
+            if (p.isEmpty()) continue;
+            if (p.contains("..") || p.indexOf('/') >= 0 || p.indexOf('\\') >= 0) {
+                throw new IllegalArgumentException("索引模式含目录穿越片段，已拒绝：" + pattern);
+            }
+            if ("_all".equals(p) || "*".equals(p)) {
+                throw new IllegalArgumentException("不允许对全量索引执行该操作（控制面索引不可触达）：" + pattern);
+            }
+            if (p.startsWith(VALIDATE_INDEX_PREFIX)) continue;
+            if (isControlIndexName(p)) {
+                throw new IllegalArgumentException("控制面索引不对通用数据接口开放：" + pattern);
+            }
+            int wild = -1;
+            for (int i = 0; i < p.length(); i++) {
+                char c = p.charAt(i);
+                if (c == '*' || c == '?') { wild = i; break; }
+            }
+            if (wild < 0) continue;
+            String literal = p.substring(0, wild);
+            if (couldMatchControl(literal)) {
+                throw new IllegalArgumentException("索引模式可能命中控制面索引，已拒绝：" + pattern);
+            }
+        }
+    }
+
+    /** 请求体守卫：SQL / reindex / bulk / 模板 / ILM / 快照 body 中一旦出现控制面索引名即拒绝。 */
+    void guardControlBody(String body) {
+        if (body == null || body.isEmpty()) return;
+        String lower = body.toLowerCase(Locale.ROOT);
+        if (lower.contains(CONTROL_INDEX_PREFIX) || lower.contains("es_rebuild_adhoc_job")
+                || lower.contains("_es_rebuild_lock") || lower.contains("_es_xmigrate_job")) {
+            throw new IllegalArgumentException("请求体不得引用控制面索引：" + CONTROL_INDEX_PREFIX + "*");
+        }
+        for (String x : extraControlIndexNames) {
+            if (lower.contains(x)) {
+                throw new IllegalArgumentException("请求体不得引用控制面索引：" + x);
+            }
+        }
+    }
+
+    /** SQL 守卫：除字面控制索引外，FROM/JOIN 的通配模式（* / es_* / e*）也不得覆盖控制索引。 */
+    void guardSql(String sql) {
+        guardControlBody(sql);
+        if (sql == null || sql.isEmpty()) return;
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("(?i)\\b(?:FROM|JOIN)\\s+\"?([\\w\\-.*?,]+)\"?")
+                .matcher(sql);
+        while (m.find()) {
+            guardIndexPattern(m.group(1));
+        }
+    }
+
+    /** reindex body 守卫：source.index / dest.index 可为字符串或数组；通配 * 同样拒绝。 */
+    void guardReindexBody(String body) {
+        guardControlBody(body);
+        if (body == null || body.isEmpty()) return;
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> root = OBJECT_MAPPER.readValue(body, Map.class);
+            guardReindexTarget(root.get("source"));
+            guardReindexTarget(root.get("dest"));
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception ignore) {
+            // 非 JSON/结构异常交由 ES 原始报错，不在此改变语义；字面控制索引已由 guardControlBody 拦截
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void guardReindexTarget(Object node) {
+        if (!(node instanceof Map)) return;
+        Object index = ((Map<String, Object>) node).get("index");
+        if (index instanceof String) {
+            guardIndexPattern((String) index);
+        } else if (index instanceof java.util.List) {
+            for (Object one : (java.util.List<Object>) index) {
+                if (one instanceof String) guardIndexPattern((String) one);
+            }
+        }
+    }
+
+    /**
+     * 索引模板守卫：index_patterns 必须显式业务模式，禁止 * / _all / 控制面通配——
+     * 否则 rank3 可通过 catch-all 模板把 settings/mapping/ILM 施加到用户库/审计等控制索引。
+     */
+    void guardIndexTemplateBody(String bodyJson) {
+        guardControlBody(bodyJson);
+        if (bodyJson == null || bodyJson.trim().isEmpty()) return;
+        final Object patterns;
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> root = OBJECT_MAPPER.readValue(bodyJson, Map.class);
+            patterns = root.get("index_patterns");
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            return; // 非 JSON 交由 ES 原始报错
+        }
+        if (patterns instanceof String) {
+            guardIndexPattern((String) patterns);
+        } else if (patterns instanceof java.util.List) {
+            java.util.List<?> list = (java.util.List<?>) patterns;
+            if (list.isEmpty()) throw new IllegalArgumentException("index_patterns 不能为空");
+            for (Object one : list) {
+                if (!(one instanceof String) || ((String) one).trim().isEmpty()) {
+                    throw new IllegalArgumentException("index_patterns 元素必须是非空字符串");
+                }
+                guardIndexPattern((String) one);
+            }
+        } else if (patterns != null) {
+            throw new IllegalArgumentException("index_patterns 必须是字符串或字符串数组");
+        }
+    }
+
+    /**
+     * 非 ADMIN 快照恢复守卫：必须显式给出业务 indices，禁止“恢复全部”/通配/控制索引——
+     * 否则 rank3 可把包含控制面索引的快照恢复到线上，覆盖用户库/审计/连接档案。
+     */
+    void guardRestoreBody(String bodyJson) {
+        guardControlBody(bodyJson);
+        if (bodyJson == null || bodyJson.trim().isEmpty()) {
+            throw new IllegalArgumentException("恢复快照必须显式指定 indices（不允许恢复全部）");
+        }
+        final Object indices;
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> root = OBJECT_MAPPER.readValue(bodyJson, Map.class);
+            indices = root.get("indices");
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("恢复快照 body 不是合法 JSON: " + e.getMessage());
+        }
+        if (indices instanceof String) {
+            String s = ((String) indices).trim();
+            if (s.isEmpty()) throw new IllegalArgumentException("恢复快照 indices 不能为空");
+            guardIndexPattern(s);
+        } else if (indices instanceof java.util.List) {
+            java.util.List<?> list = (java.util.List<?>) indices;
+            if (list.isEmpty()) throw new IllegalArgumentException("恢复快照 indices 不能为空");
+            for (Object one : list) {
+                if (!(one instanceof String) || ((String) one).trim().isEmpty()) {
+                    throw new IllegalArgumentException("恢复快照 indices 元素必须是非空字符串");
+                }
+                guardIndexPattern((String) one);
+            }
+        } else {
+            throw new IllegalArgumentException("恢复快照必须显式指定 indices（不允许恢复全部）");
+        }
+    }
+
     /** 当前请求应使用的 client：无路由/无目标 → 宿主；有目标 → 路由器长连接。 */
     private RestHighLevelClient restHighLevelClient() {
         io.github.dengmeiluan.es.rebuild.multicluster.EsClientRouter r = clientRouter;
@@ -79,6 +357,7 @@ public class EsIndexAdmin {
      * 物理索引是否存在
      */
     public boolean indexExists(String index) throws IOException {
+        guardIndexName(index);
         return restHighLevelClient().indices().exists(new GetIndexRequest(index), RequestOptions.DEFAULT);
     }
 
@@ -91,6 +370,7 @@ public class EsIndexAdmin {
      * @param mappingJson 可为 null（无 @Mapping 的实体）
      */
     public void createIndex(String index, String settingsJson, String mappingJson) throws IOException {
+        guardIndexName(index);
         io.github.dengmeiluan.es.rebuild.multicluster.EsClientRouter r = clientRouter;
         String targetVersion = r == null ? null : r.currentEsVersion();
         if (io.github.dengmeiluan.es.rebuild.multicluster.EsVersionCaps.requiresMappingType(targetVersion)) {
@@ -186,6 +466,7 @@ public class EsIndexAdmin {
      * 别名是否存在
      */
     public boolean aliasExists(String alias) throws IOException {
+        guardIndexName(alias);
         return restHighLevelClient().indices().existsAlias(new GetAliasesRequest(alias), RequestOptions.DEFAULT);
     }
 
@@ -193,6 +474,7 @@ public class EsIndexAdmin {
      * 返回别名当前指向的物理索引集合（别名不存在时返回空集）
      */
     public Set<String> getIndicesByAlias(String alias) throws IOException {
+        guardIndexName(alias);
         if (!aliasExists(alias)) {
             return Collections.emptySet();
         }
@@ -206,6 +488,7 @@ public class EsIndexAdmin {
      * 若无显式 write 标志但别名仅指向单个索引，则返回该唯一索引；否则返回 null。
      */
     public String getWriteIndex(String alias) throws IOException {
+        guardIndexName(alias);
         if (!aliasExists(alias)) {
             return null;
         }
@@ -229,6 +512,8 @@ public class EsIndexAdmin {
      * 首次创建别名并指向物理索引（is_write_index=true）
      */
     public void createWriteAlias(String alias, String physicalIndex) throws IOException {
+        guardIndexName(alias);
+        guardIndexName(physicalIndex);
         IndicesAliasesRequest request = new IndicesAliasesRequest();
         request.addAliasAction(IndicesAliasesRequest.AliasActions.add()
                 .index(physicalIndex).alias(alias).writeIndex(true));
@@ -241,6 +526,9 @@ public class EsIndexAdmin {
      * 切换后增量自动写入新物理索引。
      */
     public void switchWriteIndex(String alias, String newPhysical, String oldPhysical) throws IOException {
+        guardIndexName(alias);
+        guardIndexName(newPhysical);
+        guardIndexName(oldPhysical);
         IndicesAliasesRequest request = new IndicesAliasesRequest();
         request.addAliasAction(IndicesAliasesRequest.AliasActions.add()
                 .index(newPhysical).alias(alias).writeIndex(true));
@@ -256,6 +544,8 @@ public class EsIndexAdmin {
      * 从别名原子移除某物理索引
      */
     public void removeAlias(String alias, String physicalIndex) throws IOException {
+        guardIndexName(alias);
+        guardIndexName(physicalIndex);
         IndicesAliasesRequest request = new IndicesAliasesRequest();
         request.addAliasAction(IndicesAliasesRequest.AliasActions.remove()
                 .index(physicalIndex).alias(alias));
@@ -270,6 +560,8 @@ public class EsIndexAdmin {
      * @return taskId，格式 {@code nodeId:taskNum}
      */
     public String submitReindex(String sourceIndex, String destIndex) throws IOException {
+        guardIndexPattern(sourceIndex);
+        guardIndexPattern(destIndex);
         ReindexRequest request = new ReindexRequest();
         request.setSourceIndices(sourceIndex);
         request.setDestIndex(destIndex);
@@ -357,6 +649,7 @@ public class EsIndexAdmin {
      * 删除物理索引（高危，仅在确认不被任何别名指向后调用）
      */
     public void deleteIndex(String index) throws IOException {
+        guardIndexName(index);
         restHighLevelClient().indices().delete(new DeleteIndexRequest(index), RequestOptions.DEFAULT);
         logger.info("[EsIndexAdmin] deleteIndex: {}", index);
     }
@@ -365,10 +658,11 @@ public class EsIndexAdmin {
      * 强制合并索引 segment，减少碎片。大量删除后调用以回收磁盘空间。
      */
     public Map<String, Object> forceMerge(String index, int maxNumSegments) throws IOException {
+        guardIndexName(index);
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request(
                 "POST", "/" + index + "/_forcemerge?wait_for_completion=false");
         req.setJsonEntity("{\"max_num_segments\":" + maxNumSegments + ",\"flush\":true}");
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String respBody = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> result = OBJECT_MAPPER.readValue(respBody, Map.class);
@@ -380,6 +674,7 @@ public class EsIndexAdmin {
      * 热更新索引 settings（仅限动态参数如 number_of_replicas）。
      */
     public void updateSettings(String index, String settingsJson) throws IOException {
+        guardIndexName(index);
         UpdateSettingsRequest req = new UpdateSettingsRequest(index);
         req.settings(settingsJson, XContentType.JSON);
         restHighLevelClient().indices().putSettings(req, RequestOptions.DEFAULT);
@@ -486,7 +781,7 @@ public class EsIndexAdmin {
         }
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("POST", "/" + indexOrAlias + "/_search");
         req.setJsonEntity(body);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String respBody = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> raw = OBJECT_MAPPER.readValue(respBody, Map.class);
@@ -535,7 +830,7 @@ public class EsIndexAdmin {
      */
     public java.util.List<Map<String, Object>> listClusterIndices() throws IOException {
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("GET", "/_cat/indices?format=json&h=index,health,status,docs.count,store.size,pri,rep,creation.date.string,segments.count,docs.deleted");
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         java.util.List<Map<String, Object>> list = OBJECT_MAPPER.readValue(body,
@@ -640,7 +935,7 @@ public class EsIndexAdmin {
                 + "}}}}";
             org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("POST", "/" + index + "/_search");
             req.setJsonEntity(aggBody);
-            org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+            org.elasticsearch.client.Response resp = performGuarded(req);
             String respBody = org.apache.http.util.EntityUtils.toString(resp.getEntity());
             @SuppressWarnings("unchecked")
             Map<String, Object> result = OBJECT_MAPPER.readValue(respBody, Map.class);
@@ -685,7 +980,7 @@ public class EsIndexAdmin {
     /** 集群健康概览。 */
     public Map<String, Object> clusterHealth() throws IOException {
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("GET", "/_cluster/health");
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> result = OBJECT_MAPPER.readValue(body, Map.class);
@@ -694,7 +989,7 @@ public class EsIndexAdmin {
            「我只是打开页面却出现高危操作」）。共享端点带版本后前端弃 raw 回落。 */
         try {
             org.elasticsearch.client.Request root = new org.elasticsearch.client.Request("GET", "/");
-            org.elasticsearch.client.Response rootResp = restHighLevelClient().getLowLevelClient().performRequest(root);
+            org.elasticsearch.client.Response rootResp = performGuarded(root);
             mergeVersion(result, org.apache.http.util.EntityUtils.toString(rootResp.getEntity()));
         } catch (Exception e) {
             logger.debug("[EsIndexAdmin] health 版本伴随探测失败（健康概览照常返回）: {}", e.getMessage());
@@ -716,8 +1011,9 @@ public class EsIndexAdmin {
 
     /** 按 _id 删除单条文档。 */
     public Map<String, Object> deleteById(String index, String id) throws IOException {
+        guardIndexName(index);
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("DELETE", "/" + index + "/_doc/" + id);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> result = OBJECT_MAPPER.readValue(body, Map.class);
@@ -732,6 +1028,7 @@ public class EsIndexAdmin {
      * @return ES 响应（result: created/updated）
      */
     public Map<String, Object> updateDocument(String index, String id, String docJson) throws IOException {
+        guardIndexName(index);
         String encodedId;
         try {
             encodedId = java.net.URLEncoder.encode(id, "UTF-8").replace("+", "%20");
@@ -740,7 +1037,7 @@ public class EsIndexAdmin {
         }
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("PUT", "/" + index + "/_doc/" + encodedId + "?refresh=true");
         req.setJsonEntity(docJson);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> result = OBJECT_MAPPER.readValue(body, Map.class);
@@ -750,9 +1047,10 @@ public class EsIndexAdmin {
 
     /** 按 query 批量删除文档 (_delete_by_query)。 */
     public Map<String, Object> deleteByQuery(String index, String queryDsl) throws IOException {
+        guardIndexName(index);
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("POST", "/" + index + "/_delete_by_query");
         req.setJsonEntity(queryDsl);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> result = OBJECT_MAPPER.readValue(body, Map.class);
@@ -761,9 +1059,10 @@ public class EsIndexAdmin {
 
     /** 热更新索引 settings（不关闭索引）。 */
     public Map<String, Object> updateSettingsDynamic(String index, Map<String, Object> settings) throws IOException {
+        guardIndexName(index);
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("PUT", "/" + index + "/_settings");
         req.setJsonEntity(OBJECT_MAPPER.writeValueAsString(settings));
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> result = OBJECT_MAPPER.readValue(body, Map.class);
@@ -912,7 +1211,7 @@ public class EsIndexAdmin {
         String body = withProfileFlag(dslJson);
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("POST", "/" + indexOrAlias + "/_search");
         req.setJsonEntity(body);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         return org.apache.http.util.EntityUtils.toString(resp.getEntity());
     }
 
@@ -935,7 +1234,7 @@ public class EsIndexAdmin {
                 : "{\"query\":" + OBJECT_MAPPER.writeValueAsString(query) + "}";
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("POST", "/" + indexOrAlias + "/_count");
         req.setJsonEntity(body);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String respBody = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> result = OBJECT_MAPPER.readValue(respBody, Map.class);
@@ -946,8 +1245,17 @@ public class EsIndexAdmin {
      * REST Playground：透传任意 ES REST 调用。path 必须以 "/" 开头且不含 ".."；
      * method 白名单 GET/POST/PUT/DELETE/HEAD。返回 {status, body(原始文本)}。
      */
-    public Map<String, Object> raw(String method, String path, String body) throws IOException {
-        if (path == null || !path.startsWith("/") || path.contains("..")) {
+    /**
+     * 非 ADMIN 的 raw 透传：仍可访问业务索引，但不得触达控制面索引（路径/通配/请求体）。
+     * ADMIN raw 继续走 {@link #raw} 作为应急逃生通道。
+     */
+    public Map<String, Object> rawGuarded(String method, String path, String body) throws IOException {
+        guardControlPath(path);
+        guardControlBody(body);
+        return raw(method, path, body);
+    }
+
+    public Map<String, Object> raw(String method, String path, String body) throws IOException {        if (path == null || !path.startsWith("/") || path.contains("..")) {
             throw new IllegalArgumentException("path 非法：须以 / 开头且不含 ..");
         }
         String m = method == null ? "GET" : method.trim().toUpperCase(Locale.ROOT);
@@ -958,7 +1266,8 @@ public class EsIndexAdmin {
         if (body != null && !body.trim().isEmpty() && !"GET".equals(m) && !"HEAD".equals(m)) {
             req.setJsonEntity(body);
         }
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        /* ADMIN raw 是控制面应急逃生通道：不走控制索引守卫（结构化端点才是越权面） */
+        org.elasticsearch.client.Response resp = performUnguarded(req);
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("status", resp.getStatusLine().getStatusCode());
         result.put("body", resp.getEntity() == null ? "" : org.apache.http.util.EntityUtils.toString(resp.getEntity()));
@@ -980,7 +1289,7 @@ public class EsIndexAdmin {
             path.append("&actions=").append(java.net.URLEncoder.encode(actions.trim(), "UTF-8"));
         }
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("GET", path.toString());
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> raw = OBJECT_MAPPER.readValue(body, Map.class);
@@ -1025,7 +1334,7 @@ public class EsIndexAdmin {
             throw new IllegalArgumentException("taskId 非法：应为 nodeId:taskNum 形式");
         }
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("POST", "/_tasks/" + taskId + "/_cancel");
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> result = OBJECT_MAPPER.readValue(body, Map.class);
@@ -1042,7 +1351,7 @@ public class EsIndexAdmin {
         if (bodyJson != null && !bodyJson.trim().isEmpty()) {
             req.setJsonEntity(bodyJson);
         }
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String respBody = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> result = OBJECT_MAPPER.readValue(respBody, Map.class);
@@ -1061,7 +1370,7 @@ public class EsIndexAdmin {
         if (interval != null && !interval.trim().isEmpty()) path.append("&interval=").append(interval.trim());
         if (type != null && !type.trim().isEmpty()) path.append("&type=").append(type.trim());
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("GET", path.toString());
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         return org.apache.http.util.EntityUtils.toString(resp.getEntity());
     }
 
@@ -1070,7 +1379,7 @@ public class EsIndexAdmin {
      */
     public Map<String, Object> pendingTasks() throws IOException {
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("GET", "/_cluster/pending_tasks");
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> result = OBJECT_MAPPER.readValue(body, Map.class);
@@ -1082,7 +1391,7 @@ public class EsIndexAdmin {
      */
     public java.util.List<Map<String, Object>> nodesStats() throws IOException {
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("GET", "/_nodes/stats/jvm,fs,os,thread_pool");
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> raw = OBJECT_MAPPER.readValue(body, Map.class);
@@ -1164,10 +1473,11 @@ public class EsIndexAdmin {
      * body 形如 {@code {"analyzer":"ik_smart","text":"..."}} 或 {@code {"tokenizer":"...","filter":[...]}}。
      */
     public Map<String, Object> analyze(String index, String bodyJson) throws IOException {
+        guardIndexName(index);
         String path = (index == null || index.isEmpty() || "_analyze".equals(index)) ? "/_analyze" : "/" + index + "/_analyze";
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("POST", path);
         req.setJsonEntity(bodyJson == null || bodyJson.trim().isEmpty() ? "{}" : bodyJson);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String respBody = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> result = OBJECT_MAPPER.readValue(respBody, Map.class);
@@ -1180,7 +1490,7 @@ public class EsIndexAdmin {
      */
     public java.util.List<Map<String, Object>> listAllAliases() throws IOException {
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("GET", "/_alias");
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> raw = OBJECT_MAPPER.readValue(body, Map.class);
@@ -1216,6 +1526,7 @@ public class EsIndexAdmin {
      * refresh=true 保证提交后立即可搜。
      */
     public Map<String, Object> updatePartial(String index, String id, String partialDocJson) throws IOException {
+        guardIndexName(index);
         String encodedId;
         try {
             encodedId = java.net.URLEncoder.encode(id, "UTF-8").replace("+", "%20");
@@ -1241,7 +1552,7 @@ public class EsIndexAdmin {
         Map<String, Object> out = new java.util.LinkedHashMap<>();
         if (!supportsComposableTemplateNow()) {
             org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("GET", "/_template");
-            org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+            org.elasticsearch.client.Response resp = performGuarded(req);
             String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
             @SuppressWarnings("unchecked")
             Map<String, Object> raw = OBJECT_MAPPER.readValue(body, Map.class);
@@ -1265,7 +1576,7 @@ public class EsIndexAdmin {
     @SuppressWarnings("unchecked")
     private java.util.List<Map<String, Object>> performGetJsonList(String path, String field) throws IOException {
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("GET", path);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         Map<String, Object> raw = OBJECT_MAPPER.readValue(body, Map.class);
         Object list = raw.get(field);
@@ -1277,10 +1588,20 @@ public class EsIndexAdmin {
      * @param kind 取值 {@code index} 或 {@code component}
      */
     public Map<String, Object> putTemplate(String kind, String name, String bodyJson) throws IOException {
+        guardIndexTemplateBody(bodyJson);
+        return doPutTemplate(kind, name, bodyJson);
+    }
+
+    /** ADMIN 结构化入口：允许 catch-all 模板（与 raw 逃生通道同权，非 ADMIN 仍走严格守卫）。 */
+    public Map<String, Object> putTemplateAdmin(String kind, String name, String bodyJson) throws IOException {
+        return doPutTemplate(kind, name, bodyJson);
+    }
+
+    private Map<String, Object> doPutTemplate(String kind, String name, String bodyJson) throws IOException {
         String base = resolveTemplateBase(kind);
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("PUT", base + "/" + name);
         req.setJsonEntity(bodyJson);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String respBody = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> result = OBJECT_MAPPER.readValue(respBody, Map.class);
@@ -1292,7 +1613,7 @@ public class EsIndexAdmin {
     public Map<String, Object> deleteTemplate(String kind, String name) throws IOException {
         String base = resolveTemplateBase(kind);
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("DELETE", base + "/" + name);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String respBody = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> result = OBJECT_MAPPER.readValue(respBody, Map.class);
@@ -1321,7 +1642,7 @@ public class EsIndexAdmin {
     /** 列出已注册的 snapshot repositories。返回 {@code [{name,type,settings}]}。 */
     public java.util.List<Map<String, Object>> listSnapshotRepositories() throws IOException {
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("GET", "/_snapshot");
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> raw = OBJECT_MAPPER.readValue(body, Map.class);
@@ -1342,7 +1663,7 @@ public class EsIndexAdmin {
     @SuppressWarnings("unchecked")
     public java.util.List<Map<String, Object>> listSnapshots(String repo) throws IOException {
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("GET", "/_snapshot/" + repo + "/_all?ignore_unavailable=true");
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         Map<String, Object> raw = OBJECT_MAPPER.readValue(body, Map.class);
         Object list = raw.get("snapshots");
@@ -1351,9 +1672,10 @@ public class EsIndexAdmin {
 
     /** 创建 snapshot（非阻塞，wait_for_completion=false）。body 可传 indices/include_global_state 等。 */
     public Map<String, Object> createSnapshot(String repo, String name, String bodyJson) throws IOException {
+        guardControlBody(bodyJson);
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("PUT", "/_snapshot/" + repo + "/" + name + "?wait_for_completion=false");
         if (bodyJson != null && !bodyJson.trim().isEmpty()) req.setJsonEntity(bodyJson);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String respBody = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> result = OBJECT_MAPPER.readValue(respBody, Map.class);
@@ -1361,11 +1683,18 @@ public class EsIndexAdmin {
         return result;
     }
 
+    /** 非 ADMIN 快照恢复：先过控制面/全量守卫，再走正常恢复。 */
+    public Map<String, Object> restoreSnapshotGuarded(String repo, String name, String bodyJson) throws IOException {
+        guardRestoreBody(bodyJson);
+        return restoreSnapshot(repo, name, bodyJson);
+    }
+
     /** 恢复 snapshot（非阻塞）。body 可传 indices/rename_pattern/rename_replacement/include_global_state 等。 */
     public Map<String, Object> restoreSnapshot(String repo, String name, String bodyJson) throws IOException {
+        guardControlBody(bodyJson);
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("POST", "/_snapshot/" + repo + "/" + name + "/_restore?wait_for_completion=false");
         if (bodyJson != null && !bodyJson.trim().isEmpty()) req.setJsonEntity(bodyJson);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String respBody = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> result = OBJECT_MAPPER.readValue(respBody, Map.class);
@@ -1376,7 +1705,7 @@ public class EsIndexAdmin {
     /** 删除 snapshot（过期快照清理）。 */
     public Map<String, Object> deleteSnapshot(String repo, String name) throws IOException {
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("DELETE", "/_snapshot/" + repo + "/" + name);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String respBody = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> result = OBJECT_MAPPER.readValue(respBody, Map.class);
@@ -1390,11 +1719,12 @@ public class EsIndexAdmin {
      */
     @SuppressWarnings("unchecked")
     public java.util.List<Map<String, Object>> shardsDistribution(String indexPattern) throws IOException {
+        guardIndexPattern(indexPattern);
         String path = "/_cat/shards" + (indexPattern != null && !indexPattern.trim().isEmpty()
                 ? "/" + java.net.URLEncoder.encode(indexPattern.trim(), "UTF-8")
                 : "") + "?format=json&bytes=b&h=index,shard,prirep,state,docs,store,node,ip";
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("GET", path);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         java.util.List<Map<String, Object>> raw = OBJECT_MAPPER.readValue(body, java.util.List.class);
         java.util.List<Map<String, Object>> out = new java.util.ArrayList<>(raw.size());
@@ -1451,7 +1781,7 @@ public class EsIndexAdmin {
         if (profile) effectiveBody = withProfileFlag(effectiveBody);
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("POST", path);
         req.setJsonEntity(effectiveBody);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         return OBJECT_MAPPER.readValue(body, Map.class);
     }
@@ -1463,7 +1793,7 @@ public class EsIndexAdmin {
     public Map<String, Object> getIndexSettings(String index) throws IOException {
         String path = "/" + java.net.URLEncoder.encode(index, "UTF-8") + "/_settings?include_defaults=true&flat_settings=false";
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("GET", path);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         return OBJECT_MAPPER.readValue(body, Map.class);
     }
@@ -1479,7 +1809,7 @@ public class EsIndexAdmin {
         String path = "/" + java.net.URLEncoder.encode(index, "UTF-8") + "/_settings";
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("PUT", path);
         req.setJsonEntity(bodyJson);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         return OBJECT_MAPPER.readValue(body, Map.class);
     }
@@ -1498,7 +1828,7 @@ public class EsIndexAdmin {
         String path = "/_cluster/reroute" + (qp.isEmpty() ? "" : "?" + String.join("&", qp));
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("POST", path);
         req.setJsonEntity(bodyJson == null || bodyJson.trim().isEmpty() ? "{\"commands\":[]}" : bodyJson);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         return OBJECT_MAPPER.readValue(body, Map.class);
     }
@@ -1510,7 +1840,7 @@ public class EsIndexAdmin {
     @SuppressWarnings("unchecked")
     public java.util.List<Map<String, Object>> listIlmPolicies() throws IOException {
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("GET", "/_ilm/policy");
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         Map<String, Object> map = OBJECT_MAPPER.readValue(body, Map.class);
         java.util.List<Map<String, Object>> out = new java.util.ArrayList<>();
@@ -1525,6 +1855,7 @@ public class EsIndexAdmin {
 
     /** PUT /_ilm/policy/{name} 创建/更新 ILM 策略（此前策略变更只能去 REST 手写 JSON）。 */
     public Map<String, Object> putIlmPolicy(String name, String bodyJson) throws IOException {
+        guardControlBody(bodyJson);
         return performJson("PUT", "/_ilm/policy/" + java.net.URLEncoder.encode(name, "UTF-8"), bodyJson);
     }
 
@@ -1541,7 +1872,7 @@ public class EsIndexAdmin {
     public Map<String, Object> explainIlm(String index) throws IOException {
         String path = "/" + java.net.URLEncoder.encode(index, "UTF-8") + "/_ilm/explain";
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("GET", path);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         return OBJECT_MAPPER.readValue(body, Map.class);
     }
@@ -1559,7 +1890,7 @@ public class EsIndexAdmin {
     public Map<String, Object> getClusterSettings() throws IOException {
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request(
                 "GET", "/_cluster/settings?include_defaults=true&flat_settings=false");
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         return OBJECT_MAPPER.readValue(body, Map.class);
     }
@@ -1572,7 +1903,7 @@ public class EsIndexAdmin {
     public Map<String, Object> putClusterSettings(String bodyJson) throws IOException {
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("PUT", "/_cluster/settings");
         req.setJsonEntity(bodyJson == null || bodyJson.trim().isEmpty() ? "{}" : bodyJson);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         return OBJECT_MAPPER.readValue(body, Map.class);
     }
@@ -1590,7 +1921,7 @@ public class EsIndexAdmin {
         path.append("/_shard_stores");
         if (status != null && !status.trim().isEmpty()) path.append("?status=").append(status.trim());
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("GET", path.toString());
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         return OBJECT_MAPPER.readValue(body, Map.class);
     }
@@ -1611,7 +1942,7 @@ public class EsIndexAdmin {
                     + "/" + java.net.URLEncoder.encode(name.trim(), "UTF-8") + "/_status";
         }
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("GET", path);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         return OBJECT_MAPPER.readValue(body, Map.class);
     }
@@ -1774,7 +2105,7 @@ public class EsIndexAdmin {
     public Map<String, Object> taskDetail(String taskId) throws IOException {
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request(
                 "GET", "/_tasks/" + java.net.URLEncoder.encode(taskId, "UTF-8") + "?wait_for_completion=false");
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         return OBJECT_MAPPER.readValue(body, Map.class);
     }
@@ -1786,12 +2117,13 @@ public class EsIndexAdmin {
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> reindexPreview(String source, String queryJson) throws IOException {
+        guardIndexPattern(source);
         Map<String, Object> out = new java.util.LinkedHashMap<>();
         String enc = java.net.URLEncoder.encode(source, "UTF-8");
         /* 1) count with optional query */
         org.elasticsearch.client.Request cnt = new org.elasticsearch.client.Request("POST", "/" + enc + "/_count");
         cnt.setJsonEntity(queryJson == null || queryJson.trim().isEmpty() ? "{\"query\":{\"match_all\":{}}}" : queryJson);
-        org.elasticsearch.client.Response cntResp = restHighLevelClient().getLowLevelClient().performRequest(cnt);
+        org.elasticsearch.client.Response cntResp = performGuarded(cnt);
         Map<String, Object> cntMap = OBJECT_MAPPER.readValue(
                 org.apache.http.util.EntityUtils.toString(cntResp.getEntity()), Map.class);
         long docs = ((Number) cntMap.getOrDefault("count", 0)).longValue();
@@ -1800,7 +2132,7 @@ public class EsIndexAdmin {
         /* 2) primary store size + total docs */
         org.elasticsearch.client.Request st = new org.elasticsearch.client.Request(
                 "GET", "/" + enc + "/_stats/store,docs");
-        org.elasticsearch.client.Response stResp = restHighLevelClient().getLowLevelClient().performRequest(st);
+        org.elasticsearch.client.Response stResp = performGuarded(st);
         Map<String, Object> stMap = OBJECT_MAPPER.readValue(
                 org.apache.http.util.EntityUtils.toString(stResp.getEntity()), Map.class);
         long totalDocs = 0L;
@@ -1994,13 +2326,13 @@ public class EsIndexAdmin {
     private Map<String, Object> performJson(String method, String path, String body) throws IOException {
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request(method, path);
         if (body != null) req.setJsonEntity(body);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         return OBJECT_MAPPER.readValue(org.apache.http.util.EntityUtils.toString(resp.getEntity()), Map.class);
     }
     @SuppressWarnings("unchecked")
     private java.util.List<Map<String, Object>> performJsonArray(String method, String path) throws IOException {
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request(method, path);
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         return OBJECT_MAPPER.readValue(org.apache.http.util.EntityUtils.toString(resp.getEntity()), java.util.List.class);
     }
     private int intOf(Object v) {
@@ -2141,6 +2473,7 @@ public class EsIndexAdmin {
         if (body == null || body.trim().isEmpty()) {
             throw new IllegalArgumentException("reindex body 不能为空，至少包含 source.index / dest.index");
         }
+        guardReindexBody(body);
         Map<String, String> o = opts == null ? java.util.Collections.emptyMap() : opts;
         StringBuilder path = new StringBuilder("/_reindex");
         java.util.List<String> qs = new java.util.ArrayList<>();
@@ -2163,6 +2496,7 @@ public class EsIndexAdmin {
     /** _update_by_query —— 按 query 批量更新。body: {query, script?}。opts 同 reindex。 */
     public Map<String, Object> updateByQuery(String indexPattern, String body, Map<String, String> opts) throws IOException {
         if (indexPattern == null || indexPattern.trim().isEmpty()) throw new IllegalArgumentException("indexPattern 不能为空");
+        guardIndexPattern(indexPattern);
         Map<String, String> o = opts == null ? java.util.Collections.emptyMap() : opts;
         StringBuilder path = new StringBuilder("/").append(indexPattern).append("/_update_by_query");
         java.util.List<String> qs = new java.util.ArrayList<>();
@@ -2187,6 +2521,7 @@ public class EsIndexAdmin {
     /** _delete_by_query —— 按 query 批量删除。 */
     public Map<String, Object> deleteByQuery(String indexPattern, String body, Map<String, String> opts) throws IOException {
         if (indexPattern == null || indexPattern.trim().isEmpty()) throw new IllegalArgumentException("indexPattern 不能为空");
+        guardIndexPattern(indexPattern);
         if (body == null || body.trim().isEmpty()) throw new IllegalArgumentException("delete_by_query body 不能为空，必须显式 query（防误删）");
         Map<String, String> o = opts == null ? java.util.Collections.emptyMap() : opts;
         StringBuilder path = new StringBuilder("/").append(indexPattern).append("/_delete_by_query");
@@ -2214,6 +2549,8 @@ public class EsIndexAdmin {
      */
     public Map<String, Object> bulk(String indexOrNull, String ndjson, Map<String, String> opts) throws IOException {
         if (ndjson == null || ndjson.trim().isEmpty()) throw new IllegalArgumentException("bulk body 不能为空");
+        guardIndexPattern(indexOrNull);
+        guardControlBody(ndjson);
         if (!ndjson.endsWith("\n")) ndjson = ndjson + "\n";
         Map<String, String> o = opts == null ? java.util.Collections.emptyMap() : opts;
         StringBuilder path = new StringBuilder();
@@ -2269,7 +2606,7 @@ public class EsIndexAdmin {
         /* ContentType 不能带 charset——6.x 严格校验拒收 "application/x-ndjson; charset=UTF-8"（406） */
         req.setEntity(new org.apache.http.entity.StringEntity(ndjson,
                 org.apache.http.entity.ContentType.create("application/x-ndjson")));
-        org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+        org.elasticsearch.client.Response resp = performGuarded(req);
         return OBJECT_MAPPER.readValue(org.apache.http.util.EntityUtils.toString(resp.getEntity()), Map.class);
     }
 
@@ -2361,6 +2698,7 @@ public class EsIndexAdmin {
      * @param subPath 端点后缀，如 {@code ?format=json}、{@code /translate}、{@code /close}
      */
     private Map<String, Object> performSqlVersionAware(String subPath, String body) throws IOException {
+        guardSql(body);
         io.github.dengmeiluan.es.rebuild.multicluster.EsClientRouter r = clientRouter;
         String version = r == null ? null : r.currentEsVersion();
         if (io.github.dengmeiluan.es.rebuild.multicluster.EsVersionCaps.requiresMappingType(version)) {
@@ -2405,6 +2743,7 @@ public class EsIndexAdmin {
 
     /** 单文档 GET，供前端 diff+patch 编辑器获取原文。 */
     public Map<String, Object> getDoc(String index, String id) throws IOException {
+        guardIndexName(index);
         if (index == null || index.trim().isEmpty()) throw new IllegalArgumentException("index 不能为空");
         if (id == null || id.isEmpty()) throw new IllegalArgumentException("id 不能为空");
         return performJson("GET", "/" + index + "/_doc/" + java.net.URLEncoder.encode(id, "UTF-8"), null);
@@ -2412,6 +2751,7 @@ public class EsIndexAdmin {
 
     /** 单文档 PUT/index（幂等覆盖）。 */
     public Map<String, Object> putDoc(String index, String id, String body, String refresh) throws IOException {
+        guardIndexName(index);
         if (index == null || index.trim().isEmpty()) throw new IllegalArgumentException("index 不能为空");
         if (id == null || id.isEmpty()) throw new IllegalArgumentException("id 不能为空");
         if (body == null || body.trim().isEmpty()) throw new IllegalArgumentException("body 不能为空");
@@ -2422,6 +2762,7 @@ public class EsIndexAdmin {
 
     /** _update partial doc —— 局部更新。body: {"doc":{...}} 或 {"script":{...}}。：版本感知路径兼容 6.x。 */
     public Map<String, Object> updateDoc(String index, String id, String body, String refresh) throws IOException {
+        guardIndexName(index);
         if (index == null || index.trim().isEmpty()) throw new IllegalArgumentException("index 不能为空");
         if (id == null || id.isEmpty()) throw new IllegalArgumentException("id 不能为空");
         if (body == null || body.trim().isEmpty()) throw new IllegalArgumentException("body 不能为空");
@@ -2488,6 +2829,7 @@ public class EsIndexAdmin {
     /** POST /{alias}/_rollover —— 手动滚动。body 可为 {"conditions":{...}} 或 null；dryRun 参数控制预检。 */
     public Map<String, Object> rolloverAlias(String alias, String body, boolean dryRun) throws IOException {
         if (alias == null || alias.trim().isEmpty()) throw new IllegalArgumentException("alias 不能为空");
+        guardIndexName(alias);
         String path = "/" + alias + "/_rollover" + (dryRun ? "?dry_run" : "");
         return performJson("POST", path, body);
     }
@@ -2496,6 +2838,7 @@ public class EsIndexAdmin {
     public Map<String, Object> ilmMove(String index, String body) throws IOException {
         if (index == null || index.trim().isEmpty()) throw new IllegalArgumentException("index 不能为空");
         if (body == null || body.trim().isEmpty()) throw new IllegalArgumentException("body 不能为空");
+        guardIndexName(index);
         try {
             return performJson("POST", "/_ilm/move/" + java.net.URLEncoder.encode(index, "UTF-8"), body);
         } catch (Exception ex) {
@@ -2978,7 +3321,7 @@ public class EsIndexAdmin {
         Object raw;
         try {
             org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("GET", "/_cat/plugins?format=json&v=true");
-            org.elasticsearch.client.Response resp = restHighLevelClient().getLowLevelClient().performRequest(req);
+            org.elasticsearch.client.Response resp = performGuarded(req);
             String txt = org.apache.http.util.EntityUtils.toString(resp.getEntity());
             raw = OBJECT_MAPPER.readValue(txt, java.util.List.class);
         } catch (Exception ex) {
@@ -3114,6 +3457,7 @@ public class EsIndexAdmin {
      */
     public Map<String, Object> aliasActions(String body) throws IOException {
         if (body == null || body.trim().isEmpty()) throw new IllegalArgumentException("body 不能为空");
+        guardControlBody(body);
         return performJson("POST", "/_aliases", body);
     }
 }

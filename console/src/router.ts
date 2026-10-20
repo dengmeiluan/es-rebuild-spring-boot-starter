@@ -198,7 +198,10 @@ router.onError((err, to) => {
  身份到达后由 App.vue watch grantedPages 复核当前路由兜底纠正（跳转构造收敛在 pageDeniedRedirect）。
  判定按当前目标连接收缩（conn:{id}:{page} 键只对目标连接生效）。 */
 router.beforeEach((to) => {
-  return pageDeniedRedirect(useAuthStore().grantedPages, to.path, useAppStore().target) ?? true;
+  const auth = useAuthStore();
+  /* 超级管理员全局可见：宿主白名单/连接键不拦 ADMIN */
+  if (auth.isAdmin()) return true;
+  return pageDeniedRedirect(auth.grantedPages, to.path, useAppStore().target) ?? true;
 });
 
 /* 标签页标题随页面切换，多开标签可区分 */

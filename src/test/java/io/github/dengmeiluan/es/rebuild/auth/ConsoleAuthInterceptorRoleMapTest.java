@@ -97,4 +97,36 @@ public class ConsoleAuthInterceptorRoleMapTest {
         assertEquals(ConsoleRole.VIEWER,
                 ConsoleAuthInterceptor.requiredRole("POST", "/internal/es/index/cluster/query"));
     }
+
+    @Test
+    public void 迁移探测面与迁移写同档rank3_防VIEWER_SSRF与环境变量读取() {
+        assertEquals(ConsoleRole.REBUILD_OP,
+                ConsoleAuthInterceptor.requiredRole("POST", "/internal/es/xmigrate/connect-check"));
+        assertEquals(ConsoleRole.REBUILD_OP,
+                ConsoleAuthInterceptor.requiredRole("POST", "/internal/es/xmigrate/fetch-config"));
+        assertEquals(ConsoleRole.REBUILD_OP,
+                ConsoleAuthInterceptor.requiredRole("POST", "/internal/es/xmigrate/resolve-preview"));
+        assertEquals(ConsoleRole.REBUILD_OP,
+                ConsoleAuthInterceptor.requiredRole("POST", "/internal/es/xmigrate/preflight"));
+    }
+
+    @Test
+    public void SQL控制台与索引settings影响分析_只读POST归VIEWER() {
+        /* /cluster/sql 裸路径（纯文本 SQL，零写入）此前只列了 /cluster/sql/ 带尾斜杠，
+           VIEWER 用 SQL 控制台直接 403；contains 前缀同时覆盖 sql/query 等子路径 */
+        assertEquals(ConsoleRole.VIEWER,
+                ConsoleAuthInterceptor.requiredRole("POST", "/internal/es/index/cluster/sql"));
+        assertEquals(ConsoleRole.VIEWER,
+                ConsoleAuthInterceptor.requiredRole("POST", "/internal/es/index/cluster/sql/query"));
+        /* InsightController settings-impact 是只读影响分析（热Setting页只读预览），
+           原先漏清单落 OPERATOR → VIEWER 403 */
+        assertEquals(ConsoleRole.VIEWER,
+                ConsoleAuthInterceptor.requiredRole("POST", "/internal/es/index/insight/settings-impact"));
+    }
+
+    @Test
+    public void 审计值建议归rank3_不再对VIEWER开放() {
+        assertEquals(ConsoleRole.REBUILD_OP,
+                ConsoleAuthInterceptor.requiredRole("GET", "/internal/es/index/auth/audit-facets"));
+    }
 }

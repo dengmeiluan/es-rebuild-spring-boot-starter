@@ -416,6 +416,8 @@ const dfMetaItems = computed<MetaStripItem[]>(() => original.value ? [
 ] : []);
 
 async function doPush() {
+  /* 权限执行体首行门（按钮已有 v-if，此处覆盖键盘/程序化通道） */
+  if (!canWrite.value) { store.notify('warning', '提交文档变更需 OPERATOR 及以上角色'); return; }
   if (!editedSource.value) return;
   if (!await askConfirm({
     title: '提交文档变更',

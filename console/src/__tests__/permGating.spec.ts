@@ -76,15 +76,15 @@ describe('危险按钮按角色隐藏（点名：只读不再看到删索引/删
     /* 同步更新：canW 定义行升连接感知档 canWriteOn(store.target)（第四波扫荡）；
        ：canO 细化为 canEndpoint(create-index 端点)——canO 唯一消费
        r59-create-index 的端点归 config-validator 页，连接模型按本页写键勾选裁决 */
-    expect(pal).toContain("const canW = auth.canWriteOn(store.target), canO = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target), canA = auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target);");
+    expect(pal).toContain("const canW = auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/doc', store.target), canO = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target), canA = auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target);");
     expect(pal).toContain("if (canO) list.push(\n    { id: 'r59-create-index'");
     expect(pal).toContain("if (canW) list.push(\n    { id: 'r59-create-doc'");
     expect(pal).toContain("if (canA) list.push(\n    { id: 'ops-refresh'");
     expect(pal).toContain("{ id: 'ops-reroute-retry'"); /* raw 系一并入 admin 组 */
-    expect(pal).toContain('...(canO ? [\n      { id: \'dev-ilm-start\'');
+    expect(pal).toContain('...(canIlm ? [\n      { id: \'dev-ilm-start\''); /* 963 同步更新：ILM 起停门随 ilm/start 端点（canIlm），不再借 create-index 的 canO */
   });
   it('ClusterSwitcher：连接档案管理（表单/⋯菜单）=admin；查看/切换/探活全角色保留', () => {
-    expect(cs).toContain("const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/clusters/save', store.target)); /* 连接档案管理按连接勾选（写键持有人=管理者）；静态模型回落 ADMIN 档 */");
+    expect(cs).toContain("const canAdmin = computed(() => auth.can('admin')); /* 连接档案/探活配置=系统管理域：ADMIN 角色专属，连接写键不放行 */");
     /* 同步更新：⋯ 次级菜单退役改 hover-reveal 图标直出（测试/编辑/删除仍 canAdmin 三件套门控；
        探活钮移出菜单后依旧不受门禁—— probe=VIEWER 豁免） */
     expect(cs).toContain('<template v-if="canAdmin">');
@@ -115,8 +115,8 @@ describe('权限隐藏第二波（，16 视图写按钮收尾）', () => {
     const v = V('XmigrateView.vue');
     expect(v).toContain('<button v-if="canOps" class="btn pri" :disabled="!canStart || starting"');
     /* 换壳 QRT：操作钮移 #row-actions 槽，行对象经 rowJob(row) 反查（权限门禁不变） */
-    expect(v).toContain("v-if=\"canOps && rowJob(row)?.status === 'RUNNING'\"");
-    expect(v).toContain("v-if=\"canOps && ['FAILED','ABORTED','INTERRUPTED'].includes(rowJob(row)?.status ?? '')\"");
+    expect(v).toContain("v-if=\"canJobOps(rowJob(row)) && rowJob(row)?.status === 'RUNNING'\"");
+    expect(v).toContain("v-if=\"canJobOps(rowJob(row)) && ['FAILED','ABORTED','INTERRUPTED'].includes(rowJob(row)?.status ?? '')\"");
     expect(v).toContain('迁移发起需 REBUILD_OP/ADMIN 角色');
   });
   it('AdhocRebuildView：启动/中止/确认切换=ops + AWAIT_CONFIRM 低权指引', () => {
@@ -155,7 +155,9 @@ describe('权限隐藏第二波（，16 视图写按钮收尾）', () => {
     const ilm = V('IlmView.vue');
     expect(ilm).toContain('<button v-if="canOps" aria-label="编辑策略"');
     expect(ilm).toContain('<button v-if="canOps" aria-label="删除策略"');
-    expect(ilm).toContain('v-if="canOps && isRetryable(info)"');
+    /* 963：重试 step 实调 /cluster/ilm/move（lifecycle 页）——按真实端点单独判门，不复用策略写门 */
+    expect(ilm).toContain("const canMove = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/ilm/move', store.target));");
+    expect(ilm).toContain('v-if="canMove && isRetryable(info)"');
     expect(ilm).toContain('<button v-if="canOps" class="btn xs" style="margin-left:auto" @click="openNewPolicy">');
     const tv = V('TemplatesView.vue');
     expect(tv).toContain('<button v-if="canOps" class="btn sm" @click="openNew">');
@@ -168,7 +170,8 @@ describe('权限隐藏第二波（，16 视图写按钮收尾）', () => {
     /* 保存钮后续加了 saveBlockReason 禁用门（disabled+title 就近说明），@click 换行——
        断言按语义拆：canOps 门与 doSave 接线各自独立存在即可 */
     expect(sy).toMatch(/<button v-if="canOps" class="btn primary sm" [^>]*@click="doSave"/s);
-    expect(sy).toContain('<button v-if="canOps" class="btn ghost sm" @click="doReload"');
+    /* 963：热重载实调 /cluster/reload-analyzers——按真实端点单独判门（保存仍 canOps） */
+    expect(sy).toContain('<button v-if="canReload" class="btn ghost sm" @click="doReload"');
     const csv = V('ClusterSettingsView.vue');
     /* v3.0.1:工具行按钮对齐全站 sm 基准(xs→sm),权限门 v-if="canOps" 契约不变 */
     expect(csv).toContain('<button v-if="canOps" class="btn sm" :disabled="!countDirty || busy" @click="apply(false)">');
@@ -231,16 +234,18 @@ describe('第三波：写门收口（10 视图写按钮 VIEWER 不可见）', ()
     expect(v).toContain('<button v-if="canOps" class="btn pri" :disabled="!newMappingValid || putting"'); /*  G213 同步更新：在途守卫入 disabled 绑定 */
     expect(v).toContain('<button v-if="canOps" class="btn pri" :disabled="!newSettingsValid || putting"');
   });
-  it('AnalysisSettingsView：热重载/保存=ops（加载为读操作不受门禁）', () => {
+  it('AnalysisSettingsView：热重载按 reload-analyzers / 保存=ops（加载为读操作不受门禁）', () => {
     const v = V('AnalysisSettingsView.vue');
     expect(v).toContain("const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/analysis-update', store.target));");
-    expect(v).toContain('<button v-if="canOps" class="btn ghost sm" @click="doReload" :disabled="!index || busy">');
     expect(v).toContain('<button v-if="canOps" class="btn sm pri" @click="doSave" :disabled="!index || !loaded || busy || !hasChanges">');
+    /* 963：热重载实调 /cluster/reload-analyzers——按真实端点单独判门 */
+    expect(v).toContain('<button v-if="canReload" class="btn ghost sm" @click="doReload" :disabled="!index || busy">');
   });
   it('IndexOptimizerView：下发优化项/执行 force_merge=ops', () => {
     const v = V('IndexOptimizerView.vue');
     expect(v).toContain("const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/force-merge', store.target));");
-    expect(v).toContain('<button v-if="canOps" class="btn sm pri" :disabled="!hasChecked || applying" @click="applyChecked">');
+    /* 963：应用勾选实调 index-settings/update——按真实端点单独判门（force_merge 仍 canOps） */
+    expect(v).toContain('<button v-if="canApply" class="btn sm pri" :disabled="!hasChecked || applying" @click="applyChecked">');
     expect(v).toContain('<button v-if="canOps" class="btn sm warn" :disabled="segMerging" @click="runForceMerge">');
   });
   it('ConfigValidatorView：真实创建索引=ops（校验为 dry 读不受门禁）', () => {
@@ -293,6 +298,6 @@ describe('第四波： canWrite 连接感知扫荡（6 文件定义行 canWriteO
     expect(V('views/IndexHubView.vue')).toContain("const canWrite = computed(() => auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/update-partial', store.target));");
   });
   it('CmdPalette：canW=canWriteOn(store.target)（create-doc 命令接连接感知档）；canO 细化为 canEndpoint(create-index 端点)（create-index 命令唯一消费，端点归 config-validator 页）；canA 管理域全局档不动', () => {
-    expect(V('components/CmdPalette.vue')).toContain("const canW = auth.canWriteOn(store.target), canO = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target), canA = auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target);");
+    expect(V('components/CmdPalette.vue')).toContain("const canW = auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/doc', store.target), canO = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target), canA = auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target);");
   });
 });

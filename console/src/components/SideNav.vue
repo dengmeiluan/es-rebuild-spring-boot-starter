@@ -145,13 +145,14 @@ const searchEl = ref<HTMLInputElement | null>(null);
 const grouped = computed(() => {
   const q = navQuery.value.trim().toLowerCase();
   const gp = auth.grantedPages; // 2.5.0：null=未启用全量可见；白名单外页面连入口都不露
-  /* 连接模型键(conn:{id}:{page})按当前目标收缩——host 下仅静态键可见 */
+  /* 连接模型键(conn:{id}:{page})按当前目标收缩——host 下仅静态键可见；ADMIN 全局可见 */
   const eff = effectivePagesForTarget(gp, store.target);
+  const admin = auth.isAdmin();
   return NAV_GROUPS
     .map(g => ({
       id: g.id as string, name: g.name,
       items: NAV_ITEMS.filter(i => i.group === g.id
-        && (eff == null || eff.has(i.pageKey))
+        && (admin || eff == null || eff.has(i.pageKey))
         && (!q || i.name.toLowerCase().includes(q) || i.path.toLowerCase().includes(q))),
     }))
     .filter(g => g.items.length);

@@ -615,6 +615,8 @@ function goRebuild() {
 
 /* 旧直存路径：Insight 降级时的回退（智能死了，功能不能死） */
 async function save() {
+  /* 执行体收口：护栏钮/回退钮之外无其它按钮面，但函数直调与后续入口同受此门 */
+  if (!canOps.value) { store.notify('warning', '索引设置保存需专项角色'); return; }
   if (!diffCount.value || !form.value) return;
   const idx: Record<string, any> = {};
   for (const d of diffList.value) {

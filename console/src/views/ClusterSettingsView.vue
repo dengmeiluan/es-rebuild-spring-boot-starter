@@ -356,6 +356,7 @@ const previewBody = computed(() => {
 });
 
 async function apply(transientOnly: boolean) {
+  if (!canOps.value) { store.notify('warning', '集群设置下发需要 CLUSTER_OP/ADMIN 角色'); return; }
   const body: any = {};
   const target = transientOnly ? 'transient' : 'persistent';
   body[target] = {};

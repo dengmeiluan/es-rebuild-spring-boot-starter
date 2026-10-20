@@ -894,6 +894,7 @@ public class CrossClusterMigrateService {
         meta.setDestIndex(req.getDestIndex());
         meta.setIndexKey(req.getIndexKey());
         meta.setRemoteEndpoint(conn.endpoint());
+        meta.setSrcConnId(req.getSrcConnId());
         meta.setDestCreateMode(req.getDestCreateMode().name());
         meta.setTuneMode(req.getTuneMode().name());
         meta.setSlices(slices);
@@ -911,6 +912,7 @@ public class CrossClusterMigrateService {
         meta.setDestIndex(persisted.getDestIndex());
         meta.setIndexKey(persisted.getIndexKey());
         meta.setRemoteEndpoint(persisted.getRemoteEndpoint());
+        meta.setSrcConnId(persisted.getSrcConnId());
         meta.setDestCreateMode(persisted.getDestCreateMode());
         meta.setTuneMode(persisted.getTuneMode());
         meta.setSlices(persisted.getSlices());

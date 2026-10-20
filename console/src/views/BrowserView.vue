@@ -145,8 +145,8 @@
       <span>{{ filtered.length }} / {{ store.indices.length }} 个索引</span>
     </div>
 
-    <!-- 新建索引（创建成功直达索引工作区详情） -->
-    <CreateIndexModal v-model:show="createOpen" @created="goHub" />
+    <!-- 新建索引（创建成功直达索引工作区详情）；无创建权限彻底卸载组件 -->
+    <CreateIndexModal v-if="canCreateIdx" v-model:show="createOpen" @created="goHub" />
   </div>
 </template>
 
@@ -283,7 +283,8 @@ const linkedDocHtml = computed(() =>
   linkedDoc.value ? highlightJson(JSON.stringify(rawView.value ? linkedDoc.value.raw : linkedDoc.value.src, null, 2)) : '');
 async function openLinkedDoc(idx: string, id: string) {
   try {
-    const r: any = await api.raw('GET', `/${idx}/_doc/${encodeURIComponent(id)}`);
+    /* GET /cluster/doc 是 VIEWER 可读通道（raw 是 ADMIN 域——深链看文档不该被角色拦死） */
+    const r: any = await api.getDoc(idx, id);
     linkedDoc.value = { id, src: r?._source ?? r ?? null, raw: r ?? null };
     rawView.value = false;
   } catch (e: any) {
@@ -375,6 +376,8 @@ function goMapping(name: string) {
 /* ForceMerge——：本地 ConfirmModal（warn/okText 等价迁移），确认通过后原 doFm 执行体原样内联。
  操作列槽行内钮经 askFmRow 适配（矩阵行 → IndexCat）后复用原函数体 */
 async function askFm(idx: IndexCat) {
+  /* 行内 ForceMerge 实调 api.raw（ADMIN 域）——执行体首行收口，键盘/程序旁路同受门 */
+  if (!canForceMerge.value) { store.notify('warning', 'ForceMerge 需 ADMIN 角色'); return; }
   const okGo = await askConfirm({
     title: 'ForceMerge 段合并',
     level: 'warn',
@@ -401,6 +404,7 @@ function askFmRow(row: any[]) { return askFm(rowToIdx(row)); }
 /* 删除——：本地 ConfirmModal（critical + guardText=索引名 + okText 等价迁移；
  正文里的索引名/文档数/store.size 改走 facts 具名行） */
 async function askDel(idx: IndexCat) {
+  if (!canOps.value) { store.notify('warning', '删除需专项或 ADMIN 角色'); return; }
   const okGo = await askConfirm({
     title: '删除索引',
     level: 'critical',

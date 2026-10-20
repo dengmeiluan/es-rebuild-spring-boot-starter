@@ -10,7 +10,7 @@
   <button class="btn ghost sm" @click="doLoad" :disabled="!index || busy">
     <RefreshCw :size="12" :class="{ spinning: busy }" /> 加载
   </button>
-  <button class="btn primary sm" @click="showAdd = true" :disabled="!tree.length">
+  <button v-if="canOps" class="btn primary sm" @click="showAdd = true" :disabled="!tree.length">
     <Plus :size="12" /> 加字段
   </button>
   <!-- 原始 IO 快查——本页最近一次 mapping-put 写入请求/响应原文（ioRecorder 记录环；
@@ -321,6 +321,8 @@ async function doLoad() {
 function pickField(n: any) { picked.value = n; }
 
 async function doAdd() {
+  /* 执行体收口：弹窗提交钮已 v-if，深链/键盘等旁路仍同汇入本函数 */
+  if (!canOps.value) { store.notify('warning', '加字段需专项角色'); return; }
   if (!newPath.value.trim() || !previewBody.value) return;
   busy.value = true;
   try {

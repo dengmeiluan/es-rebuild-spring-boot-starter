@@ -374,6 +374,7 @@ async function save() {
  在途互斥闸：确认窗+请求窗全程钉住（置位先于确认窗 await，取消/失败路径
  finally 复位），请求窗内重复点击不二发；钮面 :disabled 承接在途反馈 */
 async function del(t: any) {
+  if (!canOps.value) { store.notify('error', '当前身份无模板写权限'); return; }
   if (delBusy.value) return;
   delBusy.value = true;
   try {

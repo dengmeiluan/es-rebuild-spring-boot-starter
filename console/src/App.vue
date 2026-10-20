@@ -365,7 +365,11 @@ function autoPickConnTarget(gp: readonly string[] | null) {
   store.setTarget(first.id, first.name);
   store.notify('info', `宿主集群未授权任何页面，已切到「${first.name}」`);
 }
-watch([() => auth.grantedPages, () => store.conns.length], ([gp]) => {
+/* 963：目标连接并入复核源——切 target 后按新连接的 conn:{id}:{page} 键重算当前路由。
+ 自循环可控：setTarget 后本 watch 再跑一次时，autoPickConnTarget 已在授权目标上即 no-op，
+ pageDeniedRedirect 对已允许页面返回 null（仅拒绝态才 replace，而 /forbidden 非页面路由恒放行）。 */
+watch([() => auth.grantedPages, () => store.conns.length, () => store.target], ([gp]) => {
+  if (auth.isAdmin()) return; /* 超管全局可见：不自动切目标、不做页面拒绝跳转 */
   autoPickConnTarget(gp);
   const r = pageDeniedRedirect(gp, router.currentRoute.value.path, store.target);
   if (r) router.replace(r);
@@ -459,6 +463,8 @@ onBeforeUnmount(() => {
  token 消息可顺带带 theme 字段（首握一次到位）；es-console-host-theme 是运行期热切通道。
  用户手切主题档后宿主热推不再生效（反超语义在 store.setHostTheme）。 */
 function onHostMessage(e: MessageEvent) {
+  /* 只接受宿主父窗口消息：任意可 postMessage 的第三方窗口不得替换 hostToken/主题 */
+  if (window.parent && e.source !== window.parent) return;
   const d = e.data;
   if (!d || typeof d !== 'object') return;
   if (d.type === 'es-console-host-token' && typeof d.token === 'string') {

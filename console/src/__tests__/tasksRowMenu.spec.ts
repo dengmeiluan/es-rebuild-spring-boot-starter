@@ -17,7 +17,8 @@ describe('TasksView 任务节点右键菜单（一百八十六批）', () => {
     expect(src).toMatch(/<CellContextMenu v-if="taskMenu" :x="taskMenu\.x" :y="taskMenu\.y" :title="taskMenu\.t\.taskId"/);
     expect(src).toContain("key: 'copy-id', label: '复制 taskId'");
     expect(src).toContain("key: 'copy-row', label: '复制任务信息'");
-    expect(src).toMatch(/\.\.\.\(t\.cancellable \? \[\{ key: 'cancel', label: '取消任务…', icon: X, danger: true, sep: true, run: \(\) => cancelOne\(t\) \}\] : \[\]\)/);
+    /* 963：右键取消项同受角色门（canWrite=OPERATOR+），viewer 不再看到取消入口 */
+    expect(src).toMatch(/\.\.\.\(t\.cancellable && canWrite\.value \? \[\{ key: 'cancel', label: '取消任务…', icon: X, danger: true, sep: true, run: \(\) => cancelOne\(t\) \}\] : \[\]\)/);
   });
 
   it('任务信息事实串含诊断关键字段', () => {

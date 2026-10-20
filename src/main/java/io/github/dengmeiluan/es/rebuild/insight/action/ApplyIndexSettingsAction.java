@@ -29,7 +29,7 @@ import java.util.Map;
 /**
  *  首个护栏动作：热更索引动态 settings。
  *
- * <p>minRole=ADMIN（对齐既有 {@code /cluster/index-settings/update} 定级）；
+ * <p>minRole=REBUILD_OP（与 {@code /cluster/index-settings/update} 的 rank3 定级一致）；
  * estimate 内联 {@link SettingsChangeAnalyzer} 结果 + 人话摘要，
  * <b>含 STATIC/ILLEGAL 项时直接抛 IllegalArgumentException</b>——护栏：
  * 不可热更的变更不发 confirmToken；execute 直调
@@ -58,7 +58,7 @@ public class ApplyIndexSettingsAction implements GuardedAction {
 
     @Override
     public ConsoleRole minRole() {
-        return ConsoleRole.ADMIN;
+        return ConsoleRole.REBUILD_OP;
     }
 
     @Override

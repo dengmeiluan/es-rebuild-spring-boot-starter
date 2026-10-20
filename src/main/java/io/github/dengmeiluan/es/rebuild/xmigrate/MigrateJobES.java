@@ -62,6 +62,13 @@ public class MigrateJobES {
     @Field(type = FieldType.Keyword)
     private String remoteEndpoint;
 
+    /**
+     * 源连接档案 id（空=手输连接，未绑定档案）。连接模型下作业列表/进度/中止/续跑据此
+     * 校验操作者是否持有该连接的迁移写键，防止用 A 连接权限操作 B 连接的迁移。
+     */
+    @Field(type = FieldType.Keyword)
+    private String srcConnId;
+
     /** {@link DestCreateMode} 名。 */
     @Field(type = FieldType.Keyword)
     private String destCreateMode;
@@ -166,6 +173,8 @@ public class MigrateJobES {
     public void setIndexKey(String indexKey) { this.indexKey = indexKey; }
     public String getRemoteEndpoint() { return remoteEndpoint; }
     public void setRemoteEndpoint(String remoteEndpoint) { this.remoteEndpoint = remoteEndpoint; }
+    public String getSrcConnId() { return srcConnId; }
+    public void setSrcConnId(String srcConnId) { this.srcConnId = srcConnId; }
     public String getDestCreateMode() { return destCreateMode; }
     public void setDestCreateMode(String destCreateMode) { this.destCreateMode = destCreateMode; }
     public String getTuneMode() { return tuneMode; }

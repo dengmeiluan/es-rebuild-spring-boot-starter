@@ -64,7 +64,7 @@
               <FileDown :size="12" /> 导出
             </button>
             <label class="io-check-all"><input type="checkbox" :checked="allChecked" @change="toggleAll" />全选</label>
-            <button v-if="canOps" class="btn sm pri" :disabled="!hasChecked || applying" @click="applyChecked">
+            <button v-if="canApply" class="btn sm pri" :disabled="!hasChecked || applying" @click="applyChecked">
               <Play :size="12" /> {{ applying ? '下发中…' : `应用勾选（${checkedCount}）` }}
             </button>
           </span>
@@ -187,6 +187,9 @@ const store = useAppStore();
 /* 权限写门——下发优化项/force_merge 均为写操作，VIEWER 不显示入口 */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/force-merge', store.target));
+/* 「应用勾选」实调 PUT /cluster/index-settings/update（属 index-settings 页）——
+   与 force_merge 分属两端点，conn 模型下各自判门（门错位=有权限却看不到/点了 403） */
+const canApply = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/index-settings/update', store.target));
 const router = useRouter();
 /* 目标索引进 URL——刷新/分享链接可复原（可重入） */
 const target = useIdxState();
@@ -396,6 +399,7 @@ function exportRecs() {
 }
 
 async function applyChecked() {
+  if (!canApply.value) { store.notify('warning', '应用优化项需索引设置权限'); return; }
   if (!hasChecked.value || applying.value) return;  if (!await askConfirm({
     title: '下发索引优化项',
     message: `将向 /${target.value}/_settings 下发 ${checkedCount.value} 项优化（真实修改线上索引配置，可在热 Setting 页回改）：\n${previewBody.value}`,
@@ -420,6 +424,7 @@ async function applyChecked() {
 /* force_merge：重操作 + 不可逆（5GB 以上的合并结果无法再拆），强制二次确认。
  走 cluster/force-merge（接受任意索引），受管索引专用的 api.forceMerge 不动。 */
 async function runForceMerge() {
+  if (!canOps.value) { store.notify('warning', 'ForceMerge 需专项角色'); return; }
   const adv = segAdvice.value;
   if (!adv || segMerging.value) return;
   const n = Math.max(1, Math.floor(segMaxSegments.value || 1));

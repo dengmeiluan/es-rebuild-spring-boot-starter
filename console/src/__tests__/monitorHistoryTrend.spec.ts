@@ -753,7 +753,8 @@ describe('R31 聚合修真与分片卡', () => {
   });
   it('R49 高频交互闭环：Top 索引名可点=setTarget+深链数据浏览器', () => {
     expect(view).toContain('function gotoBrowser(t: any) {');
-    expect(view).toContain('if (t.connId) setTargetId(t.connId);');
+    /* 963：下钻换集群走 store.setTarget（同步 SideNav/页面门/router key），不再裸改数据面 target */
+    expect(view).toContain('if (t.connId && t.connId !== store.target) store.setTarget(');
     expect(view).toContain("router.push({ path: '/browser', query: { idx: t.index } })");
   });
   it('R52 实时走势扩展：CPU/磁盘走势卡+网格 3 列+tabular-nums 丝滑（实报「很多东西没有实时走势图/不够丝滑」）', () => {

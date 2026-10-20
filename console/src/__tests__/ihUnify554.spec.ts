@@ -213,14 +213,14 @@ describe('554 二：JSON/Tree/卡片渲染体（docs docsRan 域 + query qryResp
     expect(seg).toMatch(/<div v-show="docsView === 'json'" class="scroll-y ih-json-wrap ih-alt-body">\s*<AltHitsViews view="json" :json-html="docsJsonHtml" :doc-count="docsHits\.length"/);
     expect(seg).toContain('<AltHitsViews view="tree" :tree-data="docsAltData" :doc-count="docsAltData.length"');
     expect(seg).toMatch(/<div v-show="docsView === 'cards'" class="ih-cards ih-alt-body">/);
-    expect(seg).toContain('<AltHitsViews view="cards" :hits="docsHits" editable @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />');
+    expect(seg).toContain('<AltHitsViews view="cards" :hits="docsHits" :editable="canWrite" @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />');
   });
   it('query：三档同构（qryView 驱动；667 改用同步更新同 docs 域）', () => {
     const seg = ih.slice(ih.indexOf('<template v-else-if="tab === \'query\'">'), ih.indexOf('<!-- Settings -->'));
     expect(seg).toMatch(/<div v-show="qryView === 'json'" class="scroll-y ih-json-wrap ih-alt-body">\s*<AltHitsViews view="json" :json-html="qryJsonHtml" :doc-count="qryResp\?\.hits\?\.length \?\? 0"/);
     expect(seg).toContain('<AltHitsViews view="tree" :tree-data="qryAltData" :doc-count="qryAltData.length"');
     expect(seg).toMatch(/<div v-show="qryView === 'cards'" class="ih-cards ih-alt-body">/);
-    expect(seg).toContain('<AltHitsViews view="cards" :hits="qryResp.hits" editable @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />');
+    expect(seg).toContain('<AltHitsViews view="cards" :hits="qryResp.hits" :editable="canWrite" @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />');
   });
   it('渲染源：AltHitsViews 共享件（667 改用）+ prettyJson/highlightJson（utils/jsonc）导入在场；42 字截断导入随内脏退役', () => {
     expect(ih).toMatch(/import AltHitsViews from '\.\.\/components\/AltHitsViews\.vue';/);

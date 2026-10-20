@@ -77,6 +77,8 @@ public class ConsolePageCatalogTest {
            系统管理（/setup/rebind、/clusters/）仍维持 ADMIN 专属（无菜单勾选项对应）。 */
         assertEquals("security", catalog.pageOf("/internal/es/index/auth/users").getKey());
         assertEquals("security", catalog.pageOf("/internal/es/index/auth/users/upsert").getKey());
+        /* 审计值建议会暴露全量用户名/URI——归属安全中心（原挂 overview 是页面归属错位） */
+        assertEquals("security", catalog.pageOf("/internal/es/index/auth/audit-facets").getKey());
         /* ops-audit 移出 security 页归属（auth/users 同款收权）——全量审计
            回归共享端点走角色门（AUDIT_KEYWORDS rank3）；VIEWER 的 /auth/ops-audit/mine
            特例是自助流水，不受页面归属影响 */

@@ -246,6 +246,7 @@ async function loadAll() {
 }
 
 async function execNow(id: string) {
+  if (!canOps.value) { store.notify('warning', 'SLM 执行需要 CLUSTER_OP/ADMIN 角色'); return; }
   if (!await askConfirm({
     title: '立即执行快照策略',
     message: `将立即触发策略「${id}」的快照创建（异步执行）：会占用仓库存储并在创建期间增加集群 IO。`,

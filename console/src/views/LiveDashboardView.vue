@@ -733,7 +733,6 @@ import { sparkHoverAt, lineYAtFrac, type SparkHoverHit } from '../utils/sparkHov
 import { useHoverEscape } from '../composables/useHoverEscape';
 import { friendlyEsError } from '../utils/esError';
 import { usePref } from '../composables/urlState';
-import { setTargetId } from '../api';
 import { useAutoRefresh } from '../composables/useAutoRefresh';
 
 /* 采样器/趋势/告警状态机全部住进全局 store（切页不中断），组件只管展示与启动 */
@@ -1390,7 +1389,9 @@ const detailCanExport = computed(() => {
 /* Z1：toggleTop/toggleSlow 函数随 CollapsePanel v-model:open 合并退役——
  首开懒加载语义保留（watch open 起手拉取，与旧 toggle 内 if 分支等价） */
 function gotoBrowser(t: any) {
-  if (t.connId) setTargetId(t.connId);
+  /* 963：下钻换集群必须走 store.setTarget——裸 setTargetId 只改数据面，SideNav 授权过滤/页面门/
+   router key 仍停在旧目标（切过去落在未授权页=403 死路）；setTarget 一并刷新目标名/清旧索引现场 */
+  if (t.connId && t.connId !== store.target) store.setTarget(t.connId, t.clusterName ?? t.cluster ?? t.connId);
   router.push({ path: '/browser', query: { idx: t.index } });
 }
 let topSeq = 0;

@@ -122,9 +122,21 @@ public class EsClusterConnController {
         return saved;
     }
 
-    /** 手动即时探活单个连接（只读观测，VIEWER 可用）。 */
+    /** 手动即时探活单个连接（只读观测，VIEWER 可用；但不得低于该连接档案的 minRole）。 */
     @PostMapping("{id}/probe")
-    public Map<String, Object> probe(@PathVariable String id) {
+    public Map<String, Object> probe(@PathVariable String id, HttpServletRequest request) {
+        RemoteClusterConn conn = connStore == null ? null : connStore.get(id);
+        if (conn != null) {
+            ConsoleRole required = ConsoleRole.parse(conn.getMinRole());
+            Object p = request == null ? null : request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+            ConsoleRole actual = p instanceof ConsolePrincipal
+                    ? ((ConsolePrincipal) p).getRole() : ConsoleRole.VIEWER;
+            if (!actual.atLeast(required)) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.FORBIDDEN,
+                        "当前角色无权探活该连接（需 " + required.name() + "）");
+            }
+        }
         Map<String, Object> r = new LinkedHashMap<>();
         if (prober == null) {
             r.put("status", "UNKNOWN");
@@ -141,6 +153,11 @@ public class EsClusterConnController {
             return r;
         }
         return prober.probeOne(id);
+    }
+
+    /** 兼容旧内部调用/单测的一参入口（无 HTTP 请求上下文时按 VIEWER 角色处理）。 */
+    public Map<String, Object> probe(String id) {
+        return probe(id, currentRequest());
     }
 
     /** 删除连接（幂等），并关闭缓存的长连接。 */

@@ -843,6 +843,8 @@ function tryFormatBody(body: string): string {
 }
 
 async function run() {
+  /* 权限门双保险：按钮 v-if 之外，键盘/历史/预填所有入口在执行体首行拦截（busy 置位前） */
+  if (!canAdmin.value) { store.notify('warning', '原始透传需要 ADMIN 角色'); return; }
   /* G7-A1：Ctrl+Enter 键盘路径不受按钮 :disabled 约束——执行体守卫管键盘重入（教训 7，
  与 观察项 TemplatesView Ctrl+S 同构；busy 期间连按不再并发重发写请求）
  复审 F1：头部快照 tab 引用——await 期间用户切 tab 后 cur 随 active 漂移，
@@ -863,6 +865,8 @@ async function run() {
  segLabel 在场=段执行：历史条目补 seg 标识（「seg i/n」）便于区分段现场；
  镜像 HistAllEntry 字段零增（跨 Tab 汇聚锁面零触），草稿 t.body 原稿零触。 */
 async function execSend(t: Tab, bodyOut: string, segLabel?: string): Promise<boolean> {
+  /* 内核单点门：全量/段执行/预填/历史回放最终都汇入此处，非 ADMIN 一律不发出 raw 透传 */
+  if (!canAdmin.value) { store.notify('warning', '原始透传需要 ADMIN 角色'); return false; }
   const t0 = performance.now();
   const signal = qr.begin();
   try {
@@ -937,6 +941,8 @@ function editorCursorOffset(): number | null {
 }
 function onBodyExecute() { void runSmart(false); }
 async function runSmart(all: boolean) {
+  /* 段执行（Monaco Ctrl+Enter / Shift+Ctrl+Enter）同样受 ADMIN 门，守卫先于 busy 置位 */
+  if (!canAdmin.value) { store.notify('warning', '原始透传需要 ADMIN 角色'); return; }
   const t = cur.value;
   if (!t || t.busy) return;
   const segs = splitRequests(t.body || '');

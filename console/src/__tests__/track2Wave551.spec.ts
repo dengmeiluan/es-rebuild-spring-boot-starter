@@ -176,7 +176,8 @@ describe('551 ⑧b：Adhoc doStart/doValidateConfig 接 useQueryRun（IndexHub �
     expect(ar).toContain('const startQr = useQueryRun();');
   });
   it('doValidateConfig：signal 竞态丢弃消费 + begin/finish 消费（api 层调用零触）', () => {
-    expect(ar).toMatch(/async function doValidateConfig\(advance: boolean\) \{\s*validating\.value = true;\s*const signal = valQr\.begin\(\);/);
+    /* 963：执行体首行补 canValidate 权限早退（按钮 v-if 之外的 Enter/程序化通道）——闸后仍 validating→begin 原序 */
+    expect(ar).toMatch(/async function doValidateConfig\(advance: boolean\) \{\s*(?:\/\*[^]*?\*\/\s*)?if \(!canValidate\.value\)[^\n]*\n\s*validating\.value = true;\s*const signal = valQr\.begin\(\);/);
     expect(ar, 'api.configLab.validate 调用保留（mock 面不破）').toContain('await api.configLab.validate(');
     expect(ar, '旧轮竞态丢弃（queryRunRace382 等价语义）').toMatch(/if \(signal\.aborted\) return;/);
     expect(ar).toMatch(/valQr\.finish\(\);/);

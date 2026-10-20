@@ -353,7 +353,8 @@ public class InternalEsIndexRebuildController {
      *  执行摘要回填 request attribute（拦截器 afterCompletion 落入 HIGH_RISK detail）——
      *  高危操作审计从「谁调过 raw」到「谁执行了什么」。 */
     @PostMapping("cluster/raw")
-    public Map<String, Object> clusterRaw(@org.springframework.web.bind.annotation.RequestBody Map<String, String> req) throws IOException {
+    public Map<String, Object> clusterRaw(@org.springframework.web.bind.annotation.RequestBody Map<String, String> req,
+                                          javax.servlet.http.HttpServletRequest request) throws IOException {
         try {
             org.springframework.web.context.request.RequestAttributes ra =
                     org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
@@ -367,7 +368,15 @@ public class InternalEsIndexRebuildController {
             // 且无痕（审计链断点）。低频用户路径直接 WARN 不节流；回填失败不影响执行契约不变
             log.warn("[es-console-raw] 审计摘要回填失败(本次高危审计缺执行摘要): {}", e.getMessage(), e);
         }
-        return esIndexAdmin.raw(req.get("method"), req.get("path"), req.get("body"));
+        Object principal = request.getAttribute(
+                io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+        boolean admin = !(principal instanceof io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal)
+                || ((io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal) principal)
+                        .getRole().atLeast(io.github.dengmeiluan.es.rebuild.auth.ConsoleRole.ADMIN);
+        /* 连接模型 rest 写键持有人可使用 raw 访问业务索引，但控制面索引仍仅 ADMIN 可达 */
+        return admin
+                ? esIndexAdmin.raw(req.get("method"), req.get("path"), req.get("body"))
+                : esIndexAdmin.rawGuarded(req.get("method"), req.get("path"), req.get("body"));
     }
 
     /** 字段级部分更新：body 为 {"field":val,...}（_update partial doc，非整体覆盖）。 */
@@ -446,8 +455,16 @@ public class InternalEsIndexRebuildController {
     @PostMapping("cluster/templates/put")
     public Map<String, Object> clusterPutTemplate(@RequestParam String name,
                                                   @RequestParam(defaultValue = "index") String kind,
-                                                  @org.springframework.web.bind.annotation.RequestBody String body) throws java.io.IOException {
-        return esIndexAdmin.putTemplate(kind, name, body);
+                                                  @org.springframework.web.bind.annotation.RequestBody String body,
+                                                  javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
+        Object principal = request.getAttribute(
+                io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+        boolean admin = !(principal instanceof io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal)
+                || ((io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal) principal)
+                        .getRole().atLeast(io.github.dengmeiluan.es.rebuild.auth.ConsoleRole.ADMIN);
+        return admin
+                ? esIndexAdmin.putTemplateAdmin(kind, name, body)
+                : esIndexAdmin.putTemplate(kind, name, body);
     }
 
     /** 删除模板 */
@@ -481,8 +498,17 @@ public class InternalEsIndexRebuildController {
     @PostMapping("cluster/snapshot/restore")
     public Map<String, Object> clusterRestoreSnapshot(@RequestParam String repo,
                                                       @RequestParam String name,
-                                                      @org.springframework.web.bind.annotation.RequestBody(required = false) String body) throws java.io.IOException {
-        return esIndexAdmin.restoreSnapshot(repo, name, body);
+                                                      @org.springframework.web.bind.annotation.RequestBody(required = false) String body,
+                                                      javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
+        Object principal = request.getAttribute(
+                io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+        boolean admin = !(principal instanceof io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal)
+                || ((io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal) principal)
+                        .getRole().atLeast(io.github.dengmeiluan.es.rebuild.auth.ConsoleRole.ADMIN);
+        /* 非 ADMIN：必须显式业务 indices，禁止 restore-all 覆盖控制面索引 */
+        return admin
+                ? esIndexAdmin.restoreSnapshot(repo, name, body)
+                : esIndexAdmin.restoreSnapshotGuarded(repo, name, body);
     }
 
     /** 删除快照（过期快照清理） */

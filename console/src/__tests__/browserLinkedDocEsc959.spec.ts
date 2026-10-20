@@ -19,6 +19,7 @@ const DOC_FULL = {
 };
 
 const rawFn = vi.fn();
+const getDocFn = vi.fn();
 vi.mock('../api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api')>();
   return {
@@ -31,6 +32,7 @@ vi.mock('../api', async (importOriginal) => {
         { index: 'orders-v9', health: 'green', status: 'open', 'docs.count': 1, 'store.size': '1kb', pri: 1, rep: 0, 'creation.date.string': '2026-10-01T08:30:00Z' },
       ]),
       raw: (...a: any[]) => rawFn(...a),
+      getDoc: (...a: any[]) => getDocFn(...a),
       setup: { ...actual.api.setup, status: () => Promise.resolve({ bound: true, mode: 'x', endpoint: null, appName: 't', hostVisible: true }) },
     },
   };
@@ -75,12 +77,14 @@ beforeEach(() => {
     if (String(path).includes('_doc/')) return JSON.parse(JSON.stringify(DOC_FULL));
     return { acknowledged: true };
   });
+  /* 963：深链文档卡改走 GET /cluster/doc（VIEWER 可读），raw 是 ADMIN 域 */
+  getDocFn.mockReset().mockImplementation(async (_idx: string, _id: string) => JSON.parse(JSON.stringify(DOC_FULL)));
 });
 
 describe('959 深链文档卡 Esc 关闭通道', () => {
   it('Esc 收卡：深链开卡→document Escape→卡移除（✕ 钮语义不受影响）', async () => {
     await mountBrowser('#/browser?idx=orders-v9&doc=doc-959-1');
-    expect(rawFn, '深链消费走 api.raw GET _doc').toHaveBeenCalledTimes(1);
+    expect(getDocFn, '深链消费走 api.getDoc（GET /cluster/doc）').toHaveBeenCalledTimes(1);
     expect(host.querySelector('.bw-linked-doc'), '深链文档卡开').toBeTruthy();
 
     pressEsc();

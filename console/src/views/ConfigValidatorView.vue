@@ -9,12 +9,12 @@
 <button class="btn ghost sm" :aria-pressed="showImport" @click="showImport = !showImport">
   <Download :size="12" /> 从现有索引导入
 </button>
-<button class="btn ghost sm" @click="doValidate(false)" :disabled="busy">
+<button v-if="canValidate" class="btn ghost sm" @click="doValidate(false)" :disabled="busy">
   <Loader2 v-if="busy && !lastDryRun" :size="12" class="spinning" />
   <Play v-else :size="12" />
   {{ busy && !lastDryRun ? '校验中…' : '快速 Lint' }}
 </button>
-<button class="btn primary sm" @click="doValidate(true)" :disabled="busy">
+<button v-if="canValidate" class="btn primary sm" @click="doValidate(true)" :disabled="busy">
   <Loader2 v-if="busy && lastDryRun" :size="12" class="spinning" />
   <FlaskConical v-else :size="12" />
   {{ busy && lastDryRun ? '校验中…' : '校验 + Dry-run' }}
@@ -92,7 +92,7 @@
  有旧报告重试失败时与旧报告并存；重试重跑同模式（lastDryRun），不绕过任何确认门 -->
     <div v-if="validateErr" role="alert" class="err-bar rise-in">
       {{ validateErr }}
-      <button class="btn sm" @click="doValidate(lastDryRun)" :disabled="busy"><RefreshCw :size="12" :class="{ spinning: busy }" /> 重试</button>
+      <button v-if="canValidate" class="btn sm" @click="doValidate(lastDryRun)" :disabled="busy"><RefreshCw :size="12" :class="{ spinning: busy }" /> 重试</button>
     </div>
 
     <!-- 校验报告（cv-report 整卡壳退役 → border-top 分节；rp-hd 工具条与
@@ -193,6 +193,8 @@ const store = useAppStore();
 /* 权限写门——create-index 后端为 rank3（REBUILD_OP/CLUSTER_OP/ADMIN 皆可），VIEWER 不显示入口 */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target));
+/* 校验端点=config-lab/validate（写档 OPERATOR）——按钮隐藏之外，Monaco Ctrl+Enter/错误重试同受执行体门 */
+const canValidate = computed(() => auth.canEndpoint('write', 'POST', '/internal/es/index/config-lab/validate', store.target));
 /* 草稿：两栏编辑稿迁 useScopedDraft（按集群目标隔离）；「清空」按钮改走 clear() */
 const cvScope = { route: 'config-validator',};
 const settingsDraft = useScopedDraft('settings', cvScope);
@@ -365,6 +367,8 @@ function applyTemplate(t: any) {
 }
 
 async function doValidate(dryRun: boolean) {
+  /* 键盘（Monaco Ctrl+Enter）/错误条重试与按钮同汇入本函数——执行体首行单源守卫 */
+  if (!canValidate.value) { store.notify('warning', '配置校验需要 OPERATOR 及以上角色'); return; }
   busy.value = true;
   /* G6-B7：记录本次模式供 err-bar 重试重跑同模式；开始即清旧失败条 */
   lastDryRun.value = dryRun;
@@ -412,6 +416,7 @@ async function doImport() {
 /* 建索引确认收敛全局 askConfirm——后果前置 + facts 具名行（目标集群/索引名），
  确认后才进 doCreate（原 ConfirmModal @confirm 等价改写） */
 async function askCreate() {
+  if (!canOps.value) { store.notify('warning', '创建索引需要 REBUILD_OP/CLUSTER_OP/ADMIN 角色'); return; }
   const ok = await askConfirm({
     title: '创建索引',
     message: '将用当前已通过校验的配置真实创建索引（需写权限，REBUILD_OP/CLUSTER_OP/ADMIN 角色）。建错可在数据浏览器中删除。',
@@ -427,6 +432,7 @@ async function askCreate() {
 }
 
 async function doCreate() {
+  if (!canOps.value) { store.notify('warning', '创建索引需要 REBUILD_OP/CLUSTER_OP/ADMIN 角色'); return; }
   creating.value = true;
   try {
     await api.createIndex(createName.value.trim(), settingsText.value.trim() || undefined, mappingText.value.trim() || undefined);

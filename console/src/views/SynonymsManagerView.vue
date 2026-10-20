@@ -78,7 +78,7 @@
         <div class="sy-card-hd">
           <span>预览（下发 body）</span>
           <div class="sy-hd-r">
-            <button v-if="canOps" class="btn ghost sm" @click="doReload" :disabled="!index || busy">
+            <button v-if="canReload" class="btn ghost sm" @click="doReload" :disabled="!index || busy">
               <Zap :size="12" :class="{ spinning: busy }" /> 热重载
             </button>
             <button v-if="canOps" class="btn primary sm" :disabled="!index || !parsed.length || busy || saveBlockReason !== ''"
@@ -162,6 +162,8 @@ const store = useAppStore();
  编辑/解析/预览全角色可用 */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/synonyms-upsert', store.target));
+/* 热重载实调 /cluster/reload-analyzers（属 analysis-settings 页）——与下发分属两端点，各自判门 */
+const canReload = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/reload-analyzers', store.target));
 
 /* 原始 IO 三件套（RemoteClusters 557 同款）；判空不开空弹窗 */
 const rawIoShow = ref(false);
@@ -322,6 +324,7 @@ async function doLoad() {
 }
 
 async function doSave() {
+  if (!canOps.value) { store.notify('warning', '下发同义词字典需专项角色'); return; }
   if (!index.value.trim() || !parsed.value.length) return;
   if (!await askConfirm({
     title: '下发同义词字典',
@@ -349,6 +352,7 @@ async function doSave() {
 }
 
 async function doReload() {
+  if (!canReload.value) { store.notify('warning', '热重载搜索分词器需专项角色'); return; }
   if (!index.value.trim()) return;
   /* （ G66）：热重载在途守卫——起手 busy + finally 复位（与 doLoad/doSave 同款，
  修「在途窗钮不禁用、连点可重复触发 reload-analyzers」；doSave 内 await 本函数时 busy 已置位，

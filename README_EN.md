@@ -51,7 +51,7 @@ state is persisted, resumable and auditable.
 ### Standalone (Kibana-style)
 
 ```bash
-java -jar es-rebuild-standalone-1.0.31.jar
+java -jar es-rebuild-standalone-1.0.32.jar
 ```
 
 Bundles its own web server (default port `5601`) and ES client stack — no host application

@@ -291,6 +291,7 @@ function copyResult() {
 }
 
 async function save() {
+  if (!canOps.value) { store.notify('warning', '存储脚本变更需要 CLUSTER_OP/ADMIN 角色'); return; }
   if (saving.value) return;
   saving.value = true;
   try {
@@ -324,6 +325,7 @@ function pickStored(s: any) {
   result.value = ''; runErr.value = ''; runErrRaw.value = null;
 }
 async function deleteStored(id: string) {
+  if (!canOps.value) { store.notify('warning', '存储脚本变更需要 CLUSTER_OP/ADMIN 角色'); return; }
   if (!await askConfirm({
     title: '删除存储脚本',
     message: `将从集群删除存储脚本 "${id}"，引用它的查询/模板会立即报错，删除后不可恢复。`,

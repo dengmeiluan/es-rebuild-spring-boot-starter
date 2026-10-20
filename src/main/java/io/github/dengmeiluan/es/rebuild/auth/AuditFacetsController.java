@@ -16,24 +16,31 @@
 
 package io.github.dengmeiluan.es.rebuild.auth;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
  * 审计下拉值建议端点（ terms agg）：返回审计索引族里真实出现过的动作/集群值与计数，
  * 供安全中心审计筛选下拉做「值建议」（数据里没有的值不出现在下拉里）。
  *
- * <p>VIEWER 只读；失败/空档回空建议，前端回落硬编码词表，绝不反噬。</p>
+ * <p>审计值建议会暴露全量用户名/URI，属于审计域数据：rank3 专项（REBUILD_OP/CLUSTER_OP/
+ * AUDIT_OP）或 ADMIN 才可读；VIEWER 返回 403。失败/空档回空建议，前端回落硬编码词表，绝不反噬。</p>
  *
  * @author aicoding
  */
 @RestController
 @RequestMapping("internal/es/index/auth/audit-facets")
 public class AuditFacetsController {
+
+    private static final String FORBIDDEN_MESSAGE = "审计值建议需 rank3 专项或 ADMIN 角色";
 
     private final AuditFacetsStore store;
 
@@ -42,7 +49,16 @@ public class AuditFacetsController {
     }
 
     @GetMapping
-    public Map<String, Object> facets() {
-        return Collections.unmodifiableMap(store.facets());
+    public ResponseEntity<Map<String, Object>> facets(HttpServletRequest request) {
+        Object attr = request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+        if (!(attr instanceof ConsolePrincipal)
+                || !((ConsolePrincipal) attr).getRole().atLeast(ConsoleRole.REBUILD_OP)) {
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("code", "FORBIDDEN");
+            body.put("message", FORBIDDEN_MESSAGE);
+            body.put("required", ConsoleRole.REBUILD_OP.name());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+        }
+        return ResponseEntity.ok(Collections.unmodifiableMap(store.facets()));
     }
 }

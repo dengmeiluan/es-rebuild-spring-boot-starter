@@ -443,6 +443,7 @@ const queueMpMappingMarkers = useDebounceFn(() => {
 }, 250);
 watch(newMapping, () => { queueMpMappingMarkers(); }, { immediate: true });
 async function askPutMapping() {
+  if (!canOps.value) { store.notify('warning', 'mapping 变更需专项角色'); return; }
   try { JSON.parse(newMapping.value); } catch (e: any) { store.notify('error', 'JSON 非法: ' + e.message); return; }
   addOpen.value = false;
   /* 原本地 ConfirmModal（title/level=warn/okText 等价迁移；富文本索引名改纯文本句式） */
@@ -455,6 +456,7 @@ async function askPutMapping() {
   if (ok) await doPutMapping();
 }
 async function doPutMapping() {
+  if (!canOps.value) { store.notify('warning', 'mapping 变更需专项角色'); return; }
   if (putting.value) return;
   putting.value = true;
   try {
@@ -479,6 +481,7 @@ const queueMpSettingsMarkers = useDebounceFn(() => {
 }, 250);
 watch(newSettings, () => { queueMpSettingsMarkers(); }, { immediate: true });
 async function askPutSettings() {
+  if (!canOps.value) { store.notify('warning', 'settings 变更需专项角色'); return; }
   try { JSON.parse(newSettings.value); } catch (e: any) { store.notify('error', 'JSON 非法: ' + e.message); return; }
   settingsOpen.value = false;
   /* 原本地 ConfirmModal（title/level=warn/okText 等价迁移；富文本索引名改纯文本句式） */
@@ -491,6 +494,7 @@ async function askPutSettings() {
   if (ok) await doPutSettings();
 }
 async function doPutSettings() {
+  if (!canOps.value) { store.notify('warning', 'settings 变更需专项角色'); return; }
   if (putting.value) return;
   putting.value = true;
   try {
@@ -501,9 +505,10 @@ async function doPutSettings() {
   finally { putting.value = false; }
 }
 
-/* 表单弹窗 Enter=提交——等价点击「提交变更」钮，JSON 校验与二次确认原样生效 */
-useModalEnter(addOpen, askPutMapping);
-useModalEnter(settingsOpen, askPutSettings);
+/* 表单弹窗 Enter=提交——等价点击「提交变更」钮，JSON 校验与二次确认原样生效；
+   权限闸与主按钮 v-if 同源（canOps 缺席时 Enter 也不提交） */
+useModalEnter(addOpen, askPutMapping, () => canOps.value);
+useModalEnter(settingsOpen, askPutSettings, () => canOps.value);
 </script>
 
 <style scoped>

@@ -400,7 +400,7 @@
             :searchable="view === 'table'"
             remote-sort
             :sync-sort="hitsSortSync"
-            editable @edit-doc="h => openDoc(h, true)"
+            :editable="canWrite" @edit-doc="h => openDoc(h, true)"
             @sort-change="onHitsSortChange"
             @open-doc="openDoc"
             @delete-doc="askDeleteDoc"
@@ -488,14 +488,14 @@
  W1·402 字面锁面零触，56vh 现值不变；卡片内脏样式同步更新组件 scoped）。
  json 件 ref="jsonBox" 承接 preEl expose——jsonFind 定位链等价迁移 -->
           <div v-show="view === 'json'" class="scroll-y dq-json-wrap dq-alt-body">
-            <AltHitsViews ref="jsonBox" view="json" :json-html="jsonMarkedHtml" :doc-count="resp?.hits?.length ?? 0" :doc-ids="resp?.hits?.map(h => h._id) ?? []" editable @open-doc-at="i => resp && openDoc(resp.hits[i])" @edit-doc-at="i => resp && openDoc(resp.hits[i], true)" />
+            <AltHitsViews ref="jsonBox" view="json" :json-html="jsonMarkedHtml" :doc-count="resp?.hits?.length ?? 0" :doc-ids="resp?.hits?.map(h => h._id) ?? []" :editable="canWrite" @open-doc-at="i => resp && openDoc(resp.hits[i])" @edit-doc-at="i => resp && openDoc(resp.hits[i], true)" />
           </div>
           <div v-show="view === 'tree'" class="scroll-y dq-tree-view dq-alt-body">
-            <AltHitsViews view="tree" :tree-data="jqResult !== null ? jqResult : (resp.hits || []).map(h => ({ _id: h._id, ...h._source }))" :doc-count="jqResult !== null ? jqResult.length : (resp?.hits || []).length" :doc-ids="jqResult !== null ? jqResult.map((r: any) => String(r._id ?? '')) : (resp?.hits || []).map(h => h._id)" editable @open-doc-at="i => openTreeDocAt(i)" @edit-doc-at="i => openTreeDocAt(i, true)" />
+            <AltHitsViews view="tree" :tree-data="jqResult !== null ? jqResult : (resp.hits || []).map(h => ({ _id: h._id, ...h._source }))" :doc-count="jqResult !== null ? jqResult.length : (resp?.hits || []).length" :doc-ids="jqResult !== null ? jqResult.map((r: any) => String(r._id ?? '')) : (resp?.hits || []).map(h => h._id)" :editable="canWrite" @open-doc-at="i => openTreeDocAt(i)" @edit-doc-at="i => openTreeDocAt(i, true)" />
           </div>
           <div v-show="view === 'cards'" class="dq-cards scroll-y dq-alt-body">
             <!-- 卡片集走 cardHits 快滤（kw 空即全量）；565 改用共享件 -->
-            <AltHitsViews view="cards" :hits="cardHits" editable @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />
+            <AltHitsViews view="cards" :hits="cardHits" :editable="canWrite" @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />
           </div>
           </ResultTable>
         </div>
@@ -516,7 +516,7 @@
           <button class="btn sm" title="与另一个索引的同 ID 文档做字段级对比（只读）" @click="gotoCompare">
             <GitCompareArrows :size="13" /> 跨索引对比
           </button>
-          <button class="btn sm" @click="docEditMode = !docEditMode">{{ docEditMode ? '预览' : '编辑' }}</button>
+          <button v-if="canWrite" class="btn sm" @click="docEditMode = !docEditMode">{{ docEditMode ? '预览' : '编辑' }}</button>
           <!-- 编辑器高度档钮（dq.docH useTierCycle 循环，title 实时回显当前档） -->
           <button v-if="docEditMode" class="btn sm ghost" :title="'编辑器高度档：' + docH + '（点击循环）'" @click="cycleDocH">高</button>
           <button v-if="docEditMode && canWrite" class="btn sm pri" :disabled="docSaving" @click="saveDoc" title="全量替换该文档的 _source">保存（全量覆盖 _source）</button>
@@ -1767,6 +1767,7 @@ function mappingReady(): Promise<void> {
   });
 }
 async function openNewDocFromLink() {
+  if (!canWrite.value) { store.notify('warning', '当前身份无文档写权限'); return; }
   if (!store.pickedIdx) { store.notify('warning', '请先选中一个索引'); newDocLink.value = ''; return; }
   await mappingReady(); // 深链进入时 mapping 可能还在路上，等一拍再预填骨架，避免误降级空模板
   if (!newDocOpen.value) openNewDoc();
@@ -1845,6 +1846,7 @@ useModalEnter(newDocOpen, saveNewDoc, () => newDocValid.value && !newDocSaving.v
  facts 具名行与 critical 守卫语义原样迁入 ═══ */
 const resultTbl = ref<InstanceType<typeof ResultTable> | null>(null);
 async function askDeleteDoc(hit: SearchHit) {
+  if (!canOps.value) { store.notify('warning', '删除文档需专项或 ADMIN 角色'); return; }
   if (!await askConfirm({
     title: '删除文档',
     message: '将删除该文档，此操作不可撤销。',
@@ -1863,6 +1865,7 @@ async function askDeleteDoc(hit: SearchHit) {
 }
 
 async function askBatchDelete(ids: string[]) {
+  if (!canOps.value) { store.notify('warning', '删除文档需专项或 ADMIN 角色'); return; }
   if (!await askConfirm({
     title: '批量删除文档',
     message: '将永久删除勾选的全部文档，此操作不可撤销。',
@@ -1883,6 +1886,7 @@ async function askBatchDelete(ids: string[]) {
 }
 
 async function askDeleteByQuery() {
+  if (!canOps.value) { store.notify('warning', '删除文档需专项或 ADMIN 角色'); return; }
   const cleaned = applyVars(stripJsonComments(dsl.value));
   let count = 0;
   try {
@@ -2372,7 +2376,7 @@ watch(() => store.eventBus, (ev) => {
   else if (ev.name === 'open-history') histOpen.value = true;
   else if (ev.name === 'open-vars') varsOpen.value = true;
   else if (ev.name === 'export-json') exportJson();
-  else if (ev.name === 'new-doc') { if (store.pickedIdx) openNewDoc(); else store.notify('warning', '请先选中一个索引'); }
+  else if (ev.name === 'new-doc') { if (!canWrite.value) { store.notify('warning', '当前身份无文档写权限'); return; } if (store.pickedIdx) openNewDoc(); else store.notify('warning', '请先选中一个索引'); }
 });
 
 function onKeySave(e: KeyboardEvent) {

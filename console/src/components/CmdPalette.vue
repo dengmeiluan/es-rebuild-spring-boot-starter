@@ -68,7 +68,7 @@ FolderTree, BookText, PackageOpen,
   LayoutTemplate, GitCompareArrows,
   Plus, FilePlus2, Keyboard, Crosshair,
 } from 'lucide-vue-next';
-import { NAV_ITEMS } from '../router';
+import { NAV_ITEMS, effectivePagesForTarget } from '../router';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
 import { aliasForTitle } from '../utils/cmdAlias';
@@ -125,7 +125,9 @@ FolderTree, BookText, PackageOpen,
 };
 
 const commands = computed<Cmd[]>(() => {
-  const list: Cmd[] = NAV_ITEMS.map(n => ({
+  /* 导航命令与侧栏同源过滤：未授权页面不出现在命令面板，防低权看到未授权页面目录 */
+  const eff = effectivePagesForTarget(auth.grantedPages, store.target);
+  const list: Cmd[] = NAV_ITEMS.filter(n => auth.isAdmin() || eff == null || eff.has(n.pageKey)).map(n => ({
     id: 'nav' + n.path,
     title: '前往：' + n.name,
     /* 版本不足的功能在命令面板同步降级提示，与侧边栏徽标一致 */
@@ -189,6 +191,7 @@ const commands = computed<Cmd[]>(() => {
  confirmSwitch notify action 范式），其余调用方不传零影响 */
   const runRaw = async (method: string, path: string, body: string, msg: string,
     action?: { label: string; onClick: () => void }) => {
+    if (!canA) return; /* 963 防御：raw 透传属管理域（命令已按 canA 隐藏），执行体再兜一层挡直调路径 */
     try { await api.raw(method, path, body); store.notify('success', msg, action ? { action } : undefined); }
     catch (e: any) { store.notify('error', msg + '失败：' + (e?.message || e)); }
   };
@@ -196,7 +199,12 @@ const commands = computed<Cmd[]>(() => {
  create-doc=OPERATOR(write)；：create-index 命令唯一 canO 消费，端点
  （POST /cluster/create-index）归 config-validator 页——连接模型按本页写键勾选裁决；
  runRaw 系走 /cluster/raw=ADMIN 管理域，维持全局角色档 */
-  const canW = auth.canWriteOn(store.target), canO = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target), canA = auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target); /* ：raw 五命令按 rest 页勾选 */
+  const canW = auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/doc', store.target), canO = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target), canA = auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target); /* ：raw 五命令按 rest 页勾选 */
+  /* 963：端点级精化——设置下发/分词热重载/ILM 起停各按自身端点归属页（apiPrefixes）裁决，
+     未归属页的共享端点回落任意写键；低权角色不再看到点了必 403 的命令 */
+  const canSettings = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/settings/put', store.target);
+  const canReload = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/reload-analyzers', store.target);
+  const canIlm = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/ilm/start', store.target);
   /* CRUD 里「增」提升为一等公民——新建索引/新建文档直达 */
   if (canO) list.push(
     { id: 'r59-create-index', title: '新建索引', sub: '名称校验 + 分片/副本 + 别名 + 高级 JSON', cat: '动作', icon: Plus,
@@ -215,7 +223,7 @@ const commands = computed<Cmd[]>(() => {
   /* 交互修复：集群/目标切换进面板——此前多集群用户必须移步顶栏切换器，⌘K 搜「切集群」无果。
  遍历 store.conns 每连接一条；行为对齐 ClusterSwitcher.pickTarget：当前目标 no-op、
  RED 探活失败先确认，核心动作复用 store.setTarget（切完自动清 picked/recent 并重拉索引） */
-  for (const c of store.conns) {
+  for (const c of store.conns.filter(c => auth.canSeeConn(c.id))) {
     list.push({
       id: 'tgt-' + c.id,
       title: '切换到 ' + c.name,
@@ -290,7 +298,8 @@ const commands = computed<Cmd[]>(() => {
       action: () => router.push('/security') },
     { id: 'ops-open-reindex-preview', title: '打开 Reindex 预估（不写入）', sub: '_count + _stats 估算', cat: '运维', icon: Calculator,
       action: () => router.push('/reindex-preview') },
-    { id: 'ops-reroute-retry-r25', title: '恢复集群分片分配（persistent）', sub: '下发 cluster.routing.allocation.enable=all', cat: '运维', icon: RefreshCcw,
+    /* 963：恢复分片分配走 cluster/settings/put（归集群设置页）——按端点写键裁决，无权限不展示 */
+    ...(canSettings ? [{ id: 'ops-reroute-retry-r25', title: '恢复集群分片分配（persistent）', sub: '下发 cluster.routing.allocation.enable=all', cat: '运维', icon: RefreshCcw,
       action: async () => {
         if (!await askConfirm({
           title: '恢复分片分配',
@@ -299,7 +308,7 @@ const commands = computed<Cmd[]>(() => {
         })) return;
         try { await api.putClusterSettings(JSON.stringify({ persistent: { cluster: { routing: { allocation: { enable: 'all' } } } } })); store.notify('success', '已下发：allocation.enable=all'); }
         catch (e: any) { store.notify('error', '下发失败：' + (e?.message || e)); }
-      } },
+      } }] : []),
     { id: 'ops-snapshot-status', title: '快照当前进度', sub: '_status 实时快照', cat: '运维', icon: Camera,
       action: async () => {
         try {
@@ -384,8 +393,8 @@ const commands = computed<Cmd[]>(() => {
       action: () => router.push('/painless-lab') },
     { id: 'dev-lifecycle', title: 'ILM 生命周期视图', sub: '甘特图 phase · rollover Dry Run · move step', cat: 'dev', icon: Layers,
       action: () => router.push('/lifecycle') },
-    /* ILM start/stop=CLUSTER 档（rank3+）——低权角色不展示（不再点了 403） */
-    ...(canO ? [
+    /* ILM start/stop=CLUSTER 档（rank3+）——按 ilm/start 端点写键裁决，低权角色不展示（不再点了 403） */
+    ...(canIlm ? [
       { id: 'dev-ilm-start', title: 'ILM 启动 (start)', sub: '一键启动 ILM 引擎', cat: 'dev', icon: PlayCircle,
         action: async () => {
           if (!await askConfirm({
@@ -467,12 +476,13 @@ const commands = computed<Cmd[]>(() => {
         if (!store.pickedIdx) { store.notify('warning', '请先在左侧选中索引'); return; }
         router.push('/analyzer-lab');
       } },
-    { id: 'index-reload-analyzers', title: '热重载当前索引的搜索分词器', sub: '_reload_search_analyzers · 同义词改后一键生效', cat: 'index', icon: Zap,
+    /* 963：分词热重载走 cluster/reload-analyzers（rank3 写端点）——按端点写键裁决，无权限不展示 */
+    ...(canReload ? [{ id: 'index-reload-analyzers', title: '热重载当前索引的搜索分词器', sub: '_reload_search_analyzers · 同义词改后一键生效', cat: 'index', icon: Zap,
       action: async () => {
         if (!store.pickedIdx) { store.notify('warning', '请先在左侧选中索引'); return; }
         try { await api.reloadAnalyzers(store.pickedIdx); store.notify('success', '搜索分词器已热重载'); }
         catch (e: any) { store.notify('error', '热重载失败：' + (e?.message || e)); }
-      } },
+      } }] : []),
     /* 相关性打分实验室 · explain/排名/调参/矩阵/X光 */
     { id: 'query-score', title: '打分解剖（search + explain）', sub: '每个命中的 BM25 因子树 · tf/idf/boost/norm 贡献百分比', cat: 'query', icon: Microscope,
       action: () => router.push('/score-explain') },

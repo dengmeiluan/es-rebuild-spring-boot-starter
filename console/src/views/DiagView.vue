@@ -408,6 +408,8 @@ const retrying = ref(false);
  互斥闸收函数本体首行+置位前移到确认窗之前：确认窗挂起期间钮面即禁用，
  确认窗内二击不得穿透闸二次下发集群级动作；取消路径走 finally 复位防闸死 */
 async function retryFailedAlloc() {
+  /* 走 /_cluster/reroute?retry_failed=true（raw 透传）=ADMIN——按钮 v-if 之外执行体首行单源守卫 */
+  if (!canAdmin.value) { store.notify('warning', '重试分片分配需要 ADMIN 角色'); return; }
   if (retrying.value) return;
   retrying.value = true;
   try {

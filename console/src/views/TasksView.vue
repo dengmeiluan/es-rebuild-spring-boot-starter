@@ -329,6 +329,8 @@ async function load() {
 }
 
 async function cancelOne(t: Task) {
+  /* 权限执行体首行门（按钮 v-if 之外的右键菜单/程序化通道） */
+  if (!canWrite.value) { store.notify('warning', '取消任务需 OPERATOR 及以上角色'); return; }
   if (!t.cancellable) return;
   if (!await askConfirm({
     title: '取消任务',
@@ -456,7 +458,7 @@ const taskMenuItems = computed(() => {
       const ok = await copyText(facts);
       store.notify(ok ? 'success' : 'error', ok ? '已复制任务信息' : '复制失败');
     } },
-    ...(t.cancellable ? [{ key: 'cancel', label: '取消任务…', icon: X, danger: true, sep: true, run: () => cancelOne(t) }] : []),
+    ...(t.cancellable && canWrite.value ? [{ key: 'cancel', label: '取消任务…', icon: X, danger: true, sep: true, run: () => cancelOne(t) }] : []),
   ];
 });
 const cancellableCount = computed(() => visibleTasks.value.filter(t => t.cancellable).length);

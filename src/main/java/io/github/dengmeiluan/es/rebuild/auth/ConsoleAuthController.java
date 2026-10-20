@@ -196,8 +196,9 @@ public class ConsoleAuthController {
 
     /** 删除用户。 */
     @PostMapping("users/delete")
-    public Map<String, Object> deleteUser(@RequestParam String username) throws IOException {
-        authService.deleteUser(username);
+    public Map<String, Object> deleteUser(HttpServletRequest request, @RequestParam String username) throws IOException {
+        ConsolePrincipal p = (ConsolePrincipal) request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+        authService.deleteUser(username, p);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("ok", true);
         return out;

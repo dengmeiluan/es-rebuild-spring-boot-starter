@@ -98,19 +98,23 @@ public class EnvPagesResolver {
                 if (g != null && !g.startsWith(CONN_KEY_PREFIX)) staticKeys.add(g);
             }
         }
-        Set<String> out = new LinkedHashSet<>(staticKeys);
-        if (!connMap.isEmpty()) {
-            Set<String> connPages = connMap.get(targetId);
-            if (connPages != null) out.addAll(connPages);
-        }
         Set<String> envPages = pagesFor(targetId);
-        if (envPages != null) {
-            if (connMap.isEmpty()) {
-                // 纯静态模型(现状):env 模板收缩静态页
-                out.retainAll(envPages);
+        Set<String> out;
+        if (connMap.isEmpty()) {
+            /* 纯静态模型：env 模板收缩静态页（现状不变） */
+            out = new LinkedHashSet<>(staticKeys);
+            if (envPages != null) out.retainAll(envPages);
+        } else {
+            /* 混合/纯 conn 模型：conn 键是宿主按连接明示授权，不受 env 收缩；
+               但混入的静态键仍必须过 env 模板，否则 static+conn 混用会绕过环境收缩。 */
+            out = new LinkedHashSet<>();
+            if (envPages == null) {
+                out.addAll(staticKeys);
+            } else {
                 out.addAll(staticPagesUnderEnv(staticKeys, envPages));
             }
-            // conn 模型:env 模板与 conn 键双轨,不做交集(宿主 RBAC 已按连接明示授权)
+            Set<String> connPages = connMap.get(targetId);
+            if (connPages != null) out.addAll(connPages);
         }
         return out;
     }

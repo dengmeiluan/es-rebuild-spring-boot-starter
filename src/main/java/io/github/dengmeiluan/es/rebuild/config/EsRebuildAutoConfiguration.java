@@ -373,11 +373,20 @@ public class EsRebuildAutoConfiguration {
         @Bean
         @ConditionalOnMissingBean
         public EsIndexAdmin esIndexAdmin(ObjectProvider<RestHighLevelClient> restHighLevelClientProvider,
-                                         EsClientRouter esClientRouter) {
+                                         EsClientRouter esClientRouter,
+                                         EsRebuildProperties properties) {
             // 宿主 client 可选（null 时数据面恒走 router，router 无目标头时兜底到控制集群）
             EsIndexAdmin admin = new EsIndexAdmin(restHighLevelClientProvider.getIfAvailable());
             // 注入多集群路由——数据面（/cluster/**）跟随 X-Es-Target 目标，控制面恒定宿主
             admin.setClientRouter(esClientRouter);
+            // 数据面通用端点不得触达控制面索引（默认 es_console_* 前缀 + 宿主自定义实名）
+            admin.setExtraControlIndexNames(java.util.Arrays.asList(
+                    properties.getConsole().getAuth().getUserIndexName(),
+                    properties.getConsole().getAuth().getOpsAuditIndexName(),
+                    properties.getConsole().getConnIndexName(),
+                    properties.getConsole().getMonitor().getIndexName(),
+                    properties.getLock().getIndexName(),
+                    properties.getMigrate().getJobIndexName()));
             return admin;
         }
 
@@ -718,8 +727,11 @@ public class EsRebuildAutoConfiguration {
         @ConditionalOnBean(CrossClusterMigrateService.class)
         @ConditionalOnProperty(prefix = "es.rebuild", name = "web-enabled", matchIfMissing = true)
         public CrossClusterMigrateController crossClusterMigrateController(CrossClusterMigrateService crossClusterMigrateService,
-                                                                           ConnStore connStore) {
-            return new CrossClusterMigrateController(crossClusterMigrateService, connStore);
+                                                                           ConnStore connStore,
+                                                                           org.springframework.beans.factory.ObjectProvider<io.github.dengmeiluan.es.rebuild.auth.EnvPagesResolver> envPagesProvider,
+                                                                           EsRebuildProperties properties) {
+            return new CrossClusterMigrateController(crossClusterMigrateService, connStore,
+                    envPagesProvider.getIfAvailable(), properties.getConsole().getPageAuth().isEnabled());
         }
 
         @Bean
@@ -816,8 +828,11 @@ public class EsRebuildAutoConfiguration {
         @Bean
         @ConditionalOnMissingBean
         @ConditionalOnProperty(prefix = "es.rebuild", name = "web-enabled", matchIfMissing = true)
-        public InternalAdhocRebuildController internalAdhocRebuildController(AdhocRebuildService adhocRebuildService) {
-            return new InternalAdhocRebuildController(adhocRebuildService);
+        public InternalAdhocRebuildController internalAdhocRebuildController(AdhocRebuildService adhocRebuildService,
+                                                                            org.springframework.beans.factory.ObjectProvider<io.github.dengmeiluan.es.rebuild.auth.EnvPagesResolver> envPagesProvider,
+                                                                            EsRebuildProperties properties) {
+            return new InternalAdhocRebuildController(adhocRebuildService, envPagesProvider.getIfAvailable(),
+                    properties.getConsole().getPageAuth().isEnabled());
         }
 
         // ----------------------------------------------------------------------------------------------

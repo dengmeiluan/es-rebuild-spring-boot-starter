@@ -396,6 +396,7 @@ function newTemplate() {
 }
 
 async function save() {
+  if (!canOps.value) { store.notify('warning', '搜索模板变更需要 CLUSTER_OP/ADMIN 角色'); return; }
   if (!curId.value) return;
   busy.value = true;
   try {
@@ -412,6 +413,7 @@ async function save() {
 }
 
 async function del() {
+  if (!canOps.value) { store.notify('warning', '搜索模板变更需要 CLUSTER_OP/ADMIN 角色'); return; }
   if (!curId.value) return;
   if (!await askConfirm({
     title: '删除搜索模板',
