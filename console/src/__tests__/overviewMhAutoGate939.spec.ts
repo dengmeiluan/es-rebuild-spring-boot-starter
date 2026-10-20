@@ -9,6 +9,10 @@
  * 刀② 「上次自动」提示 v-if 条件出现/消失推挤同行 TSV/MD/刷新 三钮（铁律 B 位置恒定，
  *   936 刀②/938 刀③ 同族）——提示移至卡头行尾，末位增减零推挤；645 字面锚零扰动。
  * 刀③ AlertTriangle 死 import 退役（785 死码族续账：import 行外全文件零消费）。
+ *
+ * 九六四批随迁：mhAuto 布尔勾选收编 AutoRefreshSelect 档位件（ovAutoTiers964 本锁）——
+ *   落盘语义不变（usePref 持久化+setOn 接线+勾选联动），字面随档位键/档位 watch 升格；
+ *   「上次自动」占位条前位置锁与死 import 负锁原样守恒。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -20,16 +24,17 @@ const OV = codeOf('views/OverviewView.vue');
 const RAW = read('views/OverviewView.vue');
 
 describe('九百三十九批：概览监控历史自动刷新接线 + 卡头位置恒定 + 死 import 退役', () => {
-  it('刀①：mhAuto 升 usePref 落盘（重进页面还原）', () => {
-    expect(OV, 'mhAuto 走 usePref').toContain("const mhAuto = usePref('overview.mhAuto', false);");
+  it('刀①：间隔档升 usePref 落盘（重进页面还原；九六四批收编档位件+旧布尔键一次性迁移）', () => {
+    expect(OV, '档位走 usePref 新键').toContain("usePref<number>('overview.mhAutoMs', legacyAuto.value ? 60000 : 0);");
+    expect(OV, '旧布尔键迁移源在场').toContain("usePref<boolean>('overview.mhAuto', false)");
     expect(OV, '会话态 ref(false) 退役').not.toContain('const mhAuto = ref(false);');
   });
 
-  it('刀①：refresher 捕获 + setOn 接线 + 勾选联动（DiagView diagRefresher 同型）', () => {
+  it('刀①：refresher 捕获 + setOn 接线 + 档位联动（DiagView diagRefresher 同型）', () => {
     expect(OV, 'refresher 实例捕获').toContain('const mhRefresher = useAutoRefresh(');
     expect(OV, 'setOn 接线在场').toContain('mhRefresher.setOn(true);');
-    expect(OV, '勾选开→即刷+重启定时 / 关→停表').toContain(
-      'watch(mhAuto, (v) => { if (v) void loadHistory(); mhRefresher.restart(); });',
+    expect(OV, '档位开→即刷+重启定时 / 选关→停表').toContain(
+      'watch(mhMs, (v) => { if (v) void loadHistory(); mhRefresher.restart(); });',
     );
   });
 

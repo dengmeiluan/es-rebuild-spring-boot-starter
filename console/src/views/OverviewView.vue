@@ -179,15 +179,16 @@
       <div class="card-t"><Activity :size="13" /> 集群监控历史
         <span class="ov-mh-sub">服务端定时快照 · 环形保留</span>
         <!-- 「上次自动」置于弹性占位条之前：提示出现/消失/变宽全部由占位条吸收，
- 右侧动作组（实时监控/自动/TSV/MD/刷新）钉在右缘零位移——占位条之后的行尾放置
+ 右侧动作组（实时监控/自动刷新/TSV/MD/刷新）钉在右缘零位移——占位条之后的行尾放置
  会被占位条放大成整组平移（真机量尺实测） -->
-        <span v-if="mhAuto && mhAutoAt" class="dim sm-txt" style="white-space:nowrap" title="上次自动刷新时间">上次自动 {{ fmtTime(mhAutoAt) }}</span>
+        <span v-if="mhMs > 0 && mhAutoAt" class="dim sm-txt" style="white-space:nowrap" title="上次自动刷新时间">上次自动 {{ fmtTime(mhAutoAt) }}</span>
         <span style="flex:1"></span>
         <!-- ③ 复盘收口（ Phase 0 最后一项活口）：运行时指标**入口**缺位补入口——
  两页分工约定定案：概览=历史回看+探活（/monitor-history），实时监控页=运行时指标（/live）；
  指标本体不搬防重复建设（G16「全站单源一致性」同族裁决） -->
         <button class="btn sm ghost" title="进入实时监控大屏：QPS / 写入 / Heap / CPU / 磁盘实时走势、节点对比、挂墙模式" @click="router.push('/live')"><Gauge :size="11" /> 实时监控</button>
-        <label class="ov-mh-auto" title="自动刷新（60s）"><input v-model="mhAuto" type="checkbox" /> 自动</label>
+        <!-- 自动刷新换档位统一件（原「自动」checkbox+写死 60s 退役）：关/10s/30s/60s 可选 -->
+        <AutoRefreshSelect v-model:ms="mhMs" label="自动刷新（监控历史）" />
         <!-- 导出：TSV/MD 复制走 QRT getCsvBlock 单源（表头自动继承列名，所见即所复） -->
         <button class="btn sm ghost" :disabled="!mhRows.length" title="复制当前筛选结果为 TSV（Excel/飞书直贴）" @click="copyMonitorTsv">TSV</button>
         <button class="btn sm ghost" :disabled="!mhRows.length" title="复制当前筛选结果为 Markdown（群聊/工单直贴）" @click="copyMonitorMd">MD</button>
@@ -276,6 +277,7 @@ import { semFormat } from '../composables/useSemFormat';
 import { jobStatusZh, clusterHealthZh } from '../utils/esEnumZh';
 import { friendlyEsError } from '../utils/esError'; /* ：err-bar 三源 reason 裸拼人话化 */
 import QueryResultTable from '../components/QueryResultTable.vue'; /* 监控历史表格内核 */
+import AutoRefreshSelect from '../components/AutoRefreshSelect.vue'; /* ：自动刷新档位统一件（监控历史） */
 import { usePref } from '../composables/urlState'; /* 监控历史时间范围偏好 */
 import type { MonitorRow } from '../api'; /* 监控快照落库批④:读侧行类型 */
 
@@ -573,8 +575,10 @@ watch(mhConnOfTarget, (id) => { if (id) mhConn.value = id; }, { immediate: true 
 const mhStatus = ref('');
 /* 大盘联动：与 LiveDashboardView 历史趋势共享同一偏好键——一处改档两处同步 */
 const mhRange = usePref<string>('live.histRange', '24h');
-/* 开关走 usePref 落盘：重进页面还原（与 mhRange 同域口径） */
-const mhAuto = usePref('overview.mhAuto', false);
+/* 自动刷新换 AutoRefreshSelect 档位统一件：间隔走 usePref 落盘（关/10s/30s/60s，重进页面还原）；
+ 旧布尔键一次性迁移（true→60s），旧键退役不清除（urlState 历史遗留键同口径） */
+const legacyAuto = usePref<boolean>('overview.mhAuto', false);
+const mhMs = usePref<number>('overview.mhAutoMs', legacyAuto.value ? 60000 : 0);
 const mhAutoAt = ref<number | null>(null); /* ：自动刷新 tick 时间戳（可视反馈） */
 const mhRows = ref<MonitorRow[]>([]);
 const mhQrt = ref<InstanceType<typeof QueryResultTable> | null>(null);
@@ -633,12 +637,13 @@ const mhMatrix = computed(() => mhRows.value.map(r => [
   r.latencyMs ?? '-', r.esVersion || '-', r.error || '',
 ]));
 function mhTone(s: string): 'g' | 'r' | 'n' { return s === 'GREEN' ? 'g' : s === 'RED' ? 'r' : 'n'; }
-/* 筛选变化即重查；自动刷新 60s（useAutoRefresh 统一停续：后台标签页/KeepAlive 失活不空转）。
- refresher 捕获 + setOn 接线（DiagView diagRefresher 同型）——实例被丢弃时内部 on 恒 false，
- interval 永不创建，「自动」勾选成空摆设 */
+/* 筛选变化即重查；自动刷新档位（AutoRefreshSelect 统一件，useAutoRefresh 统一停续：
+ 后台标签页/KeepAlive 失活不空转）。refresher 捕获 + setOn 接线（DiagView diagRefresher
+ 同型）——实例被丢弃时内部 on 恒 false，interval 永不创建，档位选择成空摆设。
+ 间隔=档位值（0=关）：切换→即刷+重启（restart 通道 DiagView 同型），选关→停表 */
 watch([mhConn, mhStatus, mhRange], () => { void loadHistory(); });
-const mhRefresher = useAutoRefresh(() => { mhAutoAt.value = Date.now(); void loadHistory(); }, { ms: () => (mhAuto.value ? 60000 : 0) });
-watch(mhAuto, (v) => { if (v) void loadHistory(); mhRefresher.restart(); });
+const mhRefresher = useAutoRefresh(() => { mhAutoAt.value = Date.now(); void loadHistory(); }, { ms: () => mhMs.value });
+watch(mhMs, (v) => { if (v) void loadHistory(); mhRefresher.restart(); });
 mhRefresher.setOn(true);
 onMounted(loadHistory);
 </script>
@@ -701,7 +706,6 @@ onMounted(loadHistory);
  min-width，同行横排、窄屏随 wrap 自然换行（178px 为刻意值，按 --sp 合并约定豁免） */
 .ov-mh-filters .inp { width: auto; flex: 0 1 178px; min-width: 150px; }
 .ov-mh-sub { font-weight: 400; font-size: var(--fs-xs); color: var(--tx2); }
-.ov-mh-auto { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-xs); color: var(--tx2); cursor: pointer; user-select: none; }
 /* 大屏 1600 档四列——2K 或带侧栏 1920 宽下卡墙不再留大片空白（小屏断点见文件尾） */
 @media (min-width: 1600px) {
   .ov-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }

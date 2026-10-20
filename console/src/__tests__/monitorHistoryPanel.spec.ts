@@ -41,7 +41,7 @@ describe('OverviewView 监控历史分区', () => {
     expect(view).toContain('v-model="mhConn"');
     expect(view).toContain('v-model="mhStatus"');
     expect(view).toContain('v-model="mhRange"');
-    expect(view).toContain('v-model="mhAuto"');
+    expect(view).toContain('v-model:ms="mhMs"'); /* 九六四批收编 AutoRefreshSelect，布尔勾选退役 */
     expect(view).toContain('@click="loadHistory"');
   });
   it('QRT 列序:时间/集群/环境/状态/时延/版本/错误', () => {
@@ -51,9 +51,9 @@ describe('OverviewView 监控历史分区', () => {
   it('状态色映射 GREEN→g / RED→r / 其余 n', () => {
     expect(view).toContain("function mhTone(s: string): 'g' | 'r' | 'n' { return s === 'GREEN' ? 'g' : s === 'RED' ? 'r' : 'n'; }");
   });
-  it('筛选变化即重查+自动刷新 60s(useAutoRefresh 统一停续；六百四十五批 G18 tick 记 mhAutoAt)', () => {
+  it('筛选变化即重查+自动刷新档位(useAutoRefresh 统一停续；六百四十五批 G18 tick 记 mhAutoAt；九六四批收编档位件)', () => {
     expect(view).toContain('watch([mhConn, mhStatus, mhRange], () => { void loadHistory(); });');
-    expect(view).toContain('useAutoRefresh(() => { mhAutoAt.value = Date.now(); void loadHistory(); }, { ms: () => (mhAuto.value ? 60000 : 0) });');
+    expect(view).toContain('useAutoRefresh(() => { mhAutoAt.value = Date.now(); void loadHistory(); }, { ms: () => mhMs.value });');
   });
   it('时间范围偏好落 usePref(跨会话记忆;R20 起与大盘历史趋势共享 live.histRange 键)', () => {
     expect(view).toContain("usePref<string>('live.histRange', '24h')");
