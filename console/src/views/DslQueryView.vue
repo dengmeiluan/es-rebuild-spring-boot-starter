@@ -510,8 +510,8 @@
     <n-modal v-model:show="docOpen" preset="card" :title="'文档 ' + (activeDoc?._id || '')" style="width:760px;max-width:94vw" :bordered="false">
       <template #header-extra>
         <div style="display:flex;gap:var(--sp-1h)">
-          <!-- 克隆——复制一条改几个字段是高频造数据场景 -->
-          <button class="btn sm" @click="cloneDoc" title="以此文档为模板新建（ID 重新生成）"><CopyPlus :size="13" /> 克隆</button>
+          <!-- 克隆——复制一条改几个字段是高频造数据场景；写权限门与保存链同档（write=OPERATOR+） -->
+          <button v-if="canWrite" class="btn sm" @click="cloneDoc" title="以此文档为模板新建（ID 重新生成）"><CopyPlus :size="13" /> 克隆</button>
           <!-- W2-3：情境入口——正看着这条文档时才会想到要跟另一个索引对比 -->
           <button class="btn sm" title="与另一个索引的同 ID 文档做字段级对比（只读）" @click="gotoCompare">
             <GitCompareArrows :size="13" /> 跨索引对比
@@ -519,7 +519,7 @@
           <button class="btn sm" @click="docEditMode = !docEditMode">{{ docEditMode ? '预览' : '编辑' }}</button>
           <!-- 编辑器高度档钮（dq.docH useTierCycle 循环，title 实时回显当前档） -->
           <button v-if="docEditMode" class="btn sm ghost" :title="'编辑器高度档：' + docH + '（点击循环）'" @click="cycleDocH">高</button>
-          <button v-if="docEditMode" class="btn sm pri" :disabled="docSaving" @click="saveDoc" title="全量替换该文档的 _source">保存（全量覆盖 _source）</button>
+          <button v-if="docEditMode && canWrite" class="btn sm pri" :disabled="docSaving" @click="saveDoc" title="全量替换该文档的 _source">保存（全量覆盖 _source）</button>
         </div>
       </template>
       <!-- 弹窗编辑器定高改视口弹性：min(60vh, 原值兜底)——矮屏不再顶出视口要滚两层，
@@ -549,7 +549,7 @@
       <template #footer>
         <div style="display:flex;justify-content:flex-end;gap:var(--sp-2)">
           <button class="btn" @click="newDocOpen = false">取消</button>
-          <button class="btn pri" :disabled="newDocSaving || !newDocValid" :title="newDocValid ? '' : 'JSON 不合法，无法写入'" @click="saveNewDoc">{{ newDocSaving ? '写入中…' : '写入文档' }}</button>
+          <button v-if="canWrite" class="btn pri" :disabled="newDocSaving || !newDocValid" :title="newDocValid ? '' : 'JSON 不合法，无法写入'" @click="saveNewDoc">{{ newDocSaving ? '写入中…' : '写入文档' }}</button>
         </div>
       </template>
     </n-modal>
@@ -1702,6 +1702,8 @@ function gotoXray(hit: SearchHit) {
    前移到第一个 await 之前（在途窗内连点只发一次），try/finally 全包裹复位防闸死 */
 const docSaving = ref(false);
 async function saveDoc() {
+  /* 写权限守卫落执行体——Ctrl+S 等一切旁路通道不经按钮，闸收本体 */
+  if (!canWrite.value) { store.notify('error', '当前身份无文档写权限'); return; }
   if (!activeDoc.value || docSaving.value) return;
   if (!tryParse(docEditText.value)) { store.notify('error', 'JSON 不合法'); return; }
   docSaving.value = true;
@@ -1820,6 +1822,8 @@ function gotoCompare() {
   router.push({ path: '/doc-diff', query: { mode: 'compare', idx: store.pickedIdx, id } });
 }
 async function saveNewDoc() {
+  /* 写权限守卫落执行体——Enter 提交（useModalEnter）与深链入口不经按钮 */
+  if (!canWrite.value) { store.notify('error', '当前身份无文档写权限'); return; }
   if (!tryParse(newDocText.value)) { store.notify('error', 'JSON 不合法'); return; }
   /* raw POST 自动 ID 是 ADMIN 级通道，客户端 UUID 走 OPERATOR 级 putDoc 即可 */
   const id = newDocId.value.trim() || crypto.randomUUID();

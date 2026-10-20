@@ -20,7 +20,7 @@
         :loading="store.loadingIndices"
         filterable
         clearable
-        placeholder="选择索引（可搜索）"
+        :placeholder="idxPlaceholder"
         size="small"
         :consistent-menu-width="false"
         :render-label="renderLabel"
@@ -141,6 +141,10 @@ const themeLabel = computed(() => {
  recent 从 pool（别名+索引）里找——选过的别名也进最近使用。 */
 const clusterKey = computed(() => store.target || '@host');
 watch(clusterKey, k => { ensureAliases(k); }, { immediate: true });
+
+/* 占位带全量计数：未选中时也看得出选择器里躺着多少索引（与页头「索引列表 N」同语言） */
+const idxPlaceholder = computed(() =>
+  store.indices.length ? `全部索引 ${store.indices.length} · 可搜索` : '选择索引（可搜索）');
 
 const idxOptions = computed(() => {
   const ali = aliasEntries(clusterKey.value)

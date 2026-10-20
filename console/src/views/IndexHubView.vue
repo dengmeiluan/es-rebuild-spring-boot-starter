@@ -5,8 +5,9 @@
     <!-- 联动性：选中索引一键去托管重建（goto 自带 store.pick(cur)，AdhocRebuild 从全局选中索引接上下文） -->
     <PageHeader :icon="Boxes" title="索引工作区" subtitle="索引列表 · 元信息排序 · 别名/重建/分片运维入口">
       <template #actions>
-    <!-- 列表改抽屉,开关常驻页头;放大/还原=工作区全屏(整行含主表,.fs-active 见样式区) -->
-    <button aria-label="索引列表" class="btn sm ghost" :title="listOpen ? '关闭索引列表（Esc 也可）' : '打开索引列表（搜索/健康过滤/排序）'" @click="listOpen = !listOpen"><List :size="13" /> 索引列表</button>
+    <!-- 列表改抽屉,开关常驻页头;放大/还原=工作区全屏(整行含主表,.fs-active 见样式区)。
+         计数徽标：开关本身带全量索引数（显眼度——不看钮文不知列表内有多少索引） -->
+    <button aria-label="索引列表" class="btn sm ghost" :title="(listOpen ? '关闭索引列表（Esc 也可）' : '打开索引列表（搜索/健康过滤/排序）') + (store.indices.length ? ' · 共 ' + store.indices.length + ' 个' : '')" @click="listOpen = !listOpen"><List :size="13" /> 索引列表<span v-if="store.indices.length" class="ih-ilct mono">{{ store.indices.length }}</span></button>
         <button v-if="cur && canRebuild" aria-label="托管重建当前索引" class="btn sm ghost" title="托管重建当前索引（粘贴期望配置 / 探测 / 校验 / 切换一条龙）" @click="goto('/adhoc-rebuild')"><Rocket :size="13" /> 托管重建</button>
       </template>
     </PageHeader>
@@ -592,7 +593,7 @@
           <JsonArea v-model="docEditText" fill :dsl-assist="{ fields: ihDslAssist.fields, bodyKind: () => 'doc' }" />
         </div>
         <div class="ih-docs-bar" style="margin-top:var(--sp-2h)">
-          <button class="btn sm pri" :disabled="docSaving" @click="saveDoc">{{ docSaving ? '保存中…' : '保存（全量覆盖 _source）' }}</button>
+          <button v-if="canWrite" class="btn sm pri" :disabled="docSaving" @click="saveDoc">{{ docSaving ? '保存中…' : '保存（全量覆盖 _source）' }}</button>
           <button class="btn sm ghost" @click="docEditMode = false">取消</button>
           <!-- 编辑器高度档钮（ih.docH useTierCycle 循环，title 实时回显当前档；
                dq.docH :500 档钮同款形态） -->
@@ -1791,6 +1792,8 @@ async function copyDoc() {
   if (await copyText(docEditText.value)) store.notify('success', '文档 JSON 已复制');
 }
 async function saveDoc() {
+  /* 写权限守卫落执行体——Ctrl+S 键盘通道不经按钮，闸收本体 */
+  if (!canWrite.value) { store.notify('error', '当前身份无文档写权限'); return; }
   if (docSaving.value) return; /* ：函数体级防重入 */
   if (!activeDoc.value) return;
   try { JSON.parse(docEditText.value); } catch { store.notify('error', 'JSON 不合法'); return; }
@@ -2099,6 +2102,8 @@ async function askDelIndex() {
 .ih-seg .ih-hdot { margin-right: var(--sp-1); }
 .ih-collapse-btn { display: inline-flex; align-items: center; padding: var(--sp-0); border: 0; background: none; color: var(--tx2); cursor: pointer; border-radius: var(--r-xs); flex-shrink: 0; }
 .ih-collapse-btn:hover { color: var(--tx0); background: var(--bg2); }
+/* 索引列表开关上的全量计数徽标（页头钮显眼度：不看 title 不知列表内索引数） */
+.ih-ilct { margin-left: var(--sp-1h); opacity: .72; font-size: var(--fs-2xs); }
 /* 放大/还原双态钮实装（与折叠钮同款视觉、独立语义类 spec 选择器隔离）；on 态随选中语言走品牌色 */
 .ih-fs-btn.on { color: var(--ac-hi); }
 /* 聚焦态（放大）——工作区整行铺满全屏面（fixed inset12，z 走既有 --z-focus=300）；
