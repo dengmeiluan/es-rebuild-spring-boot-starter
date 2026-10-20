@@ -128,7 +128,7 @@ describe('TasksView reindex 进度渲染（528 批，挂载）', () => {
 
 describe('ReconcileReportDrawer 视口钳制（528 批）', () => {
   it('620 固定宽退役改 drawerW computed（94% 视口收口、上限 620）', () => {
-    expect(rrd).toContain('const drawerW = computed(() => Math.min(620, Math.round(window.innerWidth * 0.94)));');
+    expect(rrd).toContain('const drawerW = computed(() => Math.min(620, Math.round(store.viewportW * 0.94)));');
     expect(rrd).toContain(':width="drawerW"');
     expect(rrd, '数字字面量回流即回归').not.toContain(':width="620"');
   });

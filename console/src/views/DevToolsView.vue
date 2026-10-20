@@ -1214,8 +1214,9 @@ function copyBody() {
 const insFieldOpen = ref(false);
 /* 插入字段弹层视口钳制（239 守卫锚⑤合并）——naive width prop 类型窄
  （number|'trigger'），CSS min() 字符串运行时生效但类型不过，改站内 computed 先例
- 形态（QueryHubView histDrawerW 同款 0.94 口径）。 */
-const insFieldPopW = computed(() => Math.min(300, Math.round(window.innerWidth * 0.94)));
+ 形态（QueryHubView histDrawerW 同款 0.94 口径）；视口宽走 app store 响应式单源
+ （非响应式直读在嵌入容器挂载早期会读到 0 并永久缓存）。 */
+const insFieldPopW = computed(() => Math.min(300, Math.round(store.viewportW * 0.94)));
 const insFieldKw = ref('');
 /* 方案 B：「⋯」溢出菜单开合（菜单内动作选择即关） */
 const moreOpen = ref(false);

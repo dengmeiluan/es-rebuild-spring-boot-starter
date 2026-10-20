@@ -79,7 +79,8 @@ describe('B：结果柄方向反转修治+表格默认大（553 批）', () => {
     const fnAt = dq.indexOf('function onResultResize');
     const fn = dq.slice(fnAt, fnAt + 400);
     expect(fn).toMatch(/Math\.max\(320, desired\)/);
-    expect(fn).toMatch(/window\.innerHeight - 260/);
+    expect(fn).toMatch(/store\.viewportH - 260/);
+    expect(fn, '视口高直读退役（响应式单源）').not.toMatch(/window\.innerHeight/);
   });
   it('构建区缺省收起=表格默认大（buildCollapsed 缺省 true；行为变更备案）', () => {
     expect(dq).toMatch(/const buildCollapsed = usePref\('query\.buildCollapsed', true\)/);

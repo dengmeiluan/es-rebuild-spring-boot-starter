@@ -155,8 +155,9 @@ const ICONS: Record<string, any> = { TerminalSquare, Database, SearchCode, Beake
 /* 相关性实验室入口：藏在侧栏的强能力，这里给一条主入口（带当前索引上下文可直跳） */
 const labOpen = ref(false);
 /* 440 固定宽抽屉 ≤440px 视口溢出——94% 视口收口（ReconcileReportDrawer
- drawerW 同款；本站纯 SPA 无 SSR 顾虑），上限仍 440 */
-const histDrawerW = computed(() => Math.min(440, Math.round(window.innerWidth * 0.94)));
+ drawerW 同款），上限仍 440；视口宽走 app store 响应式单源
+ （非响应式直读在嵌入容器挂载早期会读到 0 并永久缓存） */
+const histDrawerW = computed(() => Math.min(440, Math.round(store.viewportW * 0.94)));
 function gotoLab(path: string) {
   labOpen.value = false;
   router.push(path);

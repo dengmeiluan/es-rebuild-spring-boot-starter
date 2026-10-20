@@ -186,9 +186,10 @@ describe('五百二十八批：锚⑤ 弹层 :width prop 视口钳制', () => {
     for (const e of exemptions) {
       expect(hitsByFile.get(e) ?? 0, `豁免 ${e} 已无 ≥300px :width 命中，请从豁免清单移除`).toBeGreaterThan(0);
     }
-    /* 合并锚定：两抽屉数字字面量退役改 computed 钳制（94% 视口、原宽为上限） */
-    expect(rrd).toContain('const drawerW = computed(() => Math.min(620, Math.round(window.innerWidth * 0.94)));');
-    expect(qh).toContain('const histDrawerW = computed(() => Math.min(440, Math.round(window.innerWidth * 0.94)));');
+    /* 合并锚定：两抽屉数字字面量退役改 computed 钳制（94% 视口、原宽为上限；
+       视口宽走 app store 响应式单源，window 直读在嵌入容器挂载早期会读到 0 并永久缓存） */
+    expect(rrd).toContain('const drawerW = computed(() => Math.min(620, Math.round(store.viewportW * 0.94)));');
+    expect(qh).toContain('const histDrawerW = computed(() => Math.min(440, Math.round(store.viewportW * 0.94)));');
     expect(rrd).toContain(':width="drawerW"');
     expect(qh).toContain(':width="histDrawerW"');
   });

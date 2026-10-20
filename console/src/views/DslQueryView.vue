@@ -922,8 +922,9 @@ function setSplitTier(tier: 'none' | 'tree' | 'ws') {
  >0 时覆写档位值，档位钮全灭；点档位钮清零回 DQ_MAIN_H 档位高度=「回不去」根治） */
 const dqMainH = usePref<number>('dq.mainH', 0);
 const dqMainStyle = computed(() => ({ height: dqMainH.value > 0 ? dqMainH.value + 'px' : DQ_MAIN_H[editorH.value] }));
-const mainHandleSize = computed(() => dqMainH.value || Math.round(window.innerHeight * 0.34));
-const mainHandleMax = computed(() => Math.round(window.innerHeight * 0.78));
+/* 柄读数上限走响应式视口高（非响应式 innerHeight 在嵌入容器挂载早期会读到 0 并永久缓存） */
+const mainHandleSize = computed(() => dqMainH.value || Math.round(store.viewportH * 0.34));
+const mainHandleMax = computed(() => Math.round(store.viewportH * 0.78));
 function onMainResize(size: number) {
   dqMainH.value = Math.round(Math.max(220, size));
 }
@@ -939,8 +940,8 @@ function onMainResizeEnd(size: number) {
  负值/极矮视口归 320 保底可读 */
 const resultH = usePref<number>('dq.resultH', 0);
 const dqMainEl = ref<HTMLElement | null>(null); /* 模板 ref：dq-main 实高供高度哨兵/其他观测（552 clamp 改版后 resize 不再扣 mainH，保留声明防模板 ref 悬空） */
-const resultHandleSize = computed(() => resultH.value || Math.round(window.innerHeight * 0.4));
-const resultHandleMax = computed(() => Math.max(320, Math.round(window.innerHeight - 260)));
+const resultHandleSize = computed(() => resultH.value || Math.round(store.viewportH * 0.4));
+const resultHandleMax = computed(() => Math.max(320, Math.round(store.viewportH - 260)));
 const resultStyle = computed(() => resultH.value > 0 ? { flex: '0 0 auto', height: resultH.value + 'px' } : {});
 /* 结果柄方向语义修正（实报「往下拉表格反而大了」根因实证）——SplitHandle
  增量=柄自身坐标基线+Δ，而结果柄在结果区上方：边界应随指针（VS Code 面板惯例），
@@ -955,7 +956,7 @@ function onResultDragAnchor() {
 }
 function onResultResize(raw: number) {
   const desired = resultDragBaseH - (raw - resultDragBaseRaw);
-  const room = Math.round(window.innerHeight - 260);
+  const room = Math.round(store.viewportH - 260);
   resultH.value = Math.round(Math.min(Math.max(320, desired), Math.max(320, room)));
 }
 function onResultResizeEnd(raw: number) { onResultResize(raw); }

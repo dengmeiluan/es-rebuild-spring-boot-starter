@@ -64,15 +64,19 @@ import { RefreshCw, ExternalLink } from 'lucide-vue-next';
 import { NDrawer, NDrawerContent } from 'naive-ui';
 import { api } from '../api';
 import { friendlyEsError } from '../utils/esError';
+import { useAppStore } from '../stores/app';
 import QueryResultTable from './QueryResultTable.vue';
 import StatusPill from './StatusPill.vue';
 
 const props = defineProps<{ show: boolean }>();
 const emit = defineEmits<{ (e: 'update:show', v: boolean): void }>();
 
+const store = useAppStore();
+
 /* 620 固定宽无视口钳制（≤620px 视口整条溢出）——按视口 94% 收口，
- 上限仍 620（大屏观感不变）；本站纯 SPA，window 直读无 SSR 顾虑 */
-const drawerW = computed(() => Math.min(620, Math.round(window.innerWidth * 0.94)));
+ 上限仍 620（大屏观感不变）；视口宽走 app store 响应式单源
+ （非响应式直读在嵌入容器挂载早期会读到 0 并永久缓存） */
+const drawerW = computed(() => Math.min(620, Math.round(store.viewportW * 0.94)));
 
 const router = useRouter();
 /* 索引列 goHub 跳转（XmigrateView gotoIdx 同范式） */
