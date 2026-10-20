@@ -1153,7 +1153,7 @@ function pctOf(j: any): number {
  （useAutoRefresh 契约「间隔变更由调用方重启」）：零 RUNNING 挂载时不排表，首作业转
  RUNNING 后无人重启 → 轮询永不启动；RUNNING 中挂载转终态同理永不停表。抽 hasRunningJob
  computed + watch → restart() 双向接线（转 RUNNING 启表、转终态停表，启停判据与 ms
- 同源；OverviewView 每轮 restart 先例）。不新增 setOn（ 总数 12 守恒） */
+ 同源；OverviewView 每轮 restart 先例）。不新增 setOn（ 总数 13 守恒） */
 const hasRunningJob = computed(() => jobs.value.some(j => j.status === 'RUNNING'));
 const xmRefresher = useAutoRefresh(loadJobs, {
   ms: () => (hasRunningJob.value ? 3000 : 0),

@@ -79,7 +79,7 @@
                 </template>
               </div>
             </div>
-            <button v-if="canOps" aria-label="删除" class="btn sm ghost" @click.stop="del(t)" title="删除">
+            <button v-if="canOps" aria-label="删除" class="btn sm ghost" @click.stop="del(t)" :disabled="delBusy" title="删除">
               <Trash2 :size="11" />
             </button>
           </div>
@@ -215,6 +215,7 @@ const loading = ref(true);
 const loadErr = ref('');
 const legacy = ref(false);
 const saving = ref(false);
+const delBusy = ref(false);
 
 const selected = ref<any>(null);
 const newMode = ref(false);
@@ -369,23 +370,29 @@ async function save() {
 }
 
 /* 删除走统一确认。 W4：直挂 ConfirmModal 合并 askConfirm，
- 模板名入 facts 具名行，后果语句逐字保留 */
+ 模板名入 facts 具名行，后果语句逐字保留。
+ 在途互斥闸：确认窗+请求窗全程钉住（置位先于确认窗 await，取消/失败路径
+ finally 复位），请求窗内重复点击不二发；钮面 :disabled 承接在途反馈 */
 async function del(t: any) {
-  if (!await askConfirm({
-    title: '删除模板',
-    message: `将删除${tab.value === 'index' ? '索引' : '组件'}模板 ${t.name}。 已按该模板创建的索引不受影响，但后续新建索引将不再自动套用它，不可恢复。`,
-    level: 'warn',
-    okText: '删除',
-    dismissable: true,
-    facts: [{ label: '模板名', value: t.name }],
-  })) return;
+  if (delBusy.value) return;
+  delBusy.value = true;
   try {
+    if (!await askConfirm({
+      title: '删除模板',
+      message: `将删除${tab.value === 'index' ? '索引' : '组件'}模板 ${t.name}。 已按该模板创建的索引不受影响，但后续新建索引将不再自动套用它，不可恢复。`,
+      level: 'warn',
+      okText: '删除',
+      dismissable: true,
+      facts: [{ label: '模板名', value: t.name }],
+    })) return;
     await api.deleteTemplate(t.name, tab.value);
     store.notify('success', '已删除：' + t.name);
     if (selected.value?.name === t.name) cancel();
     await load();
   } catch (e: any) {
     store.notify('error', '删除失败：' + (e?.message || e));
+  } finally {
+    delBusy.value = false;
   }
 }
 

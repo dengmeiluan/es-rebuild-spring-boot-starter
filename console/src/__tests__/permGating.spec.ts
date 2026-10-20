@@ -159,7 +159,8 @@ describe('权限隐藏第二波（，16 视图写按钮收尾）', () => {
     expect(ilm).toContain('<button v-if="canOps" class="btn xs" style="margin-left:auto" @click="openNewPolicy">');
     const tv = V('TemplatesView.vue');
     expect(tv).toContain('<button v-if="canOps" class="btn sm" @click="openNew">');
-    expect(tv).toContain('<button v-if="canOps" aria-label="删除" class="btn sm ghost" @click.stop="del(t)"');
+    expect(tv).toContain('<button v-if="canOps" aria-label="删除" class="btn sm ghost" @click.stop="del(t)" :disabled="delBusy"');
+    expect(tv).not.toContain('@click.stop="del(t)" title="删除">'); /* 旧形态防回潮：删除钮在途闸 disabled 缺席形态 */
     expect(tv).toContain('<button v-if="canOps" class="btn primary sm" @click="save" :disabled="saving">');
   });
   it('SynonymsManagerView 下发重载/ClusterSettingsView 下发/PainlessLabView stored=ops', () => {

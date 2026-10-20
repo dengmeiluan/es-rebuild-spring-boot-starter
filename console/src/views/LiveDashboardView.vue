@@ -1244,16 +1244,17 @@ const detailTabs = computed(() => {
 const detailSegN = computed(() => detailTabs.value.length);
 const detailTabIdx = computed(() => Math.max(0, detailTabs.value.findIndex(t => t.k === detailTab.value)));
 const detailShows = (t: DetailTab) => detailOpen.value && detailTab.value === t;
-function toggleDetail() { detailOpen.value = !detailOpen.value; if (detailOpen.value) void ensureDetailLoad(); }
+function toggleDetail() { detailOpen.value = !detailOpen.value; }
 function switchDetail(k: DetailTab) {
   detailTab.value = k;
   if (detailTab.value === 'top' && nodeMode.value) detailTab.value = 'alert'; /* Top 在节点模式不渲染=回落告警视图 */
-  if (detailOpen.value) void ensureDetailLoad();
 }
 function ensureDetailLoad() {
   if (detailTab.value === 'top' && !nodeMode.value && !topRows.value.length) void loadTop();
   else if (detailTab.value === 'slow' && !slowRows.value.length) void loadSlow();
 }
+/* 懒加载唯一触发源=这对 watch：toggle/switch 函数体不得再直调 ensureDetailLoad
+ （同 tick 双入口双发，loadTop/loadSlow 每交互各拉两拍） */
 watch(detailOpen, on => { if (on) void ensureDetailLoad(); });
 watch(detailTab, () => { if (detailOpen.value) void ensureDetailLoad(); });
 const alertHistFilter = ref<'all' | 'alert' | 'recovered'>('all');
