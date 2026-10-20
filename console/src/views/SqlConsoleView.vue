@@ -424,7 +424,9 @@ function loadSample() {
 
 function buildBody(): string {
   const b: any = { query: sql.value };
-  if (fetchSize.value > 0) b.fetch_size = fetchSize.value;
+  /* ES SQL fetch_size 上限 10000：输入框 max 属性拦不住键入与偏好落盘的超限值，
+     超限直发会被 ES 400 拒——构建时夹取兜底；非正数维持不进构建体（走 ES 默认） */
+  if (fetchSize.value > 0) b.fetch_size = Math.min(fetchSize.value, 10000);
   return JSON.stringify(b);
 }
 

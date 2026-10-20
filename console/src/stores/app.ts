@@ -368,11 +368,17 @@ export const useAppStore = defineStore('app', () => {
 
   /* 视口宽度（窄容器判定用）——iframe 内嵌时这就是 iframe 自身宽度 */
   const viewportW = ref(typeof window !== 'undefined' ? window.innerWidth : 1440);
+  /* 视口高度（编辑器拖柄上限/满档高度估计用）——嵌入容器挂载早期可能读到 0，
+     响应式值让消费 computed 在首拍 resize 后自愈，非响应式读数会永久缓存 0 */
+  const viewportH = ref(typeof window !== 'undefined' ? (window.innerHeight || document.documentElement.clientHeight || 900) : 900);
   if (typeof window !== 'undefined') {
     let rt: any = null;
     window.addEventListener('resize', () => {
       clearTimeout(rt);
-      rt = setTimeout(() => { viewportW.value = window.innerWidth; }, 120);
+      rt = setTimeout(() => {
+        viewportW.value = window.innerWidth;
+        if (window.innerHeight > 0) viewportH.value = window.innerHeight;
+      }, 120);
     });
   }
   const narrow = computed(() => viewportW.value <= 1000);
@@ -398,5 +404,5 @@ export const useAppStore = defineStore('app', () => {
     setNavHidden(!navHidden.value);
   }
 
-  return { indices, pickedIdx, recentIdx, pickedInfo, loadingIndices, clusterOk, clusterSelf, clusterHealth, clusterUnassigned, loadIndices, pick, notifyQueue, notify, shiftNotify, notifyLog, notifyUnread, markNotifySeen, clearNotifyLog, eventBus, emit, favorites, addFavorite, removeFavorite, clearFavorites, settings, saveSettings, toggleDensity, effectiveTheme, setTheme, cycleTheme, hostTheme, setHostTheme, target, targetName, conns, isRemote, hostVisible, loadConns, setTarget, esVersion, verBelow, viewportW, narrow, navIcon, toggleNav, navHidden, setNavHidden, toggleNavHidden };
+  return { indices, pickedIdx, recentIdx, pickedInfo, loadingIndices, clusterOk, clusterSelf, clusterHealth, clusterUnassigned, loadIndices, pick, notifyQueue, notify, shiftNotify, notifyLog, notifyUnread, markNotifySeen, clearNotifyLog, eventBus, emit, favorites, addFavorite, removeFavorite, clearFavorites, settings, saveSettings, toggleDensity, effectiveTheme, setTheme, cycleTheme, hostTheme, setHostTheme, target, targetName, conns, isRemote, hostVisible, loadConns, setTarget, esVersion, verBelow, viewportW, viewportH, narrow, navIcon, toggleNav, navHidden, setNavHidden, toggleNavHidden };
 });

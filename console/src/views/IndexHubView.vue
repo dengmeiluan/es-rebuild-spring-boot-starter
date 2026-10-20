@@ -227,7 +227,7 @@
                    JsonArea fill 吃满容器高；教育文案收进下方结果表工具行 Info 钮 tooltip（同款裁决）。
                     P2：qryH 自定态（拖柄落盘）覆写档位值——ih-h-full 满档语义保形
                    （自定态下 min-height 档不叠加，定高 px 直接接管） -->
-              <div class="ih-dsl-wrap" :class="{ 'ih-h-full': editorH === 'full' && qryH <= 0 }" :style="dslWrapStyle" @keydown.ctrl.enter.prevent="runDslNew">
+              <div ref="dslWrapEl" class="ih-dsl-wrap" :class="{ 'ih-h-full': editorH === 'full' && qryH <= 0 }" :style="dslWrapStyle" @keydown.ctrl.enter.prevent="runDslNew">
                 <JsonArea ref="dslJaRef" v-model="dsl" fill :dsl-assist="ihDslAssist" placeholder="{&quot;query&quot;: {&quot;match_all&quot;: {}}}" :font-size="ihFont" />
               </div>
               <!--  P2：编辑器高度拖柄（dq-height-handle 同款落位）。553 裁决=边界随指针：
@@ -1449,8 +1449,30 @@ const dslWrapStyle = computed(() => {
   if (qryH.value > 0) return { height: qryH.value + 'px' };
   return editorH.value === 'full' ? undefined : { height: EDITOR_HEIGHTS[editorH.value] };
 });
-const qryHandleSize = computed(() => qryH.value || Math.round(window.innerHeight * 0.34));
-const qryHandleMax = computed(() => Math.round(window.innerHeight * 0.78));
+/* 拖柄读数=编辑区真实高度（SplitHandle 的 aria-valuenow 与拖拽起点锚都消费此值）：
+   自定态=落盘 px、档位态=档位 px、满档=容器 flex 实测高（ResizeObserver 写 ref，
+   柄高独立于容器高不回写布局，无反馈环），量测不可用时回落满档 CSS 下界 42vh
+   （.ih-h-full min-height 口径）——原缺省恒取 34% 视口高，与档位实高错位
+   （读屏值失真+起拖首拍从错误锚起算） */
+const dslWrapEl = ref<HTMLElement | null>(null);
+const dslWrapH = ref(0);
+let wrapRo: ResizeObserver | undefined;
+watch(dslWrapEl, el => {
+  wrapRo?.disconnect();
+  wrapRo = undefined;
+  if (el && typeof ResizeObserver !== 'undefined') {
+    wrapRo = new ResizeObserver(list => { dslWrapH.value = list[0]?.contentRect.height ?? 0; });
+    wrapRo.observe(el);
+  }
+});
+onBeforeUnmount(() => wrapRo?.disconnect());
+const qryHandleSize = computed(() => {
+  if (qryH.value > 0) return qryH.value;
+  if (editorH.value === 'full') return Math.round(dslWrapH.value) || Math.round(store.viewportH * 0.42);
+  return parseInt(EDITOR_HEIGHTS[editorH.value], 10);
+});
+/* 上限走响应式视口高（非响应式 innerHeight 在嵌入容器挂载早期会读到 0 并永久缓存） */
+const qryHandleMax = computed(() => Math.round(store.viewportH * 0.78));
 function onQryHResize(size: number) {
   qryH.value = Math.round(Math.max(200, size));
 }
@@ -1893,6 +1915,7 @@ watch(cur, () => {
   docsHits.value = []; docsTotal.value = 0; docsTook.value = -1; docsRan.value = false; docsPage.value = 1; /* 切索引翻页归位 */
   docsShards.value = null; /* ：切索引黄条随旧命中集清场（qryResp=null 同语义） */
   docsSort.value = null; /* ：切索引清排序态——排序属于当前索引维度，新索引回原始序 */
+  docsErr.value = ''; docsErrRaw.value = null; /* ：错误条属上个索引的检索，随切清场（qryErr 同款） */
   qryResp.value = null; qryErr.value = ''; qryPage.value = 1; qryProfileTree.value = null; /* ：查询 tab 翻页同步归位 */
   docsHist.reset(); qryHist.reset(); /* ：切索引清直方图桶态（ES 拒绝拉黑按索引维度保留，DQ 同语义） */
   if (tab.value === 'docs' && cur.value) runDocs();
