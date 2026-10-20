@@ -113,7 +113,7 @@
             <span class="hr-diff-old" :title="d.old">{{ d.old === '' ? '（无）' : d.old }}</span>
             <span class="hr-diff-arrow">→</span>
             <span class="hr-diff-new" :title="d.new">{{ d.new === '' ? '（无）' : d.new }}</span>
-            <StatusPill v-if="d.pct" class="hr-diff-pct mono xs" :tone="d.up ? 'g' : 'r'" :label="d.pct" />
+            <StatusPill v-if="d.pct" class="hr-diff-pct mono xs" :tone="d.tone" :label="d.pct" />
           </div>
         </div>
         <div v-else class="hr-diff-same">两份报告内容完全一致，期间集群状态无变化</div>
@@ -465,7 +465,7 @@ const diffItems = computed(() => {
   const b = flatReport(cmpEntry.value.data);
   const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])];
   /* 数值型变化附变化率（↑/↓ 徽标，可视化拉满）；非数值/缺失不判 */
-  const out: { k: string; old: string; new: string; pct?: string; up?: boolean }[] = [];
+  const out: { k: string; old: string; new: string; pct?: string; tone?: 'g' | 'r' | 'n' }[] = [];
   for (const k of keys) {
     /* 生成时间是报告元数据非集群状态：排除出对比——否则任何两份报告恒有 ≥1 项变化，
      「完全一致」的正向反馈永不出现 */
@@ -480,12 +480,23 @@ const diffItems = computed(() => {
       const rate = ((nv - ov) / Math.abs(ov)) * 100;
       if (Math.abs(rate) >= 1) {
         d.pct = (rate > 0 ? '↑ ' : '↓ ') + Math.abs(Math.round(rate)) + '%';
-        d.up = rate > 0;
+        d.tone = diffTone(d.k, rate > 0);
       }
     }
   }
   return out.slice(0, 200);
 });
+/* 徽标色档随指标性质分档，不一律「涨绿跌红」：score 涨=改善（绿）；
+ 「越多越糟」的集群健康量（未分配分片/待处理任务/不健康索引/高负载节点）
+ 涨=恶化（红）跌=缓解（绿）；其余容量/结构量（节点数/索引数等）涨跌无好坏，
+ 中性档不判方向——白名单双表，未收录键一律中性（宁中性勿误导）。 */
+const DIFF_GOOD_UP = ['score'];
+const DIFF_BAD_UP = ['summary.unassigned', 'summary.pending', 'summary.unhealthyIndices', 'summary.hotNodes'];
+function diffTone(key: string, up: boolean): 'g' | 'r' | 'n' {
+  if (DIFF_GOOD_UP.includes(key)) return up ? 'g' : 'r';
+  if (DIFF_BAD_UP.includes(key)) return up ? 'r' : 'g';
+  return 'n';
+}
 /* 对比结果 Markdown 复制（处置报告贴工单——基准/对照标签+得分差+全量变化清单） */
 async function copyDiffMd() {
   if (!baseEntry.value || !cmpEntry.value) return;

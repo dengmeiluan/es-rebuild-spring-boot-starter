@@ -2,7 +2,9 @@
  * 五百五十四批·工蚁E（全站统一组件化：胶囊改用 + 交互统一）。静态源码断言仿 flattenWave552 范式。
  *
  * ① HealthReportView 三族私造胶囊改用 StatusPill 统一件：
- *    - hr-diff-pct（213 批得分/变化率徽标）：up 升→g / down 降→r（升降语义直映主档）；
+ *    - hr-diff-pct（213 批得分/变化率徽标）：up 升→g / down 降→r（升降语义直映主档；
+ *      965 起 diff 行变化率徽标改 tone 随指标性质分档——score 涨绿保持/健康量族反转/其余中性，
+ *      见 healthDiffTone965；得分差徽标 deltaUp 语义不变）；
  *    - hr-sec-cnt（分节计数徽标 ×3）：中性计数→n；
  *    - hr-pop-mark（弹层「当前基准/对照」选中标记 ×4）：本弹层自身角色的当前选中（原 .on
  *      强调态）→b info 强调档 / 另一角色选中（原弱化态）→n 中性档。mark 徽标语义判断备案：
@@ -53,11 +55,12 @@ describe('五百五十四批①：HealthReportView 三族胶囊改用 StatusPill
       .toMatch(/\.hr-pop-mark \{ margin-left: auto; flex: none; \}/);
   });
 
-  it('hr-diff-pct 改用在场：得分差/变化率徽标 up→g / down→r（xs 档对齐原 2xs，mono 保数字档）', () => {
+  it('hr-diff-pct 改用在场：得分差 up→g / down→r；变化率徽标 tone 随指标性质分档（965 色档语义，healthDiffTone965；xs 档对齐原 2xs，mono 保数字档）', () => {
     expect(s, 'summary 得分差徽标').toContain(
       '<StatusPill v-if="scoreDelta" class="hr-diff-pct mono xs" :tone="deltaUp ? \'g\' : \'r\'" :label="scoreDelta" />');
-    expect(s, 'diff 行变化率徽标').toContain(
-      '<StatusPill v-if="d.pct" class="hr-diff-pct mono xs" :tone="d.up ? \'g\' : \'r\'" :label="d.pct" />');
+    expect(s, 'diff 行变化率徽标（tone 分档：score 涨绿保持/健康量族反转/其余中性）').toContain(
+      '<StatusPill v-if="d.pct" class="hr-diff-pct mono xs" :tone="d.tone" :label="d.pct" />');
+    expect(s, '旧「涨绿跌红」二元形态防回潮').not.toContain("d.up ? 'g'");
   });
 
   it('hr-sec-cnt 改用在场 ×3：中性计数→n（检查项/不健康索引/节点负载）', () => {
