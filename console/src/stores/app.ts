@@ -113,9 +113,22 @@ export const useAppStore = defineStore('app', () => {
     }
     return setupPromise;
   }
+  /* 世代守卫（loadIndices indicesSeq 同构）：启动链/切换器增删后/登录后/懒载口
+ 可并发入列，回包乱序时旧拍整拍丢弃——迟到旧快照不得覆写清单，也不得在陈旧快照上
+ 走回落链（把刚选的新目标误判「已删除」强制切回） */
+  let connsSeq = 0;
   async function loadConns() {
+    const seq = ++connsSeq;
     await ensureSetup();
-    try { const list = await api.clustersList(); conns.value = Array.isArray(list) ? list : []; } catch { conns.value = []; }
+    if (seq !== connsSeq) return; // 已有更新拍入列：本拍整拍作废
+    try {
+      const list = await api.clustersList();
+      if (seq !== connsSeq) return; // 旧拍迟到：清单与回落链整拍丢弃
+      conns.value = Array.isArray(list) ? list : [];
+    } catch {
+      if (seq !== connsSeq) return; // 旧拍失败同样丢弃：不得清空新拍成功清单
+      conns.value = [];
+    }
     // 目标档案已被删：回落避免死绑不存在的 connId 全站报错（宿主隐藏时回落首个可见连接而非宿主）
     if (target.value && !conns.value.some(c => c.id === target.value)) {
       if (hostVisible.value) {
