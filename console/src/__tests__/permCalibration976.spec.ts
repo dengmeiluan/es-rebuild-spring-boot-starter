@@ -46,11 +46,13 @@ describe('976 前端权限校准', () => {
     expect(auth.canPage('ops', 'cluster-settings', 'host')).toBe(true);
   });
 
-  it('连接模型读端点同样受页面可见性约束（未授 security 不显示用户列表）', () => {
+  it('连接模型读端点同样受页面可见性约束（本地账号管理按宿主 security 键）', () => {
     const auth = useAuthStore();
     auth.me = { username: 'u', role: 'VIEWER', fallback: false, pages: PAGES, grantedPages: ['conn:c1:devtools', 'conn:c1:w:devtools'] };
     expect(auth.canEndpoint('admin', 'GET', '/internal/es/index/auth/users', 'c1')).toBe(false);
     auth.me = { username: 'u', role: 'VIEWER', fallback: false, pages: PAGES, grantedPages: ['conn:c1:security'] };
+    expect(auth.canEndpoint('admin', 'GET', '/internal/es/index/auth/users', 'c1')).toBe(false);
+    auth.me = { username: 'u', role: 'VIEWER', fallback: false, pages: PAGES, grantedPages: ['conn:host:security'] };
     expect(auth.canEndpoint('admin', 'GET', '/internal/es/index/auth/users', 'c1')).toBe(true);
   });
 
@@ -72,11 +74,21 @@ describe('976 前端权限校准', () => {
     expect(pageAllowed(['indices'], '/indices/', 'host')).toBe(true);
   });
 
-  it('DevTools 预填 run=true 时身份未确认只填入、不自动发写请求', () => {
+  it('DevTools 预填 run=true 时身份未确认只填入、确认后自动执行一次；写预填只填不发', () => {
     const src = readFileSync(join(__dirname, '../views/DevToolsView.vue'), 'utf-8');
-    expect(src).toContain('auth.me == null && !auth.authDisabled');
-    const guard = src.indexOf('auth.me == null && !auth.authDisabled');
+    expect(src).toContain('const pendingPrefillRun = ref(false);');
+    expect(src).toContain('const pendingPrefillTab = ref<Tab | null>(null);');
+    const branch = src.indexOf('if (p.run && readOnlyPrefill) {', src.indexOf('isReadOnlyPrefill'));
+    expect(branch).toBeGreaterThanOrEqual(0);
+    expect(src).toContain('const readOnlyPrefill = isReadOnlyPrefill(p.method || \'GET\', p.path || \'/\');');
+    expect(src).toContain("p.endsWith('/_search')");
+    expect(src).toContain('写请求仅预填，请确认后手动发送');
+    const guard = src.indexOf('if (!auth.probed) {', branch);
     expect(guard).toBeGreaterThanOrEqual(0);
-    expect(guard).toBeLessThan(src.indexOf('run();', guard));
+    const runAt = src.indexOf('run();', guard);
+    expect(runAt).toBeGreaterThan(guard);
+    expect(src).toContain('pendingPrefillRun.value = true;');
+    expect(src).toContain('pendingPrefillTab.value = tab;');
+    expect(src).toContain('active.value = idx;');
   });
 });

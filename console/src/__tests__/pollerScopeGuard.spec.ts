@@ -22,7 +22,7 @@ const liveMonitor = readFileSync(join(__dirname, '../stores/liveMonitor.ts'), 'u
 
 describe('全局轮询器权限感知（一百九十批+五百五十七批连接键感知）', () => {
   it('jobTracker：poll 按有效页集裁剪 adhoc/xmigrate 通道（连接键解析）', () => {
-    expect(jobTracker).toMatch(/const eff = effectivePagesForTarget\(granted, app\.target \|\| 'host'\);/);
+    expect(jobTracker).toMatch(/const eff = auth\.isAdmin\(\) \? null : effectivePagesForTarget\(granted, app\.target \|\| 'host'\);/);
     expect(jobTracker).toMatch(/const can = \(pageKey: string\) => eff == null \|\| eff\.has\(pageKey\);/);
     expect(jobTracker).toMatch(/can\('adhoc-rebuild'\)/);
     expect(jobTracker).toMatch(/can\('xmigrate'\)/);
@@ -39,7 +39,7 @@ describe('全局轮询器权限感知（一百九十批+五百五十七批连接
   });
 
   it('liveMonitor：无 diag 权限时跳过 pending-tasks 采样（连接键感知）', () => {
-    expect(liveMonitor).toMatch(/const eff = effectivePagesForTarget\(auth\.grantedPages, app\.target \|\| 'host'\);/);
+    expect(liveMonitor).toMatch(/const eff = auth\.isAdmin\(\) \? null : effectivePagesForTarget\(auth\.grantedPages, app\.target \|\| 'host'\);/);
     expect(liveMonitor).toMatch(/const canDiag = eff == null \|\| eff\.has\('diag'\);/);
     expect(liveMonitor).toMatch(/canDiag \? api\.pendingTasks\(\)/);
   });

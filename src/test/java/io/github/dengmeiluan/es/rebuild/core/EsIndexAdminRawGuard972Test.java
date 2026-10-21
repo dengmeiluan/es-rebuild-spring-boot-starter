@@ -77,47 +77,54 @@ public class EsIndexAdminRawGuard972Test {
     }
 
     @Test
-    public void reindex通配与控制面来源拒绝() {
+    public void reindex只能走专属端点_raw一律拒绝() {
         assertRejected(() -> admin.guardRawGuarded("POST", "/_reindex",
                 "{\"source\":{\"index\":\"*\"},\"dest\":{\"index\":\"copy\"}}"), "source 通配");
         assertRejected(() -> admin.guardRawGuarded("POST", "/_reindex",
                 "{\"source\":{\"index\":\"logs-*\"},\"dest\":{\"index\":\"es_console_copy\"}}"), "dest 控制面");
-        assertAllowed(() -> admin.guardRawGuarded("POST", "/_reindex",
-                "{\"source\":{\"index\":\"logs-*\"},\"dest\":{\"index\":\"copy\"}}"), "业务 reindex");
+        assertRejected(() -> admin.guardRawGuarded("POST", "/_reindex",
+                "{\"source\":{\"index\":\"logs-*\"},\"dest\":{\"index\":\"copy\"}}"), "raw 业务 reindex");
+        assertAllowed(() -> admin.guardReindexBody(
+                "{\"source\":{\"index\":\"logs-*\"},\"dest\":{\"index\":\"copy\"}}"), "专属端点业务 reindex");
     }
 
     @Test
-    public void 快照恢复必须显式业务索引() {
+    public void 快照恢复只能走专属端点_raw一律拒绝() {
         assertRejected(() -> admin.guardRawGuarded("POST", "/_snapshot/repo/snap/_restore", "{}"),
                 "恢复全部");
         assertRejected(() -> admin.guardRawGuarded("POST", "/_snapshot/repo/snap/_restore",
                 "{\"indices\":\"*\"}"), "恢复通配");
-        assertAllowed(() -> admin.guardRawGuarded("POST", "/_snapshot/repo/snap/_restore",
-                "{\"indices\":\"logs-*\"}"), "恢复业务索引");
+        assertRejected(() -> admin.guardRawGuarded("POST", "/_snapshot/repo/snap/_restore",
+                "{\"indices\":\"logs-*\"}"), "raw 恢复业务索引");
+        assertAllowed(() -> admin.guardRestoreBody("{\"indices\":\"logs-*\"}"), "专属端点恢复业务索引");
     }
 
     @Test
-    public void 别名通配绑定拒绝() {
+    public void 别名只能走专属端点_raw一律拒绝() {
         assertRejected(() -> admin.guardRawGuarded("POST", "/_aliases",
                 "{\"actions\":[{\"add\":{\"index\":\"*\",\"alias\":\"rest\"}}]}"), "通配别名");
         assertRejected(() -> admin.guardRawGuarded("POST", "/_aliases",
                 "{\"actions\":[{\"add\":{\"index\":\"es_console*\",\"alias\":\"rest\"}}]}"), "控制面别名");
         assertRejected(() -> admin.guardRawGuarded("POST", "/_aliases",
                 "{\"actions\":[{\"add\":{\"indices\":[\"*\"],\"alias\":\"rest\"}}]}"), "复数通配别名");
-        assertAllowed(() -> admin.guardRawGuarded("POST", "/_aliases",
-                "{\"actions\":[{\"add\":{\"index\":\"logs-*\",\"alias\":\"rest\"}}]}"), "业务别名");
-        assertAllowed(() -> admin.guardRawGuarded("POST", "/_aliases",
-                "{\"actions\":[{\"add\":{\"indices\":[\"logs-*\"],\"alias\":\"rest\"}}]}"), "复数业务别名");
+        assertRejected(() -> admin.guardRawGuarded("POST", "/_aliases",
+                "{\"actions\":[{\"add\":{\"index\":\"logs-*\",\"alias\":\"rest\"}}]}"), "raw 业务别名");
+        assertAllowed(() -> admin.guardAliasActionsBody(
+                "{\"actions\":[{\"add\":{\"index\":\"logs-*\",\"alias\":\"rest\"}}]}"), "专属端点业务别名");
+        assertAllowed(() -> admin.guardAliasActionsBody(
+                "{\"actions\":[{\"add\":{\"indices\":[\"logs-*\"],\"alias\":\"rest\"}}]}"), "专属端点复数别名");
     }
 
     @Test
-    public void 模板catchAll拒绝() {
+    public void 模板只能走专属端点_raw一律拒绝() {
         assertRejected(() -> admin.guardRawGuarded("PUT", "/_index_template/x",
                 "{\"index_patterns\":[\"*\"],\"template\":{}}"), "索引模板 catch-all");
         assertRejected(() -> admin.guardRawGuarded("PUT", "/_template/x",
                 "{\"index_patterns\":[\"es_*\"],\"settings\":{}}"), "旧模板 catch-all");
-        assertAllowed(() -> admin.guardRawGuarded("PUT", "/_index_template/x",
-                "{\"index_patterns\":[\"logs-*\"],\"template\":{}}"), "业务模板");
+        assertRejected(() -> admin.guardRawGuarded("PUT", "/_index_template/x",
+                "{\"index_patterns\":[\"logs-*\"],\"template\":{}}"), "raw 业务模板");
+        assertAllowed(() -> admin.guardIndexTemplateBody(
+                "{\"index_patterns\":[\"logs-*\"],\"template\":{}}"), "专属端点业务模板");
     }
 
     @Test

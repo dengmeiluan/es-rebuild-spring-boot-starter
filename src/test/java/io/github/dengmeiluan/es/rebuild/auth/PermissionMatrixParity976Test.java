@@ -17,9 +17,21 @@
 package io.github.dengmeiluan.es.rebuild.auth;
 
 import org.junit.Test;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
+import org.springframework.core.type.filter.AnnotationTypeFilter;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -102,5 +114,79 @@ public class PermissionMatrixParity976Test {
         assertTrue(shared.get("/cluster/devtools/execute").containsAll(Arrays.asList("rest", "devtools")));
         assertTrue("devtools 页必须在契约中",
                 pageKeys(ConsolePageCatalog.load()).contains("devtools"));
+    }
+
+    /**
+     * 代码级兜底：扫描所有 @RestController 的写映射，逐个要求登记到权限面板（或自助白名单）。
+     * 新增写接口忘记登记页面归属时，本测试直接失败，而不是默默回落角色门。
+     */
+    @Test
+    public void 所有控制器写端点必须登记权限面板或自助白名单() throws Exception {
+        Set<String> registered = new HashSet<>(writeEndpointPaths());
+        Set<String> selfService = new HashSet<>(Arrays.asList(
+                "/internal/es/index/auth/login",
+                "/internal/es/index/auth/change-password",
+                "/internal/es/index/auth/logout",
+                "/internal/es/index/setup/test",
+                "/internal/es/index/setup/apply"));
+        ClassPathScanningCandidateComponentProvider scanner =
+                new ClassPathScanningCandidateComponentProvider(false);
+        scanner.addIncludeFilter(new AnnotationTypeFilter(RestController.class));
+        List<String> missing = new ArrayList<>();
+        Set<String> discovered = new HashSet<>();
+        for (BeanDefinition bd : scanner.findCandidateComponents("io.github.dengmeiluan.es.rebuild")) {
+            Class<?> clazz = Class.forName(bd.getBeanClassName(), false,
+                    PermissionMatrixParity976Test.class.getClassLoader());
+            List<String> bases = mappingPaths(clazz.getAnnotation(RequestMapping.class));
+            if (bases.isEmpty()) bases = Collections.singletonList("");
+            for (Method m : clazz.getDeclaredMethods()) {
+                for (String path : writePaths(m)) {
+                    for (String base : bases) {
+                        String full = joinPath(base, path);
+                        if (full.contains("{") || full.endsWith("/probe")) continue;
+                        if (ConsoleAuthInterceptor.isReadonlyPost(full)) continue;
+                        discovered.add(full);
+                        if (!registered.contains(full) && !selfService.contains(full)) missing.add(full);
+                    }
+                }
+            }
+        }
+        assertTrue("扫描器未发现写端点（类路径扫描失效，守卫将形同虚设）", discovered.size() > 20);
+        assertTrue("写端点未登记权限面板/自助白名单: " + missing, missing.isEmpty());
+    }
+
+    private static List<String> writePaths(Method m) {
+        List<String> out = new ArrayList<>();
+        for (Object ann : new Object[]{m.getAnnotation(PostMapping.class), m.getAnnotation(PutMapping.class),
+                m.getAnnotation(DeleteMapping.class), m.getAnnotation(PatchMapping.class)}) {
+            if (ann == null) continue;
+            try {
+                Method value = ann.getClass().getMethod("value");
+                Object v = value.invoke(ann);
+                if (v instanceof String[]) Collections.addAll(out, (String[]) v);
+                Method path = ann.getClass().getMethod("path");
+                Object p = path.invoke(ann);
+                if (p instanceof String[]) Collections.addAll(out, (String[]) p);
+            } catch (Exception ignore) {
+                // 注解形态变化：由编译期兜底
+            }
+        }
+        return out;
+    }
+
+    private static List<String> mappingPaths(RequestMapping mapping) {
+        List<String> out = new ArrayList<>();
+        if (mapping == null) return out;
+        Collections.addAll(out, mapping.value());
+        Collections.addAll(out, mapping.path());
+        return out;
+    }
+
+    private static String joinPath(String base, String path) {
+        String b = base == null ? "" : base.trim();
+        String p = path == null ? "" : path.trim();
+        String full = ("/" + b + "/" + p).replaceAll("/+", "/");
+        if (full.length() > 1 && full.endsWith("/")) full = full.substring(0, full.length() - 1);
+        return full;
     }
 }

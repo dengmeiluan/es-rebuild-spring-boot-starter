@@ -91,6 +91,7 @@ public class JdbcConnStore implements ConnStore {
                 str(row.get("username")), str(row.get("password")));
         conn.setMinRole(str(row.get("min_role")));
         conn.setAuthType(str(row.get("auth_type")));
+        conn.setEnv(str(row.get("env")));
         conn.setConnectTimeoutMs(intOrNull(row.get("connect_timeout_ms")));
         conn.setSocketTimeoutMs(intOrNull(row.get("socket_timeout_ms")));
         return conn;

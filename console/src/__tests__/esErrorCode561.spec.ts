@@ -123,6 +123,6 @@ describe('F1 CmdPalette forcemerge 异步化（561）', () => {
 
   it('成功 toast 带「看任务」action 直达 /tasks', () => {
     expect(code).toContain('看任务');
-    expect(code).toContain("router.push('/tasks')");
+    expect(code).toContain("go('/tasks')");
   });
 });

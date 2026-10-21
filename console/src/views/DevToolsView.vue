@@ -58,7 +58,7 @@
  （非 admin 仍可见可读可聚焦，仅省宽度；原文案字面保留在 aria-label/title，
  permGating 可见性语义锚零漂移） -->
         <span v-else class="dt-perm-dim" tabindex="0" role="img" aria-label="运行需 ADMIN 角色"
-          title="运行需 ADMIN、DevTools 或 REST 页写权限：运行走 /cluster/devtools/execute 透传（方法+路径任意组合）"><ShieldAlert :size="13" /></span>
+          title="运行需 ADMIN、DevTools 或 REST 页写权限；非 ADMIN 仅数据面（检索/文档/批量），系统管理与别名/快照/模板仍仅 ADMIN"><ShieldAlert :size="13" /></span>
         <button v-if="cur.busy" class="btn sm" @click="qr.cancel()"><X :size="12" /> 取消</button>
         <button class="btn ghost sm" @click="copyCurl" title="复制 curl">
           <Copy :size="12" /> curl
@@ -257,7 +257,7 @@
         <span class="dt-err-rs">{{ cur.errBrief }}</span>
         <!-- 提示条三要素审计：原因（HTTP 码 + errBrief 人话）已具备，补重试入口——复用本页 run()
  重新执行当前 Tab 的方法+路径+body；busy 中禁用防重入（全站 err-bar 范式） -->
-        <button class="btn sm" :disabled="cur.busy" @click="run"><RefreshCw :size="12" :class="{ spinning: cur.busy }" /> 重试</button>
+        <button v-if="canAdmin" class="btn sm" :disabled="cur.busy" @click="run"><RefreshCw :size="12" :class="{ spinning: cur.busy }" /> 重试</button>
       </div>
       <div class="dt-out">
         <!-- W6-T3：裸 pre → 只读 Monaco（json 着色/折叠/Ctrl+F；非 JSON 落 plaintext）——:model-value 单向不回写 -->
@@ -297,9 +297,13 @@
         <EmptyState v-else :icon="TerminalSquare" text="输入 REST 请求执行" hint="快捷键 Ctrl+Enter">
           <!-- 空态给下一步动作，一键起步。三个不同参数的 quickRun 靠插槽承载
  （单 actionText 只能装一个），容器留白仍归 EmptyState -->
-          <button class="btn ghost xs" @click="quickRun('GET', '/_cluster/health')">试试：集群健康</button>
-          <button class="btn ghost xs" @click="quickRun('GET', '/_cat/indices?v&format=json')">列出索引</button>
-          <button class="btn ghost xs" @click="quickRun('POST', '/_search', SEARCH_SAMPLE)">全局搜 5 条</button>
+          <!-- 空态快捷入口同样按写门隐藏：无 DevTools/REST 写权时 run() 必然拒绝，
+               展示可点按钮只会制造必 403 的死入口 -->
+          <template v-if="canAdmin">
+            <button class="btn ghost xs" @click="quickRun('GET', '/_cluster/health')">试试：集群健康</button>
+            <button class="btn ghost xs" @click="quickRun('GET', '/_cat/indices?v&format=json')">列出索引</button>
+            <button class="btn ghost xs" @click="quickRun('POST', '/_search', SEARCH_SAMPLE)">全局搜 5 条</button>
+          </template>
         </EmptyState>
       </div>
     </FocusableSurface>
@@ -438,6 +442,49 @@ const store = useAppStore();
 const auth = useAuthStore();
 const permOpen = ref(false);
 const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/devtools/execute', store.target)); /* DevTools 页写键或 rest 写键（ADMIN 全局） */
+/* 预填 run:true 在身份未确认时挂起，probe 完成后仅执行一次：
+   既不提前发写请求，也不让有权限的人因为开屏竞态而丢失自动执行。 */
+const pendingPrefillRun = ref(false);
+/* 挂起执行必须绑定到被预填的那个 tab：等待身份期间用户可能切到另一个含写请求的
+   历史 tab，watcher 不能用“当前 tab”代跑——否则会绕过手动发送。 */
+const pendingPrefillTab = ref<Tab | null>(null);
+/* 只读判定：GET/HEAD 与搜索类 POST（_search/_count/_sql/scroll）可自动执行；
+   其余写方法必须手动发送。 */
+function isReadOnlyPrefill(method: string, path: string): boolean {
+  const m = String(method || 'GET').toUpperCase();
+  if (m === 'GET' || m === 'HEAD') return true;
+  if (m !== 'POST') return false;
+  const p = String(path || '').split('?')[0];
+  return p === '/_search' || p === '/_count' || p === '/_sql' || p === '/_xpack/sql'
+    || p.endsWith('/_search') || p.endsWith('/_search/template') || p.endsWith('/_search/scroll')
+    || p.endsWith('/_count') || p.endsWith('/_msearch') || p.endsWith('/_sql');
+}
+/* KeepAlive 失活页不得执行挂起预填：离页即丢弃，避免身份晚到后在不可见页发写请求 */
+const pageActive = ref(true);
+watch([() => auth.probed, () => auth.me, () => auth.authDisabled, canAdmin], () => {
+  if (!pendingPrefillRun.value || !pageActive.value || !auth.probed) return;
+  /* 首探 401 后宿主令牌可能晚到并重探成功：me 仍空且未明确无鉴权时继续等 */
+  if (auth.me == null && !auth.authDisabled) return;
+  const tab = pendingPrefillTab.value;
+  pendingPrefillRun.value = false;
+  pendingPrefillTab.value = null;
+  if (!canAdmin.value) {
+    store.notify('warning', '身份已确认但无 DevTools 写权限，请求仅填入未执行');
+    return;
+  }
+  /* 只执行当初被预填的那个只读 tab；用户等待期间切换/删除了它就不代跑当前 tab。 */
+  if (!tab || !isReadOnlyPrefill(tab.method, tab.path)) {
+    store.notify('warning', '预填请求已失效，请手动确认后发送');
+    return;
+  }
+  const idx = tabs.value.indexOf(tab);
+  if (idx < 0) {
+    store.notify('warning', '预填标签页已关闭，未自动执行');
+    return;
+  }
+  active.value = idx;
+  run();
+});
 
 /* P1 workbench：布局偏好按 target+route+mode+viewport 档位隔离（不与 query 草稿混用） */
 const wbScope = { target: store.target || 'host', route: '/devtools', mode: 'search', profile: 'standard' as const };
@@ -789,11 +836,15 @@ onMounted(() => {
  onMounted 双挂载幂等无害 */
 onActivated(() => {
   /* KeepAlive 缓存态恢复：全局键只在页面激活时挂载，离页不得残留执行通道 */
+  pageActive.value = true;
   window.addEventListener('keydown', onGlobalRunKey);
   consumePrefill();
 });
 onDeactivated(() => {
   /* 切页仅失活不卸载——必须摘掉全局执行键，防在别的页面 Ctrl+Enter 触发隐藏 Tab 写请求 */
+  pageActive.value = false;
+  pendingPrefillRun.value = false;
+  pendingPrefillTab.value = null;
   window.removeEventListener('keydown', onGlobalRunKey);
 });
 onBeforeUnmount(() => {
@@ -832,17 +883,26 @@ function consumePrefill() {
   removeStoredRaw(sessionStorage, 'es-console.devtools.open');
   try {
     const p = JSON.parse(raw);
-    tabs.value.push(mkTab(p.title, p.method || 'GET', p.path || '/', p.body || ''));
+    const tab = mkTab(p.title, p.method || 'GET', p.path || '/', p.body || '');
+    tabs.value.push(tab);
     active.value = tabs.value.length - 1;
     persist();
     /* 身份探测未完成时不得自动发出写请求：预填只回填、不执行。
-       authDisabled 仅在后端明确 404（无鉴权部署）时为真，401/网络失败保持等待。 */
-    if (p.run) {
-      if (auth.me == null && !auth.authDisabled) {
-        store.notify('info', '身份确认中，请求已填入但未自动执行');
-      } else {
+       自动执行仅限 GET/HEAD 与搜索类只读 POST——sessionStorage 同源可写，
+       任意脚本塞入 run:true 的 DELETE/PUT 不得借打开 DevTools 自动落地。 */
+    const readOnlyPrefill = isReadOnlyPrefill(p.method || 'GET', p.path || '/');
+    if (p.run && readOnlyPrefill) {
+      if (!auth.probed) {
+        pendingPrefillRun.value = true;
+        pendingPrefillTab.value = tab;
+        store.notify('info', '身份确认中，请求已填入，确认后自动执行');
+      } else if (canAdmin.value) {
         run();
+      } else {
+        store.notify('warning', '无 DevTools 写权限，请求已填入但未执行');
       }
+    } else if (p.run) {
+      store.notify('info', '写请求仅预填，请确认后手动发送');
     }
   } catch { /* 预填内容损坏则忽略，正常打开 DevTools */ }
 }

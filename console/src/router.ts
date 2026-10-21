@@ -61,6 +61,10 @@ export function normalizeRoutePath(path: string): string {
  grantedPages=null 未启用（内置身份/宿主未下发/逃生阀/probe 未完成）→ 全量放行；
  非页面路由（/forbidden、404、legacy 重定向）不拦——否则全拒用户连提示页都进不去。
  targetId 缺省=宿主：静态键模型行为与既有 includes 逐字节一致，连接键模型按当前目标收缩。 */
+/* 恒定执行在宿主集群的页面：连接键必须按 host 判定，否则 conn:c1:xxx 会看到一进去就 403
+   的死页面，而 conn:host:xxx 反而被隐藏。 */
+export const HOST_BOUND_PAGES: ReadonlySet<string> = new Set(['system', 'config-drift']);
+
 export function pageAllowed(
   grantedPages: readonly string[] | null,
   path: string,
@@ -69,8 +73,14 @@ export function pageAllowed(
   if (grantedPages == null) return true;
   const item = NAV_ITEMS.find(n => n.path === normalizeRoutePath(path));
   if (!item) return true;
-  const eff = effectivePagesForTarget(grantedPages, targetId);
-  return eff !== null && eff.has(item.pageKey);
+  const eff = effectivePagesForTarget(
+    grantedPages, HOST_BOUND_PAGES.has(item.pageKey) ? 'host' : targetId);
+  const tid = !targetId || String(targetId).toLowerCase() === 'host' ? 'host' : targetId;
+  /* 只有 conn:{tid}:w:rest 写键才把 DevTools 页面视为可达；静态 rest 页在纯静态模型
+     仍受 ADMIN 角色门约束，给低角色展示入口只会制造必 403 的死页面。 */
+  const restWriter = grantedPages.some(k => k === 'conn:' + tid + ':w:rest');
+  return eff !== null && (eff.has(item.pageKey)
+    || (item.pageKey === 'devtools' && restWriter));
 }
 
 /* 2.5.0 页面级授权：拒绝时的统一跳转构造（守卫/App 复核共用）。放行返回 null。 */

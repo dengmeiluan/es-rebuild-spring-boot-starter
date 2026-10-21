@@ -142,6 +142,25 @@ public class EnvPagesResolver {
         return grantedPages.contains(CONN_KEY_PREFIX + targetId + ":w:" + pageKey);
     }
 
+    /**
+     * 静态页写权：授权集里的无前缀 pageKey（全局页授权）经 env 模板收缩后仍然可见。
+     * 混合授权（conn 键 + 静态键）下，静态键不能被 conn 写法门吞掉——否则同一份
+     * 静态页授权在纯静态模型可写、混入任一 conn 读键后反而 403（有权限人被拦）。
+     */
+    public boolean staticWriteAllowed(String targetId, String pageKey, Set<String> grantedPages) {
+        if (grantedPages == null || pageKey == null || !grantedPages.contains(pageKey)) return false;
+        return effectivePages(targetId, grantedPages).contains(pageKey);
+    }
+
+    /** 授权集是否含任一静态（全局页）键。混合模型的无页归属写回落角色门时用。 */
+    public boolean hasStatic(Set<String> grantedPages) {
+        if (grantedPages == null) return false;
+        for (String g : grantedPages) {
+            if (g != null && !g.startsWith(CONN_KEY_PREFIX)) return true;
+        }
+        return false;
+    }
+
     /** 403 响应体（页面被 env 模板收缩掉时——与 PAGE_DENIED 风格区分）。 */
     public static String denyBody(String page) {
         return "{\"code\":\"ENV_PAGE_DENIED\",\"page\":\"" + page + "\",\"message\":\"当前连接环境未开放该页面\"}";

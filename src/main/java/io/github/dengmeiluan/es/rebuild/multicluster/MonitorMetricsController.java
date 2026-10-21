@@ -16,13 +16,19 @@
 
 package io.github.dengmeiluan.es.rebuild.multicluster;
 
+import io.github.dengmeiluan.es.rebuild.auth.ConsoleConnVisibility;
+import io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -40,9 +46,11 @@ import java.util.Map;
 public class MonitorMetricsController {
 
     private final MonitorMetricsStore store;
+    private final ConnStore connStore;
 
-    public MonitorMetricsController(MonitorMetricsStore store) {
+    public MonitorMetricsController(MonitorMetricsStore store, ConnStore connStore) {
         this.store = store;
+        this.connStore = connStore;
     }
 
     /** interval 桶宽合法性（缺省不聚合走原始 doc；给了必须形如 60s/10m/1h/1d）。 */
@@ -71,11 +79,30 @@ public class MonitorMetricsController {
                                        @RequestParam(required = false) Long fromMs,
                                        @RequestParam(required = false) Long toMs,
                                        @RequestParam(required = false) String interval,
-                                       @RequestParam(required = false, defaultValue = "avg") String agg) {
+                                       @RequestParam(required = false, defaultValue = "avg") String agg,
+                                       HttpServletRequest request) {
+        ConsolePrincipal principal = MonitorRecordVisibility.principal(request);
+        ConsoleConnVisibility.Snapshot snap = ConsoleConnVisibility.snapshot(principal, connStore);
+        if (connId != null && !connId.trim().isEmpty() && !snap.seesId(connId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "暂无该连接监控数据的访问权限");
+        }
+        if (connName != null && !connName.trim().isEmpty()
+                && !ConsoleConnVisibility.canSeeName(snap, principal, connName)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "暂无该集群监控数据的访问权限");
+        }
+        boolean hasFilter = (connId != null && !connId.trim().isEmpty())
+                || (connName != null && !connName.trim().isEmpty());
+        /* 节点聚合桶只含 nodeName，无法逐行判定归属：未覆盖全部连接时必须显式指定集群。
+           静态页/内置角色即使非 ADMIN 也可能覆盖目录内全部连接（seesAllKnown），
+           不能只因 visibleIds 非空就 403——那会把有权限的人挡在默认视图外。 */
+        if (!snap.seesAllKnown() && !hasFilter && "node".equals(scope)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "节点视图需先选择已授权的集群");
+        }
         Map<String, Object> out = new LinkedHashMap<>();
+        List<Map<String, Object>> records;
         if (interval == null || interval.isEmpty()) {
             /* 缺省不聚合：原始 doc 形态，前端零改动兼容 */
-            out.put("records", store.search(connId, connName, scope, size, from, fromMs, toMs));
+            records = store.search(connId, connName, scope, size, from, fromMs, toMs);
         } else {
             if (!interval.matches(INTERVAL_PATTERN)) {
                 throw new IllegalStateException("非法 interval（须形如 60s/10m/1h/1d）: " + interval);
@@ -83,8 +110,13 @@ public class MonitorMetricsController {
             if (!agg.matches(AGG_PATTERN)) {
                 throw new IllegalStateException("非法 agg（仅 avg|max）: " + agg);
             }
-            out.put("records", store.searchAgg(connId, connName, scope, fromMs, toMs, interval, agg));
+            records = store.searchAgg(connId, connName, scope, fromMs, toMs, interval, agg);
         }
+        /* 节点桶只含 nodeName：显式过滤已由查询侧收口；全量可见用户也无需逐行判定。
+           其余行按 connId/connName 再验一次。 */
+        boolean alreadyScopedNode = "node".equals(scope) && (hasFilter || snap.seesAllKnown());
+        out.put("records", alreadyScopedNode ? records
+                : MonitorRecordVisibility.filterByIdentity(records, snap));
         return Collections.unmodifiableMap(out);
     }
 
@@ -95,7 +127,18 @@ public class MonitorMetricsController {
      */
     @GetMapping("top-indexes")
     public Map<String, Object> topIndexes(@RequestParam(required = false) String connName,
-                                          @RequestParam(required = false, defaultValue = "8") Integer limit) {
+                                          @RequestParam(required = false, defaultValue = "8") Integer limit,
+                                          HttpServletRequest request) {
+        ConsolePrincipal principal = MonitorRecordVisibility.principal(request);
+        ConsoleConnVisibility.Snapshot snap = ConsoleConnVisibility.snapshot(principal, connStore);
+        boolean hasName = connName != null && !connName.trim().isEmpty();
+        if (!snap.seesAllKnown() && !hasName) {
+            /* Top 快照行不带集群标识：未覆盖全部连接时必须按已授权集群逐次查询 */
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Top 索引需先选择已授权的集群");
+        }
+        if (hasName && !ConsoleConnVisibility.canSeeName(snap, principal, connName)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "暂无该集群 Top 索引的访问权限");
+        }
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("records", store.searchTopIndexes(connName,
                 Math.max(1, Math.min(limit == null ? 8 : limit, 20))));

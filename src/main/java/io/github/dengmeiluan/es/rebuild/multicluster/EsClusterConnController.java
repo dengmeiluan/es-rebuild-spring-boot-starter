@@ -91,14 +91,30 @@ public class EsClusterConnController {
         ConsoleRole actual = p instanceof ConsolePrincipal
                 ? ((ConsolePrincipal) p).getRole() : ConsoleRole.VIEWER;
         ConsolePrincipal principal = p instanceof ConsolePrincipal ? (ConsolePrincipal) p : null;
+        /* 一次连接目录快照，避免每行一次 list()/ES 查询（N+1） */
+        io.github.dengmeiluan.es.rebuild.auth.ConsoleConnVisibility.Snapshot snap =
+                io.github.dengmeiluan.es.rebuild.auth.ConsoleConnVisibility.snapshot(principal, connStore);
         List<Map<String, Object>> out = new ArrayList<>();
-        for (Map<String, Object> c : connStore.list()) {
+        /* 复用快照已取到的目录行：再次 list() 在存储瞬时故障时会 500，
+           返回 null 的实现还会 NPE；空目录也必须是空数组而不是异常。
+           ADMIN 快照不受限（visibleIds=null）时不预取目录行，此处补一次读。 */
+        List<Map<String, Object>> rows = snap.rows;
+        if (snap.visibleIds == null) {
+            try {
+                rows = connStore.list();
+                if (rows == null) rows = java.util.Collections.emptyList();
+            } catch (Exception e) {
+                rows = java.util.Collections.emptyList();
+            }
+        }
+        for (Map<String, Object> c : rows) {
             ConsoleRole required = ConsoleRole.parse(c.get("minRole") == null ? null : String.valueOf(c.get("minRole")));
-            if (!actual.atLeast(required)) {
+            /* principal=null=无鉴权部署：不按 minRole 过滤（全功能语义）；ADMIN 自然全过 */
+            if (principal != null && !actual.atLeast(required)) {
                 continue;
             }
             /* 连接模型：未授权的连接档案连名称/地址都不下发，与前端 canSeeConn 同口径 */
-            if (!connModelVisible(principal, String.valueOf(c.get("id")))) {
+            if (!snap.seesId(String.valueOf(c.get("id")))) {
                 continue;
             }
             if (prober != null) {
@@ -132,20 +148,22 @@ public class EsClusterConnController {
     public Map<String, Object> probe(@PathVariable String id, HttpServletRequest request) {
         RemoteClusterConn conn = connStore == null ? null : connStore.get(id);
         if (conn != null) {
-            ConsoleRole required = ConsoleRole.parse(conn.getMinRole());
             Object p = request == null ? null : request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);
-            ConsoleRole actual = p instanceof ConsolePrincipal
-                    ? ((ConsolePrincipal) p).getRole() : ConsoleRole.VIEWER;
-            if (!actual.atLeast(required)) {
-                throw new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.FORBIDDEN,
-                        "当前角色无权探活该连接（需 " + required.name() + "）");
-            }
-            ConsolePrincipal principal = p instanceof ConsolePrincipal ? (ConsolePrincipal) p : null;
-            if (!connModelVisible(principal, id)) {
-                throw new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.FORBIDDEN,
-                        "当前身份未获该连接授权，不能探活");
+            /* principal=null=无鉴权部署：全功能可用，不走 minRole/页面可见性门；
+               鉴权开启时拦截器保证 principal 恒在场。 */
+            if (p instanceof ConsolePrincipal) {
+                ConsolePrincipal principal = (ConsolePrincipal) p;
+                ConsoleRole required = ConsoleRole.parse(conn.getMinRole());
+                if (!principal.getRole().atLeast(required)) {
+                    throw new org.springframework.web.server.ResponseStatusException(
+                            org.springframework.http.HttpStatus.FORBIDDEN,
+                            "当前角色无权探活该连接（需 " + required.name() + "）");
+                }
+                if (!connModelVisible(principal, id)) {
+                    throw new org.springframework.web.server.ResponseStatusException(
+                            org.springframework.http.HttpStatus.FORBIDDEN,
+                            "当前身份未获该连接授权，不能探活");
+                }
             }
         }
         Map<String, Object> r = new LinkedHashMap<>();
@@ -166,15 +184,9 @@ public class EsClusterConnController {
         return prober.probeOne(id);
     }
 
-    /** 连接模型下必须有该连接维度键（读或写）或全局静态页键；ADMIN/非页面模型放行。 */
-    private static boolean connModelVisible(ConsolePrincipal p, String connId) {
-        if (p == null || !p.isDelegated() || p.getGrantedPages() == null) return true;
-        if (p.getRole().atLeast(ConsoleRole.ADMIN)) return true;
-        java.util.Set<String> gp = p.getGrantedPages();
-        boolean connModel = gp.stream().anyMatch(g -> g != null && g.startsWith("conn:"));
-        if (!connModel) return true; /* 静态页键是全局授权 */
-        String prefix = "conn:" + connId + ":";
-        return gp.stream().anyMatch(g -> g != null && g.startsWith(prefix));
+    /** 连接可见性统一走 ConsoleConnVisibility（连接目录/权限面板/监控接口同口径）。 */
+    private boolean connModelVisible(ConsolePrincipal p, String connId) {
+        return io.github.dengmeiluan.es.rebuild.auth.ConsoleConnVisibility.canSee(p, connId, connStore);
     }
 
     /** 兼容旧内部调用/单测的一参入口（无 HTTP 请求上下文时按 VIEWER 角色处理）。 */

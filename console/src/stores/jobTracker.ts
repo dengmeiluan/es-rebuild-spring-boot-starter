@@ -206,7 +206,7 @@ export const useJobTrackerStore = defineStore('jobTracker', () => {
  当前目标解析有效页集（与 router.effectivePagesForTarget/后端 EnvPagesResolver
  同构）判定；快照通道额外受 snapshots 页授权约束。 */
     const granted = auth.grantedPages; // null=页面授权未启用（全放行）
-    const eff = effectivePagesForTarget(granted, app.target || 'host');
+    const eff = auth.isAdmin() ? null : effectivePagesForTarget(granted, app.target || 'host');
     const can = (pageKey: string) => eff == null || eff.has(pageKey);
     const wantAdhoc = can('adhoc-rebuild');
     const wantXm = can('xmigrate');

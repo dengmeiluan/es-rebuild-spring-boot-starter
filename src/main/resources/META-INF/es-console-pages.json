@@ -20,7 +20,7 @@
     { "key": "workspace", "name": "工作台", "group": "core", "route": "/workspace", "icon": "LayoutGrid", "hotkey": "h", "apiPrefixes": [], "minVer": null },
     { "key": "live", "name": "实时大屏", "group": "core", "route": "/live", "icon": "MonitorSpeaker", "hotkey": "", "apiPrefixes": [], "minVer": null },
     { "key": "favorites", "name": "收藏夹", "group": "core", "route": "/favorites", "icon": "Star", "hotkey": "b", "apiPrefixes": [], "minVer": null },
-    { "key": "security", "name": "安全中心", "group": "core", "route": "/security", "icon": "ShieldCheck", "hotkey": "", "apiPrefixes": ["/internal/es/index/auth/users", "/internal/es/index/auth/audit-facets"], "minVer": null },
+    { "key": "security", "name": "安全中心", "group": "core", "route": "/security", "icon": "ShieldCheck", "hotkey": "", "apiPrefixes": ["/internal/es/index/auth/users", "/internal/es/index/auth/audit-facets", "/internal/es/index/auth/ops-audit"], "minVer": null },
     { "key": "search", "name": "查询工作台", "group": "search", "route": "/search", "icon": "TerminalSquare", "hotkey": "2", "apiPrefixes": ["/internal/es/index/cluster/sql", "/internal/es/index/cluster/count", "/internal/es/index/cluster/lucene-search", "/internal/es/index/cluster/resolve-schema", "/internal/es/index/cluster/pit/"], "minVer": null },
     { "key": "search-templates", "name": "搜索模板中心", "group": "search", "route": "/search-templates", "icon": "LayoutTemplate", "hotkey": "", "apiPrefixes": ["/internal/es/index/cluster/render-template", "/internal/es/index/cluster/search-template"], "minVer": null },
     { "key": "browser", "name": "数据浏览器", "group": "search", "route": "/browser", "icon": "Database", "hotkey": "4", "apiPrefixes": [], "minVer": null },

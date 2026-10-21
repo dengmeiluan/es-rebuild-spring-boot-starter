@@ -24,12 +24,12 @@ describe('自助操作流水（非 admin 可见自己的操作）', () => {
     expect(apiSrc).toContain('`/auth/ops-audit/mine?${q({ action, size, from, since, connName })}`');
   });
   it('SecurityView：canAuditAll 分派全量/自助；身份就绪任意角色补拉', () => {
-    expect(sec).toContain('const canAuditAll = computed(() => auth.canAuditAll());');
+    expect(sec).toContain('const canAuditAll = computed(() => auth.canAuditAll(store.target));');
     /*  同步更新：uriPrefix 前缀下推第 7 参接活（ 输入挂了但通道缺失的死输入，
        服务端 ConsoleAuthController uriPrefix 形参在案），源码锁字面随之（mine 分支 5 参未动，31 行锁零触） */
     expect(sec).toContain('? await api.auth.opsAudit(fUser.value || undefined, fAction.value || undefined, AUDIT_PAGE, offset, sinceMsOf(), fConn.value || undefined, fUri.value || undefined)');
     expect(sec).toContain(': await api.auth.opsAuditMine(fAction.value || undefined, AUDIT_PAGE, offset, sinceMsOf(), fConnMine.value || undefined);'); /* 自助面集群维度 */
-    expect(sec).toContain('（仅我的操作 · 全量需 AUDIT_OP/ADMIN）');
+    expect(sec).toContain('（仅我的操作 · 全量需 AUDIT_OP/ADMIN + 安全中心读权限）');
     expect(sec).toContain('if (role && old !== role) { loadUsers(); loadAudit(); }');
     /* 用户过滤输入框仅全量可见（mine 模式用户名被服务端锁死，给了也没用） */
     expect(sec).toContain('v-if="canAuditAll" v-model.trim="fUser"');
@@ -37,10 +37,13 @@ describe('自助操作流水（非 admin 可见自己的操作）', () => {
 });
 
 describe('capability 门禁真源（auth store 暴露）', () => {
-  it('auth store：can(cap)/canAuditAll() 统一入口；me=null（无鉴权部署）全放行不破既有语义', () => {
+  it('auth store：can(cap)/canAuditAll() 统一入口；仅明确无鉴权(authDisabled)全放行，身份未知 fail-closed', () => {
     expect(authStore).toContain("import { canCap, canViewAllAudit, type ConsoleCap } from '../utils/capability';");
-    expect(authStore).toContain('const can = (cap: ConsoleCap) => me.value == null ? true : canCap(me.value.role, cap);');
-    expect(authStore).toContain('const canAuditAll = () => me.value != null && canViewAllAudit(me.value.role);');
+    expect(authStore).toContain("const identityKnown = () => authDisabled.value || me.value != null || !probeStarted.value;");
+    expect(authStore).toContain('if (!identityKnown()) return false;');
+    expect(authStore).toContain('return me.value == null ? true : canCap(me.value.role, cap);');
+    expect(authStore).toContain('const canAuditAll = (targetId?: string | null) => me.value != null');
+    expect(authStore).toContain('&& canViewAllAudit(me.value.role) && canReadPage(\'security\', targetId);');
   });
 });
 
@@ -76,10 +79,11 @@ describe('危险按钮按角色隐藏（点名：只读不再看到删索引/删
     /* 同步更新：canW 定义行升连接感知档 canWriteOn(store.target)（第四波扫荡）；
        ：canO 细化为 canEndpoint(create-index 端点)——canO 唯一消费
        r59-create-index 的端点归 config-validator 页，连接模型按本页写键勾选裁决 */
-    expect(pal).toContain("const canW = auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/doc', store.target), canO = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target), canA = auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target);");
+    expect(pal).toContain("const canW = auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/doc', store.target), canO = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target);");
+    expect(pal).toContain('const canRawOps = () => auth.canAdminOps();');
     expect(pal).toContain("if (canO) list.push(\n    { id: 'r59-create-index'");
     expect(pal).toContain("if (canW) list.push(\n    { id: 'r59-create-doc'");
-    expect(pal).toContain("if (canA) list.push(\n    { id: 'ops-refresh'");
+    expect(pal).toContain("if (canRawOps()) list.push(\n    { id: 'ops-refresh'");
     expect(pal).toContain("{ id: 'ops-reroute-retry'"); /* raw 系一并入 admin 组 */
     expect(pal).toContain('...(canIlm ? [\n      { id: \'dev-ilm-start\''); /* 963 同步更新：ILM 起停门随 ilm/start 端点（canIlm），不再借 create-index 的 canO */
   });
@@ -179,8 +183,9 @@ describe('权限隐藏第二波（，16 视图写按钮收尾）', () => {
     const pl = V('PainlessLabView.vue');
     expect(pl).toContain('<button v-if="canOps" class="btn ghost xs" @click="save"');
     expect(pl).toContain('<X v-if="canOps" :size="10" class="pl-stored-x"');
-    /* 试跑 execute 是只读模拟，不受门禁 */
-    expect(pl).toContain('<button class="btn primary xs" @click="run" :disabled="busy">');
+    /* 试跑 execute 可执行脚本/读取 filter 上下文：按写档 canRun 门禁（后端同口径） */
+    expect(pl).toContain("const canRun = computed(() => auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/painless/execute', store.target));");
+    expect(pl).toContain('<button v-if="canRun" class="btn primary xs" @click="run" :disabled="busy">');
   });
   it('DiffEditorView 推送=write / LifecycleView ILM 起停 rollover move=ops / DevToolsView run=admin', () => {
     const df = V('DiffEditorView.vue');
@@ -297,7 +302,9 @@ describe('第四波： canWrite 连接感知扫荡（6 文件定义行 canWriteO
   it('IndexHubView：canWrite=canWriteOn(store.target)（189 只读提示文案随连接感知——conn 写键用户实际可编辑）', () => {
     expect(V('views/IndexHubView.vue')).toContain("const canWrite = computed(() => auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/update-partial', store.target));");
   });
-  it('CmdPalette：canW=canWriteOn(store.target)（create-doc 命令接连接感知档）；canO 细化为 canEndpoint(create-index 端点)（create-index 命令唯一消费，端点归 config-validator 页）；canA 管理域全局档不动', () => {
-    expect(V('components/CmdPalette.vue')).toContain("const canW = auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/doc', store.target), canO = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target), canA = auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target);");
+  it('CmdPalette：canW/canO 端点级；raw 五命令按 ADMIN 档（977 raw 系统守卫同源）', () => {
+    const v = V('components/CmdPalette.vue');
+    expect(v).toContain("const canW = auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/doc', store.target), canO = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target);");
+    expect(v).toContain('const canRawOps = () => auth.canAdminOps();');
   });
 });

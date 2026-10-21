@@ -17,6 +17,7 @@
 package io.github.dengmeiluan.es.rebuild.multicluster;
 
 import io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthInterceptor;
+import io.github.dengmeiluan.es.rebuild.auth.ConsoleConnVisibility;
 import io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal;
 import io.github.dengmeiluan.es.rebuild.auth.ConsoleRole;
 import io.github.dengmeiluan.es.rebuild.xmigrate.RemoteClusterConn;
@@ -80,35 +81,46 @@ public class EsTargetInterceptor implements HandlerInterceptor {
         // target-aware adhoc：prepare/start 是数据面入口——重建必须作用于用户当前选中的集群；
         //   其余 adhoc 端点（status/jobs/abort/confirm-switch）查的是宿主控制面的作业/存储，维持控制面
         boolean adhocDataPlane = uri.endsWith("/adhoc-rebuild/prepare") || uri.endsWith("/adhoc-rebuild/start");
+        /* /progress 直接走 EsIndexAdmin（路由感知）：远端 delete/update-by-query 的任务
+           进度必须查发起任务的集群，不能恒定回落宿主。 */
         boolean dataPlane = uri.contains("/cluster/") || uri.contains("/insight")
                 || uri.contains("/config-lab/validate")
+                || uri.endsWith("/internal/es/index/progress")
                 || adhocDataPlane;
-        // .2：宿主集群隐藏模式下，数据面只认连接档案目标
-        if (!hostVisible && dataPlane
-                && (target == null || target.trim().isEmpty() || EsClientRouter.HOST.equalsIgnoreCase(target.trim()))) {
+        Object p = request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+        ConsolePrincipal principal = p instanceof ConsolePrincipal ? (ConsolePrincipal) p : null;
+        String tid = target == null || target.trim().isEmpty()
+                ? EsClientRouter.HOST : target.trim();
+        if (dataPlane && !hostVisible && EsClientRouter.HOST.equalsIgnoreCase(tid)) {
             deny(response, 403, "{\"code\":\"HOST_DISABLED\",\"message\":\"当前部署未开放宿主集群，请先在顶栏选择集群连接\"}");
             return false;
         }
-        if (target != null && !target.isEmpty() && dataPlane) {
-            if (!EsClientRouter.HOST.equalsIgnoreCase(target.trim())) {
-                // 每次绑定都回查档案——minRole 改动即刻生效，不留权限缓存窗口
-                RemoteClusterConn conn = connStore.get(target.trim());
+        if (dataPlane) {
+            /* 连接隔离必须在目标绑定点完成：页面门只看“有没有某页授权”，不知道用户
+               能不能看这条连接。纯 conn 模型用户带别人的 X-Es-Target、或省略头回落到
+               宿主，都必须在这里被挡住——前端 canSeeConn 只是体验层。 */
+            if (EsClientRouter.HOST.equalsIgnoreCase(tid)) {
+                if (!ConsoleConnVisibility.canSeeHost(principal)) {
+                    deny(response, 403, "{\"code\":\"CONN_FORBIDDEN\",\"message\":\"当前身份未获宿主集群授权\"}");
+                    return false;
+                }
+            } else {
+                // 每次绑定都回查档案——minRole/页面授权改动即刻生效，不留权限缓存窗口
+                RemoteClusterConn conn = connStore.get(tid);
                 if (conn == null) {
                     deny(response, 404, "{\"code\":\"CONN_NOT_FOUND\",\"message\":\"连接不存在或已被删除\"}");
                     return false;
                 }
-                ConsoleRole required = ConsoleRole.parse(conn.getMinRole());
-                Object p = request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);
-                ConsoleRole actual = p instanceof ConsolePrincipal
-                        ? ((ConsolePrincipal) p).getRole() : ConsoleRole.VIEWER;
-                if (!actual.atLeast(required)) {
-                    deny(response, 403, "{\"code\":\"CONN_FORBIDDEN\",\"message\":\"当前角色无权访问该集群连接\","
+                if (!ConsoleConnVisibility.canSeeResolved(principal, tid, conn)) {
+                    ConsoleRole required = ConsoleRole.parse(conn.getMinRole());
+                    deny(response, 403, "{\"code\":\"CONN_FORBIDDEN\",\"message\":\"当前角色或页面授权无权访问该集群连接\","
                             + "\"required\":\"" + required.name() + "\"}");
                     return false;
                 }
-
             }
-            router.bind(target);
+        }
+        if (dataPlane && target != null && !target.trim().isEmpty()) {
+            router.bind(tid);
         } else {
             router.clear(); // 容器线程复用：无头/控制面请求必须清残留
         }

@@ -18,6 +18,7 @@ package io.github.dengmeiluan.es.rebuild.core;
 
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 /**
@@ -107,6 +108,58 @@ public class EsIndexAdminControlGuard963Test {
         assertRejected(() -> admin.guardIndexTemplateBody("{\"index_patterns\":[\"es_console_*\"]}"), "模板控制面通配");
         admin.guardIndexTemplateBody("{\"index_patterns\":[\"logs-*\",\"orders-*\"]}");
         admin.guardIndexTemplateBody("{\"template\":{\"settings\":{}}}");
+    }
+
+    @Test
+    public void SQL表清单解析覆盖引号无空白逗号别名与注释() {
+        /* 旧正则漏掉的五类真实载荷：FROM 后无空白、引号列表第二项、引号别名、块/行注释、反引号 */
+        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM\\\"e*\\\"\"}"), "FROM 后无空白");
+        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM \\\"logs\\\", \\\"e*\\\"\"}"), "逗号列表夹带");
+        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM \\\"logs\\\" AS \\\"l\\\", \\\"e*\\\"\"}"),
+                "引号别名后的逗号列表");
+        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM/*x*/e*\"}"), "块注释");
+        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM -- x\\ne*\"}"), "行注释");
+        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM `e*`\"}"), "反引号");
+        /* 未闭合注释/非法 JSON 必须 fail-closed，不能把整条 SQL 当引号跳过 */
+        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM/*x e*\"}"), "未闭合块注释");
+        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM -- x\ne*\"}"), "JSON 未转义换行");
+        assertRejected(() -> admin.guardSql("{\"notQuery\":\"x\"}"), "缺 query");
+        /* 合法业务 SQL 与字符串字面量不得误伤 */
+        admin.guardSql("{\"query\":\"SELECT * FROM \\\"logs-*\\\"\"}");
+        admin.guardSql("{\"query\":\"SELECT * FROM logs AS l, other WHERE x=1\"}");
+        admin.guardSql("{\"query\":\"SELECT 'FROM e*' AS x FROM logs-*\"}");
+        admin.guardSql("SELECT * FROM logs-* JOIN orders-* ON 1=1");
+        admin.guardSql("{\"cursor\":\"abc\"}");
+        assertRejected(() -> admin.guardSql("SHOW TABLES"), "元数据枚举");
+    }
+
+    @Test
+    public void mget路径形式允许省略文档_index_根路径仍禁止全量() {
+        admin.guardRawGuarded("POST", "/logs/_mget", "{\"docs\":[{\"_id\":\"1\"}]}");
+        assertRejected(() -> admin.guardRawGuarded("POST", "/_mget", "{\"docs\":[{\"_id\":\"1\"}]}"),
+                "根 _mget 缺 _index");
+        assertRejected(() -> admin.guardRawGuarded("POST", "/logs/_mget",
+                "{\"docs\":[{\"_id\":\"1\",\"_index\":\"es_console_user\"}]}"), "文档级控制索引");
+    }
+
+    @Test
+    public void 文档与脚本路径ID不得携带穿越片段() {
+        assertRejected(() -> admin.guardControlPath("/logs/_doc/../../_security/user/admin"), "多段穿越");
+        assertRejected(() -> admin.guardControlPath("/logs/_doc/%2e%2e/%2e%2e/_security/user/admin"), "编码穿越");
+        assertRejected(() -> EsIndexAdmin.encodePathToken("../../_security/user/admin", "文档 ID"), "ID 穿越");
+        assertRejected(() -> EsIndexAdmin.encodePathToken("a/b", "文档 ID"), "ID 斜杠");
+        assertRejected(() -> EsIndexAdmin.encodePathToken("a\\b", "脚本 ID"), "ID 反斜杠");
+        assertEquals("a%20b%26c", EsIndexAdmin.encodePathToken("a b&c", "文档 ID"));
+    }
+
+    @Test
+    public void Painless执行体不得读取控制面索引() {
+        assertRejected(() -> admin.guardPainlessBody(
+                "{\"script\":{\"source\":\"1\"},\"context_setup\":{\"index\":\"es_console_user\"}}"),
+                "painless 控制索引上下文");
+        assertRejected(() -> admin.guardPainlessBody(
+                "{\"index\":[\"logs-*\",\"es_console_user\"]}"), "painless index 数组夹带");
+        admin.guardPainlessBody("{\"script\":{\"source\":\"1\"},\"context_setup\":{\"index\":\"logs-*\"}}");
     }
 
     @Test

@@ -9,6 +9,7 @@ import { verLt } from '../utils/version';
 import { readUrlHostTheme } from '../utils/hostTheme';
 import type { HostThemeMode } from '../utils/hostTheme';
 import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
+import { useAuthStore } from './auth';
 
 export const useAppStore = defineStore('app', () => {
   /* 索引 */
@@ -44,7 +45,11 @@ export const useAppStore = defineStore('app', () => {
       indices.value = Array.isArray(list) ? list : [];
       clusterOk.value = true;
       loadVersion(); // 连接成功后顺带识别版本，供导航级能力降级标注
-      api.overview().then(o => { clusterSelf.value = o?.self || ''; }).catch(() => {});
+      /* 宿主概览恒定执行在 host：目标连接用户无宿主 overview 页授权时不发这段必 403 的请求。 */
+      const gp = useAuthStore().grantedPages;
+      const canHostOverview = useAuthStore().isAdmin() || gp == null || gp.includes('overview')
+        || gp.includes('conn:host:overview') || gp.includes('conn:host:w:overview');
+      if (canHostOverview) api.overview().then(o => { clusterSelf.value = o?.self || ''; }).catch(() => {});
       api.clusterHealth().then((h: any) => {
         clusterHealth.value = h?.status || '';
         clusterUnassigned.value = Number(h?.unassigned_shards || 0);

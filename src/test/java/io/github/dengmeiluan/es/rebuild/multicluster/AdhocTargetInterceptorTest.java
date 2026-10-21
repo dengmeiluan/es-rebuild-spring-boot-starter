@@ -30,10 +30,13 @@ import java.io.ByteArrayOutputStream;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -156,6 +159,11 @@ public class AdhocTargetInterceptorTest {
         return new ConsolePrincipal("tester", role, false);
     }
 
+    private static ConsolePrincipal delegated(ConsoleRole role, String... grantedPages) {
+        Set<String> gp = new HashSet<>(Arrays.asList(grantedPages));
+        return new ConsolePrincipal("tester", role, false, true, "测试用户", null, gp);
+    }
+
     /* ---------------- 数据面：prepare / start 跟随目标头 ---------------- */
 
     @Test
@@ -274,5 +282,72 @@ public class AdhocTargetInterceptorTest {
                 request(BASE + "/cluster/state", "conn-a", principal(ConsoleRole.ADMIN)),
                 new StubResponse().proxy, new Object())).isTrue();
         assertThat(router.currentTarget()).isEqualTo("conn-a");
+    }
+
+    /* ---------- 978：目标头必须同时过连接可见性（页面键 + minRole） ---------- */
+
+    @Test
+    public void pureConnUserCannotBindAnotherConnection() throws Exception {
+        conns.put("conn-a", conn("VIEWER"));
+        conns.put("conn-b", conn("VIEWER"));
+        EsTargetInterceptor interceptor = new EsTargetInterceptor(router, fakeConnStore(conns), true);
+        StubResponse resp = new StubResponse();
+        boolean ok = interceptor.preHandle(
+                request(BASE + "/cluster/query", "conn-b",
+                        delegated(ConsoleRole.VIEWER, "conn:conn-a:search")),
+                resp.proxy, new Object());
+        assertThat(ok).isFalse();
+        assertThat(resp.status).isEqualTo(403);
+        assertThat(resp.bodyText()).contains("CONN_FORBIDDEN");
+        assertThat(router.currentTarget()).isNull();
+    }
+
+    @Test
+    public void pureConnUserWithoutHostGrantCannotFallBackToHost() throws Exception {
+        conns.put("conn-a", conn("VIEWER"));
+        EsTargetInterceptor interceptor = new EsTargetInterceptor(router, fakeConnStore(conns), true);
+        StubResponse resp = new StubResponse();
+        boolean ok = interceptor.preHandle(
+                request(BASE + "/cluster/query", null,
+                        delegated(ConsoleRole.VIEWER, "conn:conn-a:search")),
+                resp.proxy, new Object());
+        assertThat(ok).isFalse();
+        assertThat(resp.status).isEqualTo(403);
+        assertThat(resp.bodyText()).contains("CONN_FORBIDDEN");
+        assertThat(router.currentTarget()).isNull();
+    }
+
+    @Test
+    public void explicitHostGrantAllowsHostDataPlane() throws Exception {
+        EsTargetInterceptor interceptor = new EsTargetInterceptor(router, fakeConnStore(conns), true);
+        assertThat(interceptor.preHandle(
+                request(BASE + "/cluster/query", null,
+                        delegated(ConsoleRole.VIEWER, "conn:host:search")),
+                new StubResponse().proxy, new Object())).isTrue();
+        assertThat(router.currentTarget()).isNull(); /* host=不绑定远程目标 */
+    }
+
+    @Test
+    public void taskProgressFollowsSelectedConnection() throws Exception {
+        conns.put("conn-a", conn("VIEWER"));
+        EsTargetInterceptor interceptor = new EsTargetInterceptor(router, fakeConnStore(conns), true);
+        assertThat(interceptor.preHandle(
+                request(BASE + "/progress", "conn-a", principal(ConsoleRole.ADMIN)),
+                new StubResponse().proxy, new Object())).isTrue();
+        assertThat(router.currentTarget())
+                .as("delete/update-by-query 的任务进度必须查发起集群")
+                .isEqualTo("conn-a");
+    }
+
+    @Test
+    public void staticPageGrantKeepsAllMinRoleVisibleConnections() throws Exception {
+        conns.put("conn-a", conn("VIEWER"));
+        conns.put("conn-b", conn("VIEWER"));
+        EsTargetInterceptor interceptor = new EsTargetInterceptor(router, fakeConnStore(conns), true);
+        assertThat(interceptor.preHandle(
+                request(BASE + "/cluster/query", "conn-b",
+                        delegated(ConsoleRole.VIEWER, "overview")),
+                new StubResponse().proxy, new Object())).isTrue();
+        assertThat(router.currentTarget()).isEqualTo("conn-b");
     }
 }

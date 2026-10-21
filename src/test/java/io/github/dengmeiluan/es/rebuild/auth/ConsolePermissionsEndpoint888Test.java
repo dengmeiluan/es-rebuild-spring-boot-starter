@@ -133,7 +133,13 @@ public class ConsolePermissionsEndpoint888Test {
     /** 连接档案桩：c1=PROD 环境、实名「生产集群」。 */
     private static ConnStore connStoreWithProd() {
         return new ConnStore() {
-            @Override public List<Map<String, Object>> list() { return Collections.emptyList(); }
+            @Override public List<Map<String, Object>> list() {
+                Map<String, Object> c = new java.util.LinkedHashMap<>();
+                c.put("id", "c1");
+                c.put("name", "生产集群");
+                c.put("minRole", "VIEWER");
+                return Collections.singletonList(c);
+            }
             @Override public RemoteClusterConn get(String id) {
                 if ("c1".equals(id)) {
                     RemoteClusterConn conn = new RemoteClusterConn();
@@ -321,6 +327,30 @@ public class ConsolePermissionsEndpoint888Test {
                 set("conn:c1:overview", "conn:c1:w:overview")), "c1").get("sharedWriteAllowed"));
         assertEquals(Boolean.TRUE, call(ctrl(), delegatedAs(ConsoleRole.VIEWER,
                 set("conn:c1:search", "conn:c1:w:search")), "c1").get("sharedWriteAllowed"));
+        /* 内置/静态角色模型同样如实反映：OPERATOR 可做文档类共享写 */
+        assertEquals(Boolean.TRUE, call(ctrl(), builtin(ConsoleRole.OPERATOR), "host").get("sharedWriteAllowed"));
+        assertEquals(Boolean.TRUE, call(ctrl(), delegatedAs(ConsoleRole.OPERATOR,
+                set("search")), "host").get("sharedWriteAllowed"));
+        assertEquals(Boolean.FALSE, call(ctrl(), delegatedAs(ConsoleRole.OPERATOR,
+                set("overview")), "host").get("sharedWriteAllowed"));
+    }
+
+    @Test
+    public void 权限面板不泄露未授权连接名与环境() {
+        Map<String, Object> other = call(ctrl(), delegatedAs(ConsoleRole.VIEWER,
+                set("conn:c1:overview", "conn:c1:w:overview")), "c2");
+        assertNull(other.get("connName"));
+        assertNull(other.get("env"));
+        assertEquals(Boolean.FALSE, other.get("envPagesApplied"));
+        Map<String, Object> own = call(ctrl(), delegatedAs(ConsoleRole.VIEWER,
+                set("conn:c1:overview", "conn:c1:w:overview")), "c1");
+        assertEquals("生产集群", own.get("connName"));
+        assertEquals("PROD", own.get("env"));
+        /* 空集=全拒：零页面授权也不得借非 conn 模型枚举连接 */
+        Map<String, Object> zero = call(ctrl(), delegatedAs(ConsoleRole.VIEWER,
+                set()), "c1");
+        assertNull(zero.get("connName"));
+        assertNull(zero.get("env"));
     }
 
     @Test

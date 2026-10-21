@@ -73,7 +73,7 @@ public class ConsoleAuthControllerOpsAuditFilterTest {
     @Test
     public void opsAudit_全维参数映射结构化查询对象() {
         CapturingStore store = new CapturingStore();
-        controller(store).opsAudit("u1", "HIGH_RISK", 33, 7, null, 111L, 222L,
+        controller(store).opsAudit(null, "u1", "HIGH_RISK", 33, 7, null, 111L, 222L,
                 "7bdac680", "腾讯云QA", "ADMIN", "POST", 403, "console", "203.0.113.9",
                 500L, "/internal/es", "页面被拒");
         ConsoleOpsAuditQuery q = store.got.get();
@@ -99,7 +99,7 @@ public class ConsoleAuthControllerOpsAuditFilterTest {
     @Test
     public void opsAudit_since参数向后兼容_fromMs未传时生效() {
         CapturingStore store = new CapturingStore();
-        controller(store).opsAudit(null, null, 100, 0, 333L, null, null,
+        controller(store).opsAudit(null, null, null, 100, 0, 333L, null, null,
                 null, null, null, null, null, null, null, null, null, null);
         assertEquals(Long.valueOf(333L), store.got.get().getFromMs());
     }

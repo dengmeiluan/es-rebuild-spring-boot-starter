@@ -124,9 +124,26 @@ const IO_RAW_MAX = 200 * 1024;
 const ioRing: RawIoRec[] = [];
 let ioSeq = 0;
 
+function redactIoBody(body: string): string {
+  if (!body) return body;
+  const scrub = (v: any): any => {
+    if (Array.isArray(v)) return v.map(scrub);
+    if (v && typeof v === 'object') {
+      const out: Record<string, unknown> = {};
+      for (const [k, val] of Object.entries(v)) {
+        out[k] = /password|passwd|secret|token|salt|authorization|api[_-]?key/i.test(k) ? '***' : scrub(val);
+      }
+      return out;
+    }
+    return v;
+  };
+  try { return JSON.stringify(scrub(JSON.parse(body))); }
+  catch { return body; }
+}
+
 function recordIo(url: string, method: string, requestBody: string, status: number, ok: boolean, durationMs: number, responseRaw: string, kind?: string): void {
   try {
-    const rec: RawIoRec = { id: ++ioSeq, ts: Date.now(), method, url, requestBody, status, ok, durationMs: Math.round(durationMs), responseRaw };
+    const rec: RawIoRec = { id: ++ioSeq, ts: Date.now(), method, url, requestBody: redactIoBody(requestBody), status, ok, durationMs: Math.round(durationMs), responseRaw };
     if (kind) rec.kind = kind;
     if (rec.responseRaw.length > IO_RAW_MAX) { rec.responseRaw = rec.responseRaw.slice(0, IO_RAW_MAX); rec.truncated = true; }
     ioRing.push(rec);
@@ -181,6 +198,14 @@ function timeoutSignal(callerSignal: AbortSignal | null | undefined, ms: number)
   };
 }
 
+/* ==================== ：写请求客户端硬门 ====================
+ 后端拦截器是安全边界；这里再加一层「未授权请求不发车」——视图漏判/深链/脚本直调
+ api.post 时，凭当前身份与目标先判写权，拒绝则抛 403 且不产生任何网络请求。
+ 守卫由 auth store 注册（main.ts 装配），api 层不反依赖 pinia（避免成环）。 */
+export type ApiWriteGuard = (method: string, path: string, targetId: string) => boolean;
+let apiWriteGuard: ApiWriteGuard | null = null;
+export const setApiWriteGuard = (fn: ApiWriteGuard | null) => { apiWriteGuard = fn; };
+
 async function request<T = any>(path: string, init?: RequestInit & { timeoutMs?: number; ioKind?: string }, base: string = EP): Promise<T> {
   /* 授权就绪门——宿主令牌在途且身份/目标未 settle 时先等（豁免端点与独立部署直通，
  token 快照必须在门后取：等待期间握手可能送达新凭证） */
@@ -206,10 +231,24 @@ async function request<T = any>(path: string, init?: RequestInit & { timeoutMs?:
     else if (restInit.body != null) ioBody = JSON.stringify(restInit.body) ?? String(restInit.body);
   } catch { try { ioBody = String(restInit.body); } catch { ioBody = ''; } }
   let resp: Response;
+  const fetchMethod = (restInit.method || 'GET').toUpperCase();
+  const mergedHeaders: Record<string, string> = {
+    'Content-Type': 'application/json', ...authHeaders(), ...hostHeaders(), ...targetHeaders(),
+    ...((extraHeaders as Record<string, string>) || {}),
+  };
+  /* 写门在 fetch 前裁决：无权限时零网络请求（402/403 由后端兜底的安全边界之外，
+     再做一层「请求根本没发出去」的确定性保证）。 */
+  if (apiWriteGuard && fetchMethod !== 'GET' && fetchMethod !== 'HEAD' && fetchMethod !== 'OPTIONS') {
+    const cleanBase = CTX && base.startsWith(CTX) ? base.slice(CTX.length) : base;
+    const targetId = mergedHeaders['X-Es-Target'] || getTarget();
+    if (!apiWriteGuard(fetchMethod, cleanBase + path, targetId)) {
+      throw new ApiError(403, '当前身份无权执行该写操作，请求已在客户端拦截', 'CLIENT_WRITE_DENIED');
+    }
+  }
   try {
     resp = await fetch(base + path, {
       ...restInit,
-      headers: { 'Content-Type': 'application/json', ...authHeaders(), ...hostHeaders(), ...targetHeaders(), ...((extraHeaders as Record<string, string>) || {}) },
+      headers: mergedHeaders,
       signal: ts.signal,
     });
   } catch (e: any) {
@@ -456,7 +495,8 @@ export const api = {
 
   /* R7 服务端告警（GET /monitor-alerts，VIEWER 只读；timestamp 降序，recovered:true=恢复事件） */
   /* 最新 Top 索引快照（对标阿里云 Index 索引行）：{index,qps,idxRate,storeMb}×≤8 */
-  monitorTopIndexes: (connId?: string, limit?: number) => get<{ records: any[] }>(`/monitor-metrics/top-indexes?${q({ connId, limit })}`),
+  /* 后端 top-indexes 按集群实名过滤（connName），不是连接 ID——传错参数会退化成全集群 */
+  monitorTopIndexes: (connName?: string, limit?: number) => get<{ records: any[] }>(`/monitor-metrics/top-indexes?${q({ connName, limit })}`),
   monitorAlerts: (size = 50, fromMs?: number, toMs?: number) => get<{ records: MonitorAlertDoc[] }>(`/monitor-alerts?${q({ size, fromMs, toMs })}`),
 
   /* 集群监控历史趋势(GET /monitor-metrics,VIEWER 只读;scope=cluster 多集群叠加;
@@ -741,7 +781,7 @@ export const api = {
        不能沿用顶栏目标（源≠顶栏时会被页面门误拒）。 */
     jobs: (limit = 20, target?: string) => get(`/jobs?${q({ limit })}`, XB, xbTargetInit(target)),
     /* 目标索引补全专用：迁移写入端（宿主）索引清单——恒宿主控制面，别用跟随 X-Es-Target 的 clusterIndices */
-    destIndices: () => get('/dest-indices', XB),
+    destIndices: () => get('/dest-indices', XB, xbTargetInit('host')),
     progress: (jobId: string, target?: string) => get(`/progress?${q({ jobId })}`, XB, xbTargetInit(target)),
     start: (req: any, target?: string) => post('/start', req, XB, xbTargetInit(target)),
     preflight: (req: any, target?: string) => post('/preflight', req, XB, xbTargetInit(target)),

@@ -74,11 +74,11 @@ describe('972 Painless 写落库有门、试跑只走只读 execute', () => {
 });
 
 describe('972 命令面板 raw 执行体守卫', () => {
-  it('runRaw 首行 canA', () => {
+  it('runRaw 首行 canRawOps（977 raw 系统命令 ADMIN 档）', () => {
     const start = palette.indexOf('const runRaw =');
     expect(start, 'runRaw 必须存在').toBeGreaterThanOrEqual(0);
     const body = palette.slice(start, palette.indexOf('const canW', start));
-    expect(body.indexOf('if (!canA) return;')).toBeGreaterThanOrEqual(0);
-    expect(body.indexOf('if (!canA) return;')).toBeLessThan(body.indexOf('await api.raw('));
+    expect(body.indexOf('if (!canRawOps()) return;')).toBeGreaterThanOrEqual(0);
+    expect(body.indexOf('if (!canRawOps()) return;')).toBeLessThan(body.indexOf('await api.raw('));
   });
 });

@@ -157,7 +157,7 @@ describe('ModalShell Esc 收口升 document 捕获级（五百六十九批；铁
     const { default: GAB } = await import('../components/GuardedActionButton.vue');
     mountTrigger();
     const app = createApp({
-      render: () => h(GAB as any, { actionId: 'a', params: {}, label: '执行' }),
+      render: () => h(GAB as any, { actionId: 'a', params: {}, label: '执行', can: true }),
     });
     app.use(createPinia());
     const hostEl = document.createElement('div'); document.body.appendChild(hostEl); app.mount(hostEl);

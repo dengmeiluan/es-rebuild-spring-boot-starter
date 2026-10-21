@@ -16,11 +16,16 @@
 
 package io.github.dengmeiluan.es.rebuild.multicluster;
 
+import io.github.dengmeiluan.es.rebuild.auth.ConsoleConnVisibility;
+import io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -40,9 +45,11 @@ import java.util.Map;
 public class MonitorHistoryController {
 
     private final MonitorHistoryStore store;
+    private final ConnStore connStore;
 
-    public MonitorHistoryController(MonitorHistoryStore store) {
+    public MonitorHistoryController(MonitorHistoryStore store, ConnStore connStore) {
         this.store = store;
+        this.connStore = connStore;
     }
 
     /** 监控历史（timestamp 倒序）。线缆 {records:[...]}，与 ops-audit 同款单点组装。 */
@@ -52,9 +59,16 @@ public class MonitorHistoryController {
                                        @RequestParam(required = false, defaultValue = "200") int size,
                                        @RequestParam(required = false, defaultValue = "0") int from,
                                        @RequestParam(required = false) Long fromMs,
-                                       @RequestParam(required = false) Long toMs) {
+                                       @RequestParam(required = false) Long toMs,
+                                       HttpServletRequest request) {
+        ConsolePrincipal principal = MonitorRecordVisibility.principal(request);
+        ConsoleConnVisibility.Snapshot snap = ConsoleConnVisibility.snapshot(principal, connStore);
+        if (connId != null && !connId.trim().isEmpty() && !snap.seesId(connId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "暂无该连接监控历史的访问权限");
+        }
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("records", store.search(connId, status, size, from, fromMs, toMs));
+        out.put("records", MonitorRecordVisibility.filterByIdentity(
+                store.search(connId, status, size, from, fromMs, toMs), snap));
         return Collections.unmodifiableMap(out);
     }
 }

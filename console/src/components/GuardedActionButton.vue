@@ -106,13 +106,13 @@ const props = withDefaults(defineProps<{
   /** HIGH 风险时要求输入的确认文案（如索引名），非 HIGH 忽略 */
   guardText?: string;
   disabled?: boolean;
-  /** 执行体权限门（父组件按真实端点判定；默认 true 保持既有调用零改动） */
+  /** 执行体权限门（父组件按真实端点判定；缺省 false——新调用点漏传时不得默认放行） */
   can?: boolean;
 }>(), {
   label: '执行',
   guardText: '',
   disabled: false,
-  can: true,
+  can: false,
 });
 
 const emit = defineEmits<{ (e: 'executed', receipt: any): void }>();

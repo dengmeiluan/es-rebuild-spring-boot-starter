@@ -259,7 +259,15 @@ async function load() {
  -13：原第三源 /diagnostics 已随 SPI 能力矩阵一并退役，不再拉取 */
   const fails: string[] = [];
   const raws: unknown[] = []; /* ：原始对象旁路（firstMetaRaw 选喂 errMeta） */
-  try { health.value = await api.health(); } catch (e: any) { raws.push(e); fails.push('health（' + friendlyEsError(String(e?.message ?? e)) + '）'); }
+  /* /health 恒定宿主：按宿主页授权判定（混合静态+连接授权不再误发 403）；
+     探测完成前照常发起，避免独立部署首屏丢宿主健康数据。 */
+  const canHostHealth = !auth.probed
+    || auth.canEndpoint('write', 'GET', '/internal/es/index/health', store.target);
+  if (canHostHealth) {
+    try { health.value = await api.health(); } catch (e: any) { raws.push(e); fails.push('health（' + friendlyEsError(String(e?.message ?? e)) + '）'); }
+  } else {
+    health.value = null;
+  }
   try { cluster.value = await api.clusterHealth(); } catch (e: any) { raws.push(e); fails.push('clusterHealth（' + friendlyEsError(String(e?.message ?? e)) + '）'); }
   loadErr.value = fails.length ? '诊断数据拉取失败：' + fails.join('、') : '';
   loadErrRaw.value = firstMetaRaw(raws);

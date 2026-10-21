@@ -89,7 +89,8 @@ public class EsIndexRebuildService {
      * 仅剩 {@code lock} 可查。</p>
      */
     public Map<String, Object> inspectSystem(String which) throws IOException {
-        return esIndexAdmin.inspect(systemIndexName(which), 20);
+        /* lock 名由装配处注入、非用户输入；通用控制面守卫会拒绝该名，这里走系统索引专用读。 */
+        return esIndexAdmin.inspectInternal(systemIndexName(which), 20);
     }
 
     /**
@@ -187,7 +188,7 @@ public class EsIndexRebuildService {
      * 仅剩 {@code lock} 可查。</p>
      */
     public Map<String, Object> querySystem(String which, String dslJson, int size) throws IOException {
-        return esIndexAdmin.queryDsl(systemIndexName(which), dslJson, Math.max(0, Math.min(size, 100)));
+        return esIndexAdmin.queryDslInternal(systemIndexName(which), dslJson, Math.max(0, Math.min(size, 100)));
     }
 
     /** Q1: 自由 query DSL。 */

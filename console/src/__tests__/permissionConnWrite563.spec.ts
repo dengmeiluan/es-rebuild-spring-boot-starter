@@ -82,10 +82,17 @@ describe('584 批:页面级连接感知门 canPage(conn 模型勾选即权限)',
     auth.me = { username: 'u', role: 'REBUILD_OP', fallback: false, grantedPages: null };
     expect(auth.canPage('ops', 'docs', 'c1')).toBe(true);
   });
-  it('me=null(后端未启用鉴权):恒放行(既有语义)', () => {
+  it('authDisabled=true(后端未启用鉴权):恒放行(既有语义)', () => {
     const auth = useAuthStore();
+    auth.authDisabled = true;
     expect(auth.canPage('ops', 'docs', 'c1')).toBe(true);
     expect(auth.canPage('admin', 'docs', 'c1')).toBe(true);
+  });
+  it('探测已启动且 me=null:canPage fail-closed', () => {
+    const auth = useAuthStore();
+    auth.beginProbe();
+    expect(auth.canPage('ops', 'docs', 'c1')).toBe(false);
+    expect(auth.canPage('admin', 'docs', 'c1')).toBe(false);
   });
 });
 
@@ -171,9 +178,29 @@ describe('588 批:端点级单一权限入口 canEndpoint(apiPrefixes 最长前�
     auth.me = { username: 'u', role: 'REBUILD_OP', fallback: false, grantedPages: null, pages: pagesWithPrefixes };
     expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/delete-index', 'c1')).toBe(true);
   });
-  it('me=null(后端未启用鉴权):恒放行(既有语义)', () => {
+  it('authDisabled=true(后端未启用鉴权):恒放行(既有语义)', () => {
     const auth = useAuthStore();
+    auth.authDisabled = true;
     expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/delete-index', 'c1')).toBe(true);
+  });
+  it('探测已启动且身份未确认/探测失败:fail-closed，不得当无鉴权放行', () => {
+    const auth = useAuthStore();
+    auth.beginProbe();
+    expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/delete-index', 'c1')).toBe(false);
+    expect(auth.canSeeConn('c2')).toBe(false);
+    expect(auth.can('write')).toBe(false);
+    expect(auth.canAdminOps()).toBe(false);
+  });
+  it('canAdminOps：明确无鉴权/ADMIN 放行，探测中关闭', () => {
+    const auth = useAuthStore();
+    expect(auth.canAdminOps()).toBe(true); /* 独立挂载（未启动探测） */
+    auth.beginProbe();
+    expect(auth.canAdminOps()).toBe(false);
+    auth.authDisabled = true;
+    expect(auth.canAdminOps()).toBe(true);
+    auth.authDisabled = false;
+    auth.me = { username: 'root', role: 'ADMIN', fallback: false };
+    expect(auth.canAdminOps()).toBe(true);
   });
   it('ADMIN 全局放行：无页面写键/无连接写键仍可读写（超管不被门禁拖累）', () => {
     const auth = useAuthStore();

@@ -631,7 +631,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount, onActivated, nextTick, h, defineComponent, type PropType, type Ref } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount, onActivated, onDeactivated, nextTick, h, defineComponent, type PropType, type Ref } from 'vue';
 import { NModal, NPopover } from 'naive-ui';
 import {
   Database, Play, Save, History, Variable, Code2, FileDown, FileUp, Share2, AlignLeft, SlidersHorizontal, ChevronDown, Check, Workflow,
@@ -2461,6 +2461,9 @@ onMounted(() => {
  首次挂载的 activated 由 onMounted 链路负责,跳过防双重执行 */
 let activatedRestoreArmed = false;
 onActivated(() => {
+  /* KeepAlive 回页补挂全局键（离页已在 onDeactivated 摘除，防其它页触发隐藏查询/保存） */
+  window.addEventListener('keydown', onKeySave);
+  window.addEventListener('keydown', onGlobalRunKey);
   if (!activatedRestoreArmed) { activatedRestoreArmed = true; return; }
   if (running.value || resp.value || !store.pickedIdx) return;
   let saved: string | null = null;
@@ -2468,6 +2471,12 @@ onActivated(() => {
   if (saved != null && saved === dsl.value) {
     runQuery();
   }
+});
+onDeactivated(() => {
+  /* QueryHub 切模式/门户切页签时组件不卸载：必须摘掉全局键，
+     否则隐藏实例仍会响应 Ctrl+Enter/Ctrl+S */
+  window.removeEventListener('keydown', onKeySave);
+  window.removeEventListener('keydown', onGlobalRunKey);
 });
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeySave);

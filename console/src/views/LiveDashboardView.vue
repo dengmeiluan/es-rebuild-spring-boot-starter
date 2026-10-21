@@ -608,7 +608,7 @@
           </template>
           <!-- 慢请求视图（ 对标阿里云慢查询 tab；634 权限语义锚=无权限诚实说明不静默消失） -->
           <template v-else-if="detailTab === 'slow'">
-            <template v-if="auth.canAuditAll()">
+            <template v-if="auth.canAuditAll(store.target)">
               <div class="ld-detail-tools">
                 <div class="ld-slow-bar">
                   <input v-model.number="slowThresholdMs" class="inp sm ld-slow-inp" type="number" min="100" step="100"
@@ -807,6 +807,11 @@ const clearResolved = mon.clearResolved;
  不新造轮询逻辑；「重新登录」走既有登出流（清 token 弹登录遮罩） */
 const auth = useAuthStore();
 const store = useAppStore();
+/* 纯连接模型：节点聚合行无连接标识，后端要求先指定已授权集群——前端补默认首个可见集群 */
+const pureConnModel = computed(() => {
+  const gp = auth.grantedPages;
+  return Array.isArray(gp) && gp.length > 0 && gp.every(g => g.startsWith('conn:'));
+});
 function retryObserve() { mon.setFocus(false); mon.setFocus(true); }
 
 /* A：节点角色区分——data 排前、master-only/ingest 弱化；角色徽标分色。
@@ -1236,7 +1241,7 @@ const detailTab = ref<DetailTab>('top');
 const detailTabs = computed(() => {
   const t: Array<{ k: DetailTab; label: string }> = [];
   if (!nodeMode.value) t.push({ k: 'top', label: 'Top 索引' });
-  if (auth.canAuditAll()) t.push({ k: 'slow', label: '慢请求' });
+  if (auth.canAuditAll(store.target)) t.push({ k: 'slow', label: '慢请求' });
   t.push({ k: 'alert', label: '告警历史' });
   return t;
 });
@@ -1390,7 +1395,12 @@ const detailCanExport = computed(() => {
  首开懒加载语义保留（watch open 起手拉取，与旧 toggle 内 if 分支等价） */
 function gotoBrowser(t: any) {
   /* 963：下钻换集群必须走 store.setTarget——裸 setTargetId 只改数据面，SideNav 授权过滤/页面门/
-   router key 仍停在旧目标（切过去落在未授权页=403 死路）；setTarget 一并刷新目标名/清旧索引现场 */
+   router key 仍停在旧目标（切过去落在未授权页=403 死路）；setTarget 一并刷新目标名/清旧索引现场。
+   切目标前再验一次连接授权：top 行可能残留旧授权期的数据。 */
+  if (t.connId && !auth.canSeeConn(t.connId)) {
+    store.notify('warning', '暂无该连接的访问权限');
+    return;
+  }
   if (t.connId && t.connId !== store.target) store.setTarget(t.connId, t.clusterName ?? t.cluster ?? t.connId);
   router.push({ path: '/browser', query: { idx: t.index } });
 }
@@ -1479,7 +1489,7 @@ function slowCostTone(costMs: number | null | undefined): '' | 'ld-cost-warn' | 
 }
 let slowSeq = 0;
 async function loadSlow() {
-  if (!auth.canAuditAll()) return;
+  if (!auth.canAuditAll(store.target)) return;
   const seq = ++slowSeq; // 世代计数：窗/阈值重入使旧拍作废
   slowLoading.value = true;
   try {
@@ -1658,14 +1668,22 @@ async function loadHist() {
   void api.monitorAlerts(100, histFromMs, rangeMs.value.to)
     .then(res => {
       if (seq !== histSeq) return; // 旧拍告警标记不得覆盖新窗
+      /* 连接隔离已在后端 /monitor-alerts 行级完成；聚合行无 connId，前端不得再按目标猜测 */
       srvAlerts.value = res?.records || [];
     })
     .catch(() => {});
   histLoading.value = true; histErr.value = '';
   try {
+    const nodeFallback = nodeMode.value && pureConnModel.value
+      ? (clusterList.value[0]
+        || store.conns.find(c => auth.canSeeConn(c.id))?.name
+        || (auth.canSeeConn('host') ? connNameOfTarget.value : ''))
+      : '';
     const res = await api.monitorMetrics({
       scope: nodeMode.value ? 'node' : 'cluster',
-      connName: clusterFilter.value || undefined, /* 修复：下拉值=集群实名，传 connName 下推（原误传 connId 恒空） */
+      /* 修复：下拉值=集群实名，传 connName 下推（原误传 connId 恒空）；
+         纯连接节点模式无筛选时默认首个可见集群（后端禁止无标识节点聚合） */
+      connName: clusterFilter.value || nodeFallback || undefined,
       fromMs: histFromMs,
       toMs: rangeMs.value.to, /* ：custom 档终点下推（固定档=now 与现状等价） */
       size: 3000,
@@ -1673,6 +1691,8 @@ async function loadHist() {
       agg: mhAgg.value, /* 聚合方式下推（avg|max） */
     });
     if (seq !== histSeq) return; // 旧拍曲线回包丢弃
+    /* 连接隔离由后端 /monitor-metrics 行级完成：聚合行只有 connName/nodeName，
+       前端再按 connId 猜会把所有连接模型用户的行误删。 */
     let records: MonitorMetricsRecord[] = res?.records || [];
     if (nodeMode.value) {
       /* 节点下钻：connName 映射 nodeName 后复用 buildSeries 单源（序列名=节点名，
@@ -1736,7 +1756,10 @@ function fmtN(v: number | undefined): string {
  不能反把下拉污染成节点列表 */
 function clustersOf(records: MonitorMetricsRecord[]): string[] {
   const set = new Set<string>();
-  for (const r of records) { const n = r.connName || r.connId; if (n) set.add(n); }
+  for (const r of records) {
+    const n = r.connName || r.connId;
+    if (n) set.add(n);
+  }
   return [...set].sort();
 }
 const clusterList = ref<string[]>([]);
@@ -1744,7 +1767,8 @@ const clusterList = ref<string[]>([]);
  options 会瞬时缺当前集群（select 显示回落''）；兜底后选项恒含当前观察口径集群 */
 const histClusters = computed<string[]>(() => {
   const set = new Set(clusterList.value);
-  if (connNameOfTarget.value) set.add(connNameOfTarget.value);
+  /* 当前目标也必须是授权连接：深链/旧 localStorage 目标不得把未授权集群名带进下拉 */
+  if (connNameOfTarget.value && auth.canSeeConn(store.target || 'host')) set.add(connNameOfTarget.value);
   return [...set];
 });
 

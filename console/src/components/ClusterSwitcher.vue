@@ -11,7 +11,7 @@
     </template>
     <div class="cs-menu">
       <!-- .2：纯管理平台形态藏掉宿主项——数据面只认自定义连接档案；：切换项键盘可达（role/tabindex/Enter， Overview 同口径） -->
-      <div v-if="store.hostVisible" class="cs-item" :class="{ on: !store.isRemote }" role="button" tabindex="0" aria-label="切换到宿主集群" @click="pickTarget('', '')" @keydown.enter.prevent="pickTarget('', '')" @keydown.space.prevent="pickTarget('', '')">
+      <div v-if="store.hostVisible && hostAllowed" class="cs-item" :class="{ on: !store.isRemote }" role="button" tabindex="0" aria-label="切换到宿主集群" @click="pickTarget('', '')" @keydown.enter.prevent="pickTarget('', '')" @keydown.space.prevent="pickTarget('', '')">
         <Server :size="12" />
         <span class="cs-item-name">宿主集群</span>
         <span v-if="store.clusterSelf" class="cs-item-sub mono">{{ store.clusterSelf }}</span>
@@ -224,6 +224,7 @@ const store = useAppStore();
 /* 连接档案管理（新增/编辑/删除/测试=ADMIN，/clusters/ 写与 test 均在超管清单）——
  非 ADMIN 保留查看/切换/探活（probe= VIEWER 豁免），不再展示必 403 的管理入口 */
 const auth = useAuthStore();
+const hostAllowed = computed(() => auth.canSeeConn('host'));
 const canAdmin = computed(() => auth.can('admin')); /* 连接档案/探活配置=系统管理域：ADMIN 角色专属，连接写键不放行 */
 /* 列表排序——默认 status（异常置顶），可切 name/latency；usePref 跨会话记忆。
  增第四档「手动」（623 设计稿 D3/D4 裁决）——manualOrder 落盘跨会话记忆；
@@ -335,6 +336,11 @@ function verOf(c: ClusterConnView) {
 
 async function pickTarget(id: string, name: string) {
   menuOpen.value = false;
+  /* 纯连接模型下宿主不在授权内：入口已隐藏，执行体再兜一层挡深链/程序化切换 */
+  if (!auth.canSeeConn(id || 'host')) {
+    store.notify('warning', '暂无该集群的访问权限');
+    return;
+  }
   if (id === store.target) return;
   const c = store.conns.find(x => x.id === id);
   // RED 集群仍可切（可能刚恢复/探活口径偏差），但前置告知，避免用户对满屏超时一头雾水。

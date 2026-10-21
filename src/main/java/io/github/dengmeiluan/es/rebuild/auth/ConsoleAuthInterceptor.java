@@ -29,6 +29,7 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
@@ -64,6 +65,9 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
 
     /** request attribute：拦截器入口时刻（毫秒）——审计耗时维度（。 */
     static final String ATTR_START_MS = "es.console.audit.startMs";
+
+    /** request attribute：本次请求是否拥有完整别名写权（preHandle 已叠加 env 页模板收缩）。 */
+    public static final String ATTR_ALIASES_FULL_WRITE = "es.console.aliases.fullWrite";
 
     /** request attribute：raw 透传执行摘要（"GET /_cat/indices" 形态）——由 /cluster/raw
      *  端点解析请求体后回填，afterCompletion 落入 HIGH_RISK detail（*  高危操作从「零法证」到「谁对哪个集群执行了什么」）。 */
@@ -135,8 +139,10 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             "/clusters/");
     /** 执行类只读 POST（零数据写入但执行脚本/消耗资源）——落 EXEC 审计留痕。 */
     private static final List<String> EXEC_AUDIT_POST_KEYWORDS = Arrays.asList(
-            "/cluster/painless/execute", "/cluster/analyze", "/cluster/reindex-preview",
-            "/config-lab/validate");
+            "/cluster/analyze", "/cluster/reindex-preview", "/config-lab/validate",
+            /* 只读语义但会创建/关闭服务端资源或游标：落 EXEC 留痕（谁锁了哪个 PIT/游标） */
+            "/cluster/pit/open", "/cluster/pit/close",
+            "/cluster/sql/cursor", "/cluster/sql/close");
 
     private static boolean isSystemAdminUri(String uri) {
         // 探活是只读观测（POST 但零副作用），不受系统管理 ADMIN 门约束（requiredRole 特判 VIEWER）
@@ -157,8 +163,10 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             "/cluster/search-dsl", "/cluster/search-raw", "/cluster/search-template", "/cluster/render-template",
             "/cluster/validate-query", "/cluster/explain-doc", "/cluster/allocation-explain",
             "/cluster/analyze", "/cluster/reindex-preview",
-            "/cluster/sql", "/cluster/pit/", "/cluster/painless/execute",
+            "/cluster/sql", "/cluster/pit/",
             "/insight/settings-impact");
+    /* Painless 执行是“可执行脚本”而非纯查询：消费 CPU/可在 filter/score 上下文
+       读取文档（含控制索引）。按写档（OPERATOR/页写键）裁决，不再借只读 POST 放行。 */
 
     /**
      * 共享写端点 → 合法页面写键归属（conn 模型）。
@@ -189,6 +197,8 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         m.put("/cluster/create-index", Arrays.asList("config-validator", "indices"));
         m.put("/cluster/scripts/put", Arrays.asList("search-templates", "painless-lab"));
         m.put("/cluster/scripts/delete", Arrays.asList("search-templates", "painless-lab"));
+        /* 脚本执行不是只读查询：可消费 CPU 并读取 filter/score 上下文文档，按本页写键放行。 */
+        m.put("/cluster/painless/execute", java.util.Collections.singletonList("painless-lab"));
         /* DevTools 独立执行端点：rest 写键兼容旧授权，devtools 写键可单独授权。 */
         m.put("/cluster/devtools/execute", Arrays.asList("rest", "devtools"));
         /* 护栏动作按动作归属页裁决：apply-index-settings 是 index-settings 页的保存出口；
@@ -225,7 +235,9 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         m.put("/cluster/ilm/policies", Arrays.asList("ilm", "lifecycle"));
         m.put("/cluster/templates", Arrays.asList("templates", "templates-gallery"));
         m.put("/cluster/shards", Arrays.asList("overview", "indices", "topology"));
-        m.put("/cluster/task-detail", Arrays.asList("tasks", "task-tree"));
+        /* workspace 工作台的「任务数/远程集群」卡片复用这两个只读端点 */
+        m.put("/cluster/task-detail", Arrays.asList("tasks", "task-tree", "workspace"));
+        m.put("/cluster/remote-clusters", Arrays.asList("remote-clusters", "workspace"));
         m.put("/cluster/sql", Arrays.asList("search", "workspace"));
         m.put("/cluster/health-report", Arrays.asList("health-report", "workspace"));
         m.put("/insight/settings-impact", Arrays.asList("index-settings", "optimizer"));
@@ -234,6 +246,33 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         m.put("/monitor-alerts", Arrays.asList("overview", "live"));
         m.put("/ring-usage", Arrays.asList("overview", "topology", "live"));
         m.put("/cluster/tasks", Arrays.asList("tasks", "task-tree"));
+        /* 无页前缀的集群只读端点：按真实调用页收口，不能让任意 conn 读键拿到脚本源码/
+           mapping/settings/节点清单等超出本页的数据面信息。 */
+        m.put("/cluster/index-settings", Arrays.asList("index-settings", "indices", "optimizer"));
+        /* 更长片段优先：mapping 页读默认值不能被热更页的共享读误拦 */
+        m.put("/cluster/index-settings-defaults", Arrays.asList("mapping", "index-settings", "indices", "optimizer"));
+        m.put("/cluster/aliases", Arrays.asList("aliases", "indices", "browser"));
+        m.put("/cluster/scripts", Arrays.asList("painless-lab", "search-templates"));
+        m.put("/cluster/mapping-detail",
+                Arrays.asList("mapping", "mapping-designer", "indices", "analyzer-lab",
+                        "search", "browser", "doc-diff"));
+        m.put("/cluster/analysis-settings", Arrays.asList("analysis-settings", "analyze", "mapping", "synonyms"));
+        m.put("/cluster/nodes-stats-brief", Arrays.asList("topology", "overview", "live"));
+        m.put("/cluster/shard-stores", Arrays.asList("topology", "indices", "overview"));
+        m.put("/cluster/analyze", Arrays.asList("analyze", "analyzer-lab", "analysis-settings"));
+        /* 宿主 provider 只读面：已登记索引键/漂移报告同样按真实使用页收口。
+           /es/index/keys 精确到段，避免误吞 /config-lab/drift/keys。 */
+        m.put("/es/index/keys", java.util.Collections.singletonList("xmigrate"));
+        m.put("/desired-state", Arrays.asList("config-drift", "adhoc-rebuild", "indices", "mapping"));
+        m.put("/mapping-reconcile/report", Arrays.asList("config-drift", "indices", "mapping"));
+        /* 任务进度是跨页读取：DBQ/UBQ/reindex/DSL 都可能轮询同一 taskId */
+        m.put("/progress", Arrays.asList("indices", "update-by-query", "reindex-advanced",
+                "search", "tasks", "task-tree", "adhoc-rebuild"));
+        /* 迁移作业进度同路径族：更长片段优先于通用 /progress，否则 only-xmigrate 用户被误拒，
+           而 search/tasks 页用户反能读到迁移作业元数据。 */
+        m.put("/xmigrate/progress", java.util.Collections.singletonList("xmigrate"));
+        /* 宿主锁健康：只允许真实消费它的观测页读取（Overview 对纯连接用户会跳过调用）。 */
+        m.put("/internal/es/index/health", Arrays.asList("overview", "diag", "health-report"));
         SHARED_READ_PAGES = java.util.Collections.unmodifiableMap(m);
     }
 
@@ -248,6 +287,48 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             }
         }
         return best;
+    }
+
+    /**
+     * 恒定作用于宿主集群的路径（执行侧不跟随 X-Es-Target）。与 {@code EsTargetInterceptor}
+     * 的数据面白名单同口径，另有连接维度的宿主侧读端点（监控行级过滤/连接目录/自助/迁移）
+     * 不计入：它们按目标头取页面授权是设计语义，但执行仍在宿主，读结果已按连接收口。
+     */
+    static boolean isHostBoundPath(String path) {
+        return isHostBoundPath(path, "GET");
+    }
+
+    static boolean isHostBoundPath(String path, String method) {
+        if (path == null) return false;
+        if (path.contains("/cluster/") || path.contains("/insight")
+                || path.contains("/config-lab/validate")
+                || path.endsWith("/internal/es/index/progress")
+                || path.contains("/adhoc-rebuild/")) {
+            return false;
+        }
+        if (path.contains("/monitor-metrics") || path.contains("/monitor-history")
+                || path.contains("/monitor-alerts") || path.contains("/ring-usage")) {
+            return false;
+        }
+        /* 宿主 provider 的只读辅助面：执行仍在宿主，但页面授权按当前目标选择——
+           Xmigrate（/keys）、ConfigDrift/Adhoc（desired-state/mapping-reconcile）是
+           目标工作流的一部分，强制 host 授权会把已授权连接用户挡在页面外。
+           只对只读请求生效：未来若在这些前缀下新增写端点，仍按 host 授权。 */
+        boolean readOnly = "GET".equalsIgnoreCase(method) || "HEAD".equalsIgnoreCase(method)
+                || "OPTIONS".equalsIgnoreCase(method) || isReadonlyPost(path);
+        if (readOnly && (path.endsWith("/es/index/keys") || path.contains("/desired-state")
+                || path.contains("/mapping-reconcile/report"))) {
+            return false;
+        }
+        if (path.contains("/clusters") || path.contains("/xmigrate/")
+                || path.contains("/setup/")) {
+            return false;
+        }
+        /* 本地账号管理恒定宿主（远端连接不存在本地账号库）；审计流水仍按目标连接行级过滤。 */
+        if (path.contains("/auth/")) {
+            return path.contains("/auth/users");
+        }
+        return true;
     }
 
     /** 空页面授权仍必须放行的自举/自助端点（身份、退出、改密、权限自查、setup 状态）。 */
@@ -271,6 +352,22 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         return best;
     }
 
+    /**
+     * 静态页（全局授权）在混合/纯静态模型下是否真正解锁任一共享写端点：
+     * 页面可见 + 该端点角色档达标。权限面板回显必须与实际执行门同序。
+     */
+    static boolean hasStaticSharedWriteGrant(java.util.Set<String> grantedPages,
+                                             java.util.Set<String> effectivePages, ConsoleRole role) {
+        if (grantedPages == null || effectivePages == null || role == null) return false;
+        for (Map.Entry<String, List<String>> e : SHARED_WRITE_PAGES.entrySet()) {
+            if (!role.atLeast(requiredRole("POST", e.getKey()))) continue;
+            for (String page : e.getValue()) {
+                if (grantedPages.contains(page) && effectivePages.contains(page)) return true;
+            }
+        }
+        return false;
+    }
+
     /** conn 模型下是否持有任一共享写端点的合法页面写键（权限面板 sharedWriteAllowed 用）。 */
     static boolean hasSharedWriteGrant(String targetId, java.util.Set<String> grantedPages) {
         if (targetId == null || targetId.isEmpty() || grantedPages == null) return false;
@@ -282,6 +379,33 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             }
         }
         return false;
+    }
+
+    /**
+     * alias-actions 的动作级收口：config-validator 页只会“建索引后 add 挂载别名”，
+     * 不能借共享写映射执行 remove/remove_index；aliases 页写权不受限。
+     */
+    public static boolean aliasActionsAddOnly(HttpServletRequest request) {
+        Object p = request == null ? null : request.getAttribute(ATTR_PRINCIPAL);
+        if (!(p instanceof ConsolePrincipal)) return false;
+        ConsolePrincipal cp = (ConsolePrincipal) p;
+        if (cp.getRole().atLeast(ConsoleRole.ADMIN)) return false;
+        java.util.Set<String> gp = cp.getGrantedPages();
+        if (!cp.isDelegated() || gp == null) return false;
+        String h = request.getHeader("X-Es-Target");
+        String tid = h == null || h.trim().isEmpty() ? "host" : h.trim();
+        if ("host".equalsIgnoreCase(tid)) tid = "host";
+        Object full = request.getAttribute(ATTR_ALIASES_FULL_WRITE);
+        if (full instanceof Boolean) {
+            return !((Boolean) full);
+        }
+        boolean aliases = gp.contains(EnvPagesResolver.CONN_KEY_PREFIX + tid + ":w:aliases")
+                /* 静态 aliases 页键在连接模型里只是可见性；只有角色达写档时才等于完整别名写权。 */
+                || (gp.contains("aliases")
+                    && cp.getRole().atLeast(requiredRole("POST", "/internal/es/index/cluster/alias-actions")));
+        boolean validator = gp.contains("config-validator")
+                || gp.contains(EnvPagesResolver.CONN_KEY_PREFIX + tid + ":w:config-validator");
+        return validator && !aliases;
     }
 
     /** 矩阵参数（每个路径段的 {@code ;...}）：与 Spring UrlPathHelper.removeSemicolonContent 同口径。 */
@@ -365,6 +489,14 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             deny(response, 401, "{\"code\":\"UNAUTHORIZED\",\"message\":\"请先登录 ES 控制台\"}");
             return false;
         }
+        /* 逃生阀关闭页面授权时，把授权集在身份入口就归一为 null：拦截器、连接可见性、
+           监控行过滤与权限面板必须看到同一个“未启用”形态，不能只有门禁被关、
+           可见性仍拿旧 grants 继续收窄（有权限的人被隐藏）。 */
+        if (!pageAuthEnabled && principal.isDelegated() && principal.getGrantedPages() != null) {
+            principal = new ConsolePrincipal(principal.getUsername(), principal.getRole(),
+                    principal.isFallback(), true, principal.getDisplayName(),
+                    principal.getAttributes(), null);
+        }
         request.setAttribute(ATTR_PRINCIPAL, principal);
         /* 委托会话 LOGIN 审计——宿主 iframe 流没有控制台登录动作（历史 LOGIN
            事件全来自独立部署的内置登录），「正常登录的审计日志」在宿主形态下一直缺位。
@@ -400,20 +532,50 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             if (principal.getRole().atLeast(ConsoleRole.ADMIN)) {
                 return true;
             }
-            String targetHeader = request.getHeader("X-Es-Target");
-            /* host/缺省目标也必须参与连接模型写键裁决：conn 用户不该因「没带目标头」
-               落到全局角色门，从而改写宿主集群。 */
-            String targetId = targetHeader == null || targetHeader.trim().isEmpty()
-                    ? "host" : targetHeader.trim();
-            if ("host".equalsIgnoreCase(targetId)) targetId = "host";
+            /* 全量审计是 rank3 专项数据：连接模型下页面读键会短路角色门，
+               这里补回 rank3 硬门——security 读键给 VIEWER 只能看用户列表/自助流水，
+               不得读全量 IP/URI/连接维度审计。 */
+            if ("/internal/es/index/auth/ops-audit".equals(path)
+                    && !principal.getRole().atLeast(ConsoleRole.REBUILD_OP)) {
+                opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
+                        "ROLE_DENIED", 403, "required=REBUILD_OP"));
+                deny(response, 403, "{\"code\":\"FORBIDDEN\",\"message\":\"全量审计需要 AUDIT_OP/ADMIN 角色\","
+                        + "\"required\":\"REBUILD_OP\"}");
+                return false;
+            }
+            /* 目标绑定的执行语义：只有数据面通道跟随 X-Es-Target；重建 provider、系统索引
+               查询等宿主专属端点即使带了远端目标头也恒定执行在宿主。授权若仍按目标头取
+               conn:{c1} 页键，持 c1 写键的人就能改宿主索引——因此这类路径一律按 host 授权。 */
+            String targetId;
+            if (isHostBoundPath(path, request.getMethod())) {
+                targetId = "host";
+            } else {
+                String targetHeader = request.getHeader("X-Es-Target");
+                /* host/缺省目标也必须参与连接模型写键裁决：conn 用户不该因「没带目标头」
+                   落到全局角色门，从而改写宿主集群。 */
+                targetId = targetHeader == null || targetHeader.trim().isEmpty()
+                        ? "host" : targetHeader.trim();
+                if ("host".equalsIgnoreCase(targetId)) targetId = "host";
+            }
+            if ("/internal/es/index/cluster/alias-actions".equals(path)) {
+                /* 完整别名写权必须叠加 env 页模板收缩：静态 aliases 命中但被环境模板排除时，
+                   不能借 config-validator 的 add-only 通道执行 remove/remove_index。 */
+                boolean fullAlias = envPagesResolver.writeAllowed(targetId, "aliases", principal.getGrantedPages())
+                        || envPagesResolver.staticWriteAllowed(targetId, "aliases", principal.getGrantedPages());
+                request.setAttribute(ATTR_ALIASES_FULL_WRITE, fullAlias);
+            }
             ConsolePageCatalog.Page page = pageCatalog.pageOf(path);
             java.util.Set<String> effectivePages = envPagesResolver.effectivePages(
                     targetId, principal.getGrantedPages());
+            /* HEAD 由容器映射到 GET 处理链（只读观测）：与 GET 同权，不能按写档拦健康检查。 */
             boolean writeReq = !"GET".equalsIgnoreCase(request.getMethod())
+                    && !"HEAD".equalsIgnoreCase(request.getMethod())
                     && !"OPTIONS".equalsIgnoreCase(request.getMethod())
                     && !isReadonlyPost(path);
-            /* 空集=全拒：不得借无页面归属的共享写端点回落角色门（OPERATOR 也能写）。 */
-            if (writeReq && principal.getGrantedPages().isEmpty()) {
+            List<String> sharedWrite = writeReq ? sharedWritePages(path) : null;
+            /* 空集=全拒：不得借无页面归属的共享写端点回落角色门（OPERATOR 也能写）。
+               自助端点（改密/退出）例外：无页面授权也必须能管理自己的会话。 */
+            if (writeReq && principal.getGrantedPages().isEmpty() && !isBootstrapPath(path)) {
                 opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
                         "WRITE_DENIED", 403, "pageGrants=empty target=" + targetId));
                 deny(response, 403, "{\"code\":\"WRITE_DENIED\",\"message\":\"当前身份无任何页面授权，写操作一律拒绝\"}");
@@ -449,26 +611,56 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             }
             /* 托管重建向导的「校验并继续」是 adhoc 流程内步骤：持 adhoc 写键即可调用
                config-lab/validate 的 dry-run，不要求再勾 config-validator 页（否则向导
-               第 1 步永远无法前进）。校验器页自身的写键仍按原页面门裁决。 */
+               第 1 步永远无法前进）。校验器页自身的写键仍按原页面门裁决。
+               静态页白名单同样要放行——effectivePages 有 adhoc-rebuild 且角色达 rank3。 */
             if (writeReq && "/internal/es/index/config-lab/validate".equals(path)
-                    && envPagesResolver.inConnModel(principal.getGrantedPages())
-                    && envPagesResolver.writeAllowed(targetId, "adhoc-rebuild", principal.getGrantedPages())) {
+                    && (envPagesResolver.writeAllowed(targetId, "adhoc-rebuild", principal.getGrantedPages())
+                        || ((envPagesResolver.staticWriteAllowed(targetId, "adhoc-rebuild", principal.getGrantedPages())
+                                || (!envPagesResolver.inConnModel(principal.getGrantedPages())
+                                    && effectivePages.contains("adhoc-rebuild")))
+                            && principal.getRole().atLeast(requiredRole("POST", "/internal/es/index/adhoc-rebuild/start"))))) {
                 return true;
             }
             /* 共享写映射优先于单一页面前缀：一个端点被多页合法使用时，
                持任一归属页写键都应放行（否则 ilm/move、写别名等会误拦另一页的授权）。 */
             if (writeReq && envPagesResolver.inConnModel(principal.getGrantedPages())) {
-                List<String> sharedPages = sharedWritePages(path);
-                if (sharedPages != null) {
-                    for (String pageKey : sharedPages) {
+                if (sharedWrite != null) {
+                    for (String pageKey : sharedWrite) {
                         if (envPagesResolver.writeAllowed(targetId, pageKey, principal.getGrantedPages())) {
                             return true;
                         }
                     }
+                    /* 混合模型：静态页授权仍是全局写权（与纯静态模型同语义，角色门照旧）。
+                       不能因为混入 conn 读键就把用户自己看得见的静态写入口全部 403。 */
+                    ConsoleRole sharedRole = requiredRole(request.getMethod(), path);
+                    for (String pageKey : sharedWrite) {
+                        if (envPagesResolver.staticWriteAllowed(targetId, pageKey, principal.getGrantedPages())
+                                && principal.getRole().atLeast(sharedRole)) {
+                            return true;
+                        }
+                    }
                     opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
-                            "WRITE_DENIED", 403, "conn=" + targetId + " sharedPages=" + String.join(",", sharedPages)));
+                            "WRITE_DENIED", 403, "conn=" + targetId + " sharedPages=" + String.join(",", sharedWrite)));
                     deny(response, 403, "{\"code\":\"WRITE_DENIED\",\"message\":\"暂无该共享写端点的页面写权限（需 "
-                            + jsonEscape(String.join("/", sharedPages)) + " 之一），请联系管理员授权\"}");
+                            + jsonEscape(String.join("/", sharedWrite)) + " 之一），请联系管理员授权\"}");
+                    return false;
+                }
+            }
+            /* 静态页白名单同样必须让共享写映射优先于页前缀：create-index 归属 config-validator、
+               ilm/move 归属 lifecycle，但 indices/ilm 页也是合法使用者。原顺序先吃页前缀，
+               有权限的静态页用户会被自己看得到的按钮 403——授权可见性与执行门必须同序。 */
+            boolean staticSharedWrite = writeReq && sharedWrite != null
+                    && !envPagesResolver.inConnModel(principal.getGrantedPages());
+            if (staticSharedWrite) {
+                boolean visible = false;
+                for (String pageKey : sharedWrite) {
+                    if (effectivePages.contains(pageKey)) { visible = true; break; }
+                }
+                if (!visible) {
+                    opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
+                            "WRITE_DENIED", 403, "target=" + targetId + " sharedPages=" + String.join(",", sharedWrite)));
+                    deny(response, 403, "{\"code\":\"WRITE_DENIED\",\"message\":\"暂无该共享写端点归属页面的访问权限（需 "
+                            + jsonEscape(String.join("/", sharedWrite)) + " 之一），请联系管理员授权\"}");
                     return false;
                 }
             }
@@ -476,7 +668,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                必须对任何已认证身份可用；否则把 ops-audit/mine 收进 security 页后，
                没勾 security 的普通用户连自己的操作记录都看不了。 */
             boolean bootstrapRead = !writeReq && isBootstrapPath(path);
-            if (page != null && !bootstrapRead) {
+            if (page != null && !bootstrapRead && !staticSharedWrite) {
                 if (!effectivePages.contains(page.getKey())) {
                     /* 页面不可见:拒绝事件显式落审计(:带目标集群/实名/来源 IP 维度) */
                     opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
@@ -488,6 +680,11 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                 /* 连接模型:该连接的读写授权即最终裁决,跳过角色门 */
                 if (envPagesResolver.inConnModel(principal.getGrantedPages())) {
                     if (writeReq && !envPagesResolver.writeAllowed(targetId, page.getKey(), principal.getGrantedPages())) {
+                        /* 混合模型：静态页写权 = 可见 + 角色档（与纯静态模型同序）。 */
+                        if (envPagesResolver.staticWriteAllowed(targetId, page.getKey(), principal.getGrantedPages())
+                                && principal.getRole().atLeast(requiredRole(request.getMethod(), path))) {
+                            return true;
+                        }
                         opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
                                 "WRITE_DENIED", 403, "conn=" + targetId + " page=" + page.getKey()));
                         deny(response, 403, "{\"code\":\"WRITE_DENIED\",\"page\":\"" + jsonEscape(page.getKey())
@@ -508,7 +705,9 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                        与未绑定时的 setup 引导放行到角色门。 */
                     boolean bootstrapWrite = isBootstrapPath(path)
                             || path.endsWith("/setup/test") || path.endsWith("/setup/apply");
-                    if (!bootstrapWrite) {
+                    /* 混合模型仍有静态全局页权限：未登记端点按纯静态语义回落角色门；
+                       纯连接模型保持默认拒绝（未登记写不得回落 OPERATOR）。 */
+                    if (!bootstrapWrite && !envPagesResolver.hasStatic(principal.getGrantedPages())) {
                         opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
                                 "WRITE_DENIED", 403, "target=" + targetId + " unregisteredWrite"));
                         deny(response, 403, "{\"code\":\"WRITE_DENIED\",\"message\":\"该写端点未登记页面归属，连接模型下拒绝执行\"}");
@@ -548,6 +747,8 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         }
         ConsoleRole required = requiredRole(request.getMethod(), path);
         if (!principal.getRole().atLeast(required)) {
+            opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
+                    "ROLE_DENIED", 403, "required=" + required.name()));
             deny(response, 403, "{\"code\":\"FORBIDDEN\",\"message\":\"权限不足，需要 " + required.name()
                     + " 角色\",\"required\":\"" + required.name() + "\"}");
             return false;
@@ -569,8 +770,10 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
 
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
-        // 只审计写操作（GET 观测太密，无回溯价值）
-        if ("GET".equalsIgnoreCase(request.getMethod()) || "OPTIONS".equalsIgnoreCase(request.getMethod())) {
+        // 只审计写操作（GET/HEAD 观测太密，无回溯价值）
+        if ("GET".equalsIgnoreCase(request.getMethod())
+                || "HEAD".equalsIgnoreCase(request.getMethod())
+                || "OPTIONS".equalsIgnoreCase(request.getMethod())) {
             return;
         }
         String uri = stripContextPath(request);
@@ -688,7 +891,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             return ConsoleRole.REBUILD_OP; /* 三个专项同 rank,任一命中都返回 rank3;
                                               atLeast 判定保证 CLUSTER_OP/AUDIT_OP 也能过 */
         }
-        if ("GET".equalsIgnoreCase(method)) {
+        if ("GET".equalsIgnoreCase(method) || "HEAD".equalsIgnoreCase(method)) {
             return ConsoleRole.VIEWER;
         }
         // -C1：只读查询类 POST 与 GET 同权——UI 承诺「VIEWER 仅查询观测」，查询却要 OPERATOR 是自相矛盾

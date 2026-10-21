@@ -215,10 +215,10 @@ public class ConsoleAuthInterceptorAuditContextTest {
     }
 
     /* ---------------- ：执行类只读 POST 落 EXEC 审计（可审计补全） ----------------
-       painless 脚本执行/analyze/reindex 预估/config-lab dry-run 这类「零数据写入但消耗集群
-       资源/执行脚本」的只读 POST 此前完全零审计——用户要求操作可审计，此类须留痕。 */
+       analyze/reindex 预估/config-lab dry-run 这类「零数据写入但消耗集群资源/执行脚本」的
+       只读 POST 须留痕。painless 已升写档，不再走 EXEC 分支（下方独立用例锁 WRITE）。 */
     @Test
-    public void 执行类只读POST落EXEC审计_painless脚本可追溯() {
+    public void painless执行升写档后仍可追溯_落WRITE审计() {
         CapturingAudit audit = new CapturingAudit();
         ConsoleAuthInterceptor it = interceptor(audit);
         Map<String, Object> attrs = new HashMap<>();
@@ -230,7 +230,7 @@ public class ConsoleAuthInterceptorAuditContextTest {
         it.afterCompletion(stubRequest("POST", "/internal/es/index/cluster/painless/execute", headers, attrs),
                 new StubResponse(200).proxy, null, null);
         assertNotNull("painless 执行必须留痕", audit.last);
-        assertEquals("EXEC", audit.last.getAction());
+        assertEquals("WRITE", audit.last.getAction());
         assertEquals("c1", audit.last.getConnId());
     }
 

@@ -94,6 +94,7 @@ public class ConsolePermissionsController {
             "/internal/es/index/cluster/templates/delete",
             "/internal/es/index/cluster/scripts/put",
             "/internal/es/index/cluster/scripts/delete",
+            "/internal/es/index/cluster/painless/execute",
             "/internal/es/index/cluster/snapshot/create",
             "/internal/es/index/cluster/snapshot/restore",
             "/internal/es/index/cluster/snapshot/delete",
@@ -151,22 +152,32 @@ public class ConsolePermissionsController {
         boolean connModel = pageGateActive && envPagesResolver.inConnModel(gp);
         Set<String> effective = pageGateActive ? envPagesResolver.effectivePages(tid, gp) : null;
 
+        /* 目标连接名/环境按 canSeeConn 同口径过滤：/auth/permissions 是自举端点，
+           任意已认证用户都能带 target 探测，不能借此枚举未授权连接档案。 */
+        boolean targetVisible = targetIsConn && canSeeTarget(p, tid);
+        boolean targetAccessible = !targetIsConn || targetVisible;
+
         // raw 直连档：ADMIN 全局可用；连接模型=精确 rest 页写键；静态模型=角色档。
         // DevTools 走独立端点，w:devtools 不能顺带解锁 REST 直连（/cluster/raw 仍是 rest 页）。
-        boolean rawAllowed = admin || ((pageGateActive && connModel)
+        boolean rawAllowed = targetAccessible && (admin || ((pageGateActive && connModel)
                 ? envPagesResolver.writeAllowed(tid, "rest", gp)
-                : p.getRole().atLeast(ConsoleAuthInterceptor.requiredRole("POST", RAW_PATH)));
-        boolean devtoolsAllowed = admin || ((pageGateActive && connModel)
+                : p.getRole().atLeast(ConsoleAuthInterceptor.requiredRole("POST", RAW_PATH))));
+        boolean devtoolsAllowed = targetAccessible && (admin || ((pageGateActive && connModel)
                 ? (envPagesResolver.writeAllowed(tid, "devtools", gp)
                     || envPagesResolver.writeAllowed(tid, "rest", gp))
-                : p.getRole().atLeast(ConsoleAuthInterceptor.requiredRole("POST", DEVTOOLS_PATH)));
-        // 共享写档：ADMIN 全局可用；连接模型需持有真实使用共享端点的页面写键
-        boolean sharedWriteAllowed = admin || (pageGateActive && connModel
-                && ConsoleAuthInterceptor.hasSharedWriteGrant(tid, gp));
-
+                : p.getRole().atLeast(ConsoleAuthInterceptor.requiredRole("POST", DEVTOOLS_PATH))));
+        // 共享写档：ADMIN 全局可用；连接模型需持有真实使用共享端点的页面写键；
+        // 静态/内置模型按「页面可见 + 角色档」判定（不能只对 conn 模型报可用）
+        boolean sharedWriteAllowed = targetAccessible && (admin
+                || (pageGateActive && connModel
+                    && (ConsoleAuthInterceptor.hasSharedWriteGrant(tid, gp)
+                        || ConsoleAuthInterceptor.hasStaticSharedWriteGrant(gp, effective, p.getRole())))
+                || (pageGateActive && !connModel
+                    && ConsoleAuthInterceptor.hasStaticSharedWriteGrant(gp, effective, p.getRole()))
+                || (!pageGateActive && p.getRole().atLeast(ConsoleRole.OPERATOR)));
         String connName = null;
         String env = null;
-        if (targetIsConn) {
+        if (targetVisible) {
             try {
                 connName = connStore.getName(tid);
             } catch (Exception e) {
@@ -181,7 +192,7 @@ public class ConsolePermissionsController {
                 // 同上
             }
         }
-        boolean envPagesApplied = targetIsConn && envPagesResolver.pagesFor(tid) != null;
+        boolean envPagesApplied = targetVisible && envPagesResolver.pagesFor(tid) != null;
 
         out.put("role", p.getRole().name());
         out.put("delegated", p.isDelegated());
@@ -203,7 +214,8 @@ public class ConsolePermissionsController {
                 Map<String, Object> pm = new LinkedHashMap<>();
                 pm.put("key", pg.getKey());
                 pm.put("name", pg.getName());
-                boolean read = admin || !pageGateActive || effective.contains(pg.getKey());
+                boolean read = admin || !pageGateActive
+                        || (targetAccessible && effective.contains(pg.getKey()));
                 List<String> prefixes = pg.getApiPrefixes();
                 ConsoleRole writeRole = requiredWriteRole(pg.getKey(), prefixes);
                 boolean hasWriteEndpoint = writeRole != null;
@@ -237,6 +249,11 @@ public class ConsolePermissionsController {
                         write = admin || envPagesResolver.writeAllowed(tid, "devtools", gp)
                                 || envPagesResolver.writeAllowed(tid, "rest", gp);
                         writeDeny = write ? null : "WRITE_DENIED";
+                        /* REST 写键可执行 DevTools（后端共享写映射同口径）：面板读能力不得显示 false，
+                           否则前端路由/侧栏与权限面板自相矛盾。 */
+                        if (Boolean.TRUE.equals(write)) {
+                            read = true;
+                        }
                     }
                 }
                 pm.put("read", read);
@@ -254,6 +271,11 @@ public class ConsolePermissionsController {
         }
         out.put("groups", groups);
         return ResponseEntity.ok(out);
+    }
+
+    /** 与前端 canSeeConn / 连接目录 / 监控接口同口径。 */
+    private boolean canSeeTarget(ConsolePrincipal p, String tid) {
+        return ConsoleConnVisibility.canSee(p, tid, connStore);
     }
 
     /**

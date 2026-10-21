@@ -124,9 +124,10 @@ describe('Xmigrate 探测面：与迁移写同档 rank3（防 VIEWER SSRF/环境
     expect(xmigrate).toMatch(/async function fetchCfg\(\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canOps\.value\) \{ store\.notify\('warning', '迁移探测需专项或 ADMIN 角色'\); return; \}/);
   });
   it('前端只读 POST 清单移除 connect-check/fetch-config/resolve-preview（后端已升 rank3）', () => {
-    expect(authStore).not.toContain("'/xmigrate/connect-check'");
-    expect(authStore).not.toContain("'/xmigrate/fetch-config'");
-    expect(authStore).not.toContain("'/xmigrate/resolve-preview'");
+    const roLine = authStore.split('\n').find(l => l.includes('const READONLY_POST_KEYWORDS')) || '';
+    expect(roLine).not.toContain("'/xmigrate/connect-check'");
+    expect(roLine).not.toContain("'/xmigrate/fetch-config'");
+    expect(roLine).not.toContain("'/xmigrate/resolve-preview'");
   });
 });
 

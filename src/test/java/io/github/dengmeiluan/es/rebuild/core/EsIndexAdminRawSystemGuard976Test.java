@@ -101,7 +101,7 @@ public class EsIndexAdminRawSystemGuard976Test {
                 "{\"index\":{\"_index\":\"logs\",\"_id\":\"1\"}}\n{\"message\":\"hi\"}\n"), "bulk");
         assertAllowed(() -> admin.guardRawGuarded("POST", "/logs/_pit?keep_alive=1m", null), "PIT");
         assertAllowed(() -> admin.guardRawGuarded("GET", "/_cluster/health", null), "健康只读");
-        assertAllowed(() -> admin.guardRawGuarded("GET", "/_cat/indices", null), "索引目录只读");
+        assertAllowed(() -> admin.guardRawGuarded("GET", "/_cat/indices?format=json", null), "索引目录只读（JSON 行过滤）");
         assertAllowed(() -> admin.guardRawGuarded("GET", "/_security/_authenticate", null), "身份自检");
     }
 
@@ -113,6 +113,12 @@ public class EsIndexAdminRawSystemGuard976Test {
         settings.put("access_key", "AK");
         settings.put("secret_key", "SK");
         settings.put("session_token", "TOK");
+        /* Azure 用 key、GCS 用 service_account；凭据可能藏在嵌套 map/list 里 */
+        settings.put("key", "AZURE_KEY");
+        settings.put("service_account", "{\"private_key\":\"PEM\"}");
+        Map<String, Object> nested = new java.util.LinkedHashMap<>();
+        nested.put("secret_key", "NESTED_SK");
+        settings.put("client", nested);
         repo.put("name", "s3");
         repo.put("settings", settings);
         java.util.List<Map<String, Object>> masked = EsIndexAdmin.maskSnapshotRepoSecrets(
@@ -122,7 +128,57 @@ public class EsIndexAdminRawSystemGuard976Test {
         org.junit.Assert.assertEquals("***", ms.get("access_key"));
         org.junit.Assert.assertEquals("***", ms.get("secret_key"));
         org.junit.Assert.assertEquals("***", ms.get("session_token"));
+        org.junit.Assert.assertEquals("***", ms.get("key"));
+        org.junit.Assert.assertEquals("***", ms.get("service_account"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> mc = (Map<String, Object>) ms.get("client");
+        org.junit.Assert.assertEquals("***", mc.get("secret_key"));
         org.junit.Assert.assertEquals("logs", ms.get("bucket"));
+    }
+
+    @Test
+    public void 组件模板不要求index_patterns且路径标识按段编码() {
+        try {
+            admin.putTemplate("component", "x", "{\"template\":{}}");
+            fail("无 client 应抛运行时异常");
+        } catch (ControlPlaneGuardException e) {
+            fail("组件模板不应被 index_patterns 守卫拦截: " + e.getMessage());
+        } catch (java.io.IOException e) {
+            fail("组件模板不应在守卫阶段失败: " + e.getMessage());
+        } catch (RuntimeException expected) {
+            /* 通过守卫后因无 client 失败，说明组件模板未被 patterns 守卫拒绝 */
+        }
+        assertAllowed(() -> EsIndexAdmin.guardPathToken("模板@v1", "模板名"), "unicode/@ 模板名");
+        assertRejected(() -> EsIndexAdmin.guardPathToken("../../es_console_user", "模板名"), "模板名穿越");
+        assertRejected(() -> EsIndexAdmin.guardPathToken("x*", "模板名"), "模板名通配");
+    }
+
+    @Test
+    public void 精确索引操作拒绝逗号列表通配与路径注入() {
+        assertRejected(() -> {
+            try { admin.deleteIndex("logs,es_console_user"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
+        }, "删除索引逗号夹带控制面");
+        assertRejected(() -> {
+            try { admin.deleteIndex("logs,es_console_*"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
+        }, "删除索引逗号通配");
+        assertRejected(() -> {
+            try { admin.deleteIndex("logs*"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
+        }, "删除索引通配");
+        assertRejected(() -> {
+            try { admin.deleteTemplate("index", "../../es_console_user"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
+        }, "模板名穿越");
+        assertRejected(() -> {
+            try { admin.putTemplate("index", "x", "{\"template\":{}}"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
+        }, "模板缺 patterns");
+        assertRejected(() -> {
+            try { admin.slmExecute("../../_cluster/settings"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
+        }, "SLM 策略路径注入");
+        assertRejected(() -> {
+            try { admin.cancelTask("node:1/../../_cluster/reroute?"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
+        }, "任务 ID 路径注入");
+        assertRejected(() -> {
+            try { admin.rolloverAlias("logs*", "{}", false); } catch (java.io.IOException e) { throw new RuntimeException(e); }
+        }, "rollover 通配");
     }
 
     @Test
@@ -179,6 +235,11 @@ public class EsIndexAdminRawSystemGuard976Test {
         assertRejected(() -> admin.guardRawGuarded("GET", "/_mapping", null), "全量 mapping");
         assertRejected(() -> admin.guardRawGuarded("GET", "/_settings", null), "全量 settings");
         assertRejected(() -> admin.guardRawGuarded("GET", "/_cat/repositories", null), "快照仓库目录");
+        assertRejected(() -> admin.guardRawGuarded("GET", "/_cluster/settings?include_defaults=true", null),
+                "集群设置读取");
+        assertRejected(() -> admin.guardRawGuarded("GET", "/_refresh", null), "集群级 refresh");
+        assertRejected(() -> admin.guardRawGuarded("GET", "/logs/_refresh", null), "GET 形态索引 refresh");
+        assertRejected(() -> admin.guardRawGuarded("GET", "/logs/_forcemerge", null), "GET 形态 forcemerge");
     }
 
     @Test
@@ -191,6 +252,10 @@ public class EsIndexAdminRawSystemGuard976Test {
                 "{\"query\":\"SELECT * FROM `e*`\"}"), "反引号通配");
         assertRejected(() -> admin.guardRawGuarded("POST", "/_xpack/sql",
                 "{\"query\":\"SELECT * FROM -- x\ne*\"}"), "行注释通配");
+        assertRejected(() -> admin.guardRawGuarded("POST", "/_xpack/sql",
+                "{\"query\":\"SELECT * FROM\\/**\\/e*\"}"), "JSON 转义斜杠藏块注释");
+        assertRejected(() -> admin.guardRawGuarded("POST", "/_xpack/sql",
+                "{\"query\":\"SELECT * FROM\\te*\"}"), "JSON 空白转义");
         assertAllowed(() -> admin.guardRawGuarded("POST", "/_xpack/sql",
                 "{\"query\":\"SELECT * FROM logs-*\"}"), "业务索引通配");
     }
@@ -268,20 +333,52 @@ public class EsIndexAdminRawSystemGuard976Test {
     }
 
     @Test
-    public void 快照恢复与reindex远程源补强() {
+    public void 快照恢复与reindex只能走专属端点_raw拒绝() {
+        /* raw 不再承接别名/reindex/快照恢复/模板：留 rest 写键也不能绕过专属页写键 */
         assertRejected(() -> admin.guardRawGuarded("POST", "/_snapshot/repo/snap/_restore",
-                "{\"indices\":\"logs-*\",\"include_global_state\":true}"), "恢复全局状态");
-        assertRejected(() -> admin.guardRawGuarded("POST", "/_snapshot/repo/snap/_restore",
-                "{\"indices\":\"logs-*\",\"include_global_state\":\"true\"}"), "字符串布尔全局状态");
-        assertRejected(() -> admin.guardRawGuarded("POST", "/_snapshot/repo/snap/_restore",
-                "{\"indices\":\"logs-*\",\"feature_states\":[\"security\"]}"), "恢复安全 feature state");
-        assertAllowed(() -> admin.guardRawGuarded("POST", "/_snapshot/repo/snap/_restore",
-                "{\"indices\":\"logs-*\"}"), "恢复业务索引");
+                "{\"indices\":\"logs-*\"}"), "raw 恢复快照");
         assertRejected(() -> admin.guardRawGuarded("POST", "/_reindex",
+                "{\"source\":{\"index\":\"logs-*\"},\"dest\":{\"index\":\"copy\"}}"), "raw reindex");
+        assertRejected(() -> admin.guardRawGuarded("POST", "/_aliases",
+                "{\"actions\":[{\"add\":{\"index\":\"logs-*\",\"alias\":\"rest\"}}]}"), "raw 别名写入");
+        assertRejected(() -> admin.guardRawGuarded("PUT", "/_index_template/x",
+                "{\"index_patterns\":[\"logs-*\"],\"template\":{}}"), "raw 模板写入");
+
+        /* 专属端点内仍复用同一套 body 守卫 */
+        assertRejected(() -> admin.guardRestoreBody(
+                "{\"indices\":\"logs-*\",\"include_global_state\":true}"), "恢复全局状态");
+        assertRejected(() -> admin.guardRestoreBody(
+                "{\"indices\":\"logs-*\",\"include_global_state\":\"true\"}"), "字符串布尔全局状态");
+        assertRejected(() -> admin.guardRestoreBody(
+                "{\"indices\":\"logs-*\",\"feature_states\":[\"security\"]}"), "恢复安全 feature state");
+        assertAllowed(() -> admin.guardRestoreBody("{\"indices\":\"logs-*\"}"), "恢复业务索引");
+        assertRejected(() -> admin.guardRestoreBody(
+                "{\"indices\":\"logs\",\"rename_pattern\":\"(.+)\",\"rename_replacement\":\"es_console_$1\"}"),
+                "重命名写入控制面");
+        assertRejected(() -> admin.guardRestoreBody(
+                "{\"indices\":\"logs\",\"rename_pattern\":\"(.+)\",\"rename_replacement\":\".security_$1\"}"),
+                "重命名写入系统索引");
+        assertRejected(() -> admin.guardRestoreBody(
+                "{\"indices\":\"e_user\",\"rename_pattern\":\"(.*)\",\"rename_replacement\":\"es_consol$1\"}"),
+                "$1 展开拼出控制面");
+        assertRejected(() -> admin.guardRestoreBody(
+                "{\"indices\":\"logs*\",\"rename_pattern\":\"(.+)\",\"rename_replacement\":\"restored_$1\"}"),
+                "通配源 + 占位符重命名");
+        assertAllowed(() -> admin.guardRestoreBody(
+                "{\"indices\":\"logs\",\"rename_pattern\":\"(.+)\",\"rename_replacement\":\"logs-restored-$1\"}"),
+                "重命名到业务索引");
+        assertRejected(() -> {
+            try { admin.getIndexSettingsWithDefaults("%65s_console_user"); }
+            catch (java.io.IOException e) { throw new RuntimeException(e); }
+        }, "settings 双重编码读取控制面");
+        assertRejected(() -> admin.guardReindexRemote(
                 "{\"source\":{\"remote\":{\"host\":\"http://169.254.169.254\"},\"index\":\"logs\"},\"dest\":{\"index\":\"copy\"}}"),
                 "reindex 远程源");
-        assertAllowed(() -> admin.guardRawGuarded("POST", "/_reindex",
+        assertAllowed(() -> admin.guardReindexBody(
                 "{\"source\":{\"index\":\"logs-*\"},\"dest\":{\"index\":\"copy\"}}"), "业务 reindex");
+        assertRejected(() -> admin.guardReindexBody(
+                "{\"source\":{\"index\":\"logs\"},\"dest\":{\"index\":\"copy\"},"
+                + "\"script\":{\"source\":\"ctx._index='es_consol'+'e_user'\"}}"), "reindex 脚本改写目标");
     }
 
     @Test
@@ -301,15 +398,18 @@ public class EsIndexAdminRawSystemGuard976Test {
     }
 
     @Test
-    public void 合法别名与模板写入保留_删除模板拒绝() {
-        assertAllowed(() -> admin.guardRawGuarded("POST", "/_aliases",
+    public void 结构化别名与模板守卫保留_raw一律拒绝() {
+        assertAllowed(() -> admin.guardAliasActionsBody(
                 "{\"actions\":[{\"add\":{\"index\":\"logs-*\",\"alias\":\"rest\"}}]}"), "业务别名");
-        assertAllowed(() -> admin.guardRawGuarded("PUT", "/_index_template/x",
+        assertAllowed(() -> admin.guardIndexTemplateBody(
                 "{\"index_patterns\":[\"logs-*\"],\"template\":{}}"), "业务模板");
-        assertRejected(() -> admin.guardRawGuarded("PUT", "/_index_template/x",
-                "{\"template\":{}}"), "模板缺 patterns=catch-all");
-        assertRejected(() -> admin.guardRawGuarded("PUT", "/_template/x",
-                "{\"settings\":{}}"), "旧模板缺 patterns=catch-all");
-        assertRejected(() -> admin.guardRawGuarded("DELETE", "/_index_template/x", null), "删模板");
+        assertRejected(() -> {
+            try { admin.putTemplate("index", "x", "{\"template\":{}}"); }
+            catch (java.io.IOException e) { throw new RuntimeException(e); }
+        }, "模板缺 patterns=catch-all");
+        assertRejected(() -> admin.guardIndexTemplateBody(
+                "{\"index_patterns\":[\"*\"]}"), "模板通配 catch-all");
+        assertRejected(() -> admin.guardIndexTemplateBody(
+                "{\"index_patterns\":[\"es_console_*\"]}"), "模板控制面");
     }
 }

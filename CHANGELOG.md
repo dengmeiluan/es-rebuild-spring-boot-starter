@@ -5,6 +5,103 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.36]
+
+### 安全
+
+- 索引表达式拒绝 date-math 包装（`<es_console_user>`/`<es_consol?_*>`）：精确名、通配模式、
+  raw 路径、SQL/alias/reindex/模板/快照 body 全部覆盖；通配模式先经 `_cat/indices` 解析真实
+  目标并拒绝后缀控制索引（`*_es_rebuild_lock`/`*_es_xmigrate_job`），只读搜索与 PIT 不再能扫出控制面
+- 搜索 DSL 二级数据源结构守卫：`terms/terms_set` lookup、`percolate`、`indexed_shape`、
+  `more_like_this`、内嵌文档 `_index` 均过统一索引表达式校验；搜索模板必须内联 source
+  （按已存 id 执行直接拒绝），reindex 预估/`source.query` 同样受控
+- 非 ADMIN raw 的 `_cat/indices|aliases|shards` 只允许 `format=json` 且必须保留 index 列，
+  返回前逐行剔除控制面索引；`_stats`/`_cat/count|segments|recovery|allocation`、
+  `_search_shards`/`_segments`/`_recovery`/`_shard_stores`/`_resolve`/`_alias` 与
+  索引级 `_cluster/health` 一律拒绝；健康报告、分片存储、分配诊断响应同步脱敏
+- 快照创建/恢复/删除只接受精确 repo/snapshot 名，`name=*` 不再清空整个仓库；别名 add-only
+  叠加 env 页模板收缩，静态 aliases 键在环境未开放该页时不能执行 remove/remove_index
+- 本地账号管理 `auth/users` 改为宿主绑定：远端连接的 security 授权不能读写宿主账号库；
+  审计流水仍按目标连接行级过滤。`/xmigrate/progress` 归 xmigrate 专属读取，
+  宿主锁健康只对 overview/diag/health-report 开放
+- DevTools 预填自动执行只允许 GET/HEAD 与搜索类只读 POST，且必须仍是当初预填的那个 tab；
+  写预填一律只回填不自动发送。请求原文记录对 password/token/secret 等字段脱敏，
+  退出登录、用户切换（含 401→新登录）立即清空
+- 前端宿主页判定与后端对齐：`system`/`config-drift` 按宿主授权，`conn:{id}:w:rest` 可进入
+  DevTools，静态 rest 不再向低角色暴露死入口；概览/诊断/后台轮询按各自端点页授权跳过，
+  权限降档时安全中心立即清空已加载的全量审计行
+- 无权限用户没有可用写通道：新增回归测试覆盖 date-math/通配/模板/reindex/raw cat/快照/
+  别名/宿主页/DevTools 预填，前端 980 规格锁定 host-bound 与 REST→DevTools 可见性；
+  后端全量 1235 项、前端全量套件均通过
+
+- 非 ADMIN raw 进一步收敛到文档/检索/批量面：别名切换、reindex、快照恢复、模板写入一律改走
+  aliases/reindex-advanced/snapshots/templates 专属页写键；GET 形态的 refresh/flush/
+  forcemerge/close 与 `_cluster/settings` 读取同样拒绝，rest/devtools 写键不再跨页扩权
+- 删除索引精确名守卫拒绝逗号列表与通配（堵住 `index=logs,es_console_user` 夹带控制索引）、
+  拒绝 `#`/`%` 等 URL 特殊字符；模板名/SLM 策略/任务 ID 拼路径前统一白名单校验，rollover 别名
+  服务端编码，settings 含默认值读取拒绝双重编码
+- reindex 禁止脚本（`ctx._index` 可字符串拼接改写目标写入控制面）；快照恢复
+  `rename_replacement` 的 `$1` 按真实源索引展开后逐个判定，通配源禁止占位符重命名
+- 快照仓库凭据递归脱敏：Azure `key`、GCS `service_account` 与嵌套 map/list 中的密钥不再下发给
+  非 ADMIN
+- 权限面板不泄露未授权连接名/环境；混合静态页+连接键的连接可见性前后端同口径；零页面授权
+  仍可改密/退出；静态 `adhoc-rebuild` 可走向导配置校验；`workspace` 页可读任务/远程集群卡片；
+  静态与内置 OPERATOR 的共享写能力如实回显；连接目录、权限面板与监控接口共用
+  `ConsoleConnVisibility` 单一可见性判定
+- 监控读侧后端行级隔离：曲线/告警/历史按 `connId/connName` 过滤，Top 索引与节点聚合在非全量
+  权限下要求显式已授权集群，前端过滤只作第二层
+- 数据面目标绑定点补连接可见性硬门：`X-Es-Target` 与省略目标头回落宿主都必须同时通过
+  minRole 与 `conn:{id}:` 页面键；宿主专属端点（provider 重建/系统索引/`/overview` 等）一律按
+  `host` 授权，持远端连接写键不能再改宿主；`/progress` 改为跟随目标集群查任务进度
+- SQL 守卫改为词法扫描：`FROM"e*"`、引号逗号列表、引号别名、块/行注释、反引号、未闭合注释
+  与非法 JSON 全部覆盖；文档/脚本路径 ID 统一拒绝 `..`/斜杠并编码，低层路径守卫逐段拒绝穿越
+- 破坏性通配（`_delete_by_query`/`_update_by_query`）与快照通配恢复先解析真实索引名再逐个判定，
+  `logs-2026*` 不再命中 `*_es_rebuild_lock`/后缀控制索引；Painless 执行从只读 POST 升为写档，
+  `context_setup.index` 同样过控制面守卫
+- 权限面板目标不可见时读写/共享写/raw/devtools 能力一律回 false；JDBC 连接档案 `get()` 回填
+  `env`（环境页模板不再被静默跳过）；目录 200 条截断或读取失败时未知实名不再回落宿主
+- 连接目录 ADMIN/无鉴权分支恢复完整列表（可见性快照不再清空管理员数据）；无鉴权部署不再按
+  minRole 过滤连接/探活；监控聚合“全量可见”必须有可读且完整的目录证明，目录失败时节点/Top
+  聚合保持 fail-closed
+- 任务进度端点 `/progress` 跟随目标集群并登记为跨页共享读（DBQ/UBQ/reindex/DSL 轮询不再 403）
+- SQL 元数据枚举（SHOW/DESCRIBE）拒绝；通配表与快照创建同样解析真实索引名后再判定；
+  `_mget` 路径形式允许省略文档 `_index`（根路径仍拒绝全量）
+- 共享读片段匹配修正：`index-settings-defaults` 归 mapping 页、`/es/index/keys` 不再误吞
+  config-drift；mapping-detail 覆盖 search/browser/doc-diff；宿主侧只读辅助面（keys/
+  desired-state/mapping-reconcile）按当前目标页面授权，不再把已授权连接用户挡在页面外
+- raw 管理域入口统一走身份感知门（探测中/失败关闭）；Painless 试跑补写档 UI 门；
+  DevTools 挂起预填在页面失活时丢弃、首探 401 后等待宿主令牌重探；安全中心用户列表在
+  探测中/失败时不再读取
+- 全量审计归 security 页（rank3 + 页面读键）：`security` 页仅授权单连接时行级按
+  `ConsoleConnVisibility` 过滤，连接/宿主外事件不下发；audit-facets 跨连接聚合对
+  非全局授权回空建议；连接目录、集群索引/别名/分片列表对非 ADMIN 隐藏控制面索引名
+- config-validator 页借 alias-actions 只允许单条 `add{index,alias}`：remove/remove_index、
+  `is_write_index`/`indices`/routing 等扩权参数一律拒绝；aliases 页写权不受限
+- PIT 搜索必须携带非空 `pit.id` 且不得携带 `index/indices`（裸 body 会退化为全集群
+  `_search` 读出账号/连接凭据/审计索引）；PIT open 通配解析真实索引名后逐个过控制面守卫；
+  raw 通配 `_delete_by_query/_update_by_query` 同样解析真实索引名（堵住 `logs-*` 命中
+  `*_es_rebuild_lock`/`*_es_xmigrate_job` 后缀控制索引）
+- 混合授权（conn 键 + 静态页键）写门回落静态页语义：静态页可见 + 角色档即放行，
+  不再因任一 conn 读键把有权限用户整体拦死；未登记写端点仅在纯 conn 模型默认拒绝
+- 前端 API 层写门：`request()` 在 fetch 前按身份×目标×端点归属页裁决，未授权写请求
+  零发出（CLIENT_WRITE_DENIED）；命令面板导航全部走页面门，DevTools 重试/空态快捷入口
+  按写权隐藏，杜绝“看得见点得着但必 403”的死入口
+
+### 修复
+
+- 监控曲线/告警/历史/Top 索引按连接授权过滤，Top 索引下推改为集群实名参数；集群切换器宿主
+  项在纯连接模型下隐藏；DSL 查询页 KeepAlive 离页摘除 Ctrl+Enter/Ctrl+S 全局键
+- 组件模板不再被 `index_patterns` 必填误伤；监控聚合行不再在前端二次按 `connId` 过滤
+  （连接隔离由后端行级完成，避免连接模型大屏空白）；含默认值 settings 保持 `{status,body}` 契约
+- 前端身份探测启动后 fail-closed：`me` 未到达/探测失败时写门不把 `me=null` 当无鉴权，
+  瞬时失败指数退避重探；仅明确 404 无鉴权部署全放行。DevTools 预填 `run:true` 挂起至身份
+  确认后只执行一次，`GuardedActionButton` 权限门缺省改为 false
+- 静态页模型共享写映射优先于页前缀（`indices` 建索引、`ilm` 移步、`config-validator` 写别名
+  不再被另一页前缀 403）；无页前缀读端点（settings/aliases/scripts/mapping/analysis/节点）
+  按真实调用页收口；HEAD 按只读判定；角色门拒绝同样落审计
+- Overview/Diag 在身份确认且无 host 授权时跳过恒定宿主的概览/健康请求，纯连接用户不再看到
+  必 403 的错误条；权限面板目标不可见时不再虚报可读
+
 ## [1.0.35]
 
 ### 安全

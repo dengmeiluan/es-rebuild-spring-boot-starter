@@ -313,11 +313,24 @@ async function load() {
   ovLoading.value = true;
   try {
     const errs: string[] = [];
-    const [ov, hd, ch] = await Promise.allSettled([api.overview(), api.health(), api.clusterHealth()]);
+    /* /overview 与 /health 恒定宿主：按宿主页授权逐接口判定，
+       混合静态+连接授权时不再因 canSeeConn('host') 为真而误发 403。
+       探测完成前照常发起——否则独立部署首屏会永远错过宿主概览。 */
+    const canOverview = !auth.probed
+      || auth.canEndpoint('write', 'GET', '/internal/es/index/overview', store.target);
+    const canHealth = !auth.probed
+      || auth.canEndpoint('write', 'GET', '/internal/es/index/health', store.target);
+    const [ov, hd, ch] = await Promise.allSettled([
+      canOverview ? api.overview() : Promise.resolve(null),
+      canHealth ? api.health() : Promise.resolve(null),
+      api.clusterHealth(),
+    ]);
     /* 三源 reason.message 裸拼 → friendlyEsError 单源翻译（前缀「概览接口/健康接口/
  集群健康」保留；obsWave560 BoostTuner w80 先例口径） */
-    if (ov.status === 'fulfilled') overview.value = ov.value; else errs.push('概览接口：' + friendlyEsError(String(ov.reason?.message ?? ov.reason)));
-    if (hd.status === 'fulfilled') healthData.value = hd.value; else errs.push('健康接口：' + friendlyEsError(String(hd.reason?.message ?? hd.reason)));
+    if (ov.status === 'fulfilled') overview.value = ov.value;
+    else if (canOverview) errs.push('概览接口：' + friendlyEsError(String(ov.reason?.message ?? ov.reason)));
+    if (hd.status === 'fulfilled') healthData.value = hd.value;
+    else if (canHealth) errs.push('健康接口：' + friendlyEsError(String(hd.reason?.message ?? hd.reason)));
     if (ch.status === 'fulfilled') clusterHealth.value = ch.value; else errs.push('集群健康：' + friendlyEsError(String(ch.reason?.message ?? ch.reason)));
     const msg = errs.join('；');
     if (msg && !loadErr.value && loaded.value === false) store.notify('error', '概览部分数据加载失败：' + errs[0]);
@@ -601,7 +614,9 @@ async function loadHistory() {
       fromMs, size: 200,
     });
     if (conn !== mhConn.value || status !== mhStatus.value || range !== mhRange.value) return;
-    mhRows.value = res.records || [];
+    /* 连接隔离由后端行级完成（含只有 connName 的历史行）；前端仅在行带 connId 时复核，
+       不能把缺失 connId 的行一律当宿主——那会误删已授权连接的记录。 */
+    mhRows.value = (res.records || []).filter((r: any) => !r.connId || auth.canSeeConn(r.connId));
   } catch (e: any) {
     if (conn !== mhConn.value || status !== mhStatus.value || range !== mhRange.value) return;
     mhErr.value = friendlyEsError(String(e?.message ?? e));

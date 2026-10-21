@@ -74,6 +74,7 @@ public class EsIndexRebuildServiceSurvivingBehaviorTest {
         @Override public void removeAlias(String a, String p) { calls.add("removeAlias:" + a + ":" + p); }
         @Override public void deleteIndex(String i) { calls.add("deleteIndex:" + i); }
         @Override public Map<String, Object> inspect(String name, int size) { calls.add("inspect:" + name); return java.util.Collections.singletonMap("index", name); }
+        @Override Map<String, Object> inspectInternal(String name, int size) { calls.add("inspect:" + name); return java.util.Collections.singletonMap("index", name); }
     }
 
     /** 不碰 ES 的锁守卫：只记录 acquire/release，get() 返回可控的锁视图。 */

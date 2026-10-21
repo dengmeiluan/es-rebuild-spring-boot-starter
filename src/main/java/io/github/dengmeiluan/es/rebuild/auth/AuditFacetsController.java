@@ -59,6 +59,19 @@ public class AuditFacetsController {
             body.put("required", ConsoleRole.REBUILD_OP.name());
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
         }
+        ConsolePrincipal p = (ConsolePrincipal) attr;
+        java.util.Set<String> gp = p.getGrantedPages();
+        /* 值建议是跨全部连接的聚合（用户/URI/集群），连接维度 security 读键不能拿到
+           其它连接与宿主的目录值。非全局授权回空建议，前端回落硬编码词表即可。 */
+        if (p.isDelegated() && gp != null && !gp.isEmpty()
+                && !gp.contains("security") && !p.getRole().atLeast(ConsoleRole.ADMIN)) {
+            Map<String, Object> empty = new LinkedHashMap<>();
+            empty.put("actions", Collections.emptyList());
+            empty.put("conns", Collections.emptyList());
+            empty.put("users", Collections.emptyList());
+            empty.put("uris", Collections.emptyList());
+            return ResponseEntity.ok(empty);
+        }
         return ResponseEntity.ok(Collections.unmodifiableMap(store.facets()));
     }
 }

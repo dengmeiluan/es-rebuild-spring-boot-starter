@@ -79,11 +79,11 @@ public class ConsolePageCatalogTest {
         assertEquals("security", catalog.pageOf("/internal/es/index/auth/users/upsert").getKey());
         /* 审计值建议会暴露全量用户名/URI——归属安全中心（原挂 overview 是页面归属错位） */
         assertEquals("security", catalog.pageOf("/internal/es/index/auth/audit-facets").getKey());
-        /* ops-audit 移出 security 页归属（auth/users 同款收权）——全量审计
-           回归共享端点走角色门（AUDIT_KEYWORDS rank3）；VIEWER 的 /auth/ops-audit/mine
-           特例是自助流水，不受页面归属影响 */
-        assertNull(catalog.pageOf("/internal/es/index/auth/ops-audit"));
-        assertNull(catalog.pageOf("/internal/es/index/auth/ops-audit/mine"));
+        /* ops-audit 归 security 页：全量审计必须同时具备页面读键 + rank3 角色门
+           （连接模型下页面读键即最终裁决）；/auth/ops-audit/mine 是自助端点，
+           拦截器 bootstrapRead 特例不因页面归属受限。 */
+        assertEquals("security", catalog.pageOf("/internal/es/index/auth/ops-audit").getKey());
+        assertEquals("security", catalog.pageOf("/internal/es/index/auth/ops-audit/mine").getKey());
         assertEquals("indices", catalog.pageOf("/internal/es/index/status").getKey());
         assertEquals("indices", catalog.pageOf("/internal/es/index/cluster/delete-index").getKey());
         assertEquals("optimizer", catalog.pageOf("/internal/es/index/cluster/force-merge").getKey());

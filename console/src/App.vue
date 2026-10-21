@@ -37,7 +37,7 @@
  fade 仅 140ms 透明度装饰，代价是整页空白级事故，直接移除；页面级过渡
  交由各视图自身的骨架屏/ind-bar 承担。 -->
                   <keep-alive :include="KEEP_ALIVE_VIEWS" :max="12">
-                    <component :is="Component" :key="route.path + '@' + store.target" />
+                    <component :is="Component" :key="route.path + '@' + store.target + '@' + (auth.me?.username || '')" />
                   </keep-alive>
                 </router-view>
               </div>
@@ -98,12 +98,20 @@ const KEEP_ALIVE_VIEWS = [
   'PitScrollView',   // PIT 分页（长任务现场）
   'IndexHubView',    // 索引工作区（列表筛选/滚动/tab 现场，重挂即丢）
 ];
-import { setHostToken, getHostToken, setAuthSettled } from './api';
+import { setHostToken, getHostToken, setAuthSettled, ioRecorder } from './api';
 
 const route = useRoute();
 const router = useRouter();
 const store = useAppStore();
 const auth = useAuthStore();
+
+/* 宿主换发令牌可能切换为另一个用户（角色相同也不罕见）：页面缓存/请求原文必须随
+   用户名切换失效，否则后一个用户能看到前一个用户的查询结果与连接口令。 */
+watch(() => auth.me?.username, (u, prev) => {
+  if (u !== prev) ioRecorder.clear();
+});
+/* 子视图 mounted 先于父级：setup 同步置位，保证首帧写门就处于 fail-closed 探测态 */
+auth.beginProbe();
 const mon = useLiveMonitorStore();
 const jt = useJobTrackerStore();
 const paletteOpen = ref(false);

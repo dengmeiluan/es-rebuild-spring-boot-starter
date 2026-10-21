@@ -241,11 +241,22 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
+    public void 委托身份_空集_改密与退出仍可自助() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor it = interceptor(delegated(Collections.<String>emptySet()), true, audit);
+        /* 自助端点不受页面白名单约束：否则零页面授权用户连自己的会话都管不了 */
+        assertTrue(it.preHandle(stubRequest("POST", "/internal/es/index/auth/change-password", ""),
+                new StubResponse().proxy, null));
+        assertTrue(it.preHandle(stubRequest("POST", "/internal/es/index/auth/logout", ""),
+                new StubResponse().proxy, null));
+    }
+
+    @Test
     public void 用户管理按security页读写键_无键PAGE_DENIED() throws Exception {
         CapturingAudit audit = new CapturingAudit();
-        // security 读键可看用户列表（页面门按页读键裁决）
+        // security 读键可看用户列表（本地账号库恒定宿主，按 host 连接键裁决）
         ConsoleAuthInterceptor viewer = interceptor(delegatedAs(ConsoleRole.VIEWER,
-                new HashSet<>(Arrays.asList("conn:c1:security", "conn:c1:overview"))), true, audit);
+                new HashSet<>(Arrays.asList("conn:host:security", "conn:c1:overview"))), true, audit);
         assertTrue(viewer.preHandle(stubRequest("GET", "/internal/es/index/auth/users",
                 java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
 
@@ -263,12 +274,29 @@ public class ConsoleAuthInterceptorPageAuthTest {
                 new HashSet<>(Collections.singletonList("conn:c1:rest"))), true, audit);
         assertTrue(admin.preHandle(stubRequest("GET", "/internal/es/index/auth/users",
                 java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
-        /* ops-audit 无页面归属，走角色门 rank3——conn 读键不再放行 VIEWER 的全量审计 */
+        /* ops-audit 归 security 页且保留 rank3 硬门：
+           - VIEWER + security 读键 → 403（全量审计是 rank3 专项）
+           - rank3 无 security 页 → 403（页面门）
+           - rank3 + security 读键 → 放行 */
+        StubResponse viewerAudit = new StubResponse();
+        assertFalse("VIEWER 不得读全量审计", viewer.preHandle(stubRequest("GET",
+                "/internal/es/index/auth/ops-audit",
+                java.util.Collections.singletonMap("X-Es-Target", "c1")), viewerAudit.proxy, null));
+        assertEquals(403, viewerAudit.status);
+        assertTrue(viewerAudit.bodyText().contains("\"required\":\"REBUILD_OP\""));
+        ConsoleAuthInterceptor rank3NoSecurity = interceptor(delegatedAs(ConsoleRole.CLUSTER_OP,
+                new HashSet<>(Collections.singletonList("conn:c1:overview"))), true, audit);
         StubResponse respAudit = new StubResponse();
-        assertFalse(viewer.preHandle(stubRequest("GET", "/internal/es/index/auth/ops-audit",
+        assertFalse("无 security 页的 rank3 不得读全量审计", rank3NoSecurity.preHandle(stubRequest("GET",
+                "/internal/es/index/auth/ops-audit",
                 java.util.Collections.singletonMap("X-Es-Target", "c1")), respAudit.proxy, null));
         assertEquals(403, respAudit.status);
-        assertTrue(respAudit.bodyText().contains("\"required\""));
+        assertTrue(respAudit.bodyText().contains("\"page\":\"security\""));
+        ConsoleAuthInterceptor auditor = interceptor(delegatedAs(ConsoleRole.AUDIT_OP,
+                new HashSet<>(Collections.singletonList("conn:c1:security"))), true, audit);
+        assertTrue("rank3 + security 读键可读全量审计", auditor.preHandle(stubRequest("GET",
+                "/internal/es/index/auth/ops-audit",
+                java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
     }
 
 
@@ -467,6 +495,33 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
+    public void 静态页授权_托管重建页可调用向导内配置校验() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor rank3 = interceptor(delegatedAs(ConsoleRole.REBUILD_OP,
+                new HashSet<>(Arrays.asList("adhoc-rebuild"))), true, audit);
+        assertTrue("静态 adhoc 页 + rank3 应允许 config-lab/validate dry-run", rank3.preHandle(
+                stubRequest("POST", "/internal/es/index/config-lab/validate", ""), new StubResponse().proxy, null));
+
+        ConsoleAuthInterceptor viewer = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("adhoc-rebuild"))), true, audit);
+        StubResponse resp = new StubResponse();
+        assertFalse("静态 adhoc 页但角色不足不得调用配置校验", viewer.preHandle(
+                stubRequest("POST", "/internal/es/index/config-lab/validate", ""), resp.proxy, null));
+        assertEquals(403, resp.status);
+    }
+
+    @Test
+    public void 静态workspace页可读任务与远程集群卡片() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor ws = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("workspace"))), true, audit);
+        assertTrue(ws.preHandle(stubRequest("GET", "/internal/es/index/cluster/task-detail", ""),
+                new StubResponse().proxy, null));
+        assertTrue(ws.preHandle(stubRequest("GET", "/internal/es/index/cluster/remote-clusters", ""),
+                new StubResponse().proxy, null));
+    }
+
+    @Test
     public void 连接模型共享写不得因缺目标头回落角色门写宿主() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         /* OPERATOR 角色只够角色门；连接模型下必须再持有目标连接的页面写键。 */
@@ -500,18 +555,19 @@ public class ConsoleAuthInterceptorPageAuthTest {
     public void 委托会话首见落LOGIN审计_同令牌去重() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
-                new HashSet<>(Arrays.asList("conn:c1:overview"))), true, audit);
+                new HashSet<>(Arrays.asList("conn:c1:search"))), true, audit);
         Map<String, String> headers = new HashMap<>();
         headers.put("X-Es-Host-Token", "host-jwt-token-a");
         headers.put("X-Es-Target", "c1");
-        assertTrue(it.preHandle(stubRequest("GET", "/internal/es/index/overview", headers), new StubResponse().proxy, null));
+        /* 用数据面共享读端点验证 LOGIN 审计：宿主专属 /overview 按 host 页键授权，不随目标头。 */
+        assertTrue(it.preHandle(stubRequest("GET", "/internal/es/index/cluster/query", headers), new StubResponse().proxy, null));
         assertEquals("LOGIN", audit.action);
         assertEquals("宿主委托会话建立", audit.last.getDetail());
         audit.action = null;
-        assertTrue(it.preHandle(stubRequest("GET", "/internal/es/index/overview", headers), new StubResponse().proxy, null));
+        assertTrue(it.preHandle(stubRequest("GET", "/internal/es/index/cluster/query", headers), new StubResponse().proxy, null));
         assertEquals(null, audit.action); /* 同令牌第二次请求不再落 LOGIN */
         headers.put("X-Es-Host-Token", "host-jwt-token-b"); /* 换发=新会话 */
-        assertTrue(it.preHandle(stubRequest("GET", "/internal/es/index/overview", headers), new StubResponse().proxy, null));
+        assertTrue(it.preHandle(stubRequest("GET", "/internal/es/index/cluster/query", headers), new StubResponse().proxy, null));
         assertEquals("LOGIN", audit.action);
     }
 
@@ -638,7 +694,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
                 respIlm.proxy, null));
         assertEquals(403, respIlm.status);
         assertTrue(respIlm.bodyText().contains("\"required\":\"REBUILD_OP\""));
-        assertNull("拒绝路径在 preHandle 内落审计前不产生动作", audit.action);
+        assertEquals("角色门拒绝同样留痕（事后可追溯越权尝试）", "ROLE_DENIED", audit.action);
     }
 
     /* ------------- 共享写端点按真实归属页写键裁决（963 收口后的当前语义） -------------
@@ -728,14 +784,14 @@ public class ConsoleAuthInterceptorPageAuthTest {
         CapturingAudit audit = new CapturingAudit();
         // security 页写键：用户管理放行（ADMIN 角色授予/改写由 BuiltinConsoleAuthService 拦截）
         ConsoleAuthInterceptor writer = interceptor(delegatedAs(ConsoleRole.VIEWER,
-                new HashSet<>(Arrays.asList("conn:c1:security", "conn:c1:w:security"))), true, audit);
+                new HashSet<>(Arrays.asList("conn:host:security", "conn:host:w:security"))), true, audit);
         assertTrue(writer.preHandle(stubRequest("POST", "/internal/es/index/auth/users/upsert",
                 java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
 
         // 仅读键：WRITE_DENIED
         StubResponse denied = new StubResponse();
         ConsoleAuthInterceptor reader = interceptor(delegatedAs(ConsoleRole.VIEWER,
-                new HashSet<>(Collections.singletonList("conn:c1:security"))), true, audit);
+                new HashSet<>(Collections.singletonList("conn:host:security"))), true, audit);
         assertFalse(reader.preHandle(stubRequest("POST", "/internal/es/index/auth/users/upsert",
                 java.util.Collections.singletonMap("X-Es-Target", "c1")), denied.proxy, null));
         assertEquals(403, denied.status);
@@ -945,5 +1001,147 @@ public class ConsoleAuthInterceptorPageAuthTest {
         HttpServletRequest req = stubRequest("GET", "/api/internal/es/index/overview", "",
                 "/api", "/internal/es/index/overview");
         assertEquals("/internal/es/index/overview", ConsoleAuthInterceptor.normalizePath(req));
+    }
+
+    /* ---------- 978：静态共享写同序、宿主绑定、Painless 写档、HEAD 只读 ---------- */
+
+    @Test
+    public void 静态页共享写优先于页前缀_持indices的rank3可建索引() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.REBUILD_OP,
+                new HashSet<>(Arrays.asList("indices"))), true, audit);
+        StubResponse resp = new StubResponse();
+        assertTrue("indices 页是 create-index 的合法使用者，不得被 config-validator 前缀 403",
+                it.preHandle(stubRequest("POST", "/internal/es/index/cluster/create-index", ""), resp.proxy, null));
+    }
+
+    @Test
+    public void 宿主专属端点按host授权_持远端连接写键不得改宿主() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor remote = interceptor(delegatedAs(ConsoleRole.REBUILD_OP,
+                new HashSet<>(Arrays.asList("conn:c1:indices", "conn:c1:w:indices"))), true, audit);
+        StubResponse denied = new StubResponse();
+        assertFalse("provider 重建恒定宿主，c1 写键不能授权宿主写",
+                remote.preHandle(stubRequest("POST", "/internal/es/index/rebuild",
+                        Collections.singletonMap("X-Es-Target", "c1")), denied.proxy, null));
+        assertEquals(403, denied.status);
+
+        ConsoleAuthInterceptor host = interceptor(delegatedAs(ConsoleRole.REBUILD_OP,
+                new HashSet<>(Arrays.asList("conn:host:indices", "conn:host:w:indices"))), true, audit);
+        assertTrue("显式 host 写键必须放行宿主端点",
+                host.preHandle(stubRequest("POST", "/internal/es/index/rebuild",
+                        Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+    }
+
+    @Test
+    public void Painless执行按写档_只读页键不得执行脚本() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor readOnly = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:painless-lab"))), true, audit);
+        StubResponse denied = new StubResponse();
+        assertFalse(readOnly.preHandle(stubRequest("POST", "/internal/es/index/cluster/painless/execute",
+                Collections.singletonMap("X-Es-Target", "c1")), denied.proxy, null));
+        assertEquals(403, denied.status);
+
+        ConsoleAuthInterceptor writer = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:painless-lab", "conn:c1:w:painless-lab"))), true, audit);
+        assertTrue("持 painless-lab 写键必须可执行",
+                writer.preHandle(stubRequest("POST", "/internal/es/index/cluster/painless/execute",
+                        Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+    }
+
+    @Test
+    public void 宿主只读辅助面按目标页授权_共享读片段不误吞更长端点() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor xmigrate = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:xmigrate"))), true, audit);
+        assertTrue("Xmigrate 需要的宿主索引键不能被 host 授权挡死",
+                xmigrate.preHandle(stubRequest("GET", "/internal/es/index/keys",
+                        Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+
+        ConsoleAuthInterceptor mapping = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:mapping"))), true, audit);
+        assertTrue("mapping 页读 settings 默认值不得被 index-settings 共享读误拦",
+                mapping.preHandle(stubRequest("GET", "/internal/es/index/cluster/index-settings-defaults",
+                        Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+
+        ConsoleAuthInterceptor search = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:search"))), true, audit);
+        assertTrue("查询页字段类型依赖 mapping-detail",
+                search.preHandle(stubRequest("GET", "/internal/es/index/cluster/mapping-detail",
+                        Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+
+        ConsoleAuthInterceptor dbq = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:update-by-query"))), true, audit);
+        assertTrue("DBQ 页必须能轮询自己发起的任务进度",
+                dbq.preHandle(stubRequest("GET", "/internal/es/index/progress",
+                        Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+    }
+
+    @Test
+    public void 无页前缀读端点按真实调用页收口_HEAD按只读判定() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor overviewOnly = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:overview"))), true, audit);
+        StubResponse denied = new StubResponse();
+        assertFalse("overview 页不得读存储脚本源码", overviewOnly.preHandle(
+                stubRequest("GET", "/internal/es/index/cluster/scripts",
+                        Collections.singletonMap("X-Es-Target", "c1")), denied.proxy, null));
+        assertEquals(403, denied.status);
+
+        ConsoleAuthInterceptor scriptsReader = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:painless-lab"))), true, audit);
+        assertTrue(scriptsReader.preHandle(stubRequest("GET", "/internal/es/index/cluster/scripts",
+                Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+        assertTrue("HEAD 是只读观测，不得按写档拦截", scriptsReader.preHandle(
+                stubRequest("HEAD", "/internal/es/index/cluster/scripts",
+                        Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+    }
+
+    /** 混合授权（conn 键 + 静态页键）：静态全局页写权不能被 conn 读键吞掉。 */
+    @Test
+    public void 混合授权静态页写权仍生效_纯conn无权仍拒绝() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor mixed = interceptor(delegatedAs(ConsoleRole.REBUILD_OP,
+                new HashSet<>(Arrays.asList("config-validator", "indices", "conn:c1:overview"))), true, audit);
+        assertTrue("静态 config-validator/indices 写权 + rank3 应放行建索引",
+                mixed.preHandle(stubRequest("POST", "/internal/es/index/cluster/create-index",
+                        Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+
+        ConsoleAuthInterceptor connOnly = interceptor(delegatedAs(ConsoleRole.REBUILD_OP,
+                new HashSet<>(Collections.singletonList("conn:c1:overview"))), true, audit);
+        StubResponse denied = new StubResponse();
+        assertFalse("只有 conn 读键不得建索引",
+                connOnly.preHandle(stubRequest("POST", "/internal/es/index/cluster/create-index",
+                        Collections.singletonMap("X-Es-Target", "c1")), denied.proxy, null));
+        assertEquals(403, denied.status);
+
+        ConsoleAuthInterceptor mixedPageWrite = interceptor(delegatedAs(ConsoleRole.CLUSTER_OP,
+                new HashSet<>(Arrays.asList("index-settings", "conn:c1:overview"))), true, audit);
+        assertTrue("静态 index-settings 写权 + rank3 应放行热更",
+                mixedPageWrite.preHandle(stubRequest("POST", "/internal/es/index/cluster/index-settings/update",
+                        Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+    }
+
+    /** config-validator 页只允许 alias add；aliases 页写权不受限；ADMIN 不受限。 */
+    @Test
+    public void aliasActions按页面写键收口动作() {
+        HttpServletRequest req = stubRequest("POST", "/internal/es/index/cluster/alias-actions",
+                Collections.singletonMap("X-Es-Target", "c1"));
+        req.setAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL, delegatedAs(ConsoleRole.CLUSTER_OP,
+                new HashSet<>(Collections.singletonList("conn:c1:w:config-validator"))));
+        assertTrue("config-validator 页只允许 add", ConsoleAuthInterceptor.aliasActionsAddOnly(req));
+
+        req.setAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL, delegatedAs(ConsoleRole.CLUSTER_OP,
+                new HashSet<>(Collections.singletonList("conn:c1:w:aliases"))));
+        assertFalse("aliases 页写权不受限", ConsoleAuthInterceptor.aliasActionsAddOnly(req));
+
+        req.setAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL, delegatedAs(ConsoleRole.CLUSTER_OP,
+                new HashSet<>(Arrays.asList("config-validator", "conn:c1:overview"))));
+        assertTrue("静态 config-validator 页同样只允许 add", ConsoleAuthInterceptor.aliasActionsAddOnly(req));
+
+        req.setAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL, delegatedAs(ConsoleRole.ADMIN,
+                new HashSet<>(Collections.singletonList("conn:c1:w:config-validator"))));
+        assertFalse("ADMIN 不受动作收口", ConsoleAuthInterceptor.aliasActionsAddOnly(req));
     }
 }

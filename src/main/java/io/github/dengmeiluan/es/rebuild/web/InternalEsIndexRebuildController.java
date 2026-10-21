@@ -181,10 +181,29 @@ public class InternalEsIndexRebuildController {
 
     // ═══ 集群级只读查询（不限于 provider 注册的索引）═══
 
-    /** 列出集群全部索引（排除系统索引）。 */
+    /** 列出集群全部索引（排除系统索引；控制面索引仅 ADMIN 可见）。 */
     @GetMapping("cluster/indices")
-    public java.util.List<Map<String, Object>> clusterIndices() throws java.io.IOException {
-        return esIndexAdmin.listClusterIndices();
+    public java.util.List<Map<String, Object>> clusterIndices(
+            javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
+        java.util.List<Map<String, Object>> list = esIndexAdmin.listClusterIndices();
+        boolean admin = adminView(request);
+        if (admin) return list;
+        java.util.List<Map<String, Object>> out = new java.util.ArrayList<>();
+        for (Map<String, Object> item : list) {
+            if (!esIndexAdmin.isControlIndex(String.valueOf(item.get("index")))) out.add(item);
+        }
+        return out;
+    }
+
+    /** 非 ADMIN 的集群读视图不得暴露控制面索引名（账号/连接/审计/锁索引）。 */
+    private boolean adminView(javax.servlet.http.HttpServletRequest request) {
+        Object p = request == null ? null
+                : request.getAttribute(io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+        if (p instanceof io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal) {
+            return ((io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal) p).getRole()
+                    .atLeast(io.github.dengmeiluan.es.rebuild.auth.ConsoleRole.ADMIN);
+        }
+        return !authRequired;
     }
 
     /** 集群级任意索引 inspect（只读）。自动解析 indexKey→alias。 */
@@ -477,8 +496,15 @@ public class InternalEsIndexRebuildController {
 
     /** 别名全图（排除系统索引，扁平列表） */
     @GetMapping("cluster/aliases")
-    public java.util.List<Map<String, Object>> clusterAliases() throws java.io.IOException {
-        return esIndexAdmin.listAllAliases();
+    public java.util.List<Map<String, Object>> clusterAliases(
+            javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
+        java.util.List<Map<String, Object>> list = esIndexAdmin.listAllAliases();
+        if (adminView(request)) return list;
+        java.util.List<Map<String, Object>> out = new java.util.ArrayList<>();
+        for (Map<String, Object> row : list) {
+            if (!esIndexAdmin.isControlIndex(String.valueOf(row.get("index")))) out.add(row);
+        }
+        return out;
     }
 
     // ═══ : 平台/分布式能力端点（templates / snapshot / shards distribution） ═══
@@ -557,8 +583,16 @@ public class InternalEsIndexRebuildController {
 
     /** 分片分布（_cat/shards）结构化 */
     @GetMapping("cluster/shards")
-    public java.util.List<Map<String, Object>> clusterShards(@RequestParam(required = false) String index) throws java.io.IOException {
-        return esIndexAdmin.shardsDistribution(index);
+    public java.util.List<Map<String, Object>> clusterShards(
+            @RequestParam(required = false) String index,
+            javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
+        java.util.List<Map<String, Object>> list = esIndexAdmin.shardsDistribution(index);
+        if (adminView(request)) return list;
+        java.util.List<Map<String, Object>> out = new java.util.ArrayList<>();
+        for (Map<String, Object> row : list) {
+            if (!esIndexAdmin.isControlIndex(String.valueOf(row.get("index")))) out.add(row);
+        }
+        return out;
     }
 
     /* ================= : 搜索沙盒 / 热Setting / Reroute / ILM ================= */
@@ -651,12 +685,8 @@ public class InternalEsIndexRebuildController {
      *  只读透传，不在 ADMIN 关键词内，VIEWER 可用（raw 是 ADMIN-only，不能拿它兼职）。 */
     @GetMapping("cluster/index-settings-defaults")
     public Map<String, Object> indexSettingsWithDefaults(@RequestParam String index) throws java.io.IOException {
-        if (index == null || index.trim().isEmpty() || index.contains("/") || index.contains("..")) {
-            throw new IllegalArgumentException("index 非法");
-        }
-        /* 页面用户也不能借“含默认值”读取控制面索引的 settings/metadata */
-        esIndexAdmin.guardIndexPattern(index.trim());
-        return esIndexAdmin.raw("GET", "/" + index.trim() + "/_settings?include_defaults=true&flat_settings=true", null);
+        /* 精确索引名守卫 + 服务端再编码：此前直接拼 raw()，%2565 双重编码可借 ES 再解码读控制面。 */
+        return esIndexAdmin.getIndexSettingsWithDefaults(index);
     }
 
     /** 集群级设置下发（传 null 重置）*/
@@ -1055,8 +1085,10 @@ public class InternalEsIndexRebuildController {
 /** 别名原子操作 POST /_aliases */
     @PostMapping("cluster/alias-actions")
     public Map<String, Object> aliasActions(
-            @org.springframework.web.bind.annotation.RequestBody(required = false) String body) throws java.io.IOException {
-        return esIndexAdmin.aliasActions(body);
+            @org.springframework.web.bind.annotation.RequestBody(required = false) String body,
+            javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
+        return esIndexAdmin.aliasActions(body,
+                io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthInterceptor.aliasActionsAddOnly(request));
     }
 
     /** 当前 HTTP 请求（供错误体带 endpoint 上下文，EsClusterConnController 同款）；无 web 上下文返回 null，绝不抛异常。 */

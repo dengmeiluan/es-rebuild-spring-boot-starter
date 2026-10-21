@@ -44,6 +44,11 @@
 <span>全局页面</span>
               <span class="dim">{{ grantSummary.staticKeys.map(pageName).join('、') }}（所有连接）</span>
             </div>
+            <!-- 纯静态页白名单（无 conn 键）不是「未启用页面级授权」：如实展示全局页 -->
+            <div class="me-row" v-else-if="grantSummary.staticKeys?.length">
+<span>页面授权</span>
+              <span>全局页面 <b>{{ grantSummary.staticKeys.length }}</b> 个：<span class="dim">{{ grantSummary.staticKeys.map(pageName).join('、') }}</span>（所有连接）</span>
+            </div>
             <!-- grantedPages=null（宿主未启用页面级授权）≠「未下发授权」——
  按角色档回落展示：ADMIN=全权；非 ADMIN 保留角色徽标+说明（角色档是 SPI 未
  启用部署的唯一裁决，如实展示而不是一律说「未下发」误导） -->
@@ -251,7 +256,7 @@
     <div class="audit-card">
             <div class="card-t"><button class="sec-fold" :class="{ folded: collapsed.audit }" :aria-label="collapsed.audit ? '展开' : '折叠'" @click="toggleBlock('audit')"><ChevronDown :size="14" /></button>
 <ScrollText :size="14" /> 操作审计流水
-        <span v-if="!canAuditAll" class="dim sm-txt">（仅我的操作 · 全量需 AUDIT_OP/ADMIN）</span>
+        <span v-if="!canAuditAll" class="dim sm-txt">（仅我的操作 · 全量需 AUDIT_OP/ADMIN + 安全中心读权限）</span>
         <!-- ：工具行分组收纳——高频快滤/动作/时间/刷新留明面（可见按钮 ≤5），
  低频筛选（按用户/集群/URI）与导出（TSV/Markdown）收进 ⋯（复用 ld-hist-more 同语汇） -->
         <!-- 轨4：审计快滤明面改用 SearchFilterBar 单源（sfbUnify650 锁；639 语义零变）——
@@ -471,7 +476,9 @@ const canManageUsers = computed(() => auth.canEndpoint('admin', 'POST', '/intern
 /* 用户列表：后端 GET /auth/users 属 ADMIN 关键词（静态/内置身份只有 ADMIN 可读）；
    连接模型下 security 页读键在页面门裁决后才放行，故非 ADMIN 仅 conn 模型可见。 */
 const canReadUsers = computed(() => {
-  if (auth.me == null) return true; /* 无鉴权部署既有语义 */
+  /* 明确无鉴权/独立挂载（未启动探测）可用；探测中或探测失败(me=null)不得读用户库 */
+  if (auth.authDisabled || !auth.probeStarted) return true;
+  if (auth.me == null) return false;
   if (auth.isAdmin()) return true;
   const gp = auth.grantedPages;
   return Array.isArray(gp) && gp.some(g => g.startsWith('conn:'))
@@ -943,13 +950,26 @@ onMounted(() => { loadUsers(); loadAudit(); loadSetup(); if (canAuditAll.value) 
 /* 修复首屏审计/用户列表空——身份探测（probe）是异步的，onMounted 时 isAdmin() 可能
  还是 false 被静默跳过，靠手动刷新才出数据。身份就绪后自动补拉一次。
  身份就绪即补拉（任意角色——非审计角色也有「我的操作流水」要看） */
-const canAuditAll = computed(() => auth.canAuditAll());
+const canAuditAll = computed(() => auth.canAuditAll(store.target));
 watch(() => auth.me?.role, (role, old) => {
   if (role && old !== role) { loadUsers(); loadAudit(); }
 });
+/* 无鉴权部署没有 role 跃迁：探测明确 404 后补拉用户/审计，不能停在首屏空态 */
+watch(() => auth.authDisabled, (disabled) => {
+  if (disabled) { loadUsers(); loadAudit(); if (canAuditAll.value) loadFacets(); }
+});
 /* 963：建议词表随全量审计档同步——身份就绪/升档补拉 audit-facets（低权端点必 403，降档即清空）。
    独立 watch 而非并入上方 role watch：档位是角色派生物，canViewAllAudit 映射变化（AUDIT_OP 等）也要跟随 */
-watch(canAuditAll, (v) => { if (v) loadFacets(); else facets.value = null; });
+watch(canAuditAll, (v) => {
+  if (v) { loadFacets(); return; }
+  /* 降档（宿主收回 security/全量审计授权，角色可能不变）必须立刻清掉已加载的全量流水，
+     再按自助口重拉，不能把上一权限档看到的数据留在表里。 */
+  facets.value = null;
+  auditRows.value = [];
+  auditHasMore.value = false;
+  auditSel.value = [];
+  void loadAudit();
+});
 </script>
 
 <style scoped>

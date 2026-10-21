@@ -3,6 +3,8 @@ import { createPinia } from 'pinia';
 import App from './App.vue';
 import { router } from './router';
 import { useAppStore } from './stores/app';
+import { useAuthStore } from './stores/auth';
+import { setApiWriteGuard } from './api';
 /* 真字体（本地打包，离线 fat jar 可用）：此前 font stack 里的 Inter/JetBrains Mono 从未真正加载，
  Windows 上实际渲染 Segoe UI/雅黑，是与 Linear/Vercel 第一眼差距的最大来源 */
 import '@fontsource-variable/inter';
@@ -12,6 +14,8 @@ import './theme.css';
 const app = createApp(App);
 app.use(createPinia());
 app.use(router);
+/* 写请求客户端硬门：视图/脚本直调 api 时也先按身份×目标判写权，无权限零发出。 */
+setApiWriteGuard((method, path, targetId) => useAuthStore().canEmitWrite(method, path, targetId));
 
 /* 全局异常兜底——此前渲染异常/未捕获 Promise 拒绝直接白屏+控制台裸奔。
  完整堆栈进控制台（调试可用）；用户侧经 store.notify 弹一次（自带 风暴抑制，

@@ -730,14 +730,15 @@ describe('R31 聚合修真与分片卡', () => {
   });
   it('R34 筛选集群传 connName（原误传 connId 致选集群恒空的真缺陷修复锚）', () => {
     expect(apiSrc).toContain('connId?: string; connName?: string; scope?: string;');
-    expect(view).toContain('connName: clusterFilter.value || undefined');
+    expect(view).toContain('connName: clusterFilter.value || nodeFallback || undefined');
   });
   it('R42 Top 索引卡：监控明细单容器视图+集群模式渲染+api 通道（对标阿里云 Index 索引行）', () => {
     /* 800 同步更新：三面板合并「监控明细」单容器——Top 索引=detailTab 首视图（字面锚迁语义等价形态）；
        896 批同步更新：api 通道加 limit 参数（Top N 宽度参数化，服务端钳 1..20） */
     expect(view).toContain("detailTab === 'top' && !nodeMode");
     expect(view).toContain('暂无索引速率快照（首轮采集基线建立后出数）');
-    expect(apiSrc).toContain("monitorTopIndexes: (connId?: string, limit?: number) => get<{ records: any[] }>(`/monitor-metrics/top-indexes?${q({ connId, limit })}`)");
+    /* 977：后端 top-indexes 参数是集群实名 connName，不是连接 ID */
+    expect(apiSrc).toContain("monitorTopIndexes: (connName?: string, limit?: number) => get<{ records: any[] }>(`/monitor-metrics/top-indexes?${q({ connName, limit })}`)");
   });
   it('R39 onlyClusterMode：集群专属卡节点下钻时隐藏（真机走查发现 QPS/耗时等挂假空态）', () => {
     expect(view).toContain('onlyClusterMode?: boolean');
@@ -806,7 +807,7 @@ describe('R31 聚合修真与分片卡', () => {
     /* 六百三十四批同步更新（633-C2 同律）+800 同步更新（单容器视图内三段式语义保留）：
        权限门「视图恒可选 + 内部 v-if」，无权限渲染 .ld-stale 说明条（禁止静默消失）。 */
     expect(view).toContain("detailTab === 'slow'");
-    expect(view).toContain('v-if="auth.canAuditAll()"');
+    expect(view).toContain('v-if="auth.canAuditAll(store.target)"');
     expect(view).toContain('<div v-else class="ld-stale" role="status">');
     expect(view).toContain("usePref<number>('live.slowMs', 1000)");
     expect(view).toContain('minCostMs');

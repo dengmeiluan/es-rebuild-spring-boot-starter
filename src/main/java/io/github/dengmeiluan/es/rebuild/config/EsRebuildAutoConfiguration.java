@@ -475,8 +475,9 @@ public class EsRebuildAutoConfiguration {
         @Bean
         @ConditionalOnMissingBean
         @ConditionalOnProperty(prefix = "es.rebuild", name = "web-enabled", matchIfMissing = true)
-        public MonitorHistoryController monitorHistoryController(MonitorHistoryStore monitorHistoryStore) {
-            return new MonitorHistoryController(monitorHistoryStore);
+        public MonitorHistoryController monitorHistoryController(MonitorHistoryStore monitorHistoryStore,
+                                                                 ConnStore connStore) {
+            return new MonitorHistoryController(monitorHistoryStore, connStore);
         }
 
         /** 指标读侧(指标时序批):只读查询 kind=metrics 的 cluster/node 指标 doc(timestamp 升序供图表)。 */
@@ -491,8 +492,9 @@ public class EsRebuildAutoConfiguration {
         @Bean
         @ConditionalOnMissingBean
         @ConditionalOnProperty(prefix = "es.rebuild", name = "web-enabled", matchIfMissing = true)
-        public MonitorMetricsController monitorMetricsController(MonitorMetricsStore monitorMetricsStore) {
-            return new MonitorMetricsController(monitorMetricsStore);
+        public MonitorMetricsController monitorMetricsController(MonitorMetricsStore monitorMetricsStore,
+                                                                 ConnStore connStore) {
+            return new MonitorMetricsController(monitorMetricsStore, connStore);
         }
 
         /**  审计下拉值建议(只读 terms agg):动作/集群真实出现值+计数,VIEWER 可用,失败回空建议。
@@ -512,8 +514,9 @@ public class EsRebuildAutoConfiguration {
         @Bean
         @ConditionalOnMissingBean
         @ConditionalOnProperty(prefix = "es.rebuild", name = "web-enabled", matchIfMissing = true)
-        public MonitorAlertsController monitorAlertsController(MonitorMetricsStore monitorMetricsStore) {
-            return new MonitorAlertsController(monitorMetricsStore);
+        public MonitorAlertsController monitorAlertsController(MonitorMetricsStore monitorMetricsStore,
+                                                               ConnStore connStore) {
+            return new MonitorAlertsController(monitorMetricsStore, connStore);
         }
 
         /** R6 环形治理用量端点(只读):审计+监控两族合计与分族占用/总量上限,VIEWER 可见。 */

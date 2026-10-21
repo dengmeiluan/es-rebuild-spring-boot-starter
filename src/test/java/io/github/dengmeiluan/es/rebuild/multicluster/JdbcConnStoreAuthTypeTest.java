@@ -88,6 +88,8 @@ public class JdbcConnStoreAuthTypeTest {
         assertEquals("API_KEY", apiKeyView.get("authType"));
         assertEquals("API_KEY 形态用户名为空", null, apiKeyView.get("username"));
         assertEquals("get 恢复 authType 供工厂分支", "API_KEY", store.get(apiKeyId).getAuthType());
+        assertEquals("get 必须回填 env（env-pages 环境收缩的唯一输入）",
+                "PROD", store.get(apiKeyId).getEnv());
         assertEquals("secret 位承载 ApiKey 明文(服务端红线:仅内存流转)",
                 "ak-secret-value", store.get(apiKeyId).getPassword());
 

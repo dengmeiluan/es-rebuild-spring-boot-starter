@@ -39,8 +39,9 @@ describe('963 CmdPalette：端点级门禁（设置下发/分词热重载/ILM �
     expect(pal).toContain("const canIlm = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/ilm/start', store.target);");
   });
 
-  it('canW/canO/canA 定义行原样保留（permGating 锁行零改）', () => {
-    expect(pal).toContain("const canW = auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/doc', store.target), canO = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target), canA = auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target);");
+  it('canW/canO 定义保留；raw 系统命令改用 ADMIN 档（977 校准）', () => {
+    expect(pal).toContain("const canW = auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/doc', store.target), canO = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target);");
+    expect(pal).toContain('const canRawOps = () => auth.canAdminOps();');
   });
 
   it('恢复分片分配（settings/put）条件展开：canSettings 缺省即不入列', () => {
@@ -56,9 +57,9 @@ describe('963 CmdPalette：端点级门禁（设置下发/分词热重载/ILM �
     expect(pal).not.toContain('...(canO ? [');
   });
 
-  it('runRaw 首行 canA 防御（直调路径也挡 raw 透传）', () => {
-    const body = pal.slice(pal.indexOf('const runRaw = async ('), pal.indexOf('/* 权限门禁'));
-    expect(body).toMatch(/action\?: \{ label: string; onClick: \(\) => void \}\) => \{\n\s*if \(!canA\) return;/);
+  it('runRaw 首行 canRawOps 防御（直调路径也挡 raw 透传）', () => {
+    const body = pal.slice(pal.indexOf('const runRaw = async ('), pal.indexOf('const canW'));
+    expect(body).toContain('if (!canRawOps()) return;');
   });
 });
 
@@ -67,7 +68,7 @@ describe('963 SecurityView：用户/重绑执行体守卫与 facets 档位', () 
   it('doUpsert/doDelete 首行 canWriteUsers 守卫（委派非 ADMIN 不得写全局账号）', () => {
     expect(sec).toMatch(/async function doUpsert\(\) \{\n\s*if \(!canWriteUsers\.value\) return;/);
     expect(sec).toMatch(/async function doDelete\(username: string\) \{\n\s*if \(!canWriteUsers\.value\) return;/);
-    expect(sec).toContain("if (auth.me == null) return true; /* 无鉴权部署既有语义 */");
+    expect(sec).toContain("if (auth.authDisabled || !auth.probeStarted) return true;");
     expect(sec).toContain("return Array.isArray(gp) && gp.some(g => g.startsWith('conn:'))");
     expect(sec).toContain("auth.canEndpoint('admin', 'GET', '/internal/es/index/auth/users', store.target)");
     expect(sec).toContain("const canWriteUsers = computed(() => canManageUsers.value && (!auth.me?.delegated || auth.isAdmin()));");
@@ -85,7 +86,9 @@ describe('963 SecurityView：用户/重绑执行体守卫与 facets 档位', () 
 
   it('onMounted 按档位条件拉 facets；档位变化 watch 同步补拉/清空', () => {
     expect(sec).toContain('onMounted(() => { loadUsers(); loadAudit(); loadSetup(); if (canAuditAll.value) loadFacets(); });');
-    expect(sec).toContain('watch(canAuditAll, (v) => { if (v) loadFacets(); else facets.value = null; });');
+    expect(sec).toContain('if (v) { loadFacets(); return; }');
+    expect(sec).toContain('auditRows.value = [];');
+    expect(sec).toContain('void loadAudit();');
   });
 });
 
@@ -175,15 +178,18 @@ describe('963 auth.canEndpoint：只读 POST 对齐后端 isReadonlyPost', () =>
 });
 
 describe('可选加固：命令面板目录/连接元数据 + 宿主消息来源', () => {
-  it('CmdPalette 导航按 effectivePagesForTarget 过滤、集群切换按 canSeeConn 过滤', () => {
-    expect(pal).toContain("import { NAV_ITEMS, effectivePagesForTarget } from '../router';");
-    expect(pal).toContain('const eff = effectivePagesForTarget(auth.grantedPages, store.target);');
-    expect(pal).toContain('NAV_ITEMS.filter(n => auth.isAdmin() || eff == null || eff.has(n.pageKey))');
+  it('CmdPalette 导航按 pageAllowed 过滤、集群切换按 canSeeConn 过滤', () => {
+    expect(pal).toContain("import { pageAllowed } from '../router';");
+    expect(pal).toContain('NAV_ITEMS.filter(n => auth.isAdmin()');
+    expect(pal).toContain('|| pageAllowed(auth.grantedPages, n.path, store.target)).map(n => ({');
     expect(pal).toContain('for (const c of store.conns.filter(c => auth.canSeeConn(c.id)))');
   });
   it('超管全局可见：SideNav/路由守卫/App 复核/Forbidden 均对 ADMIN 短路', () => {
     expect(sideNav).toContain('const admin = auth.isAdmin();');
-    expect(sideNav).toContain('(admin || eff == null || eff.has(i.pageKey))');
+    expect(sideNav).toContain('if (admin) return true;');
+    expect(sideNav).toContain('return eff == null || eff.has(i.pageKey)');
+    expect(sideNav).toContain("const restWriter = !!gp && gp.includes('conn:' + tid + ':w:rest');");
+    expect(sideNav).toContain("(i.pageKey === 'devtools' && restWriter)");
     expect(routerSrc).toContain('if (auth.isAdmin()) return true;');
     expect(app).toContain('if (auth.isAdmin()) return; /* 超管全局可见：不自动切目标、不做页面拒绝跳转 */');
     expect(forbid).toContain("auth.isAdmin() || pageAllowed(auth.grantedPages, '/overview', store.target)");

@@ -51,6 +51,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
+import { pageAllowed } from '../router';
 import {
   Search, Play, Save, History, FileDown, Variable, Database, RefreshCw,
   LayoutDashboard, TerminalSquare, Braces, Zap, Wrench, Stethoscope, Rocket, Settings2,
@@ -68,7 +69,7 @@ FolderTree, BookText, PackageOpen,
   LayoutTemplate, GitCompareArrows,
   Plus, FilePlus2, Keyboard, Crosshair,
 } from 'lucide-vue-next';
-import { NAV_ITEMS, effectivePagesForTarget } from '../router';
+import { NAV_ITEMS } from '../router';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
 import { aliasForTitle } from '../utils/cmdAlias';
@@ -124,22 +125,34 @@ FolderTree, BookText, PackageOpen,
   LayoutTemplate, GitCompareArrows,
 };
 
+/* 命令面板导航门：与路由守卫/侧栏同一 pageAllowed 真源，未授权页面动作不执行。 */
+const canGo = (path: string) => auth.isAdmin() || pageAllowed(auth.grantedPages, path, store.target);
+const go = (to: any) => {
+  const path = typeof to === 'string' ? to : to?.path;
+  if (typeof path === 'string' && !canGo(path)) {
+    store.notify('warning', '当前身份无该页面权限');
+    return;
+  }
+  router.push(to);
+};
+
 const commands = computed<Cmd[]>(() => {
-  /* 导航命令与侧栏同源过滤：未授权页面不出现在命令面板，防低权看到未授权页面目录 */
-  const eff = effectivePagesForTarget(auth.grantedPages, store.target);
-  const list: Cmd[] = NAV_ITEMS.filter(n => auth.isAdmin() || eff == null || eff.has(n.pageKey)).map(n => ({
+  /* 导航命令与侧栏同源过滤：未授权页面不出现在命令面板，防低权看到未授权页面目录。
+     pageAllowed 已含 host-bound 页与 REST→DevTools 别名，避免与菜单可见性分叉。 */
+  const list: Cmd[] = NAV_ITEMS.filter(n => auth.isAdmin()
+    || pageAllowed(auth.grantedPages, n.path, store.target)).map(n => ({
     id: 'nav' + n.path,
     title: '前往：' + n.name,
     /* 版本不足的功能在命令面板同步降级提示，与侧边栏徽标一致 */
     sub: (n.minVer && store.verBelow(n.minVer) ? `需 ES ${n.minVer}+（当前 ${store.esVersion}） · ` : '') + '快捷键 ' + n.key,
     cat: '页面',
     icon: NAV_ICONS[n.icon] || Database,
-    action: () => router.push(n.path),
+    action: () => go(n.path),
   }));
   list.push(
-    { id: 'act-run', title: '执行查询', sub: '查询工作台 · Ctrl+Enter', cat: '动作', icon: Play, action: () => { router.push('/search'); store.emit('run-query'); } },
-    { id: 'act-save', title: '保存当前查询', sub: '查询工作台', cat: '动作', icon: Save, action: () => { router.push('/search'); store.emit('save-query'); } },
-    { id: 'act-hist', title: '打开查询历史', cat: '动作', icon: History, action: () => { router.push('/search'); store.emit('open-history'); } },
+    { id: 'act-run', title: '执行查询', sub: '查询工作台 · Ctrl+Enter', cat: '动作', icon: Play, action: () => { go('/search'); store.emit('run-query'); } },
+    { id: 'act-save', title: '保存当前查询', sub: '查询工作台', cat: '动作', icon: Save, action: () => { go('/search'); store.emit('save-query'); } },
+    { id: 'act-hist', title: '打开查询历史', cat: '动作', icon: History, action: () => { go('/search'); store.emit('open-history'); } },
     { id: 'act-export', title: '导出结果为 JSON', cat: '动作', icon: FileDown, action: () => store.emit('export-json') },
     /* 表格域命令——window 广播，仅当前可见表格响应（RT/QRT 自检 offsetParent）。
  M3：markHandled 协商——可见实例响应即标记，150ms 后无人认领显式提示
@@ -147,7 +160,7 @@ const commands = computed<Cmd[]>(() => {
     { id: 'tbl-export', title: '表格：导出当前视图（CSV）', sub: '作用于当前可见表格（RT/QRT）', cat: '动作', icon: FileDown, action: () => dispatchTableCmd('export') },
     { id: 'tbl-dense', title: '表格：切换密度', sub: '作用于当前可见表格（表格级偏好）', cat: '设置', icon: Rows3, action: () => dispatchTableCmd('dense') },
     { id: 'tbl-reset-widths', title: '表格：重置全部列宽', sub: '作用于当前可见表格（拖拽过的列回原始宽）', cat: '设置', icon: RotateCcw, action: () => dispatchTableCmd('reset-widths') },
-    { id: 'act-vars', title: '管理变量 ${var}', cat: '动作', icon: Variable, action: () => { router.push('/search'); store.emit('open-vars'); } },
+    { id: 'act-vars', title: '管理变量 ${var}', cat: '动作', icon: Variable, action: () => { go('/search'); store.emit('open-vars'); } },
     { id: 'act-refresh', title: '刷新索引列表', cat: '动作', icon: RefreshCw, action: () => store.loadIndices() },
     /* 显示偏好一键重置（调乱行高/列宽/布局后的救急入口）——
  只清显示类键；草稿（draft2/dsl.body）/历史/收藏/主题等用户数据不动；刷新后全量生效 */
@@ -189,17 +202,24 @@ const commands = computed<Cmd[]>(() => {
   }
   /* 补可选第 5 参 action——成功 toast 附动作按钮（AdhocRebuildView
  confirmSwitch notify action 范式），其余调用方不传零影响 */
+  /* raw 五命令（refresh/flush/cache/forcemerge/reroute）都是后端 raw 守卫的系统管理面：
+     非 ADMIN 即使持 w:rest 也会 403，入口必须与执行体同档（无鉴权部署保持全功能）。
+     用函数在读时求值，身份探测晚到也能让命令列表随 auth.me 重算。 */
+  const canRawOps = () => auth.canAdminOps();
   const runRaw = async (method: string, path: string, body: string, msg: string,
     action?: { label: string; onClick: () => void }) => {
-    if (!canA) return; /* 963 防御：raw 透传属管理域（命令已按 canA 隐藏），执行体再兜一层挡直调路径 */
+    if (!canRawOps()) return; /* 963 防御：raw 透传属管理域（命令已按 canRawOps 隐藏），执行体再兜一层挡直调路径 */
     try { await api.raw(method, path, body); store.notify('success', msg, action ? { action } : undefined); }
     catch (e: any) { store.notify('error', msg + '失败：' + (e?.message || e)); }
   };
   /* 权限门禁——写/高危命令按角色裁剪（不再展示点了必 403 的命令）；
  create-doc=OPERATOR(write)；：create-index 命令唯一 canO 消费，端点
- （POST /cluster/create-index）归 config-validator 页——连接模型按本页写键勾选裁决；
- runRaw 系走 /cluster/raw=ADMIN 管理域，维持全局角色档 */
-  const canW = auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/doc', store.target), canO = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target), canA = auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target); /* ：raw 五命令按 rest 页勾选 */
+ （POST /cluster/create-index）归 config-validator 页——连接模型按本页写键勾选裁决 */
+  const canW = auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/doc', store.target), canO = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target);
+  /* 后台读动作同样按端点归属页裁剪：无权用户不再看到点了必 403 的体检/节点/字段命令 */
+  const canHealthRead = auth.canEndpoint('write', 'GET', '/internal/es/index/cluster/health-report', store.target);
+  const canNodesRead = auth.canEndpoint('write', 'GET', '/internal/es/index/cluster/nodes-stats-brief', store.target);
+  const canSchemaRead = auth.canEndpoint('write', 'GET', '/internal/es/index/cluster/resolve-schema', store.target);
   /* 963：端点级精化——设置下发/分词热重载/ILM 起停各按自身端点归属页（apiPrefixes）裁决，
      未归属页的共享端点回落任意写键；低权角色不再看到点了必 403 的命令 */
   const canSettings = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/settings/put', store.target);
@@ -208,17 +228,17 @@ const commands = computed<Cmd[]>(() => {
   /* CRUD 里「增」提升为一等公民——新建索引/新建文档直达 */
   if (canO) list.push(
     { id: 'r59-create-index', title: '新建索引', sub: '名称校验 + 分片/副本 + 别名 + 高级 JSON', cat: '动作', icon: Plus,
-      action: () => router.push({ path: '/indices', query: { create: '1' } }) },
+      action: () => go({ path: '/indices', query: { create: '1' } }) },
   );
   if (canW) list.push(
     { id: 'r59-create-doc', title: '新建文档（当前索引）', sub: idx ? '写入 ' + idx + ' · mapping 骨架预填' : '先选中一个索引', cat: '动作', icon: FilePlus2,
       /* 走 ?newdoc=1 深链（与 ?create=1 同模式）：事件总线跨页会丢，深链同页/跨页都可靠且可重入 */
-      action: () => router.push({ path: '/search', query: { newdoc: '1' } }) },
+      action: () => go({ path: '/search', query: { newdoc: '1' } }) },
   );
   list.push(
     /* →：高频入口——当前索引直达工作区（文档/查询/配置/分片/运维一站式） */
     { id: 'ops-index-hub', title: '打开索引工作区', sub: idx ? '目标 ' + idx : '先选中一个索引', cat: '运维', icon: Database,
-      action: () => idx ? router.push({ path: '/indices', query: { idx } }) : router.push('/indices') },
+      action: () => idx ? go({ path: '/indices', query: { idx } }) : go('/indices') },
   );
   /* 交互修复：集群/目标切换进面板——此前多集群用户必须移步顶栏切换器，⌘K 搜「切集群」无果。
  遍历 store.conns 每连接一条；行为对齐 ClusterSwitcher.pickTarget：当前目标 no-op、
@@ -249,13 +269,13 @@ const commands = computed<Cmd[]>(() => {
  数据浏览器直达（BrowserView 消费全局 pickedIdx，跳转即用） */
   if (idx) list.push(
     { id: 'ops-adhoc-rebuild-cur', title: '托管重建当前索引', sub: '粘贴期望配置 / 探测 / 校验 / 切换一条龙 · ' + idx, cat: '运维', icon: Rocket,
-      action: () => { store.pick(idx); router.push('/adhoc-rebuild'); } },
+      action: () => { store.pick(idx); go('/adhoc-rebuild'); } },
     { id: 'act-refresh-cur-idx', title: '刷新当前索引详情', sub: '重拉 _cat 索引元信息 · ' + idx, cat: '动作', icon: RefreshCw,
       action: async () => { await store.loadIndices(); store.notify('success', '已刷新索引元信息：' + idx); } },
     { id: 'act-open-browser-cur', title: '打开数据浏览器（当前索引）', sub: idx, cat: '动作', icon: ScanSearch,
-      action: () => router.push('/browser') },
+      action: () => go('/browser') },
   );
-  if (canA) list.push(
+  if (canRawOps()) list.push(
     { id: 'ops-refresh', title: '刷新索引 (_refresh)', sub: idx ? '目标 ' + idx : '先选中一个索引', cat: '运维', icon: RotateCw,
       action: () => idx ? runRaw('POST', `/${idx}/_refresh`, '', `已 refresh ：${idx}`) : store.notify('warning', '请先选中一个索引') },
     { id: 'ops-flush', title: '刷盘索引 (_flush)', sub: idx ? '目标 ' + idx : '先选中一个索引', cat: '运维', icon: Wind,
@@ -274,7 +294,7 @@ const commands = computed<Cmd[]>(() => {
  同款：大索引同步 await 会占死前端直到网关超时）；成功文案对齐异步语义 +
  「看任务」动作直达 /tasks（AdhocRebuildView confirmSwitch notify action 范式） */
         runRaw('POST', `/${idx}/_forcemerge?max_num_segments=1&wait_for_completion=false`, '', `任务已提交(异步)：forcemerge ${idx}`,
-          { label: '看任务', onClick: () => router.push('/tasks') });
+          { label: '看任务', onClick: () => go('/tasks') });
       } },
     { id: 'ops-reroute-retry', title: '重试失败分片 (_cluster/reroute?retry_failed)', sub: '集群级一键重试', cat: '运维', icon: ShieldCheck,
       action: () => runRaw('POST', '/_cluster/reroute?retry_failed=true', '{}', '已提交 retry_failed=true') },
@@ -283,21 +303,21 @@ const commands = computed<Cmd[]>(() => {
     { id: 'ops-copy-idx', title: '复制当前索引名', sub: idx || '未选中', cat: '运维', icon: Copy,
       action: () => idx ? copyText(idx).then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制：' + idx : '复制失败：浏览器拦截了剪贴板')) : store.notify('warning', '未选中索引') },
     { id: 'ops-open-search-sandbox', title: '打开搜索沙盒', sub: 'DSL / explain / 高亮', cat: '运维', icon: FlaskConical,
-      action: () => router.push({ path: '/search', query: { mode: 'sandbox' } }) },
+      action: () => go({ path: '/search', query: { mode: 'sandbox' } }) },
     { id: 'ops-open-index-settings', title: '打开索引设置（热更）', sub: 'refresh_interval / replicas / blocks', cat: '运维', icon: Sliders,
-      action: () => router.push('/index-settings') },
+      action: () => go('/index-settings') },
     { id: 'ops-open-ilm', title: '打开 ILM 策略', sub: 'phase 时间线 + explain', cat: '运维', icon: Recycle,
-      action: () => router.push('/ilm') },
+      action: () => go('/ilm') },
     /* */
     { id: 'ops-open-cluster-settings', title: '打开集群设置（persistent/transient）', sub: 'diff 预览 + 下发', cat: '运维', icon: GaugeCircle,
-      action: () => router.push('/cluster-settings') },
+      action: () => go('/cluster-settings') },
     { id: 'ops-open-task-tree', title: '打开任务树（可批量 cancel）', sub: '任务层级 + auto refresh', cat: '运维', icon: GitBranch,
-      action: () => router.push('/task-tree') },
+      action: () => go('/task-tree') },
     /* 运维审计直达——谁在什么时候对哪个集群干了什么，一键进安全中心审计表 */
     { id: 'ops-open-audit', title: '查看操作审计', sub: '安全中心 · 写操作审计流水', cat: '运维', icon: ShieldCheck,
-      action: () => router.push('/security') },
+      action: () => go('/security') },
     { id: 'ops-open-reindex-preview', title: '打开 Reindex 预估（不写入）', sub: '_count + _stats 估算', cat: '运维', icon: Calculator,
-      action: () => router.push('/reindex-preview') },
+      action: () => go('/reindex-preview') },
     /* 963：恢复分片分配走 cluster/settings/put（归集群设置页）——按端点写键裁决，无权限不展示 */
     ...(canSettings ? [{ id: 'ops-reroute-retry-r25', title: '恢复集群分片分配（persistent）', sub: '下发 cluster.routing.allocation.enable=all', cat: '运维', icon: RefreshCcw,
       action: async () => {
@@ -320,29 +340,29 @@ const commands = computed<Cmd[]>(() => {
       } },
     /* 一键体检 / 模板 / 优化 / 重看引导 */
     { id: 'ops-open-health', title: '一键集群体检', sub: '10 秒诊断报告 + Markdown 导出', cat: 'assist', icon: HeartPulse,
-      action: () => router.push('/health-report') },
+      action: () => go('/health-report') },
     { id: 'ops-open-templates-gallery', title: '打开 DSL 模板画廊', sub: '20+ 即插即用模板', cat: 'assist', icon: BookOpen,
-      action: () => router.push('/templates-gallery') },
+      action: () => go('/templates-gallery') },
     { id: 'ops-open-optimizer', title: '索引一键优化向导', sub: '扫描热参数 + 建议 + 一键应用', cat: 'assist', icon: Wand2,
-      action: () => router.push('/optimizer') },
+      action: () => go('/optimizer') },
     { id: 'ops-relaunch-wizard', title: '重看欢迎引导', sub: '3 步上手面板（傻瓜化）', cat: 'assist', icon: Sparkles,
       action: () => store.emit('open-wizard') },
-    { id: 'ops-run-health-now', title: '立即体检（后台）', sub: '不跳转页面，直接 toast 得分', cat: 'assist', icon: HeartPulse,
+    ...(canHealthRead ? [{ id: 'ops-run-health-now', title: '立即体检（后台）', sub: '不跳转页面，直接 toast 得分', cat: 'assist', icon: HeartPulse,
       action: async () => {
         try { const r = await api.healthReport(); store.notify(r.score >= 85 ? 'success' : r.score >= 60 ? 'warning' : 'error', `体检完成：${r.score}/100（${r.checks?.length || 0} 项）`); }
         catch (e: any) { store.notify('error', '体检失败：' + (e?.message || e)); }
-      } },
+      } }] : []),
     /* 分布式运维 / 自定义 / 收藏 */
     { id: 'ops-slm', title: 'SLM 快照策略', sub: '定时备份策略与执行统计', cat: 'ops', icon: ShieldCheck,
-      action: () => router.push('/slm') },
+      action: () => go('/slm') },
     { id: 'ops-watcher', title: 'Watcher 告警', sub: '分布式告警规则与执行', cat: 'ops', icon: BellRing,
-      action: () => router.push('/watcher') },
+      action: () => go('/watcher') },
     { id: 'ops-remote', title: '远程集群 CCS', sub: '跨集群搜索与连接状态', cat: 'ops', icon: Network,
-      action: () => router.push('/remote-clusters') },
+      action: () => go('/remote-clusters') },
     { id: 'ops-favorites', title: '打开收藏夹', sub: '跨会话 DSL/REST/视图一键重放', cat: 'ops', icon: Star,
-      action: () => router.push('/favorites') },
+      action: () => go('/favorites') },
     { id: 'ops-reindex-adv', title: 'Reindex 高级自定义', sub: '自定义目标集群 / 自由 body / 全参数', cat: 'ops', icon: Wand2,
-      action: () => router.push('/reindex-advanced') },
+      action: () => go('/reindex-advanced') },
     { id: 'ops-fav-current-dsl', title: '收藏当前 DSL', sub: '把当前查询页 body 存到收藏夹', cat: 'ops', icon: Star,
       action: () => {
         const body = sessionStorage.getItem('es-console.dsl.body') || '';
@@ -354,28 +374,28 @@ const commands = computed<Cmd[]>(() => {
       } },
     /* 自定义化 / 快捷编辑 / SQL */
     { id: 'data-workspace', title: '自定义工作台', sub: 'localStorage 拖拽布局 · 8 widget', cat: 'data', icon: LayoutGrid,
-      action: () => router.push('/workspace') },
+      action: () => go('/workspace') },
     { id: 'data-bulk', title: 'Bulk 批量文档编辑', sub: 'NDJSON 直编 · 预校 · 分组结果', cat: 'data', icon: Rows3,
-      action: () => router.push('/bulk') },
+      action: () => go('/bulk') },
     { id: 'data-ubq', title: 'Update by Query', sub: '按自定义 query 批量更新 · painless 脚本', cat: 'data', icon: Pencil,
-      action: () => router.push('/update-by-query') },
+      action: () => go('/update-by-query') },
     { id: 'data-sql', title: 'ES-SQL 控制台', sub: '分布式 SQL · cursor 分页 · CSV 导出', cat: 'data', icon: Database,
-      action: () => router.push({ path: '/search', query: { mode: 'sql' } }) },
+      action: () => go({ path: '/search', query: { mode: 'sql' } }) },
     { id: 'data-doc-diff', title: '文档 Diff+Patch', sub: '双列 diff · PUT/update/script 三模式', cat: 'data', icon: FileCode2,
-      action: () => router.push('/doc-diff') },
+      action: () => go('/doc-diff') },
     { id: 'data-quick-sql', title: '快速 SQL（带入当前索引）', sub: '预填 SELECT 并跳转 SQL 控制台自动执行', cat: 'data', icon: Send,
       action: () => {
         /* 原生 prompt() 废弃，改为预填 + 路由到成熟视图 */
         writeStoredRaw(sessionStorage, 'es-console.sql.prefill', store.pickedIdx ? `SELECT * FROM "${store.pickedIdx}" LIMIT 5` : 'SELECT * FROM "my-index" LIMIT 5');
-        router.push({ path: '/search', query: { mode: 'sql' } });
+        go({ path: '/search', query: { mode: 'sql' } });
       } },
     /* 开发者工具 / 拓扑 / 火焰图 / 实时大屏 / painless / 生命周期 */
     { id: 'dev-devtools', title: 'Dev Tools 多标签编辑器', sub: 'Kibana 风格 · 多标签持久化 · Ctrl+Enter', cat: 'dev', icon: TerminalSquare,
-      action: () => router.push('/devtools') },
+      action: () => go('/devtools') },
     { id: 'dev-devtools-new-tab', title: 'Dev Tools 新开标签', sub: '直接打开一个空 GET / 请求', cat: 'dev', icon: TerminalSquare,
-      action: () => { writeStoredRaw(sessionStorage, 'es-console.devtools.newtab', '1'); router.push('/devtools'); } },
+      action: () => { writeStoredRaw(sessionStorage, 'es-console.devtools.newtab', '1'); go('/devtools'); } },
     { id: 'dev-flame', title: 'Profile 火焰图', sub: 'DSL profile 递归展开 · 热力条 · Top10 慢操作', cat: 'dev', icon: Flame,
-      action: () => router.push('/profile-flame') },
+      action: () => go('/profile-flame') },
     { id: 'dev-flame-current', title: '把当前 DSL 送去火焰图分析', sub: '带 profile=true 重跑', cat: 'dev', icon: Flame,
       action: () => {
         const body = sessionStorage.getItem('es-console.dsl.body') || '';
@@ -384,16 +404,16 @@ const commands = computed<Cmd[]>(() => {
         /* flame.index 同取 DSL 镜像的所属索引 */
         const idx = sessionStorage.getItem('es-console.dsl.index') || store.pickedIdx;
         if (idx) writeStoredRaw(sessionStorage, 'es-console.flame.index', idx);
-        router.push('/profile-flame');
+        go('/profile-flame');
       } },
     { id: 'dev-live', title: '实时监控大屏', sub: '轮询 nodes-stats · Sparkline QPS/写入/heap', cat: 'dev', icon: MonitorSpeaker,
-      action: () => router.push('/live') },
+      action: () => go('/live') },
     { id: 'dev-live-fs', title: '实时大屏 · 全屏切换', sub: '进入沉浸式监控模式', cat: 'dev', icon: Maximize2,
-      action: () => { writeStoredRaw(sessionStorage, 'es-console.live.fullscreen', '1'); router.push('/live'); } },
+      action: () => { writeStoredRaw(sessionStorage, 'es-console.live.fullscreen', '1'); go('/live'); } },
     { id: 'dev-painless', title: 'Painless 脚本沙盒', sub: '试跑 · 6 模板 · stored CRUD · UBQ 注入', cat: 'dev', icon: FlaskConical,
-      action: () => router.push('/painless-lab') },
+      action: () => go('/painless-lab') },
     { id: 'dev-lifecycle', title: 'ILM 生命周期视图', sub: '甘特图 phase · rollover Dry Run · move step', cat: 'dev', icon: Layers,
-      action: () => router.push('/lifecycle') },
+      action: () => go('/lifecycle') },
     /* ILM start/stop=CLUSTER 档（rank3+）——按 ilm/start 端点写键裁决，低权角色不展示（不再点了 403） */
     ...(canIlm ? [
       { id: 'dev-ilm-start', title: 'ILM 启动 (start)', sub: '一键启动 ILM 引擎', cat: 'dev', icon: PlayCircle,
@@ -423,23 +443,23 @@ const commands = computed<Cmd[]>(() => {
       action: () => {
         /* 原生 prompt() 废弃，改为预填 + 路由到成熟视图（Dry Run/条件可视化可编辑） */
         if (store.pickedIdx) writeStoredRaw(sessionStorage, 'es-console.lifecycle.rollover', store.pickedIdx);
-        router.push('/lifecycle');
+        go('/lifecycle');
       } },
-    { id: 'dev-nodes-brief', title: '节点简要统计（后台）', sub: 'heap/cpu/disk 一览 · toast 摘要', cat: 'dev', icon: GaugeCircle,
+    ...(canNodesRead ? [{ id: 'dev-nodes-brief', title: '节点简要统计（后台）', sub: 'heap/cpu/disk 一览 · toast 摘要', cat: 'dev', icon: GaugeCircle,
       action: async () => {
         try { const rows: any[] = await api.nodesStatsBrief();
           const worst = rows.slice().sort((a, b) => (b.heapPct || 0) - (a.heapPct || 0))[0];
           store.notify(worst && worst.heapPct >= 80 ? 'warning' : 'success', `节点 ${rows.length} · 最高 heap ${worst?.name || '-'} ${worst?.heapPct || 0}%`);
         } catch (e: any) { store.notify('error', '获取失败：' + (e?.message || e)); }
-      } },
+      } }] : []),
     /* 查询能力全通道 · 专治 ES-SQL 硬伤 */
     { id: 'monitor-lucene', title: 'Lucene 查询（数组/nested 友好）', sub: 'query_string 语法 · 绕开 ES-SQL 数组硬伤', cat: 'monitor', icon: SearchCode,
-      action: () => router.push({ path: '/search', query: { mode: 'lucene' } }) },
+      action: () => go({ path: '/search', query: { mode: 'lucene' } }) },
     { id: 'monitor-pit', title: 'PIT 深度分页', sub: 'Point-in-Time + search_after · 突破 10000 上限 · 流式导出', cat: 'monitor', icon: Layers,
-      action: () => router.push({ path: '/search', query: { mode: 'pit' } }) },
+      action: () => go({ path: '/search', query: { mode: 'pit' } }) },
     { id: 'monitor-bridge', title: '查询语法桥 SQL↔DSL↔Lucene', sub: '一键转换 · 10 项能力对比表 · 无失真', cat: 'monitor', icon: ArrowLeftRight,
-      action: () => router.push({ path: '/search', query: { mode: 'bridge' } }) },
-    { id: 'monitor-schema', title: '字段体检（当前索引）', sub: '后台探测 mapping + 实际多值 · toast 报告失能字段', cat: 'monitor', icon: ShieldAlert,
+      action: () => go({ path: '/search', query: { mode: 'bridge' } }) },
+    ...(canSchemaRead ? [{ id: 'monitor-schema', title: '字段体检（当前索引）', sub: '后台探测 mapping + 实际多值 · toast 报告失能字段', cat: 'monitor', icon: ShieldAlert,
       action: async () => {
         if (!store.pickedIdx) { store.notify('warning', '请先在左侧选中索引'); return; }
         try {
@@ -448,7 +468,7 @@ const commands = computed<Cmd[]>(() => {
           store.notify(ws.length ? 'warning' : 'success',
             ws.length ? `${ws.length} 项 SQL 失能字段，建议改用 Lucene/DSL` : '字段完全兼容 SQL');
         } catch (e: any) { store.notify('error', '体检失败：' + (e?.message || e)); }
-      } },
+      } }] : []),
     { id: 'monitor-dsl-to-lucene', title: '把当前 DSL 翻译为 Lucene', sub: '从 DSL 页读 body · 启发式抽取 query_string · 跳转 /lucene', cat: 'monitor', icon: ArrowLeftRight,
       action: () => {
         const body = sessionStorage.getItem('es-console.dsl.body') || '';
@@ -460,24 +480,24 @@ const commands = computed<Cmd[]>(() => {
           /* lucene.index 同取 DSL 镜像的所属索引 */
           const idx = sessionStorage.getItem('es-console.dsl.index') || store.pickedIdx;
           if (idx) writeStoredRaw(sessionStorage, 'es-console.lucene.index', idx);
-          router.push({ path: '/search', query: { mode: 'lucene' } });
+          go({ path: '/search', query: { mode: 'lucene' } });
         } catch (e: any) { store.notify('error', '解析失败：' + (e?.message || e)); }
       } },
     /* 索引运维中枢 · mapping/分词/同义词/analysis/插件 */
     { id: 'index-mapping', title: 'Mapping 设计器（字段树 + 加字段）', sub: '可视化嵌套/multi-fields · 点分路径自动 wrap', cat: 'index', icon: FolderTree,
-      action: () => router.push('/mapping-designer') },
+      action: () => go('/mapping-designer') },
     { id: 'index-analyzer', title: '分词实验室（_analyze 多列对比）', sub: 'standard/ik*/custom（tokenizer+char_filter+filter）并排', cat: 'index', icon: FlaskConical,
-      action: () => router.push('/analyzer-lab') },
+      action: () => go('/analyzer-lab') },
     { id: 'index-synonyms', title: '同义词字典（ES 7.10 inline synonym_graph）', sub: '逗号/箭头双语法 · close→PUT→open · 自动热重载', cat: 'index', icon: BookText,
-      action: () => router.push('/synonyms') },
+      action: () => go('/synonyms') },
     { id: 'index-analysis', title: 'Analysis 全景（当前索引）', sub: 'analyzer/tokenizer/filter/char_filter/normalizer 一屏看全', cat: 'index', icon: Sliders,
-      action: () => router.push('/analysis-settings') },
+      action: () => go('/analysis-settings') },
     { id: 'index-plugins', title: '插件矩阵（集群体检）', sub: '节点×插件 + mismatches 告警 + SSH 安装指南', cat: 'index', icon: PackageOpen,
-      action: () => router.push('/plugins') },
+      action: () => go('/plugins') },
     { id: 'index-analyze-current', title: '试跑当前索引的分词器', sub: '默认多列对比 standard/whitespace/ik_max_word', cat: 'index', icon: FlaskConical,
       action: () => {
         if (!store.pickedIdx) { store.notify('warning', '请先在左侧选中索引'); return; }
-        router.push('/analyzer-lab');
+        go('/analyzer-lab');
       } },
     /* 963：分词热重载走 cluster/reload-analyzers（rank3 写端点）——按端点写键裁决，无权限不展示 */
     ...(canReload ? [{ id: 'index-reload-analyzers', title: '热重载当前索引的搜索分词器', sub: '_reload_search_analyzers · 同义词改后一键生效', cat: 'index', icon: Zap,
@@ -489,20 +509,20 @@ const commands = computed<Cmd[]>(() => {
       } }] : []),
     /* 相关性打分实验室 · explain/排名/调参/矩阵/X光 */
     { id: 'query-score', title: '打分解剖（search + explain）', sub: '每个命中的 BM25 因子树 · tf/idf/boost/norm 贡献百分比', cat: 'query', icon: Microscope,
-      action: () => router.push('/score-explain') },
+      action: () => go('/score-explain') },
     { id: 'query-rank', title: '排名侦探（why-not + A/B 对决）', sub: '_explain 单文档诊断 · 两文档打分树并排 diff', cat: 'query', icon: SearchCheck,
-      action: () => router.push('/rank-debug') },
+      action: () => go('/rank-debug') },
     { id: 'query-boost', title: 'Boost 调参沙盒', sub: '字段权重滑杆 · 重跑对比排名↑↓ · 导出最终 DSL', cat: 'query', icon: SlidersHorizontal,
-      action: () => router.push('/boost-tuner') },
+      action: () => go('/boost-tuner') },
     { id: 'query-matrix', title: '子句命中矩阵（named queries）', sub: '每条结果命中哪些子句 · 没起作用的子句现形', cat: 'query', icon: Grid3x3,
-      action: () => router.push('/match-matrix') },
+      action: () => go('/match-matrix') },
     { id: 'query-xray', title: '查询 X 光（rewrite + 词频取证）', sub: '_validate 改写透视 · _termvectors tf/doc_freq/ttf', cat: 'query', icon: ScanSearch,
-      action: () => router.push('/query-xray') },
+      action: () => go('/query-xray') },
     /* 搜索模板中心 + 别名管控台 */
     { id: 'govern-tpl', title: '搜索模板中心（填空即查）', sub: 'mustache 模板 CRUD · 参数自动提取 · _render 预览', cat: 'govern', icon: LayoutTemplate,
-      action: () => router.push('/search-templates') },
+      action: () => go('/search-templates') },
     { id: 'govern-alias', title: '别名管控台（原子切换）', sub: '新建/切换/设写/解绑 · 一次 _aliases 零停机', cat: 'govern', icon: Link2,
-      action: () => router.push('/aliases') },
+      action: () => go('/aliases') },
   );
 
   /* 索引命令全量可搜（此前只前 30，大集群搜不到）+ 最近使用置顶 +
@@ -522,7 +542,7 @@ const commands = computed<Cmd[]>(() => {
       action: () => {
         store.pick(idxItem.index);
         store.notify('success', '已切换：' + idxItem.index, {
-          action: { label: '打开索引工作区', onClick: () => router.push({ path: '/indices', query: { idx: idxItem.index } }) },
+          action: { label: '打开索引工作区', onClick: () => go({ path: '/indices', query: { idx: idxItem.index } }) },
         });
       },
     });
@@ -531,17 +551,17 @@ const commands = computed<Cmd[]>(() => {
     const iname = idxItem.index;
     list.push(
       { id: 'idx-q-' + iname, title: '查询 ' + iname, sub: '直达查询工作台', cat: '索引', icon: Search,
-        action: () => { store.pick(iname); router.push('/search'); } },
+        action: () => { store.pick(iname); go('/search'); } },
       { id: 'idx-m-' + iname, title: 'Mapping ' + iname, sub: '直达 Mapping 设计器', cat: '索引', icon: FolderTree,
-        action: () => { store.pick(iname); router.push({ path: '/mapping-designer', query: { idx: iname } }); } },
+        action: () => { store.pick(iname); go({ path: '/mapping-designer', query: { idx: iname } }); } },
       { id: 'idx-s-' + iname, title: 'Settings ' + iname, sub: '直达索引设置（热更）', cat: '索引', icon: Sliders,
-        action: () => { store.pick(iname); router.push({ path: '/index-settings', query: { idx: iname } }); } },
+        action: () => { store.pick(iname); go({ path: '/index-settings', query: { idx: iname } }); } },
       /* 「索引+tab」深链收尾（ 债务项）——输索引名直达工作区具体 tab；
  ?idx&tab 通道 IndexHub useUrlState('tab') 现成消费，纯 palette 注入零视图改动 */
       { id: 'idx-hub-' + iname, title: '工作区 ' + iname, sub: '索引工作区 · 文档', cat: '索引', icon: Database,
-        action: () => { store.pick(iname); router.push({ path: '/indices', query: { idx: iname, tab: 'docs' } }); } },
+        action: () => { store.pick(iname); go({ path: '/indices', query: { idx: iname, tab: 'docs' } }); } },
       { id: 'idx-shards-' + iname, title: '分片 ' + iname, sub: '索引工作区 · 分片诊断', cat: '索引', icon: LayoutGrid,
-        action: () => { store.pick(iname); router.push({ path: '/indices', query: { idx: iname, tab: 'shards' } }); } },
+        action: () => { store.pick(iname); go({ path: '/indices', query: { idx: iname, tab: 'shards' } }); } },
     );
   }
   /* 收藏夹提升为一等公民 */

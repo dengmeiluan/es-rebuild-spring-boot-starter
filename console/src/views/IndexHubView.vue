@@ -810,7 +810,9 @@ const canDeleteDoc = computed(() => auth.canEndpoint('ops', 'POST', '/internal/e
 const canRebuild = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/adhoc-rebuild/start', store.target));
 const canCreateIdx = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target));
 const canSettings = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/index-settings/update', store.target));
-const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target)); /* ：raw 系分节按 rest 页勾选 */
+/* raw 系分节全是系统管理面（refresh/flush/cache/forcemerge/close/open）：
+   非 ADMIN 即使持 w:rest 也会被 raw 守卫 403，入口与执行体同档。 */
+const canAdmin = computed(() => auth.canAdminOps());
 
 /* ==== 左列表 ==== */
 const kw = useScopedDraft('kw', { route: 'indices' }, '').text;

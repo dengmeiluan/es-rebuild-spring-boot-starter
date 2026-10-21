@@ -70,9 +70,10 @@
             <button v-if="canOps" class="btn ghost xs" @click="save" :disabled="!scriptId.trim() || saving">
               <Save :size="11" /> {{ saving ? '保存中…' : '保存' }}
             </button>
-            <button class="btn primary xs" @click="run" :disabled="busy">
+            <button v-if="canRun" class="btn primary xs" @click="run" :disabled="busy">
               <Play :size="11" /> {{ busy ? '执行中…' : '试跑' }}
             </button>
+            <span v-else class="dim sm-txt">试跑需 Painless 沙盒写权限</span>
           </div>
           <!-- 主编辑面接 painless assist（四骨架补全 + doc['f'] hover 通道；
  本页无索引上下文，fields 恒空=零字段候选/hover 静默，纯骨架补全收益。
@@ -156,10 +157,11 @@ import { writeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 /* 权限门禁——stored script 保存/删除=/cluster/scripts/put|delete=CLUSTER 档（rank3+）；
- 试跑 execute 是只读模拟（READONLY_POST），全角色可用 */
+ 试跑 execute 可执行脚本/读取 filter 上下文文档，按写档裁决（后端同口径） */
 const auth = useAuthStore();
 const permOpen = ref(false);
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/scripts/put', store.target));
+const canRun = computed(() => auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/painless/execute', store.target));
 const router = useRouter();
 
 /* 执行上下文偏好 usePref 持久化——工作区选择切页回来不再重选 */
@@ -256,6 +258,7 @@ onMounted(() => {
 onBeforeUnmount(() => { paramsProvider?.dispose(); paramsProvider = null; });
 
 async function run() {
+  if (!canRun.value) { store.notify('warning', '试跑需要 Painless 沙盒写权限'); return; }
   if (busy.value) return;
   busy.value = true; result.value = ''; runErr.value = ''; runErrRaw.value = null;
   try {

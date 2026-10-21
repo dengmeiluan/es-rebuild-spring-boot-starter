@@ -28,7 +28,7 @@ describe('六百三十四批：慢请求节权限静默修复', () => {
   });
 
   it('权限判定下沉内部：授权分支保留原控件与面板（零行为变更；800 同步更新=视图内部 v-if）', () => {
-    expect(VIEW, '内部授权分支').toContain('v-if="auth.canAuditAll()"');
+    expect(VIEW, '内部授权分支').toContain('v-if="auth.canAuditAll(store.target)"');
     /* 800 同步更新：慢请求视图=detailTab==='slow' 内部分支（首开懒加载 ensureDetailLoad 保语义） */
     expect(VIEW, '慢请求视图仍在授权分支内').toContain("detailTab === 'slow'");
     expect(VIEW, '耗时阈值输入保留').toContain('v-model.number="slowThresholdMs"');

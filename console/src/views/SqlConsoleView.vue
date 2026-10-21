@@ -368,7 +368,7 @@ async function probeSqlTargets() {
   try {
     if (!store.conns.length) await store.loadConns();
     const cands: Array<{ id: string; name: string }> = [
-      ...(store.hostVisible ? [{ id: '', name: '宿主集群' }] : []),
+      ...(store.hostVisible && auth.canSeeConn('host') ? [{ id: '', name: '宿主集群' }] : []),
       ...store.conns.filter(c => auth.canSeeConn(c.id)).map(c => ({ id: c.id, name: c.name })),
     ].filter(c => c.id !== store.target); // 当前目标已证不可用，跳过
     probedN.value = cands.length;

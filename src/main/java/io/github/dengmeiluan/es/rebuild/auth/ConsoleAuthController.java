@@ -49,6 +49,13 @@ public class ConsoleAuthController {
     private final BuiltinConsoleAuthService authService;
     private final ConsoleOpsAuditStore opsAuditStore;
     private final boolean pageAuthEnabled;
+    /** 审计行连接隔离的目录源；单测手工构造时可为 null（无连接模型语义）。 */
+    private io.github.dengmeiluan.es.rebuild.multicluster.ConnStore connStore;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setConnStore(io.github.dengmeiluan.es.rebuild.multicluster.ConnStore connStore) {
+        this.connStore = connStore;
+    }
     /** 页面契约全量载荷（组→页），构造期预建；前端 Forbidden 页取名 / 运行时对账用。 */
     private final Map<String, Object> pagesPayload;
 
@@ -220,7 +227,8 @@ public class ConsoleAuthController {
      *  20260922 快筛批：全维筛选下推（时间范围/集群/角色/方法/HTTP/来源/IP/耗时阈值/URI 前缀/关键词），
      *  旧 since 参数保持兼容（fromMs 未传时落 since）。 */
     @GetMapping("ops-audit")
-    public Map<String, Object> opsAudit(@RequestParam(required = false) String username,
+    public Map<String, Object> opsAudit(HttpServletRequest request,
+                                        @RequestParam(required = false) String username,
                                         @RequestParam(required = false) String action,
                                         @RequestParam(required = false, defaultValue = "100") int size,
                                         @RequestParam(required = false, defaultValue = "0") int from,
@@ -238,14 +246,19 @@ public class ConsoleAuthController {
                                         @RequestParam(required = false) String uriPrefix,
                                         @RequestParam(required = false) String kw) {
         /* 时间范围下推；20260922：全维结构化查询对象 */
-        return wire(opsAuditStore.search(ConsoleOpsAuditQuery.builder()
+        List<ConsoleOpsAuditEvent> records = opsAuditStore.search(ConsoleOpsAuditQuery.builder()
                 .username(username).action(action)
                 .fromMs(fromMs != null ? fromMs : since).toMs(toMs)
                 .connId(connId).connName(connName).role(role).method(method)
                 .httpStatus(httpStatus).source(source).ip(ip).minCostMs(minCostMs)
                 .uriPrefix(uriPrefix).kw(kw)
                 .size(size).from(from)
-                .build()));
+                .build());
+        Object p = request == null ? null : request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+        /* security 页读键可只授权到单个连接：行级按 ConsoleConnVisibility 收口，
+           与连接目录/监控/权限面板同口径；ADMIN/全局静态页授权保持全量。 */
+        return wire(ConsoleAuditVisibility.filter(records,
+                p instanceof ConsolePrincipal ? (ConsolePrincipal) p : null, connStore));
     }
 
     /** 自助操作流水——任何已认证身份（VIEWER+，拦截器已放行）查「自己的」操作。

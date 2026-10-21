@@ -138,9 +138,10 @@ describe('P0 高度链：WorkbenchLayout fillViewport + DslQueryView 自建链',
     /* 输入守卫 + Monaco 让路（编辑器内已有同名 execute action） */
     expect(dqSrc).toMatch(/t\.closest\('\.monaco-editor'\)/);
     expect(dqSrc).toMatch(/function onFilterHit\(p: \{ field: string; value: unknown; op\?: 'term' \| 'match' \}\)/);
-    /* 挂载双入口（carry 分支提前 return 也要挂）+ 卸载对称 */
-    expect(dqSrc.match(/window\.addEventListener\('keydown', onGlobalRunKey\)/g)?.length).toBe(2);
+    /* 挂载双入口（carry 分支提前 return 也要挂）+ KeepAlive 回页补挂 + 离页/卸载对称 */
+    expect(dqSrc.match(/window\.addEventListener\('keydown', onGlobalRunKey\)/g)?.length).toBe(3);
     expect(dqSrc).toMatch(/window\.removeEventListener\('keydown', onGlobalRunKey\)/);
+    expect(dqSrc).toMatch(/onDeactivated\(\(\) => \{[\s\S]*?removeEventListener\('keydown', onGlobalRunKey\)/);
   });
 
   it('P1 Lucene：?page= 契约对齐 DSL + 聚焦态全屏高口径（561 同步更新：内建聚焦承接）', () => {

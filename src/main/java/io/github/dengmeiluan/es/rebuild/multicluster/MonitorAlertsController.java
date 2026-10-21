@@ -16,11 +16,14 @@
 
 package io.github.dengmeiluan.es.rebuild.multicluster;
 
+import io.github.dengmeiluan.es.rebuild.auth.ConsoleConnVisibility;
+import io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -40,9 +43,11 @@ import java.util.Map;
 public class MonitorAlertsController {
 
     private final MonitorMetricsStore store;
+    private final ConnStore connStore;
 
-    public MonitorAlertsController(MonitorMetricsStore store) {
+    public MonitorAlertsController(MonitorMetricsStore store, ConnStore connStore) {
         this.store = store;
+        this.connStore = connStore;
     }
 
     /** 告警事件（timestamp 倒序，最新打头）。线缆 {records:[...]}，与 monitor-metrics 同款单点组装。
@@ -50,9 +55,13 @@ public class MonitorAlertsController {
     @GetMapping
     public Map<String, Object> alerts(@RequestParam(required = false, defaultValue = "50") int size,
                                       @RequestParam(required = false) Long fromMs,
-                                      @RequestParam(required = false) Long toMs) {
+                                      @RequestParam(required = false) Long toMs,
+                                      HttpServletRequest request) {
+        ConsolePrincipal principal = MonitorRecordVisibility.principal(request);
+        ConsoleConnVisibility.Snapshot snap = ConsoleConnVisibility.snapshot(principal, connStore);
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("records", store.searchAlerts(size, fromMs, toMs));
+        out.put("records", MonitorRecordVisibility.filterByIdentity(
+                store.searchAlerts(size, fromMs, toMs), snap));
         return Collections.unmodifiableMap(out);
     }
 }

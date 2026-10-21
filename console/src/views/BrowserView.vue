@@ -183,8 +183,12 @@ const store = useAppStore();
 /* 权限写门——新建索引/ForceMerge/删除索引=ops 档高危写，VIEWER 不可见 */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/delete-index', store.target));
-/* 行内 ForceMerge 实调 api.raw→ADMIN 域，门禁随端点域收口（canOps 只管删索引钮） */
-const canForceMerge = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target));
+/* 行内 ForceMerge 走结构化 /cluster/force-merge，门禁随 optimizer 页写键（canOps 只管删索引钮） */
+/* ForceMerge 走 /cluster/raw，非 ADMIN 会被 raw 系统守卫 403：入口与执行体同档 */
+/* ForceMerge 走结构化 /cluster/force-merge（归属 optimizer 页）：按真实端点页写键门，
+   不再用角色档 ADMIN 把有 optimizer 页写权的静态/连接用户误挡在门外。 */
+const canForceMerge = computed(() => auth.canEndpoint('ops', 'POST',
+  '/internal/es/index/cluster/force-merge', store.target));
 /* （兵蚁 MUST-FIX）：新建索引实调 POST /cluster/create-index（归 config-validator 页），与删索引(indices) 分属两页——canCreateIdx 独立裁决 */
 const canCreateIdx = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target));
 
@@ -376,8 +380,8 @@ function goMapping(name: string) {
 /* ForceMerge——：本地 ConfirmModal（warn/okText 等价迁移），确认通过后原 doFm 执行体原样内联。
  操作列槽行内钮经 askFmRow 适配（矩阵行 → IndexCat）后复用原函数体 */
 async function askFm(idx: IndexCat) {
-  /* 行内 ForceMerge 实调 api.raw（ADMIN 域）——执行体首行收口，键盘/程序旁路同受门 */
-  if (!canForceMerge.value) { store.notify('warning', 'ForceMerge 需 ADMIN 角色'); return; }
+  /* 行内 ForceMerge 走结构化 /cluster/force-merge——执行体首行收口，键盘/程序旁路同受门 */
+  if (!canForceMerge.value) { store.notify('warning', 'ForceMerge 需 optimizer 页写权限'); return; }
   const okGo = await askConfirm({
     title: 'ForceMerge 段合并',
     level: 'warn',
@@ -389,7 +393,7 @@ async function askFm(idx: IndexCat) {
     /* 同步等待改异步提交——大索引 forcemerge 同步 await 会占死前端
  （IndexHubView wait_for_completion=false 先例）；响应含 taskId 时指路任务页
  （IndexOptimizerView 先例响应处理形态），无 taskId 维持原成功文案 */
-    const r: any = await api.raw('POST', `/${idx.index}/_forcemerge?max_num_segments=1&wait_for_completion=false`);
+    const r: any = await api.clusterForceMerge(idx.index, 1);
     if (r?.taskId) {
       store.notify('success', `已提交后台执行：${idx.index} ForceMerge（taskId=${r.taskId}，去任务页看进度）`);
     } else {

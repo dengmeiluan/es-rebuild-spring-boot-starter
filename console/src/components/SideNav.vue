@@ -108,7 +108,7 @@ import {
   Microscope, SearchCheck, SlidersHorizontal, Grid3x3, ScanSearch,
   LayoutTemplate, ChevronDown, Hammer, GitCompareArrows, Boxes,
 } from 'lucide-vue-next';
-import { NAV_ITEMS, NAV_GROUPS, effectivePagesForTarget } from '../router';
+import { NAV_ITEMS, NAV_GROUPS, effectivePagesForTarget, HOST_BOUND_PAGES } from '../router';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
 import MarkText from './MarkText.vue';
@@ -146,13 +146,23 @@ const grouped = computed(() => {
   const q = navQuery.value.trim().toLowerCase();
   const gp = auth.grantedPages; // 2.5.0：null=未启用全量可见；白名单外页面连入口都不露
   /* 连接模型键(conn:{id}:{page})按当前目标收缩——host 下仅静态键可见；ADMIN 全局可见 */
-  const eff = effectivePagesForTarget(gp, store.target);
   const admin = auth.isAdmin();
+  const visible = (i: (typeof NAV_ITEMS)[number]) => {
+    if (admin) return true;
+    /* 与 router.pageAllowed 同口径：host-bound 页按宿主目标，REST 写键可进 DevTools。 */
+    const tid = HOST_BOUND_PAGES.has(i.pageKey)
+      ? 'host'
+      : (!store.target || String(store.target).toLowerCase() === 'host' ? 'host' : store.target);
+    const eff = effectivePagesForTarget(gp, tid);
+    const restWriter = !!gp && gp.includes('conn:' + tid + ':w:rest');
+    return eff == null || eff.has(i.pageKey)
+      || (i.pageKey === 'devtools' && restWriter);
+  };
   return NAV_GROUPS
     .map(g => ({
       id: g.id as string, name: g.name,
       items: NAV_ITEMS.filter(i => i.group === g.id
-        && (admin || eff == null || eff.has(i.pageKey))
+        && visible(i)
         && (!q || i.name.toLowerCase().includes(q) || i.path.toLowerCase().includes(q))),
     }))
     .filter(g => g.items.length);

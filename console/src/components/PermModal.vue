@@ -26,6 +26,7 @@
         <span class="pm-cap-k">共享写端点（文档/任务/ILM/DevTools 等归属页）</span>
         <span class="pm-cap-v" :class="d.sharedWriteAllowed ? 'is-ok' : 'is-no'">{{ d.sharedWriteAllowed ? '可用' : '不可用' }}</span>
       </div>
+      <div class="pm-note">REST/DevTools 写仅覆盖数据面（检索/文档/批量）；别名切换、reindex、快照恢复、索引模板需对应页面写权限。</div>
 
       <!-- 逐页判定清单 -->
       <div class="pm-sec-t">逐页判定</div>
