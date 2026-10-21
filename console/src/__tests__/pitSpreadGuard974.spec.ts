@@ -14,8 +14,10 @@ const pitSrc = readFileSync(join(__dirname, '../views/PitScrollView.vue'), 'utf-
 describe('PIT 缓冲增量分块（spread 越引擎参数上限防御）', () => {
   it('buffer 增量分块进栈，spread 直推形态退役', () => {
     expect(pitSrc, 'spread 直推形态退役').not.toMatch(/buffer\.value\.push\(\.\.\.hits\)/);
+    /* 单行同步循环形态已随块间让出退役（pitYield980 锁让出形态），本锁放宽为
+       分块调用在场——分块防御语义保持，让出维度由 pitYield980 承接 */
     expect(pitSrc, '分块进栈在场').toMatch(
-      /for \(let i = 0; i < hits\.length; i \+= \d+\) buffer\.value\.push\(\.\.\.hits\.slice\(i, i \+ \d+\)\);/,
+      /buffer\.value\.push\(\.\.\.hits\.slice\(i, i \+ \d+\)\)/,
     );
   });
 });

@@ -406,8 +406,12 @@ async function doStart() {
       }
 
       /* 批次大小手输可超输入框上限，PIT 深分页单批可数万条：spread 直推有
- 引擎参数上限（RangeError）风险，分块进栈 */
-      for (let i = 0; i < hits.length; i += 8192) buffer.value.push(...hits.slice(i, i + 8192));
+       引擎参数上限（RangeError）风险，分块进栈；块间让出主线程——单拍数万条
+       push 同步执行会冻结 UI（进度/日志/计时器全停），多块批次片间交出渲染帧 */
+      for (let i = 0; i < hits.length; i += 8192) {
+        buffer.value.push(...hits.slice(i, i + 8192));
+        if (i + 8192 < hits.length) await new Promise(res => setTimeout(res, 0));
+      }
       preview.value = buffer.value.slice(-100);
       fetched.value += hits.length;
       batches.value += 1;
