@@ -479,6 +479,8 @@ export const api = {
   profile: (index: string, dsl: string, signal?: AbortSignal) => post(`/cluster/profile?${q({ index })}`, dsl, undefined, signal ? { signal } : undefined),
   count: (index: string, dsl: string) => post(`/cluster/count?${q({ index })}`, dsl),
   raw: (method: string, path: string, body?: string, signal?: AbortSignal) => post('/cluster/raw', { method, path, body: body || '' }, undefined, signal ? { signal } : undefined),
+  /* DevTools 独立执行端点（devtools 页写键或 rest 写键；执行内核/守卫与 raw 同源） */
+  devtoolsExecute: (method: string, path: string, body?: string, signal?: AbortSignal) => post('/cluster/devtools/execute', { method, path, body: body || '' }, undefined, signal ? { signal } : undefined),
   sql: (sql: string, signal?: AbortSignal) => post('/cluster/sql', sql, undefined, signal ? { signal } : undefined),
 
   /* 文档操作 */
@@ -557,6 +559,8 @@ export const api = {
     post(`/cluster/index-settings/update?${q({ index })}`, body),
   reroute: (body: string, opts: { dryRun?: boolean; explain?: boolean; retryFailed?: boolean } = {}) =>
     post(`/cluster/reroute?${q({ dryRun: opts.dryRun, explain: opts.explain ?? true, retryFailed: opts.retryFailed })}`, body),
+  /* 诊断页专用：固定 retry_failed=true，不接受任意 reroute commands。 */
+  rerouteRetryFailed: () => post('/cluster/reroute/retry-failed', undefined),
   ilmPolicies: () => get<any[]>('/cluster/ilm/policies'),
   ilmPolicyPut: (name: string, body: string) => put(`/cluster/ilm/policy?${q({ name })}`, body),
   ilmPolicyDelete: (name: string) => del(`/cluster/ilm/policy?${q({ name })}`),

@@ -136,6 +136,26 @@ describe('588 批:端点级单一权限入口 canEndpoint(apiPrefixes 最长前�
     expect(auth.canWriteOn(undefined)).toBe(true);
     expect(auth.canPage('write', 'search', undefined)).toBe(true);
   });
+
+  it('conn 模型:共享读端点按归属页读键裁决', () => {
+    const auth = useAuthStore();
+    auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['conn:c1:search'], pages: pagesWithPrefixes };
+    expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/query?index=orders', 'c1')).toBe(true);
+    auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['conn:c1:overview'], pages: pagesWithPrefixes };
+    expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/query?index=orders', 'c1')).toBe(false);
+    auth.me = { username: 'u', role: 'OPERATOR', fallback: false, grantedPages: [], pages: pagesWithPrefixes };
+    expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/query?index=orders', 'c1')).toBe(false);
+    expect(auth.canWriteOn('c1')).toBe(false);
+    expect(auth.canPage('write', 'search', 'c1')).toBe(false);
+  });
+
+  it('conn 模型:共享写映射优先于页前缀（ilm/move、alias-actions）', () => {
+    const auth = useAuthStore();
+    auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['conn:c1:ilm', 'conn:c1:w:ilm'], pages: pagesWithPrefixes };
+    expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/ilm/move', 'c1')).toBe(true);
+    auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['conn:c1:config-validator', 'conn:c1:w:config-validator'], pages: pagesWithPrefixes };
+    expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/alias-actions', 'c1')).toBe(true);
+  });
   it('conn 模型:host/缺省目标不落回角色门——共享写须 conn:host 写键', () => {
     const auth = useAuthStore();
     auth.me = { username: 'u', role: 'OPERATOR', fallback: false, grantedPages: ['conn:c1:search', 'conn:c1:w:search'], pages: pagesWithPrefixes };

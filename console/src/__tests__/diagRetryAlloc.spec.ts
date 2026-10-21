@@ -15,15 +15,15 @@ describe('Diag 分配重试（）', () => {
   it('按钮接线（canOps+unassigned 双门控）+ reroute 路径', () => {
     expect(src).toMatch(/v-if="canOps && allocation\.current_state === 'unassigned'"/);
     expect(src).toMatch(/@click="retryFailedAlloc"/);
-    expect(src).toMatch(/api\.reroute\('\{\}', \{ retryFailed: true, explain: false \}\)/);
-    expect(src).toContain("const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/reroute', store.target));");
+    expect(src).toMatch(/api\.rerouteRetryFailed\(\)/);
+    expect(src).toContain("const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/reroute/retry-failed', store.target));");
   });
 
   it('askConfirm warn 门控在提交之前', () => {
     expect(src).toMatch(/title: '重试失败分片分配'/);
     expect(src).toMatch(/level: 'warn'/);
     const gate = src.indexOf('if (!await askConfirm({');
-    const submit = src.indexOf("api.reroute('{}'");
+    const submit = src.indexOf('api.rerouteRetryFailed()');
     expect(gate).toBeGreaterThan(-1);
     expect(submit).toBeGreaterThan(gate);
   });

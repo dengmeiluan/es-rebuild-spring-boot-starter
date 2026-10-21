@@ -39,6 +39,7 @@ vi.mock('../api', async (importOriginal) => {
       ...actual.api,
       /* 惰性包装：vi.mock factory 提升到文件顶执行，此时 vi.fn 尚未初始化（TDZ） */
       raw: (...args: any[]) => rawFn(...args),
+      devtoolsExecute: (...args: any[]) => rawFn(...args),
       painlessExecute: (...args: any[]) => painlessExecuteFn(...args),
       listStoredScripts: (...args: any[]) => listStoredScriptsFn(...args),
       putStoredScript: (...args: any[]) => putStoredScriptFn(...args),

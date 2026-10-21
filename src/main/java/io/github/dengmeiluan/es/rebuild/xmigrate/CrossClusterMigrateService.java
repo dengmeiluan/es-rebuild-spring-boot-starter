@@ -114,9 +114,42 @@ public class CrossClusterMigrateService {
         return out;
     }
 
+    /** ref 只允许源连接相关变量，禁止借迁移预览读取任意 Spring/环境配置（如 datasource 密码）。 */
+    private static boolean allowedRef(String ref) {
+        if (ref == null) return false;
+        String k = ref.trim();
+        if (k.isEmpty()) return false;
+        if (k.matches("(SOURCE|ES|MIGRATE|QUOTEHUB)_[A-Z0-9_]+")) return true;
+        return k.startsWith("es.rebuild.migrate.") || k.startsWith("es.rebuild.console.");
+    }
+
+    private static boolean sensitiveRef(String ref) {
+        if (ref == null) return false;
+        String k = ref.toLowerCase(java.util.Locale.ROOT);
+        return k.contains("password") || k.contains("passwd") || k.contains("secret")
+                || k.contains("token") || k.contains("credential") || k.contains("apikey")
+                || k.contains("accesskey") || k.contains("privatekey");
+    }
+
+    private static void requireAllowedPlaceholders(String literal) {
+        if (literal == null || !literal.contains("${")) return;
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("\\$\\{([^}:]+)(?::[^}]*)?}").matcher(literal);
+        while (m.find()) {
+            if (!allowedRef(m.group(1))) {
+                throw new IllegalArgumentException("变量引用不允许：" + m.group(1)
+                        + "（仅允许 SOURCE_/ES_/MIGRATE_/QUOTEHUB_ 或 es.rebuild.* 源连接变量）");
+            }
+        }
+    }
+
     /** ref 非空→按名取属性；否则字面值含 {@code ${}} 则解析占位符；解析不出（残留 ${）返回 null。 */
     private String resolveField(String literal, String ref) {
         if (ref != null && !ref.trim().isEmpty()) {
+            if (!allowedRef(ref)) {
+                throw new IllegalArgumentException("变量引用不允许：" + ref
+                        + "（仅允许 SOURCE_/ES_/MIGRATE_/QUOTEHUB_ 或 es.rebuild.* 源连接变量）");
+            }
             String v = environment.getProperty(ref.trim());
             return v == null || v.isEmpty() ? null : v;
         }
@@ -124,6 +157,7 @@ public class CrossClusterMigrateService {
             return literal;
         }
         if (literal.contains("${")) {
+            requireAllowedPlaceholders(literal);
             String resolved = environment.resolvePlaceholders(literal);
             return resolved.contains("${") ? null : resolved; // 残留占位符=未解析
         }
@@ -133,6 +167,9 @@ public class CrossClusterMigrateService {
     private Integer resolvePortField(RemoteClusterConn in) {
         if (in.getPortRef() == null || in.getPortRef().trim().isEmpty()) {
             return null; // 无 ref → 用字面 port
+        }
+        if (!allowedRef(in.getPortRef())) {
+            throw new IllegalArgumentException("变量引用不允许：" + in.getPortRef());
         }
         String v = environment.getProperty(in.getPortRef().trim());
         if (v == null || v.isEmpty()) {
@@ -155,14 +192,16 @@ public class CrossClusterMigrateService {
         out.put("scheme", r.getScheme());
         out.put("host", r.getHost());
         out.put("port", r.getPort());
-        out.put("username", r.getUsername());
+        boolean sensitiveUser = sensitiveRef(raw.getUserRef()) || containsSensitivePlaceholder(raw.getUsername());
+        out.put("username", sensitiveUser ? null : r.getUsername());
         out.put("passwordResolved", r.getPassword() != null && !r.getPassword().isEmpty());
         List<String> unresolved = new ArrayList<>();
         if (r.getHost() == null || r.getHost().isEmpty()) {
             unresolved.add("host");
         }
         // 仅当用户给了 ref/${} 但没解析出来时，才把 user/password 记为未解析
-        if (refRequested(raw.getUserRef(), raw.getUsername()) && (r.getUsername() == null || r.getUsername().isEmpty())) {
+        if (sensitiveUser || (refRequested(raw.getUserRef(), raw.getUsername())
+                && (r.getUsername() == null || r.getUsername().isEmpty()))) {
             unresolved.add("username");
         }
         if (refRequested(raw.getPasswordRef(), raw.getPassword()) && (r.getPassword() == null || r.getPassword().isEmpty())) {
@@ -170,6 +209,16 @@ public class CrossClusterMigrateService {
         }
         out.put("unresolved", unresolved);
         return out;
+    }
+
+    private static boolean containsSensitivePlaceholder(String literal) {
+        if (literal == null || !literal.contains("${")) return false;
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("\\$\\{([^}:]+)(?::[^}]*)?}").matcher(literal);
+        while (m.find()) {
+            if (sensitiveRef(m.group(1))) return true;
+        }
+        return false;
     }
 
     private boolean refRequested(String ref, String literal) {

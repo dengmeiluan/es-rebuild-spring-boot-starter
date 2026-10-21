@@ -1122,6 +1122,7 @@ public class EsRebuildAutoConfiguration {
         @ConditionalOnMissingBean
         @ConditionalOnBean(io.github.dengmeiluan.es.rebuild.auth.EnvPagesResolver.class)
         @ConditionalOnProperty(prefix = "es.rebuild", name = "web-enabled", matchIfMissing = true)
+        @org.springframework.boot.autoconfigure.condition.ConditionalOnExpression("${es.rebuild.console.auth.enabled:true}")
         public io.github.dengmeiluan.es.rebuild.auth.ConsolePermissionsController consolePermissionsController(
                 ConsolePageCatalog consolePageCatalog,
                 io.github.dengmeiluan.es.rebuild.auth.EnvPagesResolver envPagesResolver,

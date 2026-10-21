@@ -2828,6 +2828,7 @@ public class EsIndexAdmin {
      */
     public Map<String, Object> sqlQuery(String body) throws IOException {
         if (body == null || body.trim().isEmpty()) throw new IllegalArgumentException("sql body 不能为空");
+        guardSql(body);
         try {
             return performSqlVersionAware("?format=json", body);
         } catch (Exception ex) {
@@ -2885,6 +2886,7 @@ public class EsIndexAdmin {
     /** _sql/translate —— 把 SQL 转为 DSL，供前端一键“转为 DSL”。 */
     public Map<String, Object> sqlTranslate(String body) throws IOException {
         if (body == null || body.trim().isEmpty()) throw new IllegalArgumentException("sql body 不能为空");
+        guardSql(body);
         try {
             return performSqlVersionAware("/translate", body);
         } catch (Exception ex) {

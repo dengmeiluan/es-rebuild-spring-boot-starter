@@ -154,14 +154,16 @@ describe('963 auth.canEndpoint：只读 POST 对齐后端 isReadonlyPost', () =>
 
   it('行为：conn 模型无任何写键，裸 /cluster/sql 与 settings-impact 仍按只读放行', () => {
     const auth = useAuthStore();
-    auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['conn:c1:live'], pages };
+    auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['conn:c1:live', 'conn:c1:search', 'conn:c1:index-settings'], pages };
     expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/sql', 'c1')).toBe(true);
     expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/insight/settings-impact', 'c1')).toBe(true);
+    auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['conn:c1:live'], pages };
+    expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/insight/settings-impact', 'c1')).toBe(false);
   });
 
   it('行为：尾缀端点（index/query、system-query、probe）只读放行；真正的写端点仍被连接写键拦', () => {
     const auth = useAuthStore();
-    auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['conn:c1:live'], pages };
+    auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['conn:c1:live', 'conn:c1:search', 'conn:c1:index-settings'], pages };
     expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/query/index/query', 'c1')).toBe(true);
     expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/query/index/system-query', 'c1')).toBe(true);
     expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/clusters/c1/probe', 'c1')).toBe(true);

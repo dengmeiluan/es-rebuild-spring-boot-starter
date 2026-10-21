@@ -104,7 +104,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
     private static final List<String> CLUSTER_KEYWORDS = Arrays.asList(
             "/cluster/delete-index", "/cluster/create-index",
             "/cluster/delete-by-id", "/cluster/delete-by-query",
-            "/cluster/settings/put", "/cluster/reroute",
+            "/cluster/settings/put", "/cluster/reroute", "/cluster/reroute/retry-failed",
             "/cluster/alias-actions", "/cluster/rollover",
             "/cluster/templates/put", "/cluster/templates/delete",
             "/cluster/scripts/put", "/cluster/scripts/delete",
@@ -125,6 +125,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
     private static final List<String> ADMIN_KEYWORDS = Arrays.asList(
             "/auth/users",
             "/cluster/raw",
+            "/cluster/devtools/execute",
             "/setup/rebind",  //  重绑控制集群（高危：控制面数据归属切换）
             "/clusters/");  //  多集群连接保存/删除/测试（凭据流转）；GET /clusters 列表脱敏，VIEWER 可读
     /** 系统管理层（重绑/连接档案）：ADMIN 角色专属。用户管理归 security 页写键，
@@ -178,15 +179,69 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         m.put("/cluster/delete-by-query", Arrays.asList("search", "update-by-query"));
         m.put("/cluster/tasks/cancel", Arrays.asList("tasks", "task-tree"));
         m.put("/cluster/ilm/policy", java.util.Collections.singletonList("ilm"));
+        m.put("/cluster/ilm/move", Arrays.asList("ilm", "lifecycle"));
         m.put("/cluster/index-settings/update", Arrays.asList("index-settings", "indices", "optimizer"));
         m.put("/cluster/reload-analyzers", Arrays.asList("analysis-settings", "synonyms"));
-        m.put("/cluster/reroute", Arrays.asList("cluster-settings", "diag"));
+        m.put("/cluster/reroute", java.util.Collections.singletonList("cluster-settings"));
+        m.put("/cluster/alias-actions", Arrays.asList("aliases", "config-validator"));
+        m.put("/cluster/reroute/retry-failed", java.util.Collections.singletonList("diag"));
         m.put("/cluster/scripts/put", Arrays.asList("search-templates", "painless-lab"));
         m.put("/cluster/scripts/delete", Arrays.asList("search-templates", "painless-lab"));
+        /* DevTools 独立执行端点：rest 写键兼容旧授权，devtools 写键可单独授权。 */
+        m.put("/cluster/devtools/execute", Arrays.asList("rest", "devtools"));
         /* 护栏动作按动作归属页裁决：apply-index-settings 是 index-settings 页的保存出口；
            未登记的新动作在连接模型下一律拒绝（防未来动作回落角色门绕过页面写键）。 */
-        m.put("/insight/actions/apply-index-settings", java.util.Collections.singletonList("index-settings"));
+        m.put("/insight/actions/apply-index-settings",
+                Arrays.asList("index-settings", "indices", "optimizer"));
         SHARED_WRITE_PAGES = java.util.Collections.unmodifiableMap(m);
+    }
+
+    /**
+     * 共享读端点 → 允许读取的页面写/读键。这些端点没有页面归属（pageOf=null），
+     * 连接模型下若只按角色门放行，任意页面授权用户都能读业务数据——必须按页面读键裁决。
+     */
+    private static final java.util.Map<String, List<String>> SHARED_READ_PAGES;
+    static {
+        java.util.Map<String, List<String>> m = new java.util.LinkedHashMap<>();
+        m.put("/cluster/query", Arrays.asList("search", "indices", "analyzer-lab"));
+        m.put("/cluster/search-dsl", Arrays.asList("search", "profile-flame", "update-by-query"));
+        m.put("/cluster/search-template", java.util.Collections.singletonList("search-templates"));
+        m.put("/cluster/search-raw", Arrays.asList("search", "indices", "browser", "analyzer-lab",
+                "aliases", "update-by-query", "bulk", "doc-diff", "boost-tuner", "rank-debug",
+                "score-explain", "match-matrix", "query-xray", "profile-flame"));
+        m.put("/cluster/profile", Arrays.asList("search", "indices"));
+        m.put("/cluster/count", Arrays.asList("search", "indices"));
+        m.put("/cluster/explain-doc", Arrays.asList("rank-debug", "search", "indices"));
+        m.put("/cluster/validate-query", Arrays.asList("query-xray", "search"));
+        m.put("/cluster/term-vectors", java.util.Collections.singletonList("query-xray"));
+        m.put("/insight/settings-impact", Arrays.asList("index-settings", "optimizer"));
+        m.put("/monitor-metrics", Arrays.asList("overview", "live"));
+        m.put("/monitor-history", Arrays.asList("overview", "live"));
+        m.put("/monitor-alerts", Arrays.asList("overview", "live"));
+        m.put("/ring-usage", Arrays.asList("overview", "topology"));
+        m.put("/cluster/tasks", Arrays.asList("tasks", "task-tree"));
+        SHARED_READ_PAGES = java.util.Collections.unmodifiableMap(m);
+    }
+
+    /** 最长片段匹配的共享读页面集合；无登记返回 null（调用方维持既有角色/页面门）。 */
+    static List<String> sharedReadPages(String path) {
+        List<String> best = null;
+        int bestLen = -1;
+        for (java.util.Map.Entry<String, List<String>> e : SHARED_READ_PAGES.entrySet()) {
+            if (path.contains(e.getKey()) && e.getKey().length() > bestLen) {
+                best = e.getValue();
+                bestLen = e.getKey().length();
+            }
+        }
+        return best;
+    }
+
+    /** 空页面授权仍必须放行的自举/自助端点（身份、退出、改密、权限自查、setup 状态）。 */
+    private static boolean isBootstrapPath(String path) {
+        return path.endsWith("/auth/me") || path.endsWith("/auth/logout")
+                || path.endsWith("/auth/change-password") || path.endsWith("/auth/permissions")
+                || path.endsWith("/auth/ops-audit/mine") || path.endsWith("/setup/status")
+                || path.endsWith("/cluster/health");
     }
 
     /** 最长片段匹配的共享写页面集合；无登记返回 null（调用方回落角色门）。 */
@@ -349,6 +404,33 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                 deny(response, 403, "{\"code\":\"WRITE_DENIED\",\"message\":\"当前身份无任何页面授权，写操作一律拒绝\"}");
                 return false;
             }
+            /* 空集=全拒同样覆盖读：除身份/退出/改密/权限自查/setup 状态外一律拒绝，
+               防止无页面授权用户直调 pageOf=null 的 query/search 读端点。 */
+            if (!writeReq && principal.getGrantedPages().isEmpty() && !isBootstrapPath(path)) {
+                opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
+                        "PAGE_DENIED", 403, "pageGrants=empty target=" + targetId));
+                deny(response, 403, "{\"code\":\"PAGE_DENIED\",\"message\":\"当前身份无任何页面授权\"}");
+                return false;
+            }
+            /* 无页面归属的共享读端点：连接模型按归属页读键裁决（pageOf=null 不再
+               直接吃角色门，否则 only-overview 用户可读 query/search 业务数据）。 */
+            if (!writeReq && envPagesResolver.inConnModel(principal.getGrantedPages())) {
+                List<String> readPages = sharedReadPages(path);
+                if (readPages != null) {
+                    boolean allowed = false;
+                    for (String pageKey : readPages) {
+                        if (effectivePages.contains(pageKey)) { allowed = true; break; }
+                    }
+                    if (!allowed) {
+                        opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
+                                "PAGE_DENIED", 403, "target=" + targetId + " readPages=" + String.join(",", readPages)));
+                        deny(response, 403, "{\"code\":\"PAGE_DENIED\",\"message\":\"暂无该查询端点归属页面的读权限（需 "
+                                + jsonEscape(String.join("/", readPages)) + " 之一），请联系管理员授权\"}");
+                        return false;
+                    }
+                    return true;
+                }
+            }
             /* 托管重建向导的「校验并继续」是 adhoc 流程内步骤：持 adhoc 写键即可调用
                config-lab/validate 的 dry-run，不要求再勾 config-validator 页（否则向导
                第 1 步永远无法前进）。校验器页自身的写键仍按原页面门裁决。 */
@@ -356,6 +438,23 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                     && envPagesResolver.inConnModel(principal.getGrantedPages())
                     && envPagesResolver.writeAllowed(targetId, "adhoc-rebuild", principal.getGrantedPages())) {
                 return true;
+            }
+            /* 共享写映射优先于单一页面前缀：一个端点被多页合法使用时，
+               持任一归属页写键都应放行（否则 ilm/move、写别名等会误拦另一页的授权）。 */
+            if (writeReq && envPagesResolver.inConnModel(principal.getGrantedPages())) {
+                List<String> sharedPages = sharedWritePages(path);
+                if (sharedPages != null) {
+                    for (String pageKey : sharedPages) {
+                        if (envPagesResolver.writeAllowed(targetId, pageKey, principal.getGrantedPages())) {
+                            return true;
+                        }
+                    }
+                    opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
+                            "WRITE_DENIED", 403, "conn=" + targetId + " sharedPages=" + String.join(",", sharedPages)));
+                    deny(response, 403, "{\"code\":\"WRITE_DENIED\",\"message\":\"暂无该共享写端点的页面写权限（需 "
+                            + jsonEscape(String.join("/", sharedPages)) + " 之一），请联系管理员授权\"}");
+                    return false;
+                }
             }
             if (page != null) {
                 if (!effectivePages.contains(page.getKey())) {

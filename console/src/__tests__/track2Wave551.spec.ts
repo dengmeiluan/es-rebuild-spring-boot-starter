@@ -59,8 +59,11 @@ describe('551 ②③：openRawIo 判空三处补齐（DslQueryView 550 口径逐
   it('XmigrateView：/xmigrate/ 未命中 notify 引导不开空弹窗', () => {
     expect(xm).toMatch(openRawIoShape('/xmigrate/'));
   });
-  it('DevToolsView：/cluster/raw 未命中 notify 引导不开空弹窗', () => {
-    expect(dt).toMatch(openRawIoShape('/cluster/raw'));
+  it('DevToolsView：/cluster/devtools/execute 未命中 notify 引导不开空弹窗', () => {
+    expect(dt).toMatch(/function openRawIo\(\) \{\s*const rec = ioRecorder\.last\('\/cluster\/devtools\/execute'\) \|\| ioRecorder\.last\('\/cluster\/raw'\);/);
+    expect(dt).toContain('暂无原始 IO 记录，先在本页执行一次操作（记录环近 30 条）再查看');
+    expect(dt).toContain('rawIoRec.value = rec;');
+    expect(dt).toContain('rawIoShow.value = true;');
   });
   it('IndexHubView：/cluster/query 未命中 notify 引导不开空弹窗', () => {
     /* 五百五十二批同步更新（击穿者：552 轨2 刀②——ops raw 通道补口，特征串扩双参）：

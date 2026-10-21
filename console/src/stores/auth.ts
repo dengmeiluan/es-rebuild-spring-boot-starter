@@ -105,6 +105,7 @@ export const useAuthStore = defineStore('auth', () => {
   };
   const canWriteOn = (targetId: string | null | undefined): boolean => {
     if (isAdmin()) return true; /* 超管全局写权：不受连接写键缺失拖累 */
+    if (Array.isArray(grantedPages.value) && grantedPages.value.length === 0) return false; /* 空集=全拒 */
     const conn = connWriteResolved(targetId);
     if (conn !== null) return conn;
     return can('write');
@@ -117,6 +118,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (me.value == null) return true;
     if (isAdmin()) return true; /* 超管全局页面权：页面白名单/连接键不拖累 */
     const gp = me.value.grantedPages;
+    if (Array.isArray(gp) && gp.length === 0) return false; /* 空集=全拒 */
     const isConn = Array.isArray(gp) && gp.some(g => g.startsWith('conn:'));
     if (isConn && cap !== 'admin') {
       return gp!.includes('conn:' + (targetId || 'host') + ':w:' + pageKey);
@@ -142,12 +144,16 @@ export const useAuthStore = defineStore('auth', () => {
     '/cluster/delete-by-query': ['search', 'update-by-query'],
     '/cluster/tasks/cancel': ['tasks', 'task-tree'],
     '/cluster/ilm/policy': ['ilm'],
+    '/cluster/ilm/move': ['ilm', 'lifecycle'],
     '/cluster/index-settings/update': ['index-settings', 'indices', 'optimizer'],
     '/cluster/reload-analyzers': ['analysis-settings', 'synonyms'],
-    '/cluster/reroute': ['cluster-settings', 'diag'],
+    '/cluster/reroute': ['cluster-settings'],
+    '/cluster/reroute/retry-failed': ['diag'],
+    '/cluster/alias-actions': ['aliases', 'config-validator'],
     '/cluster/scripts/put': ['search-templates', 'painless-lab'],
     '/cluster/scripts/delete': ['search-templates', 'painless-lab'],
-    '/insight/actions/apply-index-settings': ['index-settings'],
+    '/cluster/devtools/execute': ['rest', 'devtools'],
+    '/insight/actions/apply-index-settings': ['index-settings', 'indices', 'optimizer'],
   };
   const sharedWritePageKeys = (path: string): string[] | null => {
     let best: string[] | null = null;
@@ -157,10 +163,37 @@ export const useAuthStore = defineStore('auth', () => {
     }
     return best;
   };
+  /* 共享读端点 → 归属页读键（与后端 SHARED_READ_PAGES 同源）。 */
+  const SHARED_READ_PAGE_KEYS: Record<string, string[]> = {
+    '/cluster/query': ['search', 'indices', 'analyzer-lab'],
+    '/cluster/search-dsl': ['search', 'profile-flame', 'update-by-query'],
+    '/cluster/search-template': ['search-templates'],
+    '/cluster/search-raw': ['search', 'indices', 'browser', 'analyzer-lab', 'aliases', 'update-by-query', 'bulk', 'doc-diff', 'boost-tuner', 'rank-debug', 'score-explain', 'match-matrix', 'query-xray', 'profile-flame'],
+    '/cluster/profile': ['search', 'indices'],
+    '/cluster/count': ['search', 'indices'],
+    '/cluster/explain-doc': ['rank-debug', 'search', 'indices'],
+    '/cluster/validate-query': ['query-xray', 'search'],
+    '/cluster/term-vectors': ['query-xray'],
+    '/insight/settings-impact': ['index-settings', 'optimizer'],
+    '/monitor-metrics': ['overview', 'live'],
+    '/monitor-history': ['overview', 'live'],
+    '/monitor-alerts': ['overview', 'live'],
+    '/ring-usage': ['overview', 'topology'],
+    '/cluster/tasks': ['tasks', 'task-tree'],
+  };
+  const sharedReadPageKeys = (path: string): string[] | null => {
+    let best: string[] | null = null;
+    let bestLen = -1;
+    for (const [frag, keys] of Object.entries(SHARED_READ_PAGE_KEYS)) {
+      if (path.includes(frag) && frag.length > bestLen) { best = keys; bestLen = frag.length; }
+    }
+    return best;
+  };
   const canEndpoint = (cap: ConsoleCap, method: string, path: string, targetId: string | null | undefined) => {
     if (me.value == null) return true;
     if (isAdmin()) return true; /* 超管全局端点权：与后端 ADMIN 页面门豁免镜像 */
     const gp = me.value.grantedPages;
+    if (Array.isArray(gp) && gp.length === 0) return false; /* 空集=全拒 */
     const isConn = Array.isArray(gp) && gp.some(g => g.startsWith('conn:'));
     if (!isConn) return canCap(me.value.role, cap);
     /* host/缺省目标同样走连接写键：conn 用户不得因未带目标头落回全局角色门写宿主；
@@ -171,7 +204,10 @@ export const useAuthStore = defineStore('auth', () => {
     if (method.toUpperCase() !== 'GET'
       && !READONLY_POST_KEYWORDS.some(kw => path.includes(kw))
       && !path.endsWith('/index/query') && !path.endsWith('/index/system-query') && !path.endsWith('/probe')) {
-      /* 写语义：页命中→精确写键；共享→真实使用该端点的页面写键 */
+      /* 写语义：共享映射优先（多页合法复用的端点，任一归属页写键即放行）；
+         未登记共享写再走页前缀精确写键。 */
+      const sharedPages = sharedWritePageKeys(path);
+      if (sharedPages) return sharedPages.some(k => gp!.includes('conn:' + tid + ':w:' + k));
       const pages = me.value.pages?.groups?.flatMap(g => g.pages) ?? [];
       let best: { key: string; len: number } | null = null;
       for (const p of pages) for (const pre of (p.apiPrefixes ?? [])) {
@@ -179,11 +215,11 @@ export const useAuthStore = defineStore('auth', () => {
         if (hit && pre.length > (best?.len ?? 0)) best = { key: p.key, len: pre.length };
       }
       if (best) return gp!.includes('conn:' + tid + ':w:' + best.key);
-      /* 共享写：须持有真实使用该端点的页面写键；未登记共享写回落角色档（后端角色门） */
-      const sharedPages = sharedWritePageKeys(path);
-      if (sharedPages) return sharedPages.some(k => gp!.includes('conn:' + tid + ':w:' + k));
       return canCap(me.value.role, cap);
     }
+    const sharedRead = sharedReadPageKeys(path);
+    if (sharedRead) return sharedRead.some(k => gp!.includes('conn:' + tid + ':' + k)
+      || gp!.includes('conn:' + tid + ':w:' + k));
     return true; /* 读请求：conn 模型页面门读键即过（与后端 effectivePages 语义一致） */
   };
 

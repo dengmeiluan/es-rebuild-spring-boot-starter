@@ -75,6 +75,7 @@ public class ConsolePermissionsController {
             "/internal/es/index/cluster/create-index",
             "/internal/es/index/cluster/delete-by-id",
             "/internal/es/index/cluster/delete-by-query",
+            "/internal/es/index/cluster/devtools/execute",
             "/internal/es/index/cluster/doc",
             "/internal/es/index/cluster/doc/update",
             "/internal/es/index/cluster/update-document",
@@ -101,6 +102,7 @@ public class ConsolePermissionsController {
             "/internal/es/index/cluster/slm/execute",
             "/internal/es/index/cluster/settings/put",
             "/internal/es/index/cluster/reroute",
+            "/internal/es/index/cluster/reroute/retry-failed",
             "/internal/es/index/cluster/tasks/cancel",
             "/internal/es/index/cluster/analysis-update",
             "/internal/es/index/cluster/synonyms-upsert",
@@ -149,7 +151,8 @@ public class ConsolePermissionsController {
 
         // raw 直连档：ADMIN 全局可用；连接模型=精确 rest 页写键；静态模型=角色档
         boolean rawAllowed = admin || ((pageGateActive && connModel)
-                ? envPagesResolver.writeAllowed(tid, "rest", gp)
+                ? (envPagesResolver.writeAllowed(tid, "rest", gp)
+                    || envPagesResolver.writeAllowed(tid, "devtools", gp))
                 : p.getRole().atLeast(ConsoleAuthInterceptor.requiredRole("POST", RAW_PATH)));
         // 共享写档：ADMIN 全局可用；连接模型需持有真实使用共享端点的页面写键
         boolean sharedWriteAllowed = admin || (pageGateActive && connModel
@@ -216,6 +219,17 @@ public class ConsolePermissionsController {
                         if (!write) {
                             writeDeny = "ROLE_INSUFFICIENT:" + writeRole.name();
                         }
+                    }
+                    /* DevTools 专用端点同时接受 devtools/rest 写键（兼容），页行必须同口径。 */
+                    /* 委派非 ADMIN 的 security 写键不能管理本地账号（服务端同口径），面板不得误报可写。 */
+                    if (pageGateActive && connModel && !admin && "security".equals(pg.getKey())) {
+                        write = Boolean.FALSE;
+                        writeDeny = "DELEGATED_SECURITY_READONLY";
+                    }
+                    if (pageGateActive && connModel && "devtools".equals(pg.getKey())) {
+                        write = admin || envPagesResolver.writeAllowed(tid, "devtools", gp)
+                                || envPagesResolver.writeAllowed(tid, "rest", gp);
+                        writeDeny = write ? null : "WRITE_DENIED";
                     }
                 }
                 pm.put("read", read);

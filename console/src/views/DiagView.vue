@@ -239,7 +239,7 @@ const router = useRouter();
 const store = useAppStore();
 /* 权限门禁——retryFailedAlloc 走结构化 /cluster/reroute（归 diag/cluster-settings 页写键，rank3） */
 const auth = useAuthStore();
-const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/reroute', store.target));
+const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/reroute/retry-failed', store.target));
 
 /* ES unassigned_info.reason 枚举 → 人话：已收口 utils/esEnumZh（天罗 W6），HealthReportView 同源 */
 
@@ -419,7 +419,7 @@ async function retryFailedAlloc() {
       message: '将对集群下发 _cluster/reroute?retry_failed=true，对所有因节点离线等原因分配失败的分片重新触发分配。若根因未消除（如磁盘水位/缺失副本），分片会再次分配失败。',
       okText: '提交重试',
     })) return;
-    await api.reroute('{}', { retryFailed: true, explain: false });
+    await api.rerouteRetryFailed();
     store.notify('success', '已提交 retry_failed=true，稍后重新探测');
     setTimeout(loadAllocation, 1500);
   } catch (e: any) {

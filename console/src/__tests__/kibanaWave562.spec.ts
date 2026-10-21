@@ -155,10 +155,10 @@ describe('562 K1：DevToolsView run 链升级（切段只作用于发送出参�
     const runBody = dt.slice(dt.indexOf('async function run()'), dt.indexOf('/* 语义色轮：耗时展示与四档'));
     const busyAt = runBody.indexOf('t.busy = true');
     const fmtAt = runBody.indexOf('const bodyOut = autoFmt.value ? tryFormatBody(t.body) : t.body;');
-    const rawAt = runBody.indexOf('api.raw(');
+    const rawAt = runBody.indexOf('api.devtoolsExecute(');
     expect(fmtAt).toBeGreaterThan(busyAt);
     expect(fmtAt).toBeLessThan(rawAt);
-    expect(runBody).toContain('api.raw(t.method, t.path, bodyOut, signal)');
+    expect(runBody).toContain('api.devtoolsExecute(t.method, t.path, bodyOut, signal)');
   });
 });
 
@@ -171,6 +171,7 @@ vi.mock('../api', async (importOriginal) => {
     api: {
       ...actual.api,
       raw: (...args: any[]) => rawFn(...args),
+      devtoolsExecute: (...args: any[]) => rawFn(...args),
       setup: { ...actual.api.setup, status: () => Promise.resolve({ bound: true, mode: 'x', endpoint: null, appName: 't', hostVisible: true }) },
       clusterIndices: () => Promise.resolve([]),
       overview: () => Promise.resolve({}),

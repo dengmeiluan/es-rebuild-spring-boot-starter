@@ -381,6 +381,22 @@ public class InternalEsIndexRebuildController {
     @PostMapping("cluster/raw")
     public Map<String, Object> clusterRaw(@org.springframework.web.bind.annotation.RequestBody Map<String, String> req,
                                           javax.servlet.http.HttpServletRequest request) throws IOException {
+        return executePassthrough(req, request);
+    }
+
+    /**
+     * DevTools 独立透传端点：与 raw 同一执行内核，但归属 devtools 页写键（也兼容 rest 写键）。
+     * 这样「DevTools 无写操作」的权限面板错误消失，且 w:devtools 可单独授权、无需借 rest 页。
+     */
+    @PostMapping("cluster/devtools/execute")
+    public Map<String, Object> clusterDevtoolsExecute(
+            @org.springframework.web.bind.annotation.RequestBody Map<String, String> req,
+            javax.servlet.http.HttpServletRequest request) throws IOException {
+        return executePassthrough(req, request);
+    }
+
+    private Map<String, Object> executePassthrough(Map<String, String> req,
+                                                   javax.servlet.http.HttpServletRequest request) throws IOException {
         boolean admin = adminOrFail(request);
         try {
             org.springframework.web.context.request.RequestAttributes ra =
@@ -545,7 +561,19 @@ public class InternalEsIndexRebuildController {
     public Map<String, Object> clusterSearchDsl(@RequestParam(required = false) String index,
                                                 @RequestParam(defaultValue = "false") boolean explain,
                                                 @RequestParam(defaultValue = "false") boolean profile,
-                                                @org.springframework.web.bind.annotation.RequestBody(required = false) String body) throws java.io.IOException {
+                                                @org.springframework.web.bind.annotation.RequestBody(required = false) String body,
+                                                javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
+        if (index == null || index.trim().isEmpty()) {
+            Object p = request == null ? null
+                    : request.getAttribute(io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+            boolean admin = p instanceof io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal
+                    && ((io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal) p).getRole()
+                        .atLeast(io.github.dengmeiluan.es.rebuild.auth.ConsoleRole.ADMIN);
+            if (!admin) {
+                throw new io.github.dengmeiluan.es.rebuild.core.ControlPlaneGuardException(
+                        "全量 DSL 搜索必须显式指定索引（控制面索引不可触达）");
+            }
+        }
         return esIndexAdmin.searchDsl(index, body, explain, profile);
     }
 
@@ -569,6 +597,12 @@ public class InternalEsIndexRebuildController {
                                               @RequestParam(defaultValue = "false") boolean retryFailed,
                                               @org.springframework.web.bind.annotation.RequestBody String body) throws java.io.IOException {
         return esIndexAdmin.clusterReroute(body, dryRun, explain, retryFailed);
+    }
+
+    /** 诊断页“重试失败分片”：固定 retry_failed=true，不接受任意 reroute commands。 */
+    @PostMapping("cluster/reroute/retry-failed")
+    public Map<String, Object> clusterRerouteRetryFailed() throws java.io.IOException {
+        return esIndexAdmin.clusterReroute("{}", false, false, true);
     }
 
     /** ILM 策略列表 */

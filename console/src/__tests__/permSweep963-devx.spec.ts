@@ -56,7 +56,7 @@ function expectFirstGuard(src: string, name: string, cond: string, ret: 'return;
 
 describe('963 DevTools：raw 透传 ADMIN 门（按钮+run/runSmart/execSend 三执行体）', () => {
   it('canAdmin 定义=raw 端点', () => {
-    expect(devtools).toContain("const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target));");
+    expect(devtools).toContain("const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/devtools/execute', store.target));");
   });
   it('run/runSmart 首行守卫先于 busy 置位', () => {
     expectFirstGuard(devtools, 'run', 'canAdmin', 'return;');

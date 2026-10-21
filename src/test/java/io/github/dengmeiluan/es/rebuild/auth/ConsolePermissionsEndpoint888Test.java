@@ -209,6 +209,29 @@ public class ConsolePermissionsEndpoint888Test {
         assertNull(pageOf(resp, "rest").get("writeDeny"));
     }
 
+
+    @Test
+    public void 连接模型_带devtools写键_DevTools页可写且高危档开启() {
+        Map<String, Object> resp = call(ctrl(), delegatedAs(ConsoleRole.VIEWER,
+                set("conn:c1:devtools", "conn:c1:w:devtools")), "c1");
+        assertEquals(Boolean.TRUE, resp.get("rawAllowed"));
+        Map<String, Object> devtools = pageOf(resp, "devtools");
+        assertEquals(Boolean.TRUE, devtools.get("read"));
+        assertEquals(Boolean.TRUE, devtools.get("write"));
+        assertNull(devtools.get("writeDeny"));
+    }
+
+
+    @Test
+    public void 连接模型_rest写键也能写DevTools页() {
+        Map<String, Object> resp = call(ctrl(), delegatedAs(ConsoleRole.VIEWER,
+                set("conn:c1:devtools", "conn:c1:rest", "conn:c1:w:rest")), "c1");
+        Map<String, Object> devtools = pageOf(resp, "devtools");
+        assertEquals(Boolean.TRUE, devtools.get("read"));
+        assertEquals(Boolean.TRUE, devtools.get("write"));
+        assertNull(devtools.get("writeDeny"));
+    }
+
     @Test
     public void 连接模型_未授权页_不可读() {
         Map<String, Object> resp = call(ctrl(), delegatedAs(ConsoleRole.VIEWER,
@@ -273,6 +296,7 @@ public class ConsolePermissionsEndpoint888Test {
         assertEquals(Boolean.TRUE, pageOf(admin, "ilm").get("write"));
         assertEquals(Boolean.TRUE, pageOf(admin, "index-settings").get("write"));
         assertEquals(Boolean.TRUE, pageOf(admin, "optimizer").get("write"));
+        assertEquals(Boolean.TRUE, pageOf(admin, "devtools").get("write"));
 
         Map<String, Object> operator = call(ctrl(), builtin(ConsoleRole.OPERATOR), "host");
         assertNull(pageOf(operator, "overview").get("write"));

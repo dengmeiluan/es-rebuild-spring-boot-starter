@@ -78,6 +78,7 @@ function denyText(reason?: string): string {
   if (!reason) return '不可写';
   if (reason === 'WRITE_DENIED') return '连接写权限未授予';
   if (reason === 'PAGE_DENIED') return '页面未授权';
+  if (reason === 'DELEGATED_SECURITY_READONLY') return '委派会话只读（账号仅 ADMIN 管理）';
   if (reason.startsWith('ROLE_INSUFFICIENT:')) return `需 ${reason.slice('ROLE_INSUFFICIENT:'.length)} 角色`;
   return reason;
 }

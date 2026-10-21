@@ -5,6 +5,26 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.34]
+
+### 安全
+
+- DevTools 改为独立执行端点 `/cluster/devtools/execute`：权限面板不再显示「无写操作」，
+  可单独授予 `w:devtools`（兼容 `w:rest`），ADMIN 全局通行；未授权用户仍被页面门拦截
+- 查询读权限按页面读键收口：`/cluster/query`、`search-dsl`、`search-raw`、`monitor-*`、
+  `ring-usage`、`/cluster/tasks` 等无页面归属读端点按归属页裁决；空页面授权除身份/健康
+  自举外一律拒绝，不能再借角色门直读业务数据
+- 结构化 SQL 与控制面搜索加固：SQL 的 FROM/JOIN 通配/控制索引在发往 ES 前拦截；
+  非 ADMIN 无索引 DSL 搜索必须显式指定索引，防止扫出控制面用户/连接文档
+- 诊断页重试分片改走固定 `/cluster/reroute/retry-failed`，`w:diag` 不再能执行任意
+  reroute commands；任意 reroute 仍归 cluster-settings 写键
+- 迁移环境变量解析仅允许 `SOURCE_/ES_/MIGRATE_/QUOTEHUB_` 或 `es.rebuild.*` 源连接变量，
+  敏感变量被误用作 username 时不再回显，堵住借 resolve-preview 读取任意应用配置
+- 命令面板的设置下发/ILM 起停/分词重载动作补执行体权限门；共享写映射优先于单一页面前缀
+  （ILM move、建索引带别名等不再误拦另一页写键）
+- 委派非 ADMIN 的安全页显示只读（本地账号仅 ADMIN 可管理）；auth 关闭时不再注册权限
+  查询控制器，避免误弹登录遮罩
+
 ## [1.0.33]
 
 ### 安全

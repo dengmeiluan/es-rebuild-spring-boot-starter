@@ -301,6 +301,7 @@ const commands = computed<Cmd[]>(() => {
     /* 963：恢复分片分配走 cluster/settings/put（归集群设置页）——按端点写键裁决，无权限不展示 */
     ...(canSettings ? [{ id: 'ops-reroute-retry-r25', title: '恢复集群分片分配（persistent）', sub: '下发 cluster.routing.allocation.enable=all', cat: '运维', icon: RefreshCcw,
       action: async () => {
+        if (!canSettings) return;
         if (!await askConfirm({
           title: '恢复分片分配',
           message: '将下发 persistent 设置 cluster.routing.allocation.enable=all，集群恢复自动分片分配（可在集群设置页回改）。',
@@ -397,6 +398,7 @@ const commands = computed<Cmd[]>(() => {
     ...(canIlm ? [
       { id: 'dev-ilm-start', title: 'ILM 启动 (start)', sub: '一键启动 ILM 引擎', cat: 'dev', icon: PlayCircle,
         action: async () => {
+          if (!canIlm) return;
           if (!await askConfirm({
             title: '启动 ILM 引擎',
             message: '将恢复所有 ILM 策略的推进，处于等待中的 phase 动作（rollover/shrink/delete 等）会继续执行。',
@@ -407,6 +409,7 @@ const commands = computed<Cmd[]>(() => {
         } },
       { id: 'dev-ilm-stop', title: 'ILM 停止 (stop)', sub: '临时暂停所有策略推进', cat: 'dev', icon: PauseCircle,
         action: async () => {
+          if (!canIlm) return;
           if (!await askConfirm({
             title: '停止 ILM 引擎',
             message: '所有 ILM 策略推进将暂停：rollover 不再触发、过期索引不再删除，直到重新 start。',
@@ -479,6 +482,7 @@ const commands = computed<Cmd[]>(() => {
     /* 963：分词热重载走 cluster/reload-analyzers（rank3 写端点）——按端点写键裁决，无权限不展示 */
     ...(canReload ? [{ id: 'index-reload-analyzers', title: '热重载当前索引的搜索分词器', sub: '_reload_search_analyzers · 同义词改后一键生效', cat: 'index', icon: Zap,
       action: async () => {
+        if (!canReload) return;
         if (!store.pickedIdx) { store.notify('warning', '请先在左侧选中索引'); return; }
         try { await api.reloadAnalyzers(store.pickedIdx); store.notify('success', '搜索分词器已热重载'); }
         catch (e: any) { store.notify('error', '热重载失败：' + (e?.message || e)); }

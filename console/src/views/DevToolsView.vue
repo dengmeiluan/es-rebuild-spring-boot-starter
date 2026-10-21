@@ -58,7 +58,7 @@
  （非 admin 仍可见可读可聚焦，仅省宽度；原文案字面保留在 aria-label/title，
  permGating 可见性语义锚零漂移） -->
         <span v-else class="dt-perm-dim" tabindex="0" role="img" aria-label="运行需 ADMIN 角色"
-          title="运行需 ADMIN 角色：运行走 /cluster/raw 透传（方法+路径任意组合），属超管专属通道"><ShieldAlert :size="13" /></span>
+          title="运行需 ADMIN、DevTools 或 REST 页写权限：运行走 /cluster/devtools/execute 透传（方法+路径任意组合）"><ShieldAlert :size="13" /></span>
         <button v-if="cur.busy" class="btn sm" @click="qr.cancel()"><X :size="12" /> 取消</button>
         <button class="btn ghost sm" @click="copyCurl" title="复制 curl">
           <Copy :size="12" /> curl
@@ -433,11 +433,11 @@ import FocusableSurface from '../components/FocusableSurface.vue';
 import PageHeader from '../components/PageHeader.vue';
 import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 const store = useAppStore();
-/* 权限门禁——DevTools 运行统一走 api.raw（/cluster/raw 透传）=ADMIN 档；
+/* 权限门禁——DevTools 运行统一走专用 /cluster/devtools/execute（devtools/rest 写键，ADMIN 全局）；
  编辑/导入/复制响应全角色可用，非 ADMIN 给自述不给扳机 */
 const auth = useAuthStore();
 const permOpen = ref(false);
-const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target)); /* ：执行走 raw，管理域按 rest 页勾选 */
+const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/devtools/execute', store.target)); /* DevTools 页写键或 rest 写键（ADMIN 全局） */
 
 /* P1 workbench：布局偏好按 target+route+mode+viewport 档位隔离（不与 query 草稿混用） */
 const wbScope = { target: store.target || 'host', route: '/devtools', mode: 'search', profile: 'standard' as const };
@@ -726,12 +726,12 @@ async function askClearTabHist() {
 }
 
 /* ==== ：原始 IO 快查（响应工具行钮） ====
- 本页执行走 api.raw（/cluster/raw 透传），记录环按该特征取最近一条开弹窗；无记录时空态引导。 */
+ 本页执行走 api.devtoolsExecute（/cluster/devtools/execute 透传，兼容历史 /cluster/raw 记录），记录环按该特征取最近一条开弹窗；无记录时空态引导。 */
 const rawIoShow = ref(false);
 const rawIoRec = ref<RawIoRec | null>(null);
 /* 判空同步更新（DslQueryView 550 口径逐字平移）——无记录 notify 引导不开空弹窗 */
 function openRawIo() {
-  const rec = ioRecorder.last('/cluster/raw');
+  const rec = ioRecorder.last('/cluster/devtools/execute') || ioRecorder.last('/cluster/raw');
   if (!rec) { store.notify('info', '暂无原始 IO 记录，先在本页执行一次操作（记录环近 30 条）再查看'); return; }
   rawIoRec.value = rec;
   rawIoShow.value = true;
@@ -842,7 +842,7 @@ function consumePrefill() {
 /* run() 前置 auto-format（Kibana「send 时 auto indent」对标，556 设计稿 P2）——
  合法 JSON 才 pretty；非法/带注释（JSONC）原样不动：严格 JSON.parse 门（不走 stripJsonComments
  宽容口径——宽容解析会剥注释，DQ「不做」同因；宽容路径仍归手动 format 钮既有 :789-793）。
- 发送态格式化只作用于 api.raw 出参（bodyOut），t.body 草稿零触：草稿是 sessionStorage 持久稿，
+ 发送态格式化只作用于 api.devtoolsExecute 出参（bodyOut），t.body 草稿零触：草稿是 sessionStorage 持久稿，
  且历史/跨 Tab 汇聚镜像源码锁钉 body: t.body 原稿（devtoolsLint532:310-311）、fill 回填
  逐字节保形（279）。非法静默（dtLint 已报，不重复播报） */
 function tryFormatBody(body: string): string {
@@ -852,7 +852,7 @@ function tryFormatBody(body: string): string {
 
 async function run() {
   /* 权限门双保险：按钮 v-if 之外，键盘/历史/预填所有入口在执行体首行拦截（busy 置位前） */
-  if (!canAdmin.value) { store.notify('warning', '原始透传需要 ADMIN 角色'); return; }
+  if (!canAdmin.value) { store.notify('warning', '原始透传需要 ADMIN 或 DevTools/REST 页写权限'); return; }
   /* G7-A1：Ctrl+Enter 键盘路径不受按钮 :disabled 约束——执行体守卫管键盘重入（教训 7，
  与 观察项 TemplatesView Ctrl+S 同构；busy 期间连按不再并发重发写请求）
  复审 F1：头部快照 tab 引用——await 期间用户切 tab 后 cur 随 active 漂移，
@@ -874,14 +874,14 @@ async function run() {
  镜像 HistAllEntry 字段零增（跨 Tab 汇聚锁面零触），草稿 t.body 原稿零触。 */
 async function execSend(t: Tab, bodyOut: string, segLabel?: string): Promise<boolean> {
   /* 内核单点门：全量/段执行/预填/历史回放最终都汇入此处，非 ADMIN 一律不发出 raw 透传 */
-  if (!canAdmin.value) { store.notify('warning', '原始透传需要 ADMIN 角色'); return false; }
+  if (!canAdmin.value) { store.notify('warning', '原始透传需要 ADMIN 或 DevTools/REST 页写权限'); return false; }
   const t0 = performance.now();
   const signal = qr.begin();
   try {
-    /* 走 api.raw 统一封装：自动带 context-path 前缀、鉴权头、X-Es-Target 目标头。
+    /* 走 api.devtoolsExecute 统一封装：自动带 context-path 前缀、鉴权头、X-Es-Target 目标头。
  body 送格式化出参（bodyOut），t.body 草稿原样进历史/镜像 */
-    const data = await api.raw(t.method, t.path, bodyOut, signal);
-    /* 语义色轮：/cluster/raw 成功回 {status, body} 信封（RestView 读 .status/.body 同款解包）——
+    const data = await api.devtoolsExecute(t.method, t.path, bodyOut, signal);
+    /* 语义色轮：/cluster/devtools/execute 成功回 {status, body} 信封（RestView 读 .status/.body 同款解包）——
  此前整信封 stringify 进面板，body 变转义字符串且真实 ES 状态码不可见。解包后
  body 直接进面板/截断/复制链路，status 供 HTTP 徽标语义分档；信封形态不符（防御）保持整包。 */
     const env = data && typeof data === 'object' ? (data as { status?: unknown; body?: unknown }) : null;
@@ -950,7 +950,7 @@ function editorCursorOffset(): number | null {
 function onBodyExecute() { void runSmart(false); }
 async function runSmart(all: boolean) {
   /* 段执行（Monaco Ctrl+Enter / Shift+Ctrl+Enter）同样受 ADMIN 门，守卫先于 busy 置位 */
-  if (!canAdmin.value) { store.notify('warning', '原始透传需要 ADMIN 角色'); return; }
+  if (!canAdmin.value) { store.notify('warning', '原始透传需要 ADMIN 或 DevTools/REST 页写权限'); return; }
   const t = cur.value;
   if (!t || t.busy) return;
   const segs = splitRequests(t.body || '');
@@ -1199,7 +1199,7 @@ function doImportCurl() {
 }
 
 /* P1-3：host 从硬编码 ES_HOST 占位串改当前页面 origin——DevTools 本就走
- 同源 /cluster/raw 透传，复制出的 curl 直接可执行（占位串此前必须手改才能用） */
+ 同源 /cluster/devtools/execute 透传，复制出的 curl 直接可执行（占位串此前必须手改才能用） */
 function copyCurl() {
   if (!cur.value) return;
   const c = `curl -X ${cur.value.method} '${window.location.origin}${cur.value.path}'` +

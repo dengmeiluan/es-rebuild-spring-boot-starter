@@ -302,6 +302,104 @@ public class ConsoleAuthInterceptorPageAuthTest {
                         Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
     }
 
+
+    @Test
+    public void DevTools独立执行端点接受devtools或rest写键() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        java.util.Map<String, String> target = java.util.Collections.singletonMap("X-Es-Target", "c1");
+        ConsoleAuthInterceptor devtoolsWriter = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:devtools", "conn:c1:w:devtools"))), true, audit);
+        assertTrue("w:devtools 可执行 DevTools",
+                devtoolsWriter.preHandle(stubRequest("POST", "/internal/es/index/cluster/devtools/execute", target),
+                        new StubResponse().proxy, null));
+
+        ConsoleAuthInterceptor restWriter = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:rest", "conn:c1:w:rest"))), true, audit);
+        assertTrue("w:rest 兼容 DevTools",
+                restWriter.preHandle(stubRequest("POST", "/internal/es/index/cluster/devtools/execute", target),
+                        new StubResponse().proxy, null));
+
+        ConsoleAuthInterceptor readOnly = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                Collections.singleton("conn:c1:devtools")), true, audit);
+        assertFalse("只读键不得执行 DevTools",
+                readOnly.preHandle(stubRequest("POST", "/internal/es/index/cluster/devtools/execute", target),
+                        new StubResponse().proxy, null));
+    }
+
+
+
+
+    @Test
+    public void 共享写映射优先于单一页面前缀() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        java.util.Map<String, String> target = java.util.Collections.singletonMap("X-Es-Target", "c1");
+        ConsoleAuthInterceptor ilm = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:ilm", "conn:c1:w:ilm"))), true, audit);
+        assertTrue("w:ilm 可执行 ilm/move",
+                ilm.preHandle(stubRequest("POST", "/internal/es/index/cluster/ilm/move", target),
+                        new StubResponse().proxy, null));
+        ConsoleAuthInterceptor lifecycle = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:lifecycle", "conn:c1:w:lifecycle"))), true, audit);
+        assertTrue("w:lifecycle 可执行 ilm/move",
+                lifecycle.preHandle(stubRequest("POST", "/internal/es/index/cluster/ilm/move", target),
+                        new StubResponse().proxy, null));
+        ConsoleAuthInterceptor validator = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:config-validator", "conn:c1:w:config-validator"))), true, audit);
+        assertTrue("w:config-validator 可写别名（建索引带 alias）",
+                validator.preHandle(stubRequest("POST", "/internal/es/index/cluster/alias-actions", target),
+                        new StubResponse().proxy, null));
+    }
+
+    @Test
+    public void diag只可调用固定retry端点_不可任意reroute() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        java.util.Map<String, String> target = java.util.Collections.singletonMap("X-Es-Target", "c1");
+        ConsoleAuthInterceptor diag = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:diag", "conn:c1:w:diag"))), true, audit);
+        assertTrue(diag.preHandle(stubRequest("POST", "/internal/es/index/cluster/reroute/retry-failed", target),
+                new StubResponse().proxy, null));
+        assertFalse("w:diag 不得执行任意 reroute commands",
+                diag.preHandle(stubRequest("POST", "/internal/es/index/cluster/reroute", target),
+                        new StubResponse().proxy, null));
+
+        ConsoleAuthInterceptor settings = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:cluster-settings", "conn:c1:w:cluster-settings"))), true, audit);
+        assertTrue(settings.preHandle(stubRequest("POST", "/internal/es/index/cluster/reroute", target),
+                new StubResponse().proxy, null));
+    }
+
+    @Test
+    public void 共享读端点按归属页读键裁决_空集全拒() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        java.util.Map<String, String> target = java.util.Collections.singletonMap("X-Es-Target", "c1");
+        ConsoleAuthInterceptor search = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                Collections.singleton("conn:c1:search")), true, audit);
+        assertTrue("search 页可读 query",
+                search.preHandle(stubRequest("POST", "/internal/es/index/cluster/query?index=orders", target),
+                        new StubResponse().proxy, null));
+        assertTrue("search 页可读 search-dsl",
+                search.preHandle(stubRequest("POST", "/internal/es/index/cluster/search-dsl?index=logs-*", target),
+                        new StubResponse().proxy, null));
+
+        ConsoleAuthInterceptor overviewOnly = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                Collections.singleton("conn:c1:overview")), true, audit);
+        StubResponse denied = new StubResponse();
+        assertFalse("overview 页不得读 query",
+                overviewOnly.preHandle(stubRequest("POST", "/internal/es/index/cluster/query?index=orders", target),
+                        denied.proxy, null));
+        assertEquals(403, denied.status);
+        assertTrue(denied.bodyText().contains("PAGE_DENIED"));
+
+        ConsoleAuthInterceptor empty = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                Collections.<String>emptySet()), true, audit);
+        assertFalse("空集不得读 query",
+                empty.preHandle(stubRequest("POST", "/internal/es/index/cluster/query?index=orders", target),
+                        new StubResponse().proxy, null));
+        assertTrue("空集仍可拉身份",
+                empty.preHandle(stubRequest("GET", "/internal/es/index/auth/me", target),
+                        new StubResponse().proxy, null));
+    }
+
     @Test
     public void 空集或未授予归属页的共享写一律拒绝() throws Exception {
         CapturingAudit audit = new CapturingAudit();

@@ -136,4 +136,20 @@ public class EsIndexAdminRawGuard972Test {
         assertRejected(() -> admin.guardRawGuarded("POST", "/_bulk", body), "bulk 转义控制面");
         assertRejected(() -> admin.guardControlBody(body), "body 守卫转义");
     }
+
+    @Test
+    public void SQL全量查询在发往ES前拦截() {
+        assertRejected(() -> {
+            try { admin.executeSql("SELECT * FROM *", 100); }
+            catch (java.io.IOException e) { throw new RuntimeException(e); }
+        }, "结构化 SQL 全量");
+        assertRejected(() -> {
+            try { admin.executeSql("SELECT * FROM es_console_user", 100); }
+            catch (java.io.IOException e) { throw new RuntimeException(e); }
+        }, "结构化 SQL 控制面");
+        assertRejected(() -> {
+            try { admin.sqlQuery("{\"query\":\"SELECT * FROM *\"}"); }
+            catch (java.io.IOException e) { throw new RuntimeException(e); }
+        }, "SQL JSON 通道全量");
+    }
 }

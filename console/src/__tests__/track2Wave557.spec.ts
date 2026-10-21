@@ -101,13 +101,13 @@ describe('557 二：DT Ctrl+I 宿主接线 + run() 前置 auto-format（Kibana �
     const busyAt = runBody.indexOf('t.busy = true');
     /* 五百六十批同步更新：dt.autoFmt 退出口（条件分支；busy 快照后、api.raw 前的位置语义不变） */
     const fmtAt = runBody.indexOf('const bodyOut = autoFmt.value ? tryFormatBody(t.body) : t.body;');
-    const rawAt = runBody.indexOf('api.raw(');
+    const rawAt = runBody.indexOf('api.devtoolsExecute(');
     expect(busyAt, 'busy 快照在场（防空跑）').toBeGreaterThan(-1);
     expect(fmtAt, 'tryFormat 调用在场').toBeGreaterThan(-1);
-    expect(rawAt, 'api.raw 在场（防空跑）').toBeGreaterThan(-1);
+    expect(rawAt, 'api.devtoolsExecute 在场（防空跑）').toBeGreaterThan(-1);
     expect(fmtAt, 'tryFormat 在 busy 快照之后').toBeGreaterThan(busyAt);
-    expect(fmtAt, 'tryFormat 在 api.raw 之前（send 前置）').toBeLessThan(rawAt);
-    expect(runBody, '送格式化出参进 api.raw（t.body 草稿零触：历史/镜像源码锁 body: t.body + fill 回填保形）').toContain('api.raw(t.method, t.path, bodyOut, signal)');
+    expect(fmtAt, 'tryFormat 在 api.devtoolsExecute 之前（send 前置）').toBeLessThan(rawAt);
+    expect(runBody, '送格式化出参进 api.raw（t.body 草稿零触：历史/镜像源码锁 body: t.body + fill 回填保形）').toContain('api.devtoolsExecute(t.method, t.path, bodyOut, signal)');
     expect(dt).toContain('function tryFormatBody(body: string): string');
     expect(dt).toContain('try { return JSON.stringify(JSON.parse(body), null, 2); } catch');
   });

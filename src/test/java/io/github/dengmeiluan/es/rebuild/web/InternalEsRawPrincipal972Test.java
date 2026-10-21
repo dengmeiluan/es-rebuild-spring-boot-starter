@@ -47,8 +47,14 @@ public class InternalEsRawPrincipal972Test {
         String templateAdmin;
         String restore;
         String restoreGuarded;
+        String searchDsl;
 
         StubAdmin() { super(null); }
+
+        @Override public Map<String, Object> searchDsl(String index, String body, boolean explain, boolean profile) {
+            searchDsl = index;
+            return Collections.emptyMap();
+        }
 
         @Override public Map<String, Object> raw(String method, String path, String body) {
             raw = method + " " + path;
@@ -147,6 +153,45 @@ public class InternalEsRawPrincipal972Test {
         c.clusterRestoreSnapshot("repo", "snap", "{\"indices\":\"logs-*\"}", req(viewer));
         assertEquals("repo/snap", admin.restoreGuarded);
         assertNull("VIEWER 不得走无守卫恢复", admin.restore);
+    }
+
+
+    @Test
+    public void 无索引DSL搜索仅ADMIN放行() throws Exception {
+        StubAdmin admin = new StubAdmin();
+        InternalEsIndexRebuildController c = new InternalEsIndexRebuildController(null, admin);
+        ConsolePrincipal viewer = new ConsolePrincipal("viewer", ConsoleRole.VIEWER, false);
+        try {
+            c.clusterSearchDsl(null, false, false, "{}", req(viewer));
+            fail("VIEWER 无索引搜索应拒绝");
+        } catch (io.github.dengmeiluan.es.rebuild.core.ControlPlaneGuardException expected) {
+            assertNull(admin.searchDsl);
+        }
+        c.clusterSearchDsl("logs-*", false, false, "{}", req(viewer));
+        assertEquals("logs-*", admin.searchDsl);
+
+        StubAdmin admin2 = new StubAdmin();
+        InternalEsIndexRebuildController c2 = new InternalEsIndexRebuildController(null, admin2);
+        c2.clusterSearchDsl(null, false, false, "{}",
+                req(new ConsolePrincipal("root", ConsoleRole.ADMIN, false)));
+        assertNull(admin2.searchDsl);
+    }
+
+    @Test
+    public void DevTools端点与raw同源走guarded或ADMIN通道() throws Exception {
+        StubAdmin admin = new StubAdmin();
+        InternalEsIndexRebuildController c = new InternalEsIndexRebuildController(null, admin);
+        ConsolePrincipal viewer = new ConsolePrincipal("viewer", ConsoleRole.VIEWER, false);
+        c.clusterDevtoolsExecute(rawBody(), req(viewer));
+        assertEquals("GET /_cluster/health", admin.guarded);
+        assertNull(admin.raw);
+
+        StubAdmin admin2 = new StubAdmin();
+        InternalEsIndexRebuildController c2 = new InternalEsIndexRebuildController(null, admin2);
+        ConsolePrincipal root = new ConsolePrincipal("root", ConsoleRole.ADMIN, false);
+        c2.clusterDevtoolsExecute(rawBody(), req(root));
+        assertEquals("GET /_cluster/health", admin2.raw);
+        assertNull(admin2.guarded);
     }
 
     @Test

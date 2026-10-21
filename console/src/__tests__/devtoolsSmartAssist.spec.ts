@@ -40,6 +40,7 @@ vi.mock('../api', async (importOriginal) => {
     api: {
       ...actual.api,
       raw: (...args: any[]) => rawFn(...args),
+      devtoolsExecute: (...args: any[]) => rawFn(...args),
       setup: { ...actual.api.setup, status: () => Promise.resolve({ bound: true, mode: 'x', endpoint: null, appName: 't', hostVisible: true }) },
       /* 防御性 stub 挡真实 fetch 噪音（store.loadIndices 链路） */
       clusterIndices: () => Promise.resolve([]),

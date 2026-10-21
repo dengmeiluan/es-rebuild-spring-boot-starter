@@ -44,6 +44,7 @@ vi.mock('../api', async (importOriginal) => {
       hotThreads: vi.fn(async () => ''),
       raw: (...a: any[]) => rawFn(...a),
       reroute: (...a: any[]) => rerouteFn(...a),
+      rerouteRetryFailed: (...a: any[]) => rerouteFn(...a),
     },
   };
 });
@@ -151,8 +152,7 @@ describe('Diag retry_failed 执行闸（刀①）', () => {
     releaseConfirm(true);
     await settle(6);
     expect(rerouteFn).toHaveBeenCalledTimes(1);
-    expect((rerouteFn.mock.calls[0] as any[])[0]).toBe('{}');
-    expect((rerouteFn.mock.calls[0] as any[])[1]).toMatchObject({ retryFailed: true, explain: false });
+    expect(rerouteFn).toHaveBeenCalledWith();
     expect(btn.disabled).toBe(false);
   });
 });

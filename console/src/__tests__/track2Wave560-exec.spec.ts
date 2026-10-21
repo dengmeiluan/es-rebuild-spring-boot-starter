@@ -75,11 +75,11 @@ describe('560 ③：DevToolsView dt.autoFmt 退出口（条件 format 分支，�
     const runBody = dt.slice(dt.indexOf('async function run()'), dt.indexOf('/* 语义色轮：耗时展示与四档'));
     const busyAt = runBody.indexOf('t.busy = true');
     const fmtAt = runBody.indexOf('const bodyOut = autoFmt.value ? tryFormatBody(t.body) : t.body;');
-    const rawAt = runBody.indexOf('api.raw(');
+    const rawAt = runBody.indexOf('api.devtoolsExecute(');
     expect(fmtAt, '条件 format 分支在场').toBeGreaterThan(-1);
     expect(fmtAt).toBeGreaterThan(busyAt);
     expect(fmtAt).toBeLessThan(rawAt);
-    expect(runBody).toContain('api.raw(t.method, t.path, bodyOut, signal)');
+    expect(runBody).toContain('api.devtoolsExecute(t.method, t.path, bodyOut, signal)');
   });
 
   it('开关钮居请求 pane ⋯ 菜单（menuitemcheckbox aria-checked 态 + 落盘键接线，577 批同步更新 563 合并形态）', () => {
