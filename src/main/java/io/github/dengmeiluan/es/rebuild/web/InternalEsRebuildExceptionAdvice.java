@@ -58,6 +58,8 @@ public class InternalEsRebuildExceptionAdvice {
     public static final String CODE_STAGE_GUARD = "STAGE_GUARD";
     /** 入参非法 */
     public static final String CODE_BAD_REQUEST = "BAD_REQUEST";
+    /** 控制面守卫拒绝：与 ConsoleAuthInterceptor 的权限拒绝（403 {code:"FORBIDDEN"}）同语义 */
+    public static final String CODE_FORBIDDEN = "FORBIDDEN";
     /** 兜底业务规则拒绝 */
     public static final String CODE_RULE_REJECTED = "RULE_REJECTED";
     /**  控制台尚未绑定控制集群（前端弹首连向导） */
@@ -98,6 +100,19 @@ public class InternalEsRebuildExceptionAdvice {
             code = CODE_RULE_REJECTED;
         }
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body(code, msg, EsErrorMapper.endpointOf(request)));
+    }
+
+    /**
+     * 控制面守卫拒绝升格 403：保护策略拒绝（控制索引不可触达/通配可能命中控制面/路径穿越/
+     * 请求体引用控制索引/非管理员恢复全部）不是入参畸形——Spring 选 handler 按最具体匹配，
+     * 本臂优先于 {@link #illegalArg}。结构校验类 IAE 不抛此型，维持 400。
+     */
+    @ExceptionHandler(io.github.dengmeiluan.es.rebuild.core.ControlPlaneGuardException.class)
+    public ResponseEntity<Map<String, Object>> controlPlaneGuard(
+            io.github.dengmeiluan.es.rebuild.core.ControlPlaneGuardException e,
+            javax.servlet.http.HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(body(CODE_FORBIDDEN, e.getMessage(), EsErrorMapper.endpointOf(request)));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

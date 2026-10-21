@@ -166,7 +166,7 @@ public class ConsolePermissionsEndpoint888Test {
     }
 
     private static Map<String, Object> call(ConsolePermissionsController c, ConsolePrincipal p, String target) {
-        return c.permissions(stubRequest(p, "host".equals(target) ? null : target), target);
+        return c.permissions(stubRequest(p, "host".equals(target) ? null : target), target).getBody();
     }
 
     @SuppressWarnings("unchecked")

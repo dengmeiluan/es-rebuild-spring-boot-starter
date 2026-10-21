@@ -154,7 +154,7 @@ public class EsIndexAdmin {
         }
         if (first.isEmpty() || "_all".equalsIgnoreCase(first)) {
             if (first.isEmpty()) return;
-            throw new IllegalArgumentException("不允许对全量索引执行该操作（控制面索引不可触达）：_all");
+            throw new ControlPlaneGuardException("不允许对全量索引执行该操作（控制面索引不可触达）：_all");
         }
         if (first.startsWith("_")) return;
         String decoded;
@@ -162,14 +162,14 @@ public class EsIndexAdmin {
             decoded = java.net.URLDecoder.decode(first, "UTF-8");
         } catch (Exception e) {
             // 非法编码无法判定真实目标——fail-closed（不存在需要非法 % 序列的合法索引路径）
-            throw new IllegalArgumentException("索引路径编码非法，已拒绝：" + first);
+            throw new ControlPlaneGuardException("索引路径编码非法，已拒绝：" + first);
         }
         String lower = decoded.toLowerCase(Locale.ROOT);
         if ("_all".equals(lower) || "*".equals(lower)) {
-            throw new IllegalArgumentException("不允许对全量索引执行该操作（控制面索引不可触达）：" + decoded);
+            throw new ControlPlaneGuardException("不允许对全量索引执行该操作（控制面索引不可触达）：" + decoded);
         }
         if (lower.contains("..") || lower.indexOf('/') >= 0 || lower.indexOf('\\') >= 0) {
-            throw new IllegalArgumentException("索引路径含目录穿越片段，已拒绝：" + first);
+            throw new ControlPlaneGuardException("索引路径含目录穿越片段，已拒绝：" + first);
         }
         if (lower.indexOf('*') >= 0 || lower.indexOf('?') >= 0 || lower.indexOf(',') >= 0) {
             guardIndexPattern(lower);
@@ -184,13 +184,13 @@ public class EsIndexAdmin {
         String n = name.trim().toLowerCase(Locale.ROOT);
         if (n.isEmpty() || n.startsWith(VALIDATE_INDEX_PREFIX)) return;
         if ("_all".equals(n) || "*".equals(n)) {
-            throw new IllegalArgumentException("不允许对全量索引执行该操作（控制面索引不可触达）：" + name);
+            throw new ControlPlaneGuardException("不允许对全量索引执行该操作（控制面索引不可触达）：" + name);
         }
         if (n.contains("..") || n.indexOf('/') >= 0 || n.indexOf('\\') >= 0) {
-            throw new IllegalArgumentException("索引名含目录穿越片段，已拒绝：" + name);
+            throw new ControlPlaneGuardException("索引名含目录穿越片段，已拒绝：" + name);
         }
         if (isControlIndexName(n)) {
-            throw new IllegalArgumentException("控制面索引不对通用数据接口开放：" + name);
+            throw new ControlPlaneGuardException("控制面索引不对通用数据接口开放：" + name);
         }
     }
 
@@ -206,14 +206,14 @@ public class EsIndexAdmin {
             if (p.startsWith("-")) p = p.substring(1).trim();
             if (p.isEmpty()) continue;
             if (p.contains("..") || p.indexOf('/') >= 0 || p.indexOf('\\') >= 0) {
-                throw new IllegalArgumentException("索引模式含目录穿越片段，已拒绝：" + pattern);
+                throw new ControlPlaneGuardException("索引模式含目录穿越片段，已拒绝：" + pattern);
             }
             if ("_all".equals(p) || "*".equals(p)) {
-                throw new IllegalArgumentException("不允许对全量索引执行该操作（控制面索引不可触达）：" + pattern);
+                throw new ControlPlaneGuardException("不允许对全量索引执行该操作（控制面索引不可触达）：" + pattern);
             }
             if (p.startsWith(VALIDATE_INDEX_PREFIX)) continue;
             if (isControlIndexName(p)) {
-                throw new IllegalArgumentException("控制面索引不对通用数据接口开放：" + pattern);
+                throw new ControlPlaneGuardException("控制面索引不对通用数据接口开放：" + pattern);
             }
             int wild = -1;
             for (int i = 0; i < p.length(); i++) {
@@ -223,7 +223,7 @@ public class EsIndexAdmin {
             if (wild < 0) continue;
             String literal = p.substring(0, wild);
             if (couldMatchControl(literal)) {
-                throw new IllegalArgumentException("索引模式可能命中控制面索引，已拒绝：" + pattern);
+                throw new ControlPlaneGuardException("索引模式可能命中控制面索引，已拒绝：" + pattern);
             }
         }
     }
@@ -234,11 +234,11 @@ public class EsIndexAdmin {
         String lower = body.toLowerCase(Locale.ROOT);
         if (lower.contains(CONTROL_INDEX_PREFIX) || lower.contains("es_rebuild_adhoc_job")
                 || lower.contains("_es_rebuild_lock") || lower.contains("_es_xmigrate_job")) {
-            throw new IllegalArgumentException("请求体不得引用控制面索引：" + CONTROL_INDEX_PREFIX + "*");
+            throw new ControlPlaneGuardException("请求体不得引用控制面索引：" + CONTROL_INDEX_PREFIX + "*");
         }
         for (String x : extraControlIndexNames) {
             if (lower.contains(x)) {
-                throw new IllegalArgumentException("请求体不得引用控制面索引：" + x);
+                throw new ControlPlaneGuardException("请求体不得引用控制面索引：" + x);
             }
         }
     }
@@ -324,7 +324,7 @@ public class EsIndexAdmin {
     void guardRestoreBody(String bodyJson) {
         guardControlBody(bodyJson);
         if (bodyJson == null || bodyJson.trim().isEmpty()) {
-            throw new IllegalArgumentException("恢复快照必须显式指定 indices（不允许恢复全部）");
+            throw new ControlPlaneGuardException("恢复快照必须显式指定 indices（不允许恢复全部）");
         }
         final Object indices;
         try {
@@ -350,7 +350,7 @@ public class EsIndexAdmin {
                 guardIndexPattern((String) one);
             }
         } else {
-            throw new IllegalArgumentException("恢复快照必须显式指定 indices（不允许恢复全部）");
+            throw new ControlPlaneGuardException("恢复快照必须显式指定 indices（不允许恢复全部）");
         }
     }
 

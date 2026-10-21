@@ -16,6 +16,7 @@
 
 package io.github.dengmeiluan.es.rebuild.auth;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -123,15 +124,17 @@ public class ConsolePermissionsController {
             "/internal/es/xmigrate/preflight");
 
     @GetMapping("permissions")
-    public Map<String, Object> permissions(HttpServletRequest request,
+    public ResponseEntity<Map<String, Object>> permissions(HttpServletRequest request,
             @RequestParam(required = false) String target) {
         ConsolePrincipal p = (ConsolePrincipal) request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);
         Map<String, Object> out = new LinkedHashMap<>();
         if (p == null) {
-            // 拦截器在前面 principal 恒在场；此臂=拦截器被旁路的部署形态，fail-closed
+            // 拦截器在前面 principal 恒在场；此臂=拦截器被旁路的部署形态，fail-closed。
+            // 状态码对齐拦截器未认证拒绝（401 {code:"UNAUTHORIZED"}）——200 包体带错误码
+            // 会让前端登录遮罩广播（api.ts 401 通道）失效
             out.put("code", "UNAUTHORIZED");
             out.put("message", "请先登录 ES 控制台");
-            return out;
+            return ResponseEntity.status(401).body(out);
         }
         String tid = (target == null || target.isEmpty() || "host".equalsIgnoreCase(target.trim()))
                 ? "host" : target.trim();
@@ -227,7 +230,7 @@ public class ConsolePermissionsController {
             groups.add(gm);
         }
         out.put("groups", groups);
-        return out;
+        return ResponseEntity.ok(out);
     }
 
     /** 该页真实写端点的最高角色档；无写端点返回 null。 */

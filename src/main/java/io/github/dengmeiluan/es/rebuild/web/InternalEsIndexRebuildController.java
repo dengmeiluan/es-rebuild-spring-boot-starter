@@ -1023,6 +1023,15 @@ public class InternalEsIndexRebuildController {
         return EX_ADVICE.illegalArg(e);
     }
 
+    /* 守卫拒绝与 IAE 同族但语义是保护策略拒绝（403），必须显式声明同类型本地 handler
+       委派 advice——本地 handler 优先于 advice，缺此臂恒落 handleIllegalArg 被映射 400 */
+    @org.springframework.web.bind.annotation.ExceptionHandler(
+            io.github.dengmeiluan.es.rebuild.core.ControlPlaneGuardException.class)
+    public org.springframework.http.ResponseEntity<Map<String, Object>> handleControlPlaneGuard(
+            io.github.dengmeiluan.es.rebuild.core.ControlPlaneGuardException e) {
+        return EX_ADVICE.controlPlaneGuard(e, currentRequest());
+    }
+
     @org.springframework.web.bind.annotation.ExceptionHandler(Exception.class)
     @org.springframework.web.bind.annotation.ResponseBody
     public org.springframework.http.ResponseEntity<Map<String, Object>> handleError(Exception e,
