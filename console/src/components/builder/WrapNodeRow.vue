@@ -1,7 +1,7 @@
 <template>
-  <div class="wnr" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">
+  <div class="wnr">
     <div class="wnr-hd">
-      <span class="wnr-grip" title="拖拽">⋮⋮</span>
+      <span class="wnr-grip" title="拖拽排序（按住拖动）" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
       <span class="wnr-op">{{ WRAP_LABEL[node.op] || node.op }}</span>
       <code class="wnr-fk">{{ WRAP_FIELD[node.op] }}</code>
       <FieldSelect

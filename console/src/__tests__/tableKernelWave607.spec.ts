@@ -111,6 +111,8 @@ describe('六百零七批二：viewSeg 分段出档与 alt 体', () => {
     await clickIt(segBtn('卡片')!);
     expect(host.querySelectorAll('.qrt-alt-body .dq-card').length, '卡片行数=行集').toBe(2);
     await clickIt(host.querySelector('.qrt-alt-body .dq-card')!);
+    /* 971 手势仲裁：单击延迟开，泵过仲裁窗再断言（tick 是微任务不推进真时器） */
+    await new Promise(r => setTimeout(r, 300));
     expect(seen.length, 'open-doc 透传恰一次').toBe(1);
     expect(seen[0]?._id, '载荷=所点行').toBe('a');
   });

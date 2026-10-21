@@ -494,8 +494,8 @@
             <AltHitsViews view="tree" :tree-data="jqResult !== null ? jqResult : (resp.hits || []).map(h => ({ _id: h._id, ...h._source }))" :doc-count="jqResult !== null ? jqResult.length : (resp?.hits || []).length" :doc-ids="jqResult !== null ? jqResult.map((r: any) => String(r._id ?? '')) : (resp?.hits || []).map(h => h._id)" :editable="canWrite" @open-doc-at="i => openTreeDocAt(i)" @edit-doc-at="i => openTreeDocAt(i, true)" />
           </div>
           <div v-show="view === 'cards'" class="dq-cards scroll-y dq-alt-body">
-            <!-- 卡片集走 cardHits 快滤（kw 空即全量）；565 改用共享件 -->
-            <AltHitsViews view="cards" :hits="cardHits" :editable="canWrite" @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />
+            <!-- 卡片集走 cardHits 快滤（kw 空即全量）；565 改用共享件（编辑走导航条钮+抽屉链显式通道） -->
+            <AltHitsViews view="cards" :hits="cardHits" @open-doc="openDoc" />
           </div>
           </ResultTable>
         </div>

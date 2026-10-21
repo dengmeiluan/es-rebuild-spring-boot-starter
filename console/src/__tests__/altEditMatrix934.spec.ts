@@ -44,18 +44,20 @@ describe('934 文档编辑直达矩阵（源码锁）', () => {
     expect(rt, '内建 alt 档仅打开链').toMatch(/@open-doc-at="i => \{ const h = props\.hits\[i\]; if \(h\) emit\('open-doc', h\) \}"/);
   });
 
-  it('渲染数据直达（935 续）：JsonTree 行挂 data-jid，AltHitsViews 三档委托单击开/双击编辑', () => {
+  it('渲染数据直达（935 续）：JsonTree 行挂 data-jid，AltHitsViews 三档委托单击开；971 双击编辑退役（选词回归原生，编辑=导航条钮+抽屉链）', () => {
     const jt = read('../components/JsonTree.vue');
     expect(jt, '树行携带点分路径（委托按首段定位文档）').toContain("'data-jid': id");
-    expect(ah).toContain('class="ah-tree-body" @click="onTreeClick" @dblclick="onTreeDblClick"');
+    expect(ah).toContain('class="ah-tree-body" @mousedown="onTreeDown" @click="onTreeClick" @dblclick="onTreeDblClick"');
     expect(ah).toMatch(/function treeDocIndexOf\(e: MouseEvent\): number/);
     expect(ah).toMatch(/\/\^\(\\d\+\)\(\?:\\\._id\)\?\$\/\.exec\(row\.getAttribute\('data-jid'\)/);
-    expect(ah).toMatch(/<pre v-if="view === 'json'" ref="preEl" class="json-view" v-html="jsonHtml" @click="onPreClick" @dblclick="onPreDblClick"/);
-    expect(ah).toContain('@dblclick="editable && emit(\'edit-doc\', h)"');
+    expect(ah).toMatch(/<pre v-if="view === 'json'" ref="preEl" class="json-view" v-html="jsonHtml" @mousedown="onPreDown" @click="onPreClick" @dblclick="onPreDblClick"/);
+    /* 971 手势仲裁：双击处理器只做取消仲裁，cards 编辑 emit 退役 */
+    expect(ah).toContain('@mousedown="onCardDown" @click="onCardClick($event, h)" @dblclick="onCardDblClick"');
+    expect(ah, 'cards 档编辑 emit 退役').not.toContain("emit('edit-doc'");
     /* 宿主表格行内编辑直达接线（两工作台 + RT 行钮） */
     expect(dq).toMatch(/:editable="canWrite" @edit-doc="h => openDoc\(h, true\)"/);
     expect(ih.match(/:editable="canWrite" @edit-doc="h => openDoc\(h, true\)"/g)?.length ?? 0, 'IH 两处 ResultTable 行内编辑接线（963：editable 随 canWrite）').toBe(2);
-    expect(dq).toContain('<AltHitsViews view="cards" :hits="cardHits" :editable="canWrite" @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />');
+    expect(dq).toContain('<AltHitsViews view="cards" :hits="cardHits" @open-doc="openDoc" />');
     /* IH json 信封逐文档块化（j-doc-block 与查询工作台同款） */
     expect(ih).toContain('`<span class="j-doc-block" data-doc-i="${i}">`');
   });

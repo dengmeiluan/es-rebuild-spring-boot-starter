@@ -1,7 +1,6 @@
 <template>
-  <div class="cn" draggable="true"
-       :style="node.disabled ? { opacity: .45 } : undefined"
-       @dragstart.stop="onDragStart" @dragend="endDrag">
+  <div class="cn"
+       :style="node.disabled ? { opacity: .45 } : undefined">
     <button v-if="node.disabled" aria-label="恢复参与匹配" class="btn xs ghost cn-pw-resume"
             title="该条件已临时停用，点击恢复参与匹配" style="color: var(--ok); flex-shrink: 0" @click="toggleDisabled(false)">
       <Circle :size="15" />
@@ -10,7 +9,8 @@
             title="临时停用该条件（不删除、不参与本次匹配），点击可恢复" style="color: var(--warn); flex-shrink: 0" @click="toggleDisabled(true)">
       <CircleSlash :size="15" />
     </button>
-    <span class="cn-grip" title="拖拽">⋮⋮</span>
+    <!-- 拖拽源只在 grip 柄：根 draggable 会劫持行内值输入框的文本选择/光标拖划 -->
+    <span class="cn-grip" title="拖拽排序（按住拖动）" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
     <FieldSelect
       :model-value="node.field || ''" :fields="fields" :types="types" :type-priority="fieldTypePriority"
       @update:model-value="onField"

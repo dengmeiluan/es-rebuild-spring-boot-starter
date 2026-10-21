@@ -30,7 +30,7 @@ describe('565 件③：AltHitsViews 共享件接线（源码锁）', () => {
     expect(dq).toContain("import AltHitsViews from '../components/AltHitsViews.vue';");
     expect(dq).toMatch(/<AltHitsViews ref="jsonBox" view="json" :json-html="jsonMarkedHtml" :doc-count="resp\?\.hits\?\.length \?\? 0" :doc-ids="resp\?\.hits\?\.map\(h => h\._id\) \?\? \[\]" :editable="canWrite" @open-doc-at="i => resp && openDoc\(resp\.hits\[i\]\)"/);
     expect(dq).toMatch(/<AltHitsViews view="tree" :tree-data="jqResult !== null \? jqResult : \(resp\.hits \|\| \[\]\)\.map\(h => \(\{ _id: h\._id, \.\.\.h\._source \}\)\)" :doc-count=/);
-    expect(dq).toMatch(/<AltHitsViews view="cards" :hits="cardHits" :editable="canWrite" @open-doc="openDoc" @edit-doc="h => openDoc\(h, true\)" \/>/);
+    expect(dq).toMatch(/<AltHitsViews view="cards" :hits="cardHits" @open-doc="openDoc" \/>/);
   });
 
   it('包裹层类串与 --dq-view-cap 高度链零触（track2Wave551 黑名单 + W1/402 锁面保形）', () => {
@@ -52,8 +52,8 @@ describe('565 件③：AltHitsViews 共享件接线（源码锁）', () => {
     expect(ih).toContain("import AltHitsViews from '../components/AltHitsViews.vue';");
     expect(ih).toContain('<AltHitsViews view="json" :json-html="docsJsonHtml" :doc-count="docsHits.length"');
     expect(ih).toContain('<AltHitsViews view="tree" :tree-data="docsAltData" :doc-count="docsAltData.length"');
-    expect(ih).toContain('<AltHitsViews view="cards" :hits="docsHits" :editable="canWrite" @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />');
-    expect(ih).toContain('<AltHitsViews view="cards" :hits="qryResp.hits" :editable="canWrite" @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />');
+    expect(ih).toContain('<AltHitsViews view="cards" :hits="docsHits" @open-doc="openDoc" />');
+    expect(ih).toContain('<AltHitsViews view="cards" :hits="qryResp.hits" @open-doc="openDoc" />');
     expect(ih, '包裹层容器类留宿主（track2Wave560-ih CSS 锁零触）').toContain('ih-json-wrap ih-alt-body');
     expect(ih).toContain('ih-cards ih-alt-body');
   });
@@ -113,8 +113,10 @@ describe('565 件③：AltHitsViews 三形态渲染（行为锁）', () => {
     expect(cards[0]!.querySelector('.dq-card-id')!.textContent).toBe('a1');
     expect(cards[0]!.querySelectorAll('.dq-card-row').length).toBe(5);
     expect(cards[1]!.querySelector('.dq-card-k')!.textContent).toBe('name');
-    /* 键盘可达 + 点击 emit（DQ openDoc 消费） */
+    /* 键盘可达 + 点击 emit（DQ openDoc 消费）；971 手势仲裁：单击延迟开（双击选词的第二击
+       到达即取消首击），合成 click 走延迟窗，断言前先泵过仲裁窗 */
     (cards[1] as HTMLElement)!.click();
+    await new Promise(r => setTimeout(r, 300));
     await nextTick();
     expect(emitted.length).toBe(1);
     expect((emitted[0] as any)._id).toBe('a2');

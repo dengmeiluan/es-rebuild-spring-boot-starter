@@ -1,7 +1,7 @@
 <template>
-  <div class="bgn" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">
+  <div class="bgn">
     <div class="bgn-hd">
-      <span class="bgn-grip" title="拖拽整组">⋮⋮</span>
+      <span class="bgn-grip" title="拖拽整组排序（按住拖动）" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
       <button aria-label="折叠或展开整组" class="btn sm ghost" :title="collapsed ? '展开整组' : '折叠整组'"
               @click="collapsed = !collapsed">
 <ChevronRight v-if="collapsed" :size="12" /><ChevronDown v-else :size="12" />

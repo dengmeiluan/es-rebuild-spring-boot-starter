@@ -296,8 +296,9 @@
             <td
               v-for="(cell, ci) in row" :key="ci"
               class="qrt-cell" :class="{ expanded: isExpanded(ri, ci), 'qrt-col-frozen': prefsOn && isFrozenCol(shownCols[ci]), 'qrt-hit': isSearchHit(ri, ci), 'rt-hit-cur': isSearchCur(ri, ci), 'num-col': isNumericCol(shownCols[ci]), 'ip-col': semPref && isIpCol(shownCols[ci] ?? ''), ...semToneCls(cell, ci) }" :title="cell === null || cell === undefined ? '' : fullText(cell)"
-              @click.exact="onCellClick(cell, ri, ci)"
-              @keydown.enter.exact.prevent="onCellClick(cell, ri, ci)"
+              @mousedown="onCellDown($event)"
+              @click.exact="onCellClick($event, cell, ri, ci)"
+              @keydown.enter.exact.prevent="onCellClick($event, cell, ri, ci)"
               @contextmenu.prevent="openCellMenu($event, ri, ci)"
             >
               <!-- 空值与 ResultTable 统一为灰 ∅（原 '-'）；值照旧展示，单击复制全文。
@@ -459,6 +460,7 @@ import SkeletonBox from './SkeletonBox.vue';
 import CellContextMenu from './CellContextMenu.vue';
 import JsonTree from './JsonTree.vue';
 import AltHitsViews from './AltHitsViews.vue'; /* ：alt 三视图体共享件单源（内建视图档消费，勿再造壳） */
+import { createPressGuard } from '../utils/pressGuard';
 import ColDetailModal from './ColDetailModal.vue';
 import { NModal, NDrawer, NDrawerContent } from 'naive-ui';
 import ColPicker from './ColPicker.vue';
@@ -1222,11 +1224,16 @@ function objChip(v: any): { label: string; n: number } | null {
   const fs = f == null ? '' : typeof f === 'object' ? JSON.stringify(f) : String(f);
   return { label: keys[0] + ': ' + (fs.length > 24 ? fs.slice(0, 24) + '…' : fs), n: keys.length };
 }
-function onCellClick(cell: any, ri: number, ci: number) {
+function onCellClick(e: MouseEvent | KeyboardEvent, cell: any, ri: number, ci: number) {
   if (cell === null || cell === undefined) return;
+  /* 拖选守卫：格内文本拖选松手的 click 不当作单击（复制/展开都不抢）；
+   键盘事件不经守卫；单元格无导航代价，不做延迟仲裁（同位单击零变化） */
+  if (e instanceof MouseEvent && cellGuard.moved(e)) return;
   if (cellText(cell).length > MAX_CELL || isExpanded(ri, ci)) { toggleExpand(ri, ci); return; }
   void copyCell(cell);
 }
+const cellGuard = createPressGuard();
+function onCellDown(e: MouseEvent) { cellGuard.down(e); }
 
 /* 大整数（|v|>=1e4 的整数）千分位显示——title/复制仍为原始值；
  epoch 毫秒优先（其自身已是人性化形态），小数与短数字不加工 */

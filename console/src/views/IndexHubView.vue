@@ -205,7 +205,7 @@
                     <AltHitsViews view="tree" :tree-data="docsAltData" :doc-count="docsAltData.length" :doc-ids="docsAltData.map(r => String(r._id ?? ''))" :editable="canWrite" @open-doc-at="i => openAltDocAt(docsAltData, i)" @edit-doc-at="i => openAltDocAt(docsAltData, i, true)" />
                   </div>
                   <div v-show="docsView === 'cards'" class="ih-cards ih-alt-body">
-                    <AltHitsViews view="cards" :hits="docsHits" :editable="canWrite" @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />
+                    <AltHitsViews view="cards" :hits="docsHits" @open-doc="openDoc" />
                   </div>
                 </ResultTable>
               </template>
@@ -356,7 +356,7 @@
                   <AltHitsViews view="tree" :tree-data="qryAltData" :doc-count="qryAltData.length" :doc-ids="qryAltData.map(r => String(r._id ?? ''))" :editable="canWrite" @open-doc-at="i => openAltDocAt(qryAltData, i)" @edit-doc-at="i => openAltDocAt(qryAltData, i, true)" />
                 </div>
                 <div v-show="qryView === 'cards'" class="ih-cards ih-alt-body">
-                  <AltHitsViews view="cards" :hits="qryResp.hits" :editable="canWrite" @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />
+                  <AltHitsViews view="cards" :hits="qryResp.hits" @open-doc="openDoc" />
                 </div>
               </ResultTable>
               <!-- query tab 未执行就绪空态（DslQueryView :470 同件同文案风格）——

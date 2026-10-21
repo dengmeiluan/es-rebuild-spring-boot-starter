@@ -1,6 +1,8 @@
 <template>
-  <div class="gn" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">
+  <div class="gn">
     <div class="gn-hd">
+      <!-- 拖拽源只在 grip 柄（与 cn/bgn/wnr 同语言）；根 draggable 会劫持参数表的文本选择 -->
+      <span class="gn-grip" title="拖拽排序（按住拖动）" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
       <span class="gn-op mono" title="未内置富表单的算子，以结构化参数表编辑（零降级）">{{ node.op === '__raw__' ? '自定义查询' : node.op }}</span>
       <span class="gn-tag">结构化</span>
       <span style="flex:1"></span>
@@ -60,6 +62,8 @@ function endDrag() { delete (window as any)[DRAG_KEY]; fireDrag(false); }
 <style scoped>
 .gn { border: 1px dashed var(--line-strong); border-radius: var(--r-s); padding: var(--sp-2) var(--sp-3); margin-bottom: var(--sp-2); background: var(--bg1); }
 .gn-hd { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); flex-wrap: wrap; }
+.gn-grip { cursor: grab; color: var(--tx2); font-size: var(--fs-xs); user-select: none; transition: color var(--tr); flex-shrink: 0; }
+.gn-grip:hover { color: var(--tx1); }
 .gn-op { font-size: var(--fs-sm); color: var(--ac-hi); }
 .gn-tag { font-size: var(--fs-2xs); padding: 0 var(--sp-1); border-radius: var(--r-xs); background: var(--info-soft); color: var(--info); }
 </style>

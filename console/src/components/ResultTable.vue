@@ -260,6 +260,7 @@
               :data-col="c"
               :title="cellTitle(hit, c)"
               @dblclick="startEdit(hit, c)"
+              @mousedown="onCellDown($event)"
               @mousedown.left="onRegionStart($event, ri, ci)"
               @click.ctrl.exact="toggleAggCell(hit, c)"
               @click.exact="onCellClick($event, hit, c)"
@@ -585,6 +586,7 @@ import JsonTree from './JsonTree.vue';
 import ColDetailModal from './ColDetailModal.vue';
 import TookBadge from './TookBadge.vue';
 import Pagination from './Pagination.vue';
+import { createPressGuard } from '../utils/pressGuard';
 import TableShell, { TableExpandRow, TableBacktop } from './TableShell.vue';
 import { api } from '../api';
 import { useAppStore } from '../stores/app';
@@ -1359,6 +1361,8 @@ function epochText(v: any): string | null {
 function onCellClick(e: MouseEvent | KeyboardEvent, hit: SearchHit, c: string) {
   if (suppressClick) return; /* ：框选拖出后的那次 click 不当单击处理 */
   if (editing.value) return; /* 编辑态直通：input 内选区/粘贴回归原生语义 */
+  /* 拖选守卫：格内文本拖选松手的 click 不当作单击（不展开）；键盘事件不经守卫 */
+  if (e instanceof MouseEvent && cellGuard.moved(e)) return;
   const v = displayVal(hit, c);
   const text = cellText(v);
   const k = cellKey(hit._id, c);
@@ -1902,6 +1906,10 @@ async function commitPending() {
 const regionAnchor = ref<{ ri: number; ci: number } | null>(null);
 const region = ref<{ ri1: number; ri2: number; ci1: number; ci2: number } | null>(null);
 let suppressClick = false;
+/* 格内拖选守卫：mousedown 锚定→click 位移超阈不当作单击（与框选 suppressClick 互补——
+ 框选管跨格矩阵拖选，这里管格内字符级拖选） */
+const cellGuard = createPressGuard();
+function onCellDown(e: MouseEvent) { cellGuard.down(e); }
 const regionKeys = computed(() => {
   const s = new Set<string>();
   const r = region.value;

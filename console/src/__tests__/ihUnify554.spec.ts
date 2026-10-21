@@ -213,14 +213,14 @@ describe('554 二：JSON/Tree/卡片渲染体（docs docsRan 域 + query qryResp
     expect(seg).toMatch(/<div v-show="docsView === 'json'" class="scroll-y ih-json-wrap ih-alt-body">\s*<AltHitsViews view="json" :json-html="docsJsonHtml" :doc-count="docsHits\.length"/);
     expect(seg).toContain('<AltHitsViews view="tree" :tree-data="docsAltData" :doc-count="docsAltData.length"');
     expect(seg).toMatch(/<div v-show="docsView === 'cards'" class="ih-cards ih-alt-body">/);
-    expect(seg).toContain('<AltHitsViews view="cards" :hits="docsHits" :editable="canWrite" @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />');
+    expect(seg).toContain('<AltHitsViews view="cards" :hits="docsHits" @open-doc="openDoc" />');
   });
   it('query：三档同构（qryView 驱动；667 改用同步更新同 docs 域）', () => {
     const seg = ih.slice(ih.indexOf('<template v-else-if="tab === \'query\'">'), ih.indexOf('<!-- Settings -->'));
     expect(seg).toMatch(/<div v-show="qryView === 'json'" class="scroll-y ih-json-wrap ih-alt-body">\s*<AltHitsViews view="json" :json-html="qryJsonHtml" :doc-count="qryResp\?\.hits\?\.length \?\? 0"/);
     expect(seg).toContain('<AltHitsViews view="tree" :tree-data="qryAltData" :doc-count="qryAltData.length"');
     expect(seg).toMatch(/<div v-show="qryView === 'cards'" class="ih-cards ih-alt-body">/);
-    expect(seg).toContain('<AltHitsViews view="cards" :hits="qryResp.hits" :editable="canWrite" @open-doc="openDoc" @edit-doc="h => openDoc(h, true)" />');
+    expect(seg).toContain('<AltHitsViews view="cards" :hits="qryResp.hits" @open-doc="openDoc" />');
   });
   it('渲染源：AltHitsViews 共享件（667 改用）+ prettyJson/highlightJson（utils/jsonc）导入在场；42 字截断导入随内脏退役', () => {
     expect(ih).toMatch(/import AltHitsViews from '\.\.\/components\/AltHitsViews\.vue';/);
@@ -356,7 +356,10 @@ describe('554 四：视图 seg 行为网（点击切档 + hideBody 隐表格体 
     const card = host.querySelector<HTMLElement>('.ih-cards .dq-card');
     expect(card, '卡片档渲染').toBeTruthy();
     (card as HTMLElement).click();
-    await settle(16);
+    /* 971 手势仲裁：单击延迟开（双击选词的第二击到达即取消首击），泵过仲裁窗再断言
+     （settle 参数是 nextTick 循环数非毫秒——仲裁窗是真时器，须真时等待） */
+    await new Promise(r => setTimeout(r, 300));
+    await settle();
     /* n-modal Teleport 到 body——断言走 document（rtCellDetail 同法） */
     expect(document.body.querySelectorAll('.n-modal').length, '点卡开文档弹窗（openDoc）').toBeGreaterThan(0);
   });

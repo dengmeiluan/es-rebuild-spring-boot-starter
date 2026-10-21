@@ -23,13 +23,12 @@
       <div class="ws-cfg-tt sec-t">选择要显示的组件（拖动排序）</div>
       <div class="ws-cfg-list">
         <div v-for="(w, i) in layout" :key="w.k" class="ws-cfg-row"
-          draggable="true"
-          @dragstart="dragIdx = i"
           @dragover.prevent
           @drop="moveTo(i)">
           <!-- G44+：勾选/跨度即落盘（@change=persist，副标题持久化承诺兑现）
- + checkbox/select 补部件名 aria-label、grab 装饰字 aria-hidden -->
-          <span class="ws-cfg-grab" aria-hidden="true">⋮⋮</span>
+ + checkbox/select 补部件名 aria-label、grab 装饰字 aria-hidden。
+ 拖拽源只在 grab 柄：根 draggable 会劫持行内 checkbox/select 的原生手势 -->
+          <span class="ws-cfg-grab" aria-hidden="true" draggable="true" @dragstart="dragIdx = i">⋮⋮</span>
           <input type="checkbox" v-model="w.on" @change="persist()"
             :aria-label="(widgetOf(w.k)?.name ?? w.k) + '显示'" />
           <component :is="widgetOf(w.k)?.icon" :size="12" />

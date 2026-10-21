@@ -57,7 +57,7 @@ describe('963-2 IndexHubView：弹窗卸载/查看态编辑/结果表 editable/�
   });
   it('查看态「编辑」钮 canWrite；docs/query 两 tab 的 ResultTable/AltHitsViews 全部改绑定', () => {
     expect(ih).toContain('<button v-if="canWrite" class="btn sm pri" @click="docEditMode = true">');
-    expect(ih.match(/:editable="canWrite"/g)?.length).toBe(8);
+    expect(ih.match(/:editable="canWrite"/g)?.length, 'docs/query 两域 ResultTable 2 处 + AltHitsViews json/tree 4 处（971 cards 编辑退役，编辑=导航条钮+抽屉显式通道）').toBe(6);
     expect(ih).not.toMatch(/(?<!:)\beditable\s+@/);
   });
   it('删除三执行体首行 canOps 守卫', () => {
