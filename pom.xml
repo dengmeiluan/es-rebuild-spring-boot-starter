@@ -15,7 +15,7 @@
 
     <groupId>io.github.dengmeiluan</groupId>
     <artifactId>es-rebuild-spring-boot-starter</artifactId>
-    <version>1.0.34</version>
+    <version>1.0.35</version>
     <packaging>jar</packaging>
     <name>es-rebuild-spring-boot-starter</name>
     <description>Zero-downtime Elasticsearch index rebuild Spring Boot starter: alias-based write-index
@@ -43,7 +43,7 @@
         <url>https://github.com/dengmeiluan/es-rebuild-spring-boot-starter</url>
         <connection>scm:git:git://github.com/dengmeiluan/es-rebuild-spring-boot-starter.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/dengmeiluan/es-rebuild-spring-boot-starter.git</developerConnection>
-        <tag>v1.0</tag>
+        <tag>v1.0.35</tag>
     </scm>
 
     <properties>

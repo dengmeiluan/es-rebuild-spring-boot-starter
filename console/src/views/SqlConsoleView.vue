@@ -233,6 +233,7 @@ import { NModal } from 'naive-ui';
 import QueryHistoryPanel from '../components/QueryHistoryPanel.vue';
 import { api, ioRecorder, type RawIoRec } from '../api';
 import { useAppStore } from '../stores/app';
+import { useAuthStore } from '../stores/auth';
 import { encodeDslParam } from '../utils/queryHub';
 import { useQueryHistoryStore } from '../stores/queryHistory';
 import { useQueryRun } from '../composables/useQueryRun';
@@ -263,6 +264,7 @@ import { useDebounceFn } from '../composables/useDebounceFn'; /* P0-3：划线�
 import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
+const auth = useAuthStore();
 const router = useRouter();
 /* w80：执行快捷键角标跟平台——Mac 显示 ⌘⏎，Windows/Linux 显示 Ctrl+⏎（此前硬编码 Mac 符号） */
 const isMac = navigator.platform.toUpperCase().includes('MAC');
@@ -367,7 +369,7 @@ async function probeSqlTargets() {
     if (!store.conns.length) await store.loadConns();
     const cands: Array<{ id: string; name: string }> = [
       ...(store.hostVisible ? [{ id: '', name: '宿主集群' }] : []),
-      ...store.conns.map(c => ({ id: c.id, name: c.name })),
+      ...store.conns.filter(c => auth.canSeeConn(c.id)).map(c => ({ id: c.id, name: c.name })),
     ].filter(c => c.id !== store.target); // 当前目标已证不可用，跳过
     probedN.value = cands.length;
     const hits = await Promise.all(cands.map(async c => {

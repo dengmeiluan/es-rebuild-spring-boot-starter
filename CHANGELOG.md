@@ -5,6 +5,29 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.35]
+
+### 安全
+
+- DevTools/REST 非 ADMIN 透传收敛为数据面白名单：先规范化路径再默认拒绝集群/系统管理写
+  （`_cluster`/`_security`/`_snapshot`/`_scripts`/`_ingest`/`_ilm`/`_slm` 等），堵住尾斜杠、
+  `%XX` 编码、矩阵参数、纯排除索引、跨集群 `remote:index`、带索引前缀的
+  `_msearch/_mget/_bulk`、`_xpack/sql`、remote reindex 与快照 `feature_states` 旁路；
+  快照仓库云凭据对非 ADMIN 脱敏
+- 控制面读取补守卫：`search-raw`/`query`/`profile`/`count`/`mapping`/`analysis`/`settings`/
+  `lucene`/`schema`/`ilm-explain`/`reload`/PIT/bulk/SQL 均不得触达控制索引与校验临时索引；
+  空索引参数 fail-closed
+- 页面授权补齐共享读写归属页（`create-index`、`inspect`、`ilm/policies`、`templates`、
+  `shards`、`task-detail`、`sql`、`health-report`、`live ring-usage`）；连接模型下未登记
+  页面归属的写端点默认拒绝；静态页白名单写入口同时校验页面与角色；ADMIN 与持精确页写键者
+  保持通行
+- 迁移发起/续跑/预检/目标索引必须同时持有源连接与宿主 `w:xmigrate`；`resolve-preview` 补源
+  写门；续跑钉死作业源档案；连接目录与探活按连接授权过滤
+- 权限面板拆分 REST 直连与 DevTools 执行档；前端路由大小写/尾斜杠归一；DevTools 预填在身份
+  未确认时只填入不自动执行；IndexHub Ctrl+S 离页摘除；文档删除按 `delete-by-id` 端点独立门控
+- 前后端权限矩阵/只读 POST 清单逐项对拍测试 + raw 系统边界测试：后续新增写端点漏登记页面
+  归属会直接测试失败
+
 ## [1.0.34]
 
 ### 安全

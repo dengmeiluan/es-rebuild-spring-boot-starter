@@ -23,10 +23,11 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 控制台三级角色（。
+ * 控制台角色（rank 越大权限越高）。
  *
- * <p>rank 越大权限越高：VIEWER 只读（GET）、OPERATOR 低危写（普通 POST）、
- * ADMIN 高危操作（重建/迁移/别名切换/删除/集群 settings 等）。
+ * <p>VIEWER 只读（GET）→ OPERATOR 低危写（普通 POST）→ 专项 rank3（重建/集群/审计）
+ * → ADMIN（用户管理/raw 透传/系统管理）。<b>三个 rank3 专项当前同 rank、按 atLeast 互通</b>
+ * （与 {@link ConsoleAuthInterceptor#requiredRole} 实现一致；页面授权模型下再由连接/页面键收窄）。
  * 拦截规则见 {@link ConsoleAuthInterceptor}。</p>
  *
  * @author aicoding
@@ -37,11 +38,11 @@ public enum ConsoleRole {
     VIEWER(1),
     /** 操作员：低危写操作（文档编辑、analyze、模板渲染等普通 POST）。 */
     OPERATOR(2),
-    /** w66:重建/迁移专项 — 可发起/中止/确认重建与跨集群迁移,不管集群 settings/用户。 */
+    /** rank3 重建/迁移专项；当前三专项同 rank 互通。 */
     REBUILD_OP(3),
-    /** w66:索引/集群管理专项 — 可管理索引(mapping/settings/alias/模板/快照),不管重建/用户。 */
+    /** rank3 索引/集群管理专项；当前三专项同 rank 互通。 */
     CLUSTER_OP(3),
-    /** w66:安全管理专项 — 可查看审计日志,不管重建/集群/用户。 */
+    /** rank3 安全管理专项；当前三专项同 rank 互通。 */
     AUDIT_OP(3),
     /** 超级管理员：一切(含用户管理、raw 透传)。 */
     ADMIN(4);

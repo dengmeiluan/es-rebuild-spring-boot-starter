@@ -22,7 +22,6 @@ import io.github.dengmeiluan.es.rebuild.multicluster.ConnStore;
 import io.github.dengmeiluan.es.rebuild.xmigrate.RemoteClusterConn;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -59,10 +58,12 @@ public class EnvPagesResolver {
         RemoteClusterConn conn = connStore.get(targetId);
         if (conn == null) return null;
         String env = conn.getEnv();
-        if (env == null || env.isEmpty()) return null;
+        if (env == null || env.trim().isEmpty()) return null;
         Map<String, java.util.Set<String>> templates = properties.getEnvPages();
         if (templates == null || templates.isEmpty()) return null;
-        Set<String> pages = templates.get(env.toUpperCase(Locale.ROOT));
+        /* 连接存储层已 trim+upper，这里再归一一次：旧档案/宿主直写不得因空白或大小写
+           跳过环境收缩（跳过=prod 变全开，属于 fail-open）。 */
+        Set<String> pages = templates.get(env.trim().toUpperCase(Locale.ROOT));
         return pages == null || pages.isEmpty() ? null : pages;
     }
 
@@ -141,25 +142,9 @@ public class EnvPagesResolver {
         return grantedPages.contains(CONN_KEY_PREFIX + targetId + ":w:" + pageKey);
     }
 
-    /** ·实报打通:targetId 连接上是否持有任意页写键(conn:{id}:w:* 通配)——
-     *  与前端 auth.canWriteOn 的 conn 解析语义同源对齐(),供共享端点(无页面归属、
-     *  无法按页精确定位写键)的低危写档放行判定使用。 */
-    public boolean hasAnyWriteKey(String targetId, Set<String> grantedPages) {
-        if (grantedPages == null || targetId == null || targetId.isEmpty()) return false;
-        String prefix = CONN_KEY_PREFIX + targetId + ":w:";
-        for (String g : grantedPages) {
-            if (g != null && g.startsWith(prefix)) return true;
-        }
-        return false;
-    }
-
     /** 403 响应体（页面被 env 模板收缩掉时——与 PAGE_DENIED 风格区分）。 */
     public static String denyBody(String page) {
         return "{\"code\":\"ENV_PAGE_DENIED\",\"page\":\"" + page + "\",\"message\":\"当前连接环境未开放该页面\"}";
     }
 
-    /** Collections 显式引用占位（保持 import 最小集，供后续扩展排序视图）。 */
-    static Set<String> unmodifiableCopy(Set<String> src) {
-        return Collections.unmodifiableSet(new LinkedHashSet<>(src));
-    }
 }

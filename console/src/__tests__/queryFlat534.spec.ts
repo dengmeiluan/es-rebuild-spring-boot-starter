@@ -32,7 +32,7 @@ describe('五百三十四批：dq-profile 卡壳退役（卡中卡根治）', ()
 
 describe('五百三十四批：dq-jq 壳框退役→行内裸排', () => {
   it('bg2/border/radius/padding 移除，flex 骨架与聚焦描边保留', () => {
-    expect(dq).toMatch(/\.dq-jq \{\s*\n  display: flex; align-items: center; gap: var\(--sp-2\); margin-top: var\(--sp-2\);\s*\n\}/);
+    expect(dq).toMatch(/\.dq-jq \{\s*\n {2}display: flex; align-items: center; gap: var\(--sp-2\); margin-top: var\(--sp-2\);\s*\n\}/);
     const rule = dq.slice(dq.indexOf('.dq-jq {'), dq.indexOf('}', dq.indexOf('.dq-jq {')));
     expect(rule, '壳底色不回流').not.toContain('background');
     expect(rule, '壳描边不回流').not.toContain('border');

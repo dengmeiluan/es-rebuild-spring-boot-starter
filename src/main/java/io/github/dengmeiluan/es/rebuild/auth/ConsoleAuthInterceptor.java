@@ -185,6 +185,8 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         m.put("/cluster/reroute", java.util.Collections.singletonList("cluster-settings"));
         m.put("/cluster/alias-actions", Arrays.asList("aliases", "config-validator"));
         m.put("/cluster/reroute/retry-failed", java.util.Collections.singletonList("diag"));
+        /* 建索引同时服务“索引工作区”的快速新建与“配置校验器”的校验后落地 */
+        m.put("/cluster/create-index", Arrays.asList("config-validator", "indices"));
         m.put("/cluster/scripts/put", Arrays.asList("search-templates", "painless-lab"));
         m.put("/cluster/scripts/delete", Arrays.asList("search-templates", "painless-lab"));
         /* DevTools 独立执行端点：rest 写键兼容旧授权，devtools 写键可单独授权。 */
@@ -214,11 +216,23 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         m.put("/cluster/explain-doc", Arrays.asList("rank-debug", "search", "indices"));
         m.put("/cluster/validate-query", Arrays.asList("query-xray", "search"));
         m.put("/cluster/term-vectors", java.util.Collections.singletonList("query-xray"));
+        /* 文档读取：只允许真实有文档面权限的页面，不能再让任意 conn 读键直读业务文档 */
+        m.put("/cluster/doc", Arrays.asList("search", "indices", "browser", "doc-diff"));
+        /* 跨页只读复用：mapping 页用 inspect 载索引概览；lifecycle 用 ilm/explain；
+           workspace 用 sql/health-report；live 用 ring-usage。 */
+        m.put("/cluster/inspect", Arrays.asList("indices", "mapping", "search", "config-validator", "adhoc-rebuild"));
+        m.put("/cluster/ilm/explain", Arrays.asList("ilm", "lifecycle"));
+        m.put("/cluster/ilm/policies", Arrays.asList("ilm", "lifecycle"));
+        m.put("/cluster/templates", Arrays.asList("templates", "templates-gallery"));
+        m.put("/cluster/shards", Arrays.asList("overview", "indices", "topology"));
+        m.put("/cluster/task-detail", Arrays.asList("tasks", "task-tree"));
+        m.put("/cluster/sql", Arrays.asList("search", "workspace"));
+        m.put("/cluster/health-report", Arrays.asList("health-report", "workspace"));
         m.put("/insight/settings-impact", Arrays.asList("index-settings", "optimizer"));
         m.put("/monitor-metrics", Arrays.asList("overview", "live"));
         m.put("/monitor-history", Arrays.asList("overview", "live"));
         m.put("/monitor-alerts", Arrays.asList("overview", "live"));
-        m.put("/ring-usage", Arrays.asList("overview", "topology"));
+        m.put("/ring-usage", Arrays.asList("overview", "topology", "live"));
         m.put("/cluster/tasks", Arrays.asList("tasks", "task-tree"));
         SHARED_READ_PAGES = java.util.Collections.unmodifiableMap(m);
     }
@@ -391,6 +405,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                落到全局角色门，从而改写宿主集群。 */
             String targetId = targetHeader == null || targetHeader.trim().isEmpty()
                     ? "host" : targetHeader.trim();
+            if ("host".equalsIgnoreCase(targetId)) targetId = "host";
             ConsolePageCatalog.Page page = pageCatalog.pageOf(path);
             java.util.Set<String> effectivePages = envPagesResolver.effectivePages(
                     targetId, principal.getGrantedPages());
@@ -412,9 +427,10 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                 deny(response, 403, "{\"code\":\"PAGE_DENIED\",\"message\":\"当前身份无任何页面授权\"}");
                 return false;
             }
-            /* 无页面归属的共享读端点：连接模型按归属页读键裁决（pageOf=null 不再
-               直接吃角色门，否则 only-overview 用户可读 query/search 业务数据）。 */
-            if (!writeReq && envPagesResolver.inConnModel(principal.getGrantedPages())) {
+            /* 共享读端点按归属页裁决——静态页白名单与连接模型同一口径：
+               pageOf=null / 跨页复用端点不能直接吃角色门，否则 only-overview 用户可读
+               query/search 业务数据；live/workspace 也会被 overview 的页面前缀误拦。 */
+            if (!writeReq) {
                 List<String> readPages = sharedReadPages(path);
                 if (readPages != null) {
                     boolean allowed = false;
@@ -456,7 +472,11 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                     return false;
                 }
             }
-            if (page != null) {
+            /* 自助/自举端点不吃页面白名单：/auth/me、改密、退出、我的流水、权限自查、setup 状态
+               必须对任何已认证身份可用；否则把 ops-audit/mine 收进 security 页后，
+               没勾 security 的普通用户连自己的操作记录都看不了。 */
+            boolean bootstrapRead = !writeReq && isBootstrapPath(path);
+            if (page != null && !bootstrapRead) {
                 if (!effectivePages.contains(page.getKey())) {
                     /* 页面不可见:拒绝事件显式落审计(:带目标集群/实名/来源 IP 维度) */
                     opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
@@ -482,11 +502,18 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                未登记共享写回落角色门（保守）；已登记但无对应页写键直接 WRITE_DENIED。 */
             if (writeReq && envPagesResolver.inConnModel(principal.getGrantedPages())) {
                 List<String> allowedPages = sharedWritePages(path);
-                if (allowedPages == null && path.contains("/insight/actions/")) {
-                    opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
-                            "WRITE_DENIED", 403, "target=" + targetId + " unregisteredInsightAction"));
-                    deny(response, 403, "{\"code\":\"WRITE_DENIED\",\"message\":\"该护栏动作未登记页面归属，连接模型下拒绝执行\"}");
-                    return false;
+                if (allowedPages == null) {
+                    /* 连接模型默认拒绝「无页面归属」的写端点：未登记共享写映射的新端点
+                       不得回落角色门（OPERATOR 角色即可写）。仅自助端点（改密/退出）
+                       与未绑定时的 setup 引导放行到角色门。 */
+                    boolean bootstrapWrite = isBootstrapPath(path)
+                            || path.endsWith("/setup/test") || path.endsWith("/setup/apply");
+                    if (!bootstrapWrite) {
+                        opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
+                                "WRITE_DENIED", 403, "target=" + targetId + " unregisteredWrite"));
+                        deny(response, 403, "{\"code\":\"WRITE_DENIED\",\"message\":\"该写端点未登记页面归属，连接模型下拒绝执行\"}");
+                        return false;
+                    }
                 }
                 if (allowedPages != null) {
                     for (String pageKey : allowedPages) {

@@ -60,9 +60,9 @@ describe('963-2 IndexHubView：弹窗卸载/查看态编辑/结果表 editable/�
     expect(ih.match(/:editable="canWrite"/g)?.length, 'docs/query 两域 ResultTable 2 处 + AltHitsViews json/tree 4 处（971 cards 编辑退役，编辑=导航条钮+抽屉显式通道）').toBe(6);
     expect(ih).not.toMatch(/(?<!:)\beditable\s+@/);
   });
-  it('删除三执行体首行 canOps 守卫', () => {
-    expect(guardAfter(ih, 'async function askDelDoc(hit: SearchHit)', '!canOps\\.value')).toBe(true);
-    expect(guardAfter(ih, 'async function askBatchDel(ids: string[])', '!canOps\\.value')).toBe(true);
+  it('删除执行体首行按端点归属守卫（文档 delete-by-id / 索引 delete-index）', () => {
+    expect(guardAfter(ih, 'async function askDelDoc(hit: SearchHit)', '!canDeleteDoc\\.value')).toBe(true);
+    expect(guardAfter(ih, 'async function askBatchDel(ids: string[])', '!canDeleteDoc\\.value')).toBe(true);
     expect(guardAfter(ih, 'async function askDelIndex()', '!canOps\\.value')).toBe(true);
     expect(ih).toContain("if (!canOps.value) { store.notify('warning', '删除需专项或 ADMIN 角色'); return; }");
   });

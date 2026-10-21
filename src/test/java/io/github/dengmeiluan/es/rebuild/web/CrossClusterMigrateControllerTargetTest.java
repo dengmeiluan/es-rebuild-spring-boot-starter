@@ -163,8 +163,11 @@ public class CrossClusterMigrateControllerTargetTest {
         expectForbidden(() -> ctrl.preflight(req, c1), "持 c1 写键预检 c2");
 
         HttpServletRequest c2 = request(viewer("conn:c2:w:xmigrate"));
-        assertEquals("job-dest-1", ctrl.start(req, c2).get("jobId"));
-        assertTrue(ctrl.preflight(req, c2).isEmpty());
+        expectForbidden(() -> ctrl.start(req, c2), "仅有源写键、无宿主目标写键不得发起迁移");
+
+        HttpServletRequest c2WithDest = request(viewer("conn:c2:w:xmigrate", "conn:host:w:xmigrate"));
+        assertEquals("job-dest-1", ctrl.start(req, c2WithDest).get("jobId"));
+        assertTrue(ctrl.preflight(req, c2WithDest).isEmpty());
     }
 
     @Test
@@ -206,7 +209,9 @@ public class CrossClusterMigrateControllerTargetTest {
         CrossClusterMigrateController ctrl = controller(service, connStore());
         HttpServletRequest c2 = request(viewer("conn:c2:w:xmigrate"));
         expectForbidden(() -> ctrl.resume("j2", new RemoteClusterConn(), "c1", c2), "用 c1 档案续跑 c2");
-        assertEquals("j2", ctrl.resume("j2", new RemoteClusterConn(), "c2", c2).get("jobId"));
+        expectForbidden(() -> ctrl.resume("j2", new RemoteClusterConn(), "c2", c2), "无宿主写键续跑");
+        HttpServletRequest c2WithDest = request(viewer("conn:c2:w:xmigrate", "conn:host:w:xmigrate"));
+        assertEquals("j2", ctrl.resume("j2", new RemoteClusterConn(), "c2", c2WithDest).get("jobId"));
     }
 
     @Test

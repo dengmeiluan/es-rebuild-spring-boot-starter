@@ -53,15 +53,17 @@ public class ConsolePermissionsController {
         this.pageAuthEnabled = pageAuthEnabled;
     }
 
-    /** REST 直连 / DevTools 执行走的透传端点（rest 页归属），raw 档判定的代表路径。 */
+    /** REST 直连走的透传端点（rest 页归属），raw 档判定的代表路径。 */
     static final String RAW_PATH = "/internal/es/index/cluster/raw";
+    /** DevTools 独立执行端点（devtools/rest 页写键均可）。 */
+    static final String DEVTOOLS_PATH = "/internal/es/index/cluster/devtools/execute";
 
     /**
      * 真实写端点路径（非 GET，且不是只读 POST）——页面写面判定的唯一依据。
      *
      * <p>不能再用 {@code requiredRole("POST", prefix)} 推断：GET-only 页面的前缀不在任何
-     * 关键词表里，会被误判成 OPERATOR 可写，宿主据此下发 {@code w:} 键后
-     * {@code hasAnyWriteKey} 会解锁全部共享写端点（权限面误报→提权链）。</p>
+     * 关键词表里，会被误判成 OPERATOR 可写，宿主据此下发 {@code w:} 键后会解锁共享写端点
+     * （权限面误报→提权链）。</p>
      */
     private static final List<String> WRITE_ENDPOINT_PATHS = java.util.Arrays.asList(
             "/internal/es/index/rebuild",
@@ -149,11 +151,15 @@ public class ConsolePermissionsController {
         boolean connModel = pageGateActive && envPagesResolver.inConnModel(gp);
         Set<String> effective = pageGateActive ? envPagesResolver.effectivePages(tid, gp) : null;
 
-        // raw 直连档：ADMIN 全局可用；连接模型=精确 rest 页写键；静态模型=角色档
+        // raw 直连档：ADMIN 全局可用；连接模型=精确 rest 页写键；静态模型=角色档。
+        // DevTools 走独立端点，w:devtools 不能顺带解锁 REST 直连（/cluster/raw 仍是 rest 页）。
         boolean rawAllowed = admin || ((pageGateActive && connModel)
-                ? (envPagesResolver.writeAllowed(tid, "rest", gp)
-                    || envPagesResolver.writeAllowed(tid, "devtools", gp))
+                ? envPagesResolver.writeAllowed(tid, "rest", gp)
                 : p.getRole().atLeast(ConsoleAuthInterceptor.requiredRole("POST", RAW_PATH)));
+        boolean devtoolsAllowed = admin || ((pageGateActive && connModel)
+                ? (envPagesResolver.writeAllowed(tid, "devtools", gp)
+                    || envPagesResolver.writeAllowed(tid, "rest", gp))
+                : p.getRole().atLeast(ConsoleAuthInterceptor.requiredRole("POST", DEVTOOLS_PATH)));
         // 共享写档：ADMIN 全局可用；连接模型需持有真实使用共享端点的页面写键
         boolean sharedWriteAllowed = admin || (pageGateActive && connModel
                 && ConsoleAuthInterceptor.hasSharedWriteGrant(tid, gp));
@@ -187,6 +193,7 @@ public class ConsolePermissionsController {
         out.put("connModel", connModel);
         out.put("envPagesApplied", envPagesApplied);
         out.put("rawAllowed", rawAllowed);
+        out.put("devtoolsAllowed", devtoolsAllowed);
         out.put("sharedWriteAllowed", sharedWriteAllowed);
 
         List<Map<String, Object>> groups = new ArrayList<>();

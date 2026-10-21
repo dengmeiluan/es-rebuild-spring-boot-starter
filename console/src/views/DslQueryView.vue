@@ -710,6 +710,9 @@ const auth = useAuthStore();
 const canWrite = computed(() => auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/doc', store.target));
 /* 权限写门——按查询删除是破坏性批量删，归 ops 档（与删除文档同档） */
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/delete-by-query', store.target)); /* ：端点级连接感知——按查询删除走 delete-by-query 归属页 */
+/* 单条/批量删文档走 delete-by-id（shared: search/indices），与按查询删除的归属页不同：
+   入口可见性已在 ResultTable 按同一端点判定，执行体必须用同一门，不能拿 delete-by-query 误拦。 */
+const canDeleteDoc = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/delete-by-id', store.target));
 const router = useRouter();
 /* DSL 结果表对齐索引工作区——双层列头类型徽标（field-types 数据源） */
 const fieldTypes = useIndexFieldTypes(computed(() => store.pickedIdx || ''));
@@ -1847,7 +1850,7 @@ useModalEnter(newDocOpen, saveNewDoc, () => newDocValid.value && !newDocSaving.v
  facts 具名行与 critical 守卫语义原样迁入 ═══ */
 const resultTbl = ref<InstanceType<typeof ResultTable> | null>(null);
 async function askDeleteDoc(hit: SearchHit) {
-  if (!canOps.value) { store.notify('warning', '删除文档需专项或 ADMIN 角色'); return; }
+  if (!canDeleteDoc.value) { store.notify('warning', '删除文档需专项或 ADMIN 角色'); return; }
   if (!await askConfirm({
     title: '删除文档',
     message: '将删除该文档，此操作不可撤销。',
@@ -1866,7 +1869,7 @@ async function askDeleteDoc(hit: SearchHit) {
 }
 
 async function askBatchDelete(ids: string[]) {
-  if (!canOps.value) { store.notify('warning', '删除文档需专项或 ADMIN 角色'); return; }
+  if (!canDeleteDoc.value) { store.notify('warning', '删除文档需专项或 ADMIN 角色'); return; }
   if (!await askConfirm({
     title: '批量删除文档',
     message: '将永久删除勾选的全部文档，此操作不可撤销。',

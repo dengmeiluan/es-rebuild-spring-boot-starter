@@ -67,7 +67,9 @@ describe('963 SecurityView：用户/重绑执行体守卫与 facets 档位', () 
   it('doUpsert/doDelete 首行 canWriteUsers 守卫（委派非 ADMIN 不得写全局账号）', () => {
     expect(sec).toMatch(/async function doUpsert\(\) \{\n\s*if \(!canWriteUsers\.value\) return;/);
     expect(sec).toMatch(/async function doDelete\(username: string\) \{\n\s*if \(!canWriteUsers\.value\) return;/);
-    expect(sec).toContain("const canReadUsers = computed(() => auth.canEndpoint('admin', 'GET', '/internal/es/index/auth/users', store.target));");
+    expect(sec).toContain("if (auth.me == null) return true; /* 无鉴权部署既有语义 */");
+    expect(sec).toContain("return Array.isArray(gp) && gp.some(g => g.startsWith('conn:'))");
+    expect(sec).toContain("auth.canEndpoint('admin', 'GET', '/internal/es/index/auth/users', store.target)");
     expect(sec).toContain("const canWriteUsers = computed(() => canManageUsers.value && (!auth.me?.delegated || auth.isAdmin()));");
     expect(sec).toMatch(/async function loadUsers\(\) \{\n\s*if \(!canReadUsers\.value\) return;/);
   });
@@ -144,7 +146,7 @@ describe('963 auth.canEndpoint：只读 POST 对齐后端 isReadonlyPost', () =>
   });
 
   it('三条精确尾缀（index/query、index/system-query、probe）视为只读', () => {
-    expect(authSrc).toContain("!path.endsWith('/index/query') && !path.endsWith('/index/system-query') && !path.endsWith('/probe')");
+    expect(authSrc).toContain("!cleanPath.endsWith('/index/query') && !cleanPath.endsWith('/index/system-query') && !cleanPath.endsWith('/probe')");
   });
 
   const pages = {

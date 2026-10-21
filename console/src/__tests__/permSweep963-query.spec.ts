@@ -58,11 +58,12 @@ describe('963 DslQueryView：新建文档旁路通道写门', () => {
   });
 });
 
-describe('963 DslQueryView：删除三执行体 canOps 守卫', () => {
-  it('askDeleteDoc / askBatchDelete / askDeleteByQuery 首行 canOps 早退 + 统一报真', () => {
-    for (const sig of ['askDeleteDoc(hit: SearchHit)', 'askBatchDelete(ids: string[])', 'askDeleteByQuery()']) {
-      expect(dq).toContain(`async function ${sig} {\n  if (!canOps.value) { ${DENY_OPS}; return; }`);
+describe('963 DslQueryView：删除执行体按端点归属守卫', () => {
+  it('delete-by-id 与 delete-by-query 各用各的门 + 统一报真', () => {
+    for (const sig of ['askDeleteDoc(hit: SearchHit)', 'askBatchDelete(ids: string[])']) {
+      expect(dq).toContain(`async function ${sig} {\n  if (!canDeleteDoc.value) { ${DENY_OPS}; return; }`);
     }
+    expect(dq).toContain(`async function askDeleteByQuery() {\n  if (!canOps.value) { ${DENY_OPS}; return; }`);
     expect(dq.match(/删除文档需专项或 ADMIN 角色/g)?.length ?? 0, '三执行体同文案').toBe(3);
   });
 });
@@ -73,7 +74,7 @@ describe('963 ResultTable：行内编辑钮 + 本地写入/提交链', () => {
   });
 
   it('applyEdit 首行 canWrite 早退（双击/Enter/blur/Tab 的本地 pending 写入先拦）', () => {
-    expect(rt).toMatch(/function applyEdit\(\) \{\n  if \(!canWrite\.value\) return;/);
+    expect(rt).toMatch(/function applyEdit\(\) \{\n {2}if \(!canWrite\.value\) return;/);
   });
 
   it('commitPending 首行 canWrite 早退（点提交/Ctrl+S/Ctrl+Enter/预览弹层提交四入口汇聚同一执行体）', () => {

@@ -80,14 +80,18 @@ public class CrossClusterMigrateController {
      * 与"密码是否已解析"，<b>不返回密码值</b>。供"只知变量名、填不出实际值"场景确认解析结果。
      */
     @PostMapping("resolve-preview")
-    public Map<String, Object> resolvePreview(@RequestBody RemoteClusterConn conn) {
-        return migrateService.resolvePreview(conn);
+    public Map<String, Object> resolvePreview(@RequestBody RemoteClusterConn conn,
+                                              @RequestParam(required = false) String connId,
+                                              HttpServletRequest request) {
+        requireSourceWrite(connId, request);
+        return migrateService.resolvePreview(pick(conn, connId, request));
     }
 
     /** 迁移前预检：目标索引是否已存在（已存在则同名文档将跳过、结果是合并），供启动确认弹层前置警告。 */
     @PostMapping("preflight")
     public Map<String, Object> preflight(@RequestBody MigrateRequest request, HttpServletRequest http) {
         requireSourceWrite(request.getSrcConnId(), http);
+        requireDestWrite(http);
         return migrateService.preflight(request);
     }
 
@@ -95,6 +99,7 @@ public class CrossClusterMigrateController {
     @PostMapping("start")
     public Map<String, Object> start(@RequestBody MigrateRequest request, HttpServletRequest http) {
         requireSourceWrite(request.getSrcConnId(), http);
+        requireDestWrite(http);
         if (request.getSrcConnId() != null && !request.getSrcConnId().trim().isEmpty()) {
             request.setConn(storedConn(request.getSrcConnId(), http));
         }
@@ -146,7 +151,8 @@ public class CrossClusterMigrateController {
      * 迁移恒定写宿主，与数据面 X-Es-Target 无关，故不走 /cluster/** 数据面通道。
      */
     @GetMapping("dest-indices")
-    public List<Map<String, Object>> destIndices() {
+    public List<Map<String, Object>> destIndices(HttpServletRequest request) {
+        requireDestWrite(request);
         return migrateService.destIndices();
     }
 
@@ -164,6 +170,7 @@ public class CrossClusterMigrateController {
             }
         }
         requireSourceWrite(connId, request);
+        requireDestWrite(request);
         migrateService.resume(jobId, pick(conn, connId, request));
         return ok("jobId", jobId);
     }
@@ -192,6 +199,19 @@ public class CrossClusterMigrateController {
         if (!envPagesResolver.writeAllowed(connId.trim(), "xmigrate", principal.getGrantedPages())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "暂无源连接档案 " + connId.trim() + " 的迁移写权限");
+        }
+    }
+
+    /**
+     * 迁移的写入端恒为宿主/控制集群：连接模型下除了源连接写键，还必须持有宿主连接的
+     * xmigrate 写键。否则持 A 连接写键的用户可以把任意数据搬进宿主、覆盖宿主业务索引。
+     */
+    private void requireDestWrite(HttpServletRequest request) {
+        if (!connModel(request)) return;
+        ConsolePrincipal principal = principal(request);
+        if (principal == null || !envPagesResolver.writeAllowed("host", "xmigrate", principal.getGrantedPages())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "暂无宿主目标集群的迁移写权限（conn:host:w:xmigrate）");
         }
     }
 

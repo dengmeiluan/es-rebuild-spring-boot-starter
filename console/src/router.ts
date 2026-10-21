@@ -36,7 +36,7 @@ export function effectivePagesForTarget(
   targetId: string | null | undefined,
 ): Set<string> | null {
   if (grantedPages == null) return null;
-  const tid = targetId || 'host';
+  const tid = !targetId || String(targetId).toLowerCase() === 'host' ? 'host' : targetId;
   const out = new Set<string>();
   for (const g of grantedPages) {
     const m = CONN_KEY_RE.exec(g);
@@ -49,6 +49,14 @@ export function effectivePagesForTarget(
   return out;
 }
 
+/* 路由路径归一：Vue Router 对大小写/尾斜杠是宽松匹配（/INDICES、/indices/ 都能进 /indices），
+ 但页面门此前的精确串比对会 miss 后放行——深链/收藏即可绕过菜单门。判定前统一小写去尾斜杠。 */
+export function normalizeRoutePath(path: string): string {
+  const p = String(path || '').split('?')[0].split('#')[0];
+  const trimmed = p.length > 1 ? p.replace(/\/+$/, '') : p;
+  return trimmed.toLowerCase();
+}
+
 /* 2.5.0 页面级授权判定（纯函数，守卫/侧栏/App.vue 复核共用）：
  grantedPages=null 未启用（内置身份/宿主未下发/逃生阀/probe 未完成）→ 全量放行；
  非页面路由（/forbidden、404、legacy 重定向）不拦——否则全拒用户连提示页都进不去。
@@ -59,7 +67,7 @@ export function pageAllowed(
   targetId?: string | null,
 ): boolean {
   if (grantedPages == null) return true;
-  const item = NAV_ITEMS.find(n => n.path === path);
+  const item = NAV_ITEMS.find(n => n.path === normalizeRoutePath(path));
   if (!item) return true;
   const eff = effectivePagesForTarget(grantedPages, targetId);
   return eff !== null && eff.has(item.pageKey);
@@ -72,7 +80,7 @@ export function pageDeniedRedirect(
   targetId?: string | null,
 ) {
   if (pageAllowed(grantedPages, path, targetId)) return null;
-  const item = NAV_ITEMS.find(n => n.path === path)!;
+  const item = NAV_ITEMS.find(n => n.path === normalizeRoutePath(path))!;
   return { path: '/forbidden', query: { page: item.pageKey, name: item.name } };
 }
 
@@ -208,6 +216,6 @@ router.beforeEach((to) => {
 router.afterEach((to) => {
   /* 导航成功即清自愈标记，下次部署后仍可再自愈 */
   removeStoredRaw(sessionStorage, CHUNK_RETRY_KEY);
-  const item = NAV_ITEMS.find(n => n.path === to.path);
+  const item = NAV_ITEMS.find(n => n.path === normalizeRoutePath(to.path));
   document.title = (item ? item.name + ' · ' : '') + 'ES Console';
 });

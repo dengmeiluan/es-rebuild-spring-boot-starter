@@ -369,6 +369,31 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
+    public void 静态页白名单同样按共享读归属页裁决() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        java.util.Map<String, String> target = java.util.Collections.singletonMap("X-Es-Target", "c1");
+        /* static live 页读监控端点：monitor-metrics 前缀归 overview，但共享读表允许 live */
+        ConsoleAuthInterceptor live = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                Collections.singleton("live")), true, audit);
+        assertTrue("static live 可读 monitor-metrics",
+                live.preHandle(stubRequest("GET", "/internal/es/index/monitor-metrics", target),
+                        new StubResponse().proxy, null));
+        ConsoleAuthInterceptor lifecycle = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                Collections.singleton("lifecycle")), true, audit);
+        assertTrue("static lifecycle 可读 ilm/explain",
+                lifecycle.preHandle(stubRequest("GET", "/internal/es/index/cluster/ilm/explain", target),
+                        new StubResponse().proxy, null));
+        /* static overview-only 仍不得直读 query/search 业务数据 */
+        ConsoleAuthInterceptor overviewOnly = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                Collections.singleton("overview")), true, audit);
+        StubResponse denied = new StubResponse();
+        assertFalse("static overview 不得读 query",
+                overviewOnly.preHandle(stubRequest("POST", "/internal/es/index/cluster/query?index=orders", target),
+                        denied.proxy, null));
+        assertEquals(403, denied.status);
+    }
+
+    @Test
     public void 共享读端点按归属页读键裁决_空集全拒() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         java.util.Map<String, String> target = java.util.Collections.singletonMap("X-Es-Target", "c1");
@@ -616,15 +641,12 @@ public class ConsoleAuthInterceptorPageAuthTest {
         assertNull("拒绝路径在 preHandle 内落审计前不产生动作", audit.action);
     }
 
-    /* ------------- ·实报打通：共享低危写端点认 conn 写键（角色×授权形态×端点档位全矩阵） -------------
-       实报：飞书授权用户（宿主角色映射恒 VIEWER）持 QA 集群写键，表格编辑提交
-       （POST /cluster/update-partial，共享端点无页面归属）被角色门拦——前端 canWriteOn 认
-       conn:{tid}:w:* 通配写键开放编辑入口，后端共享端点却不认写键 = 有权限写不进。
-       打通语义（已被 584 升格取代）：conn 模型写键持有者可执行「缺省低危写档」的共享端点；
-       584 起不限档位（任意写键放行共享写，ADMIN 管理域除外），strict 已随语义升格整体退役。
-       语义升格（裁决「按照角色菜单配置的勾选来，按照真正的连接权限菜单 spi 来」）：
-       conn 模型下勾选即权限——共享写端点不再限 OPERATOR 档（任意写键放行，ADMIN 管理域除外），
-       strict 双因子开关整体退役（角色门在连接模型下不复辟）。 */
+    /* ------------- 共享写端点按真实归属页写键裁决（963 收口后的当前语义） -------------
+       历史：飞书授权用户（宿主角色映射恒 VIEWER）持 QA 集群写键，表格编辑提交
+       （POST /cluster/update-partial）曾被角色门误拦；584 曾放宽为「任意连接写键放行共享写」。
+       963 起收口：共享写端点必须持有真实使用该端点的页面写键（search/indices/ilm 等），
+       不再按「任意写键」放行——防止 optimizer 写键删文档、改 ILM 策略。
+       连接模型下页面写键是最终裁决，角色门不复辟；未登记共享写默认拒绝。 */
 
     @Test
     public void 打通_共享写要求真实页面写键_表格编辑提交() throws Exception {

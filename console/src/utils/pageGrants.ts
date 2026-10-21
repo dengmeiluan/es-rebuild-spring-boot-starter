@@ -16,9 +16,10 @@ export interface GrantSummary {
   connModel: boolean;
   /** 按连接分组的授权明细（连接模型时） */
   conns: ConnGrant[];
-  /** 连接模型汇总（visible 去重计数） */
+  /** 汇总：visible=去重后的页面 key 数（含全局静态页）；writable=去重后的可写页面 key 数 */
   totals: { visible: number; writable: number };
-  /** 静态键（非连接模型时原样返回；null=SPI 未启用） */
+  /** 全局静态页（无 conn: 前缀）——连接模型混合授权时也必须展示，不能丢；
+   *  null=SPI 未启用（grantedPages=null） */
   staticKeys: string[] | null;
 }
 
@@ -26,9 +27,10 @@ export function summarizeGrants(grantedPages: string[] | null): GrantSummary {
   if (grantedPages == null) {
     return { connModel: false, conns: [], totals: { visible: 0, writable: 0 }, staticKeys: null };
   }
+  const staticKeys = grantedPages.filter(k => typeof k === 'string' && !k.startsWith('conn:'));
   const connKeys = grantedPages.filter(k => typeof k === 'string' && k.startsWith('conn:'));
   if (connKeys.length === 0) {
-    return { connModel: false, conns: [], totals: { visible: 0, writable: 0 }, staticKeys: [...grantedPages] };
+    return { connModel: false, conns: [], totals: { visible: 0, writable: 0 }, staticKeys: [...staticKeys] };
   }
 
   const conns = new Map<string, ConnGrant>();
@@ -57,16 +59,17 @@ export function summarizeGrants(grantedPages: string[] | null): GrantSummary {
   }
 
   const list = [...conns.values()].sort((a, b2) => a.connId.localeCompare(b2.connId));
-  const visibleSet = new Set<string>();
-  let writable = 0;
+  const visibleSet = new Set<string>(staticKeys);
+  const writableSet = new Set<string>();
   for (const g of list) {
     for (const p of g.visible) visibleSet.add(p);
-    writable += g.writable.length;
+    for (const p of g.writable) writableSet.add(p);
   }
   return {
     connModel: true,
     conns: list,
-    totals: { visible: visibleSet.size, writable },
-    staticKeys: null,
+    /* 页面 key 去重计数：同一页在多个连接可写只算一页，保证「可写 ≤ 可见」 */
+    totals: { visible: visibleSet.size, writable: writableSet.size },
+    staticKeys: [...staticKeys],
   };
 }

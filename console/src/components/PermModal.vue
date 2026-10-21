@@ -15,11 +15,15 @@
       <!-- 高危档位：raw 直连 / 共享写端点 -->
       <div class="pm-sec-t">高危档位</div>
       <div class="pm-cap" data-test="perm-raw">
-        <span class="pm-cap-k">REST 直连 / Dev Tools 执行</span>
+        <span class="pm-cap-k">REST 直连</span>
         <span class="pm-cap-v" :class="d.rawAllowed ? 'is-ok' : 'is-no'">{{ d.rawAllowed ? '可用' : '不可用（需 ADMIN 或 rest 页写权限）' }}</span>
       </div>
-      <div v-if="d.target !== 'host'" class="pm-cap">
-        <span class="pm-cap-k">共享写端点（表格编辑 / 文档增删等）</span>
+      <div class="pm-cap" data-test="perm-devtools">
+        <span class="pm-cap-k">Dev Tools 执行</span>
+        <span class="pm-cap-v" :class="d.devtoolsAllowed ? 'is-ok' : 'is-no'">{{ d.devtoolsAllowed ? '可用' : '不可用（需 ADMIN、devtools 或 rest 页写权限）' }}</span>
+      </div>
+      <div class="pm-cap">
+        <span class="pm-cap-k">共享写端点（文档/任务/ILM/DevTools 等归属页）</span>
         <span class="pm-cap-v" :class="d.sharedWriteAllowed ? 'is-ok' : 'is-no'">{{ d.sharedWriteAllowed ? '可用' : '不可用' }}</span>
       </div>
 

@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -97,6 +98,8 @@ public class EsIndexAdmin {
 
     private boolean isControlIndexName(String n) {
         if (n == null || n.isEmpty()) return false;
+        /* 点号索引是 ES 系统/隐藏索引（.security/.watches/.kibana 等），通用数据面一律不得触达 */
+        if (n.startsWith(".")) return true;
         if (n.startsWith(CONTROL_INDEX_PREFIX)
                 || n.equals("es_rebuild_adhoc_job")
                 || n.startsWith("es_rebuild_adhoc_job-")
@@ -180,14 +183,19 @@ public class EsIndexAdmin {
 
     /** 精确索引名守卫；校验器临时索引放行（只用于建/删/存在性检查）。 */
     void guardIndexName(String name) {
-        if (name == null) return;
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("索引名不能为空");
+        }
         String n = name.trim().toLowerCase(Locale.ROOT);
-        if (n.isEmpty() || n.startsWith(VALIDATE_INDEX_PREFIX)) return;
+        if (n.startsWith(VALIDATE_INDEX_PREFIX)) return;
         if ("_all".equals(n) || "*".equals(n)) {
             throw new ControlPlaneGuardException("不允许对全量索引执行该操作（控制面索引不可触达）：" + name);
         }
         if (n.contains("..") || n.indexOf('/') >= 0 || n.indexOf('\\') >= 0) {
             throw new ControlPlaneGuardException("索引名含目录穿越片段，已拒绝：" + name);
+        }
+        if (n.indexOf(':') >= 0) {
+            throw new ControlPlaneGuardException("索引名不允许跨集群表达式：" + name);
         }
         if (isControlIndexName(n)) {
             throw new ControlPlaneGuardException("控制面索引不对通用数据接口开放：" + name);
@@ -199,21 +207,36 @@ public class EsIndexAdmin {
      * 控制索引名的模式（{@code es_*}、{@code e*}、宿主自定义名前缀）一律拒绝——
      * 防止“查全部”把控制索引带出。
      */
-    void guardIndexPattern(String pattern) {
+    public void guardIndexPattern(String pattern) {
         if (pattern == null) return;
+        boolean anyPositive = false;
         for (String raw : pattern.split(",")) {
             String p = raw.trim().toLowerCase(Locale.ROOT);
-            if (p.startsWith("-")) p = p.substring(1).trim();
+            boolean excluded = p.startsWith("-");
+            if (excluded) p = p.substring(1).trim();
             if (p.isEmpty()) continue;
+            if (!excluded) anyPositive = true;
             if (p.contains("..") || p.indexOf('/') >= 0 || p.indexOf('\\') >= 0) {
                 throw new ControlPlaneGuardException("索引模式含目录穿越片段，已拒绝：" + pattern);
+            }
+            if (p.indexOf(':') >= 0) {
+                throw new ControlPlaneGuardException("索引模式不允许跨集群表达式：" + pattern);
             }
             if ("_all".equals(p) || "*".equals(p)) {
                 throw new ControlPlaneGuardException("不允许对全量索引执行该操作（控制面索引不可触达）：" + pattern);
             }
             if (p.startsWith(VALIDATE_INDEX_PREFIX)) continue;
+            if (p.startsWith(".")) {
+                throw new ControlPlaneGuardException("系统/隐藏索引不对通用数据接口开放：" + pattern);
+            }
             if (isControlIndexName(p)) {
                 throw new ControlPlaneGuardException("控制面索引不对通用数据接口开放：" + pattern);
+            }
+            /* 后缀型控制索引（*_es_rebuild_lock / *_es_xmigrate_job）无法靠“字面前缀”判断，
+               模式里出现控制面词根时直接拒绝，防 logs*_es_rebuild_lock* 这类通配命中。 */
+            if (p.contains(CONTROL_INDEX_PREFIX) || p.contains("es_rebuild_adhoc_job")
+                    || p.contains("_es_rebuild_lock") || p.contains("_es_xmigrate_job")) {
+                throw new ControlPlaneGuardException("索引模式含控制面词根，已拒绝：" + pattern);
             }
             int wild = -1;
             for (int i = 0; i < p.length(); i++) {
@@ -226,6 +249,24 @@ public class EsIndexAdmin {
                 throw new ControlPlaneGuardException("索引模式可能命中控制面索引，已拒绝：" + pattern);
             }
         }
+        /* 纯排除表达式（如 index=-logs）在 ES 里等价于“全量减 logs”，会把控制面索引带出。 */
+        if (!anyPositive) {
+            throw new ControlPlaneGuardException("索引模式不能只包含排除项（会隐式全量）：" + pattern);
+        }
+    }
+
+    /** 对外数据面端点专用：校验器临时索引也不得被用户态请求读写（内部校验器仍走 guardIndexPattern）。 */
+    private void guardPublicIndexPattern(String pattern) {
+        if (pattern != null) {
+            for (String raw : pattern.split(",")) {
+                String p = raw.trim().toLowerCase(Locale.ROOT);
+                if (p.startsWith("-")) p = p.substring(1).trim();
+                if (p.startsWith(VALIDATE_INDEX_PREFIX)) {
+                    throw new ControlPlaneGuardException("校验器临时索引不对用户态接口开放：" + pattern);
+                }
+            }
+        }
+        guardIndexPattern(pattern);
     }
 
     /** 请求体守卫：SQL / reindex / bulk / 模板 / ILM / 快照 body 中一旦出现控制面索引名即拒绝。 */
@@ -274,11 +315,17 @@ public class EsIndexAdmin {
     void guardSql(String sql) {
         guardControlBody(sql);
         if (sql == null || sql.isEmpty()) return;
+        /* ES 执行的是 JSON 解码后的 SQL，且解析器会忽略注释与反引号：
+           先按同一语义归一，再抽取 FROM/JOIN，防 \u0065*、FROM/**\/e*、`e*` 绕过通配守卫。 */
+        String normalized = decodeJsonUnicodeEscapes(sql)
+                .replaceAll("(?s)/\\*.*?\\*/", " ")
+                .replaceAll("(?m)(^|[\\s,(])--[^\\r\\n]*", "$1")
+                .replace('`', ' ');
         java.util.regex.Matcher m = java.util.regex.Pattern
                 .compile("(?i)\\b(?:FROM|JOIN)\\s+\"?([\\w\\-.*?,]+)\"?")
-                .matcher(sql);
+                .matcher(normalized);
         while (m.find()) {
-            guardIndexPattern(m.group(1));
+            guardPublicIndexPattern(m.group(1));
         }
     }
 
@@ -303,10 +350,10 @@ public class EsIndexAdmin {
         if (!(node instanceof Map)) return;
         Object index = ((Map<String, Object>) node).get("index");
         if (index instanceof String) {
-            guardIndexPattern((String) index);
+            guardPublicIndexPattern((String) index);
         } else if (index instanceof java.util.List) {
             for (Object one : (java.util.List<Object>) index) {
-                if (one instanceof String) guardIndexPattern((String) one);
+                if (one instanceof String) guardPublicIndexPattern((String) one);
             }
         }
     }
@@ -329,7 +376,7 @@ public class EsIndexAdmin {
             return; // 非 JSON 交由 ES 原始报错
         }
         if (patterns instanceof String) {
-            guardIndexPattern((String) patterns);
+            guardPublicIndexPattern((String) patterns);
         } else if (patterns instanceof java.util.List) {
             java.util.List<?> list = (java.util.List<?>) patterns;
             if (list.isEmpty()) throw new IllegalArgumentException("index_patterns 不能为空");
@@ -337,7 +384,7 @@ public class EsIndexAdmin {
                 if (!(one instanceof String) || ((String) one).trim().isEmpty()) {
                     throw new IllegalArgumentException("index_patterns 元素必须是非空字符串");
                 }
-                guardIndexPattern((String) one);
+                guardPublicIndexPattern((String) one);
             }
         } else if (patterns != null) {
             throw new IllegalArgumentException("index_patterns 必须是字符串或字符串数组");
@@ -357,6 +404,13 @@ public class EsIndexAdmin {
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> root = OBJECT_MAPPER.readValue(bodyJson, Map.class);
+            if (truthy(root.get("include_global_state"))) {
+                throw new ControlPlaneGuardException("非管理员恢复快照不得包含全局状态（集群配置/模板/ILM）");
+            }
+            Object featureStates = root.get("feature_states");
+            if (featureStates instanceof java.util.Collection && !((java.util.Collection<?>) featureStates).isEmpty()) {
+                throw new ControlPlaneGuardException("非管理员恢复快照不得包含 feature_states（安全/告警等系统数据）");
+            }
             indices = root.get("indices");
         } catch (IllegalArgumentException e) {
             throw e;
@@ -366,7 +420,7 @@ public class EsIndexAdmin {
         if (indices instanceof String) {
             String s = ((String) indices).trim();
             if (s.isEmpty()) throw new IllegalArgumentException("恢复快照 indices 不能为空");
-            guardIndexPattern(s);
+            guardPublicIndexPattern(s);
         } else if (indices instanceof java.util.List) {
             java.util.List<?> list = (java.util.List<?>) indices;
             if (list.isEmpty()) throw new IllegalArgumentException("恢复快照 indices 不能为空");
@@ -374,7 +428,7 @@ public class EsIndexAdmin {
                 if (!(one instanceof String) || ((String) one).trim().isEmpty()) {
                     throw new IllegalArgumentException("恢复快照 indices 元素必须是非空字符串");
                 }
-                guardIndexPattern((String) one);
+                guardPublicIndexPattern((String) one);
             }
         } else {
             throw new ControlPlaneGuardException("恢复快照必须显式指定 indices（不允许恢复全部）");
@@ -808,6 +862,7 @@ public class EsIndexAdmin {
      * 自由 query DSL：用 raw JSON 查任意索引。仅用于运维调试。
      */
     public Map<String, Object> queryDsl(String indexOrAlias, String dslJson, int size) throws IOException {
+        guardIndexPattern(indexOrAlias);
         String body = dslJson;
         if (body == null || body.trim().isEmpty()) {
             body = "{\"query\":{\"match_all\":{}},\"size\":" + size + "}";
@@ -1115,6 +1170,7 @@ public class EsIndexAdmin {
      * @return ES 响应（含 acknowledged 字段）
      */
     public Map<String, Object> putMapping(String index, String mappingJson) throws IOException {
+        guardIndexPattern(index);
         Map<String, Object> result = putMappingVersionAware(index, mappingJson);
         logger.info("[EsIndexAdmin] putMapping index={} body={}", index, mappingJson);
         return result;
@@ -1244,6 +1300,7 @@ public class EsIndexAdmin {
      * 返回完整原始响应 JSON 文本（含 profile breakdown 段），由前端渲染火焰树。
      */
     public String profile(String indexOrAlias, String dslJson) throws IOException {
+        guardIndexPattern(indexOrAlias);
         String body = withProfileFlag(dslJson);
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("POST", "/" + indexOrAlias + "/_search");
         req.setJsonEntity(body);
@@ -1256,6 +1313,7 @@ public class EsIndexAdmin {
      * 用于 delete-by-query 等高危操作前的「将影响 N 条」预估。
      */
     public Map<String, Object> count(String indexOrAlias, String dslJson) throws IOException {
+        guardIndexPattern(indexOrAlias);
         Object query = null;
         if (dslJson != null && !dslJson.trim().isEmpty()) {
             try {
@@ -1290,35 +1348,317 @@ public class EsIndexAdmin {
         return raw(method, path, body);
     }
 
-    /** 非 ADMIN raw 的控制面守卫；独立方法便于逐请求形态单测（不触 ES）。 */
+    /**
+     * 非 ADMIN raw 的守卫；独立方法便于逐请求形态单测（不触 ES）。
+     *
+     * <p>非 ADMIN 的 raw 只保留<b>数据面</b>能力：业务索引上的检索/文档增删改/批量/
+     * delete-by-query/reindex/别名与模板的受控写入。集群管理、系统配置、账号安全、
+     * 快照仓库、脚本/管道、索引结构管理一律拒绝——这些操作在控制台都有各自的页面写键，
+     * 不能借 devtools/rest 页的写键越权。路径先做一次规范化再判定，尾斜杠、重复斜杠、
+     * 百分号编码、矩阵参数不能改变路由语义。</p>
+     */
     void guardRawGuarded(String method, String path, String body) {
-        guardControlPath(path);
+        String canonical = canonicalRawPath(path);
+        String p = rawPathOnly(canonical);
+        String query = rawQueryOnly(canonical);
         guardControlBody(body);
-        if (path == null || path.isEmpty()) return;
-        int q = path.indexOf('?');
-        String p = q < 0 ? path : path.substring(0, q);
-        String query = q < 0 ? "" : path.substring(q + 1);
-        /* 结构化端点已有专用守卫；raw 通道必须复用同一套，不能只靠字面扫描。 */
+        List<String> segments = rawSegments(p);
+        if (!segments.isEmpty()) {
+            String first = segments.get(0);
+            if ("_all".equalsIgnoreCase(first)) {
+                throw new ControlPlaneGuardException("不允许对全量索引执行该操作（控制面索引不可触达）：_all");
+            }
+            if (!first.startsWith("_")) {
+                guardRawIndexToken(first);
+            } else if (segments.size() > 1) {
+                /* 系统 API 的第二段以后同样可能是索引名/别名/仓库名——逐段做控制面判定，
+                   防止 _cat/indices/es_console*、_cluster/state/metadata/es_console_users
+                   这类“首段是 _ 系统词”的读取把控制面元数据带出。 */
+                for (int i = 1; i < segments.size(); i++) {
+                    String seg = segments.get(i);
+                    if (!seg.startsWith("_")) guardRawIndexToken(seg);
+                }
+            }
+        }
+        guardRawQueryIndexRefs(query);
+        boolean write = !"GET".equalsIgnoreCase(method) && !"HEAD".equalsIgnoreCase(method)
+                && !"OPTIONS".equalsIgnoreCase(method);
+        boolean system = !segments.isEmpty() && segments.get(0).startsWith("_");
+        if (system) {
+            if (write) {
+                guardRawSystemWrite(method, p, query, body);
+            } else {
+                guardRawSystemRead(p, query);
+            }
+        } else if (write) {
+            guardRawIndexWrite(p, body);
+        }
+        /* 结构化端点专用守卫；raw 通道必须复用同一套，不能只靠字面扫描。 */
         if (p.equals("/_reindex") || p.startsWith("/_reindex/")) {
             guardReindexBody(body);
+            guardReindexRemote(body);
         } else if (p.startsWith("/_snapshot/") && p.endsWith("/_restore")) {
             guardRestoreBody(body);
-        } else if (p.equals("/_aliases") || p.startsWith("/_aliases/")) {
+        } else if (p.equals("/_aliases")) {
             guardAliasActionsBody(body);
         } else if (p.startsWith("/_index_template") || p.startsWith("/_component_template")
                 || p.startsWith("/_template")) {
+            /* 组件模板没有 index_patterns 是合法形态；索引/旧模板缺 patterns 在部分 ES 版本
+               等同 catch-all，非 ADMIN 必须显式给出业务模式。 */
+            if (!p.startsWith("/_component_template")) {
+                guardIndexTemplatePatternsPresent(body);
+            }
             guardIndexTemplateBody(body);
-        } else if (p.equals("/_sql") || (p.startsWith("/_sql/") && !p.equals("/_sql/close"))) {
+        } else if (p.equals("/_sql") || (p.startsWith("/_sql/") && !p.equals("/_sql/close"))
+                || p.equals("/_xpack/sql") || (p.startsWith("/_xpack/sql/") && !p.equals("/_xpack/sql/close"))) {
             guardSql(body);
         } else if (p.equals("/_search") || p.equals("/_search/template")
-                || p.equals("/_count") || p.equals("/_async_search")) {
+                || p.equals("/_count") || p.equals("/_async_search") || p.equals("/_field_caps")) {
             guardAllIndexRead(query, p);
         } else if (p.equals("/_msearch") || p.equals("/_msearch/template")) {
             guardMsearchBody(body);
         } else if (p.equals("/_mget")) {
             guardMgetBody(body);
+        } else if (p.equals("/_bulk")) {
+            guardBulkBody(body);
         }
     }
+
+    /** raw 系统级读：数据面查询照旧，但账号/快照仓库/脚本/管道等敏感配置不向非 ADMIN 开放。 */
+    private void guardRawSystemRead(String p, String query) {
+        if (p.equals("/_security/_authenticate") || p.equals("/_xpack/security/_authenticate")) return;
+        for (String deny : RAW_SYSTEM_READ_DENY) {
+            if (p.equals(deny) || p.startsWith(deny + "/")) {
+                throw new ControlPlaneGuardException("非管理员 raw 不允许读取系统管理接口：" + p);
+            }
+        }
+        if (p.equals("/_search") || p.equals("/_search/template") || p.equals("/_count")
+                || p.equals("/_async_search") || p.equals("/_field_caps")) {
+            guardAllIndexRead(query, p);
+        }
+    }
+
+    /**
+     * raw 系统级写：只放行数据面 API（检索/文档/批量/reindex/SQL/受控别名与模板/快照恢复），
+     * 集群设置、reroute、快照创建删除、ILM/SLM、脚本、ingest、security、watcher、transform
+     * 等一律拒绝。所有放行项仍会走各自的结构化守卫。
+     */
+    private void guardRawSystemWrite(String method, String p, String query, String body) {
+        boolean dataPlane = p.equals("/_bulk")
+                || p.equals("/_msearch") || p.equals("/_msearch/template")
+                || p.equals("/_mget")
+                || p.equals("/_search") || p.equals("/_search/template") || p.equals("/_search/scroll")
+                || p.equals("/_count") || p.equals("/_async_search") || p.equals("/_field_caps")
+                || p.equals("/_analyze") || p.equals("/_render/template")
+                || p.equals("/_sql") || p.equals("/_sql/close")
+                || p.equals("/_xpack/sql") || p.equals("/_xpack/sql/close")
+                || p.equals("/_reindex") || p.equals("/_aliases");
+        if (p.startsWith("/_sql/") || p.startsWith("/_xpack/sql/")) dataPlane = true;
+        if (p.startsWith("/_snapshot/") && p.endsWith("/_restore")) dataPlane = true;
+        boolean templateWrite = p.startsWith("/_index_template/") || p.startsWith("/_component_template/")
+                || p.startsWith("/_template/");
+        if (templateWrite) {
+            if ("DELETE".equalsIgnoreCase(method)) {
+                throw new ControlPlaneGuardException("非管理员 raw 不允许删除集群模板：" + p);
+            }
+            dataPlane = true;
+        }
+        if (!dataPlane) {
+            throw new ControlPlaneGuardException("非管理员 raw 不允许执行集群/系统管理写操作：" + p);
+        }
+        if (p.equals("/_search") || p.equals("/_count") || p.equals("/_async_search")
+                || p.equals("/_search/template") || p.equals("/_field_caps")) {
+            guardAllIndexRead(query, p);
+        }
+    }
+
+    /** 索引路径上的写：只放行文档级数据操作；建删索引/mapping/settings/alias/close/forcemerge 等交给带页写键的专用端点。 */
+    private void guardRawIndexWrite(String p, String body) {
+        List<String> segments = rawSegments(p);
+        if (segments.size() < 2) {
+            throw new ControlPlaneGuardException("非管理员 raw 不允许创建/删除索引：" + p);
+        }
+        String defaultIndex = segments.get(0);
+        String op = segments.get(1).toLowerCase(Locale.ROOT);
+        if (!RAW_INDEX_DATA_WRITE_OPS.contains(op)) {
+            throw new ControlPlaneGuardException("非管理员 raw 不允许执行索引结构/管理写操作：" + p);
+        }
+        /* 带索引前缀的 _msearch/_mget/_bulk 同样要逐条校验 body；否则
+           /logs/_msearch 的 index 头可写 * 或控制面索引，绕过根路径守卫。 */
+        if ("_msearch".equals(op) || "_msearch/template".equals(op)) {
+            guardMsearchBody(body, defaultIndex);
+        } else if ("_mget".equals(op)) {
+            guardMgetBody(body);
+        } else if ("_bulk".equals(op)) {
+            guardBulkBody(body);
+        }
+    }
+
+    /** 请求体里逐行 _index 校验（bulk 动作行不能借 unicode 转义/数组形态夹带控制面）。 */
+    private void guardBulkBody(String body) {
+        if (body == null || body.trim().isEmpty()) return;
+        String[] lines = body.split("\\r?\\n", -1);
+        for (String line : lines) {
+            if (line.trim().isEmpty()) continue;
+            final Map<?, ?> action;
+            try {
+                action = OBJECT_MAPPER.readValue(line, Map.class);
+            } catch (Exception e) {
+                /* 非动作行（文档行）或非法 JSON 交由 ES 原始报错；字面控制面名已由 guardControlBody 拦截 */
+                continue;
+            }
+            for (Object v : action.values()) {
+                if (!(v instanceof Map)) continue;
+                Object idx = ((Map<?, ?>) v).get("_index");
+                if (idx instanceof String) {
+                    guardRawIndexToken((String) idx);
+                }
+            }
+        }
+    }
+
+    /** 索引/旧模板必须显式给出 index_patterns——缺省在部分 ES 版本等同 catch-all。 */
+    private void guardIndexTemplatePatternsPresent(String body) {
+        if (body == null || body.trim().isEmpty()) {
+            throw new ControlPlaneGuardException("索引模板必须显式指定 index_patterns");
+        }
+        try {
+            Map<?, ?> root = OBJECT_MAPPER.readValue(body, Map.class);
+            if (!root.containsKey("index_patterns")) {
+                throw new ControlPlaneGuardException("索引模板必须显式指定 index_patterns（不允许缺省 catch-all）");
+            }
+        } catch (ControlPlaneGuardException e) {
+            throw e;
+        } catch (Exception e) {
+            /* 非 JSON 交由 ES 原始报错；字面控制面名已由 guardControlBody 拦截 */
+        }
+    }
+
+    /** reindex 的 remote 源会把服务端当 SSRF 跳板/读取远端凭据，非 ADMIN 一律拒绝。 */
+    private void guardReindexRemote(String body) {
+        if (body == null || body.trim().isEmpty()) return;
+        try {
+            Map<?, ?> root = OBJECT_MAPPER.readValue(body, Map.class);
+            Object source = root.get("source");
+            if (source instanceof Map && ((Map<?, ?>) source).get("remote") != null) {
+                throw new ControlPlaneGuardException("非管理员 reindex 不允许使用 remote 源");
+            }
+        } catch (ControlPlaneGuardException e) {
+            throw e;
+        } catch (Exception ignore) {
+            /* 非 JSON 交由 ES 原始报错；字面控制面名已由 guardControlBody 拦截 */
+        }
+    }
+
+    /** raw 查询串中的 index/indices 目标同样过控制面与全量通配守卫。 */
+    private void guardRawQueryIndexRefs(String query) {
+        if (query == null || query.isEmpty()) return;
+        for (String pair : query.split("&")) {
+            int eq = pair.indexOf('=');
+            if (eq < 0) continue;
+            final String key;
+            final String value;
+            try {
+                /* 参数名同样要解码：?%69ndex=... 在 ES 侧等价于 index，不能按字面 key 漏过 */
+                key = java.net.URLDecoder.decode(pair.substring(0, eq), "UTF-8");
+                value = java.net.URLDecoder.decode(pair.substring(eq + 1), "UTF-8");
+            } catch (Exception e) {
+                throw new ControlPlaneGuardException("索引参数编码非法，已拒绝：" + pair);
+            }
+            if (!"index".equals(key) && !"indices".equals(key)) continue;
+            guardRawIndexToken(value);
+        }
+    }
+
+    /** 索引 token（可逗号列表/排除项）：拒绝跨集群冒号、点号系统索引、校验临时索引与控制面。 */
+    private void guardRawIndexToken(String token) {
+        if (token == null || token.trim().isEmpty()) return;
+        boolean anyPositive = false;
+        for (String raw : token.split(",")) {
+            String part = raw.trim();
+            boolean excluded = part.startsWith("-");
+            if (excluded) part = part.substring(1).trim();
+            if (part.isEmpty()) continue;
+            if (!excluded) anyPositive = true;
+            String lower = part.toLowerCase(Locale.ROOT);
+            if (lower.indexOf(':') >= 0) {
+                throw new ControlPlaneGuardException("非管理员 raw 不允许跨集群索引表达式：" + part);
+            }
+            if (lower.startsWith(".") || lower.startsWith(VALIDATE_INDEX_PREFIX)) {
+                throw new ControlPlaneGuardException("非管理员 raw 不允许访问系统/校验索引：" + part);
+            }
+            guardIndexPattern(lower);
+        }
+        if (!anyPositive) {
+            throw new ControlPlaneGuardException("索引表达式不能只包含排除项（会隐式全量）：" + token);
+        }
+    }
+
+    /** raw 路径规范化：单次严格解码每个路径段、去矩阵参数、折叠空段与尾斜杠；失败 fail-closed。 */
+    static String canonicalRawPath(String path) {
+        if (path == null || !path.startsWith("/")) {
+            throw new IllegalArgumentException("path 非法：须以 / 开头");
+        }
+        if (path.indexOf('\\') >= 0 || path.indexOf('\0') >= 0) {
+            throw new ControlPlaneGuardException("path 非法：含反斜杠或 NUL");
+        }
+        int q = path.indexOf('?');
+        String pathOnly = q < 0 ? path : path.substring(0, q);
+        String query = q < 0 ? "" : path.substring(q);
+        StringBuilder out = new StringBuilder(pathOnly.length());
+        for (String raw : pathOnly.split("/", -1)) {
+            if (raw.isEmpty()) continue;
+            String decoded;
+            try {
+                decoded = java.net.URLDecoder.decode(raw.replace("+", "%2B"), "UTF-8");
+            } catch (Exception e) {
+                throw new ControlPlaneGuardException("path 编码非法，已拒绝：" + raw);
+            }
+            decoded = java.util.regex.Pattern.compile(";[^/]*").matcher(decoded).replaceAll("");
+            if (decoded.isEmpty() || ".".equals(decoded)) continue;
+            if ("..".equals(decoded)) {
+                throw new ControlPlaneGuardException("path 含目录穿越片段，已拒绝");
+            }
+            if (decoded.indexOf('/') >= 0 || decoded.indexOf('\\') >= 0 || decoded.indexOf('\0') >= 0) {
+                throw new ControlPlaneGuardException("path 段含非法分隔符，已拒绝：" + decoded);
+            }
+            out.append('/').append(decoded);
+        }
+        String p = out.length() == 0 ? "/" : out.toString();
+        return p + query;
+    }
+
+    private static String rawPathOnly(String canonical) {
+        int q = canonical.indexOf('?');
+        return q < 0 ? canonical : canonical.substring(0, q);
+    }
+
+    private static String rawQueryOnly(String canonical) {
+        int q = canonical.indexOf('?');
+        return q < 0 ? "" : canonical.substring(q + 1);
+    }
+
+    private static List<String> rawSegments(String pathOnly) {
+        List<String> out = new java.util.ArrayList<>();
+        for (String s : pathOnly.split("/")) {
+            if (!s.isEmpty()) out.add(s);
+        }
+        return out;
+    }
+
+    /** 系统级读禁止清单：账号/快照仓库凭据/脚本/管道/变更数据捕获/远端连接等配置面。 */
+    private static final java.util.List<String> RAW_SYSTEM_READ_DENY = java.util.Arrays.asList(
+            "/_security", "/_xpack/security", "/_snapshot", "/_watcher", "/_xpack/watcher",
+            "/_scripts", "/_ingest", "/_ilm", "/_xpack/ilm", "/_slm", "/_ml", "/_xpack/ml",
+            "/_transform", "/_xpack/transform", "/_rollup", "/_xpack/rollup",
+            "/_ccr", "/_xpack/ccr", "/_remote", "/_nodes", "/_cluster/state",
+            "/_mapping", "/_settings", "/_cat/repositories", "/_cat/snapshots");
+
+    /** 索引级数据面写操作白名单（其余索引结构/管理写一律拒绝）。 */
+    private static final java.util.Set<String> RAW_INDEX_DATA_WRITE_OPS = new java.util.HashSet<>(
+            java.util.Arrays.asList("_doc", "_create", "_update", "_bulk", "_delete_by_query",
+                    "_update_by_query", "_search", "_count", "_msearch", "_mget", "_explain",
+                    "_validate", "_field_caps", "_termvectors", "_analyze", "_pit", "_search_shards"));
 
     /** 无索引路径的系统级查询默认覆盖全部索引——必须显式给 index/indices 且不得命中控制面。 */
     private void guardAllIndexRead(String query, String endpoint) {
@@ -1326,16 +1666,17 @@ public class EsIndexAdmin {
         for (String pair : query.split("&")) {
             int eq = pair.indexOf('=');
             if (eq < 0) continue;
-            String key = pair.substring(0, eq);
-            if (!"index".equals(key) && !"indices".equals(key)) continue;
+            final String key;
             String value = pair.substring(eq + 1);
             try {
+                key = java.net.URLDecoder.decode(pair.substring(0, eq), "UTF-8");
                 value = java.net.URLDecoder.decode(value, "UTF-8");
             } catch (Exception e) {
                 throw new ControlPlaneGuardException("索引参数编码非法，已拒绝：" + value);
             }
+            if (!"index".equals(key) && !"indices".equals(key)) continue;
             if (value.trim().isEmpty()) continue;
-            guardIndexPattern(value);
+            guardPublicIndexPattern(value);
             scoped = true;
         }
         if (!scoped) {
@@ -1345,6 +1686,10 @@ public class EsIndexAdmin {
 
     /** _msearch NDJSON：每个索引头必须显式且不得是控制面/全量通配。 */
     private void guardMsearchBody(String body) {
+        guardMsearchBody(body, null);
+    }
+
+    private void guardMsearchBody(String body, String defaultIndex) {
         if (body == null || body.trim().isEmpty()) {
             throw new ControlPlaneGuardException("_msearch 每个请求必须显式指定 index（不允许全量）");
         }
@@ -1362,7 +1707,12 @@ public class EsIndexAdmin {
             } catch (Exception e) {
                 throw new IllegalArgumentException("_msearch 索引头不是合法 JSON: " + e.getMessage());
             }
-            guardMsearchIndex(index);
+            /* 路径已带索引时允许空头继承路径索引（ES 语义），但路径索引本身必须已过守卫。 */
+            if (index == null && defaultIndex != null) {
+                guardRawIndexToken(defaultIndex);
+            } else {
+                guardMsearchIndex(index);
+            }
             expectHeader = false;
         }
         if (headers == 0) {
@@ -1375,7 +1725,7 @@ public class EsIndexAdmin {
             throw new ControlPlaneGuardException("_msearch 每个请求必须显式指定 index（不允许全量）");
         }
         if (index instanceof String) {
-            guardIndexPattern((String) index);
+            guardPublicIndexPattern((String) index);
             return;
         }
         if (index instanceof java.util.List) {
@@ -1383,7 +1733,7 @@ public class EsIndexAdmin {
                 if (!(one instanceof String)) {
                     throw new IllegalArgumentException("_msearch index 数组元素必须是字符串");
                 }
-                guardIndexPattern((String) one);
+                guardPublicIndexPattern((String) one);
             }
             return;
         }
@@ -1408,7 +1758,7 @@ public class EsIndexAdmin {
             if (!(index instanceof String) || ((String) index).trim().isEmpty()) {
                 throw new ControlPlaneGuardException("_mget 每篇文档必须显式指定 _index（不允许全量）");
             }
-            guardIndexPattern((String) index);
+            guardPublicIndexPattern((String) index);
         }
     }
 
@@ -1630,8 +1980,9 @@ public class EsIndexAdmin {
      * body 形如 {@code {"analyzer":"ik_smart","text":"..."}} 或 {@code {"tokenizer":"...","filter":[...]}}。
      */
     public Map<String, Object> analyze(String index, String bodyJson) throws IOException {
-        guardIndexName(index);
-        String path = (index == null || index.isEmpty() || "_analyze".equals(index)) ? "/_analyze" : "/" + index + "/_analyze";
+        boolean global = index == null || index.trim().isEmpty() || "_analyze".equals(index);
+        if (!global) guardIndexName(index);
+        String path = global ? "/_analyze" : "/" + index + "/_analyze";
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("POST", path);
         req.setJsonEntity(bodyJson == null || bodyJson.trim().isEmpty() ? "{}" : bodyJson);
         org.elasticsearch.client.Response resp = performGuarded(req);
@@ -1816,9 +2167,34 @@ public class EsIndexAdmin {
         return out;
     }
 
+    /** 非 ADMIN 的仓库视图：脱敏云存储凭据，页面只读用户不得看到 access/secret key。 */
+    public static java.util.List<Map<String, Object>> maskSnapshotRepoSecrets(
+            java.util.List<Map<String, Object>> repos) {
+        java.util.List<Map<String, Object>> out = new java.util.ArrayList<>();
+        if (repos == null) return out;
+        for (Map<String, Object> row : repos) {
+            Map<String, Object> copy = new java.util.LinkedHashMap<>(row);
+            Object settings = row.get("settings");
+            if (settings instanceof Map) {
+                Map<String, Object> masked = new java.util.LinkedHashMap<>();
+                for (Map.Entry<?, ?> e : ((Map<?, ?>) settings).entrySet()) {
+                    String k = String.valueOf(e.getKey()).toLowerCase(Locale.ROOT);
+                    boolean secret = k.contains("secret") || k.contains("password") || k.contains("token")
+                            || k.contains("access_key") || k.contains("accesskey") || k.contains("credential")
+                            || k.contains("role_arn");
+                    masked.put(String.valueOf(e.getKey()), secret ? "***" : e.getValue());
+                }
+                copy.put("settings", masked);
+            }
+            out.add(copy);
+        }
+        return out;
+    }
+
     /** 列出指定 repo 下所有 snapshot。 */
     @SuppressWarnings("unchecked")
     public java.util.List<Map<String, Object>> listSnapshots(String repo) throws IOException {
+        guardSnapshotToken(repo, "snapshot repo");
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("GET", "/_snapshot/" + repo + "/_all?ignore_unavailable=true");
         org.elasticsearch.client.Response resp = performGuarded(req);
         String body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
@@ -1827,8 +2203,19 @@ public class EsIndexAdmin {
         return list instanceof java.util.List ? (java.util.List<Map<String, Object>>) list : Collections.emptyList();
     }
 
+    /** repo/snapshot 名会拼进 URL 路径：只允许 ES 合法字符，杜绝 `..`/斜杠/查询串注入。 */
+    static void guardSnapshotToken(String value, String label) {
+        if (value == null || value.trim().isEmpty()
+                || !value.matches("[A-Za-z0-9._+*\\-]{1,255}")
+                || value.contains("..")) {
+            throw new IllegalArgumentException(label + " 非法: " + value);
+        }
+    }
+
     /** 创建 snapshot（非阻塞，wait_for_completion=false）。body 可传 indices/include_global_state 等。 */
     public Map<String, Object> createSnapshot(String repo, String name, String bodyJson) throws IOException {
+        guardSnapshotToken(repo, "snapshot repo");
+        guardSnapshotToken(name, "snapshot name");
         guardControlBody(bodyJson);
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("PUT", "/_snapshot/" + repo + "/" + name + "?wait_for_completion=false");
         if (bodyJson != null && !bodyJson.trim().isEmpty()) req.setJsonEntity(bodyJson);
@@ -1840,6 +2227,70 @@ public class EsIndexAdmin {
         return result;
     }
 
+    /** 非 ADMIN 快照创建：必须显式业务 indices，禁止全量/控制面/全局状态（防把用户库/审计打包外带）。 */
+    public Map<String, Object> createSnapshotGuarded(String repo, String name, String bodyJson) throws IOException {
+        guardSnapshotCreateBody(bodyJson);
+        return createSnapshot(repo, name, bodyJson);
+    }
+
+    /** 非 ADMIN 快照创建 body 守卫；独立方法便于单测。 */
+    void guardSnapshotCreateBody(String bodyJson) {
+        if (bodyJson == null || bodyJson.trim().isEmpty()) {
+            throw new ControlPlaneGuardException("创建快照必须显式指定业务 indices（不允许全量快照）");
+        }
+        final Object indices;
+        final Object globalState;
+        try {
+            Map<?, ?> root = OBJECT_MAPPER.readValue(bodyJson, Map.class);
+            indices = root.get("indices");
+            globalState = root.get("include_global_state");
+        } catch (Exception e) {
+            throw new IllegalArgumentException("创建快照 body 不是合法 JSON: " + e.getMessage());
+        }
+        if (truthy(globalState)) {
+            throw new ControlPlaneGuardException("非管理员创建快照不得包含全局状态（集群配置/模板/ILM）");
+        }
+        if (rootContainsNonEmptyFeatureStates(bodyJson)) {
+            throw new ControlPlaneGuardException("非管理员创建快照不得包含 feature_states（安全/告警等系统数据）");
+        }
+        if (indices == null) {
+            throw new ControlPlaneGuardException("创建快照必须显式指定业务 indices（不允许全量快照）");
+        }
+        if (indices instanceof String) {
+            String s = ((String) indices).trim();
+            if (s.isEmpty()) throw new ControlPlaneGuardException("创建快照 indices 不能为空");
+            guardPublicIndexPattern(s);
+        } else if (indices instanceof java.util.List) {
+            java.util.List<?> list = (java.util.List<?>) indices;
+            if (list.isEmpty()) throw new ControlPlaneGuardException("创建快照 indices 不能为空");
+            for (Object one : list) {
+                if (!(one instanceof String) || ((String) one).trim().isEmpty()) {
+                    throw new IllegalArgumentException("创建快照 indices 元素必须是非空字符串");
+                }
+                guardPublicIndexPattern((String) one);
+            }
+        } else {
+            throw new ControlPlaneGuardException("创建快照 indices 必须是字符串或字符串数组");
+        }
+    }
+
+    /** JSON 布尔兼容字符串形态（"true"）——快照 body 的 include_global_state 两种写法都认。 */
+    private static boolean truthy(Object v) {
+        if (Boolean.TRUE.equals(v)) return true;
+        return v instanceof String && "true".equalsIgnoreCase(((String) v).trim());
+    }
+
+    private static boolean rootContainsNonEmptyFeatureStates(String bodyJson) {
+        if (bodyJson == null || bodyJson.trim().isEmpty()) return false;
+        try {
+            Map<?, ?> root = OBJECT_MAPPER.readValue(bodyJson, Map.class);
+            Object fs = root.get("feature_states");
+            return fs instanceof java.util.Collection && !((java.util.Collection<?>) fs).isEmpty();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /** 非 ADMIN 快照恢复：先过控制面/全量守卫，再走正常恢复。 */
     public Map<String, Object> restoreSnapshotGuarded(String repo, String name, String bodyJson) throws IOException {
         guardRestoreBody(bodyJson);
@@ -1848,6 +2299,8 @@ public class EsIndexAdmin {
 
     /** 恢复 snapshot（非阻塞）。body 可传 indices/rename_pattern/rename_replacement/include_global_state 等。 */
     public Map<String, Object> restoreSnapshot(String repo, String name, String bodyJson) throws IOException {
+        guardSnapshotToken(repo, "snapshot repo");
+        guardSnapshotToken(name, "snapshot name");
         guardControlBody(bodyJson);
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("POST", "/_snapshot/" + repo + "/" + name + "/_restore?wait_for_completion=false");
         if (bodyJson != null && !bodyJson.trim().isEmpty()) req.setJsonEntity(bodyJson);
@@ -1861,6 +2314,8 @@ public class EsIndexAdmin {
 
     /** 删除 snapshot（过期快照清理）。 */
     public Map<String, Object> deleteSnapshot(String repo, String name) throws IOException {
+        guardSnapshotToken(repo, "snapshot repo");
+        guardSnapshotToken(name, "snapshot name");
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("DELETE", "/_snapshot/" + repo + "/" + name);
         org.elasticsearch.client.Response resp = performGuarded(req);
         String respBody = org.apache.http.util.EntityUtils.toString(resp.getEntity());
@@ -1926,6 +2381,7 @@ public class EsIndexAdmin {
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> searchDsl(String index, String bodyJson, boolean explain, boolean profile) throws IOException {
+        if (index != null && !index.trim().isEmpty()) guardIndexPattern(index.trim());
         String path = (index == null || index.trim().isEmpty() ? "" : "/" + java.net.URLEncoder.encode(index.trim(), "UTF-8"))
                 + "/_search";
         java.util.List<String> qp = new java.util.ArrayList<>();
@@ -1948,6 +2404,7 @@ public class EsIndexAdmin {
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> getIndexSettings(String index) throws IOException {
+        guardIndexPattern(index);
         String path = "/" + java.net.URLEncoder.encode(index, "UTF-8") + "/_settings?include_defaults=true&flat_settings=false";
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("GET", path);
         org.elasticsearch.client.Response resp = performGuarded(req);
@@ -2035,6 +2492,7 @@ public class EsIndexAdmin {
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> explainIlm(String index) throws IOException {
+        guardIndexPattern(index);
         String path = "/" + java.net.URLEncoder.encode(index, "UTF-8") + "/_ilm/explain";
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("GET", path);
         org.elasticsearch.client.Response resp = performGuarded(req);
@@ -2640,6 +3098,8 @@ public class EsIndexAdmin {
             throw new IllegalArgumentException("reindex body 不能为空，至少包含 source.index / dest.index");
         }
         guardReindexBody(body);
+        /* 页面写键持有人也不能借 reindex 的 remote 源做 SSRF/读取内网凭据 */
+        guardReindexRemote(body);
         Map<String, String> o = opts == null ? java.util.Collections.emptyMap() : opts;
         StringBuilder path = new StringBuilder("/_reindex");
         java.util.List<String> qs = new java.util.ArrayList<>();
@@ -2715,8 +3175,10 @@ public class EsIndexAdmin {
      */
     public Map<String, Object> bulk(String indexOrNull, String ndjson, Map<String, String> opts) throws IOException {
         if (ndjson == null || ndjson.trim().isEmpty()) throw new IllegalArgumentException("bulk body 不能为空");
-        guardIndexPattern(indexOrNull);
+        if (indexOrNull != null && !indexOrNull.trim().isEmpty()) guardIndexPattern(indexOrNull);
         guardControlBody(ndjson);
+        /* 逐行动作行的 _index 也要过守卫：仅靠字面扫描拦不住 .security/.watches/通配形态。 */
+        guardBulkBody(ndjson);
         if (!ndjson.endsWith("\n")) ndjson = ndjson + "\n";
         Map<String, String> o = opts == null ? java.util.Collections.emptyMap() : opts;
         StringBuilder path = new StringBuilder();
@@ -3113,6 +3575,7 @@ public class EsIndexAdmin {
         if (finalBody.startsWith("{") && !finalBody.contains("field_multi_value_leniency")) {
             finalBody = "{\"field_multi_value_leniency\":true," + finalBody.substring(1);
         }
+        guardSql(finalBody);
         try {
             /* 经版本感知 SQL 路径（6.x 是 /_xpack/sql） */
             return performSqlVersionAware("?format=json", finalBody);
@@ -3134,6 +3597,7 @@ public class EsIndexAdmin {
     public Map<String, Object> luceneSearch(String index, String q, int size, int from,
                                             String sortField, String sortOrder) throws IOException {
         if (index == null || index.trim().isEmpty()) throw new IllegalArgumentException("index 不能为空");
+        guardIndexPattern(index);
         if (q == null) q = "*";
         java.util.List<String> qs = new java.util.ArrayList<>();
         addQ(qs, "q", q);
@@ -3153,6 +3617,7 @@ public class EsIndexAdmin {
     /** 开启 Point-in-Time——分布式深度分页基石，keepAlive 如 "5m"。 */
     public Map<String, Object> pitOpen(String index, String keepAlive) throws IOException {
         if (index == null || index.trim().isEmpty()) throw new IllegalArgumentException("index 不能为空");
+        guardIndexPattern(index);
         String ka = (keepAlive == null || keepAlive.trim().isEmpty()) ? "5m" : keepAlive.trim();
         try {
             return performJson("POST", "/" + index + "/_pit?keep_alive="
@@ -3203,6 +3668,7 @@ public class EsIndexAdmin {
     @SuppressWarnings("unchecked")
     public Map<String, Object> resolveSchema(String index) throws IOException {
         if (index == null || index.trim().isEmpty()) throw new IllegalArgumentException("index 不能为空");
+        guardIndexPattern(index);
         /* 1. 拉 mapping */
         Map<String, Object> mResp = performJson("GET", "/" + index + "/_mapping", null);
         Map<String, Object> firstIdx = null;
@@ -3314,6 +3780,7 @@ public class EsIndexAdmin {
     @SuppressWarnings("unchecked")
     public Map<String, Object> getMappingDetail(String index) throws IOException {
         if (index == null || index.trim().isEmpty()) throw new IllegalArgumentException("index 不能为空");
+        guardIndexPattern(index);
         Map<String, Object> raw = performJson("GET", "/" + java.net.URLEncoder.encode(index, "UTF-8") + "/_mapping", null);
         Map<String, Object> out = new java.util.LinkedHashMap<>();
         out.put("index", index);
@@ -3400,6 +3867,7 @@ public class EsIndexAdmin {
      */
     public Map<String, Object> putMappingField(String index, String body) throws IOException {
         if (index == null || index.trim().isEmpty()) throw new IllegalArgumentException("index 不能为空");
+        guardIndexPattern(index);
         if (body == null || body.trim().isEmpty()) throw new IllegalArgumentException("body 不能为空");
         // 与 putMapping 同走版本感知路径（6.x 必须 typed，否则 400 mapping type is missing）
         return putMappingVersionAware(java.net.URLEncoder.encode(index, "UTF-8"), body);
@@ -3411,6 +3879,7 @@ public class EsIndexAdmin {
     @SuppressWarnings("unchecked")
     public Map<String, Object> getAnalysisSettings(String index) throws IOException {
         if (index == null || index.trim().isEmpty()) throw new IllegalArgumentException("index 不能为空");
+        guardIndexPattern(index);
         Map<String, Object> raw = performJson("GET",
             "/" + java.net.URLEncoder.encode(index, "UTF-8") + "/_settings?include_defaults=false&flat_settings=false", null);
         Map<String, Object> out = new java.util.LinkedHashMap<>();
@@ -3442,6 +3911,7 @@ public class EsIndexAdmin {
      */
     public Map<String, Object> updateAnalysisSettings(String index, String body) throws IOException {
         if (index == null || index.trim().isEmpty()) throw new IllegalArgumentException("index 不能为空");
+        guardIndexPattern(index);
         if (body == null || body.trim().isEmpty()) throw new IllegalArgumentException("body 不能为空");
         String enc = java.net.URLEncoder.encode(index, "UTF-8");
         Map<String, Object> log = new java.util.LinkedHashMap<>();
@@ -3476,6 +3946,7 @@ public class EsIndexAdmin {
      */
     public Map<String, Object> reloadSearchAnalyzers(String index) throws IOException {
         if (index == null || index.trim().isEmpty()) throw new IllegalArgumentException("index 不能为空");
+        guardIndexPattern(index);
         return performJson("POST", "/" + java.net.URLEncoder.encode(index, "UTF-8") + "/_reload_search_analyzers", null);
     }
 
@@ -3562,6 +4033,7 @@ public class EsIndexAdmin {
      * 带 explain 的搜索透传。body 由前端自由控制（可含 explain:true / _name 命名子句）。
      */
     public Map<String, Object> searchRaw(String index, String body) throws IOException {
+        guardIndexPattern(index);
         String enc = java.net.URLEncoder.encode(index, "UTF-8");
         return performJson("POST", "/" + enc + "/_search", body);
     }
@@ -3571,6 +4043,7 @@ public class EsIndexAdmin {
      * body 形如 {"query":{...}}，命中时返回完整 BM25 解释树，未命中时 matched=false。
      */
     public Map<String, Object> explainDoc(String index, String id, String body) throws IOException {
+        guardIndexPattern(index);
         String enc = java.net.URLEncoder.encode(index, "UTF-8");
         String encId = java.net.URLEncoder.encode(id, "UTF-8");
         /* typeless _explain 是 7.0 才有的路由，经版本感知路径兼容 6.x */
@@ -3581,6 +4054,7 @@ public class EsIndexAdmin {
      * 查询校验 + Lucene 改写透视。看“我写的 match 实际被改写成什么”。
      */
     public Map<String, Object> validateQuery(String index, String body) throws IOException {
+        guardIndexPattern(index);
         String enc = java.net.URLEncoder.encode(index, "UTF-8");
         return performJson("POST", "/" + enc + "/_validate/query?explain=true&rewrite=true", body);
     }
@@ -3589,6 +4063,7 @@ public class EsIndexAdmin {
      * 词频取证。指定文档指定字段的 term 统计（tf/ttf/doc_freq），打分调试的微观证据。
      */
     public Map<String, Object> termVectors(String index, String id, String fields) throws IOException {
+        guardIndexPattern(index);
         String enc = java.net.URLEncoder.encode(index, "UTF-8");
         String encId = java.net.URLEncoder.encode(id, "UTF-8");
         StringBuilder qs = new StringBuilder("?term_statistics=true&field_statistics=true&positions=false&offsets=false");
@@ -3615,6 +4090,7 @@ public class EsIndexAdmin {
      */
     public Map<String, Object> searchTemplate(String index, String body) throws IOException {
         if (body == null || body.trim().isEmpty()) throw new IllegalArgumentException("body 不能为空");
+        guardIndexPattern(index);
         String enc = java.net.URLEncoder.encode(index, "UTF-8");
         return performJson("POST", "/" + enc + "/_search/template", body);
     }

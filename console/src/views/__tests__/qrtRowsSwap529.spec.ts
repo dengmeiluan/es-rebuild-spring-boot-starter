@@ -270,7 +270,7 @@ describe('529 换壳：AnalyzeView token 表 QRT rows 型源码锁', () => {
   });
 
   it('矩阵映射：# 序号=原数组位 i+1（kw 过滤不串位）、词性列存原码、offset 区间串', () => {
-    expect(av).toMatch(/const tokenMatrix = computed<any\[\]\[\]>\(\(\) => shownTokens\.value\.map\(\(\{ t, i \}\) => \[\n  i \+ 1, t\.token, t\.position, `\$\{t\.start_offset\}-\$\{t\.end_offset\}`, t\.type, t\.end_offset - t\.start_offset,\n\]\)\);/);
+    expect(av).toMatch(/const tokenMatrix = computed<any\[\]\[\]>\(\(\) => shownTokens\.value\.map\(\(\{ t, i \}\) => \[\n {2}i \+ 1, t\.token, t\.position, `\$\{t\.start_offset\}-\$\{t\.end_offset\}`, t\.type, t\.end_offset - t\.start_offset,\n\]\)\);/);
   });
 
   it('槽保真：词元/词性 MarkText 命中、数值三列 title 原值、token 色 colorFor', () => {

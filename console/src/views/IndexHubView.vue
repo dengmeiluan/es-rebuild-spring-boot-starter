@@ -720,7 +720,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, type Ref } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, onActivated, onDeactivated, watch, nextTick, type Ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { NSelect, NModal } from 'naive-ui';
 import {
@@ -804,6 +804,9 @@ const auth = useAuthStore();
    （页命中=精确本页写键；共享端点=任意连接写键；静态模型回落角色档） */
 const canWrite = computed(() => auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/update-partial', store.target));
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/delete-index', store.target));
+/* 文档删除走 delete-by-id（shared: search/indices），与删索引的归属页不同；
+   ResultTable 的删除钮按 delete-by-id 展示，执行体必须同门。 */
+const canDeleteDoc = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/delete-by-id', store.target));
 const canRebuild = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/adhoc-rebuild/start', store.target));
 const canCreateIdx = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target));
 const canSettings = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/index-settings/update', store.target));
@@ -1843,10 +1846,16 @@ function onDocSaveKey(e: KeyboardEvent) {
   e.preventDefault();
   saveDoc();
 }
-watch([docOpen, docEditMode], ([open, edit]) => {
-  if (open && edit) window.addEventListener('keydown', onDocSaveKey);
+/* KeepAlive 离页必须摘掉隐藏写键：否则在别的页面按 Ctrl+S 仍会触发本页 saveDoc
+ （文档弹窗开着+编辑态时监听才挂；旧实现只在弹窗态变化时摘，离页不摘）。 */
+const hubActive = ref(true);
+function syncDocSaveListener() {
+  if (hubActive.value && docOpen.value && docEditMode.value) window.addEventListener('keydown', onDocSaveKey);
   else window.removeEventListener('keydown', onDocSaveKey);
-});
+}
+watch([docOpen, docEditMode, hubActive], syncDocSaveListener);
+onActivated(() => { hubActive.value = true; });
+onDeactivated(() => { hubActive.value = false; });
 onBeforeUnmount(() => window.removeEventListener('keydown', onDocSaveKey));
 
 /* 文档/DSL 两个结果表引用：删除成功后精确清理勾选（防幽灵 id 流入批量操作） */
@@ -1856,7 +1865,7 @@ const qryTbl = ref<InstanceType<typeof ResultTable> | null>(null);
  facts 具名行沿用口径（索引/文档 ID），正文只留动作语句 */
 async function askDelDoc(hit: SearchHit) {
   /* 执行体首行守卫——行内删除钮/Del 键/右键菜单同汇入本函数，点位隐藏挡不住键盘旁路 */
-  if (!canOps.value) { store.notify('warning', '删除需专项或 ADMIN 角色'); return; }
+  if (!canDeleteDoc.value) { store.notify('warning', '删除需专项或 ADMIN 角色'); return; }
   if (!await askConfirm({
     title: '删除文档',
     message: '将删除该文档，不可恢复。',
@@ -1879,7 +1888,7 @@ async function askDelDoc(hit: SearchHit) {
 
 /* W4：批量文档删除合并 askConfirm——critical 守卫（输入文档数）语义原样 */
 async function askBatchDel(ids: string[]) {
-  if (!canOps.value) { store.notify('warning', '删除需专项或 ADMIN 角色'); return; }
+  if (!canDeleteDoc.value) { store.notify('warning', '删除需专项或 ADMIN 角色'); return; }
   if (!await askConfirm({
     title: '批量删除文档',
     message: '将删除选中的文档，不可恢复。',

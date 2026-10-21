@@ -211,14 +211,23 @@ public class ConsolePermissionsEndpoint888Test {
 
 
     @Test
-    public void 连接模型_带devtools写键_DevTools页可写且高危档开启() {
+    public void 连接模型_带devtools写键_DevTools可写但REST直连不越权() {
         Map<String, Object> resp = call(ctrl(), delegatedAs(ConsoleRole.VIEWER,
                 set("conn:c1:devtools", "conn:c1:w:devtools")), "c1");
-        assertEquals(Boolean.TRUE, resp.get("rawAllowed"));
+        assertEquals(Boolean.FALSE, resp.get("rawAllowed"));
+        assertEquals(Boolean.TRUE, resp.get("devtoolsAllowed"));
         Map<String, Object> devtools = pageOf(resp, "devtools");
         assertEquals(Boolean.TRUE, devtools.get("read"));
         assertEquals(Boolean.TRUE, devtools.get("write"));
         assertNull(devtools.get("writeDeny"));
+    }
+
+    @Test
+    public void 连接模型_带rest写键_REST与DevTools均可用() {
+        Map<String, Object> resp = call(ctrl(), delegatedAs(ConsoleRole.VIEWER,
+                set("conn:c1:rest", "conn:c1:w:rest")), "c1");
+        assertEquals(Boolean.TRUE, resp.get("rawAllowed"));
+        assertEquals(Boolean.TRUE, resp.get("devtoolsAllowed"));
     }
 
 
@@ -319,6 +328,7 @@ public class ConsolePermissionsEndpoint888Test {
         Map<String, Object> resp = call(ctrl(), delegatedAs(ConsoleRole.ADMIN,
                 set("conn:c1:rest")), "c1");
         assertEquals(Boolean.TRUE, resp.get("rawAllowed"));
+        assertEquals(Boolean.TRUE, resp.get("devtoolsAllowed"));
         assertEquals(Boolean.TRUE, resp.get("sharedWriteAllowed"));
         assertEquals(Boolean.TRUE, pageOf(resp, "indices").get("read"));
         assertEquals(Boolean.TRUE, pageOf(resp, "indices").get("write"));

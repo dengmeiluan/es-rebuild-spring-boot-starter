@@ -90,8 +90,8 @@ describe('525 任务三：filterable 三处（大集群节点/连接档案 >20 �
 
   it('XmigrateView：两处连接档案下拉（源集群/续跑）都补 filterable', () => {
     const xm = read('views/XmigrateView.vue');
-    const connTags = xm.match(/<n-select[^>]*:options="connOpts"[^>]*\/>/g) || [];
-    expect(connTags.length, 'connOpts 下拉恰两处').toBe(2);
+    const connTags = xm.match(/<n-select[^>]*:options="(?:connOpts|resumeOpts)"[^>]*\/>/g) || [];
+    expect(connTags.length, '连接档案下拉恰两处（源/续跑）').toBe(2);
     for (const t of connTags) expect(t, '每处都必须可搜索').toContain('filterable');
   });
 });
@@ -103,7 +103,9 @@ describe('525 任务四：IndexHubView 文档编辑弹窗两件', () => {
     expect(ih, '必须认 Ctrl/Cmd+S').toMatch(/\(e\.ctrlKey \|\| e\.metaKey\) && e\.key\.toLowerCase\(\) !== 's'|!\(e\.ctrlKey \|\| e\.metaKey\) \|\| e\.key\.toLowerCase\(\) !== 's'/);
     expect(ih, '必须只在编辑弹窗开着时响应（不拦浏览器保存默认）').toContain('if (!docOpen.value || !docEditMode.value) return;');
     expect(ih, 'preventDefault 掐掉浏览器「保存网页」').toMatch(/onDocSaveKey[\s\S]*?e\.preventDefault\(\);[\s\S]*?saveDoc\(\);/);
-    expect(ih, '监听随弹窗态挂摘（onDrawerKeydown 同范式）').toMatch(/watch\(\[docOpen, docEditMode\], \(\[open, edit\]\) => \{[\s\S]*?window\.addEventListener\('keydown', onDocSaveKey\);[\s\S]*?window\.removeEventListener\('keydown', onDocSaveKey\);[\s\S]*?\}\);/);
+    expect(ih, '监听随弹窗态/KeepAlive 激活态挂摘').toContain('function syncDocSaveListener()');
+    expect(ih).toMatch(/watch\(\[docOpen, docEditMode, hubActive\], syncDocSaveListener\);/);
+    expect(ih, '离页必须摘掉隐藏写键').toContain('onDeactivated(() => { hubActive.value = false; });');
     expect(ih, '卸载兜底清理').toMatch(/onBeforeUnmount\(\(\) => window\.removeEventListener\('keydown', onDocSaveKey\)\);/);
   });
 

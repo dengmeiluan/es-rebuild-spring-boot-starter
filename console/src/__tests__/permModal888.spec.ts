@@ -50,11 +50,11 @@ async function mountModal(target: string | null) {
 const FIXTURE = {
   role: 'VIEWER', delegated: true, pageAuthEnabled: true, pageGateActive: true,
   target: 'c1', connName: '生产集群', env: 'PROD', connModel: true, envPagesApplied: false,
-  rawAllowed: false, sharedWriteAllowed: false,
+  rawAllowed: false, devtoolsAllowed: false, sharedWriteAllowed: false,
   groups: [
     { id: 'devx', name: '开发者工具', pages: [
       { key: 'rest', name: 'REST 直连', read: true, write: false, writeDeny: 'WRITE_DENIED' },
-      { key: 'devtools', name: 'Dev Tools', read: true, write: null },
+      { key: 'devtools', name: 'Dev Tools', read: true, write: false, writeDeny: 'WRITE_DENIED' },
     ] },
     { id: 'core', name: '总览与工作台', pages: [
       { key: 'overview', name: '概览', read: true, write: true },
@@ -98,14 +98,14 @@ describe('八百八十八批：PermModal 我的权限弹层', () => {
     app.unmount();
   });
 
-  it('write=true 页显示可写态；write=null 页显示无写操作', async () => {
+  it('write=true 页显示可写态；write=false 页显示拒绝原因', async () => {
     const { app, host } = await mountModal('c1');
     const ok = document.body.querySelector('[data-test="perm-page-overview"]');
     expect(ok).toBeTruthy();
     expect(ok!.textContent).toContain('可写');
-    const na = document.body.querySelector('[data-test="perm-page-devtools"]');
-    expect(na).toBeTruthy();
-    expect(na!.textContent).toContain('无写操作');
+    const no = document.body.querySelector('[data-test="perm-page-devtools"]');
+    expect(no).toBeTruthy();
+    expect(no!.textContent).toContain('连接写权限未授予');
     app.unmount();
   });
 

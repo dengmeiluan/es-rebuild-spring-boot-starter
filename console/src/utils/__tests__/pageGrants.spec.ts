@@ -35,6 +35,19 @@ describe('summarizeGrants：连接模型解析', () => {
     const s = summarizeGrants(['conn:c1:docs', 'conn:c1:w:docs', 'conn:c1:docs']);
     expect(s.totals).toEqual({ visible: 1, writable: 1 });
   });
+
+  it('totals：可写按页面 key 去重，不会出现「可写 > 可见」', () => {
+    const s = summarizeGrants(['conn:c1:w:docs', 'conn:c2:w:docs', 'conn:c2:indices']);
+    expect(s.totals).toEqual({ visible: 2, writable: 1 });
+  });
+
+  it('混合授权：static 全局页不丢，且计入可见总数', () => {
+    const s = summarizeGrants(['overview', 'conn:c1:w:docs']);
+    expect(s.connModel).toBe(true);
+    expect(s.staticKeys).toEqual(['overview']);
+    expect(s.conns[0].writable).toEqual(['docs']);
+    expect(s.totals).toEqual({ visible: 2, writable: 1 });
+  });
 });
 
 describe('summarizeGrants：静态键与空值', () => {
@@ -68,6 +81,7 @@ describe('五百九十八批：SecurityView 结构锁（delegated 下角色概�
     expect(src).toContain('<b>宿主连接菜单</b>');
     expect(src).toContain('grantSummary.totals.visible');
     expect(src).toContain('grantSummary.totals.writable');
+    expect(src, '混合授权的全局静态页不能丢').toContain('grantSummary.staticKeys?.length');
   });
   it('页面授权总览区按连接分组+页名解析（connName/pageName 助手在场）', () => {
     expect(src).toContain('页面授权（宿主菜单勾选）');

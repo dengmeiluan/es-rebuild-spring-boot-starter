@@ -197,7 +197,7 @@
       <div class="ov-mh-filters">
         <select v-model="mhConn" class="inp sm" aria-label="筛选集群" title="筛选集群">
           <option value="">全部集群</option>
-          <option v-for="c in store.conns" :key="c.id" :value="c.id">{{ c.name }}</option>
+          <option v-for="c in visibleConns" :key="c.id" :value="c.id">{{ c.name }}</option>
         </select>
         <select v-model="mhStatus" class="inp sm" aria-label="筛选状态" title="筛选状态">
           <option value="">全部状态</option>
@@ -264,6 +264,7 @@ import StatusPill from '../components/StatusPill.vue'; /* ：状态徽标统一�
 import { api } from '../api';
 import { probeDigest } from '../utils/monitorSeries';
 import { useAppStore } from '../stores/app';
+import { useAuthStore } from '../stores/auth';
 import { useLiveMonitorStore } from '../stores/liveMonitor';
 import SkeletonBox from '../components/SkeletonBox.vue';
 import TimeCell from '../components/TimeCell.vue'; /* ：作业时间列统一件合并 */
@@ -283,6 +284,9 @@ import type { MonitorRow } from '../api'; /* 监控快照落库批④:读侧行�
 
 const router = useRouter();
 const store = useAppStore();
+const auth = useAuthStore();
+/* 监控筛选只列授权连接：conn 模型下未授权连接名/host 不外泄（与 ClusterSwitcher 同源） */
+const visibleConns = computed(() => store.conns.filter(c => auth.canSeeConn(c.id)));
 const mon = useLiveMonitorStore(); // -D4：趋势序列来自全局常驻采样器
 
 const overview = ref<any>(null);
@@ -570,7 +574,7 @@ const MH_STATUS_OPTS = ['GREEN', 'RED'].map(v => ({ v, label: `${clusterHealthZh
  （回落「全部集群」）；连接档案异步到达时跟随（与 LiveDashboardView 同律：切换器换集群
  重新跟随，同 target 内用户手改不回弹）。 */
 const mhConn = ref('');
-const mhConnOfTarget = computed(() => (store.conns.some(c => c.id === store.target) ? store.target : ''));
+const mhConnOfTarget = computed(() => (visibleConns.value.some(c => c.id === store.target) ? store.target : ''));
 watch(mhConnOfTarget, (id) => { if (id) mhConn.value = id; }, { immediate: true });
 const mhStatus = ref('');
 /* 大盘联动：与 LiveDashboardView 历史趋势共享同一偏好键——一处改档两处同步 */

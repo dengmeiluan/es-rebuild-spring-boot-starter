@@ -508,10 +508,12 @@ public class InternalEsIndexRebuildController {
         return esIndexAdmin.deleteTemplate(kind, name);
     }
 
-    /** Snapshot repositories 列表 */
+    /** Snapshot repositories 列表（非 ADMIN 脱敏云存储凭据） */
     @GetMapping("cluster/snapshot/repos")
-    public java.util.List<Map<String, Object>> clusterSnapshotRepos() throws java.io.IOException {
-        return esIndexAdmin.listSnapshotRepositories();
+    public java.util.List<Map<String, Object>> clusterSnapshotRepos(javax.servlet.http.HttpServletRequest request)
+            throws java.io.IOException {
+        java.util.List<Map<String, Object>> repos = esIndexAdmin.listSnapshotRepositories();
+        return adminOrFail(request) ? repos : io.github.dengmeiluan.es.rebuild.core.EsIndexAdmin.maskSnapshotRepoSecrets(repos);
     }
 
     /** 指定 repo 下快照列表 */
@@ -524,8 +526,13 @@ public class InternalEsIndexRebuildController {
     @PostMapping("cluster/snapshot/create")
     public Map<String, Object> clusterCreateSnapshot(@RequestParam String repo,
                                                      @RequestParam String name,
-                                                     @org.springframework.web.bind.annotation.RequestBody(required = false) String body) throws java.io.IOException {
-        return esIndexAdmin.createSnapshot(repo, name, body);
+                                                     @org.springframework.web.bind.annotation.RequestBody(required = false) String body,
+                                                     javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
+        boolean admin = adminOrFail(request);
+        /* 非 ADMIN：必须显式业务 indices，禁止全量/控制面/全局状态打包外带 */
+        return admin
+                ? esIndexAdmin.createSnapshot(repo, name, body)
+                : esIndexAdmin.createSnapshotGuarded(repo, name, body);
     }
 
     /** 恢复快照（非阻塞）。body 可传 indices/rename_pattern/rename_replacement/include_global_state 等 */
@@ -647,6 +654,8 @@ public class InternalEsIndexRebuildController {
         if (index == null || index.trim().isEmpty() || index.contains("/") || index.contains("..")) {
             throw new IllegalArgumentException("index 非法");
         }
+        /* 页面用户也不能借“含默认值”读取控制面索引的 settings/metadata */
+        esIndexAdmin.guardIndexPattern(index.trim());
         return esIndexAdmin.raw("GET", "/" + index.trim() + "/_settings?include_defaults=true&flat_settings=true", null);
     }
 

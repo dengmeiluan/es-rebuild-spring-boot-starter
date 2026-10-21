@@ -346,7 +346,7 @@
       <div class="xm-tip" style="margin-bottom:var(--sp-3)">目标：<b class="mono">{{ actJob?.sourceIndex }}</b> → <b class="mono">{{ actJob?.destIndex }}</b>（{{ actJob?.remoteEndpoint }}）</div>
       <!-- 续跑同样可引用已存连接档案；：补 filterable（与源集群下拉同款） -->
       <div style="margin-bottom:var(--sp-2)">
-        <n-select v-model:value="resumeConnId" :options="connOpts" :render-label="renderConnOpt" size="small" filterable placeholder="手动输入连接信息" />
+        <n-select v-model:value="resumeConnId" :options="resumeOpts" :render-label="renderConnOpt" size="small" filterable placeholder="手动输入连接信息" />
       </div>
       <div v-if="!resumeConnId" class="xm-conn" style="flex-wrap:wrap">
         <input v-model="resumeConn.host" class="inp mono" placeholder="host 或 ${HOST_REF}" style="flex:2;min-width:140px" />
@@ -419,6 +419,8 @@ const store = useAppStore();
 /* 权限门禁——迁移发起/中止/续跑=/xmigrate/start|abort|resume=REBUILD 档（rank3+） */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/xmigrate/start', srcConnId.value || store.target));
+/* 迁移写入端恒为宿主：发起/续跑必须同时持有宿主连接的 xmigrate 写键（后端 requireDestWrite 同源） */
+const canDestOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/xmigrate/start', 'host'));
 /* 作业操作按作业源连接写键裁决（后端按 job.srcConnId 校验）；旧版/手输作业在连接模型下不展示操作 */
 const canJobOps = (job: any): boolean => {
   if (!job) return false;
@@ -462,10 +464,20 @@ onMounted(() => { conn.value.password = ''; });
 /* 已存连接下拉——选中则服务端按档案取密，明文不经前端；''=手动输入回退 */
 const srcConnIdDraft = useScopedDraft('src-conn-id', { route: 'xmigrate' });
 const srcConnId = srcConnIdDraft.text;
+/* 连接模型下源必须是已授权档案（后端 requireSourceWrite 拒绝手输）；
+   非连接模型保留手输回退。连接目录本身也按 canSeeConn 过滤，未授权连接名不外泄。 */
+const connModel = computed(() => Array.isArray(auth.grantedPages)
+  && auth.grantedPages.some(g => g.startsWith('conn:')));
 const connOpts = computed(() => [
-  { label: '手动输入…', value: '' },
-  ...store.conns.map(c => ({ label: `${c.name}（${c.host}:${c.port}）`, value: c.id, health: c.health })),
+  ...(connModel.value ? [] : [{ label: '手动输入…', value: '' }]),
+  ...store.conns.filter(c => auth.canSeeConn(c.id))
+    .map(c => ({ label: `${c.name}（${c.host}:${c.port}）`, value: c.id, health: c.health })),
 ]);
+/* 续跑只能沿用作业源档案（后端同口径）；连接模型下把下拉钉死在该档案。 */
+const resumeOpts = computed(() => {
+  if (!connModel.value || !actJob.value?.srcConnId) return connOpts.value;
+  return connOpts.value.filter(o => o.value === String(actJob.value.srcConnId).trim());
+});
 function renderConnOpt(opt: any) {
   if (!opt.value) return opt.label;
   // 下拉菜单 teleport 到 body，scoped 样式覆盖不到——状态点用内联样式
@@ -716,7 +728,7 @@ const preflight = ref<any>(null); // 启动前预检（dest 是否已存在）
  destExists 统一取 destExistsSafe（preflight 缺席时用 hostIndices 兜底）。 */
 async function openStartConfirm() {
   /* 权限执行体首行门：放在 preflight/确认窗之前——无权限者不得看到预检与启动弹层 */
-  if (!canOps.value) { store.notify('warning', '迁移操作需专项或 ADMIN 角色'); return; }
+  if (!canOps.value || !canDestOps.value) { store.notify('warning', '迁移发起需要源连接与宿主目标集群的迁移写权限'); return; }
   /* 闸读收本体首行+置位前移到第一个 await 之前：preflight 与确认窗挂起期间启动钮
  即禁用，二击不再穿透双开确认窗（确认服务是全局单例，二次请求会把先开的弹层按取消
  静默收掉）；取消路径由 finally 复位防闸死，成功路径随 doStart 完成统一复位 */
@@ -776,12 +788,14 @@ const idxNameError = computed(() => {
   return '';
 });
 const canStart = computed(() =>
+  canDestOps.value &&
+  (!connModel.value || !!srcConnId.value) &&
   (srcConnId.value || conn.value.host) && form.value.sourceIndex && form.value.destIndex &&
   (form.value.destCreateMode !== 'FROM_ENTITY' || form.value.indexKey) &&
   !idxNameError.value);
 async function doStart() {
   /* 权限执行体首行门（启动钮/重试钮之外的深链/程序化通道） */
-  if (!canOps.value) { store.notify('warning', '迁移操作需专项或 ADMIN 角色'); return; }
+  if (!canOps.value || !canDestOps.value) { store.notify('warning', '迁移发起需要源连接与宿主目标集群的迁移写权限'); return; }
   /* starting 闸已收 openStartConfirm 本体（唯一调用点，置位前移到确认窗之前）——
  此处只保留 qr 运行态防御查；starting 置位/复位由外层 try/finally 统一承担 */
   if (qr.running.value) return;
@@ -1211,7 +1225,9 @@ function askResume(j: any) {
   const m = String(j.remoteEndpoint || '').match(/^(https?):\/\/([^:]+):(\d+)/);
   if (m) resumeConn.value = { scheme: m[1], host: m[2], port: Number(m[3]), username: '', password: '' };
   // 端点匹配到已存档案则默认选中（少一次手输），匹配不到回退手动
-  resumeConnId.value = (m && store.conns.find(c => c.scheme === m[1] && c.host === m[2] && String(c.port) === m[3])?.id) || '';
+  resumeConnId.value = (connModel.value && j.srcConnId)
+    ? String(j.srcConnId).trim()
+    : ((m && store.conns.find(c => c.scheme === m[1] && c.host === m[2] && String(c.port) === m[3])?.id) || '');
   resumeOpen.value = true;
 }
 /* aborting 闸收 askAbort 本体（置位前移到确认窗之前，唯一调用点已闸）：生命周期按
@@ -1247,7 +1263,12 @@ async function copyJobId(id: string) {
 const resuming = ref(false);
 async function doResume() {
   /* 权限执行体首行门（续跑钮已有 v-if，此处覆盖弹窗 Enter/程序化通道） */
-  if (!canJobOps(actJob.value)) { store.notify('warning', '迁移操作需专项或 ADMIN 角色'); return; }
+  if (!canJobOps(actJob.value) || !canDestOps.value) { store.notify('warning', '续跑需要源连接与宿主目标集群的迁移写权限'); return; }
+  if (connModel.value && actJob.value?.srcConnId
+    && String(resumeConnId.value || '').trim() !== String(actJob.value.srcConnId).trim()) {
+    store.notify('warning', '续跑必须使用该作业的源连接档案');
+    return;
+  }
   if (resuming.value) return;
   resumeOpen.value = false;
   resuming.value = true;
@@ -1263,7 +1284,7 @@ async function doResume() {
 }
 /* 续跑凭据弹窗 Enter=提交（can 门与主按钮 disabled 同口径——resuming 在途不放行，
  原注释「首行即关弹窗天然防连按」不够：resume 已关但 API 在途时再按 Enter 仍会重复下发） */
-useModalEnter(resumeOpen, doResume, () => !resuming.value && canJobOps(actJob.value));
+useModalEnter(resumeOpen, doResume, () => !resuming.value && canJobOps(actJob.value) && canDestOps.value);
 </script>
 
 <style scoped>

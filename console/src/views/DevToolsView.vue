@@ -835,7 +835,15 @@ function consumePrefill() {
     tabs.value.push(mkTab(p.title, p.method || 'GET', p.path || '/', p.body || ''));
     active.value = tabs.value.length - 1;
     persist();
-    if (p.run) run();
+    /* 身份探测未完成时不得自动发出写请求：预填只回填、不执行。
+       authDisabled 仅在后端明确 404（无鉴权部署）时为真，401/网络失败保持等待。 */
+    if (p.run) {
+      if (auth.me == null && !auth.authDisabled) {
+        store.notify('info', '身份确认中，请求已填入但未自动执行');
+      } else {
+        run();
+      }
+    }
   } catch { /* 预填内容损坏则忽略，正常打开 DevTools */ }
 }
 

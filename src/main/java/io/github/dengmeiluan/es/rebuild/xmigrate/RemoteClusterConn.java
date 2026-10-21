@@ -16,6 +16,7 @@
 
 package io.github.dengmeiluan.es.rebuild.xmigrate;
 
+import java.util.Locale;
 import java.util.Objects;
 
 /**
@@ -139,6 +140,24 @@ public final class RemoteClusterConn {
         }
         if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
             throw new IllegalArgumentException("scheme 仅支持 http/https，实际: " + scheme);
+        }
+        /* 服务端代连的 SSRF 底线：云元数据/链路本地地址永远不是合法 ES 集群。
+           未绑定控制台时 setup/test 是免鉴权入口，不能把主机变成元数据代理。 */
+        String h = host.trim().toLowerCase(Locale.ROOT);
+        if (h.startsWith("169.254.") || "metadata.google.internal".equals(h)
+                || "metadata".equals(h) || "100.100.100.200".equals(h)
+                || "fd00:ec2::254".equals(h)) {
+            throw new IllegalArgumentException("不允许连接云元数据/链路本地地址: " + host);
+        }
+        /* 十进制/别名等变体交给解析后判定；只拒绝 link-local/any-local，本机回环仍允许
+           （单机部署连 localhost ES 是合法主路径）。解析失败不在这里改写错误形态。 */
+        try {
+            java.net.InetAddress addr = java.net.InetAddress.getByName(h);
+            if (addr.isLinkLocalAddress() || addr.isAnyLocalAddress()) {
+                throw new IllegalArgumentException("不允许连接云元数据/链路本地地址: " + host);
+            }
+        } catch (java.net.UnknownHostException ignore) {
+            /* DNS 失败由 REST client 原始报错呈现 */
         }
     }
 

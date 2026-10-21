@@ -90,10 +90,15 @@ public class EsClusterConnController {
         Object p = request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);
         ConsoleRole actual = p instanceof ConsolePrincipal
                 ? ((ConsolePrincipal) p).getRole() : ConsoleRole.VIEWER;
+        ConsolePrincipal principal = p instanceof ConsolePrincipal ? (ConsolePrincipal) p : null;
         List<Map<String, Object>> out = new ArrayList<>();
         for (Map<String, Object> c : connStore.list()) {
             ConsoleRole required = ConsoleRole.parse(c.get("minRole") == null ? null : String.valueOf(c.get("minRole")));
             if (!actual.atLeast(required)) {
+                continue;
+            }
+            /* 连接模型：未授权的连接档案连名称/地址都不下发，与前端 canSeeConn 同口径 */
+            if (!connModelVisible(principal, String.valueOf(c.get("id")))) {
                 continue;
             }
             if (prober != null) {
@@ -136,6 +141,12 @@ public class EsClusterConnController {
                         org.springframework.http.HttpStatus.FORBIDDEN,
                         "当前角色无权探活该连接（需 " + required.name() + "）");
             }
+            ConsolePrincipal principal = p instanceof ConsolePrincipal ? (ConsolePrincipal) p : null;
+            if (!connModelVisible(principal, id)) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.FORBIDDEN,
+                        "当前身份未获该连接授权，不能探活");
+            }
         }
         Map<String, Object> r = new LinkedHashMap<>();
         if (prober == null) {
@@ -153,6 +164,17 @@ public class EsClusterConnController {
             return r;
         }
         return prober.probeOne(id);
+    }
+
+    /** 连接模型下必须有该连接维度键（读或写）或全局静态页键；ADMIN/非页面模型放行。 */
+    private static boolean connModelVisible(ConsolePrincipal p, String connId) {
+        if (p == null || !p.isDelegated() || p.getGrantedPages() == null) return true;
+        if (p.getRole().atLeast(ConsoleRole.ADMIN)) return true;
+        java.util.Set<String> gp = p.getGrantedPages();
+        boolean connModel = gp.stream().anyMatch(g -> g != null && g.startsWith("conn:"));
+        if (!connModel) return true; /* 静态页键是全局授权 */
+        String prefix = "conn:" + connId + ":";
+        return gp.stream().anyMatch(g -> g != null && g.startsWith(prefix));
     }
 
     /** 兼容旧内部调用/单测的一参入口（无 HTTP 请求上下文时按 VIEWER 角色处理）。 */

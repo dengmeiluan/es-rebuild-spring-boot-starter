@@ -78,18 +78,18 @@ describe('Xmigrate：启动/中止/续跑全通道 canOps 门', () => {
   it('续跑弹窗 footer 续跑钮 v-if="canJobOps(actJob)"', () => {
     expect(xmigrate).toContain('<button v-if="canJobOps(actJob)" class="btn pri" :disabled="resuming" @click="doResume">续跑</button>');
   });
-  it('续跑弹窗 Enter 门含 canJobOps(actJob)', () => {
-    expect(xmigrate).toContain('useModalEnter(resumeOpen, doResume, () => !resuming.value && canJobOps(actJob.value));');
+  it('续跑弹窗 Enter 门含 canJobOps(actJob) 与宿主目标写键', () => {
+    expect(xmigrate).toContain('useModalEnter(resumeOpen, doResume, () => !resuming.value && canJobOps(actJob.value) && canDestOps.value);');
   });
-  it('openStartConfirm 首行 canOps 早退（先于 preflight/确认窗）', () => {
-    expect(xmigrate).toMatch(/async function openStartConfirm\(\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canOps\.value\) \{ store\.notify\('warning', '迁移操作需专项或 ADMIN 角色'\); return; \}/);
-    expect(xmigrate.indexOf("if (!canOps.value) { store.notify('warning', '迁移操作需专项或 ADMIN 角色'); return; }"))
+  it('openStartConfirm 首行源/宿主双写键早退（先于 preflight/确认窗）', () => {
+    expect(xmigrate).toMatch(/async function openStartConfirm\(\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canOps\.value \|\| !canDestOps\.value\) \{ store\.notify\('warning', '迁移发起需要源连接与宿主目标集群的迁移写权限'\); return; \}/);
+    expect(xmigrate.indexOf("if (!canOps.value || !canDestOps.value)"))
       .toBeLessThan(xmigrate.indexOf("preflight.value = await api.xb.preflight("));
   });
-  it('doStart canOps；doAbort / doResume 按作业源 canJobOps 首行早退', () => {
-    expect(xmigrate).toMatch(/async function doStart\(\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canOps\.value\) \{ store\.notify\('warning', '迁移操作需专项或 ADMIN 角色'\); return; \}/);
+  it('doStart 源/宿主双写键；doAbort 按源；doResume 源+宿主', () => {
+    expect(xmigrate).toMatch(/async function doStart\(\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canOps\.value \|\| !canDestOps\.value\) \{ store\.notify\('warning', '迁移发起需要源连接与宿主目标集群的迁移写权限'\); return; \}/);
     expect(xmigrate).toMatch(/async function doAbort\(\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canJobOps\(actJob\.value\)\) \{ store\.notify\('warning', '迁移操作需专项或 ADMIN 角色'\); return; \}/);
-    expect(xmigrate).toMatch(/async function doResume\(\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canJobOps\(actJob\.value\)\) \{ store\.notify\('warning', '迁移操作需专项或 ADMIN 角色'\); return; \}/);
+    expect(xmigrate).toMatch(/async function doResume\(\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canJobOps\(actJob\.value\) \|\| !canDestOps\.value\) \{ store\.notify\('warning', '续跑需要源连接与宿主目标集群的迁移写权限'\); return; \}/);
   });
 });
 

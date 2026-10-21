@@ -39,6 +39,11 @@
 <span>页面授权</span>
               <span>可见 <b>{{ grantSummary.totals.visible }}</b> 页 · 可写 <b>{{ grantSummary.totals.writable }}</b> 页（明细见下）</span>
             </div>
+            <!-- 混合授权：无 conn: 前缀的全局静态页对所有连接生效，不能只展示连接明细把它丢掉 -->
+            <div class="me-row" v-if="grantSummary.connModel && grantSummary.staticKeys?.length">
+<span>全局页面</span>
+              <span class="dim">{{ grantSummary.staticKeys.map(pageName).join('、') }}（所有连接）</span>
+            </div>
             <!-- grantedPages=null（宿主未启用页面级授权）≠「未下发授权」——
  按角色档回落展示：ADMIN=全权；非 ADMIN 保留角色徽标+说明（角色档是 SPI 未
  启用部署的唯一裁决，如实展示而不是一律说「未下发」误导） -->
@@ -463,7 +468,15 @@ const allConnsFullGrant = computed(() =>
     && grantSummary.value.conns.every(g => isFullGrant(g)));
 /* ·管理域放开：用户管理归 security 页写勾选（POST /auth/users/upsert 归属 security 页），重绑/连接档案维持 ADMIN */
 const canManageUsers = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/auth/users/upsert', store.target)); /* security 页写键可管理普通账号；ADMIN 角色全局可 */
-const canReadUsers = computed(() => auth.canEndpoint('admin', 'GET', '/internal/es/index/auth/users', store.target)); /* security 页读键可看列表（后端 GET 同口径） */
+/* 用户列表：后端 GET /auth/users 属 ADMIN 关键词（静态/内置身份只有 ADMIN 可读）；
+   连接模型下 security 页读键在页面门裁决后才放行，故非 ADMIN 仅 conn 模型可见。 */
+const canReadUsers = computed(() => {
+  if (auth.me == null) return true; /* 无鉴权部署既有语义 */
+  if (auth.isAdmin()) return true;
+  const gp = auth.grantedPages;
+  return Array.isArray(gp) && gp.some(g => g.startsWith('conn:'))
+    && auth.canEndpoint('admin', 'GET', '/internal/es/index/auth/users', store.target);
+});
 const canWriteUsers = computed(() => canManageUsers.value && (!auth.me?.delegated || auth.isAdmin())); /* 委派非 ADMIN 不得管理全局本地账号 */
 const canAssignAdmin = computed(() => auth.can('admin')); /* 只有 ADMIN 可授予/修改/删除 ADMIN 账号（后端同口径防提权） */
 const canRebind = computed(() => auth.can('admin')); /* 重绑控制集群属系统管理域：ADMIN 角色专属 */

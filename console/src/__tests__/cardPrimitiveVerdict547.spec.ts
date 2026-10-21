@@ -26,7 +26,7 @@ const theme = read('../theme.css');
 
 describe('五百四十七批：.card 原语约定正锁（单源保留裁决）', () => {
   it('theme.css .card 原语定义在场（三件套+14px 刻意内衬逐字，不删原语）', () => {
-    expect(theme, '.card 原语单源在场').toMatch(/\.card \{\n  background: var\(--bg1\);\n  border: 1px solid var\(--line\);\n  border-radius: var\(--r-l\);\n  padding: 14px var\(--sp-4\);/);
+    expect(theme, '.card 原语单源在场').toMatch(/\.card \{\n {2}background: var\(--bg1\);\n {2}border: 1px solid var\(--line\);\n {2}border-radius: var\(--r-l\);\n {2}padding: 14px var\(--sp-4\);/);
     expect(theme, '14px 垂直留白刻意值备案在场（themeTokenGuard 同口径）')
       .toMatch(/14px 垂直留白为视觉刻意值豁免保字面/);
     expect(theme, '.card-t 卡头档同源在场').toMatch(/\.card-t \{/);
