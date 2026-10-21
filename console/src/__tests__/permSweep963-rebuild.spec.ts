@@ -94,15 +94,16 @@ describe('Xmigrate：启动/中止/续跑全通道 canOps 门', () => {
 });
 
 describe('AdhocRebuild：校验/write 与启动/中止/切换 ops 双层门', () => {
-  it('canValidate 走 config-lab/validate 写端点', () => {
-    expect(adhoc).toContain("const canValidate = computed(() => auth.canEndpoint('write', 'POST', '/internal/es/index/config-lab/validate', store.target));");
+  it('canValidate 走 config-lab/validate 写端点或 adhoc 写键', () => {
+    expect(adhoc).toContain("auth.canEndpoint('write', 'POST', '/internal/es/index/config-lab/validate', store.target)");
+    expect(adhoc).toContain("auth.canEndpoint('ops', 'POST', '/internal/es/index/adhoc-rebuild/start', store.target)");
   });
   it('仅校验/校验并继续 v-if="canOps" + disabled 合并 canValidate + title', () => {
-    expect(adhoc).toContain('v-if="canOps" class="btn ghost" :disabled="validating || !canValidate" title="校验需配置校验页写权限" @click="doValidateConfig(false)"');
-    expect(adhoc).toContain('v-if="canOps" class="btn primary" :disabled="validating || !canValidate" title="校验需配置校验页写权限" @click="doValidateConfig(true)"');
+    expect(adhoc).toContain('v-if="canOps" class="btn ghost" :disabled="validating || !canValidate" title="校验需配置校验页或托管重建写权限" @click="doValidateConfig(false)"');
+    expect(adhoc).toContain('v-if="canOps" class="btn primary" :disabled="validating || !canValidate" title="校验需配置校验页或托管重建写权限" @click="doValidateConfig(true)"');
   });
   it('doValidateConfig 首行 canValidate 早退 + notify', () => {
-    expect(adhoc).toMatch(/async function doValidateConfig\(advance: boolean\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canValidate\.value\) \{ store\.notify\('warning', '校验需配置校验页写权限'\); return; \}/);
+    expect(adhoc).toMatch(/async function doValidateConfig\(advance: boolean\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canValidate\.value\) \{ store\.notify\('warning', '校验需配置校验页或托管重建写权限'\); return; \}/);
   });
   it('doStart / doAbort / doConfirmSwitch 首行 canOps 早退', () => {
     expect(adhoc).toMatch(/async function doStart\(\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canOps\.value\)/);

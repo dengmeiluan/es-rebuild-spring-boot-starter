@@ -70,7 +70,11 @@ public class EsTargetInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String target = request.getHeader(HEADER);
-        String uri = request.getRequestURI();
+        /* 必须用鉴权层归一化后的路径判定数据面：裸 URI 的 ;矩阵参数 会让
+           /cluster;x=1/delete-index 漏判为控制面并清掉目标绑定，实际执行落到宿主。 */
+        Object normalized = request.getAttribute(ConsoleAuthInterceptor.ATTR_NORMALIZED_PATH);
+        String uri = normalized instanceof String && !((String) normalized).isEmpty()
+                ? (String) normalized : request.getRequestURI();
         // insight 分析器属数据面，同样跟随目标头（否则分析恒打宿主集群）
         // config-lab/validate 的 Dry-run 同样跟随目标头（版本差异下裁决结果不同）
         // target-aware adhoc：prepare/start 是数据面入口——重建必须作用于用户当前选中的集群；

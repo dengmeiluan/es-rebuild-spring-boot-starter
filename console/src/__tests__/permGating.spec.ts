@@ -141,12 +141,12 @@ describe('权限隐藏第二波（，16 视图写按钮收尾）', () => {
     expect(be).toContain('<button v-if="canOps" class="btn primary sm" @click="doSubmit"');
     expect(be).toContain('执行需 REBUILD_OP/ADMIN 角色');
   });
-  it('TasksView 取消=write / DiagView retryFailedAlloc=admin', () => {
+  it('TasksView 取消=write / DiagView retryFailedAlloc=diag 页写键', () => {
     const tv = V('TasksView.vue');
     /* 该文件 CRLF 行尾——多行锁用 \s* 兼容 */
     expect(tv).toMatch(/v-if="canWrite"\s+class="btn sm"/);
     const dg = V('DiagView.vue');
-    expect(dg).toContain("v-if=\"canAdmin && allocation.current_state === 'unassigned'\"");
+    expect(dg).toContain("v-if=\"canOps && allocation.current_state === 'unassigned'\"");
   });
   it('IndexSettingsView 双保存出口/IlmView 策略与重试 step/TemplatesView 保存删除=ops', () => {
     const isv = V('IndexSettingsView.vue');
@@ -266,7 +266,7 @@ describe('第三波：写门收口（10 视图写按钮 VIEWER 不可见）', ()
   });
   it('RestView：send() 执行体收口 canAdmin（@enter 裸键盘与重试钮同汇入 send，点位隐藏挡不住键盘路径，守卫单源在执行体）', () => {
     const v = V('RestView.vue');
-    expect(v).toContain("if (!canAdmin.value) { store.notify('warning', 'raw 透传需要 ADMIN 角色'); return; }");
+    expect(v).toContain("if (!canAdmin.value) { store.notify('warning', 'raw 透传需要 ADMIN 或 REST 页写权限'); return; }");
   });
   it('MappingDesignerView：添加字段=ops（mapping-put 是 rank3 写端点，令直接补刀+584 页面感知）', () => {
     const v = V('MappingDesignerView.vue');

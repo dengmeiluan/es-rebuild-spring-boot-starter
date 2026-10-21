@@ -194,7 +194,9 @@ const store = useAppStore();
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target));
 /* 校验端点=config-lab/validate（写档 OPERATOR）——按钮隐藏之外，Monaco Ctrl+Enter/错误重试同受执行体门 */
-const canValidate = computed(() => auth.canEndpoint('write', 'POST', '/internal/es/index/config-lab/validate', store.target));
+const canValidate = computed(() =>
+  auth.canEndpoint('write', 'POST', '/internal/es/index/config-lab/validate', store.target)
+  || auth.canEndpoint('ops', 'POST', '/internal/es/index/adhoc-rebuild/start', store.target));
 /* 草稿：两栏编辑稿迁 useScopedDraft（按集群目标隔离）；「清空」按钮改走 clear() */
 const cvScope = { route: 'config-validator',};
 const settingsDraft = useScopedDraft('settings', cvScope);
@@ -368,7 +370,7 @@ function applyTemplate(t: any) {
 
 async function doValidate(dryRun: boolean) {
   /* 键盘（Monaco Ctrl+Enter）/错误条重试与按钮同汇入本函数——执行体首行单源守卫 */
-  if (!canValidate.value) { store.notify('warning', '配置校验需要 OPERATOR 及以上角色'); return; }
+  if (!canValidate.value) { store.notify('warning', '配置校验需要配置校验页或托管重建写权限'); return; }
   busy.value = true;
   /* G6-B7：记录本次模式供 err-bar 重试重跑同模式；开始即清旧失败条 */
   lastDryRun.value = dryRun;

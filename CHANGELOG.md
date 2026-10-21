@@ -5,6 +5,32 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.33]
+
+### 安全
+
+- 开发者工具写发起链路收口：REST 直连/DevTools/Painless 的写操作在按钮、执行体
+  与后端接口三层校验；DevTools 全局 Ctrl+Enter 随 KeepAlive 失活摘除，离页不再
+  触发隐藏写请求；raw 透传非 ADMIN 版本补齐 reindex、快照恢复、别名、模板、SQL、
+  无索引搜索/msearch/mget、unicode 转义与控制面索引守卫
+- host/缺省目标与空页面授权不再回落全局角色门：连接模型写宿主必须持有目标连接
+  写键；静态页白名单未授予归属页的共享写一律拒绝
+- 路径与目标绑定加固：矩阵参数按归一化路径判定数据面；跨集群迁移请求绑定源连接，
+  连接模型下拒绝手输源连接；控制集群重绑/连接档案等系统管理端点维持 ADMIN 专属
+- 委派会话不得创建/修改/删除本地全局账号，堵死“security 写键创建本地账号再以
+  全局角色登录”的越权链；安全中心读键可只读查看用户列表
+- insight 护栏动作接入页面写键表，未登记动作在连接模型下拒绝；动作执行器仅在页面
+  门实际启用时按连接写键放行，页面门关闭时仍按 rank3
+- 权限面板补齐共享写页（ILM/tasks/index-settings/optimizer）、force-merge 与
+  insight 动作写能力，宿主可正确下发 `w:` 键
+
+### 修复
+
+- 托管重建写键可直接执行向导内的配置校验；配置校验页同样接受 adhoc 写键
+- 诊断页分片重试改走结构化 reroute，`w:diag` 或 rank3 即可执行，不再只能借
+  ADMIN raw
+- 迁移发起/预检/作业列表/中止显式携带源连接目标，源写键持有者不再被顶栏目标误拒
+
 ## [1.0.32]
 
 ### 安全

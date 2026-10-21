@@ -24,6 +24,7 @@ import { join } from 'node:path';
 
 const confirmFn = vi.fn();
 const rawFn = vi.fn();
+const rerouteFn = vi.fn();
 
 vi.mock('../composables/confirm', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../composables/confirm')>();
@@ -42,6 +43,7 @@ vi.mock('../api', async (importOriginal) => {
       allocationExplain: vi.fn(async () => ({ index: 'idx-a', shard: 0, primary: true, current_state: 'unassigned', unassigned_info: { reason: 'NODE_LEFT' } })),
       hotThreads: vi.fn(async () => ''),
       raw: (...a: any[]) => rawFn(...a),
+      reroute: (...a: any[]) => rerouteFn(...a),
     },
   };
 });
@@ -59,6 +61,7 @@ async function mountDiag(): Promise<HTMLElement> {
   pendingConfirms = [];
   confirmFn.mockReset();
   rawFn.mockReset();
+  rerouteFn.mockReset();
   confirmFn.mockImplementation(() => new Promise<boolean>((res) => { pendingConfirms.push({ res }); }));
   const router = createRouter({
     history: createMemoryHistory(),
@@ -88,7 +91,7 @@ function findBtn(host: HTMLElement, selector: string, re?: RegExp): HTMLButtonEl
   return btn;
 }
 
-/* 重试钮 v-if 双门控（canAdmin && current_state==='unassigned'）：挂载后点「探测」
+/* 重试钮 v-if 双门控（canOps && current_state==='unassigned'）：挂载后点「探测」
    让 allocationExplain 回包落定，重试钮才进渲染树 */
 async function mountDiagWithUnassigned(): Promise<HTMLElement> {
   const host = await mountDiag();
@@ -118,7 +121,7 @@ describe('Diag retry_failed 执行闸（刀①）', () => {
     expect(confirmFn).toHaveBeenCalledTimes(1);
     releaseConfirm(true);
     await settle(6);
-    expect(rawFn).toHaveBeenCalledTimes(1);        /* 单发铁证 */
+    expect(rerouteFn).toHaveBeenCalledTimes(1);    /* 单发铁证 */
     expect(btn.disabled).toBe(false);              /* finally 复位 */
   });
 
@@ -131,25 +134,25 @@ describe('Diag retry_failed 执行闸（刀①）', () => {
     releaseConfirm(false);
     await settle(4);
     expect(btn.disabled).toBe(false);
-    expect(rawFn).not.toHaveBeenCalled();
+    expect(rerouteFn).not.toHaveBeenCalled();
     btn.click();
     await settle(4);
     expect(confirmFn).toHaveBeenCalledTimes(2);    /* 可再进确认 */
     releaseConfirm(true);
     await settle(6);
-    expect(rawFn).toHaveBeenCalledTimes(1);
+    expect(rerouteFn).toHaveBeenCalledTimes(1);
   });
 
-  it('确认提交后 reroute 走 raw 通道（POST+retry_failed=true）且完成后复位', async () => {
+  it('确认提交后 reroute 走结构化端点（retryFailed=true）且完成后复位', async () => {
     const host = await mountDiagWithUnassigned();
     const btn = findBtn(host, 'button', /重试失败分片分配/);
     btn.click();
     await settle(4);
     releaseConfirm(true);
     await settle(6);
-    expect(rawFn).toHaveBeenCalledTimes(1);
-    expect((rawFn.mock.calls[0] as any[])[0]).toBe('POST');
-    expect(String((rawFn.mock.calls[0] as any[])[1])).toContain('retry_failed=true');
+    expect(rerouteFn).toHaveBeenCalledTimes(1);
+    expect((rerouteFn.mock.calls[0] as any[])[0]).toBe('{}');
+    expect((rerouteFn.mock.calls[0] as any[])[1]).toMatchObject({ retryFailed: true, explain: false });
     expect(btn.disabled).toBe(false);
   });
 });

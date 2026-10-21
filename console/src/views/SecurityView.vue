@@ -112,15 +112,16 @@
       <div class="us-card">
         <div class="card-t"><button class="sec-fold" :class="{ folded: collapsed.users }" :aria-label="collapsed.users ? '展开' : '折叠'" @click="toggleBlock('users')"><ChevronDown :size="14" /></button>
 <Users :size="14" /> 用户管理（内置账号 · 独立部署登录用）
-          <span v-if="!canManageUsers" class="dim sm-txt">（需安全中心写权限）</span>
-          <!-- selectable 批量勾选暗状态（有勾选时计数常驻；admin 分支内） -->
-          <template v-else>
-            <span v-if="usSel.length" class="dim sm-txt">已选 {{ usSel.length }} 用户</span>
+          <span v-if="!canReadUsers" class="dim sm-txt">（需安全中心读权限）</span>
+          <span v-else-if="!canWriteUsers" class="dim sm-txt">（委派会话只读；全局账号由 ADMIN 管理）</span>
+          <!-- selectable 批量勾选暗状态（有勾选时计数常驻；仅写权限可见） -->
+          <template v-if="canReadUsers">
+            <span v-if="canWriteUsers && usSel.length" class="dim sm-txt">已选 {{ usSel.length }} 用户</span>
             <button aria-label="刷新用户列表" class="btn ghost sm right" @click="loadUsers" :disabled="usersLoading" title="刷新用户列表"><RefreshCw :size="12" :class="{ spinning: usersLoading }" /></button>
           </template>
         </div>
         <div v-show="!collapsed.users">
-        <template v-if="canManageUsers">
+        <template v-if="canReadUsers">
           <!-- -A2：拉取失败不能伪装成「暂无正式账号」，否则误导管理员重建用户 -->
           <div v-if="usersErr" role="alert" class="err-bar rise-in">
             用户列表拉取失败：{{ usersErr }}
@@ -142,7 +143,7 @@
             :cols="US_COLS" :rows="usMatrix" sortable
             storage-key="security:users"
             export-name="security-users"
-            selectable
+            :selectable="canWriteUsers"
             @selection-change="usSel = $event"
             max-height="none"
           >
@@ -150,7 +151,7 @@
             <template #cell-角色="{ value }"><StatusPill :tone="roleTone(String(value))" :label="String(value)" /></template>
             <template #cell-更新="{ value }"><TimeCell :ts="value" abs /></template>
             <template #row-actions="{ row }">
-              <button aria-label="删除" class="btn ghost sm danger" title="删除" :disabled="deleting" @click="doDelete(row[0])"><Trash2 :size="12" :class="{ spinning: deleting }" /></button>
+              <button v-if="canWriteUsers" aria-label="删除" class="btn ghost sm danger" title="删除" :disabled="deleting" @click="doDelete(row[0])"><Trash2 :size="12" :class="{ spinning: deleting }" /></button>
             </template>
           </QueryResultTable>
           <!-- C3/#13：err-bar 与 empty 互斥——拉取失败时不许伪装成「暂无正式账号」误导管理员重建用户
@@ -158,6 +159,7 @@
  裸 .empty 迁 EmptyState compact（用户管理窄卡），创建 ADMIN 改 actionText 等价保留 -->
           <EmptyState v-else-if="!usersLoading && !usersErr" compact :icon="UserPlus"
             text="暂无正式账号 —— 当前依赖兜底默认账号" :action-text="canAssignAdmin ? '创建 ADMIN' : undefined" @action="presetAdmin" />
+          <template v-if="canWriteUsers">
           <div class="divider"></div>
           <div class="card-t sm">新建 / 更新用户</div>
           <div class="new-user">
@@ -182,6 +184,7 @@
               <span class="dim">{{ roleDesc(rl) }}</span>
             </div>
           </div>
+          </template>
           <!-- 页面目录：授权时不再靠猜——能看到有哪些页面、哪些需版本门槛（me 响应的 pages 契约，纯前端渲染） -->
           <details v-if="auth.me?.pages?.groups?.length" class="page-catalog">
             <summary>页面目录（{{ pageCount }} 页 · 标「需 X+」为版本门槛）</summary>
@@ -460,6 +463,8 @@ const allConnsFullGrant = computed(() =>
     && grantSummary.value.conns.every(g => isFullGrant(g)));
 /* ·管理域放开：用户管理归 security 页写勾选（POST /auth/users/upsert 归属 security 页），重绑/连接档案维持 ADMIN */
 const canManageUsers = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/auth/users/upsert', store.target)); /* security 页写键可管理普通账号；ADMIN 角色全局可 */
+const canReadUsers = computed(() => auth.canEndpoint('admin', 'GET', '/internal/es/index/auth/users', store.target)); /* security 页读键可看列表（后端 GET 同口径） */
+const canWriteUsers = computed(() => canManageUsers.value && (!auth.me?.delegated || auth.isAdmin())); /* 委派非 ADMIN 不得管理全局本地账号 */
 const canAssignAdmin = computed(() => auth.can('admin')); /* 只有 ADMIN 可授予/修改/删除 ADMIN 账号（后端同口径防提权） */
 const canRebind = computed(() => auth.can('admin')); /* 重绑控制集群属系统管理域：ADMIN 角色专属 */
 
@@ -744,7 +749,7 @@ async function doChangePw() {
 }
 
 async function loadUsers() {
-  if (!canManageUsers.value) return;
+  if (!canReadUsers.value) return;
   /* -A2：失败不再静默吞成空列表，页面级透传 + 重试。
  修复：usersLoading 状态位——骨架只在「在途」显示，
  加载完成但为空走空态（委托鉴权+无正式账号时骨架曾无限转圈并叠加空态） */
@@ -755,7 +760,7 @@ async function loadUsers() {
 }
 
 async function doUpsert() {
-  if (!canManageUsers.value) return; /* 963 执行体守卫：用户管理=security 页写键（模板已隐藏，直调/键盘路径再兜一层） */
+  if (!canWriteUsers.value) return; /* 委派非 ADMIN 不得写全局账号（服务端同口径） */
   if (!canAssignAdmin.value) {
     const target = users.value.find((u: any) => u.username === nuName.value);
     if (nuRole.value === 'ADMIN' || target?.role === 'ADMIN') {
@@ -790,7 +795,7 @@ async function doUpsert() {
    闸置位先于确认窗——critical 确认窗挂起期间行内删除钮已禁用，二击不穿透双发 */
 const deleting = ref(false);
 async function doDelete(username: string) {
-  if (!canManageUsers.value) return; /* 963 执行体守卫（同上款：行内删除钮之外的第二道门） */
+  if (!canWriteUsers.value) return; /* 委派非 ADMIN 不得删除全局账号（服务端同口径） */
   if (!canAssignAdmin.value) {
     const target = users.value.find((u: any) => u.username === username);
     if (target?.role === 'ADMIN') {

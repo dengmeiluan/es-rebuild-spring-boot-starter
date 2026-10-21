@@ -183,6 +183,9 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         m.put("/cluster/reroute", Arrays.asList("cluster-settings", "diag"));
         m.put("/cluster/scripts/put", Arrays.asList("search-templates", "painless-lab"));
         m.put("/cluster/scripts/delete", Arrays.asList("search-templates", "painless-lab"));
+        /* 护栏动作按动作归属页裁决：apply-index-settings 是 index-settings 页的保存出口；
+           未登记的新动作在连接模型下一律拒绝（防未来动作回落角色门绕过页面写键）。 */
+        m.put("/insight/actions/apply-index-settings", java.util.Collections.singletonList("index-settings"));
         SHARED_WRITE_PAGES = java.util.Collections.unmodifiableMap(m);
     }
 
@@ -328,14 +331,32 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             if (principal.getRole().atLeast(ConsoleRole.ADMIN)) {
                 return true;
             }
-            String targetId = request.getHeader("X-Es-Target");
-            boolean targetIsConn = targetId != null && !targetId.isEmpty() && !"host".equalsIgnoreCase(targetId.trim());
+            String targetHeader = request.getHeader("X-Es-Target");
+            /* host/缺省目标也必须参与连接模型写键裁决：conn 用户不该因「没带目标头」
+               落到全局角色门，从而改写宿主集群。 */
+            String targetId = targetHeader == null || targetHeader.trim().isEmpty()
+                    ? "host" : targetHeader.trim();
             ConsolePageCatalog.Page page = pageCatalog.pageOf(path);
             java.util.Set<String> effectivePages = envPagesResolver.effectivePages(
                     targetId, principal.getGrantedPages());
             boolean writeReq = !"GET".equalsIgnoreCase(request.getMethod())
                     && !"OPTIONS".equalsIgnoreCase(request.getMethod())
                     && !isReadonlyPost(path);
+            /* 空集=全拒：不得借无页面归属的共享写端点回落角色门（OPERATOR 也能写）。 */
+            if (writeReq && principal.getGrantedPages().isEmpty()) {
+                opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
+                        "WRITE_DENIED", 403, "pageGrants=empty target=" + targetId));
+                deny(response, 403, "{\"code\":\"WRITE_DENIED\",\"message\":\"当前身份无任何页面授权，写操作一律拒绝\"}");
+                return false;
+            }
+            /* 托管重建向导的「校验并继续」是 adhoc 流程内步骤：持 adhoc 写键即可调用
+               config-lab/validate 的 dry-run，不要求再勾 config-validator 页（否则向导
+               第 1 步永远无法前进）。校验器页自身的写键仍按原页面门裁决。 */
+            if (writeReq && "/internal/es/index/config-lab/validate".equals(path)
+                    && envPagesResolver.inConnModel(principal.getGrantedPages())
+                    && envPagesResolver.writeAllowed(targetId, "adhoc-rebuild", principal.getGrantedPages())) {
+                return true;
+            }
             if (page != null) {
                 if (!effectivePages.contains(page.getKey())) {
                     /* 页面不可见:拒绝事件显式落审计(:带目标集群/实名/来源 IP 维度) */
@@ -360,8 +381,14 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             /* 无页面归属的共享写端点：必须持有真实使用该端点的页面写键（共享端点被多页
                复用，不能按“任意写键”放行——optimizer 写键不应能删文档/改 ILM 策略）。
                未登记共享写回落角色门（保守）；已登记但无对应页写键直接 WRITE_DENIED。 */
-            if (writeReq && targetIsConn && envPagesResolver.inConnModel(principal.getGrantedPages())) {
+            if (writeReq && envPagesResolver.inConnModel(principal.getGrantedPages())) {
                 List<String> allowedPages = sharedWritePages(path);
+                if (allowedPages == null && path.contains("/insight/actions/")) {
+                    opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
+                            "WRITE_DENIED", 403, "target=" + targetId + " unregisteredInsightAction"));
+                    deny(response, 403, "{\"code\":\"WRITE_DENIED\",\"message\":\"该护栏动作未登记页面归属，连接模型下拒绝执行\"}");
+                    return false;
+                }
                 if (allowedPages != null) {
                     for (String pageKey : allowedPages) {
                         if (envPagesResolver.writeAllowed(targetId, pageKey, principal.getGrantedPages())) {
@@ -373,6 +400,23 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                     deny(response, 403, "{\"code\":\"WRITE_DENIED\",\"message\":\"暂无该共享写端点的页面写权限（需 "
                             + jsonEscape(String.join("/", allowedPages)) + " 之一），请联系管理员授权\"}");
                     return false;
+                }
+            } else if (writeReq) {
+                /* 静态页白名单（无 conn 键）：共享写端点至少要能看到一个归属页，
+                   否则「只授 overview」的 OPERATOR 仍可直调文档写。写档仍由角色门兜底。 */
+                List<String> allowedPages = sharedWritePages(path);
+                if (allowedPages != null) {
+                    boolean visible = false;
+                    for (String pageKey : allowedPages) {
+                        if (effectivePages.contains(pageKey)) { visible = true; break; }
+                    }
+                    if (!visible) {
+                        opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
+                                "WRITE_DENIED", 403, "target=" + targetId + " sharedPages=" + String.join(",", allowedPages)));
+                        deny(response, 403, "{\"code\":\"WRITE_DENIED\",\"message\":\"暂无该共享写端点归属页面的访问权限（需 "
+                                + jsonEscape(String.join("/", allowedPages)) + " 之一），请联系管理员授权\"}");
+                        return false;
+                    }
                 }
             }
         }

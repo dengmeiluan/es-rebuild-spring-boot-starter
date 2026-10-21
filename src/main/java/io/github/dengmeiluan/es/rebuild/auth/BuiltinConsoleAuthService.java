@@ -197,6 +197,18 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
     /* 用户管理（ADMIN）                                                                      */
     /* ==================================================================================== */
 
+    /**
+     * 委派会话（宿主委托身份）不得管理本地账号：本地账号是全局身份，
+     * 一旦创建即可用内置登录绕过 delegated 页面门——security 连接写键不能越出页面模型。
+     * 仅 ADMIN（含委派 ADMIN）可管理全局账号。
+     */
+    private static void forbidDelegatedLocalUserWrite(ConsolePrincipal actor) {
+        if (actor != null && actor.isDelegated()
+                && !actor.getRole().atLeast(ConsoleRole.ADMIN)) {
+            throw new IllegalArgumentException("委派会话不得创建/修改/删除本地账号（全局账号仅 ADMIN 可管理）");
+        }
+    }
+
     /** 用户列表（不含密码哈希）。 */
     public List<Map<String, Object>> listUsers() throws IOException {
         List<Map<String, Object>> out = new ArrayList<>();
@@ -223,6 +235,7 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
 
     /** 新建/覆盖用户（password 为空表示只改角色）。 */
     public void upsertUser(ConsolePrincipal actor, String username, String password, ConsoleRole role) throws IOException {
+        forbidDelegatedLocalUserWrite(actor);
         if (username == null || username.trim().isEmpty()) {
             throw new IllegalArgumentException("username 不可为空");
         }
@@ -288,6 +301,7 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
 
     /** 删除用户（保护最后一个 ADMIN；非 ADMIN 不得删除 ADMIN 账号）。 */
     public void deleteUser(String username, ConsolePrincipal actor) throws IOException {
+        forbidDelegatedLocalUserWrite(actor);
         Map<String, Object> existing = findUser(username);
         if (existing == null) {
             return;

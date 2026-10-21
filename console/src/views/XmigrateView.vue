@@ -725,7 +725,7 @@ async function openStartConfirm() {
   try {
     preflight.value = null;
     try {
-      preflight.value = await api.xb.preflight({ sourceIndex: form.value.sourceIndex, destIndex: form.value.destIndex });
+      preflight.value = await api.xb.preflight({ sourceIndex: form.value.sourceIndex, destIndex: form.value.destIndex }, srcConnId.value || undefined);
     } catch {
       /* F3：预检失败不阻断启动，但不能静默——用户须知道弹层警告此刻是降级口径
    （以界面已有数据为准），而不是「确认过没有风险」 */
@@ -798,7 +798,7 @@ async function doStart() {
     };
     if (srcConnId.value) req.srcConnId = srcConnId.value;
     else req.conn = connBody();
-    const r = await api.xb.start(req);
+    const r = await api.xb.start(req, srcConnId.value || undefined);
     store.notify('success', '迁移已启动: ' + (r?.jobId || ''), { action: { label: '查看进度', onClick: () => { formOpen.value = false; locateJobRow(String(r?.jobId || '')); } } });
     formOpen.value = false;
     formDraft.clear();
@@ -990,7 +990,7 @@ async function loadJobs() {
   const seq = ++jobsSeq;
   jobsLoading.value = true;
   try {
-    const r = await api.xb.jobs(30);
+    const r = await api.xb.jobs(30, srcConnId.value || undefined);
     if (seq !== jobsSeq) return; // 已有更新拍入列：本拍整拍作废，不动任何状态
     jobs.value = Array.isArray(r) ? r : [];
     loadErr.value = '';
@@ -1232,7 +1232,7 @@ async function doAbort() {
   setTimeout(async () => {
     if (cancelled) return;
     try {
-      await api.xb.abort(jobId);
+      await api.xb.abort(jobId, job.srcConnId || undefined);
       store.notify('success', '已中止 ' + jobId);
       loadJobs();
     } catch (e: any) { store.notify('error', '中止失败: ' + friendlyApiError(e)); } /* w80：裸 e.message → friendlyEsError */

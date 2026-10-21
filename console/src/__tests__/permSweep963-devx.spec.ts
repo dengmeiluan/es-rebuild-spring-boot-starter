@@ -112,7 +112,8 @@ describe('963 Ilm：move 按真实端点单立 canMove；策略写门进执行�
 
 describe('963 ConfigValidator：validate=write 门 + create=ops 门', () => {
   it('canValidate 定义=config-lab/validate（write 档）', () => {
-    expect(configValidator).toContain("const canValidate = computed(() => auth.canEndpoint('write', 'POST', '/internal/es/index/config-lab/validate', store.target));");
+    expect(configValidator).toContain("auth.canEndpoint('write', 'POST', '/internal/es/index/config-lab/validate', store.target)");
+    expect(configValidator).toContain("auth.canEndpoint('ops', 'POST', '/internal/es/index/adhoc-rebuild/start', store.target)");
   });
   it('快速 Lint / 校验+Dry-run / 错误重试三钮均 v-if=canValidate', () => {
     expect(configValidator).toContain('<button v-if="canValidate" class="btn ghost sm" @click="doValidate(false)" :disabled="busy">');
@@ -137,8 +138,8 @@ describe('963 其余写执行体首行 ops/admin 守卫', () => {
   it('ClusterSettingsView：apply 首行 canOps', () => {
     expectFirstGuard(clusterSettings, 'apply', 'canOps', 'return;');
   });
-  it('DiagView：retryFailedAlloc 首行 canAdmin', () => {
-    expectFirstGuard(diag, 'retryFailedAlloc', 'canAdmin', 'return;');
+  it('DiagView：retryFailedAlloc 首行 canOps', () => {
+    expectFirstGuard(diag, 'retryFailedAlloc', 'canOps', 'return;');
   });
   it('TemplatesView：del 首行 canOps（save 既有守卫保留）', () => {
     expectFirstGuard(templates, 'del', 'canOps', 'return;');

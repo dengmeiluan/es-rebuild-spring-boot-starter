@@ -22,11 +22,11 @@ import GuardedActionButton from '../GuardedActionButton.vue';
 const apps: ReturnType<typeof createApp>[] = [];
 let executed: any[] = [];
 
-async function mountBtn(guardText = '') {
+async function mountBtn(guardText = '', can = true) {
   const Host = defineComponent({
     setup() {
       return () => h(GuardedActionButton, {
-        actionId: 'act-1', params: { idx: 'a' }, label: '执行', guardText,
+        actionId: 'act-1', params: { idx: 'a' }, label: '执行', guardText, can,
         onExecuted: (r: any) => executed.push(r),
       });
     },
@@ -88,5 +88,14 @@ describe('GuardedActionButton 护栏协议（476 批）', () => {
     expect(insight.execute).toHaveBeenCalledWith('act-1', { idx: 'a' }, 'tok-9');
     expect(executed.length).toBe(1);
     expect(document.querySelector('.ga-receipt')!.textContent).toContain('已执行');
+  });
+
+  it('can=false：按钮禁用且执行体不拉预估（权限门纵深）', async () => {
+    const host = await mountBtn('', false);
+    const btn = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('执行')) as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+    btn.click();
+    await nextTick();
+    expect(insight.estimate).not.toHaveBeenCalled();
   });
 });

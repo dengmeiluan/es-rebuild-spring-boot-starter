@@ -79,7 +79,10 @@ describe('favReplay827 devtools 分支（实报根因①）', () => {
 describe('favReplay827 KeepAlive 预填（实报根因②）', () => {
   it('B1 DevToolsView consumePrefill 挂 onActivated（白名单再进入仍消费）', () => {
     const v = rd('../views/DevToolsView.vue');
-    expect(v).toMatch(/onActivated\(\s*\(\)\s*=>\s*\{?\s*consumePrefill\(\)\s*\}?\s*\)/);
+    const start = v.indexOf('onActivated(');
+    const block = v.slice(start, v.indexOf('onDeactivated(', start));
+    expect(block).toContain('consumePrefill();');
+    expect(block).toContain("window.addEventListener('keydown', onGlobalRunKey)");
   });
 });
 

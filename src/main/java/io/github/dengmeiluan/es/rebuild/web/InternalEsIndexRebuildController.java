@@ -20,6 +20,7 @@ import io.github.dengmeiluan.es.rebuild.core.EsIndexRebuildService;
 import io.github.dengmeiluan.es.rebuild.core.ReindexProgress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.List;
@@ -51,11 +53,35 @@ public class InternalEsIndexRebuildController {
 
     private final EsIndexRebuildService esIndexRebuildService;
     private final io.github.dengmeiluan.es.rebuild.core.EsIndexAdmin esIndexAdmin;
+    /** auth.enabled=false 的免鉴权部署仍按历史语义运行；开启鉴权时缺 principal 必须 fail-closed。 */
+    private final boolean authRequired;
 
     public InternalEsIndexRebuildController(EsIndexRebuildService esIndexRebuildService,
                                             io.github.dengmeiluan.es.rebuild.core.EsIndexAdmin esIndexAdmin) {
+        this(esIndexRebuildService, esIndexAdmin, true);
+    }
+
+    public InternalEsIndexRebuildController(EsIndexRebuildService esIndexRebuildService,
+                                            io.github.dengmeiluan.es.rebuild.core.EsIndexAdmin esIndexAdmin,
+                                            boolean authRequired) {
         this.esIndexRebuildService = esIndexRebuildService;
         this.esIndexAdmin = esIndexAdmin;
+        this.authRequired = authRequired;
+    }
+
+    /**
+     * 高危端点不在缺 principal 时回落 ADMIN：拦截器绕过/未装配的部署形态必须 fail-closed，
+     * 否则匿名 raw / 模板写 / 快照恢复会走 ADMIN 的无守卫通道。auth 明确关闭时维持免鉴权语义。
+     */
+    private boolean adminOrFail(javax.servlet.http.HttpServletRequest request) {
+        Object p = request == null ? null
+                : request.getAttribute(io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+        if (p instanceof io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal) {
+            return ((io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal) p).getRole()
+                    .atLeast(io.github.dengmeiluan.es.rebuild.auth.ConsoleRole.ADMIN);
+        }
+        if (!authRequired) return true;
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "请先登录 ES 控制台");
     }
 
     /**
@@ -355,6 +381,7 @@ public class InternalEsIndexRebuildController {
     @PostMapping("cluster/raw")
     public Map<String, Object> clusterRaw(@org.springframework.web.bind.annotation.RequestBody Map<String, String> req,
                                           javax.servlet.http.HttpServletRequest request) throws IOException {
+        boolean admin = adminOrFail(request);
         try {
             org.springframework.web.context.request.RequestAttributes ra =
                     org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
@@ -368,11 +395,6 @@ public class InternalEsIndexRebuildController {
             // 且无痕（审计链断点）。低频用户路径直接 WARN 不节流；回填失败不影响执行契约不变
             log.warn("[es-console-raw] 审计摘要回填失败(本次高危审计缺执行摘要): {}", e.getMessage(), e);
         }
-        Object principal = request.getAttribute(
-                io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthInterceptor.ATTR_PRINCIPAL);
-        boolean admin = !(principal instanceof io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal)
-                || ((io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal) principal)
-                        .getRole().atLeast(io.github.dengmeiluan.es.rebuild.auth.ConsoleRole.ADMIN);
         /* 连接模型 rest 写键持有人可使用 raw 访问业务索引，但控制面索引仍仅 ADMIN 可达 */
         return admin
                 ? esIndexAdmin.raw(req.get("method"), req.get("path"), req.get("body"))
@@ -457,11 +479,7 @@ public class InternalEsIndexRebuildController {
                                                   @RequestParam(defaultValue = "index") String kind,
                                                   @org.springframework.web.bind.annotation.RequestBody String body,
                                                   javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
-        Object principal = request.getAttribute(
-                io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthInterceptor.ATTR_PRINCIPAL);
-        boolean admin = !(principal instanceof io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal)
-                || ((io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal) principal)
-                        .getRole().atLeast(io.github.dengmeiluan.es.rebuild.auth.ConsoleRole.ADMIN);
+        boolean admin = adminOrFail(request);
         return admin
                 ? esIndexAdmin.putTemplateAdmin(kind, name, body)
                 : esIndexAdmin.putTemplate(kind, name, body);
@@ -500,11 +518,7 @@ public class InternalEsIndexRebuildController {
                                                       @RequestParam String name,
                                                       @org.springframework.web.bind.annotation.RequestBody(required = false) String body,
                                                       javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
-        Object principal = request.getAttribute(
-                io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthInterceptor.ATTR_PRINCIPAL);
-        boolean admin = !(principal instanceof io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal)
-                || ((io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal) principal)
-                        .getRole().atLeast(io.github.dengmeiluan.es.rebuild.auth.ConsoleRole.ADMIN);
+        boolean admin = adminOrFail(request);
         /* 非 ADMIN：必须显式业务 indices，禁止 restore-all 覆盖控制面索引 */
         return admin
                 ? esIndexAdmin.restoreSnapshot(repo, name, body)
@@ -552,8 +566,9 @@ public class InternalEsIndexRebuildController {
     @PostMapping("cluster/reroute")
     public Map<String, Object> clusterReroute(@RequestParam(defaultValue = "false") boolean dryRun,
                                               @RequestParam(defaultValue = "true") boolean explain,
+                                              @RequestParam(defaultValue = "false") boolean retryFailed,
                                               @org.springframework.web.bind.annotation.RequestBody String body) throws java.io.IOException {
-        return esIndexAdmin.clusterReroute(body, dryRun, explain);
+        return esIndexAdmin.clusterReroute(body, dryRun, explain, retryFailed);
     }
 
     /** ILM 策略列表 */

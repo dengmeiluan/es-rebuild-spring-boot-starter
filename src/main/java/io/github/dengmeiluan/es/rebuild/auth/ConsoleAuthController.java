@@ -17,11 +17,13 @@
 package io.github.dengmeiluan.es.rebuild.auth;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
@@ -175,6 +177,15 @@ public class ConsoleAuthController {
         return out;
     }
 
+    /** 用户写操作不再接受缺 principal：拦截器被绕过/关闭时 fail-closed，防匿名建 ADMIN。 */
+    private static ConsolePrincipal requirePrincipal(HttpServletRequest request) {
+        Object p = request == null ? null : request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+        if (!(p instanceof ConsolePrincipal)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "请先登录 ES 控制台");
+        }
+        return (ConsolePrincipal) p;
+    }
+
     /* ------------------------------- 用户管理（ADMIN，拦截器已卡） ------------------------------- */
 
     /** 用户列表。 */
@@ -187,7 +198,7 @@ public class ConsoleAuthController {
     @PostMapping("users/upsert")
     public Map<String, Object> upsertUser(HttpServletRequest request,
                                           @RequestBody Map<String, String> body) throws IOException {
-        ConsolePrincipal p = (ConsolePrincipal) request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+        ConsolePrincipal p = requirePrincipal(request);
         authService.upsertUser(p, body.get("username"), body.get("password"), ConsoleRole.parse(body.get("role")));
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("ok", true);
@@ -197,7 +208,7 @@ public class ConsoleAuthController {
     /** 删除用户。 */
     @PostMapping("users/delete")
     public Map<String, Object> deleteUser(HttpServletRequest request, @RequestParam String username) throws IOException {
-        ConsolePrincipal p = (ConsolePrincipal) request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+        ConsolePrincipal p = requirePrincipal(request);
         authService.deleteUser(username, p);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("ok", true);

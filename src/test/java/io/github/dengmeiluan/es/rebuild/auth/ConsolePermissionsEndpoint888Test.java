@@ -262,12 +262,17 @@ public class ConsolePermissionsEndpoint888Test {
 
     @Test
     public void 权限面写档_GET_only页不误报_真实写端点页按角色() {        Map<String, Object> admin = call(ctrl(), builtin(ConsoleRole.ADMIN), "host");
-        /* overview/diag 只有 GET/只读 POST——不得披露 write（否则宿主下发的 w: 键会解锁共享写端点） */
+        /* overview 只有 GET/只读 POST——不得披露 write；diag 通过共享映射拥有结构化 reroute 写端点 */
         assertNull(pageOf(admin, "overview").get("write"));
-        assertNull(pageOf(admin, "diag").get("write"));
+        assertEquals(Boolean.TRUE, pageOf(admin, "diag").get("write"));
         assertEquals(Boolean.TRUE, pageOf(admin, "indices").get("write"));
         assertEquals(Boolean.TRUE, pageOf(admin, "security").get("write"));
         assertEquals(Boolean.TRUE, pageOf(admin, "rest").get("write"));
+        /* 仅靠共享写映射拥有写能力的页面必须可被授权（w: 键下发入口） */
+        assertEquals(Boolean.TRUE, pageOf(admin, "tasks").get("write"));
+        assertEquals(Boolean.TRUE, pageOf(admin, "ilm").get("write"));
+        assertEquals(Boolean.TRUE, pageOf(admin, "index-settings").get("write"));
+        assertEquals(Boolean.TRUE, pageOf(admin, "optimizer").get("write"));
 
         Map<String, Object> operator = call(ctrl(), builtin(ConsoleRole.OPERATOR), "host");
         assertNull(pageOf(operator, "overview").get("write"));

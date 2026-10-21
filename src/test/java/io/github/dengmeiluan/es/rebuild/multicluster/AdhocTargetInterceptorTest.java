@@ -64,9 +64,17 @@ public class AdhocTargetInterceptorTest {
     /* ---------------- 桩设施（JDK 动态代理，沿用仓内既定模式） ---------------- */
 
     private static HttpServletRequest request(String uri, String targetHeader, ConsolePrincipal principal) {
+        return request(uri, targetHeader, principal, null);
+    }
+
+    private static HttpServletRequest request(String uri, String targetHeader, ConsolePrincipal principal,
+                                               String normalizedPath) {
         Map<String, Object> attrs = new HashMap<>();
         if (principal != null) {
             attrs.put(ConsoleAuthInterceptor.ATTR_PRINCIPAL, principal);
+        }
+        if (normalizedPath != null) {
+            attrs.put(ConsoleAuthInterceptor.ATTR_NORMALIZED_PATH, normalizedPath);
         }
         InvocationHandler h = (proxy, m, args) -> {
             switch (m.getName()) {
@@ -169,6 +177,25 @@ public class AdhocTargetInterceptorTest {
         EsTargetInterceptor interceptor = new EsTargetInterceptor(router, fakeConnStore(conns), true);
         assertThat(interceptor.preHandle(
                 request(BASE + "/adhoc-rebuild/start", "conn-a", principal(ConsoleRole.ADMIN)),
+                new StubResponse().proxy, new Object())).isTrue();
+        assertThat(router.currentTarget()).isEqualTo("conn-a");
+    }
+
+    @Test
+    public void normalizedPathKeepsDataPlaneClassificationForMatrixParams() throws Exception {
+        conns.put("conn-a", conn("VIEWER"));
+        EsTargetInterceptor interceptor = new EsTargetInterceptor(router, fakeConnStore(conns), true);
+        /* 裸 URI 含 ;x=1 时不得漏判为控制面清绑定——按鉴权层归一化路径仍绑定 conn-a */
+        assertThat(interceptor.preHandle(
+                request(BASE + "/cluster;x=1/delete-index", "conn-a", principal(ConsoleRole.ADMIN),
+                        "/internal/es/index/cluster/delete-index"),
+                new StubResponse().proxy, new Object())).isTrue();
+        assertThat(router.currentTarget()).isEqualTo("conn-a");
+
+        router.clear();
+        assertThat(interceptor.preHandle(
+                request(BASE + "/adhoc-rebuild/start;x=1", "conn-a", principal(ConsoleRole.ADMIN),
+                        "/internal/es/index/adhoc-rebuild/start"),
                 new StubResponse().proxy, new Object())).isTrue();
         assertThat(router.currentTarget()).isEqualTo("conn-a");
     }

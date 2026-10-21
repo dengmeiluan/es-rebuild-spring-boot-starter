@@ -64,9 +64,12 @@ describe('963 CmdPalette：端点级门禁（设置下发/分词热重载/ILM �
 
 /* ═══ ② SecurityView：执行体守卫 + facets 按全量审计档 ═══ */
 describe('963 SecurityView：用户/重绑执行体守卫与 facets 档位', () => {
-  it('doUpsert/doDelete 首行 canManageUsers 守卫', () => {
-    expect(sec).toMatch(/async function doUpsert\(\) \{\n\s*if \(!canManageUsers\.value\) return;/);
-    expect(sec).toMatch(/async function doDelete\(username: string\) \{\n\s*if \(!canManageUsers\.value\) return;/);
+  it('doUpsert/doDelete 首行 canWriteUsers 守卫（委派非 ADMIN 不得写全局账号）', () => {
+    expect(sec).toMatch(/async function doUpsert\(\) \{\n\s*if \(!canWriteUsers\.value\) return;/);
+    expect(sec).toMatch(/async function doDelete\(username: string\) \{\n\s*if \(!canWriteUsers\.value\) return;/);
+    expect(sec).toContain("const canReadUsers = computed(() => auth.canEndpoint('admin', 'GET', '/internal/es/index/auth/users', store.target));");
+    expect(sec).toContain("const canWriteUsers = computed(() => canManageUsers.value && (!auth.me?.delegated || auth.isAdmin()));");
+    expect(sec).toMatch(/async function loadUsers\(\) \{\n\s*if \(!canReadUsers\.value\) return;/);
   });
 
   it('doRebind 首行 canRebind 守卫（先于 rbBusy 闸）', () => {

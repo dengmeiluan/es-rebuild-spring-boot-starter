@@ -17,6 +17,7 @@
           v-if="canOps && canGuardedSave"
           action-id="apply-index-settings"
           :params="guardParams"
+          :can="canOps && canGuardedSave"
           :label="`保存 (${diffCount})`"
           @executed="onExecuted"
         />

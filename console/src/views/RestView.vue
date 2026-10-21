@@ -358,7 +358,7 @@ watch(body, () => { queueRtLintMarkers(); }, { immediate: true });
 async function send() {
   /* 执行体收口——raw 透传是 admin 档，裸 Enter（@enter="send"）与重试钮都汇入
  此函数，按点位隐藏发送钮挡不住键盘路径，守卫收到执行体才是单源 */
-  if (!canAdmin.value) { store.notify('warning', 'raw 透传需要 ADMIN 角色'); return; }
+  if (!canAdmin.value) { store.notify('warning', 'raw 透传需要 ADMIN 或 REST 页写权限'); return; }
   if (!path.value.trim().startsWith('/')) { store.notify('warning', 'path 必须以 / 开头'); return; }
   if (method.value === 'PUT' || method.value === 'DELETE') {
     const ok = await askConfirm({
@@ -374,6 +374,8 @@ async function send() {
 }
 
 async function doSend() {
+  /* 执行体单点门：send/重试/Enter/确认后目标切换最终都汇入此处，钮面隐藏不是唯一防线 */
+  if (!canAdmin.value) { store.notify('warning', 'raw 透传需要 ADMIN 或 REST 页写权限'); return; }
   /* G7-A2：path 输入框 Enter 路径不受按钮 :disabled 约束——执行体守卫管键盘重入（教训 7） */
   if (sending.value) return;
   sending.value = true;

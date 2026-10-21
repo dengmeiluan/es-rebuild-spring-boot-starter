@@ -168,6 +168,20 @@ public class CrossClusterMigrateControllerTargetTest {
     }
 
     @Test
+    public void 连接模型_手输源连接被拒绝() {
+        FakeService service = new FakeService();
+        MigrateRequest req = new MigrateRequest();
+        req.setSourceIndex("src-1");
+        req.setDestIndex("dest-1");
+        HttpServletRequest c1 = request(viewer("conn:c1:w:xmigrate"));
+        CrossClusterMigrateController ctrl = controller(service, connStore());
+        expectForbidden(() -> ctrl.start(req, c1), "空 srcConnId 手输源发起");
+        expectForbidden(() -> ctrl.preflight(req, c1), "空 srcConnId 手输源预检");
+        expectForbidden(() -> ctrl.connectCheck(new RemoteClusterConn(), null, c1), "空 connId 手输源连接检查");
+        expectForbidden(() -> ctrl.fetchConfig(new RemoteClusterConn(), "src-1", null, c1), "空 connId 手输源取配置");
+    }
+
+    @Test
     public void 进度中止续跑_按作业源连接写键裁决() {
         FakeService service = new FakeService();
         service.jobs.put("j1", job("j1", "c1"));

@@ -67,6 +67,8 @@ public class ConsolePermissionsController {
             "/internal/es/index/rebuild",
             "/internal/es/index/rebuild-empty",
             "/internal/es/index/force-merge",
+            "/internal/es/index/cluster/force-merge",
+            "/internal/es/index/insight/actions/apply-index-settings",
             "/internal/es/index/replicas",
             "/internal/es/index/config-lab/validate",
             "/internal/es/index/cluster/delete-index",
@@ -150,7 +152,7 @@ public class ConsolePermissionsController {
                 ? envPagesResolver.writeAllowed(tid, "rest", gp)
                 : p.getRole().atLeast(ConsoleAuthInterceptor.requiredRole("POST", RAW_PATH)));
         // 共享写档：ADMIN 全局可用；连接模型需持有真实使用共享端点的页面写键
-        boolean sharedWriteAllowed = admin || (pageGateActive && connModel && targetIsConn
+        boolean sharedWriteAllowed = admin || (pageGateActive && connModel
                 && ConsoleAuthInterceptor.hasSharedWriteGrant(tid, gp));
 
         String connName = null;
@@ -193,7 +195,7 @@ public class ConsolePermissionsController {
                 pm.put("name", pg.getName());
                 boolean read = admin || !pageGateActive || effective.contains(pg.getKey());
                 List<String> prefixes = pg.getApiPrefixes();
-                ConsoleRole writeRole = requiredWriteRole(prefixes);
+                ConsoleRole writeRole = requiredWriteRole(pg.getKey(), prefixes);
                 boolean hasWriteEndpoint = writeRole != null;
                 Boolean write = null;
                 String writeDeny = null;
@@ -233,19 +235,30 @@ public class ConsolePermissionsController {
         return ResponseEntity.ok(out);
     }
 
-    /** 该页真实写端点的最高角色档；无写端点返回 null。 */
-    private static ConsoleRole requiredWriteRole(List<String> prefixes) {
-        if (prefixes == null || prefixes.isEmpty()) return null;
+    /**
+     * 该页真实写端点的最高角色档；无写端点返回 null。
+     * 除页面 apiPrefixes 直连端点外，还要识别 SHARED_WRITE_PAGES 里声明本页为归属页的
+     * 共享写端点（ilm/tasks/index-settings/optimizer 等页仅靠共享映射拥有写能力）——
+     * 否则宿主的权限面板不给 w: 键，已授权用户永远无法被授权。
+     */
+    private static ConsoleRole requiredWriteRole(String pageKey, List<String> prefixes) {
         ConsoleRole need = null;
-        for (String prefix : prefixes) {
-            for (String write : WRITE_ENDPOINT_PATHS) {
-                if (!covers(prefix, write) || ConsoleAuthInterceptor.isReadonlyPost(write)) {
-                    continue;
+        for (String write : WRITE_ENDPOINT_PATHS) {
+            if (ConsoleAuthInterceptor.isReadonlyPost(write)) continue;
+            boolean owned = false;
+            if (prefixes != null) {
+                for (String prefix : prefixes) {
+                    if (covers(prefix, write)) { owned = true; break; }
                 }
-                ConsoleRole r = ConsoleAuthInterceptor.requiredRole("POST", write);
-                if (need == null || r.ordinal() > need.ordinal()) {
-                    need = r;
-                }
+            }
+            if (!owned) {
+                List<String> shared = ConsoleAuthInterceptor.sharedWritePages(write);
+                owned = shared != null && shared.contains(pageKey);
+            }
+            if (!owned) continue;
+            ConsoleRole r = ConsoleAuthInterceptor.requiredRole("POST", write);
+            if (need == null || r.ordinal() > need.ordinal()) {
+                need = r;
             }
         }
         return need;

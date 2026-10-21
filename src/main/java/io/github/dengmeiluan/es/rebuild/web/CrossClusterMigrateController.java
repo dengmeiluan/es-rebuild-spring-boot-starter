@@ -177,9 +177,17 @@ public class CrossClusterMigrateController {
         return ok("aborted", jobId);
     }
 
-    /** 连接模型下源连接档案必须有该连接的迁移写键；手输连接不绑定档案（仍受当前页 rank3 门）。 */
+    /**
+     * 连接模型下源连接档案必须有该连接的迁移写键。<b>手输源连接一律拒绝</b>——
+     * 手输连接不绑定档案，若放行则持 A 连接写键的用户可绕过源授权读取任意集群并写宿主；
+     * 需要临时连接请先在连接中心建档并授予该连接 xmigrate 写键。
+     */
     private void requireSourceWrite(String connId, HttpServletRequest request) {
-        if (!connModel(request) || connId == null || connId.trim().isEmpty()) return;
+        if (!connModel(request)) return;
+        if (connId == null || connId.trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "连接模型下必须选择已授权的源连接档案（不支持手输源连接）");
+        }
         ConsolePrincipal principal = principal(request);
         if (!envPagesResolver.writeAllowed(connId.trim(), "xmigrate", principal.getGrantedPages())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,

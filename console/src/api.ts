@@ -42,6 +42,9 @@ const targetHeaders = (): Record<string, string> => {
   const t = getTarget();
   return t ? { 'X-Es-Target': t } : {};
 };
+/** xmigrate 专用目标覆盖：请求里的源连接与顶栏目标可能不同，空值沿用全局。 */
+const xbTargetInit = (target?: string | null) =>
+  target && target.trim() ? { headers: { 'X-Es-Target': target.trim() } } : undefined;
 
 /* ==================== ：授权就绪门（iframe 嵌入形态） ====================
  连接模型用户（宿主委托）的页面门按 X-Es-Target 命中 conn:{id}:{page} 键判定——
@@ -552,8 +555,8 @@ export const api = {
   indexSettings: (index: string) => get<any>(`/cluster/index-settings?${q({ index })}`),
   updateIndexSettings: (index: string, body: string) =>
     post(`/cluster/index-settings/update?${q({ index })}`, body),
-  reroute: (body: string, opts: { dryRun?: boolean; explain?: boolean } = {}) =>
-    post(`/cluster/reroute?${q({ dryRun: opts.dryRun, explain: opts.explain ?? true })}`, body),
+  reroute: (body: string, opts: { dryRun?: boolean; explain?: boolean; retryFailed?: boolean } = {}) =>
+    post(`/cluster/reroute?${q({ dryRun: opts.dryRun, explain: opts.explain ?? true, retryFailed: opts.retryFailed })}`, body),
   ilmPolicies: () => get<any[]>('/cluster/ilm/policies'),
   ilmPolicyPut: (name: string, body: string) => put(`/cluster/ilm/policy?${q({ name })}`, body),
   ilmPolicyDelete: (name: string) => del(`/cluster/ilm/policy?${q({ name })}`),
@@ -730,19 +733,21 @@ export const api = {
   /* 跨集群迁移（XB 前缀）——对齐 CrossClusterMigrateController
  connId/srcConnId 引用已存连接档案（服务端取密，明文不经前端；角色低于档案 minRole 回 403） */
   xb: {
-    jobs: (limit = 20) => get(`/jobs?${q({ limit })}`, XB),
+    /* 迁移端点按源连接判定页面写键：显式携带 X-Es-Target=源连接档案，
+       不能沿用顶栏目标（源≠顶栏时会被页面门误拒）。 */
+    jobs: (limit = 20, target?: string) => get(`/jobs?${q({ limit })}`, XB, xbTargetInit(target)),
     /* 目标索引补全专用：迁移写入端（宿主）索引清单——恒宿主控制面，别用跟随 X-Es-Target 的 clusterIndices */
     destIndices: () => get('/dest-indices', XB),
-    progress: (jobId: string) => get(`/progress?${q({ jobId })}`, XB),
-    start: (req: any) => post('/start', req, XB),
-    preflight: (req: any) => post('/preflight', req, XB),
+    progress: (jobId: string, target?: string) => get(`/progress?${q({ jobId })}`, XB, xbTargetInit(target)),
+    start: (req: any, target?: string) => post('/start', req, XB, xbTargetInit(target)),
+    preflight: (req: any, target?: string) => post('/preflight', req, XB, xbTargetInit(target)),
     connectCheck: (conn: any, connId?: string) =>
-      post(connId ? `/connect-check?${q({ connId })}` : '/connect-check', conn ?? {}, XB),
+      post(connId ? `/connect-check?${q({ connId })}` : '/connect-check', conn ?? {}, XB, xbTargetInit(connId)),
     resolvePreview: (conn: any) => post('/resolve-preview', conn, XB),
     fetchConfig: (conn: any, sourceIndex: string, connId?: string) =>
-      post(`/fetch-config?${q({ sourceIndex, connId })}`, conn ?? {}, XB),
+      post(`/fetch-config?${q({ sourceIndex, connId })}`, conn ?? {}, XB, xbTargetInit(connId)),
     resume: (jobId: string, conn: any, connId?: string) =>
-      post(`/resume?${q({ jobId, connId })}`, conn ?? {}, XB),
-    abort: (jobId: string) => post(`/abort?${q({ jobId })}`, undefined, XB),
+      post(`/resume?${q({ jobId, connId })}`, conn ?? {}, XB, xbTargetInit(connId)),
+    abort: (jobId: string, target?: string) => post(`/abort?${q({ jobId })}`, undefined, XB, xbTargetInit(target)),
   },
 };

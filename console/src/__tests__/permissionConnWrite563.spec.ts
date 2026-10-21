@@ -125,6 +125,25 @@ describe('588 批:端点级单一权限入口 canEndpoint(apiPrefixes 最长前�
     auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['conn:c1:optimizer', 'conn:c1:w:optimizer'], pages: pagesWithPrefixes };
     expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/delete-by-id', 'c1')).toBe(false);
   });
+  it('conn 模型:host/缺省目标的 canWriteOn/canPage 不回落角色门', () => {
+    const auth = useAuthStore();
+    auth.me = { username: 'u', role: 'OPERATOR', fallback: false, grantedPages: ['conn:c1:search', 'conn:c1:w:search'], pages: pagesWithPrefixes };
+    expect(auth.canWriteOn(undefined)).toBe(false);
+    expect(auth.canWriteOn('c1')).toBe(true);
+    expect(auth.canPage('write', 'search', undefined)).toBe(false);
+    expect(auth.canPage('write', 'search', 'c1')).toBe(true);
+    auth.me = { username: 'u', role: 'OPERATOR', fallback: false, grantedPages: ['conn:host:w:search'], pages: pagesWithPrefixes };
+    expect(auth.canWriteOn(undefined)).toBe(true);
+    expect(auth.canPage('write', 'search', undefined)).toBe(true);
+  });
+  it('conn 模型:host/缺省目标不落回角色门——共享写须 conn:host 写键', () => {
+    const auth = useAuthStore();
+    auth.me = { username: 'u', role: 'OPERATOR', fallback: false, grantedPages: ['conn:c1:search', 'conn:c1:w:search'], pages: pagesWithPrefixes };
+    expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/doc', undefined)).toBe(false);
+    expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/doc', 'c1')).toBe(true);
+    auth.me = { username: 'u', role: 'OPERATOR', fallback: false, grantedPages: ['conn:host:w:search'], pages: pagesWithPrefixes };
+    expect(auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/doc', undefined)).toBe(true);
+  });
   it('静态模型(grantedPages=null):回落 canCap(VIEWER 拒,REBUILD_OP 过)', () => {
     const auth = useAuthStore();
     auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: null, pages: pagesWithPrefixes };

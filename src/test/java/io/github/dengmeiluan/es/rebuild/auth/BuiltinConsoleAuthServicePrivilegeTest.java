@@ -42,12 +42,42 @@ public class BuiltinConsoleAuthServicePrivilegeTest {
         return new ConsolePrincipal("security-writer", ConsoleRole.VIEWER, false);
     }
 
+    private static ConsolePrincipal delegatedNonAdmin() {
+        return new ConsolePrincipal("delegated-writer", ConsoleRole.VIEWER, false, true,
+                "宿主写者", null, java.util.Collections.singleton("conn:c1:w:security"));
+    }
+
     private static void expectRejected(Runnable r, String why) {
         try {
             r.run();
             fail("应拒绝：" + why);
         } catch (IllegalArgumentException e) {
             assertTrue(e.getMessage().contains("ADMIN"));
+        }
+    }
+
+
+    @Test
+    public void 委派非ADMIN不得创建本地账号() {
+        try {
+            serviceWithAdminDoc().upsertUser(delegatedNonAdmin(), "escalated", "password1", ConsoleRole.REBUILD_OP);
+            fail("委派 security 写键不得创建本地账号");
+        } catch (IllegalArgumentException e) {
+            assertTrue(e.getMessage().contains("委派"));
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    public void 委派非ADMIN不得删除本地账号() {
+        try {
+            serviceWithAdminDoc().deleteUser("normal-user", delegatedNonAdmin());
+            fail("委派 security 写键不得删除本地账号");
+        } catch (IllegalArgumentException e) {
+            assertTrue(e.getMessage().contains("委派"));
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e);
         }
     }
 

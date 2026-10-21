@@ -1,6 +1,6 @@
 <!-- 同构确认弹窗双实现——数值改动必须两边同步(另一半:ConfirmModal.vue) -->
 <template>
-  <button class="btn pri" :disabled="disabled || phase === 'estimating'" @click="start">
+  <button class="btn pri" :disabled="!can || disabled || phase === 'estimating'" @click="start">
     <Loader2 v-if="phase === 'estimating'" :size="13" class="spinning" />
     {{ label }}
   </button>
@@ -106,10 +106,13 @@ const props = withDefaults(defineProps<{
   /** HIGH 风险时要求输入的确认文案（如索引名），非 HIGH 忽略 */
   guardText?: string;
   disabled?: boolean;
+  /** 执行体权限门（父组件按真实端点判定；默认 true 保持既有调用零改动） */
+  can?: boolean;
 }>(), {
   label: '执行',
   guardText: '',
   disabled: false,
+  can: true,
 });
 
 const emit = defineEmits<{ (e: 'executed', receipt: any): void }>();
@@ -136,7 +139,7 @@ const items = computed(() => (estimate.value?.analysis?.items ?? []) as any[]);
 const shortReceipt = computed(() => String(receipt.value?.receiptId || '').slice(0, 8));
 
 const canExecute = computed(() => {
-  if (!estimate.value || phase.value === 'executing' || phase.value === 'dryRunning') return false;
+  if (!props.can || !estimate.value || phase.value === 'executing' || phase.value === 'dryRunning') return false;
   if (riskLevel.value === 'HIGH' && props.guardText) return guardInput.value === props.guardText;
   return true;
 });
@@ -149,6 +152,7 @@ function fmtVal(v: any) {
 }
 
 async function start() {
+  if (!props.can) return;
   modalOpen.value = true;
   phase.value = 'estimating';
   estimate.value = null;
@@ -168,6 +172,7 @@ async function start() {
 }
 
 async function doDryRun() {
+  if (!props.can) return;
   phase.value = 'dryRunning';
   error.value = '';
   errorRaw.value = null;
@@ -182,7 +187,7 @@ async function doDryRun() {
 }
 
 async function doExecute() {
-  if (!canExecute.value) return;
+  if (!props.can || !canExecute.value) return;
   phase.value = 'executing';
   error.value = '';
   errorRaw.value = null;

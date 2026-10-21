@@ -97,9 +97,10 @@ export const useAuthStore = defineStore('auth', () => {
   const connWriteResolved = (targetId: string | null | undefined): boolean | null => {
     const gp = grantedPages.value;
     if (gp == null) return null;
-    const tid = targetId || 'host';
-    const prefix = 'conn:' + tid + ':';
-    if (!gp.some(g => g.startsWith(prefix))) return null;
+    const isConn = gp.some(g => g.startsWith('conn:'));
+    if (!isConn) return null;
+    /* conn 模型下 host/缺省目标同样按 host 写键裁决，不能回落全局角色门。 */
+    const prefix = 'conn:' + (targetId || 'host') + ':';
     return gp.some(g => g.startsWith(prefix + 'w:'));
   };
   const canWriteOn = (targetId: string | null | undefined): boolean => {
@@ -117,8 +118,8 @@ export const useAuthStore = defineStore('auth', () => {
     if (isAdmin()) return true; /* 超管全局页面权：页面白名单/连接键不拖累 */
     const gp = me.value.grantedPages;
     const isConn = Array.isArray(gp) && gp.some(g => g.startsWith('conn:'));
-    if (isConn && targetId && cap !== 'admin') {
-      return gp!.includes('conn:' + targetId + ':w:' + pageKey);
+    if (isConn && cap !== 'admin') {
+      return gp!.includes('conn:' + (targetId || 'host') + ':w:' + pageKey);
     }
     return canCap(me.value.role, cap);
   };
@@ -146,6 +147,7 @@ export const useAuthStore = defineStore('auth', () => {
     '/cluster/reroute': ['cluster-settings', 'diag'],
     '/cluster/scripts/put': ['search-templates', 'painless-lab'],
     '/cluster/scripts/delete': ['search-templates', 'painless-lab'],
+    '/insight/actions/apply-index-settings': ['index-settings'],
   };
   const sharedWritePageKeys = (path: string): string[] | null => {
     let best: string[] | null = null;
@@ -160,23 +162,26 @@ export const useAuthStore = defineStore('auth', () => {
     if (isAdmin()) return true; /* 超管全局端点权：与后端 ADMIN 页面门豁免镜像 */
     const gp = me.value.grantedPages;
     const isConn = Array.isArray(gp) && gp.some(g => g.startsWith('conn:'));
-    if (!(isConn && targetId)) return canCap(me.value.role, cap);
+    if (!isConn) return canCap(me.value.role, cap);
+    /* host/缺省目标同样走连接写键：conn 用户不得因未带目标头落回全局角色门写宿主；
+       与后端 ConsoleAuthInterceptor 的 targetId=host 归一化同源。 */
+    const tid = targetId || 'host';
     /* 963：只读 POST=清单命中 或 后端三条精确尾缀（index/query、index/system-query、探活 probe）——
        尾缀端点无页归属，误判写会走精确写键把读动作也拦掉 */
     if (method.toUpperCase() !== 'GET'
       && !READONLY_POST_KEYWORDS.some(kw => path.includes(kw))
       && !path.endsWith('/index/query') && !path.endsWith('/index/system-query') && !path.endsWith('/probe')) {
-      /* 写语义：页命中→精确写键；共享→任意写键 */
+      /* 写语义：页命中→精确写键；共享→真实使用该端点的页面写键 */
       const pages = me.value.pages?.groups?.flatMap(g => g.pages) ?? [];
       let best: { key: string; len: number } | null = null;
       for (const p of pages) for (const pre of (p.apiPrefixes ?? [])) {
         const hit = pre.endsWith('/') ? path.startsWith(pre) : (path === pre || path.startsWith(pre + '/'));
         if (hit && pre.length > (best?.len ?? 0)) best = { key: p.key, len: pre.length };
       }
-      if (best) return gp!.includes('conn:' + targetId + ':w:' + best.key);
+      if (best) return gp!.includes('conn:' + tid + ':w:' + best.key);
       /* 共享写：须持有真实使用该端点的页面写键；未登记共享写回落角色档（后端角色门） */
       const sharedPages = sharedWritePageKeys(path);
-      if (sharedPages) return sharedPages.some(k => gp!.includes('conn:' + targetId + ':w:' + k));
+      if (sharedPages) return sharedPages.some(k => gp!.includes('conn:' + tid + ':w:' + k));
       return canCap(me.value.role, cap);
     }
     return true; /* 读请求：conn 模型页面门读键即过（与后端 effectivePages 语义一致） */

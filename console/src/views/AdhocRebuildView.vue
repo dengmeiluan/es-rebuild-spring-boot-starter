@@ -275,10 +275,10 @@ mapping <span class="dim">字段映射</span>
       </div>
 
       <div class="row">
-        <button v-if="canOps" class="btn ghost" :disabled="validating || !canValidate" title="校验需配置校验页写权限" @click="doValidateConfig(false)">
+        <button v-if="canOps" class="btn ghost" :disabled="validating || !canValidate" title="校验需配置校验页或托管重建写权限" @click="doValidateConfig(false)">
           <Loader2 v-if="validating" :size="13" class="spinning" /><ShieldCheck v-else :size="13" /> 仅校验
         </button>
-        <button v-if="canOps" class="btn primary" :disabled="validating || !canValidate" title="校验需配置校验页写权限" @click="doValidateConfig(true)">
+        <button v-if="canOps" class="btn primary" :disabled="validating || !canValidate" title="校验需配置校验页或托管重建写权限" @click="doValidateConfig(true)">
           <Loader2 v-if="validating" :size="13" class="spinning" /><ChevronRight v-else :size="13" /> {{ validating ? '校验中 ' + valSecs + 's' : '校验并继续：选择追平策略' }}
         </button>
       </div>
@@ -786,7 +786,9 @@ const AR_ED_PANES: WorkbenchPaneSpec[] = [
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/adhoc-rebuild/start', store.target));
 /* 校验独立权限面：配置校验页写端点（可能与 start 的 ops 档不同权） */
-const canValidate = computed(() => auth.canEndpoint('write', 'POST', '/internal/es/index/config-lab/validate', store.target));
+const canValidate = computed(() =>
+  auth.canEndpoint('write', 'POST', '/internal/es/index/config-lab/validate', store.target)
+  || auth.canEndpoint('ops', 'POST', '/internal/es/index/adhoc-rebuild/start', store.target));
 /* 草稿：向导全程草稿（按集群目标隔离）。粘贴/审编/表单字段挂载时读一次、
  之后只写不读——切页/失焦/重挂载后现场可复原；doPrepare/校验/prepare 失败不清稿
  （机制保证：只有显式 reset 或改回默认值才清）。 */
@@ -997,7 +999,7 @@ async function copyBackfillDsl() {
 
 async function doValidateConfig(advance: boolean) {
   /* 权限执行体首行门：覆盖 Enter/程序化通道（按钮 v-if 之外） */
-  if (!canValidate.value) { store.notify('warning', '校验需配置校验页写权限'); return; }
+  if (!canValidate.value) { store.notify('warning', '校验需配置校验页或托管重建写权限'); return; }
   validating.value = true;
   const signal = valQr.begin(); /* ：begin 即作废上一轮（queryRunRace382 竞态语义随身） */
   try {

@@ -271,6 +271,108 @@ public class ConsoleAuthInterceptorPageAuthTest {
         assertTrue(respAudit.bodyText().contains("\"required\""));
     }
 
+
+    @Test
+    public void 护栏动作按归属页写键裁决且未登记动作拒绝() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor writer = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:index-settings", "conn:c1:w:index-settings"))), true, audit);
+        assertTrue("w:index-settings 可执行 apply-index-settings",
+                writer.preHandle(stubRequest("POST",
+                        "/internal/es/index/insight/actions/apply-index-settings/execute",
+                        Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+
+        ConsoleAuthInterceptor readOnly = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                Collections.singleton("conn:c1:index-settings")), true, audit);
+        assertFalse("只读键不得执行护栏动作",
+                readOnly.preHandle(stubRequest("POST",
+                        "/internal/es/index/insight/actions/apply-index-settings/execute",
+                        Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+
+        ConsoleAuthInterceptor rank3OtherPage = interceptor(delegatedAs(ConsoleRole.REBUILD_OP,
+                Collections.singleton("conn:c1:overview")), true, audit);
+        assertFalse("rank3 但无归属页写键不得执行",
+                rank3OtherPage.preHandle(stubRequest("POST",
+                        "/internal/es/index/insight/actions/apply-index-settings/execute",
+                        Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+
+        assertFalse("未登记页面归属的护栏动作在连接模型下一律拒绝",
+                writer.preHandle(stubRequest("POST",
+                        "/internal/es/index/insight/actions/unregistered/execute",
+                        Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+    }
+
+    @Test
+    public void 空集或未授予归属页的共享写一律拒绝() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor empty = interceptor(delegatedAs(ConsoleRole.OPERATOR,
+                Collections.<String>emptySet()), true, audit);
+        StubResponse emptyResp = new StubResponse();
+        assertFalse("空页面授权不得借角色门写共享端点", empty.preHandle(
+                stubRequest("POST", "/internal/es/index/cluster/doc",
+                        Collections.singletonMap("X-Es-Target", "c1")), emptyResp.proxy, null));
+        assertEquals(403, emptyResp.status);
+        assertTrue(emptyResp.bodyText().contains("WRITE_DENIED"));
+
+        ConsoleAuthInterceptor overviewOnly = interceptor(delegatedAs(ConsoleRole.OPERATOR,
+                Collections.singleton("overview")), true, audit);
+        assertFalse("只有 overview 页不得写 search 归属的共享端点", overviewOnly.preHandle(
+                stubRequest("POST", "/internal/es/index/cluster/doc",
+                        Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+
+        ConsoleAuthInterceptor searchPage = interceptor(delegatedAs(ConsoleRole.OPERATOR,
+                Collections.singleton("search")), true, audit);
+        assertTrue("有 search 页 + OPERATOR 角色可写该共享端点", searchPage.preHandle(
+                stubRequest("POST", "/internal/es/index/cluster/doc",
+                        Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+    }
+
+    @Test
+    public void 托管重建写键可调用向导内的配置校验() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor adhoc = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:adhoc-rebuild", "conn:c1:w:adhoc-rebuild"))), true, audit);
+        assertTrue("adhoc 写键应允许 config-lab/validate dry-run", adhoc.preHandle(
+                stubRequest("POST", "/internal/es/index/config-lab/validate",
+                        Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+
+        ConsoleAuthInterceptor other = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                Collections.singleton("conn:c1:w:xmigrate")), true, audit);
+        assertFalse("无关写键不得调用配置校验", other.preHandle(
+                stubRequest("POST", "/internal/es/index/config-lab/validate",
+                        Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+    }
+
+    @Test
+    public void 连接模型共享写不得因缺目标头回落角色门写宿主() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        /* OPERATOR 角色只够角色门；连接模型下必须再持有目标连接的页面写键。 */
+        ConsoleAuthInterceptor op = interceptor(delegatedAs(ConsoleRole.OPERATOR,
+                new HashSet<>(Arrays.asList("conn:c1:search", "conn:c1:w:search"))), true, audit);
+        StubResponse hostDenied = new StubResponse();
+        assertFalse("缺目标头=host，conn:c1 写键不得写宿主", op.preHandle(
+                stubRequest("POST", "/internal/es/index/cluster/doc", Collections.<String, String>emptyMap()),
+                hostDenied.proxy, null));
+        assertEquals(403, hostDenied.status);
+        assertTrue(hostDenied.bodyText().contains("WRITE_DENIED"));
+
+        assertTrue("带 c1 目标=该连接写键放行", op.preHandle(
+                stubRequest("POST", "/internal/es/index/cluster/doc",
+                        Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+
+        ConsoleAuthInterceptor readOnly = interceptor(delegatedAs(ConsoleRole.OPERATOR,
+                Collections.singleton("conn:c1:search")), true, audit);
+        assertFalse("只读键不得写共享端点", readOnly.preHandle(
+                stubRequest("POST", "/internal/es/index/cluster/doc",
+                        Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+
+        ConsoleAuthInterceptor hostWriter = interceptor(delegatedAs(ConsoleRole.OPERATOR,
+                Collections.singleton("conn:host:w:search")), true, audit);
+        assertTrue("显式 conn:host 写键可写宿主", hostWriter.preHandle(
+                stubRequest("POST", "/internal/es/index/cluster/doc", Collections.<String, String>emptyMap()),
+                new StubResponse().proxy, null));
+    }
+
     @Test
     public void 委托会话首见落LOGIN审计_同令牌去重() throws Exception {
         CapturingAudit audit = new CapturingAudit();
@@ -648,12 +750,12 @@ public class ConsoleAuthInterceptorPageAuthTest {
                 new StubResponse().proxy, null));
         assertTrue(it.preHandle(stubRequest("POST", "/internal/es/index/cluster/tasks/cancel", target),
                 new StubResponse().proxy, null));
-        /* 未登记共享写（洞察动作）不再吃任意写键：回落角色门，VIEWER 403 */
+        /* 未登记页面归属的洞察动作在连接模型下直接拒绝，不再回落角色门 */
         StubResponse insight = new StubResponse();
         assertFalse(it.preHandle(stubRequest("POST", "/internal/es/index/insight/actions/a1/estimate", target),
                 insight.proxy, null));
         assertEquals(403, insight.status);
-        assertTrue(insight.bodyText().contains("\"required\":\"OPERATOR\""));
+        assertTrue(insight.bodyText().contains("\"code\":\"WRITE_DENIED\""));
     }
 
     @Test
@@ -661,7 +763,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
         CapturingAudit audit = new CapturingAudit();
         // grantedPages 全静态键（无 conn: 前缀）→ inConnModel=false：静态键本就不授写，永不因写键语义放行
         ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
-                new HashSet<>(java.util.Collections.singletonList("docs"))), true, audit);
+                new HashSet<>(java.util.Collections.singletonList("search"))), true, audit);
         StubResponse resp = new StubResponse();
         assertFalse(it.preHandle(stubRequest("POST", "/internal/es/index/cluster/update-partial",
                 java.util.Collections.singletonMap("X-Es-Target", "c1")), resp.proxy, null));

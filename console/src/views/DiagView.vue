@@ -146,7 +146,7 @@
             </div>
             <!-- 诊断现场一键重试——此前要去命令面板搜（看到原因却不能就地处置）；
  走 /cluster/raw=ADMIN 档，非 ADMIN 只读观测（不再给会 403 的钮） -->
-            <div v-if="canAdmin && allocation.current_state === 'unassigned'" class="dg-alloc-row">
+            <div v-if="canOps && allocation.current_state === 'unassigned'" class="dg-alloc-row">
               <button class="btn xs" :disabled="retrying" @click="retryFailedAlloc">
                 <RefreshCw :size="10" :class="{ spinning: retrying }" /> 重试失败分片分配（retry_failed）
               </button>
@@ -237,9 +237,9 @@ import { semFormat } from '../composables/useSemFormat';
 
 const router = useRouter();
 const store = useAppStore();
-/* 权限门禁——retryFailedAlloc 走 api.raw（/_cluster/reroute 经 /cluster/raw 透传）=ADMIN 档 */
+/* 权限门禁——retryFailedAlloc 走结构化 /cluster/reroute（归 diag/cluster-settings 页写键，rank3） */
 const auth = useAuthStore();
-const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target)); /* reroute 走 raw，管理域按 rest 页勾选 */
+const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/reroute', store.target));
 
 /* ES unassigned_info.reason 枚举 → 人话：已收口 utils/esEnumZh（天罗 W6），HealthReportView 同源 */
 
@@ -408,8 +408,8 @@ const retrying = ref(false);
  互斥闸收函数本体首行+置位前移到确认窗之前：确认窗挂起期间钮面即禁用，
  确认窗内二击不得穿透闸二次下发集群级动作；取消路径走 finally 复位防闸死 */
 async function retryFailedAlloc() {
-  /* 走 /_cluster/reroute?retry_failed=true（raw 透传）=ADMIN——按钮 v-if 之外执行体首行单源守卫 */
-  if (!canAdmin.value) { store.notify('warning', '重试分片分配需要 ADMIN 角色'); return; }
+  /* 走结构化 /_cluster/reroute?retry_failed=true——按钮 v-if 之外执行体首行单源守卫 */
+  if (!canOps.value) { store.notify('warning', '重试分片分配需要集群运维权限'); return; }
   if (retrying.value) return;
   retrying.value = true;
   try {
@@ -419,7 +419,7 @@ async function retryFailedAlloc() {
       message: '将对集群下发 _cluster/reroute?retry_failed=true，对所有因节点离线等原因分配失败的分片重新触发分配。若根因未消除（如磁盘水位/缺失副本），分片会再次分配失败。',
       okText: '提交重试',
     })) return;
-    await api.raw('POST', '/_cluster/reroute?retry_failed=true', '{}');
+    await api.reroute('{}', { retryFailed: true, explain: false });
     store.notify('success', '已提交 retry_failed=true，稍后重新探测');
     setTimeout(loadAllocation, 1500);
   } catch (e: any) {

@@ -48,13 +48,23 @@ public class GuardedActionExecutor {
     private final GuardedActionRegistry registry;
     private final ConfirmTokenService tokenService;
     private final ConsoleOpsAuditStore auditStore;
+    /** 页面门是否启用：只有页面门真正按动作归属页校验过 w:page，才可跳过动作 minRole。 */
+    private final boolean pageGateEnabled;
 
     public GuardedActionExecutor(GuardedActionRegistry registry,
                                  ConfirmTokenService tokenService,
                                  ConsoleOpsAuditStore auditStore) {
+        this(registry, tokenService, auditStore, false);
+    }
+
+    public GuardedActionExecutor(GuardedActionRegistry registry,
+                                 ConfirmTokenService tokenService,
+                                 ConsoleOpsAuditStore auditStore,
+                                 boolean pageGateEnabled) {
         this.registry = registry;
         this.tokenService = tokenService;
         this.auditStore = auditStore;
+        this.pageGateEnabled = pageGateEnabled;
     }
 
     /** 影响预估：成功即签发 confirmToken（动作 estimate 抛 IllegalArgumentException 时不发 token）。 */
@@ -92,11 +102,24 @@ public class GuardedActionExecutor {
 
     private GuardedAction requireRole(String actionId, ConsolePrincipal principal) {
         GuardedAction action = registry.get(actionId);
-        if (principal == null || !principal.getRole().atLeast(action.minRole())) {
+        /* 连接模型下页面写键是最终裁决：拦截器已按动作归属页校验 w:{page}，
+           这里不再用全局角色档二次拦截（否则 w:index-settings 的 VIEWER 会被误杀）。
+           静态角色模型仍按动作 minRole 校验。 */
+        if (principal == null
+                || (!(pageGateEnabled && delegatedConnModel(principal))
+                    && !principal.getRole().atLeast(action.minRole()))) {
             throw new InsightForbiddenException(InsightForbiddenException.ACTION_FORBIDDEN,
-                    "该动作要求 " + action.minRole() + " 及以上角色");
+                    "该动作要求 " + action.minRole() + " 及以上角色或对应页面写权限");
         }
         return action;
+    }
+
+    private static boolean delegatedConnModel(ConsolePrincipal p) {
+        if (p == null || !p.isDelegated() || p.getGrantedPages() == null) return false;
+        for (String g : p.getGrantedPages()) {
+            if (g != null && g.startsWith("conn:")) return true;
+        }
+        return false;
     }
 
     private void audit(ActionReceipt receipt, Map<String, Object> params, ConsolePrincipal principal) {

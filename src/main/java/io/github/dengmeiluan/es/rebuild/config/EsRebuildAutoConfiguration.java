@@ -636,8 +636,10 @@ public class EsRebuildAutoConfiguration {
         @ConditionalOnMissingBean
         @ConditionalOnProperty(prefix = "es.rebuild", name = "web-enabled", matchIfMissing = true)
         public InternalEsIndexRebuildController internalEsIndexRebuildController(EsIndexRebuildService esIndexRebuildService,
-                                                                                EsIndexAdmin esIndexAdmin) {
-            return new InternalEsIndexRebuildController(esIndexRebuildService, esIndexAdmin);
+                                                                                EsIndexAdmin esIndexAdmin,
+                                                                                EsRebuildProperties properties) {
+            return new InternalEsIndexRebuildController(esIndexRebuildService, esIndexAdmin,
+                    properties.getConsole().getAuth().isEnabled());
         }
 
         @Bean
@@ -920,10 +922,12 @@ public class EsRebuildAutoConfiguration {
         @ConditionalOnMissingBean
         public GuardedActionExecutor guardedActionExecutor(GuardedActionRegistry guardedActionRegistry,
                                                            ConfirmTokenService confirmTokenService,
-                                                           ObjectProvider<ConsoleOpsAuditStore> auditStoreProvider) {
+                                                           ObjectProvider<ConsoleOpsAuditStore> auditStoreProvider,
+                                                           EsRebuildProperties properties) {
             // 审计 store 随鉴权开关可缺席，executor 内部已容忍 null
             return new GuardedActionExecutor(guardedActionRegistry, confirmTokenService,
-                    auditStoreProvider.getIfAvailable());
+                    auditStoreProvider.getIfAvailable(),
+                    properties.getConsole().getPageAuth().isEnabled());
         }
 
         @Bean

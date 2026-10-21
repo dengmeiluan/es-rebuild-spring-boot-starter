@@ -381,7 +381,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onActivated, onBeforeUnmount, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, onActivated, onDeactivated, onBeforeUnmount, watch, nextTick } from 'vue';
 import {
   TerminalSquare, Plus, X, Play, Copy, AlignJustify, Minimize2, Star, Eraser, History, RotateCcw, Braces, ClipboardPaste,
   ChevronDown, RefreshCw, ShieldAlert, Terminal, ListPlus, Ellipsis, Check, Shield,
@@ -787,7 +787,15 @@ onMounted(() => {
  入名单时漏）；es-console.devtools.open 既有 5 写入方（DslQuery/Watcher/IndexHub/Ilm/
  CmdPalette）+827 favReplay devtools 分支第 6 写入方，缓存态此前全被吞。键读后即删=与
  onMounted 双挂载幂等无害 */
-onActivated(() => consumePrefill());
+onActivated(() => {
+  /* KeepAlive 缓存态恢复：全局键只在页面激活时挂载，离页不得残留执行通道 */
+  window.addEventListener('keydown', onGlobalRunKey);
+  consumePrefill();
+});
+onDeactivated(() => {
+  /* 切页仅失活不卸载——必须摘掉全局执行键，防在别的页面 Ctrl+Enter 触发隐藏 Tab 写请求 */
+  window.removeEventListener('keydown', onGlobalRunKey);
+});
 onBeforeUnmount(() => {
   window.removeEventListener('pagehide', flushDraft);
   window.removeEventListener('keydown', onGlobalRunKey); /* ：全局键随挂载对摘除 */
