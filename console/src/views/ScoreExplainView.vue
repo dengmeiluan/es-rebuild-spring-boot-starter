@@ -259,8 +259,9 @@ async function run() {
 }
 
 async function copyExplain(h: any) {
-  await copyText(JSON.stringify(h._explanation ?? {}, null, 2));
-  store.notify('success', '已复制 explanation JSON');
+  /* 失败分支补齐（诚实口径——此前失败仍报已复制） */
+  const ok = await copyText(JSON.stringify(h._explanation ?? {}, null, 2));
+  store.notify(ok ? 'success' : 'error', ok ? '已复制 explanation JSON' : '复制失败，请手动选中后 Ctrl+C');
 }
 
 /* ==================== ：实验室联动 —— hit 一键送去排名侦探 / 查询X光 ====================
