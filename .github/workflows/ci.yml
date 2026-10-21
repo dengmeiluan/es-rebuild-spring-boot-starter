@@ -38,6 +38,26 @@ jobs:
         run: npm run build
       - name: Backend tests (default path, npm inside maven on POSIX)
         run: mvn -B clean test
+      # surefire 失败明细以 ::error:: 注解上报（镜像 frontend 作业的 vitest 注解技法）：
+      # 作业日志需 admin 权限，注解走公开 check-runs API 即可读取，定位不必升权
+      - name: Report surefire failures as annotations
+        if: failure()
+        run: |
+          found=0
+          for f in target/surefire-reports/*.txt; do
+            [ -e "$f" ] || continue
+            if grep -q "<<< FAILURE!\|<<< ERROR!" "$f"; then
+              found=1
+              cls=$(basename "$f" .txt)
+              while IFS= read -r line; do
+                echo "::error::$cls :: $(echo "$line" | head -c 380)"
+              done < <(grep -A4 "<<< FAILURE!\|<<< ERROR!" "$f" | head -40)
+            fi
+          done
+          if [ "$found" = "0" ]; then
+            echo "::error::backend mvn step failed with no surefire failure files - see raw log (compile/build error?)"
+            ls target/surefire-reports/ 2>/dev/null | head -5
+          fi
       # 双部署形态回归：standalone（可执行应用 jar）依赖本地仓里的 starter，
       # install 后构建并跑其契约+启动冒烟测试（空环境起完整上下文）
       - name: Standalone build & smoke tests
