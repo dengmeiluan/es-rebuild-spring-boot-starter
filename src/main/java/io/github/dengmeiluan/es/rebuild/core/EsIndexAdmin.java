@@ -145,6 +145,13 @@ public class EsIndexAdmin {
         String p = q < 0 ? path : path.substring(0, q);
         int slash = p.indexOf('/', 1);
         String first = slash < 0 ? p.substring(1) : p.substring(1, slash);
+        if (first.isEmpty()) {
+            // "//" 前缀空首段：ES 路由跳过空段，折叠出真实首段再判定——直接放行会让
+            // 上层裸拼 "/"+indexOrAlias 在入参自带前导斜杠时整条守卫失明
+            for (String seg : p.substring(1).split("/")) {
+                if (!seg.isEmpty()) { first = seg; break; }
+            }
+        }
         if (first.isEmpty() || "_all".equalsIgnoreCase(first)) {
             if (first.isEmpty()) return;
             throw new IllegalArgumentException("不允许对全量索引执行该操作（控制面索引不可触达）：_all");
@@ -686,6 +693,8 @@ public class EsIndexAdmin {
      * Q1 面板"索引详情卡 + Multi-head 风格"用。
      */
     public Map<String, Object> inspect(String indexOrAlias, int sampleSize) throws IOException {
+        // 混用高级客户端调用（不经 performGuarded 路径闸），必须在入口按名/模式守卫
+        guardIndexPattern(indexOrAlias);
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("name", indexOrAlias);
         // mappings（低层 REST，避开 MappingMetaData 类名在 7.7 的变更）
@@ -1822,6 +1831,7 @@ public class EsIndexAdmin {
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> clusterReroute(String bodyJson, boolean dryRun, boolean explain) throws IOException {
+        guardControlBody(bodyJson);
         java.util.List<String> qp = new java.util.ArrayList<>();
         if (dryRun) qp.add("dry_run=true");
         if (explain) qp.add("explain=true");
@@ -1901,6 +1911,7 @@ public class EsIndexAdmin {
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> putClusterSettings(String bodyJson) throws IOException {
+        guardControlBody(bodyJson);
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("PUT", "/_cluster/settings");
         req.setJsonEntity(bodyJson == null || bodyJson.trim().isEmpty() ? "{}" : bodyJson);
         org.elasticsearch.client.Response resp = performGuarded(req);
@@ -3457,7 +3468,42 @@ public class EsIndexAdmin {
      */
     public Map<String, Object> aliasActions(String body) throws IOException {
         if (body == null || body.trim().isEmpty()) throw new IllegalArgumentException("body 不能为空");
-        guardControlBody(body);
+        guardAliasActionsBody(body);
         return performJson("POST", "/_aliases", body);
+    }
+
+    /**
+     * 别名操作 body 守卫：actions 里 add/remove 的 index 字段逐个过通配守卫。
+     * 字面 body 闸只认控制名子串，拦不住 {@code "es_console*"} 这类无下划线字面的
+     * 通配形态——别名一旦绑上控制索引，后续按名守卫对别名全部失明。
+     */
+    void guardAliasActionsBody(String body) {
+        guardControlBody(body);
+        if (body == null || body.isEmpty()) return;
+        final Object actions;
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> root = OBJECT_MAPPER.readValue(body, Map.class);
+            actions = root.get("actions");
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            return; // 非 JSON 交由 ES 原始报错，字面控制索引已由 guardControlBody 拦截
+        }
+        if (!(actions instanceof java.util.List)) return;
+        for (Object one : (java.util.List<?>) actions) {
+            if (!(one instanceof Map)) continue;
+            for (Object op : ((java.util.Map<?, ?>) one).values()) {
+                if (!(op instanceof Map)) continue;
+                Object index = ((java.util.Map<?, ?>) op).get("index");
+                if (index instanceof String) {
+                    guardIndexPattern((String) index);
+                } else if (index instanceof java.util.List) {
+                    for (Object n : (java.util.List<?>) index) {
+                        if (n instanceof String) guardIndexPattern((String) n);
+                    }
+                }
+            }
+        }
     }
 }

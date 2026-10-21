@@ -70,6 +70,16 @@ public class ConsoleAuthInterceptorPathCanonicalTest {
     }
 
     @Test
+    public void 分号矩阵参数无论字面还是编码都剥离() {
+        assertEquals("/internal/es/index/auth/users/upsert",
+                ConsoleAuthInterceptor.normalizePath(
+                        stubRequest("/internal/es/index/auth/users/upsert;jsp=1")));
+        assertEquals("/internal/es/index/auth/users/upsert",
+                ConsoleAuthInterceptor.normalizePath(
+                        stubRequest("/internal/es/index/auth/users/upsert%3Bjsp=1")));
+    }
+
+    @Test
     public void 点点越过根_failClosed() {
         assertNull(ConsoleAuthInterceptor.normalizePath(stubRequest("/../../x")));
         assertNull(ConsoleAuthInterceptor.normalizePath(stubRequest("/a/../../x")));
