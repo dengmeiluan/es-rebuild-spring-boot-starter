@@ -405,7 +405,9 @@ async function doStart() {
         log('info', `total ≈ ${total.value}`);
       }
 
-      buffer.value.push(...hits);
+      /* 批次大小手输可超输入框上限，PIT 深分页单批可数万条：spread 直推有
+ 引擎参数上限（RangeError）风险，分块进栈 */
+      for (let i = 0; i < hits.length; i += 8192) buffer.value.push(...hits.slice(i, i + 8192));
       preview.value = buffer.value.slice(-100);
       fetched.value += hits.length;
       batches.value += 1;
