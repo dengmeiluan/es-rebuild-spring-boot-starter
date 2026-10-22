@@ -43,6 +43,10 @@
         <span class="rx-cn">搜索建议</span><code class="rx-key">suggest</code>
         <span class="rx-state" :class="{ on: !!tree.suggest?.items.length }">{{ tree.suggest?.items.length ? tree.suggest.items.length + ' 项' : '未设置' }}</span>
       </button>
+      <button type="button" class="rx-chip" :class="{ on: open.has('rc') }" title="重打分：首屏按 query 相关性排序，再对前 N 条用 rescore_query 二次打分（rescore）" @click="toggle('rc')">
+        <span class="rx-cn">重打分</span><code class="rx-key">rescore</code>
+        <span class="rx-state" :class="{ on: !!tree.rescore }">{{ tree.rescore ? '已设置' : '未设置' }}</span>
+      </button>
       <button type="button" class="rx-chip" :class="{ on: open.has('ex') }" @click="toggle('ex')">
         <span class="rx-cn">其他顶层键</span>
         <span class="rx-state" :class="{ on: !!Object.keys(tree.extras).length }">{{ Object.keys(tree.extras).length ? Object.keys(tree.extras).length + ' 个键' : '无' }}</span>
@@ -250,6 +254,32 @@ ES 默认返回全部字段
       </template>
     </div>
 
+    <!-- 991：重打分 rescore（window_size + 重打分查询树编辑 + query 权重参数） -->
+    <div v-if="open.has('rc')" class="rx-open">
+      <div v-if="!tree.rescore" class="rx-none">
+首屏排序后再对前 N 条二次打分（相关性调优）
+        <button class="btn sm ghost rx-rc-add" @click="rcAdd">+ 加重打分</button>
+      </div>
+      <template v-else>
+        <div class="rx-row">
+          <label class="rx-lb" for="rc-ws">window_size</label>
+          <input id="rc-ws" class="inp mono rx-num" :value="tree.rescore.hasWindowSize ? String(tree.rescore.windowSize ?? '') : ''"
+                 placeholder="如 10" title="参与重打分的首屏条数（可留空 = ES 默认）"
+                 @input="onRcWindow(($event.target as HTMLInputElement).value)" />
+          <button aria-label="重打分参数（query_weight/rescore_query_weight…）" class="btn sm ghost" :class="{ on: rcParams }" title="重打分参数（query_weight/rescore_query_weight…）" @click="rcParams = !rcParams"><Settings2 :size="12" /></button>
+          <span style="flex:1"></span>
+          <button aria-label="移除 rescore 键" class="btn sm ghost danger" title="移除 rescore 键" @click="patch({ rescore: null })"><X :size="12" /></button>
+        </div>
+        <div class="rx-row">
+          <span class="rx-lb">重打分查询</span>
+        </div>
+        <MiniTreeEditor v-if="tree.rescore.rescoreQuery" :node="tree.rescore.rescoreQuery" :fields="fields" :types="types" @update:node="rcUpdate" />
+        <div v-if="rcParams" class="rx-sub">
+          <GenericParams :value="tree.rescore.params" path-prefix="" @update="onRcParams" />
+        </div>
+      </template>
+    </div>
+
     <!-- extras：其余顶层键 -->
     <div v-if="open.has('ex')" class="rx-open rx-ex">
       <div v-if="!Object.keys(tree.extras).length" class="rx-none">无（track_total_hits / collapse / search_after 等会出现在这里）</div>
@@ -268,7 +298,7 @@ import FieldPicker from '../FieldPicker.vue';
 import GenericParams from './GenericParams.vue';
 import AggTreeNode from './AggTreeNode.vue';
 import MiniTreeEditor from './MiniTreeEditor.vue';
-import { nid, type QueryTree, type SortItem, type SourceSpec, type AggNode, type QueryNode, type CollapseSpec, type KnnSpec, type SuggestItem, type SuggestSpec } from '../../utils/queryAst';
+import { nid, type QueryTree, type SortItem, type SourceSpec, type AggNode, type QueryNode, type CollapseSpec, type KnnSpec, type SuggestItem, type SuggestSpec, type RescoreSpec } from '../../utils/queryAst';
 import { setFieldSearchIndex } from '../../utils/fieldSearch';
 
 const props = defineProps<{ tree: QueryTree; fields: string[]; types: Record<string, string>; index?: string }>();
@@ -304,6 +334,7 @@ const open = ref<Set<string>>(new Set([
   ...(props.tree.collapse ? ['col'] : []),
   ...(props.tree.knn ? ['knn'] : []),
   ...(props.tree.suggest ? ['sug'] : []),
+  ...(props.tree.rescore ? ['rc'] : []),
   ...(Object.keys(props.tree.extras).length ? ['ex'] : []),
 ]));
 function toggle(k: string) {
@@ -340,6 +371,8 @@ watch(() => props.tree.collapse, (n, o) => { if (n && !o) autoOpen('col'); });
 watch(() => props.tree.knn, (n, o) => { if (n && !o) autoOpen('knn'); });
 /* 989：suggest 同风格跳变 */
 watch(() => props.tree.suggest, (n, o) => { if (n && !o) autoOpen('sug'); });
+/* 991：rescore 同风格跳变 */
+watch(() => props.tree.rescore, (n, o) => { if (n && !o) autoOpen('rc'); });
 
 /* size/from 控制链随分页节退役（numText/numPatch 曾为其专用）——
  tree 上残留的 size/from 键序列化直通（旧草稿兼容，执行链 562 联动语义接管） */
@@ -505,6 +538,25 @@ function sugPatchGlobal(v: string) {
 function sugGlobalText() {
   if (!props.tree.suggest) return;
   patch({ suggest: { ...props.tree.suggest, globalText: '', hasGlobalText: true } });
+}
+
+/* ═══ 991：rescore 编辑（window_size 数字容错 + 重打分查询树编辑 + query 权重递归表） ═══ */
+const rcParams = ref(false);
+function rcAdd() {
+  const leaf: QueryNode = { id: nid(), type: 'leaf', op: 'match_phrase', field: props.fields[0] || '', value: '', params: {}, raw: null };
+  patch({ rescore: { windowSize: 10, hasWindowSize: true, rescoreQuery: leaf, params: {} } });
+  if (!open.value.has('rc')) toggle('rc');
+}
+function rcUpdate(n: QueryNode) { if (props.tree.rescore) patch({ rescore: { ...props.tree.rescore, rescoreQuery: n } }); }
+/* window_size 编辑：数字写回、空串退役键、非数字中间态不写（knn 向量等值守卫同语言） */
+function onRcWindow(raw: string) {
+  if (!props.tree.rescore) return;
+  const n = Number(raw);
+  if (raw === '') patch({ rescore: { ...props.tree.rescore, windowSize: '', hasWindowSize: false } });
+  else if (Number.isFinite(n)) patch({ rescore: { ...props.tree.rescore, windowSize: n, hasWindowSize: true } });
+}
+function onRcParams(v: Record<string, unknown> | unknown[]) {
+  if (!Array.isArray(v) && props.tree.rescore) patch({ rescore: { ...props.tree.rescore, params: v } });
 }
 
 /* 【预授权偏差A】GenericParams @update 联合类型收窄（Record|unknown[] → Record；数组形态忽略，params/extras 语义必须是对象）——内联箭头会 TS2322 */

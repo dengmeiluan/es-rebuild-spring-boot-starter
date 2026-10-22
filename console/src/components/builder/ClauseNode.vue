@@ -340,9 +340,14 @@ const OBJ_KEY_HINTS: Record<string, string[]> = {
   /* intervals 真实结构三通道：match 单规则 / allOf 顺序组合 / anyOf 任一——
    加键后键值仍是递归键值表逐层编辑（allOf.clauses 数组自动走数组分支） */
   intervals: ['match', 'allOf', 'anyOf', 'ordered'],
+  /* 991：对象值算子扩员（8.x 新算子族常用键骨架） */
+  geo_grid: ['geohash', 'geotile', 'geohex', 'ignore_unmapped'],
+  shape: ['shape', 'relation'],
+  text_expansion: ['model_id', 'model_text'],
+  weighted_tokens: ['tokens', 'pruning_config'],
 };
 const OBJ_ARR_KEYS = new Set(['terms', 'points', 'shape']);
-const OBJ_OBJ_KEYS = new Set(['top_left', 'bottom_right', 'match', 'allOf', 'anyOf', 'filter']);
+const OBJ_OBJ_KEYS = new Set(['top_left', 'bottom_right', 'match', 'allOf', 'anyOf', 'filter', 'tokens', 'pruning_config']);
 const objKeyHints = computed(() => OBJ_KEY_HINTS[props.node.op] || []);
 function addObjKey(k: string) {
   if (k in objVal.value) return;

@@ -47,15 +47,21 @@
 <X :size="11" />
 </button>
       </div>
-      <NodeRenderer
-        v-for="c in childrenOf(o)" :key="c.node.id"
-        :node="c.node" :fields="fields" :types="types" in-bool
-        @update:node="n => replaceChild(c.node.id, n)"
-        @remove="emit('update:node', removeNodeById(node, c.node.id) as BoolNode)"
-        @wrap="emit('update:node', wrapInBool(node, c.node.id) as BoolNode)"
-        @dissolve="emit('update:node', dissolveBool(node, c.node.id) as BoolNode)"
-        @duplicate="emit('duplicate', $event as string)"
-      />
+      <template v-for="c in childrenOf(o)" :key="c.node.id">
+        <NodeRenderer
+          :node="c.node" :fields="fields" :types="types" in-bool
+          @update:node="n => replaceChild(c.node.id, n)"
+          @remove="emit('update:node', removeNodeById(node, c.node.id) as BoolNode)"
+          @wrap="emit('update:node', wrapInBool(node, c.node.id) as BoolNode)"
+          @dissolve="emit('update:node', dissolveBool(node, c.node.id) as BoolNode)"
+          @duplicate="emit('duplicate', $event as string)"
+        />
+        <!-- 991 行级拖拽落点：dragging 期间每行后露槽，悬停亮插入线（落点=该行之后）；
+         分区级 drop 保留（槽外区域=尾部追加既有语义） -->
+        <div v-if="dragging" class="bgn-slot" :class="{ act: dropSlot === c.node.id }"
+             @dragover.prevent.stop="dropSlot = c.node.id"
+             @drop.stop.prevent="onDropAt(o, c.node.id)" />
+      </template>
       <div v-if="!childrenOf(o).length" class="bgn-empty">{{ dragging ? '松开即移到此分区' : '空分区' }}</div>
     </div>
     <div v-if="!dragging && hiddenOccur.length" class="bgn-more">
@@ -211,10 +217,22 @@ function onDragStart(e: DragEvent) {
   fireDrag(true);
 }
 function endDrag() { delete (window as any)[DRAG_KEY]; fireDrag(false); }
+/* 991：行级落点状态（悬停槽 id）——dropSlot 与分区级 drop 互不抢占（槽 dragover.stop） */
+const dropSlot = ref<string | null>(null);
+function onDropAt(o: Occur, anchorId: string) {
+  const id = (window as any)[DRAG_KEY] as string | undefined;
+  delete (window as any)[DRAG_KEY];
+  fireDrag(false);
+  dropSlot.value = null;
+  if (!id || id === props.node.id) return;
+  if (!bus) { if (import.meta.env.DEV) console.warn('[qtp] TREE_BUS 未 provide，drop 被忽略'); return; }
+  bus.move(id, props.node.id, o, anchorId);
+}
 function onDrop(o: Occur) {
   const id = (window as any)[DRAG_KEY] as string | undefined;
   delete (window as any)[DRAG_KEY];
   fireDrag(false);
+  dropSlot.value = null;
   if (!id || id === props.node.id) return;
   if (!bus) { if (import.meta.env.DEV) console.warn('[qtp] TREE_BUS 未 provide，drop 被忽略'); return; }
   bus.move(id, props.node.id, o);
@@ -271,6 +289,9 @@ onBeforeUnmount(() => window.removeEventListener(BGN_COLLAPSE_EVENT, onCollapseE
 .bgn-pill.p-should { color: var(--c-should, var(--violet)); background: var(--c-should-bg, var(--dv-violet-soft)); }
 .bgn-pill.p-must_not { color: var(--c-exclude, var(--err)); background: var(--c-exclude-bg, var(--err-soft)); }
 
+/* 991 行级拖拽槽：dragging 期 10px 高透明槽，悬停亮品牌插入线（inset 上边 2px） */
+.bgn-slot { height: 10px; margin: var(--sp-0) 0; border-radius: var(--r-xs); transition: background var(--tr); }
+.bgn-slot.act { background: color-mix(in srgb, var(--brand) 12%, transparent); box-shadow: inset 0 2px 0 var(--brand); }
 .bgn-empty { font-size: var(--fs-xs); color: var(--tx2); padding: var(--sp-1) 0 var(--sp-1) var(--sp-0); }
 .bgn-more { display: flex; gap: var(--sp-2); margin-top: var(--sp-1); flex-wrap: wrap; }
 .bgn-more-btn { color: var(--tx2); }

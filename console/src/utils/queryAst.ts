@@ -68,6 +68,10 @@ export interface KnnSpec { field: string | null; vector: unknown; params: Record
  等整体落 rest 原样）。任一项 body 非对象 → 整键落 extras 零丢失。 */
 export interface SuggestItem { name: string; text: unknown; hasText: boolean; rest: Record<string, unknown> }
 export interface SuggestSpec { items: SuggestItem[]; globalText: unknown; hasGlobalText: boolean }
+/* 991：rescore 一等解析（post_filter 姊妹键）。单对象形态结构化（window_size + query 双层）：
+ rescore_query 复用 QueryNode 树编辑；query 下其余键（query_weight/rescore_query_weight）落
+ params。数组多段形态首期不结构化 → 落 extras 零丢失。 */
+export interface RescoreSpec { windowSize: unknown; hasWindowSize: boolean; rescoreQuery: QueryNode | null; params: Record<string, unknown> }
 
 export interface QueryTree {
   root: QueryNode | null;
@@ -75,6 +79,7 @@ export interface QueryTree {
   collapse: CollapseSpec | null;
   knn: KnnSpec | null;
   suggest: SuggestSpec | null;
+  rescore: RescoreSpec | null;
   size?: unknown; from?: unknown;  // 非数值也原样保留（零降级）
   sort: SortItem[] | null;         // null = 键不存在；[] = 空数组保键
   source: SourceSpec | null;
@@ -301,6 +306,8 @@ export function parseTree(dsl: unknown): ParseResult {
     else if (k === 'knn') { const n = parseKnn(v); if (n) tree.knn = n; else tree.extras[k] = v; }
     /* 989：suggest 项 body 非对象整键落 extras（零丢失），合法对象走结构化分账 */
     else if (k === 'suggest') { const s = parseSuggest(v); if (s) tree.suggest = s; else tree.extras[k] = v; }
+    /* 991：rescore 单对象结构化；数组多段/query 缺席落 extras 零丢失 */
+    else if (k === 'rescore') { const rs = parseRescore(v); if (rs) tree.rescore = rs; else tree.extras[k] = v; }
     else tree.extras[k] = v;
   }
   return { ok: true, tree };
@@ -310,6 +317,13 @@ function parseCollapse(v: unknown): CollapseSpec | null {
   if (!isObj(v) || typeof v.field !== 'string') return null;
   const { field, ...params } = v;
   return { field, params };
+}
+function parseRescore(v: unknown): RescoreSpec | null {
+  if (!isObj(v) || !isObj(v.query)) return null;
+  const { window_size, query, ...outerRest } = v;
+  const { rescore_query, ...params } = query as Record<string, unknown>;
+  if (Object.keys(outerRest).length) return null;   // query 外多余键 = 非标准形态，整键 extras 不猜
+  return { windowSize: window_size, hasWindowSize: 'window_size' in v, rescoreQuery: parseQueryNode(rescore_query), params };
 }
 function parseSuggest(v: unknown): SuggestSpec | null {
   if (!isObj(v)) return null;
@@ -354,6 +368,13 @@ export function serializeTree(t: QueryTree): Record<string, unknown> {
       s[it.name] = body;
     }
     out.suggest = s;
+  }
+  if (t.rescore) {
+    const q: Record<string, unknown> = { rescore_query: t.rescore.rescoreQuery ? serQueryNode(t.rescore.rescoreQuery) : { match_all: {} } };
+    Object.assign(q, t.rescore.params);
+    const rs: Record<string, unknown> = { query: q };
+    if (t.rescore.hasWindowSize) rs.window_size = t.rescore.windowSize;
+    out.rescore = rs;
   }
   if (t.aggs !== null) out[t.aggKey || 'aggs'] = serAggs(t.aggs);
   if (t.highlight !== null) out.highlight = serHighlight(t.highlight);
@@ -513,19 +534,32 @@ export function removeNodeById(root: QueryNode, id: string): QueryNode {
   return root;
 }
 
-export function insertChild(root: QueryNode, boolId: string, occur: Occur, node: QueryNode): QueryNode {
-  return updateNodeById(root, boolId, n =>
-    n.type === 'bool' ? { ...n, children: [...n.children, { occur, node }] } : n);
+export function insertChild(root: QueryNode, boolId: string, occur: Occur, node: QueryNode, anchorId?: string | null): QueryNode {
+  return updateNodeById(root, boolId, n => {
+    if (n.type !== 'bool') return n;
+    if (!anchorId) return { ...n, children: [...n.children, { occur, node }] };
+    /* 991 行级插入：插到同分区 anchorId 行之后；anchor 缺席/不同分区/自身 = 回落尾部追加 */
+    const idx = n.children.findIndex(c => c.node.id === anchorId);
+    if (idx < 0 || n.children[idx].occur !== occur || anchorId === node.id) {
+      return { ...n, children: [...n.children, { occur, node }] };
+    }
+    const children = [...n.children.slice(0, idx + 1), { occur, node }, ...n.children.slice(idx + 1)];
+    return { ...n, children };
+  });
 }
 
-/* 拖拽移动：dragId → targetBoolId 的 occur 分区末尾。
+/* 拖拽移动：dragId → targetBoolId 的 occur 分区（anchorId 缺省 = 分区末尾；
+ 991 起可传同分区某子句 id = 插到该行之后，行级拖拽落点）。
  移到自身/后代、root 被拖、target 非 bool 时原样返回。 */
-export function moveNode(root: QueryNode, dragId: string, targetBoolId: string, occur: Occur): QueryNode {
+export function moveNode(root: QueryNode, dragId: string, targetBoolId: string, occur: Occur, anchorId?: string | null): QueryNode {
   if (dragId === targetBoolId || root.id === dragId) return root;
+  const dragPre = findNode(root, dragId);
+  if (anchorId && dragPre && (anchorId === dragId || isDescendant(dragPre, anchorId))) return root;
   const drag = findNode(root, dragId);
   const target = findNode(root, targetBoolId);
   if (!drag || target?.type !== 'bool' || isDescendant(drag, targetBoolId)) return root;
-  return insertChild(removeNodeById(root, dragId), targetBoolId, occur, drag);
+  const mv = insertChild(removeNodeById(root, dragId), targetBoolId, occur, drag, anchorId);
+  return mv;
 }
 
 /* 包成 bool 组：{ must: [node] }（数组形态） */
@@ -592,7 +626,7 @@ export function insertAfter(root: QueryNode, id: string): QueryNode {
 }
 
 export function emptyTree(): QueryTree {
-  return { root: null, postFilter: null, collapse: null, knn: null, suggest: null, sort: null, source: null, aggs: null, highlight: null, extras: {} };
+  return { root: null, postFilter: null, collapse: null, knn: null, suggest: null, rescore: null, sort: null, source: null, aggs: null, highlight: null, extras: {} };
 }
 
 /* ═══ 985：高级算子空节点工厂（BoolGroupNode「+ 高级」菜单插入入口） ═══

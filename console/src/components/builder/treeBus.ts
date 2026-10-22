@@ -5,7 +5,8 @@ import type { InjectionKey } from 'vue';
 import type { Occur } from '../../utils/queryAst';
 
 export interface TreeBus {
-  move(dragId: string, targetBoolId: string, occur: Occur): void;
+  /** anchorId（991）：同分区某子句 id = 行级插入（该行之后）；缺省 = 分区末尾追加 */
+  move(dragId: string, targetBoolId: string, occur: Occur, anchorId?: string | null): void;
   /** 条件行「参与/不参与」开关：按叶子 id 递归翻 disabled（ClauseNode 直调，免逐层事件透传） */
   toggleDisabled(leafId: string, disabled: boolean): void;
 }

@@ -106,7 +106,7 @@ import RootExtrasPane from './RootExtrasPane.vue';
 import { TREE_BUS } from './treeBus';
 import { setFieldSearchIndex, setFieldSearchUsedFields, defaultLeafTarget } from '../../utils/fieldSearch';
 import {
-  nid, moveNode, wrapInBool, updateNodeById, cloneNode, insertAfter,
+  nid, moveNode, findNode, serQueryNode, wrapInBool, updateNodeById, cloneNode, insertAfter,
   type QueryTree, type QueryNode, type BoolNode, type LeafNode,
 } from '../../utils/queryAst';
 
@@ -348,10 +348,11 @@ function addSibling() {
 }
 
 provide(TREE_BUS, {
-  move(dragId, targetBoolId, occur) {
+  move(dragId, targetBoolId, occur, anchorId) {
     const r = props.tree.root;
     if (!r) return;
-    setRoot(moveNode(r, dragId, targetBoolId, occur));
+
+    setRoot(moveNode(r, dragId, targetBoolId, occur, anchorId));
   },
   toggleDisabled(leafId, disabled) {
     const r = props.tree.root;

@@ -69,8 +69,8 @@ function onDuplicate(id: string) {
 }
 
 provide(TREE_BUS, {
-  move(dragId, targetBoolId, occur) {
-    emitU(moveNode(props.node, dragId, targetBoolId, occur));
+  move(dragId, targetBoolId, occur, anchorId) {
+    emitU(moveNode(props.node, dragId, targetBoolId, occur, anchorId));
   },
   toggleDisabled(leafId, disabled) {
     emitU(updateNodeById(props.node, leafId, n => (n.type === 'leaf' ? { ...n, disabled } : n)));
