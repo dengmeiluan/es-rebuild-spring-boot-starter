@@ -202,14 +202,23 @@ public class PropertiesAuthDelegate implements ConsoleAuthDelegate {
         }
         /* 身份头默认由反向网关注入；直连方是公网地址时请求头可被客户端任意伪造
            （包含角色头→可直取 ADMIN），一律拒识交回内置鉴权。内网网关部署
-           （remoteAddr 为回环/私网/链路本地）不受影响。 */
+           （remoteAddr 为回环/私网/链路本地）不受影响。
+           配置 trusted-proxies 后进一步收窄：仅清单内地址（精确 IP/CIDR）采信身份头，
+           私网内其它直连方也不再默认信任（防「私网 LB 后的任意客户端」伪造）。 */
         String remote = request.getRemoteAddr();
-        if (remote != null && !remote.trim().isEmpty()
-                && !ConsoleAuthInterceptor.isProxyAddress(remote.trim())) {
+        boolean trusted;
+        java.util.List<String> allow = props.getHeader().getTrustedProxies();
+        if (!allow.isEmpty()) {
+            trusted = remote == null ? false : matchesProxyList(remote.trim(), allow);
+        } else {
+            trusted = remote == null || remote.trim().isEmpty()
+                    || ConsoleAuthInterceptor.isProxyAddress(remote.trim());
+        }
+        if (!trusted) {
             long now = System.currentTimeMillis();
             long last = lastHeaderWarnAt.get();
             if (now - last > WARN_THROTTLE_MS && lastHeaderWarnAt.compareAndSet(last, now)) {
-                LOG.warn("[PropertiesAuthDelegate] header 模式拒绝公网直连来源的身份头 remote={}（{}s 内不再重复告警）",
+                LOG.warn("[PropertiesAuthDelegate] header 模式拒绝非受信来源的身份头 remote={}（{}s 内不再重复告警）",
                         remote, WARN_THROTTLE_MS / 1000);
             }
             return null;
@@ -236,6 +245,69 @@ public class PropertiesAuthDelegate implements ConsoleAuthDelegate {
     }
 
     // ---------------- helpers ----------------
+
+    /** 来源是否命中受信代理清单：条目可为精确 IP 或 IPv4 CIDR（如 10.8.0.0/16）；
+     * IPv6 仅支持精确匹配（::1 等回环写法）。命中失败一律不采信（fail-closed）。 */
+    static boolean matchesProxyList(String remote, java.util.List<String> allow) {
+        String a = remote.toLowerCase(java.util.Locale.ROOT);
+        if (a.startsWith("::ffff:")) {
+            a = a.substring(7);
+        }
+        for (String raw : allow) {
+            String entry = raw == null ? "" : raw.trim().toLowerCase(java.util.Locale.ROOT);
+            if (entry.isEmpty()) {
+                continue;
+            }
+            if (entry.equals(a)) {
+                return true;
+            }
+            int slash = entry.indexOf('/');
+            if (slash > 0 && a.indexOf('.') > 0) {
+                if (ipv4CidrContains(entry, a)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** IPv4 CIDR 判定；任一侧解析失败按不匹配处理（fail-closed，不抛错）。 */
+    private static boolean ipv4CidrContains(String cidr, String addr) {
+        try {
+            String[] parts = cidr.split("/", 2);
+            int[] base = ipv4Parts(parts[0]);
+            int[] ip = ipv4Parts(addr);
+            if (base == null || ip == null) {
+                return false;
+            }
+            int prefix = Integer.parseInt(parts[1].trim());
+            if (prefix < 0 || prefix > 32) {
+                return false;
+            }
+            long mask = prefix == 0 ? 0L : (-1L << (32 - prefix)) & 0xFFFFFFFFL;
+            long baseVal = (base[0] << 24 | base[1] << 16 | base[2] << 8 | base[3]) & 0xFFFFFFFFL;
+            long ipVal = (ip[0] << 24 | ip[1] << 16 | ip[2] << 8 | ip[3]) & 0xFFFFFFFFL;
+            return (baseVal & mask) == (ipVal & mask);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static int[] ipv4Parts(String s) {
+        String[] segs = s.split("\\.");
+        if (segs.length != 4) {
+            return null;
+        }
+        int[] out = new int[4];
+        for (int i = 0; i < 4; i++) {
+            int v = Integer.parseInt(segs[i].trim());
+            if (v < 0 || v > 255) {
+                return null;
+            }
+            out[i] = v;
+        }
+        return out;
+    }
 
     /** 展示名头解码：含 % 才尝试 URL 解码（纯 ASCII 人名直透），解码失败退回原值不报错。 */
     private static String decodeMaybe(String raw) {

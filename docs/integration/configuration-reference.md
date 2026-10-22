@@ -190,6 +190,7 @@ ES 文档锁（以 indexKey 为锁文档 _id）。
 | `es.rebuild.console.auth.delegate.header.user-header` | （空串） | 用户名头（非空即信任） |
 | `es.rebuild.console.auth.delegate.header.roles-header` | （空串） | 角色头（逗号分隔，经 role-mapping 映射） |
 | `es.rebuild.console.auth.delegate.header.display-name-header` | （空串） | 展示名头；值若经 URL 编码可携中文，服务端自动解码 |
+| `es.rebuild.console.auth.delegate.header.trusted-proxies` | `[]` | 受信代理清单（精确 IP 或 IPv4 CIDR，如 `10.0.0.5,10.8.0.0/16`）。非空时身份头仅在 remoteAddr 命中清单时被采信——推荐显式配置网关地址，把「私网整体信任」收窄到具体代理；留空维持默认行为（回环/私网/链路本地即信） |
 
 ## 完整默认配置
 
@@ -283,6 +284,7 @@ es:
             user-header: ""
             roles-header: ""
             display-name-header: ""
+            trusted-proxies: []
 ```
 
 ## 行为边界

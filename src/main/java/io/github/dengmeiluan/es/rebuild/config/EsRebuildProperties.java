@@ -511,6 +511,10 @@ public class EsRebuildProperties {
             private String rolesHeader = "";
             /** 展示名头（；值若经 URL 编码可携中文，服务端自动解码）；空 = 不取。 */
             private String displayNameHeader = "";
+            /** 受信代理清单（精确 IP 或 CIDR，如 10.0.0.5,10.8.0.0/16）。非空时身份头仅在
+             * remoteAddr 命中清单时被采信（推荐：显式网关地址，私网整体信任面收窄到具体代理）；
+             * 留空维持默认行为（回环/私网/链路本地即信）。 */
+            private java.util.List<String> trustedProxies = java.util.Collections.emptyList();
 
             public String getUserHeader() { return userHeader; }
             public void setUserHeader(String userHeader) { this.userHeader = userHeader; }
@@ -518,6 +522,10 @@ public class EsRebuildProperties {
             public void setRolesHeader(String rolesHeader) { this.rolesHeader = rolesHeader; }
             public String getDisplayNameHeader() { return displayNameHeader; }
             public void setDisplayNameHeader(String displayNameHeader) { this.displayNameHeader = displayNameHeader; }
+            public java.util.List<String> getTrustedProxies() { return trustedProxies; }
+            public void setTrustedProxies(java.util.List<String> trustedProxies) {
+                this.trustedProxies = trustedProxies == null
+                        ? java.util.Collections.emptyList() : trustedProxies; }
         }
     }
 

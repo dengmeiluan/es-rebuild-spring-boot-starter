@@ -47,8 +47,9 @@ import java.util.Map;
  *
  * <ul>
  *   <li>密码：PBKDF2WithHmacSHA256（纯 JDK，salt 16B + 迭代 31000），不落明文。</li>
- *   <li>token：无状态 HMAC-SHA256 签名（username.role.expires.sig），TTL 可配置；
- *       secret 未配置时启动随机生成（重启后 token 全失效，需重新登录）。</li>
+ *   <li>token：无状态 HMAC-SHA256 签名（username.role.expires.flag.epoch.sig），TTL 可配置；
+ *       secret 未配置时启动随机生成（重启后 token 全失效，需重新登录）。非兜底 token 每次校验
+ *       回查用户档案纪元（epoch）——改密/改角色/删号后旧 token 立即作废，不再等到 TTL 过期。</li>
  *   <li>ES IO 全部走 low-level REST（不碰 spring-data-es 版本敏感面，利于跨 SB 2.3~2.7 宿主）。</li>
  * </ul>
  *
@@ -120,7 +121,8 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
             return null;
         }
         long expiresAt = System.currentTimeMillis() + tokenTtlMs;
-        String token = issueToken(principal, expiresAt);
+        long epoch = user != null ? readEpoch(user) : 0L;
+        String token = issueToken(principal, expiresAt, epoch);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("token", token);
         out.put("username", principal.getUsername());
@@ -142,31 +144,37 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
         return verifyToken(token);
     }
 
-    /** 签发 token：b64(username).role.expires.b64(hmac(username|role|expires))。 */
-    private String issueToken(ConsolePrincipal p, long expiresAt) {
+    /** 签发 token：b64(username).role.expires.flag.epoch.b64(hmac(username|role|expires|flag|epoch))。
+     * epoch=签发时用户档案的纪元（账号任何变更都会递增），校验时回查不符即吊销。 */
+    private String issueToken(ConsolePrincipal p, long expiresAt, long epoch) {
         String userB64 = Base64.getUrlEncoder().withoutPadding()
                 .encodeToString(p.getUsername().getBytes(StandardCharsets.UTF_8));
         String flag = p.isFallback() ? "F" : "N";
-        String payload = userB64 + "." + p.getRole().name() + "." + expiresAt + "." + flag;
+        String payload = userB64 + "." + p.getRole().name() + "." + expiresAt + "." + flag + "." + epoch;
         return payload + "." + hmac(payload);
     }
 
-    /** 校验 token：签名 + TTL + 兜底账号仍有效性（有真实账号后兜底 token 立即作废）。 */
+    /** 校验 token：签名 + TTL + 纪元回查（非兜底）+ 兜底账号仍有效性（有真实账号后兜底 token 立即作废）。
+     * 五段形态为纪元字段引入前的存量 token（隐含 epoch=0）：升级部署后未变更过的账号会话不中断，
+     * 一旦账号有任何变更（改密/改角色/重建）纪元递增、存量 token 与新 token 一起吊销。 */
     public ConsolePrincipal verifyToken(String token) {
         if (token == null || token.isEmpty()) {
             return null;
         }
         String[] parts = token.split("\\.");
-        if (parts.length != 5) {
+        if (parts.length != 5 && parts.length != 6) {
             return null;
         }
-        String payload = parts[0] + "." + parts[1] + "." + parts[2] + "." + parts[3];
-        if (!constantTimeEquals(hmac(payload), parts[4])) {
+        String payload = parts[0] + "." + parts[1] + "." + parts[2] + "." + parts[3]
+                + (parts.length == 6 ? "." + parts[4] : "");
+        if (!constantTimeEquals(hmac(payload), parts[parts.length - 1])) {
             return null;
         }
         long expiresAt;
+        long tokenEpoch;
         try {
             expiresAt = Long.parseLong(parts[2]);
+            tokenEpoch = parts.length == 6 ? Long.parseLong(parts[4]) : 0L;
         } catch (NumberFormatException e) {
             return null;
         }
@@ -189,8 +197,31 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
                         username, e.getMessage(), e);
                 return null;
             }
+            return new ConsolePrincipal(username, ConsoleRole.parse(parts[1]), fallback);
         }
-        return new ConsolePrincipal(username, ConsoleRole.parse(parts[1]), fallback);
+        /* 纪元回查（吊销面）：删号（档案消失）/改密/改角色（纪元递增）后旧 token 立即作废，
+           角色以最新档案为准——降权后即使纪元校验被绕过也不沿用签发时的旧角色。 */
+        final Map<String, Object> user;
+        try {
+            user = findUser(username);
+        } catch (IOException e) {
+            LOG.warn("[es-console-auth] token 纪元回查因用户索引 IO 失败被按无效拒绝 username={}：{}",
+                    username, e.getMessage(), e);
+            return null;
+        }
+        if (user == null) {
+            return null;
+        }
+        if (readEpoch(user) != tokenEpoch) {
+            return null;
+        }
+        return new ConsolePrincipal(username, ConsoleRole.parse(String.valueOf(user.get("role"))), false);
+    }
+
+    /** 用户档案纪元（缺省 0=纪元字段引入前建立的存量账号）。 */
+    private static long readEpoch(Map<String, Object> user) {
+        Object epoch = user.get("epoch");
+        return epoch instanceof Number ? ((Number) epoch).longValue() : 0L;
     }
 
     /* ==================================================================================== */
@@ -256,6 +287,9 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
         doc.put("role", role.name());
         doc.put("updatedAt", System.currentTimeMillis());
         doc.put("updatedBy", actor == null ? "system" : actor.getUsername());
+        /* 纪元递增：账号任何变更（改密/改角色/重建）都使既有 token 全部吊销（verifyToken 回查）。
+           新建从 1 起；存量档案无字段按 0 读，首次变更写 1=存量五段 token（隐含 epoch=0）同时吊销。 */
+        doc.put("epoch", (existing == null ? 0L : readEpoch(existing)) + 1L);
         if (password != null && !password.isEmpty()) {
             byte[] salt = new byte[SALT_BYTES];
             new SecureRandom().nextBytes(salt);
