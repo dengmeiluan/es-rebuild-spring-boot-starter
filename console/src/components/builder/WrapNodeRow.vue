@@ -1,5 +1,5 @@
 <template>
-  <div class="wnr">
+  <div class="wnr" :data-nid="node.id">
     <div class="wnr-hd">
       <span class="wnr-grip" title="拖拽排序（按住拖动）" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
       <span class="wnr-op">{{ WRAP_LABELS[node.op] || node.op }}</span>
@@ -21,7 +21,7 @@
       <button aria-label="删除" class="btn sm ghost danger" title="删除" @click="emit('remove')"><X :size="12" /></button>
     </div>
     <div v-if="showParams" class="wnr-params">
-      <GenericParams :value="node.params" path-prefix="" @update="onParams" />
+      <GenericParams :value="node.params" :schema="WRAP_PARAMS[node.op]" path-prefix="" @update="onParams" />
     </div>
     <!-- 989：function_score functions 数组结构化编辑（评分函数行列表；AST 零改动 params 直通） -->
     <FsFunctionsPanel v-if="node.op === 'function_score'" :params="node.params"
@@ -49,7 +49,7 @@ import GenericParams from './GenericParams.vue';
 import FsFunctionsPanel from './FsFunctionsPanel.vue';
 import NodeRenderer from './NodeRenderer.vue';
 import { DRAG_KEY, fireDrag } from './treeBus';
-import { WRAP_LABELS } from '../../utils/queryAstOps';
+import { WRAP_LABELS, WRAP_PARAMS } from '../../utils/queryAstOps';
 import { WRAP_FIELD, nid, wrapInBool, type WrapNode, type BoolNode } from '../../utils/queryAst';
 
 const props = defineProps<{ node: WrapNode; fields: string[]; types: Record<string, string> }>();

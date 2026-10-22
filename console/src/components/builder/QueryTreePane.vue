@@ -4,6 +4,10 @@
       右侧 DSL 有未解析的修改，条件树冻结显示最近一次成功解析——修正语法后自动恢复。
     </div>
 
+    <!-- 998：语句阅读层——条件树之上先给一行「人话」，点片段定位到对应条件行。
+         与编辑区同源（同一棵 tree），无独立状态，树变即变。 -->
+    <QuerySentenceBar v-if="tree.root && !isPlainMatchAll" :tree="tree" @locate="locateNode" />
+
     <!-- 面板头部：递归叶子条件计数徽标（含嵌套与临时停用） -->
     <div v-if="tree.root" class="qtp-hd"><!-- 993：undo/redo（面板写路径单点汇聚 setRoot，栈深 50；title 避开 541/553 锁词） -->
       <button class="btn sm ghost" aria-label="撤销上一步树编辑" :disabled="!undoStack.length" :title="'撤销上一步树编辑（Ctrl+Z），可回退 ' + undoStack.length + ' 步'" @click="undo()"><Undo2 :size="11" /></button>
@@ -99,11 +103,12 @@
  provide TREE_BUS：落点分区的 move 在这里统一 moveNode（ 防环）。
  index prop：写入 fieldSearch 的当前索引上下文（per-index 最近字段记忆供 defaultLeaf 与
  子树深处的 FieldSelect 读取——NodeRenderer 之下逐层透传 prop 不现实）。 */
-import { computed, watch, watchEffect, provide, ref, nextTick } from 'vue';
+import { computed, watch, watchEffect, provide, ref, nextTick, onBeforeUnmount } from 'vue';
 import { Plus, ChevronsDown, ChevronsUp, Pause, Play, Undo2, Redo2 } from 'lucide-vue-next';
 import SearchFilterBar from '../SearchFilterBar.vue';
 import BoolGroupNode, { BGN_COLLAPSE_EVENT } from './BoolGroupNode.vue';
 import NodeRenderer from './NodeRenderer.vue';
+import QuerySentenceBar from './QuerySentenceBar.vue';
 import RootExtrasPane from './RootExtrasPane.vue';
 import { TREE_BUS } from './treeBus';
 import { setFieldSearchIndex, setFieldSearchUsedFields, defaultLeafTarget } from '../../utils/fieldSearch';
@@ -253,6 +258,32 @@ function expandFoldedHits() {
   broadcastCollapse(false);
   rescanFind();
 }
+/* ═══ 998：语句片段 → 条件行定位 ═══
+   目标行可能在折叠组里（v-if 卸载，DOM 根本不存在）——先直接命中，未命中就展开全部嵌套组
+   再重试一次；命中后滚到视口中心 + 品牌描边脉冲 1.4s，焦点落到该行字段输入（键盘流可直改）。
+   与条件过滤（qtp-hit）互不干扰：那是常驻柔底，这是瞬时脉冲。 */
+let flashEl: HTMLElement | null = null;
+let flashTimer: ReturnType<typeof setTimeout> | undefined;
+async function locateNode(id: string) {
+  await nextTick();
+  const root = paneEl.value;
+  if (!root) return;
+  let el = root.querySelector<HTMLElement>(`[data-nid="${id}"]`);
+  if (!el) {
+    broadcastCollapse(false);
+    await nextTick();
+    el = root.querySelector<HTMLElement>(`[data-nid="${id}"]`);
+  }
+  if (!el) return;
+  el.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+  flashEl?.classList.remove('qtp-flash');
+  flashEl = el;
+  el.classList.add('qtp-flash');
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => { el?.classList.remove('qtp-flash'); if (flashEl === el) flashEl = null; }, 1400);
+  (el.querySelector('.fs-inp') as HTMLInputElement | null)?.focus({ preventScroll: true });
+}
+onBeforeUnmount(() => clearTimeout(flashTimer));
 /* 游标 → DOM 落位：唯一 .qtp-hit-cur + 滚到视口中心（命中行尚未渲染时不炸，下次导航再试） */
 function applyFindCur() {
   const root = paneEl.value;
@@ -424,6 +455,14 @@ provide(TREE_BUS, {
 .qtp :deep(.cn.qtp-hit) { background: var(--ac-soft); }
 /* 【W3b】当前命中加重档：品牌色内描边（inset 不抖布局），柔底保留 */
 .qtp :deep(.cn.qtp-hit-cur) { background: var(--ac-soft); box-shadow: inset 0 0 0 1px var(--ac); }
+/* 998：语句定位脉冲——瞬时品牌描边 + 柔底呼吸一下（1.4s 后由脚本摘类）；
+   ！important 压过 `.cn:hover`/`.gn` 等各组件局部底色的竞争 */
+.qtp :deep(.qtp-flash) { animation: qtp-flash 1.4s ease-out; border-radius: var(--r-m); }
+@keyframes qtp-flash {
+  0%   { box-shadow: inset 0 0 0 2px var(--ac), 0 0 0 4px var(--ac-soft); background: var(--ac-soft); }
+  60%  { box-shadow: inset 0 0 0 2px var(--ac), 0 0 0 4px transparent; background: var(--ac-soft); }
+  100% { box-shadow: inset 0 0 0 2px transparent, 0 0 0 4px transparent; background: transparent; }
+}
 .qtp-stale { padding: var(--sp-2); margin-bottom: var(--sp-2); border: 1px solid var(--warn); border-radius: var(--r-s); background: var(--warn-soft); color: var(--warn); font-size: var(--fs-xs); }
 /* v3.1 空态：漏斗插画+光晕（品牌渐变方块+白漏斗），居中引导 */
 .qtp-none { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--sp-0);

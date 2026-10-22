@@ -5,9 +5,13 @@
  无损契约的适用前提：合法 ES 形态。非法/退化输入按 best-effort 结构化归一，已知裁剪：
  _source:null→true；sort 非标项（多键/空对象/非标量 inner）；agg 同体双键（aggs+aggregations
  后者覆盖前者）；agg 非标 body（非对象/多 op 键多余键丢弃）；highlight 字段值非对象归一 {}；
- meta:null 丢弃。
- 零拷贝取舍：parse 不重造子对象（params/raw 直引原 DSL），parse 后不得 mutate 原 DSL。 */
+  meta:null 丢弃。
+自 998 起补两处保真：
+① field 形态 inner 对象形态记忆（expanded）——{match:{f:{query:'x'}}} 不再被归一成 {match:{f:'x'}}；
+② 查询体参数（min_score/search_after/fields/pit…共 18 键）一等分账 searchParams，不再落 extras 键值表。
+零拷贝取舍：parse 不重造子对象（params/raw 直引原 DSL），parse 后不得 mutate 原 DSL。 */
 import { OPS_META, MULTI_META, type ParamMeta } from './queryAstOps';
+import { SEARCH_PARAM_KEYS, SEARCH_PARAM_ORDER } from './queryBodyParams';
 
 export type Occur = 'must' | 'filter' | 'should' | 'must_not';
 export const OCCURS: Occur[] = ['must', 'filter', 'should', 'must_not'];
@@ -25,6 +29,9 @@ export interface LeafNode {
   value: unknown;
   params: Record<string, unknown>;
   raw: unknown;
+  /** field 形态 inner 写法记忆：true = 原 DSL 是 {op:{field:{value|query:…}}} 对象形态，
+   * false/缺省 = 标量简写 {op:{field:'x'}}。往返时按原形态写回，树编辑不再悄悄改写用户 DSL 文本。 */
+  expanded?: boolean;
   /** 条件临时停用：true 时不参与序列化(不发 ES),树与 UI 保留以便再次勾选恢复 */
   disabled?: boolean;
 }
@@ -53,7 +60,7 @@ export interface MultiNode {
 export type QueryNode = LeafNode | BoolNode | WrapNode | MultiNode;
 
 /* W2 富化：sort/_source/highlight/aggs 一等解析（形态记忆，往返无损） */
-export interface SortItem { id: string; field: string; form: 'str' | 'short' | 'full'; params: Record<string, unknown> }
+export interface SortItem { id: string; field: string; form: 'str' | 'short' | 'full' | 'multi'; params: Record<string, unknown> }
 export interface SourceSpec { mode: 'all' | 'none' | 'one' | 'list' | 'pattern'; fields: string[]; includes: string[]; excludes: string[]; hasIncludes?: boolean; hasExcludes?: boolean }
 export interface AggNode { id: string; name: string; op: string; body: unknown; children: AggNode[]; meta: Record<string, unknown>; aggKey: string; hasMeta?: boolean; hasKids?: boolean }
 interface HighlightSpec { fields: Array<{ name: string; params: Record<string, unknown> }>; params: Record<string, unknown> }
@@ -83,8 +90,15 @@ export interface QueryTree {
   postFilter: QueryNode | null;    // null = 键不存在；任何值经 parseQueryNode（__raw__ 兜底无损）
   collapse: CollapseSpec | null;
   knn: KnnSpec | null;
+  /** 998：knn 数组形态（ES 8.7+ 多向量混合检索）——第 2..n 项；knn 恒为第 1 项 */
+  knnExtra?: KnnSpec[];
+  /** 998：原 DSL 是否数组形态（含单元素数组/空数组），序列化时原样写回 */
+  knnArray?: boolean;
   suggest: SuggestSpec | null;
   rescore: RescoreSpec | null;
+  /** 998：rescore 数组形态（多段重打分）——第 2..n 段；rescore 恒为第 1 段 */
+  rescoreExtra?: RescoreSpec[];
+  rescoreArray?: boolean;
   scriptFields: ScriptFieldsSpec | null;
   runtimeMappings: RuntimeMappingsSpec | null;
   size?: unknown; from?: unknown;  // 非数值也原样保留（零降级）
@@ -93,6 +107,9 @@ export interface QueryTree {
   aggs: AggNode[] | null;
   aggKey?: string;                 // 顶层 aggs/aggregations 键名记忆
   highlight: HighlightSpec | null;
+  /** 998：查询体参数（min_score/search_after/fields/pit…18 键）结构化分账——
+   * 键名与控件语义见 utils/queryBodyParams；不在册的键仍落 extras（零丢失）。 */
+  searchParams: Record<string, unknown>;
   extras: Record<string, unknown>; // 其余顶层键原样保留
 }
 type ParseResult = { ok: true; tree: QueryTree } | { ok: false; reason: string };
@@ -109,6 +126,7 @@ export const WRAP_META: Record<string, WrapMeta> = {
   script_score: { childKey: 'query' },
   pinned: { childKey: 'organic' },
   span_first: { childKey: 'match' },
+  span_last: { childKey: 'match' },
   span_multi: { childKey: 'match' },
   field_masking_span: { fieldKey: 'field', childKey: 'query' },
 };
@@ -152,7 +170,9 @@ function parseLeaf(op: string, body: unknown): LeafNode {
       const vk = meta.valueKey || (meta.wrap === 'query' ? 'query' : 'value');
       if (isObj(inner) && vk in inner) {
         const { [vk]: value, ...rest } = inner;
-        return { ...base, field, value, params: rest };
+        /* 998：对象形态记忆——{term:{f:{value:'x'}}} 与 {term:{f:'x'}} 语义等价但文本不同，
+          原样保留写回，避免树编辑把用户的显式形态洗成简写 */
+        return { ...base, field, value, params: rest, expanded: true };
       }
       return { ...base, field, value: inner };
     }
@@ -291,7 +311,8 @@ export function serQueryNode(n: QueryNode): unknown {
   if (n.field === null) return { [n.op]: n.raw };   // 兜底：无字段的非标准富形态（理论不可达，保守还原）
   if (meta?.wrap === 'none') return { [n.op]: { ...n.params, [n.field]: n.value } };   // geo_distance 混层：散参数合回 body（terms/range params 恒空零变）
   const vk = meta?.valueKey || (meta?.wrap === 'query' ? 'query' : 'value');
-  const inner = Object.keys(n.params).length ? { [vk]: n.value, ...n.params } : n.value;
+  /* 998：expanded 记忆优先——无参数也写回 {value|query: …} 对象形态（原 DSL 文本不变） */
+  const inner = Object.keys(n.params).length || n.expanded ? { [vk]: n.value, ...n.params } : n.value;
   return { [n.op]: { [n.field]: inner } };
 }
 
@@ -310,14 +331,42 @@ export function parseTree(dsl: unknown): ParseResult {
      结构化形态不合法（field 非 string/非对象/数组）落 extras 零丢失 */
     else if (k === 'post_filter') tree.postFilter = parseQueryNode(v);
     else if (k === 'collapse') { const c = parseCollapse(v); if (c) tree.collapse = c; else tree.extras[k] = v; }
-    else if (k === 'knn') { const n = parseKnn(v); if (n) tree.knn = n; else tree.extras[k] = v; }
+    /* 998：knn 支持 对象 / 数组（多向量混合检索）两形态；数组元素任一非法则整键落 extras 零丢失 */
+    else if (k === 'knn') {
+      if (Array.isArray(v)) {
+        const items = v.map(x => parseKnn(x));
+        if (items.every((x): x is KnnSpec => !!x)) {
+          tree.knn = items[0] ?? null;
+          tree.knnExtra = items.slice(1);
+          tree.knnArray = true;
+        } else tree.extras[k] = v;
+      } else {
+        const n = parseKnn(v);
+        if (n) tree.knn = n; else tree.extras[k] = v;
+      }
+    }
     /* 989：suggest 项 body 非对象整键落 extras（零丢失），合法对象走结构化分账 */
     else if (k === 'suggest') { const s = parseSuggest(v); if (s) tree.suggest = s; else tree.extras[k] = v; }
-    /* 991：rescore 单对象结构化；数组多段/query 缺席落 extras 零丢失 */
-    else if (k === 'rescore') { const rs = parseRescore(v); if (rs) tree.rescore = rs; else tree.extras[k] = v; }
+    /* 991/998：rescore 单对象结构化；数组多段形态逐段结构化（任一非法整键 extras 零丢失） */
+    else if (k === 'rescore') {
+      if (Array.isArray(v)) {
+        const items = v.map(x => parseRescore(x));
+        if (items.length && items.every((x): x is RescoreSpec => !!x)) {
+          tree.rescore = items[0];
+          tree.rescoreExtra = items.slice(1);
+          tree.rescoreArray = true;
+        } else tree.extras[k] = v;
+      } else {
+        const rs = parseRescore(v);
+        if (rs) tree.rescore = rs; else tree.extras[k] = v;
+      }
+    }
     /* 996：命名键+体 同构双键；项 body 非对象整键落 extras 零丢失 */
     else if (k === 'script_fields') { const sf = parseNamed(v); if (sf) tree.scriptFields = sf; else tree.extras[k] = v; }
     else if (k === 'runtime_mappings') { const rm = parseNamed(v); if (rm) tree.runtimeMappings = rm; else tree.extras[k] = v; }
+    /* 998：查询体参数一等分账（18 键，控件语义见 queryBodyParams）——任何值原样入账，
+       不再落 extras 键值表；未注册键维持 extras 零丢失 */
+    else if (SEARCH_PARAM_KEYS.has(k)) tree.searchParams[k] = v;
     else tree.extras[k] = v;
   }
   return { ok: true, tree };
@@ -371,12 +420,11 @@ export function serializeTree(t: QueryTree): Record<string, unknown> {
   if (t.source !== null) out._source = serSource(t.source);
   if (t.postFilter) out.post_filter = serQueryNode(t.postFilter);
   if (t.collapse) out.collapse = { field: t.collapse.field, ...t.collapse.params };
-  if (t.knn) {
-    const b: Record<string, unknown> = {};
-    if (t.knn.field !== null) b.field = t.knn.field;
-    if (t.knn.hasVector) b.query_vector = t.knn.vector;
-    Object.assign(b, t.knn.params);
-    out.knn = b;
+  /* 998：knn 两形态（对象/数组）——数组形态下空列表也保键（knn: [] 原样写回） */
+  if (t.knn || (t.knnArray && t.knn === null)) {
+    if (t.knnArray) {
+      out.knn = [...(t.knn ? [t.knn] : []), ...(t.knnExtra || [])].map(serKnn);
+    } else if (t.knn) out.knn = serKnn(t.knn);
   }
   if (t.suggest) {
     const s: Record<string, unknown> = {};
@@ -390,15 +438,21 @@ export function serializeTree(t: QueryTree): Record<string, unknown> {
   }
   if (t.scriptFields) out.script_fields = serNamed(t.scriptFields.items);
   if (t.runtimeMappings) out.runtime_mappings = serNamed(t.runtimeMappings.items);
-  if (t.rescore) {
-    const q: Record<string, unknown> = { rescore_query: t.rescore.rescoreQuery ? serQueryNode(t.rescore.rescoreQuery) : { match_all: {} } };
-    Object.assign(q, t.rescore.params);
-    const rs: Record<string, unknown> = { query: q };
-    if (t.rescore.hasWindowSize) rs.window_size = t.rescore.windowSize;
-    out.rescore = rs;
+  /* 998：rescore 两形态（单对象/数组多段） */
+  if (t.rescore || (t.rescoreArray && t.rescore === null)) {
+    if (t.rescoreArray) {
+      out.rescore = [...(t.rescore ? [t.rescore] : []), ...(t.rescoreExtra || [])].map(serRescore);
+    } else if (t.rescore) out.rescore = serRescore(t.rescore);
   }
   if (t.aggs !== null) out[t.aggKey || 'aggs'] = serAggs(t.aggs);
   if (t.highlight !== null) out.highlight = serHighlight(t.highlight);
+  /* 998：查询体参数按注册序写出（DSL 文本稳定）；未注册键（历史草稿/未来扩展）按插入序殿后 */
+  for (const k of SEARCH_PARAM_ORDER) {
+    if (Object.prototype.hasOwnProperty.call(t.searchParams || {}, k)) out[k] = t.searchParams[k];
+  }
+  for (const [k, v] of Object.entries(t.searchParams || {})) {
+    if (!SEARCH_PARAM_KEYS.has(k) && !Object.prototype.hasOwnProperty.call(out, k)) out[k] = v;
+  }
   for (const [k, v] of Object.entries(t.extras)) if (!Object.prototype.hasOwnProperty.call(out, k)) out[k] = v;
   return out;
 }
@@ -409,11 +463,29 @@ function serNamed(items: NamedSpecItem[]): Record<string, unknown> {
   return out;
 }
 
+function serKnn(k: KnnSpec): Record<string, unknown> {
+  const b: Record<string, unknown> = {};
+  if (k.field !== null) b.field = k.field;
+  if (k.hasVector) b.query_vector = k.vector;
+  Object.assign(b, k.params);
+  return b;
+}
+function serRescore(rs: RescoreSpec): Record<string, unknown> {
+  const q: Record<string, unknown> = { rescore_query: rs.rescoreQuery ? serQueryNode(rs.rescoreQuery) : { match_all: {} } };
+  Object.assign(q, rs.params);
+  const out: Record<string, unknown> = { query: q };
+  if (rs.hasWindowSize) out.window_size = rs.windowSize;
+  return out;
+}
+
 /* ---- sort：form 记忆原形态；编辑加参数后自然升级 full ---- */
 function parseSortItem(v: unknown): SortItem {
   const base: SortItem = { id: nid(), field: '', form: 'full', params: {} };
   if (typeof v === 'string') return { ...base, field: v, form: 'str' };
   if (isObj(v) && Object.keys(v).length >= 1) {
+    /* 998：多键排序项（{a:'asc', b:'desc'} 合并写法）整项原样保真——
+       旧实现只取首键 + 首键 inner，其余键被静默丢弃（往返丢数据） */
+    if (Object.keys(v).length > 1) return { ...base, form: 'multi', params: { ...v } };
     const field = Object.keys(v)[0];
     const inner = v[field];
     if (typeof inner === 'string') return { ...base, field, form: 'short', params: { order: inner } };
@@ -423,6 +495,7 @@ function parseSortItem(v: unknown): SortItem {
   return { ...base, field: String(v), form: 'full', params: { value: v } };
 }
 function serSortItem(s: SortItem): unknown {
+  if (s.form === 'multi') return { ...s.params };   // 998：多键项原样写回
   const keys = Object.keys(s.params);
   if (s.form === 'str' && keys.length === 0) return s.field;
   if (s.form === 'short' && keys.length === 1 && 'order' in s.params) return { [s.field]: s.params.order };
@@ -653,7 +726,7 @@ export function insertAfter(root: QueryNode, id: string): QueryNode {
 }
 
 export function emptyTree(): QueryTree {
-  return { root: null, postFilter: null, collapse: null, knn: null, suggest: null, rescore: null, scriptFields: null, runtimeMappings: null, sort: null, source: null, aggs: null, highlight: null, extras: {} };
+  return { root: null, postFilter: null, collapse: null, knn: null, suggest: null, rescore: null, scriptFields: null, runtimeMappings: null, sort: null, source: null, aggs: null, highlight: null, searchParams: {}, extras: {} };
 }
 
 /* ═══ 985：高级算子空节点工厂（BoolGroupNode「+ 高级」菜单插入入口） ═══

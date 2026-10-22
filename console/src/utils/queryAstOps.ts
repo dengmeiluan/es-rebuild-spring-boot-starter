@@ -36,45 +36,70 @@ export const OPS_META: Record<string, OpMeta> = {
   match_none: { form: 'none', label: '不匹配任何' },
   term: { form: 'field', wrap: 'value', label: '精确匹配', types: ['keyword', 'number', 'boolean', 'ip'],
     params: [{ key: 'boost', kind: 'number' }] },
-  terms: { form: 'field', wrap: 'none', label: '多值精确', types: ['keyword', 'number', 'ip'] },
+  terms: { form: 'field', wrap: 'none', label: '多值精确', types: ['keyword', 'number', 'ip'],
+    params: [{ key: 'boost', kind: 'number' }] },
   /* types 含 keyword：match 在 keyword 字段上不分词，行为≈term（保留入口，选它不算错配） */
   match: { form: 'field', wrap: 'query', label: '全文匹配', types: ['text', 'keyword'],
-    params: [{ key: 'operator', kind: 'enum', options: ['and', 'or'] }, { key: 'fuzziness', kind: 'text' }, { key: 'boost', kind: 'number' }] },
+    params: [{ key: 'operator', kind: 'enum', options: ['and', 'or'] }, { key: 'fuzziness', kind: 'text' },
+      { key: 'minimum_should_match', kind: 'text' }, { key: 'analyzer', kind: 'text' },
+      { key: 'zero_terms_query', kind: 'enum', options: ['none', 'all'] }, { key: 'boost', kind: 'number' }] },
   match_phrase: { form: 'field', wrap: 'query', label: '短语匹配', types: ['text'],
-    params: [{ key: 'slop', kind: 'number' }, { key: 'boost', kind: 'number' }] },
+    params: [{ key: 'slop', kind: 'number' }, { key: 'analyzer', kind: 'text' },
+      { key: 'zero_terms_query', kind: 'enum', options: ['none', 'all'] }, { key: 'boost', kind: 'number' }] },
   match_phrase_prefix: { form: 'field', wrap: 'query', label: '短语前缀', types: ['text'],
-    params: [{ key: 'max_expansions', kind: 'number' }] },
+    params: [{ key: 'max_expansions', kind: 'number' }, { key: 'slop', kind: 'number' }, { key: 'analyzer', kind: 'text' },
+      { key: 'zero_terms_query', kind: 'enum', options: ['none', 'all'] }, { key: 'boost', kind: 'number' }] },
   range: { form: 'field', wrap: 'none', label: '范围', types: ['number', 'date', 'ip'],
-    params: [{ key: 'boost', kind: 'number' }] },
-  exists: { form: 'field', wrap: 'none', label: '字段存在' },
-  prefix: { form: 'field', wrap: 'value', label: '前缀', types: ['keyword', 'text'] },
+    params: [{ key: 'relation', kind: 'enum', options: ['WITHIN', 'INTERSECTS', 'CONTAINS'] },
+      { key: 'time_zone', kind: 'text' }, { key: 'format', kind: 'text' }, { key: 'boost', kind: 'number' }] },
+  exists: { form: 'field', wrap: 'none', label: '字段存在', params: [{ key: 'boost', kind: 'number' }] },
+  prefix: { form: 'field', wrap: 'value', label: '前缀', types: ['keyword', 'text'],
+    params: [{ key: 'case_insensitive', kind: 'boolean' }, { key: 'boost', kind: 'number' }] },
   wildcard: { form: 'field', wrap: 'value', label: '通配符', types: ['keyword', 'text', 'wildcard'],
-    params: [{ key: 'case_insensitive', kind: 'boolean' }] },
-  regexp: { form: 'field', wrap: 'value', label: '正则', types: ['keyword', 'text'] },
+    params: [{ key: 'case_insensitive', kind: 'boolean' }, { key: 'boost', kind: 'number' }] },
+  regexp: { form: 'field', wrap: 'value', label: '正则', types: ['keyword', 'text'],
+    params: [{ key: 'flags', kind: 'text' }, { key: 'max_determinized_states', kind: 'number' },
+      { key: 'case_insensitive', kind: 'boolean' }, { key: 'boost', kind: 'number' }] },
   fuzzy: { form: 'field', wrap: 'value', label: '模糊', types: ['keyword', 'text'],
-    params: [{ key: 'fuzziness', kind: 'text' }] },
+    params: [{ key: 'fuzziness', kind: 'text' }, { key: 'prefix_length', kind: 'number' },
+      { key: 'max_expansions', kind: 'number' }, { key: 'transpositions', kind: 'boolean' }, { key: 'boost', kind: 'number' }] },
   /* ═══ 富表单算子扩充：12 → 35。对象值算子（wrap:'none' 且值是对象）
    在 ClauseNode 值位渲染递归键值子表（GenericParams），geo 系/terms_set/intervals/
    percolate 的复杂 body 不再落 raw 键值大表。多字段/具名字段/无字段形态由
    form + mainKey/fieldKey 驱动 parse/ser 对称投影，往返无损契约不变。 ═══ */
   match_bool_prefix: { form: 'field', wrap: 'query', label: '前缀全文', types: ['text', 'keyword'],
-    params: [{ key: 'operator', kind: 'enum', options: ['and', 'or'] }, { key: 'fuzziness', kind: 'text' }] },
+    params: [{ key: 'operator', kind: 'enum', options: ['and', 'or'] }, { key: 'fuzziness', kind: 'text' },
+      { key: 'minimum_should_match', kind: 'text' }, { key: 'analyzer', kind: 'text' }, { key: 'boost', kind: 'number' }] },
   terms_set: { form: 'field', wrap: 'none', label: '多值命中数', types: ['keyword', 'text', 'long', 'integer'] },
   rank_feature: { form: 'field', wrap: 'value', label: '排序特征', types: ['rank_feature'] },
-  geo_distance: { form: 'field', wrap: 'none', label: '地理距离', types: ['geo_point'] },
-  geo_bounding_box: { form: 'field', wrap: 'none', label: '地理矩形', types: ['geo_point'] },
+  /* 998：rank_features（复数）——同族多特征打分查询，body 是 {特征字段: {boost…}} 对象值形态 */
+  rank_features: { form: 'field', wrap: 'none', label: '排序特征组', types: ['rank_features'] },
+  geo_distance: { form: 'field', wrap: 'none', label: '地理距离', types: ['geo_point'],
+    params: [{ key: 'validation_method', kind: 'enum', options: ['STRICT', 'IGNORE_MALFORMED', 'COERCE'] }] },
+  geo_bounding_box: { form: 'field', wrap: 'none', label: '地理矩形', types: ['geo_point'],
+    params: [{ key: 'validation_method', kind: 'enum', options: ['STRICT', 'IGNORE_MALFORMED', 'COERCE'] }] },
   geo_polygon: { form: 'field', wrap: 'none', label: '地理多边形', types: ['geo_point'] },
   geo_shape: { form: 'field', wrap: 'none', label: '地理形状', types: ['geo_shape', 'geo_point'] },
   intervals: { form: 'field', wrap: 'none', label: '间隔规则', types: ['text'] },
   multi_match: { form: 'fields', mainKey: 'query', label: '多字段全文', types: ['text', 'keyword'],
     params: [{ key: 'type', kind: 'enum', options: ['best_fields', 'most_fields', 'cross_fields', 'phrase', 'phrase_prefix', 'bool_prefix'] },
-      { key: 'operator', kind: 'enum', options: ['and', 'or'] }, { key: 'fuzziness', kind: 'text' }] },
+      { key: 'operator', kind: 'enum', options: ['and', 'or'] }, { key: 'fuzziness', kind: 'text' },
+      { key: 'tie_breaker', kind: 'number' }, { key: 'slop', kind: 'number' }, { key: 'minimum_should_match', kind: 'text' },
+      { key: 'analyzer', kind: 'text' }, { key: 'lenient', kind: 'boolean' }, { key: 'boost', kind: 'number' }] },
   query_string: { form: 'named', mainKey: 'query', fieldKey: 'default_field', label: '查询串', types: ['text', 'keyword'],
-    params: [{ key: 'default_operator', kind: 'enum', options: ['and', 'or'] }, { key: 'fuzziness', kind: 'text' }] },
+    params: [{ key: 'default_operator', kind: 'enum', options: ['and', 'or'] }, { key: 'fuzziness', kind: 'text' },
+      { key: 'tie_breaker', kind: 'number' }, { key: 'minimum_should_match', kind: 'text' }, { key: 'analyzer', kind: 'text' },
+      { key: 'phrase_slop', kind: 'number' }, { key: 'analyze_wildcard', kind: 'boolean' }, { key: 'lenient', kind: 'boolean' },
+      { key: 'boost', kind: 'number' }] },
   simple_query_string: { form: 'fields', mainKey: 'query', label: '简单查询串', types: ['text', 'keyword'],
-    params: [{ key: 'default_operator', kind: 'enum', options: ['and', 'or'] }] },
-  combined_fields: { form: 'fields', mainKey: 'query', label: '组合字段', types: ['text', 'keyword'] },
-  more_like_this: { form: 'fields', mainKey: 'like', label: '更多相似', types: ['text'] },
+    params: [{ key: 'default_operator', kind: 'enum', options: ['and', 'or'] }, { key: 'flags', kind: 'text' },
+      { key: 'minimum_should_match', kind: 'text' }, { key: 'analyzer', kind: 'text' },
+      { key: 'lenient', kind: 'boolean' }, { key: 'boost', kind: 'number' }] },
+  combined_fields: { form: 'fields', mainKey: 'query', label: '组合字段', types: ['text', 'keyword'],
+    params: [{ key: 'operator', kind: 'enum', options: ['and', 'or'] }, { key: 'minimum_should_match', kind: 'text' }, { key: 'boost', kind: 'number' }] },
+  more_like_this: { form: 'fields', mainKey: 'like', label: '更多相似', types: ['text'],
+    params: [{ key: 'analyzer', kind: 'text' }, { key: 'minimum_should_match', kind: 'text' },
+      { key: 'max_query_terms', kind: 'number' }, { key: 'min_term_freq', kind: 'number' }] },
   ids: { form: 'none', mainKey: 'values', label: '文档 ID' },
   script: { form: 'none', mainKey: 'script', label: '脚本过滤' },
   wrapper: { form: 'none', mainKey: 'query', label: '二进制包装' },
@@ -97,9 +122,16 @@ export const OPS_META: Record<string, OpMeta> = {
   semantic: { form: 'named', mainKey: 'query', fieldKey: 'field', label: '语义查询', types: ['semantic', 'text'] },
   sparse_vector: { form: 'named', mainKey: 'query_vectors', fieldKey: 'field', label: '稀疏向量', types: ['sparse_vector'] },
   knn: { form: 'named', mainKey: 'query_vector', fieldKey: 'field', label: '向量近邻', types: ['dense_vector'],
-    params: [{ key: 'k', kind: 'number' }, { key: 'num_candidates', kind: 'number' }, { key: 'similarity', kind: 'number' }] },
-  text_expansion: { form: 'field', wrap: 'none', label: '文本扩展', types: ['text', 'sparse_vector'] },
-  weighted_tokens: { form: 'field', wrap: 'none', label: '加权词元', types: ['sparse_vector'] },
+    params: [{ key: 'k', kind: 'number' }, { key: 'num_candidates', kind: 'number' }, { key: 'similarity', kind: 'number' }, { key: 'boost', kind: 'number' }] },
+  text_expansion: { form: 'field', wrap: 'none', label: '文本扩展', types: ['text', 'sparse_vector'],
+    params: [{ key: 'boost', kind: 'number' }] },
+  weighted_tokens: { form: 'field', wrap: 'none', label: '加权词元', types: ['sparse_vector'],
+    params: [{ key: 'boost', kind: 'number' }] },
+  /* 999：span_gap——span_near clauses 内的间隙占位（width 主值；只在该上下文有检索语义，
+   高级菜单与 span_near 同组呈现，独立出现时 ES 会拒绝——树不拦，ES 报错即教育） */
+  span_gap: { form: 'none', mainKey: 'width', label: '跨度间隙' },
+  /* 999：rule（8.14+ 检索规则）——ruleset_id 主值，match_criteria / match_predicate 走参数表 */
+  rule: { form: 'none', mainKey: 'ruleset_id', label: '规则查询' },
 };
 
 /* 字段类型 → 推荐算子（ClauseNode 算子下拉：推荐的排前，其余富表单算子分组列后，均可选） */
@@ -115,6 +147,9 @@ export function opsForType(type: string | undefined): string[] {
   if (type === 'geo_point') return ['geo_distance', 'geo_bounding_box', 'geo_polygon', 'exists'];
   if (type === 'geo_shape') return ['geo_shape', 'exists'];
   if (type === 'rank_feature') return ['rank_feature', 'exists'];
+  if (type === 'rank_features') return ['rank_features', 'exists'];
+  /* 998：flattened 字段（整对象当一字段检索）——term/match 两档是官方推荐入口 */
+  if (type === 'flattened') return ['term', 'match', 'exists'];
   /* 987：dense_vector 推荐向量近邻（knn 查询级形态），sparse_vector 推荐稀疏向量 */
   if (type === 'dense_vector') return ['knn', 'exists'];
   if (type === 'sparse_vector') return ['sparse_vector', 'exists'];
@@ -122,6 +157,22 @@ export function opsForType(type: string | undefined): string[] {
 }
 
 export const RICH_OPS: string[] = Object.keys(OPS_META);
+
+/* ═══ 998：高特异算子（字段类型不符 = 查询必空/报错）═══
+ geo 系 / 形状 / 特征 / 向量族只在对应 mapping 类型上有意义——字段选择器据此收窄候选
+ （typeFilter），用户不再在 3000 个字段里翻 geo_point。其余算子维持「只置顶不过滤」：
+ term 打在 text 字段、range 打在 keyword 字段都仍有合法语义（字典序/分词），强行过滤反而挡路。 */
+export const STRICT_TYPE_OPS: ReadonlySet<string> = new Set([
+  'geo_distance', 'geo_bounding_box', 'geo_polygon', 'geo_shape', 'geo_grid', 'shape',
+  'rank_feature', 'rank_features', 'knn', 'sparse_vector', 'distance_feature', 'intervals',
+]);
+
+/** 算子的字段候选类型过滤（未登记/非高特异 → undefined = 不过滤） */
+export function typeFilterForOp(op: string): string[] | undefined {
+  if (!STRICT_TYPE_OPS.has(op)) return undefined;
+  const t = OPS_META[op]?.types;
+  return t && t.length ? t : undefined;
+}
 
 /* 算子场景 → 字段候选类型置顶序（ClauseNode fieldTypePriority 消费，DSL/非 Vue
  语境也可直接复用）。term/terms/prefix/wildcard 精确语义 keyword 优先；
@@ -150,8 +201,26 @@ export function typePriorityForOp(op: string): string[] {
 export const WRAP_LABELS: Record<string, string> = {
   nested: '嵌套', has_child: '子文档', has_parent: '父文档',
   constant_score: '恒定评分', function_score: '评分函数', script_score: '脚本评分', pinned: '置顶优选',
-  span_first: '首跨度', span_multi: '跨度多匹配',
+  span_first: '首跨度', span_last: '尾跨度', span_multi: '跨度多匹配',
   field_masking_span: '字段掩码跨度',
+};
+
+/* ═══ 999：wrap 容器具名参数表（WrapNodeRow 参数面板 schema 源）═══
+   与 OPS_META.params 同一 ParamMeta 形态——enum 档在 GenericParams 渲染为下拉，
+   其余档维持自由表但键名在册可查。pinned / span_multi / field_masking_span 不登记：
+   它们的剩余键全是结构位（ids/docs/organic、match、query/field），登记反而误导。 */
+export const WRAP_PARAMS: Record<string, ParamMeta[]> = {
+  nested: [{ key: 'score_mode', kind: 'enum', options: ['avg', 'sum', 'max', 'min', 'none'] }, { key: 'ignore_unmapped', kind: 'boolean' }],
+  has_child: [{ key: 'score_mode', kind: 'enum', options: ['avg', 'sum', 'max', 'min', 'none'] },
+    { key: 'min_children', kind: 'number' }, { key: 'max_children', kind: 'number' }, { key: 'ignore_unmapped', kind: 'boolean' }],
+  has_parent: [{ key: 'score_mode', kind: 'enum', options: ['none', 'score'] }, { key: 'ignore_unmapped', kind: 'boolean' }],
+  constant_score: [{ key: 'boost', kind: 'number' }],
+  function_score: [{ key: 'boost', kind: 'number' }, { key: 'boost_mode', kind: 'enum', options: ['multiply', 'replace', 'sum', 'avg', 'max', 'min'] },
+    { key: 'score_mode', kind: 'enum', options: ['multiply', 'sum', 'avg', 'first', 'max', 'min'] },
+    { key: 'min_score', kind: 'number' }, { key: 'max_boost', kind: 'number' }],
+  script_score: [{ key: 'min_score', kind: 'number' }],
+  span_first: [{ key: 'end', kind: 'number' }],
+  span_last: [{ key: 'end', kind: 'number' }],
 };
 export const MULTI_LABELS: Record<string, string> = {
   boosting: '正负加权', dis_max: '多查询取最大',
@@ -160,6 +229,26 @@ export const MULTI_LABELS: Record<string, string> = {
 };
 export function labelOfOp(op: string): string {
   return OPS_META[op]?.label || WRAP_LABELS[op] || MULTI_LABELS[op] || op;
+}
+
+/* ═══ 998：算子语义族（交互层配色/分组共用，纯语义零 UI 依赖）═══
+   text=全文检索（分词相关性）/ exact=精确命中（词项与集合）/ range=范围与存在 /
+   geo=空间 / vector=向量与语义 / span=跨度位置 / script=脚本与评分包装 / struct=结构占位。
+   算子下拉胶囊与「+ 高级」菜单按族着色，用户不用读完整名字就能判断「这是哪一类条件」。 */
+export type OpFamily = 'text' | 'exact' | 'range' | 'geo' | 'vector' | 'span' | 'script' | 'struct';
+export function opFamilyOf(op: string): OpFamily {
+  if (op === 'match_all' || op === 'match_none') return 'struct';
+  if (op.startsWith('span_') || op === 'field_masking_span') return 'span';
+  if (op.startsWith('geo_') || op === 'shape' || op === 'distance_feature') return 'geo';
+  if (op === 'knn' || op === 'sparse_vector') return 'vector';
+  if (op.startsWith('match') || op === 'multi_match' || op === 'query_string' || op === 'simple_query_string'
+    || op === 'combined_fields' || op === 'more_like_this' || op === 'intervals'
+    || op === 'semantic' || op === 'text_expansion' || op === 'weighted_tokens') return 'text';
+  if (op === 'range' || op === 'exists') return 'range';
+  if (op === 'script' || op === 'script_score' || op === 'wrapper' || op === 'percolate' || op === 'rule'
+    || op === 'function_score' || op === 'constant_score' || op === 'boosting' || op === 'dis_max'
+    || op === 'pinned' || op === 'rank_feature' || op === 'rank_features') return 'script';
+  return 'exact';
 }
 
 /* multi 容器元数据：keys = 子查询分区键（键序即序列化序）；arrKeys = 恒数组形态键
@@ -184,9 +273,9 @@ export const ADV_MENU: Array<{ group: string; ops: string[] }> = [
   { group: '全文检索', ops: ['multi_match', 'query_string', 'simple_query_string', 'combined_fields', 'match_bool_prefix', 'match_int_prefix', 'more_like_this', 'intervals'] },
   { group: '精确与集合', ops: ['ids', 'terms_set', 'parent_id'] },
   { group: '地理位置', ops: ['geo_distance', 'geo_bounding_box', 'geo_polygon', 'geo_shape', 'geo_grid', 'shape', 'distance_feature'] },
-  { group: '跨度位置', ops: ['span_near', 'span_or', 'span_not', 'span_first', 'span_containing', 'span_within', 'span_term', 'span_multi', 'field_masking_span'] },
+  { group: '跨度位置', ops: ['span_near', 'span_or', 'span_not', 'span_first', 'span_last', 'span_containing', 'span_within', 'span_term', 'span_gap', 'span_multi', 'field_masking_span'] },
   { group: '向量与语义', ops: ['knn', 'sparse_vector', 'text_expansion', 'weighted_tokens', 'semantic'] },
-  { group: '脚本与其他', ops: ['script', 'wrapper', 'percolate', 'rank_feature'] },
+  { group: '脚本与其他', ops: ['script', 'wrapper', 'percolate', 'rule', 'rank_feature', 'rank_features'] },
   { group: '复合容器', ops: ['constant_score', 'boosting', 'dis_max', 'function_score', 'script_score', 'pinned'] },
 ];
 

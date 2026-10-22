@@ -1,5 +1,5 @@
 <template>
-  <div class="mnr">
+  <div class="mnr" :data-nid="node.id">
     <div class="mnr-hd">
       <span class="mnr-grip" title="拖拽排序（按住拖动）" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
       <span class="mnr-op">{{ MULTI_LABELS[node.op] || node.op }}</span>

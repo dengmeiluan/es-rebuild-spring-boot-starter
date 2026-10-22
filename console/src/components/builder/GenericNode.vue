@@ -1,5 +1,5 @@
 <template>
-  <div class="gn">
+  <div class="gn" :data-nid="node.id">
     <div class="gn-hd">
       <!-- 拖拽源只在 grip 柄（与 cn/bgn/wnr 同语言）；根 draggable 会劫持参数表的文本选择 -->
       <span class="gn-grip" title="拖拽排序（按住拖动）" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>

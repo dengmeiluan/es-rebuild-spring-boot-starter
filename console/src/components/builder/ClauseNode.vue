@@ -1,12 +1,12 @@
 <template>
-  <div class="cn"
+  <div class="cn" :data-nid="node.id"
        :style="node.disabled ? { opacity: .45 } : undefined">
-    <button v-if="node.disabled" aria-label="恢复参与匹配" class="btn xs ghost cn-pw-resume"
-            title="该条件已临时停用，点击恢复参与匹配" style="color: var(--ok); flex-shrink: 0" @click="toggleDisabled(false)">
+    <button v-if="node.disabled" aria-label="恢复参与匹配" class="btn xs ghost cn-pw on"
+            title="该条件已临时停用，点击恢复参与匹配" @click="toggleDisabled(false)">
       <Circle :size="15" />
     </button>
     <button v-else aria-label="临时停用（不参与匹配）" class="btn xs ghost cn-pw"
-            title="临时停用该条件（不删除、不参与本次匹配），点击可恢复" style="color: var(--warn); flex-shrink: 0" @click="toggleDisabled(true)">
+            title="临时停用该条件（不删除、不参与本次匹配），点击可恢复" @click="toggleDisabled(true)">
       <CircleSlash :size="15" />
     </button>
     <!-- 拖拽源只在 grip 柄：根 draggable 会劫持行内值输入框的文本选择/光标拖划 -->
@@ -15,6 +15,7 @@
     <template v-if="hasFieldSlot">
       <FieldSelect
         :model-value="node.field || ''" :fields="fields" :types="types" :type-priority="fieldTypePriority"
+        :type-filter="fieldTypeFilter"
         @update:model-value="onField"
       />
       <!-- 字段类型徽标 + 类型提示 tooltip（零结构改动的类型教育）：keyword→term 精确、
@@ -22,8 +23,11 @@
       <!-- 类型徽标挂全站色卡 .mft-type（theme.css），删局部三类型撞色规则 -->
       <span v-if="fieldType" class="cn-fty mono mft-type" :data-t="fieldType" :title="typeHint">{{ fieldType }}</span>
     </template>
-    <!-- 算子下拉：推荐（opsForType）+ 常用（单字段形态非推荐）+ 高级分组（ADV_MENU 同源） -->
-    <select class="inp cn-op" :value="node.op" @change="onOp(($event.target as HTMLSelectElement).value)">
+    <!-- 算子下拉：推荐（opsForType）+ 常用（单字段形态非推荐）+ 高级分组（ADV_MENU 同源）。
+         998：外观升级为「语义族胶囊」——按 opFamilyOf 着色（全文/精确/范围/空间/向量/跨度/脚本），
+         原生 select 语义与 change 事件不变（键盘、输入法、无障碍全保留），只把壳做成芯片。 -->
+    <select class="inp cn-op" :class="'opf-' + opFamily" :data-op="node.op" :title="'当前算子：' + label(node.op)"
+            :value="node.op" @change="onOp(($event.target as HTMLSelectElement).value)">
       <optgroup v-for="g in opGroups" :key="g.label" :label="g.label">
         <option v-for="o in g.ops" :key="o" :value="o">{{ label(o) }}</option>
       </optgroup>
@@ -101,26 +105,28 @@
  span 升级 button——黄点可点，一键切到该类型推荐首算子（exists 是万能
  兜底不作为「推荐」目标；未知类型 opsForType 只有 exists，点击不动作）。 -->
     <button v-if="rowWarn" type="button" class="cn-owarn" aria-label="改用推荐算子" :title="rowWarn" @click="onOwarnClick" />
-    <!-- ⏰ 常驻——此前按字段名正则门控，「不像时间字段」的按钮直接消失，
+    <!-- 998：行尾动作收成一组（margin-left:auto 右对齐）——空间不足时整组换行落到下一行右侧，
+         不再出现「按钮散落在行首」的断裂感；组内按钮统一 22px 方形，视觉重量低于主控件 -->
+    <span class="cn-acts">
+      <!-- ⏰ 常驻——此前按字段名正则门控，「不像时间字段」的按钮直接消失，
  placeholder 却承诺「⏰ 转换」，用户找不到入口。常驻后任何字段都可点：
  值能解析成标准时间才转换，解析失败保持原值（title 说明适用面）。 -->
-    <button aria-label="标准时间转时间戳" class="btn sm ghost"
-            title="⏰ 把标准时间（YYYY-MM-DD HH:mm[:ss]）转成 epoch 毫秒；值不是标准时间格式时点击不变"
-            @click="convertStdTime">
-      <Clock :size="12" />
-    </button>
+      <button aria-label="标准时间转时间戳" class="btn sm ghost cn-act" title="⏰ 把标准时间（YYYY-MM-DD HH:mm[:ss]）转成 epoch 毫秒；值不是标准时间格式时点击不变"
+              @click="convertStdTime">
+        <Clock :size="12" />
+      </button>
 
-    <!-- 具名参数（schema 内）+ 更多参数入口 -->
-    <button aria-label="参数（boost/operator…）" v-if="hasParams" class="btn sm ghost" title="参数（boost/operator…）" @click="paramsOpen = !paramsOpen">
-      <Settings2 :size="12" />
-    </button>
+      <!-- 具名参数（schema 内）+ 更多参数入口 -->
+      <button aria-label="参数（boost/operator…）" v-if="hasParams" class="btn sm ghost cn-act" title="参数（boost/operator…）" @click="paramsOpen = !paramsOpen">
+        <Settings2 :size="12" />
+      </button>
+      <button aria-label="复制条件" class="btn sm ghost cn-act" title="复制条件（插到本条件之后）" @click="$emit('duplicate', node.id)"><Copy :size="12" /></button>
+      <button aria-label="包成 bool 组" class="btn sm ghost cn-act" title="包成 bool 组" @click="$emit('wrap')"><Group :size="12" /></button>
+      <button aria-label="删除" class="btn sm ghost cn-act danger" title="删除" @click="$emit('remove')"><X :size="12" /></button>
+    </span>
     <div v-if="paramsOpen" class="cn-params">
       <GenericParams :value="node.params" :schema="paramSchema" @update="onParams" />
     </div>
-
-    <button aria-label="复制条件" class="btn sm ghost" title="复制条件（插到本条件之后）" @click="$emit('duplicate', node.id)"><Copy :size="12" /></button>
-    <button aria-label="包成 bool 组" class="btn sm ghost" title="包成 bool 组" @click="$emit('wrap')"><Group :size="12" /></button>
-    <button aria-label="删除" class="btn sm ghost danger" title="删除" @click="$emit('remove')"><X :size="12" /></button>
     <!-- 换字段算子被静默替换时的行内微提示（2.5s 后淡出）——aria-live 播报，不弹全局 toast -->
     <span v-if="nudge" class="cn-nudge" :class="{ out: nudgeOut }" role="status" aria-live="polite">{{ nudge }}</span>
   </div>
@@ -135,7 +141,7 @@ import FieldSelect from './FieldSelect.vue';
 import GenericParams from './GenericParams.vue';
 import { stdTimeToEpochMs } from '../../utils/format';
 import { DRAG_KEY, TREE_BUS, fireDrag } from './treeBus';
-import { OPS_META, opsForType, RICH_OPS, ADV_MENU, typePriorityForOp, NUMERIC_VALUE_TYPES } from '../../utils/queryAstOps';
+import { OPS_META, opsForType, RICH_OPS, ADV_MENU, typePriorityForOp, typeFilterForOp, NUMERIC_VALUE_TYPES, opFamilyOf } from '../../utils/queryAstOps';
 import type { LeafNode } from '../../utils/queryAst';
 
 const props = defineProps<{ node: LeafNode; fields: string[]; types: Record<string, string> }>();
@@ -155,6 +161,8 @@ const label = (op: string) => OPS_META[op]?.label || op;
 /* 985：算子下拉分组——推荐（opsForType）+ 常用（单字段形态非推荐非高级）+ ADV_MENU
  高级分组（全文/精确/地理/脚本/复合，与「+ 高级」菜单同源同序）；去重后全部富算子可达 */
 const nodeOpForm = computed(() => OPS_META[props.node.op]?.form);
+/* 998：算子语义族——胶囊配色用（族定义在 queryAstOps，纯语义可复用） */
+const opFamily = computed(() => opFamilyOf(props.node.op));
 const hasFieldSlot = computed(() => nodeOpForm.value === 'field' || nodeOpForm.value === 'named');
 const opGroups = computed(() => {
   const rec = opsForType(props.types[props.node.field || '']);
@@ -182,6 +190,10 @@ const NUMERIC_TYPES = ['long', 'integer', 'short', 'byte', 'double', 'float', 'h
  本组件删私藏表直接消费——term/terms/prefix/wildcard 精确语义 keyword 优先、
  range 数值/时间语义 date+数值族优先、其余空数组纯 rank 平铺。 */
 const fieldTypePriority = computed<string[]>(() => typePriorityForOp(props.node.op));
+/* 998：高特异算子（geo/向量/特征/形状/间隔）字段候选按 mapping 类型收窄——
+   选 geo_distance 时只列 geo_point，不再让用户在几千字段里翻。
+   非高特异算子返回 undefined（不过滤，保留自由手输与跨类型语义） */
+const fieldTypeFilter = computed<string[] | undefined>(() => typeFilterForOp(props.node.op));
 const fieldType = computed(() => props.types[props.node.field || ''] || '');
 const TYPE_HINTS: Record<string, string> = {
   keyword: 'keyword 字段：建议 term/terms 精确匹配（整串一致，不分词）；match 在 keyword 上等同 term',
@@ -477,21 +489,65 @@ function endDrag() { delete (window as any)[DRAG_KEY]; fireDrag(false); }
  深嵌套无卡片（无边框行），字段聚焦品牌描边+柔光由 FieldSelect 内部处理 */
 .cn { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; padding: var(--sp-1) var(--sp-2); border-radius: var(--r-m); margin-bottom: var(--sp-0); position: relative; transition: background var(--tr); }
 .cn:hover { background: var(--bg2); }
+/* 参与开关：静息态中性灰（每行都亮一粒琥珀会盖过真正的条件内容），hover 才提示「可停用」；
+   已停用态转绿色常亮——恢复入口必须显眼，否则停用条件容易被忘掉 */
 .cn-pw { flex-shrink: 0; color: var(--tx2); }
-.cn-pw:hover { color: var(--tx0); }
+.cn-pw:hover { color: var(--warn); background: var(--warn-soft); }
+.cn-pw.on { color: var(--ok); }
+.cn-pw.on:hover { color: var(--ok); background: var(--ok-soft); }
 .cn-grip { cursor: grab; color: var(--tx2); font-size: var(--fs-xs); user-select: none; transition: color var(--tr); }
 .cn:hover .cn-grip { color: var(--tx1); }
 /* 工具钮恒定全可见（透明度降噪在亮色下过度，点名看不清）——
  hover 仅做背景反馈；⏰ 品牌色常亮 */
 .cn .btn.sm.ghost[aria-label="标准时间转时间戳"] { color: var(--ac); }
 .cn .btn.sm.ghost[aria-label="标准时间转时间戳"]:hover { color: var(--ac-hi, var(--ac)); background: var(--ac-soft); }
-.cn-op { height: 30px; font-size: var(--fs-sm); max-width: 140px; }
+/* ═══ 998：条件行视觉重构 ═══
+   目标：一眼分清「字段 / 算子 / 值」三段，而不是四个等权重输入框排在一起。
+   · 行：hover 浅底 + focus-within 品牌弱描边（编辑中的那一行自己会亮）；
+   · 算子：语义族胶囊（全文=青 / 精确=蓝 / 范围=紫 / 空间=绿 / 向量=品红 / 跨度=橙 / 脚本=中性）；
+   · 值：mono 输入，底色比字段输入浅一档，视觉上「这是要被填的东西」。 */
+.cn { border: 1px solid transparent; gap: var(--sp-1h); }
+.cn:hover { background: var(--bg2); border-color: var(--line); }
+.cn:focus-within { background: var(--bg2); border-color: var(--ac-line); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ac) 8%, transparent); }
+/* 拖拽柄平时收敛，行 hover/聚焦才浮现（减少每行左侧的视觉噪点；功能与拖拽事件不变） */
+.cn-grip { opacity: .35; }
+.cn:hover .cn-grip, .cn:focus-within .cn-grip { opacity: 1; }
+/* 算子胶囊：原生 select 去壳 + 语义族配色 + 右侧 chevron（背景 SVG，双主题中性灰） */
+.cn-op {
+  appearance: none; -webkit-appearance: none; -moz-appearance: none;
+  height: 26px; max-width: 124px; flex: none;
+  font-size: var(--fs-xs); font-weight: 650; letter-spacing: var(--ls-tight);
+  padding: 0 16px 0 8px; border-radius: 999px; border: 1px solid transparent;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%236f8b83' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 5px center; background-size: 9px 9px;
+  cursor: pointer; transition: filter var(--tr), border-color var(--tr), background-color var(--tr);
+}
+.cn-op:hover { filter: brightness(1.08); }
+.cn-op:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.cn-op option { color: var(--tx0); background: var(--card, var(--bg1)); font-weight: 400; }
+/* 语义族七色（暗/亮双主题都取语义 token 的对应档）：软底 + 同色文字；
+   描边不写固定百分比 color-mix（亮色下会过重，且与全站 -line token 纪律冲突），
+   统一走基类的透明边（尺寸稳定，不抖布局） */
+.cn-op.opf-text { color: var(--c-must); background-color: var(--c-must-bg); }
+.cn-op.opf-exact { color: var(--c-filter); background-color: var(--c-filter-bg); }
+.cn-op.opf-range { color: var(--c-should); background-color: var(--c-should-bg); }
+.cn-op.opf-geo { color: var(--ok); background-color: var(--ok-soft); }
+.cn-op.opf-vector { color: var(--dv-purple); background-color: var(--dv-purple-soft); }
+.cn-op.opf-span { color: var(--dv-orange-deep); background-color: color-mix(in srgb, var(--dv-orange-deep) 10%, transparent); }
+.cn-op.opf-script { color: var(--tx1); background-color: var(--bg3); }
+.cn-op.opf-struct { color: var(--tx2); background-color: var(--bg2); }
 /* 类型徽标色统一 theme.css 全站 .mft-type[data-t] 色卡（本文件原局部三类型规则已删）；
  冷门类型回落档走 :where（specificity 0），色卡命中时必胜（同 FieldPicker 口径） */
 .cn-fty { flex: none; font-size: var(--fs-2xs); padding: 0 5px; border-radius: var(--r-xs); line-height: 16px; cursor: help; }
 :where(.cn-fty) { color: var(--muted); background: var(--hl); }
 .cn-val { height: 30px; font-size: var(--fs-sm); padding: 3px var(--sp-2); flex: 1 1 120px; min-width: 0; }
-.cn-range { flex: 0 1 110px; }
+.cn-range { flex: 0 1 86px; min-width: 62px; }
+/* 998：行尾动作组——整组右对齐、空间不足时整体折行（不散落在行首）；
+   24px 方形按钮，hover/focus 才提亮，静息态低对比不抢主控件 */
+.cn-acts { display: inline-flex; align-items: center; gap: 0; margin-left: auto; flex: none; }
+.cn-act { width: 22px; height: 22px; padding: 0; justify-content: center; border-radius: var(--r-s); color: var(--tx2); }
+.cn-act:hover { color: var(--tx0); background: var(--bg3); }
+.cn-act.danger:hover { color: var(--err); background: var(--err-soft); }
 /* 985：多字段形态的字段列表输入（与主值并排换行）+ 对象值子表容器（独占一行，dashed 弱边框与 GenericNode 同语言） */
 .cn-fields { flex: 1 1 150px; }
 .cn-objval { flex-basis: 100%; padding: var(--sp-2); border: 1px dashed var(--line); border-radius: var(--r-s); background: var(--bg1); }

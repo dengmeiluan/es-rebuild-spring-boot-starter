@@ -69,19 +69,23 @@ describe('queryAst 解析/序列化（398 批）', () => {
       expect(r.tree.highlight).toBeDefined();
       expect(r.tree.aggs).toBeDefined();
       expect(r.tree.aggKey).toBe('aggs');
-      expect(r.tree.extras, '未知顶层键保真（不丢不炸）').toEqual({ track_total_hits: true });
+      /* 998 批起查询体参数一等分账：track_total_hits 等在册键进 searchParams
+         （具名控件可编辑），不再落 extras；未在册键仍走 extras 保真 */
+      expect(r.tree.searchParams, '在册查询体参数进 searchParams').toEqual({ track_total_hits: true });
+      expect(r.tree.extras, '未在册顶层键保真（不丢不炸）').toEqual({});
     }
     /* 最终序列化输出与输入 DSL 深等值（form 记忆原形态还原） */
     expect(roundtrip(dsl)).toEqual({ ok: true, out: dsl });
   });
 
-  it('emptyTree 基态：全 null + extras 空', () => {
+  it('emptyTree 基态：全 null + searchParams/extras 空', () => {
     const t = emptyTree();
     expect(t.root).toBeNull();
     expect(t.sort).toBeNull();
     expect(t.source).toBeNull();
     expect(t.aggs).toBeNull();
     expect(t.highlight).toBeNull();
+    expect(t.searchParams, '998：查询体参数分账容器基态为空对象').toEqual({});
     expect(t.extras).toEqual({});
   });
 });

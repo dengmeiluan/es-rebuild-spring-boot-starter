@@ -55,6 +55,12 @@
         <span class="rx-cn">运行时字段</span><code class="rx-key">runtime_mappings</code>
         <span class="rx-state" :class="{ on: !!tree.runtimeMappings?.items.length }">{{ tree.runtimeMappings?.items.length ? tree.runtimeMappings.items.length + ' 项' : '未设置' }}</span>
       </button>
+      <!-- 998：查询参数（检索级顶层键）一等公民——游标翻页/精确总数/返回字段/最低评分/PIT…
+           此前全部堆在「其他顶层键」的裸键值表里，现在按 schema 给具名控件。 -->
+      <button type="button" class="rx-chip" :class="{ on: open.has('qp') }" title="检索级参数：游标翻页 / 精确总数 / 返回字段 / 最低评分 / PIT / 超时…（query 之外的检索键）" @click="toggle('qp')">
+        <span class="rx-cn">查询参数</span><code class="rx-key">search body</code>
+        <span class="rx-state" :class="{ on: qpKeys.length > 0 }">{{ qpKeys.length ? qpKeys.length + ' 项' : '未设置' }}</span>
+      </button>
       <button type="button" class="rx-chip" :class="{ on: open.has('ex') }" @click="toggle('ex')">
         <span class="rx-cn">其他顶层键</span>
         <span class="rx-state" :class="{ on: !!Object.keys(tree.extras).length }">{{ Object.keys(tree.extras).length ? Object.keys(tree.extras).length + ' 个键' : '无' }}</span>
@@ -68,9 +74,11 @@
       <div v-if="tree.sort === null" class="rx-none">未设置 <button class="btn sm ghost rx-sort-add" @click="addSort">+ 加排序</button></div>
       <div v-for="(s, i) in tree.sort || []" :key="s.id" class="rx-sort-row">
         <!-- 排序行字段选择器只出可排序类型（ES doc_values 口径，含 boolean）；
- 【W3b】候选内 date/数值族置顶（typePriority 只重排分组，候选集不变） -->
-        <FieldSelect :model-value="s.field" :fields="fields" :types="types" :type-filter="SORTABLE_TYPES" :type-priority="SORT_PRIO_TYPES" @update:model-value="v => patchSort(s.id, { field: v })" />
-        <select class="inp rx-sort-order" :value="String(s.params.order ?? 'asc')"
+ 【W3b】候选内 date/数值族置顶（typePriority 只重排分组，候选集不变）
+ 998：多键排序项（{a:'asc',b:'desc'} 合并写法）不拆行——原样保留整项，用参数表编辑 -->
+        <span v-if="s.form === 'multi'" class="rx-lb" title="该排序项含多个键，DSL 原样保留；可点右侧参数编辑">多键排序项</span>
+        <FieldSelect v-else :model-value="s.field" :fields="fields" :types="types" :type-filter="SORTABLE_TYPES" :type-priority="SORT_PRIO_TYPES" @update:model-value="v => patchSort(s.id, { field: v })" />
+        <select v-if="s.form !== 'multi'" class="inp rx-sort-order" :value="String(s.params.order ?? 'asc')"
                 @change="patchSort(s.id, { params: { ...s.params, order: ($event.target as HTMLSelectElement).value } })">
           <option value="asc">asc</option>
           <option value="desc">desc</option>
@@ -216,7 +224,7 @@ ES 默认返回全部字段
           <FieldSelect :model-value="tree.knn.field || ''" :fields="fields" :types="types" :type-filter="KNN_TYPES" @update:model-value="v => knnPatch({ field: v || null })" />
           <button aria-label="kNN 参数（k/num_candidates/filter…）" class="btn sm ghost" :class="{ on: knnParams }" title="kNN 参数（k/num_candidates/filter…）" @click="knnParams = !knnParams"><Settings2 :size="12" /></button>
           <span style="flex:1"></span>
-          <button aria-label="移除 knn 键" class="btn sm ghost danger" title="移除 knn 键" @click="patch({ knn: null })"><X :size="12" /></button>
+          <button aria-label="移除 knn 键" class="btn sm ghost danger" title="移除 knn 键" @click="knnClear"><X :size="12" /></button>
         </div>
         <div class="rx-row">
           <span class="rx-lb">query_vector</span>
@@ -226,6 +234,30 @@ ES 默认返回全部字段
         </div>
         <div v-if="knnParams" class="rx-sub">
           <GenericParams :value="tree.knn.params" path-prefix="" @update="onKnnParams" />
+        </div>
+        <!-- 998：多向量混合检索（knn 数组形态）——额外向量逐条紧凑编辑 -->
+        <div v-for="(k, i) in tree.knnExtra || []" :key="'kx' + i" class="rx-knn-x">
+          <div class="rx-row">
+            <span class="rx-lb">向量 {{ i + 2 }}</span>
+            <FieldSelect :model-value="k.field || ''" :fields="fields" :types="types" :type-filter="KNN_TYPES"
+                         @update:model-value="v => knnPatchExtra(i, { field: v || null })" />
+            <input class="inp mono rx-knn-vec" :value="JSON.stringify(k.vector ?? null)"
+                   placeholder="query_vector JSON" @change="onKnnVecExtra(i, ($event.target as HTMLInputElement).value)" />
+            <button aria-label="额外向量参数" class="btn sm ghost" :class="{ on: knnXIdx === i }"
+                    title="k / num_candidates / filter…" @click="knnXIdx = knnXIdx === i ? null : i"><Settings2 :size="12" /></button>
+            <button aria-label="删除该向量" class="btn sm ghost danger" title="删除该向量" @click="knnDelExtra(i)"><X :size="12" /></button>
+          </div>
+          <div v-if="knnXIdx === i" class="rx-sub">
+            <GenericParams :value="k.params" path-prefix="" @update="v => { if (!Array.isArray(v)) knnPatchExtra(i, { params: v }); }" />
+          </div>
+        </div>
+        <div class="rx-row">
+          <button class="btn sm ghost rx-knn-add2" title="再加一路向量查询（knn 写成数组，ES 8.7+ 混合检索）"
+                  @click="knnAddExtra"><Plus :size="12" /> 加一路向量（数组形态）</button>
+          <span v-if="tree.knnArray" class="rx-knn-tag mono">knn: [ ]</span>
+          <span style="flex:1"></span>
+          <button v-if="tree.knnArray" class="btn sm ghost rx-knn-fold" title="收回对象形态（仅保留第一路向量）"
+                  @click="knnFoldToObject">收回单对象</button>
         </div>
       </template>
     </div>
@@ -276,7 +308,7 @@ ES 默认返回全部字段
                  @input="onRcWindow(($event.target as HTMLInputElement).value)" />
           <button aria-label="重打分参数（query_weight/rescore_query_weight…）" class="btn sm ghost" :class="{ on: rcParams }" title="重打分参数（query_weight/rescore_query_weight…）" @click="rcParams = !rcParams"><Settings2 :size="12" /></button>
           <span style="flex:1"></span>
-          <button aria-label="移除 rescore 键" class="btn sm ghost danger" title="移除 rescore 键" @click="patch({ rescore: null })"><X :size="12" /></button>
+          <button aria-label="移除 rescore 键" class="btn sm ghost danger" title="移除 rescore 键" @click="rcClear"><X :size="12" /></button>
         </div>
         <div class="rx-row">
           <span class="rx-lb">重打分查询</span>
@@ -284,6 +316,31 @@ ES 默认返回全部字段
         <MiniTreeEditor v-if="tree.rescore.rescoreQuery" :node="tree.rescore.rescoreQuery" :fields="fields" :types="types" @update:node="rcUpdate" />
         <div v-if="rcParams" class="rx-sub">
           <GenericParams :value="tree.rescore.params" path-prefix="" @update="onRcParams" />
+        </div>
+        <!-- 998：多段重打分（rescore 数组形态）——第 2 段起逐段编辑 -->
+        <div v-for="(rs, i) in tree.rescoreExtra || []" :key="'rcx' + i" class="rx-rc-x">
+          <div class="rx-row">
+            <span class="rx-lb">第 {{ i + 2 }} 段</span>
+            <label class="rx-lb" :for="'rcx-ws' + i">window_size</label>
+            <input :id="'rcx-ws' + i" class="inp mono rx-num" :value="rs.hasWindowSize ? String(rs.windowSize ?? '') : ''"
+                   placeholder="如 10" @input="onRcWindowExtra(i, ($event.target as HTMLInputElement).value)" />
+            <button aria-label="该段权重参数" class="btn sm ghost" :class="{ on: rcXIdx === i }"
+                    title="query_weight / rescore_query_weight…" @click="rcXIdx = rcXIdx === i ? null : i"><Settings2 :size="12" /></button>
+            <button aria-label="删除该段重打分" class="btn sm ghost danger" title="删除该段" @click="rcDelExtra(i)"><X :size="12" /></button>
+          </div>
+          <MiniTreeEditor v-if="rs.rescoreQuery" :node="rs.rescoreQuery" :fields="fields" :types="types"
+                          @update:node="n => rcUpdateExtra(i, n)" />
+          <div v-if="rcXIdx === i" class="rx-sub">
+            <GenericParams :value="rs.params" path-prefix="" @update="v => { if (!Array.isArray(v)) rcPatchExtra(i, { params: v }); }" />
+          </div>
+        </div>
+        <div class="rx-row">
+          <button class="btn sm ghost rx-rc-add2" title="再加一段重打分（rescore 写成数组，多阶段重排）"
+                  @click="rcAddExtra"><Plus :size="12" /> 加一段重打分</button>
+          <span v-if="tree.rescoreArray" class="rx-knn-tag mono">rescore: [ ]</span>
+          <span style="flex:1"></span>
+          <button v-if="tree.rescoreArray" class="btn sm ghost rx-rc-fold" title="收回单对象形态（仅保留第一段）"
+                  @click="rcFoldToObject">收回单段</button>
         </div>
       </template>
     </div>
@@ -335,9 +392,60 @@ ES 默认返回全部字段
       </template>
     </div>
 
+    <!-- 998：查询参数（searchParams）——schema 驱动表单。
+         只列已设置的键（列表随加随减），未设置的从「+ 添加参数」菜单按族挑选；
+         JSON 类键用单行 JSON 输入 + 即时校验（非法只标红不写树，避免半截 JSON 打断查询）。 -->
+    <div v-if="open.has('qp')" class="rx-open rx-qp">
+      <div v-if="!qpKeys.length" class="rx-none">
+        未设置检索级参数（游标翻页 / 精确总数 / 返回字段 / 最低评分 / PIT…）
+      </div>
+      <div v-for="k in qpKeys" :key="k" class="rx-qp-row">
+        <span class="rx-qp-head">
+          <span class="rx-lb">{{ SEARCH_PARAM_META[k]?.label || k }}</span>
+          <code class="rx-qp-key">{{ k }}</code>
+        </span>
+        <!-- boolean：真/假 双态开关 -->
+        <select v-if="SEARCH_PARAM_META[k]?.kind === 'boolean'" class="inp rx-qp-ctl" :value="String(tree.searchParams[k])"
+                @change="qpPatch(k, ($event.target as HTMLSelectElement).value === 'true')">
+          <option value="true">true</option>
+          <option value="false">false</option>
+        </select>
+        <!-- number / booleanNumber（track_total_hits 允许 true + 数字上限）：文本输入 + 容错解析 -->
+        <input v-else-if="SEARCH_PARAM_META[k]?.kind === 'number' || SEARCH_PARAM_META[k]?.kind === 'booleanNumber'"
+               class="inp mono rx-qp-ctl" :value="qpText(k)" :placeholder="SEARCH_PARAM_META[k]?.placeholder || '数字'"
+               @change="onQpScalar(k, ($event.target as HTMLInputElement).value)" />
+        <!-- string -->
+        <input v-else-if="SEARCH_PARAM_META[k]?.kind === 'string'" class="inp mono rx-qp-ctl" :value="qpText(k)"
+               :placeholder="SEARCH_PARAM_META[k]?.placeholder || ''"
+               @input="qpPatch(k, ($event.target as HTMLInputElement).value)" />
+        <!-- json：单行 JSON，非法标红不写树 -->
+        <input v-else class="inp mono rx-qp-ctl rx-qp-json" :class="{ bad: qpJsonBad(k) }" :value="qpJsonText(k)"
+               :placeholder="SEARCH_PARAM_META[k]?.placeholder || '[…]'"
+               :title="qpJsonBad(k) ? 'JSON 语法错误：修正后自动生效，当前未写入树' : '合法 JSON：数组或对象'"
+               @input="onQpJson(k, ($event.target as HTMLInputElement).value)"
+               @blur="qpDraftClear(k)" />
+        <button aria-label="移除该查询参数" class="btn sm ghost danger" title="移除该参数" @click="qpDel(k)"><X :size="12" /></button>
+        <div class="rx-qp-hint">{{ SEARCH_PARAM_META[k]?.hint }}</div>
+      </div>
+      <div class="rx-row">
+        <button class="btn sm ghost rx-qp-add" :aria-expanded="qpMenu" title="添加检索级参数（按族分组）" @click="qpMenu = !qpMenu">
+          <Plus :size="12" /> 添加参数
+        </button>
+      </div>
+      <div v-if="qpMenu" class="rx-qp-menu">
+        <div v-for="g in SEARCH_PARAM_GROUPS" :key="g.group" class="rx-qp-grp">
+          <div class="rx-qp-g">{{ g.group }}</div>
+          <button v-for="it in g.items" :key="it.key" type="button" class="rx-qp-mi"
+                  :disabled="it.key in tree.searchParams" :title="it.hint" @click="qpAdd(it.key)">
+            <span>{{ it.label }}</span><code class="mono">{{ it.key }}</code>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- extras：其余顶层键 -->
     <div v-if="open.has('ex')" class="rx-open rx-ex">
-      <div v-if="!Object.keys(tree.extras).length" class="rx-none">无（track_total_hits / collapse / search_after 等会出现在这里）</div>
+      <div v-if="!Object.keys(tree.extras).length" class="rx-none">无（未登记的顶层键会出现在这里，原样保留）</div>
       <GenericParams :value="tree.extras" path-prefix="" @update="onExtras" />
     </div>
   </div>
@@ -346,7 +454,7 @@ ES 默认返回全部字段
 <script setup lang="ts">
 /* W2：周边子句表单区。折叠分区有内容默认展开；size/from 非数字原样保留标黄（零降级）；
  aggs 区由 挂载（本组件模板预留位置见 补丁）。 */
-import { ref, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { Plus, X, ChevronUp, ChevronDown, Settings2 } from 'lucide-vue-next';
 import FieldSelect from './FieldSelect.vue';
 import FieldPicker from '../FieldPicker.vue';
@@ -354,6 +462,7 @@ import GenericParams from './GenericParams.vue';
 import AggTreeNode from './AggTreeNode.vue';
 import MiniTreeEditor from './MiniTreeEditor.vue';
 import { nid, type QueryTree, type SortItem, type SourceSpec, type AggNode, type QueryNode, type CollapseSpec, type KnnSpec, type SuggestItem, type SuggestSpec, type RescoreSpec, type NamedSpecItem } from '../../utils/queryAst';
+import { SEARCH_PARAM_META, SEARCH_PARAM_GROUPS } from '../../utils/queryBodyParams';
 import { setFieldSearchIndex } from '../../utils/fieldSearch';
 
 const props = defineProps<{ tree: QueryTree; fields: string[]; types: Record<string, string>; index?: string }>();
@@ -378,6 +487,73 @@ watch(() => props.index, i => setFieldSearchIndex(i || ''), { immediate: true })
 const patch = (p: Partial<QueryTree>) => emit('update:tree', { ...props.tree, ...p });
 const csv = (raw: string) => raw.split(',').map(x => x.trim()).filter(Boolean);
 
+/* ═══ 998：查询参数（searchParams）═══
+   检索级顶层键的 schema 驱动编辑。三条取舍：
+   ① 只渲染「已设置」的键（列表即当前检索面，不用在 18 个空控件里找）；
+   ② JSON 类键走单行文本 + 即时校验：非法只标红、不写树（半截 JSON 会让整条查询失效）；
+   ③ 初始值按语义给：布尔 false / 数字 0 / 数组 [] / slice·pit 对象 {}（用户点一下就能改）。 */
+const qpMenu = ref(false);
+const qpKeys = computed(() => Object.keys(props.tree.searchParams || {}));
+const qpDraft = ref<Record<string, string>>({});
+function qpPatch(k: string, v: unknown) {
+  patch({ searchParams: { ...props.tree.searchParams, [k]: v } });
+}
+function qpDraftClear(k: string) {
+  if (!(k in qpDraft.value)) return;
+  const d = { ...qpDraft.value };
+  delete d[k];
+  qpDraft.value = d;
+}
+function qpDel(k: string) {
+  const next = { ...props.tree.searchParams };
+  delete next[k];
+  qpDraftClear(k);
+  patch({ searchParams: next });
+}
+function qpAdd(k: string) {
+  qpMenu.value = false;
+  if (k in props.tree.searchParams) return;
+  const kind = SEARCH_PARAM_META[k]?.kind;
+  const init = kind === 'boolean' ? false
+    : kind === 'number' ? 0
+    : kind === 'booleanNumber' ? true
+    : kind === 'json' ? ((k === 'slice' || k === 'pit') ? {} : [])
+    : '';
+  qpPatch(k, init);
+}
+function qpText(k: string): string {
+  const v = props.tree.searchParams[k];
+  if (v === undefined) return '';
+  return typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v);
+}
+/* number / booleanNumber 容错解析：true/false 直转布尔，数字转数值，其余原样存字符串
+   （交给 ES 报错——不在客户端静默改写用户意图） */
+function onQpScalar(k: string, raw: string) {
+  const t = raw.trim();
+  if (!t) { qpDel(k); return; }
+  if (t === 'true') { qpPatch(k, true); return; }
+  if (t === 'false') { qpPatch(k, false); return; }
+  const n = Number(t);
+  qpPatch(k, Number.isFinite(n) ? n : t);
+}
+function qpJsonText(k: string): string {
+  if (k in qpDraft.value) return qpDraft.value[k];
+  const v = props.tree.searchParams[k];
+  return v === undefined ? '' : JSON.stringify(v);
+}
+function qpJsonBad(k: string): boolean {
+  const d = qpDraft.value[k];
+  if (d === undefined) return false;
+  try { JSON.parse(d); return false; } catch { return true; }
+}
+function onQpJson(k: string, raw: string) {
+  qpDraft.value = { ...qpDraft.value, [k]: raw };
+  try { qpPatch(k, JSON.parse(raw)); } catch { /* 半截 JSON：只留草稿，不写树 */ }
+}
+watch(() => props.tree.searchParams, s => {
+  if (!Object.keys(s || {}).length) qpMenu.value = false;
+});
+
 /* 分区折叠：有内容的默认展开 */
 const open = ref<Set<string>>(new Set([
   'page',
@@ -392,6 +568,7 @@ const open = ref<Set<string>>(new Set([
   ...(props.tree.rescore ? ['rc'] : []),
   ...(props.tree.scriptFields ? ['sf'] : []),
   ...(props.tree.runtimeMappings ? ['rm'] : []),
+  ...(Object.keys(props.tree.searchParams || {}).length ? ['qp'] : []),
   ...(Object.keys(props.tree.extras).length ? ['ex'] : []),
 ]));
 function toggle(k: string) {
@@ -433,6 +610,8 @@ watch(() => props.tree.rescore, (n, o) => { if (n && !o) autoOpen('rc'); });
 /* 996：script_fields/runtime_mappings 同风格跳变 */
 watch(() => props.tree.scriptFields, (n, o) => { if (n && !o) autoOpen('sf'); });
 watch(() => props.tree.runtimeMappings, (n, o) => { if (n && !o) autoOpen('rm'); });
+/* 998：查询参数同风格跳变（DSL 里出现 search_after/pit 等键时自动展开） */
+watch(() => Object.keys(props.tree.searchParams || {}).length, (n, o) => { if (n && !o) autoOpen('qp'); });
 
 /* size/from 控制链随分页节退役（numText/numPatch 曾为其专用）——
  tree 上残留的 size/from 键序列化直通（旧草稿兼容，执行链 562 联动语义接管） */
@@ -563,6 +742,37 @@ function onKnnVec(text: string) {
 function onKnnParams(v: Record<string, unknown> | unknown[]) {
   if (!Array.isArray(v) && props.tree.knn) patch({ knn: { ...props.tree.knn, params: v } });
 }
+/* ═══ 998：多向量（knn 数组形态） ═══
+   knn 恒为第一路，knnExtra 为第 2..n 路，knnArray 记忆原 DSL 是否数组形态。
+   加一路 = 升为数组形态；删空 = 自动收回对象形态（不留 `knn: [x]` 这种无意义包装）。 */
+const knnXIdx = ref<number | null>(null);
+function knnPatchExtra(i: number, p: Partial<KnnSpec>) {
+  const list = [...(props.tree.knnExtra || [])];
+  if (!list[i]) return;
+  list[i] = { ...list[i], ...p };
+  patch({ knnExtra: list, knnArray: true });
+}
+function knnAddExtra() {
+  const item: KnnSpec = { field: null, vector: [], params: { k: 10, num_candidates: 100 }, hasVector: true };
+  patch({ knnExtra: [...(props.tree.knnExtra || []), item], knnArray: true });
+  if (!open.value.has('knn')) toggle('knn');
+}
+function knnDelExtra(i: number) {
+  const list = (props.tree.knnExtra || []).filter((_, j) => j !== i);
+  patch({ knnExtra: list, knnArray: list.length > 0 });
+  knnXIdx.value = null;
+}
+function knnFoldToObject() { patch({ knnExtra: [], knnArray: false }); }
+/* 移除整个 knn 键：数组形态的额外项与形态记忆一并清掉——
+   否则 serialize 会把 knnExtra 当作「数组剩下的项」重新写回 knn 键（删不掉的鬼键） */
+function knnClear() { patch({ knn: null, knnExtra: [], knnArray: false }); }
+function onKnnVecExtra(i: number, text: string) {
+  try {
+    const v = JSON.parse(text);
+    if (typeof v !== 'object' || v === null) return;
+    knnPatchExtra(i, { vector: v, hasVector: true });
+  } catch { /* 半截 JSON 不写树 */ }
+}
 
 /* ═══ 989：suggest 项级编辑（名称/text/类型体 rest/全局 text） ═══ */
 const sugIdx = ref<number | null>(null);
@@ -617,6 +827,35 @@ function onRcWindow(raw: string) {
 }
 function onRcParams(v: Record<string, unknown> | unknown[]) {
   if (!Array.isArray(v) && props.tree.rescore) patch({ rescore: { ...props.tree.rescore, params: v } });
+}
+/* ═══ 998：多段重打分（rescore 数组形态）——rescore 恒为第一段，rescoreExtra 为第 2..n 段 ═══ */
+const rcXIdx = ref<number | null>(null);
+function rcPatchExtra(i: number, p: Partial<RescoreSpec>) {
+  const list = [...(props.tree.rescoreExtra || [])];
+  if (!list[i]) return;
+  list[i] = { ...list[i], ...p };
+  patch({ rescoreExtra: list, rescoreArray: true });
+}
+function rcAddExtra() {
+  const leaf: QueryNode = { id: nid(), type: 'leaf', op: 'match_phrase', field: props.fields[0] || '', value: '', params: {}, raw: null };
+  const seg: RescoreSpec = { windowSize: 50, hasWindowSize: true, rescoreQuery: leaf, params: {} };
+  patch({ rescoreExtra: [...(props.tree.rescoreExtra || []), seg], rescoreArray: true });
+}
+function rcDelExtra(i: number) {
+  const list = (props.tree.rescoreExtra || []).filter((_, j) => j !== i);
+  patch({ rescoreExtra: list, rescoreArray: list.length > 0 });
+  rcXIdx.value = null;
+}
+function rcFoldToObject() { patch({ rescoreExtra: [], rescoreArray: false }); }
+/* 移除整个 rescore 键：同 knnClear，额外段与形态记忆一并清（防鬼键复活） */
+function rcClear() { patch({ rescore: null, rescoreExtra: [], rescoreArray: false }); }
+function rcUpdateExtra(i: number, n: QueryNode) { rcPatchExtra(i, { rescoreQuery: n }); }
+function onRcWindowExtra(i: number, raw: string) {
+  const cur = (props.tree.rescoreExtra || [])[i];
+  if (!cur) return;
+  const n = Number(raw);
+  if (raw === '') rcPatchExtra(i, { windowSize: '', hasWindowSize: false });
+  else if (Number.isFinite(n)) rcPatchExtra(i, { windowSize: n, hasWindowSize: true });
 }
 
 /* ═══ 996：script_fields / runtime_mappings 项级编辑（同构双键） ═══ */
@@ -731,4 +970,37 @@ function onExtras(v: Record<string, unknown> | unknown[]) {
 /* 996 命名项行（script_fields/runtime_mappings 同款）：名称输入钉宽、按钮不收缩 */
 .rx-named-row { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; margin: var(--sp-1) 0; }
 .rx-named-row .btn { flex: none; }
+
+/* ═══ 998：查询参数分区 ═══
+   每行 = 参数名（中文主 + mono 键）+ 控件 + 移除；说明文字独占一行小字弱化。
+   控件宽度按类型分档：布尔/数字短、JSON 吃满剩余（游标数组可能很长）。 */
+.rx-qp { display: flex; flex-direction: column; gap: var(--sp-1); }
+.rx-qp-row { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; padding: var(--sp-1) 0; border-bottom: 1px dashed var(--line); }
+.rx-qp-row:last-of-type { border-bottom: none; }
+.rx-qp-head { display: inline-flex; align-items: center; gap: var(--sp-1h); flex: none; min-width: 132px; }
+.rx-qp-key { font-family: var(--mono, ui-monospace, monospace); font-size: var(--fs-2xs); color: var(--tx2); background: var(--bg3); border-radius: var(--r-xs); padding: 1px 5px; }
+.rx-qp-ctl { height: 28px; font-size: var(--fs-sm); flex: 1 1 160px; min-width: 0; }
+select.rx-qp-ctl { flex: 0 0 92px; }
+.rx-qp-json { font-size: var(--fs-xs); }
+.rx-qp-json.bad { border-color: var(--err); box-shadow: 0 0 0 2px var(--err-soft); }
+.rx-qp-hint { flex-basis: 100%; font-size: var(--fs-2xs); color: var(--tx2); line-height: 1.5; }
+/* 添加参数菜单：每组独占一行、组内两列（18 键一眼扫完；组头横跨整行） */
+.rx-qp-menu { display: grid; grid-template-columns: 1fr; gap: var(--sp-0); padding: var(--sp-2);
+  border: 1px solid var(--line); border-radius: var(--r-s); background: var(--bg1); margin-top: var(--sp-1);
+  max-height: 360px; overflow: auto; }
+.rx-qp-grp { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--sp-3); }
+.rx-qp-g { grid-column: 1 / -1; font-size: var(--fs-2xs); color: var(--tx2); letter-spacing: var(--ls-wide);
+  padding: var(--sp-1) 0 var(--sp-0); border-bottom: 1px solid var(--line); margin-bottom: var(--sp-0); }
+.rx-qp-mi { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); width: 100%;
+  padding: 3px var(--sp-1); border: none; background: none; border-radius: var(--r-xs);
+  font-size: var(--fs-sm); color: var(--tx0); cursor: pointer; text-align: left; }
+.rx-qp-mi:hover:not(:disabled) { background: var(--ac-soft); }
+.rx-qp-mi:disabled { opacity: .38; cursor: default; }
+.rx-qp-mi code { font-size: var(--fs-2xs); color: var(--tx2); }
+
+/* 998：多向量 / 多段重打分——额外项用左侧细引导线分组，与首项视觉分层 */
+.rx-knn-x, .rx-rc-x { border-left: 2px solid var(--line); padding-left: var(--sp-2); margin: var(--sp-1) 0; }
+.rx-knn-x:hover, .rx-rc-x:hover { border-left-color: var(--ac-line); }
+/* 数组形态徽标：mono 小字提示「当前 DSL 是数组写法」 */
+.rx-knn-tag { font-size: var(--fs-2xs); color: var(--ac); background: var(--ac-soft); border-radius: 999px; padding: 1px 7px; }
 </style>
