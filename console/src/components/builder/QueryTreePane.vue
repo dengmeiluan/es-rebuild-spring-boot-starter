@@ -1,11 +1,13 @@
 <template>
-  <div ref="paneEl" class="qtp" :class="{ froz: stale }">
+  <div ref="paneEl" class="qtp" :class="{ froz: stale }" @keydown.ctrl.z.prevent="undo()" @keydown.ctrl.shift.z.prevent="redo()" @keydown.ctrl.y.prevent="redo()">
     <div v-if="stale" class="qtp-stale">
       右侧 DSL 有未解析的修改，条件树冻结显示最近一次成功解析——修正语法后自动恢复。
     </div>
 
     <!-- 面板头部：递归叶子条件计数徽标（含嵌套与临时停用） -->
-    <div v-if="tree.root" class="qtp-hd">
+    <div v-if="tree.root" class="qtp-hd"><!-- 993：undo/redo（面板写路径单点汇聚 setRoot，栈深 50；title 避开 541/553 锁词） -->
+      <button class="btn sm ghost" aria-label="撤销上一步树编辑" :disabled="!undoStack.length" :title="'撤销上一步树编辑（Ctrl+Z），可回退 ' + undoStack.length + ' 步'" @click="undo()"><Undo2 :size="11" /></button>
+      <button class="btn sm ghost" aria-label="重做树编辑" :disabled="!redoStack.length" title="重做树编辑（Ctrl+Shift+Z / Ctrl+Y）" @click="redo()"><Redo2 :size="11" /></button>
       <!-- 徽标升级分档读数「共 N · 停用 M · 嵌套 K」（M/K 为 0 省略段）；
  N>10 转 .hot 警示色，提示条件树偏大。
  裸 pill 升级 .chip.static 质感档（bg2 底+line 边+tabular-nums 全局单源），
@@ -98,7 +100,7 @@
  index prop：写入 fieldSearch 的当前索引上下文（per-index 最近字段记忆供 defaultLeaf 与
  子树深处的 FieldSelect 读取——NodeRenderer 之下逐层透传 prop 不现实）。 */
 import { computed, watch, watchEffect, provide, ref, nextTick } from 'vue';
-import { Plus, ChevronsDown, ChevronsUp, Pause, Play } from 'lucide-vue-next';
+import { Plus, ChevronsDown, ChevronsUp, Pause, Play, Undo2, Redo2 } from 'lucide-vue-next';
 import SearchFilterBar from '../SearchFilterBar.vue';
 import BoolGroupNode, { BGN_COLLAPSE_EVENT } from './BoolGroupNode.vue';
 import NodeRenderer from './NodeRenderer.vue';
@@ -303,9 +305,46 @@ const isPlainMatchAll = computed(() => {
   return !!r && r.type === 'leaf' && r.op === 'match_all' && !Object.keys((r as LeafNode).params).length;
 });
 
+/* ═══ 993：undo/redo 历史栈 ═══
+ 面板内写路径全部汇聚 setRoot（单点 emit）——emit 前记 lastEmitted 引用；watch props.tree
+ 回流时甄别来源（=== lastEmitted = 内部写回流，不动栈；≠ = DSL 解析/外部换树，清栈防
+ 跨源串撤销——用户手改 DSL 后撤销到旧树会覆盖手改，Monaco setValue 清 undo 栈不可逆）。
+ 栈存「写前 root」，深 50 截断；新写动作清空重做分支。 */
+const undoStack = ref<QueryNode[]>([]);
+const redoStack = ref<QueryNode[]>([]);
+let lastEmitted: QueryTree | null = null;
+const UNDO_MAX = 50;
+
 function setRoot(root: QueryNode) {
   if (root.type === 'bool' && !root.children.length) root = matchAllLeaf();
-  emit('update:tree', { ...props.tree, root });
+  const prevRoot = props.tree.root;
+  if (prevRoot) {
+    undoStack.value.push(prevRoot);
+    if (undoStack.value.length > UNDO_MAX) undoStack.value.shift();
+    redoStack.value = [];
+  }
+  lastEmitted = { ...props.tree, root };
+  emit('update:tree', lastEmitted);
+}
+watch(() => props.tree, t => {
+  if (t === lastEmitted) return;
+  undoStack.value = [];
+  redoStack.value = [];
+  lastEmitted = t;
+});
+function undo() {
+  const prev = undoStack.value.pop();
+  if (!prev || !props.tree.root) return;
+  redoStack.value.push(props.tree.root);
+  lastEmitted = { ...props.tree, root: prev };
+  emit('update:tree', lastEmitted);
+}
+function redo() {
+  const next = redoStack.value.pop();
+  if (!next || !props.tree.root) return;
+  undoStack.value.push(props.tree.root);
+  lastEmitted = { ...props.tree, root: next };
+  emit('update:tree', lastEmitted);
 }
 function onRootUpdate(n: QueryNode) { setRoot(n); }
 function onRootRemove() { setRoot(matchAllLeaf()); }

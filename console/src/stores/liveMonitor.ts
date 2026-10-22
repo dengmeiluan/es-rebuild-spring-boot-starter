@@ -214,6 +214,9 @@ const nodeSeries = ref<Record<string, NodeSeries>>({});
   async function tick() {
     const seq = ++tickSeq;
     try {
+      /* 已登出/token 被吊销（身份已知且无会话）时跳过该次采样——不留请求、不空转
+       unauthorized 事件链；重登后下一拍自动续采（994：登出不停轮询器的补偿单点）。 */
+      if (auth.me == null && !auth.authDisabled && auth.probed) return;
       /* 无 diag 页权限时跳过 pending-tasks 采样（保留 0 值）——
  无权限角色每采样周期 403 会往审计流刷 PAGE_DENIED 心跳。
  连接键感知——grantedPages 为 conn:{id}:{page} 形态时裸 includes

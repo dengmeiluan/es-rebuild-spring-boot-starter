@@ -196,6 +196,9 @@ export const useJobTrackerStore = defineStore('jobTracker', () => {
  旧拍回包迟到不得覆盖 jobs 清单、不得把已消失作业错登记进终态检测状态机 */
   let pollSeq = 0;
   async function poll() {
+    /* 已登出/token 被吊销（身份已知且无会话）时跳过该次跟踪——不留请求、不空转
+       unauthorized 事件链；重登后下一拍自动恢复（994：登出不停轮询器的补偿单点）。 */
+    if (auth.me == null && !auth.authDisabled && auth.probed) return;
     /* 两类作业各自容忍失败：403（角色不足看迁移）/404（未装 adhoc）不该让整块跟踪瘫掉。
  权限感知——页面白名单不含对应页时，本角色对这两个轮询端点必然 403，
  继续打只会每周期往审计流刷 PAGE_DENIED（同质心跳刷屏）。无权限的通道直接跳过

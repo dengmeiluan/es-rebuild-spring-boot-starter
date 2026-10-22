@@ -72,11 +72,12 @@
          顶部即时过滤（中文名/算子名模糊匹配），Enter 插入首个命中，Esc 关闭 -->
     <Teleport to="body">
       <div v-if="advOpen" class="adv-pop float-pop" :style="advStyle" @click.stop>
-        <input ref="advQEl" v-model="advQ" class="inp adv-q" placeholder="搜索算子（如 multi / geo / 跨度），Enter 插入首个命中"
-               @keydown.esc.stop="advOpen = null" @keydown.enter.prevent="addFirstAdvHit" />
+        <input ref="advQEl" v-model="advQ" class="inp adv-q" placeholder="搜索算子（如 multi / geo / 跨度），Enter 插入命中项"
+               @keydown.esc.stop="advOpen = null" @keydown="onAdvKey" />
+        <!-- 993：↑↓ 键盘导航（跨组扁平游标）+ act 高亮，Enter 插游标项（未导航=首个命中既有语义） -->
         <template v-for="g in advGroups" :key="g.group">
           <div class="adv-g">{{ g.group }}</div>
-          <button v-for="op in g.ops" :key="op" class="adv-i" type="button" @click="addAdvanced(op)">
+          <button v-for="op in g.ops" :key="op" class="adv-i" :class="{ act: advFlat[advCursor] === op }" type="button" @click="addAdvanced(op)">
             <span>{{ labelOfOp(op) }}</span><code class="mono">{{ op }}</code>
           </button>
         </template>
@@ -186,9 +187,23 @@ function addAdvanced(op: string) {
   emit('update:node', { ...props.node, children: [...props.node.children, { occur: o, node: makeNodeByOp(op) }] });
 }
 /* 过滤后 Enter 直插首个命中（键盘流：搜索 → Enter 即得，不用碰鼠标） */
-function addFirstAdvHit() {
-  const first = advGroups.value[0]?.ops[0];
-  if (first) addAdvanced(first);
+/* 993：↑↓ 键盘导航——跨组扁平序列游标；过滤词变化重置（Enter 未导航仍首个命中） */
+const advCursor = ref(-1);
+const advFlat = computed(() => advGroups.value.flatMap(g => g.ops));
+watch(advQ, () => { advCursor.value = -1; });
+function onAdvKey(e: KeyboardEvent) {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    const max = advFlat.value.length - 1;
+    advCursor.value = e.key === 'ArrowDown' ? Math.min(max, advCursor.value + 1) : Math.max(-1, advCursor.value - 1);
+    nextTick(() => (document.body.querySelector('.adv-i.act') as HTMLElement | null)?.scrollIntoView({ block: 'nearest' }));
+    return;
+  }
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const pick = advCursor.value >= 0 ? advFlat.value[advCursor.value] : advGroups.value[0]?.ops[0];
+    if (pick) addAdvanced(pick);
+  }
 }
 /* 非 capture：菜单项自己的 click 先跑完（含插入），.adv-pop @click.stop 再拦住冒泡，
    外部点击照常冒泡到 window 关闭——capture 会在菜单项 handler 之前清 advOpen 吞掉插入 */
@@ -305,6 +320,7 @@ onBeforeUnmount(() => window.removeEventListener(BGN_COLLAPSE_EVENT, onCollapseE
 .adv-q { grid-column: 1 / -1; height: 28px; font-size: var(--fs-sm); margin-bottom: var(--sp-1); }
 .adv-g { grid-column: 1 / -1; font-size: var(--fs-2xs); color: var(--tx2); padding: var(--sp-1) var(--sp-1) 0; user-select: none; }
 .adv-none { grid-column: 1 / -1; font-size: var(--fs-xs); color: var(--tx2); padding: var(--sp-2); text-align: center; }
+.adv-i.act { background: var(--hover); }
 .adv-i { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); padding: 3px var(--sp-1); border: none; background: none; border-radius: var(--r-xs); font-size: var(--fs-sm); color: var(--tx0); cursor: pointer; text-align: left; }
 .adv-i:hover { background: var(--ac-soft); }
 .adv-i code { font-size: var(--fs-2xs); color: var(--tx2); }
