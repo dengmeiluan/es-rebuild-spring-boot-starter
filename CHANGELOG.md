@@ -5,6 +5,108 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.37]
+
+### 安全
+
+- DevTools/raw 纵深加固：路径拒绝 `#` 片段与 `%23`（守卫看 `index#`、HTTP 客户端只发 `index`，曾可绕过
+  `DELETE /index` 与精确系统读拒绝）；所有 JSON 守卫入口统一剥离 BOM（`_bulk` 动作行/`_index`、
+  search/reindex/alias/template/restore/mget/SQL 不再因解析失败被静默跳过）；`wrapper.query`
+  base64（标准/URL-safe）解码后递归过二级索引守卫；系统读新增拒绝 `_aliases`、`_tasks`、
+  `_cat/tasks|pending_tasks|templates`、`_cluster/allocation|pending_tasks`、`_index_template|_template`；
+  `_cat` 重复 `h` 参数必须每组都保留 index 列；`_render/template` 禁止按已存 id 回显模板体；
+  合法 PIT 搜索按 ES 契约免显式 index（空 `pit.id` 仍拒绝），`DELETE /_pit` 恢复可用
+- 非 ADMIN 删除快照前解析快照真实索引，含控制面/系统索引或无法证明内容一律拒绝；快照仓库凭据
+  脱敏改为点号/连字符归一后匹配，覆盖 `conf.fs.s3a.access.key`、Azure account key、`api_key` 等插件写法
+- 迁移面收口：`resolve-preview` 不再允许 `es.rebuild.console.*`（token-secret 泄露可伪造 ADMIN），
+  由敏感 ref/占位符解析出的 scheme/host/port/username 一律不回显，`portRef` 报错不回声原值；
+  源/目标索引必须是精确业务索引（拒绝控制面/系统/通配/列表/date-math），续跑对历史作业同样校验；
+  `connect-check` 与 `dest-indices` 过滤控制面索引名
+- 全量审计行级隔离只认 security 授权：其它连接/任意静态页面读键不再放大 `conn:{id}:security`
+  的可见范围；宿主专属端点带远端 `X-Es-Target` 时审计归属记宿主，不再记到远端连接账上
+- 环境页面模板键大小写不敏感；显式空模板=该环境静态页全拒（未配置该环境仍原样透传）。
+  `/cluster/inspect` 样本文档只下发给 indices/search/browser/doc-diff 页面，mapping 等纯元数据页
+  只回结构；`browser` 从文档写归属移除（保留文档读面），`w:browser` 不再隐式获得覆盖权；
+  权限面板对 `system`/`config-drift` 按 host 授权回显，不再出现「面板说可读、实际 403」的假入口
+- 前端：宿主换发 token 或 401 时立即撤旧身份（`invalidateIdentity`），probe 落地前写门 fail-closed；
+  同一标签页换人登录清除上一用户 DevTools/REST 草稿、历史、收藏与查询历史；迁移中止 3s 定时器
+  离页即清空且回调内重新校验权限
+- DevTools/raw `?source=` 与请求体同权过守卫：SQL/mget/msearch/search/template 不再能借查询参数
+  直读控制面；`_msearch` 同时校验 `index`/`indices` 且拒绝空数组（空数组会退化为全量），搜索 DSL
+  的 `indices` 二级查询、模板 `inline/template` 字段与 BOM 前缀 id 一并收口；GET 携带 body 不再被
+  静默丢弃；业务检索正文里出现 `es_console`/`.security` 字样不再被误杀
+- env 页模板同时封顶静态键与 conn 读写键；conn 读键不得把 env 排除的静态页重新并入写权；
+  低角色静态 aliases + config-validator 写键强制 add-only；护栏动作仅在 conn 写键直接授权时跳过
+  minRole（混合模型静态回落仍按角色档）
+- 审计行按连接 minRole 二次收口，零页面授权不再拿到 audit-facets 全量建议；迁移/托管重建
+  审计归属请求目标连接；宿主 security 键在连接目标下仍保留宿主审计入口（行级仍只看 host 事件）；
+  已删除连接的监控实名不再回落宿主；快照列表/状态对非 ADMIN 去除控制面索引名，仓库凭据脱敏
+  覆盖 URL userinfo 与 `Authorization` 头
+- 前端：跨标签页目标/令牌变更同步并重探身份；DevTools 权限撤销量在途 busy 自动复位；
+  `/auth/me` 404 仅在 setup/status 明确 `authEnabled=false` 时视为无鉴权；browser 静态页不再
+  回显文档写权；别名面板对 add-only 授权隐藏切换/解绑/扩展参数（只保留 index+alias 创建）
+- 读档纠偏：`GET /cluster/ilm/policies` 不再因写关键词子串误提 rank3；混合模型的静态
+  xmigrate 写档与 ADMIN 不再被源/宿主写键检查拦死；未绑定窗口的 `/setup/test` 在宿主委托
+  部署下要求 ADMIN（关闭匿名 SSRF 探测）；连接模型 ADMIN 发起/续跑迁移保持全局放行
+
+### 安全（985 校准轮）
+
+- DevTools/raw：`index`/`indices` 查询参数拒绝空值、裸参数与重复项（ES 只取首值，空首值会
+  退化为全量索引搜索）；搜索模板拒绝 lookup 结构键/索引值中的 Mustache 占位符、对象 source
+  内的子句键占位符与分隔符切换（防渲染后把 `index/id/path` 或子句类型伪装成控制面查找）；
+  `/_render/template/{id}` 路径形态、`/_cluster/health/{index}?level=indices|shards` 与
+  `_update_by_query` 脚本改写 `_index` 一并拒绝；`_terms_enum`/`_rank_eval`/`_knn_search`
+  的 body 同过二级索引守卫；`pipeline` 参数与 reindex `dest.pipeline` 解析管道定义，
+  含 `reroute`/`_index` 或无法确认时拒绝（防管道把文档改写到控制面）；系统读补充拒绝
+  `_cat/nodes|nodeattrs|thread_pool|plugins|transforms|ml|component_templates`、
+  `_data_stream`、`_features`、`_license`、`_xpack/license|usage`、`_cluster/stats`、
+  `_enrich`、`_monitoring`
+- 前后端所见即所得：`/auth/me` 下发 `envPages` 环境页模板，菜单/路由/按钮/轮询与后端
+  `EnvPagesResolver` 同口径收缩（显式空模板=全拒，未配置 env=不收缩）；权限面板
+  `sharedWriteAllowed`/`rawAllowed`/`devtoolsAllowed` 过 env 模板，不再虚报「可写」；
+  host-scope security 与源连接 xmigrate 授权在顶栏目标不同时仍显示入口；静态 rest/devtools
+  页不再给非 ADMIN 露必 403 的死入口（连接写键仍可见）；表格文档写只认
+  search/indices/doc-diff 写键（aliases/optimizer 写键不再放大为文档编辑权）；
+  UpdateByQuery 删除模式按 delete-by-query 端点单独授权（`w:search` 用户不再被误拦），
+  快照/ILM 弹窗在权限撤销后同步禁用提交
+- 未绑定首连窗口新增可选 `es.rebuild.console.setup-token`：配置后 `/setup/test|apply`
+  必须携带 `X-Setup-Token`（常量时间比较）；默认空时匿名首连只允许本机回环且无转发头，
+  远程/反向代理初始化必须配置令牌；委托部署仍要求宿主 ADMIN
+- 自定义 `EsConsoleAuthorizer` 部署新增 `/auth/me` 兜底端点：回显拦截器已认证的角色/页面授权/
+  env 模板，前端不再把 404 误判为「无鉴权部署」而全开菜单（后端执法与前端所见重新对齐）
+- 审计：删除索引/快照恢复/模板删除/ILM 停止/迁移启停等破坏性写落 `HIGH_RISK`（仅审计分级，
+  不改变授权）；raw 法证摘要剥离换行控制符；来源 IP 仅在直连方为回环/私网代理时才信
+  `X-Forwarded-For`/`X-Real-IP`，公网直连伪造转发头不再污染审计法证
+
+### 安全（986 终审轮）
+
+- DevTools/raw：`_bulk` 动作行 `pipeline`、`_update`/`_update_by_query` 脚本（含拼接、
+  动态 `ctx[...]`、已存脚本 id）、SQL `filter` 二级查询、`_mtermvectors`
+  的 `docs[]._index`/`parameters.index`、`_rank_eval.template_id`、快照恢复逗号通配
+  逐项解析；pipeline 定义拒绝嵌套 `pipeline`/`reroute`/`date_index_name`/`script`
+  与定义内控制面索引名（无法确认一律 fail-closed）
+- 自定义 `EsConsoleAuthorizer` 返回的非委托 `grantedPages` 与委托同权执法：
+  拦截器/连接可见性/审计聚合/权限面板/前端菜单共用同一白名单；env 模板收缩为空集时，
+  pageOf=null 的共享端点读写同样全拒
+- 前端预暴露补齐：DevTools 非 ADMIN 仅数据面可执行（系统管理/别名/快照/模板/脚本
+  提前禁用并给出原因）；命令面板动作按目标页过滤；收藏重放先过页面门；任务轮询按
+  tasks/task-tree 页授权；Watcher/ILM 的 DevTools 入口按 DevTools 页权提示；
+  REST 只读身份显示内联说明；无内置登录的部署在登录遮罩给出宿主认证指引
+
+### 新增（987 批：查询构建器 DSL 全量覆盖轮）
+
+- 条件树算子补齐 ES 8.x 新语法九员：整词前缀（`match_int_prefix`）、地理网格（`geo_grid`）、
+  形状过滤（`shape`）、稀疏向量（`sparse_vector`）、文本扩展（`text_expansion`）、加权词元
+  （`weighted_tokens`）、语义查询（`semantic`）、向量近邻（`knn`）、字段掩码跨度
+  （`field_masking_span`），全部富表单编辑且序列化往返无损；「+ 高级」菜单新增「向量与语义」
+  分组，`dense_vector`/`sparse_vector` 字段自动推荐对应算子
+- 顶层检索键一等化：`post_filter`（后置过滤）直接以条件树编辑（增删/拖拽/复制/启停全通道），
+  `collapse`（字段折叠）与 `knn`（向量检索）升级为独立结构化分区（向量走 JSON 编辑、非法
+  中间态标黄不落树），不再混入「其他顶层键」键值表；畸形形态仍原样保留零丢失
+- 交互修复：折叠后的嵌套组组头常显（此前 hover 才浮现，触屏无法再展开）；字段选择器对不在
+  当前索引 mapping 的手输字段给黄点提示（无 mapping 部署不受影响）；DSL 手改导致条件树冻结
+  期间补键盘惰性（此前鼠标已挡但键盘仍可触发写树覆盖手改）
+
 ## [1.0.36]
 
 ### 安全

@@ -215,6 +215,24 @@ public class CrossClusterMigrateControllerTargetTest {
     }
 
     @Test
+    public void 混合模型_静态xmigrate写档角色可发起迁移() {
+        FakeService service = new FakeService();
+        MigrateRequest req = new MigrateRequest();
+        req.setSrcConnId("c1");
+        req.setSourceIndex("src-1");
+        req.setDestIndex("dest-1");
+        CrossClusterMigrateController ctrl = controller(service, connStore());
+        ConsolePrincipal op = new ConsolePrincipal("u", ConsoleRole.REBUILD_OP, false, true, "ops", null,
+                new HashSet<>(Arrays.asList("xmigrate", "conn:c1:overview")));
+        HttpServletRequest reqp = request(op);
+        assertEquals("job-dest-1", ctrl.start(req, reqp).get("jobId"));
+
+        ConsolePrincipal viewer = new ConsolePrincipal("v", ConsoleRole.VIEWER, false, true, "viewer", null,
+                new HashSet<>(Arrays.asList("xmigrate", "conn:c1:overview")));
+        expectForbidden(() -> ctrl.start(req, request(viewer)), "静态 xmigrate 低角色不得发起迁移");
+    }
+
+    @Test
     public void 静态模型_保持全局作业可见() {
         FakeService service = new FakeService();
         service.jobs.put("j1", job("j1", "c1"));
@@ -238,5 +256,11 @@ public class CrossClusterMigrateControllerTargetTest {
         assertEquals(2, ctrl.jobs(20, req).size());
         assertEquals("j2", ctrl.progress("j2", req).getJobId());
         ctrl.abort("j2", req);
+
+        MigrateRequest start = new MigrateRequest();
+        start.setSrcConnId("c2");
+        start.setSourceIndex("src-1");
+        start.setDestIndex("dest-1");
+        assertEquals("job-dest-1", ctrl.start(start, req).get("jobId"));
     }
 }

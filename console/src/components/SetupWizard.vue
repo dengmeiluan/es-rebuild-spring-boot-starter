@@ -24,6 +24,13 @@
               </div>
             </div>
 
+            <template v-if="tokenRequired">
+              <label class="sw-label">初始化令牌 <span class="sw-req">*</span></label>
+              <input v-model.trim="setupToken" type="password" class="ipt sw-ipt mono"
+                autocomplete="off" placeholder="X-Setup-Token（服务端 es.rebuild.console.setup-token）"
+                @keydown.enter.prevent="onSubmit" />
+            </template>
+
             <div v-if="testResult" class="sw-test" :class="testResult.ok ? 'ok' : 'err'">
               <template v-if="testResult.ok">
                 <CheckCircle2 :size="13" />
@@ -86,13 +93,18 @@ const testing = ref(false);
 const applying = ref(false);
 const testResult = ref<{ ok: boolean; clusterName?: string; version?: string; status?: string; nodes?: number; message?: string } | null>(null);
 const error = ref('');
+/* 服务端配置 setup-token 时（/setup/status.setupTokenRequired）显示令牌输入并随 test/apply 发送。 */
+const tokenRequired = ref(false);
+const setupToken = ref('');
 
 async function doTest() {
   testing.value = true;
   error.value = '';
   testResult.value = null;
   try {
-    testResult.value = await api.setup.test({ url: url.value, username: username.value || undefined, password: password.value || undefined });
+    testResult.value = await api.setup.test(
+      { url: url.value, username: username.value || undefined, password: password.value || undefined },
+      setupToken.value || undefined);
   } catch (e: any) {
     // 403 ALREADY_BOUND（并发绑定）等：直接展示并建议刷新
     /* A：ES 错误友好化——裸 message 换全站 friendlyEsError 口径 */
@@ -107,7 +119,9 @@ async function doApply() {
   applying.value = true;
   error.value = '';
   try {
-    await api.setup.apply({ url: url.value, username: username.value || undefined, password: password.value || undefined });
+    await api.setup.apply(
+      { url: url.value, username: username.value || undefined, password: password.value || undefined },
+      setupToken.value || undefined);
     // 绑定成功：整页刷新，让全部存储走新控制集群重新初始化
     window.location.reload();
   } catch (e: any) {
@@ -138,6 +152,7 @@ async function refreshStatus() {
   try {
     const s = await api.setup.status();
     appName.value = s.appName || 'default';
+    tokenRequired.value = !!s.setupTokenRequired;
     // 防御：已绑定（别处并发绑好 / 误触发事件）就不弹
     if (s.bound) show.value = false;
   } catch {
@@ -151,6 +166,7 @@ onMounted(async () => {
   try {
     const s = await api.setup.status();
     appName.value = s.appName || 'default';
+    tokenRequired.value = !!s.setupTokenRequired;
     if (!s.bound) show.value = true;
   } catch {
     // 后端老版本无此端点（404）：静默，永不弹

@@ -63,12 +63,18 @@ interface HighlightSpec { fields: Array<{ name: string; params: Record<string, u
  （collapse 数组 / knn 非对象或 field 非字符串）一律落 extras 零丢失。 */
 export interface CollapseSpec { field: string; params: Record<string, unknown> }
 export interface KnnSpec { field: string | null; vector: unknown; params: Record<string, unknown>; hasVector: boolean }
+/* 989：suggest 一等解析。顶层 text 是 suggest 级全局参数（与建议项同名层，parse 特判
+ 不吞项）；建议项 = 命名键 + text 骨架 + 其余键（suggester 类型键 term/phrase/completion
+ 等整体落 rest 原样）。任一项 body 非对象 → 整键落 extras 零丢失。 */
+export interface SuggestItem { name: string; text: unknown; hasText: boolean; rest: Record<string, unknown> }
+export interface SuggestSpec { items: SuggestItem[]; globalText: unknown; hasGlobalText: boolean }
 
 export interface QueryTree {
   root: QueryNode | null;
   postFilter: QueryNode | null;    // null = 键不存在；任何值经 parseQueryNode（__raw__ 兜底无损）
   collapse: CollapseSpec | null;
   knn: KnnSpec | null;
+  suggest: SuggestSpec | null;
   size?: unknown; from?: unknown;  // 非数值也原样保留（零降级）
   sort: SortItem[] | null;         // null = 键不存在；[] = 空数组保键
   source: SourceSpec | null;
@@ -293,6 +299,8 @@ export function parseTree(dsl: unknown): ParseResult {
     else if (k === 'post_filter') tree.postFilter = parseQueryNode(v);
     else if (k === 'collapse') { const c = parseCollapse(v); if (c) tree.collapse = c; else tree.extras[k] = v; }
     else if (k === 'knn') { const n = parseKnn(v); if (n) tree.knn = n; else tree.extras[k] = v; }
+    /* 989：suggest 项 body 非对象整键落 extras（零丢失），合法对象走结构化分账 */
+    else if (k === 'suggest') { const s = parseSuggest(v); if (s) tree.suggest = s; else tree.extras[k] = v; }
     else tree.extras[k] = v;
   }
   return { ok: true, tree };
@@ -302,6 +310,17 @@ function parseCollapse(v: unknown): CollapseSpec | null {
   if (!isObj(v) || typeof v.field !== 'string') return null;
   const { field, ...params } = v;
   return { field, params };
+}
+function parseSuggest(v: unknown): SuggestSpec | null {
+  if (!isObj(v)) return null;
+  const out: SuggestSpec = { items: [], globalText: null, hasGlobalText: false };
+  for (const [name, body] of Object.entries(v)) {
+    if (name === 'text') { out.globalText = body; out.hasGlobalText = true; continue; }
+    if (!isObj(body)) return null;
+    const { text, ...rest } = body;
+    out.items.push({ name, text, hasText: 'text' in body, rest });
+  }
+  return out;
 }
 function parseKnn(v: unknown): KnnSpec | null {
   if (!isObj(v)) return null;
@@ -325,6 +344,16 @@ export function serializeTree(t: QueryTree): Record<string, unknown> {
     if (t.knn.hasVector) b.query_vector = t.knn.vector;
     Object.assign(b, t.knn.params);
     out.knn = b;
+  }
+  if (t.suggest) {
+    const s: Record<string, unknown> = {};
+    if (t.suggest.hasGlobalText) s.text = t.suggest.globalText;
+    for (const it of t.suggest.items) {
+      const body: Record<string, unknown> = it.hasText ? { text: it.text } : {};
+      Object.assign(body, it.rest);
+      s[it.name] = body;
+    }
+    out.suggest = s;
   }
   if (t.aggs !== null) out[t.aggKey || 'aggs'] = serAggs(t.aggs);
   if (t.highlight !== null) out.highlight = serHighlight(t.highlight);
@@ -563,7 +592,7 @@ export function insertAfter(root: QueryNode, id: string): QueryNode {
 }
 
 export function emptyTree(): QueryTree {
-  return { root: null, postFilter: null, collapse: null, knn: null, sort: null, source: null, aggs: null, highlight: null, extras: {} };
+  return { root: null, postFilter: null, collapse: null, knn: null, suggest: null, sort: null, source: null, aggs: null, highlight: null, extras: {} };
 }
 
 /* ═══ 985：高级算子空节点工厂（BoolGroupNode「+ 高级」菜单插入入口） ═══

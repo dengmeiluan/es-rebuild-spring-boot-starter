@@ -138,7 +138,7 @@ public class InternalAdhocRebuildController {
         ConsolePrincipal principal = (ConsolePrincipal) attr;
         // ADMIN 是全局超管：不受连接作业过滤/目标一致性限制
         if (principal.getRole().atLeast(io.github.dengmeiluan.es.rebuild.auth.ConsoleRole.ADMIN)) return false;
-        return principal.isDelegated() && principal.getGrantedPages() != null
+        return principal.getGrantedPages() != null
                 && envPagesResolver.inConnModel(principal.getGrantedPages());
     }
 

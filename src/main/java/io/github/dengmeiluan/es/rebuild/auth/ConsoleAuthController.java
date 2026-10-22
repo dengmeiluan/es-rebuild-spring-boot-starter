@@ -56,6 +56,13 @@ public class ConsoleAuthController {
     public void setConnStore(io.github.dengmeiluan.es.rebuild.multicluster.ConnStore connStore) {
         this.connStore = connStore;
     }
+    /** env 页面模板（连接环境级页面收缩）；单测/自定义部署可为 null。 */
+    private EnvPagesResolver envPagesResolver;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setEnvPagesResolver(EnvPagesResolver envPagesResolver) {
+        this.envPagesResolver = envPagesResolver;
+    }
     /** 页面契约全量载荷（组→页），构造期预建；前端 Forbidden 页取名 / 运行时对账用。 */
     private final Map<String, Object> pagesPayload;
 
@@ -68,7 +75,7 @@ public class ConsoleAuthController {
     }
 
     /** 页面契约 → me 响应载荷（apiPrefixes 随契约下发：前端用同一份数据镜像 pageOf 定端点归属；hotkey/icon 前端走构建期 JSON）。 */
-    private static Map<String, Object> buildPagesPayload(ConsolePageCatalog catalog) {
+    static Map<String, Object> buildPagesPayload(ConsolePageCatalog catalog) {
         List<Map<String, Object>> groups = new ArrayList<>();
         for (ConsolePageCatalog.Group g : catalog.getGroups()) {
             Map<String, Object> gm = new LinkedHashMap<>();
@@ -123,20 +130,9 @@ public class ConsoleAuthController {
         return result;
     }
 
-    /** 来源地址（与 ConsoleAuthInterceptor.clientIp 同口径；登录端点在拦截器白名单外自采）。 */
+    /** 来源地址（与拦截器同一实现：仅私网/回环代理才信转发头，防公网直连伪造审计 IP）。 */
     private static String clientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.trim().isEmpty()) {
-            String first = xff.split(",")[0].trim();
-            if (!first.isEmpty()) {
-                return first;
-            }
-        }
-        String real = request.getHeader("X-Real-IP");
-        if (real != null && !real.trim().isEmpty()) {
-            return real.trim();
-        }
-        return request.getRemoteAddr();
+        return ConsoleAuthInterceptor.clientIp(request);
     }
 
     /** 当前身份（前端启动时探测 token 是否仍有效）。 */
@@ -152,10 +148,25 @@ public class ConsoleAuthController {
         out.put("displayName", p.getDisplayName());
         out.put("authSource", p.isDelegated() ? "delegate" : "builtin");
         // 2.5.0 菜单 SPI：页面白名单三态下发（null=不启用；空列表=全拒，不得折叠成 null）+ 契约全量
-        out.put("grantedPages", pageAuthEnabled && p.isDelegated() && p.getGrantedPages() != null
+        out.put("grantedPages", pageAuthEnabled && p.getGrantedPages() != null
                 ? new ArrayList<>(new TreeSet<>(p.getGrantedPages())) : null);
         // 契约非秘密，无条件下发——逃生阀只关授权判定与 grantedPages，不关 Forbidden 取名数据源
         out.put("pages", pagesPayload);
+        /* 环境页面模板（env → 页面 key 集）随身份下发：前端菜单/按钮必须与后端
+           EnvPagesResolver 同口径收缩，否则会出现「菜单可见、点了 403」的假入口。
+           仅下发页面 key（配置策略，非账号/凭据）；未配置/非委托模型不下发。 */
+        if (pageAuthEnabled && p.getGrantedPages() != null
+                && envPagesResolver != null) {
+            java.util.Map<String, java.util.Set<String>> envPages =
+                    envPagesResolver.configuredTemplates();
+            if (!envPages.isEmpty()) {
+                java.util.Map<String, Object> payload = new LinkedHashMap<>();
+                for (java.util.Map.Entry<String, java.util.Set<String>> e : envPages.entrySet()) {
+                    payload.put(e.getKey(), new ArrayList<>(new java.util.TreeSet<>(e.getValue())));
+                }
+                out.put("envPages", payload);
+            }
+        }
         if (!p.getAttributes().isEmpty()) {
             out.put("attributes", p.getAttributes());
         }

@@ -126,7 +126,8 @@ FolderTree, BookText, PackageOpen,
 };
 
 /* 命令面板导航门：与路由守卫/侧栏同一 pageAllowed 真源，未授权页面动作不执行。 */
-const canGo = (path: string) => auth.isAdmin() || pageAllowed(auth.grantedPages, path, store.target);
+const canGo = (path: string) => auth.isAdmin()
+  || pageAllowed(auth.grantedPages, path, store.target, auth.envAllows, auth.me?.role);
 const go = (to: any) => {
   const path = typeof to === 'string' ? to : to?.path;
   if (typeof path === 'string' && !canGo(path)) {
@@ -140,7 +141,7 @@ const commands = computed<Cmd[]>(() => {
   /* 导航命令与侧栏同源过滤：未授权页面不出现在命令面板，防低权看到未授权页面目录。
      pageAllowed 已含 host-bound 页与 REST→DevTools 别名，避免与菜单可见性分叉。 */
   const list: Cmd[] = NAV_ITEMS.filter(n => auth.isAdmin()
-    || pageAllowed(auth.grantedPages, n.path, store.target)).map(n => ({
+    || pageAllowed(auth.grantedPages, n.path, store.target, auth.envAllows, auth.me?.role)).map(n => ({
     id: 'nav' + n.path,
     title: '前往：' + n.name,
     /* 版本不足的功能在命令面板同步降级提示，与侧边栏徽标一致 */
@@ -149,10 +150,14 @@ const commands = computed<Cmd[]>(() => {
     icon: NAV_ICONS[n.icon] || Database,
     action: () => go(n.path),
   }));
-  list.push(
+  /* 动作命令也走页面门：目标页不可见时连入口都不出现（go() 内仍兜底）。 */
+  if (canGo('/search')) list.push(
     { id: 'act-run', title: '执行查询', sub: '查询工作台 · Ctrl+Enter', cat: '动作', icon: Play, action: () => { go('/search'); store.emit('run-query'); } },
     { id: 'act-save', title: '保存当前查询', sub: '查询工作台', cat: '动作', icon: Save, action: () => { go('/search'); store.emit('save-query'); } },
     { id: 'act-hist', title: '打开查询历史', cat: '动作', icon: History, action: () => { go('/search'); store.emit('open-history'); } },
+    { id: 'act-vars', title: '管理变量 ${var}', cat: '动作', icon: Variable, action: () => { go('/search'); store.emit('open-vars'); } },
+  );
+  list.push(
     { id: 'act-export', title: '导出结果为 JSON', cat: '动作', icon: FileDown, action: () => store.emit('export-json') },
     /* 表格域命令——window 广播，仅当前可见表格响应（RT/QRT 自检 offsetParent）。
  M3：markHandled 协商——可见实例响应即标记，150ms 后无人认领显式提示
@@ -160,7 +165,6 @@ const commands = computed<Cmd[]>(() => {
     { id: 'tbl-export', title: '表格：导出当前视图（CSV）', sub: '作用于当前可见表格（RT/QRT）', cat: '动作', icon: FileDown, action: () => dispatchTableCmd('export') },
     { id: 'tbl-dense', title: '表格：切换密度', sub: '作用于当前可见表格（表格级偏好）', cat: '设置', icon: Rows3, action: () => dispatchTableCmd('dense') },
     { id: 'tbl-reset-widths', title: '表格：重置全部列宽', sub: '作用于当前可见表格（拖拽过的列回原始宽）', cat: '设置', icon: RotateCcw, action: () => dispatchTableCmd('reset-widths') },
-    { id: 'act-vars', title: '管理变量 ${var}', cat: '动作', icon: Variable, action: () => { go('/search'); store.emit('open-vars'); } },
     { id: 'act-refresh', title: '刷新索引列表', cat: '动作', icon: RefreshCw, action: () => store.loadIndices() },
     /* 显示偏好一键重置（调乱行高/列宽/布局后的救急入口）——
  只清显示类键；草稿（draft2/dsl.body）/历史/收藏/主题等用户数据不动；刷新后全量生效 */
@@ -226,16 +230,16 @@ const commands = computed<Cmd[]>(() => {
   const canReload = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/reload-analyzers', store.target);
   const canIlm = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/ilm/start', store.target);
   /* CRUD 里「增」提升为一等公民——新建索引/新建文档直达 */
-  if (canO) list.push(
+  if (canO && canGo('/indices')) list.push(
     { id: 'r59-create-index', title: '新建索引', sub: '名称校验 + 分片/副本 + 别名 + 高级 JSON', cat: '动作', icon: Plus,
       action: () => go({ path: '/indices', query: { create: '1' } }) },
   );
-  if (canW) list.push(
+  if (canW && canGo('/search')) list.push(
     { id: 'r59-create-doc', title: '新建文档（当前索引）', sub: idx ? '写入 ' + idx + ' · mapping 骨架预填' : '先选中一个索引', cat: '动作', icon: FilePlus2,
       /* 走 ?newdoc=1 深链（与 ?create=1 同模式）：事件总线跨页会丢，深链同页/跨页都可靠且可重入 */
       action: () => go({ path: '/search', query: { newdoc: '1' } }) },
   );
-  list.push(
+  if (canGo('/indices')) list.push(
     /* →：高频入口——当前索引直达工作区（文档/查询/配置/分片/运维一站式） */
     { id: 'ops-index-hub', title: '打开索引工作区', sub: idx ? '目标 ' + idx : '先选中一个索引', cat: '运维', icon: Database,
       action: () => idx ? go({ path: '/indices', query: { idx } }) : go('/indices') },
@@ -268,10 +272,17 @@ const commands = computed<Cmd[]>(() => {
  goto 自带 store.pick(cur)，AdhocRebuild 从全局选中索引接上下文）、刷新当前索引元信息、
  数据浏览器直达（BrowserView 消费全局 pickedIdx，跳转即用） */
   if (idx) list.push(
+    { id: 'act-refresh-cur-idx', title: '刷新当前索引详情', sub: '重拉 _cat 索引元信息 · ' + idx, cat: '动作', icon: RefreshCw,
+      action: async () => {
+        /* loadIndices 失败已由 store 报错：不得再补一条成功 toast 覆盖真实结果。 */
+        if (await store.loadIndices()) store.notify('success', '已刷新索引元信息：' + idx);
+      } },
+  );
+  if (idx && canGo('/adhoc-rebuild')) list.push(
     { id: 'ops-adhoc-rebuild-cur', title: '托管重建当前索引', sub: '粘贴期望配置 / 探测 / 校验 / 切换一条龙 · ' + idx, cat: '运维', icon: Rocket,
       action: () => { store.pick(idx); go('/adhoc-rebuild'); } },
-    { id: 'act-refresh-cur-idx', title: '刷新当前索引详情', sub: '重拉 _cat 索引元信息 · ' + idx, cat: '动作', icon: RefreshCw,
-      action: async () => { await store.loadIndices(); store.notify('success', '已刷新索引元信息：' + idx); } },
+  );
+  if (idx && canGo('/browser')) list.push(
     { id: 'act-open-browser-cur', title: '打开数据浏览器（当前索引）', sub: idx, cat: '动作', icon: ScanSearch,
       action: () => go('/browser') },
   );
@@ -572,8 +583,9 @@ const commands = computed<Cmd[]>(() => {
       sub: `[${f.kind}] ${f.subtitle || ''}`,
       cat: '收藏',
       icon: Star,
-      /* 改走统一真链路（utils/favReplay）——旧逻辑写的预填键无人消费，重放是假动作 */
-      action: () => replayFavorite(f, router, (t, m) => store.notify(t, m)),
+      /* 改走统一真链路（utils/favReplay）——旧逻辑写的预填键无人消费，重放是假动作；
+         canOpen 与导航命令同一 pageAllowed 真源，越权收藏不写 carry 键、不假报成功 */
+      action: () => replayFavorite(f, router, (t, m) => store.notify(t, m), canGo),
     });
   }
   return list;

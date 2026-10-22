@@ -151,7 +151,7 @@ describe('963 其余写执行体首行 ops/admin 守卫', () => {
   });
   it('SnapshotsView：非 ADMIN 恢复必须显式业务 indices（防 restore-all 覆盖控制面）', () => {
     expect(snapshots).toContain("const mustSpecifyRestoreIndices = computed(() => !auth.can('admin'));");
-    expect(snapshots).toContain(':disabled="restoring || (mustSpecifyRestoreIndices && !restoreIndices.trim())"');
+    expect(snapshots).toContain(':disabled="restoring || (mustSpecifyRestoreIndices && !restoreIndices.trim()) || !canOps"');
     expect(snapshots).toContain("if (mustSpecifyRestoreIndices.value && !restoreIndices.value.trim()) {");
   });
 });

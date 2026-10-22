@@ -148,7 +148,7 @@ describe('949 app store loadIndices 世代守卫（切连接慢拍跨集群污�
     const body = src.slice(src.indexOf('async function loadIndices()'), src.indexOf('function loadConns()'));
     expect(src, '世代计数器声明').toContain('let indicesSeq = 0;');
     expect(body, '拍序捕获前移到首个 await 之前').toContain('const seq = ++indicesSeq;');
-    expect((body.match(/if \(seq !== indicesSeq\) return;/g) || []).length, '回包与失败两支弃拍锚')
+    expect((body.match(/if \(seq !== indicesSeq\) return(?: false)?;/g) || []).length, '回包与失败两支弃拍锚')
       .toBeGreaterThanOrEqual(2);
     expect(body, 'loadingIndices 闸只归最新拍收').toContain('if (seq === indicesSeq) loadingIndices.value = false;');
   });

@@ -147,7 +147,7 @@ public class ConsolePermissionsController {
                 ? "host" : target.trim();
         boolean targetIsConn = !"host".equals(tid);
         boolean admin = p.getRole().atLeast(ConsoleRole.ADMIN);
-        Set<String> gp = pageAuthEnabled && p.isDelegated() ? p.getGrantedPages() : null;
+        Set<String> gp = pageAuthEnabled ? p.getGrantedPages() : null;
         boolean pageGateActive = gp != null;
         boolean connModel = pageGateActive && envPagesResolver.inConnModel(gp);
         Set<String> effective = pageGateActive ? envPagesResolver.effectivePages(tid, gp) : null;
@@ -157,20 +157,30 @@ public class ConsolePermissionsController {
         boolean targetVisible = targetIsConn && canSeeTarget(p, tid);
         boolean targetAccessible = !targetIsConn || targetVisible;
 
-        // raw 直连档：ADMIN 全局可用；连接模型=精确 rest 页写键；静态模型=角色档。
+        // raw 直连档：ADMIN 全局可用；连接模型=精确 rest 页写键（混入静态页时按静态写权+角色）；
+        // 静态模型=环境模板收缩后的页可见 + 角色档。
         // DevTools 走独立端点，w:devtools 不能顺带解锁 REST 直连（/cluster/raw 仍是 rest 页）。
-        boolean rawAllowed = targetAccessible && (admin || ((pageGateActive && connModel)
-                ? envPagesResolver.writeAllowed(tid, "rest", gp)
-                : p.getRole().atLeast(ConsoleAuthInterceptor.requiredRole("POST", RAW_PATH))));
-        boolean devtoolsAllowed = targetAccessible && (admin || ((pageGateActive && connModel)
+        ConsoleRole rawRole = ConsoleAuthInterceptor.requiredRole("POST", RAW_PATH);
+        ConsoleRole devtoolsRole = ConsoleAuthInterceptor.requiredRole("POST", DEVTOOLS_PATH);
+        boolean rawAllowed = targetAccessible && (admin || (pageGateActive && connModel
+                ? (envPagesResolver.writeAllowed(tid, "rest", gp)
+                    || (envPagesResolver.staticWriteAllowed(tid, "rest", gp)
+                        && p.getRole().atLeast(rawRole)))
+                : p.getRole().atLeast(rawRole)
+                    && (!pageGateActive || effective.contains("rest"))));
+        boolean devtoolsAllowed = targetAccessible && (admin || (pageGateActive && connModel
                 ? (envPagesResolver.writeAllowed(tid, "devtools", gp)
-                    || envPagesResolver.writeAllowed(tid, "rest", gp))
-                : p.getRole().atLeast(ConsoleAuthInterceptor.requiredRole("POST", DEVTOOLS_PATH))));
+                    || envPagesResolver.writeAllowed(tid, "rest", gp)
+                    || ((envPagesResolver.staticWriteAllowed(tid, "devtools", gp)
+                        || envPagesResolver.staticWriteAllowed(tid, "rest", gp))
+                        && p.getRole().atLeast(devtoolsRole)))
+                : p.getRole().atLeast(devtoolsRole)
+                    && (!pageGateActive || effective.contains("devtools") || effective.contains("rest"))));
         // 共享写档：ADMIN 全局可用；连接模型需持有真实使用共享端点的页面写键；
         // 静态/内置模型按「页面可见 + 角色档」判定（不能只对 conn 模型报可用）
         boolean sharedWriteAllowed = targetAccessible && (admin
                 || (pageGateActive && connModel
-                    && (ConsoleAuthInterceptor.hasSharedWriteGrant(tid, gp)
+                    && (ConsoleAuthInterceptor.hasSharedWriteGrant(tid, gp, effective)
                         || ConsoleAuthInterceptor.hasStaticSharedWriteGrant(gp, effective, p.getRole())))
                 || (pageGateActive && !connModel
                     && ConsoleAuthInterceptor.hasStaticSharedWriteGrant(gp, effective, p.getRole()))
@@ -207,6 +217,8 @@ public class ConsolePermissionsController {
         out.put("devtoolsAllowed", devtoolsAllowed);
         out.put("sharedWriteAllowed", sharedWriteAllowed);
 
+        Set<String> hostEffective = pageGateActive
+                ? envPagesResolver.effectivePages("host", gp) : null;
         List<Map<String, Object>> groups = new ArrayList<>();
         for (ConsolePageCatalog.Group g : pageCatalog.getGroups()) {
             List<Map<String, Object>> pages = new ArrayList<>();
@@ -214,8 +226,32 @@ public class ConsolePermissionsController {
                 Map<String, Object> pm = new LinkedHashMap<>();
                 pm.put("key", pg.getKey());
                 pm.put("name", pg.getName());
+                /* system/config-drift 的执行恒定宿主：面板必须按 host 授权回显，
+                   否则 conn:c1:system 会显示可读、实际端点 403（与拦截器 isHostBoundPath 同源）。 */
+                boolean hostPage = "system".equals(pg.getKey()) || "config-drift".equals(pg.getKey());
+                Set<String> pageEffective = pageGateActive
+                        ? envPagesResolver.effectivePages(hostPage ? "host" : tid, gp) : null;
                 boolean read = admin || !pageGateActive
-                        || (targetAccessible && effective.contains(pg.getKey()));
+                        || (hostPage
+                            ? pageEffective.contains(pg.getKey())
+                            : targetAccessible && pageEffective.contains(pg.getKey()))
+                        /* security 页的审计读是 host-scope：目标不可见/不持有该连接键时，
+                           持 conn:host:security 仍能看到宿主审计入口。 */
+                        || ("security".equals(pg.getKey()) && hostEffective != null
+                            && hostEffective.contains("security"));
+                /* REST/DevTools 对非 ADMIN 只认连接键（router.pageAllowed 同口径）：
+                   静态页键在后端仍要求 ADMIN，面板不得报可读/可写。 */
+                if (!admin && "rest".equals(pg.getKey())) {
+                    read = pageGateActive && hasConnKey(gp, tid, "rest")
+                            && pageEffective.contains("rest");
+                } else if (!admin && "devtools".equals(pg.getKey())) {
+                    boolean devtoolsKey = pageGateActive && hasConnKey(gp, tid, "devtools")
+                            && pageEffective.contains("devtools");
+                    boolean restKey = pageGateActive && gp != null
+                            && gp.contains("conn:" + tid + ":w:rest")
+                            && pageEffective.contains("rest");
+                    read = devtoolsKey || restKey;
+                }
                 List<String> prefixes = pg.getApiPrefixes();
                 ConsoleRole writeRole = requiredWriteRole(pg.getKey(), prefixes);
                 boolean hasWriteEndpoint = writeRole != null;
@@ -226,7 +262,13 @@ public class ConsolePermissionsController {
                         write = Boolean.FALSE;
                         writeDeny = "PAGE_DENIED";
                     } else if (pageGateActive && connModel) {
-                        write = admin || envPagesResolver.writeAllowed(tid, pg.getKey(), gp);
+                        /* security 的写端点（auth/users）与 system/config-drift 一样恒定宿主：
+                           面板必须按 host 写键回显，不能把 conn:c1:w:security 报成可写。 */
+                        String writeTid = ("security".equals(pg.getKey()) || hostPage) ? "host" : tid;
+                        /* 与拦截器同序：conn 写键优先；混合模型静态页写权 = 静态键 + 角色档。 */
+                        write = admin || envPagesResolver.writeAllowed(writeTid, pg.getKey(), gp)
+                                || (envPagesResolver.staticWriteAllowed(writeTid, pg.getKey(), gp)
+                                    && p.getRole().atLeast(writeRole));
                         if (!write) {
                             writeDeny = "WRITE_DENIED";
                         }
@@ -254,6 +296,15 @@ public class ConsolePermissionsController {
                         if (Boolean.TRUE.equals(write)) {
                             read = true;
                         }
+                    }
+                    /* 迁移写入端恒为宿主：仅持源连接 w:xmigrate 无法真正启动迁移，面板不得虚报。 */
+                    if (pageGateActive && connModel && !admin && "xmigrate".equals(pg.getKey())
+                            && Boolean.TRUE.equals(write)
+                            && !(envPagesResolver.writeAllowed("host", "xmigrate", gp)
+                                || (envPagesResolver.staticWriteAllowed("host", "xmigrate", gp)
+                                    && p.getRole().atLeast(writeRole)))) {
+                        write = Boolean.FALSE;
+                        writeDeny = "HOST_DEST_WRITE_REQUIRED";
                     }
                 }
                 pm.put("read", read);
@@ -284,6 +335,11 @@ public class ConsolePermissionsController {
      * 共享写端点（ilm/tasks/index-settings/optimizer 等页仅靠共享映射拥有写能力）——
      * 否则宿主的权限面板不给 w: 键，已授权用户永远无法被授权。
      */
+    private static boolean hasConnKey(Set<String> gp, String tid, String page) {
+        return gp != null && (gp.contains("conn:" + tid + ":" + page)
+                || gp.contains("conn:" + tid + ":w:" + page));
+    }
+
     private static ConsoleRole requiredWriteRole(String pageKey, List<String> prefixes) {
         ConsoleRole need = null;
         for (String write : WRITE_ENDPOINT_PATHS) {

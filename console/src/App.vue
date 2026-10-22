@@ -376,10 +376,17 @@ function autoPickConnTarget(gp: readonly string[] | null) {
 /* 963：目标连接并入复核源——切 target 后按新连接的 conn:{id}:{page} 键重算当前路由。
  自循环可控：setTarget 后本 watch 再跑一次时，autoPickConnTarget 已在授权目标上即 no-op，
  pageDeniedRedirect 对已允许页面返回 null（仅拒绝态才 replace，而 /forbidden 非页面路由恒放行）。 */
-watch([() => auth.grantedPages, () => store.conns.length, () => store.target], ([gp]) => {
+watch([
+  () => auth.grantedPages,
+  () => store.conns.length,
+  () => store.conns.map(c => c.env || '').join('|'),
+  () => auth.me?.envPages,
+  () => store.target,
+], ([gp]) => {
   if (auth.isAdmin()) return; /* 超管全局可见：不自动切目标、不做页面拒绝跳转 */
   autoPickConnTarget(gp);
-  const r = pageDeniedRedirect(gp, router.currentRoute.value.path, store.target);
+  const r = pageDeniedRedirect(gp, router.currentRoute.value.path, store.target,
+    auth.envAllows, auth.me?.role);
   if (r) router.replace(r);
 });
 
@@ -476,11 +483,15 @@ function onHostMessage(e: MessageEvent) {
   const d = e.data;
   if (!d || typeof d !== 'object') return;
   if (d.type === 'es-console-host-token' && typeof d.token === 'string') {
+    /* 运行期换发：旧 token 对应的授权必须立即失效，probe 落地前写门 fail-closed。
+       否则新 token 已生效、旧 grantedPages 仍在，旧写权限可在换人窗口发出请求。 */
+    auth.invalidateIdentity();
     setHostToken(d.token);
     if (d.theme === 'dark' || d.theme === 'light') store.setHostTheme(d.theme);
     auth.showLogin = false;
-    // 首探走统一入口（probe + loadIndices 并行）；运行期换发只重探身份（数据面不依赖身份）
-    if (bootstrapped) auth.probe();
+    // 首探走统一入口（probe + loadIndices 并行）；运行期换发重探身份，并重拉连接目录：
+    // 换人后可见连接/env 可能变化，旧目录会让菜单/按钮按上一身份的门禁渲染。
+    if (bootstrapped) { auth.probe(); store.loadConns(); }
     else bootstrapIdentity();
   } else if (d.type === 'es-console-host-theme') {
     /* 非法载荷忽略（保留当前主题）而非钳回 dark——浅色宿主下被误翻深比不收消息更糟 */

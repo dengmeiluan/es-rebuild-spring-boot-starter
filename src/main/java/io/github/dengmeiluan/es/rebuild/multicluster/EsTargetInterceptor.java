@@ -80,13 +80,10 @@ public class EsTargetInterceptor implements HandlerInterceptor {
         // config-lab/validate 的 Dry-run 同样跟随目标头（版本差异下裁决结果不同）
         // target-aware adhoc：prepare/start 是数据面入口——重建必须作用于用户当前选中的集群；
         //   其余 adhoc 端点（status/jobs/abort/confirm-switch）查的是宿主控制面的作业/存储，维持控制面
-        boolean adhocDataPlane = uri.endsWith("/adhoc-rebuild/prepare") || uri.endsWith("/adhoc-rebuild/start");
         /* /progress 直接走 EsIndexAdmin（路由感知）：远端 delete/update-by-query 的任务
-           进度必须查发起任务的集群，不能恒定回落宿主。 */
-        boolean dataPlane = uri.contains("/cluster/") || uri.contains("/insight")
-                || uri.contains("/config-lab/validate")
-                || uri.endsWith("/internal/es/index/progress")
-                || adhocDataPlane;
+           进度必须查发起任务的集群，不能恒定回落宿主。
+           判定与审计归属共用 ConsoleAuthInterceptor.followsTarget，防执行/记账两套口径。 */
+        boolean dataPlane = ConsoleAuthInterceptor.followsTarget(uri, request.getMethod());
         Object p = request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);
         ConsolePrincipal principal = p instanceof ConsolePrincipal ? (ConsolePrincipal) p : null;
         String tid = target == null || target.trim().isEmpty()

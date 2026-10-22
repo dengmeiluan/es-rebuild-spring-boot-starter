@@ -17,6 +17,7 @@
 package io.github.dengmeiluan.es.rebuild.insight.action;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthInterceptor;
 import io.github.dengmeiluan.es.rebuild.auth.ConsoleOpsAuditStore;
 import io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal;
 import io.github.dengmeiluan.es.rebuild.insight.InsightForbiddenException;
@@ -102,11 +103,11 @@ public class GuardedActionExecutor {
 
     private GuardedAction requireRole(String actionId, ConsolePrincipal principal) {
         GuardedAction action = registry.get(actionId);
-        /* 连接模型下页面写键是最终裁决：拦截器已按动作归属页校验 w:{page}，
-           这里不再用全局角色档二次拦截（否则 w:index-settings 的 VIEWER 会被误杀）。
-           静态角色模型仍按动作 minRole 校验。 */
+        /* 只有拦截器明确标记「本次写由 conn:{id}:w:{page} 写键直接授权」时才跳过动作 minRole；
+           混合模型的静态页回落仍按角色档校验，否则 OPERATOR+静态 index-settings
+           可直调 REBUILD_OP 动作（绕过 /cluster/index-settings/update 的角色门）。 */
         if (principal == null
-                || (!(pageGateEnabled && delegatedConnModel(principal))
+                || (!(pageGateEnabled && connWriteGranted(principal))
                     && !principal.getRole().atLeast(action.minRole()))) {
             throw new InsightForbiddenException(InsightForbiddenException.ACTION_FORBIDDEN,
                     "该动作要求 " + action.minRole() + " 及以上角色或对应页面写权限");
@@ -114,10 +115,22 @@ public class GuardedActionExecutor {
         return action;
     }
 
-    private static boolean delegatedConnModel(ConsolePrincipal p) {
-        if (p == null || !p.isDelegated() || p.getGrantedPages() == null) return false;
-        for (String g : p.getGrantedPages()) {
-            if (g != null && g.startsWith("conn:")) return true;
+    /**
+     * 拦截器在 conn 写键直接放行时置位的请求属性。生产请求一律以该标记为准（混合模型的
+     * 静态页回落不会置位）；无 web 上下文的直调（单测/内部）退回「持任一 conn 写键」，
+     * 保持连接模型页面写键即最终裁决的既有语义。
+     */
+    private static boolean connWriteGranted(ConsolePrincipal principal) {
+        org.springframework.web.context.request.RequestAttributes ra =
+                org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        if (ra instanceof org.springframework.web.context.request.ServletRequestAttributes) {
+            return Boolean.TRUE.equals(
+                    ((org.springframework.web.context.request.ServletRequestAttributes) ra)
+                            .getRequest().getAttribute(ConsoleAuthInterceptor.ATTR_CONN_WRITE_GRANTED));
+        }
+        if (principal == null || principal.getGrantedPages() == null) return false;
+        for (String g : principal.getGrantedPages()) {
+            if (g != null && g.startsWith("conn:") && g.contains(":w:")) return true;
         }
         return false;
     }

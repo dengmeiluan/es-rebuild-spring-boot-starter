@@ -133,10 +133,10 @@ import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面双参改�
 import { highlightJson } from '../utils/jsonc';
 
 const store = useAppStore();
-/* 权限门禁——取消任务=/cluster/tasks/cancel=OPERATOR+（与 TasksView 同口径）；
+/* 权限门禁——取消任务=/cluster/tasks/cancel=重建专项档（rank3+，与 TasksView 同口径）；
  任务观测全角色可用。低权隐藏 Cancel/批量/勾选/右键取消项，不让人点了才报 403。 */
 const auth = useAuthStore();
-const canWrite = computed(() => auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/tasks/cancel', store.target));
+const canWrite = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/tasks/cancel', store.target));
 const raw = ref<any[]>([]);
 const loading = ref(false);
 const loadErr = ref('');

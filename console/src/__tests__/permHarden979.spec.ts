@@ -124,7 +124,8 @@ describe('API 层写门：无权限请求零发出', () => {
 
 describe('菜单/按钮校准', () => {
   it('命令面板导航全部走页面门 go()，只剩 go 内部一次 router.push', () => {
-    expect(pal).toContain('const canGo = (path: string) => auth.isAdmin() || pageAllowed(auth.grantedPages, path, store.target);');
+    expect(pal).toContain('const canGo = (path: string) => auth.isAdmin()');
+    expect(pal).toContain('pageAllowed(auth.grantedPages, path, store.target, auth.envAllows, auth.me?.role)');
     expect(pal).toContain('if (typeof path === \'string\' && !canGo(path))');
     expect((pal.match(/router\.push\(/g) || []).length).toBe(1);
   });
@@ -133,6 +134,13 @@ describe('菜单/按钮校准', () => {
     expect(devtools).toContain('<button v-if="canAdmin" class="btn sm" :disabled="cur.busy" @click="run">');
     expect(devtools).toContain('<template v-if="canAdmin">');
     expect(devtools).toContain('无 DevTools/REST 写权时 run() 必然拒绝');
+  });
+
+  it('DevTools 非 ADMIN 系统管理写不显示可执行态', () => {
+    expect(devtools).toContain('nonAdminDataPlaneWriteAllowed');
+    expect(devtools).toContain('const currentSendable = computed(() => canAdmin.value && !!cur.value');
+    expect(devtools).toContain('if (!requestInScope(cur.value?.method || \'GET\', cur.value?.path || \'/\'))');
+    expect(devtools).toContain('if (!requestInScope(t.method, t.path))');
   });
 
   it('安全中心全量审计需 rank3 + security 页读键', () => {

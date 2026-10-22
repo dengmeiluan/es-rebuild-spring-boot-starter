@@ -46,8 +46,9 @@ public class ConsolePrincipal {
      * 页面级授权白名单（2.5.0 菜单 SPI，页面 key 集合）。三态语义：
      * <ul>
      *   <li>{@code null}：不启用页面级（内置 token 身份 / 宿主未下发 / 逃生阀关闭）——全量放行，向后兼容；</li>
-     *   <li>空集：delegated 但宿主一个页面都没授——页面端点全拒；</li>
-     *   <li>非空：白名单，仅放行集合内页面。</li>
+     *   <li>空集：授权器一个页面都没授——页面端点全拒；</li>
+     *   <li>非空：白名单，仅放行集合内页面。内置委托、自定义授权器与宿主下发同语义，
+     *       拦截器/可见性/权限面板/前端菜单共用这一份白名单。</li>
      * </ul>
      */
     private final Set<String> grantedPages;

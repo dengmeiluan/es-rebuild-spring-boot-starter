@@ -64,16 +64,99 @@ public class ConsoleSetupController {
     private final ConsoleAuthDelegate delegate;
     private final String appName;
     private final boolean hostClusterVisible;
+    /** 鉴权是否启用：前端据此区分「无鉴权部署 404」与代理/版本错配 404，避免写门误放开。 */
+    private final boolean authEnabled;
+    /** 是否提供内置账号登录（false=自定义授权器/宿主委托，前端不应展示本地账号表单）。 */
+    private final boolean builtinLogin;
+    /** 未绑定首连令牌；空=不启用（历史行为）。配置后 test/apply 必须携带 X-Setup-Token。 */
+    private final String setupToken;
 
     public ConsoleSetupController(ControlClusterResolver resolver, RemoteEsClientFactory clientFactory,
                                   ConsoleOpsAuditStore opsAuditStore, ConsoleAuthDelegate delegate,
                                   String appName, boolean hostClusterVisible) {
+        this(resolver, clientFactory, opsAuditStore, delegate, appName, hostClusterVisible, false, "");
+    }
+
+    public ConsoleSetupController(ControlClusterResolver resolver, RemoteEsClientFactory clientFactory,
+                                  ConsoleOpsAuditStore opsAuditStore, ConsoleAuthDelegate delegate,
+                                  String appName, boolean hostClusterVisible, boolean authEnabled) {
+        this(resolver, clientFactory, opsAuditStore, delegate, appName, hostClusterVisible, authEnabled, "");
+    }
+
+    public ConsoleSetupController(ControlClusterResolver resolver, RemoteEsClientFactory clientFactory,
+                                  ConsoleOpsAuditStore opsAuditStore, ConsoleAuthDelegate delegate,
+                                  String appName, boolean hostClusterVisible, boolean authEnabled,
+                                  String setupToken) {
+        this(resolver, clientFactory, opsAuditStore, delegate, appName, hostClusterVisible,
+                authEnabled, authEnabled, setupToken);
+    }
+
+    public ConsoleSetupController(ControlClusterResolver resolver, RemoteEsClientFactory clientFactory,
+                                  ConsoleOpsAuditStore opsAuditStore, ConsoleAuthDelegate delegate,
+                                  String appName, boolean hostClusterVisible, boolean authEnabled,
+                                  boolean builtinLogin, String setupToken) {
         this.resolver = resolver;
         this.clientFactory = clientFactory;
         this.opsAuditStore = opsAuditStore;
         this.delegate = delegate;
         this.appName = appName;
         this.hostClusterVisible = hostClusterVisible;
+        this.authEnabled = authEnabled;
+        this.builtinLogin = builtinLogin;
+        this.setupToken = setupToken == null ? "" : setupToken.trim();
+    }
+
+    /** 未绑定窗口的匿名防线：配置了 setup-token 且没有可鉴权的委托时，必须携带正确令牌。 */
+    private boolean setupTokenConfigured() {
+        return !setupToken.isEmpty();
+    }
+
+    private boolean setupTokenValid(HttpServletRequest request) {
+        if (!setupTokenConfigured()) return true;
+        return setupTokenMatches(setupToken, request == null ? null : request.getHeader("X-Setup-Token"));
+    }
+
+    /**
+     * 未配置 setup-token 的匿名首连只允许本机：否则公网可达的未绑定控制台可被匿名
+     * 指向攻击者 ES（SSRF + 用攻击者账号接管控制面）。配置令牌后远程可初始化。
+     * request=null 是控制器直调/单测路径，保持内部兼容。
+     */
+    private boolean anonymousSetupSourceAllowed(HttpServletRequest request) {
+        if (request == null) return true;
+        if (setupTokenConfigured()) return true;
+        /* 反向代理会把公网请求的 remoteAddr 变成回环；带转发头时不能仅凭回环判定本机。 */
+        for (String h : new String[]{"X-Forwarded-For", "X-Real-IP", "Forwarded"}) {
+            String v = request.getHeader(h);
+            if (v != null && !v.trim().isEmpty()) return false;
+        }
+        String addr = request.getRemoteAddr();
+        if (addr == null) return false;
+        String a = addr.trim().toLowerCase(java.util.Locale.ROOT);
+        return "127.0.0.1".equals(a) || "0:0:0:0:0:0:0:1".equals(a) || "::1".equals(a)
+                || a.startsWith("127.");
+    }
+
+    private ResponseEntity<Map<String, Object>> localSetupOnly() {
+        Map<String, Object> b = new LinkedHashMap<>();
+        b.put("code", "SETUP_LOCAL_ONLY");
+        b.put("message", "未配置 setup-token 时只允许本机完成初始化；远程初始化请配置 es.rebuild.console.setup-token");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(b);
+    }
+
+    /** 首连令牌常量时间比较；expected 为空=未启用（恒放行），provided 允许首尾空白。 */
+    static boolean setupTokenMatches(String expected, String provided) {
+        if (expected == null || expected.trim().isEmpty()) return true;
+        if (provided == null || provided.trim().isEmpty()) return false;
+        return java.security.MessageDigest.isEqual(
+                expected.trim().getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                provided.trim().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    private ResponseEntity<Map<String, Object>> setupTokenDenied() {
+        Map<String, Object> b = new LinkedHashMap<>();
+        b.put("code", "SETUP_TOKEN_REQUIRED");
+        b.put("message", "初始化需要 X-Setup-Token（见 es.rebuild.console.setup-token 配置）");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(b);
     }
 
     /** 绑定状态（免鉴权：前端启动即查，决定是否弹向导）。 */
@@ -86,14 +169,39 @@ public class ConsoleSetupController {
         r.put("appName", appName);
         // .2：纯管理平台形态下前端藏掉「宿主集群」入口（后端 EsTargetInterceptor 同步拒绝）
         r.put("hostVisible", hostClusterVisible);
+        r.put("authEnabled", authEnabled);
+        r.put("builtinLogin", builtinLogin);
+        r.put("setupTokenRequired", delegate == null && setupTokenConfigured());
         return r;
+    }
+
+    /** 兼容直调（单测/内部）：无 web 上下文时无法校验宿主身份，仅限无 delegate 场景。 */
+    public ResponseEntity<Map<String, Object>> test(Map<String, String> body) {
+        return test(body, null);
     }
 
     /** 连通性测试（仅未绑定开放）。body: {url, username?, password?}。失败 HTTP 200 {ok:false}。 */
     @PostMapping("test")
-    public ResponseEntity<Map<String, Object>> test(@RequestBody Map<String, String> body) {
+    public ResponseEntity<Map<String, Object>> test(@RequestBody Map<String, String> body,
+                                                    HttpServletRequest request) {
         if (resolver.bound()) {
             return alreadyBound();
+        }
+        /* 独立部署的未绑定窗口：配置令牌后匿名请求不得做 SSRF 探测/绑定；
+           未配置令牌时也只允许本机，避免公网匿名探测内网/绑定攻击者 ES。 */
+        if (delegate == null) {
+            if (!setupTokenValid(request)) return setupTokenDenied();
+            if (!anonymousSetupSourceAllowed(request)) return localSetupOnly();
+        }
+        /* 宿主委托部署在未绑定窗口同样要求 ADMIN：否则匿名可用 /setup/test 对内网做 SSRF 探测。 */
+        if (delegate != null) {
+            ConsolePrincipal p = delegate.authenticate(request);
+            if (p == null || !p.getRole().atLeast(ConsoleRole.ADMIN)) {
+                Map<String, Object> b = new LinkedHashMap<>();
+                b.put("code", "FORBIDDEN");
+                b.put("message", "绑定控制集群需要宿主管理员身份");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(b);
+            }
         }
         return ResponseEntity.ok(probe(body));
     }
@@ -104,6 +212,10 @@ public class ConsoleSetupController {
                                                      HttpServletRequest request) {
         if (resolver.bound()) {
             return alreadyBound();
+        }
+        if (delegate == null) {
+            if (!setupTokenValid(request)) return setupTokenDenied();
+            if (!anonymousSetupSourceAllowed(request)) return localSetupOnly();
         }
         String operator = "setup";
         if (delegate != null) {

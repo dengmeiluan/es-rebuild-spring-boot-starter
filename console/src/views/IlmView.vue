@@ -110,7 +110,9 @@
           <template v-else-if="explainIndex && explain">
             <FileSearch :size="13" /> Explain: {{ explainIndex }}
             <!-- 在 DevTools 打开（GET /<idx>/_ilm/explain 带参预填，Watcher 范式） -->
-            <button class="btn ghost xs" style="margin-left:auto" @click="explainToDevtools" title="在 Dev Tools 打开 explain API">
+            <button class="btn ghost xs" style="margin-left:auto" :disabled="!canDevtools"
+              :title="canDevtools ? '在 Dev Tools 打开 explain API' : 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'"
+              @click="explainToDevtools">
               <TerminalSquare :size="11" /> Dev Tools
             </button>
           </template>
@@ -207,8 +209,8 @@
       <div style="display:flex;justify-content:flex-end;gap:var(--sp-2)">
         <button class="btn" @click="policyEditOpen = false">取消</button>
         <!-- 空提交拦截：名空/JSON 非法时按钮禁用并说明原因（Enter 路径仍由 savePolicy 内同口径校验兜底） -->
-        <button class="btn pri" :disabled="policyBusy || !policyName.trim() || !!policyJsonErr"
-          :title="!policyName.trim() ? '先填策略名' : policyJsonErr ? '策略 JSON 不合法，修正后再保存' : ''"
+        <button class="btn pri" :disabled="policyBusy || !policyName.trim() || !!policyJsonErr || !canOps"
+          :title="!canOps ? '当前授权不含 ILM 写权限' : !policyName.trim() ? '先填策略名' : policyJsonErr ? '策略 JSON 不合法，修正后再保存' : ''"
           @click="savePolicy"><Save :size="12" /> 保存</button>
       </div>
     </template>
@@ -258,6 +260,9 @@ const store = useAppStore();
  偏低档，待后端加固，前端先按角色意图收口；move/start/stop 本就在 CLUSTER 档） */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/ilm/policy', store.target));
+/* DevTools 跳转入口与 DevTools 页同门：无页写键时不展示可点击态。 */
+const canDevtools = computed(() => auth.canEndpoint('admin', 'POST',
+  '/internal/es/index/cluster/devtools/execute', store.target));
 /* 「重试 step」实调 /cluster/ilm/move（rank3）——按真实端点单独裁决，不复用策略写门（两页端点可能分别授权） */
 const canMove = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/ilm/move', store.target));
 const router = useRouter();
@@ -479,6 +484,7 @@ onMounted(() => {
 
 /* explain API 带参跳 DevTools（_prefill 会话契约，run:true 直达结果） */
 function explainToDevtools() {
+  if (!canDevtools.value) { store.notify('warning', 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'); return; }
   if (!explainIndex.value) return;
   writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
     title: 'explain/' + explainIndex.value, method: 'GET',

@@ -108,7 +108,7 @@ import {
   Microscope, SearchCheck, SlidersHorizontal, Grid3x3, ScanSearch,
   LayoutTemplate, ChevronDown, Hammer, GitCompareArrows, Boxes,
 } from 'lucide-vue-next';
-import { NAV_ITEMS, NAV_GROUPS, effectivePagesForTarget, HOST_BOUND_PAGES } from '../router';
+import { NAV_ITEMS, NAV_GROUPS, pageAllowed } from '../router';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
 import MarkText from './MarkText.vue';
@@ -149,14 +149,8 @@ const grouped = computed(() => {
   const admin = auth.isAdmin();
   const visible = (i: (typeof NAV_ITEMS)[number]) => {
     if (admin) return true;
-    /* 与 router.pageAllowed 同口径：host-bound 页按宿主目标，REST 写键可进 DevTools。 */
-    const tid = HOST_BOUND_PAGES.has(i.pageKey)
-      ? 'host'
-      : (!store.target || String(store.target).toLowerCase() === 'host' ? 'host' : store.target);
-    const eff = effectivePagesForTarget(gp, tid);
-    const restWriter = !!gp && gp.includes('conn:' + tid + ':w:rest');
-    return eff == null || eff.has(i.pageKey)
-      || (i.pageKey === 'devtools' && restWriter);
+    /* 与路由守卫/命令面板同一真源：host-bound、env 模板、security/xmigrate 作用域收口都在 pageAllowed。 */
+    return pageAllowed(gp, i.path, store.target, auth.envAllows, auth.me?.role);
   };
   return NAV_GROUPS
     .map(g => ({

@@ -54,11 +54,12 @@ final class MonitorRecordVisibility {
             }
             Object rawName = rec.get("connName");
             if (rawName != null && !String.valueOf(rawName).trim().isEmpty()) {
-                java.util.Set<String> ids = snap.nameToIds.get(String.valueOf(rawName));
+                String name = String.valueOf(rawName).trim();
+                java.util.Set<String> ids = snap.nameToIds.get(name);
                 if (ids != null && snap.visibleIds.containsAll(ids)) {
                     out.add(rec);
-                } else if (ids == null && snap.complete && snap.storeReadable && snap.hostVisible) {
-                    /* 目录外的实名视为宿主；目录不可读/被截断时 fail-closed */
+                } else if (ids == null && snap.hostVisible && "host".equalsIgnoreCase(name)) {
+                    /* 只有宿主字面量可按宿主放行；已删除连接的实名不得借宿主可见性漏出 */
                     out.add(rec);
                 }
             }

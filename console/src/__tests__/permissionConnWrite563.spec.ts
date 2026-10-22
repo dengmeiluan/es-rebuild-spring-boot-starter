@@ -19,17 +19,22 @@ describe('563 实报②:连接级写授权 canWriteOn(镜像后端写门三态)'
 
   it('连接写键在场:VIEWER 全局角色也放行(后端写门同源语义)', () => {
     const auth = useAuthStore();
-    auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['conn:5:docs', 'conn:5:w:docs'] };
+    auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['conn:5:search', 'conn:5:w:search'] };
     expect(auth.canWriteOn('5')).toBe(true);
   });
   it('连接只读键(无 w):不放行(写门保持闭合)', () => {
     const auth = useAuthStore();
-    auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['conn:5:docs'] };
+    auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['conn:5:search'] };
+    expect(auth.canWriteOn('5')).toBe(false);
+  });
+  it('非文档页写键(aliases)不放大表格文档写权', () => {
+    const auth = useAuthStore();
+    auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['conn:5:w:aliases'] };
     expect(auth.canWriteOn('5')).toBe(false);
   });
   it('目标无 conn 键(静态键模型):回退全局角色门(VIEWER 不放行)', () => {
     const auth = useAuthStore();
-    auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['overview', 'docs'] };
+    auth.me = { username: 'u', role: 'VIEWER', fallback: false, grantedPages: ['overview', 'search'] };
     expect(auth.canWriteOn('5')).toBe(false);
   });
   it('grantedPages=null(授权体系未启用):回退全局角色门(既有语义)', () => {

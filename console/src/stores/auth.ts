@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { api, setToken, clearToken, getToken, ioRecorder } from '../api';
 import { canCap, canViewAllAudit, type ConsoleCap } from '../utils/capability';
+import { removeStoredRaw, writeStoredRaw } from '../utils/safeJson';
 
 /** 控制台鉴权状态 —— token 持久在 localStorage，身份内存态 */
 export const useAuthStore = defineStore('auth', () => {
@@ -11,6 +12,8 @@ export const useAuthStore = defineStore('auth', () => {
     username: string; role: string; fallback: boolean; hasAnyUser?: boolean; delegated?: boolean;
     displayName?: string | null; authSource?: string; attributes?: Record<string, string>;
     grantedPages?: string[] | null; // 2.5.0 菜单 SPI：null=未启用 / []=全拒 / 非空=白名单
+    /** 环境页面模板（env → 页面 key 集）：与后端 EnvPagesResolver 同口径收缩菜单/按钮。 */
+    envPages?: Record<string, string[]>;
     pages?: { groups: { id: string; name: string; sort: number; pages: { key: string; name: string; route: string; minVer?: string; apiPrefixes?: string[] }[] }[] }; // 页面目录契约（安全中心页面目录）
   } | null>(null);
   /** 是否需要弹登录遮罩 */
@@ -19,6 +22,8 @@ export const useAuthStore = defineStore('auth', () => {
   const probed = ref(false);
   /** 探测到后端明确关闭鉴权（/auth/me 404）。用于区分「未探测完成」与「无鉴权部署」。 */
   const authDisabled = ref(false);
+  /* 是否提供内置账号登录（null=未知，按可用处理）：自定义授权器/宿主委托部署不展示本地表单。 */
+  const builtinLogin = ref<boolean | null>(null);
 
   /* 代际守卫：并发 probe（iframe 首探与宿主 token 重探）乱序完成时只认最新一代——
  无凭证 401 若晚于有凭证 200 回来，旧代 catch 会把已认出的身份清回 null（grantedPages 随之失守） */
@@ -39,6 +44,40 @@ export const useAuthStore = defineStore('auth', () => {
   /** raw/管理域入口：ADMIN/无鉴权部署/独立挂载测试放行；探测中或探测失败一律关闭。 */
   const canAdminOps = () => authDisabled.value || isAdmin() || !probeStarted.value;
 
+  /** 上一登录用户（localStorage）：换人时清掉上一用户的请求草稿/历史，防同标签页串数据。 */
+  const LAST_USER_KEY = 'es-console.last-user';
+  const USER_STATE_PREFIXES = [
+    /* DevTools/REST 草稿与历史（旧命名空间 + draft2 新命名空间覆盖全部视图 route） */
+    'es_devtools_', 'es-console.devtools.', 'es_rest_hist', 'es-console.draft2:',
+    /* 收藏/查询历史/保存的搜索/命令面板最近使用 */
+    'es-console.favorites.v1', 'es_query_hist_v2', 'es_query_saved', 'es_cmd_recent',
+    /* 一次性 carry/预填键：换人后自动回填上一用户的载荷（部分入口还会自动执行） */
+    'es-console.dsl.', 'es-console.bulk.', 'es-console.ubq.', 'es-console.doc-diff.',
+    'es-console.reindex-advanced.', 'es-console.sql.', 'es-console.lucene.',
+    'es-console.sandbox.',
+  ];
+  function purgeUserRequestState() {
+    for (const storage of [localStorage, sessionStorage]) {
+      try {
+        const keys: string[] = [];
+        for (let i = 0; i < storage.length; i++) {
+          const k = storage.key(i);
+          if (k) keys.push(k);
+        }
+        for (const k of keys) {
+          if (USER_STATE_PREFIXES.some(p => k === p || k.startsWith(p))) removeStoredRaw(storage, k);
+        }
+      } catch { /* 存储不可用：无残留可清 */ }
+    }
+  }
+  function purgeIfUserChanged(username?: string | null) {
+    if (!username) return;
+    let prev = '';
+    try { prev = localStorage.getItem(LAST_USER_KEY) || ''; } catch { /* 存储不可用 */ }
+    if (prev && prev !== username) purgeUserRequestState();
+    writeStoredRaw(localStorage, LAST_USER_KEY, username);
+  }
+
   /** 启动探测：有 token 或后端放行则拉身份；401 由全局事件弹遮罩 */
   async function probe() {
     probeStarted.value = true;
@@ -47,6 +86,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const m = await api.auth.me();
       if (seq !== probeSeq) return; // 已有更新一代在飞/完成，旧代结果丢弃
+      purgeIfUserChanged(m?.username);
       me.value = m;
       authDisabled.value = false;
       probeRetryDelay = 3000;
@@ -54,11 +94,25 @@ export const useAuthStore = defineStore('auth', () => {
       if (me.value) showLogin.value = false;
     } catch (e: any) {
       if (seq !== probeSeq) return;
-      // 401 已由 api.ts 广播 es-console:unauthorized；404（auth 关闭）静默
+      // 401 已由 api.ts 广播 es-console:unauthorized；404 需二次确认（下方）
       me.value = null;
-      /* 只有明确 404 才视为「无鉴权部署」；401/网络失败一律按未授权处理，
-         避免身份探测未完成时把写入口当无鉴权放行。 */
-      authDisabled.value = e?.status === 404;
+      /* 404 可能是「无鉴权部署」（/auth 控制器未装配），也可能是代理/版本错配。
+         必须由 setup/status 明确报告 authEnabled=false 才放开写门；否则 fail-closed。 */
+      if (e?.status === 404 || e?.status === 401) {
+        try {
+          const s = await api.setup.status();
+          if (seq !== probeSeq) return;
+          authDisabled.value = s.authEnabled === false;
+          if (typeof (s as any).builtinLogin === 'boolean') {
+            builtinLogin.value = (s as any).builtinLogin;
+          }
+        } catch {
+          if (seq !== probeSeq) return;
+          authDisabled.value = false;
+        }
+      } else {
+        authDisabled.value = false;
+      }
       /* 非 401/404 的瞬时失败（500/网络/超时）不能让有权限的人永久锁死：
          指数退避重探，身份一到即恢复；期间所有写门保持 fail-closed。 */
       if (!authDisabled.value && e?.status !== 401) {
@@ -76,6 +130,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(username: string, password: string) {
     const r = await api.auth.login(username, password);
+    purgeIfUserChanged(r.username);
     setToken(r.token);
     ioRecorder.clear(); /* 前一个会话的请求原文不得留给新登录用户 */
     me.value = { username: r.username, role: r.role, fallback: r.fallback };
@@ -84,6 +139,16 @@ export const useAuthStore = defineStore('auth', () => {
     // 登录成功后补拉一次完整身份（含 hasAnyUser）
     probe();
     return r;
+  }
+
+  /**
+   * 凭证换发/401：旧身份授权立即失效，直到新一代 probe 落地。
+   * 只认身份、不清请求原文（换发不是换人）；期间的写门因 me=null 而 fail-closed。
+   */
+  function invalidateIdentity() {
+    probeSeq++; /* 作废在飞/待重试的身份探测，旧回包不得把旧授权填回 */
+    clearProbeRetry();
+    me.value = null;
   }
 
   function logout() {
@@ -96,7 +161,9 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function requireLogin() {
-    showLogin.value = true; // 401 到达即弹（真失效场景必须弹）
+    /* 401 到达即撤旧授权：遮罩背后不得继续用上一份 grantedPages 发写。 */
+    invalidateIdentity();
+    showLogin.value = true;
     // 401 瞬时竞态自愈：本机有 token（宿主委托/本地登录态）时自动重探一次身份——
     // probe 成功即收遮罩；probe 仍 401 则遮罩保持。杜绝「token 已恢复但遮罩无人收回，
     // 透明拦截层挡死整页交互」的残留形态（托管重建 settings/mapping 不可编辑的真凶）。
@@ -108,6 +175,40 @@ export const useAuthStore = defineStore('auth', () => {
     const gp = me.value?.grantedPages;
     return Array.isArray(gp) ? gp : null;
   });
+
+  /* 连接环境（来自连接目录）→ 该环境的页面模板（来自 /auth/me.envPages）。
+     环境模板是后端 EnvPagesResolver 的页集封顶：前端菜单/按钮必须同口径收缩，
+     否则会出现「菜单说能进、端点 403」的假入口（或反向误拦）。 */
+  const connEnvById = ref<Record<string, string>>({});
+  function setConnEnvs(list: ReadonlyArray<{ id?: string; env?: string | null }>) {
+    const out: Record<string, string> = {};
+    for (const c of list || []) {
+      if (!c?.id || !c?.env) continue;
+      out[String(c.id)] = String(c.env).trim().toUpperCase();
+    }
+    connEnvById.value = out;
+  }
+  const envPagesMap = computed<Record<string, Set<string>> | null>(() => {
+    const raw = me.value?.envPages;
+    if (!raw || typeof raw !== 'object') return null;
+    const out: Record<string, Set<string>> = {};
+    for (const k of Object.keys(raw)) {
+      const pages = (raw as Record<string, unknown>)[k];
+      out[String(k).trim().toUpperCase()] = new Set(
+        Array.isArray(pages) ? pages.map(p => String(p)) : []);
+    }
+    return Object.keys(out).length ? out : null;
+  });
+  /** 当前目标连接的环境模板是否开放 pageKey（未配置模板/未知环境=不收缩）。 */
+  const envAllows = (pageKey: string, targetId?: string | null): boolean => {
+    const templates = envPagesMap.value;
+    if (!templates || !pageKey) return true;
+    const tid = !targetId || String(targetId).toLowerCase() === 'host' ? 'host' : String(targetId);
+    const env = connEnvById.value[tid];
+    if (!env) return true;
+    const tpl = templates[env];
+    return tpl === undefined ? true : tpl.has(pageKey);
+  };
 
   const isAdmin = () => me.value?.role === 'ADMIN';
   /* 连接元数据可见性：ADMIN/未启用鉴权/静态键模型看全部；conn 模型只看授权连接，防未授权连接名/host 外泄 */
@@ -145,45 +246,38 @@ export const useAuthStore = defineStore('auth', () => {
     const tid = hostPage
       ? 'host'
       : (!targetId || String(targetId).toLowerCase() === 'host' ? 'host' : targetId);
-    return gp.includes(pageKey)
+    /* security 页的审计读是 host-scope：顶栏选中连接时，conn:host:security
+       仍应打开安全中心（后端 pageScope 同口径，行级只看 host 事件）。 */
+    /* 静态 security 页同样回退到宿主 scope（后端 pageScope 取 host 有效页集）；
+       目标 env 排除 security 时，这段 fallback 仍让宿主审计入口可见。 */
+    const hostSecurity = pageKey === 'security'
+      && (gp.includes('security')
+        || gp.includes('conn:host:security') || gp.includes('conn:host:w:security'));
+    /* 环境模板按实际授权作用域收缩：静态/目标连接授权走目标 env，host security 走宿主。 */
+    const direct = gp.includes(pageKey)
       || gp.includes('conn:' + tid + ':' + pageKey)
-      || gp.includes('conn:' + tid + ':w:' + pageKey)
-      || (pageKey === 'devtools' && gp.includes('conn:' + tid + ':w:rest'));
+      || gp.includes('conn:' + tid + ':w:' + pageKey);
+    if (direct && envAllows(pageKey, tid)) return true;
+    /* DevTools 由 w:rest 打开时按 rest 页收缩（env 只开放 rest 时 DevTools 仍可达）。 */
+    if (pageKey === 'devtools' && gp.includes('conn:' + tid + ':w:rest')
+        && envAllows('rest', tid)) return true;
+    return hostSecurity;
   };
 
-  /* ·实报「同事被授予 qa 连接后仍无法操作数据」前端断点打通：
- 连接级写授权镜像后端拦截器写门语义（conn 模型=连接授权最终裁决，跳过全局角色门）。
- 三态解析：授权体系未启用（grantedPages=null）或该目标无 conn 键（静态键模型）→
- 返回 null 走既有全局角色门；该目标存在 conn 键 → 写键 conn:{tid}:w:* 在场即裁决。
- grantedPages=null 时 any 前提不成立恒 false，与 pageAllowed(null)=全放行一致由
- 调用方兜底。canWriteOn 与 can() 是「或」之外的精化：调用方按 target 决定用哪个门。 */
-  const connWriteResolved = (targetId: string | null | undefined): boolean | null => {
-    const gp = grantedPages.value;
-    if (gp == null) return null;
-    const isConn = gp.some(g => g.startsWith('conn:'));
-    if (!isConn) return null;
-    const tid = !targetId || String(targetId).toLowerCase() === 'host' ? 'host' : targetId;
-    const prefix = 'conn:' + tid + ':';
-    const hasConnWrite = gp.some(g => g.startsWith(prefix + 'w:'));
-    /* 混合授权：静态页键仍是全局写授权（与后端 staticWriteAllowed 同口径），
-       不能因任一 conn 读键把静态写入口整体判死。 */
-    const hasStatic = gp.some(g => !g.startsWith('conn:'));
-    if (!hasConnWrite && hasStatic) return null;
-    return hasConnWrite;
-  };
+  /* 表格文档写门（{@code /cluster/doc*} 共享端点）：
+     conn 模型只认 search/indices/doc-diff 三个归属页的精确 w: 键；混合模型静态页键回落到
+     「页可见 + 角色档」。此前「该目标有任意 w: 键即放行」会把 optimizer/aliases 写键
+     误当成文档写权（按钮露出、后端 403）。browser 只有文档读面，不参与写。 */
   const canWriteOn = (targetId: string | null | undefined): boolean => {
     if (!identityKnown()) return false; /* 身份未定：写入口不展示 */
     if (isAdmin()) return true; /* 超管全局写权：不受连接写键缺失拖累 */
     const gp = grantedPages.value;
     if (Array.isArray(gp) && gp.length === 0) return false; /* 空集=全拒 */
-    const conn = connWriteResolved(targetId);
-    if (conn !== null) return conn;
-    /* 静态页面白名单：表格文档写走 shared 文档端点（search/indices/doc-diff/browser），
-       未勾选任一归属页时后端 shared 写门会拒——前端不能只按角色显示编辑入口。 */
-    if (Array.isArray(gp) && gp.length > 0) {
-      return ['search', 'indices', 'doc-diff', 'browser'].some(p => gp.includes(p)) && can('write');
-    }
-    return can('write');
+    const tid = !targetId || String(targetId).toLowerCase() === 'host' ? 'host' : String(targetId);
+    const docPages = ['search', 'indices', 'doc-diff'];
+    if (!Array.isArray(gp) || gp.length === 0) return can('write');
+    return docPages.some(p => envAllows(p, tid) && (
+      gp.includes('conn:' + tid + ':w:' + p) || (gp.includes(p) && can('write'))));
   };
 
   /* 页面级连接感知门——conn 模型下「勾选即权限」，本页写键(conn:{tid}:w:{pageKey})
@@ -196,15 +290,21 @@ export const useAuthStore = defineStore('auth', () => {
     const gp = me.value.grantedPages;
     if (Array.isArray(gp) && gp.length === 0) return false; /* 空集=全拒 */
     const isConn = Array.isArray(gp) && gp.some(g => g.startsWith('conn:'));
+    const hostPage = pageKey === 'system' || pageKey === 'config-drift';
+    const tid = hostPage
+      ? 'host'
+      : (!targetId || String(targetId).toLowerCase() === 'host' ? 'host' : targetId);
+    const envOk = envAllows(pageKey, tid);
     if (isConn && cap !== 'admin') {
-      const tid = !targetId || String(targetId).toLowerCase() === 'host' ? 'host' : targetId;
       /* 混合模型：conn 写键优先；静态页键回落到「可见 + 角色档」（后端同序）。 */
-      return gp!.includes('conn:' + tid + ':w:' + pageKey)
-        || (gp!.includes(pageKey) && canCap(me.value.role, cap));
+      return envOk && (gp!.includes('conn:' + tid + ':w:' + pageKey)
+        || (gp!.includes(pageKey) && canCap(me.value.role, cap)));
     }
     /* 静态页面白名单：页面可见性 + 角色档双闸（后端页面门/角色门同序），
        不能只按角色放行而在点下去时才 403。 */
-    if (Array.isArray(gp) && gp.length > 0) return gp.includes(pageKey) && canCap(me.value.role, cap);
+    if (Array.isArray(gp) && gp.length > 0) {
+      return envOk && gp.includes(pageKey) && canCap(me.value.role, cap);
+    }
     return canCap(me.value.role, cap);
   };
 
@@ -219,10 +319,10 @@ export const useAuthStore = defineStore('auth', () => {
   /* 963：共享写端点 → 合法页面写键（与后端 ConsoleAuthInterceptor.SHARED_WRITE_PAGES 同源）。
      原先“任意写键”放行会让 optimizer 写键持有人删文档/取消任务/改 ILM 策略。 */
   const SHARED_WRITE_PAGE_KEYS: Record<string, string[]> = {
-    '/cluster/doc/update': ['search', 'indices', 'doc-diff', 'browser'],
-    '/cluster/doc': ['search', 'indices', 'doc-diff', 'browser'],
-    '/cluster/update-document': ['search', 'indices', 'doc-diff', 'browser'],
-    '/cluster/update-partial': ['search', 'indices', 'doc-diff', 'browser'],
+    '/cluster/doc/update': ['search', 'indices', 'doc-diff'],
+    '/cluster/doc': ['search', 'indices', 'doc-diff'],
+    '/cluster/update-document': ['search', 'indices', 'doc-diff'],
+    '/cluster/update-partial': ['search', 'indices', 'doc-diff'],
     '/cluster/delete-by-id': ['search', 'indices'],
     '/cluster/delete-by-query': ['search', 'update-by-query'],
     '/cluster/tasks/cancel': ['tasks', 'task-tree'],
@@ -240,12 +340,22 @@ export const useAuthStore = defineStore('auth', () => {
     '/cluster/devtools/execute': ['rest', 'devtools'],
     '/insight/actions/apply-index-settings': ['index-settings', 'indices', 'optimizer'],
   };
+  /* 共享端点匹配必须落在段边界：apply-index-settings 不得命中 apply-index-settings-extra。 */
+  const sharedPathMatches = (path: string, key: string): boolean => {
+    let i = path.indexOf(key);
+    while (i >= 0) {
+      const end = i + key.length;
+      if (end === path.length || path[end] === '/' || path[end] === '?') return true;
+      i = path.indexOf(key, i + 1);
+    }
+    return false;
+  };
   const sharedWritePageKeys = (path: string): string[] | null => {
     const clean = String(path || '').split('?')[0].split('#')[0];
     let best: string[] | null = null;
     let bestLen = -1;
     for (const [frag, keys] of Object.entries(SHARED_WRITE_PAGE_KEYS)) {
-      if (clean.includes(frag) && frag.length > bestLen) { best = keys; bestLen = frag.length; }
+      if (sharedPathMatches(clean, frag) && frag.length > bestLen) { best = keys; bestLen = frag.length; }
     }
     return best;
   };
@@ -287,6 +397,7 @@ export const useAuthStore = defineStore('auth', () => {
     '/cluster/analyze': ['analyze', 'analyzer-lab', 'analysis-settings'],
     '/es/index/keys': ['xmigrate'],
     '/desired-state': ['config-drift', 'adhoc-rebuild', 'indices', 'mapping'],
+    '/desired-state.html': ['config-drift', 'adhoc-rebuild', 'indices', 'mapping'],
     '/mapping-reconcile/report': ['config-drift', 'indices', 'mapping'],
     '/progress': ['indices', 'update-by-query', 'reindex-advanced', 'search', 'tasks', 'task-tree', 'adhoc-rebuild'],
     '/xmigrate/progress': ['xmigrate'],
@@ -297,7 +408,7 @@ export const useAuthStore = defineStore('auth', () => {
     let best: string[] | null = null;
     let bestLen = -1;
     for (const [frag, keys] of Object.entries(SHARED_READ_PAGE_KEYS)) {
-      if (clean.includes(frag) && frag.length > bestLen) { best = keys; bestLen = frag.length; }
+      if (sharedPathMatches(clean, frag) && frag.length > bestLen) { best = keys; bestLen = frag.length; }
     }
     return best;
   };
@@ -312,6 +423,8 @@ export const useAuthStore = defineStore('auth', () => {
     '/xmigrate/start', '/xmigrate/resume', '/xmigrate/abort',
     '/xmigrate/connect-check', '/xmigrate/fetch-config', '/xmigrate/resolve-preview', '/xmigrate/preflight',
     'adhoc-rebuild/start', 'adhoc-rebuild/abort', 'adhoc-rebuild/confirm-switch',
+    /* 取消在途 reindex/UBQ/force-merge 任务与重建中止同族，提档与 abort 对齐（后端同源） */
+    '/cluster/tasks/cancel',
     '/cluster/delete-index', '/cluster/create-index', '/cluster/delete-by-id', '/cluster/delete-by-query',
     '/cluster/settings/put', '/cluster/reroute', '/cluster/reroute/retry-failed',
     '/cluster/alias-actions', '/cluster/rollover',
@@ -382,16 +495,24 @@ export const useAuthStore = defineStore('auth', () => {
          未登记共享写再走页前缀精确写键。 */
       const sharedPages = sharedWritePageKeys(path);
       if (sharedPages) {
-        if (isConn) return sharedPages.some(k => gp!.includes('conn:' + tid + ':w:' + k))
-          || (!!staticPages && sharedPages.some(k => staticPages.has(k)) && canCap(me.value.role, cap));
-        if (staticPages) return sharedPages.some(k => staticPages.has(k)) && canCap(me.value.role, cap);
+        /* env 模板按页收缩：共享端点任一“可写且环境开放”的归属页即可放行。 */
+        if (isConn) return sharedPages.some(k => gp!.includes('conn:' + tid + ':w:' + k) && envAllows(k, tid))
+          || (!!staticPages && sharedPages.some(k => staticPages.has(k) && envAllows(k, tid))
+              && canCap(me.value.role, cap));
+        if (staticPages) {
+          return sharedPages.some(k => staticPages.has(k) && envAllows(k, tid))
+            && canCap(me.value.role, cap);
+        }
         return canCap(me.value.role, cap);
       }
       const owner = pageOwnerOf(path);
       if (owner) {
-        if (isConn) return gp!.includes('conn:' + tid + ':w:' + owner)
-          || (!!staticPages && staticPages.has(owner) && canCap(me.value.role, cap));
-        if (staticPages) return staticPages.has(owner) && canCap(me.value.role, cap);
+        const envOk = envAllows(owner, tid);
+        if (isConn) {
+          return envOk && (gp!.includes('conn:' + tid + ':w:' + owner)
+            || (!!staticPages && staticPages.has(owner) && canCap(me.value.role, cap)));
+        }
+        if (staticPages) return envOk && staticPages.has(owner) && canCap(me.value.role, cap);
         return canCap(me.value.role, cap);
       }
       /* 连接模型默认拒绝「无页面归属」的写端点：与后端未登记写默认拒绝同源，
@@ -404,18 +525,30 @@ export const useAuthStore = defineStore('auth', () => {
       /* conn 模型读也要过页面可见性：后端 effectivePages 先裁页面，再落到角色门。
          混入的静态键同样视为可见（后端 effectivePages 同口径；env 收缩在服务端执行）。 */
       const staticKeys = gp!.filter(k => !k.startsWith('conn:'));
-      const visibleOn = (keys: string[]) => keys.some(k => staticKeys.includes(k)
-        || gp!.includes('conn:' + tid + ':' + k) || gp!.includes('conn:' + tid + ':w:' + k));
+      const visibleOn = (keys: string[]) => keys.some(k => envAllows(k, tid)
+        && (staticKeys.includes(k)
+          || gp!.includes('conn:' + tid + ':' + k) || gp!.includes('conn:' + tid + ':w:' + k)));
       if (sharedRead) return visibleOn(sharedRead);
       const owner = pageOwnerOf(path);
+      /* 与后端 pageScope 同口径：host-scope security 审计在连接目标下仍可读；
+         静态 security 页也回退宿主 scope（后端 hostPages 回退包含静态键）。 */
+      if (owner === 'security'
+          && (gp!.includes('security')
+            || gp!.includes('conn:host:security') || gp!.includes('conn:host:w:security'))) {
+        return true;
+      }
       return owner == null ? true : visibleOn([owner]);
     }
     if (sharedRead) {
-      if (staticPages) return sharedRead.some(k => staticPages.has(k));
+      if (staticPages) return sharedRead.some(k => staticPages.has(k) && envAllows(k, tid));
       return true;
     }
     const owner = pageOwnerOf(path);
-    if (staticPages && owner) return staticPages.has(owner);
+    if (staticPages && owner) {
+      /* security 读端点在目标 env 排除该页时仍可按宿主 scope 回退（后端 pageScope 同口径）。 */
+      if (owner === 'security' && staticPages.has('security')) return true;
+      return staticPages.has(owner) && envAllows(owner, tid);
+    }
     return true;
   };
 
@@ -437,5 +570,15 @@ export const useAuthStore = defineStore('auth', () => {
     return canEndpoint(capForWritePath(clean), m, clean, targetId);
   };
 
-  return { me, showLogin, probed, authDisabled, probeStarted, beginProbe, canAdminOps, probe, login, logout, requireLogin, isAdmin, canSeeConn, grantedPages, can, canWriteOn, canPage, canEndpoint, canEmitWrite, canReadPage, canAuditAll };
+  /* 跨标签页身份同步：另一标签换人/退出后，本页旧 grantedPages 必须立即失效；
+     新 token 到达即作废旧身份并重探，身份落地前写门 fail-closed。 */
+  if (typeof window !== 'undefined') {
+    window.addEventListener('storage', (e) => {
+      if (e.key !== 'es-console.auth.token') return;
+      invalidateIdentity();
+      void probe();
+    });
+  }
+
+  return { me, showLogin, probed, authDisabled, builtinLogin, probeStarted, beginProbe, canAdminOps, probe, login, logout, requireLogin, invalidateIdentity, isAdmin, canSeeConn, grantedPages, can, canWriteOn, canPage, canEndpoint, canEmitWrite, canReadPage, canAuditAll, setConnEnvs, envAllows };
 });

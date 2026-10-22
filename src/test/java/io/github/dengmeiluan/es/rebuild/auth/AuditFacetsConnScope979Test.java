@@ -77,6 +77,14 @@ public class AuditFacetsConnScope979Test {
     }
 
     @Test
+    public void 空授权集返回空值建议() {
+        Map<String, Object> body = new AuditFacetsController(leakingStore())
+                .facets(request(new ConsolePrincipal("u", ConsoleRole.CLUSTER_OP, false, true, "审计员",
+                        null, new HashSet<>()))).getBody();
+        assertEquals(Collections.emptyList(), body.get("users"));
+    }
+
+    @Test
     public void 低角色仍403() {
         assertEquals(403, new AuditFacetsController(leakingStore())
                 .facets(request(principal(ConsoleRole.VIEWER, "conn:c1:security")))

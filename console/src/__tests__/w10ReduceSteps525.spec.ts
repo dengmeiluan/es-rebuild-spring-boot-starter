@@ -157,10 +157,10 @@ describe('W10 视图落点源码锁', () => {
     expect(v).toMatch(/function pickIdx\(idx: string\) \{\s*chosenIdx\.value = idx;\s*next\(\);\s*\}/);
   });
 
-  it('SetupWizard：submit 分派接线（form + 三 input）', () => {
+  it('SetupWizard：submit 分派接线（form + 四 input，含可选首连令牌）', () => {
     const v = read('components/SetupWizard.vue');
     expect(v).toContain('<form @submit.prevent="onSubmit">');
-    expect((v.match(/@keydown\.enter\.prevent="onSubmit"/g) ?? []).length).toBe(3);
+    expect((v.match(/@keydown\.enter\.prevent="onSubmit"/g) ?? []).length).toBe(4);
     expect(v).toMatch(/if \(!testResult\.value\?\.ok\) void doTest\(\);\s*else void doApply\(\);/);
   });
 

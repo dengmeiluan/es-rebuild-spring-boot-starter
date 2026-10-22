@@ -16,7 +16,6 @@
 
 package io.github.dengmeiluan.es.rebuild.auth;
 
-import java.util.Locale;
 import io.github.dengmeiluan.es.rebuild.config.EsRebuildProperties;
 import io.github.dengmeiluan.es.rebuild.multicluster.ConnStore;
 import io.github.dengmeiluan.es.rebuild.xmigrate.RemoteClusterConn;
@@ -42,12 +41,44 @@ import java.util.Set;
 @Component
 public class EnvPagesResolver {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(EnvPagesResolver.class);
+
     private final ConnStore connStore;
     private final EsRebuildProperties properties;
 
     public EnvPagesResolver(ConnStore connStore, EsRebuildProperties properties) {
         this.connStore = connStore;
         this.properties = properties;
+        /* 空模板不是「未配置」而是显式全拒：启动时点名，避免上线后被静默锁死。 */
+        Map<String, java.util.Set<String>> templates = properties == null ? null : properties.getEnvPages();
+        if (templates != null) {
+            for (Map.Entry<String, java.util.Set<String>> e : templates.entrySet()) {
+                if (e.getValue() == null || e.getValue().isEmpty()) {
+                    log.warn("[es-console] env-pages[{}] 为空：该环境所有页面读写均被拒绝（显式全拒语义）",
+                            e.getKey());
+                }
+            }
+        }
+    }
+
+    /**
+     * 环境模板快照（env → 页面 key 集），供 /auth/me 下发前端做菜单/按钮同口径收缩。
+     * 只含页面 key（非秘密）；未配置返回空 Map。键归一为大写，空集保留（=该环境全拒）。
+     */
+    public Map<String, Set<String>> configuredTemplates() {
+        Map<String, java.util.Set<String>> templates = properties.getEnvPages();
+        Map<String, Set<String>> out = new java.util.LinkedHashMap<>();
+        if (templates == null || templates.isEmpty()) return out;
+        for (Map.Entry<String, java.util.Set<String>> e : templates.entrySet()) {
+            if (e.getKey() == null || e.getKey().trim().isEmpty()) continue;
+            Set<String> pages = new LinkedHashSet<>();
+            if (e.getValue() != null) pages.addAll(e.getValue());
+            /* 与 pagesFor 的“首个大小写不敏感匹配”保持一致：重复键先到先得，
+               避免 /auth/me 下发一份、实际执行用另一份。 */
+            String key = e.getKey().trim().toUpperCase(java.util.Locale.ROOT);
+            if (!out.containsKey(key)) out.put(key, pages);
+        }
+        return out;
     }
 
     /** 该连接的环境封顶页集；未配置返回 null（不收缩）。targetId=连接 id（host 字面量=宿主，无模板）。 */
@@ -62,9 +93,15 @@ public class EnvPagesResolver {
         Map<String, java.util.Set<String>> templates = properties.getEnvPages();
         if (templates == null || templates.isEmpty()) return null;
         /* 连接存储层已 trim+upper，这里再归一一次：旧档案/宿主直写不得因空白或大小写
-           跳过环境收缩（跳过=prod 变全开，属于 fail-open）。 */
-        Set<String> pages = templates.get(env.trim().toUpperCase(Locale.ROOT));
-        return pages == null || pages.isEmpty() ? null : pages;
+           跳过环境收缩（跳过=prod 变全开，属于 fail-open）。配置键本身也按大小写不敏感匹配：
+           YAML 的 env-pages.prod 与代码里的 PROD 必须是同一份模板。 */
+        String wanted = env.trim();
+        for (Map.Entry<String, java.util.Set<String>> e : templates.entrySet()) {
+            if (e.getKey() == null || !wanted.equalsIgnoreCase(e.getKey().trim())) continue;
+            /* 显式配置的空集=该环境全拒；只有「该环境未配置」才返回 null 表示不收缩。 */
+            return e.getValue() == null ? new LinkedHashSet<>() : e.getValue();
+        }
+        return null;
     }
 
     /** 连接维度键前缀(grantedPages 形态:conn:{connId}:{pageKey},写:conn:{connId}:w:{pageKey})。 */
@@ -106,8 +143,9 @@ public class EnvPagesResolver {
             out = new LinkedHashSet<>(staticKeys);
             if (envPages != null) out.retainAll(envPages);
         } else {
-            /* 混合/纯 conn 模型：conn 键是宿主按连接明示授权，不受 env 收缩；
-               但混入的静态键仍必须过 env 模板，否则 static+conn 混用会绕过环境收缩。 */
+            /* 混合/纯 conn 模型：env 是环境级页集封顶，静态键与 conn 键都必须过模板。
+               此前只收缩静态键，conn 读键会把被 env 排除的页面重新并入有效集，
+               进而让 staticWriteAllowed 误判——环境限制被 conn 读键绕过。 */
             out = new LinkedHashSet<>();
             if (envPages == null) {
                 out.addAll(staticKeys);
@@ -115,7 +153,15 @@ public class EnvPagesResolver {
                 out.addAll(staticPagesUnderEnv(staticKeys, envPages));
             }
             Set<String> connPages = connMap.get(targetId);
-            if (connPages != null) out.addAll(connPages);
+            if (connPages != null) {
+                if (envPages == null) {
+                    out.addAll(connPages);
+                } else {
+                    Set<String> capped = new LinkedHashSet<>(connPages);
+                    capped.retainAll(envPages);
+                    out.addAll(capped);
+                }
+            }
         }
         return out;
     }
@@ -136,20 +182,24 @@ public class EnvPagesResolver {
         return false;
     }
 
-    /** 连接写授权检查:targetId 连接上 pageKey 的写操作是否被显式授权(conn:{id}:w:{page} 键)。 */
+    /** 连接写授权检查:targetId 连接上 pageKey 的写操作是否被显式授权(conn:{id}:w:{page} 键)，且过 env 模板。 */
     public boolean writeAllowed(String targetId, String pageKey, Set<String> grantedPages) {
-        if (grantedPages == null) return false;
-        return grantedPages.contains(CONN_KEY_PREFIX + targetId + ":w:" + pageKey);
+        if (grantedPages == null || pageKey == null) return false;
+        if (!grantedPages.contains(CONN_KEY_PREFIX + targetId + ":w:" + pageKey)) return false;
+        Set<String> envPages = pagesFor(targetId);
+        return envPages == null || envPages.contains(pageKey);
     }
 
     /**
      * 静态页写权：授权集里的无前缀 pageKey（全局页授权）经 env 模板收缩后仍然可见。
      * 混合授权（conn 键 + 静态键）下，静态键不能被 conn 写法门吞掉——否则同一份
      * 静态页授权在纯静态模型可写、混入任一 conn 读键后反而 403（有权限人被拦）。
+     * 但 env 收缩只能看静态键本身：conn 读键不得把 env 排除的静态页重新并入有效集。
      */
     public boolean staticWriteAllowed(String targetId, String pageKey, Set<String> grantedPages) {
         if (grantedPages == null || pageKey == null || !grantedPages.contains(pageKey)) return false;
-        return effectivePages(targetId, grantedPages).contains(pageKey);
+        Set<String> envPages = pagesFor(targetId);
+        return envPages == null || envPages.contains(pageKey);
     }
 
     /** 授权集是否含任一静态（全局页）键。混合模型的无页归属写回落角色门时用。 */

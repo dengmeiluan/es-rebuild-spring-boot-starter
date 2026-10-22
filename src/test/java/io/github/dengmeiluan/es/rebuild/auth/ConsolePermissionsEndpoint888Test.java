@@ -261,7 +261,10 @@ public class ConsolePermissionsEndpoint888Test {
         Map<String, Object> resp = call(ctrl(), builtin(ConsoleRole.VIEWER), "host");
         assertEquals(Boolean.FALSE, resp.get("connModel"));
         assertEquals(Boolean.FALSE, resp.get("pageGateActive"));
-        assertEquals(Boolean.TRUE, pageOf(resp, "rest").get("read"));
+        /* REST/DevTools 的静态页入口对非 ADMIN 是死入口（端点 ADMIN 档）：
+           面板不得把 VIEWER 报成可读，否则菜单可见、进去必 403。 */
+        assertEquals(Boolean.FALSE, pageOf(resp, "rest").get("read"));
+        assertEquals(Boolean.FALSE, pageOf(resp, "devtools").get("read"));
         // rest 页唯一端点 /cluster/raw 是 ADMIN 档 → VIEWER 不可写
         assertEquals(Boolean.FALSE, pageOf(resp, "rest").get("write"));
         assertEquals(Boolean.FALSE, resp.get("rawAllowed"));
@@ -366,14 +369,15 @@ public class ConsolePermissionsEndpoint888Test {
     }
 
     @Test
-    public void env模板_混合静态conn_静态页仍收缩_conn页保留() {
+    public void env模板_静态页与conn页同为环境封顶() {
         EsRebuildProperties props = new EsRebuildProperties();
         props.setEnvPages(Collections.singletonMap("PROD", new HashSet<>(Collections.singletonList("overview"))));
         Map<String, Object> resp = call(ctrlWithProps(props), delegatedAs(ConsoleRole.VIEWER,
                 set("conn:c1:search", "conn:c1:w:search", "rest", "overview")), "c1");
         assertEquals(Boolean.FALSE, pageOf(resp, "rest").get("read"));
         assertEquals(Boolean.TRUE, pageOf(resp, "overview").get("read"));
-        assertEquals(Boolean.TRUE, pageOf(resp, "search").get("read"));
+        /* 环境模板是硬封顶：conn 读/写键同样不得把 prod 未开放的 search 页并回。 */
+        assertEquals(Boolean.FALSE, pageOf(resp, "search").get("read"));
     }
 
     /* ---------------- 对拍锁：端点判定 ⇔ 真拦截器 preHandle 同裁 ---------------- */

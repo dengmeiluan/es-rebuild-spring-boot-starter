@@ -46,7 +46,17 @@ public class RingUsageController {
     }
 
     @GetMapping
-    public Map<String, Object> usage() {
-        return Collections.unmodifiableMap(store.usage(auditPrefix, capBytes));
+    public Map<String, Object> usage(javax.servlet.http.HttpServletRequest request) {
+        Map<String, Object> out = new java.util.LinkedHashMap<>(store.usage(auditPrefix, capBytes));
+        /* 控制面索引前缀只对 ADMIN 可见：概览页读者只需要占用数值，不需要知道审计/监控索引名。 */
+        Object p = request == null ? null
+                : request.getAttribute(io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+        if (p instanceof io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal
+                && !((io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal) p).getRole()
+                    .atLeast(io.github.dengmeiluan.es.rebuild.auth.ConsoleRole.ADMIN)) {
+            out.remove("auditPrefix");
+            out.remove("monitorPrefix");
+        }
+        return Collections.unmodifiableMap(out);
     }
 }

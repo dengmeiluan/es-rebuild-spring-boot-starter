@@ -209,9 +209,14 @@ public class InternalEsIndexRebuildController {
     /** 集群级任意索引 inspect（只读）。自动解析 indexKey→alias。 */
     @GetMapping("cluster/inspect")
     public Map<String, Object> clusterInspect(@RequestParam String index,
-                                              @RequestParam(required = false, defaultValue = "5") int sampleSize) throws java.io.IOException {
+                                              @RequestParam(required = false, defaultValue = "5") int sampleSize,
+                                              javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
         String resolved = esIndexRebuildService.resolveToPhysical(index);
-        return esIndexAdmin.inspect(resolved, Math.max(0, Math.min(sampleSize, 50)));
+        int capped = Math.max(0, Math.min(sampleSize, 50));
+        Object sampleAllowed = request.getAttribute(
+                io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthInterceptor.ATTR_INSPECT_SAMPLE_ALLOWED);
+        if (Boolean.FALSE.equals(sampleAllowed)) capped = 0;
+        return esIndexAdmin.inspect(resolved, capped);
     }
 
     /**
@@ -542,10 +547,43 @@ public class InternalEsIndexRebuildController {
         return adminOrFail(request) ? repos : io.github.dengmeiluan.es.rebuild.core.EsIndexAdmin.maskSnapshotRepoSecrets(repos);
     }
 
-    /** 指定 repo 下快照列表 */
+    /** 指定 repo 下快照列表（非 ADMIN 去掉控制面索引名） */
     @GetMapping("cluster/snapshot/list")
-    public java.util.List<Map<String, Object>> clusterSnapshotList(@RequestParam String repo) throws java.io.IOException {
-        return esIndexAdmin.listSnapshots(repo);
+    public java.util.List<Map<String, Object>> clusterSnapshotList(@RequestParam String repo,
+                                                                   javax.servlet.http.HttpServletRequest request)
+            throws java.io.IOException {
+        java.util.List<Map<String, Object>> rows = esIndexAdmin.listSnapshots(repo);
+        if (adminView(request)) return rows;
+        return (java.util.List<Map<String, Object>>) sanitizeSnapshotView(rows);
+    }
+
+    /** 快照读侧控制面索引脱敏：快照页只该看到业务索引名。 */
+    private Object sanitizeSnapshotView(Object node) {
+        if (node instanceof String) {
+            return esIndexAdmin.isControlIndex((String) node) ? null : node;
+        }
+        if (node instanceof Map) {
+            Map<?, ?> src = (Map<?, ?>) node;
+            Object idx = src.get("index");
+            if (idx instanceof String && esIndexAdmin.isControlIndex((String) idx)) return null;
+            java.util.Map<String, Object> out = new java.util.LinkedHashMap<>();
+            for (java.util.Map.Entry<?, ?> e : src.entrySet()) {
+                String key = String.valueOf(e.getKey());
+                if (esIndexAdmin.isControlIndex(key)) continue;
+                Object value = sanitizeSnapshotView(e.getValue());
+                if (value != null) out.put(key, value);
+            }
+            return out;
+        }
+        if (node instanceof java.util.List) {
+            java.util.List<Object> out = new java.util.ArrayList<>();
+            for (Object one : (java.util.List<?>) node) {
+                Object value = sanitizeSnapshotView(one);
+                if (value != null) out.add(value);
+            }
+            return out;
+        }
+        return node;
     }
 
     /** 创建快照（非阻塞）。body 可传 indices/include_global_state/partial 等 */
@@ -577,8 +615,12 @@ public class InternalEsIndexRebuildController {
     /** 删除快照（过期快照清理） */
     @DeleteMapping("cluster/snapshot/delete")
     public Map<String, Object> clusterDeleteSnapshot(@RequestParam String repo,
-                                                     @RequestParam String name) throws java.io.IOException {
-        return esIndexAdmin.deleteSnapshot(repo, name);
+                                                     @RequestParam String name,
+                                                     javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
+        boolean admin = adminOrFail(request);
+        return admin
+                ? esIndexAdmin.deleteSnapshot(repo, name)
+                : esIndexAdmin.deleteSnapshotGuarded(repo, name);
     }
 
     /** 分片分布（_cat/shards）结构化 */
@@ -708,10 +750,13 @@ public class InternalEsIndexRebuildController {
     public Map<String, Object> clusterSnapshotStatus(@RequestParam(required = false) String repo,
                                                      @RequestParam(required = false) String name,
                                                      @RequestParam(required = false, defaultValue = "false") boolean summary) throws java.io.IOException {
+        Map<String, Object> out;
         if (summary) {
-            return esIndexAdmin.snapshotStatusSummary(repo, name);
+            out = esIndexAdmin.snapshotStatusSummary(repo, name);
+        } else {
+            out = esIndexAdmin.snapshotStatus(repo, name);
         }
-        return esIndexAdmin.snapshotStatus(repo, name);
+        return adminView(currentRequest()) ? out : (Map<String, Object>) sanitizeSnapshotView(out);
     }
 
     /** 单任务详情 */

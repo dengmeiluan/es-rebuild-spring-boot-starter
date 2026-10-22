@@ -108,9 +108,14 @@ describe('963 ClusterSwitcher：连接档案管理域守卫', () => {
 
 /* ═══ ④ App.vue：页面授权复核随 target 重跑 ═══ */
 describe('963 App.vue：页面复核 watch 源加入 store.target', () => {
-  it('watch 三元源（grantedPages/conns.length/store.target）且按当前 target 判页', () => {
-    expect(app).toContain('watch([() => auth.grantedPages, () => store.conns.length, () => store.target], ([gp]) => {');
-    expect(app).toContain('const r = pageDeniedRedirect(gp, router.currentRoute.value.path, store.target);');
+  it('watch 源（grantedPages/连接目录/envPages/target）且按当前 target+env 判页', () => {
+    expect(app).toContain('() => auth.grantedPages,');
+    expect(app).toContain('() => store.conns.length,');
+    expect(app).toContain("() => store.conns.map(c => c.env || '').join('|'),");
+    expect(app).toContain('() => auth.me?.envPages,');
+    expect(app).toContain('() => store.target,');
+    expect(app).toContain('const r = pageDeniedRedirect(gp, router.currentRoute.value.path, store.target,');
+    expect(app).toContain('auth.envAllows, auth.me?.role);');
   });
 
   it('autoPickConnTarget 逻辑保留（连接模型自动落首个授权连接）', () => {
@@ -135,7 +140,7 @@ describe('963 LiveDashboardView：Top 索引下钻目标同步', () => {
 describe('963 ForbiddenView：回到概览判定', () => {
   it('showHome 走 pageAllowed(grantedPages, /overview, store.target)', () => {
     expect(forbid).toContain("import { pageAllowed } from '../router';");
-    expect(forbid).toContain("const showHome = computed(() => auth.isAdmin() || pageAllowed(auth.grantedPages, '/overview', store.target));");
+    expect(forbid).toContain("const showHome = computed(() => auth.isAdmin() || pageAllowed(auth.grantedPages, '/overview', store.target, auth.envAllows, auth.me?.role));");
     expect(forbid).not.toContain("auth.grantedPages.includes('overview')");
   });
 });
@@ -181,18 +186,17 @@ describe('可选加固：命令面板目录/连接元数据 + 宿主消息来源
   it('CmdPalette 导航按 pageAllowed 过滤、集群切换按 canSeeConn 过滤', () => {
     expect(pal).toContain("import { pageAllowed } from '../router';");
     expect(pal).toContain('NAV_ITEMS.filter(n => auth.isAdmin()');
-    expect(pal).toContain('|| pageAllowed(auth.grantedPages, n.path, store.target)).map(n => ({');
+    expect(pal).toContain('|| pageAllowed(auth.grantedPages, n.path, store.target, auth.envAllows, auth.me?.role)).map(n => ({');
     expect(pal).toContain('for (const c of store.conns.filter(c => auth.canSeeConn(c.id)))');
   });
   it('超管全局可见：SideNav/路由守卫/App 复核/Forbidden 均对 ADMIN 短路', () => {
     expect(sideNav).toContain('const admin = auth.isAdmin();');
     expect(sideNav).toContain('if (admin) return true;');
-    expect(sideNav).toContain('return eff == null || eff.has(i.pageKey)');
-    expect(sideNav).toContain("const restWriter = !!gp && gp.includes('conn:' + tid + ':w:rest');");
-    expect(sideNav).toContain("(i.pageKey === 'devtools' && restWriter)");
+    /* 985：host-bound/env 模板/security/xmigrate 作用域统一收敛到 pageAllowed 真源。 */
+    expect(sideNav).toContain('return pageAllowed(gp, i.path, store.target, auth.envAllows, auth.me?.role);');
     expect(routerSrc).toContain('if (auth.isAdmin()) return true;');
     expect(app).toContain('if (auth.isAdmin()) return; /* 超管全局可见：不自动切目标、不做页面拒绝跳转 */');
-    expect(forbid).toContain("auth.isAdmin() || pageAllowed(auth.grantedPages, '/overview', store.target)");
+    expect(forbid).toContain("auth.isAdmin() || pageAllowed(auth.grantedPages, '/overview', store.target, auth.envAllows, auth.me?.role)");
   });
   it('App 只接受父窗口 postMessage（第三方窗口不得替换 hostToken）', () => {
     expect(app).toContain('if (window.parent && e.source !== window.parent) return;');

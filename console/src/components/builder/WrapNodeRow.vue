@@ -23,6 +23,9 @@
     <div v-if="showParams" class="wnr-params">
       <GenericParams :value="node.params" path-prefix="" @update="onParams" />
     </div>
+    <!-- 989：function_score functions 数组结构化编辑（评分函数行列表；AST 零改动 params 直通） -->
+    <FsFunctionsPanel v-if="node.op === 'function_score'" :params="node.params"
+                      @update="p => emit('update:node', { ...node, params: p })" />
     <div class="wnr-body">
       <NodeRenderer
         v-if="node.child" :node="node.child" :fields="fields" :types="types"
@@ -43,6 +46,7 @@ import { ref, computed } from 'vue';
 import { X, Group, Plus, SlidersHorizontal } from 'lucide-vue-next';
 import FieldSelect from './FieldSelect.vue';
 import GenericParams from './GenericParams.vue';
+import FsFunctionsPanel from './FsFunctionsPanel.vue';
 import NodeRenderer from './NodeRenderer.vue';
 import { DRAG_KEY, fireDrag } from './treeBus';
 import { WRAP_LABELS } from '../../utils/queryAstOps';

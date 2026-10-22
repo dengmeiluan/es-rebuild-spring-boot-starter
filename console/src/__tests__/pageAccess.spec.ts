@@ -10,6 +10,16 @@ describe('pageAllowed 三态', () => {
   it('null=未启用：全量放行', () => {
     expect(pageAllowed(null, '/overview')).toBe(true);
     expect(pageAllowed(null, '/bulk')).toBe(true);
+    /* 无鉴权/探测中 role 缺省：含 REST/DevTools 全量可见（无鉴权部署语义）。 */
+    expect(pageAllowed(null, '/rest')).toBe(true);
+    expect(pageAllowed(null, '/devtools')).toBe(true);
+  });
+
+  it('null=未启用但内置非 ADMIN：REST/DevTools 死页隐藏', () => {
+    expect(pageAllowed(null, '/rest', 'host', undefined, 'VIEWER')).toBe(false);
+    expect(pageAllowed(null, '/devtools', 'host', undefined, 'OPERATOR')).toBe(false);
+    expect(pageAllowed(null, '/overview', 'host', undefined, 'VIEWER')).toBe(true);
+    expect(pageAllowed(null, '/rest', 'host', undefined, 'ADMIN')).toBe(true);
   });
 
   it('空数组=全拒：页面路由全灭；非页面路由（/forbidden/未知路径）不拦', () => {
@@ -127,6 +137,13 @@ describe('连接模型 effectivePagesForTarget / pageAllowed', () => {
     expect(pageAllowed(['conn:c1:overview'], '/overview')).toBe(false);
   });
 
+  it('静态 rest/devtools 页授权不再给非 ADMIN 露死入口（连接键仍可见）', () => {
+    expect(pageAllowed(['rest'], '/rest', 'c1')).toBe(false);
+    expect(pageAllowed(['devtools'], '/devtools', 'c1')).toBe(false);
+    expect(pageAllowed(['conn:c1:rest'], '/rest', 'c1')).toBe(true);
+    expect(pageAllowed(['conn:c1:devtools'], '/devtools', 'c1')).toBe(true);
+  });
+
   it('pageDeniedRedirect 带 targetId 透传', () => {
     const gp = ['conn:c1:overview'];
     expect(pageDeniedRedirect(gp, '/overview', 'c1')).toBeNull();
@@ -155,6 +172,60 @@ describe('守卫装配（连接模型）', () => {
     expect(router.currentRoute.value.path).toBe('/overview');
     app.target = '';
     await router.push('/bulk'); // 先去别的页面触发守卫
+    expect(router.currentRoute.value.path).toBe('/forbidden');
+  });
+});
+
+/* 环境页面模板（/auth/me.envPages）：前端菜单/守卫必须与后端 EnvPagesResolver 同口径收缩，
+   否则会出现「菜单可见、点了 403」的假入口。 */
+describe('pageAllowed × env 模板', () => {
+  it('env 未开放页面：即使连接页键在场也不可见', () => {
+    const env = (page: string, target?: string | null) => target === 'c1' ? page !== 'bulk' : true;
+    expect(pageAllowed(['conn:c1:bulk'], '/bulk', 'c1', env)).toBe(false);
+    expect(pageAllowed(['conn:c1:search'], '/search', 'c1', env)).toBe(true);
+  });
+
+  it('DevTools 由 w:rest 打开时按 rest 页收缩', () => {
+    const noRest = (page: string) => page !== 'rest';
+    expect(pageAllowed(['conn:c1:w:rest'], '/devtools', 'c1')).toBe(true);
+    expect(pageAllowed(['conn:c1:w:rest'], '/devtools', 'c1', noRest)).toBe(false);
+  });
+
+  it('host security 在连接目标下仍可见（宿主无 env 模板）', () => {
+    const denyAll = () => false;
+    expect(pageAllowed(['conn:host:security'], '/security', 'c1', denyAll)).toBe(true);
+    expect(pageAllowed(['security'], '/security', 'c1', denyAll)).toBe(true); // 静态键同样回退宿主
+    expect(pageAllowed(['conn:c1:security'], '/security', 'c1', denyAll)).toBe(false);
+  });
+
+  it('源连接 xmigrate 授权不因顶栏目标为 host 而隐藏', () => {
+    const env = (page: string, target?: string | null) => !(target === 'src' && page === 'xmigrate');
+    expect(pageAllowed(['conn:src:w:xmigrate'], '/xmigrate', 'host')).toBe(true);
+    expect(pageAllowed(['conn:src:w:xmigrate'], '/xmigrate', 'host', env)).toBe(false);
+  });
+});
+
+describe('守卫装配 × env 模板', () => {
+  beforeEach(async () => {
+    setActivePinia(createPinia());
+    localStorage.clear();
+    await router.replace('/__page-access-reset__');
+  });
+
+  it('身份 envPages 收缩菜单：PROD 连接只开放 search 时 /bulk 落 forbidden', { timeout: 20000 }, async () => {
+    const a = useAuthStore();
+    a.beginProbe();
+    a.me = {
+      username: 'u', role: 'OPERATOR', fallback: false, delegated: true,
+      grantedPages: ['conn:c1:bulk', 'conn:c1:search'],
+      envPages: { PROD: ['search'] },
+    } as any;
+    a.setConnEnvs([{ id: 'c1', env: 'prod' }]);
+    const app = useAppStore();
+    app.target = 'c1';
+    await router.push('/search');
+    expect(router.currentRoute.value.path).toBe('/search');
+    await router.push('/bulk');
     expect(router.currentRoute.value.path).toBe('/forbidden');
   });
 });

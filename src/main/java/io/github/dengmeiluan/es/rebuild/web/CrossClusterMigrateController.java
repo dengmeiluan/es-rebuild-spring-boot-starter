@@ -125,7 +125,7 @@ public class CrossClusterMigrateController {
     public MigrateJobES progress(@RequestParam String jobId, HttpServletRequest request) {
         MigrateJobES job = migrateService.progress(jobId);
         requireJobSource(job, request);
-        return job;
+        return sanitizeJobFor(job, request);
     }
 
     /** 近期迁移作业列表（连接模型：只列源连接写键可达的作业）。 */
@@ -133,18 +133,43 @@ public class CrossClusterMigrateController {
     public List<MigrateJobES> jobs(@RequestParam(required = false, defaultValue = "20") int limit,
                                    HttpServletRequest request) {
         List<MigrateJobES> all = migrateService.jobs(limit);
-        if (!connModel(request)) return all;
+        boolean connModel = connModel(request);
         ConsolePrincipal principal = principal(request);
-        List<MigrateJobES> visible = new ArrayList<>();
+        List<MigrateJobES> out = new ArrayList<>(all.size());
         for (MigrateJobES job : all) {
-            if (job.getSrcConnId() != null && !job.getSrcConnId().trim().isEmpty()
-                    && envPagesResolver.writeAllowed(job.getSrcConnId().trim(), "xmigrate",
-                            principal.getGrantedPages())) {
-                visible.add(job);
+            if (connModel && !(job.getSrcConnId() != null && !job.getSrcConnId().trim().isEmpty()
+                    && xmigrateWriteAllowed(job.getSrcConnId().trim(), principal))) {
+                continue;
             }
+            out.add(sanitizeJobFor(job, request));
         }
-        return visible;
+        return out;
     }
+
+    /** 进度读面脱敏：源集群地址/源连接档案/连接参数/错误样本含内网拓扑与业务数据片段，
+        观测级身份只保留进度状态字段；迁移专项（rank3+）排障所需完整信息保留。
+        深拷贝后剥离，避免污染服务端作业缓存对象。 */
+    private static MigrateJobES sanitizeJobFor(MigrateJobES job, HttpServletRequest request) {
+        ConsolePrincipal principal = principal(request);
+        if (principal != null && principal.getRole() != null
+                && principal.getRole().atLeast(ConsoleRole.REBUILD_OP)) {
+            return job;
+        }
+        MigrateJobES copy;
+        try {
+            copy = JOB_COPY.convertValue(job, MigrateJobES.class);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "作业数据脱敏失败");
+        }
+        copy.setRemoteEndpoint(null);
+        copy.setSrcConnId(null);
+        copy.setSavedSettings(null);
+        copy.setErrorSamples(null);
+        return copy;
+    }
+
+    private static final com.fasterxml.jackson.databind.ObjectMapper JOB_COPY =
+            new com.fasterxml.jackson.databind.ObjectMapper();
 
     /**
      * 迁移写入端（宿主/控制集群）索引清单——目标索引补全专用。
@@ -196,10 +221,20 @@ public class CrossClusterMigrateController {
                     "连接模型下必须选择已授权的源连接档案（不支持手输源连接）");
         }
         ConsolePrincipal principal = principal(request);
-        if (!envPagesResolver.writeAllowed(connId.trim(), "xmigrate", principal.getGrantedPages())) {
+        if (!xmigrateWriteAllowed(connId.trim(), principal)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "暂无源连接档案 " + connId.trim() + " 的迁移写权限");
         }
+    }
+
+    /** conn 写键优先；混合模型静态 xmigrate 页 + 写档角色同样是合法授权（与拦截器同序）。 */
+    private boolean xmigrateWriteAllowed(String target, ConsolePrincipal principal) {
+        if (principal == null) return false;
+        /* 超管是全局权限：连接写键/宿主目标写键都不得把 ADMIN 拦在迁移之外。 */
+        if (principal.getRole().atLeast(io.github.dengmeiluan.es.rebuild.auth.ConsoleRole.ADMIN)) return true;
+        if (envPagesResolver.writeAllowed(target, "xmigrate", principal.getGrantedPages())) return true;
+        return envPagesResolver.staticWriteAllowed(target, "xmigrate", principal.getGrantedPages())
+                && principal.getRole().atLeast(io.github.dengmeiluan.es.rebuild.auth.ConsoleRole.REBUILD_OP);
     }
 
     /**
@@ -209,7 +244,7 @@ public class CrossClusterMigrateController {
     private void requireDestWrite(HttpServletRequest request) {
         if (!connModel(request)) return;
         ConsolePrincipal principal = principal(request);
-        if (principal == null || !envPagesResolver.writeAllowed("host", "xmigrate", principal.getGrantedPages())) {
+        if (!xmigrateWriteAllowed("host", principal)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "暂无宿主目标集群的迁移写权限（conn:host:w:xmigrate）");
         }
@@ -233,7 +268,7 @@ public class CrossClusterMigrateController {
         if (principal != null && principal.getRole().atLeast(io.github.dengmeiluan.es.rebuild.auth.ConsoleRole.ADMIN)) {
             return false;
         }
-        return principal != null && principal.isDelegated() && principal.getGrantedPages() != null
+        return principal != null && principal.getGrantedPages() != null
                 && envPagesResolver.inConnModel(principal.getGrantedPages());
     }
 

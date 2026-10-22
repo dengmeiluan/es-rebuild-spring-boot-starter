@@ -4,6 +4,11 @@
     <div class="pg-progress ind-bar" :class="{ on: sending }"></div>
     <PageHeader :icon="Zap" title="REST 直连" subtitle="单次透传任意 ES REST 请求（快速试跑）" />
 
+    <!-- 只读身份的前置说明：发送钮隐藏时不让页面变成无解释的空壳 -->
+    <div v-if="auth.probed && !canAdmin" class="rt-perm-note" role="status">
+      <Shield :size="13" /> 当前身份只读：发送需要 ADMIN；连接模型下需勾选该连接的「REST 直连」写权限。
+    </div>
+
     <!-- 请求行（全局 .card 壳退役——bg/border/radius 归 theme.css 单源不再消费，
  局部 padding 条栏形态原样保留；响应分节加 border-top 承接约定①分界） -->
     <div class="rt-req">
@@ -477,6 +482,7 @@ function openRawIo() {
 /* 执行进度条贴页顶 */
 /* 全局 .card 壳退役（请求/响应两块不再消费 theme 壳类，restFav/devxThreeState
  锚类 rt-req-row/.rt-resp-scroll 零变动）；响应分节 border-top 承接约定①分界 */
+.rt-perm-note { display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-2) var(--sp-4) 0; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); }
 .rt-req { padding: var(--sp-3) var(--sp-4); }
 /* 窄视口 7 控件必溢出——请求行可换行（row-gap 补换行后行距，gap 仍管同排间距） */
 .rt-req-row { display: flex; gap: var(--sp-2); row-gap: var(--sp-1); align-items: center; flex-wrap: wrap; }

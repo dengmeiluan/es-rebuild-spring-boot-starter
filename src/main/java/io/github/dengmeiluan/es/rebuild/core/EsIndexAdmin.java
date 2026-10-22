@@ -236,7 +236,9 @@ public class EsIndexAdmin {
     private static void rejectIndexExpressionChars(String lower, String original) {
         for (int i = 0; i < lower.length(); i++) {
             char c = lower.charAt(i);
-            if (c == '<' || c == '>' || c == '{' || c == '}' || c == '"' || c == '|'
+            /* # 是 URI 片段分隔符：守卫看到 index#，HTTP 客户端却只把 index 发给 ES——
+               会绕过按名判定（DELETE /index# 实际删除 index）。索引名本身也禁止 #。 */
+            if (c == '<' || c == '>' || c == '{' || c == '}' || c == '"' || c == '|' || c == '#'
                     || Character.isWhitespace(c) || Character.isISOControl(c)) {
                 throw new ControlPlaneGuardException("索引名/模式含非法字符，已拒绝：" + original);
             }
@@ -248,7 +250,7 @@ public class EsIndexAdmin {
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("索引名不能为空");
         }
-        String n = name.trim().toLowerCase(Locale.ROOT);
+        String n = stripBom(name).trim().toLowerCase(Locale.ROOT);
         rejectIndexExpressionChars(n, name);
         /* 精确索引操作不接受逗号列表/通配：ES 的 DeleteIndexRequest 会按逗号拆成多目标，
            logs,es_console_user 这类载荷能绕过单名控制面判定。 */
@@ -274,6 +276,11 @@ public class EsIndexAdmin {
         }
     }
 
+    /** 迁移等跨集群流程的源/目标索引：只接受精确业务索引名（拒绝控制面/系统/通配/列表/表达式）。 */
+    public void guardExactDataIndex(String name) {
+        guardIndexName(name);
+    }
+
     /**
      * 索引通配模式守卫：{@code *}/{@code _all}/空字面量前缀，以及字面量前缀能覆盖
      * 控制索引名的模式（{@code es_*}、{@code e*}、宿主自定义名前缀）一律拒绝——
@@ -287,7 +294,7 @@ public class EsIndexAdmin {
         if (pattern == null) return;
         boolean anyPositive = false;
         for (String raw : pattern.split(",")) {
-            String p = raw.trim().toLowerCase(Locale.ROOT);
+            String p = stripBom(raw).trim().toLowerCase(Locale.ROOT);
             boolean excluded = p.startsWith("-");
             if (excluded) p = p.substring(1).trim();
             if (p.isEmpty()) continue;
@@ -400,9 +407,10 @@ public class EsIndexAdmin {
 
     /** 对外数据面端点专用：校验器临时索引也不得被用户态请求读写（内部校验器仍走 guardIndexPattern）。 */
     private void guardPublicIndexPattern(String pattern) {
+        pattern = stripBom(pattern);
         if (pattern != null) {
             for (String raw : pattern.split(",")) {
-                String p = raw.trim().toLowerCase(Locale.ROOT);
+                String p = stripBom(raw).trim().toLowerCase(Locale.ROOT);
                 if (p.startsWith("-")) p = p.substring(1).trim();
                 if (p.startsWith(VALIDATE_INDEX_PREFIX)) {
                     throw new ControlPlaneGuardException("校验器临时索引不对用户态接口开放：" + pattern);
@@ -414,6 +422,7 @@ public class EsIndexAdmin {
 
     /** 请求体守卫：SQL / reindex / bulk / 模板 / ILM / 快照 body 中一旦出现控制面索引名即拒绝。 */
     void guardControlBody(String body) {
+        body = stripBom(body);
         if (body == null || body.isEmpty()) return;
         // ES 解码 JSON unicode 转义；字面扫描前同步解码，防转义绕过按名守卫。
         // 精确前缀之外补通配形态（es_console* 可匹配账号/连接/审计族），但不用裸词根
@@ -439,45 +448,117 @@ public class EsIndexAdmin {
      * 逐个解析并复用统一索引表达式守卫。
      */
     void guardSearchBody(String body) {
+        body = stripBom(body);
         if (body == null || body.trim().isEmpty()) return;
-        guardControlBody(body);
         final Object root;
         try {
             root = OBJECT_MAPPER.readValue(body, Object.class);
         } catch (Exception e) {
-            return; // 非 JSON 由 ES 原始报错；字面控制面名已由 guardControlBody 拦截
+            return; // 非 JSON 由 ES 原始报错
         }
-        guardSearchTargets(root);
+        /* 只做结构化目标扫描：查询值里合法出现 "es_console"/".security" 字样
+           （业务日志检索）不能误杀；索引目标由 _index/terms/wrapper/indices/模板体逐层守卫。 */
+        guardSearchTargets(root, true);
     }
 
     @SuppressWarnings("unchecked")
     private void guardSearchTargets(Object node) {
+        guardSearchTargets(node, false);
+    }
+
+    /** 查询子句容器：其直接键是子句类型（terms/bool/...），Mustache 渲染会伪装成另一子句。 */
+    private static final java.util.Set<String> QUERY_CLAUSE_CONTAINER_KEYS = new java.util.HashSet<>(
+            java.util.Arrays.asList("query", "must", "should", "must_not", "filter", "filters", "functions"));
+
+    /** 子句容器直接键出现占位符=渲染后可变成 terms/lookup 等目标子句，一律拒绝。 */
+    private static void rejectPlaceholderClauseKeys(Object container) {
+        if (container instanceof Map) {
+            rejectPlaceholderKeys((Map<?, ?>) container);
+        } else if (container instanceof java.util.List) {
+            for (Object one : (java.util.List<?>) container) {
+                if (one instanceof Map) rejectPlaceholderKeys((Map<?, ?>) one);
+            }
+        }
+    }
+
+    /** 对象形态的模板 source 也要拒绝分隔符切换（字符串分支已单独处理）。 */
+    private static void rejectTemplateDelimiters(Object node) {
+        if (node instanceof String) {
+            String s = (String) node;
+            if (s.contains("{{=")) {
+                throw new ControlPlaneGuardException("搜索模板不允许切换 Mustache 分隔符");
+            }
+        } else if (node instanceof Map) {
+            for (Map.Entry<?, ?> e : ((Map<?, ?>) node).entrySet()) {
+                if (e.getKey() instanceof String && ((String) e.getKey()).contains("{{=")) {
+                    throw new ControlPlaneGuardException("搜索模板不允许切换 Mustache 分隔符");
+                }
+                rejectTemplateDelimiters(e.getValue());
+            }
+        } else if (node instanceof java.util.List) {
+            for (Object one : (java.util.List<?>) node) rejectTemplateDelimiters(one);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void guardSearchTargets(Object node, boolean root) {
         if (node instanceof Map) {
             Map<String, Object> map = (Map<String, Object>) node;
+            rejectPlaceholderStructuralKeys(map);
+            for (Map.Entry<String, Object> e : map.entrySet()) {
+                if (QUERY_CLAUSE_CONTAINER_KEYS.contains(e.getKey())) {
+                    rejectPlaceholderClauseKeys(e.getValue());
+                }
+            }
             guardTermsClause(map.get("terms"));
             guardTermsClause(map.get("terms_set"));
             guardLookupClause(map.get("percolate"));
             guardLookupClause(map.get("indexed_shape"));
             guardMoreLikeThis(map.get("more_like_this"));
+            guardWrapperQuery(map.get("wrapper"));
+            /* boost 目标键虽然只加权已命中的检索，为维持索引键位全集口径，
+               目标同样过索引表达式守卫（index_boost 数组形态 / indices_boost 对象键形态）。 */
+            guardIndexBoostTargets(map.get("index_boost"));
+            guardIndexBoostTargets(map.get("indices_boost"));
+            /* ES 7.13+ 的 indices 查询是二级数据源：子查询跑在另一个索引上。 */
+            guardIndicesQuery(map.get("indices"));
             /* 任何内嵌文档引用（pinned/MLT 等）的 _index 同样是二级数据源。 */
             Object docIndex = map.get("_index");
+            rejectPlaceholderTarget("_index", docIndex);
             if (docIndex instanceof String && !((String) docIndex).trim().isEmpty()) {
                 guardPublicIndexPattern((String) docIndex);
             }
             for (Map.Entry<String, Object> e : map.entrySet()) {
                 Object value = e.getValue();
+                boolean templateField = "source".equals(e.getKey()) || "inline".equals(e.getKey())
+                        || "template".equals(e.getKey());
                 if (value instanceof Map || value instanceof java.util.List) {
-                    guardSearchTargets(value);
-                } else if ("source".equals(e.getKey()) && value instanceof String) {
-                    /* _search/template 的 source 可以是 JSON 字符串：解析后再扫二级索引目标。 */
+                    if (root && templateField) {
+                        /* 对象形态的 source 同样会被 Mustache 渲染；分隔符切换先把
+                           <%k%> 伪装成普通字段名，后续子句键扫描会失明。 */
+                        rejectTemplateDelimiters(value);
+                    }
+                    guardSearchTargets(value, false);
+                } else if (templateField && value instanceof String) {
+                    /* 根级 source/inline/template 才是 _search/template 的模板体；
+                       嵌套同名字段可能只是普通字段值。ES 三种字段名都接受且后者覆盖前者。 */
                     String s = ((String) value).trim();
+                    /* Mustache 分隔符切换（{{=<% %>=}}）会把结构键伪装成 <%k%>，
+                       后续占位符扫描失效——模板 source 内一律拒绝分隔符变更。 */
+                    if (root && s.contains("{{=")) {
+                        throw new ControlPlaneGuardException("搜索模板不允许切换 Mustache 分隔符");
+                    }
                     if (s.startsWith("{") || s.startsWith("[")) {
                         try {
-                            guardSearchTargets(OBJECT_MAPPER.readValue(s, Object.class));
+                            guardSearchTargets(OBJECT_MAPPER.readValue(s, Object.class), false);
                         } catch (ControlPlaneGuardException ex) {
                             throw ex;
-                        } catch (Exception ignore) {
-                            // 非 JSON source 交给 ES；字面控制面名已由 guardControlBody 拦截
+                        } catch (Exception ignored) {
+                            if (root) {
+                                /* 模板 source 解析失败仍可能被 ES 作为 Mustache 渲染
+                                   （{{!注释}} 前缀会让 Jackson 失败），不能静默放行。 */
+                                throw new ControlPlaneGuardException("搜索模板 source 不是合法 JSON，已拒绝");
+                            }
                         }
                     }
                 }
@@ -491,11 +572,63 @@ public class EsIndexAdmin {
         }
     }
 
+    /** boost 目标守卫：index_boost 为数组（元素 {index,boost} 或裸索引名），
+     * indices_boost 为对象（键=索引名）或数组（元素为键值对象）。 */
+    private void guardIndexBoostTargets(Object value) {
+        if (value instanceof Map) {
+            for (Object key : ((Map<?, ?>) value).keySet()) {
+                if (key instanceof String) guardRawIndexToken((String) key);
+            }
+        } else if (value instanceof List) {
+            for (Object one : (List<?>) value) {
+                if (one instanceof Map) {
+                    Object idx = ((Map<?, ?>) one).get("index");
+                    if (idx instanceof String) guardRawIndexToken((String) idx);
+                    for (Object key : ((Map<?, ?>) one).keySet()) {
+                        if (key instanceof String && !"boost".equals(key)) {
+                            /* 数组元素的裸键形态（[{"logs":1.5}]）键即索引名 */
+                            guardRawIndexToken((String) key);
+                        }
+                    }
+                } else if (one instanceof String) {
+                    guardRawIndexToken((String) one);
+                }
+            }
+        }
+    }
+
+    /**
+     * Mustache 模板参数出现在结构键位（lookup 的 index/id/path、文档 _index/_id 等）时，
+     * 渲染后可能把普通字段名变成控制面目标，而结构化守卫只认字面键名。此类模板直接拒绝；
+     * 普通动态字段键（如 match 的 {{field}}）没有这些兄弟键，不受影响。
+     */
+    private static void rejectPlaceholderStructuralKeys(Map<?, ?> map) {
+        boolean placeholder = false;
+        for (Object k : map.keySet()) {
+            if (k instanceof String && ((String) k).contains("{{") && ((String) k).contains("}}")) {
+                placeholder = true;
+                break;
+            }
+        }
+        if (!placeholder) return;
+        for (String key : new String[]{"_index", "_id", "id", "path", "_source", "source", "query", "indices"}) {
+            if (map.containsKey(key)) {
+                throw new ControlPlaneGuardException("搜索模板参数不得出现在结构化键位（邻近 " + key + "）");
+            }
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private void guardLookupClause(Object clause) {
         if (!(clause instanceof Map)) return;
         Object index = ((Map<String, Object>) clause).get("index");
         guardLookupIndex(index);
+    }
+
+    /** {@code indices} 查询：{"indices":[...],"query":{...}}，子查询目标必须过同一索引守卫。 */
+    private void guardIndicesQuery(Object clause) {
+        if (!(clause instanceof Map)) return;
+        guardLookupIndex(((Map<?, ?>) clause).get("indices"));
     }
 
     /** terms/terms_set 的 lookup 形态是 {@code {"field":{"index":...,"id":...}}}：逐字段下探。 */
@@ -506,13 +639,44 @@ public class EsIndexAdmin {
         guardLookupIndex(terms.get("index"));
         for (Object value : terms.values()) {
             if (value instanceof Map) {
+                /* terms lookup 的字段级对象形如 {"index":...,"id":...,"path":...}。
+                   字段键本身也可能被 Mustache 渲染（{"{{k}}":"{{v}}"}），渲染后
+                   会变成真实的 index/id/path 键，静态守卫看不见——模板里一律拒绝。 */
+                rejectPlaceholderKeys((Map<?, ?>) value);
                 guardLookupIndex(((Map<String, Object>) value).get("index"));
+            }
+        }
+    }
+
+    /**
+     * 结构化目标位出现 Mustache 占位符时拒绝：渲染后的索引名无法静态校验，
+     * 允许 {@code {{idx}}} 等于把控制面守卫交给模板参数。普通字段键不受影响。
+     */
+    private static void rejectPlaceholderTarget(String label, Object value) {
+        if (value instanceof String) {
+            String s = (String) value;
+            if (s.contains("{{") && s.contains("}}")) {
+                throw new ControlPlaneGuardException("搜索模板参数不得用于结构目标 " + label + "：" + s);
+            }
+        } else if (value instanceof java.util.List) {
+            for (Object one : (java.util.List<?>) value) {
+                rejectPlaceholderTarget(label, one);
+            }
+        }
+    }
+
+    private static void rejectPlaceholderKeys(Map<?, ?> map) {
+        for (Object key : map.keySet()) {
+            if (key instanceof String && ((String) key).contains("{{")
+                    && ((String) key).contains("}}")) {
+                throw new ControlPlaneGuardException("搜索模板参数不得出现在结构化键位：" + key);
             }
         }
     }
 
     @SuppressWarnings("unchecked")
     private void guardLookupIndex(Object index) {
+        rejectPlaceholderTarget("index", index);
         if (index instanceof String && !((String) index).trim().isEmpty()) {
             guardPublicIndexPattern((String) index);
         } else if (index instanceof java.util.List) {
@@ -521,6 +685,33 @@ public class EsIndexAdmin {
                     guardPublicIndexPattern((String) one);
                 }
             }
+        }
+    }
+
+    /** wrapper 查询把真实 DSL 藏在 base64 里：解码后递归走同一套二级索引守卫，非法编码 fail-closed。 */
+    private void guardWrapperQuery(Object wrapper) {
+        if (!(wrapper instanceof Map)) return;
+        Object encoded = ((Map<?, ?>) wrapper).get("query");
+        if (!(encoded instanceof String)) return;
+        String s = ((String) encoded).trim();
+        if (s.isEmpty()) return;
+        byte[] bytes;
+        try {
+            bytes = java.util.Base64.getDecoder().decode(s);
+        } catch (IllegalArgumentException standard) {
+            try {
+                bytes = java.util.Base64.getUrlDecoder().decode(s);
+            } catch (IllegalArgumentException urlSafe) {
+                throw new ControlPlaneGuardException("wrapper 查询编码非法，已拒绝");
+            }
+        }
+        try {
+            guardSearchTargets(OBJECT_MAPPER.readValue(
+                    new String(bytes, java.nio.charset.StandardCharsets.UTF_8), Object.class));
+        } catch (ControlPlaneGuardException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ControlPlaneGuardException("wrapper 查询解码后不是合法 DSL，已拒绝");
         }
     }
 
@@ -533,9 +724,7 @@ public class EsIndexAdmin {
             for (Object doc : (java.util.List<?>) docs) {
                 if (!(doc instanceof Map)) continue;
                 Object index = ((Map<String, Object>) doc).get("_index");
-                if (index instanceof String && !((String) index).trim().isEmpty()) {
-                    guardPublicIndexPattern((String) index);
-                }
+                guardLookupIndex(index);
             }
         }
     }
@@ -568,8 +757,14 @@ public class EsIndexAdmin {
 
     /** SQL 守卫：除字面控制索引外，FROM/JOIN 的通配模式（* / es_* / e*）也不得覆盖控制索引。 */
     void guardSql(String sqlBody) {
-        guardControlBody(sqlBody);
+        sqlBody = stripBom(sqlBody);
         if (sqlBody == null || sqlBody.isEmpty()) return;
+        /* SQL 的 filter 是独立 Query DSL 通道：只扫 SQL 文本会漏掉 terms lookup /
+           more_like_this 等二级数据源，filter 必须与搜索 body 同一套结构化守卫。 */
+        String trimmedBody = sqlBody.trim();
+        if (trimmedBody.startsWith("{") || trimmedBody.startsWith("[")) {
+            guardSearchBody(sqlBody);
+        }
         /* ES 执行的是 JSON 解码后的 query 字符串。正则抽 FROM/JOIN 会被以下形态绕过：
            FROM"e*"（无空白）、FROM 后紧跟注释、FROM "a", "e*"（只取首个目标）、
            字符串内的 -- 被误当注释。改为词法扫描：先剥注释（保留单引号字面量），
@@ -822,6 +1017,7 @@ public class EsIndexAdmin {
      */
     private static String sqlQueryOf(String body) {
         if (body == null) return null;
+        body = stripBom(body);
         String t = body.trim();
         if (!t.startsWith("{") && !t.startsWith("[")) return body;
         try {
@@ -840,7 +1036,9 @@ public class EsIndexAdmin {
 
     /** reindex body 守卫：source.index / dest.index 可为字符串或数组；通配 * 同样拒绝。 */
     void guardReindexBody(String body) {
-        guardControlBody(body);
+        body = stripBom(body);
+        /* 不做整串字面扫描：source.query 里检索 "es_console" 字样是合法业务；
+           源/目标索引由 guardReindexTarget 结构化校验，脚本已整体禁止。 */
         guardSearchBody(body);
         if (body == null || body.isEmpty()) return;
         try {
@@ -848,6 +1046,10 @@ public class EsIndexAdmin {
             Map<String, Object> root = OBJECT_MAPPER.readValue(body, Map.class);
             guardReindexTarget(root.get("source"));
             guardReindexTarget(root.get("dest"));
+            Object dest = root.get("dest");
+            if (dest instanceof Map && ((Map<?, ?>) dest).get("pipeline") != null) {
+                guardPipelineRef(String.valueOf(((Map<?, ?>) dest).get("pipeline")));
+            }
             /* reindex 脚本可用 ctx._index='...' 改写目标索引（还能字符串拼接绕过字面扫描），
                非 ADMIN 一律不允许脚本。 */
             if (root.get("script") != null) {
@@ -857,6 +1059,152 @@ public class EsIndexAdmin {
             throw e;
         } catch (Exception ignore) {
             // 非 JSON/结构异常交由 ES 原始报错，不在此改变语义；字面控制索引已由 guardControlBody 拦截
+        }
+    }
+
+    /**
+     * _update / _update_by_query 脚本守卫：与 reindex 同权——Painless 可改写文档落到哪个索引
+     * （旧版 ES 的 {@code ctx._index} 可写）。允许普通字段更新脚本，但任何触碰索引元数据的
+     * 形态（点号 / 方括号 / 拼接 / 动态键 / 已存脚本 id）一律拒绝。
+     */
+    void guardUpdateScript(String body) {
+        body = stripBom(body);
+        if (body == null || body.trim().isEmpty()) return;
+        final Object script;
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> root = OBJECT_MAPPER.readValue(body, Map.class);
+            script = root.get("script");
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception ignore) {
+            return; // 非 JSON 交由 ES 原始报错
+        }
+        if (script == null) return;
+        if (script instanceof String) {
+            guardUpdateScriptSource((String) script, null);
+            return;
+        }
+        if (!(script instanceof Map)) {
+            throw new ControlPlaneGuardException("update 脚本形态无法静态审计，已拒绝");
+        }
+        Map<?, ?> m = (Map<?, ?>) script;
+        if (m.get("id") != null) {
+            throw new ControlPlaneGuardException("非管理员 update 不允许按已存脚本执行");
+        }
+        Object lang = m.get("lang");
+        if (lang != null && !"painless".equalsIgnoreCase(String.valueOf(lang).trim())) {
+            throw new ControlPlaneGuardException("非管理员 update 只允许可静态审计的 painless 脚本");
+        }
+        Object source = m.containsKey("source") ? m.get("source") : m.get("inline");
+        if (!(source instanceof String) || ((String) source).trim().isEmpty()) {
+            throw new ControlPlaneGuardException("update 脚本缺少可审计的 source，已拒绝");
+        }
+        guardUpdateScriptSource((String) source, m.get("params"));
+    }
+
+    private void guardUpdateScriptSource(String source, Object params) {
+        String decoded = decodeJsonUnicodeEscapes(source);
+        String lower = decoded.toLowerCase(Locale.ROOT);
+        /* 去掉引号/反斜杠/加号/空白后再取 token：ctx['_'+'index'] 会归一为 ctx[_index]，
+           ctx._source.index 仍是 source/index 两个 token，不会误杀普通字段更新。 */
+        String normalized = lower.replaceAll("[\"'`\\\\+\\s]", "");
+        for (String token : normalized.split("[^a-z0-9_]+")) {
+            if ("_index".equals(token)) {
+                throw new ControlPlaneGuardException("非管理员 update 脚本不允许触碰 _index");
+            }
+        }
+        /* ctx[...] 动态方括号访问可把 _index 藏在运行时变量/参数里；
+           只放行 ctx['literal'] 形态，其余一律拒绝。 */
+        java.util.regex.Matcher dynamicCtx = java.util.regex.Pattern
+                .compile("ctx\\s*\\[\\s*[^\"'`\\s]").matcher(lower);
+        if (dynamicCtx.find()) {
+            throw new ControlPlaneGuardException("非管理员 update 脚本不允许动态 ctx[...] 访问");
+        }
+        /* ctx['_'+params.s] / concat 形态：方括号内出现拼接或运行时参数，
+           渲染后可能等于 _index，不能静态证明安全。 */
+        java.util.regex.Matcher computedCtx = java.util.regex.Pattern
+                .compile("ctx\\s*\\[[^\\]]*(\\+|params|concat|tostring|join)").matcher(lower);
+        if (computedCtx.find()) {
+            throw new ControlPlaneGuardException("非管理员 update 脚本不允许拼接/参数化 ctx[...] 访问");
+        }
+        if (params instanceof Map) {
+            StringBuilder joined = new StringBuilder();
+            for (Object v : ((Map<?, ?>) params).values()) {
+                if (v instanceof String) joined.append((String) v);
+            }
+            String paramsJoined = joined.toString().toLowerCase(Locale.ROOT)
+                    .replaceAll("[\"'`\\\\+\\s]", "");
+            for (String token : paramsJoined.split("[^a-z0-9_]+")) {
+                if ("_index".equals(token)) {
+                    throw new ControlPlaneGuardException("非管理员 update 脚本参数不允许携带 _index");
+                }
+            }
+        }
+    }
+
+    /** @deprecated 使用 {@link #guardUpdateScript(String)}；保留方法名兼容既有调用方。 */
+    @Deprecated
+    void guardUpdateByQueryScript(String body) {
+        guardUpdateScript(body);
+    }
+
+    /**
+     * ingest pipeline 目标守卫：管道里的 {@code reroute}/{@code _index} 处理器可把文档改写到
+     * 控制面索引；非管理员只能使用可证明不改写目标索引的管道。无法读取定义一律 fail-closed。
+     */
+    void guardPipelineRef(String pipelineId) {
+        String id = stripBom(pipelineId);
+        if (id == null || id.trim().isEmpty()) return;
+        String clean = id.trim();
+        if (clean.indexOf('/') >= 0 || clean.indexOf('\\') >= 0 || clean.indexOf('?') >= 0
+                || clean.indexOf('#') >= 0 || clean.contains("..")) {
+            throw new ControlPlaneGuardException("pipeline ID 含非法字符，已拒绝：" + clean);
+        }
+        final Map<?, ?> def;
+        try {
+            def = performJson("GET", "/_ingest/pipeline/" + encodePathToken(clean, "pipeline"), null);
+        } catch (ControlPlaneGuardException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ControlPlaneGuardException("无法确认 pipeline 是否会改写目标索引，已拒绝：" + clean);
+        }
+        String json;
+        try {
+            json = OBJECT_MAPPER.writeValueAsString(def).toLowerCase(Locale.ROOT);
+        } catch (Exception e) {
+            throw new ControlPlaneGuardException("无法解析 pipeline 定义，已拒绝：" + clean);
+        }
+        /* reroute/date_index_name 与 inner script 都能把文档改写到别的索引；
+           定义里出现控制面索引名同样拒绝（enrich 等处理器可作为控制面读跳板）。 */
+        if (json.contains("\"reroute\"") || json.contains("_index")
+                || json.contains("\"date_index_name\"") || json.contains("\"script\"")
+                /* 嵌套 pipeline 处理器会把定义委托给另一条管道，当前层静态扫描看不到目标改写。 */
+                || json.contains("\"pipeline\"")) {
+            throw new ControlPlaneGuardException("非管理员不允许使用可改写目标索引的 pipeline：" + clean);
+        }
+        guardControlBody(json);
+    }
+
+    /** 查询串里的 pipeline 参数同样要过管道目标守卫（重复参数取首值，守卫必须拒绝歧义）。 */
+    private void guardRawPipeline(String query) {
+        if (query == null || query.isEmpty()) return;
+        boolean seen = false;
+        for (String pair : query.split("&")) {
+            if (pair.isEmpty()) continue;
+            int eq = pair.indexOf('=');
+            final String key;
+            final String value;
+            try {
+                key = java.net.URLDecoder.decode(eq < 0 ? pair : pair.substring(0, eq), "UTF-8");
+                value = eq < 0 ? "" : java.net.URLDecoder.decode(pair.substring(eq + 1), "UTF-8");
+            } catch (Exception e) {
+                throw new ControlPlaneGuardException("查询参数编码非法，已拒绝：" + pair);
+            }
+            if (!"pipeline".equals(key)) continue;
+            if (seen) throw new ControlPlaneGuardException("非管理员 raw 不允许重复 pipeline 参数");
+            seen = true;
+            guardPipelineRef(value);
         }
     }
 
@@ -878,6 +1226,7 @@ public class EsIndexAdmin {
      * 否则 rank3 可通过 catch-all 模板把 settings/mapping/ILM 施加到用户库/审计等控制索引。
      */
     void guardIndexTemplateBody(String bodyJson) {
+        bodyJson = stripBom(bodyJson);
         guardControlBody(bodyJson);
         if (bodyJson == null || bodyJson.trim().isEmpty()) return;
         final Object patterns;
@@ -911,6 +1260,7 @@ public class EsIndexAdmin {
      * 否则 rank3 可把包含控制面索引的快照恢复到线上，覆盖用户库/审计/连接档案。
      */
     void guardRestoreBody(String bodyJson) {
+        bodyJson = stripBom(bodyJson);
         guardControlBody(bodyJson);
         if (bodyJson == null || bodyJson.trim().isEmpty()) {
             throw new ControlPlaneGuardException("恢复快照必须显式指定 indices（不允许恢复全部）");
@@ -1995,17 +2345,21 @@ public class EsIndexAdmin {
                 if (!"h".equals(key) && !"headers".equals(key)) continue;
                 sawH = true;
                 String value = java.net.URLDecoder.decode(pair.substring(eq + 1), "UTF-8");
+                boolean hasIndex = false;
                 for (String col : value.split(",")) {
                     String c = col.trim();
                     int order = c.indexOf(':');
                     if (order > 0) c = c.substring(0, order).trim();
-                    if ("index".equals(c) || "*".equals(c)) return true;
+                    if ("index".equals(c) || "*".equals(c) || c.startsWith("index.")) hasIndex = true;
                 }
+                /* 重复 h（?h=status&h=index）时 ES 只认最后一组，不能因任一值含 index 就放行。 */
+                if (!hasIndex) return false;
             } catch (Exception ignore) {
                 return false;
             }
         }
-        return !sawH;
+        /* 无 h=默认列含 index；有 h 且每组都含 index（上面已逐组校验）同样安全。 */
+        return true;
     }
 
     /** 非 ADMIN raw 的 _cat 结果行级脱敏：控制面索引/别名/分片行不下发。 */
@@ -2053,6 +2407,10 @@ public class EsIndexAdmin {
         String canonical = canonicalRawPath(path);
         String p = rawPathOnly(canonical);
         String query = rawQueryOnly(canonical);
+        /* 系统段判定统一小写：_CAT/_MSEARCH 这类大写变体目前依赖目标端路由的
+           大小写敏感兜底，一旦中间介入代理或版本升级放宽即失去守卫。仅守卫链内部
+           归一，不改变实际发出的路径与查询串。 */
+        String pGuard = p.toLowerCase(Locale.ROOT);
         /* 不在入口盲扫 body：文档源正文可以合法包含 ".security"/"es_console" 字样，
            盲扫会把正常写入误杀。各结构化渠道（bulk/msearch/mget/sql/reindex/alias/
            template/restore/search）在下面逐一做目标级守卫。 */
@@ -2070,14 +2428,35 @@ public class EsIndexAdmin {
                    这类“首段是 _ 系统词”的读取把控制面元数据带出。 */
                 for (int i = 1; i < segments.size(); i++) {
                     String seg = segments.get(i);
+                    /* 索引位的 _all 是隐式全量（/_cluster/health/_all、_cat/indices/_all），
+                       与首段同权拒绝；_ALL 变体同样命中。 */
+                    if ("_all".equalsIgnoreCase(seg)) {
+                        throw new ControlPlaneGuardException("不允许对全量索引执行该操作（路径中段 _all）：_all");
+                    }
                     if (!seg.startsWith("_")) guardRawIndexToken(seg);
                 }
             }
         }
         guardRawQueryIndexRefs(query);
+        guardRawPipeline(query);
+        /* ES 的 source 查询参数与 body 同权（RestRequest.contentOrSourceParam）：
+           只守卫 body 会让 ?source=... 成为控制面读写旁路。source 与 body 各过一遍
+           同一套结构化守卫，任一命中即拒。 */
+        String sourceBody = rawSourceBody(query);
         boolean write = !"GET".equalsIgnoreCase(method) && !"HEAD".equalsIgnoreCase(method)
                 && !"OPTIONS".equalsIgnoreCase(method);
         boolean system = !segments.isEmpty() && segments.get(0).startsWith("_");
+        guardRawBody(method, pGuard, query, body, write, system);
+        guardStructuredRawBody(pGuard, body, query);
+        if (sourceBody != null) {
+            guardRawBody(method, pGuard, query, sourceBody, write, system);
+            guardStructuredRawBody(pGuard, sourceBody, query);
+        }
+    }
+
+    /** 路径形态（系统级 / 索引级，写 / 读）对应的守卫；body 可以是实体体或 source 参数体。 */
+    private void guardRawBody(String method, String p, String query, String body,
+                              boolean write, boolean system) {
         if (system) {
             if (write) {
                 guardRawSystemWrite(method, p, query, body);
@@ -2087,6 +2466,7 @@ public class EsIndexAdmin {
         } else if (write) {
             guardRawIndexWrite(p, body);
         } else {
+            guardRawIndexRead(p, body);
             /* GET 形态的 refresh/flush/forcemerge/close 等同样改状态：不能借只读方法绕过写白名单。 */
             List<String> segs = rawSegments(p);
             if (segs.size() >= 2
@@ -2094,7 +2474,10 @@ public class EsIndexAdmin {
                 throw new ControlPlaneGuardException("非管理员 raw 不允许以 GET 形态执行索引管理写操作：" + p);
             }
         }
-        /* 结构化端点专用守卫；raw 通道必须复用同一套，不能只靠字面扫描。 */
+    }
+
+    /** 结构化端点专用守卫；raw 通道必须复用同一套，不能只靠字面扫描。 */
+    private void guardStructuredRawBody(String p, String body, String query) {
         if (p.equals("/_reindex") || p.startsWith("/_reindex/")) {
             guardReindexBody(body);
             guardReindexRemote(body);
@@ -2113,15 +2496,31 @@ public class EsIndexAdmin {
         } else if (p.equals("/_sql") || (p.startsWith("/_sql/") && !p.equals("/_sql/close"))
                 || p.equals("/_xpack/sql") || (p.startsWith("/_xpack/sql/") && !p.equals("/_xpack/sql/close"))) {
             guardSql(body);
-        } else if (p.equals("/_search") || p.equals("/_search/template")
-                || p.equals("/_count") || p.equals("/_async_search") || p.equals("/_field_caps")) {
+        } else if (p.equals("/_render/template")) {
+            /* 渲染已存模板会回显模板体（可能由 ADMIN 写入）；非 ADMIN raw 只允许内联 source。 */
             guardStoredTemplateReference(body);
-            guardAllIndexRead(query, p);
+            guardSearchBody(body);
+        } else if (p.startsWith("/_render/template/")) {
+            /* 路径形态 /_render/template/{id} 本身就是已存模板引用，body 守卫看不到 id。 */
+            throw new ControlPlaneGuardException("非管理员 raw 不允许按已存 id 渲染模板：" + p);
+        } else if (p.startsWith("/_search/template/")) {
+            /* 路径形态 /_search/template/{id} 按已存 id 执行搜索模板：模板体可能由
+               更高权限写入（terms lookup 控制面等），body 守卫看不到路径里的 id。 */
+            throw new ControlPlaneGuardException("非管理员 raw 不允许按已存 id 执行搜索模板：" + p);
+        } else if (p.equals("/_search") || p.equals("/_search/template")
+                || p.equals("/_count") || p.equals("/_async_search") || p.equals("/_field_caps")
+                || p.equals("/_terms_enum") || p.equals("/_rank_eval")) {
+            guardStoredTemplateReference(body);
+            /* PIT 搜索按 ES 契约不能带 index：有有效 pit.id 时不要求显式 index。 */
+            if (!searchBodyHasPit(body)) guardAllIndexRead(query, p);
             guardSearchBody(body);
         } else if (p.equals("/_msearch") || p.equals("/_msearch/template")) {
             guardMsearchBody(body);
         } else if (p.equals("/_mget")) {
             guardMgetBody(body, null);
+        } else if (p.equals("/_mtermvectors")) {
+            /* 根路径多词向量：docs[]._index/parameters.index 都是二级数据源。 */
+            guardMtermvectorsBody(body);
         } else if (p.equals("/_bulk")) {
             guardBulkBody(body);
         }
@@ -2136,7 +2535,8 @@ public class EsIndexAdmin {
             }
         }
         if (p.equals("/_search") || p.equals("/_search/template") || p.equals("/_count")
-                || p.equals("/_async_search") || p.equals("/_field_caps")) {
+                || p.equals("/_async_search") || p.equals("/_field_caps")
+                || p.equals("/_terms_enum") || p.equals("/_rank_eval")) {
             guardAllIndexRead(query, p);
         }
         if (isCatControlMetadataPath(p) && !queryHasFormatJson(query)) {
@@ -2147,7 +2547,10 @@ public class EsIndexAdmin {
             throw new ControlPlaneGuardException(
                     "非管理员 raw 的索引目录查询必须包含 index 列（否则无法过滤控制面索引）：" + p);
         }
-        if ("/_cluster/health".equals(p) && queryRequestsIndexLevel(query)) {
+        /* health 的索引级视图会枚举响应内的全部索引名；除根路径外还有
+           /_cluster/health/{index}、/_cluster/health/_all 等路径形态，必须同权拒绝。 */
+        if (("/_cluster/health".equals(p) || p.startsWith("/_cluster/health/"))
+                && queryRequestsIndexLevel(query)) {
             throw new ControlPlaneGuardException(
                     "非管理员 raw 不允许按索引级 health 枚举（会暴露控制面索引名）：" + p);
         }
@@ -2184,18 +2587,25 @@ public class EsIndexAdmin {
         boolean dataPlane = p.equals("/_bulk")
                 || p.equals("/_msearch") || p.equals("/_msearch/template")
                 || p.equals("/_mget")
-                || p.equals("/_search") || p.equals("/_search/template") || p.equals("/_search/scroll")
+                || p.equals("/_search") || p.equals("/_search/template")
                 || p.equals("/_count") || p.equals("/_async_search") || p.equals("/_field_caps")
                 || p.equals("/_analyze") || p.equals("/_render/template")
                 || p.equals("/_sql") || p.equals("/_sql/close")
-                || p.equals("/_xpack/sql") || p.equals("/_xpack/sql/close");
+                || p.equals("/_xpack/sql") || p.equals("/_xpack/sql/close")
+                /* 开 PIT/续读 scroll 覆盖的是打开时刻的全部索引（无路径级目标限定），
+                   非 ADMIN 经 raw 开全集群 PIT 或续读他人 scroll 等价于全量读；
+                   仅 DELETE（释放自己持有的资源）放行。限定索引的开点走查询实验室
+                   专属端点（/cluster/pit/open 强制显式索引过守卫）。 */
+                || (p.equals("/_pit") && "DELETE".equalsIgnoreCase(method))
+                || (p.equals("/_search/scroll") && "DELETE".equalsIgnoreCase(method));
         if (p.startsWith("/_sql/") || p.startsWith("/_xpack/sql/")) dataPlane = true;
         if (!dataPlane) {
             throw new ControlPlaneGuardException("非管理员 raw 不允许执行集群/系统管理写操作：" + p);
         }
         if (p.equals("/_search") || p.equals("/_count") || p.equals("/_async_search")
                 || p.equals("/_search/template") || p.equals("/_field_caps")) {
-            guardAllIndexRead(query, p);
+            /* PIT 搜索按 ES 契约不带 index：有有效 pit.id 时不要求显式索引。 */
+            if (!searchBodyHasPit(body)) guardAllIndexRead(query, p);
             guardSearchBody(body);
         }
     }
@@ -2219,27 +2629,97 @@ public class EsIndexAdmin {
             guardMgetBody(body, defaultIndex);
         } else if ("_bulk".equals(op)) {
             guardBulkBody(body);
+        } else if ("_mtermvectors".equals(op)) {
+            guardMtermvectorsBody(body);
+        } else if ("_update".equals(op)) {
+            /* 局部更新脚本与 UBQ 同权：可改写 _index 的脚本一律拒绝。 */
+            guardUpdateScript(body);
         } else if ("_search".equals(op) || "_count".equals(op)
                 || "_explain".equals(op) || "_validate".equals(op)
-                || "_field_caps".equals(op) || "_search_shards".equals(op)) {
+                || "_field_caps".equals(op) || "_search_shards".equals(op)
+                || "_terms_enum".equals(op) || "_rank_eval".equals(op) || "_knn_search".equals(op)) {
             guardSearchBody(body);
-            /* 索引前缀的 _search/template 同样不能按已存 id 执行（模板可能由更高权限写入）。 */
+            /* 索引前缀的 _search/template 同样不能按已存 id 执行（模板可能由更高权限写入）；
+               路径形态 /{index}/_search/template/{id} 的 id 在路径上，body 守卫看不到——直接拒绝。 */
             if (segments.size() >= 3 && "template".equalsIgnoreCase(segments.get(2))) {
+                if (segments.size() >= 4) {
+                    throw new ControlPlaneGuardException("非管理员 raw 不允许按已存 id 执行搜索模板：" + p);
+                }
                 guardStoredTemplateReference(body);
             }
+            if ("_rank_eval".equals(op)) guardStoredTemplateReference(body);
         } else if ("_delete_by_query".equals(op) || "_update_by_query".equals(op)) {
             /* 通配破坏性操作必须解析真实索引名再逐个判定——logs-* 会命中
                *_es_rebuild_lock / *_es_xmigrate_job 这类后缀控制索引，字面前缀看不出来。 */
             guardDestructivePattern(defaultIndex);
             guardSearchBody(body);
+            if ("_update_by_query".equals(op)) guardUpdateByQueryScript(body);
+        }
+    }
+
+    /** 索引前缀的只读 body（含 GET ?source= 形态）：与写形态复用同一套目标守卫。 */
+    private void guardRawIndexRead(String p, String body) {
+        List<String> segments = rawSegments(p);
+        if (segments.size() < 2) return;
+        String defaultIndex = segments.get(0);
+        String op = segments.get(1).toLowerCase(Locale.ROOT);
+        if ("_msearch".equals(op)) {
+            guardMsearchBody(body, defaultIndex);
+        } else if ("_mget".equals(op)) {
+            guardMgetBody(body, defaultIndex);
+        } else if ("_mtermvectors".equals(op)) {
+            guardMtermvectorsBody(body);
+        } else if ("_search".equals(op) || "_count".equals(op) || "_async_search".equals(op)
+                || "_explain".equals(op) || "_validate".equals(op)
+                || "_field_caps".equals(op) || "_search_shards".equals(op)
+                || "_terms_enum".equals(op) || "_rank_eval".equals(op) || "_knn_search".equals(op)) {
+            guardSearchBody(body);
+            /* 与写形态同口径：路径上的模板 id（/{index}/_search/template/{id}）body 守卫看不到。 */
+            if (segments.size() >= 3 && "template".equalsIgnoreCase(segments.get(2))) {
+                if (segments.size() >= 4) {
+                    throw new ControlPlaneGuardException("非管理员 raw 不允许按已存 id 执行搜索模板：" + p);
+                }
+                guardStoredTemplateReference(body);
+            }
+            if ("_rank_eval".equals(op)) guardStoredTemplateReference(body);
+        }
+    }
+
+    /** 多词向量：docs[]._index、parameters.index / 根 index 都是可指定目标索引的通道。 */
+    private void guardMtermvectorsBody(String body) {
+        guardSearchBody(body);
+        body = stripBom(body);
+        if (body == null || body.trim().isEmpty()) return;
+        try {
+            Map<?, ?> root = OBJECT_MAPPER.readValue(body, Map.class);
+            guardBodyIndexValue(root.get("index"));
+            Object parameters = root.get("parameters");
+            if (parameters instanceof Map) guardBodyIndexValue(((Map<?, ?>) parameters).get("index"));
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception ignore) {
+            /* 非 JSON 交由 ES 原始报错；docs 内 _index 已由 guardSearchBody 覆盖 */
+        }
+    }
+
+    private void guardBodyIndexValue(Object index) {
+        if (index instanceof String) {
+            if (!((String) index).trim().isEmpty()) guardPublicIndexPattern((String) index);
+        } else if (index instanceof java.util.List) {
+            for (Object one : (java.util.List<?>) index) {
+                if (one instanceof String && !((String) one).trim().isEmpty()) {
+                    guardPublicIndexPattern((String) one);
+                }
+            }
         }
     }
 
     /** 请求体里逐行 _index 校验（bulk 动作行不能借 unicode 转义/数组形态夹带控制面）。 */
     private void guardBulkBody(String body) {
         if (body == null || body.trim().isEmpty()) return;
-        String[] lines = body.split("\\r?\\n", -1);
-        for (String line : lines) {
+        String[] lines = stripBom(body).split("\\r?\\n", -1);
+        for (String rawLine : lines) {
+            String line = stripBom(rawLine);
             if (line.trim().isEmpty()) continue;
             final Map<?, ?> action;
             try {
@@ -2250,16 +2730,36 @@ public class EsIndexAdmin {
             }
             for (Object v : action.values()) {
                 if (!(v instanceof Map)) continue;
-                Object idx = ((Map<?, ?>) v).get("_index");
+                Map<?, ?> actionMeta = (Map<?, ?>) v;
+                Object idx = actionMeta.get("_index");
                 if (idx instanceof String) {
-                    guardRawIndexToken((String) idx);
+                    guardRawIndexToken(stripBom((String) idx));
                 }
+                /* 动作行 pipeline 与查询串 pipeline 同权：ES 会用它改写目标索引。 */
+                Object pipeline = actionMeta.get("pipeline");
+                if (pipeline != null) guardPipelineRef(String.valueOf(pipeline));
             }
         }
     }
 
+    /** 守卫解析前的 BOM/零宽噪声剥离（含前导空白后的 BOM）：解析口径必须覆盖 ES 能接受的形态。 */
+    private static String stripBom(String s) {
+        if (s == null || s.isEmpty()) return s;
+        int i = 0;
+        while (i < s.length()) {
+            char c = s.charAt(i);
+            if (c == '\uFEFF' || c == '\u200B' || Character.isWhitespace(c)) {
+                i++;
+                continue;
+            }
+            break;
+        }
+        return i == 0 ? s : s.substring(i);
+    }
+
     /** 索引/旧模板必须显式给出 index_patterns——缺省在部分 ES 版本等同 catch-all。 */
     private void guardIndexTemplatePatternsPresent(String body) {
+        body = stripBom(body);
         if (body == null || body.trim().isEmpty()) {
             throw new ControlPlaneGuardException("索引模板必须显式指定 index_patterns");
         }
@@ -2277,6 +2777,7 @@ public class EsIndexAdmin {
 
     /** reindex 的 remote 源会把服务端当 SSRF 跳板/读取远端凭据，非 ADMIN 一律拒绝。 */
     void guardReindexRemote(String body) {
+        body = stripBom(body);
         if (body == null || body.trim().isEmpty()) return;
         try {
             Map<?, ?> root = OBJECT_MAPPER.readValue(body, Map.class);
@@ -2294,19 +2795,28 @@ public class EsIndexAdmin {
     /** raw 查询串中的 index/indices 目标同样过控制面与全量通配守卫。 */
     private void guardRawQueryIndexRefs(String query) {
         if (query == null || query.isEmpty()) return;
+        java.util.Set<String> seen = new java.util.HashSet<>();
         for (String pair : query.split("&")) {
+            if (pair.isEmpty()) continue;
             int eq = pair.indexOf('=');
-            if (eq < 0) continue;
             final String key;
             final String value;
             try {
                 /* 参数名同样要解码：?%69ndex=... 在 ES 侧等价于 index，不能按字面 key 漏过 */
-                key = java.net.URLDecoder.decode(pair.substring(0, eq), "UTF-8");
-                value = java.net.URLDecoder.decode(pair.substring(eq + 1), "UTF-8");
+                key = java.net.URLDecoder.decode(eq < 0 ? pair : pair.substring(0, eq), "UTF-8");
+                value = eq < 0 ? "" : java.net.URLDecoder.decode(pair.substring(eq + 1), "UTF-8");
             } catch (Exception e) {
                 throw new ControlPlaneGuardException("索引参数编码非法，已拒绝：" + pair);
             }
             if (!"index".equals(key) && !"indices".equals(key)) continue;
+            /* ES 对重复参数取首值；首个为空/naked 参数会退化为全量索引搜索。
+               守卫不能只校验“最后一个看得过去的值”，空值/重复一律拒绝。 */
+            if (value.trim().isEmpty()) {
+                throw new ControlPlaneGuardException("索引参数不得为空（空值会退化为全量索引）：" + key);
+            }
+            if (!seen.add(key)) {
+                throw new ControlPlaneGuardException("非管理员 raw 不允许重复 " + key + " 参数");
+            }
             guardRawIndexToken(value);
         }
     }
@@ -2316,9 +2826,12 @@ public class EsIndexAdmin {
         if (token == null || token.trim().isEmpty()) return;
         boolean anyPositive = false;
         for (String raw : token.split(",")) {
-            String part = raw.trim();
+            String part = stripBom(raw).trim();
             boolean excluded = part.startsWith("-");
             if (excluded) part = part.substring(1).trim();
+            /* "+" 是索引表达式的显式包含标记：目标端解析时会剥掉再判定，
+               守卫不归一的话 +.security / +宿主控制索引能躲过点号前缀检查。 */
+            if (part.startsWith("+")) part = part.substring(1).trim();
             if (part.isEmpty()) continue;
             if (!excluded) anyPositive = true;
             String lower = part.toLowerCase(Locale.ROOT);
@@ -2360,7 +2873,10 @@ public class EsIndexAdmin {
             if ("..".equals(decoded)) {
                 throw new ControlPlaneGuardException("path 含目录穿越片段，已拒绝");
             }
-            if (decoded.indexOf('/') >= 0 || decoded.indexOf('\\') >= 0 || decoded.indexOf('\0') >= 0) {
+            /* # 会被 URI 客户端当片段截断，? 会把后续段变成查询串：
+               守卫判定与线上实际路径必须逐字节同义，不能把差异留给 HTTP 库。 */
+            if (decoded.indexOf('/') >= 0 || decoded.indexOf('\\') >= 0 || decoded.indexOf('\0') >= 0
+                    || decoded.indexOf('#') >= 0 || decoded.indexOf('?') >= 0) {
                 throw new ControlPlaneGuardException("path 段含非法分隔符，已拒绝：" + decoded);
             }
             out.append('/').append(decoded);
@@ -2377,6 +2893,43 @@ public class EsIndexAdmin {
     private static String rawQueryOnly(String canonical) {
         int q = canonical.indexOf('?');
         return q < 0 ? "" : canonical.substring(q + 1);
+    }
+
+    /**
+     * ES 的 {@code ?source=} 与请求体同权：提取并解码，作为第二个 body 过全部守卫。
+     * 非 JSON 的 source_content_type 无法用结构化守卫解析，直接拒绝（ADMIN 不受此限）。
+     */
+    private static String rawSourceBody(String query) {
+        if (query == null || query.isEmpty()) return null;
+        String source = null;
+        boolean sourceSeen = false;
+        for (String pair : query.split("&")) {
+            if (pair.isEmpty()) continue;
+            int eq = pair.indexOf('=');
+            if (eq < 0) continue;
+            final String key;
+            final String value;
+            try {
+                key = java.net.URLDecoder.decode(pair.substring(0, eq), "UTF-8");
+                value = java.net.URLDecoder.decode(pair.substring(eq + 1), "UTF-8");
+            } catch (Exception e) {
+                throw new ControlPlaneGuardException("查询参数编码非法，已拒绝：" + pair);
+            }
+            if ("source_content_type".equals(key)) {
+                String ct = value.trim().toLowerCase(Locale.ROOT);
+                if (!ct.isEmpty() && !ct.startsWith("application/json")) {
+                    throw new ControlPlaneGuardException("非管理员 raw 的 source 只允许 JSON 内容类型：" + value);
+                }
+            } else if ("source".equals(key)) {
+                /* ES 对重复参数取首值，守卫若只取末值会被「首个恶意、末个干净」绕过。 */
+                if (sourceSeen) {
+                    throw new ControlPlaneGuardException("非管理员 raw 不允许重复 source 参数");
+                }
+                sourceSeen = true;
+                source = value;
+            }
+        }
+        return source == null || source.trim().isEmpty() ? null : source;
     }
 
     private static List<String> rawSegments(String pathOnly) {
@@ -2399,8 +2952,22 @@ public class EsIndexAdmin {
             "/_cat/count", "/_cat/segments", "/_cat/recovery", "/_cat/allocation", "/_stats",
             /* 无索引路径的索引枚举/分片/段视图会把控制面索引名带出 */
             "/_search_shards", "/_segments", "/_recovery", "/_shard_stores", "/_cat/fielddata",
-            /* 解析/别名全量视图同样会枚举控制面索引与别名 */
-            "/_resolve", "/_alias",
+            /* 解析/别名全量视图同样会枚举控制面索引与别名（_aliases 复数形态曾漏网） */
+            "/_resolve", "/_alias", "/_aliases",
+            /* 任务描述/分配诊断会带出控制面索引名与查询原文；模板视图同样属于页面专属元数据 */
+            "/_tasks", "/_cat/tasks", "/_cluster/allocation", "/_cluster/pending_tasks", "/_cat/pending_tasks",
+            "/_cat/templates", "/_index_template", "/_component_template", "/_template",
+            /* 节点/许可/数据流/富化/监控等集群元数据面：非数据面读所需，避免暴露节点与内部数据流名 */
+            "/_cat/nodes", "/_cat/nodeattrs", "/_cat/thread_pool", "/_cat/plugins",
+            "/_cat/transforms", "/_cat/ml", "/_cat/component_templates",
+            "/_data_stream", "/_features", "/_license", "/_xpack/license", "/_xpack/usage",
+            "/_cluster/stats", "/_enrich", "/_monitoring",
+            /* scroll 续读无法从请求验明所属搜索上下文：id 一旦泄露（审计/同屏）可续读
+               任意人打开过的控制面上下文；GET 形态在此兜底（POST 续读已被数据面写白名单拒绝）。
+               热线程栈、悬挂索引、许可/特性根、脚本上下文与异步搜索状态会带出
+               控制面索引名、节点内部结构与集群元数据，均非数据面读所需。 */
+            "/_search/scroll", "/_cat/hot_threads", "/_dangling", "/_xpack",
+            "/_script_context", "/_script_language", "/_migration", "/_async_search/status",
             /* 这些“读”动词在 ES 侧会改状态（refresh/flush/cache/forcemerge/close/open） */
             "/_refresh", "/_flush", "/_cache", "/_forcemerge", "/_close", "/_open", "/_reindex");
 
@@ -2413,24 +2980,50 @@ public class EsIndexAdmin {
     private static final java.util.Set<String> RAW_INDEX_DATA_WRITE_OPS = new java.util.HashSet<>(
             java.util.Arrays.asList("_doc", "_create", "_update", "_bulk", "_delete_by_query",
                     "_update_by_query", "_search", "_count", "_msearch", "_mget", "_explain",
-                    "_validate", "_field_caps", "_termvectors", "_analyze", "_pit", "_search_shards"));
+                    "_validate", "_field_caps", "_termvectors", "_mtermvectors", "_analyze", "_pit", "_search_shards",
+                    /* 只读但接受 body（GET/POST 均可）的检索类端点：允许下发但必须过 DSL 守卫。 */
+                    "_terms_enum", "_rank_eval", "_knn_search"));
+
+    /** PIT 搜索按 ES 契约不带 index：只有非空 pit.id 且没有 index/indices 时才豁免显式索引。 */
+    private static boolean searchBodyHasPit(String body) {
+        body = stripBom(body);
+        if (body == null || body.trim().isEmpty()) return false;
+        try {
+            Map<?, ?> root = OBJECT_MAPPER.readValue(body, Map.class);
+            Object pit = root.get("pit");
+            if (!(pit instanceof Map)) return false;
+            Object id = ((Map<?, ?>) pit).get("id");
+            return id instanceof String && !((String) id).trim().isEmpty()
+                    && !root.containsKey("index") && !root.containsKey("indices");
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
     /** 无索引路径的系统级查询默认覆盖全部索引——必须显式给 index/indices 且不得命中控制面。 */
     private void guardAllIndexRead(String query, String endpoint) {
         boolean scoped = false;
+        java.util.Set<String> seen = new java.util.HashSet<>();
         for (String pair : query.split("&")) {
+            if (pair.isEmpty()) continue;
             int eq = pair.indexOf('=');
-            if (eq < 0) continue;
             final String key;
-            String value = pair.substring(eq + 1);
+            String value;
             try {
-                key = java.net.URLDecoder.decode(pair.substring(0, eq), "UTF-8");
-                value = java.net.URLDecoder.decode(value, "UTF-8");
+                key = java.net.URLDecoder.decode(eq < 0 ? pair : pair.substring(0, eq), "UTF-8");
+                value = eq < 0 ? "" : java.net.URLDecoder.decode(pair.substring(eq + 1), "UTF-8");
             } catch (Exception e) {
-                throw new ControlPlaneGuardException("索引参数编码非法，已拒绝：" + value);
+                throw new ControlPlaneGuardException("索引参数编码非法，已拒绝：" + pair);
             }
             if (!"index".equals(key) && !"indices".equals(key)) continue;
-            if (value.trim().isEmpty()) continue;
+            /* 空/naked 首值在 ES 侧等价于未指定（全量），重复参数只取首值；
+               守卫必须按同一语义拒绝，而不是跳过空值后校验后面的干净值。 */
+            if (value.trim().isEmpty()) {
+                throw new ControlPlaneGuardException("系统级查询的索引参数不得为空（会退化为全量）：" + endpoint);
+            }
+            if (!seen.add(key)) {
+                throw new ControlPlaneGuardException("系统级查询不允许重复 " + key + " 参数：" + endpoint);
+            }
             guardPublicIndexPattern(value);
             scoped = true;
         }
@@ -2450,8 +3043,16 @@ public class EsIndexAdmin {
         }
         boolean expectHeader = true;
         int headers = 0;
-        for (String line : body.split("\\r?\\n", -1)) {
-            if (line.trim().isEmpty()) continue;
+        String[] lines = body.split("\\r?\\n", -1);
+        int lineCount = lines.length;
+        /* 只忽略末尾换行；内部空行会让守卫与 ES 的 NDJSON 配对错位
+           （守卫把下一行当头、ES 可能跳过空行后仍当头），必须拒绝。 */
+        while (lineCount > 0 && stripBom(lines[lineCount - 1]).trim().isEmpty()) lineCount--;
+        for (int lineNo = 0; lineNo < lineCount; lineNo++) {
+            String line = stripBom(lines[lineNo]);
+            if (line.trim().isEmpty()) {
+                throw new ControlPlaneGuardException("_msearch 不允许空行（避免索引头与查询体错位）");
+            }
             if (!expectHeader) {
                 /* 查询行同样可能夹带 terms lookup 的二级索引目标；模板 id 形态也必须拒绝。 */
                 guardStoredTemplateReference(line);
@@ -2460,19 +3061,27 @@ public class EsIndexAdmin {
                 continue;
             }
             headers++;
-            final Object index;
+            final Map<String, Object> root;
             try {
                 @SuppressWarnings("unchecked")
-                Map<String, Object> root = OBJECT_MAPPER.readValue(line, Map.class);
-                index = root.get("index");
+                Map<String, Object> parsed = OBJECT_MAPPER.readValue(line, Map.class);
+                root = parsed;
             } catch (Exception e) {
                 throw new IllegalArgumentException("_msearch 索引头不是合法 JSON: " + e.getMessage());
             }
-            /* 路径已带索引时允许空头继承路径索引（ES 语义），但路径索引本身必须已过守卫。 */
-            if (index == null && defaultIndex != null) {
-                guardRawIndexToken(defaultIndex);
+            /* ES 的 _msearch 头同时接受 index 与 indices；只看单数会让 indices 形态直读控制面。
+               两者都在场时逐一校验（任一命中即拒），空数组/空串等同未指定（ES 会退化为 _all）。 */
+            boolean hasIndex = root.containsKey("index") || root.containsKey("indices");
+            if (!hasIndex) {
+                /* 路径已带索引时允许空头继承路径索引（ES 语义），但路径索引本身必须已过守卫。 */
+                if (defaultIndex != null) {
+                    guardRawIndexToken(defaultIndex);
+                } else {
+                    guardMsearchIndex(null);
+                }
             } else {
-                guardMsearchIndex(index);
+                if (root.containsKey("index")) guardMsearchIndex(root.get("index"));
+                if (root.containsKey("indices")) guardMsearchIndex(root.get("indices"));
             }
             expectHeader = false;
         }
@@ -2486,13 +3095,19 @@ public class EsIndexAdmin {
             throw new ControlPlaneGuardException("_msearch 每个请求必须显式指定 index（不允许全量）");
         }
         if (index instanceof String) {
+            if (((String) index).trim().isEmpty()) {
+                throw new ControlPlaneGuardException("_msearch 每个请求必须显式指定 index（不允许全量）");
+            }
             guardPublicIndexPattern((String) index);
             return;
         }
         if (index instanceof java.util.List) {
+            if (((java.util.List<?>) index).isEmpty()) {
+                throw new ControlPlaneGuardException("_msearch 每个请求必须显式指定 index（不允许全量）");
+            }
             for (Object one : (java.util.List<?>) index) {
-                if (!(one instanceof String)) {
-                    throw new IllegalArgumentException("_msearch index 数组元素必须是字符串");
+                if (!(one instanceof String) || ((String) one).trim().isEmpty()) {
+                    throw new IllegalArgumentException("_msearch index 数组元素必须是非空字符串");
                 }
                 guardPublicIndexPattern((String) one);
             }
@@ -2506,6 +3121,7 @@ public class EsIndexAdmin {
      * 路径形式 {@code POST /logs/_mget {"docs":[{"_id":"1"}]}} 可省略 _index（默认索引已由路径守卫）。
      */
     private void guardMgetBody(String body, String defaultIndex) {
+        body = stripBom(body);
         if (body == null || body.trim().isEmpty()) return;
         final Object docs;
         try {
@@ -2531,12 +3147,17 @@ public class EsIndexAdmin {
     public Map<String, Object> raw(String method, String path, String body) throws IOException {        if (path == null || !path.startsWith("/") || path.contains("..")) {
             throw new IllegalArgumentException("path 非法：须以 / 开头且不含 ..");
         }
+        if (path.indexOf('#') >= 0) {
+            throw new IllegalArgumentException("path 非法：不得包含 URI 片段分隔符 #");
+        }
         String m = method == null ? "GET" : method.trim().toUpperCase(Locale.ROOT);
         if (!java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "HEAD").contains(m)) {
             throw new IllegalArgumentException("method 不支持: " + method);
         }
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request(m, path);
-        if (body != null && !body.trim().isEmpty() && !"GET".equals(m) && !"HEAD".equals(m)) {
+        /* ES 接受 GET 携带 body（_search/_count 等）；HEAD 语义无响应体，忽略。
+           此前丢弃 GET body 会让 DevTools 导入的 GET 搜索静默退化为 match_all。 */
+        if (body != null && !body.trim().isEmpty() && !"HEAD".equals(m)) {
             req.setJsonEntity(body);
         }
         /* ADMIN raw 是控制面应急逃生通道：不走控制索引守卫（结构化端点才是越权面） */
@@ -2978,11 +3599,15 @@ public class EsIndexAdmin {
         Map<String, Object> masked = new java.util.LinkedHashMap<>();
         for (Map.Entry<?, ?> e : src.entrySet()) {
             String key = String.valueOf(e.getKey());
-            String k = key.toLowerCase(Locale.ROOT);
-            boolean secret = k.contains("secret") || k.contains("password") || k.contains("token")
-                    || k.contains("access_key") || k.contains("accesskey") || k.contains("credential")
-                    || k.contains("role_arn") || k.contains("service_account") || k.contains("private_key")
-                    || k.equals("key") || k.contains("client_key") || k.contains("sas_token");
+            /* 点号/连字符/下划线统一后再判定：Hadoop/Azure 插件常用
+               conf.fs.s3a.access.key、conf.fs.azure.account.key.<acct> 等写法。 */
+            String k = key.toLowerCase(Locale.ROOT).replace('.', '_').replace('-', '_');
+            boolean secret = k.contains("secret") || k.contains("password") || k.contains("passwd")
+                    || k.contains("passphrase") || k.contains("token") || k.contains("access_key")
+                    || k.contains("accesskey") || k.contains("credential") || k.contains("role_arn")
+                    || k.contains("service_account") || k.contains("private_key") || k.contains("client_key")
+                    || k.contains("api_key") || k.contains("account_key") || k.contains("key")
+                    || k.contains("sas") || k.contains("cert") || k.contains("authorization");
             masked.put(key, secret ? "***" : maskSecretValue(e.getValue()));
         }
         return masked;
@@ -2995,7 +3620,20 @@ public class EsIndexAdmin {
             for (Object one : (java.util.List<?>) v) out.add(maskSecretValue(one));
             return out;
         }
+        /* URL 内嵌凭据（https://user:pass@host）不在 key 名里：按值形态脱敏。 */
+        if (v instanceof String) return maskUrlUserInfo((String) v);
         return v;
+    }
+
+    static String maskUrlUserInfo(String value) {
+        if (value == null) return null;
+        int scheme = value.indexOf("://");
+        if (scheme < 0) return value;
+        int at = value.indexOf('@', scheme + 3);
+        if (at < 0) return value;
+        int slash = value.indexOf('/', scheme + 3);
+        if (slash >= 0 && slash < at) return value;
+        return value.substring(0, scheme + 3) + "***" + value.substring(at);
     }
 
     /** 列出指定 repo 下所有 snapshot。 */
@@ -3177,10 +3815,10 @@ public class EsIndexAdmin {
         }
         java.util.List<String> patterns = new java.util.ArrayList<>();
         if (indices instanceof String) {
-            patterns.add((String) indices);
+            patterns.addAll(snapshotPatternParts((String) indices));
         } else if (indices instanceof java.util.List) {
             for (Object one : (java.util.List<?>) indices) {
-                if (one instanceof String) patterns.add((String) one);
+                if (one instanceof String) patterns.addAll(snapshotPatternParts((String) one));
             }
         }
         boolean anyWildcard = false;
@@ -3221,6 +3859,21 @@ public class EsIndexAdmin {
         }
     }
 
+    /**
+     * 快照 indices 的逗号展开：ES 会把 {@code "logs*,-x"} 当两个模式，
+     * 逐个模式才能让通配目标真正与快照索引清单对表（排除项不增加目标）。
+     */
+    static java.util.List<String> snapshotPatternParts(String value) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        if (value == null) return out;
+        for (String raw : value.split(",")) {
+            String p = stripBom(raw).trim();
+            if (p.isEmpty() || p.startsWith("-")) continue;
+            out.add(p);
+        }
+        return out;
+    }
+
     private static java.util.regex.Pattern sqlGlobToRegex(String glob) {
         StringBuilder re = new StringBuilder("^");
         for (int i = 0; i < glob.length(); i++) {
@@ -3247,7 +3900,41 @@ public class EsIndexAdmin {
         return result;
     }
 
-    /** 删除 snapshot（过期快照清理）。 */
+    /**
+     * 非 ADMIN 删除快照：先解析快照真实索引，含控制面/系统索引或无法证明内容时一律拒绝——
+     * snapshots 页写键不能顺手清掉管理员备份的控制面数据。
+     */
+    public Map<String, Object> deleteSnapshotGuarded(String repo, String name) throws IOException {
+        guardExactSnapshotToken(repo, "snapshot repo");
+        guardExactSnapshotToken(name, "snapshot name");
+        guardSnapshotDeletion(listSnapshots(repo), name);
+        return deleteSnapshot(repo, name);
+    }
+
+    /** 删除前的快照内容守卫（独立方法便于不触 ES 的单测）。 */
+    void guardSnapshotDeletion(java.util.List<Map<String, Object>> snapshots, String name) {
+        Map<String, Object> target = null;
+        if (snapshots != null) {
+            for (Map<String, Object> s : snapshots) {
+                if (s != null && name.equals(String.valueOf(s.get("snapshot")))) {
+                    target = s;
+                    break;
+                }
+            }
+        }
+        if (target == null) {
+            throw new ControlPlaneGuardException("无法确认快照内容，已拒绝删除：" + name);
+        }
+        Object indices = target.get("indices");
+        if (!(indices instanceof java.util.List) || ((java.util.List<?>) indices).isEmpty()) {
+            throw new ControlPlaneGuardException("快照未返回索引清单，已拒绝删除：" + name);
+        }
+        for (Object idx : (java.util.List<?>) indices) {
+            guardIndexName(String.valueOf(idx));
+        }
+    }
+
+    /** 删除 snapshot（过期快照清理）。ADMIN 专用；非 ADMIN 走 {@link #deleteSnapshotGuarded}。 */
     public Map<String, Object> deleteSnapshot(String repo, String name) throws IOException {
         guardExactSnapshotToken(repo, "snapshot repo");
         guardExactSnapshotToken(name, "snapshot name");
@@ -4086,7 +4773,9 @@ public class EsIndexAdmin {
         if (indexPattern == null || indexPattern.trim().isEmpty()) throw new IllegalArgumentException("indexPattern 不能为空");
         guardDestructivePattern(indexPattern);
         guardSearchBody(body);
+        guardUpdateByQueryScript(body);
         Map<String, String> o = opts == null ? java.util.Collections.emptyMap() : opts;
+        guardPipelineRef(o.get("pipeline"));
         StringBuilder path = new StringBuilder("/").append(indexPattern).append("/_update_by_query");
         java.util.List<String> qs = new java.util.ArrayList<>();
         addQ(qs, "conflicts", o.get("conflicts"));
@@ -4114,6 +4803,7 @@ public class EsIndexAdmin {
         guardDestructivePattern(indexPattern);
         guardSearchBody(body);
         Map<String, String> o = opts == null ? java.util.Collections.emptyMap() : opts;
+        guardPipelineRef(o.get("pipeline"));
         StringBuilder path = new StringBuilder("/").append(indexPattern).append("/_delete_by_query");
         java.util.List<String> qs = new java.util.ArrayList<>();
         addQ(qs, "conflicts", o.get("conflicts"));
@@ -4143,8 +4833,9 @@ public class EsIndexAdmin {
         guardControlBody(ndjson);
         /* 逐行动作行的 _index 也要过守卫：仅靠字面扫描拦不住 .security/.watches/通配形态。 */
         guardBulkBody(ndjson);
-        if (!ndjson.endsWith("\n")) ndjson = ndjson + "\n";
         Map<String, String> o = opts == null ? java.util.Collections.emptyMap() : opts;
+        guardPipelineRef(o.get("pipeline"));
+        if (!ndjson.endsWith("\n")) ndjson = ndjson + "\n";
         StringBuilder path = new StringBuilder();
         if (indexOrNull != null && !indexOrNull.trim().isEmpty()) path.append('/').append(indexOrNull);
         path.append("/_bulk");
@@ -4360,6 +5051,7 @@ public class EsIndexAdmin {
         if (index == null || index.trim().isEmpty()) throw new IllegalArgumentException("index 不能为空");
         if (id == null || id.isEmpty()) throw new IllegalArgumentException("id 不能为空");
         if (body == null || body.trim().isEmpty()) throw new IllegalArgumentException("body 不能为空");
+        guardUpdateScript(body);
         String encodedId = encodePathToken(id, "文档 ID");
         String qs = refresh != null && !refresh.isEmpty() ? "?refresh=" + refresh : "";
         return performDocOpVersionAware("POST", index, encodedId, "_update", qs, body);
@@ -4412,6 +5104,9 @@ public class EsIndexAdmin {
     public Map<String, Object> putStoredScript(String id, String body) throws IOException {
         if (id == null || id.trim().isEmpty()) throw new IllegalArgumentException("id 不能为空");
         if (body == null || body.trim().isEmpty()) throw new IllegalArgumentException("body 不能为空");
+        /* 已存脚本后续可能被脚本执行通道复用：写入时就拒绝控制面字面量与 _index 改写脚本。 */
+        guardControlBody(body);
+        guardUpdateScript(body);
         return performJson("PUT", "/_scripts/" + encodePathToken(id, "脚本 ID"), body);
     }
 
@@ -5073,6 +5768,9 @@ public class EsIndexAdmin {
      */
     public Map<String, Object> renderTemplate(String body) throws IOException {
         if (body == null || body.trim().isEmpty()) throw new IllegalArgumentException("body 不能为空");
+        /* 只禁按已存 id 渲染（会回显更高权限写入的模板体）；内联 source 由调用者自持，
+           render 不执行搜索，故不套用 search-body 的结构守卫（Mustache 段落语法并非合法 JSON）。 */
+        guardStoredTemplateReference(body);
         return performJson("POST", "/_render/template", body);
     }
 
@@ -5090,16 +5788,39 @@ public class EsIndexAdmin {
 
     /** 搜索模板必须内联 source：按已存 id 执行会绕过请求体目标扫描（模板可能由更高权限写入）。 */
     private void guardStoredTemplateReference(String body) {
+        body = stripBom(body);
+        if (body == null || body.trim().isEmpty()) return;
         try {
             Map<?, ?> root = OBJECT_MAPPER.readValue(body, Map.class);
-            if (root.get("source") == null && root.get("id") != null) {
+            /* ES 的 SearchTemplateRequest 对 source/inline/template/id 采用 last-field-wins：
+               只要 id 在场，内联 source 也可能被覆盖为已存模板——一律拒绝按 id 执行。 */
+            if (root.get("id") != null) {
                 throw new ControlPlaneGuardException("搜索模板必须内联 source，不允许按已存 id 执行");
+            }
+            /* _rank_eval 等端点把已存模板引用放在 requests[].template_id：
+               只查根 id 会让模板服务端执行通道漏网。 */
+            if (containsKeyDeep(root, "template_id")) {
+                throw new ControlPlaneGuardException("不允许按已存模板 id 执行（template_id）");
             }
         } catch (ControlPlaneGuardException e) {
             throw e;
-        } catch (Exception ignore) {
-            // 非 JSON 由 ES 原始报错；字面控制面名已由 guardSearchBody 拦截
+        } catch (Exception e) {
+            throw new ControlPlaneGuardException("搜索模板 body 不是合法 JSON，已拒绝");
         }
+    }
+
+    private static boolean containsKeyDeep(Object node, String key) {
+        if (node instanceof Map) {
+            for (Map.Entry<?, ?> e : ((Map<?, ?>) node).entrySet()) {
+                if (e.getKey() instanceof String && key.equals(e.getKey())) return true;
+                if (containsKeyDeep(e.getValue(), key)) return true;
+            }
+        } else if (node instanceof java.util.Collection) {
+            for (Object one : (java.util.Collection<?>) node) {
+                if (containsKeyDeep(one, key)) return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -5130,6 +5851,7 @@ public class EsIndexAdmin {
     }
 
     void guardAliasActionsBody(String body, boolean addOnly) {
+        body = stripBom(body);
         guardControlBody(body);
         if (body == null || body.isEmpty()) return;
         final Object actions;

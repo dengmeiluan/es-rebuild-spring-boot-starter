@@ -1121,6 +1121,22 @@ public class EsRebuildAutoConfiguration {
                     properties.getConsole().getPageAuth().isEnabled());
         }
 
+        /**
+         * 自定义 EsConsoleAuthorizer（无内置账号服务）时的 /auth/me 兜底：让前端拿到
+         * 拦截器已认证的角色/页面授权/env 模板，不再把 404 误判成「无鉴权部署」而全开菜单。
+         */
+        @Bean
+        @ConditionalOnMissingBean({ConsoleAuthController.class, BuiltinConsoleAuthService.class})
+        @ConditionalOnProperty(prefix = "es.rebuild", name = "web-enabled", matchIfMissing = true)
+        @org.springframework.boot.autoconfigure.condition.ConditionalOnExpression("${es.rebuild.console.auth.enabled:true}")
+        public io.github.dengmeiluan.es.rebuild.auth.ConsoleMeFallbackController consoleMeFallbackController(
+                ConsolePageCatalog consolePageCatalog,
+                io.github.dengmeiluan.es.rebuild.auth.EnvPagesResolver envPagesResolver,
+                EsRebuildProperties properties) {
+            return new io.github.dengmeiluan.es.rebuild.auth.ConsoleMeFallbackController(
+                    consolePageCatalog, properties.getConsole().getPageAuth().isEnabled(), envPagesResolver);
+        }
+
         @Bean
         @ConditionalOnMissingBean
         @ConditionalOnBean(io.github.dengmeiluan.es.rebuild.auth.EnvPagesResolver.class)
@@ -1182,13 +1198,31 @@ public class EsRebuildAutoConfiguration {
         public ConsoleSetupController consoleSetupController(ControlClusterResolver controlClusterResolver,
                                                              ConsoleOpsAuditStore consoleOpsAuditStore,
                                                              ObjectProvider<ConsoleAuthDelegate> delegateProvider,
+                                                             ObjectProvider<io.github.dengmeiluan.es.rebuild.auth.BuiltinConsoleAuthService> builtinAuthProvider,
                                                              EsRebuildProperties properties,
                                                              Environment environment) {
             RemoteEsClientFactory factory = new RemoteEsClientFactory(
                     properties.getMigrate().getConnectTimeoutMs(), properties.getMigrate().getSocketTimeoutMs());
+            ConsoleAuthDelegate delegate = delegateProvider.getIfAvailable();
+            /* 权限相关逃生阀必须在启动期留痕：关鉴权/未配首连令牌都是「可达客户端能写」的暴露面。 */
+            if (!properties.getConsole().getAuth().isEnabled()) {
+                logger.warn("控制台鉴权已关闭（es.rebuild.console.auth.enabled=false）："
+                        + "任何可达客户端均可匿名执行控制台读写，仅限隔离网络临时排障");
+            }
+            if (properties.getConsole().getSetupToken() == null
+                    || properties.getConsole().getSetupToken().trim().isEmpty()) {
+                logger.warn("未配置 es.rebuild.console.setup-token：未绑定窗口的匿名首连仅允许本机回环；"
+                        + "远程/反向代理初始化请配置令牌");
+            }
+            /* authEnabled 表示后端鉴权是否真的在执法（auth.enabled），不是「内置登录是否存在」。
+               自定义 EsConsoleAuthorizer 部署同样有 /auth/me 兜底与拦截器，404 只能是代理/版本错配，
+               前端必须保持 fail-closed；builtinLogin 单独标识是否展示本地账号表单。 */
+            boolean authEnabled = properties.getConsole().getAuth().isEnabled();
+            boolean builtinLogin = builtinAuthProvider.getIfAvailable() != null;
             return new ConsoleSetupController(controlClusterResolver, factory, consoleOpsAuditStore,
-                    delegateProvider.getIfAvailable(), environment.getProperty("spring.application.name", "default"),
-                    properties.getConsole().isHostClusterVisible());
+                    delegate, environment.getProperty("spring.application.name", "default"),
+                    properties.getConsole().isHostClusterVisible(), authEnabled, builtinLogin,
+                    properties.getConsole().getSetupToken());
         }
     }
 }

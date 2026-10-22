@@ -194,9 +194,15 @@ describe('五百七十七批·TasksView conn 写键行为锁（VIEWER+连接写�
     expect(cancelBtnIn(host), '静态模型 VIEWER 不应看到 Cancel 钮').toBe(false);
   });
 
-  it('OPERATOR + grantedPages=null：Cancel 钮可见（正向链路证明按钮渲染本身通，防恒真假绿）', async () => {
+  it('REBUILD_OP + grantedPages=null：Cancel 钮可见（正向链路证明按钮渲染本身通，防恒真假绿；取消与重建中止同族提档）', async () => {
+    tasksFn.mockResolvedValue([TV_TASK]);
+    const host = await mountTasksWithGrants('REBUILD_OP', null);
+    expect(cancelBtnIn(host), 'REBUILD_OP 应看到 Cancel 钮').toBe(true);
+  });
+
+  it('OPERATOR + grantedPages=null：Cancel 钮不可见（取消提档 rank3 后 OPERATOR 不再持有，防回潮）', async () => {
     tasksFn.mockResolvedValue([TV_TASK]);
     const host = await mountTasksWithGrants('OPERATOR', null);
-    expect(cancelBtnIn(host), 'OPERATOR 应看到 Cancel 钮').toBe(true);
+    expect(cancelBtnIn(host), 'OPERATOR 不应看到 Cancel 钮').toBe(false);
   });
 });

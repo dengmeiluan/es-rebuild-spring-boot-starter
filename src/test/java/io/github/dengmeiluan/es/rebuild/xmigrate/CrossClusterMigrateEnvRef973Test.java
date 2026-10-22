@@ -95,4 +95,55 @@ public class CrossClusterMigrateEnvRef973Test {
         assertNull("敏感变量不得作为 username 回显", out.get("username"));
         assertTrue(((List<?>) out.get("unresolved")).contains("username"));
     }
+
+    @Test
+    public void 控制台鉴权秘密引用被拒绝() {
+        Map<String, Object> props = new HashMap<>();
+        props.put("es.rebuild.console.auth.token-secret", "hmac-secret");
+        RemoteClusterConn c = conn();
+        c.setHostRef("es.rebuild.console.auth.token-secret");
+        try {
+            service(props).resolvePreview(c);
+            fail("控制台 token secret 引用必须拒绝");
+        } catch (IllegalArgumentException e) {
+            assertTrue(e.getMessage().contains("不允许"));
+        }
+    }
+
+    @Test
+    public void 字面量控制台秘密占位符同样拒绝() {
+        RemoteClusterConn c = conn();
+        c.setHost("${es.rebuild.console.auth.fallback-password}");
+        try {
+            service(new HashMap<String, Object>()).resolvePreview(c);
+            fail("控制台兜底密码占位符必须拒绝");
+        } catch (IllegalArgumentException e) {
+            assertTrue(e.getMessage().contains("不允许"));
+        }
+    }
+
+    @Test
+    public void 敏感变量作为host时不回显() {
+        Map<String, Object> props = new HashMap<>();
+        props.put("SOURCE_ES_PASSWORD", "secret-host-value");
+        RemoteClusterConn c = conn();
+        c.setHostRef("SOURCE_ES_PASSWORD");
+        Map<String, Object> out = service(props).resolvePreview(c);
+        assertNull("敏感变量不得作为 host 回显", out.get("host"));
+        assertTrue(((List<?>) out.get("unresolved")).contains("host"));
+    }
+
+    @Test
+    public void portRef解析失败不回声原值() {
+        Map<String, Object> props = new HashMap<>();
+        props.put("SOURCE_ES_PORT", "p@ssw0rd");
+        RemoteClusterConn c = conn();
+        c.setPortRef("SOURCE_ES_PORT");
+        try {
+            service(props).resolvePreview(c);
+            fail("非数字端口必须拒绝");
+        } catch (IllegalArgumentException e) {
+            assertTrue("报错文本不得包含原值", !e.getMessage().contains("p@ssw0rd"));
+        }
+    }
 }

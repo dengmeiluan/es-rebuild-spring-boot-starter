@@ -150,7 +150,7 @@ public final class ConsoleConnVisibility {
     public static boolean canSeeHost(ConsolePrincipal p) {
         if (p == null) return true;
         if (p.getRole().atLeast(ConsoleRole.ADMIN)) return true;
-        if (!p.isDelegated() || p.getGrantedPages() == null) return true;
+        if (p.getGrantedPages() == null) return true;
         Set<String> gp = p.getGrantedPages();
         if (gp.isEmpty()) return false;
         if (hasStatic(gp)) return true;
@@ -174,9 +174,9 @@ public final class ConsoleConnVisibility {
         if (snap.visibleIds == null) return true;
         Set<String> ids = snap.nameToIds.get(name.trim());
         if (ids != null) return snap.visibleIds.containsAll(ids);
-        /* 目录外的实名只可能是宿主：仅在目录完整可读且宿主可见时放行；
-           目录被 200 条上限截断时无法排除“未列出的第 201 个连接”，必须拒绝。 */
-        return snap.complete && snap.storeReadable && snap.hostVisible;
+        /* 目录外的实名只认宿主字面量：已删除/未列出的连接实名不得回落宿主
+           （监控文档按连接采集，历史行可能属于已删除连接，不能当作宿主数据下发）。 */
+        return snap.hostVisible && "host".equalsIgnoreCase(name.trim());
     }
 
     static boolean hasStatic(Set<String> gp) {
@@ -190,7 +190,7 @@ public final class ConsoleConnVisibility {
     }
 
     private static boolean pageModelAllows(ConsolePrincipal p, String id) {
-        if (!p.isDelegated() || p.getGrantedPages() == null) return true;
+        if (p.getGrantedPages() == null) return true;
         Set<String> gp = p.getGrantedPages();
         if (gp.isEmpty()) return false;
         if (hasStatic(gp)) return true;

@@ -62,6 +62,8 @@ public class PropertiesAuthDelegate implements ConsoleAuthDelegate {
     private final AtomicLong lastEndpointWarnAt = new AtomicLong(0);
     /** jwt 验签失败 WARN 节流计数（同 endpoint 臂 lastEndpointWarnAt 范式）。 */
     private final AtomicLong lastJwtWarnAt = new AtomicLong(0);
+    /** header 模式公网来源拒识 WARN 节流计数（同范式）。 */
+    private final AtomicLong lastHeaderWarnAt = new AtomicLong(0);
 
     public PropertiesAuthDelegate(EsRebuildProperties.Delegate props) {
         this.props = props;
@@ -196,6 +198,20 @@ public class PropertiesAuthDelegate implements ConsoleAuthDelegate {
     private ConsolePrincipal byHeader(HttpServletRequest request) {
         String userHeader = props.getHeader().getUserHeader();
         if (userHeader.isEmpty()) {
+            return null;
+        }
+        /* 身份头默认由反向网关注入；直连方是公网地址时请求头可被客户端任意伪造
+           （包含角色头→可直取 ADMIN），一律拒识交回内置鉴权。内网网关部署
+           （remoteAddr 为回环/私网/链路本地）不受影响。 */
+        String remote = request.getRemoteAddr();
+        if (remote != null && !remote.trim().isEmpty()
+                && !ConsoleAuthInterceptor.isProxyAddress(remote.trim())) {
+            long now = System.currentTimeMillis();
+            long last = lastHeaderWarnAt.get();
+            if (now - last > WARN_THROTTLE_MS && lastHeaderWarnAt.compareAndSet(last, now)) {
+                LOG.warn("[PropertiesAuthDelegate] header 模式拒绝公网直连来源的身份头 remote={}（{}s 内不再重复告警）",
+                        remote, WARN_THROTTLE_MS / 1000);
+            }
             return null;
         }
         String username = request.getHeader(userHeader);

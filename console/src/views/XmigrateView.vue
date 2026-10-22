@@ -37,7 +37,7 @@
                 style="max-width:420px" placeholder="手动输入连接信息" @update:value="onSrcConnChange" />
             </div>
 
-            <template v-if="!srcConnId">
+            <template v-if="!srcConnId && !connModel">
               <!-- 连接串粘贴 -->
               <div class="xm-paste">
                 <input v-model="connUrl" class="inp mono" placeholder="粘贴连接串一键填充：http(s)://user:pass@host:port" @keydown.enter="parseUrl" />
@@ -646,6 +646,7 @@ function connBody() {
 async function check() {
   /* 探测面（服务端按任意连接串建连）与迁移写同档 rank3——按钮 v-if 之外的直调也收口 */
   if (!canOps.value) { store.notify('warning', '迁移探测需专项或 ADMIN 角色'); return; }
+  if (connModel.value && !srcConnId.value) { store.notify('warning', '连接模型下必须选择已授权的源连接档案'); return; }
   /* 在途互斥闸：闸读收本体首行——fetchCfg 复用 checking 做闸（拉取在途直接短路）
  既有形态在本体收敛，失败面板重试钮同拍双击的两拍 connectCheck 随之消除 */
   if (checking.value) return;
@@ -685,6 +686,7 @@ const { v: cfgCapRows, cycle: cycleCfgRows } = useTierCycle('xm.cfgRows', [XM_CF
 function cfgRows(text: string) { return Math.min(text.split('\n').length, cfgCapRows.value); }
 async function fetchCfg() {
   if (!canOps.value) { store.notify('warning', '迁移探测需专项或 ADMIN 角色'); return; }
+  if (connModel.value && !srcConnId.value) { store.notify('warning', '连接模型下必须选择已授权的源连接档案'); return; }
   if (checking.value) return; /* 提交防重：复用连接检查的 checking 状态位，拉取在途直接短路 */
   checking.value = true;
   cfgErr.value = '';
@@ -849,6 +851,8 @@ function locateJobRow(jobId: string) {
 /* 卸载清 timer——组件销毁后定时器仍会把 hitJobId 置空一次（无害但悬空），
  卸载时显式回收 */
 onBeforeUnmount(() => { if (hitTimer) clearTimeout(hitTimer); });
+/* 中止撤销窗的 3s 定时器同样不得跨页存活。 */
+onBeforeUnmount(() => { if (abortTimer) { clearTimeout(abortTimer); abortTimer = null; } });
 const loadErr = ref('');
 const loadErrRaw = ref<unknown>(null); // ：原始错误对象旁路（喂 errMeta，同 checkErrRaw）
 /* G3-B1：loading 初值 true——首载未完成前不渲染空态（ B6 Watcher 范式）；
@@ -1234,6 +1238,7 @@ function askResume(j: any) {
  「从确认起钉住到 API 落定（含 3s 撤销窗）」——复位权在撤销回调、延时回调与外层取消
  分支；双击确认/重复开弹窗不会重复排第二个 setTimeout；中止钮 :disabled+spinning 同形 */
 const aborting = ref(false);
+let abortTimer: any = null;
 async function doAbort() {
   /* 权限执行体首行门（行级中止钮已有 v-if，此处覆盖菜单/程序化通道） */
   if (!canJobOps(actJob.value)) { store.notify('warning', '迁移操作需专项或 ADMIN 角色'); return; }
@@ -1245,8 +1250,12 @@ async function doAbort() {
     duration: 3000,
     action: { label: '撤销', onClick: () => { cancelled = true; aborting.value = false; store.notify('info', '已撤销中止'); } }
   });
-  setTimeout(async () => {
+  if (abortTimer) clearTimeout(abortTimer);
+  abortTimer = setTimeout(async () => {
+    abortTimer = null;
     if (cancelled) return;
+    /* 离页/降权后不补发：定时窗口内权限可能已变，发车前再判一次执行体。 */
+    if (!canJobOps(job)) { aborting.value = false; return; }
     try {
       await api.xb.abort(jobId, job.srcConnId || undefined);
       store.notify('success', '已中止 ' + jobId);

@@ -737,9 +737,12 @@ export const api = {
 
   /* 控制集群首连向导 —— status 免鉴权，test/apply 仅未绑定开放，rebind 走 ADMIN 高危 */
   setup: {
-    status: () => get<{ bound: boolean; mode: string; endpoint: string | null; appName: string; hostVisible: boolean }>('/setup/status'),
-    test: (c: { url: string; username?: string; password?: string }) => post<any>('/setup/test', c),
-    apply: (c: { url: string; username?: string; password?: string }) => post<any>('/setup/apply', c),
+    status: () => get<{ bound: boolean; mode: string; endpoint: string | null; appName: string; hostVisible: boolean; authEnabled?: boolean; builtinLogin?: boolean; setupTokenRequired?: boolean }>('/setup/status'),
+    /* 可选首连令牌：配置 es.rebuild.console.setup-token 后未绑定窗口必须携带（防匿名绑定）。 */
+    test: (c: { url: string; username?: string; password?: string }, setupToken?: string) =>
+      post<any>('/setup/test', c, undefined, setupToken ? { headers: { 'X-Setup-Token': setupToken } } : undefined),
+    apply: (c: { url: string; username?: string; password?: string }, setupToken?: string) =>
+      post<any>('/setup/apply', c, undefined, setupToken ? { headers: { 'X-Setup-Token': setupToken } } : undefined),
     rebind: (c: { url: string; username?: string; password?: string }) => post<any>('/setup/rebind', c),
   },
 

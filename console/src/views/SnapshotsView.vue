@@ -189,7 +189,8 @@
       <template #footer>
         <div style="display:flex; justify-content:flex-end; gap:var(--sp-2)">
           <button class="btn ghost sm" @click="createOpen = false">取消</button>
-          <button class="btn primary sm" @click="doCreate" :disabled="creating || !createName">
+          <button class="btn primary sm" @click="doCreate" :disabled="creating || !createName || !canOps"
+            :title="canOps ? '' : '当前授权不含快照写权限'">
             <Save :size="11" /> {{ creating ? '提交中…' : '开始快照（异步）' }}
           </button>
         </div>
@@ -240,7 +241,9 @@
       <template #footer>
         <div style="display:flex; justify-content:flex-end; gap:var(--sp-2)">
           <button class="btn ghost sm" @click="restoreOpen = false">取消</button>
-          <button class="btn primary sm" @click="doRestore" :disabled="restoring || (mustSpecifyRestoreIndices && !restoreIndices.trim())">
+          <button class="btn primary sm" @click="doRestore"
+            :disabled="restoring || (mustSpecifyRestoreIndices && !restoreIndices.trim()) || !canOps"
+            :title="canOps ? '' : '当前授权不含快照写权限'">
             <Undo2 :size="11" /> {{ restoring ? '提交中…' : '开始恢复（异步）' }}
           </button>
         </div>

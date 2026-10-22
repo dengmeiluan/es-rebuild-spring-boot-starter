@@ -12,7 +12,15 @@
               <div class="lo-sub">请登录后继续操作</div>
             </div>
           </div>
-          <form @submit.prevent="doLogin">
+          <div v-if="auth.builtinLogin === false" class="lo-host">
+            <ShieldAlert :size="18" class="lo-host-ic" />
+            <div>
+              <div class="lo-host-t">由宿主鉴权接管</div>
+              <div class="lo-host-d">当前部署使用自定义授权器/宿主委托，控制台不提供本地账号登录。请在宿主侧完成认证后重新检测，或刷新页面重试。</div>
+            </div>
+            <button class="btn sm" type="button" @click="retryHost">重新检测</button>
+          </div>
+          <form v-else @submit.prevent="doLogin">
             <label class="lo-label">用户名</label>
             <input v-model.trim="username" class="ipt lo-ipt" autocomplete="username" placeholder="admin" autofocus />
             <label class="lo-label">密码</label>
@@ -36,7 +44,7 @@
 <script setup lang="ts">
 /* 全屏登录遮罩 —— 监听 api.ts 广播的 401 事件，任何请求未授权即弹出 */
 import { ref, onMounted, onBeforeUnmount } from 'vue';
-import { ShieldCheck, LogIn, Loader2, Info } from 'lucide-vue-next';
+import { ShieldCheck, ShieldAlert, LogIn, Loader2, Info } from 'lucide-vue-next';
 import { useAuthStore } from '../stores/auth';
 import { useAppStore } from '../stores/app';
 import { friendlyEsError } from '../utils/esError'; /* ：登录错误一行收口 */
@@ -73,6 +81,11 @@ function onUnauthorized() {
   auth.requireLogin();
 }
 
+function retryHost() {
+  auth.requireLogin();
+  void auth.probe();
+}
+
 onMounted(() => window.addEventListener('es-console:unauthorized', onUnauthorized));
 onBeforeUnmount(() => window.removeEventListener('es-console:unauthorized', onUnauthorized));
 </script>
@@ -85,6 +98,11 @@ onBeforeUnmount(() => window.removeEventListener('es-console:unauthorized', onUn
   animation: lo-in .18s ease;
 }
 @keyframes lo-in { from { opacity: 0; } }
+.lo-host { display: flex; align-items: flex-start; gap: var(--sp-2); padding: var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); }
+.lo-host-ic { flex: none; color: var(--warn); margin-top: 1px; }
+.lo-host-t { color: var(--tx1); font-weight: 650; margin-bottom: var(--sp-1); }
+.lo-host-d { line-height: 1.5; }
+.lo-host .btn { margin-left: auto; flex: none; }
 .lo-card {
   width: 360px; max-width: 90vw; padding: 28px 28px 22px; border-radius: var(--r-l);
   background: var(--bg1); border: 1px solid var(--line); box-shadow: var(--shadow-pop);

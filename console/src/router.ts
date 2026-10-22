@@ -65,22 +65,59 @@ export function normalizeRoutePath(path: string): string {
    的死页面，而 conn:host:xxx 反而被隐藏。 */
 export const HOST_BOUND_PAGES: ReadonlySet<string> = new Set(['system', 'config-drift']);
 
+export type EnvAllowsFn = (pageKey: string, targetId?: string | null) => boolean;
+
 export function pageAllowed(
   grantedPages: readonly string[] | null,
   path: string,
   targetId?: string | null,
+  envAllows?: EnvAllowsFn,
+  role?: string | null,
 ): boolean {
-  if (grantedPages == null) return true;
   const item = NAV_ITEMS.find(n => n.path === normalizeRoutePath(path));
   if (!item) return true;
-  const eff = effectivePagesForTarget(
-    grantedPages, HOST_BOUND_PAGES.has(item.pageKey) ? 'host' : targetId);
-  const tid = !targetId || String(targetId).toLowerCase() === 'host' ? 'host' : targetId;
-  /* 只有 conn:{tid}:w:rest 写键才把 DevTools 页面视为可达；静态 rest 页在纯静态模型
-     仍受 ADMIN 角色门约束，给低角色展示入口只会制造必 403 的死页面。 */
-  const restWriter = grantedPages.some(k => k === 'conn:' + tid + ':w:rest');
-  return eff !== null && (eff.has(item.pageKey)
-    || (item.pageKey === 'devtools' && restWriter));
+  if (grantedPages == null) {
+    /* 内置非 ADMIN 的 REST/DevTools 静态页入口是死页（后端 requiredRole=ADMIN）；
+       无鉴权部署/探测中 role 为空，保持全量可见语义。 */
+    if (role && role !== 'ADMIN' && (item.pageKey === 'rest' || item.pageKey === 'devtools')) {
+      return false;
+    }
+    return true;
+  }
+  const pageTarget = HOST_BOUND_PAGES.has(item.pageKey) ? 'host' : targetId;
+  const eff = effectivePagesForTarget(grantedPages, pageTarget);
+  const tid = !pageTarget || String(pageTarget).toLowerCase() === 'host' ? 'host' : pageTarget;
+  const envOk = (key: string, target?: string | null) => !envAllows || envAllows(key, target);
+  const connKey = (page: string) => grantedPages.includes('conn:' + tid + ':' + page)
+    || grantedPages.includes('conn:' + tid + ':w:' + page);
+  /* REST/DevTools 的执行门对静态页授权仍要求 ADMIN（后端 requiredRole=ADMIN）；
+     pageAllowed 的非 ADMIN 调用面只认连接键，避免静态 rest/devtools 页露出必 403 的死入口。
+     ADMIN 在守卫/侧栏/命令面板均短路 pageAllowed，不受影响。 */
+  if (item.pageKey === 'rest') {
+    return connKey('rest') && envOk('rest', tid);
+  }
+  if (item.pageKey === 'devtools') {
+    if (connKey('devtools') && envOk('devtools', tid)) return true;
+    if (grantedPages.includes('conn:' + tid + ':w:rest') && envOk('rest', tid)) return true;
+    return false;
+  }
+  if (eff !== null && eff.has(item.pageKey) && envOk(item.pageKey, tid)) return true;
+  /* security 审计读是 host-scope：当前目标无该页时，conn:host:security 仍应打开入口
+     （后端 pageScope 回退宿主页集，行级仍只看宿主事件）。 */
+  if (item.pageKey === 'security'
+      && (grantedPages.includes('security')
+        || grantedPages.includes('conn:host:security')
+        || grantedPages.includes('conn:host:w:security'))) return true;
+  /* 迁移作业的 X-Es-Target 随表单源连接走，不跟顶栏：任何连接上的 xmigrate
+     页授权都应让页面可达（否则源连接已授权、顶栏在宿主时菜单恒隐藏）。
+     环境模板按授予该页的连接自身 env 收缩。 */
+  if (item.pageKey === 'xmigrate') {
+    for (const g of grantedPages) {
+      const m = /^conn:([^:]+):(?:w:)?xmigrate$/.exec(g);
+      if (m && envOk('xmigrate', m[1])) return true;
+    }
+  }
+  return false;
 }
 
 /* 2.5.0 页面级授权：拒绝时的统一跳转构造（守卫/App 复核共用）。放行返回 null。 */
@@ -88,8 +125,10 @@ export function pageDeniedRedirect(
   grantedPages: readonly string[] | null,
   path: string,
   targetId?: string | null,
+  envAllows?: EnvAllowsFn,
+  role?: string | null,
 ) {
-  if (pageAllowed(grantedPages, path, targetId)) return null;
+  if (pageAllowed(grantedPages, path, targetId, envAllows, role)) return null;
   const item = NAV_ITEMS.find(n => n.path === normalizeRoutePath(path))!;
   return { path: '/forbidden', query: { page: item.pageKey, name: item.name } };
 }
@@ -219,7 +258,8 @@ router.beforeEach((to) => {
   const auth = useAuthStore();
   /* 超级管理员全局可见：宿主白名单/连接键不拦 ADMIN */
   if (auth.isAdmin()) return true;
-  return pageDeniedRedirect(auth.grantedPages, to.path, useAppStore().target) ?? true;
+  return pageDeniedRedirect(auth.grantedPages, to.path, useAppStore().target,
+    auth.envAllows, auth.me?.role) ?? true;
 });
 
 /* 标签页标题随页面切换，多开标签可区分 */

@@ -219,10 +219,16 @@ const nodeSeries = ref<Record<string, NodeSeries>>({});
  连接键感知——grantedPages 为 conn:{id}:{page} 形态时裸 includes
  恒 false（连接模型用户有 diag 授权也被静默跳过=能力反向丢失）；按当前目标解析
  有效页集判定（与 router.effectivePagesForTarget 同构）。 */
-      const eff = auth.isAdmin() ? null : effectivePagesForTarget(auth.grantedPages, app.target || 'host');
-      const canDiag = eff == null || eff.has('diag');
+      const target = app.target || 'host';
+      const admin = auth.isAdmin();
+      const eff = admin ? null : effectivePagesForTarget(auth.grantedPages, target);
+      /* env 模板封顶与后端 effectivePages 同口径：环境未开放的页面不轮询（否则每拍 403）。
+         ADMIN 不受页面门/env 模板约束（后端 preHandle 对 ADMIN 直接放行）。 */
+      const canAny = (keys: string[]) => admin || eff == null
+        || keys.some(k => eff.has(k) && auth.envAllows(k, target));
+      const canDiag = canAny(['diag']);
       /* 节点简要统计归属 overview/live/topology；无权目标不轮询，避免每拍 403 刷审计。 */
-      const canNodes = eff == null || eff.has('topology') || eff.has('overview') || eff.has('live');
+      const canNodes = canAny(['topology', 'overview', 'live']);
       const [h, ns, pt] = await Promise.all([
         /* 只取 clusterHealth（轻量），不拉 health-report 的全量索引扫描——后台 15s/前台 5s 采样，8 小时挂着省大量资源 */
         api.clusterHealth().catch(() => null),

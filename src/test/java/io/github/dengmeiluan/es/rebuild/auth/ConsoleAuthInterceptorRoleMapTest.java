@@ -60,6 +60,17 @@ public class ConsoleAuthInterceptorRoleMapTest {
     }
 
     @Test
+    public void GET读端点不因写关键词提档() {
+        /* /cluster/ilm/policies 含 /cluster/ilm/policy 子串，但 GET 是观测读，不能提 rank3。 */
+        assertEquals(ConsoleRole.VIEWER,
+                ConsoleAuthInterceptor.requiredRole("GET", "/internal/es/index/cluster/ilm/policies"));
+        assertEquals(ConsoleRole.VIEWER,
+                ConsoleAuthInterceptor.requiredRole("GET", "/internal/es/index/cluster/ilm/explain"));
+        assertEquals(ConsoleRole.REBUILD_OP,
+                ConsoleAuthInterceptor.requiredRole("POST", "/internal/es/index/cluster/ilm/start"));
+    }
+
+    @Test
     public void 危险级重划_观测读降档与漏网写升档() {
         /* adhoc 的 GET（任务列表/就绪检查）是观测面：裸词 "/adhoc-rebuild" 退役后 VIEWER 可读 */
         assertEquals(ConsoleRole.VIEWER,

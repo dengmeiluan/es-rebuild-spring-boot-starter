@@ -64,10 +64,10 @@
               <PickCurrentIdxBtn @pick="cIndex = store.pickedIdx" />
             </div>
           </label>
-          <label class="alv-chk"><input type="checkbox" v-model="cWrite" /><span>is_write_index</span></label>
-          <label class="alv-f"><span>routing（可选）</span><input v-model="cRouting" class="alv-fi" placeholder="留空不设" /></label>
+          <label v-if="canFullAlias" class="alv-chk"><input type="checkbox" v-model="cWrite" /><span>is_write_index</span></label>
+          <label v-if="canFullAlias" class="alv-f"><span>routing（可选）</span><input v-model="cRouting" class="alv-fi" placeholder="留空不设" /></label>
         </div>
-        <label class="alv-f alv-f-block">
+        <label v-if="canFullAlias" class="alv-f alv-f-block">
           <div class="alv-f-hd">
             <span>filter DSL（可选，形如 {"term":{"status":1}}）</span>
             <!-- filter 编辑框高度三档循环钮（ra.script-h 同款形态），useTierCycle('aliases.filterH') 跨会话记忆 -->
@@ -127,7 +127,7 @@
         </div>
         <div class="alv-sw-hint">remove + add 在一次 <code>POST /_aliases</code> 里原子完成，查询方零感知——和 rebuild 内核同款机制</div>
         <div class="alv-panel-act">
-          <button v-if="canOps" class="btn sm primary" @click="doSwitch" :disabled="!swFrom || !swTo || swFrom === swTo || acting"><ArrowLeftRight :size="11" /> 原子切换</button>
+          <button v-if="canFullAlias" class="btn sm primary" @click="doSwitch" :disabled="!swFrom || !swTo || swFrom === swTo || acting"><ArrowLeftRight :size="11" /> 原子切换</button>
         </div>
       </template>
     </div>
@@ -178,7 +178,7 @@
             <StatusPill v-else-if="g.writeCount === 1" tone="g" label="正常" />
           </div>
           <div class="alv-g-hd-r">
-            <button v-if="canOps" class="btn sm" @click="openSwitch(g)" :title="'零停机原子切换指向'">
+            <button v-if="canFullAlias" class="btn sm" @click="openSwitch(g)" :title="'零停机原子切换指向'">
               <ArrowLeftRight :size="11" /> 切换
             </button>
             <button class="btn sm" @click="goInspect(g.alias)" :title="'查看别名详情'">
@@ -217,10 +217,10 @@
                   </n-popover>
                 </MetaStrip>
               </template>
-              <button v-if="canOps && g.rows.length > 1 && r.isWriteIndex !== true" class="btn sm ghost" :disabled="acting" @click="setWrite(g, r.index)" :title="'设为唯一 write index（其余自动设 false）'">
+              <button v-if="canFullAlias && g.rows.length > 1 && r.isWriteIndex !== true" class="btn sm ghost" :disabled="acting" @click="setWrite(g, r.index)" :title="'设为唯一 write index（其余自动设 false）'">
                 设写
               </button>
-              <button v-if="canOps" :aria-label="'解绑此索引'" class="btn sm ghost alv-danger" :disabled="acting" @click="unbind(g.alias, r.index)" :title="'解绑此索引'">
+              <button v-if="canFullAlias" :aria-label="'解绑此索引'" class="btn sm ghost alv-danger" :disabled="acting" @click="unbind(g.alias, r.index)" :title="'解绑此索引'">
                 <Trash2 :size="10" />
               </button>
               <button :aria-label="'设为当前索引'" class="btn sm ghost" @click="pickIndex(r.index)" :title="'设为当前索引'">
@@ -294,6 +294,18 @@ const store = useAppStore();
  rank3+ 可见；VIEWER/OPERATOR 只读观测（不再给会 403 的按钮） */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/alias-actions', store.target));
+/* config-validator 写键只允许 add（建索引后挂载别名）：remove/switch/unbind 必须另有
+   aliases 写键（或静态 aliases + 写档角色），与后端 aliasActionsAddOnly 同口径。 */
+const canFullAlias = computed(() => {
+  if (auth.isAdmin()) return true;
+  if (auth.me == null) return canOps.value;
+  const gp = auth.grantedPages;
+  if (!Array.isArray(gp)) return canOps.value;
+  const tid = !store.target || String(store.target).toLowerCase() === 'host' ? 'host' : store.target;
+  /* env 模板与页面写门同口径：环境未开放 aliases 时，写键在场也不展示写控件。 */
+  if (gp.includes('conn:' + tid + ':w:aliases')) return auth.envAllows('aliases', tid);
+  return gp.includes('aliases') && auth.can('ops') && auth.envAllows('aliases', tid);
+});
 
 /* 原始 IO 快查（546 六页同款三件套）——/cluster/alias-actions 写通道独占
  （GET /cluster/aliases 会被 IndexHub 顶掉，勿用）；判空 rec=null 时 notify 引导，不开空弹窗 */
@@ -508,6 +520,7 @@ function openCreate() {
   panel.value = { mode: 'create', alias: '' };
 }
 function openSwitch(g: Group) {
+  if (!canFullAlias.value) { store.notify('warning', '当前授权仅允许新增别名（add）'); return; }
   const w = g.rows.find(r => r.isWriteIndex === true);
   swFrom.value = (w || g.rows[0])?.index || '';
   swTo.value = ''; swWrite.value = true;
@@ -537,12 +550,16 @@ async function execActions(actions: any[], okMsg: string, opts?: { stayOpen?: bo
 async function doCreate() {
   if (!canOps.value) { store.notify('warning', '别名写操作需专项或 ADMIN 角色'); return; }
   const add: any = { index: cIndex.value.trim(), alias: cAlias.value.trim() };
-  if (cWrite.value) add.is_write_index = true;
-  if (cRouting.value.trim()) add.routing = cRouting.value.trim();
-  if (cFilter.value.trim()) {
-    try { add.filter = JSON.parse(cFilter.value); }
-    /* 裸 e.message（浏览器原生 JSON 解析文案）合并 friendlyEsError（522 别名操作失败同源口径） */
-    catch (e: any) { store.notify('error', 'filter DSL 解析失败：' + friendlyEsError(String(e?.message ?? e))); return; }
+  /* add-only 授权（config-validator 写键）后端只接受 index+alias：扩展参数一律不发送，
+     不能把用户填写的 is_write_index/routing/filter 变成必 400 的请求。 */
+  if (canFullAlias.value) {
+    if (cWrite.value) add.is_write_index = true;
+    if (cRouting.value.trim()) add.routing = cRouting.value.trim();
+    if (cFilter.value.trim()) {
+      try { add.filter = JSON.parse(cFilter.value); }
+      /* 裸 e.message（浏览器原生 JSON 解析文案）合并 friendlyEsError（522 别名操作失败同源口径） */
+      catch (e: any) { store.notify('error', 'filter DSL 解析失败：' + friendlyEsError(String(e?.message ?? e))); return; }
+    }
   }
   /* W10：连续录入——create 成功后面板保留，清空输入并重聚焦别名框；
  批量建 N 个别名不再「关面板→点新建」×N（每轮 -2 击）。物理索引刻意保留：
@@ -560,6 +577,7 @@ async function doCreate() {
 
 async function doSwitch() {
   if (!canOps.value) { store.notify('warning', '别名写操作需专项或 ADMIN 角色'); return; }
+  if (!canFullAlias.value) { store.notify('warning', '当前授权仅允许新增别名（add）'); return; }
   const alias = panel.value!.alias;
   const okGo = await askConfirm({
     title: '原子切换别名指向',
@@ -579,6 +597,7 @@ async function doSwitch() {
 
 async function setWrite(g: Group, idx: string) {
   if (!canOps.value) { store.notify('warning', '别名写操作需专项或 ADMIN 角色'); return; }
+  if (!canFullAlias.value) { store.notify('warning', '当前授权仅允许新增别名（add）'); return; }
   const okGo = await askConfirm({
     title: '切换 write index',
     level: 'warn',
@@ -593,6 +612,7 @@ async function setWrite(g: Group, idx: string) {
 
 async function unbind(alias: string, index: string) {
   if (!canOps.value) { store.notify('warning', '别名写操作需专项或 ADMIN 角色'); return; }
+  if (!canFullAlias.value) { store.notify('warning', '当前授权仅允许新增别名（add）'); return; }
   const okGo = await askConfirm({
     title: '解绑别名',
     level: 'warn',
@@ -638,7 +658,7 @@ const aliasMenuItems = computed(() => {
       store.notify(ok ? 'success' : 'error', ok ? `已复制 ${members.length} 个成员索引` : '复制失败');
     } },
     /* 切换=alias-actions 写操作（CLUSTER 档）——低权角色菜单不给出 */
-    ...(canOps.value ? [{ key: 'switch', label: '零停机切换指向…', icon: ArrowLeftRight, sep: true, run: () => openSwitch(g) }] : []),
+    ...(canFullAlias.value ? [{ key: 'switch', label: '零停机切换指向…', icon: ArrowLeftRight, sep: true, run: () => openSwitch(g) }] : []),
     { key: 'inspect', label: '查看别名详情', icon: ExternalLink, run: () => goInspect(g.alias) },
     { key: 'query', label: 'DSL 查询此别名', icon: TerminalSquare, run: () => goQuery(g.alias) },
   ];
@@ -658,14 +678,14 @@ const rowMenuItems = computed(() => {
     { key: 'query', label: 'DSL 查询此索引', icon: TerminalSquare, run: () => { store.pick(m.index); router.push('/search'); } },
   ];
   /* 设写/解绑=alias-actions 写操作（CLUSTER 档）——低权角色菜单不给出 */
-  if (canOps.value && m.isWrite !== true) {
+  if (canFullAlias.value && m.isWrite !== true) {
     items.push({ key: 'set-write', label: '设为唯一可写…', icon: Save, sep: true, run: () => {
       const g = rowMenu.value!.g;
       const r = g.rows.find(x => x.index === m.index);
       if (r) setWrite(g, m.index);
     } });
   }
-  if (canOps.value) {
+  if (canFullAlias.value) {
     items.push({ key: 'unbind', label: '解绑此索引…', icon: Trash2, danger: true, sep: true, run: () => unbind(m.g.alias, m.index) });
   }
   return items;

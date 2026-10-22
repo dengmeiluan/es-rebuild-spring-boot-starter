@@ -13,7 +13,7 @@
 
     <groupId>io.github.dengmeiluan</groupId>
     <artifactId>es-rebuild-standalone</artifactId>
-    <version>1.0.36</version>
+    <version>1.0.37</version>
     <name>es-rebuild-standalone</name>
     <description>Standalone distribution of the ES rebuild ops console: java -jar and you have the
         full console (Setup wizard, multi-cluster management, adhoc rebuilds) without embedding it
@@ -30,7 +30,7 @@
             <groupId>io.github.dengmeiluan</groupId>
             <artifactId>es-rebuild-spring-boot-starter</artifactId>
             <!-- 与仓根 es-rebuild-spring-boot-starter 版本同步发布，StandalonePomContractTest 防漂移 -->
-            <version>1.0.36</version>
+            <version>1.0.37</version>
         </dependency>
 
         <!-- 独立部署自带的运行时栈：内嵌 web 服务器 + ES 客户端。

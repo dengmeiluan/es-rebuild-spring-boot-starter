@@ -120,7 +120,9 @@ public class CrossClusterMigrateService {
         String k = ref.trim();
         if (k.isEmpty()) return false;
         if (k.matches("(SOURCE|ES|MIGRATE|QUOTEHUB)_[A-Z0-9_]+")) return true;
-        return k.startsWith("es.rebuild.migrate.") || k.startsWith("es.rebuild.console.");
+        /* 控制台鉴权/令牌配置属本应用秘密，迁移源连接解析面绝不开放（token-secret 泄露=可伪造 ADMIN）。
+           仅保留迁移自身的连接参数域。 */
+        return k.startsWith("es.rebuild.migrate.");
     }
 
     private static boolean sensitiveRef(String ref) {
@@ -178,7 +180,8 @@ public class CrossClusterMigrateService {
         try {
             return Integer.parseInt(v.trim());
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("portRef 解析出的端口非数字: " + v);
+            /* 不回声解析值：portRef 可能误指向秘密配置，报错文本同样会泄露。 */
+            throw new IllegalArgumentException("portRef 解析出的值不是数字（值不回声）");
         }
     }
 
@@ -189,16 +192,21 @@ public class CrossClusterMigrateService {
     public Map<String, Object> resolvePreview(RemoteClusterConn raw) {
         RemoteClusterConn r = resolveConn(raw);
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("scheme", r.getScheme());
-        out.put("host", r.getHost());
-        out.put("port", r.getPort());
+        boolean sensitiveScheme = containsSensitivePlaceholder(raw.getScheme());
+        boolean sensitiveHost = sensitiveRef(raw.getHostRef()) || containsSensitivePlaceholder(raw.getHost());
+        boolean sensitivePort = sensitiveRef(raw.getPortRef());
+        out.put("scheme", sensitiveScheme ? null : r.getScheme());
+        out.put("host", sensitiveHost ? null : r.getHost());
+        out.put("port", sensitivePort ? null : r.getPort());
         boolean sensitiveUser = sensitiveRef(raw.getUserRef()) || containsSensitivePlaceholder(raw.getUsername());
         out.put("username", sensitiveUser ? null : r.getUsername());
         out.put("passwordResolved", r.getPassword() != null && !r.getPassword().isEmpty());
         List<String> unresolved = new ArrayList<>();
-        if (r.getHost() == null || r.getHost().isEmpty()) {
+        if (sensitiveScheme) unresolved.add("scheme");
+        if (sensitiveHost || r.getHost() == null || r.getHost().isEmpty()) {
             unresolved.add("host");
         }
+        if (sensitivePort) unresolved.add("port");
         // 仅当用户给了 ref/${} 但没解析出来时，才把 user/password 记为未解析
         if (sensitiveUser || (refRequested(raw.getUserRef(), raw.getUsername())
                 && (r.getUsername() == null || r.getUsername().isEmpty()))) {
@@ -233,7 +241,13 @@ public class CrossClusterMigrateService {
     public List<Map<String, Object>> connectCheck(RemoteClusterConn conn) {
         RemoteClusterConn resolved = resolveConn(conn);
         try (RestHighLevelClient remote = remoteClientFactory.build(resolved)) {
-            return new EsIndexAdmin(remote).listClusterIndices();
+            EsIndexAdmin admin = new EsIndexAdmin(remote);
+            List<Map<String, Object>> rows = admin.listClusterIndices();
+            List<Map<String, Object>> out = new ArrayList<>();
+            for (Map<String, Object> row : rows) {
+                if (!admin.isControlIndex(String.valueOf(row.get("index")))) out.add(row);
+            }
+            return out;
         } catch (Exception e) {
             throw new IllegalStateException("连接旧集群失败 [" + resolved.endpoint() + "]: " + rootMsg(e));
         }
@@ -247,6 +261,7 @@ public class CrossClusterMigrateService {
         if (sourceIndex == null || sourceIndex.trim().isEmpty()) {
             throw new IllegalArgumentException("sourceIndex 不能为空");
         }
+        localAdmin.guardExactDataIndex(sourceIndex.trim());
         RemoteClusterConn resolved = resolveConn(conn);
         try (RestHighLevelClient remote = remoteClientFactory.build(resolved)) {
             RestClient ll = remote.getLowLevelClient();
@@ -372,6 +387,9 @@ public class CrossClusterMigrateService {
         RestHighLevelClient remote = remoteClientFactory.build(resolved);
         boolean tuned = false;
         String dest = persisted.getDestIndex();
+        /* 旧作业（可能由历史版本写入）续跑前同样过精确业务索引守卫。 */
+        localAdmin.guardExactDataIndex(String.valueOf(persisted.getSourceIndex()));
+        localAdmin.guardExactDataIndex(String.valueOf(dest));
         Map<String, String> savedSettings = persisted.getSavedSettings() == null
                 ? new LinkedHashMap<>() : new LinkedHashMap<>(persisted.getSavedSettings());
         try {
@@ -487,7 +505,13 @@ public class CrossClusterMigrateService {
      */
     public List<Map<String, Object>> destIndices() {
         try {
-            return new EsIndexAdmin(localClient.get()).listClusterIndices();
+            EsIndexAdmin admin = new EsIndexAdmin(localClient.get());
+            List<Map<String, Object>> rows = admin.listClusterIndices();
+            List<Map<String, Object>> out = new ArrayList<>();
+            for (Map<String, Object> row : rows) {
+                if (!admin.isControlIndex(String.valueOf(row.get("index")))) out.add(row);
+            }
+            return out;
         } catch (Exception e) {
             throw new IllegalStateException("读取目标（宿主）集群索引清单失败: " + rootMsg(e));
         }
@@ -902,7 +926,7 @@ public class CrossClusterMigrateService {
         throw new IllegalStateException(msg);
     }
 
-    private void validate(MigrateRequest req) {
+    void validate(MigrateRequest req) {
         if (req.getConn() == null) {
             throw new IllegalArgumentException("缺少旧集群连接信息 conn");
         }
@@ -914,6 +938,10 @@ public class CrossClusterMigrateService {
         if (isBlank(req.getDestIndex())) {
             throw new IllegalArgumentException("destIndex 不可为空");
         }
+        /* 源/目标都只能是精确业务索引：控制面/系统索引、通配、列表、date-math 一律不允许。
+           源头控制索引被迁走等于把账号/连接/审计数据复制到业务索引；目标控制索引会被覆盖。 */
+        localAdmin.guardExactDataIndex(req.getSourceIndex().trim());
+        localAdmin.guardExactDataIndex(req.getDestIndex().trim());
         if (req.getDestCreateMode() == DestCreateMode.FROM_ENTITY && isBlank(req.getIndexKey())) {
             throw new IllegalArgumentException("destCreateMode=FROM_ENTITY 必须提供已注册的 indexKey");
         }

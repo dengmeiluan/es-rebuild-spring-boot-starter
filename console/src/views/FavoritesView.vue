@@ -122,6 +122,8 @@ import { Star, Download, Upload, Trash2, Copy, Play, Code2, Terminal, Map as Map
 import SearchFilterBar from '../components/SearchFilterBar.vue';
 
 import PageHeader from '../components/PageHeader.vue';import { useAppStore } from '../stores/app';
+import { useAuthStore } from '../stores/auth';
+import { pageAllowed } from '../router';
 import MarkText from '../components/MarkText.vue';
 import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue'; /* ：fv-card-meta 统一件（时间戳段）；：tag 段合并 items */
 
@@ -136,6 +138,7 @@ import { useHitLocate } from '../composables/useHitNav';
 import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
+const auth = useAuthStore();
 const router = useRouter();
 /* 类型/关键词过滤进 URL */
 const kind = useScopedDraft('kind', { route: 'favorites' }, 'all').text as Ref<'all' | 'dsl' | 'rest' | 'route' | 'template'>;
@@ -231,7 +234,9 @@ function preview(payload: any): string {
 
 /* 重放走统一真链路（utils/favReplay），此前预填键无人消费，「打开」是假动作 */
 function replay(it: any) {
-  replayFavorite(it, router, (t, m) => store.notify(t, m));
+  replayFavorite(it, router, (t, m) => store.notify(t, m),
+    (path) => auth.isAdmin()
+      || pageAllowed(auth.grantedPages, path, store.target, auth.envAllows, auth.me?.role));
 }
 
 function copyPayload(it: any) {

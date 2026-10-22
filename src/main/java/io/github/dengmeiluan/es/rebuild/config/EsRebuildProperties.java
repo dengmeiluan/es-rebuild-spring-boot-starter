@@ -237,6 +237,12 @@ public class EsRebuildProperties {
          * （与控制集群自举档案同目录）。仅 sqlite 档消费。
          */
         private String sqlitePath = "";
+        /**
+         * 未绑定首连初始化令牌（可选加固）：非空时 setup/test|apply 必须携带
+         * {@code X-Setup-Token}，防止暴露在网络的未绑定实例被匿名绑定到攻击者集群。
+         * 默认空=保持历史首连向导行为；委托部署仍以宿主 ADMIN 身份为准。
+         */
+        private String setupToken = "";
         /** 2.5.0 菜单 SPI：页面级授权（仅 delegated 身份 + 宿主下发 grantedPages 时生效）。 */
         private PageAuth pageAuth = new PageAuth();
         /** 连接中心自动同步参数(前缀 es.rebuild.console.conn-sync,连接中心自动同步批)。 */
@@ -258,6 +264,8 @@ public class EsRebuildProperties {
         public void setConnProbeIntervalSeconds(int connProbeIntervalSeconds) { this.connProbeIntervalSeconds = connProbeIntervalSeconds; }
         public boolean isHostClusterVisible() { return hostClusterVisible; }
         public void setHostClusterVisible(boolean hostClusterVisible) { this.hostClusterVisible = hostClusterVisible; }
+        public String getSetupToken() { return setupToken; }
+        public void setSetupToken(String setupToken) { this.setupToken = setupToken; }
         public String getStore() { return store; }
         public void setStore(String store) { this.store = store; }
         public String getSqlitePath() { return sqlitePath; }

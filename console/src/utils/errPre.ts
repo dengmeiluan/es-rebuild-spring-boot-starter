@@ -20,7 +20,7 @@
  * （纯增量，向后兼容）：errMeta(err) 帮手——调用方不再手拼 meta。
  * ApiError 实例（api.ts 五百三十三/透传 code/endpoint）直接读两字段；
  * 普通 Error/字符串兼容降级：无 code/endpoint 的对象出空 meta（errPreHtml 对空 meta
- * 输出与单参一致，见 errPre524 批锚），null/undefined 也不抛。双参改用由 Lead 收口波
+ * 输出与单参一致，见既有行为锚），null/undefined 也不抛。双参改用由 Lead 收口波
  * 统一接线，只落帮手本体。
  */
 import { highlightDslJson } from './jsonc';

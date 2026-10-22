@@ -97,8 +97,12 @@
           </div>
         </div>
         <div class="wt-card-r">
-          <button class="btn ghost sm" aria-label="编辑此 watch" title="在 DevTools 编辑此 watch（PUT 现定义入 body）" @click="toDevToolsEdit(w)"><Pencil :size="12" /></button>
-          <button class="btn ghost sm" title="在 DevTools 打开 GET _watcher/watch/<id>" @click="toDevTools(w)">
+          <button class="btn ghost sm" aria-label="编辑此 watch" :disabled="!canDevtools"
+            :title="canDevtools ? '在 DevTools 编辑此 watch（PUT 现定义入 body）' : 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'"
+            @click="toDevToolsEdit(w)"><Pencil :size="12" /></button>
+          <button class="btn ghost sm" :disabled="!canDevtools"
+            :title="canDevtools ? '在 DevTools 打开 GET _watcher/watch/<id>' : 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'"
+            @click="toDevTools(w)">
             <TerminalSquare :size="12" /> DevTools
           </button>
           <button class="btn ghost sm" @click="copyBody(w)"><Copy :size="12" /> 复制</button>
@@ -122,6 +126,7 @@ import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, 
 import RawIoModal from '../components/RawIoModal.vue';
 import { useScopedDraft } from '../composables/useScopedDraft';
 import { useAppStore } from '../stores/app';
+import { useAuthStore } from '../stores/auth';
 import { friendlyEsError } from '../utils/esError';
 import { watcherStateZh, watcherStateTone } from '../utils/esEnumZh'; /* ：watcher_state 中文主显收口件 */
 
@@ -139,7 +144,11 @@ import { useHitLocate } from '../composables/useHitNav';
 import { writeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
+const auth = useAuthStore();
 const router = useRouter();
+/* DevTools 跳转是页面入口，不是当前页写权：无 DevTools/REST 页写键时按钮禁用并说明。 */
+const canDevtools = computed(() => auth.canEndpoint('admin', 'POST',
+  '/internal/es/index/cluster/devtools/execute', store.target));
 
 /* 原始 IO 三件套（RemoteClusters 557 同款）；判空不开空弹窗 */
 const rawIoShow = ref(false);
@@ -266,6 +275,7 @@ function copyBody(w: any) {
 
 /* -f 跨工具联动——在 DevTools 里打开该 watch 定义，改完直接 PUT 回去 */
 function toDevTools(w: any) {
+  if (!canDevtools.value) { store.notify('warning', 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'); return; }
   writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
     title: 'watch/' + w._id, method: 'GET', path: '/_watcher/watch/' + encodeURIComponent(w._id), run: true,
   }));
@@ -274,6 +284,7 @@ function toDevTools(w: any) {
 
 /* 真空态快捷起步——示例 watch 送入 DevTools（不自动执行） */
 function toDevToolsSample() {
+  if (!canDevtools.value) { store.notify('warning', 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'); return; }
   const body = JSON.stringify({
     trigger: { schedule: { interval: '1h' } },
     input: { search: { request: { indices: ['*'], body: { query: { match_all: {} } } } } },
@@ -287,6 +298,7 @@ function toDevToolsSample() {
 
 /* PUT 编辑变体——GET 现定义入 body，改完直接 PUT 回写（免手工复制粘贴） */
 function toDevToolsEdit(w: any) {
+  if (!canDevtools.value) { store.notify('warning', 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'); return; }
   const body = JSON.stringify(w.watch ?? w, null, 2);
   writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
     title: 'watch/' + w._id + ' 编辑', method: 'PUT',

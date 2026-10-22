@@ -39,9 +39,19 @@ export function replayFavorite(
   it: { kind: string; payload?: any; tags?: string[] },
   router: Router,
   notify: (type: 'success' | 'warning', msg: string) => void,
+  canOpen?: (path: string) => boolean,
 ) {
   const p = it.payload || {};
   const tags: string[] = it.tags || [];
+  /* 重放前先过页面门：目标页不可见时不写 carry 键、不 push、不报「已恢复」，
+     避免路由守卫跳到 /forbidden 而 toast 仍宣称成功。 */
+  const dest = it.kind === 'route'
+    ? (typeof p.path === 'string' && p.path ? p.path : '/overview')
+    : replayTarget(it).path;
+  if (canOpen && dest && !canOpen(dest)) {
+    notify('warning', `当前身份无「${dest}」页面权限，已取消打开`);
+    return;
+  }
   /* payload 缺关键字段（旧格式/手工导入损坏）不再静默假成功——
  如实告知但仍跳到目标视图，现场可手动补全，不留死胡同 */
   const partial = (view: string) =>

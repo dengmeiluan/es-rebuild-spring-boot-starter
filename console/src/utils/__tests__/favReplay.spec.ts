@@ -81,6 +81,14 @@ describe('replayFavorite 正常分发矩阵', () => {
     expect(sessionStorage.getItem('es-console.sandbox.body')).toBe('{"query":{}}');
     expect(pushed[0]).toEqual({ path: '/search', query: { mode: 'sandbox' } });
   });
+
+  it('页面门拒绝时不写 carry/不跳转/不报已恢复', () => {
+    replayFavorite({ kind: 'dsl', payload: { body: '{"query":{}}' } }, router, notify, () => false);
+    expect(pushed).toHaveLength(0);
+    expect(sessionStorage.getItem('es-console.dsl.carry')).toBeNull();
+    expect(notices[0].type).toBe('warning');
+    expect(notices[0].msg).toContain('无');
+  });
 });
 
 describe('replayFavorite 损坏 payload 容错（R56：不再静默假成功）', () => {

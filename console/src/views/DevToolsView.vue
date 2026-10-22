@@ -49,7 +49,9 @@
         <!-- W3-T11：端点目录补全渗透；@keydown.ctrl.enter 经 attrs 落根 div，choose 后冒泡仍触发 run（选中即执行） -->
         <EndpointPathInput v-model="cur.path" class="dt-path" placeholder="/index/_search"
           @endpoint="onEndpoint" @keydown.ctrl.enter="run" />
-        <button v-if="canAdmin" class="btn primary sm btn-run-lock" @click="run" :disabled="cur.busy">
+        <button v-if="canAdmin" class="btn primary sm btn-run-lock" @click="run"
+          :disabled="cur.busy || !currentSendable"
+          :title="currentSendable ? '执行（Ctrl+Enter）' : SCOPE_DENY_HINT">
           <!-- 主按钮中文化对齐两工作台（此前英文 Run 是中文界面孤例）；执行中态句式统一「执行中 X.Xs」 -->
           <Play :size="12" /> {{ cur.busy ? '执行中 ' + (qr.elapsedMs.value / 1000).toFixed(1) + 's' : '执行' }}
           <span class="kbd" style="margin-left:var(--sp-1)">Ctrl⏎</span>
@@ -59,6 +61,8 @@
  permGating 可见性语义锚零漂移） -->
         <span v-else class="dt-perm-dim" tabindex="0" role="img" aria-label="运行需 ADMIN 角色"
           title="运行需 ADMIN、DevTools 或 REST 页写权限；非 ADMIN 仅数据面（检索/文档/批量），系统管理与别名/快照/模板仍仅 ADMIN"><ShieldAlert :size="13" /></span>
+        <span v-if="canAdmin && !currentSendable" class="dt-perm-dim" tabindex="0" role="status"
+          :title="SCOPE_DENY_HINT">非 ADMIN 仅数据面</span>
         <button v-if="cur.busy" class="btn sm" @click="qr.cancel()"><X :size="12" /> 取消</button>
         <button class="btn ghost sm" @click="copyCurl" title="复制 curl">
           <Copy :size="12" /> curl
@@ -436,12 +440,20 @@ import WorkbenchLayout, { type WorkbenchPaneSpec } from '../components/Workbench
 import FocusableSurface from '../components/FocusableSurface.vue';
 import PageHeader from '../components/PageHeader.vue';
 import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
+import { nonAdminDataPlaneWriteAllowed } from '../utils/devtoolsScope';
 const store = useAppStore();
 /* 权限门禁——DevTools 运行统一走专用 /cluster/devtools/execute（devtools/rest 写键，ADMIN 全局）；
  编辑/导入/复制响应全角色可用，非 ADMIN 给自述不给扳机 */
 const auth = useAuthStore();
 const permOpen = ref(false);
 const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/devtools/execute', store.target)); /* DevTools 页写键或 rest 写键（ADMIN 全局） */
+/* 当前请求是否在非 ADMIN 的数据面白名单内。ADMIN/无鉴权部署不受限；
+   连接写键用户对系统管理写（别名/快照/模板/设置/脚本）不显示可执行态。 */
+const requestInScope = (method: string, path: string) =>
+  auth.isAdmin() || auth.authDisabled || nonAdminDataPlaneWriteAllowed(method, path);
+const currentSendable = computed(() => canAdmin.value && !!cur.value
+  && requestInScope(cur.value.method, cur.value.path));
+const SCOPE_DENY_HINT = '非 ADMIN 仅可执行数据面写（检索/文档/批量/SQL）；别名、快照、模板、脚本与集群管理写需 ADMIN';
 /* 预填 run:true 在身份未确认时挂起，probe 完成后仅执行一次：
    既不提前发写请求，也不让有权限的人因为开屏竞态而丢失自动执行。 */
 const pendingPrefillRun = ref(false);
@@ -921,6 +933,10 @@ function tryFormatBody(body: string): string {
 async function run() {
   /* 权限门双保险：按钮 v-if 之外，键盘/历史/预填所有入口在执行体首行拦截（busy 置位前） */
   if (!canAdmin.value) { store.notify('warning', '原始透传需要 ADMIN 或 DevTools/REST 页写权限'); return; }
+  if (!requestInScope(cur.value?.method || 'GET', cur.value?.path || '/')) {
+    store.notify('warning', SCOPE_DENY_HINT);
+    return;
+  }
   /* G7-A1：Ctrl+Enter 键盘路径不受按钮 :disabled 约束——执行体守卫管键盘重入（教训 7，
  与 观察项 TemplatesView Ctrl+S 同构；busy 期间连按不再并发重发写请求）
  复审 F1：头部快照 tab 引用——await 期间用户切 tab 后 cur 随 active 漂移，
@@ -941,8 +957,14 @@ async function run() {
  segLabel 在场=段执行：历史条目补 seg 标识（「seg i/n」）便于区分段现场；
  镜像 HistAllEntry 字段零增（跨 Tab 汇聚锁面零触），草稿 t.body 原稿零触。 */
 async function execSend(t: Tab, bodyOut: string, segLabel?: string): Promise<boolean> {
-  /* 内核单点门：全量/段执行/预填/历史回放最终都汇入此处，非 ADMIN 一律不发出 raw 透传 */
-  if (!canAdmin.value) { store.notify('warning', '原始透传需要 ADMIN 或 DevTools/REST 页写权限'); return false; }
+  /* 内核单点门：全量/段执行/预填/历史回放最终都汇入此处，非 ADMIN 一律不发出 raw 透传。
+     调用方已置 busy；此处拒绝必须复位，否则权限在等待期间被撤会永久锁死该 Tab。 */
+  if (!canAdmin.value) { store.notify('warning', '原始透传需要 ADMIN 或 DevTools/REST 页写权限'); t.busy = false; return false; }
+  if (!requestInScope(t.method, t.path)) {
+    store.notify('warning', SCOPE_DENY_HINT);
+    t.busy = false;
+    return false;
+  }
   const t0 = performance.now();
   const signal = qr.begin();
   try {

@@ -9,7 +9,8 @@
             <button class="uq-mode-b" :class="{ act: mode === 'update' }" :aria-pressed="mode === 'update'" @click="mode = 'update'">
               <Pencil :size="12" /> update_by_query
             </button>
-            <button class="uq-mode-b danger" :class="{ act: mode === 'delete' }" :aria-pressed="mode === 'delete'" @click="mode = 'delete'">
+            <button class="uq-mode-b danger" :class="{ act: mode === 'delete' }" :aria-pressed="mode === 'delete'"
+        :disabled="!canDelete" :title="canDelete ? '' : '当前授权不含删除权限'" @click="canDelete && (mode = 'delete')">
               <Trash2 :size="12" /> delete_by_query
             </button>
           </div>
@@ -230,12 +231,19 @@ import { removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 /* 权限门禁——UBQ/DBQ=/cluster/update-by-query|delete-by-query=REBUILD 档（rank3+）；
- 预估影响（count 只读）全角色可用 */
+ 预估影响（count 只读）全角色可用。删除共享端点还接受 w:search 页授权，不能复用更新门。 */
 const auth = useAuthStore();
-const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/update-by-query', store.target));
+const canUpdate = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/update-by-query', store.target));
+const canDelete = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/delete-by-query', store.target));
 const router = useRouter();
 /* 模式进 URL（?mode=）——收藏重放/分享链接可复原 update|delete 现场 */
 const mode = useUrlState('mode', 'update') as unknown as import('vue').Ref<'update' | 'delete'>;
+const canOps = computed(() => mode.value === 'delete' ? canDelete.value : canUpdate.value);
+/* 旧链接带 ?mode=delete 但身份落地后确认没有删除权：落回更新模式，避免展示必 403 的执行钮。
+   probe 完成前 canDelete 恒 false，不能在身份未定时抹掉深链模式。 */
+watch([mode, canDelete, () => auth.probed], () => {
+  if (mode.value === 'delete' && auth.probed && !canDelete.value) mode.value = 'update';
+}, { immediate: true });
 /* 目标索引进 URL——刷新/分享链接可复原（可重入） */
 const index = useIdxState();
 const maxDocs = ref('');

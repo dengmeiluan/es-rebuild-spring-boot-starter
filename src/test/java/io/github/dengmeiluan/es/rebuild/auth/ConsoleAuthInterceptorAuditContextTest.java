@@ -52,6 +52,11 @@ public class ConsoleAuthInterceptorAuditContextTest {
 
     private static HttpServletRequest stubRequest(String method, String uri, Map<String, String> headers,
                                                   Map<String, Object> presetAttrs) {
+        return stubRequestFrom(method, uri, headers, presetAttrs, "127.0.0.1");
+    }
+
+    private static HttpServletRequest stubRequestFrom(String method, String uri, Map<String, String> headers,
+                                                      Map<String, Object> presetAttrs, String remoteAddr) {
         Map<String, Object> attrs = new HashMap<>();
         if (presetAttrs != null) {
             attrs.putAll(presetAttrs);
@@ -67,7 +72,7 @@ public class ConsoleAuthInterceptorAuditContextTest {
                 case "getAttribute": return attrs.get(args[0]);
                 case "setAttribute": attrs.put((String) args[0], args[1]); return null;
                 case "getHeader": return headers.get(args[0]);
-                case "getRemoteAddr": return "192.0.2.1";
+                case "getRemoteAddr": return remoteAddr;
                 default: throw new UnsupportedOperationException(m.getName());
             }
         };
@@ -148,7 +153,7 @@ public class ConsoleAuthInterceptorAuditContextTest {
         Map<String, String> headers = new HashMap<>();
         headers.put("X-Es-Target", "3556353a");
         headers.put("X-Forwarded-For", "203.0.113.9, 10.0.0.1");
-        it.preHandle(stubRequest("GET", "/internal/es/index/overview", headers, null),
+        it.preHandle(stubRequest("POST", "/internal/es/index/cluster/delete-index", headers, null),
                 new StubResponse(403).proxy, null);
 
         assertNotNull("页面被拒必须落审计", audit.last);
@@ -156,16 +161,46 @@ public class ConsoleAuthInterceptorAuditContextTest {
         assertEquals("3556353a", audit.last.getConnId());
         assertEquals("腾讯云UAT", audit.last.getConnName());
         assertEquals("XFF 首跳必须取为来源 IP", "203.0.113.9", audit.last.getIp());
-        assertEquals("page=overview", audit.last.getDetail());
+        assertEquals("page=indices", audit.last.getDetail());
         assertNotNull("耗时维度必须落档", audit.last.getCostMs());
+    }
+
+    @Test
+    public void 公网直连伪造XFF不得改写审计来源IP() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor it = interceptor(audit);
+        Map<String, String> headers = new HashMap<>();
+        headers.put("X-Es-Target", "3556353a");
+        headers.put("X-Forwarded-For", "203.0.113.9");
+        headers.put("X-Real-IP", "203.0.113.10");
+        it.preHandle(stubRequestFrom("POST", "/internal/es/index/cluster/delete-index",
+                        headers, null, "198.51.100.7"),
+                new StubResponse(403).proxy, null);
+        assertNotNull(audit.last);
+        assertEquals("公网直连必须采 remoteAddr，不采可伪造的转发头",
+                "198.51.100.7", audit.last.getIp());
+    }
+
+    @Test
+    public void 宿主专属端点带远端目标头仍记宿主审计() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor it = interceptor(audit);
+        Map<String, String> headers = new HashMap<>();
+        headers.put("X-Es-Target", "3556353a");
+        it.preHandle(stubRequest("GET", "/internal/es/index/overview", headers, null),
+                new StubResponse(403).proxy, null);
+
+        assertNotNull(audit.last);
+        assertNull("宿主专属端点不得记到远端连接账上", audit.last.getConnId());
+        assertNull(audit.last.getConnName());
     }
 
     @Test
     public void 无目标头的拒绝记录connId为空_ip回退remoteAddr() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         ConsoleAuthInterceptor it = interceptor(audit);
-        it.preHandle(stubRequest("GET", "/internal/es/index/overview", new HashMap<>(), null),
-                new StubResponse(403).proxy, null);
+        it.preHandle(stubRequestFrom("GET", "/internal/es/index/overview", new HashMap<>(), null,
+                        "192.0.2.1"), new StubResponse(403).proxy, null);
 
         assertNotNull(audit.last);
         assertNull("host/空目标头不得伪装成连接维度", audit.last.getConnId());

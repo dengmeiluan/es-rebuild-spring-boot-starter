@@ -39,6 +39,10 @@
         <span class="rx-cn">向量检索</span><code class="rx-key">knn</code>
         <span class="rx-state" :class="{ on: !!tree.knn }">{{ tree.knn?.field || '未设置' }}</span>
       </button>
+      <button type="button" class="rx-chip" :class="{ on: open.has('sug') }" title="搜索建议（suggest：term/phrase/completion）" @click="toggle('sug')">
+        <span class="rx-cn">搜索建议</span><code class="rx-key">suggest</code>
+        <span class="rx-state" :class="{ on: !!tree.suggest?.items.length }">{{ tree.suggest?.items.length ? tree.suggest.items.length + ' 项' : '未设置' }}</span>
+      </button>
       <button type="button" class="rx-chip" :class="{ on: open.has('ex') }" @click="toggle('ex')">
         <span class="rx-cn">其他顶层键</span>
         <span class="rx-state" :class="{ on: !!Object.keys(tree.extras).length }">{{ Object.keys(tree.extras).length ? Object.keys(tree.extras).length + ' 个键' : '无' }}</span>
@@ -214,6 +218,38 @@ ES 默认返回全部字段
       </template>
     </div>
 
+    <!-- 989：搜索建议 suggest（项级结构化：名称 + text + suggester 类型体 rest） -->
+    <div v-if="open.has('sug')" class="rx-open">
+      <div v-if="!tree.suggest" class="rx-none">
+搜索建议调试（term 纠错 / phrase 短语 / completion 补全）
+        <button class="btn sm ghost rx-sug-add" @click="sugAdd">+ 加建议</button>
+      </div>
+      <template v-else>
+        <div v-for="(s, i) in tree.suggest.items" :key="i" class="rx-sug-row">
+          <input class="inp mono rx-sug-name" :value="s.name" placeholder="建议名" title="建议项名称（DSL 顶层键名）"
+                 @input="sugPatch(i, { name: ($event.target as HTMLInputElement).value })" />
+          <input class="inp rx-sug-text" :value="s.hasText ? String(s.text ?? '') : ''" placeholder="text（待纠错文本）"
+                 @input="onSugText(i, ($event.target as HTMLInputElement).value)" />
+          <button aria-label="建议参数（suggester 体）" class="btn sm ghost" :class="{ on: sugIdx === i }" title="建议参数（term/phrase/completion 体）" @click="sugIdx = sugIdx === i ? null : i"><Settings2 :size="12" /></button>
+          <button aria-label="删除建议" class="btn sm ghost danger" title="删除建议" @click="sugDel(i)"><X :size="12" /></button>
+          <div v-if="sugIdx === i" class="rx-sub">
+            <GenericParams :value="s.rest" path-prefix="" @update="v => onSugRest(i, v)" />
+          </div>
+        </div>
+        <div class="rx-row">
+          <button class="btn sm ghost rx-sug-add2" @click="sugAdd"><Plus :size="12" /> 加建议</button>
+          <button v-if="!tree.suggest.hasGlobalText" class="btn sm ghost rx-sug-gtext" title="全局 text：所有建议项共享的待纠错文本" @click="sugGlobalText">+ 全局 text</button>
+          <span style="flex:1"></span>
+          <button aria-label="移除 suggest 键" class="btn sm ghost danger" title="移除 suggest 键" @click="patch({ suggest: null })"><X :size="12" /></button>
+        </div>
+        <div v-if="tree.suggest.hasGlobalText" class="rx-row">
+          <span class="rx-lb">全局 text</span>
+          <input class="inp rx-sug-text" :value="String(tree.suggest.globalText ?? '')" placeholder="所有建议项共享"
+                 @input="sugPatchGlobal(($event.target as HTMLInputElement).value)" />
+        </div>
+      </template>
+    </div>
+
     <!-- extras：其余顶层键 -->
     <div v-if="open.has('ex')" class="rx-open rx-ex">
       <div v-if="!Object.keys(tree.extras).length" class="rx-none">无（track_total_hits / collapse / search_after 等会出现在这里）</div>
@@ -232,7 +268,7 @@ import FieldPicker from '../FieldPicker.vue';
 import GenericParams from './GenericParams.vue';
 import AggTreeNode from './AggTreeNode.vue';
 import MiniTreeEditor from './MiniTreeEditor.vue';
-import { nid, type QueryTree, type SortItem, type SourceSpec, type AggNode, type QueryNode, type CollapseSpec, type KnnSpec } from '../../utils/queryAst';
+import { nid, type QueryTree, type SortItem, type SourceSpec, type AggNode, type QueryNode, type CollapseSpec, type KnnSpec, type SuggestItem, type SuggestSpec } from '../../utils/queryAst';
 import { setFieldSearchIndex } from '../../utils/fieldSearch';
 
 const props = defineProps<{ tree: QueryTree; fields: string[]; types: Record<string, string>; index?: string }>();
@@ -267,6 +303,7 @@ const open = ref<Set<string>>(new Set([
   ...(props.tree.postFilter ? ['pf'] : []),
   ...(props.tree.collapse ? ['col'] : []),
   ...(props.tree.knn ? ['knn'] : []),
+  ...(props.tree.suggest ? ['sug'] : []),
   ...(Object.keys(props.tree.extras).length ? ['ex'] : []),
 ]));
 function toggle(k: string) {
@@ -301,6 +338,8 @@ watch(() => props.tree.aggs?.length, (n, o) => { if (n && !o) autoOpen('aggs'); 
 watch(() => props.tree.postFilter, (n, o) => { if (n && !o) autoOpen('pf'); });
 watch(() => props.tree.collapse, (n, o) => { if (n && !o) autoOpen('col'); });
 watch(() => props.tree.knn, (n, o) => { if (n && !o) autoOpen('knn'); });
+/* 989：suggest 同风格跳变 */
+watch(() => props.tree.suggest, (n, o) => { if (n && !o) autoOpen('sug'); });
 
 /* size/from 控制链随分页节退役（numText/numPatch 曾为其专用）——
  tree 上残留的 size/from 键序列化直通（旧草稿兼容，执行链 562 联动语义接管） */
@@ -430,6 +469,42 @@ function onKnnVec(text: string) {
 }
 function onKnnParams(v: Record<string, unknown> | unknown[]) {
   if (!Array.isArray(v) && props.tree.knn) patch({ knn: { ...props.tree.knn, params: v } });
+}
+
+/* ═══ 989：suggest 项级编辑（名称/text/类型体 rest/全局 text） ═══ */
+const sugIdx = ref<number | null>(null);
+function sugAdd() {
+  /* 默认 completion 形态（补全是最常用调试入口）：rest 给可用的 suggester 体而非空对象 */
+  const base = props.tree.suggest || { items: [] as SuggestItem[], globalText: null, hasGlobalText: false };
+  let i = base.items.length + 1;
+  while (base.items.some(s => s.name === 'my-suggest_' + i)) i++;
+  patch({
+    suggest: {
+      ...base,
+      items: [...base.items, { name: 'my-suggest_' + i, text: '', hasText: true, rest: { completion: { field: props.fields[0] || '', prefix: '' } } }],
+    },
+  });
+  if (!open.value.has('sug')) toggle('sug');
+}
+function sugPatch(i: number, p: Partial<SuggestItem>) {
+  if (!props.tree.suggest) return;
+  patch({ suggest: { ...props.tree.suggest, items: props.tree.suggest.items.map((s, j) => (j === i ? { ...s, ...p } : s)) } });
+}
+function onSugText(i: number, v: string) { sugPatch(i, { text: v, hasText: true }); }
+function onSugRest(i: number, v: Record<string, unknown> | unknown[]) {
+  if (!Array.isArray(v)) sugPatch(i, { rest: v });
+}
+function sugDel(i: number) {
+  if (!props.tree.suggest) return;
+  patch({ suggest: { ...props.tree.suggest, items: props.tree.suggest.items.filter((_, j) => j !== i) } });
+}
+function sugPatchGlobal(v: string) {
+  if (!props.tree.suggest) return;
+  patch({ suggest: { ...props.tree.suggest, globalText: v, hasGlobalText: true } });
+}
+function sugGlobalText() {
+  if (!props.tree.suggest) return;
+  patch({ suggest: { ...props.tree.suggest, globalText: '', hasGlobalText: true } });
 }
 
 /* 【预授权偏差A】GenericParams @update 联合类型收窄（Record|unknown[] → Record；数组形态忽略，params/extras 语义必须是对象）——内联箭头会 TS2322 */

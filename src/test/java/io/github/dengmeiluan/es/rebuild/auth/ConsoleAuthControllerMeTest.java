@@ -94,10 +94,57 @@ public class ConsoleAuthControllerMeTest {
     }
 
     @Test
-    public void 内置身份_即使带集合也不下发() throws Exception {
-        ConsolePrincipal p = new ConsolePrincipal("admin", ConsoleRole.ADMIN, true, false, null, null,
+    @SuppressWarnings("unchecked")
+    public void 委托身份_下发env页面模板供前端同口径收缩() throws Exception {
+        io.github.dengmeiluan.es.rebuild.config.EsRebuildProperties props =
+                new io.github.dengmeiluan.es.rebuild.config.EsRebuildProperties();
+        java.util.Map<String, java.util.Set<String>> templates = new java.util.HashMap<>();
+        templates.put("prod", new java.util.LinkedHashSet<>(Arrays.asList("search", "overview")));
+        templates.put("qa", Collections.<String>emptySet());
+        props.setEnvPages(templates);
+        ConsoleAuthController c = controller(true);
+        c.setEnvPagesResolver(new EnvPagesResolver(null, props));
+
+        ConsolePrincipal p = new ConsolePrincipal("u", ConsoleRole.VIEWER, false, true, null, null,
+                new HashSet<>(Arrays.asList("conn:c1:search", "conn:host:overview")));
+        Map<String, Object> out = c.me(requestWith(p));
+        Map<String, Object> envPages = (Map<String, Object>) out.get("envPages");
+        assertNotNull(envPages);
+        assertEquals(Arrays.asList("overview", "search"), envPages.get("PROD"));
+        assertEquals(Collections.emptyList(), envPages.get("QA"));
+    }
+
+    @Test
+    public void 内置身份或未下发页面授权时不下发env模板() throws Exception {
+        io.github.dengmeiluan.es.rebuild.config.EsRebuildProperties props =
+                new io.github.dengmeiluan.es.rebuild.config.EsRebuildProperties();
+        java.util.Map<String, java.util.Set<String>> templates = new java.util.HashMap<>();
+        templates.put("PROD", Collections.singleton("search"));
+        props.setEnvPages(templates);
+        ConsoleAuthController c = controller(true);
+        c.setEnvPagesResolver(new EnvPagesResolver(null, props));
+
+        ConsolePrincipal builtin = new ConsolePrincipal("admin", ConsoleRole.ADMIN, true, false);
+        assertNull(c.me(requestWith(builtin)).get("envPages"));
+
+        ConsolePrincipal noGrants = new ConsolePrincipal("u", ConsoleRole.VIEWER, false, true,
+                null, null, null);
+        assertNull(c.me(requestWith(noGrants)).get("envPages"));
+
+        /* 非委托的自定义授权器同样下发页面授权与 env 模板：拦截器同口径执法。 */
+        ConsolePrincipal custom = new ConsolePrincipal("custom", ConsoleRole.VIEWER, false, false,
+                null, null, Collections.singleton("search"));
+        ConsoleAuthController me = c;
+        assertNotNull(me.me(requestWith(custom)).get("grantedPages"));
+        assertNotNull(me.me(requestWith(custom)).get("envPages"));
+    }
+
+    @Test
+    public void 非委托身份带集合_照常下发页面授权() throws Exception {
+        ConsolePrincipal p = new ConsolePrincipal("custom", ConsoleRole.VIEWER, false, false, null, null,
                 Collections.singleton("overview"));
-        assertNull(controller(true).me(requestWith(p)).get("grantedPages"));
+        assertEquals(Collections.singletonList("overview"),
+                controller(true).me(requestWith(p)).get("grantedPages"));
     }
 
     @Test

@@ -206,8 +206,12 @@ export const useJobTrackerStore = defineStore('jobTracker', () => {
  当前目标解析有效页集（与 router.effectivePagesForTarget/后端 EnvPagesResolver
  同构）判定；快照通道额外受 snapshots 页授权约束。 */
     const granted = auth.grantedPages; // null=页面授权未启用（全放行）
-    const eff = auth.isAdmin() ? null : effectivePagesForTarget(granted, app.target || 'host');
-    const can = (pageKey: string) => eff == null || eff.has(pageKey);
+    const target = app.target || 'host';
+    const admin = auth.isAdmin();
+    const eff = admin ? null : effectivePagesForTarget(granted, target);
+    /* env 模板封顶与后端 effectivePages 同口径：环境未开放的页面不轮询（否则每拍 403）。
+       ADMIN 不受页面门/env 模板约束（后端 preHandle 对 ADMIN 直接放行）。 */
+    const can = (pageKey: string) => admin || ((eff == null || eff.has(pageKey)) && auth.envAllows(pageKey, target));
     const wantAdhoc = can('adhoc-rebuild');
     const wantXm = can('xmigrate');
     /* 数据面通道（reindex 任务/快照跟随 X-Es-Target）：连接模型须目标已钉选（授权就绪
@@ -216,7 +220,10 @@ export const useJobTrackerStore = defineStore('jobTracker', () => {
     const connModel = granted != null && granted.some(k => k.startsWith('conn:'));
     const dataReady = !!app.target || (!!app.hostVisible && !connModel);
     const wantSnaps = dataReady && can('snapshots');
-    const wantTasks = dataReady;
+    /* 任务轮询归 tasks/task-tree 页：无归属页的读键身份每 20s 打一次必 403 的拍，
+       既污染审计也永远看不到任务；与后端 sharedReadPages 同口径。 */
+    const wantTasks = dataReady
+      && (auth.canReadPage('tasks', target) || auth.canReadPage('task-tree', target));
     if (connModel && !dataReady && !pollSilentNotified) {
       pollSilentNotified = true;
       app.notify('warning', '当前账号未被授权任何集群连接，作业跟踪与数据面轮询已停用（授权后自动恢复）');

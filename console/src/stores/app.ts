@@ -29,19 +29,19 @@ export const useAppStore = defineStore('app', () => {
   async function loadIndices() {
     const seq = ++indicesSeq;
     await ensureSetup();
-    if (seq !== indicesSeq) return; // 已有更新拍入列：本拍整拍作废
+    if (seq !== indicesSeq) return false; // 已有更新拍入列：本拍整拍作废
     // .2：宿主隐藏且尚未选中连接：不发数据面请求（后端会 403 HOST_DISABLED），保持未知态等引导
     if (!hostVisible.value && !target.value) {
       indices.value = [];
       clusterOk.value = null;
       clusterHealth.value = '';
       loadingIndices.value = false;
-      return;
+      return false;
     }
     loadingIndices.value = true;
     try {
       const list = await api.clusterIndices();
-      if (seq !== indicesSeq) return; // 旧拍迟到：清单/健康面/版本识别整拍丢弃
+      if (seq !== indicesSeq) return false; // 旧拍迟到：清单/健康面/版本识别整拍丢弃
       indices.value = Array.isArray(list) ? list : [];
       clusterOk.value = true;
       loadVersion(); // 连接成功后顺带识别版本，供导航级能力降级标注
@@ -57,8 +57,9 @@ export const useAppStore = defineStore('app', () => {
       if (pickedIdx.value && !indices.value.some(i => i.index === pickedIdx.value)) {
         // 保留 picked（可能是别名），不强制清空
       }
+      return true;
     } catch (e: any) {
-      if (seq !== indicesSeq) return; // 旧拍失败同样丢弃：不得改写新拍成功面
+      if (seq !== indicesSeq) return false; // 旧拍失败同样丢弃：不得改写新拍成功面
       if (e?.status === 401) {
         // 未登录导致的 401：登录遮罩已在引导，不误报“集群连接失败”，保持未知态
         clusterOk.value = null;
@@ -67,6 +68,7 @@ export const useAppStore = defineStore('app', () => {
         clusterHealth.value = '';
         notify('error', '加载索引列表失败: ' + (e?.message || e));
       }
+      return false;
     } finally {
       if (seq === indicesSeq) loadingIndices.value = false;
     }
@@ -134,6 +136,9 @@ export const useAppStore = defineStore('app', () => {
       if (seq !== connsSeq) return; // 旧拍失败同样丢弃：不得清空新拍成功清单
       conns.value = [];
     }
+    /* 连接环境是 env 页面模板的前端收缩依据：目录与 /auth/me.envPages 合流，
+       菜单/按钮必须与后端 effectivePages 同口径（否则出现必 403 的假入口）。 */
+    useAuthStore().setConnEnvs(conns.value);
     // 目标档案已被删：回落避免死绑不存在的 connId 全站报错（宿主隐藏时回落首个可见连接而非宿主）
     if (target.value && !conns.value.some(c => c.id === target.value)) {
       if (hostVisible.value) {
@@ -420,6 +425,27 @@ export const useAppStore = defineStore('app', () => {
   }
   function toggleNavHidden() {
     setNavHidden(!navHidden.value);
+  }
+
+  /* 跨标签页目标同步：api 层每次请求读 localStorage 的 X-Es-Target，UI 门读内存 target。
+     另一标签切换目标而本页不跟随，会出现「界面显示 QA、请求打到 PROD」的目标撕裂。 */
+  if (typeof window !== 'undefined') {
+    window.addEventListener('storage', (e) => {
+      if (e.key !== 'es-console.target' && e.key !== 'es-console.target.name') return;
+      const id = getTarget();
+      const name = id ? (localStorage.getItem('es-console.target.name') || '') : '';
+      if (id === target.value) {
+        targetName.value = name;
+        return;
+      }
+      target.value = id;
+      targetName.value = name;
+      pick('');
+      recentIdx.value = [];
+      removeStoredRaw(localStorage, RECENT_KEY);
+      esVersion.value = '';
+      loadIndices();
+    });
   }
 
   return { indices, pickedIdx, recentIdx, pickedInfo, loadingIndices, clusterOk, clusterSelf, clusterHealth, clusterUnassigned, loadIndices, pick, notifyQueue, notify, shiftNotify, notifyLog, notifyUnread, markNotifySeen, clearNotifyLog, eventBus, emit, favorites, addFavorite, removeFavorite, clearFavorites, settings, saveSettings, toggleDensity, effectiveTheme, setTheme, cycleTheme, hostTheme, setHostTheme, target, targetName, conns, isRemote, hostVisible, loadConns, setTarget, esVersion, verBelow, viewportW, viewportH, narrow, navIcon, toggleNav, navHidden, setNavHidden, toggleNavHidden };

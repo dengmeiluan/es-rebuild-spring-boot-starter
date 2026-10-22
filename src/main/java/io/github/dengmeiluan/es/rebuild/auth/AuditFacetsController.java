@@ -63,7 +63,8 @@ public class AuditFacetsController {
         java.util.Set<String> gp = p.getGrantedPages();
         /* 值建议是跨全部连接的聚合（用户/URI/集群），连接维度 security 读键不能拿到
            其它连接与宿主的目录值。非全局授权回空建议，前端回落硬编码词表即可。 */
-        if (p.isDelegated() && gp != null && !gp.isEmpty()
+        /* 空授权集同样不得读跨连接聚合值：此前 !gp.isEmpty() 让零页面用户拿到全量建议。 */
+        if (gp != null
                 && !gp.contains("security") && !p.getRole().atLeast(ConsoleRole.ADMIN)) {
             Map<String, Object> empty = new LinkedHashMap<>();
             empty.put("actions", Collections.emptyList());

@@ -62,7 +62,9 @@ describe('977 权限校准', () => {
     const s = read('stores/auth.ts');
     expect(s).toContain('const identityKnown = () => authDisabled.value || me.value != null || !probeStarted.value;');
     expect(s).toContain('if (!identityKnown()) return false;');
-    expect(s).toContain("authDisabled.value = e?.status === 404;");
+    /* 984：404 不再直接当无鉴权——须 setup/status 明确 authEnabled=false。 */
+    expect(s).toContain('const s = await api.setup.status();');
+    expect(s).toContain('authDisabled.value = s.authEnabled === false;');
     expect(s).toContain('probeRetry = setTimeout(');
   });
 

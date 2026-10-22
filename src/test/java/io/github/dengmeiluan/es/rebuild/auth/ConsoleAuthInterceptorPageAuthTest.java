@@ -297,6 +297,13 @@ public class ConsoleAuthInterceptorPageAuthTest {
         assertTrue("rank3 + security 读键可读全量审计", auditor.preHandle(stubRequest("GET",
                 "/internal/es/index/auth/ops-audit",
                 java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+        /* host-scope 审计：顶栏目标为 c1 时，conn:host:security 仍应能打开宿主审计入口
+           （行级过滤只给 host 事件，不会看到 c1 流水）。 */
+        ConsoleAuthInterceptor hostAuditor = interceptor(delegatedAs(ConsoleRole.AUDIT_OP,
+                new HashSet<>(Collections.singletonList("conn:host:security"))), true, audit);
+        assertTrue("host security 键在连接目标下仍可读宿主审计", hostAuditor.preHandle(stubRequest("GET",
+                "/internal/es/index/auth/ops-audit",
+                java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
     }
 
 
@@ -376,6 +383,39 @@ public class ConsoleAuthInterceptorPageAuthTest {
         assertTrue("w:config-validator 可写别名（建索引带 alias）",
                 validator.preHandle(stubRequest("POST", "/internal/es/index/cluster/alias-actions", target),
                         new StubResponse().proxy, null));
+    }
+
+    @Test
+    public void 低角色静态aliases与configValidator写键仍只允许add() throws Exception {
+        ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("aliases", "conn:c1:w:config-validator"))), true,
+                new CapturingAudit());
+        HttpServletRequest req = stubRequest("POST", "/internal/es/index/cluster/alias-actions",
+                Collections.singletonMap("X-Es-Target", "c1"));
+        assertTrue(it.preHandle(req, new StubResponse().proxy, null));
+        assertTrue("preHandle 必须把低角色静态 aliases 降为 add-only",
+                ConsoleAuthInterceptor.aliasActionsAddOnly(req));
+    }
+
+    @Test
+    public void 动作端点记录conn写键直接授权_静态回落不置位() throws Exception {
+        java.util.Map<String, String> target = Collections.singletonMap("X-Es-Target", "c1");
+        HttpServletRequest connReq = stubRequest("POST",
+                "/insight/actions/apply-index-settings/estimate", target);
+        ConsoleAuthInterceptor conn = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:index-settings", "conn:c1:w:index-settings"))),
+                true, new CapturingAudit());
+        assertTrue(conn.preHandle(connReq, new StubResponse().proxy, null));
+        assertEquals(Boolean.TRUE,
+                connReq.getAttribute(ConsoleAuthInterceptor.ATTR_CONN_WRITE_GRANTED));
+
+        HttpServletRequest staticReq = stubRequest("POST",
+                "/insight/actions/apply-index-settings/estimate", target);
+        ConsoleAuthInterceptor stat = interceptor(delegatedAs(ConsoleRole.OPERATOR,
+                Collections.singleton("index-settings")), true, new CapturingAudit());
+        assertTrue(stat.preHandle(staticReq, new StubResponse().proxy, null));
+        assertEquals("静态页回落不得冒充 conn 写键授权", null,
+                staticReq.getAttribute(ConsoleAuthInterceptor.ATTR_CONN_WRITE_GRANTED));
     }
 
     @Test
@@ -618,12 +658,30 @@ public class ConsoleAuthInterceptorPageAuthTest {
     @Test
     public void 非委托身份_带grantedPages_页面门不生效_放行() throws Exception {
         CapturingAudit audit = new CapturingAudit();
-        // 畸形身份（非 delegated 但 grantedPages 非 null）：AND 短路门不生效—— 依赖此语义
+        // ADMIN 即使来自自定义授权器（非 delegated）：超管全局放行，页面白名单不拖累超管
         ConsolePrincipal p = new ConsolePrincipal("u", ConsoleRole.ADMIN, true, false, null, null,
                 Collections.singleton("search"));
         ConsoleAuthInterceptor it = interceptor(p, true, audit);
         assertTrue(it.preHandle(stubRequest("GET", "/internal/es/index/overview", ""), new StubResponse().proxy, null));
-        assertNull("非委托身份页面门不生效，不得落 PAGE_DENIED 审计", audit.action);
+        assertNull("非委托 ADMIN 放行不得落 PAGE_DENIED 审计", audit.action);
+    }
+
+    @Test
+    public void 自定义授权器非委托身份_页面白名单同样生效() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        /* 自定义 EsConsoleAuthorizer 返回非空 grantedPages 时，/auth/me 会把它下发给前端
+           收缩菜单；后端必须同口径执法，否则前端隐藏的页面可被直调绕过。 */
+        ConsoleAuthInterceptor it = interceptor(new ConsolePrincipal("custom-u", ConsoleRole.VIEWER,
+                false, false, null, null, Collections.singleton("search")), true, audit);
+        StubResponse denied = new StubResponse();
+        assertFalse(it.preHandle(stubRequest("GET", "/internal/es/index/overview", ""),
+                denied.proxy, null));
+        assertEquals(403, denied.status);
+        assertTrue(denied.bodyText().contains("\"page\":\"overview\""));
+        assertTrue("授予的 search 页仍可读共享查询端点", it.preHandle(
+                stubRequest("GET", "/internal/es/index/cluster/query?index=orders",
+                        Collections.singletonMap("X-Es-Target", "c1")),
+                new StubResponse().proxy, null));
     }
 
     @Test

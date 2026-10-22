@@ -12,7 +12,8 @@
 | `es.rebuild.mode` | `client` | 装配模式：`client`=业务应用侧只装索引声明；`console`=宿主侧全量装配（控制台+AOP 切面+控制集群解析）。允许值 `client` / `console`，拼写错误拒绝启动 |
 | `es.rebuild.web-enabled` | `true` | 是否启用内置运维 Controller 与静态面板 |
 | `es.rebuild.version-format` | `yyyyMMddHHmmss` | 物理索引版本号时间格式（物理索引名为 原名_v时间戳），非法 pattern 拒绝启动 |
-| `es.rebuild.env-pages` | （空 Map） | 连接环境 → 页面 key 白名单集合（键=PROD/STAGING/QA/DEV）；空=不启用，未配置的 env 原样透传 |
+| `es.rebuild.env-pages` | （空 Map） | 连接环境 → 页面 key 白名单集合（键=PROD/STAGING/QA/DEV）；整个 Map 为空=不启用，未配置的 env 原样透传；**显式配置的 env 为空集/null=该环境全拒**（启动 WARN 点名）。`/auth/me` 会把模板下发给前端，菜单/按钮与后端同口径收缩 |
+| `es.rebuild.console.setup-token` | （空串） | 未绑定首连初始化令牌；非空时 `/setup/test`、`/setup/apply` 必须携带 `X-Setup-Token`（防匿名绑定/SSRF 探测）。空=仅允许本机（回环且无 `X-Forwarded-For`/`X-Real-IP`/`Forwarded` 头）匿名首连；远程初始化必须配置令牌 |
 
 ## 写入重试（es.rebuild.retry）
 

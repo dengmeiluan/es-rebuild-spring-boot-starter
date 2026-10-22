@@ -212,10 +212,10 @@ import SkeletonBox from '../components/SkeletonBox.vue';
 import RawIoModal from '../components/RawIoModal.vue'; /* G255：原始 IO 快查弹窗（755 G200 同构） */
 
 const store = useAppStore();
-/* 权限门禁——取消任务=/cluster/tasks/cancel=普通写档（OPERATOR+）；
+/* 权限门禁——取消任务=/cluster/tasks/cancel=重建专项档（rank3+，与 abort 族对齐）；
  任务观测全角色可用 */
 const auth = useAuthStore();
-const canWrite = computed(() => auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/tasks/cancel', store.target));
+const canWrite = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/tasks/cancel', store.target));
 
 interface Task {
   taskId: string;
