@@ -1031,6 +1031,12 @@ watch(() => store.pickedIdx, (n, o) => {
 });
 
 async function runQuery() {
+  /* 在途时主动触发（编辑器快捷键/结果区刷新）给轻提示；自动通道（定时重查/映射
+     预载重查）不经此处，由 execQuery 本体闸静默挡（错过一拍无妨，提示反而噪声） */
+  if (running.value) {
+    store.notify('info', '查询执行中，请等待完成或先取消');
+    return;
+  }
   /* ?page= 深链恢复的首查豁免一次「回页首」（见 pageLink 处注释） */
   if (urlPagePending) urlPagePending = false;
   else page.value = 1;
@@ -1114,6 +1120,11 @@ function writeSortToDsl(s: { f: string; d: 'asc' | 'desc' } | null): boolean {
   return true;
 }
 function onHitsSortChange(s: { f: string; d: 'asc' | 'desc' } | null) {
+  /* 在途排序先闸后写：排序态/DSL sort 子句/页码保持触发前现场，查询不静默丢失 */
+  if (running.value) {
+    store.notify('info', '查询执行中，请等待完成或先取消');
+    return;
+  }
   hitsSort.value = s;
   if (!writeSortToDsl(s)) return;
   page.value = 1; /* 排序变更后旧页码无意义（真分页序变） */
@@ -1413,6 +1424,11 @@ function guessDateField(): string {
   return brushField;
 }
 function onBrush(from: any, to: any) {
+  /* 在途刷选先闸后写：DSL/范围条保持触发前现场，不出现「已改写却没重查」的脱节 */
+  if (running.value) {
+    store.notify('info', '查询执行中，请等待完成或先取消');
+    return;
+  }
   const field = guessDateField();
   if (!field) return;
   if (!brushRange.value) preBrushDsl = dsl.value;

@@ -28,7 +28,9 @@ describe('件2：RT 挂接 remote 排序契约（535/543 范式平移）', () =>
     const s = strip(v);
     expect(s).toContain("const hitsSort = ref<{ f: string; d: 'asc' | 'desc' } | null>(null)");
     expect(s).toContain('function onHitsSortChange');
-    expect(s).toMatch(/function onHitsSortChange\([^)]*\)\s*\{[^}]*hitsSort\.value = s;[^}]*writeSortToDsl\(s\)[^}]*page\.value = 1;[^}]*execQuery\(\)/s);
+    /* 984 随迁：函数体首新增在途闸块（含花括号），段间通配由 [^}]* 放宽为 [\s\S]*?；
+       四步序列「写 sort→回页 1→重查」锁语义保持不变，另由 dqInteractiveGate984 锁闸块在四步之前 */
+    expect(s).toMatch(/function onHitsSortChange\([^)]*\)\s*\{[\s\S]*?hitsSort\.value = s;[\s\S]*?writeSortToDsl\(s\)[\s\S]*?page\.value = 1;[\s\S]*?execQuery\(\)/);
   });
 
   it('A3 writeSortToDsl 写 sort 子句（unmapped_type 兜底=IH buildDocsDslWithSort 同构，源码锁）', () => {
