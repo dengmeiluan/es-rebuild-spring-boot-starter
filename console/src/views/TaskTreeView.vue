@@ -260,7 +260,7 @@ function openRawIo() {
 
 async function cancelOne(id: string, node?: string) {
   /* 权限执行体首行门（按钮/菜单已有 v-if，此处覆盖键盘/程序化通道） */
-  if (!canWrite.value) { store.notify('warning', '取消任务需 OPERATOR 及以上角色'); return; }
+  if (!canWrite.value) { store.notify('warning', '取消任务需 REBUILD_OP/CLUSTER_OP 或 ADMIN 角色'); return; }
   if (!await askConfirm({
     title: '取消任务',
     message: '将取消该任务。已处理的部分不会回滚，任务会尽快在安全点停下。',
@@ -272,7 +272,7 @@ async function cancelOne(id: string, node?: string) {
 }
 async function bulkCancel() {
   /* 权限执行体首行门（批量钮已有 v-if，此处覆盖程序化通道） */
-  if (!canWrite.value) { store.notify('warning', '取消任务需 OPERATOR 及以上角色'); return; }
+  if (!canWrite.value) { store.notify('warning', '取消任务需 REBUILD_OP/CLUSTER_OP 或 ADMIN 角色'); return; }
   const ids = Array.from(selected.value);
   if (!ids.length) return;
   if (!await askConfirm({

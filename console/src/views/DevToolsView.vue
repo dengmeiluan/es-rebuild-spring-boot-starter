@@ -448,9 +448,11 @@ const auth = useAuthStore();
 const permOpen = ref(false);
 const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/devtools/execute', store.target)); /* DevTools 页写键或 rest 写键（ADMIN 全局） */
 /* 当前请求是否在非 ADMIN 的数据面白名单内。ADMIN/无鉴权部署不受限；
-   连接写键用户对系统管理写（别名/快照/模板/设置/脚本）不显示可执行态。 */
+   连接写键用户对系统管理写（别名/快照/模板/设置/脚本）不显示可执行态。
+   me==null（未启用鉴权/探测完成未登录）跟随 canEndpoint 放行——authDisabled 形态
+   无角色概念，scope 门不得把管理写在前端拦死。 */
 const requestInScope = (method: string, path: string) =>
-  auth.isAdmin() || auth.authDisabled || nonAdminDataPlaneWriteAllowed(method, path);
+  auth.isAdmin() || auth.me == null || auth.authDisabled || nonAdminDataPlaneWriteAllowed(method, path);
 const currentSendable = computed(() => canAdmin.value && !!cur.value
   && requestInScope(cur.value.method, cur.value.path));
 const SCOPE_DENY_HINT = '非 ADMIN 仅可执行数据面写（检索/文档/批量/SQL）；别名、快照、模板、脚本与集群管理写需 ADMIN';

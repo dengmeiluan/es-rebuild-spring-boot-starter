@@ -47,10 +47,12 @@
     <EmptyState v-if="filtered.length === 0 && items.length === 0" :icon="Star"
       text="当前无收藏项"
       hint="任何 DSL 查询 / REST 请求 / 模板均可「⭐ 收藏」，跨会话恢复。">
-      <!-- 空态给下一步动作 -->
-      <button class="btn sm pri" @click="router.push('/search')">去查询工作台跑一条 →</button>
+      <!-- 空态给下一步动作（无目标页权限时禁用+提示，与重放同门——提前暴露可不可达） -->
+      <button class="btn sm pri" :disabled="!canGo('/search')" :title="canGo('/search') ? undefined : '当前身份无查询工作台页面权限'"
+        @click="goOrHint('/search')">去查询工作台跑一条 →</button>
       <!-- 指向页用注册名（/devtools=Dev Tools），与 /rest（REST 直连）区分 -->
-      <button class="btn sm ghost" @click="router.push('/devtools')">去 Dev Tools 多标签控制台 →</button>
+      <button class="btn sm ghost" :disabled="!canGo('/devtools')" :title="canGo('/devtools') ? undefined : '当前身份无 Dev Tools 页面权限'"
+        @click="goOrHint('/devtools')">去 Dev Tools 多标签控制台 →</button>
     </EmptyState>
 
     <EmptyState v-else-if="filtered.length === 0" :icon="Star"
@@ -235,8 +237,18 @@ function preview(payload: any): string {
 /* 重放走统一真链路（utils/favReplay），此前预填键无人消费，「打开」是假动作 */
 function replay(it: any) {
   replayFavorite(it, router, (t, m) => store.notify(t, m),
-    (path) => auth.isAdmin()
-      || pageAllowed(auth.grantedPages, path, store.target, auth.envAllows, auth.me?.role));
+    (path) => canGo(path));
+}
+
+/* 空态导航与重放同门（pageAllowed 单源）：无权限不再裸 push 到 /forbidden，
+   按钮提前禁用+提示（所见即所得） */
+function canGo(path: string) {
+  return auth.isAdmin()
+    || pageAllowed(auth.grantedPages, path, store.target, auth.envAllows, auth.me?.role);
+}
+function goOrHint(path: string) {
+  if (!canGo(path)) { store.notify('warning', '当前身份无该页面权限'); return; }
+  router.push(path);
 }
 
 function copyPayload(it: any) {

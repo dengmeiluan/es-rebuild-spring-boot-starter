@@ -212,7 +212,9 @@ describe('第三波：写门收口（10 视图写按钮 VIEWER 不可见）', ()
   it('RestView：发送/失败重试=raw 透传 admin 档（canAdmin 定义）', () => {
     const v = V('RestView.vue');
     expect(v).toContain("const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target));");
-    expect(v).toContain('<button v-if="canAdmin" class="btn primary sm" :disabled="sending || !path.trim()" @click="send">');
+    /* 988：发送钮叠非 ADMIN 数据面预暴露门（DevTools 双门同口径），钮面 disabled 与 doSend 体首行同源 */
+    expect(v).toContain('<button v-if="canAdmin" class="btn primary sm" :disabled="sending || !path.trim() || !currentSendable"');
+    expect(v).toContain("if (!requestInScope(method.value, path.value)) { store.notify('warning', SCOPE_DENY_HINT); return; }");
     expect(v).toContain('v-if="respErr && canAdmin" class="btn sm" :disabled="sending" @click="send"');
   });
   it('BrowserView：新建索引/ForceMerge 行钮/删除索引行钮=ops', () => {

@@ -1081,6 +1081,11 @@ public class EsIndexAdmin {
             return; // 非 JSON 交由 ES 原始报错
         }
         if (script == null) return;
+        guardScriptValue(script);
+    }
+
+    /** update 脚本值守卫（bulk update 的伴生文档行与 _update/_update_by_query 同权）。 */
+    private void guardScriptValue(Object script) {
         if (script instanceof String) {
             guardUpdateScriptSource((String) script, null);
             return;
@@ -2739,6 +2744,10 @@ public class EsIndexAdmin {
                 Object pipeline = actionMeta.get("pipeline");
                 if (pipeline != null) guardPipelineRef(String.valueOf(pipeline));
             }
+            /* bulk update 的伴生文档行可携带 script（旧版 ES 的 ctx._index 可写），
+               与 _update 通道同权过脚本守卫，堵住动作行 _index 合法 + 脚本改道的组合。 */
+            Object script = action.get("script");
+            if (script != null) guardScriptValue(script);
         }
     }
 

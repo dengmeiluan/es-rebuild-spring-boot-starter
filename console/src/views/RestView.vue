@@ -25,9 +25,11 @@
         <!-- W3-T11：端点目录补全渗透；面板关/无候选 Enter 透发 enter → send（裸 Enter 执行语义保留） -->
         <EndpointPathInput v-model="path" class="inp mono rt-path" placeholder="/_cluster/health"
           @endpoint="onEndpoint" @enter="send" />
-        <button v-if="canAdmin" class="btn primary sm" :disabled="sending || !path.trim()" @click="send">
+        <button v-if="canAdmin" class="btn primary sm" :disabled="sending || !path.trim() || !currentSendable"
+          :title="currentSendable ? undefined : SCOPE_DENY_HINT" @click="send">
           <Send :size="13" /> {{ sending ? '发送中（' + (qr.elapsedMs.value / 1000).toFixed(1) + 's）…' : '发送' }}
         </button>
+        <span v-if="canAdmin && !currentSendable" class="rt-scope-dim" role="status" :title="SCOPE_DENY_HINT">非 ADMIN 仅数据面</span>
         <button v-if="sending" class="btn sm" @click="qr.cancel()"><X :size="12" /> 取消</button>
       </div>
       <!-- 常用 snippet -->
@@ -184,11 +186,20 @@ import { useInputLint, jqLiteRule } from '../composables/useInputLint';
 import { markHtmlAll } from '../utils/respMark';
 /* 历史弹窗体改用 QueryHistoryPanel 统一件（本地过滤/导出/空态实现退役） */
 import QueryHistoryPanel, { type HistRow } from '../components/QueryHistoryPanel.vue';
+/* 非 ADMIN 数据面写白名单（与后端 guardRawGuarded 同口径的客户端预暴露） */
+import { nonAdminDataPlaneWriteAllowed } from '../utils/devtoolsScope';
 
 const store = useAppStore();
 /* 权限写门——raw 透传是 ADMIN 档（DevToolsView canAdmin 同口径），发送/重试钮仅 ADMIN 可见 */
 const auth = useAuthStore();
 const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target)); /* ：管理域按 rest 页勾选 */
+/* 非 ADMIN 写范围预暴露与 DevTools 同口径（后端同执行内核 guardRawGuarded，双页单口径）。
+   me==null（未启用鉴权/探测完成未登录）跟随 canEndpoint 放行语义——后端 authDisabled
+   形态无角色概念，scope 门不得把管理写在前端拦死 */
+const requestInScope = (m: string, p: string) =>
+  auth.isAdmin() || auth.me == null || auth.authDisabled || nonAdminDataPlaneWriteAllowed(m, p);
+const currentSendable = computed(() => canAdmin.value && requestInScope(method.value, path.value));
+const SCOPE_DENY_HINT = '非 ADMIN 仅可执行数据面写（检索/文档/批量/SQL）；别名、快照、模板、脚本与集群管理写需 ADMIN';
 /* 方法全集收口 esEndpoints.REST_METHODS */
 const METHODS = REST_METHODS;
 const SNIPPETS = [
@@ -381,6 +392,8 @@ async function send() {
 async function doSend() {
   /* 执行体单点门：send/重试/Enter/确认后目标切换最终都汇入此处，钮面隐藏不是唯一防线 */
   if (!canAdmin.value) { store.notify('warning', 'raw 透传需要 ADMIN 或 REST 页写权限'); return; }
+  /* 非 ADMIN 数据面口径与 DevTools 同源：越权形态在客户端即拒，不把请求发到后端才 403 */
+  if (!requestInScope(method.value, path.value)) { store.notify('warning', SCOPE_DENY_HINT); return; }
   /* G7-A2：path 输入框 Enter 路径不受按钮 :disabled 约束——执行体守卫管键盘重入（教训 7） */
   if (sending.value) return;
   sending.value = true;
@@ -484,6 +497,8 @@ function openRawIo() {
  锚类 rt-req-row/.rt-resp-scroll 零变动）；响应分节 border-top 承接约定①分界 */
 .rt-perm-note { display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-2) var(--sp-4) 0; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); }
 .rt-req { padding: var(--sp-3) var(--sp-4); }
+/* 非 ADMIN 数据面口径的按钮旁占位说明（dt-perm-dim 同形态） */
+.rt-scope-dim { align-self: center; display: inline-flex; color: var(--muted); cursor: help; font-size: var(--fs-xs); }
 /* 窄视口 7 控件必溢出——请求行可换行（row-gap 补换行后行距，gap 仍管同排间距） */
 .rt-req-row { display: flex; gap: var(--sp-2); row-gap: var(--sp-1); align-items: center; flex-wrap: wrap; }
 .rt-methods button[data-m="DELETE"].on { color: var(--err); }

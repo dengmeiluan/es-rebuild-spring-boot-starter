@@ -61,13 +61,13 @@ describe('Tasks / TaskTree：取消任务执行体 canWrite 门', () => {
     expect(tasks).toContain("...(t.cancellable && canWrite.value ? [{ key: 'cancel'");
   });
   it('TasksView cancelOne 首行 canWrite 早退（warning 文案）', () => {
-    expect(tasks).toMatch(/async function cancelOne\(t: Task\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canWrite\.value\) \{ store\.notify\('warning', '取消任务需 OPERATOR 及以上角色'\); return; \}/);
+    expect(tasks).toMatch(/async function cancelOne\(t: Task\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canWrite\.value\) \{ store\.notify\('warning', '取消任务需 REBUILD_OP\/CLUSTER_OP 或 ADMIN 角色'\); return; \}/);
   });
   it('TaskTreeView 单条 cancelOne 首行 canWrite 早退', () => {
-    expect(taskTree).toMatch(/async function cancelOne\(id: string, node\?: string\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canWrite\.value\) \{ store\.notify\('warning', '取消任务需 OPERATOR 及以上角色'\); return; \}/);
+    expect(taskTree).toMatch(/async function cancelOne\(id: string, node\?: string\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canWrite\.value\) \{ store\.notify\('warning', '取消任务需 REBUILD_OP\/CLUSTER_OP 或 ADMIN 角色'\); return; \}/);
   });
   it('TaskTreeView 批量 bulkCancel 首行 canWrite 早退', () => {
-    expect(taskTree).toMatch(/async function bulkCancel\(\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canWrite\.value\) \{ store\.notify\('warning', '取消任务需 OPERATOR 及以上角色'\); return; \}/);
+    expect(taskTree).toMatch(/async function bulkCancel\(\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canWrite\.value\) \{ store\.notify\('warning', '取消任务需 REBUILD_OP\/CLUSTER_OP 或 ADMIN 角色'\); return; \}/);
   });
 });
 

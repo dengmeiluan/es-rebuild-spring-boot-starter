@@ -112,7 +112,7 @@ public class ConsoleAuthController {
             err.put("code", "BAD_CREDENTIALS");
             err.put("message", "用户名或密码错误");
             opsAuditStore.record(ConsoleOpsAuditEvent.builder()
-                    .username(body.get("username")).role("-")
+                    .username(clipAuditName(body.get("username"))).role("-")
                     .method("POST").uri("/internal/es/index/auth/login")
                     .action("LOGIN_FAIL").httpStatus(401)
                     .ip(clientIp(request))
@@ -120,14 +120,22 @@ public class ConsoleAuthController {
             return err;
         }
         opsAuditStore.record(ConsoleOpsAuditEvent.builder()
-                .username(String.valueOf(result.get("username")))
-                .displayName(String.valueOf(result.get("role")))
+                .username(clipAuditName(String.valueOf(result.get("username"))))
+                .role(String.valueOf(result.get("role")))
                 .method("POST").uri("/internal/es/index/auth/login")
                 .action("LOGIN").httpStatus(200)
                 .detail(Boolean.TRUE.equals(result.get("fallback")) ? "fallback 默认账号登录" : null)
                 .ip(clientIp(request))
                 .build());
         return result;
+    }
+
+    /** 失败登录的用户名是攻击者可控串：钳制后入审计，防长串撑爆审计索引/污染合规流水
+     （与 JDBC 档列宽同量级）；此前 role 误占 displayName 位，人名列显示 "ADMIN" 属字段错位。 */
+    private static String clipAuditName(String raw) {
+        if (raw == null) return null;
+        String s = raw.trim();
+        return s.length() > 128 ? s.substring(0, 128) : s;
     }
 
     /** 来源地址（与拦截器同一实现：仅私网/回环代理才信转发头，防公网直连伪造审计 IP）。 */

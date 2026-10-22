@@ -34,4 +34,14 @@ describe('DevTools 非 ADMIN 数据面白名单', () => {
     expect(ok('POST', '/logs/_close')).toBe(false);
     expect(ok('POST', '/_nodes/reload_secure_settings')).toBe(false);
   });
+
+  /* 988：根级 PIT/scroll 按方法收口——POST 开全集群 PIT/续读 scroll 等价全量读，
+     与后端 guardRawGuarded 987 口径一致；限定索引的 POST /logs/_pit 仍走索引级白名单。 */
+  it('根级 PIT 与 scroll 仅 DELETE 放行（988）', () => {
+    expect(ok('POST', '/_pit')).toBe(false);
+    expect(ok('DELETE', '/_pit')).toBe(true);
+    expect(ok('POST', '/_search/scroll')).toBe(false);
+    expect(ok('DELETE', '/_search/scroll')).toBe(true);
+    expect(ok('POST', '/logs/_pit')).toBe(true);
+  });
 });

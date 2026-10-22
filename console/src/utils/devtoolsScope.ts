@@ -6,10 +6,14 @@
  */
 const SYSTEM_DATA_WRITE = new Set([
   '/_bulk', '/_msearch', '/_msearch/template', '/_mget',
-  '/_search', '/_search/template', '/_search/scroll', '/_count',
+  '/_search', '/_search/template', '/_count',
   '/_async_search', '/_field_caps', '/_analyze', '/_render/template',
-  '/_sql', '/_sql/close', '/_xpack/sql', '/_xpack/sql/close', '/_pit',
+  '/_sql', '/_sql/close', '/_xpack/sql', '/_xpack/sql/close',
 ]);
+
+/* 根级 PIT/scroll 与后端 987 同口径：POST 开全集群 PIT/续读 scroll 等价全量读必须拒，
+   仅 DELETE（显式清理资源）放行；限定索引的 POST /logs/_pit 走索引级白名单。 */
+const SYSTEM_DATA_WRITE_DELETE_ONLY = new Set(['/_pit', '/_search/scroll']);
 
 const INDEX_DATA_WRITE_OPS = new Set([
   '_doc', '_create', '_update', '_bulk', '_delete_by_query', '_update_by_query',
@@ -28,6 +32,7 @@ export function nonAdminDataPlaneWriteAllowed(method: string, path: string): boo
   const first = segs[0].toLowerCase();
   if (first.startsWith('_')) {
     if (SYSTEM_DATA_WRITE.has(clean)) return true;
+    if (m === 'DELETE' && SYSTEM_DATA_WRITE_DELETE_ONLY.has(clean)) return true;
     /* 后端对 /_sql/**、/_xpack/sql/** 子路由整体放行（close 等）。 */
     if (first === '_sql') return true;
     if (first === '_xpack' && segs[1]?.toLowerCase() === 'sql') return true;

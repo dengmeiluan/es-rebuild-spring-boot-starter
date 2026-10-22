@@ -330,7 +330,7 @@ async function load() {
 
 async function cancelOne(t: Task) {
   /* 权限执行体首行门（按钮 v-if 之外的右键菜单/程序化通道） */
-  if (!canWrite.value) { store.notify('warning', '取消任务需 OPERATOR 及以上角色'); return; }
+  if (!canWrite.value) { store.notify('warning', '取消任务需 REBUILD_OP/CLUSTER_OP 或 ADMIN 角色'); return; }
   if (!t.cancellable) return;
   if (!await askConfirm({
     title: '取消任务',

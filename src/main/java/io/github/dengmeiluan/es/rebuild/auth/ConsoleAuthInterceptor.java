@@ -141,11 +141,14 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             "/cluster/raw",
             "/cluster/devtools/execute",
             "/setup/rebind",  //  重绑控制集群（高危：控制面数据归属切换）
+            /* 已绑定后 setup/apply|test 与 rebind 同族（控制面归属/凭据流转）——
+               未绑定窗口在 SETUP 短路放行（早于角色门），bootstrap 不受影响 */
+            "/setup/apply", "/setup/test",
             "/clusters/");  //  多集群连接保存/删除/测试（凭据流转）；GET /clusters 列表脱敏，VIEWER 可读
     /** 系统管理层（重绑/连接档案）：ADMIN 角色专属。用户管理归 security 页写键，
      *  由页面门裁决；账号服务再限制非 ADMIN 不得授予/修改/删除 ADMIN（防提权）。 */
     private static final List<String> SYSTEM_ADMIN_KEYWORDS = Arrays.asList(
-            "/setup/rebind",
+            "/setup/rebind", "/setup/apply",
             "/clusters/");
     /** 审计分级专用（不参与授权）：破坏性数据/控制面操作一律记 HIGH_RISK。 */
     private static final List<String> HIGH_RISK_AUDIT_KEYWORDS = Arrays.asList(
@@ -1212,11 +1215,26 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         return uri;
     }
 
-    /** 只读 POST 判定（清单 contains + 三个精确尾缀）。 */
+    /** 只读 POST 判定（清单段边界匹配 + 三个精确尾缀）。
+     * 段边界=kw 前是 / 或串首、kw 后是段尾（/ ? ; 或串尾；尾带 / 的 kw 天然段前缀）——
+     * 裸 contains 会让未来落在 /cluster/counter-reset 等前缀内的新写端点被静默归为
+     * VIEWER 只读档，与「连接模型未登记写默认拒绝」的纵深不一致。 */
     static boolean isReadonlyPost(String uri) {
         for (String kw : READONLY_POST_KEYWORDS) {
-            if (uri.contains(kw)) {
-                return true;
+            boolean prefixKw = kw.endsWith("/");
+            int at = uri.indexOf(kw);
+            while (at >= 0) {
+                int end = at + kw.length();
+                /* kw 以 / 开头时前导 / 自身就是段分隔（/index/cluster/query 的 at-1 是 x 不是 /）；
+                   不以 / 开头才要求前一字符是段边界，防 /mycluster/query 命中 cluster/query。 */
+                boolean prevOk = at == 0 || uri.charAt(at - 1) == '/' || kw.charAt(0) == '/';
+                boolean endOk = prefixKw
+                        || end == uri.length()
+                        || uri.charAt(end) == '/' || uri.charAt(end) == '?' || uri.charAt(end) == ';';
+                if (prevOk && endOk) {
+                    return true;
+                }
+                at = uri.indexOf(kw, at + 1);
             }
         }
         return uri.endsWith("/index/query") || uri.endsWith("/index/system-query") || uri.endsWith("/probe");

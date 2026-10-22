@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { api } from '../../api';
-import { useAuthStore } from '../auth';
+import { useAuthStore, matchReadonlyKeyword } from '../auth';
 
 /* probe 代际守卫：并发探测乱序完成时只认最新一代。
    防的失败模式——iframe 握手场景无凭证首探的 401 晚于宿主 token 重探的 200 回来，
@@ -27,6 +27,21 @@ beforeEach(() => {
 
 afterEach(() => {
   meSpy.mockRestore();
+});
+
+describe('matchReadonlyKeyword 段边界匹配（988：与后端 isReadonlyPost 同源）', () => {
+  it('段精确/段前缀/query 串照旧命中', () => {
+    expect(matchReadonlyKeyword('/internal/es/index/cluster/query', '/cluster/query')).toBe(true);
+    expect(matchReadonlyKeyword('/internal/es/index/cluster/sql', '/cluster/sql')).toBe(true);
+    expect(matchReadonlyKeyword('/internal/es/index/cluster/sql/close', '/cluster/sql')).toBe(true);
+    expect(matchReadonlyKeyword('/internal/es/index/cluster/pit/open', '/cluster/pit/')).toBe(true);
+    expect(matchReadonlyKeyword('/internal/es/index/cluster/count?a=b', '/cluster/count')).toBe(true);
+  });
+  it('前缀内新写形态不被 includes 静默认成只读', () => {
+    expect(matchReadonlyKeyword('/internal/es/index/cluster/counter-reset', '/cluster/count')).toBe(false);
+    expect(matchReadonlyKeyword('/internal/es/index/cluster/counterX', '/cluster/count')).toBe(false);
+    expect(matchReadonlyKeyword('/internal/es/index/cluster/query-admin', '/cluster/query')).toBe(false);
+  });
 });
 
 describe('auth.probe 代际守卫', () => {

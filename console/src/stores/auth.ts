@@ -4,6 +4,26 @@ import { api, setToken, clearToken, getToken, ioRecorder } from '../api';
 import { canCap, canViewAllAudit, type ConsoleCap } from '../utils/capability';
 import { removeStoredRaw, writeStoredRaw } from '../utils/safeJson';
 
+/** 只读 POST 清单的段边界匹配（后端 ConsoleAuthInterceptor.isReadonlyPost 同源）：
+ * kw 前是 / 或串首、kw 后是段尾（/ ? ; 或串尾；尾带 / 的 kw 天然段前缀）——
+ * includes 会把 /cluster/counter-reset 等前缀内的新写端点静默认成只读。 */
+export function matchReadonlyKeyword(path: string, kw: string): boolean {
+  const prefixKw = kw.endsWith('/');
+  let at = path.indexOf(kw);
+  while (at >= 0) {
+    const end = at + kw.length;
+    /* kw 以 / 开头时前导 / 自身就是段分隔（/index/cluster/query 的 at-1 是 x 不是 /）；
+       不以 / 开头才要求前一字符是段边界，防 /mycluster/query 命中 cluster/query。 */
+    const prevOk = at === 0 || path.charAt(at - 1) === '/' || kw.charAt(0) === '/';
+    const endOk = prefixKw
+      || end === path.length
+      || path.charAt(end) === '/' || path.charAt(end) === '?' || path.charAt(end) === ';';
+    if (prevOk && endOk) return true;
+    at = path.indexOf(kw, at + 1);
+  }
+  return false;
+}
+
 /** 控制台鉴权状态 —— token 持久在 localStorage，身份内存态 */
 export const useAuthStore = defineStore('auth', () => {
   /** 当前身份（null=未登录/未知）；delegated=宿主委托鉴权（凭证归宿主管，不可退出/改密）；
@@ -486,9 +506,12 @@ export const useAuthStore = defineStore('auth', () => {
     const gateTarget = isHostBoundPath(cleanPath) ? 'host' : targetId;
     const tid = !gateTarget || String(gateTarget).toLowerCase() === 'host' ? 'host' : gateTarget;
     /* 963：只读 POST=清单命中 或 后端三条精确尾缀（index/query、index/system-query、探活 probe）——
-       尾缀端点无页归属，误判写会走精确写键把读动作也拦掉 */
+       尾缀端点无页归属，误判写会走精确写键把读动作也拦掉。
+       988：清单命中改段边界匹配（后端 isReadonlyPost 同源）——kw 前是 / 或串首、kw 后是
+       段尾（/ ? ; 串尾；尾带 / 的 kw 天然段前缀），防 includes 把前缀内的未来新写端点
+       静默认成只读 */
     const writeReq = method.toUpperCase() !== 'GET' && method.toUpperCase() !== 'HEAD'
-      && !READONLY_POST_KEYWORDS.some(kw => cleanPath.includes(kw))
+      && !READONLY_POST_KEYWORDS.some(kw => matchReadonlyKeyword(cleanPath, kw))
       && !cleanPath.endsWith('/index/query') && !cleanPath.endsWith('/index/system-query') && !cleanPath.endsWith('/probe');
     if (writeReq) {
       /* 写语义：共享映射优先（多页合法复用的端点，任一归属页写键即放行）；

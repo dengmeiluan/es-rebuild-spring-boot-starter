@@ -93,6 +93,14 @@
   tasks/task-tree 页授权；Watcher/ILM 的 DevTools 入口按 DevTools 页权提示；
   REST 只读身份显示内联说明；无内置登录的部署在登录遮罩给出宿主认证指引
 
+### 新增（989 批：构建树评分函数与搜索建议编辑轮）
+
+- `function_score` 评分函数结构化编辑：函数行列表（类型下拉七种/weight/主参数/filter
+  递归子表/增删），自定义形态类型位锁定防丢数据；`functions` 数组仍原样往返零降级
+- `suggest`（搜索建议）一等化：term/phrase/completion 建议项行级编辑（名称/text/建议器
+  体/全局 text），畸形形态整键落「其他顶层键」零丢失
+- 条件过滤修复：命中条件在折叠的嵌套组内时此前完全不可见（折叠内容不渲染），过滤框旁
+  现给出「折叠内 N」提示并可一键展开全部定位
 ### 新增（987 批：查询构建器 DSL 全量覆盖轮）
 
 - 条件树算子补齐 ES 8.x 新语法九员：整词前缀（`match_int_prefix`）、地理网格（`geo_grid`）、
@@ -106,6 +114,28 @@
 - 交互修复：折叠后的嵌套组组头常显（此前 hover 才浮现，触屏无法再展开）；字段选择器对不在
   当前索引 mapping 的手输字段给黄点提示（无 mapping 部署不受影响）；DSL 手改导致条件树冻结
   期间补键盘惰性（此前鼠标已挡但键盘仍可触发写树覆盖手改）
+
+### 安全（988 批：并发审计收口）
+
+- `_bulk` update 动作的伴生文档行 `script` 与 `_update` 通道同权过脚本守卫：此前动作行
+  `_index` 合法即可借 `ctx._index='es_console_user'` 脚本把文档改写到控制面索引
+  （`_update`/`_update_by_query` 均已堵，唯 bulk 漏网）；已存脚本 `id`、params 携带
+  `_index`、非 painless 语言同样拒绝，普通字段累加脚本不受影响
+- REST 直连页补非 ADMIN 数据面预暴露（与 DevTools 双门同口径、后端同执行内核）：越权形态
+  在客户端即禁用+提示，不再「RestView 亮钮、发出才 403」的双口径分裂
+- DevTools 前端 `/_pit`、`/_search/scroll` 白名单按方法收口对齐后端 987 契约：POST 开
+  全集群 PIT/续读 scroll 前端即拒（仅 DELETE 清理资源放行），限定索引的 `POST /logs/_pit`
+  照旧
+- 已绑定后 `setup/apply|test` 与 `setup/rebind` 同档 ADMIN（控制面归属/凭据流转；未绑定
+  bootstrap 窗口在 SETUP 短路放行，不受影响），不再依赖控制器 `alreadyBound` 单层兜底
+- 只读 POST 清单前后端同步段边界化（`isReadonlyPost`/`matchReadonlyKeyword` 同源）：
+  裸 `contains` 会把未来落在 `/cluster/counter-reset` 等前缀内的新写端点静默归为
+  VIEWER 只读档
+- 登录失败审计的用户名钳制 128 字符（攻击者可控串防撑爆审计索引/污染合规流水）；登录
+  成功审计 role 字段落位修正（此前误占 displayName 位，人名列显示 "ADMIN"）
+- 前端体验：收藏夹空态导航按钮接 `pageAllowed` 同源门（无权限禁用+提示，不再裸跳
+  /forbidden）；任务取消守卫提示文案档位修正（REBUILD_OP/CLUSTER_OP 或 ADMIN，
+  此前误写 OPERATOR 及以上）
 
 ## [1.0.36]
 
