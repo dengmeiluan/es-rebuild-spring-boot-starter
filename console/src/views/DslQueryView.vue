@@ -112,6 +112,7 @@
         <div class="dq-tree">
           <!-- W4-T14：builder 字段源并轨 useIndexFields（mappingDetail 出口），消除 clusterInspect 双管线漂移 -->
           <QueryTreePane
+            ref="treePaneRef"
             :tree="queryTree" :fields="builderFields" :types="builderTypes" :stale="treeStale"
             :index="store.pickedIdx"
             @update:tree="onTreeUpdate"
@@ -254,7 +255,7 @@
         <div v-show="paramsOpen" class="dq-params-body dq-params-standalone">
             <RootExtrasPane
               :tree="queryTree" :fields="builderFields" :types="builderTypes" :index="store.pickedIdx"
-              @update:tree="onTreeUpdate"
+              @update:tree="onExtrasUpdate"
             />
         </div>
         <!-- Profile 树移出参数面板（实报「看不到 profile」根因=树藏在
@@ -899,6 +900,16 @@ watch(dsl, (v) => queueLint(v), { immediate: true });
 
 /* W1：条件树 ↔ DSL 双向同步（useTreeDslSync 承载防环/回解/冻结，dslTreeSync.spec 覆盖）。 */
 const { tree: queryTree, stale: treeStale, onTreeUpdate, resyncNow } = useTreeDslSync(dsl);
+
+/* 1002：extras 域写经条件树面板的历史栈合流——排序/查询参数/检索器等编辑与条件树
+   编辑共用同一条撤销流（Ctrl+Z 跨域逐级回退）。此前 extras 写绕开 setRoot 且被
+   lastEmitted 甄别当成外部换树=清栈，任何参数编辑都会抹掉全部撤销历史。
+   条件树面板恒显示=通道恒在场；兜底直写仅供理论缺席态。 */
+const treePaneRef = ref<{ commitTree: (t: typeof queryTree.value) => void } | null>(null);
+function onExtrasUpdate(t: typeof queryTree.value) {
+  if (treePaneRef.value) treePaneRef.value.commitTree(t);
+  else onTreeUpdate(t);
+}
 
 /* P1 workbench：tree 宽度交 WorkbenchLayout 管理（偏好 key 含 target/route/mode/档位），
  旧 es_console_qb_split 由 useLayoutPreferences 在 route='/search' 首建时一次性迁移。 */

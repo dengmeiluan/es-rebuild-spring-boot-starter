@@ -1,7 +1,9 @@
 /* 993 批：构建树 undo/redo 历史栈契约。
    甄别机制：本面板写路径全部汇聚 setRoot（emit 前记 lastEmitted 引用）——props.tree
    回流 === lastEmitted = 内部写（push undo）；≠ = DSL 解析/外部换树（清栈防跨源串撤销）。
-   键盘 Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y 面板内增强；栈深 50 截断。 */
+   键盘 Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y 面板内增强；栈深 50 截断。
+   1002 扩域：栈快照从 root 升整树——extras 域（排序/查询参数/检索器…）经 DslQueryView
+   路由进 commitTree（defineExpose），与条件树编辑共用同一条撤销流。 */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createApp, h, nextTick, ref, shallowRef } from 'vue';
 import QueryTreePane from '../builder/QueryTreePane.vue';
@@ -28,6 +30,25 @@ function mount(dsl: Record<string, unknown>) {
 }
 const ser = (cur: { value: QueryTree }) => JSON.stringify(serializeTree(cur.value));
 const btn = (host: HTMLElement, title: string) => host.querySelector<HTMLButtonElement>(`button[title^="${title}"]`);
+
+/* 1002：带面板实例 ref 的挂具——extras 域写通道 commitTree 直接调用（生产由
+   DslQueryView 把 RootExtrasPane 的 update:tree 路由进来） */
+function mountX(dsl: Record<string, unknown>) {
+  const t = parseTree(dsl);
+  if (!t.ok) throw new Error('parse failed');
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  const cur = shallowRef<QueryTree>(t.tree);
+  const pane = ref<{ commitTree: (t: QueryTree) => void } | null>(null);
+  const app = createApp({
+    render: () => h(QueryTreePane, {
+      ref: pane, tree: cur.value, fields: ['a', 'b', 'c'], types: {},
+      'onUpdate:tree': (x: QueryTree) => { cur.value = x; },
+    }),
+  });
+  app.mount(host);
+  return { host, cur, pane };
+}
 
 beforeEach(() => { document.body.innerHTML = ''; localStorage.clear(); sessionStorage.clear(); });
 
@@ -104,6 +125,48 @@ describe('993 undo/redo 历史栈', () => {
     pane.dispatchEvent(new KeyboardEvent('keydown', { key: 'Z', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }));
     await tick();
     expect(ser(cur)).not.toContain('"a":1');
+  });
+});
+
+describe('1002 extras 域撤销（排序/查询参数/检索器编辑入同一条历史流）', () => {
+  it('extras 编辑可撤销且不清条件树历史（跨域单栈逐级回退）', async () => {
+    const { host, cur, pane } = mountX({ query: { bool: { must: [{ term: { a: 1 } }, { term: { b: 2 } }] } } });
+    await tick();
+    const undo = btn(host, '撤销');
+    expect(undo!.disabled, '初态无历史').toBe(true);
+    /* 条件树域写：删第一条件 */
+    (host.querySelector('.bgn-part.o-must .cn button[aria-label="删除"]') as HTMLElement).click();
+    await tick();
+    expect(undo!.disabled).toBe(false);
+    /* extras 域写（RootExtrasPane 的 update:tree 形态：加排序） */
+    pane.value!.commitTree({ ...cur.value, sort: [{ id: 's1', field: 'a', form: 'str', params: {} }] });
+    await tick();
+    expect(ser(cur)).toContain('"sort"');
+    expect(undo!.disabled, 'extras 写入即有历史（旧 bug：extras 写清栈）').toBe(false);
+    /* 撤销一次 → 回到 extras 写之前（排序消失、删除保持） */
+    undo!.click();
+    await tick();
+    expect(ser(cur)).not.toContain('"sort"');
+    expect(ser(cur), '删除仍生效（逐级回退不串域）').not.toContain('"a":1');
+    /* 再撤销 → 回到删除之前 */
+    undo!.click();
+    await tick();
+    expect(ser(cur)).toContain('"a":1');
+    expect(ser(cur)).not.toContain('"sort"');
+  });
+
+  it('无根树的 extras 编辑同样可撤销（排序/参数-only 现场不再栈死）', async () => {
+    const { host, cur, pane } = mountX({ sort: ['a'] });
+    await tick();
+    expect(btn(host, '撤销'), '无根无历史=空态干净（头行隐藏）').toBeNull();
+    pane.value!.commitTree({ ...cur.value, size: 10 });
+    await tick();
+    const undo = btn(host, '撤销')!;
+    expect(undo.disabled, 'extras 写入即有历史（头行随历史出现）').toBe(false);
+    undo.click();
+    await tick();
+    expect(ser(cur)).not.toContain('"size"');
+    expect(ser(cur)).toContain('"sort"');
   });
 });
 

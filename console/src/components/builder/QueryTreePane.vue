@@ -48,6 +48,12 @@
         <button v-else class="btn sm ghost" title="全部条件临时停用（不删除，可恢复）" @click="setAllDisabled(true)"><Pause :size="11" /> 停用全部</button>
       </template>
     </div>
+    <!-- 1002：无根树（排序/参数-only 现场）的撤销窄条——extras 域编辑同样可撤；
+         与头行 v-if/v-else-if 互斥（无根时头行整排控件是噪声，只出 undo/redo） -->
+    <div v-else-if="undoStack.length || redoStack.length" class="qtp-hd">
+      <button class="btn sm ghost" aria-label="撤销上一步树编辑" :disabled="!undoStack.length" :title="'撤销上一步树编辑（Ctrl+Z），可回退 ' + undoStack.length + ' 步'" @click="undo()"><Undo2 :size="11" /></button>
+      <button class="btn sm ghost" aria-label="重做树编辑" :disabled="!redoStack.length" title="重做树编辑（Ctrl+Shift+Z / Ctrl+Y）" @click="redo()"><Redo2 :size="11" /></button>
+    </div>
 
     <!-- v3.1 空态：漏斗插画+光晕引导（替代单行虚线框） -->
     <div v-if="!tree.root" class="qtp-none">
@@ -336,26 +342,30 @@ const isPlainMatchAll = computed(() => {
   return !!r && r.type === 'leaf' && r.op === 'match_all' && !Object.keys((r as LeafNode).params).length;
 });
 
-/* ═══ 993：undo/redo 历史栈 ═══
- 面板内写路径全部汇聚 setRoot（单点 emit）——emit 前记 lastEmitted 引用；watch props.tree
- 回流时甄别来源（=== lastEmitted = 内部写回流，不动栈；≠ = DSL 解析/外部换树，清栈防
- 跨源串撤销——用户手改 DSL 后撤销到旧树会覆盖手改，Monaco setValue 清 undo 栈不可逆）。
- 栈存「写前 root」，深 50 截断；新写动作清空重做分支。 */
-const undoStack = ref<QueryNode[]>([]);
-const redoStack = ref<QueryNode[]>([]);
+/* ═══ 993/1002：undo/redo 历史栈 ═══
+ 写路径单点 emit，emit 前记 lastEmitted 引用；watch props.tree 回流甄别来源
+ （=== lastEmitted = 内部写回流，不动栈；≠ = DSL 解析/外部换树，清栈防跨源串撤销
+ ——用户手改 DSL 后撤销到旧树会覆盖手改，Monaco setValue 清 undo 栈不可逆）。
+ 栈存「写前整树快照」（树按不可变约定流转，存引用零拷贝），深 50 截断；新写动作
+ 清空重做分支。1002 起快照从 root 扩到整树：extras 域（排序/查询参数/检索器…）经
+ DslQueryView 路由进 commitTree，与条件树编辑共用同一条撤销流（Ctrl+Z 跨域逐级回退）。 */
+const undoStack = ref<QueryTree[]>([]);
+const redoStack = ref<QueryTree[]>([]);
 let lastEmitted: QueryTree | null = null;
 const UNDO_MAX = 50;
 
-function setRoot(root: QueryNode) {
-  if (root.type === 'bool' && !root.children.length) root = matchAllLeaf();
-  const prevRoot = props.tree.root;
-  if (prevRoot) {
-    undoStack.value.push(prevRoot);
+function commitTree(next: QueryTree, skipHistory = false) {
+  if (!skipHistory) {
+    undoStack.value.push(props.tree);
     if (undoStack.value.length > UNDO_MAX) undoStack.value.shift();
     redoStack.value = [];
   }
-  lastEmitted = { ...props.tree, root };
-  emit('update:tree', lastEmitted);
+  lastEmitted = next;
+  emit('update:tree', next);
+}
+function setRoot(root: QueryNode) {
+  if (root.type === 'bool' && !root.children.length) root = matchAllLeaf();
+  commitTree({ ...props.tree, root }, !props.tree.root);   /* 首建根不入栈（993 语义：无根可撤） */
 }
 watch(() => props.tree, t => {
   if (t === lastEmitted) return;
@@ -365,18 +375,22 @@ watch(() => props.tree, t => {
 });
 function undo() {
   const prev = undoStack.value.pop();
-  if (!prev || !props.tree.root) return;
-  redoStack.value.push(props.tree.root);
-  lastEmitted = { ...props.tree, root: prev };
-  emit('update:tree', lastEmitted);
+  if (!prev) return;
+  redoStack.value.push(props.tree);
+  lastEmitted = prev;
+  emit('update:tree', prev);
 }
 function redo() {
   const next = redoStack.value.pop();
-  if (!next || !props.tree.root) return;
-  undoStack.value.push(props.tree.root);
-  lastEmitted = { ...props.tree, root: next };
-  emit('update:tree', lastEmitted);
+  if (!next) return;
+  undoStack.value.push(props.tree);
+  lastEmitted = next;
+  emit('update:tree', next);
 }
+
+/* 1002：extras 域写入口（DslQueryView 把 RootExtrasPane 的 update:tree 路由进来；
+   条件树面板恒显示=通道恒在场，视图侧保留兜底直写） */
+defineExpose({ commitTree: (t: QueryTree) => commitTree(t) });
 function onRootUpdate(n: QueryNode) { setRoot(n); }
 function onRootRemove() { setRoot(matchAllLeaf()); }
 function wrapRoot() { if (props.tree.root) setRoot(wrapInBool(props.tree.root, props.tree.root.id)); }
