@@ -141,6 +141,7 @@ import JsonArea from '../components/JsonArea.vue';
 import QueryResultTable from '../components/QueryResultTable.vue';
 import EmptyState from '../components/EmptyState.vue';
 import { friendlyEsError } from '../utils/esError'; /* ：runErr 人话化 */
+import { removeStoredRaw } from '../utils/safeJson';
 /* errMeta 随双参改用接入（utils/errPre 帮手只读复用） */
 import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-html 内核 */
 import { matrixText } from '../utils/copyMatrix'; /* ：最慢操作表 MD 复制 */
@@ -299,7 +300,19 @@ function heatColor(t: number) {
   return 'var(--ok)';
 }
 
-onMounted(() => { if (!index.value) index.value = store.pickedIdx || ''; });
+onMounted(() => {
+  /* 命令面板「把当前 DSL 送去火焰图分析」的一次性载荷：读后即清（防刷新重复覆盖
+     用户后续手改的草稿）；profile:true 由 run() 自行注入，这里只回填原始 body。 */
+  const carried = sessionStorage.getItem('es-console.flame.body');
+  if (carried && carried.trim()) {
+    dsl.value = carried;
+    removeStoredRaw(sessionStorage, 'es-console.flame.body');
+    const carriedIdx = sessionStorage.getItem('es-console.flame.index');
+    if (carriedIdx) { index.value = carriedIdx; removeStoredRaw(sessionStorage, 'es-console.flame.index'); }
+    return;
+  }
+  if (!index.value) index.value = store.pickedIdx || '';
+});
 </script>
 
 <style scoped>

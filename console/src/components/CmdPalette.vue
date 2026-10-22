@@ -396,7 +396,9 @@ const commands = computed<Cmd[]>(() => {
       action: () => go('/doc-diff') },
     { id: 'data-quick-sql', title: '快速 SQL（带入当前索引）', sub: '预填 SELECT 并跳转 SQL 控制台自动执行', cat: 'data', icon: Send,
       action: () => {
-        /* 原生 prompt() 废弃，改为预填 + 路由到成熟视图 */
+        /* 原生 prompt() 废弃，改为预填 + 路由到成熟视图；先判页权再写一次性键——
+           无权被拒时键不残留（残留会让下次合法进入时意外执行陈旧预填）。 */
+        if (!canGo('/search')) { go({ path: '/search', query: { mode: 'sql' } }); return; }
         writeStoredRaw(sessionStorage, 'es-console.sql.prefill', store.pickedIdx ? `SELECT * FROM "${store.pickedIdx}" LIMIT 5` : 'SELECT * FROM "my-index" LIMIT 5');
         go({ path: '/search', query: { mode: 'sql' } });
       } },
@@ -404,7 +406,7 @@ const commands = computed<Cmd[]>(() => {
     { id: 'dev-devtools', title: 'Dev Tools 多标签编辑器', sub: 'Kibana 风格 · 多标签持久化 · Ctrl+Enter', cat: 'dev', icon: TerminalSquare,
       action: () => go('/devtools') },
     { id: 'dev-devtools-new-tab', title: 'Dev Tools 新开标签', sub: '直接打开一个空 GET / 请求', cat: 'dev', icon: TerminalSquare,
-      action: () => { writeStoredRaw(sessionStorage, 'es-console.devtools.newtab', '1'); go('/devtools'); } },
+      action: () => { if (!canGo('/devtools')) { go('/devtools'); return; } writeStoredRaw(sessionStorage, 'es-console.devtools.newtab', '1'); go('/devtools'); } },
     { id: 'dev-flame', title: 'Profile 火焰图', sub: 'DSL profile 递归展开 · 热力条 · Top10 慢操作', cat: 'dev', icon: Flame,
       action: () => go('/profile-flame') },
     { id: 'dev-flame-current', title: '把当前 DSL 送去火焰图分析', sub: '带 profile=true 重跑', cat: 'dev', icon: Flame,

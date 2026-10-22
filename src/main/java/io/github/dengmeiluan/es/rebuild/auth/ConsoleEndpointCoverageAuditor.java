@@ -94,9 +94,15 @@ public class ConsoleEndpointCoverageAuditor {
         }
         Set<String> unclassifiedWrites = new TreeSet<>();
         Set<String> unclassifiedReads = new TreeSet<>();
+        boolean degraded = false;
         for (Map.Entry<RequestMappingInfo, HandlerMethod> entry : mapping.getHandlerMethods().entrySet()) {
             RequestMappingInfo info = entry.getKey();
             Set<String> patterns = extractPatterns(info);
+            if (patterns == null) {
+                /* 反射失明=本宿主上自检不可用，不能让空结果汇成「覆盖完整」的假保证。 */
+                degraded = true;
+                continue;
+            }
             if (patterns.isEmpty()) continue;
             Set<RequestMethod> methods = info.getMethodsCondition().getMethods();
             for (String pattern : patterns) {
@@ -120,7 +126,7 @@ public class ConsoleEndpointCoverageAuditor {
             LOG.warn("[console-auth] 以下读端点没有页面归属，任意已认证 VIEWER 可读（越权读面，请登记"
                     + "页面契约 apiPrefixes 或 SHARED_READ_PAGES）: {}", unclassifiedReads);
         }
-        if (unclassifiedWrites.isEmpty() && unclassifiedReads.isEmpty()) {
+        if (unclassifiedWrites.isEmpty() && unclassifiedReads.isEmpty() && !degraded) {
             LOG.info("[console-auth] 端点授权覆盖自检通过：全部 /internal/es/** 端点均有页面或共享映射归属");
         }
     }
@@ -129,7 +135,8 @@ public class ConsoleEndpointCoverageAuditor {
      * 兼容两种路径匹配策略取映射 pattern：老 AntPathMatcher（{@code getPatternsCondition()}）
      * 与 Spring Boot 2.6+ 默认的 PathPatternParser（{@code getPathPatternsCondition()}，
      * 此时前者恒 null）。后者是 5.3 才有的 API 而本工程编译基线是 5.2，只能反射取——
-     * 否则自检在 2.6+ 宿主上全量失明还打出「覆盖完整」的假保证。
+     * 失败返回 null（区别于空集）标记自检失明，否则会在 2.6+ 宿主上全量跳过
+     * 还打出「覆盖完整」的假保证。
      */
     static Set<String> extractPatterns(RequestMappingInfo info) {
         Set<String> patterns = new TreeSet<>();
@@ -146,6 +153,7 @@ public class ConsoleEndpointCoverageAuditor {
         } catch (Exception e) {
             LOG.warn("[console-auth] 端点覆盖自检无法读取路径映射——本宿主上自检不可用，"
                     + "请人工核对新增端点已登记页面契约或共享映射", e);
+            return null;
         }
         return patterns;
     }

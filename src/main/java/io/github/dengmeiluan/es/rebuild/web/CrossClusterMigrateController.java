@@ -132,7 +132,7 @@ public class CrossClusterMigrateController {
     @GetMapping("jobs")
     public List<MigrateJobES> jobs(@RequestParam(required = false, defaultValue = "20") int limit,
                                    HttpServletRequest request) {
-        List<MigrateJobES> all = migrateService.jobs(limit);
+        List<MigrateJobES> all = migrateService.jobs(Math.min(Math.max(limit, 1), 500));
         boolean connModel = connModel(request);
         ConsolePrincipal principal = principal(request);
         List<MigrateJobES> out = new ArrayList<>(all.size());

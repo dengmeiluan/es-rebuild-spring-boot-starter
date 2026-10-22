@@ -59,6 +59,11 @@ public class CrossClusterMigrateService {
     /** 进度持久化节流（毫秒）：减少 worker 高频写作业索引。 */
     private static final long PERSIST_THROTTLE_MS = 1500L;
 
+    /** 请求侧切片/批量上限：slices 直接映射线程池大小、batch 直传 scroll size——
+     *  不钳制时一次请求即可建十万线程（认证后的资源耗尽面）。 */
+    private static final int MAX_SLICES = 32;
+    private static final int MAX_BATCH_SIZE = 10_000;
+
     /** 捕获/还原的目标索引动态 settings 键。 */
     private static final String K_REFRESH = "index.refresh_interval";
     private static final String K_REPLICAS = "index.number_of_replicas";
@@ -305,8 +310,8 @@ public class CrossClusterMigrateService {
     public String start(MigrateRequest req) {
         validate(req);
         guardDestMajor();
-        int slices = req.getSlices() > 0 ? req.getSlices() : properties.getMigrate().getDefaultSlices();
-        int batch = req.getBatchSize() > 0 ? req.getBatchSize() : properties.getMigrate().getDefaultBatchSize();
+        int slices = req.getSlices() > 0 ? Math.min(req.getSlices(), MAX_SLICES) : properties.getMigrate().getDefaultSlices();
+        int batch = req.getBatchSize() > 0 ? Math.min(req.getBatchSize(), MAX_BATCH_SIZE) : properties.getMigrate().getDefaultBatchSize();
         int keepAlive = req.getScrollKeepAliveSec() > 0
                 ? req.getScrollKeepAliveSec() : properties.getMigrate().getScrollKeepAliveSec();
 
@@ -395,9 +400,11 @@ public class CrossClusterMigrateService {
         Map<String, String> savedSettings = persisted.getSavedSettings() == null
                 ? new LinkedHashMap<>() : new LinkedHashMap<>(persisted.getSavedSettings());
         try {
-            int slices = persisted.getSlices() == null ? 1 : persisted.getSlices();
+            int slices = persisted.getSlices() == null ? 1
+                    : Math.min(persisted.getSlices(), MAX_SLICES);
             int batch = persisted.getBatchSize() == null
-                    ? properties.getMigrate().getDefaultBatchSize() : persisted.getBatchSize();
+                    ? properties.getMigrate().getDefaultBatchSize()
+                    : Math.min(persisted.getBatchSize(), MAX_BATCH_SIZE);
             int keepAlive = properties.getMigrate().getScrollKeepAliveSec();
             TuneMode tuneMode = parseTune(persisted.getTuneMode(), jobId);
 
@@ -506,6 +513,12 @@ public class CrossClusterMigrateService {
      * 与前端顶栏所选数据面目标无关——目标索引补全必须用本清单，不能复用跟随 X-Es-Target 的清单。
      */
     public List<Map<String, Object>> destIndices() {
+        /* xmigrate 不经 EsTargetInterceptor（只挂 /internal/es/index/**），host-cluster-visible=false
+           的纯管理平台形态下 /cluster/** 全部 403 HOST_DISABLED——这里若不拦即成宿主索引
+           元数据的旁路泄露口。 */
+        if (!properties.getConsole().isHostClusterVisible()) {
+            throw new IllegalStateException("宿主集群数据面已隐藏（host-cluster-visible=false），迁移目标清单不可用");
+        }
         try {
             EsIndexAdmin admin = new EsIndexAdmin(localClient.get());
             List<Map<String, Object>> rows = admin.listClusterIndices();

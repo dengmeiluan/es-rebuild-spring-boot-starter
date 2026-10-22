@@ -162,6 +162,9 @@ public class MigrationHandle {
         s.setSourceIndex(meta.getSourceIndex());
         s.setDestIndex(meta.getDestIndex());
         s.setIndexKey(meta.getIndexKey());
+        // 源连接档案必须随快照带出：连接模型下 jobs 过滤/progress/abort/resume 的授权
+        // 全部按 job.srcConnId 对写键——丢失即「发起者无法查看/中止自己发起的迁移」。
+        s.setSrcConnId(meta.getSrcConnId());
         s.setRemoteEndpoint(meta.getRemoteEndpoint());
         s.setDestCreateMode(meta.getDestCreateMode());
         s.setTuneMode(meta.getTuneMode());

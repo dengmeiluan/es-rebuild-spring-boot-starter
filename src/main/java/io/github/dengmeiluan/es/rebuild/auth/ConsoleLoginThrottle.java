@@ -74,7 +74,12 @@ public class ConsoleLoginThrottle {
         if (failures.size() >= KEY_CAP && !failures.containsKey(key)) {
             failures.entrySet().removeIf(e -> now - e.getValue()[0] > WINDOW_MS);
             if (failures.size() >= KEY_CAP && !failures.containsKey(key)) {
-                return;
+                /* 键空间被灌满（海量随机用户名各失败一次）时静默丢弃会让全部未锁键
+                   的计数失效——驱逐最旧窗口条目腾位，维持对后续爆破目标的计数能力；
+                   被驱逐键只是计数清零重数（10 次机会重新累积），维持灌满成本翻倍。 */
+                failures.entrySet().stream()
+                        .min(java.util.Comparator.comparingLong(e -> e.getValue()[0]))
+                        .ifPresent(e -> failures.remove(e.getKey()));
             }
         }
         long[] slot = failures.compute(key, (k, v) ->

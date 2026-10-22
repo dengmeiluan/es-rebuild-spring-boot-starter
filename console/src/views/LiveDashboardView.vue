@@ -708,6 +708,7 @@ import { useAppStore } from '../stores/app';
 /* 第四卡单源——全局作业跟踪器（App.vue 登录就绪后常驻轮询），本页只读不拉新端点 */
 import { useJobTrackerStore } from '../stores/jobTracker';
 import { fmtTime, fmtDur, fmtWindow, fmtNum, copyText } from '../utils/format';
+import { removeStoredRaw } from '../utils/safeJson';
 import { matrixText } from '../utils/copyMatrix';
 import { METRIC_THRESHOLDS, metricTone } from '../utils/metricThresholds';
 /* 天罗W6：节点角色分档收口 utils/esEnumZh（data=蓝/master=紫单一出处，DiagView 节点表同源）；
@@ -1825,6 +1826,11 @@ watch([mh2Range, clusterFilter, nodeMode, mhAgg, customFrom, customTo], () => { 
 watch(histPeriod, () => { void loadHist(); if (detailShows('slow')) void loadSlow(); if (detailShows('top')) void loadTop(); });
 onMounted(() => {
   loadHist();
+  /* 命令面板「实时大屏·全屏切换」的一次性载荷：读后即清（刷新不再重复进入挂墙态）。 */
+  if (sessionStorage.getItem('es-console.live.fullscreen') === '1') {
+    fullscreen.value = true;
+    removeStoredRaw(sessionStorage, 'es-console.live.fullscreen');
+  }
   /* 入场编排——next rAF 翻真，令 [data-st] 初态先落一帧再起过渡 */
   requestAnimationFrame(() => { pageIn.value = true; });
 });

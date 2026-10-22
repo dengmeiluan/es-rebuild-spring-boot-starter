@@ -190,10 +190,11 @@ public class ConsoleAuthController {
     }
 
     /** 失败登录的用户名是攻击者可控串：钳制后入审计，防长串撑爆审计索引/污染合规流水
-     （与 JDBC 档列宽同量级）；此前 role 误占 displayName 位，人名列显示 "ADMIN" 属字段错位。 */
+     （与 JDBC 档列宽同量级）；此前 role 误占 displayName 位，人名列显示 "ADMIN" 属字段错位。
+     同时清洗 CR/LF 与控制符——审计落档与日志两用，防伪造日志行。 */
     private static String clipAuditName(String raw) {
         if (raw == null) return null;
-        String s = raw.trim();
+        String s = raw.replaceAll("[\\r\\n\\t\\p{Cntrl}]", " ").trim();
         return s.length() > 128 ? s.substring(0, 128) : s;
     }
 

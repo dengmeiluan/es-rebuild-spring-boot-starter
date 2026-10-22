@@ -285,8 +285,14 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
         if (revokedTokens.size() >= REVOKED_TOKEN_CAP) {
             revokedTokens.entrySet().removeIf(e -> e.getValue() <= now);
             if (revokedTokens.size() >= REVOKED_TOKEN_CAP) {
-                LOG.warn("[es-console-auth] 登出吊销表已满，本次登出不登记（token 将在 TTL 自然过期）");
-                return false;
+                /* 持任一有效凭据循环 login/logout 同样能灌满封顶（成功登录不节流、
+                   每次签发的 token 唯一）——拒绝新吊销会让所有人的被盗 token 在 TTL
+                   内不可吊销。驱逐最早到期的条目腾位：被驱逐者要么接近自然过期、
+                   要么是灌水条目，短窗口复活风险远小于「全部吊销失效」。 */
+                revokedTokens.entrySet().stream()
+                        .min(java.util.Comparator.comparingLong(Map.Entry::getValue))
+                        .ifPresent(e -> revokedTokens.remove(e.getKey()));
+                LOG.warn("[es-console-auth] 登出吊销表已满，已驱逐最早到期条目为新吊销腾位");
             }
         }
         revokedTokens.put(tokenFingerprint(token), tokenExpiresAt(token));
@@ -381,10 +387,15 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
     }
 
     /** 新建/覆盖用户（password 为空表示只改角色）。 */
-    public void upsertUser(ConsolePrincipal actor, String username, String password, ConsoleRole role) throws IOException {
+    public synchronized void upsertUser(ConsolePrincipal actor, String username, String password, ConsoleRole role) throws IOException {
         forbidDelegatedLocalUserWrite(actor);
         if (username == null || username.trim().isEmpty()) {
             throw new IllegalArgumentException("username 不可为空");
+        }
+        /* 用户名会进 token 载荷、审计档与日志：CR/LF/控制符可在日志与流水里伪造行，
+           白名单式拒绝（字母数字 + 常规可见 ASCII + 中文等非控制 Unicode）。 */
+        if (username.chars().anyMatch(c -> c < 0x20 || c == 0x7F)) {
+            throw new IllegalArgumentException("username 不得包含控制字符");
         }
         if (role == null) {
             throw new IllegalArgumentException("role 不可为空");
@@ -474,7 +485,7 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
     }
 
     /** 删除用户（保护最后一个 ADMIN；非 ADMIN 不得删除 ADMIN 账号）。 */
-    public void deleteUser(String username, ConsolePrincipal actor) throws IOException {
+    public synchronized void deleteUser(String username, ConsolePrincipal actor) throws IOException {
         forbidDelegatedLocalUserWrite(actor);
         Map<String, Object> existing = findUser(username);
         if (existing == null) {

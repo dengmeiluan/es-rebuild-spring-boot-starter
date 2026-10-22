@@ -80,6 +80,10 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
      *  端点解析请求体后回填，afterCompletion 落入 HIGH_RISK detail（*  高危操作从「零法证」到「谁对哪个集群执行了什么」）。 */
     public static final String ATTR_RAW_SUMMARY = "es.console.raw.summary";
 
+    /** 带 body 请求的统一体积上限（字节）：与 raw 通道的 32M 字符守卫对齐，
+     *  封住 @RequestBody 端点（Jackson 全量读入）的内存耗尽面。 */
+    private static final long MAX_BODY_BYTES = 32L * 1024 * 1024;
+
     /** 免鉴权路径（登录本身 +  Setup 状态查询）。 */
     private static final List<String> WHITELIST = Arrays.asList(
             "/internal/es/index/auth/login",
@@ -547,6 +551,22 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             return false;
         }
         request.setAttribute(ATTR_NORMALIZED_PATH, path);
+        /* 带 body 请求的统一体积上限：raw 透传有自己的 32M 字符守卫，其余 @RequestBody
+           端点此前无任何应用层限制（容器 maxPostSize 只管 form 编码）——认证用户
+           POST 数百 MB JSON 会被 Jackson 全量读入，属内存耗尽面。32MB 与 raw 对齐。 */
+        String reqMethod = request.getMethod();
+        long bodyLen;
+        try {
+            bodyLen = request.getContentLengthLong();
+        } catch (UnsupportedOperationException e) {
+            bodyLen = -1; /* 最小 stub/老容器无此方法：无 body 信息，不据此拒绝 */
+        }
+        if (!"GET".equalsIgnoreCase(reqMethod) && !"HEAD".equalsIgnoreCase(reqMethod)
+                && !"OPTIONS".equalsIgnoreCase(reqMethod)
+                && bodyLen > MAX_BODY_BYTES) {
+            deny(response, 413, "{\"code\":\"BODY_TOO_LARGE\",\"message\":\"请求体超过 32MB 上限\"}");
+            return false;
+        }
         //  SETUP 短路：未绑定控制集群时，除 setup 三端点外统一 409（前端据此弹首连向导）
         if (!resolver.bound()) {
             if ("/internal/es/index/setup/status".equals(path)

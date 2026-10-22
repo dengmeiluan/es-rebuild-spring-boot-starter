@@ -2,6 +2,10 @@
 server:
   # 避开 8080 常用业务端口，方便与你的应用并排跑
   port: 8081
+  # 演示宿主默认只绑回环（与 standalone 同款）：用户索引为空期间兜底账号
+  # admin/es-console 可直登 ADMIN，绑定全部网卡等于把默认口令暴露给整个内网；
+  # 需要对外演示时显式覆盖本值并先建立真实账号。
+  address: 127.0.0.1
 
 spring:
   application:
