@@ -10,7 +10,7 @@
 ① field 形态 inner 对象形态记忆（expanded）——{match:{f:{query:'x'}}} 不再被归一成 {match:{f:'x'}}；
 ② 查询体参数（min_score/search_after/fields/pit…共 18 键）一等分账 searchParams，不再落 extras 键值表。
 零拷贝取舍：parse 不重造子对象（params/raw 直引原 DSL），parse 后不得 mutate 原 DSL。 */
-import { OPS_META, MULTI_META, type ParamMeta } from './queryAstOps';
+import { OPS_META, MULTI_META, RETRIEVER_META, type ParamMeta } from './queryAstOps';
 import { SEARCH_PARAM_KEYS, SEARCH_PARAM_ORDER } from './queryBodyParams';
 
 export type Occur = 'must' | 'filter' | 'should' | 'must_not';
@@ -101,6 +101,9 @@ export interface QueryTree {
   rescoreArray?: boolean;
   scriptFields: ScriptFieldsSpec | null;
   runtimeMappings: RuntimeMappingsSpec | null;
+  /** 1000：检索器（8.14+ 检索面）——六变体递归结构（bm25/knn/rrf/tsr/rule/linear），
+   * 见 parseRetriever/serRetriever；未注册变体/畸形体整键落 extras 零丢失 */
+  retriever: RetrieverNode | null;
   size?: unknown; from?: unknown;  // 非数值也原样保留（零降级）
   sort: SortItem[] | null;         // null = 键不存在；[] = 空数组保键
   source: SourceSpec | null;
@@ -364,6 +367,8 @@ export function parseTree(dsl: unknown): ParseResult {
     /* 996：命名键+体 同构双键；项 body 非对象整键落 extras 零丢失 */
     else if (k === 'script_fields') { const sf = parseNamed(v); if (sf) tree.scriptFields = sf; else tree.extras[k] = v; }
     else if (k === 'runtime_mappings') { const rm = parseNamed(v); if (rm) tree.runtimeMappings = rm; else tree.extras[k] = v; }
+    /* 1000：retriever 检索器（8.14+ 检索面）；未注册变体/畸形体整键落 extras 零丢失 */
+    else if (k === 'retriever') { const rv = parseRetriever(v); if (rv) tree.retriever = rv; else tree.extras[k] = v; }
     /* 998：查询体参数一等分账（18 键，控件语义见 queryBodyParams）——任何值原样入账，
        不再落 extras 键值表；未注册键维持 extras 零丢失 */
     else if (SEARCH_PARAM_KEYS.has(k)) tree.searchParams[k] = v;
@@ -444,6 +449,8 @@ export function serializeTree(t: QueryTree): Record<string, unknown> {
       out.rescore = [...(t.rescore ? [t.rescore] : []), ...(t.rescoreExtra || [])].map(serRescore);
     } else if (t.rescore) out.rescore = serRescore(t.rescore);
   }
+  /* 1000：retriever 检索器 */
+  if (t.retriever) out.retriever = serRetriever(t.retriever);
   if (t.aggs !== null) out[t.aggKey || 'aggs'] = serAggs(t.aggs);
   if (t.highlight !== null) out.highlight = serHighlight(t.highlight);
   /* 998：查询体参数按注册序写出（DSL 文本稳定）；未注册键（历史草稿/未来扩展）按插入序殿后 */
@@ -476,6 +483,97 @@ function serRescore(rs: RescoreSpec): Record<string, unknown> {
   const out: Record<string, unknown> = { query: q };
   if (rs.hasWindowSize) out.window_size = rs.windowSize;
   return out;
+}
+
+/* ═══ 1000：retriever 检索器（8.14+ 顶层检索面）═══
+   六变体递归结构。畸形/未注册变体整键落 extras（调用方 parseTree 负责），
+   本层只保证「解析成功 ⇒ 往返一致」；半成品态（如 rule 无回退子检索器）合法保留。 */
+export interface RetrieverNode {
+  id: string;
+  op: string;
+  query: QueryNode | null;           /* bm25 内嵌查询树（MiniTreeEditor 编辑） */
+  child: RetrieverNode | null;       /* 单子变体：text_similarity_reranker 重排源 / rule 回退 */
+  children: RetrieverNode[];         /* 数组变体：rrf.retrievers / linear.retrieve */
+  childKeys: Record<string, Record<string, unknown>>;   /* linear 每子项伴随键（weight…），按子 id 记账 */
+  field: string | null;              /* knn / tsr 字段（null = 键缺席） */
+  value: unknown;                    /* knn.query_vector 主值 */
+  hasValue: boolean;                 /* 向量键在场记忆（false = 原 DSL 无此键） */
+  params: Record<string, unknown>;   /* 其余参数（k/rank_constant/text/ruleset_id/match_criteria…） */
+}
+
+export function parseRetriever(v: unknown): RetrieverNode | null {
+  if (!isObj(v)) return null;
+  const keys = Object.keys(v);
+  if (keys.length !== 1) return null;
+  const op = keys[0];
+  const meta = RETRIEVER_META[op];
+  const body = v[op];
+  if (!meta || !isObj(body)) return null;
+  const base = (): RetrieverNode => ({ id: nid(), op, query: null, child: null, children: [], childKeys: {}, field: null, value: undefined, hasValue: false, params: {} });
+  if (meta.kind === 'query') {
+    if (!isObj(body.query)) return null;   /* bm25 必带查询体，缺席=畸形整键 extras */
+    const { query, ...rest } = body;
+    return { ...base(), query: parseQueryNode(query), params: rest };
+  }
+  if (meta.kind === 'flat') {
+    const { field, query_vector, ...rest } = body;
+    if (field !== undefined && typeof field !== 'string') return null;
+    return { ...base(), field: typeof field === 'string' ? field : null,
+      value: query_vector, hasValue: Object.prototype.hasOwnProperty.call(body, 'query_vector'), params: rest };
+  }
+  if (meta.kind === 'list') {
+    const list = body[meta.listKey!];
+    if (!Array.isArray(list)) return null;
+    const children: RetrieverNode[] = [];
+    const childKeys: Record<string, Record<string, unknown>> = {};
+    for (const item of list) {
+      if (meta.wrapped) {
+        /* linear：子项是 {retriever: {...}, weight…} 包裹——伴随键按子 id 记账，序列化时回包 */
+        if (!isObj(item) || !isObj(item.retriever)) return null;
+        const { retriever, ...rest } = item;
+        const c = parseRetriever(retriever);
+        if (!c) return null;
+        children.push(c); childKeys[c.id] = rest;
+      } else {
+        const c = parseRetriever(item);
+        if (!c) return null;
+        children.push(c);
+      }
+    }
+    const { [meta.listKey!]: _list, ...rest } = body;
+    return { ...base(), children, childKeys, params: rest };
+  }
+  /* child 变体：tsr 源 / rule 回退（retriever 键缺席合法——rule 可只按 match_criteria 路由） */
+  const { retriever, field, ...rest } = body;
+  if (retriever !== undefined && !isObj(retriever)) return null;
+  const c = retriever === undefined ? null : parseRetriever(retriever);
+  if (retriever !== undefined && !c) return null;
+  if (field !== undefined && typeof field !== 'string') return null;
+  return { ...base(), child: c, field: typeof field === 'string' ? field : null, params: rest };
+}
+
+export function serRetriever(n: RetrieverNode): Record<string, unknown> {
+  const meta = RETRIEVER_META[n.op];
+  if (!meta) return {};   // 理论不可达（解析器不产未注册变体）
+  if (meta.kind === 'query') {
+    return { [n.op]: { ...n.params, query: n.query ? serQueryNode(n.query) : { match_all: {} } } };
+  }
+  if (meta.kind === 'flat') {
+    const b: Record<string, unknown> = { ...n.params };
+    if (n.field !== null) b.field = n.field;
+    if (n.hasValue) b.query_vector = n.value;
+    return { [n.op]: b };
+  }
+  if (meta.kind === 'list') {
+    const arr = n.children.map(c => meta.wrapped
+      ? { retriever: serRetriever(c), ...n.childKeys[c.id] }
+      : serRetriever(c));
+    return { [n.op]: { ...n.params, [meta.listKey!]: arr } };
+  }
+  const b: Record<string, unknown> = { ...n.params };
+  if (n.child) b.retriever = serRetriever(n.child);
+  if (n.field !== null) b.field = n.field;
+  return { [n.op]: b };
 }
 
 /* ---- sort：form 记忆原形态；编辑加参数后自然升级 full ---- */
@@ -726,7 +824,7 @@ export function insertAfter(root: QueryNode, id: string): QueryNode {
 }
 
 export function emptyTree(): QueryTree {
-  return { root: null, postFilter: null, collapse: null, knn: null, suggest: null, rescore: null, scriptFields: null, runtimeMappings: null, sort: null, source: null, aggs: null, highlight: null, searchParams: {}, extras: {} };
+  return { root: null, postFilter: null, collapse: null, knn: null, suggest: null, rescore: null, scriptFields: null, runtimeMappings: null, retriever: null, sort: null, source: null, aggs: null, highlight: null, searchParams: {}, extras: {} };
 }
 
 /* ═══ 985：高级算子空节点工厂（BoolGroupNode「+ 高级」菜单插入入口） ═══
@@ -757,4 +855,20 @@ export function makeNodeByOp(op: string): QueryNode {
 
 function matchAllLeafNode(): LeafNode {
   return { id: nid(), type: 'leaf', op: 'match_all', field: null, value: {}, params: {}, raw: null };
+}
+
+/* 1000：检索器空节点工厂——新变体给可用初值（bm25=match_all 查询；rrf/linear 默认带一路 bm25 子项，
+   linear 子项给 weight:1）。切换变体=换新节点（六变体载荷语义互斥，保留旧载荷只会造出脏 DSL） */
+export function makeRetrieverByOp(op: string): RetrieverNode {
+  const base = (o: string): RetrieverNode => ({ id: nid(), op: o, query: null, child: null, children: [], childKeys: {}, field: null, value: undefined, hasValue: false, params: {} });
+  const m = RETRIEVER_META[op];
+  if (!m) return { ...base('bm25'), query: matchAllLeafNode() };
+  if (m.kind === 'query') return { ...base(op), query: matchAllLeafNode() };
+  if (m.kind === 'list') {
+    const c = makeRetrieverByOp('bm25');
+    const n = { ...base(op), children: [c] };
+    if (m.wrapped) n.childKeys = { [c.id]: { weight: 1 } };
+    return n;
+  }
+  return base(op);
 }

@@ -39,6 +39,11 @@
         <span class="rx-cn">向量检索</span><code class="rx-key">knn</code>
         <span class="rx-state" :class="{ on: !!tree.knn }">{{ tree.knn?.field || '未设置' }}</span>
       </button>
+      <!-- 1000：retriever 检索器（8.14+ 多路召回组合面，query 的继任写法） -->
+      <button type="button" class="rx-chip" :class="{ on: open.has('rt') }" title="检索器（8.14+）：多路召回组合——BM25 / 向量 / RRF 融合 / 文本重排 / 规则路由 / 线性加权（与 query 二选一的声明式检索面）" @click="toggle('rt')">
+        <span class="rx-cn">检索器</span><code class="rx-key">retriever</code>
+        <span class="rx-state" :class="{ on: !!tree.retriever }">{{ tree.retriever ? '已设置' : '未设置' }}</span>
+      </button>
       <button type="button" class="rx-chip" :class="{ on: open.has('sug') }" title="搜索建议（suggest：term/phrase/completion）" @click="toggle('sug')">
         <span class="rx-cn">搜索建议</span><code class="rx-key">suggest</code>
         <span class="rx-state" :class="{ on: !!tree.suggest?.items.length }">{{ tree.suggest?.items.length ? tree.suggest.items.length + ' 项' : '未设置' }}</span>
@@ -294,6 +299,16 @@ ES 默认返回全部字段
       </template>
     </div>
 
+    <!-- 1000：检索器 retriever（六变体递归编辑；未注册变体/畸形体不进面板——留在「其他顶层键」零丢失） -->
+    <div v-if="open.has('rt')" class="rx-open">
+      <div v-if="!tree.retriever" class="rx-none">
+检索器（8.14+）：多路召回组合检索面（与 query 二选一）
+        <button class="btn sm ghost" @click="rtAdd">+ 加检索器</button>
+      </div>
+      <RetrieverEditor v-else :node="tree.retriever" :fields="fields" :types="types"
+                       @update:node="rtUpdate" @remove="rtClear" />
+    </div>
+
     <!-- 991：重打分 rescore（window_size + 重打分查询树编辑 + query 权重参数） -->
     <div v-if="open.has('rc')" class="rx-open">
       <div v-if="!tree.rescore" class="rx-none">
@@ -461,7 +476,8 @@ import FieldPicker from '../FieldPicker.vue';
 import GenericParams from './GenericParams.vue';
 import AggTreeNode from './AggTreeNode.vue';
 import MiniTreeEditor from './MiniTreeEditor.vue';
-import { nid, type QueryTree, type SortItem, type SourceSpec, type AggNode, type QueryNode, type CollapseSpec, type KnnSpec, type SuggestItem, type SuggestSpec, type RescoreSpec, type NamedSpecItem } from '../../utils/queryAst';
+import RetrieverEditor from './RetrieverEditor.vue';
+import { nid, makeRetrieverByOp, type QueryTree, type SortItem, type SourceSpec, type AggNode, type QueryNode, type CollapseSpec, type KnnSpec, type SuggestItem, type SuggestSpec, type RescoreSpec, type NamedSpecItem, type RetrieverNode } from '../../utils/queryAst';
 import { SEARCH_PARAM_META, SEARCH_PARAM_GROUPS } from '../../utils/queryBodyParams';
 import { setFieldSearchIndex } from '../../utils/fieldSearch';
 
@@ -564,6 +580,7 @@ const open = ref<Set<string>>(new Set([
   ...(props.tree.postFilter ? ['pf'] : []),
   ...(props.tree.collapse ? ['col'] : []),
   ...(props.tree.knn ? ['knn'] : []),
+  ...(props.tree.retriever ? ['rt'] : []),
   ...(props.tree.suggest ? ['sug'] : []),
   ...(props.tree.rescore ? ['rc'] : []),
   ...(props.tree.scriptFields ? ['sf'] : []),
@@ -693,6 +710,11 @@ function pfAdd() {
   if (!open.value.has('pf')) toggle('pf');
 }
 function pfUpdate(n: QueryNode) { patch({ postFilter: n }); }
+
+/* 1000：检索器三口——新建给 bm25 可用初值；编辑直通；删除整键收回 */
+function rtAdd() { patch({ retriever: makeRetrieverByOp('bm25') }); }
+function rtUpdate(n: RetrieverNode) { patch({ retriever: n }); }
+function rtClear() { patch({ retriever: null }); }
 
 /* collapse：路由字段折叠 + 其余参数（inner_hits 等）走递归表 */
 const COLLAPSE_TYPES = ['keyword', 'long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float', 'boolean', 'date'];

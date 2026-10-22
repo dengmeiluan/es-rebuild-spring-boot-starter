@@ -109,7 +109,7 @@ async function popupAfterFocus(root: HTMLElement, selector: string) {
   };
 }
 
-const emptyTree = (): QueryTree => ({ root: null, postFilter: null, collapse: null, knn: null, suggest: null, rescore: null, scriptFields: null, runtimeMappings: null, sort: null, source: null, aggs: null, highlight: null, searchParams: {}, extras: {} });
+const emptyTree = (): QueryTree => ({ root: null, postFilter: null, collapse: null, knn: null, suggest: null, rescore: null, scriptFields: null, runtimeMappings: null, retriever: null, sort: null, source: null, aggs: null, highlight: null, searchParams: {}, extras: {} });
 
 describe('RootExtrasPane sort/highlight 行 typePriority（W3b）', () => {
   it('sort 行：typeFilter 可排序集内 date 置顶、数值族次之、keyword 殿后', async () => {

@@ -239,6 +239,7 @@ export function buildQuerySentence(tree: QueryTree): QuerySentence {
   if (tree.knn) pushMeta('向量检索', 'struct');
   if (tree.suggest?.items.length) pushMeta(`${tree.suggest.items.length} 个建议`, 'struct');
   if (tree.rescore) pushMeta('重打分', 'struct');
+  if (tree.retriever) pushMeta('检索器 retriever', 'struct');
   if (tree.scriptFields?.items.length) pushMeta(`${tree.scriptFields.items.length} 个脚本字段`, 'struct');
   if (tree.runtimeMappings?.items.length) pushMeta(`${tree.runtimeMappings.items.length} 个运行时字段`, 'struct');
   const sp = tree.searchParams || {};

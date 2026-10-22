@@ -267,6 +267,31 @@ export const MULTI_META: Record<string, { keys: string[]; arrKeys: string[]; par
   span_within: { keys: ['little', 'big'], arrKeys: [], partLabel: { little: '内部 little', big: '外部 big' } },
 };
 
+/* ═══ 1000：retriever 检索器元数据（8.14+ 顶层检索面，query 的继任写法）═══
+   kind 指示变体形态：'query'=bm25 内嵌 QueryNode 树；'flat'=knn 平面（field+query_vector+参数）；
+   'list'=子检索器数组（listKey；wrapped=true 为 linear 的每子项 {retriever,weight} 包裹形态）；
+   'child'=单子检索器（text_similarity_reranker 重排源 / rule 回退）。 */
+export interface RetrieverMeta { label: string; kind: 'query' | 'flat' | 'list' | 'child'; listKey?: string; wrapped?: boolean }
+export const RETRIEVER_META: Record<string, RetrieverMeta> = {
+  bm25: { label: 'BM25 检索', kind: 'query' },
+  knn: { label: '向量近邻', kind: 'flat' },
+  rrf: { label: 'RRF 融合', kind: 'list', listKey: 'retrievers' },
+  text_similarity_reranker: { label: '文本相似重排', kind: 'child' },
+  rule: { label: '规则路由', kind: 'child' },
+  linear: { label: '线性加权', kind: 'list', listKey: 'retrieve', wrapped: true },
+};
+/* 各变体具名常用参数（GenericParams schema 源；knn 的 field/query_vector 是结构位不在此表） */
+export const RETRIEVER_PARAMS: Record<string, ParamMeta[]> = {
+  bm25: [{ key: 'k', kind: 'number' }],
+  knn: [{ key: 'k', kind: 'number' }, { key: 'num_candidates', kind: 'number' },
+    { key: 'similarity', kind: 'number' }, { key: 'boost', kind: 'number' }],
+  rrf: [{ key: 'rank_constant', kind: 'number' }, { key: 'rank_window_size', kind: 'number' }],
+  text_similarity_reranker: [{ key: 'text', kind: 'text' }, { key: 'inference_id', kind: 'text' },
+    { key: 'rank_window_size', kind: 'number' }, { key: 'min_score', kind: 'number' }],
+  rule: [{ key: 'ruleset_id', kind: 'text' }],
+  linear: [{ key: 'normalize_weights', kind: 'boolean' }],
+};
+
 /* 高级算子分组（BoolGroupNode「+ 高级」菜单与 ClauseNode 下拉分组共用同源序）。
  全部成员必须是 OPS_META 或 WRAP_LABELS/MULTI_LABELS 已注册算子。 */
 export const ADV_MENU: Array<{ group: string; ops: string[] }> = [
