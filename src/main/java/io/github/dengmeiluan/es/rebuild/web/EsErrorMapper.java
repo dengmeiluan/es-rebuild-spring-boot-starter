@@ -41,12 +41,13 @@ public final class EsErrorMapper {
     private static final String TRUNCATED_SUFFIX = "...(truncated)";
 
     /** 错误体内的内网拓扑指纹归一（992）：URL（RHLC message 内嵌 host 形态）与
-     *  ES 节点坐标 [host:port] 脱敏；裸「IPv4:port」保留（连接异常的诊断粒度，既有契约锁）。
+     *  节点坐标脱敏；坐标两形态——ES 分片坐标 [host:port] 与 Apache 连接失败
+     *  [host/ip:port]（994 补）；裸「IPv4:port」保留（连接异常的诊断粒度，既有契约锁）。
      *  root_cause 语义保留（前端 friendlyEsError 链路不受影响）。 */
     private static final java.util.regex.Pattern TOPOLOGY_URL =
             java.util.regex.Pattern.compile("https?://[\\w.\\-]+(?::\\d{1,5})?");
     private static final java.util.regex.Pattern TOPOLOGY_BRACKET_HOST =
-            java.util.regex.Pattern.compile("\\[[\\w.\\-]+:\\d{1,5}\\]");
+            java.util.regex.Pattern.compile("\\[[\\w.\\-]+(?:/[\\w.\\-]+)*:\\d{1,5}\\]");
 
     private static final String REDACTED_HOST = "[redacted-host]";
 

@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {"es.rebuild.console.home-dir=target/demo-bootstrap",
-                "es.rebuild.console.sqlite.path=target/demo-bootstrap/jobs.db"})
+                "es.rebuild.console.sqlite-path=target/demo-bootstrap/jobs.db"})
 class DemoHostSmokeTest {
 
     @LocalServerPort

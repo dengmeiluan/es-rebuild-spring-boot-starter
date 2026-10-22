@@ -72,6 +72,14 @@ public class PropertiesAuthDelegate implements ConsoleAuthDelegate {
                 ? new JwtVerifier(props.getJwt().getSecret(), props.getJwt().getPublicKey()) : null;
         LOG.info("[PropertiesAuthDelegate] 配置式宿主鉴权已启用 mode={} tokenHeader={}",
                 props.getMode(), props.getTokenHeader());
+        /* header 模式空受信清单=回环/私网整体默认信任：私网内任意直连客户端（不限于网关）
+           都可注入身份/角色头。提醒收敛到显式网关清单（trusted-proxies 配置后仅清单内采信）。 */
+        if ("header".equalsIgnoreCase(props.getMode())
+                && props.getHeader().getTrustedProxies().isEmpty()) {
+            LOG.warn("[PropertiesAuthDelegate] header 模式未配置 trusted-proxies 受信代理清单，"
+                    + "当前默认信任回环/私网/链路本地全部来源的身份头——请配置网关真实地址"
+                    + "（如 10.8.0.0/16）把采信面收窄到具体代理");
+        }
     }
 
     @Override

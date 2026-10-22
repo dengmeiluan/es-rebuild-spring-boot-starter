@@ -178,7 +178,10 @@ public class MonitorSnapshotRecorder {
         }
         putIfNotNull(doc, "esVersion", health.get("version"));
         if (health.get("error") != null) {
-            String err = String.valueOf(health.get("error"));
+            /* 断链根因入档先过拓扑脱敏（992 口径）：连接失败消息内嵌的 URL/节点坐标
+               不随 monitor-history 长留存外发。 */
+            String err = io.github.dengmeiluan.es.rebuild.web.EsErrorMapper.sanitizeTopology(
+                    String.valueOf(health.get("error")));
             doc.put("error", err.length() > 500 ? err.substring(0, 500) : err);
         }
         return doc;

@@ -222,10 +222,13 @@ public class EsRebuildAutoConfiguration {
      * 端点存在无害且便于自检。</p>
      *
      * <p><b>无鉴权</b>：依赖内网隔离，页面显著位置印有该约束。此处刻意不引入任何鉴权
-     * Bean/拦截器/配置项 —— 那会增加 client 模式的重量，违反本波的目的。</p>
+     * Bean/拦截器/配置项 —— 那会增加 client 模式的重量，违反本波的目的。
+     * web-enabled=false 时与其它运维 Controller 同步关闭——该开关承诺「关闭内置
+     * 运维端点」，无鉴权端点更不能在关闭后残挂。</p>
      */
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "es.rebuild", name = "web-enabled", matchIfMissing = true)
     public DesiredStateController desiredStateController(IndexMetaRegistry indexMetaRegistry,
                                                         EntityMappingDeriver entityMappingDeriver) {
         // payload 要带上「重建实际会用的」注解推导 mapping，宿主 无法自己推导

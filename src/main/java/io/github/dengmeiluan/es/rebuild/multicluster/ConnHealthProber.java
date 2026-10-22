@@ -210,7 +210,9 @@ public class ConnHealthProber {
         h.put("status", "RED");
         h.put("latencyMs", null);
         h.put("lastProbeAt", System.currentTimeMillis());
-        h.put("error", error);
+        /* 断链根因统一拓扑脱敏（992 口径单源）：连接失败消息内嵌的 URL/节点坐标
+           不随 health 字段/monitor 落档外发。 */
+        h.put("error", io.github.dengmeiluan.es.rebuild.web.EsErrorMapper.sanitizeTopology(error));
         return h;
     }
 

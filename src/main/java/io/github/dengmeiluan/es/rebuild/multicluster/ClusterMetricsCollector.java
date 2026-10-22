@@ -519,7 +519,11 @@ public class ClusterMetricsCollector {
         doc.put("connName", str(conn.get("name")));
         putIfNotNull(doc, "env", conn.get("env"));
         doc.put("status", "red");
-        putIfNotNull(doc, "error", error != null && error.length() > 500 ? error.substring(0, 500) : error);
+        /* 断链根因入档先过拓扑脱敏（992 口径）：连接失败消息内嵌的 URL/节点坐标
+           不随 monitor-metrics 长留存外发；写时脱敏，存量由留存期消化。 */
+        String safeError = io.github.dengmeiluan.es.rebuild.web.EsErrorMapper.sanitizeTopology(error);
+        putIfNotNull(doc, "error", safeError != null && safeError.length() > 500
+                ? safeError.substring(0, 500) : safeError);
         return doc;
     }
 
@@ -948,6 +952,19 @@ public class ClusterMetricsCollector {
      */
     static final int TOP_SNAPSHOT_LIMIT = 20;
 
+    /** 控制面索引基础族（与 EsIndexAdmin.isControlIndexName 同源口径的静态近似）：
+     * Top 业务榜单不收录控制面——监控索引自写自读会把自身刷上榜，且控制面索引名
+     * 不应随 top-indexes 下发给 overview/live 页读者（ring-usage/clusterIndices 同口径）。 */
+    static boolean isControlIndexLike(String name) {
+        if (name == null || name.isEmpty()) {
+            return true;
+        }
+        String n = name.toLowerCase(java.util.Locale.ROOT);
+        return n.startsWith(".") || n.startsWith("es_console_")
+                || n.startsWith("es_rebuild_adhoc_job") || n.endsWith("_es_rebuild_lock")
+                || n.endsWith("_es_xmigrate_job");
+    }
+
     static List<Map<String, Object>> buildTopIndexes(Map<String, Object> indexStats,
                                                      IndexBaseline prev, long ts) {
         List<Map<String, Object>> out = new ArrayList<>();
@@ -961,6 +978,9 @@ public class ClusterMetricsCollector {
             }
             Map<?, ?> node = (Map<?, ?>) en.getValue();
             String name = String.valueOf(en.getKey());
+            if (isControlIndexLike(name)) {
+                continue;
+            }
             Long qT = counterOrNull(leaf(node, "total.search.query_total"));
             Long iT = counterOrNull(leaf(node, "total.indexing.index_total"));
             Long store = counterOrNull(leaf(node, "primaries.store.size_in_bytes"));

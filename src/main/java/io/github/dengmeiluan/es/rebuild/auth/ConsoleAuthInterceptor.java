@@ -946,7 +946,16 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         String connName = null;
         if (targetIsConn && connStore != null) {
             try {
-                connName = connStore.getName(targetId.trim());
+                String resolved = connStore.getName(targetId.trim());
+                /* xmigrate/adhoc 族的归属头不经过 EsTargetInterceptor 校验（执行锚是
+                   请求体的 srcConnId/作业 targetId）：未知 id 不落连接账——防伪造
+                   X-Es-Target 把写操作记到他人连接名下误导法证。 */
+                boolean connectionWorkflow = uri != null
+                        && (uri.contains("/xmigrate/") || uri.contains("/adhoc-rebuild/"));
+                if (resolved == null && connectionWorkflow) {
+                    targetIsConn = false;
+                }
+                connName = resolved;
             } catch (Exception e) {
                 /* 连接档案瞬态不可用：审计维度尽力而为，绝不反噬；
                    补节流 WARN——connName 恒 null 会让审计集群列失真且此前零痕 */

@@ -2,6 +2,10 @@
 server:
   # Kibana 同款默认端口，避免与常见 8080 业务端口相撞
   port: 5601
+  # 默认只听回环：绑定控制集群到建立首个真实账号之间存在兜底 ADMIN 账号
+  # （admin/es-console）窗口期，全网卡监听等于把该窗口暴露到内网。对外服务
+  # 时显式覆盖 --server.address=0.0.0.0（或内网网卡 IP）并第一时间创建真实账号。
+  address: 127.0.0.1
 
 spring:
   application:
