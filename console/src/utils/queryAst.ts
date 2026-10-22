@@ -72,6 +72,11 @@ export interface SuggestSpec { items: SuggestItem[]; globalText: unknown; hasGlo
  rescore_query 复用 QueryNode 树编辑；query 下其余键（query_weight/rescore_query_weight）落
  params。数组多段形态首期不结构化 → 落 extras 零丢失。 */
 export interface RescoreSpec { windowSize: unknown; hasWindowSize: boolean; rescoreQuery: QueryNode | null; params: Record<string, unknown> }
+/* 996：script_fields / runtime_mappings 一等解析（命名键+体 同构双键）。项体原样保真
+ （script source/params、type/format 等），任一项 body 非对象 → 整键落 extras 零丢失。 */
+export interface NamedSpecItem { name: string; body: Record<string, unknown> }
+export interface ScriptFieldsSpec { items: NamedSpecItem[] }
+export interface RuntimeMappingsSpec { items: NamedSpecItem[] }
 
 export interface QueryTree {
   root: QueryNode | null;
@@ -80,6 +85,8 @@ export interface QueryTree {
   knn: KnnSpec | null;
   suggest: SuggestSpec | null;
   rescore: RescoreSpec | null;
+  scriptFields: ScriptFieldsSpec | null;
+  runtimeMappings: RuntimeMappingsSpec | null;
   size?: unknown; from?: unknown;  // 非数值也原样保留（零降级）
   sort: SortItem[] | null;         // null = 键不存在；[] = 空数组保键
   source: SourceSpec | null;
@@ -308,6 +315,9 @@ export function parseTree(dsl: unknown): ParseResult {
     else if (k === 'suggest') { const s = parseSuggest(v); if (s) tree.suggest = s; else tree.extras[k] = v; }
     /* 991：rescore 单对象结构化；数组多段/query 缺席落 extras 零丢失 */
     else if (k === 'rescore') { const rs = parseRescore(v); if (rs) tree.rescore = rs; else tree.extras[k] = v; }
+    /* 996：命名键+体 同构双键；项 body 非对象整键落 extras 零丢失 */
+    else if (k === 'script_fields') { const sf = parseNamed(v); if (sf) tree.scriptFields = sf; else tree.extras[k] = v; }
+    else if (k === 'runtime_mappings') { const rm = parseNamed(v); if (rm) tree.runtimeMappings = rm; else tree.extras[k] = v; }
     else tree.extras[k] = v;
   }
   return { ok: true, tree };
@@ -317,6 +327,15 @@ function parseCollapse(v: unknown): CollapseSpec | null {
   if (!isObj(v) || typeof v.field !== 'string') return null;
   const { field, ...params } = v;
   return { field, params };
+}
+function parseNamed(v: unknown): { items: NamedSpecItem[] } | null {
+  if (!isObj(v)) return null;
+  const items: NamedSpecItem[] = [];
+  for (const [name, body] of Object.entries(v)) {
+    if (!isObj(body)) return null;
+    items.push({ name, body });
+  }
+  return { items };
 }
 function parseRescore(v: unknown): RescoreSpec | null {
   if (!isObj(v) || !isObj(v.query)) return null;
@@ -369,6 +388,8 @@ export function serializeTree(t: QueryTree): Record<string, unknown> {
     }
     out.suggest = s;
   }
+  if (t.scriptFields) out.script_fields = serNamed(t.scriptFields.items);
+  if (t.runtimeMappings) out.runtime_mappings = serNamed(t.runtimeMappings.items);
   if (t.rescore) {
     const q: Record<string, unknown> = { rescore_query: t.rescore.rescoreQuery ? serQueryNode(t.rescore.rescoreQuery) : { match_all: {} } };
     Object.assign(q, t.rescore.params);
@@ -379,6 +400,12 @@ export function serializeTree(t: QueryTree): Record<string, unknown> {
   if (t.aggs !== null) out[t.aggKey || 'aggs'] = serAggs(t.aggs);
   if (t.highlight !== null) out.highlight = serHighlight(t.highlight);
   for (const [k, v] of Object.entries(t.extras)) if (!Object.prototype.hasOwnProperty.call(out, k)) out[k] = v;
+  return out;
+}
+
+function serNamed(items: NamedSpecItem[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const it of items) out[it.name] = { ...it.body };
   return out;
 }
 
@@ -626,7 +653,7 @@ export function insertAfter(root: QueryNode, id: string): QueryNode {
 }
 
 export function emptyTree(): QueryTree {
-  return { root: null, postFilter: null, collapse: null, knn: null, suggest: null, rescore: null, sort: null, source: null, aggs: null, highlight: null, extras: {} };
+  return { root: null, postFilter: null, collapse: null, knn: null, suggest: null, rescore: null, scriptFields: null, runtimeMappings: null, sort: null, source: null, aggs: null, highlight: null, extras: {} };
 }
 
 /* ═══ 985：高级算子空节点工厂（BoolGroupNode「+ 高级」菜单插入入口） ═══

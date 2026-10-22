@@ -18,7 +18,7 @@ describe('useTreeDslSync 双向同步（396 批）', () => {
     /* 叶子节点真实形态：type='leaf' + op/field/value/params/raw（queryAst 树契约） */
     s.onTreeUpdate({
       root: { id: 'n1', type: 'leaf', op: 'term', field: 'status', value: 'ACTIVE', params: {}, raw: null } as any,
-      postFilter: null, collapse: null, knn: null, suggest: null, rescore: null,
+      postFilter: null, collapse: null, knn: null, suggest: null, rescore: null, scriptFields: null, runtimeMappings: null,
       sort: null, source: null, aggs: null, highlight: null, extras: {},
     });
     expect(dsl.value).toContain('"term"');

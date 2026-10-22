@@ -47,6 +47,14 @@
         <span class="rx-cn">重打分</span><code class="rx-key">rescore</code>
         <span class="rx-state" :class="{ on: !!tree.rescore }">{{ tree.rescore ? '已设置' : '未设置' }}</span>
       </button>
+      <button type="button" class="rx-chip" :class="{ on: open.has('sf') }" title="脚本字段：返回面追加脚本计算字段（script_fields）" @click="toggle('sf')">
+        <span class="rx-cn">脚本字段</span><code class="rx-key">script_fields</code>
+        <span class="rx-state" :class="{ on: !!tree.scriptFields?.items.length }">{{ tree.scriptFields?.items.length ? tree.scriptFields.items.length + ' 项' : '未设置' }}</span>
+      </button>
+      <button type="button" class="rx-chip" :class="{ on: open.has('rm') }" title="运行时字段：查询期动态定义字段（runtime_mappings，可与查询/聚合/脚本字段共用）" @click="toggle('rm')">
+        <span class="rx-cn">运行时字段</span><code class="rx-key">runtime_mappings</code>
+        <span class="rx-state" :class="{ on: !!tree.runtimeMappings?.items.length }">{{ tree.runtimeMappings?.items.length ? tree.runtimeMappings.items.length + ' 项' : '未设置' }}</span>
+      </button>
       <button type="button" class="rx-chip" :class="{ on: open.has('ex') }" @click="toggle('ex')">
         <span class="rx-cn">其他顶层键</span>
         <span class="rx-state" :class="{ on: !!Object.keys(tree.extras).length }">{{ Object.keys(tree.extras).length ? Object.keys(tree.extras).length + ' 个键' : '无' }}</span>
@@ -280,6 +288,53 @@ ES 默认返回全部字段
       </template>
     </div>
 
+    <!-- 996：脚本字段 / 运行时字段（命名键+体 同构项列表） -->
+    <div v-if="open.has('sf')" class="rx-open">
+      <div v-if="!tree.scriptFields" class="rx-none">
+返回面追加脚本计算字段
+        <button class="btn sm ghost rx-sf-add" @click="sfAdd">+ 加脚本字段</button>
+      </div>
+      <template v-else>
+        <div v-for="(it, i) in tree.scriptFields.items" :key="i" class="rx-named-row">
+          <input class="inp mono rx-sug-name" :value="it.name" placeholder="字段名" title="返回文档里的新字段名"
+                 @input="sfPatch(i, ($event.target as HTMLInputElement).value)" />
+          <button aria-label="脚本字段参数" class="btn sm ghost" :class="{ on: sfIdx === i }" title="脚本体（source/params…）" @click="sfIdx = sfIdx === i ? null : i"><Settings2 :size="12" /></button>
+          <button aria-label="删除脚本字段" class="btn sm ghost danger" title="删除脚本字段" @click="sfDel(i)"><X :size="12" /></button>
+          <div v-if="sfIdx === i" class="rx-sub">
+            <GenericParams :value="it.body" path-prefix="" @update="v => { if (!Array.isArray(v)) sfPatchBody(i, v); }" />
+          </div>
+        </div>
+        <div class="rx-row">
+          <button class="btn sm ghost rx-sf-add2" @click="sfAdd"><Plus :size="12" /> 加脚本字段</button>
+          <span style="flex:1"></span>
+          <button aria-label="移除 script_fields 键" class="btn sm ghost danger" title="移除 script_fields 键" @click="patch({ scriptFields: null })"><X :size="12" /></button>
+        </div>
+      </template>
+    </div>
+
+    <div v-if="open.has('rm')" class="rx-open">
+      <div v-if="!tree.runtimeMappings" class="rx-none">
+查询期动态定义字段（可与查询/聚合/脚本字段共用）
+        <button class="btn sm ghost rx-rm-add" @click="rmAdd">+ 加运行时字段</button>
+      </div>
+      <template v-else>
+        <div v-for="(it, i) in tree.runtimeMappings.items" :key="i" class="rx-named-row">
+          <input class="inp mono rx-sug-name" :value="it.name" placeholder="字段名" title="运行时字段名"
+                 @input="rmPatch(i, ($event.target as HTMLInputElement).value)" />
+          <button aria-label="运行时字段参数" class="btn sm ghost" :class="{ on: rmIdx === i }" title="字段体（type/script/format…）" @click="rmIdx = rmIdx === i ? null : i"><Settings2 :size="12" /></button>
+          <button aria-label="删除运行时字段" class="btn sm ghost danger" title="删除运行时字段" @click="rmDel(i)"><X :size="12" /></button>
+          <div v-if="rmIdx === i" class="rx-sub">
+            <GenericParams :value="it.body" path-prefix="" @update="v => { if (!Array.isArray(v)) rmPatchBody(i, v); }" />
+          </div>
+        </div>
+        <div class="rx-row">
+          <button class="btn sm ghost rx-rm-add2" @click="rmAdd"><Plus :size="12" /> 加运行时字段</button>
+          <span style="flex:1"></span>
+          <button aria-label="移除 runtime_mappings 键" class="btn sm ghost danger" title="移除 runtime_mappings 键" @click="patch({ runtimeMappings: null })"><X :size="12" /></button>
+        </div>
+      </template>
+    </div>
+
     <!-- extras：其余顶层键 -->
     <div v-if="open.has('ex')" class="rx-open rx-ex">
       <div v-if="!Object.keys(tree.extras).length" class="rx-none">无（track_total_hits / collapse / search_after 等会出现在这里）</div>
@@ -298,7 +353,7 @@ import FieldPicker from '../FieldPicker.vue';
 import GenericParams from './GenericParams.vue';
 import AggTreeNode from './AggTreeNode.vue';
 import MiniTreeEditor from './MiniTreeEditor.vue';
-import { nid, type QueryTree, type SortItem, type SourceSpec, type AggNode, type QueryNode, type CollapseSpec, type KnnSpec, type SuggestItem, type SuggestSpec, type RescoreSpec } from '../../utils/queryAst';
+import { nid, type QueryTree, type SortItem, type SourceSpec, type AggNode, type QueryNode, type CollapseSpec, type KnnSpec, type SuggestItem, type SuggestSpec, type RescoreSpec, type NamedSpecItem } from '../../utils/queryAst';
 import { setFieldSearchIndex } from '../../utils/fieldSearch';
 
 const props = defineProps<{ tree: QueryTree; fields: string[]; types: Record<string, string>; index?: string }>();
@@ -335,6 +390,8 @@ const open = ref<Set<string>>(new Set([
   ...(props.tree.knn ? ['knn'] : []),
   ...(props.tree.suggest ? ['sug'] : []),
   ...(props.tree.rescore ? ['rc'] : []),
+  ...(props.tree.scriptFields ? ['sf'] : []),
+  ...(props.tree.runtimeMappings ? ['rm'] : []),
   ...(Object.keys(props.tree.extras).length ? ['ex'] : []),
 ]));
 function toggle(k: string) {
@@ -373,6 +430,9 @@ watch(() => props.tree.knn, (n, o) => { if (n && !o) autoOpen('knn'); });
 watch(() => props.tree.suggest, (n, o) => { if (n && !o) autoOpen('sug'); });
 /* 991：rescore 同风格跳变 */
 watch(() => props.tree.rescore, (n, o) => { if (n && !o) autoOpen('rc'); });
+/* 996：script_fields/runtime_mappings 同风格跳变 */
+watch(() => props.tree.scriptFields, (n, o) => { if (n && !o) autoOpen('sf'); });
+watch(() => props.tree.runtimeMappings, (n, o) => { if (n && !o) autoOpen('rm'); });
 
 /* size/from 控制链随分页节退役（numText/numPatch 曾为其专用）——
  tree 上残留的 size/from 键序列化直通（旧草稿兼容，执行链 562 联动语义接管） */
@@ -559,6 +619,48 @@ function onRcParams(v: Record<string, unknown> | unknown[]) {
   if (!Array.isArray(v) && props.tree.rescore) patch({ rescore: { ...props.tree.rescore, params: v } });
 }
 
+/* ═══ 996：script_fields / runtime_mappings 项级编辑（同构双键） ═══ */
+const sfIdx = ref<number | null>(null);
+const rmIdx = ref<number | null>(null);
+function namedAdd(cur: { items: NamedSpecItem[] } | null, name: string, body: Record<string, unknown>) {
+  const items = cur ? [...cur.items] : [];
+  let i = items.length + 1;
+  while (items.some(x => x.name === name + i)) i++;
+  return [...items, { name: name + i, body }];
+}
+function sfAdd() {
+  patch({ scriptFields: { items: namedAdd(props.tree.scriptFields, 'script_field_', { script: { source: '' } }) } });
+  if (!open.value.has('sf')) toggle('sf');
+}
+function sfPatch(i: number, name: string) {
+  if (!props.tree.scriptFields) return;
+  patch({ scriptFields: { items: props.tree.scriptFields.items.map((x, j) => (j === i ? { ...x, name } : x)) } });
+}
+function sfPatchBody(i: number, body: Record<string, unknown>) {
+  if (!props.tree.scriptFields) return;
+  patch({ scriptFields: { items: props.tree.scriptFields.items.map((x, j) => (j === i ? { ...x, body } : x)) } });
+}
+function sfDel(i: number) {
+  if (!props.tree.scriptFields) return;
+  patch({ scriptFields: { items: props.tree.scriptFields.items.filter((_, j) => j !== i) } });
+}
+function rmAdd() {
+  patch({ runtimeMappings: { items: namedAdd(props.tree.runtimeMappings, 'runtime_field_', { type: 'keyword' }) } });
+  if (!open.value.has('rm')) toggle('rm');
+}
+function rmPatch(i: number, name: string) {
+  if (!props.tree.runtimeMappings) return;
+  patch({ runtimeMappings: { items: props.tree.runtimeMappings.items.map((x, j) => (j === i ? { ...x, name } : x)) } });
+}
+function rmPatchBody(i: number, body: Record<string, unknown>) {
+  if (!props.tree.runtimeMappings) return;
+  patch({ runtimeMappings: { items: props.tree.runtimeMappings.items.map((x, j) => (j === i ? { ...x, body } : x)) } });
+}
+function rmDel(i: number) {
+  if (!props.tree.runtimeMappings) return;
+  patch({ runtimeMappings: { items: props.tree.runtimeMappings.items.filter((_, j) => j !== i) } });
+}
+
 /* 【预授权偏差A】GenericParams @update 联合类型收窄（Record|unknown[] → Record；数组形态忽略，params/extras 语义必须是对象）——内联箭头会 TS2322 */
 function onSortParams(id: string, v: Record<string, unknown> | unknown[]) {
   if (!Array.isArray(v)) patchSort(id, { params: v });
@@ -626,4 +728,7 @@ function onExtras(v: Record<string, unknown> | unknown[]) {
 .rx-sug-row .btn { flex: none; }
 .rx-sug-name { width: 130px; height: 28px; font-size: var(--fs-sm); flex: none; }
 .rx-sug-text { flex: 1 1 160px; min-width: 0; height: 28px; font-size: var(--fs-sm); }
+/* 996 命名项行（script_fields/runtime_mappings 同款）：名称输入钉宽、按钮不收缩 */
+.rx-named-row { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; margin: var(--sp-1) 0; }
+.rx-named-row .btn { flex: none; }
 </style>
