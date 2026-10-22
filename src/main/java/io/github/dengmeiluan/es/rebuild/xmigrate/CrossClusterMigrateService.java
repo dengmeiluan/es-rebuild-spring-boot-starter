@@ -249,7 +249,9 @@ public class CrossClusterMigrateService {
             }
             return out;
         } catch (Exception e) {
-            throw new IllegalStateException("连接旧集群失败 [" + resolved.endpoint() + "]: " + rootMsg(e));
+            /* 失败信息不回显远端集群内网地址（rank3 用户可达端点，拓扑指纹统一脱敏） */
+            throw new IllegalStateException(io.github.dengmeiluan.es.rebuild.web.EsErrorMapper.sanitizeTopology(
+                    "连接旧集群失败 [" + resolved.endpoint() + "]: " + rootMsg(e)));
         }
     }
 

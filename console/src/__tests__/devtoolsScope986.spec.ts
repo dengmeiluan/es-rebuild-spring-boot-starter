@@ -16,8 +16,7 @@ describe('DevTools 非 ADMIN 数据面白名单', () => {
     expect(ok('PUT', '/logs/_doc/1')).toBe(true);
     expect(ok('POST', '/logs/_update/1')).toBe(true);
     expect(ok('POST', '/logs/_delete_by_query')).toBe(true);
-    expect(ok('GET', '/_cluster/settings')).toBe(true); /* 读仍可看，写门不在客户端拦读 */
-    expect(ok('HEAD', '/_cat/indices')).toBe(true);
+    expect(ok('HEAD', '/_cat/indices')).toBe(true); /* cat/indices 不在系统读拒绝清单（后端走 JSON 行过滤） */
   });
 
   it('系统管理/别名/快照/模板/脚本等写拒绝', () => {
@@ -43,5 +42,34 @@ describe('DevTools 非 ADMIN 数据面白名单', () => {
     expect(ok('POST', '/_search/scroll')).toBe(false);
     expect(ok('DELETE', '/_search/scroll')).toBe(true);
     expect(ok('POST', '/logs/_pit')).toBe(true);
+  });
+
+  /* 992：系统读拒绝清单镜像（后端 guardRawSystemRead/RAW_SYSTEM_READ_DENY 同源）——
+     非 ADMIN 的系统管理读在客户端即禁用，不再亮钮后端 403（所见即所得）。 */
+  it('系统管理读在客户端即禁用（992 读侧镜像）', () => {
+    expect(ok('GET', '/_cluster/settings')).toBe(false); /* 986 旧锁随迁：读门从「不拦读」升为镜像后端清单 */
+    expect(ok('GET', '/_security/user')).toBe(false);
+    expect(ok('GET', '/_nodes/stats')).toBe(false);
+    expect(ok('GET', '/_tasks')).toBe(false);
+    expect(ok('GET', '/_snapshot')).toBe(false);
+    expect(ok('GET', '/_cat/nodes?v')).toBe(false);
+    expect(ok('GET', '/_aliases')).toBe(false);
+    expect(ok('GET', '/_ilm/policy/x')).toBe(false); /* 段前缀：deny 后跟新段同拒 */
+    expect(ok('GET', '/_search/scroll?scroll=1m')).toBe(false);
+    expect(ok('GET', '/_security/_authenticate')).toBe(true); /* 后端同款特例：客户端自省 */
+    expect(ok('GET', '/logs/_search')).toBe(true); /* 索引级读不受限 */
+    expect(ok('GET', '/_cat/indices?format=json&h=index')).toBe(true); /* 行过滤族不在清单 */
+    expect(ok('GET', '/logs/_refresh')).toBe(false); /* 索引级 mutating GET 镜像 */
+    expect(ok('GET', '/logs/_search/scroll')).toBe(true); /* 索引级 scroll 读不在镜像面（后端按 id 判） */
+    expect(ok('OPTIONS', '/logs/_search')).toBe(false); /* UI 外方法按后端白名单拒（L-6） */
+  });
+
+  it('路径规范化对齐后端 canonicalRawPath（992）', () => {
+    expect(ok('POST', '/_bulk/')).toBe(true); /* 尾斜杠折叠 */
+    expect(ok('POST', '//_bulk')).toBe(true); /* 双斜杠折叠 */
+    expect(ok('POST', '/_%73ql/close')).toBe(true); /* 段内百分号编码解码后走 _sql 白名单 */
+    expect(ok('POST', '/logs/./_doc/1')).toBe(true); /* `.` 段折叠 */
+    expect(ok('GET', '/_%73ecurity/user')).toBe(false); /* 解码后的系统读同样被镜像拦 */
+    expect(ok('POST', '/_bu%6Ck')).toBe(true); /* 段内编码解码后命中白名单 */
   });
 });

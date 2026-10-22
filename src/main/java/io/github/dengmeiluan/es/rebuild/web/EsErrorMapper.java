@@ -40,6 +40,27 @@ public final class EsErrorMapper {
 
     private static final String TRUNCATED_SUFFIX = "...(truncated)";
 
+    /** 错误体内的内网拓扑指纹归一（992）：URL（RHLC message 内嵌 host 形态）与
+     *  ES 节点坐标 [host:port] 脱敏；裸「IPv4:port」保留（连接异常的诊断粒度，既有契约锁）。
+     *  root_cause 语义保留（前端 friendlyEsError 链路不受影响）。 */
+    private static final java.util.regex.Pattern TOPOLOGY_URL =
+            java.util.regex.Pattern.compile("https?://[\\w.\\-]+(?::\\d{1,5})?");
+    private static final java.util.regex.Pattern TOPOLOGY_BRACKET_HOST =
+            java.util.regex.Pattern.compile("\\[[\\w.\\-]+:\\d{1,5}\\]");
+
+    private static final String REDACTED_HOST = "[redacted-host]";
+
+    /** 剥错误体内的完整 URL 与节点坐标：VIEWER 级只读端点错误体同样可达，ES message
+     *  内嵌的集群地址不随响应外发；诊断仍可凭 code+reason+裸地址粒度定位。 */
+    public static String sanitizeTopology(String message) {
+        if (message == null || message.isEmpty()) {
+            return message;
+        }
+        String out = TOPOLOGY_URL.matcher(message).replaceAll(REDACTED_HOST);
+        out = TOPOLOGY_BRACKET_HOST.matcher(out).replaceAll(REDACTED_HOST);
+        return out;
+    }
+
     private EsErrorMapper() {
     }
 
@@ -65,10 +86,12 @@ public final class EsErrorMapper {
         return esStatus >= 400 && esStatus < 500 ? esStatus : 502;
     }
 
-    /** 异常 → 前端可读 message：{@code 异常类名: 原始报错体}（含 ES root_cause），超长截断。 */
+    /** 异常 → 前端可读 message：{@code 异常类名: 原始报错体}（含 ES root_cause），超长截断；
+     *  内网地址/端口统一脱敏（root_cause 语义不受影响）。 */
     public static String describe(Throwable e) {
         String msg = e.getMessage();
         String full = e.getClass().getSimpleName() + (msg == null || msg.isEmpty() ? "" : ": " + msg);
+        full = sanitizeTopology(full);
         return full.length() <= MAX_MESSAGE_LEN ? full : full.substring(0, MAX_MESSAGE_LEN) + TRUNCATED_SUFFIX;
     }
 

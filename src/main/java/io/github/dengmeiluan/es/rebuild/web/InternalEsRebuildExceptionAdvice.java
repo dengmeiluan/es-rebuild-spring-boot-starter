@@ -78,7 +78,8 @@ public class InternalEsRebuildExceptionAdvice {
     public ResponseEntity<Map<String, Object>> controlClusterDown(org.springframework.dao.DataAccessResourceFailureException e,
             javax.servlet.http.HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(body(CODE_CONTROL_CLUSTER_DOWN, "控制集群不可达: " + e.getMessage(),
+                .body(body(CODE_CONTROL_CLUSTER_DOWN, "控制集群不可达: "
+                        + EsErrorMapper.sanitizeTopology(e.getMessage()),
                         EsErrorMapper.endpointOf(request)));
     }
 
