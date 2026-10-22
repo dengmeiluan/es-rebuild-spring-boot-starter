@@ -1,5 +1,5 @@
 <template>
-  <div class="bgn">
+  <div class="bgn" :class="{ folded: collapsed }">
     <div class="bgn-hd">
       <span class="bgn-grip" title="拖拽整组排序（按住拖动）" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
       <button aria-label="折叠或展开整组" class="btn sm ghost" :title="collapsed ? '展开整组' : '折叠整组'"
@@ -236,6 +236,9 @@ onBeforeUnmount(() => window.removeEventListener(BGN_COLLAPSE_EVENT, onCollapseE
 .bgn-hd { display: flex; align-items: center; gap: var(--sp-0); margin: 0 0 var(--sp-0); flex-wrap: wrap;
   opacity: 0; height: 24px; transition: opacity var(--tr); }
 .bgn:hover > .bgn-hd, .bgn:focus-within > .bgn-hd { opacity: 1; }
+/* 折叠态组头恒可见——hover 才浮现的设计让折叠组成一行不可见空白（触屏完全不可操作），
+ 折叠后 DOM 只剩 header，必须常显才能再展开/看到摘要 */
+.bgn.folded > .bgn-hd { opacity: 1; }
 .bgn-hd .btn { flex: none; }
 .bgn-scope { font-family: var(--mono, ui-monospace, monospace); font-size: var(--fs-2xs); color: var(--tx2);
   background: var(--bg3); border-radius: var(--r-xs); padding: 1px var(--sp-1h); margin-right: var(--sp-0); }

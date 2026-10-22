@@ -7,6 +7,9 @@
       :aria-activedescendant="open && flat[cursor] ? itemId(cursor) : undefined"
       @input="onInput" @focus="openPanel" @keydown="onFsKey"
     />
+    <!-- 987 未知字段护栏：mapping 在场时手输不在 mapping 的字段给黄点提示（ClauseNode
+     .cn-owarn 同语言）。零降级：无 mapping（fields 空）不提示——自由手输是既有合法路径 -->
+    <i v-if="unknownField" class="fs-unk" title="字段不在当前索引 mapping：可能是嵌套路径、别名或脚本字段；若非刻意请核对拼写或切换索引">字段不在 mapping</i>
     <!-- 弹层 teleport 到 body + fixed 定位——构建器面板（.dq-tree）带 overflow-y:auto，
  absolute 弹层会被面板边界裁剪。骨架（↑↓/Enter/Home/End 键盘导航、IME isComposing 守卫、
  防溢出钳位 place()、点击外部关闭）由 usePopupList 承载——与 FieldPicker 同一代体验；
@@ -70,6 +73,11 @@ const props = defineProps<{
 const emit = defineEmits<{ (e: 'update:modelValue', v: string): void }>();
 
 const CAP = 30;   // 候选上限（旧版同值）；超出的靠更精确输入收窄，页脚有提示
+
+/* 未知字段护栏判定：mapping 有字段集、输入非空、且不在集内。typing 中间态也会亮——
+ 黄点是弱提示不阻断（仍可手输提交），比「候选空但仍可手输」的纯静默多一层护栏 */
+const unknownField = computed(() =>
+  !!props.modelValue && props.fields.length > 0 && !props.fields.includes(props.modelValue));
 
 /* 过滤+rank 排序+cap 收口 fieldSearch；最近使用（per-index）中命中当前搜索的置顶 */
 const res = computed(() => {
@@ -173,6 +181,11 @@ function pick(h: FieldHit) {
 <style scoped>
 .fs { position: relative; display: inline-block; min-width: 130px; }
 .fs-inp { width: 100%; height: 30px; font-size: var(--fs-sm); padding: 3px var(--sp-2); }
+/* 未知字段护栏黄点（右缘内侧，弱提示不遮值）：warn 底圆点 + title 全语义（.cn-owarn 同语言） */
+.fs-unk { position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
+  width: 8px; height: 8px; border-radius: 50%; background: var(--warn);
+  box-shadow: 0 0 0 3px var(--warn-soft); cursor: help; pointer-events: auto; }
+.fs-inp:not(:placeholder-shown) { padding-right: 18px; }
 /* v3.1: 聚焦品牌描边+3px 柔光（--brand/--card theme.css 均有定义，删永不生效的 fallback 字面） */
 .fs-inp:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 14%, transparent); background: var(--card); }
 /* 壳属性（fixed/--z-island/bg/border/shadow/圆角）合并 theme.css .float-pop，本类只留坐标外裁切与字号 */

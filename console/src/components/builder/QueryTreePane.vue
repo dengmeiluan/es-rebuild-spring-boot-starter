@@ -92,7 +92,7 @@
  provide TREE_BUS：落点分区的 move 在这里统一 moveNode（ 防环）。
  index prop：写入 fieldSearch 的当前索引上下文（per-index 最近字段记忆供 defaultLeaf 与
  子树深处的 FieldSelect 读取——NodeRenderer 之下逐层透传 prop 不现实）。 */
-import { computed, watch, provide, ref, nextTick } from 'vue';
+import { computed, watch, watchEffect, provide, ref, nextTick } from 'vue';
 import { Plus, ChevronsDown, ChevronsUp, Pause, Play } from 'lucide-vue-next';
 import SearchFilterBar from '../SearchFilterBar.vue';
 import BoolGroupNode, { BGN_COLLAPSE_EVENT } from './BoolGroupNode.vue';
@@ -101,7 +101,7 @@ import RootExtrasPane from './RootExtrasPane.vue';
 import { TREE_BUS } from './treeBus';
 import { setFieldSearchIndex, setFieldSearchUsedFields, defaultLeafTarget } from '../../utils/fieldSearch';
 import {
-  nid, moveNode, wrapInBool, updateNodeById,
+  nid, moveNode, wrapInBool, updateNodeById, cloneNode, insertAfter,
   type QueryTree, type QueryNode, type BoolNode, type LeafNode,
 } from '../../utils/queryAst';
 
@@ -111,6 +111,11 @@ const props = defineProps<{
 const emit = defineEmits<{ (e: 'update:tree', t: QueryTree): void }>();
 
 watch(() => props.index, i => setFieldSearchIndex(i || ''), { immediate: true });
+
+/* 987：stale 冻结补键盘面——.froz 只挡 pointer-events，键盘仍可 Tab 进「停用全部」
+ 等写树钮以冻结旧树覆盖正在手改的 DSL。inert 属性一次性挡鼠标+键盘+焦点全通道（含 AT）；
+ flush post 保证挂载后初次也应用（watch immediate 跑在 paneEl 赋值前） */
+watchEffect(() => { paneEl.value?.toggleAttribute('inert', !!props.stale); }, { flush: 'post' });
 
 /* 树内已用字段→fieldSearch 模块态（FieldSelect 候选 used 前置段数据源）——
  收集全部叶子条件字段名去重写入（bool 下钻 / wrap 下钻 / 叶取 field）。树编辑全走不可变
@@ -266,40 +271,8 @@ function onRootRemove() { setRoot(matchAllLeaf()); }
 function wrapRoot() { if (props.tree.root) setRoot(wrapInBool(props.tree.root, props.tree.root.id)); }
 
 /* ═══ 复制：node 深拷贝 + id 全部重新 nid() + 插到原节点之后 ═══
+ cloneNode/insertAfter 已提为 queryAst 纯函数（987 起 MiniTreeEditor 共用）；
  父 bool 命中 → 同 occur 分区原位后插；root 命中（单条件/根组复制）→ 包一层 bool.must。 */
-function cloneNode(n: QueryNode): QueryNode {
-  const fresh = JSON.parse(JSON.stringify(n)) as QueryNode;   // params/raw/value 均为 JSON 形态
-  const reid = (x: QueryNode): QueryNode => {
-    const id = nid();
-    if (x.type === 'bool') return { ...x, id, children: x.children.map(c => ({ occur: c.occur, node: reid(c.node) })) };
-    if (x.type === 'wrap') return { ...x, id, child: x.child ? reid(x.child) : null };
-    if (x.type === 'multi') return { ...x, id, children: x.children.map(c => ({ key: c.key, node: reid(c.node) })) };
-    return { ...x, id };
-  };
-  return reid(fresh);
-}
-function insertAfter(root: QueryNode, id: string): QueryNode {
-  if (root.type === 'bool') {
-    const idx = root.children.findIndex(c => c.node.id === id);
-    if (idx >= 0) {
-      const src = root.children[idx];
-      const children = [...root.children.slice(0, idx + 1), { occur: src.occur, node: cloneNode(src.node) }, ...root.children.slice(idx + 1)];
-      return { ...root, children };
-    }
-    return { ...root, children: root.children.map(c => ({ occur: c.occur, node: insertAfter(c.node, id) })) };
-  }
-  if (root.type === 'wrap' && root.child) return { ...root, child: insertAfter(root.child, id) };
-  if (root.type === 'multi') {
-    const idx = root.children.findIndex(c => c.node.id === id);
-    if (idx >= 0) {
-      const src = root.children[idx];
-      const children = [...root.children.slice(0, idx + 1), { key: src.key, node: cloneNode(src.node) }, ...root.children.slice(idx + 1)];
-      return { ...root, children };
-    }
-    return { ...root, children: root.children.map(c => ({ key: c.key, node: insertAfter(c.node, id) })) };
-  }
-  return root;
-}
 function onDuplicate(id: string) {
   const r = props.tree.root;
   if (!r) return;

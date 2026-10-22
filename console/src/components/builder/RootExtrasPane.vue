@@ -26,6 +26,19 @@
         <span class="rx-cn">聚合</span><code class="rx-key">{{ tree.aggKey || 'aggs' }}</code>
         <span class="rx-state" :class="{ on: !!tree.aggs?.length }">{{ tree.aggs?.length ? tree.aggs.length + ' 项' : '未设置' }}</span>
       </button>
+      <!-- 987：post_filter / collapse / knn 三键一等公民化（extras 键值表升格结构化编辑） -->
+      <button type="button" class="rx-chip" :class="{ on: open.has('pf') }" title="聚合后过滤：命中统计含全部文档，返回结果按此过滤（post_filter）" @click="toggle('pf')">
+        <span class="rx-cn">后置过滤</span><code class="rx-key">post_filter</code>
+        <span class="rx-state" :class="{ on: !!tree.postFilter }">{{ tree.postFilter ? '已设置' : '未设置' }}</span>
+      </button>
+      <button type="button" class="rx-chip" :class="{ on: open.has('col') }" title="字段折叠：按字段值收敛命中（collapse）" @click="toggle('col')">
+        <span class="rx-cn">折叠</span><code class="rx-key">collapse</code>
+        <span class="rx-state" :class="{ on: !!tree.collapse }">{{ tree.collapse?.field || '未设置' }}</span>
+      </button>
+      <button type="button" class="rx-chip" :class="{ on: open.has('knn') }" title="向量近邻检索（knn）" @click="toggle('knn')">
+        <span class="rx-cn">向量检索</span><code class="rx-key">knn</code>
+        <span class="rx-state" :class="{ on: !!tree.knn }">{{ tree.knn?.field || '未设置' }}</span>
+      </button>
       <button type="button" class="rx-chip" :class="{ on: open.has('ex') }" @click="toggle('ex')">
         <span class="rx-cn">其他顶层键</span>
         <span class="rx-state" :class="{ on: !!Object.keys(tree.extras).length }">{{ Object.keys(tree.extras).length ? Object.keys(tree.extras).length + ' 个键' : '无' }}</span>
@@ -142,6 +155,65 @@ ES 默认返回全部字段
       </template>
     </div>
 
+    <!-- 987：后置过滤 post_filter（QueryNode 树编辑，MiniTreeEditor 承载） -->
+    <div v-if="open.has('pf')" class="rx-open">
+      <div v-if="!tree.postFilter" class="rx-none">
+聚合后过滤（命中统计含全部文档，仅返回结果被过滤）
+        <button class="btn sm ghost rx-pf-add" @click="pfAdd">+ 加后置过滤</button>
+      </div>
+      <template v-else>
+        <MiniTreeEditor :node="tree.postFilter" :fields="fields" :types="types" @update:node="pfUpdate" />
+        <div class="rx-row">
+          <span style="flex:1"></span>
+          <button aria-label="移除 post_filter 键" class="btn sm ghost danger" title="移除 post_filter 键" @click="patch({ postFilter: null })"><X :size="12" /></button>
+        </div>
+      </template>
+    </div>
+
+    <!-- 987：字段折叠 collapse（路由字段 + 其余参数） -->
+    <div v-if="open.has('col')" class="rx-open">
+      <div v-if="!tree.collapse" class="rx-none">
+按字段值收敛命中（每组只返回代表文档）
+        <button class="btn sm ghost rx-col-add" @click="colAdd">+ 加折叠</button>
+      </div>
+      <template v-else>
+        <div class="rx-row">
+          <FieldSelect :model-value="tree.collapse.field" :fields="fields" :types="types" :type-filter="COLLAPSE_TYPES" @update:model-value="v => colPatch({ field: v })" />
+          <button aria-label="折叠参数（inner_hits…）" class="btn sm ghost" :class="{ on: colParams }" title="折叠参数（inner_hits…）" @click="colParams = !colParams"><Settings2 :size="12" /></button>
+          <span style="flex:1"></span>
+          <button aria-label="移除 collapse 键" class="btn sm ghost danger" title="移除 collapse 键" @click="patch({ collapse: null })"><X :size="12" /></button>
+        </div>
+        <div v-if="colParams" class="rx-sub">
+          <GenericParams :value="tree.collapse.params" path-prefix="" @update="onColParams" />
+        </div>
+      </template>
+    </div>
+
+    <!-- 987：向量近邻 knn（路由字段 + 向量 JSON + 其余参数） -->
+    <div v-if="open.has('knn')" class="rx-open">
+      <div v-if="!tree.knn" class="rx-none">
+向量近邻检索（dense_vector 字段）
+        <button class="btn sm ghost rx-knn-add" @click="knnAdd">+ 加向量检索</button>
+      </div>
+      <template v-else>
+        <div class="rx-row">
+          <FieldSelect :model-value="tree.knn.field || ''" :fields="fields" :types="types" :type-filter="KNN_TYPES" @update:model-value="v => knnPatch({ field: v || null })" />
+          <button aria-label="kNN 参数（k/num_candidates/filter…）" class="btn sm ghost" :class="{ on: knnParams }" title="kNN 参数（k/num_candidates/filter…）" @click="knnParams = !knnParams"><Settings2 :size="12" /></button>
+          <span style="flex:1"></span>
+          <button aria-label="移除 knn 键" class="btn sm ghost danger" title="移除 knn 键" @click="patch({ knn: null })"><X :size="12" /></button>
+        </div>
+        <div class="rx-row">
+          <span class="rx-lb">query_vector</span>
+          <input class="inp mono rx-knn-vec" :class="{ warn: knnVecBad }" :value="knnVecText"
+                 placeholder='向量 JSON 数组，如 [0.1, 0.2, 0.3]'
+                 @input="onKnnVec(($event.target as HTMLInputElement).value)" />
+        </div>
+        <div v-if="knnParams" class="rx-sub">
+          <GenericParams :value="tree.knn.params" path-prefix="" @update="onKnnParams" />
+        </div>
+      </template>
+    </div>
+
     <!-- extras：其余顶层键 -->
     <div v-if="open.has('ex')" class="rx-open rx-ex">
       <div v-if="!Object.keys(tree.extras).length" class="rx-none">无（track_total_hits / collapse / search_after 等会出现在这里）</div>
@@ -159,7 +231,8 @@ import FieldSelect from './FieldSelect.vue';
 import FieldPicker from '../FieldPicker.vue';
 import GenericParams from './GenericParams.vue';
 import AggTreeNode from './AggTreeNode.vue';
-import { nid, type QueryTree, type SortItem, type SourceSpec, type AggNode } from '../../utils/queryAst';
+import MiniTreeEditor from './MiniTreeEditor.vue';
+import { nid, type QueryTree, type SortItem, type SourceSpec, type AggNode, type QueryNode, type CollapseSpec, type KnnSpec } from '../../utils/queryAst';
 import { setFieldSearchIndex } from '../../utils/fieldSearch';
 
 const props = defineProps<{ tree: QueryTree; fields: string[]; types: Record<string, string>; index?: string }>();
@@ -191,6 +264,9 @@ const open = ref<Set<string>>(new Set([
   ...(props.tree.source ? ['src'] : []),
   ...(props.tree.highlight ? ['hl'] : []),
   ...(props.tree.aggs?.length ? ['aggs'] : []),
+  ...(props.tree.postFilter ? ['pf'] : []),
+  ...(props.tree.collapse ? ['col'] : []),
+  ...(props.tree.knn ? ['knn'] : []),
   ...(Object.keys(props.tree.extras).length ? ['ex'] : []),
 ]));
 function toggle(k: string) {
@@ -221,6 +297,10 @@ watch(() => props.tree.highlight, (n, o) => { if (n && !o) autoOpen('hl'); });
 watch(() => Object.keys(props.tree.extras).length, (n, o) => { if (n && !o) autoOpen('ex'); });
 /* 【预授权偏差C】aggs 空→非空跳变自动展开（与既有 4 条同风格） */
 watch(() => props.tree.aggs?.length, (n, o) => { if (n && !o) autoOpen('aggs'); });
+/* 987：post_filter/collapse/knn 同风格三跳变 */
+watch(() => props.tree.postFilter, (n, o) => { if (n && !o) autoOpen('pf'); });
+watch(() => props.tree.collapse, (n, o) => { if (n && !o) autoOpen('col'); });
+watch(() => props.tree.knn, (n, o) => { if (n && !o) autoOpen('knn'); });
 
 /* size/from 控制链随分页节退役（numText/numPatch 曾为其专用）——
  tree 上残留的 size/from 键序列化直通（旧草稿兼容，执行链 562 联动语义接管） */
@@ -294,6 +374,64 @@ function aggAdd() {
 function aggPatch(id: string, n: AggNode) { patch({ aggs: (props.tree.aggs || []).map(a => a.id === id ? n : a) }); }
 function aggDel(id: string) { patch({ aggs: (props.tree.aggs || []).filter(a => a.id !== id) }); }
 
+/* ═══ 987：post_filter / collapse / knn 三键结构化编辑 ═══ */
+/* post_filter：默认给 bool must 组带一条可编辑的空 term（比裸 match_all 立即可上手） */
+function pfAdd() {
+  const leaf: QueryNode = { id: nid(), type: 'leaf', op: 'term', field: props.fields[0] || '', value: '', params: {}, raw: null };
+  patch({ postFilter: { id: nid(), type: 'bool', children: [{ occur: 'must', node: leaf }], params: {}, arrForm: { must: true } } });
+  if (!open.value.has('pf')) toggle('pf');
+}
+function pfUpdate(n: QueryNode) { patch({ postFilter: n }); }
+
+/* collapse：路由字段折叠 + 其余参数（inner_hits 等）走递归表 */
+const COLLAPSE_TYPES = ['keyword', 'long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float', 'boolean', 'date'];
+const KNN_TYPES = ['dense_vector'];
+const colParams = ref(false);
+function colAdd() {
+  patch({ collapse: { field: props.fields[0] || '', params: {} } });
+  if (!open.value.has('col')) toggle('col');
+}
+function colPatch(p: Partial<CollapseSpec>) { if (props.tree.collapse) patch({ collapse: { ...props.tree.collapse, ...p } }); }
+function onColParams(v: Record<string, unknown> | unknown[]) {
+  if (!Array.isArray(v) && props.tree.collapse) patch({ collapse: { ...props.tree.collapse, params: v } });
+}
+
+/* knn：向量走 JSON 文本框（768 维手填不现实，chip/递归表均不可用）——
+   合法 JSON 写树、非法只本地标黄不写（不触发树→文本回写循环） */
+const knnParams = ref(false);
+const knnVecText = ref('[]');
+const knnVecBad = ref(false);
+watch(() => props.tree.knn, k => {
+  const next = k?.hasVector ? JSON.stringify(k.vector) : '[]';
+  /* 本地文本与树等值（parse 深度相等）时不回写——防合法输入被 JSON.stringify
+   规范化改写（空格折叠/键序），光标跳尾是输入侧事故 */
+  let same = false;
+  if (!knnVecBad.value) {
+    try { same = JSON.stringify(JSON.parse(knnVecText.value)) === next; } catch { same = false; }
+  }
+  knnVecText.value = same ? knnVecText.value : next;
+  knnVecBad.value = false;
+}, { immediate: true });
+function knnAdd() {
+  patch({ knn: { field: props.fields[0] || null, vector: [], params: { k: 10, num_candidates: 100 }, hasVector: true } });
+  if (!open.value.has('knn')) toggle('knn');
+}
+function knnPatch(p: Partial<KnnSpec>) { if (props.tree.knn) patch({ knn: { ...props.tree.knn, ...p } }); }
+function onKnnVec(text: string) {
+  knnVecText.value = text;
+  try {
+    const v = JSON.parse(text);
+    if (typeof v !== 'object' || v === null) { knnVecBad.value = true; return; }
+    knnVecBad.value = false;
+    knnPatch({ vector: v, hasVector: true });
+  } catch {
+    knnVecBad.value = true;   // 编辑中间态不写树（向量半输完是常态）
+  }
+}
+function onKnnParams(v: Record<string, unknown> | unknown[]) {
+  if (!Array.isArray(v) && props.tree.knn) patch({ knn: { ...props.tree.knn, params: v } });
+}
+
 /* 【预授权偏差A】GenericParams @update 联合类型收窄（Record|unknown[] → Record；数组形态忽略，params/extras 语义必须是对象）——内联箭头会 TS2322 */
 function onSortParams(id: string, v: Record<string, unknown> | unknown[]) {
   if (!Array.isArray(v)) patchSort(id, { params: v });
@@ -353,4 +491,7 @@ function onExtras(v: Record<string, unknown> | unknown[]) {
 .rx-src-mode { height: 28px; font-size: var(--fs-sm); }
 .rx-sub { flex-basis: 100%; padding: var(--sp-2) var(--sp-3); background: var(--bg2); border-radius: var(--r-s); }
 .rx-ex { padding-top: var(--sp-0); }
+/* knn 向量 JSON 输入框：mono 长串横向吃满行（dim 向量百千位） */
+.rx-knn-vec { flex: 1 1 200px; min-width: 0; font-size: var(--fs-xs); }
+.rx-knn-vec.warn { border-color: var(--warn); }
 </style>

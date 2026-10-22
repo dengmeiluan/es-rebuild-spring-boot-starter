@@ -57,9 +57,18 @@ export interface SortItem { id: string; field: string; form: 'str' | 'short' | '
 export interface SourceSpec { mode: 'all' | 'none' | 'one' | 'list' | 'pattern'; fields: string[]; includes: string[]; excludes: string[]; hasIncludes?: boolean; hasExcludes?: boolean }
 export interface AggNode { id: string; name: string; op: string; body: unknown; children: AggNode[]; meta: Record<string, unknown>; aggKey: string; hasMeta?: boolean; hasKids?: boolean }
 interface HighlightSpec { fields: Array<{ name: string; params: Record<string, unknown> }>; params: Record<string, unknown> }
+/* 987：顶层键一等公民化。post_filter 直接复用 QueryNode 树（聚合后过滤可树编辑）；
+ collapse = 路由字段 + 其余参数（inner_hits 落 params）；knn = 路由字段 + 向量 presence
+ 记忆（query_vector 键缺席形态如 query_vector_builder 不写回主值位）。畸形形态
+ （collapse 数组 / knn 非对象或 field 非字符串）一律落 extras 零丢失。 */
+export interface CollapseSpec { field: string; params: Record<string, unknown> }
+export interface KnnSpec { field: string | null; vector: unknown; params: Record<string, unknown>; hasVector: boolean }
 
 export interface QueryTree {
   root: QueryNode | null;
+  postFilter: QueryNode | null;    // null = 键不存在；任何值经 parseQueryNode（__raw__ 兜底无损）
+  collapse: CollapseSpec | null;
+  knn: KnnSpec | null;
   size?: unknown; from?: unknown;  // 非数值也原样保留（零降级）
   sort: SortItem[] | null;         // null = 键不存在；[] = 空数组保键
   source: SourceSpec | null;
@@ -83,6 +92,7 @@ export const WRAP_META: Record<string, WrapMeta> = {
   pinned: { childKey: 'organic' },
   span_first: { childKey: 'match' },
   span_multi: { childKey: 'match' },
+  field_masking_span: { fieldKey: 'field', childKey: 'query' },
 };
 export const WRAP_FIELD: Record<string, string> = Object.fromEntries(
   Object.entries(WRAP_META).filter(([, m]) => m.fieldKey).map(([op, m]) => [op, m.fieldKey!]),
@@ -278,9 +288,26 @@ export function parseTree(dsl: unknown): ParseResult {
     else if (k === '_source') tree.source = parseSource(v);
     else if (k === 'highlight') { if (isObj(v)) tree.highlight = parseHighlight(v); else tree.extras[k] = v; }
     else if (k === 'aggs' || k === 'aggregations') { if (isObj(v)) { tree.aggs = parseAggs(v); tree.aggKey = k; } else tree.extras[k] = v; }
+    /* 987：post_filter 全值走 parseQueryNode（非对象落 __raw__ 叶无损）；collapse/knn
+     结构化形态不合法（field 非 string/非对象/数组）落 extras 零丢失 */
+    else if (k === 'post_filter') tree.postFilter = parseQueryNode(v);
+    else if (k === 'collapse') { const c = parseCollapse(v); if (c) tree.collapse = c; else tree.extras[k] = v; }
+    else if (k === 'knn') { const n = parseKnn(v); if (n) tree.knn = n; else tree.extras[k] = v; }
     else tree.extras[k] = v;
   }
   return { ok: true, tree };
+}
+
+function parseCollapse(v: unknown): CollapseSpec | null {
+  if (!isObj(v) || typeof v.field !== 'string') return null;
+  const { field, ...params } = v;
+  return { field, params };
+}
+function parseKnn(v: unknown): KnnSpec | null {
+  if (!isObj(v)) return null;
+  const { field, query_vector, ...params } = v;
+  if (field !== undefined && typeof field !== 'string') return null;
+  return { field: typeof field === 'string' ? field : null, vector: query_vector, params, hasVector: 'query_vector' in v };
 }
 
 export function serializeTree(t: QueryTree): Record<string, unknown> {
@@ -290,6 +317,15 @@ export function serializeTree(t: QueryTree): Record<string, unknown> {
   if (t.from !== undefined) out.from = t.from;
   if (t.sort !== null) out.sort = t.sort.map(serSortItem);
   if (t.source !== null) out._source = serSource(t.source);
+  if (t.postFilter) out.post_filter = serQueryNode(t.postFilter);
+  if (t.collapse) out.collapse = { field: t.collapse.field, ...t.collapse.params };
+  if (t.knn) {
+    const b: Record<string, unknown> = {};
+    if (t.knn.field !== null) b.field = t.knn.field;
+    if (t.knn.hasVector) b.query_vector = t.knn.vector;
+    Object.assign(b, t.knn.params);
+    out.knn = b;
+  }
   if (t.aggs !== null) out[t.aggKey || 'aggs'] = serAggs(t.aggs);
   if (t.highlight !== null) out.highlight = serHighlight(t.highlight);
   for (const [k, v] of Object.entries(t.extras)) if (!Object.prototype.hasOwnProperty.call(out, k)) out[k] = v;
@@ -487,8 +523,47 @@ export function dissolveBool(root: QueryNode, id: string): QueryNode {
   return root;
 }
 
+/* ═══ 987：复制/原位后插（QueryTreePane 与 MiniTreeEditor 共用的树 owner 语义） ═══
+ 深拷贝 + id 全部重新 nid()（params/raw/value 均为 JSON 形态，JSON 深拷贝无损）；
+ 原位后插：bool 同 occur 分区 / multi 同 key 分区，root 命中返回 null（调用方
+ 自行决定包组语义——QueryTreePane 包 bool.must 双份，MiniTreeEditor 同式）。 */
+export function cloneNode(n: QueryNode): QueryNode {
+  const fresh = JSON.parse(JSON.stringify(n)) as QueryNode;
+  const reid = (x: QueryNode): QueryNode => {
+    const id = nid();
+    if (x.type === 'bool') return { ...x, id, children: x.children.map(c => ({ occur: c.occur, node: reid(c.node) })) };
+    if (x.type === 'wrap') return { ...x, id, child: x.child ? reid(x.child) : null };
+    if (x.type === 'multi') return { ...x, id, children: x.children.map(c => ({ key: c.key, node: reid(c.node) })) };
+    return { ...x, id };
+  };
+  return reid(fresh);
+}
+
+export function insertAfter(root: QueryNode, id: string): QueryNode {
+  if (root.type === 'bool') {
+    const idx = root.children.findIndex(c => c.node.id === id);
+    if (idx >= 0) {
+      const src = root.children[idx];
+      const children = [...root.children.slice(0, idx + 1), { occur: src.occur, node: cloneNode(src.node) }, ...root.children.slice(idx + 1)];
+      return { ...root, children };
+    }
+    return { ...root, children: root.children.map(c => ({ occur: c.occur, node: insertAfter(c.node, id) })) };
+  }
+  if (root.type === 'wrap' && root.child) return { ...root, child: insertAfter(root.child, id) };
+  if (root.type === 'multi') {
+    const idx = root.children.findIndex(c => c.node.id === id);
+    if (idx >= 0) {
+      const src = root.children[idx];
+      const children = [...root.children.slice(0, idx + 1), { key: src.key, node: cloneNode(src.node) }, ...root.children.slice(idx + 1)];
+      return { ...root, children };
+    }
+    return { ...root, children: root.children.map(c => ({ key: c.key, node: insertAfter(c.node, id) })) };
+  }
+  return root;
+}
+
 export function emptyTree(): QueryTree {
-  return { root: null, sort: null, source: null, aggs: null, highlight: null, extras: {} };
+  return { root: null, postFilter: null, collapse: null, knn: null, sort: null, source: null, aggs: null, highlight: null, extras: {} };
 }
 
 /* ═══ 985：高级算子空节点工厂（BoolGroupNode「+ 高级」菜单插入入口） ═══

@@ -261,7 +261,10 @@ describe('985 工厂×序列化一致性', () => {
       'ids', 'script', 'wrapper', 'percolate', 'terms_set', 'geo_distance', 'geo_bounding_box',
       'geo_polygon', 'geo_shape', 'intervals', 'match_bool_prefix', 'rank_feature', 'distance_feature',
       'constant_score', 'function_score', 'script_score', 'pinned', 'boosting', 'dis_max',
-      'span_near', 'span_or', 'span_not', 'span_first', 'span_containing', 'span_within', 'span_term', 'span_multi'];
+      'span_near', 'span_or', 'span_not', 'span_first', 'span_containing', 'span_within', 'span_term', 'span_multi',
+      /* 987：DSL 全量覆盖补齐九员随迁入锁面 */
+      'match_int_prefix', 'geo_grid', 'shape', 'sparse_vector', 'text_expansion',
+      'weighted_tokens', 'semantic', 'knn', 'field_masking_span'];
     for (const op of ops) {
       const n = makeNodeByOp(op);
       const ser = serQueryNode(n) as Record<string, unknown>;

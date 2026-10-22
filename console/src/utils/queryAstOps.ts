@@ -88,6 +88,18 @@ export const OPS_META: Record<string, OpMeta> = {
     params: [{ key: 'type', kind: 'text' }] },
   /* ═══ span 跨度系（精确位置控制的底层查询，配 span_near 组合使用） ═══ */
   span_term: { form: 'field', wrap: 'value', valueKey: 'term', label: '跨度词', types: ['text'] },
+  /* ═══ 987：ES 8.x 新算子补齐（DSL 全量覆盖）。match 系第九员 / geo 网格 /
+   shape 字段 / 向量与语义四员（named 投影）/ 对象值两员。 ═══ */
+  match_int_prefix: { form: 'field', wrap: 'query', label: '整词前缀', types: ['text', 'keyword'],
+    params: [{ key: 'operator', kind: 'enum', options: ['and', 'or'] }, { key: 'fuzziness', kind: 'text' }] },
+  geo_grid: { form: 'field', wrap: 'none', label: '地理网格', types: ['geo_point', 'geo_shape'] },
+  shape: { form: 'field', wrap: 'none', label: '形状过滤', types: ['shape', 'geo_shape'] },
+  semantic: { form: 'named', mainKey: 'query', fieldKey: 'field', label: '语义查询', types: ['semantic', 'text'] },
+  sparse_vector: { form: 'named', mainKey: 'query_vectors', fieldKey: 'field', label: '稀疏向量', types: ['sparse_vector'] },
+  knn: { form: 'named', mainKey: 'query_vector', fieldKey: 'field', label: '向量近邻', types: ['dense_vector'],
+    params: [{ key: 'k', kind: 'number' }, { key: 'num_candidates', kind: 'number' }, { key: 'similarity', kind: 'number' }] },
+  text_expansion: { form: 'field', wrap: 'none', label: '文本扩展', types: ['text', 'sparse_vector'] },
+  weighted_tokens: { form: 'field', wrap: 'none', label: '加权词元', types: ['sparse_vector'] },
 };
 
 /* 字段类型 → 推荐算子（ClauseNode 算子下拉：推荐的排前，其余富表单算子分组列后，均可选） */
@@ -103,6 +115,9 @@ export function opsForType(type: string | undefined): string[] {
   if (type === 'geo_point') return ['geo_distance', 'geo_bounding_box', 'geo_polygon', 'exists'];
   if (type === 'geo_shape') return ['geo_shape', 'exists'];
   if (type === 'rank_feature') return ['rank_feature', 'exists'];
+  /* 987：dense_vector 推荐向量近邻（knn 查询级形态），sparse_vector 推荐稀疏向量 */
+  if (type === 'dense_vector') return ['knn', 'exists'];
+  if (type === 'sparse_vector') return ['sparse_vector', 'exists'];
   return ['exists'];
 }
 
@@ -136,6 +151,7 @@ export const WRAP_LABELS: Record<string, string> = {
   nested: '嵌套', has_child: '子文档', has_parent: '父文档',
   constant_score: '恒定评分', function_score: '评分函数', script_score: '脚本评分', pinned: '置顶优选',
   span_first: '首跨度', span_multi: '跨度多匹配',
+  field_masking_span: '字段掩码跨度',
 };
 export const MULTI_LABELS: Record<string, string> = {
   boosting: '正负加权', dis_max: '多查询取最大',
@@ -165,10 +181,11 @@ export const MULTI_META: Record<string, { keys: string[]; arrKeys: string[]; par
 /* 高级算子分组（BoolGroupNode「+ 高级」菜单与 ClauseNode 下拉分组共用同源序）。
  全部成员必须是 OPS_META 或 WRAP_LABELS/MULTI_LABELS 已注册算子。 */
 export const ADV_MENU: Array<{ group: string; ops: string[] }> = [
-  { group: '全文检索', ops: ['multi_match', 'query_string', 'simple_query_string', 'combined_fields', 'match_bool_prefix', 'more_like_this', 'intervals'] },
+  { group: '全文检索', ops: ['multi_match', 'query_string', 'simple_query_string', 'combined_fields', 'match_bool_prefix', 'match_int_prefix', 'more_like_this', 'intervals'] },
   { group: '精确与集合', ops: ['ids', 'terms_set', 'parent_id'] },
-  { group: '地理位置', ops: ['geo_distance', 'geo_bounding_box', 'geo_polygon', 'geo_shape', 'distance_feature'] },
-  { group: '跨度位置', ops: ['span_near', 'span_or', 'span_not', 'span_first', 'span_containing', 'span_within', 'span_term', 'span_multi'] },
+  { group: '地理位置', ops: ['geo_distance', 'geo_bounding_box', 'geo_polygon', 'geo_shape', 'geo_grid', 'shape', 'distance_feature'] },
+  { group: '跨度位置', ops: ['span_near', 'span_or', 'span_not', 'span_first', 'span_containing', 'span_within', 'span_term', 'span_multi', 'field_masking_span'] },
+  { group: '向量与语义', ops: ['knn', 'sparse_vector', 'text_expansion', 'weighted_tokens', 'semantic'] },
   { group: '脚本与其他', ops: ['script', 'wrapper', 'percolate', 'rank_feature'] },
   { group: '复合容器', ops: ['constant_score', 'boosting', 'dis_max', 'function_score', 'script_score', 'pinned'] },
 ];
