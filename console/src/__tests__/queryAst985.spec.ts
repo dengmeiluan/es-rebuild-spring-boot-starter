@@ -84,6 +84,37 @@ describe('985 span 跨度系与 distance_feature 往返无损', () => {
     expect(n.children.map(c => c.key)).toEqual(['clauses']);
     expect(n.params).toEqual({ slop: 1 });
   });
+  /* 产线真实形态（onshore-sentiment-service-apple ElasticSearchUtils.
+     getIntervalQueryOrderBuilderMatch：IntervalQueryBuilder(field,
+     Match(text, maxGaps, ordered=true, filter=null, analyzer=null))——
+     maxGaps=0 短语等价 / -1 match 等价 / 多字段 ifPresent(x::or) 并列进 should） */
+  roundTrip('intervals 产线形态 A：短语等价（max_gaps 0, ordered）', {
+    query: { intervals: { sentimentTitleStandard: { match: { query: '债券 利率', max_gaps: 0, ordered: true } } } },
+  });
+  roundTrip('intervals 产线形态 B：match 等价（max_gaps -1）', {
+    query: { intervals: { sentimentTitleStandard: { match: { query: '债券 利率', max_gaps: -1, ordered: true } } } },
+  });
+  it('intervals 产线组合：多字段 ifPresent(x::or) = bool should 并列，逐子句富表单投影', () => {
+    const dsl = {
+      query: {
+        bool: {
+          should: [
+            { intervals: { sentimentTitle: { match: { query: '茅台', max_gaps: 0, ordered: true } } } },
+            { intervals: { sentimentTitleStandard: { match: { query: '茅台', max_gaps: 0, ordered: true } } } },
+            { intervals: { contentHtml: { match: { query: '茅台', max_gaps: -1, ordered: true } } } },
+          ],
+          minimum_should_match: 1,
+        },
+      },
+    };
+    const r = parseTree(dsl);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(serializeTree(r.tree)).toEqual(dsl);
+    const root = r.tree.root as any;
+    expect(root.children.every((c: any) => c.node.type === 'leaf' && c.node.op === 'intervals' && c.node.field
+      && typeof c.node.value === 'object')).toBe(true);   // 三子句全部富表单化（非 raw）
+  });
 });
 
 describe('985 复合包装（wrap 扩员）往返无损', () => {
