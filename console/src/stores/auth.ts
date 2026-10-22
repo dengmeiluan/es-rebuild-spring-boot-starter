@@ -74,7 +74,9 @@ export const useAuthStore = defineStore('auth', () => {
     /* 一次性 carry/预填键：换人后自动回填上一用户的载荷（部分入口还会自动执行） */
     'es-console.dsl.', 'es-console.bulk.', 'es-console.ubq.', 'es-console.doc-diff.',
     'es-console.reindex-advanced.', 'es-console.sql.', 'es-console.lucene.',
-    'es-console.sandbox.',
+    'es-console.sandbox.', 'es-console.pit.', 'es-console.rebuild-paste',
+    'es-console.search-templates.carry', 'es-console.flame.',
+    'es-console.lifecycle.rollover', 'es-console.link.',
   ];
   function purgeUserRequestState() {
     for (const storage of [localStorage, sessionStorage]) {

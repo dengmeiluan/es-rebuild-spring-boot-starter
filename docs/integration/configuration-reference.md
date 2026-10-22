@@ -108,7 +108,7 @@ ES 文档锁（以 indexKey 为锁文档 _id）。
 | `es.rebuild.console.auth.fallback-username` | `admin` | 兜底账号：仅当用户索引一个账号都没有时可登录（角色 ADMIN） |
 | `es.rebuild.console.auth.fallback-password` | `es-console` | 兜底密码；enabled=true 时账号/密码不可为空（启动期校验）——**上线务必修改** |
 | `es.rebuild.console.auth.token-ttl-ms` | `43200000` | token 有效期毫秒（默认 12 小时） |
-| `es.rebuild.console.auth.token-secret` | （空串） | token HMAC secret；空=启动随机生成（重启后需重新登录）；多实例部署必须显式配置保证互通 |
+| `es.rebuild.console.auth.token-secret` | （空串） | token HMAC secret；空=启动随机生成（重启后需重新登录）；多实例部署必须显式配置保证互通。**注意**：登出吊销表与登录节流均为实例内存态——多实例下登出只吊销处理该请求的实例，被盗 token 在其余实例继续有效至 TTL（单实例或短 TTL 部署无此窗口） |
 | `es.rebuild.console.auth.user-index-name` | `es_console_user` | 控制台用户索引名 |
 | `es.rebuild.console.auth.ops-audit-index-name` | `es_console_ops_audit` | 操作审计索引名：环形开启时为日期索引前缀，关闭时为固定单索引名 |
 | `es.rebuild.console.auth.host-audit-merge` | `false` | 宿主审计并入开关：开启后宿主注册的 ConsoleAuditContributor 记录才并入控制台审计视图 |

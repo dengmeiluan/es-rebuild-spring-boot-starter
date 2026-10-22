@@ -18,7 +18,9 @@ export function hlSafe(raw: string): string {
     .replace(/&lt;em class=&quot;hl&quot;&gt;/g, '<em class="hl">')
     .replace(/&lt;em class="hl"&gt;/g, '<em class="hl">')
     .replace(/&lt;\/em&gt;/g, '</em>')
-    .replace(/&lt;(\/?)(em|mark)((?:\s+class="[^"]*")?)\s*&gt;/g, '<$1$2$3>');
+    /* class 值白名单 [a-zA-Z0-9 _-]：引号已排除（无法逃逸属性造事件），但任意
+       class 名仍可命中本站样式类造成视觉混淆——只放行合法类名字符集。 */
+    .replace(/&lt;(\/?)(em|mark)((?:\s+class="[a-zA-Z0-9 _-]*")?)\s*&gt;/g, '<$1$2$3>');
 }
 /* T2：highlight 片段装配共用纯函数（ES 返回片段数组 → join ' … ' → hlSafe
  净化；空档短路=''即调用方回落普通渲染）。RT hlHtml 一行委托（模板 v-html="hlHtml(hit, c)"

@@ -33,6 +33,12 @@ public class RunningMigrations {
         handles.put(handle.getJobId(), handle);
     }
 
+    /** 原子注册：isRunning 检查与 register 之间的窗口里并发 resume 同一作业会建双执行器
+     *  双写目标索引——占位失败即已有实例在跑，调用方按「仍在运行」拒绝。 */
+    public boolean registerIfAbsent(MigrationHandle handle) {
+        return handles.putIfAbsent(handle.getJobId(), handle) == null;
+    }
+
     public MigrationHandle get(String jobId) {
         return handles.get(jobId);
     }

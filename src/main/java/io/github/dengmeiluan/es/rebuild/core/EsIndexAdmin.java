@@ -2416,9 +2416,13 @@ public class EsIndexAdmin {
      */
     void guardRawGuarded(String method, String path, String body) {
         /* 守卫按 canonical（剥矩阵参数）判定而实际请求原样发出，两端语义一旦被
-           目标端分号归一收窄即成分歧——含矩阵参数的原始路径直接拒绝。 */
-        if (path.indexOf(';') >= 0) {
-            throw new ControlPlaneGuardException("非管理员 raw 不允许携带矩阵参数的路径：" + path);
+           目标端分号归一收窄即成分歧——路径部分含矩阵参数直接拒绝。
+           只查 '?' 之前的路径段：query 值里的分号是合法字符（q=foo;bar），
+           对全串检查会把正常检索误杀。 */
+        int qIdx = path.indexOf('?');
+        String pathPart = qIdx < 0 ? path : path.substring(0, qIdx);
+        if (pathPart.indexOf(';') >= 0) {
+            throw new ControlPlaneGuardException("非管理员 raw 不允许携带矩阵参数的路径：" + pathPart);
         }
         String canonical = canonicalRawPath(path);
         String p = rawPathOnly(canonical);

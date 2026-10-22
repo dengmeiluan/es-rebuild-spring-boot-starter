@@ -111,6 +111,9 @@ public class AdhocRebuildService {
     private final AdhocJobStore store;
     /** 已 WARN 过 docCount 失败的索引（每索引仅记首次，防 prepare 轮询刷屏）。 */
     private final Set<String> docCountWarned = ConcurrentHashMap.newKeySet();
+    /** 全局在途重建作业上限（防无界线程池+ES reindex 并发放大）。 */
+    private static final int MAX_CONCURRENT_JOBS = 8;
+
     private final ExecutorService worker = Executors.newCachedThreadPool(r -> {
         Thread t = new Thread(r, "es-adhoc-rebuild");
         t.setDaemon(true);
@@ -398,6 +401,14 @@ public class AdhocRebuildService {
      * timeField、bufferMs(默认 120000)、deleteOldIndex(默认 false)、confirmDirectSwap(直连模式必须 true)。
      */
     public Map<String, Object> start(Map<String, Object> req) throws IOException {
+        /* 并发作业上限：worker 是无界 cachedThreadPool，批量提交数百索引即数百并发
+           重建（线程+ES reindex 双放大）。同 target+index 已有锁互斥，这里限的是
+           全局在途作业总量——超限明确拒绝，用户可等在途完成或先清理。 */
+        long active = jobs.values().stream().filter(AdhocRebuildJob::isRunning).count();
+        if (active >= MAX_CONCURRENT_JOBS) {
+            throw new IllegalStateException("在途重建作业已达上限 " + MAX_CONCURRENT_JOBS
+                    + "，请等待在途作业完成或先清理历史作业");
+        }
         String index = str(req.get("index"));
         if (index == null) {
             throw new IllegalArgumentException("index 不能为空");

@@ -438,7 +438,9 @@ public class CrossClusterMigrateService {
             }
             handle.setStatus(MigrateJobTracker.STATUS_RUNNING);
             handle.markStarted(); // resume 重置耗时口径：startedAtMs 刷新、旧 finishedAtMs 清空
-            running.register(handle);
+            if (!running.registerIfAbsent(handle)) {
+                throw new IllegalStateException("作业仍在运行中，无需 resume: " + jobId);
+            }
             tracker.save(handle.toJobEs());
 
             if (rerun.isEmpty()) {
