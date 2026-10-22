@@ -21,6 +21,11 @@
       <SearchFilterBar v-model="filterQ" class="qtp-find" placeholder="过滤条件…" @enter="onFindKey" title="按字段名/算子/值过滤条件行：命中柔底高亮，Enter/Shift+Enter 在命中间轮转，清空恢复">
         <span v-if="findHits.length" class="qtp-find-nav chip static mono" aria-live="polite"
               :title="'命中 ' + findHits.length + ' 条，当前第 ' + findCur + ' 条'">{{ findCur }}/{{ findHits.length }}</span>
+        <!-- 989：命中在折叠组内不可见——一键展开全部嵌套组并重扫定位。
+         title 刻意避开「展开全部」字面（541/553 的 btnLine 行定位器按该子串找工具行钮，
+         新钮用词撞车会抢走行定位=锁面误红） -->
+        <button v-if="foldedHits" type="button" class="btn sm ghost qtp-find-fold" :title="'有 ' + foldedHits + ' 条命中在折叠的嵌套组内，点击展开'"
+                @click="expandFoldedHits"><ChevronsUp :size="11" /> 折叠内 {{ foldedHits }}</button>
       </SearchFilterBar>
       <!-- 四枚举钮收敛两枚状态感知循环钮（折叠⇄展开 / 启用⇄停用各一枚，
  显隐条件与 title 原语义保留）——
@@ -188,14 +193,32 @@ const paneEl = ref<HTMLElement>();
 const filterQ = ref('');
 const findHits = ref<HTMLElement[]>([]);
 const findCur = ref(0);   // 1-based；0 = 无命中
-watch(filterQ, async () => {
+/* 989：命中在折叠组内的条数。折叠组内容 v-if 卸载（大树性能取舍）——DOM 扫描根本
+ 看不到折叠内条件，「过滤失效」的真根因。判定走数据面：sessionStorage 折叠草稿
+ （bgn-fold:<组id>='1'，BoolGroupNode useScopedDraft 同源）+ 树递归匹配（匹配串与
+ DOM 扫描同构 field+op+value）。提示钮展开全部后草稿清空、重扫自然归零。 */
+const foldedHits = ref(0);
+watch(filterQ, () => { rescanFind(); });
+function foldedGroupIds(): Set<string> {
+  const s = new Set<string>();
+  for (let i = 0; i < sessionStorage.length; i++) {
+    const k = sessionStorage.key(i);
+    /* draft2 键形：es-console.draft2:query-builder:<host>:<idx>:-:-:bgn-fold:<组id>，
+     值 '1' = 折叠（展开态键被 writeRaw(null) 删除）；中段维度可变，认尾部 bgn-fold: 标记 */
+    if (k && k.includes(':bgn-fold:') && sessionStorage.getItem(k) === '1') {
+      s.add(k.slice(k.indexOf(':bgn-fold:') + ':bgn-fold:'.length));
+    }
+  }
+  return s;
+}
+async function rescanFind() {
   await nextTick();
   const root = paneEl.value;
   if (!root) return;
   root.querySelectorAll('.cn.qtp-hit').forEach(el => el.classList.remove('qtp-hit'));
   root.querySelectorAll('.cn.qtp-hit-cur').forEach(el => el.classList.remove('qtp-hit-cur'));
   const q = filterQ.value.trim().toLowerCase();
-  if (!q) { findHits.value = []; findCur.value = 0; return; }
+  if (!q) { findHits.value = []; findCur.value = 0; foldedHits.value = 0; return; }
   const hits: HTMLElement[] = [];
   for (const row of Array.from(root.querySelectorAll('.cn'))) {
     const field = (row.querySelector('.fs-inp') as HTMLInputElement | null)?.value || '';
@@ -209,7 +232,25 @@ watch(filterQ, async () => {
   findHits.value = hits;
   findCur.value = hits.length ? 1 : 0;
   hits[0]?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-});
+  /* 折叠内命中（数据面补扫——与 DOM 扫描同串匹配，祖先组在折叠草稿即计） */
+  const foldIds = foldedGroupIds();
+  let folded = 0;
+  const walk = (x: QueryNode, foldedCtx: boolean) => {
+    if (x.type === 'bool') { const f = foldedCtx || foldIds.has(x.id); x.children.forEach(c => walk(c.node, f)); }
+    else if (x.type === 'wrap') { if (x.child) walk(x.child, foldedCtx); }
+    else if (x.type === 'multi') { x.children.forEach(c => walk(c.node, foldedCtx)); }
+    else {
+      const hay = ((x.field || '') + ' ' + x.op + ' ' + String(x.value ?? '')).toLowerCase();
+      if (hay.includes(q) && foldedCtx) folded++;
+    }
+  };
+  if (props.tree.root) { walk(props.tree.root, false); foldedHits.value = folded; }
+}
+/* 展开全部折叠组后重扫（广播同步置位、草稿清空与内容渲染下一拍，rescan 自带 nextTick） */
+function expandFoldedHits() {
+  broadcastCollapse(false);
+  rescanFind();
+}
 /* 游标 → DOM 落位：唯一 .qtp-hit-cur + 滚到视口中心（命中行尚未渲染时不炸，下次导航再试） */
 function applyFindCur() {
   const root = paneEl.value;

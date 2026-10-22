@@ -58,7 +58,7 @@ async function settle(n = 10) {
 
 /* 五百七十七批：grantedPages 参数支持——conn 模型形态（默认 null 与既有三用例字面等价零改） */
 async function mountWithRole(
-  role: 'VIEWER' | 'OPERATOR' | 'ADMIN',
+  role: 'VIEWER' | 'OPERATOR' | 'ADMIN' | 'REBUILD_OP',
   grantedPages: string[] | null = null,
 ): Promise<HTMLElement> {
   const pinia = createPinia();
@@ -148,7 +148,7 @@ const TV_TASK = {
   startTimeMillis: 0, runningTimeNanos: 2_000_000_000, cancellable: true, status: {},
 };
 
-async function mountTasksWithGrants(role: 'VIEWER' | 'OPERATOR' | 'ADMIN', grantedPages: string[] | null): Promise<HTMLElement> {
+async function mountTasksWithGrants(role: 'VIEWER' | 'OPERATOR' | 'ADMIN' | 'REBUILD_OP', grantedPages: string[] | null): Promise<HTMLElement> {
   const pinia = createPinia();
   const router = createRouter({
     history: createMemoryHistory(),

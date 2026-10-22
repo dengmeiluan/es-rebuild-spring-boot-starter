@@ -569,4 +569,9 @@ function onExtras(v: Record<string, unknown> | unknown[]) {
 /* knn 向量 JSON 输入框：mono 长串横向吃满行（dim 向量百千位） */
 .rx-knn-vec { flex: 1 1 200px; min-width: 0; font-size: var(--fs-xs); }
 .rx-knn-vec.warn { border-color: var(--warn); }
+/* suggest 项行：名称/文本双输入吃满剩余空间，按钮钉死不收缩 */
+.rx-sug-row { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; margin: var(--sp-1) 0; }
+.rx-sug-row .btn { flex: none; }
+.rx-sug-name { width: 130px; height: 28px; font-size: var(--fs-sm); flex: none; }
+.rx-sug-text { flex: 1 1 160px; min-width: 0; height: 28px; font-size: var(--fs-sm); }
 </style>
