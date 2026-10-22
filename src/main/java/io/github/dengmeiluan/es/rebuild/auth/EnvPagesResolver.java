@@ -99,7 +99,14 @@ public class EnvPagesResolver {
         for (Map.Entry<String, java.util.Set<String>> e : templates.entrySet()) {
             if (e.getKey() == null || !wanted.equalsIgnoreCase(e.getKey().trim())) continue;
             /* 显式配置的空集=该环境全拒；只有「该环境未配置」才返回 null 表示不收缩。 */
-            return e.getValue() == null ? new LinkedHashSet<>() : e.getValue();
+            if (e.getValue() == null) return new LinkedHashSet<>();
+            /* 模板值归一化：YAML 里写成 "Indices"/"indices " 时，retainAll/contains 会静默失配，
+               表现为「配了模板却把有权限的人全拦掉」。键已归一，值必须同口径。 */
+            Set<String> normalized = new LinkedHashSet<>();
+            for (String v : e.getValue()) {
+                if (v != null && !v.trim().isEmpty()) normalized.add(v.trim());
+            }
+            return normalized;
         }
         return null;
     }
@@ -138,7 +145,10 @@ public class EnvPagesResolver {
         }
         Set<String> envPages = pagesFor(targetId);
         Set<String> out;
-        if (connMap.isEmpty()) {
+        /* 模型判定必须与 {@link #inConnModel} 同源（都看 conn: 前缀）。此前用 connPages.isEmpty()
+           判模型：畸形键 conn:x（不匹配解析正则）会让 effectivePages 走纯静态分支（不吃 env 收缩），
+           而写门 inConnModel 仍按连接模型默认拒绝——两个函数对「是否连接模型」各说各话。 */
+        if (!inConnModel(grantedPages)) {
             /* 纯静态模型：env 模板收缩静态页（现状不变） */
             out = new LinkedHashSet<>(staticKeys);
             if (envPages != null) out.retainAll(envPages);

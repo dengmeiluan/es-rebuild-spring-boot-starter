@@ -13,6 +13,11 @@
       </template>
     </PageHeader>
 
+    <!-- 只读身份的前置说明：脚本存储/删除钮隐藏时不让页面变成无解释的空壳（RestView 只读说明条同款） -->
+    <div v-if="auth.probed && !canOps" class="pl-perm-note" role="status">
+      <Shield :size="13" /> 当前身份只读：已存储脚本的保存/删除不可用；需要集群脚本写权限。
+    </div>
+
     <div class="pl-body" :style="{ '--pl-rail-w': plRailW + 'px' }">
       <div class="pl-left">
         <div class="pl-panel">
@@ -373,6 +378,8 @@ function openRawIo() {
 <style scoped>
 /* G7-C4/C6：区块级间距 token 化（--sp-1..6 = 4/8/12/16/24/32）；控件内 padding / 行级密排 / 亚阶梯不动 */
 .pl-page { padding: var(--sp-2) var(--sp-3); }
+/* 只读身份说明条（RestView .rt-perm-note 同款形态；pl-page 无 flex gap 自补下距） */
+.pl-perm-note { display: flex; align-items: center; gap: var(--sp-2); margin: 0 0 var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); }
 /* ：旧手写页头五类规则家族删除（页头已迁 PageHeader 组件无对应元素，
  PluginsView W-F 同款先例） */
 

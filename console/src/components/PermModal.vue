@@ -84,6 +84,9 @@ function denyText(reason?: string): string {
   if (reason === 'WRITE_DENIED') return '连接写权限未授予';
   if (reason === 'PAGE_DENIED') return '页面未授权';
   if (reason === 'DELEGATED_SECURITY_READONLY') return '委派会话只读（账号仅 ADMIN 管理）';
+  if (reason === 'HOST_DEST_WRITE_REQUIRED') return '可中止/探测；启动与续跑还需宿主集群的迁移写权限';
+  if (reason === 'CONN_FORBIDDEN') return '当前角色低于该连接要求';
+  if (reason === 'CONN_NOT_FOUND') return '目标连接不存在或已删除';
   if (reason.startsWith('ROLE_INSUFFICIENT:')) return `需 ${reason.slice('ROLE_INSUFFICIENT:'.length)} 角色`;
   return reason;
 }

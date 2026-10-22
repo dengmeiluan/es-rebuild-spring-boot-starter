@@ -1,5 +1,9 @@
 <template>
   <div class="mp">
+    <!-- 只读身份的前置说明：写钮隐藏时不让页面变成无解释的空壳（RestView 只读说明条同款） -->
+    <div v-if="auth.probed && !canOps" class="mp-perm-note" role="status">
+      <Shield :size="13" /> 当前身份只读：添加字段/动态规则设置不可用；需要 mapping 写权限。
+    </div>
     <!-- 交互修复：空态补「最近使用」chips——store.recentIdx 即全站最近工作索引（切集群自动清空），
  过滤出当前集群仍存在的取前 5；点击 store.pick 即选中进入（本页 follow + watch pickedIdx 自动加载）。
  条件插槽：chips 为空时 default 插槽整个缺席，EmptyState 不渲染 es-extra 空容器 -->
@@ -177,7 +181,7 @@ ES 仅允许<b>新增</b>字段；修改已有字段类型需走零停机重建�
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
 import { NModal } from 'naive-ui';
-import { Braces, RefreshCw, Plus, Settings2, PieChart, SlidersHorizontal, FileJson, Copy, Hammer, AlertTriangle, ChevronDown, ArrowUpDown } from 'lucide-vue-next';
+import { Shield, Braces, RefreshCw, Plus, Settings2, PieChart, SlidersHorizontal, FileJson, Copy, Hammer, AlertTriangle, ChevronDown, ArrowUpDown } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api } from '../api';
 import { useRouter } from 'vue-router';
@@ -580,4 +584,7 @@ useModalEnter(settingsOpen, askPutSettings, () => canOps.value);
   .mp-fields { padding: var(--sp-3); }
   .mp-donut-wrap { flex-wrap: wrap; }
 }
+
+/* 只读身份说明条（RestView .rt-perm-note 同款形态） */
+.mp-perm-note { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); margin: 0 0 var(--sp-3); }
 </style>

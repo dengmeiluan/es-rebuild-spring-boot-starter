@@ -19,6 +19,11 @@
       </PageHeader>
 </div>
 
+    <!-- 只读身份的前置说明：下发/热重载钮隐藏时不让页面变成无解释的空壳（RestView 只读说明条同款） -->
+    <div v-if="auth.probed && !canOps && !canReload" class="sy-perm-note" role="status">
+      <Shield :size="13" /> 当前身份只读：同义词的下发/热重载不可用；需要集群同义词写权限。
+    </div>
+
     <div class="sy-note">
       <Info :size="12" />
       <div>
@@ -135,7 +140,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue';
-import { BookText, RefreshCw, Info, Send, Zap, AlertTriangle, Terminal, Lightbulb } from 'lucide-vue-next';
+import { BookText, RefreshCw, Info, Send, Zap, AlertTriangle, Terminal, Lightbulb, Shield } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
@@ -376,6 +381,8 @@ watch(index, v => { if (v) doLoad(); });
  原 12px 16px 24px 与其叠加成双层 padding，移除与多数视图取齐（同步 11c ProfileFlameView 处理） */
 .sy-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); }
 .sy-hd-r { display: flex; gap: var(--sp-1h); align-items: center; }
+/* 只读身份说明条（RestView .rt-perm-note 同款形态；sy-page 无 flex gap 自补下距） */
+.sy-perm-note { display: flex; align-items: center; gap: var(--sp-2); margin: 0 0 var(--sp-3); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); }
 /* （ G67）：页头合并 PageHeader 后遗留的左组标题四条死规则与表单壳合并
  后遗留的表单行修饰两条死规则删（模板零元素实证，713/715/717 同族清理）；
  .sy-hd 外距锚、.sy-hd-r 预览卡头钮组、.sy-ii 输入框为活规则保留 */

@@ -12,6 +12,11 @@
       </PageHeader>
 </div>
 
+    <!-- 只读身份的前置说明：保存/删除钮隐藏时不让页面变成无解释的空壳（RestView 只读说明条同款） -->
+    <div v-if="auth.probed && !canOps" class="st-perm-note" role="status">
+      <Shield :size="13" /> 当前身份只读：搜索模板的保存/删除不可用；需要集群脚本写权限。
+    </div>
+
     <div class="st-body">
       <!-- 左：模板列表 -->
       <div class="st-list">
@@ -178,7 +183,7 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import {
   LayoutTemplate, RefreshCw, Plus, FileCode2, FileJson, Save, Trash2, Info,
-  Variable, Eye, Play, Copy, History, Terminal,
+  Variable, Eye, Play, Copy, History, Terminal, Shield,
 } from 'lucide-vue-next';
 import { NModal } from 'naive-ui';
 /* 页内历史面板合并 QueryHistoryPanel 共享件（DslQueryView 弹窗范式） */
@@ -557,6 +562,8 @@ load();
 
 <style scoped>
 .st-page { display: flex; flex-direction: column; gap: var(--sp-3); height: 100%; }
+/* 只读身份说明条（RestView .rt-perm-note 同款形态；st-page flex gap 承担落位，零 margin） */
+.st-perm-note { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); }
 .st-hd { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
 /* .st-hd-l/-ic/-sub/-r/.st-ii 死规则退役（页头已由 PageHeader 接管、页内选择器退役换
  CurrentIdxChip，模板 grep 0 引用） */

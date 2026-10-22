@@ -81,7 +81,8 @@ public class InternalEsMigrateExceptionAdvice {
     private static Map<String, Object> body(String code, String message, String endpoint) {
         Map<String, Object> b = new LinkedHashMap<>();
         b.put("code", code);
-        b.put("message", message);
+        // 连接失败臂的 message 内嵌远端集群地址：与 EsErrorMapper 错误通道同一脱敏口径
+        b.put("message", message == null ? null : EsErrorMapper.sanitizeTopology(message));
         if (endpoint != null && !endpoint.trim().isEmpty()) {
             b.put("endpoint", endpoint);
         }

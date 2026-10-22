@@ -1,5 +1,9 @@
 <template>
   <div class="ilm" ref="rootEl">
+    <!-- 只读身份的前置说明：写钮隐藏时不让页面变成无解释的空壳（RestView 只读说明条同款） -->
+    <div v-if="auth.probed && !canOps && !canMove" class="ilm-perm-note" role="status">
+      <Shield :size="13" /> 当前身份只读：策略的新建/编辑/删除与手动迁移不可用；需要 ILM 写权限。
+    </div>
     <PageHeader :icon="Recycle" title="ILM 索引生命周期">
       <template #subtitle>
         <span>策略管理 / 索引解释 / 生命周期移步</span>
@@ -225,7 +229,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { NModal } from 'naive-ui';
 import MarkText from '../components/MarkText.vue';
-import { Recycle, List, RefreshCw, Info, FileSearch, ShieldOff, ShieldQuestion, Plus, Pencil, Trash2, Save, Terminal, TerminalSquare } from 'lucide-vue-next';
+import { Shield, Recycle, List, RefreshCw, Info, FileSearch, ShieldOff, ShieldQuestion, Plus, Pencil, Trash2, Save, Terminal, TerminalSquare } from 'lucide-vue-next';
 import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
 import RawIoModal from '../components/RawIoModal.vue';
@@ -638,4 +642,7 @@ const hasErr = computed(() => {
   .ilm-tl-head { flex-wrap: wrap; }
   .ilm-ex-line { flex-wrap: wrap; }
 }
+
+/* 只读身份说明条（RestView .rt-perm-note 同款形态） */
+.ilm-perm-note { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); margin: 0 0 var(--sp-3); }
 </style>

@@ -145,6 +145,33 @@ import java.util.Map;
 @AutoConfigureAfter(ElasticsearchDataAutoConfiguration.class)
 public class EsRebuildAutoConfiguration {
 
+    private static final org.slf4j.Logger STARTUP_LOG =
+            org.slf4j.LoggerFactory.getLogger(EsRebuildAutoConfiguration.class);
+
+    /**
+     * 启动期鉴权暴露面告警：不挂在任何条件 Bean 下——鉴权关闭是最危险形态，
+     * 告警链路本身不得随条件 Bean 一起消失（此前告警挂在依赖审计 Bean 的装配链里，永不发声）。
+     * 监听面仅回环时降为 WARN，其余（含未配置=绑全部网卡）升格 ERROR。
+     */
+    @Bean
+    static org.springframework.beans.factory.SmartInitializingSingleton consoleAuthDisabledNotice(
+            EsRebuildProperties properties, org.springframework.core.env.Environment environment) {
+        return () -> {
+            if (!properties.getConsole().getAuth().isEnabled()) {
+                String addr = environment.getProperty("server.address", "");
+                boolean loopbackOnly = "127.0.0.1".equals(addr) || "localhost".equals(addr) || "::1".equals(addr);
+                String msg = "控制台鉴权已关闭（es.rebuild.console.auth.enabled=false）："
+                        + "任何可达客户端均可匿名执行控制台读写，仅限隔离网络临时排障；当前监听地址="
+                        + (addr.isEmpty() ? "未配置（默认绑定全部网卡）" : addr);
+                if (loopbackOnly) {
+                    STARTUP_LOG.warn(msg);
+                } else {
+                    STARTUP_LOG.error(msg);
+                }
+            }
+        };
+    }
+
     /**
      * 宿主 ES 栈版本契约的启动期诊断。
      *
@@ -1099,10 +1126,24 @@ public class EsRebuildAutoConfiguration {
         @ConditionalOnMissingBean(EsConsoleAuthorizer.class)
         @ConditionalOnProperty(prefix = "es.rebuild.console.auth", name = "enabled", matchIfMissing = true)
         public BuiltinConsoleAuthService builtinConsoleAuthService(ControlClusterResolver controlClusterResolver,
-                                                                   EsRebuildProperties properties) {
+                                                                   EsRebuildProperties properties,
+                                                                   ObjectProvider<ConsoleAuthDelegate> delegateProvider) {
             EsRebuildProperties.Auth auth = properties.getConsole().getAuth();
+            /* 内置登录开关三态：显式配置优先；否则「有宿主委托=关闭、独立部署=开启」。
+               关闭的理由是安全默认：委托部署里默认兜底账号 admin/es-console 可经免鉴权的
+               /auth/login 直接拿本地 ADMIN（grantedPages=null 绕过全部页面门），
+               等于在宿主鉴权之外留一把永久钥匙。 */
+            boolean hasDelegate = delegateProvider.getIfAvailable() != null;
+            Boolean configured = auth.getBuiltinLoginEnabled();
+            boolean loginEnabled = configured != null ? configured : !hasDelegate;
+            if (hasDelegate && loginEnabled) {
+                logger.error("[es-console-auth] 已启用宿主鉴权委托，但内置账号登录仍被强制开启"
+                        + "（builtin-login-enabled=true）：本地账号（含兜底 admin）可绕过宿主鉴权直接登录，"
+                        + "请确认这是临时运维安排并尽快关闭");
+            }
             return new BuiltinConsoleAuthService(controlClusterResolver::client, auth.getUserIndexName(),
-                    auth.getFallbackUsername(), auth.getFallbackPassword(), auth.getTokenTtlMs(), auth.getTokenSecret());
+                    auth.getFallbackUsername(), auth.getFallbackPassword(), auth.getTokenTtlMs(),
+                    auth.getTokenSecret(), loginEnabled);
         }
 
         @Bean
@@ -1110,6 +1151,19 @@ public class EsRebuildAutoConfiguration {
         public ConsolePageCatalog consolePageCatalog() {
             // 2.5.0：页面契约唯一事实源；宿主注册自定义 Bean 可覆盖（如裁剪页面集）
             return ConsolePageCatalog.load();
+        }
+
+        /**
+         * 端点授权覆盖自检（984）：启动完成后把「未登记页面/共享映射」的端点打 WARN。
+         * 只在页面级授权开启时装配——纯角色档模型下页面清单本就不参与执法，告警无意义。
+         */
+        @Bean
+        @ConditionalOnMissingBean
+        @ConditionalOnBean(ConsolePageCatalog.class)
+        @ConditionalOnProperty(prefix = "es.rebuild.console.page-auth", name = "enabled", matchIfMissing = true)
+        public io.github.dengmeiluan.es.rebuild.auth.ConsoleEndpointCoverageAuditor consoleEndpointCoverageAuditor(
+                ConsolePageCatalog consolePageCatalog) {
+            return new io.github.dengmeiluan.es.rebuild.auth.ConsoleEndpointCoverageAuditor(consolePageCatalog);
         }
 
         @Bean
@@ -1207,11 +1261,7 @@ public class EsRebuildAutoConfiguration {
             RemoteEsClientFactory factory = new RemoteEsClientFactory(
                     properties.getMigrate().getConnectTimeoutMs(), properties.getMigrate().getSocketTimeoutMs());
             ConsoleAuthDelegate delegate = delegateProvider.getIfAvailable();
-            /* 权限相关逃生阀必须在启动期留痕：关鉴权/未配首连令牌都是「可达客户端能写」的暴露面。 */
-            if (!properties.getConsole().getAuth().isEnabled()) {
-                logger.warn("控制台鉴权已关闭（es.rebuild.console.auth.enabled=false）："
-                        + "任何可达客户端均可匿名执行控制台读写，仅限隔离网络临时排障");
-            }
+            /* 首连令牌暴露面启动期留痕（鉴权关闭的告警已移至无条件的 consoleAuthDisabledNotice）。 */
             if (properties.getConsole().getSetupToken() == null
                     || properties.getConsole().getSetupToken().trim().isEmpty()) {
                 logger.warn("未配置 es.rebuild.console.setup-token：未绑定窗口的匿名首连仅允许本机回环；"
@@ -1221,11 +1271,38 @@ public class EsRebuildAutoConfiguration {
                自定义 EsConsoleAuthorizer 部署同样有 /auth/me 兜底与拦截器，404 只能是代理/版本错配，
                前端必须保持 fail-closed；builtinLogin 单独标识是否展示本地账号表单。 */
             boolean authEnabled = properties.getConsole().getAuth().isEnabled();
-            boolean builtinLogin = builtinAuthProvider.getIfAvailable() != null;
+            /* builtinLogin 标识「本地账号表单是否可用」，不是「内置服务 Bean 是否存在」：
+               委托部署默认关闭内置登录时 Bean 仍会装配，按 loginEnabled 口径下发，
+               登录遮罩才能正确给出宿主鉴权指引而不是展示永远登不进的本地表单。 */
+            io.github.dengmeiluan.es.rebuild.auth.BuiltinConsoleAuthService builtinService =
+                    builtinAuthProvider.getIfAvailable();
+            boolean builtinLogin = builtinService != null && builtinService.isLoginEnabled();
             return new ConsoleSetupController(controlClusterResolver, factory, consoleOpsAuditStore,
                     delegate, environment.getProperty("spring.application.name", "default"),
                     properties.getConsole().isHostClusterVisible(), authEnabled, builtinLogin,
                     properties.getConsole().getSetupToken());
+        }
+
+        /** 控制台 API 的基础安全响应头：nosniff 全量；auth 域（token/身份档案）禁缓存；
+         *  frame-ancestors 仅在显式配置 es.rebuild.console.security.frame-ancestors 时下发
+         *  （宿主 iframe 嵌入是声明特性，默认不限制可嵌域——限制反而会截断合法部署）。 */
+        @Bean
+        @ConditionalOnMissingBean
+        @ConditionalOnProperty(prefix = "es.rebuild", name = "web-enabled", matchIfMissing = true)
+        public org.springframework.boot.web.servlet.FilterRegistrationBean<io.github.dengmeiluan.es.rebuild.auth.ConsoleSecurityHeadersFilter>
+                consoleSecurityHeadersFilter(EsRebuildProperties properties) {
+            String frameAncestors = properties.getConsole().getSecurity().getFrameAncestors();
+            org.springframework.boot.web.servlet.FilterRegistrationBean<io.github.dengmeiluan.es.rebuild.auth.ConsoleSecurityHeadersFilter> reg =
+                    new org.springframework.boot.web.servlet.FilterRegistrationBean<>(
+                            new io.github.dengmeiluan.es.rebuild.auth.ConsoleSecurityHeadersFilter(
+                                    frameAncestors == null || frameAncestors.trim().isEmpty() ? null : frameAncestors));
+            /* 控制台 HTML/静态资源同样要过安全头：被 iframe 嵌入的是 HTML 文档而非 JSON API，
+               frame-ancestors 只下发到 API 路径等于配置虚设；nosniff 对 JS/CSS 同样适用。 */
+            reg.addUrlPatterns("/internal/es/index/*", "/internal/es/xmigrate/*",
+                    "/console/*", "/es-rebuild.html", "/es-xmigrate.html");
+            reg.setOrder(org.springframework.core.Ordered.HIGHEST_PRECEDENCE);
+            reg.setName("consoleSecurityHeadersFilter");
+            return reg;
         }
     }
 }

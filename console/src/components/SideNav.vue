@@ -27,7 +27,14 @@
     </div>
 
     <nav class="nav-list">
-      <div v-if="!grouped.length" class="nav-empty">无匹配功能</div>
+      <!-- 身份未确认 ≠ 无权限：探测失败时菜单会保持「全量」形态，此时点进去必被 403。
+           给一条可解释的状态条，避免用户把「后端不可达」当成「系统坏了」。 -->
+      <div v-if="auth.probed && !auth.authDisabled && auth.me == null" class="nav-empty nav-degraded" role="status">
+        身份未确认：正在重试连接鉴权服务。菜单可能多于实际权限，操作以服务端校验为准。
+      </div>
+      <div v-if="!grouped.length && !(auth.probed && !auth.authDisabled && auth.me == null)" class="nav-empty">
+        {{ navQuery.trim() ? '无匹配功能' : '当前身份/目标连接下没有可访问的页面——请在「安全中心 → 我的账号」查看授权，或联系管理员勾选菜单' }}
+      </div>
       <div v-for="g in grouped" :key="g.id" class="nav-group">
         <!-- 组标题与图标态分隔线同时常驻：两态高度互补渐变，宽度动画全程不跳行高 -->
         <div class="nav-g-hd" role="button" tabindex="0" :aria-expanded="isOpen(g)" @click="toggleGroup(g.id)" @keydown.enter.prevent="toggleGroup(g.id)" @keydown.space.prevent="toggleGroup(g.id)">
@@ -255,6 +262,7 @@ function itemTip(item: { name: string; key?: string }) {
 .nav-search-x { flex-shrink: 0; cursor: pointer; opacity: .7; background: none; border: none; padding: var(--sp-0); display: flex; align-items: center; color: inherit; }
 .nav-search-x:hover { opacity: 1; color: var(--tx0); }
 .nav-empty { padding: var(--sp-4) var(--sp-2); font-size: var(--fs-xs); color: var(--tx2); text-align: center; }
+.nav-degraded { text-align: left; line-height: 1.5; border: 1px solid var(--warn-line, var(--line)); border-radius: var(--r-s); background: var(--warn-soft); color: var(--tx1); margin-bottom: var(--sp-2); }
 
 .nav-list { flex: 1; padding: var(--sp-2); overflow-y: auto; overflow-x: hidden; }
 .nav-group { margin-bottom: var(--sp-0); }

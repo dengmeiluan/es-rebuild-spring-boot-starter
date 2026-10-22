@@ -59,16 +59,32 @@ public class JwtVerifier {
 
     private final byte[] hmacSecret;
     private final PublicKey rsaPublicKey;
+    /** 是否强制要求 exp（缺失即拒）。缺省 false=兼容旧宿主；装配层默认开启。 */
+    private final boolean requireExp;
+    /** 时钟偏移容忍（签发方与本机时钟不同步的常规窗口）。 */
+    private static final long CLOCK_SKEW_MS = 60_000L;
     /** 解析失败节流 WARN 计数（首败留痕，同 key 节流；lastJwtWarnAt 范式）。 */
     private final AtomicLong lastParseWarnAt = new AtomicLong(0);
 
     /**
+     * 兼容构造：不强制 exp（既有调用方/单测语义逐字节不变）。
+     *
      * @param secret    HS256 共享密钥（可空）
      * @param publicKeyPem RS256 PEM 公钥（可空；与 secret 至少一个非空）
      */
     public JwtVerifier(String secret, String publicKeyPem) {
+        this(secret, publicKeyPem, false);
+    }
+
+    /**
+     * @param secret    HS256 共享密钥（可空）
+     * @param publicKeyPem RS256 PEM 公钥（可空；与 secret 至少一个非空）
+     * @param requireExp true=claims 缺 exp 即拒（生产装配默认）；false=兼容旧宿主
+     */
+    public JwtVerifier(String secret, String publicKeyPem, boolean requireExp) {
         this.hmacSecret = secret == null || secret.isEmpty() ? null : secret.getBytes(StandardCharsets.UTF_8);
         this.rsaPublicKey = parsePublicKey(publicKeyPem);
+        this.requireExp = requireExp;
         if (hmacSecret == null && rsaPublicKey == null) {
             throw new IllegalStateException("jwt 委托模式需要配置 secret（HS256）或 public-key（RS256）至少一项");
         }
@@ -106,9 +122,29 @@ public class JwtVerifier {
                 return null;
             }
             JsonNode claims = MAPPER.readTree(Base64.getUrlDecoder().decode(parts[1]));
+            long now = System.currentTimeMillis();
             JsonNode exp = claims.get("exp");
-            if (exp != null && exp.isNumber() && exp.asLong() * 1000L < System.currentTimeMillis()) {
-                return null; // 已过期
+            if (exp == null) {
+                /* 缺 exp = 永不过期凭证：requireExp 开启时直接拒绝（生产默认）。
+                   旧宿主未签发 exp 可通过 es.rebuild.console.auth.delegate.jwt.require-exp=false 显式放行。 */
+                if (requireExp) {
+                    return null;
+                }
+            } else if (!exp.isNumber()) {
+                /* 非数值 exp（字符串/对象）此前被 isNumber() 判假后完全跳过校验——
+                   签发方一个手误就产出永久令牌。无论 requireExp 如何都拒绝。 */
+                return null;
+            } else if (exp.asLong() * 1000L + CLOCK_SKEW_MS < now) {
+                return null; // 已过期（含 60s 时钟偏移容忍）
+            }
+            JsonNode nbf = claims.get("nbf");
+            if (nbf != null) {
+                if (!nbf.isNumber()) {
+                    return null;
+                }
+                if (nbf.asLong() * 1000L - CLOCK_SKEW_MS > now) {
+                    return null; // 尚未生效
+                }
             }
             return claims;
         } catch (Exception e) {

@@ -28,6 +28,15 @@ app.config.errorHandler = (err: unknown, _inst, info) => {
 };
 window.addEventListener('unhandledrejection', (e) => {
   console.error('[es-console] 未捕获的 Promise 拒绝', e.reason);
+  /* 漏 catch 的请求失败此前纯静默（用户点完没反应）。403 已由全局 forbidden 通道提示，
+     这里只兜其余错误，避免同一次拒绝弹两条。 */
+  try {
+    const r: any = e.reason;
+    if (r && r.status === 403) return;
+    const msg = r instanceof Error ? r.message : String(r ?? '');
+    if (!msg) return;
+    useAppStore().notify('error', `操作失败：${msg}`);
+  } catch { /* store 不可用时不二次炸 */ }
 });
 
 app.mount('#app');

@@ -496,6 +496,9 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
     /** 矩阵参数（每个路径段的 {@code ;...}）：与 Spring UrlPathHelper.removeSemicolonContent 同口径。 */
     private static final Pattern MATRIX_PARAM = Pattern.compile(";[^/]*");
 
+    /** 审计 detail 控制符清洗（日志注入防护：CR/LF/TAB 与 C0/C1 控制符一律折成空格）。 */
+    private static final Pattern AUDIT_CTRL = Pattern.compile("[\\r\\n\\t\\u0000-\\u001f\\u007f]");
+
     private final EsConsoleAuthorizer authorizer;
     private final ConsoleOpsAuditStore opsAuditStore;
     private final io.github.dengmeiluan.es.rebuild.control.ControlClusterResolver resolver;
@@ -565,9 +568,11 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             deny(response, 409, "{\"code\":\"SETUP_REQUIRED\",\"message\":\"控制台尚未绑定控制集群\"}");
             return false;
         } catch (Exception e) {
-            // 已绑定但控制集群不可达：明确 503（绝不回落 SETUP，防拒绝服务骗出重绑向导）
+            // 已绑定但控制集群不可达：明确 503（绝不回落 SETUP，防拒绝服务骗出重绑向导）。
+            // 该响应发给未认证调用方：异常 message 内嵌的控制集群地址同口径脱敏
             deny(response, 503, "{\"code\":\"CONTROL_CLUSTER_DOWN\",\"message\":\"控制集群不可达: "
-                    + jsonEscape(e.getMessage()) + "\"}");
+                    + jsonEscape(io.github.dengmeiluan.es.rebuild.web.EsErrorMapper
+                            .sanitizeTopology(e.getMessage())) + "\"}");
             return false;
         }
         if (principal == null) {
@@ -578,8 +583,11 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
            监控行过滤与权限面板必须看到同一个“未启用”形态，不能只有门禁被关、
            可见性仍拿旧 grants 继续收窄（有权限的人被隐藏）。 */
         if (!pageAuthEnabled && principal.getGrantedPages() != null) {
+            /* 第 4 参是 delegated，必须保留原身份形态：此前硬编码 true 会把「页面授权逃生阀
+               关闭」的委派/内置身份全部误标成委派，导致 /auth/me 报 authSource=delegate、
+               改密被 DELEGATED 只读规则挡下（有权限的人被误拦）。 */
             principal = new ConsolePrincipal(principal.getUsername(), principal.getRole(),
-                    principal.isFallback(), true, principal.getDisplayName(),
+                    principal.isFallback(), principal.isDelegated(), principal.getDisplayName(),
                     principal.getAttributes(), null);
         }
         request.setAttribute(ATTR_PRINCIPAL, principal);
@@ -623,8 +631,11 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             }
             /* 全量审计是 rank3 专项数据：连接模型下页面读键会短路角色门，
                这里补回 rank3 硬门——security 读键给 VIEWER 只能看用户列表/自助流水，
-               不得读全量 IP/URI/连接维度审计。 */
-            if ("/internal/es/index/auth/ops-audit".equals(path)
+               不得读全量 IP/URI/连接维度审计。/auth/ops-audit/mine 是自助面（服务端强制
+               username=自己），不吃该硬门；用前缀匹配而非精确相等，防未来新增
+               /auth/ops-audit/export 之类子路径被 security 读键静默短路。 */
+            if (path.startsWith("/internal/es/index/auth/ops-audit")
+                    && !path.endsWith("/auth/ops-audit/mine")
                     && !principal.getRole().atLeast(ConsoleRole.REBUILD_OP)) {
                 opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
                         "ROLE_DENIED", 403, "required=REBUILD_OP"));
@@ -645,6 +656,28 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                 targetId = targetHeader == null || targetHeader.trim().isEmpty()
                         ? "host" : targetHeader.trim();
                 if ("host".equalsIgnoreCase(targetId)) targetId = "host";
+            }
+            /* 目标连接的角色闸，对所有「按目标头取页键」的路径统一生效。
+               此前只有数据面（EsTargetInterceptor 覆盖的 /cluster/**、/insight 等）做过 minRole 校验；
+               adhoc-rebuild/abort|status|jobs、desired-state、es/index/keys、mapping-reconcile/report、
+               config-lab/drift 等同样吃 X-Es-Target 授权却完全跳过了它——持 conn:B:w:adhoc-rebuild
+               但角色低于 B.minRole 的用户可中止 B 上的重建。
+               档案查不到（null）时不额外拒绝：存在性由数据面拦截器与宿主键下发共同保证，
+               这里只补「连接存在时必须同时满足 minRole」这一条，避免把有页面键的人误拦。 */
+            if (!"host".equals(targetId) && connStore != null) {
+                try {
+                    io.github.dengmeiluan.es.rebuild.xmigrate.RemoteClusterConn targetConn = connStore.get(targetId);
+                    if (targetConn != null && !ConsoleConnVisibility.canSeeResolved(principal, targetId, targetConn)) {
+                        ConsoleRole need = ConsoleRole.parse(targetConn.getMinRole());
+                        opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
+                                "CONN_DENIED", 403, "target=" + targetId + " required=" + need.name()));
+                        deny(response, 403, "{\"code\":\"CONN_FORBIDDEN\",\"message\":\"当前角色无权访问该集群连接\",\"required\":\""
+                                + need.name() + "\"}");
+                        return false;
+                    }
+                } catch (Exception e) {
+                    // 档案瞬态不可用：不能让审计/授权读取反噬请求（数据面仍有独立 503 闸）
+                }
             }
             if ("/internal/es/index/cluster/alias-actions".equals(path)) {
                 /* 完整别名写权必须叠加 env 页模板收缩：静态 aliases 命中但被环境模板排除时，
@@ -874,7 +907,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
     }
 
     /** 命中执行类清单的只读 POST 落 EXEC 审计（谁在哪个集群执行了脚本/预估）。 */
-    private void recordExecAuditIfNeeded(HttpServletRequest request, String uri) {
+    private void recordExecAuditIfNeeded(HttpServletRequest request, HttpServletResponse response, String uri) {
         boolean isExec = false;
         for (String kw : EXEC_AUDIT_POST_KEYWORDS) {
             if (uri.contains(kw)) { isExec = true; break; }
@@ -882,7 +915,10 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         if (!isExec) return;
         Object p = request.getAttribute(ATTR_PRINCIPAL);
         if (!(p instanceof ConsolePrincipal)) return;
-        opsAuditStore.record(auditEvent((ConsolePrincipal) p, request, request.getMethod(), uri, "EXEC", 200, null));
+        /* 状态码取真实响应：硬编码 200 会把一次 4xx/5xx 的执行尝试记成「成功」，
+           法证回溯时无法区分「跑了但失败」与「真的执行成功」。 */
+        opsAuditStore.record(auditEvent((ConsolePrincipal) p, request, request.getMethod(), uri,
+                "EXEC", response == null ? 200 : response.getStatus(), null));
     }
 
     @Override
@@ -905,7 +941,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             /* ·可审计补全：执行类只读 POST（painless 脚本执行/analyze 分词验证/
                reindex 预估/config-lab dry-run）零数据写入但执行脚本或消耗集群资源——落 EXEC
                审计留痕（谁在哪个集群跑了什么），其余只读查询维持零噪音。 */
-            recordExecAuditIfNeeded(request, uri);
+            recordExecAuditIfNeeded(request, response, uri);
             return;
         }
         Object p = request.getAttribute(ATTR_PRINCIPAL);
@@ -926,7 +962,13 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             detail = "raw=" + ((String) rawSummary).replace('\r', ' ').replace('\n', ' ');
         }
         if (ex != null && ex.getMessage() != null) {
-            detail = detail == null ? "err=" + ex.getMessage() : detail + " err=" + ex.getMessage();
+            /* 异常文本可能含 CR/LF 与其他控制符（ES 报错体、连接串片段）——
+               审计是行式渲染 + 导出面，不清洗会制造日志注入（伪造审计行）。 */
+            String msg = AUDIT_CTRL.matcher(ex.getMessage()).replaceAll(" ");
+            if (msg.length() > 300) {
+                msg = msg.substring(0, 300) + "…";
+            }
+            detail = detail == null ? "err=" + msg : detail + " err=" + msg;
         }
         opsAuditStore.record(auditEvent(principal, request, request.getMethod(),
                 qs == null ? uri : uri + "?" + qs, action, response.getStatus(), detail));
@@ -949,7 +991,9 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                 String resolved = connStore.getName(targetId.trim());
                 /* xmigrate/adhoc 族的归属头不经过 EsTargetInterceptor 校验（执行锚是
                    请求体的 srcConnId/作业 targetId）：未知 id 不落连接账——防伪造
-                   X-Es-Target 把写操作记到他人连接名下误导法证。 */
+                   X-Es-Target 把写操作记到他人连接名下误导法证。
+                   其余端点保留连接维度（自定义 ConnStore 的 getName 可能未实现，
+                   一律按 null 摘除会让审计永久丢失集群列——污染面小于信息丢失面）。 */
                 boolean connectionWorkflow = uri != null
                         && (uri.contains("/xmigrate/") || uri.contains("/adhoc-rebuild/"));
                 if (resolved == null && connectionWorkflow) {
@@ -986,8 +1030,10 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
     }
 
     /**
-     * 来源地址：只有直连方是回环/私网代理时才信 X-Forwarded-For 首跳 → X-Real-IP，
-     * 否则用 remoteAddr。否则任何公网直连用户都能伪造审计来源 IP（法证失真）。
+     * 来源地址：只有直连方是回环/私网代理时才信转发头；X-Forwarded-For 取「从右往左
+     * 第一个非受信代理」的跳——代理把真实客户端地址追加在客户端可伪造的值之后，
+     * 取最左首跳会让伪造值冒充审计来源（法证失真）。转发链上的地址全是受信代理时
+     * 回退最左一跳（最接近客户端的那个）。
      */
     static String clientIp(HttpServletRequest request) {
         String remote = request.getRemoteAddr();
@@ -996,9 +1042,21 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         if (trustedProxy) {
             String xff = request.getHeader("X-Forwarded-For");
             if (xff != null && !xff.trim().isEmpty()) {
-                String first = xff.split(",")[0].trim();
-                if (!first.isEmpty()) {
-                    return first;
+                String[] hops = xff.split(",");
+                String leftmostTrusted = null;
+                for (int i = hops.length - 1; i >= 0; i--) {
+                    String hop = hops[i].trim();
+                    if (hop.isEmpty()) {
+                        continue;
+                    }
+                    if (!isProxyAddress(hop)) {
+                        return hop;
+                    }
+                    /* 从右往左持续覆盖：循环自然结束时留下的是最左（最接近客户端）的受信跳 */
+                    leftmostTrusted = hop;
+                }
+                if (leftmostTrusted != null) {
+                    return leftmostTrusted;
                 }
             }
             String real = request.getHeader("X-Real-IP");
@@ -1120,7 +1178,43 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         if (path == null) {
             return null;
         }
-        return canonicalizePath(MATRIX_PARAM.matcher(path).replaceAll(""));
+        String canonical = canonicalizePath(MATRIX_PARAM.matcher(path).replaceAll(""));
+        if (canonical == null) {
+            return null;
+        }
+        /* 后缀模式匹配（Spring 5.x 默认 useSuffixPatternMatch=true）会把
+           /cluster/doc.json 路由到 cluster/doc handler，但页面门/共享映射按严格段边界匹配，
+           `.json` 会让 pageOf 与 sharedRead/sharedWrite 双双失配 → 落角色门 VIEWER 放行，
+           页面级授权被整体旁路（任何持 overview 只读页的 VIEWER 可读任意文档）。
+           授权口径统一剥掉末段扩展名，与真实路由语义对齐；剥空即非法路径 fail-closed。 */
+        return stripPathExtension(canonical);
+    }
+
+    /**
+     * 剥掉最后一段的扩展名（{@code /cluster/doc.json} → {@code /cluster/doc}）。
+     *
+     * <p>只处理最后一段的第一个点之后的内容：Spring 的 {@code pattern + ".*"} 后缀匹配
+     * 会把 {@code doc.a.b} 也路由到 {@code doc}，因此必须整段后缀一起剥。
+     * 路径段本身不含 "."（控制台全部端点都是固定字面量）时行为逐字节不变。</p>
+     *
+     * @return 剥后缀后的路径；最后一段剥空（如 {@code /.json}）返回 null（fail-closed）
+     */
+    static String stripPathExtension(String path) {
+        if (path == null || path.isEmpty()) {
+            return path;
+        }
+        int slash = path.lastIndexOf('/');
+        int dot = path.indexOf('.', slash + 1);
+        if (dot < 0) {
+            return path; // 无扩展名：逐字节不变
+        }
+        if (dot == slash + 1) {
+            /* 段以点开头（/.json）：主体为空，剥完只剩 "/" —— 不是合法端点形态 */
+            return null;
+        }
+        String stripped = path.substring(0, dot);
+        /* 剥完只剩 "/" 或空段：原路径不是合法端点形态，拒绝而非回落到根（根无页面归属） */
+        return stripped.length() > 1 && !stripped.endsWith("/") ? stripped : null;
     }
 
     /**

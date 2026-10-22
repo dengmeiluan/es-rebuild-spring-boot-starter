@@ -49,6 +49,8 @@ public class ConsoleAuthController {
     private final BuiltinConsoleAuthService authService;
     private final ConsoleOpsAuditStore opsAuditStore;
     private final boolean pageAuthEnabled;
+    /** 登录失败节流（按用户名+来源 IP 的失败窗口与临时拒绝）。 */
+    private final ConsoleLoginThrottle loginThrottle = new ConsoleLoginThrottle();
     /** 审计行连接隔离的目录源；单测手工构造时可为 null（无连接模型语义）。 */
     private io.github.dengmeiluan.es.rebuild.multicluster.ConnStore connStore;
 
@@ -100,34 +102,91 @@ public class ConsoleAuthController {
         return Collections.unmodifiableMap(out);
     }
 
-    /** 登录（免鉴权白名单）。凭证错误回 401 结构化 code。：登录审计带来源 IP。 */
+    /** 登录（免鉴权白名单）。凭证错误回 401 结构化 code。：登录审计带来源 IP。
+     *  同一用户名+IP 的失败在窗口内触顶后临时拒绝（429 LOGIN_THROTTLED），防在线爆破兜底账号。 */
     @PostMapping("login")
     public Map<String, Object> login(@RequestBody Map<String, String> body,
                                      HttpServletRequest request,
                                      javax.servlet.http.HttpServletResponse response) throws IOException {
-        Map<String, Object> result = authService.login(body.get("username"), body.get("password"));
+        String username = body.get("username");
+        String ip = clientIp(request);
+        /* 委托部署默认关闭本地登录：明确回 403 而不是 401 密码错误，
+           否则运维会一直以为是自己密码敲错了（实为身份必须来自宿主）。 */
+        if (!authService.isLoginEnabled()) {
+            response.setStatus(403);
+            Map<String, Object> err = new LinkedHashMap<>();
+            err.put("code", "BUILTIN_LOGIN_DISABLED");
+            err.put("message", "本部署已启用宿主统一登录，控制台本地账号登录已关闭；请从宿主系统进入控制台");
+            return err;
+        }
+        long lockMs = loginThrottle.remainingLockMs(username, ip);
+        if (lockMs > 0) {
+            response.setStatus(429);
+            long minutes = (lockMs + 59_999) / 60_000;
+            opsAuditStore.record(ConsoleOpsAuditEvent.builder()
+                    .username(clipAuditName(username)).role("-")
+                    .method("POST").uri("/internal/es/index/auth/login")
+                    .action("LOGIN_THROTTLED").httpStatus(429)
+                    .ip(ip)
+                    .build());
+            Map<String, Object> err = new LinkedHashMap<>();
+            err.put("code", "LOGIN_THROTTLED");
+            err.put("message", "登录失败次数过多，请约 " + minutes + " 分钟后再试");
+            return err;
+        }
+        Map<String, Object> result = authService.login(username, body.get("password"));
         if (result == null) {
+            loginThrottle.recordFailure(username, ip);
             response.setStatus(401);
             Map<String, Object> err = new LinkedHashMap<>();
             err.put("code", "BAD_CREDENTIALS");
             err.put("message", "用户名或密码错误");
             opsAuditStore.record(ConsoleOpsAuditEvent.builder()
-                    .username(clipAuditName(body.get("username"))).role("-")
+                    .username(clipAuditName(username)).role("-")
                     .method("POST").uri("/internal/es/index/auth/login")
                     .action("LOGIN_FAIL").httpStatus(401)
-                    .ip(clientIp(request))
+                    .ip(ip)
                     .build());
             return err;
         }
+        loginThrottle.recordSuccess(username, ip);
         opsAuditStore.record(ConsoleOpsAuditEvent.builder()
                 .username(clipAuditName(String.valueOf(result.get("username"))))
                 .role(String.valueOf(result.get("role")))
                 .method("POST").uri("/internal/es/index/auth/login")
                 .action("LOGIN").httpStatus(200)
                 .detail(Boolean.TRUE.equals(result.get("fallback")) ? "fallback 默认账号登录" : null)
-                .ip(clientIp(request))
+                .ip(ip)
                 .build());
         return result;
+    }
+
+    /** 登出：无状态 token 的服务端吊销——TTL 内的被盗 token 立即失效，而非只清客户端本地。
+     *  拦截器已验过有效身份才可达；token 未生效（重复登出等）同样返回 ok（登出幂等）。 */
+    @PostMapping("logout")
+    public Map<String, Object> logout(HttpServletRequest request) {
+        String token = request.getHeader(BuiltinConsoleAuthService.TOKEN_HEADER);
+        if (token == null || token.isEmpty()) {
+            String auth = request.getHeader("Authorization");
+            if (auth != null && auth.startsWith("Bearer ")) {
+                token = auth.substring(7);
+            }
+        }
+        boolean revoked = authService.revokeToken(token);
+        Object p = request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+        if (p instanceof ConsolePrincipal) {
+            ConsolePrincipal principal = (ConsolePrincipal) p;
+            opsAuditStore.record(ConsoleOpsAuditEvent.builder()
+                    .username(principal.getUsername()).role(principal.getRole().name())
+                    .method("POST").uri("/internal/es/index/auth/logout")
+                    .action("LOGOUT").httpStatus(200)
+                    .ip(clientIp(request))
+                    .build());
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("ok", true);
+        out.put("revoked", revoked);
+        return out;
     }
 
     /** 失败登录的用户名是攻击者可控串：钳制后入审计，防长串撑爆审计索引/污染合规流水

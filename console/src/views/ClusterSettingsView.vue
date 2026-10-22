@@ -1,5 +1,9 @@
 <template>
   <div class="cs">
+    <!-- 只读身份的前置说明：写钮隐藏时不让页面变成无解释的空壳（RestView 只读说明条同款） -->
+    <div v-if="auth.probed && !canOps" class="cs-perm-note" role="status">
+      <Shield :size="13" /> 当前身份只读：集群设置的持久/动态下发不可用；需要集群设置写权限。
+    </div>
     <PageHeader :icon="GaugeCircle" title="集群设置" subtitle="persistent / transient 两档集群级设置" />
     <div class="cs-bar lr-bar">
       <div class="cs-bar-l lr-bar-l">
@@ -84,7 +88,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { GaugeCircle, AlertTriangle, SearchX, Copy, ClipboardCopy, Terminal } from 'lucide-vue-next';
+import { Shield, GaugeCircle, AlertTriangle, SearchX, Copy, ClipboardCopy, Terminal } from 'lucide-vue-next';
 import EmptyState from '../components/EmptyState.vue';
 import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
@@ -453,4 +457,7 @@ onMounted(load);
 @media (max-width: 900px) { /* 900 档（.cs-k 纵排）——批次补齐（全站唯一无单 900 档） */
   .cs-k { flex-direction: column; align-items: flex-start; gap: var(--sp-1); }
 }
+
+/* 只读身份说明条（RestView .rt-perm-note 同款形态） */
+.cs-perm-note { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); margin: 0 0 var(--sp-3); }
 </style>

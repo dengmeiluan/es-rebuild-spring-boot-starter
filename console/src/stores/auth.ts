@@ -172,6 +172,9 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function logout() {
+    /* 先尽力通知服务端吊销当前令牌：请求在途/失败都不阻塞、不影响本地清理
+       （服务端不可达也要能登出），令牌头在发车前快照，随后才 clearToken。 */
+    void api.auth.logout().catch(() => { /* 吞错：吊销失败不阻断登出 */ });
     probeSeq++; /* 作废在飞/待重试的身份探测，避免退出后又被旧回包填回 me */
     clearProbeRetry();
     clearToken();

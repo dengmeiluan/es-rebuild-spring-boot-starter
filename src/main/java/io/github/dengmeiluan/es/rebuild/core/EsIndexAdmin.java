@@ -1044,7 +1044,13 @@ public class EsIndexAdmin {
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> root = OBJECT_MAPPER.readValue(body, Map.class);
-            guardReindexTarget(root.get("source"));
+            /* 缺省 source.index 等同全量源（跨全部业务索引复制，带索引枚举语义），
+               非 ADMIN 必须显式指定源索引。 */
+            Object source = root.get("source");
+            if (!(source instanceof Map) || ((Map<?, ?>) source).get("index") == null) {
+                throw new ControlPlaneGuardException("reindex 必须显式指定 source.index（缺省即全量源，已拒绝）");
+            }
+            guardReindexTarget(source);
             guardReindexTarget(root.get("dest"));
             Object dest = root.get("dest");
             if (dest instanceof Map && ((Map<?, ?>) dest).get("pipeline") != null) {
@@ -1058,7 +1064,7 @@ public class EsIndexAdmin {
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception ignore) {
-            // 非 JSON/结构异常交由 ES 原始报错，不在此改变语义；字面控制索引已由 guardControlBody 拦截
+            // 非 JSON/结构异常交由 ES 原始报错，不在此改变语义；目标索引由 guardReindexTarget 结构化校验
         }
     }
 
@@ -2409,6 +2415,11 @@ public class EsIndexAdmin {
      * 百分号编码、矩阵参数不能改变路由语义。</p>
      */
     void guardRawGuarded(String method, String path, String body) {
+        /* 守卫按 canonical（剥矩阵参数）判定而实际请求原样发出，两端语义一旦被
+           目标端分号归一收窄即成分歧——含矩阵参数的原始路径直接拒绝。 */
+        if (path.indexOf(';') >= 0) {
+            throw new ControlPlaneGuardException("非管理员 raw 不允许携带矩阵参数的路径：" + path);
+        }
         String canonical = canonicalRawPath(path);
         String p = rawPathOnly(canonical);
         String query = rawQueryOnly(canonical);
@@ -2468,15 +2479,38 @@ public class EsIndexAdmin {
             } else {
                 guardRawSystemRead(p, query);
             }
-        } else if (write) {
-            guardRawIndexWrite(p, body);
         } else {
-            guardRawIndexRead(p, body);
-            /* GET 形态的 refresh/flush/forcemerge/close 等同样改状态：不能借只读方法绕过写白名单。 */
+            /* typed 兼容路由（/{index}/{type}/{verb} 与 /{index}/{type}/{id}/{verb}，如
+               /logs/_doc/_bulk、/logs/_doc/1/_update）把操作动词挪到第 3/4 段，固定看
+               第 2 段会把 type 段当白名单命中而漏掉全部 body 守卫（update 脚本、bulk
+               动作行、search 跨索引 lookup 全部失明）。ES 8.x 已移除 typed 路由，
+               非 ADMIN 对「后置动词段」一律拒绝。 */
             List<String> segs = rawSegments(p);
-            if (segs.size() >= 2
-                    && RAW_INDEX_MUTATING_GET.contains(segs.get(1).toLowerCase(Locale.ROOT))) {
-                throw new ControlPlaneGuardException("非管理员 raw 不允许以 GET 形态执行索引管理写操作：" + p);
+            for (int i = 2; i < segs.size(); i++) {
+                String later = segs.get(i).toLowerCase(Locale.ROOT);
+                if (RAW_INDEX_DATA_WRITE_OPS.contains(later)
+                        || RAW_INDEX_MUTATING_GET.contains(later)
+                        || RAW_INDEX_TOPOLOGY_READ_DENY.contains(later)
+                        || "_mapping".equals(later) || "_alias".equals(later)) {
+                    throw new ControlPlaneGuardException(
+                            "非管理员 raw 不允许 typed 兼容路由（操作动词后置形态）：" + p);
+                }
+            }
+            if (write) {
+                guardRawIndexWrite(p, body);
+            } else {
+                guardRawIndexRead(p, body);
+                /* GET 形态的 refresh/flush/forcemerge/close 等同样改状态：不能借只读方法绕过写白名单。 */
+                if (segs.size() >= 2
+                        && RAW_INDEX_MUTATING_GET.contains(segs.get(1).toLowerCase(Locale.ROOT))) {
+                    throw new ControlPlaneGuardException("非管理员 raw 不允许以 GET 形态执行索引管理写操作：" + p);
+                }
+                /* 索引级拓扑读与根形态同权拒绝：分片恢复/段/存储/统计会把节点名与传输地址带出，
+                   借索引前缀绕开根路径拒绝清单即成口径破口。 */
+                if (segs.size() >= 2
+                        && RAW_INDEX_TOPOLOGY_READ_DENY.contains(segs.get(1).toLowerCase(Locale.ROOT))) {
+                    throw new ControlPlaneGuardException("非管理员 raw 不允许读取索引分片拓扑：" + p);
+                }
             }
         }
     }
@@ -2634,7 +2668,8 @@ public class EsIndexAdmin {
             guardMgetBody(body, defaultIndex);
         } else if ("_bulk".equals(op)) {
             guardBulkBody(body);
-        } else if ("_mtermvectors".equals(op)) {
+        } else if ("_mtermvectors".equals(op) || "_termvectors".equals(op)) {
+            /* 单数 _termvectors 的 docs[] 同样可带 _index 跨索引，与 _mtermvectors 同守卫。 */
             guardMtermvectorsBody(body);
         } else if ("_update".equals(op)) {
             /* 局部更新脚本与 UBQ 同权：可改写 _index 的脚本一律拒绝。 */
@@ -2672,7 +2707,7 @@ public class EsIndexAdmin {
             guardMsearchBody(body, defaultIndex);
         } else if ("_mget".equals(op)) {
             guardMgetBody(body, defaultIndex);
-        } else if ("_mtermvectors".equals(op)) {
+        } else if ("_mtermvectors".equals(op) || "_termvectors".equals(op)) {
             guardMtermvectorsBody(body);
         } else if ("_search".equals(op) || "_count".equals(op) || "_async_search".equals(op)
                 || "_explain".equals(op) || "_validate".equals(op)
@@ -2730,7 +2765,7 @@ public class EsIndexAdmin {
             try {
                 action = OBJECT_MAPPER.readValue(line, Map.class);
             } catch (Exception e) {
-                /* 非动作行（文档行）或非法 JSON 交由 ES 原始报错；字面控制面名已由 guardControlBody 拦截 */
+                /* 非动作行（文档行）或非法 JSON 交由 ES 原始报错；动作行目标由下方 _index/pipeline 校验把守 */
                 continue;
             }
             for (Object v : action.values()) {
@@ -2780,7 +2815,7 @@ public class EsIndexAdmin {
         } catch (ControlPlaneGuardException e) {
             throw e;
         } catch (Exception e) {
-            /* 非 JSON 交由 ES 原始报错；字面控制面名已由 guardControlBody 拦截 */
+            /* 非 JSON 交由 ES 原始报错；index_patterns 在场性由上方结构化校验 */
         }
     }
 
@@ -2797,7 +2832,7 @@ public class EsIndexAdmin {
         } catch (ControlPlaneGuardException e) {
             throw e;
         } catch (Exception ignore) {
-            /* 非 JSON 交由 ES 原始报错；字面控制面名已由 guardControlBody 拦截 */
+            /* 非 JSON 交由 ES 原始报错；remote 源由上方结构化校验拒绝 */
         }
     }
 
@@ -2984,6 +3019,10 @@ public class EsIndexAdmin {
     private static final java.util.Set<String> RAW_INDEX_MUTATING_GET = new java.util.HashSet<>(
             java.util.Arrays.asList("_refresh", "_flush", "_cache", "_forcemerge", "_close", "_open",
                     "_rollover", "_delete_by_query", "_update_by_query", "_bulk", "_reindex"));
+
+    /** 索引级形态同权拒绝的分片拓扑读：根形态已在系统读拒绝清单，索引前缀变体不得绕行。 */
+    private static final java.util.Set<String> RAW_INDEX_TOPOLOGY_READ_DENY = new java.util.HashSet<>(
+            java.util.Arrays.asList("_recovery", "_shard_stores", "_segments", "_stats"));
 
     /** 索引级数据面写操作白名单（其余索引结构/管理写一律拒绝）。 */
     private static final java.util.Set<String> RAW_INDEX_DATA_WRITE_OPS = new java.util.HashSet<>(
@@ -5804,6 +5843,12 @@ public class EsIndexAdmin {
             /* ES 的 SearchTemplateRequest 对 source/inline/template/id 采用 last-field-wins：
                只要 id 在场，内联 source 也可能被覆盖为已存模板——一律拒绝按 id 执行。 */
             if (root.get("id") != null) {
+                throw new ControlPlaneGuardException("搜索模板必须内联 source，不允许按已存 id 执行");
+            }
+            /* 嵌套形态 {"template":{"id":...}} 与根级 id 同权：last-field-wins 语义下
+               id 一旦在场即可覆盖内联 source。 */
+            Object nestedTemplate = root.get("template");
+            if (nestedTemplate instanceof Map && ((Map<?, ?>) nestedTemplate).get("id") != null) {
                 throw new ControlPlaneGuardException("搜索模板必须内联 source，不允许按已存 id 执行");
             }
             /* _rank_eval 等端点把已存模板引用放在 requests[].template_id：

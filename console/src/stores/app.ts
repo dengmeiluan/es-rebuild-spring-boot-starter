@@ -132,9 +132,12 @@ export const useAppStore = defineStore('app', () => {
       const list = await api.clustersList();
       if (seq !== connsSeq) return; // 旧拍迟到：清单与回落链整拍丢弃
       conns.value = Array.isArray(list) ? list : [];
-    } catch {
+    } catch (e: any) {
       if (seq !== connsSeq) return; // 旧拍失败同样丢弃：不得清空新拍成功清单
-      conns.value = [];
+      /* 失败不清空既有清单：清空会让侧栏与切换器同时变空，用户无法区分
+         「网络/后端故障」「连接被删」还是「自己被撤权」——三者处置完全不同。
+         保留上次结果 + 明确告警，是本文件 loadIndexes 既有范式。 */
+      notify('warning', '连接目录加载失败：' + (e?.message || e) + '（已保留上次结果，可稍后重试）');
     }
     /* 连接环境是 env 页面模板的前端收缩依据：目录与 /auth/me.envPages 合流，
        菜单/按钮必须与后端 effectivePages 同口径（否则出现必 403 的假入口）。 */
@@ -234,6 +237,38 @@ export const useAppStore = defineStore('app', () => {
     window.addEventListener('es-console:slow-request', (e: Event) => {
       const d = (e as CustomEvent).detail || {};
       if (d.path) notify('warning', `${d.path} 耗时 ${d.seconds}s`);
+    });
+    /* 权限拒绝的全局出口（后端 403 与客户端写硬门共用）：此前 215 处 catch 静默吞掉，
+       用户只看到「点了没反应」。统一给出「缺什么 + 怎么办 + 可复制申请」，各视图不必再造轮子。
+       轮询型读请求由 notify 的 8s 同文去重吸收；写操作永远提示（那是用户主动动作）。 */
+    window.addEventListener('es-console:forbidden', (e: Event) => {
+      const d = (e as CustomEvent).detail || {};
+      const page = typeof d.page === 'string' && d.page ? d.page : '';
+      const required = typeof d.required === 'string' && d.required ? d.required : '';
+      const who = d.method && d.method !== 'GET' ? '该操作' : '该功能';
+      let msg: string;
+      if (d.denied === 'CLIENT_WRITE_DENIED') {
+        msg = `当前身份无权执行${who}，请求已在客户端拦截`;
+      } else if (page) {
+        msg = `暂无「${page}」页面权限：${who}未发出（后端拒绝）`;
+      } else if (required) {
+        msg = `权限不足：${who}需要 ${required} 角色`;
+      } else {
+        msg = d.message || `${who}被拒绝：当前身份无权限`;
+      }
+      const detail = [page && `page=${page}`, required && `required=${required}`,
+        d.method && `method=${d.method}`, d.path && `path=${d.path}`].filter(Boolean).join(' · ');
+      notify('error', detail ? `${msg}（${detail}）` : msg, {
+        actions: [{
+          label: '复制申请信息',
+          onClick: () => {
+            const text = [`控制台权限申请`, `页面：${page || '（未指定）'}`, `所需角色：${required || '（未指定）'}`,
+              `请求：${d.method || ''} ${d.path || ''}`, `后端提示：${d.message || ''}`].join('\n');
+            copyText(text).then(ok => notify(ok ? 'success' : 'error',
+              ok ? '申请信息已复制，可发给管理员' : '复制失败：浏览器拦截了剪贴板'));
+          },
+        }],
+      });
     });
   }
 

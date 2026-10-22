@@ -38,6 +38,11 @@
       </template>
     </PageHeader>
 
+    <!-- 只读身份的前置说明：新建/保存/删除钮隐藏时不让页面变成无解释的空壳（RestView 只读说明条同款） -->
+    <div v-if="auth.probed && !canOps" class="tv2-perm-note" role="status">
+      <Shield :size="13" /> 当前身份只读：模板的新建/保存/删除不可用；需要集群模板写权限。
+    </div>
+
     <div class="tv2-grid" :style="tv2LeftW > 0 ? { '--tv2-left-w': tv2LeftW + 'px' } : undefined">
       <!-- 左：列表。：pane 壳三件套（border/bg/radius）退役（535 SqlBridge pane
  直贴约定续扫）——flex/overflow 布局语义与 .card padding 载体原样迁 .tv2-list -->
@@ -165,7 +170,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch, type Ref } from 'vue';
-import { FileCode2, Puzzle, List, Plus, Trash2, RefreshCw, Save, Info, ListFilter, Terminal } from 'lucide-vue-next';
+import { FileCode2, Puzzle, List, Plus, Trash2, RefreshCw, Save, Info, ListFilter, Terminal, Shield } from 'lucide-vue-next';
 import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
 import RawIoModal from '../components/RawIoModal.vue';
@@ -418,6 +423,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onGlobalKey));
 <style scoped>
 /* G6-S1：区块级间距 token 化（--sp-1..6 = 4/8/12/16/24/32）；控件内 padding / 亚阶梯(≤3px) / 行级密排不动 */
 .tv2 { display: flex; flex-direction: column; gap: var(--sp-3); height: 100%; }
+/* 只读身份说明条（RestView .rt-perm-note 同款形态；tv2 flex gap 承担落位，零 margin） */
+.tv2-perm-note { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); }
 /* 原独立工具条 tv2-bar 并入页头 actions 后的内部排布（窄屏折行） */
 .tv2-acts { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
 /* KPI 大卡墙退役：tab 条数角标（原两张 tv2-kpi 卡） */

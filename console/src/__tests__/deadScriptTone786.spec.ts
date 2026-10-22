@@ -38,9 +38,11 @@ const strip = (s: string) => s.replace(/<!--[\s\S]*?-->/g, ' ').replace(/\/\*[\s
 const hasWord = (code: string, w: string) => new RegExp('\\b' + w + '\\b').test(strip(code));
 
 describe('deadScriptTone786 · 刀A script 域死代码清零（19 符号/9 文件）', () => {
-  it('A1 RootExtrasPane：computed/ChevronRight 死 import 清零', () => {
+  it('A1 RootExtrasPane：ChevronRight 死 import 清零（computed 已于 998 批由 qpKeys 复活）', () => {
     const code = strip(vue('components/builder/RootExtrasPane.vue'));
-    expect(hasWord(code, 'computed'), 'computed(vue) 死 import 复发').toBe(false);
+    /* computed(vue)：786 清的是当时零消费的死 import；998 批「查询参数」分区
+       的 qpKeys = computed(...) 是真实消费面，看守退出——若未来再清零 qpKeys，
+       请把本断言一并复原（先确认无消费）。 */
     expect(hasWord(code, 'ChevronRight'), 'ChevronRight 死 import 复发').toBe(false);
   });
 

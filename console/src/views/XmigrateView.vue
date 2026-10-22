@@ -198,7 +198,7 @@
  裸插值换 errPreHtml+errMeta 双参（TaskTreeView 547 口径） -->
         <div v-if="startErr" role="alert" class="err-bar rise-in xm-start-err">
           <span class="xm-err-txt" v-html="errPreHtml(startErr, errMeta(startErrRaw))"></span>
-          <button v-if="canOps" class="btn sm" @click="openStartConfirm"><RotateCcw :size="12" /> 重试</button>
+          <button v-if="canOps && canDestOps" class="btn sm" @click="openStartConfirm"><RotateCcw :size="12" /> 重试</button>
         </div>
 
         <div class="xm-actions">
@@ -321,7 +321,7 @@
         <!-- 行级行动注入位（原「操作」列合并）：中止/续跑/去查询验证/复制错误样本/作业行菜单 -->
         <template #row-actions="{ row }">
           <button aria-label="中止迁移：停止拉取，目标索引已写入的数据保留（不自动清理）" v-if="canJobOps(rowJob(row)) && rowJob(row)?.status === 'RUNNING'" class="btn sm danger" title="中止迁移：停止拉取，目标索引已写入的数据保留（不自动清理）" :disabled="aborting" @click.stop="askAbort(rowJob(row))"><OctagonX :size="11" :class="{ spinning: aborting }" /></button>
-          <button aria-label="断点续跑" v-if="canJobOps(rowJob(row)) && ['FAILED','ABORTED','INTERRUPTED'].includes(rowJob(row)?.status ?? '')" class="btn sm" @click.stop="askResume(rowJob(row))" title="断点续跑"><RotateCcw :size="11" /></button>
+          <button aria-label="断点续跑" v-if="canJobOps(rowJob(row)) && canDestOps && ['FAILED','ABORTED','INTERRUPTED'].includes(rowJob(row)?.status ?? '')" class="btn sm" @click.stop="askResume(rowJob(row))" title="断点续跑"><RotateCcw :size="11" /></button>
           <!-- 联动性：迁移完成一键去查询工作台验证目标索引（对齐托管重建「去查询验证」深链） -->
           <button aria-label="去查询验证：在查询工作台打开目标索引" v-if="rowJob(row)?.status === 'DONE' && rowJob(row)?.destIndex" class="btn sm" :title="'验证迁移结果：在查询工作台打开「' + rowJob(row)?.destIndex + '」'" @click.stop="goVerify(rowJob(row))"><SearchCheck :size="11" /></button>
           <!-- 错误样本全量复制（诚实口径）——展开详情降维 JsonTree 后复制入口上移行尾 -->
@@ -358,7 +358,7 @@
       <template #footer>
         <div style="display:flex;justify-content:flex-end;gap:var(--sp-2)">
           <button class="btn" @click="resumeOpen = false">取消</button>
-          <button v-if="canJobOps(actJob)" class="btn pri" :disabled="resuming" @click="doResume">续跑</button>
+          <button v-if="canJobOps(actJob) && canDestOps" class="btn pri" :disabled="resuming" @click="doResume">续跑</button>
         </div>
       </template>
     </n-modal>
@@ -1008,6 +1008,15 @@ async function loadJobs() {
   const seq = ++jobsSeq;
   jobsLoading.value = true;
   try {
+    /* 连接模型未选源连接即引导，不发必败请求：作业列表按源连接档案判权拉取
+       （api 层随 X-Es-Target），未选源连接回落宿主必 403——连接检查/取配置的
+       「连接模型下必须选择已授权的源连接档案」同款前置口径；引导走既有错误条
+       （选中源连接后的刷新/轮询照常走下方请求分支并复位） */
+    if (connModel.value && !srcConnId.value) {
+      loadErr.value = '请先选择源连接：迁移作业列表按所选源连接加载';
+      loadErrRaw.value = null;
+      return;
+    }
     const r = await api.xb.jobs(30, srcConnId.value || undefined);
     if (seq !== jobsSeq) return; // 已有更新拍入列：本拍整拍作废，不动任何状态
     jobs.value = Array.isArray(r) ? r : [];
@@ -1049,8 +1058,12 @@ async function consumeJobDeepLink() {
 onMounted(async () => {
   consumeJobDeepLink(); /* 首载（无 ?jobId= 时即普通 loadJobs） */
   store.loadConns(); // ：连接下拉数据源
-  // 目标索引补全清单：迁移写入端（宿主）索引，拿不到不阻塞（纯补全增强）
-  api.xb.destIndices().then(list => { hostIndices.value = list || []; }).catch(() => {});
+  // 目标索引补全清单：迁移写入端（宿主）索引，拿不到不阻塞（纯补全增强）。
+  // 静默吞改可见提示：清单恒按宿主控制面授权（api 层固定 X-Es-Target=host），
+  // 纯连接授权拿不到属预期——降级不阻断迁移主流程，但缺清单要让用户知道原因。
+  api.xb.destIndices().then(list => { hostIndices.value = list || []; }).catch((e: any) => {
+    store.notify('warning', '目标索引清单加载失败（需宿主或静态页授权，目标索引列表不可用）：' + friendlyApiError(e));
+  });
   /* 装载即排序（字母序 + 最近选用置顶，见 sortKeyOpts） */
   try { keyOpts.value = sortKeyOpts((await api.keys()).map((k: string) => ({ label: k, value: k }))); }
   catch (e: any) { store.notify('warning', 'indexKey 清单加载失败（不影响手输）：' + friendlyApiError(e)); } /* w80：裸 e.message → friendlyEsError */

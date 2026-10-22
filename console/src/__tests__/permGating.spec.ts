@@ -123,7 +123,8 @@ describe('权限隐藏第二波（，16 视图写按钮收尾）', () => {
     expect(v).toContain('<button v-if="canOps" class="btn pri" :disabled="!canStart || starting"');
     /* 换壳 QRT：操作钮移 #row-actions 槽，行对象经 rowJob(row) 反查（权限门禁不变） */
     expect(v).toContain("v-if=\"canJobOps(rowJob(row)) && rowJob(row)?.status === 'RUNNING'\"");
-    expect(v).toContain("v-if=\"canJobOps(rowJob(row)) && ['FAILED','ABORTED','INTERRUPTED'].includes(rowJob(row)?.status ?? '')\"");
+    /* 984：续跑需「源写键 + 宿主目标写键」双证——只持源连接写键的用户不该看到必 403 的按钮 */
+    expect(v).toContain("v-if=\"canJobOps(rowJob(row)) && canDestOps && ['FAILED','ABORTED','INTERRUPTED'].includes(rowJob(row)?.status ?? '')\"");
     expect(v).toContain('迁移发起需 REBUILD_OP/ADMIN 角色');
   });
   it('AdhocRebuildView：启动/中止/确认切换=ops + AWAIT_CONFIRM 低权指引', () => {
@@ -198,7 +199,8 @@ describe('权限隐藏第二波（，16 视图写按钮收尾）', () => {
     expect(lc).toContain('<button v-if="canOps" class="btn ghost sm" @click="ilmStart"');
     expect(lc).toContain('<button v-if="canOps" class="btn ghost sm" @click="ilmStop"');
     expect(lc).toContain('<button v-if="canOps" class="btn primary sm" @click="doRollover(false)"');
-    expect(lc).toContain('<button v-if="canOps" class="btn primary sm" @click="doMove"');
+    /* 984：「推进」走共享写端点 ilm/move（归属 ilm|lifecycle），只看 ilm/start 会把 w:ilm 授权人挡在门外 */
+    expect(lc).toContain('<button v-if="canMove" class="btn primary sm" @click="doMove"');
     const dt = V('DevToolsView.vue');
     expect(dt).toContain('class="btn primary sm btn-run-lock" @click="run"'); /* 锁宽 */
     expect(dt).toContain(':disabled="cur.busy || !currentSendable"');

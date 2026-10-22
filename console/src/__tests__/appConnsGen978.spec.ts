@@ -133,7 +133,9 @@ describe('978 app store loadConns 世代守卫（乱序回落链误触发）', (
     clustersListFn.mockRejectedValueOnce(new Error('real down'));
     store.loadConns();
     await settle(8);
-    expect(store.conns, '最新拍真实失败照常清空').toEqual([]);
+    /* 失败分支语义已收编为「保留上次清单 + 告警」：清空会让用户无法区分
+       网络/后端故障、连接被删与自己被撤权，与 loadIndices 同范式。 */
+    expect(store.conns.map(c => c.id), '最新拍真实失败保留上次清单').toEqual(['c-a', 'c-b']);
   });
 
   it('对照绿锚：目标档案被删回落照走（最新拍内语义保持）', { timeout: 15000 }, async () => {

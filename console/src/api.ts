@@ -59,7 +59,7 @@ export function setAuthSettled(p: Promise<void>): void {
   authSettledPending = true;
   authSettled = p.finally(() => { authSettledPending = false; });
 }
-const AUTH_GATE_EXEMPT = ['/auth/me', '/auth/login', '/setup/', '/clusters'];
+const AUTH_GATE_EXEMPT = ['/auth/me', '/auth/login', '/auth/logout', '/setup/', '/clusters'];
 function authGateWait(path: string): Promise<void> | null {
   if (!authSettledPending || !hostToken) return null;
   if (AUTH_GATE_EXEMPT.some(x => path.includes(x))) return null;
@@ -75,11 +75,21 @@ export class ApiError extends Error {
   /* 失败端点透传（如 "GET /internal/es/index/..."）——errPre「失败于 …」行
  消费（errMeta 读它），旧后端缺省 undefined 不显行，与 code 同为纯增量契约 */
   endpoint?: string;
-  constructor(status: number, message: string, code?: string, endpoint?: string) {
+  /* 403 结构化归因（后端 PAGE_DENIED/WRITE_DENIED 报文同名字段）：
+ page=缺权限的页面 key、required=所需角色、denied=拒绝类型。
+ 此前只带一句 message，前端无法回答「缺哪个页/哪个角色/找谁开」。 */
+  page?: string;
+  required?: string;
+  denied?: string;
+  constructor(status: number, message: string, code?: string, endpoint?: string,
+              page?: string, required?: string, denied?: string) {
     super(message);
     this.status = status;
     this.code = code;
     this.endpoint = endpoint;
+    this.page = page;
+    this.required = required;
+    this.denied = denied;
   }
 }
 
@@ -242,7 +252,12 @@ async function request<T = any>(path: string, init?: RequestInit & { timeoutMs?:
     const cleanBase = CTX && base.startsWith(CTX) ? base.slice(CTX.length) : base;
     const targetId = mergedHeaders['X-Es-Target'] || getTarget();
     if (!apiWriteGuard(fetchMethod, cleanBase + path, targetId)) {
-      throw new ApiError(403, '当前身份无权执行该写操作，请求已在客户端拦截', 'CLIENT_WRITE_DENIED');
+      const message = '当前身份无权执行该写操作，请求已在客户端拦截';
+      /* 与后端 403 走同一条全局通道：客户端拦截同样要能回答「缺什么」。 */
+      window.dispatchEvent(new CustomEvent('es-console:forbidden', {
+        detail: { path: cleanBase + path, method: fetchMethod, message, denied: 'CLIENT_WRITE_DENIED' },
+      }));
+      throw new ApiError(403, message, 'CLIENT_WRITE_DENIED');
     }
   }
   try {
@@ -299,10 +314,27 @@ async function request<T = any>(path: string, init?: RequestInit & { timeoutMs?:
       msg = '目标集群连接不存在或已被删除，请在顶栏切换器重新选择';
     }
     /* code 随错误透传（友好文案特判照旧读 data.code，语义不丢）；
- endpoint 同透传（errPre「失败于 …」行消费，旧后端缺省不显） */
-    throw new ApiError(resp.status, msg,
+ endpoint 同透传（errPre「失败于 …」行消费，旧后端缺省不显）；
+ 403 另透传 page/required：全局错误通道与调用方用它回答「缺什么、找谁」。 */
+    const denied = resp.status === 403 && data && typeof data === 'object'
+      ? {
+          page: typeof data.page === 'string' ? data.page : undefined,
+          required: typeof data.required === 'string' ? data.required : undefined,
+          denied: typeof data.code === 'string' ? data.code : undefined,
+        }
+      : null;
+    const err = new ApiError(resp.status, msg,
       data && typeof data === 'object' ? data.code : undefined,
-      data && typeof data === 'object' && typeof data.endpoint === 'string' ? data.endpoint : undefined);
+      data && typeof data === 'object' && typeof data.endpoint === 'string' ? data.endpoint : undefined,
+      denied?.page, denied?.required, denied?.denied);
+    /* 403 全局广播：各视图不必再各自发明「没权限」的说法。
+       轮询型读请求由 app store 的通知去重兜住；写请求被客户端硬门拦下时走同一条通道。 */
+    if (resp.status === 403) {
+      window.dispatchEvent(new CustomEvent('es-console:forbidden', {
+        detail: { path, method: fetchMethod, message: msg, ...(denied || {}) },
+      }));
+    }
+    throw err;
   }
   if (data && typeof data === 'object' && data.error === true) {
     /* 200+error 信封同透传 code（LOCK_CONFLICT/ES_ERROR 多走此形态）； endpoint 同透传 */
@@ -540,7 +572,6 @@ export const api = {
 
   /* 重建作业（-13：SPI 驱动的编排端点整条退役，仅存只读状态与手工触发） */
   status: (indexKey: string) => get(`/status?${q({ indexKey })}`),
-  rebuild: (indexKey: string) => post(`/rebuild?${q({ indexKey })}`),
   rebuildEmpty: (indexKey: string, triggerReload = false) => post(`/rebuild-empty?${q({ indexKey, triggerReload })}`),
   progress: (taskId: string) => get(`/progress?${q({ taskId })}`),
 
@@ -712,6 +743,8 @@ export const api = {
   /* 控制台鉴权 —— 登录/自助/用户管理/操作审计 */
   auth: {
     login: (username: string, password: string) => post<any>('/auth/login', { username, password }),
+    /* 登出让服务端吊销当前令牌（尽力而为：调用方吞错，不阻塞本地登出） */
+    logout: () => post<any>('/auth/logout'),
     me: () => get<any>('/auth/me'),
     /* 我的权限面：当前身份 × 目标连接的逐页读/写判定 + raw 档 + 共享写档（后端判定与拦截器同源） */
     permissions: (target?: string) => get<any>(`/auth/permissions?${q({ target })}`),

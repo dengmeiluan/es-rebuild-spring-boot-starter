@@ -1,5 +1,9 @@
 <template>
   <div class="sv" ref="rootEl">
+    <!-- 只读身份的前置说明：写钮隐藏时不让页面变成无解释的空壳（RestView 只读说明条同款） -->
+    <div v-if="auth.probed && !canOps" class="sv-perm-note" role="status">
+      <Shield :size="13" /> 当前身份只读：快照的创建/恢复/删除不可用；需要快照写权限。
+    </div>
     <PageHeader :icon="Camera" title="快照 / 恢复">
       <template #subtitle>
         <span>仓库快照与恢复操作</span>
@@ -270,7 +274,7 @@ import { useAutoRefresh } from '../composables/useAutoRefresh';
 import { usePref } from '../composables/urlState';
 import AutoRefreshSelect from '../components/AutoRefreshSelect.vue';
 import CellContextMenu from '../components/CellContextMenu.vue';
-import { Camera, Plus, RefreshCw, History, Undo2, Info, Save, Trash2, Copy, ClipboardList,
+import { Shield, Camera, Plus, RefreshCw, History, Undo2, Info, Save, Trash2, Copy, ClipboardList,
   AlertTriangle, CheckCircle2, Loader2, XCircle, FileDown, TerminalSquare,
   ArrowDownNarrowWide, ArrowUpNarrowWide, Terminal } from 'lucide-vue-next';
 import { api, ioRecorder, type RawIoRec } from '../api';
@@ -896,4 +900,7 @@ useModalEnter(restoreOpen, doRestore, () => canOps.value);
   .sv-input-wrap { width: 100%; margin-left: 0; }
   .sv-tl-row { gap: var(--sp-2); }
 }
+
+/* 只读身份说明条（RestView .rt-perm-note 同款形态） */
+.sv-perm-note { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); margin: 0 0 var(--sp-3); }
 </style>

@@ -419,8 +419,15 @@ public class InternalEsIndexRebuildController {
         return executePassthrough(req, request);
     }
 
+    /** 透传请求体上限（字符量≈字节量级）：超限直接拒绝，ES 转发与客户端缓冲都不再发生。 */
+    static final int RAW_BODY_LIMIT_CHARS = 32 * 1024 * 1024;
+
     private Map<String, Object> executePassthrough(Map<String, String> req,
                                                    javax.servlet.http.HttpServletRequest request) throws IOException {
+        String rawBody = req.get("body");
+        if (rawBody != null && rawBody.length() > RAW_BODY_LIMIT_CHARS) {
+            throw new IllegalArgumentException("透传请求体超过上限（约 32M 字符），请拆分批量任务");
+        }
         boolean admin = adminOrFail(request);
         try {
             org.springframework.web.context.request.RequestAttributes ra =
@@ -438,7 +445,20 @@ public class InternalEsIndexRebuildController {
         /* 连接模型 rest 写键持有人可使用 raw 访问业务索引，但控制面索引仍仅 ADMIN 可达 */
         return admin
                 ? esIndexAdmin.raw(req.get("method"), req.get("path"), req.get("body"))
-                : esIndexAdmin.rawGuarded(req.get("method"), req.get("path"), req.get("body"));
+                : sanitizeRawEnvelope(esIndexAdmin.rawGuarded(req.get("method"), req.get("path"), req.get("body")));
+    }
+
+    /** 非 ADMIN 的成功信封体与错误路径同口径脱敏：bulk 逐条 failure、_msearch 逐项 error、
+     *  _shards.failures 里同样内嵌目标集群节点坐标；文本替换不改变 JSON 结构。 */
+    private static Map<String, Object> sanitizeRawEnvelope(Map<String, Object> result) {
+        if (result == null) {
+            return null;
+        }
+        Object body = result.get("body");
+        if (body instanceof String) {
+            result.put("body", EsErrorMapper.sanitizeTopology((String) body));
+        }
+        return result;
     }
 
     /** 字段级部分更新：body 为 {"field":val,...}（_update partial doc，非整体覆盖）。 */

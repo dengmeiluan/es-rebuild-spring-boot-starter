@@ -29,6 +29,11 @@ const INDEX_MUTATING_GET = new Set([
   '_rollover', '_delete_by_query', '_update_by_query', '_bulk', '_reindex',
 ]);
 
+/* 后端 RAW_INDEX_TOPOLOGY_READ_DENY 镜像：索引级分片拓扑读与根形态同权拒绝——
+   根形态（/_recovery 等）已在 SYSTEM_READ_DENY，分片恢复/段/存储/统计借索引前缀
+   绕根清单会带出节点名与传输地址。后端清单新增拒绝项时此处必须同步（两处清单注释互指）。 */
+const INDEX_TOPOLOGY_READ_DENY = new Set(['_recovery', '_shard_stores', '_segments', '_stats']);
+
 /* 后端 guardRawSystemRead 的 RAW_SYSTEM_READ_DENY 同源镜像（段前缀）：
    非 ADMIN 的系统管理读（账号/快照/脚本/节点/模板/任务等）在客户端即禁用，
    不再亮钮后端 403。后端清单新增拒绝项时此处必须同步（两处清单注释互指）。 */
@@ -75,10 +80,24 @@ function canonicalPath(raw: string): string {
   return segs.length === 0 ? '/' : '/' + segs.join('/');
 }
 
+/** 后端 typed 兼容路由拒绝的镜像：/logs/_doc/_bulk、/logs/_doc/1/_update 这类把
+ * 操作动词后置到第 3/4 段的旧版路由形态，后端整体拒绝（守卫按第 2 段分派会漏掉
+ * 全部 body 守卫）——前端同口径禁用，不再亮「可执行」让用户碰后端 403。 */
+function typedRouteVerbLater(segs: string[]): boolean {
+  for (let i = 2; i < segs.length; i++) {
+    const seg = segs[i].toLowerCase();
+    if (INDEX_DATA_WRITE_OPS.has(seg) || INDEX_MUTATING_GET.has(seg)
+        || INDEX_TOPOLOGY_READ_DENY.has(seg) || seg === '_mapping' || seg === '_alias') {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function nonAdminDataPlaneWriteAllowed(method: string, path: string): boolean {
   const m = String(method || 'GET').toUpperCase();
   const clean = canonicalPath(path);
-  if (!clean.startsWith('/') || clean.includes('..')) return false;
+  if (!clean.startsWith('/') || clean.includes('..') || clean.includes(';')) return false;
   const segs = clean.split('/').filter(Boolean);
   if (segs.length === 0) return false;
   const first = segs[0].toLowerCase();
@@ -88,6 +107,8 @@ export function nonAdminDataPlaneWriteAllowed(method: string, path: string): boo
     if (systemReadDenied(clean)) return false;
     const second = segs[1]?.toLowerCase();
     if (second && INDEX_MUTATING_GET.has(second)) return false;
+    if (second && INDEX_TOPOLOGY_READ_DENY.has(second)) return false;
+    if (typedRouteVerbLater(segs)) return false;
     return true;
   }
   /* 后端 raw 方法白名单只认 GET/POST/PUT/DELETE/HEAD：OPTIONS/CONNECT/TRACE 等
@@ -102,5 +123,6 @@ export function nonAdminDataPlaneWriteAllowed(method: string, path: string): boo
     return false;
   }
   if (segs.length < 2) return false;
+  if (typedRouteVerbLater(segs)) return false;
   return INDEX_DATA_WRITE_OPS.has(segs[1].toLowerCase());
 }

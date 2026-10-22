@@ -69,7 +69,13 @@ public class PropertiesAuthDelegate implements ConsoleAuthDelegate {
         this.props = props;
         this.roleMapper = new HostRoleMapper(props.getRoleMapping());
         this.jwtVerifier = "jwt".equalsIgnoreCase(props.getMode())
-                ? new JwtVerifier(props.getJwt().getSecret(), props.getJwt().getPublicKey()) : null;
+                ? new JwtVerifier(props.getJwt().getSecret(), props.getJwt().getPublicKey(),
+                        props.getJwt().isRequireExp()) : null;
+        if (jwtVerifier != null && !props.getJwt().isRequireExp()) {
+            LOG.warn("[PropertiesAuthDelegate] jwt 模式已关闭 exp 强制校验"
+                    + "（delegate.jwt.require-exp=false）：缺 exp 的令牌将被视为永久有效凭证，"
+                    + "仅应在宿主确实无法签发 exp 时临时启用");
+        }
         LOG.info("[PropertiesAuthDelegate] 配置式宿主鉴权已启用 mode={} tokenHeader={}",
                 props.getMode(), props.getTokenHeader());
         /* header 模式空受信清单=回环/私网整体默认信任：私网内任意直连客户端（不限于网关）
@@ -226,7 +232,10 @@ public class PropertiesAuthDelegate implements ConsoleAuthDelegate {
             long now = System.currentTimeMillis();
             long last = lastHeaderWarnAt.get();
             if (now - last > WARN_THROTTLE_MS && lastHeaderWarnAt.compareAndSet(last, now)) {
-                LOG.warn("[PropertiesAuthDelegate] header 模式拒绝非受信来源的身份头 remote={}（{}s 内不再重复告警）",
+                LOG.warn("[PropertiesAuthDelegate] header 模式拒绝非受信来源的身份头 remote={}（{}s 内不再重复告警）。"
+                        + "若这是反向网关/容器的真实地址（容器网段/CGNAT/IPv6 直连都会命中），"
+                        + "请将其加入 es.rebuild.console.auth.delegate.header.trusted-proxies"
+                        + "（精确 IP 或 CIDR，逗号分隔）；清单为空时默认仅信任回环/私网/链路本地地址",
                         remote, WARN_THROTTLE_MS / 1000);
             }
             return null;

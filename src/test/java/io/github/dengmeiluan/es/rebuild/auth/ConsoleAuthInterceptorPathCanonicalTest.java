@@ -79,6 +79,44 @@ public class ConsoleAuthInterceptorPathCanonicalTest {
                         stubRequest("/internal/es/index/auth/users/upsert%3Bjsp=1")));
     }
 
+    /* ══ 后缀模式匹配绕过（984）：Spring 5.x useSuffixPatternMatch 把 /cluster/doc.json
+       路由到 cluster/doc handler，但页面门按严格段边界会失配 → 落角色门 VIEWER 放行。
+       授权口径必须剥掉末段扩展名，与真实路由语义对齐。 ══ */
+
+    @Test
+    public void 末段扩展名被剥离_后缀路由不再绕过页面门() {
+        assertEquals("/internal/es/index/cluster/doc",
+                ConsoleAuthInterceptor.normalizePath(
+                        stubRequest("/internal/es/index/cluster/doc.json")));
+        assertEquals("/internal/es/index/cluster/index-settings",
+                ConsoleAuthInterceptor.normalizePath(
+                        stubRequest("/internal/es/index/cluster/index-settings.json")));
+        /* 多段后缀同属一个 pattern+"*" 命中，必须整段剥掉而非只剥最后一段 */
+        assertEquals("/internal/es/index/cluster/doc",
+                ConsoleAuthInterceptor.normalizePath(
+                        stubRequest("/internal/es/index/cluster/doc.a.b")));
+    }
+
+    @Test
+    public void 真实带点端点剥后缀后仍落在同一授权归属() {
+        assertEquals("/internal/es/index/desired-state",
+                ConsoleAuthInterceptor.normalizePath(
+                        stubRequest("/internal/es/index/desired-state.html")));
+    }
+
+    @Test
+    public void 剥后缀后为空段则fail_closed() {
+        assertNull(" /.json 剥完只剩 /：不是合法端点形态，必须拒绝",
+                ConsoleAuthInterceptor.normalizePath(stubRequest("/.json")));
+    }
+
+    @Test
+    public void 无扩展名路径逐字节不变() {
+        assertEquals("/internal/es/index/cluster/sql/query",
+                ConsoleAuthInterceptor.normalizePath(
+                        stubRequest("/internal/es/index/cluster/sql/query")));
+    }
+
     @Test
     public void 点点越过根_failClosed() {
         assertNull(ConsoleAuthInterceptor.normalizePath(stubRequest("/../../x")));

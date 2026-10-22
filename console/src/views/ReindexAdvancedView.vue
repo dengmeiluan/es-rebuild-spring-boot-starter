@@ -1,5 +1,9 @@
 <template>
   <div class="ra-page">
+    <!-- 只读身份的前置说明：写钮隐藏时不让页面变成无解释的空壳（RestView 只读说明条同款） -->
+    <div v-if="auth.probed && !canOps" class="ra-perm-note" role="status">
+      <Shield :size="13" /> 当前身份只读：高级重建的提交/重试不可用；需要 reindex 写权限。
+    </div>
     <div class="ra-hd">
       <PageHeader :icon="Wand2" title="Reindex 高级自定义" subtitle="跨集群 / 自由 body / 全参数开放 — 高级用户模式，不强制幂等">
       <template #actions>
@@ -284,7 +288,7 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { fmtNum } from '../utils/format';
 import { useRouter } from 'vue-router';
-import { Wand2, Database, Target, Terminal, SlidersHorizontal, Code2, RefreshCcw, Play, Star, AlertTriangle, CheckCircle2, XCircle, ArrowRight, RotateCcw, Search } from 'lucide-vue-next';
+import { Shield, Wand2, Database, Target, Terminal, SlidersHorizontal, Code2, RefreshCcw, Play, Star, AlertTriangle, CheckCircle2, XCircle, ArrowRight, RotateCcw, Search } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环） */
@@ -769,4 +773,7 @@ onMounted(async () => {
  单列档 .ra-f.wide 的 span 2 会撑出隐式列，一并回落 auto */
 @media (max-width: 1100px) { .ra-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ra-f.wide { grid-column: span 2; } }
 @media (max-width: 900px) { .ra-grid { grid-template-columns: minmax(0, 1fr); } .ra-f.wide { grid-column: auto; } }
+
+/* 只读身份说明条（RestView .rt-perm-note 同款形态） */
+.ra-perm-note { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); margin: 0 0 var(--sp-3); }
 </style>

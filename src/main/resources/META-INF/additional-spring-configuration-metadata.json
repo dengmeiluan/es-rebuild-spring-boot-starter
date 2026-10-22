@@ -1,6 +1,28 @@
 {
   "properties": [
     {
+      "name": "es.rebuild.console.auth.builtin-login-enabled",
+      "type": "java.lang.Boolean",
+      "description": "内置账号登录三态：未设置=有宿主委托（ConsoleAuthDelegate）时自动关闭、独立部署开启；true/false 强制开/关。关闭后 /auth/login 回 403 BUILTIN_LOGIN_DISABLED（防默认兜底账号绕过宿主鉴权）。"
+    },
+    {
+      "name": "es.rebuild.console.auth.delegate.jwt.require-exp",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "是否强制要求 JWT 携带数值型 exp：true（默认）缺 exp 即拒（无 exp 令牌等同永久凭证）；旧宿主未签发 exp 可置 false 兼容（启动 WARN）。非数值 exp/nbf 始终拒绝。"
+    },
+    {
+      "name": "es.rebuild.console.auth.delegate.header.trusted-proxies",
+      "type": "java.util.List<java.lang.String>",
+      "defaultValue": [],
+      "description": "header 模式受信代理清单（精确 IP 或 IPv4 CIDR）。非空时身份头仅在 remoteAddr 命中清单时采信；留空默认信任回环/私网/链路本地。容器网段（172.17.x）、CGNAT（100.64/10）与 IPv6 直连不在默认清单，网关属这些段时必须显式配置。"
+    },
+    {
+      "name": "es.rebuild.console.security.frame-ancestors",
+      "type": "java.lang.String",
+      "description": "iframe 嵌入白名单（CSP frame-ancestors 值，如 'self' https://portal.example.com）。默认不下发任何 frame 头（同源 iframe 嵌入不受影响）；显式配置后仅白名单域可嵌控制台页面。"
+    },
+    {
       "name": "es.rebuild.mapping.auto-register",
       "type": "java.lang.String",
       "defaultValue": "startup",

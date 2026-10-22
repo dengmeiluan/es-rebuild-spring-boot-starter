@@ -427,7 +427,9 @@ describe('943 源码锁（刀①②③④⑤）', () => {
     expect(pullGate).toContain('finally');
     expect(pullGate, '空索引名 warning 保真（不因收闸丢提示）')
       .toContain('先在上方选择要重建的索引名，才能拉取源配置');
-    expect(src, '拉取钮 disabled 双保险').toMatch(/data-ar-pull-src[^>]*:disabled="pullingSrc"/);
+    /* 999 随迁：拉取钮 disabled 追加权限闸位（canPullSrc），在途闸位保留 */
+    expect(src, '拉取钮 disabled 双保险（在途闸+权限闸）').toMatch(/data-ar-pull-src[^>]*:disabled="pullingSrc \|\| !canPullSrc"/);
+    expect(src, '旧形态反锁：仅在途闸、缺权限不禁用的形态不得回潮').not.toMatch(/data-ar-pull-src[^>]*:disabled="pullingSrc"/);
   });
 
   it('prepare 世代守卫：prepSeq 三支同口径+reset 侧显式清场', () => {

@@ -72,11 +72,13 @@ describe('Tasks / TaskTree：取消任务执行体 canWrite 门', () => {
 });
 
 describe('Xmigrate：启动/中止/续跑全通道 canOps 门', () => {
-  it('启动失败内联重试钮 v-if="canOps"', () => {
-    expect(xmigrate).toContain('<button v-if="canOps" class="btn sm" @click="openStartConfirm"><RotateCcw :size="12" /> 重试</button>');
+  it('启动失败内联重试钮 v-if="canOps && canDestOps"', () => {
+    /* 984：重试 = 重新发起迁移，需要源写键 + 宿主目标写键双证（与 openStartConfirm 早退同源） */
+    expect(xmigrate).toContain('<button v-if="canOps && canDestOps" class="btn sm" @click="openStartConfirm"><RotateCcw :size="12" /> 重试</button>');
   });
-  it('续跑弹窗 footer 续跑钮 v-if="canJobOps(actJob)"', () => {
-    expect(xmigrate).toContain('<button v-if="canJobOps(actJob)" class="btn pri" :disabled="resuming" @click="doResume">续跑</button>');
+  it('续跑弹窗 footer 续跑钮 v-if="canJobOps(actJob) && canDestOps"', () => {
+    /* 984：续跑需要源写键 + 宿主目标写键双证，与 doResume 的早退条件同源 */
+    expect(xmigrate).toContain('<button v-if="canJobOps(actJob) && canDestOps" class="btn pri" :disabled="resuming" @click="doResume">续跑</button>');
   });
   it('续跑弹窗 Enter 门含 canJobOps(actJob) 与宿主目标写键', () => {
     expect(xmigrate).toContain('useModalEnter(resumeOpen, doResume, () => !resuming.value && canJobOps(actJob.value) && canDestOps.value);');
@@ -98,9 +100,11 @@ describe('AdhocRebuild：校验/write 与启动/中止/切换 ops 双层门', ()
     expect(adhoc).toContain("auth.canEndpoint('write', 'POST', '/internal/es/index/config-lab/validate', store.target)");
     expect(adhoc).toContain("auth.canEndpoint('ops', 'POST', '/internal/es/index/adhoc-rebuild/start', store.target)");
   });
-  it('仅校验/校验并继续 v-if="canOps" + disabled 合并 canValidate + title', () => {
-    expect(adhoc).toContain('v-if="canOps" class="btn ghost" :disabled="validating || !canValidate" title="校验需配置校验页或托管重建写权限" @click="doValidateConfig(false)"');
-    expect(adhoc).toContain('v-if="canOps" class="btn primary" :disabled="validating || !canValidate" title="校验需配置校验页或托管重建写权限" @click="doValidateConfig(true)"');
+  it('仅校验/校验并继续 v-if="canValidate" + disabled 合并 canValidate + title', () => {
+    /* 984：入口按「校验」真实权限面（config-validator 写键 或 adhoc 写键）显示——
+       原 v-if="canOps" 会让持 config-validator 写键的人看不到后端允许的校验入口 */
+    expect(adhoc).toContain('v-if="canValidate" class="btn ghost" :disabled="validating || !canValidate" title="校验需配置校验页或托管重建写权限" @click="doValidateConfig(false)"');
+    expect(adhoc).toContain('v-if="canValidate" class="btn primary" :disabled="validating || !canValidate" title="校验需配置校验页或托管重建写权限" @click="doValidateConfig(true)"');
   });
   it('doValidateConfig 首行 canValidate 早退 + notify', () => {
     expect(adhoc).toMatch(/async function doValidateConfig\(advance: boolean\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canValidate\.value\) \{ store\.notify\('warning', '校验需配置校验页或托管重建写权限'\); return; \}/);

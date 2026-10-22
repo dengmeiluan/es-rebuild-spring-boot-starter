@@ -233,14 +233,23 @@ public class ConsolePermissionsController {
                         ? envPagesResolver.effectivePages(hostPage ? "host" : tid, gp) : null;
                 boolean read = admin || !pageGateActive
                         || (hostPage
-                            ? pageEffective.contains(pg.getKey())
+                            /* config-drift 的共享读（desired-state / mapping-reconcile）跟随目标，
+                               system 的端点恒宿主——两者取并集才不会虚报不可读。 */
+                            ? (pageEffective.contains(pg.getKey())
+                                || (targetAccessible && effective != null && effective.contains(pg.getKey())))
                             : targetAccessible && pageEffective.contains(pg.getKey()))
                         /* security 页的审计读是 host-scope：目标不可见/不持有该连接键时，
                            持 conn:host:security 仍能看到宿主审计入口。 */
                         || ("security".equals(pg.getKey()) && hostEffective != null
                             && hostEffective.contains("security"));
-                /* REST/DevTools 对非 ADMIN 只认连接键（router.pageAllowed 同口径）：
-                   静态页键在后端仍要求 ADMIN，面板不得报可读/可写。 */
+                /* 安全中心两个作用域必须分开回显：/auth/users 恒宿主、/auth/ops-audit 跟随目标。
+                   面板 read=true 只表示「本页至少有一个可读面」，具体 tab 由 readScopes 标注，
+                   避免把「只能看宿主流水」误读成「能看该连接全部审计」。 */
+                boolean usersRead = admin || !pageGateActive
+                        || (hostEffective != null && hostEffective.contains("security"));
+                boolean auditRead = admin || !pageGateActive
+                        || (targetAccessible && pageEffective.contains("security"))
+                        || (hostEffective != null && hostEffective.contains("security"));
                 if (!admin && "rest".equals(pg.getKey())) {
                     read = pageGateActive && hasConnKey(gp, tid, "rest")
                             && pageEffective.contains("rest");
@@ -282,8 +291,11 @@ public class ConsolePermissionsController {
                         }
                     }
                     /* DevTools 专用端点同时接受 devtools/rest 写键（兼容），页行必须同口径。 */
-                    /* 委派非 ADMIN 的 security 写键不能管理本地账号（服务端同口径），面板不得误报可写。 */
-                    if (pageGateActive && connModel && !admin && "security".equals(pg.getKey())) {
+                    /* 只有「委派身份」的 security 写键不能管理本地账号（服务端按 isDelegated 判定）；
+                       非委派的页面写键持有人后端实际可写——面板不能把所有非 ADMIN 都标成只读，
+                       否则会出现「面板说不可写、实际能改账号」（与拦截器分叉）。 */
+                    if (pageGateActive && connModel && p.isDelegated() && !admin
+                            && "security".equals(pg.getKey())) {
                         write = Boolean.FALSE;
                         writeDeny = "DELEGATED_SECURITY_READONLY";
                     }
@@ -297,20 +309,43 @@ public class ConsolePermissionsController {
                             read = true;
                         }
                     }
-                    /* 迁移写入端恒为宿主：仅持源连接 w:xmigrate 无法真正启动迁移，面板不得虚报。 */
-                    if (pageGateActive && connModel && !admin && "xmigrate".equals(pg.getKey())
-                            && Boolean.TRUE.equals(write)
-                            && !(envPagesResolver.writeAllowed("host", "xmigrate", gp)
+                    /* 迁移写入端恒为宿主：start/resume/preflight 需要「源写键 + 宿主写键」双证；
+                       abort/connect-check/fetch-config/resolve-preview 只需源写键。
+                       面板 write 表示「本页写操作至少有一部分可用」，缺宿主写键时用 writeDeny
+                       标注限制（而不是一律 false 把只能中止在途作业的人报成完全不可写）。 */
+                    if (pageGateActive && connModel && !admin && "xmigrate".equals(pg.getKey())) {
+                        boolean sourceWrite = Boolean.TRUE.equals(write);
+                        boolean hostWrite = envPagesResolver.writeAllowed("host", "xmigrate", gp)
                                 || (envPagesResolver.staticWriteAllowed("host", "xmigrate", gp)
-                                    && p.getRole().atLeast(writeRole)))) {
-                        write = Boolean.FALSE;
-                        writeDeny = "HOST_DEST_WRITE_REQUIRED";
+                                    && p.getRole().atLeast(writeRole));
+                        if (!sourceWrite) {
+                            write = Boolean.FALSE;
+                            writeDeny = "WRITE_DENIED";
+                        } else if (!hostWrite) {
+                            writeDeny = "HOST_DEST_WRITE_REQUIRED";
+                        }
                     }
                 }
                 pm.put("read", read);
                 pm.put("write", write);
                 if (writeDeny != null) {
                     pm.put("writeDeny", writeDeny);
+                }
+                /* 细粒度说明（前端按需消费，不影响既有布尔契约）：
+                   security 的两个读作用域（users=宿主、audit=目标）实际不可互换；
+                   aliases 在 config-validator 归属下只有 add-only 写权（后端 aliasActionsAddOnly 同源）。 */
+                if ("security".equals(pg.getKey())) {
+                    Map<String, Object> scopes = new LinkedHashMap<>();
+                    scopes.put("users", usersRead);
+                    scopes.put("audit", auditRead);
+                    pm.put("readScopes", scopes);
+                }
+                if ("aliases".equals(pg.getKey()) && Boolean.TRUE.equals(write)) {
+                    String writeTid = "host".equals(tid) ? "host" : tid;
+                    boolean fullAlias = envPagesResolver.writeAllowed(writeTid, "aliases", gp)
+                            || (envPagesResolver.staticWriteAllowed(writeTid, "aliases", gp)
+                                && writeRole != null && p.getRole().atLeast(writeRole));
+                    pm.put("writeScope", fullAlias ? "FULL" : "ADD_ONLY");
                 }
                 pages.add(pm);
             }

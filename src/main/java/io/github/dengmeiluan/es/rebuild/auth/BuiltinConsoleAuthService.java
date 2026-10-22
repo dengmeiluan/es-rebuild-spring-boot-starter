@@ -73,15 +73,34 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
     private final String fallbackPassword;
     private final long tokenTtlMs;
     private final byte[] hmacSecret;
+    /** 内置账号登录总开关：false 时 /auth/login 一律 401（委托部署防默认兜底账号后门）。 */
+    private final boolean loginEnabled;
 
     public BuiltinConsoleAuthService(java.util.function.Supplier<RestHighLevelClient> client, String userIndex,
                                      String fallbackUsername, String fallbackPassword,
                                      long tokenTtlMs, String configuredSecret) {
+        this(client, userIndex, fallbackUsername, fallbackPassword, tokenTtlMs, configuredSecret, true);
+    }
+
+    public BuiltinConsoleAuthService(java.util.function.Supplier<RestHighLevelClient> client, String userIndex,
+                                     String fallbackUsername, String fallbackPassword,
+                                     long tokenTtlMs, String configuredSecret, boolean loginEnabled) {
         this.client = client;
         this.userIndex = userIndex;
         this.fallbackUsername = fallbackUsername;
         this.fallbackPassword = fallbackPassword;
         this.tokenTtlMs = tokenTtlMs;
+        this.loginEnabled = loginEnabled;
+        if (!loginEnabled) {
+            LOG.info("[es-console-auth] 内置账号登录已关闭（检测到宿主鉴权委托）：/auth/login 不再接受本地账号，"
+                    + "如需保留请显式配置 es.rebuild.console.auth.builtin-login-enabled=true");
+        } else if (isDefaultFallbackCredential()) {
+            /* 默认口令 + 内置登录 = 公开已知凭据的 ADMIN 入口。独立部署必须首登改密；
+               此处只告警不阻断（阻断会让空库部署无法首登），但必须是 ERROR 级、不可静默。 */
+            LOG.error("[es-console-auth] 兜底账号仍使用默认口令（{} / ***）：任何能访问 /auth/login 的人"
+                    + "都可获得 ADMIN。请立即修改 es.rebuild.console.auth.fallback-username/password，"
+                    + "或关闭内置登录（builtin-login-enabled=false）", fallbackUsername);
+        }
         if (configuredSecret != null && !configuredSecret.trim().isEmpty()) {
             this.hmacSecret = configuredSecret.trim().getBytes(StandardCharsets.UTF_8);
         } else {
@@ -91,6 +110,16 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
             LOG.info("[es-console-auth] 未配置 token secret，已随机生成（实例重启后需重新登录；" +
                     "多实例部署请配置 es.rebuild.console.auth.token-secret 保证 token 互通）");
         }
+    }
+
+    /** 兜底账号是否仍是出厂默认（admin / es-console）。 */
+    private boolean isDefaultFallbackCredential() {
+        return "admin".equals(fallbackUsername) && "es-console".equals(fallbackPassword);
+    }
+
+    /** 内置登录是否可用（/auth/login 与 setup/status 的 builtinLogin 回显同源）。 */
+    public boolean isLoginEnabled() {
+        return loginEnabled;
     }
 
     /* ==================================================================================== */
@@ -103,6 +132,11 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
      * @return {token, username, role, fallback, expiresAt}；凭证错误返回 null
      */
     public Map<String, Object> login(String username, String password) throws IOException {
+        if (!loginEnabled) {
+            /* 委托部署的默认形态：本地登录通道整体关闭，身份只能来自宿主。
+               不返回 null 以免被当作「密码错误」掩盖配置语义——调用方按 isLoginEnabled() 给明确 403。 */
+            return null;
+        }
         if (username == null || username.trim().isEmpty() || password == null || password.isEmpty()) {
             // 空用户名会拼出 /_doc/ 空 id 请求导致 ES 405，此处直接按凭证错误处理
             return null;
@@ -181,6 +215,11 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
         if (System.currentTimeMillis() > expiresAt) {
             return null;
         }
+        /* 登出/被盗 token 的服务端吊销面：签名与 TTL 合法但已在吊销表的立即拒绝。
+           只登记通过完整校验链的 token，过期项在此永远不会误伤（TTL 检查先行）。 */
+        if (revokedTokens.containsKey(tokenFingerprint(token))) {
+            return null;
+        }
         String username = new String(Base64.getUrlDecoder().decode(parts[0]), StandardCharsets.UTF_8);
         boolean fallback = "F".equals(parts[3]);
         if (fallback) {
@@ -225,6 +264,65 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
     }
 
     /* ==================================================================================== */
+    /* 登出吊销（无状态 token 的服务端失效面）                                                */
+    /* ==================================================================================== */
+
+    /** 已登出 token 指纹 → 原 token 到期时间。内存封顶防灌水；实例重启即清空
+     *  （secret 随机生成的部署重启后 token 本就全部失效），其余靠 TTL 自然过期淘汰。 */
+    private final Map<String, Long> revokedTokens = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static final int REVOKED_TOKEN_CAP = 10_000;
+
+    /**
+     * 登出吊销：只有通过完整校验链（签名+TTL+纪元回查）的真实有效 token 才入吊销表——
+     * 伪造串不占内存，灌水打不满封顶值。返回是否实际登记。
+     */
+    public boolean revokeToken(String token) {
+        if (token == null || token.isEmpty() || verifyToken(token) == null) {
+            return false;
+        }
+        long now = System.currentTimeMillis();
+        if (revokedTokens.size() >= REVOKED_TOKEN_CAP) {
+            revokedTokens.entrySet().removeIf(e -> e.getValue() <= now);
+            if (revokedTokens.size() >= REVOKED_TOKEN_CAP) {
+                LOG.warn("[es-console-auth] 登出吊销表已满，本次登出不登记（token 将在 TTL 自然过期）");
+                return false;
+            }
+        }
+        revokedTokens.put(tokenFingerprint(token), tokenExpiresAt(token));
+        return true;
+    }
+
+    /** 吊销表当前登记数（运维观测用）。 */
+    public int revokedTokenCount() {
+        return revokedTokens.size();
+    }
+
+    private static long tokenExpiresAt(String token) {
+        try {
+            return Long.parseLong(token.split("\\.")[2]);
+        } catch (Exception e) {
+            return 0L;
+        }
+    }
+
+    private static String tokenFingerprint(String token) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(token.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder(digest.length * 2);
+            for (byte b : digest) {
+                sb.append(Character.forDigit((b >> 4) & 0xF, 16))
+                        .append(Character.forDigit(b & 0xF, 16));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            // 摘要不可用（JDK 异常配置）：退化为可重复的视图哈希，吊销语义保持
+            return "h" + token.hashCode();
+        }
+    }
+
+    /* ==================================================================================== */
     /* 用户管理（ADMIN）                                                                      */
     /* ==================================================================================== */
 
@@ -237,6 +335,24 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
         if (actor != null && actor.isDelegated()
                 && !actor.getRole().atLeast(ConsoleRole.ADMIN)) {
             throw new IllegalArgumentException("委派会话不得创建/修改/删除本地账号（全局账号仅 ADMIN 可管理）");
+        }
+    }
+
+    /**
+     * 委派 ADMIN 的红线：可以管理普通本地账号，但不得创建/提升/改写本地 ADMIN。
+     *
+     * <p>本地账号走内置登录（grantedPages=null），一旦存在本地 ADMIN，它就绕过宿主鉴权与页面门；
+     * 宿主侧撤权后这个账号仍然有效——等于给委派会话留了一个持久化后门。</p>
+     */
+    private static void forbidDelegatedAdminEscalation(ConsolePrincipal actor, ConsoleRole targetRole,
+                                                       Map<String, Object> existing) {
+        if (actor == null || !actor.isDelegated()) return;
+        if (targetRole == ConsoleRole.ADMIN) {
+            throw new IllegalArgumentException("委派会话不得创建/提升本地 ADMIN 账号（本地 ADMIN 可绕过宿主鉴权直接登录）");
+        }
+        if (existing != null
+                && ConsoleRole.parse(String.valueOf(existing.get("role"))) == ConsoleRole.ADMIN) {
+            throw new IllegalArgumentException("委派会话不得修改本地 ADMIN 账号");
         }
     }
 
@@ -270,18 +386,35 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
         if (username == null || username.trim().isEmpty()) {
             throw new IllegalArgumentException("username 不可为空");
         }
+        if (role == null) {
+            throw new IllegalArgumentException("role 不可为空");
+        }
         username = username.trim();
         Map<String, Object> existing = findUser(username);
-        /* 防提权：security 页写键持有人可管理普通账号，但不得授予/改写 ADMIN 账号 */
+        /* 防提权（security 页写键持有人可管理普通账号，但不得越出自身权限）：
+           1) 只能授予不高于自己的角色——否则 OPERATOR 可自授/授他人 rank3；
+           2) 不能改写高于自己角色的账号；
+           3) 不能重置既有账号密码（账号接管）——改密走「修改我的密码」（校验旧密码）。
+              新建账号必须给初始密码，属建号而非接管，放行。 */
+        boolean settingPassword = password != null && !password.isEmpty();
+        boolean self = actor != null && username.equals(actor.getUsername());
         if (actor != null && !actor.getRole().atLeast(ConsoleRole.ADMIN)) {
-            if (role == ConsoleRole.ADMIN) {
-                throw new IllegalArgumentException("仅 ADMIN 可授予 ADMIN 角色");
+            if (role.rankValue() > actor.getRole().rankValue()) {
+                throw new IllegalArgumentException("不能授予高于自身角色（" + actor.getRole().name()
+                        + "）的权限：ADMIN 及更高角色仅 ADMIN 可授予");
             }
-            if (existing != null
-                    && ConsoleRole.parse(String.valueOf(existing.get("role"))) == ConsoleRole.ADMIN) {
-                throw new IllegalArgumentException("仅 ADMIN 可修改 ADMIN 账号");
+            if (existing != null) {
+                ConsoleRole existingRole = ConsoleRole.parse(String.valueOf(existing.get("role")));
+                if (existingRole.rankValue() > actor.getRole().rankValue()) {
+                    throw new IllegalArgumentException("不能修改高于自身角色的账号：ADMIN 账号仅 ADMIN 可修改");
+                }
+                if (settingPassword && !self) {
+                    throw new IllegalArgumentException(
+                            "非 ADMIN 不能重置他人密码；如需改自己的密码请使用「修改我的密码」");
+                }
             }
         }
+        forbidDelegatedAdminEscalation(actor, role, existing);
         Map<String, Object> doc = new LinkedHashMap<>();
         doc.put("username", username);
         doc.put("role", role.name());
@@ -327,7 +460,14 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
             return;
         }
         Map<String, Object> user = findUser(actor.getUsername());
-        if (user == null || !verifyPassword(actor.getUsername(), oldPassword, user)) {
+        if (user == null) {
+            /* 本地无档案不是密码错：委派身份在宿主侧改密，本地档案被删走管理员通道，
+               报「旧密码不正确」只会让人反复重试正确的密码。 */
+            throw new IllegalArgumentException(actor.isDelegated()
+                    ? "当前为宿主委派身份，请在宿主系统修改密码"
+                    : "本地账号不存在（可能已被删除），请联系管理员重建");
+        }
+        if (!verifyPassword(actor.getUsername(), oldPassword, user)) {
             throw new IllegalArgumentException("旧密码不正确");
         }
         upsertUser(actor, actor.getUsername(), newPassword, ConsoleRole.parse(String.valueOf(user.get("role"))));
@@ -341,8 +481,10 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
             return;
         }
         ConsoleRole existingRole = ConsoleRole.parse(String.valueOf(existing.get("role")));
-        if (actor != null && !actor.getRole().atLeast(ConsoleRole.ADMIN) && existingRole == ConsoleRole.ADMIN) {
-            throw new IllegalArgumentException("仅 ADMIN 可删除 ADMIN 账号");
+        if (actor != null && !actor.getRole().atLeast(ConsoleRole.ADMIN)
+                && existingRole.rankValue() >= actor.getRole().rankValue()) {
+            /* 同级也不允许：删掉同权账号是降级 DoS（可借此清空 rank3 岗位） */
+            throw new IllegalArgumentException("仅 ADMIN 可删除同级或更高角色的账号");
         }
         if (existingRole == ConsoleRole.ADMIN && countAdmins() <= 1) {
             throw new IllegalStateException("不能删除最后一个 ADMIN 账号");

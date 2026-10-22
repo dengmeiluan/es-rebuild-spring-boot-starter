@@ -9,6 +9,58 @@
 
 ### 安全
 
+- typed 兼容路由收口（非管理员 raw）：旧版 ES 路由把操作动词后置到第 3/4 段
+  （`/logs/_doc/_bulk`、`/logs/_doc/1/_update`、`/logs/_doc/_search`），按第 2 段分派的
+  body 守卫全部失明——bulk 动作行 `_index`、update 脚本 `ctx._index`、search 跨索引
+  terms lookup 可直写/直读控制面索引；后置动词段（含 `_mapping`/`_alias` 管理形态）一律
+  拒绝，前端 devtoolsScope 同口径镜像（不再亮「可执行」）。矩阵参数路径（`;x=1`）与
+  单数 `_termvectors` 的 `docs[]` 跨索引 body 同批收口
+- `/setup/status` 的 `builtinLogin` 改按 `isLoginEnabled()` 口径下发：此前取「内置服务
+  Bean 是否存在」，委托部署（内置登录自动关闭）的登录遮罩会展示永远登不进的本地表单，
+  而不是宿主鉴权指引面板
+- 登录失败节流（10 次/5 分钟锁 10 分钟，键=用户名|IP，灌水防护）+ `/auth/logout` 端点与
+  token 指纹吊销表（SHA-256 指纹，封顶 1 万，TTL 检查后回查）；审计 IP 取 XFF 最右非受信跳
+- 非 ADMIN raw 响应信封脱敏（bulk failure/_msearch item error 的拓扑信息）；索引级
+  `_recovery/_shard_stores/_segments/_stats` 拓扑读与根形态同权拒绝（前后端清单镜像）；
+  reindex 强制 `source.index` 在场；嵌套 `template.id` 已存模板引用同权拒绝
+- 安全响应头过滤器（nosniff/no-referrer 全量，auth 域 no-store，`frame-ancestors` 仅显式
+  配置时下发且覆盖控制台 HTML/静态资源——只下发到 API 路径对被嵌的文档无效）；透传
+  body 32M 上限；鉴权关闭告警改无条件启动检查（原挂在审计条件链里永不发声）
+- 端点授权覆盖自检兼容 Spring Boot 2.6+ 的 PathPatternParser（原 `getPatternsCondition()`
+  恒 null 时自检全量失明还报「覆盖完整」）；header 委托拒识 WARN 附 remote 地址与
+  trusted-proxies 配置写法（容器网段/CGNAT/IPv6 直连网关误配即锁死的排障入口）；委派身份
+  修改密码不再误报「旧密码不正确」（提示在宿主系统改密）
+- 控制台 iframe 宿主握手消息加同源 origin 校验（quotehub 等同源嵌入不受影响；宿主页面
+  被 XSS 时攻击脚本拿不到本源消息通道）
+- 授权口径统一剥末段扩展名（`/cluster/doc.json` 曾绕过整个页面门：Spring 5.x 后缀模式匹配把它
+  路由到 `cluster/doc`，而页面门/共享映射按严格段边界失配 → 落角色门 VIEWER 放行，只读页用户可读
+  任意业务文档）。`desired-state.html` 等真实带点端点剥后仍落同一归属，纯扩展名段 fail-closed
+- `X-Es-Target` 的角色闸从数据面扩展到全部按目标头取页键的路径（`adhoc-rebuild/abort|status|jobs`、
+  `desired-state`、`es/index/keys`、`mapping-reconcile/report`、`config-lab/drift` 原先只查页键、
+  不查连接 minRole：持 `conn:B:w:adhoc-rebuild` 但角色低于 B.minRole 者可中止 B 上的重建）
+- 委托部署默认关闭内置账号登录（`es.rebuild.console.auth.builtin-login-enabled` 三态）：此前默认
+  兜底账号 `admin/es-console` 可经免鉴权的 `/auth/login` 直接拿本地 ADMIN（`grantedPages=null`
+  绕过全部页面门），等于宿主鉴权之外的永久后门；默认口令仍生效时启动 ERROR
+- 账号管理防提权：非 ADMIN 只能授予不高于自身的角色、不能改写更高角色账号、不能重置他人密码
+  （建号给初始密码除外）；非 ADMIN 不能删除同级或更高角色；委派会话（含委派 ADMIN）不得创建/提升
+  本地 ADMIN（本地账号可绕过宿主鉴权，属持久化后门）
+- JWT 委托：`exp` 缺失即拒（`require-exp` 默认 true，旧宿主可显式关闭并 WARN）、非数值 `exp`/
+  `nbf` 一律拒绝、补 60s 时钟偏移与 `nbf` 生效校验
+- 全量审计 rank3 硬门改前缀匹配（精确相等会让未来 `/auth/ops-audit/export` 类子路径被 security
+  读键静默短路），`/auth/ops-audit/mine` 保持自助可用
+- 页面授权逃生阀关闭时保留真实身份形态（此前硬编码 `delegated=true` 会把内置身份误标成委派，
+  导致 `/auth/me` 来源错误、改密被只读规则挡下）
+- 审计 detail 清洗 CR/LF 与控制符（日志注入）；EXEC 事件记录真实响应码（原硬编码 200 会把失败
+  执行记成成功）；去重装饰层吞掉委托方异常（审计永不反噬请求）
+- 权限面板与执行门对齐：security 写只读判定改按 `isDelegated`（原 `!admin` 把所有非超管都标成
+  委派只读，面板说不可写、实际可写）；`xmigrate` 面板区分「源写键」与「宿主写键」（只可中止的
+  用户不再被报成完全不可写）；`config-drift` 读按 host+目标双作用域取并集；新增 `readScopes`
+  与 `writeScope`（aliases add-only）细粒度字段
+- 环境页面模板值归一化（`Indices`/`indices ` 不再静默失配）；`effectivePages` 与 `inConnModel`
+  共用同一套连接键判定（畸形 `conn:x` 键不再两边各说各话）
+- 新增启动期端点授权覆盖自检：扫描全部 `/internal/es/**` 映射，把「无页面/共享归属」的写端点
+  （连接模型下必 403 的假入口）与读端点（VIEWER 可读的越权面）汇总 WARN
+
 - DevTools/raw 纵深加固：路径拒绝 `#` 片段与 `%23`（守卫看 `index#`、HTTP 客户端只发 `index`，曾可绕过
   `DELETE /index` 与精确系统读拒绝）；所有 JSON 守卫入口统一剥离 BOM（`_bulk` 动作行/`_index`、
   search/reindex/alias/template/restore/mget/SQL 不再因解析失败被静默跳过）；`wrapper.query`
@@ -92,7 +144,54 @@
   提前禁用并给出原因）；命令面板动作按目标页过滤；收藏重放先过页面门；任务轮询按
   tasks/task-tree 页授权；Watcher/ILM 的 DevTools 入口按 DevTools 页权提示；
   REST 只读身份显示内联说明；无内置登录的部署在登录遮罩给出宿主认证指引
+- 前端预暴露收官（只读说明条六视图 → 十四视图）：高级重建/别名/集群设置/映射/ILM 策略/
+  生命周期/快照策略/快照八个写操作视图补页面级只读横幅（身份已探测且无写权限时出现，
+  解释哪些操作不可用）——此前这些页面的写钮按 v-if 隐藏、页面无任何解释，用户只看到
+  功能凭空消失；权限拒绝的全局出口统一给出「缺什么 + 怎么办 + 一键复制申请信息」，
+  连接目录加载失败保留上次清单并告警（不再清空成无法区分「故障/被删/被撤权」的空壳）
 
+### 新增（998 批：全量 DSL 双向映射与语句阅读层）
+
+- 双向映射保真补三处：field 形态 inner 对象写法记忆（`{match:{f:{query:'x'}}}` 不再被树编辑改写成
+  `{match:{f:'x'}}`）；sort 多键项整项保真（旧实现只取首键、其余键静默丢弃）；knn / rescore 数组形态
+  （多向量混合检索、多段重打分）逐项结构化，单元素与空数组也保形
+- 查询体参数一等分账：`min_score` / `track_total_hits` / `search_after` / `fields` / `docvalue_fields` /
+  `stored_fields` / `indices_boost` / `slice` / `pit` / `explain` / `version` / `seq_no_primary_term` /
+  `track_scores` / `timeout` / `allow_partial_search_results` / `preference` / `stats` / `profile` 共 18 键
+  不再落「其他顶层键」裸键值表，改由 schema 驱动表单编辑（布尔/数字/字符串/JSON 四档控件，
+  JSON 非法只标红不写树，避免半截 JSON 打断查询）
+- 算子补齐 `rank_features`（多特征打分）与 `flattened` 字段推荐档；算子按语义族着色
+  （全文/精确/范围/空间/向量/跨度/脚本），下拉外壳升级为胶囊但保留原生 select 的键盘与无障碍语义
+- 语句阅读层：条件树顶部新增「一句话摘要」——must/filter→且、should→或、must_not→非，
+  复合子组按优先级自动加括号；点任一片段定位到对应条件行并打高亮脉冲；检索级元信息
+  （取几条 / 排序 / 聚合数 / 游标 / PIT / 最低分）单列一行
+- 智能字段匹配：高特异算子（geo / 向量 / 特征 / 形状 / 间隔）字段候选按 mapping 类型收窄；
+  其余算子维持「只置顶不过滤」（term 打 text、range 打 keyword 仍有合法语义）
+- 条件行视觉重构：行尾动作收成右对齐图标组（空间不足整组折行，不再散落行首）；
+  参与开关静息中性色、已停用转绿色常亮；range 四操作符输入收窄，行内控件密度重排
+- 跨度族收口与规则查询：补 `span_last`（尾位锚定）、`span_gap`（span_near 子句内的间隙占位，
+  width 主值）、`rule`（8.14+ 检索规则，ruleset_id 主值、match_criteria 走参数表）三员——
+  跨度族全谱齐员，全 DSL 查询算子面就此收口（未注册算子仍走原样保真兜底）
+- 具名参数大扩员（高频调优参数不再埋进「更多参数」自由表）：match 系 / multi_match /
+  query_string / simple_query_string 补 minimum_should_match、analyzer、tie_breaker、lenient、
+  flags、phrase_slop、analyze_wildcard 等；range 补 relation（WITHIN/INTERSECTS/CONTAINS 枚举）、
+  time_zone、format；regexp 补 flags / max_determinized_states / case_insensitive；fuzzy 补
+  prefix_length / max_expansions / transpositions；geo_distance / geo_bounding_box 补
+  validation_method；prefix 补 case_insensitive；terms / exists / knn / text_expansion /
+  weighted_tokens / more_like_this / combined_fields 各补常用档
+- wrap 容器具名参数表（WRAP_PARAMS）：nested / has_child / has_parent 的 score_mode（含
+  min_children / max_children / ignore_unmapped）、function_score 的 boost_mode / score_mode /
+  min_score / max_boost、constant_score 的 boost、span_first / span_last 的 end——
+  枚举档参数从自由文本升级为官方取值下拉
+- 门禁：新增 `queryAstCorpus.spec`（ES 8.x 全量语料往返无损 + 结构化覆盖普查 + 数组形态边界）、
+  `querySentence998.spec`（摘要文法 25 例）、`builder998.spec`（组件契约 + 参数面板/数组形态/
+  语义族胶囊/语句条/包装参数下拉 15 例）
+
+### 新增（996 批：脚本字段与运行时字段一等化轮）
+
+- `script_fields`（脚本字段）与 `runtime_mappings`（运行时字段）一等化：命名项行列表编辑
+  （字段名 + 脚本体/映射体递归表），新建项给可用默认体（script source / type:keyword）；
+  非常规形态（项体非对象）落「其他顶层键」零丢失
 ### 新增（993 批：条件树撤销/重做与菜单键盘导航轮）
 
 - 条件树撤销/重做：面板内全部写操作可撤销（Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y 或面板头按钮），

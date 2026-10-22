@@ -69,6 +69,11 @@ public enum ConsoleRole {
         return this.rank >= required.rank;
     }
 
+    /** 档位数值（包内可见）：账号管理防提权需要比较「授予角色 vs 操作者角色」。 */
+    int rankValue() {
+        return rank;
+    }
+
     /** 宽容解析（大小写不敏感，无法识别回退 VIEWER）。 */
     public static ConsoleRole parse(String s) {
         if (s == null) {

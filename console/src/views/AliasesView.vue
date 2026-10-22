@@ -1,5 +1,9 @@
 <template>
   <div class="alv" ref="rootEl">
+    <!-- 只读身份的前置说明：写钮隐藏时不让页面变成无解释的空壳（RestView 只读说明条同款） -->
+    <div v-if="auth.probed && !canOps" class="alv-perm-note" role="status">
+      <Shield :size="13" /> 当前身份只读：别名的新建/设写/解绑不可用；需要别名写权限。
+    </div>
     <PageHeader :icon="Link2" title="别名图">
       <template #subtitle>
         <span>别名与索引的指向关系，支持重建与原子切换</span>
@@ -251,7 +255,7 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { NPopover } from 'naive-ui';
-import { Link2, RefreshCw, AlertTriangle, ExternalLink, TerminalSquare, MousePointer, Plus, ArrowLeftRight, Trash2, X, Save, Copy, ClipboardList, SearchX, Terminal } from 'lucide-vue-next';
+import { Shield, Link2, RefreshCw, AlertTriangle, ExternalLink, TerminalSquare, MousePointer, Plus, ArrowLeftRight, Trash2, X, Save, Copy, ClipboardList, SearchX, Terminal } from 'lucide-vue-next';
 import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环） */
 import RawIoModal from '../components/RawIoModal.vue';
@@ -848,4 +852,7 @@ watch(() => route.query.idx, v => { if (v) consumeDeepIdx(); });
 @media (max-width: 900px) {
   .alv-form > .alv-chk { flex: 1 0 100%; }
 }
+
+/* 只读身份说明条（RestView .rt-perm-note 同款形态） */
+.alv-perm-note { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); margin: 0 0 var(--sp-3); }
 </style>

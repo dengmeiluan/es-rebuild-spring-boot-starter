@@ -478,7 +478,10 @@ onBeforeUnmount(() => {
  token 消息可顺带带 theme 字段（首握一次到位）；es-console-host-theme 是运行期热切通道。
  用户手切主题档后宿主热推不再生效（反超语义在 store.setHostTheme）。 */
 function onHostMessage(e: MessageEvent) {
-  /* 只接受宿主父窗口消息：任意可 postMessage 的第三方窗口不得替换 hostToken/主题 */
+  /* 只接受宿主父窗口消息：任意可 postMessage 的第三方窗口不得替换 hostToken/主题。
+     且宿主与控制台是同源部署（同源 iframe/同源页签），origin 不等的一律拒收——
+     父窗口被 XSS 时攻击脚本拿不到本源 origin 的消息通道。 */
+  if (e.origin !== window.location.origin) return;
   if (window.parent && e.source !== window.parent) return;
   const d = e.data;
   if (!d || typeof d !== 'object') return;

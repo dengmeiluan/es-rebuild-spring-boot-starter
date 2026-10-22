@@ -112,6 +112,7 @@ ES 文档锁（以 indexKey 为锁文档 _id）。
 | `es.rebuild.console.auth.user-index-name` | `es_console_user` | 控制台用户索引名 |
 | `es.rebuild.console.auth.ops-audit-index-name` | `es_console_ops_audit` | 操作审计索引名：环形开启时为日期索引前缀，关闭时为固定单索引名 |
 | `es.rebuild.console.auth.host-audit-merge` | `false` | 宿主审计并入开关：开启后宿主注册的 ConsoleAuditContributor 记录才并入控制台审计视图 |
+| `es.rebuild.console.auth.builtin-login-enabled` | （未设置） | 内置账号登录三态：未设置=有宿主委托时自动关闭、独立部署开启；true/false 强制开/关。关闭后 `/auth/login` 回 403 `BUILTIN_LOGIN_DISABLED`（防默认兜底账号绕过宿主鉴权）。**联动提示**：只要宿主注册了 `ConsoleAuthDelegate`（代码 SPI 或 header 模式）且本键未设置，内置登录即自动关闭——存量双轨部署（委托+本地账号并用）升级后需显式置 `true` 恢复本地登录 |
 
 ## 审计环形保留（es.rebuild.console.auth.audit-retention）
 
@@ -171,6 +172,7 @@ ES 文档锁（以 indexKey 为锁文档 _id）。
 | `es.rebuild.console.auth.delegate.jwt.username-claim` | `sub` | 用户名 claim（支持 a.b.c 点分路径） |
 | `es.rebuild.console.auth.delegate.jwt.roles-claim` | `roles` | 角色 claim（数组或逗号串） |
 | `es.rebuild.console.auth.delegate.jwt.display-name-claim` | （空串） | 展示名 claim（点分路径）；空=不取，顶栏回落 username |
+| `es.rebuild.console.auth.delegate.jwt.require-exp` | `true` | 是否强制要求 `exp`：true（默认）缺 exp 即拒——无 exp 的令牌等同永久凭证；旧宿主未签发 exp 可置 false 兼容（启动 WARN），非数值 exp/nbf 始终拒绝 |
 
 ### endpoint 模式（凭据转发宿主校验接口，2xx 即认）
 
@@ -190,7 +192,15 @@ ES 文档锁（以 indexKey 为锁文档 _id）。
 | `es.rebuild.console.auth.delegate.header.user-header` | （空串） | 用户名头（非空即信任） |
 | `es.rebuild.console.auth.delegate.header.roles-header` | （空串） | 角色头（逗号分隔，经 role-mapping 映射） |
 | `es.rebuild.console.auth.delegate.header.display-name-header` | （空串） | 展示名头；值若经 URL 编码可携中文，服务端自动解码 |
-| `es.rebuild.console.auth.delegate.header.trusted-proxies` | `[]` | 受信代理清单（精确 IP 或 IPv4 CIDR，如 `10.0.0.5,10.8.0.0/16`）。非空时身份头仅在 remoteAddr 命中清单时被采信——推荐显式配置网关地址，把「私网整体信任」收窄到具体代理；留空维持默认行为（回环/私网/链路本地即信） |
+| `es.rebuild.console.auth.delegate.header.trusted-proxies` | `[]` | 受信代理清单（精确 IP 或 IPv4 CIDR，如 `10.0.0.5,10.8.0.0/16`）。非空时身份头仅在 remoteAddr 命中清单时被采信——推荐显式配置网关地址，把「私网整体信任」收窄到具体代理；留空维持默认行为（回环/私网/链路本地即信）。注意容器网段（如 172.17.x）、CGNAT（100.64/10）与 IPv6 直连不在默认私网清单内——网关地址属这些段时必须显式配置，否则身份头被拒识（日志有 remote 与配置写法提示） |
+
+## 控制台安全响应头（es.rebuild.console.security）
+
+控制台 API 与控制台 HTML/静态资源统一过安全头过滤器：`X-Content-Type-Options: nosniff`、`Referrer-Policy: no-referrer` 全量；auth 域响应额外 `Cache-Control: no-store`（token/身份档案不留缓存）。
+
+| 配置键 | Java 默认值 | 说明 |
+|---|---|---|
+| `es.rebuild.console.security.frame-ancestors` | （空串） | iframe 嵌入白名单（CSP `frame-ancestors` 值，如 `'self' https://portal.example.com`）。**空=不下发任何 frame 头**——同源 iframe 嵌入（如 quotehub 形态）与独立部署不受影响；显式配置后仅白名单域可嵌控制台页面（防点击劫持）。清单必须包含实际嵌页的完整 origin |
 
 ## 完整默认配置
 

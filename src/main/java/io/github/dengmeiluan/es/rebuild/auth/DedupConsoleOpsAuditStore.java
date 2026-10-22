@@ -16,6 +16,9 @@
 
 package io.github.dengmeiluan.es.rebuild.auth;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -39,6 +42,8 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class DedupConsoleOpsAuditStore implements ConsoleOpsAuditStore {
 
+    private static final Logger LOG = LoggerFactory.getLogger(DedupConsoleOpsAuditStore.class);
+
     /** PAGE_DENIED 聚合窗口（毫秒） */
     static final long WINDOW_MS = 10 * 60_000L;
     private static final int MAX_KEYS = 2048;
@@ -55,9 +60,21 @@ public class DedupConsoleOpsAuditStore implements ConsoleOpsAuditStore {
         this.delegate = delegate;
     }
 
-    /* 唯一写入口=富事件——聚合逻辑单点在此，富维度（集群/IP/耗时）原样透传下层 */
+    /* 唯一写入口=富事件——聚合逻辑单点在此，富维度（集群/IP/耗时）原样透传下层。
+       委托方异常必须在此吞掉：record 在拦截器 preHandle 的拒绝链路上被调用，
+       宿主自定义 store 抛一次异常就会把「403 拒绝」变成「500 未定义错误」——
+       审计旁路永不反噬主流程是 ConsoleOpsAuditStore 的契约。 */
     @Override
     public void record(ConsoleOpsAuditEvent event) {
+        try {
+            doRecord(event);
+        } catch (RuntimeException e) {
+            /* warn/info 必须带 throwable（LogStackFidelityGuard901 约定：异常栈是唯一排障依据） */
+            LOG.warn("[DedupConsoleOpsAuditStore] 审计落档失败（已旁路，不影响请求）", e);
+        }
+    }
+
+    private void doRecord(ConsoleOpsAuditEvent event) {
         if ("PAGE_DENIED".equals(event.getAction())) {
             String key = event.getUsername() + '|' + event.getUri();
             long now = System.currentTimeMillis();

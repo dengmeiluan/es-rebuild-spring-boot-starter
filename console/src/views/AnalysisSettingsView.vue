@@ -26,6 +26,11 @@
       </PageHeader>
 </div>
 
+    <!-- 只读身份的前置说明：保存/热重载钮隐藏时不让页面变成无解释的空壳（RestView 只读说明条同款） -->
+    <div v-if="auth.probed && !canOps && !canReload" class="as-perm-note" role="status">
+      <Shield :size="13" /> 当前身份只读：Analysis 的保存/热重载不可用；需要集群 analysis 写权限。
+    </div>
+
     <!-- 五枚统计条退役：原 .as-stat-row 独立横幅删除，计数并入页头 as-meta 串 -->
 
     <!-- 加载失败档：与初始引导空态分两档，给原因 + 重试（重发 doLoad）。
@@ -125,7 +130,7 @@
 <script setup lang="ts">
 import { ref, computed, reactive, watch } from 'vue';
 import { Sliders, RefreshCw, Zap, Info, ExternalLink, ChevronRight, FileJson, Copy,
-  Wand2, Scissors, Filter, Eraser, Ruler, AlertTriangle, Save, Search } from 'lucide-vue-next';
+  Wand2, Scissors, Filter, Eraser, Ruler, AlertTriangle, Save, Search, Shield } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api } from '../api';
 import { askConfirm } from '../composables/confirm';
@@ -350,6 +355,8 @@ function copyRaw() {
  --sp 间距 token 收口（theme.css:100-103 裁决，只收精确等值字面；
  3/5/9/30 等奇数/定位刻意值保字面） */
 .as-page { padding: var(--sp-3) var(--sp-4) var(--sp-5); display: flex; flex-direction: column; min-height: 100%; }
+/* 只读身份说明条（RestView .rt-perm-note 同款形态；as-page 无 flex gap 自补下距） */
+.as-perm-note { display: flex; align-items: center; gap: var(--sp-2); margin: 0 0 var(--sp-3); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); }
 .as-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); }
 /* 五枚统计条退役：页头 inline 计数串（范式同 IndexHub ih-meta） */
 /* W-C 批：基础形态合并全局 .meta-strip（theme.css 末段）；改挂 MetaStrip 组件根（class 透传仍命中），

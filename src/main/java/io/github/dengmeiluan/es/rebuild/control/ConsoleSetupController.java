@@ -165,7 +165,9 @@ public class ConsoleSetupController {
         Map<String, Object> r = new LinkedHashMap<>();
         r.put("bound", resolver.bound());
         r.put("mode", resolver.mode().name());
-        r.put("endpoint", resolver.endpoint());
+        // status 是免鉴权白名单端点：绑定后控制集群地址不再向未认证方回显
+        // （向导只在未绑定窗口出现，前端把该键声明为可空，消费零破坏）
+        r.put("endpoint", resolver.bound() ? null : resolver.endpoint());
         r.put("appName", appName);
         // .2：纯管理平台形态下前端藏掉「宿主集群」入口（后端 EsTargetInterceptor 同步拒绝）
         r.put("hostVisible", hostClusterVisible);
@@ -285,7 +287,8 @@ public class ConsoleSetupController {
             // 同 advice 对 IAE 的 BAD_REQUEST 同码；ok/message 既有键保留、HTTP 200 形态
             // 不变（前端消费零破坏）；endpoint 无 web 上下文时宁缺勿炸不输出该键
             r.put("code", "BAD_REQUEST");
-            r.put("message", e.getMessage() == null ? "连接串解析失败" : e.getMessage());
+            r.put("message", e.getMessage() == null ? "连接串解析失败"
+                    : EsErrorMapper.sanitizeTopology(e.getMessage()));
             String endpoint = EsErrorMapper.endpointOf(currentRequest());
             if (endpoint != null) {
                 r.put("endpoint", endpoint);
@@ -316,7 +319,8 @@ public class ConsoleSetupController {
             // 与 EsClusterConnController.test 及 advice 路径 {code,message} 双轨对齐
             // ——错误体补 code 键（ok/message 既有键保留，前端消费零破坏）；message null 兜底改中文
             r.put("code", "PROBE_FAILED");
-            r.put("message", e.getMessage() == null ? "连接探测失败(未知异常类型)" : e.getMessage());
+            r.put("message", e.getMessage() == null ? "连接探测失败(未知异常类型)"
+                    : EsErrorMapper.sanitizeTopology(e.getMessage()));
             // 补 endpoint 键（additive）——与 advice 路径 EsErrorMapper.body 同口径
             // （method + " " + requestURI），失败端点一眼可定位；RequestContextHolder 取当前请求，
             // 非 web 线程/单测无上下文时宁缺勿炸不输出该键（endpointOf 空白口径同源）

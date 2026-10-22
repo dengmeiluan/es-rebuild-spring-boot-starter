@@ -40,6 +40,17 @@
       <div class="dt-tab-add" role="button" tabindex="0" aria-label="新建标签" title="新建标签" @click="addTab" @keydown.enter.prevent="addTab" @keydown.space.prevent="addTab">+</div>
     </div>
 
+    <!-- 权限前置说明：执行钮在无写权时不再「静默消失」——告诉用户缺什么、能做什么。
+         与 RestView.rt-perm-note 同一语言；两档区分「完全只读」与「仅数据面写」。 -->
+    <div v-if="auth.probed && !canAdmin" class="dt-perm-note" role="status">
+      <ShieldAlert :size="13" /> 当前身份只读：执行需要 ADMIN，或该连接的「DevTools / REST 直连」写权限。
+      现在仍可编辑请求、导入历史与查看响应；获权后执行钮自动出现。
+    </div>
+    <div v-else-if="auth.probed && canAdmin && !isAdminIdentity" class="dt-perm-note dt-perm-note-warn" role="status">
+      <ShieldAlert :size="13" /> 当前为数据面写权限：可执行检索/文档/批量/delete-by-query；
+      系统管理、别名/快照/模板/脚本等写操作会被后端拒绝（需对应页面写权限或 ADMIN）。
+    </div>
+
     <div v-if="cur" class="dt-body">
       <div class="dt-req">
         <select v-model="cur.method" class="dt-method" :class="'m-' + cur.method.toLowerCase()">
@@ -447,6 +458,8 @@ const store = useAppStore();
 const auth = useAuthStore();
 const permOpen = ref(false);
 const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/devtools/execute', store.target)); /* DevTools 页写键或 rest 写键（ADMIN 全局） */
+/* 身份档位（仅用于说明条文案分叉）：ADMIN 有全局写权，其余有写键者只到数据面。 */
+const isAdminIdentity = computed(() => auth.isAdmin());
 /* 当前请求是否在非 ADMIN 的数据面白名单内。ADMIN/无鉴权部署不受限；
    连接写键用户对系统管理写（别名/快照/模板/设置/脚本）不显示可执行态。
    me==null（未启用鉴权/探测完成未登录）跟随 canEndpoint 放行——authDisabled 形态
@@ -462,15 +475,16 @@ const pendingPrefillRun = ref(false);
 /* 挂起执行必须绑定到被预填的那个 tab：等待身份期间用户可能切到另一个含写请求的
    历史 tab，watcher 不能用“当前 tab”代跑——否则会绕过手动发送。 */
 const pendingPrefillTab = ref<Tab | null>(null);
-/* 只读判定：GET/HEAD 与搜索类 POST（_search/_count/_sql/scroll）可自动执行；
-   其余写方法必须手动发送。 */
+/* 只读判定：GET/HEAD 与搜索类 POST（_search/_count/_sql）可自动执行；
+   其余写方法必须手动发送。POST scroll 不在列——非 ADMIN 数据面下仅 DELETE 形态
+   放行，自动执行一个必被 scope 禁用的请求只会变成「预填失效」的困惑。 */
 function isReadOnlyPrefill(method: string, path: string): boolean {
   const m = String(method || 'GET').toUpperCase();
   if (m === 'GET' || m === 'HEAD') return true;
   if (m !== 'POST') return false;
   const p = String(path || '').split('?')[0];
   return p === '/_search' || p === '/_count' || p === '/_sql' || p === '/_xpack/sql'
-    || p.endsWith('/_search') || p.endsWith('/_search/template') || p.endsWith('/_search/scroll')
+    || p.endsWith('/_search') || p.endsWith('/_search/template')
     || p.endsWith('/_count') || p.endsWith('/_msearch') || p.endsWith('/_sql');
 }
 /* KeepAlive 失活页不得执行挂起预填：离页即丢弃，避免身份晚到后在不可见页发写请求 */
@@ -1368,8 +1382,10 @@ function saveFav() {
 .dt-out :deep(.empty-state) { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0; }
 /* 执行进度条贴请求行上方（DslQuery 同款 ind-bar 语言） */
 .dt-progress { position: absolute; top: 0; left: 0; right: 0; color: var(--ac); }
-.dt-tabs { display: flex; align-items: center; gap: var(--sp-2); border-bottom: 1px solid var(--border); padding: 0 var(--sp-1); overflow-x: auto; }
-.dt-tab { display: flex; align-items: center; gap: var(--sp-1h); padding: var(--sp-1h) var(--sp-2h); font-size: var(--fs-xs); cursor: pointer;
+/* 权限前置说明条（RestView.rt-perm-note 同语言）：只在身份就绪后出现，不闪断首屏 */
+.dt-perm-note { display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-2) var(--sp-1) 0; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); line-height: 1.5; }
+.dt-perm-note-warn { border-color: var(--warn-line, var(--line)); background: var(--warn-soft); color: var(--tx1); }
+.dt-tabs { display: flex; align-items: center; gap: var(--sp-2); border-bottom: 1px solid var(--border); padding: 0 var(--sp-1); overflow-x: auto; }.dt-tab { display: flex; align-items: center; gap: var(--sp-1h); padding: var(--sp-1h) var(--sp-2h); font-size: var(--fs-xs); cursor: pointer;
   border: 1px solid transparent; border-bottom: none; border-radius: 4px 4px 0 0; white-space: nowrap; }
 /* 重命名内联输入（贴 tab 同视觉密度） */
 .dt-tab-ren { width: 90px; height: 20px; padding: 0 var(--sp-1); font-size: var(--fs-xs); border: 1px solid var(--ac); border-radius: 3px; background: var(--bg1); color: var(--fg); outline: none; }

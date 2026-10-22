@@ -208,6 +208,20 @@ public class EsRebuildProperties {
     /** 控制台（面板+接口）安全参数（前缀 {@code es.rebuild.console}）。 新增。 */
     public static class Console {
         private Auth auth = new Auth();
+        private Security security = new Security();
+
+        /** 控制台安全响应头配置（frame-ancestors 等；nosniff/no-store 无配置项恒生效）。 */
+        public static class Security {
+            /** iframe 嵌入白名单（CSP frame-ancestors 值）；空=不下发任何 frame 头
+             *  ——同源 iframe 嵌入是声明特性，默认不限制可嵌域。 */
+            private String frameAncestors = "";
+
+            public String getFrameAncestors() { return frameAncestors; }
+            public void setFrameAncestors(String frameAncestors) { this.frameAncestors = frameAncestors; }
+        }
+
+        public Security getSecurity() { return security; }
+        public void setSecurity(Security security) { this.security = security; }
         /**  多集群连接档案索引名（存控制集群，密码只留服务端）。 */
         private String connIndexName = "es_console_conn";
         /**  控制集群自举档案目录；空 → {@code ${user.home}/.es-console/<appName>/}。 */
@@ -370,6 +384,17 @@ public class EsRebuildProperties {
         private boolean hostAuditMerge = false;
         /**  配置式宿主鉴权委托（零 Java 代码对接，代码 SPI Bean 优先）。 */
         private Delegate delegate = new Delegate();
+        /**
+         * 内置账号登录总开关（三态，默认 null=自动）。
+         *
+         * <p>自动语义：<b>未配置宿主委托（delegate）时开启</b>（独立部署靠内置账号登录）；
+         * <b>配置了任何宿主委托时关闭</b>——否则默认兜底账号 admin/es-console 会通过
+         * 免鉴权的 /auth/login 拿到本地 ADMIN（grantedPages=null，绕过全部页面门），
+         * 等于给宿主鉴权开了一个永久后门。</p>
+         *
+         * <p>true=强制开启（旧部署兼容逃生阀，启动会 ERROR 告警）；false=强制关闭。</p>
+         */
+        private Boolean builtinLoginEnabled = null;
 
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
@@ -391,6 +416,8 @@ public class EsRebuildProperties {
         public void setHostAuditMerge(boolean hostAuditMerge) { this.hostAuditMerge = hostAuditMerge; }
         public Delegate getDelegate() { return delegate; }
         public void setDelegate(Delegate delegate) { this.delegate = delegate; }
+        public Boolean getBuiltinLoginEnabled() { return builtinLoginEnabled; }
+        public void setBuiltinLoginEnabled(Boolean builtinLoginEnabled) { this.builtinLoginEnabled = builtinLoginEnabled; }
     }
 
     /**
@@ -461,6 +488,11 @@ public class EsRebuildProperties {
             private String rolesClaim = "roles";
             /** 展示名 claim（点分路径，如 name / user.nickname）；空 = 不取，顶栏回落 username。 */
             private String displayNameClaim = "";
+            /**
+             * 是否强制要求 {@code exp}（默认 true）：缺 exp 的令牌等同永久凭证，生产必须拒绝。
+             * 旧宿主未签发 exp 时可显式置 false 兼容（启动会 WARN），但字符串/非数值 exp 始终拒绝。
+             */
+            private boolean requireExp = true;
 
             public String getSecret() { return secret; }
             public void setSecret(String secret) { this.secret = secret; }
@@ -472,6 +504,8 @@ public class EsRebuildProperties {
             public void setRolesClaim(String rolesClaim) { this.rolesClaim = rolesClaim; }
             public String getDisplayNameClaim() { return displayNameClaim; }
             public void setDisplayNameClaim(String displayNameClaim) { this.displayNameClaim = displayNameClaim; }
+            public boolean isRequireExp() { return requireExp; }
+            public void setRequireExp(boolean requireExp) { this.requireExp = requireExp; }
         }
 
         /** endpoint 模式：把凭据转发宿主校验接口，2xx 即认。 */

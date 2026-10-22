@@ -1,5 +1,9 @@
 <template>
   <div class="lc-page">
+    <!-- 只读身份的前置说明：写钮隐藏时不让页面变成无解释的空壳（RestView 只读说明条同款） -->
+    <div v-if="auth.probed && !canOps && !canMove" class="lc-perm-note" role="status">
+      <Shield :size="13" /> 当前身份只读：生命周期的启动/停止/rollover/迁移不可用；需要 ILM 生命周期写权限。
+    </div>
     <PageHeader :icon="Layers" title="索引生命周期视图">
 <template #subtitle>
         <span class="lc-hd-sub">
@@ -175,7 +179,7 @@
         </div>
         <div class="lc-actions">
           <!-- G123：推进钮补 mvPending 守卫+spinning+文案（随 G121 同修同验） -->
-          <button v-if="canOps" class="btn primary sm" @click="doMove" :disabled="!moveIndex.trim() || mvPending">
+          <button v-if="canMove" class="btn primary sm" @click="doMove" :disabled="!moveIndex.trim() || mvPending">
             <FastForward :size="12" :class="{ spinning: mvPending }" /> {{ mvPending ? '推进中…' : '推进' }}
           </button>
           <!-- 原始 IO 快查（explain 通道）——选索引自动预填的 ilm/explain 记录
@@ -197,7 +201,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Layers, RefreshCw, PlayCircle, PauseCircle, Rocket, Search, GitBranch, FastForward, Terminal } from 'lucide-vue-next';
+import { Shield, Layers, RefreshCw, PlayCircle, PauseCircle, Rocket, Search, GitBranch, FastForward, Terminal } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
@@ -226,6 +230,9 @@ const store = useAppStore();
  甘特图/explain 全角色可用；本页写门统一按 lifecycle 页 start 端点做连接感知裁决 */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/ilm/start', store.target));
+/* 「推进」走共享写端点 ilm/move（归属 ilm | lifecycle 两页）：只看 ilm/start 会把
+   持 w:ilm 的授权人挡在按钮外，而其后端实际允许——按真实端点判定，与执行门同源。 */
+const canMove = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/ilm/move', store.target));
 const router = useRouter();
 const busy = ref(true); /* ：初值 true——首帧即骨架，不闪「无策略」空态 */
 const ilmOpPending = ref(false); /* 复审 M4：start/stop 写操作防重入——in-flight 期间按钮禁用 + 重入直接返回，杜绝双击双发 */
@@ -408,6 +415,15 @@ async function load() {
 async function ilmStart() {
   if (!canOps.value) { store.notify('warning', 'ILM 操作需要 CLUSTER_OP/ADMIN 角色'); return; }
   if (ilmOpPending.value) return;
+  /* 与「停止」和命令面板同一安全档：启动会恢复 rollover/过期删除等自动动作，
+     误点一下就可能触发全量索引的级联推进——必须先确认（原先只有停止有确认，不对称）。 */
+  if (!await askConfirm({
+    title: '启动 ILM 引擎',
+    level: 'warn',
+    okText: '启动引擎',
+    message: '所有索引的生命周期策略将恢复自动推进：rollover / shrink / forcemerge / delete 等动作会按策略触发，可能删除已过期索引。',
+  })) return;
+  if (ilmOpPending.value) return;
   ilmOpPending.value = true;
   try {
     await api.ilmStart();
@@ -589,4 +605,7 @@ function openRawIoExplain() {
   .lc-panel-tt { flex-wrap: wrap; }
   .lc-move-row { flex-wrap: wrap; }
 }
+
+/* 只读身份说明条（RestView .rt-perm-note 同款形态） */
+.lc-perm-note { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); margin: 0 0 var(--sp-3); }
 </style>

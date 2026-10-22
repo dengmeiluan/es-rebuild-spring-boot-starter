@@ -91,7 +91,8 @@
           <span class="hint">业务应用 → desired-state.html → 「复制期望配置」→ 贴到这里</span>
           <!-- 期望配置页外链钮（宿主 client 侧 DesiredStateController 自包含单页，
  与 api EP 同前缀 /internal/es/index）——此前只有文案，业务同事找不到入口 -->
-          <button type="button" class="btn ghost xs" @click="openDesiredState"><ExternalLink :size="11" /> 打开期望配置页</button>
+          <button type="button" class="btn ghost xs" :disabled="!canDesiredState"
+            :title="canDesiredState ? '' : '期望配置页需宿主或静态页授权——纯连接授权打开只会得到 403'" @click="openDesiredState"><ExternalLink :size="11" /> 打开期望配置页</button>
           <!-- 四档高度循环钮（ConfigValidatorView data-cv-issues-h 同款范式）——
  title 实时回显当前档，点击切下一档末档回首档，usePref 落盘 -->
           <button type="button" class="btn ghost xs" data-ar-paste-h :title="'粘贴区高度档：' + pasteH + '（点击循环）'" @click="cyclePasteH">高</button>
@@ -121,8 +122,8 @@
  现场 api.clusterInspect 补拉；显式用户动作 + askConfirm 确认覆盖后才写两框
  （挂载初值/自动链零触——adhocManualWorkbench426/draftGovernance 口径） -->
           <button type="button" class="btn ghost xs" data-ar-pull-src aria-label="拉取源配置"
-            :disabled="pullingSrc"
-            title="拉取源索引当前的 settings / mapping 覆盖下方两框（覆盖前需确认）" @click="pullSourceToManual">
+            :disabled="pullingSrc || !canPullSrc"
+            :title="canPullSrc ? '拉取源索引当前的 settings / mapping 覆盖下方两框（覆盖前需确认）' : '拉取源配置需索引、映射、搜索、配置校验或托管重建任一页读权限'" @click="pullSourceToManual">
             <Download :size="11" /> 拉取源配置
           </button>
           <!-- P1：编辑框高度档循环钮（形态抄本页 paste 档钮；与审编卡头钮同一落盘键 adhoc.edH） -->
@@ -275,10 +276,10 @@ mapping <span class="dim">字段映射</span>
       </div>
 
       <div class="row">
-        <button v-if="canOps" class="btn ghost" :disabled="validating || !canValidate" title="校验需配置校验页或托管重建写权限" @click="doValidateConfig(false)">
+        <button v-if="canValidate" class="btn ghost" :disabled="validating || !canValidate" title="校验需配置校验页或托管重建写权限" @click="doValidateConfig(false)">
           <Loader2 v-if="validating" :size="13" class="spinning" /><ShieldCheck v-else :size="13" /> 仅校验
         </button>
-        <button v-if="canOps" class="btn primary" :disabled="validating || !canValidate" title="校验需配置校验页或托管重建写权限" @click="doValidateConfig(true)">
+        <button v-if="canValidate" class="btn primary" :disabled="validating || !canValidate" title="校验需配置校验页或托管重建写权限" @click="doValidateConfig(true)">
           <Loader2 v-if="validating" :size="13" class="spinning" /><ChevronRight v-else :size="13" /> {{ validating ? '校验中 ' + valSecs + 's' : '校验并继续：选择追平策略' }}
         </button>
       </div>
@@ -789,6 +790,15 @@ const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/inde
 const canValidate = computed(() =>
   auth.canEndpoint('write', 'POST', '/internal/es/index/config-lab/validate', store.target)
   || auth.canEndpoint('ops', 'POST', '/internal/es/index/adhoc-rebuild/start', store.target));
+/* 拉取源配置的回退补拉通道 cluster/inspect 是共享读端点（索引/映射/搜索/配置校验/托管
+ 重建任一页读键可见，与后端 SHARED_READ_PAGES 同源）——纯连接模型缺页时补拉必 403，
+ doStart/doAbort 同款闸（探测 prep 快照路径零网络不受闸） */
+const canPullSrc = computed(() => auth.canEndpoint('write', 'GET', '/internal/es/index/cluster/inspect', store.target));
+/* 期望配置页是宿主 client 侧静态单页（浏览器 window.open 直开不携连接目标头，恒按
+ 宿主/静态页授权裁决）——纯连接模型点开必得 403 裸页，钮面禁用先给引导；
+ 探测完成前不禁用（OverviewView 宿主页预判同款，独立部署首屏入口不闪断） */
+const canDesiredState = computed(() => !auth.probed
+  || auth.canEndpoint('write', 'GET', EP + '/desired-state.html', 'host'));
 /* 草稿：向导全程草稿（按集群目标隔离）。粘贴/审编/表单字段挂载时读一次、
  之后只写不读——切页/失焦/重挂载后现场可复原；doPrepare/校验/prepare 失败不清稿
  （机制保证：只有显式 reset 或改回默认值才清）。 */
@@ -1114,9 +1124,12 @@ const mappingFromDerived = ref(false);
  pretty 口径与 doPrepare 预填一致（prettyJson）。 */
 const pullingSrc = ref(false);
 async function pullSourceToManual() {
+  /* 权限执行体首行门（拉取钮已随 canPullSrc 禁用，此处覆盖程序化通道；doStart/doAbort
+     同款）——仅约束会发网络的回退补拉分支，本地 prep 快照路径确认窗随后照常 */
+  if (!canPullSrc.value) { store.notify('warning', '拉取源配置需索引、映射、搜索、配置校验或托管重建任一页读权限'); return; }
   if (!indexName.value) { store.notify('warning', '先在上方选择要重建的索引名，才能拉取源配置'); return; }
   /* 闸置位前移到确认窗之前（xmigrateGateExport941 同族口径）：确认窗+clusterInspect 在途全程拉取钮
-     :disabled="pullingSrc" 即禁用，二击不再穿透双开确认窗；取消路径由 finally 复位防闸死。 */
+     :disabled="pullingSrc || !canPullSrc" 即禁用，二击不再穿透双开确认窗；取消路径由 finally 复位防闸死。 */
   if (pullingSrc.value) return;
   pullingSrc.value = true;
   try {

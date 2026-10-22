@@ -201,6 +201,9 @@ describe('可选加固：命令面板目录/连接元数据 + 宿主消息来源
   it('App 只接受父窗口 postMessage（第三方窗口不得替换 hostToken）', () => {
     expect(app).toContain('if (window.parent && e.source !== window.parent) return;');
   });
+  it('App 拒收非同源 postMessage（宿主与控制台同源部署，origin 必须等于自身）', () => {
+    expect(app).toContain('if (e.origin !== window.location.origin) return;');
+  });
   it('auth store 暴露 canSeeConn 且 ADMIN 走全局短路', () => {
     expect(authSrc).toContain('const canSeeConn = (connId: string): boolean =>');
     expect(authSrc).toContain('if (isAdmin()) return true; /* 超管全局端点权：与后端 ADMIN 页面门豁免镜像 */');

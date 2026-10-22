@@ -168,7 +168,10 @@ public class Observability558Test {
         ListAppender<ILoggingEvent> appender = new ListAppender<ILoggingEvent>();
         PropertiesAuthDelegate delegate = jwtDelegate(appender);
         try {
-            String token = hs256(JWT_SECRET, "{\"sub\":\"u1\",\"roles\":[\"OPERATOR\"]}");
+            /* 984：生产装配默认 require-exp=true（缺 exp 的令牌等同永久凭证），
+               合法样本必须带未过期的数值 exp。 */
+            String token = hs256(JWT_SECRET, "{\"sub\":\"u1\",\"roles\":[\"OPERATOR\"],\"exp\":"
+                    + (System.currentTimeMillis() / 1000L + 3600L) + "}");
             ConsolePrincipal p = delegate.authenticate(headerRequest("Authorization", "Bearer " + token));
 
             assertNotNull("合法 token 必须照常认出（宿主身份语义不变）", p);

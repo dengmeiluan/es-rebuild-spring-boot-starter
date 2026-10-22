@@ -1,5 +1,9 @@
 <template>
   <div class="slm-page">
+    <!-- 只读身份的前置说明：写钮隐藏时不让页面变成无解释的空壳（RestView 只读说明条同款） -->
+    <div v-if="auth.probed && !canOps" class="slm-perm-note" role="status">
+      <Shield :size="13" /> 当前身份只读：快照策略的立即执行不可用；需要快照策略写权限。
+    </div>
     <div class="slm-hd">
       <PageHeader :icon="ShieldCheck" title="SLM 快照生命周期">
       <template #subtitle>
@@ -98,7 +102,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import { ShieldCheck, RefreshCcw, AlertTriangle, Calendar, Play, Copy, Terminal } from 'lucide-vue-next';
+import { Shield, ShieldCheck, RefreshCcw, AlertTriangle, Calendar, Play, Copy, Terminal } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
@@ -349,4 +353,7 @@ onMounted(loadAll);
   .slm-page { padding: var(--sp-3) var(--sp-3) var(--sp-4); }
   .slm-hd-r { flex-wrap: wrap; }
 }
+
+/* 只读身份说明条（RestView .rt-perm-note 同款形态） */
+.slm-perm-note { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); margin: 0 0 var(--sp-3); }
 </style>

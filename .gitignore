@@ -26,3 +26,6 @@ Thumbs.db
 # local maintenance notes (kept out of the distribution; history lives in commit messages)
 console/docs/GOAL-*
 .tmp-prescan894.mjs
+# one-off probe artifacts (screenshots / node dumps) — never distributed
+.tmp-*
+.workbuddy/

@@ -255,7 +255,8 @@ public class EsClusterConnController {
             // 错误体同轨——同 advice 对 IAE 的 BAD_REQUEST 同码；ok/message 既有键保留、
             // HTTP 200 形态不变（前端消费零破坏）；endpoint 无 web 上下文时宁缺勿炸不输出
             r.put("code", "BAD_REQUEST");
-            r.put("message", e.getMessage() == null ? "连接串解析失败" : e.getMessage());
+            r.put("message", e.getMessage() == null ? "连接串解析失败"
+                    : EsErrorMapper.sanitizeTopology(e.getMessage()));
             String endpoint = EsErrorMapper.endpointOf(currentRequest());
             if (endpoint != null) {
                 r.put("endpoint", endpoint);
@@ -294,7 +295,8 @@ public class EsClusterConnController {
             // 与 advice 路径 {code,message} 双轨对齐——错误体补 code 键
             // （ok/message 既有键保留，前端消费零破坏）；message null 兜底改中文
             r.put("code", "PROBE_FAILED");
-            r.put("message", e.getMessage() == null ? "连接探测失败(未知异常类型)" : e.getMessage());
+            r.put("message", e.getMessage() == null ? "连接探测失败(未知异常类型)"
+                    : EsErrorMapper.sanitizeTopology(e.getMessage()));
             // 补 endpoint 键（additive）——与 advice 路径 EsErrorMapper.body 同口径
             // （method + " " + requestURI），失败端点一眼可定位；RequestContextHolder 取当前请求，
             // 非 web 线程/单测无上下文时宁缺勿炸不输出该键（endpointOf 空白口径同源）

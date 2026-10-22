@@ -450,7 +450,28 @@ const store = useAppStore();
 /* delegated 用户的安全中心语义=展示「宿主菜单勾了什么」而非角色——
  grantedPages 解析为按连接分组的授权摘要（纯函数见 utils/pageGrants.ts） */
 import { summarizeGrants } from '../utils/pageGrants';
-const grantSummary = computed(() => summarizeGrants(auth.me?.grantedPages ?? null));
+/* 984：裸键推导会虚报——conn:c1:w:bulk 在 c1 的 env 模板排除 bulk 时后端必 403，
+   conn:c1:w:system 因 system 恒定宿主执行也不生效。展示层按与后端同源的
+   envAllows + host-bound 归一后再算「可见/可写」，面板与执行门所见即所得。 */
+const hostBoundWritePage = (p: string): boolean =>
+  p === 'system' || p === 'config-drift' || p === 'security';
+const grantSummary = computed(() => {
+  const base = summarizeGrants(auth.me?.grantedPages ?? null);
+  if (!base.connModel) return base;
+  const conns = base.conns.map(g => {
+    const visible = g.visible.filter(p => auth.envAllows(p, g.connId));
+    const writable = g.writable.filter(p => auth.envAllows(p, g.connId)
+      && (!hostBoundWritePage(p) || g.connId === 'host'));
+    return { ...g, visible, writable };
+  });
+  const visibleSet = new Set<string>(base.staticKeys ?? []);
+  const writableSet = new Set<string>();
+  for (const g of conns) {
+    for (const p of g.visible) visibleSet.add(p);
+    for (const p of g.writable) writableSet.add(p);
+  }
+  return { ...base, conns, totals: { visible: visibleSet.size, writable: writableSet.size } };
+});
 const connName = (connId: string): string => store.conns.find(c => c.id === connId)?.name || connId;
 /* 页 key → 中文名：me.pages 目录（587 契约含 name）；未收录 key 原样展示（新增页兜底） */
 const pageName = (key: string): string => {

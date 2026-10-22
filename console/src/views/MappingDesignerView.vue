@@ -21,6 +21,11 @@
         </template>
       </PageHeader>
 
+    <!-- 只读身份的前置说明：加字段钮隐藏时不让页面变成无解释的空壳（RestView 只读说明条同款） -->
+    <div v-if="auth.probed && !canOps" class="md-perm-note" role="status">
+      <Shield :size="13" /> 当前身份只读：加字段不可用；需要集群 mapping 写权限。
+    </div>
+
     <!-- 五格 md-stat 收敛 MetaStrip 统一件（值亮+标签暗+·分隔；nested 计数 tone:warn 承接原 .md-stat.warn） -->
     <MetaStrip v-if="stats.total" class="md-strip" :items="statItems" />
 
@@ -129,7 +134,7 @@
 <script setup lang="ts">
 import { ref, computed, h, defineComponent, onBeforeUnmount, onMounted, watch } from 'vue';
 import { fmtNum } from '../utils/format';
-import { FolderTree, RefreshCw, Plus, Send, ShieldAlert, ChevronRight, ChevronDown, Terminal } from 'lucide-vue-next';
+import { FolderTree, RefreshCw, Plus, Send, Shield, ShieldAlert, ChevronRight, ChevronDown, Terminal } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环） */
@@ -343,6 +348,8 @@ async function doAdd() {
 <style scoped>
 /* 页面转 flex 纵向吃满可滚区——md-grid 由此拿到「页面余高」弹性 */
 .md-page { padding: var(--sp-3) var(--sp-4) var(--sp-5); display: flex; flex-direction: column; min-height: 100%; }
+/* 只读身份说明条（RestView .rt-perm-note 同款形态；md-page 无 flex gap 自补下距） */
+.md-perm-note { display: flex; align-items: center; gap: var(--sp-2); margin: 0 0 var(--sp-3); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); }
 /* 页头已收敛 PageHeader 组件，本地 .md-hd/.md-hd-l/.md-hd-ic/.md-hd-tt/.md-hd-sub 删除 */
 /* .md-inp 随页内 IndexPicker 退役删除（选择入口收敛顶栏 CurrentIdxChip） */
 /* ：页头右组 flex 修饰与输入框 sm 后缀窄档两条死规则删（模板 0 元素实证，
