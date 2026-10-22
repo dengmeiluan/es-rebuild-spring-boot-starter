@@ -49,7 +49,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *   <li><b>指纹免刷</b>:name/url/username/env/minRole/password 全同不 save——防周期 SAVED
  *       事件刷连接菜单供给器;任一不同才 save + evict + 探活(与 EsClusterConnController.save 同款链);</li>
  *   <li><b>失联标记保留</b>(裁决):源消失 → markSyncState(STALE) 保留;源复现 → 恢复并更新;
- *       失联档案人工删除后不复活;在线档案人工删除按镜像语义下轮重建;</li>
+ *       人工删除的同步档案(软删 DISMISSED)一律不再回灌——跳过 upsert 与失联标记,报告 notes 留痕;</li>
  *   <li><b>降级红线</b>:contribute() 抛错一次 WARN 后本进程永久降级;单条失败计入报告不中断整轮。</li>
  * </ul>
  *
@@ -356,12 +356,17 @@ public class ClusterConnSyncEngine {
             }
         }
 
-        // D. 逐条 upsert(指纹免刷)
+        // D. 逐条 upsert(指纹免刷);人工软删的同步档案不回灌
         Set<String> presentIds = new HashSet<>();
         for (Entry e : accepted) {
             String id = syncIdOf(e.sourceId);
             presentIds.add(id);
             try {
+                if (isDismissed(connStore.getSyncState(id))) {
+                    // 墓碑零写:不复活、不覆盖、不改 createdAt,报告留痕供运维理解为何未灌回
+                    rep.note("已删除的同步连接不再回灌:" + e.name);
+                    continue;
+                }
                 RemoteClusterConn existing = connStore.get(id);
                 Map<String, Object> view = syncDomain.get(id);
                 if (existing == null) {
@@ -412,13 +417,14 @@ public class ClusterConnSyncEngine {
             }
         }
 
-        // E. STALE 扫描:同步域内不在 contributed 的 → 标记保留(裁决:不自动删)
+        // E. STALE 扫描:同步域内不在 contributed 的 → 标记保留(裁决:不自动删);软删墓碑零写
         for (Map.Entry<String, Map<String, Object>> en : syncDomain.entrySet()) {
             if (presentIds.contains(en.getKey())) {
                 continue;
             }
-            if (isStale(en.getValue())) {
-                continue; // 已标记,零写
+            if (isStale(en.getValue())
+                    || isDismissed(strOrNull(en.getValue().get("syncState")))) {
+                continue; // 已标记/软删墓碑,零写
             }
             try {
                 connStore.markSyncState(en.getKey(), STATE_STALE);
@@ -471,6 +477,11 @@ public class ClusterConnSyncEngine {
     private static boolean isStale(Map<String, Object> view) {
         return view.get("syncState") != null
                 && "STALE".equalsIgnoreCase(String.valueOf(view.get("syncState")));
+    }
+
+    /** 同步档案软删墓碑判定(人工删除后不再回灌)。 */
+    private static boolean isDismissed(String syncState) {
+        return ConnStore.STATE_DISMISSED.equalsIgnoreCase(syncState);
     }
 
     private static boolean intersects(Set<String> a, Set<String> b) {

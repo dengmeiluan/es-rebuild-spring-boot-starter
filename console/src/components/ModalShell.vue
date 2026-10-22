@@ -9,7 +9,7 @@
 <template>
   <teleport to="body">
     <transition name="pop">
-      <div v-if="show" class="msk-mask" role="presentation" @click.self="$emit('close')">
+      <div v-if="show" ref="maskEl" class="msk-mask" role="presentation" @click.self="$emit('close')">
         <div ref="boxEl" class="msk-box" :style="boxStyle" role="dialog" aria-modal="true" :aria-label="label">
           <slot />
         </div>
@@ -20,6 +20,8 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, nextTick, onBeforeUnmount } from 'vue';
+/* naive-ui 同款层计数器（naive-ui 自身依赖，深路径同源；无 exports 锁深导入合法） */
+import zIndexManager from 'vdirs/es/zindexable/z-index-manager';
 
 const props = withDefaults(defineProps<{
   show: boolean;
@@ -55,12 +57,18 @@ function onDocEsc(e: KeyboardEvent) {
   e.stopPropagation();
   emit('close');
 }
+/* z 序动态跟随：本壳常从 naive 弹层（集群连接管理等 preset=card 弹窗，vdirs 管理器 2000 起
+ 自增）内触发，静态档 --z-confirm 1300 永远压不过宿主弹层——开层把 mask 注册进 naive 同款
+ 计数器（后开者胜），关层/卸载反注册；全域无层时管理器自然回落 2000，与 naive 同拍。 */
+const maskEl = ref<HTMLElement>();
 watch(() => props.show, (v) => {
   if (v) {
     escPrevFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     document.addEventListener('keydown', onDocEsc, true);
+    nextTick(() => { if (maskEl.value) zIndexManager.ensureZIndex(maskEl.value); });
   } else {
     document.removeEventListener('keydown', onDocEsc, true);
+    if (maskEl.value) zIndexManager.unregister(maskEl.value);
     const back = escPrevFocus;
     escPrevFocus = null;
     nextTick(() => back?.focus());
@@ -68,6 +76,7 @@ watch(() => props.show, (v) => {
 }, { immediate: true });
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onDocEsc, true);
+  if (maskEl.value) zIndexManager.unregister(maskEl.value);
   escPrevFocus = null;
 });
 

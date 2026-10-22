@@ -82,6 +82,9 @@ public class EsConnStore implements ConnStore {
                         @SuppressWarnings("unchecked")
                         Map<String, Object> src = (Map<String, Object>) h.get("_source");
                         if (src != null) {
+                            if (STATE_DISMISSED.equalsIgnoreCase(str(src.get("syncState")))) {
+                                continue; // 软删墓碑:读面不透出(列表/探活/监控同源自动隐身)
+                            }
                             out.add(masked(String.valueOf(h.get("_id")), src));
                         }
                     }
@@ -99,11 +102,11 @@ public class EsConnStore implements ConnStore {
         }
     }
 
-    /** 按 id 取完整连接（含密码，仅服务端内部使用）；不存在返回 null。 */
+    /** 按 id 取完整连接（含密码，仅服务端内部使用）；不存在或已软删（墓碑）返回 null。 */
     @Override
     public RemoteClusterConn get(String id) {
         Map<String, Object> src = getSource(id);
-        if (src == null) {
+        if (src == null || STATE_DISMISSED.equalsIgnoreCase(str(src.get("syncState")))) {
             return null;
         }
         RemoteClusterConn conn = new RemoteClusterConn(
@@ -278,9 +281,9 @@ public class EsConnStore implements ConnStore {
     }
 
     /**
-     * 连接中心同步域状态标记:STALE=源已失联 / null=恢复(删除键)。
-     * 用整篇 PUT _doc 而非 _update 端点——6.x/7.x 路径形态不同(updateVersion 同款裁决);
-     * 失败 WARN 不抛(标记是增强信息,绝不反噬同步主流程)。
+     * 连接中心同步域状态标记:STALE=源已失联 / DISMISSED=人工软删墓碑(经 {@link #markDismissed}
+     * 落库)/ null=恢复(删除键)。用整篇 PUT _doc 而非 _update 端点——6.x/7.x 路径形态不同
+     * (updateVersion 同款裁决);失败 WARN 不抛(标记是增强信息,绝不反噬同步主流程)。
      */
     @Override
     public void markSyncState(String id, String state) {
@@ -303,6 +306,19 @@ public class EsConnStore implements ConnStore {
         } catch (Exception e) {
             LOG.warn("[EsConnStore] markSyncState failed id={}: {}", id, e.getMessage(), e);
         }
+    }
+
+    /** 同步档案软删除:syncState 置 DISMISSED(墓碑保留,契约见 ConnStore);复用 markSyncState 写路径。 */
+    @Override
+    public void markDismissed(String id) {
+        markSyncState(id, STATE_DISMISSED);
+    }
+
+    /** 读单条档案的同步域状态标记(STALE/DISMISSED);无标记或档案不存在返回 null。 */
+    @Override
+    public String getSyncState(String id) {
+        Map<String, Object> src = getSource(id);
+        return src == null ? null : str(src.get("syncState"));
     }
 
     /** 删除连接（幂等）。 */

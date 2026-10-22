@@ -116,7 +116,8 @@
      `box-shadow: var(--glow-m) var(--err)`；裸用（不带色）时 box-shadow 自动落 currentColor，仍合法。
      退役小档 --glow-s（「备而未收」储备，三周零消费；deadTokenGuard823 防回潮） */
   --glow-m: 0 0 6px;
-  /* v3.0.1 z 阶梯:sticky 1-10 < 抽屉 100/110 < 聚焦面 300 < 视图模态 1000 < 局部浮层 1150 < 确认弹窗 1300 < 回执 1310 < naive 动态 2000+ < 全屏遮罩 10000+(登录/向导) */
+  /* v3.0.1 z 阶梯:sticky 1-10 < 抽屉 100/110 < 聚焦面 300 < 视图模态 1000 < 局部浮层 1150 < 确认弹窗 1300 < 回执 1310 < naive 动态 2000+ < 全屏遮罩 10000+(登录/向导)
+     确认壳层例外:ModalShell 开层把 mask 注册进 naive 同款计数器(后开者胜),静态档仅首帧兜底——从 naive 弹层内触发的确认不再被宿主弹层盖住 */
   --z-drawer-mask: 250; --z-drawer: 251; --z-focus: 300; --z-modal-view: 1000; --z-popover: 1150; --z-confirm: 1300; --z-receipt: 1310;
   /* 确认弹窗宽度档 --dlg-w 四档约定：small 340 / info 460 / confirm 560 / large 640。
      现散值：ModalShell 默认 460（info 档）/ GuardedActionButton 480（confirm 档散值，待收编）；

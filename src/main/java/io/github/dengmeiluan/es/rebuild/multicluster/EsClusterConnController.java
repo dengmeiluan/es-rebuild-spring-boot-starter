@@ -194,10 +194,18 @@ public class EsClusterConnController {
         return probe(id, currentRequest());
     }
 
-    /** 删除连接（幂等），并关闭缓存的长连接。 */
+    /**
+     * 删除连接（幂等），并关闭缓存的长连接。
+     * 同步档案（cc- 前缀）走软删除：档案落 syncState=DISMISSED 保留为墓碑——控制台读面
+     * 整体隐身，自动同步引擎不再回灌；手工域档案物理删除，语义不变。
+     */
     @PostMapping("delete")
     public Map<String, Object> delete(@RequestParam String id) {
-        connStore.delete(id);
+        if (id != null && id.startsWith(ClusterConnSyncEngine.SYNC_ID_PREFIX)) {
+            connStore.markDismissed(id);
+        } else {
+            connStore.delete(id);
+        }
         router.evict(id);
         Map<String, Object> r = new LinkedHashMap<>();
         r.put("deleted", id);

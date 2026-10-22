@@ -71,6 +71,9 @@ public class JdbcConnStore implements ConnStore {
              ResultSet rs = ps.executeQuery()) {
             List<Map<String, Object>> out = new ArrayList<>();
             while (rs.next()) {
+                if (STATE_DISMISSED.equalsIgnoreCase(rs.getString("sync_state"))) {
+                    continue; // 软删墓碑:读面不透出(列表/探活/监控同源自动隐身)
+                }
                 out.add(masked(rs));
             }
             return out;
@@ -82,8 +85,8 @@ public class JdbcConnStore implements ConnStore {
     @Override
     public RemoteClusterConn get(String id) {
         Map<String, Object> row = getRow(id);
-        if (row == null) {
-            return null;
+        if (row == null || STATE_DISMISSED.equalsIgnoreCase(str(row.get("sync_state")))) {
+            return null; // 软删墓碑:数据面不可见(路由/探活不可再建连)
         }
         RemoteClusterConn conn = new RemoteClusterConn(
                 str(row.get("scheme")), str(row.get("host")),
@@ -266,7 +269,7 @@ public class JdbcConnStore implements ConnStore {
         }
     }
 
-    /** 连接中心同步域状态标记:STALE=源已失联 / null=恢复。失败 WARN 不抛(增强信息红线)。 */
+    /** 连接中心同步域状态标记:STALE=源已失联 / DISMISSED=人工软删墓碑(经 markDismissed 落库)/ null=恢复。失败 WARN 不抛(增强信息红线)。 */
     @Override
     public void markSyncState(String id, String state) {
         if (id == null || id.trim().isEmpty()) {
@@ -290,6 +293,19 @@ public class JdbcConnStore implements ConnStore {
         } catch (SQLException e) {
             LOG.warn("[JdbcConnStore] markSyncState failed id={}: {}", id, e.getMessage(), e);
         }
+    }
+
+    /** 同步档案软删除:sync_state 置 DISMISSED(墓碑保留,契约见 ConnStore);复用 markSyncState 写路径。 */
+    @Override
+    public void markDismissed(String id) {
+        markSyncState(id, STATE_DISMISSED);
+    }
+
+    /** 读单条档案的同步域状态标记(STALE/DISMISSED);无标记或档案不存在返回 null。 */
+    @Override
+    public String getSyncState(String id) {
+        Map<String, Object> row = getRow(id);
+        return row == null ? null : str(row.get("sync_state"));
     }
 
     // ---------------- internal ----------------

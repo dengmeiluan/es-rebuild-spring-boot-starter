@@ -37,7 +37,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * 连接中心自动同步批:引擎全语义行为锁(FakeStore 直构造,仓内无 mockito 基线)。
  * 覆盖:幂等 id/节点规范化/首建/指纹免刷/指纹变更落库/源内判重/手工优先冲突/
- * STALE 标记-恢复-失联不复活-在线重建镜像语义/降级红线/skipReason/配置默认 minRole/环境映射集成。
+ * STALE 标记-恢复-人工软删档案不再回灌/降级红线/skipReason/配置默认 minRole/环境映射集成。
  */
 public class ClusterConnSyncEngineTest {
 
@@ -51,6 +51,10 @@ public class ClusterConnSyncEngineTest {
         @Override public List<Map<String, Object>> list() {
             List<Map<String, Object>> out = new ArrayList<>();
             for (Map.Entry<String, Map<String, Object>> e : rows.entrySet()) {
+                Object st = e.getValue().get("syncState");
+                if (STATE_DISMISSED.equalsIgnoreCase(st == null ? null : String.valueOf(st))) {
+                    continue; // 对齐真店契约:软删墓碑不透出读面
+                }
                 Map<String, Object> v = new LinkedHashMap<>(e.getValue());
                 v.put("id", e.getKey());
                 out.add(v);
@@ -120,6 +124,15 @@ public class ClusterConnSyncEngineTest {
             if (r == null) return;
             if (state == null || state.trim().isEmpty()) r.remove("syncState");
             else r.put("syncState", state);
+        }
+
+        @Override public void markDismissed(String id) {
+            markSyncState(id, STATE_DISMISSED);
+        }
+
+        @Override public String getSyncState(String id) {
+            Map<String, Object> r = rows.get(id);
+            return r == null || r.get("syncState") == null ? null : String.valueOf(r.get("syncState"));
         }
     }
 
@@ -256,7 +269,7 @@ public class ClusterConnSyncEngineTest {
     }
 
     @Test
-    public void 失联档案人工删除后不复活_在线人工删除镜像重建() {
+    public void 人工删除的同步档案软删后不再回灌_在线与失联同规() {
         AtomicInteger round = new AtomicInteger();
         ClusterConnSyncEngine e = engine(() -> {
             int r = round.incrementAndGet();
@@ -269,14 +282,18 @@ public class ClusterConnSyncEngineTest {
         e.runOnce("scheduled"); // c2 → STALE
         String c2 = ClusterConnSyncEngine.syncIdOf("c2");
         String c1 = ClusterConnSyncEngine.syncIdOf("c1");
-        store.delete(c2); // 人工删除失联档案
+        store.markDismissed(c2); // 人工删除失联档案(软删墓碑)
+        store.markDismissed(c1); // 人工删除在线档案(软删墓碑)
         int before = store.saveCalls;
         ClusterConnSyncReport r3 = e.runOnce("scheduled");
-        assertFalse("源已无此连接,删除后不复活", store.rows.containsKey(c2));
-        store.delete(c1); // 人工删除在线档案
-        ClusterConnSyncReport r4 = e.runOnce("scheduled");
-        assertTrue("在线档案镜像语义重建", store.rows.containsKey(c1));
-        assertEquals(1, r4.getCreated());
+        assertEquals("删除的同步档案不回灌(不新建)", 0, r3.getCreated());
+        assertEquals("且不覆盖既有墓碑(不更新)", 0, r3.getUpdated());
+        assertEquals("墓碑不参与失联标记", 0, r3.getMarkedStale());
+        assertEquals("零 save(不覆盖档案、不改 createdAt)", before, store.saveCalls);
+        assertEquals("墓碑标记保留(不清标记)", "DISMISSED", store.getSyncState(c1));
+        assertEquals("DISMISSED", store.getSyncState(c2));
+        assertTrue("报告留痕:被软删挡下的条目对运维可见",
+                r3.getNotes().toString().contains("不再回灌"));
     }
 
     @Test

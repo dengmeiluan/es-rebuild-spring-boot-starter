@@ -94,4 +94,26 @@ public interface ConnStore {
      */
     default void markSyncState(String id, String state) {
     }
+
+    /** 同步档案软删除标记值:人工删除的同步档案落此标记保留为墓碑,不再被自动同步回灌。 */
+    String STATE_DISMISSED = "DISMISSED";
+
+    /**
+     * 同步档案软删除(幂等):档案保留为墓碑——两内置档落 syncState=DISMISSED 后,
+     * {@link #list()} 脱敏读面不再透出、{@link #get(String)} 返回 null(管理列表/探活/
+     * 指标/路由整体隐身),自动同步引擎据此跳过重建。手工域档案不走此路径,仍走 {@link #delete(String)}。
+     * 默认 no-op——宿主自定义 ConnStore 档安全忽略(退回物理删除语义);实现须吞异常只留日志
+     * (与 {@link #markSyncState} 同款红线:目录语义变更,绝不反噬请求主流程)。
+     */
+    default void markDismissed(String id) {
+    }
+
+    /**
+     * 读单条连接档案的同步域状态标记(与 {@link #markSyncState} 成对的读面):
+     * "STALE"/"DISMISSED" 等,无标记或档案不存在返回 null。
+     * 默认恒 null——宿主自定义 ConnStore 档按「无标记」处理,自动同步引擎不触发软删跳过。
+     */
+    default String getSyncState(String id) {
+        return null;
+    }
 }
