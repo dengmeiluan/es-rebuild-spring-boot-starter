@@ -121,6 +121,7 @@ watch(() => props.tree, t => {
   const walk = (x: QueryNode) => {
     if (x.type === 'bool') x.children.forEach(c => walk(c.node));
     else if (x.type === 'wrap') { if (x.child) walk(x.child); }
+    else if (x.type === 'multi') x.children.forEach(c => walk(c.node));
     else if (x.field) names.push(x.field);
   };
   if (t.root) walk(t.root);
@@ -149,6 +150,8 @@ const leafStats = computed(() => {
       x.children.forEach(c => walk(c.node, false));
     } else if (x.type === 'wrap') {
       if (x.child) walk(x.child, false);
+    } else if (x.type === 'multi') {
+      x.children.forEach(c => walk(c.node, false));
     } else {
       st.total++;
       if (x.disabled) st.disabled++;
@@ -243,6 +246,7 @@ function setAllDisabled(disabled: boolean) {
   const walk = (x: QueryNode): QueryNode => {
     if (x.type === 'bool') return { ...x, children: x.children.map(c => ({ occur: c.occur, node: walk(c.node) })) };
     if (x.type === 'wrap') return { ...x, child: x.child ? walk(x.child) : null };
+    if (x.type === 'multi') return { ...x, children: x.children.map(c => ({ key: c.key, node: walk(c.node) })) };
     return { ...x, disabled };
   };
   setRoot(walk(r));
@@ -269,6 +273,7 @@ function cloneNode(n: QueryNode): QueryNode {
     const id = nid();
     if (x.type === 'bool') return { ...x, id, children: x.children.map(c => ({ occur: c.occur, node: reid(c.node) })) };
     if (x.type === 'wrap') return { ...x, id, child: x.child ? reid(x.child) : null };
+    if (x.type === 'multi') return { ...x, id, children: x.children.map(c => ({ key: c.key, node: reid(c.node) })) };
     return { ...x, id };
   };
   return reid(fresh);
@@ -284,6 +289,15 @@ function insertAfter(root: QueryNode, id: string): QueryNode {
     return { ...root, children: root.children.map(c => ({ occur: c.occur, node: insertAfter(c.node, id) })) };
   }
   if (root.type === 'wrap' && root.child) return { ...root, child: insertAfter(root.child, id) };
+  if (root.type === 'multi') {
+    const idx = root.children.findIndex(c => c.node.id === id);
+    if (idx >= 0) {
+      const src = root.children[idx];
+      const children = [...root.children.slice(0, idx + 1), { key: src.key, node: cloneNode(src.node) }, ...root.children.slice(idx + 1)];
+      return { ...root, children };
+    }
+    return { ...root, children: root.children.map(c => ({ key: c.key, node: insertAfter(c.node, id) })) };
+  }
   return root;
 }
 function onDuplicate(id: string) {
@@ -378,7 +392,7 @@ provide(TREE_BUS, {
 /* stale 冻结：整面板禁交互——与「冻结」文案语义一致，
  防树编辑以冻结旧树覆盖用户正在修正的 DSL（Monaco setValue 会清 undo 栈，覆盖不可逆）。
  .qtp-none/.qtp-single-bar 一并冻结：stale 时「加查询条件」同样会覆盖手改。 */
-.qtp.froz .bgn, .qtp.froz .cn, .qtp.froz .gn, .qtp.froz .wnr, .qtp.froz .rx,
+.qtp.froz .bgn, .qtp.froz .cn, .qtp.froz .gn, .qtp.froz .wnr, .qtp.froz .mnr, .qtp.froz .rx,
 .qtp.froz .qtp-none, .qtp.froz .qtp-single-bar { pointer-events: none; opacity: .55; }
 /* 头部工具（过滤/折叠/启停）一并冻结——「停用全部」会写树，冻结期覆盖手改不可逆 */
 .qtp.froz .qtp-hd { pointer-events: none; opacity: .55; }

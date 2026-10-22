@@ -2,12 +2,16 @@
   <div class="wnr">
     <div class="wnr-hd">
       <span class="wnr-grip" title="拖拽排序（按住拖动）" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
-      <span class="wnr-op">{{ WRAP_LABEL[node.op] || node.op }}</span>
-      <code class="wnr-fk">{{ WRAP_FIELD[node.op] }}</code>
-      <FieldSelect
-        :model-value="node.field" :fields="fields" :types="types" :type-priority="wrapperPriority"
-        @update:model-value="v => emit('update:node', { ...node, field: v })"
-      />
+      <span class="wnr-op">{{ WRAP_LABELS[node.op] || node.op }}</span>
+      <!-- 无路由字段包装（constant_score 等）不渲染字段段；有路由字段显示键名+FieldSelect -->
+      <template v-if="node.field !== null">
+        <code class="wnr-fk">{{ WRAP_FIELD[node.op] }}</code>
+        <FieldSelect
+          :model-value="node.field" :fields="fields" :types="types" :type-priority="wrapperPriority"
+          @update:model-value="v => emit('update:node', { ...node, field: v })"
+        />
+      </template>
+      <code v-else class="wnr-fk mono">{{ node.childKey || 'query' }}</code>
       <span style="flex:1"></span>
       <button aria-label="参数（score_mode 等）" class="btn sm ghost" :class="{ on: showParams }" title="参数（score_mode 等）"
               @click="showParams = !showParams">
@@ -32,22 +36,22 @@
 </template>
 
 <script setup lang="ts">
-/* W1：nested/has_child/has_parent 包装节点。child=null 时序列化兜底 match_all（ 契约）。
- 子节点不传给解散入口（dissolve 仅支持 bool-in-bool）。 */
+/* W1：包装节点行（nested/has_child/has_parent 路由字段族 + 985 扩员 constant_score/
+ function_score/script_score/pinned 无路由字段族——字段段按 field!==null 分派）。
+ child=null 时序列化兜底 match_all（ 契约）。子节点不传给解散入口（dissolve 仅支持 bool-in-bool）。 */
 import { ref, computed } from 'vue';
 import { X, Group, Plus, SlidersHorizontal } from 'lucide-vue-next';
 import FieldSelect from './FieldSelect.vue';
 import GenericParams from './GenericParams.vue';
 import NodeRenderer from './NodeRenderer.vue';
 import { DRAG_KEY, fireDrag } from './treeBus';
+import { WRAP_LABELS } from '../../utils/queryAstOps';
 import { WRAP_FIELD, nid, wrapInBool, type WrapNode, type BoolNode } from '../../utils/queryAst';
 
 const props = defineProps<{ node: WrapNode; fields: string[]; types: Record<string, string> }>();
 const emit = defineEmits<{
   (e: 'update:node', n: WrapNode): void; (e: 'remove'): void; (e: 'wrap'): void;
 }>();
-
-const WRAP_LABEL: Record<string, string> = { nested: '嵌套', has_child: '子文档', has_parent: '父文档' };
 /* 【W3b】包装路由字段的类型置顶按 node.op 分派——实地核真 useIndexFields.walk：mapping 里
  type:'nested'/'join' 按原类型入表、纯 properties 节点入 'object'，包装路由字段（nested 的
  path / has_child·has_parent 的 join 字段名）类型是 nested/object/join，原 ['keyword'] 置顶

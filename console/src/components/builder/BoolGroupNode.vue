@@ -38,6 +38,10 @@
         <span style="flex:1"></span>
         <button class="btn sm ghost" title="在此分区加条件" @click="addClause(o)"><Plus :size="11" /> 条件</button>
         <button class="btn sm ghost" title="在此分区加嵌套子组" @click="addGroup(o)"><Group :size="11" /> 子组</button>
+        <!-- 985：高级算子菜单——multi_match/geo 系/ids/script/复合容器等非常用算子的插入入口
+             （ClauseNode 下拉只能切换已有条件的算子，这里是「新建即高级」通道） -->
+        <button class="btn sm ghost" :aria-expanded="advOpen === o" title="高级算子（多字段全文/地理/脚本/复合容器…）"
+                @click.stop="toggleAdv(o, $event)"><Layers :size="11" /> 高级</button>
         <button v-if="pinned.includes(o) && !childrenOf(o).length" aria-label="收起此空分区" class="btn sm ghost"
                 title="收起此空分区" @click="unpin(o)">
 <X :size="11" />
@@ -58,6 +62,21 @@
       <button v-for="o in hiddenOccur" :key="o" class="btn sm ghost bgn-more-btn" :class="'p-' + o" @click="pin(o)">+ {{ OCCUR_LABEL[o] }}</button>
     </div>
     </template>
+    <!-- 985 高级算子菜单：teleport body + fixed（构建器面板 overflow 裁剪，FieldSelect 弹层同款取舍）；
+         顶部即时过滤（中文名/算子名模糊匹配），Enter 插入首个命中，Esc 关闭 -->
+    <Teleport to="body">
+      <div v-if="advOpen" class="adv-pop float-pop" :style="advStyle" @click.stop>
+        <input ref="advQEl" v-model="advQ" class="inp adv-q" placeholder="搜索算子（如 multi / geo / 跨度），Enter 插入首个命中"
+               @keydown.esc.stop="advOpen = null" @keydown.enter.prevent="addFirstAdvHit" />
+        <template v-for="g in advGroups" :key="g.group">
+          <div class="adv-g">{{ g.group }}</div>
+          <button v-for="op in g.ops" :key="op" class="adv-i" type="button" @click="addAdvanced(op)">
+            <span>{{ labelOfOp(op) }}</span><code class="mono">{{ op }}</code>
+          </button>
+        </template>
+        <div v-if="!advGroups.length" class="adv-none">无匹配算子</div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -72,15 +91,16 @@ export const BGN_COLLAPSE_EVENT = 'qtp-collapse-all';
  空分区默认折叠（must 除外），拖拽广播期间全量亮出作落点；可手动固定展开。
  不可变更新：remove/wrap/dissolve 经 queryAst 树操作函数；add/replace 本地展开新 children
  （insertChild 会标 arrForm 改变序列化形态，追加语义下不可用）。一切变更 emit 新对象。 */
-import { ref, computed, watch, inject, onMounted, onBeforeUnmount } from 'vue';
-import { X, Group, Ungroup, Plus, SlidersHorizontal, ChevronDown, ChevronRight, Copy } from 'lucide-vue-next';
+import { ref, computed, watch, inject, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { X, Group, Ungroup, Plus, SlidersHorizontal, ChevronDown, ChevronRight, Copy, Layers } from 'lucide-vue-next';
 import GenericParams from './GenericParams.vue';
 import NodeRenderer from './NodeRenderer.vue';
 import { TREE_BUS, DRAG_KEY, DRAG_EVENT, fireDrag } from './treeBus';
 import { defaultLeafTarget, curFieldSearchIndex } from '../../utils/fieldSearch';
 import { useScopedDraft } from '../../composables/useScopedDraft';
+import { ADV_MENU, labelOfOp } from '../../utils/queryAstOps';
 import {
-  OCCURS, nid, removeNodeById, wrapInBool, dissolveBool,
+  OCCURS, nid, removeNodeById, wrapInBool, dissolveBool, makeNodeByOp,
   type BoolNode, type LeafNode, type QueryNode, type Occur,
 } from '../../utils/queryAst';
 
@@ -129,6 +149,46 @@ function defaultLeaf(): LeafNode {
 function addClause(o: Occur) {
   emit('update:node', { ...props.node, children: [...props.node.children, { occur: o, node: defaultLeaf() }] });
 }
+
+/* ═══ 985：高级算子菜单 ═══
+ 单开互斥（开一个分区关其他）；菜单定位锚在触发钮下方，右缘翻转防溢出；
+ 点外部关闭（capture 监听，菜单本体 @click.stop 免误关）；顶部过滤即时收缩分组。 */
+const advOpen = ref<Occur | null>(null);
+const advStyle = ref<Record<string, string>>({});
+const advQ = ref('');
+const advQEl = ref<HTMLInputElement>();
+const advGroups = computed(() => {
+  const q = advQ.value.trim().toLowerCase();
+  if (!q) return ADV_MENU;
+  return ADV_MENU.map(g => ({ ...g, ops: g.ops.filter(op =>
+    op.toLowerCase().includes(q) || labelOfOp(op).toLowerCase().includes(q)) }))
+    .filter(g => g.ops.length);
+});
+function toggleAdv(o: Occur, e: MouseEvent) {
+  if (advOpen.value === o) { advOpen.value = null; return; }
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  const left = Math.min(rect.left, window.innerWidth - 292);
+  advStyle.value = { top: rect.bottom + 4 + 'px', left: Math.max(8, left) + 'px' };
+  advOpen.value = o;
+  advQ.value = '';
+  nextTick(() => advQEl.value?.focus());
+}
+function addAdvanced(op: string) {
+  if (!advOpen.value) return;
+  const o = advOpen.value;
+  advOpen.value = null;
+  emit('update:node', { ...props.node, children: [...props.node.children, { occur: o, node: makeNodeByOp(op) }] });
+}
+/* 过滤后 Enter 直插首个命中（键盘流：搜索 → Enter 即得，不用碰鼠标） */
+function addFirstAdvHit() {
+  const first = advGroups.value[0]?.ops[0];
+  if (first) addAdvanced(first);
+}
+/* 非 capture：菜单项自己的 click 先跑完（含插入），.adv-pop @click.stop 再拦住冒泡，
+   外部点击照常冒泡到 window 关闭——capture 会在菜单项 handler 之前清 advOpen 吞掉插入 */
+const onAdvOutside = () => { advOpen.value = null; };
+onMounted(() => window.addEventListener('click', onAdvOutside));
+onBeforeUnmount(() => window.removeEventListener('click', onAdvOutside));
 function addGroup(o: Occur) {
   const g: BoolNode = { id: nid(), type: 'bool', children: [{ occur: 'must', node: defaultLeaf() }], params: {}, arrForm: { must: true } };
   emit('update:node', { ...props.node, children: [...props.node.children, { occur: o, node: g }] });
@@ -215,4 +275,13 @@ onBeforeUnmount(() => window.removeEventListener(BGN_COLLAPSE_EVENT, onCollapseE
 .bgn-more-btn.p-filter:hover { color: var(--c-filter); }
 .bgn-more-btn.p-should:hover { color: var(--c-should); }
 .bgn-more-btn.p-must_not:hover { color: var(--c-exclude); }
+/* 985 高级算子菜单（teleport body）：float-pop 壳在 theme.css（fixed/底/边/影/圆角），
+ 本处只留内容布局——紧凑双列分组清单 */
+.adv-pop { position: fixed; z-index: 60; width: 284px; max-height: 60vh; overflow-y: auto; padding: var(--sp-2); display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-0); }
+.adv-q { grid-column: 1 / -1; height: 28px; font-size: var(--fs-sm); margin-bottom: var(--sp-1); }
+.adv-g { grid-column: 1 / -1; font-size: var(--fs-2xs); color: var(--tx2); padding: var(--sp-1) var(--sp-1) 0; user-select: none; }
+.adv-none { grid-column: 1 / -1; font-size: var(--fs-xs); color: var(--tx2); padding: var(--sp-2); text-align: center; }
+.adv-i { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); padding: 3px var(--sp-1); border: none; background: none; border-radius: var(--r-xs); font-size: var(--fs-sm); color: var(--tx0); cursor: pointer; text-align: left; }
+.adv-i:hover { background: var(--ac-soft); }
+.adv-i code { font-size: var(--fs-2xs); color: var(--tx2); }
 </style>

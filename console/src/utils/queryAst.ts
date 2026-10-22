@@ -7,7 +7,7 @@
  后者覆盖前者）；agg 非标 body（非对象/多 op 键多余键丢弃）；highlight 字段值非对象归一 {}；
  meta:null 丢弃。
  零拷贝取舍：parse 不重造子对象（params/raw 直引原 DSL），parse 后不得 mutate 原 DSL。 */
-import { OPS_META } from './queryAstOps';
+import { OPS_META, MULTI_META, type ParamMeta } from './queryAstOps';
 
 export type Occur = 'must' | 'filter' | 'should' | 'must_not';
 export const OCCURS: Occur[] = ['must', 'filter', 'should', 'must_not'];
@@ -20,7 +20,8 @@ const isObj = (v: unknown): v is Record<string, unknown> =>
 
 export interface LeafNode {
   id: string; type: 'leaf'; op: string;
-  field: string | null;          // 标准单字段形态非空；null 时 raw 为权威
+  field: string | null;          // 标准单字段形态非空；null 时 raw 为权威（fields/named/none 形态也无 field）
+  fields?: string[] | null;      // form='fields' 多字段形态（multi_match 等）；null = body 无 fields 键
   value: unknown;
   params: Record<string, unknown>;
   raw: unknown;
@@ -35,12 +36,21 @@ export interface BoolNode {
   arrForm: Partial<Record<Occur, boolean>>;
 }
 export interface WrapNode {
-  id: string; type: 'wrap'; op: string;   // nested / has_child / has_parent
-  field: string;                          // path / type / parent_type
+  id: string; type: 'wrap'; op: string;   // nested / has_child / has_parent / constant_score / function_score / script_score / pinned
+  field: string | null;                   // 路由字段（path/type/parent_type）；constant_score 等无路由字段 = null
+  childKey?: string;                      // 子查询键名记忆（query/filter/organic），缺省 'query'
   child: QueryNode | null;
   params: Record<string, unknown>;
 }
-export type QueryNode = LeafNode | BoolNode | WrapNode;
+/* 985：多子查询容器（boosting 正负加权 / dis_max 多查询取最大）。
+ 同 key 多条 = 序列化聚合数组（dis_max queries）；arrForm 记忆各键原始数组形态（往返无损）。 */
+export interface MultiNode {
+  id: string; type: 'multi'; op: string;
+  children: Array<{ key: string; node: QueryNode }>;
+  params: Record<string, unknown>;
+  arrForm: Partial<Record<string, boolean>>;
+}
+export type QueryNode = LeafNode | BoolNode | WrapNode | MultiNode;
 
 /* W2 富化：sort/_source/highlight/aggs 一等解析（形态记忆，往返无损） */
 export interface SortItem { id: string; field: string; form: 'str' | 'short' | 'full'; params: Record<string, unknown> }
@@ -60,8 +70,28 @@ export interface QueryTree {
 }
 type ParseResult = { ok: true; tree: QueryTree } | { ok: false; reason: string };
 
-/* 包装算子 → 字段键名 */
-export const WRAP_FIELD: Record<string, string> = { nested: 'path', has_child: 'type', has_parent: 'parent_type' };
+/* 包装算子元数据：fieldKey = 路由字段键（缺省 = 无路由字段包装）；childKey = 子查询键名。
+ WRAP_FIELD 保持路由字段键的兼容视图（既有消费面：builderTypePriority521 等）。 */
+export interface WrapMeta { fieldKey?: string; childKey: string }
+export const WRAP_META: Record<string, WrapMeta> = {
+  nested: { fieldKey: 'path', childKey: 'query' },
+  has_child: { fieldKey: 'type', childKey: 'query' },
+  has_parent: { fieldKey: 'parent_type', childKey: 'query' },
+  constant_score: { childKey: 'filter' },
+  function_score: { childKey: 'query' },
+  script_score: { childKey: 'query' },
+  pinned: { childKey: 'organic' },
+  span_first: { childKey: 'match' },
+  span_multi: { childKey: 'match' },
+};
+export const WRAP_FIELD: Record<string, string> = Object.fromEntries(
+  Object.entries(WRAP_META).filter(([, m]) => m.fieldKey).map(([op, m]) => [op, m.fieldKey!]),
+);
+
+/* geo_distance 特判：body 是「字段键 + 散参数」同层（{distance, location:{…}}）——
+ 值为对象的键即字段。geo_point 字段值也可以是字符串（"41,-87"），该形态无对象值键，
+ 照旧落 raw 键值表（无损不丢）。 */
+const FIELD_OBJ_OPS = new Set(['geo_distance']);
 
 function parseLeaf(op: string, body: unknown): LeafNode {
   const base: LeafNode = { id: nid(), type: 'leaf', op, field: null, value: null, params: {}, raw: null };
@@ -77,16 +107,48 @@ function parseLeaf(op: string, body: unknown): LeafNode {
     return { ...base, raw: body };
   }
   const meta = OPS_META[op];
-  if (meta?.form === 'field' && isObj(body) && Object.keys(body).length === 1) {
-    const field = Object.keys(body)[0];
-    const inner = body[field];
-    if (meta.wrap === 'none') return { ...base, field, value: inner };   // range/terms：inner 整体即值
-    const vk = meta.wrap === 'query' ? 'query' : 'value';
-    if (isObj(inner) && vk in inner) {
-      const { [vk]: value, ...rest } = inner;
-      return { ...base, field, value, params: rest };
+  if (meta?.form === 'field' && isObj(body)) {
+    /* geo_distance 混层形态：对象值键 = 字段，其余键进 params */
+    if (FIELD_OBJ_OPS.has(op)) {
+      const fk = Object.keys(body).find(k => isObj(body[k]));
+      if (fk) {
+        const { [fk]: value, ...rest } = body;
+        return { ...base, field: fk, value, params: rest };
+      }
+      return { ...base, raw: body };
     }
-    return { ...base, field, value: inner };
+    if (Object.keys(body).length === 1) {
+      const field = Object.keys(body)[0];
+      const inner = body[field];
+      if (meta.wrap === 'none') return { ...base, field, value: inner };   // range/terms/对象值：inner 整体即值
+      const vk = meta.valueKey || (meta.wrap === 'query' ? 'query' : 'value');
+      if (isObj(inner) && vk in inner) {
+        const { [vk]: value, ...rest } = inner;
+        return { ...base, field, value, params: rest };
+      }
+      return { ...base, field, value: inner };
+    }
+    return { ...base, raw: body };
+  }
+  /* 多字段形态：{mainKey: 值, fields: […], …其余参数}（fields 键缺席 = null 记忆） */
+  if (meta?.form === 'fields' && isObj(body)) {
+    const { [meta.mainKey!]: value, fields, ...rest } = body;
+    return { ...base, value, fields: Array.isArray(fields) ? fields.map(String) : null, params: rest };
+  }
+  /* 具名字段键形态：{fieldKey: '字段名', mainKey: 值, …其余}（fieldKey 非 string 进 params 原样） */
+  if (meta?.form === 'named' && isObj(body)) {
+    const { [meta.mainKey!]: value, ...rest } = body;
+    const fv = rest[meta.fieldKey!];
+    if (meta.fieldKey && typeof fv === 'string') {
+      delete rest[meta.fieldKey];
+      return { ...base, field: fv, value, params: rest };
+    }
+    return { ...base, value, params: rest };
+  }
+  /* 无字段形态：{mainKey: 值, …其余参数}（ids/script/wrapper） */
+  if (meta?.form === 'none' && isObj(body)) {
+    const { [meta.mainKey!]: value, ...rest } = body;
+    return { ...base, value, params: rest };
   }
   return { ...base, raw: body };   // 非标准/未知 → 通用结构化节点
 }
@@ -103,12 +165,30 @@ function parseBool(body: Record<string, unknown>): BoolNode {
 }
 
 function parseWrap(op: string, body: Record<string, unknown>): QueryNode {
-  const fk = WRAP_FIELD[op];
-  if (typeof body[fk] !== 'string' || !isObj(body.query)) {
-    return { id: nid(), type: 'leaf', op, field: null, value: null, params: {}, raw: body };
+  const fm = WRAP_META[op];
+  const fk = fm.fieldKey;
+  const rawLeaf = (): QueryNode => ({ id: nid(), type: 'leaf', op, field: null, value: null, params: {}, raw: body });
+  if (!fk) {
+    /* 无路由字段包装（constant_score/function_score/script_score/pinned） */
+    if (!isObj(body[fm.childKey])) return rawLeaf();
+    const { [fm.childKey]: query, ...params } = body;
+    return { id: nid(), type: 'wrap', op, field: null, childKey: fm.childKey, child: parseQueryNode(query), params };
   }
-  const { [fk]: field, query, ...params } = body;
-  return { id: nid(), type: 'wrap', op, field: field as string, child: parseQueryNode(query), params };
+  if (typeof body[fk] !== 'string' || !isObj(body[fm.childKey])) return rawLeaf();
+  const { [fk]: field, [fm.childKey]: query, ...params } = body;
+  return { id: nid(), type: 'wrap', op, field: field as string, childKey: fm.childKey, child: parseQueryNode(query), params };
+}
+
+function parseMulti(op: string, body: Record<string, unknown>): QueryNode {
+  const meta = MULTI_META[op];
+  const n: MultiNode = { id: nid(), type: 'multi', op, children: [], params: {}, arrForm: {} };
+  for (const [k, v] of Object.entries(body)) {
+    if (!meta.keys.includes(k)) { n.params[k] = v; continue; }
+    const arr = Array.isArray(v);
+    n.arrForm[k] = arr;   // 两态都记（对象形态 undefined 会让序列化无从还原单对象）
+    for (const item of arr ? v : [v]) n.children.push({ key: k, node: parseQueryNode(item) });
+  }
+  return n;
 }
 
 export function parseQueryNode(q: unknown): QueryNode {
@@ -118,7 +198,8 @@ export function parseQueryNode(q: unknown): QueryNode {
   const op = keys[0];
   const body = q[op];
   if (op === 'bool' && isObj(body)) return parseBool(body);
-  if (op in WRAP_FIELD && isObj(body)) return parseWrap(op, body);
+  if (op in WRAP_META && isObj(body)) return parseWrap(op, body);
+  if (op in MULTI_META && isObj(body)) return parseMulti(op, body);
   return parseLeaf(op, body);
 }
 
@@ -143,18 +224,45 @@ export function serQueryNode(n: QueryNode): unknown {
     }
     return { bool: out };
   }
+  if (n.type === 'multi') {
+    const meta = MULTI_META[n.op];
+    const out: Record<string, unknown> = { ...n.params };
+    for (const k of meta.keys) {
+      const arr = n.children.filter(c => c.key === k).map(c => serQueryNode(c.node));
+      if (!arr.length) continue;
+      out[k] = n.arrForm[k] === false && arr.length === 1 ? arr[0] : arr;   // 原形态记忆优先（畸形输入无损）
+    }
+    return { [n.op]: out };
+  }
   if (n.type === 'leaf' && n.disabled) return { match_none: {} };   // 停用条件单独出现在顶层时兜底为空结果(不污染查询)
   if (n.type === 'wrap') {
-    return { [n.op]: { [WRAP_FIELD[n.op]]: n.field, query: n.child ? serQueryNode(n.child) : { match_all: {} }, ...n.params } };
+    const body: Record<string, unknown> = { ...n.params };
+    body[n.childKey || 'query'] = n.child ? serQueryNode(n.child) : { match_all: {} };
+    if (n.field !== null) body[WRAP_META[n.op]?.fieldKey || 'path'] = n.field;
+    return { [n.op]: body };
   }
   if (n.op === '__raw__') return n.raw;
   if (n.field === null && n.raw !== null) return { [n.op]: n.raw };   // 非标准形态 raw 权威优先
   if (n.op === 'match_all' || n.op === 'match_none') return { [n.op]: { ...n.params } };
   if (n.op === 'exists') return { exists: { field: n.field, ...n.params } };
-  if (n.field === null) return { [n.op]: n.raw };
   const meta = OPS_META[n.op];
-  if (meta?.wrap === 'none') return { [n.op]: { [n.field]: n.value } };
-  const vk = meta?.wrap === 'query' ? 'query' : 'value';
+  /* 多字段形态：{mainKey: 值, fields: […], …参数}（fields null = 原无键不写回） */
+  if (meta?.form === 'fields') {
+    const body: Record<string, unknown> = { [meta.mainKey!]: n.value, ...n.params };
+    if (n.fields !== null && n.fields !== undefined) body.fields = [...n.fields];
+    return { [n.op]: body };
+  }
+  /* 具名字段键形态：{fieldKey: 字段, mainKey: 值, …参数}（field null = 原无字段键不写回） */
+  if (meta?.form === 'named') {
+    const body: Record<string, unknown> = { [meta.mainKey!]: n.value, ...n.params };
+    if (n.field !== null && n.field !== undefined) body[meta.fieldKey!] = n.field;
+    return { [n.op]: body };
+  }
+  /* 无字段形态：{mainKey: 值, …参数} */
+  if (meta?.form === 'none') return { [n.op]: { [meta.mainKey!]: n.value, ...n.params } };
+  if (n.field === null) return { [n.op]: n.raw };   // 兜底：无字段的非标准富形态（理论不可达，保守还原）
+  if (meta?.wrap === 'none') return { [n.op]: { ...n.params, [n.field]: n.value } };   // geo_distance 混层：散参数合回 body（terms/range params 恒空零变）
+  const vk = meta?.valueKey || (meta?.wrap === 'query' ? 'query' : 'value');
   const inner = Object.keys(n.params).length ? { [vk]: n.value, ...n.params } : n.value;
   return { [n.op]: { [n.field]: inner } };
 }
@@ -284,6 +392,9 @@ export function updateNodeById(root: QueryNode, id: string, fn: (n: QueryNode) =
     return { ...root, children: root.children.map(c => ({ occur: c.occur, node: updateNodeById(c.node, id, fn) })) };
   }
   if (root.type === 'wrap' && root.child) return { ...root, child: updateNodeById(root.child, id, fn) };
+  if (root.type === 'multi') {
+    return { ...root, children: root.children.map(c => ({ key: c.key, node: updateNodeById(c.node, id, fn) })) };
+  }
   return root;
 }
 
@@ -294,13 +405,18 @@ export function findNode(root: QueryNode, id: string): QueryNode | null {
     return null;
   }
   if (root.type === 'wrap' && root.child) return findNode(root.child, id);
+  if (root.type === 'multi') {
+    for (const c of root.children) { const r = findNode(c.node, id); if (r) return r; }
+    return null;
+  }
   return null;
 }
 
 /* ancestor 的严格后代里是否含 id（不含自身）——拖拽防环用 */
 function isDescendant(ancestor: QueryNode, id: string): boolean {
   const kids: QueryNode[] = ancestor.type === 'bool' ? ancestor.children.map(c => c.node)
-    : ancestor.type === 'wrap' && ancestor.child ? [ancestor.child] : [];
+    : ancestor.type === 'wrap' && ancestor.child ? [ancestor.child]
+    : ancestor.type === 'multi' ? ancestor.children.map(c => c.node) : [];
   return kids.some(k => k.id === id || isDescendant(k, id));
 }
 
@@ -324,6 +440,10 @@ export function removeNodeById(root: QueryNode, id: string): QueryNode {
   if (root.type === 'wrap' && root.child) {
     if (root.child.id === id) return { ...root, child: null };
     return { ...root, child: removeNodeById(root.child, id) };
+  }
+  if (root.type === 'multi') {
+    const children = root.children.filter(c => c.node.id !== id).map(c => ({ key: c.key, node: removeNodeById(c.node, id) }));
+    return { ...root, children };
   }
   return root;
 }
@@ -369,4 +489,34 @@ export function dissolveBool(root: QueryNode, id: string): QueryNode {
 
 export function emptyTree(): QueryTree {
   return { root: null, sort: null, source: null, aggs: null, highlight: null, extras: {} };
+}
+
+/* ═══ 985：高级算子空节点工厂（BoolGroupNode「+ 高级」菜单插入入口） ═══
+ 值初值按形态给安全档：对象值算子 {}、数组值算子 []、标量 ''。未知 op 回退 match_all。 */
+export function makeNodeByOp(op: string): QueryNode {
+  const empty = (): LeafNode => ({ id: nid(), type: 'leaf', op, field: null, value: '', params: {}, raw: null });
+  const wm = WRAP_META[op];
+  if (wm) {
+    return { id: nid(), type: 'wrap', op, field: wm.fieldKey ? '' : null, childKey: wm.childKey, child: null, params: {} };
+  }
+  if (MULTI_META[op]) {
+    const meta = MULTI_META[op];
+    const children = meta.keys.map(key => ({ key, node: matchAllLeafNode() as QueryNode }));
+    const arrForm: Partial<Record<string, boolean>> = {};
+    for (const k of meta.keys) arrForm[k] = meta.arrKeys.includes(k);
+    return { id: nid(), type: 'multi', op, children, params: {}, arrForm };
+  }
+  const meta = OPS_META[op];
+  if (!meta || op === 'match_all' || op === 'match_none') return matchAllLeafNode();
+  if (meta.form === 'field') {
+    const objValue = meta.wrap === 'none' && op !== 'terms';
+    const value = op === 'terms' ? [] : objValue ? {} : '';
+    return { ...empty(), field: '', value };
+  }
+  if (meta.form === 'fields') return { ...empty(), fields: [] };
+  return empty();   // named/none：field null + 标量值初值
+}
+
+function matchAllLeafNode(): LeafNode {
+  return { id: nid(), type: 'leaf', op: 'match_all', field: null, value: {}, params: {}, raw: null };
 }

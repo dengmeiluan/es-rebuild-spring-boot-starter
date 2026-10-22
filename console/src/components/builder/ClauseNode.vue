@@ -11,24 +11,25 @@
     </button>
     <!-- 拖拽源只在 grip 柄：根 draggable 会劫持行内值输入框的文本选择/光标拖划 -->
     <span class="cn-grip" title="拖拽排序（按住拖动）" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
-    <FieldSelect
-      :model-value="node.field || ''" :fields="fields" :types="types" :type-priority="fieldTypePriority"
-      @update:model-value="onField"
-    />
-    <!-- 字段类型徽标 + 类型提示 tooltip（零结构改动的类型教育）：keyword→term 精确、
+    <!-- 字段槽：field/named 形态显示（fields 多字段/none 无字段形态无单字段可选） -->
+    <template v-if="hasFieldSlot">
+      <FieldSelect
+        :model-value="node.field || ''" :fields="fields" :types="types" :type-priority="fieldTypePriority"
+        @update:model-value="onField"
+      />
+      <!-- 字段类型徽标 + 类型提示 tooltip（零结构改动的类型教育）：keyword→term 精确、
  text→match 全文、数值/date→range 范围；mapping 缺失（types 无此字段）不渲染，零降级 -->
-    <!-- 类型徽标挂全站色卡 .mft-type（theme.css），删局部三类型撞色规则 -->
-    <span v-if="fieldType" class="cn-fty mono mft-type" :data-t="fieldType" :title="typeHint">{{ fieldType }}</span>
+      <!-- 类型徽标挂全站色卡 .mft-type（theme.css），删局部三类型撞色规则 -->
+      <span v-if="fieldType" class="cn-fty mono mft-type" :data-t="fieldType" :title="typeHint">{{ fieldType }}</span>
+    </template>
+    <!-- 算子下拉：推荐（opsForType）+ 常用（单字段形态非推荐）+ 高级分组（ADV_MENU 同源） -->
     <select class="inp cn-op" :value="node.op" @change="onOp(($event.target as HTMLSelectElement).value)">
-      <optgroup label="推荐">
-        <option v-for="o in recommended" :key="'r' + o" :value="o">{{ label(o) }}</option>
-      </optgroup>
-      <optgroup label="全部">
-        <option v-for="o in restOps" :key="'a' + o" :value="o">{{ label(o) }}</option>
+      <optgroup v-for="g in opGroups" :key="g.label" :label="g.label">
+        <option v-for="o in g.ops" :key="o" :value="o">{{ label(o) }}</option>
       </optgroup>
     </select>
 
-    <!-- 值控件：按算子形态分派 -->
+    <!-- 值控件：按算子形态分派（985：多字段/对象值/数组值分支加入） -->
     <template v-if="node.op === 'exists' || node.op === 'match_all' || node.op === 'match_none'">
       <span class="cn-na">（无值）</span>
     </template>
@@ -50,6 +51,23 @@
       <span v-if="rangeLexWarn" class="cn-rwarn" role="img" aria-label="keyword 字段的 range 按字典序比较"
             title="keyword 字段的 range 按字典序比较（'100' < '20'）；数值/时间范围建议改用对应类型字段" />
     </template>
+    <!-- 【985】多字段形态：主值输入 + 字段列表输入（逗号分隔 ↔ string[]） -->
+    <template v-else-if="nodeOpForm === 'fields'">
+      <input class="inp cn-val mono" :value="valText"
+             :placeholder="mainKeyPlaceholder"
+             @input="onValue(($event.target as HTMLInputElement).value)" />
+      <input class="inp cn-val mono cn-fields" :value="fieldsText" placeholder="字段列表，逗号分隔"
+             @input="onFields(($event.target as HTMLInputElement).value)" />
+    </template>
+    <!-- 【985】对象值（geo 系/terms_set/intervals/script 等）：常用键快捷 chips +
+     递归键值子表（零降级同款语言）——键名不用猜，点 chips 即得骨架再改值 -->
+    <div v-else-if="isObjValue" class="cn-objval">
+      <div v-if="objKeyHints.length" class="cn-objk" role="group" aria-label="常用键快捷添加">
+        <button v-for="k in objKeyHints" :key="k" class="cn-objk-btn" type="button"
+                :disabled="k in objVal" :title="'添加常用键 ' + k" @click="addObjKey(k)">+ {{ k }}</button>
+      </div>
+      <GenericParams :value="objVal" @update="onObjValue" />
+    </div>
     <!-- 【W3b】boolean 字段 + term：三态 select（true/false/空）替代裸文本输入——
  true/false 直接可选不再手打，选「（空）」= 删除该条件（无值的 term 无语义） -->
     <select
@@ -117,7 +135,7 @@ import FieldSelect from './FieldSelect.vue';
 import GenericParams from './GenericParams.vue';
 import { stdTimeToEpochMs } from '../../utils/format';
 import { DRAG_KEY, TREE_BUS, fireDrag } from './treeBus';
-import { OPS_META, opsForType, RICH_OPS, typePriorityForOp, NUMERIC_VALUE_TYPES } from '../../utils/queryAstOps';
+import { OPS_META, opsForType, RICH_OPS, ADV_MENU, typePriorityForOp, NUMERIC_VALUE_TYPES } from '../../utils/queryAstOps';
 import type { LeafNode } from '../../utils/queryAst';
 
 const props = defineProps<{ node: LeafNode; fields: string[]; types: Record<string, string> }>();
@@ -134,8 +152,23 @@ const toggleDisabled = (v: boolean) => bus?.toggleDisabled(props.node.id, v);
 
 const paramsOpen = ref(false);
 const label = (op: string) => OPS_META[op]?.label || op;
-const recommended = computed(() => opsForType(props.types[props.node.field || '']));
-const restOps = computed(() => RICH_OPS.filter(o => OPS_META[o].form === 'field' && !recommended.value.includes(o)));
+/* 985：算子下拉分组——推荐（opsForType）+ 常用（单字段形态非推荐非高级）+ ADV_MENU
+ 高级分组（全文/精确/地理/脚本/复合，与「+ 高级」菜单同源同序）；去重后全部富算子可达 */
+const nodeOpForm = computed(() => OPS_META[props.node.op]?.form);
+const hasFieldSlot = computed(() => nodeOpForm.value === 'field' || nodeOpForm.value === 'named');
+const opGroups = computed(() => {
+  const rec = opsForType(props.types[props.node.field || '']);
+  const seen = new Set(rec);
+  const groups: Array<{ label: string; ops: string[] }> = [{ label: '推荐', ops: rec }];
+  const advSet = new Set(ADV_MENU.flatMap(g => g.ops));
+  const common = RICH_OPS.filter(o => !advSet.has(o) && OPS_META[o].form === 'field' && !seen.has(o));
+  if (common.length) { groups.push({ label: '常用', ops: common }); common.forEach(o => seen.add(o)); }
+  for (const g of ADV_MENU) {
+    const ops = g.ops.filter(o => OPS_META[o] && !seen.has(o));
+    if (ops.length) { groups.push({ label: g.group, ops }); ops.forEach(o => seen.add(o)); }
+  }
+  return groups;
+});
 const paramSchema = computed(() => OPS_META[props.node.op]?.params || []);
 const hasParams = computed(() => paramSchema.value.length > 0 || Object.keys(props.node.params).length > 0);
 
@@ -215,7 +248,9 @@ function onField(field: string) {
     const t = props.types[field];
     showNudge(t ? `已按 ${t} 字段切换为「${label(nextOp)}」` : `字段无 mapping，已切换为「${label(nextOp)}」`);
   }
-  patch({ field, op: nextOp });
+  /* named 形态字段键可空（query_string 无 default_field 合法）：清空 → null（序列化不写键） */
+  const f = nodeOpForm.value === 'named' && !field ? null : field;
+  patch({ field: f, op: nextOp });
 }
 
 /* range-on-keyword：range 打在 keyword/wildcard 字段按字典序比较（'100' < '20'）——
@@ -253,20 +288,66 @@ function onOwarnClick() {
   const rec = opsForType(fieldType.value).filter(o => o !== 'exists');
   if (rec.length) onOp(rec[0]);
 }
+/* 985：切算子按目标形态重建值/字段/多字段——标量尽量带过去，结构不兼容给安全初值。
+ 对象值算子（wrap none 非 terms）目标 {}；数组值算子（terms/ids）归一 []；
+ fields 形态 field 退役、fields=[]；none 形态 field 退役。 */
+const ARRAY_VAL_OPS = new Set(['terms', 'ids']);
 function onOp(op: string) {
-  /* 切算子时保留 field/value；range ↔ 标量形态互转时给安全初值 */
-  let v = op === 'range'
-    ? (props.node.value && typeof props.node.value === 'object' ? props.node.value : {})
-    : (props.node.value && typeof props.node.value === 'object' ? '' : props.node.value);
-  if (op === 'terms' && !Array.isArray(v)) v = (v === '' || v == null) ? [] : [v];   // terms 只收数组，归一
-  patch({ op, value: v });
+  const meta = OPS_META[op];
+  const v = props.node.value;
+  const isObj = v !== null && typeof v === 'object' && !Array.isArray(v);
+  const form = meta?.form;
+  let value: unknown;
+  if (op === 'range' || (form === 'field' && meta?.wrap === 'none' && op !== 'terms')) value = isObj ? v : {};
+  else if (ARRAY_VAL_OPS.has(op)) value = Array.isArray(v) ? v : (v === '' || v == null) ? [] : [v];
+  else value = isObj ? '' : v;
+  const field = form === 'none' || form === 'fields' ? null : (props.node.field ?? '');
+  const fields = form === 'fields' ? (Array.isArray(props.node.fields) ? props.node.fields : []) : null;
+  patch({ op, value, field, fields });
 }
+/* 数组值算子（terms/ids）↔ 逗号分隔；其余标量直存 */
 const valText = computed(() =>
-  props.node.op === 'terms'
+  ARRAY_VAL_OPS.has(props.node.op)
     ? (Array.isArray(props.node.value) ? props.node.value.join(',') : String(props.node.value ?? ''))
     : String(props.node.value ?? ''));
 function onValue(raw: string) {
-  patch({ value: props.node.op === 'terms' ? raw.split(',').map(s => s.trim()).filter(Boolean) : raw });
+  patch({ value: ARRAY_VAL_OPS.has(props.node.op) ? raw.split(',').map(s => s.trim()).filter(Boolean) : raw });
+}
+/* 多字段形态：fields ↔ 逗号分隔（主值 placeholder 按 mainKey 语义） */
+const mainKeyPlaceholder = computed(() => `主值（${OPS_META[props.node.op]?.mainKey || 'query'}）`);
+const fieldsText = computed(() => (Array.isArray(props.node.fields) ? props.node.fields.join(',') : ''));
+function onFields(raw: string) {
+  patch({ fields: raw.split(',').map(s => s.trim()).filter(Boolean) });
+}
+/* 对象值子表（geo 系/terms_set/intervals/script 等）：值是纯对象即子表编辑 */
+const isObjValue = computed(() => {
+  if (nodeOpForm.value !== 'field' && nodeOpForm.value !== 'none') return false;
+  const v = props.node.value;
+  return v !== null && typeof v === 'object' && !Array.isArray(v);
+});
+const objVal = computed<Record<string, unknown>>(() =>
+  (isObjValue.value ? props.node.value : {}) as Record<string, unknown>);
+function onObjValue(v: Record<string, unknown> | unknown[]) {
+  if (!Array.isArray(v)) patch({ value: v });
+}
+/* 常用键快捷骨架（傻瓜化）：点 chips 添加键、初始值按语义给形态（集合 []、嵌套对象 {}、标量空串） */
+const OBJ_KEY_HINTS: Record<string, string[]> = {
+  geo_distance: ['lat', 'lon'],
+  geo_bounding_box: ['top_left', 'bottom_right'],
+  geo_polygon: ['points'],
+  geo_shape: ['shape', 'relation'],
+  terms_set: ['terms', 'minimum_should_match_field'],
+  /* intervals 真实结构三通道：match 单规则 / allOf 顺序组合 / anyOf 任一——
+   加键后键值仍是递归键值表逐层编辑（allOf.clauses 数组自动走数组分支） */
+  intervals: ['match', 'allOf', 'anyOf', 'ordered'],
+};
+const OBJ_ARR_KEYS = new Set(['terms', 'points', 'shape']);
+const OBJ_OBJ_KEYS = new Set(['top_left', 'bottom_right', 'match', 'allOf', 'anyOf', 'filter']);
+const objKeyHints = computed(() => OBJ_KEY_HINTS[props.node.op] || []);
+function addObjKey(k: string) {
+  if (k in objVal.value) return;
+  const init: unknown = OBJ_ARR_KEYS.has(k) ? [] : OBJ_OBJ_KEYS.has(k) ? {} : '';
+  patch({ value: { ...objVal.value, [k]: init } });
 }
 
 /* ═══ （P1-3a）：值输入候选（term/terms/prefix keyword 精确语义档）═══
@@ -406,6 +487,14 @@ function endDrag() { delete (window as any)[DRAG_KEY]; fireDrag(false); }
 :where(.cn-fty) { color: var(--muted); background: var(--hl); }
 .cn-val { height: 30px; font-size: var(--fs-sm); padding: 3px var(--sp-2); flex: 1 1 120px; min-width: 0; }
 .cn-range { flex: 0 1 110px; }
+/* 985：多字段形态的字段列表输入（与主值并排换行）+ 对象值子表容器（独占一行，dashed 弱边框与 GenericNode 同语言） */
+.cn-fields { flex: 1 1 150px; }
+.cn-objval { flex-basis: 100%; padding: var(--sp-2); border: 1px dashed var(--line); border-radius: var(--r-s); background: var(--bg1); }
+/* 对象值常用键快捷 chips：胶囊虚线弱态，点击补骨架；已添加键禁用防重复 */
+.cn-objk { display: flex; gap: var(--sp-1); flex-wrap: wrap; margin-bottom: var(--sp-1); }
+.cn-objk-btn { font-size: var(--fs-2xs); padding: 1px 7px; border-radius: 999px; border: 1px dashed var(--line-strong); background: var(--bg2); color: var(--tx2); cursor: pointer; transition: color var(--tr), border-color var(--tr); }
+.cn-objk-btn:hover:not(:disabled) { color: var(--ac); border-color: var(--ac); }
+.cn-objk-btn:disabled { opacity: .4; cursor: default; }
 /* 字段选择器伸展：flex-wrap 行内吃满剩余空间，长路径 a.b.c.keyword 不再截断；
  值输入 flex 比例相应上调（形态对齐 RootExtrasPane .rx-sort-row .fs 的遮挡修复） */
 .cn .fs { flex: 1 1 150px; min-width: 0; }

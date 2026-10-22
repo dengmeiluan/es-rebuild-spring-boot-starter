@@ -27,7 +27,7 @@ describe('queryAst 往返无损', () => {
   roundTrip('bool 带 minimum_should_match', { query: { bool: { should: [{ match: { t: 'x' } }], minimum_should_match: 2 } } });
   roundTrip('bool 三层嵌套', { query: { bool: { must: [{ bool: { should: [{ bool: { must_not: [{ term: { x: 1 } }] } }] } }] } } });
   roundTrip('nested 包装', { query: { nested: { path: 'items', query: { term: { 'items.sku': 'A' } }, score_mode: 'avg' } } });
-  roundTrip('未知算子 script_score', { query: { script_score: { query: { match_all: {} }, script: { source: 'return 1;' } } } });
+  roundTrip('script_score 复合包装（985 起一等算子，仍无损）', { query: { script_score: { query: { match_all: {} }, script: { source: 'return 1;' } } } });
   roundTrip('query 多键（非法但须无损）', { query: { match_all: {}, term: { a: 1 } } });
   roundTrip('size/from', { query: { match_all: {} }, size: 20, from: 40 });
   roundTrip('未知顶层键进 extras', { query: { match_all: {} }, track_total_hits: true, collapse: { field: 'uid' } });
