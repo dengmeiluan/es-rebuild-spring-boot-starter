@@ -129,7 +129,6 @@ export const WRAP_META: Record<string, WrapMeta> = {
   script_score: { childKey: 'query' },
   pinned: { childKey: 'organic' },
   span_first: { childKey: 'match' },
-  span_last: { childKey: 'match' },
   span_multi: { childKey: 'match' },
   field_masking_span: { fieldKey: 'field', childKey: 'query' },
 };

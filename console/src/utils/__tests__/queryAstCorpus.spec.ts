@@ -99,8 +99,8 @@ const CORPUS: Array<[string, unknown]> = [
   ['span_containing', { span_containing: { little: { span_term: { f: 'a' } }, big: { span_term: { f: 'b' } } } }],
   ['span_within', { span_within: { little: { span_term: { f: 'a' } }, big: { span_term: { f: 'b' } } } }],
   ['field_masking_span', { field_masking_span: { query: { span_term: { f: 'a' } }, field: 'f' } }],
-  /* 999：跨度族收口两员——span_last（尾部锚定）与 span_gap（span_near 子句内的间隙占位） */
-  ['span_last', { span_last: { match: { span_term: { f: 'v' } }, end: 2 } }],
+  /* 999：span_gap——span_near 子句内的间隙占位（span_last 于 1009 撤册：ES 无此算子，
+   官方文档 404；存量 DSL 中的 span_last 走未知算子 raw 退化零丢失，见下方退化断言） */
   ['span_gap', { span_gap: { width: 8 } }],
   ['span_near-gap', { span_near: { clauses: [{ span_term: { f: 'a' } }, { span_gap: { width: 8 } }, { span_term: { f: 'b' } }], slop: 12, in_order: true } }],
 ];
@@ -115,6 +115,17 @@ const MALFORMED: Array<[string, unknown]> = [
 describe('998 queryAst 全量语料往返无损', () => {
   it.each(CORPUS)('%s 往返一致', (_name, q) => {
     roundTrip(q);
+  });
+});
+
+/* 一〇〇九：span_last 撤册后的退化契约——未知算子（含曾被误注册的 span_last）落
+   raw 叶（op 原名 + raw 权威）零丢失，往返仍一致（GenericNode 递归表可编辑，树富形态不再） */
+describe('1009 未知算子零丢失退化', () => {
+  it('span_last（ES 无此算子）落 raw 叶且往返一致', () => {
+    const q = { span_last: { match: { span_term: { f: 'v' } }, end: 2 } };
+    const n = parseQueryNode(q);
+    expect(isRaw(n)).toBe(true);
+    expect(serQueryNode(n)).toEqual(q);
   });
 });
 
@@ -300,15 +311,14 @@ describe('999 具名参数 schema 扩充', () => {
 
 /* 999：wrap 容器具名参数表——nested/has_child 等的 score_mode 等从自由表升为下拉 */
 describe('999 wrap 容器具名参数表（WRAP_PARAMS）', () => {
-  it('八个容器在册，枚举档与 ES 官方一致', () => {
+  it('容器在册（1009 撤 span_last：ES 无此算子），枚举档与 ES 官方一致', () => {
     expect(new Set(Object.keys(WRAP_PARAMS))).toEqual(new Set(
-      ['nested', 'has_child', 'has_parent', 'constant_score', 'function_score', 'script_score', 'span_first', 'span_last']));
+      ['nested', 'has_child', 'has_parent', 'constant_score', 'function_score', 'script_score', 'span_first']));
     const opts = (op: string, key: string) => WRAP_PARAMS[op].find(p => p.key === key)?.options;
     expect(opts('has_child', 'score_mode')).toEqual(['avg', 'sum', 'max', 'min', 'none']);
     expect(opts('has_parent', 'score_mode')).toEqual(['none', 'score']);
     expect(opts('function_score', 'boost_mode')).toEqual(['multiply', 'replace', 'sum', 'avg', 'max', 'min']);
     expect(opts('function_score', 'score_mode')).toEqual(['multiply', 'sum', 'avg', 'first', 'max', 'min']);
     expect(WRAP_PARAMS.span_first.find(p => p.key === 'end')?.kind).toBe('number');
-    expect(WRAP_PARAMS.span_last.find(p => p.key === 'end')?.kind).toBe('number');
   });
 });

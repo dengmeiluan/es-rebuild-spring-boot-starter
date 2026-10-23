@@ -23,8 +23,9 @@
     <div v-if="showParams" class="wnr-params">
       <GenericParams :value="node.params" :schema="WRAP_PARAMS[node.op]" path-prefix="" @update="onParams" />
     </div>
-    <!-- 989：function_score functions 数组结构化编辑（评分函数行列表；AST 零改动 params 直通） -->
-    <FsFunctionsPanel v-if="node.op === 'function_score'" :params="node.params"
+    <!-- 989：function_score functions 数组结构化编辑（评分函数行列表；AST 零改动 params 直通）。
+         1009：fields/types 透传——filter 查询树与衰减函数字段快径需要字段候选 -->
+    <FsFunctionsPanel v-if="node.op === 'function_score'" :params="node.params" :fields="fields" :types="types"
                       @update="p => emit('update:node', { ...node, params: p })" />
     <div class="wnr-body">
       <NodeRenderer

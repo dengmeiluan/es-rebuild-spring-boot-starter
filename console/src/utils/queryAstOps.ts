@@ -201,7 +201,7 @@ export function typePriorityForOp(op: string): string[] {
 export const WRAP_LABELS: Record<string, string> = {
   nested: '嵌套', has_child: '子文档', has_parent: '父文档',
   constant_score: '恒定评分', function_score: '评分函数', script_score: '脚本评分', pinned: '置顶优选',
-  span_first: '首跨度', span_last: '尾跨度', span_multi: '跨度多匹配',
+  span_first: '首跨度', span_multi: '跨度多匹配',
   field_masking_span: '字段掩码跨度',
 };
 
@@ -220,7 +220,6 @@ export const WRAP_PARAMS: Record<string, ParamMeta[]> = {
     { key: 'min_score', kind: 'number' }, { key: 'max_boost', kind: 'number' }],
   script_score: [{ key: 'min_score', kind: 'number' }],
   span_first: [{ key: 'end', kind: 'number' }],
-  span_last: [{ key: 'end', kind: 'number' }],
 };
 export const MULTI_LABELS: Record<string, string> = {
   boosting: '正负加权', dis_max: '多查询取最大',
@@ -298,7 +297,7 @@ export const ADV_MENU: Array<{ group: string; ops: string[] }> = [
   { group: '全文检索', ops: ['multi_match', 'query_string', 'simple_query_string', 'combined_fields', 'match_bool_prefix', 'match_int_prefix', 'more_like_this', 'intervals'] },
   { group: '精确与集合', ops: ['ids', 'terms_set', 'parent_id'] },
   { group: '地理位置', ops: ['geo_distance', 'geo_bounding_box', 'geo_polygon', 'geo_shape', 'geo_grid', 'shape', 'distance_feature'] },
-  { group: '跨度位置', ops: ['span_near', 'span_or', 'span_not', 'span_first', 'span_last', 'span_containing', 'span_within', 'span_term', 'span_gap', 'span_multi', 'field_masking_span'] },
+  { group: '跨度位置', ops: ['span_near', 'span_or', 'span_not', 'span_first', 'span_containing', 'span_within', 'span_term', 'span_gap', 'span_multi', 'field_masking_span'] },
   { group: '向量与语义', ops: ['knn', 'sparse_vector', 'text_expansion', 'weighted_tokens', 'semantic'] },
   { group: '脚本与其他', ops: ['script', 'wrapper', 'percolate', 'rule', 'rank_feature', 'rank_features'] },
   { group: '复合容器', ops: ['constant_score', 'boosting', 'dis_max', 'function_score', 'script_score', 'pinned'] },

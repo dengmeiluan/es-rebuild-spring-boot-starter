@@ -127,7 +127,7 @@ describe('989 FsFunctionsPanel 函数列表编辑', () => {
     expect(cur.value.functions![1]).toEqual({});
   });
 
-  it('主参数与 filter 经递归子表编辑写回', async () => {
+  it('主参数经递归子表编辑写回', async () => {
     const { host, cur } = mountRaw(FsFunctionsPanel, { params: FN_PARAMS() });
     (host.querySelectorAll('button[aria-label="函数参数"]')[0] as HTMLElement).click();
     await tick();
@@ -137,23 +137,87 @@ describe('989 FsFunctionsPanel 函数列表编辑', () => {
     bodyVal.dispatchEvent(new Event('input'));
     await tick();
     expect((cur.value.functions![0].field_value_factor as Record<string, unknown>).field).toBe('stars');
-    /* 收起主参数，只留 filter 一个子表（.fsfn-sub 选择器唯一） */
-    (host.querySelectorAll('button[aria-label="函数参数"]')[0] as HTMLElement).click();
-    await tick();
+  });
 
-    /* {weight:5} 项无 filter 键：展开后空表加键 'term' → 值改 'active' → filter 写回 */
+  it('1009 filter 一等查询树：展开即树行（ClauseNode），值编辑序列化写回', async () => {
+    const { host, cur } = mountRaw(FsFunctionsPanel, { params: FN_PARAMS(), fields: ['status', 'likes', 'created'], types: { status: 'keyword', likes: 'integer', created: 'date' } });
+    (host.querySelectorAll('button[aria-label="filter 过滤"]')[0] as HTMLElement).click();
+    await tick();
+    const flt = host.querySelector('.fsfn-flt');
+    expect(flt, 'filter 面板在场').not.toBeNull();
+    const cn = flt!.querySelector('.cn') as HTMLElement;
+    expect(cn, '完整查询树行（ClauseNode）渲染').not.toBeNull();
+    const opSel = cn.querySelector<HTMLSelectElement>('.cn-op');
+    expect(opSel!.value).toBe('term');
+    const val = cn.querySelector<HTMLInputElement>('.cn-val');
+    expect(val!.value).toBe('active');
+    val!.value = 'inactive';
+    val!.dispatchEvent(new Event('input'));
+    await tick();
+    expect(cur.value.functions![0].filter).toEqual({ term: { status: 'inactive' } });
+  });
+
+  it('1009 filter 缺席态：展开只读展示 match_all 骨架不写回；已有 filter 可移除', async () => {
+    const { host, cur } = mountRaw(FsFunctionsPanel, { params: FN_PARAMS(), fields: ['status'], types: { status: 'keyword' } });
+    /* row1 = {weight:5} 无 filter 键：展开后树骨架在场但不写回（不污染 DSL 文本） */
     (host.querySelectorAll('button[aria-label="filter 过滤"]')[1] as HTMLElement).click();
     await tick();
-    const addKey = host.querySelector('.fsfn-sub .gp-add input') as HTMLInputElement;
-    addKey.value = 'term';
-    addKey.dispatchEvent(new Event('input'));
-    (host.querySelector('.fsfn-sub .gp-add button') as HTMLElement).click();
+    expect(host.querySelector('.fsfn-flt .mte-single-bar'), 'match_all 单条件骨架').not.toBeNull();
+    expect('filter' in (cur.value.functions![1] as Record<string, unknown>)).toBe(false);
+    expect(host.querySelector('button[aria-label="移除过滤条件"]'), '无 filter 键无移除钮').toBeNull();
+    /* row0 有 filter：移除钮删键 */
+    (host.querySelectorAll('button[aria-label="filter 过滤"]')[0] as HTMLElement).click();
     await tick();
-    const fVal = host.querySelector('.fsfn-sub .gp-v') as HTMLInputElement;
-    fVal.value = 'active';
-    fVal.dispatchEvent(new Event('input'));
+    (host.querySelector('button[aria-label="移除过滤条件"]') as HTMLElement).click();
     await tick();
-    expect((cur.value.functions![1] as Record<string, unknown>).filter).toEqual({ term: 'active' });
+    expect('filter' in (cur.value.functions![0] as Record<string, unknown>)).toBe(false);
+    expect(cur.value.functions![0]).toEqual({ weight: 2, field_value_factor: { field: 'likes', modifier: 'none' } });
+  });
+
+  it('1009 衰减函数快径：字段作键合法形态渲染，origin 编辑/mvm 下拉/字段搬家写回', async () => {
+    const p = FN_PARAMS();
+    const { host, cur } = mountRaw(FsFunctionsPanel, { params: p, fields: ['status', 'likes', 'created'], types: { status: 'keyword', likes: 'integer', created: 'date' } });
+    (host.querySelectorAll('button[aria-label="函数参数"]')[2] as HTMLElement).click();   // row2 gauss
+    await tick();
+    const decay = host.querySelector('.fsfn-decay');
+    expect(decay, '衰减快径编辑位在场').not.toBeNull();
+    const origin = decay!.querySelectorAll<HTMLInputElement>('.fsfn-dp')[0];
+    expect(origin.value).toBe('now');
+    origin.value = 'now-1h';
+    origin.dispatchEvent(new Event('input'));
+    await tick();
+    expect(cur.value.functions![2]).toEqual({ gauss: { created: { origin: 'now-1h', scale: '10d' } } });
+    /* multi_value_mode：选 sum 加键、选回默认删键 */
+    const mvm = decay!.querySelector<HTMLSelectElement>('.fsfn-mvm')!;
+    mvm.value = 'sum';
+    mvm.dispatchEvent(new Event('change'));
+    await tick();
+    expect(cur.value.functions![2]).toEqual({ gauss: { created: { origin: 'now-1h', scale: '10d' }, multi_value_mode: 'sum' } });
+    mvm.value = '';
+    mvm.dispatchEvent(new Event('change'));
+    await tick();
+    expect(cur.value.functions![2]).toEqual({ gauss: { created: { origin: 'now-1h', scale: '10d' } } });
+    /* 字段搬家：字段选择器输入改 'likes'（input 事件走 update:modelValue → 键搬家参数保留） */
+    const fsInp = decay!.querySelector<HTMLInputElement>('.fs-inp');
+    fsInp!.value = 'likes';
+    fsInp!.dispatchEvent(new Event('input'));
+    await tick();
+    expect(cur.value.functions![2]).toEqual({ gauss: { likes: { origin: 'now-1h', scale: '10d' } } });
+  });
+
+  it('1009 衰减换类型给字段作键骨架（旧 field 属性写法 ES 必拒）；多字段体退化递归表', async () => {
+    const { host, cur } = mountRaw(FsFunctionsPanel, { params: FN_PARAMS(), fields: ['likes'], types: { likes: 'integer' } });
+    const sel = host.querySelectorAll<HTMLSelectElement>('.fsfn-type')[1];   // row1 weight 裸项
+    sel.value = 'gauss';
+    sel.dispatchEvent(new Event('change'));
+    await tick();
+    expect(cur.value.functions![1]).toEqual({ weight: 5, gauss: { '': { origin: '', scale: '' } } });
+    /* 多字段衰减体（合法但非单字段）→ 通用递归表（零丢失），不走快径 */
+    const { host: h2 } = mountRaw(FsFunctionsPanel, { params: { functions: [{ gauss: { a: { scale: '1' }, b: { scale: '2' } } }] }, fields: [], types: {} });
+    (h2.querySelector('button[aria-label="函数参数"]') as HTMLElement).click();
+    await tick();
+    expect(h2.querySelector('.fsfn-decay'), '多字段体不进快径').toBeNull();
+    expect(h2.querySelector('.fsfn-sub .gp-row'), '通用递归表兜底').not.toBeNull();
   });
 
   it('自定义形态锁定：多类型键项 select/参数钮双 disabled', () => {
