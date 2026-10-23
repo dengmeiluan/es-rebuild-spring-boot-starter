@@ -75,6 +75,18 @@
     <div v-else-if="geoEditable" class="cn-objval">
       <GeoValueEditor :op="node.op" :value="node.value" :params="node.params" @patch="onGeoPatch" />
     </div>
+    <!-- 1017：percolate document 一等 JSON 文档编辑位——draft/bad/同步三件套
+         （RootExtrasPane json 控件同语言）：非法 JSON 或非对象标红不写树（半截输入容忍），
+         树外变更经 stringify 同比较守卫回流文本（不打断输入）。field 在行头 FieldSelect，
+         name/preference 等参数走既有「更多参数」 -->
+    <div v-else-if="node.op === 'percolate'" class="cn-objval">
+      <textarea
+        class="inp mono cn-perc" :class="{ bad: percBad }" :value="percText" rows="4" spellcheck="false"
+        placeholder="document 文档体（JSON 对象）——反查：哪些已存查询会命中这份文档"
+        title="要反查的文档体；合法 JSON 对象即写回查询（非法半截态标红不写）"
+        @input="onPercDoc(($event.target as HTMLTextAreaElement).value)"
+      ></textarea>
+    </div>
     <!-- 【985】对象值（geo 系/terms_set/script 等）：常用键快捷 chips +
      递归键值子表（零降级同款语言）——键名不用猜，点 chips 即得骨架再改值 -->
     <div v-else-if="isObjValue" class="cn-objval">
@@ -416,6 +428,28 @@ const geoEditable = computed(() =>
 function onGeoPatch(p: { value?: unknown; params?: Record<string, unknown> }) {
   patch({ ...(p.value !== undefined ? { value: p.value } : {}), ...(p.params !== undefined ? { params: p.params } : {}) });
 }
+/* 1017：percolate document JSON 编辑位（rx-qp-json/knnVec 同语言三件套：
+   draft 文本态、非法/非对象标红不写树、外部树变更 stringify 同比较回流） */
+const percText = ref('');
+const percBad = ref(false);
+watch(() => props.node.op === 'percolate' ? props.node.value : undefined, v => {
+  const next = v === undefined ? '' : JSON.stringify(v, null, 2);
+  let same = false;
+  if (!percBad.value) {
+    try { same = JSON.stringify(JSON.parse(percText.value)) === next; } catch { same = false; }
+  }
+  if (!same) percText.value = next;
+  percBad.value = false;
+}, { immediate: true });
+function onPercDoc(raw: string) {
+  percText.value = raw;
+  try {
+    const v = JSON.parse(raw);
+    if (typeof v !== 'object' || v === null || Array.isArray(v)) { percBad.value = true; return; }
+    percBad.value = false;
+    patch({ value: v });
+  } catch { percBad.value = true; }   // 半截 JSON：只留草稿不写树
+}
 const objVal = computed<Record<string, unknown>>(() =>
   (isObjValue.value ? props.node.value : {}) as Record<string, unknown>);
 function onObjValue(v: Record<string, unknown> | unknown[]) {
@@ -628,6 +662,8 @@ function endDrag() { delete (window as any)[DRAG_KEY]; fireDrag(false); }
 /* 985：多字段形态的字段列表输入（与主值并排换行）+ 对象值子表容器（独占一行，dashed 弱边框与 GenericNode 同语言） */
 .cn-fields { flex: 1 1 150px; }
 .cn-objval { flex-basis: 100%; padding: var(--sp-2); border: 1px dashed var(--line); border-radius: var(--r-s); background: var(--bg1); }
+.cn-perc { width: 100%; min-height: 76px; font-size: var(--fs-xs); line-height: 1.5; resize: vertical; }
+.cn-perc.bad { border-color: var(--err); box-shadow: 0 0 0 2px var(--err-soft); }
 /* 1005：terms/ids 值 chips——值即标签（hl 底+line 边，与 .cn-objk-btn 同语言）；
    行内折行承载多值，输入框随行伸缩（空态独占一行给 placeholder） */
 .cn-chips { display: inline-flex; flex: 1 1 150px; min-width: 0; flex-wrap: wrap; align-items: center; gap: var(--sp-1); }
