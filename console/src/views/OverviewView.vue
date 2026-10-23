@@ -635,7 +635,10 @@ async function loadHistory() {
     mhRows.value = (res.records || []).filter((r: any) => !r.connId || auth.canSeeConn(r.connId));
   } catch (e: any) {
     if (conn !== mhConn.value || status !== mhStatus.value || range !== mhRange.value) return;
-    mhErr.value = friendlyEsError(String(e?.message ?? e));
+    /* 权限类失败（403/带 page·denied 归因）走区块空态而非错误条：无授权身份进概览时
+       监控历史必 403，「加载失败+重试」是对着拒绝屏再喊一遍（产线实报）；真实故障照常报错 */
+    const perm = e != null && (e.status === 403 || e.denied != null || e.page != null);
+    mhErr.value = perm ? '' : friendlyEsError(String(e?.message ?? e));
   } finally {
     if (conn === mhConn.value && status === mhStatus.value && range === mhRange.value) {
       mhLoading.value = false;

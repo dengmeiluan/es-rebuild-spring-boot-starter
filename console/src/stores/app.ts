@@ -154,11 +154,14 @@ export const useAppStore = defineStore('app', () => {
     if (target.value && !conns.value.some(c => c.id === target.value)) {
       if (hostVisible.value) {
         setTarget('', '');
-        notify('warning', '目标集群连接已删除，已切回宿主集群');
+        /* 后台自愈只入史不弹：回落可能是跨账号残留目标（换号后 localStorage 按域共享），
+           也可能是连接真被删——顶栏切换器已如实显示宿主集群，「已删除」对权限场景
+           是错误表述（产线实报：零授权用户开屏即见此条）。 */
+        notify('warning', '目标集群连接已删除，已切回宿主集群', { logOnly: true });
       } else {
         const first = conns.value[0];
         setTarget(first?.id || '', first?.name || '');
-        notify('warning', first ? `目标集群连接已删除，已切到「${first.name}」` : '目标集群连接已删除，请先添加集群连接');
+        notify('warning', first ? `目标集群连接已删除，已切到「${first.name}」` : '目标集群连接已删除，请先添加集群连接', { logOnly: true });
       }
     } else if (!hostVisible.value && !target.value && conns.value.length) {
       // .2 自动映射：宿主隐藏且未选目标，默认选中首个可见连接，免去手动切一次
