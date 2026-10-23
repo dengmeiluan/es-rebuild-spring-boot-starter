@@ -23,6 +23,10 @@
                       @patch="r => onBodyPatch('ranges', r)" />
       <AggFiltersPanel v-if="op === 'filters'" :body="(node.body as Record<string, unknown>)" :fields="fields" :types="types"
                        @patch="v => onBodyPatch('filters', v)" />
+      <!-- 1031：桶聚合 order 行编辑——面板只接可投影形态（数组逐项单键/单键对象）；
+           多键对象等非投影形态留守自由表零丢失（orderShown 门控） -->
+      <AggOrderPanel v-if="orderShown" :body="(node.body as Record<string, unknown>)"
+                     @patch="v => onBodyPatch('order', v)" />
       <!-- top 常见聚合的 .field 键传 fieldKeys，行内渲染 FieldSelect 字段选择器；
      其余/未知聚合名不传（空数组），回落裸键值表零降级。
      1020：AGG_BODY_PARAMS 在册聚合的 body 加 schema——具名参数升类型化输入/枚举下拉
@@ -52,6 +56,7 @@ import { X, Plus, Tag } from 'lucide-vue-next';
 import GenericParams from './GenericParams.vue';
 import AggRangesPanel from './AggRangesPanel.vue';
 import AggFiltersPanel from './AggFiltersPanel.vue';
+import AggOrderPanel from './AggOrderPanel.vue';
 import { AGG_OPS, AGG_BODY_PARAMS } from '../../utils/queryAstOps';
 import { nid, type AggNode } from '../../utils/queryAst';
 
@@ -61,26 +66,55 @@ const emit = defineEmits<{ (e: 'update:node', n: AggNode): void; (e: 'remove'): 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const metaOpen = ref(false);
 
-/* 1022：面板专属键（ranges/filters）由面板权威编辑——参数表视图剥离，表内加出该键路由回流 */
+/* 1022：面板专属键（ranges/filters）由面板权威编辑——参数表视图剥离，表内加出该键路由回流。
+   1031：order 由 AggOrderPanel 权威编辑，但只接可投影形态（数组逐项单键/单键对象）——
+   多键对象等非投影形态留守自由表零丢失（orderShown 门控 + 剥离条件含形态判断） */
 const PANEL_KEYS = new Set(['ranges', 'filters']);
+/* 支持桶排序的聚合（order 语义在册；其余聚合即使带 order 键也走自由表） */
+const ORDER_AGGS = new Set(['terms', 'rare_terms', 'significant_terms', 'significant_text', 'multi_terms',
+  'date_histogram', 'histogram', 'auto_date_histogram', 'variable_width_histogram', 'ip_range']);
+/* order 可投影形态：数组（每项单键对象）或单键对象；多键对象/其它形态=非投影 */
+function orderProjectionOk(o: unknown): boolean {
+  if (Array.isArray(o)) {
+    return o.every(it => isObj(it) && Object.keys(it).length === 1);
+  }
+  return isObj(o) && Object.keys(o).length === 1;
+}
 const op = computed(() => props.node.op);
+const orderShown = computed(() =>
+  ORDER_AGGS.has(op.value) && isObj(props.node.body) && 'order' in props.node.body
+  && orderProjectionOk(props.node.body.order));
 const bodyView = computed<Record<string, unknown>>(() => {
-  if (!PANEL_KEYS.size) return props.node.body as Record<string, unknown>;
   const b = props.node.body as Record<string, unknown>;
   const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(b || {})) if (!PANEL_KEYS.has(k)) out[k] = v;
+  for (const [k, v] of Object.entries(b || {})) {
+    if (PANEL_KEYS.has(k)) continue;
+    if (k === 'order' && orderShown.value) continue;
+    out[k] = v;
+  }
   return out;
 });
-function onBodyPatch(key: 'ranges' | 'filters', v: unknown) {
-  emit('update:node', { ...props.node, body: { ...(props.node.body as Record<string, unknown>), [key]: v } });
+function onBodyPatch(key: 'ranges' | 'filters' | 'order', v: unknown) {
+  const body: Record<string, unknown> = { ...(props.node.body as Record<string, unknown>) };
+  /* order 清空行 = 删键回默认排序（order:[] 无语义）；空数组形态从无记忆必要 */
+  if (key === 'order' && Array.isArray(v) && v.length === 0) delete body.order;
+  else body[key] = v;
+  emit('update:node', { ...props.node, body });
 }
 function onBodyParams(v: Record<string, unknown> | unknown[]) {
   if (Array.isArray(v)) return;
   const out: Record<string, unknown> = { ...v };
-  /* 表内出现面板键：路由回流 body（数组=面板位形态；非数组保真共存） */
+  const b = (props.node.body || {}) as Record<string, unknown>;
+  /* 1031 修 1022 存量洞：面板权威键以现 body 合回——bodyView 把面板键剥离后 v 永不含它，
+     只回填「v 在场」的旧语义让任何自由表编辑静默丢掉 ranges/filters（挂载实证：改 format
+     后 ranges 成 undefined）。面板键删除走面板自身通道（行清空），自由表删除不是其通道。
+     表内加出面板键仍以表内值回流（v 在场优先）。 */
   for (const k of PANEL_KEYS) {
-    if (k in v) { out[k] = (v as Record<string, unknown>)[k]; }
+    if (k in v) out[k] = (v as Record<string, unknown>)[k];
+    else if (k in b) out[k] = b[k];
   }
+  if ('order' in v) out.order = (v as Record<string, unknown>).order;
+  else if ('order' in b) out.order = b.order;
   emit('update:node', { ...props.node, body: out });
 }
 

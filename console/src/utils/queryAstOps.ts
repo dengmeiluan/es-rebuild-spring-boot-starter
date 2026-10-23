@@ -344,6 +344,39 @@ export const AGG_OPS: Record<string, string> = {
 /* 1030：gap_policy 三档全族单源（管道聚合对空桶的取数策略） */
 const GAP_POLICY: string[] = ['skip', 'insert_zeros', 'keep_values'];
 
+/* ═══ 1031：suggester 类型注册表（搜索建议 suggest 项的 suggester 体编辑面）═══
+   suggest 项 rest = { <类型键>: {field,size,…} } 单类型键形态——SuggesterEditor 做类型
+   切换 + 类型体 schema 编辑；rest 结构零改动（AST SuggestItem 直通），本表只供投影。
+   field 行由 GenericParams field-keys 机制渲染 FieldSelect，不在此表。 */
+export const SUGGESTER_TYPES: Record<string, string> = {
+  term: '纠错 term',
+  phrase: '短语 phrase',
+  completion: '补全 completion',
+};
+export const SUGGESTER_PARAMS: Record<string, ParamMeta[]> = {
+  term: [
+    { key: 'size', kind: 'number' },
+    { key: 'suggest_mode', kind: 'enum', options: ['missing', 'popular', 'always'] },
+    { key: 'string_distance', kind: 'enum', options: ['internal', 'damerau_levenshtein', 'levenshtein', 'jaro_winkler', 'ngram'] },
+    { key: 'max_edits', kind: 'number' },
+    { key: 'prefix_length', kind: 'number' },
+    { key: 'min_word_length', kind: 'number' },
+    { key: 'shard_size', kind: 'number' },
+  ],
+  phrase: [
+    { key: 'size', kind: 'number' },
+    { key: 'gram_size', kind: 'number' },
+    { key: 'confidence', kind: 'number' },
+    { key: 'max_errors', kind: 'number' },
+    { key: 'real_word_error_likelihood', kind: 'number' },
+    { key: 'separator', kind: 'text' },
+  ],
+  completion: [
+    { key: 'size', kind: 'number' },
+    { key: 'skip_duplicates', kind: 'boolean' },
+  ],
+};
+
 /* 1020：常用聚合 body 具名参数 schema（GenericParams 消费——具名键升类型化输入/枚举下拉，
  与 WRAP_PARAMS 同语言）。field 由 field-keys 行内 FieldSelect 权威编辑不在此表；
  未登记键维持自由表（加键零丢失）；未登记聚合类型零 schema = 裸表（现状不变）。 */

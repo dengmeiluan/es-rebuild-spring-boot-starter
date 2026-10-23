@@ -285,7 +285,8 @@ ES 默认返回全部字段
           <button aria-label="建议参数（suggester 体）" class="btn sm ghost" :class="{ on: sugIdx === i }" title="建议参数（term/phrase/completion 体）" @click="sugIdx = sugIdx === i ? null : i"><Settings2 :size="12" /></button>
           <button aria-label="删除建议" class="btn sm ghost danger" title="删除建议" @click="sugDel(i)"><X :size="12" /></button>
           <div v-if="sugIdx === i" class="rx-sub">
-            <GenericParams :value="s.rest" path-prefix="" @update="v => onSugRest(i, v)" />
+            <SuggesterEditor :rest="s.rest" :fields="fields" :types="types"
+                             @update="v => onSugRest(i, v)" />
           </div>
         </div>
         <div class="rx-row">
@@ -477,6 +478,7 @@ import { Plus, X, ChevronUp, ChevronDown, Settings2 } from 'lucide-vue-next';
 import FieldSelect from './FieldSelect.vue';
 import FieldPicker from '../FieldPicker.vue';
 import GenericParams from './GenericParams.vue';
+import SuggesterEditor from './SuggesterEditor.vue';
 import AggTreeNode from './AggTreeNode.vue';
 import MiniTreeEditor from './MiniTreeEditor.vue';
 import RetrieverEditor from './RetrieverEditor.vue';
