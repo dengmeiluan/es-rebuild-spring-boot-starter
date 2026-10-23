@@ -2221,7 +2221,7 @@ async function askDelIndex() {
 /* 1026：索引名行冻结（行冻结全站推广续）——.ih-hd 是当前索引的上下文行（健康点/索引名/
  状态/元信息/动作），吸附滚动容器 .ih-right（scroll-y）顶：文档/查询结果滚深后仍知道
  「在看哪个索引」。实底 + 负边距拉满 .ih-ws 内宽防内容缝隙滚过；z-index 压内容让位弹层 */
-.ih-hd { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-1h) var(--sp-3); padding: var(--sp-2h) 14px; flex-wrap: wrap; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; margin: 0 -14px; padding-left: 14px; padding-right: 14px; background: var(--bg1); }
+.ih-hd { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-1h) var(--sp-3); padding: var(--sp-2h) 14px; flex-wrap: wrap; position: sticky; top: 0; z-index: 20; margin: 0 -14px; background: var(--bg1); border-bottom: 1px solid var(--line); }
 .ih-hd-l { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .ih-hd-nm { font-size: var(--fs-xl); font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ih-hd-acts { display: flex; gap: var(--sp-1h); flex-wrap: wrap; }
