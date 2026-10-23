@@ -5,6 +5,16 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.38]
+
+### 安全
+
+- 空页面授权拒绝（`PAGE_DENIED`）文案可操作化：宿主委托部署下「当前身份无任何页面授权」
+  最常见根因是委托侧实体未拿到授权（如飞书 SSO 自动新建账号只挂默认角色，授权配置留在
+  另一实体上）——文案直接指引到宿主系统角色菜单勾选 ES 控制台连接授权，SSO 登录需确认
+  绑定的是被授权账号（配合 quotehub 侧同批的飞书实体分裂 WARN，产线用户实报
+  「配置了只读授权仍被拒」的自助排查闭环）
+
 ## [1.0.37]
 
 ### 安全
