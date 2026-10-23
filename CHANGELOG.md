@@ -5,6 +5,15 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.51]
+
+### 修复
+
+- /forbidden 停车自愈兜底（产线实报 x1 跨分钟停车）：回迁依赖 watch 触发，若连接
+  目录加载曾失败/后端瞬态不可用，之后无状态变化即永久停车。停车期间每 5s 用当前
+  输入有界重判（≤12 次），记录页放行即回迁；离开 /forbidden 或次数用尽即停，
+  真被拒时纯函数重判零成本
+
 ## [1.0.50]
 
 ### 修复

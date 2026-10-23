@@ -400,9 +400,33 @@ watch([
     }
   }
 });
-/* 用户主动离开 /forbidden（点菜单/切目标）即放弃回迁意向，避免过期跳转 */
+/* 用户主动离开 /forbidden（点菜单/切目标）即放弃回迁意向，避免过期跳转。
+   停留 /forbidden 期间每 5s 有界重判（≤12 次）：回迁依赖 watch 触发，若连接目录
+   加载曾失败/后端瞬态不可用，之后无状态变化即永久停车（产线实报 x1 跨分钟停车）。
+   每拍用当前输入重判，记录页放行即回迁；真被拒时纯函数重判零成本。 */
+let forbidRetryTimer = 0;
+let forbidRetryLeft = 0;
 watch(() => router.currentRoute.value.path, (p) => {
-  if (p !== '/forbidden') clearDeniedPage();
+  if (p !== '/forbidden') {
+    clearDeniedPage();
+    if (forbidRetryTimer) { window.clearInterval(forbidRetryTimer); forbidRetryTimer = 0; }
+    return;
+  }
+  forbidRetryLeft = 12;
+  if (forbidRetryTimer) window.clearInterval(forbidRetryTimer);
+  forbidRetryTimer = window.setInterval(() => {
+    if (auth.isAdmin() || forbidRetryLeft-- <= 0) {
+      window.clearInterval(forbidRetryTimer); forbidRetryTimer = 0; return;
+    }
+    const back = peekDeniedPage();
+    if (!back) { window.clearInterval(forbidRetryTimer); forbidRetryTimer = 0; return; }
+    const rr = pageDeniedRedirect(auth.grantedPages, back, store.target, auth.envAllows, auth.me?.role);
+    if (!rr) {
+      consumeDeniedPage();
+      window.clearInterval(forbidRetryTimer); forbidRetryTimer = 0;
+      router.replace(back);
+    }
+  }, 5000);
 });
 
 /* ==================== ：授权就绪门（连接模型开屏竞态根治） ====================
