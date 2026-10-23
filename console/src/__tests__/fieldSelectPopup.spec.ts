@@ -159,18 +159,37 @@ describe('FieldSelect 换代：fieldSearch 共享内核', () => {
     expect(nm.textContent, '片段拼接必须还原完整路径').toBe('user.name');
   });
 
-  it('候选计数与 cap 提示：页脚显示 命中/总数，超上限提示截断', async () => {
+  it('候选计数与虚拟滚动：页脚显示全部命中数（无截断话术），窗口渲染可滚动浏览全部', async () => {
     const fields = Array.from({ length: 40 }, (_, i) => 'f' + String(i).padStart(2, '0'));
     const { host } = mountSelect({ fields });
     await focus(host);
-    expect(items().length, '候选最多 30').toBe(30);
+    /* 1004：CAP=30 硬顶退役为可视区窗口渲染——40 个匹配全部可达，DOM 只出窗口子集 */
+    const n = items().length;
+    expect(n, 'DOM 只渲染窗口子集（非全量 40）').toBeLessThan(40);
+    expect(n, '窗口至少覆盖首屏+缓冲').toBeGreaterThanOrEqual(9);
     const ft = document.body.querySelector('.fs-ft')!.textContent!;
-    expect(ft).toContain('30 / 40 个匹配');
-    expect(ft).toContain('仅显示前 30');
-    await type(host, 'f0');
-    const ft2 = document.body.querySelector('.fs-ft')!.textContent!;
-    expect(ft2).toContain('10 / 10 个匹配');
-    expect(ft2).not.toContain('仅显示前');
+    expect(ft).toContain('40 个匹配');
+    expect(ft, '截断话术退役（防回潮）').not.toContain('仅显示前');
+    /* End 跳末项：光标窗口跟随，末项必须渲染在场且高亮 */
+    await key(host, 'End');
+    const its = items();
+    const last = its[its.length - 1];
+    expect(actIdx(), 'End 后末项高亮在场').toBe(its.length - 1);
+    expect(names()[its.length - 1], '末项=字典序末位 f39').toBe('f39');
+    expect(inp(host).getAttribute('aria-activedescendant'), 'aria-activedescendant 指向在场末项')
+      .toBe(last!.id);
+    /* 列表盒语义：窗口化下 aria-setsize=全集、posinset=窗口内项的真实序 */
+    expect(last!.getAttribute('aria-setsize')).toBe('40');
+    expect(last!.getAttribute('aria-posinset')).toBe('40');
+    /* Enter 选中窗口深处末项（跨窗口可达性） */
+    await key(host, 'Enter');
+    expect((host as HTMLElement).querySelector<HTMLInputElement>('.fs-inp')!.value, 'End+Enter 必须选中末项').toBe('f39');
+    /* 收窄查询 → 小集合窗口全覆盖（无窗口化残留），计数为全集 */
+    const { host: h2 } = mountSelect({ fields });
+    await focus(h2);
+    await type(h2, 'f0');
+    expect(items().length, '10 个命中全渲染（窗口覆盖小集合）').toBe(10);
+    expect(document.body.querySelector('.fs-ft')!.textContent!).toContain('10 个匹配');
   });
 
   it('per-index 最近使用置顶：key 拼索引写 per-index 键，全局键不动；读不到回退全局', async () => {

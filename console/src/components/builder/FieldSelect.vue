@@ -18,13 +18,19 @@
       <div v-if="open" class="fs-pop float-pop" :style="popStyle" @mousedown.prevent.stop>
         <div v-if="!fields.length" class="fs-hint">暂无字段清单，可自由手输</div>
         <div v-else-if="!flat.length" class="fs-hint">没有匹配「{{ modelValue }}」的字段（仍可手输）</div>
-        <div v-else class="fs-list" ref="listEl" role="listbox" :id="listId">
+        <div v-else class="fs-list" ref="listEl" role="listbox" :id="listId" @scroll="onScroll">
+          <!-- 1004：候选虚拟列表——超大索引几千字段时全量进 DOM 会卡死弹层。
+               统一行高（ROW_H）+ 上下占位垫片 + 可视区窗口渲染：rank/分组/键盘导航/aria
+               语义不变（aria-setsize/posinset 补全窗口化下的列表盒语义），光标移动时
+               窗口跟随（见 watch(cursor)），小列表窗口全覆盖=DOM 与旧全量渲染一致 -->
+          <div :style="{ height: winStart * ROW_H + 'px' }" aria-hidden="true"></div>
           <!-- 类型分组标签行不进候选集（cursor/Enter 按 flat 索引导航，标签混进候选集会错位高亮） -->
-          <template v-for="r in rows" :key="r.gh !== undefined ? 'gh' + r.gh + r.first : r.hit!.path">
+          <template v-for="r in winRows" :key="r.gh !== undefined ? 'gh' + r.gh + r.first : r.hit!.path">
             <div v-if="r.gh !== undefined" class="fs-gh mono" role="presentation">{{ r.gh }}</div>
             <div
               v-else class="fs-item" :class="{ act: r.hit!.i === cursor }"
-              role="option" :id="itemId(r.hit!.i)" :aria-selected="r.hit!.i === cursor" tabindex="-1"
+              role="option" :id="itemId(r.hit!.i)" :aria-selected="r.hit!.i === cursor"
+              :aria-setsize="flat.length" :aria-posinset="r.hit!.i + 1" tabindex="-1"
               @mouseenter="cursor = r.hit!.i" @click="pick(r.hit!)" @keydown.enter.prevent="pick(r.hit!)"
             >
               <!-- 类型徽标挂全站色卡 .mft-type（theme.css），删局部四类型撞色规则 -->
@@ -35,9 +41,10 @@
               <span class="fs-nm mono"><template v-for="(sg, si) in r.hit!.segs" :key="si"><mark v-if="sg.m">{{ sg.t }}</mark><template v-else>{{ sg.t }}</template></template></span>
             </div>
           </template>
+          <div :style="{ height: Math.max(0, (rows.length - winStart - winRows.length) * ROW_H) + 'px' }" aria-hidden="true"></div>
         </div>
         <div v-if="flat.length" class="fs-ft">
-          <span>{{ flat.length }} / {{ total }} 个匹配{{ capped ? '，仅显示前 ' + CAP + ' 个，输入更精确可缩小' : '' }}</span>
+          <span>{{ flat.length }} 个匹配</span>
           <span class="fs-keys"><kbd class="kbd">↑↓</kbd> 选择 <kbd class="kbd">Enter</kbd> 确认 <kbd class="kbd">Esc</kbd> 关闭</span>
         </div>
       </div>
@@ -50,7 +57,7 @@
  rank 排序（精确>前缀>包含）、类型分组+组头、data-t 三色类型徽标、输入 <mark> 高亮、
  候选计数与 cap 提示。零降级保留：mapping 缺失 fields 为空时输入框仍可自由手输。
  最近使用升级 per-index（key 拼当前索引，读不到回退全局），且选中字段回写记忆。 */
-import { computed, nextTick } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { getActivePinia } from 'pinia';
 import { usePopupList } from '../../composables/usePopupList';
 import { useTermsSuggest } from '../../composables/useTermsSuggest';
@@ -72,7 +79,13 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: string): void }>();
 
-const CAP = 30;   // 候选上限（旧版同值）；超出的靠更精确输入收窄，页脚有提示
+/* 1004：候选虚拟列表——扫描上限放大到全量（超大索引几千字段可滚动浏览全部匹配），
+   DOM 只渲染可视区窗口（统一行高 ROW_H + 上下垫片）；rank/分组/键盘导航语义不变。
+   小列表窗口全覆盖 = DOM 与旧全量渲染一致（既有契约零变化） */
+const SCAN_CAP = 20000;
+const ROW_H = 28;        /* 统一行高（候选项与组头一致——虚拟滚动偏移计算前提） */
+const VIEW_H = 240;      /* 与 .fs-list max-height 同值 */
+const WIN_PAD = 8;       /* 窗口上下缓冲行数（滚动方向预渲染，避免快速滚动闪白） */
 
 /* 未知字段护栏判定：mapping 有字段集、输入非空、且不在集内。typing 中间态也会亮——
  黄点是弱提示不阻断（仍可手输提交），比「候选空但仍可手输」的纯静默多一层护栏 */
@@ -87,7 +100,7 @@ const res = computed(() => {
   const s = searchFields({
     fields: props.fields.map(f => ({ path: f, type: props.types[f] || '' })),
     query: props.modelValue || '',
-    cap: CAP,
+    cap: SCAN_CAP,
     typeFilter: props.typeFilter,
     typePriority: props.typePriority,
   });
@@ -117,8 +130,6 @@ const res = computed(() => {
   return { total: s.total, capped: s.capped, flat, groups: groupByLabel(flat, prio) };
 });
 const flat = computed(() => res.value.flat);
-const total = computed(() => res.value.total);
-const capped = computed(() => res.value.capped);
 
 type FsRow = { gh?: string; hit?: FieldHit; first?: number };
 const rows = computed<FsRow[]>(() => {
@@ -130,6 +141,19 @@ const rows = computed<FsRow[]>(() => {
   return out;
 });
 
+/* ═══ 1004：可视区窗口渲染 ═══ 垫片撑总高、窗口切片出 DOM；光标移动时窗口跟随并滚动，
+   键盘 ↑↓/Home/End 与 hover 全走 cursor 单源（watch 收敛，不逐键位挂钩） */
+const scrollTop = ref(0);
+function onScroll(e: Event) { scrollTop.value = (e.target as HTMLElement).scrollTop; }
+const winStart = computed(() => Math.max(0, Math.floor(scrollTop.value / ROW_H) - WIN_PAD));
+const winRows = computed(() =>
+  rows.value.slice(winStart.value, winStart.value + Math.ceil(VIEW_H / ROW_H) + WIN_PAD * 2));
+const rowOfItem = computed(() => {
+  const m = new Map<number, number>();
+  rows.value.forEach((r, ri) => { if (r.hit) m.set(r.hit.i, ri); });
+  return m;
+});
+
 const {
   open, cursor, popStyle, listId, itemId, rootEl, listEl, openPanel, close, onKey,
 } = usePopupList<FieldHit>({
@@ -139,6 +163,21 @@ const {
   idPrefix: 'fs',
   activeSelector: '.fs-item.act',
   place: { minWidth: 220, flipBelow: 240, flipTop: 260 },
+});
+
+/* 1004：光标窗口跟随——键盘 ↑↓/Home/End 与 hover 全走 cursor 单源，在此收敛：
+   目标行在缓冲带外 → 居中滚动（scrollTop 变更驱动 winRows 重算）→ 渲染后再滚屏到位 */
+watch(cursor, async ri => {
+  const row = rowOfItem.value.get(ri);
+  if (row === undefined) return;
+  const top = row * ROW_H;
+  const st = scrollTop.value;
+  if (top < st + ROW_H * 2 || top + ROW_H > st + VIEW_H - ROW_H * 2) {
+    if (listEl.value) listEl.value.scrollTop = Math.max(0, top - Math.floor((VIEW_H - ROW_H) / 2));
+    scrollTop.value = listEl.value?.scrollTop ?? 0;
+  }
+  await nextTick();
+  scrollCur();
 });
 
 /* Home/End 首尾跳（骨架不含，本组件补齐；滚屏用自家 activeSelector） */
@@ -190,11 +229,11 @@ function pick(h: FieldHit) {
 .fs-inp:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 14%, transparent); background: var(--card); }
 /* 壳属性（fixed/--z-island/bg/border/shadow/圆角）合并 theme.css .float-pop，本类只留坐标外裁切与字号 */
 .fs-pop { overflow: hidden; font-size: var(--fs-sm); }
-.fs-list { max-height: 240px; overflow: auto; padding: 3px 0; }
+.fs-list { max-height: 240px; overflow: auto; }
 .fs-hint { padding: var(--sp-3); color: var(--muted); }
-/* 类型分组标签行（与 FieldPicker .fxp-gh 同款） */
-.fs-gh { padding: var(--sp-1) var(--sp-2h) var(--sp-0); font-size: var(--fs-2xs); color: var(--muted); letter-spacing: .04em; user-select: none; }
-.fs-item { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-1) var(--sp-3); cursor: pointer; }
+/* 类型分组标签行（与 FieldPicker .fxp-gh 同款）；1004 统一行高=虚拟滚动偏移前提 */
+.fs-gh { display: flex; align-items: center; height: 28px; padding: 0 var(--sp-2h); font-size: var(--fs-2xs); color: var(--muted); letter-spacing: .04em; user-select: none; }
+.fs-item { display: flex; align-items: center; gap: var(--sp-2); height: 28px; padding: 0 var(--sp-3); cursor: pointer; }
 .fs-item:hover, .fs-item.act { background: var(--hover); }
 .fs-nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fs-nm mark { background: none; color: var(--acc); font-weight: 600; }
