@@ -35,7 +35,7 @@ describe('全局轮询器权限感知（一百九十批+五百五十七批连接
     expect(jobTracker).toMatch(/const wantSnaps = dataReady && can\('snapshots'\);/);
     expect(jobTracker).toMatch(/wantSnaps \? api\.snapshotStatus\(\)/);
     /* 用户感知：无授权连接的全停形态一次性明示（不再静默） */
-    expect(jobTracker).toMatch(/connModel && !dataReady && !pollSilentNotified/);
+    expect(jobTracker).toMatch(/connModel && !dataReady && app\.conns\.length > 0 && !pollSilentNotified/);
   });
 
   it('liveMonitor：无 diag 权限时跳过 pending-tasks 采样（连接键感知）', () => {
