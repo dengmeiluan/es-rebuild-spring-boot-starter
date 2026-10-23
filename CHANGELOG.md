@@ -5,6 +5,14 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.52]
+
+### 修复
+
+- 拒绝面板自报前端版本（+身份确认中标记）：「改了没生效」类报告可一眼定界——
+  面板版本号低于发版单即浏览器缓存了旧 bundle（iframe 资源按部署版本参数缓存，
+  旧标签页不重开拿不到新前端）
+
 ## [1.0.51]
 
 ### 修复

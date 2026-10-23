@@ -12,6 +12,7 @@
         <div class="fb-row"><span>当前身份</span><b>{{ role }}</b><code v-if="auth.me?.username">{{ auth.me.username }}</code></div>
         <div class="fb-row"><span>目标连接</span><b>{{ targetLabel }}</b></div>
         <div class="fb-row"><span>拒绝原因</span><b>{{ reasonKind }}</b></div>
+        <div class="fb-row"><span>前端版本</span><b class="mono">{{ starterVersion }}</b><span v-if="!auth.probed" style="color:var(--warn)">（身份确认中，自动回迁重试中…）</span></div>
       </div>
     </NResult>
   </div>
@@ -33,6 +34,9 @@ const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
 const store = useAppStore();
+/* 构建期注入的 starter 版本（vite define）：拒绝面板自报版本，缓存旧 bundle 的
+   「改了没生效」类报告可一眼定界（用户截图版本号 vs 发版单）。 */
+const starterVersion = __STARTER_VERSION__;
 const pageName = computed(() => String(route.query.name || '该页面'));
 const pageKey = computed(() => String(route.query.page || ''));
 const role = computed(() => auth.me?.role || (auth.authDisabled ? '未启用鉴权' : '身份未就绪'));

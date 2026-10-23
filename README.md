@@ -42,7 +42,7 @@ Elasticsearch 的索引 mapping/分词/配置**不可原地修改**——改一�
 ### 独立部署（standalone，Kibana 式）
 
 ```bash
-java -jar es-rebuild-standalone-1.0.51.jar
+java -jar es-rebuild-standalone-1.0.52.jar
 ```
 
 内置 web 服务器（默认端口 `5601`）与 ES 客户端栈，不依赖任何宿主应用。启动后打开
@@ -63,7 +63,7 @@ java -jar es-rebuild-standalone-1.0.51.jar
 <dependency>
     <groupId>io.github.dengmeiluan</groupId>
     <artifactId>es-rebuild-spring-boot-starter</artifactId>
-    <version>1.0.51</version>
+    <version>1.0.52</version>
 </dependency>
 ```
 
