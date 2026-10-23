@@ -31,7 +31,10 @@
       <button aria-label="删除该参数键" class="btn sm ghost danger" @click="removeKey(row.key)"><X :size="12" /></button>
     </div>
     <div class="gp-add">
-      <input v-if="!isArr" class="inp mono" v-model="newKey" placeholder="+ 键名" @keydown.enter="addKey" />
+      <input v-if="!isArr" class="inp mono" v-model="newKey" placeholder="+ 键名" :list="'gpkeys-' + uid" @keydown.enter="addKey" />
+      <datalist v-if="!isArr && pendingSchema.length" :id="'gpkeys-' + uid">
+        <option v-for="p in pendingSchema" :key="p.key" :value="p.key">{{ KIND_ZH[p.kind] || '文本' }}{{ p.options?.length ? '：' + p.options.join(' / ') : '' }}</option>
+      </datalist>
       <button class="btn sm" @click="addKey">添加</button>
     </div>
   </div>
@@ -66,6 +69,19 @@ const emit = defineEmits<{ (e: 'update', v: Record<string, unknown> | unknown[])
 const newKey = ref('');
 const collapsed = ref(new Set<string>());
 const isArr = computed(() => Array.isArray(props.value));
+
+/* 1032：schema 键提示——注册在册但尚未入体的键升 datalist 建议（带类型释义与枚举
+   选项串）。schema 只升级「已在体」键的控件形态，未入体键此前完全不可见=具名参数
+   可发现性断层；添加仍不限制（任何键可手输，datalist 只提示不约束）。
+   uid：递归组件多实例，datalist id 用模块计数器区分。 */
+let uidSeq = 0;
+const uid = 'gp' + (++uidSeq).toString(36);
+const KIND_ZH: Record<string, string> = { number: '数值', boolean: '布尔', enum: '枚举', text: '文本' };
+const pendingSchema = computed<ParamMeta[]>(() => {
+  const body = props.value as Record<string, unknown>;
+  if (isArr.value) return [];
+  return props.schema.filter(p => !(p.key in body));
+});
 
 type Kind = 'string' | 'number' | 'numstr' | 'boolean' | 'null' | 'object' | 'array';
 type Row = { key: string; val: unknown; kind: Kind; raw: string };
