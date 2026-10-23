@@ -69,6 +69,12 @@
     <div v-else-if="isIntervals" class="cn-objval">
       <IntervalsEditor :rule="intervalsParsed!" :fields="fields" :types="types" @update="onIntervalsUpdate" />
     </div>
+    <!-- 1012：geo_distance / geo_bounding_box 专用坐标编辑位——值形态可解析（{lat,lon}
+         对象 / bbox corners·edges）即 distance+经纬度（或四角/四边）数值输入；
+         串/geohash/数组坐标等合法 ES 形态保真优先，落回通用键值表 -->
+    <div v-else-if="geoEditable" class="cn-objval">
+      <GeoValueEditor :op="node.op" :value="node.value" :params="node.params" @patch="onGeoPatch" />
+    </div>
     <!-- 【985】对象值（geo 系/terms_set/script 等）：常用键快捷 chips +
      递归键值子表（零降级同款语言）——键名不用猜，点 chips 即得骨架再改值 -->
     <div v-else-if="isObjValue" class="cn-objval">
@@ -166,7 +172,9 @@ import { Clock, X, Settings2, Group, Circle, CircleSlash, Copy } from 'lucide-vu
 import FieldSelect from './FieldSelect.vue';
 import GenericParams from './GenericParams.vue';
 import IntervalsEditor from './IntervalsEditor.vue';
+import GeoValueEditor from './GeoValueEditor.vue';
 import { parseIntervalRule, serIntervalRule, type IntervalRule } from '../../utils/intervalsRule';
+import { geoPointView, bboxView } from '../../utils/geoForm';
 import { stdTimeToEpochMs } from '../../utils/format';
 import { DRAG_KEY, TREE_BUS, fireDrag } from './treeBus';
 import { OPS_META, opsForType, RICH_OPS, ADV_MENU, typePriorityForOp, typeFilterForOp, NUMERIC_VALUE_TYPES, opFamilyOf } from '../../utils/queryAstOps';
@@ -401,6 +409,13 @@ const isIntervals = computed(() => !!intervalsParsed.value);
 function onIntervalsUpdate(r: IntervalRule) {
   patch({ value: serIntervalRule(r) });
 }
+/* 1012：geo 坐标形态可解析 → 专用编辑位（geo_point 双数值 / bbox corners·edges） */
+const geoEditable = computed(() =>
+  (props.node.op === 'geo_distance' && geoPointView(props.node.value) !== null)
+  || (props.node.op === 'geo_bounding_box' && bboxView(props.node.value) !== null));
+function onGeoPatch(p: { value?: unknown; params?: Record<string, unknown> }) {
+  patch({ ...(p.value !== undefined ? { value: p.value } : {}), ...(p.params !== undefined ? { params: p.params } : {}) });
+}
 const objVal = computed<Record<string, unknown>>(() =>
   (isObjValue.value ? props.node.value : {}) as Record<string, unknown>);
 function onObjValue(v: Record<string, unknown> | unknown[]) {
@@ -408,8 +423,6 @@ function onObjValue(v: Record<string, unknown> | unknown[]) {
 }
 /* 常用键快捷骨架（傻瓜化）：点 chips 添加键、初始值按语义给形态（集合 []、嵌套对象 {}、标量空串） */
 const OBJ_KEY_HINTS: Record<string, string[]> = {
-  geo_distance: ['lat', 'lon'],
-  geo_bounding_box: ['top_left', 'bottom_right'],
   geo_polygon: ['points'],
   geo_shape: ['shape', 'relation'],
   terms_set: ['terms', 'minimum_should_match_field'],

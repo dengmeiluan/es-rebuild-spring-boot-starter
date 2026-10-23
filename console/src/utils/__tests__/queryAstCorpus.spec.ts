@@ -79,6 +79,8 @@ const CORPUS: Array<[string, unknown]> = [
   /* ---- 地理 ---- */
   ['geo_distance', { geo_distance: { distance: '12km', location: { lat: 40, lon: -70 } } }],
   ['geo_bounding_box', { geo_bounding_box: { location: { top_left: { lat: 42, lon: -72 }, bottom_right: { lat: 40, lon: -74 } } } }],
+  /* 1012：bbox 平铺四边形态（专用编辑位覆盖面语料） */
+  ['geo_bounding_box-edges', { geo_bounding_box: { location: { top: 40, left: -74, right: -72, bottom: 39 } } }],
   ['geo_polygon', { geo_polygon: { location: { points: [{ lat: 40, lon: -70 }, { lat: 30, lon: -80 }] } } }],
   ['geo_shape', { geo_shape: { location: { shape: { type: 'envelope', coordinates: [[-70, 40], [-60, 50]] }, relation: 'intersects' } } }],
   ['geo_grid', { geo_grid: { location: { geohash: 'u17' } } }],
@@ -134,6 +136,14 @@ describe('998 queryAst 全量语料往返无损', () => {
 describe('1009 未知算子零丢失退化', () => {
   it('span_last（ES 无此算子）落 raw 叶且往返一致', () => {
     const q = { span_last: { match: { span_term: { f: 'v' } }, end: 2 } };
+    const n = parseQueryNode(q);
+    expect(isRaw(n)).toBe(true);
+    expect(serQueryNode(n)).toEqual(q);
+  });
+  /* 1012：geo_distance 串/geohash 坐标（合法 ES 形态）——FIELD_OBJ_OPS 特判认对象值键，
+     串坐标无对象值键落 raw 退化，往返仍零丢失（ClauseNode 标量输入保真可编辑） */
+  it('geo_distance 串坐标落 raw 叶且往返一致', () => {
+    const q = { geo_distance: { distance: '12km', location: '40,-70' } };
     const n = parseQueryNode(q);
     expect(isRaw(n)).toBe(true);
     expect(serQueryNode(n)).toEqual(q);
