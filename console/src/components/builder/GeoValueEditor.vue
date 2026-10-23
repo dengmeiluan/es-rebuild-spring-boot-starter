@@ -173,7 +173,7 @@ const GeoPointInputs = defineComponent({
 .gve-more { flex: none; }
 .gve-sub { flex-basis: 100%; padding: var(--sp-2) var(--sp-3); background: var(--bg1); border-radius: var(--r-s); }
 /* 内联 h() 子件（GeoPointInputs 的 lat/lon 输入与越界警示点）不带 scoped data 属性，
-   相关规则须 :deep 穿透（inlineRenderScope R91 守门约束），模板元素与 h() 元素共用同一组规则 */
+   相关规则须 :deep 穿透（inlineRenderScope 守卫约束），模板元素与 h() 元素共用同一组规则 */
 .gve :deep(.gve-lb) { font-size: var(--fs-2xs); color: var(--tx2); }
 .gve :deep(.gve-n) { width: 112px; height: 28px; font-size: var(--fs-sm); }
 .gve :deep(.cn-rwarn) { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--warn); cursor: help; }
