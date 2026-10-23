@@ -27,12 +27,18 @@
     </div>
 
     <nav class="nav-list">
+      <!-- 探测在途不出任何菜单：grantedPages 的 null（=未启用全量可见）只有探测完成后才可信，
+           在途放行=先渲染全量菜单、身份到达后再全部隐藏，无权限用户会看见菜单闪现（产线实报）。
+           给中性等待态，探测完成后按授权精确渲染。 -->
+      <div v-if="!auth.probed" class="nav-empty nav-degraded" role="status">
+        身份确认中…
+      </div>
       <!-- 身份未确认 ≠ 无权限：探测失败时菜单会保持「全量」形态，此时点进去必被 403。
            给一条可解释的状态条，避免用户把「后端不可达」当成「系统坏了」。 -->
-      <div v-if="auth.probed && !auth.authDisabled && auth.me == null" class="nav-empty nav-degraded" role="status">
+      <div v-else-if="!auth.authDisabled && auth.me == null" class="nav-empty nav-degraded" role="status">
         身份未确认：正在重试连接鉴权服务。菜单可能多于实际权限，操作以服务端校验为准。
       </div>
-      <div v-if="!grouped.length && !(auth.probed && !auth.authDisabled && auth.me == null)" class="nav-empty">
+      <div v-else-if="!grouped.length" class="nav-empty">
         {{ navQuery.trim() ? '无匹配功能' : '当前身份/目标连接下没有可访问的页面——请在「安全中心 → 我的账号」查看授权，或联系管理员勾选菜单' }}
       </div>
       <div v-for="g in grouped" :key="g.id" class="nav-group">
@@ -155,6 +161,9 @@ const grouped = computed(() => {
   /* 连接模型键(conn:{id}:{page})按当前目标收缩——host 下仅静态键可见；ADMIN 全局可见 */
   const admin = auth.isAdmin();
   const visible = (i: (typeof NAV_ITEMS)[number]) => {
+    /* 探测在途不出菜单：null（全量可见语义）只有探测完成后才可信——
+       在途放行会让无权限身份先看见全量菜单再整批消失（闪现，产线实报） */
+    if (!auth.probed) return false;
     if (admin) return true;
     /* 与路由守卫/命令面板同一真源：host-bound、env 模板、security/xmigrate 作用域收口都在 pageAllowed。 */
     return pageAllowed(gp, i.path, store.target, auth.envAllows, auth.me?.role);
@@ -198,13 +207,21 @@ function toggleGroup(id: string) {
   writeStoredRaw(localStorage, LS_KEY, JSON.stringify(collapsed.value));
 }
 
-/* 底栏状态改报真实集群健康——连接成功不等于集群正常（yellow/red 必须如实露出） */
+/* 底栏状态改报真实集群健康——连接成功不等于集群正常（yellow/red 必须如实露出）。
+   零授权身份：探测完成但没有任何可见页——「连接中…」会永久挂着像卡死，
+   改报中性「未授权任何集群」（灰点），授权到达后随身份 watch 自然转正常链 */
+const noClusterAccess = computed(() => {
+  const gp = auth.grantedPages;
+  return !!auth.probed && !auth.authDisabled && auth.me != null && Array.isArray(gp) && gp.length === 0;
+});
 const dotCls = computed(() => {
+  if (noClusterAccess.value) return 'c-idle';
   if (store.clusterOk === null) return 'c-warn';
   if (!store.clusterOk) return 'c-err';
   return store.clusterHealth === 'red' ? 'c-err' : store.clusterHealth === 'yellow' ? 'c-warn' : 'c-ok';
 });
 const footTx = computed(() => {
+  if (noClusterAccess.value) return '未授权任何集群';
   if (store.clusterOk === null) return '连接中…';
   if (!store.clusterOk) return '连接失败';
   if (store.clusterHealth === 'red') return '集群 RED';
@@ -212,6 +229,7 @@ const footTx = computed(() => {
   return '集群正常';
 });
 const footTitle = computed(() => {
+  if (noClusterAccess.value) return '当前身份未被授权任何集群连接';
   if (store.clusterOk === null) return '集群连接中…';
   if (!store.clusterOk) return '集群连接失败';
   const h = store.clusterHealth || '未知';
@@ -328,6 +346,7 @@ function itemTip(item: { name: string; key?: string }) {
 .dot.c-ok { background: var(--ok); box-shadow: var(--glow-m) var(--ok); }
 .dot.c-warn { background: var(--warn); }
 .dot.c-err { background: var(--err); box-shadow: var(--glow-m) var(--err); }
+.dot.c-idle { background: var(--text3, #8a929e); }
 
 /* ── / 图标折叠态：866px iframe 里 208px 侧栏吃掉 1/4 宽度，收成 56px 纯图标轨。
  丝滑化：所有元素常驻 DOM，高度/透明度/宽度全程同步插值（同一时长同一缓动），

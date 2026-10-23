@@ -257,11 +257,11 @@ export const useAppStore = defineStore('app', () => {
       const page = typeof d.page === 'string' && d.page ? d.page : '';
       const required = typeof d.required === 'string' && d.required ? d.required : '';
       const who = d.method && d.method !== 'GET' ? '该操作' : '该功能';
-      /* 读拒绝只落通知历史不弹 toast：开屏并行引导（索引选择器/健康探针/概览聚合/
-         监控历史）对无页面授权身份会一次挂一串，逐条弹错=右下角轰炸（产线实报），
-         而页面自身的禁用态/空态/无授权全屏已在讲同一件事。写请求保持必弹——
-         那是用户主动动作，静音会变成「点了没反应」。 */
-      const readDenied = !d.method || /^(GET|HEAD|OPTIONS)$/i.test(String(d.method));
+      /* 读拒绝完全静默（不弹也不入史）：无授权身份开屏时引导读会一齐 403，
+         逐条记录=通知历史被权限噪声刷屏（产线实报），而页面自身的禁用态/
+         空态/无授权全屏已在讲同一件事。写请求保持必弹+必入史——那是用户
+         主动动作，静音会变成「点了没反应」。 */
+      if (!d.method || /^(GET|HEAD|OPTIONS)$/i.test(String(d.method))) return;
       let msg: string;
       if (d.denied === 'CLIENT_WRITE_DENIED') {
         msg = `当前身份无权执行${who}，请求已在客户端拦截`;
@@ -275,8 +275,7 @@ export const useAppStore = defineStore('app', () => {
       const detail = [page && `page=${page}`, required && `required=${required}`,
         d.method && `method=${d.method}`, d.path && `path=${d.path}`].filter(Boolean).join(' · ');
       notify('error', detail ? `${msg}（${detail}）` : msg, {
-        logOnly: readDenied,
-        actions: readDenied ? undefined : [{
+        actions: [{
           label: '复制申请信息',
           onClick: () => {
             const text = [`控制台权限申请`, `页面：${page || '（未指定）'}`, `所需角色：${required || '（未指定）'}`,

@@ -124,7 +124,8 @@ describe('API 层写门：无权限请求零发出', () => {
 
 describe('菜单/按钮校准', () => {
   it('命令面板导航全部走页面门 go()，只剩 go 内部一次 router.push', () => {
-    expect(pal).toContain('const canGo = (path: string) => auth.isAdmin()');
+    /* 探测在途不出导航项（auth.probed 前置，1015 批防未授权清单闪现） */
+    expect(pal).toContain('const canGo = (path: string) => auth.probed');
     expect(pal).toContain('pageAllowed(auth.grantedPages, path, store.target, auth.envAllows, auth.me?.role)');
     expect(pal).toContain('if (typeof path === \'string\' && !canGo(path))');
     expect((pal.match(/router\.push\(/g) || []).length).toBe(1);

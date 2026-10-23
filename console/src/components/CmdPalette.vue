@@ -125,9 +125,11 @@ FolderTree, BookText, PackageOpen,
   LayoutTemplate, GitCompareArrows,
 };
 
-/* 命令面板导航门：与路由守卫/侧栏同一 pageAllowed 真源，未授权页面动作不执行。 */
-const canGo = (path: string) => auth.isAdmin()
-  || pageAllowed(auth.grantedPages, path, store.target, auth.envAllows, auth.me?.role);
+/* 命令面板导航门：与路由守卫/侧栏同一 pageAllowed 真源，未授权页面动作不执行。
+   探测在途同侧栏口径不出导航项（null 全量语义未可信，防未授权清单闪现）。 */
+const canGo = (path: string) => auth.probed
+  && (auth.isAdmin()
+  || pageAllowed(auth.grantedPages, path, store.target, auth.envAllows, auth.me?.role));
 const go = (to: any) => {
   const path = typeof to === 'string' ? to : to?.path;
   if (typeof path === 'string' && !canGo(path)) {

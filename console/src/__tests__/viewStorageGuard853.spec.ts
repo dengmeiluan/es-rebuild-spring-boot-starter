@@ -20,6 +20,7 @@ import { createApp, h, nextTick } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
 import { createRouter, createMemoryHistory } from 'vue-router';
 import SideNav from '../components/SideNav.vue';
+import { useAuthStore } from '../stores/auth';
 
 const srcDir = join(__dirname, '..');
 const read = (rel: string) => readFileSync(join(srcDir, rel), 'utf8');
@@ -136,6 +137,8 @@ describe('viewStorageGuard853 · 视图/组件层存储写入防御', () => {
     await router.isReady();
     const host = document.createElement('div');
     document.body.appendChild(host);
+    /* 探测在途不出菜单（身份确认中态）：折叠链用例需先落定探测态，菜单组才渲染 */
+    useAuthStore().probed = true;
     const app = createApp({ render: () => h(SideNav) });
     app.use(pinia);
     app.use(router);

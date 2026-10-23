@@ -121,6 +121,14 @@ export function pageAllowed(
 }
 
 /* 2.5.0 页面级授权：拒绝时的统一跳转构造（守卫/App 复核共用）。放行返回 null。 */
+
+/* 时序补偿记录（仅内存，不跨刷新）：身份/连接目录晚到时页面被误拒 → /forbidden，
+   收敛后 App.vue 复核据此自动回迁原页面。用户主动离开 /forbidden 即作废。 */
+let lastDeniedPath: string | null = null;
+export function peekDeniedPage(): string | null { return lastDeniedPath; }
+export function consumeDeniedPage(): string | null { const p = lastDeniedPath; lastDeniedPath = null; return p; }
+export function clearDeniedPage(): void { lastDeniedPath = null; }
+
 export function pageDeniedRedirect(
   grantedPages: readonly string[] | null,
   path: string,
@@ -130,6 +138,7 @@ export function pageDeniedRedirect(
 ) {
   if (pageAllowed(grantedPages, path, targetId, envAllows, role)) return null;
   const item = NAV_ITEMS.find(n => n.path === normalizeRoutePath(path))!;
+  lastDeniedPath = normalizeRoutePath(path);
   return { path: '/forbidden', query: { page: item.pageKey, name: item.name } };
 }
 
