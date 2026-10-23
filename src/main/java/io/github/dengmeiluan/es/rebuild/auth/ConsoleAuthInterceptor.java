@@ -750,7 +750,10 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                 opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
                         "PAGE_DENIED", 403, "pageGrants=empty target=" + targetId
                                 + " env=" + envPagesResolver.pagesFor(targetId)));
-                deny(response, 403, "{\"code\":\"PAGE_DENIED\",\"message\":\"当前身份无任何页面授权\"}");
+                /* 文案必须可操作：宿主委托部署下「无任何页面授权」最常见根因是
+                   委托侧实体没拿到授权（如飞书 SSO 自动新建账号只挂默认角色），
+                   直接告诉用户去哪配，而不是一句无上下文的拒绝。 */
+                deny(response, 403, "{\"code\":\"PAGE_DENIED\",\"message\":\"当前身份没有任何 ES 控制台页面授权——宿主委托部署请到宿主系统（如 quotehub）的角色菜单勾选 ES 控制台连接授权；若用飞书等 SSO 登录，请确认登录绑定的是被授权的账号（SSO 自动新建的账号不带任何授权）\"}");
                 return false;
             }
             /* 共享读端点按归属页裁决——静态页白名单与连接模型同一口径：
