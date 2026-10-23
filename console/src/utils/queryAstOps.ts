@@ -309,7 +309,13 @@ export const AGG_OPS: Record<string, string> = {
   range: '范围分组', date_range: '日期范围', filters: '多过滤分组', filter: '单过滤',
   avg: '平均值', sum: '求和', min: '最小', max: '最大', cardinality: '去重计数',
   value_count: '计数', stats: '统计', extended_stats: '扩展统计', percentiles: '百分位',
-  top_hits: 'Top 文档', nested: '嵌套', reverse_nested: '反嵌套',
+  percentile_ranks: '百分位排名', significant_terms: '显著词项', rare_terms: '稀有词项',
+  sampler: '采样', diversified_sampler: '多样化采样',
+  top_hits: 'Top 文档', top_metrics: 'Top 指标', missing: '缺值聚合',
+  geo_bounds: '地理边界', geo_centroid: '地理质心', composite: '复合分桶',
+  scripted_metric: '脚本聚合', median_absolute_deviation: '绝对中位差',
+  boxplot: '箱线图', string_stats: '字符串统计', weighted_avg: '加权平均',
+  nested: '嵌套', reverse_nested: '反嵌套',
 };
 
 /* 1020：常用聚合 body 具名参数 schema（GenericParams 消费——具名键升类型化输入/枚举下拉，
@@ -337,6 +343,21 @@ export const AGG_BODY_PARAMS: Record<string, ParamMeta[]> = {
   filters: [
     { key: 'other_bucket', kind: 'boolean' }, { key: 'other_bucket_key', kind: 'text' },
   ],
+  /* 1026：低频族补录（percents/values 数组键留自由表——数组编辑非单值档） */
+  percentiles: [
+    { key: 'keyed', kind: 'boolean' },
+    { key: 'tdigest', kind: 'boolean' }, { key: 'compression', kind: 'number' },
+    { key: 'hdr', kind: 'boolean' }, { key: 'number_of_sigmas', kind: 'number' },
+  ],
+  percentile_ranks: [{ key: 'keyed', kind: 'boolean' }],
+  extended_stats: [{ key: 'sigma', kind: 'number' }],
+  significant_terms: [
+    { key: 'size', kind: 'number' }, { key: 'min_doc_count', kind: 'number' },
+    { key: 'exclude_frequent', kind: 'boolean' },
+  ],
+  rare_terms: [{ key: 'max_doc_count', kind: 'number' }],
+  sampler: [{ key: 'shard_size', kind: 'number' }],
+  diversified_sampler: [{ key: 'shard_size', kind: 'number' }],
   avg: [{ key: 'missing', kind: 'number' }],
   sum: [{ key: 'missing', kind: 'number' }],
   min: [{ key: 'missing', kind: 'number' }],

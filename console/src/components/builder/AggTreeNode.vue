@@ -87,7 +87,7 @@ function onBodyParams(v: Record<string, unknown> | unknown[]) {
 /* top 常见聚合的 body.field 是字段键——命中时 GenericParams 该行渲染 FieldSelect
  （rank/分组/类型徽标/mark 全套）。未知聚合名/其余聚合（top_hits/filters/nested…）body 无
  直接字段键语义，传空数组回落裸键值表（零降级）。 */
-const FIELD_BODY_AGGS = new Set(['terms', 'histogram', 'date_histogram', 'range', 'date_range', 'avg', 'max', 'min', 'sum', 'cardinality']);
+const FIELD_BODY_AGGS = new Set(['terms', 'histogram', 'date_histogram', 'range', 'date_range', 'avg', 'max', 'min', 'sum', 'cardinality', 'value_count', 'percentiles', 'percentile_ranks', 'extended_stats', 'significant_terms', 'rare_terms', 'missing', 'geo_bounds', 'geo_centroid', 'weighted_avg', 'median_absolute_deviation', 'boxplot', 'string_stats']);
 const aggFieldKeys = computed(() => (FIELD_BODY_AGGS.has(props.node.op) ? ['field'] : []));
 
 /* 【W3b】聚合 field 行的类型置顶：候选分组按聚合语义排前（不改候选集）——

@@ -162,9 +162,11 @@ describe('560⑤：OverviewView 双条 + GuardedActionButton 错误盒合并 err
   it('OverviewView：err-bar 三源 reason.message 裸拼 → friendlyEsError', () => {
     const s = read('../views/OverviewView.vue');
     expect(s).toContain("import { friendlyEsError } from '../utils/esError'");
-    expect(s).toContain("errs.push('概览接口：' + friendlyEsError(String(ov.reason?.message ?? ov.reason)))");
-    expect(s).toContain("errs.push('健康接口：' + friendlyEsError(String(hd.reason?.message ?? hd.reason)))");
-    expect(s).toContain("errs.push('集群健康：' + friendlyEsError(String(ch.reason?.message ?? ch.reason)))");
+    /* 锁面随迁：三处硬编码 errs.push 已重构为 pushErr 循环单源（行为保留——
+       label 前缀 + friendlyEsError 友好化 + errs.push 链路不变，权限类静默为增量） */
+    expect(s).toContain("const pushErr = (label: string, reason: unknown, gated: boolean) => {");
+    expect(s).toContain("const text = label + '：' + friendlyEsError(String(r?.message ?? reason));");
+    expect(s).toContain('errs.push(text)');
   });
   it('GuardedActionButton：.ga-error 合并 err-bar 形态（role=alert；类锚保留，guardedBtn499 同路径）', () => {
     const s = read('../components/GuardedActionButton.vue');

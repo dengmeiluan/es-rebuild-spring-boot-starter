@@ -360,6 +360,20 @@
   功能凭空消失；权限拒绝的全局出口统一给出「缺什么 + 怎么办 + 一键复制申请信息」，
   连接目录加载失败保留上次清单并告警（不再清空成无法区分「故障/被删/被撤权」的空壳）
 
+### 新增（1026 批：低频聚合族 schema 补录 + 建议表扩员）
+
+- 聚合参数 schema 补录低频族：percentiles（hdr/tdigest 布尔档、compression/
+  number_of_sigmas 数值档、keyed）、percentile_ranks、extended_stats（sigma）、
+  significant_terms（size/min_doc_count/exclude_frequent）、rare_terms
+  （max_doc_count）、sampler 族（shard_size）——percents/values 等数组键留自由表
+- 聚合类型建议表（datalist）扩员 14 项至 30+（百分位排名/显著词项/稀有词项/采样/
+  Top 指标/缺值聚合/地理边界/地理质心/复合分桶/脚本聚合/绝对中位差/箱线图/
+  字符串统计/加权平均）——低频聚合不用手打名字
+- field 行 FieldSelect 扩员 13 个单字段聚合（percentiles/extended_stats/
+  significant_terms/missing/geo_bounds/加权平均 等）——字段候选+类型徽标+置顶
+  同步获得；随迁 flattenWave560 错误盒锁面（概览三源硬编码已重构为 pushErr 循环
+  单源，friendlyEsError 行为保留，锁面按现实现更新）
+
 ### 新增（1025 批：索引上下文行冻结全站推广——26 个视图一次覆盖）
 
 - 批 1024 的查询工作台页头冻结推广到全部带当前索引 chip 的视图（分词验证/相关性
