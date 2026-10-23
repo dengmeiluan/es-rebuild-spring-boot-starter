@@ -132,6 +132,12 @@ export const OPS_META: Record<string, OpMeta> = {
   span_gap: { form: 'none', mainKey: 'width', label: '跨度间隙' },
   /* 999：rule（8.14+ 检索规则）——ruleset_id 主值，match_criteria / match_predicate 走参数表 */
   rule: { form: 'none', mainKey: 'ruleset_id', label: '规则查询' },
+  /* 1030：注册表全量收官两员。type = 7.x 遗留映射类型过滤（8.x 已移除，老集群仍可达）；
+   template = 搜索模板查询（body 是 id/name/source 任一形态 + params，主值取 id——
+   id 缺席形态 value=undefined、其余键整体进 params 保真，序列化 undefined 键
+   JSON.stringify 自然剔除，往返零丢失）。none 形态：parse/ser 零特判，注册即得富表单 */
+  type: { form: 'none', mainKey: 'value', label: '类型过滤', params: [{ key: 'boost', kind: 'number' }] },
+  template: { form: 'none', mainKey: 'id', label: '搜索模板' },
 };
 
 /* 字段类型 → 推荐算子（ClauseNode 算子下拉：推荐的排前，其余富表单算子分组列后，均可选） */
@@ -245,6 +251,7 @@ export function opFamilyOf(op: string): OpFamily {
     || op === 'semantic' || op === 'text_expansion' || op === 'weighted_tokens') return 'text';
   if (op === 'range' || op === 'exists') return 'range';
   if (op === 'script' || op === 'script_score' || op === 'wrapper' || op === 'percolate' || op === 'rule'
+    || op === 'template'
     || op === 'function_score' || op === 'constant_score' || op === 'boosting' || op === 'dis_max'
     || op === 'pinned' || op === 'rank_feature' || op === 'rank_features') return 'script';
   return 'exact';
@@ -295,11 +302,11 @@ export const RETRIEVER_PARAMS: Record<string, ParamMeta[]> = {
  全部成员必须是 OPS_META 或 WRAP_LABELS/MULTI_LABELS 已注册算子。 */
 export const ADV_MENU: Array<{ group: string; ops: string[] }> = [
   { group: '全文检索', ops: ['multi_match', 'query_string', 'simple_query_string', 'combined_fields', 'match_bool_prefix', 'match_int_prefix', 'more_like_this', 'intervals'] },
-  { group: '精确与集合', ops: ['ids', 'terms_set', 'parent_id'] },
+  { group: '精确与集合', ops: ['ids', 'terms_set', 'parent_id', 'type'] },
   { group: '地理位置', ops: ['geo_distance', 'geo_bounding_box', 'geo_polygon', 'geo_shape', 'geo_grid', 'shape', 'distance_feature'] },
   { group: '跨度位置', ops: ['span_near', 'span_or', 'span_not', 'span_first', 'span_containing', 'span_within', 'span_term', 'span_gap', 'span_multi', 'field_masking_span'] },
   { group: '向量与语义', ops: ['knn', 'sparse_vector', 'text_expansion', 'weighted_tokens', 'semantic'] },
-  { group: '脚本与其他', ops: ['script', 'wrapper', 'percolate', 'rule', 'rank_feature', 'rank_features'] },
+  { group: '脚本与其他', ops: ['script', 'wrapper', 'percolate', 'rule', 'template', 'rank_feature', 'rank_features'] },
   { group: '复合容器', ops: ['constant_score', 'boosting', 'dis_max', 'function_score', 'script_score', 'pinned'] },
 ];
 
@@ -316,7 +323,26 @@ export const AGG_OPS: Record<string, string> = {
   scripted_metric: '脚本聚合', median_absolute_deviation: '绝对中位差',
   boxplot: '箱线图', string_stats: '字符串统计', weighted_avg: '加权平均',
   nested: '嵌套', reverse_nested: '反嵌套',
+  /* 1030：聚合建议表全量补齐——管道族（对既有桶结果做二次计算）、地理网格族、
+   杂项桶/度量族。建议不限制：任何 ES 聚合名都可手输（AggTreeNode datalist 语义）。 */
+  global: '全局桶', children: '子文档桶', parent: '父文档桶',
+  multi_terms: '多词项分组', adjacency_matrix: '邻接矩阵',
+  auto_date_histogram: '自适应日期直方图', significant_text: '显著词文本',
+  ip_range: 'IP 范围', variable_width_histogram: '变宽数值直方图',
+  geo_distance: '地理距离桶', geohash_grid: 'Geohash 网格',
+  geotile_grid: 'Geotile 网格', geohex_grid: 'Geohex 网格', geo_line: '地理轨迹',
+  rate: '速率', matrix_stats: '矩阵统计', t_test: 'T 检验',
+  categorize_text: '文本归类', frequent_item_sets: '频繁项集', inference: '推理',
+  bucket_script: '桶脚本', bucket_selector: '桶选择', bucket_sort: '桶排序',
+  cumulative_cardinality: '累计去重', cumulative_sum: '累计求和',
+  derivative: '导数', extended_stats_bucket: '桶扩展统计',
+  moving_fn: '移动函数', moving_percentiles: '移动百分位', moving_avg: '移动平均（旧）',
+  normalize: '归一化', percentiles_bucket: '桶百分位', serial_diff: '串行差分',
+  stats_bucket: '桶统计',
 };
+
+/* 1030：gap_policy 三档全族单源（管道聚合对空桶的取数策略） */
+const GAP_POLICY: string[] = ['skip', 'insert_zeros', 'keep_values'];
 
 /* 1020：常用聚合 body 具名参数 schema（GenericParams 消费——具名键升类型化输入/枚举下拉，
  与 WRAP_PARAMS 同语言）。field 由 field-keys 行内 FieldSelect 权威编辑不在此表；
@@ -364,4 +390,55 @@ export const AGG_BODY_PARAMS: Record<string, ParamMeta[]> = {
   max: [{ key: 'missing', kind: 'number' }],
   cardinality: [{ key: 'precision_threshold', kind: 'number' }],
   top_hits: [{ key: 'size', kind: 'number' }, { key: 'from', kind: 'number' }],
+  /* 1030：管道族与地理网格族 schema——buckets_path（管道输入引用）升具名文本档，
+   gap_policy 三档全族统一枚举；script/buckets 数组键（bucket_script.script、
+   bucket_sort.sort、percentiles_bucket.percents）维持自由表零丢失 */
+  geohash_grid: [{ key: 'precision', kind: 'number' }, { key: 'size', kind: 'number' }],
+  geotile_grid: [{ key: 'precision', kind: 'number' }, { key: 'size', kind: 'number' }],
+  geohex_grid: [{ key: 'precision', kind: 'number' }, { key: 'size', kind: 'number' }],
+  auto_date_histogram: [
+    { key: 'buckets', kind: 'number' }, { key: 'format', kind: 'text' }, { key: 'min_doc_count', kind: 'number' },
+  ],
+  ip_range: [{ key: 'keyed', kind: 'boolean' }],
+  variable_width_histogram: [{ key: 'buckets', kind: 'number' }],
+  significant_text: [{ key: 'size', kind: 'number' }, { key: 'min_doc_count', kind: 'number' }],
+  adjacency_matrix: [{ key: 'separator', kind: 'text' }],
+  rate: [
+    { key: 'unit', kind: 'text' },
+    { key: 'mode', kind: 'enum', options: ['sum', 'min', 'max', 'avg'] },
+  ],
+  derivative: [
+    { key: 'buckets_path', kind: 'text' }, { key: 'unit', kind: 'text' },
+    { key: 'gap_policy', kind: 'enum', options: GAP_POLICY },
+  ],
+  cumulative_sum: [{ key: 'buckets_path', kind: 'text' }, { key: 'format', kind: 'text' }],
+  cumulative_cardinality: [{ key: 'precision_threshold', kind: 'number' }],
+  bucket_script: [{ key: 'buckets_path', kind: 'text' }],
+  bucket_selector: [{ key: 'buckets_path', kind: 'text' }, { key: 'gap_policy', kind: 'enum', options: GAP_POLICY }],
+  bucket_sort: [{ key: 'gap_policy', kind: 'enum', options: GAP_POLICY }],
+  extended_stats_bucket: [
+    { key: 'buckets_path', kind: 'text' }, { key: 'sigma', kind: 'number' },
+    { key: 'gap_policy', kind: 'enum', options: GAP_POLICY },
+  ],
+  stats_bucket: [{ key: 'buckets_path', kind: 'text' }, { key: 'gap_policy', kind: 'enum', options: GAP_POLICY }],
+  percentiles_bucket: [{ key: 'buckets_path', kind: 'text' }, { key: 'gap_policy', kind: 'enum', options: GAP_POLICY }],
+  moving_fn: [
+    { key: 'buckets_path', kind: 'text' }, { key: 'window', kind: 'number' }, { key: 'shift', kind: 'number' },
+    { key: 'gap_policy', kind: 'enum', options: GAP_POLICY },
+  ],
+  moving_percentiles: [
+    { key: 'buckets_path', kind: 'text' }, { key: 'window', kind: 'number' }, { key: 'shift', kind: 'number' },
+  ],
+  moving_avg: [
+    { key: 'buckets_path', kind: 'text' }, { key: 'window', kind: 'number' },
+    { key: 'gap_policy', kind: 'enum', options: GAP_POLICY },
+  ],
+  serial_diff: [
+    { key: 'buckets_path', kind: 'text' }, { key: 'lag', kind: 'number' },
+    { key: 'gap_policy', kind: 'enum', options: GAP_POLICY },
+  ],
+  normalize: [
+    { key: 'buckets_path', kind: 'text' },
+    { key: 'mode', kind: 'enum', options: ['percent_of_sum', 'mean_of_values', 'median_of_values', 'sum_of_values'] },
+  ],
 };

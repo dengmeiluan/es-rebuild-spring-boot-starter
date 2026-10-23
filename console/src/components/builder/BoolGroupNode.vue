@@ -77,7 +77,8 @@
         <!-- 993：↑↓ 键盘导航（跨组扁平游标）+ act 高亮，Enter 插游标项（未导航=首个命中既有语义） -->
         <template v-for="g in advGroups" :key="g.group">
           <div class="adv-g">{{ g.group }}</div>
-          <button v-for="op in g.ops" :key="op" class="adv-i" :class="{ act: advFlat[advCursor] === op }" type="button" @click="addAdvanced(op)">
+          <button v-for="op in g.ops" :key="op" class="adv-i" :class="{ act: advFlat[advCursor] === op }" type="button"
+                  :title="op + ' · ' + labelOfOp(op)" @click="addAdvanced(op)">
             <span>{{ labelOfOp(op) }}</span><code class="mono">{{ op }}</code>
           </button>
         </template>
@@ -323,5 +324,7 @@ onBeforeUnmount(() => window.removeEventListener(BGN_COLLAPSE_EVENT, onCollapseE
 .adv-i.act { background: var(--hover); }
 .adv-i { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); padding: 3px var(--sp-1); border: none; background: none; border-radius: var(--r-xs); font-size: var(--fs-sm); color: var(--tx0); cursor: pointer; text-align: left; }
 .adv-i:hover { background: var(--ac-soft); }
-.adv-i code { font-size: var(--fs-2xs); color: var(--tx2); }
+/* 1030：长算子名（combined_fields 等 14+ 字符）在双列窄列内溢出被面板裁切——
+ code 位收缩省略号收口，完整名走行 title 提示（悬停可读全名） */
+.adv-i code { font-size: var(--fs-2xs); color: var(--tx2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>

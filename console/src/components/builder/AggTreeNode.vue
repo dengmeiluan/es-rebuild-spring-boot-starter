@@ -87,7 +87,7 @@ function onBodyParams(v: Record<string, unknown> | unknown[]) {
 /* top 常见聚合的 body.field 是字段键——命中时 GenericParams 该行渲染 FieldSelect
  （rank/分组/类型徽标/mark 全套）。未知聚合名/其余聚合（top_hits/filters/nested…）body 无
  直接字段键语义，传空数组回落裸键值表（零降级）。 */
-const FIELD_BODY_AGGS = new Set(['terms', 'histogram', 'date_histogram', 'range', 'date_range', 'avg', 'max', 'min', 'sum', 'cardinality', 'value_count', 'percentiles', 'percentile_ranks', 'extended_stats', 'significant_terms', 'rare_terms', 'missing', 'geo_bounds', 'geo_centroid', 'weighted_avg', 'median_absolute_deviation', 'boxplot', 'string_stats']);
+const FIELD_BODY_AGGS = new Set(['terms', 'histogram', 'date_histogram', 'range', 'date_range', 'avg', 'max', 'min', 'sum', 'cardinality', 'value_count', 'percentiles', 'percentile_ranks', 'extended_stats', 'significant_terms', 'significant_text', 'rare_terms', 'missing', 'geo_bounds', 'geo_centroid', 'weighted_avg', 'median_absolute_deviation', 'boxplot', 'string_stats', 'auto_date_histogram', 'ip_range', 'variable_width_histogram', 'geohash_grid', 'geotile_grid', 'geohex_grid', 'geo_distance', 'rate']);
 const aggFieldKeys = computed(() => (FIELD_BODY_AGGS.has(props.node.op) ? ['field'] : []));
 
 /* 【W3b】聚合 field 行的类型置顶：候选分组按聚合语义排前（不改候选集）——
@@ -96,11 +96,13 @@ const aggFieldKeys = computed(() => (FIELD_BODY_AGGS.has(props.node.op) ? ['fiel
  会被 ES 拒或产出无意义桶）→ 数值族置顶；range 分桶 date+数值族皆常见 → date 置顶数值族次之；
  其余聚合无类型倾向，空数组 = GenericParams 归一 null 纯 rank 平铺（现状零增量） */
 const NUMERIC_TYPES = ['long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float'];
-const NUMERIC_AGGS = new Set(['avg', 'min', 'max', 'sum', 'cardinality', 'histogram']);
+const NUMERIC_AGGS = new Set(['avg', 'min', 'max', 'sum', 'cardinality', 'histogram', 'variable_width_histogram', 'rate']);
+const GEO_AGGS = new Set(['geohash_grid', 'geotile_grid', 'geohex_grid', 'geo_distance']);
 const aggTypePriority = computed<string[]>(() => {
-  if (props.node.op === 'date_histogram') return ['date'];
+  if (props.node.op === 'date_histogram' || props.node.op === 'auto_date_histogram') return ['date'];
   if (props.node.op === 'terms') return ['keyword', ...NUMERIC_TYPES];
   if (props.node.op === 'range' || props.node.op === 'date_range') return ['date', ...NUMERIC_TYPES];
+  if (GEO_AGGS.has(props.node.op)) return ['geo_point', 'geo_shape'];
   if (NUMERIC_AGGS.has(props.node.op)) return [...NUMERIC_TYPES];
   return [];
 });
