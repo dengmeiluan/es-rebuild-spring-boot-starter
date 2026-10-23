@@ -249,6 +249,17 @@ describe('998 顶层形态边界（tree 级）', () => {
     const dsl = { aggregations: { by_tag: { terms: { field: 'tag' }, aggs: { avg_price: { avg: { field: 'price' } } } } } };
     expect(rtTree(dsl)).toEqual(dsl);
   });
+  /* 1022：date_range ranges 行编辑 / filters 命名与匿名桶——一等编辑位覆盖面语料 */
+  it('date_range ranges 混合区间保真', () => {
+    const dsl = { aggs: { r: { date_range: { field: 'created', format: 'yyyy', ranges: [{ to: 'now-10M/M' }, { from: 100, to: 200, key: 'mid' }] } } } };
+    expect(rtTree(dsl)).toEqual(dsl);
+  });
+  it('filters 命名桶与匿名数组两形态保真', () => {
+    const named = { aggs: { f: { filters: { filters: { errors: { term: { status: 'error' } }, warns: { match: { body: 'warn' } } }, other_bucket: true } } } };
+    expect(rtTree(named)).toEqual(named);
+    const anon = { aggs: { f: { filters: { filters: [{ match_all: {} }, { term: { status: 'ok' } }] } } } };
+    expect(rtTree(anon)).toEqual(anon);
+  });
   it('emptyTree 新字段默认空（防消费方 undefined）', () => {
     const t: QueryTree = emptyTree();
     expect(t.searchParams).toEqual({});

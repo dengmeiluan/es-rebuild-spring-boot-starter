@@ -346,7 +346,7 @@ function itemTip(item: { name: string; key?: string }) {
 .dot.c-ok { background: var(--ok); box-shadow: var(--glow-m) var(--ok); }
 .dot.c-warn { background: var(--warn); }
 .dot.c-err { background: var(--err); box-shadow: var(--glow-m) var(--err); }
-.dot.c-idle { background: var(--text3, #8a929e); }
+.dot.c-idle { background: var(--tx3); }
 
 /* ── / 图标折叠态：866px iframe 里 208px 侧栏吃掉 1/4 宽度，收成 56px 纯图标轨。
  丝滑化：所有元素常驻 DOM，高度/透明度/宽度全程同步插值（同一时长同一缓动），

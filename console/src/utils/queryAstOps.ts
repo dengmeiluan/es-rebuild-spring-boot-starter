@@ -330,6 +330,13 @@ export const AGG_BODY_PARAMS: Record<string, ParamMeta[]> = {
     { key: 'interval', kind: 'number' }, { key: 'min_doc_count', kind: 'number' },
   ],
   range: [{ key: 'keyed', kind: 'boolean' }],
+  /* 1022：date_range（ranges 由 AggRangesPanel 权威编辑）/ filters（buckets 由 AggFiltersPanel） */
+  date_range: [
+    { key: 'format', kind: 'text' }, { key: 'time_zone', kind: 'text' }, { key: 'keyed', kind: 'boolean' },
+  ],
+  filters: [
+    { key: 'other_bucket', kind: 'boolean' }, { key: 'other_bucket_key', kind: 'text' },
+  ],
   avg: [{ key: 'missing', kind: 'number' }],
   sum: [{ key: 'missing', kind: 'number' }],
   min: [{ key: 'missing', kind: 'number' }],

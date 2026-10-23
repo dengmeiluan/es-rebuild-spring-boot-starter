@@ -5,6 +5,14 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.49]
+
+### 修复
+
+- 「上次工作现场」提示时机移到身份确认后：现场记录是账号视角产物，换号清理挂在
+  probe 成功路径——此前提示在探测前发出，x3 会收到 x1 的「查询工作台」现场
+  （产线实报）；同账号场景不变（身份确认后照常一键回）
+
 ## [1.0.48]
 
 ### 修复
@@ -325,6 +333,18 @@
   解释哪些操作不可用）——此前这些页面的写钮按 v-if 隐藏、页面无任何解释，用户只看到
   功能凭空消失；权限拒绝的全局出口统一给出「缺什么 + 怎么办 + 一键复制申请信息」，
   连接目录加载失败保留上次清单并告警（不再清空成无法区分「故障/被删/被撤权」的空壳）
+
+### 新增（1022 批：date_range/range ranges 行编辑 + filters 命名桶查询树）
+
+- `date_range` 与 `range` 聚合的 `ranges` 数组从递归键值表升为**三元组行编辑**：每行
+  from → to → key 三输入（from/to 接受 date-math 串或数值、开区间 from-only/to-only
+  半成品合法、key 空删键）、行级增删；`filters` 聚合的桶升为**一等查询树编辑**——
+  命名形态每桶 = 桶名输入 + MiniTreeEditor（bool/nested 全套树编辑，与主树同语言），
+  匿名数组形态逐项树行；other_bucket 等参数走 schema 表，畸形 filters 键保真退化
+- date_range 补齐 field 行 FieldSelect（date 类型置顶）与 format/time_zone/keyed
+  schema；corpus 补 ranges 混合区间与 filters 两形态往返语料
+- 顺手修：SideNav 空闲态圆点 fallback 误写 `--text3`（全站 token 实为 `--tx3`）带
+  硬编码色后备——token 守卫红多轮，改用正版 token（行为零变，浅色主题下取同源色）
 
 ### 新增（1021 批：highlight 字段参数 schema 化）
 
