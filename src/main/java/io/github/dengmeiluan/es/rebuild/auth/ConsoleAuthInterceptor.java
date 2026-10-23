@@ -707,10 +707,17 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                     io.github.dengmeiluan.es.rebuild.xmigrate.RemoteClusterConn targetConn = connStore.get(targetId);
                     if (targetConn != null && !ConsoleConnVisibility.canSeeResolved(principal, targetId, targetConn)) {
                         ConsoleRole need = ConsoleRole.parse(targetConn.getMinRole());
+                        /* 两种不可见分开说（产线实报混用误导）：角色低于 minRole=提示升角色；
+                           角色够但页面授权缺失=提示去宿主系统勾选（升级角色解决不了）。 */
+                        boolean roleShort = !principal.getRole().atLeast(need);
+                        String connMsg = roleShort
+                                ? "当前角色无权访问该集群连接（需 " + need.name() + " 及以上），请联系管理员调整连接的最低角色或切换其他集群目标"
+                                : "该集群连接未授权给当前身份，请联系管理员在宿主系统勾选该连接的页面授权";
                         opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
-                                "CONN_DENIED", 403, "target=" + targetId + " required=" + need.name()));
-                        deny(response, 403, "{\"code\":\"CONN_FORBIDDEN\",\"message\":\"当前角色无权访问该集群连接\",\"required\":\""
-                                + need.name() + "\"}");
+                                "CONN_DENIED", 403, "target=" + targetId + " required=" + need.name()
+                                        + (roleShort ? "" : " pageModel=missing")));
+                        deny(response, 403, "{\"code\":\"CONN_FORBIDDEN\",\"message\":\"" + jsonEscape(connMsg)
+                                + "\",\"required\":\"" + need.name() + "\"}");
                         return false;
                     }
                 } catch (Exception e) {

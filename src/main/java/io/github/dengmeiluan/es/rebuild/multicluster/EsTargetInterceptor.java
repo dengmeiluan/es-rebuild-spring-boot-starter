@@ -110,8 +110,14 @@ public class EsTargetInterceptor implements HandlerInterceptor {
                 }
                 if (!ConsoleConnVisibility.canSeeResolved(principal, tid, conn)) {
                     ConsoleRole required = ConsoleRole.parse(conn.getMinRole());
-                    deny(response, 403, "{\"code\":\"CONN_FORBIDDEN\",\"message\":\"当前角色或页面授权无权访问该集群连接\","
-                            + "\"required\":\"" + required.name() + "\"}");
+                    /* 两种不可见分开说：角色不足=升角色；角色够但页面授权缺失=去宿主系统勾选
+                       （产线实报混用误导——提示升角色对缺页面授权的用户根本解决不了）。 */
+                    boolean roleShort = principal == null || !principal.getRole().atLeast(required);
+                    String msg = roleShort
+                            ? "当前角色无权访问该集群连接（需 " + required.name() + " 及以上），请联系管理员调整连接的最低角色或切换其他集群目标"
+                            : "该集群连接未授权给当前身份，请联系管理员在宿主系统勾选该连接的页面授权";
+                    deny(response, 403, "{\"code\":\"CONN_FORBIDDEN\",\"message\":\"" + msg.replace("\"", "\\\"")
+                            + "\",\"required\":\"" + required.name() + "\"}");
                     return false;
                 }
             }

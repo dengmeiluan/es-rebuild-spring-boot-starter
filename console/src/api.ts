@@ -315,7 +315,10 @@ async function request<T = any>(path: string, init?: RequestInit & { timeoutMs?:
     // 集群级权限隔离/档案失效的统一友好文案（后端 code 见 EsTargetInterceptor / MigrateExceptionAdvice）
     let msg = (data && data.message) || text || `HTTP ${resp.status}`;
     if (data && data.code === 'CONN_FORBIDDEN') {
-      msg = `当前角色无权访问该集群连接${data.required ? `（需 ${data.required} 及以上）` : ''}，请联系管理员调整连接的最低角色或切换其他集群目标`;
+      /* 优先后端精确文案（角色不足 vs 页面授权缺失两种不可见分开说，1.0.53 起后端下发）；
+         旧后端无 message 时退回通用文案。 */
+      msg = data.message
+        || `当前角色无权访问该集群连接${data.required ? `（需 ${data.required} 及以上）` : ''}，请联系管理员调整连接的最低角色或切换其他集群目标`;
     } else if (data && data.code === 'CONN_NOT_FOUND') {
       msg = '目标集群连接不存在或已被删除，请在顶栏切换器重新选择';
     }

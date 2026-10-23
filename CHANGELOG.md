@@ -5,6 +5,17 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.54]
+
+### 修复
+
+- 连接不可见文案分层（产线实报混用误导）：角色低于连接 minRole=提示升角色；
+  角色达标但页面授权缺失=提示去宿主系统勾选该连接的页面授权（升角色根本
+  解决不了）。授权拦截器与数据面拦截器两处同口径，前端 CONN_FORBIDDEN 优先
+  采用后端精确文案（旧后端退回通用文案）。同批全量交叉核对页面归属×宿主
+  绑定授权（/overview 同类）：确认无剩余漏网实例——inspect/status/system-inspect
+  无前端调用方，config-drift/system 为前后端一致的主机绑定页
+
 ## [1.0.53]
 
 ### 新增

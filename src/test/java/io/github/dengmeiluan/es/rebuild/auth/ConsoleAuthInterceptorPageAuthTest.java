@@ -329,6 +329,8 @@ public class ConsoleAuthInterceptorPageAuthTest {
         assertFalse(it.preHandle(stubRequest("GET", "/internal/es/index/cluster/inspect",
                 java.util.Collections.singletonMap("X-Es-Target", "c1")), resp.proxy, null));
         assertEquals(403, resp.status);
+        // 角色达 minRole 而页面授权缺失：文案必须指向「未授权给当前身份」而非误导升角色
+        assertTrue(resp.bodyText().contains("未授权给当前身份"));
     }
 
     @Test
