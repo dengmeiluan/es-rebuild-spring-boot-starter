@@ -696,8 +696,13 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                config-lab/drift 等同样吃 X-Es-Target 授权却完全跳过了它——持 conn:B:w:adhoc-rebuild
                但角色低于 B.minRole 的用户可中止 B 上的重建。
                档案查不到（null）时不额外拒绝：存在性由数据面拦截器与宿主键下发共同保证，
-               这里只补「连接存在时必须同时满足 minRole」这一条，避免把有页面键的人误拦。 */
-            if (!"host".equals(targetId) && connStore != null) {
+               这里只补「连接存在时必须同时满足 minRole」这一条，避免把有页面键的人误拦。
+               自救通道（bootstrap：身份/连接目录/健康/setup）例外——它们是空页集/换号
+               用户的定位通道，残留的跨账号目标头（localStorage 按域共享）不得把它们
+               打死成 CONN_FORBIDDEN（产线实报：换号后 /auth/me、/clusters 全 403，
+               「身份未确认」+连接目录加载失败要等兜底重置才自愈）。数据面另有独立闸：
+               EsTargetInterceptor 对 followsTarget 路径独立做 canSeeResolved，安全不减。 */
+            if (!"host".equals(targetId) && connStore != null && !isBootstrapPath(path)) {
                 try {
                     io.github.dengmeiluan.es.rebuild.xmigrate.RemoteClusterConn targetConn = connStore.get(targetId);
                     if (targetConn != null && !ConsoleConnVisibility.canSeeResolved(principal, targetId, targetConn)) {

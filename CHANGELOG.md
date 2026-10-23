@@ -5,6 +5,19 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.45]
+
+### 修复
+
+- 跨账号残留目标头毒化鉴权链（产线实报：同浏览器换号进入，上一账号的
+  es-console.target 以 X-Es-Target 随请求发出——零页集身份对该连接不可见，
+  /auth/me 与 /clusters 被连接可见性闸打成 CONN_FORBIDDEN：身份探测失败呈现
+  「身份未确认」全量菜单假态+连接目录加载失败，要等兜底重置目标才自愈）。
+  三层修：①后端自救通道（bootstrap：身份/连接目录/健康/setup）豁免连接可见性
+  检查——目录本身按可见性过滤行级，数据面另有 EsTargetInterceptor 独立闸，安全
+  不减；②前端身份/管理面请求（auth/clusters/setup）不发目标头；③换人清理清单
+  补目标选择键（目标选择是账号可见性产物，不得跨账号携带）
+
 ## [1.0.44]
 
 ### 修复
@@ -283,6 +296,19 @@
   解释哪些操作不可用）——此前这些页面的写钮按 v-if 隐藏、页面无任何解释，用户只看到
   功能凭空消失；权限拒绝的全局出口统一给出「缺什么 + 怎么办 + 一键复制申请信息」，
   连接目录加载失败保留上次清单并告警（不再清空成无法区分「故障/被删/被撤权」的空壳）
+
+### 新增（1020 批：聚合 body 按类型 schema 富表单 + vitest 解析解堵）
+
+- 常用聚合（terms/date_histogram/histogram/range/avg/sum/min/max/cardinality/top_hits）
+  的参数体从裸键值表升为 **schema 驱动具名表单**：execution_hint 三档枚举下拉、
+  keyed 布尔档、size/interval/min_doc_count/precision_threshold 等数值档、
+  calendar_interval/format 等文本档——键名不用记、合法取值点选即得；field 行
+  FieldSelect（字段候选+类型置顶）既有不受影响；未登记键维持自由表加键零丢失，
+  未登记聚合类型零 schema 裸表（现状不变），body 直通零 AST 改动
+- 测试基建解堵：src 下并行迁移的整树 .js 快照在 vitest 解析里遮蔽 .ts 正源
+  （queryAstOps 新导出在 vitest 读成冻结快照实锤）——vitest.config 补
+  `resolve.extensions` .ts 优先（与 d469e2c 的 vite.config 修复同语义另一半），
+  tracked .ts 恒为正源
 
 ### 新增（1019 批：terms lookup 远程词项一等编辑位）
 

@@ -183,6 +183,34 @@ public class ConsoleAuthInterceptorPageAuthTest {
                 envPagesResolver, stubStore);
     }
 
+    /** 同 interceptor，但连接档案里存在 c1（minRole=VIEWER）：残留目标头可见性闸的红绿判据用。 */
+    private static ConsoleAuthInterceptor interceptorWithConn(ConsolePrincipal principal, CapturingAudit audit) {
+        EsConsoleAuthorizer authorizer = req -> principal;
+        ControlClusterResolver resolver = new ControlClusterResolver(null, null, null, null, null, "auto") {
+            @Override public boolean bound() { return true; }
+        };
+        ConnStore stubStore = new ConnStore() {
+            @Override public java.util.List<java.util.Map<String, Object>> list() { return java.util.Collections.emptyList(); }
+            @Override public RemoteClusterConn get(String id) {
+                if ("c1".equals(id)) {
+                    RemoteClusterConn conn = new RemoteClusterConn();
+                    conn.setMinRole("VIEWER");
+                    return conn;
+                }
+                return null;
+            }
+            @Override public String getName(String id) { return "c1"; }
+            @Override public String getVersion(String id) { return null; }
+            @Override public java.util.Map<String, Object> save(String id, String name, String url, String username,
+                    String password, String minRole, Integer connectTimeoutMs, Integer socketTimeoutMs, String env) { throw new UnsupportedOperationException(); }
+            @Override public void delete(String id) { }
+            @Override public void updateVersion(String id, String version) { }
+        };
+        EnvPagesResolver envPagesResolver = new EnvPagesResolver(stubStore, new EsRebuildProperties());
+        return new ConsoleAuthInterceptor(authorizer, audit, resolver, ConsolePageCatalog.load(), true,
+                envPagesResolver, stubStore);
+    }
+
     /* ---------------- 拦截矩阵 ---------------- */
 
     @Test
@@ -275,6 +303,31 @@ public class ConsoleAuthInterceptorPageAuthTest {
         StubResponse resp = new StubResponse();
         assertFalse(it.preHandle(stubRequest("GET", "/internal/es/index/overview",
                 java.util.Collections.<String, String>emptyMap()), resp.proxy, null));
+        assertEquals(403, resp.status);
+    }
+
+    @Test
+    public void 自救通道_残留跨账号目标头不死于连接可见性() throws Exception {
+        // 产线实报：换号后 localStorage 残留上一账号的 es-console.target，/auth/me 与 /clusters
+        // 带着它发出——零页集身份对该连接不可见 → 连身份探测都 403（「身份未确认」全量菜单假态）
+        // + 连接目录加载失败，要等兜底重置目标才自愈。自助通道不得死于连接可见性：
+        // 目录本身按可见性过滤行级，身份探测与目标无关，数据面另有 EsTargetInterceptor 独立闸。
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor it = interceptorWithConn(delegated(Collections.<String>emptySet()), audit);
+        assertTrue(it.preHandle(stubRequest("GET", "/internal/es/index/auth/me",
+                java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+        assertTrue(it.preHandle(stubRequest("GET", "/internal/es/index/clusters",
+                java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+    }
+
+    @Test
+    public void 非自助端点_残留目标头连接不可见仍拒() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor it = interceptorWithConn(delegated(Collections.<String>emptySet()), audit);
+        StubResponse resp = new StubResponse();
+        // /cluster/inspect 不在自助清单：连接可见性闸必须保留（零页集身份带 c1 目标 = 必拒）
+        assertFalse(it.preHandle(stubRequest("GET", "/internal/es/index/cluster/inspect",
+                java.util.Collections.singletonMap("X-Es-Target", "c1")), resp.proxy, null));
         assertEquals(403, resp.status);
     }
 

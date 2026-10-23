@@ -77,6 +77,9 @@ export const useAuthStore = defineStore('auth', () => {
     'es-console.sandbox.', 'es-console.pit.', 'es-console.rebuild-paste',
     'es-console.search-templates.carry', 'es-console.flame.',
     'es-console.lifecycle.rollover', 'es-console.link.',
+    /* 目标选择是账号可见性产物：换人不清零，残留目标会以 X-Es-Target 毒化
+       数据面请求（对不可见连接必 403）——管理面已在 api 层剥头，这里兜数据面。 */
+    'es-console.target', 'es-console.target.name',
   ];
   function purgeUserRequestState() {
     for (const storage of [localStorage, sessionStorage]) {

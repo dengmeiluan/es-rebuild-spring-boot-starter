@@ -42,6 +42,11 @@ const targetHeaders = (): Record<string, string> => {
   const t = getTarget();
   return t ? { 'X-Es-Target': t } : {};
 };
+/* 身份/连接目录/setup 是宿主管理面：不带 X-Es-Target。换号后 localStorage 按域共享，
+   上一账号的目标残留会跟着发出去——零页集身份对该连接不可见，/auth/me 与 /clusters
+   会被连接可见性闸打成 CONN_FORBIDDEN（产线实报：「身份未确认」全量菜单假态+目录
+   加载失败，要等兜底重置目标才自愈）。管理面与目标无关，数据面请求不受影响。 */
+const MANAGEMENT_PLANE_RE = /\/(auth|clusters|setup)(\/|$)/;
 /** xmigrate 专用目标覆盖：请求里的源连接与顶栏目标可能不同，空值沿用全局。 */
 const xbTargetInit = (target?: string | null) =>
   target && target.trim() ? { headers: { 'X-Es-Target': target.trim() } } : undefined;
@@ -243,7 +248,8 @@ async function request<T = any>(path: string, init?: RequestInit & { timeoutMs?:
   let resp: Response;
   const fetchMethod = (restInit.method || 'GET').toUpperCase();
   const mergedHeaders: Record<string, string> = {
-    'Content-Type': 'application/json', ...authHeaders(), ...hostHeaders(), ...targetHeaders(),
+    'Content-Type': 'application/json', ...authHeaders(), ...hostHeaders(),
+    ...(MANAGEMENT_PLANE_RE.test(path) ? {} : targetHeaders()),
     ...((extraHeaders as Record<string, string>) || {}),
   };
   /* 写门在 fetch 前裁决：无权限时零网络请求（402/403 由后端兜底的安全边界之外，
