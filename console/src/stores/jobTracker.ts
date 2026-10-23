@@ -229,7 +229,10 @@ export const useJobTrackerStore = defineStore('jobTracker', () => {
       && (auth.canReadPage('tasks', target) || auth.canReadPage('task-tree', target));
     if (connModel && !dataReady && !pollSilentNotified) {
       pollSilentNotified = true;
-      app.notify('warning', '当前账号未被授权任何集群连接，作业跟踪与数据面轮询已停用（授权后自动恢复）');
+      /* 后台自愈态只入史不弹：本判定在「身份已到、目标未钉选」的竞态窗内会对
+         有授权的人误报「未被授予任何集群连接」（产线实报 x1：数据都渲染了还说
+         未授权），下一拍 autoPick 落位即自动恢复——对称静默，历史留一条聚合记录。 */
+      app.notify('warning', '当前账号未被授权任何集群连接，作业跟踪与数据面轮询已停用（授权后自动恢复）', { logOnly: true });
     }
     const seq = ++pollSeq;
     const [ad, xm, ts, sn] = await Promise.all([
