@@ -313,6 +313,18 @@ async function load() {
   ovLoading.value = true;
   try {
     const errs: string[] = [];
+    /* 权限类失败（403 或带 page/denied 归因）不参与首错 toast：无授权身份开屏时
+       概览/健康/集群健康会一齐 403，逐条弹=轰炸（产线实报），而禁用屏与侧栏
+       指引已在讲同一件事。真实故障（网络/超时/ES 错误）保持必弹。 */
+    const toastErrs: string[] = [];
+    const pushErr = (label: string, reason: unknown, gated: boolean) => {
+      if (!gated) return;
+      const r = reason as { status?: number; denied?: string; page?: string; message?: unknown } | null | undefined;
+      const text = label + '：' + friendlyEsError(String(r?.message ?? reason));
+      errs.push(text);
+      const perm = r != null && (r.status === 403 || r.denied != null || r.page != null);
+      if (!perm) toastErrs.push(text);
+    };
     /* /overview 与 /health 恒定宿主：按宿主页授权逐接口判定，
        混合静态+连接授权时不再因 canSeeConn('host') 为真而误发 403。
        探测完成前照常发起——否则独立部署首屏会永远错过宿主概览。 */
@@ -320,20 +332,24 @@ async function load() {
       || auth.canEndpoint('write', 'GET', '/internal/es/index/overview', store.target);
     const canHealth = !auth.probed
       || auth.canEndpoint('write', 'GET', '/internal/es/index/health', store.target);
+    /* 集群健康同门槛：无页面授权身份不发这段必 CONN_FORBIDDEN 的探测（空集=全拒
+       时 canEndpoint 恒 false），有任意授权的连接用户照常探测 */
+    const canClusterHealth = !auth.probed
+      || auth.canEndpoint('write', 'GET', '/internal/es/index/cluster/health', store.target);
     const [ov, hd, ch] = await Promise.allSettled([
       canOverview ? api.overview() : Promise.resolve(null),
       canHealth ? api.health() : Promise.resolve(null),
-      api.clusterHealth(),
+      canClusterHealth ? api.clusterHealth() : Promise.resolve(null),
     ]);
     /* 三源 reason.message 裸拼 → friendlyEsError 单源翻译（前缀「概览接口/健康接口/
  集群健康」保留；obsWave560 BoostTuner w80 先例口径） */
     if (ov.status === 'fulfilled') overview.value = ov.value;
-    else if (canOverview) errs.push('概览接口：' + friendlyEsError(String(ov.reason?.message ?? ov.reason)));
+    else pushErr('概览接口', ov.reason, canOverview);
     if (hd.status === 'fulfilled') healthData.value = hd.value;
-    else if (canHealth) errs.push('健康接口：' + friendlyEsError(String(hd.reason?.message ?? hd.reason)));
-    if (ch.status === 'fulfilled') clusterHealth.value = ch.value; else errs.push('集群健康：' + friendlyEsError(String(ch.reason?.message ?? ch.reason)));
+    else pushErr('健康接口', hd.reason, canHealth);
+    if (ch.status === 'fulfilled') clusterHealth.value = ch.value; else pushErr('集群健康', ch.reason, canClusterHealth);
     const msg = errs.join('；');
-    if (msg && !loadErr.value && loaded.value === false) store.notify('error', '概览部分数据加载失败：' + errs[0]);
+    if (toastErrs.length && !loadErr.value && loaded.value === false) store.notify('error', '概览部分数据加载失败：' + toastErrs[0]);
     loadErr.value = msg;
     loaded.value = true;
     // 有活动任务时 5s 自动轮询，便于盯重建进度（ms getter 逐轮重估，任务终态即自然停）

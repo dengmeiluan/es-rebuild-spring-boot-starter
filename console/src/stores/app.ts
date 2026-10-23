@@ -63,6 +63,12 @@ export const useAppStore = defineStore('app', () => {
       if (e?.status === 401) {
         // 未登录导致的 401：登录遮罩已在引导，不误报“集群连接失败”，保持未知态
         clusterOk.value = null;
+      } else if (e?.status === 403) {
+        // 无页面授权≠集群故障：同样保持未知态——不发「连接失败」横幅/红点/弹窗，
+        // 禁用屏与侧栏的授权指引已在讲同一件事（产线实报：零授权用户开屏即见
+        // 「集群连接失败，部分功能不可用」+ 加载索引列表失败，全是噪声）
+        clusterOk.value = null;
+        clusterHealth.value = '';
       } else {
         clusterOk.value = false;
         clusterHealth.value = '';
@@ -136,8 +142,10 @@ export const useAppStore = defineStore('app', () => {
       if (seq !== connsSeq) return; // 旧拍失败同样丢弃：不得清空新拍成功清单
       /* 失败不清空既有清单：清空会让侧栏与切换器同时变空，用户无法区分
          「网络/后端故障」「连接被删」还是「自己被撤权」——三者处置完全不同。
-         保留上次结果 + 明确告警，是本文件 loadIndexes 既有范式。 */
-      notify('warning', '连接目录加载失败：' + (e?.message || e) + '（已保留上次结果，可稍后重试）');
+         保留上次结果 + 明确告警，是本文件 loadIndexes 既有范式。
+         无页面授权的 403 只落通知历史不弹（开屏噪声，授权指引屏已在讲）。 */
+      notify('warning', '连接目录加载失败：' + (e?.message || e) + '（已保留上次结果，可稍后重试）',
+        { logOnly: e?.status === 403 });
     }
     /* 连接环境是 env 页面模板的前端收缩依据：目录与 /auth/me.envPages 合流，
        菜单/按钮必须与后端 effectivePages 同口径（否则出现必 403 的假入口）。 */
