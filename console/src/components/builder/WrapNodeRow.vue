@@ -21,12 +21,31 @@
       <button aria-label="删除" class="btn sm ghost danger" title="删除" @click="emit('remove')"><X :size="12" /></button>
     </div>
     <div v-if="showParams" class="wnr-params">
-      <GenericParams :value="node.params" :schema="WRAP_PARAMS[node.op]" path-prefix="" @update="onParams" />
+      <GenericParams :value="paramsView" :schema="WRAP_PARAMS[node.op]" path-prefix="" @update="onParams" />
     </div>
     <!-- 989：function_score functions 数组结构化编辑（评分函数行列表；AST 零改动 params 直通）。
          1009：fields/types 透传——filter 查询树与衰减函数字段快径需要字段候选 -->
     <FsFunctionsPanel v-if="node.op === 'function_score'" :params="node.params" :fields="fields" :types="types"
                       @update="p => emit('update:node', { ...node, params: p })" />
+    <!-- 1015：pinned ids 数组 chips 编辑位（1005 terms/ids 同款交互：回车/逗号提交、
+         粘贴按项拆分、IME Enter 守卫、空输入退格删末项、chip 可删）。AST 零改动：
+         params.ids 直通往返；docs 形态/ids 非数组不走此位（params 表保真） -->
+    <div v-if="pinnedIds" class="wnr-ids" role="group"
+         aria-label="置顶文档 id 列表：回车或逗号添加，空输入退格删末项">
+      <span class="wnr-ids-lb">置顶 ids</span>
+      <span v-for="(v, i) in pinnedIds" :key="i" class="wnr-chip mono" :title="String(v)">
+        <span class="wnr-chip-v">{{ v }}</span>
+        <button type="button" class="wnr-chip-x" :aria-label="'删除 id ' + v" :title="'删除 id ' + v"
+                @click="delId(i)"><X :size="10" /></button>
+      </span>
+      <input
+        class="inp mono wnr-ids-in" v-model="idDraft"
+        :placeholder="pinnedIds.length ? '' : '文档 _id，回车添加'"
+        @keydown.enter.prevent="onIdEnter($event)"
+        @keydown="onIdKey"
+        @blur="commitIds()"
+      />
+    </div>
     <div class="wnr-body">
       <NodeRenderer
         v-if="node.child" :node="node.child" :fields="fields" :types="types"
@@ -71,13 +90,60 @@ const WRAPPER_PRIORITY_BY_OP: Record<string, string[]> = {
 const wrapperPriority = computed<string[]>(() => WRAPPER_PRIORITY_BY_OP[props.node.op] || ['keyword']);
 const showParams = ref(false);
 
+/* ═══ 1015：pinned ids chips（ClauseNode 1005 cn-chips 同语言）═══
+   draft 不写树（半截值不进 DSL），提交才整项入账；粘贴含逗号按项拆分；
+   IME 组合态 Enter 是提交原文不误拆；清空保空数组键（pinned 必须有 ids/docs 之一，
+   空数组=编辑中间态，ES 侧由 lint/执行报错兜底） */
+const pinnedIds = computed<unknown[] | null>(() =>
+  props.node.op === 'pinned' && Array.isArray(props.node.params.ids) ? props.node.params.ids : null);
+const idDraft = ref('');
+function patchIds(list: unknown[]) {
+  const params = { ...props.node.params, ids: list };
+  emit('update:node', { ...props.node, params });
+}
+function commitIds() {
+  const raw = idDraft.value;
+  idDraft.value = '';
+  const parts = raw.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+  if (parts.length && pinnedIds.value) patchIds([...pinnedIds.value, ...parts]);
+}
+function delId(i: number) {
+  if (!pinnedIds.value) return;
+  patchIds(pinnedIds.value.filter((_, j) => j !== i));
+}
+function onIdEnter(e: KeyboardEvent) { if (!e.isComposing) commitIds(); }
+function onIdKey(e: KeyboardEvent) {
+  if (e.isComposing) return;
+  if (e.key === 'Backspace' && !idDraft.value && pinnedIds.value?.length) {
+    e.preventDefault();
+    patchIds(pinnedIds.value.slice(0, -1));
+  } else if (e.key === ',' || e.key === '，') {
+    e.preventDefault();
+    commitIds();
+  }
+}
+
 function addChild() {
   const g: BoolNode = { id: nid(), type: 'bool', children: [], params: {}, arrForm: {} };
   emit('update:node', { ...props.node, child: g });
 }
-/* params 恒为对象：GenericParams 的 update 联合类型在此收窄（数组分支不会出现，守卫兜底） */
+/* params 恒为对象：GenericParams 的 update 联合类型在此收窄（数组分支不会出现，守卫兜底）。
+   pinned 的 ids 由 chips 权威编辑——参数表视图剥离、表内加出 ids 路由回 chips（不静默丢弃） */
+const paramsView = computed<Record<string, unknown>>(() => {
+  if (props.node.op !== 'pinned') return props.node.params;
+  const { ids, ...rest } = props.node.params;
+  return rest;
+});
 function onParams(v: Record<string, unknown> | unknown[]) {
-  if (!Array.isArray(v)) emit('update:node', { ...props.node, params: v });
+  if (Array.isArray(v)) return;
+  if (props.node.op === 'pinned') {
+    const { ids, ...rest } = v;
+    const out: Record<string, unknown> = { ...rest };
+    if (ids !== undefined) out.ids = ids;   // 表内改出 ids 路由回 params（数组走 chips 位、非数组保真共存）
+    emit('update:node', { ...props.node, params: out });
+    return;
+  }
+  emit('update:node', { ...props.node, params: v });
 }
 function onDragStart(e: DragEvent) {
   (window as any)[DRAG_KEY] = props.node.id;
@@ -94,5 +160,13 @@ function endDrag() { delete (window as any)[DRAG_KEY]; fireDrag(false); }
 .wnr-op { font-size: var(--fs-sm); font-weight: 600; color: var(--ac-hi); }
 .wnr-fk { font-size: var(--fs-2xs); color: var(--tx2); }
 .wnr-params { margin-top: var(--sp-2); padding: var(--sp-2) var(--sp-3); background: var(--bg2); border-radius: var(--r-s); }
+.wnr-ids { display: flex; align-items: center; gap: var(--sp-1); flex-wrap: wrap; margin-top: var(--sp-2); padding: var(--sp-2) var(--sp-3); background: var(--bg2); border-radius: var(--r-s); }
+.wnr-ids-lb { font-size: var(--fs-2xs); color: var(--tx2); margin-right: var(--sp-1); }
+.wnr-chip { display: inline-flex; align-items: center; gap: 2px; max-width: 200px; padding: 1px 4px 1px 8px; background: var(--bg1); border: 1px solid var(--line-strong); border-radius: 999px; font-size: var(--fs-2xs); }
+.wnr-chip-v { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wnr-chip-x { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; padding: 0; border: none; border-radius: 50%; background: transparent; color: var(--tx2); cursor: pointer; }
+.wnr-chip-x:hover { background: var(--hover); color: var(--tx1); }
+.wnr-ids-in { width: 160px; height: 26px; font-size: var(--fs-sm); border: none; background: transparent; }
+.wnr-ids-in:focus { outline: none; }
 .wnr-body { margin-top: var(--sp-2); padding-left: var(--sp-2); border-left: 2px solid var(--line); }
 </style>
