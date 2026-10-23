@@ -16,7 +16,13 @@ export default defineConfig({
   plugins: [vue()],
   base: './',
   define: { __STARTER_VERSION__: JSON.stringify(starterVersion()) },
-  resolve: { alias: { '@': '/src' } },
+  resolve: {
+    alias: { '@': '/src' },
+    /* .ts 优先于 .js：src 下存在整树 .js 快照（并行迁移中间态，内容冻结于生成时刻），
+       默认 .js 优先会让快照遮蔽 .ts 正源——对 app.ts/router.ts 的修复全部静默失效
+       （1.0.42 前的产线 bundle 实锤）。.ts 是 tracked 正源，必须先解析。 */
+    extensions: ['.mts', '.ts', '.mjs', '.jsx', '.tsx', '.js', '.json'],
+  },
   build: {
     outDir: '../src/main/resources/static/console',
     emptyOutDir: true,
