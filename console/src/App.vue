@@ -370,8 +370,9 @@ function autoPickConnTarget(gp: readonly string[] | null) {
   if (!store.conns.length) return; // 连接目录未到，等 conns 变化再触发
   const first = store.conns.find(c => connIds.has(c.id));
   if (!first) return;
+  /* 目标纠正全静默：切到哪个连接顶栏切换器如实可见（后台自愈不弹不记——产线实报
+     每次冷进入都弹/记「宿主集群未授权任何页面，已切到…」被当脏数据）。 */
   store.setTarget(first.id, first.name);
-  store.notify('info', `宿主集群未授权任何页面，已切到「${first.name}」`);
 }
 /* 963：目标连接并入复核源——切 target 后按新连接的 conn:{id}:{page} 键重算当前路由。
  自循环可控：setTarget 后本 watch 再跑一次时，autoPickConnTarget 已在授权目标上即 no-op，

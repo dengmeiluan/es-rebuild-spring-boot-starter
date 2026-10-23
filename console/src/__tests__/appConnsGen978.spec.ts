@@ -150,10 +150,12 @@ describe('978 app store loadConns 世代守卫（乱序回落链误触发）', (
     release(0, [conn('c-alive')]);
     await settle(6);
     expect(store.target, '档案确被删时回落首个可见连接').toBe('c-alive');
+    /* 回落全静默（1030 批裁决：后台目标纠正不弹不记——「已删除」对权限场景是
+       错误表述，顶栏切换器如实呈现回落结果）；回落行为本身照走。 */
     expect(
       store.notifyLog.filter(n => n.kind === 'warning' && n.msg.includes('已删除')),
-      '真实回落保留警告',
-    ).toHaveLength(1);
+      '回落零警告（后台自愈静默裁决）',
+    ).toHaveLength(0);
   });
 
   it('源码锁：世代计数器声明+拍序捕获前移+回包与失败两支弃拍锚', { timeout: 15000 }, async () => {
