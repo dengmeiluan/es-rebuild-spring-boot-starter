@@ -27,6 +27,10 @@
            多键对象等非投影形态留守自由表零丢失（orderShown 门控） -->
       <AggOrderPanel v-if="orderShown" :body="(node.body as Record<string, unknown>)"
                      @patch="v => onBodyPatch('order', v)" />
+      <!-- 1035：date_histogram/histogram 的 extended_bounds 边界面板——无键也给空面板
+           （可发现性），双空删键回默认；非标量形态留守自由表零丢失（boundsShown 门控） -->
+      <AggBoundsPanel v-if="boundsShown" :body="(node.body as Record<string, unknown>)"
+                      @patch="v => onBodyPatch('extended_bounds', v)" />
       <!-- top 常见聚合的 .field 键传 fieldKeys，行内渲染 FieldSelect 字段选择器；
      其余/未知聚合名不传（空数组），回落裸键值表零降级。
      1020：AGG_BODY_PARAMS 在册聚合的 body 加 schema——具名参数升类型化输入/枚举下拉
@@ -57,6 +61,7 @@ import GenericParams from './GenericParams.vue';
 import AggRangesPanel from './AggRangesPanel.vue';
 import AggFiltersPanel from './AggFiltersPanel.vue';
 import AggOrderPanel from './AggOrderPanel.vue';
+import AggBoundsPanel from './AggBoundsPanel.vue';
 import { AGG_OPS, AGG_BODY_PARAMS } from '../../utils/queryAstOps';
 import { nid, type AggNode } from '../../utils/queryAst';
 
@@ -84,20 +89,31 @@ const op = computed(() => props.node.op);
 const orderShown = computed(() =>
   ORDER_AGGS.has(op.value) && isObj(props.node.body) && 'order' in props.node.body
   && orderProjectionOk(props.node.body.order));
+/* 1035：extended_bounds 边界面板门控——date_histogram/histogram 专属；键缺席也给
+   空面板（可发现性：加边界是设置直方图的高频动作）；非标量值形态（畸形）留守自由表 */
+const BOUNDS_AGGS = new Set(['date_histogram', 'histogram']);
+function boundsProjectionOk(o: unknown): boolean {
+  if (!isObj(o)) return false;
+  return Object.values(o).every(v => typeof v !== 'object' || v === null);
+}
+const boundsShown = computed(() =>
+  BOUNDS_AGGS.has(op.value) && isObj(props.node.body)
+  && (!('extended_bounds' in props.node.body) || boundsProjectionOk(props.node.body.extended_bounds)));
 const bodyView = computed<Record<string, unknown>>(() => {
   const b = props.node.body as Record<string, unknown>;
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(b || {})) {
     if (PANEL_KEYS.has(k)) continue;
     if (k === 'order' && orderShown.value) continue;
+    if (k === 'extended_bounds' && boundsShown.value) continue;
     out[k] = v;
   }
   return out;
 });
-function onBodyPatch(key: 'ranges' | 'filters' | 'order', v: unknown) {
+function onBodyPatch(key: 'ranges' | 'filters' | 'order' | 'extended_bounds', v: unknown) {
   const body: Record<string, unknown> = { ...(props.node.body as Record<string, unknown>) };
-  /* order 清空行 = 删键回默认排序（order:[] 无语义）；空数组形态从无记忆必要 */
-  if (key === 'order' && Array.isArray(v) && v.length === 0) delete body.order;
+  /* order/extended_bounds 清空 = 删键回默认语义（空数组哨兵，键本身无空语义） */
+  if ((key === 'order' || key === 'extended_bounds') && Array.isArray(v) && v.length === 0) delete body[key];
   else body[key] = v;
   emit('update:node', { ...props.node, body });
 }
@@ -108,13 +124,11 @@ function onBodyParams(v: Record<string, unknown> | unknown[]) {
   /* 1031 修 1022 存量洞：面板权威键以现 body 合回——bodyView 把面板键剥离后 v 永不含它，
      只回填「v 在场」的旧语义让任何自由表编辑静默丢掉 ranges/filters（挂载实证：改 format
      后 ranges 成 undefined）。面板键删除走面板自身通道（行清空），自由表删除不是其通道。
-     表内加出面板键仍以表内值回流（v 在场优先）。 */
-  for (const k of PANEL_KEYS) {
+     表内加出面板键仍以表内值回流（v 在场优先）。1035：order/extended_bounds 并入同循环。 */
+  for (const k of [...PANEL_KEYS, 'order', 'extended_bounds']) {
     if (k in v) out[k] = (v as Record<string, unknown>)[k];
     else if (k in b) out[k] = b[k];
   }
-  if ('order' in v) out.order = (v as Record<string, unknown>).order;
-  else if ('order' in b) out.order = b.order;
   emit('update:node', { ...props.node, body: out });
 }
 
