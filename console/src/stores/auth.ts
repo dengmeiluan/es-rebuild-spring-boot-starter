@@ -80,6 +80,9 @@ export const useAuthStore = defineStore('auth', () => {
     /* 目标选择是账号可见性产物：换人不清零，残留目标会以 X-Es-Target 毒化
        数据面请求（对不可见连接必 403）——管理面已在 api 层剥头，这里兜数据面。 */
     'es-console.target', 'es-console.target.name',
+    /* 通知历史/已读位/工作现场是账号视角产物：换人不清零，x3 的历史里会躺着
+       x1 的「已切到 es_excel_conn」、恢复提示会把 x1 的现场弹给 x3（产线实报）。 */
+    'es-console.notify.log', 'es-console.notify.seen', 'es-console.last-route',
   ];
   function purgeUserRequestState() {
     for (const storage of [localStorage, sessionStorage]) {
