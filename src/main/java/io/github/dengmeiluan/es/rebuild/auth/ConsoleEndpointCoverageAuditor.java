@@ -183,7 +183,13 @@ public class ConsoleEndpointCoverageAuditor {
 
     private static boolean isIntentionalShared(String path) {
         for (String prefix : INTENTIONAL_SHARED) {
-            if (path.equals(prefix) || path.startsWith(prefix + "/")) return true;
+            /* 条目本身带尾斜杠=前缀条目（如 setup/）：裸 startsWith 匹配——此前统一拼
+               prefix+"/" 会造出双斜杠失配，setup 三端点从清单引入起一直被误报噪声。 */
+            if (prefix.endsWith("/")) {
+                if (path.startsWith(prefix)) return true;
+            } else if (path.equals(prefix) || path.startsWith(prefix + "/")) {
+                return true;
+            }
         }
         return false;
     }
