@@ -5,7 +5,7 @@
       spellcheck="false" autocomplete="off" role="combobox" aria-autocomplete="list"
       :aria-expanded="open ? 'true' : 'false'" :aria-controls="listId"
       :aria-activedescendant="open && flat[cursor] ? itemId(cursor) : undefined"
-      @input="onInput" @focus="openPanel" @keydown="onFsKey"
+      @input="onInput" @focus="onFsFocus" @mousedown="pointerFocus = true" @keydown="onFsKey"
     />
     <!-- 987 未知字段护栏：mapping 在场时手输不在 mapping 的字段给黄点提示（ClauseNode
      .cn-owarn 同语言）。零降级：无 mapping（fields 空）不提示——自由手输是既有合法路径 -->
@@ -164,6 +164,18 @@ const {
   activeSelector: '.fs-item.act',
   place: { minWidth: 220, flipBelow: 240, flipTop: 260 },
 });
+
+/* 1033：指针聚焦全选现值——点进字段框即打字=替换（「改字段」的用户心智：原值是要被
+   换掉的，追加只会拼出零匹配的怪字段名）；Tab 键盘聚焦保持追加语义（a11y 惯例，
+   键盘用户预期在原文尾部续打）。全选后打字首字符自然覆盖，弹层过滤随 modelValue 收敛。 */
+const pointerFocus = ref(false);
+function onFsFocus(e: FocusEvent) {
+  openPanel();
+  if (!pointerFocus.value) return;
+  pointerFocus.value = false;
+  const inp = e.target as HTMLInputElement;
+  requestAnimationFrame(() => inp.select());
+}
 
 /* 1004：光标窗口跟随——键盘 ↑↓/Home/End 与 hover 全走 cursor 单源，在此收敛：
    目标行在缓冲带外 → 居中滚动（scrollTop 变更驱动 winRows 重算）→ 渲染后再滚屏到位 */

@@ -5,6 +5,15 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.56]
+
+### 修复
+
+- 构建树字段选择器：指针聚焦全选现值（产线浏览器实测发现——点进已选字段的输入框
+  直接打字会追加拼出「_classbond」式零匹配怪字段名）。改字段的用户心智=原值要被
+  换掉：鼠标点入即全选，打字首字符自然覆盖；Tab 键盘聚焦保持尾部追加（a11y 惯例）。
+  覆盖全部编辑器字段位（子句/聚合/建议器/护栏面板统一走 FieldSelect 单源）
+
 ## [1.0.55]
 
 ### 修复
