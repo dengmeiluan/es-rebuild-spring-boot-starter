@@ -5,6 +5,20 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.40]
+
+### 修复
+
+- 概览聚合读的授权目标修正（产线实报：概览接口 403 而同页 monitor-history 200）：
+  GET /overview 执行恒在宿主（登记 indexKey 状态摘要+本实例 owner），但授权此前被
+  宿主绑定路径兜底钉死在 host——纯连接授权用户（grantedPages 全是 conn:{id}:* 键）
+  在 host 维度落空页集，被页面门 403。现与 /keys、/desired-state 同例：读请求授权
+  随目标头取 conn:{id}:{page} 键，写仍按 host；无目标头时维持宿主裁决不变
+- 权限拒绝提示的读静音（产线实报：无授权身份进控制台右下角并发弹 5+ 条 403）：
+  全局 forbidden 通道对 GET/HEAD/OPTIONS 读拒绝只落通知历史不再逐条弹 toast——
+  开屏并行引导（索引选择器/健康探针/概览聚合/监控历史）对无页面授权身份一次挂一串，
+  而页面自身的禁用态/空态/无授权全屏已在讲同一件事；写请求保持必弹（用户主动动作）
+
 ## [1.0.39]
 
 ### 修复
@@ -216,6 +230,21 @@
   解释哪些操作不可用）——此前这些页面的写钮按 v-if 隐藏、页面无任何解释，用户只看到
   功能凭空消失；权限拒绝的全局出口统一给出「缺什么 + 怎么办 + 一键复制申请信息」，
   连接目录加载失败保留上次清单并告警（不再清空成无法区分「故障/被删/被撤权」的空壳）
+
+### 新增（1012 批：geo_distance / geo_bounding_box 专用坐标编辑位）
+
+- 地理距离与地理矩形两算子从通用键值表升为**专用坐标编辑位**：geo_distance =
+  distance 输入（带常用单位 datalist 提示）+ 圆心 lat/lon 双数值输入；
+  geo_bounding_box 两形态——corners（top_left/bottom_right 各 lat/lon 四输入，分组
+  标签引导）与 edges 平铺四数值（top/left/right/bottom）；空值直接给输入位（不再
+  需要先点 chips 加键），更多参数（distance_type/validation_method/boost…）折叠
+  schema 表
+- 编辑语义与 range 四输入同语言：空串删键（半成品中间态）、非数值不写、lat/lon
+  越界（>90/>180）黄点轻警示（不拦截，title 说明 ES 将按 validation_method 处置）；
+  字段选择器收窄 geo_point 候选既有（STRICT_TYPE_OPS）
+- 保真退化契约：串坐标（"40,-70"）/geohash/数组坐标等合法 ES 形态不进编辑位
+  （标量输入/通用键值表原样保真编辑）；混合形态（corners+edges 并存）整体退化；
+  corpus 补 bbox edges 往返案例与串坐标 raw 退化断言
 
 ### 新增（1011 批：intervals 间隔规则专用递归编辑位）
 

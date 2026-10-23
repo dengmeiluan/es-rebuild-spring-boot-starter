@@ -384,6 +384,13 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                 || path.contains("/mapping-reconcile/report"))) {
             return false;
         }
+        /* 概览页主聚合读（登记 indexKey 的状态摘要+本实例 owner）：与 /keys 同类——
+           执行恒在宿主，但它是概览页随目标选择消费的读端点，纯连接授权用户
+           （grantedPages 只有 conn:{id}:* 键）按 host 授权会落空页集被页面门 403。
+           只放行读；该前缀下未来若新增写端点仍按 host 授权。 */
+        if (readOnly && path.endsWith("/internal/es/index/overview")) {
+            return false;
+        }
         if (path.contains("/clusters") || path.contains("/xmigrate/")
                 || path.contains("/setup/")) {
             return false;

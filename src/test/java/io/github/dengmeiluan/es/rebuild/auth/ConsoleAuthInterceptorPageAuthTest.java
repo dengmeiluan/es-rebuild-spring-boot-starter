@@ -258,6 +258,27 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
+    public void 纯连接授权_概览聚合读_授权随目标连接() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        // /overview 执行恒在宿主，但它是概览页随目标消费的读端点（与 /keys 同类）：
+        // 授权必须按目标头取 conn:{id}:{page} 键——恒按 host 裁决会让纯连接授权用户
+        // 落空页集被页面门 403（产线实报：概览接口 403 而同页 monitor-history 200）
+        ConsoleAuthInterceptor it = interceptor(delegated(Collections.singleton("conn:c1:overview")), true, audit);
+        assertTrue(it.preHandle(stubRequest("GET", "/internal/es/index/overview",
+                java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
+    }
+
+    @Test
+    public void 纯连接授权_概览聚合读_无目标头按宿主裁决仍拒() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor it = interceptor(delegated(Collections.singleton("conn:c1:overview")), true, audit);
+        StubResponse resp = new StubResponse();
+        assertFalse(it.preHandle(stubRequest("GET", "/internal/es/index/overview",
+                java.util.Collections.<String, String>emptyMap()), resp.proxy, null));
+        assertEquals(403, resp.status);
+    }
+
+    @Test
     public void 用户管理按security页读写键_无键PAGE_DENIED() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         // security 读键可看用户列表（本地账号库恒定宿主，按 host 连接键裁决）

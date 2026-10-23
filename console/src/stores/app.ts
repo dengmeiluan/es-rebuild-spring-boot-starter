@@ -207,12 +207,12 @@ export const useAppStore = defineStore('app', () => {
  历史侧则聚合为一条 ×N（见 pushNotifyLog），信息不丢、噪音归零。 */
   const TOAST_DEDUP_MS = 8000;
   const lastToastAt = new Map<string, number>();
-  function notify(kind: 'success' | 'error' | 'warning' | 'info', msg: string, opts?: { action?: NotifyAction; actions?: NotifyAction[]; duration?: number }) {
+  function notify(kind: 'success' | 'error' | 'warning' | 'info', msg: string, opts?: { action?: NotifyAction; actions?: NotifyAction[]; duration?: number; logOnly?: boolean }) {
     /* 错误类消息全局友好化：ES 原始错误 JSON 提取 reason + 常见场景翻译 + 限长 */
     const shown = kind === 'error' ? friendlyEsError(msg) : msg;
     /* + 动作数组化：友好化后原始错误不丢——自动附「复制原始」动作；
- 调用方还可经 opts.actions 追加「跳转」类动作（如查询失败直达诊断页），
- 单 action 入参保持兼容并并入数组头（渲染层见 App.vue toast-acts 多按钮） */
+    调用方还可经 opts.actions 追加「跳转」类动作（如查询失败直达诊断页），
+    单 action 入参保持兼容并并入数组头（渲染层见 App.vue toast-acts 多按钮） */
     const actions: NotifyAction[] = [...(opts?.actions ?? [])];
     if (opts?.action) actions.unshift(opts.action);
     if (kind === 'error' && shown !== msg && !actions.some(a => a.label === '复制原始')) {
@@ -226,6 +226,9 @@ export const useAppStore = defineStore('app', () => {
       if ((now - (lastToastAt.get(dk) || 0)) < TOAST_DEDUP_MS) return; // 历史已聚合计数，toast 静音
       lastToastAt.set(dk, now);
     }
+    /* logOnly：只落通知历史不弹 toast——读拒绝的批量出口用（开屏并行引导请求
+       逐条 403 时逐条弹错=轰炸；页面自身的禁用态/空态已经在讲同一件事） */
+    if (opts?.logOnly) return;
     notifyQueue.value.push({ id: ++nid, kind, msg: shown, action: actions[0], actions: actions.length > 1 ? actions : undefined, duration: opts?.duration });
   }
   function shiftNotify() { notifyQueue.value.shift(); }
@@ -246,6 +249,11 @@ export const useAppStore = defineStore('app', () => {
       const page = typeof d.page === 'string' && d.page ? d.page : '';
       const required = typeof d.required === 'string' && d.required ? d.required : '';
       const who = d.method && d.method !== 'GET' ? '该操作' : '该功能';
+      /* 读拒绝只落通知历史不弹 toast：开屏并行引导（索引选择器/健康探针/概览聚合/
+         监控历史）对无页面授权身份会一次挂一串，逐条弹错=右下角轰炸（产线实报），
+         而页面自身的禁用态/空态/无授权全屏已在讲同一件事。写请求保持必弹——
+         那是用户主动动作，静音会变成「点了没反应」。 */
+      const readDenied = !d.method || /^(GET|HEAD|OPTIONS)$/i.test(String(d.method));
       let msg: string;
       if (d.denied === 'CLIENT_WRITE_DENIED') {
         msg = `当前身份无权执行${who}，请求已在客户端拦截`;
@@ -259,7 +267,8 @@ export const useAppStore = defineStore('app', () => {
       const detail = [page && `page=${page}`, required && `required=${required}`,
         d.method && `method=${d.method}`, d.path && `path=${d.path}`].filter(Boolean).join(' · ');
       notify('error', detail ? `${msg}（${detail}）` : msg, {
-        actions: [{
+        logOnly: readDenied,
+        actions: readDenied ? undefined : [{
           label: '复制申请信息',
           onClick: () => {
             const text = [`控制台权限申请`, `页面：${page || '（未指定）'}`, `所需角色：${required || '（未指定）'}`,
