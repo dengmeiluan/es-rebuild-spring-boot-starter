@@ -18,6 +18,12 @@
       "description": "header 模式受信代理清单（精确 IP 或 IPv4 CIDR）。非空时身份头仅在 remoteAddr 命中清单时采信；留空默认信任回环/私网/链路本地。容器网段（172.17.x）、CGNAT（100.64/10）与 IPv6 直连不在默认清单，网关属这些段时必须显式配置。"
     },
     {
+      "name": "es.rebuild.console.auth.conn-secret",
+      "type": "java.lang.String",
+      "defaultValue": "",
+      "description": "连接档案凭据加密密钥（base64 的 32 字节 AES-256-GCM）。空=自动生成并落自举档案目录 conn.key（单实例零配置；多实例必须显式配置共享同一密钥）。存量明文档案读取透明兼容，保存时自动升级为密文。"
+    },
+    {
       "name": "es.rebuild.console.security.frame-ancestors",
       "type": "java.lang.String",
       "description": "iframe 嵌入白名单（CSP frame-ancestors 值，如 'self' https://portal.example.com）。默认不下发任何 frame 头（同源 iframe 嵌入不受影响）；显式配置后仅白名单域可嵌控制台页面。"

@@ -50,16 +50,24 @@ public class JdbcConnStore implements ConnStore {
 
     private final DataSource dataSource;
     private volatile boolean schemaReady;
+    /** 凭据静态加密（null=旁路：旧构造/单测保持明文行为不变）。 */
+    private final ConnCrypto crypto;
 
     private final org.springframework.context.ApplicationEventPublisher events;
 
     public JdbcConnStore(DataSource dataSource) {
-        this(dataSource, null);
+        this(dataSource, null, null);
     }
 
     public JdbcConnStore(DataSource dataSource, org.springframework.context.ApplicationEventPublisher events) {
+        this(dataSource, events, null);
+    }
+
+    public JdbcConnStore(DataSource dataSource, org.springframework.context.ApplicationEventPublisher events,
+                         ConnCrypto crypto) {
         this.dataSource = dataSource;
         this.events = events;
+        this.crypto = crypto;
     }
 
     @Override
@@ -91,7 +99,7 @@ public class JdbcConnStore implements ConnStore {
         RemoteClusterConn conn = new RemoteClusterConn(
                 str(row.get("scheme")), str(row.get("host")),
                 row.get("port") instanceof Number ? ((Number) row.get("port")).intValue() : 9200,
-                str(row.get("username")), str(row.get("password")));
+                str(row.get("username")), decryptPwd(str(row.get("password"))));
         conn.setMinRole(str(row.get("min_role")));
         conn.setAuthType(str(row.get("auth_type")));
         conn.setEnv(str(row.get("env")));
@@ -112,7 +120,11 @@ public class JdbcConnStore implements ConnStore {
         return row == null ? null : str(row.get("es_version"));
     }
 
-    @Override
+    /** 存储形态密码 → 明文（null crypto=旁路；无前缀=存量明文直通；密文解密失败显性异常）。 */
+    private String decryptPwd(String stored) {
+        return crypto == null ? stored : crypto.decrypt(stored);
+    }
+
     public Map<String, Object> save(String id, String name, String url, String username, String password,
                                     String minRole, Integer connectTimeoutMs, Integer socketTimeoutMs, String env) {
         return doSave(id, name, url, username, password, minRole, connectTimeoutMs, socketTimeoutMs, env, null);
@@ -172,10 +184,13 @@ public class JdbcConnStore implements ConnStore {
                 : id.trim();
         Map<String, Object> old = getRow(docId);
         long now = System.currentTimeMillis();
-        // 密码留空且已有旧档案 → 沿用旧密码（编辑连接不必重输密码）
-        String pw = parsed.getPassword();
-        if ((pw == null || pw.isEmpty()) && old != null) {
+        // 密码留空且已有旧档案 → 沿用旧密码的「存储形态」（密文原样沿用，绝不二次加密）；
+        // 本次新提供的密码一律加密落库（存量明文经再次编辑自动升级）。
+        String pw;
+        if ((parsed.getPassword() == null || parsed.getPassword().isEmpty()) && old != null) {
             pw = str(old.get("password"));
+        } else {
+            pw = crypto == null ? parsed.getPassword() : crypto.encrypt(parsed.getPassword());
         }
         String normRole = minRole == null || minRole.trim().isEmpty() ? null : minRole.trim().toUpperCase(Locale.ROOT);
         String normEnv = env == null || env.trim().isEmpty() ? null : env.trim().toUpperCase(Locale.ROOT);

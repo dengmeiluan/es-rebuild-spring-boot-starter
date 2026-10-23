@@ -431,16 +431,35 @@ public class EsRebuildAutoConfiguration {
         @ConditionalOnMissingBean
         public ConnStore connStore(ControlClusterResolver controlClusterResolver, EsRebuildProperties properties,
                                    ObjectProvider<DataSource> dataSourceProvider,
-                                   org.springframework.context.ApplicationEventPublisher eventPublisher) {
+                                   org.springframework.context.ApplicationEventPublisher eventPublisher,
+                                   @org.springframework.beans.factory.annotation.Value(
+                                           "${spring.application.name:default}") String appName) {
             if ("jdbc".equalsIgnoreCase(properties.getConsole().getStore())) {
                 DataSource ds = dataSourceProvider.getIfAvailable();
                 if (ds == null) {
                     throw new IllegalStateException("es.rebuild.console.store=jdbc 但宿主未提供 DataSource Bean；"
                             + "请配置 spring.datasource.* 或改回 store=control-es");
                 }
-                return new JdbcConnStore(ds, eventPublisher);
+                return new JdbcConnStore(ds, eventPublisher, connCrypto(properties, appName));
             }
-            return new EsConnStore(controlClusterResolver::client, properties.getConsole().getConnIndexName(), eventPublisher);
+            return new EsConnStore(controlClusterResolver::client, properties.getConsole().getConnIndexName(),
+                    eventPublisher, connCrypto(properties, appName));
+        }
+
+        /** 连接档案凭据加密器：显式配置优先；未配置时密钥自动生成并落自举档案目录
+         *  （与 SQLite 库/自举档案同目录，单实例零配置；多实例显式共享 conn-secret）。 */
+        private io.github.dengmeiluan.es.rebuild.multicluster.ConnCrypto connCrypto(
+                EsRebuildProperties properties, String appName) {
+            String configured = properties.getConsole().getAuth().getConnSecret();
+            java.nio.file.Path dir;
+            String configuredDir = properties.getConsole().getHomeDir();
+            if (configuredDir != null && !configuredDir.trim().isEmpty()) {
+                dir = java.nio.file.Paths.get(configuredDir.trim());
+            } else {
+                dir = java.nio.file.Paths.get(System.getProperty("user.home"), ".es-console",
+                        appName == null ? "default" : appName);
+            }
+            return io.github.dengmeiluan.es.rebuild.multicluster.ConnCrypto.resolve(configured, dir);
         }
 
         /**

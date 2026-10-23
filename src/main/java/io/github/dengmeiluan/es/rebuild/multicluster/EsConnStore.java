@@ -51,14 +51,22 @@ public class EsConnStore implements ConnStore {
 
     private final java.util.function.Supplier<RestHighLevelClient> controlClient;
     private final String connIndex;
+    /** 凭据静态加密（null=旁路：旧构造/单测保持明文行为不变）。 */
+    private final ConnCrypto crypto;
 
     private final org.springframework.context.ApplicationEventPublisher events;
 
     public EsConnStore(java.util.function.Supplier<RestHighLevelClient> controlClient, String connIndex,
                        org.springframework.context.ApplicationEventPublisher events) {
+        this(controlClient, connIndex, events, null);
+    }
+
+    public EsConnStore(java.util.function.Supplier<RestHighLevelClient> controlClient, String connIndex,
+                       org.springframework.context.ApplicationEventPublisher events, ConnCrypto crypto) {
         this.controlClient = controlClient;
         this.connIndex = connIndex;
         this.events = events;
+        this.crypto = crypto;
     }
 
     /** 全部连接（脱敏视图：不含密码明文，只给 hasPassword 布尔）。 */
@@ -112,7 +120,7 @@ public class EsConnStore implements ConnStore {
         RemoteClusterConn conn = new RemoteClusterConn(
                 str(src.get("scheme")), str(src.get("host")),
                 src.get("port") instanceof Number ? ((Number) src.get("port")).intValue() : 9200,
-                str(src.get("username")), str(src.get("password")));
+                str(src.get("username")), decryptPwd(str(src.get("password"))));
         conn.setMinRole(str(src.get("minRole")));
         conn.setEnv(str(src.get("env")));
         conn.setAuthType(str(src.get("authType")));
@@ -126,6 +134,11 @@ public class EsConnStore implements ConnStore {
     public String getName(String id) {
         Map<String, Object> src = getSource(id);
         return src == null ? null : str(src.get("name"));
+    }
+
+    /** 存储形态密码 → 明文（null crypto=旁路；无前缀=存量明文直通；密文解密失败显性异常）。 */
+    private String decryptPwd(String stored) {
+        return crypto == null ? stored : crypto.decrypt(stored);
     }
 
     /** 档案里的服务端版本（探活回写）；未探到/不存在返回 null，调用方按 7.x 默认。 */
@@ -215,12 +228,16 @@ public class EsConnStore implements ConnStore {
         doc.put("host", parsed.getHost());
         doc.put("port", parsed.getPort());
         doc.put("username", parsed.getUsername());
-        // 密码留空且已有旧档案 → 沿用旧密码（编辑连接不必重输密码）
-        String pw = parsed.getPassword();
-        if ((pw == null || pw.isEmpty()) && old != null) {
-            pw = str(old.get("password"));
+        // 密码留空且已有旧档案 → 沿用旧密码（编辑连接不必重输密码）。
+        // 旧档密码是「存储形态」（密文或存量明文）——原样沿用，绝不能把密文再加密一次；
+        // 只有本次新提供的密码才走加密（存量明文经再次编辑自动升级为密文）。
+        String pwStored;
+        if ((parsed.getPassword() == null || parsed.getPassword().isEmpty()) && old != null) {
+            pwStored = str(old.get("password"));
+        } else {
+            pwStored = crypto == null ? parsed.getPassword() : crypto.encrypt(parsed.getPassword());
         }
-        doc.put("password", pw);
+        doc.put("password", pwStored);
         // minRole 空串视为未设置（= VIEWER），统一存大写档位便于前端直显
         doc.put("minRole", minRole == null || minRole.trim().isEmpty() ? null : minRole.trim().toUpperCase(Locale.ROOT));
         doc.put("connectTimeoutMs", connectTimeoutMs);

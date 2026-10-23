@@ -369,6 +369,11 @@ public class EsRebuildProperties {
         private long tokenTtlMs = 43_200_000L;
         /** token HMAC secret；空 → 启动随机生成（重启后需重新登录；多实例部署必须显式配置保证互通）。 */
         private String tokenSecret = "";
+        /** 连接档案凭据加密密钥（base64 的 32 字节 AES-256）；空 → 自动生成并落
+         *  自举档案目录 conn.key（单实例零配置；多实例必须显式配置共享同一密钥，
+         *  否则各实例互相解不开对方加密的档案）。存量明文档案读取透明兼容，
+         *  再次保存时自动升级为密文。 */
+        private String connSecret = "";
         /** 控制台用户索引名。 */
         private String userIndexName = "es_console_user";
         /** 控制台操作审计索引名：环形开启时为「日期索引前缀」，关闭时为固定单索引名。 */
@@ -406,6 +411,8 @@ public class EsRebuildProperties {
         public void setTokenTtlMs(long tokenTtlMs) { this.tokenTtlMs = tokenTtlMs; }
         public String getTokenSecret() { return tokenSecret; }
         public void setTokenSecret(String tokenSecret) { this.tokenSecret = tokenSecret; }
+        public String getConnSecret() { return connSecret; }
+        public void setConnSecret(String connSecret) { this.connSecret = connSecret; }
         public String getUserIndexName() { return userIndexName; }
         public void setUserIndexName(String userIndexName) { this.userIndexName = userIndexName; }
         public String getOpsAuditIndexName() { return opsAuditIndexName; }
