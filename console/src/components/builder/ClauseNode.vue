@@ -95,6 +95,20 @@
         @input="perc.onInput(($event.target as HTMLTextAreaElement).value)"
       ></textarea>
     </div>
+    <!-- 1019：terms lookup 远程词项形态（值对象键 ⊆ {index,id,path}）→ 三具名输入：
+         「从 index 索引的 id 文档取 path 字段值集合当词项」的语义提示带上，
+         空串删键（半成品）、未知键/非字符串值退化通用键值表保真 -->
+    <div v-else-if="termsLookup" class="cn-objval cn-tl">
+      <span class="cn-tl-tip" title="远程词项：ES 在查询时从目标文档的 path 字段取值集合作为本条件词项（集群内取数，不回传文档）">
+        远程词项 —— 从
+        <input class="inp mono cn-tl-in" :value="tlText('index')" placeholder="索引名 index" title="目标索引（要取词项的文档所在索引）" @input="onTl('index', ($event.target as HTMLInputElement).value)" />
+        索引的文档
+        <input class="inp mono cn-tl-in" :value="tlText('id')" placeholder="文档 _id" title="目标文档 _id" @input="onTl('id', ($event.target as HTMLInputElement).value)" />
+        取
+        <input class="inp mono cn-tl-in" :value="tlText('path')" placeholder="字段路径 path" title="词项来源字段路径（多值字段取全部值）" @input="onTl('path', ($event.target as HTMLInputElement).value)" />
+        字段的值集合
+      </span>
+    </div>
     <!-- 【985】对象值（geo 系/terms_set/script 等）：常用键快捷 chips +
      递归键值子表（零降级同款语言）——键名不用猜，点 chips 即得骨架再改值 -->
     <div v-else-if="isObjValue" class="cn-objval">
@@ -446,6 +460,28 @@ const mltRich = computed(() => {
   const v = props.node.value;
   return !!v && typeof v === 'object';
 });
+/* 1019：terms lookup 形态判定——值对象且键 ⊆ {index,id,path}、出现的值全字符串
+   （半成品允许键缺席；未知键/非字符串值 → null 退化通用键值表保真） */
+const TL_KEYS = new Set(['index', 'id', 'path']);
+const termsLookup = computed(() => {
+  if (props.node.op !== 'terms') return false;
+  const v = props.node.value;
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return false;
+  for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+    if (!TL_KEYS.has(k)) return false;
+    if (typeof val !== 'string') return false;
+  }
+  return true;
+});
+function tlText(k: string): string {
+  return String((props.node.value as Record<string, unknown>)?.[k] ?? '');
+}
+function onTl(k: string, raw: string) {
+  const v = { ...(props.node.value as Record<string, unknown>) };
+  if (raw === '') delete v[k];
+  else v[k] = raw;
+  patch({ value: v });
+}
 const objVal = computed<Record<string, unknown>>(() =>
   (isObjValue.value ? props.node.value : {}) as Record<string, unknown>);
 function onObjValue(v: Record<string, unknown> | unknown[]) {
@@ -660,6 +696,8 @@ function endDrag() { delete (window as any)[DRAG_KEY]; fireDrag(false); }
 .cn-objval { flex-basis: 100%; padding: var(--sp-2); border: 1px dashed var(--line); border-radius: var(--r-s); background: var(--bg1); }
 .cn-perc { width: 100%; min-height: 76px; font-size: var(--fs-xs); line-height: 1.5; resize: vertical; }
 .cn-perc.bad { border-color: var(--err); box-shadow: 0 0 0 2px var(--err-soft); }
+.cn-tl-tip { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: var(--fs-2xs); color: var(--tx2); }
+.cn-tl-in { width: 128px; height: 26px; font-size: var(--fs-sm); }
 /* 1005：terms/ids 值 chips——值即标签（hl 底+line 边，与 .cn-objk-btn 同语言）；
    行内折行承载多值，输入框随行伸缩（空态独占一行给 placeholder） */
 .cn-chips { display: inline-flex; flex: 1 1 150px; min-width: 0; flex-wrap: wrap; align-items: center; gap: var(--sp-1); }
