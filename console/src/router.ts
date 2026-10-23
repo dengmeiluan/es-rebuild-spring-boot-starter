@@ -267,6 +267,18 @@ router.beforeEach((to) => {
   const auth = useAuthStore();
   /* 超级管理员全局可见：宿主白名单/连接键不拦 ADMIN */
   if (auth.isAdmin()) return true;
+  /* 时序补偿落地裁决（竞态免疫）：误拒 replace('/forbidden') 是异步导航，提交时
+     身份/连接目录可能已收敛（App 复核 watch 先于 replace 提交跑完、走的是放行分支
+     不回迁，之后无新触发→永久停车，产线实报 35s）。此处对每次 /forbidden 落地用
+     当前输入重判：记录中的被拒页现已放行 → 直接回迁。仍在守卫内重判=与落地同帧输入。 */
+  if (to.path === '/forbidden' && !auth.isAdmin()) {
+    const back = peekDeniedPage();
+    if (back) {
+      const re = pageDeniedRedirect(auth.grantedPages, back, useAppStore().target,
+        auth.envAllows, auth.me?.role);
+      if (!re) { consumeDeniedPage(); return back; }
+    }
+  }
   return pageDeniedRedirect(auth.grantedPages, to.path, useAppStore().target,
     auth.envAllows, auth.me?.role) ?? true;
 });
