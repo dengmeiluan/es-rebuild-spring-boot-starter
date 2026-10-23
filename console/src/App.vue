@@ -79,7 +79,7 @@ import { confirmState, resolveConfirm } from './composables/confirm';
 import WelcomeWizard from './components/WelcomeWizard.vue';
 import LoginOverlay from './components/LoginOverlay.vue';
 import SetupWizard from './components/SetupWizard.vue';
-import { NAV_ITEMS, pageDeniedRedirect } from './router';
+import { NAV_ITEMS, pageDeniedRedirect, peekDeniedPage, consumeDeniedPage, clearDeniedPage } from './router';
 import { GOTO_MAP } from './utils/hotkeys';
 import { readLastRoute, saveLastRoute, restorable } from './composables/continuity';
 import { useAppStore } from './stores/app';
@@ -196,9 +196,9 @@ let rbTimer: any = null;
 router.beforeEach(() => { routeLoading.value = true; clearTimeout(rbTimer); return true; });
 router.afterEach(() => { rbTimer = setTimeout(() => (routeLoading.value = false), 260); });
 
-/* 工作现场恢复——进站前先读存量（afterEach 会覆盖），裸进站时 toast 提供一键回 */
+/* 工作现场恢复——进站前先读存量（afterEach 会覆盖），裸进站时 toast 提供一键回。
+   提示时机在身份确认后（见 onMounted tryRestoreScene）：换号清理挂 probe 成功路径。 */
 const entryHash = location.hash;
-const lastRoute = readLastRoute();
 router.afterEach((to) => { saveLastRoute(to.fullPath); });
 
 /* 标签页后台时禁用路由过渡（rAF 冻结会卡死 out-in 切换） */
@@ -387,7 +387,21 @@ watch([
   autoPickConnTarget(gp);
   const r = pageDeniedRedirect(gp, router.currentRoute.value.path, store.target,
     auth.envAllows, auth.me?.role);
-  if (r) router.replace(r);
+  if (r) { router.replace(r); return; }
+  /* 时序补偿：身份/连接目录晚到时页面曾被误拒（拒绝页已记录），收敛后自动回迁——
+     用户感知的「拒绝了一会儿自己又好了」停在 /forbidden 不动，即此处缺失（产线实报）。
+     仅当原页面现已放行才回迁；仍被拒则保留记录等下一次收敛。 */
+  if (router.currentRoute.value.path === '/forbidden') {
+    const back = peekDeniedPage();
+    if (back) {
+      const rr = pageDeniedRedirect(gp, back, store.target, auth.envAllows, auth.me?.role);
+      if (!rr) { consumeDeniedPage(); router.replace(back); }
+    }
+  }
+});
+/* 用户主动离开 /forbidden（点菜单/切目标）即放弃回迁意向，避免过期跳转 */
+watch(() => router.currentRoute.value.path, (p) => {
+  if (p !== '/forbidden') clearDeniedPage();
 });
 
 /* ==================== ：授权就绪门（连接模型开屏竞态根治） ====================
@@ -459,12 +473,24 @@ onMounted(() => {
   } else {
     bootstrapIdentity();
   }
-  // 裸进站且存在未过期现场 → 提供「继续上次」（深链进站是明确意图，不打扰）
-  const rst = restorable(entryHash, lastRoute);
-  if (rst) {
-    store.notify('info', '上次工作现场：' + rst.name, {
-      duration: 10000,
-      action: { label: '继续上次', onClick: () => router.push(rst.fullPath) },
+  // 裸进站且存在未过期现场 → 提供「继续上次」（深链进站是明确意图，不打扰）。
+  // 身份确认后再提示：last-route/通知历史是账号视角产物，换号清理挂在 probe 成功路径
+  // （purgeIfUserChanged），探测前提示会把上一账号的现场弹给新账号（产线实报）。
+  const tryRestoreScene = () => {
+    const rst = restorable(entryHash, readLastRoute());
+    if (rst) {
+      store.notify('info', '上次工作现场：' + rst.name, {
+        duration: 10000,
+        action: { label: '继续上次', onClick: () => router.push(rst.fullPath) },
+      });
+    }
+  };
+  if (auth.probed) tryRestoreScene();
+  else {
+    const stopWatchScene = watch(() => auth.probed, (p) => {
+      if (!p) return;
+      stopWatchScene();
+      tryRestoreScene();
     });
   }
 });
