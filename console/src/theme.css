@@ -935,3 +935,13 @@ mark { background: var(--warn); color: var(--tx-on-strong); border-radius: 2px; 
 .monaco-editor .monaco-scrollable-element > .scrollbar.vertical > .slider {
   border-radius: 3px;
 }
+
+/* 1024：CurrentIdxChip 所在行冻结（Excel 冻结窗格语义，全站 26 视图推广）——
+   组件挂载时注入本类；sticky 吸附 .page 滚动容器顶，实底+横向负边距拉满内容宽
+   （token 与 .page padding 同源）防内容从缝隙滚过；z-index 压内容让位弹层。 */
+.cic-row-sticky {
+  position: sticky; top: 0; z-index: 20;
+  margin: 0 calc(-1 * var(--sp-5));
+  padding: var(--sp-1h) var(--sp-5) var(--sp-2);
+  background: var(--bg0);
+}

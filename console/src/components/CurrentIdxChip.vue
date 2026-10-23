@@ -2,7 +2,7 @@
   <!-- follow 档视图页内只读「当前索引」chip——选索引入口收敛 TopBar 唯一处
  （别名组/recent/健康度都在顶栏），本件只读 store 自显 + 三个助攻动作。
  未选索引整件不渲染（根 v-if），页内空态兜底契约留给各视图。 -->
-  <span v-if="store.pickedIdx" class="cic" :title="store.pickedIdx">
+  <span v-if="store.pickedIdx" ref="rootEl" class="cic" :title="store.pickedIdx">
     <span class="cic-dot" :class="'h-' + (store.pickedInfo?.health || 'grey')" aria-hidden="true"></span>
     <span class="cic-nm">{{ store.pickedIdx }}</span>
     <span v-if="meta" class="cic-meta">{{ meta }}</span>
@@ -16,7 +16,7 @@
 /* follow 档视图页内 IndexPicker 退役配套件——无 props 自读 store
  （pickedIdx/pickedInfo/pick）。健康色点沿用 IndexOptionRow .ior-dot 色映射
  （green→ok/yellow→warn/red→err/未知灰）；docs·size 小字与 TopBar idx-meta 同口径。 */
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Copy, ExternalLink, X } from 'lucide-vue-next';
 import { useAppStore } from '../stores/app';
@@ -24,6 +24,25 @@ import { copyText, fmtNum, fmtSize } from '../utils/format';
 
 const store = useAppStore();
 const router = useRouter();
+const rootEl = ref<HTMLElement>();
+
+/* 1024：所在行冻结推广——挂载时给 cic 所在页头行注入全局 .cic-row-sticky
+ （theme.css 定义 sticky/实底/负边距拉满宽，26 个消费视图一次覆盖、新视图自动获得）。
+ 行定位：直接父；父是 lr-bar-l（左右布局左段）再上一层取整行。
+ 父已 sticky/fixed（查询工作台 .qh-top 等）不叠加；元素未挂滚动流无效也不伤。 */
+/* watch 驱动（非 onMounted）：未选索引时组件挂载而 chip 未渲染（根 v-if），先选后
+ 索引的场景注入须等 chip 真正入 DOM；已注入过的行不重复（视图切索引重渲染幂等） */
+const injectedRows = new WeakSet<HTMLElement>();
+watch(rootEl, el => {
+  if (!el?.parentElement) return;
+  let row: HTMLElement = el.parentElement;
+  if (row.classList.contains('lr-bar-l')) row = row.parentElement ?? row;
+  if (!row || row === document.body || injectedRows.has(row)) return;
+  const pos = getComputedStyle(row).position;
+  if (pos === 'sticky' || pos === 'fixed') return;
+  row.classList.add('cic-row-sticky');
+  injectedRows.add(row);
+}, { flush: 'post' });
 
 const meta = computed(() => {
   const i = store.pickedInfo;
