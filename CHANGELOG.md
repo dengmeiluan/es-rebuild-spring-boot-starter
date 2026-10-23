@@ -5,6 +5,14 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.46]
+
+### 修复
+
+- 目标回落的后台自愈改为只入史不弹：跨账号残留目标（换号后 localStorage 按域共享）
+  触发的「目标集群连接已删除，已切回宿主集群」对权限场景是错误表述（连接没删，
+  只是该身份不可见）——自愈行为由顶栏切换器如实呈现，通知历史保留一条聚合记录
+
 ## [1.0.45]
 
 ### 修复
@@ -296,6 +304,16 @@
   解释哪些操作不可用）——此前这些页面的写钮按 v-if 隐藏、页面无任何解释，用户只看到
   功能凭空消失；权限拒绝的全局出口统一给出「缺什么 + 怎么办 + 一键复制申请信息」，
   连接目录加载失败保留上次清单并告警（不再清空成无法区分「故障/被删/被撤权」的空壳）
+
+### 新增（1021 批：highlight 字段参数 schema 化）
+
+- 高亮字段级参数从裸键值表升为 **schema 驱动具名控件**：`type` 三档枚举下拉
+  （plain 普通高亮 / postings 词项高亮 / fvh 快速向量高亮——高亮器选型不用记拼写）、
+  fragment_size / number_of_fragments / fragment_offset / no_match_size 数值档；
+  未登记键（matched_fields / highlight_query / 字段级 pre_tags 覆盖等）维持自由表
+  加键零丢失；全局参数表（pre_tags/post_tags/order…）不受影响
+- 至此构建器三面（查询算子 / 聚合 body / highlight 字段）全部 schema 化收口，
+  GenericParams 的 enum/boolean/number 具名控件语言全站统一
 
 ### 新增（1020 批：聚合 body 按类型 schema 富表单 + vitest 解析解堵）
 

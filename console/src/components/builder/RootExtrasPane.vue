@@ -150,7 +150,10 @@ ES 默认返回全部字段
           <button aria-label="字段参数（fragment_size…）" class="btn sm ghost" title="字段参数（fragment_size…）" @click="hlParamsIdx = hlParamsIdx === i ? null : i"><Settings2 :size="12" /></button>
           <button aria-label="删除" class="btn sm ghost danger" title="删除" @click="hlDelField(i)"><X :size="12" /></button>
           <div v-if="hlParamsIdx === i" class="rx-sub">
-            <GenericParams :value="f.params" path-prefix="" @update="v => onHlFieldParams(i, v)" />
+            <!-- 1021：字段级参数 schema 化——fragment_size/number_of_fragments/fragment_offset/
+                 no_match_size 数值档 + type 三档枚举（plain/postings/fvh）；未登记键
+                 （matched_fields/highlight_query/pre_tags 覆盖等）自由表加键零丢失 -->
+            <GenericParams :value="f.params" :schema="HL_FIELD_PARAMS" path-prefix="" @update="v => onHlFieldParams(i, v)" />
           </div>
         </div>
         <div class="rx-row">
@@ -489,6 +492,16 @@ const emit = defineEmits<{ (e: 'update:tree', t: QueryTree): void }>();
  数组经 props 透传 searchFields.typeFilter，mapping 缺失类型时仍可清空输入框自由手输 */
 const SORTABLE_TYPES = ['keyword', 'date', 'long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float', 'boolean'];
 const HL_TYPES = ['text', 'keyword'];
+/* 1021：高亮字段级参数 schema（GenericParams 消费——常用五参数升类型化控件：
+   type 三档枚举 plain/postings/fvh，fragment 系/size 数值档；未登记键
+   matched_fields/highlight_query/pre_tags 覆盖等维持自由表加键零丢失） */
+const HL_FIELD_PARAMS: Array<{ key: string; kind: 'number' | 'text' | 'boolean' | 'enum'; options?: string[] }> = [
+  { key: 'fragment_size', kind: 'number' },
+  { key: 'number_of_fragments', kind: 'number' },
+  { key: 'fragment_offset', kind: 'number' },
+  { key: 'no_match_size', kind: 'number' },
+  { key: 'type', kind: 'enum', options: ['plain', 'postings', 'fvh'] },
+];
 /* 【W3b】排序/高亮行的候选类型置顶（typePriority 只调候选分组排序，不改候选集）：
  排序行 date 打头、数值族紧随（时间/数值范围排序是主场景，keyword 字典序排序殿后）；
  高亮行 text 置顶（全文命中高亮主场景），keyword 次之 */
