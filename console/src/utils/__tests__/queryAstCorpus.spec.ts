@@ -35,6 +35,17 @@ const CORPUS: Array<[string, unknown]> = [
   ['query_string', { query_string: { query: 'title:foo AND body:bar', default_field: 'title' } }],
   ['simple_query_string', { simple_query_string: { query: 'foo + bar', fields: ['title'], default_operator: 'and' } }],
   ['intervals', { intervals: { title: { match: { query: 'foo', max_gaps: 2, ordered: true } } } }],
+  /* 1011：intervals 递归容器 + 位置过滤（专用编辑位覆盖面语料） */
+  ['intervals-nested', { intervals: { title: {
+    all_of: {
+      intervals: [
+        { match: { query: 'a' } },
+        { any_of: { intervals: [{ prefix: { prefix: 'b' } }, { wildcard: { pattern: 'c*' } }] } },
+      ],
+      max_gaps: 2, ordered: true,
+    } } } }],
+  ['intervals-filter', { intervals: { title: {
+    match: { query: 'x', filter: { not_containing: { match: { query: 'water' } } } }, _name: 'nm' } } }],
   ['more_like_this', { more_like_this: { fields: ['title'], like: 'once upon a time', min_term_freq: 1 } }],
 
   /* ---- 词项级 ---- */

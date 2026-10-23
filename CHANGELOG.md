@@ -217,6 +217,20 @@
   功能凭空消失；权限拒绝的全局出口统一给出「缺什么 + 怎么办 + 一键复制申请信息」，
   连接目录加载失败保留上次清单并告警（不再清空成无法区分「故障/被删/被撤权」的空壳）
 
+### 新增（1011 批：intervals 间隔规则专用递归编辑位）
+
+- `intervals` 查询的规则体从通用键值表升为**一等递归编辑器**：规则类型下拉（match/prefix/
+  wildcard/fuzzy/all_of/any_of 六类）+ 主值输入 + `_name` 命名 + 参数 schema 表
+  （max_gaps/ordered/analyzer/fuzziness/use_field…）——all_of/any_of 的 `intervals`
+  子规则行递归渲染可增删，规则级 `filter` 给八关系槽（六位置关系 + before/after，
+  槽内子规则再递归），`script` 等其余 filter 键走小键值表；此前这类复杂规则只能在
+  递归键值表里逐层手改 JSON 键值
+- 零丢失退化契约：畸形/未知形态（多类型键、未知类型键等）整体退回通用键值表；
+  容器内子规则或 filter 槽值畸形 → 自定义行原样保真（嵌套深处不牵连整树退化）；
+  参数表里加出 filter/intervals 专用键会路由回流专用控件而非静默丢弃
+- 修正通用路径骨架键名：`allOf`/`anyOf` 驼峰写法并非 ES 键（ES 是 `all_of`/`any_of`），
+  chips 快捷添加不再引导产出 ES 必拒的 DSL；语料新增递归容器与位置过滤往返案例
+
 ### 新增（1010 批：评分函数 filter 一等查询树 + 衰减函数合法形态 + span_last 撤册）
 
 - function_score 评分函数面板两处升级：每个函数的 `filter` 从键值表升为**完整查询树**

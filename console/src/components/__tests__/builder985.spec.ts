@@ -90,10 +90,11 @@ describe('985 ClauseNode 无字段形态（ids/script）与对象值子表', () 
     const { host, cur } = mount<LeafNode>(ClauseNode, { node }, n => { last = n; });
     const chips = [...host.querySelectorAll('.cn-objk-btn')] as HTMLButtonElement[];
     expect(chips.map(b => b.textContent!.trim())).toEqual(['+ terms', '+ minimum_should_match_field']);
-    /* intervals 三通道骨架 chips（match/allOf/anyOf） */
+    /* intervals 通用退化路径骨架 chips（1011：可解析形态走专用编辑器；
+       键名按 ES 官方 all_of/any_of——旧 allOf/anyOf 驼峰写法 ES 必拒） */
     const { host: hIv } = mount<LeafNode>(ClauseNode, { node: mk({ op: 'intervals', field: 'content', value: {} }) });
     const ivChips = [...hIv.querySelectorAll('.cn-objk-btn')] as HTMLButtonElement[];
-    expect(ivChips.map(b => b.textContent!.trim())).toEqual(['+ match', '+ allOf', '+ anyOf', '+ ordered']);
+    expect(ivChips.map(b => b.textContent!.trim())).toEqual(['+ match', '+ all_of', '+ any_of']);
     chips[0].click();
     await new Promise(r => setTimeout(r));
     expect(last!.value).toEqual({ terms: [] });

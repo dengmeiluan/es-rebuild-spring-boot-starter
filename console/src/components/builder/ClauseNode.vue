@@ -63,7 +63,13 @@
       <input class="inp cn-val mono cn-fields" :value="fieldsText" placeholder="字段列表，逗号分隔"
              @input="onFields(($event.target as HTMLInputElement).value)" />
     </template>
-    <!-- 【985】对象值（geo 系/terms_set/intervals/script 等）：常用键快捷 chips +
+    <!-- 1011：intervals 专用递归编辑位——规则可解析（唯一类型键+官方 6 类）即一等编辑：
+         类型/主值/_name/参数 schema 表/all_of·any_of 递归子规则/位置过滤关系槽；
+         不可解析（畸形/未知形态）落回下方通用对象值键值表零丢失 -->
+    <div v-else-if="isIntervals" class="cn-objval">
+      <IntervalsEditor :rule="intervalsParsed!" :fields="fields" :types="types" @update="onIntervalsUpdate" />
+    </div>
+    <!-- 【985】对象值（geo 系/terms_set/script 等）：常用键快捷 chips +
      递归键值子表（零降级同款语言）——键名不用猜，点 chips 即得骨架再改值 -->
     <div v-else-if="isObjValue" class="cn-objval">
       <div v-if="objKeyHints.length" class="cn-objk" role="group" aria-label="常用键快捷添加">
@@ -159,6 +165,8 @@ import { ref, computed, inject, onBeforeUnmount, watch } from 'vue';
 import { Clock, X, Settings2, Group, Circle, CircleSlash, Copy } from 'lucide-vue-next';
 import FieldSelect from './FieldSelect.vue';
 import GenericParams from './GenericParams.vue';
+import IntervalsEditor from './IntervalsEditor.vue';
+import { parseIntervalRule, serIntervalRule, type IntervalRule } from '../../utils/intervalsRule';
 import { stdTimeToEpochMs } from '../../utils/format';
 import { DRAG_KEY, TREE_BUS, fireDrag } from './treeBus';
 import { OPS_META, opsForType, RICH_OPS, ADV_MENU, typePriorityForOp, typeFilterForOp, NUMERIC_VALUE_TYPES, opFamilyOf } from '../../utils/queryAstOps';
@@ -379,12 +387,20 @@ const fieldsText = computed(() => (Array.isArray(props.node.fields) ? props.node
 function onFields(raw: string) {
   patch({ fields: raw.split(',').map(s => s.trim()).filter(Boolean) });
 }
-/* 对象值子表（geo 系/terms_set/intervals/script 等）：值是纯对象即子表编辑 */
+/* 对象值子表（geo 系/terms_set/script 等）：值是纯对象即子表编辑 */
 const isObjValue = computed(() => {
   if (nodeOpForm.value !== 'field' && nodeOpForm.value !== 'none') return false;
   const v = props.node.value;
   return v !== null && typeof v === 'object' && !Array.isArray(v);
 });
+/* 1011：intervals 规则体可解析（唯一类型键+官方 6 类）→ 专用递归编辑位接管；
+   不可解析维持通用键值表（零丢失退化，与 FsFunctionsPanel 自定义形态锁定同语言） */
+const intervalsParsed = computed(() =>
+  props.node.op === 'intervals' ? parseIntervalRule(props.node.value) : null);
+const isIntervals = computed(() => !!intervalsParsed.value);
+function onIntervalsUpdate(r: IntervalRule) {
+  patch({ value: serIntervalRule(r) });
+}
 const objVal = computed<Record<string, unknown>>(() =>
   (isObjValue.value ? props.node.value : {}) as Record<string, unknown>);
 function onObjValue(v: Record<string, unknown> | unknown[]) {
@@ -397,9 +413,9 @@ const OBJ_KEY_HINTS: Record<string, string[]> = {
   geo_polygon: ['points'],
   geo_shape: ['shape', 'relation'],
   terms_set: ['terms', 'minimum_should_match_field'],
-  /* intervals 真实结构三通道：match 单规则 / allOf 顺序组合 / anyOf 任一——
-   加键后键值仍是递归键值表逐层编辑（allOf.clauses 数组自动走数组分支） */
-  intervals: ['match', 'allOf', 'anyOf', 'ordered'],
+  /* intervals 通用退化路径骨架（1011：可解析形态走专用编辑器；此处键名按 ES 官方
+     all_of/any_of——旧 allOf/anyOf 驼峰写法 ES 必拒） */
+  intervals: ['match', 'all_of', 'any_of'],
   /* 991：对象值算子扩员（8.x 新算子族常用键骨架） */
   geo_grid: ['geohash', 'geotile', 'geohex', 'ignore_unmapped'],
   shape: ['shape', 'relation'],
@@ -407,7 +423,7 @@ const OBJ_KEY_HINTS: Record<string, string[]> = {
   weighted_tokens: ['tokens', 'pruning_config'],
 };
 const OBJ_ARR_KEYS = new Set(['terms', 'points', 'shape']);
-const OBJ_OBJ_KEYS = new Set(['top_left', 'bottom_right', 'match', 'allOf', 'anyOf', 'filter', 'tokens', 'pruning_config']);
+const OBJ_OBJ_KEYS = new Set(['top_left', 'bottom_right', 'match', 'all_of', 'any_of', 'filter', 'tokens', 'pruning_config']);
 const objKeyHints = computed(() => OBJ_KEY_HINTS[props.node.op] || []);
 function addObjKey(k: string) {
   if (k in objVal.value) return;
