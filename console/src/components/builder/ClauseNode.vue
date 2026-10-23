@@ -83,6 +83,26 @@
       <option value="true">true</option>
       <option value="false">false</option>
     </select>
+    <!-- 1005：数组值算子（terms/ids）chip 视觉化——值即标签可删可加，逗号分隔文本退役；
+         值候选 datalist（terms-agg top20+历史值双源）与 IME 守卫原样保留；
+         非数组形态（如 terms-lookup 对象）不走此分支=保留原输入路径 -->
+    <div v-else-if="isArrayVal" class="cn-chips" role="group"
+         :aria-label="(OPS_META[props.node.op]?.label || props.node.op) + ' 值列表：回车或逗号添加，空输入退格删末项'">
+      <span v-for="(v, i) in arrVals" :key="i" class="cn-chip mono" :title="String(v)">
+        <span class="cn-chip-v">{{ v }}</span>
+        <button type="button" class="cn-chip-x" :aria-label="'删除值 ' + v" :title="'删除值 ' + v"
+                @click="delChip(i)"><X :size="10" /></button>
+      </span>
+      <input
+        class="inp cn-val mono cn-chip-in" v-model="chipDraft"
+        :placeholder="arrVals.length ? '' : valPlaceholder"
+        :list="valCandidates.length ? valDlId : undefined"
+        @focus="primeValAgg"
+        @keydown.enter.prevent="onChipEnter($event)"
+        @keydown="onChipKey"
+        @blur="commitChip()"
+      />
+    </div>
     <input
       v-else class="inp cn-val mono" :value="valText"
       :placeholder="valPlaceholder"
@@ -212,7 +232,7 @@ const typeHint = computed(() => {
   return `${t} 字段`;
 });
 const valPlaceholder = computed(() => {
-  if (props.node.op === 'terms') return '逗号分隔多值';   // 多值语义优先于字段类型
+  if (props.node.op === 'terms') return '输入值后回车或逗号添加';   // 多值语义优先于字段类型（1005 chip 形态文案）
   const t = fieldType.value;
   if (t === 'date') return '日期或 epoch 毫秒（⏰ 可转换）';
   if (NUMERIC_TYPES.includes(t)) return '数值，如 ≥ 100';
@@ -324,6 +344,34 @@ const valText = computed(() =>
     : String(props.node.value ?? ''));
 function onValue(raw: string) {
   patch({ value: ARRAY_VAL_OPS.has(props.node.op) ? raw.split(',').map(s => s.trim()).filter(Boolean) : raw });
+}
+
+/* ═══ 1005：数组值 chip 编辑 ═══ draft 不写树（半截值不进 DSL），提交才整项入账；
+   粘贴含逗号按项拆分（与旧逗号分隔输入等价）；IME 组合态 Enter 守卫（FieldSelect 同款） */
+const isArrayVal = computed(() => ARRAY_VAL_OPS.has(props.node.op) && Array.isArray(props.node.value));
+const arrVals = computed(() => (props.node.value as unknown[]).map(v => String(v)));
+const chipDraft = ref('');
+function commitChip() {
+  const raw = chipDraft.value;
+  chipDraft.value = '';
+  const parts = raw.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+  if (parts.length) patch({ value: [...arrVals.value, ...parts] });
+}
+function delChip(i: number) {
+  const next = arrVals.value.slice();
+  next.splice(i, 1);
+  patch({ value: next });
+}
+function onChipEnter(e: KeyboardEvent) { if (!e.isComposing) commitChip(); }
+function onChipKey(e: KeyboardEvent) {
+  if (e.isComposing) return;
+  if (e.key === 'Backspace' && !chipDraft.value && arrVals.value.length) {
+    e.preventDefault();
+    delChip(arrVals.value.length - 1);
+  } else if (e.key === ',' || e.key === '，') {
+    e.preventDefault();
+    commitChip();
+  }
 }
 /* 多字段形态：fields ↔ 逗号分隔（主值 placeholder 按 mainKey 语义） */
 const mainKeyPlaceholder = computed(() => `主值（${OPS_META[props.node.op]?.mainKey || 'query'}）`);
@@ -551,6 +599,17 @@ function endDrag() { delete (window as any)[DRAG_KEY]; fireDrag(false); }
 /* 985：多字段形态的字段列表输入（与主值并排换行）+ 对象值子表容器（独占一行，dashed 弱边框与 GenericNode 同语言） */
 .cn-fields { flex: 1 1 150px; }
 .cn-objval { flex-basis: 100%; padding: var(--sp-2); border: 1px dashed var(--line); border-radius: var(--r-s); background: var(--bg1); }
+/* 1005：terms/ids 值 chips——值即标签（hl 底+line 边，与 .cn-objk-btn 同语言）；
+   行内折行承载多值，输入框随行伸缩（空态独占一行给 placeholder） */
+.cn-chips { display: inline-flex; flex: 1 1 150px; min-width: 0; flex-wrap: wrap; align-items: center; gap: var(--sp-1); }
+.cn-chip { display: inline-flex; align-items: center; gap: 2px; max-width: 220px; overflow: hidden;
+  padding: 0 var(--sp-1h); border: 1px solid var(--line); border-radius: var(--r-s);
+  background: var(--hl); font-size: var(--fs-xs); line-height: 20px; }
+.cn-chip-v { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cn-chip-x { display: inline-flex; align-items: center; padding: 0; border: none; background: none;
+  color: var(--tx2); cursor: pointer; transition: color var(--tr); }
+.cn-chip-x:hover { color: var(--warn); }
+.cn-chip-in { flex: 1 1 80px; min-width: 70px; width: auto; height: 26px; padding: 0 var(--sp-1h); }
 /* 对象值常用键快捷 chips：胶囊虚线弱态，点击补骨架；已添加键禁用防重复 */
 .cn-objk { display: flex; gap: var(--sp-1); flex-wrap: wrap; margin-bottom: var(--sp-1); }
 .cn-objk-btn { font-size: var(--fs-2xs); padding: 1px 7px; border-radius: 999px; border: 1px dashed var(--line-strong); background: var(--bg2); color: var(--tx2); cursor: pointer; transition: color var(--tr), border-color var(--tr); }

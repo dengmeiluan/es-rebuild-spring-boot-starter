@@ -53,16 +53,19 @@ describe('985 ClauseNode 多字段形态（multi_match）', () => {
 });
 
 describe('985 ClauseNode 无字段形态（ids/script）与对象值子表', () => {
-  it('ids：无字段选择器，值逗号分隔', async () => {
+  it('ids：无字段选择器，值 chip 编辑（1005 随迁——逗号分隔文本退役，粘贴含逗号仍拆项）', async () => {
     let last: LeafNode | null = null;
     const { host } = mount<LeafNode>(ClauseNode, { node: mk({ op: 'ids', field: null, value: ['1', '2'] }) }, n => { last = n; });
     expect(host.querySelector('.fs-inp')).toBeNull();
-    const inp = host.querySelector('.cn-val') as HTMLInputElement;
-    expect(inp.value).toBe('1,2');
-    inp.value = '1,3';
+    /* 既有值渲染为 chips；追加一项走提交链（回车），半截不写树 */
+    const chips = Array.from(host.querySelectorAll('.cn-chip-v')).map(el => el.textContent);
+    expect(chips).toEqual(['1', '2']);
+    const inp = host.querySelector('.cn-chip-in') as HTMLInputElement;
+    inp.value = '3';
     inp.dispatchEvent(new Event('input'));
+    inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
     await new Promise(r => setTimeout(r));
-    expect(last!.value).toEqual(['1', '3']);
+    expect(last!.value).toEqual(['1', '2', '3']);
   });
   it('对象值（terms_set）渲染递归键值子表，编辑回写 value', async () => {
     let last: LeafNode | null = null;

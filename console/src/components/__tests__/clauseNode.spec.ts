@@ -117,9 +117,9 @@ describe('ClauseNode', () => {
     expect(ph({}, { field: '' }), '无 mapping 零降级为现状文案').toBe('值（时间字段可用 ⏰ 转换）');
   });
 
-  it('terms 多值 placeholder 优先于字段类型（多值语义主导）', () => {
+  it('terms 多值 placeholder 优先于字段类型（多值语义主导；1005 随迁 chip 文案）', () => {
     const { host } = mount(mk({ field: 'f', op: 'terms', value: [] }), { f: 'keyword' });
-    expect((host.querySelector('.cn-val') as HTMLInputElement).placeholder).toBe('逗号分隔多值');
+    expect((host.querySelector('.cn-val') as HTMLInputElement).placeholder).toBe('输入值后回车或逗号添加');
   });
 
   it('字段类型徽标：渲染类型名 + 类型建议 tooltip；mapping 缺失不渲染（零降级）', () => {
@@ -281,5 +281,74 @@ describe('ClauseNode', () => {
     sel.dispatchEvent(new Event('change'));
     await new Promise(r => setTimeout(r));
     expect(removed(), '无值 term 无查询语义：选空=删除该条件（走父级 remove 链）').toBe(1);
+  });
+});
+
+describe('1005 terms/ids 值 chip 视觉化', () => {
+  const tick = () => new Promise(r => setTimeout(r));
+  const chipInput = (host: HTMLElement) => host.querySelector<HTMLInputElement>('.cn-chip-in')!;
+  const setDraft = (inp: HTMLInputElement, v: string) => { inp.value = v; inp.dispatchEvent(new Event('input')); };
+
+  it('数组值渲染为 chips；删 chip 写回数组（不可变更新）', async () => {
+    const { host, cur } = mount(mk({ field: 'tag', op: 'terms', value: ['a', 'b', 'c'] }), { tag: 'keyword' });
+    const chips = () => Array.from(host.querySelectorAll('.cn-chip-v')).map(el => el.textContent);
+    expect(chips()).toEqual(['a', 'b', 'c']);
+    (host.querySelectorAll('.cn-chip-x')[1] as HTMLElement).click();
+    await tick();
+    expect(chips()).toEqual(['a', 'c']);
+    expect(cur.value.value).toEqual(['a', 'c']);
+  });
+
+  it('输入回车添加；英文/中文逗号即刻提交；粘贴含逗号拆多项', async () => {
+    const { host, cur } = mount(mk({ field: 'tag', op: 'terms', value: ['a'] }), { tag: 'keyword' });
+    const inp = chipInput(host);
+    setDraft(inp, 'b');
+    inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await tick();
+    expect(cur.value.value).toEqual(['a', 'b']);
+    setDraft(inp, 'c');
+    inp.dispatchEvent(new KeyboardEvent('keydown', { key: '，' }));
+    await tick();
+    expect(cur.value.value).toEqual(['a', 'b', 'c']);
+    setDraft(inp, 'd,e');
+    inp.dispatchEvent(new KeyboardEvent('keydown', { key: ',' }));
+    await tick();
+    expect(cur.value.value, '粘贴含逗号拆项（与旧逗号分隔输入等价）').toEqual(['a', 'b', 'c', 'd', 'e']);
+  });
+
+  it('空输入 Backspace 删末项；IME 组合态 Enter 不提交', async () => {
+    const { host, cur } = mount(mk({ field: 'tag', op: 'terms', value: ['x', 'y'] }), { tag: 'keyword' });
+    const inp = chipInput(host);
+    expect(inp.value).toBe('');
+    inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace' }));
+    await tick();
+    expect(cur.value.value, '空输入退格删末项').toEqual(['x']);
+    setDraft(inp, '半');
+    inp.dispatchEvent(new CompositionEvent('compositionstart'));
+    inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', isComposing: true }));
+    await tick();
+    expect(cur.value.value, 'IME 组合态 Enter 不提交半截值').toEqual(['x']);
+    inp.dispatchEvent(new CompositionEvent('compositionend'));
+    inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await tick();
+    expect(cur.value.value).toEqual(['x', '半']);
+  });
+
+  it('空数组=纯输入框无 chips；placeholder 新文案（旧逗号话术防回潮）', () => {
+    const { host } = mount(mk({ field: 'tag', op: 'terms', value: [] }), { tag: 'keyword' });
+    expect(host.querySelectorAll('.cn-chip')).toHaveLength(0);
+    const ph = (host.querySelector('.cn-val') as HTMLInputElement).placeholder;
+    expect(ph).toBe('输入值后回车或逗号添加');
+    expect(ph).not.toBe('逗号分隔多值');
+  });
+
+  it('ids 同构 chip（数组值算子族一致）', async () => {
+    const { host, cur } = mount(mk({ field: null, op: 'ids', value: ['1', '2'] }), {});
+    expect(Array.from(host.querySelectorAll('.cn-chip-v')).map(el => el.textContent)).toEqual(['1', '2']);
+    const inp = chipInput(host);
+    setDraft(inp, '3');
+    inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await tick();
+    expect(cur.value.value).toEqual(['1', '2', '3']);
   });
 });
