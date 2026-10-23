@@ -86,3 +86,27 @@ export function compactOffsetToPos(compact: string, pretty: string, offset: numb
   }
   return ci === offset ? { line, column: col } : null;
 }
+
+/* ═══ 1008：DSL 光标 → 内层节点反查（反向联动内核）═══
+   树按不可变约定流转（每次编辑换新引用）→ WeakMap 按树身份缓存 span 集，
+   光标高频移动零重复序列化。命中=包含偏移的 span 中最内层（start 最大）者；
+   节点间隙（逗号/键名等不属于任何节点）返回 null=联动静默不打扰。 */
+const spanCache = new WeakMap<QueryTree, Map<string, NodeSpan>>();
+
+export function nodeAtOffset(tree: QueryTree, offset: number): string | null {
+  if (!tree.root) return null;
+  let spans = spanCache.get(tree);
+  if (!spans) {
+    spans = queryNodeSpans(tree);
+    spanCache.set(tree, spans);
+  }
+  let bestId: string | null = null;
+  let bestStart = -1;
+  for (const [id, sp] of spans) {
+    if (offset >= sp.start && offset < sp.end && sp.start > bestStart) {
+      bestStart = sp.start;
+      bestId = id;
+    }
+  }
+  return bestId;
+}

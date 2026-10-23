@@ -274,6 +274,14 @@ async function locateNode(id: string) {
   await nextTick();
   /* 1007：定位双链——条件行脉冲之外，同步上抛给视图层联动右侧 DSL 编辑器滚动定位 */
   emit('locateDsl', id);
+  await flashRow(id, true);
+}
+/* 1008：DSL 光标反向联动入口——只滚动+脉冲（折叠中的行先展开可见），
+   不 emit locateDsl（防「编辑器定位→光标移动→再联动」反馈环）、不抢编辑器焦点 */
+async function highlightFromDsl(id: string) {
+  await flashRow(id, false);
+}
+async function flashRow(id: string, focusInput: boolean) {
   const root = paneEl.value;
   if (!root) return;
   let el = root.querySelector<HTMLElement>(`[data-nid="${id}"]`);
@@ -289,7 +297,7 @@ async function locateNode(id: string) {
   el.classList.add('qtp-flash');
   clearTimeout(flashTimer);
   flashTimer = setTimeout(() => { el?.classList.remove('qtp-flash'); if (flashEl === el) flashEl = null; }, 1400);
-  (el.querySelector('.fs-inp') as HTMLInputElement | null)?.focus({ preventScroll: true });
+  if (focusInput) (el.querySelector('.fs-inp') as HTMLInputElement | null)?.focus({ preventScroll: true });
 }
 onBeforeUnmount(() => clearTimeout(flashTimer));
 /* 游标 → DOM 落位：唯一 .qtp-hit-cur + 滚到视口中心（命中行尚未渲染时不炸，下次导航再试） */
@@ -392,7 +400,11 @@ function redo() {
 
 /* 1002：extras 域写入口（DslQueryView 把 RootExtrasPane 的 update:tree 路由进来；
    条件树面板恒显示=通道恒在场，视图侧保留兜底直写） */
-defineExpose({ commitTree: (t: QueryTree) => commitTree(t) });
+defineExpose({
+  commitTree: (t: QueryTree) => commitTree(t),
+  /* 1008：DSL 光标反向联动入口（仅行滚动+脉冲，不 emit 不抢焦点） */
+  highlightFromDsl: (id: string) => { void highlightFromDsl(id); },
+});
 function onRootUpdate(n: QueryNode) { setRoot(n); }
 function onRootRemove() { setRoot(matchAllLeaf()); }
 function wrapRoot() { if (props.tree.root) setRoot(wrapInBool(props.tree.root, props.tree.root.id)); }

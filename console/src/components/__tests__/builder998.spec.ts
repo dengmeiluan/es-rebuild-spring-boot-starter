@@ -266,6 +266,7 @@ describe('998 ClauseNode 算子语义族胶囊', () => {
 
 describe('998 QueryTreePane 语句摘要条', () => {
   const locateIds: string[] = [];
+  const pane = ref<{ highlightFromDsl: (id: string) => void } | null>(null);
   function mountPane(src: unknown) {
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -274,6 +275,7 @@ describe('998 QueryTreePane 语句摘要条', () => {
     const tree = ref(r.tree);
     const app = createApp({
       render: () => h(QueryTreePane, {
+        ref: pane,
         tree: tree.value, fields: ['status', 'price'], types: { status: 'keyword', price: 'long' },
         'onUpdate:tree': (t: QueryTree) => { tree.value = t; },
         onLocateDsl: (id: string) => { locateIds.push(id); },
@@ -317,6 +319,21 @@ describe('998 QueryTreePane 语句摘要条', () => {
     const { host } = mountPane({ query: { match_all: {} } });
     await tick();
     expect(host.querySelector('.qsb')).toBeNull();
+  });
+
+  it('1008 反向联动：highlightFromDsl 行脉冲在场且不回弹 locateDsl（无反馈环）', async () => {
+    const { host } = mountPane({
+      query: { bool: { must: [{ term: { status: 'active' } }, { term: { status: 'draft' } }] } },
+    });
+    await tick();
+    const before = locateIds.length;
+    const row = host.querySelector<HTMLElement>('.cn');
+    const nid = row!.dataset.nid!;
+    pane.value!.highlightFromDsl(nid);
+    await tick();
+    await tick();
+    expect(host.querySelector('.qtp-flash'), '反向联动行脉冲在场').not.toBeNull();
+    expect(locateIds.length, '反向入口不 emit locateDsl（防反馈环）').toBe(before);
   });
 });
 

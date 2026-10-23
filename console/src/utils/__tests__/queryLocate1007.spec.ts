@@ -6,7 +6,7 @@
      行列（字符串字面量内的空格/换行/转义不被当作排版空白跳过=双流零漂移）。 */
 import { describe, it, expect } from 'vitest';
 import { parseTree, serializeTree, serQueryNode } from '../queryAst';
-import { queryNodeSpans, compactOffsetToPos } from '../queryLocate';
+import { queryNodeSpans, compactOffsetToPos, nodeAtOffset } from '../queryLocate';
 import type { QueryTree, QueryNode } from '../queryAst';
 
 const treeOf = (dsl: Record<string, unknown>): QueryTree => {
@@ -93,5 +93,36 @@ describe('1007 compactOffsetToPos', () => {
     const span = queryNodeSpans(t).get(leaf.id)!;
     const pos = compactOffsetToPos(compactT, prettyT, span.start)!;
     expect(prettyT.split('\n')[pos.line - 1].slice(pos.column - 1).startsWith('{"term"') || prettyT[pos.column - 1] === '{' || prettyT.split('\n')[pos.line - 1].slice(pos.column - 1).startsWith('{')).toBe(true);
+  });
+});
+
+describe('1008 nodeAtOffset（DSL 光标 → 内层节点反查）', () => {
+  const t = treeOf({ query: { bool: {
+    must: [{ term: { a: 1 } }, { nested: { path: 'c', query: { term: { 'c.x': 2 } } } }],
+  } } });
+  const spans = queryNodeSpans(t);
+  const ids = collect(t.root!);
+  const rootSpan = spans.get(t.root!.id)!;
+  const leafIn = spans.get(ids.find(n => n.type === 'leaf' && (n as any).field === 'c.x')!.id)!;
+
+  it('光标落在嵌套叶子 span 内 → 命中最内层节点（非根/非父）', () => {
+    const id = nodeAtOffset(t, leafIn.start + 1);
+    expect(id).toBe(ids.find(n => n.type === 'leaf' && (n as any).field === 'c.x')!.id);
+  });
+
+  it('光标落在根 span 开头（仅根包含） → 命中根', () => {
+    expect(nodeAtOffset(t, rootSpan.start)).toBe(t.root!.id);
+  });
+
+  it('未命中（span 之外/树空/越界）→ null', () => {
+    const empty = treeOf({ size: 10 });
+    expect(nodeAtOffset(empty, 0)).toBeNull();
+    expect(nodeAtOffset(t, 0)).toBeNull();   /* 0 落在 {"query": 前缀内，任何节点 span 之前 */
+    expect(nodeAtOffset(t, 99999)).toBeNull();
+  });
+
+  it('缓存同引用：重复查询零重算（WeakMap 树身份缓存）', () => {
+    /* 行为面断言：同树多偏移查询结果一致且不抛 */
+    expect(nodeAtOffset(t, leafIn.start + 1)).toBe(nodeAtOffset(t, leafIn.start + 2));
   });
 });

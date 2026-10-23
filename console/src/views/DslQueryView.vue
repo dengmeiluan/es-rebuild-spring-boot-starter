@@ -697,7 +697,7 @@ import SplitHandle from '../components/SplitHandle.vue';
 import FieldPicker from '../components/FieldPicker.vue';
 import { useTreeDslSync } from '../composables/useTreeDslSync';
 import { serializeTree } from '../utils/queryAst';
-import { queryNodeSpans, compactOffsetToPos } from '../utils/queryLocate';
+import { queryNodeSpans, compactOffsetToPos, nodeAtOffset } from '../utils/queryLocate';
 /* 文档弹窗两处 Monaco 定高接档循环统一件（adhoc.piH/ih.settingsH·mapH 同范式） */
 import { useTierCycle } from '../composables/useTierCycle';
 import { useDebounceFn } from '../composables/useDebounceFn'; /* ：防抖统一件（卸载自动清 timer） */
@@ -908,7 +908,7 @@ const { tree: queryTree, stale: treeStale, onTreeUpdate, resyncNow } = useTreeDs
    编辑共用同一条撤销流（Ctrl+Z 跨域逐级回退）。此前 extras 写绕开 setRoot 且被
    lastEmitted 甄别当成外部换树=清栈，任何参数编辑都会抹掉全部撤销历史。
    条件树面板恒显示=通道恒在场；兜底直写仅供理论缺席态。 */
-const treePaneRef = ref<{ commitTree: (t: typeof queryTree.value) => void } | null>(null);
+const treePaneRef = ref<{ commitTree: (t: typeof queryTree.value) => void; highlightFromDsl?: (id: string) => void } | null>(null);
 function onExtrasUpdate(t: typeof queryTree.value) {
   if (treePaneRef.value) treePaneRef.value.commitTree(t);
   else onTreeUpdate(t);
@@ -942,6 +942,30 @@ function onSentenceLocate(id: string) {
   } catch { locDeco = null; }
   locTimer = setTimeout(() => { locDeco?.dispose?.(); locDeco = null; }, 1800);
 }
+
+/* ═══ 1008：DSL 光标 → 条件行反向联动 ═══
+   编辑器光标移动 → 内核反查包含该偏移的最内层节点（WeakMap 按树身份缓存 span，
+   高频移动零重复序列化）→ 条件行滚动+脉冲（不 emit 不抢焦点=无反馈环；
+   语句条正向定位的 setSelection 会触发本联动，同行幂等）。Monaco 为异步
+   loader 就绪，getEditor 首拍可能缺席——短轮询等到为止。stale 冻结态跳过。 */
+let cursorSub: { dispose(): void } | undefined;
+watch(monacoRef, async m => {
+  cursorSub?.dispose?.();
+  cursorSub = undefined;
+  for (let i = 0; i < 40 && m && !m.getEditor?.(); i++) await new Promise(r => setTimeout(r, 250));
+  const ed = m?.getEditor?.();
+  if (!ed) return;
+  /* 桩编辑器（测试环境）可能缺该方法——可选调用，缺=跳过订阅零降级 */
+  cursorSub = ed.onDidChangeCursorPosition?.(ev => {
+    const tree = queryTree.value;
+    if (!tree?.root || treeStale.value) return;
+    const model = ed.getModel?.();
+    if (!model) return;
+    const id = nodeAtOffset(tree, model.getOffsetAt(ev.position));
+    if (id) treePaneRef.value?.highlightFromDsl?.(id);
+  });
+}, { immediate: true });
+onBeforeUnmount(() => { cursorSub?.dispose?.(); cursorSub = undefined; });
 
 /* P1 workbench：tree 宽度交 WorkbenchLayout 管理（偏好 key 含 target/route/mode/档位），
  旧 es_console_qb_split 由 useLayoutPreferences 在 route='/search' 首建时一次性迁移。 */
