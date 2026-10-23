@@ -395,12 +395,18 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         return true;
     }
 
-    /** 空页面授权仍必须放行的自举/自助端点（身份、退出、改密、权限自查、setup 状态）。 */
+    /** 空页面授权仍必须放行的自举/自助端点（身份、退出、改密、权限自查、setup 状态、
+     * 基础健康探针）。连接目录（GET /clusters 精确形态）也在列：它是「获知自己有哪些
+     * 可切换授权目标」的唯一自助通道——拒掉它会让纯连接授权用户（宿主维度无键）既看不到
+     * 菜单也拿不到可切换列表，形成无法自救的死锁环（前端 autoPickConnTarget 依赖该目录
+     * 自动落位到首个授权连接）。列表本身已按 minRole+可见性过滤，不泄露未授权连接。 */
     private static boolean isBootstrapPath(String path) {
         return path.endsWith("/auth/me") || path.endsWith("/auth/logout")
                 || path.endsWith("/auth/change-password") || path.endsWith("/auth/permissions")
                 || path.endsWith("/auth/ops-audit/mine") || path.endsWith("/setup/status")
-                || path.endsWith("/cluster/health");
+                || path.endsWith("/cluster/health")
+                || path.endsWith("/internal/es/index/health")
+                || path.endsWith("/internal/es/index/clusters");
     }
 
     /** 只有真实持有文档读面的页面才允许索引详情携带样本文档；纯 mapping 元数据页只回结构。 */
@@ -758,8 +764,10 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             }
             /* 共享读端点按归属页裁决——静态页白名单与连接模型同一口径：
                pageOf=null / 跨页复用端点不能直接吃角色门，否则 only-overview 用户可读
-               query/search 业务数据；live/workspace 也会被 overview 的页面前缀误拦。 */
-            if (!writeReq) {
+               query/search 业务数据；live/workspace 也会被 overview 的页面前缀误拦。
+               bootstrap 自助端点（健康探针/连接目录等）豁免：它们不承载业务数据，
+               且是空页集用户定位自己授权的自救通道。 */
+            if (!writeReq && !isBootstrapPath(path)) {
                 List<String> readPages = sharedReadPages(path);
                 if (readPages != null) {
                     boolean allowed = false;

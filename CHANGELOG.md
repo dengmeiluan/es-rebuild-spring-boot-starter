@@ -5,6 +5,17 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.39]
+
+### 修复
+
+- 空页面授权的自救通道豁免（产线实报：纯连接授权用户全屏 403 死锁）：连接目录
+  （GET /clusters）与基础健康探针（/health）此前被空页集拒绝——纯连接授权用户
+  （授权全在 conn:{id}:* 键、宿主维度无键）既看不到菜单也拿不到可切换连接列表，
+  前端的授权目标自动落位（autoPickConnTarget）因目录为空永远无法触发，形成
+  「454 个授权键在手却满屏无任何页面授权」的死锁环。两通道放行后，用户首次进入
+  即自动落到第一个有授权的连接；列表本身仍按 minRole+可见性过滤，不泄露未授权连接
+
 ## [1.0.38]
 
 ### 安全

@@ -238,6 +238,12 @@ public class ConsoleAuthInterceptorPageAuthTest {
         assertTrue(it.preHandle(stubRequest("GET", "/internal/es/index/cluster/health", ""), new StubResponse().proxy, null));
         // /auth/me 共享（角色档 VIEWER 兜底）
         assertTrue(it.preHandle(stubRequest("GET", "/internal/es/index/auth/me", ""), new StubResponse().proxy, null));
+        // 基础健康探针：空页集也放行（观测自愈通道，产线实报误伤面）
+        assertTrue(it.preHandle(stubRequest("GET", "/internal/es/index/health", ""), new StubResponse().proxy, null));
+        // 连接目录（GET /clusters 精确形态）：纯连接授权用户（宿主维度无键）的自救通道——
+        // 拒它=拿不到可切换目标列表，前端 autoPickConnTarget 无法落位，形成空屏死锁
+        // （产线实报：454 个连接授权键在手，宿主维度全 403+菜单全隐）。列表已按 minRole 过滤。
+        assertTrue(it.preHandle(stubRequest("GET", "/internal/es/index/clusters", ""), new StubResponse().proxy, null));
     }
 
     @Test
