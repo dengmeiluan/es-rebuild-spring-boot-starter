@@ -375,8 +375,18 @@ function favHistRow(it: { mode?: string; query: string; index?: string; ts?: num
  拿不到宿主 scopeId，纯 scoped 规则匹配不到）——SkeletonBox 定高块+一行弱文，拉取期高度恒定 */
 
 /* 顶栏：模式切换器 + 历史入口。：补 flex-wrap（900 档单列化兜窄档，
- 档位之间 900-1100 一带窄容器允许 chip/入口钮换行，不再硬挤单行） */
-.qh-top { display: flex; align-items: flex-start; gap: var(--sp-2); flex-wrap: wrap; }
+ 档位之间 900-1100 一带窄容器允许 chip/入口钮换行，不再硬挤单行）。
+ 1023：页头行冻结（Excel 冻结窗格语义）——集群/索引上下文（模式胶囊 + 当前索引 chip）
+ 长页滚动时恒悬可视区顶，翻到结果深处仍知道「在哪个索引上查」。sticky 生效前提：
+ 父 .qh 贯穿整页高度 ✓；实底 + 横向负边距拉满 .page 内容宽防内容从缝隙滚过；
+ z-index 压内容、让位弹层（float-pop 层级更高） */
+.qh-top {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: flex-start; gap: var(--sp-2); flex-wrap: wrap;
+  margin: calc(-1 * var(--sp-1h)) calc(-1 * var(--sp-5)) 0;
+  padding: var(--sp-1h) var(--sp-5) var(--sp-2);
+  background: var(--bg0);
+}
 .qh-top .qh-modes { flex: 1; }
 .qh-hist { flex-shrink: 0; }
 .qh-labs { display: flex; flex-direction: column; min-width: 160px; padding: var(--sp-1); }
