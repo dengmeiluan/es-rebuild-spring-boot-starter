@@ -116,6 +116,7 @@
             :tree="queryTree" :fields="builderFields" :types="builderTypes" :stale="treeStale"
             :index="store.pickedIdx"
             @update:tree="onTreeUpdate"
+            @locate-dsl="onSentenceLocate"
           />
           <!-- 零降级：mapping 缺失只影响字段候选/类型徽标，字段名仍可手输 -->
           <div v-if="!fieldList.length" class="dq-tree-map">
@@ -695,6 +696,8 @@ import WorkbenchLayout from '../components/WorkbenchLayout.vue';
 import SplitHandle from '../components/SplitHandle.vue';
 import FieldPicker from '../components/FieldPicker.vue';
 import { useTreeDslSync } from '../composables/useTreeDslSync';
+import { serializeTree } from '../utils/queryAst';
+import { queryNodeSpans, compactOffsetToPos } from '../utils/queryLocate';
 /* 文档弹窗两处 Monaco 定高接档循环统一件（adhoc.piH/ih.settingsH·mapH 同范式） */
 import { useTierCycle } from '../composables/useTierCycle';
 import { useDebounceFn } from '../composables/useDebounceFn'; /* ：防抖统一件（卸载自动清 timer） */
@@ -909,6 +912,35 @@ const treePaneRef = ref<{ commitTree: (t: typeof queryTree.value) => void } | nu
 function onExtrasUpdate(t: typeof queryTree.value) {
   if (treePaneRef.value) treePaneRef.value.commitTree(t);
   else onTreeUpdate(t);
+}
+
+/* ═══ 1007：语句条片段 → DSL 编辑器联动定位 ═══
+   点语句摘要片段（QuerySentenceBar @locate → QueryTreePane 上抛 locateDsl）：
+   内核（queryLocate）在紧凑文本里按序列化书写序找该节点字符 span，映射到
+   美化文本行列，编辑器滚动居中 + 选区 + 1.8s 短闪装饰。stale 冻结态跳过
+   （编辑器文本与树可能已不一致，定位会指错）。 */
+let locDeco: { dispose?: () => void } | null = null;
+let locTimer: ReturnType<typeof setTimeout> | undefined;
+function onSentenceLocate(id: string) {
+  const ed = monacoRef.value?.getEditor?.();
+  const tree = queryTree.value;
+  if (!ed || !tree?.root || treeStale.value) return;
+  const span = queryNodeSpans(tree).get(id);
+  if (!span) return;
+  const compact = JSON.stringify(serializeTree(tree));
+  const s = compactOffsetToPos(compact, dsl.value, span.start);
+  const e = compactOffsetToPos(compact, dsl.value, span.end - 1);
+  if (!s || !e) return;
+  const range = { startLineNumber: s.line, startColumn: s.column, endLineNumber: e.line, endColumn: e.column + 1 };
+  ed.revealRangeInCenter(range);
+  ed.setSelection(range);
+  locDeco?.dispose?.();
+  clearTimeout(locTimer);
+  try {
+    /* 该 Monaco 版本的集合类型未暴露 dispose（运行时在），显式收窄；调用侧 ?.dispose?.() 双守卫 */
+    locDeco = (ed.createDecorationsCollection?.([{ range, options: { className: 'dq-loc-flash' } }]) as { dispose?: () => void } | undefined) ?? null;
+  } catch { locDeco = null; }
+  locTimer = setTimeout(() => { locDeco?.dispose?.(); locDeco = null; }, 1800);
 }
 
 /* P1 workbench：tree 宽度交 WorkbenchLayout 管理（偏好 key 含 target/route/mode/档位），
@@ -2513,6 +2545,18 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* 1007：语句条片段联动定位——DSL 编辑器内目标节点短闪（1.8s 装饰随定时器回收）。
+   装饰类挂在 Monaco 内容节点上（子组件渲染域），scoped 需 :deep 穿透；
+   动画与条件树行 .qtp-flash 同语言（品牌色淡入淡出） */
+:deep(.dq-loc-flash) { animation: dq-loc-fade 1.8s ease-out; border-radius: var(--r-xs); }
+@keyframes dq-loc-fade {
+  0% { background: color-mix(in srgb, var(--ac) 26%, transparent); }
+  60% { background: color-mix(in srgb, var(--ac) 12%, transparent); }
+  100% { background: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :deep(.dq-loc-flash) { animation: none; background: color-mix(in srgb, var(--ac) 14%, transparent); }
+}
 /* JSON 搜索/导航组寄居 rt-bar（bar-prepend 视图段后）——浮动条形态退役：
  去 sticky/边框/内边距浮层（遮挡内容且与工具行割裂），行内控件组与 seg/分页同排等高
  （输入 26px 对齐 ctl-h 口径） */

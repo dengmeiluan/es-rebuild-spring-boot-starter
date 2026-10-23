@@ -265,6 +265,7 @@ describe('998 ClauseNode 算子语义族胶囊', () => {
 });
 
 describe('998 QueryTreePane 语句摘要条', () => {
+  const locateIds: string[] = [];
   function mountPane(src: unknown) {
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -275,6 +276,7 @@ describe('998 QueryTreePane 语句摘要条', () => {
       render: () => h(QueryTreePane, {
         tree: tree.value, fields: ['status', 'price'], types: { status: 'keyword', price: 'long' },
         'onUpdate:tree': (t: QueryTree) => { tree.value = t; },
+        onLocateDsl: (id: string) => { locateIds.push(id); },
       }),
     });
     apps.push(app);
@@ -306,6 +308,9 @@ describe('998 QueryTreePane 语句摘要条', () => {
     await tick();
     await tick();
     expect(host.querySelector('.qtp-flash'), '点击片段后目标行应有定位脉冲').not.toBeNull();
+    /* 1007：同一动作同步上抛 locateDsl（视图层联动右侧 DSL 编辑器定位） */
+    expect(locateIds.length, '片段点击上抛 locateDsl').toBeGreaterThanOrEqual(1);
+    expect(locateIds[0]).toBeTruthy();
   });
 
   it('纯 match_all 空态不渲染语句条（避免与空态插画重复）', async () => {

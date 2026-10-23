@@ -126,7 +126,7 @@ import {
 const props = defineProps<{
   tree: QueryTree; fields: string[]; types: Record<string, string>; stale?: boolean; index?: string;
 }>();
-const emit = defineEmits<{ (e: 'update:tree', t: QueryTree): void }>();
+const emit = defineEmits<{ (e: 'update:tree', t: QueryTree): void; (e: 'locateDsl', id: string): void }>();
 
 watch(() => props.index, i => setFieldSearchIndex(i || ''), { immediate: true });
 
@@ -272,6 +272,8 @@ let flashEl: HTMLElement | null = null;
 let flashTimer: ReturnType<typeof setTimeout> | undefined;
 async function locateNode(id: string) {
   await nextTick();
+  /* 1007：定位双链——条件行脉冲之外，同步上抛给视图层联动右侧 DSL 编辑器滚动定位 */
+  emit('locateDsl', id);
   const root = paneEl.value;
   if (!root) return;
   let el = root.querySelector<HTMLElement>(`[data-nid="${id}"]`);
