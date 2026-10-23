@@ -5,6 +5,18 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.55]
+
+### 修复
+
+- insight 护栏动作 fail-closed（并发审计发现的结构性漂移面）：动态 actionId 的写
+  请求在授权层双查——①未注册动作直接拒绝（执行器只会 400，授权层提前给出确定
+  语义）；②已注册但共享写映射漏登：拒绝（否则静态/混合模型回落 OPERATOR 角色门，
+  未来新增动作 minRole≤OPERATOR 即失控——配置漂移显式拦下逼登记）。注册表新增
+  contains 判据，装配注入拦截器；前端写门镜像同判。本批含双代理并发审计报告：
+  前端写门镜像 96 写形态全覆盖无越权组合；后端写端点全映射，兜底角色门支仅剩
+  登出/改密两个自助端点，isReadonlyPost 18 条逐条核验无提权路径
+
 ## [1.0.54]
 
 ### 修复

@@ -549,6 +549,9 @@ export const useAuthStore = defineStore('auth', () => {
         if (staticPages) return envOk && staticPages.has(owner) && canCap(me.value.role, cap);
         return canCap(me.value.role, cap);
       }
+      /* 护栏动作 fail-closed（与后端 1031 同口径）：动态 actionId 未经共享写映射登记
+         一律拒绝——不得借角色档回落漏进静态/混合模型（配置漂移在客户端也拦下）。 */
+      if (path.startsWith('/insight/actions/')) return false;
       /* 连接模型默认拒绝「无页面归属」的写端点：与后端未登记写默认拒绝同源，
          不能让未登记的端点回落全局角色档（否则 UI 会显示一个后端必 403 的入口）。
          混合模型有静态全局页授权时，按纯静态语义回落角色门（后端 hasStatic 同口径）。 */

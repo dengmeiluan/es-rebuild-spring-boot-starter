@@ -48,4 +48,10 @@ public class GuardedActionRegistry {
         }
         return a;
     }
+
+    /** 授权闸 fail-closed 判据（1031）：actionId 是否已注册——未注册写请求在授权层
+        直接拒绝，不落兜底角色门（动态 actionId 不得借角色档回落漏进静态/混合模型）。 */
+    public boolean contains(String actionId) {
+        return actionId != null && actions.containsKey(actionId);
+    }
 }

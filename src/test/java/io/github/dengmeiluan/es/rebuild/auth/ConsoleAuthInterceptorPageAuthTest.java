@@ -307,6 +307,22 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
+    public void insight护栏动作_未登记actionId写请求授权层拒绝() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.OPERATOR,
+                new HashSet<>(Arrays.asList("overview"))), true, audit);
+        // 空注册表 = 任何 actionId 都未登记：静态模型 + OPERATOR 旧代码会落兜底角色门放行
+        //（执行器 400 兜底）；fail-closed 后授权层直接拒，动态 actionId 不再借角色档回落
+        it.setGuardedActionRegistry(new io.github.dengmeiluan.es.rebuild.insight.action.GuardedActionRegistry(
+                Collections.emptyList()));
+        StubResponse resp = new StubResponse();
+        assertFalse(it.preHandle(stubRequest("POST", "/internal/es/index/insight/actions/unknown-action/execute",
+                java.util.Collections.<String, String>emptyMap()), resp.proxy, null));
+        assertEquals(403, resp.status);
+        assertTrue(resp.bodyText().contains("未知的护栏动作"));
+    }
+
+    @Test
     public void 自救通道_残留跨账号目标头不死于连接可见性() throws Exception {
         // 产线实报：换号后 localStorage 残留上一账号的 es-console.target，/auth/me 与 /clusters
         // 带着它发出——零页集身份对该连接不可见 → 连身份探测都 403（「身份未确认」全量菜单假态）

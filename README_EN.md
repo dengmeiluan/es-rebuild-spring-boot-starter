@@ -51,7 +51,7 @@ state is persisted, resumable and auditable.
 ### Standalone (Kibana-style)
 
 ```bash
-java -jar es-rebuild-standalone-1.0.54.jar
+java -jar es-rebuild-standalone-1.0.55.jar
 ```
 
 Bundles its own web server (default port `5601`) and ES client stack — no host application
@@ -74,7 +74,7 @@ and HTTP endpoints are registered automatically, and authentication can delegate
 <dependency>
     <groupId>io.github.dengmeiluan</groupId>
     <artifactId>es-rebuild-spring-boot-starter</artifactId>
-    <version>1.0.54</version>
+    <version>1.0.55</version>
 </dependency>
 ```
 

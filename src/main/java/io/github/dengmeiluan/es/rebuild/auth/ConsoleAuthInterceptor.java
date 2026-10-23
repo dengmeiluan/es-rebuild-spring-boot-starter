@@ -527,6 +527,14 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
     private final io.github.dengmeiluan.es.rebuild.multicluster.ConnStore connStore;
     /** connName 解析失败 WARN 节流计数（实例级——拦截器产线单例）。 */
     private final AtomicLong lastConnNameWarnAt = new AtomicLong(0);
+
+    /** insight 护栏动作注册表（可选注入：1031 fail-closed——未登记 actionId 的写请求
+        在授权层直接拒绝，不落兜底角色门；null=旧装配形态，检查跳过）。 */
+    private io.github.dengmeiluan.es.rebuild.insight.action.GuardedActionRegistry guardedActionRegistry;
+
+    public void setGuardedActionRegistry(io.github.dengmeiluan.es.rebuild.insight.action.GuardedActionRegistry guardedActionRegistry) {
+        this.guardedActionRegistry = guardedActionRegistry;
+    }
     /* 委托令牌首见登记（会话 LOGIN 审计去重）——LRU 封顶防长期运行膨胀；
        令牌即会话标识（宿主 会话期内令牌稳定，换发即新会话）。 */
     private final java.util.Map<String, Long> seenDelegateTokens =
@@ -756,6 +764,28 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                     && !"HEAD".equalsIgnoreCase(request.getMethod())
                     && !"OPTIONS".equalsIgnoreCase(request.getMethod())
                     && !isReadonlyPost(path);
+            /* insight 护栏动作 fail-closed（1031）：动态 actionId 的写请求在授权层双查——
+               ①未注册动作：拒绝（执行器只会 400，授权层提前给出确定语义）；
+               ②已注册但共享写映射漏登：拒绝（否则静态/混合模型回落 OPERATOR 角色门，
+               新动作 minRole≤OPERATOR 即失控——配置漂移在此显式拦下逼登记）。 */
+            int insightActionsAt = path.indexOf("/insight/actions/");
+            if (writeReq && guardedActionRegistry != null && insightActionsAt >= 0) {
+                String rest = path.substring(insightActionsAt + "/insight/actions/".length());
+                String actionId = rest.indexOf('/') >= 0 ? rest.substring(0, rest.indexOf('/')) : rest;
+                if (!guardedActionRegistry.contains(actionId)) {
+                    opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
+                            "WRITE_DENIED", 403, "insight action 未注册: " + actionId));
+                    deny(response, 403, "{\"code\":\"WRITE_DENIED\",\"message\":\"未知的护栏动作: "
+                            + jsonEscape(actionId) + "\"}");
+                    return false;
+                }
+                if (!SHARED_WRITE_PAGES.containsKey("/insight/actions/" + actionId)) {
+                    opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
+                            "WRITE_DENIED", 403, "insight action 未登记共享写映射: " + actionId));
+                    deny(response, 403, "{\"code\":\"WRITE_DENIED\",\"message\":\"护栏动作未配置页面授权映射，请联系开发者登记\"}");
+                    return false;
+                }
+            }
             List<String> sharedWrite = writeReq ? sharedWritePages(path) : null;
             /* 空有效页集=全拒：不仅空 grantedPages，env 模板收缩后为空也必须拒绝，
                否则无页面归属的共享端点会回落角色门（OPERATOR 也能读/写）。

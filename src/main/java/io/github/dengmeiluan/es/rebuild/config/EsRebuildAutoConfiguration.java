@@ -1243,7 +1243,7 @@ public class EsRebuildAutoConfiguration {
                 ControlClusterResolver controlClusterResolver, ConnStore connStore,
                 ObjectProvider<ConsoleAuthDelegate> delegateProvider,
                 ConsolePageCatalog consolePageCatalog, EnvPagesResolver envPagesResolver,
-                EsRebuildProperties properties) {
+                EsRebuildProperties properties, GuardedActionRegistry guardedActionRegistry) {
             // 宿主注册 ConsoleAuthDelegate 则组合之——委托先行（iframe 嵌入带宿主凭证）、内置兜底（独立开页登录）
             ConsoleAuthDelegate delegate = delegateProvider.getIfAvailable();
             EsConsoleAuthorizer effective = delegate == null ? esConsoleAuthorizer
@@ -1257,6 +1257,8 @@ public class EsRebuildAutoConfiguration {
             }
             ConsoleAuthInterceptor interceptor = new ConsoleAuthInterceptor(effective, consoleOpsAuditStore,
                     controlClusterResolver, consolePageCatalog, pageAuthEnabled, envPagesResolver, connStore);
+            // 1031：insight 护栏动作 fail-closed 闸的注册表判据（未登记 actionId 写请求授权层拒绝）
+            interceptor.setGuardedActionRegistry(guardedActionRegistry);
             return new org.springframework.web.servlet.config.annotation.WebMvcConfigurer() {
                 @Override
                 public void addInterceptors(org.springframework.web.servlet.config.annotation.InterceptorRegistry registry) {
