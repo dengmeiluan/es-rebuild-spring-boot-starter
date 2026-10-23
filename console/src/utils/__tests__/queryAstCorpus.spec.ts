@@ -47,6 +47,9 @@ const CORPUS: Array<[string, unknown]> = [
   ['intervals-filter', { intervals: { title: {
     match: { query: 'x', filter: { not_containing: { match: { query: 'water' } } } }, _name: 'nm' } } }],
   ['more_like_this', { more_like_this: { fields: ['title'], like: 'once upon a time', min_term_freq: 1 } }],
+  /* 1018：like 混合形态（串+文档引用+内联文档）——专用编辑位覆盖面语料 */
+  ['more_like_this-mixed', { more_like_this: { fields: ['title'], like: ['free text', { _index: 'i', _id: '1' }, { doc: { title: 'bike' } }] } }],
+  ['more_like_this-doc', { more_like_this: { fields: ['title'], like: { _index: 'i', _id: '1' } } }],
 
   /* ---- 词项级 ---- */
   ['term', { term: { status: { value: 'active', boost: 2 } } }],

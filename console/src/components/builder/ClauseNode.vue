@@ -55,7 +55,15 @@
       <span v-if="rangeLexWarn" class="cn-rwarn" role="img" aria-label="keyword 字段的 range 按字典序比较"
             title="keyword 字段的 range 按字典序比较（'100' < '20'）；数值/时间范围建议改用对应类型字段" />
     </template>
-    <!-- 【985】多字段形态：主值输入 + 字段列表输入（逗号分隔 ↔ string[]） -->
+    <!-- 【985】多字段形态：主值输入 + 字段列表输入（逗号分隔 ↔ string[]）。
+         1018：more_like_this 的 like 为对象/数组混合形态时升专用编辑器
+         （对象=JSON 文档区、数组=chips+选中项 JSON 区）——此前对象 like 直落
+         String() 显示成 [object Object]；字符串 like 维持既有输入 -->
+    <template v-else-if="nodeOpForm === 'fields' && node.op === 'more_like_this' && mltRich">
+      <MltLikeEditor :value="node.value" @update="v => patch({ value: v })" />
+      <input class="inp cn-val mono cn-fields" :value="fieldsText" placeholder="字段列表，逗号分隔"
+             @input="onFields(($event.target as HTMLInputElement).value)" />
+    </template>
     <template v-else-if="nodeOpForm === 'fields'">
       <input class="inp cn-val mono" :value="valText"
              :placeholder="mainKeyPlaceholder"
@@ -81,10 +89,10 @@
          name/preference 等参数走既有「更多参数」 -->
     <div v-else-if="node.op === 'percolate'" class="cn-objval">
       <textarea
-        class="inp mono cn-perc" :class="{ bad: percBad }" :value="percText" rows="4" spellcheck="false"
+        class="inp mono cn-perc" :class="{ bad: perc.bad.value }" :value="perc.text.value" rows="4" spellcheck="false"
         placeholder="document 文档体（JSON 对象）——反查：哪些已存查询会命中这份文档"
         title="要反查的文档体；合法 JSON 对象即写回查询（非法半截态标红不写）"
-        @input="onPercDoc(($event.target as HTMLTextAreaElement).value)"
+        @input="perc.onInput(($event.target as HTMLTextAreaElement).value)"
       ></textarea>
     </div>
     <!-- 【985】对象值（geo 系/terms_set/script 等）：常用键快捷 chips +
@@ -187,6 +195,8 @@ import IntervalsEditor from './IntervalsEditor.vue';
 import GeoValueEditor from './GeoValueEditor.vue';
 import { parseIntervalRule, serIntervalRule, type IntervalRule } from '../../utils/intervalsRule';
 import { geoPointView, bboxView } from '../../utils/geoForm';
+import { useJsonDraft } from '../../composables/useJsonDraft';
+import MltLikeEditor from './MltLikeEditor.vue';
 import { stdTimeToEpochMs } from '../../utils/format';
 import { DRAG_KEY, TREE_BUS, fireDrag } from './treeBus';
 import { OPS_META, opsForType, RICH_OPS, ADV_MENU, typePriorityForOp, typeFilterForOp, NUMERIC_VALUE_TYPES, opFamilyOf } from '../../utils/queryAstOps';
@@ -428,28 +438,14 @@ const geoEditable = computed(() =>
 function onGeoPatch(p: { value?: unknown; params?: Record<string, unknown> }) {
   patch({ ...(p.value !== undefined ? { value: p.value } : {}), ...(p.params !== undefined ? { params: p.params } : {}) });
 }
-/* 1017：percolate document JSON 编辑位（rx-qp-json/knnVec 同语言三件套：
-   draft 文本态、非法/非对象标红不写树、外部树变更 stringify 同比较回流） */
-const percText = ref('');
-const percBad = ref(false);
-watch(() => props.node.op === 'percolate' ? props.node.value : undefined, v => {
-  const next = v === undefined ? '' : JSON.stringify(v, null, 2);
-  let same = false;
-  if (!percBad.value) {
-    try { same = JSON.stringify(JSON.parse(percText.value)) === next; } catch { same = false; }
-  }
-  if (!same) percText.value = next;
-  percBad.value = false;
-}, { immediate: true });
-function onPercDoc(raw: string) {
-  percText.value = raw;
-  try {
-    const v = JSON.parse(raw);
-    if (typeof v !== 'object' || v === null || Array.isArray(v)) { percBad.value = true; return; }
-    percBad.value = false;
-    patch({ value: v });
-  } catch { percBad.value = true; }   // 半截 JSON：只留草稿不写树
-}
+/* 1017：percolate document JSON 编辑位（useJsonDraft 三件套：draft/bad/同步回流） */
+const perc = useJsonDraft(() => props.node.op === 'percolate' ? props.node.value : undefined, v => patch({ value: v }));
+/* 1018：more_like_this like 混合形态（对象/数组）→ 专用编辑器；字符串维持既有输入 */
+const mltRich = computed(() => {
+  if (props.node.op !== 'more_like_this') return false;
+  const v = props.node.value;
+  return !!v && typeof v === 'object';
+});
 const objVal = computed<Record<string, unknown>>(() =>
   (isObjValue.value ? props.node.value : {}) as Record<string, unknown>);
 function onObjValue(v: Record<string, unknown> | unknown[]) {
