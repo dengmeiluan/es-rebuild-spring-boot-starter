@@ -20,6 +20,13 @@ function starterVersion(): string {
 export default defineConfig({
   plugins: [vue()],
   define: { __STARTER_VERSION__: JSON.stringify(starterVersion()) },
+  resolve: {
+    /* .ts 优先于 .js：src 下存在整树 .js 快照（并行迁移中间态，内容冻结于生成时刻），
+       vite 默认 .js 优先会让快照遮蔽 .ts 正源——d469e2c 已修 vite.config.ts 的 build 面，
+       vitest 走本配置的 resolver 同病（queryAstOps.ts 新导出在 vitest 里读成 .js 快照
+       实锤），同语义补齐：tracked .ts 是正源。 */
+    extensions: ['.mts', '.ts', '.mjs', '.jsx', '.tsx', '.js', '.json'],
+  },
   server: { fs: { allow: ['..'] } }, // 2.5.0：契约 JSON 在 console/ 之外
   test: {
     environment: 'happy-dom',

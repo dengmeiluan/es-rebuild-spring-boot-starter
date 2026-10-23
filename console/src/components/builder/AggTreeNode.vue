@@ -18,8 +18,11 @@
     </div>
     <div class="agn-body">
       <!-- top 常见聚合的 .field 键传 fieldKeys，行内渲染 FieldSelect 字段选择器；
- 其余/未知聚合名不传（空数组），回落裸键值表零降级 -->
+     其余/未知聚合名不传（空数组），回落裸键值表零降级。
+     1020：AGG_BODY_PARAMS 在册聚合的 body 加 schema——具名参数升类型化输入/枚举下拉
+     （execution_hint 三档、keyed 布尔、interval 数值…），未登记键维持自由表加键零丢失 -->
       <GenericParams v-if="isObj(node.body)" :value="(node.body as Record<string, unknown>)" path-prefix=""
+                     :schema="AGG_BODY_PARAMS[node.op] || []"
                      :field-keys="aggFieldKeys" :fields="fields" :types="types" :type-priority="aggTypePriority"
                      @update="v => emit('update:node', { ...node, body: v })" />
       <input v-else class="inp mono agn-scalar" :value="String(node.body ?? '')" title="非标量聚合体（原样保留，按字符串编辑）"
@@ -41,7 +44,7 @@
 import { ref, computed } from 'vue';
 import { X, Plus, Tag } from 'lucide-vue-next';
 import GenericParams from './GenericParams.vue';
-import { AGG_OPS } from '../../utils/queryAstOps';
+import { AGG_OPS, AGG_BODY_PARAMS } from '../../utils/queryAstOps';
 import { nid, type AggNode } from '../../utils/queryAst';
 
 const props = defineProps<{ node: AggNode; fields: string[]; types: Record<string, string> }>();

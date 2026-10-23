@@ -311,3 +311,29 @@ export const AGG_OPS: Record<string, string> = {
   value_count: '计数', stats: '统计', extended_stats: '扩展统计', percentiles: '百分位',
   top_hits: 'Top 文档', nested: '嵌套', reverse_nested: '反嵌套',
 };
+
+/* 1020：常用聚合 body 具名参数 schema（GenericParams 消费——具名键升类型化输入/枚举下拉，
+ 与 WRAP_PARAMS 同语言）。field 由 field-keys 行内 FieldSelect 权威编辑不在此表；
+ 未登记键维持自由表（加键零丢失）；未登记聚合类型零 schema = 裸表（现状不变）。 */
+export const AGG_BODY_PARAMS: Record<string, ParamMeta[]> = {
+  terms: [
+    { key: 'size', kind: 'number' }, { key: 'min_doc_count', kind: 'number' },
+    { key: 'missing', kind: 'text' },
+    { key: 'execution_hint', kind: 'enum', options: ['map', 'global_ordinals', 'term_ordinals'] },
+  ],
+  date_histogram: [
+    { key: 'calendar_interval', kind: 'text' }, { key: 'fixed_interval', kind: 'text' },
+    { key: 'format', kind: 'text' }, { key: 'min_doc_count', kind: 'number' },
+    { key: 'offset', kind: 'text' }, { key: 'time_zone', kind: 'text' },
+  ],
+  histogram: [
+    { key: 'interval', kind: 'number' }, { key: 'min_doc_count', kind: 'number' },
+  ],
+  range: [{ key: 'keyed', kind: 'boolean' }],
+  avg: [{ key: 'missing', kind: 'number' }],
+  sum: [{ key: 'missing', kind: 'number' }],
+  min: [{ key: 'missing', kind: 'number' }],
+  max: [{ key: 'missing', kind: 'number' }],
+  cardinality: [{ key: 'precision_threshold', kind: 'number' }],
+  top_hits: [{ key: 'size', kind: 'number' }, { key: 'from', kind: 'number' }],
+};
