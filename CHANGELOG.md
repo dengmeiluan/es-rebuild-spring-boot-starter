@@ -5,6 +5,32 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.53]
+
+### 新增
+
+- 查询构建树富化七连（1010-1019）：function_score 评分函数 filter 升完整查询树 +
+  衰减函数字段作键合法形态 + span_last 撤册（1010）；intervals 六类规则一等递归
+  编辑器（all_of/any_of 递归子规则 + 八关系位置过滤槽，修正 allOf/anyOf 伪键名，
+  1011）；geo_distance/geo_bounding_box 专用坐标输入（distance+经纬度/corners/edges
+  + 越界警示，1012）；pinned 置顶 ids chips（回车/逗号/粘贴拆分/IME 安全，1016）；
+  percolate document 一等 JSON 编辑位（draft/标红/回流三件套，1017）；more_like_this
+  like 混合形态编辑器（对象 JSON 区 + 数组 chips 逐文档编辑，1018）；terms lookup
+  三具名输入（index/id/path 语义句式，1019）——查询算子复杂形态全部脱离裸键值表
+- 聚合与高亮 schema 化（1020/1021/1026）：常用聚合 body 具名参数表单（枚举/布尔/
+  数值档）+ 低频族补录 + 聚合建议表扩员 30+；highlight 字段级 type 三档枚举与
+  fragment 系数值档；date_range ranges 三元组行编辑 + filters 命名桶完整查询树（1022）
+- 索引上下文行冻结全站（1024/1025/1027，Excel 冻结窗格语义）：查询工作台页头行、
+  26 个视图的当前索引 chip 行、索引工作区索引名行——长页滚动时集群/索引上下文恒悬
+  可视区顶
+
+### 修复
+
+- vitest/vite 解析器 .ts 优先（并行迁移 .js 快照遮蔽正源——新导出在测试与产线包
+  静默失效的根因，1020）
+- SideNav 空闲态圆点 fallback 误写 `--text3`（全站 token 为 `--tx3`）带硬编码色——
+  浅色主题必然色错（1022）
+
 ## [1.0.52]
 
 ### 修复
