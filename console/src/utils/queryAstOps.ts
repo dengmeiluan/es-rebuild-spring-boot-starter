@@ -311,6 +311,12 @@ export const ADV_MENU: Array<{ group: string; ops: string[] }> = [
 ];
 
 /* W2：聚合类型建议表（datalist 自由输入的建议项——不限制输入，任何 ES 聚合名都可手输） */
+/* 1033：_name 命名查询——所有查询子句通用的 ES 能力（执行时命中归因：响应
+   matched_queries 回告哪个命名条件命中，复杂查询调试核心手段）。参数面板恒在
+   建议末位（配 schema 键提示可发现性），零注册表膨胀（不逐算子复制 params 清单）；
+   _name 落 node.params 直通往返，AST 零改动。 */
+export const NAME_PARAM: ParamMeta = { key: '_name', kind: 'text' };
+
 export const AGG_OPS: Record<string, string> = {
   terms: 'Terms 分组', date_histogram: '日期直方图', histogram: '数值直方图',
   range: '范围分组', date_range: '日期范围', filters: '多过滤分组', filter: '单过滤',

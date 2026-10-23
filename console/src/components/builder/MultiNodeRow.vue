@@ -43,7 +43,7 @@ import { X, Group, Plus, SlidersHorizontal } from 'lucide-vue-next';
 import GenericParams from './GenericParams.vue';
 import NodeRenderer from './NodeRenderer.vue';
 import { DRAG_KEY, fireDrag } from './treeBus';
-import { MULTI_META, MULTI_LABELS } from '../../utils/queryAstOps';
+import { MULTI_META, MULTI_LABELS, NAME_PARAM } from '../../utils/queryAstOps';
 import { nid, wrapInBool, type MultiNode, type QueryNode, type LeafNode } from '../../utils/queryAst';
 import { defaultLeafTarget, curFieldSearchIndex } from '../../utils/fieldSearch';
 
@@ -53,7 +53,11 @@ const emit = defineEmits<{
 }>();
 
 const meta = computed(() => MULTI_META[props.node.op] || { keys: [], arrKeys: [], partLabel: {} });
-const paramSchema = computed(() => MULTI_META[props.node.op]?.params || []);
+/* 1033：_name 命名查询恒在建议末位（与 ClauseNode 同语言） */
+const paramSchema = computed(() => {
+  const base = MULTI_META[props.node.op]?.params || [];
+  return base.some(p => p.key === '_name') ? base : [...base, NAME_PARAM];
+});
 const showParams = ref(false);
 
 const childrenOf = (k: string) => props.node.children.filter(c => c.key === k);

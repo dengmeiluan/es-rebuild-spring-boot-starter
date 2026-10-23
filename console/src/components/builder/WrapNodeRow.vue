@@ -21,7 +21,7 @@
       <button aria-label="删除" class="btn sm ghost danger" title="删除" @click="emit('remove')"><X :size="12" /></button>
     </div>
     <div v-if="showParams" class="wnr-params">
-      <GenericParams :value="paramsView" :schema="WRAP_PARAMS[node.op]" path-prefix="" @update="onParams" />
+      <GenericParams :value="paramsView" :schema="wrapSchema" path-prefix="" @update="onParams" />
     </div>
     <!-- 989：function_score functions 数组结构化编辑（评分函数行列表；AST 零改动 params 直通）。
          1009：fields/types 透传——filter 查询树与衰减函数字段快径需要字段候选 -->
@@ -69,7 +69,7 @@ import GenericParams from './GenericParams.vue';
 import FsFunctionsPanel from './FsFunctionsPanel.vue';
 import NodeRenderer from './NodeRenderer.vue';
 import { DRAG_KEY, fireDrag } from './treeBus';
-import { WRAP_LABELS, WRAP_PARAMS } from '../../utils/queryAstOps';
+import { WRAP_LABELS, WRAP_PARAMS, NAME_PARAM } from '../../utils/queryAstOps';
 import { WRAP_FIELD, nid, wrapInBool, type WrapNode, type BoolNode } from '../../utils/queryAst';
 
 const props = defineProps<{ node: WrapNode; fields: string[]; types: Record<string, string> }>();
@@ -89,6 +89,14 @@ const WRAPPER_PRIORITY_BY_OP: Record<string, string[]> = {
 };
 const wrapperPriority = computed<string[]>(() => WRAPPER_PRIORITY_BY_OP[props.node.op] || ['keyword']);
 const showParams = ref(false);
+
+/* 1033：_name 命名查询恒在建议末位（nested/function_score 等容器子句同属查询子句，
+   与 ClauseNode/MultiNodeRow 同语言）；未在册容器（pinned/span_multi 等）也给空
+   schema 基础上的 _name 单建议 */
+const wrapSchema = computed(() => {
+  const base = WRAP_PARAMS[props.node.op] || [];
+  return base.some(p => p.key === '_name') ? base : [...base, NAME_PARAM];
+});
 
 /* ═══ 1015：pinned ids chips（ClauseNode 1005 cn-chips 同语言）═══
    draft 不写树（半截值不进 DSL），提交才整项入账；粘贴含逗号按项拆分；

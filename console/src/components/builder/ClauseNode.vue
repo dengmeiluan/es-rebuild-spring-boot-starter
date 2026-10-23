@@ -213,7 +213,7 @@ import { useJsonDraft } from '../../composables/useJsonDraft';
 import MltLikeEditor from './MltLikeEditor.vue';
 import { stdTimeToEpochMs } from '../../utils/format';
 import { DRAG_KEY, TREE_BUS, fireDrag } from './treeBus';
-import { OPS_META, opsForType, RICH_OPS, ADV_MENU, typePriorityForOp, typeFilterForOp, NUMERIC_VALUE_TYPES, opFamilyOf } from '../../utils/queryAstOps';
+import { OPS_META, opsForType, RICH_OPS, ADV_MENU, typePriorityForOp, typeFilterForOp, NUMERIC_VALUE_TYPES, opFamilyOf, NAME_PARAM } from '../../utils/queryAstOps';
 import type { LeafNode } from '../../utils/queryAst';
 
 const props = defineProps<{ node: LeafNode; fields: string[]; types: Record<string, string> }>();
@@ -249,7 +249,12 @@ const opGroups = computed(() => {
   }
   return groups;
 });
-const paramSchema = computed(() => OPS_META[props.node.op]?.params || []);
+/* 1033：参数 schema 恒追加 _name 命名查询（命中归因 matched_queries）——配 schema
+   键提示可发现性；ops 未在册键不被排挤（append 尾位） */
+const paramSchema = computed(() => {
+  const base = OPS_META[props.node.op]?.params || [];
+  return base.some(p => p.key === '_name') ? base : [...base, NAME_PARAM];
+});
 const hasParams = computed(() => paramSchema.value.length > 0 || Object.keys(props.node.params).length > 0);
 
 /* ═══ 字段类型匹配：徽标 tooltip + 值输入 placeholder 按类型给形态提示 ═══
