@@ -480,4 +480,7 @@ export const AGG_BODY_PARAMS: Record<string, ParamMeta[]> = {
     { key: 'buckets_path', kind: 'text' },
     { key: 'mode', kind: 'enum', options: ['percent_of_sum', 'mean_of_values', 'median_of_values', 'sum_of_values'] },
   ],
+  /* 1039：多键分组与复合分桶的 size（1032 schema 键提示对未入体键的建议通道覆盖） */
+  multi_terms: [{ key: 'size', kind: 'number' }],
+  composite: [{ key: 'size', kind: 'number' }],
 };

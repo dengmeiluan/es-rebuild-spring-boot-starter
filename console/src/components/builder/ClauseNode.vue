@@ -65,7 +65,12 @@
              @input="onFields(($event.target as HTMLInputElement).value)" />
     </template>
     <template v-else-if="nodeOpForm === 'fields'">
-      <input class="inp cn-val mono" :value="valText"
+      <!-- 1039：长查询串主值多行编辑（query_string/simple_query_string/combined_fields——
+           长布尔串单行挤排痛点；换行在查询串语法里=合法空白分隔） -->
+      <textarea v-if="longQueryOp" class="inp cn-val mono cn-qry" rows="2" spellcheck="false"
+                :value="valText" :placeholder="mainKeyPlaceholder"
+                @input="onValue(($event.target as HTMLTextAreaElement).value)" />
+      <input v-else class="inp cn-val mono" :value="valText"
              :placeholder="mainKeyPlaceholder"
              @input="onValue(($event.target as HTMLInputElement).value)" />
       <input class="inp cn-val mono cn-fields" :value="fieldsText" placeholder="字段列表，逗号分隔"
@@ -149,6 +154,14 @@
         @blur="commitChip()"
       />
     </div>
+    <!-- 1039：长查询串主值多行编辑（named 形态 query_string/simple_query_string——
+         长布尔串单行挤排痛点；换行=查询串语法合法空白分隔） -->
+    <textarea
+      v-else-if="longQueryOp" class="inp cn-val mono cn-qry" rows="2" spellcheck="false"
+      :value="valText"
+      :placeholder="valPlaceholder"
+      @input="onValue(($event.target as HTMLTextAreaElement).value)"
+    />
     <input
       v-else class="inp cn-val mono" :value="valText"
       :placeholder="valPlaceholder"
@@ -336,6 +349,10 @@ function onCopySubtree() {
   copySubtreeToStash(props.node);
   showNudge('已复制子树——任意条件组可粘贴');
 }
+/* 1039：长查询串主值多行编辑算子集（换行在查询串语法里=合法空白分隔；
+   multi_match/query 短串语义维持单行输入） */
+const LONG_QUERY_OPS = new Set(['query_string', 'simple_query_string', 'combined_fields']);
+const longQueryOp = computed(() => LONG_QUERY_OPS.has(props.node.op));
 onBeforeUnmount(() => { clearTimeout(nudgeT1); clearTimeout(nudgeT2); });
 
 function onField(field: string) {
@@ -697,6 +714,8 @@ function endDrag() { delete (window as any)[DRAG_KEY]; fireDrag(false); }
 .cn-fty { flex: none; font-size: var(--fs-2xs); padding: 0 5px; border-radius: var(--r-xs); line-height: 16px; cursor: help; }
 :where(.cn-fty) { color: var(--muted); background: var(--hl); }
 .cn-val { height: 30px; font-size: var(--fs-sm); padding: 3px var(--sp-2); flex: 1 1 120px; min-width: 0; }
+/* 1039：长查询串 textarea——覆盖 cn-val 定高，纵向伸缩，行顶对齐由 flex wrap 承接 */
+.cn-qry { height: auto; min-height: 52px; resize: vertical; line-height: 1.5; }
 .cn-range { flex: 0 1 86px; min-width: 62px; }
 /* 998：行尾动作组——整组右对齐、空间不足时整体折行（不散落在行首）；
    24px 方形按钮，hover/focus 才提亮，静息态低对比不抢主控件 */
