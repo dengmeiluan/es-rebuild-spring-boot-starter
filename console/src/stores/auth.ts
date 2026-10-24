@@ -206,6 +206,9 @@ export const useAuthStore = defineStore('auth', () => {
    *  共享工作站上旧草稿/目标/词项会在登录遮罩背后继续留在磁盘。 */
   function purgeLocalUserState() {
     purgeUserRequestState();
+    /* 用户名本身也是上一账号痕迹：登出后不留在共享工作站的 localStorage 里。
+       下一账号登录时 prev='' 同样触发一次清理（幂等）。 */
+    removeStoredRaw(localStorage, LAST_USER_KEY);
     ioRecorder.clear();
     try {
       window.dispatchEvent(new CustomEvent('es-console:identity-changed', { detail: { username: '' } }));

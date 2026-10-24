@@ -23,8 +23,10 @@ describe('1050 宿主登出清理', () => {
       'es_vars',
     ];
     for (const k of keys) localStorage.setItem(k, 'x');
+    localStorage.setItem('es-console.last-user', 'deng_test_x2');
     useAuthStore().purgeLocalUserState();
     for (const k of keys) expect(localStorage.getItem(k), k).toBeNull();
+    expect(localStorage.getItem('es-console.last-user')).toBeNull();
   });
 
   it('App 收到空 host token 时清现场并回到登录态', () => {
