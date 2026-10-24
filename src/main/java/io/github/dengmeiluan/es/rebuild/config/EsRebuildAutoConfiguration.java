@@ -1237,6 +1237,16 @@ public class EsRebuildAutoConfiguration {
             return new PropertiesAuthDelegate(properties.getConsole().getAuth().getDelegate());
         }
 
+        /**
+         * 1048：控制台端点的方法/媒体类型错误还原为 405/415（Spring 找不到 handler 时
+         * 拦截器不执行，宿主全局包装会把 405 变成 HTTP 200 + code:500）。
+         */
+        @Bean
+        public io.github.dengmeiluan.es.rebuild.web.InternalEsMethodNotAllowedResolver
+        internalEsMethodNotAllowedResolver() {
+            return new io.github.dengmeiluan.es.rebuild.web.InternalEsMethodNotAllowedResolver();
+        }
+
         @Bean
         @ConditionalOnBean(EsConsoleAuthorizer.class)
         @ConditionalOnProperty(prefix = "es.rebuild.console.auth", name = "enabled", matchIfMissing = true)
