@@ -192,6 +192,23 @@ rank2 的 `w:lifecycle` 仍可做单索引 rollover / `ilm/move`，`w:diag` 仍�
 账号切换后旧标签页里的 PIT id 不会随新身份放行。控制台外（curl/其他工具）打开的 id 不登记，
 维持既有能力；进程内表与内置 token 吊销表同限制（多实例不共享）。
 
+**凭据类资源与模板/脚本边界（1046）**：
+- PIT 的 `?source=` 与请求体同权，`DELETE /_pit` 的 id 在根级——两者都过同一归属校验；
+- SQL cursor 与 PIT 同类：页面 `/cluster/sql/{query,cursor,close}` 与 raw `_sql` 的开启/续页/关闭
+  绑定开启者（ADMIN 可接管），cursor 轮换登记新 id 并释放旧 id；
+- `query.template.inline` 等 Mustache 模板在任意深度都做「去标签后的控制面字面扫描」（含拆
+  section 拼接）并拒绝分隔符切换；嵌套模板解析失败不再静默放行；
+- `es_console_validate_*` 仅校验器专用的 `createValidatorTempIndex` / `deleteValidatorTempIndex`
+  通道可用，通用建/删/查/模式守卫一律按控制面拒绝；
+- 搜索模板页覆盖已存脚本时先读回目标 id 的 lang：非 mustache 覆盖需要 painless-lab 页写权；
+- 委托部署 `builtin-login-enabled=false` 时，浏览器残留的内置 token 也立即失效（不再成为
+  绕过宿主授权的第二条身份）；
+- 非 ADMIN raw/DevTools 拒绝 `_logstash` / `_connector` / `_synonyms` / `_query_rules` /
+  `_autoscaling` / `_searchable_snapshots` 等可带凭据/容量的管理面读；
+- `host-cluster-visible=false` 时，非 ADMIN 的宿主专属 provider（inspect/query/force-merge/
+  rebuild-empty/replicas）与数据面同口径 403 `HOST_DISABLED`；自举端点仍放行。
+- 控制器主动判定的拒绝（`ResponseStatusException`）保留 403 等业务状态码，不再被兜底拉平为 500。
+
 **DevTools / REST 写键的真实范围**：`/cluster/raw` 与 `/cluster/devtools/execute` 共用同一
 透传内核，非 ADMIN 会被 `guardRawGuarded` 收窄到**数据面**（检索/文档 CRUD/bulk/
 update-by-query/delete-by-query/SQL/别名与模板的受控写入被拒、快照仓库与集群设置被拒），
@@ -232,6 +249,11 @@ E 数据面放行；F 根级 PIT/scroll 仅 DELETE 形态（释放）放行。
   只清磁盘会让单例 ref 在下一笔写入时把旧账号数据落回，或让请求在「界面显示 A 的集群、实际不带
   X-Es-Target」的状态下打到宿主。同名账号被降权/撤页不做整页重挂：403 / 窗口聚焦 /
   标签页恢复会触发 30s 节流 `/auth/me` 重探，按钮与菜单随 `me` 响应式收敛。
+- **工作现场与词项缓存同属账号视角（1046）**：`es-console.qw.session:`（DSL 会话）、
+  `es_console_terms_stash`（字段词项持久档）、`es-console.qb.subtree`、`es-console.pref.sqlbridge.sql`、
+  `es-console.health-report.last`、`es_vars`、`es_confirm_skip:` 随换人清理；App 同步清空模块级
+  词项/字段/别名缓存并剥掉当前路由 query（防 `?dsl=` 用新身份自动执行旧查询）。登录顺序固定为
+  `setToken → invalidateIdentity → purgeIfUserChanged`，否则作业/监控轮询会带上一身份跑第一拍。
 - `delegate.mode=jwt|endpoint` 的登出会用**宿主令牌头**原文登记本地拒绝表（此前误用内置 token，
   等于没吊销）；`header` 模式无令牌原文，无法本地吊销。
 - 宿主凭证存在但被拒绝（过期/撤销/验签失败）时**不回落**内置登录：否则 iframe 会在宿主撤销会话后
