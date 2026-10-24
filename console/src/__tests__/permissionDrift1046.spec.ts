@@ -7,6 +7,7 @@ import {
   nonAdminDataPlaneWriteAllowed,
   nonAdminHealthLevelEnumeration,
   nonAdminRootSearchNeedsIndex,
+  nonAdminWildcardTargetAdvisory,
 } from '../utils/devtoolsScope';
 
 /* 1046：账号切换与 DevTools 前后端同口径回归锚。 */
@@ -110,5 +111,20 @@ describe('1046 DevTools 前后端同口径（UI 不再亮必 403 的执行钮）
     const source = encodeURIComponent('{"pit":{"id":"p1"}}');
     expect(nonAdminRootSearchNeedsIndex(`/_search?source=${source}`)).toBe(false);
     expect(nonAdminRootSearchNeedsIndex('/_search')).toBe(true);
+  });
+});
+
+describe('1048 通配/日期数学目标的前置提示', () => {
+  it('通配/日期数学/跨集群目标给出后端解析提示', () => {
+    for (const p of ['/logs-*/_search', '/remote:logs/_search', '/logs-<2026.01.01>/_search']) {
+      expect(nonAdminWildcardTargetAdvisory(p), p).toContain('后端解析');
+    }
+    expect(nonAdminWildcardTargetAdvisory('/logs/_search')).toBeNull();
+  });
+
+  it('body 二级目标的通配同样提示', () => {
+    expect(nonAdminWildcardTargetAdvisory('/_bulk', '{"index":{"_index":"logs-*"}}')).toContain('后端解析');
+    expect(nonAdminWildcardTargetAdvisory('/_bulk', '{"index":{"_index":"logs"}}')).toBeNull();
+    expect(nonAdminWildcardTargetAdvisory('/_sql', '{"query":"SELECT * FROM logs-*"}')).toContain('SQL');
   });
 });

@@ -26,7 +26,7 @@
         <EndpointPathInput v-model="path" class="inp mono rt-path" placeholder="/_cluster/health"
           @endpoint="onEndpoint" @enter="send" />
         <button v-if="canAdmin" class="btn primary sm" :disabled="sending || !path.trim() || !currentSendable"
-          :title="currentSendable ? undefined : scopeDenyHint" @click="send">
+          :title="currentSendable ? (scopeAdvisory || undefined) : scopeDenyHint" @click="send">
           <Send :size="13" /> {{ sending ? '发送中（' + (qr.elapsedMs.value / 1000).toFixed(1) + 's）…' : '发送' }}
         </button>
         <span v-if="canAdmin && !currentSendable" class="rt-scope-dim" role="status" :title="scopeDenyHint">非 ADMIN 仅数据面</span>
@@ -188,7 +188,7 @@ import { markHtmlAll } from '../utils/respMark';
 import QueryHistoryPanel, { type HistRow } from '../components/QueryHistoryPanel.vue';
 /* 非 ADMIN 数据面写白名单（与后端 guardRawGuarded 同口径的客户端预暴露） */
 import { nonAdminDataPlaneWriteAllowed, nonAdminRootSearchNeedsIndex,
-  nonAdminIndexQueryParamRejected, nonAdminControlIndexDenied,
+  nonAdminIndexQueryParamRejected, nonAdminControlIndexDenied, nonAdminWildcardTargetAdvisory,
   nonAdminBodyTargetsControl, nonAdminCatNeedsJson, nonAdminAsyncResultRead } from '../utils/devtoolsScope';
 
 const store = useAppStore();
@@ -205,6 +205,10 @@ const requestInScope = (m: string, p: string, b?: string | null) =>
 const currentSendable = computed(() => canAdmin.value && requestInScope(method.value, path.value, body.value));
 const SCOPE_DENY_HINT = '非 ADMIN 仅可执行数据面写（检索/文档/批量/SQL）；别名、快照、模板、脚本与集群管理写需 ADMIN';
 /* 不可用原因分档（与 DevTools 同口径）：根级检索缺索引范围单列，直接说明怎么改 */
+const scopeAdvisory = computed(() => {
+  if (auth.isAdmin() || auth.me == null || auth.authDisabled) return '';
+  return nonAdminWildcardTargetAdvisory(path.value, body.value) || '';
+});
 const scopeDenyHint = computed(() => {
   if (!auth.isAdmin() && auth.me != null && !auth.authDisabled) {
     if (nonAdminIndexQueryParamRejected(path.value)) {

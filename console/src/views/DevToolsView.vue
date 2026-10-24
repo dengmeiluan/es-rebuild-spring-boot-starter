@@ -62,7 +62,7 @@
           @endpoint="onEndpoint" @keydown.ctrl.enter="run" />
         <button v-if="canAdmin" class="btn primary sm btn-run-lock" @click="run"
           :disabled="cur.busy || !currentSendable"
-          :title="currentSendable ? '执行（Ctrl+Enter）' : scopeDenyHint">
+          :title="currentSendable ? (scopeAdvisory || '执行（Ctrl+Enter）') : scopeDenyHint">
           <!-- 主按钮中文化对齐两工作台（此前英文 Run 是中文界面孤例）；执行中态句式统一「执行中 X.Xs」 -->
           <Play :size="12" /> {{ cur.busy ? '执行中 ' + (qr.elapsedMs.value / 1000).toFixed(1) + 's' : '执行' }}
           <span class="kbd" style="margin-left:var(--sp-1)">Ctrl⏎</span>
@@ -452,7 +452,7 @@ import FocusableSurface from '../components/FocusableSurface.vue';
 import PageHeader from '../components/PageHeader.vue';
 import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 import { nonAdminDataPlaneWriteAllowed, nonAdminRootSearchNeedsIndex,
-  nonAdminIndexQueryParamRejected, nonAdminControlIndexDenied,
+  nonAdminIndexQueryParamRejected, nonAdminControlIndexDenied, nonAdminWildcardTargetAdvisory,
   nonAdminBodyTargetsControl, nonAdminCatNeedsJson, nonAdminAsyncResultRead } from '../utils/devtoolsScope';
 const store = useAppStore();
 /* 权限门禁——DevTools 运行统一走专用 /cluster/devtools/execute（devtools/rest 写键，ADMIN 全局）；
@@ -472,6 +472,11 @@ const currentSendable = computed(() => canAdmin.value && !!cur.value
   && requestInScope(cur.value.method, cur.value.path, cur.value.body));
 const SCOPE_DENY_HINT = '非 ADMIN 仅可执行数据面写（检索/文档/批量/SQL）；别名、快照、模板、脚本与集群管理写需 ADMIN';
 /* 不可用原因分档：根级检索缺索引范围是最高频的「看得见点不了」，单独说明怎么改 */
+const scopeAdvisory = computed(() => {
+  const c = cur.value;
+  if (!c || auth.isAdmin() || auth.me == null || auth.authDisabled) return '';
+  return nonAdminWildcardTargetAdvisory(c.path, c.body) || '';
+});
 const scopeDenyHint = computed(() => {
   const c = cur.value;
   if (c && !auth.isAdmin() && auth.me != null && !auth.authDisabled) {

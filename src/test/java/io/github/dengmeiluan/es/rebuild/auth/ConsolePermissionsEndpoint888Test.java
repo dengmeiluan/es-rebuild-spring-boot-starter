@@ -207,6 +207,28 @@ public class ConsolePermissionsEndpoint888Test {
     }
 
     @Test
+    public void 连接模型_52页只读授权_全部写拒绝且raw档关闭() {
+        Set<String> grants = new HashSet<>();
+        for (ConsolePageCatalog.Page p : ConsolePageCatalog.load().getPages()) {
+            grants.add("conn:c1:" + p.getKey());
+        }
+        Map<String, Object> resp = call(ctrl(), delegatedAs(ConsoleRole.VIEWER, grants), "c1");
+        int read = 0;
+        int write = 0;
+        for (Map<String, Object> g : (List<Map<String, Object>>) resp.get("groups")) {
+            for (Map<String, Object> pg : (List<Map<String, Object>>) g.get("pages")) {
+                if (Boolean.TRUE.equals(pg.get("read"))) read++;
+                if (Boolean.TRUE.equals(pg.get("write"))) write++;
+            }
+        }
+        assertEquals("52 页只读授权：每页 read=true", 52, read);
+        assertEquals("无任何 w: 键时不得有任何页 write=true（PROD 只读）", 0, write);
+        assertEquals(Boolean.FALSE, resp.get("rawAllowed"));
+        assertEquals(Boolean.FALSE, resp.get("devtoolsAllowed"));
+        assertEquals(Boolean.FALSE, resp.get("sharedWriteAllowed"));
+    }
+
+    @Test
     public void 连接模型_带rest写键_写放行_raw档开启() {
         Map<String, Object> resp = call(ctrl(), delegatedAs(ConsoleRole.VIEWER,
                 set("conn:c1:rest", "conn:c1:w:rest")), "c1");

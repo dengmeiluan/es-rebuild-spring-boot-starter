@@ -297,6 +297,35 @@ function bodyTargetDenied(value: unknown): boolean {
 }
 
 /**
+ * 通配/日期数学/跨集群目标的**非阻断提示**（1048）。
+ *
+ * <p>这些模式需要服务端解析真实索引后才能判断是否命中控制面，前端不能安全预拒
+ * （预拒会误伤合法 `logs-*` 检索）。因此在可执行时用 tooltip 提前说明「后端解析，
+ * 命中控制面会拒绝」，避免用户以为通配一定放行。</p>
+ */
+export function nonAdminWildcardTargetAdvisory(rawPath: string, body?: string | null): string | null {
+  const raw = String(rawPath || '');
+  const path = raw.split('?')[0];
+  const segs = canonicalPath(path).split('/').filter(Boolean);
+  const first = (segs[0] || '').toLowerCase();
+  const target = first.startsWith('_') ? (segs[1] || '') : first;
+  const wild = /[*?]/.test(target) || target.includes('<') || target.includes(':');
+  if (wild) {
+    return '通配/日期数学/跨集群目标由后端解析真实索引：若命中控制面索引会被拒绝；建议优先用精确索引名或 PIT';
+  }
+  const b = String(body || '');
+  if (b) {
+    if (/"(?:_?index|indices)"\s*:\s*"[^"]*[*?<:]/.test(b)) {
+      return '请求体里的通配/日期数学/跨集群目标由后端解析：命中控制面索引会被拒绝';
+    }
+    if (/_sql/i.test(path) && /\b(?:FROM|JOIN)\s+[^\s;()]*[*?<:]/.test(b)) {
+      return 'SQL 通配/日期数学目标由后端解析：命中控制面索引会被拒绝';
+    }
+  }
+  return null;
+}
+
+/**
  * 结构化多目标端点（_bulk/_msearch/_mget/_mtermvectors/_sql）的 body 级目标镜像。
  *
  * <p>这些端点的目标索引不在路径上，而在动作行/请求头/docs/SQL 语句里；后端
