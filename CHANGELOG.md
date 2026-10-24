@@ -5,6 +5,61 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.59]（未发布）
+
+> 权限加固续批（1046）：在 1.0.58 的页面/连接授权基础上，补齐「凭据类资源」与
+> 「模板/脚本/系统临时索引」的旁路，并把账号切换的工作现场清理扩到模块级缓存。
+
+### 安全
+
+- **PIT 归属覆盖两种旁路形态**：`GET /{index}/_search?source={"pit":...}` 的 `source`
+  与 body 同权、`DELETE /_pit` 的 id 在根级（不是 `pit.id`）——旧实现只解析 body 里的
+  `pit.id`，导致他人可借 source 续读、或关闭别人（含 ADMIN）的 PIT。现 `source`/根级 `id`
+  都过 `PitOwnership`，关闭时同步释放登记
+- **SQL cursor 归属绑定**（`SqlCursorOwnership`，与 PIT 同一 IDOR 类）：cursor 即结果集
+  凭据，页面端点与 raw `_sql` 的开启/续页/关闭都必须同人（ADMIN 可应急接管）；cursor
+  轮换时登记新 id 并释放旧 id。此前持 search/workspace 读键即可拿别人 cursor 翻页
+- **嵌套 legacy template 控制面旁路**：`query.template.inline` 等 Mustache 字符串解析失败时
+  旧实现只对根级 fail-closed，嵌套形态可把 `{{#x}}.security{{/x}}` 渲染成 terms lookup /
+  wrapper 指向控制面。现任意深度模板串都做去标签后的字面扫描（含拆词拼接）并拒绝分隔符切换；
+  正常含 `{{q}}` 的业务模板不误杀
+- **校验器临时索引前缀不再对通用写通道豁免**：`es_console_validate_*` 曾让任意持
+  create-index/doc 写键的人创建非 ADMIN 不可见的控制面命名索引。现通用 `guardIndexName`
+  一律按控制面拒绝，校验器改走 `createValidatorTempIndex/deleteValidatorTempIndex` 专用通道
+- **已存脚本覆盖写同口径收口**：put 原先只看新 body（mustache 即放行），搜索模板页可覆盖
+  ADMIN 的 painless 脚本。现在目标 id 已存在且非 mustache 时，put 与 delete 一样要求
+  painless-lab 页写权
+- **委托部署关闭内置登录后存量 token 立即失效**：内置 token 的 `grantedPages=null` 会整体
+  关闭页面门；宿主撤销会话后浏览器残留的旧 token 不能经回落通道继续生效
+- **`host-cluster-visible=false` 覆盖宿主专属 provider**：`/cluster/inspect|query|force-merge`、
+  `rebuild-empty`、`replicas` 等恒定执行在宿主的端点，此前只有数据面拦截器检查宿主可见性，
+  残留 `conn:host` 页键可绕过；现非 ADMIN 在宿主隐藏时按 `HOST_DISABLED` 拒绝（自举端点仍放行）
+- **`search-raw` 不再授予 aliases 页文档读**：别名页只做元数据管理，不应凭页键读取业务文档原文
+- 读者可写面复核：`_render/template` 的已存模板 id、`_msearch` 的字符串 `indices`、
+  SQL `FROM a, b` 逗号列表、检索 body 的 terms/wrapper/MLT/indices_boost 目标，前端
+  `devtoolsScope` 全部与后端同口径预检（金标准新增 8 条向量，50+ 条双向断言）
+
+### 修复
+
+- **账号切换：登录先换令牌再触发换人清理**：旧顺序让新账号的作业/监控轮询带着上一账号
+  的令牌与授权跑第一拍（x3 登录后短暂看到 x1 的在跑作业/告警）
+- **换号清理覆盖工作现场与词项缓存**：新增 `es-console.qw.session:`（DSL 会话自动恢复）、
+  `es_console_terms_stash`（字段词项持久档）、`es-console.qb.subtree`、`es-console.pref.sqlbridge.sql`、
+  `es-console.health-report.last`、`es_vars`、`es_confirm_skip:`；App 换人时清模块级
+  词项/字段/别名缓存并剥掉当前路由 query（防 `?dsl=` 深链用新身份自动执行旧查询）
+- **app 内存重置补未消费通知与在飞世代**：`notifyQueue` 归零、`indicesSeq/connsSeq` 前移、
+  `verInflight/esVersion` 复位，防旧账号迟到回包/Toast 串到新账号
+- **客户端写门补用户管理/重绑**：非 ADMIN 不再把 `/auth/users`、已绑定后的 `/setup/apply|test|rebind`
+  发出（后端本就 ADMIN-only）；初始化窗口不受影响
+- **客户端拦截提示可操作**：明确「请求未发出」并给出「核对当前页面/目标连接写授权、刚被撤权时刷新页面」下一步
+
+### 测试
+
+- 新增 `RawPitOwnership1046Test`、`SearchTemplateGuard1046Test`、`SharedReadGrant1046Test`、
+  `SqlCursorOwnership1046Test`、`DelegatedBuiltinToken1046Test`、`permissionDrift1046.spec`；
+  `ConsoleAuthInterceptorPageAuthTest` 增宿主隐藏三例；DevTools 金标准增 8 条向量并同步前端断言
+- 权限一致性扫描：共享写 23 / 共享读 41 / 页 52 / 299 文件，0 不一致；`vue-tsc` 0 错
+
 ## [1.0.58]
 
 > 本版包含原 `1.0.57`（未发布，无远端 tag）的全部权限加固与 1007 生产验证内容，

@@ -299,7 +299,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         m.put("/cluster/search-dsl", Arrays.asList("search", "profile-flame", "update-by-query"));
         m.put("/cluster/search-template", java.util.Collections.singletonList("search-templates"));
         m.put("/cluster/search-raw", Arrays.asList("search", "indices", "browser", "analyzer-lab",
-                "aliases", "update-by-query", "bulk", "doc-diff", "boost-tuner", "rank-debug",
+                "update-by-query", "bulk", "doc-diff", "boost-tuner", "rank-debug",
                 "score-explain", "match-matrix", "query-xray", "profile-flame"));
         m.put("/cluster/profile", Arrays.asList("search", "indices"));
         m.put("/cluster/count", Arrays.asList("search", "indices"));
@@ -593,6 +593,15 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
     /** connName 解析失败 WARN 节流计数（实例级——拦截器产线单例）。 */
     private final AtomicLong lastConnNameWarnAt = new AtomicLong(0);
 
+    /** 宿主集群是否作为数据面目标暴露（host-cluster-visible，默认 true）。纯管理平台形态
+     *  设 false 时，非 ADMIN 不得借残留的 conn:host 授权直捣宿主数据面/托管重建 provider。 */
+    private boolean hostClusterVisible = true;
+
+    /** 由自动配置注入（见 EsRebuildAutoConfiguration）；测试可显式设置。 */
+    public void setHostClusterVisible(boolean hostClusterVisible) {
+        this.hostClusterVisible = hostClusterVisible;
+    }
+
     /** insight 护栏动作注册表（可选注入：1031 fail-closed——未登记 actionId 的写请求
         在授权层直接拒绝，不落兜底角色门；null=旧装配形态，检查跳过）。 */
     private io.github.dengmeiluan.es.rebuild.insight.action.GuardedActionRegistry guardedActionRegistry;
@@ -794,6 +803,16 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                 targetId = targetHeader == null || targetHeader.trim().isEmpty()
                         ? "host" : targetHeader.trim();
                 if ("host".equalsIgnoreCase(targetId)) targetId = "host";
+            }
+            /* host-cluster-visible=false（纯管理平台）时，宿主数据面/托管重建 provider 必须
+               和 EsTargetInterceptor 同口径拒绝：这些端点恒定执行在宿主，残留的 conn:host
+               页键不能成为直捣宿主的第二通道。ADMIN 已在上方整体放行；自举端点保留
+               （身份/连接目录/健康），否则换号用户无法自救。 */
+            if (!hostClusterVisible && "host".equals(targetId) && !isBootstrapPath(path)) {
+                opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
+                        "HOST_DISABLED", 403, "host-cluster-visible=false"));
+                deny(response, 403, "{\"code\":\"HOST_DISABLED\",\"message\":\"当前部署未开放宿主集群，请先在顶栏选择集群连接\"}");
+                return false;
             }
             /* 目标连接的角色闸，对所有「按目标头取页键」的路径统一生效。
                此前只有数据面（EsTargetInterceptor 覆盖的 /cluster/**、/insight 等）做过 minRole 校验；

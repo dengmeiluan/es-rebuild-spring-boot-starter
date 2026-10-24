@@ -314,7 +314,8 @@ public class InternalEsIndexRebuildController {
 
     /** ES SQL 查询（集群级，只读）。body 为裸 SQL 文本。自动解析 indexKey→物理索引名。 */
     @PostMapping(value = "cluster/sql", consumes = {"text/plain", "application/json"})
-    public Map<String, Object> clusterSql(@org.springframework.web.bind.annotation.RequestBody String sql) throws java.io.IOException {
+    public Map<String, Object> clusterSql(@org.springframework.web.bind.annotation.RequestBody String sql,
+                                          javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
         if (sql == null || sql.trim().isEmpty()) {
             throw new IllegalArgumentException("SQL 不能为空");
         }
@@ -323,7 +324,9 @@ public class InternalEsIndexRebuildController {
             cleaned = cleaned.substring(1, cleaned.length() - 1);
         }
         cleaned = resolveFromInSql(cleaned);
-        return esIndexAdmin.executeSql(cleaned, 100);
+        Map<String, Object> out = esIndexAdmin.executeSql(cleaned, 100);
+        rememberSqlCursor(out, request);
+        return out;
     }
 
     private String resolveFromInSql(String sql) {
@@ -513,19 +516,75 @@ public class InternalEsIndexRebuildController {
             // 且无痕（审计链断点）。低频用户路径直接 WARN 不节流；回填失败不影响执行契约不变
             log.warn("[es-console-raw] 审计摘要回填失败(本次高危审计缺执行摘要): {}", e.getMessage(), e);
         }
-        /* PIT id 是服务端资源的持有凭据：控制台内打开的 id 绑定执行者，换号/他人不得续用。 */
-        guardPitOwnership(rawBody, request, admin);
+        /* PIT id 是服务端资源的持有凭据：控制台内打开的 id 绑定执行者，换号/他人不得续用。
+           ES 的 ?source= 与请求体同权——只查 body 会让「GET /{index}/_search?source={"pit":...}」
+           绕过归属判定；DELETE /_pit 的 id 又在根级（不是 pit.id），同样必须覆盖。 */
+        String sourceBody = sourceFromPath(req.get("path"));
+        guardPitOwnership(rawBody, sourceBody, req.get("method"), req.get("path"), request, admin);
+        guardRawSqlCursor(rawBody, req.get("path"), request, admin);
         /* 连接模型 rest 写键持有人可使用 raw 访问业务索引，但控制面索引仍仅 ADMIN 可达 */
         Map<String, Object> result = admin
                 ? esIndexAdmin.raw(req.get("method"), req.get("path"), req.get("body"))
                 : sanitizeRawEnvelope(esIndexAdmin.rawGuarded(req.get("method"), req.get("path"), req.get("body")));
-        rememberPitCall(req.get("method"), req.get("path"), rawBody, result, request, admin);
+        rememberRawSqlCursor(req.get("path"), result, request);
+        rememberPitCall(req.get("method"), req.get("path"), rawBody, sourceBody, result, request, admin);
         return result;
     }
 
-    /** 本请求是否在操作某个已登记的 PIT：非归属者（非 ADMIN）拒绝。未登记=控制台外资源，维持放行。 */
+    /** 页面端点（PIT search）只带 body 的简洁入口。 */
     private void guardPitOwnership(String body, javax.servlet.http.HttpServletRequest request, boolean admin) {
+        guardPitOwnership(body, null, null, null, request, admin);
+    }
+
+    /** 本请求是否在操作某个已登记的 PIT：非归属者（非 ADMIN）拒绝。未登记=控制台外资源，维持放行。 */
+    private void guardPitOwnership(String body, String sourceBody, String method, String path,
+                                   javax.servlet.http.HttpServletRequest request, boolean admin) {
         guardPitOwnershipById(pitIdFromBody(body), request, admin);
+        if (sourceBody != null) {
+            guardPitOwnershipById(pitIdFromBody(sourceBody), request, admin);
+        }
+        /* 关闭 PIT 的 body 是根级 {"id":...}（不是 {"pit":{"id":...}}），旧解析永远取不到 id。 */
+        if (isPitClose(method, path)) {
+            guardPitOwnershipById(rootIdFromBody(body), request, admin);
+            if (sourceBody != null) {
+                guardPitOwnershipById(rootIdFromBody(sourceBody), request, admin);
+            }
+        }
+    }
+
+    /** DELETE /_pit（含带 query 形态）才是关闭 PIT；搜索/开启 PIT 不走根级 id。 */
+    static boolean isPitClose(String method, String path) {
+        if (method == null || path == null || !"DELETE".equalsIgnoreCase(method.trim())) return false;
+        String clean = path.split("\\?")[0].toLowerCase(java.util.Locale.ROOT);
+        while (clean.endsWith("/") && clean.length() > 1) clean = clean.substring(0, clean.length() - 1);
+        return clean.endsWith("/_pit") || "/_pit".equals(clean);
+    }
+
+    /** ES 的 ?source= 与请求体同权：提取并解码（重复参数取首值，与 rawGuarded 的拒绝口径一致）。 */
+    static String sourceFromPath(String path) {
+        if (path == null) return null;
+        int q = path.indexOf('?');
+        if (q < 0) return null;
+        String source = null;
+        boolean seen = false;
+        for (String pair : path.substring(q + 1).split("&")) {
+            if (pair.isEmpty()) continue;
+            int eq = pair.indexOf('=');
+            if (eq < 0) continue;
+            final String key;
+            final String value;
+            try {
+                key = java.net.URLDecoder.decode(pair.substring(0, eq), "UTF-8");
+                value = java.net.URLDecoder.decode(pair.substring(eq + 1), "UTF-8");
+            } catch (Exception e) {
+                continue; /* 编码非法：rawGuarded 对非 ADMIN fail-closed，这里不因解析失败放行归属 */
+            }
+            if (!"source".equals(key)) continue;
+            if (seen) return source;
+            seen = true;
+            source = value;
+        }
+        return source == null || source.trim().isEmpty() ? null : source;
     }
 
     /** 按 id 判定归属（关闭 PIT 直接走这里，避免拼接 JSON 时被非法字符绕过判定）。 */
@@ -541,8 +600,9 @@ public class InternalEsIndexRebuildController {
         }
     }
 
-    /** raw 开/关 PIT 的归属登记：开启绑定当前身份，关闭释放。 */
-    private void rememberPitCall(String method, String path, String body, Map<String, Object> result,
+    /** raw 开/关 PIT 的归属登记：开启绑定当前身份，关闭释放（body 与 ?source= 两种形态都认）。 */
+    private void rememberPitCall(String method, String path, String body, String sourceBody,
+                                 Map<String, Object> result,
                                  javax.servlet.http.HttpServletRequest request, boolean admin) {
         if (path == null || result == null || method == null) return;
         String clean = path.split("\\?")[0];
@@ -550,8 +610,11 @@ public class InternalEsIndexRebuildController {
         if (!clean.toLowerCase(java.util.Locale.ROOT).endsWith("/_pit")) return;
         ConsolePrincipal p = principal(request);
         if ("DELETE".equalsIgnoreCase(method)) {
-            String bodyId = pitIdFromBody(body);
+            /* 关闭 PIT 是根级 id；?source= 形态同样释放，避免登记表残留旧 id。 */
+            String bodyId = rootIdFromBody(body);
             if (bodyId != null) io.github.dengmeiluan.es.rebuild.auth.PitOwnership.release(bodyId);
+            String sourceId = rootIdFromBody(sourceBody);
+            if (sourceId != null) io.github.dengmeiluan.es.rebuild.auth.PitOwnership.release(sourceId);
             return;
         }
         if (!"POST".equalsIgnoreCase(method)) return;
@@ -559,6 +622,20 @@ public class InternalEsIndexRebuildController {
         if (id != null && p != null) {
             io.github.dengmeiluan.es.rebuild.auth.PitOwnership.register(String.valueOf(id), p.getUsername(),
                     admin ? 7L * 24L * 3_600_000L : 2L * 3_600_000L);
+        }
+    }
+
+    /** 根级 {"id":"..."}（DELETE /_pit 的关闭形态）；与 search body 的 pit.id 区分。 */
+    static String rootIdFromBody(String body) {
+        if (body == null || body.trim().isEmpty() || body.indexOf("\"id\"") < 0) return null;
+        try {
+            com.fasterxml.jackson.databind.JsonNode root = SCRIPT_MAPPER.readTree(body);
+            com.fasterxml.jackson.databind.JsonNode id = root == null ? null : root.get("id");
+            if (id == null || !id.isValueNode()) return null;
+            String v = id.asText();
+            return v == null || v.trim().isEmpty() ? null : v.trim();
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -1089,24 +1166,123 @@ public class InternalEsIndexRebuildController {
 
     /** _sql 查询（JSON body）—— 与 cluster/sql（纯文本 SQL）区分 */
     @PostMapping("cluster/sql/query")
-    public Map<String, Object> clusterSqlJson(@org.springframework.web.bind.annotation.RequestBody String body) throws java.io.IOException {
-        return esIndexAdmin.sqlQuery(body);
+    public Map<String, Object> clusterSqlJson(@org.springframework.web.bind.annotation.RequestBody String body,
+                                              javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
+        Map<String, Object> out = esIndexAdmin.sqlQuery(body);
+        rememberSqlCursor(out, request);
+        return out;
     }
     /** _sql/translate 把 SQL 转成 DSL */
     @PostMapping("cluster/sql/translate")
     public Map<String, Object> clusterSqlTranslate(@org.springframework.web.bind.annotation.RequestBody String body) throws java.io.IOException {
         return esIndexAdmin.sqlTranslate(body);
     }
-    /** _sql 分页 cursor */
+    /** _sql 分页 cursor（cursor 即结果集凭据：仅开启者本人或 ADMIN 可续页） */
     @PostMapping("cluster/sql/cursor")
-    public Map<String, Object> clusterSqlCursor(@RequestParam String cursor) throws java.io.IOException {
-        return esIndexAdmin.sqlCursor(cursor);
+    public Map<String, Object> clusterSqlCursor(@RequestParam String cursor,
+                                                javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
+        guardSqlCursor(cursor, request);
+        Map<String, Object> out = esIndexAdmin.sqlCursor(cursor);
+        /* cursor 可能轮换：登记新 id 并释放旧 id，避免旧 id 变成无主凭据。 */
+        rememberSqlCursor(out, request);
+        Object next = out == null ? null : out.get("cursor");
+        if (next != null && !String.valueOf(next).equals(cursor)) {
+            io.github.dengmeiluan.es.rebuild.auth.SqlCursorOwnership.release(cursor);
+        }
+        return out;
     }
-    /** _sql 关闭 cursor */
+    /** _sql 关闭 cursor（仅开启者本人或 ADMIN；关闭后释放归属） */
     @PostMapping("cluster/sql/close")
-    public Map<String, Object> clusterSqlClose(@RequestParam String cursor) throws java.io.IOException {
-        return esIndexAdmin.sqlClose(cursor);
+    public Map<String, Object> clusterSqlClose(@RequestParam String cursor,
+                                               javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
+        guardSqlCursor(cursor, request);
+        try {
+            return esIndexAdmin.sqlClose(cursor);
+        } finally {
+            io.github.dengmeiluan.es.rebuild.auth.SqlCursorOwnership.release(cursor);
+        }
     }
+
+    /** SQL cursor 归属登记（页面端点）：cursor 按执行者权限生成，不能成为跨身份翻页凭据。 */
+    private void rememberSqlCursor(Map<String, Object> result, javax.servlet.http.HttpServletRequest request) {
+        if (result == null) return;
+        Object cursor = result.get("cursor");
+        if (cursor == null || String.valueOf(cursor).trim().isEmpty()) return;
+        ConsolePrincipal p = principal(request);
+        if (p == null) return;
+        io.github.dengmeiluan.es.rebuild.auth.SqlCursorOwnership.register(
+                String.valueOf(cursor), p.getUsername(), SQL_CURSOR_TTL_MS);
+    }
+
+    private void guardSqlCursor(String cursor, javax.servlet.http.HttpServletRequest request) {
+        if (cursor == null || cursor.trim().isEmpty()) return;
+        ConsolePrincipal p = principal(request);
+        if (p == null) return; // 免鉴权部署
+        if (!io.github.dengmeiluan.es.rebuild.auth.SqlCursorOwnership.allows(
+                cursor, p.getUsername(), adminView(request))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "SQL cursor 由 " + io.github.dengmeiluan.es.rebuild.auth.SqlCursorOwnership.owner(cursor)
+                            + " 开启：cursor 即凭据，仅开启者本人或 ADMIN 可续页/关闭；"
+                            + "账号切换后请重新执行查询（旧 cursor 不会随新身份放行）");
+        }
+    }
+
+    /** raw 透传的 _sql 续页/关闭：先按 cursor 归属校验（关闭他人 cursor 不可在事后补救）。 */
+    private void guardRawSqlCursor(String rawBody, String path,
+                                   javax.servlet.http.HttpServletRequest request, boolean admin) {
+        if (!isRawSqlPath(path)) return;
+        ConsolePrincipal p = principal(request);
+        if (p == null) return;
+        String requested = sqlCursorFromBody(rawBody);
+        if (requested != null && !io.github.dengmeiluan.es.rebuild.auth.SqlCursorOwnership.allows(
+                requested, p.getUsername(), admin)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "SQL cursor 由 " + io.github.dengmeiluan.es.rebuild.auth.SqlCursorOwnership.owner(requested)
+                            + " 开启：cursor 即凭据，仅开启者本人或 ADMIN 可使用");
+        }
+    }
+
+    /** raw 透传的 _sql 响应登记 cursor（否则页面端点侧看到的是「控制台外 cursor」而放行）。 */
+    private void rememberRawSqlCursor(String path, Map<String, Object> result,
+                                      javax.servlet.http.HttpServletRequest request) {
+        if (!isRawSqlPath(path) || result == null) return;
+        ConsolePrincipal p = principal(request);
+        if (p == null) return;
+        Object body = result.get("body");
+        if (!(body instanceof String)) return;
+        try {
+            com.fasterxml.jackson.databind.JsonNode root = SCRIPT_MAPPER.readTree((String) body);
+            com.fasterxml.jackson.databind.JsonNode next = root == null ? null : root.get("cursor");
+            if (next != null && next.isValueNode()) {
+                io.github.dengmeiluan.es.rebuild.auth.SqlCursorOwnership.register(
+                        next.asText(), p.getUsername(), SQL_CURSOR_TTL_MS);
+            }
+        } catch (Exception ignored) {
+            /* 非 JSON 响应（错误体/文本）不登记 */
+        }
+    }
+
+    private static boolean isRawSqlPath(String path) {
+        if (path == null) return false;
+        String clean = path.split("\\?")[0].toLowerCase(java.util.Locale.ROOT);
+        return clean.endsWith("/_sql") || clean.endsWith("/_sql/close")
+                || clean.endsWith("/_xpack/sql") || clean.endsWith("/_xpack/sql/close");
+    }
+
+    static String sqlCursorFromBody(String body) {
+        if (body == null || body.trim().isEmpty() || body.indexOf("\"cursor\"") < 0) return null;
+        try {
+            com.fasterxml.jackson.databind.JsonNode root = SCRIPT_MAPPER.readTree(body);
+            com.fasterxml.jackson.databind.JsonNode c = root == null ? null : root.get("cursor");
+            if (c == null || !c.isValueNode()) return null;
+            String v = c.asText();
+            return v == null || v.trim().isEmpty() ? null : v.trim();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static final long SQL_CURSOR_TTL_MS = 10L * 60L * 1000L;
 
     /** 单文档 GET（供 diff editor 拉取原文） */
     @GetMapping("cluster/doc")
@@ -1192,17 +1368,24 @@ public class InternalEsIndexRebuildController {
     private void requireScriptScope(String id, String body,
                                     javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
         if (adminView(request) || pageVisible(request, "painless-lab")) return;
+        /* 目标 id 的现状必须读回：已存在 painless 脚本时，模板页即使提交 mustache 也是
+           覆盖他人脚本（写侧全开、读侧不可见）——put 与 delete 同口径。 */
+        Map<String, Object> listed = esIndexAdmin.listStoredScripts();
+        Object scripts = listed == null ? null : listed.get("scripts");
+        Object def = scripts instanceof Map ? ((Map<?, ?>) scripts).get(id) : null;
+        String existingLang = def instanceof Map ? String.valueOf(((Map<?, ?>) def).get("lang")) : "";
         if (body == null) {
-            Map<String, Object> listed = esIndexAdmin.listStoredScripts();
-            Object scripts = listed == null ? null : listed.get("scripts");
-            Object def = scripts instanceof Map ? ((Map<?, ?>) scripts).get(id) : null;
-            String lang = def instanceof Map ? String.valueOf(((Map<?, ?>) def).get("lang")) : "";
-            if (def != null && "mustache".equalsIgnoreCase(lang)) return;
+            if (def != null && "mustache".equalsIgnoreCase(existingLang)) return;
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     def == null
                             ? "已存脚本 " + id + " 不存在或无法确认类型：删除脚本需要 painless-lab 页写权限"
-                            : "已存脚本 " + id + " 不是 mustache 模板（lang=" + lang
+                            : "已存脚本 " + id + " 不是 mustache 模板（lang=" + existingLang
                                     + "）：删除需要 painless-lab 页写权限");
+        }
+        if (def != null && !"mustache".equalsIgnoreCase(existingLang)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "已存脚本 " + id + " 不是 mustache 模板（lang=" + existingLang
+                            + "）：覆盖写需要 painless-lab 页写权限；已存脚本是集群级共享件");
         }
         String lang;
         try {

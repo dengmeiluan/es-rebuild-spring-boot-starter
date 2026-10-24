@@ -87,6 +87,9 @@ import { useAuthStore } from './stores/auth';
 import { useLiveMonitorStore } from './stores/liveMonitor';
 import { useJobTrackerStore } from './stores/jobTracker';
 import { useQueryHistoryStore } from './stores/queryHistory';
+import { __clearSuggestCache as clearSuggestCache, clearTermsStash } from './composables/useTermsSuggest';
+import { __clearFieldCache } from './composables/useIndexFields';
+import { __clearAliasCache } from './composables/useAliases';
 
 /* 路由级 KeepAlive 白名单（= SFC 文件名）：这些页的查询结果/交互现场在侧栏切页后保留。
  只收「重状态、重挂载代价高」的页；其余页面保持即换即重挂（数据新鲜度优先）。
@@ -126,6 +129,18 @@ function onIdentityChanged() {
   jt.resetIdentityState();
   mon.resetIdentityState();
   qh.clear();
+  /* 模块级缓存不属 Pinia：字段词项/字段表/别名是上一账号在目标集群上的观测结果，
+     换人后必须同步清空（含 localStorage 词项持久档），否则 x3 聚焦同一字段会直接
+     看到 x1 读出的客户邮箱/ID（零网络同步回填）。 */
+  clearSuggestCache();
+  clearTermsStash();
+  __clearFieldCache();
+  __clearAliasCache();
+  /* 深链载荷（?dsl=/?idx=/?q=）会在视图挂载时自动执行：换号后 URL 仍是上一账号的
+     现场，清空 query 才能保证「新账号打开的是自己的页面」。 */
+  if (route && Object.keys(route.query).length) {
+    void router.replace({ path: route.path, query: {} });
+  }
 }
 
 /* 同名账号被降权/撤页、或跨标签页授权变更：后端每请求都重算权限，但前端 me 不会自己更新。

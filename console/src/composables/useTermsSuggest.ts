@@ -1,4 +1,4 @@
-import { writeStoredRaw } from '../utils/safeJson';
+import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 
 /* W2 值建议：keyword 字段 terms agg top 20（searchRaw 出口，D2 首选分支成立）。
  300ms 防抖 + 序号守卫（in-flight 切换丢弃旧响应）+ TTL 5min 缓存（上限 200 条：超限时先清过期、再逐最旧）；失败静默（不打断输入流）。
@@ -32,7 +32,6 @@ function pruneCache() {
 }
 /** 测试专用：清空缓存 */
 export function __clearSuggestCache() { cache.clear(); }
-
 /* ═══ ：词项持久档（localStorage）═══
  TTL 内存缓存之外的「上次 top20」快照：跨会话/缓存过期后的首轮 suggest 同步候选来源
  （零网络零防抖即刻回填，权威词项到达后 merge 刷新）。key 前三段与内存缓存同构；
@@ -50,6 +49,18 @@ function readStash(key: string): string[] {
 }
 function writeStash(key: string, values: string[]) {
   writeStoredRaw(localStorage, key, JSON.stringify(values.slice(0, STASH_CAP)));
+}
+/** 换号清理：词项持久档是上一身份从目标集群读出的业务值（邮箱/ID），不能跨账号同步回填。 */
+export function clearTermsStash() {
+  cache.clear();
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(STASH_KEY)) keys.push(k);
+    }
+    for (const k of keys) removeStoredRaw(localStorage, k);
+  } catch { /* 存储不可用：无残留可清 */ }
 }
 
 /* 工厂可选第二参 types——字段类型表读源（消费方持有字段表时传入，

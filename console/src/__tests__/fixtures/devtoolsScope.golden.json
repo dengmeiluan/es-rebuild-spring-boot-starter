@@ -60,12 +60,21 @@
     { "id": "d38", "method": "PUT", "path": "/logs/_doc/..%2F..%2F_security/user/evil", "body": "{}", "allow": false, "ui": "deny", "why": "文档 ID 穿越" },
     { "id": "d39", "method": "PUT", "path": "http://evil.example.com/", "body": null, "allow": false, "ui": "deny", "why": "绝对 URL 不是 ES 路径" },
     { "id": "d40", "method": "TRACE", "path": "/logs/_search", "body": null, "allow": false, "ui": "deny", "why": "方法白名单" },
+    { "id": "d41", "method": "GET", "path": "/_cat/indices/es_console_user?format=json", "body": null, "allow": false, "ui": "deny", "why": "系统 API 后续段仍是索引位（1046 前端逐段镜像）" },
+    { "id": "d42", "method": "GET", "path": "/_all", "body": null, "allow": false, "ui": "deny", "why": "_all 隐式全量（1046 前端不再因 _ 前缀放行）" },
+    { "id": "d43", "method": "GET", "path": "/_cluster/health?level=indices", "body": null, "allow": false, "ui": "deny", "why": "索引级 health 枚举控制面（1046 前端镜像）" },
+    { "id": "d44", "method": "GET", "path": "/logs%2F_search", "body": null, "allow": false, "ui": "deny", "why": "解码分隔符与真实路由分歧（1046 前端 fail-closed）" },
+    { "id": "d45", "method": "POST", "path": "/logs/_search", "body": "{\"query\":{\"terms\":{\"u\":{\"index\":\".security\",\"id\":\"1\",\"path\":\"username\"}}}}", "allow": false, "ui": "deny", "why": "检索 body 二级数据源指向控制面（1046 前端解析 terms/wrapper/MLT）" },
+    { "id": "d46", "method": "POST", "path": "/_msearch", "body": "{\"indices\":\"es_console_user\"}\n{\"query\":{\"match_all\":{}}}\n", "allow": false, "ui": "deny", "why": "msearch indices 字符串形态（1046 前端兼容 string/array）" },
 
-    { "id": "b01", "method": "POST", "path": "/_bulk", "body": "{\"index\":{\"_index\":\"es_console_user\",\"_id\":\"1\"}}\n{\"role\":\"ADMIN\"}\n", "allow": false, "ui": "any", "why": "body 夹带控制索引（前端不解析 bulk 动作行）" },
-    { "id": "b02", "method": "POST", "path": "/_msearch", "body": "{\"index\":\"es_console_user\"}\n{\"query\":{\"match_all\":{}}}\n", "allow": false, "ui": "any", "why": "body 头夹带" },
-    { "id": "b03", "method": "POST", "path": "/_mget", "body": "{\"docs\":[{\"_index\":\"es_console_user\",\"_id\":\"1\"}]}", "allow": false, "ui": "any", "why": "docs 夹带" },
-    { "id": "b04", "method": "POST", "path": "/_sql", "body": "{\"query\":\"SELECT * FROM es_console_user\"}", "allow": false, "ui": "any", "why": "SQL FROM 控制面" },
-    { "id": "b05", "method": "POST", "path": "/logs/_update/1", "body": "{\"script\":{\"source\":\"ctx._index='es_console_user'\"}}", "allow": false, "ui": "any", "why": "_index 改写脚本" },
-    { "id": "b06", "method": "POST", "path": "/_render/template", "body": "{\"id\":\"evil\"}", "allow": false, "ui": "any", "why": "按已存 id 渲染" }
+    { "id": "e19", "method": "GET", "path": "/logs/_search?source=%7B%22pit%22%3A%7B%22id%22%3A%22abc%22%7D%7D", "body": null, "allow": true, "ui": "allow", "why": "?source= 是 body 同权形态：索引级 PIT 搜索应放行（1046 前端同样按 source 判定）" },
+    { "id": "e20", "method": "GET", "path": "/logs/_search?pretty=true", "body": null, "allow": true, "ui": "allow", "why": "普通查询参数不影响数据面检索" },
+
+    { "id": "b01", "method": "POST", "path": "/_bulk", "body": "{\"index\":{\"_index\":\"es_console_user\",\"_id\":\"1\"}}\n{\"role\":\"ADMIN\"}\n", "allow": false, "ui": "deny", "why": "body 夹带控制索引（1046 前端已解析 bulk 动作行）" },
+    { "id": "b02", "method": "POST", "path": "/_msearch", "body": "{\"index\":\"es_console_user\"}\n{\"query\":{\"match_all\":{}}}\n", "allow": false, "ui": "deny", "why": "body 头夹带（1046 前端已解析 msearch）" },
+    { "id": "b03", "method": "POST", "path": "/_mget", "body": "{\"docs\":[{\"_index\":\"es_console_user\",\"_id\":\"1\"}]}", "allow": false, "ui": "deny", "why": "docs 夹带（1046 前端已解析 mget）" },
+    { "id": "b04", "method": "POST", "path": "/_sql", "body": "{\"query\":\"SELECT * FROM es_console_user\"}", "allow": false, "ui": "deny", "why": "SQL FROM 控制面（1046 前端逐 token 判定）" },
+    { "id": "b05", "method": "POST", "path": "/logs/_update/1", "body": "{\"script\":{\"source\":\"ctx._index='es_console_user'\"}}", "allow": false, "ui": "any", "why": "_index 改写脚本（前端不解析 painless）" },
+    { "id": "b06", "method": "POST", "path": "/_render/template", "body": "{\"id\":\"evil\"}", "allow": false, "ui": "deny", "why": "按已存 id 渲染（1046 前端对 id 引用禁用）" }
   ]
 }

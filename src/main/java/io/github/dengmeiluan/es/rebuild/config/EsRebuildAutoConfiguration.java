@@ -1263,6 +1263,9 @@ public class EsRebuildAutoConfiguration {
                     properties.getConsole().getAuth().getDelegate().getHeader().getTrustedProxies());
             // 1031：insight 护栏动作 fail-closed 闸的注册表判据（未登记 actionId 写请求授权层拒绝）
             interceptor.setGuardedActionRegistry(guardedActionRegistry);
+            /* host-cluster-visible=false 的纯管理平台：宿主专属 provider 端点与数据面同口径拒绝
+               （否则残留 conn:host 授权可绕过 EsTargetInterceptor 直捣宿主）。 */
+            interceptor.setHostClusterVisible(properties.getConsole().isHostClusterVisible());
             return new org.springframework.web.servlet.config.annotation.WebMvcConfigurer() {
                 @Override
                 public void addInterceptors(org.springframework.web.servlet.config.annotation.InterceptorRegistry registry) {

@@ -112,15 +112,15 @@ public class IndexConfigValidator {
             /* 目标信息是增强信息,取不到不影响校验本身 */
         }
         try {
-            esIndexAdmin.createIndex(tmpIndex, overrideShards(settingsJson), mappingJson);
+            esIndexAdmin.createValidatorTempIndex(tmpIndex, overrideShards(settingsJson), mappingJson);
             report.setDryRunPassed(true);
         } catch (Exception e) {
             report.setDryRunPassed(false);
             parseEsError(e, report);
         } finally {
             try {
-                if (esIndexAdmin.indexExists(tmpIndex)) {
-                    esIndexAdmin.deleteIndex(tmpIndex);
+                if (esIndexAdmin.validatorTempIndexExists(tmpIndex)) {
+                    esIndexAdmin.deleteValidatorTempIndex(tmpIndex);
                 }
             } catch (Exception cleanup) {
                 logger.warn("[IndexConfigValidator] dry-run 临时索引清理失败（可按前缀 {} 手动清理）: {}",

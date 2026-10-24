@@ -264,7 +264,7 @@ async function request<T = any>(path: string, init?: RequestInit & { timeoutMs?:
     const cleanBase = CTX && base.startsWith(CTX) ? base.slice(CTX.length) : base;
     const targetId = mergedHeaders['X-Es-Target'] || getTarget();
     if (!apiWriteGuard(fetchMethod, cleanBase + path, targetId)) {
-      const message = '当前身份无权执行该写操作，请求已在客户端拦截';
+      const message = '当前身份无权执行该写操作（请求未发出）——请确认当前页面与目标连接的写授权；如需申请，请联系管理员勾选对应页面/连接的写权限';
       /* 与后端 403 走同一条全局通道：客户端拦截同样要能回答「缺什么」。 */
       window.dispatchEvent(new CustomEvent('es-console:forbidden', {
         detail: { path: cleanBase + path, method: fetchMethod, message, denied: 'CLIENT_WRITE_DENIED' },

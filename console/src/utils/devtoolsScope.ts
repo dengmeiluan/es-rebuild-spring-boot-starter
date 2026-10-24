@@ -123,7 +123,22 @@ export function nonAdminRootSearchNeedsIndex(rawPath: string, body?: string | nu
   const qAt = raw.indexOf('?');
   const pathOnly = canonicalPath(qAt >= 0 ? raw.slice(0, qAt) : raw).toLowerCase();
   if (!ROOT_SEARCH_PATHS.has(pathOnly)) return false;
-  const b = String(body || '').trim();
+  let b = String(body || '').trim();
+  if (!b && qAt >= 0) {
+    /* ES 的 ?source= 与 body 同权：只认 body 会把「?source={"pit":...}」的合法 PIT
+       搜索在 UI 侧误禁（后端允许，有权限的人点不了）。 */
+    for (const pair of raw.slice(qAt + 1).split('#')[0].split('&')) {
+      const eq = pair.indexOf('=');
+      if (eq < 0) continue;
+      try {
+        if (decodeURIComponent(pair.slice(0, eq)) !== 'source') continue;
+        b = decodeURIComponent(pair.slice(eq + 1)).trim();
+        break;
+      } catch {
+        return true; /* 编码非法：后端 fail-closed */
+      }
+    }
+  }
   if (b) {
     try {
       const o = JSON.parse(stripJsonComments(b));
@@ -162,9 +177,9 @@ export function nonAdminIndexQueryParamRejected(rawPath: string): boolean {
   return false;
 }
 
-/* 控制面索引的轻量镜像（后端 guardIndexPattern 的常用形态）：点号系统索引、控制词根、
-   可能命中控制面的通配字面前缀。只用于前端提前禁用，最终边界仍在后端。 */
-const CONTROL_ROOTS = ['es_console', 'es_rebuild_adhoc_job', '_es_rebuild_lock', '_es_xmigrate_job'];
+/* 控制面索引的轻量镜像（后端 isControlIndexName/couldMatchControl 的常用形态）：
+   点号系统索引、控制词根精确/前后缀、可能命中控制面的通配字面前缀。
+   只用于前端提前禁用，最终边界仍在后端。 */
 
 /* _cat 索引目录（indices/aliases/shards）会枚举全部索引名，服务端靠 format=json + index 列
    做行级过滤；不带 format=json 或投影掉了 index 列时后端直接拒绝，前端同口径提前禁用。
@@ -235,21 +250,38 @@ export function nonAdminAsyncResultRead(rawPath: string): boolean {
     || k.startsWith('/_xpack/sql/async/') || k.startsWith('/_eql/search/');
 }
 
-/** 首段是否指向控制面/系统索引（含通配可能命中）——非 ADMIN 提前禁用。 */
+/** 首段是否指向控制面/系统索引（含通配可能命中）——非 ADMIN 提前禁用。
+ * 与后端 guardRawGuarded 的段判定同口径：首段是系统 API（_ 前缀）时逐段检查后续
+ * 索引位（_cat/indices/es_console* 这类形态），首段是索引时只检查首段（与后端一致，
+ * 文档 id 不按索引名解释）。_all 在任何段都等于隐式全量。 */
 export function nonAdminControlIndexDenied(rawPath: string): boolean {
   const clean = canonicalPath(rawPath);
   const segs = clean.split('/').filter(Boolean);
   if (!segs.length) return false;
   const first = segs[0].toLowerCase();
-  if (first.startsWith('_')) return false; /* 系统 API（/_search 等）由其它规则裁决 */
-  for (const part of first.split(',')) {
-    const t = part.trim().replace(/^[+-]/, '');
-    if (!t) continue;
+  if (first === '_all') return true;
+  const tokenDenied = (raw: string): boolean => {
+    const t = raw.trim().replace(/^[+-]/, '').toLowerCase();
+    if (!t) return false;
     if (t === '*' || t === '_all') return true;
     if (t.startsWith('.')) return true;
-    if (CONTROL_ROOTS.some((r) => t.includes(r))) return true;
+    if (t.startsWith('es_console')
+      || t === 'es_rebuild_adhoc_job' || t.startsWith('es_rebuild_adhoc_job-')
+      || t.endsWith('_es_rebuild_lock') || t.endsWith('_es_xmigrate_job')) return true;
+    /* 通配字面前缀可覆盖控制索引（es_*、e* 等）时同样拒绝（后端 couldMatchControl 镜像）。 */
     const literal = t.replace(/[*?].*$/, '');
-    if (literal !== t && CONTROL_ROOTS.some((r) => r.startsWith(literal))) return true;
+    if (literal !== t
+      && ['es_console', 'es_rebuild_adhoc_job', '_es_rebuild_lock', '_es_xmigrate_job']
+        .some((r) => r.startsWith(literal))) return true;
+    return false;
+  };
+  if (!first.startsWith('_')) {
+    return first.split(',').some(tokenDenied);
+  }
+  for (let i = 1; i < segs.length; i++) {
+    const seg = segs[i].toLowerCase();
+    if (seg === '_all') return true;
+    if (!seg.startsWith('_') && seg.split(',').some(tokenDenied)) return true;
   }
   return false;
 }
@@ -301,6 +333,8 @@ export function nonAdminBodyTargetsControl(path: string, body?: string | null): 
       try {
         const o = JSON.parse(line);
         if (bodyTargetDenied(o.index)) return true;
+        /* ES 接受 string 与 array 两种 indices 形态（后端两种都校验）。 */
+        if (bodyTargetDenied(o.indices)) return true;
         if (Array.isArray(o.indices) && o.indices.some(bodyTargetDenied)) return true;
       } catch {
         /* ignore */
@@ -325,13 +359,110 @@ export function nonAdminBodyTargetsControl(path: string, body?: string | null): 
       const q = (typeof o?.query === 'string' ? o.query : '')
         .replace(/\/\*[\s\S]*?\*\//g, ' ')
         .replace(/--[^\n\r]*/g, ' ');
-      const re = /\b(?:FROM|JOIN)\s+([^\s,;()]+)/gi;
+      /* FROM/JOIN 后的逗号列表是多个目标：旧正则只吃到第一个逗号前
+         （FROM logs, es_console_user 漏检后者）。整段捕获后逐个 token 判定。 */
+      const re = /\b(?:FROM|JOIN)\s+([^\s,;()]+(?:\s*,\s*[^\s,;()]+)*)/gi;
       let m: RegExpExecArray | null;
       while ((m = re.exec(q)) !== null) {
-        if (bodyTargetDenied(m[1])) return true;
+        for (const token of m[1].split(',')) {
+          if (bodyTargetDenied(token.trim())) return true;
+        }
       }
     } catch {
       /* ignore */
+    }
+    return false;
+  }
+  /* 检索类 body 的二级数据源（terms/terms_set lookup、percolate、MLT、wrapper、
+     indices 查询、indices_boost、内嵌 _index）与路径同权：后端 guardSearchBody
+     逐层扫描，前端只按路径预检会亮「可执行」按钮后 403。 */
+  if (op === '_search' || op === '_count' || op === '_render') {
+    try {
+      const o = JSON.parse(stripJsonComments(b));
+      /* 按已存模板 id 渲染/检索会回显/执行 ADMIN 写入的模板体（后端 guardStoredTemplateReference
+         同口径）；路径形态 /_render/template/{id} 见下面 index 级判定。 */
+      if (o && typeof o === 'object' && !Array.isArray(o) && (o as any).id !== undefined) return true;
+      return searchBodyTargetsControl(o);
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+/** 搜索 DSL 目标扫描（后端 guardSearchTargets 的 TS 镜像）：只认结构化目标键，
+ * 不盲扫文档正文/查询值（业务日志里出现 .security 字样是合法的）。 */
+function searchBodyTargetsControl(node: unknown): boolean {
+  if (Array.isArray(node)) return node.some(searchBodyTargetsControl);
+  if (!node || typeof node !== 'object') return false;
+  const o = node as Record<string, any>;
+  if (bodyTargetDenied(o._index)) return true;
+  for (const key of ['terms', 'terms_set']) {
+    const clause = o[key];
+    if (!clause || typeof clause !== 'object' || Array.isArray(clause)) continue;
+    for (const v of Object.values(clause)) {
+      if (v && typeof v === 'object' && !Array.isArray(v)
+        && bodyTargetDenied((v as any).index)) return true;
+    }
+  }
+  for (const key of ['percolate', 'indexed_shape']) {
+    const c = o[key];
+    if (c && typeof c === 'object' && bodyTargetDenied((c as any).index)) return true;
+  }
+  const mlt = o.more_like_this;
+  const mltList = Array.isArray(mlt) ? mlt : (mlt ? [mlt] : []);
+  for (const m of mltList) {
+    if (!m || typeof m !== 'object') continue;
+    const likes = Array.isArray(m.like) ? m.like : (m.like ? [m.like] : []);
+    for (const d of likes) {
+      if (d && typeof d === 'object' && bodyTargetDenied((d as any)._index)) return true;
+    }
+  }
+  const boost = o.indices_boost ?? o.index_boost;
+  if (Array.isArray(boost)) {
+    for (const one of boost) {
+      if (one && typeof one === 'object') {
+        for (const k of Object.keys(one)) if (bodyTargetDenied(k)) return true;
+      } else if (bodyTargetDenied(one)) return true;
+    }
+  } else if (boost && typeof boost === 'object') {
+    for (const k of Object.keys(boost)) if (bodyTargetDenied(k)) return true;
+  }
+  const indicesQuery = o.indices;
+  if (indicesQuery && typeof indicesQuery === 'object' && !Array.isArray(indicesQuery)
+    && Array.isArray((indicesQuery as any).indices)
+    && (indicesQuery as any).indices.some(bodyTargetDenied)) return true;
+  const wrapper = o.wrapper;
+  if (wrapper && typeof wrapper === 'object') {
+    for (const key of ['query', 'inline', 'source', 'template']) {
+      const raw = (wrapper as any)[key];
+      if (typeof raw !== 'string' || !raw.trim()) continue;
+      let decoded = raw;
+      try { decoded = atob(raw); } catch { /* 非 base64：按 JSON 原文尝试 */ }
+      try { if (searchBodyTargetsControl(JSON.parse(decoded))) return true; } catch { /* 非 JSON */ }
+    }
+  }
+  return Object.values(o).some(searchBodyTargetsControl);
+}
+
+/** health 的 index/shards 级视图会枚举控制面索引名（后端 queryRequestsIndexLevel 同口径）。
+ * 根路径与 /_cluster/health/{index} 形态都检查 level=indices|shards。 */
+export function nonAdminHealthLevelEnumeration(rawPath: string): boolean {
+  const raw = String(rawPath || '');
+  const qAt = raw.indexOf('?');
+  const clean = canonicalPath(qAt >= 0 ? raw.slice(0, qAt) : raw).toLowerCase();
+  if (clean !== '/_cluster/health' && !clean.startsWith('/_cluster/health/')) return false;
+  if (qAt < 0) return false;
+  const query = raw.slice(qAt + 1).split('#')[0];
+  for (const pair of query.split('&')) {
+    const eq = pair.indexOf('=');
+    if (eq < 0) continue;
+    try {
+      const key = decodeURIComponent(pair.slice(0, eq));
+      const value = decodeURIComponent(pair.slice(eq + 1)).trim().toLowerCase();
+      if (key === 'level' && (value === 'indices' || value === 'shards')) return true;
+    } catch {
+      return true; /* 编码非法：后端 fail-closed */
     }
   }
   return false;
@@ -341,9 +472,13 @@ export function nonAdminDataPlaneWriteAllowed(method: string, path: string, body
   const m = String(method || 'GET').toUpperCase();
   const clean = canonicalPath(path);
   if (!clean.startsWith('/') || clean.includes('..') || clean.includes(';')) return false;
+  /* 后端对 %2F/%3B/%5C/%00 解码后的分隔符 fail-closed（防路由语义分歧）：
+     前端若先解码再放行，会出现「亮可执行、后端拒绝」。 */
+  if (/%2f|%3b|%5c|%00/i.test(String(path || '').split('?')[0])) return false;
   /* 先钉目标再分派读写：查询参数不算限定、控制面索引/通配直接拒、根级检索要路径或 PIT。
      GET/POST 同规则（后端两处守卫同口径）。 */
   if (nonAdminIndexQueryParamRejected(path)) return false;
+  if (nonAdminHealthLevelEnumeration(path)) return false;
   if (nonAdminCatNeedsJson(path)) return false;
   if (nonAdminControlIndexDenied(path)) return false;
   if (nonAdminRootSearchNeedsIndex(path, body)) return false;

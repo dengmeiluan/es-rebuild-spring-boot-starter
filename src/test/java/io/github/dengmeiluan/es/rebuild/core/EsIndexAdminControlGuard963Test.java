@@ -49,15 +49,15 @@ public class EsIndexAdminControlGuard963Test {
         assertRejected(() -> admin.guardControlPath("/%2e%2e/es_console_user/_search"), "目录穿越");
         assertRejected(() -> admin.guardControlPath("/es_console*/_search"), "通配控制索引");
         assertRejected(() -> admin.guardControlPath("/%2A/_search"), "全量通配");
-        admin.guardControlPath("/es_console_validate_123/_mapping");
+        assertRejected(() -> admin.guardControlPath("/es_console_validate_123/_mapping"), "校验器临时索引走公开路径");
         admin.guardControlPath("/logs-*/_search");
         assertRejected(() -> admin.guardControlPath("/_all/_search"), "全量别名路径");
         admin.guardControlPath("/_cluster/health");
     }
 
     @Test
-    public void 控制索引名与模式_校验临时索引放行() {
-        admin.guardIndexName("es_console_validate_1");
+    public void 控制索引名与模式_校验临时索引只走专用通道() {
+        assertRejected(() -> admin.guardIndexName("es_console_validate_1"), "校验器临时索引走通用写通道");
         admin.guardIndexName("logs-2026");
         assertRejected(() -> admin.guardIndexName("es_console_user"), "用户库");
         assertRejected(() -> admin.guardIndexName("../es_console_user"), "穿越名");
@@ -68,7 +68,7 @@ public class EsIndexAdminControlGuard963Test {
         assertRejected(() -> admin.guardIndexPattern("e*"), "e 前缀通配");
         assertRejected(() -> admin.guardIndexPattern("logs-*,es_console_user"), "逗号列表夹带");
         admin.guardIndexPattern("logs-*");
-        admin.guardIndexPattern("es_console_validate_*");
+        assertRejected(() -> admin.guardIndexPattern("es_console_validate_*"), "校验器临时索引通配走公开模式");
     }
 
     @Test

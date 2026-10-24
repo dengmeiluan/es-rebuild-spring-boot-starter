@@ -87,6 +87,11 @@ export const useAuthStore = defineStore('auth', () => {
     /* 通知历史/已读位/工作现场是账号视角产物：换人不清零，x3 的历史里会躺着
        x1 的「已切到 es_excel_conn」、恢复提示会把 x1 的现场弹给 x3（产线实报）。 */
     'es-console.notify.log', 'es-console.notify.seen', 'es-console.last-route',
+    /* 查询工作台会话/深链自动执行、字段词项持久档、建树暂存、SQL 桥预填、健康报告快照、
+       变量编辑器内容、确认「不再提示」：都是上一身份的工作现场/决定，不能跨账号沿用。 */
+    'es-console.qw.session:', 'es_console_terms_stash', 'es-console.qb.subtree',
+    'es-console.pref.sqlbridge.sql', 'es-console.health-report.last', 'es_vars',
+    'es_confirm_skip:',
   ];
   function purgeUserRequestState() {
     for (const storage of [localStorage, sessionStorage]) {
@@ -171,8 +176,12 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(username: string, password: string) {
     const r = await api.auth.login(username, password);
-    purgeIfUserChanged(r.username);
+    /* 先换令牌再触发换人清理：purge 会同步广播 identity-changed，App.vue 随即重启
+       jobTracker/liveMonitor 轮询。旧顺序（先 purge 后 setToken）让新账号的轮询带着
+       上一账号的令牌/授权跑第一拍（x3 登录后能看到 x1 的在跑作业/告警）。 */
     setToken(r.token);
+    invalidateIdentity(); /* 旧 me/grantedPages 立即失效；身份落地前写门 fail-closed */
+    purgeIfUserChanged(r.username);
     ioRecorder.clear(); /* 前一个会话的请求原文不得留给新登录用户 */
     me.value = { username: r.username, role: r.role, fallback: r.fallback };
     authDisabled.value = false;
@@ -433,7 +442,7 @@ export const useAuthStore = defineStore('auth', () => {
     '/cluster/query': ['search', 'indices', 'analyzer-lab'],
     '/cluster/search-dsl': ['search', 'profile-flame', 'update-by-query'],
     '/cluster/search-template': ['search-templates'],
-    '/cluster/search-raw': ['search', 'indices', 'browser', 'analyzer-lab', 'aliases', 'update-by-query', 'bulk', 'doc-diff', 'boost-tuner', 'rank-debug', 'score-explain', 'match-matrix', 'query-xray', 'profile-flame'],
+    '/cluster/search-raw': ['search', 'indices', 'browser', 'analyzer-lab', 'update-by-query', 'bulk', 'doc-diff', 'boost-tuner', 'rank-debug', 'score-explain', 'match-matrix', 'query-xray', 'profile-flame'],
     '/cluster/profile': ['search', 'indices'],
     '/cluster/count': ['search', 'indices'],
     '/cluster/explain-doc': ['rank-debug', 'search', 'indices'],
@@ -636,6 +645,13 @@ export const useAuthStore = defineStore('auth', () => {
     if (m === 'GET' || m === 'HEAD' || m === 'OPTIONS') return true;
     const clean = String(path || '').split('?')[0].split('#')[0];
     if (BOOTSTRAP_WRITE_HINTS.some(h => clean.includes(h))) return true;
+    /* 用户管理/重绑是授权载体本身：后端始终要求 ADMIN（系统管理域先于页面门），
+       conn:{tid}:w:security 不得在客户端把请求发车。初始化窗口（me 尚未认出）仍放行，
+       否则首次绑定会被自己的客户端门拦住。 */
+    if (clean.includes('/auth/users') && !isAdmin()
+        && (me.value != null || (probeStarted.value && !authDisabled.value))) return false;
+    if ((clean.endsWith('/setup/apply') || clean.endsWith('/setup/test') || clean.endsWith('/setup/rebind'))
+        && me.value != null && !isAdmin()) return false;
     /* 委派非 ADMIN 不得写本地账号（BuiltinConsoleAuthService 同口径）：客户端也不发车。 */
     if (clean.includes('/auth/users') && me.value?.delegated && !isAdmin()) return false;
     /* 与后端同源特例：托管重建向导「校验并继续」持 adhoc 写键即可调用

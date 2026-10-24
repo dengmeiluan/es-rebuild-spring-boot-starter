@@ -275,8 +275,10 @@ public class EsIndexAdmin {
         if (n.indexOf(':') >= 0) {
             throw new ControlPlaneGuardException("索引名不允许跨集群表达式：" + name);
         }
-        /* 校验器临时索引仅跳过控制面前缀判定；路径/通配/逗号检查必须在放行之前。 */
-        if (n.startsWith(VALIDATE_INDEX_PREFIX)) return;
+        /* 校验器临时索引前缀属于控制面命名空间（isControlIndexName 已覆盖）：
+           不能在通用守卫里做前缀豁免——否则任何持 create-index/doc 写键的人都能建
+           es_console_validate_* 隐藏索引（所有非 ADMIN 列表都看不到，仍可写）。
+           校验器走专用 createValidatorTempIndex/deleteValidatorTempIndex 通道。 */
         if (isControlIndexName(n)) {
             throw new ControlPlaneGuardException("控制面索引不对通用数据接口开放：" + name);
         }
@@ -315,7 +317,9 @@ public class EsIndexAdmin {
             if ("_all".equals(p) || "*".equals(p)) {
                 throw new ControlPlaneGuardException("不允许对全量索引执行该操作（控制面索引不可触达）：" + pattern);
             }
-            if (p.startsWith(VALIDATE_INDEX_PREFIX)) continue;
+            if (p.startsWith(VALIDATE_INDEX_PREFIX)) {
+                throw new ControlPlaneGuardException("校验器临时索引不对用户态接口开放：" + pattern);
+            }
             if (p.startsWith(".")) {
                 throw new ControlPlaneGuardException("系统/隐藏索引不对通用数据接口开放：" + pattern);
             }
@@ -506,6 +510,41 @@ public class EsIndexAdmin {
         }
     }
 
+    /**
+     * Mustache 模板字符串的控制面目标守卫（与 {@link #guardControlBody(String)} 同词表）。
+     *
+     * <p>模板体在服务端渲染后才成为 DSL，结构化扫描看不到渲染结果；嵌套模板解析失败时
+     * 旧实现只对根级 fail-closed，{@code query.template.inline} 可借此把
+     * {@code {{#x}}.security{{/x}}} 渲染成 terms lookup 的 index。这里对任意深度的模板串
+     * 做去标签后的字面扫描：既拦直写，也拦把控制面名拆进多个 section 的拼接写法。</p>
+     */
+    private void guardTemplateStringTargets(String s) {
+        if (s == null || s.isEmpty()) return;
+        if (s.contains("{{=")) {
+            throw new ControlPlaneGuardException("搜索模板不允许切换 Mustache 分隔符");
+        }
+        if (!s.contains("{{")) return;
+        String lower = decodeJsonUnicodeEscapes(s).toLowerCase(Locale.ROOT);
+        /* 去掉 {{...}} 段后再拼起来：{{#a}}.sec{{/a}}{{#b}}urity{{/b}} 不能靠拆词绕过。 */
+        String stitched = lower.replaceAll("\\{\\{[^}]*\\}\\}", "");
+        if (containsControlLiteral(lower) || containsControlLiteral(stitched)) {
+            throw new ControlPlaneGuardException("搜索模板体不得引用控制面索引：" + CONTROL_INDEX_PREFIX + "*");
+        }
+        for (String x : extraControlIndexNames) {
+            if (lower.contains(x) || stitched.contains(x)) {
+                throw new ControlPlaneGuardException("搜索模板体不得引用控制面索引：" + x);
+            }
+        }
+    }
+
+    private static boolean containsControlLiteral(String lower) {
+        return lower.contains(CONTROL_INDEX_PREFIX)
+                || lower.contains("es_console*") || lower.contains("es_console?")
+                || lower.contains("es_rebuild_adhoc_job")
+                || lower.contains("_es_rebuild_lock") || lower.contains("_es_xmigrate_job")
+                || lower.contains(".security") || lower.contains(".kibana");
+    }
+
     @SuppressWarnings("unchecked")
     private void guardSearchTargets(Object node, boolean root) {
         if (node instanceof Map) {
@@ -549,11 +588,10 @@ public class EsIndexAdmin {
                     /* 根级 source/inline/template 才是 _search/template 的模板体；
                        嵌套同名字段可能只是普通字段值。ES 三种字段名都接受且后者覆盖前者。 */
                     String s = ((String) value).trim();
-                    /* Mustache 分隔符切换（{{=<% %>=}}）会把结构键伪装成 <%k%>，
-                       后续占位符扫描失效——模板 source 内一律拒绝分隔符变更。 */
-                    if (root && s.contains("{{=")) {
-                        throw new ControlPlaneGuardException("搜索模板不允许切换 Mustache 分隔符");
-                    }
+                    /* 嵌套 template 查询（query.template.inline）同样是 Mustache 模板：
+                       解析失败时不能静默放行，否则 {{#x}}.security{{/x}} 这类渲染后目标
+                       可绕过全部结构化守卫（控制面 terms/wrapper/MLT 查询）。 */
+                    guardTemplateStringTargets(s);
                     if (s.startsWith("{") || s.startsWith("[")) {
                         try {
                             guardSearchTargets(OBJECT_MAPPER.readValue(s, Object.class), false);
@@ -1415,6 +1453,37 @@ public class EsIndexAdmin {
      */
     public void createIndex(String index, String settingsJson, String mappingJson) throws IOException {
         guardIndexName(index);
+        doCreateIndex(index, settingsJson, mappingJson);
+    }
+
+    /**
+     * 校验器 dry-run 临时索引专用通道：只接受 {@code es_console_validate_} 前缀。
+     * 通用 createIndex 不再豁免该前缀（防任意写键创建不可见控制面索引）。
+     */
+    public void createValidatorTempIndex(String index, String settingsJson, String mappingJson) throws IOException {
+        if (index == null || !index.startsWith(VALIDATE_INDEX_PREFIX)) {
+            throw new IllegalArgumentException("校验器临时索引必须使用 " + VALIDATE_INDEX_PREFIX + " 前缀");
+        }
+        doCreateIndex(index, settingsJson, mappingJson);
+    }
+
+    /** 校验器临时索引存在性（通用 indexExists 会按控制面索引拒绝）。 */
+    public boolean validatorTempIndexExists(String index) throws IOException {
+        if (index == null || !index.startsWith(VALIDATE_INDEX_PREFIX)) {
+            throw new IllegalArgumentException("校验器临时索引必须使用 " + VALIDATE_INDEX_PREFIX + " 前缀");
+        }
+        return restHighLevelClient().indices().exists(new GetIndexRequest(index), RequestOptions.DEFAULT);
+    }
+
+    /** 校验器临时索引清理专用通道（通用 deleteIndex 会按控制面索引拒绝）。 */
+    public void deleteValidatorTempIndex(String index) throws IOException {
+        if (index == null || !index.startsWith(VALIDATE_INDEX_PREFIX)) {
+            throw new IllegalArgumentException("校验器临时索引必须使用 " + VALIDATE_INDEX_PREFIX + " 前缀");
+        }
+        doDeleteIndex(index);
+    }
+
+    private void doCreateIndex(String index, String settingsJson, String mappingJson) throws IOException {
         io.github.dengmeiluan.es.rebuild.multicluster.EsClientRouter r = clientRouter;
         String targetVersion = r == null ? null : r.currentEsVersion();
         if (io.github.dengmeiluan.es.rebuild.multicluster.EsVersionCaps.requiresMappingType(targetVersion)) {
@@ -1696,6 +1765,10 @@ public class EsIndexAdmin {
      */
     public void deleteIndex(String index) throws IOException {
         guardIndexName(index);
+        doDeleteIndex(index);
+    }
+
+    private void doDeleteIndex(String index) throws IOException {
         restHighLevelClient().indices().delete(new DeleteIndexRequest(index), RequestOptions.DEFAULT);
         logger.info("[EsIndexAdmin] deleteIndex: {}", index);
     }

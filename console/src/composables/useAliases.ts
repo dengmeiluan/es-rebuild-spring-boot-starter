@@ -55,3 +55,11 @@ export function aliasEntries(key: string): AliasEntry[] {
 export function aliasesOf(index: string, key: string): string[] {
   return aliasEntries(key).filter(a => a.to.includes(index)).map(a => a.name);
 }
+
+/** 换号清理：别名清单是上一身份在目标集群上的元数据观测（连接名/索引名不外泄）。 */
+export function __clearAliasCache() {
+  cache.key = null;
+  cache.list = [];
+  cache.inflight = null;
+  lastRequestedKey = null;
+}

@@ -1325,4 +1325,41 @@ public class ConsoleAuthInterceptorPageAuthTest {
                 new HashSet<>(Collections.singletonList("conn:c1:w:config-validator"))));
         assertFalse("ADMIN 不受动作收口", ConsoleAuthInterceptor.aliasActionsAddOnly(req));
     }
+
+    /* ---------------- host-cluster-visible=false（1046） ---------------- */
+
+    @Test
+    public void 宿主隐藏模式_残留conn_host页键不得直捣宿主数据面() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor it = interceptor(
+                delegated(new HashSet<>(Collections.singletonList("indices"))), true, audit);
+        it.setHostClusterVisible(false);
+        StubResponse resp = new StubResponse();
+        assertFalse("host-cluster-visible=false 时宿主专属 provider 必须拒绝",
+                it.preHandle(stubRequest("GET", "/internal/es/index/cluster/inspect?indexKey=orders", ""),
+                        resp.proxy, null));
+        assertEquals(403, resp.status);
+        assertEquals("HOST_DISABLED", audit.action);
+    }
+
+    @Test
+    public void 宿主隐藏模式_自举端点仍可自救() throws Exception {
+        ConsoleAuthInterceptor it = interceptor(
+                delegated(new HashSet<>(Collections.singletonList("indices"))), true, new CapturingAudit());
+        it.setHostClusterVisible(false);
+        assertTrue("身份自查不能在宿主隐藏时被挡死（换号用户要能定位自己的授权）",
+                it.preHandle(stubRequest("GET", "/internal/es/index/auth/me", ""), new StubResponse().proxy, null));
+        assertTrue("连接目录是定位授权目标的唯一自助通道",
+                it.preHandle(stubRequest("GET", "/internal/es/index/clusters", ""), new StubResponse().proxy, null));
+    }
+
+    @Test
+    public void 宿主隐藏模式_ADMIN仍可管理宿主() throws Exception {
+        ConsoleAuthInterceptor it = interceptor(
+                new ConsolePrincipal("admin", ConsoleRole.ADMIN, false), true, new CapturingAudit());
+        it.setHostClusterVisible(false);
+        assertTrue("ADMIN 是全局管理权，宿主隐藏不拦管理面",
+                it.preHandle(stubRequest("GET", "/internal/es/index/cluster/inspect?indexKey=orders", ""),
+                        new StubResponse().proxy, null));
+    }
 }

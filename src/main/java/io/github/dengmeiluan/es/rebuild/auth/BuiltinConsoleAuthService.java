@@ -200,6 +200,12 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
      * 五段形态为纪元字段引入前的存量 token（隐含 epoch=0）：升级部署后未变更过的账号会话不中断，
      * 一旦账号有任何变更（改密/改角色/重建）纪元递增、存量 token 与新 token 一起吊销。 */
     public ConsolePrincipal verifyToken(String token) {
+        /* 内置登录关闭=委托部署：宿主撤销会话后，浏览器里残留的旧内置 token 不得成为
+           绕过宿主授权的第二条身份（其 grantedPages=null 会直接关闭页面门）。
+           关闭后不再签发新 token，因此拒绝存量 token 不误伤任何正常会话。 */
+        if (!loginEnabled) {
+            return null;
+        }
         if (token == null || token.isEmpty()) {
             return null;
         }
