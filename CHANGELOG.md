@@ -86,7 +86,9 @@
 - 1048 收尾轮 `--target all` 发版 **20261024183959**：405/415、通配提示随 console bundle 上线；
   56 写端点/52 页矩阵/SQL cursor 复验通过。
 - 宿主侧：`LinkMenuProvisioner` 默认授权改为仅新连接首次注册时补授（撤销跨重启持久），
-  iframe `postMessage` 改同源 targetOrigin 并校验 `e.origin`（防 iframe 被导航到跨源页后 JWT 外泄）。
+  iframe `postMessage` 改同源 targetOrigin 并校验 `e.origin`（防 iframe 被导航到跨源页后 JWT 外泄）；
+  新建 **PROD** 连接默认只授读叶子（不自动授 `:write:` 生产写权），QA/STAGING 维持全量默认，
+  存量连接授权不变（管理员可显式勾选生产写权）。
 - 收尾复核：非 ADMIN 的 `_logstash/_connector/_synonyms/_query_rules/_autoscaling/
   _searchable_snapshots` 六个管理面读端点全部 403，ADMIN 放行。
 - `deng_test_x3`（零页集）：连接目录空、`/cluster/indices`、文档写、DevTools 读写、
