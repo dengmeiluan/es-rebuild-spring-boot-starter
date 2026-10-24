@@ -97,7 +97,7 @@
 - 1048 收尾轮 `--target all` 发版 **20261024183959**：405/415、通配提示随 console bundle 上线；
   56 写端点/52 页矩阵/SQL cursor 复验通过。
 - 1050 发版 **20261024194551**（all）：跨标签会话同步、宿主登出清理、契约 fail-fast 上线；
-  QutoHub 启动通过（契约 52/52），空 token 产线复验通过。
+  QuoteHub 启动通过（契约 52/52），空 token 产线复验通过。
 - 宿主侧：`LinkMenuProvisioner` 默认授权改为仅新连接首次注册时补授（撤销跨重启持久），
   iframe `postMessage` 改同源 targetOrigin 并校验 `e.origin`（防 iframe 被导航到跨源页后 JWT 外泄）；
   新建 **PROD** 连接默认只授读叶子（不自动授 `:write:` 生产写权），QA/STAGING 维持全量默认，
