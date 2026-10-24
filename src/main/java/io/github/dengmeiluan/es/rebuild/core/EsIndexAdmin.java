@@ -3257,6 +3257,10 @@ public class EsIndexAdmin {
             "/_cat/transforms", "/_cat/ml", "/_cat/component_templates",
             "/_data_stream", "/_features", "/_license", "/_xpack/license", "/_xpack/usage",
             "/_cluster/stats", "/_enrich", "/_monitoring",
+            /* 1046：新版采集/连接器/同义词/查询规则/弹性伸缩/可搜索快照的只读元数据面——
+               可带出管道凭据、连接器密钥与集群容量信息，属管理面，非 ADMIN 不开放。 */
+            "/_logstash", "/_connector", "/_synonyms", "/_query_rules",
+            "/_autoscaling", "/_searchable_snapshots",
             /* scroll 续读无法从请求验明所属搜索上下文：id 一旦泄露（审计/同屏）可续读
                任意人打开过的控制面上下文；GET 形态在此兜底（POST 续读已被数据面写白名单拒绝）。
                热线程栈、悬挂索引、许可/特性根、脚本上下文与异步搜索状态会带出

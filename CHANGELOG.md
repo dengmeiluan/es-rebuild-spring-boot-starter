@@ -35,9 +35,15 @@
   `rebuild-empty`、`replicas` 等恒定执行在宿主的端点，此前只有数据面拦截器检查宿主可见性，
   残留 `conn:host` 页键可绕过；现非 ADMIN 在宿主隐藏时按 `HOST_DISABLED` 拒绝（自举端点仍放行）
 - **`search-raw` 不再授予 aliases 页文档读**：别名页只做元数据管理，不应凭页键读取业务文档原文
+- **控制器主动拒绝的状态码不再被兜底拉平成 500**：`ResponseStatusException`（PIT/SQL cursor
+  归属、作业归属等）现保留其 403 等业务状态码，错误体只回 reason 文案（此前前端会把
+  「无权限」误判为服务端故障并重试）
+- **管理面只读元数据补拒绝**：`_logstash` / `_connector` / `_synonyms` / `_query_rules` /
+  `_autoscaling` / `_searchable_snapshots` 可带出管道凭据、连接器密钥与容量信息，
+  非 ADMIN raw 与 DevTools 前端镜像同步拒绝
 - 读者可写面复核：`_render/template` 的已存模板 id、`_msearch` 的字符串 `indices`、
   SQL `FROM a, b` 逗号列表、检索 body 的 terms/wrapper/MLT/indices_boost 目标，前端
-  `devtoolsScope` 全部与后端同口径预检（金标准新增 8 条向量，50+ 条双向断言）
+  `devtoolsScope` 全部与后端同口径预检（金标准新增 14 条向量，50+ 条双向断言）
 
 ### 修复
 
@@ -57,8 +63,26 @@
 
 - 新增 `RawPitOwnership1046Test`、`SearchTemplateGuard1046Test`、`SharedReadGrant1046Test`、
   `SqlCursorOwnership1046Test`、`DelegatedBuiltinToken1046Test`、`permissionDrift1046.spec`；
-  `ConsoleAuthInterceptorPageAuthTest` 增宿主隐藏三例；DevTools 金标准增 8 条向量并同步前端断言
+  `ConsoleAuthInterceptorPageAuthTest` 增宿主隐藏三例；DevTools 金标准增 14 条向量并同步前端断言
 - 权限一致性扫描：共享写 23 / 共享读 41 / 页 52 / 299 文件，0 不一致；`vue-tsc` 0 错
+
+### 真实产线验证（QuoteHub，2026-10-24）
+
+- starter 1.0.58 干净 worktree 构建（排除并行 lane WIP）→ 本机 Maven 安装 → QuoteHub
+  `release.py --mode deploy --target backend` 上线，`Started QuoteHubAdminApplication` 健康。
+- `deng_test_x3`（零页集）：连接目录空、`/cluster/indices`、文档写、DevTools 读写、
+  `auth/users` 全 403；浏览器只出「无可访问页面/未授权任何集群」+ 申请信息。
+- `deng_test_x1`（VIEWER，QA/STAGING 全写、PROD 无写）：QA 文档删除过授权门（ES 404）、
+  DevTools QA 执行钮可见且标注「数据面」；PROD 文档写/DevTools 写 403，DevTools 页只出
+  「只读」无执行钮。
+- `deng_test_x2`（ADMIN）：PROD 文档写、raw `_cat/indices`、`auth/users` 均放行。
+- PIT 跨身份：x2 在 QA 开启 PIT 后，x1 经 `pit/search`、`?source=`、`DELETE /_pit` 三种
+  通道全部 403；x2 仍可续用并正常关闭（`source`/根级 id 归属校验实锤）。
+- 换号污染：同标签页 x2→x3，预置 17 个账号视角键（DevTools 草稿/历史、DSL 会话、词项
+  持久档、目标、收藏、健康快照、确认免打扰等）全部清空，仅剩 `last-user` 与空的历史数组；
+  x3 菜单为空且无 DevTools 入口。
+- 宿主侧：`LinkMenuProvisioner` 默认授权改为仅新连接首次注册时补授（撤销跨重启持久），
+  iframe `postMessage` 改同源 targetOrigin 并校验 `e.origin`。
 
 ## [1.0.58]
 

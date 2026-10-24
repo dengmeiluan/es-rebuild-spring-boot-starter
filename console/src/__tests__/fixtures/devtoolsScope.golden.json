@@ -66,6 +66,12 @@
     { "id": "d44", "method": "GET", "path": "/logs%2F_search", "body": null, "allow": false, "ui": "deny", "why": "解码分隔符与真实路由分歧（1046 前端 fail-closed）" },
     { "id": "d45", "method": "POST", "path": "/logs/_search", "body": "{\"query\":{\"terms\":{\"u\":{\"index\":\".security\",\"id\":\"1\",\"path\":\"username\"}}}}", "allow": false, "ui": "deny", "why": "检索 body 二级数据源指向控制面（1046 前端解析 terms/wrapper/MLT）" },
     { "id": "d46", "method": "POST", "path": "/_msearch", "body": "{\"indices\":\"es_console_user\"}\n{\"query\":{\"match_all\":{}}}\n", "allow": false, "ui": "deny", "why": "msearch indices 字符串形态（1046 前端兼容 string/array）" },
+    { "id": "d47", "method": "GET", "path": "/_logstash/pipeline", "body": null, "allow": false, "ui": "deny", "why": "管道元数据可带凭据（1046 管理面读拒绝）" },
+    { "id": "d48", "method": "GET", "path": "/_connector", "body": null, "allow": false, "ui": "deny", "why": "连接器密钥面（1046）" },
+    { "id": "d49", "method": "GET", "path": "/_synonyms", "body": null, "allow": false, "ui": "deny", "why": "同义词集元数据（1046）" },
+    { "id": "d50", "method": "GET", "path": "/_query_rules", "body": null, "allow": false, "ui": "deny", "why": "查询规则管理面（1046）" },
+    { "id": "d51", "method": "GET", "path": "/_autoscaling/capacity", "body": null, "allow": false, "ui": "deny", "why": "集群容量信息（1046）" },
+    { "id": "d52", "method": "GET", "path": "/_searchable_snapshots/cache/stats", "body": null, "allow": false, "ui": "deny", "why": "可搜索快照缓存元数据（1046）" },
 
     { "id": "e19", "method": "GET", "path": "/logs/_search?source=%7B%22pit%22%3A%7B%22id%22%3A%22abc%22%7D%7D", "body": null, "allow": true, "ui": "allow", "why": "?source= 是 body 同权形态：索引级 PIT 搜索应放行（1046 前端同样按 source 判定）" },
     { "id": "e20", "method": "GET", "path": "/logs/_search?pretty=true", "body": null, "allow": true, "ui": "allow", "why": "普通查询参数不影响数据面检索" },

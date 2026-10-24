@@ -60,6 +60,8 @@ const SYSTEM_READ_DENY = new Set([
   '/_cat/transforms', '/_cat/ml', '/_cat/component_templates',
   '/_data_stream', '/_features', '/_license', '/_xpack/license', '/_xpack/usage',
   '/_cluster/stats', '/_enrich', '/_monitoring',
+  /* 1046：新版采集/连接器/同义词/查询规则/弹性伸缩/可搜索快照的元数据面（可带凭据/容量）。 */
+  '/_logstash', '/_connector', '/_synonyms', '/_query_rules', '/_autoscaling', '/_searchable_snapshots',
   '/_search/scroll', '/_cat/hot_threads', '/_dangling', '/_xpack',
   '/_script_context', '/_script_language', '/_migration', '/_async_search/status',
   '/_refresh', '/_flush', '/_cache', '/_forcemerge', '/_close', '/_open', '/_reindex',
