@@ -44,6 +44,14 @@
   即没有业务动作执行，授权边界不变
 - **DevTools/REST 通配目标前置提示（1048）**：通配/日期数学/跨集群目标由后端解析真实索引，
   前端不预拒合法 `logs-*`，但在执行钮 tooltip 提前说明「命中控制面会被拒绝」
+- **宿主登出/跨标签换人立即清工作现场（1050）**：host token 变空时此前只 invalidate 身份，
+  旧账号草稿/目标/词项仍留在 localStorage 直到下一次登录。现空 token 分支立即
+  `purgeLocalUserState()`（工作现场键 + `last-user` + ioRecorder + identity-changed）并回到
+  登录态；宿主 auth store 监听 persist key 的 storage 事件，跨标签换人/登出同步 token、
+  重拉档案，iframe 收到新 token 或空 token 后立即失效旧身份
+- **页面契约漂移启动期 fail-fast（1050）**：QuoteHub `LinkMenuProvisioner` 启动时校验
+  starter 契约 key 集 == 宿主 PAGES key 集，缺页/多页直接拒绝启动，杜绝新页面在宿主
+  静默无菜单（非 ADMIN 永远授不到、ADMIN 绕过掩盖）
 - **管理面只读元数据补拒绝**：`_logstash` / `_connector` / `_synonyms` / `_query_rules` /
   `_autoscaling` / `_searchable_snapshots` 可带出管道凭据、连接器密钥与容量信息，
   非 ADMIN raw 与 DevTools 前端镜像同步拒绝
@@ -73,6 +81,9 @@
 - 1048：`InternalEsMethodNotAllowedResolverTest`（405+Allow/非控制台不拦/415）、
   `pageRouteMatrix1048.spec`（零授权 52 路由全 forbidden、全读授权 52 路由全可达）、
   `ConsolePermissionsEndpoint888Test` 增 52 页只读矩阵（read 全 true / write 全 false）
+- 1050：`hostLogoutPurge1050.spec`（8 类工作现场键 + last-user 清零、空 token 分支源码锁）、
+  `LinkMenuProvisionerTest` 增契约缺页/多页用例（7 例全绿）；产线空 token 复验
+  11 键→3 键（仅新会话提示/空历史/设备向导标记），`last-user=null`，会话结束提示+登录态
 - 产线机械扫描：56 个写端点，x3 与 x1-PROD 均 **54×403 + 2×405**（方法不匹配语义化），
   0 意外；逐页矩阵 x3 **0读/0写**、x1-PROD **52读/0写**、x1-QA **52读/23写**、
   x2-PROD **52读/30写**；SQL cursor 跨身份 x1 403、x2 续页/关闭 200
@@ -85,6 +96,8 @@
   收尾轮 `--target all`（后端 + 宿主前端）发版 **20261024182511** 验证通过。
 - 1048 收尾轮 `--target all` 发版 **20261024183959**：405/415、通配提示随 console bundle 上线；
   56 写端点/52 页矩阵/SQL cursor 复验通过。
+- 1050 发版 **20261024194551**（all）：跨标签会话同步、宿主登出清理、契约 fail-fast 上线；
+  QutoHub 启动通过（契约 52/52），空 token 产线复验通过。
 - 宿主侧：`LinkMenuProvisioner` 默认授权改为仅新连接首次注册时补授（撤销跨重启持久），
   iframe `postMessage` 改同源 targetOrigin 并校验 `e.origin`（防 iframe 被导航到跨源页后 JWT 外泄）；
   新建 **PROD** 连接默认只授读叶子（不自动授 `:write:` 生产写权），QA/STAGING 维持全量默认，
