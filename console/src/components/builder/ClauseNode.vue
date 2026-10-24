@@ -68,6 +68,7 @@
       <MltLikeEditor :value="node.value" @update="v => patch({ value: v })" />
       <input class="inp cn-val mono cn-fields" :value="fieldsText" placeholder="字段列表，逗号分隔"
              @input="onFields(($event.target as HTMLInputElement).value)" />
+      <button aria-label="多选字段" class="btn sm ghost" title="多选字段（弹层勾选）" @click.stop="toggleMf($event)"><ListChecks :size="11" /></button>
     </template>
     <template v-else-if="nodeOpForm === 'fields'">
       <!-- 1039：长查询串主值多行编辑（query_string/simple_query_string/combined_fields——
@@ -80,6 +81,7 @@
              @input="onValue(($event.target as HTMLInputElement).value)" />
       <input class="inp cn-val mono cn-fields" :value="fieldsText" placeholder="字段列表，逗号分隔"
              @input="onFields(($event.target as HTMLInputElement).value)" />
+      <button aria-label="多选字段" class="btn sm ghost" title="多选字段（弹层勾选）" @click.stop="toggleMf($event)"><ListChecks :size="11" /></button>
     </template>
     <!-- 1011：intervals 专用递归编辑位——规则可解析（唯一类型键+官方 6 类）即一等编辑：
          类型/主值/_name/参数 schema 表/all_of·any_of 递归子规则/位置过滤关系槽；
@@ -214,6 +216,11 @@
       <GenericParams :value="node.params" :schema="paramSchema" @update="onParams" />
     </div>
     <!-- 换字段算子被静默替换时的行内微提示（2.5s 后淡出）——aria-live 播报，不弹全局 toast -->
+    <!-- 1042：fields 形态多选字段弹层（两分支触发钮共用一实例；定位锚触发钮下方右缘钳制） -->
+    <MultiFieldPicker v-if="mfOpen" :model-value="Array.isArray(node.fields) ? node.fields : []"
+                      :fields="fields" :types="types" :style="mfStyle"
+                      @update:model-value="v => onFields((v || []).join(','))"
+                      @close="mfOpen = false" />
     <span v-if="nudge" class="cn-nudge" :class="{ out: nudgeOut }" role="status" aria-live="polite">{{ nudge }}</span>
   </div>
 </template>
@@ -222,7 +229,8 @@
 /* W1：富表单条件行。不可变更新：所有变更 emit 新 LeafNode，由父级替换——
  同步引擎依赖引用变化触发序列化。 */
 import { ref, computed, inject, onBeforeUnmount, watch } from 'vue';
-import { Clock, X, Settings2, Group, Circle, CircleSlash, Copy, ClipboardCopy } from 'lucide-vue-next';
+import { Clock, X, Settings2, Group, Circle, CircleSlash, Copy, ClipboardCopy, ListChecks } from 'lucide-vue-next';
+import MultiFieldPicker from './MultiFieldPicker.vue';
 import { copySubtreeToStash } from '../../utils/queryStash';
 import FieldSelect from './FieldSelect.vue';
 import GenericParams from './GenericParams.vue';
@@ -358,6 +366,15 @@ function onCopySubtree() {
    multi_match/query 短串语义维持单行输入） */
 const LONG_QUERY_OPS = new Set(['query_string', 'simple_query_string', 'combined_fields']);
 const longQueryOp = computed(() => LONG_QUERY_OPS.has(props.node.op));
+/* 1042：fields 形态多选字段弹层（两分支触发钮共用一实例；定位同 toggleAdv 右缘钳制） */
+const mfOpen = ref(false);
+const mfStyle = ref<Record<string, string>>({});
+function toggleMf(e: MouseEvent) {
+  mfOpen.value = !mfOpen.value;
+  if (!mfOpen.value) return;
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  mfStyle.value = { top: rect.bottom + 4 + 'px', left: Math.max(8, Math.min(rect.left, window.innerWidth - 332)) + 'px' };
+}
 onBeforeUnmount(() => { clearTimeout(nudgeT1); clearTimeout(nudgeT2); });
 
 function onField(field: string) {
