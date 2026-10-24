@@ -31,6 +31,10 @@
            （可发现性），双空删键回默认；非标量形态留守自由表零丢失（boundsShown 门控） -->
       <AggBoundsPanel v-if="boundsShown" :body="(node.body as Record<string, unknown>)"
                       @patch="v => onBodyPatch('extended_bounds', v)" />
+      <!-- 1037：composite 的 sources 行编辑——键缺席给单行骨架（可发现性），非投影
+           形态（多键源项等）留守自由表零丢失（sourcesShown 门控） -->
+      <AggCompositePanel v-if="sourcesShown" :body="(node.body as Record<string, unknown>)" :fields="fields" :types="types"
+                         @patch="v => onBodyPatch('sources', v)" />
       <!-- top 常见聚合的 .field 键传 fieldKeys，行内渲染 FieldSelect 字段选择器；
      其余/未知聚合名不传（空数组），回落裸键值表零降级。
      1020：AGG_BODY_PARAMS 在册聚合的 body 加 schema——具名参数升类型化输入/枚举下拉
@@ -62,6 +66,7 @@ import AggRangesPanel from './AggRangesPanel.vue';
 import AggFiltersPanel from './AggFiltersPanel.vue';
 import AggOrderPanel from './AggOrderPanel.vue';
 import AggBoundsPanel from './AggBoundsPanel.vue';
+import AggCompositePanel from './AggCompositePanel.vue';
 import { AGG_OPS, AGG_BODY_PARAMS } from '../../utils/queryAstOps';
 import { nid, type AggNode } from '../../utils/queryAst';
 
@@ -99,6 +104,14 @@ function boundsProjectionOk(o: unknown): boolean {
 const boundsShown = computed(() =>
   BOUNDS_AGGS.has(op.value) && isObj(props.node.body)
   && (!('extended_bounds' in props.node.body) || boundsProjectionOk(props.node.body.extended_bounds)));
+/* 1037：composite 的 sources 门控——键缺席给骨架（可发现性），可投影形态（数组且
+   每项单类型键+对象体）给行编辑；非投影形态留守自由表零丢失 */
+function sourcesProjectionOk(o: unknown): boolean {
+  return Array.isArray(o) && o.every(it => isObj(it) && Object.keys(it).length === 1 && isObj((it as Record<string, unknown>)[Object.keys(it)[0]]));
+}
+const sourcesShown = computed(() =>
+  op.value === 'composite' && isObj(props.node.body)
+  && (!('sources' in props.node.body) || sourcesProjectionOk(props.node.body.sources)));
 const bodyView = computed<Record<string, unknown>>(() => {
   const b = props.node.body as Record<string, unknown>;
   const out: Record<string, unknown> = {};
@@ -106,14 +119,15 @@ const bodyView = computed<Record<string, unknown>>(() => {
     if (PANEL_KEYS.has(k)) continue;
     if (k === 'order' && orderShown.value) continue;
     if (k === 'extended_bounds' && boundsShown.value) continue;
+    if (k === 'sources' && sourcesShown.value) continue;
     out[k] = v;
   }
   return out;
 });
-function onBodyPatch(key: 'ranges' | 'filters' | 'order' | 'extended_bounds', v: unknown) {
+function onBodyPatch(key: 'ranges' | 'filters' | 'order' | 'extended_bounds' | 'sources', v: unknown) {
   const body: Record<string, unknown> = { ...(props.node.body as Record<string, unknown>) };
-  /* order/extended_bounds 清空 = 删键回默认语义（空数组哨兵，键本身无空语义） */
-  if ((key === 'order' || key === 'extended_bounds') && Array.isArray(v) && v.length === 0) delete body[key];
+  /* order/extended_bounds/sources 清空 = 删键回骨架语义（空数组哨兵） */
+  if ((key === 'order' || key === 'extended_bounds' || key === 'sources') && Array.isArray(v) && v.length === 0) delete body[key];
   else body[key] = v;
   emit('update:node', { ...props.node, body });
 }
@@ -129,6 +143,8 @@ function onBodyParams(v: Record<string, unknown> | unknown[]) {
     if (k in v) out[k] = (v as Record<string, unknown>)[k];
     else if (k in b) out[k] = b[k];
   }
+  if ('sources' in v) out.sources = (v as Record<string, unknown>).sources;
+  else if ('sources' in b) out.sources = b.sources;
   emit('update:node', { ...props.node, body: out });
 }
 
