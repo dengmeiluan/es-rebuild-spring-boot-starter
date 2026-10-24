@@ -70,6 +70,12 @@ public final class EsErrorMapper {
      * ES 端 5xx 与网络类 IO 故障映射 502（上游故障）；其余未知异常 500。
      */
     public static int httpStatusOf(Throwable e) {
+        /* 控制器里用 ResponseStatusException 表达「已判定的拒绝」（PIT/SQL cursor 归属、
+           作业归属等）：其状态码就是业务语义，不能被通用兜底拉平成 500（前端会误判为
+           服务端故障并重试）。 */
+        if (e instanceof org.springframework.web.server.ResponseStatusException) {
+            return ((org.springframework.web.server.ResponseStatusException) e).getStatus().value();
+        }
         if (e instanceof org.elasticsearch.client.ResponseException) {
             return normalize(((org.elasticsearch.client.ResponseException) e)
                     .getResponse().getStatusLine().getStatusCode());
@@ -90,6 +96,14 @@ public final class EsErrorMapper {
     /** 异常 → 前端可读 message：{@code 异常类名: 原始报错体}（含 ES root_cause），超长截断；
      *  内网地址/端口统一脱敏（root_cause 语义不受影响）。 */
     public static String describe(Throwable e) {
+        if (e instanceof org.springframework.web.server.ResponseStatusException) {
+            /* reason 是给人看的业务文案（如 PIT 归属提示）；不要暴露
+               "ResponseStatusException: 403 FORBIDDEN" 这类框架串。 */
+            String reason = ((org.springframework.web.server.ResponseStatusException) e).getReason();
+            if (reason != null && !reason.trim().isEmpty()) {
+                return sanitizeTopology(reason.trim());
+            }
+        }
         String msg = e.getMessage();
         String full = e.getClass().getSimpleName() + (msg == null || msg.isEmpty() ? "" : ": " + msg);
         full = sanitizeTopology(full);

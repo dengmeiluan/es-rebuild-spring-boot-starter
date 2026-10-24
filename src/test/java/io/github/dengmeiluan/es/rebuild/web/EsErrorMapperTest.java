@@ -19,7 +19,9 @@ package io.github.dengmeiluan.es.rebuild.web;
 import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.rest.RestStatus;
 import org.junit.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -57,6 +59,17 @@ public class EsErrorMapperTest {
     public void esStatus5xx_mapsTo502() {
         assertEquals("ES 端 5xx 是上游故障，映射 502",
                 502, EsErrorMapper.httpStatusOf(new ElasticsearchStatusException("down", RestStatus.SERVICE_UNAVAILABLE)));
+    }
+
+    @Test
+    public void responseStatusException_preservesBusinessStatusAndReason() {
+        ResponseStatusException denied = new ResponseStatusException(
+                HttpStatus.FORBIDDEN, "PIT id 由他人开启：仅开启者本人或 ADMIN 可使用");
+        assertEquals("控制器主动判定的 403 不得被兜底拉平成 500", 403, EsErrorMapper.httpStatusOf(denied));
+        assertEquals("错误体只保留业务文案，不暴露 ResponseStatusException 框架串",
+                "PIT id 由他人开启：仅开启者本人或 ADMIN 可使用", EsErrorMapper.describe(denied));
+        assertEquals("PIT id 由他人开启：仅开启者本人或 ADMIN 可使用",
+                EsErrorMapper.esErrorBody(denied).get("message"));
     }
 
     @Test
