@@ -55,12 +55,31 @@ function fieldValueParts(n: LeafNode, verb: string): SentencePart[] {
     const sym = (k: string) => (k === 'gte' ? '≥' : k === 'gt' ? '>' : k === 'lte' ? '≤' : '<');
     const keys = ['gte', 'gt', 'lte', 'lt'].filter(k => v[k] !== undefined && v[k] !== '');
     if (!keys.length) return [P(field, 'field', id), P(' 范围内', 'op', id), P('（未填边界）', 'muted', id)];
+    /* 1044：date-math 人话化——快选 chips 写入的 now-Nu/now/y 锚在摘要条出人话
+       （「近30天」「今年」），与 1041 时间窗快选心智贯穿；其余值原样 */
+    const human = (val: unknown): string => {
+      const s = String(val);
+      /* /d /y 等舍入尾可选——'now-30d/d' 与 'now-30d' 均命中 */
+      const m = s.match(/^now-(\d+)([dmy])(?:\/\w+)?$/);
+      if (m) {
+        const n = m[1];
+        if (n === '7' && m[2] === 'd') return '近7天';
+        if (n === '30' && m[2] === 'd') return '近30天';
+        if (n === '90' && m[2] === 'd') return '近90天';
+        if (n === '1' && m[2] === 'y') return '近一年';
+        return '近' + n + ({ d: '天', m: '个月', y: '年' }[m[2]] || m[2]);
+      }
+      if (s === 'now/y') return '今年';
+      if (s === 'now/M') return '本月';
+      if (s === 'now/w') return '本周';
+      return s;
+    };
     const out: SentencePart[] = [P(field, 'field', id)];
     keys.forEach((k, i) => {
       /* 同一条件内的多个边界用顿号（不是逻辑「且」——否则和外层条件连接词混淆） */
       if (i) out.push(P('、', 'muted', id), P(sym(k) + ' ', 'op', id));
       else out.push(P(' ' + sym(k) + ' ', 'op', id));
-      out.push(P(briefValue(v[k]), 'value', id, String(v[k])));
+      out.push(P(human(v[k]), 'value', id, String(v[k])));
     });
     return out;
   }

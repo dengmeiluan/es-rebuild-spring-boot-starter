@@ -26,7 +26,7 @@ describe('998 语句摘要 · 词项形态', () => {
     expect(say({ query: { range: { age: { gte: 10, lte: 20 } } } })).toBe('age ≥ 10、≤ 20');
   });
   it('range 单边 + date math', () => {
-    expect(say({ query: { range: { ts: { gte: 'now-1d/d' } } } })).toBe('ts ≥ now-1d/d');
+    expect(say({ query: { range: { ts: { gte: 'now-1d/d' } } } })).toBe('ts ≥ 近1天'); /* 1044：date-math 人话化随迁 */
   });
   it('exists', () => {
     expect(say({ query: { exists: { field: 'user' } } })).toBe('user 存在');
