@@ -54,6 +54,11 @@
  值输入旁黄点警示，title 完整说明 -->
       <span v-if="rangeLexWarn" class="cn-rwarn" role="img" aria-label="keyword 字段的 range 按字典序比较"
             title="keyword 字段的 range 按字典序比较（'100' < '20'）；数值/时间范围建议改用对应类型字段" />
+      <!-- 1041：日期时间窗快选（公告/研报/舆情查询的最高频手势）——一击成窗 gte=相对锚 + lte=now -->
+      <div v-if="isDateRange" class="cn-rchips" role="group" aria-label="时间窗快选">
+        <button v-for="c in DATE_CHIPS" :key="c.label" type="button" class="cn-rchip"
+                :title="'gte=' + c.gte + '，lte=now'" @click="applyChip(c)">{{ c.label }}</button>
+      </div>
     </template>
     <!-- 【985】多字段形态：主值输入 + 字段列表输入（逗号分隔 ↔ string[]）。
          1018：more_like_this 的 like 为对象/数组混合形态时升专用编辑器
@@ -649,6 +654,23 @@ const rangeHints = computed<string[]>(() => {
   return [];
 });
 
+/* 1041：日期时间窗快选——公告/研报/舆情类查询的最高频手势（发布时间窗一击成窗：
+   gte=相对锚 + lte=now 完整窗口）；仅 date/date_nanos 字段挂载 */
+const isDateRange = computed(() => fieldType.value === 'date' || fieldType.value === 'date_nanos');
+const DATE_CHIPS = [
+  { label: '近7天', gte: 'now-7d/d' },
+  { label: '近30天', gte: 'now-30d/d' },
+  { label: '近90天', gte: 'now-90d/d' },
+  { label: '近一年', gte: 'now-1y/y' },
+  { label: '今年', gte: 'now/y' },
+];
+function applyChip(c: { gte: string }) {
+  /* 单次整体 patch（同 tick 两次 setRange 会读到未更新的旧基，lte 覆写 gte） */
+  const base = props.node.value && typeof props.node.value === 'object' && !Array.isArray(props.node.value)
+    ? props.node.value as Record<string, unknown> : {};
+  patch({ value: { ...base, gte: c.gte, lte: 'now' } });
+}
+
 function onDragStart(e: DragEvent) {
   (window as any)[DRAG_KEY] = props.node.id;
   e.dataTransfer?.setData('text/plain', props.node.id);
@@ -756,6 +778,11 @@ function endDrag() { delete (window as any)[DRAG_KEY]; fireDrag(false); }
 .cn-nudge.out { opacity: 0; }
 /* range-on-keyword 字典序警示黄点：title 承载完整说明 */
 .cn-rwarn { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--warn); cursor: help; }
+/* 1041：日期时间窗快选 chips（cn-objk-btn 同语言：细边胶囊+hover 柔底） */
+.cn-rchips { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: var(--sp-1); }
+.cn-rchip { padding: 1px 8px; border: 1px solid var(--line); border-radius: 999px; background: none;
+  font-size: var(--fs-2xs); color: var(--tx2); cursor: pointer; transition: background var(--tr), color var(--tr); }
+.cn-rchip:hover { background: var(--ac-soft); color: var(--tx0); }
 /* 算子×类型错配 / 开头通配符警示黄点（同 .cn-rwarn 形态）。
  span 升级 button（键盘可达），重置 UA 按钮壳、cursor 由 help 改 pointer */
 .cn-owarn { flex: none; width: 8px; height: 8px; padding: 0; border: none; border-radius: 50%; background: var(--warn); cursor: pointer; }
