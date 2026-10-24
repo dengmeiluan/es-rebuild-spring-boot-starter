@@ -69,7 +69,12 @@
 ### 真实产线验证（QuoteHub，2026-10-24）
 
 - starter 1.0.58 干净 worktree 构建（排除并行 lane WIP）→ 本机 Maven 安装 → QuoteHub
-  `release.py --mode deploy --target backend` 上线，`Started QuoteHubAdminApplication` 健康。
+  `release.py --mode deploy --target backend` 上线，`Started QuoteHubAdminApplication` 健康；
+  收尾轮 `--target all`（后端 + 宿主前端）发版 **20261024182511** 验证通过。
+- 宿主侧：`LinkMenuProvisioner` 默认授权改为仅新连接首次注册时补授（撤销跨重启持久），
+  iframe `postMessage` 改同源 targetOrigin 并校验 `e.origin`（防 iframe 被导航到跨源页后 JWT 外泄）。
+- 收尾复核：非 ADMIN 的 `_logstash/_connector/_synonyms/_query_rules/_autoscaling/
+  _searchable_snapshots` 六个管理面读端点全部 403，ADMIN 放行。
 - `deng_test_x3`（零页集）：连接目录空、`/cluster/indices`、文档写、DevTools 读写、
   `auth/users` 全 403；浏览器只出「无可访问页面/未授权任何集群」+ 申请信息。
 - `deng_test_x1`（VIEWER，QA/STAGING 全写、PROD 无写）：QA 文档删除过授权门（ES 404）、
@@ -80,7 +85,7 @@
   通道全部 403；x2 仍可续用并正常关闭（`source`/根级 id 归属校验实锤）。
 - 换号污染：同标签页 x2→x3，预置 17 个账号视角键（DevTools 草稿/历史、DSL 会话、词项
   持久档、目标、收藏、健康快照、确认免打扰等）全部清空，仅剩 `last-user` 与空的历史数组；
-  x3 菜单为空且无 DevTools 入口。
+  x3 菜单为空且无 DevTools 入口（收尾轮 11 键复测同样 2 键收口）。
 - 宿主侧：`LinkMenuProvisioner` 默认授权改为仅新连接首次注册时补授（撤销跨重启持久），
   iframe `postMessage` 改同源 targetOrigin 并校验 `e.origin`。
 
