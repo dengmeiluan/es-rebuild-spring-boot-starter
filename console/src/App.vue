@@ -504,6 +504,17 @@ async function settleAuthChain() {
  比「先探身份再拉索引」串行省 1 个 RTT；bootstrapped 保证握手应答与超时兜底只赢一次 */
 let hostWaitTimer = 0;
 let bootstrapped = false;
+/* 宿主监听器可能晚于子页就绪挂载（宿主 effect/路由切换、首包缓存命中都会改变时序）：
+   单次 ready 一旦被错过，子页只能走内置鉴权并在统一登录部署上永久停在「身份未确认」。
+   拿到宿主凭证前多拍重播，宿主挂上监听后的任意一拍都能补完握手。 */
+const readyTimers: number[] = [];
+function stopReadyAnnounce() {
+  while (readyTimers.length) window.clearTimeout(readyTimers.pop() as number);
+}
+function announceHostReady() {
+  if (getHostToken()) { stopReadyAnnounce(); return; }
+  try { window.parent.postMessage({ type: 'es-console-ready' }, '*'); } catch { /* 跨域限制时静默 */ }
+}
 function bootstrapIdentity() {
   if (bootstrapped) return;
   bootstrapped = true;
@@ -539,7 +550,10 @@ onMounted(() => {
   // 收到后重探身份：委托鉴权认出即免内置登录。独立开页（非 iframe）零开销。
   if (window.parent !== window) {
     window.addEventListener('message', onHostMessage);
-    try { window.parent.postMessage({ type: 'es-console-ready' }, '*'); } catch { /* 跨域限制时静默 */ }
+    announceHostReady();
+    for (const delay of [300, 900, 2000, 3500]) {
+      readyTimers.push(window.setTimeout(announceHostReady, delay));
+    }
     // iframe 场景等宿主 token 到达后统一首探：消灭无凭证裸探的 401 浪费与乱序覆盖；
     // 宿主 1.2s 不应答（独立壳页嵌套等异常）兜底走内置鉴权，不卡死
     hostWaitTimer = window.setTimeout(bootstrapIdentity, 1200);
@@ -568,6 +582,8 @@ onMounted(() => {
   }
 });
 onBeforeUnmount(() => {
+  stopReadyAnnounce();
+  window.clearTimeout(hostWaitTimer);
   window.removeEventListener('keydown', onKey);
   window.removeEventListener('message', onHostMessage);
   window.removeEventListener('es-console:identity-changed', onIdentityChanged);
@@ -589,10 +605,19 @@ function onHostMessage(e: MessageEvent) {
   const d = e.data;
   if (!d || typeof d !== 'object') return;
   if (d.type === 'es-console-host-token' && typeof d.token === 'string') {
+    stopReadyAnnounce();
     /* 运行期换发：旧 token 对应的授权必须立即失效，probe 落地前写门 fail-closed。
        否则新 token 已生效、旧 grantedPages 仍在，旧写权限可在换人窗口发出请求。 */
     auth.invalidateIdentity();
     setHostToken(d.token);
+    /* 宿主登出（空 token）：没有新身份可探测，必须立即清工作现场；
+       否则登录遮罩背后的草稿/目标/词项会留给下一个账号。 */
+    if (!d.token) {
+      auth.purgeLocalUserState();
+      auth.showLogin = true;
+      store.notify('warning', '宿主会话已结束，请在宿主系统重新登录后继续使用 ES 控制台');
+      return;
+    }
     if (d.theme === 'dark' || d.theme === 'light') store.setHostTheme(d.theme);
     auth.showLogin = false;
     // 首探走统一入口（probe + loadIndices 并行）；运行期换发重探身份，并重拉连接目录：

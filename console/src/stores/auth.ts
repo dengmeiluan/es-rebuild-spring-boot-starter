@@ -201,6 +201,17 @@ export const useAuthStore = defineStore('auth', () => {
     me.value = null;
   }
 
+  /** 宿主登出/跨标签登出：立即清掉上一账号的工作现场并广播内存重置。
+   *  此时没有新身份可探测（probe 只会 401），不能等「下一次登录的 purgeIfUserChanged」——
+   *  共享工作站上旧草稿/目标/词项会在登录遮罩背后继续留在磁盘。 */
+  function purgeLocalUserState() {
+    purgeUserRequestState();
+    ioRecorder.clear();
+    try {
+      window.dispatchEvent(new CustomEvent('es-console:identity-changed', { detail: { username: '' } }));
+    } catch { /* 非浏览器/派发失败：内存重置由调用方兜底 */ }
+  }
+
   function logout() {
     /* 先尽力通知服务端吊销当前令牌：请求在途/失败都不阻塞、不影响本地清理
        （服务端不可达也要能登出），令牌头在发车前快照，随后才 clearToken。 */
@@ -671,5 +682,5 @@ export const useAuthStore = defineStore('auth', () => {
     });
   }
 
-  return { me, showLogin, probed, authDisabled, builtinLogin, probeStarted, beginProbe, canAdminOps, probe, login, logout, requireLogin, invalidateIdentity, isAdmin, canSeeConn, grantedPages, can, canWriteOn, canPage, canEndpoint, canEmitWrite, canReadPage, canAuditAll, canClusterScope, setConnEnvs, envAllows };
+  return { me, showLogin, probed, authDisabled, builtinLogin, probeStarted, beginProbe, canAdminOps, probe, login, logout, purgeLocalUserState, requireLogin, invalidateIdentity, isAdmin, canSeeConn, grantedPages, can, canWriteOn, canPage, canEndpoint, canEmitWrite, canReadPage, canAuditAll, canClusterScope, setConnEnvs, envAllows };
 });
