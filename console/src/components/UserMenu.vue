@@ -94,7 +94,12 @@ const initial = computed(() => {
 
 const roleHint = computed(() => {
   const r = auth.me?.role;
-  return r === 'ADMIN' ? '全部能力，含高危操作' : r === 'OPERATOR' ? '可写，高危操作受限' : '只读访问';
+  return r === 'ADMIN' ? '全部能力，含高危操作'
+    : r === 'OPERATOR' ? '可写，高危操作受限'
+    : r === 'REBUILD_OP' ? '重建 / 迁移 / 回滚专项'
+    : r === 'CLUSTER_OP' ? '索引 / 集群管理专项'
+    : r === 'AUDIT_OP' ? '审计查看专项'
+    : '只读访问';
 });
 
 const sourceLabel = computed(() => {

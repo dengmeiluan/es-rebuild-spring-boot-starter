@@ -37,7 +37,7 @@
           <span class="pm-row-v">
             <span v-if="!p.read" class="is-no">页面未授权</span>
             <template v-else>
-              <span v-if="p.write === true" class="is-ok">可写</span>
+              <span v-if="p.write === true" class="is-ok">{{ writeText(p) }}</span>
               <span v-else-if="p.write === false" class="is-no">{{ denyText(p.writeDeny) }}</span>
               <span v-else class="is-na">无写操作</span>
             </template>
@@ -84,11 +84,26 @@ function denyText(reason?: string): string {
   if (reason === 'WRITE_DENIED') return '连接写权限未授予';
   if (reason === 'PAGE_DENIED') return '页面未授权';
   if (reason === 'DELEGATED_SECURITY_READONLY') return '委派会话只读（账号仅 ADMIN 管理）';
+  if (reason === 'PAGE_SCOPED_SECURITY_READONLY') return '页面授权只读（本地账号是全局身份，仅 ADMIN 可管理）';
   if (reason === 'HOST_DEST_WRITE_REQUIRED') return '可中止/探测；启动与续跑还需宿主集群的迁移写权限';
+  if (reason === 'CLUSTER_SCOPE_REQUIRED') return '集群级动作需 rank3 或集群设置写权（页内操作不受限）';
   if (reason === 'CONN_FORBIDDEN') return '当前角色低于该连接要求';
   if (reason === 'CONN_NOT_FOUND') return '目标连接不存在或已删除';
   if (reason.startsWith('ROLE_INSUFFICIENT:')) return `需 ${reason.slice('ROLE_INSUFFICIENT:'.length)} 角色`;
   return reason;
+}
+
+/** 可写档的精细说明：写出真实范围（数据面全权/仅新增别名/部分受限），不留「可写」黑盒。 */
+function writeText(p: any): string {
+  if (p.writeScope === 'DATA_PLANE') return '可写（数据面全权）';
+  if (p.writeScope === 'ADD_ONLY') return '可写（仅新增别名）';
+  if (p.writeDeny === 'CLUSTER_SCOPE_REQUIRED') return '可写（集群开关需 rank3）';
+  if (p.writeDeny === 'HOST_DEST_WRITE_REQUIRED') return '可写（启动/续跑需宿主写权）';
+  if (typeof p.writeDeny === 'string' && p.writeDeny.startsWith('PARTIAL_ROLE:')) {
+    return `可写（高危端点需 ${p.writeDeny.slice('PARTIAL_ROLE:'.length)}）`;
+  }
+  if (p.writeDeny) return '可写（部分受限）';
+  return '可写';
 }
 </script>
 

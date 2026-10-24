@@ -87,11 +87,14 @@ describe('963 Lifecycle：生命周期页 ops 端点归一 + Dry Run 同门', ()
   it('canOps 改按 lifecycle start 端点（start/stop/move/rollover 同页）', () => {
     expect(lifecycle).toContain("const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/ilm/start', store.target));");
   });
-  it('Dry Run 预检钮 v-if=canOps（/cluster/rollover 是 rank3）', () => {
-    expect(lifecycle).toMatch(/<button v-if="canOps" class="btn ghost sm" @click="doRollover\(true\)"/);
+  it('Dry Run 预检钮 v-if=canRollover（/cluster/rollover 是 rank3）', () => {
+    expect(lifecycle).toMatch(/<button v-if="canRollover" class="btn ghost sm" @click="doRollover\(true\)"/);
   });
-  it('ilmStart/ilmStop/doRollover/doMove 首行守卫', () => {
-    for (const fn of ['ilmStart', 'ilmStop', 'doRollover', 'doMove']) expectFirstGuard(lifecycle, fn, 'canOps', 'return;');
+  it('ilmStart/ilmStop 走 canOps；doRollover 走 canRollover；doMove 走 canMove', () => {
+    expectFirstGuard(lifecycle, 'ilmStart', 'canOps', 'return;');
+    expectFirstGuard(lifecycle, 'ilmStop', 'canOps', 'return;');
+    expectFirstGuard(lifecycle, 'doRollover', 'canRollover', 'return;');
+    expectFirstGuard(lifecycle, 'doMove', 'canMove', 'return;');
   });
 });
 

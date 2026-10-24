@@ -107,9 +107,13 @@ public class ConsoleSetupTokenController985Test {
     }
 
     @Test
-    public void 委托部署不要求首连令牌() {
+    public void 委托部署配置令牌后同样要求首连令牌() {
+        /* 1003 反转：委托 header 模式的身份来自网关注入头（可伪造），单靠「认出 ADMIN」
+           不足以为「把控制面指向哪个 ES」背书——配置了 setup-token 就必须携带（第二因子）。
+           因此 status 必须如实报 true，前端才会显示令牌输入框。未配置时仍为 false（历史行为）。 */
         io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthDelegate delegate = request -> null;
-        assertFalse((Boolean) controller("s3cret", delegate).status().get("setupTokenRequired"));
+        assertEquals(Boolean.TRUE, controller("s3cret", delegate).status().get("setupTokenRequired"));
+        assertFalse((Boolean) controller("", delegate).status().get("setupTokenRequired"));
     }
 
     @Test

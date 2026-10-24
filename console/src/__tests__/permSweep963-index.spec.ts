@@ -89,13 +89,13 @@ describe('963-3 IndexSettingsView：save() 首行 canOps 早退', () => {
 describe('963-4 MappingView：Enter 闸 + 四执行体首行 canOps 守卫', () => {
   it('useModalEnter 第三参接 canOps（与提交钮 v-if 同口径）', () => {
     expect(mp).toContain('useModalEnter(addOpen, askPutMapping, () => canOps.value);');
-    expect(mp).toContain('useModalEnter(settingsOpen, askPutSettings, () => canOps.value);');
+    expect(mp).toContain('useModalEnter(settingsOpen, askPutSettings, () => canSettings.value);');
   });
   it('askPut/doPut 两两执行体首行守卫', () => {
     expect(guardAfter(mp, 'async function askPutMapping()', '!canOps\\.value')).toBe(true);
     expect(guardAfter(mp, 'async function doPutMapping()', '!canOps\\.value')).toBe(true);
-    expect(guardAfter(mp, 'async function askPutSettings()', '!canOps\\.value')).toBe(true);
-    expect(guardAfter(mp, 'async function doPutSettings()', '!canOps\\.value')).toBe(true);
+    expect(guardAfter(mp, 'async function askPutSettings()', '!canSettings\\.value')).toBe(true);
+    expect(guardAfter(mp, 'async function doPutSettings()', '!canSettings\\.value')).toBe(true);
   });
 });
 

@@ -36,12 +36,13 @@ describe('963 CmdPalette：端点级门禁（设置下发/分词热重载/ILM �
   it('三条端点门常量在场（ops 档 + 各自真实端点 + store.target）', () => {
     expect(pal).toContain("const canSettings = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/settings/put', store.target);");
     expect(pal).toContain("const canReload = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/reload-analyzers', store.target);");
-    expect(pal).toContain("const canIlm = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/ilm/start', store.target);");
+    expect(pal).toContain("const canIlm = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/ilm/start', store.target)");
+    expect(pal).toContain('&& auth.canClusterScope(store.target)'); /* 1007：集群级 rank 硬门前置 */
   });
 
-  it('canW/canO 定义保留；raw 系统命令改用 ADMIN 档（977 校准）', () => {
+  it('canW/canO 定义保留；raw 数据面命令按 rest/devtools 写键、reroute 按 ADMIN', () => {
     expect(pal).toContain("const canW = auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/doc', store.target), canO = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target);");
-    expect(pal).toContain('const canRawOps = () => auth.canAdminOps();');
+    expect(pal).toContain("const canRawOps = () => auth.canAdminOps();");
   });
 
   it('恢复分片分配（settings/put）条件展开：canSettings 缺省即不入列', () => {
@@ -71,7 +72,7 @@ describe('963 SecurityView：用户/重绑执行体守卫与 facets 档位', () 
     expect(sec).toContain("if (auth.authDisabled || !auth.probeStarted) return true;");
     expect(sec).toContain("return Array.isArray(gp) && gp.some(g => g.startsWith('conn:'))");
     expect(sec).toContain("auth.canEndpoint('admin', 'GET', '/internal/es/index/auth/users', store.target)");
-    expect(sec).toContain("const canWriteUsers = computed(() => canManageUsers.value && (!auth.me?.delegated || auth.isAdmin()));");
+    expect(sec).toContain('if (Array.isArray(auth.grantedPages)) return false;'); /* 1007：页面授权身份仅 ADMIN 可管本地账号 */
     expect(sec).toMatch(/async function loadUsers\(\) \{\n\s*if \(!canReadUsers\.value\) return;/);
   });
 

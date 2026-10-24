@@ -237,9 +237,12 @@ import { semFormat } from '../composables/useSemFormat';
 
 const router = useRouter();
 const store = useAppStore();
-/* 权限门禁——retryFailedAlloc 走结构化 /cluster/reroute（归 diag/cluster-settings 页写键，rank3） */
+/* 权限门禁——retryFailedAlloc 走结构化 /cluster/reroute/retry-failed：集群级动作
+   （作用于全集群未分配分片），连接模型下除 diag 页写键外还需 rank3（后端同源硬门）。
+   diag 页其余端点全是只读诊断，不参与该门。 */
 const auth = useAuthStore();
-const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/reroute/retry-failed', store.target));
+const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/reroute/retry-failed', store.target)
+  && auth.canClusterScope(store.target));
 
 /* ES unassigned_info.reason 枚举 → 人话：已收口 utils/esEnumZh（天罗 W6），HealthReportView 同源 */
 

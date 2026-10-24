@@ -281,7 +281,9 @@ public class EsIndexAdminRawSystemGuard976Test {
                 "{\"index\":\"-logs\"}\n{}\n"), "msearch 纯排除");
         assertRejected(() -> admin.guardRawGuarded("POST", "/_reindex",
                 "{\"source\":{\"index\":\"-logs\"},\"dest\":{\"index\":\"copy\"}}"), "reindex 纯排除");
-        assertAllowed(() -> admin.guardRawGuarded("GET", "/_search?index=logs-*,-logs-archive", null), "正索引+排除");
+        /* 1005：正索引+排除表达式改走路径形式（查询参数不再充当范围凭据） */
+        assertAllowed(() -> admin.guardRawGuarded("GET", "/logs-*,-logs-archive/_search", null),
+                "正索引+排除（路径形式）");
     }
 
     @Test

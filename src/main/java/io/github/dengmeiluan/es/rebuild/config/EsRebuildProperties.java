@@ -151,6 +151,40 @@ public class EsRebuildProperties {
         if (console.auth.enabled && (console.auth.fallbackUsername.isEmpty() || console.auth.fallbackPassword.isEmpty())) {
             throw new IllegalStateException("es.rebuild.console.auth 兜底账号/密码不可为空");
         }
+        /* 委托模式配置非法会同时禁用内置登录（见 AutoConfiguration）：拼错 mode 或漏填该模式
+           必填项 → 部署启动正常但所有身份都 401，连 ADMIN 都进不来。启动即失败比线上锁死好。 */
+        String delegateMode = console.auth.delegate == null || console.auth.delegate.getMode() == null
+                ? "" : console.auth.delegate.getMode().trim().toLowerCase(java.util.Locale.ROOT);
+        if (!delegateMode.isEmpty()) {
+            switch (delegateMode) {
+                case "jwt":
+                    if (isBlank(console.auth.delegate.getJwt().getSecret())
+                            && isBlank(console.auth.delegate.getJwt().getPublicKey())) {
+                        throw new IllegalStateException("delegate.mode=jwt 必须配置 delegate.jwt.secret 或 delegate.jwt.public-key，"
+                                + "否则所有令牌验签失败且内置登录已关闭");
+                    }
+                    break;
+                case "endpoint":
+                    if (isBlank(console.auth.delegate.getEndpoint().getVerifyUrl())) {
+                        throw new IllegalStateException("delegate.mode=endpoint 必须配置 delegate.endpoint.verify-url，"
+                                + "否则所有令牌校验失败且内置登录已关闭");
+                    }
+                    break;
+                case "header":
+                    if (isBlank(console.auth.delegate.getHeader().getUserHeader())) {
+                        throw new IllegalStateException("delegate.mode=header 必须配置 delegate.header.user-header，"
+                                + "否则无法识别任何身份且内置登录已关闭");
+                    }
+                    break;
+                default:
+                    throw new IllegalStateException("es.rebuild.console.delegate.mode 必须为 jwt / endpoint / header（留空=关闭委托），实际="
+                            + console.auth.delegate.getMode());
+            }
+        }
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
     }
 
     /** 重建锁参数（以 indexKey 为锁文档 _id 的 ES 文档锁）。 */

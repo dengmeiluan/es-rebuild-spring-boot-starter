@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -171,14 +172,19 @@ public class BuiltinConsoleAuthRevocation990Test {
     }
 
     @Test
-    public void 新建账号纪元从一开始() throws Exception {
+    public void 新建账号纪元为随机正值_不从1开始() throws Exception {
         UserDoc doc = new UserDoc();
         doc.found = "false"; // findUser 不存在=新建
         AtomicReference<String> putBody = new AtomicReference<>();
         BuiltinConsoleAuthService svc = service(doc, putBody);
         svc.upsertUser(new ConsolePrincipal("admin1", ConsoleRole.ADMIN, false),
                 "u1", "password1", ConsoleRole.OPERATOR);
-        assertTrue("新建账号纪元=1", String.valueOf(putBody.get()).contains("\"epoch\":1"));
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("\"epoch\":(\\d+)").matcher(String.valueOf(putBody.get()));
+        assertTrue("新建账号必须写纪元", m.find());
+        long epoch = Long.parseLong(m.group(1));
+        assertTrue("纪元必须为正", epoch > 0);
+        assertFalse("纪元不得固定为 1：删号重建会让旧 epoch=1 的 token 复活", epoch == 1L);
     }
 
     /* ── token 工具（与生产签名口径一致） ── */

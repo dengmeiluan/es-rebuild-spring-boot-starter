@@ -86,6 +86,7 @@ import { useAppStore } from './stores/app';
 import { useAuthStore } from './stores/auth';
 import { useLiveMonitorStore } from './stores/liveMonitor';
 import { useJobTrackerStore } from './stores/jobTracker';
+import { useQueryHistoryStore } from './stores/queryHistory';
 
 /* 路由级 KeepAlive 白名单（= SFC 文件名）：这些页的查询结果/交互现场在侧栏切页后保留。
  只收「重状态、重挂载代价高」的页；其余页面保持即换即重挂（数据新鲜度优先）。
@@ -114,6 +115,34 @@ watch(() => auth.me?.username, (u, prev) => {
 auth.beginProbe();
 const mon = useLiveMonitorStore();
 const jt = useJobTrackerStore();
+const qh = useQueryHistoryStore();
+
+/* 换账号（登录换人/宿主 token 换人）：auth 已清磁盘键，这里把内存单例同步归零——
+   只清 localStorage 时，收藏/历史/目标/作业清单等 ref 仍在，下一笔写入会把旧账号数据
+   重新落盘，且旧目标会让请求落到别的集群。 */
+function onIdentityChanged() {
+  ioRecorder.clear();
+  store.resetIdentityState();
+  jt.resetIdentityState();
+  mon.resetIdentityState();
+  qh.clear();
+}
+
+/* 同名账号被降权/撤页、或跨标签页授权变更：后端每请求都重算权限，但前端 me 不会自己更新。
+   在 403、窗口重新聚焦、标签页恢复时做一次节流重探（30s），让菜单/按钮尽快与后端同口径；
+   身份未确定（me=null）不重探，避免与登录遮罩/401 流程互相打断。 */
+let lastPermRefreshAt = 0;
+function refreshIdentityIfStale() {
+  if (!auth.me) return;
+  const now = Date.now();
+  if (now - lastPermRefreshAt < 30_000) return;
+  lastPermRefreshAt = now;
+  void auth.probe();
+}
+function onWindowFocusPermRefresh() { refreshIdentityIfStale(); }
+function onVisibilityPermRefresh() {
+  if (document.visibilityState === 'visible') refreshIdentityIfStale();
+}
 const paletteOpen = ref(false);
 const topBarRef = ref<any>(null);
 const helpOpen = ref(false);
@@ -471,6 +500,10 @@ function bootstrapIdentity() {
 
 onMounted(() => {
   window.addEventListener('keydown', onKey);
+  window.addEventListener('es-console:identity-changed', onIdentityChanged);
+  window.addEventListener('es-console:forbidden', refreshIdentityIfStale);
+  window.addEventListener('focus', onWindowFocusPermRefresh);
+  document.addEventListener('visibilitychange', onVisibilityPermRefresh);
   /* v3.0.0：th.sortable 键盘可达的 tabindex 注入（事件委托代理 focus 不可行，
  需真实可聚焦；捕获期 click 委托挂 document，A3 静态审计的 role/键盘可达收口） */
   const focusables = document.querySelectorAll('th.sortable');
@@ -522,6 +555,10 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKey);
   window.removeEventListener('message', onHostMessage);
+  window.removeEventListener('es-console:identity-changed', onIdentityChanged);
+  window.removeEventListener('es-console:forbidden', refreshIdentityIfStale);
+  window.removeEventListener('focus', onWindowFocusPermRefresh);
+  document.removeEventListener('visibilitychange', onVisibilityPermRefresh);
   (window as any).__esSortableMo?.disconnect();
 });
 
@@ -545,7 +582,12 @@ function onHostMessage(e: MessageEvent) {
     auth.showLogin = false;
     // 首探走统一入口（probe + loadIndices 并行）；运行期换发重探身份，并重拉连接目录：
     // 换人后可见连接/env 可能变化，旧目录会让菜单/按钮按上一身份的门禁渲染。
-    if (bootstrapped) { auth.probe(); store.loadConns(); }
+    if (bootstrapped) {
+      /* 换发即刻作废旧身份：探测往返期间写门保持 fail-closed，不能拿上一身份的门禁发请求。 */
+      auth.invalidateIdentity();
+      auth.probe();
+      store.loadConns();
+    }
     else bootstrapIdentity();
   } else if (d.type === 'es-console-host-theme') {
     /* 非法载荷忽略（保留当前主题）而非钳回 dark——浅色宿主下被误翻深比不收消息更糟 */

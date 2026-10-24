@@ -1,8 +1,8 @@
 <template>
   <div class="mp">
     <!-- 只读身份的前置说明：写钮隐藏时不让页面变成无解释的空壳（RestView 只读说明条同款） -->
-    <div v-if="auth.probed && !canOps" class="mp-perm-note" role="status">
-      <Shield :size="13" /> 当前身份只读：添加字段/动态规则设置不可用；需要 mapping 写权限。
+    <div v-if="auth.probed && !canOps && !canSettings" class="mp-perm-note" role="status">
+      <Shield :size="13" /> 当前身份只读：添加字段需 mapping 写权限，动态设置需 mapping/index-settings 写权限。
     </div>
     <!-- 交互修复：空态补「最近使用」chips——store.recentIdx 即全站最近工作索引（切集群自动清空），
  过滤出当前集群仍存在的取前 5；点击 store.pick 即选中进入（本页 follow + watch pickedIdx 自动加载）。
@@ -26,7 +26,7 @@
           <!-- 任何面板都可能有取舍，原始 JSON 是最终「看全」兜底 -->
           <button class="btn sm" :disabled="!data" @click="rawOpen = true"><FileJson :size="12" /> 原始 JSON</button>
           <button v-if="canOps" class="btn sm" @click="addOpen = true"><Plus :size="12" /> 添加字段</button>
-          <button v-if="canOps" class="btn sm" @click="settingsOpen = true"><Settings2 :size="12" /> 动态设置</button>
+          <button v-if="canSettings" class="btn sm" @click="settingsOpen = true"><Settings2 :size="12" /> 动态设置</button>
         </template>
       </PageHeader>
 
@@ -152,7 +152,7 @@ ES 仅允许<b>新增</b>字段；修改已有字段类型需走零停机重建�
       <template #footer>
         <div style="display:flex;justify-content:flex-end;gap:var(--sp-2)">
           <button class="btn" @click="settingsOpen = false">取消</button>
-          <button v-if="canOps" class="btn pri" :disabled="!newSettingsValid || putting" :title="newSettingsValid ? '' : 'JSON 不合法'" @click="askPutSettings">{{ putting ? '提交中…' : '提交' }}</button>
+          <button v-if="canSettings" class="btn pri" :disabled="!newSettingsValid || putting" :title="newSettingsValid ? '' : 'JSON 不合法'" @click="askPutSettings">{{ putting ? '提交中…' : '提交' }}</button>
         </div>
       </template>
     </n-modal>
@@ -212,6 +212,10 @@ import { writeStoredRaw } from '../utils/safeJson';
 const store = useAppStore();
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/put-mapping', store.target));
+/* 热 Setting 的两个入口同权（后端 SHARED_WRITE 同源）：/cluster/update-settings 的归属页集是
+   mapping/index-settings/indices/optimizer。动态设置提交必须按它判权——复用 put-mapping 的
+   canOps 会把「持 mapping 读 + index-settings 写」的人挡在保存按钮外（有权限的人被拦）。 */
+const canSettings = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/update-settings', store.target));
 const router = useRouter();
 /* analyzer 快验联动——带字段路径深链跳分析实验室（verifyField 同语义） */
 function quickAnalyze(f: any) {
@@ -485,7 +489,7 @@ const queueMpSettingsMarkers = useDebounceFn(() => {
 }, 250);
 watch(newSettings, () => { queueMpSettingsMarkers(); }, { immediate: true });
 async function askPutSettings() {
-  if (!canOps.value) { store.notify('warning', 'settings 变更需专项角色'); return; }
+  if (!canSettings.value) { store.notify('warning', 'settings 变更需专项角色'); return; }
   try { JSON.parse(newSettings.value); } catch (e: any) { store.notify('error', 'JSON 非法: ' + e.message); return; }
   settingsOpen.value = false;
   /* 原本地 ConfirmModal（title/level=warn/okText 等价迁移；富文本索引名改纯文本句式） */
@@ -498,7 +502,7 @@ async function askPutSettings() {
   if (ok) await doPutSettings();
 }
 async function doPutSettings() {
-  if (!canOps.value) { store.notify('warning', 'settings 变更需专项角色'); return; }
+  if (!canSettings.value) { store.notify('warning', 'settings 变更需专项角色'); return; }
   if (putting.value) return;
   putting.value = true;
   try {
@@ -512,7 +516,7 @@ async function doPutSettings() {
 /* 表单弹窗 Enter=提交——等价点击「提交变更」钮，JSON 校验与二次确认原样生效；
    权限闸与主按钮 v-if 同源（canOps 缺席时 Enter 也不提交） */
 useModalEnter(addOpen, askPutMapping, () => canOps.value);
-useModalEnter(settingsOpen, askPutSettings, () => canOps.value);
+useModalEnter(settingsOpen, askPutSettings, () => canSettings.value);
 </script>
 
 <style scoped>

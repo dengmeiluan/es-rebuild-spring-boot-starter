@@ -475,7 +475,7 @@ mapping <span class="dim">字段映射</span>
  margin-left:auto 独占行尾推进，本钮不叠加 auto（防双 auto 平分剩余空间挤移中止钮），
  非 RUNNING（中止钮缺席）时本钮自持 margin-left:auto 补行尾位 -->
         <button class="btn ghost sm" :style="(canOps && job?.status === 'RUNNING') ? '' : 'margin-left:auto'" aria-label="查看原始 IO（监控轮询）" title="最近一次托管重建接口调用的请求/响应原文（含监控轮询现场）" @click="openRawIo"><Terminal :size="12" /></button>
-        <button v-if="canOps && job?.status === 'RUNNING'" class="btn ghost sm danger right" title="中止作业：删除半成品新索引、回滚到原索引，已迁移的数据丢弃" :disabled="aborting" @click="doAbort"><CircleStop :size="12" /> 中止</button>
+        <button v-if="canMutateJob && job?.status === 'RUNNING'" class="btn ghost sm danger right" title="中止作业：删除半成品新索引、回滚到原索引，已迁移的数据丢弃" :disabled="aborting" @click="doAbort"><CircleStop :size="12" /> 中止</button>
       </div>
       <template v-if="job">
         <!-- 等待人工确认。此刻 WRITE_BLOCK 已在挡写，业务写入持续失败，必须醒目。 -->
@@ -483,9 +483,10 @@ mapping <span class="dim">字段映射</span>
           <TriangleAlert :size="14" />
           <b>业务写入正在被阻断</b>
           <span>已阻断 {{ blockedSec }} 秒 —— 请尽快「确认切换」或「中止」</span>
-          <button v-if="canOps" class="btn primary sm" :disabled="confirming" @click="doConfirmSwitch">确认切换</button>
-          <button v-if="canOps" class="btn ghost sm danger" :disabled="aborting" @click="doAbort">中止并解除阻断</button>
+          <button v-if="canMutateJob" class="btn primary sm" :disabled="confirming" @click="doConfirmSwitch">确认切换</button>
+          <button v-if="canMutateJob" class="btn ghost sm danger" :disabled="aborting" @click="doAbort">中止并解除阻断</button>
           <span v-if="!canOps" class="dim" style="font-size: var(--fs-xs)">切换/中止需 REBUILD_OP/ADMIN 角色——请联系对应角色处置，勿自行尝试</span>
+          <span v-else-if="!canMutateJob && jobOwner" class="dim" style="font-size: var(--fs-xs)">作业由 <b class="mono">{{ jobOwner }}</b> 创建：切换/中止仅创建者本人或 ADMIN 可操作；同连接成员可查看进度与报告</span>
         </div>
         <div class="probe">
           <div class="p-row"><span>作业</span><span class="mono cpy" :title="'点击复制 jobId：' + job.jobId" tabindex="0" role="button" @keydown.enter.prevent="copyJobId(job.jobId)" @keydown.space.prevent="copyJobId(job.jobId)" @click="copyJobId(job.jobId)">{{ job.jobId }}</span></div>
@@ -786,6 +787,15 @@ const AR_ED_PANES: WorkbenchPaneSpec[] = [
  只读角色可看向导与监控（评估/探测是只读 POST），不给出扳机 */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/adhoc-rebuild/start', store.target));
+/* 作业归属（后端 1007）：中止/确认切换是用户级不可逆动作，仅创建者本人或 ADMIN；
+   legacy 无 owner 的升级前作业维持连接级语义。同连接同事仍可观测进度。 */
+const jobOwner = computed(() => String((job.value as any)?.ownerUsername || '').trim());
+const canMutateJob = computed(() => {
+  if (!canOps.value) return false;
+  if (!jobOwner.value) return true;
+  if (auth.isAdmin()) return true;
+  return jobOwner.value === (auth.me?.username || '');
+});
 /* 校验独立权限面：配置校验页写端点（可能与 start 的 ops 档不同权） */
 const canValidate = computed(() =>
   auth.canEndpoint('write', 'POST', '/internal/es/index/config-lab/validate', store.target)
@@ -1786,7 +1796,12 @@ function stopPolling() {
 
 async function doAbort() {
   /* 权限执行体首行门（中止钮已有 v-if，此处覆盖程序化通道） */
-  if (!canOps.value) { store.notify('warning', '重建操作需专项或 ADMIN 角色'); return; }
+  if (!canMutateJob.value) {
+    store.notify('warning', jobOwner.value && auth.me?.username !== jobOwner.value && !auth.isAdmin()
+      ? `作业由 ${jobOwner.value} 创建：中止仅创建者本人或 ADMIN 可操作`
+      : '重建操作需专项或 ADMIN 角色');
+    return;
+  }
   if (!job.value || aborting.value) return;
   /* 闸置位前移到确认窗之前（xmigrateGateExport941 同族口径）：确认窗挂起期中止钮
      :disabled="aborting" 即禁用，二击不再穿透双开确认窗（confirm.ts 全局单例覆写会把
@@ -1856,7 +1871,12 @@ document.addEventListener('visibilitychange', onBlockVisChange);
 
 async function doConfirmSwitch() {
   /* 权限执行体首行门（确认切换钮已有 v-if，此处覆盖深链/程序化通道） */
-  if (!canOps.value) { store.notify('warning', '重建操作需专项或 ADMIN 角色'); return; }
+  if (!canMutateJob.value) {
+    store.notify('warning', jobOwner.value && auth.me?.username !== jobOwner.value && !auth.isAdmin()
+      ? `作业由 ${jobOwner.value} 创建：确认切换仅创建者本人或 ADMIN 可操作`
+      : '重建操作需专项或 ADMIN 角色');
+    return;
+  }
   /* 闸读收本体首行+置位前移（templateSaveGate937 口径：确认窗 await 在闸读之前=闸形同虚设）——critical
      确认窗须手输旧索引名、挂起窗口长，确认切换钮 :disabled="confirming" 在窗期即禁用，
      二击不再穿透双开确认窗；取消路径由 finally 复位防闸死。 */

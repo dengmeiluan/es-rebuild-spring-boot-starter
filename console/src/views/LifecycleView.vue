@@ -1,7 +1,7 @@
 <template>
   <div class="lc-page">
     <!-- 只读身份的前置说明：写钮隐藏时不让页面变成无解释的空壳（RestView 只读说明条同款） -->
-    <div v-if="auth.probed && !canOps && !canMove" class="lc-perm-note" role="status">
+    <div v-if="auth.probed && !canOps && !canMove && !canRollover" class="lc-perm-note" role="status">
       <Shield :size="13" /> 当前身份只读：生命周期的启动/停止/rollover/迁移不可用；需要 ILM 生命周期写权限。
     </div>
     <PageHeader :icon="Layers" title="索引生命周期视图">
@@ -21,12 +21,18 @@
             <RefreshCw :size="12" :class="{ spinning: busy }" /> 刷新
           </button>
           <!-- G122：双钮补 spinning（ilmOpPending 此前只 disabled 半合规；733 G110 同款） -->
-          <button v-if="canOps" class="btn ghost sm" @click="ilmStart" :disabled="ilmOpPending">
+          <button v-if="canOps" class="btn ghost sm" @click="ilmStart"
+            :disabled="ilmOpPending || !canClusterScope" :title="ilmScopeHint">
             <PlayCircle :size="12" :class="{ spinning: ilmOpPending }" /> Start ILM
           </button>
-          <button v-if="canOps" class="btn ghost sm" @click="ilmStop" :disabled="ilmOpPending">
+          <button v-if="canOps" class="btn ghost sm" @click="ilmStop"
+            :disabled="ilmOpPending || !canClusterScope" :title="ilmScopeHint">
             <PauseCircle :size="12" :class="{ spinning: ilmOpPending }" /> Stop ILM
           </button>
+          <!-- 前置说明：不可用态不只靠 title（触屏/键盘看不到 tooltip），在按钮旁常驻一句原因 -->
+          <span v-if="canOps && !canClusterScope" class="dim" style="font-size:var(--fs-xs)" :title="ilmScopeHint">
+            集群级开关需 rank3 / 集群设置写权
+          </span>
 </div>
       </template>
 </PageHeader>
@@ -68,10 +74,10 @@
         <div class="lc-actions">
           <!-- G121：roPending 守卫+spinning+文案切换（修前无守卫连点可重复触发；
  dry/run 分档让触发钮各自改用，互斥共用一档防并发，729 G95/731 G104/733 G110 同款） -->
-          <button v-if="canOps" class="btn ghost sm" @click="doRollover(true)" :disabled="!rolloverAlias.trim() || roPending !== null">
+          <button v-if="canRollover" class="btn ghost sm" @click="doRollover(true)" :disabled="!rolloverAlias.trim() || roPending !== null">
             <Search :size="12" :class="{ spinning: roPending === 'dry' }" /> {{ roPending === 'dry' ? '预检中…' : 'Dry Run 预检' }}
           </button>
-          <button v-if="canOps" class="btn primary sm" @click="doRollover(false)" :disabled="!rolloverAlias.trim() || roPending !== null">
+          <button v-if="canRollover" class="btn primary sm" @click="doRollover(false)" :disabled="!rolloverAlias.trim() || roPending !== null">
             <Rocket :size="12" :class="{ spinning: roPending === 'run' }" /> {{ roPending === 'run' ? '执行中…' : '执行 Rollover' }}
           </button>
           <!-- 原始 IO 快查——本页最近一次 rollover（含 dry-run）请求/响应原文
@@ -233,6 +239,16 @@ const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/inde
 /* 「推进」走共享写端点 ilm/move（归属 ilm | lifecycle 两页）：只看 ilm/start 会把
    持 w:ilm 的授权人挡在按钮外，而其后端实际允许——按真实端点判定，与执行门同源。 */
 const canMove = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/ilm/move', store.target));
+/* Rollover 是 /cluster/rollover（页归属 lifecycle，rank3），与 ilm/start 的共享页集不同：
+   只持 w:cluster-settings 的人能调 ilm/start 但**不能** rollover——复用 canOps 会亮一个必 403 的钮。 */
+const canRollover = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/rollover', store.target));
+/* ILM start/stop 是集群级动作（作用于目标集群全部索引）：连接模型下页面写键短路角色门，
+   后端要求 rank3 或该连接的 cluster-settings 写键，前端必须同源——否则 rank2 的
+   w:lifecycle 持有人看见可点、点下去 403。 */
+const canClusterScope = computed(() => auth.canClusterScope(store.target));
+const ilmScopeHint = computed(() => canClusterScope.value
+  ? '集群级开关：启动/停止目标集群的 ILM 执行'
+  : '集群级动作需 rank3 角色（CLUSTER_OP / REBUILD_OP / AUDIT_OP）或该连接的「集群设置」写权限；单索引 rollover 与推进步骤仍可用');
 const router = useRouter();
 const busy = ref(true); /* ：初值 true——首帧即骨架，不闪「无策略」空态 */
 const ilmOpPending = ref(false); /* 复审 M4：start/stop 写操作防重入——in-flight 期间按钮禁用 + 重入直接返回，杜绝双击双发 */
@@ -414,6 +430,7 @@ async function load() {
  复审 M4：ilmOpPending 防重入——in-flight 期间重入直接返回（配合按钮 :disabled），finally 复位 */
 async function ilmStart() {
   if (!canOps.value) { store.notify('warning', 'ILM 操作需要 CLUSTER_OP/ADMIN 角色'); return; }
+  if (!canClusterScope.value) { store.notify('warning', ilmScopeHint.value); return; }
   if (ilmOpPending.value) return;
   /* 与「停止」和命令面板同一安全档：启动会恢复 rollover/过期删除等自动动作，
      误点一下就可能触发全量索引的级联推进——必须先确认（原先只有停止有确认，不对称）。 */
@@ -435,6 +452,7 @@ async function ilmStart() {
 }
 async function ilmStop() {
   if (!canOps.value) { store.notify('warning', 'ILM 操作需要 CLUSTER_OP/ADMIN 角色'); return; }
+  if (!canClusterScope.value) { store.notify('warning', ilmScopeHint.value); return; }
   if (ilmOpPending.value) return;
   if (!await askConfirm({ title: '停止 ILM 引擎', level: 'warn', okText: '停止引擎', message: '所有索引的生命周期策略将暂停推进（rollover/收缩/删除等动作不再触发），可随时重新启动恢复。' })) return;
   if (ilmOpPending.value) return; /* 确认等待期间另一写操作可能已开始 */
@@ -450,7 +468,7 @@ async function ilmStop() {
 
 async function doRollover(dryRun: boolean) {
   /* Dry Run 同样走 /cluster/rollover（rank3 写端点）——按钮 v-if 之外执行体单源守卫 */
-  if (!canOps.value) { store.notify('warning', 'ILM 操作需要 CLUSTER_OP/ADMIN 角色'); return; }
+  if (!canRollover.value) { store.notify('warning', 'Rollover 需要 lifecycle 页写权限'); return; }
   if (roPending.value) return; /* G121：入口防重入（dry-run 无确认门更要挡连点） */
   // 非 dry-run 会真实创建新索引并切换别名，强制确认
   if (!dryRun && !await askConfirm({
@@ -476,7 +494,7 @@ async function doRollover(dryRun: boolean) {
 }
 
 async function doMove() {
-  if (!canOps.value) { store.notify('warning', 'ILM 操作需要 CLUSTER_OP/ADMIN 角色'); return; }
+  if (!canMove.value) { store.notify('warning', '推进步骤需要 ilm 或 lifecycle 页写权限'); return; }
   if (mvPending.value) return; /* G123：入口防重入 */
   // ILM move-step 为高危操作：跳步可能直接触发收缩/删除等动作，critical 级输入守卫
   if (!await askConfirm({

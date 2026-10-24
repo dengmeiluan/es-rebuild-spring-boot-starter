@@ -520,12 +520,28 @@ public class ConsoleAuthInterceptorPageAuthTest {
     public void diag只可调用固定retry端点_不可任意reroute() throws Exception {
         CapturingAudit audit = new CapturingAudit();
         java.util.Map<String, String> target = java.util.Collections.singletonMap("X-Es-Target", "c1");
-        ConsoleAuthInterceptor diag = interceptor(delegatedAs(ConsoleRole.VIEWER,
+        /* 1002：retry-failed 是全集群分片重试（集群级动作），连接模型下除 w:diag 外还需 rank3；
+           VIEWER 的 w:diag 不再够（原实现能用一页写键触发整集群分片迁移）。 */
+        ConsoleAuthInterceptor viewerDiag = interceptor(delegatedAs(ConsoleRole.VIEWER,
                 new HashSet<>(Arrays.asList("conn:c1:diag", "conn:c1:w:diag"))), true, audit);
-        assertTrue(diag.preHandle(stubRequest("POST", "/internal/es/index/cluster/reroute/retry-failed", target),
-                new StubResponse().proxy, null));
+        assertFalse("rank2 的 w:diag 不得触发集群级 retry",
+                viewerDiag.preHandle(stubRequest("POST", "/internal/es/index/cluster/reroute/retry-failed", target),
+                        new StubResponse().proxy, null));
+        ConsoleAuthInterceptor diag = interceptor(delegatedAs(ConsoleRole.CLUSTER_OP,
+                new HashSet<>(Arrays.asList("conn:c1:diag", "conn:c1:w:diag"))), true, audit);
+        assertTrue("rank3 + w:diag 可用固定 retry 端点",
+                diag.preHandle(stubRequest("POST", "/internal/es/index/cluster/reroute/retry-failed", target),
+                        new StubResponse().proxy, null));
         assertFalse("w:diag 不得执行任意 reroute commands",
                 diag.preHandle(stubRequest("POST", "/internal/es/index/cluster/reroute", target),
+                        new StubResponse().proxy, null));
+        /* 第二通道：rank2 + w:cluster-settings（集群设置页=集群级语义）可执行集群级动作，
+           避免把宿主显式授了集群设置写权的人一刀切拦住 */
+        ConsoleAuthInterceptor scoped = interceptor(delegatedAs(ConsoleRole.OPERATOR,
+                new HashSet<>(Arrays.asList("conn:c1:diag", "conn:c1:w:diag",
+                        "conn:c1:cluster-settings", "conn:c1:w:cluster-settings"))), true, audit);
+        assertTrue("rank2 + w:cluster-settings 可执行集群级 retry",
+                scoped.preHandle(stubRequest("POST", "/internal/es/index/cluster/reroute/retry-failed", target),
                         new StubResponse().proxy, null));
 
         ConsoleAuthInterceptor settings = interceptor(delegatedAs(ConsoleRole.VIEWER,
@@ -903,21 +919,30 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     @Test
-    public void 共享ilmPolicy_须ilm写键_其他页写键不放行() throws Exception {
+    public void 集群级ilmPolicy_ilm页写键不足_rank3或集群设置写键放行() throws Exception {
         CapturingAudit audit = new CapturingAudit();
-        ConsoleAuthInterceptor allow = interceptor(delegatedAs(ConsoleRole.VIEWER,
+        /* ILM 策略是集群级共享件（影响所有引用索引）：rank2 的 w:ilm 只能做页内
+           explain，不得改/删策略（误配可让全集群索引提前滚出/删除）。 */
+        StubResponse low = new StubResponse();
+        ConsoleAuthInterceptor deny = interceptor(delegatedAs(ConsoleRole.VIEWER,
+                new HashSet<>(Arrays.asList("conn:c1:ilm", "conn:c1:w:ilm"))), true, audit);
+        assertFalse(deny.preHandle(stubRequest("PUT", "/internal/es/index/cluster/ilm/policy",
+                java.util.Collections.singletonMap("X-Es-Target", "c1")), low.proxy, null));
+        assertEquals(403, low.status);
+        assertTrue(low.bodyText().contains("CLUSTER_SCOPE_REQUIRED"));
+
+        /* rank3 专项不受影响 */
+        ConsoleAuthInterceptor allow = interceptor(delegatedAs(ConsoleRole.CLUSTER_OP,
                 new HashSet<>(Arrays.asList("conn:c1:ilm", "conn:c1:w:ilm"))), true, audit);
         assertTrue(allow.preHandle(stubRequest("PUT", "/internal/es/index/cluster/ilm/policy",
                 java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
-        assertNull(audit.action);
 
-        StubResponse cross = new StubResponse();
-        ConsoleAuthInterceptor deny = interceptor(delegatedAs(ConsoleRole.VIEWER,
-                new HashSet<>(Arrays.asList("conn:c1:search", "conn:c1:w:search"))), true, audit);
-        assertFalse(deny.preHandle(stubRequest("PUT", "/internal/es/index/cluster/ilm/policy",
-                java.util.Collections.singletonMap("X-Es-Target", "c1")), cross.proxy, null));
-        assertEquals(403, cross.status);
-        assertTrue(cross.bodyText().contains("WRITE_DENIED"));
+        /* 第二通道：显式授予集群设置写权的 rank2 运维不被一刀切拦住 */
+        ConsoleAuthInterceptor viaSettings = interceptor(delegatedAs(ConsoleRole.OPERATOR,
+                new HashSet<>(Arrays.asList("conn:c1:ilm", "conn:c1:w:ilm",
+                        "conn:c1:cluster-settings", "conn:c1:w:cluster-settings"))), true, audit);
+        assertTrue(viaSettings.preHandle(stubRequest("PUT", "/internal/es/index/cluster/ilm/policy",
+                java.util.Collections.singletonMap("X-Es-Target", "c1")), new StubResponse().proxy, null));
     }
 
     /* ------------- ·管理域放开（裁决「管理域放」）：raw/users 归属菜单页按勾选裁决 -------------
@@ -1069,8 +1094,8 @@ public class ConsoleAuthInterceptorPageAuthTest {
     @Test
     public void 打通_共享写桶成员按归属页写键逐一放行_未登记端点回落角色门() throws Exception {
         CapturingAudit audit = new CapturingAudit();
-        // 文档 CRUD 归 search/indices；任务取消归 tasks/task-tree
-        ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.VIEWER,
+        // 文档 CRUD 归 search/indices；任务取消归 tasks/task-tree 且是集群级动作（需 rank3）
+        ConsoleAuthInterceptor it = interceptor(delegatedAs(ConsoleRole.CLUSTER_OP,
                 new HashSet<>(Arrays.asList("conn:c1:search", "conn:c1:w:search",
                         "conn:c1:tasks", "conn:c1:w:tasks"))), true, audit);
         Map<String, String> target = java.util.Collections.singletonMap("X-Es-Target", "c1");

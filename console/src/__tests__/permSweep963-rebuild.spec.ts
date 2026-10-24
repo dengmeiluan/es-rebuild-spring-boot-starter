@@ -61,13 +61,13 @@ describe('Tasks / TaskTree：取消任务执行体 canWrite 门', () => {
     expect(tasks).toContain("...(t.cancellable && canWrite.value ? [{ key: 'cancel'");
   });
   it('TasksView cancelOne 首行 canWrite 早退（warning 文案）', () => {
-    expect(tasks).toMatch(/async function cancelOne\(t: Task\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canWrite\.value\) \{ store\.notify\('warning', '取消任务需 REBUILD_OP\/CLUSTER_OP 或 ADMIN 角色'\); return; \}/);
+    expect(tasks).toMatch(/async function cancelOne\(t: Task\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canWrite\.value\) \{ store\.notify\('warning', '取消任务是集群级动作：需 CLUSTER_OP 及以上角色，或该连接的集群设置写权限'\); return; \}/);
   });
   it('TaskTreeView 单条 cancelOne 首行 canWrite 早退', () => {
-    expect(taskTree).toMatch(/async function cancelOne\(id: string, node\?: string\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canWrite\.value\) \{ store\.notify\('warning', '取消任务需 REBUILD_OP\/CLUSTER_OP 或 ADMIN 角色'\); return; \}/);
+    expect(taskTree).toMatch(/async function cancelOne\(id: string, node\?: string\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canWrite\.value\) \{ store\.notify\('warning', '取消任务是集群级动作：需 CLUSTER_OP 及以上角色，或该连接的集群设置写权限'\); return; \}/);
   });
   it('TaskTreeView 批量 bulkCancel 首行 canWrite 早退', () => {
-    expect(taskTree).toMatch(/async function bulkCancel\(\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canWrite\.value\) \{ store\.notify\('warning', '取消任务需 REBUILD_OP\/CLUSTER_OP 或 ADMIN 角色'\); return; \}/);
+    expect(taskTree).toMatch(/async function bulkCancel\(\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canWrite\.value\) \{ store\.notify\('warning', '取消任务是集群级动作：需 CLUSTER_OP 及以上角色，或该连接的集群设置写权限'\); return; \}/);
   });
 });
 
@@ -109,10 +109,10 @@ describe('AdhocRebuild：校验/write 与启动/中止/切换 ops 双层门', ()
   it('doValidateConfig 首行 canValidate 早退 + notify', () => {
     expect(adhoc).toMatch(/async function doValidateConfig\(advance: boolean\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canValidate\.value\) \{ store\.notify\('warning', '校验需配置校验页或托管重建写权限'\); return; \}/);
   });
-  it('doStart / doAbort / doConfirmSwitch 首行 canOps 早退', () => {
+  it('doStart 首行 canOps；doAbort/doConfirmSwitch 首行 canMutateJob（创建者或 ADMIN）', () => {
     expect(adhoc).toMatch(/async function doStart\(\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canOps\.value\)/);
-    expect(adhoc).toMatch(/async function doAbort\(\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canOps\.value\)/);
-    expect(adhoc).toMatch(/async function doConfirmSwitch\(\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canOps\.value\)/);
+    expect(adhoc).toMatch(/async function doAbort\(\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canMutateJob\.value\)/);
+    expect(adhoc).toMatch(/async function doConfirmSwitch\(\) \{\s*(?:\/\*[\s\S]*?\*\/\s*)?if \(!canMutateJob\.value\)/);
   });
 });
 

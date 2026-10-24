@@ -247,9 +247,13 @@ public class ConsolePermissionsController {
                    避免把「只能看宿主流水」误读成「能看该连接全部审计」。 */
                 boolean usersRead = admin || !pageGateActive
                         || (hostEffective != null && hostEffective.contains("security"));
-                boolean auditRead = admin || !pageGateActive
-                        || (targetAccessible && pageEffective.contains("security"))
-                        || (hostEffective != null && hostEffective.contains("security"));
+                /* 全量审计是 rank3 专项数据：security 读键给 VIEWER 只能看用户列表/自助流水，
+                   不得读全量 IP/URI/连接维度审计。面板必须与拦截器同序（原先只看页键，
+                   面板报 audit=true 而实际 /auth/ops-audit 403）。 */
+                boolean auditRead = p.getRole().atLeast(ConsoleRole.REBUILD_OP)
+                        && (admin || !pageGateActive
+                            || (targetAccessible && pageEffective.contains("security"))
+                            || (hostEffective != null && hostEffective.contains("security")));
                 if (!admin && "rest".equals(pg.getKey())) {
                     read = pageGateActive && hasConnKey(gp, tid, "rest")
                             && pageEffective.contains("rest");
@@ -262,7 +266,8 @@ public class ConsolePermissionsController {
                     read = devtoolsKey || restKey;
                 }
                 List<String> prefixes = pg.getApiPrefixes();
-                ConsoleRole writeRole = requiredWriteRole(pg.getKey(), prefixes);
+                List<ConsoleRole> writeRoles = writeRoles(pg.getKey(), prefixes);
+                ConsoleRole writeRole = writeRoles.isEmpty() ? null : maxRole(writeRoles);
                 boolean hasWriteEndpoint = writeRole != null;
                 Boolean write = null;
                 String writeDeny = null;
@@ -282,22 +287,30 @@ public class ConsolePermissionsController {
                             writeDeny = "WRITE_DENIED";
                         }
                     } else {
-                        /* 页面写键在 conn 模型是最终裁决（一次授权覆盖该页全部写端点）——
-                           必须按该页最高危写端点判定，不能“任一可写即 true”，否则 OPERATOR
-                           拿到含 rank3 端点的页写键后可直接执行 rank3 操作。 */
-                        write = p.getRole().atLeast(writeRole);
-                        if (!write) {
+                        /* 静态模型按端点逐个判定：页面写权 = 至少有一个本页写端点角色达标。
+                           用「最高危端点」一票否决会把 OPERATOR 的 search/indices/config-validator
+                           报成完全不可写，而实际文档编辑/校验 dry-run 都能做——面板比后端严格
+                           同样是「有权限的人被拦」（只是发生在 UI 层）。 */
+                        boolean any = false;
+                        boolean partial = false;
+                        for (ConsoleRole r : writeRoles) {
+                            if (p.getRole().atLeast(r)) any = true; else partial = true;
+                        }
+                        write = any;
+                        if (!any) {
                             writeDeny = "ROLE_INSUFFICIENT:" + writeRole.name();
+                        } else if (partial) {
+                            writeDeny = "PARTIAL_ROLE:" + writeRole.name();
                         }
                     }
                     /* DevTools 专用端点同时接受 devtools/rest 写键（兼容），页行必须同口径。 */
-                    /* 只有「委派身份」的 security 写键不能管理本地账号（服务端按 isDelegated 判定）；
-                       非委派的页面写键持有人后端实际可写——面板不能把所有非 ADMIN 都标成只读，
-                       否则会出现「面板说不可写、实际能改账号」（与拦截器分叉）。 */
-                    if (pageGateActive && connModel && p.isDelegated() && !admin
+                    /* 本地账号管理是全局 ABI：页面授权身份（含非委派的连接写键）不得建/改/删号，
+                       后端 forbidDelegatedLocalUserWrite 已按「委派 或 grantedPages!=null 且非 ADMIN」拒绝。
+                       面板必须同口径——否则「面板说可写、实际 403」，管理员会以为授权已生效。 */
+                    if (pageGateActive && connModel && !admin
                             && "security".equals(pg.getKey())) {
                         write = Boolean.FALSE;
-                        writeDeny = "DELEGATED_SECURITY_READONLY";
+                        writeDeny = "PAGE_SCOPED_SECURITY_READONLY";
                     }
                     if (pageGateActive && connModel && "devtools".equals(pg.getKey())) {
                         write = admin || envPagesResolver.writeAllowed(tid, "devtools", gp)
@@ -347,6 +360,27 @@ public class ConsolePermissionsController {
                                 && writeRole != null && p.getRole().atLeast(writeRole));
                     pm.put("writeScope", fullAlias ? "FULL" : "ADD_ONLY");
                 }
+                /* rest/devtools 的写键实际授予的是「目标连接的数据面全权」——两者共用同一
+                   透传内核（文档 CRUD/bulk/UBQ/DBQ/SQL，管理面写被 guardRawGuarded 拦住）。
+                   宿主按「一页」授权时，面板必须说清这一键给出的真实范围，否则
+                   管理员会把 devtools 当成调试工具授出整个数据面的写能力。 */
+                if (("rest".equals(pg.getKey()) || "devtools".equals(pg.getKey()))
+                        && Boolean.TRUE.equals(write)) {
+                    pm.put("writeScope", "DATA_PLANE");
+                }
+                /* 集群级动作（ilm start/stop/policy、reroute retry-failed、slm execute、tasks cancel）
+                   在连接模型下补了「rank3 或 w:cluster-settings」双通道硬门：
+                   - 页面全部写端点都是集群级 → 硬门不过时该页实际零写能力，write=false；
+                   - 混合页（lifecycle 的 rollover/move 等）仍 write=true，但标注这一限制。
+                   与拦截器 CLUSTER_SCOPE_WRITE_KEYWORDS 同源，避免面板说可写而点什么都 403。 */
+                if (pageGateActive && connModel && !admin && Boolean.TRUE.equals(write)
+                        && !p.getRole().atLeast(ConsoleRole.CLUSTER_OP)
+                        && !envPagesResolver.writeAllowed(tid, "cluster-settings", gp)) {
+                    if (allWritesAreClusterScope(pg.getKey(), prefixes)) {
+                        write = Boolean.FALSE;
+                    }
+                    writeDeny = "CLUSTER_SCOPE_REQUIRED";
+                }
                 pages.add(pm);
             }
             Map<String, Object> gm = new LinkedHashMap<>();
@@ -364,38 +398,58 @@ public class ConsolePermissionsController {
         return ConsoleConnVisibility.canSee(p, tid, connStore);
     }
 
-    /**
-     * 该页真实写端点的最高角色档；无写端点返回 null。
-     * 除页面 apiPrefixes 直连端点外，还要识别 SHARED_WRITE_PAGES 里声明本页为归属页的
-     * 共享写端点（ilm/tasks/index-settings/optimizer 等页仅靠共享映射拥有写能力）——
-     * 否则宿主的权限面板不给 w: 键，已授权用户永远无法被授权。
-     */
+    /** 该连接上是否持有某页的读或写键（rest/devtools 的读侧兼容判定用）。 */
     private static boolean hasConnKey(Set<String> gp, String tid, String page) {
         return gp != null && (gp.contains("conn:" + tid + ":" + page)
                 || gp.contains("conn:" + tid + ":w:" + page));
     }
 
-    private static ConsoleRole requiredWriteRole(String pageKey, List<String> prefixes) {
-        ConsoleRole need = null;
+    /**
+     * 该页每个真实写端点的角色档（页面前缀直连 + SHARED_WRITE_PAGES 声明本页归属）。
+     * 静态模型要「至少一个端点可用」才叫可写，因此必须保留逐端点档位，而不是只取最高档。
+     */
+    private static List<ConsoleRole> writeRoles(String pageKey, List<String> prefixes) {
+        List<ConsoleRole> roles = new ArrayList<>();
         for (String write : WRITE_ENDPOINT_PATHS) {
             if (ConsoleAuthInterceptor.isReadonlyPost(write)) continue;
-            boolean owned = false;
-            if (prefixes != null) {
-                for (String prefix : prefixes) {
-                    if (covers(prefix, write)) { owned = true; break; }
-                }
-            }
-            if (!owned) {
-                List<String> shared = ConsoleAuthInterceptor.sharedWritePages(write);
-                owned = shared != null && shared.contains(pageKey);
-            }
-            if (!owned) continue;
-            ConsoleRole r = ConsoleAuthInterceptor.requiredRole("POST", write);
-            if (need == null || r.ordinal() > need.ordinal()) {
-                need = r;
-            }
+            if (!ownsWriteEndpoint(pageKey, prefixes, write)) continue;
+            roles.add(ConsoleAuthInterceptor.requiredRole("POST", write));
+        }
+        return roles;
+    }
+
+    private static ConsoleRole maxRole(List<ConsoleRole> roles) {
+        ConsoleRole need = null;
+        for (ConsoleRole r : roles) {
+            if (need == null || r.ordinal() > need.ordinal()) need = r;
         }
         return need;
+    }
+
+    /** 该页是否拥有该写端点（页面前缀直连，或被共享写映射声明为本页写能力）。 */
+    private static boolean ownsWriteEndpoint(String pageKey, List<String> prefixes, String write) {
+        if (prefixes != null) {
+            for (String prefix : prefixes) {
+                if (covers(prefix, write)) return true;
+            }
+        }
+        List<String> shared = ConsoleAuthInterceptor.sharedWritePages(write);
+        return shared != null && shared.contains(pageKey);
+    }
+
+    /**
+     * 该页是否**只有**集群级动作写端点（diag 的 retry-failed 是唯一写）：
+     * 用于把「硬门不过＝零写能力」如实回成 write=false。
+     */
+    private static boolean allWritesAreClusterScope(String pageKey, List<String> prefixes) {
+        boolean any = false;
+        for (String write : WRITE_ENDPOINT_PATHS) {
+            if (ConsoleAuthInterceptor.isReadonlyPost(write)) continue;
+            if (!ownsWriteEndpoint(pageKey, prefixes, write)) continue;
+            any = true;
+            if (!ConsoleAuthInterceptor.isClusterScopeWrite(write)) return false;
+        }
+        return any;
     }
 
     /** 页面前缀是否覆盖写端点（段边界：前缀等于端点或为端点父路径）。 */

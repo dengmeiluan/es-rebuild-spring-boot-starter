@@ -2,7 +2,7 @@
   <div class="slm-page">
     <!-- 只读身份的前置说明：写钮隐藏时不让页面变成无解释的空壳（RestView 只读说明条同款） -->
     <div v-if="auth.probed && !canOps" class="slm-perm-note" role="status">
-      <Shield :size="13" /> 当前身份只读：快照策略的立即执行不可用；需要快照策略写权限。
+      <Shield :size="13" /> 当前身份只读：立即执行属集群级动作，需要 CLUSTER_OP 及以上角色，或该连接的「集群设置」写权限。
     </div>
     <div class="slm-hd">
       <PageHeader :icon="ShieldCheck" title="SLM 快照生命周期">
@@ -125,7 +125,9 @@ import AutoRefreshSelect from '../components/AutoRefreshSelect.vue';
 const store = useAppStore();
 /* 权限写门——SLM 立即执行（触发快照）=ops 档写，VIEWER 不可见（卡钮+右键菜单项同门） */
 const auth = useAuthStore();
-const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/slm/execute', store.target));
+/* 立即执行=全集群快照策略触发（集群级动作）：除页写键外还需 rank3 或集群设置写键。 */
+const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/slm/execute', store.target)
+  && auth.canClusterScope(store.target));
 const loading = ref(true); /* ：初值 true——首帧即骨架，不闪空态 */
 
 /* 原始 IO 三件套（RemoteClusters 557 同款）；判空不开空弹窗 */

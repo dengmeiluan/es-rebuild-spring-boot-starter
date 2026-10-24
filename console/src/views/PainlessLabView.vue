@@ -301,6 +301,12 @@ function copyResult() {
 async function save() {
   if (!canOps.value) { store.notify('warning', '存储脚本变更需要 CLUSTER_OP/ADMIN 角色'); return; }
   if (saving.value) return;
+  /* 脚本是集群共享件：同名覆盖会即时改变他人查询/模板行为（后端按 HIGH_RISK 留痕）。 */
+  if (storedList.value.some((s: any) => s.id === scriptId.value) && !await askConfirm({
+    title: '覆盖已存脚本',
+    message: `存储脚本 "${scriptId.value}" 已存在。保存会立即替换其源码，引用该 id 的查询/模板会按新脚本执行。`,
+    okText: '覆盖保存',
+  })) return;
   saving.value = true;
   try {
     const body = { script: { lang: 'painless', source: source.value } };

@@ -173,7 +173,9 @@ public class ConsoleSetupController {
         r.put("hostVisible", hostClusterVisible);
         r.put("authEnabled", authEnabled);
         r.put("builtinLogin", builtinLogin);
-        r.put("setupTokenRequired", delegate == null && setupTokenConfigured());
+        /* 令牌要求与实际守卫必须同口径：委托模式下配置了令牌同样会校验（见 test/apply/rebind），
+           向导据此决定是否显示令牌输入框。 */
+        r.put("setupTokenRequired", setupTokenConfigured());
         return r;
     }
 
@@ -197,6 +199,9 @@ public class ConsoleSetupController {
         }
         /* 宿主委托部署在未绑定窗口同样要求 ADMIN：否则匿名可用 /setup/test 对内网做 SSRF 探测。 */
         if (delegate != null) {
+            /* 配置了 setup-token 就必须携带——委托身份在 header 模式下可由网关注入头伪造，
+               单靠「认出 ADMIN」不足以为「把控制面指向哪个 ES」背书（第二因子）。 */
+            if (!setupTokenValid(request)) return setupTokenDenied();
             ConsolePrincipal p = delegate.authenticate(request);
             if (p == null || !p.getRole().atLeast(ConsoleRole.ADMIN)) {
                 Map<String, Object> b = new LinkedHashMap<>();
@@ -221,6 +226,8 @@ public class ConsoleSetupController {
         }
         String operator = "setup";
         if (delegate != null) {
+            /* 同 test：配置了令牌就必须携带（委托身份 + 一次性口令双因子才允许改控制面归属）。 */
+            if (!setupTokenValid(request)) return setupTokenDenied();
             ConsolePrincipal p = delegate.authenticate(request);
             if (p == null || !p.getRole().atLeast(ConsoleRole.ADMIN)) {
                 Map<String, Object> b = new LinkedHashMap<>();
@@ -242,7 +249,16 @@ public class ConsoleSetupController {
 
     /** 重绑控制集群（高危：常规鉴权 ADMIN，见拦截器高危清单 /setup/rebind）。 */
     @PostMapping("rebind")
-    public Map<String, Object> rebind(@RequestBody Map<String, String> body, HttpServletRequest request) {
+    public ResponseEntity<Map<String, Object>> rebind(@RequestBody Map<String, String> body,
+                                                      HttpServletRequest request) {
+        /* 配置了 setup-token 时重绑同样要带：ADMIN 会话若被 CSRF/伪造头取得，
+           没有第二因子就能无声改控制面归属（旧集群凭据不会被校验）。未配置=历史行为不变。 */
+        if (!setupTokenValid(request)) {
+            Map<String, Object> denied = new LinkedHashMap<>();
+            denied.put("code", "SETUP_TOKEN_REQUIRED");
+            denied.put("message", "重绑需要 X-Setup-Token（见 es.rebuild.console.setup-token 配置）");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(denied);
+        }
         RemoteClusterConn conn = parseConn(body);
         resolver.bindBootstrap(conn);
         Object p = request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);
@@ -252,7 +268,7 @@ public class ConsoleSetupController {
                 .uri("/internal/es/index/setup/rebind").action("REBIND").httpStatus(200)
                 .detail("rebind " + conn.endpoint())
                 .build());
-        return status();
+        return ResponseEntity.ok(status());
     }
 
     // ---------------- internal ----------------

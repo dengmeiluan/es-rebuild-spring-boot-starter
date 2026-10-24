@@ -273,6 +273,7 @@ import MarkText from '../components/MarkText.vue';
 import { useAutoRefresh } from '../composables/useAutoRefresh';
 import { usePref } from '../composables/urlState';
 import AutoRefreshSelect from '../components/AutoRefreshSelect.vue';
+import { writeStoredRaw } from '../utils/safeJson';
 import CellContextMenu from '../components/CellContextMenu.vue';
 import { Shield, Camera, Plus, RefreshCw, History, Undo2, Info, Save, Trash2, Copy, ClipboardList,
   AlertTriangle, CheckCircle2, Loader2, XCircle, FileDown, TerminalSquare,
@@ -310,6 +311,16 @@ const store = useAppStore();
  未入 CLUSTER 关键词清单是已知偏低档，待后端加固，前端先按角色意图收口） */
 const auth = useAuthStore();
 const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/snapshot/create', store.target));
+/* DevTools 跳转是页面入口，不是当前页写权：无 DevTools/REST 页写键时不亮「打开 API」。 */
+const canDevtools = computed(() => auth.canEndpoint('admin', 'POST',
+  '/internal/es/index/cluster/devtools/execute', store.target));
+function openInDevtools(method: string, path: string, title: string) {
+  if (!canDevtools.value) { store.notify('warning', 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'); return; }
+  /* 与 Watcher/Ilm/DslQuery 同一 sessionStorage 契约；此前用 ?_prefill= 查询串，
+     DevToolsView.consumePrefill 只读本键——点了打开空 Tab（ADMIN 也一样）。 */
+  writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({ title, method, path }));
+  router.push('/devtools');
+}
 const router = useRouter();
 
 /* 原始 IO 三件套（RemoteClusters 557 同款）；判空不开空弹窗 */
@@ -323,7 +334,7 @@ function openRawIo() {
 }
 
 function goDevtoolsCreateRepo() {
-  router.push({ path: '/devtools', query: { _prefill: JSON.stringify({ method: 'PUT', path: '/_snapshot/my_backup' }) } });
+  openInDevtools('PUT', '/_snapshot/my_backup', 'snapshot repo sample');
 }
 
 /* -f 跨工具联动——快照包含的索引一键选中并跳数据浏览器核对现存数据 */
@@ -610,7 +621,7 @@ async function doCreate() {
       duration: 12000,
       action: {
         label: '查状态',
-        onClick: () => { router.push({ path: '/devtools', query: { _prefill: JSON.stringify({ method: 'GET', path: `/_snapshot/${encodeURIComponent(currentRepo.value || '')}/${encodeURIComponent(createName.value)}` }) } }); },
+        onClick: () => { openInDevtools('GET', `/_snapshot/${encodeURIComponent(currentRepo.value || '')}/${encodeURIComponent(createName.value)}`, 'snapshot/' + createName.value); },
       },
     });
     createOpen.value = false;
@@ -695,9 +706,9 @@ const snapMenuItems = computed(() => {
   const ops = inProgress || !canOps.value ? [] : [
     { key: 'restore', label: '恢复此快照…', icon: Undo2, sep: true, run: () => openRestore(s) },
     /* 在 DevTools 打开 _restore API（GET 快照详情+恢复 body 骨架双段预填不便，先给 GET；恢复向导=恢复此快照…） */
-    { key: 'devtools-restore', label: '在 DevTools 打开恢复 API', icon: TerminalSquare, run: () => {
-      router.push({ path: '/devtools', query: { _prefill: JSON.stringify({ method: 'POST', path: `/_snapshot/${encodeURIComponent(currentRepo.value || '')}/${encodeURIComponent(s.snapshot)}/_restore` }) } });
-    } },
+    ...(canDevtools.value ? [{ key: 'devtools-restore', label: '在 DevTools 打开恢复 API', icon: TerminalSquare, run: () => {
+      openInDevtools('POST', `/_snapshot/${encodeURIComponent(currentRepo.value || '')}/${encodeURIComponent(s.snapshot)}/_restore`, 'restore/' + s.snapshot);
+    } }] : []),
     { key: 'delete', label: '删除快照…', icon: Trash2, danger: true, run: () => doDeleteSnapshot(s) },
   ];
   return [
@@ -709,10 +720,10 @@ const snapMenuItems = computed(() => {
       const ok = await copyText(facts);
       store.notify(ok ? 'success' : 'error', ok ? '已复制快照信息' : '复制失败');
     } },
-    /* 在 DevTools 打开（GET /_snapshot/<repo>/<snap> 带参预填——_prefill 范式） */
-    { key: 'devtools', label: '在 DevTools 打开 API', icon: TerminalSquare, run: () => {
-      router.push({ path: '/devtools', query: { _prefill: JSON.stringify({ method: 'GET', path: `/_snapshot/${encodeURIComponent(currentRepo.value || '')}/${encodeURIComponent(s.snapshot)}` }) } });
-    } },
+    /* 在 DevTools 打开（GET /_snapshot/<repo>/<snap>；sessionStorage 预填契约） */
+    ...(canDevtools.value ? [{ key: 'devtools', label: '在 DevTools 打开 API', icon: TerminalSquare, run: () => {
+      openInDevtools('GET', `/_snapshot/${encodeURIComponent(currentRepo.value || '')}/${encodeURIComponent(s.snapshot)}`, 'snapshot/' + s.snapshot);
+    } }] : []),
     ...ops,
   ];
 });

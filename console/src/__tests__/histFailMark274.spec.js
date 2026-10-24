@@ -1,0 +1,29 @@
+/**
+ * 二百七十四批：查询历史失败标记——失败也记史（旧历史+跨模式 store 双路 ok:false），
+ * 面板红点提示+重试入口语义；重试成功翻转红点。
+ */
+import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+const read = (p) => readFileSync(join(__dirname, p), 'utf-8');
+const dq = read('../views/DslQueryView.vue');
+const store = read('../stores/queryHistory.ts');
+const panel = read('../components/QueryHistoryPanel.vue');
+describe('查询历史失败标记（274 批）', () => {
+    it('store push 支持失败标记并随最近一次执行刷新', () => {
+        expect(store).toMatch(/function push\(mode: string, query: string, index\?: string, took\?: number, ok = true\)/);
+        expect(store).toMatch(/it\.ok = ok;/);
+        expect(store).toMatch(/ok\?: boolean;/);
+    });
+    it('DslQueryView：失败双路标记+成功翻转红点+histRows 透传', () => {
+        expect(dq).toMatch(/h0\.ok = false; writeStoredRaw\(localStorage, HIST_KEY/);
+        expect(dq).toMatch(/h0\?\.ok === false\) \{ h0\.ok = true;/);
+        expect(dq).toMatch(/push\('dsl', dsl\.value, idx, -1, false\)/); /* idx=execQuery 选择源快照（执行链世代守卫随迁：快照即执行时的 pickedIdx，防切索引在途拍把失败标记记错索引） */
+        expect(dq).toMatch(/ts: h\.ts, ok: h\.ok \}/);
+    });
+    it('面板失败红点渲染', () => {
+        expect(panel).toMatch(/v-if="it\.ok === false" class="qhp-fail"/);
+        expect(panel).toContain('上次执行失败——回放可重试');
+        expect(panel).toMatch(/\.qhp-fail \{/);
+    });
+});

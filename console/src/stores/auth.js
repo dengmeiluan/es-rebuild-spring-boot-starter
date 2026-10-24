@@ -1,0 +1,662 @@
+import { defineStore } from 'pinia';
+import { computed, ref } from 'vue';
+import { api, setToken, clearToken, getToken, ioRecorder } from '../api';
+import { canCap, canViewAllAudit } from '../utils/capability';
+import { removeStoredRaw, writeStoredRaw } from '../utils/safeJson';
+/** 只读 POST 清单的段边界匹配（后端 ConsoleAuthInterceptor.isReadonlyPost 同源）：
+ * kw 前是 / 或串首、kw 后是段尾（/ ? ; 或串尾；尾带 / 的 kw 天然段前缀）——
+ * includes 会把 /cluster/counter-reset 等前缀内的新写端点静默认成只读。 */
+export function matchReadonlyKeyword(path, kw) {
+    const prefixKw = kw.endsWith('/');
+    let at = path.indexOf(kw);
+    while (at >= 0) {
+        const end = at + kw.length;
+        /* kw 以 / 开头时前导 / 自身就是段分隔（/index/cluster/query 的 at-1 是 x 不是 /）；
+           不以 / 开头才要求前一字符是段边界，防 /mycluster/query 命中 cluster/query。 */
+        const prevOk = at === 0 || path.charAt(at - 1) === '/' || kw.charAt(0) === '/';
+        const endOk = prefixKw
+            || end === path.length
+            || path.charAt(end) === '/' || path.charAt(end) === '?' || path.charAt(end) === ';';
+        if (prevOk && endOk)
+            return true;
+        at = path.indexOf(kw, at + 1);
+    }
+    return false;
+}
+/** 控制台鉴权状态 —— token 持久在 localStorage，身份内存态 */
+export const useAuthStore = defineStore('auth', () => {
+    /** 当前身份（null=未登录/未知）；delegated=宿主委托鉴权（凭证归宿主管，不可退出/改密）；
+   * displayName/authSource/attributes= 身份档案（宿主真实姓名与来源，顶栏产品化展示） */
+    const me = ref(null);
+    /** 是否需要弹登录遮罩 */
+    const showLogin = ref(false);
+    /** 鉴权是否启用（后端关了 auth 时 me 探测 404/放行，遮罩永不弹） */
+    const probed = ref(false);
+    /** 探测到后端明确关闭鉴权（/auth/me 404）。用于区分「未探测完成」与「无鉴权部署」。 */
+    const authDisabled = ref(false);
+    /* 是否提供内置账号登录（null=未知，按可用处理）：自定义授权器/宿主委托部署不展示本地表单。 */
+    const builtinLogin = ref(null);
+    /* 代际守卫：并发 probe（iframe 首探与宿主 token 重探）乱序完成时只认最新一代——
+   无凭证 401 若晚于有凭证 200 回来，旧代 catch 会把已认出的身份清回 null（grantedPages 随之失守） */
+    let probeSeq = 0;
+    let probeRetry = null;
+    let probeRetryDelay = 3000;
+    /* 身份探测是否已启动：应用启动即置位。未启动=独立挂载/组件测试（无鉴权语义）；
+       一旦启动，身份未确定前写门必须 fail-closed，不能把开屏竞态窗口当无鉴权。 */
+    const probeStarted = ref(false);
+    const clearProbeRetry = () => {
+        if (probeRetry) {
+            clearTimeout(probeRetry);
+            probeRetry = null;
+        }
+    };
+    /** 身份已确定：明确关闭鉴权（404）、已取得 me，或探测尚未启动。其余一律 fail-closed。 */
+    const identityKnown = () => authDisabled.value || me.value != null || !probeStarted.value;
+    /** 应用 setup 同步调用：子视图挂载前就进入“探测中”，关闭开屏 fail-open 窗口。 */
+    const beginProbe = () => { probeStarted.value = true; };
+    /** raw/管理域入口：ADMIN/无鉴权部署/独立挂载测试放行；探测中或探测失败一律关闭。 */
+    const canAdminOps = () => authDisabled.value || isAdmin() || !probeStarted.value;
+    /** 上一登录用户（localStorage）：换人时清掉上一用户的请求草稿/历史，防同标签页串数据。 */
+    const LAST_USER_KEY = 'es-console.last-user';
+    const USER_STATE_PREFIXES = [
+        /* DevTools/REST 草稿与历史（旧命名空间 + draft2 新命名空间覆盖全部视图 route） */
+        'es_devtools_', 'es-console.devtools.', 'es_rest_hist', 'es-console.draft2:',
+        /* 收藏/查询历史/保存的搜索/命令面板最近使用 */
+        'es-console.favorites.v1', 'es_query_hist_v2', 'es_query_saved', 'es_cmd_recent',
+        /* 一次性 carry/预填键：换人后自动回填上一用户的载荷（部分入口还会自动执行） */
+        'es-console.dsl.', 'es-console.bulk.', 'es-console.ubq.', 'es-console.doc-diff.',
+        'es-console.reindex-advanced.', 'es-console.sql.', 'es-console.lucene.',
+        'es-console.sandbox.', 'es-console.pit.', 'es-console.rebuild-paste',
+        'es-console.search-templates.carry', 'es-console.flame.',
+        'es-console.lifecycle.rollover', 'es-console.link.',
+    ];
+    function purgeUserRequestState() {
+        for (const storage of [localStorage, sessionStorage]) {
+            try {
+                const keys = [];
+                for (let i = 0; i < storage.length; i++) {
+                    const k = storage.key(i);
+                    if (k)
+                        keys.push(k);
+                }
+                for (const k of keys) {
+                    if (USER_STATE_PREFIXES.some(p => k === p || k.startsWith(p)))
+                        removeStoredRaw(storage, k);
+                }
+            }
+            catch { /* 存储不可用：无残留可清 */ }
+        }
+    }
+    function purgeIfUserChanged(username) {
+        if (!username)
+            return;
+        let prev = '';
+        try {
+            prev = localStorage.getItem(LAST_USER_KEY) || '';
+        }
+        catch { /* 存储不可用 */ }
+        if (prev && prev !== username)
+            purgeUserRequestState();
+        writeStoredRaw(localStorage, LAST_USER_KEY, username);
+    }
+    /** 启动探测：有 token 或后端放行则拉身份；401 由全局事件弹遮罩 */
+    async function probe() {
+        probeStarted.value = true;
+        const seq = ++probeSeq;
+        clearProbeRetry();
+        try {
+            const m = await api.auth.me();
+            if (seq !== probeSeq)
+                return; // 已有更新一代在飞/完成，旧代结果丢弃
+            purgeIfUserChanged(m?.username);
+            me.value = m;
+            authDisabled.value = false;
+            probeRetryDelay = 3000;
+            // 认出身份即收遮罩：iframe 握手竞态下首次 probe 的 401 可能把遮罩顶出来，重探成功要能自愈
+            if (me.value)
+                showLogin.value = false;
+        }
+        catch (e) {
+            if (seq !== probeSeq)
+                return;
+            // 401 已由 api.ts 广播 es-console:unauthorized；404 需二次确认（下方）
+            me.value = null;
+            /* 404 可能是「无鉴权部署」（/auth 控制器未装配），也可能是代理/版本错配。
+               必须由 setup/status 明确报告 authEnabled=false 才放开写门；否则 fail-closed。 */
+            if (e?.status === 404 || e?.status === 401) {
+                try {
+                    const s = await api.setup.status();
+                    if (seq !== probeSeq)
+                        return;
+                    authDisabled.value = s.authEnabled === false;
+                    if (typeof s.builtinLogin === 'boolean') {
+                        builtinLogin.value = s.builtinLogin;
+                    }
+                }
+                catch {
+                    if (seq !== probeSeq)
+                        return;
+                    authDisabled.value = false;
+                }
+            }
+            else {
+                authDisabled.value = false;
+            }
+            /* 非 401/404 的瞬时失败（500/网络/超时）不能让有权限的人永久锁死：
+               指数退避重探，身份一到即恢复；期间所有写门保持 fail-closed。 */
+            if (!authDisabled.value && e?.status !== 401) {
+                const delay = probeRetryDelay;
+                probeRetryDelay = Math.min(probeRetryDelay * 2, 30000);
+                probeRetry = setTimeout(() => {
+                    probeRetry = null;
+                    if (seq === probeSeq && me.value == null && !authDisabled.value)
+                        void probe();
+                }, delay);
+            }
+        }
+        finally {
+            if (seq === probeSeq)
+                probed.value = true;
+        }
+    }
+    async function login(username, password) {
+        const r = await api.auth.login(username, password);
+        purgeIfUserChanged(r.username);
+        setToken(r.token);
+        ioRecorder.clear(); /* 前一个会话的请求原文不得留给新登录用户 */
+        me.value = { username: r.username, role: r.role, fallback: r.fallback };
+        authDisabled.value = false;
+        showLogin.value = false;
+        // 登录成功后补拉一次完整身份（含 hasAnyUser）
+        probe();
+        return r;
+    }
+    /**
+     * 凭证换发/401：旧身份授权立即失效，直到新一代 probe 落地。
+     * 只认身份、不清请求原文（换发不是换人）；期间的写门因 me=null 而 fail-closed。
+     */
+    function invalidateIdentity() {
+        probeSeq++; /* 作废在飞/待重试的身份探测，旧回包不得把旧授权填回 */
+        clearProbeRetry();
+        me.value = null;
+    }
+    function logout() {
+        /* 先尽力通知服务端吊销当前令牌：请求在途/失败都不阻塞、不影响本地清理
+           （服务端不可达也要能登出），令牌头在发车前快照，随后才 clearToken。 */
+        void api.auth.logout().catch(() => { });
+        probeSeq++; /* 作废在飞/待重试的身份探测，避免退出后又被旧回包填回 me */
+        clearProbeRetry();
+        clearToken();
+        ioRecorder.clear(); /* 请求原文（可能含连接口令）不得留给下一个登录用户 */
+        me.value = null;
+        showLogin.value = true;
+    }
+    function requireLogin() {
+        /* 401 到达即撤旧授权：遮罩背后不得继续用上一份 grantedPages 发写。 */
+        invalidateIdentity();
+        showLogin.value = true;
+        // 401 瞬时竞态自愈：本机有 token（宿主委托/本地登录态）时自动重探一次身份——
+        // probe 成功即收遮罩；probe 仍 401 则遮罩保持。杜绝「token 已恢复但遮罩无人收回，
+        // 透明拦截层挡死整页交互」的残留形态（托管重建 settings/mapping 不可编辑的真凶）。
+        if (getToken())
+            void probe();
+    }
+    /** 2.5.0 页面级授权白名单（三态）。路由守卫 / SideNav 过滤 / App.vue 复核共用同一真源。 */
+    const grantedPages = computed(() => {
+        const gp = me.value?.grantedPages;
+        return Array.isArray(gp) ? gp : null;
+    });
+    /* 连接环境（来自连接目录）→ 该环境的页面模板（来自 /auth/me.envPages）。
+       环境模板是后端 EnvPagesResolver 的页集封顶：前端菜单/按钮必须同口径收缩，
+       否则会出现「菜单说能进、端点 403」的假入口（或反向误拦）。 */
+    const connEnvById = ref({});
+    function setConnEnvs(list) {
+        const out = {};
+        for (const c of list || []) {
+            if (!c?.id || !c?.env)
+                continue;
+            out[String(c.id)] = String(c.env).trim().toUpperCase();
+        }
+        connEnvById.value = out;
+    }
+    const envPagesMap = computed(() => {
+        const raw = me.value?.envPages;
+        if (!raw || typeof raw !== 'object')
+            return null;
+        const out = {};
+        for (const k of Object.keys(raw)) {
+            const pages = raw[k];
+            out[String(k).trim().toUpperCase()] = new Set(Array.isArray(pages) ? pages.map(p => String(p)) : []);
+        }
+        return Object.keys(out).length ? out : null;
+    });
+    /** 当前目标连接的环境模板是否开放 pageKey（未配置模板/未知环境=不收缩）。 */
+    const envAllows = (pageKey, targetId) => {
+        const templates = envPagesMap.value;
+        if (!templates || !pageKey)
+            return true;
+        const tid = !targetId || String(targetId).toLowerCase() === 'host' ? 'host' : String(targetId);
+        const env = connEnvById.value[tid];
+        if (!env)
+            return true;
+        const tpl = templates[env];
+        return tpl === undefined ? true : tpl.has(pageKey);
+    };
+    const isAdmin = () => me.value?.role === 'ADMIN';
+    /* 连接元数据可见性：ADMIN/未启用鉴权/静态键模型看全部；conn 模型只看授权连接，防未授权连接名/host 外泄 */
+    const canSeeConn = (connId) => {
+        if (!identityKnown())
+            return false; /* 探测中/探测失败：连接名也不外泄 */
+        if (me.value == null || isAdmin())
+            return true;
+        const gp = me.value.grantedPages;
+        if (!Array.isArray(gp))
+            return true;
+        if (gp.length === 0)
+            return false; /* 空集=全拒：连连接名也不外泄 */
+        /* 静态键是全局页授权（对所有连接生效），混入 conn 键时不能反过来把静态覆盖的连接藏掉 */
+        if (gp.some(g => !g.startsWith('conn:')))
+            return true;
+        return gp.some(g => g.startsWith('conn:' + connId + ':'));
+    };
+    /* 能力门禁统一入口（镜像后端拦截器 rank 语义）——危险按钮「不展示」都走 can()，
+   语义真源在 utils/capability.ts；安全边界始终在后端，这里是体验层防误点。
+   分层兜底：me=null（后端未启用鉴权/身份未探测到）→ 全放行——无鉴权部署全功能可用的既有语义不破
+   （有鉴权但未登录时整卡被 LoginOverlay 遮罩拦截，此放行不可达）；me 有值但 role 无法识别 →
+   capability 内 fail-closed 按 VIEWER。 */
+    const can = (cap) => {
+        if (!identityKnown())
+            return false;
+        return me.value == null ? true : canCap(me.value.role, cap);
+    };
+    const canAuditAll = (targetId) => me.value != null
+        && canViewAllAudit(me.value.role) && canReadPage('security', targetId);
+    /* 页面读可见性（不含角色档）：路由/菜单按页面 key 判可见，审计全量另叠 rank3。
+       与后端 effectivePages 同口径：静态键全局、conn:{tid}: 键按目标、w: 键同可见。 */
+    const canReadPage = (pageKey, targetId) => {
+        if (!identityKnown())
+            return false;
+        if (me.value == null || isAdmin())
+            return true;
+        const gp = me.value.grantedPages;
+        if (!Array.isArray(gp))
+            return true;
+        if (gp.length === 0)
+            return false;
+        /* system/config-drift 恒定执行在宿主；REST 写键可执行 DevTools 端点，页面入口同口径可见。 */
+        const hostPage = pageKey === 'system' || pageKey === 'config-drift';
+        const tid = hostPage
+            ? 'host'
+            : (!targetId || String(targetId).toLowerCase() === 'host' ? 'host' : targetId);
+        /* security 页的审计读是 host-scope：顶栏选中连接时，conn:host:security
+           仍应打开安全中心（后端 pageScope 同口径，行级只看 host 事件）。 */
+        /* 静态 security 页同样回退到宿主 scope（后端 pageScope 取 host 有效页集）；
+           目标 env 排除 security 时，这段 fallback 仍让宿主审计入口可见。 */
+        const hostSecurity = pageKey === 'security'
+            && (gp.includes('security')
+                || gp.includes('conn:host:security') || gp.includes('conn:host:w:security'));
+        /* 环境模板按实际授权作用域收缩：静态/目标连接授权走目标 env，host security 走宿主。 */
+        const direct = gp.includes(pageKey)
+            || gp.includes('conn:' + tid + ':' + pageKey)
+            || gp.includes('conn:' + tid + ':w:' + pageKey);
+        if (direct && envAllows(pageKey, tid))
+            return true;
+        /* DevTools 由 w:rest 打开时按 rest 页收缩（env 只开放 rest 时 DevTools 仍可达）。 */
+        if (pageKey === 'devtools' && gp.includes('conn:' + tid + ':w:rest')
+            && envAllows('rest', tid))
+            return true;
+        return hostSecurity;
+    };
+    /* 表格文档写门（{@code /cluster/doc*} 共享端点）：
+       conn 模型只认 search/indices/doc-diff 三个归属页的精确 w: 键；混合模型静态页键回落到
+       「页可见 + 角色档」。此前「该目标有任意 w: 键即放行」会把 optimizer/aliases 写键
+       误当成文档写权（按钮露出、后端 403）。browser 只有文档读面，不参与写。 */
+    const canWriteOn = (targetId) => {
+        if (!identityKnown())
+            return false; /* 身份未定：写入口不展示 */
+        if (isAdmin())
+            return true; /* 超管全局写权：不受连接写键缺失拖累 */
+        const gp = grantedPages.value;
+        if (Array.isArray(gp) && gp.length === 0)
+            return false; /* 空集=全拒 */
+        const tid = !targetId || String(targetId).toLowerCase() === 'host' ? 'host' : String(targetId);
+        const docPages = ['search', 'indices', 'doc-diff'];
+        if (!Array.isArray(gp) || gp.length === 0)
+            return can('write');
+        return docPages.some(p => envAllows(p, tid) && (gp.includes('conn:' + tid + ':w:' + p) || (gp.includes(p) && can('write'))));
+    };
+    /* 页面级连接感知门——conn 模型下「勾选即权限」，本页写键(conn:{tid}:w:{pageKey})
+   在场即放行（镜像后端页面门 writeAllowed 精确键语义）；静态模型（grantedPages=null）与
+   非连接上下文回落全局角色档 canCap；admin 是管理域（连接菜单无对应勾选项）不走连接分支。 */
+    const canPage = (cap, pageKey, targetId) => {
+        if (!identityKnown())
+            return false;
+        if (me.value == null)
+            return true;
+        if (isAdmin())
+            return true; /* 超管全局页面权：页面白名单/连接键不拖累 */
+        const gp = me.value.grantedPages;
+        if (Array.isArray(gp) && gp.length === 0)
+            return false; /* 空集=全拒 */
+        const isConn = Array.isArray(gp) && gp.some(g => g.startsWith('conn:'));
+        const hostPage = pageKey === 'system' || pageKey === 'config-drift';
+        const tid = hostPage
+            ? 'host'
+            : (!targetId || String(targetId).toLowerCase() === 'host' ? 'host' : targetId);
+        const envOk = envAllows(pageKey, tid);
+        if (isConn && cap !== 'admin') {
+            /* 混合模型：conn 写键优先；静态页键回落到「可见 + 角色档」（后端同序）。 */
+            return envOk && (gp.includes('conn:' + tid + ':w:' + pageKey)
+                || (gp.includes(pageKey) && canCap(me.value.role, cap)));
+        }
+        /* 静态页面白名单：页面可见性 + 角色档双闸（后端页面门/角色门同序），
+           不能只按角色放行而在点下去时才 403。 */
+        if (Array.isArray(gp) && gp.length > 0) {
+            return envOk && gp.includes(pageKey) && canCap(me.value.role, cap);
+        }
+        return canCap(me.value.role, cap);
+    };
+    /* 端点级单一权限入口——用 me.pages 下发的 apiPrefixes 镜像后端 pageOf
+   （最长前缀匹配→归属页），conn 模型按精确 conn:{tid}:w:{pageKey} 裁决；未命中（共享
+   端点）按任意写键；静态模型回落 canCap；admin 管理域不走连接分支。视图只传按钮真实
+   调用的端点路径，零 pageKey 硬编码（586 错位根治）。 */
+    /* 963：与后端 ConsoleAuthInterceptor.isReadonlyPost 对齐——sql 关键词去尾斜杠（裸 /cluster/sql 也命中）；
+       insight/settings-impact 为只读评估端点新增入册 */
+    /* painless/execute 不在列：可执行脚本按写档裁决（后端 READONLY_POST_KEYWORDS 同源） */
+    const READONLY_POST_KEYWORDS = ['/cluster/query', '/cluster/profile', '/cluster/count', '/cluster/search-dsl', '/cluster/search-raw', '/cluster/search-template', '/cluster/render-template', '/cluster/validate-query', '/cluster/explain-doc', '/cluster/allocation-explain', '/cluster/analyze', '/cluster/reindex-preview', '/cluster/sql', '/cluster/pit/', '/insight/settings-impact'];
+    /* 963：共享写端点 → 合法页面写键（与后端 ConsoleAuthInterceptor.SHARED_WRITE_PAGES 同源）。
+       原先“任意写键”放行会让 optimizer 写键持有人删文档/取消任务/改 ILM 策略。 */
+    const SHARED_WRITE_PAGE_KEYS = {
+        '/cluster/doc/update': ['search', 'indices', 'doc-diff'],
+        '/cluster/doc': ['search', 'indices', 'doc-diff'],
+        '/cluster/update-document': ['search', 'indices', 'doc-diff'],
+        '/cluster/update-partial': ['search', 'indices', 'doc-diff'],
+        '/cluster/delete-by-id': ['search', 'indices'],
+        '/cluster/delete-by-query': ['search', 'update-by-query'],
+        '/cluster/tasks/cancel': ['tasks', 'task-tree'],
+        '/cluster/ilm/policy': ['ilm'],
+        '/cluster/ilm/move': ['ilm', 'lifecycle'],
+        '/cluster/index-settings/update': ['index-settings', 'indices', 'optimizer'],
+        '/cluster/reload-analyzers': ['analysis-settings', 'synonyms'],
+        '/cluster/reroute': ['cluster-settings'],
+        '/cluster/reroute/retry-failed': ['diag'],
+        '/cluster/create-index': ['config-validator', 'indices'],
+        '/cluster/alias-actions': ['aliases', 'config-validator'],
+        '/cluster/scripts/put': ['search-templates', 'painless-lab'],
+        '/cluster/scripts/delete': ['search-templates', 'painless-lab'],
+        '/cluster/painless/execute': ['painless-lab'],
+        '/cluster/devtools/execute': ['rest', 'devtools'],
+        '/insight/actions/apply-index-settings': ['index-settings', 'indices', 'optimizer'],
+    };
+    /* 共享端点匹配必须落在段边界：apply-index-settings 不得命中 apply-index-settings-extra。 */
+    const sharedPathMatches = (path, key) => {
+        let i = path.indexOf(key);
+        while (i >= 0) {
+            const end = i + key.length;
+            if (end === path.length || path[end] === '/' || path[end] === '?')
+                return true;
+            i = path.indexOf(key, i + 1);
+        }
+        return false;
+    };
+    const sharedWritePageKeys = (path) => {
+        const clean = String(path || '').split('?')[0].split('#')[0];
+        let best = null;
+        let bestLen = -1;
+        for (const [frag, keys] of Object.entries(SHARED_WRITE_PAGE_KEYS)) {
+            if (sharedPathMatches(clean, frag) && frag.length > bestLen) {
+                best = keys;
+                bestLen = frag.length;
+            }
+        }
+        return best;
+    };
+    /* 共享读端点 → 归属页读键（与后端 SHARED_READ_PAGES 同源）。 */
+    const SHARED_READ_PAGE_KEYS = {
+        '/cluster/query': ['search', 'indices', 'analyzer-lab'],
+        '/cluster/search-dsl': ['search', 'profile-flame', 'update-by-query'],
+        '/cluster/search-template': ['search-templates'],
+        '/cluster/search-raw': ['search', 'indices', 'browser', 'analyzer-lab', 'aliases', 'update-by-query', 'bulk', 'doc-diff', 'boost-tuner', 'rank-debug', 'score-explain', 'match-matrix', 'query-xray', 'profile-flame'],
+        '/cluster/profile': ['search', 'indices'],
+        '/cluster/count': ['search', 'indices'],
+        '/cluster/explain-doc': ['rank-debug', 'search', 'indices'],
+        '/cluster/validate-query': ['query-xray', 'search'],
+        '/cluster/term-vectors': ['query-xray'],
+        '/cluster/doc': ['search', 'indices', 'browser', 'doc-diff'],
+        '/cluster/inspect': ['indices', 'mapping', 'search', 'config-validator', 'adhoc-rebuild'],
+        '/cluster/ilm/explain': ['ilm', 'lifecycle'],
+        '/cluster/ilm/policies': ['ilm', 'lifecycle'],
+        '/cluster/templates': ['templates', 'templates-gallery'],
+        '/cluster/shards': ['overview', 'indices', 'topology'],
+        '/cluster/task-detail': ['tasks', 'task-tree', 'workspace'],
+        '/cluster/remote-clusters': ['remote-clusters', 'workspace'],
+        '/cluster/sql': ['search', 'workspace'],
+        '/cluster/health-report': ['health-report', 'workspace'],
+        '/insight/settings-impact': ['index-settings', 'optimizer'],
+        '/monitor-metrics': ['overview', 'live'],
+        '/monitor-history': ['overview', 'live'],
+        '/monitor-alerts': ['overview', 'live'],
+        '/ring-usage': ['overview', 'topology', 'live'],
+        '/cluster/tasks': ['tasks', 'task-tree'],
+        '/cluster/index-settings': ['index-settings', 'indices', 'optimizer'],
+        '/cluster/index-settings-defaults': ['mapping', 'index-settings', 'indices', 'optimizer'],
+        '/cluster/aliases': ['aliases', 'indices', 'browser'],
+        '/cluster/scripts': ['painless-lab', 'search-templates'],
+        '/cluster/mapping-detail': ['mapping', 'mapping-designer', 'indices', 'analyzer-lab', 'search', 'browser', 'doc-diff'],
+        '/cluster/analysis-settings': ['analysis-settings', 'analyze', 'mapping', 'synonyms'],
+        '/cluster/nodes-stats-brief': ['topology', 'overview', 'live'],
+        '/cluster/shard-stores': ['topology', 'indices', 'overview'],
+        '/cluster/analyze': ['analyze', 'analyzer-lab', 'analysis-settings'],
+        '/es/index/keys': ['xmigrate'],
+        '/desired-state': ['config-drift', 'adhoc-rebuild', 'indices', 'mapping'],
+        '/desired-state.html': ['config-drift', 'adhoc-rebuild', 'indices', 'mapping'],
+        '/mapping-reconcile/report': ['config-drift', 'indices', 'mapping'],
+        '/progress': ['indices', 'update-by-query', 'reindex-advanced', 'search', 'tasks', 'task-tree', 'adhoc-rebuild'],
+        '/xmigrate/progress': ['xmigrate'],
+        '/internal/es/index/health': ['overview', 'diag', 'health-report'],
+    };
+    const sharedReadPageKeys = (path) => {
+        const clean = String(path || '').split('?')[0].split('#')[0];
+        let best = null;
+        let bestLen = -1;
+        for (const [frag, keys] of Object.entries(SHARED_READ_PAGE_KEYS)) {
+            if (sharedPathMatches(clean, frag) && frag.length > bestLen) {
+                best = keys;
+                bestLen = frag.length;
+            }
+        }
+        return best;
+    };
+    /* 写端点角色档镜像（与后端 ConsoleAuthInterceptor 的 ADMIN/REBUILD/CLUSTER 关键词同源）。
+       守卫只用于「请求发车前」拦截；漏项只会让守卫更宽松，有权限的人不会被误拦，
+       后端 rank 门仍是最终边界。 */
+    const ADMIN_WRITE_HINTS = ['/auth/users', '/cluster/raw', '/cluster/devtools/execute', '/setup/rebind', '/clusters/'];
+    const OPS_WRITE_HINTS = [
+        '/rebuild', '/first-migrate', '/full-reload', '/cleanup', '/abort',
+        '/lock/release', '/force-merge', '/replicas',
+        '/cluster/update-by-query', '/cluster/bulk', '/reindex-advanced',
+        '/xmigrate/start', '/xmigrate/resume', '/xmigrate/abort',
+        '/xmigrate/connect-check', '/xmigrate/fetch-config', '/xmigrate/resolve-preview', '/xmigrate/preflight',
+        'adhoc-rebuild/start', 'adhoc-rebuild/abort', 'adhoc-rebuild/confirm-switch',
+        /* 取消在途 reindex/UBQ/force-merge 任务与重建中止同族，提档与 abort 对齐（后端同源） */
+        '/cluster/tasks/cancel',
+        '/cluster/delete-index', '/cluster/create-index', '/cluster/delete-by-id', '/cluster/delete-by-query',
+        '/cluster/settings/put', '/cluster/reroute', '/cluster/reroute/retry-failed',
+        '/cluster/alias-actions', '/cluster/rollover',
+        '/cluster/templates/put', '/cluster/templates/delete', '/cluster/scripts/put', '/cluster/scripts/delete',
+        '/cluster/snapshot/delete', '/cluster/snapshot/restore', '/cluster/snapshot/create',
+        '/cluster/ilm/policy', '/cluster/ilm/move', '/cluster/ilm/start', '/cluster/ilm/stop', '/cluster/slm/execute',
+        '/cluster/index-settings/update', '/cluster/update-settings',
+        '/cluster/mapping-put', '/cluster/put-mapping', '/cluster/analysis-update',
+        '/cluster/synonyms-upsert', '/cluster/reload-analyzers',
+    ];
+    const BOOTSTRAP_WRITE_HINTS = ['/auth/login', '/auth/logout', '/auth/change-password', '/setup/test', '/setup/apply'];
+    const capForWritePath = (path) => {
+        if (ADMIN_WRITE_HINTS.some(h => path.includes(h)))
+            return 'admin';
+        if (OPS_WRITE_HINTS.some(h => path.includes(h)))
+            return 'ops';
+        return 'write';
+    };
+    /* 最长前缀匹配端点归属页（与后端 pageOf 同口径） */
+    const pageOwnerOf = (path) => {
+        /* 查询串/锚点不参与归属判定：调用方可能把实际调用路径（含 ?index=）直接传进来 */
+        const clean = String(path || '').split('?')[0].split('#')[0];
+        const pages = me.value?.pages?.groups?.flatMap(g => g.pages) ?? [];
+        let best = null;
+        for (const p of pages)
+            for (const pre of (p.apiPrefixes ?? [])) {
+                const hit = pre.endsWith('/') ? clean.startsWith(pre) : (clean === pre || clean.startsWith(pre + '/'));
+                if (hit && pre.length > (best?.len ?? 0))
+                    best = { key: p.key, len: pre.length };
+            }
+        return best?.key ?? null;
+    };
+    /* 恒定作用于宿主集群的端点（镜像后端 isHostBoundPath）：
+       只有 /cluster/**、/insight、config-lab/validate、迁移进度与 adhoc prepare/start 跟随目标；
+       其余 provider/系统/概览读取都执行在宿主，授权目标必须按 host 判定。 */
+    const isHostBoundPath = (path) => {
+        if (path.includes('/cluster/') || path.includes('/insight')
+            || path.includes('/config-lab/validate') || path.endsWith('/internal/es/index/progress')
+            || path.includes('/adhoc-rebuild/'))
+            return false;
+        if (path.includes('/monitor-metrics') || path.includes('/monitor-history')
+            || path.includes('/monitor-alerts') || path.includes('/ring-usage'))
+            return false;
+        if (path.endsWith('/es/index/keys') || path.includes('/desired-state')
+            || path.includes('/mapping-reconcile/report'))
+            return false;
+        if (path.includes('/clusters') || path.includes('/xmigrate/') || path.includes('/setup/'))
+            return false;
+        /* 本地账号管理是宿主控制面数据；审计流水仍按目标连接行级过滤。 */
+        if (path.includes('/auth/'))
+            return path.includes('/auth/users');
+        return true;
+    };
+    const canEndpoint = (cap, method, path, targetId) => {
+        if (!identityKnown())
+            return false;
+        if (me.value == null)
+            return true;
+        if (isAdmin())
+            return true; /* 超管全局端点权：与后端 ADMIN 页面门豁免镜像 */
+        const gp = me.value.grantedPages;
+        if (Array.isArray(gp) && gp.length === 0)
+            return false; /* 空集=全拒：与后端 isEmpty 分支同源 */
+        const isConn = Array.isArray(gp) && gp.some(g => g.startsWith('conn:'));
+        /* 静态页白名单：纯静态模型与「conn 键 + 静态键」混合模型都保留全局页授权。
+           混合模型下静态写权 = 静态页键在场 + 角色档（后端 staticWriteAllowed 同语义）。 */
+        const staticKeys = Array.isArray(gp) ? gp.filter(k => !k.startsWith('conn:')) : [];
+        const staticPages = staticKeys.length > 0 ? new Set(staticKeys) : null;
+        /* host/缺省目标同样走连接写键：conn 用户不得因未带目标头落回全局角色门写宿主；
+           与后端 ConsoleAuthInterceptor 的 targetId=host 归一化同源。host-bound 端点强制 host。 */
+        const cleanPath = String(path || '').split('?')[0].split('#')[0];
+        const gateTarget = isHostBoundPath(cleanPath) ? 'host' : targetId;
+        const tid = !gateTarget || String(gateTarget).toLowerCase() === 'host' ? 'host' : gateTarget;
+        /* 963：只读 POST=清单命中 或 后端三条精确尾缀（index/query、index/system-query、探活 probe）——
+           尾缀端点无页归属，误判写会走精确写键把读动作也拦掉。
+           988：清单命中改段边界匹配（后端 isReadonlyPost 同源）——kw 前是 / 或串首、kw 后是
+           段尾（/ ? ; 串尾；尾带 / 的 kw 天然段前缀），防 includes 把前缀内的未来新写端点
+           静默认成只读 */
+        const writeReq = method.toUpperCase() !== 'GET' && method.toUpperCase() !== 'HEAD'
+            && !READONLY_POST_KEYWORDS.some(kw => matchReadonlyKeyword(cleanPath, kw))
+            && !cleanPath.endsWith('/index/query') && !cleanPath.endsWith('/index/system-query') && !cleanPath.endsWith('/probe');
+        if (writeReq) {
+            /* 写语义：共享映射优先（多页合法复用的端点，任一归属页写键即放行）；
+               未登记共享写再走页前缀精确写键。 */
+            const sharedPages = sharedWritePageKeys(path);
+            if (sharedPages) {
+                /* env 模板按页收缩：共享端点任一“可写且环境开放”的归属页即可放行。 */
+                if (isConn)
+                    return sharedPages.some(k => gp.includes('conn:' + tid + ':w:' + k) && envAllows(k, tid))
+                        || (!!staticPages && sharedPages.some(k => staticPages.has(k) && envAllows(k, tid))
+                            && canCap(me.value.role, cap));
+                if (staticPages) {
+                    return sharedPages.some(k => staticPages.has(k) && envAllows(k, tid))
+                        && canCap(me.value.role, cap);
+                }
+                return canCap(me.value.role, cap);
+            }
+            const owner = pageOwnerOf(path);
+            if (owner) {
+                const envOk = envAllows(owner, tid);
+                if (isConn) {
+                    return envOk && (gp.includes('conn:' + tid + ':w:' + owner)
+                        || (!!staticPages && staticPages.has(owner) && canCap(me.value.role, cap)));
+                }
+                if (staticPages)
+                    return envOk && staticPages.has(owner) && canCap(me.value.role, cap);
+                return canCap(me.value.role, cap);
+            }
+            /* 连接模型默认拒绝「无页面归属」的写端点：与后端未登记写默认拒绝同源，
+               不能让未登记的端点回落全局角色档（否则 UI 会显示一个后端必 403 的入口）。
+               混合模型有静态全局页授权时，按纯静态语义回落角色门（后端 hasStatic 同口径）。 */
+            return isConn ? (staticPages ? canCap(me.value.role, cap) : false) : canCap(me.value.role, cap);
+        }
+        const sharedRead = sharedReadPageKeys(path);
+        if (isConn) {
+            /* conn 模型读也要过页面可见性：后端 effectivePages 先裁页面，再落到角色门。
+               混入的静态键同样视为可见（后端 effectivePages 同口径；env 收缩在服务端执行）。 */
+            const staticKeys = gp.filter(k => !k.startsWith('conn:'));
+            const visibleOn = (keys) => keys.some(k => envAllows(k, tid)
+                && (staticKeys.includes(k)
+                    || gp.includes('conn:' + tid + ':' + k) || gp.includes('conn:' + tid + ':w:' + k)));
+            if (sharedRead)
+                return visibleOn(sharedRead);
+            const owner = pageOwnerOf(path);
+            /* 与后端 pageScope 同口径：host-scope security 审计在连接目标下仍可读；
+               静态 security 页也回退宿主 scope（后端 hostPages 回退包含静态键）。 */
+            if (owner === 'security'
+                && (gp.includes('security')
+                    || gp.includes('conn:host:security') || gp.includes('conn:host:w:security'))) {
+                return true;
+            }
+            return owner == null ? true : visibleOn([owner]);
+        }
+        if (sharedRead) {
+            if (staticPages)
+                return sharedRead.some(k => staticPages.has(k) && envAllows(k, tid));
+            return true;
+        }
+        const owner = pageOwnerOf(path);
+        if (staticPages && owner) {
+            /* security 读端点在目标 env 排除该页时仍可按宿主 scope 回退（后端 pageScope 同口径）。 */
+            if (owner === 'security' && staticPages.has('security'))
+                return true;
+            return staticPages.has(owner) && envAllows(owner, tid);
+        }
+        return true;
+    };
+    /**
+     * API 层写门（api.request 在 fetch 前调用）：未授权写请求零发出。
+     * 自助/引导写（登录/退出/改密/setup）与只读 POST 不拦；后端仍是最终边界。
+     */
+    const canEmitWrite = (method, path, targetId) => {
+        const m = String(method || 'GET').toUpperCase();
+        if (m === 'GET' || m === 'HEAD' || m === 'OPTIONS')
+            return true;
+        const clean = String(path || '').split('?')[0].split('#')[0];
+        if (BOOTSTRAP_WRITE_HINTS.some(h => clean.includes(h)))
+            return true;
+        /* 委派非 ADMIN 不得写本地账号（BuiltinConsoleAuthService 同口径）：客户端也不发车。 */
+        if (clean.includes('/auth/users') && me.value?.delegated && !isAdmin())
+            return false;
+        /* 与后端同源特例：托管重建向导「校验并继续」持 adhoc 写键即可调用
+           config-lab/validate，不额外要求 config-validator 页。 */
+        if (clean.endsWith('/config-lab/validate')
+            && canEndpoint('ops', 'POST', '/internal/es/index/adhoc-rebuild/start', targetId))
+            return true;
+        return canEndpoint(capForWritePath(clean), m, clean, targetId);
+    };
+    /* 跨标签页身份同步：另一标签换人/退出后，本页旧 grantedPages 必须立即失效；
+       新 token 到达即作废旧身份并重探，身份落地前写门 fail-closed。 */
+    if (typeof window !== 'undefined') {
+        window.addEventListener('storage', (e) => {
+            if (e.key !== 'es-console.auth.token')
+                return;
+            invalidateIdentity();
+            void probe();
+        });
+    }
+    return { me, showLogin, probed, authDisabled, builtinLogin, probeStarted, beginProbe, canAdminOps, probe, login, logout, requireLogin, invalidateIdentity, isAdmin, canSeeConn, grantedPages, can, canWriteOn, canPage, canEndpoint, canEmitWrite, canReadPage, canAuditAll, setConnEnvs, envAllows };
+});

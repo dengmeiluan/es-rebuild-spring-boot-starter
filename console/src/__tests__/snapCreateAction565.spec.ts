@@ -22,10 +22,10 @@ describe('五百六十五批件③：快照创建成功 notify 带 action', () =
     );
   });
 
-  it('action 深链 DevTools 预填 GET /_snapshot/<repo>/<name>（行级「状态」动作同一契约）', () => {
-    expect(view).toMatch(
-      /快照已提交（异步）：' \+ createName\.value, \{[^]*?path: '\/devtools'[^]*?_snapshot\/\$\{encodeURIComponent\(currentRepo\.value \|\| ''\)\}\/\$\{encodeURIComponent\(createName\.value\)\}/,
-    );
+  it('action 深链 DevTools 预填 GET /_snapshot/<repo>/<name>（1007：sessionStorage 契约）', () => {
+    expect(view).toContain("openInDevtools('GET'");
+    expect(view).toContain("`/_snapshot/${encodeURIComponent(currentRepo.value || '')}/${encodeURIComponent(createName.value)}`");
+    expect(view).not.toContain('query: { _prefill:');
   });
 
   it('恢复先例不动：doRestore 的「去查询验证」action 仍在（升级不覆盖既有指路）', () => {

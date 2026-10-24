@@ -140,8 +140,9 @@ describe('菜单/按钮校准', () => {
   it('DevTools 非 ADMIN 系统管理写不显示可执行态', () => {
     expect(devtools).toContain('nonAdminDataPlaneWriteAllowed');
     expect(devtools).toContain('const currentSendable = computed(() => canAdmin.value && !!cur.value');
-    expect(devtools).toContain('if (!requestInScope(cur.value?.method || \'GET\', cur.value?.path || \'/\'))');
-    expect(devtools).toContain('if (!requestInScope(t.method, t.path))');
+    /* 1004：门必须带 body——根级检索的 PIT 豁免要读 pit.id，否则 PIT 搜索被误禁 */
+    expect(devtools).toContain('if (!requestInScope(cur.value?.method || \'GET\', cur.value?.path || \'/\', cur.value?.body))');
+    expect(devtools).toContain('if (!requestInScope(t.method, t.path, t.body))');
   });
 
   it('安全中心全量审计需 rank3 + security 页读键', () => {

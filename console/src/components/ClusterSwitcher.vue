@@ -21,7 +21,7 @@
         <span class="cs-hdot" :class="hdotCls(c.health)" :title="hdotTip(c.health)"></span>
         <Globe :size="12" />
         <span class="cs-item-name">{{ c.name }}</span>
-        <span v-if="c.env" class="cs-env" :class="'e-' + c.env.toLowerCase()" :title="envTip(c.env)">{{ c.env }}<span v-if="c.env === 'PROD'" class="cs-ro">只读</span></span>
+        <span v-if="c.env" class="cs-env" :class="'e-' + c.env.toLowerCase()" :title="envTip(c.env)">{{ c.env }}<span v-if="c.env === 'PROD'" class="cs-ro">生产</span></span>
         <span v-if="c.syncState === 'STALE'" class="cs-stale" title="连接中心已无此连接(自动同步源失联);确认不再需要可在管理弹窗删除">源已失联</span>
         <span v-if="c.authType === 'API_KEY'" class="cs-ak mono" title="API Key 认证">AK</span>
         <span v-if="verOf(c)" class="cs-ver mono" title="服务端版本（探活自动识别）">v{{ verOf(c) }}</span>
@@ -75,7 +75,7 @@
             <div class="cm-row-main">
               <span class="cs-hdot" :class="hdotCls(c.health)" :title="hdotTip(c.health)"></span>
               <span class="cm-row-name">{{ c.name }}</span>
-              <span v-if="c.env" class="cs-env" :class="'e-' + c.env.toLowerCase()" :title="envTip(c.env)">{{ c.env }}<span v-if="c.env === 'PROD'" class="cs-ro">只读</span></span>
+              <span v-if="c.env" class="cs-env" :class="'e-' + c.env.toLowerCase()" :title="envTip(c.env)">{{ c.env }}<span v-if="c.env === 'PROD'" class="cs-ro">生产</span></span>
               <span v-if="c.syncState === 'STALE'" class="cs-stale" title="连接中心已无此连接(自动同步源失联);确认不再需要可删除">源已失联</span>
             </div>
             <div class="cm-row-aux">
@@ -302,7 +302,7 @@ const ENV_OPTS = [
 const curEnv = computed(() => store.conns.find(c => c.id === store.target)?.env || '');
 function envTip(env: string) {
   /* S2：与后端 env-role-cap 默认建议对齐——PROD 连接封顶只读 */
-  if (env === 'PROD') return '生产环境：已封顶只读，写操作在当前环境不可用';
+  if (env === 'PROD') return '生产环境：切换器与顶栏红色警示；写操作仍按页面授权判定（后端不做环境只读封顶）';
   return `环境标识：${env}`;
 }
 

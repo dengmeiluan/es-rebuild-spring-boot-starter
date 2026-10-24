@@ -113,4 +113,29 @@ public class BuiltinConsoleLogoutRevocation999Test {
         assertNull("被登出的会话失效", svc.verifyToken(tokenA));
         assertNotNull("其它会话不受牵连", svc.verifyToken(tokenB));
     }
+
+    @Test
+    public void 新建账号纪元随机_同名重建不复活旧token() throws IOException {
+        AtomicReference<String> putBody = new AtomicReference<>();
+        BuiltinConsoleAuthService svc = new BuiltinConsoleAuthService(
+                () -> EsFakeClients.scripted(req -> {
+                    if (req.getEndpoint().contains("/reborn")) {
+                        if ("PUT".equals(req.getMethod())) {
+                            putBody.set(req.getEntity() == null ? ""
+                                    : org.apache.http.util.EntityUtils.toString(req.getEntity()));
+                            return "{}";
+                        }
+                        return "{\"found\":false}";
+                    }
+                    return "{}";
+                }),
+                "es_console_user", "admin", "es-console", 3_600_000L, "it-secret");
+        svc.upsertUser(null, "reborn", PASSWORD, ConsoleRole.VIEWER);
+        String body = putBody.get();
+        assertNotNull("应写入用户档案", body);
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\"epoch\":(\\d+)").matcher(body);
+        assertTrue("档案必须带纪元", m.find());
+        long epoch = Long.parseLong(m.group(1));
+        assertFalse("新建账号不得固定 epoch=1：删号重建会让旧 epoch=1 的 token 复活", epoch == 1L);
+    }
 }

@@ -62,7 +62,7 @@
           @endpoint="onEndpoint" @keydown.ctrl.enter="run" />
         <button v-if="canAdmin" class="btn primary sm btn-run-lock" @click="run"
           :disabled="cur.busy || !currentSendable"
-          :title="currentSendable ? '执行（Ctrl+Enter）' : SCOPE_DENY_HINT">
+          :title="currentSendable ? '执行（Ctrl+Enter）' : scopeDenyHint">
           <!-- 主按钮中文化对齐两工作台（此前英文 Run 是中文界面孤例）；执行中态句式统一「执行中 X.Xs」 -->
           <Play :size="12" /> {{ cur.busy ? '执行中 ' + (qr.elapsedMs.value / 1000).toFixed(1) + 's' : '执行' }}
           <span class="kbd" style="margin-left:var(--sp-1)">Ctrl⏎</span>
@@ -73,7 +73,7 @@
         <span v-else class="dt-perm-dim" tabindex="0" role="img" aria-label="运行需 ADMIN 角色"
           title="运行需 ADMIN、DevTools 或 REST 页写权限；非 ADMIN 仅数据面（检索/文档/批量），系统管理与别名/快照/模板仍仅 ADMIN"><ShieldAlert :size="13" /></span>
         <span v-if="canAdmin && !currentSendable" class="dt-perm-dim" tabindex="0" role="status"
-          :title="SCOPE_DENY_HINT">非 ADMIN 仅数据面</span>
+          :title="scopeDenyHint">非 ADMIN 仅数据面</span>
         <button v-if="cur.busy" class="btn sm" @click="qr.cancel()"><X :size="12" /> 取消</button>
         <button class="btn ghost sm" @click="copyCurl" title="复制 curl">
           <Copy :size="12" /> curl
@@ -451,7 +451,9 @@ import WorkbenchLayout, { type WorkbenchPaneSpec } from '../components/Workbench
 import FocusableSurface from '../components/FocusableSurface.vue';
 import PageHeader from '../components/PageHeader.vue';
 import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
-import { nonAdminDataPlaneWriteAllowed } from '../utils/devtoolsScope';
+import { nonAdminDataPlaneWriteAllowed, nonAdminRootSearchNeedsIndex,
+  nonAdminIndexQueryParamRejected, nonAdminControlIndexDenied,
+  nonAdminBodyTargetsControl, nonAdminCatNeedsJson, nonAdminAsyncResultRead } from '../utils/devtoolsScope';
 const store = useAppStore();
 /* 权限门禁——DevTools 运行统一走专用 /cluster/devtools/execute（devtools/rest 写键，ADMIN 全局）；
  编辑/导入/复制响应全角色可用，非 ADMIN 给自述不给扳机 */
@@ -464,11 +466,36 @@ const isAdminIdentity = computed(() => auth.isAdmin());
    连接写键用户对系统管理写（别名/快照/模板/设置/脚本）不显示可执行态。
    me==null（未启用鉴权/探测完成未登录）跟随 canEndpoint 放行——authDisabled 形态
    无角色概念，scope 门不得把管理写在前端拦死。 */
-const requestInScope = (method: string, path: string) =>
-  auth.isAdmin() || auth.me == null || auth.authDisabled || nonAdminDataPlaneWriteAllowed(method, path);
+const requestInScope = (method: string, path: string, body?: string | null) =>
+  auth.isAdmin() || auth.me == null || auth.authDisabled || nonAdminDataPlaneWriteAllowed(method, path, body);
 const currentSendable = computed(() => canAdmin.value && !!cur.value
-  && requestInScope(cur.value.method, cur.value.path));
+  && requestInScope(cur.value.method, cur.value.path, cur.value.body));
 const SCOPE_DENY_HINT = '非 ADMIN 仅可执行数据面写（检索/文档/批量/SQL）；别名、快照、模板、脚本与集群管理写需 ADMIN';
+/* 不可用原因分档：根级检索缺索引范围是最高频的「看得见点不了」，单独说明怎么改 */
+const scopeDenyHint = computed(() => {
+  const c = cur.value;
+  if (c && !auth.isAdmin() && auth.me != null && !auth.authDisabled) {
+    if (nonAdminIndexQueryParamRejected(c.path)) {
+      return 'index/indices 查询参数不能限定目标：请改用 /{index}/_search 路径形式';
+    }
+    if (nonAdminControlIndexDenied(c.path)) {
+      return '控制面/系统索引不对非 ADMIN 开放：请改用业务索引';
+    }
+    if (nonAdminRootSearchNeedsIndex(c.path, c.body)) {
+      return '根级检索需用 /{index}/_search 形式，或 PIT（body 带 pit.id）；非 ADMIN 不允许全量读';
+    }
+    if (nonAdminCatNeedsJson(c.path)) {
+      return '_cat 目录查询需带 format=json 且保留 index 列（服务端据此逐行过滤控制面索引）';
+    }
+    if (nonAdminAsyncResultRead(c.path)) {
+      return '异步查询结果按 id 取回（id 即凭据，结果集按执行者权限生成）：非 ADMIN 请重新提交查询，不要复用他人 id';
+    }
+    if (nonAdminBodyTargetsControl(c.path, c.body)) {
+      return '请求体里的目标指向控制面索引：请把 _index / index / indices / SQL FROM 改为业务索引';
+    }
+  }
+  return SCOPE_DENY_HINT;
+});
 /* 预填 run:true 在身份未确认时挂起，probe 完成后仅执行一次：
    既不提前发写请求，也不让有权限的人因为开屏竞态而丢失自动执行。 */
 const pendingPrefillRun = ref(false);
@@ -949,7 +976,7 @@ function tryFormatBody(body: string): string {
 async function run() {
   /* 权限门双保险：按钮 v-if 之外，键盘/历史/预填所有入口在执行体首行拦截（busy 置位前） */
   if (!canAdmin.value) { store.notify('warning', '原始透传需要 ADMIN 或 DevTools/REST 页写权限'); return; }
-  if (!requestInScope(cur.value?.method || 'GET', cur.value?.path || '/')) {
+  if (!requestInScope(cur.value?.method || 'GET', cur.value?.path || '/', cur.value?.body)) {
     store.notify('warning', SCOPE_DENY_HINT);
     return;
   }
@@ -976,7 +1003,7 @@ async function execSend(t: Tab, bodyOut: string, segLabel?: string): Promise<boo
   /* 内核单点门：全量/段执行/预填/历史回放最终都汇入此处，非 ADMIN 一律不发出 raw 透传。
      调用方已置 busy；此处拒绝必须复位，否则权限在等待期间被撤会永久锁死该 Tab。 */
   if (!canAdmin.value) { store.notify('warning', '原始透传需要 ADMIN 或 DevTools/REST 页写权限'); t.busy = false; return false; }
-  if (!requestInScope(t.method, t.path)) {
+  if (!requestInScope(t.method, t.path, t.body)) {
     store.notify('warning', SCOPE_DENY_HINT);
     t.busy = false;
     return false;

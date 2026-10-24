@@ -18,12 +18,15 @@ package io.github.dengmeiluan.es.rebuild.auth;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
@@ -45,6 +48,8 @@ import java.util.TreeSet;
 @RestController
 @RequestMapping("internal/es/index/auth")
 public class ConsoleAuthController {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ConsoleAuthController.class);
 
     private final BuiltinConsoleAuthService authService;
     private final ConsoleOpsAuditStore opsAuditStore;
@@ -68,12 +73,37 @@ public class ConsoleAuthController {
     /** 页面契约全量载荷（组→页），构造期预建；前端 Forbidden 页取名 / 运行时对账用。 */
     private final Map<String, Object> pagesPayload;
 
+    /** 受信代理清单（与 header 委托同源）：登录节流/审计 IP 只认清单内直连方转发的地址。 */
+    private final java.util.List<String> trustedProxies;
+
+    /** 宿主鉴权委托（登出吊销用）：PropertiesAuthDelegate 实现 jwt/endpoint 的本地拒绝表。 */
+    private List<ConsoleAuthDelegate> authDelegates = Collections.emptyList();
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setAuthDelegates(ObjectProvider<ConsoleAuthDelegate> delegates) {
+        List<ConsoleAuthDelegate> list = new ArrayList<>();
+        delegates.forEach(list::add);
+        this.authDelegates = list;
+    }
+
     public ConsoleAuthController(BuiltinConsoleAuthService authService, ConsoleOpsAuditStore opsAuditStore,
                                  ConsolePageCatalog pageCatalog, boolean pageAuthEnabled) {
+        this(authService, opsAuditStore, pageCatalog, pageAuthEnabled, java.util.Collections.emptyList());
+    }
+
+    /**
+     * @param trustedProxies 受信代理清单（与 header 委托同源）：非空时登录节流的 IP 维度
+     *                       只采信清单内直连方转发的地址，避免「换伪造 XFF 即换配额」。
+     */
+    public ConsoleAuthController(BuiltinConsoleAuthService authService, ConsoleOpsAuditStore opsAuditStore,
+                                 ConsolePageCatalog pageCatalog, boolean pageAuthEnabled,
+                                 java.util.List<String> trustedProxies) {
         this.authService = authService;
         this.opsAuditStore = opsAuditStore;
         this.pageAuthEnabled = pageAuthEnabled;
         this.pagesPayload = buildPagesPayload(pageCatalog);
+        this.trustedProxies = trustedProxies == null
+                ? java.util.Collections.emptyList() : trustedProxies;
     }
 
     /** 页面契约 → me 响应载荷（apiPrefixes 随契约下发：前端用同一份数据镜像 pageOf 定端点归属；hotkey/icon 前端走构建期 JSON）。 */
@@ -117,6 +147,27 @@ public class ConsoleAuthController {
             Map<String, Object> err = new LinkedHashMap<>();
             err.put("code", "BUILTIN_LOGIN_DISABLED");
             err.put("message", "本部署已启用宿主统一登录，控制台本地账号登录已关闭；请从宿主系统进入控制台");
+            return err;
+        }
+        /* 出厂默认口令（admin/es-console）是公开已知凭据：空用户库时只允许本机登录。
+           否则任何能访问 /auth/login 的人都能直接拿到 ADMIN，再「首登改密」把真管理员锁在门外。
+           远程部署请显式配置 es.rebuild.console.auth.fallback-password（强口令），
+           或先在本机建好首个账号——有权限的运维能力不受影响。 */
+        if (authService.usesFactoryDefaultCredential() && !isLoopbackRequest(request)
+                && !hasAnyUserQuietly()) {
+            response.setStatus(403);
+            opsAuditStore.record(ConsoleOpsAuditEvent.builder()
+                    .username(clipAuditName(username)).role("-")
+                    .method("POST").uri("/internal/es/index/auth/login")
+                    .action("LOGIN_DENIED").httpStatus(403)
+                    .detail("factory-default-password remote=" + ip)
+                    .ip(ip)
+                    .build());
+            Map<String, Object> err = new LinkedHashMap<>();
+            err.put("code", "DEFAULT_PASSWORD_LOCAL_ONLY");
+            err.put("message", "兜底账号仍使用出厂默认口令，仅允许服务器本机（loopback）登录。"
+                    + "请在本机登录后立即改密，或配置 es.rebuild.console.auth.fallback-password 为强口令"
+                    + "（也可在首个账号建好后关闭 builtin-login-enabled）");
             return err;
         }
         long lockMs = loginThrottle.remainingLockMs(username, ip);
@@ -173,6 +224,22 @@ public class ConsoleAuthController {
             }
         }
         boolean revoked = authService.revokeToken(token);
+        /* 委托令牌（jwt/endpoint）的本地吊销：宿主签发无法真正撤销，但本实例可以拒绝
+           「已在本控制台退出」的令牌，避免登出只清 localStorage、被复制令牌继续可用。
+           必须用委托自己的令牌头（X-Es-Host-Token 等）——拿内置 token 去调 revoke
+           只会登记一个不相关的指纹，托管登录的退出实际从未生效。 */
+        boolean delegatedRevoked = false;
+        for (ConsoleAuthDelegate d : authDelegates) {
+            try {
+                String delegatedToken = d.tokenOf(request);
+                if (delegatedToken != null && !delegatedToken.isEmpty() && d.revoke(delegatedToken)) {
+                    delegatedRevoked = true;
+                }
+            } catch (Exception e) {
+                /* 委托实现异常不得让登出失败（拒绝/放行决策已由清本地 + 内置吊销完成） */
+                LOG.warn("[es-console-auth] 委托令牌登出吊销失败（忽略，登出仍成功）: {}", e.getMessage(), e);
+            }
+        }
         Object p = request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);
         if (p instanceof ConsolePrincipal) {
             ConsolePrincipal principal = (ConsolePrincipal) p;
@@ -185,7 +252,7 @@ public class ConsoleAuthController {
         }
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("ok", true);
-        out.put("revoked", revoked);
+        out.put("revoked", revoked || delegatedRevoked);
         return out;
     }
 
@@ -198,9 +265,27 @@ public class ConsoleAuthController {
         return s.length() > 128 ? s.substring(0, 128) : s;
     }
 
-    /** 来源地址（与拦截器同一实现：仅私网/回环代理才信转发头，防公网直连伪造审计 IP）。 */
-    private static String clientIp(HttpServletRequest request) {
-        return ConsoleAuthInterceptor.clientIp(request);
+    /** 来源地址（与拦截器同一实现：仅受信代理才信转发头，防伪造审计 IP 与换 IP 绕节流）。 */
+    private String clientIp(HttpServletRequest request) {
+        return ConsoleAuthInterceptor.clientIp(request, trustedProxies);
+    }
+
+    /** 是否服务器本机直连（出厂默认口令的唯一放行面；代理转发的请求 remoteAddr 是代理，不算）。 */
+    static boolean isLoopbackRequest(HttpServletRequest request) {
+        String addr = request == null ? null : request.getRemoteAddr();
+        if (addr == null) return false;
+        String a = addr.trim().toLowerCase(java.util.Locale.ROOT);
+        if (a.startsWith("::ffff:")) a = a.substring(7);
+        return "::1".equals(a) || "0:0:0:0:0:0:0:1".equals(a) || a.startsWith("127.");
+    }
+
+    /** 用户库是否已有账号；IO 失败按「有账号」处理（默认口令分支只在确定空库时收紧）。 */
+    private boolean hasAnyUserQuietly() {
+        try {
+            return authService.hasAnyUser();
+        } catch (IOException e) {
+            return true;
+        }
     }
 
     /** 当前身份（前端启动时探测 token 是否仍有效）。 */

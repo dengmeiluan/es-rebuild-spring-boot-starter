@@ -71,6 +71,9 @@ public class InternalEsIndexRebuildControlReadScope979Test {
                     if ("getAttribute".equals(m.getName())) {
                         return ConsoleAuthInterceptor.ATTR_PRINCIPAL.equals(args[0]) ? p : null;
                     }
+                    if ("getHeader".equals(m.getName())) {
+                        return null; /* 页面可见性按目标连接取键：本用例无 X-Es-Target */
+                    }
                     throw new UnsupportedOperationException(m.getName());
                 });
     }

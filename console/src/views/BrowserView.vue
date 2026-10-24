@@ -390,9 +390,8 @@ async function askFm(idx: IndexCat) {
   });
   if (!okGo) return;
   try {
-    /* 同步等待改异步提交——大索引 forcemerge 同步 await 会占死前端
- （IndexHubView wait_for_completion=false 先例）；响应含 taskId 时指路任务页
- （IndexOptimizerView 先例响应处理形态），无 taskId 维持原成功文案 */
+    /* ES 7.10 _forcemerge 不支持 wait_for_completion，接口本身同步返回；
+       响应若含 taskId（未来版本/兼容端）仍指路任务页，否则按同步完成提示。 */
     const r: any = await api.clusterForceMerge(idx.index, 1);
     if (r?.taskId) {
       store.notify('success', `已提交后台执行：${idx.index} ForceMerge（taskId=${r.taskId}，去任务页看进度）`);

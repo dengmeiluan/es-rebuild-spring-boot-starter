@@ -80,6 +80,30 @@ public final class ClusterConnSyncReport {
     public int getErrors() { return errors; }
     public List<String> getNotes() { return notes; }
 
+    /** 脱敏副本：保留时间/计数，替换 notes（同步状态是自举面，非 ADMIN 可见聚合但不得枚举连接名）。 */
+    public ClusterConnSyncReport withNotes(List<String> replacement) {
+        return new ClusterConnSyncReport(this, replacement);
+    }
+
+    private ClusterConnSyncReport(ClusterConnSyncReport src, List<String> replacement) {
+        this.finishedAt = src.finishedAt;
+        this.durationMs = src.durationMs;
+        this.trigger = src.trigger;
+        this.contributorBroken = src.contributorBroken;
+        this.contributedTotal = src.contributedTotal;
+        this.created = src.created;
+        this.updated = src.updated;
+        this.unchanged = src.unchanged;
+        this.duplicatesMerged = src.duplicatesMerged;
+        this.skippedConflicts = src.skippedConflicts;
+        this.skipped = src.skipped;
+        this.markedStale = src.markedStale;
+        this.restored = src.restored;
+        this.errors = src.errors;
+        this.notes = Collections.unmodifiableList(new ArrayList<>(
+                replacement == null ? Collections.<String>emptyList() : replacement));
+    }
+
     /** 累加器(引擎内部用;builder 语义,count 类字段只增不减)。 */
     public static final class Builder {
         private long durationMs;

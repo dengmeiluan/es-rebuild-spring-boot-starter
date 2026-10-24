@@ -7,6 +7,9 @@
 
 ## [1.0.58]
 
+> 本版包含原 `1.0.57`（未发布，无远端 tag）的全部权限加固与 1007 生产验证内容，
+> 见下方「1.0.57 未发布内容（已并入本版）」。
+
 ### 修复
 
 - 冻结首行全站推广（产线实报：行冻结只落在索引工作区/QueryHub/DevTools 等五处，
@@ -16,7 +19,7 @@
   任务/任务树/拓扑。长页滚动时工具行恒悬：检索参数/执行/过滤永远可达；
   高度链页（工作台 fill 态）无滚动时 sticky 惰性零开销
 
-## [1.0.57]
+### 1.0.57 未发布内容（已并入本版）
 
 ### 修复
 
@@ -153,6 +156,10 @@
   SLM 立即执行、任务取消补入集群级 rank 硬门（与 start/stop、retry-failed 同档）
 - **作业变更前端前置**：AdhocRebuildView 的中止/确认切换、XmigrateView 的续跑/中止
   对非创建者隐藏并说明「由 X 创建，仅创建者或 ADMIN」；同连接成员仍可观测进度/报告
+- **force merge 同步语义**：ES 7.10 的 `_forcemerge` 不支持 `wait_for_completion`
+  （请求 400），此前结构化端点/命令面板/索引工作区都带该参数，导致授权用户执行必失败。
+  现统一移除参数：结构化端点、命令面板、索引工作区按同步语义提示「已完成/耗时取决于索引大小」；
+  raw 维护写（refresh/flush/cache/forcemerge）仍按 976/1004 金标准保持 ADMIN 专属
 - **已存脚本守卫不再误拦 mustache**：`putStoredScript` 此前复用 update 脚本守卫
   （只接受 painless），导致 search-templates 页持写键写 mustache 模板被 403（生产实测）。
   现改为 stored-script 专用守卫：mustache 静态模板放行，painless/缺省按可静态审计口径检查
@@ -175,7 +182,7 @@
 - **部署**：新 starter 安装到本机 Maven 仓库后，仅部署 QuoteHub 后端（控制台静态资源在 starter
   jar 内）并等待 `Started QuoteHubAdminApplication`。部署前备份原 jar
   （`quote-hub-admin-0.0.1-SNAPSHOT.jar.bak-20261024141542`，原 sha256 `f4c8ce82…`），
-  本次上线 jar sha256 `f0628674…`；启动健康检查通过。
+  最终上线 jar sha256 `8c4cd7b1…`（中间版均已备份为 `.bak-*`）；启动健康检查通过。
 - **三账号后端矩阵 25/25**：
   - `deng_test_x3`（零页集）：连接目录空、读/写/DevTools 全 403；
   - `deng_test_x1`（飞书委托 VIEWER）：PROD 读 200，文档/脚本/DevTools/ILM 策略写全 403；
@@ -186,6 +193,14 @@
   复制申请信息；x1 在 PROD 的 DevTools 显示「当前身份只读：执行需要 ADMIN，或该连接的
   DevTools/REST 写权限」，执行钮不出现；切到 QA 后执行钮出现并提示「当前为数据面写权限…」；
   PROD 搜索模板页隐藏保存/删除并给出只读原因；x2 菜单完整、PROD DevTools 执行钮可用。
+- **DevTools 向量矩阵**（x1 QA 持数据面写键）：文档 CRUD/count/PIT/`_cat` JSON 放行；
+  控制面索引（路径/通配/body）、根级 search、`?index=`、health 枚举、scripts/snapshot/watcher/
+  nodes/cluster state/settings、已存模板 id、SQL/msearch/bulk、PIT 超限/嵌套 keep_alive 全 403；
+  raw refresh/flush/cache/forcemerge 仍 ADMIN 专属；x1 PROD、x3 全 403；x2 ADMIN `_nodes`/
+  `_cluster/state`/`_cat/nodes` 放行。
+- **真实换号污染**：同一浏览器以 x2 打开控制台并写入 DevTools 草稿/查询历史/目标/索引选择，登出后
+  x3 登录并打开控制台——上述键全部被清除（`es_devtools_*`、`es-console.draft2:*`、
+  `es_query_hist_v2`、`es_picked`、`es-console.target*`），身份/目标显示为 x3、无上一账号菜单残留。
 - **清理**：探针索引/脚本/组件模板均已删除；本地开发后端与 SSH 隧道已恢复。
 
 ### 兼容性
@@ -198,12 +213,12 @@
 
 ### 门禁
 
-- 后端：**1507 例 0 失败 0 错误 / 2 跳过**（新增 1007：`RawScope1007Test` 4 /
+- 后端：**1508 例 0 失败 0 错误 / 2 跳过**（新增 1007：`RawScope1007Test` 4 /
   `InternalEsIndexRebuildScope1007Test` 3 / `AuthSwitchHardening1007Test` 5 /
   `PitOwnership1007Test` 3 / 跨集群作业归属 2；1002~1006 既有锚全部保留；
   `BuiltinConsoleAuthRevocation990Test` 的「新建 epoch=1」按随机纪元反转；
   `InternalEsIndexRebuildControlReadScope979Test` 补页面可见性所需的 header 桩）；
-  前端 `vue-tsc` 0 错；全量 **1102 文件 / 9534 例全绿**（含 1007 新增
+  前端 `vue-tsc` 0 错；全量 **1103 文件 / 9539 例全绿**（含 1007 新增
   `identitySwitch1007` 11 例与权限/DevTools/REST/审计相关 spec 全绿）；
   `perm:scan` 0 不一致（共享写 23 / 共享读 41 / 页契约 52 / 扫描 298 文件 /
   集群级动作 6；3 条 cluster-scope 端点无页面前缀为刻意设计，靠关键词+共享表裁决）

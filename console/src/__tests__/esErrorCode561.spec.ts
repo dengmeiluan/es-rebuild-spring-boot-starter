@@ -110,19 +110,20 @@ describe('F6 useNow hidden 短路（561）', () => {
   });
 });
 
-describe('F1 CmdPalette forcemerge 异步化（561）', () => {
+describe('F1 CmdPalette forcemerge 同步语义（ES 7.10 不支持 wait_for_completion）', () => {
   const code = strip(src('components/CmdPalette.vue'));
 
-  it('runRaw 的 forcemerge URL 带 wait_for_completion=false（对齐 BrowserView/560 先例）', () => {
-    expect(code).toContain('_forcemerge?max_num_segments=1&wait_for_completion=false');
+  it('forcemerge URL 不再携带 ES 7.10 不支持的 wait_for_completion', () => {
+    expect(code).toContain('_forcemerge?max_num_segments=1`');
+    expect(code).not.toContain('wait_for_completion=false');
   });
 
-  it('成功文案对齐异步语义「任务已提交(异步)」', () => {
-    expect(code).toContain('任务已提交(异步)');
+  it('成功文案按同步语义「ForceMerge 已完成」', () => {
+    expect(code).toContain('ForceMerge 已完成');
+    expect(code).not.toContain('任务已提交(异步)');
   });
 
-  it('成功 toast 带「看任务」action 直达 /tasks', () => {
-    expect(code).toContain('看任务');
-    expect(code).toContain("go('/tasks')");
+  it('不再编造异步「看任务」入口（同步 API 无 taskId）', () => {
+    expect(code).not.toContain('看任务');
   });
 });

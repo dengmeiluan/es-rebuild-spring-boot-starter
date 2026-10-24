@@ -132,6 +132,119 @@ ES 文档锁（以 indexKey 为锁文档 _id）。
 |---|---|---|
 | `es.rebuild.console.page-auth.enabled` | `true` | 页面级授权开关（仅 delegated 身份+宿主下发 grantedPages 时生效）；false=逃生阀，紧急回退纯角色档 |
 
+### 授权键与判定顺序（宿主集成契约）
+
+`grantedPages` 是宿主下发的字符串集合，三种键形态共存：
+
+| 键形态 | 语义 | 例 |
+|---|---|---|
+| `{page}` | 静态全局页授权（对所有连接生效） | `search` |
+| `conn:{connId}:{page}` | 该连接上该页**可见**（读） | `conn:quotehub-qa:search` |
+| `conn:{connId}:w:{page}` | 该连接上该页**可写** | `conn:quotehub-qa:w:bulk` |
+
+判定顺序（`ConsoleAuthInterceptor#preHandle`，前端 `auth.canEndpoint` 逐步镜像）：
+
+1. **系统管理域**（`/setup/rebind|apply`、`/clusters/**` 写）→ ADMIN，连接写键不放行；
+2. **ADMIN** → 全放行（超管不受页面白名单拖累）；
+3. **全量审计**（`/auth/ops-audit*`，自助 `/mine` 除外）→ rank3；
+4. **集群级动作** → rank3（连接模型不短路，见下）；
+5. **共享写端点**：一个端点被多页合法复用时，持任一**真实使用方**的页写键即放行
+   （`/cluster/doc*`→search/indices/doc-diff，`/cluster/tasks/cancel`→tasks/task-tree，
+   `/cluster/ilm/policy`→ilm，`/cluster/ilm/move`→ilm/lifecycle，
+   `/cluster/ilm/start|stop`→lifecycle/cluster-settings，
+   `/cluster/reroute`→cluster-settings，`/cluster/reroute/retry-failed`→diag/cluster-settings，
+   `/cluster/index-settings/update` 与 `/cluster/update-settings`→index-settings/indices/optimizer(+mapping)，
+   `/cluster/devtools/execute`→devtools/rest，`/insight/actions/apply-index-settings`→index-settings/indices/optimizer）；
+6. **页面门**：`pageOf(path)` 最长前缀归属页 → 连接模型要求 `conn:{tid}:w:{page}`；
+   静态模型要求页可见 + 端点角色档；
+7. **未登记写的默认拒绝**：连接模型下 `pageOf=null` 且未登记共享写的写端点一律 403
+   （防新增端点悄悄回落 OPERATOR）；启动期 `ConsoleEndpointCoverageAuditor` 会列出未归类端点。
+
+**集群级动作的 rank 硬门**：`/cluster/ilm/start|stop`（启停整集群 ILM）、
+`/cluster/ilm/policy`（增删改集群共享策略）、`/cluster/reroute/retry-failed`（全集群未分配分片重试）、
+`/cluster/slm/execute`（触发全集群快照策略）、`/cluster/tasks/cancel`（取消无归属的任务）都不带索引参数、
+作用于集群全局，连接模型下**除页写键外还需 rank3**（`REBUILD_OP`/`CLUSTER_OP`/`AUDIT_OP` 同 rank，或 ADMIN）
+**或该连接的 `w:cluster-settings`**（集群设置页的语义本就是集群级操作，给宿主留显式授权通道，
+rank2 的运维也能被授到）。静态/内置模型本就走 `CLUSTER_OP` 关键词档，行为不变。
+rank2 的 `w:lifecycle` 仍可做单索引 rollover / `ilm/move`，`w:diag` 仍可读全部诊断面。
+前端同源前置：LifecycleView / DiagView / IlmView / SlmView / TasksView / TaskTreeView 在
+`canClusterScope()` 为假时禁用这些钮并说明「需 rank3 或集群设置写键」，不是「能点、点下去 403」。
+
+**写面与读面同权限（1007）**：
+- 已存脚本是集群共享命名空间：只有 `painless-lab` 页（或 ADMIN）能写入/删除 painless 脚本；
+  `search-templates` 页写键仅能写 **mustache**。删除前读回真实 `lang` 判定（未知 id fail-closed），
+  防止模板页覆盖/按 id 删除他人的 painless 脚本。
+- 组件模板没有 `index_patterns` 可供判定，却被索引模板（可能覆盖控制面模式）引用：非 ADMIN
+  需 rank3 或 `w:cluster-settings` 才能写/删组件模板；普通索引模板仍按 patterns 守卫。
+- `_cat/shards` 的 `n`/`id` 列是 `node` 的别名：行过滤同时摘除 `ip/node/n/id/sync_id/unassigned.*`，
+  `ilm-history-*` / `slm-history-*` 行按系统面过滤（只影响展示，不放宽写入守卫）。
+- 非 ADMIN raw 的 `keep_alive` 上限同时覆盖 **`pit.keep_alive` 嵌套形态**，页面
+  `/cluster/pit/search` 的 body 续期同样校验；根级 `_analyze` 的
+  `body.index` 与路径同权（不得指向控制面索引）；`/clusters/sync` 的 `notes` 仅在调用者可证明
+  全目录可见时下发（聚合计数保留）。
+
+- **非 ADMIN raw 是白名单而非黑名单**：未列入数据面白名单的形态一律拒绝（如 EQL
+  `_eql/search`、按路径释放 async/scroll、根级 `_cluster/health/{index}`、`?index=` 限定）。
+  能力缺失优先于越权；需要这些能力请使用对应页面或由 ADMIN 执行。
+
+**PIT id 归属（1007）**：控制台内打开的 PIT 会登记「id → 用户名」（有效期 ≥ 上限，ADMIN 7 天 /
+其他 2 小时）。同一 PIT 只允许开启者本人或 ADMIN 用于 `_search` / `/cluster/pit/search` / 关闭；
+账号切换后旧标签页里的 PIT id 不会随新身份放行。控制台外（curl/其他工具）打开的 id 不登记，
+维持既有能力；进程内表与内置 token 吊销表同限制（多实例不共享）。
+
+**DevTools / REST 写键的真实范围**：`/cluster/raw` 与 `/cluster/devtools/execute` 共用同一
+透传内核，非 ADMIN 会被 `guardRawGuarded` 收窄到**数据面**（检索/文档 CRUD/bulk/
+update-by-query/delete-by-query/SQL/别名与模板的受控写入被拒、快照仓库与集群设置被拒），
+但**在数据面内是全权**——包括对任意业务索引批量删文档。`/auth/permissions` 对这两页回
+`writeScope: DATA_PLANE`，「我的权限」面板据此标注。授予 `w:devtools` 前请按「数据面写权」
+而非「调试工具」评估。
+
+**根级检索要带索引范围**：`/_search`、`/_count`、`/_field_caps`、`/_async_search`、
+`/_terms_enum`、`/_rank_eval`、`/_search/template` 在非 ADMIN 下必须把索引放在**路径**里
+（`/{index}/_search`），或走 PIT（body 带有效 `pit.id`；PIT 搜索按 ES 契约不带 index）。
+**查询参数 `index`/`indices` 不被接受**：REST 层路径参数与查询参数如何合并、谁优先随版本实现
+而变，一旦目标端忽略该参数，`/_search?index=logs` 就是一次全量读（控制面索引一并读出），
+守卫却以为「已限定」；索引级路径再带同名参数还会造成目标二义（`/logs/_search?index=orders`）。
+标准写法在所有版本都生效，能力不缺。前端 DevTools/REST 页已镜像同一套规则：不可执行时
+tooltip 直接给出改法（`/{index}/_search`、PIT、控制面索引不可用），不再「点下去 403」。
+
+**前后端同一份金标准**：`console/src/__tests__/fixtures/devtoolsScope.golden.json` 是两边
+共用的作用域样例（`allow`=内核裁决，`ui`=前端应有态）。后端 `DevtoolsScopeGolden1005Test`
+断言内核与 `allow` 逐条一致，前端 `devtoolsScopeGolden1005.spec` 断言 UI 与 `ui` 逐条一致，
+并额外锁死不变量：**allow=true ⇒ 前端必须可执行**（有权限的人不能被拦）。改任一侧规则
+未同步样例 → 该侧红。
+
+**透传内核的越权矩阵**（`DevtoolsEscalationMatrix1004Test` 逐条锁定，约 60 条向量）：
+A 集群/系统管理写全拒（settings/security/template/script/ingest/ilm/slm/snapshot/reindex/
+aliases/nodes/tasks/watcher/ml/transform/rollup/remote/license）；B 索引结构写全拒（建删索引/
+mapping/settings/alias/close/open/forcemerge/rollover/refresh/flush）；C 控制面索引
+路径/通配/请求体三通道全拒（bulk 动作行、msearch 头、mget docs、SQL FROM、`_index` 改写脚本）；
+D 路径与方法变形（`//`、`/./`、`..`、`%5F`、大写、绝对 URL、TRACE/PATCH）一律拒；
+E 数据面放行；F 根级 PIT/scroll 仅 DELETE 形态（释放）放行。
+
+**PIT 资源上限**：非 ADMIN 的 `POST /cluster/pit/open` 会把 `keep_alive` 夹到
+`-Des.rebuild.console.pit.max-keep-alive-minutes`（默认 60 分钟），响应回填
+`keepAliveRequested/keepAliveApplied/keepAliveClamped` 供前端提示；ADMIN 不受限。
+
+**身份切换与委托凭据（1007）**：
+- 登录换人/宿主 token 换人时，除清理 localStorage/sessionStorage 外，前端会同步清零内存态
+  （目标连接、索引清单、收藏、通知、查询历史、作业清单、监控序列）并广播 `es-console:identity-changed`；
+  只清磁盘会让单例 ref 在下一笔写入时把旧账号数据落回，或让请求在「界面显示 A 的集群、实际不带
+  X-Es-Target」的状态下打到宿主。同名账号被降权/撤页不做整页重挂：403 / 窗口聚焦 /
+  标签页恢复会触发 30s 节流 `/auth/me` 重探，按钮与菜单随 `me` 响应式收敛。
+- `delegate.mode=jwt|endpoint` 的登出会用**宿主令牌头**原文登记本地拒绝表（此前误用内置 token，
+  等于没吊销）；`header` 模式无令牌原文，无法本地吊销。
+- 宿主凭证存在但被拒绝（过期/撤销/验签失败）时**不回落**内置登录：否则 iframe 会在宿主撤销会话后
+  静默变成浏览器里残留的内置 ADMIN。只有「本请求没带宿主凭证」才回退内置登录。
+- 新建本地账号的 `epoch` 使用随机正值（不再固定 1）：删号→同名重建后，旧账号未变更时签发的
+  token 不会在新账号上复活。任何改密/改角色仍递增 epoch。
+- 出厂的 `admin/es-console` 默认口令在用户库为空时**只允许 loopback 登录**；远程部署请先在本机登录
+  改密，或配置强 `fallback-password`。默认口令比较改为常量时间。
+- `delegate.mode` 拼写错误或该模式必填项缺失（jwt 无密钥/公钥、endpoint 无 verify-url、header 无
+  user-header）会在启动期直接失败——否则部署正常启动但内置登录已关闭，所有身份都 401。
+- 配置了 `setup-token` 时，安全中心的重绑表单会显示令牌输入框并随请求发送 `X-Setup-Token`
+  （此前后端要求、前端不传，ADMIN 重绑必 403）。
+
 ## 连接中心自动同步（es.rebuild.console.conn-sync）
 
 双门设计：宿主注册 ClusterConnContributor Bean **且** enabled=true 才启用；任一缺席=零行为（不建线程、不落库）。
@@ -198,6 +311,56 @@ ES 文档锁（以 indexKey 为锁文档 _id）。
 ## 控制台安全响应头（es.rebuild.console.security）
 
 控制台 API 与控制台 HTML/静态资源统一过安全头过滤器：`X-Content-Type-Options: nosniff`、`Referrer-Policy: no-referrer` 全量；auth 域响应额外 `Cache-Control: no-store`（token/身份档案不留缓存）。
+
+### 跨站写防护（CSRF）
+
+所有**状态变更请求**（非 GET/HEAD/OPTIONS）在鉴权之前先过一道跨站判定：
+
+- 判据只用浏览器强制写入、页面 JS 不可伪造的 `Sec-Fetch-Site`：`cross-site` → **403
+  `CSRF_BLOCKED`**（并落审计 `action=CSRF_BLOCKED`）；`same-origin` / `same-site` / `none` /
+  缺省（curl、SDK、服务间调用不带该头）→ 放行。
+- 只拒 `cross-site` 是刻意的：宿主页与 console 位于不同子域的同站集成、iframe 内请求
+  （iframe 文档自身 origin 即 console，浏览器判为 `same-origin`）都不受影响。
+- 为什么需要：委托 `header` 模式下身份来自「网关注入头 + 浏览器自动携带的宿主 cookie」，
+  跨站表单 POST 属 CORS simple request（不触发预检），一个 `<form>` 即可借用户身份
+  abort 迁移 / 取消任务 / 删账号。
+
+### 受信代理与来源 IP（审计 / 登录节流）
+
+`es.rebuild.console.auth.delegate.header.trusted-proxies` **同时约束审计来源 IP 与登录节流**：
+
+- 非空：只有清单内（精确 IP 或 CIDR）的直连方才可经 `X-Forwarded-For` / `X-Real-IP`
+  声明客户端地址；清单外的私网直连视为终端本身。
+- 为空：沿用历史启发式（回环/私网即代理）。**生产建议显式配置**，否则内网直连者可伪造
+  XFF 污染审计来源、并以「换 IP 即换配额」绕过登录节流（10 次/5 分钟）。
+
+### 已知边界（当前版本有意不做，接入方需自行评估）
+
+- **作业变更是「用户级」、观测是「连接级」**：`adhoc-rebuild` / `xmigrate` 的 abort / resume /
+  confirm-switch 只允许**创建者本人或 ADMIN**（同连接同事仍可看 progress 做团队排障）；升级前
+  无 owner 的旧作业保持连接级语义以便收尾；前端 Adhoc/Xmigrate 同源隐藏非创建者的
+  中止/续跑/确认钮并给出创建者说明。`adhoc confirm-switch` 还要求作业已进入
+  `AWAIT_CONFIRM` 阶段（不能提前放行）。`/cluster/tasks/cancel` 属集群级动作（taskId 无归属）：
+  连接模型下需 rank3 或 `w:cluster-settings`。
+- **jobId 不可预测**：xmigrate 为 `dest_<毫秒>_<16 hex>`、adhoc 为 `adhoc-<16 hex>`；日志检索
+  仍可按前缀匹配。旧格式历史作业照常读取。
+- **jwt/endpoint 委托登出会在本实例登记拒绝表**（jwt 到 exp、endpoint 到裁决缓存窗口）；
+  进程内表，多实例部署只在当前实例生效，需要全局即时失效请缩短 TTL 或走宿主侧吊销。
+  `header` 模式无令牌原文，无法本地吊销。
+- **内置登录的兜底账号 `admin`/`es-console`** 仅在 `builtin-login-enabled` 打开时可用，
+  委托部署默认关闭；用户库为空时还要求 loopback 直连。独立部署请在本机首登改密或配置强
+  `fallback-password`（启动日志有 ERROR 提醒）。
+- 读侧「内网拓扑」（节点 host/IP、远端集群 seeds、脚本源码、`path.repo`）对**持有对应页面
+  读键**的身份可见——这是页面授权语义，不再按 ADMIN 二次收窄；如需收窄请只授必要页面。
+
+### 首次绑定（setup）与重绑
+
+- 未绑定窗口只放行 `setup/status|test|apply`；`test/apply` 在**无委托**时要求
+  `X-Setup-Token`（配置后）且默认仅本机可调；**有委托**时要求委托认出的 ADMIN。
+- 配置了 `es.rebuild.console.setup-token` 后，**委托模式与 `setup/rebind` 同样校验该令牌**
+  （第二因子：header 模式身份可伪造，「改控制面指向」不能只凭角色）。未配置时行为不变。
+- 反代部署注意：若代理不追加 `X-Forwarded-For`，未绑定请求的 `remoteAddr` 会是回环，
+  被判定为本机——请配置 `setup-token` 或仅在初始化窗口短暂暴露。
 
 | 配置键 | Java 默认值 | 说明 |
 |---|---|---|

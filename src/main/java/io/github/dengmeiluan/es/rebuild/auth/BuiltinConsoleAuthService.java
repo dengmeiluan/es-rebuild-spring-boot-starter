@@ -117,6 +117,11 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
         return "admin".equals(fallbackUsername) && "es-console".equals(fallbackPassword);
     }
 
+    /** 登录控制器用：默认口令必须只允许本机登录（公开已知凭据不能作为远程 ADMIN 入口）。 */
+    public boolean usesFactoryDefaultCredential() {
+        return isDefaultFallbackCredential();
+    }
+
     /** 内置登录是否可用（/auth/login 与 setup/status 的 builtinLogin 回显同源）。 */
     public boolean isLoginEnabled() {
         return loginEnabled;
@@ -147,7 +152,10 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
             if (verifyPassword(username, password, user)) {
                 principal = new ConsolePrincipal(username, ConsoleRole.parse(String.valueOf(user.get("role"))), false);
             }
-        } else if (!hasAnyUser() && fallbackUsername.equals(username) && fallbackPassword.equals(password)) {
+        } else if (!hasAnyUser() && fallbackUsername.equals(username)
+                /* 常量时间比较：默认口令逐字符短路的时序差可被用来猜口令（即使已限本机） */
+                && MessageDigest.isEqual(fallbackPassword.getBytes(StandardCharsets.UTF_8),
+                        password.getBytes(StandardCharsets.UTF_8))) {
             // 兜底默认账号：仅在用户索引完全为空时生效
             principal = new ConsolePrincipal(username, ConsoleRole.ADMIN, true);
         }
@@ -333,14 +341,21 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
     /* ==================================================================================== */
 
     /**
-     * 委派会话（宿主委托身份）不得管理本地账号：本地账号是全局身份，
-     * 一旦创建即可用内置登录绕过 delegated 页面门——security 连接写键不能越出页面模型。
-     * 仅 ADMIN（含委派 ADMIN）可管理全局账号。
+     * 页面授权/委派会话不得管理本地账号：本地账号是全局身份（grantedPages=null，
+     * 走内置登录），一旦创建即可绕过页面门与连接写键——security 连接写键不能越出页面模型。
+     * 仅 ADMIN 可管理全局账号。
+     *
+     * <p>不能只卡 {@code isDelegated()}：自定义授权器/内置授权器返回的「非委派 + 非空
+     * grantedPages」身份同样是页面模型身份（连接模型下页面写键短路角色门），
+     * 若能建号就等于用一页授权换来一个跨全部连接的全局账号。</p>
      */
     private static void forbidDelegatedLocalUserWrite(ConsolePrincipal actor) {
-        if (actor != null && actor.isDelegated()
-                && !actor.getRole().atLeast(ConsoleRole.ADMIN)) {
-            throw new IllegalArgumentException("委派会话不得创建/修改/删除本地账号（全局账号仅 ADMIN 可管理）");
+        if (actor == null || actor.getRole().atLeast(ConsoleRole.ADMIN)) {
+            return;
+        }
+        if (actor.isDelegated() || actor.getGrantedPages() != null) {
+            throw new IllegalArgumentException(
+                    "页面授权/委派会话不得创建/修改/删除本地账号（本地账号是全局身份，仅 ADMIN 可管理）");
         }
     }
 
@@ -432,8 +447,17 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
         doc.put("updatedAt", System.currentTimeMillis());
         doc.put("updatedBy", actor == null ? "system" : actor.getUsername());
         /* 纪元递增：账号任何变更（改密/改角色/重建）都使既有 token 全部吊销（verifyToken 回查）。
-           新建从 1 起；存量档案无字段按 0 读，首次变更写 1=存量五段 token（隐含 epoch=0）同时吊销。 */
-        doc.put("epoch", (existing == null ? 0L : readEpoch(existing)) + 1L);
+           新建用随机正值而不是固定 1：删号→同名重建若从 1 重新计数，旧账号未变更时签发的
+           token（epoch=1）会在新账号上重新通过校验，等于回收旧凭据。随机值使重建前后不重叠。
+           存量档案无字段按 0 读，首次变更写 1=存量五段 token（隐含 epoch=0）同时吊销。 */
+        long epoch;
+        if (existing == null) {
+            epoch = new SecureRandom().nextLong() & 0x7fffffffffffffffL;
+            if (epoch == 0) epoch = 1;
+        } else {
+            epoch = readEpoch(existing) + 1L;
+        }
+        doc.put("epoch", epoch);
         if (password != null && !password.isEmpty()) {
             byte[] salt = new byte[SALT_BYTES];
             new SecureRandom().nextBytes(salt);

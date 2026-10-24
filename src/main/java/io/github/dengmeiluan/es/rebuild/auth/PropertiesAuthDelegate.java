@@ -105,9 +105,65 @@ public class PropertiesAuthDelegate implements ConsoleAuthDelegate {
 
     // ---------------- jwt ----------------
 
+    /**
+     * 登出吊销：jwt 用令牌自身 exp 作为拒绝表 TTL；endpoint 驱逐本地裁决缓存并
+     * 在缓存窗口内拒绝（宿主仍判有效，控制台无法替宿主撤销）。header 模式无服务端会话。
+     */
+    @Override
+    public boolean revoke(String token) {
+        if (token == null || token.isEmpty()) {
+            return false;
+        }
+        String mode = props.getMode() == null ? "" : props.getMode().toLowerCase(Locale.ROOT);
+        if ("jwt".equals(mode)) {
+            JsonNode claims = jwtVerifier.verify(token);
+            if (claims == null) {
+                return false;
+            }
+            JsonNode exp = claims.get("exp");
+            long expiresAt = exp != null && exp.isNumber()
+                    ? exp.asLong() * 1000L
+                    : System.currentTimeMillis() + 3_600_000L;
+            return DelegatedTokenRevocations.revoke(token, expiresAt);
+        }
+        if ("endpoint".equals(mode)) {
+            verdictCache.remove(token);
+            long ttl = Math.max(1, props.getEndpoint().getCacheSeconds()) * 1000L;
+            return DelegatedTokenRevocations.revoke(token, System.currentTimeMillis() + ttl);
+        }
+        return false;
+    }
+
+    @Override
+    public boolean hasCredential(HttpServletRequest request) {
+        String mode = props.getMode() == null ? "" : props.getMode().toLowerCase(Locale.ROOT);
+        if ("jwt".equals(mode) || "endpoint".equals(mode)) {
+            return extractToken(request) != null;
+        }
+        if ("header".equals(mode)) {
+            String userHeader = props.getHeader().getUserHeader();
+            return userHeader != null && !userHeader.trim().isEmpty()
+                    && request.getHeader(userHeader) != null;
+        }
+        return false;
+    }
+
+    @Override
+    public String tokenOf(HttpServletRequest request) {
+        /* header 模式的身份来自网关注入头，没有可吊销的令牌原文；只有 jwt/endpoint 有。 */
+        String mode = props.getMode() == null ? "" : props.getMode().toLowerCase(Locale.ROOT);
+        if (!"jwt".equals(mode) && !"endpoint".equals(mode)) return null;
+        return extractToken(request);
+    }
+
     private ConsolePrincipal byJwt(HttpServletRequest request) {
         String token = extractToken(request);
         if (token == null) {
+            return null;
+        }
+        /* 登出吊销（本实例）：委托令牌由宿主签发，控制台无法撤销宿主侧凭证；
+           但「已在本控制台退出」的令牌不应继续被接受（否则登出只是清了浏览器本地）。 */
+        if (DelegatedTokenRevocations.isRevoked(token)) {
             return null;
         }
         JsonNode claims = jwtVerifier.verify(token);
@@ -139,6 +195,10 @@ public class PropertiesAuthDelegate implements ConsoleAuthDelegate {
     private ConsolePrincipal byEndpoint(HttpServletRequest request) {
         String token = extractToken(request);
         if (token == null || props.getEndpoint().getVerifyUrl().isEmpty()) {
+            return null;
+        }
+        if (DelegatedTokenRevocations.isRevoked(token)) {
+            verdictCache.remove(token);
             return null;
         }
         long now = System.currentTimeMillis();

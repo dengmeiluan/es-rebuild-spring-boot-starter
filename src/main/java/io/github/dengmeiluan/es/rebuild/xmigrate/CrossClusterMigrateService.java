@@ -38,6 +38,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -308,6 +309,16 @@ public class CrossClusterMigrateService {
      * 发起迁移（异步）。同步完成 校验→连通→建/跳目标索引→捕获并调优 settings，随后提交 worker 并返回 jobId。
      */
     public String start(MigrateRequest req) {
+        return start(req, null, null);
+    }
+
+    /**
+     * 发起迁移（带创建者身份）：连接模型下 resume/abort 只允许创建者本人或 ADMIN。
+     *
+     * @param ownerUsername 创建者；null=旧装配/内部调用（维持连接级语义）
+     * @param ownerRole     创建时角色快照
+     */
+    public String start(MigrateRequest req, String ownerUsername, String ownerRole) {
         validate(req);
         guardDestMajor();
         int slices = req.getSlices() > 0 ? Math.min(req.getSlices(), MAX_SLICES) : properties.getMigrate().getDefaultSlices();
@@ -334,8 +345,12 @@ public class CrossClusterMigrateService {
             applyTune(dest, req.getTuneMode());
             tuned = true;
 
-            String jobId = dest + "_" + System.currentTimeMillis();
-            MigrateJobES meta = buildMeta(jobId, req, conn, slices, batch, total, savedSettings);
+            /* jobId 不可预测：此前 dest_<毫秒> 可枚举，同连接内可猜中他人 jobId 读进度/续跑。
+               保留 dest_ 前缀（日志检索/前端展示兼容），追加 64bit 随机段。 */
+            String jobId = dest + "_" + System.currentTimeMillis() + "_"
+                    + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+            MigrateJobES meta = buildMeta(jobId, req, conn, slices, batch, total, savedSettings,
+                    ownerUsername, ownerRole);
             meta.setFormatlessDateFields(new ArrayList<>(formatlessDates));
 
             ExecutorService executor = Executors.newFixedThreadPool(slices, namedThreadFactory(jobId));
@@ -981,9 +996,12 @@ public class CrossClusterMigrateService {
     }
 
     private MigrateJobES buildMeta(String jobId, MigrateRequest req, RemoteClusterConn conn, int slices, int batch,
-                                   Long total, Map<String, String> savedSettings) {
+                                   Long total, Map<String, String> savedSettings,
+                                   String ownerUsername, String ownerRole) {
         MigrateJobES meta = new MigrateJobES();
         meta.setJobId(jobId);
+        meta.setOwnerUsername(ownerUsername);
+        meta.setOwnerRole(ownerRole);
         meta.setSourceIndex(req.getSourceIndex());
         meta.setDestIndex(req.getDestIndex());
         meta.setIndexKey(req.getIndexKey());
@@ -1002,6 +1020,9 @@ public class CrossClusterMigrateService {
     private MigrateJobES cloneMetaForResume(MigrateJobES persisted, Map<String, String> savedSettings) {
         MigrateJobES meta = new MigrateJobES();
         meta.setJobId(persisted.getJobId());
+        /* 续跑不转移所有权：owner 原样保留，否则同连接他人可借 resume 接管他人作业。 */
+        meta.setOwnerUsername(persisted.getOwnerUsername());
+        meta.setOwnerRole(persisted.getOwnerRole());
         meta.setSourceIndex(persisted.getSourceIndex());
         meta.setDestIndex(persisted.getDestIndex());
         meta.setIndexKey(persisted.getIndexKey());

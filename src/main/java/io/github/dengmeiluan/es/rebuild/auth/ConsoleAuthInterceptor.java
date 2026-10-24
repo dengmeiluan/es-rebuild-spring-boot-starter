@@ -154,10 +154,34 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
     private static final List<String> SYSTEM_ADMIN_KEYWORDS = Arrays.asList(
             "/setup/rebind", "/setup/apply",
             "/clusters/");
+    /**
+     * 集群级开关/集群级动作（连接模型补 rank 硬门）。
+     *
+     * <p>连接模型的语义是「页面写键即最终裁决」，角色门被短路——对绝大多数页面端点这是
+     * 正确的（勾选即权限）。但下列端点<b>不带任何索引参数</b>，直接作用于目标集群全局：</p>
+     * <ul>
+     *   <li>{@code /cluster/ilm/start|stop}：启停整集群的 ILM 执行（lifecycle 页的语义是
+     *       单索引 rollover / 推进步骤）；</li>
+     *   <li>{@code /cluster/reroute/retry-failed}：对全集群未分配分片重试分配（diag 页
+     *       其余端点全是只读诊断）。</li>
+     *   <li>{@code /cluster/ilm/policy}：增删改 ILM 策略是集群级共享件，影响所有引用它的
+     *       索引；ilm 页只读 explain、lifecycle 页是单索引动作，都不是策略编辑语义。</li>
+     *   <li>{@code /cluster/slm/execute}：立即触发全集群快照策略（备份面）。</li>
+     *   <li>{@code /cluster/tasks/cancel}：任务 id 不携带归属，取消的是别人的重建/快照/回滚。</li>
+     * </ul>
+     * <p>把这些能力挂在一页的写键上，等于用单页授权换集群级操作。这里补回静态模型已有的
+     * rank3 档位：ADMIN / 三个 rank3 专项（含宿主映射的 CLUSTER_OP）不受影响，
+     * 只有 rank2 的 OPERATOR 被拦（其页面写键仍可做页内动作）。</p>
+     */
+    private static final List<String> CLUSTER_SCOPE_WRITE_KEYWORDS = Arrays.asList(
+            "/cluster/ilm/start", "/cluster/ilm/stop", "/cluster/ilm/policy",
+            "/cluster/reroute/retry-failed", "/cluster/slm/execute", "/cluster/tasks/cancel");
     /** 审计分级专用（不参与授权）：破坏性数据/控制面操作一律记 HIGH_RISK。 */
     private static final List<String> HIGH_RISK_AUDIT_KEYWORDS = Arrays.asList(
             "/cluster/delete-index", "/cluster/delete-by-id", "/cluster/delete-by-query",
             "/cluster/snapshot/restore", "/cluster/snapshot/delete",
+            /* 已存脚本是集群级共享件：装卸会即时改变他人查询/模板的行为，删除更不可逆 */
+            "/cluster/scripts/put", "/cluster/scripts/delete",
             "/cluster/templates/delete", "/cluster/ilm/stop", "/cluster/slm/execute",
             "/cluster/settings/put", "/cluster/reroute", "/auth/users/delete",
             "/auth/users/upsert", "/xmigrate/start", "/xmigrate/resume");
@@ -173,6 +197,27 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         if (uri != null && uri.endsWith("/probe")) return false;
         for (String kw : SYSTEM_ADMIN_KEYWORDS) {
             if (uri.contains(kw)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * 连接档案根路径的<b>写</b>形态（{@code POST /internal/es/index/clusters}）。
+     *
+     * <p>{@code "/clusters/"} 依赖尾斜杠，只覆盖子路径；根路径的批量导入/同步写
+     * 会漏到 OPERATOR。GET 列表是脱敏只读观测（VIEWER 可读），不在此列——
+     * 不能用根路径一刀切把有读权限的人拦在门外。</p>
+     */
+    private static boolean isClustersRootWrite(String uri, String method) {
+        return uri != null && uri.endsWith("/internal/es/index/clusters")
+                && !"GET".equalsIgnoreCase(method) && !"HEAD".equalsIgnoreCase(method);
+    }
+
+    /** 集群级开关（见 {@link #CLUSTER_SCOPE_WRITE_KEYWORDS}）：段边界尾匹配，不吃前缀子路径。 */
+    static boolean isClusterScopeWrite(String uri) {
+        if (uri == null) return false;
+        for (String kw : CLUSTER_SCOPE_WRITE_KEYWORDS) {
+            if (uri.endsWith(kw)) return true;
         }
         return false;
     }
@@ -214,10 +259,20 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         m.put("/cluster/ilm/policy", java.util.Collections.singletonList("ilm"));
         m.put("/cluster/ilm/move", Arrays.asList("ilm", "lifecycle"));
         m.put("/cluster/index-settings/update", Arrays.asList("index-settings", "indices", "optimizer"));
+        /* 热 Setting 的两个入口必须同页集：update-settings 原先只吃 mapping 页前缀，
+           而真正持有热更写键的 index-settings/indices/optimizer 反而被 403（有权限的人被拦）。
+           同一 PUT _settings 能力，页集对齐后不新增任何写面。 */
+        m.put("/cluster/update-settings", Arrays.asList("mapping", "index-settings", "indices", "optimizer"));
         m.put("/cluster/reload-analyzers", Arrays.asList("analysis-settings", "synonyms"));
         m.put("/cluster/reroute", java.util.Collections.singletonList("cluster-settings"));
-        m.put("/cluster/alias-actions", Arrays.asList("aliases", "config-validator"));
-        m.put("/cluster/reroute/retry-failed", java.util.Collections.singletonList("diag"));
+        m.put("/cluster/alias-actions", Arrays.asList("aliases", "config-validator", "indices"));
+        /* retry-failed 是 reroute 的子集（只能重试未分配分片）：持 cluster-settings 写键的人
+           本来就能执行任意 reroute，若反而做不了更窄的 retry 就是口径倒挂（有权限的人被拦）。 */
+        m.put("/cluster/reroute/retry-failed", Arrays.asList("diag", "cluster-settings"));
+        /* ilm/start|stop 是集群级开关，与 cluster-settings 页的语义同级：集群设置写键持有人
+           不应被「lifecycle 页写键」这一更窄的入口挡住（rank 档位仍由 CLUSTER_SCOPE 硬门把控）。 */
+        m.put("/cluster/ilm/start", Arrays.asList("lifecycle", "cluster-settings"));
+        m.put("/cluster/ilm/stop", Arrays.asList("lifecycle", "cluster-settings"));
         /* 建索引同时服务“索引工作区”的快速新建与“配置校验器”的校验后落地 */
         m.put("/cluster/create-index", Arrays.asList("config-validator", "indices"));
         m.put("/cluster/scripts/put", Arrays.asList("search-templates", "painless-lab"));
@@ -413,7 +468,11 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                 || path.endsWith("/auth/ops-audit/mine") || path.endsWith("/setup/status")
                 || path.endsWith("/cluster/health")
                 || path.endsWith("/internal/es/index/health")
-                || path.endsWith("/internal/es/index/clusters");
+                || path.endsWith("/internal/es/index/clusters")
+                /* 连接目录的同步状态是连接页轮询刷新（只读、已按可见性过滤）：
+                   与目录本身同属自举面——零页用户在「连接被撤权后重新定位授权」时
+                   也要靠它刷新，不能只豁免目录不豁免 sync。 */
+                || path.endsWith("/internal/es/index/clusters/sync");
     }
 
     /** 只有真实持有文档读面的页面才允许索引详情携带样本文档；纯 mapping 元数据页只回结构。 */
@@ -507,7 +566,11 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                     && cp.getRole().atLeast(requiredRole("POST", "/internal/es/index/cluster/alias-actions")));
         boolean validator = gp.contains("config-validator")
                 || gp.contains(EnvPagesResolver.CONN_KEY_PREFIX + tid + ":w:config-validator");
-        return validator && !aliases;
+        /* indices 页的写键包含「建索引」，建索引时顺手挂别名是同一工作流的一步；
+           但删别名/摘别名属于 aliases 页语义，indices 侧同样只允许 add。 */
+        boolean indicesPage = gp.contains("indices")
+                || gp.contains(EnvPagesResolver.CONN_KEY_PREFIX + tid + ":w:indices");
+        return (validator || indicesPage) && !aliases;
     }
 
     /** 矩阵参数（每个路径段的 {@code ;...}）：与 Spring UrlPathHelper.removeSemicolonContent 同口径。 */
@@ -525,6 +588,8 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
     private final EnvPagesResolver envPagesResolver;
     /* 连接档案——审计的集群实名维度（connId → connName）；可为 null（测试桩） */
     private final io.github.dengmeiluan.es.rebuild.multicluster.ConnStore connStore;
+    /** 受信代理清单（见构造器 javadoc）：非空时审计来源 IP 只认清单内直连方转发的转发头。 */
+    private final List<String> trustedProxies;
     /** connName 解析失败 WARN 节流计数（实例级——拦截器产线单例）。 */
     private final AtomicLong lastConnNameWarnAt = new AtomicLong(0);
 
@@ -550,6 +615,23 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                                   ConsolePageCatalog pageCatalog, boolean pageAuthEnabled,
                                   EnvPagesResolver envPagesResolver,
                                   io.github.dengmeiluan.es.rebuild.multicluster.ConnStore connStore) {
+        this(authorizer, opsAuditStore, resolver, pageCatalog, pageAuthEnabled, envPagesResolver,
+                connStore, java.util.Collections.emptyList());
+    }
+
+    /**
+     * @param trustedProxies 受信代理清单（精确 IP 或 IPv4 CIDR）：非空时<b>只有清单内的直连方</b>
+     *                       才有资格转发客户端地址（X-Forwarded-For / X-Real-IP）；为空时沿用
+     *                       「回环/私网即代理」的历史启发式。与 header 委托模式的
+     *                       {@code trusted-proxies} 同一份配置——审计来源与身份采信必须同源，
+     *                       否则内网直连者可伪造 XFF 污染审计并绕过登录节流。
+     */
+    public ConsoleAuthInterceptor(EsConsoleAuthorizer authorizer, ConsoleOpsAuditStore opsAuditStore,
+                                  io.github.dengmeiluan.es.rebuild.control.ControlClusterResolver resolver,
+                                  ConsolePageCatalog pageCatalog, boolean pageAuthEnabled,
+                                  EnvPagesResolver envPagesResolver,
+                                  io.github.dengmeiluan.es.rebuild.multicluster.ConnStore connStore,
+                                  List<String> trustedProxies) {
         this.authorizer = authorizer;
         this.opsAuditStore = opsAuditStore;
         this.resolver = resolver;
@@ -557,6 +639,8 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         this.pageAuthEnabled = pageAuthEnabled;
         this.envPagesResolver = envPagesResolver;
         this.connStore = connStore;
+        this.trustedProxies = trustedProxies == null
+                ? java.util.Collections.emptyList() : trustedProxies;
     }
 
     @Override
@@ -586,6 +670,19 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                 && !"OPTIONS".equalsIgnoreCase(reqMethod)
                 && bodyLen > MAX_BODY_BYTES) {
             deny(response, 413, "{\"code\":\"BODY_TOO_LARGE\",\"message\":\"请求体超过 32MB 上限\"}");
+            return false;
+        }
+        /* CSRF/跨站写防护（先于任何放行分支，含 SETUP 窗口与登录白名单）：
+           委托 header 模式下身份来自「网关注入头 + 浏览器自动携带的宿主 cookie」，
+           跨站表单 POST（simple request，不触发 CORS 预检）可借用户身份完成写操作——
+           abort 迁移/取消任务/删账号都是 @RequestParam 形态，一个 <form> 即可。
+           判据只用浏览器强制写入、页面 JS 不可伪造的 Sec-Fetch-Site：
+           cross-site → 拒；same-origin / same-site / none / 缺省（非浏览器客户端）→ 放行。
+           只拒 cross-site 是刻意的：宿主页与 console 不同子域的同站集成不能被误伤。 */
+        if (crossSiteWrite(request)) {
+            recordCsrfBlocked(path, reqMethod);
+            deny(response, 403, "{\"code\":\"CSRF_BLOCKED\",\"message\":\""
+                    + "跨站写请求已被拒绝（Sec-Fetch-Site: cross-site）；请在控制台页面内操作\"}");
             return false;
         }
         //  SETUP 短路：未绑定控制集群时，除 setup 三端点外统一 409（前端据此弹首连向导）
@@ -657,7 +754,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             /* 超管域优先裁决：用户管理/重绑/连接档案是授权载体本身，任何连接写键都不放行；
                必须 ADMIN 角色；ADMIN 不受页面写键限制（全局管理权）。
                连接同步状态的 GET 是只读观测（前端轮询），与 /probe 同口径豁免。 */
-            if (isSystemAdminUri(path)
+            if ((isSystemAdminUri(path) || isClustersRootWrite(path, request.getMethod()))
                     && !("GET".equalsIgnoreCase(request.getMethod()) && path.endsWith("/clusters/sync"))) {
                 if (!principal.getRole().atLeast(ConsoleRole.ADMIN)) {
                     deny(response, 403, "{\"code\":\"FORBIDDEN\",\"message\":\"该操作属管理员专属（用户管理/连接档案/重绑），连接页面授权不放行\",\"required\":\"ADMIN\"}");
@@ -833,7 +930,24 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                     return true;
                 }
             }
-            /* 托管重建向导的「校验并继续」是 adhoc 流程内步骤：持 adhoc 写键即可调用
+            /* 集群级动作注入 rank 硬门（见 CLUSTER_SCOPE_WRITE_KEYWORDS）：静态/内置模型
+               已由 CLUSTER 关键词档位裁决，这里只补连接模型被「页面写键即最终裁决」短路的那道门。
+               放行通道二选一——rank3 及以上，或该连接的 cluster-settings 写键
+               （集群设置页的语义本就是集群级操作，宿主可显式授权；避免把「有权限的人」一刀切拦住）。 */
+            if (writeReq && envPagesResolver.inConnModel(principal.getGrantedPages())
+                    && isClusterScopeWrite(path)
+                    && !principal.getRole().atLeast(ConsoleRole.CLUSTER_OP)
+                    && !envPagesResolver.writeAllowed(targetId, "cluster-settings", principal.getGrantedPages())) {
+                opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
+                        "ROLE_DENIED", 403, "clusterScope required=CLUSTER_OP|w:cluster-settings role="
+                                + principal.getRole() + " conn=" + targetId));
+                deny(response, 403, "{\"code\":\"CLUSTER_SCOPE_REQUIRED\",\"page\":\"lifecycle\","
+                        + "\"message\":\"该操作是集群级动作（作用于目标集群全局），需要 CLUSTER_OP 及以上角色，"
+                        + "或该连接的「集群设置」写权限；单索引的 rollover / 推进步骤仍可用\","
+                        + "\"required\":\"CLUSTER_OP\"}");
+                return false;
+            }
+        /* 托管重建向导的「校验并继续」是 adhoc 流程内步骤：持 adhoc 写键即可调用
                config-lab/validate 的 dry-run，不要求再勾 config-validator 页（否则向导
                第 1 步永远无法前进）。校验器页自身的写键仍按原页面门裁决。
                静态页白名单同样要放行——effectivePages 有 adhoc-rebuild 且角色达 rank3。 */
@@ -1104,7 +1218,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                 .detail(detail)
                 .connId(targetIsConn ? targetId.trim() : null)
                 .connName(connName)
-                .ip(clientIp(request))
+                .ip(clientIp(request, trustedProxies))
                 .costMs(costMs)
                 .build();
     }
@@ -1116,9 +1230,26 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
      * 回退最左一跳（最接近客户端的那个）。
      */
     static String clientIp(HttpServletRequest request) {
+        return clientIp(request, java.util.Collections.emptyList());
+    }
+
+    /**
+     * @param trustedProxies 受信代理清单；非空时只有清单内的直连方才可转发客户端地址
+     *                       （清单外私网直连视为终端本身）。空=沿用回环/私网启发式。
+     */
+    static String clientIp(HttpServletRequest request, List<String> trustedProxies) {
         String remote = request.getRemoteAddr();
-        boolean trustedProxy = remote == null || remote.trim().isEmpty()
-                || isProxyAddress(remote.trim());
+        List<String> allow = trustedProxies == null ? java.util.Collections.emptyList() : trustedProxies;
+        boolean trustedProxy;
+        if (!allow.isEmpty()) {
+            /* 显式清单优先：与 header 委托模式同一份配置——审计来源与身份采信必须同源，
+               否则内网直连者可伪造 XFF 污染审计、并以换 IP 绕过登录节流。 */
+            trustedProxy = remote != null && !remote.trim().isEmpty()
+                    && PropertiesAuthDelegate.matchesProxyList(remote.trim(), allow);
+        } else {
+            trustedProxy = remote == null || remote.trim().isEmpty()
+                    || isProxyAddress(remote.trim());
+        }
         if (trustedProxy) {
             String xff = request.getHeader("X-Forwarded-For");
             if (xff != null && !xff.trim().isEmpty()) {
@@ -1147,9 +1278,41 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         return remote;
     }
 
+    /**
+     * 是否「跨站发起的写请求」：判据只用 {@code Sec-Fetch-Site}——浏览器强制写入、
+     * 页面 JS 不可伪造。缺省（curl/SDK/服务间调用）视为非浏览器，放行：
+     * CSRF 只可能由浏览器页面发起，把缺省当跨站会误杀所有非浏览器客户端。
+     */
+    static boolean crossSiteWrite(HttpServletRequest request) {
+        String m = request.getMethod();
+        if (m == null) return false;
+        if ("GET".equalsIgnoreCase(m) || "HEAD".equalsIgnoreCase(m) || "OPTIONS".equalsIgnoreCase(m)) {
+            return false;
+        }
+        String site = request.getHeader("Sec-Fetch-Site");
+        return site != null && "cross-site".equalsIgnoreCase(site.trim());
+    }
+
+    /** 跨站写拦截留痕：此时身份尚未解析（可能在白名单/SETUP 窗口），按匿名事件记账。 */
+    private void recordCsrfBlocked(String path, String method) {
+        try {
+            opsAuditStore.record(ConsoleOpsAuditEvent.builder()
+                    .username("anonymous")
+                    .role(ConsoleRole.VIEWER.name())
+                    .method(method)
+                    .uri(path)
+                    .action("CSRF_BLOCKED")
+                    .httpStatus(403)
+                    .detail("sec-fetch-site=cross-site")
+                    .build());
+        } catch (Exception e) {
+            /* 审计落档失败不得改变拒绝结果（拒绝是安全决策，审计是留痕） */
+            LOG.warn("[es-console] 跨站写拦截审计落档失败（拒绝结果不变）", e);
+        }
+    }
+
     /** 回环/私网/链路本地地址（反向代理常见部署位置）；公网直连不得借转发头改审计 IP。 */
-    static boolean isProxyAddress(String addr) {
-        if (addr == null) return false;
+    static boolean isProxyAddress(String addr) {        if (addr == null) return false;
         String a = addr.trim().toLowerCase(java.util.Locale.ROOT);
         if (a.startsWith("::ffff:")) a = a.substring(7);
         if ("::1".equals(a) || "0:0:0:0:0:0:0:1".equals(a)
@@ -1186,7 +1349,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         }
         /* w66:多域判定 — 按命中顺序取最高要求(超管域>专项域)。
          * ADMIN(rank 4)自然涵盖所有专项(rank 3);专项之间互不覆盖。 */
-        if (isAdminUri(uri)) {
+        if (isAdminUri(uri) || isClustersRootWrite(uri, method)) {
             return ConsoleRole.ADMIN;
         }
         /* 自助流水「只看自己」给全角色——username 由服务端身份强制（见 controller），

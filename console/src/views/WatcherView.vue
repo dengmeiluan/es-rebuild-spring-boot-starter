@@ -146,9 +146,10 @@ import { writeStoredRaw } from '../utils/safeJson';
 const store = useAppStore();
 const auth = useAuthStore();
 const router = useRouter();
-/* DevTools 跳转是页面入口，不是当前页写权：无 DevTools/REST 页写键时按钮禁用并说明。 */
-const canDevtools = computed(() => auth.canEndpoint('admin', 'POST',
-  '/internal/es/index/cluster/devtools/execute', store.target));
+/* DevTools 跳转是页面入口，不是当前页写权。_watcher 读写属系统管理面
+   （devtoolsScope/后端 guardRawSystemWrite 对非 ADMIN 一律拒绝），因此入口按 ADMIN 收口：
+   只持 w:rest 的用户打开也是禁用态，不如提前说明（有权限的 ADMIN 不受影响）。 */
+const canDevtools = computed(() => auth.canAdminOps());
 
 /* 原始 IO 三件套（RemoteClusters 557 同款）；判空不开空弹窗 */
 const rawIoShow = ref(false);

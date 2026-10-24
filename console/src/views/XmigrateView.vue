@@ -425,6 +425,10 @@ const canDestOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/
 const canJobOps = (job: any): boolean => {
   if (!job) return false;
   if (auth.isAdmin()) return true;
+  /* 作业归属（后端 1007）：续跑/中止仅创建者本人或 ADMIN；legacy 无 owner 维持连接级。
+     进度仍对同源连接成员可见（团队排障），只是不展示这两颗不可逆动作钮。 */
+  const owner = job.ownerUsername ? String(job.ownerUsername).trim() : '';
+  if (owner && owner !== (auth.me?.username || '')) return false;
   const src = job.srcConnId ? String(job.srcConnId).trim() : '';
   const connModel = auth.grantedPages != null && auth.grantedPages.some(g => g.startsWith('conn:'));
   if (!src && connModel) return false;

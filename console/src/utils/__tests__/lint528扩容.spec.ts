@@ -185,7 +185,7 @@ describe('五百二十八批：四页接线看守（源码级防回潮，esEnumZ
     expect(src).toMatch(/import \{ jobStatusZh \} from '\.\.\/utils\/esEnumZh'/);
     expect(src).toContain('jobStatusZh(job.status)');
     /* permGating 锁形不受扰：状态条件行一字未动 */
-    expect(src).toContain("v-if=\"canOps && job?.status === 'RUNNING'\"");
+    expect(src).toContain("v-if=\"canMutateJob && job?.status === 'RUNNING'\""); /* 1007：中止仅创建者/ADMIN */
   });
 
   it('OverviewView：最近作业状态插值接 jobStatusZh（中文+英文小字）', () => {

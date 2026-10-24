@@ -38,12 +38,16 @@ describe('自助操作流水（非 admin 可见自己的操作）', () => {
 
 describe('capability 门禁真源（auth store 暴露）', () => {
   it('auth store：can(cap)/canAuditAll() 统一入口；仅明确无鉴权(authDisabled)全放行，身份未知 fail-closed', () => {
-    expect(authStore).toContain("import { canCap, canViewAllAudit, type ConsoleCap } from '../utils/capability';");
+    /* 1002：canClusterScope 需要 roleRank 做「rank3 或 w:cluster-settings」双通道判定 */
+    expect(authStore).toContain("import { canCap, canViewAllAudit, roleRank, type ConsoleCap } from '../utils/capability';");
     expect(authStore).toContain("const identityKnown = () => authDisabled.value || me.value != null || !probeStarted.value;");
     expect(authStore).toContain('if (!identityKnown()) return false;');
     expect(authStore).toContain('return me.value == null ? true : canCap(me.value.role, cap);');
     expect(authStore).toContain('const canAuditAll = (targetId?: string | null) => me.value != null');
     expect(authStore).toContain('&& canViewAllAudit(me.value.role) && canReadPage(\'security\', targetId);');
+    /* 集群级动作门必须与后端 CLUSTER_SCOPE_WRITE_KEYWORDS 同源（rank3 或 w:cluster-settings） */
+    expect(authStore).toContain("const canClusterScope = (targetId?: string | null) => {");
+    expect(authStore).toContain("return gp.includes('conn:' + tid + ':w:cluster-settings');");
   });
 });
 
@@ -80,14 +84,14 @@ describe('危险按钮按角色隐藏（点名：只读不再看到删索引/删
        ：canO 细化为 canEndpoint(create-index 端点)——canO 唯一消费
        r59-create-index 的端点归 config-validator 页，连接模型按本页写键勾选裁决 */
     expect(pal).toContain("const canW = auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/doc', store.target), canO = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target);");
-    expect(pal).toContain('const canRawOps = () => auth.canAdminOps();');
+    expect(pal).toContain("const canRawOps = () => auth.canAdminOps();");
     expect(pal).toContain("if (canO && canGo('/indices')) list.push(\n    { id: 'r59-create-index'");
     expect(pal).toContain("if (canW && canGo('/search')) list.push(\n    { id: 'r59-create-doc'");
     expect(pal).toContain("if (canGo('/search')) list.push(\n    { id: 'act-run'");
     expect(pal).toContain("if (idx && canGo('/adhoc-rebuild')) list.push(");
     expect(pal).toContain("if (idx && canGo('/browser')) list.push(");
     expect(pal).toContain("if (canRawOps()) list.push(\n    { id: 'ops-refresh'");
-    expect(pal).toContain("{ id: 'ops-reroute-retry'"); /* raw 系一并入 admin 组 */
+    expect(pal).toContain("if (canRawOps()) list.push(\n    { id: 'ops-reroute-retry'"); /* reroute 属集群系统写，仍 ADMIN */
     expect(pal).toContain('...(canIlm ? [\n      { id: \'dev-ilm-start\''); /* 963 同步更新：ILM 起停门随 ilm/start 端点（canIlm），不再借 create-index 的 canO */
   });
   it('ClusterSwitcher：连接档案管理（表单/⋯菜单）=admin；查看/切换/探活全角色保留', () => {
@@ -130,9 +134,10 @@ describe('权限隐藏第二波（，16 视图写按钮收尾）', () => {
   it('AdhocRebuildView：启动/中止/确认切换=ops + AWAIT_CONFIRM 低权指引', () => {
     const v = V('AdhocRebuildView.vue');
     expect(v).toContain('<button v-if="canOps" class="btn primary" :disabled="starting ||');
-    expect(v).toContain("v-if=\"canOps && job?.status === 'RUNNING'\"");
-    expect(v).toContain('<button v-if="canOps" class="btn primary sm" :disabled="confirming" @click="doConfirmSwitch">');
+    expect(v).toContain("v-if=\"canMutateJob && job?.status === 'RUNNING'\"");
+    expect(v).toContain('<button v-if="canMutateJob" class="btn primary sm" :disabled="confirming" @click="doConfirmSwitch">');
     expect(v).toContain('切换/中止需 REBUILD_OP/ADMIN 角色——请联系对应角色处置，勿自行尝试');
+    expect(v).toContain('作业由 <b class="mono">{{ jobOwner }}</b> 创建'); /* 1007：非创建者前置说明 */
   });
   it('SnapshotsView：创建/恢复/删除=ops（删除按角色意图提级，后端关键词偏低档已披露）', () => {
     const v = V('SnapshotsView.vue');
@@ -198,7 +203,7 @@ describe('权限隐藏第二波（，16 视图写按钮收尾）', () => {
     const lc = V('LifecycleView.vue');
     expect(lc).toContain('<button v-if="canOps" class="btn ghost sm" @click="ilmStart"');
     expect(lc).toContain('<button v-if="canOps" class="btn ghost sm" @click="ilmStop"');
-    expect(lc).toContain('<button v-if="canOps" class="btn primary sm" @click="doRollover(false)"');
+    expect(lc).toContain('<button v-if="canRollover" class="btn primary sm" @click="doRollover(false)"');
     /* 984：「推进」走共享写端点 ilm/move（归属 ilm|lifecycle），只看 ilm/start 会把 w:ilm 授权人挡在门外 */
     expect(lc).toContain('<button v-if="canMove" class="btn primary sm" @click="doMove"');
     const dt = V('DevToolsView.vue');
@@ -216,7 +221,8 @@ describe('第三波：写门收口（10 视图写按钮 VIEWER 不可见）', ()
     expect(v).toContain("const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target));");
     /* 988：发送钮叠非 ADMIN 数据面预暴露门（DevTools 双门同口径），钮面 disabled 与 doSend 体首行同源 */
     expect(v).toContain('<button v-if="canAdmin" class="btn primary sm" :disabled="sending || !path.trim() || !currentSendable"');
-    expect(v).toContain("if (!requestInScope(method.value, path.value)) { store.notify('warning', SCOPE_DENY_HINT); return; }");
+    /* 1004：门带 body（根级检索的 PIT 豁免要读 pit.id），提示分档（根级检索缺索引单列） */
+    expect(v).toContain('if (!requestInScope(method.value, path.value, body.value)) { store.notify(\'warning\', scopeDenyHint.value); return; }');
     expect(v).toContain('v-if="respErr && canAdmin" class="btn sm" :disabled="sending" @click="send"');
   });
   it('BrowserView：新建索引/ForceMerge 行钮/删除索引行钮=ops', () => {
@@ -228,7 +234,8 @@ describe('第三波：写门收口（10 视图写按钮 VIEWER 不可见）', ()
   });
   it('SlmView：立即执行卡钮+右键菜单项=ops（AliasesView 条件展开同款形态）', () => {
     const v = V('SlmView.vue');
-    expect(v).toContain("const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/slm/execute', store.target));");
+    expect(v).toContain("const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/slm/execute', store.target)");
+    expect(v).toContain('&& auth.canClusterScope(store.target)'); /* 1007：集群级动作 rank 硬门前置 */
     expect(v).toContain('<button v-if="canOps" class="btn pri sm" @click="execNow(p.id)" :disabled="execing === p.id">');
     expect(v).toContain("...(canOps.value ? [{ key: 'exec', label: '立即执行', icon: Play, sep: true, run: () => { close(); void execNow(rm.p.id); } }] : []),");
   });
@@ -243,9 +250,9 @@ describe('第三波：写门收口（10 视图写按钮 VIEWER 不可见）', ()
     const v = V('MappingView.vue');
     expect(v).toContain("const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/put-mapping', store.target));");
     expect(v).toContain('<button v-if="canOps" class="btn sm" @click="addOpen = true">');
-    expect(v).toContain('<button v-if="canOps" class="btn sm" @click="settingsOpen = true">');
+    expect(v).toContain('<button v-if="canSettings" class="btn sm" @click="settingsOpen = true">');
     expect(v).toContain('<button v-if="canOps" class="btn pri" :disabled="!newMappingValid || putting"'); /*  G213 同步更新：在途守卫入 disabled 绑定 */
-    expect(v).toContain('<button v-if="canOps" class="btn pri" :disabled="!newSettingsValid || putting"');
+    expect(v).toContain('<button v-if="canSettings" class="btn pri" :disabled="!newSettingsValid || putting"');
   });
   it('AnalysisSettingsView：热重载按 reload-analyzers / 保存=ops（加载为读操作不受门禁）', () => {
     const v = V('AnalysisSettingsView.vue');
@@ -299,10 +306,12 @@ describe('第四波： canWrite 连接感知扫荡（6 文件定义行 canWriteO
     expect(V('views/DslQueryView.vue')).toContain("const canWrite = computed(() => auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/doc', store.target));");
   });
   it('TasksView：canWrite=canWriteOn(store.target)（取消任务门接连接感知档；取消与重建中止同族提档 ops）', () => {
-    expect(V('views/TasksView.vue')).toContain("const canWrite = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/tasks/cancel', store.target));");
+    expect(V('views/TasksView.vue')).toContain("const canWrite = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/tasks/cancel', store.target)");
+    expect(V('views/TasksView.vue')).toContain('&& auth.canClusterScope(store.target)');
   });
   it('TaskTreeView：canWrite=canWriteOn(store.target)（批量 cancel/行 Cancel/右键取消项同源提档 ops）', () => {
-    expect(V('views/TaskTreeView.vue')).toContain("const canWrite = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/tasks/cancel', store.target));");
+    expect(V('views/TaskTreeView.vue')).toContain("const canWrite = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/tasks/cancel', store.target)");
+    expect(V('views/TaskTreeView.vue')).toContain('&& auth.canClusterScope(store.target)');
   });
   it('DiffEditorView：canWrite=canWriteOn(store.target)（推送门接连接感知档）', () => {
     expect(V('views/DiffEditorView.vue')).toContain("const canWrite = computed(() => auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/doc/update', store.target));");
@@ -310,9 +319,9 @@ describe('第四波： canWrite 连接感知扫荡（6 文件定义行 canWriteO
   it('IndexHubView：canWrite=canWriteOn(store.target)（189 只读提示文案随连接感知——conn 写键用户实际可编辑）', () => {
     expect(V('views/IndexHubView.vue')).toContain("const canWrite = computed(() => auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/update-partial', store.target));");
   });
-  it('CmdPalette：canW/canO 端点级；raw 五命令按 ADMIN 档（977 raw 系统守卫同源）', () => {
+  it('CmdPalette：canW/canO 端点级；raw 数据面命令按 rest/devtools 写键、reroute 按 ADMIN', () => {
     const v = V('components/CmdPalette.vue');
     expect(v).toContain("const canW = auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/doc', store.target), canO = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target);");
-    expect(v).toContain('const canRawOps = () => auth.canAdminOps();');
+    expect(v).toContain("const canRawOps = () => auth.canAdminOps();");
   });
 });

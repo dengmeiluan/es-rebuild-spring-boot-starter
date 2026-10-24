@@ -103,7 +103,10 @@ public class CrossClusterMigrateController {
         if (request.getSrcConnId() != null && !request.getSrcConnId().trim().isEmpty()) {
             request.setConn(storedConn(request.getSrcConnId(), http));
         }
-        String jobId = migrateService.start(request);
+        ConsolePrincipal p = principal(http);
+        String jobId = migrateService.start(request,
+                p == null ? null : p.getUsername(),
+                p == null ? null : p.getRole().name());
         return ok("jobId", jobId);
     }
 
@@ -187,7 +190,7 @@ public class CrossClusterMigrateController {
                                       @RequestParam(required = false) String connId,
                                       HttpServletRequest request) {
         MigrateJobES job = migrateService.progress(jobId);
-        requireJobSource(job, request);
+        requireJobSource(job, request, true);
         if (connModel(request) && job.getSrcConnId() != null && !job.getSrcConnId().trim().isEmpty()) {
             if (connId == null || !job.getSrcConnId().trim().equals(connId.trim())) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -204,7 +207,7 @@ public class CrossClusterMigrateController {
     @PostMapping("abort")
     public Map<String, Object> abort(@RequestParam String jobId, HttpServletRequest request) {
         MigrateJobES job = migrateService.progress(jobId);
-        requireJobSource(job, request);
+        requireJobSource(job, request, true);
         migrateService.abort(jobId);
         return ok("aborted", jobId);
     }
@@ -252,13 +255,35 @@ public class CrossClusterMigrateController {
 
     /** 连接模型下作业必须记录源连接档案，且操作者持有该档案的迁移写键；旧版/手输作业不下放。 */
     private void requireJobSource(MigrateJobES job, HttpServletRequest request) {
-        if (!connModel(request)) return;
-        String src = job == null ? null : job.getSrcConnId();
-        if (src == null || src.trim().isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "该迁移作业未记录源连接档案，连接模型下不可操作");
+        requireJobSource(job, request, false);
+    }
+
+    /**
+     * @param mutating true=续跑/中止：在源连接写键之外再校验作业归属（创建者本人或 ADMIN）。
+     *                 进度读取保持连接级（团队观测），不因归属把同事挡在排障门外。
+     */
+    private void requireJobSource(MigrateJobES job, HttpServletRequest request, boolean mutating) {
+        if (connModel(request)) {
+            String src = job == null ? null : job.getSrcConnId();
+            if (src == null || src.trim().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "该迁移作业未记录源连接档案，连接模型下不可操作");
+            }
+            requireSourceWrite(src, request);
         }
-        requireSourceWrite(src, request);
+        if (!mutating) return;
+        /* 归属检查不依赖连接模型：静态/内置模型的作业同样记录了创建者，
+           不能因为部署模型不同就让同事随意续跑/中止别人的迁移。 */
+        ConsolePrincipal p = principal(request);
+        if (p == null || p.getRole().atLeast(io.github.dengmeiluan.es.rebuild.auth.ConsoleRole.ADMIN)) {
+            return;
+        }
+        String owner = job == null ? null : job.getOwnerUsername();
+        if (owner == null || owner.trim().isEmpty()) return; // legacy：连接级语义
+        if (owner.trim().equals(p.getUsername())) return;
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "迁移作业 " + job.getJobId() + " 由 " + owner + " 创建：续跑/中止仅限创建者本人或 ADMIN。"
+                        + "同连接其他成员可查看进度。");
     }
 
     private boolean connModel(HttpServletRequest request) {

@@ -39,4 +39,37 @@ public interface ConsoleAuthDelegate {
      * @return 宿主认出的身份（建议 delegated=true）；认不出返回 {@code null}（交回内置鉴权，不视为失败）
      */
     ConsolePrincipal authenticate(HttpServletRequest request);
+
+    /**
+     * 登出时尝试吊销当前令牌（可选实现）。
+     *
+     * <p>宿主签发的令牌控制台无法真正撤销；实现方可在本实例维护短期拒绝表
+     * （{@link DelegatedTokenRevocations}），至少让「已退出」的令牌在本实例立即失效。
+     * 返回 false 表示该模式无可吊销的服务端会话（如 header 模式）。</p>
+     *
+     * @param token 当前请求携带的原始令牌（可能为 null）
+     * @return 是否在本实例建立了拒绝
+     */
+    default boolean revoke(String token) {
+        return false;
+    }
+
+    /**
+     * 本请求是否携带了该委托模式的凭证。
+     *
+     * <p>用于区分「没带宿主凭证（可回落内置登录）」与「带了但不被接受（不得回落）」：
+     * 后者若回落到浏览器里残留的旧内置 ADMIN token，会让一个已被宿主撤销的会话
+     * 静默升级成更强的本地身份。默认 false = 未知，保持既有回退语义。</p>
+     */
+    default boolean hasCredential(javax.servlet.http.HttpServletRequest request) {
+        return false;
+    }
+
+    /**
+     * 本请求携带的委托令牌原文（jwt/endpoint 模式；header 模式无令牌返回 null）。
+     * 登出时据此登记本地拒绝表——不能拿内置 token 顶替。
+     */
+    default String tokenOf(javax.servlet.http.HttpServletRequest request) {
+        return null;
+    }
 }

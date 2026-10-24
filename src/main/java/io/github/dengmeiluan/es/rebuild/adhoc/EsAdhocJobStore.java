@@ -269,6 +269,7 @@ public class EsAdhocJobStore implements AdhocJobStore {
             // target-aware adhoc：旧 payload 无 targetId 字段 → getOrDefault 归一 host（迁移既定语义）
             job.restoreTarget(str(m.getOrDefault("targetId", AdhocRebuildJob.TARGET_HOST)),
                     str(m.get("targetName")), str(m.get("targetEsVersion")));
+            job.restoreOwner(str(m.get("ownerUsername")), str(m.get("ownerRole")));
             Object lockActive = m.get("lockActive");
             if (lockActive instanceof Boolean) {
                 job.setLockActive((Boolean) lockActive);

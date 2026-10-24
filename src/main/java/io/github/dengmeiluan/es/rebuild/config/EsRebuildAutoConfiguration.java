@@ -1194,7 +1194,9 @@ public class EsRebuildAutoConfiguration {
                                                            ConsolePageCatalog consolePageCatalog,
                                                            EsRebuildProperties properties) {
             return new ConsoleAuthController(builtinConsoleAuthService, consoleOpsAuditStore, consolePageCatalog,
-                    properties.getConsole().getPageAuth().isEnabled());
+                    properties.getConsole().getPageAuth().isEnabled(),
+                    /* 与 header 委托同一份受信代理清单：登录节流的 IP 维度不能用可伪造的转发头 */
+                    properties.getConsole().getAuth().getDelegate().getHeader().getTrustedProxies());
         }
 
         /**
@@ -1256,7 +1258,9 @@ public class EsRebuildAutoConfiguration {
                         + "回退纯角色档拦截；宿主下发的 grantedPages 将被忽略");
             }
             ConsoleAuthInterceptor interceptor = new ConsoleAuthInterceptor(effective, consoleOpsAuditStore,
-                    controlClusterResolver, consolePageCatalog, pageAuthEnabled, envPagesResolver, connStore);
+                    controlClusterResolver, consolePageCatalog, pageAuthEnabled, envPagesResolver, connStore,
+                    /* 审计来源 IP 的受信代理清单与 header 委托同源（防伪造 XFF 污染审计/绕过节流） */
+                    properties.getConsole().getAuth().getDelegate().getHeader().getTrustedProxies());
             // 1031：insight 护栏动作 fail-closed 闸的注册表判据（未登记 actionId 写请求授权层拒绝）
             interceptor.setGuardedActionRegistry(guardedActionRegistry);
             return new org.springframework.web.servlet.config.annotation.WebMvcConfigurer() {

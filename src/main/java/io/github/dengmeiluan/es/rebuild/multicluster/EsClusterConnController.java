@@ -312,9 +312,28 @@ public class EsClusterConnController {
      * 连接中心同步最近一轮报告(连接中心自动同步批);未启用同步(引擎未装配)返回 null。
      * 报告含集群名与跳过原因(脱敏无密码),路径含 /clusters/ 天然落高危清单 ADMIN。
      */
+    /** 兼容直调/测试（无请求上下文=全量，与 ADMIN 语义一致）；HTTP 走带 request 的签名。 */
+    ClusterConnSyncReport syncStatus() {
+        return syncStatus(null);
+    }
+
     @GetMapping("sync")
-    public ClusterConnSyncReport syncStatus() {
-        return syncEngine == null ? null : syncEngine.lastReport();
+    public ClusterConnSyncReport syncStatus(HttpServletRequest request) {
+        if (syncEngine == null) return null;
+        ClusterConnSyncReport report = syncEngine.lastReport();
+        if (report == null) return null;
+        Object p = request == null ? null : request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+        if (!(p instanceof ConsolePrincipal)
+                || ((ConsolePrincipal) p).getRole().atLeast(ConsoleRole.ADMIN)) {
+            return report;
+        }
+        /* sync 是自举豁免端点（撤权重定位要靠它刷新），但不能把 notes 里的全部连接名
+           下发给只能看见部分目录的人：聚合计数保留，明细仅在全目录可见时下发。 */
+        io.github.dengmeiluan.es.rebuild.auth.ConsoleConnVisibility.Snapshot snap =
+                io.github.dengmeiluan.es.rebuild.auth.ConsoleConnVisibility.snapshot(
+                        (ConsolePrincipal) p, connStore);
+        return snap.seesAllKnown() ? report
+                : report.withNotes(java.util.Collections.<String>emptyList());
     }
 
     /** 手动触发一轮同步(同步执行完返回报告,与周期调度 synchronized 互斥);引擎未启用显式报错。 */

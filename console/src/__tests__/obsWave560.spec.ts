@@ -120,10 +120,11 @@ describe('obsWave560：SnapshotsView 提交后进度可见', () => {
 describe('obsWave560：BrowserView ForceMerge 异步化+错误合并', () => {
   const br = read('BrowserView.vue');
 
-  it('ForceMerge 提交改异步（结构化端点后端 wait_for_completion=false）', () => {
+  it('ForceMerge 走结构化端点；ES 7.10 不携带 wait_for_completion（会 400）', () => {
     expect(br).toContain('api.clusterForceMerge(idx.index, 1)');
     const adminSrc = readFileSync(join(__dirname, '../../../src/main/java/io/github/dengmeiluan/es/rebuild/core/EsIndexAdmin.java'), 'utf-8');
-    expect(adminSrc).toContain('/_forcemerge?wait_for_completion=false');
+    expect(adminSrc).toContain('/_forcemerge');
+    expect(adminSrc).not.toContain('/_forcemerge?wait_for_completion=false');
   });
 
   it('响应含 taskId 时 notify 指路任务页（响应处理形态对齐 IndexOptimizerView 先例）', () => {

@@ -54,6 +54,8 @@ public class CrossClusterMigrateControllerTargetTest {
     private static class FakeService extends CrossClusterMigrateService {
         final Map<String, MigrateJobES> jobs = new LinkedHashMap<>();
         String lastStartSource;
+        String lastStartOwner;
+        String lastStartOwnerRole;
 
         FakeService() {
             super(null, null, null, null, null, null, null, null, null);
@@ -82,7 +84,14 @@ public class CrossClusterMigrateControllerTargetTest {
 
         @Override
         public String start(MigrateRequest request) {
+            return start(request, null, null);
+        }
+
+        @Override
+        public String start(MigrateRequest request, String ownerUsername, String ownerRole) {
             lastStartSource = request.getSrcConnId();
+            lastStartOwner = ownerUsername;
+            lastStartOwnerRole = ownerRole;
             return "job-" + request.getDestIndex();
         }
 
@@ -98,6 +107,13 @@ public class CrossClusterMigrateControllerTargetTest {
         job.setSourceIndex("src-1");
         job.setDestIndex("dest-1");
         job.setSrcConnId(srcConnId);
+        return job;
+    }
+
+    private static MigrateJobES job(String id, String srcConnId, String owner) {
+        MigrateJobES job = job(id, srcConnId);
+        job.setOwnerUsername(owner);
+        job.setOwnerRole("VIEWER");
         return job;
     }
 
@@ -200,6 +216,44 @@ public class CrossClusterMigrateControllerTargetTest {
         List<MigrateJobES> visible = ctrl.jobs(20, c1);
         assertEquals(1, visible.size());
         assertEquals("j1", visible.get(0).getJobId());
+    }
+
+    @Test
+    public void 作业归属_中止与续跑仅限创建者本人或ADMIN() {
+        FakeService service = new FakeService();
+        service.jobs.put("j-owned", job("j-owned", "c1", "u-owner"));
+        HttpServletRequest teammate = request(viewer("conn:c1:w:xmigrate"));
+        HttpServletRequest owner = request(new ConsolePrincipal("u-owner", ConsoleRole.VIEWER, false, true,
+                "创建者", null, new HashSet<>(Arrays.asList("conn:c1:w:xmigrate", "conn:host:w:xmigrate"))));
+        CrossClusterMigrateController ctrl = controller(service, connStore());
+
+        /* 同连接同事可观测（团队排障），但不可替代创建者执行不可逆动作 */
+        assertEquals("j-owned", ctrl.progress("j-owned", teammate).getJobId());
+        expectForbidden(() -> ctrl.abort("j-owned", teammate), "非创建者中止他人作业");
+        expectForbidden(() -> ctrl.resume("j-owned", new RemoteClusterConn(), "c1", teammate),
+                "非创建者续跑他人作业");
+
+        ctrl.abort("j-owned", owner);
+        assertEquals("j-owned", ctrl.resume("j-owned", new RemoteClusterConn(), "c1", owner).get("jobId"));
+
+        /* ADMIN 是全局超管：即使不是创建者也必须能收尾（连接模型对 ADMIN 整体短路） */
+        HttpServletRequest admin = request(new ConsolePrincipal("admin-x", ConsoleRole.ADMIN,
+                false, true, "超管", null, new HashSet<>(Arrays.asList("conn:c1:rest"))));
+        ctrl.abort("j-owned", admin);
+    }
+
+    @Test
+    public void 发起迁移_记录创建者身份() {
+        FakeService service = new FakeService();
+        MigrateRequest req = new MigrateRequest();
+        req.setSrcConnId("c2");
+        req.setSourceIndex("src-1");
+        req.setDestIndex("dest-1");
+        CrossClusterMigrateController ctrl = controller(service, connStore());
+        HttpServletRequest c2WithDest = request(viewer("conn:c2:w:xmigrate", "conn:host:w:xmigrate"));
+        ctrl.start(req, c2WithDest);
+        assertEquals("u-conn", service.lastStartOwner);
+        assertEquals("VIEWER", service.lastStartOwnerRole);
     }
 
     @Test

@@ -208,9 +208,9 @@ const commands = computed<Cmd[]>(() => {
   }
   /* 补可选第 5 参 action——成功 toast 附动作按钮（AdhocRebuildView
  confirmSwitch notify action 范式），其余调用方不传零影响 */
-  /* raw 五命令（refresh/flush/cache/forcemerge/reroute）都是后端 raw 守卫的系统管理面：
-     非 ADMIN 即使持 w:rest 也会 403，入口必须与执行体同档（无鉴权部署保持全功能）。
-     用函数在读时求值，身份探测晚到也能让命令列表随 auth.me 重算。 */
+  /* raw 五命令（refresh/flush/cache/forcemerge/reroute）都是后端 raw 守卫的管理/维护写：
+     976/1004 金标准明确非 ADMIN 一律拒绝（forcemerge 等为可控 DoS 面），入口必须同档；
+     无鉴权部署保持全功能。函数读时求值，身份探测晚到也能随 auth.me 重算。 */
   const canRawOps = () => auth.canAdminOps();
   const runRaw = async (method: string, path: string, body: string, msg: string,
     action?: { label: string; onClick: () => void }) => {
@@ -230,7 +230,10 @@ const commands = computed<Cmd[]>(() => {
      未归属页的共享端点回落任意写键；低权角色不再看到点了必 403 的命令 */
   const canSettings = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/settings/put', store.target);
   const canReload = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/reload-analyzers', store.target);
-  const canIlm = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/ilm/start', store.target);
+  const canIlm = auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/ilm/start', store.target)
+    /* ILM start/stop 是集群级动作：连接模型下 rank2 的 w:lifecycle 会被后端
+       CLUSTER_SCOPE_REQUIRED 拦下——命令面板必须同源，不能比页面宽。 */
+    && auth.canClusterScope(store.target);
   /* CRUD 里「增」提升为一等公民——新建索引/新建文档直达 */
   if (canO && canGo('/indices')) list.push(
     { id: 'r59-create-index', title: '新建索引', sub: '名称校验 + 分片/副本 + 别名 + 高级 JSON', cat: '动作', icon: Plus,
@@ -303,12 +306,12 @@ const commands = computed<Cmd[]>(() => {
           message: `将对「${idx}」执行 force merge max_num_segments=1：大索引可能长时间占用 IO 且不可中断，建议低峰期执行。`,
           okText: '执行合并',
         })) return;
-        /* 同步等待改异步提交——wait_for_completion=false（BrowserView 
- 同款：大索引同步 await 会占死前端直到网关超时）；成功文案对齐异步语义 +
- 「看任务」动作直达 /tasks（AdhocRebuildView confirmSwitch notify action 范式） */
-        runRaw('POST', `/${idx}/_forcemerge?max_num_segments=1&wait_for_completion=false`, '', `任务已提交(异步)：forcemerge ${idx}`,
-          { label: '看任务', onClick: () => go('/tasks') });
+        /* ES 7.10 的 _forcemerge 不支持 wait_for_completion（会 400），且该 API 本身同步；
+           大索引会等到合并结束，文案不再谎称“异步/看任务”。 */
+        runRaw('POST', `/${idx}/_forcemerge?max_num_segments=1`, '', `ForceMerge 已完成：${idx}`);
       } },
+  );
+  if (canRawOps()) list.push(
     { id: 'ops-reroute-retry', title: '重试失败分片 (_cluster/reroute?retry_failed)', sub: '集群级一键重试', cat: '运维', icon: ShieldCheck,
       action: () => runRaw('POST', '/_cluster/reroute?retry_failed=true', '{}', '已提交 retry_failed=true') },
   );

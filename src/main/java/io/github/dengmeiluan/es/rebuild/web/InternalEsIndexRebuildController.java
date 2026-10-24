@@ -16,6 +16,7 @@
 
 package io.github.dengmeiluan.es.rebuild.web;
 
+import io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal;
 import io.github.dengmeiluan.es.rebuild.core.EsIndexRebuildService;
 import io.github.dengmeiluan.es.rebuild.core.ReindexProgress;
 import org.slf4j.Logger;
@@ -55,6 +56,14 @@ public class InternalEsIndexRebuildController {
     private final io.github.dengmeiluan.es.rebuild.core.EsIndexAdmin esIndexAdmin;
     /** auth.enabled=false 的免鉴权部署仍按历史语义运行；开启鉴权时缺 principal 必须 fail-closed。 */
     private final boolean authRequired;
+
+    /** 连接环境页面模板（可选注入）：拓扑类字段的“按页收窄”需要真实生效页集。 */
+    private io.github.dengmeiluan.es.rebuild.auth.EnvPagesResolver envPagesResolver;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setEnvPagesResolver(io.github.dengmeiluan.es.rebuild.auth.EnvPagesResolver envPagesResolver) {
+        this.envPagesResolver = envPagesResolver;
+    }
 
     public InternalEsIndexRebuildController(EsIndexRebuildService esIndexRebuildService,
                                             io.github.dengmeiluan.es.rebuild.core.EsIndexAdmin esIndexAdmin) {
@@ -204,6 +213,68 @@ public class InternalEsIndexRebuildController {
                     .atLeast(io.github.dengmeiluan.es.rebuild.auth.ConsoleRole.ADMIN);
         }
         return !authRequired;
+    }
+
+    /**
+     * 页面模型下当前身份是否真实持有某页（ADMIN 恒 true）。
+     *
+     * <p>用于「共享读端点按调用页语义做字段级收窄」：没有页面语义的部署
+     * （{@code grantedPages=null} 的静态/内置模型）恒 true=不收窄，保持历史可见性——
+     * 否则会把拓扑页正常需要的节点 IP 一起抹掉（有权限的人被拦）。</p>
+     */
+    private boolean pageVisible(javax.servlet.http.HttpServletRequest request, String page) {
+        Object attr = request == null ? null
+                : request.getAttribute(io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+        if (!(attr instanceof io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal)) {
+            return !authRequired;
+        }
+        io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal cp =
+                (io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal) attr;
+        if (cp.getRole().atLeast(io.github.dengmeiluan.es.rebuild.auth.ConsoleRole.ADMIN)) {
+            return true;
+        }
+        java.util.Set<String> gp = cp.getGrantedPages();
+        if (gp == null) {
+            return true; // 静态/内置模型：无页语义，维持历史行为
+        }
+        String h = request.getHeader("X-Es-Target");
+        String tid = h == null || h.trim().isEmpty() || "host".equalsIgnoreCase(h.trim())
+                ? "host" : h.trim();
+        java.util.Set<String> effective = envPagesResolver == null
+                ? gp : envPagesResolver.effectivePages(tid, gp);
+        if (effective.contains(page)) return true;
+        /* 无 resolver 的直调/测试形态：按 conn:{tid}:{page} 精确键判定（与页面门同义）。 */
+        return envPagesResolver == null
+                && (gp.contains("conn:" + tid + ":" + page)
+                    || gp.contains("conn:" + tid + ":w:" + page));
+    }
+
+    private boolean clusterScopeAllowed(javax.servlet.http.HttpServletRequest request) {
+        Object attr = request == null ? null
+                : request.getAttribute(io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+        if (!(attr instanceof io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal)) {
+            return !authRequired;
+        }
+        io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal cp =
+                (io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal) attr;
+        if (cp.getRole().atLeast(io.github.dengmeiluan.es.rebuild.auth.ConsoleRole.CLUSTER_OP)) {
+            return true;
+        }
+        java.util.Set<String> gp = cp.getGrantedPages();
+        if (gp == null) {
+            return true; // 静态/内置模型：rank 由拦截器裁决，控制器不再二次收缩
+        }
+        if (envPagesResolver == null) {
+            String h = request.getHeader("X-Es-Target");
+            String tid = h == null || h.trim().isEmpty() || "host".equalsIgnoreCase(h.trim())
+                    ? "host" : h.trim();
+            return gp.contains("conn:" + tid + ":cluster-settings")
+                    || gp.contains("conn:" + tid + ":w:cluster-settings");
+        }
+        String h = request.getHeader("X-Es-Target");
+        String tid = h == null || h.trim().isEmpty() || "host".equalsIgnoreCase(h.trim())
+                ? "host" : h.trim();
+        return envPagesResolver.writeAllowed(tid, "cluster-settings", gp);
     }
 
     /** 集群级任意索引 inspect（只读）。自动解析 indexKey→alias。 */
@@ -442,10 +513,75 @@ public class InternalEsIndexRebuildController {
             // 且无痕（审计链断点）。低频用户路径直接 WARN 不节流；回填失败不影响执行契约不变
             log.warn("[es-console-raw] 审计摘要回填失败(本次高危审计缺执行摘要): {}", e.getMessage(), e);
         }
+        /* PIT id 是服务端资源的持有凭据：控制台内打开的 id 绑定执行者，换号/他人不得续用。 */
+        guardPitOwnership(rawBody, request, admin);
         /* 连接模型 rest 写键持有人可使用 raw 访问业务索引，但控制面索引仍仅 ADMIN 可达 */
-        return admin
+        Map<String, Object> result = admin
                 ? esIndexAdmin.raw(req.get("method"), req.get("path"), req.get("body"))
                 : sanitizeRawEnvelope(esIndexAdmin.rawGuarded(req.get("method"), req.get("path"), req.get("body")));
+        rememberPitCall(req.get("method"), req.get("path"), rawBody, result, request, admin);
+        return result;
+    }
+
+    /** 本请求是否在操作某个已登记的 PIT：非归属者（非 ADMIN）拒绝。未登记=控制台外资源，维持放行。 */
+    private void guardPitOwnership(String body, javax.servlet.http.HttpServletRequest request, boolean admin) {
+        guardPitOwnershipById(pitIdFromBody(body), request, admin);
+    }
+
+    /** 按 id 判定归属（关闭 PIT 直接走这里，避免拼接 JSON 时被非法字符绕过判定）。 */
+    private void guardPitOwnershipById(String pitId, javax.servlet.http.HttpServletRequest request, boolean admin) {
+        if (pitId == null || pitId.trim().isEmpty()) return;
+        ConsolePrincipal p = principal(request);
+        if (p == null) return; // 免鉴权部署
+        if (!io.github.dengmeiluan.es.rebuild.auth.PitOwnership.allows(pitId, p.getUsername(), admin)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "PIT id 由 " + io.github.dengmeiluan.es.rebuild.auth.PitOwnership.owner(pitId)
+                            + " 开启：PIT id 即凭据，仅开启者本人或 ADMIN 可使用；"
+                            + "账号切换后请重新打开 PIT（旧 id 不会随新身份放行）");
+        }
+    }
+
+    /** raw 开/关 PIT 的归属登记：开启绑定当前身份，关闭释放。 */
+    private void rememberPitCall(String method, String path, String body, Map<String, Object> result,
+                                 javax.servlet.http.HttpServletRequest request, boolean admin) {
+        if (path == null || result == null || method == null) return;
+        String clean = path.split("\\?")[0];
+        while (clean.endsWith("/") && clean.length() > 1) clean = clean.substring(0, clean.length() - 1);
+        if (!clean.toLowerCase(java.util.Locale.ROOT).endsWith("/_pit")) return;
+        ConsolePrincipal p = principal(request);
+        if ("DELETE".equalsIgnoreCase(method)) {
+            String bodyId = pitIdFromBody(body);
+            if (bodyId != null) io.github.dengmeiluan.es.rebuild.auth.PitOwnership.release(bodyId);
+            return;
+        }
+        if (!"POST".equalsIgnoreCase(method)) return;
+        Object id = result.get("id");
+        if (id != null && p != null) {
+            io.github.dengmeiluan.es.rebuild.auth.PitOwnership.register(String.valueOf(id), p.getUsername(),
+                    admin ? 7L * 24L * 3_600_000L : 2L * 3_600_000L);
+        }
+    }
+
+    static String pitIdFromBody(String body) {
+        if (body == null || body.trim().isEmpty()) return null;
+        /* 大 body（bulk 可达 32MB）先做廉价子串判定，避免每次 raw 请求整树解析。 */
+        if (body.indexOf("\"pit\"") < 0) return null;
+        try {
+            com.fasterxml.jackson.databind.JsonNode root = SCRIPT_MAPPER.readTree(body);
+            com.fasterxml.jackson.databind.JsonNode pit = root == null ? null : root.get("pit");
+            com.fasterxml.jackson.databind.JsonNode id = pit == null ? null : pit.get("id");
+            if (id == null || !id.isValueNode()) return null;
+            String v = id.asText();
+            return v == null || v.trim().isEmpty() ? null : v.trim();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static ConsolePrincipal principal(javax.servlet.http.HttpServletRequest request) {
+        Object attr = request == null ? null
+                : request.getAttribute(io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+        return attr instanceof ConsolePrincipal ? (ConsolePrincipal) attr : null;
     }
 
     /** 非 ADMIN 的成功信封体与错误路径同口径脱敏：bulk 逐条 failure、_msearch 逐项 error、
@@ -547,6 +683,14 @@ public class InternalEsIndexRebuildController {
                                                   @org.springframework.web.bind.annotation.RequestBody String body,
                                                   javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
         boolean admin = adminOrFail(request);
+        /* 组件模板没有 index_patterns 可供守卫判定，却会被索引模板（可能覆盖控制面模式）
+           引用：改它等于改所有未来匹配索引的 settings/mappings。按集群级动作处理。 */
+        if (!admin && !"index".equalsIgnoreCase(kind) && !clusterScopeAllowed(request)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "组件模板是集群级共享件（被索引模板引用，影响未来所有匹配索引）："
+                            + "需要 CLUSTER_OP 及以上角色，或该连接的「集群设置」写权限；"
+                            + "普通索引模板仍可按 index_patterns 守卫写入");
+        }
         return admin
                 ? esIndexAdmin.putTemplateAdmin(kind, name, body)
                 : esIndexAdmin.putTemplate(kind, name, body);
@@ -555,8 +699,18 @@ public class InternalEsIndexRebuildController {
     /** 删除模板 */
     @PostMapping("cluster/templates/delete")
     public Map<String, Object> clusterDeleteTemplate(@RequestParam String name,
-                                                     @RequestParam(defaultValue = "index") String kind) throws java.io.IOException {
-        return esIndexAdmin.deleteTemplate(kind, name);
+                                                     @RequestParam(defaultValue = "index") String kind,
+                                                     javax.servlet.http.HttpServletRequest request)
+            throws java.io.IOException {
+        /* 写有守卫、删无守卫是同一口径的破口：非 ADMIN 必须按模板真实 index_patterns
+           判定（读回再删），不能凭模板名删掉覆盖控制面模式的集群模板。 */
+        if (!adminView(request) && !"index".equalsIgnoreCase(kind) && !clusterScopeAllowed(request)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "组件模板是集群级共享件：删除需要 CLUSTER_OP 及以上角色，或该连接的「集群设置」写权限");
+        }
+        return adminView(request)
+                ? esIndexAdmin.deleteTemplate(kind, name)
+                : esIndexAdmin.deleteTemplateGuarded(kind, name);
     }
 
     /** Snapshot repositories 列表（非 ADMIN 脱敏云存储凭据） */
@@ -650,9 +804,20 @@ public class InternalEsIndexRebuildController {
             javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
         java.util.List<Map<String, Object>> list = esIndexAdmin.shardsDistribution(index);
         if (adminView(request)) return list;
+        /* 分片行的 ip 是节点内网坐标：overview/indices 只需要 node 名做分组，
+           只有拓扑页（TopologyView）真正渲染 IP。按页面语义收窄，避免“顺带泄露”；
+           静态模型 pageVisible 恒 true，不受影响。 */
+        boolean topologyPage = pageVisible(request, "topology");
         java.util.List<Map<String, Object>> out = new java.util.ArrayList<>();
         for (Map<String, Object> row : list) {
-            if (!esIndexAdmin.isControlIndex(String.valueOf(row.get("index")))) out.add(row);
+            if (esIndexAdmin.isControlIndex(String.valueOf(row.get("index")))) continue;
+            if (topologyPage) {
+                out.add(row);
+            } else {
+                Map<String, Object> trimmed = new java.util.LinkedHashMap<>(row);
+                trimmed.remove("ip");
+                out.add(trimmed);
+            }
         }
         return out;
     }
@@ -826,8 +991,19 @@ public class InternalEsIndexRebuildController {
 
     /** 远程集群配置 + 连接状态（CCS/CCR） */
     @GetMapping("cluster/remote-clusters")
-    public Map<String, Object> clusterRemoteClusters() throws java.io.IOException {
-        return esIndexAdmin.remoteClusters();
+    public Map<String, Object> clusterRemoteClusters(javax.servlet.http.HttpServletRequest request)
+            throws java.io.IOException {
+        Map<String, Object> out = esIndexAdmin.remoteClusters();
+        /* 工作台只消费 count：远端 seeds/地址属拓扑面，按页面语义收窄（远程集群页保留全量）。 */
+        if (adminView(request) || pageVisible(request, "remote-clusters")) return out;
+        Map<String, Object> restricted = new java.util.LinkedHashMap<>();
+        restricted.put("remotes", java.util.Collections.emptyMap());
+        restricted.put("count", out.get("count"));
+        restricted.put("localClusterName", out.get("localClusterName"));
+        restricted.put("localVersion", out.get("localVersion"));
+        restricted.put("restricted", true);
+        restricted.put("reason", "当前视图只需要远端连接数量；seeds/地址请在「远程集群」页查看");
+        return restricted;
     }
 
     /** ➕：高级 Reindex — 自定义目标集群 / 自由 body / 全参数开放 */
@@ -965,20 +1141,88 @@ public class InternalEsIndexRebuildController {
     }
     /** 已存储脚本列表 */
     @GetMapping("cluster/scripts")
-    public Map<String, Object> listStoredScripts() throws java.io.IOException {
-        return esIndexAdmin.listStoredScripts();
+    public Map<String, Object> listStoredScripts(javax.servlet.http.HttpServletRequest request)
+            throws java.io.IOException {
+        Map<String, Object> out = esIndexAdmin.listStoredScripts();
+        /* 搜索模板中心只需要 mustache 模板；painless 源码属脚本站（painless-lab）语义。
+           页面模型下按页收窄，避免模板页读者拿到可执行的 painless 源码。 */
+        if (adminView(request) || pageVisible(request, "painless-lab")) return out;
+        Object scripts = out.get("scripts");
+        if (scripts instanceof Map) {
+            Map<String, Object> filtered = new java.util.LinkedHashMap<>();
+            for (Map.Entry<?, ?> e : ((Map<?, ?>) scripts).entrySet()) {
+                Object def = e.getValue();
+                String lang = def instanceof Map ? String.valueOf(((Map<?, ?>) def).get("lang")) : "";
+                if ("mustache".equalsIgnoreCase(lang)) {
+                    filtered.put(String.valueOf(e.getKey()), def);
+                }
+            }
+            out.put("scripts", filtered);
+            out.put("count", filtered.size());
+            out.put("restricted", true);
+        }
+        return out;
     }
     /** 保存脚本 PUT /_scripts/{id} */
     @PostMapping("cluster/scripts/put")
     public Map<String, Object> putStoredScript(@RequestParam String id,
-                                                @org.springframework.web.bind.annotation.RequestBody String body) throws java.io.IOException {
+                                                @org.springframework.web.bind.annotation.RequestBody String body,
+                                                javax.servlet.http.HttpServletRequest request)
+            throws java.io.IOException {
+        requireScriptScope(id, body, request);
         return esIndexAdmin.putStoredScript(id, body);
     }
     /** 删除脚本 DELETE /_scripts/{id} */
     @PostMapping("cluster/scripts/delete")
-    public Map<String, Object> deleteStoredScript(@RequestParam String id) throws java.io.IOException {
+    public Map<String, Object> deleteStoredScript(@RequestParam String id,
+                                                  javax.servlet.http.HttpServletRequest request)
+            throws java.io.IOException {
+        requireScriptScope(id, null, request);
         return esIndexAdmin.deleteStoredScript(id);
     }
+
+    /**
+     * 已存脚本是集群级共享件（所有查询/模板共用同一命名空间）：搜索模板页的写键只应管理
+     * 它看得见的 mustache 模板；painless 源码的写入/删除属脚本站（painless-lab）语义。
+     *
+     * <p>与 GET 的字段收窄同源（模板页只回 mustache）：否则持 w:search-templates 的人
+     * 可以覆盖一个 ADMIN 的 painless 脚本，或按 id 删除任意人的脚本——读面收窄、写面全开
+     * 是最典型的「看起来安全」破口。静态/内置模型（grantedPages=null）维持 rank 档不变。</p>
+     */
+    private void requireScriptScope(String id, String body,
+                                    javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
+        if (adminView(request) || pageVisible(request, "painless-lab")) return;
+        if (body == null) {
+            Map<String, Object> listed = esIndexAdmin.listStoredScripts();
+            Object scripts = listed == null ? null : listed.get("scripts");
+            Object def = scripts instanceof Map ? ((Map<?, ?>) scripts).get(id) : null;
+            String lang = def instanceof Map ? String.valueOf(((Map<?, ?>) def).get("lang")) : "";
+            if (def != null && "mustache".equalsIgnoreCase(lang)) return;
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    def == null
+                            ? "已存脚本 " + id + " 不存在或无法确认类型：删除脚本需要 painless-lab 页写权限"
+                            : "已存脚本 " + id + " 不是 mustache 模板（lang=" + lang
+                                    + "）：删除需要 painless-lab 页写权限");
+        }
+        String lang;
+        try {
+            com.fasterxml.jackson.databind.JsonNode root =
+                    SCRIPT_MAPPER.readTree(body);
+            com.fasterxml.jackson.databind.JsonNode script = root == null ? null : root.get("script");
+            com.fasterxml.jackson.databind.JsonNode l = script == null ? null : script.get("lang");
+            lang = l == null ? null : l.asText();
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "脚本定义无法解析：搜索模板页只能写入 mustache 模板");
+        }
+        if ("mustache".equals(lang)) return;
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "搜索模板页只能写入 mustache 模板（lang=" + lang
+                        + "）：painless 脚本需要 painless-lab 页写权限；已存脚本是集群级共享件");
+    }
+
+    private static final com.fasterxml.jackson.databind.ObjectMapper SCRIPT_MAPPER =
+            new com.fasterxml.jackson.databind.ObjectMapper();
     /** 手动 rollover */
     @PostMapping("cluster/rollover")
     public Map<String, Object> rolloverAlias(@RequestParam String alias,
@@ -1000,8 +1244,15 @@ public class InternalEsIndexRebuildController {
     public Map<String, Object> ilmStatus() throws java.io.IOException { return esIndexAdmin.ilmStatus(); }
     /** 实时监控大屏——简化 nodes stats */
     @GetMapping("cluster/nodes-stats-brief")
-    public java.util.List<Map<String, Object>> nodesStatsBrief() throws java.io.IOException {
-        return esIndexAdmin.nodesStatsBrief();
+    public java.util.List<Map<String, Object>> nodesStatsBrief(javax.servlet.http.HttpServletRequest request)
+            throws java.io.IOException {
+        java.util.List<Map<String, Object>> list = esIndexAdmin.nodesStatsBrief();
+        if (adminView(request)) return list;
+        /* 无任何视图消费 host（拓扑页的 IP 来自 shards）：非 ADMIN 去掉主机名，保留指标。 */
+        for (Map<String, Object> row : list) {
+            row.remove("host");
+        }
+        return list;
     }
 
     /* =========================================================
@@ -1022,21 +1273,39 @@ public class InternalEsIndexRebuildController {
                                             @RequestParam(required = false) String sortOrder) throws java.io.IOException {
         return esIndexAdmin.luceneSearch(index, q, size, from, sortField, sortOrder);
     }
-    /** 开启 Point-in-Time（深度分页基石） */
+    /** 开启 Point-in-Time（深度分页基石）。非 ADMIN 的 keep-alive 夹到资源上限。 */
     @PostMapping("cluster/pit/open")
     public Map<String, Object> pitOpen(@RequestParam String index,
-                                       @RequestParam(defaultValue = "5m") String keepAlive) throws java.io.IOException {
-        return esIndexAdmin.pitOpen(index, keepAlive);
+                                       @RequestParam(defaultValue = "5m") String keepAlive,
+                                       javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
+        boolean admin = adminView(request);
+        Map<String, Object> out = admin
+                ? esIndexAdmin.pitOpen(index, keepAlive)
+                : esIndexAdmin.pitOpenClamped(index, keepAlive);
+        Object id = out == null ? null : out.get("id");
+        ConsolePrincipal p = principal(request);
+        if (id != null && p != null) {
+            io.github.dengmeiluan.es.rebuild.auth.PitOwnership.register(String.valueOf(id), p.getUsername(),
+                    admin ? 7L * 24L * 3_600_000L : 2L * 3_600_000L);
+        }
+        return out;
     }
-    /** PIT + search_after 分页搜索 */
+    /** PIT + search_after 分页搜索（PIT id 绑定开启者：换号/他人 id 不放行） */
     @PostMapping("cluster/pit/search")
-    public Map<String, Object> pitSearch(@org.springframework.web.bind.annotation.RequestBody String body) throws java.io.IOException {
-        return esIndexAdmin.pitSearch(body);
+    public Map<String, Object> pitSearch(@org.springframework.web.bind.annotation.RequestBody String body,
+                                         javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
+        boolean admin = adminView(request);
+        guardPitOwnership(body, request, admin);
+        return admin ? esIndexAdmin.pitSearch(body) : esIndexAdmin.pitSearchClamped(body);
     }
-    /** 关闭 PIT */
+    /** 关闭 PIT（仅开启者本人或 ADMIN；关闭后释放归属） */
     @PostMapping("cluster/pit/close")
-    public Map<String, Object> pitClose(@RequestParam String pitId) throws java.io.IOException {
-        return esIndexAdmin.pitClose(pitId);
+    public Map<String, Object> pitClose(@RequestParam String pitId,
+                                        javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
+        guardPitOwnershipById(pitId, request, adminView(request));
+        Map<String, Object> out = esIndexAdmin.pitClose(pitId);
+        io.github.dengmeiluan.es.rebuild.auth.PitOwnership.release(pitId);
+        return out;
     }
     /** 字段结构探测（前端教育） */
     @GetMapping("cluster/resolve-schema")

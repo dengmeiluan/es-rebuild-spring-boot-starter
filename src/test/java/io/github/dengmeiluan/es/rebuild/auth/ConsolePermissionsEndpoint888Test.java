@@ -318,10 +318,15 @@ public class ConsolePermissionsEndpoint888Test {
 
         Map<String, Object> operator = call(ctrl(), builtin(ConsoleRole.OPERATOR), "host");
         assertNull(pageOf(operator, "overview").get("write"));
-        assertEquals(Boolean.FALSE, pageOf(operator, "indices").get("write"));
+        /* 静态模型按端点逐条裁决：indices 页的文档编辑/热更（OPERATOR 档）可用，
+           只有 rebuild/force-merge 等 rank3 端点被角色门挡住——面板必须报「可写（部分受限）」，
+           不能用最高危端点一票否决（否则 OPERATOR 会以为自己完全不能写）。 */
+        assertEquals(Boolean.TRUE, pageOf(operator, "indices").get("write"));
+        assertTrue(String.valueOf(pageOf(operator, "indices").get("writeDeny")).startsWith("PARTIAL_ROLE:"));
         assertEquals(Boolean.FALSE, pageOf(operator, "rest").get("write"));
         assertEquals(Boolean.FALSE, pageOf(operator, "cluster-settings").get("write"));
-        assertEquals(Boolean.FALSE, pageOf(operator, "config-validator").get("write"));
+        assertEquals(Boolean.TRUE, pageOf(operator, "config-validator").get("write"));
+        assertTrue(String.valueOf(pageOf(operator, "config-validator").get("writeDeny")).startsWith("PARTIAL_ROLE:"));
     }
 
     @Test

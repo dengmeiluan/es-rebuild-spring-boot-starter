@@ -148,6 +148,17 @@ public class MigrateJobES {
     @Field(type = FieldType.Long)
     private Long createTime;
 
+    /**
+     * 作业创建者（用户级归属）：连接模型下 resume/abort 只允许创建者本人或 ADMIN。
+     * 旧作业文档无此字段=legacy，维持连接级语义（升级后仍可收尾）。
+     */
+    @Field(type = FieldType.Keyword)
+    private String ownerUsername;
+
+    /** 创建时角色快照（审计/展示；判权以当前身份角色为准）。 */
+    @Field(type = FieldType.Keyword)
+    private String ownerRole;
+
     @Field(type = FieldType.Long)
     private Long updateTime;
 
@@ -209,6 +220,15 @@ public class MigrateJobES {
     public void setFormatlessDateFields(List<String> formatlessDateFields) { this.formatlessDateFields = formatlessDateFields; }
     public Long getCreateTime() { return createTime; }
     public void setCreateTime(Long createTime) { this.createTime = createTime; }
+    public String getOwnerUsername() { return ownerUsername; }
+    public void setOwnerUsername(String ownerUsername) { this.ownerUsername = ownerUsername; }
+    public String getOwnerRole() { return ownerRole; }
+    public void setOwnerRole(String ownerRole) { this.ownerRole = ownerRole; }
+    /** 旧作业无归属记录：前端据此显示「升级前作业（连接级）」，不做创建者限制。 */
+    /* 派生字段不参与序列化往返：脱敏用的是 ObjectMapper#convertValue 深拷贝，
+       只有 getter 没有 setter 的派生属性会让回读阶段抛 UnrecognizedProperty。 */
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public boolean isOwnerLegacy() { return ownerUsername == null || ownerUsername.trim().isEmpty(); }
     public Long getUpdateTime() { return updateTime; }
     public void setUpdateTime(Long updateTime) { this.updateTime = updateTime; }
     public Long getStartedAtMs() { return startedAtMs; }

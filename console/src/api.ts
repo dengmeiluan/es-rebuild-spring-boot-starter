@@ -25,7 +25,13 @@ const authHeaders = (): Record<string, string> => {
 /* iframe 嵌入场景：宿主页面 postMessage 下发宿主凭证，内存态（不落 localStorage，随页面生命周期）。
  带上后每个请求先走宿主委托鉴权（DelegatingConsoleAuthorizer），认出即免内置登录。 */
 let hostToken = '';
-export const setHostToken = (t: string) => { hostToken = t || ''; };
+export const setHostToken = (t: string) => {
+  const next = t || '';
+  /* 宿主身份到达即覆盖内置会话：内置 token 留在 localStorage 时，宿主一旦撤销/停发凭证，
+     旧内置 ADMIN 仍会被回落使用。清掉后只有宿主身份（拒绝即 401），不做静默升级。 */
+  if (next && next !== hostToken) clearToken();
+  hostToken = next;
+};
 export const getHostToken = () => hostToken;
 const hostHeaders = (): Record<string, string> =>
   hostToken ? { 'X-Es-Host-Token': hostToken } : {};
@@ -785,7 +791,8 @@ export const api = {
       post<any>('/setup/test', c, undefined, setupToken ? { headers: { 'X-Setup-Token': setupToken } } : undefined),
     apply: (c: { url: string; username?: string; password?: string }, setupToken?: string) =>
       post<any>('/setup/apply', c, undefined, setupToken ? { headers: { 'X-Setup-Token': setupToken } } : undefined),
-    rebind: (c: { url: string; username?: string; password?: string }) => post<any>('/setup/rebind', c),
+    rebind: (c: { url: string; username?: string; password?: string }, setupToken?: string) =>
+      post<any>('/setup/rebind', c, undefined, setupToken ? { headers: { 'X-Setup-Token': setupToken } } : undefined),
   },
 
   /* Adhoc 托管重建（无 provider，作用于任意逻辑索引名） */

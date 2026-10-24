@@ -96,36 +96,63 @@ client 默认配置：
   {
     id: 'auth',
     title: '4. 角色与页面级权限（菜单 SPI）',
-    body: `控制台两级权限：
+    body: `控制台两级权限（前端菜单/按钮与后端拦截器同源，越不过前端也拦得住）：
 
-角色级（内置）：VIEWER 只读 / OPERATOR 可执行写操作 / ADMIN 全部 + 用户管理。
-宿主委托鉴权时在 ConsolePrincipal 中下发 ConsoleRole。
+角色级（内置）：VIEWER 只读 / OPERATOR 普通写 / 专项 rank3（REBUILD_OP、CLUSTER_OP、
+AUDIT_OP 同 rank）/ ADMIN 全部 + 用户管理 + raw 透传。委托鉴权时随 ConsolePrincipal 下发。
 
-页面级（2.5.0 菜单 SPI）：宿主可按 53 个功能页粒度授权。
-ConsolePrincipal 第 7 参 grantedPages：
-  null      —— 不启用页面级（全量放行，默认）
-  空集合    —— 全拒（只看到 Forbidden 页）
-  非空集合  —— 页面 key 白名单（key 清单见 META-INF/es-console-pages.json）
+页面级（菜单 SPI）：宿主按 52 个功能页 × 连接 × 读/写授权。ConsolePrincipal 第 7 参 grantedPages：
+  null                 —— 不启用页面级（全量放行，默认）
+  空集合               —— 全拒（只看到 Forbidden 页）
+  {page}               —— 静态全局页（对所有连接生效）
+  conn:{id}:{page}     —— 该连接上该页可见（读）
+  conn:{id}:w:{page}   —— 该连接上该页可写
+页面 key 清单见 META-INF/es-console-pages.json（契约是唯一真源：后端门、前端导航、宿主菜单三端共用）。
 
-逃生阀：es.rebuild.console.page-auth.enabled=false 可整体关闭页面级拦截。`,
+判定顺序（前端 auth.canEndpoint 逐步镜像，可复跑校验 npm run perm:scan）：
+  ① 系统管理域（setup/rebind、/clusters 写）→ ADMIN
+  ② ADMIN 全放行 → ③ 全量审计 rank3 → ④ 集群级动作 rank3 或 w:cluster-settings
+  ⑤ 共享写端点（一个端点被多页合法复用）持任一真实使用方页写键 → ⑥ 页面门 →
+  ⑦ 角色门；连接模型下「无页面归属且未登记共享写」的写端点默认拒绝（新增端点必须登记）
+
+三条容易被忽略的边界：
+  · 集群级动作（/cluster/ilm/start|stop、/cluster/reroute/retry-failed）作用于集群全局，
+    连接模型下除页写键外还需 rank3 或该连接的 w:cluster-settings
+  · /cluster/raw 与 /cluster/devtools/execute 共用透传内核：非 ADMIN 被收窄到数据面
+    （检索/文档/bulk/UBQ/DBQ/SQL），但数据面内是全权——w:devtools 应按「数据面写权」评估
+  · 非 ADMIN 的 PIT keep_alive 夹到 es.rebuild.console.pit.max-keep-alive-minutes（默认 60）
+
+跨站写（CSRF）一律拒绝：状态变更请求若由跨站页面发起（Sec-Fetch-Site: cross-site）返回
+403 CSRF_BLOCKED 并落审计；iframe 嵌入与同站子域集成不受影响（iframe 内请求即 same-origin）。
+委托 header 模式请配置 delegate.header.trusted-proxies——它同时约束身份采信、审计来源 IP
+与登录节流（否则内网直连者可伪造 XFF、换 IP 绕过登录限流）。
+
+逃生阀：es.rebuild.console.page-auth.enabled=false 可整体关闭页面级拦截（回退纯角色档）。`,
   },
   {
     id: 'menu-spi',
     title: '5. 菜单注册与主题跟随（宿主侧对接）',
     body: `【菜单注册】starter classpath 提供 io.github.dengmeiluan.es.rebuild.console.ConsolePageCatalog，
-宿主启动时直读契约注册菜单（12 目录 + 53 页面按钮），perms 约定：
-  ops:es-console:page:{页面key}
+宿主启动时直读契约注册菜单（12 目录 + 52 页面），perms 约定：
+  ops:es-console:conn:{connId}:{page}     读
+  ops:es-console:conn:{connId}:w:{page}   写
+（旧静态前缀 ops:es-console:page:{page} 仍在读取侧兼容，仅建议存量迁移期使用）
 
-授权查询：从用户权限集合中筛 ops:es-console:page: 前缀、剥前缀即 grantedPages。
+授权查询：从用户权限集合中筛上述前缀、剥前缀即 grantedPages（空集原样返回=全拒，
+不得折叠成 null——null 语义是「不启用页面级」）。
 参考实现（宿主形态，复制后改包名）：
 
   Set<String> granted = new LinkedHashSet<>();
   for (String p : permsOfUser) {
-    if (p.startsWith("ops:es-console:page:")) {
-      granted.add(p.substring("ops:es-console:page:".length()));
+    if (p.startsWith("ops:es-console:conn:")) {
+      granted.add(p.substring("ops:es-console:conn:".length()));  // 剥到 page / w:page
     }
   }
   return new ConsolePrincipal(username, role, false, true, nickname, attrs, granted);
+
+自查：控制台顶栏「我的权限」调 /internal/es/index/auth/permissions，逐页回读/写与
+writeDeny（PAGE_DENIED / WRITE_DENIED / CLUSTER_SCOPE_REQUIRED / HOST_DEST_WRITE_REQUIRED），
+与真实执行门同序——排障时先看它，不要靠猜。
 
 【主题跟随】iframe src 拼 ?hostTheme=dark|light 防首屏闪；
 主题切换时 postMessage { type:'es-console-host-theme', mode:'dark'|'light' } 热切。

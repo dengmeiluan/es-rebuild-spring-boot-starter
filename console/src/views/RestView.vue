@@ -26,10 +26,10 @@
         <EndpointPathInput v-model="path" class="inp mono rt-path" placeholder="/_cluster/health"
           @endpoint="onEndpoint" @enter="send" />
         <button v-if="canAdmin" class="btn primary sm" :disabled="sending || !path.trim() || !currentSendable"
-          :title="currentSendable ? undefined : SCOPE_DENY_HINT" @click="send">
+          :title="currentSendable ? undefined : scopeDenyHint" @click="send">
           <Send :size="13" /> {{ sending ? '发送中（' + (qr.elapsedMs.value / 1000).toFixed(1) + 's）…' : '发送' }}
         </button>
-        <span v-if="canAdmin && !currentSendable" class="rt-scope-dim" role="status" :title="SCOPE_DENY_HINT">非 ADMIN 仅数据面</span>
+        <span v-if="canAdmin && !currentSendable" class="rt-scope-dim" role="status" :title="scopeDenyHint">非 ADMIN 仅数据面</span>
         <button v-if="sending" class="btn sm" @click="qr.cancel()"><X :size="12" /> 取消</button>
       </div>
       <!-- 常用 snippet -->
@@ -187,7 +187,9 @@ import { markHtmlAll } from '../utils/respMark';
 /* 历史弹窗体改用 QueryHistoryPanel 统一件（本地过滤/导出/空态实现退役） */
 import QueryHistoryPanel, { type HistRow } from '../components/QueryHistoryPanel.vue';
 /* 非 ADMIN 数据面写白名单（与后端 guardRawGuarded 同口径的客户端预暴露） */
-import { nonAdminDataPlaneWriteAllowed } from '../utils/devtoolsScope';
+import { nonAdminDataPlaneWriteAllowed, nonAdminRootSearchNeedsIndex,
+  nonAdminIndexQueryParamRejected, nonAdminControlIndexDenied,
+  nonAdminBodyTargetsControl, nonAdminCatNeedsJson, nonAdminAsyncResultRead } from '../utils/devtoolsScope';
 
 const store = useAppStore();
 /* 权限写门——raw 透传是 ADMIN 档（DevToolsView canAdmin 同口径），发送/重试钮仅 ADMIN 可见 */
@@ -196,10 +198,36 @@ const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/
 /* 非 ADMIN 写范围预暴露与 DevTools 同口径（后端同执行内核 guardRawGuarded，双页单口径）。
    me==null（未启用鉴权/探测完成未登录）跟随 canEndpoint 放行语义——后端 authDisabled
    形态无角色概念，scope 门不得把管理写在前端拦死 */
-const requestInScope = (m: string, p: string) =>
-  auth.isAdmin() || auth.me == null || auth.authDisabled || nonAdminDataPlaneWriteAllowed(m, p);
-const currentSendable = computed(() => canAdmin.value && requestInScope(method.value, path.value));
+/* 1004：门带 body——根级检索的 PIT 豁免要读 pit.id，否则非 ADMIN 的 w:rest 用户
+   发 PIT 搜索会被前端误禁（有权限的人被拦）。 */
+const requestInScope = (m: string, p: string, b?: string | null) =>
+  auth.isAdmin() || auth.me == null || auth.authDisabled || nonAdminDataPlaneWriteAllowed(m, p, b);
+const currentSendable = computed(() => canAdmin.value && requestInScope(method.value, path.value, body.value));
 const SCOPE_DENY_HINT = '非 ADMIN 仅可执行数据面写（检索/文档/批量/SQL）；别名、快照、模板、脚本与集群管理写需 ADMIN';
+/* 不可用原因分档（与 DevTools 同口径）：根级检索缺索引范围单列，直接说明怎么改 */
+const scopeDenyHint = computed(() => {
+  if (!auth.isAdmin() && auth.me != null && !auth.authDisabled) {
+    if (nonAdminIndexQueryParamRejected(path.value)) {
+      return 'index/indices 查询参数不能限定目标：请改用 /{index}/_search 路径形式';
+    }
+    if (nonAdminControlIndexDenied(path.value)) {
+      return '控制面/系统索引不对非 ADMIN 开放：请改用业务索引';
+    }
+    if (nonAdminRootSearchNeedsIndex(path.value, body.value)) {
+      return '根级检索需用 /{index}/_search 形式，或 PIT（body 带 pit.id）；非 ADMIN 不允许全量读';
+    }
+    if (nonAdminCatNeedsJson(path.value)) {
+      return '_cat 目录查询需带 format=json 且保留 index 列（服务端据此逐行过滤控制面索引）';
+    }
+    if (nonAdminAsyncResultRead(path.value)) {
+      return '异步查询结果按 id 取回（id 即凭据，结果集按执行者权限生成）：非 ADMIN 请重新提交查询，不要复用他人 id';
+    }
+    if (nonAdminBodyTargetsControl(path.value, body.value)) {
+      return '请求体里的目标指向控制面索引：请把 _index / index / indices / SQL FROM 改为业务索引';
+    }
+  }
+  return SCOPE_DENY_HINT;
+});
 /* 方法全集收口 esEndpoints.REST_METHODS */
 const METHODS = REST_METHODS;
 const SNIPPETS = [
@@ -393,7 +421,7 @@ async function doSend() {
   /* 执行体单点门：send/重试/Enter/确认后目标切换最终都汇入此处，钮面隐藏不是唯一防线 */
   if (!canAdmin.value) { store.notify('warning', 'raw 透传需要 ADMIN 或 REST 页写权限'); return; }
   /* 非 ADMIN 数据面口径与 DevTools 同源：越权形态在客户端即拒，不把请求发到后端才 403 */
-  if (!requestInScope(method.value, path.value)) { store.notify('warning', SCOPE_DENY_HINT); return; }
+  if (!requestInScope(method.value, path.value, body.value)) { store.notify('warning', scopeDenyHint.value); return; }
   /* G7-A2：path 输入框 Enter 路径不受按钮 :disabled 约束——执行体守卫管键盘重入（教训 7） */
   if (sending.value) return;
   sending.value = true;

@@ -1,4 +1,4 @@
-import { writeStoredRaw } from '../utils/safeJson';
+import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 
 import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
@@ -366,5 +366,18 @@ export const useJobTrackerStore = defineStore('jobTracker', () => {
  （App.vue 的 HOST_ONLY 已声明 /adhoc-rebuild、/xmigrate 为宿主专属视图），
  因此切目标时既不清空也不换快照 key——否则会把在跑作业「跟丢」。 */
 
-  return { jobs, running, runningCount, overallPct, recentDone, recentFailed, probed, start, poll, clearDone };
+  /** 换账号：作业清单/终态通知/已读位都是上一身份的观测结果，归零并从新身份重拉。 */
+  function resetIdentityState() {
+    jobs.value = [];
+    recentDone.value = [];
+    probed.value = false;
+    seenRunning = new Set();
+    notified = new Set();
+    seenLabels = {};
+    pollSilentNotified = false;
+    removeStoredRaw(sessionStorage, seenKey());
+    if (started) poll();
+  }
+
+  return { jobs, running, runningCount, overallPct, recentDone, recentFailed, probed, start, poll, clearDone, resetIdentityState };
 });

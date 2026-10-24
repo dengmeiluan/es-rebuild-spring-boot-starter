@@ -114,7 +114,7 @@
             </details>
           </div>
         </template>
-        <div class="dim" style="margin-top:var(--sp-2)">权限随宿主菜单勾选实时生效；点击连接行展开逐页明细；「·写」=可变更数据。</div>
+        <div class="dim" style="margin-top:var(--sp-2)">权限随宿主菜单勾选实时生效；点击连接行展开逐页明细；「·写」=可变更数据。Dev Tools / REST 的写权限等于<b>该连接的数据面全权</b>（检索/文档/批量/删查/SQL），管理面写（别名/快照/模板/脚本/集群设置）仍需对应页面写权限。</div>
       </div>
       </div>
 
@@ -123,7 +123,7 @@
         <div class="card-t"><button class="sec-fold" :class="{ folded: collapsed.users }" :aria-label="collapsed.users ? '展开' : '折叠'" @click="toggleBlock('users')"><ChevronDown :size="14" /></button>
 <Users :size="14" /> 用户管理（内置账号 · 独立部署登录用）
           <span v-if="!canReadUsers" class="dim sm-txt">（需安全中心读权限）</span>
-          <span v-else-if="!canWriteUsers" class="dim sm-txt">（委派会话只读；全局账号由 ADMIN 管理）</span>
+          <span v-else-if="!canWriteUsers" class="dim sm-txt">（页面授权/委派会话只读；本地全局账号仅 ADMIN 可管理）</span>
           <!-- selectable 批量勾选暗状态（有勾选时计数常驻；仅写权限可见） -->
           <template v-if="canReadUsers">
             <span v-if="canWriteUsers && usSel.length" class="dim sm-txt">已选 {{ usSel.length }} 用户</span>
@@ -243,10 +243,13 @@
           <input v-model.trim="rbUrl" class="ipt mono" placeholder="http://es-host:9200" />
           <input v-model.trim="rbUser" class="ipt" placeholder="用户名（可选）" autocomplete="off" />
           <input v-model="rbPass" type="text" class="ipt pw-mask" placeholder="密码（可选）" autocomplete="off" />
-          <button class="btn primary sm" :disabled="!rbUrl || rbBusy" @click="doRebind">
+          <input v-if="setup?.setupTokenRequired" v-model="rbToken" type="password" class="ipt"
+            placeholder="首连令牌 X-Setup-Token" autocomplete="off" />
+          <button class="btn primary sm" :disabled="!rbUrl || rbBusy || (setup?.setupTokenRequired && !rbToken)" @click="doRebind">
             <Link2 :size="12" /> 重绑
           </button>
         </div>
+        <div v-if="setup?.setupTokenRequired" class="dim sm-txt">本部署配置了 setup-token：重绑必须携带同一令牌（X-Setup-Token），否则服务端拒绝。</div>
       </template>
     </div>
       </div>
@@ -505,8 +508,18 @@ const canReadUsers = computed(() => {
   return Array.isArray(gp) && gp.some(g => g.startsWith('conn:'))
     && auth.canEndpoint('admin', 'GET', '/internal/es/index/auth/users', store.target);
 });
-const canWriteUsers = computed(() => canManageUsers.value && (!auth.me?.delegated || auth.isAdmin())); /* 委派非 ADMIN 不得管理全局本地账号 */
-const canAssignAdmin = computed(() => auth.can('admin')); /* 只有 ADMIN 可授予/修改/删除 ADMIN 账号（后端同口径防提权） */
+/* 本地账号是全局身份（可绕过页面门/连接写键），服务端只允许 ADMIN 与
+   无页面语义的静态身份管理：页面授权（grantedPages 非空）与委派会话即使持
+   security 页写键也会被 400 拒绝，前端必须同口径，不能亮出必失败的入口。 */
+const canWriteUsers = computed(() => {
+  if (auth.authDisabled || !auth.probeStarted) return true;
+  if (auth.me == null) return false;
+  if (auth.isAdmin()) return true;
+  if (auth.me.delegated) return false;
+  if (Array.isArray(auth.grantedPages)) return false;
+  return canManageUsers.value;
+});
+const canAssignAdmin = computed(() => auth.can('admin') && !auth.me?.delegated); /* 委派身份不得建/升本地 ADMIN（后端同口径） */
 const canRebind = computed(() => auth.can('admin')); /* 重绑控制集群属系统管理域：ADMIN 角色专属 */
 
 const pwOld = ref('');
@@ -653,7 +666,7 @@ const usMatrix = computed<any[][]>(() => users.value.map(u => [u.username, u.rol
 const usSel = ref<unknown[]>([]);
 
 /* 控制集群状态 + 重绑 */
-const setup = ref<{ bound: boolean; mode: string; endpoint: string | null; appName: string } | null>(null);
+const setup = ref<{ bound: boolean; mode: string; endpoint: string | null; appName: string; setupTokenRequired?: boolean } | null>(null);
 /* 巡查：loadSetup 在途 ref（刷新安全状态钮守卫+spinning；713 族） */
 const setupLoading = ref(false);
 async function loadSetup() {
@@ -664,6 +677,7 @@ async function loadSetup() {
 const rbUrl = ref('');
 const rbUser = ref('');
 const rbPass = ref('');
+const rbToken = ref('');
 const rbBusy = ref(false);
 
 function roleDesc(role: string) {
@@ -955,7 +969,8 @@ async function doRebind() {
       message: `将控制集群重绑到 ${rbUrl.value}：新集群上幂等初始化控制索引；现有用户/连接档案/审计不会自动迁移，重绑后可能需重新登录建号。输入 REBIND 确认。`,
       okText: '重绑集群',
     })) return;
-    await api.setup.rebind({ url: rbUrl.value, username: rbUser.value || undefined, password: rbPass.value || undefined });
+    await api.setup.rebind({ url: rbUrl.value, username: rbUser.value || undefined, password: rbPass.value || undefined },
+      setup.value?.setupTokenRequired ? rbToken.value : undefined);
     submitted = true;
     store.notify('success', '控制集群已重绑，即将刷新页面');
     setTimeout(() => window.location.reload(), 800);
@@ -1081,7 +1096,7 @@ watch(canAuditAll, (v) => {
 .ok-txt { color: var(--ok); }
 
 .ctl-card { margin-bottom: var(--sp-4); }
-.rebind-row { display: grid; grid-template-columns: 1.6fr 1fr 1fr auto; gap: var(--sp-2); align-items: center; }
+.rebind-row { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr auto; gap: var(--sp-2); align-items: center; }
 /* 两处单行 900 重复档并档为一档（1100+900 两块标准形态）——new-user/rebind-row
  两规则逐条等值迁移零删规则（responsive900Sweep529 纪律口径：档内非空、无 ≥300px 裸 width） */
 @media (max-width: 900px) {

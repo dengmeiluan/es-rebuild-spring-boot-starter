@@ -52,7 +52,10 @@ public class EsIndexAdminRawGuard972Test {
                 "{\"query\":{\"match_all\":{}}}"), "_search 全量 body");
         assertRejected(() -> admin.guardRawGuarded("GET", "/_search?index=*", null), "_search 通配");
         assertRejected(() -> admin.guardRawGuarded("GET", "/_count", null), "_count 无索引");
-        assertAllowed(() -> admin.guardRawGuarded("GET", "/_search?index=logs-*", null), "显式业务索引");
+        /* 1005 收紧：查询参数不构成目标限定（无法证明目标端按其路由，忽略即全量）——
+           业务索引必须写在路径里。 */
+        assertRejected(() -> admin.guardRawGuarded("GET", "/_search?index=logs-*", null),
+                "查询参数不构成目标限定");
         assertAllowed(() -> admin.guardRawGuarded("GET", "/logs-*/_search", null), "路径限定索引");
     }
 

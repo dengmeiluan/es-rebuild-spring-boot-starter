@@ -394,12 +394,25 @@ const nodeSeries = ref<Record<string, NodeSeries>>({});
     if (started && running.value) { tick(); setupTimer(); }
   });
 
+  /** 换账号：监控序列/告警/节点清单都是上一身份的观测结果，归零并按新目标续采。 */
+  function resetIdentityState() {
+    qpsSeries.value = []; indexRateSeries.value = []; heapSeries.value = [];
+    cpuSeries.value = []; diskSeries.value = []; sampleTs.value = [];
+    nodeSeries.value = {};
+    nodeRatePrev = null;
+    lastSampleQ = 0; lastSampleI = 0; lastSampleT = 0;
+    alertsMap.value = new Map();
+    health.value = null; nodes.value = []; pendingTasks.value = 0; lastOkAt.value = 0;
+    restore();
+    if (started && running.value) { tick(); setupTimer(); }
+  }
+
   return {
     intervalMs, windowPts, running, health, nodes, pendingTasks, focus, effectiveMs,
     qpsSeries, indexRateSeries, heapSeries, cpuSeries, diskSeries, nodeSeries, sampleTs, windowMs, nowTs, lastOkAt, obsStale,
     jobCountSeries, pushJobCount,
     avgHeap, avgCpu, avgDisk, dataNodes, unassignedShards, uaAbnormal, uaSub, curQps, curIdx, curCpu, curDisk, hHealth,
     activeAlerts, resolvedAlerts, badCount, warnCount,
-    diskUsedPct, start, toggle, clearResolved, setFocus,
+    diskUsedPct, start, toggle, clearResolved, setFocus, resetIdentityState,
   };
 });

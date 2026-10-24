@@ -499,5 +499,28 @@ export const useAppStore = defineStore('app', () => {
     });
   }
 
-  return { indices, pickedIdx, recentIdx, pickedInfo, loadingIndices, clusterOk, clusterSelf, clusterHealth, clusterUnassigned, loadIndices, pick, notifyQueue, notify, shiftNotify, notifyLog, notifyUnread, markNotifySeen, clearNotifyLog, eventBus, emit, favorites, addFavorite, removeFavorite, clearFavorites, settings, saveSettings, toggleDensity, effectiveTheme, setTheme, cycleTheme, hostTheme, setHostTheme, target, targetName, conns, isRemote, hostVisible, loadConns, setTarget, esVersion, verBelow, viewportW, viewportH, narrow, navIcon, toggleNav, navHidden, setNavHidden, toggleNavHidden };
+  /* 换账号（含宿主 token 换人）：所有「账号视角」内存态归零。
+     只清存储不够——单例 ref 会在下一次写入时把旧账号的收藏/历史落回磁盘；
+     目标尤其危险：storage 已被清空而内存仍显示 A 的生产集群，请求却不带 X-Es-Target，
+     写入会落到宿主。存储键由 auth.purgeUserRequestState 统一清理，这里负责内存与目标双键。 */
+  function resetIdentityState() {
+    indices.value = [];
+    recentIdx.value = [];
+    pickedIdx.value = '';
+    clusterOk.value = null;
+    clusterSelf.value = '';
+    clusterHealth.value = '';
+    clusterUnassigned.value = 0;
+    conns.value = [];
+    target.value = '';
+    targetName.value = '';
+    setTargetId('');
+    removeStoredRaw(localStorage, 'es-console.target.name');
+    removeStoredRaw(localStorage, 'es_picked');
+    removeStoredRaw(localStorage, RECENT_KEY);
+    favorites.value = [];
+    notifyLog.value = [];
+  }
+
+  return { indices, pickedIdx, recentIdx, pickedInfo, loadingIndices, clusterOk, clusterSelf, clusterHealth, clusterUnassigned, loadIndices, pick, notifyQueue, notify, shiftNotify, notifyLog, notifyUnread, markNotifySeen, clearNotifyLog, eventBus, emit, favorites, addFavorite, removeFavorite, clearFavorites, resetIdentityState, settings, saveSettings, toggleDensity, effectiveTheme, setTheme, cycleTheme, hostTheme, setHostTheme, target, targetName, conns, isRemote, hostVisible, loadConns, setTarget, esVersion, verBelow, viewportW, viewportH, narrow, navIcon, toggleNav, navHidden, setNavHidden, toggleNavHidden };
 });

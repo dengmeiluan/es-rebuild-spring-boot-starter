@@ -401,6 +401,18 @@ public class AdhocRebuildService {
      * timeField、bufferMs(默认 120000)、deleteOldIndex(默认 false)、confirmDirectSwap(直连模式必须 true)。
      */
     public Map<String, Object> start(Map<String, Object> req) throws IOException {
+        return start(req, null, null);
+    }
+
+    /**
+     * 启动托管重建（带创建者身份）。
+     *
+     * @param ownerUsername 创建者用户名（连接模型下 abort/confirm-switch 的归属判据；
+     *                      传 null 表示调用方未提供身份——旧装配/单测路径，保持连接级语义）
+     * @param ownerRole     创建时角色快照（审计与「谁能接管」判断用）
+     */
+    public Map<String, Object> start(Map<String, Object> req, String ownerUsername, String ownerRole)
+            throws IOException {
         /* 并发作业上限：worker 是无界 cachedThreadPool，批量提交数百索引即数百并发
            重建（线程+ES reindex 双放大）。同 target+index 已有锁互斥，这里限的是
            全局在途作业总量——超限明确拒绝，用户可等在途完成或先清理。 */
@@ -502,9 +514,13 @@ public class AdhocRebuildService {
             mappingJson = nr.mappingJson;
         }
 
-        String jobId = "adhoc-" + UUID.randomUUID().toString().substring(0, 8);
+        /* jobId 必须不可预测：此前只取 UUID 前 8 位（32 bit），同连接内可被枚举/猜测后
+           读到他人作业报告甚至（配合页面写键）中止他人作业。取 16 位十六进制（64 bit），
+           前缀保持 "adhoc-" 以兼容既有日志检索/前端展示。 */
+        String jobId = "adhoc-" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
         AdhocRebuildJob job = new AdhocRebuildJob(jobId, index, strategy, isAlias, source, dest,
                 timeField, bufferMs, deleteOld, pauseBeforeSwitch, targetId, targetName, targetEsVersion);
+        job.setOwner(ownerUsername, ownerRole);
         // 按 target+逻辑索引名跨实例互斥。此前 adhoc 作业只是内存态 map，无跨实例互斥——
         // 两人同时对同一索引起重建会各建新物理索引、各翻别名，后翻的赢，先翻的那个新索引成为孤儿。
         // target-aware adhoc：锁 key 带 target 维度——不同集群的同名索引不互相顶锁。
@@ -903,6 +919,14 @@ public class AdhocRebuildService {
         }
         if (job.isSwitchConfirmed()) {
             return job.toMap(); // 重复确认：已经是自己赢的，幂等返回
+        }
+        /* 只有真正走到切换前等待门才允许放行：此前只校验 pauseBeforeSwitch，
+           在 FULL_REINDEX / 追平阶段就能提前把门置 CONFIRMED——等到 worker 真正到达门时
+           直接跳过人工评审执行别名切换（创建者的评审权被绕过）。 */
+        if (!AdhocRebuildJob.STAGE_AWAIT_CONFIRM.equals(job.getStage())) {
+            throw new IllegalStateException("作业当前阶段 " + job.getStage()
+                    + "，尚未进入切换前等待确认（" + AdhocRebuildJob.STAGE_AWAIT_CONFIRM
+                    + "），不能提前放行: " + jobId);
         }
         if (!job.confirmSwitch()) {
             throw new IllegalStateException("确认无效：该作业的切换确认门已关闭（" + job.getGateOutcome()

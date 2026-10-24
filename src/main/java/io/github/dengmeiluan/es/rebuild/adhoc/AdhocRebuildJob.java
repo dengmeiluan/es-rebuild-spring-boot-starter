@@ -80,6 +80,14 @@ public class AdhocRebuildJob {
     private volatile String targetNameSnapshot;
     /** 创建时的目标集群 ES 版本快照（审计与事后追查用） */
     private volatile String targetEsVersionSnapshot;
+    /**
+     * 作业创建者（用户级归属）。连接模型下 abort / confirm-switch 只允许创建者本人或 ADMIN：
+     * 同一连接内持页写键的同事可以观测进度，但不能替代创建者做不可逆动作。
+     * 旧作业（升级前持久化）无此字段=legacy，维持连接级语义，避免升级后无人能收尾。
+     */
+    private volatile String ownerUsername;
+    /** 创建时角色快照（审计/展示；判权仍以当前身份角色为准，防降权后沿用旧权）。 */
+    private volatile String ownerRole;
 
     private volatile String stage = "PENDING";
     /** RUNNING / SUCCEEDED / FAILED / ABORTED */
@@ -215,6 +223,11 @@ public class AdhocRebuildJob {
         m.put("targetId", targetId);
         m.put("targetName", targetNameSnapshot);
         m.put("targetEsVersion", targetEsVersionSnapshot);
+        /* 用户级归属（legacy=true 表示升级前的旧作业，按连接级语义放行）：
+           前端据此只对创建者亮 abort/confirm，其余人给「由 xxx 创建」的说明。 */
+        m.put("ownerUsername", ownerUsername);
+        m.put("ownerRole", ownerRole);
+        m.put("ownerLegacy", ownerUsername == null || ownerUsername.trim().isEmpty());
         m.put("awaitConfirmSince", awaitConfirmSince == 0 ? null : awaitConfirmSince);
         // 门的精确结局（null=未决/未开门）。status 只能反推「作业中止了」，
         // 分不出是超时还是人工中止；下游少一个字段就要多一层猜测。
@@ -268,6 +281,21 @@ public class AdhocRebuildJob {
         return targetEsVersionSnapshot;
     }
 
+    /** 作业创建者（username）；legacy 旧作业为 null。 */
+    public String getOwnerUsername() {
+        return ownerUsername;
+    }
+
+    public String getOwnerRole() {
+        return ownerRole;
+    }
+
+    /** 创建时由控制器写入（service.start 重载）；存储回读亦经此恢复。 */
+    public void setOwner(String ownerUsername, String ownerRole) {
+        this.ownerUsername = ownerUsername;
+        this.ownerRole = ownerRole;
+    }
+
     /**
      * 存储回读专用（包可见）：按 toMap 快照回填目标身份。无 targetId 字段的旧数据
      * 由调用方归一为 host 后传入——「旧作业一律视作宿主」是本迁移的既定语义。
@@ -276,6 +304,12 @@ public class AdhocRebuildJob {
         this.targetId = targetId == null || targetId.trim().isEmpty() ? TARGET_HOST : targetId.trim();
         this.targetNameSnapshot = targetNameSnapshot;
         this.targetEsVersionSnapshot = targetEsVersionSnapshot;
+    }
+
+    /** 存储回读专用：旧 payload 无 owner 字段时保持 null（legacy，连接级语义）。 */
+    void restoreOwner(String ownerUsername, String ownerRole) {
+        this.ownerUsername = ownerUsername;
+        this.ownerRole = ownerRole;
     }
 
     public String getLogicalName() {

@@ -118,6 +118,12 @@ public class EsIndexAdmin {
         return false;
     }
 
+    /** _cat 行过滤专用：ES 自带的作业历史索引含跨租户策略/快照活动，不属数据面。
+     *  仅用于展示脱敏，不放宽/收紧 guardIndexName（校验器的临时索引仍需可清理）。 */
+    private static boolean isSensitiveSystemIndexName(String n) {
+        return n.startsWith("ilm-history-") || n.startsWith("slm-history-");
+    }
+
     /** 通配字面量前缀是否可能覆盖任一控制索引名（含宿主自定义名）。 */
     private boolean couldMatchControl(String literal) {
         if (literal == null || literal.isEmpty()) return true;
@@ -1697,16 +1703,18 @@ public class EsIndexAdmin {
     /**
      * 强制合并索引 segment，减少碎片。大量删除后调用以回收磁盘空间。
      */
+    /** 单索引 force merge。ES 7.10 的 _forcemerge 不支持 wait_for_completion（会 400），
+     *  该 API 本身同步执行；前端文案按同步语义展示。 */
     public Map<String, Object> forceMerge(String index, int maxNumSegments) throws IOException {
         guardIndexName(index);
         org.elasticsearch.client.Request req = new org.elasticsearch.client.Request(
-                "POST", "/" + index + "/_forcemerge?wait_for_completion=false");
+                "POST", "/" + index + "/_forcemerge");
         req.setJsonEntity("{\"max_num_segments\":" + maxNumSegments + ",\"flush\":true}");
         org.elasticsearch.client.Response resp = performGuarded(req);
         String respBody = org.apache.http.util.EntityUtils.toString(resp.getEntity());
         @SuppressWarnings("unchecked")
         Map<String, Object> result = OBJECT_MAPPER.readValue(respBody, Map.class);
-        logger.info("[EsIndexAdmin] forceMerge async index={} maxSegments={} result={}", index, maxNumSegments, result);
+        logger.info("[EsIndexAdmin] forceMerge sync index={} maxSegments={} result={}", index, maxNumSegments, result);
         return result;
     }
 
@@ -2318,7 +2326,10 @@ public class EsIndexAdmin {
     public Map<String, Object> rawGuarded(String method, String path, String body) throws IOException {
         guardRawGuarded(method, path, body);
         Map<String, Object> result = raw(method, path, body);
-        return filterCatControlRows(rawPathOnly(canonicalRawPath(path)), result);
+        /* 与守卫链同一大小写口径：守卫按小写判定（/_CAT/INDICES 也命中），行过滤若用原始
+           大小写就会在目标端/代理大小写不敏感时静默漏掉控制面行（以为过滤了其实没过滤）。 */
+        return filterCatControlRows(
+                rawPathOnly(canonicalRawPath(path)).toLowerCase(Locale.ROOT), result);
     }
 
     /** _cat 索引目录只允许 JSON 行式返回，便于逐行剔除控制面索引（文本表格无法可靠解析）。 */
@@ -2387,13 +2398,36 @@ public class EsIndexAdmin {
             throw new ControlPlaneGuardException("非管理员 raw 的 _cat 目录查询必须使用 format=json：" + pathOnly);
         }
         java.util.List<Object> kept = new java.util.ArrayList<>(rows.size());
+        /* _cat/shards 的默认列含 ip / node：节点名与内网地址属拓扑面（与 /_nodes、/_cat/nodes
+           的拒绝口径同源）。行仍保留 index/shard/state/docs/store 等排障所需列，只摘掉
+           定位节点所需的两个字段——非 ADMIN 仍然能看「哪些分片在哪个状态」，看不到集群地图。 */
+        boolean shardsView = pathOnly.startsWith("/_cat/shards");
         for (Object row : rows) {
             if (row instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) row;
                 boolean control = false;
-                for (Object v : ((Map<?, ?>) row).values()) {
-                    if (v != null && isControlIndexName(String.valueOf(v))) { control = true; break; }
+                for (Object v : map.values()) {
+                    if (v != null && (isControlIndexName(String.valueOf(v))
+                            || isSensitiveSystemIndexName(String.valueOf(v)))) {
+                        control = true;
+                        break;
+                    }
                 }
                 if (control) continue;
+                if (shardsView) {
+                    Map<String, Object> trimmed = new java.util.LinkedHashMap<>();
+                    for (Map.Entry<?, ?> e : map.entrySet()) {
+                        String k = String.valueOf(e.getKey()).toLowerCase(Locale.ROOT);
+                        /* ES 按请求的 h 列名回写 JSON（buildXContentBuilder 用 header.display），
+                           所以别名 n / id / i 与全名同权：只删 node/ip 等于留了一条别名旁路。 */
+                        if ("ip".equals(k) || "node".equals(k) || "n".equals(k)
+                                || "id".equals(k) || "i".equals(k) || "sync_id".equals(k)
+                                || k.startsWith("unassigned")) continue;
+                        trimmed.put(String.valueOf(e.getKey()), e.getValue());
+                    }
+                    kept.add(trimmed);
+                    continue;
+                }
             }
             kept.add(row);
         }
@@ -2459,6 +2493,11 @@ public class EsIndexAdmin {
         }
         guardRawQueryIndexRefs(query);
         guardRawPipeline(query);
+        /* index/indices 查询参数不能充当「已限定目标」的凭据（见方法注释）：非 ADMIN 一律拒绝。 */
+        guardRawIndexQueryParam(query);
+        /* 搜索上下文 TTL 上限：PIT/scroll/async_search 的 keep_alive 不设界＝低成本 DoS
+           （一个 999d 的 PIT 把 reader 与段引用钉死到集群重启），页面端点已夹紧，raw 不能绕过。 */
+        guardRawKeepAlive(pGuard, query, body);
         /* ES 的 source 查询参数与 body 同权（RestRequest.contentOrSourceParam）：
            只守卫 body 会让 ?source=... 成为控制面读写旁路。source 与 body 各过一遍
            同一套结构化守卫，任一命中即拒。 */
@@ -2471,12 +2510,117 @@ public class EsIndexAdmin {
         if (sourceBody != null) {
             guardRawBody(method, pGuard, query, sourceBody, write, system);
             guardStructuredRawBody(pGuard, sourceBody, query);
+            guardRawKeepAlive(pGuard, query, sourceBody);
+        }
+    }
+
+    /**
+     * 非 ADMIN raw 的搜索上下文 TTL 上限（与页面端点 {@code pitOpenClamped} 同一上限）。
+     *
+     * <p>PIT / scroll / async_search 都是「服务端资源 + 客户端持有 id」的模型：keep_alive
+     * 决定资源被钉住多久。限制只作用于非 ADMIN——ADMIN 的 raw 是应急逃生通道，
+     * 行为不变；有权限的运维仍可把 PIT 活到上限（默认 60m），能力不缺。</p>
+     */
+    private void guardRawKeepAlive(String p, String query, String body) {
+        boolean relevant = p.equals("/_pit") || p.endsWith("/_pit")
+                || p.equals("/_search") || p.endsWith("/_search")
+                || p.equals("/_search/scroll") || p.equals("/_async_search");
+        if (!relevant) return;
+        long cap = pitKeepAliveCapMillis();
+        checkKeepAliveValue("keep_alive", queryParam(query, "keep_alive"), cap);
+        checkKeepAliveValue("scroll", queryParam(query, "scroll"), cap);
+        if (body == null || body.trim().isEmpty()) return;
+        try {
+            Map<?, ?> root = OBJECT_MAPPER.readValue(stripBom(body), Map.class);
+            checkKeepAliveValue("keep_alive", root.get("keep_alive") instanceof String
+                    ? (String) root.get("keep_alive") : null, cap);
+            checkKeepAliveValue("scroll", root.get("scroll") instanceof String
+                    ? (String) root.get("scroll") : null, cap);
+            /* PIT 搜索/异步搜索可把 keep_alive 嵌在 pit 对象里（PointInTimeBuilder.KEEP_ALIVE_FIELD）：
+               只看根层会让 {"pit":{"id":...,"keep_alive":"9999d"}} 绕过上限。 */
+            Object pit = root.get("pit");
+            if (pit instanceof Map) {
+                checkKeepAliveValue("keep_alive", ((Map<?, ?>) pit).get("keep_alive") instanceof String
+                        ? (String) ((Map<?, ?>) pit).get("keep_alive") : null, cap);
+            }
+        } catch (ControlPlaneGuardException e) {
+            throw e;
+        } catch (Exception ignore) {
+            /* 非 JSON body 交由 ES 原生报错；守卫不因解析失败放行已有字段（上面 query 已查） */
+        }
+    }
+
+    /** 查询串单值（同名重复取首值；编码非法 fail-closed）。 */
+    private static String queryParam(String query, String name) {
+        if (query == null || query.isEmpty()) return null;
+        for (String pair : query.split("&")) {
+            int eq = pair.indexOf('=');
+            if (eq < 0) continue;
+            final String key;
+            final String value;
+            try {
+                key = java.net.URLDecoder.decode(pair.substring(0, eq), "UTF-8");
+                if (!name.equals(key)) continue;
+                value = java.net.URLDecoder.decode(pair.substring(eq + 1), "UTF-8");
+            } catch (Exception e) {
+                throw new ControlPlaneGuardException("查询参数编码非法，已拒绝：" + pair);
+            }
+            return value;
+        }
+        return null;
+    }
+
+    /** keep_alive/scroll 字面量必须可识别且有界：无法识别/超上限一律拒绝（fail-closed）。 */
+    private static void checkKeepAliveValue(String name, String value, long capMillis) {
+        if (value == null || value.trim().isEmpty()) return;
+        String v = value.trim();
+        long ms = v.matches("\\d+") ? Long.parseLong(v) : parseEsTimeMillis(v);
+        if (ms < 0) {
+            throw new ControlPlaneGuardException(
+                    "非管理员 raw 的 " + name + " 不是可识别的时长（需如 30s/5m/1h）：" + value);
+        }
+        if (ms > capMillis) {
+            throw new ControlPlaneGuardException(
+                    "非管理员 raw 的 " + name + " 超出上限 " + esTimeLiteral(capMillis) + "（请求 " + value
+                            + "）：长时间占用搜索上下文会阻止段合并并耗尽堆外内存；请改用不超过上限的值，"
+                            + "PIT 深度分页请走查询实验室（服务端按同一上限自动夹紧）");
+        }
+    }
+
+    /**
+     * {@code index} / {@code indices} 查询参数在 raw 通道不能作为「已限定目标」的凭据。
+     *
+     * <p>两个理由，任一成立都足以 fail-closed：</p>
+     * <ol>
+     *   <li><b>无法证明目标端按它路由</b>：REST 层的路径参数与查询参数如何合并、谁优先，
+     *       随 ES 版本/实现而变；一旦目标端忽略该参数，{@code /_search?index=logs} 就是
+     *       一次全量读（控制面索引一并读出），守卫却以为「已限定」。</li>
+     *   <li><b>目标二义</b>：索引级路径再带同名参数（{@code /logs/_search?index=orders}）时，
+     *       路径与参数各说一个目标；若目标端以查询参数为准，等于绕过首段控制面判定。</li>
+     * </ol>
+     * <p>标准写法 {@code /{index}/_search} 在所有版本都生效，能力不缺；PIT 搜索按契约
+     * 不带索引，走 body 里的 pit.id。非 ADMIN 命中即拒，ADMIN 走 raw 逃生通道不受影响。</p>
+     */
+    static void guardRawIndexQueryParam(String query) {
+        if (query == null || query.isEmpty()) return;
+        for (String pair : query.split("&")) {
+            if (pair.isEmpty()) continue;
+            int eq = pair.indexOf('=');
+            final String key;
+            try {
+                key = java.net.URLDecoder.decode(eq < 0 ? pair : pair.substring(0, eq), "UTF-8");
+            } catch (Exception e) {
+                throw new ControlPlaneGuardException("索引参数编码非法，已拒绝：" + pair);
+            }
+            if (!"index".equals(key) && !"indices".equals(key)) continue;
+            throw new ControlPlaneGuardException(
+                    "非管理员 raw 不支持用 index/indices 查询参数限定目标（无法保证目标端按该参数路由，"
+                            + "被忽略即全量读）：请改用 /{index}/_search 路径形式，或用 PIT 搜索（body 带 pit.id）");
         }
     }
 
     /** 路径形态（系统级 / 索引级，写 / 读）对应的守卫；body 可以是实体体或 source 参数体。 */
-    private void guardRawBody(String method, String p, String query, String body,
-                              boolean write, boolean system) {
+    private void guardRawBody(String method, String p, String query, String body,                              boolean write, boolean system) {
         if (system) {
             if (write) {
                 guardRawSystemWrite(method, p, query, body);
@@ -2557,6 +2701,9 @@ public class EsIndexAdmin {
             /* PIT 搜索按 ES 契约不能带 index：有有效 pit.id 时不要求显式 index。 */
             if (!searchBodyHasPit(body)) guardAllIndexRead(query, p);
             guardSearchBody(body);
+        } else if (p.equals("/_analyze")) {
+            /* 根级 _analyze 是数据面通道，但 body 的 index 目标同样会触达控制面索引配置。 */
+            guardAnalyzeBody(body);
         } else if (p.equals("/_msearch") || p.equals("/_msearch/template")) {
             guardMsearchBody(body);
         } else if (p.equals("/_mget")) {
@@ -2572,6 +2719,15 @@ public class EsIndexAdmin {
     /** raw 系统级读：数据面查询照旧，但账号/快照仓库/脚本/管道等敏感配置不向非 ADMIN 开放。 */
     private void guardRawSystemRead(String p, String query) {
         if (p.equals("/_security/_authenticate") || p.equals("/_xpack/security/_authenticate")) return;
+        /* 异步查询结果（async search / async SQL / EQL）按 id 取回，id 即凭据：
+           结果集是按**执行者**权限生成的（可能是 ADMIN 的全量命中），响应还会带 pit_id；
+           持 rest/devtools 读键的人拿到 id 就能读出别人的结果并继续翻页——不能按普通读放行。
+           提交动作（POST /_async_search、POST /_sql）不受影响，只挡按 id 取回/状态查询。 */
+        if (p.startsWith("/_async_search/") || p.startsWith("/_sql/async/")
+                || p.startsWith("/_xpack/sql/async/") || p.startsWith("/_eql/search/")) {
+            throw new ControlPlaneGuardException(
+                    "非管理员 raw 不允许按 id 读取异步查询结果（结果按执行者权限生成，id 即凭据）：" + p);
+        }
         for (String deny : RAW_SYSTEM_READ_DENY) {
             if (p.equals(deny) || p.startsWith(deny + "/")) {
                 throw new ControlPlaneGuardException("非管理员 raw 不允许读取系统管理接口：" + p);
@@ -2633,15 +2789,18 @@ public class EsIndexAdmin {
                 || p.equals("/_search") || p.equals("/_search/template")
                 || p.equals("/_count") || p.equals("/_async_search") || p.equals("/_field_caps")
                 || p.equals("/_analyze") || p.equals("/_render/template")
-                || p.equals("/_sql") || p.equals("/_sql/close")
+                /* SQL 只放行「提交查询 / 关闭游标 / 翻译」三个具名子路由：
+                   此前 /_sql/** 整段前缀放行，任何新增子路由（如 7.11 的 DELETE /_sql/async/{id}）
+                   都会自动获得写权限——把「新增路由=新增越权」变成默认行为。 */
+                || p.equals("/_sql") || p.equals("/_sql/close") || p.equals("/_sql/translate")
                 || p.equals("/_xpack/sql") || p.equals("/_xpack/sql/close")
+                || p.equals("/_xpack/sql/translate")
                 /* 开 PIT/续读 scroll 覆盖的是打开时刻的全部索引（无路径级目标限定），
                    非 ADMIN 经 raw 开全集群 PIT 或续读他人 scroll 等价于全量读；
                    仅 DELETE（释放自己持有的资源）放行。限定索引的开点走查询实验室
                    专属端点（/cluster/pit/open 强制显式索引过守卫）。 */
                 || (p.equals("/_pit") && "DELETE".equalsIgnoreCase(method))
                 || (p.equals("/_search/scroll") && "DELETE".equalsIgnoreCase(method));
-        if (p.startsWith("/_sql/") || p.startsWith("/_xpack/sql/")) dataPlane = true;
         if (!dataPlane) {
             throw new ControlPlaneGuardException("非管理员 raw 不允许执行集群/系统管理写操作：" + p);
         }
@@ -2680,7 +2839,7 @@ public class EsIndexAdmin {
             guardUpdateScript(body);
         } else if ("_search".equals(op) || "_count".equals(op)
                 || "_explain".equals(op) || "_validate".equals(op)
-                || "_field_caps".equals(op) || "_search_shards".equals(op)
+                || "_field_caps".equals(op)
                 || "_terms_enum".equals(op) || "_rank_eval".equals(op) || "_knn_search".equals(op)) {
             guardSearchBody(body);
             /* 索引前缀的 _search/template 同样不能按已存 id 执行（模板可能由更高权限写入）；
@@ -2715,7 +2874,7 @@ public class EsIndexAdmin {
             guardMtermvectorsBody(body);
         } else if ("_search".equals(op) || "_count".equals(op) || "_async_search".equals(op)
                 || "_explain".equals(op) || "_validate".equals(op)
-                || "_field_caps".equals(op) || "_search_shards".equals(op)
+                || "_field_caps".equals(op)
                 || "_terms_enum".equals(op) || "_rank_eval".equals(op) || "_knn_search".equals(op)) {
             guardSearchBody(body);
             /* 与写形态同口径：路径上的模板 id（/{index}/_search/template/{id}）body 守卫看不到。 */
@@ -2746,8 +2905,20 @@ public class EsIndexAdmin {
         }
     }
 
-    private void guardBodyIndexValue(Object index) {
-        if (index instanceof String) {
+    /** 根级 _analyze：body.index 与路径一样是目标通道，不能让它读到控制面索引的 analyzer 配置。 */
+    private void guardAnalyzeBody(String body) {
+        if (body == null || body.trim().isEmpty()) return;
+        try {
+            Map<?, ?> root = OBJECT_MAPPER.readValue(stripBom(body), Map.class);
+            guardBodyIndexValue(root.get("index"));
+        } catch (ControlPlaneGuardException e) {
+            throw e;
+        } catch (Exception ignore) {
+            /* 非 JSON 交由 ES 原始报错；没有可解析的 index 字段即无目标可越界 */
+        }
+    }
+
+    private void guardBodyIndexValue(Object index) {        if (index instanceof String) {
             if (!((String) index).trim().isEmpty()) guardPublicIndexPattern((String) index);
         } else if (index instanceof java.util.List) {
             for (Object one : (java.util.List<?>) index) {
@@ -3007,6 +3178,9 @@ public class EsIndexAdmin {
             "/_cat/templates", "/_index_template", "/_component_template", "/_template",
             /* 节点/许可/数据流/富化/监控等集群元数据面：非数据面读所需，避免暴露节点与内部数据流名 */
             "/_cat/nodes", "/_cat/nodeattrs", "/_cat/thread_pool", "/_cat/plugins",
+            /* master 身份与投票排除清单是「选主成员 + 节点 id/name」的直接出口：
+               与 /_cat/nodes、/_nodes 同属拓扑面，非数据面读所需。 */
+            "/_cat/master", "/_cluster/voting",
             "/_cat/transforms", "/_cat/ml", "/_cat/component_templates",
             "/_data_stream", "/_features", "/_license", "/_xpack/license", "/_xpack/usage",
             "/_cluster/stats", "/_enrich", "/_monitoring",
@@ -3024,15 +3198,18 @@ public class EsIndexAdmin {
             java.util.Arrays.asList("_refresh", "_flush", "_cache", "_forcemerge", "_close", "_open",
                     "_rollover", "_delete_by_query", "_update_by_query", "_bulk", "_reindex"));
 
-    /** 索引级形态同权拒绝的分片拓扑读：根形态已在系统读拒绝清单，索引前缀变体不得绕行。 */
+    /** 索引级形态同权拒绝的分片拓扑读：根形态已在系统读拒绝清单，索引前缀变体不得绕行。
+     *  {@code _search_shards} 的响应自带 {@code nodes[].transport_address}（节点名 + 内网
+     *  IP:9300），与根形态 {@code /_search_shards} 的拒绝口径必须一致——只在索引前缀放行
+     *  等于把「根路径禁拓扑」变成一条换前缀即可绕过的假边界。 */
     private static final java.util.Set<String> RAW_INDEX_TOPOLOGY_READ_DENY = new java.util.HashSet<>(
-            java.util.Arrays.asList("_recovery", "_shard_stores", "_segments", "_stats"));
+            java.util.Arrays.asList("_recovery", "_shard_stores", "_segments", "_stats", "_search_shards"));
 
     /** 索引级数据面写操作白名单（其余索引结构/管理写一律拒绝）。 */
     private static final java.util.Set<String> RAW_INDEX_DATA_WRITE_OPS = new java.util.HashSet<>(
             java.util.Arrays.asList("_doc", "_create", "_update", "_bulk", "_delete_by_query",
                     "_update_by_query", "_search", "_count", "_msearch", "_mget", "_explain",
-                    "_validate", "_field_caps", "_termvectors", "_mtermvectors", "_analyze", "_pit", "_search_shards",
+                    "_validate", "_field_caps", "_termvectors", "_mtermvectors", "_analyze", "_pit",
                     /* 只读但接受 body（GET/POST 均可）的检索类端点：允许下发但必须过 DSL 守卫。 */
                     "_terms_enum", "_rank_eval", "_knn_search"));
 
@@ -3595,6 +3772,82 @@ public class EsIndexAdmin {
         Map<String, Object> result = OBJECT_MAPPER.readValue(respBody, Map.class);
         logger.info("[EsIndexAdmin] deleteTemplate kind={} name={} result={}", kind, name, result);
         return result;
+    }
+
+    /**
+     * 非 ADMIN 删除模板：<b>先读回模板定义、按其 index_patterns 判定</b>再删。
+     *
+     * <p>写入侧（{@link #putTemplate}）早就要求显式业务模式、拒绝 catch-all 与控制面通配；
+     * 删除侧此前没有任何守卫——持 templates 页写键即可删掉任意集群模板（含覆盖控制面
+     * 索引模式的模板）。模板是集群级、影响未来所有匹配索引的建索引行为，「写有守卫、
+     * 删无守卫」是同一口径的破口，这里补齐对称性。读不到/解析不出模式一律拒绝
+     * （fail-closed）：无法证明安全就不允许删。</p>
+     */
+    public Map<String, Object> deleteTemplateGuarded(String kind, String name) throws IOException {
+        guardPathToken(name, "模板名");
+        if (!"component".equalsIgnoreCase(kind)) {
+            guardTemplateDeletionTarget(resolveTemplateBase(kind), name);
+        }
+        return deleteTemplate(kind, name);
+    }
+
+    /** 读回模板体并抽出 index_patterns 过写入同款守卫；模板不存在时交给 DELETE 自然 404。 */
+    private void guardTemplateDeletionTarget(String base, String name) throws IOException {
+        final String body;
+        try {
+            org.elasticsearch.client.Request req = new org.elasticsearch.client.Request(
+                    "GET", base + "/" + encodePathSegment(name));
+            org.elasticsearch.client.Response resp = performGuarded(req);
+            body = org.apache.http.util.EntityUtils.toString(resp.getEntity());
+        } catch (org.elasticsearch.client.ResponseException e) {
+            if (e.getResponse() != null && e.getResponse().getStatusLine() != null
+                    && e.getResponse().getStatusLine().getStatusCode() == 404) {
+                return; // 不存在：让 DELETE 走原错误通道（404 语义不变）
+            }
+            throw new ControlPlaneGuardException("模板定义读取失败，非管理员不得删除：" + name);
+        }
+        if (body == null || body.trim().isEmpty()) {
+            throw new ControlPlaneGuardException("无法读取模板定义，非管理员不得删除：" + name);
+        }
+        final Object patterns;
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> root = OBJECT_MAPPER.readValue(body, Map.class);
+            Object node = root;
+            Object list = root.get("index_templates");
+            if (list instanceof java.util.List && !((java.util.List<?>) list).isEmpty()) {
+                /* composable：{"index_templates":[{"name":..,"index_template":{..}}]} */
+                Object first = ((java.util.List<?>) list).get(0);
+                node = first instanceof Map ? ((Map<?, ?>) first).get("index_template") : null;
+            } else if (root.size() == 1) {
+                /* legacy：{"<模板名>":{"index_patterns":[..],..}} */
+                Object only = root.values().iterator().next();
+                node = only;
+            }
+            if (!(node instanceof Map)) {
+                throw new ControlPlaneGuardException("模板定义结构无法识别，非管理员不得删除：" + name);
+            }
+            patterns = ((Map<?, ?>) node).get("index_patterns");
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ControlPlaneGuardException("模板定义无法解析，非管理员不得删除：" + name);
+        }
+        if (patterns == null) {
+            /* 缺 patterns 在部分 ES 版本等同 catch-all：无法证明只落在业务索引上，fail-closed */
+            throw new ControlPlaneGuardException(
+                    "模板未声明 index_patterns（部分版本等同 catch-all），非管理员不得删除：" + name);
+        }
+        final String patternsJson;
+        try {
+            patternsJson = OBJECT_MAPPER.writeValueAsString(
+                    java.util.Collections.singletonMap("index_patterns", patterns));
+        } catch (Exception e) {
+            throw new ControlPlaneGuardException("模板 index_patterns 无法序列化，非管理员不得删除：" + name);
+        }
+        /* 与写入同口径：缺 patterns（部分版本等同 catch-all）/ catch-all / 控制面通配一律拒。 */
+        guardIndexTemplatePatternsPresent(patternsJson);
+        guardIndexTemplateBody(patternsJson);
     }
 
     /* 模板端点版本感知——路由到目标集群时按其版本选 composable / legacy API */
@@ -5156,10 +5409,39 @@ public class EsIndexAdmin {
     public Map<String, Object> putStoredScript(String id, String body) throws IOException {
         if (id == null || id.trim().isEmpty()) throw new IllegalArgumentException("id 不能为空");
         if (body == null || body.trim().isEmpty()) throw new IllegalArgumentException("body 不能为空");
-        /* 已存脚本后续可能被脚本执行通道复用：写入时就拒绝控制面字面量与 _index 改写脚本。 */
+        /* 已存脚本后续可能被脚本执行通道复用：写入时就拒绝控制面字面量与 _index 改写脚本。
+           注意不能复用 guardUpdateScript：它按 update 语义只接受 painless，会把
+           search-templates 页唯一合法的 mustache 模板一并拦掉（生产实测 403）。 */
         guardControlBody(body);
-        guardUpdateScript(body);
+        guardStoredScript(body);
         return performJson("PUT", "/_scripts/" + encodePathToken(id, "脚本 ID"), body);
+    }
+
+    /**
+     * 已存脚本守卫：painless（或缺省 lang=ES 默认 painless）按可静态审计的 update 脚本口径；
+     * mustache 是静态模板（search-templates 页的唯一合法语言），不做 painless 的 ctx 检查，
+     * 控制面字面量已由调用方的 {@link #guardControlBody(String)} 拦截。
+     */
+    void guardStoredScript(String body) {
+        body = stripBom(body);
+        if (body == null || body.trim().isEmpty()) return;
+        final Object script;
+        try {
+            Map<String, Object> root = OBJECT_MAPPER.readValue(body, Map.class);
+            script = root.get("script");
+        } catch (Exception ignore) {
+            return; // 非 JSON 交由 ES 原始报错
+        }
+        if (script == null) return;
+        String lang = null;
+        if (script instanceof Map) {
+            Object l = ((Map<?, ?>) script).get("lang");
+            lang = l == null ? null : String.valueOf(l).trim();
+        }
+        if (lang == null || lang.isEmpty() || "painless".equalsIgnoreCase(lang)) {
+            guardScriptValue(script);
+        }
+        /* mustache：静态模板，无 painless 的 ctx/_index 语义；控制面字面量已在入口拦截。 */
     }
 
     /** DELETE /_scripts/{id} */
@@ -5353,6 +5635,86 @@ public class EsIndexAdmin {
     }
 
     /**
+     * 非 ADMIN 的 PIT 开启：keep-alive 夹到资源上限。
+     *
+     * <p>PIT 是「锁定时间点搜索上下文」，每个 PIT 都在目标集群占堆外/段引用。只读身份可以
+     * 合法使用深度分页，但不能用 {@code 999d} 这类超长值把上下文无限期钉住（低成本 DoS）。
+     * 超限按上限下发而不是直接拒绝——有权限的人继续能用，只是资源占用有界；
+     * 值本身不会被静默改写后不告知，响应里回填 {@code keepAliveApplied} 供前端提示。</p>
+     */
+    public Map<String, Object> pitOpenClamped(String index, String keepAlive) throws IOException {
+        String requested = (keepAlive == null || keepAlive.trim().isEmpty()) ? "5m" : keepAlive.trim();
+        long capMillis = pitKeepAliveCapMillis();
+        long wantMillis = parseEsTimeMillis(requested);
+        if (wantMillis < 0) {
+            throw new IllegalArgumentException("keep_alive 格式非法（例：5m / 1h / 30s）：" + keepAlive);
+        }
+        String applied = requested;
+        boolean clamped = false;
+        if (wantMillis > capMillis) {
+            applied = esTimeLiteral(capMillis);
+            clamped = true;
+        }
+        Map<String, Object> out = pitOpen(index, applied);
+        if (out != null) {
+            out.put("keepAliveRequested", requested);
+            out.put("keepAliveApplied", applied);
+            out.put("keepAliveClamped", clamped);
+        }
+        return out;
+    }
+
+    /**
+     * 非 ADMIN PIT keep-alive 上限（分钟）：默认 60。
+     *
+     * <p>用 JVM 系统属性而非 Spring 配置，是因为本类也被非 Spring 直调路径（单测/内部任务）
+     * 使用；属性名沿用 {@code es.rebuild.*} 命名域，便于运维在同一处检索。
+     * 非正整数/解析失败一律回落默认 60 分钟（fail-closed 方向是「更小上限」）。</p>
+     */
+    private static long pitKeepAliveCapMillis() {
+        String v = System.getProperty("es.rebuild.console.pit.max-keep-alive-minutes", "60");
+        try {
+            long minutes = Long.parseLong(v.trim());
+            return minutes > 0 ? minutes * 60_000L : 60 * 60_000L;
+        } catch (Exception e) {
+            return 60 * 60_000L;
+        }
+    }
+
+    /** ES 时间字面量 → 毫秒；无法识别返回 -1（调用方 fail-closed）。 */
+    static long parseEsTimeMillis(String value) {
+        if (value == null) return -1;
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("^(\\d+)(nanos|micros|ms|s|m|h|d)$", java.util.regex.Pattern.CASE_INSENSITIVE)
+                .matcher(value.trim());
+        if (!m.matches()) return -1;
+        long n;
+        try {
+            n = Long.parseLong(m.group(1));
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+        switch (m.group(2).toLowerCase(Locale.ROOT)) {
+            case "nanos": return n / 1_000_000L;
+            case "micros": return n / 1_000L;
+            case "ms": return n;
+            case "s": return n * 1_000L;
+            case "m": return n * 60_000L;
+            case "h": return n * 3_600_000L;
+            case "d": return n * 86_400_000L;
+            default: return -1;
+        }
+    }
+
+    /** 毫秒 → 最接近的整分/整时字面量（上限回填用，避免出现 "3600000ms" 这类噪音）。 */
+    static String esTimeLiteral(long millis) {
+        if (millis % 3_600_000L == 0) return (millis / 3_600_000L) + "h";
+        if (millis % 60_000L == 0) return (millis / 60_000L) + "m";
+        if (millis % 1_000L == 0) return (millis / 1_000L) + "s";
+        return millis + "ms";
+    }
+
+    /**
      * PIT 能力级失败甄别——只有「端点真不在」（旧版本 ES 对未知路径回 400 no handler
      * found for uri）与连接类异常（非 ResponseException）维持 available=false 能力降级；
      * 其余 ResponseException（keep_alive 解析 400/索引不存在 404 等请求级形态）一律异常
@@ -5387,6 +5749,38 @@ public class EsIndexAdmin {
         }
         guardSearchBody(body);
         return performJson("POST", "/_search", body);
+    }
+
+    /**
+     * 页面 PIT 搜索（非 ADMIN）：pit.keep_alive 也受资源上限约束。
+     *
+     * <p>raw 通道已限制根层/嵌套 keep_alive；页面端点如果只校验 pit.id，持查询页读权限的人
+     * 可以用 body 里的 {@code pit.keep_alive:"9999d"} 无限延长已打开的 PIT——与 raw 同源的
+     * 资源上限必须在这里也生效。无法识别的时长同样拒绝（fail-closed）。</p>
+     */
+    public Map<String, Object> pitSearchClamped(String body) throws IOException {
+        if (body != null && body.indexOf("\"keep_alive\"") >= 0) {
+            try {
+                Map<?, ?> root = OBJECT_MAPPER.readValue(stripBom(body), Map.class);
+                Object pit = root.get("pit");
+                if (pit instanceof Map) {
+                    Object ka = ((Map<?, ?>) pit).get("keep_alive");
+                    if (ka instanceof String) {
+                        long ms = parseEsTimeMillis((String) ka);
+                        long cap = pitKeepAliveCapMillis();
+                        if (ms < 0 || ms > cap) {
+                            throw new IllegalArgumentException("PIT keep_alive 超上限 " + esTimeLiteral(cap)
+                                    + "（请求 " + ka + "）：长时间占用搜索上下文会阻止段合并并耗尽堆外内存");
+                        }
+                    }
+                }
+            } catch (IllegalArgumentException e) {
+                throw e;
+            } catch (Exception ignore) {
+                /* 非 JSON 交由 pitSearch 的原始报错 */
+            }
+        }
+        return pitSearch(body);
     }
 
     /** 关闭 PIT：释放集群保留的搜索上下文。 */

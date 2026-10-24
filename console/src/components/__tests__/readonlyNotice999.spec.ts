@@ -241,7 +241,7 @@ describe('999 六个写操作视图的页面级只读说明条', () => {
     await settle();
     const note = host.querySelector('.mp-perm-note[role="status"]');
     expect(note).toBeTruthy();
-    expect(note!.textContent).toContain('添加字段/动态规则设置不可用');
+    expect(note!.textContent).toContain('添加字段需 mapping 写权限');
   });
 
   it('IlmView：只读身份出 .ilm-perm-note（管理+迁移双写门全关才出）', async () => {
@@ -271,7 +271,7 @@ describe('999 六个写操作视图的页面级只读说明条', () => {
     await settle();
     const note = host.querySelector('.slm-perm-note[role="status"]');
     expect(note).toBeTruthy();
-    expect(note!.textContent).toContain('快照策略的立即执行不可用');
+    expect(note!.textContent).toContain('立即执行属集群级动作');
   });
 
   it('SnapshotsView：只读身份出 .sv-perm-note', async () => {

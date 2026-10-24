@@ -403,6 +403,12 @@ function newTemplate() {
 async function save() {
   if (!canOps.value) { store.notify('warning', '搜索模板变更需要 CLUSTER_OP/ADMIN 角色'); return; }
   if (!curId.value) return;
+  /* 集群共享件覆盖风险：同 id 可能被他人查询引用，静默替换会即时改变他人结果。 */
+  if (exists(curId.value) && !await askConfirm({
+    title: '覆盖已存模板',
+    message: `模板 "${curId.value}" 已存在。保存会立即替换其内容，引用该 id 的查询/集成会返回新结果。`,
+    okText: '覆盖保存',
+  })) return;
   busy.value = true;
   try {
     /* mustache source 必须存成字符串（占位符会破坏 JSON 结构） */

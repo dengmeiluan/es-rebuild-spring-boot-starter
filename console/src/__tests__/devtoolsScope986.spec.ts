@@ -16,7 +16,9 @@ describe('DevTools 非 ADMIN 数据面白名单', () => {
     expect(ok('PUT', '/logs/_doc/1')).toBe(true);
     expect(ok('POST', '/logs/_update/1')).toBe(true);
     expect(ok('POST', '/logs/_delete_by_query')).toBe(true);
-    expect(ok('HEAD', '/_cat/indices')).toBe(true); /* cat/indices 不在系统读拒绝清单（后端走 JSON 行过滤） */
+    /* 1005：_cat 索引目录必须 format=json（服务端靠它做行级过滤），HEAD 同口径 */
+    expect(ok('HEAD', '/_cat/indices?format=json')).toBe(true);
+    expect(ok('HEAD', '/_cat/indices')).toBe(false);
   });
 
   it('系统管理/别名/快照/模板/脚本等写拒绝', () => {

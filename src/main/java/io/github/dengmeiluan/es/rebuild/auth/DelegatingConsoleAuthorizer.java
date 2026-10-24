@@ -54,6 +54,13 @@ public class DelegatingConsoleAuthorizer implements EsConsoleAuthorizer {
                 if (p != null) {
                     return p;
                 }
+                /* 带了宿主凭证但没被接受（过期/被撤销/宿主拒绝）：不得回落到浏览器里
+                   可能残留的内置 token——否则宿主一撤销会话，iframe 反而升级成内置 ADMIN。
+                   只有「本请求没带宿主凭证」才回退到内置登录（两套身份并存的既定语义）。 */
+                if (delegate.hasCredential(request)) {
+                    LOG.debug("[DelegatingConsoleAuthorizer] 宿主凭证存在但未被接受：不回落内置登录");
+                    return null;
+                }
             } catch (Exception e) {
                 // WARN 末参补 e——降级留痕只有 getMessage 无从定位宿主侧根因，
                 // 堆栈补上；返回 fallback 契约不变

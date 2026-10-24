@@ -2023,7 +2023,7 @@ async function askForceMerge() {
     message: `将对 ${cur.value} 执行 force merge max_num_segments=1：大索引可能长时间占用 IO 且不可中断，建议低峰期执行。`,
     okText: '开始合并',
   })) return;
-  opRaw('POST', `/${cur.value}/_forcemerge?max_num_segments=1&wait_for_completion=false`, 'ForceMerge 任务已提交（异步）');
+  opRaw('POST', `/${cur.value}/_forcemerge?max_num_segments=1`, 'ForceMerge 已完成（同步，耗时取决于索引大小）');
 }
 async function askClose() {
   if (!canAdmin.value) { store.notify('warning', '原始透传需 ADMIN 角色'); return; }

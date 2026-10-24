@@ -263,7 +263,9 @@ const store = useAppStore();
  （角色定义「OPERATOR=低危写」不含策略级变更；后端 /cluster/ilm/policy 未入 CLUSTER 关键词是已知
  偏低档，待后端加固，前端先按角色意图收口；move/start/stop 本就在 CLUSTER 档） */
 const auth = useAuthStore();
-const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/ilm/policy', store.target));
+/* 策略增删改是集群级共享件：连接模型下除 w:ilm 外还需 rank3 或集群设置写键。 */
+const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/ilm/policy', store.target)
+  && auth.canClusterScope(store.target));
 /* DevTools 跳转入口与 DevTools 页同门：无页写键时不展示可点击态。 */
 const canDevtools = computed(() => auth.canEndpoint('admin', 'POST',
   '/internal/es/index/cluster/devtools/execute', store.target));

@@ -72,8 +72,11 @@ public class InternalAdhocRebuildController {
 
     /** 启动托管重建（body 见 {@link AdhocRebuildService#start}） */
     @PostMapping("/start")
-    public Map<String, Object> start(@RequestBody Map<String, Object> req) throws IOException {
-        return adhocRebuildService.start(req);
+    public Map<String, Object> start(@RequestBody Map<String, Object> req, HttpServletRequest request) throws IOException {
+        ConsolePrincipal p = principal(request);
+        return adhocRebuildService.start(req,
+                p == null ? null : p.getUsername(),
+                p == null ? null : p.getRole().name());
     }
 
     /** 作业进度快照（连接模型：只允许当前目标连接的作业） */
@@ -83,10 +86,11 @@ public class InternalAdhocRebuildController {
         return adhocRebuildService.status(jobId);
     }
 
-    /** 请求中止（连接模型：只允许当前目标连接的作业） */
+    /** 请求中止（连接模型：只允许当前目标连接 + 作业创建者本人/ADMIN） */
     @PostMapping("/abort")
     public Map<String, Object> abort(@RequestParam("jobId") String jobId, HttpServletRequest request) {
         requireJobTarget(jobId, request);
+        requireJobOwner(jobId, request);
         return adhocRebuildService.abort(jobId);
     }
 
@@ -99,6 +103,7 @@ public class InternalAdhocRebuildController {
     @PostMapping("/confirm-switch")
     public Map<String, Object> confirmSwitch(@RequestParam("jobId") String jobId, HttpServletRequest request) {
         requireJobTarget(jobId, request);
+        requireJobOwner(jobId, request);
         return adhocRebuildService.confirmSwitch(jobId);
     }
 
@@ -131,15 +136,40 @@ public class InternalAdhocRebuildController {
         }
     }
 
+    /**
+     * 作业归属：连接模型下，中止/人工放行只允许创建者本人或 ADMIN。
+     *
+     * <p>页面写键是「连接级」授权——同连接内持 w:adhoc-rebuild 的同事可以观测进度，
+     * 但不能替代创建者做不可逆动作（中止会解除写阻断、确认会执行别名切换）。
+     * 旧作业无 owner（升级前持久化）维持连接级语义：升级后仍要能收尾，不能一刀切拒绝。</p>
+     */
+    private void requireJobOwner(String jobId, HttpServletRequest request) {
+        ConsolePrincipal p = principal(request);
+        /* connModel 已把 ADMIN 排除在外；这里再判一次是为了直调/未来复用时语义自洽。 */
+        if (p == null || p.getRole().atLeast(io.github.dengmeiluan.es.rebuild.auth.ConsoleRole.ADMIN)) return;
+        Map<String, Object> job = adhocRebuildService.status(jobId);
+        Object owner = job.get("ownerUsername");
+        String ownerName = owner == null ? "" : String.valueOf(owner).trim();
+        if (ownerName.isEmpty()) return; // legacy：无归属记录，维持连接级
+        if (ownerName.equals(p.getUsername())) return;
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "作业 " + jobId + " 由 " + ownerName + " 创建：中止/确认切换仅限创建者本人或 ADMIN。"
+                        + "同连接其他成员可观测进度，但不能替代创建者执行不可逆动作。");
+    }
+
     private boolean connModel(HttpServletRequest request) {
         if (!pageAuthEnabled || envPagesResolver == null) return false;
-        Object attr = request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);
-        if (!(attr instanceof ConsolePrincipal)) return false;
-        ConsolePrincipal principal = (ConsolePrincipal) attr;
+        ConsolePrincipal principal = principal(request);
+        if (principal == null) return false;
         // ADMIN 是全局超管：不受连接作业过滤/目标一致性限制
         if (principal.getRole().atLeast(io.github.dengmeiluan.es.rebuild.auth.ConsoleRole.ADMIN)) return false;
         return principal.getGrantedPages() != null
                 && envPagesResolver.inConnModel(principal.getGrantedPages());
+    }
+
+    private static ConsolePrincipal principal(HttpServletRequest request) {
+        Object attr = request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);
+        return attr instanceof ConsolePrincipal ? (ConsolePrincipal) attr : null;
     }
 
     private static String normalizeTarget(String target) {

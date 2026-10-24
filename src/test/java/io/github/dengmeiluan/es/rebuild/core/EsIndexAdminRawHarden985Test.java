@@ -61,9 +61,12 @@ public class EsIndexAdminRawHarden985Test {
     }
 
     @Test
-    public void 单个业务索引仍放行() {
-        assertAllowed(() -> admin.guardRawGuarded("GET", "/_count?index=logs", null),
-                "显式业务索引");
+    public void 单个业务索引走路径形式才放行() {
+        /* 1005 收紧：index 查询参数不再充当范围凭据（原因见 guardRawIndexQueryParam），
+           业务索引改用路径形式；能力不缺。 */
+        assertAllowed(() -> admin.guardRawGuarded("GET", "/logs/_count", null), "路径限定业务索引");
+        assertRejected(() -> admin.guardRawGuarded("GET", "/_count?index=logs", null),
+                "查询参数不构成目标限定");
     }
 
     @Test

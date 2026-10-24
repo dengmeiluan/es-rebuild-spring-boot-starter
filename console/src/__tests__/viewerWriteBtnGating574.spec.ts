@@ -148,7 +148,7 @@ const TV_TASK = {
   startTimeMillis: 0, runningTimeNanos: 2_000_000_000, cancellable: true, status: {},
 };
 
-async function mountTasksWithGrants(role: 'VIEWER' | 'OPERATOR' | 'ADMIN' | 'REBUILD_OP', grantedPages: string[] | null): Promise<HTMLElement> {
+async function mountTasksWithGrants(role: 'VIEWER' | 'OPERATOR' | 'ADMIN' | 'REBUILD_OP' | 'CLUSTER_OP', grantedPages: string[] | null): Promise<HTMLElement> {
   const pinia = createPinia();
   const router = createRouter({
     history: createMemoryHistory(),
@@ -175,11 +175,17 @@ async function mountTasksWithGrants(role: 'VIEWER' | 'OPERATOR' | 'ADMIN' | 'REB
 const cancelBtnIn = (host: HTMLElement) =>
   !!Array.from(host.querySelectorAll('.tv-node button')).find((b) => (b.textContent || '').includes('取消'));
 
-describe('五百七十七批·TasksView conn 写键行为锁（VIEWER+连接写键可见 Cancel，连接感知通 DOM）', () => {
-  it('VIEWER + grantedPages 含 conn:c1:w:tasks（归属页写键）：任务行 Cancel 钮可见（镜像后端放行面）', async () => {
+describe('五百七十七批·TasksView conn 写键行为锁（集群级动作需 rank3；VIEWER+连接写键不再可见）', () => {
+  it('VIEWER + conn:c1:w:tasks：取消属集群级动作，rank2 不足 → Cancel 不可见', async () => {
     tasksFn.mockResolvedValue([TV_TASK]);
     const host = await mountTasksWithGrants('VIEWER', ['conn:c1:tasks', 'conn:c1:w:tasks']);
-    expect(cancelBtnIn(host), 'VIEWER+任务页写键应看到 Cancel 钮').toBe(true);
+    expect(cancelBtnIn(host), 'VIEWER+任务页写键不得再看到 Cancel（后端需 rank3）').toBe(false);
+  });
+
+  it('CLUSTER_OP + conn:c1:w:tasks：集群级动作 rank3 达标 → Cancel 可见', async () => {
+    tasksFn.mockResolvedValue([TV_TASK]);
+    const host = await mountTasksWithGrants('CLUSTER_OP', ['conn:c1:tasks', 'conn:c1:w:tasks']);
+    expect(cancelBtnIn(host), 'CLUSTER_OP+任务页写键应看到 Cancel 钮').toBe(true);
   });
 
   it('VIEWER + grantedPages 仅读键（conn:c1:tasks 无 w:）：Cancel 钮不可见（w: 键不在场即拒）', async () => {
