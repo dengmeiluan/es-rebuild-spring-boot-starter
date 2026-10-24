@@ -145,6 +145,13 @@
  读不出），meta 空时输出与单参逐字节一致（errPre524 锚），字符串全文回看语义不变 -->
           <div><b>SQL 执行失败</b> · {{ friendlyRunErr }}</div>
           <pre class="sq-err-body" v-html="errPreHtml(runErr, errMeta(runErrObj))"></pre>
+          <!-- 1043：UnknownColumn 智能纠错——相近字段 chips 一键替换列名（editDistance top-3） -->
+          <div v-if="colFix" class="sq-colfix" role="group" aria-label="相近字段建议">
+            <span class="sq-colfix-t">列 [{{ colFix.col }}] 不存在——相近字段：</span>
+            <button v-for="s in colFix.suggestions" :key="s.path" type="button" class="btn sm"
+                    :title="'替换 SQL 中的 ' + colFix.col + ' 为 ' + s.path"
+                    @click="applyColFix(s.path)">{{ s.path }}</button>
+          </div>
           <div class="sq-alert-acts">
             <button class="btn sm" @click="doRun" :disabled="!sql.trim() || busy">重试</button>
           </div>
@@ -258,7 +265,7 @@ import { friendlyEsError } from '../utils/esError';
 /* W2 批：SQL 补全单例接入——与 SqlBridge 共享同一份语言级 provider（引用计数，挂载 ensure/卸载 dispose） */
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import { useIndexFields } from '../composables/useIndexFields';
-import { ensureSqlCompletion, type SqlCompletionCtx } from '../utils/sqlCompletion';
+import { ensureSqlCompletion, suggestColumnsFor, type SqlCompletionCtx } from '../utils/sqlCompletion';
 import { lintSql } from '../utils/sqlLint'; /* P0-3：SQL 静态 lint */
 import { useDebounceFn } from '../composables/useDebounceFn'; /* P0-3：划线防抖统一件 */
 import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
@@ -334,6 +341,22 @@ const runErr = ref('');
 const runErrObj = ref<unknown>(null);
 /* 错误面板标题行的人话摘要（pre 仍保全文，SearchSandboxView 同款双轨） */
 const friendlyRunErr = computed(() => friendlyEsError(runErr.value));
+/* 1043：UnknownColumn 智能纠错——错误文本解析列名 + editDistance 相近字段 top-3；
+   无 UnknownColumn 字样/字段源为空 → null（面板零增量）。字段冷缓存时顺带
+   ensure（fire-and-forget，computed 随 fields.value 更新自愈重算）。 */
+const colFix = computed(() => {
+  if (!runErr.value) return null;
+  const fields = sqlFieldsCtx.fields.value;
+  if (!fields.length) { void sqlFieldsCtx.ensure(); return null; }
+  return suggestColumnsFor(runErr.value, fields);
+});
+function applyColFix(path: string) {
+  const col = colFix.value?.col;
+  if (!col) return;
+  const re = new RegExp(col.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+  sql.value = sql.value.replace(re, path);
+  store.notify('info', `已将列 ${col} 替换为 ${path}，可重新执行`);
+}
 
 /* DSL 预览裸插值 → highlightJson（dslPreview 已是 pretty 串，着色 + json-view 全局范式） */
 const dslHtml = computed(() => highlightJson(dslPreview.value ?? ''));
@@ -641,6 +664,9 @@ function exportNdjson() {
 .sq-alert-body { flex: 1; }
 .sq-alert-acts { display: flex; gap: var(--sp-1h); align-items: center; flex-wrap: wrap; margin-top: var(--sp-2); }
 .sq-err-body { margin: var(--sp-1h) 0 0; font-family: var(--mono); font-size: var(--fs-xs); white-space: pre-wrap; word-break: break-word; color: var(--fg); max-height: 200px; overflow: auto; }
+/* 1043：UnknownColumn 纠错 chips 行（列名不存在→相近字段一键替换） */
+.sq-colfix { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; margin-top: var(--sp-1h); }
+.sq-colfix-t { font-size: var(--fs-xs); color: var(--tx2); }
 .sq-tog { display: inline-flex; align-items: center; gap: var(--sp-1); margin-left: var(--sp-2); }
 .sq-tog input { margin: 0; }
 .sq-warn { display: flex; gap: var(--sp-2h); padding: var(--sp-2) 14px; background: var(--warn-soft); border-color: var(--warn-line); color: var(--warning, var(--warn)); }

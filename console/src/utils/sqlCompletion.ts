@@ -38,6 +38,7 @@ import { ref, type Ref } from 'vue';
 import { useIndexFields, type FieldItem } from '../composables/useIndexFields';
 import { useTermsSuggest } from '../composables/useTermsSuggest';
 import { typePriorityForOp, KEYWORD_VALUE_TYPES, NUMERIC_VALUE_TYPES } from './queryAstOps';
+import { editDistance } from './editDistance';
 /* 件④：值位静态档单源 TYPE_VALUE_HINTS 落地 fieldSearch。本文件仅 version/geo_point
  两档 values 引单源（值逐字同形零漂移；两档无源码字面锁，dslValueTiers545/
  均为 toEqual 值锁保形）。boolean/ip 不可引： 对本文件源码含
@@ -79,6 +80,37 @@ let sqlCtxRef: (() => SqlCompletionCtx) | null = null;
 let valCtx: ReturnType<typeof useTermsSuggest> | null = null;
 
 function sortAt(i: number): string { return '!' + String(i).padStart(3, '0'); }
+
+/* 1043：UnknownColumn 智能纠错——ES-SQL verification_exception 的「Unknown column
+   [typo]」是 SQL 高频错误（列名敲错），此前只报错不给建议。解析列名后对当前索引
+   字段清单算 editDistance，给 top-3 相近字段（错误面板 chips 一键替换）。
+   无 UnknownColumn 字样返回 null（其他错误零扰动）；短列名（≤3 字符）距离阈值
+   收紧到 2（548C fuzzy 同款口径：短词噪音大于价值）。 */
+export function suggestColumnsFor(errText: string, fields: Array<{ path: string; type?: string }>): { col: string; suggestions: Array<{ path: string; score: number }> } | null {
+  const m = errText.match(/Unknown column \[([^\]]+)\]/i);
+  if (!m) return null;
+  const col = m[1];
+  if (!col) return null;
+  const maxD = col.length <= 3 ? 2 : 3;
+  const lc = col.toLowerCase();
+  const suggestions = fields
+    .map(f => ({ path: f.path, score: editDistance(lc, f.path.toLowerCase()) }))
+    .filter(s => s.score > 0 && s.score <= maxD)
+    .sort((a, b) => a.score - b.score || a.path.localeCompare(b.path))
+    .slice(0, 3);
+  return { col, suggestions };
+}
+
+/* 1043：聚合函数族（SELECT 词位补全）——研报/舆情统计查询高频
+   （GROUP BY source + COUNT(*) 形态），此前聚合词只能盲打词表兜底。
+   insertText 带左括号：选中直落列参数位（列补全由 ② ③ 既有通道接力）。 */
+const AGG_FUNCS = [
+  { name: 'COUNT', detail: 'COUNT(col) · 计数' },
+  { name: 'AVG', detail: 'AVG(col) · 平均' },
+  { name: 'SUM', detail: 'SUM(col) · 求和' },
+  { name: 'MIN', detail: 'MIN(col) · 最小' },
+  { name: 'MAX', detail: 'MAX(col) · 最大' },
+];
 
 /* keyword 族值语义类型单一出处（dslCompletionContext.AFFINITY_FAMILIES.keyword 同表
  先例；导出供 builder FieldSelect 预载 / ClauseNode datalist 聚合门槛同源消费）。
@@ -309,17 +341,29 @@ export function ensureSqlCompletion(monaco: MonacoApi, getCtx: () => SqlCompleti
  R1：按左扫最近子句键给类型置顶序（候选集不变仅提供序分档，无键零扰动）。
  A3：ensureCurFields 改 Promise 链（② 同步）——调用方异步预载到位后再
  searchFields；契约放宽为 void | Promise<void>（同步 void 旧实现 Promise.resolve
- 归一，微任务一拍即过）；token 取消弃回填。 */
+ 归一，微任务一拍即过）；token 取消弃回填。
+ 1043：SELECT 词位前置聚合函数候选（空前缀全出五员、已敲前缀按前缀过滤；
+ 候选插文本带左括号，选中直落列参数位）。 */
         return Promise.resolve(ctx.ensureCurFields()).then(() => {
           if (token?.isCancellationRequested) return { suggestions: [] };
           const prio = CLAUSE_TYPE_PRIO[clauseOf(before)];
           const hits = searchFields({ fields: ctx.curFields(), query: word.word || '', cap: 50, typePriority: prio });
-          return { suggestions: hits.flat.map((h, i) => ({
+          const fieldSuggestions = hits.flat.map((h, i) => ({
             label: h.path, kind: monaco.languages.CompletionItemKind.Property,
             insertText: h.path,
             detail: h.type + (ctx.pickedIdx() ? ' · 当前索引 ' + ctx.pickedIdx() : ''),
             sortText: sortAt(i), range,
-          })) };
+          }));
+          const inSelect = clauseOf(before) === 'SELECT';
+          const wp = (word.word || '').toLowerCase();
+          const aggSuggestions = inSelect
+            ? AGG_FUNCS.filter(f => f.name.toLowerCase().startsWith(wp)).map((f, i) => ({
+                label: f.name + '(', kind: monaco.languages.CompletionItemKind.Function,
+                insertText: f.name + '(', detail: f.detail,
+                sortText: '!' + String(i).padStart(3, '0'), range,
+              }))
+            : [];
+          return { suggestions: [...aggSuggestions, ...fieldSuggestions] };
         });
       },
     });
