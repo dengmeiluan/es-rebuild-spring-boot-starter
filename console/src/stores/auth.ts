@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { api, setToken, clearToken, getToken, ioRecorder } from '../api';
-import { canCap, canViewAllAudit, type ConsoleCap } from '../utils/capability';
+import { canCap, canViewAllAudit, roleRank, type ConsoleCap } from '../utils/capability';
 import { removeStoredRaw, writeStoredRaw } from '../utils/safeJson';
 
 /** 只读 POST 清单的段边界匹配（后端 ConsoleAuthInterceptor.isReadonlyPost 同源）：
@@ -77,6 +77,10 @@ export const useAuthStore = defineStore('auth', () => {
     'es-console.sandbox.', 'es-console.pit.', 'es-console.rebuild-paste',
     'es-console.search-templates.carry', 'es-console.flame.',
     'es-console.lifecycle.rollover', 'es-console.link.',
+    /* 旧命名空间的历史/列宽/字段记忆/监控快照/健康报告/作业已读位：同样是账号视角产物 */
+    'es_dsl:', 'es_query_hist', 'es_cols:', 'es_tbl_', 'es_recent_idx', 'es_picked',
+    'es_console_qb_field_recent', 'es-console.live.snapshot:',
+    'es-console.healthReport.archive.v1', 'es-console.jobs.seen',
     /* 目标选择是账号可见性产物：换人不清零，残留目标会以 X-Es-Target 毒化
        数据面请求（对不可见连接必 403）——管理面已在 api 层剥头，这里兜数据面。 */
     'es-console.target', 'es-console.target.name',
@@ -102,7 +106,16 @@ export const useAuthStore = defineStore('auth', () => {
     if (!username) return;
     let prev = '';
     try { prev = localStorage.getItem(LAST_USER_KEY) || ''; } catch { /* 存储不可用 */ }
-    if (prev && prev !== username) purgeUserRequestState();
+    if (prev !== username) {
+      /* prev 为空同样清理：升级/手工清键后，磁盘里可能仍躺着上一个身份的数据。
+         清理后广播，让内存态 Pinia store 同步归零（只清存储不够：singleton ref 会在
+         下一次写入时把旧账号的收藏/历史又落回磁盘）。 */
+      purgeUserRequestState();
+      try {
+        window.dispatchEvent(new CustomEvent('es-console:identity-changed',
+          { detail: { username } }));
+      } catch { /* 非浏览器/派发失败：内存重置由 App.vue 的 username watcher 兜底 */ }
+    }
     writeStoredRaw(localStorage, LAST_USER_KEY, username);
   }
 
@@ -339,6 +352,21 @@ export const useAuthStore = defineStore('auth', () => {
     return canCap(me.value.role, cap);
   };
 
+  /* 集群级动作（ILM start/stop、全集群 reroute retry）的 rank 门镜像
+     （后端 CLUSTER_SCOPE_WRITE_KEYWORDS）：连接模型下页面写键短路角色门，但这些动作作用于
+     目标集群全局——rank2 的 OPERATOR 即使持 w:lifecycle 也只能做 rollover/move。
+     放行通道与后端同序：rank3+ 或该连接的 w:cluster-settings（集群设置页=集群级语义）；
+     静态/内置模型由端点角色档（ops=rank3）裁决，本函数对它们恒真。 */
+  const canClusterScope = (targetId?: string | null) => {
+    if (!identityKnown()) return false;
+    if (me.value == null) return true;
+    if (roleRank(me.value.role) >= 3) return true;
+    const gp = me.value.grantedPages;
+    if (!Array.isArray(gp) || !gp.some(g => g.startsWith('conn:'))) return true;
+    const tid = !targetId || String(targetId).toLowerCase() === 'host' ? 'host' : String(targetId);
+    return gp.includes('conn:' + tid + ':w:cluster-settings');
+  };
+
   /* 端点级单一权限入口——用 me.pages 下发的 apiPrefixes 镜像后端 pageOf
  （最长前缀匹配→归属页），conn 模型按精确 conn:{tid}:w:{pageKey} 裁决；未命中（共享
  端点）按任意写键；静态模型回落 canCap；admin 管理域不走连接分支。视图只传按钮真实
@@ -346,6 +374,8 @@ export const useAuthStore = defineStore('auth', () => {
   /* 963：与后端 ConsoleAuthInterceptor.isReadonlyPost 对齐——sql 关键词去尾斜杠（裸 /cluster/sql 也命中）；
      insight/settings-impact 为只读评估端点新增入册 */
   /* painless/execute 不在列：可执行脚本按写档裁决（后端 READONLY_POST_KEYWORDS 同源） */
+  /* insight/actions/{id}/estimate|dry-run 也不在列：estimate 会签发 confirmToken（写意图），
+     必须与 execute 同档，否则连接模型的页写键授权标记不会置位，有权限的人反被动作 minRole 拦下。 */
   const READONLY_POST_KEYWORDS = ['/cluster/query', '/cluster/profile', '/cluster/count', '/cluster/search-dsl', '/cluster/search-raw', '/cluster/search-template', '/cluster/render-template', '/cluster/validate-query', '/cluster/explain-doc', '/cluster/allocation-explain', '/cluster/analyze', '/cluster/reindex-preview', '/cluster/sql', '/cluster/pit/', '/insight/settings-impact'];
   /* 963：共享写端点 → 合法页面写键（与后端 ConsoleAuthInterceptor.SHARED_WRITE_PAGES 同源）。
      原先“任意写键”放行会让 optimizer 写键持有人删文档/取消任务/改 ILM 策略。 */
@@ -360,11 +390,19 @@ export const useAuthStore = defineStore('auth', () => {
     '/cluster/ilm/policy': ['ilm'],
     '/cluster/ilm/move': ['ilm', 'lifecycle'],
     '/cluster/index-settings/update': ['index-settings', 'indices', 'optimizer'],
+    /* 热 Setting 的两入口必须同页集（后端 SHARED_WRITE_PAGES 同源）：原先只认 mapping 页，
+       index-settings/indices/optimizer 的写键持有人点保存会被 403。 */
+    '/cluster/update-settings': ['mapping', 'index-settings', 'indices', 'optimizer'],
     '/cluster/reload-analyzers': ['analysis-settings', 'synonyms'],
     '/cluster/reroute': ['cluster-settings'],
-    '/cluster/reroute/retry-failed': ['diag'],
+    /* retry-failed 是 reroute 的子集：cluster-settings 写键本就能任意 reroute，
+       不许它做更窄的 retry 就是口径倒挂（后端 SHARED_WRITE_PAGES 同源）。 */
+    '/cluster/reroute/retry-failed': ['diag', 'cluster-settings'],
+    /* ilm/start|stop 是集群级开关，与 cluster-settings 页同级（rank 档位另由 canClusterScope 把守） */
+    '/cluster/ilm/start': ['lifecycle', 'cluster-settings'],
+    '/cluster/ilm/stop': ['lifecycle', 'cluster-settings'],
     '/cluster/create-index': ['config-validator', 'indices'],
-    '/cluster/alias-actions': ['aliases', 'config-validator'],
+    '/cluster/alias-actions': ['aliases', 'config-validator', 'indices'],
     '/cluster/scripts/put': ['search-templates', 'painless-lab'],
     '/cluster/scripts/delete': ['search-templates', 'painless-lab'],
     '/cluster/painless/execute': ['painless-lab'],
@@ -617,5 +655,5 @@ export const useAuthStore = defineStore('auth', () => {
     });
   }
 
-  return { me, showLogin, probed, authDisabled, builtinLogin, probeStarted, beginProbe, canAdminOps, probe, login, logout, requireLogin, invalidateIdentity, isAdmin, canSeeConn, grantedPages, can, canWriteOn, canPage, canEndpoint, canEmitWrite, canReadPage, canAuditAll, setConnEnvs, envAllows };
+  return { me, showLogin, probed, authDisabled, builtinLogin, probeStarted, beginProbe, canAdminOps, probe, login, logout, requireLogin, invalidateIdentity, isAdmin, canSeeConn, grantedPages, can, canWriteOn, canPage, canEndpoint, canEmitWrite, canReadPage, canAuditAll, canClusterScope, setConnEnvs, envAllows };
 });
