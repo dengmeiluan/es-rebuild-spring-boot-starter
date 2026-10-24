@@ -1,7 +1,7 @@
 <template>
   <div class="tt">
     <PageHeader :icon="GitBranch" title="任务树" subtitle="集群在途任务与父子任务层级" />
-    <div class="tt-bar lr-bar">
+    <div class="tt-bar lr-bar freeze">
       <div class="tt-bar-l lr-bar-l">
         <span class="tt-count">{{ nodes.length }} 根 · {{ totalTasks }} 任务</span>
         <!-- 手写过滤框改用 SearchFilterBar 统一件（全站第 10 胞；558 cd-kw-inp 先例：
@@ -136,7 +136,9 @@ const store = useAppStore();
 /* 权限门禁——取消任务=/cluster/tasks/cancel=重建专项档（rank3+，与 TasksView 同口径）；
  任务观测全角色可用。低权隐藏 Cancel/批量/勾选/右键取消项，不让人点了才报 403。 */
 const auth = useAuthStore();
-const canWrite = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/tasks/cancel', store.target));
+/* 取消任务是集群级动作：连接模型下还需 rank3 或集群设置写键（后端同源） */
+const canWrite = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/tasks/cancel', store.target)
+  && auth.canClusterScope(store.target));
 const raw = ref<any[]>([]);
 const loading = ref(false);
 const loadErr = ref('');
@@ -260,7 +262,7 @@ function openRawIo() {
 
 async function cancelOne(id: string, node?: string) {
   /* 权限执行体首行门（按钮/菜单已有 v-if，此处覆盖键盘/程序化通道） */
-  if (!canWrite.value) { store.notify('warning', '取消任务需 REBUILD_OP/CLUSTER_OP 或 ADMIN 角色'); return; }
+  if (!canWrite.value) { store.notify('warning', '取消任务是集群级动作：需 CLUSTER_OP 及以上角色，或该连接的集群设置写权限'); return; }
   if (!await askConfirm({
     title: '取消任务',
     message: '将取消该任务。已处理的部分不会回滚，任务会尽快在安全点停下。',
@@ -272,7 +274,7 @@ async function cancelOne(id: string, node?: string) {
 }
 async function bulkCancel() {
   /* 权限执行体首行门（批量钮已有 v-if，此处覆盖程序化通道） */
-  if (!canWrite.value) { store.notify('warning', '取消任务需 REBUILD_OP/CLUSTER_OP 或 ADMIN 角色'); return; }
+  if (!canWrite.value) { store.notify('warning', '取消任务是集群级动作：需 CLUSTER_OP 及以上角色，或该连接的集群设置写权限'); return; }
   const ids = Array.from(selected.value);
   if (!ids.length) return;
   if (!await askConfirm({

@@ -3,7 +3,7 @@
     <PageHeader :icon="Network" title="分布式拓扑" subtitle="节点 × 索引分片分布" />
     <!-- 顶栏：索引过滤 + 刷新 + 图例。：card 壳退役（约定③）——裸 lr-bar 行
  直贴页面流，border-bottom 分界；tp-canvas/tp-palette 547 豁免不在本次范围 -->
-    <div class="tp-bar lr-bar">
+    <div class="tp-bar lr-bar freeze">
       <div class="tp-bar-l lr-bar-l">
         <input
           v-model="indexPattern"

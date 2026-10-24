@@ -33,7 +33,7 @@ describe('顶部三行合一（542 批第二刀，用户截图裁决「这三个
     expect(dq).not.toMatch(/\.dq-build-hd \{/);
     /* 553 批对调后顺序：构建节头钮 → toolbar-prepend（场景条注入口）→ 模板钮，全在 dq-toolbar 内
        （用户实报「日常场景应该跟查询构建器位置换一下」，542 原序 prep→build 修订备案） */
-    const tbAt = dq.indexOf('class="dq-toolbar lr-bar"');
+    const tbAt = dq.indexOf('class="dq-toolbar lr-bar freeze"');
     const prepAt = dq.indexOf('<slot name="toolbar-prepend" />');
     const buildAt = dq.indexOf('dq-build-tg');
     const tplAt = dq.indexOf('> 模板</button>');

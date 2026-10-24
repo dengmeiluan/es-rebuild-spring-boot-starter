@@ -12,7 +12,7 @@
       </template>
     </PageHeader>
     <!-- 顶栏 -->
-    <div class="alv-bar lr-bar">
+    <div class="alv-bar lr-bar freeze">
       <div class="alv-bar-l lr-bar-l">
         <!-- 手写过滤框改用 SearchFilterBar 统一件（全站第 9 胞；558 cd-kw-inp 先例：
  v-model 接原 query 零触、placeholder 逐字保留、Esc 清空/Enter 检索（onHitKey）

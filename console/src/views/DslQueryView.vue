@@ -9,7 +9,7 @@
       <!-- 三行合一（用户截图裁决「这三个应该在一行」）——场景条（QueryHub 经
  #toolbar-prepend 注入）+构建节头（折叠钮+条件数）+工具组+分栏档位 seg 合并单行；
  dq-build-hd 独立行退役，独占态还原入口（分栏 seg）常驻工具行右段 -->
-      <div class="dq-toolbar lr-bar">
+      <div class="dq-toolbar lr-bar freeze">
         <div class="dq-tb-l lr-bar-l">
           <!-- 构建节头先行（实报「日常场景应该跟查询构建器位置换一下」——
  构建节头与场景下拉（QueryHub 经 slot 注入）对调；542 三行合一顺序锁同步更新）。

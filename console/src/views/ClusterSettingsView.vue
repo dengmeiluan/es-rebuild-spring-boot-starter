@@ -5,7 +5,7 @@
       <Shield :size="13" /> 当前身份只读：集群设置的持久/动态下发不可用；需要集群设置写权限。
     </div>
     <PageHeader :icon="GaugeCircle" title="集群设置" subtitle="persistent / transient 两档集群级设置" />
-    <div class="cs-bar lr-bar">
+    <div class="cs-bar lr-bar freeze">
       <div class="cs-bar-l lr-bar-l">
         <!-- 头部待下发 pill 换 StatusPill 统一件（530 W-D 范式）——
  tone 语义档不变（0 项 g / 有待下发 y），全局 .pill.g 挂载锚由组件内 .pill 承接 -->

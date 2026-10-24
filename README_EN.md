@@ -35,7 +35,7 @@ state is persisted, resumable and auditable.
 - **Delete-resurrection compensation** — documents deleted during the rebuild window are
   deleted again after backfill; no ghost data
 - **Job tracking** — persisted state machine (JDBC store), restart-safe, auditable
-- **Ops console out of the box** — 60+ page ES ops console (rebuild wizard / data browser /
+- **Ops console out of the box** — 50+ page ES ops console (rebuild wizard / data browser /
   query workbench / cluster governance / audit / live monitoring) shipped inside the jar,
   zero frontend build for the host app
 - **Multi-cluster** — connection catalog + SPI hosting
@@ -51,7 +51,7 @@ state is persisted, resumable and auditable.
 ### Standalone (Kibana-style)
 
 ```bash
-java -jar es-rebuild-standalone-1.0.57.jar
+java -jar es-rebuild-standalone-1.0.58.jar
 ```
 
 Bundles its own web server (default port `5601`) and ES client stack — no host application
@@ -74,7 +74,7 @@ and HTTP endpoints are registered automatically, and authentication can delegate
 <dependency>
     <groupId>io.github.dengmeiluan</groupId>
     <artifactId>es-rebuild-spring-boot-starter</artifactId>
-    <version>1.0.57</version>
+    <version>1.0.58</version>
 </dependency>
 ```
 

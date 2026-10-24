@@ -2,7 +2,7 @@
   <div class="is">
     <PageHeader :icon="Sliders" title="索引设置（热更）" subtitle="动态设置热更新，静态项需 close/open" />
     <!-- 顶栏。：card 壳退役（约定③）——裸 lr-bar 行直贴页面流，border-bottom 分界 -->
-    <div class="is-bar lr-bar">
+    <div class="is-bar lr-bar freeze">
       <div class="is-bar-l lr-bar-l">
         <!-- 页内 IndexPicker 退役换 CurrentIdxChip 只读件（「选索引」唯一入口收敛顶栏）——
  useIdxState follow:true + 脏态 guard（diffCount>0 暂停跟随）与顶栏同源，chip 即当前索引；

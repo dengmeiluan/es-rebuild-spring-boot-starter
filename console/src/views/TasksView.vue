@@ -2,7 +2,7 @@
   <div class="tv">
     <PageHeader :icon="ListTodo" title="ES 任务管理" subtitle="集群在途任务列表与中止" />
     <!-- 顶栏：actions 过滤 / 自动刷新 / 手动刷新 -->
-    <div class="tv-bar lr-bar">
+    <div class="tv-bar lr-bar freeze">
       <div class="tv-bar-l lr-bar-l">
         <n-select
           v-model:value="actionsFilter"
@@ -215,7 +215,10 @@ const store = useAppStore();
 /* 权限门禁——取消任务=/cluster/tasks/cancel=重建专项档（rank3+，与 abort 族对齐）；
  任务观测全角色可用 */
 const auth = useAuthStore();
-const canWrite = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/tasks/cancel', store.target));
+/* 取消任务是集群级动作（taskId 不带归属）：连接模型下还需 rank3 或集群设置写键，
+   与后端 CLUSTER_SCOPE_WRITE_KEYWORDS 同源；静态模型 canClusterScope 恒真。 */
+const canWrite = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/tasks/cancel', store.target)
+  && auth.canClusterScope(store.target));
 
 interface Task {
   taskId: string;
@@ -330,7 +333,7 @@ async function load() {
 
 async function cancelOne(t: Task) {
   /* 权限执行体首行门（按钮 v-if 之外的右键菜单/程序化通道） */
-  if (!canWrite.value) { store.notify('warning', '取消任务需 REBUILD_OP/CLUSTER_OP 或 ADMIN 角色'); return; }
+  if (!canWrite.value) { store.notify('warning', '取消任务是集群级动作：需 CLUSTER_OP 及以上角色，或该连接的集群设置写权限'); return; }
   if (!t.cancellable) return;
   if (!await askConfirm({
     title: '取消任务',

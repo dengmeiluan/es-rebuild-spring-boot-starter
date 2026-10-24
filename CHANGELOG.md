@@ -5,6 +5,209 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.58]
+
+### 修复
+
+- 冻结首行全站推广（产线实报：行冻结只落在索引工作区/QueryHub/DevTools 等五处，
+  未贯穿全项目）：theme.css 新增 .lr-bar.freeze 页级工具行冻结配方（sticky top0 +
+  实底 + 负边距拉满 .page 内容宽 + z20 让位弹层，1023 qh-top 同语义收口单源），
+  八个页级工具条视图挂类——查询工作台/别名管控/集群设置/索引设置/检索沙盒/
+  任务/任务树/拓扑。长页滚动时工具行恒悬：检索参数/执行/过滤永远可达；
+  高度链页（工作台 fill 态）无滚动时 sticky 惰性零开销
+
+## [1.0.57]
+
+### 修复
+
+- 模板删除补齐非 ADMIN 守卫（写有守卫、删无守卫的口径破口）：`/cluster/templates/delete`
+  原先只校验模板名格式，持 templates 页写键即可删掉任意集群模板——包括 index_patterns
+  覆盖控制面索引的那些（模板是集群级、影响未来所有匹配索引的建索引行为）。改为
+  **先读回模板定义、按其 index_patterns 过与写入同款的守卫再删**：catch-all / 控制面通配 /
+  缺 patterns（部分版本等同 catch-all）/ 读不出定义一律拒绝；模板不存在交给 DELETE 自然 404。
+  组件模板无 patterns：非 ADMIN 的写/删另需 rank3 或 `w:cluster-settings`（见 1007 段）
+- 集群级动作补 rank 硬门（连接模型不再短路）：`/cluster/ilm/start|stop` 启停的是**整集群**
+  的 ILM 执行、`/cluster/reroute/retry-failed` 触发的是**全集群**未分配分片重试，两者都不带
+  索引参数，却被挂在 lifecycle / diag 这种「单索引操作」「只读诊断」页的写键上——rank2 的
+  `w:lifecycle` 能停掉整集群滚动与过期删除。现补回静态模型已有的 rank3 档位
+  （`REBUILD_OP`/`CLUSTER_OP`/`AUDIT_OP` 同 rank 或 ADMIN），并保留**第二放行通道**
+  `w:cluster-settings`（集群设置页的语义本就是集群级操作）——宿主显式授了集群设置写权的
+  rank2 运维不被一刀切拦住（quotehub 的 `manager→OPERATOR` 映射即此档）；单索引 rollover /
+  `ilm/move` / 全部诊断读能力不缩水；前端 LifecycleView / DiagView 同源前置（不可用态 +
+  原因说明，不再是「能点、点下去 403」）
+- 热 Setting 两个入口页集对齐：`/cluster/update-settings`（mapping 页前缀）与
+  `/cluster/index-settings/update`（index-settings/indices/optimizer 共享写）做的是同一个
+  `PUT /{index}/_settings`，但前者只认 mapping 写键——真正持有热更写键的人在「保存」处被
+  403。现登记为共享写（mapping + index-settings + indices + optimizer），两入口同权
+- 连接档案根路径写形态纳入系统管理域：`"/clusters/"` 依赖尾斜杠只覆盖子路径，根路径的
+  批量导入/同步写会漏到 OPERATOR；按「方法非 GET」补根路径判据，GET 列表仍是脱敏只读
+  （VIEWER 可读，不被一刀切拦下）
+
+### 加固
+
+- **读侧端点归属完整性补上测试护栏**：976 只保证「每个写端点都有页面/共享归属」，读侧一直
+  没人守。而读侧的失败模式更隐蔽——连接模型下 `pageOf=null` 且未登记 `SHARED_READ_PAGES` 的
+  读端点会跳过页面门直接落到角色门（VIEWER 即可），即**持任意一页授权就能读**。新增
+  `ReadEndpointOwnership1006Test`：反射扫描全部 GET + **只读 POST**（`isReadonlyPost` 与 GET
+  同权，同样跳角色门），要求每个读端点归属某页 / 登记共享读 / 落在运行时审计器同一张
+  `INTENTIONAL_SHARED` 表上。当前 62 个读端点全部有归属（无实际缺口），此后新增读端点
+  漏登记会直接红。**副产物**：扫描器自身发现「注解 value 不带前导斜杠导致只读 POST 被静默
+  漏检」——这类“测试通过但没测到”的坑，用一条锚点断言（必须扫到 `/cluster/query`）钉死
+- **开发者工具越权矩阵固化为可执行测试**（`DevtoolsEscalationMatrix1004Test`，约 60 条向量）：
+  A 集群/系统管理写全拒、B 索引结构写全拒、C 控制面索引「路径/通配/请求体」三通道全拒
+  （bulk 动作行 / msearch 头 / mget docs / SQL FROM / `_index` 改写脚本）、D 路径与方法变形
+  （`//`、`/./`、`..`、`%5F`、大写、绝对 URL、TRACE/PATCH）、E 数据面放行、F 根级 PIT/scroll
+  仅 DELETE 释放形态放行。此前这些边界只存在于守卫代码里，无回归锚——放宽 allowlist 或
+  新增穿透项时不会红；现在会
+- **根级检索的索引范围规则前后端对齐，且不接受查询参数充当范围**：非 ADMIN 的 `/_search`、
+  `/_count`、`/_field_caps`、`/_async_search`、`/_terms_enum`、`/_rank_eval`、`/_search/template`
+  必须把索引放在路径里（`/{index}/_search`）或走 PIT（body 带 `pit.id`）。原先守卫接受
+  `?index=`/`?indices=` 作为「已限定」凭据——但 REST 层路径/查询参数的合并与优先级随版本实现
+  而变，目标端一旦忽略该参数就是一次全量读（控制面索引一并读出），守卫却以为安全；
+  索引级路径带同名参数还会造成目标二义。现非 ADMIN 一律拒绝该参数（标准写法在所有版本生效，
+  能力不缺）。前端 `devtoolsScope` 镜像同一规则并**带 body 判定**（否则 PIT 搜索会被误禁），
+  DevTools / REST 两页提示分档（根级检索 / 查询参数 / 控制面索引三种原因各自说明改法）
+- PIT 资源上限：非 ADMIN 的 `POST /cluster/pit/open` 把 `keep_alive` 夹到
+  `-Des.rebuild.console.pit.max-keep-alive-minutes`（默认 60 分钟）——只读身份可继续用 PIT
+  深度分页，但不能用 `999d` 把搜索上下文无限期钉在集群（低成本 DoS）。无法识别的
+  keep-alive 字面量 fail-closed 拒绝；响应回填 requested/applied/clamped 供前端提示
+- 审计分级补 `/cluster/scripts/put|delete`：已存脚本是集群级共享件，装卸即时改变他人查询
+  行为、删除不可逆，按 HIGH_RISK 留痕
+- `/auth/permissions` 对 rest / devtools 页回 `writeScope: DATA_PLANE`：两者共用透传内核，
+  非 ADMIN 被 `guardRawGuarded` 收窄到数据面（管理面写全拒），但**数据面内是全权**
+  （含任意业务索引的 bulk / DBQ）。面板与 SecurityView 明示范围，避免把
+  「调试工具」当小权限授出整个数据面；lifecycle 页在 rank2 连接模型下回
+  `CLUSTER_SCOPE_REQUIRED`（可写但集群开关受限）
+- 复核后**保留**护栏动作 estimate/dry-run 的写档裁决：estimate 成功即签发 confirmToken
+  （写意图凭证），且只有走共享写分支才会置位 `ATTR_CONN_WRITE_GRANTED`——误判为只读会让持
+  `w:index-settings` 的低角色用户在「影响预估」处被动作 minRole 拦下。本批以回归锚
+  （`PermMapHarden1002Test`）锁死这条边界，防后续「优化只读清单」时反向打破
+
+### 文档
+
+- 配置参考补「授权键与判定顺序」：三种 grantedPages 键形态、七步判定序、共享写端点表、
+  集群级动作 rank 硬门、DevTools/REST 数据面全权、PIT 上限——开源集成与 quotehub 侧
+  宿主授权都按这一节对齐（不再只有一句 enabled 开关）
+
+### 安全（跨站与凭据面，1003 二轮审计）
+
+- **跨站写防护（CSRF）**：全仓此前对 `Origin`/`Referer`/`Sec-Fetch-Site` 零处理。委托
+  `header` 模式下身份=网关注入头 + 浏览器自动携带的宿主 cookie，跨站表单 POST 属 CORS
+  simple request（不触发预检），一个 `<form>` 即可借用户身份 abort 迁移 / 取消任务 / 删账号。
+  现所有状态变更请求在鉴权前先判 `Sec-Fetch-Site`：`cross-site` → 403 `CSRF_BLOCKED` 并落
+  审计（`action=CSRF_BLOCKED`）；`same-origin`/`same-site`/`none`/缺省放行——**只拒 cross-site**
+  是刻意的，iframe 嵌入（iframe 内请求即 same-origin）与同站子域集成不受影响
+- **审计来源 IP 收窄**：`delegate.header.trusted-proxies` 此前只约束身份采信，审计 IP 与登录
+  节流仍按「私网即代理」硬编码判断——内网直连者可伪造 `X-Forwarded-For` 污染审计、并以
+  「换 IP 即换配额」绕过登录节流（10 次/5 分钟）。现清单非空时**只有清单内直连方**可声明
+  客户端地址（拦截器与登录控制器共用同一份配置）；清单为空维持历史启发式，既有部署零变更
+- **setup-token 覆盖委托与重绑**：原实现 `delegate != null` 时跳过令牌校验，只要求委托认出
+  ADMIN——header 模式身份可伪造，「把控制面指向哪个 ES」不能只凭角色。现配置了
+  `setup-token` 后，委托模式的 `test/apply` 与 `setup/rebind` **同样校验**（第二因子）；
+  未配置时行为不变。`/setup/status` 的 `setupTokenRequired` 与实际守卫同口径
+  （委托模式配置令牌时报 true，向导才会显示输入框）
+
+### 工具
+
+- 新增**前后端共用的作用域金标准** `console/src/__tests__/fixtures/devtoolsScope.golden.json`
+  （66 条向量：`allow`=内核裁决、`ui`=前端应有态）。后端 `DevtoolsScopeGolden1005Test`
+  断言内核与 `allow` 逐条一致，前端 `devtoolsScopeGolden1005.spec` 断言 UI 与 `ui` 逐条一致，
+  并把核心不变量写成断言：**allow=true ⇒ 前端必须可执行（有权限的人不能被拦）**。
+  改任一侧规则未同步样例 → 该侧立刻红，彻底消除「后端允许、前端禁用」与反向漂移
+
+- 新增 `console/scripts/perm-scan.mjs`（`npm run perm:scan`）：以**后端源码为唯一真源**
+  反向校验前端——①`SHARED_WRITE_PAGE_KEYS`/`SHARED_READ_PAGE_KEYS` 与 Java 两表逐条比对
+  （多出/缺失都报）；②视图里 `canEndpoint(cap, method, path)` 的能力档与路径真实档位比对
+  （过宽=亮出必 403 的按钮）；③`canPage` 页 key 必须存在于页面契约；④有写调用的文件必须有
+  权限门 token。解析失败即报错（结构变了必须同步脚本，不允许静默通过）。当前读数：
+  共享写 21 / 共享读 41 / 页契约 52 页 / 扫描 295 文件，0 处不一致。CI 可直接接（退出码 1）
+- **本批零页面契约变更**：未新增/改名任何页 key，quotehub 侧菜单（`LinkMenuProvisioner`
+  按契约派生）与既有授权无需迁移；`manager→OPERATOR` 用户若要保住集群级开关，勾上该连接的
+  「集群设置」写权即可（第二通道）
+
+### 安全（账号切换与写面同权，1007 二轮并发审计）
+
+- **账号切换不再污染内存态**：此前只清 localStorage/sessionStorage，Pinia 单例里的
+  目标连接/索引清单/收藏/通知/查询历史/作业清单/监控序列全部保留——换人后界面仍显示
+  上一账号的「生产集群」而请求不带 `X-Es-Target`（写入落宿主），下一次写入还会把旧账号的
+  收藏/历史重新落盘。现登录换人/宿主 token 换人时广播 `es-console:identity-changed`，
+  内存态同步归零并按新身份重拉；目标双键（id/name）一并复位。同名账号被降权/撤页时，
+  403、窗口聚焦、标签页恢复会触发 30s 节流的身份重探，菜单/按钮尽快与后端同口径。
+  委托令牌登出改为用**宿主令牌原文**登记本地拒绝表（此前误用内置 token，等于没吊销）
+- **宿主凭证被拒不回落内置身份**：`DelegatingConsoleAuthorizer` 在「带了宿主凭证但未被接受」
+  时返回未认证，不再回落到浏览器里可能残留的内置 ADMIN token（宿主撤销会话后 iframe
+  不得静默升级）。「没带宿主凭证」仍按既有语义回退内置登录
+- **删号重建不再复活旧 token**：新建账号 `epoch` 改为随机正值（原固定 1）；同名重建后，
+  旧账号未变更时签发的 token 不会重新通过纪元校验。改密/改角色仍递增 epoch
+- **出厂默认口令只允许本机登录**：用户库为空时 `admin/es-console` 仅在 loopback 可用
+  （默认口令是公开已知凭据）；远程首启请先本机改密或配置强 `fallback-password`。口令比较
+  改常量时间。文档补 SSH/curl-localhost 引导路径
+- **委托模式配置启动即校验**：`delegate.mode` 拼错或必填项缺失（jwt 无密钥/公钥、
+  endpoint 无 verify-url、header 无 user-header）直接拒绝启动——否则内置登录已关闭而所有
+  身份都 401，连 ADMIN 都进不来
+- **setup-token 重绑打通前端**：配置 `setup-token` 后安全中心重绑表单显示令牌输入并发送
+  `X-Setup-Token`（此前仅后端要求，ADMIN 重绑必 403）
+- **写面与读面同口径**：`w:search-templates` 只能写 mustache 脚本，painless 源码写入/按 id
+  删除需 `painless-lab`（删除前读回真实 lang，未知 id fail-closed）；组件模板（无
+  index_patterns、被索引模板引用）写/删需 rank3 或 `w:cluster-settings`；ILM 策略、
+  SLM 立即执行、任务取消补入集群级 rank 硬门（与 start/stop、retry-failed 同档）
+- **作业变更前端前置**：AdhocRebuildView 的中止/确认切换、XmigrateView 的续跑/中止
+  对非创建者隐藏并说明「由 X 创建，仅创建者或 ADMIN」；同连接成员仍可观测进度/报告
+- **已存脚本守卫不再误拦 mustache**：`putStoredScript` 此前复用 update 脚本守卫
+  （只接受 painless），导致 search-templates 页持写键写 mustache 模板被 403（生产实测）。
+  现改为 stored-script 专用守卫：mustache 静态模板放行，painless/缺省按可静态审计口径检查
+  `_index` 改写；控制面字面量仍由入口 `guardControlBody` 拦截
+- **PIT id 归属**：控制台内打开的 PIT 绑定开启者；同 PIT 仅开启者本人或 ADMIN 可用于
+  search/close，账号切换后的旧标签页不再续用（控制台外打开不登记，能力不变）
+- **raw 残余通道**：`pit.keep_alive` 嵌套形态纳入上限（页面 `/cluster/pit/search` 同源校验，
+  防止用搜索 body 无限续期 PIT）；根级 `_analyze` 的 body.index 过
+  控制面守卫；`_cat/shards` 同时摘除 `n`/`id` 列别名与 `unassigned.*`，`ilm-history-*` /
+  `slm-history-*` 行过滤；`/clusters/sync` 的 notes 按连接可见性下发
+- **前端前置与所见即所得**：SecurityView 不再向页面授权身份亮出必 400 的用户管理表单；
+  CmdPalette 的 raw 数据面命令按 rest/devtools 写键放行（reroute 仍 ADMIN）；PROD 徽标
+  不再谎称「已封顶只读」；Snapshots 的 DevTools 入口改用 sessionStorage 契约（原 `?_prefill=`
+  无人消费，点了空 Tab）；Watcher 入口按系统管理面 ADMIN 收口；脚本/模板覆盖加确认；
+  角色自述补全三个专项角色；DevTools 前端镜像对 JSONC/SQL 注释先剥离，消除「注释里出现
+  控制面词就误禁」的有权限者被拦
+
+### 真实产线验证（QuoteHub，2026-10-24）
+
+- **部署**：新 starter 安装到本机 Maven 仓库后，仅部署 QuoteHub 后端（控制台静态资源在 starter
+  jar 内）并等待 `Started QuoteHubAdminApplication`。部署前备份原 jar
+  （`quote-hub-admin-0.0.1-SNAPSHOT.jar.bak-20261024141542`，原 sha256 `f4c8ce82…`），
+  本次上线 jar sha256 `f0628674…`；启动健康检查通过。
+- **三账号后端矩阵 25/25**：
+  - `deng_test_x3`（零页集）：连接目录空、读/写/DevTools 全 403；
+  - `deng_test_x1`（飞书委托 VIEWER）：PROD 读 200，文档/脚本/DevTools/ILM 策略写全 403；
+    QA 建索引、文档增删读、mustache 脚本增删、DevTools 数据面、painless 执行、
+    `ilm/start`（集群设置写键第二通道）全放行；DevTools 管理面写仍 403；
+  - `deng_test_x2`（ADMIN）：PROD `_cat/indices`、`_nodes` raw 读放行。
+- **前端所见即所得（浏览器 iframe 实测）**：x3 只出「无可访问页面」+ 页面 key/身份/目标/拒绝原因/
+  复制申请信息；x1 在 PROD 的 DevTools 显示「当前身份只读：执行需要 ADMIN，或该连接的
+  DevTools/REST 写权限」，执行钮不出现；切到 QA 后执行钮出现并提示「当前为数据面写权限…」；
+  PROD 搜索模板页隐藏保存/删除并给出只读原因；x2 菜单完整、PROD DevTools 执行钮可用。
+- **清理**：探针索引/脚本/组件模板均已删除；本地开发后端与 SSH 隧道已恢复。
+
+### 兼容性
+
+- 无新增必填配置、页面契约零变更（quotehub 菜单派生与既有授权无需迁移）；
+  `ConsoleAuthDelegate` 只新增 default 方法（`hasCredential`/`tokenOf`），自定义实现不受影响。
+  控制器内部方法为接收 `HttpServletRequest` 调整了签名（非宿主 SPI）；`EsClusterConnController.syncStatus()`
+  保留无参直调重载。quotehub 的 `manager→OPERATOR` 仍可通过自动授予的 `w:cluster-settings`
+  执行集群级动作。
+
+### 门禁
+
+- 后端：**1507 例 0 失败 0 错误 / 2 跳过**（新增 1007：`RawScope1007Test` 4 /
+  `InternalEsIndexRebuildScope1007Test` 3 / `AuthSwitchHardening1007Test` 5 /
+  `PitOwnership1007Test` 3 / 跨集群作业归属 2；1002~1006 既有锚全部保留；
+  `BuiltinConsoleAuthRevocation990Test` 的「新建 epoch=1」按随机纪元反转；
+  `InternalEsIndexRebuildControlReadScope979Test` 补页面可见性所需的 header 桩）；
+  前端 `vue-tsc` 0 错；全量 **1102 文件 / 9534 例全绿**（含 1007 新增
+  `identitySwitch1007` 11 例与权限/DevTools/REST/审计相关 spec 全绿）；
+  `perm:scan` 0 不一致（共享写 23 / 共享读 41 / 页契约 52 / 扫描 298 文件 /
+  集群级动作 6；3 条 cluster-scope 端点无页面前缀为刻意设计，靠关键词+共享表裁决）
+
 ## [1.0.56]
 
 ### 修复

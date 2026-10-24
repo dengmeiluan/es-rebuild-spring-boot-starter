@@ -837,6 +837,15 @@ pre.json-view { margin: 0; font: var(--fs-sm)/1.6 var(--mono); white-space: pre-
 .lr-bar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--sp-2); row-gap: var(--sp-2); }
 .lr-bar-l { display: flex; min-width: 0; align-items: center; gap: var(--sp-2); }
 .lr-bar-r { display: flex; flex-shrink: 0; align-items: center; gap: var(--sp-2); }
+/* 1034：页级工具行冻结（冻结首行全站推广——1023 qh-top/1027 ih-hd 同语义收口单源）。
+   挂 freeze 的页级工具行长页滚动时恒悬可视区顶：检索参数/执行/过滤永远可达。
+   负边距拉满 .page 内容宽（上/侧同 App .page padding sp-4/sp-5），实底防内容缝隙滚过；
+   z-index 20 压内容让位弹层（float-pop 层级更高，1023 同款）。
+   高度链页（.dq-fill 等）无页面滚动时 sticky 惰性=零开销。 */
+.lr-bar.freeze { position: sticky; top: 0; z-index: 20;
+  margin: calc(-1 * var(--sp-4)) calc(-1 * var(--sp-5)) var(--sp-2);
+  padding: var(--sp-4) var(--sp-5) var(--sp-2);
+  background: var(--bg0); }
 
 /* ── ES 字段类型色卡(高亮区分: mapping 字段类型一眼可辨) ──
    文本=蓝 关键词=紫 整数=青 浮点=黄 日期=橙 布尔=粉 对象=灰 IP=紫红 地理=绿 */

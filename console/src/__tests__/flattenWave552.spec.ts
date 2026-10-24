@@ -71,7 +71,8 @@ describe('五百五十二批②：三视图 -bar card 壳退役（裸 lr-bar 行
     for (const [f, bar, pad] of bars) {
       const s = read('../views/' + f);
       expect(s, `${f} 的 -bar card 卡壳退役`).not.toMatch(/class="[a-z-]*-bar card lr-bar"/);
-      expect(s, `${f} 裸行锚保留（lrBarSingleTrack 骨架单轨 CONSUMERS 在册）`).toContain(`class="${bar} lr-bar"`);
+      /* 1034 冻结首行推广：工具条挂 freeze 修饰类（锚改前缀形态随批迁移） */
+      expect(s, `${f} 裸行锚保留（lrBarSingleTrack 骨架单轨 CONSUMERS 在册）`).toContain(`class="${bar} lr-bar freeze"`);
       expect(s, `${f} border-bottom 分界在场（padding 沿用原竖距档 ${pad}）`)
         .toContain(`.${bar} { padding: ${pad} 0; border-bottom: 1px solid var(--line); }`);
     }

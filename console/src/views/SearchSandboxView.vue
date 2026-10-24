@@ -4,7 +4,7 @@
     <div class="pg-progress ind-bar" :class="{ on: running }"></div>
     <PageHeader :icon="FlaskConical" title="DSL 搜索沙盒" subtitle="全集群试错：explain/profile/相关性调试" />
     <!-- 顶栏。：card 壳退役（约定③）——裸 lr-bar 行直贴页面流，border-bottom 分界 -->
-    <div class="ss-bar lr-bar">
+    <div class="ss-bar lr-bar freeze">
       <div class="ss-bar-l lr-bar-l">
         <!-- 裸 n-select 换统一选择器；反转：页内可写选择器退役换
  只读 CurrentIdxChip——「选索引」唯一可写入口收敛顶栏（架构裁决）。

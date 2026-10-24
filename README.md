@@ -29,7 +29,7 @@ Elasticsearch 的索引 mapping/分词/配置**不可原地修改**——改一�
 - **零停机重建**：别名写索引原子翻转 + 服务端 `_reindex`，观察期双写过渡，旧索引安全下线
 - **删除复活补偿**：重建窗口内被删除的文档在回填后自动再次删除，不留幽灵数据
 - **作业可追踪**：状态机落库（JDBC 存储），进程重启可恢复，历史可审计
-- **开箱即用的运维控制台**：内置 60+ 页 ES 运维控制台（重建向导/数据浏览/查询工作台/
+- **开箱即用的运维控制台**：内置 50+ 页 ES 运维控制台（重建向导/数据浏览/查询工作台/
   集群治理/权限审计/实时监控），静态资源随 jar 分发，零前端构建接入
 - **多集群**：连接目录 + SPI 托管，控制台可纳管多个 ES 集群
 - **ES 栈契约校验**：启动期比对类型签名（不比版本号），ES 栈错配拒绝启动并给出可操作报文
@@ -42,7 +42,7 @@ Elasticsearch 的索引 mapping/分词/配置**不可原地修改**——改一�
 ### 独立部署（standalone，Kibana 式）
 
 ```bash
-java -jar es-rebuild-standalone-1.0.57.jar
+java -jar es-rebuild-standalone-1.0.58.jar
 ```
 
 内置 web 服务器（默认端口 `5601`）与 ES 客户端栈，不依赖任何宿主应用。启动后打开
@@ -63,7 +63,7 @@ java -jar es-rebuild-standalone-1.0.57.jar
 <dependency>
     <groupId>io.github.dengmeiluan</groupId>
     <artifactId>es-rebuild-spring-boot-starter</artifactId>
-    <version>1.0.57</version>
+    <version>1.0.58</version>
 </dependency>
 ```
 
@@ -164,6 +164,10 @@ es:
 - **数据浏览器**：文档 CRUD、列统计、多格式导出
 - **集群治理**：索引/别名/mapping/ILM/快照/任务树/设置漂移检测/健康报告
 - **权限审计**：控制台操作审计（类型化 12 列）+ SPI 接入宿主账号体系
+- **页面级授权**：宿主按「连接 × 页面 × 读/写」下发 `grantedPages`（`conn:{id}:{page}` /
+  `conn:{id}:w:{page}`），前后端同源裁决——菜单、按钮、端点三层一致；未登记的写端点默认拒绝，
+  集群级动作（ILM 启停/全集群 reroute）另需 rank3 或 `w:cluster-settings`。判定顺序与共享端点
+  归属表见[配置参考](docs/integration/configuration-reference.md#页面级授权esrebuildconsolepage-authenabled)
 - **实时监控**：节点 KPI/告警/慢请求/Top 索引，多集群视角
 
 ### 控制台一览
