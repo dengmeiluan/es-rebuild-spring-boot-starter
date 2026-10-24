@@ -38,10 +38,16 @@
         <span style="flex:1"></span>
         <button class="btn sm ghost" title="在此分区加条件" @click="addClause(o)"><Plus :size="11" /> 条件</button>
         <button class="btn sm ghost" title="在此分区加嵌套子组" @click="addGroup(o)"><Group :size="11" /> 子组</button>
+        <!-- 1036：粘贴子树（跨查询剪贴暂存，parseQueryNode 重建全新 id） -->
+        <button v-if="stashNonEmpty" class="btn sm ghost" title="粘贴子树（上次「复制子树」的条件，含嵌套）"
+                @click="pasteStash(o)"><ClipboardPaste :size="11" /> 粘贴</button>
         <!-- 985：高级算子菜单——multi_match/geo 系/ids/script/复合容器等非常用算子的插入入口
              （ClauseNode 下拉只能切换已有条件的算子，这里是「新建即高级」通道） -->
         <button class="btn sm ghost" :aria-expanded="advOpen === o" title="高级算子（多字段全文/地理/脚本/复合容器…）"
                 @click.stop="toggleAdv(o, $event)"><Layers :size="11" /> 高级</button>
+        <!-- 1036：复制组子树（含嵌套分区，跨查询剪贴） -->
+        <button v-if="o === shownOccur[0]" class="btn sm ghost" title="复制组子树（含嵌套分区，可粘贴到任意条件组）"
+                aria-label="复制组子树（跨查询粘贴用）" @click="copyGroup"><ClipboardCopy :size="11" /> 复制组</button>
         <button v-if="pinned.includes(o) && !childrenOf(o).length" aria-label="收起此空分区" class="btn sm ghost"
                 title="收起此空分区" @click="unpin(o)">
 <X :size="11" />
@@ -100,7 +106,8 @@ export const BGN_COLLAPSE_EVENT = 'qtp-collapse-all';
  不可变更新：remove/wrap/dissolve 经 queryAst 树操作函数；add/replace 本地展开新 children
  （insertChild 会标 arrForm 改变序列化形态，追加语义下不可用）。一切变更 emit 新对象。 */
 import { ref, computed, watch, inject, onMounted, onBeforeUnmount, nextTick } from 'vue';
-import { X, Group, Ungroup, Plus, SlidersHorizontal, ChevronDown, ChevronRight, Copy, Layers } from 'lucide-vue-next';
+import { X, Group, Ungroup, Plus, SlidersHorizontal, ChevronDown, ChevronRight, Copy, Layers, ClipboardPaste, ClipboardCopy } from 'lucide-vue-next';
+import { subtreeStash, readStashSubtree, copySubtreeToStash } from '../../utils/queryStash';
 import GenericParams from './GenericParams.vue';
 import NodeRenderer from './NodeRenderer.vue';
 import { TREE_BUS, DRAG_KEY, DRAG_EVENT, fireDrag } from './treeBus';
@@ -156,6 +163,21 @@ function defaultLeaf(): LeafNode {
 }
 function addClause(o: Occur) {
   emit('update:node', { ...props.node, children: [...props.node.children, { occur: o, node: defaultLeaf() }] });
+}
+
+/* ═══ 1036：粘贴子树（跨查询剪贴）═══
+   stash 非空=钮显隐；粘贴=parseQueryNode 重建（全新 id 零纠缠）追加到本分区尾部；
+   暂存损坏（非法 JSON）静默降级为无动作（readStashSubtree 返 null） */
+const stashNonEmpty = computed(() => !!subtreeStash.value);
+function pasteStash(o: Occur) {
+  const parsed = readStashSubtree();
+  if (!parsed) return;
+  emit('update:node', { ...props.node, children: [...props.node.children, { occur: o, node: parsed }] });
+}
+/* 1036：组级复制——整棵 bool 子树（含嵌套分区）入跨查询剪贴；
+   只在首个展示分区挂一次（v-if o===shownOccur[0]），语义=复制整个组 */
+function copyGroup() {
+  copySubtreeToStash(props.node);
 }
 
 /* ═══ 985：高级算子菜单 ═══

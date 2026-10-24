@@ -79,6 +79,8 @@
       <div class="qtp-funnel-t2">加一个条件开始缩小范围，或在右侧直接编写 DSL</div>
       <div class="qtp-funnel-act">
         <button class="btn pri sm" @click="addFirst"><Plus :size="12" /> 加条件</button>
+        <!-- 1036：空态粘贴——跨查询剪贴的子树直接落为条件组（bool.must 数组形态） -->
+        <button v-if="stashNonEmpty" class="btn sm" @click="pasteFirst"><ClipboardPaste :size="12" /> 粘贴子树</button>
       </div>
     </div>
 
@@ -110,7 +112,8 @@
  index prop：写入 fieldSearch 的当前索引上下文（per-index 最近字段记忆供 defaultLeaf 与
  子树深处的 FieldSelect 读取——NodeRenderer 之下逐层透传 prop 不现实）。 */
 import { computed, watch, watchEffect, provide, ref, nextTick, onBeforeUnmount } from 'vue';
-import { Plus, ChevronsDown, ChevronsUp, Pause, Play, Undo2, Redo2 } from 'lucide-vue-next';
+import { Plus, ChevronsDown, ChevronsUp, Pause, Play, Undo2, Redo2, ClipboardPaste } from 'lucide-vue-next';
+import { subtreeStash, readStashSubtree } from '../../utils/queryStash';
 import SearchFilterBar from '../SearchFilterBar.vue';
 import BoolGroupNode, { BGN_COLLAPSE_EVENT } from './BoolGroupNode.vue';
 import NodeRenderer from './NodeRenderer.vue';
@@ -433,6 +436,18 @@ function addFirst() {
     children: [{ occur: 'must', node: defaultLeaf() }], params: {}, arrForm: { must: true },
   };
   setRoot(g);
+}
+
+/* 1036：空态粘贴子树——跨查询剪贴落为 bool.must 条件组（parseQueryNode 重建全新 id）；
+   暂存空/损坏按钮不显形（stashNonEmpty），点击时损坏静默降级 */
+const stashNonEmpty = computed(() => !!subtreeStash.value);
+function pasteFirst() {
+  const parsed = readStashSubtree();
+  if (!parsed) return;
+  setRoot({
+    id: nid(), type: 'bool',
+    children: [{ occur: 'must', node: parsed }], params: {}, arrForm: { must: true },
+  });
 }
 function addSibling() {
   const r = props.tree.root;

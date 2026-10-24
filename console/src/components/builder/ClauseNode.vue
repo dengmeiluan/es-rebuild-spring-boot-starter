@@ -187,6 +187,8 @@
         <Settings2 :size="12" />
       </button>
       <button aria-label="复制条件" class="btn sm ghost cn-act" title="复制条件（插到本条件之后）" @click="$emit('duplicate', node.id)"><Copy :size="12" /></button>
+      <!-- 1036：复制子树入跨查询剪贴（含嵌套，任意条件组可粘贴） -->
+      <button aria-label="复制子树（跨查询粘贴用）" class="btn sm ghost cn-act" title="复制子树（含嵌套，可粘贴到任意条件组）" @click="onCopySubtree"><ClipboardCopy :size="12" /></button>
       <button aria-label="包成 bool 组" class="btn sm ghost cn-act" title="包成 bool 组" @click="$emit('wrap')"><Group :size="12" /></button>
       <button aria-label="删除" class="btn sm ghost cn-act danger" title="删除" @click="$emit('remove')"><X :size="12" /></button>
     </span>
@@ -202,7 +204,8 @@
 /* W1：富表单条件行。不可变更新：所有变更 emit 新 LeafNode，由父级替换——
  同步引擎依赖引用变化触发序列化。 */
 import { ref, computed, inject, onBeforeUnmount, watch } from 'vue';
-import { Clock, X, Settings2, Group, Circle, CircleSlash, Copy } from 'lucide-vue-next';
+import { Clock, X, Settings2, Group, Circle, CircleSlash, Copy, ClipboardCopy } from 'lucide-vue-next';
+import { copySubtreeToStash } from '../../utils/queryStash';
 import FieldSelect from './FieldSelect.vue';
 import GenericParams from './GenericParams.vue';
 import IntervalsEditor from './IntervalsEditor.vue';
@@ -327,6 +330,11 @@ function showNudge(msg: string) {
   clearTimeout(nudgeT1); clearTimeout(nudgeT2);
   nudgeT1 = setTimeout(() => { nudgeOut.value = true; }, 2500);
   nudgeT2 = setTimeout(() => { nudge.value = ''; }, 3000);
+}
+/* 1036：复制子树入跨查询剪贴（sessionStorage 暂存，刷新后仍在） */
+function onCopySubtree() {
+  copySubtreeToStash(props.node);
+  showNudge('已复制子树——任意条件组可粘贴');
 }
 onBeforeUnmount(() => { clearTimeout(nudgeT1); clearTimeout(nudgeT2); });
 
