@@ -38,6 +38,12 @@
 - **控制器主动拒绝的状态码不再被兜底拉平成 500**：`ResponseStatusException`（PIT/SQL cursor
   归属、作业归属等）现保留其 403 等业务状态码，错误体只回 reason 文案（此前前端会把
   「无权限」误判为服务端故障并重试）
+- **方法/媒体类型不匹配还原为 405/415（1048）**：Spring 找不到匹配 handler 时拦截器不执行，
+  宿主全局包装会把 405 变成 HTTP 200 + `code:500`。新增仅作用于 `/internal/es/**` 的
+  `InternalEsMethodNotAllowedResolver`：405 带 `Allow`，415 带明确文案；没有 handler
+  即没有业务动作执行，授权边界不变
+- **DevTools/REST 通配目标前置提示（1048）**：通配/日期数学/跨集群目标由后端解析真实索引，
+  前端不预拒合法 `logs-*`，但在执行钮 tooltip 提前说明「命中控制面会被拒绝」
 - **管理面只读元数据补拒绝**：`_logstash` / `_connector` / `_synonyms` / `_query_rules` /
   `_autoscaling` / `_searchable_snapshots` 可带出管道凭据、连接器密钥与容量信息，
   非 ADMIN raw 与 DevTools 前端镜像同步拒绝
@@ -64,6 +70,12 @@
 - 新增 `RawPitOwnership1046Test`、`SearchTemplateGuard1046Test`、`SharedReadGrant1046Test`、
   `SqlCursorOwnership1046Test`、`DelegatedBuiltinToken1046Test`、`permissionDrift1046.spec`；
   `ConsoleAuthInterceptorPageAuthTest` 增宿主隐藏三例；DevTools 金标准增 14 条向量并同步前端断言
+- 1048：`InternalEsMethodNotAllowedResolverTest`（405+Allow/非控制台不拦/415）、
+  `pageRouteMatrix1048.spec`（零授权 52 路由全 forbidden、全读授权 52 路由全可达）、
+  `ConsolePermissionsEndpoint888Test` 增 52 页只读矩阵（read 全 true / write 全 false）
+- 产线机械扫描：56 个写端点，x3 与 x1-PROD 均 **54×403 + 2×405**（方法不匹配语义化），
+  0 意外；逐页矩阵 x3 **0读/0写**、x1-PROD **52读/0写**、x1-QA **52读/23写**、
+  x2-PROD **52读/30写**；SQL cursor 跨身份 x1 403、x2 续页/关闭 200
 - 权限一致性扫描：共享写 23 / 共享读 41 / 页 52 / 299 文件，0 不一致；`vue-tsc` 0 错
 
 ### 真实产线验证（QuoteHub，2026-10-24）
@@ -71,6 +83,8 @@
 - starter 1.0.58 干净 worktree 构建（排除并行 lane WIP）→ 本机 Maven 安装 → QuoteHub
   `release.py --mode deploy --target backend` 上线，`Started QuoteHubAdminApplication` 健康；
   收尾轮 `--target all`（后端 + 宿主前端）发版 **20261024182511** 验证通过。
+- 1048 收尾轮 `--target all` 发版 **20261024183959**：405/415、通配提示随 console bundle 上线；
+  56 写端点/52 页矩阵/SQL cursor 复验通过。
 - 宿主侧：`LinkMenuProvisioner` 默认授权改为仅新连接首次注册时补授（撤销跨重启持久），
   iframe `postMessage` 改同源 targetOrigin 并校验 `e.origin`（防 iframe 被导航到跨源页后 JWT 外泄）。
 - 收尾复核：非 ADMIN 的 `_logstash/_connector/_synonyms/_query_rules/_autoscaling/
