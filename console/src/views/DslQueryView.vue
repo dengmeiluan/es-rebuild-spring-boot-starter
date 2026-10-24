@@ -32,6 +32,10 @@
           <button class="btn sm" @click="tplOpen = true" title="查询模板"><LayoutTemplate :size="13" /> 模板</button>
           <button class="btn sm" @click="varsOpen = true" title="变量 ${var}"><Variable :size="13" /> 变量</button>
           <button class="btn sm" @click="histOpen = true" title="查询历史"><History :size="13" /> 历史</button>
+          <!-- 1057：只校验不执行——_validate/query 按当前索引 mapping 验 query（不返回文档、不算聚合/排序） -->
+          <button class="btn sm ghost" :disabled="validating || running" aria-label="校验 query（不执行）"
+                  :title="'校验 query：调用 _validate/query（不取文档、不执行检索）；仅校验 query 子句，不校验聚合/排序/高亮'"
+                  @click="validateDsl"><ShieldCheck :size="13" /> 校验</button>
           <button class="btn sm" @click="saveQuery" title="保存当前搜索（DSL+表格布局，Ctrl+S）"><Save :size="13" /> 保存</button>
           <!-- 在 DevTools 打开（_prefill 会话契约与 Snapshots/Ilm 同通道）——
  当前索引+DSL 组装 POST /{index}/_search 带到多标签控制台微调 -->
@@ -234,6 +238,12 @@
  参数展开区仍在执行行下方独立块。
  无框档被用户终审「太廉价」修订→细描边胶囊+激活柔底（样式见 scoped）。
  收起态摘要串（条件数+顶层已设参数速览，展开态不显示——面板本体即摘要） -->
+        <!-- 1045：构建区收起时仍可见的未填值提示——执行前先修半成品条件，避免「有值但查空」 -->
+        <button v-if="unfilledCondCount" type="button" class="btn sm ghost dq-unfilled"
+          :title="'有 ' + unfilledCondCount + ' 个条件未填值（空值条件会参与查询）；点击展开构建器并定位第一个'"
+          @click="focusUnfilled">
+          <CircleAlert :size="13" /> {{ unfilledCondCount }} 个条件未填值
+        </button>
         <button type="button" class="dq-params-tg" :class="{ on: paramsOpen }" :aria-expanded="paramsOpen"
           title="检索条件快速填充：分页 / 排序 / 字段裁剪 / 高亮 / 聚合 / 其他顶层键"
           @click="paramsOpen = !paramsOpen">
@@ -278,6 +288,13 @@
         <span v-for="(f, i) in lintUnplaced" :key="i" class="dq-lint-item">
           {{ f.message }}（{{ f.suggestion }}）
         </span>
+      </div>
+      <!-- 1057：query 校验结果条（只报 _validate 结论，不冒充执行成功） -->
+      <div v-if="validateState" class="lint-bar dq-vbar" :class="{ 'lint-bar-warn': !validateState.ok }" role="status">
+        <ShieldCheck :size="12" :class="{ 'dq-vbar-ic-ok': validateState.ok }" />
+        <span class="dq-vbar-t">{{ validateState.text }}</span>
+        <code class="dq-vbar-i mono">{{ validateState.idx }}</code>
+        <button type="button" class="btn xs ghost" aria-label="关闭校验结果" title="关闭校验结果" @click="validateState = null"><X :size="11" /></button>
       </div>
 
       <!-- 直方图 / Terms 聚合并入结果卡内分区（独立 .card 卡墙退役） -->
@@ -641,7 +658,7 @@ import {
   FilePlus2, CopyPlus, Wand2, GitCompareArrows, ListTree, Clock, ExternalLink,
   ArrowLeftRight,
   AlertTriangle, FileSearch,
-  TerminalSquare, Terminal, PanelBottomClose, PanelBottomOpen, } from 'lucide-vue-next';
+  TerminalSquare, Terminal, PanelBottomClose, PanelBottomOpen, CircleAlert, ShieldCheck, } from 'lucide-vue-next';
 import MonacoEditor from '../components/MonacoEditor.vue';
 import ResultTable from '../components/ResultTable.vue';
 import JsonTree from '../components/JsonTree.vue';
@@ -696,7 +713,7 @@ import WorkbenchLayout from '../components/WorkbenchLayout.vue';
 import SplitHandle from '../components/SplitHandle.vue';
 import FieldPicker from '../components/FieldPicker.vue';
 import { useTreeDslSync } from '../composables/useTreeDslSync';
-import { serializeTree } from '../utils/queryAst';
+import { serializeTree, countUnfilledLeaves } from '../utils/queryAst';
 import { queryNodeSpans, compactOffsetToPos, nodeAtOffset } from '../utils/queryLocate';
 /* 文档弹窗两处 Monaco 定高接档循环统一件（adhoc.piH/ih.settingsH·mapH 同范式） */
 import { useTierCycle } from '../composables/useTierCycle';
@@ -740,6 +757,36 @@ if (!dslDraft.restored.value && store.pickedIdx) {
   if (legacy) dsl.value = legacy;
 }
 const running = ref(false);
+/* 1057：只校验不执行——_validate/query 按当前索引 mapping 验 query 子句；
+   validateState 随改稿/切索引自动清空，避免把旧结论留在新稿上。
+   诚实边界：不校验聚合/排序/高亮，也不代表真实执行一定成功。 */
+const validating = ref(false);
+const validateState = ref<{ ok: boolean; text: string; idx: string } | null>(null);
+watch(dsl, () => { validateState.value = null; });
+watch(() => store.pickedIdx, () => { validateState.value = null; });
+async function validateDsl() {
+  if (validating.value || running.value) return;
+  const idx = store.pickedIdx;
+  if (!idx) { store.notify('info', '先在顶栏选择索引，再校验 query'); return; }
+  const obj = tryParse(applyVars(stripJsonComments(dsl.value)));
+  if (!obj) { store.notify('error', 'DSL 不是合法 JSON（已剥离注释后校验）'); return; }
+  const q = (obj as Record<string, unknown>).query;
+  if (!q) { store.notify('info', 'DSL 没有 query 子句（纯 match_all / 聚合场景无需校验 query）'); return; }
+  validating.value = true;
+  try {
+    const r: any = await api.validateQuery(idx, JSON.stringify({ query: q }));
+    const failed = Number(r?._shards?.failed ?? 0);
+    const ok = r?.valid !== false && failed === 0;
+    const text = ok ? 'query 校验通过（未执行检索）'
+      : failed ? `query 校验失败：${failed} 个分片报错` : 'query 校验失败';
+    validateState.value = { ok, text, idx };
+    store.notify(ok ? 'success' : 'warning', text);
+  } catch (e: any) {
+    const msg = friendlyEsError(String(e?.message ?? e));
+    validateState.value = { ok: false, text: msg, idx };
+    store.notify('error', '校验失败：' + msg);
+  } finally { validating.value = false; }
+}
 /* ═══ P1-4：结果自动刷新（dbx auto-refresh 对位）═══
  档位 关/10s/30s/60s（usePref 记忆，不默认开——产线查询默认自动刷新是事故源）；
  重放走 execQuery(false)：不入查询历史（防 30s 一条刷爆历史面板）；
@@ -908,7 +955,18 @@ const { tree: queryTree, stale: treeStale, onTreeUpdate, resyncNow } = useTreeDs
    编辑共用同一条撤销流（Ctrl+Z 跨域逐级回退）。此前 extras 写绕开 setRoot 且被
    lastEmitted 甄别当成外部换树=清栈，任何参数编辑都会抹掉全部撤销历史。
    条件树面板恒显示=通道恒在场；兜底直写仅供理论缺席态。 */
-const treePaneRef = ref<{ commitTree: (t: typeof queryTree.value) => void; highlightFromDsl?: (id: string) => void } | null>(null);
+const treePaneRef = ref<{
+  commitTree: (t: typeof queryTree.value) => void;
+  highlightFromDsl?: (id: string) => void;
+  unfilledCount?: () => number;
+  locateFirstUnfilled?: () => void;
+} | null>(null);
+/* 1045：未填值条件读数——直接算树（树不可变更新→computed 自动重算）；构建器收起也可见 */
+const unfilledCondCount = computed(() => countUnfilledLeaves(queryTree.value.root));
+function focusUnfilled() {
+  buildCollapsed.value = false;
+  nextTick(() => treePaneRef.value?.locateFirstUnfilled?.());
+}
 function onExtrasUpdate(t: typeof queryTree.value) {
   if (treePaneRef.value) treePaneRef.value.commitTree(t);
   else onTreeUpdate(t);
@@ -2606,7 +2664,12 @@ onBeforeUnmount(() => {
  +工具条两排 ≈ 350px），硬编码预留屡次失真——改为只减全局 vh-offset，本页 chrome 全部
  进 flex 收缩链（工具条/场景/执行行 flex-shrink:0，dq-main 可收缩 0 1，dq-result
  min-height 320 保底），高度分配由 flex 实时求解，不再手算预算。 */
-.dq.dq-fill { height: calc(100vh - var(--vh-offset)); }
+.dq.dq-fill { height: 100%; overflow-y: auto; }
+/* 1035：高度改精确占满 .page 内容盒（height:100% 取代 100vh-vh-offset 硬预算）——
+   嵌入壳 iframe 高度调整（-48px）后硬预算比可视区高出一截：内容溢出→.page 滚动→
+   冻结工具行悬浮盖住构建树首行（遮挡实报）+底部执行行被裁。
+   现 .dq 自成滚动容器：内部最小高不敷时在工具行以下滚动，冻结工具行（.freeze
+   sticky 于本容器顶）恒悬不遮挡，.page 与顶栏永不动。 */
 .dq-progress { position: absolute; top: calc(-1 * var(--sp-4)); left: calc(-1 * var(--sp-5)); right: calc(-1 * var(--sp-5)); color: var(--ac); }
 /* 三行合一后强单行——lr-bar 的 wrap 在按钮总量增大后会把工具行折两行（真机 98px 实测）；
  nowrap+子段不收缩保单行，窄屏溢出由按钮 ghost 化/图标化自然让位（不再回退双行形态） */
@@ -2709,6 +2772,9 @@ onBeforeUnmount(() => {
  （用户截图「直方图」三字竖排堆叠）；执行钮锁宽优先保完整。 */
 .dq-run-row { flex-wrap: wrap; row-gap: var(--sp-2); }
 .dq-run-row .dq-sw, .dq-run-row .dq-ar, .dq-run-row > .btn { white-space: nowrap; flex-shrink: 0; }
+/* 1045：未填值条件提示（warn 语义，弱于执行主钮；仅存在半成品条件时出现） */
+.dq-unfilled { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); }
+.dq-unfilled:hover { background: var(--warn-soft); color: var(--warn); }
 .dq-sw { display: flex; align-items: center; gap: 5px; font-size: var(--fs-sm); color: var(--tx1); cursor: pointer; user-select: none; }
 /* .dq-ar 本地定高规则随 AutoRefreshSelect 改用退役（含其上一行「」
  注释的落点——形态由统一件 .arf-sel 承担；run-row 收缩语义保留，dq-ar 类仍在模板上） */
@@ -2868,6 +2934,13 @@ onBeforeUnmount(() => {
 .nd-lb { font-size: var(--fs-sm); color: var(--tx1); flex-shrink: 0; }
 .nd-tip { margin-top: var(--sp-2); font-size: var(--fs-xs); color: var(--tx2); }
 .nd-bad { color: var(--err); }
+
+/* 1057：query 校验结果条（成功只给图标着色；宽度铺满，避免父级 flex 居中收窄） */
+.dq-vbar { flex-direction: row; align-items: center; flex-wrap: wrap; gap: var(--sp-2); width: 100%; box-sizing: border-box; }
+.dq-vbar:not(.lint-bar-warn) { background: var(--bg2); border: 1px solid var(--line); color: var(--tx1); }
+.dq-vbar-t { flex: 1; min-width: 0; }
+.dq-vbar-i { font-size: var(--fs-2xs); color: var(--muted); }
+.dq-vbar-ic-ok { color: var(--ok); }
 
 /* 900 紧凑微调档（ 口径；q 遗留补齐，W-D）——本页分栏/高度链已由
  WorkbenchLayout 宽度驱动 stacked 机制与 P0 定高链接管（1100 档只留条件树限高，
