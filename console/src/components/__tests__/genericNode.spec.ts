@@ -26,7 +26,7 @@ describe('GenericNode（零降级通用结构化节点）', () => {
     document.body.appendChild(host);
     const node = ref(mk());
     createApp({ render: () => h(GenericNode, { node: node.value, 'onUpdate:node': (n: LeafNode) => { node.value = n; } }) }).mount(host);
-    const inp = host.querySelector('input[data-path="script.source"]') as HTMLInputElement;
+    const inp = host.querySelector('textarea[data-path="script.source"]') as HTMLTextAreaElement;
     expect(inp).not.toBeNull();
     inp.value = 'return 2;';
     inp.dispatchEvent(new Event('input'));

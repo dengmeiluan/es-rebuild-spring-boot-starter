@@ -24,6 +24,10 @@
                    :model-value="String(row.val)" :fields="fields" :types="types" :type-priority="typePriority"
                    @update:model-value="setChild(row.key, $event)" />
       <input v-else-if="row.kind === 'boolean'" type="checkbox" :checked="!!row.val" @change="setChild(row.key, ($event.target as HTMLInputElement).checked)" />
+      <textarea v-else-if="row.key === 'source'" class="inp gp-v mono gp-src" rows="3" spellcheck="false"
+                :data-path="pathPrefix + row.key"
+                :value="row.raw"
+                @input="onScalar(row.key, ($event.target as HTMLTextAreaElement).value, row.kind)" />
       <input v-else class="inp gp-v mono" :class="{ warn: row.kind === 'numstr' }"
              :data-path="pathPrefix + row.key"
              :value="row.raw" :title="row.kind === 'numstr' ? '非数字，将作为字符串提交' : ''"
@@ -156,6 +160,11 @@ function toggle(k: string) {
 .gp-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin: var(--sp-1) 0 var(--sp-1) calc(var(--d, 0) * 10px); }
 .gp-k { width: 110px; height: 28px; font-size: var(--fs-sm); padding: var(--sp-0) var(--sp-2); }
 .gp-v { height: 28px; font-size: var(--fs-sm); padding: var(--sp-0) var(--sp-2); flex: 1 1 100px; min-width: 0; }
+/* 1038：source 键（Painless/脚本体）多行编辑——textarea 覆盖 gp-v 的高度/内边距，
+   行顶对齐（键名行内基线不复用居中） */
+.gp-row:has(.gp-src) { align-items: flex-start; }
+.gp-src { height: auto; min-height: 64px; resize: vertical; line-height: 1.5; padding: var(--sp-1) var(--sp-2); }
+.gp-row:has(.gp-src) .gp-k { margin-top: 2px; }
 .gp-v.warn { border-color: var(--warn); }
 .gp-sub { flex-basis: 100%; }
 /* 字段键行内的 FieldSelect 对齐 .gp-v 的 flex 形态（吃满剩余宽度、高度同键值行） */
