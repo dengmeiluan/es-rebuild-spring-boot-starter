@@ -317,6 +317,13 @@ export const ADV_MENU: Array<{ group: string; ops: string[] }> = [
    _name 落 node.params 直通往返，AST 零改动。 */
 export const NAME_PARAM: ParamMeta = { key: '_name', kind: 'text' };
 
+/* 1040：bool 组具名参数 schema——minimum_should_match 支持数值与百分比两形态
+   （text 档不约束），boost 全组加权；配 1032 schema 键提示可发现性 */
+export const BOOL_PARAMS: ParamMeta[] = [
+  { key: 'minimum_should_match', kind: 'text' },
+  { key: 'boost', kind: 'number' },
+];
+
 export const AGG_OPS: Record<string, string> = {
   terms: 'Terms 分组', date_histogram: '日期直方图', histogram: '数值直方图',
   range: '范围分组', date_range: '日期范围', filters: '多过滤分组', filter: '单过滤',

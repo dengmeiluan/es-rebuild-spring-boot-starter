@@ -24,7 +24,8 @@
     </div>
     <template v-if="!collapsed">
     <div v-if="showParams" class="bgn-params">
-      <GenericParams :value="node.params" path-prefix="" @update="onParams" />
+      <!-- 1040：BOOL_PARAMS schema——minimum_should_match/boost 升具名建议与类型化控件 -->
+      <GenericParams :value="node.params" :schema="BOOL_PARAMS" path-prefix="" @update="onParams" />
     </div>
     <div
       v-for="o in shownOccur" :key="o"
@@ -113,7 +114,7 @@ import NodeRenderer from './NodeRenderer.vue';
 import { TREE_BUS, DRAG_KEY, DRAG_EVENT, fireDrag } from './treeBus';
 import { defaultLeafTarget, curFieldSearchIndex } from '../../utils/fieldSearch';
 import { useScopedDraft } from '../../composables/useScopedDraft';
-import { ADV_MENU, labelOfOp } from '../../utils/queryAstOps';
+import { ADV_MENU, labelOfOp, BOOL_PARAMS } from '../../utils/queryAstOps';
 import {
   OCCURS, nid, removeNodeById, wrapInBool, dissolveBool, makeNodeByOp,
   type BoolNode, type LeafNode, type QueryNode, type Occur,
