@@ -2742,6 +2742,13 @@ function onGlobalRunKey(e: KeyboardEvent) {
   runQuery();
 }
 
+/* 自动执行身份门（1008）：深链/carry/会话恢复/KeepAlive 回页都可能在宿主换 token
+   的窗口里触发——probe 未落地时 me=null，canEndpoint 会 fail-open，旧 target 的查询
+   会先发出去（只读也会 403 审计噪声，且结果可能串到新账号界面）。 */
+const autoRunAllowed = () => auth.probed && auth.me != null
+  && auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/query', store.target);
+const autoRun = () => { if (autoRunAllowed()) void runQuery(); };
+
 onMounted(() => {
   /* 分栏宽度防呆：localStorage 记忆的宽屏值在小窗会把编辑器推出视口，挂载时按容器实宽 clamp */
   resyncNow();
@@ -2757,7 +2764,7 @@ onMounted(() => {
     /* 20260920 直方图竞态根治：首查必须等 mapping 到位——runQuery 与 preloadMapping 并行时
  查询先发，guessDateField() 拿空列表 → __hist 不注入（产线「直方图又不生效」真凶，
  真机时序实锤 queryAt < inspectAt）。失败不阻塞查询（降级为不注入，与原行为一致） */
-    preloadMapping().then(() => runQuery()).catch(() => runQuery());
+    preloadMapping().then(autoRun).catch(autoRun);
     window.addEventListener('keydown', onKeySave);
     window.addEventListener('keydown', onGlobalRunKey);
     return;
@@ -2783,12 +2790,12 @@ onMounted(() => {
     if (sharedDsl || idx) {
       /* 还原后清理 URL，避免刷新再次覆盖编辑器（嵌入查询工作台，回写 /search 保 mode） */
       window.history.replaceState(null, '', location.pathname + location.search + '#/search?mode=dsl');
-      runQuery();
+      autoRun();
     }
     /* 查询现场会话恢复：无深链意图（?dsl=/carry）进站时，恢复本 target+索引最近一次执行的查询并自动重查——
  切页签/切菜单/刷新/宿主 iframe 重建回到本页，结果现场自动重现，不再回到空态 */
     if (!sharedDsl && carry == null && restoreQwSession()) {
-      runQuery();
+      autoRun();
     }
   };
   preloadMapping().then(firstRun).catch(firstRun);
@@ -2809,7 +2816,7 @@ onActivated(() => {
   let saved: string | null = null;
   try { saved = sessionStorage.getItem(qwSessionKey()); } catch { return; }
   if (saved != null && saved === dsl.value) {
-    runQuery();
+    autoRun();
   }
 });
 onDeactivated(() => {
@@ -3076,7 +3083,7 @@ onBeforeUnmount(() => {
  行高 28px×10+直方图分区+表格工具行都在此预算内；实报 320 档在构建器展开时被
  压缩到只剩 5 行没法读）。构建器收起态（默认）结果区吃满视口余量 ≈20+ 行，
  与索引工作台「结果表主导」同口径 */
-.dq-result { margin-top: var(--sp-2h); flex: 1 1 auto; min-height: 470px; display: flex; flex-direction: column; }
+.dq-result { margin-top: var(--sp-2h); flex: 1 1 auto; min-height: 505px; display: flex; flex-direction: column; }
 /* 视图段钮+分页器窄容器可换行（.dq-toolbar 的换行由 lr-bar 骨架自带，本条非骨架消费方自行补） */
 /* 结果区视图 seg 禁换行（实报「点击时表头布局变形」——seg 四钮被挤成
  两行的第一参差源；seg 自身 nowrap，工具行整体仍由 rt-bar 换行策略兜底） */
