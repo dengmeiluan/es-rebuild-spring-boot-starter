@@ -172,6 +172,21 @@ export const useAppStore = defineStore('app', () => {
       setTarget(first.id, first.name);
     }
   }
+  /* 1039：按视图记忆的「上次索引」是目标域产物（dsl/lucene/sandbox/sql/flame 各自
+     记住上一集群的索引名）——切集群不清零，视图预填旧集群索引名 = index_not_found
+     类（产线实报「切换集群连接的时候，索引选择信息没有置空」）。setTarget 与跨标签
+     同步两条路径统一走这里清。 */
+  const TARGET_INDEX_KEYS = [
+    'es-console.dsl.index', 'es-console.dsl.carry.index', 'es-console.lucene.index',
+    'es-console.sandbox.index', 'es-console.sql.prefill.index', 'es-console.flame.index',
+  ];
+  function clearTargetIndexMemory() {
+    /* sql.prefill.index 在 sessionStorage（SqlConsoleView 会话域），其余在 localStorage */
+    for (const storage of [localStorage, sessionStorage]) {
+      for (const k of TARGET_INDEX_KEYS) removeStoredRaw(storage, k);
+    }
+  }
+
   function setTarget(id: string, name: string) {
     target.value = id;
     targetName.value = id ? name : '';
@@ -180,6 +195,7 @@ export const useAppStore = defineStore('app', () => {
     pick(''); // 切集群后旧 picked 索引大概率不存在，清空避免误导
     recentIdx.value = []; // ：最近索引同理随集群失效，避免跨集群误导
     removeStoredRaw(localStorage, RECENT_KEY);
+    clearTargetIndexMemory();
     esVersion.value = ''; // 版本随目标失效，等 loadIndices 成功后重新识别
     loadIndices();
   }
@@ -500,6 +516,7 @@ export const useAppStore = defineStore('app', () => {
       pick('');
       recentIdx.value = [];
       removeStoredRaw(localStorage, RECENT_KEY);
+      clearTargetIndexMemory();
       esVersion.value = '';
       loadIndices();
     });
