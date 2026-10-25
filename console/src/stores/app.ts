@@ -54,8 +54,14 @@ export const useAppStore = defineStore('app', () => {
         clusterHealth.value = h?.status || '';
         clusterUnassigned.value = Number(h?.unassigned_shards || 0);
       }).catch(() => { clusterHealth.value = ''; });
-      if (pickedIdx.value && !indices.value.some(i => i.index === pickedIdx.value)) {
-        // 保留 picked（可能是别名），不强制清空
+      if (indices.value.length && pickedIdx.value && !indices.value.some(i => i.index === pickedIdx.value)) {
+        /* 1036：跨集群残留 picked 清空（产线实报「切换集群连接的时候，索引选择信息没有
+           置空」——带着 A 集群的索引名查 B 集群全是 index_not_found）。清单非空时不在
+           清单=当前集群不可查（别名也会在清单里），置空并提示；清单为空（加载失败）
+           不误清。 */
+        const gone = pickedIdx.value;
+        pick('');
+        notify('info', `索引「${gone}」不在当前集群，已清空选择——请在顶栏重新选索引`);
       }
       return true;
     } catch (e: any) {
