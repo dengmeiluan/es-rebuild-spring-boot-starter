@@ -105,7 +105,7 @@ describe('P0 高度链：WorkbenchLayout fillViewport + DslQueryView 自建链',
     expect(dqSrc).toMatch(/const DQ_MAIN_H: Record<EditorHKey, string> = \{/);
     expect(dqSrc).toMatch(/dqMainStyle = computed\(\(\) => \(\{ height: dqMainH\.value > 0 \? dqMainH\.value \+ 'px' : DQ_MAIN_H\[editorH\.value\] \}\)\)/);
     /* 1035：结果区保底升 420（用户裁决最小至少 10 行——320 档在构建器展开时被压到 5 行没法读） */
-    expect(dqSrc).toMatch(/\.dq-result \{ margin-top: (?:10px|var\(--sp-2h\)); flex: 1 1 auto; min-height: 420px; display: flex; flex-direction: column; \}/);
+    expect(dqSrc).toMatch(/\.dq-result \{ margin-top: (?:10px|var\(--sp-2h\)); flex: 1 1 auto; min-height: 470px; display: flex; flex-direction: column; \}/);
     /* res-body 转确定高容器，各视图分支自滚；cap 兜底保留。
        五百五十七批同步更新（击穿者：557 轨2 刀——.dq-res-body padding 退役）：正则去 padding 段，
        --dq-view-cap: 56vh 与 flex 链逐字保留（workbenchParity402 cap 锚零触免同步更新） */
