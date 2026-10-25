@@ -63,6 +63,16 @@ export const useAppStore = defineStore('app', () => {
         pick('');
         notify('info', `索引「${gone}」不在当前集群，已清空选择——请在顶栏重新选索引`);
       }
+      /* 1039 续：目标未变（不触发 setTarget）但视图级「上次索引」记忆已跨集群失效的
+         启动场景——按同一清单校验逐键清理（通配符模式保留；加载失败不误清）。 */
+      if (indices.value.length) {
+        for (const k of TARGET_INDEX_KEYS) {
+          const v = localStorage.getItem(k);
+          if (v && !v.includes('*') && !indices.value.some(i => i.index === v)) {
+            removeStoredRaw(localStorage, k);
+          }
+        }
+      }
       return true;
     } catch (e: any) {
       if (seq !== indicesSeq) return false; // 旧拍失败同样丢弃：不得改写新拍成功面

@@ -4,13 +4,13 @@
 
 ## 1. 引入依赖
 
-当前版本是 `1.0.65`。starter 的 ES 栈是 `provided`，宿主必须同时提供与自身 Spring Boot、服务端 ES 配套的 Spring Data Elasticsearch 与 RHLC 依赖；版本继续由宿主 BOM 管理。
+当前版本是 `1.0.66`。starter 的 ES 栈是 `provided`，宿主必须同时提供与自身 Spring Boot、服务端 ES 配套的 Spring Data Elasticsearch 与 RHLC 依赖；版本继续由宿主 BOM 管理。
 
 ```xml
 <dependency>
     <groupId>io.github.dengmeiluan</groupId>
     <artifactId>es-rebuild-spring-boot-starter</artifactId>
-    <version>1.0.65</version>
+    <version>1.0.66</version>
 </dependency>
 <dependency>
     <groupId>org.springframework.boot</groupId>
