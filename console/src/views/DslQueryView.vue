@@ -121,6 +121,8 @@
             :index="store.pickedIdx"
             @update:tree="onTreeUpdate"
             @locate-dsl="onSentenceLocate"
+            @runtime-defined="onRuntimeDefined"
+            @runtime-edit="onRuntimeEdit"
           />
           <!-- 零降级：mapping 缺失只影响字段候选/类型徽标，字段名仍可手输 -->
           <div v-if="!fieldList.length" class="dq-tree-map">
@@ -176,6 +178,33 @@
  （执行动线贴右缘）；：直方图开关四迁回执行行 Profile 旁（用户终审） -->
         <div class="dq-run-row">
         <div class="dq-run-end">
+        <!-- 1063：请求级 URL 参数（routing/preference/search_type/...）——不在 DSL body 里，
+             执行时附到 _search / profile 的 URL；设置后按钮显计数，便于执行前一眼确认 -->
+        <n-popover trigger="click" placement="bottom-end" :width="340">
+          <template #trigger>
+            <button type="button" class="btn sm ghost dq-req-btn" :class="{ on: reqActiveCount }"
+                    :aria-label="'请求选项' + (reqActiveCount ? '（已设 ' + reqActiveCount + ' 项）' : '')"
+                    :title="reqActiveCount ? '请求选项：' + reqSummary : '请求选项（URL 参数，不进 DSL）：routing / preference / search_type 等'">
+              <SlidersHorizontal :size="13" /> 请求
+              <span v-if="reqActiveCount" class="dq-req-n mono">{{ reqActiveCount }}</span>
+            </button>
+          </template>
+          <div class="dq-req-pop">
+            <div class="dq-req-hd">
+              <b>请求选项</b><span>URL 参数 · 不进 DSL</span>
+              <button type="button" class="btn xs ghost" :disabled="!reqActiveCount" @click="clearReqOpts">清空</button>
+            </div>
+            <label v-for="p in REQUEST_PARAMS" :key="p.key" class="dq-req-row" :title="p.hint">
+              <span class="dq-req-lb">{{ p.label }}</span>
+              <select v-if="p.options" v-model="reqValues[p.key]" class="inp dq-req-in">
+                <option value="">默认</option>
+                <option v-for="o in p.options" :key="o" :value="o">{{ o }}</option>
+              </select>
+              <input v-else v-model="reqValues[p.key]" class="inp mono dq-req-in" :placeholder="p.placeholder || '默认'" />
+            </label>
+            <div class="dq-req-tip">仅对本次执行生效；请求参数不写入 DSL，保存/分享不会携带。</div>
+          </div>
+        </n-popover>
         <label class="dq-sw" :class="{ on: profileOn }" title="Query Profiler：返回 breakdown 耗时树">
           <input type="checkbox" v-model="profileOn" /> Profile
         </label>
@@ -244,6 +273,12 @@
           @click="focusUnfilled">
           <CircleAlert :size="13" /> {{ unfilledCondCount }} 个条件未填值
         </button>
+        <!-- 1065：零命中诊断——零结果时出现；显式点击才发探针（只读 size=0 计数） -->
+        <button v-if="canAblate" type="button" class="btn sm ghost dq-ablate-tg" :class="{ on: ablationOpen }"
+          title="零命中诊断：逐条停用条件并执行 size=0 计数探针，找出最可能的限制项（会发多次只读查询）"
+          @click="ablationOpen ? closeAblation() : openAblation()">
+          <SearchX :size="13" /> 零命中诊断
+        </button>
         <button type="button" class="dq-params-tg" :class="{ on: paramsOpen }" :aria-expanded="paramsOpen"
           title="检索条件快速填充：分页 / 排序 / 字段裁剪 / 高亮 / 聚合 / 其他顶层键"
           @click="paramsOpen = !paramsOpen">
@@ -280,6 +315,30 @@
         </div>
       </div>
 
+      <!-- 1065：零命中诊断结果（单条件消融）——探针是只读 size=0 计数，报告只陈述实测命中数 -->
+      <div v-if="ablationOpen && canAblate" class="dq-ablate" role="status">
+        <div class="dq-ablate-hd">
+          <b><SearchX :size="12" /> 零命中诊断</b>
+          <span>逐条停用条件，执行 size=0 计数探针（{{ ablationTargets.total }} 次）；只能发现单条限制项</span>
+          <button v-if="!ablationBusy" type="button" class="btn xs" @click="runAblation">{{ ablationRows.length ? '重新探测' : '开始探测' }}</button>
+          <button v-else type="button" class="btn xs" @click="stopAblation">停止</button>
+          <button type="button" class="btn xs ghost" @click="closeAblation">关闭</button>
+        </div>
+        <div v-if="ablationRows.length" class="dq-ablate-list">
+          <div v-for="row in ablationRows" :key="row.id" class="dq-ablate-row" :class="{ best: ablationBest?.id === row.id }">
+            <span class="dq-ablate-lb mono">{{ row.label }}</span>
+            <span class="dq-ablate-n mono" :class="{ err: row.error }">{{ row.error ? '探针失败' : row.total == null ? '探测中…' : row.total + ' 条' }}</span>
+          </div>
+        </div>
+        <div v-if="ablationBest" class="dq-ablate-act">
+          <span>最可能限制项：<b class="mono">{{ ablationBest.label }}</b>（停用后 {{ ablationBest.total }} 条）</span>
+          <button type="button" class="btn xs pri" :disabled="running" @click="disableAblationBest">停用该条件并重试</button>
+        </div>
+        <div v-else-if="ablationRows.length && !ablationBusy" class="dq-ablate-note">
+          单条停用均未恢复命中：条件组合可能过窄，或索引本身为空。
+        </div>
+      </div>
+
       <!-- W2-2：定位不到编辑器位置的 finding 降级列在这里，不静默丢弃（随执行行独立行化迁出 pane）。
  私造降级壳退役，改用 theme.css .lint-bar/.lint-bar-warn 单源
  （soft 底语义等值；类名锚同步更新见 dqFix552/tableBarUnify541） -->
@@ -305,6 +364,12 @@
  err-line 边归全局单源，重试钮与 pre max(240px,42vh) 钳制保留（531 口径冻结面）；
  原始错误对象旁路喂 errMeta（code/endpoint 一眼可辨），queryFlat534 字面锁同步更新 -->
       <div v-if="queryErr" role="alert" class="err-bar dq-err">
+        <!-- 1064：从 ES 错误提取条件字段并落到树行；可一键停用该条件后重试（排雷） -->
+        <div v-if="errLeafId" class="dq-err-locate">
+          <span>错误涉及条件字段 <b class="mono">{{ errField }}</b></span>
+          <button type="button" class="btn xs" @click="locateErrClause">定位条件</button>
+          <button type="button" class="btn xs" :disabled="running" @click="disableErrClauseAndRetry">停用该条件并重试</button>
+        </div>
         <pre class="mono" v-html="errPreHtml(queryErr, errMeta(queryErrRaw))"></pre>
         <button class="btn sm" :disabled="running" @click="runQuery">重试</button>
       </div>
@@ -650,7 +715,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount, onActivated, onDeactivated, nextTick, h, defineComponent, type PropType, type Ref } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount, onActivated, onDeactivated, nextTick, reactive, h, defineComponent, type PropType, type Ref } from 'vue';
 import { NModal, NPopover } from 'naive-ui';
 import {
   Database, Play, Save, History, Variable, Code2, FileDown, FileUp, Share2, AlignLeft, SlidersHorizontal, ChevronDown, Check, Workflow,
@@ -658,7 +723,7 @@ import {
   FilePlus2, CopyPlus, Wand2, GitCompareArrows, ListTree, Clock, ExternalLink,
   ArrowLeftRight,
   AlertTriangle, FileSearch,
-  TerminalSquare, Terminal, PanelBottomClose, PanelBottomOpen, CircleAlert, ShieldCheck, } from 'lucide-vue-next';
+  TerminalSquare, Terminal, PanelBottomClose, PanelBottomOpen, CircleAlert, ShieldCheck, SearchX, } from 'lucide-vue-next';
 import MonacoEditor from '../components/MonacoEditor.vue';
 import ResultTable from '../components/ResultTable.vue';
 import JsonTree from '../components/JsonTree.vue';
@@ -701,6 +766,7 @@ import { useTermsSuggest } from '../composables/useTermsSuggest';
 import { useIndexFieldTypes } from '../composables/useIndexFieldTypes';
 import { useAutoRefresh } from '../composables/useAutoRefresh';
 import { usePagerSize, PAGER_SIZES } from '../composables/usePagerSize';
+import { REQUEST_PARAMS } from '../utils/queryBodyParams';
 import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-html 内核；：errMeta 双参（错误码/失败端点一眼可辨） */
 /* DSL→Lucene 一键翻译（语法桥纯函数，CmdPalette r30 出口同源） */
 import { dslToLucene } from '../utils/dslToLucene';
@@ -713,7 +779,10 @@ import WorkbenchLayout from '../components/WorkbenchLayout.vue';
 import SplitHandle from '../components/SplitHandle.vue';
 import FieldPicker from '../components/FieldPicker.vue';
 import { useTreeDslSync } from '../composables/useTreeDslSync';
-import { serializeTree, countUnfilledLeaves } from '../utils/queryAst';
+import { serializeTree, countUnfilledLeaves, updateNodeById } from '../utils/queryAst';
+import { errorFieldOf, findLeafIdByField } from '../utils/queryErrorLocate';
+import { collectAblationTargets, buildAblationBody } from '../utils/zeroHitDiag';
+import { mergeRuntimeFields } from '../utils/runtimeFields';
 import { queryNodeSpans, compactOffsetToPos, nodeAtOffset } from '../utils/queryLocate';
 /* 文档弹窗两处 Monaco 定高接档循环统一件（adhoc.piH/ih.settingsH·mapH 同范式） */
 import { useTierCycle } from '../composables/useTierCycle';
@@ -757,6 +826,22 @@ if (!dslDraft.restored.value && store.pickedIdx) {
   if (legacy) dsl.value = legacy;
 }
 const running = ref(false);
+/* 1063：搜索请求级 URL 参数（routing/preference/search_type/...）——不属于 DSL body，
+   单独用偏好持久化；执行时附加到 /_search 与 /profile 的 URL（后端白名单校验）。 */
+const reqValues = reactive<Record<string, string>>(Object.fromEntries(
+  REQUEST_PARAMS.map(p => [p.key, usePref('dq.req.' + p.key, '')]),
+) as unknown as Record<string, string>);
+const reqOpts = computed<Record<string, string>>(() => {
+  const out: Record<string, string> = {};
+  for (const p of REQUEST_PARAMS) {
+    const v = String(reqValues[p.key] ?? '').trim();
+    if (v) out[p.key] = v;
+  }
+  return out;
+});
+const reqActiveCount = computed(() => Object.keys(reqOpts.value).length);
+const reqSummary = computed(() => REQUEST_PARAMS.filter(p => reqValues[p.key]).map(p => p.label).join('、'));
+function clearReqOpts() { for (const p of REQUEST_PARAMS) reqValues[p.key] = ''; }
 /* 1057：只校验不执行——_validate/query 按当前索引 mapping 验 query 子句；
    validateState 随改稿/切索引自动清空，避免把旧结论留在新稿上。
    诚实边界：不校验聚合/排序/高亮，也不代表真实执行一定成功。 */
@@ -937,7 +1022,9 @@ watch(dsl, (v) => {
  'info' 级 finding（keyword-range）喂 setMarkers 前降级为 hint——MonacoEditor
  setMarkers 的结构类型只收 warning/hint（锁定文件，不改签名）。 */
 const lintUnplaced = ref<Finding[]>([]);
-const lintCtx = computed(() => ({ fields: idxFields.value }));
+/* 1069：与构建器/补全同源字段表（mapping ∪ 树内 runtime_mappings）——运行时字段参与
+ sort/aggs/条件时不得被 unknown-field 误报，且 keyword/range 等类型规则要照常生效。 */
+const lintCtx = computed(() => ({ fields: fieldItems.value }));
 /* 手写 lintTimer 防抖换 useDebounceFn 统一件（尾值语义不变，250ms 同口径；
  卸载自动清 timer——原手写版靠 onBeforeUnmount 手清，统一件合并后该清理点退役） */
 const queueLint = useDebounceFn((v: string) => {
@@ -961,6 +1048,96 @@ const treePaneRef = ref<{
   unfilledCount?: () => number;
   locateFirstUnfilled?: () => void;
 } | null>(null);
+/* 1064：错误涉及字段 → 树内条件行。只认查询上下文错误；定位/停用前先校验树与 DSL 同步 */
+const errField = computed(() => queryErr.value ? errorFieldOf(queryErr.value) : null);
+const errLeafId = computed(() => errField.value ? findLeafIdByField(queryTree.value.root, errField.value) : null);
+function locateErrClause() {
+  const id = errLeafId.value;
+  if (!id) return;
+  buildCollapsed.value = false;
+  nextTick(() => treePaneRef.value?.highlightFromDsl?.(id));
+}
+async function disableErrClauseAndRetry() {
+  const id = errLeafId.value;
+  const t = queryTree.value;
+  if (!id || !t.root || running.value) return;
+  if (treeStale.value) {
+    store.notify('info', '条件树与 DSL 尚未同步，请先修正 JSON 再停用条件');
+    return;
+  }
+  const root = updateNodeById(t.root, id, n => ({ ...n, disabled: true }));
+  onExtrasUpdate({ ...t, root });
+  await nextTick();
+  store.notify('info', `已停用涉及字段 ${errField.value} 的条件，正在重试`);
+  await runQuery();
+}
+
+/* ═══ 1065：零命中诊断（单条件消融探针）═══
+   零命中时逐条停用叶子、跑 size=0 计数查询，按恢复命中数找最可能的限制项。
+   只做单条件消融；显式按钮触发并标注探针次数，不自动跑。 */
+interface AblationRow { id: string; label: string; total: number | null; error?: string }
+const ablationOpen = ref(false);
+const ablationBusy = ref(false);
+const ablationRows = ref<AblationRow[]>([]);
+let ablationCtl: AbortController | null = null;
+const ablationTargets = computed(() => collectAblationTargets(queryTree.value.root));
+const canAblate = computed(() => !!resp.value && totalOf(resp.value).value === 0 && ablationTargets.value.total > 1);
+const ablationBest = computed(() => ablationRows.value
+  .filter(r => r.total != null && r.total > 0)
+  .sort((a, b) => (b.total || 0) - (a.total || 0))[0] || null);
+function openAblation() {
+  ablationOpen.value = true;
+  if (!ablationRows.value.length) void runAblation();
+}
+function stopAblation() {
+  ablationCtl?.abort();
+  ablationCtl = null;
+  ablationBusy.value = false;
+}
+function closeAblation() {
+  stopAblation();
+  ablationOpen.value = false;
+}
+async function runAblation() {
+  if (ablationBusy.value || running.value || !store.pickedIdx) return;
+  const t = queryTree.value;
+  if (!t.root || treeStale.value) return;
+  const { targets } = collectAblationTargets(t.root);
+  if (!targets.length) return;
+  ablationRows.value = targets.map(x => ({ ...x, total: null }));
+  ablationBusy.value = true;
+  ablationCtl = new AbortController();
+  const ctl = ablationCtl;
+  try {
+    for (const target of targets) {
+      if (ctl.signal.aborted) break;
+      const body = buildAblationBody(t, target.id);
+      const row = ablationRows.value.find(x => x.id === target.id);
+      if (!body || !row) continue;
+      try {
+        const r: any = await api.clusterQuery(store.pickedIdx, body, 0, ctl.signal, reqOpts.value);
+        row.total = totalOf(r).value;
+      } catch (e: any) {
+        if (e?.name === 'AbortError') break;
+        row.error = friendlyEsError(String(e?.message ?? e));
+      }
+      await nextTick();
+    }
+  } finally {
+    if (ablationCtl === ctl) { ablationCtl = null; ablationBusy.value = false; }
+  }
+}
+async function disableAblationBest() {
+  const best = ablationBest.value;
+  const t = queryTree.value;
+  if (!best || !t.root || running.value) return;
+  const root = updateNodeById(t.root, best.id, n => ({ ...n, disabled: true }));
+  onExtrasUpdate({ ...t, root });
+  ablationOpen.value = false;
+  await nextTick();
+  store.notify('info', `已停用「${best.label}」，正在重试`);
+  await runQuery();
+}
 /* 1045：未填值条件读数——直接算树（树不可变更新→computed 自动重算）；构建器收起也可见 */
 const unfilledCondCount = computed(() => countUnfilledLeaves(queryTree.value.root));
 function focusUnfilled() {
@@ -977,6 +1154,19 @@ function onExtrasUpdate(t: typeof queryTree.value) {
    内核（queryLocate）在紧凑文本里按序列化书写序找该节点字符 span，映射到
    美化文本行列，编辑器滚动居中 + 选区 + 1.8s 短闪装饰。stale 冻结态跳过
    （编辑器文本与树可能已不一致，定位会指错）。 */
+/* 1069 续：条件行一键建运行时字段成功 → 明示下一步（占位字段没有 script，补完才出值） */
+function onRuntimeDefined(p: { name: string; type: string }) {
+  /* 直接展开检索参数块（RootExtrasPane 的 rm 节已随 runtimeMappings 出现自动展开）——
+    用户点完就能看到新字段并补 script，不用再找入口 */
+  paramsOpen.value = true;
+  store.notify('info', `已创建运行时字段「${p.name}」（${p.type}）：到「检索参数 → 运行时字段」补 script 后即可查询`, { duration: 6000 });
+}
+/* 1069 续：条件行「补 script」→ 展开检索参数（运行时字段节随之可见）。
+   不再 scrollIntoView：那会把整页滚走、丢掉查询现场；参数块就在执行行下方，展开即可看到。 */
+function onRuntimeEdit(name: string) {
+  paramsOpen.value = true;
+  store.notify('info', `已展开检索参数：在「运行时字段」给「${name}」补 script（source/id）后即可查询`, { duration: 6000 });
+}
 let locDeco: { dispose?: () => void } | null = null;
 let locTimer: ReturnType<typeof setTimeout> | undefined;
 function onSentenceLocate(id: string) {
@@ -1275,6 +1465,9 @@ async function execQuery(recordHist = false) {
   const idx = store.pickedIdx;
   queryErr.value = '';
   queryErrRaw.value = null;
+  /* 1065：新一轮执行关闭并作废旧诊断结果（探针结果只属于上一轮查询现场） */
+  closeAblation();
+  ablationRows.value = [];
   jqResult.value = null;
   profileTree.value = null;
   // 执行中读秒 + 可取消——慢查询不再只能干等
@@ -1326,7 +1519,7 @@ async function execQuery(recordHist = false) {
     const bodyJson = JSON.stringify(obj);
     try {
       if (profileOn.value) {
-        const raw = await api.profile(idx, bodyJson, abortCtl.signal);
+        const raw = await api.profile(idx, bodyJson, abortCtl.signal, reqOpts.value);
         const parsed = tryParse(typeof raw === 'string' ? raw : JSON.stringify(raw));
         if (idx !== store.pickedIdx || seq !== runSeq) return;
         resp.value = normalizeResp(parsed);
@@ -1335,7 +1528,7 @@ async function execQuery(recordHist = false) {
           profileTotal.value = profileTree.value.time_in_nanos || 1;
         }
       } else {
-        const r = await api.clusterQuery(idx, bodyJson, 100, abortCtl.signal);
+        const r = await api.clusterQuery(idx, bodyJson, 100, abortCtl.signal, reqOpts.value);
         if (idx !== store.pickedIdx || seq !== runSeq) return;
         resp.value = normalizeResp(r);
       }
@@ -1347,7 +1540,7 @@ async function execQuery(recordHist = false) {
       if (!Object.keys(obj.aggs).length) delete obj.aggs;
       const bareJson = JSON.stringify(obj);
       if (profileOn.value) {
-        const raw = await api.profile(idx, bareJson, abortCtl.signal);
+        const raw = await api.profile(idx, bareJson, abortCtl.signal, reqOpts.value);
         const parsed = tryParse(typeof raw === 'string' ? raw : JSON.stringify(raw));
         if (idx !== store.pickedIdx || seq !== runSeq) return;
         resp.value = normalizeResp(parsed);
@@ -1356,7 +1549,7 @@ async function execQuery(recordHist = false) {
           profileTotal.value = profileTree.value.time_in_nanos || 1;
         }
       } else {
-        const r = await api.clusterQuery(idx, bareJson, 100, abortCtl.signal);
+        const r = await api.clusterQuery(idx, bareJson, 100, abortCtl.signal, reqOpts.value);
         if (idx !== store.pickedIdx || seq !== runSeq) return;
         resp.value = normalizeResp(r);
       }
@@ -1378,7 +1571,7 @@ async function execQuery(recordHist = false) {
         obj2.from = (page.value - 1) * pageSize.value;
         obj2.size = pageSize.value;
         try {
-          const r2 = await api.clusterQuery(idx, JSON.stringify(obj2), 100, abortCtl.signal);
+          const r2 = await api.clusterQuery(idx, JSON.stringify(obj2), 100, abortCtl.signal, reqOpts.value);
           /* 过 normalizeResp 归一——缺 hits 键（mock/后端异常形态）直落模板炸 .map（544 交接 prod 炸点）；
              回包同样过身份判别（重放在途窗内切索引=旧响应不落新现场） */
           if (idx !== store.pickedIdx || seq !== runSeq) return;
@@ -1465,8 +1658,12 @@ const mappingState = ref<'loading' | 'ok' | 'err'>('loading');
  统一管线，消除 clusterInspect 双管线漂移；dslAssist 字段档吃同一 fields 闭包现调现读。
  clusterInspect 管线保留：直方图 date 字段、新文档骨架、字段提示条（职责不同，非双轨）。 */
 const { fields: idxFields, ensure: ensureIdxFields } = useIndexFields(() => store.pickedIdx);
-const builderFields = computed(() => idxFields.value.map(f => f.path));
-const builderTypes = computed(() => Object.fromEntries(idxFields.value.map(f => [f.path, f.type])));
+/* 1069：运行时字段并轨——runtime_mappings 里的字段查询期可查，必须进统一字段源
+ （构建器条件/排序/聚合/高亮/折叠、DSL 编辑器补全、lint 字段表三处同源），否则候选
+ 不可见、未知字段黄点误报，运行时字段上的 sort/aggs 还会被 lint 当拼写错误。 */
+const fieldItems = computed(() => mergeRuntimeFields(idxFields.value, queryTree.value.runtimeMappings?.items));
+const builderFields = computed(() => fieldItems.value.map(f => f.path));
+const builderTypes = computed(() => Object.fromEntries(fieldItems.value.map(f => [f.path, f.type])));
 /* dslAssist 闭包必须在 setup 作用域声明：模板内联对象字面量的箭头函数在非 inline 编译下
  走 _ctx 代理，ref 被顶层 unwrap 后 .value 取到 undefined（渗透 spec ①a 红灯实证）。
  setup 常量对象的函数字段不被 unwrap，闭包内引用 setup 局部 ref——两种编译模式都正确。 */
@@ -1474,7 +1671,9 @@ const builderTypes = computed(() => Object.fromEntries(idxFields.value.map(f => 
  suggestAsync 直挂 terms 通道（防抖/缓存/stash 全套白得）；未选索引/通道异常恒 resolve []
  （535 契约），MonacoEditor 侧窄守卫 fields 查无亦零请求零候选。 */
 const termsSuggest = useTermsSuggest(() => store.pickedIdx);
-const dslAssist = { fields: () => idxFields.value, terms: (f: string, p: string) => termsSuggest.suggestAsync(f, p) };
+/* 1069：补全字段档同源并入运行时字段——手写 DSL 时 runtime_mappings 定义完即可补全/悬停，
+  painless doc['f'] 也认得这些查询期字段（此前只有 mapping 字段，用户以为编辑器不认识）。 */
+const dslAssist = { fields: () => fieldItems.value, terms: (f: string, p: string) => termsSuggest.suggestAsync(f, p) };
 async function preloadMapping() {
   if (!store.pickedIdx) return;
   const idx = store.pickedIdx; // 选择源快照：切索引 watch/执行链/挂载链共用本函数，回包身份以此裁决
@@ -2775,6 +2974,20 @@ onBeforeUnmount(() => {
 /* 1045：未填值条件提示（warn 语义，弱于执行主钮；仅存在半成品条件时出现） */
 .dq-unfilled { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); }
 .dq-unfilled:hover { background: var(--warn-soft); color: var(--warn); }
+/* 1065：零命中诊断——触发钮与结果面板（探针行两列，最可能项强调） */
+.dq-ablate-tg.on { color: var(--ac-hi); border-color: var(--ac-line); background: var(--ac-soft); }
+.dq-ablate { margin-top: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-s); background: var(--bg2); }
+.dq-ablate-hd { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); font-size: var(--fs-xs); }
+.dq-ablate-hd b { display: inline-flex; align-items: center; gap: var(--sp-1); color: var(--tx0); }
+.dq-ablate-hd span { color: var(--tx2); margin-right: auto; }
+.dq-ablate-list { display: flex; flex-direction: column; gap: var(--sp-0); margin-top: var(--sp-2); max-height: 220px; overflow: auto; }
+.dq-ablate-row { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-0) var(--sp-1h); border-radius: var(--r-xs); font-size: var(--fs-xs); }
+.dq-ablate-row.best { background: var(--ac-soft); }
+.dq-ablate-lb { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--tx1); }
+.dq-ablate-n { color: var(--tx2); }
+.dq-ablate-n.err { color: var(--err); }
+.dq-ablate-act { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); padding-top: var(--sp-2); border-top: 1px solid var(--line); font-size: var(--fs-xs); }
+.dq-ablate-note { margin-top: var(--sp-2); font-size: var(--fs-xs); color: var(--tx2); }
 .dq-sw { display: flex; align-items: center; gap: 5px; font-size: var(--fs-sm); color: var(--tx1); cursor: pointer; user-select: none; }
 /* .dq-ar 本地定高规则随 AutoRefreshSelect 改用退役（含其上一行「」
  注释的落点——形态由统一件 .arf-sel 承担；run-row 收缩语义保留，dq-ar 类仍在模板上） */
@@ -2831,6 +3044,7 @@ onBeforeUnmount(() => {
  差异（margin-top 节奏 + 长文顶对齐 uq-err 先例 + err-bar 兜底 margin-bottom 归零），
  pre 弹性让宽（flex+min-width:0）+ max(240px,42vh) 钳制冻结面零触（queryFlat） */
 .dq-err { margin-top: var(--sp-3); margin-bottom: 0; align-items: flex-start; }
+.dq-err { flex-wrap: wrap; }
 .dq-err pre { flex: 1 1 auto; min-width: 0; font-size: var(--fs-xs); color: var(--tx1); white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; max-height: max(240px, 42vh); overflow: auto; margin: 0; }
 
 /* 按查询删除异步任务引导条（warn 柔底可关闭，与 .dq-partial 同语言） */
@@ -2858,9 +3072,10 @@ onBeforeUnmount(() => {
 /* 结果区约 48%：res-bar 常驻可见，res-body 吃剩余（P0：结果区/命中数不再出视口）。
  min-height:260px 保底（矮视口下结果区仍可用，页面回退可滚） */
 /* 20260920：结果区从 48% 弹性改主导吃满（对齐索引工作区「结果表主导」口径） */
-/* 20260920 二修：结果区保底 320px 可读（实报「表格这么点高度人怎么操作」），
- 直方图分区 + 表格工具行 + 至少数行数据在此预算内 */
-.dq-result { margin-top: var(--sp-2h); flex: 1 1 auto; min-height: 320px; display: flex; flex-direction: column; }
+/* 1035：结果区保底升 420px（用户裁决「最小至少 10 行」——行高 28px×10+表格工具行
+ 在此预算内；实报 320 档在构建器展开时被压缩到只剩 5 行没法读）。构建器收起态
+ （默认）结果区吃满视口余量 ≈20+ 行，与索引工作台「结果表主导」同口径 */
+.dq-result { margin-top: var(--sp-2h); flex: 1 1 auto; min-height: 420px; display: flex; flex-direction: column; }
 /* 视图段钮+分页器窄容器可换行（.dq-toolbar 的换行由 lr-bar 骨架自带，本条非骨架消费方自行补） */
 /* 结果区视图 seg 禁换行（实报「点击时表头布局变形」——seg 四钮被挤成
  两行的第一参差源；seg 自身 nowrap，工具行整体仍由 rt-bar 换行策略兜底） */
@@ -2941,6 +3156,20 @@ onBeforeUnmount(() => {
 .dq-vbar-t { flex: 1; min-width: 0; }
 .dq-vbar-i { font-size: var(--fs-2xs); color: var(--muted); }
 .dq-vbar-ic-ok { color: var(--ok); }
+/* 1063：请求选项（URL 参数）——激活态与 Profile 胶囊同语言，弹层两列表单 */
+.dq-req-btn.on { color: var(--ac-hi); border-color: var(--ac-line); background: var(--ac-soft); }
+.dq-req-n { font-size: var(--fs-2xs); margin-left: 2px; }
+.dq-req-pop { display: flex; flex-direction: column; gap: var(--sp-1h); }
+.dq-req-hd { display: flex; align-items: center; gap: var(--sp-1h); font-size: var(--fs-xs); }
+.dq-req-hd span { color: var(--tx2); font-size: var(--fs-2xs); margin-right: auto; }
+.dq-req-row { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); }
+.dq-req-lb { width: 96px; flex: none; color: var(--tx1); }
+.dq-req-in { flex: 1; min-width: 0; height: 26px; font-size: var(--fs-xs); }
+.dq-req-tip { padding-top: var(--sp-1); border-top: 1px solid var(--line); font-size: var(--fs-2xs); color: var(--tx2); }
+/* 1064：错误定位行——位于错误正文上方，定位/停用两个补救动作 */
+.dq-err-locate { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); flex: 0 0 100%; padding: var(--sp-1) var(--sp-2); border-bottom: 1px solid var(--err-line); font-size: var(--fs-xs); }
+.dq-err-locate :deep(.mono) { color: var(--err); }
+.dq-err-locate .btn { margin-left: 0; }
 
 /* 900 紧凑微调档（ 口径；q 遗留补齐，W-D）——本页分栏/高度链已由
  WorkbenchLayout 宽度驱动 stacked 机制与 P0 定高链接管（1100 档只留条件树限高，

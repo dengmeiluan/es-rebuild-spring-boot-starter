@@ -5,6 +5,15 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.60]
+
+### 修复
+
+- 查询工作台结果区保底升 420px（用户裁决「最小至少 10 行」——320 档在构建器
+  展开时被压缩到只剩 5 行没法读，产线截图实报）；构建器收起态（默认）结果区
+  吃满视口余量 ≈20+ 行，与索引工作台「结果表主导」同口径。结果表本体 flex
+  填充无硬顶，行数随视口与档位自然扩展
+
 ## [1.0.59]（未发布）
 
 > 权限加固续批（1046）：在 1.0.58 的页面/连接授权基础上，补齐「凭据类资源」与
@@ -58,6 +67,11 @@
 - 读者可写面复核：`_render/template` 的已存模板 id、`_msearch` 的字符串 `indices`、
   SQL `FROM a, b` 逗号列表、检索 body 的 terms/wrapper/MLT/indices_boost 目标，前端
   `devtoolsScope` 全部与后端同口径预检（金标准新增 14 条向量，50+ 条双向断言）
+- **选主/拓扑读面补漏（1007 复核）**：`/_cluster/voting_config_exclusions` 此前因拒绝清单按
+  段边界匹配（`/_cluster/voting` 匹配不到下划线续词）仍可被非 ADMIN raw 读出节点 id/name；
+  现按精确端点拒绝。同时把索引级 `_search_shards`（自带 `transport_address`）、`_cat/master`、
+  按 id 取回异步结果、`_sql` 具名子路由、PIT/scroll `keep_alive` 上限、`_cat` 投影缺失
+  写进前后端共读金标准（+13 向量），改守卫时两侧同时红
 
 ### 修复
 

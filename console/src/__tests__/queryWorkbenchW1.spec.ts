@@ -96,14 +96,16 @@ describe('P0 高度链：WorkbenchLayout fillViewport + DslQueryView 自建链',
 
   it('DslQueryView：传 fill-viewport=false + 定高 flex 链（549 批高度链合一同步更新：dq-main 高度恒由内联 style 承接 DQ_MAIN_H 档位值/拖柄自定义 px，CSS 定高退役；结果区保底 320）', () => {
     expect(dqSrc).toMatch(/:fill-viewport="false"/);
-    /* 五百三十四批同步更新二：dq-fill 只减全局 vh-offset（本页 chrome 进 flex 收缩链，不再手算预算） */
-    expect(dqSrc).toMatch(/\.dq\.dq-fill \{ height: calc\(100vh - var\(--vh-offset\)\); \}/);
+    /* 1035（并行轨）：.dq-fill 改精确占满 .page 内容盒（height:100% 自滚动），
+       不再用 100vh-vh-offset 硬预算——iframe 高度变化时硬预算会溢出并遮挡冻结工具行 */
+    expect(dqSrc).toMatch(/\.dq\.dq-fill \{ height: 100%; overflow-y: auto; \}/);
     /* 五百四十九批：34vh CSS 定高退役（与编辑器档位双轨分裂=空白带真凶），新契约=DQ_MAIN_H 四档；
        flex-shrink:0=声明高不被结果区内容挤压（真机 P3/P4 实证 shrink:1 恒被压回 min-height） */
     expect(dqSrc).toMatch(/\.dq-main \{ display: flex; gap: 0; align-items: stretch; flex: 0 0 auto; min-height: 220px; \}/);
     expect(dqSrc).toMatch(/const DQ_MAIN_H: Record<EditorHKey, string> = \{/);
     expect(dqSrc).toMatch(/dqMainStyle = computed\(\(\) => \(\{ height: dqMainH\.value > 0 \? dqMainH\.value \+ 'px' : DQ_MAIN_H\[editorH\.value\] \}\)\)/);
-    expect(dqSrc).toMatch(/\.dq-result \{ margin-top: (?:10px|var\(--sp-2h\)); flex: 1 1 auto; min-height: 320px; display: flex; flex-direction: column; \}/);
+    /* 1035：结果区保底升 420（用户裁决最小至少 10 行——320 档在构建器展开时被压到 5 行没法读） */
+    expect(dqSrc).toMatch(/\.dq-result \{ margin-top: (?:10px|var\(--sp-2h\)); flex: 1 1 auto; min-height: 420px; display: flex; flex-direction: column; \}/);
     /* res-body 转确定高容器，各视图分支自滚；cap 兜底保留。
        五百五十七批同步更新（击穿者：557 轨2 刀——.dq-res-body padding 退役）：正则去 padding 段，
        --dq-view-cap: 56vh 与 flex 链逐字保留（workbenchParity402 cap 锚零触免同步更新） */
