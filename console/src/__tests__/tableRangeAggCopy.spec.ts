@@ -31,6 +31,7 @@ vi.mock('../api', async (importOriginal) => {
 
 import ResultTable from '../components/ResultTable.vue';
 import QueryResultTable from '../components/QueryResultTable.vue';
+import { toggleViewSwitch, viewSwitch, openViewMenu } from './helpers/viewSwitch'; /* 1143：表格级视图开关归位 */
 import type { SearchHit } from '../types';
 
 const HITS: SearchHit[] = [
@@ -129,8 +130,7 @@ describe('聚合 footer 行（五百二十批）', () => {
   it('RT：菜单开关默认关→开，tfoot 出现且数值列 Σ/avg 读数；es_tbl_agg 落盘并重挂载恢复', async () => {
     await mountTbl(ResultTable, { hits: HITS, total: 3, index: 'aggRt1' });
     expect(host.querySelector('tfoot')).toBeNull();
-    await openColMenu('age');
-    await clickMenuItem('聚合行');
+    await toggleViewSwitch('聚合行');
     const foot = host.querySelector('tfoot');
     expect(foot, '开启后应渲染聚合行').not.toBeNull();
     /* HITS age=2/5/9 → Σ16 avg 5.33（statsOf 过滤后行集口径） */
@@ -152,8 +152,7 @@ describe('聚合 footer 行（五百二十批）', () => {
   it('QRT：prefsOn 落盘同口径；无 storageKey（SQL 通道）开关仅内存态不写 LS', async () => {
     await mountTbl(QueryResultTable, { hits: HITS, storageKey: 'aggQrt1' });
     expect(host.querySelector('tfoot')).toBeNull();
-    await openColMenu('age');
-    await clickMenuItem('聚合行');
+    await toggleViewSwitch('聚合行');
     expect(host.querySelector('tfoot')?.textContent).toContain('Σ 16');
     expect(localStorage.getItem('es_tbl_agg:aggQrt1')).toBe('1');
     /* 无 storageKey 实例：清掉前半段写入后，开关仍生效（内存态）但不再产生任何 es_tbl_agg 键 */
@@ -162,8 +161,7 @@ describe('聚合 footer 行（五百二十批）', () => {
     host.innerHTML = '';
     localStorage.removeItem('es_tbl_agg:aggQrt1');
     await mountTbl(QueryResultTable, { hits: HITS });
-    await openColMenu('age');
-    await clickMenuItem('聚合行');
+    await toggleViewSwitch('聚合行');
     expect(host.querySelector('tfoot'), '无记忆维度开关仍生效（内存态）').not.toBeNull();
     expect([...Array(localStorage.length)].map((_, i) => localStorage.key(i)).filter(k => k!.startsWith('es_tbl_agg'))).toEqual([]);
   });
@@ -195,12 +193,12 @@ describe('列头菜单「复制整列值」（五百二十批）', () => {
 });
 
 describe('QRT fit 菜单项 prefsOn 门控（五百二十批修复）', () => {
-  it('无 storageKey：列头菜单不再出「此列/全列适应内容」空操作项（聚合行仍可用）', async () => {
+  it('无 storageKey：fit 两项也在场（1137 内存态生效，不落盘）；聚合行仍可用', async () => {
     await mountTbl(QueryResultTable, { hits: HITS });
     await openColMenu('name');
-    expect(menuButtons().some(b => b.textContent?.includes('全列适应内容'))).toBe(false);
-    expect(menuButtons().some(b => b.textContent?.includes('此列适应内容'))).toBe(false);
-    expect(menuButtons().some(b => b.textContent?.includes('聚合行'))).toBe(true);
+    expect(menuButtons().some(b => b.textContent?.includes('全列适应内容'))).toBe(true);
+    expect(menuButtons().some(b => b.textContent?.includes('此列适应内容'))).toBe(true);
+    expect(await toggleViewSwitch('聚合行'), '聚合行开关仍在（已归位工具行「视图 ⋯」）').toBe(true);
     /* 对照：有记忆维度照旧出 fit 两项 */
     apps.forEach(a => { try { a.unmount(); } catch { /* 已卸载 */ } });
     apps.length = 0;

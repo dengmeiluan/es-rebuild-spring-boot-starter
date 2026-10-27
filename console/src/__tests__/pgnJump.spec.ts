@@ -61,6 +61,28 @@ describe('Pagination 页码跳页（233 批 P2-6）', () => {
     expect(emitted).toEqual([5, 1]);
   });
 
+  it('父级拒绝翻页（超窗口守卫）→ 输入框回显真实页', async () => {
+    const pageRef = ref(1);
+    const emitted: number[] = [];
+    const app = createApp({
+      setup() {
+        return () => h(Pagination as any, {
+          page: pageRef.value,
+          totalPages: 1000,
+          'onUpdate:page': (p: number) => { emitted.push(p); /* 拒绝：不回写 pageRef */ },
+        });
+      },
+    });
+    app.mount(host);
+    apps.push(app);
+    for (let i = 0; i < 4; i++) { await nextTick(); await Promise.resolve(); }
+    inp().value = '501';
+    await enter(inp());
+    expect(emitted).toEqual([501]);
+    expect(pageRef.value, '页面仍停真实页').toBe(1);
+    expect(inp().value, '输入框不得残留被拒页码').toBe('1');
+  });
+
   it('非法输入回落 1；同页提交不派发', async () => {
     const { emitted } = await mountPgn(2, 5);
     inp().value = 'abc';

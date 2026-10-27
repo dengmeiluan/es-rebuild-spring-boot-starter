@@ -90,6 +90,9 @@ import { useQueryHistoryStore } from './stores/queryHistory';
 import { __clearSuggestCache as clearSuggestCache, clearTermsStash } from './composables/useTermsSuggest';
 import { __clearFieldCache } from './composables/useIndexFields';
 import { __clearAliasCache } from './composables/useAliases';
+import { clearSubtreeStash } from './utils/queryStash';
+import { clearFieldSearchContext } from './utils/fieldSearch';
+import { resetSqlCompletion } from './utils/sqlCompletion';
 
 /* 路由级 KeepAlive 白名单（= SFC 文件名）：这些页的查询结果/交互现场在侧栏切页后保留。
  只收「重状态、重挂载代价高」的页；其余页面保持即换即重挂（数据新鲜度优先）。
@@ -136,6 +139,11 @@ function onIdentityChanged() {
   clearTermsStash();
   __clearFieldCache();
   __clearAliasCache();
+  /* 模块级 ref/单例同样不属 Pinia：子树剪贴、字段检索上下文、SQL 补全的表名/值位
+     候选源都会跨账号复现上一身份的条件与词项（磁盘键清了，内存 ref 还在）。 */
+  clearSubtreeStash();
+  clearFieldSearchContext();
+  resetSqlCompletion();
   /* 深链载荷（?dsl=/?idx=/?q=）会在视图挂载时自动执行：换号后 URL 仍是上一账号的
      现场，清空 query 才能保证「新账号打开的是自己的页面」。 */
   if (route && Object.keys(route.query).length) {

@@ -249,10 +249,44 @@ public class ConsoleAuthInterceptorAuditContextTest {
         assertEquals(500, audit.last.getHttpStatus());
     }
 
+    /* ---------------- 1132：破坏性/控制面写必须落 HIGH_RISK ----------------
+       rebuild-empty 删索引后重建（数据不可逆）；adhoc confirm-switch 把写别名切到新索引
+       （流量归属切换）。两者此前只记 WRITE，与 delete-index / xmigrate/start 的危害同级
+       却低一档留痕——审计复盘时看不出这两步是不可逆的。 */
+    @Test
+    public void 删索引重建落HIGH_RISK审计() {
+        assertEquals("HIGH_RISK", actionOf("POST", "/internal/es/index/rebuild-empty"));
+    }
+
+    @Test
+    public void 托管重建切写别名落HIGH_RISK审计() {
+        assertEquals("HIGH_RISK",
+                actionOf("POST", "/internal/es/index/adhoc-rebuild/confirm-switch"));
+    }
+
+    @Test
+    public void 普通写仍落WRITE不被过度标记() {
+        /* 防过度标记：把只读语义/低危写也抬成 HIGH_RISK 会让高危面失去区分度 */
+        assertEquals("WRITE", actionOf("POST", "/internal/es/index/cluster/update-settings"));
+        assertEquals("WRITE", actionOf("POST", "/internal/es/index/adhoc-rebuild/abort"));
+    }
+
+    private String actionOf(String method, String uri) {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor it = interceptor(audit);
+        Map<String, Object> attrs = new HashMap<>();
+        attrs.put(ConsoleAuthInterceptor.ATTR_PRINCIPAL, new ConsolePrincipal(
+                "fs_ou_admin", ConsoleRole.ADMIN, false, true, "测试用户", null, null));
+        attrs.put(ConsoleAuthInterceptor.ATTR_START_MS, System.currentTimeMillis());
+        it.afterCompletion(stubRequest(method, uri, new HashMap<>(), attrs),
+                new StubResponse(200).proxy, null, null);
+        assertNotNull("未落审计：", audit.last);
+        return audit.last.getAction();
+    }
+
     /* ---------------- ：执行类只读 POST 落 EXEC 审计（可审计补全） ----------------
        analyze/reindex 预估/config-lab dry-run 这类「零数据写入但消耗集群资源/执行脚本」的
-       只读 POST 须留痕。painless 已升写档，不再走 EXEC 分支（下方独立用例锁 WRITE）。 */
-    @Test
+       只读 POST 须留痕。painless 已升写档，不再走 EXEC 分支（下方独立用例锁 WRITE）。 */    @Test
     public void painless执行升写档后仍可追溯_落WRITE审计() {
         CapturingAudit audit = new CapturingAudit();
         ConsoleAuthInterceptor it = interceptor(audit);

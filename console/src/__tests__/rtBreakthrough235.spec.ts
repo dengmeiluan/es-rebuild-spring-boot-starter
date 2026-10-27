@@ -7,6 +7,7 @@
  * 挂载样板照抄 multiSort（裸 createApp + pinia + api mock）。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { findMenuItem } from './helpers/ctxMenu'; /* 1142：二级菜单取项 */
 import { createApp, h, nextTick } from 'vue';
 import { createPinia } from 'pinia';
 import { readFileSync } from 'node:fs';
@@ -85,7 +86,8 @@ describe('RT 破窗点接线（235 批）', () => {
     const td = host.querySelector('td.rt-cell') as HTMLElement;
     td.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 10, clientY: 10 }));
     await tick();
-    const fmtBtn = [...document.body.querySelectorAll('.ccm-it') as any].find(b => b.textContent?.includes('导出格式：XLSX'));
+    /* 1142：导出格式项住「列与导出…」二级 */
+    const fmtBtn = await findMenuItem('导出格式：XLSX');
     expect(fmtBtn, '右键格式组应有 XLSX').toBeTruthy();
     (fmtBtn as HTMLElement).click();
     await tick();
@@ -105,8 +107,13 @@ describe('RT 破窗点接线（235 批）', () => {
     const spy = vi.mocked(snapshotTableToPng);
     spy.mockClear();
     await mountTbl();
+    /* 1148：快照从工具行移入「视图 ⋯」菜单（低频分享动作不常驻）；先开菜单再取项 */
+    const viewBtn = [...host.querySelectorAll('button')].find(b => b.getAttribute('aria-label') === '视图设置') as HTMLElement;
+    expect(viewBtn, '工具条应有「视图 ⋯」').toBeTruthy();
+    viewBtn.click();
+    await tick();
     const snapBtn = [...host.querySelectorAll('button')].find(b => b.getAttribute('aria-label') === '表格快照 PNG') as HTMLElement;
-    expect(snapBtn, '工具条应有快照钮').toBeTruthy();
+    expect(snapBtn, '视图菜单里应有快照项').toBeTruthy();
     snapBtn.click();
     await tick();
     expect(spy).toHaveBeenCalledTimes(1);

@@ -74,7 +74,9 @@ export function useTablePrefs(
       } catch { /* 记录损坏回落默认前 8 列 */ }
     }
     const valid = saved.filter(c => cols.includes(c));
-    const fallback = opts?.defaultVisibleCols?.() ?? cols.slice(0, 8);
+    /* 1137：无维度（SQL 等内存态）默认全列——列管理可用但不跨执行记忆；
+       有维度仍维持前 8 列启发式 */
+    const fallback = opts?.defaultVisibleCols?.() ?? (d ? cols.slice(0, 8) : cols);
     visibleCols.value = valid.length ? valid : fallback;
     opts?.onColsReset?.();
   }

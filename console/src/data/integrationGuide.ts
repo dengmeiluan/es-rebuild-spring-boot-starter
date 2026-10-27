@@ -83,15 +83,20 @@ client 默认配置：
    - 从请求头 X-Es-Host-Token 读宿主凭证，认出则返回 ConsolePrincipal（含角色映射）
    - 认不出返回 null，自动交回控制台内置 token 鉴权（不视为失败）
 
-② 宿主前端在 iframe 就绪握手后下发凭证：
+② 宿主前端在 iframe 就绪握手后下发凭证（**禁止用 '\*' 作为 targetOrigin**：
+   iframe 一旦被导航/替换，宿主 JWT 会被交给任意源）：
+   const CONSOLE_ORIGIN = 'https://console.example.com'; // 控制台真实 origin
    window.addEventListener('message', (e) => {
+     if (e.origin !== CONSOLE_ORIGIN) return;
+     if (e.source !== iframe.contentWindow) return;
      if (e.data?.type === 'es-console-ready') {
        iframe.contentWindow.postMessage(
-         { type: 'es-console-host-token', token: <宿主JWT> }, '*');
+         { type: 'es-console-host-token', token: <宿主JWT> }, CONSOLE_ORIGIN);
      }
    });
 
-③ 凭证变化（重新登录）时重发同一消息即可，控制台会重新探测身份。`,
+③ 凭证变化（重新登录）时重发同一消息即可，控制台会重新探测身份；宿主登出时发
+   { type: 'es-console-host-token', token: '' }，控制台会立即清理上一账号工作现场。`,
   },
   {
     id: 'auth',

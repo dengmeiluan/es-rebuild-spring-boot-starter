@@ -75,8 +75,9 @@ describe('执行钮右置（542 批）', () => {
   it('二刀：执行钮是 run-end 最后一个元素（检索参数开关在执行左侧，绝对最右）', () => {
     const endAt = dq.indexOf('<div class="dq-run-end">');
     /* 五百六十一批同步更新：检索参数钮内新增收起态摘要 span（dq-params-sum）使执行钮右移
-       ~100 字符，切片窗口 4000→4800（序语义不变：paramsTg < jq < runBtn 仍在 run-end 内） */
-    const endSlice = dq.slice(endAt, endAt + 4800);
+       ~100 字符，切片窗口 4000→4800（序语义不变：paramsTg < jq < runBtn 仍在 run-end 内）。
+       1063 请求选项弹层插在 run-end 前部，窗口再扩到 8000（相对顺序断言不变）。 */
+    const endSlice = dq.slice(endAt, endAt + 8000);
     const paramsTg = endSlice.indexOf('dq-params-tg');
     const runBtn = endSlice.indexOf('btn-run-lock');
     const jqAt = endSlice.indexOf('class="dq-jq"');

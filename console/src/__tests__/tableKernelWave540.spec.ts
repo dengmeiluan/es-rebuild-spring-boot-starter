@@ -192,7 +192,10 @@ describe('：IndexHubView 文档浏览器 remoteSort 消费接线（源码锁）
     /* sort body 注入收口：parse-merge 包一层， buildDocsDsl 字面调用锚原样保留 */
     expect(ih).toMatch(/function buildDocsDslWithSort\(\): string \{/);
     expect(ih).toMatch(/JSON\.parse\(buildDocsDsl\(docsQ\.value, docsSize\.value, \(docsPage\.value - 1\) \* docsSize\.value\)\)/);
-    expect(ih).toMatch(/o\.sort = \[\{ \[docsSort\.value\.f\]: \{ order: docsSort\.value\.d, unmapped_type: 'long' \} \}\];/);
+    /* 1150：下推字段先过 resolveSortField（text 无 .keyword 子域=ES 必 400，拦下不下发），
+       实际写入用裁决后的 r.field；unmapped_type 兜底口径不变 */
+    expect(ih).toContain('const r = resolveSortField(docsSort.value.f, fieldTypesMap.value);');
+    expect(ih).toMatch(/o\.sort = \[\{ \[r\.field\]: \{ order: docsSort\.value\.d, unmapped_type: 'long' \} \}\];/);
     /* runDocs 消费注入件（api.clusterQuery 第二参 DSL 来自带 sort 版本）。
        同步更新：runDocs 接直方图注入链（useHistAgg 统一件）后改为 bodyObj
        可变引用形态——buildDocsDslWithSort() 产物 parse 进 bodyObj（sort 注入不变），

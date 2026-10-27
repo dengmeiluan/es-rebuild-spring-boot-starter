@@ -215,13 +215,84 @@ public class DevtoolsEscalationMatrix1004Test {
         allowed("POST", "/logs/_pit?keep_alive=1m", null, "索引级 PIT（显式索引）");
     }
 
-    /* ═══ F 资源释放：仅 DELETE 形态放行 ═══ */
+    /* ═══ G 本轮实测补齐的绕过形态（1124） ═══ */
 
+    /**
+     * 矩阵原先只测了「根级检索 body 形态」，而真实绕过首选是**查询串**：
+     * {@code GET /_search?q=*} 不带 body 也能全量读；{@code ?source=} 与 body 同权。
+     * 同时确认系统段后接索引名的形态（{@code /_search/x}）按索引位逐段判定。
+     */
+    @Test
+    public void G_根级检索的查询串形态同样被拒() {
+        blocked("GET", "/_search?q=*", null, "q 通配全量读");
+        blocked("GET", "/_search?q=*&size=100", null, "q 通配全量读（带 size）");
+        blocked("GET", "/_count?q=*", null, "count 的 q 通配");
+        blocked("GET", "/_search?source=%7B%22query%22%3A%7B%22match_all%22%3A%7B%7D%7D%7D",
+                null, "source 参数形态的根级检索");
+        blocked("GET", "/_search_shards", null, "分片视图枚举索引名");
+        /* 系统段 + 索引位：第二段起逐段做控制面判定 */
+        blocked("POST", "/_search/point_in_time", null, "系统段后的索引位");
+    }
+
+    /**
+     * _msearch：头部行 {@code {}} 等于「不限索引」，只有路径或头部显式限定业务索引才放行。
+     * _bulk 的 {@code {"index":{}}} 继承路径索引，这是 ES 的既有语义（不是越权）。
+     */
+    @Test
+    public void G_msearch空头与bulk继承语义() {
+        blocked("POST", "/_msearch", "{}\n{\"query\":{\"match_all\":{}}}\n", "空头=全量读");
+        blocked("POST", "/_msearch", "{}\n{}\n", "空头+空体=全量读");
+        blocked("POST", "/logs/_msearch",
+                "{\"index\":\"es_console_user\"}\n{\"query\":{\"match_all\":{}}}\n", "头行夹带控制索引");
+        /* ES 语义：路径里的索引是头的默认索引。空头 = 只查路径索引（logs），不是全量读；
+           只有**根路径** /_msearch 的空头才是全量（已在上面拒绝）。 */
+        allowed("POST", "/logs/_msearch", "{}\n{\"query\":{\"match_all\":{}}}\n",
+                "空头继承路径索引（ES 既有语义，非全量）");
+        /* bulk 显式控制索引必须拒；路径继承业务索引的简写放行 */
+        blocked("POST", "/_bulk", "{\"index\":{\"_index\":\"es_console_user\"}}\n{}\n", "bulk 显式控制索引");
+        allowed("POST", "/logs/_bulk", "{\"index\":{}}\n{\"a\":1}\n", "bulk 继承路径索引（ES 既有语义）");
+    }
+
+    /**
+     * _cat 元数据视图：aliases/shards 与 indices 一样可能带出控制面索引名，
+     * 因此只允许 JSON 行式返回并由 filterCatControlRows 逐行剔除（守卫不拒、结果侧过滤）。
+     */
+    @Test
+    public void G_cat视图靠结果侧行过滤而非路径拒绝() {
+        allowed("GET", "/_cat/aliases?format=json", null,
+                "_cat/aliases JSON 行式（结果侧按行剔除控制面）");
+        allowed("GET", "/_cat/shards?format=json", null,
+                "_cat/shards JSON 行式（结果侧按行剔除控制面）");
+        blocked("GET", "/_cat/count", null, "聚合形态无法按行过滤，直接拒");
+        blocked("GET", "/_stats", null, "聚合统计无法按行过滤，直接拒");
+    }
+
+    /* ═══ F 资源释放：仅 DELETE 形态放行 ═══ */
     @Test
     public void F_根级PIT与scroll仅允许释放() {
         blocked("POST", "/_pit", "{\"keep_alive\":\"1d\"}", "根级开 PIT=全量读");
         allowed("DELETE", "/_pit", "{\"id\":\"abc\"}", "释放自己持有的 PIT");
         blocked("POST", "/_search/scroll", "{\"scroll_id\":\"abc\"}", "续读他人 scroll=全量读");
         allowed("DELETE", "/_search/scroll", "{\"scroll_id\":\"abc\"}", "释放 scroll");
+    }
+
+    /* ═══ G 方法面覆盖（1131）：写方法不得因「换了动词」绕过控制面守卫 ═══
+       审计背景：拦截器 requiredRole 只把 GET/HEAD/OPTIONS 视为读，其余一律写；
+       这里验证 raw 守卫侧对不同动词是否同口径——否则 PATCH/PUT 可能成为旁路。 */
+    @Test
+    public void G_非GET动词不得绕过控制面守卫() {
+        for (String m : new String[]{"PATCH", "PUT", "DELETE", "POST"}) {
+            blocked(m, "/.security/_doc/1", "{\"x\":1}", m + " 写控制面索引");
+            blocked(m, "/es_console_jobs/_doc/1", "{\"x\":1}", m + " 写控制面索引");
+        }
+        /* 大小写变体同样拦（目标端/代理可能大小写不敏感） */
+        blocked("patch", "/.security/_doc/1", "{}", "小写 patch 变体");
+    }
+
+    @Test
+    public void G_非GET动词对业务索引维持放行() {
+        for (String m : new String[]{"PATCH", "PUT", "POST", "DELETE"}) {
+            allowed(m, "/orders/_doc/1", "{\"x\":1}", m + " 业务索引（由页面写键裁决）");
+        }
     }
 }

@@ -4,7 +4,7 @@
       <input class="inp gp-k mono" :value="row.key" :readonly="isArr"
         @change="renameKey(row.key, ($event.target as HTMLInputElement).value)
           || (($event.target as HTMLInputElement).value = row.key)" />
-      <template v-if="row.kind === 'object' || row.kind === 'array'">
+      <template v-if="(row.kind === 'object' || row.kind === 'array') && schemaKind(row.key) !== 'json'">
         <button class="btn sm ghost" @click="toggle(row.key)">{{ collapsed.has(row.key) ? '▸' : '▾' }} {{ row.key }} {{ row.kind === 'array' ? '[' + (row.val as any[]).length + ']' : '{…}' }}</button>
         <div v-show="!collapsed.has(row.key)" class="gp-sub">
           <!-- 【W3b】字段键的数组值（multi_match.fields / query_string.fields 形态）：
@@ -15,6 +15,35 @@
                          @update="setChild(row.key, $event)" />
         </div>
       </template>
+      <!-- 1159：inner_hits 等 json 参数的常见键给结构化快捷行（from/size/name 是生产里最常改的
+           三项），JSON 文本位仍保留整段编辑能力——结构化只是快通道，不限制其余键 -->
+      <div v-else-if="jsonQuickKeys(row.key).length" class="gp-jq">
+        <span class="gp-jq-k mono">{{ row.key }}</span>
+        <label v-for="q in jsonQuickKeys(row.key)" :key="q" class="gp-jq-f">
+          <span class="gp-jq-l">{{ jsonQuickLabel(q) }}</span>
+          <input v-if="q === 'name'" class="inp gp-v mono" type="text" :value="jsonSub(row.val, 'name')"
+                 :aria-label="row.key + '.' + q" @change="setJsonSub(row.key, row.val, 'name', ($event.target as HTMLInputElement).value)" />
+          <!-- 1169：脚本 source 是字符串（painless 表达式），不能被数字输入框降级 -->
+          <input v-else-if="q === 'source'" class="inp gp-v mono gp-jq-src" type="text" :value="jsonSub(row.val, 'source')"
+                 placeholder="painless 表达式"
+                 :aria-label="row.key + '.' + q" @change="setJsonSub(row.key, row.val, 'source', ($event.target as HTMLInputElement).value)" />
+          <input v-else class="inp gp-v mono" type="number" step="1" min="0" :value="jsonSub(row.val, q)"
+                 :aria-label="row.key + '.' + q" @change="setJsonSub(row.key, row.val, q, ($event.target as HTMLInputElement).value === '' ? '' : Number(($event.target as HTMLInputElement).value))" />
+        </label>
+        <textarea class="inp gp-v mono gp-json gp-jq-json"
+                  :class="{ bad: !!jsonBad[row.key] }" :data-path="pathPrefix + row.key"
+                  :value="jsonText(row.key, row.val)" spellcheck="false"
+                  :title="jsonBad[row.key] ? 'JSON 无效，暂未写入查询树' : '其余键用 JSON 编辑（保留数字/布尔类型）'"
+                  @input="onJson(row.key, ($event.target as HTMLTextAreaElement).value)" />
+      </div>
+
+      <!-- 1094：json schema 参数（inner_hits 等）用 JSON 文本位——保留数字/布尔类型，
+           不再被键值子表的字符串输入降级 -->
+      <textarea v-else-if="schemaKind(row.key) === 'json'" class="inp gp-v mono gp-json"
+                :class="{ bad: !!jsonBad[row.key] }" :data-path="pathPrefix + row.key"
+                :value="jsonText(row.key, row.val)" spellcheck="false"
+                :title="jsonBad[row.key] ? 'JSON 无效，暂未写入查询树' : 'JSON 对象（保留数字/布尔类型）'"
+                @input="onJson(row.key, ($event.target as HTMLTextAreaElement).value)" />
       <select v-else-if="schemaOpt(row.key)" class="inp gp-v" :value="String(row.val)" @change="setChild(row.key, ($event.target as HTMLSelectElement).value)">
         <option v-for="o in schemaOpt(row.key)" :key="o" :value="o">{{ o }}</option>
       </select>
@@ -24,6 +53,10 @@
                    :model-value="String(row.val)" :fields="fields" :types="types" :type-priority="typePriority"
                    @update:model-value="setChild(row.key, $event)" />
       <input v-else-if="row.kind === 'boolean'" type="checkbox" :checked="!!row.val" @change="setChild(row.key, ($event.target as HTMLInputElement).checked)" />
+      <!-- 1092：schema.number 键用数值控件——新加参数（prefix_length/boost/slop…）不再落成字符串 -->
+      <input v-else-if="schemaKind(row.key) === 'number'" type="number" step="any" class="inp gp-v mono"
+             :data-path="pathPrefix + row.key" :value="row.raw"
+             @input="onScalar(row.key, ($event.target as HTMLInputElement).value, 'number')" />
       <textarea v-else-if="row.key === 'source'" class="inp gp-v mono gp-src" rows="3" spellcheck="false"
                 :data-path="pathPrefix + row.key"
                 :value="row.raw"
@@ -72,6 +105,9 @@ const emit = defineEmits<{ (e: 'update', v: Record<string, unknown> | unknown[])
 
 const newKey = ref('');
 const collapsed = ref(new Set<string>());
+/* 1094：json schema 参数的文本草稿/非法态——非法中间态只标红不写树 */
+const jsonDrafts = ref<Record<string, string>>({});
+const jsonBad = ref<Record<string, boolean>>({});
 const isArr = computed(() => Array.isArray(props.value));
 
 /* 1032：schema 键提示——注册在册但尚未入体的键升 datalist 建议（带类型释义与枚举
@@ -80,7 +116,7 @@ const isArr = computed(() => Array.isArray(props.value));
    uid：递归组件多实例，datalist id 用模块计数器区分。 */
 let uidSeq = 0;
 const uid = 'gp' + (++uidSeq).toString(36);
-const KIND_ZH: Record<string, string> = { number: '数值', boolean: '布尔', enum: '枚举', text: '文本' };
+const KIND_ZH: Record<string, string> = { number: '数值', boolean: '布尔', enum: '枚举', text: '文本', json: '对象/JSON' };
 const pendingSchema = computed<ParamMeta[]>(() => {
   const body = props.value as Record<string, unknown>;
   if (isArr.value) return [];
@@ -100,6 +136,7 @@ const rows = computed((): Row[] => Object.entries(props.value as Record<string, 
 }));
 
 const schemaOpt = (k: string) => props.schema.find(s => s.key === k && s.kind === 'enum')?.options || null;
+const schemaKind = (k: string) => props.schema.find(s => s.key === k)?.kind;
 /* 键名命中字段键名单且确有字段源时才走 FieldSelect（缺字段源回落普通输入） */
 const isFieldKey = (k: string) => props.fieldKeys.includes(k) && props.fields.length > 0;
 /* 【W3b】字段键的数组值：子表逐项 FieldSelect——把数组序号当作字段键名单传给子实例 */
@@ -138,13 +175,61 @@ function onScalar(k: string, raw: string, kind: Kind) {
   } else if (kind === 'null') setChild(k, raw === 'null' ? null : raw);
   else setChild(k, raw);
 }
+/* 1094：json schema 参数文本位 */
+function jsonText(k: string, val: unknown): string {
+  return k in jsonDrafts.value ? jsonDrafts.value[k] : JSON.stringify(val ?? {}, null, 2);
+}
+/* 1159：json 参数的结构化快捷键（只收生产里高频改的标量项；其余键仍走 JSON 文本位）。
+   inner_hits 的 from/size/name 是 nested / has_child 结果里最常调的三项。
+   1169：terms_set.minimum_should_match_script 的 source/params 同理——body 里几乎必改
+   source（painless 表达式），params 是它的入参对象；此前只能整段手写 JSON。 */
+const JSON_QUICK: Record<string, string[]> = {
+  inner_hits: ['from', 'size', 'name'],
+  minimum_should_match_script: ['source'],
+};
+function jsonQuickKeys(k: string): string[] {
+  const keys = JSON_QUICK[k];
+  /* 只在值确实是对象时给快捷行（数组/标量形态回落 JSON 文本单通道，避免误改） */
+  if (!keys) return [];
+  const v = (props.value as Record<string, unknown>)[k];
+  return v && typeof v === 'object' && !Array.isArray(v) ? keys : [];
+}
+function jsonQuickLabel(k: string) {
+  if (k === 'from') return '起始 from';
+  if (k === 'size') return '条数 size';
+  if (k === 'name') return '命名 name';
+  if (k === 'source') return '脚本 source';
+  return k;
+}
+function jsonSub(v: unknown, key: string): string | number {
+  const o = (v && typeof v === 'object' && !Array.isArray(v) ? v : {}) as Record<string, unknown>;
+  const raw = o[key];
+  return raw === undefined || raw === null ? '' : (typeof raw === 'number' ? raw : String(raw));
+}
+function setJsonSub(outerKey: string, v: unknown, key: string, next: string | number) {
+  const base = (v && typeof v === 'object' && !Array.isArray(v) ? { ...(v as Record<string, unknown>) } : {}) as Record<string, unknown>;
+  if (next === '' || (typeof next === 'number' && Number.isNaN(next))) delete base[key];
+  else base[key] = next;
+  setChild(outerKey, base);
+}
+
+function onJson(k: string, raw: string) {
+  jsonDrafts.value = { ...jsonDrafts.value, [k]: raw };
+  let parsed: unknown;
+  let ok = false;
+  try { parsed = JSON.parse(raw); ok = !!parsed && typeof parsed === 'object'; } catch { /* 非法中间态 */ }
+  jsonBad.value = { ...jsonBad.value, [k]: !ok };
+  if (ok) setChild(k, parsed);
+}
 function addKey() {
   if (Array.isArray(props.value)) {
     emit('update', [...props.value, '']); return;   // 数组添加 = 尾部推空串
   }
   const k = newKey.value.trim();
   if (!k || k in props.value) return;
-  emit('update', { ...props.value, [k]: '' });
+  /* 1092：布尔 schema 给显式 false；1094：json schema 给空对象承接文本位；数值留空由数值控件承接 */
+  const kind = schemaKind(k);
+  emit('update', { ...props.value, [k]: kind === 'boolean' ? false : kind === 'json' ? {} : '' });
   newKey.value = '';
 }
 function toggle(k: string) {
@@ -163,6 +248,18 @@ function toggle(k: string) {
 /* 1038：source 键（Painless/脚本体）多行编辑——textarea 覆盖 gp-v 的高度/内边距，
    行顶对齐（键名行内基线不复用居中） */
 .gp-row:has(.gp-src) { align-items: flex-start; }
+/* 1094：json 对象参数文本位（inner_hits 等） */
+.gp-row:has(.gp-json) { align-items: flex-start; }
+.gp-json { height: auto; min-height: 64px; resize: vertical; line-height: 1.5; padding: var(--sp-1) var(--sp-2); }
+.gp-json.bad { border-color: var(--err); }
+/* 1159：json 参数的快捷行（inner_hits 的 from/size/name）——键名 + 三个紧凑输入 + 其余键 JSON */
+.gp-jq { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1h); width: 100%; }
+.gp-jq-k { font-size: var(--fs-2xs); color: var(--tx2); }
+.gp-jq-f { display: inline-flex; align-items: center; gap: var(--sp-0); }
+.gp-jq-l { font-size: var(--fs-2xs); color: var(--tx2); white-space: nowrap; }
+.gp-jq .gp-v { width: 84px; }
+.gp-jq .gp-jq-src { width: 220px; }
+.gp-jq-json { flex: 1 1 100%; }
 .gp-src { height: auto; min-height: 64px; resize: vertical; line-height: 1.5; padding: var(--sp-1) var(--sp-2); }
 .gp-row:has(.gp-src) .gp-k { margin-top: 2px; }
 .gp-v.warn { border-color: var(--warn); }

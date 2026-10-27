@@ -8,7 +8,11 @@
  push mode=template 历史（此前页内零出口 -->
 <button class="btn ghost sm" data-test="open-hist" @click="histOpen = true" title="查询历史"><History :size="12" /> 历史</button>
 <button class="btn ghost sm" @click="load" :disabled="busy"><RefreshCw :size="12" /> 刷新</button>
-      </template>
+      
+  <!-- 1142：模板条目右键（此前列表无右键）——载入/复制源码/删除；破坏性项进二级。 -->
+  <CellContextMenu v-if="tplMenu" :x="tplMenu.x" :y="tplMenu.y" :title="'模板 · ' + tplMenu.id"
+    :items="tplMenuItems" @close="tplMenu = null" />
+</template>
       </PageHeader>
 </div>
 
@@ -43,7 +47,8 @@
         <!-- 过滤空档合并 EmptyState compact（文案逐字保留；过滤无命中与
  真空态分档防误导语义不变，stTplTiersFilter textContent 锚保真） -->
         <EmptyState v-if="tplFilter && !filteredTemplates.length" compact :icon="LayoutTemplate" text="无匹配模板" />
-        <div v-for="t in filteredTemplates" :key="t.id" class="st-item" :class="{ on: t.id === curId }" @click="pick(t)" role="button" tabindex="0" @keydown.enter.prevent="pick(t)" @keydown.space.prevent="pick(t)">
+        <div v-for="t in filteredTemplates" :key="t.id" class="st-item" :class="{ on: t.id === curId }" @click="pick(t)"
+          @contextmenu.prevent="openTplMenu($event, t)" role="button" tabindex="0" @keydown.enter.prevent="pick(t)" @keydown.space.prevent="pick(t)">
           <FileCode2 :size="12" class="st-item-ic" />
           <!-- 裸插值换 MarkText——过滤词命中段 <mark>（textContent 与原文一致） -->
           <span class="st-item-nm" :title="t.id"><MarkText :text="t.id" :kw="tplFilter" /></span>
@@ -212,6 +217,7 @@ import { usePopupList } from '../composables/usePopupList';
 import { useDebounceFn } from '../composables/useDebounceFn'; /* R5：防抖统一件 */
 import { lintDsl } from '../utils/dslLint'; /* R5：模板源静态检查 */
 import { copyText, totalOf, fmtNum } from '../utils/format';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue'; /* 1142：模板行右键 */
 import { friendlyEsError } from '../utils/esError';
 /* 渲染 DSL 语义分档高亮（j-clause 档，QUERY_SNIPPETS/ROOT_KEYS 键命中；
  textContent 与 highlightJson 逐字一致，既有 textContent 锁面零扰动） */
@@ -446,6 +452,40 @@ async function del() {
   } finally { busy.value = false; }
 }
 
+/* 1142：模板行右键菜单——载入源码 / 复制 ID 与源码 / 删除（破坏性项进二级）。 */
+const tplMenu = ref<{ x: number; y: number; id: string; source: string } | null>(null);
+function openTplMenu(e: MouseEvent, t: { id: string; source: string }) {
+  tplMenu.value = { x: e.clientX, y: e.clientY, id: t.id, source: t.source };
+}
+const tplMenuItems = computed<CcmItem[]>(() => {
+  const m = tplMenu.value; if (!m) return [];
+  const t = { id: m.id, source: m.source };
+  return [
+    { key: 'load', label: '载入到编辑器', icon: FileCode2, run: () => pick(t) },
+    {
+      key: 'copy-group', label: '复制…', icon: Copy, sep: true, children: [
+        { key: 'copy-id', label: '复制模板 ID', icon: Copy, run: async () => {
+          const ok = await copyText(m.id);
+          store.notify(ok ? 'success' : 'error', ok ? '已复制模板 ID' : '复制失败');
+        } },
+        { key: 'copy-src', label: '复制模板源码', icon: Copy, run: async () => {
+          const ok = await copyText(m.source);
+          store.notify(ok ? 'success' : 'error', ok ? '已复制模板源码' : '复制失败');
+        } },
+      ],
+    },
+    {
+      key: 'danger-group', label: '更多操作…', icon: Trash2, children: [
+        { key: 'del', label: '删除此模板', icon: Trash2, danger: true, run: () => {
+          /* 先载入再走既有删除确认链（guardText=模板名，二次确认不绕过） */
+          pick(t);
+          void del();
+        } },
+      ],
+    },
+  ];
+});
+
 async function render() {
   busy.value = true;
   try {
@@ -513,7 +553,7 @@ async function replayTplRow(row: { query: string }, runIt: boolean) {
   if (/\{\{/.test(row.query)) {
     source.value = row.query;
     store.notify('success', '已回填模板源（历史条目为模板源快照）');
-    if (runIt) run();
+    if (runIt) runAuto();
     return;
   }
   const ok = await copyText(row.query);
@@ -521,6 +561,22 @@ async function replayTplRow(row: { query: string }, runIt: boolean) {
     ? '已复制渲染 DSL（渲染产物无法逆向还原模板源，可粘贴到 DSL 工作台直接用）'
     : '复制失败');
 }
+
+/* 历史回放自动执行的读页门（1123 续）：模板源快照可能来自上一账号，probe 未落地时
+   旧 target 的执行会先发出去。手动点「执行」不拦，后端仍按 search-templates 页写键裁决。 */
+const tplAutoAllowed = () => auth.authDisabled
+  || !auth.probeStarted /* 探测未启动（无鉴权嵌入/测试宿主）视同身份已定，与 Dsl/Lucene/Bridge 同口径 */
+  || (auth.probed && auth.me != null && auth.canReadPage('search-templates', store.target));
+let tplAutoPending = false;
+function runAuto() {
+  if (tplAutoAllowed()) { tplAutoPending = false; void run(); return; }
+  tplAutoPending = true;
+}
+watch(() => [auth.probed, auth.authDisabled, auth.me?.username, store.target], () => {
+  if (!tplAutoPending || !tplAutoAllowed()) return;
+  tplAutoPending = false;
+  void run();
+});
 
 /* ═══ ：原始 IO 快查（546/548 同款三件套）═══
  渲染（/cluster/render-template）/执行（/cluster/search-template）双响应面各取各的记录
@@ -563,7 +619,21 @@ function consumeSourceCarry() {
 }
 onMounted(consumeSourceCarry);
 
-load();
+/* setup 期列表拉取同样过身份门（1125）：宿主换 token 的窗口里 probed 未落地，
+   旧 target 的脚本清单会先拉回来（403 噪声 + 清单串到新账号界面）。
+   不放行就挂起，身份/目标落地补跑一次——与回放门 runAutoAllowed 同口径。 */
+const listAllowed = () => auth.authDisabled || !auth.probeStarted
+  || (auth.probed && auth.me != null && auth.canReadPage('search-templates', store.target));
+let listPending = false;
+function loadGuarded() {
+  if (!listAllowed()) { listPending = true; return; }
+  listPending = false;
+  void load();
+}
+watch(() => [auth.probed, auth.authDisabled, auth.me?.username, store.target], () => {
+  if (listPending && listAllowed()) loadGuarded();
+});
+loadGuarded();
 </script>
 
 <style scoped>

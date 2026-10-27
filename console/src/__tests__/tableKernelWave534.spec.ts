@@ -23,6 +23,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import QueryResultTable from '../components/QueryResultTable.vue';
 import ResultTable from '../components/ResultTable.vue';
+import { findMenuItem } from './helpers/ctxMenu'; /* 1142：二级菜单取项 */
 import { semFormat } from '../composables/useSemFormat';
 import { useColFilters } from '../composables/useColFilters';
 
@@ -180,15 +181,15 @@ describe('五百三十四批运行时锁：RT rowDrawer 行详情侧拉（QRT 53
     { _id: 'b', _source: { name: 'apple', age: 3 } },
   ] as any;
 
-  const ctxMenuBtn = (label: string) =>
-    [...document.querySelectorAll('.ccm-mask .ccm-it')].find(b => b.textContent?.includes(label)) as HTMLButtonElement | undefined;
+  /* 1142：动作项住分组二级——helper 按需展开分组 */
+  const ctxMenuBtn = (label: string) => findMenuItem(label) as Promise<HTMLButtonElement | null>;
 
   it('缺省关（零增量）：右键无「行详情」项、无侧拉 DOM', async () => {
     await mountTbl(ResultTable, { hits: RHITS, total: 2, index: 'w534rdwoff' });
     (host.querySelector('td.rt-cell') as HTMLElement)
       .dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 10, clientY: 10 }));
     await tick(4);
-    expect(ctxMenuBtn('行详情'), '缺省无行详情菜单项').toBeUndefined();
+    expect(await ctxMenuBtn('行详情'), '缺省无行详情菜单项').toBeNull();
     expect(document.querySelector('.n-drawer'), '缺省无侧拉 DOM').toBeNull();
   });
 
@@ -197,7 +198,7 @@ describe('五百三十四批运行时锁：RT rowDrawer 行详情侧拉（QRT 53
     (host.querySelector('td.rt-cell') as HTMLElement)
       .dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 10, clientY: 10 }));
     await tick(4);
-    const item = ctxMenuBtn('行详情');
+    const item = await ctxMenuBtn('行详情');
     expect(item, '开启后有行详情菜单项').toBeTruthy();
     item!.click();
     await tick(6);

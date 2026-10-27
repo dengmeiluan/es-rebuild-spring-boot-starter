@@ -104,6 +104,23 @@ public class AuthSwitchHardening1007Test {
     }
 
     @Test
+    public void 自定义委托报出的令牌也受登出拒绝表约束() {
+        DelegatedTokenRevocations.clear();
+        String token = "custom-delegate-token";
+        assertTrue(DelegatedTokenRevocations.revoke(token, System.currentTimeMillis() + 60_000L));
+        ConsolePrincipal hostUser = new ConsolePrincipal("host-user", ConsoleRole.ADMIN, false, true,
+                "宿主用户", null, Collections.<String>emptySet());
+        ConsoleAuthDelegate custom = new ConsoleAuthDelegate() {
+            @Override public ConsolePrincipal authenticate(HttpServletRequest request) { return hostUser; }
+            @Override public String tokenOf(HttpServletRequest request) { return token; }
+        };
+        DelegatingConsoleAuthorizer authorizer = new DelegatingConsoleAuthorizer(custom, null);
+        assertNull("自定义委托（未实现 revoke）只要报出 tokenOf，内核也必须执行登出拒绝",
+                authorizer.authenticate(requestWith("X-Es-Host-Token", token)));
+        DelegatedTokenRevocations.clear();
+    }
+
+    @Test
     public void 委托模式配置错误启动即失败() {
         expectInvalid("jwt2", p -> p.getConsole().getAuth().getDelegate().setMode("jwt2"));
         expectInvalid("jwt 缺密钥/公钥", p -> p.getConsole().getAuth().getDelegate().setMode("jwt"));

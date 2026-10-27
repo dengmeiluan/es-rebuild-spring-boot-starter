@@ -166,6 +166,7 @@ import { api } from '../api';
 import PageHeader from '../components/PageHeader.vue';
 import { useAutoRefresh } from '../composables/useAutoRefresh';
 import { useAppStore } from '../stores/app';
+import { useGatedBootRead } from '../composables/usePageIdentityGate';
 import { copyText } from '../utils/format';
 import { usePref, useUrlState } from '../composables/urlState';
 import SkeletonBox from '../components/SkeletonBox.vue';
@@ -241,7 +242,9 @@ const refresher = useAutoRefresh(load, {
 refresher.setOn(true); // usePref 恢复为 true 时开局即启动（原 immediate watch 语义）
 watch([autoRefresh, tpIntervalMs], () => refresher.restart());
 
-onMounted(load);
+/* 1125：拓扑首载 + 10s 轮询都要过身份门（轮询见 useAutoRefresh 的 guard 侧） */
+const topoBoot = useGatedBootRead('topology', load);
+onMounted(() => topoBoot.run());
 
 /* 布局参数。（/ 留存）：CELL 14→16 / GAP 3→4——SVG 单位格加大后
  viewBox W=844 恒定（NODE_W/网格参数零触），配 svgMinW 渲染宽保底全档 ≥24px

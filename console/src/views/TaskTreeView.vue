@@ -1,6 +1,11 @@
 <template>
   <div class="tt">
     <PageHeader :icon="GitBranch" title="任务树" subtitle="集群在途任务与父子任务层级" />
+    <!-- 只读身份前置说明（1124）：批量/行内 cancel 与勾选框隐藏时给出原因
+         （TaskTree 的勾选只用于取消，无取消权时不渲染，语言与任务管理页同源） -->
+    <div v-if="auth.probed && !canWrite" class="tt-perm-note" role="status">
+      <ShieldAlert :size="13" /> 当前身份只读：任务树照常可浏览，取消任务不可用——需 CLUSTER_OP 及以上角色，或该连接的「集群设置」写权限。
+    </div>
     <div class="tt-bar lr-bar freeze">
       <div class="tt-bar-l lr-bar-l">
         <span class="tt-count">{{ nodes.length }} 根 · {{ totalTasks }} 任务</span>
@@ -104,7 +109,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, defineComponent, h } from 'vue';
 import { useRoute } from 'vue-router';
-import { GitBranch, ChevronRight, ChevronDown, Copy, Eye, X, ListFilter, Terminal } from 'lucide-vue-next';
+import { GitBranch, ChevronRight, ChevronDown, Copy, Eye, X, ListFilter, Terminal, ShieldAlert } from 'lucide-vue-next';
 import { api, ioRecorder, type RawIoRec } from '../api';
 import { copyText } from '../utils/format';
 import { semFormat } from '../composables/useSemFormat'; /* ：running 时长人话化单源 */
@@ -444,6 +449,8 @@ watch([autoRefresh, refreshMs], () => refresher.restart());
 /* G1-C12：区块级间距落梯 --sp token（控件内 padding 与亚阶梯微调不动） */
 .tt { display: flex; flex-direction: column; gap: var(--sp-3); height: 100%; }
 .tt-bar {padding: var(--sp-3) var(--sp-4);}
+/* 只读身份说明条（RestView .rt-perm-note 同款形态） */
+.tt-perm-note { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); margin: 0 var(--sp-4) var(--sp-3); }
 .tt-count { color: var(--tx2); font-size: var(--fs-xs); }
 /* 下限挂 min(220px,100%) 钳制（ClusterSettings .cs-filter 同步同款）——
  485/375 窄档裸 220px 下限撑破工具行，min() 让输入框在极窄容器收缩到 100% */

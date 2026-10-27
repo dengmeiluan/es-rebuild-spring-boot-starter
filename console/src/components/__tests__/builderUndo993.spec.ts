@@ -227,3 +227,39 @@ describe('993 高级算子菜单 ↑↓ 键盘导航', () => {
     expect((last()?.children[1].node as any).op).toBe('geo_distance');
   });
 });
+
+/* 1045：连续输入合并——30 字公司名不再吃光 50 格撤销栈 */
+describe('1045 输入级撤销合并', () => {
+  it('同一条叶子 1.2s 内连续输入只占一步撤销', async () => {
+    const { host, cur } = mount({ query: { bool: { must: [{ term: { a: 'x' } }] } } });
+    await tick();
+    const inp = host.querySelector('.cn .cn-val') as HTMLInputElement;
+    inp.value = 'xy';
+    inp.dispatchEvent(new Event('input'));
+    await tick();
+    inp.value = 'xyz';
+    inp.dispatchEvent(new Event('input'));
+    await tick();
+    expect(ser(cur)).toContain('"xyz"');
+    (btn(host, '撤销') as HTMLElement).click();
+    await tick();
+    expect(ser(cur), '一次撤销回到输入前，而不是只退一个字符').toContain('"a":"x"');
+  });
+
+  it('结构编辑与输入不合并：删条件仍单独一步', async () => {
+    const { host, cur } = mount({ query: { bool: { must: [{ term: { a: 'x' } }, { term: { b: 2 } }] } } });
+    await tick();
+    const inp = host.querySelector('.cn .cn-val') as HTMLInputElement;
+    inp.value = 'xy';
+    inp.dispatchEvent(new Event('input'));
+    await tick();
+    (host.querySelector('.bgn-part.o-must .cn button[aria-label="删除"]') as HTMLElement).click();
+    await tick();
+    (btn(host, '撤销') as HTMLElement).click();
+    await tick();
+    expect(ser(cur), '撤销删除恢复两条').toContain('"a":"xy"');
+    (btn(host, '撤销') as HTMLElement).click();
+    await tick();
+    expect(ser(cur), '再撤一步回到输入前').toContain('"a":"x"');
+  });
+});

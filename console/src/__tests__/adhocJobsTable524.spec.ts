@@ -303,5 +303,7 @@ describe('524 W1 SqlBridge 试跑结果表格（挂载行为）', () => {
     expect(copied.split('\n').length).toBe(26);
     expect(copied.split('\n')[0]).toBe('cnt\tdt\tnul');
     app.unmount();
-  });
+    /* 全量分片并行时该挂载用例在本机实测 4~9s（QRT 25 行 + 复制），
+       5s 默认值会随机超时；本用例本身含 settle 等待，放行到 15s。 */
+  }, 15000);
 });

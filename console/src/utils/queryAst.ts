@@ -29,6 +29,9 @@ export interface LeafNode {
   value: unknown;
   params: Record<string, unknown>;
   raw: unknown;
+  /** 主值键 presence 记忆（named/none/fields 形态）：false = 原 body 没有 mainKey，
+   * 序列化时不写回 undefined 占位键（对象级往返无损；JSON 文本本会剔掉 undefined）。 */
+  hasMain?: boolean;
   /** field 形态 inner 写法记忆：true = 原 DSL 是 {op:{field:{value|query:…}}} 对象形态，
    * false/缺省 = 标量简写 {op:{field:'x'}}。往返时按原形态写回，树编辑不再悄悄改写用户 DSL 文本。 */
   expanded?: boolean;
@@ -61,9 +64,15 @@ export type QueryNode = LeafNode | BoolNode | WrapNode | MultiNode;
 
 /* W2 富化：sort/_source/highlight/aggs 一等解析（形态记忆，往返无损） */
 export interface SortItem { id: string; field: string; form: 'str' | 'short' | 'full' | 'multi'; params: Record<string, unknown> }
-export interface SourceSpec { mode: 'all' | 'none' | 'one' | 'list' | 'pattern'; fields: string[]; includes: string[]; excludes: string[]; hasIncludes?: boolean; hasExcludes?: boolean }
+export interface SourceSpec {
+  mode: 'all' | 'none' | 'one' | 'list' | 'pattern';
+  fields: string[]; includes: string[]; excludes: string[];
+  hasIncludes?: boolean; hasExcludes?: boolean;
+  /** 非标准/扩展键（exclude 单数、include、非数组 includes…）原样保真 */
+  extra?: Record<string, unknown>;
+}
 export interface AggNode { id: string; name: string; op: string; body: unknown; children: AggNode[]; meta: Record<string, unknown>; aggKey: string; hasMeta?: boolean; hasKids?: boolean }
-interface HighlightSpec { fields: Array<{ name: string; params: Record<string, unknown> }>; params: Record<string, unknown> }
+interface HighlightSpec { fields: Array<{ name: string; params: Record<string, unknown> }>; params: Record<string, unknown>; hasFields?: boolean }
 /* 987：顶层键一等公民化。post_filter 直接复用 QueryNode 树（聚合后过滤可树编辑）；
  collapse = 路由字段 + 其余参数（inner_hits 落 params）；knn = 路由字段 + 向量 presence
  记忆（query_vector 键缺席形态如 query_vector_builder 不写回主值位）。畸形形态
@@ -119,27 +128,40 @@ type ParseResult = { ok: true; tree: QueryTree } | { ok: false; reason: string }
 
 /* 包装算子元数据：fieldKey = 路由字段键（缺省 = 无路由字段包装）；childKey = 子查询键名。
  WRAP_FIELD 保持路由字段键的兼容视图（既有消费面：builderTypePriority521 等）。 */
-export interface WrapMeta { fieldKey?: string; childKey: string }
+export interface WrapMeta { fieldKey?: string; childKey: string; childOptional?: boolean }
 export const WRAP_META: Record<string, WrapMeta> = {
   nested: { fieldKey: 'path', childKey: 'query' },
   has_child: { fieldKey: 'type', childKey: 'query' },
   has_parent: { fieldKey: 'parent_type', childKey: 'query' },
   constant_score: { childKey: 'filter' },
-  function_score: { childKey: 'query' },
+  /* function_score 的 query 可选（functions/func 独立成体是官方合法形态）；
+     其余包装容器子查询必填——缺子句时仍落 raw 权威，不在树里伪造 match_all。 */
+  function_score: { childKey: 'query', childOptional: true },
   script_score: { childKey: 'query' },
   pinned: { childKey: 'organic' },
   span_first: { childKey: 'match' },
   span_multi: { childKey: 'match' },
-  field_masking_span: { fieldKey: 'field', childKey: 'query' },
+  span_field_masking: { fieldKey: 'field', childKey: 'query' },
 };
 export const WRAP_FIELD: Record<string, string> = Object.fromEntries(
   Object.entries(WRAP_META).filter(([, m]) => m.fieldKey).map(([op, m]) => [op, m.fieldKey!]),
 );
 
-/* geo_distance 特判：body 是「字段键 + 散参数」同层（{distance, location:{…}}）——
- 值为对象的键即字段。geo_point 字段值也可以是字符串（"41,-87"），该形态无对象值键，
- 照旧落 raw 键值表（无损不丢）。 */
-const FIELD_OBJ_OPS = new Set(['geo_distance']);
+/* geo 系特判：body 是「字段键 + 散参数」同层（{distance, location:{…}, validation_method}）——
+ 值为对象的键即字段，其余散键进 params。geo_point 字段值也可以是字符串（"41,-87"），
+ 无对象值键时回认 location 键（该键在 geo_distance 里恒为地理值位）。 */
+const FIELD_OBJ_OPS = new Set(['geo_distance', 'geo_bounding_box', 'geo_polygon', 'geo_grid', 'shape']);
+
+/* field 形态允许与字段键同层的具名参数（terms + boost、term + case_insensitive…）。
+ 注册表 params 是权威来源，再补 ES 全族常见散键——字段键 = 唯一不在本表的 body 键。
+ 否则「字段 + 兄弟参数」会被误判非标准形态整条落 raw（合法 DSL 失去富表单）。 */
+const COMMON_PARAM_KEYS: ReadonlySet<string> = new Set<string>([
+  /* 只收「确定不是字段名」的散参数；field/value/query/term/type/id 等既可能是参数、
+     也可能是业务字段名，收进来会把 {term:{field:'x'}} 误判成无字段形态。geo 系由
+     FIELD_OBJ_OPS 单独处理，不依赖此表。 */
+  '_name', 'boost', 'case_insensitive', 'rewrite',
+  ...Object.values(OPS_META).flatMap(m => (m.params || []).map(p => p.key)),
+]);
 
 function parseLeaf(op: string, body: unknown): LeafNode {
   const base: LeafNode = { id: nid(), type: 'leaf', op, field: null, value: null, params: {}, raw: null };
@@ -156,34 +178,39 @@ function parseLeaf(op: string, body: unknown): LeafNode {
   }
   const meta = OPS_META[op];
   if (meta?.form === 'field' && isObj(body)) {
-    /* geo_distance 混层形态：对象值键 = 字段，其余键进 params */
+    /* geo 系混层形态：对象值键 = 字段，其余键进 params；location 字符串值形态回认 location */
     if (FIELD_OBJ_OPS.has(op)) {
-      const fk = Object.keys(body).find(k => isObj(body[k]));
+      const fk = Object.keys(body).find(k => isObj(body[k]))
+        || Object.keys(body).find(k => k === 'location' && (typeof body[k] === 'string' || Array.isArray(body[k])));
       if (fk) {
         const { [fk]: value, ...rest } = body;
         return { ...base, field: fk, value, params: rest };
       }
       return { ...base, raw: body };
     }
-    if (Object.keys(body).length === 1) {
-      const field = Object.keys(body)[0];
+    /* 字段键 = 唯一不属于具名参数集的 body 键。terms/term 等允许 boost/_name
+       与字段键同层（ES 官方形态），旧实现要求恰一键，合法 DSL 被整条降级 raw。 */
+    const fieldKeys = Object.keys(body).filter(k => !COMMON_PARAM_KEYS.has(k));
+    if (fieldKeys.length === 1) {
+      const field = fieldKeys[0];
       const inner = body[field];
-      if (meta.wrap === 'none') return { ...base, field, value: inner };   // range/terms/对象值：inner 整体即值
+      const params = Object.fromEntries(Object.entries(body).filter(([k]) => k !== field));
+      if (meta.wrap === 'none') return { ...base, field, value: inner, params };   // range/terms/对象值：inner 整体即值
       const vk = meta.valueKey || (meta.wrap === 'query' ? 'query' : 'value');
       if (isObj(inner) && vk in inner) {
         const { [vk]: value, ...rest } = inner;
         /* 998：对象形态记忆——{term:{f:{value:'x'}}} 与 {term:{f:'x'}} 语义等价但文本不同，
           原样保留写回，避免树编辑把用户的显式形态洗成简写 */
-        return { ...base, field, value, params: rest, expanded: true };
+        return { ...base, field, value, params: { ...params, ...rest }, expanded: true };
       }
-      return { ...base, field, value: inner };
+      return { ...base, field, value: inner, params };
     }
     return { ...base, raw: body };
   }
   /* 多字段形态：{mainKey: 值, fields: […], …其余参数}（fields 键缺席 = null 记忆） */
   if (meta?.form === 'fields' && isObj(body)) {
     const { [meta.mainKey!]: value, fields, ...rest } = body;
-    return { ...base, value, fields: Array.isArray(fields) ? fields.map(String) : null, params: rest };
+    return { ...base, value, fields: Array.isArray(fields) ? fields.map(String) : null, params: rest, hasMain: meta.mainKey! in body };
   }
   /* 具名字段键形态：{fieldKey: '字段名', mainKey: 值, …其余}（fieldKey 非 string 进 params 原样） */
   if (meta?.form === 'named' && isObj(body)) {
@@ -191,14 +218,14 @@ function parseLeaf(op: string, body: unknown): LeafNode {
     const fv = rest[meta.fieldKey!];
     if (meta.fieldKey && typeof fv === 'string') {
       delete rest[meta.fieldKey];
-      return { ...base, field: fv, value, params: rest };
+      return { ...base, field: fv, value, params: rest, hasMain: meta.mainKey! in body };
     }
-    return { ...base, value, params: rest };
+    return { ...base, value, params: rest, hasMain: meta.mainKey! in body };
   }
   /* 无字段形态：{mainKey: 值, …其余参数}（ids/script/wrapper） */
   if (meta?.form === 'none' && isObj(body)) {
     const { [meta.mainKey!]: value, ...rest } = body;
-    return { ...base, value, params: rest };
+    return { ...base, value, params: rest, hasMain: meta.mainKey! in body };
   }
   return { ...base, raw: body };   // 非标准/未知 → 通用结构化节点
 }
@@ -220,7 +247,14 @@ function parseWrap(op: string, body: Record<string, unknown>): QueryNode {
   const rawLeaf = (): QueryNode => ({ id: nid(), type: 'leaf', op, field: null, value: null, params: {}, raw: body });
   if (!fk) {
     /* 无路由字段包装（constant_score/function_score/script_score/pinned） */
-    if (!isObj(body[fm.childKey])) return rawLeaf();
+    if (!isObj(body[fm.childKey])) {
+      /* function_score 的 query 可省略（只用 functions 打分是官方形态） */
+      if (fm.childOptional) {
+        const { [fm.childKey]: _query, ...params } = body;
+        return { id: nid(), type: 'wrap', op, field: null, childKey: fm.childKey, child: null, params };
+      }
+      return rawLeaf();
+    }
     const { [fm.childKey]: query, ...params } = body;
     return { id: nid(), type: 'wrap', op, field: null, childKey: fm.childKey, child: parseQueryNode(query), params };
   }
@@ -257,6 +291,9 @@ export function parseQueryNode(q: unknown): QueryNode {
 function isDisabled(n: QueryNode): boolean {
   if (n.type === 'leaf') return n.disabled === true;
   if (n.type === 'bool') {
+    /* 空 bool 是合法查询形态（常见于 should + minimum_should_match 骨架），
+       不是「全部停用」——旧判定把它当停用整组删除，语义从全命中翻成零命中。 */
+    if (!n.children.length) return false;
     const active = n.children.filter(c => !isDisabled(c.node));
     return active.length === 0;
   }
@@ -279,7 +316,12 @@ export function serQueryNode(n: QueryNode): unknown {
     const out: Record<string, unknown> = { ...n.params };
     for (const k of meta.keys) {
       const arr = n.children.filter(c => c.key === k).map(c => serQueryNode(c.node));
-      if (!arr.length) continue;
+      if (!arr.length) {
+        /* 空数组是合法且必需的（dis_max.queries / span_near.clauses 等必填键）；
+           原形态记忆为数组时保键，否则 ES 收到缺键直接 400。 */
+        if (n.arrForm[k]) out[k] = [];
+        continue;
+      }
       out[k] = n.arrForm[k] === false && arr.length === 1 ? arr[0] : arr;   // 原形态记忆优先（畸形输入无损）
     }
     return { [n.op]: out };
@@ -287,7 +329,10 @@ export function serQueryNode(n: QueryNode): unknown {
   if (n.type === 'leaf' && n.disabled) return { match_none: {} };   // 停用条件单独出现在顶层时兜底为空结果(不污染查询)
   if (n.type === 'wrap') {
     const body: Record<string, unknown> = { ...n.params };
-    body[n.childKey || 'query'] = n.child ? serQueryNode(n.child) : { match_all: {} };
+    const childKey = n.childKey || 'query';
+    /* function_score 无 query 是官方形态：不伪造 match_all（会改变评分语义） */
+    if (n.child) body[childKey] = serQueryNode(n.child);
+    else if (!WRAP_META[n.op]?.childOptional) body[childKey] = { match_all: {} };
     if (n.field !== null) body[WRAP_META[n.op]?.fieldKey || 'path'] = n.field;
     return { [n.op]: body };
   }
@@ -298,18 +343,21 @@ export function serQueryNode(n: QueryNode): unknown {
   const meta = OPS_META[n.op];
   /* 多字段形态：{mainKey: 值, fields: […], …参数}（fields null = 原无键不写回） */
   if (meta?.form === 'fields') {
-    const body: Record<string, unknown> = { [meta.mainKey!]: n.value, ...n.params };
+    const body: Record<string, unknown> = { ...(n.hasMain === false ? {} : { [meta.mainKey!]: n.value }), ...n.params };
     if (n.fields !== null && n.fields !== undefined) body.fields = [...n.fields];
     return { [n.op]: body };
   }
   /* 具名字段键形态：{fieldKey: 字段, mainKey: 值, …参数}（field null = 原无字段键不写回） */
   if (meta?.form === 'named') {
-    const body: Record<string, unknown> = { [meta.mainKey!]: n.value, ...n.params };
+    const body: Record<string, unknown> = { ...(n.hasMain === false ? {} : { [meta.mainKey!]: n.value }), ...n.params };
     if (n.field !== null && n.field !== undefined) body[meta.fieldKey!] = n.field;
     return { [n.op]: body };
   }
-  /* 无字段形态：{mainKey: 值, …参数} */
-  if (meta?.form === 'none') return { [n.op]: { [meta.mainKey!]: n.value, ...n.params } };
+  /* 无字段形态：{mainKey: 值, …参数}（hasMain=false = 原体无主值键，不写 undefined 占位） */
+  if (meta?.form === 'none') {
+    const body: Record<string, unknown> = { ...(n.hasMain === false ? {} : { [meta.mainKey!]: n.value }), ...n.params };
+    return { [n.op]: body };
+  }
   if (n.field === null) return { [n.op]: n.raw };   // 兜底：无字段的非标准富形态（理论不可达，保守还原）
   if (meta?.wrap === 'none') return { [n.op]: { ...n.params, [n.field]: n.value } };   // geo_distance 混层：散参数合回 body（terms/range params 恒空零变）
   const vk = meta?.valueKey || (meta?.wrap === 'query' ? 'query' : 'value');
@@ -542,8 +590,11 @@ export function parseRetriever(v: unknown): RetrieverNode | null {
     const { [meta.listKey!]: _list, ...rest } = body;
     return { ...base(), children, childKeys, params: rest };
   }
-  /* child 变体：tsr 源 / rule 回退（retriever 键缺席合法——rule 可只按 match_criteria 路由） */
-  const { retriever, field, ...rest } = body;
+  /* child 变体：tsr/pinned/diversify/rescorer 召回源 / rule 回退。
+     子检索器缺席仅 rule 合法（按 match_criteria 独立路由）；其余变体缺源=畸形整键 extras。 */
+  const childKey = meta.childKey || 'retriever';
+  const { [childKey]: retriever, field, ...rest } = body;
+  if (retriever === undefined && !meta.childOptional) return null;
   if (retriever !== undefined && !isObj(retriever)) return null;
   const c = retriever === undefined ? null : parseRetriever(retriever);
   if (retriever !== undefined && !c) return null;
@@ -570,7 +621,7 @@ export function serRetriever(n: RetrieverNode): Record<string, unknown> {
     return { [n.op]: { ...n.params, [meta.listKey!]: arr } };
   }
   const b: Record<string, unknown> = { ...n.params };
-  if (n.child) b.retriever = serRetriever(n.child);
+  if (n.child) b[meta.childKey || 'retriever'] = serRetriever(n.child);
   if (n.field !== null) b.field = n.field;
   return { [n.op]: b };
 }
@@ -607,7 +658,19 @@ function parseSource(v: unknown): SourceSpec {
   if (v === false) return { ...base, mode: 'none' };
   if (typeof v === 'string') return { ...base, mode: 'one', fields: [v] };
   if (Array.isArray(v)) return { ...base, mode: 'list', fields: v.map(String) };
-  if (isObj(v)) return { ...base, mode: 'pattern', includes: strArr(v.includes), excludes: strArr(v.excludes), hasIncludes: 'includes' in v, hasExcludes: 'excludes' in v };
+  if (isObj(v)) {
+    const extra: Record<string, unknown> = { ...v };
+    delete extra.includes; delete extra.excludes;
+    /* 非数组 includes/excludes 是合法扩展形态（如 includes:"obj.*"）：
+       原值留在 extra，序列化时原样写回，不再静默变成 [] 丢数据。 */
+    if ('includes' in v && !Array.isArray(v.includes)) extra.includes = v.includes;
+    if ('excludes' in v && !Array.isArray(v.excludes)) extra.excludes = v.excludes;
+    return {
+      ...base, mode: 'pattern', includes: strArr(v.includes), excludes: strArr(v.excludes),
+      hasIncludes: 'includes' in v, hasExcludes: 'excludes' in v,
+      ...(Object.keys(extra).length ? { extra } : {}),
+    };
+  }
   return base;
 }
 function serSource(s: SourceSpec): unknown {
@@ -615,9 +678,11 @@ function serSource(s: SourceSpec): unknown {
   if (s.mode === 'none') return false;
   if (s.mode === 'one') return s.fields[0] ?? '';
   if (s.mode === 'list') return [...s.fields];
-  const out: Record<string, unknown> = {};
-  if (s.hasIncludes ?? (s.includes.length > 0)) out.includes = [...s.includes];
-  if (s.hasExcludes ?? (s.excludes.length > 0)) out.excludes = [...s.excludes];
+  const out: Record<string, unknown> = { ...(s.extra || {}) };
+  if (Array.isArray(s.extra?.includes)) delete out.includes;
+  if (Array.isArray(s.extra?.excludes)) delete out.excludes;
+  if (!('includes' in out) && (s.hasIncludes ?? (s.includes.length > 0))) out.includes = [...s.includes];
+  if (!('excludes' in out) && (s.hasExcludes ?? (s.excludes.length > 0))) out.excludes = [...s.excludes];
   return out;   // 无 presence 键时回落 length 判断（UI 新建路径）；全空 pattern → {} 往返一致
 }
 
@@ -627,14 +692,21 @@ function parseHighlight(v: Record<string, unknown>): HighlightSpec {
   for (const [k, val] of Object.entries(v)) {
     if (k === 'fields' && isObj(val)) {
       h.fields = Object.entries(val).map(([name, p]) => ({ name, params: isObj(p) ? { ...p } : {} }));
+      h.hasFields = true;
     } else h.params[k] = val;
   }
   return h;
 }
 function serHighlight(h: HighlightSpec): unknown {
-  const fields: Record<string, unknown> = {};
-  for (const f of h.fields) fields[f.name] = { ...f.params };
-  return { ...h.params, fields };
+  const out: Record<string, unknown> = { ...h.params };
+  /* fields 键缺席形态（只配 pre_tags 等全局参数）不注入空对象——
+     old impl 恒补 fields:{}，把合法请求改写成不同文本。 */
+  if (h.hasFields ?? (h.fields.length > 0)) {
+    const fields: Record<string, unknown> = {};
+    for (const f of h.fields) fields[f.name] = { ...f.params };
+    out.fields = fields;
+  }
+  return out;
 }
 
 /* ---- aggs：op=首个非 aggs/aggregations/meta 键；aggKey 记忆子聚合键名 ---- */
@@ -679,6 +751,186 @@ export function updateNodeById(root: QueryNode, id: string, fn: (n: QueryNode) =
     return { ...root, children: root.children.map(c => ({ key: c.key, node: updateNodeById(c.node, id, fn) })) };
   }
   return root;
+}
+
+/* ═══ 1045：未填值条件判定（构建器头部计数与执行行提示共用，纯函数） ═══
+   只算「需要值但值为空」的启用叶子；exists/match_all/match_none 天然无值。
+   空对象（range 四格全空）与空数组（terms 无项）也算未填。 */
+export function isLeafValueMissing(v: unknown): boolean {
+  if (v == null || v === '') return true;
+  if (Array.isArray(v)) return v.length === 0;
+  if (typeof v === 'object') return Object.keys(v as Record<string, unknown>).length === 0;
+  return false;
+}
+/* 1118：rank_feature 的主值 boost 是可选的（字段本身即查询），不能按「未填值」报警；
+ exists/match_all/match_none 同属天然无值。 */
+const NO_VALUE_OPS: ReadonlySet<string> = new Set(['exists', 'match_all', 'match_none', 'rank_feature']);
+export function countUnfilledLeaves(root: QueryNode | null): number {
+  let n = 0;
+  const walk = (x: QueryNode) => {
+    if (x.type === 'bool') x.children.forEach(c => walk(c.node));
+    else if (x.type === 'wrap') { if (x.child) walk(x.child); }
+    else if (x.type === 'multi') x.children.forEach(c => walk(c.node));
+    else if (!x.disabled && !NO_VALUE_OPS.has(x.op) && isLeafValueMissing(x.value)) n++;
+  };
+  if (root) walk(root);
+  return n;
+}
+/* ═══ 1049：多选批量操作（纯函数）═══
+   选中节点即对其整棵子树生效；祖先选中时不再下钻（调用方递归遇到选中即停），
+   因此父子同选不会重复操作。删除保留父容器结构（空组由 setRoot 归一）。 */
+function markLeaves(n: QueryNode, disabled: boolean): QueryNode {
+  if (n.type === 'bool') return { ...n, children: n.children.map(c => ({ occur: c.occur, node: markLeaves(c.node, disabled) })) };
+  if (n.type === 'wrap') return { ...n, child: n.child ? markLeaves(n.child, disabled) : null };
+  if (n.type === 'multi') return { ...n, children: n.children.map(c => ({ key: c.key, node: markLeaves(c.node, disabled) })) };
+  return { ...n, disabled };
+}
+export function setDisabledForIds(root: QueryNode, ids: ReadonlySet<string>, disabled: boolean): QueryNode {
+  if (!ids.size) return root;
+  if (ids.has(root.id)) return markLeaves(root, disabled);
+  if (root.type === 'bool') {
+    return { ...root, children: root.children.map(c => ({ occur: c.occur, node: setDisabledForIds(c.node, ids, disabled) })) };
+  }
+  if (root.type === 'wrap') return { ...root, child: root.child ? setDisabledForIds(root.child, ids, disabled) : null };
+  if (root.type === 'multi') {
+    return { ...root, children: root.children.map(c => ({ key: c.key, node: setDisabledForIds(c.node, ids, disabled) })) };
+  }
+  return root;
+}
+export function removeNodesByIds(root: QueryNode, ids: ReadonlySet<string>): QueryNode {
+  if (!ids.size) return root;
+  if (ids.has(root.id)) return matchAllLeafNode();
+  if (root.type === 'bool') {
+    return {
+      ...root,
+      children: root.children.filter(c => !ids.has(c.node.id))
+        .map(c => ({ occur: c.occur, node: removeNodesByIds(c.node, ids) })),
+    };
+  }
+  if (root.type === 'wrap') {
+    if (!root.child) return root;
+    return { ...root, child: ids.has(root.child.id) ? null : removeNodesByIds(root.child, ids) };
+  }
+  if (root.type === 'multi') {
+    return {
+      ...root,
+      children: root.children.filter(c => !ids.has(c.node.id))
+        .map(c => ({ key: c.key, node: removeNodesByIds(c.node, ids) })),
+    };
+  }
+  return root;
+}
+
+/* ═══ 1051：多选批量复制 ═══
+   与单行「复制」同语义：bool 子句在各自 occur 分区原位后插副本，父组选中即整棵复制，
+   父子同选只复制父级（不下钻）。根选中沿用单行语义包 bool.must 两份。
+   wrap 唯一槽与 multi 结构化槽（span/dis_max…）不就地复制——换槽会改语义。 */
+export function duplicateNodesByIds(root: QueryNode, ids: ReadonlySet<string>): QueryNode {
+  if (!ids.size) return root;
+  if (ids.has(root.id)) {
+    const g: BoolNode = {
+      id: nid(), type: 'bool',
+      children: [{ occur: 'must', node: root }, { occur: 'must', node: cloneNode(root) }],
+      params: {}, arrForm: { must: true },
+    };
+    return g;
+  }
+  const walk = (n: QueryNode): QueryNode => {
+    if (n.type === 'bool') {
+      const children: BoolNode['children'] = [];
+      for (const c of n.children) {
+        if (ids.has(c.node.id)) {
+          children.push({ occur: c.occur, node: c.node }, { occur: c.occur, node: cloneNode(c.node) });
+        } else {
+          children.push({ occur: c.occur, node: walk(c.node) });
+        }
+      }
+      return { ...n, children };
+    }
+    if (n.type === 'wrap') return n.child ? { ...n, child: walk(n.child) } : n;
+    if (n.type === 'multi') return { ...n, children: n.children.map(c => ({ key: c.key, node: walk(c.node) })) };
+    return n;
+  };
+  return walk(root);
+}
+
+/* ═══ 1052：多选包成组（括号语义，往返无损） ═══
+   仅接受「同一 bool 父组、同一 occur 分区」的兄弟条件：组内孩子沿用原 occur，
+   组按原分区插回第一个被选位置。
+   无损边界：must/filter 直接等价；should 仅限父组未设 minimum_should_match
+   （包组后 should 子句数量变少，msm 口径会变）；must_not 兄弟是逐个取反，
+   再包一层会变成双重否定（NOT(NOT a AND NOT b) = a OR b），一律禁用。
+   wrap 唯一槽与 multi 结构化槽同理不参与。 */
+interface GroupSlot { parent: BoolNode; occur: Occur; index: number; node: QueryNode }
+function collectGroupSlots(root: QueryNode, ids: ReadonlySet<string>): GroupSlot[] | null {
+  if (!ids.size) return null;
+  const slots: GroupSlot[] = [];
+  let ineligible = false;
+  const walk = (n: QueryNode) => {
+    if (n.type === 'bool') {
+      n.children.forEach((c, i) => {
+        if (ids.has(c.node.id)) slots.push({ parent: n, occur: c.occur, index: i, node: c.node });
+        else walk(c.node);
+      });
+      return;
+    }
+    if (n.type === 'wrap') {
+      if (!n.child) return;
+      if (ids.has(n.child.id)) ineligible = true;
+      else walk(n.child);
+      return;
+    }
+    if (n.type === 'multi') {
+      for (const c of n.children) {
+        if (ids.has(c.node.id)) ineligible = true;
+        else walk(c.node);
+      }
+    }
+  };
+  walk(root);
+  if (ineligible || slots.length < 2) return null;
+  const { parent, occur } = slots[0];
+  if (!slots.every(s => s.parent.id === parent.id && s.occur === occur)) return null;
+  if (occur === 'must_not') return null;
+  if (occur === 'should' && ('minimum_should_match' in parent.params || 'MINIMUM_SHOULD_MATCH' in parent.params)) return null;
+  return slots;
+}
+export function canGroupByIds(root: QueryNode | null, ids: ReadonlySet<string>): boolean {
+  if (!root) return false;
+  if (ids.has(root.id)) return root.type !== 'bool';
+  return collectGroupSlots(root, ids) !== null;
+}
+export function groupNodesByIds(root: QueryNode, ids: ReadonlySet<string>): QueryNode {
+  if (ids.has(root.id)) return root.type === 'bool' ? root : wrapInBool(root, root.id);
+  const slots = collectGroupSlots(root, ids);
+  if (!slots) return root;
+  const { parent, occur } = slots[0];
+  const group: BoolNode = {
+    id: nid(), type: 'bool',
+    children: slots.map(s => ({ occur, node: s.node })),
+    params: {}, arrForm: { [occur]: true },
+  };
+  const first = Math.min(...slots.map(s => s.index));
+  return updateNodeById(root, parent.id, n => {
+    if (n.type !== 'bool') return n;
+    const sel = new Set(slots.map(s => s.node.id));
+    const rest = n.children.filter(c => !sel.has(c.node.id));
+    const pos = n.children.slice(0, first).filter(c => !sel.has(c.node.id)).length;
+    return { ...n, children: [...rest.slice(0, pos), { occur, node: group }, ...rest.slice(pos)] };
+  });
+}
+
+export function firstUnfilledLeafId(root: QueryNode | null): string | null {
+  let found: string | null = null;
+  const walk = (x: QueryNode) => {
+    if (found) return;
+    if (x.type === 'bool') x.children.forEach(c => walk(c.node));
+    else if (x.type === 'wrap') { if (x.child) walk(x.child); }
+    else if (x.type === 'multi') x.children.forEach(c => walk(c.node));
+    else if (!x.disabled && !NO_VALUE_OPS.has(x.op) && isLeafValueMissing(x.value)) found = x.id;
+  };
+  if (root) walk(root);
+  return found;
 }
 
 export function findNode(root: QueryNode, id: string): QueryNode | null {
@@ -822,6 +1074,47 @@ export function insertAfter(root: QueryNode, id: string): QueryNode {
   return root;
 }
 
+/** 1067：同一容器内键盘移动（Alt+↑/↓）——只在与当前节点同 occur 分区（multi 同 key 分区）
+    的相邻兄弟间交换，跨分区/根节点/边界原样返回。组按整棵子树移动。 */
+export function moveSibling(root: QueryNode, id: string, delta: -1 | 1): QueryNode {
+  if (!delta || root.id === id) return root;
+  if (root.type === 'bool') {
+    const idx = root.children.findIndex(c => c.node.id === id);
+    if (idx >= 0) {
+      const occur = root.children[idx].occur;
+      let swap = -1;
+      for (let i = idx + delta; i >= 0 && i < root.children.length; i += delta) {
+        if (root.children[i].occur === occur) { swap = i; break; }
+      }
+      if (swap < 0) return root;
+      const children = [...root.children];
+      [children[idx], children[swap]] = [children[swap], children[idx]];
+      return { ...root, children };
+    }
+    return { ...root, children: root.children.map(c => ({ occur: c.occur, node: moveSibling(c.node, id, delta) })) };
+  }
+  if (root.type === 'wrap' && root.child) {
+    if (root.child.id === id) return root;
+    return { ...root, child: moveSibling(root.child, id, delta) };
+  }
+  if (root.type === 'multi') {
+    const idx = root.children.findIndex(c => c.node.id === id);
+    if (idx >= 0) {
+      const key = root.children[idx].key;
+      let swap = -1;
+      for (let i = idx + delta; i >= 0 && i < root.children.length; i += delta) {
+        if (root.children[i].key === key) { swap = i; break; }
+      }
+      if (swap < 0) return root;
+      const children = [...root.children];
+      [children[idx], children[swap]] = [children[swap], children[idx]];
+      return { ...root, children };
+    }
+    return { ...root, children: root.children.map(c => ({ key: c.key, node: moveSibling(c.node, id, delta) })) };
+  }
+  return root;
+}
+
 export function emptyTree(): QueryTree {
   return { root: null, postFilter: null, collapse: null, knn: null, suggest: null, rescore: null, scriptFields: null, runtimeMappings: null, retriever: null, sort: null, source: null, aggs: null, highlight: null, searchParams: {}, extras: {} };
 }
@@ -844,30 +1137,46 @@ export function makeNodeByOp(op: string): QueryNode {
   const meta = OPS_META[op];
   if (!meta || op === 'match_all' || op === 'match_none') return matchAllLeafNode();
   if (meta.form === 'field') {
-    const objValue = meta.wrap === 'none' && op !== 'terms';
-    const value = op === 'terms' ? [] : objValue ? {} : '';
+    const objValue = meta.wrap === 'none' && op !== 'terms' && op !== 'terms_set';
+    const value = (op === 'terms' || op === 'terms_set') ? [] : objValue ? {} : '';
     return { ...empty(), field: '', value };
   }
   if (meta.form === 'fields') return { ...empty(), fields: [] };
-  return empty();   // named/none：field null + 标量值初值
+  if (meta.form === 'none') {
+    /* 无字段形态按主值语义给可用初值：ids 是数组（chip 编辑）、script 是对象
+       （脚本体递归表）、其余标量。旧实现一律 ''，插入 ids/script 后无法直接编辑。 */
+    if (op === 'ids') return { ...empty(), value: [] };
+    if (op === 'script') return { ...empty(), value: { source: '' } };
+    return empty();
+  }
+  /* 向量主值给可直接编辑的 JSON 形态（knn 数组 / sparse_vector 对象） */
+  if (op === 'knn') return { ...empty(), value: [] };
+  if (op === 'sparse_vector') return { ...empty(), value: {} };
+  /* rank_feature 的 boost 主值给 1（官方默认档），其余具名形态标量空串。
+     1120：distance_feature 的 origin/pivot 必填——给 now / 7d 的可跑默认，字段待选。 */
+  if (op === 'rank_feature') return { ...empty(), value: 1 };
+  if (op === 'distance_feature') return { ...empty(), value: '7d', params: { origin: 'now' } };
+  return empty();   // named：field null + 标量值初值
 }
 
 function matchAllLeafNode(): LeafNode {
   return { id: nid(), type: 'leaf', op: 'match_all', field: null, value: {}, params: {}, raw: null };
 }
 
-/* 1000：检索器空节点工厂——新变体给可用初值（bm25=match_all 查询；rrf/linear 默认带一路 bm25 子项，
+/* 1000：检索器空节点工厂——新变体给可用初值（standard=match_all 查询；rrf/linear 默认带一路 standard 子项，
    linear 子项给 weight:1）。切换变体=换新节点（六变体载荷语义互斥，保留旧载荷只会造出脏 DSL） */
 export function makeRetrieverByOp(op: string): RetrieverNode {
   const base = (o: string): RetrieverNode => ({ id: nid(), op: o, query: null, child: null, children: [], childKeys: {}, field: null, value: undefined, hasValue: false, params: {} });
   const m = RETRIEVER_META[op];
-  if (!m) return { ...base('bm25'), query: matchAllLeafNode() };
+  if (!m) return { ...base('standard'), query: matchAllLeafNode() };
   if (m.kind === 'query') return { ...base(op), query: matchAllLeafNode() };
   if (m.kind === 'list') {
-    const c = makeRetrieverByOp('bm25');
+    const c = makeRetrieverByOp('standard');
     const n = { ...base(op), children: [c] };
     if (m.wrapped) n.childKeys = { [c.id]: { weight: 1 } };
     return n;
   }
+  /* child 变体：必填召回源给一路 standard 可用初值；rule 保持空（可独立按规则路由） */
+  if (m.kind === 'child' && !m.childOptional) return { ...base(op), child: makeRetrieverByOp('standard') };
   return base(op);
 }

@@ -150,6 +150,7 @@ import PageHeader from '../components/PageHeader.vue';import { api } from '../ap
 import EmptyState from '../components/EmptyState.vue';
 import MetaStrip from '../components/MetaStrip.vue'; /* ：ws-kv meta 行统一件 */
 import { useAppStore } from '../stores/app';
+import { useGatedBootRead } from '../composables/usePageIdentityGate';
 import { } from '../composables/urlState';
 import { useScopedDraft } from '../composables/useScopedDraft';
 import { askConfirm } from '../composables/confirm';
@@ -298,11 +299,13 @@ function onVisChange() {
   }
 }
 
+/* 1125：refreshAll 一次拉索引/体检/远端集群/任务详情，身份未落地会带旧 target 发出 */
+const wsBoot = useGatedBootRead('workspace', () => refreshAll());
 onMounted(() => {
   loadLayout();
   now.value = fmtTimeTz(Date.now());
   clockTimer = window.setInterval(() => { now.value = fmtTimeTz(Date.now()); }, 1000);
-  refreshAll();
+  wsBoot.run();
   document.addEventListener('visibilitychange', onVisChange);
   if (typeof window.matchMedia === 'function') { /* 测试环境 happy-dom 兜底，保持默认 3 列 */
     mq1100 = window.matchMedia(`(max-width: ${BP_STACK}px)`);

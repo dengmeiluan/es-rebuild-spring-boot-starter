@@ -8,8 +8,11 @@ import { useAppStore } from '../stores/app';
 export type FieldItem = { path: string; type: string };
 
 const cache = new Map<string, FieldItem[]>();
+/* 换号代际：清理后在飞请求不得再写回 cache / 覆盖 fields（否则新账号看到
+   上一账号在旧连接读到的字段清单）。 */
+let epoch = 0;
 /** 测试专用：清空缓存 */
-export function __clearFieldCache() { cache.clear(); }
+export function __clearFieldCache() { epoch++; cache.clear(); }
 
 function walk(props: any, prefix: string, out: FieldItem[]) {
   if (!props) return;
@@ -43,7 +46,13 @@ export function useIndexFields(index: () => string) {
 
   async function ensure() {
     const idx = (index() || '').trim();
-    if (!idx) { fields.value = []; loadErr.value = ''; loading.value = false; return; }
+    if (!idx) {
+      /* 无索引：已空时不再写新数组——computed 内 ensure 会因此自激重算（递归更新） */
+      if (fields.value.length) fields.value = [];
+      if (loadErr.value) loadErr.value = '';
+      if (loading.value) loading.value = false;
+      return;
+    }
     const key = (store.target || '@host') + '|' + idx;
     const hit = cache.get(key);
     if (hit) { fields.value = hit; loadErr.value = ''; return; }
@@ -52,13 +61,15 @@ export function useIndexFields(index: () => string) {
  但 fields/loadErr/loading 仅当本次 reqKey 仍为当前 key 时才回写；已切换则静默丢弃，
  防止过期响应覆盖新索引字段或掐掉新请求的 loading。 */
     const reqKey = key;
-    const isCurrent = () => reqKey === (store.target || '@host') + '|' + ((index() || '').trim());
+    const reqEpoch = epoch;
+    const isCurrent = () => reqEpoch === epoch
+      && reqKey === (store.target || '@host') + '|' + ((index() || '').trim());
     try {
       const r: any = await api.mappingDetail(idx);
       const out: FieldItem[] = [];
       walk(r?.raw?.properties, '', out);
       out.sort((a, b) => a.path.localeCompare(b.path));
-      cache.set(key, out);
+      if (reqEpoch === epoch) cache.set(key, out);
       if (isCurrent()) fields.value = out;
     } catch (e: any) {
       if (isCurrent()) {
@@ -74,6 +85,9 @@ export function useIndexFields(index: () => string) {
   }
   /* 切集群目标：本实例字段清单清空（缓存 key 已含 target，无需清缓存） */
   watch(() => store.target, () => { fields.value = []; loadErr.value = ''; loading.value = false; });
+  /* 消费方主动换源（如 SQL 的 FROM 改稿）：清空旧清单后由调用方再 ensure——
+     不在此处 watch(index) 自动清，避免依赖 fields 状态的开层逻辑被中间空档二次触发 */
+  function reset() { fields.value = []; loadErr.value = ''; loading.value = false; }
 
-  return { fields, loading, loadErr, ensure, reload };
+  return { fields, loading, loadErr, ensure, reload, reset };
 }

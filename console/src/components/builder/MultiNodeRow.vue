@@ -1,7 +1,8 @@
 <template>
   <div class="mnr" :data-nid="node.id">
     <div class="mnr-hd">
-      <span class="mnr-grip" title="拖拽排序（按住拖动）" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
+      <NodeSelectBox :id="node.id" />
+      <span class="mnr-grip" title="拖拽排序（按住拖动）；Alt+↑/↓ 上移/下移" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
       <span class="mnr-op">{{ MULTI_LABELS[node.op] || node.op }}</span>
       <code class="mnr-fk mono">{{ node.op }}</code>
       <span style="flex:1"></span>
@@ -42,6 +43,7 @@ import { ref, computed } from 'vue';
 import { X, Group, Plus, SlidersHorizontal } from 'lucide-vue-next';
 import GenericParams from './GenericParams.vue';
 import NodeRenderer from './NodeRenderer.vue';
+import NodeSelectBox from './NodeSelectBox.vue';
 import { DRAG_KEY, fireDrag } from './treeBus';
 import { MULTI_META, MULTI_LABELS, NAME_PARAM } from '../../utils/queryAstOps';
 import { nid, wrapInBool, type MultiNode, type QueryNode, type LeafNode } from '../../utils/queryAst';

@@ -6,7 +6,7 @@
  'none'（inner 整体即值，range/terms/对象值算子）。
  mainKey 是 fields/named/none 形态 body 顶层主值键（match_all/match_none 走既有特判豁免）。
  params 是具名常用参数 → ClauseNode 渲染具名控件；其余参数走「更多参数」递归键值表。 */
-export interface ParamMeta { key: string; kind: 'number' | 'text' | 'boolean' | 'enum'; options?: string[] }
+export interface ParamMeta { key: string; kind: 'number' | 'text' | 'boolean' | 'enum' | 'json'; options?: string[] }
 interface OpMeta {
   form: 'field' | 'fields' | 'named' | 'none';
   wrap?: 'value' | 'query' | 'none';
@@ -35,14 +35,18 @@ export const OPS_META: Record<string, OpMeta> = {
   match_all: { form: 'none', label: '全部文档' },
   match_none: { form: 'none', label: '不匹配任何' },
   term: { form: 'field', wrap: 'value', label: '精确匹配', types: ['keyword', 'number', 'boolean', 'ip'],
-    params: [{ key: 'boost', kind: 'number' }] },
+    params: [{ key: 'case_insensitive', kind: 'boolean' }, { key: 'boost', kind: 'number' }] },
   terms: { form: 'field', wrap: 'none', label: '多值精确', types: ['keyword', 'number', 'ip'],
     params: [{ key: 'boost', kind: 'number' }] },
   /* types 含 keyword：match 在 keyword 字段上不分词，行为≈term（保留入口，选它不算错配） */
   match: { form: 'field', wrap: 'query', label: '全文匹配', types: ['text', 'keyword'],
     params: [{ key: 'operator', kind: 'enum', options: ['and', 'or'] }, { key: 'fuzziness', kind: 'text' },
       { key: 'minimum_should_match', kind: 'text' }, { key: 'analyzer', kind: 'text' },
-      { key: 'zero_terms_query', kind: 'enum', options: ['none', 'all'] }, { key: 'boost', kind: 'number' }] },
+      { key: 'zero_terms_query', kind: 'enum', options: ['none', 'all'] },
+      { key: 'lenient', kind: 'boolean' }, { key: 'prefix_length', kind: 'number' },
+      { key: 'max_expansions', kind: 'number' }, { key: 'fuzzy_transpositions', kind: 'boolean' },
+      { key: 'fuzzy_rewrite', kind: 'text' }, { key: 'auto_generate_synonyms_phrase_query', kind: 'boolean' },
+      { key: 'boost', kind: 'number' }] },
   match_phrase: { form: 'field', wrap: 'query', label: '短语匹配', types: ['text'],
     params: [{ key: 'slop', kind: 'number' }, { key: 'analyzer', kind: 'text' },
       { key: 'zero_terms_query', kind: 'enum', options: ['none', 'all'] }, { key: 'boost', kind: 'number' }] },
@@ -69,74 +73,108 @@ export const OPS_META: Record<string, OpMeta> = {
    form + mainKey/fieldKey 驱动 parse/ser 对称投影，往返无损契约不变。 ═══ */
   match_bool_prefix: { form: 'field', wrap: 'query', label: '前缀全文', types: ['text', 'keyword'],
     params: [{ key: 'operator', kind: 'enum', options: ['and', 'or'] }, { key: 'fuzziness', kind: 'text' },
-      { key: 'minimum_should_match', kind: 'text' }, { key: 'analyzer', kind: 'text' }, { key: 'boost', kind: 'number' }] },
-  terms_set: { form: 'field', wrap: 'none', label: '多值命中数', types: ['keyword', 'text', 'long', 'integer'] },
-  rank_feature: { form: 'field', wrap: 'value', label: '排序特征', types: ['rank_feature'] },
-  /* 998：rank_features（复数）——同族多特征打分查询，body 是 {特征字段: {boost…}} 对象值形态 */
-  rank_features: { form: 'field', wrap: 'none', label: '排序特征组', types: ['rank_features'] },
+      { key: 'minimum_should_match', kind: 'text' }, { key: 'analyzer', kind: 'text' },
+      { key: 'lenient', kind: 'boolean' }, { key: 'prefix_length', kind: 'number' },
+      { key: 'max_expansions', kind: 'number' }, { key: 'fuzzy_transpositions', kind: 'boolean' },
+      { key: 'fuzzy_rewrite', kind: 'text' }, { key: 'boost', kind: 'number' }] },
+  /* 1119：官方体 {field: [词项…], minimum_should_match_field|script}——字段键持数组、
+   * 两个 msm 键与字段同层（不是字段内部）；注册 params 后 parse 走「字段 + 兄弟参数」
+   * 富表单，不再整条落 raw，构建器也不会把 msm 写进字段对象。 */
+  terms_set: { form: 'field', wrap: 'none', label: '多值命中数', types: ['keyword', 'text', 'long', 'integer'],
+    params: [{ key: 'minimum_should_match_field', kind: 'text' }, { key: 'minimum_should_match_script', kind: 'json' }] },
+  /* 1045：官方 rank_feature 体是 {field, boost}——具名字段键形态；boost 是主值位，
+     saturation/log 等对象参数走「更多参数」。旧 field/value 投影会把 field 当字段名。 */
+  rank_feature: { form: 'named', mainKey: 'boost', fieldKey: 'field', label: '排序特征', types: ['rank_feature', 'rank_features'] },
   geo_distance: { form: 'field', wrap: 'none', label: '地理距离', types: ['geo_point'],
     params: [{ key: 'validation_method', kind: 'enum', options: ['STRICT', 'IGNORE_MALFORMED', 'COERCE'] }] },
   geo_bounding_box: { form: 'field', wrap: 'none', label: '地理矩形', types: ['geo_point'],
     params: [{ key: 'validation_method', kind: 'enum', options: ['STRICT', 'IGNORE_MALFORMED', 'COERCE'] }] },
   geo_polygon: { form: 'field', wrap: 'none', label: '地理多边形', types: ['geo_point'] },
-  geo_shape: { form: 'field', wrap: 'none', label: '地理形状', types: ['geo_shape', 'geo_point'] },
+  geo_shape: { form: 'field', wrap: 'none', label: '地理形状', types: ['geo_shape', 'geo_point'],
+    params: [{ key: 'relation', kind: 'enum', options: ['INTERSECTS', 'DISJOINT', 'WITHIN'] },
+      { key: 'orientation', kind: 'text' }, { key: 'ignore_unmapped', kind: 'boolean' }] },
   intervals: { form: 'field', wrap: 'none', label: '间隔规则', types: ['text'] },
   multi_match: { form: 'fields', mainKey: 'query', label: '多字段全文', types: ['text', 'keyword'],
     params: [{ key: 'type', kind: 'enum', options: ['best_fields', 'most_fields', 'cross_fields', 'phrase', 'phrase_prefix', 'bool_prefix'] },
       { key: 'operator', kind: 'enum', options: ['and', 'or'] }, { key: 'fuzziness', kind: 'text' },
       { key: 'tie_breaker', kind: 'number' }, { key: 'slop', kind: 'number' }, { key: 'minimum_should_match', kind: 'text' },
-      { key: 'analyzer', kind: 'text' }, { key: 'lenient', kind: 'boolean' }, { key: 'boost', kind: 'number' }] },
+      { key: 'analyzer', kind: 'text' }, { key: 'lenient', kind: 'boolean' },
+      { key: 'zero_terms_query', kind: 'enum', options: ['none', 'all'] },
+      { key: 'prefix_length', kind: 'number' }, { key: 'max_expansions', kind: 'number' },
+      { key: 'fuzzy_transpositions', kind: 'boolean' }, { key: 'fuzzy_rewrite', kind: 'text' },
+      { key: 'auto_generate_synonyms_phrase_query', kind: 'boolean' }, { key: 'boost', kind: 'number' }] },
   query_string: { form: 'named', mainKey: 'query', fieldKey: 'default_field', label: '查询串', types: ['text', 'keyword'],
     params: [{ key: 'default_operator', kind: 'enum', options: ['and', 'or'] }, { key: 'fuzziness', kind: 'text' },
       { key: 'tie_breaker', kind: 'number' }, { key: 'minimum_should_match', kind: 'text' }, { key: 'analyzer', kind: 'text' },
       { key: 'phrase_slop', kind: 'number' }, { key: 'analyze_wildcard', kind: 'boolean' }, { key: 'lenient', kind: 'boolean' },
+      { key: 'allow_leading_wildcard', kind: 'boolean' }, { key: 'enable_position_increments', kind: 'boolean' },
+      { key: 'fuzzy_prefix_length', kind: 'number' }, { key: 'fuzzy_max_expansions', kind: 'number' },
+      { key: 'fuzzy_transpositions', kind: 'boolean' }, { key: 'fuzzy_rewrite', kind: 'text' },
+      { key: 'quote_analyzer', kind: 'text' }, { key: 'quote_field_suffix', kind: 'text' },
+      { key: 'auto_generate_synonyms_phrase_query', kind: 'boolean' },
       { key: 'boost', kind: 'number' }] },
   simple_query_string: { form: 'fields', mainKey: 'query', label: '简单查询串', types: ['text', 'keyword'],
     params: [{ key: 'default_operator', kind: 'enum', options: ['and', 'or'] }, { key: 'flags', kind: 'text' },
       { key: 'minimum_should_match', kind: 'text' }, { key: 'analyzer', kind: 'text' },
+      { key: 'analyze_wildcard', kind: 'boolean' },
+      { key: 'fuzzy_prefix_length', kind: 'number' }, { key: 'fuzzy_max_expansions', kind: 'number' },
+      { key: 'fuzzy_transpositions', kind: 'boolean' }, { key: 'quote_field_suffix', kind: 'text' },
+      { key: 'auto_generate_synonyms_phrase_query', kind: 'boolean' },
       { key: 'lenient', kind: 'boolean' }, { key: 'boost', kind: 'number' }] },
   combined_fields: { form: 'fields', mainKey: 'query', label: '组合字段', types: ['text', 'keyword'],
-    params: [{ key: 'operator', kind: 'enum', options: ['and', 'or'] }, { key: 'minimum_should_match', kind: 'text' }, { key: 'boost', kind: 'number' }] },
+    params: [{ key: 'operator', kind: 'enum', options: ['and', 'or'] }, { key: 'minimum_should_match', kind: 'text' },
+      { key: 'auto_generate_synonyms_phrase_query', kind: 'boolean' }, { key: 'boost', kind: 'number' }] },
   more_like_this: { form: 'fields', mainKey: 'like', label: '更多相似', types: ['text'],
     params: [{ key: 'analyzer', kind: 'text' }, { key: 'minimum_should_match', kind: 'text' },
-      { key: 'max_query_terms', kind: 'number' }, { key: 'min_term_freq', kind: 'number' }] },
+      { key: 'max_query_terms', kind: 'number' }, { key: 'min_term_freq', kind: 'number' },
+      { key: 'min_doc_freq', kind: 'number' }, { key: 'max_doc_freq', kind: 'number' },
+      { key: 'min_word_length', kind: 'number' }, { key: 'max_word_length', kind: 'number' },
+      { key: 'stop_words', kind: 'text' }, { key: 'boost', kind: 'number' }] },
   ids: { form: 'none', mainKey: 'values', label: '文档 ID' },
   script: { form: 'none', mainKey: 'script', label: '脚本过滤' },
   wrapper: { form: 'none', mainKey: 'query', label: '二进制包装' },
-  percolate: { form: 'named', mainKey: 'document', fieldKey: 'field', label: '反查文档' },
+  percolate: { form: 'named', mainKey: 'document', fieldKey: 'field', label: '反查文档', types: ['percolator'] },
   /* distance_feature 散层 {field, pivot, queries} 走 named 投影（fieldKey 固定 'field'、
    主值取 pivot——纯结构投影，无损优先） */
-  distance_feature: { form: 'named', mainKey: 'pivot', fieldKey: 'field', label: '特征距离', types: ['date', 'date_nanos'] },
+  distance_feature: { form: 'named', mainKey: 'pivot', fieldKey: 'field', label: '特征距离', types: ['date', 'date_nanos', 'geo_point'],
+    params: [{ key: 'origin', kind: 'text' }, { key: 'boost', kind: 'number' }] },
   /* parent_id：join 族第三员（has_child/has_parent 姊妹，无子查询的叶子形态）——
-   {field: join 字段, type: 父类型, id: 父文档 id}，type 落 params 具名编辑 */
-  parent_id: { form: 'named', mainKey: 'id', fieldKey: 'field', label: '按父文档 ID',
+   官方体 {type: 父类型, id: 父文档 id}，没有 field 键；旧 named 投影会写出未知 field。 */
+  parent_id: { form: 'none', mainKey: 'id', label: '按父文档 ID',
     params: [{ key: 'type', kind: 'text' }] },
   /* ═══ span 跨度系（精确位置控制的底层查询，配 span_near 组合使用） ═══ */
   span_term: { form: 'field', wrap: 'value', valueKey: 'term', label: '跨度词', types: ['text'] },
-  /* ═══ 987：ES 8.x 新算子补齐（DSL 全量覆盖）。match 系第九员 / geo 网格 /
-   shape 字段 / 向量与语义四员（named 投影）/ 对象值两员。 ═══ */
-  match_int_prefix: { form: 'field', wrap: 'query', label: '整词前缀', types: ['text', 'keyword'],
-    params: [{ key: 'operator', kind: 'enum', options: ['and', 'or'] }, { key: 'fuzziness', kind: 'text' }] },
+  /* ═══ 987：ES 8.x 新算子补齐（DSL 全量覆盖）。geo 网格 /
+   shape 字段 / 向量与语义四员（named 投影）/ 对象值两员。 ═══
+   1045：撤 match_int_prefix（官方 full-text 清单无此算子，写出即 no [query] registered）。
+   补 bitmap_terms（9.0 term-level）：{field, value} 具名字段形态。 */
+  bitmap_terms: { form: 'named', mainKey: 'value', fieldKey: 'field', label: '位图词项',
+    types: ['keyword', 'long', 'integer'] },
   geo_grid: { form: 'field', wrap: 'none', label: '地理网格', types: ['geo_point', 'geo_shape'] },
-  shape: { form: 'field', wrap: 'none', label: '形状过滤', types: ['shape', 'geo_shape'] },
-  semantic: { form: 'named', mainKey: 'query', fieldKey: 'field', label: '语义查询', types: ['semantic', 'text'] },
-  sparse_vector: { form: 'named', mainKey: 'query_vectors', fieldKey: 'field', label: '稀疏向量', types: ['sparse_vector'] },
+  shape: { form: 'field', wrap: 'none', label: '形状过滤', types: ['shape', 'geo_shape'],
+    params: [{ key: 'relation', kind: 'enum', options: ['INTERSECTS', 'DISJOINT', 'WITHIN'] },
+      { key: 'orientation', kind: 'text' }, { key: 'ignore_unmapped', kind: 'boolean' }] },
+  /* 1000：检索器检索面 */
+  semantic: { form: 'named', mainKey: 'query', fieldKey: 'field', label: '语义查询', types: ['semantic_text'] },
+  /* 1045：官方键是 query_vector（单数）；复数键会被 ES 当未知参数拒绝 */
+  sparse_vector: { form: 'named', mainKey: 'query_vector', fieldKey: 'field', label: '稀疏向量', types: ['sparse_vector'] },
   knn: { form: 'named', mainKey: 'query_vector', fieldKey: 'field', label: '向量近邻', types: ['dense_vector'],
-    params: [{ key: 'k', kind: 'number' }, { key: 'num_candidates', kind: 'number' }, { key: 'similarity', kind: 'number' }, { key: 'boost', kind: 'number' }] },
-  text_expansion: { form: 'field', wrap: 'none', label: '文本扩展', types: ['text', 'sparse_vector'],
-    params: [{ key: 'boost', kind: 'number' }] },
-  weighted_tokens: { form: 'field', wrap: 'none', label: '加权词元', types: ['sparse_vector'],
-    params: [{ key: 'boost', kind: 'number' }] },
-  /* 999：span_gap——span_near clauses 内的间隙占位（width 主值；只在该上下文有检索语义，
-   高级菜单与 span_near 同组呈现，独立出现时 ES 会拒绝——树不拦，ES 报错即教育） */
-  span_gap: { form: 'none', mainKey: 'width', label: '跨度间隙' },
+    params: [{ key: 'k', kind: 'number' }, { key: 'num_candidates', kind: 'number' }, { key: 'similarity', kind: 'number' },
+      { key: 'filter', kind: 'json' }, { key: 'boost', kind: 'number' }] },
+  /* 1045：boost 属于字段值对象内部（{field:{model_id,…,boost}}）；旧 params 会把它
+     写到字段键同层，ES 直接拒。值对象由对象值子表编辑，boost 可在其中加键。 */
+  text_expansion: { form: 'field', wrap: 'none', label: '文本扩展', types: ['text', 'sparse_vector'] },
+  weighted_tokens: { form: 'field', wrap: 'none', label: '加权词元', types: ['sparse_vector'] },
+  /* 999/1045：span_gap 官方体是 {<字段>: width}——field 形态，不是 width 主值键；
+     span_near.clauses 内的间隙占位（独立出现时 ES 拒绝——树不拦，ES 报错即教育） */
+  span_gap: { form: 'field', wrap: 'none', label: '跨度间隙' },
   /* 999：rule（8.14+ 检索规则）——ruleset_id 主值，match_criteria / match_predicate 走参数表 */
   rule: { form: 'none', mainKey: 'ruleset_id', label: '规则查询' },
   /* 1030：注册表全量收官两员。type = 7.x 遗留映射类型过滤（8.x 已移除，老集群仍可达）；
    template = 搜索模板查询（body 是 id/name/source 任一形态 + params，主值取 id——
    id 缺席形态 value=undefined、其余键整体进 params 保真，序列化 undefined 键
    JSON.stringify 自然剔除，往返零丢失）。none 形态：parse/ser 零特判，注册即得富表单 */
-  type: { form: 'none', mainKey: 'value', label: '类型过滤', params: [{ key: 'boost', kind: 'number' }] },
+  type: { form: 'none', mainKey: 'value', label: '类型过滤（7.x 遗留）', params: [{ key: 'boost', kind: 'number' }] },
   template: { form: 'none', mainKey: 'id', label: '搜索模板' },
 };
 
@@ -148,14 +186,24 @@ export function opsForType(type: string | undefined): string[] {
   if (NUM.includes(type)) return ['term', 'terms', 'range', 'exists'];
   /* 548 B：date 分支并入 date_nanos（纳秒精度同族——此前落兜底 ['exists']，range 推荐缺失） */
   if (type === 'date' || type === 'date_nanos') return ['range', 'exists'];
+  /* 1045：range 家族（integer_range/long_range/float_range/double_range/ip_range/date_range）
+     的值是区间对象，range 是唯一语义入口；此前统一落 exists。 */
+  if (type.endsWith('_range')) return ['range', 'exists'];
   if (type === 'boolean') return ['term', 'exists'];
   if (type === 'ip') return ['term', 'range', 'exists'];
   if (type === 'geo_point') return ['geo_distance', 'geo_bounding_box', 'geo_polygon', 'exists'];
   if (type === 'geo_shape') return ['geo_shape', 'exists'];
   if (type === 'rank_feature') return ['rank_feature', 'exists'];
-  if (type === 'rank_features') return ['rank_features', 'exists'];
+  /* rank_features 是 mapping 类型（多特征对象），查询入口仍是 rank_feature */
+  if (type === 'rank_features') return ['rank_feature', 'exists'];
   /* 998：flattened 字段（整对象当一字段检索）——term/match 两档是官方推荐入口 */
   if (type === 'flattened') return ['term', 'match', 'exists'];
+  /* 1045：新型全文/语义/特殊 mapping 类型的推荐入口 */
+  if (type === 'match_only_text' || type === 'search_as_you_type') return ['match', 'match_phrase', 'match_phrase_prefix', 'exists'];
+  if (type === 'semantic_text') return ['semantic', 'match', 'exists'];
+  if (type === 'version') return ['term', 'exists'];
+  if (type === 'percolator') return ['percolate', 'exists'];
+  if (type === 'join') return ['parent_id', 'exists'];
   /* 987：dense_vector 推荐向量近邻（knn 查询级形态），sparse_vector 推荐稀疏向量 */
   if (type === 'dense_vector') return ['knn', 'exists'];
   if (type === 'sparse_vector') return ['sparse_vector', 'exists'];
@@ -170,7 +218,10 @@ export const RICH_OPS: string[] = Object.keys(OPS_META);
  term 打在 text 字段、range 打在 keyword 字段都仍有合法语义（字典序/分词），强行过滤反而挡路。 */
 export const STRICT_TYPE_OPS: ReadonlySet<string> = new Set([
   'geo_distance', 'geo_bounding_box', 'geo_polygon', 'geo_shape', 'geo_grid', 'shape',
-  'rank_feature', 'rank_features', 'knn', 'sparse_vector', 'distance_feature', 'intervals',
+  'rank_feature', 'knn', 'sparse_vector', 'distance_feature', 'intervals',
+  /* 1124：字段类型唯一/高特异的稀疏算子——此前不过滤，percolator/semantic_text/
+     sparse_vector 字段会被几百个无关字段淹没；这些算子选错类型必 400/零命中。 */
+  'percolate', 'semantic', 'text_expansion', 'weighted_tokens',
 ]);
 
 /** 算子的字段候选类型过滤（未登记/非高特异 → undefined = 不过滤） */
@@ -208,18 +259,18 @@ export const WRAP_LABELS: Record<string, string> = {
   nested: '嵌套', has_child: '子文档', has_parent: '父文档',
   constant_score: '恒定评分', function_score: '评分函数', script_score: '脚本评分', pinned: '置顶优选',
   span_first: '首跨度', span_multi: '跨度多匹配',
-  field_masking_span: '字段掩码跨度',
+  span_field_masking: '字段掩码跨度',
 };
 
 /* ═══ 999：wrap 容器具名参数表（WrapNodeRow 参数面板 schema 源）═══
    与 OPS_META.params 同一 ParamMeta 形态——enum 档在 GenericParams 渲染为下拉，
-   其余档维持自由表但键名在册可查。pinned / span_multi / field_masking_span 不登记：
+   其余档维持自由表但键名在册可查。pinned / span_multi / span_field_masking 不登记：
    它们的剩余键全是结构位（ids/docs/organic、match、query/field），登记反而误导。 */
 export const WRAP_PARAMS: Record<string, ParamMeta[]> = {
-  nested: [{ key: 'score_mode', kind: 'enum', options: ['avg', 'sum', 'max', 'min', 'none'] }, { key: 'ignore_unmapped', kind: 'boolean' }],
-  has_child: [{ key: 'score_mode', kind: 'enum', options: ['avg', 'sum', 'max', 'min', 'none'] },
+  nested: [{ key: 'inner_hits', kind: 'json' }, { key: 'score_mode', kind: 'enum', options: ['avg', 'sum', 'max', 'min', 'none'] }, { key: 'ignore_unmapped', kind: 'boolean' }],
+  has_child: [{ key: 'inner_hits', kind: 'json' }, { key: 'score_mode', kind: 'enum', options: ['avg', 'sum', 'max', 'min', 'none'] },
     { key: 'min_children', kind: 'number' }, { key: 'max_children', kind: 'number' }, { key: 'ignore_unmapped', kind: 'boolean' }],
-  has_parent: [{ key: 'score_mode', kind: 'enum', options: ['none', 'score'] }, { key: 'ignore_unmapped', kind: 'boolean' }],
+  has_parent: [{ key: 'inner_hits', kind: 'json' }, { key: 'score_mode', kind: 'enum', options: ['none', 'score'] }, { key: 'ignore_unmapped', kind: 'boolean' }],
   constant_score: [{ key: 'boost', kind: 'number' }],
   function_score: [{ key: 'boost', kind: 'number' }, { key: 'boost_mode', kind: 'enum', options: ['multiply', 'replace', 'sum', 'avg', 'max', 'min'] },
     { key: 'score_mode', kind: 'enum', options: ['multiply', 'sum', 'avg', 'first', 'max', 'min'] },
@@ -235,6 +286,21 @@ export const MULTI_LABELS: Record<string, string> = {
 export function labelOfOp(op: string): string {
   return OPS_META[op]?.label || WRAP_LABELS[op] || MULTI_LABELS[op] || op;
 }
+/* 1120：换算子时的参数清洗——旧算子参数不属于新算子 schema 即丢弃（并保留 _name），
+ 否则 match 的 operator/fuzziness 切到 term 会写出非法体（ES 400）。distance_feature
+ 的 origin 为必填，给 now 让新条件可直接跑（pivot 默认值由节点工厂/ClauseNode 给 7d）。
+ 1152：wrap 族参数表在 WRAP_PARAMS（nested/has_child/function_score/script_score…），
+ 只查 OPS_META 会把 script_score 的 min_score、nested 的 score_mode/inner_hits 等
+ 合法参数当作「旧算子参数」静默丢掉——两表并集才是完整 schema。 */
+export function paramsForOp(op: string, old: Record<string, unknown>): Record<string, unknown> {
+  const allowed = new Set(['_name',
+    ...(OPS_META[op]?.params || []).map(p => p.key),
+    ...(WRAP_PARAMS[op] || []).map(p => p.key)]);
+  const kept: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(old || {})) if (allowed.has(k)) kept[k] = v;
+  if (op === 'distance_feature' && !('origin' in kept)) kept.origin = 'now';
+  return kept;
+}
 
 /* ═══ 998：算子语义族（交互层配色/分组共用，纯语义零 UI 依赖）═══
    text=全文检索（分词相关性）/ exact=精确命中（词项与集合）/ range=范围与存在 /
@@ -243,7 +309,7 @@ export function labelOfOp(op: string): string {
 export type OpFamily = 'text' | 'exact' | 'range' | 'geo' | 'vector' | 'span' | 'script' | 'struct';
 export function opFamilyOf(op: string): OpFamily {
   if (op === 'match_all' || op === 'match_none') return 'struct';
-  if (op.startsWith('span_') || op === 'field_masking_span') return 'span';
+  if (op.startsWith('span_')) return 'span';
   if (op.startsWith('geo_') || op === 'shape' || op === 'distance_feature') return 'geo';
   if (op === 'knn' || op === 'sparse_vector') return 'vector';
   if (op.startsWith('match') || op === 'multi_match' || op === 'query_string' || op === 'simple_query_string'
@@ -253,7 +319,7 @@ export function opFamilyOf(op: string): OpFamily {
   if (op === 'script' || op === 'script_score' || op === 'wrapper' || op === 'percolate' || op === 'rule'
     || op === 'template'
     || op === 'function_score' || op === 'constant_score' || op === 'boosting' || op === 'dis_max'
-    || op === 'pinned' || op === 'rank_feature' || op === 'rank_features') return 'script';
+    || op === 'pinned' || op === 'rank_feature') return 'script';
   return 'exact';
 }
 
@@ -277,36 +343,64 @@ export const MULTI_META: Record<string, { keys: string[]; arrKeys: string[]; par
    kind 指示变体形态：'query'=bm25 内嵌 QueryNode 树；'flat'=knn 平面（field+query_vector+参数）；
    'list'=子检索器数组（listKey；wrapped=true 为 linear 的每子项 {retriever,weight} 包裹形态）；
    'child'=单子检索器（text_similarity_reranker 重排源 / rule 回退）。 */
-export interface RetrieverMeta { label: string; kind: 'query' | 'flat' | 'list' | 'child'; listKey?: string; wrapped?: boolean }
+export interface RetrieverMeta {
+  label: string; kind: 'query' | 'flat' | 'list' | 'child';
+  listKey?: string; wrapped?: boolean;
+  /** 子检索器键名（默认 retriever；pinned 等官方形态同键） */
+  childKey?: string;
+  /** 子检索器可缺席（rule 可按 match_criteria 独立路由）；其余 child 变体必填 */
+  childOptional?: boolean;
+  /** 子检索器负责召回时使用的字段位（knn/tsr/diversify） */
+  fieldTypes?: string[];
+}
 export const RETRIEVER_META: Record<string, RetrieverMeta> = {
-  bm25: { label: 'BM25 检索', kind: 'query' },
+  /* 1045：官方变体名是 standard（BM25 标准检索），bm25 不是注册键——写出即整键无效 */
+  standard: { label: '标准 BM25 检索', kind: 'query' },
   knn: { label: '向量近邻', kind: 'flat' },
   rrf: { label: 'RRF 融合', kind: 'list', listKey: 'retrievers' },
   text_similarity_reranker: { label: '文本相似重排', kind: 'child' },
-  rule: { label: '规则路由', kind: 'child' },
-  linear: { label: '线性加权', kind: 'list', listKey: 'retrieve', wrapped: true },
+  rule: { label: '规则路由', kind: 'child', childOptional: true },
+  /* 1045：官方数组键 retrievers（不是 retrieve）；子项仍为 {retriever, weight…} 包裹 */
+  linear: { label: '线性加权', kind: 'list', listKey: 'retrievers', wrapped: true },
+  /* 1047：官方高级检索器三员——pinned（置顶 docs/ids + 召回源）、
+     diversify（MMR 多样性 + 向量字段）、rescorer（rescore 体 + 召回源）。
+     docs/ids/rescore/query_vector 属结构体，RetrieverEditor 专用 JSON 位编辑。 */
+  pinned: { label: '置顶优选', kind: 'child' },
+  diversify: { label: '多样性 MMR', kind: 'child', fieldTypes: ['dense_vector'] },
+  rescorer: { label: '重打分', kind: 'child' },
 };
 /* 各变体具名常用参数（GenericParams schema 源；knn 的 field/query_vector 是结构位不在此表） */
 export const RETRIEVER_PARAMS: Record<string, ParamMeta[]> = {
-  bm25: [{ key: 'k', kind: 'number' }],
+  standard: [{ key: 'k', kind: 'number' }],
   knn: [{ key: 'k', kind: 'number' }, { key: 'num_candidates', kind: 'number' },
     { key: 'similarity', kind: 'number' }, { key: 'boost', kind: 'number' }],
   rrf: [{ key: 'rank_constant', kind: 'number' }, { key: 'rank_window_size', kind: 'number' }],
-  text_similarity_reranker: [{ key: 'text', kind: 'text' }, { key: 'inference_id', kind: 'text' },
+  text_similarity_reranker: [{ key: 'inference_text', kind: 'text' }, { key: 'inference_id', kind: 'text' },
     { key: 'rank_window_size', kind: 'number' }, { key: 'min_score', kind: 'number' }],
   rule: [{ key: 'ruleset_id', kind: 'text' }],
-  linear: [{ key: 'normalize_weights', kind: 'boolean' }],
+  linear: [
+    { key: 'normalizer', kind: 'enum', options: ['none', 'minmax', 'l2_norm'] },
+    { key: 'rank_window_size', kind: 'number' }, { key: 'min_score', kind: 'number' },
+  ],
+  /* pinned 的 docs/ids 与 rescorer 的 rescore 是结构体，走专用 JSON 位（不在表内）；
+     diversify 的 query_vector 同理由 JSON 位承担。 */
+  pinned: [],
+  diversify: [
+    { key: 'type', kind: 'enum', options: ['mmr'] },
+    { key: 'lambda', kind: 'number' }, { key: 'size', kind: 'number' },
+  ],
+  rescorer: [],
 };
 
 /* 高级算子分组（BoolGroupNode「+ 高级」菜单与 ClauseNode 下拉分组共用同源序）。
  全部成员必须是 OPS_META 或 WRAP_LABELS/MULTI_LABELS 已注册算子。 */
 export const ADV_MENU: Array<{ group: string; ops: string[] }> = [
-  { group: '全文检索', ops: ['multi_match', 'query_string', 'simple_query_string', 'combined_fields', 'match_bool_prefix', 'match_int_prefix', 'more_like_this', 'intervals'] },
-  { group: '精确与集合', ops: ['ids', 'terms_set', 'parent_id', 'type'] },
+  { group: '全文检索', ops: ['multi_match', 'query_string', 'simple_query_string', 'combined_fields', 'match_bool_prefix', 'more_like_this', 'intervals'] },
+  { group: '精确与集合', ops: ['ids', 'terms_set', 'bitmap_terms', 'parent_id', 'type'] },
   { group: '地理位置', ops: ['geo_distance', 'geo_bounding_box', 'geo_polygon', 'geo_shape', 'geo_grid', 'shape', 'distance_feature'] },
-  { group: '跨度位置', ops: ['span_near', 'span_or', 'span_not', 'span_first', 'span_containing', 'span_within', 'span_term', 'span_gap', 'span_multi', 'field_masking_span'] },
+  { group: '跨度位置', ops: ['span_near', 'span_or', 'span_not', 'span_first', 'span_containing', 'span_within', 'span_term', 'span_gap', 'span_multi', 'span_field_masking'] },
   { group: '向量与语义', ops: ['knn', 'sparse_vector', 'text_expansion', 'weighted_tokens', 'semantic'] },
-  { group: '脚本与其他', ops: ['script', 'wrapper', 'percolate', 'rule', 'template', 'rank_feature', 'rank_features'] },
+  { group: '脚本与其他', ops: ['script', 'wrapper', 'percolate', 'rule', 'template', 'rank_feature'] },
   { group: '复合容器', ops: ['constant_score', 'boosting', 'dis_max', 'function_score', 'script_score', 'pinned'] },
 ];
 

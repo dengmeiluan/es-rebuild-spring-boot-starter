@@ -62,6 +62,21 @@ describe('host-bound 页面与端点按宿主授权', () => {
     expect(delegated.canEmitWrite('GET', '/internal/es/index/auth/users', 'host')).toBe(true);
   });
 
+  /* 产线 deng_test_x2 = role=ADMIN + delegated=true：旧实现先判 isAdmin() 放行，
+     请求会发车但被 BuiltinConsoleAuthService.forbidDelegatedLocalUserWrite 400 拒绝。 */
+  it('委派 ADMIN 也不得发出本地账号写请求，但其它 ADMIN 域写不被误拦', () => {
+    const delegatedAdmin = login(['conn:host:w:security']);
+    delegatedAdmin.me = { ...delegatedAdmin.me!, role: 'ADMIN' };
+
+    expect(delegatedAdmin.canEmitWrite('POST', '/internal/es/index/auth/users/upsert', 'host')).toBe(false);
+    expect(delegatedAdmin.canEmitWrite('POST', '/internal/es/index/auth/users/delete?username=x', 'host')).toBe(false);
+    expect(delegatedAdmin.canEmitWrite('GET', '/internal/es/index/auth/users', 'host')).toBe(true);
+
+    /* 误拦检查：委派超管的常规管理域写必须照常放行 */
+    expect(delegatedAdmin.canEmitWrite('POST', '/internal/es/index/cluster/raw', 'host')).toBe(true);
+    expect(delegatedAdmin.canEmitWrite('POST', '/internal/es/index/cluster/settings/put', 'host')).toBe(true);
+  });
+
   it('概览读取按宿主键裁决，不 misroute 到目标连接', () => {
     const remoteOnly = login(['conn:c1:overview']);
     expect(remoteOnly.canEndpoint('write', 'GET', '/internal/es/index/overview', 'c1')).toBe(false);

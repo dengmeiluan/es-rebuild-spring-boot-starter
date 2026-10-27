@@ -192,12 +192,15 @@ describe('五百六十二批 T3①：QRT bar-prepend 槽脱 prefsOn 门控', () 
     expect(host.querySelector('.qrt-bar button.qrt-tool-btn'), '导出钮簇在场').toBeTruthy();
   });
 
-  it('源码锁：主壳 v-if="prefsOn" 字面不动；独立壳分支 v-else-if="hasPrepend || pagerHeadOn" 寄居槽', () => {
-    expect(qrt).toContain('<TableShell v-if="prefsOn" bar-class="qrt-bar" bar-r-class="qrt-bar-r">');
+  it('源码锁：主壳 barOn 门控；独立壳分支 v-else-if="hasPrepend || pagerHeadOn" 寄居槽', () => {
+    /* 1141：主壳门控从 prefsOn 放宽到 barOn（SQL 等内存态工具行走同一套内核工具）——
+       锁意图不变：主壳字面 + 独立壳结构 + 先后序三锚 */
+    /* 1163：主壳补工具行右键转发（属性追加，壳锚其余字面不变） */
+    expect(qrt).toContain('<TableShell v-if="barOn" bar-class="qrt-bar" bar-r-class="qrt-bar-r" @bar-contextmenu="openBarMenu">');
     /* 六百零七批同步更新：独立壳条件扩 viewSegOn（内建视图档无 storageKey 通道同样可达，
        pagerInHead 同口径；判别力不变=主壳字面+独立壳结构+先后序三锚保全） */
     expect(qrt).toContain('<TableShell v-else-if="hasPrepend || pagerHeadOn || viewSegOn" bar-class="qrt-bar" bar-r-class="qrt-bar-r">');
-    const mainAt = qrt.indexOf('<TableShell v-if="prefsOn"');
+    const mainAt = qrt.indexOf('<TableShell v-if="barOn"');
     const altAt = qrt.indexOf('<TableShell v-else-if="hasPrepend || pagerHeadOn || viewSegOn"');
     expect(altAt, '独立壳分支紧随主壳').toBeGreaterThan(mainAt);
   });

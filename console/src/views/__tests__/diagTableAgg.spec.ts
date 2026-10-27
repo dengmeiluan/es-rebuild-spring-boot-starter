@@ -10,6 +10,8 @@
  * 4) can_allocate 三档徽标（esEnumZh.canAllocateCls）：no→meta-err + reason 人话（reasonZh）。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { toggleViewSwitch } from '../../__tests__/helpers/viewSwitch'; /* 1143 */
+import { allLabels } from '../../__tests__/helpers/ctxMenu'; /* 1142：二级菜单能力面 */
 import { createApp, h, nextTick } from 'vue';
 import { createPinia } from 'pinia';
 import { createRouter, createMemoryHistory } from 'vue-router';
@@ -63,17 +65,10 @@ async function mountDiag() {
 const AGG_KEY = 'es_tbl_agg:diag:nodes';
 
 /* 列头右键 → QRT 列管理菜单（.ccm）→ 点「聚合行」开关 */
-async function toggleAggViaColMenu(host: HTMLElement) {
-  const th = host.querySelector<HTMLTableCellElement>('table.qrt-tbl thead th[data-col="HEAP%"]');
-  expect(th, 'HEAP% 列头必须渲染').toBeTruthy();
-  th!.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-  await settle(6);
-  const menu = document.querySelector('.ccm');
-  expect(menu, '列头右键菜单（.ccm）必须弹出').not.toBeNull();
-  const item = [...menu!.querySelectorAll<HTMLButtonElement>('.ccm-it')]
-    .find(b => b.textContent?.includes('聚合行'));
-  expect(item, '「聚合行」菜单项必须渲染').toBeTruthy();
-  item!.click();
+/* 1143：聚合行是表格级视图开关，入口已归位工具行「视图 ⋯」 */
+async function toggleAggViaViewMenu(_sec: HTMLElement, _col?: string) {
+  const ok = await toggleViewSwitch('聚合行', document);
+  expect(ok, '「视图 ⋯」里聚合行开关必须可达').toBe(true);
   await settle(6);
 }
 
@@ -90,7 +85,7 @@ describe('DiagView 节点表 QRT 内核化（天罗W6 graft→五百二十五批
   it('默认无 tfoot；列头菜单「聚合行」出聚合行（heap Σ130·avg65.00 内核口径）并落盘；重挂载恢复', async () => {
     const { app, host } = await mountDiag();
     expect(host.querySelector('tfoot'), '默认关闭不出 tfoot').toBeNull();
-    await toggleAggViaColMenu(host);
+    await toggleAggViaViewMenu(host);
     const tfoot = host.querySelector('tfoot tr.qrt-agg-row');
     expect(tfoot, '开启后 tfoot 渲染').toBeTruthy();
     expect(tfoot!.textContent, 'heap 列 Σ/avg（内核 fmtNum + toFixed(2) 格式）').toContain('Σ 130 · avg 65.00');
@@ -110,7 +105,9 @@ describe('DiagView 节点表 QRT 内核化（天罗W6 graft→五百二十五批
     await settle(6);
     const menu = document.querySelector('.ccm');
     expect(menu, '单元格右键菜单必须弹出').not.toBeNull();
-    expect(menu!.textContent, '整表 TSV 复制项在（内核接管原「数值」钮）')
+    /* 1142：整表 TSV 住「复制…」二级——helper 展开分组后断言能力面 */
+    const labels = await allLabels();
+    expect(labels.join(' | '), '整表 TSV 复制项在（内核接管原「数值」钮）')
       .toContain('复制整表（当前页）为 TSV');
     /* 角色列：全量角色串纯文本（chip 分档色标退役、信息保全） */
     const rows = [...host.querySelectorAll('table.qrt-tbl tbody tr')];

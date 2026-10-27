@@ -167,6 +167,7 @@ import FocusableSurface from '../components/FocusableSurface.vue';
 import { useInputLint, patternRule, TIME_RE } from '../composables/useInputLint';
 import { useDebounceFn } from '../composables/useDebounceFn'; /* ：防抖统一件（卸载自动清 timer） */
 import { useIndexFieldTypes } from '../composables/useIndexFieldTypes';
+import { resolveSortField } from '../utils/sortField';
 import { useIndexFields } from '../composables/useIndexFields';
 import { useTermsSuggest } from '../composables/useTermsSuggest'; /* ：值位动态候选（661 范式） */
 import JsonArea from '../components/JsonArea.vue';
@@ -371,6 +372,21 @@ async function doStart() {
   const timer = setInterval(() => { elapsed.value = Math.round((Date.now() - startTs.value) / 1000); }, 1000);
 
   try {
+    /* 1169：PIT 排序字段只认 asc/desc 与可排序类型——FieldPicker 下拉过滤挡不住手输/URL，
+       直接把 text 列送进来会 400「Fielddata is disabled」。开跑前解析一次：能解析就换成
+       .keyword 子域，解析不了就明确拒绝（不静默改用户选择，也不发注定失败的请求）。 */
+    const sfRaw = sortField.value.trim();
+    if (sfRaw && sfRaw !== '_shard_doc') {
+      const res = resolveSortField(sfRaw, fieldTypes.value);
+      if (!res.ok) {
+        log('err', res.reason || `「${sfRaw}」不支持排序，请换成 keyword/date/数值字段`);
+        return; /* finally 负责 clearInterval / running=false */
+      }
+      if (res.field !== sfRaw) {
+        sortField.value = res.field;
+        log('info', `排序字段已改用 ${res.field}（text 字段靠 .keyword 子域排序，原字段无法排序）`);
+      }
+    }
     while (running.value && !pause.value) {
       /* 缓冲上限保护——buffer 全量驻内存，深分页无限拉取会 OOM 浏览器。
  达到上限自动暂停（不 reset），导出清空后可再继续拉取 */

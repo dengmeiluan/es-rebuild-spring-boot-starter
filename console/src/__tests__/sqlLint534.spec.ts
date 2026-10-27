@@ -96,14 +96,15 @@ describe('A sqlLint 五规则穷举', () => {
 });
 
 describe('B 合法语句零误报（模板级样例）', () => {
-  /* SqlConsoleView TEMPLATES 逐字（ lint 上线后这六条是页内一键盘） */
+  /* SqlConsoleView TEMPLATES 逐字（1058 起按角色绑定真实字段；此处用生产形态样例验 lint） */
   const TEMPLATES = [
-    'SELECT * FROM "my-index" ORDER BY ts DESC LIMIT 100',
-    'SELECT status, COUNT(*) as cnt FROM "my-index" GROUP BY status',
-    'SELECT HISTOGRAM(ts, INTERVAL 1 DAY) as day, COUNT(*) FROM "my-index" GROUP BY day',
-    'SELECT id, score FROM "my-index" WHERE score BETWEEN 60 AND 90',
-    "SELECT * FROM \"my-index\" WHERE title LIKE '%error%' LIMIT 50",
-    'SELECT * FROM "my-index" WHERE tags IS NULL LIMIT 100',
+    'SELECT * FROM "my-index" LIMIT 100',
+    'SELECT * FROM "my-index" WHERE publish_time >= NOW() - INTERVAL 7 DAY ORDER BY publish_time DESC LIMIT 100',
+    'SELECT HISTOGRAM(publish_time, INTERVAL 1 DAY) AS day, COUNT(*) AS cnt FROM "my-index" GROUP BY day ORDER BY day ASC LIMIT 60',
+    'SELECT company_name AS name, COUNT(*) AS cnt FROM "my-index" GROUP BY company_name ORDER BY cnt DESC LIMIT 20',
+    'SELECT bond_rating AS bucket, COUNT(*) AS cnt FROM "my-index" GROUP BY bond_rating ORDER BY cnt DESC LIMIT 20',
+    "SELECT * FROM \"my-index\" WHERE announcement_title LIKE '%error%' LIMIT 50",
+    'SELECT * FROM "my-index" WHERE bond_rating IS NULL LIMIT 100',
   ];
   /* SqlBridgeView loadSample 示例逐字 */
   const BRIDGE_SAMPLE = `SELECT id, name, status, score
@@ -112,7 +113,7 @@ WHERE status = 'ACTIVE' AND score >= 60
 ORDER BY score DESC
 LIMIT 100`;
 
-  it('SqlConsole 六模板零误报', () => {
+  it('SqlConsole 七模板零误报', () => {
     for (const t of TEMPLATES) expect(lintSql(t), t).toEqual([]);
   });
 
@@ -147,8 +148,8 @@ describe('C 两页接线源锚（划线 + banner 双通道）', () => {
     expect(bridgeView).toContain('.br-pane > :deep(.monaco-host) { flex: 1 1 0; min-height: 260px; }');
   });
 
-  it('SqlConsole 高度链确定解不被触碰（minmax(170px,42vh) + flex:1 min-height:0 逐字）', () => {
-    expect(consoleView).toContain('.sq-grid { grid-template-rows: minmax(170px, 42vh); }');
+  it('SqlConsole 高度链确定解不被触碰（minmax(150px,34vh) + flex:1 min-height:0 逐字；1136 结果优先档）', () => {
+    expect(consoleView).toContain('.sq-grid { grid-template-rows: minmax(150px, 34vh); }');
     expect(consoleView).toContain('.sq-editor { display: flex; flex-direction: column; min-height: 0; }');
     expect(consoleView).toContain('.sq-editor > :deep(.monaco-host) { flex: 1 1 0; min-height: 0; }');
   });

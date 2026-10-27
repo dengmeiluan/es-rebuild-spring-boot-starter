@@ -123,7 +123,7 @@
         <div class="card-t"><button class="sec-fold" :class="{ folded: collapsed.users }" :aria-label="collapsed.users ? '展开' : '折叠'" @click="toggleBlock('users')"><ChevronDown :size="14" /></button>
 <Users :size="14" /> 用户管理（内置账号 · 独立部署登录用）
           <span v-if="!canReadUsers" class="dim sm-txt">（需安全中心读权限）</span>
-          <span v-else-if="!canWriteUsers" class="dim sm-txt">（页面授权/委派会话只读；本地全局账号仅 ADMIN 可管理）</span>
+          <span v-else-if="!canWriteUsers" class="dim sm-txt">（{{ auth.me?.delegated ? '宿主委派身份只读：本地全局账号仅内置 ADMIN 可管理' : '页面授权身份只读：本地全局账号仅内置 ADMIN 可管理' }}）</span>
           <!-- selectable 批量勾选暗状态（有勾选时计数常驻；仅写权限可见） -->
           <template v-if="canReadUsers">
             <span v-if="canWriteUsers && usSel.length" class="dim sm-txt">已选 {{ usSel.length }} 用户</span>
@@ -251,6 +251,11 @@
         </div>
         <div v-if="setup?.setupTokenRequired" class="dim sm-txt">本部署配置了 setup-token：重绑必须携带同一令牌（X-Setup-Token），否则服务端拒绝。</div>
       </template>
+      <!-- 重绑是系统管理域（ADMIN 专属）：非 ADMIN 不再只是「区块凭空消失」——
+           说明它存在但当前身份不可用，避免用户以为部署不支持重绑 -->
+      <div v-else-if="auth.probed" class="sec-ro-note" role="status">
+        重绑控制集群需 ADMIN 角色（高危：新集群需重建账号/连接档案，历史审计不同步更新）；当前身份只读该区块。
+      </div>
     </div>
       </div>
 
@@ -514,11 +519,18 @@ const canReadUsers = computed(() => {
 const canWriteUsers = computed(() => {
   if (auth.authDisabled || !auth.probeStarted) return true;
   if (auth.me == null) return false;
-  if (auth.isAdmin()) return true;
+  /* 委派先于 isAdmin()：两者都是 true 时（产线 deng_test_x2）应以委派为准。
+     能力层 canEndpoint 同口径已否决，这里保持同序，避免「内置 ADMIN 例外」被读成「委派也例外」。 */
   if (auth.me.delegated) return false;
+  if (auth.isAdmin()) return true;
   if (Array.isArray(auth.grantedPages)) return false;
   return canManageUsers.value;
 });
+/* 拒绝理由要说对：委派超管（宿主授权登录）不是「权限不够」，而是身份来源不允许管理全局账号，
+   照着「去要 ADMIN」去沟通只会白跑一趟。 */
+const USER_WRITE_DENY_HINT = computed(() => auth.me?.delegated
+  ? '当前是宿主授权的委派身份：本地全局账号只能由内置 ADMIN 管理，委派身份仅可查看'
+  : '账号管理需要 ADMIN 角色；当前身份只能查看用户与自己的操作流水');
 const canAssignAdmin = computed(() => auth.can('admin') && !auth.me?.delegated); /* 委派身份不得建/升本地 ADMIN（后端同口径） */
 const canRebind = computed(() => auth.can('admin')); /* 重绑控制集群属系统管理域：ADMIN 角色专属 */
 
@@ -815,7 +827,9 @@ async function loadUsers() {
 }
 
 async function doUpsert() {
-  if (!canWriteUsers.value) return; /* 委派非 ADMIN 不得写全局账号（服务端同口径） */
+  /* 委派非 ADMIN 不得写全局账号（服务端同口径）。提示而非静默 return：
+     按钮虽隐藏，Enter/程序化入口仍应给得出理由（「缺什么」而非「点了没反应」）。 */
+  if (!canWriteUsers.value) { store.notify('warning', USER_WRITE_DENY_HINT.value); return; }
   if (!canAssignAdmin.value) {
     const target = users.value.find((u: any) => u.username === nuName.value);
     if (nuRole.value === 'ADMIN' || target?.role === 'ADMIN') {
@@ -850,7 +864,8 @@ async function doUpsert() {
    闸置位先于确认窗——critical 确认窗挂起期间行内删除钮已禁用，二击不穿透双发 */
 const deleting = ref(false);
 async function doDelete(username: string) {
-  if (!canWriteUsers.value) return; /* 委派非 ADMIN 不得删除全局账号（服务端同口径） */
+  /* 同 doUpsert：静默 return 会变成「点了没反应」，给原因。 */
+  if (!canWriteUsers.value) { store.notify('warning', USER_WRITE_DENY_HINT.value); return; }
   if (!canAssignAdmin.value) {
     const target = users.value.find((u: any) => u.username === username);
     if (target?.role === 'ADMIN') {
@@ -1120,4 +1135,6 @@ watch(canAuditAll, (v) => {
 .pg-w { color: var(--brand); border-color: color-mix(in srgb, var(--brand) 45%, transparent); }
 .pg-w b { font-weight: 600; margin-left: var(--sp-0); }
 .us-card { grid-column: 1 / -1; } /* ：用户管理表格需要全宽（窄列挤压修复） */
+/* 只读区块说明（重绑等 ADMIN 专属区块隐藏时不留无解释的空缺；IlmView ilm-perm-note 同款） */
+.sec-ro-note { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); margin-top: var(--sp-2); }
 </style>

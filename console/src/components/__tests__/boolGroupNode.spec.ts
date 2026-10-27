@@ -25,7 +25,7 @@ function mount(src: unknown = SRC, opts: { canDissolve?: boolean; onDissolve?: (
       onDissolve: () => opts.onDissolve?.(),
     }),
   });
-  app.provide(TREE_BUS, { move: (...args: unknown[]) => moves.push(args), toggleDisabled: () => {} });
+  app.provide(TREE_BUS, { move: (...args: unknown[]) => moves.push(args), toggleDisabled: () => {}, defineRuntime: () => false });
   apps.push(app);
   app.mount(host);
   return { host, node, moves };
@@ -132,7 +132,7 @@ describe('BoolGroupNode', () => {
         'onUpdate:node': (n: BoolNode) => { cur.value = n; },
       }),
     });
-    app.provide(TREE_BUS, { move: () => {}, toggleDisabled: () => {} });
+    app.provide(TREE_BUS, { move: () => {}, toggleDisabled: () => {}, defineRuntime: () => false });
     apps.push(app);
     app.mount(host);
     return { host };

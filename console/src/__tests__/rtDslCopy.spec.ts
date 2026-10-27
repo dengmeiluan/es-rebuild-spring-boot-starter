@@ -5,6 +5,7 @@
  * 挂载样板照抄 multiSort（裸 createApp + pinia + api mock）。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { findMenuItem } from './helpers/ctxMenu'; /* 1142：二级菜单取项 */
 import { createApp, h, nextTick } from 'vue';
 import { createPinia } from 'pinia';
 
@@ -51,7 +52,7 @@ function ctxOnCell(col: string, ri = 0) {
 }
 
 const menuItem = (label: string) =>
-  [...document.body.querySelectorAll('.ccm-it') as any].find(b => b.textContent?.includes(label));
+  findMenuItem(label);
 
 beforeEach(() => {
   localStorage.clear();
@@ -70,9 +71,9 @@ describe('RT 复制为 DSL（227 批）', () => {
     await mountTbl({ hits: HITS, total: 2, index: 'dsl1', fieldTypes: { msg: 'text' } });
     ctxOnCell('age');
     await tick();
-    const termBtn = menuItem('复制为 term 查询');
+    const termBtn = await menuItem('复制为 term 查询');
     expect(termBtn, '数值列右键应有 term 项（且无 match 项）').toBeTruthy();
-    expect(menuItem('复制为 match 查询')).toBeFalsy();
+    expect(await menuItem('复制为 match 查询')).toBeFalsy();
     (termBtn as HTMLElement).click();
     await tick();
     expect(writeText).toHaveBeenCalledTimes(1);
@@ -80,7 +81,7 @@ describe('RT 复制为 DSL（227 批）', () => {
 
     ctxOnCell('msg');
     await tick();
-    const matchBtn = menuItem('复制为 match 查询');
+    const matchBtn = await menuItem('复制为 match 查询');
     expect(matchBtn, 'text 列右键应有 match 项').toBeTruthy();
     (matchBtn as HTMLElement).click();
     await tick();
@@ -96,7 +97,7 @@ describe('RT 复制为 DSL（227 批）', () => {
     await tick();
     ctxOnCell('age', 1);
     await tick();
-    const termsBtn = menuItem('复制 2 行为 terms 查询（age）');
+    const termsBtn = await menuItem('复制 2 行为 terms 查询（age）');
     expect(termsBtn, '勾选行右键应有 terms 项').toBeTruthy();
     (termsBtn as HTMLElement).click();
     await tick();

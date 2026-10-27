@@ -35,13 +35,22 @@ describe('Esc 收起路径守卫（418 批）', () => {
 
   it('CellContextMenu：Esc 关闭（417 capture 监听+卸载移除）', () => {
     const s = C('CellContextMenu.vue');
-    expect(s).toMatch(/function onKey\(e: KeyboardEvent\) \{\s*if \(e\.key === 'Escape'\) \{ e\.stopPropagation\(\); emit\('close'\); \}\s*\}/);
+    /* 1142：Esc 两段——capture 监听仍停播，处理改走 onEsc（先关二级再关整菜单） */
+    expect(s).toMatch(/function onKey\(e: KeyboardEvent\) \{\s*if \(e\.key === 'Escape'\) \{ e\.stopPropagation\(\); onEsc\(\); \}\s*\}/);
+    expect(s).toContain("function onEsc() { if (sub.value) { sub.value = null; return; } emit('close'); }");
     expect(s).toMatch(/document\.addEventListener\('keydown', onKey, true\);/);
     expect(s).toMatch(/onBeforeUnmount\(\(\) => document\.removeEventListener\('keydown', onKey, true\)\);/);
   });
 
   it('DevTools/RT/QRT 宿主消费 CellContextMenu（守卫覆盖面确认）', () => {
-    expect(V('DevToolsView.vue')).not.toContain('CellContextMenu');
+    /* 1143 起 DevTools 标签右键也复用 CellContextMenu（标签批量关闭），原「DevTools 不得出现」
+       的前提高度已失效。Esc 收起由组件自身 capture 监听承接（上方用例），这里只锁接线：
+       宿主必须给 :items + @close 复位，否则菜单开着无处关闭。 */
+    const dt = V('DevToolsView.vue');
+    if (dt.includes('CellContextMenu')) {
+      expect(dt).toContain('@close="tabMenu = null"');
+      expect(dt).toContain(':items="tabMenuItems"');
+    }
     expect(readFileSync(join(__dirname, '../components/QueryResultTable.vue'), 'utf-8')).toContain('<CellContextMenu');
     expect(readFileSync(join(__dirname, '../components/ResultTable.vue'), 'utf-8')).toContain('<CellContextMenu');
   });

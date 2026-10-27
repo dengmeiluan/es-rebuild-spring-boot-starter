@@ -7,6 +7,7 @@
  * RT 挂载样板照抄 rtDslCopy；QRT 照抄 QueryResultTable.spec。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { toggleViewSwitch, viewSwitch, openViewMenu } from './helpers/viewSwitch'; /* 1143 */
 import { createApp, h, nextTick } from 'vue';
 import { createPinia } from 'pinia';
 
@@ -82,11 +83,10 @@ describe('RT 语义格式化（W7 es_tbl_sem）', () => {
 
   it('列头菜单开关：关→回落原样显示；落盘 es-console.pref.es_tbl_sem；新实例读盘保持关', async () => {
     await mountTbl(ResultTable, { hits: HITS, total: 1, index: 'sf2', fieldTypes: TYPES });
-    const th = [...host.querySelectorAll('thead th.rt-th')].find(th => (th as HTMLElement).dataset.col === 'price') as HTMLElement;
-    th.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 10, clientY: 10 }));
-    await tick();
-    const onItem = menuItem('语义格式化：开 ✓');
-    expect(onItem, '列头菜单应有语义格式化开关（默认开）').toBeTruthy();
+    /* 1143：语义格式化已归位工具行「视图 ⋯」（不再需要先开列头菜单） */
+    expect(await openViewMenu(), '视图 ⋯ 必须可达').toBe(true);
+    const onItem = viewSwitch('语义格式化');
+    expect(onItem, '视图菜单应有语义格式化开关（默认开）').toBeTruthy();
     onItem!.click();
     await tick();
     expect(localStorage.getItem('es-console.pref.es_tbl_sem')).toBe('false');
@@ -130,7 +130,7 @@ describe('QRT 语义格式化（W7 RT 镜像）', () => {
     const th = host.querySelectorAll('thead th')[3] as HTMLElement;
     th.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 10, clientY: 10 }));
     await tick();
-    (menuItem('语义格式化：开 ✓') as HTMLElement).click();
+    await toggleViewSwitch('语义格式化');
     await tick();
     const after = [...host.querySelectorAll('tbody tr')][0].querySelectorAll('td.qrt-cell');
     expect(after[3].textContent?.trim(), '关后小数值回落原样').toBe('1234');

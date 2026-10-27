@@ -1,7 +1,8 @@
 <template>
   <div class="wnr" :data-nid="node.id">
     <div class="wnr-hd">
-      <span class="wnr-grip" title="拖拽排序（按住拖动）" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
+      <NodeSelectBox :id="node.id" />
+      <span class="wnr-grip" title="拖拽排序（按住拖动）；Alt+↑/↓ 上移/下移" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
       <span class="wnr-op">{{ WRAP_LABELS[node.op] || node.op }}</span>
       <!-- 无路由字段包装（constant_score 等）不渲染字段段；有路由字段显示键名+FieldSelect -->
       <template v-if="node.field !== null">
@@ -47,8 +48,15 @@
       />
     </div>
     <div class="wnr-body">
+      <!-- 1054：nested 内字段域提示——子条件只列 path.* 子字段；映射未展开时明示回退全量 -->
+      <div v-if="nestedScope" class="wnr-scope" :class="{ warn: nestedScope.fallback }"
+           :title="nestedScope.fallback
+             ? '映射里未列出 ' + nestedScope.prefix + '.* 子字段（可能未展开 nested properties），暂列全量字段'
+             : 'nested 查询只对 ' + nestedScope.prefix + ' 下的子字段生效；子条件候选已收窄，避免误选顶层字段而静默零命中'">
+        {{ nestedScope.fallback ? '未发现内嵌子字段 · 暂列全量' : '内嵌域 · ' + nestedScope.fields.length + ' 字段' }}
+      </div>
       <NodeRenderer
-        v-if="node.child" :node="node.child" :fields="fields" :types="types"
+        v-if="node.child" :node="node.child" :fields="childFields" :types="types"
         @update:node="n => emit('update:node', { ...node, child: n })"
         @remove="emit('update:node', { ...node, child: null })"
         @wrap="emit('update:node', { ...node, child: wrapInBool(node.child!, node.child!.id) })"
@@ -68,9 +76,11 @@ import FieldSelect from './FieldSelect.vue';
 import GenericParams from './GenericParams.vue';
 import FsFunctionsPanel from './FsFunctionsPanel.vue';
 import NodeRenderer from './NodeRenderer.vue';
+import NodeSelectBox from './NodeSelectBox.vue';
 import { DRAG_KEY, fireDrag } from './treeBus';
 import { WRAP_LABELS, WRAP_PARAMS, NAME_PARAM } from '../../utils/queryAstOps';
 import { WRAP_FIELD, nid, wrapInBool, type WrapNode, type BoolNode } from '../../utils/queryAst';
+import { nestedFieldScope } from '../../utils/fieldSearch';
 
 const props = defineProps<{ node: WrapNode; fields: string[]; types: Record<string, string> }>();
 const emit = defineEmits<{
@@ -89,6 +99,15 @@ const WRAPPER_PRIORITY_BY_OP: Record<string, string[]> = {
 };
 const wrapperPriority = computed<string[]>(() => WRAPPER_PRIORITY_BY_OP[props.node.op] || ['keyword']);
 const showParams = ref(false);
+
+/* 1054：nested 子树字段域——只把 path.* 子字段传给子渲染器（含嵌套默认字段与 FieldSelect 候选）；
+   映射未展开子字段时回退全量并出 warn 提示。嵌套内的 nested 会基于已收窄列表继续收窄。 */
+const nestedScope = computed(() => {
+  if (props.node.op !== 'nested' || !props.node.field) return null;
+  const s = nestedFieldScope(props.fields, props.node.field);
+  return { ...s, prefix: s.prefix };
+});
+const childFields = computed(() => nestedScope.value ? nestedScope.value.fields : props.fields);
 
 /* 1033：_name 命名查询恒在建议末位（nested/function_score 等容器子句同属查询子句，
    与 ClauseNode/MultiNodeRow 同语言）；未在册容器（pinned/span_multi 等）也给空
@@ -177,4 +196,6 @@ function endDrag() { delete (window as any)[DRAG_KEY]; fireDrag(false); }
 .wnr-ids-in { width: 160px; height: 26px; font-size: var(--fs-sm); border: none; background: transparent; }
 .wnr-ids-in:focus { outline: none; }
 .wnr-body { margin-top: var(--sp-2); padding-left: var(--sp-2); border-left: 2px solid var(--line); }
+.wnr-scope { display: inline-flex; align-items: center; gap: var(--sp-1); margin-bottom: var(--sp-1); padding: 1px var(--sp-1h); border: 1px solid var(--line); border-radius: var(--r-s); background: var(--bg2); color: var(--tx2); font-size: var(--fs-2xs); }
+.wnr-scope.warn { color: var(--warn); background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
 </style>

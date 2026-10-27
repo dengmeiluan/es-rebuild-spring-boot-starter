@@ -14,6 +14,7 @@
  * 8) SearchTemplatesView 模板源编辑器 Ctrl+Enter 执行。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { toggleViewSwitch } from './helpers/viewSwitch'; /* 1143 */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createApp, h, nextTick } from 'vue';
@@ -111,15 +112,8 @@ describe('QRT 导出五格式（525 批对齐 RT）', () => {
 describe('QRT rows 型转置（525 批，RT 231 批同款能力）', () => {
   it('列头菜单开关（不依赖 prefsOn）+ 转置态提示行 + 只读镜像渲染', async () => {
     await mountTbl({ cols: COLS, rows: ROWS });
-    /* 右键列头 → 列管理菜单出「转置视图」开关（rows 型限定；菜单壳 teleport body，
-       colMenuKeyboard 175 批同款 document 查询） */
-    const th = host.querySelector('thead th[data-col="类型"]') as HTMLElement;
-    th.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 10, clientY: 10 }));
-    for (let i = 0; i < 5; i++) { await nextTick(); await Promise.resolve(); }
-    const item = [...document.querySelectorAll('.ccm-it')].find(b => b.textContent?.includes('转置视图')) as HTMLButtonElement;
-    expect(item, '列头菜单出转置开关').toBeTruthy();
-    item.click();
-    for (let i = 0; i < 5; i++) { await nextTick(); await Promise.resolve(); }
+    /* 1143：转置是表格级视图开关，入口已归位工具行「视图 ⋯」/无工具行的「视图」钮 */
+    expect(await toggleViewSwitch('转置视图'), '视图菜单出转置开关').toBe(true);
     /* 主表切转置只读镜像：列名做首列，前 N 行（默认档 5 ≥ 3 行全出）做横向列 */
     expect(host.querySelector('.qrt-transposed')).toBeTruthy();
     expect(host.querySelector('.qrt-tr-bar')!.textContent).toContain('转置视图');
@@ -132,7 +126,11 @@ describe('QRT rows 型转置（525 批，RT 231 批同款能力）', () => {
   });
 
   it('hit 型不出转置开关（转置语义只属 rows 型）', () => {
-    expect(qrtSrc).toMatch(/!isHits\.value\s*\?\s*\[\{ key: 'toggle-transpose'/);
+    /* 1143：入口从列头菜单归位工具行「视图 ⋯」/无工具行的「视图」钮——
+       转置项仍是两条渲染通道各一处，且都挂 !isHits 门（hit 型不出）。 */
+    const gates = qrtSrc.match(/v-if="!isHits"\s+class="qrt-mi"\s+role="menuitemcheckbox"\s+:aria-checked="transposeOn"/g) ?? [];
+    expect(gates.length, '视图菜单（工具行 + 无工具行出口）各一处转置开关，均 !isHits 门控').toBe(2);
+    expect(qrtSrc).not.toMatch(/key: 'toggle-transpose'/);
   });
 });
 

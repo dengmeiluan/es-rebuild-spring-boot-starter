@@ -198,6 +198,7 @@ import { friendlyEsError } from '../utils/esError'; /* ：错误标题行人话 
 /* 裸 sessionStorage 收发换 useLinkCarry 统一件（530 W-D 遗留清单合并，
  键与 payload 逐字保持：analyzer {index,text} / xray {index,id}） */
 import { useLinkCarry } from '../composables/useLinkCarry';
+import { useGatedBootRead } from '../composables/usePageIdentityGate';
 import JsonArea from '../components/JsonArea.vue';
 import EmptyState from '../components/EmptyState.vue';
 import QueryResultTable from '../components/QueryResultTable.vue'; /* ：term 表换壳 */
@@ -402,15 +403,24 @@ function copyText(s: string) {
  接收侧换 useLinkCarry 统一件（键 es-console.link.xray 与 payload
  {index,id} 逐字保持，发送方 ScoreExplain 零改；receive 取后即焚语义同旧三行）。 */
 const xrayCarry = useLinkCarry<{ index?: string; id?: string }>('xray');
+/* 1125：联动 id 可能来自上一账号的现场——身份未落地就开查会把旧 target 的词频/文档
+   拉进新会话。payload 取后先暂存，门放行才消费；未放行则等身份落地补跑一次。 */
+let xrayPendingCarry: { index?: string; id?: string } | null = null;
+function applyXrayCarry(p: { index?: string; id?: string }) {
+  if (p.index) index.value = p.index;
+  if (p.id) { tab.value = 'tv'; tvId.value = p.id; if (index.value) runTv(); }
+}
+const xrayBootGate = useGatedBootRead('query-xray', () => {
+  const p = xrayPendingCarry;
+  if (!p) return;
+  xrayPendingCarry = null;
+  applyXrayCarry(p);
+});
 onMounted(() => {
   const p = xrayCarry.receive();
   if (!p) return;
-  if (p.index) index.value = p.index;
-  if (p.id) {
-    tab.value = 'tv';
-    tvId.value = p.id;
-    if (index.value) runTv();
-  }
+  if (!xrayBootGate.allowed()) { xrayPendingCarry = p; xrayBootGate.run(); return; }
+  applyXrayCarry(p);
 });
 /* term 一键送去分词实验室——：发送侧换 useLinkCarry（键
  es-console.link.analyzer 与 payload {index,text} 逐字保持，消费方 AnalyzerLab 零改） */

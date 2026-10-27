@@ -75,6 +75,8 @@ provide(TREE_BUS, {
   toggleDisabled(leafId, disabled) {
     emitU(updateNodeById(props.node, leafId, n => (n.type === 'leaf' ? { ...n, disabled } : n)));
   },
+  /* 迷你树没有运行时字段区：不提供快捷创建（条件行按钮只在 TREE_BUS 能力存在处出现） */
+  defineRuntime() { return false; },
 });
 </script>
 

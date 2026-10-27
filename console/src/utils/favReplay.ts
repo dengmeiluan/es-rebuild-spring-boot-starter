@@ -2,7 +2,7 @@ import type { Router } from 'vue-router';
 import { getTarget } from '../api';
 import { NAV_ITEMS } from '../router';
 import { draftStorageKey } from '../composables/useScopedDraft';
-import { writeStoredRaw } from './safeJson';
+import { writeStoredRaw, removeStoredRaw } from './safeJson';
 
 /* 收藏重放统一真链路（收藏夹页 + 命令面板共用）。
  此前 dsl/rest 分支写的预填键没有任何视图消费，「打开」是假动作；
@@ -68,6 +68,15 @@ export function replayFavorite(
       if (tags.includes('sql')) {
         if (p.sql) {
           writeStoredRaw(sessionStorage, 'es-console.sql.prefill', p.sql);
+          /* 1086：SQL 收藏还原索引/参数现场——旧键先清，避免上一条 SQL 的上下文串到本条 */
+          removeStoredRaw(sessionStorage, 'es-console.sql.prefill.params');
+          if (p.params) writeStoredRaw(sessionStorage, 'es-console.sql.prefill.params', p.params);
+          removeStoredRaw(sessionStorage, 'es-console.sql.prefill.index');
+          if (p.index) writeStoredRaw(sessionStorage, 'es-console.sql.prefill.index', p.index);
+          /* 1087：执行选项现场（时区/页超时/列式/宽容/取数）；旧收藏只有 fetchSize 时降级还原 */
+          removeStoredRaw(sessionStorage, 'es-console.sql.prefill.opts');
+          const opts = p.opts && typeof p.opts === 'object' ? p.opts : (p.fetchSize ? { fetchSize: p.fetchSize } : null);
+          if (opts) writeStoredRaw(sessionStorage, 'es-console.sql.prefill.opts', JSON.stringify(opts));
           router.push({ path: '/search', query: { mode: 'sql' } });
           notify('success', 'SQL 已恢复并自动执行');
         } else { router.push({ path: '/search', query: { mode: 'sql' } }); partial('ES-SQL 控制台'); }

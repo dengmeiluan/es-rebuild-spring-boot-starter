@@ -169,4 +169,38 @@ public class InternalAdhocRebuildControllerTargetTest {
         assertEquals("j2", controller.status("j2", c1).get("jobId"));
         assertEquals("j2", controller.abort("j2", c1).get("jobId"));
     }
+
+    /**
+     * 1124：同一连接内的**作业归属**隔离。目标一致性只回答「这条作业属于当前集群」，
+     * 不回答「你是谁」——同连接的同事可以看进度，但不能代替创建者中止/放行切换。
+     * 这两条守卫必须同时成立，否则持同连接写键的人能接管别人的不可逆动作。
+     */
+    @Test
+    public void 连接模型_同连接非创建者不能中止或确认切换_但可观测() {
+        FakeService service = new FakeService();
+        Map<String, Object> j1 = job("j1", "c1");
+        j1.put("ownerUsername", "alice");
+        service.jobs.put("j1", j1);
+        HttpServletRequest bob = request(new ConsolePrincipal("bob", ConsoleRole.VIEWER,
+                false, true, "同事", null, new HashSet<>(Arrays.asList("conn:c1:w:adhoc-rebuild"))), "c1");
+        InternalAdhocRebuildController controller = controller(service);
+
+        assertEquals("同连接同事仍可观测进度", "j1", controller.status("j1", bob).get("jobId"));
+        expectForbidden(() -> controller.abort("j1", bob));
+        expectForbidden(() -> controller.confirmSwitch("j1", bob));
+
+        HttpServletRequest alice = request(new ConsolePrincipal("alice", ConsoleRole.VIEWER,
+                false, true, "创建者", null, new HashSet<>(Arrays.asList("conn:c1:w:adhoc-rebuild"))), "c1");
+        assertEquals("创建者本人可中止自己的作业", "j1", controller.abort("j1", alice).get("jobId"));
+    }
+
+    @Test
+    public void 连接模型_无归属记录的旧作业维持连接级语义() {
+        FakeService service = new FakeService();
+        service.jobs.put("legacy", job("legacy", "c1")); /* 升级前作业没有 ownerUsername */
+        HttpServletRequest bob = request(new ConsolePrincipal("bob", ConsoleRole.VIEWER,
+                false, true, "同事", null, new HashSet<>(Arrays.asList("conn:c1:w:adhoc-rebuild"))), "c1");
+        assertEquals("旧作业无归属时按连接级放行（便于收尾）", "legacy",
+                controller(service).abort("legacy", bob).get("jobId"));
+    }
 }

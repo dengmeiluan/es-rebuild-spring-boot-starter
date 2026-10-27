@@ -236,10 +236,110 @@ for (const kw of CLUSTER_SCOPE_KW) {
   if (!owned) notes.push(`集群级动作 "${kw}" 没有页面前缀归属（仅靠关键词 + 共享表裁决，请确认是有意）`);
 }
 
+/* 5f. 回放通道不得直调执行函数（1124）：`if (runIt) xxx()` 的载荷来自一次性 carry/历史，
+   可能是上一账号/旧 target 的现场——必须走「身份已落地 + 目标可读」的自动门包装
+   （约定命名 `xxxAuto()`），否则探测窗口里会把旧请求先发出去（只读也会串结果到新账号界面）。
+   命名约定可机械判定：直调执行体与门控包装必须可区分，否则规则会退化成人工检查。 */
+const AUTO_WRAPPER = /^[A-Za-z_$][\w$]*Auto$/;
+for (const f of files) {
+  const s = fs.readFileSync(f, 'utf8');
+  const rel = path.relative(CONSOLE, f).replace(/\\/g, '/');
+  for (const m of s.matchAll(/if \(runIt\)\s*([A-Za-z_$][\w$]*)\(\)/g)) {
+    if (AUTO_WRAPPER.test(m[1])) continue;
+    fail(`${rel}: 回放通道 if (runIt) ${m[1]}() 直调执行函数——须改走 xxxAuto()（身份/读页门）`);
+  }
+}
+
+/* 5g. DevTools 跨页 carry 必须带入口门（1124）：写 `es-console.devtools.open` 的页面
+   （含 `run: true` 自动执行档）必须持有 DevTools/REST 写能力判定，否则只读身份会被送进
+   一个「点了只会被拒」的页面。DevToolsView 自身的二次拦截是最后一道，不是唯一一道。
+   收藏回放这类通用件用 `canOpen(path)` 注入页面门（/devtools 可见性=conn:devtools|w:rest，
+   与 DevTools 入口能力同源），同样算已门控。
+   ★ 门必须出现在**写入点附近**（1500 字符窗口），并且必须是**使用**而不是定义：
+   只匹配 `canDevtools` 会被 `const canDevtools = computed(...)` 定义行本身满足——
+   删掉调用处的 `if (!canDevtools.value)` 仍然绿（实测踩过两次）。定义形态是
+   `canDevtools =`、使用形态是 `canDevtools.value` / `canDevtools(`，两者可区分。
+   注入式页面门（收藏回放的 `canOpen(dest)` 回调）在调用点可能离写入点很远，
+   单独按「**调用**形态」放行：声明是 `canOpen?: (`，调用是 `canOpen(`。
+   页面读门 `canReadPage('devtools', target)`（1132：TemplatesView 的「在 DevTools 打开」）
+   与 canDevtools 同一裁决源，也必须按**使用**形态认；只认字面量 'devtools' 这第一实参，
+   不把任何 canReadPage 调用都当门（否则别的页面读门也能蒙混过关）。 */
+const DEVTOOLS_GATE = /canDevtools\s*(?:\.value|\(|&&|\|\|)/;
+const DEVTOOLS_PAGE_GATE = /canReadPage\s*\(\s*['"]devtools['"]/;
+const CARRY_KEY = 'es-console.devtools.open';
+for (const f of files) {
+  const s = fs.readFileSync(f, 'utf8');
+  const rel = path.relative(CONSOLE, f).replace(/\\/g, '/');
+  if (f.includes('DevToolsView.vue')) continue; /* 消费方，不是来源 */
+  let at = s.indexOf(CARRY_KEY);
+  if (at < 0) continue;
+  /* 注入门必须真的被调用（声明形态 `canOpen?: (` 不算） */
+  const injectedGateCalled = /(?:^|[^\w$])canOpen\s*\(/.test(s.replace(/canOpen\?:/g, 'canOpen_:'));
+  while (at >= 0) {
+    const window = s.slice(Math.max(0, at - 1500), at);
+    if (!DEVTOOLS_GATE.test(window) && !DEVTOOLS_PAGE_GATE.test(window) && !injectedGateCalled) {
+      const line = s.slice(0, at).split('\n').length;
+      fail(`${rel}:${line}: 写 ${CARRY_KEY} 前 1500 字符内没有 canDevtools 前置门，`
+        + '且文件中没有实际调用注入式页面门（canOpen(...)）');
+      break;
+    }
+    at = s.indexOf(CARRY_KEY, at + CARRY_KEY.length);
+  }
+}
+
+/* ── ⑤ 视图/组件层的写调用必须带能力门 ────────────────────────────
+   机器扫描（1129 审计）：任何 .vue 里出现变更型 api.* 调用，同一文件（去掉模板后的脚本区）
+   必须出现至少一处能力判定。缺了就是「页面能点到、后端才拦」的缺口。
+   为什么按文件而非按函数：全项目 30 个写调用文件已逐个人工核对过执行体首行都有门，
+   这条规则的作用是防回潮——新增写调用时不必再靠人记得加判定。
+
+   ⚠ 强度边界（1132 实测）：本规则只能发现「整个文件都没有门」。单删某个函数的门判不出来
+   ——已注入验证：删掉 SynonymsManagerView.doReload 的首行 gate 后本条仍通过（文件里其他
+   函数还有门）。按行距收紧也做不到：gate 到调用的真实距离最大 185 行（CmdPalette），任何
+   能覆盖它的窗口都等于退回文件级。**别把这条当函数级保障。**
+   函数级的安全网不在视图层而在 api.request() 的写硬门（main.ts 注入 canEmitWrite，
+   fetch 前裁决、拒绝时零网络请求并派发 CLIENT_WRITE_DENIED）：视图层缺门只会让
+   「点了才报错」而非「越权发出」。该硬门的行为覆盖见 permHarden979.spec.ts。 */
+const WRITE_CALL = /api\.(cancelTask|deleteByQuery|updateByQuery|bulk|putDoc|updateDoc|updateDocument|deleteById|createIndex|deleteIndex|clusterForceMerge|putClusterSettings|updateSettings|updateIndexSettings|aliasActions|putMapping|painlessExecute|putStoredScript|deleteStoredScript|snapshotCreate|snapshotDelete|snapshotRestore|ilmStart|ilmStop|ilmMove|ilmPolicyPut|ilmPolicyDelete|rerouteRetryFailed|synonymsUpsert|analysisUpdate|reloadAnalyzers|slmExecute|putTemplate|deleteTemplate|clustersSave|clustersDelete|reindexAdvanced|devtoolsExecute|raw)\(/;
+const CAP_GATE = /canEndpoint|canAdminOps|canAdmin|canReadPage|requestInScope|canWrite(?:On)?|canOps|canDevtools|canFullAlias|canApply|canRun|canValidate|canMove|canCreate|canAlias|canRebind|canWriteUsers|canForceMerge|canCreateIdx|canSettings|canMutateJob|canPullSrc|canJobOps|canDestOps|canDeleteDoc/;
+let writeFiles = 0;
+for (const dirName of ['views', 'components']) {
+  const dir = path.join(SRC, dirName);
+  let names = [];
+  try { names = fs.readdirSync(dir); } catch { continue; }
+  for (const name of names) {
+    if (!name.endsWith('.vue')) continue;
+    const rel = dirName + '/' + name;
+    const src = read(path.join(dir, name));
+    const script = src.replace(/<template>[\s\S]*?<\/template>/, '');
+    if (!WRITE_CALL.test(script)) continue;
+    writeFiles++;
+    if (!CAP_GATE.test(script)) fail(`写调用缺少能力门：${rel}（含 api 写调用，但全文无 canEndpoint/canXxx 判定）`);
+  }
+}
+
+/* ── ⑥ 客户端写门必须在入口真装配 ────────────────────────────────
+   `api.request` 的写门是「无权限零网络请求」的唯一保证，但它靠 main.ts 注入：
+   `setApiWriteGuard(...)` 一旦被删/改名，守卫变量保持 null，**整条客户端写门静默失效**，
+   而所有现有单测仍绿（测试自己调 setApiWriteGuard 装桩）。
+   这是典型的「门在、线没接」，必须机械盯住。 */
+const MAIN_TS = path.join(SRC, 'main.ts');
+if (fs.existsSync(MAIN_TS)) {
+  const mainSrc = read(MAIN_TS);
+  if (!/setApiWriteGuard\s*\(/.test(mainSrc)) {
+    fail('main.ts 未装配 setApiWriteGuard：客户端写门静默失效（api 层守卫为 null 时不拦任何写）');
+  }
+  if (!/canEmitWrite/.test(mainSrc)) {
+    fail('main.ts 装配的写门未指向 auth.canEmitWrite：客户端写门判据缺失');
+  }
+} else {
+  fail('找不到 console/src/main.ts：无法确认客户端写门已装配');
+}
+
 /* ── 输出 ───────────────────────────────────────────────────────── */
 const summary = [
   `后端关键词: admin=${ADMIN_KW.length} systemAdmin=${SYSTEM_ADMIN_KW.length} rank3=${REBUILD_KW.length + CLUSTER_KW.length} readonly=${READONLY_KW.length} clusterScope=${CLUSTER_SCOPE_KW.length}`,
-  `共享表: write=${SHARED_WRITE?.size ?? 0} read=${SHARED_READ?.size ?? 0}；页契约=${pageKeys.size} 页；扫描文件=${files.length}`,
+  `共享表: write=${SHARED_WRITE?.size ?? 0} read=${SHARED_READ?.size ?? 0}；页契约=${pageKeys.size} 页；扫描文件=${files.length}；写调用文件=${writeFiles}`,
 ];
 if (!quiet) console.log(summary.join('\n') + '\n');
 

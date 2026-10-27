@@ -33,13 +33,14 @@ describe('useTablePrefs 前缀冻结模型（236 批 P2-4）', () => {
     expect(rt).toMatch(/import \{[^}]*frozenStyleOf[^}]*\} from '\.\.\/composables\/useColFit'/);
   });
 
-  it('QRT：右键冻结项（prefsOn 门控）+th/td 冻结类+frozenStyle（基数 52px）', () => {
-    expect(qrt).toMatch(/'qrt-col-frozen': prefsOn && isFrozenCol\(c\)/);
-    expect(qrt).toMatch(/'qrt-col-frozen': prefsOn && isFrozenCol\(shownCols\[ci\]\)/);
-    expect(qrt).toMatch(/:style="prefsOn \? frozenStyle\(c\) : undefined"/);
+  it('QRT：右键冻结项（barOn 门控）+th/td 冻结类+frozenStyle（基数 52px）', () => {
+    /* 1141：门控从 prefsOn 放宽到 barOn（内存态工具行也可冻结，冻结数只存内存） */
+    expect(qrt).toMatch(/'qrt-col-frozen': isFrozenCol\(c\)/);
+    expect(qrt).toMatch(/'qrt-col-frozen': isFrozenCol\(shownCols\[ci\]\)/);
+    expect(qrt).toMatch(/:style="barOn \? frozenStyle\(c\) : colStyle\(c\)"/);
     /* 五百六十批锚同步更新：装配合并 useColFit.frozenStyleOf 单源（锁意图不变——基数 52=序号列
-       常参注入、prefsOn 门控透传） */
-    expect(qrt).toMatch(/frozenStyleOf\(visibleCols\.value, colWidths\.value, col, freezeN\.value, 52, prefsOn\.value\)/);
+       常参注入、1141 起门控透传 barOn） */
+    expect(qrt).toMatch(/frozenStyleOf\(visibleCols\.value, colWidths\.value, col, freezeN\.value, 52, barOn\.value\)/);
     expect(qrt).toContain("key: 'freeze-col', label: '冻结到此列'");
   });
 

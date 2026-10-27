@@ -1,8 +1,9 @@
 <template>
   <div class="gn" :data-nid="node.id">
     <div class="gn-hd">
+      <NodeSelectBox :id="node.id" />
       <!-- 拖拽源只在 grip 柄（与 cn/bgn/wnr 同语言）；根 draggable 会劫持参数表的文本选择 -->
-      <span class="gn-grip" title="拖拽排序（按住拖动）" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
+      <span class="gn-grip" title="拖拽排序（按住拖动）；Alt+↑/↓ 上移/下移" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
       <span class="gn-op mono" title="未内置富表单的算子，以结构化参数表编辑（零降级）">{{ node.op === '__raw__' ? '自定义查询' : node.op }}</span>
       <span class="gn-tag">结构化</span>
       <span style="flex:1"></span>
@@ -22,6 +23,7 @@
 import { computed } from 'vue';
 import { X, Group } from 'lucide-vue-next';
 import GenericParams from './GenericParams.vue';
+import NodeSelectBox from './NodeSelectBox.vue';
 import { DRAG_KEY, fireDrag } from './treeBus';
 import type { LeafNode } from '../../utils/queryAst';
 

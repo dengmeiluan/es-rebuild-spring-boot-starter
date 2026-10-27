@@ -2150,8 +2150,22 @@ function adjudicateEntry() {
 onActivated(() => { consumeRebuildHandoff(); });
 
 onMounted(() => {
+  /* 1125：挂载期读取（作业清单 + 入口裁决里的 prepare/体检采样）同样要过身份门——
+     宿主换 token 的窗口里 probed 未落地，旧 target 的作业行/源档案会先拉回来，
+     在「作业列表」里呈现出上一账号的现场。不放行则挂起，身份落地补跑一次。 */
+  if (adhocReady()) { consumeRebuildHandoff(); loadJobs(); adjudicateEntry(); }
+  else adhocPendingBoot = true;
+});
+
+/** 与 DslQuery autoRunAllowed 同口径（无鉴权/探测未启动视同身份已定） */
+const adhocReady = () => auth.authDisabled || !auth.probeStarted
+  || (auth.probed && auth.me != null && auth.canReadPage('adhoc-rebuild', store.target));
+let adhocPendingBoot = false;
+watch(() => [auth.probed, auth.authDisabled, auth.me?.username, store.target], () => {
+  if (!adhocPendingBoot || !adhocReady()) return;
+  adhocPendingBoot = false;
   consumeRebuildHandoff();
-  loadJobs();
+  void loadJobs();
   adjudicateEntry();
 });
 

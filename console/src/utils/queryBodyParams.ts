@@ -41,8 +41,6 @@ export const SEARCH_PARAMS: SearchParamMeta[] = [
 
   { key: 'timeout', label: '超时', kind: 'string', group: '性能与调试',
     hint: '查询级超时（如 1s / 500ms）；超时返回已收集的部分结果，不报错', placeholder: '1s' },
-  { key: 'allow_partial_search_results', label: '允许部分结果', kind: 'boolean', group: '性能与调试',
-    hint: '分片失败时返回部分结果而不是整体报错（默认 true）' },
   { key: 'profile', label: '性能剖析', kind: 'boolean', group: '性能与调试',
     hint: '返回每个查询节点的耗时与 Lucene 调用明细（调优用，开销较大）' },
   { key: 'stats', label: '统计标签', kind: 'json', group: '性能与调试',
@@ -54,8 +52,14 @@ export const SEARCH_PARAMS: SearchParamMeta[] = [
     hint: '把一次大查询切成 max 片、本次取第 id 片（手工并行导出）', placeholder: '{ "id": 0, "max": 4 }' },
   { key: 'pit', label: '时间点', kind: 'json', group: '分布式',
     hint: 'Point-in-Time：一致快照下深翻页；带 pit 时可省略 index', placeholder: '{ "id": "…", "keep_alive": "1m" }' },
-  { key: 'preference', label: '分片偏好', kind: 'string', group: '分布式',
-    hint: '指定副本/节点偏好（_local / 自定义串）以复用缓存', placeholder: '_local' },
+
+  /* 1047：多路召回融合与插件扩展——此前只能落 extras 键值表。 */
+  { key: 'sub_searches', label: '子搜索', kind: 'json', group: '融合与重排',
+    hint: '与 query 互斥：多路召回各自写 query/knn，再由 rank 融合（ES 8.14+）', placeholder: '[{ "query": { "match_all": {} } }]' },
+  { key: 'rank', label: '排名融合', kind: 'json', group: '融合与重排',
+    hint: '配合 sub_searches 的 RRF 融合配置（rank_constant / rank_window_size）', placeholder: '{ "rrf": { "rank_constant": 60, "rank_window_size": 100 } }' },
+  { key: 'ext', label: '搜索扩展', kind: 'json', group: '融合与重排',
+    hint: '插件定义的搜索扩展段，对象按原样透传给 ES', placeholder: '{ "plugin_key": { } }' },
 
   { key: 'version', label: '返回版本号', kind: 'boolean', group: '元数据',
     hint: '命中里返回 _version（乐观并发排查）' },
@@ -81,3 +85,31 @@ export const SEARCH_PARAM_GROUPS: Array<{ group: string; items: SearchParamMeta[
   }
   return out;
 })();
+
+/* ═══ 1063：搜索请求级 URL 参数（不是 DSL body）═══
+   ES 官方把 routing / preference / search_type / allow_partial_search_results /
+   ignore_unavailable / expand_wildcards 定义为查询串参数；写进 body 会被 ES 拒绝。
+   此前 preference / allow_partial_search_results 被误登记为 body 键——现移出注册表，
+   由「请求选项」面板单独编辑，执行时拼到 _search 的 URL 上（后端白名单校验）。
+   注意：粘贴的 body 若含这些键会落 extras 原样保真，不再冒充合法 body 键。 */
+export interface RequestParamMeta {
+  key: string;
+  label: string;
+  kind: 'string' | 'enum';
+  hint: string;
+  placeholder?: string;
+  options?: string[];
+}
+export const REQUEST_PARAMS: RequestParamMeta[] = [
+  { key: 'routing', label: '路由值', kind: 'string', hint: '自定义路由（join/父子文档常按主体路由）：只决定落到哪个分片，不改变查询语义', placeholder: '主体 ID' },
+  { key: 'preference', label: '分片偏好', kind: 'string', hint: '_local / _primary / 自定义串：复用分片缓存或固定副本', placeholder: '_local' },
+  { key: 'search_type', label: '搜索类型', kind: 'enum', options: ['query_then_fetch', 'dfs_query_then_fetch'],
+    hint: 'dfs_query_then_fetch 先全局统计词频再打分（小索引相关性更稳，开销更高）' },
+  { key: 'allow_partial_search_results', label: '允许部分结果', kind: 'enum', options: ['true', 'false'],
+    hint: '分片失败时返回部分结果（默认 true）；false 则整体报错' },
+  { key: 'ignore_unavailable', label: '忽略不可用索引', kind: 'enum', options: ['true', 'false'],
+    hint: '通配索引里有已关闭/缺失索引时是否忽略（默认 false）' },
+  { key: 'expand_wildcards', label: '通配展开', kind: 'string', placeholder: 'open,hidden',
+    hint: '通配索引匹配哪些状态：open / closed / hidden / none / all（可逗号组合，如 open,hidden）' },
+];
+export const REQUEST_PARAM_KEYS: ReadonlySet<string> = new Set(REQUEST_PARAMS.map(p => p.key));

@@ -5,7 +5,7 @@
    系统「剪贴」语义由本 stash 单源承担（不写系统剪贴板：无手势环境下
    clipboard.writeText 权限不稳，且跨查询复用本就是控制台内部动线）。 */
 import { ref } from 'vue';
-import { writeStoredRaw } from './safeJson';
+import { writeStoredRaw, removeStoredRaw } from './safeJson';
 import { parseQueryNode, serQueryNode, type QueryNode } from './queryAst';
 
 const KEY = 'es-console.qb.subtree';
@@ -28,6 +28,15 @@ export function copySubtreeToStash(node: QueryNode): boolean {
   } catch {
     return false;
   }
+}
+
+/** 换号清理：磁盘键被前缀清掉后，模块 ref 仍持有上一账号的条件子树——
+ *  不清会让新账号的「粘贴子树」按钮可用并粘出旧账号的查询条件。 */
+export function clearSubtreeStash() {
+  subtreeStash.value = null;
+  try {
+    removeStoredRaw(sessionStorage, KEY);
+  } catch { /* 存储不可用容忍 */ }
 }
 
 /** 读暂存为全新节点（全新 id，零纠缠）；暂存空/非法 JSON → null（粘贴钮侧静默降级） */

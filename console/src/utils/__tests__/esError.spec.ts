@@ -121,3 +121,24 @@ describe('friendlyEsError ES 错误（既有行为不回退）', () => {
     });
   });
 });
+
+/* ═══ 1150：包装型异常下潜取叶子原因 ═══
+   此前 search_phase_execution_exception 只有 reason「all shards failed」时，
+   界面就显示这句无信息量的话；真实原因常在 caused_by / 后续 root_cause 里。 */
+describe('1150 错误原因下潜（all shards failed 不再当原因）', () => {
+  const wrapperOnly = '{"error":{"root_cause":[{"type":"search_phase_execution_exception","reason":"all shards failed"}],"type":"search_phase_execution_exception","reason":"all shards failed"},"status":400}';
+  it('只有包装词时给可行动指引（不再把 all shards failed 当原因）', () => {
+    const msg = friendlyEsError(wrapperOnly);
+    expect(msg).toContain('查询执行失败');
+    expect(msg).toContain('原始 IO');
+    expect(msg).not.toContain('all shards failed');
+  });
+  it('caused_by 里的叶子原因被带出来', () => {
+    const raw = '{"error":{"root_cause":[{"type":"search_phase_execution_exception","reason":"all shards failed"}],"type":"search_phase_execution_exception","reason":"all shards failed","caused_by":{"type":"illegal_argument_exception","reason":"Fielddata is disabled on text fields by default."}},"status":400}';
+    expect(friendlyEsError(raw)).toContain('Fielddata is disabled');
+  });
+  it('root_cause 第二项是叶子时也取到（首项为包装词）', () => {
+    const raw = '{"error":{"root_cause":[{"reason":"all shards failed"},{"type":"query_shard_exception","reason":"Cannot search on field [status] since it is not indexed."}],"type":"search_phase_execution_exception","reason":"all shards failed"},"status":400}';
+    expect(friendlyEsError(raw)).toContain('Cannot search on field [status]');
+  });
+});

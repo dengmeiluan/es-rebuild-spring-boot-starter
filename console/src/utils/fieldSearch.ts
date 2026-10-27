@@ -12,6 +12,7 @@ import type { FieldItem } from '../composables/useIndexFields';
 import { opsForType, NUMERIC_VALUE_TYPES } from './queryAstOps';
 import { editDistance } from './editDistance';
 import { FIELD_TYPE_ZH } from './esEnumZh'; /* 558b 批：组头人话兜底（跨页单一出处，只读消费） */
+import { fieldRoleOf, aliasStemsFor, defaultOpForField, type FieldRole } from './fieldRole';
 
 export type MarkSeg = { t: string; m: boolean };
 
@@ -27,6 +28,8 @@ export interface FieldHit {
   i: number;
   /** 548 C：零命中近似候选标记（编辑距离 ≤2 补充；仅精确/前缀/包含三档全空时出现） */
   fuzzy?: boolean;
+  /** 1045：中文业务词扩展命中（「主体/公告/研报/债券/舆情」→ 英文字段词根） */
+  alias?: boolean;
 }
 
 interface FieldGroup { label: string; hits: FieldHit[] }
@@ -73,6 +76,8 @@ export function searchFields(opts: {
   typeFilter?: string[];
   /** 智能排序：命中这些类型的字段分组排前（组间标签），空 = 纯 rank+字母序平铺（FieldPicker 无 typePriority 现状） */
   typePriority?: string[];
+  /** 1045：业务角色优先序（同一类型/同一 typePriority 组内再按角色排），空 = 不干预 */
+  rolePriority?: FieldRole[];
   /** 候选上限，默认 50 = FieldPicker 现状 */
   cap?: number;
 }): { total: number; capped: boolean; flat: FieldHit[]; groups: FieldGroup[] } {
@@ -84,13 +89,21 @@ export function searchFields(opts: {
   const base = opts.fields
     .filter(f => (!wanted || wanted.includes(f.type)) && (!kw || f.path.toLowerCase().includes(kw)))
     .sort((a, b) => rankOf(a.path) - rankOf(b.path) || a.path.localeCompare(b.path));
-  /* 智能排序：prio 命中类型按给定次序分组排前（组内保持 rank+字母序），其余殿后原序 */
+  /* 1045：业务角色档——同一类型/同一优先组内，把「本算子最相关」的角色提前；
+     稳定排序，不改变 rank 档与组内字母序。 */
+  const rolePrio = opts.rolePriority?.length ? opts.rolePriority : null;
+  const roleIdx = (f: FieldItem) => {
+    if (!rolePrio) return 0;
+    const i = rolePrio.indexOf(fieldRoleOf(f.path, f.type));
+    return i < 0 ? rolePrio.length : i;
+  };
+  /* 智能排序：prio 命中类型按给定次序分组排前（组内角色→rank+字母序），其余殿后原序 */
   const sorted = prio
     ? [
-        ...base.filter(f => prio.includes(f.type)).sort((a, b) => prio.indexOf(a.type) - prio.indexOf(b.type)),
-        ...base.filter(f => !prio.includes(f.type)),
+        ...base.filter(f => prio.includes(f.type)).sort((a, b) => prio.indexOf(a.type) - prio.indexOf(b.type) || roleIdx(a) - roleIdx(b)),
+        ...base.filter(f => !prio.includes(f.type)).sort((a, b) => roleIdx(a) - roleIdx(b)),
       ]
-    : base;
+    : rolePrio ? base.slice().sort((a, b) => roleIdx(a) - roleIdx(b)) : base;
   const cap = opts.cap ?? 50;
   const flat: FieldHit[] = sorted.slice(0, cap).map((f, i) => ({
     path: f.path, type: f.type, rank: rankOf(f.path),
@@ -105,18 +118,49 @@ export function searchFields(opts: {
  基本无关，噪音大于价值；≥3 字符维持既有 ≤2 口径（548 C 锁面不回退） */
   let total = base.length;
   if (!flat.length && kw) {
+    /* 1045：中文业务词别名扩展——输入「主体/公告/研报/债券/舆情」等零直配时，
+       展开到 mapping 里真实存在的英文字段词根（不生成字段，只抬出已有候选）。 */
+    const stems = aliasStemsFor(rawQ);
+    const aliasFields = stems.length
+      ? opts.fields
+        .filter(f => !wanted || wanted.includes(f.type))
+        .filter(f => {
+          const lower = f.path.toLowerCase();
+          return stems.some(s => lower.includes(s));
+        })
+        .sort((a, b) => roleIdx(a) - roleIdx(b) || a.path.localeCompare(b.path))
+        .slice(0, 8)
+      : [];
+    const aliasHits: FieldHit[] = aliasFields.map((f, i): FieldHit => ({
+      path: f.path, type: f.type, rank: 2, alias: true,
+      segs: [{ t: f.path, m: false }], i,
+    }));
+    flat.push(...aliasHits);
+    if (aliasHits.length) total = aliasHits.length;
     const maxD = kw.length <= 2 ? 1 : 2;
     const fuzzy = opts.fields
       .filter(f => !wanted || wanted.includes(f.type))
+      .filter(f => !aliasFields.some(a => a.path === f.path))
       .map(f => ({ f, d: editDistance(kw, f.path.toLowerCase()) }))
       .filter(x => x.d <= maxD)
       .sort((a, b) => a.d - b.d || a.f.path.localeCompare(b.f.path))
       .slice(0, 5)
-      .map((x, i): FieldHit => ({ path: x.f.path, type: x.f.type, rank: 3, fuzzy: true, segs: splitMark(x.f.path, rawQ), i }));
+      .map((x, i): FieldHit => ({ path: x.f.path, type: x.f.type, rank: 3, fuzzy: true, segs: splitMark(x.f.path, rawQ), i: aliasHits.length + i }));
     flat.push(...fuzzy);
-    total = fuzzy.length;
+    total = aliasHits.length + fuzzy.length;
   }
   return { total, capped: base.length > flat.length, flat, groups: prio ? groupByLabel(flat, prio) : [] };
+}
+
+/* ═══ 1054：nested 查询内的字段域 ═══
+   nested 子查询只对 path 下的子字段生效；顶层字段在内嵌文档上下文里查不到（静默零命中）。
+   把候选收窄到 path.*（不含 path 自身——object/nested 路径不是可查询叶子）。
+   映射未展开子字段时回退全量并返回 fallback=true，由 UI 明示而不是让候选凭空消失。 */
+export function nestedFieldScope(fields: string[], path: string | null | undefined): { fields: string[]; fallback: boolean; prefix: string } {
+  const prefix = (path || '').trim().replace(/\.+$/, '');
+  if (!prefix) return { fields, fallback: false, prefix: '' };
+  const inner = fields.filter(f => f.startsWith(prefix + '.'));
+  return inner.length ? { fields: inner, fallback: false, prefix } : { fields, fallback: true, prefix };
 }
 
 /* ═══ per-index 最近字段记忆（FieldSelect recent 升级 + defaultLeaf 记忆共用） ═══
@@ -140,6 +184,13 @@ export function setFieldSearchUsedFields(names: string[]): void {
   usedFields.value = [...new Set(names.filter(n => !!n))];
 }
 export function getFieldSearchUsedFields(): string[] { return usedFields.value; }
+
+/** 换号清理：当前索引/已用字段是上一账号查询树的上下文，换人后新树首帧
+ *  不能拿旧索引的字段集过滤候选。 */
+export function clearFieldSearchContext(): void {
+  curIndex.value = '';
+  usedFields.value = [];
+}
 
 const recentKeyOf = (idx: string) => (idx ? RECENT_KEY + '::' + idx : RECENT_KEY);
 function readArr(key: string): string[] {
@@ -167,14 +218,31 @@ export function lastRecentField(idx: string): string | null {
 /** defaultLeaf 的字段+兼容算子：优先最近使用的字段（本索引记忆），无记录回退 fields[0]；
  * 算子取该字段类型推荐首算子，无类型信息回落 term（既有现状）。
  * fields 为空返回 null，调用方落 match_all。 */
+/* 1060：无最近使用时的默认字段——按业务角色挑「最像查询入口」的字段，
+   不再取字母序第一个（产线常见 abs_change/amount 抢默认，新条件语义不明）。
+   最近使用仍最优先；object/nested 容器不可直接查询，排除后无候选才回退全量。 */
+const DEFAULT_FIELD_ROLE_ORDER: FieldRole[] = ['entity', 'text', 'category', 'identifier', 'date', 'metric'];
+function smartDefaultField(fields: string[], types: Record<string, string>): string {
+  const usable = fields.filter(f => types[f] !== 'object' && types[f] !== 'nested');
+  const pool = usable.length ? usable : fields;
+  for (const role of DEFAULT_FIELD_ROLE_ORDER) {
+    const hit = pool.find(f => fieldRoleOf(f, types[f]) === role);
+    if (hit) return hit;
+  }
+  return pool[0];
+}
+
 export function defaultLeafTarget(
   fields: string[], types: Record<string, string>, idx: string,
 ): { field: string; op: string } | null {
   if (!fields.length) return null;
   const recent = lastRecentField(idx);
-  const field = recent && fields.includes(recent) ? recent : fields[0];
+  const field = recent && fields.includes(recent) ? recent : smartDefaultField(fields, types);
   const t = types[field];
-  return { field, op: t ? opsForType(t)[0] : 'term' };
+  /* 1045：角色感知默认算子（metric→range 等）；未识别类型回落 opsForType 首档 */
+  const op = t ? defaultOpForField(field, t) : 'term';
+  const safe = t && opsForType(t).includes(op) ? op : (t ? opsForType(t)[0] : 'term');
+  return { field, op: safe };
 }
 
 /* ═══ 件④：值位静态档表单源（TYPE_VALUE_HINTS）═══

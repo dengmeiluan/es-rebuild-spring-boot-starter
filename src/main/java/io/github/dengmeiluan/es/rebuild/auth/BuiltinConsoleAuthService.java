@@ -127,6 +127,11 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
         return loginEnabled;
     }
 
+    /** 令牌有效期（登出吊销兜底用：委托未给出 exp 时按此刻 + TTL 登记）。 */
+    public long getTokenTtlMs() {
+        return tokenTtlMs;
+    }
+
     /* ==================================================================================== */
     /* 登录 / token                                                                          */
     /* ==================================================================================== */
@@ -356,31 +361,23 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
      * 若能建号就等于用一页授权换来一个跨全部连接的全局账号。</p>
      */
     private static void forbidDelegatedLocalUserWrite(ConsolePrincipal actor) {
-        if (actor == null || actor.getRole().atLeast(ConsoleRole.ADMIN)) {
+        if (actor == null) {
             return;
         }
+        /* 委派/页面模型身份一律不得管理本地账号——**先于角色判断**。
+           原实现 `if (role >= ADMIN) return;` 把「委派 ADMIN」也放行了：产线实账
+           deng_test_x2 正是 role=ADMIN + delegated=true + authSource=delegate，
+           它因此可以创建本地账号，在宿主授权体系之外另造一个不受宿主管控的全局身份。
+           本地账号只能由内置（非委派、无 grantedPages）的 ADMIN 管理。 */
         if (actor.isDelegated() || actor.getGrantedPages() != null) {
             throw new IllegalArgumentException(
-                    "页面授权/委派会话不得创建/修改/删除本地账号（本地账号是全局身份，仅 ADMIN 可管理）");
+                    "页面授权/委派会话不得创建/修改/删除本地账号（本地账号是全局身份，仅内置 ADMIN 可管理）");
         }
-    }
-
-    /**
-     * 委派 ADMIN 的红线：可以管理普通本地账号，但不得创建/提升/改写本地 ADMIN。
-     *
-     * <p>本地账号走内置登录（grantedPages=null），一旦存在本地 ADMIN，它就绕过宿主鉴权与页面门；
-     * 宿主侧撤权后这个账号仍然有效——等于给委派会话留了一个持久化后门。</p>
-     */
-    private static void forbidDelegatedAdminEscalation(ConsolePrincipal actor, ConsoleRole targetRole,
-                                                       Map<String, Object> existing) {
-        if (actor == null || !actor.isDelegated()) return;
-        if (targetRole == ConsoleRole.ADMIN) {
-            throw new IllegalArgumentException("委派会话不得创建/提升本地 ADMIN 账号（本地 ADMIN 可绕过宿主鉴权直接登录）");
+        if (actor.getRole().atLeast(ConsoleRole.ADMIN)) {
+            return;
         }
-        if (existing != null
-                && ConsoleRole.parse(String.valueOf(existing.get("role"))) == ConsoleRole.ADMIN) {
-            throw new IllegalArgumentException("委派会话不得修改本地 ADMIN 账号");
-        }
+        /* 非 ADMIN 且非页面模型身份（内置低权账号）：旧语义允许落到后续角色校验，
+           这里保持原样——真正的角色越界由 upsertUser 的角色比较兜底。 */
     }
 
     /** 用户列表（不含密码哈希）。 */
@@ -446,7 +443,7 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
                 }
             }
         }
-        forbidDelegatedAdminEscalation(actor, role, existing);
+        forbidDelegatedLocalUserWrite(actor);
         Map<String, Object> doc = new LinkedHashMap<>();
         doc.put("username", username);
         doc.put("role", role.name());

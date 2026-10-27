@@ -18,6 +18,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createApp, h, nextTick, type App } from 'vue';
 import { createPinia } from 'pinia';
+import { useAuthStore } from '../stores/auth';
 import { createRouter, createMemoryHistory } from 'vue-router';
 
 const rd = (p: string) => readFileSync(join(__dirname, '..', p), 'utf-8');
@@ -239,6 +240,7 @@ vi.mock('../api', async (importOriginal) => {
 
 import WorkbenchLayout from '../components/WorkbenchLayout.vue';
 import DslQueryView from '../views/DslQueryView.vue';
+import { findMenuItem } from './helpers/ctxMenu'; /* 1142：二级菜单取项 */
 
 const RESP = {
   took: 42,
@@ -363,6 +365,11 @@ describe('DslQueryView 高度链 + 命中数常驻 + Ctrl+Enter（挂载型）',
     const shared = encodeURIComponent(btoa(unescape(encodeURIComponent(DSL))));
     history.replaceState(null, '', `#/search?mode=dsl&idx=a-idx&dsl=${shared}`);
     const pinia = createPinia();
+    /* 并行批新增自动执行身份门：直挂 DslQueryView 不走 App 探测——显式声明无鉴权部署，
+       否则 autoRun 永远等 probe，深链自动执行无法验证 */
+    const auth = useAuthStore(pinia);
+    auth.probed = true;
+    auth.authDisabled = true;
     host = document.createElement('div');
     document.body.appendChild(host);
     app = createApp({ render: () => h(DslQueryView) });
@@ -420,8 +427,8 @@ describe('DslQueryView 高度链 + 命中数常驻 + Ctrl+Enter（挂载型）',
     expect(td, '表格视图 status 格必须渲染').toBeTruthy();
     td!.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 10, clientY: 10 }));
     await settle();
-    const item = [...document.body.querySelectorAll('.ccm-it')]
-      .find(b => b.textContent?.includes('以此值过滤并重查')) as HTMLElement | undefined;
+    /* 1142：动作项住「筛选与排序…」二级——findMenuItem 按需展开 */
+    const item = (await findMenuItem('以此值过滤并重查')) as HTMLElement | null;
     expect(item, '右键菜单应有「以此值过滤并重查」').toBeTruthy();
     item!.click();
     await vi.waitFor(() => { expect(clusterQueryFn.mock.calls.length).toBeGreaterThan(calls); });

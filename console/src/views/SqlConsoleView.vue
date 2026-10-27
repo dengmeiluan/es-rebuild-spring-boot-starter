@@ -25,8 +25,8 @@
         有 SQL 时提示快捷键（execHint 单一出处，⌘/Ctrl 不再写死）。
         「执行中」读秒标签只随执行链（qr.running）：字段体检/转 DSL/分页等旁路操作
         共享 busy 但不走 useQueryRun，误显读秒会把陈旧耗时挂到无关操作头上 -->
-        <button class="btn primary sm" :title="sql.trim() ? '执行（' + execHint + '）' : '请输入 SQL 语句'" @click="doRun" :disabled="!sql.trim() || busy">
-          <Play :size="12" /> {{ qr.running.value ? '执行中（' + (qr.elapsedMs.value / 1000).toFixed(1) + 's）…' : '执行' }} <span class="kbd inline">{{ execHint }}</span>
+        <button class="btn primary sm" :title="sql.trim() ? (selScope ? '仅执行选中的 ' + selScope.lines + ' 行（' + execHint + '）；清除选区后执行整篇' : (multiStmt ? '仅执行光标所在语句（第 ' + cursorStmtNo + ' 条 / 共 ' + stmtScopes.length + ' 条；' + execHint + '）；选中一段可只跑选段' : '执行（' + execHint + '）')) : '请输入 SQL 语句'" @click="doRun" :disabled="!sql.trim() || busy">
+          <Play :size="12" /> {{ qr.running.value ? '执行中（' + (qr.elapsedMs.value / 1000).toFixed(1) + 's）…' : (selScope ? '执行选段' : (multiStmt ? '执行当前语句' : '执行')) }} <span class="kbd inline">{{ execHint }}</span>
         </button>
         <!-- 取消只对执行链有意义（qr.begin 签发的 signal）；旁路 busy 期间出现死取消钮=示能谎言 -->
         <button v-if="qr.running.value" class="btn sm" @click="qr.cancel()"><XCircle :size="12" /> 取消</button>
@@ -52,19 +52,90 @@
               fetch_size
               <input type="number" v-model.number="fetchSize" min="1" max="10000" class="sq-fs-i" />
             </label>
+            <!-- 1055：time_zone——影响 CURRENT_DATE/NOW/DATE_TRUNC 等日期函数与时间列返回格式；
+                 cursor 续页 ES 只认 columnar/time_zone，翻页自动沿用同一时区 -->
+            <label class="sq-fs" title="SQL 时区：影响 CURRENT_DATE/NOW/DATE_TRUNC 等日期函数与时间列格式；cursor 翻页自动沿用">
+              time_zone
+              <select v-model="timeZone" class="sq-fs-i sq-tz-i" aria-label="SQL 时区">
+                <option value="">UTC（集群默认）</option>
+                <option value="Asia/Shanghai">Asia/Shanghai</option>
+                <option value="Asia/Hong_Kong">Asia/Hong_Kong</option>
+                <option value="Asia/Tokyo">Asia/Tokyo</option>
+                <option value="Europe/London">Europe/London</option>
+                <option value="America/New_York">America/New_York</option>
+              </select>
+            </label>
+            <!-- 1066：page_timeout——单页计算超时（ES 默认 1m）；保护高开销查询。
+                 注意：带 cursor 续页时 ES 只认 columnar/time_zone，此参数会被忽略 -->
+            <label class="sq-fs" title="单页查询超时 page_timeout（ES 默认 1m）；仅首查生效，cursor 续页 ES 会忽略">
+              page_timeout
+              <select v-model="pageTimeout" class="sq-fs-i sq-to-i" aria-label="SQL 单页超时">
+                <option value="">默认</option>
+                <option value="10s">10s</option>
+                <option value="30s">30s</option>
+                <option value="1m">1m</option>
+                <option value="5m">5m</option>
+              </select>
+            </label>
+            <!-- 1070：位置参数——SQL 用 ? 占位，params 数组按顺序绑定；仅首查生效
+                 （ES cursor 续页只认 columnar/time_zone，不携带 params） -->
+            <button type="button" class="btn ghost xs sq-param-btn" :class="{ on: paramOpen || paramCount }"
+              :aria-expanded="paramOpen" aria-controls="sq-param-bar"
+              title="SQL 参数：SQL 里用 ? 占位，按顺序填 JSON 数组（如 [&quot;宁德时代&quot;, 10]）；cursor 续页不携带参数"
+              @click="paramOpen = !paramOpen">
+              参数<span v-if="paramCount" class="sq-param-badge">{{ paramCount }}</span>
+            </button>
             <label class="sq-fs sq-tog" title="开启后、SQL 对数组字段 SELECT 不报错（取首值），自动注入 field_multi_value_leniency=true">
               <input type="checkbox" v-model="lenient" />
               <span>宽容模式</span>
             </label>
+            <!-- 1075：columnar 列式返回（ES cursor 续页只认 columnar/time_zone）；表格仍按行展示 -->
+            <label class="sq-fs sq-tog" title="列式返回（columnar）：大结果/图表/导出更稳；cursor 续页自动沿用同一形态。表格仍按行展示">
+              <input type="checkbox" v-model="columnar" />
+              <span>列式</span>
+            </label>
           </div>
         </div>
+        <!-- 1080：字段源换源提示条——只在 FROM 与顶栏选中不一致时出现一行，
+             解释补全/体检/列名纠错为何按另一索引匹配（独立行，不挤占工具行） -->
+        <div v-if="fromMismatch" class="sq-from-note" role="note">
+          <span class="chip xs static" data-test="sql-from-chip"
+            :title="`字段补全/体检/列名纠错跟随 FROM「${effectiveSqlIndex}」；顶栏仍选中「${store.pickedIdx}」`">
+            FROM {{ effectiveSqlIndex }}
+          </span>
+          <span>字段补全 / 字段体检 / 列名纠错按此索引匹配；顶栏仍选中 <b>{{ store.pickedIdx }}</b></span>
+        </div>
         <!-- P0-3：SQL 静态 lint 划线通道挂点（banner 保留双通道，见 script queueSqlLintMarkers） -->
-        <MonacoEditor ref="sqlMonaco" v-model="sql" language="sql" height="100%" @execute="doRun" />
+        <MonacoEditor ref="sqlMonaco" v-model="sql" language="sql" height="100%" @execute="doRun" @selection="selScope = $event" @cursor="cursorPos = $event" />
+        <!-- 1070：参数条（紧凑单行，JSON 数组；实时显示占位符/参数匹配情况，不阻塞合法查询） -->
+        <div v-if="paramOpen" id="sq-param-bar" class="sq-param-bar" role="group" aria-label="SQL 位置参数">
+          <span class="sq-param-lb mono">params</span>
+          <input v-model="paramsText" class="inp sq-param-i mono" spellcheck="false" autocomplete="off"
+            placeholder='["宁德时代", "2026-01-01", 10]'
+            aria-label="SQL 参数（JSON 数组，按 ? 出现顺序）"
+            @keydown.esc.prevent="paramsText = ''" />
+          <span class="sq-param-stat" :class="paramStat.tone">{{ paramStat.text }}</span>
+          <button type="button" class="btn ghost xs" title="清空参数" @click="paramsText = ''">清空</button>
+        </div>
         <!-- P0-3：SQL 静态体检提示条（utils/sqlLint 纯函数，随输入防抖重估；
  零阻塞不拦执行——lint 只提示，执行门仍是既有 doRun；自动高度不进编辑器高度链）。
  .sq-sql-lint 私造形态改用 theme.css .lint-bar 单源（sq-sql-lint 锚并存，role 与文案逐字不动） -->
         <div v-if="sqlLintFindings.length" class="lint-bar sq-sql-lint lint-bar-warn" role="status">
-          <span v-for="(f, i) in sqlLintFindings" :key="i">· 第 {{ f.line }} 行：{{ f.message }} — {{ f.suggestion }}</span>
+          <span v-for="(f, i) in sqlLintFindings" :key="i">· <button type="button" class="sq-lint-ln"
+            :title="'定位到第 ' + f.line + ' 行'" @click="locateLine(f.line)">第 {{ f.line }} 行</button>：{{ f.message }} — {{ f.suggestion }}</span>
+        </div>
+        <!-- 1050：高开销/易误读结构提示（GROUP BY 无 WHERE / SELECT * 无 LIMIT / 前置 % LIKE）
+             ——只提示不拦截；可一键补 LIMIT 控制返回量（不宣称降低扫描成本）。 -->
+        <div v-if="costHints.length || canExpandStar" class="lint-bar sq-cost-hint lint-bar-warn" role="status">
+          <span v-for="h in costHints" :key="h.id" class="sq-cost-item">
+            <b>{{ h.message }}</b> — {{ h.suggestion }}
+          </span>
+          <span v-if="!costHints.length && canExpandStar" class="sq-cost-item">
+            <b>SELECT *</b> — 返回全部字段；可展开为字段清单，减少 payload 与歧义
+          </span>
+          <!-- 1105：SELECT * 一键展开为字段清单（按当前 mapping；超长截断并提示） -->
+          <button v-if="canExpandStar" type="button" class="btn xs" data-test="sql-expand-star" @click="expandStar">展开字段</button>
+          <button v-if="costFixLimit" type="button" class="btn xs" @click="applyCostLimit">补 LIMIT 1000</button>
         </div>
       </div>
 
@@ -79,9 +150,12 @@
           </div>
         </div>
         <ul class="sq-tpl">
-          <li v-for="t in TEMPLATES" :key="t.k" @click="sql = t.sql" role="button" tabindex="0" @keydown.enter.prevent="sql = t.sql" @keydown.space.prevent="sql = t.sql">
+          <li v-for="t in TEMPLATES_VIEW" :key="t.k" :class="{ off: !t.ready }"
+              :title="t.ready ? '插入模板并按当前 mapping 绑定字段' : '缺少 ' + t.missing.join('、') + '：先在顶栏选择有该字段的索引'"
+              @click="applyTemplate(t)" role="button" tabindex="0" :aria-disabled="!t.ready"
+              @keydown.enter.prevent="applyTemplate(t)" @keydown.space.prevent="applyTemplate(t)">
             <span class="sq-tpl-k">{{ t.k }}</span>
-            <span class="sq-tpl-d">{{ t.desc }}</span>
+            <span class="sq-tpl-d">{{ t.desc }}<em v-if="!t.ready" class="sq-tpl-miss"> · 缺 {{ t.missing.join('、') }}</em><em v-else-if="t.binds.length" class="sq-tpl-bind" :title="'按当前 mapping 自动绑定：' + t.binds.join('、')"> · {{ t.binds.join(' · ') }}</em></span>
           </li>
         </ul>
       </div>
@@ -89,17 +163,24 @@
       <!-- DSL 预览大容器框退役（约定④，pt-sec 538 同语言）→ sq-sec border-top 分节 -->
       <div v-if="dslPreview" class="sq-sec wide">
         <div class="sq-card-hd">
-          <span>DSL 预览（_sql/translate）</span>
+          <span>DSL 预览（_sql/translate）<em v-if="dslPreviewStale" class="sq-prev-stale" data-test="sql-preview-stale"
+            title="SQL 已修改，预览仍是上一版——点顶部「到 DSL」重新生成">预览来自上一版 SQL</em></span>
           <div class="sq-card-hd-r">
-            <button class="btn ghost xs" data-sq-code-h :title="'DSL 预览高度档：' + codeH + 'px'" @click="cycleCodeH">高</button>
-            <button class="btn ghost xs" @click="gotoDsl" :disabled="!dslPreview" title="先执行 SQL 转换生成 DSL"><ChevronRight :size="11" /> 到 DSL 页</button>
-            <button class="btn ghost xs" @click="copyDsl"><Copy :size="11" /> 复制</button>
-            <button class="btn ghost xs" @click="dslPreview = null">关闭</button>
+            <button class="btn ghost xs" data-test="sql-preview-toggle" :aria-expanded="previewOpen" aria-controls="sq-dsl-preview"
+              :title="previewOpen ? '收起 DSL 预览（结果网格优先）' : '展开 DSL 预览'" @click="previewOpen = !previewOpen">
+              {{ previewOpen ? '收起' : '展开' }}
+            </button>
+            <button v-if="previewOpen" class="btn ghost xs" data-sq-code-h :title="'DSL 预览高度档：' + codeH + 'px'" @click="cycleCodeH">高</button>
+            <button class="btn ghost xs" @click="gotoDsl" :disabled="!dslPreview || dslPreviewStale"
+                    :title="dslPreviewStale ? '预览来自上一版 SQL——请先点顶部「到 DSL」重新生成' : '先执行 SQL 转换生成 DSL'"><ChevronRight :size="11" /> 到 DSL 页</button>
+            <button class="btn ghost xs" @click="copyDsl" :disabled="dslPreviewStale"
+                    :title="dslPreviewStale ? '预览来自上一版 SQL——请先重新生成' : '复制 DSL'"><Copy :size="11" /> 复制</button>
+            <button class="btn ghost xs" @click="dslPreview = null; previewOpen = false">关闭</button>
           </div>
         </div>
         <!-- 裸插值 → highlightJson 范式（SynonymsManager/ClusterSettings 同款，输出已转义）；
- W2 批：封顶高度走 usePref（默认 300=原值），「高」档位钮切换记忆 -->
-        <pre class="sq-code json-view" v-html="dslHtml" :style="{ maxHeight: codeH + 'px' }"></pre>
+ W2 批：封顶高度走 usePref（默认 300=原值），「高」档位钮切换记忆；1136 默认折叠让结果表吃满 -->
+        <pre v-show="previewOpen" id="sq-dsl-preview" class="sq-code json-view" :class="{ 'sq-prev-dim': dslPreviewStale }" v-html="dslHtml" :style="{ maxHeight: codeH + 'px' }"></pre>
       </div>
 
       <!-- err/warn 语义卡豁免（语义边框保留约定）——sq-card 壳迁 sq-panel 语义面板，视觉零变化 -->
@@ -143,7 +224,16 @@
  （含 { 走 highlightJson 着色、否则转义平文；LuceneQuery/SearchSandbox 双轨先例）。
  改用双参——errMeta(runErrObj) 旁路对象读 code/endpoint（runErr 已压串
  读不出），meta 空时输出与单参逐字节一致（errPre524 锚），字符串全文回看语义不变 -->
-          <div><b>SQL 执行失败</b> · {{ friendlyRunErr }}</div>
+          <div>
+            <b>SQL 执行失败</b>
+            <!-- 1109：报错锚点一键定位（ES `line X:Y` 前缀）——长 SQL 不必自己数行 -->
+            <button v-if="runErrPos && !runErrStale" type="button" class="sq-err-loc mono" data-test="sql-err-locate"
+                    :title="'ES 报错位置' + (runErrScope ? (runErrScope.kind === 'statement' ? '（语句内，已换算到全文）' : '（选段内，已换算到全文）') : '') + '：第 ' + runErrPos.line + ' 行第 ' + runErrPos.column + ' 列——点击定位到该处'"
+                    @click="locateRunErr">定位 {{ runErrPos.line }}:{{ runErrPos.column }}</button>
+            <span v-if="runErrScope && runErrPos && !runErrStale" class="sq-err-stale" data-test="sql-err-scope">{{ runErrScope.kind === 'statement' ? '语句内报错，行号已换算到全文' : '选段内报错，行号已换算到全文' }}</span>
+            <span v-if="runErrStale" class="sq-err-stale" data-test="sql-err-stale">错误来自上一版 SQL</span>
+            · {{ friendlyRunErr }}
+          </div>
           <pre class="sq-err-body" v-html="errPreHtml(runErr, errMeta(runErrObj))"></pre>
           <!-- 1043：UnknownColumn 智能纠错——相近字段 chips 一键替换列名（editDistance top-3） -->
           <div v-if="colFix" class="sq-colfix" role="group" aria-label="相近字段建议">
@@ -152,7 +242,39 @@
                     :title="'替换 SQL 中的 ' + colFix.col + ' 为 ' + s.path"
                     @click="applyColFix(s.path)">{{ s.path }}</button>
           </div>
+          <!-- 1045：索引名拼错同款纠错（Unknown index / no such index） -->
+          <div v-if="idxFix" class="sq-colfix" role="group" aria-label="相近索引建议">
+            <span class="sq-colfix-t">索引 [{{ idxFix.index }}] 不存在——相近索引：</span>
+            <button v-for="s in idxFix.suggestions" :key="s.path" type="button" class="btn sm"
+                    :title="'替换 SQL 中的 ' + idxFix.index + ' 为 ' + s.path"
+                    @click="applyIdxFix(s.path)">{{ s.path }}</button>
+          </div>
+          <!-- 1110：未知函数同款纠错（Unknown function / Scalar function）——只给有相近候选的 -->
+          <div v-if="fnFix && fnFix.suggestions.length" class="sq-colfix" role="group" aria-label="相近函数建议">
+            <span class="sq-colfix-t">函数 [{{ fnFix.fn }}] 不存在——相近函数：</span>
+            <button v-for="s in fnFix.suggestions" :key="s.name" type="button" class="btn sm" data-test="sql-fn-fix"
+                    :title="'替换 SQL 中的 ' + fnFix.fn + ' 为 ' + s.name"
+                    @click="applyFnFix(s.name)">{{ s.name }}</button>
+          </div>
+          <!-- 1121：结果窗口超限（LIMIT/OFFSET → from+size > 10000）——改写后走 cursor -->
+          <div v-if="windowFix" class="sq-colfix" role="group" aria-label="结果窗口自救">
+            <span class="sq-colfix-t">SQL 结果窗口上限 10000（LIMIT/OFFSET → from+size）：</span>
+            <button type="button" class="btn sm" data-test="sql-window-fix"
+                    :title="windowFix.note" @click="applyWindowFix">
+              {{ windowFix.reason === 'offset' ? '去掉 OFFSET 用 cursor' : '把 LIMIT 降到 10000' }}
+            </button>
+          </div>
           <div class="sq-alert-acts">
+            <!-- 1095：数组字段失配时给一键自救——不必理解 field_multi_value_leniency，开关+重试一步到位 -->
+            <button v-if="arrayLenientFix" class="btn sm" data-test="sql-array-lenient"
+                    title="开启宽容模式：数组字段取首值（自动注入 field_multi_value_leniency），然后重新执行"
+                    @click="enableLenientRetry">开启宽容模式并重试</button>
+            <!-- 1102：SQL 通道不支持 nested 字段——给两条真正能完成查询的通道，不留死胡同 -->
+            <template v-if="nestedLimitFix">
+              <span class="sq-sub">SQL 不支持 nested 字段，可改用：</span>
+              <button class="btn sm" data-test="sql-goto-lucene" @click="switchQhMode('lucene')">去 Lucene 面板</button>
+              <button class="btn sm" data-test="sql-goto-pit" @click="switchQhMode('pit')">去 PIT 分页</button>
+            </template>
             <button class="btn sm" @click="doRun" :disabled="!sql.trim() || busy">重试</button>
           </div>
         </div>
@@ -160,34 +282,10 @@
 
         <!-- 结果大容器框退役（约定④，pt-sec 538 同语言）→ sq-sec border-top 分节 -->
         <div v-if="cols.length" class="sq-sec wide">
-        <div class="sq-card-hd">
-          <!-- 结果计数行走 MetaStrip 统一件（ fmtNum 千分位口径保留）；cursor 段 warn tone -->
-          <MetaStrip :items="resultMeta" />
-          <div class="sq-card-hd-r">
-            <!-- 原始 IO 快查——最近一次 SQL 请求/响应原文弹窗（ioRecorder 记录环） -->
-            <button class="btn ghost xs" data-test="raw-io" aria-label="查看原始 IO（SQL 执行）" title="最近一次 SQL 请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIo">
-              <Terminal :size="11" /> 原始 IO
-            </button>
-            <button class="btn ghost xs" data-sq-result-h :title="'结果表高度档：' + resultH + 'px'" @click="cycleResultH">高</button>
-            <button class="btn ghost xs" @click="nextPage" :disabled="!cursor || busy">
-              <ChevronRight :size="11" /> 下一页
-            </button>
-            <button class="btn ghost xs" @click="closeCursor" :disabled="!cursor || busy">
-              <XCircle :size="11" /> 关闭 cursor
-            </button>
-            <button class="btn ghost xs" @click="exportCsv">
-              <FileDown :size="11" /> CSV
-            </button>
-            <!-- NDJSON 导出（与 Lucene/PIT 通道对齐；列名作键还原行对象语义） -->
-            <button class="btn ghost xs" @click="exportNdjson">
-              <FileDown :size="11" /> NDJSON
-            </button>
-          </div>
-        </div>
-        <!-- 命中 0 行也要有交代，不留空表格； 列头排序/截断下沉到通用只读表。
- w 遗留「semOn+semRawCols 接线」SqlConsole 半边——SQL 返回列的
- 聚合/桶表达式列（COUNT(*)/HISTOGRAM(…)）与无 type 列入抑制集，防 COUNT≥1000
- 被 semFormat「按值推断」误判成时长/百分比（显式 type 普通列语义显示不受影响） -->
+        <!-- 1141：结果工具行并入表格内核工具行（QRT tableBar 内存态）——dbx 式单行
+ chrome：左=计数 MetaStrip + 内建搜索，右=控制台独占动作（原始 IO/高度档/cursor 翻页）
+ 经 bar-extra 注入，导出/视图/列选由内核共享件承接（宿主不再手写 CSV/NDJSON 导出）。
+ 无 cursor 时不挂禁用翻页钮（1136）。 -->
         <QueryResultTable
           :key="runSeq"
           ref="resultTbl"
@@ -195,11 +293,63 @@
           :cols="colNames"
           :rows="rows"
           sortable
+          row-drawer
           sem-on
+          use-as-condition
+          table-bar
+          searchable
+          export-name="sql"
+          export-ndjson
+          :export-note="exportCaveat(!!cursor, resultStale)"
+          :show-col-count="false"
           :sem-raw-cols="sqlSemRawCols"
+          :field-types="sqlFieldTypes"
           :max-height="resultH + 'px'"
           empty-text="查询成功但命中 0 行，检查 WHERE 条件或索引名"
-        />
+          @use-as-condition="useAsCondition"
+          @sort-by="sortByColumn"
+        >
+          <template #bar-prepend>
+            <!-- 结果计数行走 MetaStrip 统一件（ fmtNum 千分位口径保留）；cursor 段 warn tone -->
+            <MetaStrip :items="resultMeta" />
+          </template>
+          <template #bar-extra>
+            <button class="btn ghost xs sq-icon-btn" data-test="raw-io" aria-label="查看原始 IO（SQL 执行）" title="最近一次 SQL 请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIo">
+              <Terminal :size="12" />
+            </button>
+            <!-- 1167：图标原为 Maximize2——与内核右侧「放大结果表」同图标同尺寸且相邻，
+                 实测两个一模一样的 ↗ 并排，用户无法区分「调高度」和「全屏放大」。
+                 换成 UnfoldVertical（上下展开=高度档），语义与全屏放大正交。 -->
+            <button class="btn ghost xs sq-icon-btn" data-sq-result-h :aria-label="'结果表高度档：' + resultH + 'px'" :title="'结果表高度档：' + resultH + 'px'" @click="cycleResultH">
+              <UnfoldVertical :size="12" />
+            </button>
+            <template v-if="cursor">
+              <button class="btn ghost xs" @click="nextPage" :disabled="busy">
+                <ChevronRight :size="11" /> 下一页
+              </button>
+              <button class="btn ghost xs" @click="closeCursor" :disabled="busy">
+                <XCircle :size="11" /> 关闭 cursor
+              </button>
+            </template>
+          </template>
+        </QueryResultTable>
+        <!-- 1045：cursor 未取完时表头排序只作用于已加载行——诚实标注，避免把局部序当全量序 -->
+        <div v-if="cursor && rows.length" class="sq-sort-note" role="status">
+          cursor 未取完：表头排序仅作用于已加载 {{ rows.length }} 行；需要全量排序请在 SQL 里写 ORDER BY
+        </div>
+        <!-- 1048：两列聚合结果自动出分布图（label + count）——统计查询不再只有表格；
+             非聚合形状不猜、不占位（sqlAggSeries 纯函数判定）。 -->
+        <div v-if="aggSeries" class="sq-chart">
+          <div class="sq-chart-hd">
+            <span class="sq-chart-t"><BarChart3 :size="12" /> 聚合分布
+              <span class="sq-chart-meta mono">{{ aggSeries.labelCol }} → {{ aggSeries.valueCol }} · {{ aggSeries.buckets.length }} 组 · 合计 {{ fmtNum(aggSeries.total) }}</span>
+            </span>
+            <button class="btn ghost xs" :aria-expanded="aggChartOpen" @click="aggChartOpen = !aggChartOpen">{{ aggChartOpen ? '收起' : '展开' }}</button>
+          </div>
+          <div v-show="aggChartOpen" class="sq-chart-body">
+            <AggBarChart :buckets="aggSeries.buckets" :height="96" />
+          </div>
+        </div>
         </div>
 
       <!-- 初始/执行中空态（裸文字合并 EmptyState compact；
@@ -234,7 +384,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
-import { BookOpen, Braces, Star, Play, Copy, AlertCircle, ChevronRight, XCircle, FileDown, ShieldAlert, Database, Loader2, History, Terminal } from 'lucide-vue-next';
+import { BookOpen, Braces, Star, Play, Copy, AlertCircle, ChevronRight, XCircle, ShieldAlert, Database, Loader2, History, Terminal, BarChart3, UnfoldVertical } from 'lucide-vue-next';
 import { NModal } from 'naive-ui';
 /* 页内历史面板合并 QueryHistoryPanel 共享件（DslQueryView 弹窗范式） */
 import QueryHistoryPanel from '../components/QueryHistoryPanel.vue';
@@ -247,9 +397,11 @@ import { useQueryRun } from '../composables/useQueryRun';
 import { usePref } from '../composables/urlState';
 import { useTierCycle } from '../composables/useTierCycle'; /* ：sql.railW/resultH/codeH 三件套合并 */
 import { useScopedDraft } from '../composables/useScopedDraft';
-import { exportStamp, copyText, fmtTime, fmtNum, downloadText, csvCell, fmtCell } from '../utils/format';
+import { copyText, fmtTime, fmtNum } from '../utils/format';
 import MonacoEditor from '../components/MonacoEditor.vue';
 import QueryResultTable from '../components/QueryResultTable.vue';
+import AggBarChart from '../components/AggBarChart.vue';
+import { sqlAggSeries } from '../utils/sqlChart';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环） */
 import RawIoModal from '../components/RawIoModal.vue';
 /* 页头/空态/元信息/JSON 高亮四处统一件合并 */
@@ -265,8 +417,21 @@ import { friendlyEsError } from '../utils/esError';
 /* W2 批：SQL 补全单例接入——与 SqlBridge 共享同一份语言级 provider（引用计数，挂载 ensure/卸载 dispose） */
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import { useIndexFields } from '../composables/useIndexFields';
-import { ensureSqlCompletion, suggestColumnsFor, type SqlCompletionCtx } from '../utils/sqlCompletion';
+import { indexFromSql } from '../utils/sqlIndex';
+import { describeSqlOpts } from '../utils/sqlOpts';
+import { ensureSqlCompletion, suggestColumnsFor, suggestFunctionsFor, suggestIndicesFor, type SqlCompletionCtx } from '../utils/sqlCompletion';
 import { lintSql } from '../utils/sqlLint'; /* P0-3：SQL 静态 lint */
+/* 1109：ES 报错 `line X:Y` 锚点 → 编辑器行列定位 */
+import { parseSqlErrorPos } from '../utils/sqlErrorPos';
+import { selectionScope, statementsOf, statementScopeAt, replaceScopeText, mapScopedPos, type SqlScope } from '../utils/sqlScope';
+/* 1121：LIMIT/OFFSET 超结果窗口（from+size ≤ 10000）→ 去掉 OFFSET / 压 LIMIT 用 cursor */
+import { fixSqlResultWindow } from '../utils/sqlWindowFix';
+/* 1126：结果值下钻——简单 SELECT 追加 WHERE（安全转义；复杂结构降级为复制条件） */
+import { appendSqlFilter, appendSqlOrder, sqlPredicate } from '../utils/sqlFilter';
+import { fieldRoleOf } from '../utils/fieldRole';
+import { sqlCostHints, appendSqlLimit } from '../utils/sqlCost'; /* 1050：高开销结构提示 */
+import { countSqlPlaceholders, parseSqlParams } from '../utils/sqlParams'; /* 1070：? 位置参数 */
+import { columnarToRows, exportCaveat, hasSqlRowsShape } from '../utils/sqlResult'; /* 1075 列式转行；1078 导出注脚；1079 形态守卫 */
 import { useDebounceFn } from '../composables/useDebounceFn'; /* P0-3：划线防抖统一件 */
 import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 
@@ -289,6 +454,35 @@ const sql = useScopedDraft('sql', {
  lint 纯函数规则宁少勿误报（合法语句零误报由 sqlLint534 契约钉），零阻塞不拦执行。 */
 const sqlMonaco = ref<InstanceType<typeof MonacoEditor> | null>(null);
 const sqlLintFindings = computed(() => lintSql(sql.value || ''));
+/* 1050：成本/结构提示（编辑即算，纯函数；最多 2 条防噪音）——1130 起只评估当前
+   选区/光标语句，多语句稿不会拿另一条的缺失来提示这一条 */
+const costHints = computed(() => sqlCostHints(advisoryText.value || ''));
+const costFixLimit = computed(() => costHints.value.some(h => h.fix === 'limit'));
+/* 1105：SELECT * 一键展开为字段清单——字段源跟随 FROM/顶栏（sqlFieldsCtx），
+   上限 60 个以免把编辑器写爆；不在本地伪造字段（字段源空则不出现按钮）。
+   1130：只展开当前选区/光标语句里的 SELECT *，并原位放回，其他语句零触碰。 */
+const canExpandStar = computed(() => /\bSELECT\s+\*/i.test(advisoryText.value || '') && sqlFieldsCtx.fields.value.length > 0);
+function expandStar() {
+  const all = sqlFieldsCtx.fields.value;
+  if (!all.length) return;
+  /* 多字段子域（title.keyword）默认不展开，减少冗余列；只有全是子域时才退化为全量 */
+  const pool = all.filter(f => !f.path.endsWith('.keyword'));
+  const base = pool.length ? pool : all;
+  const picked = base.slice(0, 60);
+  const cols = picked.map(f => '"' + String(f.path).replace(/"/g, '""') + '"').join(', ');
+  const next = advisoryText.value.replace(/\bSELECT\s+\*/i, 'SELECT ' + cols);
+  if (next === advisoryText.value) return;
+  applyScopedEdit(next);
+  store.notify('info', `已展开 ${picked.length} 个字段${base.length > picked.length ? `（共 ${base.length} 个，已截断前 60）` : ''}`, { duration: 3200 });
+}
+function applyCostLimit() {
+  const src = advisoryText.value;
+  const semi = /;\s*$/.test(src) ? ';' : '';
+  const next = appendSqlLimit(src.replace(/;\s*$/, ''), 1000) + semi;
+  if (next === src) return;
+  applyScopedEdit(next);
+  store.notify('info', '已补 LIMIT 1000：只限制返回量，不减少索引扫描', { duration: 3000 });
+}
 const queueSqlLintMarkers = useDebounceFn(() => {
   sqlMonaco.value?.setLineMarkers?.(
     sqlLintFindings.value.map(f => ({ line: f.line, message: f.message + '（' + f.suggestion + '）' })),
@@ -298,7 +492,28 @@ const queueSqlLintMarkers = useDebounceFn(() => {
 watch(sql, () => { queueSqlLintMarkers(); }, { immediate: true });
 /* 执行参数作为偏好跨会话记忆 */
 const fetchSize = usePref('sql.fetchSize', 200);
+const timeZone = usePref('sql.timeZone', '');
+const pageTimeout = usePref('sql.pageTimeout', '');
 const lenient = usePref('sql.lenient', true);
+/* 1075：columnar 列式返回——大结果/深翻页用；cursor 续页必须与首查同形态 */
+const columnar = usePref('sql.columnar', false);
+/* 1070：位置参数（? 占位 + params 数组）。参数文本跨会话记忆；参数条默认仅在有值时展开，
+   不挤占每次进页的编辑器高度。占位符计数忽略字符串/注释里的问号（utils/sqlParams）。 */
+const paramsText = usePref('sql.params', '');
+const paramOpen = ref(!!paramsText.value);
+const paramPlaceholders = computed(() => countSqlPlaceholders(sql.value || ''));
+const paramParse = computed(() => parseSqlParams(paramsText.value));
+const paramCount = computed(() => (paramParse.value.ok ? paramParse.value.value.length : 0));
+const paramStat = computed<{ text: string; tone: 'ok' | 'warn' | 'bad' | '' }>(() => {
+  const p = paramParse.value;
+  if (!p.ok) return { text: p.error, tone: 'bad' };
+  const n = p.value.length;
+  const ph = paramPlaceholders.value;
+  if (!ph && !n) return { text: '未使用参数', tone: '' };
+  if (!n) return { text: `SQL 有 ${ph} 个 ? 未填参数`, tone: 'warn' };
+  if (n === ph) return { text: `${ph} / ${n} 匹配`, tone: 'ok' };
+  return { text: `占位 ? ${ph} · 参数 ${n}（数量不一致）`, tone: 'warn' };
+});
 /* W2 批：布局可调三件全走 usePref 跨会话记忆——
  ① 模板侧栏：可折叠（sql.railOpen）+ 宽度三档（sql.railW，默认 300=原 minmax 上限）；
  ② 结果表高度档（sql.resultH，默认 500=原写死值）；
@@ -318,19 +533,124 @@ const cols = ref<Array<{ name: string; type: string }>>([]);
 const rows = ref<any[][]>([]);
 /* 通用表只读 cols 是 string[]；type 子标签属 SQL 特定细节，不塞进通用表 */
 const colNames = computed(() => cols.value.map(c => c.name));
+/* 1108：SQL 返回列自带 ES 类型 → 显式喂给 QRT（列头类型徽标/数值对齐/date 本地化），
+   不再只靠值采样猜（全 null/混合列采样不到）。聚合表达式列无稳定类型，排除。 */
+const sqlFieldTypes = computed<Record<string, string>>(() => {
+  const out: Record<string, string> = {};
+  for (const c of cols.value) {
+    if (!c.type || c.name.includes('(') || c.name.includes('*')) continue;
+    out[c.name] = c.type;
+  }
+  return out;
+});
 /* w 遗留「semOn+semRawCols 接线」SqlConsole 半边——抑制集=无 type 列
  ∪ 列名含 ( 或 * 的聚合/桶表达式列（COUNT(*)/HISTOGRAM(…)），防 COUNT≥1000 被
  semFormat「按值推断」误判成时长、0..1 被判百分比；显式 type 标注的普通列语义显示不受
- 影响（semRawCols 守卫只压推断不压标注）。cols→colNames 丢弃 type 的现状不动
- （field-types 进阶不做）；本表不传 storage-key（tableDimGuard 锁）。 */
+ 影响（semRawCols 守卫只压推断不压标注）。1108：普通列 type 显式喂 QRT。
+ 本表不传 storage-key（tableDimGuard 锁）。 */
 const sqlSemRawCols = computed<string[]>(() =>
   cols.value.filter(c => !c.type || c.name.includes('(') || c.name.includes('*')).map(c => c.name),
 );
 const resultTbl = ref<InstanceType<typeof QueryResultTable>>();
+/* 1048：聚合分布图（两列 label+数值才出；不猜非聚合形状） */
+const aggSeries = computed(() => sqlAggSeries(cols.value, rows.value));
+const aggChartOpen = usePref('sql.aggChartOpen', true);
 /* 每次执行重挂表，把排序态回到 SQL 原始行序，避免陈旧排序误导 */
 const runSeq = ref(0);
 const cursor = ref<string | null>(null);
+/* 1045：cursor 与产生它的 SQL 快照绑定——改稿后继续「下一页」不得把旧查询的后续页
+   追加到新查询结果下（旧实现无条件 concat，结果串台且 cursor 泄漏）。 */
+const cursorSql = ref<string | null>(null);
+/* 结果已过期（SQL 改动/新查询失败但仍显示旧行）——表头计数区诚实标注 */
+const resultStale = ref(false);
+/* 1088：过期原因——改参数/切时区/切列式/取消/失败都标「已过期」，但徽标必须说清是哪一种 */
+const staleLabel = ref('SQL 已修改');
+/* 1082：上一次成功执行的实际输入快照——没有 cursor 时改稿同样要标过期，
+   否则表里上一轮的行会一直冒充当前结果（模板换源/补 LIMIT 都会被误读） */
+const runSql = ref<string | null>(null);
+const runParams = ref<string | null>(null);
+/* 1128：编辑器选区态（行/字符/偏移）——驱动「执行选段」示能与结果来源标注 */
+const selScope = ref<{ lines: number; chars: number; start: number; end: number } | null>(null);
+/* 1129：光标偏移 + 顶层语句切分——多语句稿不选中时执行光标所在语句（Kibana/DataGrip 同习惯），
+   单语句稿仍按整篇（行为零变化） */
+const cursorPos = ref(0);
+const stmtScopes = computed(() => statementsOf(sql.value));
+const cursorStmt = computed(() => statementScopeAt(sql.value, cursorPos.value));
+const multiStmt = computed(() => stmtScopes.value.length > 1);
+const cursorStmtNo = computed(() => {
+  const c = cursorStmt.value;
+  if (!c) return 0;
+  const i = stmtScopes.value.findIndex(s => s.start === c.start);
+  return i < 0 ? 0 : i + 1;
+});
+/* 1130：就地建议/改写的目标范围——选区优先，其次光标语句；单语句稿=整篇。
+   展开字段/补 LIMIT 等动作只改这一段，不再盲改第一条或整篇尾部。 */
+const editScope = computed<SqlScope | null>(() => {
+  if (selScope.value) return selectionScope(sql.value, selScope.value.start, selScope.value.end);
+  return multiStmt.value ? cursorStmt.value : null;
+});
+const advisoryText = computed(() => editScope.value?.text ?? sql.value);
+function applyScopedEdit(next: string) {
+  sql.value = replaceScopeText(sql.value, editScope.value, next);
+}
+/* 1128：本次结果来自哪段选区（null=整篇）；只标注来源，不改过期判定口径：
+   runSql/runErrSql 仍存整篇快照，改到选区外任何一处都算「输入已变」，宁可保守。 */
+const runScope = ref<SqlScope | null>(null);
+/* 1135：局部结果的下钻/排序在「稿未变」时只改执行过的那条语句，并强制下一次 run
+   仍跑这条（点结果表会移走光标，不能依赖当前选区）。 */
+let forcedRunScope: SqlScope | null = null;
+/* 改稿即作废旧 cursor：静默关闭服务端上下文，保留已加载行但明确标「已过期」 */
+watch(sql, () => {
+  if (rows.value.length && runSql.value !== null && sql.value !== runSql.value) {
+    resultStale.value = true;
+    staleLabel.value = 'SQL 已修改';
+  }
+  if (cursor.value && cursorSql.value !== null && sql.value !== cursorSql.value) {
+    resultStale.value = true;
+    staleLabel.value = 'SQL 已修改';
+    void closeCursorQuiet();
+  }
+});
+/* 1070：参数属于结果上下文——改 params 后旧 cursor 的后续页对应旧参数，必须作废，
+   否则「下一页」会把上一组参数的结果续到新参数现场（与改 SQL 同口径的诚实性）。
+   1082：无 cursor 时改参数也标过期，行仍属于旧参数。 */
+watch(paramsText, () => {
+  if (rows.value.length && runParams.value !== null && paramsText.value.trim() !== runParams.value) {
+    resultStale.value = true;
+    staleLabel.value = '参数已修改';
+  }
+  if (cursor.value) {
+    resultStale.value = true;
+    staleLabel.value = '参数已修改';
+    void closeCursorQuiet();
+  }
+});
+/* 1075：columnar 是结果形态的一部分——切形态后旧 cursor 的后续页形态不一致，必须作废 */
+watch(columnar, () => {
+  if (cursor.value) {
+    resultStale.value = true;
+    staleLabel.value = '列式形态已切换';
+    void closeCursorQuiet();
+  }
+});
+/* 1088：time_zone 属于结果上下文——cursor 续页按发起时的时区回显日期列；
+   中途改时区会让新页与已加载页格式不一致（同一表两套时间口径），同 columnar 作废 */
+watch(timeZone, () => {
+  if (cursor.value) {
+    resultStale.value = true;
+    staleLabel.value = '时区已修改';
+    void closeCursorQuiet();
+  }
+});
 const dslPreview = ref<string | null>(null);
+/* 1136：DSL 预览默认折叠——结果网格优先（dbx 式）；自动 translate 只备好内容，
+   手动「转 DSL」才展开；展开后跨查询保留操作者选择。 */
+const previewOpen = ref(false);
+/* 1125：预览绑定生成时的 SQL 快照——改稿后旧翻译不可再复制/跳转（可能带着旧 FROM/旧索引） */
+const dslPreviewSql = ref('');
+/* 1128：预览对应的索引名——选段翻译时按选段的 FROM 走，跳 DSL 页不落到整篇的另一条语句上 */
+const dslPreviewIdx = ref('');
+const dslPreviewStale = computed(() => !!dslPreview.value && sql.value !== dslPreviewSql.value);
 const unavailable = ref(false);
 const reason = ref('');
 /* 执行失败持久错误面板：ES 长错误全文留痕可回看，toast 6 秒即逝不作唯一载体 */
@@ -341,21 +661,135 @@ const runErr = ref('');
 const runErrObj = ref<unknown>(null);
 /* 错误面板标题行的人话摘要（pre 仍保全文，SearchSandboxView 同款双轨） */
 const friendlyRunErr = computed(() => friendlyEsError(runErr.value));
+/* 1109：ES SQL 报错带 `line X:Y` 锚点——解析后给「定位 X:Y」入口，
+ 执行错误同时在编辑器对应行标红（owner 与静态 lint 分离，互不清）。
+ 错误锚点绑定失败时的 SQL 快照：改稿后旧行号不再可信，chip/marker 立即撤下，
+ 面板保留全文但标「错误来自上一版 SQL」——不让旧错误看起来像当前稿的错误。 */
+const runErrSql = ref('');
+/* 1128：失败那次执行若来自选区——报错 `line X:Y` 是相对选段的，需按锚点换算回全文 */
+const runErrScope = ref<SqlScope | null>(null);
+const runErrPosRaw = computed(() => (runErr.value ? parseSqlErrorPos(runErr.value) : null));
+const runErrPos = computed(() => mapScopedPos(runErrPosRaw.value, runErrScope.value));
+const runErrStale = computed(() => !!runErr.value && sql.value !== runErrSql.value);
+function locateRunErr() {
+  const p = runErrPos.value;
+  if (p) sqlMonaco.value?.revealPosition?.(p.line, p.column);
+}
+function locateLine(line: number) {
+  sqlMonaco.value?.revealPosition?.(line, 1);
+}
+function syncRunErrMarker() {
+  const p = runErrStale.value ? null : runErrPos.value;
+  sqlMonaco.value?.setLineMarkers?.(
+    p ? [{ line: p.line, message: '执行错误：' + friendlyRunErr.value }] : [],
+    'es-sql-runerr', 'error',
+  );
+}
+watch(sql, () => { if (runErr.value) syncRunErrMarker(); });
+/* 1095：数组字段报错 + 宽容模式未开 → 给「一键开启并重试」；不动 SQL 文本 */
+const arrayLenientFix = computed(() => !lenient.value && !!runErr.value
+  && /Arrays are not supported|field_multi_value_leniency|multi[-_ ]value/i.test(runErr.value));
+function enableLenientRetry() {
+  lenient.value = true;
+  store.notify('info', '已开启宽容模式（数组字段取首值），正在重新执行');
+  void doRun();
+}
+/* 1102：SQL 通道不支持 nested 字段——切到支持嵌套的查询通道（保留 idx/mode 之外的 URL 现场） */
+const nestedLimitFix = computed(() => !!runErr.value && /Nested fields not supported/i.test(runErr.value));
+function switchQhMode(mode: 'lucene' | 'pit') {
+  const usp = new URLSearchParams(location.hash.split('?')[1] || '');
+  usp.set('mode', mode);
+  location.hash = (location.hash.split('?')[0] || '#/search') + '?' + usp.toString();
+}
 /* 1043：UnknownColumn 智能纠错——错误文本解析列名 + editDistance 相近字段 top-3；
    无 UnknownColumn 字样/字段源为空 → null（面板零增量）。字段冷缓存时顺带
    ensure（fire-and-forget，computed 随 fields.value 更新自愈重算）。 */
 const colFix = computed(() => {
-  if (!runErr.value) return null;
+  /* 1130：错误锚点已撤（改稿）时不再给替换建议——避免把旧错误的改名盖到新稿 */
+  if (!runErr.value || runErrStale.value) return null;
   const fields = sqlFieldsCtx.fields.value;
-  if (!fields.length) { void sqlFieldsCtx.ensure(); return null; }
+  /* 无索引时 ensure 无意义；且空字段下反复 ensure 会写新数组触发自身重算（递归更新） */
+  if (!fields.length) { if (effectiveSqlIndex.value) void sqlFieldsCtx.ensure(); return null; }
   return suggestColumnsFor(runErr.value, fields);
 });
+/* 1130：失败来自选段/光标语句时，替换只落在该段；整篇执行维持原全局替换。
+   返回 false=段内没找到目标（调用方提示而不是盲目全局改）。 */
+function replaceInRunScope(re: RegExp, to: string): boolean {
+  const sc = runErrScope.value;
+  if (!sc || runErrStale.value) return false;
+  const body = sql.value.slice(sc.start, sc.end);
+  if (!new RegExp(re.source, re.flags).test(body)) return false;
+  sql.value = replaceScopeText(sql.value, sc, body.replace(new RegExp(re.source, re.flags), to));
+  return true;
+}
 function applyColFix(path: string) {
   const col = colFix.value?.col;
   if (!col) return;
   const re = new RegExp(col.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-  sql.value = sql.value.replace(re, path);
+  if (runErrScope.value) {
+    if (!replaceInRunScope(re, path)) {
+      store.notify('warning', `当前${runErrScope.value.kind === 'statement' ? '语句' : '选段'}内未找到列 ${col}`);
+      return;
+    }
+  } else {
+    sql.value = sql.value.replace(re, path);
+  }
   store.notify('info', `已将列 ${col} 替换为 ${path}，可重新执行`);
+}
+/* 1045：索引名纠错（Unknown index / no such index）——与列名纠错同交互 */
+const idxFix = computed(() => (runErr.value && !runErrStale.value ? suggestIndicesFor(runErr.value, store.indices) : null));
+function applyIdxFix(path: string) {
+  const index = idxFix.value?.index;
+  if (!index) return;
+  const re = new RegExp(index.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+  if (runErrScope.value) {
+    if (!replaceInRunScope(re, path)) {
+      store.notify('warning', `当前${runErrScope.value.kind === 'statement' ? '语句' : '选段'}内未找到索引 ${index}`);
+      return;
+    }
+  } else {
+    sql.value = sql.value.replace(re, path);
+  }
+  store.notify('info', `已将索引 ${index} 替换为 ${path}，可重新执行`);
+}
+/* 1110：Unknown function / Scalar function 纠错——候选池为 ES SQL 官方标量+聚合函数表，
+   与列名/索引名纠错同交互（替换后由「重试」执行，不暗跑）。 */
+const fnFix = computed(() => (runErr.value && !runErrStale.value ? suggestFunctionsFor(runErr.value) : null));
+function applyFnFix(name: string) {
+  const fn = fnFix.value?.fn;
+  if (!fn) return;
+  const re = new RegExp('\\b' + fn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
+  if (runErrScope.value) {
+    if (!replaceInRunScope(re, name)) {
+      store.notify('warning', `当前${runErrScope.value.kind === 'statement' ? '语句' : '选段'}内未找到函数 ${fn}`);
+      return;
+    }
+  } else {
+    sql.value = sql.value.replace(re, name);
+  }
+  store.notify('info', `已将函数 ${fn} 替换为 ${name}，可重新执行`);
+}
+/* 1121：结果窗口超限自救——LIMIT/OFFSET 翻译成 from+size，超 10000 必 400；
+ 删除 OFFSET（或将超窗 LIMIT 压到 10000）后走 cursor 分页。只对失败那一版 SQL 生效，
+ 改稿后（stale）不提供，避免把旧改写盖到新稿上。 */
+const windowFix = computed(() => {
+  if (!runErr.value || runErrStale.value) return null;
+  if (!/Result window is too large|from \+ size must be less than or equal to|max_result_window/i.test(runErr.value)) return null;
+  return fixSqlResultWindow(runErrSql.value || sql.value);
+});
+function applyWindowFix() {
+  const f = windowFix.value;
+  if (!f) return;
+  /* 1130：失败来自选段/语句时只改该段，保留段外原文；整篇执行维持原行为 */
+  const sc = runErrScope.value;
+  if (sc) {
+    const semi = sql.value[sc.end - 1] === ';' ? ';' : '';
+    sql.value = replaceScopeText(sql.value, sc, f.sql + semi);
+  } else {
+    sql.value = f.sql;
+  }
+  store.notify('info', f.note, { duration: 5200 });
+  void doRun();
 }
 
 /* DSL 预览裸插值 → highlightJson（dslPreview 已是 pretty 串，着色 + json-view 全局范式） */
@@ -365,7 +799,17 @@ const dslHtml = computed(() => highlightJson(dslPreview.value ?? ''));
 const resultMeta = computed<MetaStripItem[]>(() => [
   { value: fmtNum(rows.value.length), label: '行' },
   { value: fmtNum(cols.value.length), label: '列' },
+  ...(timeZone.value ? [{ value: timeZone.value, label: '时区', tip: '结果日期列按此 SQL time_zone 渲染；cursor 续页沿用同一口径' }] : []),
   ...(cursor.value ? [{ value: '有更多', label: 'cursor', tone: 'warn' as const, tip: '结果集未取完，点「下一页」继续取' }] : []),
+  ...(runScope.value ? [{
+    value: runScope.value.kind === 'statement' ? '语句' : '选段',
+    label: runScope.value.kind === 'statement' ? '仅执行当前语句' : '仅执行片段',
+    tone: 'info' as const,
+    tip: runScope.value.kind === 'statement'
+      ? '结果来自光标所在的那一条 SQL，不是整篇内容；改到该条外也会标过期'
+      : `结果来自编辑器中选中的 ${runScope.value.text.split('\n').length} 行 SQL，不是整篇内容；改到选区外也会标过期`,
+  }] : []),
+  ...(resultStale.value ? [{ value: '已过期', label: staleLabel.value, tone: 'warn' as const, tip: '当前结果来自上一次执行的 SQL；重新执行以更新' }] : []),
 ]);
 
 /* SQL 失能自救——并发探测宿主+全部连接档案，可用则一键切换重跑，不留死胡同 */
@@ -409,6 +853,10 @@ function switchAndRerun(c: { id: string; name: string }) {
   /* 切 target 会按 key 整页重挂载，直接 doRun 的结果会写进已卸载的旧实例——
  改走 prefill 键，新实例 onMounted 消费后自动执行（与命令面板快速 SQL 同一链路） */
   writeStoredRaw(sessionStorage, 'es-console.sql.prefill', sql.value);
+  /* 1071：切集群重跑同样要带上参数，否则重跑的「同一条 SQL」语义已变 */
+  const carryParams = paramsText.value.trim();
+  if (carryParams) writeStoredRaw(sessionStorage, 'es-console.sql.prefill.params', carryParams);
+  else removeStoredRaw(sessionStorage, 'es-console.sql.prefill.params');
   store.setTarget(c.id, c.name);
   store.notify('success', `已切换到「${c.name}」，正在重跑 SQL`);
 }
@@ -434,67 +882,260 @@ function openRawIo() {
   rawIoShow.value = true;
 }
 
-const TEMPLATES = [
-  { k: 'top100', desc: '最新 100 条', sql: 'SELECT * FROM "my-index" ORDER BY ts DESC LIMIT 100' },
-  { k: 'agg-count', desc: '按状态聚合', sql: 'SELECT status, COUNT(*) as cnt FROM "my-index" GROUP BY status' },
-  { k: 'histogram', desc: '按天分桶', sql: 'SELECT HISTOGRAM(ts, INTERVAL 1 DAY) as day, COUNT(*) FROM "my-index" GROUP BY day' },
-  { k: 'filter', desc: '范围过滤', sql: 'SELECT id, score FROM "my-index" WHERE score BETWEEN 60 AND 90' },
-  { k: 'like', desc: '模糊匹配', sql: 'SELECT * FROM "my-index" WHERE title LIKE \'%error%\' LIMIT 50' },
-  { k: 'null', desc: 'NULL 检查', sql: 'SELECT * FROM "my-index" WHERE tags IS NULL LIMIT 100' },
+/* 1058：场景模板按 mapping 业务角色绑定字段——不再写死 status/score/tags 等假字段。
+   need 声明模板依赖的角色；缺角色时入口置灰并说明（行内“缺 …”），点击只解释不插入，
+   不伪造字段、不生成注定报错的 SQL。 */
+type TmplRole = 'date' | 'entity' | 'category' | 'text';
+interface SqlTemplate { k: string; desc: string; sql: string; need?: TmplRole[] }
+const TEMPLATES: SqlTemplate[] = [
+  { k: 'top100', desc: '前 100 条', sql: 'SELECT * FROM "my-index" LIMIT 100' },
+  { k: 'recent7d', desc: '最近 7 天', sql: 'SELECT * FROM "my-index" WHERE {date} >= NOW() - INTERVAL 7 DAY ORDER BY {date} DESC LIMIT 100', need: ['date'] },
+  { k: 'daily', desc: '每日趋势', sql: 'SELECT HISTOGRAM({date}, INTERVAL 1 DAY) AS day, COUNT(*) AS cnt FROM "my-index" GROUP BY day ORDER BY day ASC LIMIT 60', need: ['date'] },
+  { k: 'entity-top', desc: '主体 Top20', sql: 'SELECT {entity} AS name, COUNT(*) AS cnt FROM "my-index" GROUP BY {entity} ORDER BY cnt DESC LIMIT 20', need: ['entity'] },
+  { k: 'category-top', desc: '分类分布', sql: 'SELECT {category} AS bucket, COUNT(*) AS cnt FROM "my-index" GROUP BY {category} ORDER BY cnt DESC LIMIT 20', need: ['category'] },
+  { k: 'text-like', desc: '关键词检索', sql: "SELECT * FROM \"my-index\" WHERE {text} LIKE '%error%' LIMIT 50", need: ['text'] },
+  { k: 'null-audit', desc: '空值体检', sql: 'SELECT * FROM "my-index" WHERE {category} IS NULL LIMIT 100', need: ['category'] },
 ];
+const ROLE_LABEL: Record<TmplRole, string> = { date: 'date 字段', entity: '主体/名称字段', category: '分类字段', text: 'text 字段' };
+const SQL_KW_TYPES = new Set(['keyword', 'constant_keyword', 'wildcard', 'ip', 'version']);
+const isMultiField = (path: string) => path.endsWith('.keyword');
 
+/** 角色 → 当前索引真实字段（只返回可绑定候选，宁少勿假）：
+    text 取任意 text 系字段；entity 优先 keyword 实体字段，退化到 text 实体的 .keyword 子域；
+    category 只要 keyword 族（排除 .keyword 多字段，避免把 title.keyword 当业务分类）。 */
+function pickRoleFields(role: TmplRole): string[] {
+  const fs = sqlFieldsCtx.fields.value;
+  if (!fs.length) return [];
+  if (role === 'date') return fs.filter(f => f.type === 'date' || f.type === 'date_nanos').map(f => f.path);
+  if (role === 'text') return fs.filter(f => f.type === 'text' || f.type === 'match_only_text').map(f => f.path);
+  if (role === 'category') {
+    return fs.filter(f => SQL_KW_TYPES.has(f.type) && !isMultiField(f.path) && fieldRoleOf(f.path, f.type) === 'category').map(f => f.path);
+  }
+  const kw = fs.filter(f => SQL_KW_TYPES.has(f.type) && !isMultiField(f.path) && fieldRoleOf(f.path, f.type) === 'entity').map(f => f.path);
+  if (kw.length) return kw;
+  return fs.filter(f => f.type === 'text' && fieldRoleOf(f.path, f.type) === 'entity'
+    && fs.some(x => x.path === f.path + '.keyword')).map(f => f.path + '.keyword');
+}
+function missingRoles(t: SqlTemplate): string[] {
+  return (t.need || []).filter(r => !pickRoleFields(r).length).map(r => ROLE_LABEL[r]);
+}
+const TEMPLATES_VIEW = computed(() => TEMPLATES.map(t => {
+  const missing = missingRoles(t);
+  /* 1101：可用模板先把「会绑定到哪些字段」亮出来——点开前就知道自动匹配结果 */
+  const binds = (t.need || []).map(r => pickRoleFields(r)[0]).filter(Boolean);
+  return { ...t, missing, ready: missing.length === 0, binds };
+}));
+
+/* 1045→1058：模板落地即绑定当前索引与角色字段。占位符 {date}/{entity}/{category}/{text}
+   由 mapping 解析；缺字段模板不插入（no fake fields）。 */
+async function applyTemplate(t: SqlTemplate) {
+  try { await sqlFieldsCtx.ensure(); } catch { /* 字段源失败：按缺字段处理 */ }
+  const missing = missingRoles(t);
+  if (missing.length) {
+    store.notify('info', `模板「${t.desc}」缺少${missing.join('、')}：当前语句目标索引没有该字段——换一个索引（顶栏选择或改写 FROM）`);
+    return;
+  }
+  /* 1081：模板落到语句实际目标索引（FROM 优先）——字段角色也取自同一索引，
+     不能出现「字段来自 A、表名却写顶栏 B」的注定报错 SQL */
+  const tplIdx = effectiveSqlIndex.value;
+  const idx = tplIdx ? `"${tplIdx}"` : '"my-index"';
+  let next = t.sql.replace(/"my-index"/g, idx).replace(/\{index\}/g, idx);
+  const binds: string[] = [];
+  for (const r of t.need || []) {
+    const f = pickRoleFields(r)[0];
+    next = next.replace(new RegExp(`\\{${r}\\}`, 'g'), f);
+    binds.push(f);
+  }
+  sql.value = next;
+  if (tplIdx) {
+    store.notify('info', `模板已绑定索引 ${tplIdx}${tplIdx === store.pickedIdx ? '' : '（跟随 FROM）'}${binds.length ? ' · ' + binds.join(' · ') : ''}`, { duration: 2600 });
+  }
+}
 function loadSample() {
-  sql.value = TEMPLATES[0].sql.replace('"my-index"', store.pickedIdx ? `"${store.pickedIdx}"` : '"my-index"');
+  void applyTemplate(TEMPLATES[0]);
 }
 
-function buildBody(): string {
-  const b: any = { query: sql.value };
+/* 1075：统一行形态——原生 rows 优先；columnar 响应 values 转行（畸形返回 []，不伪造） */
+function sqlRowsOf(r: any): any[][] {
+  if (Array.isArray(r?.rows)) return r.rows;
+  return columnarToRows(r?.values);
+}
+/* translate 不吃 columnar（转 DSL 与行/列形态无关） */
+function withoutColumnar(body: string): string {
+  try {
+    const o = JSON.parse(body);
+    delete o.columnar;
+    return JSON.stringify(o);
+  } catch { return body; }
+}
+function buildBody(text = sql.value): string {
+  const b: any = { query: text };
   /* ES SQL fetch_size 上限 10000：输入框 max 属性拦不住键入与偏好落盘的超限值，
      超限直发会被 ES 400 拒——构建时夹取兜底；非正数维持不进构建体（走 ES 默认） */
   if (fetchSize.value > 0) b.fetch_size = Math.min(fetchSize.value, 10000);
+  /* 1055：非空才写 time_zone（空 = 跟随集群默认 UTC，不伪造参数） */
+  if (timeZone.value) b.time_zone = timeZone.value;
+  if (pageTimeout.value) b.page_timeout = pageTimeout.value;
+  if (columnar.value) b.columnar = true;
+  /* 1070：合法且非空的数组才写 params；非法 JSON 由 doRun 前置拦截（不静默丢参数执行） */
+  const pp = paramParse.value;
+  if (pp.ok && pp.value.length) b.params = pp.value;
   return JSON.stringify(b);
+}
+
+/* 1128：当前编辑器选区 → 执行范围。编辑器实例未就绪/无选区/纯空白 → null（整篇）。
+   点「执行」时焦点已离开编辑器，选区仍在 Monaco 里，与 Ctrl+Enter 同源取。 */
+function currentSelectionScope(): SqlScope | null {
+  const ed = sqlMonaco.value?.getEditor?.();
+  const model = ed?.getModel?.();
+  const sel = ed?.getSelection?.();
+  if (!ed || !model || !sel) return null;
+  return selectionScope(sql.value, model.getOffsetAt(sel.getStartPosition()), model.getOffsetAt(sel.getEndPosition()));
 }
 
 async function doRun() {
   if (!sql.value.trim()) return;
+  const pp = paramParse.value;
+  if (!pp.ok) {
+    paramOpen.value = true;
+    store.notify('error', 'SQL 参数无法解析：' + pp.error);
+    return;
+  }
+  /* 1128/1129：优先跑选段；没有选区且稿内有多个顶层语句时跑光标所在语句；
+     单语句稿维持整篇（行为零变化）。分号是客户端语句分隔符，执行前剥掉尾分号；
+     请求体/历史/预览都绑这段文本，过期判定仍绑整篇快照。 */
+  const forced = forcedRunScope;
+  forcedRunScope = null;
+  const picked = currentSelectionScope();
+  const scope = forced ?? picked ?? (multiStmt.value ? cursorStmt.value : null);
+  const execSnapshot = scope ? scope.text.replace(/;+\s*$/, '') : sql.value;
+  /* 新查询开始即释放上一轮 cursor（服务端上下文），旧行在成功回包前继续可见 */
+  if (cursor.value) void closeCursorQuiet();
   busy.value = true; unavailable.value = false; reason.value = ''; runErr.value = ''; runErrObj.value = null;
+  runErrSql.value = '';
+  runErrScope.value = null;
+  syncRunErrMarker();
+  resultStale.value = false;
   const signal = qr.begin();
+  /* 执行现场快照：参数/文本在 await 期间可能被继续编辑，历史与 cursor 必须绑定
+     实际发出去的那一份（否则「回放」记到新稿、cursor 续页绑到新参数）。 */
+  const sqlSnapshot = sql.value;
+  const paramsSnapshot = pp.value.length ? paramsText.value.trim() : undefined;
+  const body = buildBody(execSnapshot);
   try {
-    const r = lenient.value ? await api.sqlLenient(buildBody(), signal) : await api.sqlJson(buildBody(), signal);
+    const r = lenient.value ? await api.sqlLenient(body, signal) : await api.sqlJson(body, signal);
     if (r?.available === false) { unavailable.value = true; reason.value = r.reason || ''; return; }
+    if (!hasSqlRowsShape(r)) throw new Error('SQL 响应形态异常：缺少 rows/values（未按 0 行成功处理）');
     cols.value = r.columns || [];
-    rows.value = r.rows || [];
+    rows.value = sqlRowsOf(r);
     cursor.value = r.cursor || null;
+    cursorSql.value = r.cursor ? sqlSnapshot : null;
+    /* 1082：记下这次实际执行的输入；若执行期间用户已改稿，结果立刻标过期。
+       1126：成功回包按快照重算 stale——程序化改稿后立即重跑（下钻/窗口自救）时，
+       watch(sql) 会在 run 起手清标后又把它置 true；回包与快照一致必须清掉。 */
+    runSql.value = sqlSnapshot;
+    runParams.value = paramsSnapshot ?? '';
+    const paramsNow = paramParse.value.ok && paramParse.value.value.length ? paramsText.value.trim() : '';
+    const inputChanged = sql.value !== sqlSnapshot || paramsNow !== runParams.value;
+    resultStale.value = inputChanged;
+    if (inputChanged) {
+      staleLabel.value = '执行期间输入已修改';
+    }
     runSeq.value++; // ：新结果回到 SQL 原始行序（重挂表重置排序），避免陈旧排序误导
-    /* 执行成功记跨模式历史（目标索引从 FROM 子句或侧栏选中推导） */
-    useQueryHistoryStore().push('sql', sql.value, indexOf());
+    runScope.value = scope;
+    /* 执行成功记跨模式历史（目标索引从实际执行的文本推导，选段/整篇同口径）；
+       1071：参数一并入历史，回放时恢复，避免带 ? 的语句回放变成无参执行 */
+    useQueryHistoryStore().push('sql', execSnapshot, indexFromSql(execSnapshot, sqlIndexPool.value) || indexOf(), undefined, true, paramsSnapshot, sqlRunOpts());
     /* W10：run 成功后台顺带 translate——试跑→落 DSL 由 2 击减 1 击
  （此前必须「转 DSL」→「到 DSL 页」两步才能深跳）。fire-and-forget：不置 busy、
  不阻塞结果展示；实参 buildBody() 在此求值即 SQL 快照，稍后改稿不串味。
  失败静默——预览不出，「到 DSL 页」原 disabled 语义自兜底。 */
-    void api.sqlTranslate(buildBody()).then(r => {
+    void api.sqlTranslate(withoutColumnar(body)).then(r => {
       if (!r || r.available === false) return;
       dslPreview.value = JSON.stringify(r, null, 2);
+      /* 1125：预览绑定实际执行的 SQL 快照（执行期间改稿→立即标过期） */
+      dslPreviewSql.value = sqlSnapshot;
+      dslPreviewIdx.value = indexFromSql(execSnapshot, sqlIndexPool.value) || indexOf();
     }).catch(() => { /* translate 失败不干扰查询结果 */ });
   } catch (e: any) {
-    /* 主动取消不报失败（DslQueryView 取消甄别同语义）：轻提示即返，错误面板留给真失败 */
-    if (e?.name === 'AbortError') { store.notify('info', `已取消查询（${(qr.elapsedMs.value / 1000).toFixed(1)}s）`); return; }
+    /* 主动取消不报失败（DslQueryView 取消甄别同语义）：轻提示即返，错误面板留给真失败。
+       已有旧行时必须标过期——否则用户会把上一轮结果当成这次被取消查询的产物。 */
+    if (e?.name === 'AbortError') {
+      if (rows.value.length) {
+        resultStale.value = true;
+        staleLabel.value = '查询已取消';
+      }
+      store.notify('info', `已取消查询（${(qr.elapsedMs.value / 1000).toFixed(1)}s）${rows.value.length ? ' · 旧结果已标记过期' : ''}`);
+      return;
+    }
     runErr.value = String(e?.message || e);
     runErrObj.value = e; /* ：原始错误对象旁路留存（压串前的 ApiError 供 errMeta） */
+    runErrSql.value = sqlSnapshot;
+    runErrScope.value = scope;
+    syncRunErrMarker();
+    /* 1122：失败语句也入历史（ok=false + 错误摘要）——生产排障常要从失败现场回填/重试；
+       与成功条目同键去重，重跑成功会清掉错误摘要。 */
+    try {
+      useQueryHistoryStore().push('sql', execSnapshot, indexFromSql(execSnapshot, sqlIndexPool.value) || indexOf(), undefined, false, paramsSnapshot, sqlRunOpts(), runErr.value);
+    } catch { /* 历史失败不阻塞错误面板 */ }
+    if (rows.value.length) {
+      resultStale.value = true;
+      staleLabel.value = '查询失败';
+    }
     /* toast 裸串并轨 friendlyEsError（vrErr 面板 口径，obsWave560 FFE 同范式） */
     store.notify('error', 'SQL 执行失败：' + friendlyEsError(String(e?.message ?? e)));
   } finally { busy.value = false; qr.finish(); }
 }
 
+/* 命令面板/跨模式回放的预填自动执行：身份探测是异步的，probe 未落地时不能直接发；
+   无鉴权部署 authDisabled 必须放行，普通读者按「search 页读权限」放行（不是写权限）。
+   被门挡住的预填挂起一次，身份/目标变化后补跑，避免静默丢稿。 */
+let prefillAutoPending = false;
+const prefillAutoAllowed = () => auth.authDisabled
+  || !auth.probeStarted /* 探测未启动（无鉴权嵌入/测试宿主）视同身份已定，与 Dsl/Lucene/Sandbox/Bridge 同口径 */
+  || (auth.probed && auth.me != null && auth.canReadPage('search', store.target));
+watch(() => [auth.probed, auth.authDisabled, auth.me?.username, store.target], () => {
+  if (!prefillAutoPending || !prefillAutoAllowed()) return;
+  prefillAutoPending = false;
+  doRun();
+});
+
 /* 命令面板「快速 SQL」预填接收，进页自动执行 */
 onMounted(() => {
+  /* 1058：模板可用性随 mapping 角色判定——进页即拉字段，缺字段模板显式置灰
+     （1080：字段源读 effectiveSqlIndex，预填 SQL 的 FROM 优先于顶栏选中） */
+  if (effectiveSqlIndex.value) void sqlFieldsCtx.ensure();
   /* W2 批：SQL 补全单例——字段源吃当前工作索引（与顶栏选中同源），FROM 表名位由单例模块内部解析 */
   sqlCompletion = ensureSqlCompletion(monaco, sqlCtx);
+  /* 1071：跨模式历史回放会随 SQL 一起投递参数快照（无参数则不留旧键） */
+  const prefillParams = sessionStorage.getItem('es-console.sql.prefill.params');
+  if (prefillParams != null) {
+    removeStoredRaw(sessionStorage, 'es-console.sql.prefill.params');
+    paramsText.value = prefillParams;
+    paramOpen.value = true;
+  }
+  /* 1086：收藏/回放携带的索引现场——先切源再执行（无键则维持顶栏选择） */
+  const prefillIdx = sessionStorage.getItem('es-console.sql.prefill.index');
+  if (prefillIdx != null) {
+    removeStoredRaw(sessionStorage, 'es-console.sql.prefill.index');
+    if (prefillIdx && prefillIdx !== store.pickedIdx) store.pick(prefillIdx);
+  }
+  /* 1087：执行选项随收藏/回放恢复（数值夹取同 buildBody 口径） */
+  const prefillOpts = sessionStorage.getItem('es-console.sql.prefill.opts');
+  if (prefillOpts != null) {
+    removeStoredRaw(sessionStorage, 'es-console.sql.prefill.opts');
+    try {
+      const o = JSON.parse(prefillOpts) || {};
+      applySqlOpts(o);
+    } catch { /* 损坏的选项快照不阻塞 SQL 回放 */ }
+  }
   const prefill = sessionStorage.getItem('es-console.sql.prefill');
   if (prefill) {
     removeStoredRaw(sessionStorage, 'es-console.sql.prefill');
     sql.value = prefill;
-    doRun();
+    /* 身份/读页门：probe 未落地不发；无鉴权/有读页权限才自动执行 */
+    if (prefillAutoAllowed()) doRun();
+    else prefillAutoPending = true;
   }
 });
 
@@ -502,20 +1143,52 @@ onMounted(() => {
  草稿通道=useScopedDraft sql，与手工编辑同一条写入路径 */
 const qh = useQueryHistoryStore();
 const histOpen = ref(false);
-const histRows = computed(() => qh.items.filter(i => i.mode === 'sql'));
-function replayHistRow(row: { query: string }, runIt: boolean) {
+const histRows = computed(() => qh.items.filter(i => i.mode === 'sql').map(i => {
+  const sub = describeSqlOpts(i.opts);
+  return sub ? { ...i, sub } : i;
+}));
+function replayHistRow(row: { query: string; params?: string; index?: string; opts?: Record<string, unknown> }, runIt: boolean) {
+  /* 1085：历史条目记录的索引现场先还原（QueryHub 跨模式 SQL 回放同语义），
+     否则历史来自 A、顶栏停在 B 时，补全与「字段体检」会以 B 为底稿解释 A 的语句 */
+  const idx = row.index || '';
+  if (idx && idx !== store.pickedIdx) {
+    store.pick(idx);
+    store.notify('info', `已切到历史记录索引 ${idx} 并回放 SQL`);
+  }
+  /* 1089：执行选项一并还原（时区/页超时/列式/宽容/取数） */
+  if (row.opts) applySqlOpts(row.opts);
   sql.value = row.query;
+  /* 1071：参数随查询文本一起恢复；旧条目无参数则清空当前参数（如实还原当时现场，
+     不让上一轮参数偷偷套到另一条 SQL 上） */
+  paramsText.value = row.params || '';
+  if (row.params) paramOpen.value = true;
   histOpen.value = false;
-  if (runIt) doRun();
+  if (runIt) doRunAuto();
 }
+
+/* 历史回放自动执行的身份门（1124）：与命令面板预填同口径——回放载荷可能来自上一账号，
+   probe 未落地时旧 target 的查询会先发出去。手动点「执行」不拦，后端仍按 search 页读键裁决。 */
+function doRunAuto() {
+  if (prefillAutoAllowed()) { prefillAutoPending = false; void doRun(); return; }
+  prefillAutoPending = true;
+}
+onBeforeUnmount(() => { void closeCursorQuiet(); });
 onBeforeUnmount(() => { sqlCompletion?.dispose(); sqlCompletion = null; });
 
-/* W2 批：SQL 补全单例上下文（闭包现读，注册不随数据变化重挂） */
-const sqlFieldsCtx = useIndexFields(() => store.pickedIdx || '');
+/* W2 批：SQL 补全单例上下文（闭包现读，注册不随数据变化重挂）。
+   1080：字段源跟随语句自身的 FROM（单个索引），裸词只认已加载清单；
+   通配/多表/派生表回落顶栏选中——补全、列名纠错、字段体检、历史推导同源。 */
+const sqlIndexPool = computed(() => store.indices.map(i => String(i.index || '')).filter(Boolean));
+const sqlFromIdx = computed(() => indexFromSql(sql.value, sqlIndexPool.value));
+const effectiveSqlIndex = computed(() => sqlFromIdx.value || store.pickedIdx || '');
+const fromMismatch = computed(() => !!sqlFromIdx.value && !!store.pickedIdx && sqlFromIdx.value !== store.pickedIdx);
+const sqlFieldsCtx = useIndexFields(() => effectiveSqlIndex.value);
+/* 改 FROM / 换顶栏索引：先清旧字段清单再拉新 mapping（回包前不混用上一个索引的字段做补全/纠错） */
+watch(effectiveSqlIndex, idx => { sqlFieldsCtx.reset(); if (idx) void sqlFieldsCtx.ensure(); });
 function sqlCtx(): SqlCompletionCtx {
   return {
     indices: () => store.indices,
-    pickedIdx: () => store.pickedIdx || '',
+    pickedIdx: () => effectiveSqlIndex.value,
     curFields: () => sqlFieldsCtx.fields.value,
     /* 去 void 包装直返 Promise（契约本就 void|Promise<void>，④值位冷缓存首轮
  await 到位再分派—— ③A3 契约半边补齐） */
@@ -526,10 +1199,9 @@ let sqlCompletion: { dispose(): void } | null = null;
 
 /* 字段体检 */
 /* 目标索引提取走 FROM 锚定——SELECT 列表的引号串是列名（如 SELECT "status" … FROM "idx"），
- 全文首个引号串会把列名当索引用，字段体检/历史推导随之错位 */
+ 全文首个引号串会把列名当索引用，字段体检/历史推导随之错位；1080 起与补全/纠错同源 */
 function indexOf(): string {
-  const m = /\bFROM\s+"([^"]+)"/i.exec(sql.value);
-  return (m && m[1]) || store.pickedIdx || '';
+  return effectiveSqlIndex.value;
 }
 async function doSchema() {
   const idx = indexOf();
@@ -546,29 +1218,60 @@ async function doSchema() {
 
 async function nextPage() {
   if (!cursor.value) return;
+  /* 1045：cursor 属于产生它的 SQL 快照；改稿后禁止续取，避免旧页拼进新结果 */
+  if (cursorSql.value !== null && sql.value !== cursorSql.value) {
+    await closeCursorQuiet();
+    resultStale.value = true;
+    staleLabel.value = 'SQL 已修改';
+    store.notify('warning', 'SQL 已修改，上次查询的 cursor 已关闭——请重新执行后再翻页');
+    return;
+  }
   busy.value = true;
   try {
-    const r = await api.sqlCursor(cursor.value);
-    rows.value = rows.value.concat(r.rows || []);
+    const r = await api.sqlCursor(cursor.value, timeZone.value || undefined, columnar.value || undefined);
+    if (!hasSqlRowsShape(r)) {
+      store.notify('error', '分页响应形态异常（缺少 rows/values）；cursor 已保留，可重试');
+      return;
+    }
+    const add = sqlRowsOf(r);
+    rows.value = rows.value.concat(add);
     cursor.value = r.cursor || null;
-    store.notify('success', `已加载 ${r.rows?.length || 0} 行`);
+    store.notify('success', `已加载 ${add.length} 行`);
   } catch (e: any) {
-    store.notify('error', '分页失败：' + friendlyEsError(String(e?.message ?? e))); /* ：裸串并轨 */
+    store.notify('error', '分页失败：' + friendlyEsError(String(e?.message ?? e)) + '（cursor 已保留，可重试）'); /* ：裸串并轨 */
   } finally { busy.value = false; }
+}
+
+/* 静默释放 cursor（改稿/重跑/卸载）——不弹成功 toast，避免编辑时噪音 */
+async function closeCursorQuiet() {
+  const c = cursor.value;
+  cursor.value = null;
+  cursorSql.value = null;
+  if (!c) return;
+  try { await api.sqlClose(c); } catch { /* 服务端上下文可能已过期：静默 */ }
 }
 
 async function closeCursor() {
   if (!cursor.value) return;
-  try { await api.sqlClose(cursor.value); cursor.value = null; store.notify('success', 'cursor 已关闭'); }
+  try { await api.sqlClose(cursor.value); cursor.value = null; cursorSql.value = null; store.notify('success', 'cursor 已关闭'); }
   catch (e: any) { store.notify('error', '关闭失败：' + friendlyEsError(String(e?.message ?? e))); } /* ：裸串并轨 */
 }
 
 async function doTranslate() {
   busy.value = true;
+  const sqlAt = sql.value;
+  /* 1128/1129：选中一段只翻译这段；多语句稿无选区时翻译光标所在语句——与执行同源 */
+  const picked = currentSelectionScope();
+  const scope = picked ?? (multiStmt.value ? cursorStmt.value : null);
+  const text = scope ? scope.text.replace(/;+\s*$/, '') : sql.value;
   try {
-    const r = await api.sqlTranslate(buildBody());
+    const r = await api.sqlTranslate(withoutColumnar(buildBody(text)));
     if (r?.available === false) { unavailable.value = true; reason.value = r.reason || ''; return; }
     dslPreview.value = JSON.stringify(r, null, 2);
+    previewOpen.value = true;
+    /* 1125：快照是请求时的 SQL；await 期间改稿则预览立即进入过期态 */
+    dslPreviewSql.value = sqlAt;
+    dslPreviewIdx.value = indexFromSql(text, sqlIndexPool.value) || indexOf();
   } catch (e: any) {
     store.notify('error', 'translate 失败：' + friendlyEsError(String(e?.message ?? e))); /* ：裸串并轨 */
   } finally { busy.value = false; }
@@ -580,42 +1283,119 @@ function copyDsl() {
   copyText(dslPreview.value).then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制 DSL' : '复制失败'));
 }
 
+/* 1135：局部结果的动作若稿未变——只改执行过的那条语句，并强制下一次重跑它。
+   返回 false 表示稿已改/没有局部范围，调用方走复制降级。 */
+function rewriteRunScope(nextText: string, note: string): boolean {
+  const sc = runScope.value;
+  if (!sc || sql.value !== runSql.value) return false;
+  sql.value = replaceScopeText(sql.value, sc, nextText);
+  forcedRunScope = { ...sc, text: nextText, end: sc.start + nextText.length };
+  store.notify('info', note);
+  void doRun();
+  return true;
+}
+
+/* 1126：结果单元格 → 查询条件下钻（与 DSL 命中表 filter-hit 同动线）。
+   简单 SELECT 追加 WHERE 并重查；GROUP BY/JOIN/派生表不猜，降级为复制条件。 */
+async function useAsCondition({ field, value, type }: { field: string; value: unknown; type?: string }) {
+  /* 1128/1135：结果来自局部执行时，稿未变就只改那条语句并重跑它（不再要求用户手动改）；
+     稿已改/结构不支持才降级为复制条件。 */
+  const sc = runScope.value;
+  if (sc && (sc.start > 0 || sc.end < sql.value.length)) {
+    if (sql.value === runSql.value) {
+      const sr = appendSqlFilter(sc.text, field, value, type);
+      if (sr && rewriteRunScope(sr.sql, `已在当前语句追加条件 ${sr.predicate}，正在重查`)) return;
+    }
+    const p = sqlPredicate(field, value, type);
+    if (!p) { store.notify('warning', '该列名无法安全转成 SQL 条件'); return; }
+    const copied = await copyText(p);
+    store.notify('warning', `当前结果来自局部执行（选段/单条语句），不自动改写整篇 SQL；${copied ? '条件已复制：' + p : '复制条件失败'}`);
+    return;
+  }
+  const r = appendSqlFilter(sql.value, field, value, type);
+  if (r) {
+    sql.value = r.sql;
+    store.notify('info', `已追加条件 ${r.predicate}，正在重查`);
+    void doRun();
+    return;
+  }
+  const p = sqlPredicate(field, value, type);
+  if (!p) { store.notify('warning', '该列名无法安全转成 SQL 条件'); return; }
+  const ok = await copyText(p);
+  store.notify('warning', `当前 SQL 含 GROUP BY/JOIN/派生表，不自动改写；${ok ? '条件已复制：' + p : '复制条件失败'}`);
+}
+
+/* 1132：结果列 → 查询级排序（改顶层 ORDER BY 并重查），与表头本地排序语义分开。
+   局部执行（选段/光标语句）时不猜整篇；UNION/派生表/不安全列名降级复制排序子句。 */
+async function sortByColumn({ field, dir }: { field: string; dir: 'asc' | 'desc' }) {
+  const ident = '"' + String(field).replace(/"/g, '""') + '"';
+  const clause = `ORDER BY ${ident} ${dir === 'asc' ? 'ASC' : 'DESC'}`;
+  const sc = runScope.value;
+  if (sc && (sc.start > 0 || sc.end < sql.value.length)) {
+    if (sql.value === runSql.value) {
+      const sr = appendSqlOrder(sc.text, field, dir);
+      if (sr && rewriteRunScope(sr.sql, `已在当前语句按 ${field} ${dir === 'asc' ? '升序' : '降序'}排序，正在重查`)) return;
+    }
+    const copied = await copyText(clause);
+    store.notify('warning', `当前结果来自局部执行（选段/单条语句），不自动改写整篇 SQL；${copied ? '排序子句已复制：' + clause : '复制失败'}`);
+    return;
+  }
+  const r = appendSqlOrder(sql.value, field, dir);
+  if (!r) {
+    const copied = await copyText(clause);
+    store.notify('warning', `当前 SQL 结构不支持自动改写排序（UNION/派生表或列名不安全）；${copied ? '排序子句已复制：' + clause : '复制失败'}`);
+    return;
+  }
+  sql.value = r.sql;
+  store.notify('info', `已按 ${field} ${dir === 'asc' ? '升序' : '降序'}排序，正在重查`);
+  void doRun();
+}
+
 /* 转出的 DSL 继续去查询工作台调试（复用 SqlBridge 的 es-console.dsl.body 契约） */
 function gotoDsl() {
   if (!dslPreview.value) return;
   /* w77 修复:原走 es-console.dsl.body 死信箱(DslQueryView 不读且会被旧稿覆写),改走 ?dsl= 深链 */
-  router.push({ path: '/search', query: { mode: 'dsl', dsl: encodeDslParam(dslPreview.value) } });
+  /* 1083：目标索引随语句走——SQL 的 FROM 可能是另一索引，DSL 页若沿用顶栏选中会在错索引上执行 */
+  const idx = dslPreviewIdx.value || indexOf();
+  router.push({ path: '/search', query: { mode: 'dsl', ...(idx ? { idx } : {}), dsl: encodeDslParam(dslPreview.value) } });
+}
+
+/* 1087/1089：执行选项现场（收藏、历史、回放共用一份形状） */
+function sqlRunOpts(): Record<string, string | number | boolean> {
+  return {
+    fetchSize: fetchSize.value,
+    ...(timeZone.value ? { timeZone: timeZone.value } : {}),
+    ...(pageTimeout.value ? { pageTimeout: pageTimeout.value } : {}),
+    ...(columnar.value ? { columnar: true } : {}),
+    ...(lenient.value ? { lenient: true } : {}),
+  };
+}
+function applySqlOpts(o: Record<string, unknown>) {
+  if (Number.isFinite(o.fetchSize) && Number(o.fetchSize) > 0) fetchSize.value = Math.min(Number(o.fetchSize), 10000);
+  if (typeof o.timeZone === 'string') timeZone.value = o.timeZone;
+  if (typeof o.pageTimeout === 'string') pageTimeout.value = o.pageTimeout;
+  if (typeof o.columnar === 'boolean') columnar.value = o.columnar;
+  if (typeof o.lenient === 'boolean') lenient.value = o.lenient;
 }
 
 function doFav() {
+  /* 1086：收藏=完整现场（索引 + 参数）——只存 SQL 会让回放在别的索引/丢参数下重跑 */
+  const idx = indexOf();
+  const params = paramParse.value.ok && paramParse.value.value.length ? paramsText.value.trim() : '';
+  /* 1087：执行选项同样影响结果（时区/页超时/列式/宽容/取数）——一并入现场 */
+  const opts = sqlRunOpts();
   store.addFavorite({
     kind: 'rest', title: `SQL @${fmtTime(Date.now())}`,
-    subtitle: sql.value.slice(0, 100), payload: { sql: sql.value, fetchSize: fetchSize.value },
+    subtitle: sql.value.slice(0, 100),
+    payload: { sql: sql.value, fetchSize: fetchSize.value, ...(idx ? { index: idx } : {}), ...(params ? { params } : {}), opts },
     tags: ['sql'],
   });
   store.notify('success', '已收藏 SQL');
 }
 
-function exportCsv() {
-  const head = cols.value.map(c => `"${c.name}"`).join(',');
-  /* CSV 跟随表格当前排序行序——所见即所得（排序态在通用表内部，经 expose 取回） */
-  const sorted = resultTbl.value?.getSortedRows() ?? rows.value;
-  const body = sorted.map(r => r.map(v => csvCell(fmtCell(v))).join(',')).join('\n');
-  downloadText(`sql-${exportStamp()}.csv`, head + '\n' + body, 'text/csv;charset=utf-8', { bom: true });
-  store.notify('success', 'CSV 已导出');
-}
+/* 1141：CSV/NDJSON 导出退役（宿主手写版）——表格内核「导出 ▾」五格式+NDJSON 单源承接，
+ 导出注脚经 :export-note 传入（cursor 未取完/结果过期口径不变）。 */
 
-/* NDJSON 导出（行对象按列名还原，cursor 累积行同样全量导出） */
-function exportNdjson() {
-  const sorted = resultTbl.value?.getSortedRows() ?? rows.value;
-  const lines = sorted.map(r => {
-    const o: Record<string, unknown> = {};
-    cols.value.forEach((c, i) => { o[c.name] = r[i] ?? null; });
-    return JSON.stringify(o);
-  });
-  downloadText(`sql-${exportStamp()}.ndjson`, lines.join('\n'), 'application/x-ndjson');
-  store.notify('success', `NDJSON 已导出（${lines.length} 行）`);
-}
 </script>
 
 <style scoped>
@@ -626,9 +1406,10 @@ function exportNdjson() {
  rail-off 折叠为单栏；窄容器塌单栏由底部 @media 覆盖（规则顺序在后） */
 .sq-grid { display: grid; grid-template-columns: minmax(0, 1fr) var(--sq-rail-w, 300px); gap: var(--sp-3); min-height: 0; }
 .sq-grid.rail-off { grid-template-columns: minmax(0, 1fr); }
-/* SQL 编辑器弹性（原 170px 写死）：首行行高 minmax(170px, 42vh) 随视口伸缩、170px 兜底；
+/* SQL 编辑器弹性（原 170px 写死）：首行行高 minmax(150px, 34vh) 随视口伸缩、150px 兜底；
+ 1136：42vh→34vh 把高度让给结果网格（DBX 式结果优先，编辑器内部仍可滚动）；
  页面需随结果表滚动，故不能把整页锁 100% 高，只弹编辑器行 */
-.sq-grid { grid-template-rows: minmax(170px, 42vh); }
+.sq-grid { grid-template-rows: minmax(150px, 34vh); }
 .sq-editor { display: flex; flex-direction: column; min-height: 0; }
 /* 编辑器壳退役（约定③）后 Monaco 100% 高容器防撑破 overflow 承接保留
  （rd/sy 540 先例：overflow 是结构语义非 chrome）；sqlLint534 骨架锁行逐字不动，单列一条零触锁 */
@@ -639,6 +1420,9 @@ function exportNdjson() {
 .sq-editor > :deep(.monaco-host) { border: none; border-radius: 0; }
 /* .sq-sql-lint 私造形态（含 warn-line 边线）随改用 lint-bar 单源退役；
  自动高度 flex none 语义归 .lint-bar，编辑器 flex:1 min-height:0 既有高度链确定解不动 */
+/* 1050：成本提示行——多条纵向/横向排布，动作钮右端 */
+.sq-cost-hint { display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; gap: var(--sp-2); }
+.sq-cost-item { flex: 1 1 260px; min-width: 0; }
 /* sq-card 大容器壳（bg+border+radius）退役（v 约定①④，pt-sec/uq-sec 538 同语言）
  → sq-sec border-top 分节（DSL 预览/结果卡）；sq-blank 空态直贴仅留 wide 网格占位
  （EmptyState 不套空框）；sq-panel 语义面板（err/warn 豁免档）完整壳保留，视觉零变化 */
@@ -650,12 +1434,44 @@ function exportNdjson() {
 /* hd 随壳退役改行首横排档（538 .uq-script-hd→约定② 同语言：border-bottom 分界 + 650） */
 .sq-card-hd { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--border); font-size: var(--fs-sm); font-weight: 650; }
 .sq-card-hd-r { display: flex; gap: var(--sp-1h); align-items: center; }
+/* 1090：1024 档工具行不再把「宽容模式/列式」挤成单字竖排——右组占满剩余宽度并在内部换行，
+   左侧「SQL」保持同行；1440 全在一行时零视觉变化（仅在空间不足时生效） */
+.sq-card-hd { flex-wrap: wrap; row-gap: var(--sp-1); }
+.sq-card-hd-r { flex: 1 1 0; min-width: 0; flex-wrap: wrap; row-gap: var(--sp-1h); justify-content: flex-end; }
+.sq-fs { white-space: nowrap; }
+.sq-fs.sq-tog { flex-shrink: 0; }
+/* 1080：FROM 换源提示条（静态说明，不占工具行宽度） */
+.sq-from-note { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); padding: var(--sp-1) var(--sp-3); border-bottom: 1px solid var(--border); font-size: var(--fs-xs); color: var(--muted); }
+.sq-from-note .chip { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sq-fs { font-size: var(--fs-xs); color: var(--muted); }
 .sq-fs-i { width: 60px; border: 1px solid var(--border); border-radius: 3px; padding: var(--sp-0) 5px; font-size: var(--fs-xs); background: var(--card-bg); color: var(--fg); }
+.sq-tz-i { width: 146px; }
+.sq-to-i { width: 92px; }
+/* 1070：参数开关与参数条（紧凑单行，编辑器宽度自适应；状态色用 token） */
+.sq-param-btn.on { border-color: var(--brand); color: var(--brand); }
+.sq-param-badge {
+  margin-left: var(--sp-1); padding: 0 var(--sp-1); border-radius: 999px; font-size: var(--fs-2xs);
+  background: var(--brand); color: var(--card-bg); font-variant-numeric: tabular-nums;
+}
+.sq-param-bar {
+  display: flex; align-items: center; gap: var(--sp-2); flex-wrap: nowrap;
+  padding: var(--sp-1) var(--sp-2); border-bottom: 1px solid var(--line); background: var(--code-bg);
+}
+.sq-param-lb { font-size: var(--fs-xs); color: var(--muted); flex: 0 0 auto; }
+.sq-param-i { flex: 1 1 240px; min-width: 0; height: 24px; }
+.sq-param-stat { font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; flex: 0 0 auto; }
+.sq-param-stat.ok { color: var(--brand); }
+.sq-param-stat.warn { color: var(--warn); }
+.sq-param-stat.bad { color: var(--danger); }
 .sq-tpl { list-style: none; padding: 0; margin: 0; }
 .sq-tpl li { padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--border); font-size: var(--fs-xs); cursor: pointer; }
 .sq-tpl li:last-child { border-bottom: 0; }
 .sq-tpl li:hover { background: var(--code-bg); }
+/* 1058：缺角色字段的场景模板置灰（仍可点，仅解释原因，不插入假字段 SQL） */
+.sq-tpl li.off { opacity: .55; cursor: not-allowed; }
+.sq-tpl li.off:hover { background: transparent; }
+.sq-tpl-miss { font-style: normal; color: var(--warn); font-size: var(--fs-2xs); }
+.sq-tpl-bind { font-style: normal; color: var(--brand); font-size: var(--fs-2xs); }
 .sq-tpl-k { display: inline-block; font-family: var(--mono); color: var(--brand); font-weight: 400; margin-right: var(--sp-1h); }
 .sq-tpl-d { color: var(--muted); }
 .sq-code { padding: var(--sp-3); margin: 0; font-family: var(--mono); font-size: var(--fs-xs); background: var(--code-bg); overflow-x: auto; }
@@ -667,6 +1483,32 @@ function exportNdjson() {
 /* 1043：UnknownColumn 纠错 chips 行（列名不存在→相近字段一键替换） */
 .sq-colfix { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; margin-top: var(--sp-1h); }
 .sq-colfix-t { font-size: var(--fs-xs); color: var(--tx2); }
+/* 1109：报错锚点 chip（标题行内，点击定位到行列；mono 让 line:col 数字对齐）
+   与静态 lint 的行号跳转同一交互语言：位置本身就是入口。 */
+.sq-err-loc { margin-left: var(--sp-2); padding: 1px var(--sp-1h); font-size: var(--fs-2xs); line-height: 1.5;
+  color: var(--danger); background: var(--err-soft);
+  border: 1px solid var(--err-line); border-radius: var(--r-xs);
+  cursor: pointer; }
+.sq-err-loc:hover { border-color: var(--danger); }
+.sq-err-stale { margin-left: var(--sp-2); padding: 1px var(--sp-1h); font-size: var(--fs-2xs);
+  color: var(--warn); background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: var(--r-xs); }
+/* 1125：DSL 预览与当前 SQL 不同步——标题黄标 + 正文降透明，跳转/复制禁用 */
+.sq-prev-stale { margin-left: var(--sp-2); padding: 1px var(--sp-1h); font-size: var(--fs-2xs); font-style: normal;
+  color: var(--warn); background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: var(--r-xs); }
+.sq-prev-dim { opacity: .55; }
+.sq-lint-ln { padding: 0; border: 0; background: none; font: inherit; color: inherit;
+  text-decoration: underline dotted; text-underline-offset: 2px; cursor: pointer; }
+.sq-lint-ln:hover { color: var(--brand); text-decoration-color: var(--brand); }
+/* 1045：cursor 未取完的局部排序诚实提示 */
+.sq-sort-note { padding: var(--sp-1) var(--sp-3); font-size: var(--fs-2xs); color: var(--warn); background: var(--warn-soft); border-bottom: 1px solid var(--line); }
+/* 1136：结果工具行图标钮（原始 IO/高度档）——方角小钮，文字说明走 title */
+.sq-icon-btn { width: 22px; height: 20px; padding: 0; justify-content: center; }
+/* 1048：聚合分布图（两列 label+count 结果自动生成；非聚合形状不渲染） */
+.sq-chart { border-bottom: 1px solid var(--line); }
+.sq-chart-hd { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); padding: var(--sp-1h) var(--sp-3); }
+.sq-chart-t { display: inline-flex; align-items: center; gap: var(--sp-1h); font-size: var(--fs-xs); font-weight: 600; min-width: 0; }
+.sq-chart-meta { font-size: var(--fs-2xs); font-weight: 400; color: var(--tx2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sq-chart-body { padding: 0 var(--sp-3) var(--sp-2); }
 .sq-tog { display: inline-flex; align-items: center; gap: var(--sp-1); margin-left: var(--sp-2); }
 .sq-tog input { margin: 0; }
 .sq-warn { display: flex; gap: var(--sp-2h); padding: var(--sp-2) 14px; background: var(--warn-soft); border-color: var(--warn-line); color: var(--warning, var(--warn)); }
@@ -680,6 +1522,8 @@ function exportNdjson() {
 /* 窄容器塌单栏，断点同 theme.css:584 的 （iframe 可用宽 ~866px） */
 @media (max-width: 1100px) {
   .sq-grid { grid-template-columns: minmax(0, 1fr); }
+  /* 1136：单栏时模板侧栏排到结果区之后——结果表紧跟编辑器，不再被模板列表推到首屏外 */
+  .sq-grid > .sq-samples { order: 3; }
 }
 
 /* 900 紧凑微调档（ 口径；q 遗留补齐，W-D）——模板轨折叠/单栏已由

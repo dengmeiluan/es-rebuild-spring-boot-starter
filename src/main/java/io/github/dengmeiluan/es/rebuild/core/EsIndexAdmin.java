@@ -1907,14 +1907,109 @@ public class EsIndexAdmin {
         return queryDsl(indexOrAlias, dslJson, size, true);
     }
 
+    /** 1063：带搜索请求级 URL 参数（routing/preference/search_type/...）的查询入口。 */
+    public Map<String, Object> queryDsl(String indexOrAlias, String dslJson, int size,
+                                        java.util.Map<String, String> requestParams) throws IOException {
+        return queryDsl(indexOrAlias, dslJson, size, true, requestParams);
+    }
+
     /** 服务端已解析的系统索引（lock）专用查询——索引名不得由用户输入控制。 */
     Map<String, Object> queryDslInternal(String indexOrAlias, String dslJson, int size) throws IOException {
         return queryDsl(indexOrAlias, dslJson, size, false);
     }
 
     private Map<String, Object> queryDsl(String indexOrAlias, String dslJson, int size, boolean guard) throws IOException {
+        return queryDsl(indexOrAlias, dslJson, size, guard, java.util.Collections.emptyMap());
+    }
+
+    /* 搜索请求级参数白名单顺序（URL 书写稳定）；键值为 ES 官方查询串参数，绝不写进 body。 */
+    private static final String[] SEARCH_REQUEST_PARAM_ORDER = {
+            "routing", "preference", "search_type", "allow_partial_search_results",
+            "ignore_unavailable", "expand_wildcards",
+    };
+
+    /** 白名单 + 值校验后的请求参数（供 _search / profile 共用）。 */
+    static java.util.Map<String, String> checkedSearchRequestParams(java.util.Map<String, String> raw) {
+        java.util.Map<String, String> out = new java.util.LinkedHashMap<>();
+        if (raw == null) return out;
+        for (String key : SEARCH_REQUEST_PARAM_ORDER) {
+            String v = raw.get(key);
+            if (v != null && !v.trim().isEmpty()) out.put(key, validateSearchRequestParam(key, v.trim()));
+        }
+        return out;
+    }
+
+    /** 白名单 + 值校验后拼到 _search URL；URL 编码兜底特殊字符。 */
+    static String searchPathWithParams(String path, java.util.Map<String, String> params) {
+        if (params == null || params.isEmpty()) return path;
+        StringBuilder qs = new StringBuilder();
+        for (String key : SEARCH_REQUEST_PARAM_ORDER) {
+            String raw = params.get(key);
+            if (raw == null) continue;
+            String value = raw.trim();
+            if (value.isEmpty()) continue;
+            value = validateSearchRequestParam(key, value);
+            try {
+                qs.append(qs.length() == 0 ? '?' : '&')
+                        .append(key).append('=')
+                        .append(java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8.name()));
+            } catch (java.io.UnsupportedEncodingException e) {
+                throw new IllegalStateException("URL 参数编码失败", e);
+            }
+        }
+        return qs.length() == 0 ? path : path + qs;
+    }
+
+    /** 值校验（不含长度上限的 routing/preference 另判）；返回规范化键，未知键直接拒绝。 */
+    static String validateSearchRequestParamKey(String key) {
+        for (String known : SEARCH_REQUEST_PARAM_ORDER) if (known.equals(key)) return key;
+        throw new IllegalArgumentException("不支持的搜索请求参数：" + key);
+    }
+
+    static String validateSearchRequestParam(String key, String value) {
+        validateSearchRequestParamKey(key);
+        if ("routing".equals(key) || "preference".equals(key)) {
+            if (value.length() > 512) throw new IllegalArgumentException(key + " 过长（上限 512 字符）");
+            for (int i = 0; i < value.length(); i++) {
+                char c = value.charAt(i);
+                if (c < 0x20 || c == 0x7f) throw new IllegalArgumentException(key + " 含控制字符");
+            }
+            return value;
+        }
+        if ("search_type".equals(key)) {
+            if (!"query_then_fetch".equals(value) && !"dfs_query_then_fetch".equals(value)) {
+                throw new IllegalArgumentException("search_type 只支持 query_then_fetch / dfs_query_then_fetch");
+            }
+            return value;
+        }
+        if ("allow_partial_search_results".equals(key) || "ignore_unavailable".equals(key)) {
+            if (!"true".equals(value) && !"false".equals(value)) {
+                throw new IllegalArgumentException(key + " 只支持 true/false");
+            }
+            return value;
+        }
+        if ("expand_wildcards".equals(key)) {
+            String[] parts = value.split(",", -1);
+            boolean none = false;
+            for (String part : parts) {
+                String p = part.trim();
+                if (!("open".equals(p) || "closed".equals(p) || "hidden".equals(p)
+                        || "none".equals(p) || "all".equals(p))) {
+                    throw new IllegalArgumentException("expand_wildcards 非法取值：" + p);
+                }
+                if ("none".equals(p)) none = true;
+            }
+            if (none && parts.length > 1) throw new IllegalArgumentException("expand_wildcards=none 不能与其他取值组合");
+            return value;
+        }
+        throw new IllegalArgumentException("不支持的搜索请求参数：" + key);
+    }
+
+    private Map<String, Object> queryDsl(String indexOrAlias, String dslJson, int size, boolean guard,
+                                         java.util.Map<String, String> requestParams) throws IOException {
         if (guard) guardIndexPattern(indexOrAlias);
         guardSearchBody(dslJson);
+        java.util.Map<String, String> checked = checkedSearchRequestParams(requestParams);
         String body = dslJson;
         if (body == null || body.trim().isEmpty()) {
             body = "{\"query\":{\"match_all\":{}},\"size\":" + size + "}";
@@ -1922,7 +2017,8 @@ public class EsIndexAdmin {
             body = body.trim();
             body = body.substring(0, body.length() - 1) + ",\"size\":" + size + "}";
         }
-        org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("POST", "/" + indexOrAlias + "/_search");
+        org.elasticsearch.client.Request req = new org.elasticsearch.client.Request(
+                "POST", searchPathWithParams("/" + indexOrAlias + "/_search", checked));
         req.setJsonEntity(body);
         org.elasticsearch.client.Response resp = performGuarded(req);
         String respBody = org.apache.http.util.EntityUtils.toString(resp.getEntity());
@@ -2351,10 +2447,16 @@ public class EsIndexAdmin {
      * 返回完整原始响应 JSON 文本（含 profile breakdown 段），由前端渲染火焰树。
      */
     public String profile(String indexOrAlias, String dslJson) throws IOException {
+        return profile(indexOrAlias, dslJson, java.util.Collections.emptyMap());
+    }
+
+    /** 1063：Profile 搜索同样支持请求级 URL 参数（routing/preference/...）。 */
+    public String profile(String indexOrAlias, String dslJson, java.util.Map<String, String> requestParams) throws IOException {
         guardIndexPattern(indexOrAlias);
         guardSearchBody(dslJson);
         String body = withProfileFlag(dslJson);
-        org.elasticsearch.client.Request req = new org.elasticsearch.client.Request("POST", "/" + indexOrAlias + "/_search");
+        org.elasticsearch.client.Request req = new org.elasticsearch.client.Request(
+                "POST", searchPathWithParams("/" + indexOrAlias + "/_search", checkedSearchRequestParams(requestParams)));
         req.setJsonEntity(body);
         org.elasticsearch.client.Response resp = performGuarded(req);
         return org.apache.http.util.EntityUtils.toString(resp.getEntity());
@@ -3252,8 +3354,10 @@ public class EsIndexAdmin {
             /* 节点/许可/数据流/富化/监控等集群元数据面：非数据面读所需，避免暴露节点与内部数据流名 */
             "/_cat/nodes", "/_cat/nodeattrs", "/_cat/thread_pool", "/_cat/plugins",
             /* master 身份与投票排除清单是「选主成员 + 节点 id/name」的直接出口：
-               与 /_cat/nodes、/_nodes 同属拓扑面，非数据面读所需。 */
-            "/_cat/master", "/_cluster/voting",
+               与 /_cat/nodes、/_nodes 同属拓扑面，非数据面读所需。
+               注意清单按「deny 本身或 deny + /」匹配——`/_cluster/voting` 匹配不到
+               `/_cluster/voting_config_exclusions`（下划线不是段边界），必须写全。 */
+            "/_cat/master", "/_cluster/voting", "/_cluster/voting_config_exclusions",
             "/_cat/transforms", "/_cat/ml", "/_cat/component_templates",
             "/_data_stream", "/_features", "/_license", "/_xpack/license", "/_xpack/usage",
             "/_cluster/stats", "/_enrich", "/_monitoring",
@@ -5396,10 +5500,42 @@ public class EsIndexAdmin {
         }
     }
 
-    /** 若已开 fetch_size，SQL 可能返回 cursor，分页取下一页。 */
+    /** 若已开 fetch_size，SQL 可能返回 cursor，分页取下一页。
+     *  time_zone：cursor 续页时 ES 只认 columnar/time_zone（其余 body 参数被忽略），
+     *  首查用了非 UTC 时区时续页必须原样带上，否则日期列格式/函数口径前后不一致。 */
     public Map<String, Object> sqlCursor(String cursor) throws IOException {
+        return sqlCursor(cursor, null);
+    }
+
+    public Map<String, Object> sqlCursor(String cursor, String timeZone) throws IOException {
+        return sqlCursor(cursor, timeZone, null);
+    }
+
+    /** 1075：cursor 续页的 columnar 必须与首查一致（ES cursor 只认 columnar/time_zone）。 */
+    public Map<String, Object> sqlCursor(String cursor, String timeZone, Boolean columnar) throws IOException {
+        return performSqlVersionAware("?format=json", sqlCursorBody(cursor, timeZone, columnar));
+    }
+
+    /** cursor 续页请求体（包内可见：1055 单测直验 time_zone 编码与注入防护）。 */
+    static String sqlCursorBody(String cursor, String timeZone) throws IOException {
+        return sqlCursorBody(cursor, timeZone, null);
+    }
+
+    static String sqlCursorBody(String cursor, String timeZone, Boolean columnar) throws IOException {
         if (cursor == null || cursor.isEmpty()) throw new IllegalArgumentException("cursor 不能为空");
-        return performSqlVersionAware("?format=json", "{\"cursor\":\"" + cursor.replace("\"", "\\\"") + "\"}");
+        java.util.Map<String, Object> req = new java.util.LinkedHashMap<>();
+        req.put("cursor", cursor);
+        if (timeZone != null && !timeZone.trim().isEmpty()) {
+            String tz = timeZone.trim();
+            /* IANA 区域名或 ±HH:MM 偏移；拒绝空白/引号/反斜杠，JSON 编码兜底防注入 */
+            if (tz.length() > 64 || !tz.matches("[A-Za-z0-9_+\\-/:]+")) {
+                throw new IllegalArgumentException("time_zone 非法：" + tz);
+            }
+            req.put("time_zone", tz);
+        }
+        /* 只有 true 才写键：false/缺省沿用 ES 默认（与首查省略该键同形态） */
+        if (Boolean.TRUE.equals(columnar)) req.put("columnar", true);
+        return OBJECT_MAPPER.writeValueAsString(req);
     }
 
     /** 关闭 SQL cursor。 */

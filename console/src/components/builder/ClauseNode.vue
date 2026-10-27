@@ -1,6 +1,8 @@
 <template>
   <div class="cn" :data-nid="node.id"
-       :style="node.disabled ? { opacity: .45 } : undefined">
+       :style="node.disabled ? { opacity: .45 } : undefined"
+       @contextmenu.prevent="openRowMenu">
+    <NodeSelectBox :id="node.id" />
     <button v-if="node.disabled" aria-label="恢复参与匹配" class="btn xs ghost cn-pw on"
             title="该条件已临时停用，点击恢复参与匹配" @click="toggleDisabled(false)">
       <Circle :size="15" />
@@ -10,18 +12,24 @@
       <CircleSlash :size="15" />
     </button>
     <!-- 拖拽源只在 grip 柄：根 draggable 会劫持行内值输入框的文本选择/光标拖划 -->
-    <span class="cn-grip" title="拖拽排序（按住拖动）" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
+    <span class="cn-grip" title="拖拽排序（按住拖动）；Alt+↑/↓ 上移/下移" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
     <!-- 字段槽：field/named 形态显示（fields 多字段/none 无字段形态无单字段可选） -->
     <template v-if="hasFieldSlot">
       <FieldSelect
         :model-value="node.field || ''" :fields="fields" :types="types" :type-priority="fieldTypePriority"
-        :type-filter="fieldTypeFilter"
-        @update:model-value="onField"
+        :type-filter="fieldTypeFilter" :role-priority="fieldRolePriority"
+        @update:model-value="onField" @picked="onFieldPicked"
       />
       <!-- 字段类型徽标 + 类型提示 tooltip（零结构改动的类型教育）：keyword→term 精确、
  text→match 全文、数值/date→range 范围；mapping 缺失（types 无此字段）不渲染，零降级 -->
       <!-- 类型徽标挂全站色卡 .mft-type（theme.css），删局部三类型撞色规则 -->
       <span v-if="fieldType" class="cn-fty mono mft-type" :data-t="fieldType" :title="typeHint">{{ fieldType }}</span>
+      <!-- 1056：text 字段做精确算子且 mapping 有同名 .keyword 子域 → 一键改打子域。
+           text 的倒排是分词词项，term/terms/wildcard 拿整串原值大概率查空；
+           入口只给建议，点击才改（不静默改用户 DSL）。 -->
+      <button v-if="kwTwin" type="button" class="btn xs ghost cn-kwfix"
+              :title="'text 字段的 ' + label(node.op) + ' 按分词词项匹配，整串原值通常查不到；改打 ' + kwTwin + ' 精确匹配（值不变）'"
+              @click="applyKwTwin">打 .keyword</button>
     </template>
     <!-- 算子下拉：推荐（opsForType）+ 常用（单字段形态非推荐）+ 高级分组（ADV_MENU 同源）。
          998：外观升级为「语义族胶囊」——按 opFamilyOf 着色（全文/精确/范围/空间/向量/跨度/脚本），
@@ -110,6 +118,15 @@
     <!-- 1019：terms lookup 远程词项形态（值对象键 ⊆ {index,id,path}）→ 三具名输入：
          「从 index 索引的 id 文档取 path 字段值集合当词项」的语义提示带上，
          空串删键（半成品）、未知键/非字符串值退化通用键值表保真 -->
+    <!-- 1045：向量值编辑位——knn query_vector 是数组、sparse_vector 是对象；
+         旧实现落标量输入 String(array)='0.1,0.2'，回写后类型错误。JSON 草稿三件套
+         与 percolate/MLT 同语言：半截/类型不符只标红不写树。 -->
+    <div v-else-if="isJsonVec" class="cn-objval">
+      <textarea class="inp mono cn-perc" :class="{ bad: vec.bad.value }" :value="vec.text.value" rows="3" spellcheck="false"
+        :placeholder="node.op === 'knn' ? 'query_vector JSON 数组，如 [0.1, 0.2, …]' : 'query_vector JSON 对象（词 → 权重）'"
+        :title="node.op === 'knn' ? '向量数组（JSON）' : '稀疏向量对象（JSON）'"
+        @input="vec.onInput(($event.target as HTMLTextAreaElement).value)"></textarea>
+    </div>
     <div v-else-if="termsLookup" class="cn-objval cn-tl">
       <span class="cn-tl-tip" title="远程词项：ES 在查询时从目标文档的 path 字段取值集合作为本条件词项（集群内取数，不回传文档）">
         远程词项 —— 从
@@ -158,6 +175,7 @@
         @focus="primeValAgg"
         @keydown.enter.prevent="onChipEnter($event)"
         @keydown="onChipKey"
+        @paste="onChipPaste"
         @blur="commitChip()"
       />
     </div>
@@ -175,6 +193,7 @@
       :list="valCandidates.length ? valDlId : undefined"
       @focus="primeValAgg"
       @input="onValue(($event.target as HTMLInputElement).value)"
+      @paste="onValuePaste"
     />
     <!-- （P1-3a）：term/terms/prefix 值输入候选 datalist——
  起候选双源合并：terms-agg top20（useTermsSuggest，值位聚焦 prime，模块级 TTL
@@ -212,6 +231,14 @@
       <button aria-label="包成 bool 组" class="btn sm ghost cn-act" title="包成 bool 组" @click="$emit('wrap')"><Group :size="12" /></button>
       <button aria-label="删除" class="btn sm ghost cn-act danger" title="删除" @click="$emit('remove')"><X :size="12" /></button>
     </span>
+    <div v-if="fieldUnknown" class="cn-defrt-bar">
+      <span class="cn-defrt-hint">字段不在 mapping：</span>
+      <button type="button" class="btn xs ghost cn-defrt" :title="runtimeTitle" @click="defineRuntimeField">＋创建 {{ runtimeGuess }} 运行时字段</button>
+    </div>
+    <div v-else-if="runtimeNoScript" class="cn-defrt-bar" role="status">
+      <span class="cn-defrt-hint">运行时字段「{{ node.field }}」尚无 script：查询期不会产出值</span>
+      <button type="button" class="btn xs ghost cn-defrt" title="到「检索参数 → 运行时字段」补 script" @click="editRuntimeScript">补 script</button>
+    </div>
     <div v-if="paramsOpen" class="cn-params">
       <GenericParams :value="node.params" :schema="paramSchema" @update="onParams" />
     </div>
@@ -222,6 +249,12 @@
                       @update:model-value="v => onFields((v || []).join(','))"
                       @close="mfOpen = false" />
     <span v-if="nudge" class="cn-nudge" :class="{ out: nudgeOut }" role="status" aria-live="polite">{{ nudge }}</span>
+    <!-- 1147：条件行右键——行尾 7 个 22px 图标钮在窄栏里仍要点准；右键把同一批动作
+     （停用/复制条件/复制子树/包成 bool/删除）按「作用在这一条」的心智一次列全，
+     并补两条原本没有入口的读操作：复制条件为 JSON、复制为 DSL 片段。
+     全部走既有 emit / 既有工具函数，不新增写路径。 -->
+    <CellContextMenu v-if="rowMenu" :x="rowMenu.x" :y="rowMenu.y" :title="rowTitle"
+      :items="rowMenuItems" @close="rowMenu = null" />
   </div>
 </template>
 
@@ -229,10 +262,14 @@
 /* W1：富表单条件行。不可变更新：所有变更 emit 新 LeafNode，由父级替换——
  同步引擎依赖引用变化触发序列化。 */
 import { ref, computed, inject, onBeforeUnmount, watch } from 'vue';
-import { Clock, X, Settings2, Group, Circle, CircleSlash, Copy, ClipboardCopy, ListChecks } from 'lucide-vue-next';
+import { Clock, X, Settings2, Group, Circle, CircleSlash, Copy, ClipboardCopy, ListChecks, Braces, Code2 } from 'lucide-vue-next';
 import MultiFieldPicker from './MultiFieldPicker.vue';
 import { copySubtreeToStash } from '../../utils/queryStash';
+import { serQueryNode } from '../../utils/queryAst';
 import FieldSelect from './FieldSelect.vue';
+import NodeSelectBox from './NodeSelectBox.vue';
+import CellContextMenu, { type CcmItem } from '../CellContextMenu.vue'; /* 1147：条件行右键 */
+import { copyText } from '../../utils/format';
 import GenericParams from './GenericParams.vue';
 import IntervalsEditor from './IntervalsEditor.vue';
 import GeoValueEditor from './GeoValueEditor.vue';
@@ -242,7 +279,9 @@ import { useJsonDraft } from '../../composables/useJsonDraft';
 import MltLikeEditor from './MltLikeEditor.vue';
 import { stdTimeToEpochMs } from '../../utils/format';
 import { DRAG_KEY, TREE_BUS, fireDrag } from './treeBus';
-import { OPS_META, opsForType, RICH_OPS, ADV_MENU, typePriorityForOp, typeFilterForOp, NUMERIC_VALUE_TYPES, opFamilyOf, NAME_PARAM } from '../../utils/queryAstOps';
+import { OPS_META, opsForType, RICH_OPS, ADV_MENU, typePriorityForOp, typeFilterForOp, NUMERIC_VALUE_TYPES, opFamilyOf, NAME_PARAM, paramsForOp } from '../../utils/queryAstOps';
+import { rolePriorityForOp, defaultOpForField } from '../../utils/fieldRole';
+import { guessRuntimeType, runtimeScriptMissing, type RuntimeFieldType } from '../../utils/runtimeFields';
 import type { LeafNode } from '../../utils/queryAst';
 
 const props = defineProps<{ node: LeafNode; fields: string[]; types: Record<string, string> }>();
@@ -300,7 +339,45 @@ const fieldTypePriority = computed<string[]>(() => typePriorityForOp(props.node.
    选 geo_distance 时只列 geo_point，不再让用户在几千字段里翻。
    非高特异算子返回 undefined（不过滤，保留自由手输与跨类型语义） */
 const fieldTypeFilter = computed<string[] | undefined>(() => typeFilterForOp(props.node.op));
+/* 1045：业务角色优先序（同类型组内先出「本算子最相关」的字段） */
+const fieldRolePriority = computed(() => rolePriorityForOp(props.node.op));
 const fieldType = computed(() => props.types[props.node.field || ''] || '');
+/* 1069 续：手输字段不在 mapping 时给「建运行时字段」入口——把发现→定义→使用闭环在条件行内完成。
+   带 . （.keyword 子域）/ ${变量} 的名称不提供（不是可定义的运行时字段名）。 */
+const fieldUnknown = computed(() => {
+  const f = props.node.field || '';
+  return !!f && props.fields.length > 0 && !props.fields.includes(f) && !f.includes('.') && !f.includes('$');
+});
+const runtimeGuess = computed<RuntimeFieldType>(() => guessRuntimeType(props.node.field || '', props.node.op, props.node.value));
+const runtimeTitle = computed(() =>
+  `字段「${props.node.field}」不在 mapping：创建类型 ${runtimeGuess.value} 的运行时字段（script 到「检索参数 → 运行时字段」里补，补完即可查询）`);
+function defineRuntimeField() {
+  if (!fieldUnknown.value || !bus) return;
+  bus.defineRuntime(props.node.field || '', runtimeGuess.value);
+}
+/* 1069 续：字段是运行时字段但只有 type（占位）——查询期不产出值，行内诚实提示并给补 script 入口。
+   读 bus.runtimeItems（computed ref）→ 补上 script 后提示自动消失。 */
+const runtimeField = computed(() => {
+  const f = props.node.field;
+  if (!f) return null;
+  return (bus?.runtimeItems?.value || []).find(x => x.name === f) || null;
+});
+const runtimeNoScript = computed(() => !!runtimeField.value && runtimeScriptMissing(runtimeField.value.body));
+function editRuntimeScript() {
+  const f = props.node.field;
+  if (f) bus?.editRuntime?.(f);
+}
+/* 1056：text 字段 + 精确算子（term/terms/wildcard）+ mapping 有同名 .keyword 子域 → 一键改打子域。
+   分词字段上拿整串原值做精确匹配大概率查空；只给入口，不静默改字段/算子。 */
+const KW_EXACT_OPS = new Set(['term', 'terms', 'wildcard']);
+const kwTwin = computed(() => {
+  const f = props.node.field;
+  if (!f || f.endsWith('.keyword') || !KW_EXACT_OPS.has(props.node.op)) return '';
+  if (props.types[f] !== 'text') return '';
+  const twin = f + '.keyword';
+  return props.types[twin] === 'keyword' ? twin : '';
+});
+function applyKwTwin() { if (kwTwin.value) onField(kwTwin.value); }
 const TYPE_HINTS: Record<string, string> = {
   keyword: 'keyword 字段：建议 term/terms 精确匹配（整串一致，不分词）；match 在 keyword 上等同 term',
   text: 'text 字段：建议 match 全文检索（分词匹配）',
@@ -318,7 +395,12 @@ const typeHint = computed(() => {
   return `${t} 字段`;
 });
 const valPlaceholder = computed(() => {
-  if (props.node.op === 'terms') return '输入值后回车或逗号添加';   // 多值语义优先于字段类型（1005 chip 形态文案）
+  /* 1118：主值语义不是「字段值」的具名算子——类型档文案（日期/关键词…）会误导；
+     rank_feature 的 boost 可留空，distance_feature 的 pivot 是距离，bitmap_terms 是位图值。 */
+  if (props.node.op === 'rank_feature') return 'boost（可选，默认 1）';
+  if (props.node.op === 'distance_feature') return 'pivot（如 7d / 1km）';
+  if (props.node.op === 'bitmap_terms') return '位图值（Base64 或数字）';
+  if (props.node.op === 'terms' || props.node.op === 'terms_set') return '输入值后回车或逗号添加';
   const t = fieldType.value;
   if (t === 'date') return '日期或 epoch 毫秒（⏰ 可转换）';
   if (NUMERIC_TYPES.includes(t)) return '数值，如 ≥ 100';
@@ -362,6 +444,49 @@ function onCopySubtree() {
   copySubtreeToStash(props.node);
   showNudge('已复制子树——任意条件组可粘贴');
 }
+/* ═══ 1147：条件行右键 ═══
+ 行尾图标钮保留；右键是同一批动作的「一次看全」入口，另补两条只读导出：
+ 条件 JSON（结构排查/贴 issue）与 DSL 片段（直接贴进 Dev Tools 试跑）。
+ 写动作一律复用既有 emit / bus，不新增通道。 */
+const rowMenu = ref<{ x: number; y: number } | null>(null);
+const rowTitle = computed(() => {
+  const n = props.node;
+  const who = n.field || (Array.isArray(n.fields) ? n.fields.join(', ') : '') || '（无字段）';
+  return '条件 · ' + label(n.op) + ' · ' + who;
+});
+function openRowMenu(e: MouseEvent) {
+  /* 值输入框/下拉里的右键留给浏览器（复制粘贴文本），只有非输入区才开菜单 */
+  const t = e.target as HTMLElement | null;
+  if (t?.closest('input, textarea, select, .monaco-editor')) return;
+  rowMenu.value = { x: e.clientX, y: e.clientY };
+}
+async function copyJson() {
+  const ok = await copyText(JSON.stringify(props.node, null, 2));
+  showNudge(ok ? '已复制条件 JSON' : '复制失败');
+}
+async function copyDsl() {
+  const ok = await copyText(JSON.stringify(serQueryNode(props.node), null, 2));
+  showNudge(ok ? '已复制为 DSL 片段（可直接贴到 Dev Tools）' : '复制失败');
+}
+const rowMenuItems = computed<CcmItem[]>(() => [
+  { key: 'toggle', label: props.node.disabled ? '恢复参与匹配' : '临时停用（本次不匹配）', icon: props.node.disabled ? Circle : CircleSlash,
+    run: () => toggleDisabled(!props.node.disabled) },
+  ...(hasParams.value ? [{ key: 'params', label: '参数（boost / operator…）', icon: Settings2, run: () => { paramsOpen.value = !paramsOpen.value; } }] : []),
+  {
+    key: 'copy-group', label: '复制…', icon: Copy, sep: true, children: [
+      { key: 'copy-json', label: '复制条件 JSON', icon: Braces, run: () => void copyJson() },
+      { key: 'copy-dsl', label: '复制为 DSL 片段', icon: Code2, run: () => void copyDsl() },
+      { key: 'copy-subtree', label: '复制子树（跨查询粘贴）', icon: ClipboardCopy, run: onCopySubtree },
+    ],
+  },
+  {
+    key: 'shape-group', label: '结构…', icon: Group, children: [
+      { key: 'dup', label: '复制条件（插到下方）', icon: Copy, run: () => emit('duplicate', props.node.id) },
+      { key: 'wrap', label: '包成 bool 组', icon: Group, run: () => emit('wrap') },
+    ],
+  },
+  { key: 'del', label: '删除此条件', icon: X, danger: true, sep: true, run: () => emit('remove') },
+]);
 /* 1039：长查询串主值多行编辑算子集（换行在查询串语法里=合法空白分隔；
    multi_match/query 短串语义维持单行输入） */
 const LONG_QUERY_OPS = new Set(['query_string', 'simple_query_string', 'combined_fields']);
@@ -377,16 +502,82 @@ function toggleMf(e: MouseEvent) {
 }
 onBeforeUnmount(() => { clearTimeout(nudgeT1); clearTimeout(nudgeT2); });
 
-function onField(field: string) {
-  const allowed = opsForType(props.types[field]);
-  const nextOp = allowed.includes(props.node.op) ? props.node.op : allowed[0];
-  if (nextOp !== props.node.op) {
-    const t = props.types[field];
-    showNudge(t ? `已按 ${t} 字段切换为「${label(nextOp)}」` : `字段无 mapping，已切换为「${label(nextOp)}」`);
-  }
+/* 1124：输入只写字段名——半截输入（type 未知）此前会被 opsForType(undefined)=exists
+ 静默换算子（选好 range/rank_feature 后一改字段就变 exists）。只有从候选弹层明确选中
+ mapping 字段时，才按类型做「保算子优先/角色兜底」的智能切换。 */
+function patchFieldOnly(field: string) {
   /* named 形态字段键可空（query_string 无 default_field 合法）：清空 → null（序列化不写键） */
   const f = nodeOpForm.value === 'named' && !field ? null : field;
-  patch({ field: f, op: nextOp });
+  patch({ field: f });
+}
+function onField(field: string) {
+  patchFieldOnly(field);
+}
+function onFieldPicked(field: string) {
+  const type = props.types[field];
+  if (!type) { patchFieldOnly(field); return; }
+  const allowed = opsForType(type);
+  /* 1045：换字段保算子优先；不兼容时按角色给默认（date→range / metric→range /
+     text→match / 标识→term），而不是永远取 allowed[0]。 */
+  const fallback = defaultOpForField(field, type);
+  const nextOp = allowed.includes(props.node.op) ? props.node.op
+    : allowed.includes(fallback) ? fallback : allowed[0];
+  const nv = normalizeValueForOp(nextOp, props.node.value);
+  const msgs: string[] = [];
+  if (nextOp !== props.node.op) msgs.push(type ? `已按 ${type} 字段切换为「${label(nextOp)}」` : `字段无 mapping，已切换为「${label(nextOp)}」`);
+  if (nv.changed) msgs.push('旧值与新算子形态不兼容，已重置');
+  if (msgs.length) showNudge(msgs.join('；'));
+  const f = nodeOpForm.value === 'named' && !field ? null : field;
+  /* 始终写回形态安全值：空串在 range 下也是非法值（应为 {}），changed=false 只表示
+     不需要提示「旧值已重置」，不代表值形态已经正确。 */
+  patch({ field: f, op: nextOp, value: nv.value });
+}
+
+/* 1045：算子/字段切换时的值形态守卫——不兼容旧值不静默留在 DSL 里造「看似有值、
+   实际查空」的假条件。返回 changed=true 时调用方把 value 换成安全初值。 */
+function isPlainObj(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === 'object' && !Array.isArray(v);
+}
+function normalizeValueForOp(op: string, v: unknown): { value: unknown; changed: boolean } {
+  const meta = OPS_META[op];
+  if (!meta || op === 'exists' || op === 'match_all' || op === 'match_none') return { value: v, changed: false };
+  const form = meta.form;
+  if (form === 'none') {
+    if (op === 'ids') return Array.isArray(v) ? { value: v, changed: false } : { value: [], changed: v !== '' && v != null };
+    if (op === 'script') return isPlainObj(v) ? { value: v, changed: false } : { value: { source: '' }, changed: v !== '' && v != null };
+    return typeof v === 'string' || typeof v === 'number' ? { value: v, changed: false } : { value: '', changed: v != null && v !== '' };
+  }
+  if (form === 'fields') {
+    return typeof v === 'string' || typeof v === 'number' ? { value: v, changed: false } : { value: '', changed: v != null && v !== '' };
+  }
+  if (form === 'named') {
+    /* 向量主值是结构化 JSON：从标量算子切过来时给安全初值，确保 JSON 编辑位立刻出现 */
+    if (op === 'knn') return Array.isArray(v) ? { value: v, changed: false } : { value: [], changed: v != null && v !== '' };
+    if (op === 'sparse_vector') return isPlainObj(v) ? { value: v, changed: false } : { value: {}, changed: v != null && v !== '' };
+    if (op === 'rank_feature') {
+      /* boost 必须是数值；从 distance_feature 的 pivot('7d') 等字符串切来时回落默认 1 */
+      return typeof v === 'number' && Number.isFinite(v)
+        ? { value: v, changed: false }
+        : { value: 1, changed: v != null && v !== '' };
+    }
+    if (op === 'bitmap_terms') {
+      return typeof v === 'number' || typeof v === 'string' ? { value: v, changed: false } : { value: '', changed: v != null && v !== '' };
+    }
+    return { value: v, changed: false };
+  }
+  /* field 形态 */
+  if (ARRAY_VAL_OPS.has(op)) {
+    if (Array.isArray(v) || isPlainObj(v)) return { value: v, changed: false };
+    if (v === '' || v == null) return { value: [], changed: false };
+    return { value: [v], changed: false };
+  }
+  if (meta.wrap === 'none') {
+    if (op === 'span_gap') return typeof v === 'number' ? { value: v, changed: false } : { value: 1, changed: true };
+    return isPlainObj(v) ? { value: v, changed: false } : { value: {}, changed: v != null && v !== '' };
+  }
+  return typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean'
+    ? { value: v, changed: false }
+    : { value: '', changed: v != null && v !== '' };
 }
 
 /* range-on-keyword：range 打在 keyword/wildcard 字段按字典序比较（'100' < '20'）——
@@ -427,19 +618,24 @@ function onOwarnClick() {
 /* 985：切算子按目标形态重建值/字段/多字段——标量尽量带过去，结构不兼容给安全初值。
  对象值算子（wrap none 非 terms）目标 {}；数组值算子（terms/ids）归一 []；
  fields 形态 field 退役、fields=[]；none 形态 field 退役。 */
-const ARRAY_VAL_OPS = new Set(['terms', 'ids']);
+const ARRAY_VAL_OPS = new Set(['terms', 'ids', 'terms_set']);
 function onOp(op: string) {
   const meta = OPS_META[op];
-  const v = props.node.value;
-  const isObj = v !== null && typeof v === 'object' && !Array.isArray(v);
   const form = meta?.form;
-  let value: unknown;
-  if (op === 'range' || (form === 'field' && meta?.wrap === 'none' && op !== 'terms')) value = isObj ? v : {};
-  else if (ARRAY_VAL_OPS.has(op)) value = Array.isArray(v) ? v : (v === '' || v == null) ? [] : [v];
-  else value = isObj ? '' : v;
+  const same = op === props.node.op;
+  const nv = normalizeValueForOp(op, props.node.value);
+  /* 1120：切到 distance_feature 时必填 origin/pivot 给可跑默认（now/7d），
+     避免先补两项才能执行；同算子重选不动现有值。 */
+  const value = !same && op === 'distance_feature' ? '7d' : nv.value;
+  /* 1045：切换算子造成值形态重置时明确告知（旧实现静默清值，用户以为值还在） */
+  if (nv.changed && props.node.value !== '' && props.node.value != null) {
+    showNudge(`「${label(op)}」需要不同的值形态，旧值已重置`);
+  } else if (!same && op === 'distance_feature' && props.node.value !== '' && props.node.value != null) {
+    showNudge('「特征距离」默认 origin=now / pivot=7d，可按需修改');
+  }
   const field = form === 'none' || form === 'fields' ? null : (props.node.field ?? '');
   const fields = form === 'fields' ? (Array.isArray(props.node.fields) ? props.node.fields : []) : null;
-  patch({ op, value, field, fields });
+  patch({ op, value, field, fields, params: same ? props.node.params : paramsForOp(op, props.node.params) });
 }
 /* 数组值算子（terms/ids）↔ 逗号分隔；其余标量直存 */
 const valText = computed(() =>
@@ -455,11 +651,56 @@ function onValue(raw: string) {
 const isArrayVal = computed(() => ARRAY_VAL_OPS.has(props.node.op) && Array.isArray(props.node.value));
 const arrVals = computed(() => (props.node.value as unknown[]).map(v => String(v)));
 const chipDraft = ref('');
+/* 1045：多值粘贴识别——Excel 一列（换行/Tab）、中文逗号/分号、JSON 数组都按多项拆；
+   旧实现只认英文/中文逗号，整列粘贴会变成一枚带换行的巨型 chip。 */
+function splitMulti(raw: string): string[] {
+  const t = String(raw ?? '').trim();
+  if (!t) return [];
+  if (/^\[[\s\S]*\]$/.test(t)) {
+    try {
+      const a = JSON.parse(t);
+      if (Array.isArray(a)) {
+        return a.filter(x => x != null && x !== '')
+          .map(x => typeof x === 'object' ? JSON.stringify(x) : String(x))
+          .map(x => x.trim()).filter(Boolean);
+      }
+    } catch { /* 非 JSON：走分隔符拆分 */ }
+  }
+  return t.split(/[\n\r\t,，;；]+/)
+    .map(s => s.trim().replace(/^["']|["']$/g, ''))
+    .filter(Boolean);
+}
 function commitChip() {
-  const raw = chipDraft.value;
+  const parts = splitMulti(chipDraft.value);
   chipDraft.value = '';
-  const parts = raw.split(/[,，]/).map(s => s.trim()).filter(Boolean);
   if (parts.length) patch({ value: [...arrVals.value, ...parts] });
+}
+function onChipPaste(e: ClipboardEvent) {
+  const parts = splitMulti(e.clipboardData?.getData('text') || '');
+  if (parts.length < 2) return;   // 单项继续走浏览器默认粘贴
+  e.preventDefault();
+  patch({ value: [...arrVals.value, ...parts] });
+  showNudge(`已从剪贴板添加 ${parts.length} 个值`);
+}
+/* 单值位粘贴一整列：精确语义算子自动升为 terms（多值精确），避免把列表塞进一个 term */
+const PASTE_TO_TERMS_OPS = new Set(['term', 'prefix', 'wildcard', 'fuzzy', 'regexp']);
+function onValuePaste(e: ClipboardEvent) {
+  const parts = splitMulti(e.clipboardData?.getData('text') || '');
+  if (parts.length < 2) return;
+  e.preventDefault();
+  if (ARRAY_VAL_OPS.has(props.node.op)) {
+    patch({ value: [...arrVals.value, ...parts] });
+    showNudge(`已从剪贴板添加 ${parts.length} 个值`);
+    return;
+  }
+  if (PASTE_TO_TERMS_OPS.has(props.node.op)) {
+    patch({ op: 'terms', value: parts, fields: null });
+    showNudge(`检测到 ${parts.length} 项多值粘贴，已切换为「多值精确」`);
+    return;
+  }
+  /* 其他算子（match/range…）保留原语义，把原始文本按单值写回 */
+  patch({ value: parts.join(' ') });
+  showNudge('当前算子按单值处理，多行已合并为空格分隔');
 }
 function delChip(i: number) {
   const next = arrVals.value.slice();
@@ -481,7 +722,7 @@ function onChipKey(e: KeyboardEvent) {
 const mainKeyPlaceholder = computed(() => `主值（${OPS_META[props.node.op]?.mainKey || 'query'}）`);
 const fieldsText = computed(() => (Array.isArray(props.node.fields) ? props.node.fields.join(',') : ''));
 function onFields(raw: string) {
-  patch({ fields: raw.split(',').map(s => s.trim()).filter(Boolean) });
+  patch({ fields: splitMulti(raw) });
 }
 /* 对象值子表（geo 系/terms_set/script 等）：值是纯对象即子表编辑 */
 const isObjValue = computed(() => {
@@ -506,6 +747,15 @@ function onGeoPatch(p: { value?: unknown; params?: Record<string, unknown> }) {
 }
 /* 1017：percolate document JSON 编辑位（useJsonDraft 三件套：draft/bad/同步回流） */
 const perc = useJsonDraft(() => props.node.op === 'percolate' ? props.node.value : undefined, v => patch({ value: v }));
+/* 1045：向量查询值（knn 数组 / sparse_vector 对象）——数组合法，allowArray 档 */
+const JSON_VEC_OPS = new Set(['knn', 'sparse_vector']);
+const isJsonVec = computed(() => JSON_VEC_OPS.has(props.node.op)
+  && props.node.value !== null && typeof props.node.value === 'object');
+const vec = useJsonDraft(
+  () => (isJsonVec.value ? props.node.value : undefined),
+  v => patch({ value: v }),
+  { allowArray: true },
+);
 /* 1018：more_like_this like 混合形态（对象/数组）→ 专用编辑器；字符串维持既有输入 */
 const mltRich = computed(() => {
   if (props.node.op !== 'more_like_this') return false;
@@ -555,8 +805,7 @@ const OBJ_KEY_HINTS: Record<string, string[]> = {
 };
 const OBJ_ARR_KEYS = new Set(['terms', 'points', 'shape']);
 const OBJ_OBJ_KEYS = new Set(['top_left', 'bottom_right', 'match', 'all_of', 'any_of', 'filter', 'tokens', 'pruning_config']);
-const objKeyHints = computed(() => OBJ_KEY_HINTS[props.node.op] || []);
-function addObjKey(k: string) {
+const objKeyHints = computed(() => OBJ_KEY_HINTS[props.node.op] || []);function addObjKey(k: string) {
   if (k in objVal.value) return;
   const init: unknown = OBJ_ARR_KEYS.has(k) ? [] : OBJ_OBJ_KEYS.has(k) ? {} : '';
   patch({ value: { ...objVal.value, [k]: init } });
@@ -596,6 +845,9 @@ function kwAggFieldOf(f: string): string {
  文本自行过滤，无需按前缀重查；FieldSelect 选中同字段已预热模块级 TTL 缓存 → 此处缓存
  命中零网络白得）。无 pinia/非精确语义档/非 keyword 族字段/无索引语境零动作 */
 function primeValAgg() {
+  /* 运行时字段不做 terms-agg 预取：请求不带 runtime_mappings 取不到值；
+     带 mapping 又等于每次聚焦对全量文档跑脚本聚合，代价高。值候选只留查询历史。 */
+  if (runtimeField.value) return;
   if (!typePriorityForOp(props.node.op).includes('keyword') || !termCtx) return;
   const agg = kwAggFieldOf((props.node.field || '').trim());
   if (agg) termCtx.suggest(agg, '');
@@ -621,7 +873,7 @@ const valCandidates = computed<string[]>(() => {
   /* terms-agg top20 候选先行（termCtx.suggestions 是本行实例自有态，多行互不串值；
  未 prime/缓存未回时为空，历史候选照出），历史候选续后去重合并 */
   const aggField = kwAggFieldOf(f);
-  if (aggField && termCtx) for (const v of termCtx.suggestions.value) push(v);
+  if (aggField && termCtx && !runtimeField.value) for (const v of termCtx.suggestions.value) push(v);
   for (const name of names) {
     const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     for (const it of qhStore.items) {
@@ -752,6 +1004,16 @@ function endDrag() { delete (window as any)[DRAG_KEY]; fireDrag(false); }
  冷门类型回落档走 :where（specificity 0），色卡命中时必胜（同 FieldPicker 口径） */
 .cn-fty { flex: none; font-size: var(--fs-2xs); padding: 0 5px; border-radius: var(--r-xs); line-height: 16px; cursor: help; }
 :where(.cn-fty) { color: var(--muted); background: var(--hl); }
+/* 1056：text→keyword 子域一键建议（accent 弱底，只提示不抢算子/值控件） */
+.cn-kwfix { flex: none; height: 20px; padding: 0 var(--sp-1h); font-size: var(--fs-2xs); color: var(--ac-hi); background: var(--ac-soft); border-color: var(--ac-line); }
+/* 1069 续：未知字段→建运行时字段（独立整行提示条，不挤压字段/算子/值主控件） */
+.cn-defrt-bar {
+  flex-basis: 100%; display: flex; align-items: center; gap: var(--sp-1h);
+  padding: var(--sp-1) var(--sp-2); border: 1px solid var(--warn-line); border-radius: var(--r-s);
+  background: var(--warn-soft);
+}
+.cn-defrt-hint { font-size: var(--fs-2xs); color: var(--warn); }
+.cn-defrt { flex: none; height: 20px; padding: 0 var(--sp-1h); font-size: var(--fs-2xs); white-space: nowrap; color: var(--warn); background: transparent; border-color: var(--warn-line); }
 .cn-val { height: 30px; font-size: var(--fs-sm); padding: 3px var(--sp-2); flex: 1 1 120px; min-width: 0; }
 /* 1039：长查询串 textarea——覆盖 cn-val 定高，纵向伸缩，行顶对齐由 flex wrap 承接 */
 .cn-qry { height: auto; min-height: 52px; resize: vertical; line-height: 1.5; }

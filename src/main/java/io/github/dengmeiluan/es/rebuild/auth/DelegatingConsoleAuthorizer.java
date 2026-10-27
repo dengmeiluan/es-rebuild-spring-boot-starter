@@ -50,6 +50,16 @@ public class DelegatingConsoleAuthorizer implements EsConsoleAuthorizer {
     public ConsolePrincipal authenticate(HttpServletRequest request) {
         if (delegate != null) {
             try {
+                /* 登出吊销必须对**任何**委托生效，不能只靠各实现自觉：
+                   自定义委托（如 quotehub）默认 revoke=false、tokenOf=null 时，
+                   控制台 /auth/logout 会回 200 但令牌仍可用。只要委托报出原始令牌，
+                   本实例的拒绝表就先裁决一次（PropertiesAuthDelegate 内部也查，双保险）。 */
+                String delegatedToken = delegate.tokenOf(request);
+                if (delegatedToken != null && !delegatedToken.isEmpty()
+                        && DelegatedTokenRevocations.isRevoked(delegatedToken)) {
+                    LOG.debug("[DelegatingConsoleAuthorizer] 委托令牌已在本实例登出，拒绝复用");
+                    return null;
+                }
                 ConsolePrincipal p = delegate.authenticate(request);
                 if (p != null) {
                     return p;
@@ -57,7 +67,7 @@ public class DelegatingConsoleAuthorizer implements EsConsoleAuthorizer {
                 /* 带了宿主凭证但没被接受（过期/被撤销/宿主拒绝）：不得回落到浏览器里
                    可能残留的内置 token——否则宿主一撤销会话，iframe 反而升级成内置 ADMIN。
                    只有「本请求没带宿主凭证」才回退到内置登录（两套身份并存的既定语义）。 */
-                if (delegate.hasCredential(request)) {
+                if (carriesHostCredential(request)) {
                     LOG.debug("[DelegatingConsoleAuthorizer] 宿主凭证存在但未被接受：不回落内置登录");
                     return null;
                 }
@@ -65,8 +75,40 @@ public class DelegatingConsoleAuthorizer implements EsConsoleAuthorizer {
                 // WARN 末参补 e——降级留痕只有 getMessage 无从定位宿主侧根因，
                 // 堆栈补上；返回 fallback 契约不变
                 LOG.warn("[DelegatingConsoleAuthorizer] 宿主委托鉴权异常（降级内置校验）: {}", e.getMessage(), e);
+                /* 异常路径同样受「带宿主凭证不得回落」约束：宿主鉴权故障时若回落到浏览器里
+                   残留的内置 ADMIN token，一次宿主 500 就能把被撤销的会话升级成本地管理员。
+                   只有确认本请求没带宿主凭证才允许降级。hasCredential 自身异常时 fail-closed。 */
+                if (carriesHostCredential(request)) {
+                    LOG.debug("[DelegatingConsoleAuthorizer] 委托异常且请求携带宿主凭证：不回落内置登录");
+                    return null;
+                }
             }
         }
         return fallback == null ? null : fallback.authenticate(request);
+    }
+
+    /**
+     * 本请求是否携带宿主凭证——两种信号取并：
+     * ① 委托自觉实现的 {@code hasCredential}；
+     * ② 委托报出的令牌原文 {@code tokenOf}（quotehub 形态常只实现这条）。
+     *
+     * <p>只看 ① 会漏掉「实现了 tokenOf、没实现 hasCredential」的自定义委托：默认 false 让
+     * 异常/拒绝分支继续回落到内置 token，绕过 1007 的防升级约束。任一信号异常都按
+     * 「携带」处理（fail-closed），宁可 401 也不升级身份。</p>
+     */
+    private boolean carriesHostCredential(HttpServletRequest request) {
+        try {
+            if (delegate.hasCredential(request)) return true;
+        } catch (Exception e) {
+            LOG.debug("[DelegatingConsoleAuthorizer] hasCredential 异常，按携带宿主凭证处理");
+            return true;
+        }
+        try {
+            String token = delegate.tokenOf(request);
+            return token != null && !token.isEmpty();
+        } catch (Exception e) {
+            LOG.debug("[DelegatingConsoleAuthorizer] tokenOf 异常，按携带宿主凭证处理");
+            return true;
+        }
     }
 }

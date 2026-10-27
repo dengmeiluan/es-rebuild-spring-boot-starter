@@ -44,7 +44,7 @@ describe('985 无字段形态（none）往返无损', () => {
 });
 
 describe('985 对象值算子（field 形态 wrap=none）往返无损', () => {
-  roundTrip('terms_set', { query: { terms_set: { codes: { terms: ['a', 'b'], minimum_should_match_field: 'required_matches' } } } });
+  roundTrip('terms_set', { query: { terms_set: { codes: ['a', 'b'], minimum_should_match_field: 'required_matches' } } });
   roundTrip('geo_bounding_box', { query: { geo_bounding_box: { location: { top_left: { lat: 40, lon: -70 }, bottom_right: { lat: 39, lon: -71 } } } } });
   roundTrip('geo_polygon', { query: { geo_polygon: { location: { points: [{ lat: 40, lon: -70 }, { lat: 39, lon: -71 }] } } } });
   roundTrip('geo_shape', { query: { geo_shape: { region: { shape: { type: 'envelope', coordinates: [[-70, 40], [-71, 39]] }, relation: 'within' } } } });
@@ -199,7 +199,8 @@ describe('985 节点工厂 makeNodeByOp', () => {
     expect(st.value).toBe('');
   });
   it('对象值算子初值 {}，数组值初值 []，标量初值空串', () => {
-    expect((makeNodeByOp('terms_set') as LeafNode).value).toEqual({});
+    /* 1119：terms_set 字段键持词项数组（官方体），初值 [] 而非 {} */
+    expect((makeNodeByOp('terms_set') as LeafNode).value).toEqual([]);
     expect((makeNodeByOp('terms') as LeafNode).value).toEqual([]);
     expect((makeNodeByOp('term') as LeafNode).value).toBe('');
     expect((makeNodeByOp('term') as LeafNode).field).toBe('');
@@ -210,7 +211,8 @@ describe('985 节点工厂 makeNodeByOp', () => {
     expect(mm.field).toBeNull();
     const ids = makeNodeByOp('ids') as LeafNode;
     expect(ids.field).toBeNull();
-    expect(ids.value).toBe('');
+    /* 1045：ids 空节点给数组初值（ClauseNode 直接进入 chip 编辑，不再标量空串） */
+    expect(ids.value).toEqual([]);
   });
   it('wrap 工厂：路由字段空串 / 无路由字段 null / childKey 记忆', () => {
     const nested = makeNodeByOp('nested') as any;

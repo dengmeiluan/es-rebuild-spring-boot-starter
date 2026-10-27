@@ -37,6 +37,8 @@ async function openColMenu(col: string) {
   thOf(col).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 10, clientY: 10 }));
   await tick(4);
 }
+/* 1142：动作项住分组二级——helper 按需展开 */
+import { findMenuItem } from './helpers/ctxMenu';
 const menuButtons = () => [...document.querySelectorAll('.ccm-mask .ccm-it')] as HTMLButtonElement[];
 
 beforeEach(() => {
@@ -88,9 +90,10 @@ describe('QRT 列详情/全列适应/整表复制（五百一十九批）', () =
     const cell = host.querySelector('tbody tr:first-child td.qrt-cell') as HTMLElement;
     cell.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 10, clientY: 10 }));
     await tick(4);
-    const btn = menuButtons().find(b => b.textContent?.includes('复制整表（当前页）为 TSV'));
+    /* 1142：整表 TSV 住「复制…」二级 */
+    const btn = await findMenuItem('复制整表（当前页）为 TSV');
     expect(btn, '单元格右键应有「复制整表」').toBeTruthy();
-    btn!.click();
+    (btn as HTMLButtonElement).click();
     await tick(6);
     expect(writeText).toHaveBeenCalledTimes(1);
     expect(writeText.mock.calls[0][0]).toBe('_id\tname\tage\na\tbanana\t2\nb\tapple\t3\nc\tbanana\t1');

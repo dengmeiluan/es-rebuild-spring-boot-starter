@@ -15,7 +15,7 @@
 
     <groupId>io.github.dengmeiluan</groupId>
     <artifactId>es-rebuild-spring-boot-starter</artifactId>
-    <version>1.0.66</version>
+    <version>1.0.68</version>
     <packaging>jar</packaging>
     <name>es-rebuild-spring-boot-starter</name>
     <description>Zero-downtime Elasticsearch index rebuild Spring Boot starter: alias-based write-index
@@ -220,6 +220,27 @@
                 <artifactId>maven-antrun-plugin</artifactId>
                 <version>1.8</version>
                 <executions>
+                    <!-- 先清 target 里的旧 console 产物，再让 resources 阶段复制新产物。
+                         maven-resources-plugin 只做覆盖式复制、**从不删除**目标目录里多余的旧文件：
+                         增量构建（不跑 mvn clean）会让每一轮 vite 的哈希文件名都堆在
+                         target/classes/static/console/assets/ 下（实测 5849 个 vs 源码 278 个），
+                         这些文件经 /console/assets/** 是**可被 HTTP 直接请求**的——旧 bundle 仍可访问，
+                         等于把修复前的控制台代码继续对外提供，jar 也被撑到 37MB。
+                         ⚠ 必须挂在 initialize（resources:resources 之前）；绑定 process-resources 会因
+                         同阶段按插件声明序执行而**排在复制之后**，把刚复制好的产物删掉（实测打出 797KB
+                         的空 jar，控制台整体丢失）。 -->
+                    <execution>
+                        <id>purge-stale-console-assets</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <delete dir="${project.build.outputDirectory}/static/console" quiet="true"/>
+                            </target>
+                        </configuration>
+                    </execution>
                     <execution>
                         <id>require-console-assets</id>
                         <phase>process-resources</phase>

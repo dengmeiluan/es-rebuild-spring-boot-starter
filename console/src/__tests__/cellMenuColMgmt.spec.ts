@@ -10,6 +10,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createApp, h, nextTick } from 'vue';
 import { createPinia } from 'pinia';
+import { allLabels } from './helpers/ctxMenu'; /* 1142：二级菜单能力面 */
 
 vi.mock('../api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api')>();
@@ -57,6 +58,32 @@ beforeEach(() => {
 function menuButtons(): HTMLButtonElement[] {
   return [...document.querySelectorAll('.ccm-mask .ccm-it')] as HTMLButtonElement[];
 }
+/* 一级项（二级面板常驻 DOM，顺序锁只看主面板直属项） */
+function menuTopLabels(): string[] {
+  return ([...document.querySelectorAll('.ccm-mask > .ccm > .ccm-it')] as HTMLButtonElement[])
+    .map(b => (b.textContent ?? '').trim());
+}
+
+/* 1142：菜单收成两级——列管理/复制等动作项住在分组二级里。
+ 测试统一走「点分组父行 → 二级项可直接点」。 */
+const SUB = '.ccm-mask .ccm-sub .ccm-it';
+function subButtons(): HTMLButtonElement[] {
+  return [...document.querySelectorAll(SUB)] as HTMLButtonElement[];
+}
+async function openGroup(label: string) {
+  const parent = menuButtons().find(b => (b.textContent ?? '').includes(label) && b.getAttribute('aria-haspopup') === 'menu');
+  expect(parent, `分组「${label}」必须在场`).toBeTruthy();
+  parent!.click();
+  for (let i = 0; i < 6; i++) { await nextTick(); await Promise.resolve(); }
+}
+async function clickItem(label: string, group = '列与导出…') {
+  if (!subButtons().some(b => (b.textContent ?? '').includes(label))) await openGroup(group);
+  const it = subButtons().find(b => (b.textContent ?? '').includes(label))
+    ?? menuButtons().find(b => (b.textContent ?? '').includes(label));
+  expect(it, `菜单项「${label}」必须在场`).toBeTruthy();
+  it!.click();
+  for (let i = 0; i < 8; i++) { await nextTick(); await Promise.resolve(); }
+}
 
 async function openMenuAt(cellSel: string) {
   const cell = host.querySelector(cellSel) as HTMLElement;
@@ -70,10 +97,11 @@ function headerCols(): string[] {
 }
 
 describe('RT 右键列管理（129 批）', () => {
-  it('菜单含隐藏/置首项，且有分组分隔线', async () => {
+  it('菜单含隐藏/置首项（列与导出分组内），且有分组分隔线', async () => {
     await mountTbl(ResultTable, { hits: HITS, total: 2, index: 'i1', storageKey: 'cm1' });
     await openMenuAt('tbody tr:first-child td.rt-cell');
-    const labels = menuButtons().map(b => b.textContent?.trim());
+    await openGroup('列与导出…');
+    const labels = subButtons().map(b => b.textContent?.trim());
     expect(labels).toContain('隐藏此列');
     expect(labels).toContain('此列置首');
     expect(document.querySelectorAll('.ccm-mask .ccm-sep').length).toBeGreaterThanOrEqual(1);
@@ -83,8 +111,7 @@ describe('RT 右键列管理（129 批）', () => {
     await mountTbl(ResultTable, { hits: HITS, total: 2, index: 'i1', storageKey: 'cm2' });
     expect(headerCols()).toEqual(['name', 'age']);
     await openMenuAt('tbody tr:first-child td.rt-cell');
-    menuButtons().find(b => b.textContent?.includes('隐藏此列'))!.click();
-    for (let i = 0; i < 8; i++) { await nextTick(); await Promise.resolve(); }
+    await clickItem('隐藏此列');
     expect(headerCols()).toEqual(['age']);
     expect(JSON.parse(localStorage.getItem('es_cols:cm2') || '[]')).toEqual(['age']);
   });
@@ -92,8 +119,7 @@ describe('RT 右键列管理（129 批）', () => {
   it('此列置首：age 移到第一数据列 + 落盘', async () => {
     await mountTbl(ResultTable, { hits: HITS, total: 2, index: 'i1', storageKey: 'cm3' });
     await openMenuAt('tbody tr:first-child td.rt-cell:nth-child(4)');
-    menuButtons().find(b => b.textContent?.includes('此列置首'))!.click();
-    for (let i = 0; i < 8; i++) { await nextTick(); await Promise.resolve(); }
+    await clickItem('此列置首');
     expect(headerCols()).toEqual(['age', 'name']);
     expect(JSON.parse(localStorage.getItem('es_cols:cm3') || '[]')).toEqual(['age', 'name']);
   });
@@ -103,23 +129,24 @@ describe('RT 右键列管理（129 批）', () => {
     await mountTbl(ResultTable, { hits: HITS, total: 2, index: 'i1', storageKey: 'cm4' });
     expect(headerCols()).toEqual(['age']);
     await openMenuAt('tbody tr:first-child td.rt-cell');
-    menuButtons().find(b => b.textContent?.includes('隐藏此列'))!.click();
-    for (let i = 0; i < 6; i++) { await nextTick(); await Promise.resolve(); }
+    await clickItem('隐藏此列');
     expect(headerCols()).toEqual(['age']);
   });
 });
 
 describe('RT 勾选行复制组（130 批）', () => {
-  it('无勾选时不出现复制行组；勾选后出现并带行数', async () => {
+  it('无勾选时不出现复制行组；勾选后「复制…」二级出现并带行数', async () => {
     await mountTbl(ResultTable, { hits: HITS, total: 2, index: 'i1', storageKey: 'cr1' });
     await openMenuAt('tbody tr:first-child td.rt-cell');
-    expect(menuButtons().map(b => b.textContent?.trim()).filter(t => t?.includes('行为'))).toEqual([]);
+    await openGroup('复制…');
+    expect(subButtons().map(b => b.textContent?.trim()).filter(t => t?.includes('行为'))).toEqual([]);
     /* 勾选两行（含 shift 范围不做——直接点两个 checkbox） */
     const boxes = [...host.querySelectorAll('tbody input[type=checkbox]')] as HTMLInputElement[];
     boxes[0].click(); boxes[1].click();
     for (let i = 0; i < 4; i++) { await nextTick(); await Promise.resolve(); }
     await openMenuAt('tbody tr:first-child td.rt-cell');
-    const labels = menuButtons().map(b => b.textContent?.trim());
+    await openGroup('复制…');
+    const labels = subButtons().map(b => b.textContent?.trim());
     expect(labels).toContain('复制 2 行为 TSV');
     expect(labels).toContain('复制 2 行为 Markdown');
     expect(labels).toContain('复制 2 行为 JSON');
@@ -134,8 +161,7 @@ describe('RT 勾选行复制组（130 批）', () => {
     boxes[0].click();
     for (let i = 0; i < 4; i++) { await nextTick(); await Promise.resolve(); }
     await openMenuAt('tbody tr:first-child td.rt-cell');
-    menuButtons().find(b => b.textContent?.includes('行为 TSV'))!.click();
-    for (let i = 0; i < 6; i++) { await nextTick(); await Promise.resolve(); }
+    await clickItem('行为 TSV', '复制…');
     expect(writeText).toHaveBeenCalledTimes(1);
     const text = writeText.mock.calls[0][0] as string;
     expect(text).toBe('age\n2');
@@ -167,7 +193,8 @@ describe('右键 auto-fit（140 批）', () => {
   it('「此列适应内容」菜单项存在；happy-dom 下 scrollWidth=0 安全 no-op', async () => {
     await mountTbl(ResultTable, { hits: HITS, total: 2, index: 'i1', storageKey: 'af1' });
     await openMenuAt('tbody tr:first-child td.rt-cell');
-    const fit = menuButtons().find(b => b.textContent?.includes('此列适应内容'));
+    await openGroup('列与导出…');
+    const fit = subButtons().find(b => b.textContent?.includes('此列适应内容'));
     expect(fit).toBeTruthy();
     /* happy-dom 无布局引擎 scrollWidth 恒 0 → 不写入 colWidths（真实浏览器按内容实测） */
     fit!.click();
@@ -182,12 +209,18 @@ describe('列头右键列管理（148 批）', () => {
     const th = [...host.querySelectorAll('thead th')].find(t => t.textContent?.includes('name')) as HTMLElement;
     th.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }));
     for (let i = 0; i < 6; i++) { await nextTick(); await Promise.resolve(); }
-    const labels = menuButtons().map(b => b.textContent?.trim());
-    /* 一百六十二批：列头菜单扩至八项；197/207 批：+冻结；230 批：+筛选此列；236 批 P2-3：+列详情（十二项）；
-       五百二十批：+复制整列值、+聚合行开关；五百二十三批：+语义格式化开关（十四项——原注「十五项」
-       系陈旧错注，五百三十五批顺手纠正）；五百三十五批：+复制表头（TSV）（十五项，534 批 P2 放弃项落地）；
-       五百五十八批：+复制整表 JSON（RT 对称件，收 557 QRT 单侧漂移，十六项） */
-    expect(labels).toEqual(['列详情', '升序排序', '降序排序', '筛选此列', '复制列名', '复制表头（TSV）', '复制整列值', '复制整表 JSON', '隐藏此列', '此列置首', '冻结到此列', '此列适应内容', '全列适应内容', '聚合行：关', '语义格式化：开 ✓', '重置列序']);
+    /* 1142：列头菜单同为两层（一级只留列详情 + 三组父行；动作项住二级，能力零删除） */
+    expect(menuTopLabels()).toEqual(['列详情', '排序与筛选…', '复制…', '列与视图…']);
+    const all = await allLabels();
+    for (const need of ['降序排序', '筛选此列', '复制列名', '复制表头（TSV）', '复制整列值', '复制整表 JSON',
+      '隐藏此列', '此列置首', '冻结到此列', '此列适应内容', '全列适应内容', '重置列序']) {
+      expect(all, need).toContain(need);
+    }
+    /* 1143：聚合行/语义格式化/转置是「整张表」的视图开关，已归位工具行「视图 ⋯」——
+       列头菜单只留作用于「这一列」的动作，不再混入（能力未删除，入口换位置）。 */
+    for (const gone of ['聚合行：关', '语义格式化：开 ✓', '转置视图']) {
+      expect(all, gone + ' 已移出列头菜单').not.toContain(gone);
+    }
     menuButtons().find(b => b.textContent?.includes('隐藏此列'))!.click();
     for (let i = 0; i < 8; i++) { await nextTick(); await Promise.resolve(); }
     expect(headerCols()).toEqual(['age']);
@@ -216,15 +249,16 @@ describe('QRT 列管理门控（129 批）', () => {
     /* qrt-cell 精确定位数据格（167 批起首格是冻结序号列，无右键菜单） */
     await openMenuAt('tbody tr:first-child td.qrt-cell');
     const labels = menuButtons().map(b => b.textContent?.trim());
-    expect(labels).not.toContain('隐藏此列');
-    expect(labels).not.toContain('此列置首');
+    expect(labels).not.toContain('列与导出…');
+    await openGroup('筛选与排序…');
+    expect(subButtons().map(b => b.textContent?.trim())).not.toContain('隐藏此列');
+    expect(subButtons().map(b => b.textContent?.trim())).not.toContain('此列置首');
   });
 
   it('记忆启用时暴露且隐藏落盘', async () => {
     await mountTbl(QueryResultTable, { cols: QCOLS, rows: QROWS, total: 2, storageKey: 'qcm' });
     await openMenuAt('tbody tr:first-child td.qrt-cell');
-    menuButtons().find(b => b.textContent?.includes('隐藏此列'))!.click();
-    for (let i = 0; i < 8; i++) { await nextTick(); await Promise.resolve(); }
+    await clickItem('隐藏此列');
     const head = [...host.querySelectorAll('thead th')].map(th => (th.textContent ?? '').trim());
     expect(head).not.toContain('c1');
     expect(JSON.parse(localStorage.getItem('es_cols:qcm') || '[]')).toEqual(['c2']);
@@ -236,8 +270,7 @@ describe('ColPicker 集成链（164 批回归——152 批曾丢 @update:selecte
     await mountTbl(ResultTable, { hits: HITS, total: 2, index: 'i1', storageKey: 'cp1' });
     /* 先隐藏一列（右键菜单路径） */
     await openMenuAt('tbody tr:first-child td.rt-cell');
-    menuButtons().find(b => b.textContent?.includes('隐藏此列'))!.click();
-    for (let i = 0; i < 8; i++) { await nextTick(); await Promise.resolve(); }
+    await clickItem('隐藏此列');
     expect(headerCols()).toEqual(['age']);
     /* 点列选触发钮 → 弹层内点「全选」→ 全部列表头恢复 */
     const colBtn = [...host.querySelectorAll('button')].find(b => (b.getAttribute('aria-label') || '').includes('选择显示的列'))!;

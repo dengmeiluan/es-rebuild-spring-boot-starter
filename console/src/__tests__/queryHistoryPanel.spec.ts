@@ -117,6 +117,24 @@ describe('QueryHistoryPanel 共享面板', () => {
     expect(q('.qhp-empty')!.textContent).toContain('无匹配');
   });
 
+  it('1071 参数徽标：合法数组出「参数 N」+ 原文 tooltip，过滤命中参数值', async () => {
+    await mountPanel({
+      items: [
+        { id: 'p1', mode: 'sql', query: 'SELECT * FROM t WHERE a = ?', params: '["宁德时代"]', ts: Date.now() },
+        { id: 'p2', mode: 'sql', query: 'SELECT * FROM t', ts: Date.now() - 1000 },
+      ],
+    });
+    const chip = q('.qhp-params')!;
+    expect(chip.textContent?.trim()).toBe('参数 1');
+    expect(chip.getAttribute('title')).toContain('["宁德时代"]');
+    const inp = q('.qhp-filter') as HTMLInputElement;
+    inp.value = '宁德';
+    inp.dispatchEvent(new Event('input'));
+    await nextTick();
+    expect(qa('.qhp-item').length).toBe(1);
+    expect(q('.qhp-cnt')!.textContent).toBe('1/2 条');
+  });
+
   it('清空/删除/播放 emit；未配置的 fill 按钮不渲染', async () => {
     const emitted = await mountPanel();
     (qa('.qhp-acts .btn').find(b => b.getAttribute('title') === '删除此条') as HTMLElement).click();

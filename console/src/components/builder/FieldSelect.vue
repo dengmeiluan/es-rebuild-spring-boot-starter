@@ -1,5 +1,5 @@
 <template>
-  <div class="fs" ref="rootEl">
+  <div class="fs" :class="{ 'fs-has-nos': runtimeNoScript }" ref="rootEl">
     <input
       class="inp fs-inp mono" :value="modelValue" :placeholder="placeholder || '选字段…'"
       spellcheck="false" autocomplete="off" role="combobox" aria-autocomplete="list"
@@ -9,7 +9,12 @@
     />
     <!-- 987 未知字段护栏：mapping 在场时手输不在 mapping 的字段给黄点提示（ClauseNode
      .cn-owarn 同语言）。零降级：无 mapping（fields 空）不提示——自由手输是既有合法路径 -->
-    <i v-if="unknownField" class="fs-unk" title="字段不在当前索引 mapping：可能是嵌套路径、别名或脚本字段；若非刻意请核对拼写或切换索引">字段不在 mapping</i>
+    <i v-if="unknownField" class="fs-unk" role="img" aria-label="字段不在 mapping"
+       title="字段不在当前索引 mapping：可能是嵌套路径、别名或脚本字段；若非刻意请核对拼写或切换索引" />
+    <!-- 1069 续：运行时字段缺 script（排序/高亮/聚合等字段位）——点击展开该字段的 type/script 编辑 -->
+    <button v-if="runtimeNoScript" type="button" class="fs-nos"
+      :title="`运行时字段「${modelValue}」尚无 script，查询期不会产出值——点击编辑 type/script`"
+      @mousedown.prevent @click.stop="editRuntime">无 script</button>
     <!-- 弹层 teleport 到 body + fixed 定位——构建器面板（.dq-tree）带 overflow-y:auto，
  absolute 弹层会被面板边界裁剪。骨架（↑↓/Enter/Home/End 键盘导航、IME isComposing 守卫、
  防溢出钳位 place()、点击外部关闭）由 usePopupList 承载——与 FieldPicker 同一代体验；
@@ -35,16 +40,19 @@
             >
               <!-- 类型徽标挂全站色卡 .mft-type（theme.css），删局部四类型撞色规则 -->
               <span v-if="r.hit!.type" class="fs-ty mono mft-type" :data-t="r.hit!.type">{{ r.hit!.type }}</span>
-              <!-- 近似候选徽标（548 C fuzzy 零命中纠错标记，与 LuceneInput 同文案） -->
-              <i v-if="r.hit!.fuzzy" class="fs-fuzzy">近似</i>
               <!-- 输入命中 <mark>：按切分片段渲染，不开 v-html 注入面（同 MarkText 手法） -->
               <span class="fs-nm mono"><template v-for="(sg, si) in r.hit!.segs" :key="si"><mark v-if="sg.m">{{ sg.t }}</mark><template v-else>{{ sg.t }}</template></template></span>
+              <!-- 近似候选徽标（548 C fuzzy 零命中纠错标记，与 LuceneInput 同文案） -->
+              <i v-if="r.hit!.fuzzy" class="fs-fuzzy">近似</i>
+              <!-- 1045：中文业务词扩展命中（主体/公告/研报/债券/舆情 → 真实字段词根）。
+                   只在行尾留一个字标，权重低于字段名；完整说明走 title 与 footer 计数。 -->
+              <i v-if="r.hit!.alias" class="fs-alias" title="按业务词扩展匹配到的真实字段（非新建字段）">词</i>
             </div>
           </template>
           <div :style="{ height: Math.max(0, (rows.length - winStart - winRows.length) * ROW_H) + 'px' }" aria-hidden="true"></div>
         </div>
         <div v-if="flat.length" class="fs-ft">
-          <span>{{ flat.length }} 个匹配</span>
+          <span>{{ flat.length }} 个匹配<template v-if="aliasCount"> · 业务词扩展 {{ aliasCount }}</template></span>
           <span class="fs-keys"><kbd class="kbd">↑↓</kbd> 选择 <kbd class="kbd">Enter</kbd> 确认 <kbd class="kbd">Esc</kbd> 关闭</span>
         </div>
       </div>
@@ -57,8 +65,9 @@
  rank 排序（精确>前缀>包含）、类型分组+组头、data-t 三色类型徽标、输入 <mark> 高亮、
  候选计数与 cap 提示。零降级保留：mapping 缺失 fields 为空时输入框仍可自由手输。
  最近使用升级 per-index（key 拼当前索引，读不到回退全局），且选中字段回写记忆。 */
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch, onBeforeUnmount, onDeactivated, inject } from 'vue';
 import { getActivePinia } from 'pinia';
+import { RUNTIME_FIELD_CTX } from './runtimeFieldContext';
 import { usePopupList } from '../../composables/usePopupList';
 import { useTermsSuggest } from '../../composables/useTermsSuggest';
 import {
@@ -67,6 +76,7 @@ import {
   getFieldSearchUsedFields,
 } from '../../utils/fieldSearch';
 import { KEYWORD_VALUE_TYPES } from '../../utils/sqlCompletion';
+import { fieldRoleOf, type FieldRole } from '../../utils/fieldRole';
 
 /* 补 typeFilter/typePriority 两个可选 props 透传 fieldSearch.searchFields
  （类型过滤/智能置顶排序，与 FieldPicker 同名语义对齐）；默认 undefined = 现状零增量 */
@@ -76,8 +86,10 @@ const props = defineProps<{
   typeFilter?: string[];
   /** 命中这些类型的字段分组排前；空/缺省 = 纯 rank+字母序 */
   typePriority?: string[];
+  /** 1045：业务角色优先序（同类型组内再按角色排序），空/缺省 = 不干预 */
+  rolePriority?: FieldRole[];
 }>();
-const emit = defineEmits<{ (e: 'update:modelValue', v: string): void }>();
+const emit = defineEmits<{ (e: 'update:modelValue', v: string): void; (e: 'picked', v: string): void }>();
 
 /* 1004：候选虚拟列表——扫描上限放大到全量（超大索引几千字段可滚动浏览全部匹配），
    DOM 只渲染可视区窗口（统一行高 ROW_H + 上下垫片）；rank/分组/键盘导航语义不变。
@@ -91,6 +103,16 @@ const WIN_PAD = 8;       /* 窗口上下缓冲行数（滚动方向预渲染，�
  黄点是弱提示不阻断（仍可手输提交），比「候选空但仍可手输」的纯静默多一层护栏 */
 const unknownField = computed(() =>
   !!props.modelValue && props.fields.length > 0 && !props.fields.includes(props.modelValue));
+/* 1069 续：排序/高亮/折叠/聚合等字段位共用——运行时字段只有 type、缺 script 时查询不产出值。
+   上下文由 RootExtrasPane provide；不在检索参数面板内的 FieldSelect（其它页面）零提示。 */
+const rtCtx = inject(RUNTIME_FIELD_CTX, null);
+const runtimeNoScript = computed(() =>
+  !!props.modelValue && !!rtCtx?.noScript.value.has(props.modelValue));
+function editRuntime() {
+  if (!props.modelValue) return;
+  open.value = false;
+  rtCtx?.edit(props.modelValue);
+}
 
 /* 过滤+rank 排序+cap 收口 fieldSearch；最近使用（per-index）中命中当前搜索的置顶 */
 const res = computed(() => {
@@ -103,6 +125,8 @@ const res = computed(() => {
     cap: SCAN_CAP,
     typeFilter: props.typeFilter,
     typePriority: props.typePriority,
+    /* 空输入保持 mapping/最近使用的稳定顺序；一旦开始打字再按业务角色精排 */
+    rolePriority: props.modelValue ? props.rolePriority : undefined,
   });
   /* recent 段之后再前置「树内已用」命中段——上下文智能排序：
  recent 段式全前置（既有行为不动）；used 在其余候选里做「rank 不变、同 rank 内前置」
@@ -116,12 +140,19 @@ const res = computed(() => {
   const isUsed = (h: FieldHit) => used.includes(h.path);
   const prioSeg = (h: FieldHit) => (prio && !prio.includes(h.type) ? 1 : 0);
   const prioIdx = (h: FieldHit) => (prio ? prio.indexOf(h.type) : 0);
+  const rp = props.modelValue && props.rolePriority?.length ? props.rolePriority : null;
+  const roleIdx = (h: FieldHit) => {
+    if (!rp) return 0;
+    const i = rp.indexOf(fieldRoleOf(h.path, h.type));
+    return i < 0 ? rp.length : i;
+  };
   const rest = s.flat
     .filter(h => !rec.includes(h.path))
     .slice()
     .sort((a, b) =>
       prioSeg(a) - prioSeg(b)
       || (prio ? prioIdx(a) - prioIdx(b) : a.rank - b.rank)
+      || roleIdx(a) - roleIdx(b)
       || (isUsed(b) ? 1 : 0) - (isUsed(a) ? 1 : 0));
   const flat = [
     ...rec.map(f => s.flat.find(h => h.path === f)).filter((h): h is FieldHit => !!h),
@@ -130,6 +161,7 @@ const res = computed(() => {
   return { total: s.total, capped: s.capped, flat, groups: groupByLabel(flat, prio) };
 });
 const flat = computed(() => res.value.flat);
+const aliasCount = computed(() => flat.value.filter(h => h.alias).length);
 
 type FsRow = { gh?: string; hit?: FieldHit; first?: number };
 const rows = computed<FsRow[]>(() => {
@@ -162,8 +194,13 @@ const {
   to: () => 'body',
   idPrefix: 'fs',
   activeSelector: '.fs-item.act',
-  place: { minWidth: 220, flipBelow: 240, flipTop: 260 },
+  place: { minWidth: 280, flipBelow: 240, flipTop: 260 },
 });
+
+/* 1045：KeepAlive 切通道/路由后弹层仍 teleport 在 body 上（实机：DSL→ES-SQL 后
+   字段候选浮在 SQL 页面上）。离开当前组件作用域即关闭，避免跨页残留。 */
+onDeactivated(() => close());
+onBeforeUnmount(() => close());
 
 /* 1033：指针聚焦全选现值——点进字段框即打字=替换（「改字段」的用户心智：原值是要被
    换掉的，追加只会拼出零匹配的怪字段名）；Tab 键盘聚焦保持尾部追加语义（a11y 惯例，
@@ -225,6 +262,8 @@ function pick(h: FieldHit) {
   rememberRecentField(curFieldSearchIndex(), h.path);
   if (valSuggest && KEYWORD_VALUE_TYPES.includes(h.type)) valSuggest.suggest(h.path, '');
   emit('update:modelValue', h.path);
+  /* 1124：明确「从候选选中」与「输入半截」分开——宿主只在选中时按类型换算子 */
+  emit('picked', h.path);
   close();
 }
 </script>
@@ -232,11 +271,23 @@ function pick(h: FieldHit) {
 <style scoped>
 .fs { position: relative; display: inline-block; min-width: 130px; }
 .fs-inp { width: 100%; height: 30px; font-size: var(--fs-sm); padding: 3px var(--sp-2); }
-/* 未知字段护栏黄点（右缘内侧，弱提示不遮值）：warn 底圆点 + title 全语义（.cn-owarn 同语言） */
+/* 未知字段护栏黄点（右缘内侧，弱提示不遮值）：warn 底圆点 + title 全语义（.cn-owarn 同语言）。
+ 1113：圆点内不再放可见文案（此前 8px 盒里的「字段不在 mapping」逐字竖排溢出，压住
+ 算子/值行）——语义只走 title/aria-label；overflow/font-size 双护栏防未来回填。 */
 .fs-unk { position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
   width: 8px; height: 8px; border-radius: 50%; background: var(--warn);
+  overflow: hidden; font-size: 0; line-height: 0;
   box-shadow: 0 0 0 3px var(--warn-soft); cursor: help; pointer-events: auto; }
 .fs-inp:not(:placeholder-shown) { padding-right: 18px; }
+/* 1069 续：无 script 运行时字段徽标（占输入右缘，与未知黄点互斥） */
+.fs-has-nos .fs-inp, .fs-has-nos .fs-inp:not(:placeholder-shown) { padding-right: 58px; }
+.fs-nos {
+  position: absolute; right: var(--sp-1); top: 50%; transform: translateY(-50%);
+  height: 16px; padding: 0 var(--sp-1); font-size: var(--fs-2xs); line-height: 16px; white-space: nowrap;
+  border: 1px solid var(--warn-line); border-radius: var(--r-xs); background: var(--warn-soft); color: var(--warn);
+  cursor: pointer;
+}
+.fs-nos:hover { background: var(--warn-line); color: var(--card-bg); }
 /* v3.1: 聚焦品牌描边+3px 柔光（--brand/--card theme.css 均有定义，删永不生效的 fallback 字面） */
 .fs-inp:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 14%, transparent); background: var(--card); }
 /* 壳属性（fixed/--z-island/bg/border/shadow/圆角）合并 theme.css .float-pop，本类只留坐标外裁切与字号 */
@@ -247,7 +298,8 @@ function pick(h: FieldHit) {
 .fs-gh { display: flex; align-items: center; height: 28px; padding: 0 var(--sp-2h); font-size: var(--fs-2xs); color: var(--muted); letter-spacing: .04em; user-select: none; }
 .fs-item { display: flex; align-items: center; gap: var(--sp-2); height: 28px; padding: 0 var(--sp-3); cursor: pointer; }
 .fs-item:hover, .fs-item.act { background: var(--hover); }
-.fs-nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 字段名吃满剩余宽度（业务词/近似徽标不再挤掉主名），超长才省略 */
+.fs-nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fs-nm mark { background: none; color: var(--acc); font-weight: 600; }
 /* 类型徽标色统一 theme.css 全站 .mft-type[data-t] 色卡（本文件原局部四类型规则已删）；
  冷门类型回落档走 :where（specificity 0），色卡命中时必胜（同 FieldPicker 口径） */
@@ -255,6 +307,8 @@ function pick(h: FieldHit) {
 :where(.fs-ty) { color: var(--muted); background: var(--hl); }
 /* 近似候选徽标（548 C fuzzy，FieldHit 经 flat 重排 spread 原样透传） */
 .fs-fuzzy { font-size: var(--fs-2xs); color: var(--warn); font-style: normal; margin-left: var(--sp-1); }
+/* 1045：业务词扩展徽标（info 语义，弱于近似纠错黄标） */
+.fs-alias { flex: none; font-size: var(--fs-2xs); color: var(--info); background: var(--info-soft); border-radius: var(--r-xs); padding: 0 var(--sp-1); font-style: normal; margin-left: var(--sp-1); white-space: nowrap; }
 .fs-ft { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); padding: 5px var(--sp-2h); border-top: 1px solid var(--line); color: var(--muted); font-size: var(--fs-2xs); }
 .mono { font-family: var(--mono, ui-monospace, monospace); }
 </style>

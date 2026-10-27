@@ -67,7 +67,9 @@
             :aria-current="selected?.name === t.name || undefined"
             :data-hit-idx="i + 1"
             @click="select(t)"
-           role="button" tabindex="0" @keydown.enter.prevent="select(t)" @keydown.space.prevent="select(t)">
+           role="button" tabindex="0" @keydown.enter.prevent="select(t)" @keydown.space.prevent="select(t)"
+           @contextmenu.prevent="openTplMenu($event, t)"
+           @keydown.menu.prevent="openTplMenuAt($event, t)">
             <div class="tv2-row-l">
               <div class="tv2-row-name mono"><MarkText :text="t.name" :kw="filter" /></div>
               <div class="tv2-row-sub mono">
@@ -165,15 +167,23 @@
 
     <!-- 原始 IO 弹窗（宿主受控开关；rec=最近一条 /cluster/templates 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
+
+    <!-- 1169：模板行右键——此前一行只有一个删除钮，想拿模板名/patterns/整段定义只能手抄。
+         一级只给两项高频（复制名、复制定义），其余进二级；删除仍留行内按钮（破坏性动作不藏进右键）。 -->
+    <CellContextMenu v-if="tplMenu" :x="tplMenu.x" :y="tplMenu.y"
+      :title="(tab === 'index' ? '索引模板 · ' : '组件模板 · ') + tplMenu.t.name"
+      :items="tplMenuItems" @close="tplMenu = null" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch, type Ref } from 'vue';
-import { FileCode2, Puzzle, List, Plus, Trash2, RefreshCw, Save, Info, ListFilter, Terminal, Shield } from 'lucide-vue-next';
+import { FileCode2, Puzzle, List, Plus, Trash2, RefreshCw, Save, Info, ListFilter, Terminal, Shield, Copy, Braces, ChevronDown, TerminalSquare } from 'lucide-vue-next';
 import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
 import RawIoModal from '../components/RawIoModal.vue';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
+import { copyText } from '../utils/format';
 import { askConfirm } from '../composables/confirm';
 import PageHeader from '../components/PageHeader.vue';
 import SearchFilterBar from '../components/SearchFilterBar.vue'; /* ：页头过滤胶囊统一件 */
@@ -193,8 +203,63 @@ import { useHitLocate } from '../composables/useHitNav';
 import SplitHandle from '../components/SplitHandle.vue';
 import { usePopupList } from '../composables/usePopupList';
 import type { BodyKind } from '../utils/dslCompletionContext';
+import { writeStoredRaw } from '../utils/safeJson';
+import { useRouter } from 'vue-router';
 
 const store = useAppStore();
+const router = useRouter();
+
+/* 1169：模板行右键（只读数据 + 一个写入口）。一级=复制名/复制定义；二级收 patterns 与 DevTools。 */
+const tplMenu = ref<{ x: number; y: number; t: any } | null>(null);
+function openTplMenu(e: MouseEvent, t: any) {
+  tplMenu.value = { x: e.clientX, y: e.clientY, t };
+}
+/* 键盘 Menu 键（Shift+F10）：以行左下角为锚，不用鼠标也能开菜单 */
+function openTplMenuAt(e: KeyboardEvent, t: any) {
+  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  tplMenu.value = { x: Math.round(r.left), y: Math.round(r.bottom + 4), t };
+}
+const tplMenuItems = computed<CcmItem[]>(() => {
+  const m = tplMenu.value; if (!m) return [];
+  const t = m.t;
+  const raw = t._raw?.index_template || t._raw?.component_template || t._raw || {};
+  const pats: string[] = Array.isArray(t.index_patterns) ? t.index_patterns : [];
+  const path = tab.value === 'index'
+    ? `/_index_template/${encodeURIComponent(t.name)}`
+    : `/_component_template/${encodeURIComponent(t.name)}`;
+  return [
+    { key: 'tpl-name', label: '复制模板名', icon: Copy, run: async () => {
+      const ok = await copyText(String(t.name || ''));
+      store.notify(ok ? 'success' : 'error', ok ? '已复制模板名：' + t.name : '复制失败');
+    } },
+    { key: 'tpl-json', label: '复制模板定义 JSON', icon: Braces, run: async () => {
+      const ok = await copyText(JSON.stringify(raw, null, 2));
+      store.notify(ok ? 'success' : 'error', ok ? '模板定义已复制' : '复制失败');
+    } },
+    {
+      key: 'tpl-more', label: '更多…', icon: ChevronDown, sep: true, children: [
+        ...(pats.length ? [{
+          key: 'tpl-pats', label: `复制匹配模式（${pats.length} 条）`, icon: List, run: async () => {
+            const ok = await copyText(pats.join('\n'));
+            store.notify(ok ? 'success' : 'error', ok ? `已复制 ${pats.length} 条 patterns` : '复制失败');
+          },
+        }] : []),
+        { key: 'tpl-dev', label: '在 DevTools 打开（只读 GET）', icon: TerminalSquare, run: () => {
+          /* 入口门与 DevToolsView 页门同源（canReadPage）——不具备读权时不跳转、不写 session 键 */
+          if (!(auth.probed && auth.me != null && auth.canReadPage('devtools', store.target))) {
+            store.notify('warning', 'DevTools 入口需要 DevTools 页面读权限或 ADMIN');
+            return;
+          }
+          writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
+            title: (tab.value === 'index' ? 'index_template/' : 'component_template/') + t.name,
+            method: 'GET', path, body: '', run: false,
+          }));
+          router.push('/devtools');
+        } },
+      ],
+    },
+  ] as CcmItem[];
+});
 /* 权限门禁——模板保存/删除=/cluster/templates/put|delete=CLUSTER 档（rank3+）；
  查看模板内容全角色可用 */
 const auth = useAuthStore();

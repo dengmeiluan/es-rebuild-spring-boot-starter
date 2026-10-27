@@ -35,13 +35,17 @@
         v-for="(it, i) in shown" :key="it.id ?? i"
         class="qhp-item" :class="{ clickable: clickable }"
         @click="clickable && $emit('play', it)"
+        @contextmenu.prevent="openRowMenu($event, it)"
        role="button" tabindex="0" @keydown.enter.prevent="clickable && $emit('play', it)" @keydown.space.prevent="clickable && $emit('play', it)">
         <div class="qhp-row">
           <span v-if="it.name" class="qhp-name" :title="it.name"><MarkText :text="it.name" :kw="kw" /></span>
           <span v-if="showMode && it.mode" class="qhp-mode" :data-mode="it.mode">{{ modeLabel(it.mode) }}</span>
           <!-- 索引名芯片化——点击直达索引工作区（.stop 不触发整行回放） -->
           <span v-if="it.index" class="qhp-idx mono qhp-idx-go" :title="it.index + '（点击打开索引工作区）'" tabindex="0" role="button" @keydown.enter.prevent.stop="gotoIndex(it.index)" @keydown.space.prevent.stop="gotoIndex(it.index)" @click.stop="gotoIndex(it.index)"><MarkText :text="it.index" :kw="kw" /></span>
-          <span v-if="it.ok === false" class="qhp-fail" role="img" aria-label="上次执行失败" title="上次执行失败——回放可重试"></span>
+          <!-- 1071：参数化 SQL 的参数条数徽标——回放会连同这些值恢复，避免用户以为只回放了文本 -->
+          <span v-if="it.params" class="qhp-params mono" :title="'SQL 参数（回放时一并恢复）：' + it.params">{{ paramsTag(it.params) }}</span>
+          <span v-if="it.ok === false" class="qhp-fail" role="img" aria-label="上次执行失败"
+                :title="it.error ? '上次执行失败：' + it.error : '上次执行失败——回放可重试'"></span>
           <span
             v-if="it.took != null" class="qhp-took" :class="tookClass(it.took)"
             :title="props.tookTip || `ES 分片执行耗时 ${it.took}ms（took 字段，不含网络往返与序列化，端到端会更慢）`"
@@ -74,7 +78,12 @@
         <div v-if="it.sub" class="qhp-sub mono" :title="it.sub">{{ it.sub }}</div>
       </div>
     </div>
-  </div>
+    <!-- 1142：历史行右键 —— 同一批行级动作经共享 CellContextMenu 分组呈现（项目右键
+ 能力补齐；行内窄钮保留作可发现入口，右键是 Power path，不抢主链路）。 -->
+  <CellContextMenu v-if="rowMenu" :x="rowMenu.x" :y="rowMenu.y" :title="rowMenu.it.name || '查询历史'"
+    :items="rowMenuItems" @close="rowMenu = null" />
+</div>
+
 </template>
 
 <script setup lang="ts">
@@ -87,6 +96,7 @@ import { useScopedDraft } from '../composables/useScopedDraft';
 import { useNow } from '../composables/useNow';
 import MarkText from './MarkText.vue';
 import SearchFilterBar from './SearchFilterBar.vue'; /* 轨4：过滤框统一件（第 17 胞） */
+import CellContextMenu, { type CcmItem } from './CellContextMenu.vue'; /* 1142：行右键（分组） */
 import { exportStamp, relTime, copyText, downloadText, fmtTook, tookClass } from '../utils/format';
 import { QUERY_MODES } from '../utils/queryHub';
 
@@ -103,6 +113,10 @@ export interface HistRow {
   took?: number;
   /** 上次执行失败标记（false=失败红点） */
   ok?: boolean;
+  /** 1122：上次失败错误摘要（截断）——红点 tooltip 直接说明失败原因 */
+  error?: string;
+  /** 1071：SQL 位置参数（JSON 数组原文）——回放时随查询文本一起恢复 */
+  params?: string;
   /** 可选摘要行（如 DevTools 历史行的 body 截断摘要）——不传不渲染（零增量） */
   sub?: string;
 }
@@ -145,7 +159,7 @@ const props = withDefaults(defineProps<Props>(), {
   tookTip: '',
 });
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'play', it: HistRow): void;
   (e: 'fill', it: HistRow): void;
   (e: 'curl', it: HistRow): void;
@@ -163,7 +177,50 @@ const route = useRoute();
 const router = useRouter();
 const now = useNow();
 
-/* 直达索引工作区（AliasesView goHub 同范式） */
+/* 1142：行右键菜单（同一批动作，分组菜单）——高频回放/填入留一级，其余按语义分组。
+ 门控同行内钮（actions 枚举 / fav 的 mode 门），不越权暴露。 */
+const rowMenu = ref<{ x: number; y: number; it: HistRow } | null>(null);
+function openRowMenu(e: MouseEvent, it: HistRow) {
+  rowMenu.value = { x: e.clientX, y: e.clientY, it };
+}
+const rowMenuItems = computed<CcmItem[]>(() => {
+  const m = rowMenu.value; if (!m) return [];
+  const it = m.it;
+  const emitAndClose = (name: 'play' | 'fill' | 'curl' | 'del' | 'rename' | 'fav' | 'newtab') => () => {
+    /* 联合事件名无法直投 overloaded emit（TS 选不出单一签名）——逐名分派保类型 */
+    switch (name) {
+      case 'play': emit('play', it); break;
+      case 'fill': emit('fill', it); break;
+      case 'curl': emit('curl', it); break;
+      case 'del': emit('del', it); break;
+      case 'rename': emit('rename', it); break;
+      case 'fav': emit('fav', it); break;
+      case 'newtab': emit('newtab', it); break;
+    }
+  };
+  const copyChildren = [
+    { key: 'copy-query', label: '复制查询文本', icon: Copy, run: () => copyIt(it) },
+    ...(it.index ? [{ key: 'copy-index', label: '复制索引名', icon: Copy, run: async () => {
+      const ok = await copyText(it.index!);
+      store.notify(ok ? 'success' : 'error', ok ? '已复制索引名' : '复制失败');
+    } }] : []),
+  ];
+  const moreChildren = [
+    ...(props.actions.includes('newtab') ? [{ key: 'newtab', label: '回放到新 Tab', icon: ExternalLink, run: emitAndClose('newtab') }] : []),
+    ...(props.actions.includes('fav') && (!it.mode || it.mode === 'dsl')
+      ? [{ key: 'fav', label: '转为收藏（保存的搜索）', icon: Star, run: emitAndClose('fav') }] : []),
+    ...(props.actions.includes('rename') ? [{ key: 'rename', label: '重命名', icon: Pencil, run: emitAndClose('rename') }] : []),
+    ...(props.actions.includes('del') ? [{ key: 'del', label: '删除此条', icon: Trash2, danger: true, sep: true, run: emitAndClose('del') }] : []),
+  ];
+  return [
+    ...(props.actions.includes('play') ? [{ key: 'play', label: '回放 / 执行', icon: Play, run: emitAndClose('play') }] : []),
+    ...(props.actions.includes('fill') ? [{ key: 'fill', label: '仅填入', icon: CornerUpLeft, run: emitAndClose('fill') }] : []),
+    ...(props.actions.includes('curl') ? [{ key: 'curl', label: '复制为 curl', icon: Terminal, run: emitAndClose('curl') }] : []),
+    { key: 'copy-group', label: '复制…', icon: Copy, sep: true, children: copyChildren },
+    ...(moreChildren.length ? [{ key: 'more-group', label: '更多操作…', icon: Pencil, children: moreChildren }] : []),
+  ];
+});
+
 function gotoIndex(idx?: string) {
   if (!idx) return;
   router?.push({ path: '/indices', query: { idx } });
@@ -180,8 +237,17 @@ const shown = computed(() => {
     (it.query || '').toLowerCase().includes(k)
     || (it.index || '').toLowerCase().includes(k)
     || (it.name || '').toLowerCase().includes(k)
+    || (it.params || '').toLowerCase().includes(k)
   );
 });
+
+/* 1071：参数徽标文案——合法数组出「参数 N」，历史里畸形值只出「参数」不猜数量 */
+function paramsTag(raw: string): string {
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? `参数 ${v.length}` : '参数';
+  } catch { return '参数'; }
+}
 
 async function copyIt(it: HistRow) {
   if (!it.query) return;
@@ -216,7 +282,10 @@ function exportShown() {
   const rows = props.exportRow
     ? shown.value.map(props.exportRow)
     : shown.value.map(it => ({
-        mode: it.mode, name: it.name, index: it.index, query: it.query, took: it.took, ts: it.ts,
+        mode: it.mode, name: it.name, index: it.index, query: it.query,
+        /* 1071：有参数才写键——无参数历史的导出形态与旧版逐字节一致 */
+        ...(it.params ? { params: it.params } : {}),
+        took: it.took, ts: it.ts,
       }));
   downloadText(
     `query-history-${seg}-${exportStamp()}.json`,
@@ -252,6 +321,11 @@ function modeLabel(k: string): string {
 .qhp-mode {
   font-size: var(--fs-2xs); font-weight: 600; padding: 0 var(--sp-1h); border-radius: var(--r-xs); line-height: 17px;
   background: var(--bg2); border: 1px solid var(--line); color: var(--tx1); flex-shrink: 0;
+}
+/* 1071：参数徽标与 mode 徽标同构（品牌色区分「这条回放会带参数」） */
+.qhp-params {
+  font-size: var(--fs-2xs); font-weight: 600; padding: 0 var(--sp-1h); border-radius: var(--r-xs); line-height: 17px;
+  background: var(--ac-soft); border: 1px solid var(--ac-line); color: var(--ac-hi); flex-shrink: 0;
 }
 .qhp-idx {
   font-size: var(--fs-2xs); color: var(--ac-hi); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;

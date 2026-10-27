@@ -305,8 +305,10 @@ import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-
 import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue';
 import TookBadge from '../components/TookBadge.vue';
 import { removeStoredRaw, writeStoredRaw } from '../utils/safeJson';
+import { useAuthStore } from '../stores/auth'; /* 历史回放自动执行的身份/读页门（1124 续） */
 
 const store = useAppStore();
+const auth = useAuthStore();
 const router = useRouter();
 
 const DEFAULT_DSL = `{
@@ -533,8 +535,24 @@ const histRows = computed(() => qh.items.filter(i => i.mode === 'sandbox'));
 function replayHistRow(row: { query: string }, runIt: boolean) {
   dslBody.value = row.query;
   histOpen.value = false;
-  if (runIt) run();
+  if (runIt) runAuto();
 }
+
+/* 历史回放自动执行的身份门（1124 续）：回放载荷可能来自上一账号，probe 未落地时旧 target
+   的检索会先发出去。手动点「执行」不拦，后端仍按 search 页读键裁决。 */
+const runAutoAllowed = () => auth.authDisabled
+  || !auth.probeStarted /* 探测未启动（无鉴权嵌入/测试宿主）视同身份已定，与 store.identityKnown 同口径 */
+  || (auth.probed && auth.me != null && auth.canReadPage('search', store.target));
+let runAutoPending = false;
+function runAuto() {
+  if (runAutoAllowed()) { runAutoPending = false; void run(); return; }
+  runAutoPending = true;
+}
+watch(() => [auth.probed, auth.authDisabled, auth.me?.username, store.target], () => {
+  if (!runAutoPending || !runAutoAllowed()) return;
+  runAutoPending = false;
+  void run();
+});
 
 /* 原始 IO 快查（545 四页同款）——特征 /cluster/search-dsl；判空 rec=null（本页
  还没跑过搜索）时 notify 引导，不开空弹窗 */

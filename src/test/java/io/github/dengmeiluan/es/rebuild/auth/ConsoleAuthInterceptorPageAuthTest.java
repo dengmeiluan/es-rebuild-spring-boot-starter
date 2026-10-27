@@ -39,6 +39,7 @@ import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -1361,5 +1362,195 @@ public class ConsoleAuthInterceptorPageAuthTest {
         assertTrue("ADMIN 是全局管理权，宿主隐藏不拦管理面",
                 it.preHandle(stubRequest("GET", "/internal/es/index/cluster/inspect?indexKey=orders", ""),
                         new StubResponse().proxy, null));
+    }
+
+    /* ═══ 1131：page-auth 逃生阀关闭时的角色档底线 ═══
+       背景：`es.rebuild.console.page-auth.enabled=false` 是运维逃生阀（启动期有 WARN 留痕），
+       关闭后回退「纯角色档」。审计要确认这个回退**不会**把写端点一并放开——
+       否则误配一次就等于全站放开写，比不开页面级授权更危险。 */
+    @Test
+    public void 关闭页面级授权_VIEWER仍不得写() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        /* pageAuthEnabled=false：退化为纯角色档 */
+        ConsoleAuthInterceptor it = interceptor(
+                new ConsolePrincipal("viewer", ConsoleRole.VIEWER, true, false), false, audit);
+        StubResponse resp = new StubResponse();
+        assertFalse(it.preHandle(stubRequest("POST", "/internal/es/index/cluster/doc", ""), resp.proxy, null));
+        assertEquals(403, resp.status);
+    }
+
+    @Test
+    public void 关闭页面级授权_VIEWER仍不得走DevTools透传() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor it = interceptor(
+                new ConsolePrincipal("viewer", ConsoleRole.VIEWER, true, false), false, audit);
+        StubResponse resp = new StubResponse();
+        assertFalse(it.preHandle(stubRequest("POST", "/internal/es/index/cluster/devtools/execute", ""), resp.proxy, null));
+        assertEquals(403, resp.status);
+    }
+
+    @Test
+    public void 关闭页面级授权_OPERATOR仍不得走DevTools透传() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor it = interceptor(
+                new ConsolePrincipal("op", ConsoleRole.OPERATOR, true, false), false, audit);
+        StubResponse resp = new StubResponse();
+        assertFalse(it.preHandle(stubRequest("POST", "/internal/es/index/cluster/devtools/execute", ""), resp.proxy, null));
+        assertEquals(403, resp.status);
+    }
+
+    @Test
+    public void 关闭页面级授权_ADMIN仍可写() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor it = interceptor(
+                new ConsolePrincipal("admin", ConsoleRole.ADMIN, true, false), false, audit);
+        assertTrue(it.preHandle(stubRequest("POST", "/internal/es/index/cluster/devtools/execute", ""), new StubResponse().proxy, null));
+    }
+
+    /* ═══ 1132：环境模板（env）必须能封住 ADMIN ═══
+       产线实账：deng_test_x1 的角色档在测试环境是 ADMIN，其连接被标为 PROD 时按 env 模板
+       应只剩只读页集（「生产环境只读」）。但 ADMIN 在页面门里是提前 return 的：
+       `if (role >= ADMIN) return true;` 位于 line 776，而 effectivePages（含 env 收缩）
+       在 line 867 才算 —— ADMIN 根本不走 env 判定，env 模板对 ADMIN 形同虚设。
+       env 是环境级封顶（不是页面授权），与角色正交：ADMIN 可以不受页面白名单限制，
+       但不能不受「这个连接是生产库」的限制。 */
+
+    /** 与 interceptor 同构，但 c1 连接带 env=PROD，且 PROD 模板只给 overview 只读。 */
+    private static ConsoleAuthInterceptor interceptorWithProdEnv(ConsolePrincipal principal) {
+        EsConsoleAuthorizer authorizer = req -> principal;
+        ControlClusterResolver resolver = new ControlClusterResolver(null, null, null, null, null, "auto") {
+            @Override public boolean bound() { return true; }
+        };
+        ConnStore stubStore = new ConnStore() {
+            @Override public java.util.List<java.util.Map<String, Object>> list() { return java.util.Collections.emptyList(); }
+            @Override public RemoteClusterConn get(String id) {
+                if (!"c1".equals(id)) return null;
+                RemoteClusterConn conn = new RemoteClusterConn();
+                conn.setMinRole("VIEWER");
+                conn.setEnv("PROD");
+                return conn;
+            }
+            @Override public String getName(String id) { return "c1".equals(id) ? "c1" : null; }
+            @Override public String getVersion(String id) { return null; }
+            @Override public java.util.Map<String, Object> save(String id, String name, String url, String username,
+                    String password, String minRole, Integer connectTimeoutMs, Integer socketTimeoutMs, String env) { throw new UnsupportedOperationException(); }
+            @Override public void delete(String id) { }
+            @Override public void updateVersion(String id, String version) { }
+        };
+        Map<String, Set<String>> templates = new HashMap<>();
+        templates.put("PROD", new HashSet<>(Collections.singletonList("overview")));
+        EsRebuildProperties props = new EsRebuildProperties();
+        props.setEnvPages(templates);
+        return new ConsoleAuthInterceptor(authorizer, new CapturingAudit(), resolver,
+                ConsolePageCatalog.load(), true, new EnvPagesResolver(stubStore, props), stubStore);
+    }
+
+    private static HttpServletRequest reqWithTarget(String method, String uri, String target) {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("X-Es-Target", target);
+        return stubRequest(method, uri, headers);
+    }
+
+    @Test
+    public void PROD环境模板封住ADMIN的写() throws Exception {
+        ConsoleAuthInterceptor it = interceptorWithProdEnv(
+                new ConsolePrincipal("deng_test_x1", ConsoleRole.ADMIN, true, false));
+        StubResponse resp = new StubResponse();
+        assertFalse("PROD 连接的写必须被 env 封顶（即使角色是 ADMIN，x1 产线就是这种身份）",
+                it.preHandle(reqWithTarget("POST", "/internal/es/index/cluster/raw", "c1"), resp.proxy, null));
+        assertEquals(403, resp.status);
+    }
+
+    @Test
+    public void PROD环境模板封住ADMIN的DevTools执行() throws Exception {
+        ConsoleAuthInterceptor it = interceptorWithProdEnv(
+                new ConsolePrincipal("deng_test_x1", ConsoleRole.ADMIN, true, false));
+        StubResponse resp = new StubResponse();
+        assertFalse(it.preHandle(reqWithTarget("POST", "/internal/es/index/cluster/devtools/execute", "c1"),
+                resp.proxy, null));
+        assertEquals(403, resp.status);
+    }
+
+    @Test
+    public void PROD环境内的只读页对ADMIN仍然放行() throws Exception {
+        /* 防误拦：env 模板里有的页面必须照常可用，尤其 ADMIN 不能被一刀切成全拒 */
+        ConsoleAuthInterceptor it = interceptorWithProdEnv(
+                new ConsolePrincipal("deng_test_x1", ConsoleRole.ADMIN, true, false));
+        assertTrue(it.preHandle(reqWithTarget("GET", "/internal/es/index/overview", "c1"),
+                new StubResponse().proxy, null));
+    }
+
+    @Test
+    public void PROD环境外的页面ADMIN也读不到() throws Exception {
+        /* 用有页面归属的读端点（devtools 页的读前缀）。无页归属的基础读（keys / indices）
+           本就不该被 env 封顶——封顶按「页」判，判不出页就放行，否则有权限的人被误拦。 */
+        ConsoleAuthInterceptor it = interceptorWithProdEnv(
+                new ConsolePrincipal("deng_test_x1", ConsoleRole.ADMIN, true, false));
+        StubResponse resp = new StubResponse();
+        assertFalse("env 模板之外的页面在 PROD 连接上应被拒",
+                it.preHandle(reqWithTarget("POST", "/internal/es/index/cluster/sql", "c1"),
+                        resp.proxy, null));
+    }
+
+    @Test
+    public void 无页归属的基础读不被env误拦() throws Exception {
+        /* 防误拦：索引下拉的基线读（cluster/indices）没有页面归属，不该因 PROD 模板被拦，
+           否则用户在 PROD 连接下连「有哪些索引」都看不到。 */
+        ConsoleAuthInterceptor it = interceptorWithProdEnv(
+                new ConsolePrincipal("deng_test_x1", ConsoleRole.ADMIN, true, false));
+        assertTrue(it.preHandle(reqWithTarget("GET", "/internal/es/index/cluster/indices", "c1"),
+                new StubResponse().proxy, null));
+    }
+
+    @Test
+    public void 自举与系统管理端点不被env误拦() throws Exception {
+        /* env 封顶已提到最前面，必须确认它没有把自举面（身份/连接目录/setup/权限自查）
+           一起封掉——这些端点 host-bound，在服务器上执行，不属于任何连接的环境。
+           封掉任何一个都会让用户在 PROD 视图下直接失去自助能力（看不见菜单、退不出、改不了密）。 */
+        ConsoleAuthInterceptor it = interceptorWithProdEnv(
+                new ConsolePrincipal("deng_test_x1", ConsoleRole.ADMIN, true, false));
+        String[][] cases = {
+                {"GET", "/internal/es/index/auth/me"},
+                {"GET", "/internal/es/index/auth/permissions"},
+                {"POST", "/internal/es/index/auth/change-password"},
+                {"POST", "/internal/es/index/auth/logout"},
+                {"GET", "/internal/es/index/clusters"},
+                {"GET", "/internal/es/index/clusters/sync"},
+                {"GET", "/internal/es/index/setup/status"},
+        };
+        for (String[] c : cases) {
+            assertTrue("自举端点被 env 封顶误拦：" + c[0] + " " + c[1],
+                    it.preHandle(reqWithTarget(c[0], c[1], "c1"), new StubResponse().proxy, null));
+        }
+    }
+
+    @Test
+    public void 宿主目标不受env模板影响_ADMIN照常可用() throws Exception {
+        /* host 不是某个环境：宿主自身的读写不能被 PROD 模板拖走（否则控制面自己就废了） */
+        ConsoleAuthInterceptor it = interceptorWithProdEnv(
+                new ConsolePrincipal("admin", ConsoleRole.ADMIN, true, false));
+        assertTrue(it.preHandle(stubRequest("POST", "/internal/es/index/cluster/raw", ""),
+                new StubResponse().proxy, null));
+    }
+    /* 1132：非 ADMIN 探测系统管理域（账号库/连接档案/重绑）必须留痕。
+       这是攻击者最常试的一类高价值端点，此前直接 deny、不落审计——
+       「有人试过但事后查不到」。 */
+    @Test
+    public void 非ADMIN探测系统管理域被拒且落审计() throws Exception {
+        CapturingAudit audit = new CapturingAudit();
+        ConsoleAuthInterceptor it = interceptor(
+                delegatedAs(ConsoleRole.OPERATOR,
+                        new java.util.HashSet<>(java.util.Arrays.asList("conn:host:w:security"))),
+                true, audit);
+        StubResponse resp = new StubResponse();
+        /* 用真正的系统管理域端点（/clusters/ 在 SYSTEM_ADMIN_KEYWORDS 里）：
+           /auth/users 反而走页面门（security 页写键），演示不到这条分支。 */
+        boolean ok = it.preHandle(stubRequest("POST", "/internal/es/index/clusters/save", ""),
+                resp.proxy, null);
+        assertFalse("非 ADMIN 不得触达连接档案", ok);
+        assertEquals(403, resp.status);
+        assertNotNull("越权尝试必须落审计", audit.last);
+        assertEquals("ADMIN_DENIED", audit.action);
+        assertEquals("/internal/es/index/clusters/save", audit.uri);
     }
 }

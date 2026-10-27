@@ -26,3 +26,25 @@ export function walkMappingTypes(props: unknown, prefix = ''):
   walk(props, prefix);
   return { fields, dates, types };
 }
+
+/* multi-field 子域类型表（父字段名 + '.' + 子域 → 类型）。
+ 与 walkMappingTypes 分家：fields 清单对外是「可查询字段」语义，multi-fields 仍按历史
+ 口径不进清单（源码锁依赖）；但排序/聚合裁决需要知道 a.keyword 是否存在且是 keyword，
+ 否则 text 列会被误判成不可排序。纯函数，可穷举单测。 */
+export function flattenSubFieldTypes(props: unknown, prefix = ''): Record<string, string> {
+  const out: Record<string, string> = {};
+  const walk = (p: unknown, pre: string) => {
+    if (!p || typeof p !== 'object' || Array.isArray(p)) return;
+    for (const [k, v] of Object.entries(p as Record<string, any>)) {
+      const path = pre ? pre + '.' + k : k;
+      if (v && typeof v === 'object') {
+        for (const [sub, sd] of Object.entries<any>(v.fields || {})) {
+          if (sd?.type) out[path + '.' + sub] = sd.type;
+        }
+        if (v.properties) walk(v.properties, path);
+      }
+    }
+  };
+  walk(props, prefix);
+  return out;
+}

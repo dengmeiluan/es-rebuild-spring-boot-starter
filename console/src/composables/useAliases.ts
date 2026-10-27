@@ -14,15 +14,19 @@ const cache: Cache = shallowReactive({ key: null, list: [], inflight: null });
 
 /* 最近一次请求的 key：飞行中切 key 后落地校验用（竞态自愈） */
 let lastRequestedKey: string | null = null;
+/* 换号代际：清理后在飞请求不得把上一账号的别名清单写回（否则新账号零网络看到旧连接元数据）。 */
+let epoch = 0;
 
 /** 拉取并缓存 key 对应的别名清单；同 key 幂等，inflight 去重，失败兜底空清单不阻塞调用方。 */
 export function ensureAliases(key: string): Promise<void> {
   lastRequestedKey = key;
   if (cache.key === key) return Promise.resolve();
   if (cache.inflight) return cache.inflight;
+  const reqEpoch = epoch;
   cache.inflight = (async () => {
     try {
       const raw = await api.aliases();
+      if (reqEpoch !== epoch) return;
       const map = new Map<string, string[]>();
       (raw || []).forEach((r: any) => {
         if (!r?.alias || String(r.alias).startsWith('.')) return;
@@ -33,8 +37,9 @@ export function ensureAliases(key: string): Promise<void> {
       cache.list = [...map.entries()].map(([name, to]) => ({ name, to }));
       cache.key = key;
     } catch {
-      cache.list = []; /* 失败不记 key：下次触发（openPanel/watch）自然重试，瞬时故障可自愈 */
+      if (reqEpoch === epoch) cache.list = []; /* 失败不记 key：下次触发（openPanel/watch）自然重试，瞬时故障可自愈 */
     } finally {
+      if (reqEpoch !== epoch) return;
       cache.inflight = null;
       /* 仅当落地的是旧 key 的请求才补拉新 key；本次就是 lastRequestedKey（失败未记 key）时
  交还外部触发重试（openPanel/watch），避免持续失败下的无界重试风暴 */
@@ -58,6 +63,7 @@ export function aliasesOf(index: string, key: string): string[] {
 
 /** 换号清理：别名清单是上一身份在目标集群上的元数据观测（连接名/索引名不外泄）。 */
 export function __clearAliasCache() {
+  epoch++;
   cache.key = null;
   cache.list = [];
   cache.inflight = null;

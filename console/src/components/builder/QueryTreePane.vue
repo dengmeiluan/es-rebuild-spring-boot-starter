@@ -1,5 +1,5 @@
 <template>
-  <div ref="paneEl" class="qtp" :class="{ froz: stale }" @keydown.ctrl.z.prevent="undo()" @keydown.ctrl.shift.z.prevent="redo()" @keydown.ctrl.y.prevent="redo()">
+  <div ref="paneEl" class="qtp" :class="{ froz: stale }" @keydown.ctrl.z.prevent="undo()" @keydown.ctrl.shift.z.prevent="redo()" @keydown.ctrl.y.prevent="redo()" @keydown.esc="onSelectEsc" @keydown.ctrl.a="onSelectAllKey" @keydown.alt.up.prevent="nudgeFocused(-1)" @keydown.alt.down.prevent="nudgeFocused(1)">
     <div v-if="stale" class="qtp-stale">
       右侧 DSL 有未解析的修改，条件树冻结显示最近一次成功解析——修正语法后自动恢复。
     </div>
@@ -8,6 +8,8 @@
          与编辑区同源（同一棵 tree），无独立状态，树变即变。 -->
     <QuerySentenceBar v-if="tree.root && !isPlainMatchAll" :tree="tree" @locate="locateNode" />
 
+    <!-- 1049：头部+多选工具条吸顶——长树滚动时计数/警示/批量动作恒可达 -->
+    <div class="qtp-sticky">
     <!-- 面板头部：递归叶子条件计数徽标（含嵌套与临时停用） -->
     <div v-if="tree.root" class="qtp-hd"><!-- 993：undo/redo（面板写路径单点汇聚 setRoot，栈深 50；title 避开 541/553 锁词） -->
       <button class="btn sm ghost" aria-label="撤销上一步树编辑" :disabled="!undoStack.length" :title="'撤销上一步树编辑（Ctrl+Z），可回退 ' + undoStack.length + ' 步'" @click="undo()"><Undo2 :size="11" /></button>
@@ -17,6 +19,19 @@
  裸 pill 升级 .chip.static 质感档（bg2 底+line 边+tabular-nums 全局单源），
  数字 mono 包裹（textContent 不变，fieldSelectPopup 计数断言兼容） -->
       <span class="qtp-cnt chip static" :class="{ hot: leafStats.total > 10 }" :title="cntTitle">共 <b class="mono">{{ leafStats.total }}</b> 条件<template v-if="leafStats.disabled"> · 停用 <b class="mono">{{ leafStats.disabled }}</b></template><template v-if="leafStats.nested"> · 嵌套 <b class="mono">{{ leafStats.nested }}</b></template></span>
+      <!-- 全部停用=空 bool=match_all：这是危险的静默放宽，必须显性提示 -->
+      <span v-if="leafStats.total > 0 && leafStats.disabled === leafStats.total" class="chip static qtp-alloff" role="status"
+            title="所有条件都已停用，序列化后是空 bool，ES 会按 match_all 返回全部文档；点「启用全部」恢复">
+        全部停用 = 匹配全部文档
+      </span>
+      <!-- 1045：未填值条件——半成品条件在长树里几乎不可见，给可点击计数直达首个空值行 -->
+      <button v-if="unfilledCount" type="button" class="btn sm ghost qtp-unfilled"
+              :title="'有 ' + unfilledCount + ' 个条件还没填值，点击定位到第一个（执行时这些条件不会命中）'"
+              @click="locateFirstUnfilled"><CircleAlert :size="11" /> 未填值 <b class="mono">{{ unfilledCount }}</b></button>
+      <!-- 1049：多选批量——选中行/组后统一停用、启用或删除；父组选中即整棵子树生效 -->
+      <button v-if="tree.root && !isPlainMatchAll" type="button" class="btn sm ghost qtp-sel-tg" :class="{ on: selectMode }"
+              :aria-pressed="selectMode" :title="selectMode ? '退出多选' : '进入多选：勾选条件后批量停用/启用/复制/删除'"
+              @click="toggleSelectMode"><ListChecks :size="11" /> 多选</button>
       <span style="flex:1"></span>
       <!-- 条件搜索定位——命中行柔底高亮并滚动定位，清空恢复；
  计数 N/M + Enter/Shift+Enter 逐命中轮转（当前命中加重档）。
@@ -53,6 +68,19 @@
     <div v-else-if="undoStack.length || redoStack.length" class="qtp-hd">
       <button class="btn sm ghost" aria-label="撤销上一步树编辑" :disabled="!undoStack.length" :title="'撤销上一步树编辑（Ctrl+Z），可回退 ' + undoStack.length + ' 步'" @click="undo()"><Undo2 :size="11" /></button>
       <button class="btn sm ghost" aria-label="重做树编辑" :disabled="!redoStack.length" title="重做树编辑（Ctrl+Shift+Z / Ctrl+Y）" @click="redo()"><Redo2 :size="11" /></button>
+    </div>
+
+    <!-- 1049：多选批量工具条——独立一行（窄构建栏内 7 个控件挤在筛选行会换行错位） -->
+    <div v-if="selectMode" class="qtp-batch" role="toolbar" aria-label="多选批量操作">
+      <span class="chip static qtp-sel-cnt" title="Shift+点击连续范围选择 · Ctrl+A 全选 · Esc 退出多选">已选 <b class="mono">{{ selectedCount }}</b></span>
+      <button type="button" class="btn sm ghost" @click="selectAll">全选</button>
+      <button type="button" class="btn sm ghost" :disabled="!selectedCount" @click="clearSelection">清空</button>
+      <button type="button" class="btn sm ghost" :disabled="!selectedCount" title="停用选中条件（组=整棵子树）" @click="batchDisable(true)">停用</button>
+      <button type="button" class="btn sm ghost" :disabled="!selectedCount" title="恢复选中条件参与匹配" @click="batchDisable(false)">启用</button>
+      <button type="button" class="btn sm ghost" :disabled="!selectedCount" title="复制选中条件（组=整棵子树；副本紧跟在原件后，可直接改字段/值）" @click="batchDuplicate"><Copy :size="11" /> 复制</button>
+      <button type="button" class="btn sm ghost" :disabled="!canGroupSelected" :title="groupTitle" @click="batchGroup">包组</button>
+      <button type="button" class="btn sm ghost danger" :disabled="!selectedCount" @click="batchDelete"><Trash2 :size="11" /> 删除</button>
+    </div>
     </div>
 
     <!-- v3.1 空态：漏斗插画+光晕引导（替代单行虚线框） -->
@@ -112,24 +140,33 @@
  index prop：写入 fieldSearch 的当前索引上下文（per-index 最近字段记忆供 defaultLeaf 与
  子树深处的 FieldSelect 读取——NodeRenderer 之下逐层透传 prop 不现实）。 */
 import { computed, watch, watchEffect, provide, ref, nextTick, onBeforeUnmount } from 'vue';
-import { Plus, ChevronsDown, ChevronsUp, Pause, Play, Undo2, Redo2, ClipboardPaste } from 'lucide-vue-next';
+import { Plus, ChevronsDown, ChevronsUp, Pause, Play, Undo2, Redo2, ClipboardPaste, CircleAlert, ListChecks, Trash2, Copy } from 'lucide-vue-next';
 import { subtreeStash, readStashSubtree } from '../../utils/queryStash';
 import SearchFilterBar from '../SearchFilterBar.vue';
 import BoolGroupNode, { BGN_COLLAPSE_EVENT } from './BoolGroupNode.vue';
 import NodeRenderer from './NodeRenderer.vue';
 import QuerySentenceBar from './QuerySentenceBar.vue';
 import RootExtrasPane from './RootExtrasPane.vue';
-import { TREE_BUS } from './treeBus';
+import { TREE_BUS, SELECT_BUS } from './treeBus';
 import { setFieldSearchIndex, setFieldSearchUsedFields, defaultLeafTarget } from '../../utils/fieldSearch';
 import {
   nid, moveNode, findNode, serQueryNode, wrapInBool, updateNodeById, cloneNode, insertAfter,
-  type QueryTree, type QueryNode, type BoolNode, type LeafNode,
+  countUnfilledLeaves, firstUnfilledLeafId, setDisabledForIds, removeNodesByIds, duplicateNodesByIds,
+  canGroupByIds, groupNodesByIds, moveSibling,
+  type QueryTree, type QueryNode, type BoolNode, type LeafNode, type WrapNode, type MultiNode,
 } from '../../utils/queryAst';
 
 const props = defineProps<{
   tree: QueryTree; fields: string[]; types: Record<string, string>; stale?: boolean; index?: string;
 }>();
-const emit = defineEmits<{ (e: 'update:tree', t: QueryTree): void; (e: 'locateDsl', id: string): void }>();
+const emit = defineEmits<{
+  (e: 'update:tree', t: QueryTree): void;
+  (e: 'locateDsl', id: string): void;
+  /* 1069 续：条件行一键建运行时字段成功——宿主负责提示去补 script */
+  (e: 'runtime-defined', p: { name: string; type: string }): void;
+  /* 1069 续：条件行发现运行时字段缺 script——宿主展开检索参数并定位补 script */
+  (e: 'runtime-edit', name: string): void;
+}>();
 
 watch(() => props.index, i => setFieldSearchIndex(i || ''), { immediate: true });
 
@@ -189,6 +226,12 @@ const leafStats = computed(() => {
 /* 启停循环钮感知源——树内叶 disabled 字段必然在场（leafStats 递归已统计）：
  存在停用条件显「启用全部」，否则显「停用全部」；点后写树换引用，感知随动 */
 const hasDisabled = computed(() => leafStats.value.disabled > 0);
+/* 1045：未填值条件计数/首项——纯函数在 queryAst（执行行提示与构建器头部同源） */
+const unfilledCount = computed(() => countUnfilledLeaves(props.tree.root));
+function locateFirstUnfilled() {
+  const id = firstUnfilledLeafId(props.tree.root);
+  if (id) void flashRow(id, true);
+}
 const cntTitle = computed(() => {
   const s = leafStats.value;
   let t = '条件树中的叶子条件总数（含嵌套分区与临时停用的条件）';
@@ -238,9 +281,13 @@ async function rescanFind() {
   const hits: HTMLElement[] = [];
   for (const row of Array.from(root.querySelectorAll('.cn'))) {
     const field = (row.querySelector('.fs-inp') as HTMLInputElement | null)?.value || '';
-    const op = (row.querySelector('.cn-op') as HTMLSelectElement | null)?.value || '';
+    const sel = row.querySelector('.cn-op') as HTMLSelectElement | null;
+    const op = sel ? (sel.options[sel.selectedIndex]?.text || sel.value) : '';
     const val = (row.querySelector('.cn-val') as HTMLInputElement | HTMLSelectElement | null)?.value || '';
-    if ((field + ' ' + op + ' ' + val).toLowerCase().includes(q)) {
+    /* 1045：搜索面加入中文算子名（下拉 option 文本）与 chip 值/无值文案——
+       旧实现只读 select.value（term），用户输入「精确」「无值」搜不到。 */
+    const hay = [field, op, val, row.textContent || ''].join(' ').toLowerCase();
+    if (hay.includes(q)) {
       row.classList.add('qtp-hit');
       hits.push(row as HTMLElement);
     }
@@ -367,11 +414,66 @@ const redoStack = ref<QueryTree[]>([]);
 let lastEmitted: QueryTree | null = null;
 const UNDO_MAX = 50;
 
+/* 1045：输入级编辑合并——同一条叶子在 1.2s 内的连续字段/值输入只入栈一次。
+   旧实现每敲一个字 push 一份快照，50 格撤销栈被 30 字公司名吃光，结构编辑被挤出历史。
+   只有「结构不变且仅一条叶子字段/值变化」才合并；删除/加组/拖拽等结构动作照常逐步入栈。 */
+let lastTypingId: string | null = null;
+let lastTypingAt = 0;
+const TYPING_COALESCE_MS = 1200;
+function collectChangedLeafIds(a: QueryNode | null, b: QueryNode | null, out: string[]): boolean {
+  if (!a || !b) return a === b;
+  if (a.type !== b.type || a.id !== b.id) return false;
+  if (a.type === 'leaf') {
+    const al = a, bl = b as LeafNode;
+    if (al.op !== bl.op) return false;
+    if ((al.disabled === true) !== (bl.disabled === true)) return false;
+    const ja = JSON.stringify({ ...al, id: '' });
+    const jb = JSON.stringify({ ...bl, id: '' });
+    if (ja !== jb) out.push(al.id);
+    return true;
+  }
+  if (a.type === 'bool') {
+    const ab = a, bb = b as BoolNode;
+    if (ab.children.length !== bb.children.length) return false;
+    if (JSON.stringify(ab.params) !== JSON.stringify(bb.params)) return false;
+    for (let i = 0; i < ab.children.length; i++) {
+      if (ab.children[i].occur !== bb.children[i].occur) return false;
+      if (!collectChangedLeafIds(ab.children[i].node, bb.children[i].node, out)) return false;
+    }
+    return true;
+  }
+  if (a.type === 'wrap') {
+    const aw = a, bw = b as WrapNode;
+    if (aw.op !== bw.op || aw.field !== bw.field || aw.childKey !== bw.childKey) return false;
+    if (JSON.stringify(aw.params) !== JSON.stringify(bw.params)) return false;
+    return collectChangedLeafIds(aw.child, bw.child, out);
+  }
+  const am = a as MultiNode, bm = b as MultiNode;
+  if (am.op !== bm.op || am.children.length !== bm.children.length) return false;
+  if (JSON.stringify(am.params) !== JSON.stringify(bm.params)) return false;
+  for (let i = 0; i < am.children.length; i++) {
+    if (am.children[i].key !== bm.children[i].key) return false;
+    if (!collectChangedLeafIds(am.children[i].node, bm.children[i].node, out)) return false;
+  }
+  return true;
+}
+function singleTypingId(prev: QueryTree, next: QueryTree): string | null {
+  const ids: string[] = [];
+  if (!collectChangedLeafIds(prev.root, next.root, ids)) return null;
+  return ids.length === 1 ? ids[0] : null;
+}
 function commitTree(next: QueryTree, skipHistory = false) {
   if (!skipHistory) {
-    undoStack.value.push(props.tree);
-    if (undoStack.value.length > UNDO_MAX) undoStack.value.shift();
+    const now = Date.now();
+    const typingId = singleTypingId(props.tree, next);
+    const coalesce = !!typingId && typingId === lastTypingId && now - lastTypingAt < TYPING_COALESCE_MS;
+    if (!coalesce) {
+      undoStack.value.push(props.tree);
+      if (undoStack.value.length > UNDO_MAX) undoStack.value.shift();
+    }
     redoStack.value = [];
+    lastTypingId = typingId;
+    lastTypingAt = now;
   }
   lastEmitted = next;
   emit('update:tree', next);
@@ -389,6 +491,7 @@ watch(() => props.tree, t => {
 function undo() {
   const prev = undoStack.value.pop();
   if (!prev) return;
+  lastTypingId = null; lastTypingAt = 0;
   redoStack.value.push(props.tree);
   lastEmitted = prev;
   emit('update:tree', prev);
@@ -396,6 +499,7 @@ function undo() {
 function redo() {
   const next = redoStack.value.pop();
   if (!next) return;
+  lastTypingId = null; lastTypingAt = 0;
   undoStack.value.push(props.tree);
   lastEmitted = next;
   emit('update:tree', next);
@@ -407,6 +511,9 @@ defineExpose({
   commitTree: (t: QueryTree) => commitTree(t),
   /* 1008：DSL 光标反向联动入口（仅行滚动+脉冲，不 emit 不抢焦点） */
   highlightFromDsl: (id: string) => { void highlightFromDsl(id); },
+  /* 1045：未填值条件读数/定位（构建区收起时执行行仍可提示，点击展开并落位） */
+  unfilledCount: () => unfilledCount.value,
+  locateFirstUnfilled: () => locateFirstUnfilled(),
 });
 function onRootUpdate(n: QueryNode) { setRoot(n); }
 function onRootRemove() { setRoot(matchAllLeaf()); }
@@ -430,12 +537,24 @@ function onDuplicate(id: string) {
   setRoot(insertAfter(r, id));
 }
 
+/* 1045：新建根条件后焦点直达字段输入（用户下一步就是选字段/填值） */
+function focusNodeById(id: string) {
+  /* 双 nextTick：父级树引用更新后子组件（BoolGroupNode→ClauseNode）还要再渲染一拍；
+     单 tick 时 DOM 尚未出现，焦点会落回 body。 */
+  nextTick(() => nextTick(() => {
+    const el = paneEl.value?.querySelector<HTMLElement>(`[data-nid="${id}"]`);
+    (el?.querySelector<HTMLElement>('.fs-inp, input, select, textarea'))?.focus();
+    el?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  }));
+}
 function addFirst() {
+  const leaf = defaultLeaf();
   const g: BoolNode = {
     id: nid(), type: 'bool',
-    children: [{ occur: 'must', node: defaultLeaf() }], params: {}, arrForm: { must: true },
+    children: [{ occur: 'must', node: leaf }], params: {}, arrForm: { must: true },
   };
   setRoot(g);
+  focusNodeById(leaf.id);
 }
 
 /* 1036：空态粘贴子树——跨查询剪贴落为 bool.must 条件组（parseQueryNode 重建全新 id）；
@@ -452,13 +571,150 @@ function pasteFirst() {
 function addSibling() {
   const r = props.tree.root;
   if (!r) return addFirst();
+  const leaf = defaultLeaf();
   const g: BoolNode = {
     id: nid(), type: 'bool',
-    children: [{ occur: 'must', node: r }, { occur: 'must', node: defaultLeaf() }],
+    children: [{ occur: 'must', node: r }, { occur: 'must', node: leaf }],
     params: {}, arrForm: { must: true },
   };
   setRoot(g);
+  focusNodeById(leaf.id);
 }
+
+/* ═══ 1049：多选批量 ═══
+   选中集合只存节点 id；批量停用/删除对选中节点整棵子树生效（父组选中即停，不下钻），
+   因此父子同选不会重复操作。删除后清空选择；停用保留选择便于立即「启用」。 */
+const selectMode = ref(false);
+const selectedIds = ref<Set<string>>(new Set());
+const selectedCount = computed(() => selectedIds.value.size);
+/* 1052：包组只对「同一父组、同一 occur 分区」的选中兄弟开放——组内沿用原 occur，
+   插回原位，只多一层括号，布尔语义不变；跨组/跨分区会移动条件出原上下文，故禁用。 */
+const canGroupSelected = computed(() =>
+  !!props.tree.root && canGroupByIds(props.tree.root, selectedIds.value));
+const groupTitle = computed(() => canGroupSelected.value
+  ? '把选中条件包成一个新组（同分区兄弟，不改变查询语义）'
+  : '包组要求至少两个同一分组、同一逻辑的条件：且/过滤，或未设 minimum_should_match 的或；排除(must_not)不能直接包组');
+function allNodeIds(): Set<string> {
+  const out = new Set<string>();
+  const walk = (x: QueryNode) => {
+    out.add(x.id);
+    if (x.type === 'bool') x.children.forEach(c => walk(c.node));
+    else if (x.type === 'wrap') { if (x.child) walk(x.child); }
+    else if (x.type === 'multi') x.children.forEach(c => walk(c.node));
+  };
+  if (props.tree.root) walk(props.tree.root);
+  return out;
+}
+function toggleSelectMode() {
+  selectMode.value = !selectMode.value;
+  lastToggleId = null;
+  if (!selectMode.value) selectedIds.value = new Set();
+}
+/* 1053：Shift 连续范围按「当前可见行」DOM 序补齐——折叠组内未渲染的行不参与，
+   避免选中用户看不见的条件。取消勾选时同样按区间批量取消。 */
+let lastToggleId: string | null = null;
+function visibleNodeOrder(): string[] {
+  const els = paneEl.value?.querySelectorAll<HTMLElement>('[data-nid]');
+  return els ? [...els].map(el => el.dataset.nid || '').filter(Boolean) : [];
+}
+function toggleSelect(id: string, shift = false) {
+  const next = new Set(selectedIds.value);
+  if (shift && lastToggleId && lastToggleId !== id) {
+    const order = visibleNodeOrder();
+    const a = order.indexOf(lastToggleId), b = order.indexOf(id);
+    if (a >= 0 && b >= 0) {
+      const [lo, hi] = a < b ? [a, b] : [b, a];
+      const turnOn = !next.has(id);
+      for (let i = lo; i <= hi; i++) turnOn ? next.add(order[i]) : next.delete(order[i]);
+      lastToggleId = id;
+      selectedIds.value = next;
+      return;
+    }
+  }
+  next.has(id) ? next.delete(id) : next.add(id);
+  lastToggleId = id;
+  selectedIds.value = next;
+}
+function selectAll() { selectedIds.value = allNodeIds(); lastToggleId = null; }
+function clearSelection() { selectedIds.value = new Set(); lastToggleId = null; }
+/* 多选态快捷键：文字输入区内不劫持（过滤条件照常全选/取消）；复选框/按钮聚焦时照常生效 */
+function inTextEntry(e: Event): boolean {
+  const t = e.target as HTMLElement | null;
+  if (!t) return false;
+  if ((t as HTMLElement).isContentEditable) return true;
+  if (t.tagName === 'TEXTAREA') return true;
+  if (t.tagName === 'INPUT') {
+    const type = (t as HTMLInputElement).type;
+    return !['checkbox', 'radio', 'button', 'submit', 'range', 'color'].includes(type);
+  }
+  return false;
+}
+function onSelectEsc(e: KeyboardEvent) {
+  if (!selectMode.value || inTextEntry(e)) return;
+  toggleSelectMode();
+}
+function onSelectAllKey(e: KeyboardEvent) {
+  if (!selectMode.value || inTextEntry(e)) return;
+  e.preventDefault();
+  selectAll();
+}
+/* 1067：Alt+↑/↓ 移动当前焦点行（或在多选中唯一选中的行）到同分区相邻兄弟；
+   与拖拽同语义（只在同 occur / multi 同 key 内换位），边界静默不动。 */
+function nudgeFocused(delta: -1 | 1) {
+  const r = props.tree.root;
+  if (!r) return;
+  const active = document.activeElement as HTMLElement | null;
+  const row = active?.closest?.('[data-nid]') as HTMLElement | null;
+  let id = row?.dataset.nid || '';
+  if (!id && selectedIds.value.size === 1) id = [...selectedIds.value][0];
+  if (!id) return;
+  const next = moveSibling(r, id, delta);
+  if (next === r) return;
+  const activeToken = typeof active?.className === 'string'
+    ? active.className.split(/\s+/).find(c => /^[A-Za-z][\w-]*$/.test(c)) || ''
+    : '';
+  setRoot(next);
+  nextTick(() => {
+    const el = paneEl.value?.querySelector<HTMLElement>(`[data-nid="${id}"]`);
+    el?.scrollIntoView?.({ block: 'nearest' });
+    const target = activeToken ? el?.querySelector<HTMLElement>('.' + activeToken) : null;
+    (target || el?.querySelector<HTMLElement>('.fs-inp, input, select, textarea'))?.focus();
+  });
+}
+function batchDisable(disabled: boolean) {
+  const r = props.tree.root;
+  if (!r || !selectedCount.value) return;
+  setRoot(setDisabledForIds(r, selectedIds.value, disabled));
+}
+/* 1051：批量复制保留选择——原件仍在可直接继续改字段/值；副本 id 全新，紧跟在原件之后 */
+function batchDuplicate() {
+  const r = props.tree.root;
+  if (!r || !selectedCount.value) return;
+  setRoot(duplicateNodesByIds(r, selectedIds.value));
+}
+function batchGroup() {
+  const r = props.tree.root;
+  if (!r || !canGroupSelected.value) return;
+  setRoot(groupNodesByIds(r, selectedIds.value));
+}
+function batchDelete() {
+  const r = props.tree.root;
+  if (!r || !selectedCount.value) return;
+  const next = removeNodesByIds(r, selectedIds.value);
+  setRoot(next);
+  selectedIds.value = new Set();
+  /* 删到只剩 match_all：多选模式没有可选对象，直接退出（避免工具行留下无意义开关态） */
+  if (next.type === 'leaf' && next.op === 'match_all') selectMode.value = false;
+}
+/* 外部换树/删除后 prune 失效 id（避免计数与实际不符）；同值不写防 watch 环 */
+watch(() => props.tree, t => {
+  if (!selectMode.value || !selectedIds.value.size) return;
+  const valid = allNodeIds();
+  const next = [...selectedIds.value].filter(id => valid.has(id));
+  if (next.length !== selectedIds.value.size) selectedIds.value = new Set(next);
+});
+
+provide(SELECT_BUS, { enabled: selectMode, selected: selectedIds, toggle: toggleSelect });
 
 provide(TREE_BUS, {
   move(dragId, targetBoolId, occur, anchorId) {
@@ -472,11 +728,27 @@ provide(TREE_BUS, {
     if (!r) return;
     setRoot(updateNodeById(r, leafId, n => (n.type === 'leaf' ? { ...n, disabled } : n)));
   },
+  /* 1069 续：字段不在 mapping 时补一个占位运行时字段（type 由行内值推断，script 留空）。
+     走 commitTree 使这次定义可撤销；重名/空名不动树，交由调用方提示。 */
+  defineRuntime(name, type) {
+    const n = (name || '').trim();
+    if (!n) return false;
+    const items = props.tree.runtimeMappings?.items || [];
+    if (items.some(it => it.name === n)) return false;
+    commitTree({ ...props.tree, runtimeMappings: { items: [...items, { name: n, body: { type } }] } });
+    emit('runtime-defined', { name: n, type });
+    return true;
+  },
+  /* 条件行读取用：computed 跟随 tree 引用更新（script 补上后提示自动消失） */
+  runtimeItems: computed(() => props.tree.runtimeMappings?.items || []),
+  editRuntime(name) { emit('runtime-edit', name); },
 });
 </script>
 
 <style scoped>
 .qtp { font-size: var(--fs-sm); }
+/* 吸顶工具区：背景必须实底（否则滚动内容透字）；负 margin 拉满面板宽再补回 padding */
+.qtp-sticky { position: sticky; top: 0; z-index: 6; background: var(--bg0); padding: var(--sp-0) 0 var(--sp-1); }
 /* 面板头部计数徽标（chip.static 弱化档）+ 工具行（过滤输入/折叠/启停按钮）。
  行布局对齐 DQ 执行行（.dq-run-row 同式）——--ctl-h: 26px 控制线，
  输入框与按钮统一消费；间距 var(--sp-*) */
@@ -485,6 +757,15 @@ provide(TREE_BUS, {
 /* chip 形态（bg2 底/line 边/字重 500/tabular-nums）归全局 .chip 单源，
  本处只压小档字号；hot 档 warn 底色+描边随 chip 边框语言 */
 .qtp-cnt { font-size: var(--fs-2xs); }
+/* 1045：未填值计数——warn 语义弱提示（可点直达），不抢主计数权重 */
+.qtp-unfilled { color: var(--warn); }
+.qtp-unfilled:hover { background: var(--warn-soft); }
+/* 1049：多选模式开关与批量工具条（激活柔底 + chip 计数，同工具行语言） */
+.qtp-sel-tg.on { color: var(--ac); background: var(--ac-soft); border-color: var(--ac-line); }
+.qtp-batch { display: flex; align-items: center; gap: var(--sp-1h); flex-wrap: wrap; padding: var(--sp-1h) var(--sp-2); margin-bottom: var(--sp-1); background: var(--bg2); border: 1px solid var(--line); border-radius: var(--r-s); }
+.qtp-sel-cnt { font-size: var(--fs-2xs); }
+/* 全部停用警示（warn 语义；语义等值于执行 match_all） */
+.qtp-alloff { font-size: var(--fs-2xs); color: var(--warn); background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
 /* N>10 警示色档（warn 系变量，黄点语义=条件树偏大需留意） */
 .qtp-cnt.hot { color: var(--warn); background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
 /* 条件搜索定位（SearchFilterBar 第四处消费）——壳三件套（panel 底/border-subtle

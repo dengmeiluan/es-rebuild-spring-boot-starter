@@ -1059,7 +1059,13 @@ async function consumeJobDeepLink() {
   delete rest.jobId;
   router.replace({ query: rest }).catch(() => {});
 }
-onMounted(async () => {
+/** 1125：挂载期读取（作业清单/目标索引清单/indexKey）同样要过身份门——
+    宿主换 token 的窗口里 probed 未落地，旧 target 与上一账号的作业行会先拉回来。
+    与 DslQuery autoRunAllowed 同口径；不放行则挂起，身份落地补跑。 */
+const xmReady = () => auth.authDisabled || !auth.probeStarted
+  || (auth.probed && auth.me != null && auth.canReadPage('xmigrate', store.target));
+let xmPendingBoot = false;
+async function bootReads() {
   consumeJobDeepLink(); /* 首载（无 ?jobId= 时即普通 loadJobs） */
   store.loadConns(); // ：连接下拉数据源
   // 目标索引补全清单：迁移写入端（宿主）索引，拿不到不阻塞（纯补全增强）。
@@ -1071,6 +1077,15 @@ onMounted(async () => {
   /* 装载即排序（字母序 + 最近选用置顶，见 sortKeyOpts） */
   try { keyOpts.value = sortKeyOpts((await api.keys()).map((k: string) => ({ label: k, value: k }))); }
   catch (e: any) { store.notify('warning', 'indexKey 清单加载失败（不影响手输）：' + friendlyApiError(e)); } /* w80：裸 e.message → friendlyEsError */
+}
+onMounted(() => {
+  if (xmReady()) void bootReads();
+  else xmPendingBoot = true;
+});
+watch(() => [auth.probed, auth.authDisabled, auth.me?.username, store.target], () => {
+  if (!xmPendingBoot || !xmReady()) return;
+  xmPendingBoot = false;
+  void bootReads();
 });
 /* 深链第二/三口——KeepAlive 回流与 SPA 内重入共用 consumeJobDeepLink（见上注） */
 onActivated(() => { consumeJobDeepLink(); });

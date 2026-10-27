@@ -147,6 +147,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue';
+import { applyVars, missingVars, hasVars } from '../utils/vars';
 import { NModal } from 'naive-ui';
 import EmptyState from '../components/EmptyState.vue';
 import StatusPill from '../components/StatusPill.vue'; /* W-D：响应状态徽标统一件 */
@@ -436,11 +437,29 @@ async function doSend() {
   jqResult.value = null;
   jqExpr.value = ''; // 清残留表达式，避免误套旧过滤
   searchExpr.value = '';
+  /* Console Variables（与 DevTools 同源）：判定看原始请求，发送用展开值；
+     未定义变量显式拦下——原样把 ${var} 发出去只会得到难懂的 ES 语法错误。 */
+  const pathRaw = path.value.trim();
+  const bodyRaw = hasBody.value ? stripJsonComments(body.value) : '';
+  const miss = missingVars([pathRaw, bodyRaw].join('\n'));
+  if (miss.length) {
+    sending.value = false;
+    store.notify('warning', '变量未定义：' + miss.map(n => '${' + n + '}').join('、') + '——请先在「变量」里填值');
+    return;
+  }
+  const pathFinal = hasVars(pathRaw) ? applyVars(pathRaw, undefined, { pathMode: true }) : pathRaw;
+  const bodyFinal = hasVars(bodyRaw) ? applyVars(bodyRaw) : bodyRaw;
+  /* 变量展开结果再过一次范围门：避免「原始路径合规、展开后越权」被前端放行 */
+  if ((pathFinal !== pathRaw || bodyFinal !== bodyRaw) && !requestInScope(method.value, pathFinal, bodyFinal)) {
+    sending.value = false;
+    store.notify('warning', scopeDenyHint.value + '（变量展开后的实际请求已越出当前授权范围）');
+    return;
+  }
   const t0 = performance.now();
   const signal = qr.begin();
   try {
     /* 2.6.0：发送前剥离 // 与 块注释（串内保护，_bulk NDJSON 天然安全）——注释随便写，ES 只收干净 JSON */
-    resp.value = await api.raw(method.value, path.value.trim(), hasBody.value ? stripJsonComments(body.value) : '', signal);
+    resp.value = await api.raw(method.value, pathFinal, bodyFinal, signal);
     elapsed.value = Math.round(performance.now() - t0);
     /* 去重：同 method+path 旧记录提到最新 */
     history.value = history.value.filter(h => !(h.method === method.value && h.path === path.value.trim()));

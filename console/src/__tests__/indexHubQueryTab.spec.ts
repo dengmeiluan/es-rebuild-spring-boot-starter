@@ -315,7 +315,10 @@ describe('IndexHub 查询 tab 页内历史接线（535 批 W3）', () => {
        562 同步更新：lucene 行分派 docsQ 草稿路径（runDocsNew 既有链），dsl 行原门零触 */
     expect(v).toMatch(/function replayIhHist\(row: \{ query: string; mode\?: string \}, runIt: boolean\) \{/);
     expect(v).toContain("if (row.mode === 'lucene') {");
-    expect(v).toMatch(/dsl\.value = row\.query;\s*histOpen\.value = false;\s*if \(runIt\) runDslNew\(\);/);
+    /* 身份门（autoRunAllowed 同口径）：回放改走 runDslAuto（dsl.value 回填与
+       from/size 注入路径不变；载荷来自上一账号时不抢发）。runDslNew 仍供用户主动点击。 */
+    expect(v).toContain('dsl.value = row.query;');
+    expect(v).toContain('if (runIt) runDslAuto();');
   });
 
   it('查询 tab 工具行挂载出现历史钮（行为面在 histPanel535）', async () => {

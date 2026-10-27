@@ -5,6 +5,712 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.68]（2026-10-27）
+
+### 产线复验（2026-10-27，QuoteHub 生产 20261027175234）
+
+已用三账号矩阵在真实产线按**真实发送通道**逐项复验（`/cluster/devtools/execute`、
+`/cluster/raw`、页面读端点），不是直连 ES 路径的伪入口：
+
+- `deng_test_x1`（飞书授权，生产只读）：PROD 连接读端点 200（`/cluster/indices`、
+  `/cluster/health`），写端点 403 `WRITE_DENIED`（`delete-by-query`/`create-index`），
+  DevTools 403；QA/STAGING 连接 DevTools 执行 200 —— 读写分档与「测试可写、生产只读」一致
+- `deng_test_x2`（超管）：PROD 读 200、建索引/删索引 200，`/auth/users/upsert` 被
+  `forbidDelegatedLocalUserWrite` 拒（委派身份不得管本地全局账号），`/setup/rebind` 参数校验
+- `deng_test_x3`（零权限）：所有数据面 403 `FORBIDDEN`/`CONN_FORBIDDEN`，连接目录为空
+- 三账号的「体积未知写请求」全部 411 `LENGTH_REQUIRED`，补丁在产线生效
+- 探测期间创建的 `qh_denied_probe_1068` 已删除，`/_cat/indices/qh_*probe*` 回空
+
+注：x1 的 DevTools 在 PROD 被拒**不是误拦**——DevTools 执行端点按设计需要 `w:devtools`
+写键（前端 `当前身份只读：执行需要 … DevTools / REST 直连写权限` 与后端同源）；
+「生产只读」由宿主未授予 PROD 连接的 `w:` 键实现，读路径（各页面读端点）正常放行。
+
+### 修复（权限加固续批）
+
+- 宿主鉴权抛异常时不再回落到浏览器里残留的内置 token：此前委托 `authenticate` 一次 500
+  就会让「已被宿主撤销的会话」静默升级成本地 ADMIN（委托异常分支绕过了 `hasCredential`
+  判定）。现在异常路径同样裁决：带宿主凭证 → 拒绝；凭证探测本身异常 → fail-closed。
+  「没带宿主凭证」的独立部署仍照常走内置登录，有权限的人不被误拦
+- 「是否带宿主凭证」改双信号并集（`hasCredential` 或 `tokenOf` 有值）：只实现 `tokenOf`
+  的自定义委托（quotehub 常见形态）此前 `hasCredential` 走默认 false，被宿主拒绝/宿主故障
+  时仍会回落内置 ADMIN——通用 SPI 层面的升级路径已封堵，任一探测异常一律 fail-closed
+- 自定义委托（只实现 `tokenOf`、不实现 `revoke`）的登出真正生效：控制台 `/auth/logout`
+  此前回 200 但令牌在 TTL 内继续可用（产线实测 200 → 复用 200）。委托报出令牌而自身未登记
+  拒绝时，由内核按保守上界（max(内置 TTL, 24h)）兜底登记；委托已自行吊销时不重复登记
+- 索引工作区三条自动执行链补身份门：「挂载即检索 / 切到文档页 / 切索引自动重拉」此前
+  不看身份探测状态，宿主换 token 的窗口里会用旧目标把上一账号的结果拉进新账号界面。
+  自动入口统一走 `runDocsAuto/runDslAuto`（身份已落地 + 当前目标可读才发，否则挂起并在
+  身份/目标收敛后补跑）；手动「检索/重试/执行查询」保持直发，有权限用户不被探测窗口挡住
+- 索引工作区历史回放（lucene/dsl）改走同一自动门，并保留原来「回第 1 页」的语义
+- 语法桥、模板库、Lucene 检索、检索沙盒、SQL 控制台四个视图的历史回放自动执行补同一
+  读页门：回放载荷可能来自上一账号，探测未落地时旧 target 的只读请求会先发出去（403
+  审计噪声 + 结果串号）。六处回放入口统一为 `if (runIt) xxxAuto()`，直调执行函数的旧形态
+  清零；`perm:scan` 新增机械规则（回放通道直调执行函数即失败），防止旧形态回潮
+- `perm:scan` 再补一条机械规则：任何页面/通用件写 `es-console.devtools.open`（含 `run: true`
+  自动执行档）必须带 `canDevtools` 或 `canOpen(path)` 前置门——收藏回放这类通用件用注入式
+  页面门同样算已门控。规则用正反两向自验（注入违规必报、恢复后即通过）
+- **修复前后端 DevTools 判定的一处真实分叉**（1124）：根路径 `POST /_msearch` 的空头行
+  `{}` 等于「不限索引」，后端 `guardMsearchBody` 会拒，但前端 scope 只查头部有没有写控制面
+  索引，判定为可执行——「亮着可执行、点下去 403」。现前端补齐同一规则：根路径空头禁用；
+  `/{index}/_msearch` 空头仍放行（ES 把路径索引当头的默认索引，非全量）。
+  金标准补 10 条向量（`?q=*`、`?source=`、`/_search_shards`、msearch 根/前缀、bulk 继承、
+  `_cat/aliases|shards` JSON 行式、`_cat/count`），前后端各侧一致性断言同时收紧
+- 远程集群卡右键「在 Dev Tools 看 cluster.settings」补入口门：此前带 `run: true` 直接跳转，
+  只读身份进去只会看到「已填入未执行」；现在无 DevTools/REST 写权限即在来源页说明并取消跳转
+- `perm:scan` 的 DevTools carry 规则改按「写入点前 1500 字符窗口」判定并要求注入门**被实际调用**
+  （原实现只要文件里出现过 `canEndpoint('admin'` 就算通过，把能力定义行本身当成了守卫——
+  删掉调用处仍绿，实测踩到）。注入式页面门（收藏回放的 `canOpen(dest)`）按调用形态单独放行；
+  两处负向自验（删 RemoteClusters 守卫、删 favReplay 调用）均能准确报出
+- `perm:scan` 的 DevTools carry 规则补认「页面读门」形态：TemplatesView「在 DevTools 打开」
+  用的是 `auth.canReadPage('devtools', target)`（与 canDevtools 同一裁决源），原规则只认
+  `canDevtools`/`canOpen(`，把一道真实存在的门判成缺失。只认 `canReadPage` 第一实参为字面量
+  `'devtools'` 的调用（不把任意页面读门当门），并做了负向自验——把该门改成 `if (false)` 后
+  规则立刻报出 TemplatesView:253，还原后回绿
+- DevTools **账号切换实测**（真实路径，非合成事件）：operator 身份造现场（路径含
+  `secretA`、三个 Tab、`es_devtools_draft:host` 落盘）→ 宿主侧换成 x3 → 前端触发重探后
+  **Tab 数 3→0、路径清空、磁盘草稿键 0 条**；角色降到只读时执行钮同时消失。账号切换
+  不留上一身份的表单/标签现场
+- DevTools 请求行控件高度统一（Kibana 对齐的第一处视觉毛刺）：此前同排五档高度混排
+  （路径框 36px / 主执行钮 25px / ghost 钮 22–23px / 方法下拉 26px），基线参差；现整行
+  统一 26px（`box-sizing` + 定高，路径框内 input 撑满）。实测高度直方图 `{22:2,23:1,25:1,26:1,36:1}`
+  → `{26:6}`，1440/1024 均无横向溢出与裁切
+- 集成指南抽屉的 `drawer-style` 弃用告警清零（naive-ui 新版改用 `:style`），视口钳制
+  `maxWidth: 94vw` 原样保留；`responsiveGuard239` 的锚⑤同步接受新写法，9 例全绿
+- 无写权限的只读身份不再看到「工具栏少一半却无处可查」：任务管理、任务树、数据浏览器、
+  一键优化向导补页头只读说明条（隐藏取消/删除/新建/应用钮时说明缺什么、怎么申请），
+  与 Aliases/ILM/Rest 既有只读说明同一语言；身份未探测完成前不闪现
+- DevTools 跳转在来源页就说清缺口：DSL 工作台（就地/历史）、索引工作区（就地/历史）、
+  ILM 示例策略的「到 DevTools」入口按 `devtools/execute` 能力先行判定，无权限直接提示
+  「需要 DevTools/REST 页写权限或 ADMIN」，不再把人送进一个只会「填入不执行」的页面
+- 安全中心账号写操作（保存/删除用户）的权限拦截补提示：此前静默 `return` 会让键盘/程序化
+  入口表现为「点了没反应」，现在明确说明需要 ADMIN 角色
+- **委派超管（产线 `deng_test_x2` = role=ADMIN + delegated=true）不再看到必失败的用户管理表单**：
+  后端 `forbidDelegatedLocalUserWrite` 现在先判委派再判角色（本地账号是宿主体系外的全局身份，
+  只有内置 ADMIN 能建/改/删），前端 `canWriteUsers` / `canEmitWrite` 同步把委派判断提到
+  `isAdmin()` 之前——旧顺序在超管档提前放行，表单亮着、点下去必 400。拒绝理由按身份来源给出
+  （「宿主委派身份只读」而非「需要 ADMIN 角色」，后者对委派超管是错的方向）；
+  用户列表读取与其它 ADMIN 域写（重绑以外的管理动作）不受影响，不误拦有权限的人
+- 委派超管越权的**端到端链路证明**（1132）：新增 `DelegatedAdminEscalation1132Test`，
+  把「拦截器裁决 → 控制器 → 真实 service → 存储接缝」串成一条链跑通。
+  结论澄清了一个易误判的分层事实：**拦截器对委派超管的用户管理写是放行的**（`isSystemAdminUri`
+  对 ADMIN 放行，而委派超管角色就是 ADMIN），真正的否决点在 `BuiltinConsoleAuthService`。
+  因此把断言写成「拦截器 403」是错的预期——会把正常链路判成漏洞。当前断言为「必然在
+  service 层被 `IllegalArgumentException` 拒绝，且未触达存储」。
+  负向自验：移除 service 守卫 → 2 例转红（请求穿过守卫抵达存储接缝）；
+  内置 ADMIN 用例保持绿（未被误拦）。
+- SQL 执行口径整族纳入换号清理：`es-console.pref.sql.params` 单键扩为
+  `es-console.pref.sql.`（时区/超时/取数/列式/图表开关）——换人后沿用上一账号的时区会让
+  日期列口径与 cursor 续页前后不一致
+
+### 修复（结果表遮挡与检索报错）
+
+- **表头点击排序不再报「操作失败」**：排序字段统一走 `resolveSortField` 裁决。`text` 字段
+  （`title`/`issuer_name` 这类最常见的列）没有 doc_values，直接下发 `sort` 必然 400
+  「Fielddata is disabled」——文档检索/DSL 工作台此前把列名原样透传。现在有 `.keyword`
+  子域就改打子域，没有就拦下并提示「换成 keyword/date/数值字段」，查询现场不动；
+  映射表补登 multi-field 子域（`title.keyword`），否则可排的 text 列会被误判为不可排
+- **检索失败不再用右下角弹窗盖住结果表**：有旧结果时再检索失败，错误条现在压在结果表
+  正上方（限高 132px），标注「下方仍是上一次检索成功的结果」并给重试/收起；首次失败仍走
+  整页错误态。toast 改为只入通知历史——它原本正好盖在表格正文上
+- 错误原因继续下潜到分片级叶子（`root_cause` / `caused_by`），不再只显示
+  「all shards failed」这类包装词；只剩包装词时提示「展开『原始 IO』可看分片级原因」
+- **工具行窄档只留图标（真修复）**：`ColPicker` / `TablePresetMenu` 的文案标签在子组件
+  模板里，原来的 `.rt-bar .cp-label` 写在 `scoped` 样式里永远打不中（子组件元素不带父组件
+  scopeId），窄档「只留图标」对这两颗钮从未生效。改为 `:deep()` 后 1280px 以下即收成图标，
+  右簇从 392px 降到 ~263px
+- **快滤框不再压住「刷新/导出」**：检索框 160px 固宽不参与收缩，容器让位后仍有 49px 溢出盖在
+  相邻按钮上（截图里「按钮文案互相遮挡」的源头之一）。地板宽改放容器上、输入框 `width:100%`
+  跟随收缩，1280px 以下地板 90px。实测 1148px：工具行零重叠、末尾按钮完整可见
+- 「更多」菜单收纳：`表格快照 PNG` 由工具行移入「视图 ⋯」；文档检索动作行与索引工作区
+  行操作同步收进菜单（能力不减少，权限门与原钮同源）
+- **列头不再为「看不见的元素」让宽**：类型徽标与未排序 ⇅ 用 `opacity:0` 隐藏时仍参与
+  flex 宽度分配——110px 的 `status` 列里，看不见的 `keyword` 徽标吃掉 42px、⇅ 再吃 10px，
+  列名只剩 30px（文字实际需要 34px）→ 列名被截断/挤压。现在静息 `display:none` 让宽度
+  全归列名（同列可用宽 30px → 90px），类型改由列头 tooltip 首行「类型 · 列名」承载
+  （悬停浮出的徽标带底色会把 `status` 盖成 `sta`，已撤），⇅ 悬停时出现在漏斗左侧固定槽位
+  并给列名让 34px 沟槽；列名常驻右内衬 14px 让开筛选漏斗。两表（结果表/SQL 结果表）同口径
+
+- **换算子不再静默丢参数**：`paramsForOp` 此前只按 `OPS_META`（叶子算子）白名单清洗，
+  wrap 族参数表 `WRAP_PARAMS` 没参与——`script_score` 的 `min_score`、`nested` 的
+  `score_mode`/`inner_hits`、`function_score` 的 `boost`/`boost_mode` 等合法参数会被当成
+  「旧算子参数」丢掉，用户切一次算子就白配。现在两表并集裁决，非法键仍照旧剔除
+- 非常用语法往返再补一批审计：`function_score` 各 function 形态（含 `interpolate`
+  的 linear/exp/gauss）、`script_score` 全文形态、8.14+ retriever（knn 带 filter /
+  rrf 带 rank_window_size / standard 带 min_score）经 parse→serialize 均逐字节保真；
+  新增 `dslRoundTripFunc1152.spec`（12 例，含「每个已注册算子都有可读标签」防裸英文回潮）
+
+- **Watcher 告警卡补右键，行内动作不再平铺**：卡片右侧原有三颗钮（编辑 / DevTools / 复制），
+  窄屏把 watch id 挤成省略号，整页也没有右键。现在卡片右键与新增的「⋯」共用一份两级菜单
+  （一级：在 DevTools 编辑 / 复制 metadata；二级：`复制…`（watch id / 整条定义）、
+  `在 DevTools 打开…`（查看定义 / 编辑定义）），行内收成「编辑 + ⋯」。DevTools 权限门
+  仍走原函数，不因换入口而放宽。新增 `watcherCardMenu1153.spec`（4 例），
+  真实浏览器实测：卡片右侧 3 钮 → 2 钮，右键一级 4 项 + 2 个二级分组
+
+- **SQL 结果表窄档同样只留图标**：此前只有「列选 / 布局」两颗掉文字，「导出 ▾」「视图 ⋯」
+  仍是整词，1148 窗口把右簇顶宽、末尾钮贴边。文案包进 `.qrt-tool-t`，1280px 以下统一收起
+  （字符串保留，读屏与旧源码锚不变）。实测 1440 显示文字、1280/1148/1024 收起，四档零溢出零重叠
+- **宽表列头实测复核**（SQL 结果表，8 字段真实返回）：9 个列头高度统一 **25px**，
+  类型徽标在静息态 `display:none`（不占宽），**列名零截断**，横向 `scrollWidth === clientWidth`
+- **模板库卡片补右键**：卡片底部五颗钮（复制 / 沙盒 / DSL / 收藏 / 展开）平铺，与「表格右键
+  太多功能平铺」同病。右键按能力语义分两级——一级两个去向（沙盒 / 查询工作台）+ 复制…、
+  收藏…、代码区… 三个分组父行，二级承载具体动作（含新增「复制模板标题」「复制为 cURL」）；
+  底部按钮行原样保留（触屏无右键）
+
+- **实时监控屏三张表补行右键**：Top 索引 / 慢请求 / 告警历史此前是纯展示 `<table>`，既无排序筛选
+  也没有右键。现在行右键按各行心智给一级动作（Top=在数据浏览器打开该索引、慢请求=复制 URI、
+  告警=复制告警文案），整行 JSON / TSV 收进「复制…」二级；跳转仍走既有的 `canSeeConn` +
+  `setTarget` 权限门，菜单内**不含任何写动作**（监控屏不能变成误操作面）
+- **列头在极窄列（60px）下的复核**：列名按字符截断成 `st…`，筛选漏斗与文字零重叠——
+  上一批的「静息不占位」在极限宽度下同样成立
+
+- **`inner_hits` 不再只能手写 JSON**：nested / has_child 结果里几乎必用的 `inner_hits`，
+  此前是一个裸 JSON 文本框。现在值确实是对象时，`from` / `size` / `name` 给结构化输入
+  （数字控件回写 number 类型、清空即删键，不留 `from: 0` 这种脏值），JSON 位保留整段编辑
+  能力（`sort` / `highlight` / `_source` 等其余键照旧可写）；数组/标量形态不给快捷行，
+  回落原 JSON 单通道。新增 `innerHitsQuick1159.spec`（6 例）
+
+- **DevTools 响应表格补行右键**：响应 JSON 的「表格」视图此前只能单击复制整行，想拿单个字段值
+  或整张响应原文得回 JSON 档自己找。现在行右键按两级给：一级「复制该行 JSON」（与单击同义），
+  二级「复制…」（TSV / `key=value` / 前若干字段逐值）与「整表…」（复制全量 / 导出响应原文，
+  导出走服务端原文不重排）。这是临时预览表，不接查询结果内核（内核会持久化列宽/列选偏好，
+  预览表不应写维度记忆），但复用同一套两级菜单语言。新增 `devtoolsRespRowMenu1160.spec`（5 例）
+
+- **全算子结构往返审计（新增长期回归网）**：此前只抽查若干算子；现在把注册表里
+  **每一个**算子（61 个叶子 + 8 个 wrap 容器 + 8 个 multi 子句）与 6 个 retriever 变体
+  逐一过「工厂造节点 → 序列化 → 反解析 → 再序列化」，两轮必须逐字节一致。
+  72 例全通过——即「用户能把这个算子放进树里并原样取回」不存在结构断裂；
+  后续新增算子时这条网会自动覆盖（注册表驱动，无需补用例）
+
+- **工具行（「表格格式 / 表格操作那个表头」）补右键**：此前右键只覆盖列头与单元格，工具行
+  这条带子完全没有右键。现在 `TableShell`（两表共用的卡头壳）统一转发 `bar-contextmenu`，
+  RT/QRT 各自给菜单：一级只放最常用的「导出 / 行高切换 / 快照」，「重置全部列宽 / 全列适应 /
+  聚合行 / 转置视图 / 语义格式化」收进「更多…」二级（能力零删除）。
+  实测 RT 与 QRT 均二级可展开；顺带修掉一个真实渲染缺陷：菜单里 `rowHLabel` 少了 `.value`，
+  行高文案显示成 `[object Object]`（浏览器实测发现，已修并加锁）
+
+- **工具行在 1100~1180 窗口被裁切（截图「按钮文案操作遮挡」的最后一处真实原因）**：
+  列头/工具行的元素平铺此前已从「标签掉文字 + 窄档换行」治过，但换行断点定在 1100，
+  而实测（逐 20px 扫描）内容溢出起点是 **1180px**——1180 起 `scrollWidth` 就超过
+  `clientWidth`（1160 溢出 21px、1148 溢出 41px、1120 溢出 61px），这段区间两个断点都不触发，
+  于是右簇末尾钮**直接被切掉**，命中数 `rt-info` 被压缩到 **0 宽**（1120 下整块消失，
+  用户看到的就是「检索引擎报了什么」完全不见了）。现在换行阈值提到 1180（≥实测溢出起点，
+  测试里加了「断点不得低于 1180」的假修复防线），并把右簇 `margin-left:auto` 压回右缘
+  （换行后右簇是第二行唯一 flex item，`space-between` 会把它甩到最左）。实测 1180/1148/1024
+  三档：`overflow=0`、右缘间距恒 11px、15 颗钮零裁切、命中数 65px 常显。新增 2 例源码锁
+  （含「规则写在内核 scoped 里即失败」的反断言——`.rt-bar-r` 是 `TableShell` 模板元素，
+  1164 实测写在内核 scoped 里 100% 不生效，必须住壳全局 style）
+
+- **命中数被省略号吃掉（同一张截图里的「1/1 · 1…」）**：1440 宽档左簇只超出 15px，
+  而当时唯一可收缩的是 `rt-info`——实测容器 **64.8px** / 内容 **65px**，差 0.2px
+  就把耗时徽标最后一段替换成省略号（高倍截图确认渲染成 `1/1 · 1…`）。
+  两处一起改：① 快滤框地板 160→90px 并**常驻**（不再只在 ≤1280 档），
+  收缩优先级 `flex: 0 100 auto` 让它第一个让位（placeholder 是空态装饰，
+  命中数才是这条带子的主信息）；② `rt-info` 改 `flex-shrink: 0`，计数不再参与收缩。
+  实测 1440：`scrollWidth === clientWidth === 65`，徽标完整。
+
+- **SQL 结果表工具行两个一模一样的 ↗**：`bar-extra` 里宿主注入的「结果表高度档」与内核自带的
+  「放大结果表」用了同一个 `Maximize2`、同尺寸、相邻，实测并排两个几乎无法区分的图标——
+  点错就是「以为全屏，结果只改了高度」。高度档改用 `UnfoldVertical`（⇕=上下展开），
+  与 ↗（横向铺满）语义正交。字号/尺寸/aria-label/`data-sq-result-h` 全不变
+
+- **Lucene / PIT 的 sort 输入框是「操作报错」的漏网通道**：1149 只把「表头点击排序」
+  统一走了 `resolveSortField`，但这两个页面的排序字段是**输入框**——`FieldPicker`
+  只过滤下拉候选，挡不住 `?sort=title`、粘贴、历史回放。实测在 Lucene 页把 `?sort=title`
+  带进 URL 并执行：`title` 是 text 且无 `.keyword` 子域 → ES 直接 400
+  「Fielddata is disabled on text fields」，用户看到的就是「操作报错」。
+  现在两处都在**发请求之前**解析：能解析就换成 `.keyword` 子域（PIT 还会回写输入框并
+  在日志说明），解析不了就地拦下并给可行动提示，不发注定 400 的请求。
+  PIT 的 `_shard_doc` 快排豁免不参与映射判定（否则默认档会被误拦）。
+  实测：Lucene 带 `?sort=title` 执行 → 弹出「「title」是 text 字段且没有 .keyword 子域，
+  ES 无法对它排序；请换成 keyword/date/数值字段」，**发往后端的搜索请求 = 0 个**。
+  新增 `sortFieldManualInput1169.spec`（3 例，含「解析器必须在拉取循环之外」的锁），
+  并用注入违规（删解析/删豁免）证伪过
+
+- **生命周期甘特策略行补右键**：这条列表此前只能「看」——想拿策略名或阶段表只能手抄。
+  现在行右键按两级给：一级「复制策略名」「复制整条策略 JSON」，「复制…」二级承载
+  「阶段表（中文（english） min_age）」「阶段英文原名（逗号分隔）」。
+  只读数据 → 菜单内**不含任何写动作**（推进/启停仍走页内既有按钮，避免监控面变误操作面）。
+  实测一级 3 项、二级 2 项、标题 `ILM 策略 · <name>`。新增 `lifecycleRowMenu1169.spec`（3 例）
+
+- **`terms_set.minimum_should_match_script` 的 `source` 不再只能手写 JSON**：这是
+  terms_set 里几乎必改的一项（painless 表达式），此前整段 JSON 文本框。现在对象形态
+  给结构化快捷行，`source` 单独一个**文本**输入位（脚本是字符串——数字框会把它降级成
+  `NaN`），其余键（`params` 等）仍走 JSON 位保留类型。清空即删键，不留空串脏值；
+  标量/数组形态不出快捷行，回落 JSON 单通道。`dslInnerHits1094.spec` 扩到 7 例，
+  负控证明：把 `source` 输入框改回 `type="number"` → 2 例转红
+
+- **索引/组件模板列表行补右键**：一行此前只有一个删除钮，想拿模板名、`index_patterns`
+  或整段定义只能手抄。现在行右键（含键盘 Menu 键）两级：一级「复制模板名」「复制模板定义
+  JSON」，「更多…」二级承载「复制匹配模式（N 条）」与「在 DevTools 打开（只读 GET）」。
+  **破坏性删除不进右键**，仍留行内按钮。DevTools 入口门与 `DevToolsView` 页门同源
+  （`canReadPage`）——无读权时不跳转、不写 `es-console.devtools.open`
+  （否则等于把不可用动作放进可达路径）。新增 `templatesRowMenu1169.spec`（4 例，
+  含「删除不得进右键」「无读权不得写 open 键」两条负向锁）
+
+- **窄列悬停时列名反而被吃掉（`title` → `t…`）**：1151 给悬停态加了 34px 右内衬，
+  让 ⇅ 提示不压住列名——但那是按 110px 列算的。实测 70px 的 `title` 列内容盒只有 50px，
+  让完只剩 16px，**悬停比静息更糟：想看名字，名字被省略号吃了**（高倍截图确认）。
+  现在窄列（内容盒 ≤96px）悬停只保留常驻的 14px 漏斗内衬，⇅ 仍从漏斗左侧浮出
+  （短暂叠在文字尾部，可接受；截掉列名不可接受），宽列行为完全不变。
+  实现用 `@container`，锚点必须在 `.rt-th-in` 上：实测把 `container-type` 挂在 `<th>`
+  （table-cell）上**阈值放到 5000px 都不命中**，挂内层 flex 立即生效；两种挂法都不改几何
+  （列宽 70/60、行高 26 逐项不变）
+
+### 验证
+
+- 委派超管取舍双向验证（1132）：注入旧顺序（`isAdmin()` 先于委派判断）后
+  `securityDelegatedAdmin1132` 挂载用例转红（`.new-user` 表单被渲染）、能力层用例转红
+  （`canEndpoint` 放行写本地账号）；恢复后复绿。内置 ADMIN 分支同批断言「表单照常渲染 +
+  其它管理域写不被误拦」，确保修复不是把有权限的人一起拦掉
+- `BuiltinConsoleAuthServicePrivilegeTest` 8 例（含委派 ADMIN 建号/删号必须失败、
+  内置 ADMIN 仍可管理），`ConsoleAuthInterceptorPageAuthTest` 71 例，全绿
+- 后端全量 `mvn test`：**1566 例 / 0 失败 / 2 跳过**，exit 0。首轮暴露两例版本指针漂移
+  （`standalone/pom.xml`、`docs/integration/quickstart.md`、`README.md` 仍写 `1.0.66`），
+  已随根 pom 一并升到 `1.0.68`，`QuickstartSnippetContractTest` / `StandalonePinGuard1035Test` /
+  `ReadmeBilingualContractTest` 复跑全绿
+  12 例测试（行尾/行首/块注释/字符串保护/转义引号/混排/纯注释/空输入），另加两例边界：
+  未闭合块注释**不吞后续正文**、未闭合字符串不把后面当注释（宁可保留原文，也不静默扩大删除面）。
+  配套源码锁 `devtoolsSendBoundary1132`（4 例）：历史与跨 Tab 镜像必须存**原稿** `t.body`
+  （回放时注释不丢），只有发出去的字节用 `bodyFinal`；且剥离必须晚于变量展开。
+  负向自验：把历史改成写 `bodyFinal` → 锁转红。
+- **DevTools 发送时未剥离注释**（1132，Kibana 对齐）：Kibana 把 `//`、`#`、`/* */` 当语法，
+  发送前自动剔除，所以用户可以在请求里写说明。我们只在**导入导出**时把注释当文本保留，
+  发送却原样透传——照 Kibana 习惯写一行 `// 查订单` 就拿到 `Unexpected character ('/')`，
+  看着像控制台坏了。新增 `utils/devtoolsComments.ts`：字符串字面量内的 `//` `#` `/* */`
+  不动（URL/正则/文本不被误删）、转义引号正确处理、剥完只剩空白则送空串。
+  接在 `execSend`（全量/分段/键盘/历史回放唯一发送点）里，变量展开之后再剥离；
+  范围判定用的也是剥离后的 body，与实际发出的内容一致。
+  12 例测试（行尾/行首/块注释/字符串保护/转义引号/混排/纯注释/空输入）。
+- **客户端写门「门在、线没接」无人盯**（1132）：`api.request` 的写门是「无权限零网络请求」的
+  唯一保证，但它靠 `main.ts` 注入 `setApiWriteGuard(...)`——一旦这行被删或改名，守卫变量
+  保持 null，**整条客户端写门静默失效**，而所有现有单测仍绿（那些测试自己调
+  `setApiWriteGuard` 装桩，测的是 api 层，不是装配）。`perm:scan` 新增机械规则：
+  `main.ts` 必须出现 `setApiWriteGuard(` 且指向 `canEmitWrite`。
+  负向自验：删掉装配行 → 两条断言同时报红；恢复后复绿。
+- **发版兼容性前置核对**（1132，1.0.68 vs QuoteHub 现有接入）：逐类确认 QuoteHub 引用的
+  15 个 starter 类型（`ConsoleAuthDelegate`/`ConsolePrincipal`/`ConsoleRole`/
+  `DelegatedTokenRevocations`/`ConnStore`/`EsClientRouter`/`LinkLifecycleEvent` 等）
+  在 1.0.68 jar 中全部存在；再用 `javap` 核对它实际调用的方法签名
+  （`authenticate`/`hasCredential`/`tokenOf`/`revoke`/`isRevoked` 与 7 参
+  `ConsolePrincipal` 构造器）**逐一保留、无破坏性变更**。结论：升级 1.0.68 不会让宿主编译失败。
+- **非 ADMIN 探测系统管理域不再「无痕」**（1132）：`/clusters/`、`/setup/rebind|apply`
+  这类授权载体端点，非 ADMIN 被拒时**直接 deny、不落审计**——而这正是攻击者最爱试的
+  高价值端点，「有人试过但事后查不到」。现已补 `ADMIN_DENIED` 审计（含 uri 与 required）。
+  同批核对：25 处 4xx 拒绝点中 22 处已有审计，剩下 5 处属认证前拒绝
+  （`BAD_PATH`/`CSRF_BLOCKED`/`SETUP_REQUIRED`/`UNAUTHORIZED`），无身份可记，保持原样。
+  注：`/auth/users` 不在系统管理域白名单里（它走 security 页写键），写测试时踩到过这个误解。
+- **32MB 请求体上限可被 chunked 绕过**（1132）：拦截器只用
+  `request.getContentLengthLong()` 判体积，而 chunked transfer-encoding **不带
+  Content-Length**（容器返回 -1），旧实现把 -1 当成「没超限」直接放行——换一个传输编码
+  就能把任意体积推给 Jackson 全量读入，正是这条限制要挡的内存耗尽面。
+  现在「容器明确回了 -1」= 拒绝（411 `LENGTH_REQUIRED`）；`getContentLengthLong()`
+  抛 `UnsupportedOperationException` 的极老容器/最小桩**不在此列**（真实 Servlet 容器都实现它，
+  那不是攻击面）——首版没区分这两者，把 50 个既有用例一起打成 411，已修正。
+  两件事同时钉住：① 这 20 行此前**没有任何测试**（规则存在但从未被证明有效）；
+  ② 修复不能误拦正常业务——用**真实 Chrome**（headless + 本地 HTTP 页 + 5 种写法）
+  **全部带 Content-Length**，所以 411 不会打到 `clustersDelete`/`deleteById` 这类
+  参数走 query string 的正常写请求。4 例单测（超限 413 / 正常放行 / chunked 411 / GET 不受影响）。
+- **增量构建把每一轮旧 bundle 都留在 classpath 里，且可直接 HTTP 访问**（1132）：
+  `maven-resources-plugin` 只覆盖式复制、**从不删除**目标目录多出的文件，vite 每次构建又换哈希名，
+  于是不跑 `mvn clean` 的增量构建会让 `target/classes/static/console/assets/` 越堆越多
+  （实测 **5849 个 vs 源码 278 个**）。这些文件经 `/console/assets/**`（直连 classpath）是
+  **可被直接请求**的——旧 bundle 仍能访问，等于把修复前的控制台代码继续对外提供；jar 也被撑到 **37.6MB**。
+  修法：antrun 在 `initialize` 阶段先删 `target/classes/static/console`，再由 resources 复制干净的一份。
+  结果：assets 5849→**278**（与源码一致）、jar 37.6MB→**3.3MB**，且三项本批修复
+  （环境模板提示 / 三引号 vars / Ctrl 请求边界）均确认在新 jar 内。
+  踩坑记录：首版把清理绑在 `process-resources`，同阶段按声明序排在复制**之后**，
+  打出 797KB 空 jar（控制台整体丢失）——已改为 `initialize` 并复验。
+- 新增守卫 `ConsoleAssetFreshness1132Test`（demo-host，真实 Spring Boot + 真实 HTTP）：
+  入口页 200、starter jar 内 assets 与源码侧**双向比对**（多一个少一个都红）、
+  不存在的哈希名 404。负向自验：往 jar 里塞一个陈旧 bundle → 用例转红；移除后复绿。
+  写这条时的教训：最初只「逐个请求源码里的文件名」，塞入陈旧 bundle 后**依然全绿**——
+  那种写法只能证明「该有的都有」，证不出「没有多余的」，属假通过；改成枚举 jar 条目再做差集才有效
+- 开源集成示例（`examples/demo-host`）跟随主版本：其 starter 依赖指针仍停在 `1.0.66`，
+  与根 pom / standalone 脱节；已同步到 `1.0.68` 并实跑 `DemoHostSmokeTest`（真实 Spring
+  Boot 随机端口启动 + 真实 HTTP 请求 `/es-rebuild.html`、`/setup/status`）**exit 0**，
+  证明本批改动没有破坏嵌入式接入形态
+- 真实 HTTP 层权限验证的**环境限制**（如实记录）：`ConsoleAuthInterceptor` 在「控制集群
+  未绑定」时对除 setup 外的所有端点返回 409，短路先于身份认证。因此本地不接真实 ES 时，
+  无法用真实 HTTP 验证页面门/环境封顶——这部分证据目前来自拦截器级 E2E
+  （`DelegatedAdminEscalation1132Test`，真实拦截器 + 真实 service）与单元矩阵，
+  产线级验证仍需 1.0.68 发布后执行
+- 产线（1.0.67，修复前）无副作用基线：委派超管 x2 对 `/auth/users/upsert` 的
+  空用户名探针返回「username 不可为空」——说明请求已越过权限门进到参数校验，
+  确认该越权路径在发版前真实存在（发版后同一探针应返回委派拒绝语义）
+- **raw 透传守卫的红队复验**（1132）：新增 `EsIndexAdminRawBypass1132Test` 11 例，
+  针对此前批次未覆盖的编码/构造手法做主动绕过尝试——大小写变体（`ES_CONSOLE_USERS`）、
+  百分号编码（`%65s_console_users`、`es_console%5Fusers`、`%69ndex` 参数名）、双斜杠与点段
+  （`//`、`/logs/../`、`/./`）、逗号多索引与中段通配（`logs,es_console_users`、`es_cons*le_users`）、
+  体内容器（`_mget.docs[]._index`、`terms` lookup、`_reindex` 源与目标、快照 `indices`、
+  `_index_template.index_patterns`）、`?source=` 体旁路、`index|indices` 查询参数。
+  **全部被守卫拒绝**，无一绕过。负向自验：移除「首段索引 token 检查」与「query index-ref
+  检查」→ 恰好 4 例转红，确认用例真正覆盖守卫而非空转。
+  过程中修正一处**测试预期错误**：原本把 `?routing=es_console_users` 也要求拒绝——
+  routing 是分片路由值、ES 不会拿它当索引读取，拒掉反而是误拦（正常写入带 routing 很常见）。
+- 后端 mutating 端点全量对账（1132）：静态枚举 95 个 `@Post/@Put/@Delete/@Patch` 映射，
+  与权限清单逐条比对，5 个未被直接列出者均已被覆盖（`rebuild-empty`/`clusters/save`
+  在前缀白名单、`insight/actions/*` 走动态 actionId 裁决、`cluster/sql/translate|lenient`
+  属只读 POST 段匹配）——**无未登记写端点**
+- **环境模板（env）对 ADMIN 失效**（1132）：`pagesFor` 收缩原先只出现在
+  `grantedPages != null` 分支内、且排在 `if (role >= ADMIN) return true;` 之后——
+  内置 ADMIN（`grantedPages=null`）与委派 ADMIN 都不走 env 判定，连接标了 PROD 也照写。
+  现在 env 封顶提到一切角色/页面裁决之前：按「请求所属页面」与连接 env 模板比对，
+  共享写端点取任一归属页在模板内即放行；**判不出页归属的基础读（keys/indices）不封顶**
+  （否则有权限的人在 PROD 下连索引列表都看不到），宿主目标恒不受连接模板影响。
+  负向自验：把封顶条件改为 `false` → 恰好 3 例转红（raw 写 / devtools 执行 / search 页读），
+  2 例防误拦用例保持绿；恢复后 77 例全绿。
+  **适用边界（产线实测修正）**：当前 `deng_test_x1` 在产线是 `VIEWER + delegated` 且
+  宿主未下发 `envPages`，它的「PROD 只读」由 `grantedPages` 的 conn 写键实现、不经 env
+  模板——实测 PROD `cluster/raw` 403、QA 200，本就符合预期。本项修的是「角色档为 ADMIN
+  且连接配了 env 模板」这条路径（此前无人覆盖测试），不是产线现状的回归修复
+- 前端同口径补齐（1132）：`canEndpoint` 的 `isAdmin()` 分支也不再直接 `return true`，
+  改为按页前缀 → 共享读写表（raw 归 devtools/rest）判定环境封顶。否则 PROD 连接下
+  DevTools 执行钮、运维入口全部亮着，点下去才 403——违反「可操作性在前端提前暴露」。
+  负向自验：把共享表分支改成立即 `true` → 2 例转红、4 例防误拦保持绿
+- **换号后 DevTools 仍显示上一账号的跨 Tab 历史**（1132）：`histAll` 是「全部 Tab 历史」
+  的内存镜像，磁盘键 `es_devtools_hist_all:*` 已被 `purgeUserRequestState` 按
+  `es_devtools_` 前缀清掉，但 `onIdentityReset` 没有重置 ref——**同一会话内换号**后，
+  新用户进来仍能看到上一个账号执行过的方法/路径/请求体，直到切目标或刷新才消失。
+  现在换号同时清 `histAll` 与历史作用域（回到「本 Tab」档）。注入移除该两行 → 用例转红。
+- **DevTools 补两条 Kibana 键位**（1132）：`Ctrl+↑/↓`（previous/next request end）与
+  `Ctrl+L`（跳到行号）。我们的每个 Tab 已是一条请求，所以上下键语义收敛为「跳到相邻请求
+  的起始行」——同一心智模型下在请求之间移动，而不是逐行移动；找不到相邻请求时光标不动
+  （不弹回文件头）。解析复用导入用的 `METHOD_LINE` 规则，注释行并入下一条请求不单独成点。
+  `Ctrl+L` 由 Monaco 原生提供，本次只登记到快捷键面板（「有功能没人知道」防重演）。
+  6 例边界跳转测试（中间/末尾/注释/首尾边界/空内容）。
+- **Console Variables 补上三引号强制字符串替换**（1132，Kibana 对齐）：官方文档明确
+  「Triple quotes force string substitution」——值是合法 JSON（如 `5`、`{"a":1}`）但用户
+  希望它作为**字符串**注入时的唯一写法。此前只有「引号内=字符串 / 裸值=按 JSON 注入」两档，
+  `{"code": """${n}"""}` 会被原样发出（含三引号），ES 直接报语法错。
+  实现要点：三引号必须**先于**常规替换单独扫一遍——`replace` 回调只能改 `${}` 自身，
+  没法同时吃掉外侧两个引号；内部值经 `JSON.stringify` 转义，保证产出仍是合法 JSON。
+  4 例测试（数字/对象/与单引号混排/路径档不受影响）。过程中修正了自己写错的两条期望：
+  含引号的值必须转义（`"{\"a\":1}"`），以及多余空格。
+- **403 提示把「环境限制」说成了「账号没授权」**（1132）：`ENV_PAGE_DENIED` 与
+  `PAGE_DENIED` 都带 `page` 字段，前端按 `page` 分支统一渲染成「暂无『X』页面权限，
+  请联系管理员勾选」，而前者是连接的 env 模板限制——用户照提示去申请页面权限，
+  申请完仍然被拒。现在单列环境文案（说明由 env 模板限制、与账号授权无关、该调模板或换环境），
+  「复制申请信息」也改为「环境模板调整申请」。修的过程中还发现分支判据写错：
+  事件 detail 里后端 code 映射到 `denied` 字段而非 `code`，按 `code` 判永远不成立。
+  4 例行为测试（环境/页面/客户端硬门/读静默）；注入改回 `d.code` → 环境用例转红
+- 审计分级补登（1132 发现）：`rebuild-empty`（删索引后重建，数据不可逆）与
+  `adhoc-rebuild/confirm-switch`（写别名切换）此前只落 `WRITE`，与 `delete-index` /
+  `xmigrate/start` 同危害却低一档留痕。已补入 `HIGH_RISK_AUDIT_KEYWORDS`（只影响审计标签，
+  不参与授权）。注入移除该两关键词 → 2 例转红、「普通写仍落 WRITE」保持绿（防过度标记）；
+  恢复后 11 例 + 页面门 71 例全绿
+- `perm:scan` 通过（写调用文件 30 个，全部具备能力门）；`vue-tsc --noEmit` 零错
+- 前端全量 `vitest run`：**1229 文件 / 10552 例**，其中 1 例失败来自测试运行期间别处
+  正在改的 `tableKernelWave540`（陈旧排序锚点），该文件现态单跑 7 例全绿；本批新增/改动的
+  5 个 spec 单跑与合跑均绿
+- 前端全量 2 分片（**串行**，避免并发争用）：**622 文件 / 5448 例** + **622 文件 / 5278 例全绿**，
+  `vue-tsc --noEmit` 零错。并发跑时 `reindexCancel538`（挂载 2.7s 超时）、
+  `devtoolsFileIO1128` 会因 CPU 争用假红；**运行中继续改源码**还会让 Vite 读到半写文件
+  （实测 5 例假红报 `Identifier 'stripJsonComments' has already been declared`，
+  落盘后单跑 38 例全绿、静态检查无重复声明）——门禁必须等代码冻结后再起，
+  这也是本批改成「串行 + 冻结」口径的原因
+- **新增 4 例源码锁并逐条负控**：① 模板根注释守卫（注入根注释 → 转红）；
+  ② RT 换行断点 ≥1180（低阈值即失败）；③ 壳级 1180 档右簇贴右 + 内核 scoped
+  持有同规则即失败（scopeId 打不中）；④ 窄列 `@container` 规则 + 容器锚必须挂
+  `.rt-th-in`（改挂 `<th>` 或删窄档规则均转红）
+- 真实浏览器（headless Chrome CDP，1440×900 / 1024×820，mock 后端）逐项验收本批改动：
+  ILM 策略卡一级 5 项 + 3 个二级分组（贴父行右缘 x=549）；收藏卡一级 4 项、点「勾选此项」
+  后卡片进选中态且菜单自关；远程集群卡一级 3 项、复制二级按卡片出 3/2 项；
+  SQL 结果「视图 ⋯」出「表格视图」三项（聚合行/转置/语义格式化，aria-checked 正确），
+  列头右键一级 4 项且**不再含**表格级开关；SQL 补全 `GROUP BY c` 首位即别名候选
+  （`SELECT 别名（GROUP BY 可用）`），函数族不再倾泻；
+  结果表 `thead` 高度 **44px → 26px**（单行 + 收紧内衬）；工具行 1440 下右簇
+  **674px → 475px → 418px**、无溢出，1024 下自动换两行（`scrollWidth === clientWidth`，
+  此前 1283 vs 756 且「快照」被裁）
+- **本批逐 20px 扫描定位裁切区间**（1440/1280/1260…1080 共 14 档）：旧 1100 断点下
+  1180/1160/1140/1120 四档 `overflow` 分别 1/21/41/61px 且右簇末尾钮被切；
+  断点提到 1180 后四档全部 `overflow=0`、右缘间距恒 11px、15 颗钮零裁切
+- **高倍截图验收（deviceScaleFactor 2–4，裁工具行/列头单元素）**：命中数从
+  `1/1 · 1…` 变为完整 `1/1 · 1ms`（容器 65px = 内容 65px）；窄列 `title` 悬停从
+  `t…` 变为完整 `title`（内衬 34px → 14px，`⇅` 与漏斗互不压）；QRT 工具行两颗
+  原本同形的 ↗ 变为 `⇕`+`↗` 可区分
+- **浮层压表实测**：视口内与结果表区域相交的 fixed/absolute 浮层 = **0 个**
+  （此前画布悬停浮层 + 失败 toast 是压表来源，已分别改为就地展开 / `logOnly` 收进日志）
+- **工具行右键在改版后复测**：RT 一级 `导出当前页（CSV）/ 行高：标准（点击切换）/
+  快照 PNG（当前页）/ 更多…(二级)`，二级真实鼠标 hover 出 5 项，点「聚合行」菜单自关；
+  QRT 一级 3 项含二级。全程 `Runtime.exceptionThrown` **0**；路由来回切换后
+  工具行残留数 **0**、`nextSibling` 类卸载异常 **0**
+  （顺带修掉一个真事故：`TableShell` 模板根注释使其成为 fragment 根，
+  路由切走时卸载抛 `Cannot read properties of null (reading 'nextSibling')`——
+  注释已移入元素内部，并加源码锁「模板第一个有效节点不得是注释」，
+  用注入违规证伪过）
+- 宽表逐列量测（数据浏览器 8 列）：**列内容互相重叠 = 0 处**，操作列 313px → 163px，
+  索引名列回到 259px；「更多」弹层四项与 ForceMerge 二次确认在真实浏览器点通
+- 新增 `clauseRowMenu1147.spec`（7 例：条件行右键一级收口/复制二级三项/结构二级/
+  删除走既有 emit/停用文案翻转/输入框内不接管）；
+  `rtBreakthrough235`（快照移入视图菜单）、`permGating`（BrowserView 行钮入菜单）、
+  `browserIdxMenu`（操作列两钮 + 更多四项）、`qrtRowsSwap529`（ForceMerge 经更多菜单）
+  的旧锚按新入口更新
+- **遮挡与报错本批实测**（headless Chrome CDP，mock 后端，索引工作区 / 数据浏览器 /
+  DSL 工作台三处）：1148px 窗口工具行 `overflow = 0`、按钮间重叠 **0 处**（修复前
+  快滤框压「刷新」49px）；1440/1148 两档列头高均 25px、零重叠。点 `title`（text 列）：
+  索引工作区与 DSL 工作台都**不再发出请求**，只出一条可行动提示；点 `status`（keyword）
+  正常写入 `"sort":[{"status":{"order":"asc"}}]`。人为制造 400 后错误条压在结果表上方
+  （`errBottom 331 < table.y 380`，重叠 0），文案带出分片级叶子原因，右下角无遮挡 toast，
+  「收起」后表格恢复。新增 `sortField1149.spec`（7 例）、`toolbarHeaderDeclutter1150.spec`
+  （7 例，含「裸选择器=假修复」反锚）；`dslSortPush804`、`tableKernelWave540`、
+  `notifyActions246` 的旧锚按新实现更新
+- 新增 `favCardMenu1144.spec`（5 例）、`ilmCardMenu1144.spec`（5 例）、
+  `remoteClusterCardMenu1145.spec`（5 例）、`sqlAliasSuggest1145.spec`（9 例）；
+  `cellMenuColMgmt` / `healthTablesGraft` / `qrtPagerExportTranspose525` 的旧锚按新入口更新
+  （并修掉「两表共页时按 document 找视图钮 → 开关落到错表」的测试自身缺陷）
+- 新增 `DelegateAuthFailClosed1124Test`（9 例：异常不回落/无凭证可内置登录/探测异常
+  fail-closed/只实现 tokenOf 的委托被拒与异常两条路径均不回落/委托正常零干扰/
+  自定义委托兜底吊销/重复吊销幂等/无令牌不登记）
+- 新增 `autoRunIdentityGate1124.spec`（11 例，覆盖六个回放入口、五处只读说明条、
+  DevTools 入口前置判定与安全中心拒绝提示）；`identitySwitch1008` 断言更新为整族前缀
+- `perm:matrix` 增加「控制台登出 → 同一委托令牌 401」探针（真实产线跑时顺带验证自定义
+  委托的兜底吊销，无需宿主改代码）；退出码改为设 `process.exitCode` 而非强退——Windows 上
+  fetch keep-alive 套接字未收敛时 `process.exit(1)` 会触发 libuv 断言变成 127，CI 读错状态。
+  再补**写探针**：只读连接上对不存在索引发一次 `DELETE`，必须被授权层拒绝（403）；
+  授权若被绕过只会得到 ES 404，产线零副作用但能区分「拦住」与「放行」，把「只读=只测读」
+  的覆盖盲区补上。
+  用契约 harness 正反双验：合规部署 27/27 且 exit 0；注入「x3/只读连接写被放行」后
+  9 项 FAIL、exit 1（确认脚本不会假绿）
+- 后端认证范围 **15 例全绿**（含 1007 切换硬化）；前端权限相关定向 **123 例全绿**
+- 前端全量 2 分片（串行避免 CPU 争用）：**605 + 604 文件 / 5055 + 4996 例全绿**，
+  唯一 1 例失败是并行 lane 新增 DevTools 标签右键后失效的旧「禁止出现」锁——已按新形态
+  改为锁「items + close 接线」，重跑 5/5 通过
+- `perm:scan` 0 不一致（共享写 23 / 共享读 41 / 页 52 / 扫描 317 文件，回放门规则生效）；
+  打包静态资产已重建并逐文件确认含新门与新说明条
+- 真实浏览器双向验收（mock 身份 + Vite 热载，5210/5211）：
+  · 只读身份（VIEWER，仅 overview/indices/tasks/task-tree/browser/optimizer 连接键）：
+    任务管理/任务树/数据浏览器/优化向导四页均渲染只读说明条、写按钮为 0、无横向溢出；
+    直接开 `#/devtools` 落到 `/forbidden?page=devtools`（无 DevTools DOM），
+    Forbidden 页给出「未授予该功能页面 + 申请信息发给管理员」的说明；
+    绕过前端直接 `POST /cluster/devtools/execute` 被后端 **403** 拒绝
+  · 切到 ADMIN：说明条消失、工具栏恢复、DevTools「执行 Ctrl⏎」出现（带快捷键提示）；
+    真实填写路径后点击执行，响应含 `took: 1`、无错误，网络日志确认请求真的发出并 **200**
+  · 账号切换双向（不刷新整页，仅触发 focus/visibilitychange）：VIEWER→ADMIN 执行钮实时出现、
+    提示条消失；ADMIN→VIEWER 执行钮消失、侧栏隐藏 DevTools 入口、深链被挡到 Forbidden
+- 60 个视图逐个核对「写控件 × 能力门 × 拒绝说明」：所有写/运维动作的执行体首行都有门，
+  只读身份不再出现静默消失的控件；DevTools 入口门与 Snapshots/Ilm 同源
+- **QuoteHub 产线三账号矩阵实跑通过（139.196.51.46:7788/quotehub，34/34，exit 0）**：
+  · x1：7 条连接全部 52 读；PROD 四连（国内/国际生产、es_excel_conn、es_price_conn）**0 写**，
+    QA/UAT 三连（腾讯云QA、腾讯云UAT、阿里云UAT）**23 写**——与「测试可读写、生产只读」一致；
+    可写连 DevTools 数据面 200 / 管理面读 403；只读连数据面读 **403**、写探针 **403**
+  · 新增两条矩阵项一并转绿：根级 `_msearch` 空头 **403**、带索引前缀同类请求 **不被拒**（200/404），
+    以及「x1 连接 id + x3 令牌」→ 403（连接可见性只认身份）
+  · x2：ADMIN、管理面读 200；宿主登出后同一 token **401**
+  · x3：grantedPages 0、连接目录 0 条、目标连接 403；控制台登出后同一委托 token **401**
+- **产线写端点扫描（x3 零授权 + x1）**：12 个高危写端点（文档写删/DBQ/bulk/建删索引/raw/
+  devtools/模板/painless/adhoc/xmigrate）**全部 403 或 405**，无一个 200
+- **产线后端语义抽验**：根级 `POST /_msearch` 空头 → 403「每个请求必须显式指定 index（不允许全量）」，
+  带索引前缀空头 → 200，与本轮单测/金标准锁定的语义一致（说明产线已含该守卫）
+- **产线换号污染探针**：x1（7 连、454 授权）→ x3（0 连、0 授权）后，用 x1 的连接 id
+  配 x3 的令牌请求 DevTools → **403 CONN_FORBIDDEN**（「该集群连接未授权给当前身份」），
+  说明连接可见性只认当前身份，不认残留目标头
+- **已发版到 QuoteHub 产线并复验**（版本 `20261026204412`，控制台显示 `v1.0.67`）：
+  后端 starter 1.0.67 安装 → QuoteHub `backend/pom.xml` 从 1.0.66 升到 1.0.67 → 后端编译通过
+  → `release.py --mode deploy --target all` 成功（`Started QuoteHubApplication` +
+  `端点授权覆盖自检通过`）→ 发版后矩阵复跑仍 **34/34**；产线控制台 bundle 已含本轮改动
+  （`es-console.pref.sql.` 生效），DevTools 请求行实测 `{26:5, 13:1}`（五控件全 26px）
+- 发版注意：`py` 启动器指向不存在的 Python 3.13，须用 `python`（3.11）；且必须
+  `PYTHONIOENCODING=utf-8`，否则前端构建在 GBK 下无法输出 `✓` 而失败（后端 jar 仍会先打包成功）
+- **产线页面内三账号 DevTools 实测**（宿主 iframe 握手，非直接改存储）：x1 开屏自动落
+  `es_excel_conn`（PROD）→ 只读提示条在、执行钮**无**；经顶栏切换器真实点选「腾讯云QA」
+  → 执行钮出现、`disabled=false`、提示改为「当前为数据面写权限」。x2 同一路径直接可执行、
+  无只读提示。x3 无任何连接可切，整页为授权指引（页面键 `devtools`、身份、目标、拒绝原因、
+  版本、复制申请信息）。同一宿主页把宿主 token 从 x1 换成 x3：target 清空、执行钮消失、
+  chip 回落「宿主集群」、localStorage 无 auth/token 残留、无 devtools 草稿残留
+- 排障结论（避免误判为代码缺陷）：早期探针在多个残留标签页共享同一 `localStorage` 的浏览器里
+  直接写 `es-console.target`，会被各标签页的身份清洗（`purgeIfUserChanged`，`last-user` 为空
+  即视为换人）反复清空并回落到首个授权连接。关闭其余标签页、只保留单页并走真实切换器后，
+  行为与后端授权完全一致——该现象是探针污染，不是跨目标污染缺陷
+- **产线真实写端点矩阵（19 个 + 5 个文档写）**：x3 与 x1@PROD 均 **0 放行**（19 项里除
+  `ilm/policy`、`clusters` 因方法不匹配回 405 外全为 403；文档写 5 项全 403，含
+  `doc`/`doc/update` 提示「需 search/indices/doc-diff 之一」、`bulk`/`update-by-query` 提示
+  具体缺哪个页面写键）；x1@QA 的 `doc`/`doc/update`/`bulk`/`delete-by-query` **200**、
+  `update-by-query` **409**（索引不存在→ES 业务错，说明授权层已放行）。有权限用户不被误拦、
+  无权限用户无一放行，均为绕过前端直连后端所得
+- 说明：`doc-bulk` / `dbq` 并非产品端点（前端真实路径是 `cluster/bulk`、
+  `cluster/delete-by-query`），探针用错路径时会命中「该写端点未登记页面归属」兜底——
+  这正是未知写路径的 fail-closed 行为，不要据此当成误拦；`devtools/execute` 用对象型
+  `body` 会得到 500（契约要求字符串），也属探针形状问题
+- **全站 52 个页面逐页写按钮扫描（x1 只读 PROD 目标，真实宿主 iframe 渲染）**：主内容区
+  可点击的写语义按钮仅 6 处，逐条点击核验后全部无写请求——收藏「导入」只合并本地白名单键、
+  分词实验室「删除分词通道」是删本地对比列（`lanes.splice`）、检索模板「新建模板」只清空
+  编辑器进入新建态（真正落盘由 `canOps` 把守的 `save`）、迁移与 Watcher 的「重试」只是重读、
+  「运行」仅发 `POST cluster/analyze`（后端只读 POST 白名单内的分析端点）
+- **同一套页面在可写 QA 上反向验证**：别名「新建别名」、模板「新建/删除」、DevTools「执行」
+  均可用且 `disabled=false`——证明只读目标的「无写入口」来自授权收缩，不是全站一刀切隐藏
+- **x3 零权限同套点击验证**：四个候选按钮全部不存在或已禁用，未发出任何写请求
+- 逐页审计收口的四处「看得见却发不出去 / 缺解释」问题（违反第 5 条，已修）：
+  · ILM 空态「在 Dev Tools 创建示例策略」写过 DevTools 的 PUT 策略草稿，此前对只读身份
+    照常渲染——点了只得到一条 toast；现与 `canDevtools` 同门，无权限时不渲染动作文案并给出 hint
+  · ILM 只读说明条按 `!canOps && !canMove` 判定，漏掉「策略可写、`ilm/move` 不可用」这一
+    组合态，导致「重试 step」无故消失；补第二档说明，讲清缺哪一项
+  · 快照「恢复」的 `openRestore` 只有模板 `v-if` 与菜单剪辑，执行体首行缺门（键盘/程序化直调
+    可绕过）；补 `canOps` 首行门
+  · 安全中心「重绑控制集群」是 ADMIN 专属，非 ADMIN 时整块凭空消失；现补只读说明。
+    别名页同理：只有新增权限（config-validator 写键）的身份原先看不到任何说明，现说明
+    切换/设写/解绑为何缺席
+  · 新增 `pageEntryGating1125.spec.ts`（7 例）锁死上述四处门控与说明，`perm:scan` /
+    `vue-tsc` 与相关页面既有 46 例全绿
+- 并发审计第二批（检索/数据类视图）收口的五处**自动读取缺身份门**（第 7 条：换号污染）：
+  · DSL 工作台「结果自动刷新」定时器此前直调 `execQuery`，绕过 `autoRunAllowed`——
+    宿主换 token 的窗口里会带着旧 target 发查询；现定时器内联同一判定，不放行即跳过本拍
+  · 数据浏览器深链 `?doc=` 挂载即拉原文档：补 `linkDocAllowed`，不放行则挂起并在身份落地后补跑
+  · 文档 Diff 页 `onMounted` 直调 `doFetch` / `fetchCompare`（URL 可带 idx+id 直达）：同上收门
+  · 检索模板页 `setup` 期裸调 `load()`：改 `loadGuarded`，未识别身份不发清单请求
+  · 门式公式统一：检索模板回放门、SQL 控制台预填门补 `!auth.probeStarted`
+    （缺它会在探测永不启动的宿主里把回放永久挂起；其余四个视图本就是三句式）
+  · 新增 `autoReadIdentityGate1125.spec.ts`（8 例）；相关既有 24 例全绿
+- 并发审计第三批（工作台/迁移/优化/漂移/索引工作台）收口的六处**挂载期读取无门**：
+  索引工作台（别名清单 + 当前索引详情）、索引优化向导（挂载即扫描）、配置漂移
+  （key 清单 + 分享现场）、临时重建（作业清单 + 入口裁决里的 prepare/体检采样）、
+  跨集群迁移（作业清单一/二/三口 + 目标索引清单 + indexKey）、文档 Diff 与数据浏览器
+  已在上一批同批修完。统一成同一三句式门（`authDisabled || !probeStarted ||
+  (probed && me && canReadPage(page, target))`），未放行则挂起并在身份/目标落地后补跑一次
+  ——换号窗口不再把上一账号的别名/mapping/作业行/漂移结果先拉进新界面
+  · 回归扩到 **13 例**（`autoReadIdentityGate1125.spec.ts`），相关既有 38 例全绿
+  · 说明：`adhoc-rebuild/prepare` 是 GET 只读端点（非写），审计初稿把它当写端点属误判；
+    本次补的是「换号窗口读到旧数据」而非越权写
+- 并发审计第四批（剩余 21 个视图全部扫完）——把前三批反复手写的三句式身份门抽成
+  **`composables/usePageIdentityGate.ts`**（`usePageIdentityGate` / `useGatedBootRead`），
+  并接入 17 个视图：分析器验证、分词实验室、Painless 沙盒、系统信息、诊断、
+  拓扑、工作台、同义词、火焰图、打分解剖、匹配矩阵、Boost 调参、查询 X 光、
+  排名侦探、实时大屏（含轮询 tick）、索引优化、配置漂移、临时重建、跨集群迁移、
+  索引工作台、文档 Diff、数据浏览器、检索模板、DSL 工作台
+  · 抽共享件的原因不是「少写几行」：同一段条件在前几批里已经漂移过两次（漏
+    `!probeStarted` 会让探测永不启动的宿主里回放永久挂起），单点定义后
+    这类漂移不可能再发生；门的方向（fail-closed，**不得**写成 `!probed ||`）也一并锁进单测
+  · carry 回放（查询 X 光 / 排名侦探）改为「取后暂存 → 门放行才消费」，避免为了等身份把联动载荷丢掉
+  · 新增 `composables/__tests__/pageIdentityGate.spec.ts`（10 例，含 fail-closed 方向与
+    挂起/补跑恰好一次）+ 批次 E/F 接线断言 19 例（`autoReadIdentityGate1125.spec.ts` 共 32 例）
+- **DevTools 补 Kibana 的「过滤响应」档**（对齐官方 Console 工具栏清单里唯一缺失的高频能力）：
+  响应工具行新增 `JQ / 正则` 双档 + 表达式输入，只作用于展示层——原文 `cur.result` 不动，
+  清空表达式即恢复完整响应；渲染的 Monaco 与「表格」视图同源读过滤结果
+  · 自实现 JQ 子集求值器（`utils/jqFilter.ts`，零新增依赖）：字段/数组下标/迭代 `[]`/
+    递归下降 `..`/管道 `|`/逗号多值/`select`/比较/`and·or·not`/`//` 替代/数组与对象构造/
+    `length·keys·values·type·map·add·join·tostring·tonumber·contains·startswith·endswith·has`
+  · **算不对就报错，不许给错值**：不支持的语法（动态键、未知函数、类型不匹配的运算）
+    一律抛错，界面显式标红并把原因挂在 title 上；非 JSON 响应会提示改用正则档
+  · 正则档逐行匹配（不含分隔符与 flags，与 Kibana 一致），非 JSON 响应同样可用
+  · 真实浏览器验证（mock 后端）：JQ `.hits.hits[]._id` → 3 条、非法 `.hits[` → 标红
+    「方括号内只支持数字下标或键名字符串」、正则「北京」→ 2 条、清除后过滤标记消失；
+    1440 与 1024 两档工具行零横向溢出、行高恒 26px（搜响应框给 96px 下限，压缩预算优先
+    让给可选动作）
+  · 新增 `jqFilter1126.spec.ts`（62 例：求值语义 51 + 接线 6 + UI 契约 5）
+- **DevTools 补 Console Variables（Kibana「Variables」对位）**——此前 `${var}` 插值只接在 DSL 页，
+  REST 控制台里写 `${idx}` 会**原样发给 ES**，用户只得到难懂的语法错误：
+  · 页头新增「变量」入口 + 计数徽标 + 管理弹窗（与 DSL 页共用同一 `es_vars` 表，改完全站生效）
+  · 插值接进**唯一发送内核 `execSend`**，覆盖全量/分段/键盘/历史回放所有执行路径；
+    放在权限与范围判定**之后**（判定看原始请求）、发车**之前**（发送用展开值）
+  · 区分上下文：**路径档一律字符串替换**（`/${idx}/_search` → `/orders/_search`，绝不加引号）；
+    JSON 体内 `"${var}"` 按字符串、裸 `${var}` 按类型注入
+  · **未定义变量显式拦下**并列出名字（静默把 `${var}` 发出去只会换来难懂的 ES 语法错误）
+  · 修正 `applyVars` 的既有缺陷：原实现无上下文感知，路径里的变量会被加引号
+    （`/${idx}/_search` 变成 `/"orders"/_search`——合法但错误的路径）
+  · 真实浏览器验证（mock 后端）：加变量→保存→徽标 `1`；`GET /${idx}/_search` 实际发送
+    **`/orders/_search`**；`${nope}` 被拦下、提示「变量未定义：${nope}——请先在「变量」里填值」
+    且请求数 **0**；历史里仍保留原文（草稿零触）
+  · 新增 `vars1127.spec.ts`（21 例：插值语义/路径档/未定义检测/持久化）+ 接线性断言
+  · **REST 直连页同源补接**：RestView 是同一类执行入口（`/cluster/raw`），此前同样不识别变量；
+    两页现共用同一套语义与提示，避免「DevTools 能用、REST 页不能用」的认知割裂
+  · 接线回归扩到 **28 例**（含「路径档必须用 pathMode」「未定义先拦后发」「判定先于展开」三条契约）
+- **DevTools 补「导出 / 导入请求」（Kibana Console 同名能力）**——此前只有「从 curl 导入」与
+  历史 JSON 导出，用户无法把自己的多请求脚本整份带走、也打不开同事发来的脚本文件：
+  · 导出为**纯文本 .http**（方法行 + 请求体，段间空行），人可读、可改、可进版本库；
+    不使用 JSON 包一层，避免注释与排版在往返中被吃掉
+  · 导入按空行切段，每段成为一个 Tab，标题取段首注释（`//` 或 `#`）；
+    **先确认再整份替换**（不静默覆盖用户现有 Tab），无法识别的段明确报告而非猜测成请求
+  · 导出→导入**幂等**：再导出一次文本完全一致（有测试锁）
+  · 真实浏览器验证：工具栏三钮并存；导入样例文件后两个 Tab 名为「集群健康」「查订单」、
+    首 Tab 路径 `/_cluster/health`、次 Tab `/orders/_search`，右下提示「已导入 2 个请求」
+  · 新增 `devtoolsFileIO1128.spec.ts`（25 例：往返/容错/接线）
+- **审计发现并修复一处由变量功能引入的越权面**（第 2 条）：守卫判定的是「用户写的原始路径」，
+  而发车用的是「变量展开后的路径」——非 ADMIN 写 `/${v}/_snapshot`、变量值含控制面段时，
+  前端会放行一个越权请求（后端仍会拦，但前端不该放）。两页均补「展开前后不等则**再过一次**
+  `requestInScope`」，并新增 4 条回归断言；**已做负向验证**（删掉修复后测试确实转红，恢复即绿）
+- **补全前端的审计覆盖面**（此前只扫了 views，漏了 components 与 stores）：
+  · 机器清点：**30 个视图/组件文件**含变更型 `api.*` 调用，逐一核对后**全部带能力门**
+    （`ClusterSwitcher` 的档案增删改由 `canAdmin` 把守、`CreateIndexModal` 的执行体首行有门
+    且别名挂载单独判权、`CmdPalette` 的 raw 五命令走 `canAdminOps`；stores 层无直接写调用）
+  · 把这条变成常驻机械规则并入 `perm:scan`：任何 `.vue` 出现写调用而全文无能力判定即报错，
+    摘要行新增「写调用文件」计数（当前 30）
+  · 规则做了正反自验（`permScanSelfCheck1124.spec.ts` 扩到 6 例：注入「有写调用无门」必须报红、
+    同文件补上门后必须转绿）——避免又出现「规则写了但拦不住」的假绿
+- **修正一处与 Kibana 相反的键位**：`Ctrl/Cmd+I` 我们一直绑成「唤起补全」，而 Kibana 官方
+  Console 键位表里 `Ctrl+I` 是 **Auto-indent**（补全由 `Ctrl+Space`/Enter/Tab 承担）——
+  从 Kibana 过来的人按 Ctrl+I 想整理 JSON，却弹出候选框。现改为格式化当前请求体
+  （与「发送时自动格式化」共用同一 formatter，草稿同步更新，等价用户手改），
+  快捷键面板文案同步；补全保留 Monaco 默认 `Ctrl+Space`
+  · 真实浏览器验证（CDP 真实按键，非合成事件）：单行
+    `{"query":{"match_all":{}},"size":3}` 按 Ctrl+I 后变成 6 行缩进格式
+- **修复 DevTools 换号未清理内存草稿**（第 7 条）：`App.vue` 的 `onIdentityChanged` 只清
+  store/ioRecorder/模块缓存，而 DevTools 组件内的 **Tab 草稿、变量弹窗草稿、响应过滤表达式
+  都是内存态**——不落盘也照样在屏幕上，换号后下一个用户点执行会带着上一个账号的路径与变量发出去。
+  现监听 `es-console:identity-changed`：重建默认三标签（顺带丢掉旧响应）、变量草稿清零、
+  过滤表达式清空、两个弹窗关闭并给出提示；卸载时摘除监听
+  · 真实浏览器验证：造现场（路径改 `/secretA/_search`、加变量 `tok`、多开一个 Tab）
+    → 派发换号事件 → Tab 4→3、路径归 `/_cluster/health`、变量徽标消失、变量弹窗关闭
+  · 新增 `devtoolsIdentityReset1130.spec.ts`（4 例）
+- 同批核查了**其余视图的换号现场**（RestView / ILM / 索引工作台 / 模板 / 高级 Reindex）：
+  它们有内存草稿但未自己监听换号，靠 `App.vue` 的 `<component :key>` 含 `username`
+  在换号时强制重挂载兜底；存储侧 `es-console.draft2:` 也已在换号清理清单内。
+  这条兜底是那些视图不污染的唯一依据，故新增 2 条断言把它钉死（key 必须含
+  `username` + `route.path` + `target`）
+- **修复 DevTools 缺少页级可见性门**（第 5 条）：路由守卫在「身份尚未落地」窗口会放行
+  （`pageAllowed` 对 `grantedPages=null` 且 `role=null` 返回 true），零授权用户因此在探测
+  完成前就能进 `/devtools` 并**实际点到工具栏**（导出/导入/变量，实测 `elementFromPoint`
+  命中的就是按钮本身）。后端仍会拦写请求，但「可操作性必须与授权一致」要求前端也不露。
+  · 修法取**组件内门**而非路由跳转：`pageVisible = canReadPage('devtools', store.target)`，
+    身份落地后自动重算——有权限的人不会被误拦（曾试过在路由守卫里直接拒，实测把
+    x1（有 `conn:qa:devtools`）也挡在 /forbidden，已回滚）
+  · 无读权时整页让位给授权说明（点明缺什么、去哪开通），不渲染任何工具栏
+  · 真实浏览器双向验证：x3 → 无「导出」、显示拒绝说明；x1（目标 QA）→ 正常进入、
+    「执行」可用且 `disabled=false`
+  · 新增 `guardProbeFailClosed1131.spec.ts`（4 例）
+- **写方法面补测：换动词不能绕过控制面守卫**（第 2 条）
+  · 单测（`DevtoolsEscalationMatrix1004Test` 增至 11 例）：PATCH/PUT/DELETE/POST 对
+    `.security`、`es_console_jobs` 一律拦（含小写 `patch` 变体）；业务索引维持放行
+  · **产线实测**（139.196.51.46，3 身份 × 5 组合 = 15 项，**全部 403，零放行**）：
+    x3 全部「当前身份无任何页面授权」；x1@PROD 全部「暂无该共享写端点的页面写权限」；
+    最关键的是 **x1@QA（有写权限）仍拿不到**——`.security` 返回「非管理员 raw 不允许访问
+    系统/校验索引」，`es_console_jobs` 返回「控制面索引不对通用数据接口开放」，
+    说明控制面隔离是**独立于页面写权限**的第二道防线
+  · 同时复跑产线三账号矩阵：**34/34 全绿**
+- **补测「页面级授权逃生阀」关闭时的底线**（第 1 条要求覆盖所有可选加固项）：
+  `es.rebuild.console.page-auth.enabled=false` 是运维逃生阀（关闭后回退纯角色档，启动期有
+  WARN 留痕）。审计要确认这个回退**不会**把写端点一并放开——否则误配一次等于全站放开写。
+  · 新增 4 例（`ConsoleAuthInterceptorPageAuthTest` 增至 **71 例全绿**）：
+    VIEWER 写文档 → 403；VIEWER / OPERATOR 走 DevTools 透传 → 403（ADMIN 专属）；
+    **ADMIN 仍可写**（有权限的人不因逃生阀被误拦）
+  · 产线配置核查：QuoteHub 未设该键 → 走默认 `true`（页面级授权启用），与矩阵结果一致
+- **修复一个真实越权缺陷：委派 ADMIN 可创建/删除本地账号**（第 1、2 条）
+  · `forbidDelegatedLocalUserWrite` 原实现第一行 `if (role >= ADMIN) return;` 把
+    「委派 ADMIN」一并放行——**产线实证** `deng_test_x2` 正是 `role=ADMIN + delegated=true
+    + authSource=delegate`。它因此可以创建本地账号，在宿主授权体系之外另造一个不受宿主
+    管控的全局身份（本地账号 `grantedPages=null`，走内置登录，可绕过页面门与连接写键）
+  · 产线探针复现：以 x2 调 `/auth/users/upsert`（空用户名）返回的是「username 不可为空」
+    而非「页面授权/委派会话不得…」——说明**凭证门已放行**，只是被参数校验偶然挡住；
+    换合法用户名即建号成功
+  · 修法：把「委派 / 页面模型身份」判定提到角色判定**之前**，本地账号只允许**内置**
+    （非委派、无 grantedPages）ADMIN 管理
+  · 新增 3 例并**加固断言**（只接受「权限拒绝」文案；越过权限门进入存储层一律判失败）。
+    过程中发现旧写法是**假绿**——mock 存储抛 `IllegalState` 逃过 `catch` 被当通过；
+    加固后立刻转红，证明缺陷真实存在
+  · **负向验证**：回滚修复 → 测试转红（1 Failure）；恢复 → 全绿
+- `examples/demo-host`（不在根 reactor 内，单独跑）：**5 例全绿**——原有开箱冒烟 1 例
+  + 新增委托契约 4 例；其 starter 依赖已对齐 1.0.66 后重新编译通过
+
+### 新增（开源接入样板）
+
+- `examples/demo-host` 补**委托 SPI 完整参考实现** `SampleHostAuthDelegate`：四个方法
+  （`authenticate` / `hasCredential` / `tokenOf` / `revoke`）全实现，含宿主角色→控制台角色
+  映射（未知角色降 VIEWER，不升权）、页面授权下发、登出登记拒绝表。默认关闭
+  （`demo.host-delegate.enabled=true` 才注册），开箱冒烟行为不变
+- 配套 `SampleHostAuthDelegateTest`（4 例）把「最容易漏且运行时无感」的契约钉死：
+  未知角色不得升权、只读/运维身份必须下发页面集而非 null、坏令牌也算「带宿主凭证」
+  （必须阻断回落内置身份）、登出后同一令牌进拒绝表且不误伤他人
+- demo 的 starter 依赖从 1.0.39 提到 1.0.66：旧版没有 `hasCredential`/`tokenOf`/`revoke`，
+  照抄参考实现会编译失败；README 已写明版本下限与启用方式
+
 ## [1.0.60]
 
 ### 修复
@@ -81,6 +787,256 @@
   复用 JSON 文本位保留数字/布尔类型
 - DSL 索引不存在一键纠错：错误面板从 `no such index` / `Unknown index` 提取索引并给出
   相近索引 chips，点击切换顶栏索引并自动重试；索引名纠错抽为通用工具（SQL 面板同源）
+- DSL 保存的搜索跨索引回放与历史回放统一：先切索引、等 mapping 到位再执行（修复保存
+  回放首查直方图猜不到字段），提示按来源区分「保存时 / 历史记录」
+- DSL 全文本参数继续补齐：`more_like_this` 的文档频率/词长/停用词、`simple_query_string`
+  的通配与模糊档、`match_bool_prefix` 模糊档、`combined_fields` 同义词开关；均可发现
+  并带正确控件（实测 `max_doc_freq` 输出数字 5）
+- DSL 加排序默认字段按「可排序 + 时间优先」选择：不再取字典序第一个字段（text 会直接
+  fielddata 报错），有 date 时优先时间词根字段并默认 desc（实测 bond_issuer 落 publish_date）
+- SQL 常用模板在列表中直接显示自动绑定字段（如「最近 7 天 · publish_time」），点击前
+  即可确认会用到哪个 mapping 字段，不再只能点完看 toast
+- SQL nested 字段硬限制不再留死胡同：错误面板识别 `Nested fields not supported`，
+  给「去 Lucene 面板 / 去 PIT 分页」两个真正能完成查询的通道入口（保留其余 URL 现场）
+- SQL 函数补全覆盖时间/分桶/常用标量：`NOW()`、`CURRENT_DATE`、`DATE_ADD`/`DATE_DIFF`/
+  `DATE_PART`、`DAY_OF_WEEK`/`WEEK_OF_YEAR`/时分秒、`HISTOGRAM` 等；零参函数直接落
+  完整调用，选中即用（实测输入 `N` 出现 `NOW()` 候选）
+- DSL 工具行 1024 档不再裁切：左组允许换行，「新文档 / 在构建器中打开 / DSL→Lucene /
+  索引工作区」全部可达（实测无 clipped、页面无横向溢出）；1440 单行锁定不变
+- SQL `SELECT *` 一键展开为字段清单（按当前 mapping，去 `.keyword` 子域、上限 60、
+  双引号转义、不伪造字段）；提示条在字段源就绪时出现，展开后即时标注结果已过期
+- DSL 深分页预检：`from+size > 10000` 本地拦截并给「去 PIT 分页」，自动把当前 query
+  与简单字段排序接力到 PIT；分页输入框在被拒后回显真实页（不再残留 501/1000）
+- SQL 结果列类型直连表格：`_sql` 返回的列类型显式传给结果表（列头类型徽标、数值对齐、
+  date 本地化不再只靠值采样；全 null/混合列也有类型），聚合表达式列仍排除
+- SQL 报错一键定位到行列：解析 ES 错误里的 `line X:Y` 锚点，错误面板标题出现「定位 X:Y」
+  chip，点击把编辑器滚到该处并落光标（真实浏览器实测光标 0→3 行，落点即第 4 行），
+  同时对应行标红；静态体检的「第 N 行」也变成可点跳转（实测 0→2 行）。长 SQL/多行
+  查询不必自己数行
+- SQL 错误位置只对失败时那一版 SQL 有效：改稿后定位 chip 与红线立即撤下，面板保留全文
+  并标「错误来自上一版 SQL」，不再用旧行号指认当前稿（实测改稿后红线 1→0、chip 消失）
+- SQL 函数面按官方目录补齐（数学/字符串/日期/条件/转换 + 分布聚合）：`CBRT`/`LOG10`/
+  `SQRT`/`TRUNCATE`、`LENGTH`/`CONCAT`/`TRIM`/`POSITION`/`UCASE`、`CURRENT_TIMESTAMP`/
+  `DATE_PARSE`/`QUARTER`/`DAY_NAME`/`ISO_WEEK_OF_YEAR`、`IFNULL`/`GREATEST`/`NULLIF`、
+  `PERCENTILE`/`STDDEV_POP` 等可直接补全；零参函数（`PI()`/`RANDOM()`/`TODAY`/
+  `CURRENT_TIMESTAMP`）落完整调用。已敲前缀命中字段前缀时字段仍占第一屏，不并列倾泻函数
+  （`SELECT o` 行为不变，真实浏览器实测 `DATE_TR` 出 `DATE_TRUNC(`）
+- SQL 未知函数一键纠错：`Unknown function [DATE_TRUNCC]` / `Scalar function [...]` 错误给出
+  相近函数 chips（编辑距离 top-3），点击按词边界替换（实测真实鼠标点击后 SQL 变为
+  `DATE_TRUNC`，重试返回结果）；改稿后面板标「错误来自上一版 SQL」，不把旧函数名当当前错误
+- SQL 报错定位兼容 JSON 串化形态：错误 reason 里的换行常以字面 `\n` 出现在错误全文里，
+  `line 1:8` 此前漏判；现在「定位 1:8」照常出现（真实浏览器实测），`deadline`/`online`
+  词尾仍不误判
+- 语法桥页与 SQL 控制台同口径自救：试跑失败条出现「定位 1:8」、未知函数相近 chips、
+  改稿后标「错误来自上一版 SQL」；静态体检行号可点跳转。实测真实点击修正
+  `DATE_TRUNCC → DATE_TRUNC` 后再次试跑返回 1 行 × 1 列，成功回包即清错误红线
+- DSL 运行时 unknown-field 一键改名：查询报 `No field found for [titl]` 时，错误面板按
+  mapping 给出相近字段 top-3（编辑距离），点「改为 title」只改出错条件的字段并重试；
+  实测真实点击后 DSL 从 `"titl"` 变为 `"title"`、重试返回命中。sort/agg 类错误不误指，
+  条件树未同步时不暗改
+- 构建器未知字段黄点不再溢出：8px 提示圆点内原带可见「字段不在 mapping」文案，在窄行里
+  逐字竖排压住算子/值行；现语义只走 title/aria-label、圆点保持 8px（真实浏览器 1440 复核，
+  竖排残字消失）
+- 构建区默认收起（用户裁决）时点 S/M/L/满 不再「无反馈」：档位点击同时展开构建区并应用
+  该高度（实测 `.dq-main` 0×0 → 1184×532、编辑器可见且 L 档激活）；不点仍维持默认收起
+- DSL 错误锚点只对失败时那一版 DSL 有效：改稿后「定位条件 / 停用该条件 / 改为 title」立即
+  撤下，面板保留错误全文并标「错误来自上一版 DSL」，不再用旧字段/旧条件指认当前稿
+  （真实浏览器实测：插入空格后 chips/定位消失、上一版标记出现、错误全文仍在）
+- DSL 稀疏子句纳入字段体检：`regexp` / `match_phrase_prefix` / `match_bool_prefix` /
+  `span_term` / `text_expansion` / `weighted_tokens` / `shape` / `geo_shape` / `geo_grid` /
+  `terms_set` 的字段键，以及 `rank_feature` / `distance_feature` / `percolate` / `semantic` /
+  `sparse_vector` / `bitmap_terms` 的值位 `field`，写错字段会给最近字段提示（实测
+  `regexp.titl` 在编辑器出现 hint 下划线）；`span_term.boost`、`terms_set.minimum_should_match_*`、
+  `regexp.flags` 等参数键不误判
+- DSL 稀疏子句补字段类型体检：`rank_feature` 只接受 rank_feature(s)、`distance_feature`
+  只接受 date/date_nanos/geo_point、`percolate` 只接受 percolator、`sparse_vector` 只接受
+  sparse_vector、`regexp` 只接受 keyword/text/wildcard、`match_phrase_prefix`/
+  `match_bool_prefix` 只接受 text/keyword；类型明确不符给 warning（实测 `rank_feature`
+  打 `title` 出现警告下划线），不确定组合（terms_set 等）不判
+- `rank_feature` 不再被误判「未填值」：boost 是可选主值，字段本身即完整查询；主值占位改为
+  「boost（可选，默认 1）」，`distance_feature` 显示 pivot 提示、`bitmap_terms` 显示位图值
+  提示（实测未填值徽标消失、占位文案正确）
+- `terms_set` 结构化修正：官方体是「字段键持词项数组 + `minimum_should_match_field`/
+  `minimum_should_match_script` 与字段同层」——此前带 msm 的合法 DSL 整条落 raw、新建条件
+  会把 msm 写进字段对象（ES 400）。现解析为字段 + 数组 + 兄弟参数，构建器用 chips 编词项、
+  msm 走参数面板（实测 chips=es/search、参数表含 msm、DSL 原样保持）
+- 换算子不再携带旧算子参数：match 的 operator/fuzziness 切到 term 会写出非法体（ES 400）；
+  现按新算子参数 schema + `_name` 白名单保留，实测 match→term 后 DSL 仅剩 value，
+  旧参数零残留
+- `distance_feature` 新建/切换即可跑：origin 默认 `now`、pivot 默认 `7d`，字段沿用当前字段，
+  origin 可在参数表修改（实测切换后 DSL 为 `pivot:7d / origin:now / field:title`）
+- SQL 结果窗口超限就地自救：`Result window is too large … [10000]` 时错误面板给
+  「去掉 OFFSET 用 cursor」/「把 LIMIT 降到 10000」；点击改写失败那一版 SQL 并重跑
+  （实测 `LIMIT 10 OFFSET 20000` 改为 `LIMIT 10` 后返回结果，并提示从首行用「下一页」
+  cursor 深入）；改稿后旧自救不再出现
+- SQL 失败语句也入历史：条目带索引/参数/执行选项与 `ok=false` + 错误摘要，历史行红点
+  tooltip 直接显示失败原因；刷新后失败标记不再丢（加载归一此前把 `ok` 丢掉），同语句
+  重跑成功自动清掉错误。实测 `Unknown column` 失败后去掉预填刷新，历史仍显示红点与原因
+- 语法桥历史回放补齐现场：跟随历史索引切换、历史行显示执行选项摘要；带位置参数/非默认
+  选项的条目只回填不自动试跑（语法桥试跑只发送 `{query}`，避免用不同时区或无参数跑出
+  「回放结果」），并明确提示回 SQL 控制台回放。实测切到 research_report、无 `/sql` 请求、
+  不产生结果条
+- 稀疏算子字段选择器类型修正：`rank_feature` 候选含 rank_features、`distance_feature` 含
+  geo_point（此前合法字段被类型过滤隐藏）；`percolate`/`semantic`/`text_expansion`/
+  `weighted_tokens` 只列 percolator / semantic_text / text+sparse_vector / sparse_vector 字段
+- 字段输入与算子切换解耦：此前每敲一个字符（半截字段 type 未知）都会把已选算子静默降成
+  exists；现在输入只改字段名，只有从候选下拉明确选中 mapping 字段才按类型智能换算子。
+  实测 rank_feature 输入 `rank` 时算子保持、候选只列 rank_features/rank_score；
+  distance_feature→rank_feature 的 pivot 字符串同时回落 boost=1
+- SQL→DSL 预览绑定生成时的 SQL 快照：改稿后标题标「预览来自上一版 SQL」、正文降透明，
+  「到 DSL 页 / 复制」禁用（避免带着旧 FROM/旧索引跳转或复制）；点顶部「转 DSL」重新生成
+  即恢复。实测改稿后两钮 disabled、预览 dim，重转后 stale 标记消失、跳转恢复
+- SQL 结果单元格下钻：右键「以此值筛选并重查」——简单 SELECT 自动追加 `WHERE`/`AND`
+  条件并重查（字符串转义、NULL→`IS NULL`、ORDER BY/LIMIT/分号原样保留；
+  GROUP BY/JOIN/UNION/派生表不猜，降级为复制条件）。实测 SQL 变为
+  `… WHERE "title" = '第一页结果' LIMIT 5` 并自动重跑
+- 修复「程序化改稿 + 立即重跑」的过期竞态：成功回包按快照重算 stale，下钻/窗口自救
+  重跑后的新结果不再被误标「已过期」（实测下钻重跑后无过期标记）
+- 结果表本地筛选与查询下钻语义分开：单元格菜单改为「仅筛选当前结果（不改查询）」与
+  「加入查询条件并重查（改 SQL）」；无偏好工具行的 SQL 结果表新增筛选态条
+  （已筛选 N 列 · M/K 行 + AND/OR + 清除，tooltip 说明仅前端不改查询）。
+  实测本地筛选后 SQL 文本不变、提示条出现；下钻仍改写 WHERE
+
+### 新增
+
+- SQL 控制台支持「只跑选中片段」：编辑器里选中若干行后执行按钮变「执行选段」，
+  Ctrl+Enter 只发送选段（客户端尾分号不发送），整篇原文不动；请求体、历史、
+  转 DSL、结果来源徽标都绑定选段及其 FROM，报错 `line X:Y` 按选区锚点换算回
+  全文坐标；选段结果下钻不猜整篇（还有别的语句时降级复制条件）。
+  实测两条语句并排时只选第二条执行，返回选段结果，编辑器全文保持两条不变
+- SQL 控制台多语句稿支持「按光标语句执行」：稿内有多个顶层语句时执行按钮变
+  「执行当前语句」，按钮原因标注第 N 条 / 共 M 条，Ctrl+Enter 只发送光标所在
+  那一条（引号/注释内的分号不误切）；显式选区优先，单语句稿仍按整篇（零变化）。
+  转 DSL 同源；结果来源标「语句 · 仅执行当前语句」，报错行列按语句锚点换算回
+  全文。实测两条并排时光标分别落在第 1/2 条只返回对应结果，编辑器全文不动
+- SQL 就地建议与纠错跟随当前段：展开 `SELECT *`、补 LIMIT、列/索引/函数纠错、
+  结果窗口自救只改「选区或光标所在语句」，其他语句原文不动（多语句稿不再因另一条
+  已有 LIMIT 而漏提示，也不会把 LIMIT 加到另一条尾部）；改稿后旧错误的纠错建议
+  同步撤下。实测两条语句时只给第 1 条补 LIMIT/展开字段，第 2 条 LIMIT/WHERE 原样
+- 原始 DSL 编辑器补全目录与算子注册表全量对齐（此前 query 键位只有 8 个常用算子）：
+  现可选 63 类（term/全文/geo/join/复合容器/span/向量/语义/规则/模板等），每类带
+  官方体骨架与字段/值占位，高频算子保持首屏顺序；稀缺算子不再盲打。实测输入
+  `"rank_feature` / `"span_near` / `"knn` 均出对应骨架，接受后仍是合法 JSON
+- SQL 结果表新增查询级排序：单元格菜单「按此列升序/降序并重查（改 SQL）」——改写
+  顶层 ORDER BY（已有则替换；没有则插在 LIMIT/FETCH/; 之前）并自动重跑，与表头
+  本地排序明确分开；UNION/派生表/不安全列名不改写，降级复制排序子句；选段/光标
+  语句的局部结果同样不猜整篇。实测连续点升/降序只保留一个 ORDER BY，LIMIT 原位保留
+- 原始 DSL 补全的 63 个算子候选补中文语义（全文匹配 / 精确匹配 / 近邻跨度 /
+  向量近邻 / 排序特征…），不再只有英文键；悬停或方向键选中时直接显示对应说明
+- SQL 结果表头点击语义讲清：SQL 宿主下表头提示「点击本地排序（不改 SQL）」；
+  右键列头新增「按此列升/降序并重查（改 SQL）」，与本地升/降序同菜单分组。
+  实测列头菜单点降序后 SQL 变 `ORDER BY "title" DESC` 并自动重跑
+- 局部执行的 SQL 结果下钻/排序不再一律降级复制：选段/光标语句的结果在稿未改时
+  只改写执行过的那条语句并强制重跑它（追加条件与 ORDER BY 均原位），其他语句
+  原文不动；稿已改/UNION/派生表/不安全列名才回退复制。实测两条语句并排只跑
+  第 2 条后下钻/排序，第 1 条完全不变，第 2 条自动重查
+- 表格首行减法（DBX/DBeaver 式数据网格）：列头恢复单行 25px（原双层 41px），
+  类型收进 title/列详情；排序 ⇅ 与筛选漏斗改为悬停/聚焦/生效时出现且绝对定位于
+  列右侧，不再占列宽（8 列宽表 1262→1150px，1440 下不用横滚）；长列名 220px 截断；
+  结果工具行原始 IO/高度档改图标钮，无 cursor 时不渲染两个禁用翻页钮。
+  实测表头 41→25px，结果表头上移 113px
+- 列宽拖拽对 SQL 结果表可用（无 storageKey 走内存态、不落盘）：首次拖拽固化当前
+  列宽并按内容宽展开，拖多少宽多少（横向滚动），双击柄自适应内容。实测 title
+  285→405px，表宽随之扩展
+- SQL 结果列管理（内存态）：列头右键可隐藏/置首/重置列序/适应内容，列名拖拽重排
+  同样生效；隐藏后出现「已隐藏 N 列 · 恢复全部列」提示条。全部不落盘，新查询回到
+  全列；隐藏列上的本地筛选同步清除。实测隐藏 issuer_name 后提示出现、恢复后 8 列
+  全回，localStorage 零写入
+- SQL 结果工具行新增行高档位（紧凑/标准/宽松）：无偏好工具行的 SQL 结果也能切换，
+  走全局 `es_tbl_rowh` 记忆（与 RT/QRT 同源）。实测行高 26→42→22px，跨表一致
+- 原始 DSL 根键补全补齐树已支持的结构化顶层键：post_filter / knn / collapse /
+  rescore / retriever / suggest / script_fields / runtime_mappings / search_after /
+  min_score（各带官方骨架，前八键顺序不变）；post_filter 与顶层 knn.filter 内部
+  也识别为查询位。实测根键列表出 10 个新键，post_filter 内出 match/term 等候选
+- SQL 结果优先布局：DSL 预览自动生成但默认折叠为头部（手动「转 DSL」才展开，
+  头部可随时展开/收起/到 DSL/复制），编辑器高 42vh→34vh；1024 单栏时模板侧栏
+  排到结果区之后。实测结果表头位置：1440 794→605px，1024 1140→672px
+- SQL 值位补全支持否定谓词（`col NOT IN (...)` / `NOT LIKE` / `NOT BETWEEN`）：
+  此前 `NOT` 被当作列名左扫，类型分派必落空——否定写法一律零候选。现主正则前置
+  可选 `NOT`、IN 列表第 2+ 项支路统一剥尾，列名还原到真实字段后与正向候选/格式档
+  完全一致（keyword 走 terms、date 走 date-math、数值 BETWEEN 出区间形态）；
+  正向写法零漂移，未知列仍零候选
+- SQL 结果表与查询/索引工作台共用同一套表格内核（不再各写一份）：结果工具行并入
+  表格 `tableBar` 内存态——计数/搜索/导出▾（CSV/XLSX/JSON/PNG/MD/NDJSON）/
+  视图⋯（行高三档+重置列宽）/列选/布局方案/放大 全部走共享组件；列宽、冻结、
+  列隐藏/置首/适应内容在 SQL 结果上同样可用（内存态不落盘，与既有 1137 语义一致）。
+  宿主手写 CSV/NDJSON 导出退役，导出注脚（cursor 未取完/结果过期）经内核统一出口。
+  实测 SQL 结果工具行由两行降为单行 36px，表头 21px，结果表顶 604px
+- 表格右键菜单分层（用户实报「右键跟首行一样太多功能平铺」）：一级只留「复制值 /
+  查看完整值」两项，其余按心智收进「复制… / 行操作… / 筛选与排序… / 列与导出…」
+  四个二级分组（RT/QRT 同语言，能力零删除）；二级跟随父行右缘，右/下溢出自动翻转，
+  → 开二级、← 关二级、Esc 先关二级再关整菜单。实测一级 6 项、二级列管理 5 项
+- 列头右键同款分层：17 项平铺收成「列详情 + 排序与筛选… / 复制… / 列与视图…」，
+  二级面板常驻 DOM 仅切换显隐（悬停零重挂载、键盘与读屏同刻可达）。实测列头一级 4 项、
+  3 个二级分组，列管理二级 5 项、列与视图二级 10 项
+- 用户菜单健壮性：委托身份缺 `role`/`username` 字段时页面整屏白屏（`toLowerCase`
+  读 undefined）——改为统一出口按 VIEWER 档渲染，昵称缺省显示「未命名身份」
+- Dev Tools 请求标签补右键（此前只能逐点 × 关闭）：切到此标签 / 重命名 / 复制…
+  （标签名·路径·该标签 cURL）/ 关闭…（当前·其他 N 个·全部 N 个，批量关闭一次落盘）。
+  实测一级 4 项、关闭二级 3 项（关闭其他 2 个 / 关闭全部 3 个）
+- SQL 补全新增 `CASE WHEN` 骨架（ES-SQL 官方支持，可作 GROUP BY 自定义分桶键）：
+  SELECT / WHERE / GROUP BY / HAVING / ORDER BY 五个词位敲 `ca` 即出多行骨架
+  （WHEN/THEN/ELSE/END 占位符可跳转）；空前缀位仍先给字段不抢首屏。
+  实测编辑器直接落 `SELECT CASE … END`
+- DSL 往返巡检（注册表驱动，替代手写语料抽样）：遍历 OPS_META 62 个算子 +
+  9 个包装容器 + 7 个多查询容器 + 全部已注册参数，逐项断言
+  parse→serialize 深等往返（234 项）；另锁 22 种生产中最常见的真实写法
+  （terms lookup、function_score 无 query、span_near、intervals、geo_distance、
+  knn、pinned、bool 混合 occurs…）。巡检同时锁「标签表无孤儿算子」
+- 右键能力补齐到此前没有入口的列表：索引工作区索引列表行（选中/复制索引名/
+  打开分页…六个 tab/到查询工作台·数据浏览器·别名管理）、查询历史行（回放/填入/
+  复制为 curl + 复制…/更多操作…两组）、搜索模板行（载入编辑器/复制…/更多操作…，
+  删除仍走二次确认）。实测索引行 4 项一级 + 分页二级 6 项，历史行 3 项一级，
+  模板行 3 项一级
+- 收藏卡片补右键（此前只能逐点右侧三个钮）：打开（标签直接写去向：查询工作台 ·
+  DSL / Dev Tools / REST…）+ 复制…/选择…/删除… 三组二级，批量删除与「勾选当前 N 条」
+  只在真有其它选中项时出现；删除仍走原二次确认，卡片常驻钮保持原样能力零删除
+- ILM 策略卡补右键：查看相位时间线 / 查看策略 JSON / 复制…（策略名·策略体）/
+  生命周期解释…（当前索引·到 Dev Tools）；「策略写操作…」二级只在有写权限时出现，
+  编辑/删除仍走原入口与 guardText 二次确认。实测一级 5 项、三个二级分组
+- 远程集群卡补右键：跨集群查询（带 `别名:*`）+ 复制…（别名·种子地址·整卡 JSON）/
+  去查看…（Dev Tools 的 cluster.settings·查询工作台沙盒）。种子项按数据出没——
+  代理模式的集群没有 seeds 就不出该项。实测一级 3 项、复制二级按卡片出 2~3 项
+- SQL 补全支持 SELECT 输出别名（ES-SQL 官方：GROUP BY 可写 alias、ORDER BY 可写
+  output column、HAVING 示例即用别名）：`SELECT status AS s, COUNT(*) AS c … GROUP BY c`
+  里敲 `c` 直接出别名候选（detail 标「SELECT 别名（GROUP BY 可用）」）。显式 AS 与
+  隐式 `ts d` 两种写法都解析，括号/引号内逗号不切分，`… END` / `INTERVAL 1 DAY` 不当别名；
+  WHERE 位不出别名（该处写别名 ES-SQL 直接报错）。别名前缀命中时不再并列倾泻
+  CBRT/CTAN 一大屏函数
+- 查询构建器条件行补右键（此前行尾 7 个 22px 图标钮，窄栏逐个点准成本高，且「复制为
+  DSL 片段 / 条件 JSON」根本没有入口）：一级给「停用切换 + 参数 + 复制… + 结构… + 删除」，
+  复制二级给「条件 JSON / DSL 片段 / 子树」，结构二级给「复制条件 / 包成 bool 组」；
+  标题写明「条件 · 算子 · 字段」。值输入框内的右键不接管（原生复制粘贴仍归输入框），
+  写动作全部复用既有 emit / TREE_BUS，不新增通道
+- 查询工作台结果工具行减负：1024 档下工具行原本要挤进 1283px（视口只有 756px），
+  「快照」被裁掉半个。现在把「导出本页 JSON / 全量导出（PIT）/ 按查询删除」三个低频
+  宽钮收进工具行「更多 ⋯」菜单（每项带一句用途说明），右簇宽度 674px → 475px；
+  1024 及以下工具行自动换行成两行（宽档仍单行），全部钮可达、无裁切、无横向溢出
+- 结果表列头改单行（QRT 1136 的口径补齐到 RT）：类型徽标不再独占第二行。
+  实测 1440 下 `thead` 44px → **26px**，表头不再虚高
+- 列头静息态只留列名（用户实报「表头第一行还是太多元素平铺，互相遮挡」）：类型徽标与
+  未排序 ⇅ 改为悬停/聚焦才出现、已排序箭头常亮；列名占满列宽并按字符截断。
+  实测宽表逐列量测 **overlaps = 0**（此前 `source_id ⇅ long` 会压到相邻列名上），
+  类型全称仍可从列头 title / 列详情读到
+- 结果表工具行再减两处常驻：① 窄档（≤1100px）工具钮只显示图标（文案进 title/aria，
+  宽度让给结果区）；② 表格快照 PNG 从工具行移进「视图 ⋯」菜单（低频分享动作），
+  工具行右簇 475px → **418px**，1024 下换行两行但不再裁切任何钮
+- 查询报错不再只说「all shards failed」（截图里详情只有一句 DSL 语法或字段类型不匹配）：
+  `friendlyEsError` 取原因时沿 `root_cause[]` 与 `caused_by` 链继续下潜，跳过
+  「all shards failed」这类包装词，带出真正的叶子原因（如
+  `Cannot search on field [status] since it is not indexed.`）；连叶子都没有时
+  兜底文案补一句「展开原始 IO 可看分片级原因」，不再让人无从下手
+- 数据浏览器「操作」列行内按钮收敛（用户实报「表格罗列的元素太多在平铺」）：原本每行
+  5 颗图标钮把操作列撑到 313px，索引名列被挤到截断；现在常驻只剩「打开工作区 + 更多」，
+  DSL 查询 / Mapping / ForceMerge / 删除索引 收进「更多」弹层（逐项带图标，删除仍 danger
+  且二次确认）。实测操作列 **313px → 163px**，索引名列回到 259px，列间重叠 0；
+  同时修掉末列注入钮换行（「复制行信息」原被挤到第二行、把整行撑高一倍）——
+  行高回到 **32px**、四个行尾钮同排
+- 表格级视图开关归位：聚合行 / 转置视图 / 语义格式化原先混在列头右键「列与视图…」里
+  （这三个作用于整张表，不属于某一列，列头菜单里出现就是心智错位）。现统一收进工具行
+  「视图 ⋯」的「表格视图」分节，与行高/列宽同处一口径；没有工具行的内存态通道
+  （诊断表、SQL 无偏好结果表等）在表体左上给出同一组开关的悬浮「视图」钮，
+  归位不等于能力消失。转置仍只对 rows 型出现（hit 型转置无语义）
 
 ## [1.0.59]（未发布）
 

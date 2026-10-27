@@ -794,7 +794,11 @@ describe('R31 聚合修真与分片卡', () => {
   it('R38 历史自动刷新：档位偏好+全生命周期组合件复用（对标阿里云自动刷新开关）', () => {
     expect(view).toContain("usePref<number>('live.histAuto', 0)");
     expect(view).toContain(':value="300000">5 分钟</option>');
-    expect(view).toContain("useAutoRefresh(() => { void loadHist(); if (detailShows('slow')) void loadSlow(); }");
+    /* 1125：定时器回调先过身份门（换号窗口不得带旧 target 拉监控曲线），
+       门后保留原「拉历史 + 慢请求」动作——两条同时锁，缺一即失败 */
+    expect(view).toContain('if (!liveReady()) return;');
+    expect(view).toContain("void loadHist(); if (detailShows('slow')) void loadSlow();");
+    expect(view).toContain('const liveReady = () => auth.authDisabled || !auth.probeStarted');
     expect(view).toContain('guard: () => !histLoading.value');
   });
   it('R37 等级分布计数 chips（对标阿里云报警概览等级分布）', () => {

@@ -204,6 +204,7 @@ import { RefreshCw, CheckCircle2, ClipboardList, ClipboardCopy, Copy,
  运行时恒告警 Failed to resolve component（图标从未渲染） */
 import { api } from '../api';
 import { useAppStore } from '../stores/app';
+import { useGatedBootRead } from '../composables/usePageIdentityGate';
 import { useAuthStore } from '../stores/auth';
 import { askConfirm } from '../composables/confirm';
 import { useAutoRefresh } from '../composables/useAutoRefresh';
@@ -292,7 +293,9 @@ watch(diagIntervalMs, () => diagRefresher.restart());
  由 ms getter 按 usePref 开关×间隔门控 + guard 决定」）；与 修的 SnapshotsView 同型 */
 diagRefresher.setOn(true);
 
-onMounted(() => { load(); loadOps(); });
+/* 1125：健康/运维面读取与自动刷新在身份落地前会带旧 target 发出去 */
+const diagBoot = useGatedBootRead('diag', () => { load(); loadOps(); });
+onMounted(() => diagBoot.run());
 
 const locks = computed(() => health.value?.locks || { self: 0, other: 0, expired: 0 });
 const lockTotal = computed(() => locks.value.self + locks.value.other + locks.value.expired);

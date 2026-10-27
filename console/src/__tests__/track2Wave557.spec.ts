@@ -6,7 +6,7 @@
  *   原始对象旁路，DslQueryView :269 554 先例）+ docs tab err-bar 裸插值升级
  *   errPreHtml（docsErrRaw，XmigrateView :63 先例）+ esError 人话化 ×4（保存/删除/修改/删除，
  *   XmigrateView w80 先例）；
- * ② DT Ctrl+I 唤起补全（Kibana 控制台同键：getEditor() expose 出口 addCommand→triggerSuggest，
+ * ② DT Ctrl+I 格式化请求体（对齐 Kibana Console 键位表 Auto-indent：getEditor() expose 出口 addCommand，
  *   MonacoEditor 组件本体零改——全站黑名单）+ run() 前置 tryFormat（合法 JSON 才 pretty，
  *   非法/带注释不动——严格 JSON.parse 门，stripJsonComments 宽容口径留给手动 format 钮 :789-793）
  *   + 响应搜索框 min(150px,100%) 极窄钳制；
@@ -81,14 +81,18 @@ describe('557 一：IH 抽屉摘 card 壳 + 失败态合并 err-bar（556 设计
   });
 });
 
-/* ═══════════ 二、DT：Ctrl+I 唤起补全 + run() 前置 tryFormat + 断点钳 ═══════════ */
+/* ═══════════ 二、DT：Ctrl+I 格式化请求体 + run() 前置 tryFormat + 断点钳 ═══════════ */
 describe('557 二：DT Ctrl+I 宿主接线 + run() 前置 auto-format（Kibana 对标）', () => {
   it('Ctrl+I 经 getEditor() expose 出口 addCommand（KeyMod.CtrlCmd|KeyCode.KeyI → triggerSuggest），MonacoEditor 本体零改', () => {
     expect(dt).toContain("import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';");
     expect(dt).toContain('monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyI');
-    expect(dt).toContain("ed.trigger('', 'editor.action.triggerSuggest', null)");
+    /* 1129：Ctrl+I 改绑「格式化请求体」（对齐 Kibana 官方键位表 Ctrl+I=Auto-indent；
+       补全交回 Monaco 默认 Ctrl+Space）。仍走 getEditor() expose 出口、MonacoEditor 本体零改 */
+    expect(dt).toContain('dt-auto-indent');
+    expect(dt).toContain('tryFormatBody(');
+    expect(dt).toContain('KeyMod.CtrlCmd | monaco.KeyCode.KeyI');
     expect(me, '组件黑名单零触：KeyI 不进 MonacoEditor 本体').not.toContain('KeyCode.KeyI');
-    expect(me, '组件黑名单零触：triggerSuggest 不进 MonacoEditor 本体').not.toContain('triggerSuggest');
+    expect(me, '组件黑名单零触：格式化命令不进 MonacoEditor 本体').not.toContain('dt-auto-indent');
   });
 
   it('挂载时序防 undefined：watch(bodyMonacoRef)+nextTick 后置取（editor 在子组件 onMounted 创建）+ addCommand 可用性守卫', () => {
@@ -107,20 +111,25 @@ describe('557 二：DT Ctrl+I 宿主接线 + run() 前置 auto-format（Kibana �
     expect(rawAt, 'api.devtoolsExecute 在场（防空跑）').toBeGreaterThan(-1);
     expect(fmtAt, 'tryFormat 在 busy 快照之后').toBeGreaterThan(busyAt);
     expect(fmtAt, 'tryFormat 在 api.devtoolsExecute 之前（send 前置）').toBeLessThan(rawAt);
-    expect(runBody, '送格式化出参进 api.raw（t.body 草稿零触：历史/镜像源码锁 body: t.body + fill 回填保形）').toContain('api.devtoolsExecute(t.method, t.path, bodyOut, signal)');
+    /* 1126：发送值多了一层 ${var} 展开（bodyFinal），但「送格式化出参、草稿零触」的契约不变——
+       断言 bodyFinal 由 bodyOut 派生，且草稿 t.body 仍原样进历史/镜像 */
+    expect(runBody, '送格式化出参进 api.raw（t.body 草稿零触：历史/镜像源码锁 body: t.body + fill 回填保形）').toContain('api.devtoolsExecute(t.method, pathOut, bodyFinal, signal)');
+    expect(runBody, 'bodyFinal 由格式化出参派生（变量展开不绕过 autoFmt）').toContain('applyVars(bodyOut)');
     expect(dt).toContain('function tryFormatBody(body: string): string');
     expect(dt).toContain('try { return JSON.stringify(JSON.parse(body), null, 2); } catch');
   });
 
   it('响应搜索框极窄钳制：width: min(150px, 100%)（547 XmigrateView:1291 先例同款）', () => {
-    expect(dt).toMatch(/\.dt-resp-search input \{ width: min\(150px, 100%\); padding:/);
+    /* 1126：加入「过滤响应」档后工具行更挤——宽度钳制保留，并加 min-width 下限保护
+       （搜索是高频动作，压缩预算优先让给可选的过滤表达式） */
+    expect(dt).toMatch(/\.dt-resp-search input \{ width: min\(150px, 100%\); min-width: 96px; padding:/);
   });
 });
 
 /* ═══════════ 三、HotkeyPanel：Ctrl+I 登记 ═══════════ */
 describe('557 三：HotkeyPanel 登记 Ctrl+I（hotkeyParityGuard293 合规：>15 行+无重复）', () => {
   it('查询与编辑组新增唯一 Ctrl+I 行（DevTools 补全唤起，Ctrl+Space 同效语义写实）', () => {
-    expect(hk).toMatch(/\{ keys: \['Ctrl', 'I'\], desc: '唤起补全候选（DevTools 请求体；Monaco Ctrl\+Space 同效）' \}/);
+    expect(hk).toMatch(/\{ keys: \['Ctrl', 'I'\], desc: '格式化当前请求体（DevTools；草稿同步，等价手改）' \}/);
   });
 });
 

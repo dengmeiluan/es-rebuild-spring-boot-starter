@@ -39,6 +39,16 @@ defineEmits<{ (e: 'update:kw', v: string): void; (e: 'enter'): void }>();
 .qrt-qsearch, .rt-qsearch { position: relative; display: inline-flex; align-items: center; min-width: 0; }
 .qrt-qsearch-ic, .rt-qsearch-ic { position: absolute; left: var(--sp-2); color: var(--tx2); pointer-events: none; }
 .qrt-qsearch-inp, .rt-qsearch-inp { width: 160px; min-width: 90px; padding: var(--sp-1) var(--sp-2) var(--sp-1) var(--sp-5); border: 1px solid var(--line); border-radius: var(--r-s); background: var(--bg2); color: var(--tx0); font-size: var(--fs-xs); font-family: var(--font); outline: none; }
+/* 1150：收缩时输入框必须跟着容器一起缩——此前 span 让位到 90px、input 仍按 160px
+ 画，溢出段直接压到「刷新/导出」上（1148 实测 49px 压盖，正是用户说的按钮文案遮挡）。
+ 口径=地板宽放在 span 上（input 取容器宽），span 到哪 input 就到哪，不再互相越界。 */
+/* 1166：地板 160→90 常驻（不再只在 ≤1280 档）。
+ 实测 1440 宽档：左簇只超出 15px，而唯一能缩的是 rt-info——命中数被压成
+ 「1/1 ·…」（scrollWidth 65 / 宽 50）。命中数是这条带子的主信息，快滤框的
+ placeholder 是空态装饰：让位顺序必须反过来。地板 90px 仍是 placeholder
+ 「搜索结果…」的可读下限（1150 结论不变，只是不再分档）。 */
+.qrt-qsearch, .rt-qsearch { flex: 0 100 auto; min-width: 90px; }
+.qrt-qsearch-inp, .rt-qsearch-inp { flex: 1 1 auto; width: 100%; min-width: 0; max-width: 160px; }
 .qrt-qsearch-inp:focus, .rt-qsearch-inp:focus { border-color: var(--ac-line); }
 .qrt-qsearch-inp::placeholder, .rt-qsearch-inp::placeholder { color: var(--tx2); }
 </style>

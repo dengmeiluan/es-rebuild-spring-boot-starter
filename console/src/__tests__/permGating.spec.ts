@@ -229,8 +229,10 @@ describe('第三波：写门收口（10 视图写按钮 VIEWER 不可见）', ()
     const v = V('BrowserView.vue');
     expect(v).toContain("const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/delete-index', store.target));");
     expect(v).toContain('<button v-if="canCreateIdx" class="btn sm pri" @click="createOpen = true">');
-    expect(v).toContain('<button v-if="canForceMerge" aria-label="ForceMerge 段合并" class="btn sm" title="ForceMerge 段合并" @click="askFmRow(row)">'); /* 行内 ForceMerge 实调 api.raw=ADMIN 域，门随端点升 canForceMerge */
-    expect(v).toContain('<button v-if="canOps" aria-label="删除索引" class="btn sm danger" title="删除索引" @click="askDelRow(row)">');
+    /* 1148：行内动作收进「更多 ⋯」弹层（5 颗图标钮把「操作」列撑到 300px+），
+       权限门逐字不变——无权限时菜单里就不出现该项。 */
+    expect(v).toContain('<button v-if="canForceMerge" class="bw-more-it" role="menuitem" @click="rowMore = \'\'; askFmRow(row)">');
+    expect(v).toContain('<button v-if="canOps" class="bw-more-it danger" role="menuitem" @click="rowMore = \'\'; askDelRow(row)">');
   });
   it('SlmView：立即执行卡钮+右键菜单项=ops（AliasesView 条件展开同款形态）', () => {
     const v = V('SlmView.vue');
@@ -276,7 +278,10 @@ describe('第三波：写门收口（10 视图写按钮 VIEWER 不可见）', ()
   it('DslQueryView：按查询删除=ops（新文档 write 门 既有，此处不重复锁）', () => {
     const v = V('DslQueryView.vue');
     expect(v).toContain("const canOps = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/delete-by-query', store.target));");
-    expect(v).toContain('<button v-if="canOps" class="btn sm danger rt-tool-btn" @click="askDeleteByQuery" title="按当前 query 删除">');
+    /* 1146：入口收进工具行「更多 ⋯」菜单（1024 档工具行溢出治理），
+       权限门与「点开才可见」语义不变：无 ops 权限时菜单里不出现该项。 */
+    expect(v).toContain('<button v-if="canOps" class="dq-more-it danger" @click="moreOpen = false; askDeleteByQuery()">');
+    expect(v).toContain('<Trash2 :size="13" /> 按当前 query 删除');
   });
   it('ReindexAdvancedView：开始 Reindex/失败重试=ops（reindex-advanced 同批升 rank3 归 ops 档）', () => {
     const v = V('ReindexAdvancedView.vue');

@@ -36,12 +36,14 @@ describe('件2：RT 挂接 remote 排序契约（535/543 范式平移）', () =>
   it('A3 writeSortToDsl 写 sort 子句（unmapped_type 兜底=IH buildDocsDslWithSort 同构，源码锁）', () => {
     const s = strip(v);
     expect(s).toContain('function writeSortToDsl');
-    expect(s).toMatch(/obj\.sort = \[\{ \[f\]: \{ order: s\.d, unmapped_type: 'long' \} \}\]/);
+    expect(s).toMatch(/obj\.sort = \[\{ \[r\.field\]: \{ order: s\.d, unmapped_type: 'long' \} \}\]/);
   });
 
-  it('A4 text 列 .keyword 子字段改写（fielddata 400 预防，源码锁）', () => {
+  it('A4 排序字段裁决走单源 resolveSortField（text 无 .keyword 子域则拦下，源码锁）', () => {
     const s = strip(v);
-    expect(s).toMatch(/mappingFieldTypes\.value\[s\.f\] === 'text' \? s\.f \+ '\.keyword' : s\.f/);
+    expect(s).toContain("import { resolveSortField } from '../utils/sortField'");
+    expect(s).toMatch(/const r = resolveSortField\(s\.f, mappingFieldTypes\.value\)/);
+    expect(s).toMatch(/if \(!r\.ok\)/);
   });
 
   it('A5 null 态删 sort 键（三态循环终点=回宿主原始序，源码锁）', () => {

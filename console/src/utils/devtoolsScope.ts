@@ -55,8 +55,10 @@ const SYSTEM_READ_DENY = new Set([
   '/_tasks', '/_cat/tasks', '/_cluster/allocation', '/_cluster/pending_tasks', '/_cat/pending_tasks',
   '/_cat/templates', '/_index_template', '/_component_template', '/_template',
   '/_cat/nodes', '/_cat/nodeattrs', '/_cat/thread_pool', '/_cat/plugins',
-  /* master 身份 / 投票排除清单：节点 id/name 与选主成员的直接出口 */
-  '/_cat/master', '/_cluster/voting',
+  /* master 身份 / 投票排除清单：节点 id/name 与选主成员的直接出口。
+     清单按「deny 本身或 deny + /」匹配——`/_cluster/voting` 匹配不到
+     `/_cluster/voting_config_exclusions`，必须写全（后端同源注释）。 */
+  '/_cat/master', '/_cluster/voting', '/_cluster/voting_config_exclusions',
   '/_cat/transforms', '/_cat/ml', '/_cat/component_templates',
   '/_data_stream', '/_features', '/_license', '/_xpack/license', '/_xpack/usage',
   '/_cluster/stats', '/_enrich', '/_monitoring',
@@ -357,12 +359,16 @@ export function nonAdminBodyTargetsControl(path: string, body?: string | null): 
     return false;
   }
   if (op === '_msearch') {
+    /* 根路径 /_msearch 的空头 = 不限索引（全量读，后端 guardMsearchBody 拒绝）。
+       带索引前缀时 ES 把路径索引当作头的默认索引，空头只查该索引，属既有语义。 */
+    const rootedAtBulkOp = first.startsWith('_');
     const lines = b.split(/\r?\n/);
     for (let i = 0; i < lines.length; i += 2) {
       const line = lines[i].trim();
       if (!line) continue;
       try {
         const o = JSON.parse(line);
+        if (rootedAtBulkOp && !o.index && !o.indices) return true;
         if (bodyTargetDenied(o.index)) return true;
         /* ES 接受 string 与 array 两种 indices 形态（后端两种都校验）。 */
         if (bodyTargetDenied(o.indices)) return true;

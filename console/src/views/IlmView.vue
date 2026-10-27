@@ -1,8 +1,13 @@
 <template>
   <div class="ilm" ref="rootEl">
-    <!-- 只读身份的前置说明：写钮隐藏时不让页面变成无解释的空壳（RestView 只读说明条同款） -->
+    <!-- 只读身份的前置说明：写钮隐藏时不让页面变成无解释的空壳（RestView 只读说明条同款）。
+         策略写键与「重试 step」(ilm/move) 是两个端点，可能分别授权——两者都缺才是「完全只读」。 -->
     <div v-if="auth.probed && !canOps && !canMove" class="ilm-perm-note" role="status">
       <Shield :size="13" /> 当前身份只读：策略的新建/编辑/删除与手动迁移不可用；需要 ILM 写权限。
+    </div>
+    <!-- 只有 ilm/move 缺权（策略可写、重试不可用）：说明缺哪一项，避免「重试钮无故消失」 -->
+    <div v-else-if="auth.probed && canOps && !canMove" class="ilm-perm-note" role="status">
+      <Shield :size="13" /> 手动迁移（重试 step）不可用：需要 ILM 移步写权限或集群级写权；策略的新建/编辑/删除不受影响。
     </div>
     <PageHeader :icon="Recycle" title="ILM 索引生命周期">
       <template #subtitle>
@@ -74,6 +79,7 @@
               class="ilm-p" :class="{ on: selected?.name === p.name }" :data-hit-idx="i + 1"
               :aria-current="selected?.name === p.name || undefined"
               @click="pickPolicy(p)"
+              @contextmenu.prevent="openIlmMenu($event, p)"
               role="button" tabindex="0" @keydown.enter.prevent="pickPolicy(p)" @keydown.space.prevent="pickPolicy(p)">
             <div class="ilm-p-head">
               <b class="mono"><MarkText :text="p.name" :kw="filter" /></b>
@@ -100,9 +106,12 @@
         <!-- 过滤致空档：策略存在但被关键字全部隐藏（照 AliasesView 过滤档范式） -->
         <EmptyState v-else-if="policies.length" :icon="ShieldQuestion" text="无匹配策略"
           :hint="`共 ${policies.length} 个策略，被当前关键字隐藏`" action-text="清除过滤" @action="filter = ''" />
-        <!-- 真空态：err-bar 存在时不再显示「未定义策略」，两者互斥（失败不是空，同 SnapshotsView 处理） -->
+        <!-- 真空态：err-bar 存在时不再显示「未定义策略」，两者互斥（失败不是空，同 SnapshotsView 处理）。
+             示例入口写过 DevTools 的 PUT 策略草稿，与 explain 跳转同门（1124）：无 DevTools 写权时不渲染，
+             否则只读身份点下去只会拿到一条 toast。 -->
         <EmptyState v-else-if="!loadErr" :icon="ShieldQuestion" text="当前集群未定义任何 ILM 策略"
-          action-text="在 Dev Tools 创建示例策略 →" @action="createSample" />
+          :action-text="canDevtools ? '在 Dev Tools 创建示例策略 →' : ''" @action="createSample"
+          :hint="canDevtools ? '' : '示例策略需要在 Dev Tools 写权限；可先联系管理员开通 ILM 或 DevTools 页'" />
       </div>
 
       <!-- 右：详情 + Explain（pane 壳退役，布局语义与 padding 载体迁 .ilm-detail） -->
@@ -222,6 +231,10 @@
 
   <!-- 原始 IO 弹窗（宿主受控开关；rec=最近一条 /cluster/ilm/ 记录） -->
   <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
+  <!-- 策略卡右键（1144）：卡片右上只留最高频的「编辑/删除」，查看相位 JSON、
+  复制策略名/策略体、到 Dev Tools 解释这些动作走右键——与索引行/历史行同一件。 -->
+  <CellContextMenu v-if="ilmMenu" :x="ilmMenu.x" :y="ilmMenu.y" :title="'ILM 策略 · ' + ilmMenu.p.name"
+    :items="ilmMenuItems" @close="ilmMenu = null" />
 </template>
 
 <script setup lang="ts">
@@ -229,7 +242,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { NModal } from 'naive-ui';
 import MarkText from '../components/MarkText.vue';
-import { Shield, Recycle, List, RefreshCw, Info, FileSearch, ShieldOff, ShieldQuestion, Plus, Pencil, Trash2, Save, Terminal, TerminalSquare } from 'lucide-vue-next';
+import { Shield, Recycle, List, RefreshCw, Info, FileSearch, ShieldOff, ShieldQuestion, Plus, Pencil, Trash2, Save, Terminal, TerminalSquare, Copy, ExternalLink, Braces, Eye, ListTree } from 'lucide-vue-next';
 import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
 import RawIoModal from '../components/RawIoModal.vue';
@@ -256,6 +269,8 @@ import SearchFilterBar from '../components/SearchFilterBar.vue'; /* ：页头过
 import HitNav from '../components/HitNav.vue';
 import { useHitLocate } from '../composables/useHitNav';
 import { useModalEnter } from '../composables/useModalEnter';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue'; /* 1144：策略卡右键 */
+import { copyText } from '../utils/format';
 import { writeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
@@ -293,6 +308,8 @@ const SAMPLE_ILM_BODY = JSON.stringify({
   },
 }, null, 2);
 function createSample() {
+  /* 与 explain 跳转同源门（1124）：样例是 PUT 策略，无 DevTools 权限跳过去也发不出去 */
+  if (!canDevtools.value) { store.notify('warning', 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'); return; }
   writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
     title: 'ILM 示例策略', method: 'PUT', path: '/_ilm/policy/sample-policy', body: SAMPLE_ILM_BODY,
   }));
@@ -443,6 +460,55 @@ function pickPolicy(p: any) {
   selected.value = p;
   explainIndex.value = '';
 }
+
+/* ═══ 1144：策略卡右键 ═══
+ 卡片右上常驻「编辑/删除」已覆盖主链路，右键补那些「看得见但要翻出去找」的动作：
+ 查看策略体（相位 JSON）、复制策略名/策略体、在 Dev Tools 里对某索引跑 explain。
+ 写操作（编辑/删除）沿用原入口与本页权限门，右键不绕过 canOps。 */
+const ilmMenu = ref<{ x: number; y: number; p: any } | null>(null);
+function openIlmMenu(e: MouseEvent, p: any) {
+  ilmMenu.value = { x: e.clientX, y: e.clientY, p };
+}
+const ilmMenuItems = computed<CcmItem[]>(() => {
+  const m = ilmMenu.value; if (!m) return [];
+  const p = m.p;
+  const body = JSON.stringify({ policy: p.policy }, null, 2);
+  return [
+    { key: 'pick', label: '查看相位时间线', icon: ListTree, run: () => pickPolicy(p) },
+    { key: 'body', label: '查看策略 JSON', icon: Braces, run: () => {
+      /* 复用本页编辑弹窗的只读档（打开即看到完整策略体；不保存不会写集群） */
+      editingName.value = p.name;
+      editPolicyName.value = p.name;
+      editPolicyBody.value = body;
+      policyEditOpen.value = true;
+    } },
+    {
+      key: 'copy-group', label: '复制…', icon: Copy, sep: true, children: [
+        { key: 'copy-name', label: '复制策略名', icon: Copy, run: async () => {
+          const ok = await copyText(p.name);
+          store.notify(ok ? 'success' : 'error', ok ? '已复制策略名：' + p.name : '复制失败');
+        } },
+        { key: 'copy-body', label: '复制策略 JSON', icon: Braces, run: async () => {
+          const ok = await copyText(body);
+          store.notify(ok ? 'success' : 'error', ok ? `已复制「${p.name}」策略 JSON` : '复制失败');
+        } },
+      ],
+    },
+    {
+      key: 'explain-group', label: '生命周期解释…', icon: Eye, children: [
+        { key: 'explain-cur', label: explainIndex.value ? `解释当前索引（${explainIndex.value}）` : '解释当前索引（未选）',
+          icon: FileSearch, run: () => { if (!explainIndex.value) { store.notify('warning', '先在顶栏选择索引'); return; } void loadExplain(); } },
+        { key: 'explain-dev', label: '在 Dev Tools 打开 explain', icon: ExternalLink, run: () => explainToDevtools() },
+      ],
+    },
+    ...(canOps.value ? [{
+      key: 'ops-group', label: '策略写操作…', icon: Pencil, sep: true, children: [
+        { key: 'edit', label: '编辑策略', icon: Pencil, run: () => openEditPolicy(p) },
+        { key: 'del', label: '删除策略', icon: Trash2, danger: true, run: () => void deletePolicy(p.name) },
+      ],
+    }] : []),
+  ];
+});
 
 /* W4c：左栏宽度档（循环钮切档 + usePref 跨会话记忆；最小实现，不迁 WorkbenchLayout）。
  经 CSS var 注入 grid-template-columns，窄屏断点整条覆盖不受内联 style 干扰。

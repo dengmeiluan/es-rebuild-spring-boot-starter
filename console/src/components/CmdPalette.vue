@@ -600,6 +600,11 @@ const commands = computed<Cmd[]>(() => {
 
 /* 脏值防御读取：手改/残留坏 JSON 不得炸命令面板挂载 */
 const recent = ref<string[]>(readStoredJson(localStorage, 'es_cmd_recent', [], Array.isArray));
+/* 换号：auth 已清磁盘键，但常驻组件的 recent ref 仍在内存——新账号的「最近使用」
+   会显示上一账号的索引名/命令。身份事件到达即归零，避免旧现场复现。 */
+if (typeof window !== 'undefined') {
+  window.addEventListener('es-console:identity-changed', () => { recent.value = []; });
+}
 
 /* /：中文别名表（拼音首字母）+ 查表逻辑抽到 utils/cmdAlias.ts——
  * 查表判据只有一处定义，且便于单测遍历全键 + 配反向变异证明。 */

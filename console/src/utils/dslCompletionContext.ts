@@ -8,7 +8,7 @@ import { SETTINGS_CATALOG } from './indexSettingsCatalog';
  本链此前未消费——sqlCompletion/ClauseNode 同源，不另起算子映射表防漂移）
  keyword/number 两族改吃 queryAstOps 族表单源（KEYWORD_VALUE_TYPES 三员同值；
  number 滤 token_count 保持九口径——AFFINITY 族序零变，dslValueTiers545 行为锁保形） */
-import { typePriorityForOp, KEYWORD_VALUE_TYPES, NUMERIC_VALUE_TYPES } from './queryAstOps';
+import { typePriorityForOp, KEYWORD_VALUE_TYPES, NUMERIC_VALUE_TYPES, labelOfOp } from './queryAstOps';
 
 type DslCtx = { kind: 'root' } | { kind: 'query-type' } | { kind: 'field'; clause: string }
   | { kind: 'range-op' } | { kind: 'exists-key' }
@@ -16,6 +16,7 @@ type DslCtx = { kind: 'root' } | { kind: 'query-type' } | { kind: 'field'; claus
   | { kind: 'array-elem-key'; owner: string } | { kind: 'none' };
 
 export const QUERY_SNIPPETS: Record<string, string> = {
+  /* —— 高频八员保持原有顺序（既有操作者肌肉记忆；类型前缀输入仍可秒筛） —— */
   match: '"match": {\n  "${1:field}": "${2:value}"\n}',
   match_phrase: '"match_phrase": {\n  "${1:field}": "${2:value}"\n}',
   term: '"term": {\n  "${1:field}": "${2:value}"\n}',
@@ -24,7 +25,76 @@ export const QUERY_SNIPPETS: Record<string, string> = {
   exists: '"exists": {\n  "field": "${1:field}"\n}',
   wildcard: '"wildcard": {\n  "${1:field}": "${2:pref*}"\n}',
   bool: '"bool": {\n  "must": [\n    ${0}\n  ],\n  "filter": [],\n  "should": [],\n  "must_not": []\n}',
+  /* —— term-level 其余（与树 OPS_META 全量对齐） —— */
+  match_all: '"match_all": {}',
+  match_none: '"match_none": {}',
+  match_phrase_prefix: '"match_phrase_prefix": {\n  "${1:field}": "${2:value}"\n}',
+  prefix: '"prefix": {\n  "${1:field}": "${2:prefix}"\n}',
+  regexp: '"regexp": {\n  "${1:field}": "${2:pattern.*}"\n}',
+  fuzzy: '"fuzzy": {\n  "${1:field}": {\n    "value": "${2:value}"\n  }\n}',
+  match_bool_prefix: '"match_bool_prefix": {\n  "${1:field}": "${2:value}"\n}',
+  terms_set: '"terms_set": {\n  "${1:field}": ["${2:value}"],\n  "minimum_should_match_field": "${3:countField}"\n}',
+  bitmap_terms: '"bitmap_terms": {\n  "field": "${1:field}",\n  "value": "${2:value}"\n}',
+  /* —— 全文检索 —— */
+  multi_match: '"multi_match": {\n  "query": "${1:value}",\n  "fields": ["${2:field}"]\n}',
+  query_string: '"query_string": {\n  "query": "${1:value}",\n  "default_field": "${2:field}"\n}',
+  simple_query_string: '"simple_query_string": {\n  "query": "${1:value}",\n  "fields": ["${2:field}"]\n}',
+  combined_fields: '"combined_fields": {\n  "query": "${1:value}",\n  "fields": ["${2:field}"]\n}',
+  more_like_this: '"more_like_this": {\n  "fields": ["${1:field}"],\n  "like": "${2:text}"\n}',
+  intervals: '"intervals": {\n  "${1:field}": {\n    "match": { "query": "${2:value}" }\n  }\n}',
+  ids: '"ids": {\n  "values": ["${1:id}"]\n}',
+  /* —— 排序特征 / 向量 / 语义 —— */
+  rank_feature: '"rank_feature": {\n  "field": "${1:rankField}",\n  "boost": ${2:1}\n}',
+  distance_feature: '"distance_feature": {\n  "field": "${1:dateField}",\n  "pivot": "${2:7d}",\n  "origin": "${3:now}"\n}',
+  semantic: '"semantic": {\n  "field": "${1:semanticField}",\n  "query": "${2:text}"\n}',
+  sparse_vector: '"sparse_vector": {\n  "field": "${1:vectorField}",\n  "query_vector": {}\n}',
+  knn: '"knn": {\n  "field": "${1:vectorField}",\n  "query_vector": [],\n  "k": ${2:10},\n  "num_candidates": ${3:100}\n}',
+  text_expansion: '"text_expansion": {\n  "${1:sparseField}": {\n    "model_id": "${2:model}",\n    "model_text": "${3:text}"\n  }\n}',
+  weighted_tokens: '"weighted_tokens": {\n  "${1:sparseField}": {\n    "tokens": { "${2:token}": ${3:0.5} }\n  }\n}',
+  /* —— geo / shape —— */
+  geo_distance: '"geo_distance": {\n  "distance": "${1:10km}",\n  "${2:location}": { "lat": ${3:39.9}, "lon": ${4:116.4} }\n}',
+  geo_bounding_box: '"geo_bounding_box": {\n  "${1:location}": {\n    "top_left": { "lat": ${2:40}, "lon": ${3:116} },\n    "bottom_right": { "lat": ${4:39}, "lon": ${5:117} }\n  }\n}',
+  geo_polygon: '"geo_polygon": {\n  "${1:location}": {\n    "points": [\n      { "lat": ${2:39}, "lon": ${3:116} },\n      { "lat": ${4:40}, "lon": ${5:117} }\n    ]\n  }\n}',
+  geo_shape: '"geo_shape": {\n  "${1:location}": {\n    "shape": { "type": "point", "coordinates": [${2:116.4}, ${3:39.9}] },\n    "relation": "intersects"\n  }\n}',
+  geo_grid: '"geo_grid": {\n  "${1:location}": { "${2|geohash,geotile,geohex|}": "${3:u0}" }\n}',
+  shape: '"shape": {\n  "${1:shapeField}": {\n    "shape": { "type": "point", "coordinates": [${2:116.4}, ${3:39.9}] },\n    "relation": "intersects"\n  }\n}',
+  /* —— join / parent —— */
+  nested: '"nested": {\n  "path": "${1:path}",\n  "query": { "match": { "${2:field}": "${3:value}" } }\n}',
+  has_child: '"has_child": {\n  "type": "${1:childType}",\n  "query": { "match_all": {} }\n}',
+  has_parent: '"has_parent": {\n  "parent_type": "${1:parentType}",\n  "query": { "match_all": {} }\n}',
+  parent_id: '"parent_id": {\n  "type": "${1:parentType}",\n  "id": "${2:parentId}"\n}',
+  /* —— 复合容器 —— */
+  constant_score: '"constant_score": {\n  "filter": { "match_all": {} },\n  "boost": ${2:1}\n}',
+  function_score: '"function_score": {\n  "query": { "match_all": {} },\n  "functions": [\n    { "weight": ${1:1} }\n  ],\n  "boost_mode": "multiply"\n}',
+  script_score: '"script_score": {\n  "query": { "match_all": {} },\n  "script": { "source": "${1:params.factor}" },\n  "min_score": ${2:0}\n}',
+  dis_max: '"dis_max": {\n  "queries": [\n    { "match_all": {} }\n  ],\n  "tie_breaker": ${2:0.7}\n}',
+  boosting: '"boosting": {\n  "positive": { "match_all": {} },\n  "negative": { "match_none": {} },\n  "negative_boost": ${3:0.5}\n}',
+  pinned: '"pinned": {\n  "ids": ["${1:id}"],\n  "organic": { "match_all": {} }\n}',
+  /* —— span 跨度系 —— */
+  span_near: '"span_near": {\n  "clauses": [\n    { "span_term": { "${1:field}": { "term": "${2:value}" } } }\n  ],\n  "slop": ${3:1},\n  "in_order": true\n}',
+  span_or: '"span_or": {\n  "clauses": [\n    { "span_term": { "${1:field}": { "term": "${2:value}" } } }\n  ]\n}',
+  span_not: '"span_not": {\n  "include": { "span_term": { "${1:field}": { "term": "${2:value}" } } },\n  "exclude": { "span_term": { "${3:field2}": { "term": "${4:value2}" } } }\n}',
+  span_first: '"span_first": {\n  "match": { "span_term": { "${1:field}": { "term": "${2:value}" } } },\n  "end": ${3:3}\n}',
+  span_containing: '"span_containing": {\n  "little": { "span_term": { "${1:field}": { "term": "${2:value}" } } },\n  "big": { "span_near": { "clauses": [], "slop": 1, "in_order": true } }\n}',
+  span_within: '"span_within": {\n  "little": { "span_term": { "${1:field}": { "term": "${2:value}" } } },\n  "big": { "span_near": { "clauses": [], "slop": 1, "in_order": true } }\n}',
+  span_term: '"span_term": {\n  "${1:field}": { "term": "${2:value}" }\n}',
+  span_gap: '"span_gap": {\n  "${1:field}": ${2:1}\n}',
+  span_multi: '"span_multi": {\n  "match": { "prefix": { "${1:field}": "${2:value}" } }\n}',
+  span_field_masking: '"span_field_masking": {\n  "query": { "span_term": { "${1:field}": { "term": "${2:value}" } } },\n  "field": "${3:maskField}"\n}',
+  /* —— 脚本 / 包装 / 反查 / 规则 / 遗留 —— */
+  percolate: '"percolate": {\n  "field": "${1:queryField}",\n  "document": { "${2:field}": "${3:value}" }\n}',
+  script: '"script": {\n  "script": { "source": "doc[\'${1:field}\'].value > 0" }\n}',
+  wrapper: '"wrapper": {\n  "query": "${1:base64}"\n}',
+  rule: '"rule": {\n  "ruleset_id": "${1:ruleset}",\n  "match_criteria": { "${2:field}": "${3:value}" }\n}',
+  type: '"type": {\n  "value": "${1:docType}"\n}',
+  template: '"template": {\n  "id": "${1:templateId}",\n  "params": {}\n}',
 };
+/* 1133：补全候选的中文语义（树注册表同源标签；bool 容器不在 OPS_META 单列）。
+   出口放本模块，MonacoEditor 不直连 queryAstOps（dslValueTiers540 架构锁）。 */
+export function querySnippetDetail(op: string): string {
+  return op === 'bool' ? '布尔组合' : labelOfOp(op);
+}
+
 /* 2.6.0 range-op 档（spec ）：range 字段值对象内键位，日期占位默认值 */
 export const RANGE_OPS: Record<string, string> = {
   gte: 'now-1d/d', gt: 'now-1d/d', lt: 'now/d', lte: 'now/d',
@@ -44,9 +114,14 @@ export const AGG_SNIPPETS: Record<string, { text: string; detail: string }> = {
   top_hits:       { text: '"top_hits": {\n  "size": ${1:3},\n  "sort": [\n    { "${2:field}": { "order": "${3:desc}" } }\n  ]\n}', detail: '每桶取 TopN 文档' },
   aggs:           { text: '"aggs": {\n  ${0}\n}',                                                                       detail: '嵌套子聚合' },
 };
-export const ROOT_KEYS = ['query', 'sort', 'aggs', '_source', 'highlight', 'from', 'size', 'track_total_hits'];
+export const ROOT_KEYS = [
+  'query', 'sort', 'aggs', '_source', 'highlight', 'from', 'size', 'track_total_hits',
+  /* 1138：树已支持的结构化顶层键——原始 DSL 手写不再只能盲打 */
+  'post_filter', 'knn', 'collapse', 'rescore', 'retriever', 'suggest', 'script_fields', 'runtime_mappings', 'search_after', 'min_score',
+];
 /* 2.6.0 root 键骨架（spec ）：每键定制值形态，detail 一句话（H 发现性）。
- query/aggs/highlight 对象容器；sort 数组（多字段通用）；_source 数组；from/size 数字；track_total_hits choice。 */
+ query/aggs/highlight 对象容器；sort 数组（多字段通用）；_source 数组；from/size 数字；track_total_hits choice。
+ 1138：补树已支持的结构化顶层键（查询后置过滤 / 顶层向量 / 折叠 / 重打分 / 检索器 / 建议器 / 脚本字段 / 运行时字段 / 深分页 / 最低分）。 */
 export const ROOT_KEY_SNIPPETS: Record<string, { text: string; detail: string }> = {
   query:            { text: '"query": {\n  ${0}\n}',                                        detail: '查询主体' },
   sort:             { text: '"sort": [\n  { "${1:field}": { "order": "${2|desc,asc|}" } }\n]', detail: '排序' },
@@ -56,6 +131,16 @@ export const ROOT_KEY_SNIPPETS: Record<string, { text: string; detail: string }>
   from:             { text: '"from": ${1:0}',                                               detail: '分页起点' },
   size:             { text: '"size": ${1:10}',                                              detail: '分页大小' },
   track_total_hits: { text: '"track_total_hits": ${1|true,false|}',                         detail: '精确总数统计' },
+  post_filter:      { text: '"post_filter": {\n  "term": { "${1:field}": "${2:value}" }\n}', detail: '查询后过滤（不影响聚合）' },
+  knn:              { text: '"knn": {\n  "field": "${1:vectorField}",\n  "query_vector": [],\n  "k": ${2:10},\n  "num_candidates": ${3:100}\n}', detail: '顶层向量近邻检索' },
+  collapse:         { text: '"collapse": {\n  "field": "${1:field}"\n}',                    detail: '按字段折叠去重' },
+  rescore:          { text: '"rescore": {\n  "window_size": ${1:50},\n  "query": {\n    "rescore_query": { "match_all": {} },\n    "query_weight": 0.7,\n    "rescore_query_weight": 1.2\n  }\n}', detail: '二阶段重打分' },
+  retriever:        { text: '"retriever": {\n  "standard": {\n    "query": { "match_all": {} }\n  }\n}', detail: '检索器（8.14+ 检索面）' },
+  suggest:          { text: '"suggest": {\n  "${1:my_suggest}": {\n    "text": "${2:value}",\n    "term": { "field": "${3:field}" }\n  }\n}', detail: '建议器（拼写/词项）' },
+  script_fields:    { text: '"script_fields": {\n  "${1:my_field}": {\n    "script": { "source": "${2:params.factor}" }\n  }\n}', detail: '脚本计算字段' },
+  runtime_mappings: { text: '"runtime_mappings": {\n  "${1:runtime_field}": {\n    "type": "${2|keyword,long,double,date,boolean|}",\n    "script": { "source": "${3:emit(params.x)}" }\n  }\n}', detail: '运行时字段' },
+  search_after:     { text: '"search_after": ["${1:value}"]',                              detail: '深分页游标' },
+  min_score:        { text: '"min_score": ${1:0}',                                          detail: '最低评分过滤' },
 };
 /** 叶子查询子句（值位是字段名对象）。
  2.6.0：exists 移出——其键位钉死 "field"（exists-key 档），出字段名档是语义误导 */
@@ -125,7 +210,18 @@ export function dslContext(doc: string, offset: number): DslCtx {
   }
   if (!stack.length) return { kind: 'root' };
   const keys = stack.map(f => f.lastKey);
-  const qIdx = keys.lastIndexOf('query');
+  let qIdx = keys.lastIndexOf('query');
+  /* 1138：post_filter / 顶层 knn.filter 也是查询容器——此前只认 query 键，
+     这两处合法查询位不出 query-type/字段候选。顶层 knn 是首选 kNN 形态。 */
+  if (qIdx < 0) {
+    const pf = keys.lastIndexOf('post_filter');
+    if (pf >= 0 && pf < stack.length - 1) qIdx = pf;
+    else {
+      const knn = keys.lastIndexOf('knn');
+      const knnFilter = keys.lastIndexOf('filter');
+      if (knn >= 0 && knnFilter > knn && knnFilter < stack.length - 1) qIdx = knnFilter;
+    }
+  }
   /* 在 query 内 ⟺ 某层帧 lastKey='query' 且其上方还有帧（query 值容器未闭合）。
  qIdx 即栈顶 → query 值已闭合（或尚在值位前），光标回到 query 所在层。 */
   const inQuery = qIdx >= 0 && qIdx < stack.length - 1;

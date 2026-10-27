@@ -66,6 +66,8 @@ export const TableBacktop = defineComponent({
  类名以 props 注入（'rt-bar'/'rt-bar-r'、'qrt-bar'/'qrt-bar-r'）——守卫在内核源码
  indexOf 这些类名串定位钮序，串必须留在内核文件；子组件根元素继承父 scopeId，
  内核 scoped 的 .rt-bar/.qrt-bar 规则照常命中，样式零迁移。 */
+const emit = defineEmits<{ (e: 'bar-contextmenu', ev: MouseEvent): void }>();
+
 defineProps<{
   /* 卡头容器类（内核各自前缀：rt-bar / qrt-bar） */
   barClass: string;
@@ -79,7 +81,9 @@ defineProps<{
 </script>
 
 <template>
-  <div :class="barClass">
+  <div :class="barClass" @contextmenu.stop.prevent="emit('bar-contextmenu', $event)">
+    <!-- 1163 工具行右键：事件只转发坐标，菜单内容归内核（两表动作集不同）；stop 避免冒泡到页面级手势。
+         根注释必须在 div 内：根级注释=fragment 根，叠加卸载断裂（T39 同款坑）。 -->
     <slot name="bar-left" :filter-mode="filterMode ?? 'AND'" />
     <div :class="barRClass">
       <slot name="bar-right" />
@@ -113,4 +117,11 @@ defineProps<{
  ⚠本块须保持非 scoped：壳模板元素无 scopeId，scoped 编译出的 [data-v-x] 打不中。 */
 .rt-bar-r, .qrt-bar-r { display: flex; gap: var(--sp-1); align-items: center; flex-wrap: nowrap; flex-shrink: 0; }
 .rt-bar-r > *, .qrt-bar-r > * { flex-shrink: 0; }
+/* 1164：工具行换行档（内核把 .rt-bar 放开 wrap）后，右簇成为第二行唯一的 flex item，
+ 父级 space-between 会把它摆在最左（实测 1148 下右缘还差 590px）。margin-left:auto
+ 把它压回右缘。必须住本壳全局 style：.rt-bar-r 是壳模板元素，内核 scoped 打不中
+ （1164 实测：规则写在 ResultTable scoped 里 100% 不生效，右簇纹丝不动）。 */
+@media (max-width: 1180px) {
+  .rt-bar-r { flex-wrap: wrap; margin-left: auto; }
+}
 </style>

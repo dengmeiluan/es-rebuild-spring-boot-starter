@@ -35,7 +35,7 @@ const SITES: Array<{ file: string; handler: string }> = [
   { file: '../views/LuceneQueryView.vue', handler: 'qs = t.q' },
   { file: '../views/MappingView.vue', handler: 'selectAllRaw' },
   { file: '../views/ProfileFlameView.vue', handler: 'focused = s' },
-  { file: '../views/SqlConsoleView.vue', handler: 'sql = t.sql' },
+  { file: '../views/SqlConsoleView.vue', handler: 'applyTemplate(t)' },
   { file: '../views/TemplateGalleryView.vue', handler: 'cat = c' },
   { file: '../views/WatcherView.vue', handler: 'onMetaKey' },
   { file: '../views/XmigrateView.vue', handler: 'form.sourceIndex = ri.index; if (!form.destIndex) form.destIndex = ri.index' },

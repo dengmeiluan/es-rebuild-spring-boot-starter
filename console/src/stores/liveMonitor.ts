@@ -399,11 +399,14 @@ const nodeSeries = ref<Record<string, NodeSeries>>({});
     qpsSeries.value = []; indexRateSeries.value = []; heapSeries.value = [];
     cpuSeries.value = []; diskSeries.value = []; sampleTs.value = [];
     nodeSeries.value = {};
+    /* 作业数曲线此前漏清：换人后大屏仍画上一账号的 jobCount 历史。 */
+    jobCountSeries.value = [];
     nodeRatePrev = null;
     lastSampleQ = 0; lastSampleI = 0; lastSampleT = 0;
     alertsMap.value = new Map();
     health.value = null; nodes.value = []; pendingTasks.value = 0; lastOkAt.value = 0;
-    restore();
+    /* 不 restore()：快照属于上一身份/上一目标，恢复等于把旧曲线又画回来。
+       新目标的首个 tick 会重新采样。 */
     if (started && running.value) { tick(); setupTimer(); }
   }
 

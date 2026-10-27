@@ -24,7 +24,9 @@ describe('禁用原因可发现性（479 批）', () => {
     const v = readFileSync(join(SRC, 'views/SqlConsoleView.vue'), 'utf-8');
     /* 五百二十五批 W10 同步更新：执行钮 title 改随态（:title 三元）——空 SQL 档仍是
        「请输入 SQL 语句」禁用原因文案（479 原契约保留在三元 else 支），有 SQL 时提示快捷键 */
-    expect(v).toContain('<button class="btn primary sm" :title="sql.trim() ? \'执行（\' + execHint + \'）\' : \'请输入 SQL 语句\'" @click="doRun"');
-    expect(v).toContain('<button class="btn ghost xs" @click="gotoDsl" :disabled="!dslPreview" title="先执行 SQL 转换生成 DSL">');
+    expect(v).toContain('<button class="btn primary sm" :title="sql.trim() ? (selScope ? \'仅执行选中的 \' + selScope.lines + \' 行（\' + execHint + \'）；清除选区后执行整篇\' : (multiStmt ? \'仅执行光标所在语句（第 \' + cursorStmtNo + \' 条 / 共 \' + stmtScopes.length + \' 条；\' + execHint + \'）；选中一段可只跑选段\' : \'执行（\' + execHint + \'）\')) : \'请输入 SQL 语句\'" @click="doRun"');
+    /* 1125：到 DSL 页新增「预览过期」禁用原因；无预览原因原契约保留在 else 支 */
+    expect(v).toContain(':disabled="!dslPreview || dslPreviewStale"');
+    expect(v).toContain("dslPreviewStale ? '预览来自上一版 SQL——请先点顶部「到 DSL」重新生成' : '先执行 SQL 转换生成 DSL'");
   });
 });

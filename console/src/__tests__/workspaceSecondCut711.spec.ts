@@ -144,6 +144,9 @@ describe('G46：reset 后部件数值补拉（隐藏期挂载零拉取 → 重�
     const resetFn = s.match(/async function reset\(\)[\s\S]*?\n\}/)![0];
     expect(resetFn, 'reset 确认后复用 refreshAll 重拉').toContain('refreshAll()');
     expect(s, '「全部刷新」钮直连契约原样').toMatch(/@click="refreshAll"/);
-    expect(s, '挂载链 refreshAll 原样').toMatch(/onMounted\(\(\) => \{[\s\S]*?refreshAll\(\)/);
+    /* 1125：挂载链改为过身份门（wsBoot.run），但必须仍落到 refreshAll——
+       断言「挂载 → 门 → refreshAll」这条链完整，而不是断言某个具体写法 */
+    expect(s, '挂载链过身份门').toMatch(/onMounted\(\(\) => \{[\s\S]*?wsBoot\.run\(\)/);
+    expect(s, '门后仍执行 refreshAll').toContain("useGatedBootRead('workspace', () => refreshAll())");
   });
 });

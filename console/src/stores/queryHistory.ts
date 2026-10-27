@@ -16,6 +16,15 @@ interface QueryHistItem {
   took?: number; // 查询耗时（毫秒）- 慢查询回溯与调优对比
   /** 上次执行失败标记（false=上次失败）——历史条目红点提示+重试入口语义 */
   ok?: boolean;
+  /** 1071：SQL 位置参数原文（JSON 数组）——带 ? 的语句回放必须连同参数一起恢复，
+   * 否则「回放」会变成无参执行（ES 直接拒绝或语义错位）。仅 sql 模式使用。 */
+  params?: string;
+  /** 1089：SQL 执行选项现场（fetch_size/time_zone/page_timeout/columnar/lenient）——
+   * 只回放文本会让日期口径或响应形态与当时不同。仅 sql 模式使用。 */
+  opts?: Record<string, string | number | boolean>;
+  /** 1122：最近一次失败的错误摘要（截断）——历史行 tooltip 可回看失败原因；
+   * 成功回包会清空。旧条目没有该字段零影响。 */
+  error?: string;
 }
 
 const KEY = 'es_query_hist_v2';
@@ -35,6 +44,15 @@ function isItem(x: any): x is QueryHistItem {
     && typeof x.ts === 'number';
 }
 
+function cleanOpts(x: unknown): Record<string, string | number | boolean> | undefined {
+  if (!x || typeof x !== 'object' || Array.isArray(x)) return undefined;
+  const out: Record<string, string | number | boolean> = {};
+  for (const [k, v] of Object.entries(x as Record<string, unknown>)) {
+    if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') out[k] = v;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 function normalize(x: QueryHistItem): QueryHistItem {
   return {
     id: typeof x.id === 'string' && x.id ? x.id : genId(),
@@ -43,6 +61,13 @@ function normalize(x: QueryHistItem): QueryHistItem {
     index: typeof x.index === 'string' && x.index ? x.index : undefined,
     ts: x.ts,
     took: typeof x.took === 'number' && x.took >= 0 ? x.took : undefined,
+    /* 1122：失败标记/错误摘要此前在加载时被 normalize 丢弃（刷新后红点消失）——
+       现在原样保留；成功条目的 error 不落盘。 */
+    ok: x.ok === false ? false : (x.ok === true ? true : undefined),
+    error: x.ok === false && typeof x.error === 'string' && x.error.trim()
+      ? x.error.trim().slice(0, 500) : undefined,
+    params: typeof x.params === 'string' && x.params.trim() ? x.params.trim() : undefined,
+    opts: cleanOpts(x.opts),
   };
 }
 
@@ -102,19 +127,29 @@ export const useQueryHistoryStore = defineStore('queryHistory', () => {
     writeStoredRaw(localStorage, KEY, JSON.stringify(items.value));
   }
 
-  /** 记录一次查询执行：同 mode+query+index 去重（移到最前并刷新 ts），否则 unshift 新条目，上限 100 */
-  function push(mode: string, query: string, index?: string, took?: number, ok = true) {
+  /** 记录一次查询执行：同 mode+query+index+params 去重（移到最前并刷新 ts），
+   * 否则 unshift 新条目，上限 100。参数进去重键：同一 SQL 配不同参数是不同的查询现场，
+   * 不能互相覆盖（否则先跑的参数组合会从历史里消失）。 */
+  function push(mode: string, query: string, index?: string, took?: number, ok = true, params?: string, opts?: Record<string, unknown>, error?: string) {
     const q = query ?? '';
     const idx = index?.trim() || undefined;
-    const i = items.value.findIndex(it => it.mode === mode && it.query === q && (it.index || '') === (idx || ''));
+    const p = params?.trim() || undefined;
+    const o = cleanOpts(opts);
+    /* 1122：失败条目带错误摘要（截断）；成功即清空，不允许旧错误跟着成功条目回放 */
+    const err = !ok && typeof error === 'string' && error.trim() ? error.trim().slice(0, 500) : undefined;
+    const i = items.value.findIndex(it =>
+      it.mode === mode && it.query === q && (it.index || '') === (idx || '') && (it.params || '') === (p || ''));
     if (i >= 0) {
       const [it] = items.value.splice(i, 1);
       it.ts = Date.now();
       if (typeof took === 'number' && took >= 0) it.took = took; // 更新耗时
       it.ok = ok; // ：失败标记随最近一次执行结果刷新
+      it.error = err;
+      it.params = p;
+      it.opts = o; // 1089：同语句重跑，选项以最近一次为准
       items.value.unshift(it);
     } else {
-      items.value.unshift({ id: genId(), mode, query: q, index: idx, ts: Date.now(), took, ok });
+      items.value.unshift({ id: genId(), mode, query: q, index: idx, ts: Date.now(), took, ok, params: p, opts: o, error: err });
     }
     if (items.value.length > MAX) items.value.length = MAX;
     persist();

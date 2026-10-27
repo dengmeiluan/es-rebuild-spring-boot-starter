@@ -1,9 +1,10 @@
 /* 范式同 emptyState.spec.ts：createApp 手工 mount，无 @vue/test-utils。 */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createApp, h, ref } from 'vue';
+import { createApp, h, ref, computed } from 'vue';
+import { RUNTIME_FIELD_CTX } from '../builder/runtimeFieldContext';
 import FieldSelect from '../builder/FieldSelect.vue';
 
-function mount(fields: string[], types: Record<string, string> = {}, model = '') {
+function mount(fields: string[], types: Record<string, string> = {}, model = '', rt?: { names: string[]; edits: string[] }) {
   const host = document.createElement('div');
   document.body.appendChild(host);
   const val = ref(model);
@@ -13,6 +14,12 @@ function mount(fields: string[], types: Record<string, string> = {}, model = '')
       'onUpdate:modelValue': (v: string) => { val.value = v; },
     }),
   });
+  if (rt) {
+    app.provide(RUNTIME_FIELD_CTX, {
+      noScript: computed(() => new Set(rt.names)),
+      edit: (n: string) => rt.edits.push(n),
+    });
+  }
   app.mount(host);
   return { host, val };
 }
@@ -41,6 +48,25 @@ describe('FieldSelect', () => {
     expect(document.body.textContent).toContain('count');
     expect(document.body.textContent).not.toContain('title');
   });
+  it('1069 续：运行时字段缺 script 时出徽标，点击交给宿主编辑；已知 mapping 字段/无上下文不出', async () => {
+    const rt = { names: ['title_len'], edits: [] as string[] };
+    const { host } = mount(['title', 'title_len'], { title: 'text', title_len: 'long' }, 'title_len', rt);
+    const chip = host.querySelector('.fs-nos') as HTMLButtonElement;
+    expect(chip, '缺 script 运行时字段应出徽标').not.toBeNull();
+    expect(chip.textContent).toContain('无 script');
+    expect(chip.getAttribute('title')).toContain('不会产出值');
+    chip.click();
+    expect(rt.edits).toEqual(['title_len']);
+
+    while (document.body.firstChild) document.body.removeChild(document.body.firstChild);
+    const known = mount(['title', 'title_len'], { title: 'text', title_len: 'long' }, 'title', rt);
+    expect(known.host.querySelector('.fs-nos')).toBeNull();
+
+    while (document.body.firstChild) document.body.removeChild(document.body.firstChild);
+    const noCtx = mount(['title_len'], { title_len: 'long' }, 'title_len');
+    expect(noCtx.host.querySelector('.fs-nos'), '其它页无上下文零提示').toBeNull();
+  });
+
   it('选中字段 emit update:modelValue 并记最近使用', async () => {
     const { host, val } = mount(['title', 'count']);
     const inp = host.querySelector('input')!;

@@ -61,7 +61,10 @@
       hint="请先通过 PUT /_snapshot/<name> 注册 fs / s3 / gcs / azure 类型仓库 — 可复制下方命令在 DevTools 执行"
     >
       <template #default>
-        <button class="btn sm pri" @click="goDevtoolsCreateRepo">📋 去 DevTools 创建 Repository</button>
+        <!-- 与 openInDevtools 同源门（1124）：无 DevTools 能力时不亮按钮，改为一句话说明，
+             不把只读身份送进「点开只会被拒」的页面 -->
+        <button v-if="canDevtools" class="btn sm pri" @click="goDevtoolsCreateRepo">📋 去 DevTools 创建 Repository</button>
+        <span v-else-if="auth.probed" class="sv-dev-hint">当前身份没有 DevTools 写权限，仓库命令可在上方复制后交给管理员执行</span>
       </template>
     </EmptyState>
 
@@ -681,6 +684,9 @@ watch(restoreIndices, v => { restoreIndicesCheck(v); });
 watch(restoreRenamePattern, v => { restoreRenamePatternCheck(v); });
 
 function openRestore(s: any) {
+  /* 当前端两个入口都带 v-if/menu 剪辑，但直调（键盘/程序化）仍需同门：
+     打开恢复弹窗等于进入一次 restore 写意图，先拦在这里再谈执行体。 */
+  if (!canOps.value) { store.notify('warning', '快照操作需要 CLUSTER_OP/ADMIN 角色'); return; }
   restoreTarget.value = s;
   restoreIndices.value = '';
   restoreRenamePattern.value = '(.+)';
@@ -826,6 +832,8 @@ useModalEnter(restoreOpen, doRestore, () => canOps.value);
 /* v3.0.0：内联 width:200px 合并（B2 审计归零）。：过滤框改用 SearchFilterBar 后
  旧 .sv-input-w（input 落位）退役改 .sv-input-wrap（落位随先例上移壳根，tv-kw-wrap 同形） */
 .sv-input-wrap { margin-left: auto; width: 200px; box-sizing: border-box; }
+/* 空态里的 DevTools 能力说明（替代按钮，弱化为说明文字） */
+.sv-dev-hint { display: inline-block; font-size: var(--fs-xs); color: var(--tx2); max-width: 46ch; line-height: 1.5; }
 .sv-input:focus { border-color: var(--ac); outline: 0; }
 
 /* KPI 大卡墙退役：页头 inline 统计串改用 MetaStrip 统一件——基础形态（flex/b/i/sep/mono/tone）

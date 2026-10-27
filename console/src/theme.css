@@ -678,6 +678,16 @@ pre.json-view { margin: 0; font: var(--fs-sm)/1.6 var(--mono); white-space: pre-
 .toast-acts { display: inline-flex; align-items: center; gap: var(--sp-2); margin-left: var(--sp-3); }
 .toast-acts .toast-undo { margin-left: 0; }
 
+/* Toast 不吞页面点击（：实测 SQL 结果栏「下一页」在右下角，分页失败 toast 停留
+   6s 期间重试点击被 toast 内容层吃掉）。toast 是「瞥一眼」的瞬时层，正文与底色
+   一律穿透，只有动作按钮（撤销/继续上次/复制原始）与关闭钮保留可点；完整消息
+   回看走通知中心，屏幕阅读器走 App.vue 的 sr-only live region。 */
+.n-notification-container, .n-notification { pointer-events: none !important; }
+.n-notification .toast-acts,
+.n-notification .toast-acts *,
+.n-notification .n-notification-close,
+.n-notification .n-notification-close * { pointer-events: auto !important; }
+
 /* 密度切换：compact */
 [data-density="compact"] .tbl th { padding: var(--sp-1) var(--sp-2); font-size: var(--fs-xs); }
 [data-density="compact"] .tbl td { padding: 3px var(--sp-2); font-size: var(--fs-sm); }

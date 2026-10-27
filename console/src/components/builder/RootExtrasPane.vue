@@ -146,7 +146,7 @@ ES 默认返回全部字段
         <div v-for="(f, i) in tree.highlight.fields" :key="i" class="rx-hl-row">
           <!-- 高亮行只出可分词高亮的文本类字段（text/keyword）；
  【W3b】候选内 text 置顶（全文高亮主场景是分词字段） -->
-          <FieldSelect :model-value="f.name" :fields="fields" :types="types" :type-filter="HL_TYPES" :type-priority="HL_PRIO_TYPES" @update:model-value="v => hlPatchField(i, { name: v })" />
+          <FieldSelect :model-value="f.name" :fields="hlFields" :types="types" :type-filter="HL_TYPES" :type-priority="HL_PRIO_TYPES" @update:model-value="v => hlPatchField(i, { name: v })" />
           <button aria-label="字段参数（fragment_size…）" class="btn sm ghost" title="字段参数（fragment_size…）" @click="hlParamsIdx = hlParamsIdx === i ? null : i"><Settings2 :size="12" /></button>
           <button aria-label="删除" class="btn sm ghost danger" title="删除" @click="hlDelField(i)"><X :size="12" /></button>
           <div v-if="hlParamsIdx === i" class="rx-sub">
@@ -156,6 +156,7 @@ ES 默认返回全部字段
             <GenericParams :value="f.params" :schema="HL_FIELD_PARAMS" path-prefix="" @update="v => onHlFieldParams(i, v)" />
           </div>
         </div>
+        <div v-if="highlightRuntime" class="rx-rt-warn" role="status">运行时字段不支持高亮（ES 限制，elastic/elasticsearch#65556）；请改用 mapping 字段</div>
         <div class="rx-row">
           <button class="btn sm ghost rx-hl-add" @click="hlAddField"><Plus :size="12" /> 高亮字段</button>
           <button aria-label="全局参数（pre_tags/post_tags…）" class="btn sm ghost" :class="{ on: hlGlobal }" title="全局参数（pre_tags/post_tags…）" @click="hlGlobal = !hlGlobal"><Settings2 :size="12" /></button>
@@ -210,13 +211,14 @@ ES 默认返回全部字段
       </div>
       <template v-else>
         <div class="rx-row">
-          <FieldSelect :model-value="tree.collapse.field" :fields="fields" :types="types" :type-filter="COLLAPSE_TYPES" @update:model-value="v => colPatch({ field: v })" />
+          <FieldSelect :model-value="tree.collapse.field" :fields="colFields" :types="types" :type-filter="COLLAPSE_TYPES" @update:model-value="v => colPatch({ field: v })" />
           <button aria-label="折叠参数（inner_hits…）" class="btn sm ghost" :class="{ on: colParams }" title="折叠参数（inner_hits…）" @click="colParams = !colParams"><Settings2 :size="12" /></button>
           <span style="flex:1"></span>
           <button aria-label="移除 collapse 键" class="btn sm ghost danger" title="移除 collapse 键" @click="patch({ collapse: null })"><X :size="12" /></button>
+          <span v-if="collapseRuntime" class="rx-rt-warn" role="status">运行时字段不能用于 collapse（ES 需要索引字段的 doc_values）；请改用 mapping 字段</span>
         </div>
         <div v-if="colParams" class="rx-sub">
-          <GenericParams :value="tree.collapse.params" path-prefix="" @update="onColParams" />
+          <GenericParams :value="tree.collapse.params" :schema="COLLAPSE_PARAMS" path-prefix="" @update="onColParams" />
         </div>
       </template>
     </div>
@@ -473,7 +475,7 @@ ES 默认返回全部字段
 <script setup lang="ts">
 /* W2：周边子句表单区。折叠分区有内容默认展开；size/from 非数字原样保留标黄（零降级）；
  aggs 区由 挂载（本组件模板预留位置见 补丁）。 */
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, provide, nextTick } from 'vue';
 import { Plus, X, ChevronUp, ChevronDown, Settings2 } from 'lucide-vue-next';
 import FieldSelect from './FieldSelect.vue';
 import FieldPicker from '../FieldPicker.vue';
@@ -483,6 +485,8 @@ import AggTreeNode from './AggTreeNode.vue';
 import MiniTreeEditor from './MiniTreeEditor.vue';
 import RetrieverEditor from './RetrieverEditor.vue';
 import { nid, makeRetrieverByOp, type QueryTree, type SortItem, type SourceSpec, type AggNode, type QueryNode, type CollapseSpec, type KnnSpec, type SuggestItem, type SuggestSpec, type RescoreSpec, type NamedSpecItem, type RetrieverNode } from '../../utils/queryAst';
+import { runtimeScriptMissing } from '../../utils/runtimeFields';
+import { RUNTIME_FIELD_CTX } from './runtimeFieldContext';
 import { SEARCH_PARAM_META, SEARCH_PARAM_GROUPS } from '../../utils/queryBodyParams';
 import { setFieldSearchIndex } from '../../utils/fieldSearch';
 
@@ -503,6 +507,12 @@ const HL_FIELD_PARAMS: Array<{ key: string; kind: 'number' | 'text' | 'boolean' 
   { key: 'fragment_offset', kind: 'number' },
   { key: 'no_match_size', kind: 'number' },
   { key: 'type', kind: 'enum', options: ['plain', 'postings', 'fvh'] },
+];
+/* 1096：collapse 的 inner_hits（返回被折叠掉的代表文档）用 JSON 文本位；
+   并发组搜索上限给数值控件。未登记键仍可自由添加。 */
+const COLLAPSE_PARAMS: Array<{ key: string; kind: 'number' | 'text' | 'boolean' | 'enum' | 'json'; options?: string[] }> = [
+  { key: 'inner_hits', kind: 'json' },
+  { key: 'max_concurrent_group_searches', kind: 'number' },
 ];
 /* 【W3b】排序/高亮行的候选类型置顶（typePriority 只调候选分组排序，不改候选集）：
  排序行 date 打头、数值族紧随（时间/数值范围排序是主场景，keyword 字典序排序殿后）；
@@ -650,8 +660,18 @@ watch(() => Object.keys(props.tree.searchParams || {}).length, (n, o) => { if (n
 
 /* sort */
 const sortParamsId = ref<string | null>(null);
+/* 1100：加排序的默认字段——只在可排序类型里选（此前取 fields[0]，text 字段会直接报
+   fielddata 错），date 优先且时间词根优先（最新时间是最常见排序心智）。 */
+function defaultSortField(): string {
+  const sortable = props.fields.filter(f => SORTABLE_TYPES.includes(props.types[f] || ''));
+  const dates = sortable.filter(f => props.types[f] === 'date' || props.types[f] === 'date_nanos');
+  if (dates.length) {
+    return dates.find(f => /(publish|created|updated|time|date|_at|_on)/i.test(f)) || dates[0];
+  }
+  return sortable[0] || props.fields[0] || '';
+}
 function addSort() {
-  const item: SortItem = { id: nid(), field: props.fields[0] || '', form: 'short', params: { order: 'desc' } };
+  const item: SortItem = { id: nid(), field: defaultSortField(), form: 'short', params: { order: 'desc' } };
   patch({ sort: [...(props.tree.sort || []), item] });
   if (!open.value.has('sort')) toggle('sort');
 }
@@ -727,7 +747,7 @@ function pfAdd() {
 function pfUpdate(n: QueryNode) { patch({ postFilter: n }); }
 
 /* 1000：检索器三口——新建给 bm25 可用初值；编辑直通；删除整键收回 */
-function rtAdd() { patch({ retriever: makeRetrieverByOp('bm25') }); }
+function rtAdd() { patch({ retriever: makeRetrieverByOp('standard') }); }
 function rtUpdate(n: RetrieverNode) { patch({ retriever: n }); }
 function rtClear() { patch({ retriever: null }); }
 
@@ -898,6 +918,35 @@ function onRcWindowExtra(i: number, raw: string) {
 /* ═══ 996：script_fields / runtime_mappings 项级编辑（同构双键） ═══ */
 const sfIdx = ref<number | null>(null);
 const rmIdx = ref<number | null>(null);
+/* 1069 续：当前树里缺 script 的运行时字段——排序/高亮/折叠/聚合等字段位共享同一提示 */
+const runtimeFieldNames = computed<ReadonlySet<string>>(() => new Set(
+  (props.tree.runtimeMappings?.items || []).map(it => it.name).filter(Boolean),
+));
+const runtimeNoScriptNames = computed<ReadonlySet<string>>(() => new Set(
+  (props.tree.runtimeMappings?.items || [])
+    .filter(it => runtimeScriptMissing(it.body))
+    .map(it => it.name)
+    .filter(Boolean),
+));
+/* collapse 要求单值 keyword/数值且有 doc_values（ES 文档口径）；运行时字段没有索引
+   doc_values，ES 不支持据此折叠（elastic/elasticsearch#66459）——候选集剔除，已有 DSL 给提示。 */
+const colFields = computed(() => props.fields.filter(f => !runtimeFieldNames.value.has(f)));
+const collapseRuntime = computed(() => !!props.tree.collapse && runtimeFieldNames.value.has(props.tree.collapse.field));
+/* highlight 同样不支持运行时字段（ES#65556）：候选剔除；已有 DSL 给提示 */
+const hlFields = computed(() => props.fields.filter(f => !runtimeFieldNames.value.has(f)));
+const highlightRuntime = computed(() =>
+  !!props.tree.highlight && props.tree.highlight.fields.some(f => runtimeFieldNames.value.has(f.name)));
+function editRuntimeByName(name: string) {
+  autoOpen('rm');
+  const items = props.tree.runtimeMappings?.items || [];
+  const i = items.findIndex(x => x.name === name);
+  if (i >= 0) rmIdx.value = i; // 直接展开该字段的 type/script 编辑
+  nextTick(() => {
+    const rows = document.querySelectorAll('.rx-named-row');
+    rows[i >= 0 ? i : 0]?.scrollIntoView({ block: 'nearest' });
+  });
+}
+provide(RUNTIME_FIELD_CTX, { noScript: runtimeNoScriptNames, edit: editRuntimeByName });
 function namedAdd(cur: { items: NamedSpecItem[] } | null, name: string, body: Record<string, unknown>) {
   const items = cur ? [...cur.items] : [];
   let i = items.length + 1;
@@ -983,6 +1032,8 @@ function onExtras(v: Record<string, unknown> | unknown[]) {
 .rx-chev.on { transform: rotate(90deg); }
 .rx-fold-add { opacity: 0; transition: opacity var(--tr); }
 .rx-row { display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-1) 0; flex-wrap: wrap; }
+/* 1069 续：运行时字段用于 collapse 的诚实提示（ES 需要 doc_values） */
+.rx-rt-warn { flex-basis: 100%; font-size: var(--fs-2xs); color: var(--warn); }
 .rx-lb { font-size: var(--fs-xs); color: var(--tx2); }
 .rx-num { width: 80px; height: 28px; font-size: var(--fs-sm); padding: var(--sp-0) var(--sp-2); }
 .rx-num.warn { border-color: var(--warn); }

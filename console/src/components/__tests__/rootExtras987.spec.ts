@@ -116,16 +116,16 @@ describe('987 collapse 结构化编辑', () => {
     expect(serializeTree(cur.value).collapse).toEqual({ field: 'status' });
   });
 
-  it('inner_hits 参数经递归表编辑写回 params', async () => {
+  it('inner_hits 参数经 JSON 文本位编辑写回 params（1096 改型：保留数字）', async () => {
     const t = parseTree({ collapse: { field: 'user', inner_hits: { size: 3 } } });
     if (!t.ok) throw new Error('parse failed');
     const { host, cur } = mount(t.tree);
     await tick();
     (host.querySelector('[title="折叠参数（inner_hits…）"]') as HTMLElement).click();
     await tick();
-    const val = host.querySelector('.rx-sub .gp-v') as HTMLInputElement;
-    expect(val).toBeTruthy();
-    val.value = '5';
+    const val = host.querySelector('.rx-sub textarea.gp-json') as HTMLTextAreaElement;
+    expect(val, 'inner_hits 走 JSON 文本位').toBeTruthy();
+    val.value = '{"size": 5}';
     val.dispatchEvent(new Event('input'));
     await tick();
     expect(serializeTree(cur.value).collapse).toEqual({ field: 'user', inner_hits: { size: 5 } });

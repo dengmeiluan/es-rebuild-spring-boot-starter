@@ -49,6 +49,12 @@
       </div>
     </div>
 
+    <!-- 只读身份前置说明（1124）：取消钮/右键项隐藏时不留「页面没这能力」的疑惑；
+         与 Diag/Rest/Aliases 同一语言，只在身份就绪后出现，不闪断首屏 -->
+    <div v-if="auth.probed && !canWrite" class="tv-perm-note" role="status">
+      <ShieldAlert :size="13" /> 当前身份只读：任务列表与详情照常可看，取消任务不可用——需 CLUSTER_OP 及以上角色，或该连接的「集群设置」写权限。
+    </div>
+
     <!-- -A2：页面级失败态——轮询失败不能只闪 toast，持续故障时页面要有常驻提示；下次成功自动消隐。
  裸插值换 errPreHtml+errMeta 双参（DiagView 547 同款）——错误原文全文回看，
  code 徽标/「失败于 端点」元信息行走 loadErrRaw 旁路原始对象（压串读不出） -->
@@ -182,7 +188,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { NSelect } from 'naive-ui';
-import { ListTodo, ListTree, RefreshCw, X, ClipboardList, Copy, Terminal, Loader2 } from 'lucide-vue-next';
+import { ListTodo, ListTree, RefreshCw, X, ClipboardList, Copy, Terminal, Loader2, ShieldAlert } from 'lucide-vue-next';
 import { useRoute } from 'vue-router';
 import { api, ioRecorder, type RawIoRec } from '../api';
 import PageHeader from '../components/PageHeader.vue';
@@ -532,6 +538,8 @@ watch(intervalMs, () => refresher.restart());
  lrBarSingleTrack 契约清单里，不可摘）。 G258：.tv-title 死规则删
  （PageHeader 合并伴漏删——G220/G227/G232 族；527「卡头位保持」裁定随页头合并失效） */
 .tv-auto { display: flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-sm); color: var(--tx1); cursor: pointer; user-select: none; }
+/* 只读身份说明条（RestView .rt-perm-note 同款形态） */
+.tv-perm-note { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); margin: 0 0 var(--sp-3); }
 .tv-auto span { white-space: nowrap; }
 
 /* KPI 大卡墙退役后的 inline 统计串改用 MetaStrip 统一件——基础形态（flex/b/i/sep/mono/tone）

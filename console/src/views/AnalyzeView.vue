@@ -196,6 +196,7 @@ import { FlaskConical, ScanText, SearchCode, Play, Copy, ClipboardList, AlertTri
 import { useRoute } from 'vue-router';
 import { api, ioRecorder, type RawIoRec } from '../api';
 import { useAppStore } from '../stores/app';
+import { useGatedBootRead } from '../composables/usePageIdentityGate';
 import { copyText } from '../utils/format';
 import { friendlyEsError } from '../utils/esError';
 import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-html 内核；534 收口波：双参改用（errMeta 旁路） */
@@ -523,9 +524,13 @@ const highlightedSegs = computed<Seg[]>(() => {
   return out;
 });
 
+/* 1125：深链自动执行也要过身份门——宿主换 token 的窗口里 run() 会带着旧 target
+   发 _analyze（结果串到新账号界面）。未放行则挂起，身份落地后补跑一次。 */
+const analyzeBoot = useGatedBootRead('analyze', () => consumeDeepLink());
+
 onMounted(() => {
   if (!store.indices.length) store.loadIndices();
-  consumeDeepLink();
+  analyzeBoot.run();
 });
 
 /* ═══ ：联动深链消费（mapping/settings → 一键验证）═══

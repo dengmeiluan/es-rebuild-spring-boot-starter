@@ -307,9 +307,23 @@ public class InternalEsIndexRebuildController {
     @PostMapping("cluster/query")
     public Map<String, Object> clusterQuery(@RequestParam String index,
                                             @RequestParam(required = false, defaultValue = "10") int size,
+                                            @RequestParam(required = false) String routing,
+                                            @RequestParam(required = false) String preference,
+                                            @RequestParam(value = "search_type", required = false) String searchType,
+                                            @RequestParam(value = "allow_partial_search_results", required = false) String allowPartialSearchResults,
+                                            @RequestParam(value = "ignore_unavailable", required = false) String ignoreUnavailable,
+                                            @RequestParam(value = "expand_wildcards", required = false) String expandWildcards,
                                             @org.springframework.web.bind.annotation.RequestBody(required = false) String dslJson) throws java.io.IOException {
         String resolved = esIndexRebuildService.resolveToPhysical(index);
-        return esIndexAdmin.queryDsl(resolved, dslJson, Math.max(0, Math.min(size, 100)));
+        /* 1063：请求级 URL 参数白名单透传（不是 body；body 写这些键会被 ES 拒绝） */
+        java.util.Map<String, String> req = new java.util.LinkedHashMap<>();
+        if (routing != null) req.put("routing", routing);
+        if (preference != null) req.put("preference", preference);
+        if (searchType != null) req.put("search_type", searchType);
+        if (allowPartialSearchResults != null) req.put("allow_partial_search_results", allowPartialSearchResults);
+        if (ignoreUnavailable != null) req.put("ignore_unavailable", ignoreUnavailable);
+        if (expandWildcards != null) req.put("expand_wildcards", expandWildcards);
+        return esIndexAdmin.queryDsl(resolved, dslJson, Math.max(0, Math.min(size, 100)), req);
     }
 
     /** ES SQL 查询（集群级，只读）。body 为裸 SQL 文本。自动解析 indexKey→物理索引名。 */
@@ -460,9 +474,22 @@ public class InternalEsIndexRebuildController {
     /** Profile 查询：注入 profile:true 执行 _search，返回完整原始响应（含 profile breakdown）。 */
     @PostMapping(value = "cluster/profile", produces = "application/json")
     public String clusterProfile(@RequestParam String index,
+                                 @RequestParam(required = false) String routing,
+                                 @RequestParam(required = false) String preference,
+                                 @RequestParam(value = "search_type", required = false) String searchType,
+                                 @RequestParam(value = "allow_partial_search_results", required = false) String allowPartialSearchResults,
+                                 @RequestParam(value = "ignore_unavailable", required = false) String ignoreUnavailable,
+                                 @RequestParam(value = "expand_wildcards", required = false) String expandWildcards,
                                  @org.springframework.web.bind.annotation.RequestBody(required = false) String dslJson) throws java.io.IOException {
         String resolved = esIndexRebuildService.resolveToPhysical(index);
-        return esIndexAdmin.profile(resolved, dslJson);
+        java.util.Map<String, String> req = new java.util.LinkedHashMap<>();
+        if (routing != null) req.put("routing", routing);
+        if (preference != null) req.put("preference", preference);
+        if (searchType != null) req.put("search_type", searchType);
+        if (allowPartialSearchResults != null) req.put("allow_partial_search_results", allowPartialSearchResults);
+        if (ignoreUnavailable != null) req.put("ignore_unavailable", ignoreUnavailable);
+        if (expandWildcards != null) req.put("expand_wildcards", expandWildcards);
+        return esIndexAdmin.profile(resolved, dslJson, req);
     }
 
     /** dry-run 计数：提取 dsl.query 执行 _count（删除预估等高危操作前置）。 */
@@ -1180,9 +1207,11 @@ public class InternalEsIndexRebuildController {
     /** _sql 分页 cursor（cursor 即结果集凭据：仅开启者本人或 ADMIN 可续页） */
     @PostMapping("cluster/sql/cursor")
     public Map<String, Object> clusterSqlCursor(@RequestParam String cursor,
+                                                @RequestParam(required = false) String timeZone,
+                                                @RequestParam(required = false) Boolean columnar,
                                                 javax.servlet.http.HttpServletRequest request) throws java.io.IOException {
         guardSqlCursor(cursor, request);
-        Map<String, Object> out = esIndexAdmin.sqlCursor(cursor);
+        Map<String, Object> out = esIndexAdmin.sqlCursor(cursor, timeZone, columnar);
         /* cursor 可能轮换：登记新 id 并释放旧 id，避免旧 id 变成无主凭据。 */
         rememberSqlCursor(out, request);
         Object next = out == null ? null : out.get("cursor");

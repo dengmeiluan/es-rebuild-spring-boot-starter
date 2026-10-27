@@ -73,6 +73,7 @@
       <div
         v-for="(w, i) in filteredWatches" :key="w._id"
         class="wt-card" :data-hit-idx="i + 1"
+        @contextmenu.prevent="openWatchMenu($event, w)"
       >
         <div class="wt-card-l">
           <!-- G2-C5：长 watch id 省略 + title 全名可达（-->
@@ -100,12 +101,11 @@
           <button class="btn ghost sm" aria-label="编辑此 watch" :disabled="!canDevtools"
             :title="canDevtools ? '在 DevTools 编辑此 watch（PUT 现定义入 body）' : 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'"
             @click="toDevToolsEdit(w)"><Pencil :size="12" /></button>
-          <button class="btn ghost sm" :disabled="!canDevtools"
-            :title="canDevtools ? '在 DevTools 打开 GET _watcher/watch/<id>' : 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'"
-            @click="toDevTools(w)">
-            <TerminalSquare :size="12" /> DevTools
-          </button>
-          <button class="btn ghost sm" @click="copyBody(w)"><Copy :size="12" /> 复制</button>
+          <!-- 1153：复制 / 打开两个次级动作收进「更多」——此前三颗钮平铺在卡片右侧，
+               窄屏时把 watch id 挤成省略号（空位优先级：名字 > 动作）。右键菜单同源。 -->
+          <button class="btn ghost sm" :aria-label="'更多操作：' + w._id" aria-haspopup="menu"
+            :aria-expanded="watchMenu?.w?._id === w._id" title="更多操作（也可在卡片上右键）"
+            @click.stop="openWatchMenuAt($event, w)"><Ellipsis :size="12" /></button>
         </div>
       </div>
     </div>
@@ -113,13 +113,18 @@
 
     <!-- 原始 IO 弹窗（宿主受控开关；rec=最近一条 /cluster/watcher 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
+
+    <!-- 1153：watch 卡右键/「更多」同一菜单——一级=高频两项 + 分组父行，
+         复制与 DevTools 收进二级（此前三颗钮平铺在卡片右侧挤掉 watch 名）。 -->
+    <CellContextMenu v-if="watchMenu" :x="watchMenu.x" :y="watchMenu.y"
+      :title="'Watch · ' + watchMenu.w._id" :items="watchMenuItems" @close="watchMenu = null" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { BellRing, Bell, RefreshCcw, AlertTriangle, Search, Copy, TerminalSquare, Terminal, Pencil } from 'lucide-vue-next';
+import { BellRing, Bell, RefreshCcw, AlertTriangle, Search, Copy, TerminalSquare, Terminal, Pencil, Ellipsis, Braces, ExternalLink } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
@@ -134,6 +139,7 @@ import { copyText, fmtNum } from '../utils/format';
 import { highlightJson, prettyJson } from '../utils/jsonc';
 import { NPopover } from 'naive-ui';
 import EmptyState from '../components/EmptyState.vue';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 /* 页头过滤胶囊统一件（wt/fv/tg 同场景合并） */
 import SearchFilterBar from '../components/SearchFilterBar.vue';
 import SkeletonBox from '../components/SkeletonBox.vue';
@@ -282,6 +288,50 @@ function toDevTools(w: any) {
   }));
   router.push('/devtools');
 }
+
+/* ═══ 1153：watch 卡右键 / 「更多」菜单（与 IlmView 卡片菜单同一两级语言）═══ */
+const watchMenu = ref<{ x: number; y: number; w: any } | null>(null);
+function openWatchMenu(e: MouseEvent, w: any) {
+  watchMenu.value = { x: e.clientX, y: e.clientY, w };
+}
+/* 「更多」钮同源：以按钮位置为菜单锚点，两条入口共用一份菜单内容 */
+function openWatchMenuAt(e: MouseEvent, w: any) {
+  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  watchMenu.value = { x: Math.round(r.left), y: Math.round(r.bottom + 4), w };
+}
+const watchMenuItems = computed<CcmItem[]>(() => {
+  const m = watchMenu.value; if (!m) return [];
+  const w = m.w;
+  const body = JSON.stringify(w, null, 2);
+  const meta = w._source?.metadata;
+  return [
+    { key: 'edit', label: '在 DevTools 编辑此 watch', icon: Pencil, run: () => toDevToolsEdit(w) },
+    ...(meta
+      ? [{ key: 'copy-meta', label: '复制 metadata JSON', icon: Braces, sep: true, run: async () => {
+          const ok = await copyText(JSON.stringify(meta, null, 2));
+          store.notify(ok ? 'success' : 'error', ok ? '已复制 metadata' : '复制失败');
+        } }]
+      : []),
+    {
+      key: 'copy-group', label: '复制…', icon: Copy, sep: !meta, children: [
+        { key: 'copy-id', label: '复制 watch id', icon: Copy, run: async () => {
+          const ok = await copyText(w._id);
+          store.notify(ok ? 'success' : 'error', ok ? '已复制 watch id：' + w._id : '复制失败');
+        } },
+        { key: 'copy-def', label: '复制整条定义 JSON', icon: Braces, run: async () => {
+          const ok = await copyText(body);
+          store.notify(ok ? 'success' : 'error', ok ? 'Watch 已复制' : '复制失败');
+        } },
+      ],
+    },
+    {
+      key: 'dev-group', label: '在 DevTools 打开…', icon: TerminalSquare, children: [
+        { key: 'dev-get', label: '查看定义（GET _watcher/watch/<id>）', icon: ExternalLink, run: () => toDevTools(w) },
+        { key: 'dev-edit', label: '编辑定义（PUT 回写）', icon: Pencil, run: () => toDevToolsEdit(w) },
+      ],
+    },
+  ].filter(Boolean) as CcmItem[];
+});
 
 /* 真空态快捷起步——示例 watch 送入 DevTools（不自动执行） */
 function toDevToolsSample() {

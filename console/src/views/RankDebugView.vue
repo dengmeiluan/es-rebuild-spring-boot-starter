@@ -189,6 +189,7 @@ import { useScopedDraft } from '../composables/useScopedDraft';
 import { useIndexFields } from '../composables/useIndexFields';
 import { useTermsSuggest } from '../composables/useTermsSuggest'; /* ：值位动态候选（660 范式） */
 import { useLinkCarry } from '../composables/useLinkCarry'; /* ：跨页一次性值携带统一件 */
+import { useGatedBootRead } from '../composables/usePageIdentityGate';
 import { useDebounceFn } from '../composables/useDebounceFn'; /* ：lint 划线防抖统一件 */
 import CurrentIdxChip from '../components/CurrentIdxChip.vue';
 import JsonArea from '../components/JsonArea.vue';
@@ -358,9 +359,10 @@ function runActive() {
  （key='rankdebug'，键名前缀由统一件拼装，payload {index,id,query} 与旧稿逐字保持；
  receive 先焚再解，语义等价，消费端零感），其余解析分支原样。 */
 const rankDebugCarry = useLinkCarry<{ index?: string; id?: string; query?: string }>('rankdebug');
-onMounted(() => {
-  const p = rankDebugCarry.receive();
-  if (!p) return;
+/* 1125：联动的文档可能来自上一账号的现场——身份未落地就 runWhy 会把旧 target 的
+   explain 结果拉进新会话。payload 先暂存，门放行才消费；未放行等身份落地补跑。 */
+let rankDebugPendingCarry: { index?: string; id?: string; query?: string } | null = null;
+function applyRankDebugCarry(p: { index?: string; id?: string; query?: string }) {
   if (p.index) index.value = p.index;
   if (p.query) {
     try {
@@ -373,6 +375,18 @@ onMounted(() => {
     whyId.value = p.id;
     if (index.value) runWhy();
   }
+}
+const rankDebugBootGate = useGatedBootRead('rank-debug', () => {
+  const p = rankDebugPendingCarry;
+  if (!p) return;
+  rankDebugPendingCarry = null;
+  applyRankDebugCarry(p);
+});
+onMounted(() => {
+  const p = rankDebugCarry.receive();
+  if (!p) return;
+  if (!rankDebugBootGate.allowed()) { rankDebugPendingCarry = p; rankDebugBootGate.run(); return; }
+  applyRankDebugCarry(p);
 });
 </script>
 

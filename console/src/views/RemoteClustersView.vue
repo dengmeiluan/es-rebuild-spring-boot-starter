@@ -47,7 +47,8 @@
     </EmptyState>
 
     <div v-else class="rc-list">
-      <div v-for="r in rows" :key="r.name" class="rc-card" :class="{ off: !r.connected }">
+      <div v-for="r in rows" :key="r.name" class="rc-card" :class="{ off: !r.connected }"
+        @contextmenu.prevent="openRcMenu($event, r)">
         <div class="rc-card-l">
           <div class="rc-card-tt">
             <Network :size="12" /> {{ r.name }}
@@ -78,13 +79,17 @@
 
     <!-- 原始 IO 弹窗（宿主受控开关；rec 取本页最近一条 remote-clusters 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
+    <!-- 远程集群卡右键（1145）：卡右只留「跨集群查询/复制」，其余动作（复制名/种子、
+    到 Dev Tools 看 cluster.settings、只看本卡配置）收进右键——与索引/收藏/策略卡同一件。 -->
+    <CellContextMenu v-if="rcMenu" :x="rcMenu.x" :y="rcMenu.y" :title="'远程集群 · ' + rcMenu.r.name"
+      :items="rcMenuItems" @close="rcMenu = null" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { Network, Server, RefreshCcw, AlertTriangle, ArrowRightLeft, Copy, Terminal } from 'lucide-vue-next';
+import { Network, Server, RefreshCcw, AlertTriangle, ArrowRightLeft, Copy, Terminal, ExternalLink } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
@@ -99,9 +104,16 @@ import { friendlyEsError } from '../utils/esError';
 import { highlightJson } from '../utils/jsonc';
 import { copyText } from '../utils/format';
 import { writeStoredRaw } from '../utils/safeJson';
+import { useAuthStore } from '../stores/auth'; /* DevTools 入口能力门（1124） */
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue'; /* 1145：远程集群卡右键 */
 
 const store = useAppStore();
+const auth = useAuthStore();
 const router = useRouter();
+/* DevTools 入口能力：与 Snapshots/Ilm/Watcher 同源（admin 档 = DevTools/REST 页写键或 ADMIN）。
+   本页无写路径，但这格右键会带 run:true 跳到 DevTools，只读身份进去只会「填入不执行」。 */
+const canDevtools = computed(() => auth.canEndpoint('admin', 'POST',
+  '/internal/es/index/cluster/devtools/execute', store.target));
 /* review minor：初值 true——首帧即 loading（对齐 ClusterSettingsView 范式），
  不依赖 onMounted 同步置位才不闪空态；load() 入口恒置 true，无其他读取路径依赖初值 false */
 const loading = ref(true);
@@ -171,6 +183,54 @@ function ccsQuery(name: string) {
 function copyBody(r: any) {
   copyText(JSON.stringify(r, null, 2)).then(ok => store.notify(ok ? 'success' : 'error', ok ? '远程集群配置已复制' : '复制失败')); /* */
 }
+
+/* ═══ 1145：远程集群卡右键 ═══
+ 卡片右簇保留「跨集群查询/复制」两高频动作；右键补「只拿这个名字/种子地址」
+ 「去 Dev Tools 看活配置」这类跳出去找的动作。本页无写路径（PUT cluster.settings
+ 仍是唯一写入口，在 Dev Tools），右键只做读取与跳转。 */
+const rcMenu = ref<{ x: number; y: number; r: any } | null>(null);
+function openRcMenu(e: MouseEvent, r: any) {
+  rcMenu.value = { x: e.clientX, y: e.clientY, r };
+}
+const rcMenuItems = computed<CcmItem[]>(() => {
+  const m = rcMenu.value; if (!m) return [];
+  const r = m.r;
+  const seeds = (r.seeds || []).join(', ');
+  const goDevtools = () => {
+    /* 入口前置判定（1124）：只读身份跳过去只会看到「已填入未执行」，在来源页说清楚 */
+    if (!canDevtools.value) {
+      store.notify('warning', 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN');
+      return;
+    }
+    writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
+      title: 'cluster.settings（remote）', method: 'GET',
+      path: '/_cluster/settings?include_defaults=true&flat_settings=true', run: true,
+    }));
+    router.push('/devtools');
+  };
+  return [
+    { key: 'ccs', label: `跨集群查询（${r.name}:*）`, icon: ArrowRightLeft, run: () => ccsQuery(r.name) },
+    {
+      key: 'copy-group', label: '复制…', icon: Copy, sep: true, children: [
+        { key: 'copy-name', label: '复制集群别名', icon: Copy, run: async () => {
+          const ok = await copyText(r.name);
+          store.notify(ok ? 'success' : 'error', ok ? '已复制集群别名：' + r.name : '复制失败');
+        } },
+        ...(seeds ? [{ key: 'copy-seeds', label: '复制种子地址', icon: Copy, run: async () => {
+          const ok = await copyText(seeds);
+          store.notify(ok ? 'success' : 'error', ok ? '已复制种子地址' : '复制失败');
+        } }] : []),
+        { key: 'copy-body', label: '复制整卡配置 JSON', icon: Copy, run: () => copyBody(r) },
+      ],
+    },
+    {
+      key: 'goto-group', label: '去查看…', icon: ExternalLink, sep: true, children: [
+        { key: 'dev-settings', label: '在 Dev Tools 看 cluster.settings', icon: ExternalLink, run: goDevtools },
+        { key: 'go-ccs', label: '查询工作台 · 沙盒', icon: ArrowRightLeft, run: () => router.push({ path: '/search', query: { mode: 'sandbox' } }) },
+      ],
+    },
+  ];
+});
 
 /* 原始 IO 快查（546/548 同款三件套）——特征 /cluster/remote-clusters（连通性拉取
  响应=本页唯一 IO）；判空 rec=null（还没拉取过/页未回）时 notify 引导，不开空弹窗 */

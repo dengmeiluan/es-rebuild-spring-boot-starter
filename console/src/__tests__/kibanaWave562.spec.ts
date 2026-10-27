@@ -158,7 +158,9 @@ describe('562 K1：DevToolsView run 链升级（切段只作用于发送出参�
     const rawAt = runBody.indexOf('api.devtoolsExecute(');
     expect(fmtAt).toBeGreaterThan(busyAt);
     expect(fmtAt).toBeLessThan(rawAt);
-    expect(runBody).toContain('api.devtoolsExecute(t.method, t.path, bodyOut, signal)');
+    /* 1127：发送值多了一层 ${var} 展开，但「run() 用格式化出参、草稿 t.body 零触」的锁面不变 */
+    expect(runBody).toContain('api.devtoolsExecute(t.method, pathOut, bodyFinal, signal)');
+    expect(runBody).toContain('applyVars(bodyOut)');
   });
 });
 
@@ -355,7 +357,9 @@ describe('562 K3：IndexHubView docs 检索历史入口 + lucene 档并显', () 
     expect(ih).toMatch(/function replayIhHist\(row: \{ query: string; mode\?: string \}, runIt: boolean\) \{/);
     expect(ih).toContain("if (row.mode === 'lucene') {");
     expect(ih).toContain('docsQ.value = row.query;');
-    expect(ih).toContain('runDocsNew();');
+    /* 身份门（autoRunAllowed 同口径）——lucene 回放改走 runDocsAuto（docsQ 草稿路径不变，
+       且回放载荷来自上一账号时不抢发）；runDocsNew 仍保留给用户主动点击 */
+    expect(ih).toContain('if (runIt) runDocsAuto();');
   });
 });
 

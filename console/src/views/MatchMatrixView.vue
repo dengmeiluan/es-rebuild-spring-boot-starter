@@ -109,6 +109,7 @@ import LabNav from '../components/LabNav.vue';import { api, ioRecorder, type Raw
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
 import RawIoModal from '../components/RawIoModal.vue';
 import { useAppStore } from '../stores/app';
+import { useGatedBootRead } from '../composables/usePageIdentityGate';
 import { useIdxState, usePref } from '../composables/urlState';
 import { friendlyEsError } from '../utils/esError'; /* ：runErr 人话化 */
 import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-html 内核；534 收口波：双参改用（errMeta 旁路） */
@@ -139,12 +140,18 @@ function saveTaH(e: PointerEvent) {
 /* Query 接 dsl-assist——fields 闭包现调现读（DslQueryView 同范式）。
  fields() 侧惰性 ensure：补全触发才拉 mapping（挂载零请求），cache 命中后直读；
  不 await 零降级，失败仅无候选 */
-const { fields: assistFields, ensure: ensureAssistFields } = useIndexFields(() => index.value);
+const { fields: assistFields, ensure: mmEnsureRaw } = useIndexFields(() => index.value);
+/* 1125：挂载即拉 mapping 属当前目标的数据——身份未落地先拉会带上一账号的 target。
+   门放行才发，未放行则记挂起，身份落地后补跑（useGatedBootRead 负责补跑时机）。 */
+const mmAssistBoot = useGatedBootRead('match-matrix', () => { void mmEnsureRaw(); });
+function ensureAssistFields() { mmAssistBoot.run(); }
 /* 值位动态候选接线（661 范式照抄）——useTermsSuggest 实例+terms 闭包，索引源与 fields 同源现调现读 */
 const mmTerms = useTermsSuggest(() => index.value);
 const dslAssist = { fields: () => { if (!assistFields.value.length) ensureAssistFields(); return assistFields.value; }, terms: (f: string, p: string) => mmTerms.suggestAsync(f, p) };
 /* lint ctx 字段表与 dsl-assist 同源——挂载即 ensure（UpdateByQueryView immediate
  范式，只读 mapping 请求、失败零降级），fields 空=类型系规则自动跳过，零 ctx 规则始终生效 */
+/* 1125：挂载即拉 mapping 属当前目标的数据——身份未落地先拉会带旧 target；
+   未放行则挂起，身份/索引变化后补跑。 */
 watch(index, () => { void ensureAssistFields(); }, { immediate: true });
 /* lintDsl 静态体检（UpdateByQueryView 最简接线同款）——JSON 解析失败静默不阻塞 */
 const mmLint = computed(() => {

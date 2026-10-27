@@ -157,6 +157,7 @@ describe('W2 批：SqlConsole 布局可调 + 补全单例', () => {
     const v = readFileSync(join(__dirname, '../views/SqlConsoleView.vue'), 'utf-8');
     expect(v).toContain("sqlCompletion = ensureSqlCompletion(monaco, sqlCtx)");
     expect(v).toMatch(/onBeforeUnmount\(\(\) => \{ sqlCompletion\?\.dispose\(\); sqlCompletion = null; \}\)/);
-    expect(v).toMatch(/const sqlFieldsCtx = useIndexFields\(\(\) => store\.pickedIdx \|\| ''\)/);
+    /* 1080：字段源从「顶栏选中」改为「FROM 优先」的有效索引 */
+    expect(v).toMatch(/const sqlFieldsCtx = useIndexFields\(\(\) => effectiveSqlIndex\.value\)/);
   });
 });

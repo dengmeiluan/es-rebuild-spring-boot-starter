@@ -326,12 +326,15 @@ import { useUrlState, useIdxState, usePref } from '../composables/urlState';
 import { usePagerSize, PAGER_SIZES } from '../composables/usePagerSize';
 import { useQueryRun } from '../composables/useQueryRun';
 import { useIndexFieldTypes } from '../composables/useIndexFieldTypes';
+import { resolveSortField } from '../utils/sortField';
 import { useRouter } from 'vue-router';
 import { encodeDslParam } from '../utils/queryHub';
 import { exportStamp, copyText, fmtTime, downloadText, totalOf, fmtNum, csvCell, fmtCell } from '../utils/format';
 import { removeStoredRaw } from '../utils/safeJson';
+import { useAuthStore } from '../stores/auth'; /* 历史回放自动执行的身份/读页门（1124 续） */
 
 const store = useAppStore();
+const auth = useAuthStore();
 const router = useRouter();
 /* sort 字段 FieldPicker 的可排序类型过滤（逗号分隔字符串，同 PIT/构建器排序行口径）。
  补 unsigned_long（545 数值族九口径对齐——此前排序字段选择器漏第九种数值类型） */
@@ -472,8 +475,20 @@ async function doRun() {
   busy.value = true; runErr.value = ''; runErrRaw.value = null;
   const signal = qr.begin();
   try {
+    /* 1169：sort 也能从 URL/手输进来（FieldPicker 只过滤下拉候选，挡不住 ?sort=title）——
+       直接送给 ES 会 400「Fielddata is disabled on text fields」。先解析成 .keyword 子域，
+       解析不了就地拦下并给可行动提示，不发注定失败的请求。 */
+    const sfRaw = sortField.value.trim();
+    if (sfRaw) {
+      const res = resolveSortField(sfRaw, fieldTypes.value);
+      if (!res.ok) {
+        store.notify('warning', res.reason || '该字段不支持排序');
+        return; /* finally 里会复位 busy / qr */
+      }
+      sortField.value = res.field;
+    }
     const r: any = await api.luceneSearch(index.value.trim(), qs.value.trim(), size.value, from.value,
-      sortField.value.trim() || undefined, sortOrder.value, signal);
+      sfRaw ? sortField.value.trim() : undefined, sortOrder.value, signal);
     took.value = r.took || 0;
     totalShards.value = r._shards?.total || 0;
     successfulShards.value = r._shards?.successful || 0;
@@ -503,8 +518,24 @@ const histRows = computed(() => qh.items.filter(i => i.mode === 'lucene'));
 function replayHistRow(row: { query: string }, runIt: boolean) {
   qs.value = row.query;
   histOpen.value = false;
-  if (runIt) doRun();
+  if (runIt) doRunAuto();
 }
+
+/* 历史回放自动执行的身份门（1124 续）：回放载荷可能来自上一账号，probe 未落地时旧 target
+   的检索会先发出去。手动点「检索」不拦，后端仍按 search 页读键裁决。 */
+const doRunAutoAllowed = () => auth.authDisabled
+  || !auth.probeStarted /* 探测未启动视同身份已定，与 store.identityKnown 同口径 */
+  || (auth.probed && auth.me != null && auth.canReadPage('search', store.target));
+let doRunAutoPending = false;
+function doRunAuto() {
+  if (doRunAutoAllowed()) { doRunAutoPending = false; void doRun(); return; }
+  doRunAutoPending = true;
+}
+watch(() => [auth.probed, auth.authDisabled, auth.me?.username, store.target], () => {
+  if (!doRunAutoPending || !doRunAutoAllowed()) return;
+  doRunAutoPending = false;
+  void doRun();
+});
 
 /* 原始 IO 快查（545 四页同款）——特征 /cluster/lucene-search；判空 rec=null
  （本页还没检索过）时 notify 引导，不开空弹窗 */

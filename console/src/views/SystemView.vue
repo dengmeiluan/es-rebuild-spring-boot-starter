@@ -135,6 +135,7 @@ import EmptyState from '../components/EmptyState.vue';
 import QueryResultTable from '../components/QueryResultTable.vue';
 import { friendlyEsError } from '../utils/esError';
 import { useAppStore } from '../stores/app';
+import { useGatedBootRead } from '../composables/usePageIdentityGate';
 import { useScopedDraft } from '../composables/useScopedDraft';
 import { fmtNum } from '../utils/format';
 import { highlightJson } from '../utils/jsonc';
@@ -303,7 +304,9 @@ async function loadInspect() {
 }
 /* 首次挂载与回落重载走同一组动作，避免两处各自演化 */
 function reloadAll() { loadInspect(); run(); }
-onMounted(reloadAll);
+/* 1125：/system-inspect 与 /system-query 在身份落地前拉会带旧 target；路由变化仍直调 reloadAll */
+const systemBoot = useGatedBootRead('system', reloadAll);
+onMounted(() => systemBoot.run());
 
 async function run() {
   /* 在途一律忽略（闸收进函数本体才覆盖全部触发通道）：按钮 disabled 只护住钮面，

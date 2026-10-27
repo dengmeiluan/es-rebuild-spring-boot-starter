@@ -1,8 +1,13 @@
 <template>
   <div class="alv" ref="rootEl">
     <!-- 只读身份的前置说明：写钮隐藏时不让页面变成无解释的空壳（RestView 只读说明条同款） -->
+    <!-- 两级说明：完全只读（连新增都没有）= 需要别名写权限；只有新增（config-validator 写键）
+         则说明切换/设写/解绑为何缺席——否则按钮静默消失，用户以为页面缺功能。 -->
     <div v-if="auth.probed && !canOps" class="alv-perm-note" role="status">
       <Shield :size="13" /> 当前身份只读：别名的新建/设写/解绑不可用；需要别名写权限。
+    </div>
+    <div v-else-if="auth.probed && canOps && !canFullAlias" class="alv-perm-note" role="status">
+      <Shield :size="13" /> 仅可新建别名：原子切换/切换/设写/解绑需要别名页写权限；当前身份未获该权限。
     </div>
     <PageHeader :icon="Link2" title="别名图">
       <template #subtitle>

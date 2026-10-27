@@ -131,6 +131,7 @@ import { Flame, FileText, Play, X, AlertCircle, ClipboardCopy } from 'lucide-vue
 import PageHeader from '../components/PageHeader.vue';
 import LabNav from '../components/LabNav.vue';import { api } from '../api';
 import { useAppStore } from '../stores/app';
+import { useGatedBootRead } from '../composables/usePageIdentityGate';
 import { useUrlState } from '../composables/urlState';
 import { usePref } from '../composables/urlState';
 import { useScopedDraft } from '../composables/useScopedDraft';
@@ -163,7 +164,11 @@ const index = useUrlState('idx');
 /* DSL 接 dsl-assist——fields 闭包现调现读（DslQueryView 同范式）。
  fields() 侧惰性 ensure：补全触发才拉 mapping（挂载零请求；本页索引可含通配符，
  mapping 拉取失败零降级仅无候选），cache 命中后直读 */
-const { fields: assistFields, ensure: ensureAssistFields } = useIndexFields(() => index.value);
+const { fields: assistFields, ensure: pfEnsureRaw } = useIndexFields(() => index.value);
+/* 1125：挂载即拉 mapping 属当前目标的数据——身份未落地先拉会带上一账号的 target。
+   门放行才发，未放行则记挂起，身份落地后补跑（useGatedBootRead 负责补跑时机）。 */
+const pfAssistBoot = useGatedBootRead('profile-flame', () => { void pfEnsureRaw(); });
+function ensureAssistFields() { pfAssistBoot.run(); }
 /* 值位动态候选接线（661 范式照抄）——useTermsSuggest 实例+terms 闭包，索引源与 fields 同源现调现读 */
 const pfTerms = useTermsSuggest(() => index.value);
 const dslAssist = { fields: () => { if (!assistFields.value.length) ensureAssistFields(); return assistFields.value; }, terms: (f: string, p: string) => pfTerms.suggestAsync(f, p) };
@@ -175,6 +180,8 @@ const dsl = useScopedDraft('dsl', {
 /* lintDsl 静态体检（RankDebugView 最简接线同款）——JSON 解析失败静默不阻塞。
  lint ctx 字段表与 dsl-assist 同源；挂载即 ensure（UpdateByQueryView immediate 范式，
  只读 mapping 请求、失败零降级），fields 空=类型系规则自动跳过，零 ctx 规则始终生效 */
+/* 1125：挂载即拉 mapping 属当前目标的数据——身份未落地先拉会带旧 target；
+   未放行则挂起，身份/索引变化后补跑。 */
 watch(index, () => { void ensureAssistFields(); }, { immediate: true });
 const pfLint = computed(() => {
   try { return lintDsl(JSON.parse(dsl.value || ''), { fields: assistFields.value }); }

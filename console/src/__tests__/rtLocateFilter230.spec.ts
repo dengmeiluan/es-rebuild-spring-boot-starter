@@ -27,6 +27,7 @@ vi.mock('../api', async (importOriginal) => {
 
 import ResultTable from '../components/ResultTable.vue';
 import { clearTablesForTest, visibleTables } from '../utils/tableRegistry';
+import { findMenuItem } from './helpers/ctxMenu'; /* 1142：二级菜单取项 */
 import type { SearchHit } from '../types';
 
 const HITS: SearchHit[] = [
@@ -146,7 +147,8 @@ describe('RT 列值筛选（230 批 P0-4）', () => {
     const td = host.querySelector('td.rt-cell') as HTMLElement;
     td.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 10, clientY: 10 }));
     await tick();
-    const btn = [...document.body.querySelectorAll('.ccm-it') as any].find(b => b.textContent?.includes('筛选此列'));
+    /* 1142：筛选动作住「筛选与排序…」二级 */
+    const btn = await findMenuItem('筛选此列');
     expect(btn, '右键菜单应有「筛选此列」').toBeTruthy();
     (btn as HTMLElement).click();
     await tick();

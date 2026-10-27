@@ -97,7 +97,8 @@ describe('五百四十三批③：sq-alert/sq-warn 语义面板豁免在场（er
 
 describe('五百四十三批④：所触视图恒高字面冻结（2.9.115/119 事故面口径）', () => {
   it('sq-grid 42vh 弹性行 + monaco-host flex 链逐字（sqlLint534 双源核对）', () => {
-    expect(sql).toContain('.sq-grid { grid-template-rows: minmax(170px, 42vh); }');
+    /* 1136：结果网格优先——42vh→34vh（1440/1024 真机测得 Monaco 高度链正常） */
+    expect(sql).toContain('.sq-grid { grid-template-rows: minmax(150px, 34vh); }');
     expect(sql).toContain('.sq-editor { display: flex; flex-direction: column; min-height: 0; }');
     expect(sql).toContain('.sq-editor > :deep(.monaco-host) { flex: 1 1 0; min-height: 0; }');
   });

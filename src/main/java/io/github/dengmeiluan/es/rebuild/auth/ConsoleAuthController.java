@@ -54,6 +54,8 @@ public class ConsoleAuthController {
     private final BuiltinConsoleAuthService authService;
     private final ConsoleOpsAuditStore opsAuditStore;
     private final boolean pageAuthEnabled;
+    /** 委托未上报 exp 时的拒绝表兜底 TTL（24h，覆盖常见宿主会话签发策略）。 */
+    static final long DELEGATE_REVOKE_FALLBACK_MS = 24L * 60L * 60L * 1000L;
     /** 登录失败节流（按用户名+来源 IP 的失败窗口与临时拒绝）。 */
     private final ConsoleLoginThrottle loginThrottle = new ConsoleLoginThrottle();
     /** 审计行连接隔离的目录源；单测手工构造时可为 null（无连接模型语义）。 */
@@ -227,14 +229,31 @@ public class ConsoleAuthController {
         /* 委托令牌（jwt/endpoint）的本地吊销：宿主签发无法真正撤销，但本实例可以拒绝
            「已在本控制台退出」的令牌，避免登出只清 localStorage、被复制令牌继续可用。
            必须用委托自己的令牌头（X-Es-Host-Token 等）——拿内置 token 去调 revoke
-           只会登记一个不相关的指纹，托管登录的退出实际从未生效。 */
+           只会登记一个不相关的指纹，托管登录的退出实际从未生效。
+           自定义委托（如 quotehub）只实现 tokenOf、不实现 revoke：此前登出回 200 但令牌
+           在 TTL 内继续可用（产线实测）。委托报出令牌而自己没登记时，由内核按保守 TTL
+           兜底登记——「退出后同一令牌必须失效」不能依赖每个宿主实现自觉。 */
         boolean delegatedRevoked = false;
         for (ConsoleAuthDelegate d : authDelegates) {
             try {
                 String delegatedToken = d.tokenOf(request);
-                if (delegatedToken != null && !delegatedToken.isEmpty() && d.revoke(delegatedToken)) {
-                    delegatedRevoked = true;
+                if (delegatedToken == null || delegatedToken.isEmpty()) continue;
+                boolean revokedByDelegate;
+                try {
+                    revokedByDelegate = d.revoke(delegatedToken);
+                } catch (Exception revokeFailed) {
+                    LOG.warn("[es-console-auth] 委托 revoke 异常，改由内核拒绝表兜底: {}",
+                            revokeFailed.getMessage(), revokeFailed);
+                    revokedByDelegate = false;
                 }
+                if (!revokedByDelegate) {
+                    /* 拿不到宿主 exp 时的保守上界：宿主会话通常 ≤ 12h，24h 足够覆盖
+                       常见签发策略，又不会让拒绝表无限驻留。 */
+                    long until = System.currentTimeMillis()
+                            + Math.max(authService.getTokenTtlMs(), DELEGATE_REVOKE_FALLBACK_MS);
+                    revokedByDelegate = DelegatedTokenRevocations.revoke(delegatedToken, until);
+                }
+                if (revokedByDelegate) delegatedRevoked = true;
             } catch (Exception e) {
                 /* 委托实现异常不得让登出失败（拒绝/放行决策已由清本地 + 内置吊销完成） */
                 LOG.warn("[es-console-auth] 委托令牌登出吊销失败（忽略，登出仍成功）: {}", e.getMessage(), e);

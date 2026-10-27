@@ -13,8 +13,10 @@ const panel = read('../components/QueryHistoryPanel.vue');
 
 describe('查询历史失败标记（274 批）', () => {
   it('store push 支持失败标记并随最近一次执行刷新', () => {
-    expect(store).toMatch(/function push\(mode: string, query: string, index\?: string, took\?: number, ok = true\)/);
+    /* 1122：push 追加错误摘要参数（末尾可选，旧调用零破坏） */
+    expect(store).toMatch(/function push\(mode: string, query: string, index\?: string, took\?: number, ok = true, params\?: string, opts\?: Record<string, unknown>, error\?: string\)/);
     expect(store).toMatch(/it\.ok = ok;/);
+    expect(store).toMatch(/it\.error = err;/);
     expect(store).toMatch(/ok\?: boolean;/);
   });
   it('DslQueryView：失败双路标记+成功翻转红点+histRows 透传', () => {

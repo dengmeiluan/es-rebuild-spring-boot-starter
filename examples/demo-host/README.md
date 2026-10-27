@@ -35,4 +35,27 @@ create your own user before exposing the console beyond localhost.
 |---|---|
 | `src/main/java/.../Article.java` | declaring a managed entity (`@Document` + `@Field`) |
 | `src/main/resources/application.yml` | the minimal host configuration (`mode=console`, auto-register, sqlite store) |
+| `src/main/java/.../SampleHostAuthDelegate.java` | **the delegate SPI done right** — all four methods (`authenticate` / `hasCredential` / `tokenOf` / `revoke`), role mapping, page grants |
+| `src/test/java/.../SampleHostAuthDelegateTest.java` | the four contracts that are easy to *omit* and impossible to notice at runtime |
 | `src/test/java/.../DemoHostSmokeTest.java` | proof the embedded console boots with zero wiring |
+
+## Wiring a real host identity (optional)
+
+Registering only `authenticate` is the common mistake: the console then can't tell
+"delegated but rejected" from "no host credentials", so a revoked host session can
+silently fall back to a leftover built-in token, and "logout" only clears localStorage.
+The sample implements all four methods; enable it to see the wiring:
+
+```bash
+# token is just Base64("user:hostRole") in the sample — e.g. ops user
+mvn spring-boot:run -Dspring-boot.run.arguments=--demo.host-delegate.enabled=true
+curl -H 'X-Demo-Host-Token: b3BzOnZpZXdlcg==' http://localhost:8081/internal/es/index/auth/me
+```
+
+Swap `authenticate` for your own JWT verification and `grantedPages` for the pages
+your permission system actually grants (see the authorization-key table in
+`docs/integration/configuration-reference.md`). Leave pages `null` only when you really
+want role-wide access.
+
+> The sample requires starter **1.0.66+** — earlier versions don't have the
+> `hasCredential`/`tokenOf`/`revoke` methods, and copying the sample against them won't compile.

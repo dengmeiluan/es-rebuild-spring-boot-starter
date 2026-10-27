@@ -97,7 +97,7 @@ describe('535 R1：③ 词位上下文加权', () => {
     try {
       /* 1043 随迁：SELECT 位前置聚合函数候选（新增加法层，字段 rank 序零倾向语义不变）；LIMIT 位维持纯字段 */
       for (const [before, expected] of [
-        ['SELECT ', ['COUNT(', 'AVG(', 'SUM(', 'MIN(', 'MAX(', 'amount', 'created', 'flag', 'ip', 'name', 'title']],
+        ['SELECT ', ['COUNT(', 'AVG(', 'SUM(', 'MIN(', 'MAX(', 'KURTOSIS(', 'MAD(', 'PERCENTILE(', 'PERCENTILE_RANK(', 'SKEWNESS(', 'STDDEV_POP(', 'STDDEV_SAMP(', 'SUM_OF_SQUARES(', 'VAR_POP(', 'VAR_SAMP(', 'amount', 'created', 'flag', 'ip', 'name', 'title']],
         ['SELECT name FROM orders LIMIT ', ['amount', 'created', 'flag', 'ip', 'name', 'title']],
       ] as Array<[string, string[]]>) {
         const r = await sqlProvider(m).provideCompletionItems(fakeModel(before, before.length), { lineNumber: 1 });

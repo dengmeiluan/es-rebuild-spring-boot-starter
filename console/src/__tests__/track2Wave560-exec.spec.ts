@@ -79,7 +79,9 @@ describe('560 ③：DevToolsView dt.autoFmt 退出口（条件 format 分支，�
     expect(fmtAt, '条件 format 分支在场').toBeGreaterThan(-1);
     expect(fmtAt).toBeGreaterThan(busyAt);
     expect(fmtAt).toBeLessThan(rawAt);
-    expect(runBody).toContain('api.devtoolsExecute(t.method, t.path, bodyOut, signal)');
+    /* 1127：发送值多了一层 ${var} 展开，但「run() 用格式化出参、草稿 t.body 零触」的锁面不变 */
+    expect(runBody).toContain('api.devtoolsExecute(t.method, pathOut, bodyFinal, signal)');
+    expect(runBody).toContain('applyVars(bodyOut)');
   });
 
   it('开关钮居请求 pane ⋯ 菜单（menuitemcheckbox aria-checked 态 + 落盘键接线，577 批同步更新 563 合并形态）', () => {
@@ -210,6 +212,7 @@ describe('560 ⑩：HotkeyPanel「查询与编辑」组加两行（固定文案�
   });
   it('Ctrl+I 索引工作区 query 编辑器补全行在场（557 既有 Ctrl+I 行零触）', () => {
     expect(hk).toContain("{ keys: ['Ctrl', 'I'], desc: '索引工作区 query 编辑器补全' },");
-    expect(hk).toContain("{ keys: ['Ctrl', 'I'], desc: '唤起补全候选（DevTools 请求体；Monaco Ctrl+Space 同效）' }");
+    /* 1129：Ctrl+I 改绑格式化（对齐 Kibana Auto-indent），本行文案同步 */
+    expect(hk).toContain("{ keys: ['Ctrl', 'I'], desc: '格式化当前请求体（DevTools；草稿同步，等价手改）' }");
   });
 });

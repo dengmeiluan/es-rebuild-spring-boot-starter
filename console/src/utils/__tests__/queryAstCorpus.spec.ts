@@ -27,7 +27,8 @@ const CORPUS: Array<[string, unknown]> = [
   ['match-scalar', { match: { title: 'hello' } }],
   ['match-expanded-single', { match: { title: { query: 'hello' } } }],
   ['match_bool_prefix', { match_bool_prefix: { title: { query: 'quick brown f', operator: 'and' } } }],
-  ['match_int_prefix', { match_int_prefix: { code: { query: '12' } } }],
+  /* 1045：bitmap_terms（9.0 term-level）——官方 {field, value} 具名形态 */
+  ['bitmap_terms', { bitmap_terms: { field: 'product_id', value: 'AQAAAA==' } }],
   ['match_phrase', { match_phrase: { title: { query: 'quick brown', slop: 2 } } }],
   ['match_phrase_prefix', { match_phrase_prefix: { title: { query: 'quick brown f', max_expansions: 10 } } }],
   ['multi_match', { multi_match: { query: 'brown fox', fields: ['title^3', 'body'], type: 'best_fields' } }],
@@ -67,15 +68,14 @@ const CORPUS: Array<[string, unknown]> = [
   ['wildcard', { wildcard: { user: { value: 'ki*y', case_insensitive: true } } }],
   ['fuzzy', { fuzzy: { user: { value: 'ki', fuzziness: 2 } } }],
   ['ids', { ids: { values: ['1', '2'] } }],
-  ['parent_id', { parent_id: { type: 'answer', id: '1', field: 'join_field' } }],
+  ['parent_id', { parent_id: { type: 'answer', id: '1' } }],
   ['percolate', { percolate: { field: 'query', document: { message: 'hi' } } }],
-  ['rank_feature', { rank_feature: { pagerank: { boost: 2, saturation: { pivot: 8 } } } }],
-  ['rank_features', { rank_features: { topics: { boost: 2 } } }],
+  ['rank_feature', { rank_feature: { field: 'pagerank', boost: 2, saturation: { pivot: 8 } } }],
   ['distance_feature', { distance_feature: { field: 'date', pivot: '7d', origin: 'now' } }],
   ['script', { script: { script: { source: 'doc["age"].value > 10', lang: 'painless' } } }],
   ['wrapper', { wrapper: { query: 'eyJ0ZXJtIjp7fX0=' } }],
   ['semantic', { semantic: { field: 'inference_field', query: 'what is elastic' } }],
-  ['sparse_vector', { sparse_vector: { field: 'emb', query_vectors: { token: [0.1, 0.2] } } }],
+  ['sparse_vector', { sparse_vector: { field: 'emb', query_vector: { token: [0.1, 0.2] } } }],
   ['text_expansion', { text_expansion: { emb: { model_id: 'm', model_text: 'hello' } } }],
   ['weighted_tokens', { weighted_tokens: { emb: { hello: 0.5 } } }],
 
@@ -114,11 +114,11 @@ const CORPUS: Array<[string, unknown]> = [
   ['span_not', { span_not: { include: { span_term: { f: 'a' } }, exclude: { span_term: { f: 'b' } }, dist: 3 } }],
   ['span_containing', { span_containing: { little: { span_term: { f: 'a' } }, big: { span_term: { f: 'b' } } } }],
   ['span_within', { span_within: { little: { span_term: { f: 'a' } }, big: { span_term: { f: 'b' } } } }],
-  ['field_masking_span', { field_masking_span: { query: { span_term: { f: 'a' } }, field: 'f' } }],
+  ['span_field_masking', { span_field_masking: { query: { span_term: { f: 'a' } }, field: 'f' } }],
   /* 999：span_gap——span_near 子句内的间隙占位（span_last 于 1009 撤册：ES 无此算子，
    官方文档 404；存量 DSL 中的 span_last 走未知算子 raw 退化零丢失，见下方退化断言） */
-  ['span_gap', { span_gap: { width: 8 } }],
-  ['span_near-gap', { span_near: { clauses: [{ span_term: { f: 'a' } }, { span_gap: { width: 8 } }, { span_term: { f: 'b' } }], slop: 12, in_order: true } }],
+  ['span_gap', { span_gap: { text: 8 } }],
+  ['span_near-gap', { span_near: { clauses: [{ span_term: { f: 'a' } }, { span_gap: { text: 8 } }, { span_term: { f: 'b' } }], slop: 12, in_order: true } }],
 ];
 
 /* 畸形输入单列：只保证「不抛 + 输出仍是对象」，不承诺文本保真（既有 best-effort 归一契约） */
@@ -143,12 +143,13 @@ describe('1009 未知算子零丢失退化', () => {
     expect(isRaw(n)).toBe(true);
     expect(serQueryNode(n)).toEqual(q);
   });
-  /* 1012：geo_distance 串/geohash 坐标（合法 ES 形态）——FIELD_OBJ_OPS 特判认对象值键，
-     串坐标无对象值键落 raw 退化，往返仍零丢失（ClauseNode 标量输入保真可编辑） */
-  it('geo_distance 串坐标落 raw 叶且往返一致', () => {
-    const q = { geo_distance: { distance: '12km', location: '40,-70' } };
+  /* 1045：geo_distance 串/geohash 坐标（合法 ES 形态）——location 键值位就位，
+     富表单可直接编辑；validation_method 兄弟键进 params 不阻断结构化。 */
+  it('geo_distance 串坐标与 validation_method 结构化且往返一致', () => {
+    const q = { geo_distance: { distance: '12km', location: '40,-70', validation_method: 'IGNORE_MALFORMED' } };
     const n = parseQueryNode(q);
-    expect(isRaw(n)).toBe(true);
+    expect(isRaw(n)).toBe(false);
+    expect(n).toMatchObject({ type: 'leaf', op: 'geo_distance', field: 'location', value: '40,-70' });
     expect(serQueryNode(n)).toEqual(q);
   });
 });
@@ -187,10 +188,11 @@ describe('998 查询体参数一等分账', () => {
     seq_no_primary_term: true,
     track_scores: true,
     timeout: '1s',
-    allow_partial_search_results: false,
-    preference: '_local',
     stats: ['probe'],
     profile: false,
+    sub_searches: [{ query: { match: { title: 'x' } } }, { query: { match: { body: 'y' } } }],
+    rank: { rrf: { rank_constant: 60, rank_window_size: 100 } },
+    ext: { plugin_key: { enabled: true } },
   };
 
   it('注册表覆盖全部探针键（防止新增键漏登记）', () => {

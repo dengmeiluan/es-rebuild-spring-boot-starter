@@ -50,11 +50,13 @@ describe('notify 动作数组化（246 批）', () => {
     expect(labels(item), 'success 无自动动作').toEqual([]);
   });
 
-  it('DslQueryView 失败路径源码锁：原始错误进管线+「查看诊断」直达 /diag', () => {
+  it('DslQueryView 失败路径源码锁：原始错误进管线+「查看诊断」直达 /diag，且不再弹遮挡结果的 toast', () => {
     const src = readFileSync(join(__dirname, '../views/DslQueryView.vue'), 'utf-8');
     /* msg 必须传原始错误本体（friendlyEsError 才能翻译+自动「复制原始」才会触发） */
     expect(src).toMatch(/store\.notify\('error', queryErr\.value/);
     expect(src).toMatch(/label: '查看诊断', onClick: \(\) => \{ router\.push\('\/diag'\); \}/);
+    /* 原位 .dq-err 面板是主界面：右下角 toast 盖住结果表正文，改为只落历史 */
+    expect(src).toMatch(/store\.notify\('error', queryErr\.value, \{\s*logOnly: true,/);
     /* 旧光杆文案不得回归 */
     expect(src).not.toMatch(/notify\('error', '查询失败'\)/);
   });

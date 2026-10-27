@@ -8,7 +8,7 @@
  * 3) semOn + useSemFormat：bytes/duration/percent 三型（纯函数分档 tone）；显示加工、
  *    title 恒 raw；QRT/RT 缺省不传全链零变化；
  * 4) exportRowFilter：csvBlock 行级过滤（CSV/MD/XLSX 三管道同收口）；
- * 5) 单元格右键「按此值筛选」：等价点列头筛选并勾入该值；仅 rows 型 sortable 可用。
+ * 5) 单元格右键「仅筛选当前结果（不改查询）」：等价点列头筛选并勾入该值；仅 rows 型 sortable 可用。
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createApp, h, nextTick, ref } from 'vue';
@@ -16,6 +16,7 @@ import { createPinia } from 'pinia';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import QueryResultTable from '../../components/QueryResultTable.vue';
+import { findMenuItem } from '../../__tests__/helpers/ctxMenu'; /* 1142：二级菜单取项 */
 import ResultTable from '../../components/ResultTable.vue';
 import { semFormat } from '../../composables/useSemFormat';
 
@@ -51,8 +52,8 @@ beforeEach(() => {
 });
 
 const dataRows = () => [...host.querySelectorAll('tbody tr')].filter(tr => !tr.classList.contains('qrt-nomatch') && !tr.classList.contains('qrt-trunc-row'));
-const ctxMenuBtn = (label: string) =>
-  [...document.querySelectorAll('.ccm-mask .ccm-it')].find(b => b.textContent?.includes(label)) as HTMLButtonElement | undefined;
+/* 1142：动作项住分组二级——helper 按需展开分组 */
+const ctxMenuBtn = (label: string) => findMenuItem(label) as Promise<HTMLButtonElement | null>;
 const cellMenu = async (td: HTMLElement, x = 10, y = 10) => {
   td.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: x, clientY: y }));
   await tick(4);
@@ -208,13 +209,13 @@ describe('QRT semOn 语义渲染（useSemFormat 接线）', () => {
   });
 });
 
-/* ═══════════ 六、单元格右键「按此值筛选」 ═══════════ */
+/* ═══════════ 六、单元格右键「仅筛选当前结果（不改查询）」 ═══════════ */
 describe('QRT 单元格右键按此值筛选', () => {
   it('rows 型 sortable：菜单项出现；点击=勾入该值+开既有筛选弹层，行集收窄', async () => {
     await mountTbl(QueryResultTable, { cols: ['name', 'grp'], rows: [['a1', 'x'], ['a2', 'x'], ['b1', 'y']], sortable: true });
     const td = dataRows()[0].querySelectorAll('td.qrt-cell')[1] as HTMLElement; /* grp=x 格 */
     await cellMenu(td, 20, 20);
-    const item = ctxMenuBtn('按此值筛选');
+    const item = await ctxMenuBtn('仅筛选当前结果（不改查询）');
     expect(item, 'rows 型 sortable 应有按此值筛选项').toBeTruthy();
     item!.click(); await tick(6);
     expect(document.querySelector('.cfp')).not.toBeNull(); /* 复用既有列筛选弹层 */
@@ -225,11 +226,12 @@ describe('QRT 单元格右键按此值筛选', () => {
     const HITS = [{ _id: 'a', _source: { name: 'apple' } }] as any;
     await mountTbl(QueryResultTable, { hits: HITS, sortable: true });
     await cellMenu(dataRows()[0].querySelectorAll('td.qrt-cell')[0] as HTMLElement);
-    expect(ctxMenuBtn('按此值筛选'), 'hits 型隐藏').toBeUndefined();
+    expect(await ctxMenuBtn('仅筛选当前结果（不改查询）'), 'hits 型隐藏').toBeNull();
     document.querySelectorAll('.ccm-mask').forEach(e => e.remove());
     await mountTbl(QueryResultTable, { cols: ['name'], rows: [['apple']] }); /* 非 sortable */
     await cellMenu(dataRows()[0].querySelectorAll('td.qrt-cell')[0] as HTMLElement);
-    expect(ctxMenuBtn('按此值筛选'), '非 sortable 隐藏').toBeUndefined();
+    expect(await ctxMenuBtn('仅筛选当前结果（不改查询）'), '非 sortable 隐藏').toBeNull();
+    expect(await ctxMenuBtn('加入查询条件并重查'), '未开 useAsCondition 时零增量').toBeNull();
   });
 });
 
@@ -327,12 +329,12 @@ describe('内核五件零增量默认档（源码锁）', () => {
     /* 缺省关：右键菜单无「行详情」项（零增量） */
     await mountTbl(QueryResultTable, { cols: COLS, rows: ROWS, sortable: true });
     await cellMenu(dataRows()[0].querySelectorAll('td.qrt-cell')[0] as HTMLElement);
-    expect(ctxMenuBtn('行详情'), '缺省 rowDrawer 无行详情项').toBeUndefined();
+    expect(await ctxMenuBtn('行详情'), '缺省 rowDrawer 无行详情项').toBeNull();
     document.querySelectorAll('.ccm-mask').forEach(e => e.remove());
     /* 开启：菜单项出现 → 点击开侧拉，整行键值对+逐格复制+复制整行 JSON */
     await mountTbl(QueryResultTable, { cols: COLS, rows: ROWS, sortable: true, rowDrawer: true });
     await cellMenu(dataRows()[1].querySelectorAll('td.qrt-cell')[0] as HTMLElement, 20, 20);
-    const item = ctxMenuBtn('行详情');
+    const item = await ctxMenuBtn('行详情');
     expect(item, 'rowDrawer 开启应有行详情项').toBeTruthy();
     item!.click(); await tick(6);
     const drawer = document.querySelector('.n-drawer');

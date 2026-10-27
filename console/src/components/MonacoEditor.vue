@@ -19,7 +19,7 @@ import 'monaco-editor/esm/vs/editor/contrib/comment/browser/comment';   // jsonc
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import { useAppStore } from '../stores/app';
-import { dslContext, QUERY_SNIPPETS, RANGE_OPS, AGG_SNIPPETS, ROOT_KEYS, ROOT_KEY_SNIPPETS, commaAffixes, settingsKeyItems, mappingKeyItems, templateKeyItems, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
+import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS, ROOT_KEYS, ROOT_KEY_SNIPPETS, commaAffixes, settingsKeyItems, mappingKeyItems, templateKeyItems, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
 import { makeDslValueSuggestProvider } from '../utils/dslValueSuggest';
 import type { AssistItem, BodyKind } from '../utils/dslCompletionContext';
 import { ensureLanguages } from '../utils/monacoLanguages';
@@ -270,6 +270,11 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   (e: 'update:modelValue', v: string): void;
   (e: 'execute'): void;
+  /* 1128：选区态上报（行数/字符数）——SQL 控制台据此把「执行」改显「执行选段」，
+     操作者按下快捷键前就知道只会跑选中的那段，而不是整篇。 */
+  (e: 'selection', p: { lines: number; chars: number; start: number; end: number } | null): void;
+  /* 1129：光标偏移（无选区也上报）——SQL 控制台据此判定「光标所在语句」 */
+  (e: 'cursor', offset: number): void;
 }>();
 
 const hostRef = ref<HTMLElement>();
@@ -323,6 +328,22 @@ onMounted(() => {
   registerFormatKeybind(editor);
   editor.onDidChangeModelContent(() => {
     emit('update:modelValue', editor!.getValue());
+  });
+  /* 1128/1129：选区变化即上报；纯空白选区按「未选中」处理（与控制台 selectionScope 同口径），
+     光标偏移单独上报——多语句稿按光标所在语句执行。 */
+  editor.onDidChangeCursorSelection?.(() => {
+    if (!editor) return;
+    const model = editor.getModel();
+    const sel = editor.getSelection();
+    if (!model || !sel) { emit('selection', null); return; }
+    emit('cursor', model.getOffsetAt(sel.getPosition()));
+    const text = model.getValueInRange(sel).trim();
+    emit('selection', text ? {
+      lines: sel.endLineNumber - sel.startLineNumber + 1,
+      chars: text.length,
+      start: model.getOffsetAt(sel.getStartPosition()),
+      end: model.getOffsetAt(sel.getEndPosition()),
+    } : null);
   });
   /* 布局补偿（→V3 强化）：WorkbenchLayout pane 内 create 时容器可能处于 0 尺寸过渡态
  （pane 高度异步分配），monaco 的 initial layout 读到 0 后渲染层停在 0×0——
@@ -741,6 +762,7 @@ onMounted(() => {
             label: k, kind: monaco.languages.CompletionItemKind.Snippet,
             insertText: wrapSnippet(doc, startOff, end, indent, snip, affix),
             insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            detail: querySnippetDetail(k), /* 1133：63 条英文键旁给中文语义，列表可扫读 */
             range, command: ACCEPT_FORMAT_COMMAND,
             filterText: dslFilterText(k), /* W5-1 过滤关：同上 */
             sortText: dslSortText(i, k), /* W5-1 排序关：同上，组内保 QUERY_SNIPPETS 目录序 */
@@ -918,18 +940,34 @@ function setMarkers<T extends {
  （'es-syn-lint' 等，多 lint 源同编辑器互不清，且与 JSON 语法诊断 owner 'json' 分离）；
  owners 记账随组件卸载清空（model 已随 editor.dispose 退役，显式清一遍防同 model 复用残留）。 */
 const lineMarkerOwners = new Set<string>();
-function setLineMarkers(markers: { line: number; message: string }[], owner: string) {
+function setLineMarkers(
+  markers: { line: number; message: string }[], owner: string,
+  severity: 'warning' | 'error' = 'warning',
+) {
   const model = editor?.getModel();
   if (!model) return;
   lineMarkerOwners.add(owner);
   monaco.editor.setModelMarkers(model, owner, markers.map(m => ({
-    severity: monaco.MarkerSeverity.Warning,
+    severity: severity === 'error' ? monaco.MarkerSeverity.Error : monaco.MarkerSeverity.Warning,
     message: m.message,
     startLineNumber: m.line,
     startColumn: 1,
     endLineNumber: m.line,
     endColumn: typeof model.getLineMaxColumn === 'function' ? model.getLineMaxColumn(m.line) : 1,
   })));
+}
+
+/* 1109：行列直射定位（SQL 执行错误/静态 lint 行号跳转）——钳到模型合法范围，
+ 滚到视口中心并落光标，聚焦后可直接改。行号可能来自报错文本与当前稿不一致的
+ 场景（执行期间改稿/删行），钳位保证不抛错。 */
+function revealPosition(line: number, column: number) {
+  const model = editor?.getModel();
+  if (!editor || !model) return;
+  const ln = Math.max(1, Math.min(Math.trunc(line) || 1, model.getLineCount()));
+  const col = Math.max(1, Math.min(Math.trunc(column) || 1, model.getLineMaxColumn(ln)));
+  editor.revealPositionInCenter({ lineNumber: ln, column: col });
+  editor.setPosition({ lineNumber: ln, column: col });
+  editor.focus();
 }
 
 onBeforeUnmount(() => {
@@ -948,7 +986,7 @@ onBeforeUnmount(() => {
   editor?.dispose();
 });
 
-defineExpose({ format, insertSnippet, setGutterChips, setMarkers, setLineMarkers, getEditor: () => editor });
+defineExpose({ format, insertSnippet, setGutterChips, setMarkers, setLineMarkers, revealPosition, getEditor: () => editor });
 </script>
 
 <style scoped>

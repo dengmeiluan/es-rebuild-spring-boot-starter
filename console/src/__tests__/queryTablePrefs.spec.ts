@@ -1,7 +1,7 @@
 /**
  * R130 二十八批：QueryResultTable 偏好记忆守卫（useTablePrefs composable）。
  * 锁定：
- * 1) 无 storageKey（SQL 通道 R54 特例）：不渲染工具行/拖拽柄、全列显示、不写 localStorage；
+ * 1) 无 storageKey（SQL 通道 R54 特例）：不渲染偏好工具行；列宽柄可用但仅内存；全列显示、不写 localStorage；
  * 2) 有 storageKey：工具行渲染、默认前 8 列、列计数可见；
  * 3) 行高三档钮写 es_tbl_rowh 全局键、cozy class 切换、重挂载恢复（245 批）；
  * 4) 列宽恢复（es_tbl_w:<dim> 预置 → th style 生效——ResultTable 原实现只写不读的缺口，此处锁恢复）；
@@ -53,15 +53,17 @@ beforeEach(() => {
   host.innerHTML = '';
 });
 
-describe('QueryResultTable 无 storageKey（SQL 通道零增量）', () => {
-  it('不渲染工具行/拖拽柄，全列显示，不写 localStorage', async () => {
+describe('QueryResultTable 无 storageKey（SQL 通道零落盘）', () => {
+  it('不渲染偏好工具行；列宽柄可用但只在内存（不写 localStorage）', async () => {
     await mountTbl({ hits: makeHits(10) as any });
     expect(host.querySelector('.qrt-bar')).toBeNull();
-    expect(host.querySelector('.qrt-rs')).toBeNull();
+    /* 1136：DBX 式列宽拖拽对无 storageKey 宿主开放（内存态，每次挂载自足） */
+    expect(host.querySelector('.qrt-rs')).not.toBeNull();
     /* hit 型列 = _id 前缀 + 10 个 source 字段；167 批起最前多一列冻结序号 */
     expect(host.querySelectorAll('th').length).toBe(12);
-    /* 密度按钮不存在的表：无任何偏好写入 */
+    /* 无任何偏好落盘 */
     expect(localStorage.getItem('es_tbl_dense:sql')).toBeNull();
+    expect([...Array(localStorage.length)].map((_, i) => localStorage.key(i)!).filter(k => k.startsWith('es_tbl_w'))).toEqual([]);
   });
 });
 

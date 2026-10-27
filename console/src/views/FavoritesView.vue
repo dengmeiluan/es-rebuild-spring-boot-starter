@@ -61,7 +61,8 @@
       action-text="清除过滤" @action="kw = ''; kind = 'all'" />
 
     <div v-else class="fv-list">
-      <div v-for="(it, i) in filtered" :key="it.id" class="fv-card" :class="{ 'fv-sel': selected.has(it.id) }" :data-hit-idx="i + 1">
+      <div v-for="(it, i) in filtered" :key="it.id" class="fv-card" :class="{ 'fv-sel': selected.has(it.id) }" :data-hit-idx="i + 1"
+        @contextmenu.prevent="openFavMenu($event, it)">
         <!-- 批量选择勾选框 -->
         <input type="checkbox" class="fv-chk" :checked="selected.has(it.id)"
           :aria-label="'选中收藏：' + it.title" @click.stop @change="toggleSel(it.id)" />
@@ -113,15 +114,21 @@
         </button>
       </div>
     </details>
+    <!-- 收藏卡片右键（1144）：与索引行/历史行同一件 CellContextMenu——卡片右侧的
+ 「打开/复制/删除」三个常驻钮只保留最高频的打开，其余低频动作收进右键，
+ 卡片正文区不再被按钮挤占（DBX 列表行心智：动作随对象走，不随页面常驻）。 -->
+    <CellContextMenu v-if="favMenu" :x="favMenu.x" :y="favMenu.y" :title="'收藏 · ' + favMenu.it.title"
+      :items="favMenuItems" @close="favMenu = null" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, type Ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { Star, Download, Upload, Trash2, Copy, Play, Code2, Terminal, Map as MapIcon, BookOpen, Database } from 'lucide-vue-next';
+import { Star, Download, Upload, Trash2, Copy, Play, Code2, Terminal, Map as MapIcon, BookOpen, Database, ListChecks } from 'lucide-vue-next';
 /* 页头过滤胶囊统一件（wt/fv/tg 同场景合并）；Search 图标随胶囊组件化内建，本页不再单独引图标 */
 import SearchFilterBar from '../components/SearchFilterBar.vue';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue'; /* 1144：收藏卡片右键 */
 
 import PageHeader from '../components/PageHeader.vue';import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
@@ -239,6 +246,43 @@ function replay(it: any) {
   replayFavorite(it, router, (t, m) => store.notify(t, m),
     (path) => canGo(path));
 }
+
+/* ═══ 1144：收藏卡片右键 ═══
+ 动作全部复用卡片既有能力（打开/复制/勾选/删除），不新增写路径；
+ 一级只留高频两项，其余按「复制… / 选择… / 删除」分组——与表格/列表右键同一语言。 */
+const favMenu = ref<{ x: number; y: number; it: any } | null>(null);
+function openFavMenu(e: MouseEvent, it: any) {
+  favMenu.value = { x: e.clientX, y: e.clientY, it };
+}
+const favMenuItems = computed<CcmItem[]>(() => {
+  const m = favMenu.value; if (!m) return [];
+  const it = m.it;
+  const isSel = selected.value.has(it.id);
+  return [
+    { key: 'replay', label: `打开（${replayTarget(it).label}）`, icon: Play, run: () => replay(it) },
+    {
+      key: 'copy-group', label: '复制…', icon: Copy, sep: true, children: [
+        { key: 'copy-payload', label: '复制内容', icon: Copy, run: () => copyPayload(it) },
+        { key: 'copy-title', label: '复制标题', icon: Copy, run: async () => {
+          const ok = await copyText(it.title);
+          store.notify(ok ? 'success' : 'error', ok ? '已复制标题：' + it.title : '复制失败');
+        } },
+      ],
+    },
+    {
+      key: 'sel-group', label: '选择…', icon: ListChecks, children: [
+        { key: 'sel-toggle', label: isSel ? '取消勾选' : '勾选此项', icon: ListChecks, run: () => toggleSel(it.id) },
+        ...(filtered.value.length > 1 ? [{ key: 'sel-all', label: `勾选当前 ${filtered.value.length} 条`, icon: ListChecks, run: () => toggleAll() }] : []),
+      ],
+    },
+    {
+      key: 'danger-group', label: '删除…', icon: Trash2, sep: true, children: [
+        { key: 'del-one', label: '删除此条收藏', icon: Trash2, danger: true, run: () => void del(it.id) },
+        ...(selected.value.size > 1 ? [{ key: 'del-sel', label: `删除选中的 ${selected.value.size} 条`, icon: Trash2, danger: true, run: () => void delSelected() }] : []),
+      ],
+    },
+  ];
+});
 
 /* 空态导航与重放同门（pageAllowed 单源）：无权限不再裸 push 到 /forbidden，
    按钮提前禁用+提示（所见即所得） */

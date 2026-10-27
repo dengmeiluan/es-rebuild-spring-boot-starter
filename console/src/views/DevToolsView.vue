@@ -1,5 +1,9 @@
 <template>
-  <div class="dt-page">
+  <!-- 身份已落地但本页无读权：直接给授权说明，不渲染任何工具栏（避免「看得见点不了」） -->
+  <EmptyState v-if="auth.probed && !pageVisible" :icon="ShieldAlert"
+    text="暂无「Dev Tools」功能权限"
+    hint="当前账号未被授予该功能页面。请联系管理员在「角色权限 → 勾选对应菜单」中开通。" />
+  <div v-else class="dt-page">
     <!-- 执行中局部进度条（对齐 DslQuery dq-progress 范式——执行反馈不止按钮文字） -->
     <div v-if="cur" class="dt-progress ind-bar" :class="{ on: cur.busy }"></div>
     <PageHeader :icon="TerminalSquare" title="Dev Tools · 多标签 REST 控制台">
@@ -15,6 +19,11 @@
           <RotateCcw :size="12" /> 重置
         </button>
         <button class="btn ghost sm" title="查看当前身份在本页与当前连接下允许的操作（与后端拦截器判定同源）" @click="permOpen = true"><Shield :size="12" /> 我的权限</button>
+        <!-- 变量（Kibana Console「Variables」对位）——此前只在 DSL 页能管，REST 控制台
+             用户按 Kibana 习惯写 ${var} 却无处填值；补同一入口，执行时按路径/JSON 体分别展开 -->
+        <button class="btn ghost sm" title="管理变量 ${var}：路径里按字符串替换，JSON 体内按类型注入" @click="varsOpen = true">
+          <Variable :size="12" /> 变量<span v-if="varsCount" class="dt-vars-n mono">{{ varsCount }}</span>
+        </button>
       </template>
     </PageHeader>
 
@@ -27,6 +36,7 @@
       <div v-for="(t, i) in tabs" :key="t.id" class="dt-tab" :class="{ active: i === active }"
         role="tab" :aria-selected="i === active" :tabindex="i === active ? 0 : -1"
         @click="renamingIdx !== i && (active = i)" @mousedown.middle.prevent="closeTab(i)"
+        @contextmenu.prevent="openTabMenu($event, i)"
         @dblclick.self="startRename(i)" @keydown.enter.prevent="renamingIdx !== i && (active = i)"
         @keydown.space.self.prevent="renamingIdx !== i && (active = i)">
         <input v-if="renamingIdx === i" v-model="renameVal" class="dt-tab-ren mono" :aria-label="'重命名标签 ' + (i + 1)"
@@ -39,6 +49,14 @@
       </div>
       <div class="dt-tab-add" role="button" tabindex="0" aria-label="新建标签" title="新建标签" @click="addTab" @keydown.enter.prevent="addTab" @keydown.space.prevent="addTab">+</div>
     </div>
+
+  <!-- 请求标签右键：批量关标签是浏览器标签页的肌肉记忆，此前只能逐个点 ×；分组收口避免平铺 -->
+  <CellContextMenu v-if="tabMenu" :x="tabMenu.x" :y="tabMenu.y" :title="'标签 · ' + (tabs[tabMenu.i]?.title || '')"
+    :items="tabMenuItems" @close="tabMenu = null" />
+  <!-- 1160：响应表格视图的行右键——单击复制是最常用一步，右键补「复制键/值/整表」与
+       「在查询工作台打开原始响应」，与全站两级菜单同一语言（复制类收进二级）。 -->
+  <CellContextMenu v-if="respRowMenu" :x="respRowMenu.x" :y="respRowMenu.y" :title="respRowMenu.title"
+    :items="respRowMenuItems" @close="respRowMenu = null" />
 
     <!-- 权限前置说明：执行钮在无写权时不再「静默消失」——告诉用户缺什么、能做什么。
          与 RestView.rt-perm-note 同一语言；两档区分「完全只读」与「仅数据面写」。 -->
@@ -94,6 +112,17 @@
         <button class="btn ghost sm" @click="curlOpen = true; curlErr = ''" title="粘贴 curl 命令回填请求">
           <ClipboardPaste :size="12" /> 从 curl 导入
         </button>
+        <!-- 导出/导入请求（Kibana Console「Export / Import requests」对位）——
+             导出整份编辑器内容为纯文本（保留方法行/请求体/排版），导入时每段成为一个 Tab。
+             与「从 curl 导入」并存：前者是整份脚本，后者是单条命令。 -->
+        <button class="btn ghost sm" :disabled="!tabs.length" title="把当前全部 Tab 导出为 .http 文本文件（可再导入，人可读可进版本库）"
+          @click="exportToFile">
+          <FileDown :size="12" /> 导出
+        </button>
+        <button class="btn ghost sm" title="从导出的文本文件导入，每个请求成为一个 Tab" @click="importFileEl?.click()">
+          <FileUp :size="12" /> 导入
+        </button>
+        <input ref="importFileEl" type="file" class="sr-only" accept=".http,.txt,text/plain" @change="importFromFile" />
       </div>
 
       <!-- W6：body 区 textarea → Monaco（JSON 高亮/折叠/格式化），dslAssist 按端点语义分档补全 -->
@@ -251,6 +280,27 @@
             <button type="button" class="btn ghost xs" :disabled="!respFind.count.value" title="下一个匹配 (Enter)" @click="respFind.next()">↓</button>
           </template>
         </span>
+        <!-- 过滤响应（Kibana Console「Filter response」对位）——JQ 表达式或正则两档，
+ 只影响展示不改原文：清空表达式即恢复完整响应。表达式无效时原位报错，绝不给错值。 -->
+        <span v-if="cur.result" class="dt-resp-filter" :class="{ on: !!respFilter.expr.trim() }">
+          <select v-model="respFilter.mode" class="dt-flt-mode" aria-label="过滤方式"
+            title="JQ=结构化查询（需 JSON 响应）；正则=逐行匹配（原文非 JSON 也可用）">
+            <option value="jq">JQ</option>
+            <option value="regex">正则</option>
+          </select>
+          <input v-model="respFilter.expr" class="inp mono dt-flt-inp"
+            :placeholder="respFilter.mode === 'jq' ? '.hits.hits[]._id' : '^ERROR'"
+            :title="respFilter.mode === 'jq'
+              ? 'JQ 子集：字段/下标/迭代[]/递归../管道|/逗号/select/比较/逻辑/构造/常用函数'
+              : '正则逐行匹配（不含分隔符与 flags）'"
+            aria-label="过滤响应表达式" @keydown.esc.prevent="respFilter.expr = ''" />
+          <span v-if="respFilter.expr.trim()" class="mono dt-flt-n" :class="{ err: !respFilterOut.ok }"
+            :title="respFilterOut.ok ? '命中 ' + respFilterOut.count + ' 条' : respFilterOut.error">
+            {{ respFilterOut.ok ? respFilterOut.count + ' 条' : '无效' }}
+          </span>
+          <button v-if="respFilter.expr.trim()" type="button" class="btn ghost xs" aria-label="清除过滤"
+            title="清除过滤表达式，恢复完整响应" @click="respFilter.expr = ''">×</button>
+        </span>
         <!-- 多段执行 per-段锚定徽标（seg i/n + ✓/✗ + took；主响应区现行为零触——
  末段覆写保持，前段响应点徽标载回；chip 形态对齐 dt-hist-chip，横向滚动随 .dt-actions；
  template 包 v-if 跳过段位空洞——单段先执行高位段时低位暂无锚） -->
@@ -279,7 +329,7 @@
         <!-- 聚焦态 Monaco 随视口拉伸——此前固定 260px，放大后下半屏全是空白。
  裸 190px 偏移折算进 --vh-offset 收敛口径（210-20=190 视觉零变化；
  聚焦面无页头、tab 条+请求行+余量 ~20px 回加） -->
-        <MonacoEditor v-if="cur.result && !respTbl" ref="respMonacoRef" :model-value="cur.result" :language="respLang" :readonly="true"
+        <MonacoEditor v-if="cur.result && !respTbl" ref="respMonacoRef" :model-value="respShown" :language="respLang" :readonly="true"
           :dsl-assist="dtRespAssist" :font-size="edFont"
           :height="focusPaneId === 'devtools.search.response' ? 'calc(100vh - var(--vh-offset) + 20px)' : '100%'" class="dt-out-monaco" :class="{ err: !cur.ok }" />
         <!-- 表格查看档——顶层数组→行序表（列=各行键并集保持首现序，_cat/* 结构化响应
@@ -289,8 +339,9 @@
           <table v-if="respTbl.isArr" class="dt-resp-tbl-t">
             <thead><tr><th class="dt-resp-tbl-ix">#</th><th v-for="c in respTbl.cols" :key="c">{{ c }}</th></tr></thead>
             <tbody>
-              <tr v-for="(r, ri) in respTbl.rows" :key="ri" tabindex="0" title="点击复制该行 JSON"
-                @click="copyRespRow(r)" @keydown.enter.prevent="copyRespRow(r)">
+              <tr v-for="(r, ri) in respTbl.rows" :key="ri" tabindex="0" title="点击复制该行 JSON（右键更多操作）"
+                @click="copyRespRow(r)" @keydown.enter.prevent="copyRespRow(r)"
+                @contextmenu.prevent="openRespRowMenu($event, r, ri)">
                 <td class="dt-resp-tbl-ix">{{ ri + 1 }}</td>
                 <td v-for="c in respTbl.cols" :key="c">{{ respCell(r[c]) }}</td>
               </tr>
@@ -299,8 +350,9 @@
           <table v-else class="dt-resp-tbl-t">
             <thead><tr><th>键</th><th>值</th></tr></thead>
             <tbody>
-              <tr v-for="([k, val]) in respTbl.kv" :key="k" tabindex="0" title="点击复制该行 JSON"
-                @click="copyRespRow({ [k]: val })" @keydown.enter.prevent="copyRespRow({ [k]: val })">
+              <tr v-for="([k, val]) in respTbl.kv" :key="k" tabindex="0" title="点击复制该行 JSON（右键更多操作）"
+                @click="copyRespRow({ [k]: val })" @keydown.enter.prevent="copyRespRow({ [k]: val })"
+                @contextmenu.prevent="openRespRowMenu($event, { [k]: val }, -1)">
                 <td>{{ k }}</td>
                 <td>{{ respCell(val) }}</td>
               </tr>
@@ -396,16 +448,44 @@
     <!-- 原始 IO 快查弹窗（IndexHub/查询工作台同款共享件） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
     <PermModal v-model:show="permOpen" :target="store.target" />
+
+    <!-- 变量弹窗（Kibana Console「Variables」对位）——与 DSL 页共用同一 es_vars 表，
+         改完即对全站生效；执行时路径按字符串、JSON 体按类型展开 -->
+    <NModal v-model:show="varsOpen" preset="card" title="变量 ${var}" style="width:520px;max-width:92vw" :bordered="false">
+      <div class="dt-vars-list">
+        <div v-for="(v, k) in varsMap" :key="k" class="dt-vars-row">
+          <span class="mono dt-vars-k">{{ '${' + k + '}' }}</span>
+          <input class="inp mono" :value="v" @input="varsMap[k] = ($event.target as HTMLInputElement).value" />
+          <button class="btn sm ghost danger" :aria-label="'删除变量 ' + k" title="删除该变量（只影响本地变量表）" @click="delete varsMap[k]"><X :size="11" /></button>
+        </div>
+        <div class="dt-vars-row">
+          <input class="inp mono" v-model="newVarK" placeholder="变量名" style="width:150px" />
+          <input class="inp mono" v-model="newVarV" placeholder="值（JSON 或字符串）" @keydown.enter="addVar" />
+          <button class="btn sm" @click="addVar">添加</button>
+        </div>
+        <div v-if="!Object.keys(varsMap).length" class="dt-vars-empty">还没有变量。加一个后即可在路径或请求体里用 <span class="mono">${'{idx}'}</span>。</div>
+      </div>
+      <div class="dt-vars-tip">
+        用法：<span class="mono">/${'{idx}'}/_search</span>（路径里按字符串替换）或
+        <span class="mono">"size": ${'{n}'}</span>（JSON 体内数字/数组/对象按类型注入）。
+        未定义的变量在执行前会被拦下并列出名字。
+      </div>
+      <template #footer>
+        <div style="display:flex;justify-content:flex-end;gap:var(--sp-2)">
+          <button class="btn pri" @click="saveVarsAll">保存</button>
+        </div>
+      </template>
+    </NModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onActivated, onDeactivated, onBeforeUnmount, watch, nextTick } from 'vue';
+import { ref, reactive, computed, onMounted, onActivated, onDeactivated, onBeforeUnmount, watch, nextTick } from 'vue';
 import {
   TerminalSquare, Plus, X, Play, Copy, AlignJustify, Minimize2, Star, Eraser, History, RotateCcw, Braces, ClipboardPaste,
-  ChevronDown, RefreshCw, ShieldAlert, Terminal, ListPlus, Ellipsis, Check, Shield,
-} from 'lucide-vue-next';
+  ChevronDown, RefreshCw, ShieldAlert, Terminal, ListPlus, Ellipsis, Check, Shield, Pencil, Variable, FileDown, FileUp} from 'lucide-vue-next';
 import PermModal from '../components/PermModal.vue';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue'; /* 1143：标签右键 */
 import { NModal, NInput, NPopover } from 'naive-ui';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
@@ -414,9 +494,12 @@ import { usePref } from '../composables/urlState'; /* ：dt.histOpen 折叠态�
 import { useTierCycle } from '../composables/useTierCycle'; /* ：历史列表限高三档统一件（dt.histH） */
 import { EDITOR_FONT_TIERS } from '../utils/editorTiers'; /* ：字号三档单源合并（DQ/IH 同口径） */
 import EmptyState from '../components/EmptyState.vue';
+import { applyResponseFilter } from '../utils/jqFilter';
+import { applyVars, missingVars, hasVars, loadVars, saveVars } from '../utils/vars';
+import { exportRequests, parseRequests, requestTitle, nextRequestLine, prevRequestLine } from '../utils/devtoolsFileIO';
 import { api, ApiError, ioRecorder, type RawIoRec } from '../api';
 /* fmtTook/tookClass 收口 utils/format 单一出处（本页 505-513 两份复制品退役，阈值不再漂移） */
-import { copyText, fmtTime, splitSize, fmtTook, tookClass } from '../utils/format';
+import { copyText, fmtTime, splitSize, fmtTook, tookClass, downloadText } from '../utils/format';
 import EndpointPathInput from '../components/devtools/EndpointPathInput.vue';
 import MonacoEditor from '../components/MonacoEditor.vue';
 import { useIndexFields } from '../composables/useIndexFields';
@@ -460,6 +543,11 @@ const store = useAppStore();
 const auth = useAuthStore();
 const permOpen = ref(false);
 const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/devtools/execute', store.target)); /* DevTools 页写键或 rest 写键（ADMIN 全局） */
+/* 页级可见性门（1131）：路由守卫在「身份尚未落地」窗口会放行（`pageAllowed` 对
+   grantedPages=null 且 role=null 返回 true），零授权用户因此在探测完成前能进本页并
+   点到工具栏（导出/导入/变量）。后端仍会拦写请求，但「可操作性必须与授权一致」
+   要求这里也不该露出。身份落地后 canReadPage 自动重算——有权限的人不受影响。 */
+const pageVisible = computed(() => auth.canReadPage('devtools', store.target));
 /* 身份档位（仅用于说明条文案分叉）：ADMIN 有全局写权，其余有写键者只到数据面。 */
 const isAdminIdentity = computed(() => auth.isAdmin());
 /* 当前请求是否在非 ADMIN 的数据面白名单内。ADMIN/无鉴权部署不受限；
@@ -683,18 +771,44 @@ watch(dtLint, (findings) => {
 const dtLintErrors = computed(() => lintUnplaced.value.filter(f => f.severity === 'error'));
 const dtLintWarns = computed(() => lintUnplaced.value.filter(f => f.severity === 'warning' || f.severity === 'hint'));
 
-/* ═══ ：Ctrl+I 唤起补全（Kibana 控制台同键，Monaco 默认 Ctrl+Space 之外的第二入口）═══
- MonacoEditor getEditor() expose 出口接线（组件本体零改；useMonacoLocate respMonacoRef 同通道）。
- 挂载时序：editor 在子组件 onMounted 创建，watch(ref)+nextTick 后置取防 undefined；
- happy-dom stub 无 getEditor/addCommand 出口 → 守卫跳过（MonacoEditor registerFormatKeybind :814 同口径）。
- 键位已登记 HotkeyPanel「查询与编辑」组。 */
+/* ═══ Ctrl+I = 格式化当前请求体（对齐 Kibana Console 的 Auto-indent 键位）═══
+ 官方 Console 键位表：Ctrl+I=Auto-indent current request、Ctrl+Space/Enter/Tab=补全候选。
+ 此前这里把 Ctrl+I 绑成了「唤起补全」——与 Kibana 相反，从 Kibana 过来的人按 Ctrl+I
+ 期望整理 JSON，却弹出候选框。补全本来就有 Monaco 默认的 Ctrl+Space，不需要抢占该键。
+ 草稿零触：格式化只替换编辑器内容（等价用户手改），不碰 t.body 的持久化语义。 */
 watch(bodyMonacoRef, (mc) => {
   if (!mc) return;
   nextTick(() => {
     const ed = mc.getEditor?.();
     if (!ed || typeof ed.addCommand !== 'function') return;
     ed.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyI, () => {
-      ed.trigger('', 'editor.action.triggerSuggest', null);
+      /* 与「发送时自动格式化」同一个 formatter，避免两套缩进行为不一致 */
+      const next = tryFormatBody(ed.getValue?.() ?? cur.value?.body ?? '');
+      if (!next || next === ed.getValue?.()) return;
+      const model = ed.getModel?.();
+      if (model && typeof ed.executeEdits === 'function') {
+        ed.executeEdits('dt-auto-indent', [{ range: model.getFullModelRange(), text: next }]);
+      } else {
+        ed.setValue?.(next);
+      }
+      /* 编辑器是草稿的唯一真源：同步回 tab，让「切 Tab 再回来」看到的仍是格式化后的内容 */
+      if (cur.value) cur.value.body = next;
+    });
+    /* Kibana Console `Ctrl+↑/↓`（previous/next request end）对位：在请求之间移动光标。
+       我们的 Tab 已是「一条请求」，所以跳转落在相邻请求的起始行；找不到就保持不动
+       （返回 -1 时不 setPosition，避免把光标弹回文件头）。 */
+    const jump = (line: number) => {
+      if (line < 0) return;
+      const model = ed.getModel?.();
+      const maxCol = model ? model.getLineMaxColumn(line) : 1;
+      ed.setPosition?.({ lineNumber: line, column: maxCol });
+      ed.revealLineInCenterIfOutsideViewport?.(line);
+    };
+    ed.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.UpArrow, () => {
+      jump(prevRequestLine(ed.getValue?.() ?? '', ed.getPosition?.()?.lineNumber ?? 1));
+    });
+    ed.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.DownArrow, () => {
+      jump(nextRequestLine(ed.getValue?.() ?? '', ed.getPosition?.()?.lineNumber ?? 1));
     });
   });
 }, { immediate: true });
@@ -702,6 +816,63 @@ watch(bodyMonacoRef, (mc) => {
 function mkTab(title?: string, method = 'GET', path = '/_cluster/health', body = ''): Tab {
   return { id: Math.random().toString(36).slice(2, 8), title: title || 'Tab ' + (tabs.value.length + 1),
     method, path, body, result: null, ok: false, took: 0, size: 0, busy: false, history: [] };
+}
+/* 默认三标签：首装与换号清理共用同一份（两处必须一致，故抽成单点） */
+function DEFAULT_TABS(): Tab[] {
+  return [
+    mkTab('健康', 'GET', '/_cluster/health', ''),
+    mkTab('索引', 'GET', '/_cat/indices?v&format=json', ''),
+    mkTab('查询', 'POST', '/_search', '{"size":5,"query":{"match_all":{}}}'),
+  ];
+}
+/* 导出/导入请求文件（Kibana Console「Export / Import requests」）——纯文本，
+   保住方法行/请求体/排版；导入每段成一个 Tab。整份替换语义与 Kibana 一致（导入先确认）。 */
+const importFileEl = ref<HTMLInputElement | null>(null);
+function exportToFile() {
+  const text = exportRequests(tabs.value.map(t => ({ method: t.method, path: t.path, body: t.body })));
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'devtools-' + stamp + '.http';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+  store.notify('success', '已导出 ' + tabs.value.length + ' 个请求');
+}
+async function importFromFile(ev: Event) {
+  const el = ev.target as HTMLInputElement;
+  const file = el.files?.[0];
+  el.value = ''; /* 同一文件可再次选择 */
+  if (!file) return;
+  let text = '';
+  try { text = await file.text(); }
+  catch (e: any) { store.notify('error', '读取文件失败：' + (e?.message || e)); return; }
+  const { requests, skipped } = parseRequests(text);
+  if (!requests.length) {
+    store.notify('warning', skipped.length
+      ? '文件里没有可识别的请求（首个无法解析的行：' + skipped[0] + '）'
+      : '文件里没有请求');
+    return;
+  }
+  const ok = await askConfirm({
+    title: '导入请求文件',
+    message: '将用文件中的 ' + requests.length + ' 个请求替换当前 ' + tabs.value.length + ' 个 Tab'
+      + (skipped.length ? '（另有 ' + skipped.length + ' 段无法识别，将被忽略：' + skipped[0] + '）' : '') + '。',
+    okText: '替换导入',
+  });
+  if (!ok) return;
+  tabs.value = requests.map(r => {
+    const t = mkTab();
+    t.method = r.method;
+    t.path = r.path;
+    t.body = r.body;
+    t.title = requestTitle(r);
+    return t;
+  });
+  active.value = 0;
+  persist();
+  store.notify('success', '已导入 ' + requests.length + ' 个请求'
+    + (skipped.length ? '，忽略 ' + skipped.length + ' 段无法识别的内容' : ''));
 }
 function addTab() { tabs.value.push(mkTab()); active.value = tabs.value.length - 1; persist(); }
 /* 后：tab 聚焦后 ←/→ 切换（QueryHub onModesKeydown 同款 roving 模式） */
@@ -733,6 +904,61 @@ function commitRename(i: number) {
 
 /* 重命名输入自动聚焦 */
 const vFocus = { mounted: (el: HTMLElement) => el.focus() };
+
+/* 标签右键菜单（批量关闭/复制现场）——动作全部复用既有单标签函数：
+   仅此处按「多标签现场」补充 closeOthers/closeAll（逐个 closeTab 会每次 persist，
+   这里一次性裁剪后落盘一次，避免 N 次写） */
+const tabMenu = ref<{ x: number; y: number; i: number } | null>(null);
+function openTabMenu(e: MouseEvent, i: number) {
+  tabMenu.value = { x: e.clientX, y: e.clientY, i };
+}
+function closeOthers(keep: number) {
+  const kept = tabs.value[keep];
+  if (!kept) return;
+  for (const t of tabs.value) if (t.id !== kept.id) delete pickedEp.value[t.id];
+  tabs.value = [kept];
+  active.value = 0;
+  persist();
+}
+function closeAll() {
+  for (const t of tabs.value) delete pickedEp.value[t.id];
+  tabs.value = [mkTab()];
+  active.value = 0;
+  persist();
+}
+const tabMenuItems = computed<CcmItem[]>(() => {
+  const m = tabMenu.value; if (!m) return [];
+  const t = tabs.value[m.i];
+  if (!t) return [];
+  return [
+    { key: 'activate', label: '切到此标签', icon: Play, run: () => { active.value = m.i; } },
+    { key: 'rename', label: '重命名…', icon: Pencil, run: () => startRename(m.i) },
+    {
+      key: 'copy-group', label: '复制…', icon: Copy, sep: true, children: [
+        { key: 'copy-title', label: '复制标签名', icon: Copy, run: () => {
+          void copyText(t.title).then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制标签名' : '复制失败'));
+        } },
+        { key: 'copy-path', label: '复制路径', icon: Copy, run: () => {
+          void copyText(t.path).then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制路径' : '复制失败'));
+        } },
+        { key: 'copy-curl', label: '复制此标签的 cURL', icon: Terminal, run: () => {
+          const c = `curl -X ${t.method} '${window.location.origin}${t.path}'` +
+            (t.body ? ` -H 'Content-Type: application/json' -d '${t.body.replace(/'/g, "'\\''")}'` : '');
+          void copyText(c).then(ok => store.notify(ok ? 'success' : 'error', ok ? 'curl 已复制' : '复制失败'));
+        } },
+      ],
+    },
+    {
+      key: 'close-group', label: '关闭…', icon: X, sep: true, children: [
+        { key: 'close', label: '关闭此标签', icon: X, run: () => closeTab(m.i) },
+        ...(tabs.value.length > 1
+          ? [{ key: 'close-others', label: `关闭其他 ${tabs.value.length - 1} 个`, icon: X, run: () => closeOthers(m.i) }]
+          : []),
+        { key: 'close-all', label: `关闭全部 ${tabs.value.length} 个`, icon: X, danger: true, run: () => closeAll() },
+      ],
+    },
+  ];
+});
 
 function closeTab(i: number) {
   /* T11 复审 M3：pickedEp 按 tab.id 键控——关 tab 同步清键，防键控残留 */
@@ -866,6 +1092,7 @@ watch(active, persist);
 function flushDraft() { if (draftTimer) { clearTimeout(draftTimer); draftTimer = null; writeDraft(); } }
 onMounted(() => {
   window.addEventListener('pagehide', flushDraft);
+  window.addEventListener('es-console:identity-changed', onIdentityReset);
   let restored = false;
   try {
     const raw = JSON.parse(sessionStorage.getItem(DRAFT_KEY.value) || 'null');
@@ -877,13 +1104,7 @@ onMounted(() => {
       restored = true;
     }
   } catch { /* 草稿损坏静默兜底：回落默认三个示例标签 */ }
-  if (!restored) {
-    tabs.value = [
-      mkTab('健康', 'GET', '/_cluster/health', ''),
-      mkTab('索引', 'GET', '/_cat/indices?v&format=json', ''),
-      mkTab('查询', 'POST', '/_search', '{"size":5,"query":{"match_all":{}}}'),
-    ];
-  }
+  if (!restored) tabs.value = DEFAULT_TABS();
   histAll.value = histAllRead(); /* ：跨 Tab 汇聚清单按 target 键水合 */
   consumePrefill();
   /* 视图级全局执行——工作台任意处 Ctrl+Enter 即跑当前 Tab（DslQueryView 先例平移） */
@@ -907,8 +1128,30 @@ onDeactivated(() => {
   pendingPrefillTab.value = null;
   window.removeEventListener('keydown', onGlobalRunKey);
 });
+/* 换号清理（1130）：App 的 onIdentityChanged 只清 store/ioRecorder/模块缓存，
+   本组件里的 Tab 草稿、变量弹窗草稿、响应过滤表达式都是**内存态**——不落盘也照样在屏幕上。
+   不清的话，下一个用户点执行会带着上一个账号的路径与变量发出去。
+   重建默认 Tab 即同时丢掉旧响应，所以这里不做「原地保留」的例外。 */
+function onIdentityReset() {
+  try { tabs.value = DEFAULT_TABS(); active.value = 0; } catch { /* 极端态下保持可用 */ }
+  /* 跨 Tab 历史汇聚是内存镜像：磁盘键（es_devtools_hist_all:*）已被 purgeUserRequestState
+     按 es_devtools_ 前缀清掉，但 ref 不清就会在**同一会话内换号**后继续显示上一账号的
+     请求历史，直到切目标或刷新才消失。 */
+  histAll.value = [];
+  histScope.value = 'tab';
+  varsMap.value = {};
+  newVarK.value = ''; newVarV.value = '';
+  varsOpen.value = false;
+  respFilter.expr = '';
+  respFilter.mode = 'jq';
+  curlOpen.value = false; curlErr.value = '';
+  permOpen.value = false;
+  store.notify('info', '账号已切换：DevTools 的标签页与变量草稿已清空');
+}
+
 onBeforeUnmount(() => {
   window.removeEventListener('pagehide', flushDraft);
+  window.removeEventListener('es-console:identity-changed', onIdentityReset);
   window.removeEventListener('keydown', onGlobalRunKey); /* ：全局键随挂载对摘除 */
   flushDraft(); /* 卸载前冲刷防抖尾窗，草稿不丢 */
 });
@@ -1013,12 +1256,39 @@ async function execSend(t: Tab, bodyOut: string, segLabel?: string): Promise<boo
     t.busy = false;
     return false;
   }
+  /* Console Variables（Kibana 同款 ${var}）——放在权限/范围判定之后、发车之前：
+     判定必须看原始请求（变量可能展开成任何路径，先按用户写的判），发送用展开值。
+     未定义变量显式拦住：把 `${var}` 原样发给 ES 只会得到难懂的语法错误。 */
+  const miss = missingVars([t.path || '', bodyOut].join('\n'));
+  if (miss.length) {
+    store.notify('warning', '变量未定义：' + miss.map(n => '${' + n + '}').join('、') + '——请先在「变量」里填值');
+    t.busy = false;
+    return false;
+  }
+  const pathOut = hasVars(t.path || '') ? applyVars(t.path || '', undefined, { pathMode: true }) : t.path;
+  /* Kibana 把 `//` `#` `/* *\/` 当语法：发送前必须剔除，否则用户按 Kibana 习惯写一行说明
+     就会拿到 Unexpected character ('/') —— 看起来像控制台坏了。变量展开后再剥离：
+     变量值本身也可能带注释（多见于粘来的片段）。草稿 t.body 原稿零触。 */
+  const bodyExpanded = hasVars(bodyOut) ? applyVars(bodyOut) : bodyOut;
+  /* 与 RestView 同一单源（utils/jsonc.findCommentRanges）：`//` `#` 与块注释都在此剥离。
+     剥完只剩空白则送空串（别把空壳发给 ES）；草稿 t.body 原稿零触。 */
+  const stripped = stripJsonComments(bodyExpanded);
+  const bodyFinal = stripped.trim() ? stripped : '';
+  /* 变量展开结果必须再过一次范围门：否则非 ADMIN 写 `/${v}/_snapshot`、变量值是控制面路径时，
+     前端守卫会看着「原始路径」放行，而实际发出的是越权路径（后端仍会拦，但前端不该放行）。 */
+  if (pathOut !== t.path || bodyFinal !== bodyOut) {
+    if (!requestInScope(t.method, pathOut, bodyFinal)) {
+      store.notify('warning', SCOPE_DENY_HINT + '（变量展开后的实际请求已越出当前授权范围）');
+      t.busy = false;
+      return false;
+    }
+  }
   const t0 = performance.now();
   const signal = qr.begin();
   try {
     /* 走 api.devtoolsExecute 统一封装：自动带 context-path 前缀、鉴权头、X-Es-Target 目标头。
  body 送格式化出参（bodyOut），t.body 草稿原样进历史/镜像 */
-    const data = await api.devtoolsExecute(t.method, t.path, bodyOut, signal);
+    const data = await api.devtoolsExecute(t.method, pathOut, bodyFinal, signal);
     /* 语义色轮：/cluster/devtools/execute 成功回 {status, body} 信封（RestView 读 .status/.body 同款解包）——
  此前整信封 stringify 进面板，body 变转义字符串且真实 ES 状态码不可见。解包后
  body 直接进面板/截断/复制链路，status 供 HTTP 徽标语义分档；信封形态不符（防御）保持整包。 */
@@ -1247,9 +1517,40 @@ function minify() {
   try { cur.value.body = JSON.stringify(JSON.parse(stripJsonComments(cur.value.body))); }
   catch { store.notify('warning', '非合法 JSON（已容忍注释与尾逗号，仍解析失败）'); }
 }
-/* W6-T3：响应只读 Monaco 语言侦测——合法 JSON 走 json 着色/折叠，非 JSON（错误文本/NDJSON 等）落 plaintext */
+/* 过滤响应（Kibana Console「Filter response」对位）——只作用于展示层：
+ 原文 cur.result 不动，过滤结果另开一条派生串；清空表达式即回到原文。
+ 无效表达式不修改展示（避免"过滤失败却看起来像响应变了"），原位标红提示。 */
+/* 变量（Kibana Console「Variables」）——与 DSL 页共用 es_vars 表；
+   弹窗打开时从存储读一份草稿，保存才落盘（编辑中不影响已有请求）。 */
+const varsOpen = ref(false);
+const varsMap = ref<Record<string, string>>({});
+const newVarK = ref('');
+const newVarV = ref('');
+const varsCount = computed(() => Object.keys(varsMap.value).length);
+watch(varsOpen, v => { if (v) varsMap.value = { ...loadVars() }; });
+function addVar() {
+  const k = newVarK.value.trim();
+  if (!k) return;
+  if (!/^[\w.-]+$/.test(k)) { store.notify('warning', '变量名只能用字母、数字、下划线、点和连字符'); return; }
+  varsMap.value[k] = newVarV.value;
+  newVarK.value = ''; newVarV.value = '';
+}
+function saveVarsAll() {
+  saveVars({ ...varsMap.value });
+  varsOpen.value = false;
+  store.notify('success', '变量已保存，共 ' + Object.keys(varsMap.value).length + ' 个');
+}
+const respFilter = reactive({ mode: 'jq' as 'jq' | 'regex', expr: '' });
+const respFilterOut = computed(() => applyResponseFilter(cur.value?.result || '', respFilter.expr, respFilter.mode));
+/* 过滤生效时的展示文本：表达式非空且求值成功才替换，否则恒取原文 */
+const respShown = computed(() => {
+  if (!respFilter.expr.trim()) return cur.value?.result || '';
+  return respFilterOut.value.ok ? respFilterOut.value.text : (cur.value?.result || '');
+});
+/* 响应只读 Monaco 语言侦测——合法 JSON 走 json 着色/折叠，非 JSON（错误文本/NDJSON 等）落 plaintext。
+ 过滤后文本可能是多值逐行（非单一 JSON），此时按 plaintext 落，避免 json 着色器误判整段。 */
 const respLang = computed(() => {
-  const r = cur.value?.result || '';
+  const r = respShown.value || '';
   try { JSON.parse(r); return 'json'; } catch { return 'plaintext'; }
 });
 /* 响应只读面 dsl-assist 白得通道——fields 源同 body 口（dtFields 同一 useIndexFields
@@ -1266,7 +1567,8 @@ const respView = ref<'raw' | 'table'>('raw');
 const respTbl = computed<RespTbl | null>(() => {
   if (respView.value !== 'table' || respLang.value !== 'json') return null;
   try {
-    const v: unknown = JSON.parse(cur.value?.result || '');
+    /* 过滤后文本为合法 JSON 时，表格档跟随过滤结果（与 Monaco 展示同源） */
+    const v: unknown = JSON.parse(respShown.value || '');
     if (Array.isArray(v)) {
       const rows: Array<Record<string, unknown>> = v;
       const cols: string[] = [];
@@ -1285,6 +1587,48 @@ function respCell(v: unknown): string {
   return typeof v === 'object' ? JSON.stringify(v) : String(v);
 }
 /* 行点击/回车复制该行 JSON（数组行=行对象原文；键值行={k:v} 单键对象），文案口径同页内 copyText 族 */
+/* ═══ 1160：响应表格行右键（两级）═══
+ 一级 = 复制该行 JSON（与单击同义，鼠标右手也能直达）+ 复制键值对；
+ 其余（整表 / 发到查询工作台）收进二级，避免又一次「功能平铺」。 */
+const respRowMenu = ref<{ x: number; y: number; title: string; row: any; ri: number } | null>(null);
+function openRespRowMenu(e: MouseEvent, row: any, ri: number) {
+  const keys = row && typeof row === 'object' && !Array.isArray(row) ? Object.keys(row) : [];
+  const title = keys.length ? `响应行 · ${keys.slice(0, 2).join(', ')}${keys.length > 2 ? '…' : ''}` : '响应行';
+  respRowMenu.value = { x: e.clientX, y: e.clientY, title, row, ri };
+}
+const respRowMenuItems = computed<CcmItem[]>(() => {
+  const m = respRowMenu.value; if (!m) return [];
+  const json = JSON.stringify(m.row);
+  const copy = (text: string, okMsg: string) => copyText(text).then(ok => store.notify(ok ? 'success' : 'error', ok ? okMsg : '复制失败'));
+  const isObj = m.row && typeof m.row === 'object' && !Array.isArray(m.row);
+  const tsv = isObj ? Object.values(m.row).map(v => (v === null || v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v))).join('	') : '';
+  const entries = isObj ? Object.entries(m.row as Record<string, unknown>) : [];
+  return [
+    { key: 'copy-row', label: '复制该行 JSON', icon: Copy, run: () => void copy(json, '该行 JSON 已复制') },
+    ...(entries.length
+      ? [{
+          key: 'copy-group', label: '复制…', icon: ClipboardPaste, sep: true, children: [
+            { key: 'copy-tsv', label: '复制为 TSV（可直接贴表格）', icon: ClipboardPaste, run: () => void copy(tsv, '已复制该行（TSV）') },
+            { key: 'copy-kv', label: '复制为 key=value 行', icon: Braces, run: () => void copy(entries.map(([k, v]) => k + '=' + String(v)).join(' '), '已复制键值对') },
+            ...entries.slice(0, 6).map(([k, v], i) => ({
+              key: 'copy-v-' + i, label: `复制字段值：${k}`, icon: Copy,
+              run: () => void copy(v === null || v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v), '已复制 ' + k),
+            })),
+          ],
+        } as CcmItem,
+        {
+          key: 'copy-all-group', label: '整表…', icon: FileDown, children: [
+            { key: 'copy-all-json', label: '复制整个响应 JSON', icon: Braces, run: () => void copy(JSON.stringify(respTbl.value?.rows ?? respTbl.value?.kv ?? null), '已复制响应 JSON') },
+            { key: 'export-resp', label: '导出响应原文（JSON）', icon: FileDown, run: () => {
+              /* 原文直出（不重排），与服务端回包逐字节一致 */
+              downloadText(respShown.value ?? '', 'devtools-response.json', 'application/json');
+            } },
+          ],
+        } as CcmItem]
+      : []),
+  ];
+});
+
 function copyRespRow(row: unknown) {
   copyText(JSON.stringify(row)).then(ok => store.notify(ok ? 'success' : 'error', ok ? '该行 JSON 已复制' : '复制失败'));
 }
@@ -1437,10 +1781,14 @@ function saveFav() {
 /* wl 在确定高度容器内改为可收缩弹性件（原 min-height 视口兜底由 dt-body 的确定高度接管） */
 .dt-body :deep(.wl) { flex: 1 1 auto; min-height: 0; }
 /* 请求行 9 控件同排窄视口必溢出——补换行（row-gap 管换行后行距） */
+/* 同排控件统一 26px 高（此前 path 36 / 主钮 25 / ghost 钮 22–23 / 方法下拉 26 五档混排，
+   基线参差 = 视觉毛刺）：行内控件一律 box-sizing + 定高，路径框内 input 撑满 */
 .dt-req { display: flex; gap: var(--sp-1h); row-gap: var(--sp-1); align-items: center; flex-wrap: wrap; }
-.dt-method { padding: 5px var(--sp-2); font-family: var(--mono); font-weight: 650; border: 1px solid var(--border); border-radius: var(--r-xs); background: var(--panel); font-size: var(--fs-xs); }
+.dt-req > .btn, .dt-req > .dt-method, .dt-req > .dt-path { box-sizing: border-box; height: 26px; }
+.dt-req > .btn { display: inline-flex; align-items: center; gap: var(--sp-1); padding-top: 0; padding-bottom: 0; }
+.dt-method { padding: 0 var(--sp-2); font-family: var(--mono); font-weight: 650; border: 1px solid var(--border); border-radius: var(--r-xs); background: var(--panel); font-size: var(--fs-xs); }
 /* W-C 批：方法色轮迁全局 .m-*（theme.css 末段），本地五条色款删除；历史行 .dt-hist-m.m-* 同步合并 */
-.dt-path { flex: 1; padding: 5px var(--sp-2); font-family: var(--mono); font-size: var(--fs-xs); border: 1px solid var(--border); border-radius: var(--r-xs); background: var(--panel); color: var(--fg); }
+.dt-path { flex: 1; display: flex; align-items: center; padding: 0 var(--sp-2); font-family: var(--mono); font-size: var(--fs-xs); border: 1px solid var(--border); border-radius: var(--r-xs); background: var(--panel); color: var(--fg); }
 /* W-C 批：.dt-body-area 死样式段删除（W6 改用 Monaco 后模板 0 引用，grep 实证）；
  .dt-tab-ren 保留——双击重命名内联输入模板在用（tabRename440 锁定），非退役残留 */
 /* W6：body Monaco 容器边框——裁决退役（pane 已是容器，编辑器直贴扁平化，
@@ -1509,10 +1857,29 @@ function saveFav() {
  工具行「动作|元信息|搜索」轻分组——动作段与元信息段靠 .dt-status-ms
  margin-left:auto 拉开大间距，搜索段不再用第二个 auto 抢间距，改 border-left 竖线
  挂在元信息段侧做分区（纯 CSS 分隔，不引新组件；窄屏换行后竖线仍标示搜索段起点） */
-.dt-resp-search { display: inline-flex; align-items: center; gap: var(--sp-1); border-left: 1px solid var(--border); padding-left: var(--sp-2); }
+.dt-resp-search { display: inline-flex; align-items: center; gap: var(--sp-1); flex: 0 1 auto; border-left: 1px solid var(--border); padding-left: var(--sp-2); }
+/* 过滤响应档（Kibana「Filter response」对位）——与响应搜索同一条工具行，
+ 分隔线只在有内容时出现（空态不额外占视觉重量）；表达式生效时整组走强调色。 */
+.dt-resp-filter { display: inline-flex; align-items: center; gap: var(--sp-1); }
+.dt-resp-filter.on .dt-flt-inp { border-color: var(--ac-hi); }
+.dt-flt-mode { height: 26px; padding: 0 var(--sp-1); font: 650 var(--fs-2xs) var(--mono); color: var(--tx2);
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-xs); cursor: pointer; }
+.dt-flt-inp { width: min(170px, 100%); min-width: 0; flex: 0 1 170px; height: 26px; padding: 0 var(--sp-2); font-size: var(--fs-xs); }
+.dt-flt-n { font-size: var(--fs-2xs); color: var(--tx2); white-space: nowrap; }
+.dt-flt-n.err { color: var(--err); cursor: help; }
+/* 变量弹窗（与 DSL 页 vars-* 同语言；本页独立 scoped，不复用跨页类名） */
+.dt-vars-n { margin-left: var(--sp-0); padding: 0 var(--sp-1); font-size: var(--fs-2xs); color: var(--tx2); background: var(--bg2); border: 1px solid var(--line); border-radius: var(--r-m); }
+.dt-vars-list { display: flex; flex-direction: column; gap: var(--sp-1h); }
+.dt-vars-row { display: flex; align-items: center; gap: var(--sp-2); }
+.dt-vars-k { flex: 0 0 auto; min-width: 92px; font-size: var(--fs-xs); color: var(--ac-hi); }
+.dt-vars-row .inp { flex: 1 1 auto; min-width: 0; }
+.dt-vars-empty { padding: var(--sp-2) 0; font-size: var(--fs-xs); color: var(--tx2); }
+.dt-vars-tip { margin-top: var(--sp-2); font-size: var(--fs-xs); line-height: 1.7; color: var(--tx2); }
 /* width:150px → min(150px,100%) 极窄溢出钳制（547 XmigrateView:1291 同款；
  900 档同值规则保持不变——两档现在同口径，窄容器由 100% 收） */
-.dt-resp-search input { width: min(150px, 100%); padding: var(--sp-0) var(--sp-2); font-size: var(--fs-xs); }
+/* 过滤档加入后工具行更挤：搜索框给下限宽度，压缩时优先让过滤表达式收缩
+ （搜索是高频动作，过滤是可选动作——按使用频率分配可压缩预算） */
+.dt-resp-search input { width: min(150px, 100%); min-width: 96px; padding: var(--sp-0) var(--sp-2); font-size: var(--fs-xs); }
 .dt-resp-mc { font-size: var(--fs-xs); color: var(--muted); min-width: 34px; text-align: center; }
 /* 段执行锚徽标（工具行内横排随 .dt-actions 滚动；chip 形态对齐 dt-hist-chip；
  on=当前回看段、err=失败段红档；零高度链——徽标行在 fs-head 工具行内不新增 DOM 行） */

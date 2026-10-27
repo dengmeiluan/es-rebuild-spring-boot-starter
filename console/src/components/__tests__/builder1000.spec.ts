@@ -32,7 +32,7 @@ function mountPane(src: unknown) {
 describe('1000 检索器面板', () => {
   it('chip 常在场；解析含 retriever 的 DSL 自动展开面板且状态已设置', async () => {
     const { host } = mountPane({ retriever: { rrf: { retrievers: [
-      { bm25: { query: { match_all: {} } } },
+      { standard: { query: { match_all: {} } } },
       { knn: { field: 'emb', query_vector: [1], k: 5 } },
     ] } } });
     await tick();
@@ -43,10 +43,10 @@ describe('1000 检索器面板', () => {
     expect(host.querySelectorAll('.rte')).toHaveLength(3);
   });
 
-  it('bm25 变体内嵌查询树（MiniTreeEditor 在场）', async () => {
-    const { host } = mountPane({ retriever: { bm25: { query: { bool: { must: [{ term: { status: 'active' } }] } } } } });
+  it('standard 变体内嵌查询树（MiniTreeEditor 在场）', async () => {
+    const { host } = mountPane({ retriever: { standard: { query: { bool: { must: [{ term: { status: 'active' } }] } } } } });
     await tick();
-    expect(host.querySelector('.rte .mte'), 'bm25 走 MiniTreeEditor').toBeTruthy();
+    expect(host.querySelector('.rte .mte'), 'standard 走 MiniTreeEditor').toBeTruthy();
   });
 
   it('knn 向量框：合法 JSON 写树、非法只标红不写、清空移除键', async () => {
@@ -71,7 +71,7 @@ describe('1000 检索器面板', () => {
 
   it('linear 权重行内编辑写回；删路清伴随键', async () => {
     const { host, cur } = mountPane({ retriever: { linear: {
-      retrieve: [{ retriever: { bm25: { query: { match_all: {} } } }, weight: 0.7 }],
+      retrievers: [{ retriever: { standard: { query: { match_all: {} } } }, weight: 0.7 }],
     } } });
     await tick();
     const w = host.querySelector('.rte-w-in') as HTMLInputElement;
@@ -80,22 +80,22 @@ describe('1000 检索器面板', () => {
     w.dispatchEvent(new Event('input'));
     await tick();
     expect(serializeTree(cur.value).retriever).toEqual({ linear: {
-      retrieve: [{ retriever: { bm25: { query: { match_all: {} } } }, weight: 0.9 }] } });
+      retrievers: [{ retriever: { standard: { query: { match_all: {} } } }, weight: 0.9 }] } });
     /* 删掉唯一一路 → children 空但键保留（ES 侧报错即教育，树不吞用户操作） */
     const del = host.querySelector('.rte-item .rte button[aria-label="删除该检索器"]') as HTMLButtonElement;
     del.click();
     await tick();
-    expect(serializeTree(cur.value).retriever).toEqual({ linear: { retrieve: [] } });
+    expect(serializeTree(cur.value).retriever).toEqual({ linear: { retrievers: [] } });
   });
 
   it('切换变体换新节点（payload 语义互斥）；删根键收回', async () => {
-    const { host, cur } = mountPane({ retriever: { bm25: { query: { match_all: {} } } } });
+    const { host, cur } = mountPane({ retriever: { standard: { query: { match_all: {} } } } });
     await tick();
     const sel = host.querySelector('.rte > .rte-hd .rte-op') as HTMLSelectElement;
     sel.value = 'rrf';
     sel.dispatchEvent(new Event('change'));
     await tick();
-    expect(serializeTree(cur.value).retriever).toEqual({ rrf: { retrievers: [{ bm25: { query: { match_all: {} } } }] } });
+    expect(serializeTree(cur.value).retriever).toEqual({ rrf: { retrievers: [{ standard: { query: { match_all: {} } } }] } });
     /* 根删除按钮（面板里最外层 rte 的删除）→ 整键收回 */
     const rootDel = host.querySelector('.rte > .rte-hd button[aria-label="删除该检索器"]') as HTMLButtonElement;
     rootDel.click();
@@ -103,7 +103,7 @@ describe('1000 检索器面板', () => {
     expect(serializeTree(cur.value).retriever).toBeUndefined();
   });
 
-  it('空态加检索器给 bm25 可用初值', async () => {
+  it('空态加检索器给 standard 可用初值', async () => {
     const { host, cur } = mountPane({ size: 10 });
     await tick();
     const chip = [...host.querySelectorAll<HTMLButtonElement>('.rx-chip')].find(b => b.textContent?.includes('retriever'))!;
@@ -112,7 +112,7 @@ describe('1000 检索器面板', () => {
     const add = [...host.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent?.includes('+ 加检索器'))!;
     add.click();
     await tick();
-    expect(serializeTree(cur.value).retriever).toEqual({ bm25: { query: { match_all: {} } } });
+    expect(serializeTree(cur.value).retriever).toEqual({ standard: { query: { match_all: {} } } });
   });
 
   it('畸形 retriever 留在「其他顶层键」，面板空态（不进结构化编辑）', async () => {

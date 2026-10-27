@@ -292,15 +292,15 @@ describe('W4-T14 dslAssist 渗透 + 构建器前置入口', () => {
     localStorage.setItem('es_picked', 'a-idx');
     localStorage.setItem('es_dsl:a-idx', '{"query":{"match_all":{}}}');
     const { host } = await mountView(DslQueryView, '/search');
-    /* match_all 空态 → 「加条件」→ defaultLeaf(field = fields[0])；
-       旧管线 fields[0]='zz_legacy'（clusterInspect），新管线='status'（mappingDetail 排序首项） */
+    /* match_all 空态 → 「加条件」→ 默认字段按业务角色取名称/主体（1060 起不再字母序取 fields[0]）；
+       字段源仍必须是 mappingDetail（旧管线 fields[0]='zz_legacy'，新管线候选来自 status/user.*） */
     const addBtn = host.querySelector<HTMLButtonElement>('.qtp-none .btn');
     expect(addBtn, 'match_all 空态必须有「加条件」入口').toBeTruthy();
     addBtn!.click();
     await settle();
     const inp = host.querySelector<HTMLInputElement>('.cn .fs-inp');
     expect(inp, '加条件后必须渲染条件行字段选择器').toBeTruthy();
-    expect(inp!.value, 'builder 字段源必须并轨 useIndexFields（mappingDetail 出口）').toBe('status');
+    expect(inp!.value, 'builder 字段源必须并轨 useIndexFields（mappingDetail 出口）').toBe('user.name');
     /* 清空输入开弹层：候选与类型徽标双双来自 mappingDetail（旧管线会出 zz_legacy） */
     inp!.value = '';
     inp!.dispatchEvent(new Event('input'));
@@ -308,8 +308,15 @@ describe('W4-T14 dslAssist 渗透 + 构建器前置入口', () => {
     await settle();
     /* 弹层已 teleport 到 body（防 .dq-tree overflow 裁剪），不再位于 .cn 内 */
     const items = Array.from(document.body.querySelectorAll('.fs-pop .fs-item'));
-    expect(items.map(el => el.querySelector('.fs-nm')!.textContent)).toEqual(IDX_FIELDS);
-    expect(items.map(el => el.querySelector('.fs-ty')?.textContent)).toEqual(IDX_TYPES);
+    /* 1124：清空输入不再把算子降成 exists，候选按当前算子类型置顶（match→text 优先），
+       故只锁「候选集合与类型映射来自 mappingDetail」，不锁展示顺序。 */
+    const gotNames = items.map(el => el.querySelector('.fs-nm')!.textContent);
+    expect(new Set(gotNames)).toEqual(new Set(IDX_FIELDS));
+    const gotTypes = Object.fromEntries(items.map(el => [
+      el.querySelector('.fs-nm')!.textContent,
+      el.querySelector('.fs-ty')?.textContent,
+    ]));
+    expect(gotTypes).toEqual(Object.fromEntries(IDX_FIELDS.map((n, i) => [n, IDX_TYPES[i]])));
   });
 
   it('②a QueryHub 裸进：默认 tab = DSL（构建器内嵌其中，前置达成）', async () => {

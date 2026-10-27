@@ -562,8 +562,8 @@ export const api = {
     size?: number; from?: number }) => get<{ records: MonitorRow[] }>(`/monitor-history?${q(p)}`),
 
   /* 查询（可选 AbortSignal——长查询可取消，不再只能干等） */
-  clusterQuery: (index: string, dsl: string, size = 20, signal?: AbortSignal) => post(`/cluster/query?${q({ index, size })}`, dsl, undefined, signal ? { signal } : undefined),
-  profile: (index: string, dsl: string, signal?: AbortSignal) => post(`/cluster/profile?${q({ index })}`, dsl, undefined, signal ? { signal } : undefined),
+  clusterQuery: (index: string, dsl: string, size = 20, signal?: AbortSignal, req?: Record<string, string>) => post(`/cluster/query?${q({ index, size, ...(req || {}) })}`, dsl, undefined, signal ? { signal } : undefined),
+  profile: (index: string, dsl: string, signal?: AbortSignal, req?: Record<string, string>) => post(`/cluster/profile?${q({ index, ...(req || {}) })}`, dsl, undefined, signal ? { signal } : undefined),
   count: (index: string, dsl: string) => post(`/cluster/count?${q({ index })}`, dsl),
   raw: (method: string, path: string, body?: string, signal?: AbortSignal) => post('/cluster/raw', { method, path, body: body || '' }, undefined, signal ? { signal } : undefined),
   /* DevTools 独立执行端点（devtools 页写键或 rest 写键；执行内核/守卫与 raw 同源） */
@@ -697,7 +697,7 @@ export const api = {
  本次只开通道不打标（clusterQuery 等，避免面铺开，消费侧按需补）。 */
   sqlJson: (body: string, signal?: AbortSignal) => post<any>('/cluster/sql/query', body, undefined, { ...(signal ? { signal } : undefined), ioKind: 'sql' }),
   sqlTranslate: (body: string) => post<any>('/cluster/sql/translate', body),
-  sqlCursor: (cursor: string) => post<any>(`/cluster/sql/cursor?${q({ cursor })}`, undefined, undefined, { ioKind: 'sql' }),
+  sqlCursor: (cursor: string, timeZone?: string, columnar?: boolean) => post<any>(`/cluster/sql/cursor?${q({ cursor, timeZone, columnar })}`, undefined, undefined, { ioKind: 'sql' }),
   sqlClose: (cursor: string) => post<any>(`/cluster/sql/close?${q({ cursor })}`, undefined, undefined, { ioKind: 'sql' }),
   getDoc: (index: string, id: string) => get<any>(`/cluster/doc?${q({ index, id })}`),
   putDoc: (index: string, id: string, body: string, refresh?: string) =>

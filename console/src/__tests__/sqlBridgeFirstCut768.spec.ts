@@ -134,10 +134,10 @@ describe('768 G237 tag 族四死变体规则整删（死代码·头号·纯删�
   it('源码锁：四死规则绝迹（剥注释后全文零类名字面；pillSingleTrack 负向锚留字典防回潮）', () => {
     expect(srcBare, 'tag 族死规则须删（基础+三变体一条覆盖）').not.toMatch(/\.br-tag\b/);
   });
-  it('scoped 规则恰 27（767 盘点 30 恰减四+G240 补一行）+ 活锚 .br-card-hd/.br-title/.br-cmp 在场', () => {
+  it('scoped 规则恰 34（1111 错误自救新增 7 条；767 盘点 30→27 基线）+ 活锚 .br-card-hd/.br-title/.br-cmp 在场', () => {
     const style = src.slice(src.indexOf('<style scoped>'), src.indexOf('</style>'));
     const brRules = style.match(/^\.br-[a-z0-9-]+[^{\n]*\{/gm) || [];
-    expect(brRules.length, '「.br-」前缀规则块数（@media 嵌套行不计；766 同口径）').toBe(27);
+    expect(brRules.length, '「.br-」前缀规则块数（@media 嵌套行不计；766 同口径）').toBe(34);
     expect(src, '.br-card-hd 活规则不动').toMatch(/^\.br-card-hd \{/m);
     expect(src, '.br-title 活规则不动').toMatch(/^\.br-title \{/m);
     expect(src, '.br-cmp 活规则不动').toMatch(/^\.br-cmp \{/m);

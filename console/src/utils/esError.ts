@@ -34,7 +34,7 @@ const KNOWN: Array<{ match: string; friendly: string }> = [
   { match: 'action_request_validation_exception', friendly: '请求校验失败——必填参数缺失或取值非法，请检查请求体' },
   { match: 'es_rejected_execution_exception', friendly: '线程池拒绝——写入/查询队列已满（集群过载），请稍后重试或降低并发' },
   { match: 'too_many_buckets_exception', friendly: '聚合桶数超限——请缩小聚合范围或加大间隔（减小分桶数）后重试' },
-  { match: 'search_phase_execution_exception', friendly: '查询执行失败（DSL 语法或字段类型不匹配）' },
+  { match: 'search_phase_execution_exception', friendly: '查询执行失败（DSL 语法或字段类型不匹配）——展开「原始 IO」可看分片级原因' },
   { match: 'parsing_exception', friendly: 'DSL 解析失败（JSON 语法或查询结构有误）' },
   { match: 'illegal_argument_exception', friendly: '参数不合法' },
   { match: 'circuit_breaking_exception', friendly: '触发熔断（请求内存超限，缩小查询范围重试）' },
@@ -88,19 +88,46 @@ function explainDocMissing(raw: string): string | null {
   return `${who} 在 ${where} 中不存在——_explain 只能解释已存在的文档，请先确认 doc _id（可在「数据浏览器」里查一个真实 id）`;
 }
 
-/** 从 ES 错误串中尽力提取第一个 reason 短句 */
+/** 从 ES 错误串中尽力提取第一个 reason 短句。
+ *  1150：包装型异常没有叶子原因时（典型 `search_phase_execution_exception` +
+ *  reason `all shards failed`），原逻辑把「all shards failed」当原因显示——用户看不出
+ *  是哪个字段/哪个 shard 出的问题。现在沿 root_cause[] 与 caused_by 链继续下潜，
+ *  取第一个有信息量的 reason；全都只是包装词时返回 null（由上层给人话兜底）。 */
+const WRAPPER_REASONS = new Set(['all shards failed', 'all shards failed: search_phase_execution_exception']);
+function isWrapperReason(r: string): boolean {
+  const s = r.trim().toLowerCase();
+  return WRAPPER_REASONS.has(s) || /^all shards failed/.test(s);
+}
+function digReason(err: any, depth = 0): string | null {
+  if (!err || typeof err !== 'object' || depth > 6) return null;
+  const own = err.reason;
+  if (typeof own === 'string' && own && !isWrapperReason(own)) return own;
+  const rc = Array.isArray(err.root_cause) ? err.root_cause : [];
+  for (const c of rc) {
+    const r = digReason(c, depth + 1);
+    if (r) return r;
+  }
+  if (err.caused_by) return digReason(err.caused_by, depth + 1);
+  return null;
+}
 function extractReason(raw: string): string | null {
-  /* 优先 JSON 解析 root_cause[0].reason */
+  /* 优先 JSON 解析（root_cause → caused_by 逐层下潜，跳过包装词） */
   const jsonStart = raw.indexOf('{');
   if (jsonStart >= 0) {
     try {
       const obj = JSON.parse(raw.slice(jsonStart));
-      const rc = obj?.error?.root_cause?.[0]?.reason || obj?.error?.reason;
-      if (typeof rc === 'string' && rc) return rc;
+      const deep = digReason(obj?.error);
+      if (deep) return deep;
     } catch { /* 非完整 JSON，退化到正则 */ }
   }
-  const m = raw.match(/"reason"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-  return m ? m[1].replace(/\\"/g, '"') : null;
+  /* 正则兜底：取第一条「有信息量」的 reason（不取 all shards failed） */
+  const re = /"reason"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(raw)) !== null) {
+    const val = m[1].replace(/\\"/g, '"');
+    if (!isWrapperReason(val)) return val;
+  }
+  return null;
 }
 
 /**

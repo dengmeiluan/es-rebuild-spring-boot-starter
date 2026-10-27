@@ -146,15 +146,16 @@ describe('985 ClauseNode 下拉分组与切算子形态重建', () => {
     expect(last!.fields).toBeNull();
     expect(last!.value).toBe('x');
   });
-  it('term → terms_set：对象值安全初值 {}', async () => {
+  it('term → terms_set：数组值安全初值（保留旧值）', async () => {
     let last: LeafNode | null = null;
     const { host } = mount<LeafNode>(ClauseNode, { node: mk({ value: 'active' }) }, n => { last = n; });
     const sel = host.querySelector('.cn-op') as HTMLSelectElement;
     sel.value = 'terms_set';
     sel.dispatchEvent(new Event('change'));
     await new Promise(r => setTimeout(r));
-    expect(last!.value).toEqual({});
-    expect(serQueryNode(last!)).toEqual({ terms_set: { status: {} } });
+    /* 1119：terms_set 字段键持数组，旧标量收进 []（旧实现给 {} 会序列化成非法体） */
+    expect(last!.value).toEqual(['active']);
+    expect(serQueryNode(last!)).toEqual({ terms_set: { status: ['active'] } });
   });
 });
 
@@ -267,8 +268,8 @@ describe('985 工厂×序列化一致性', () => {
       'constant_score', 'function_score', 'script_score', 'pinned', 'boosting', 'dis_max',
       'span_near', 'span_or', 'span_not', 'span_first', 'span_containing', 'span_within', 'span_term', 'span_multi',
       /* 987：DSL 全量覆盖补齐九员随迁入锁面 */
-      'match_int_prefix', 'geo_grid', 'shape', 'sparse_vector', 'text_expansion',
-      'weighted_tokens', 'semantic', 'knn', 'field_masking_span'];
+      'bitmap_terms', 'geo_grid', 'shape', 'sparse_vector', 'text_expansion',
+      'weighted_tokens', 'semantic', 'knn', 'span_field_masking'];
     for (const op of ops) {
       const n = makeNodeByOp(op);
       const ser = serQueryNode(n) as Record<string, unknown>;

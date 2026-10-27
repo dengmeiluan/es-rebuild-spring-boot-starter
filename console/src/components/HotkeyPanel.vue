@@ -123,12 +123,17 @@ const GROUPS: { title: string; rows: HkRow[] }[] = [
     title: '查询与编辑',
     rows: [
       { keys: ['Ctrl', 'Enter'], desc: '执行查询（DSL / SQL / Lucene / REST / DevTools）' },
-      /* DevTools Ctrl+I 唤起补全登记（Kibana 控制台同键；宿主 getEditor().addCommand
- → triggerSuggest 接线 DevToolsView，Monaco 默认 Ctrl+Space 之外的第二入口——「有功能没人知道」防重演） */
-      { keys: ['Ctrl', 'I'], desc: '唤起补全候选（DevTools 请求体；Monaco Ctrl+Space 同效）' },
+      /* DevTools Ctrl+I = 格式化请求体（对齐 Kibana Console 键位表：Ctrl+I=Auto-indent；
+ 补全由 Monaco 默认 Ctrl+Space / Enter / Tab 承担，不再抢占 Ctrl+I） */
+      { keys: ['Ctrl', 'I'], desc: '格式化当前请求体（DevTools；草稿同步，等价手改）' },
       /* DevTools 全局执行（视图级 window keydown，任意焦点可达——输入控件/编辑器内让路）
  与索引工作区 query 编辑器补全（Ctrl+I 第二落点）登记（「有功能没人知道」防重演） */
       { keys: ['Ctrl', 'Enter'], desc: 'DevTools 全局执行请求（任意焦点；输入控件 / 编辑器内让路）' },
+      /* Kibana Console 键位表另外两条（1132 补齐后登记）：Ctrl+↑/↓ 在我们这里落在
+         「相邻请求起始行」（每个 Tab 即一条请求）；Ctrl+L 由 Monaco 原生提供跳转行。 */
+      { keys: ['Ctrl', '↑'], desc: '跳到上一条请求起始行（DevTools 编辑器内）' },
+      { keys: ['Ctrl', '↓'], desc: '跳到下一条请求起始行（DevTools 编辑器内）' },
+      { keys: ['Ctrl', 'L'], desc: '跳到指定行号（DevTools 编辑器内，Monaco 原生）' },
       { keys: ['Ctrl', 'I'], desc: '索引工作区 query 编辑器补全' },
       /* 查询工作台 DSL 编辑器 Ctrl+I 补全登记（与 DevTools 历史同键第三落点；
  「有功能没人知道」防重演） */

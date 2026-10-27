@@ -237,7 +237,7 @@
         <div class="dq-eh" role="group" aria-label="编辑器高度档位" title="编辑器高度档位：S/M/L/满（拖动下方分隔条可自定义高度，点档位钮恢复）">
           <button v-for="eh in EDITOR_H_TIERS" :key="eh.k" type="button" class="dq-eh-btn"
             :class="{ on: editorH === eh.k && dqMainH <= 0 }" :aria-pressed="editorH === eh.k && dqMainH <= 0"
-            :title="'编辑器高度：' + eh.t" @click="editorH = eh.k; dqMainH = 0">{{ eh.t }}</button>
+            :title="'编辑器高度：' + eh.t" @click="onEditorTier(eh.k)">{{ eh.t }}</button>
         </div>
         <!-- 编辑器字号三档 seg（dq.font 落盘；DevTools dt.font 同源
  EDITOR_FONT_TIERS 单源，编辑器设置族与高度档同排同语义；
@@ -365,10 +365,26 @@
  原始错误对象旁路喂 errMeta（code/endpoint 一眼可辨），queryFlat534 字面锁同步更新 -->
       <div v-if="queryErr" role="alert" class="err-bar dq-err">
         <!-- 1064：从 ES 错误提取条件字段并落到树行；可一键停用该条件后重试（排雷） -->
-        <div v-if="errLeafId" class="dq-err-locate">
+        <div v-if="queryErrStale" class="dq-err-locate dq-err-stale" data-test="dsl-err-stale" role="status">
+          <span>错误来自上一版 DSL——旧字段/条件定位已撤下；可直接重试当前稿</span>
+        </div>
+        <div v-if="errLeafId && !queryErrStale" class="dq-err-locate">
           <span>错误涉及条件字段 <b class="mono">{{ errField }}</b></span>
           <button type="button" class="btn xs" @click="locateErrClause">定位条件</button>
           <button type="button" class="btn xs" :disabled="running" @click="disableErrClauseAndRetry">停用该条件并重试</button>
+        </div>
+        <!-- 1112：运行时 unknown-field 相近字段一键改名并重试（静态 lint 未覆盖的稀有子句也能救） -->
+        <div v-if="fieldFix && fieldFix.suggestions.length && errLeafId && !queryErrStale" class="dq-err-locate" role="group" aria-label="相近字段建议">
+          <span>字段 <b class="mono">{{ fieldFix.field }}</b> 不在 mapping——相近字段：</span>
+          <button v-for="s in fieldFix.suggestions" :key="s.path" type="button" class="btn xs" data-test="dsl-field-fix"
+                  :title="'把出错条件的字段改为 ' + s.path + ' 并重试'"
+                  :disabled="running" @click="applyFieldFixAndRetry(s.path)">改为 {{ s.path }}</button>
+        </div>
+        <!-- 1097：索引不存在时给相近索引一键切换（与 SQL 错误面板同口径） -->
+        <div v-if="idxSuggestion?.suggestions.length" class="dq-err-locate" role="group" aria-label="相近索引建议">
+          <span>索引 <b class="mono">{{ idxSuggestion.index }}</b> 不存在——相近索引：</span>
+          <button v-for="s in idxSuggestion.suggestions" :key="s.path" type="button" class="btn xs"
+                  :title="'切换到索引 ' + s.path + ' 并重试'" @click="applyIdxSuggestion(s.path)">{{ s.path }}</button>
         </div>
         <pre class="mono" v-html="errPreHtml(queryErr, errMeta(queryErrRaw))"></pre>
         <button class="btn sm" :disabled="running" @click="runQuery">重试</button>
@@ -541,11 +557,39 @@
               <!-- 原始 IO 快查——最近一次 /cluster/query 请求/响应原文（IndexHub docs/query 同款钮形） -->
               <button class="btn sm ghost rt-tool-btn" aria-label="查看原始 IO（DSL 查询）"
                 title="最近一次查询的请求/响应原文（语义分档高亮 + 复制/curl 回放）" @click="openRawIo"><Terminal :size="13" /></button>
-              <button class="btn sm ghost rt-tool-btn" title="导出当前页为 JSON" @click="exportJson"><FileDown :size="13" /> 导出本页</button>
-              <n-popover v-if="!expRunning" trigger="click" placement="bottom-end" :show="expOpen" @update:show="(v: boolean) => (expOpen = v)">
+              <!-- 1146：低频宿主动作收进「更多 ⋯」——1024 档下工具行原 1283px 塞进 756px，
+ 导出本页/全量导出/按查询删除三个宽钮把单行挤成溢出。心智上它们都是
+ 「这份结果的额外去处」（导出/删除），与表格自带的「导出 ▾」同族，
+ 收成一个菜单后工具行右簇宽度从 ~674px 降到 ~420px，1024 单行不再溢出。
+ 三个动作本体与确认链零改动，只是入口收拢。 -->
+              <n-popover trigger="click" placement="bottom-end" :show="moreOpen" @update:show="(v: boolean) => (moreOpen = v)">
                 <template #trigger>
-                  <button class="btn sm ghost rt-tool-btn" title="全量导出当前查询全部命中（PIT + search_after，破 10000 上限）"><FileDown :size="13" /> 全量导出</button>
+                  <button class="btn sm ghost rt-tool-btn" aria-haspopup="menu" :aria-expanded="moreOpen" :class="{ on: moreOpen }"
+                    title="更多：导出本页 JSON / 全量导出（PIT）/ 按查询删除">
+                    <Ellipsis :size="13" /> 更多
+                  </button>
                 </template>
+                <div class="dq-more">
+                  <div class="exp-t">这份结果的其它去处</div>
+                  <button class="dq-more-it" @click="moreOpen = false; exportJson()">
+                    <FileDown :size="13" /> 导出本页为 JSON
+                    <span class="dq-more-hint">当前页、按表格排序与勾选</span>
+                  </button>
+                  <button v-if="!expRunning" class="dq-more-it" @click="moreOpen = false; expOpen = true">
+                    <FileDown :size="13" /> 全量导出…
+                    <span class="dq-more-hint">PIT + search_after，破 10000 上限</span>
+                  </button>
+                  <button v-else class="dq-more-it danger" @click="moreOpen = false; cancelExport()">
+                    <X :size="13" /> 取消全量导出（{{ fmtNum(expFetched) }}/{{ expTotal ? fmtNum(expTotal) : '…' }}）
+                  </button>
+                  <button v-if="canOps" class="dq-more-it danger" @click="moreOpen = false; askDeleteByQuery()">
+                    <Trash2 :size="13" /> 按当前 query 删除
+                    <span class="dq-more-hint">delete-by-query，需二次确认</span>
+                  </button>
+                </div>
+              </n-popover>
+              <n-popover v-if="!expRunning" trigger="click" placement="bottom-end" :show="expOpen" @update:show="(v: boolean) => (expOpen = v)">
+                <template #trigger><span class="dq-anchor" aria-hidden="true" /></template>
                 <div class="exp-pop">
                   <div class="exp-t">全量导出 · PIT + search_after · 破 10000 上限</div>
                   <label class="exp-opt"><input type="radio" value="jsonl" v-model="expMode" /> 全文档 JSONL（每行一条，逐行导入/批处理）</label>
@@ -561,10 +605,6 @@
                   <button class="btn pri sm" style="width:100%" @click="expOpen = false; exportAll()">开始导出</button>
                 </div>
               </n-popover>
-              <button v-else class="btn sm danger rt-tool-btn" @click="cancelExport" title="取消本次全量导出">
-                <X :size="13" /> 导出中 {{ fmtNum(expFetched) }}/{{ expTotal ? fmtNum(expTotal) : '…' }} 条
-              </button>
-              <button v-if="canOps" class="btn sm danger rt-tool-btn" @click="askDeleteByQuery" title="按当前 query 删除"><Trash2 :size="13" /> 按查询删除</button>
             </template>
 
           <!-- alt 三视图体改用 AltHitsViews 统一件（与 IH docs/query 逐字重复
@@ -723,7 +763,7 @@ import {
   FilePlus2, CopyPlus, Wand2, GitCompareArrows, ListTree, Clock, ExternalLink,
   ArrowLeftRight,
   AlertTriangle, FileSearch,
-  TerminalSquare, Terminal, PanelBottomClose, PanelBottomOpen, CircleAlert, ShieldCheck, SearchX, } from 'lucide-vue-next';
+  TerminalSquare, Terminal, PanelBottomClose, PanelBottomOpen, CircleAlert, ShieldCheck, SearchX, Ellipsis, } from 'lucide-vue-next';
 import MonacoEditor from '../components/MonacoEditor.vue';
 import ResultTable from '../components/ResultTable.vue';
 import JsonTree from '../components/JsonTree.vue';
@@ -760,7 +800,8 @@ import { buildDocsDsl } from '../utils/workbench';
 import { buildDsl } from '../utils/dslFromCell';
 import { shardsHint } from '../utils/shardsHint';
 import { pickHistField, buildHistAgg, sniffDateField } from '../utils/histField';
-import { walkMappingTypes } from '../utils/mappingTypes';
+import { walkMappingTypes, flattenSubFieldTypes } from '../utils/mappingTypes';
+import { resolveSortField } from '../utils/sortField';
 import { useIndexFields } from '../composables/useIndexFields';
 import { useTermsSuggest } from '../composables/useTermsSuggest';
 import { useIndexFieldTypes } from '../composables/useIndexFieldTypes';
@@ -780,7 +821,9 @@ import SplitHandle from '../components/SplitHandle.vue';
 import FieldPicker from '../components/FieldPicker.vue';
 import { useTreeDslSync } from '../composables/useTreeDslSync';
 import { serializeTree, countUnfilledLeaves, updateNodeById } from '../utils/queryAst';
-import { errorFieldOf, findLeafIdByField } from '../utils/queryErrorLocate';
+import { errorFieldOf, findLeafIdByField, suggestFieldsFor } from '../utils/queryErrorLocate';
+import { suggestIndexNames } from '../utils/indexSuggest';
+import { exceedsResultWindow } from '../utils/resultWindow';
 import { collectAblationTargets, buildAblationBody } from '../utils/zeroHitDiag';
 import { mergeRuntimeFields } from '../utils/runtimeFields';
 import { queryNodeSpans, compactOffsetToPos, nodeAtOffset } from '../utils/queryLocate';
@@ -878,7 +921,16 @@ async function validateDsl() {
  guard=执行中或有待提交编辑时跳过（编辑挂起重放会踩掉用户输入）；
  KeepAlive/页面隐藏/卸载的生命周期收口在 useAutoRefresh 内置 */
 const autoRefreshSec = usePref('dq.autorefresh', 0) as Ref<number>;
-const autoRefresh = useAutoRefresh(() => execQuery(false), {
+/* 重放同样走身份门（1008/1125）：定时器不理解「宿主刚换 token」，探针未落地时
+   canEndpoint 会 fail-open，旧 target 的查询会带着上一账号的现场发出去。
+   本拍不放行就跳过，下一拍身份到位自然恢复——定时轮询不需要挂起重试。 */
+const autoRefresh = useAutoRefresh(() => {
+  /* 内联同一判定（不在 926 行前向引用 2896 的 autoRunAllowed，避免 TDZ 脆弱耦合） */
+  const allowed = auth.authDisabled || !auth.probeStarted
+    || (auth.probed && auth.me != null && auth.canReadPage('search', store.target));
+  if (!allowed) return;
+  void execQuery(false);
+}, {
   ms: () => autoRefreshSec.value * 1000,
   guard: () => !running.value && !(resultTbl.value as any)?.hasPending?.(),
 });
@@ -895,6 +947,9 @@ const partialDismissed = ref(false);
 const partialHint = computed(() => shardsHint(resp.value?.shards));
 watch(() => resp.value, () => { partialDismissed.value = false; });
 const queryErr = ref('');
+/* 1115：错误锚点绑定失败时实际执行的 DSL 快照——改稿后字段/条件定位不再可信，
+ chip 撤下并标「错误来自上一版 DSL」，避免旧行号/旧字段指认当前稿。 */
+const queryErrDsl = ref('');
 /* 原始错误对象旁路（errMeta 读 code/endpoint，Xmigrate checkErrRaw 同款——
  catch 压串丢结构化字段，错误面板双参改用要喂原对象） */
 const queryErrRaw = ref<unknown>(null);
@@ -940,12 +995,20 @@ const DQ_MAIN_H: Record<EditorHKey, string> = {
   s: '260px',
   m: 'max(360px, 40vh)',
   l: 'max(480px, 56vh)',
-  /* 1038 满=结果优先（用户裁决「点满要能看到 20 条」——旧语义编辑器吃满视口，
+  /* 1038 满=结果优先（「点满要能看到 20 条」——旧语义编辑器吃满视口，
    结果区只剩十几行）。满档=构建区收 160px 细条（查询仍可微调），结果区吃满
    其余 ≈20+ 行；要写长查询点 L 档或再点一次还原。 */
   full: '160px',
 };
 const editorH = usePref<EditorHKey>('query.editorH', 's');
+/* 1114：构建区缺省收起（既有裁决：表格默认大）时，S/M/L/满 只改折叠区里的高度，
+ 点了没有任何视觉反馈（实机复现）。档位钮是「要看/调编辑器」的明确意图——点击顺带展开
+ 构建区；不点仍维持缺省收起，裁决口径不变。 */
+function onEditorTier(k: EditorHKey) {
+  editorH.value = k;
+  dqMainH.value = 0;
+  if (buildCollapsed.value) buildCollapsed.value = false;
+}
 /* 编辑器字号三档（dq.font 落盘，默认 12.5=MonacoEditor 组件既有默认零漂移；
  DevTools dt.font 同源 EDITOR_FONT_TIERS 单源） */
 const dqFont = usePref<number>('dq.font', 12.5);
@@ -1052,7 +1115,18 @@ const treePaneRef = ref<{
 } | null>(null);
 /* 1064：错误涉及字段 → 树内条件行。只认查询上下文错误；定位/停用前先校验树与 DSL 同步 */
 const errField = computed(() => queryErr.value ? errorFieldOf(queryErr.value) : null);
+const queryErrStale = computed(() => !!queryErr.value && dsl.value !== queryErrDsl.value);
 const errLeafId = computed(() => errField.value ? findLeafIdByField(queryTree.value.root, errField.value) : null);
+/* 1097：索引不存在（index_not_found / no such index）→ 相近索引一键切换 */
+const idxSuggestion = computed(() => queryErr.value
+  ? suggestIndexNames(queryErr.value, store.indices.map(i => String(i.index || '')))
+  : null);
+function applyIdxSuggestion(name: string) {
+  if (!name || name === store.pickedIdx) return;
+  store.pick(name);
+  store.notify('info', `已切换索引 ${name}，正在重试`);
+  runQuery();
+}
 function locateErrClause() {
   const id = errLeafId.value;
   if (!id) return;
@@ -1071,6 +1145,24 @@ async function disableErrClauseAndRetry() {
   onExtrasUpdate({ ...t, root });
   await nextTick();
   store.notify('info', `已停用涉及字段 ${errField.value} 的条件，正在重试`);
+  await runQuery();
+}
+/* 1112：运行时 unknown-field 一键改名——比「停用条件」更少损失：只把出错叶子的字段
+ 换成 mapping 内最接近的真实字段（静态 lint 未覆盖的稀有子句也能救），随后重试。 */
+const fieldFix = computed(() => (queryErr.value ? suggestFieldsFor(queryErr.value, builderFields.value) : null));
+async function applyFieldFixAndRetry(path: string) {
+  const id = errLeafId.value;
+  const t = queryTree.value;
+  const bad = fieldFix.value?.field;
+  if (!id || !t.root || running.value || !bad) return;
+  if (treeStale.value) {
+    store.notify('info', '条件树与 DSL 尚未同步，请先修正 JSON 再改字段');
+    return;
+  }
+  const root = updateNodeById(t.root, id, n => ({ ...n, field: path }));
+  onExtrasUpdate({ ...t, root });
+  await nextTick();
+  store.notify('info', `已将字段 ${bad} 改为 ${path}，正在重试`);
   await runQuery();
 }
 
@@ -1394,8 +1486,42 @@ const runDelta = computed(() => {
 async function goPage(p: number) {
   const np = Math.min(Math.max(1, p), totalPages.value);
   if (np === page.value || running.value) return;
+  /* 1107：from+size 超出 max_result_window（默认 10000）的翻页 ES 必拒——
+     本地先拦，不浪费请求；一键把当前 query/sort 带到 PIT 通道继续深翻 */
+  if (exceedsResultWindow(np, pageSize.value)) {
+    store.notify('warning', `第 ${np} 页超出 ES 10000 结果窗口（from+size），已阻止无效请求；深翻请用 PIT 分页`, {
+      duration: 9000,
+      action: { label: '去 PIT 分页', onClick: goPitDeep },
+    });
+    return;
+  }
   page.value = np;
   await execQuery();
+}
+/* 1107：DSL → PIT 深分页接力——query 作为 filter、简单字段排序随行；
+   坏 DSL/复杂排序不猜，只切通道。 */
+function goPitDeep() {
+  try {
+    const obj: any = JSON.parse(applyVars(stripJsonComments(dsl.value)));
+    if (obj?.query) writeStoredRaw(sessionStorage, 'es-console.pit.filter', JSON.stringify(obj.query));
+    const s = Array.isArray(obj?.sort) ? obj.sort[0] : obj?.sort;
+    let sf = '';
+    let so: 'asc' | 'desc' = 'asc';
+    if (typeof s === 'string' && s && !s.startsWith('_')) sf = s;
+    else if (s && typeof s === 'object') {
+      const k = Object.keys(s)[0];
+      if (k && !k.startsWith('_')) {
+        sf = k;
+        const v = s[k];
+        const o = typeof v === 'string' ? v : v?.order;
+        if (o === 'asc' || o === 'desc') so = o;
+      }
+    }
+    if (sf) writeStoredRaw(sessionStorage, 'es-console.pit.prefill', JSON.stringify({ sort: sf, order: so }));
+  } catch { /* 坏 DSL 只切通道，不写预填 */ }
+  const usp = readHashQuery();
+  usp.set('mode', 'pit');
+  location.hash = (location.hash.split('?')[0] || '#/search') + '?' + usp.toString();
 }
 /* （实报「点每页条数不生效」）：执行发起方仲裁标志——分页器发起的执行
  （setPageSize 链路）里，DSL 顶层旧 size 不得反向回滚用户刚点的分页档；DSL size 反向
@@ -1430,8 +1556,11 @@ function writeSortToDsl(s: { f: string; d: 'asc' | 'desc' } | null): boolean {
   }
   if (!s) delete obj.sort;
   else {
-    const f = mappingFieldTypes.value[s.f] === 'text' ? s.f + '.keyword' : s.f;
-    obj.sort = [{ [f]: { order: s.d, unmapped_type: 'long' } }];
+    /* text 列 → .keyword 子域（fielddata 400 预防）；无子域的 text 列不可排序，
+       拦下并提示，不写半截 sort 到编辑器 */
+    const r = resolveSortField(s.f, mappingFieldTypes.value);
+    if (!r.ok) { store.notify('warning', r.reason || '该列不支持排序'); return false; }
+    obj.sort = [{ [r.field]: { order: s.d, unmapped_type: 'long' } }];
   }
   dsl.value = JSON.stringify(obj, null, 2);
   return true;
@@ -1465,7 +1594,10 @@ async function execQuery(recordHist = false) {
   running.value = true;
   const seq = ++runSeq;
   const idx = store.pickedIdx;
+  /* 1115：错误锚点绑定实际发出的那一版 DSL（await 期间可能继续改稿） */
+  const dslSnapshot = dsl.value;
   queryErr.value = '';
+  queryErrDsl.value = '';
   queryErrRaw.value = null;
   /* 1065：新一轮执行关闭并作废旧诊断结果（探针结果只属于上一轮查询现场） */
   closeAblation();
@@ -1600,6 +1732,7 @@ async function execQuery(recordHist = false) {
       if (seq === runSeq) store.notify('info', `已取消查询（${(elapsedMs.value / 1000).toFixed(1)}s）`);
     } else if (idx === store.pickedIdx && seq === runSeq) {
       queryErr.value = e?.message || String(e);
+      queryErrDsl.value = dslSnapshot;
       queryErrRaw.value = e; /* ：原始对象旁路（errMeta 读 code/endpoint） */
       /* 失败也标记历史（旧历史条目+跨模式 store 双路 ok:false 红点）——重试有入口，失败不该消失 */
       if (recordHist) {
@@ -1610,9 +1743,11 @@ async function execQuery(recordHist = false) {
         } catch { /* 历史失败不阻塞错误提示 */ }
       }
       /* 失败 toast 行动化——msg 传原始错误（friendlyEsError 翻译+
-   自动「复制原始」），再并「查看诊断」直达 /diag；旧文案「查询失败」两字经
-   友好化原样返回，恰好绕过了自动 action（shown===msg），是全站唯一光杆错误 toast */
+   自动「复制原始」），再并「查看诊断」直达 /diag。
+   原位 .dq-err 面板已在结果区上方给出完整原因/定位/重试，右下角再叠一个 toast 只会
+   盖住结果表正文——改为只落通知历史（logOnly），面板是唯一主界面。 */
       store.notify('error', queryErr.value, {
+        logOnly: true,
         actions: [{ label: '查看诊断', onClick: () => { router.push('/diag'); } }],
       });
     }
@@ -1694,6 +1829,8 @@ async function preloadMapping() {
       fields.push(...got.fields);
       dates.push(...got.dates);
       Object.assign(types, got.types);
+      /* multi-field 子域（title.keyword…）一并入表——排序裁决要知道子域是否存在 */
+      Object.assign(types, flattenSubFieldTypes(props));
       if (!mappingProps.value && props) mappingProps.value = props;
     }
     mappingFields.value = [...new Set(fields)].sort();
@@ -2332,10 +2469,26 @@ function pushHistory(d: string) {
   history.value = history.value.slice(0, store.settings.histSize);
   writeStoredRaw(localStorage, HIST_KEY, JSON.stringify(history.value));
 }
-function replayHist(hst: HistItem, run: boolean) {
+async function replayHist(hst: HistItem, run: boolean, label = '历史记录') {
   dsl.value = hst.dsl;
   histOpen.value = false;
   savedOpen.value = false;
+  /* 1084：历史属于当时的索引现场——跨索引回放先切过去再执行，
+     否则会把 A 索引的查询按顶栏 B 跑（保存查询回放早已有此语义）。
+     1098：保存查询复用本函数；label 让提示区分「历史记录 / 保存时」。 */
+  const crossIdx = !!hst.idx && hst.idx !== store.pickedIdx;
+  if (crossIdx) {
+    suppressIdxDslLoad = true;
+    store.pick(hst.idx);
+    store.notify('info', `已切到${label}索引 ${hst.idx} 并还原查询`);
+    if (run) {
+      /* suppress 跳过了 watcher 的 mapping 完成重查，这里显式等 mapping 再发，
+         避免日期直方图首查猜不到字段 */
+      try { await preloadMapping(); } catch { /* 字段失败不阻塞查询 */ }
+      runQuery();
+    }
+    return;
+  }
   if (run) runQuery();
 }
 function removeHis(i: number) {
@@ -2394,20 +2547,16 @@ function renameSavedRow(row: { name?: string }) {
 function savedIdxOf(row: { name?: string; query: string }): number {
   return savedQueries.value.findIndex(sq => sq.name === row.name && sq.dsl === row.query);
 }
-function replaySavedRow(row: { name?: string; query: string }, run: boolean) {
+async function replaySavedRow(row: { name?: string; query: string }, run: boolean) {
   const i = savedIdxOf(row);
   if (i < 0) return;
   const sq = savedQueries.value[i];
-  /* P2-11：保存的搜索=现场还原——跨索引连带切过去（suppress 旋钮跳过
- watch 的 DSL 覆盖与自动重查，与 applyTask 同款套路），布局在 RT
- 偏好重读后二次 nextTick 恢复，最后按面板 run 意图执行查询。 */
-  const crossIdx = !!sq.idx && sq.idx !== store.pickedIdx;
-  if (crossIdx) { suppressIdxDslLoad = true; store.pickedIdx = sq.idx; }
-  replayHist(sq, run);
+  /* P2-11：保存的搜索=现场还原——跨索引切换/mapping 等齐后执行统一交给 replayHist，
+     suppress 与 wait 逻辑单源，避免保存回放首查丢直方图。布局在 RT 偏好重读后恢复。 */
+  await replayHist(sq, run, '保存时');
   if (sq.layout) {
     nextTick(() => { nextTick(() => { (resultTbl.value as any)?.applyLayout?.(sq.layout); }); });
   }
-  if (crossIdx) store.notify('info', `已切到保存时索引 ${sq.idx} 并还原查询`);
 }
 function removeSavedRow(row: { name?: string; query: string }) {
   const i = savedIdxOf(row);
@@ -2428,9 +2577,14 @@ async function askClearHist() {
 }
 const saveOpen = ref(false);
 const saveName = ref('');
+/* DevTools 入口能力（1124）：只持数据面读的身份跳过去也只能看到「已填入未执行」，
+   在来源页就说清缺什么，不把用户送进一个点了没反应的页面。 */
+const canDevtools = computed(() => auth.canEndpoint('admin', 'POST',
+  '/internal/es/index/cluster/devtools/execute', store.target));
 /* 在 DevTools 打开——当前索引+DSL 组装 POST _search 经 _prefill 会话契约带入 */
 function openInDevTools() {
   if (!resp.value) return;
+  if (!canDevtools.value) { store.notify('warning', 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'); return; }
   const idxPath = store.pickedIdx ? `/${store.pickedIdx}/_search` : '/_search';
   writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
     title: store.pickedIdx || '_search',
@@ -2444,6 +2598,7 @@ function openInDevTools() {
 /* 历史行带到 DevTools 新 Tab（openInDevTools _prefill 通道，历史行组装
  body=行自持 query 的 pretty DSL；行无 resp 依赖——openInDevTools 的 !resp 门不适用于历史回放） */
 function histNewTab(h: { query: string; index?: string }) {
+  if (!canDevtools.value) { store.notify('warning', 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'); return; }
   const idxPath = (h.index ? '/' + h.index : '') + '/_search';
   let body = h.query || '';
   try { body = JSON.stringify(JSON.parse(stripJsonComments(body)), null, 2); } catch { /* 非 JSON 原样带过去 */ }
@@ -2591,6 +2746,8 @@ function exportJson() {
 
 /* ═══ 全量导出：PIT + search_after 遍历当前 query 全部命中（from+size 10000 上限不适用） ═══ */
 const expOpen = ref(false);
+/* 1146：本页宿主的低频宿主动作（导出本页/全量导出/按查询删除）收进「更多」菜单 */
+const moreOpen = ref(false);
 const expRunning = ref(false);
 const expFetched = ref(0);
 const expTotal = ref(0);
@@ -2747,9 +2904,21 @@ function onGlobalRunKey(e: KeyboardEvent) {
 /* 自动执行身份门（1008）：深链/carry/会话恢复/KeepAlive 回页都可能在宿主换 token
    的窗口里触发——probe 未落地时 me=null，canEndpoint 会 fail-open，旧 target 的查询
    会先发出去（只读也会 403 审计噪声，且结果可能串到新账号界面）。 */
-const autoRunAllowed = () => auth.probed && auth.me != null
-  && auth.canEndpoint('write', 'POST', '/internal/es/index/cluster/query', store.target);
-const autoRun = () => { if (autoRunAllowed()) void runQuery(); };
+const autoRunAllowed = () => auth.authDisabled
+  || !auth.probeStarted /* 探测未启动（无鉴权嵌入/测试宿主）视同身份已定，与 store.identityKnown 同口径 */
+  || (auth.probed && auth.me != null && auth.canReadPage('search', store.target));
+/* 身份探测是异步的：挂载时深链 autoRun 可能先到（probed=false）——挂起一次，
+   等探测/登录落地再补跑；否则无鉴权部署（authDisabled）与登录态首开都会被静默吞掉。 */
+let autoRunPending = false;
+const autoRun = () => {
+  if (autoRunAllowed()) { autoRunPending = false; void runQuery(); return; }
+  autoRunPending = true;
+};
+watch(() => [auth.probed, auth.authDisabled, auth.me?.username], () => {
+  if (!autoRunPending || !autoRunAllowed()) return;
+  autoRunPending = false;
+  void runQuery();
+});
 
 onMounted(() => {
   /* 分栏宽度防呆：localStorage 记忆的宽屏值在小窗会把编辑器推出视口，挂载时按容器实宽 clamp */
@@ -2919,6 +3088,9 @@ onBeforeUnmount(() => {
  仅保留 stacked 态条件树限高可滚动（原 max-height:none 会把长树整棵铺开顶走编辑器） */
 @media (max-width: 1100px) {
   .dq-tree { max-height: 40vh; }
+  /* 1104：窄档工具行不再把「新文档/在构建器中打开/DSL→Lucene/索引工作区」裁到视口外——
+     左组允许换行，按钮全部可达；1440 单行锁定不变 */
+  .dq-toolbar .lr-bar-l { flex-wrap: wrap; overflow: visible; row-gap: var(--sp-1h); }
 }
 
 .dq-split-seg { display: inline-flex; margin-left: auto; border: 1px solid var(--border); border-radius: var(--r-s); overflow: hidden; flex-shrink: 0; }
@@ -3097,6 +3269,19 @@ onBeforeUnmount(() => {
 .exp-opt { display: flex; align-items: center; gap: var(--sp-1h); font-size: var(--fs-sm); color: var(--tx1); cursor: pointer; }
 .exp-fp { width: 100%; }
 .exp-hint { font-size: var(--fs-xs); color: var(--tx2); line-height: 1.5; }
+/* 1146：「更多」菜单（导出去处）——DBX 式紧凑项：左图标 + 主文案 + 右侧弱化说明。
+   主文案不折行（短标签），说明文字允许收缩省略——折行会让菜单项高度参差。 */
+.dq-more { display: flex; flex-direction: column; gap: 1px; width: 320px; }
+.dq-more .exp-t { padding: 0 0 var(--sp-1); }
+.dq-more-it { display: flex; align-items: center; gap: var(--sp-2); width: 100%; padding: var(--sp-1h) var(--sp-2);
+  border: 0; border-radius: var(--r-s); background: none; color: var(--tx1); font-size: var(--fs-sm); text-align: left; cursor: pointer; white-space: nowrap; }
+.dq-more-it:hover { background: var(--bg2); color: var(--ac-hi); }
+.dq-more-it.danger:hover { background: var(--err-soft); color: var(--err); }
+.dq-more-hint { margin-left: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+  font-size: var(--fs-xs); color: var(--tx2); }
+.dq-more-it.danger:hover .dq-more-hint { color: var(--err); }
+/* 「更多」只作锚点：弹层由菜单项驱动，锚点本身不可见 */
+.dq-anchor { display: none; }
 /* JSON/Tree/卡片视图高度封顶统一为局部变量（原 56vh 与 560px 两口径，
  切视图页面高度跳变）；值保留 vh 契约（固定 px 小屏溢出视口）。
  P0 高度链：res-body 转确定高容器（overflow:hidden），各视图分支自滚——
@@ -3180,6 +3365,8 @@ onBeforeUnmount(() => {
 .dq-err-locate { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); flex: 0 0 100%; padding: var(--sp-1) var(--sp-2); border-bottom: 1px solid var(--err-line); font-size: var(--fs-xs); }
 .dq-err-locate :deep(.mono) { color: var(--err); }
 .dq-err-locate .btn { margin-left: 0; }
+/* 1115：上一版 DSL 的错误标记（旧字段/条件定位撤下）——warning 语义，与红色错误正文区分 */
+.dq-err-stale { color: var(--warn); border-bottom-color: var(--warn-line); }
 
 /* 900 紧凑微调档（ 口径；q 遗留补齐，W-D）——本页分栏/高度链已由
  WorkbenchLayout 宽度驱动 stacked 机制与 P0 定高链接管（1100 档只留条件树限高，

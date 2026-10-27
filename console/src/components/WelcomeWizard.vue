@@ -168,20 +168,30 @@ function go(path: string, _label: string) {
   router.push(path);
 }
 function finish(skipped: boolean) {
-  if (dontShow.value) writeStoredRaw(localStorage, LS_KEY, '1');
+  /* 显式选择也落盘：勾选=不再自动弹（1），取消勾选=下次仍弹（0）。
+     只在取消勾选时什么都不写，会让「回访用户抑制」把用户刚表达的重看意图吞掉。 */
+  writeStoredRaw(localStorage, LS_KEY, dontShow.value ? '1' : '0');
   show.value = false;
   if (!skipped) store.notify?.('success', '欢迎面板已关闭，可通过 ⌘K → “重看引导” 再次呼出');
 }
 
 onMounted(() => {
-  if (localStorage.getItem(LS_KEY) === '1') return;
+  const done = localStorage.getItem(LS_KEY);
+  if (done === '1') return;
+  /* 回访用户不再自动弹：done 标志可能因换域名/存储分区/清站点数据而丢失，
+     但「已有身份记录」说明引导早就看过——继续自动弹只会每次进页挡一层。
+     done === '0' 是用户主动取消「本设备不再显示」，须尊重其重看意图。 */
+  if (done !== '0' && localStorage.getItem('es-console.last-user')) return;
   // .2：等真加载到索引再弹——connections-only 未选连接/集群不通时，
   // 第一步「选默认索引」是空态死胡同，弹了反而挡住选集群的引导横幅
   let fired = false;
-  watch(() => (store.indices || []).length > 0, (ok) => {
+  const ready = () => (store.indices || []).length > 0 && (auth.authDisabled || auth.me != null);
+  watch(ready, (ok) => {
     if (!ok || fired || localStorage.getItem(LS_KEY) === '1') return;
     fired = true;
-    setTimeout(() => (show.value = true), 400);
+    setTimeout(() => {
+      if (localStorage.getItem(LS_KEY) !== '1') show.value = true;
+    }, 400);
   }, { immediate: true });
 });
 

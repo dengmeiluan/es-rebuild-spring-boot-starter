@@ -33,7 +33,8 @@ describe('高度链合一（549 批，用户实报「拉伸没用/回不去了�
     expect(dq).toMatch(/s: '260px'/);
     expect(dq).toMatch(/m: 'max\(360px, 40vh\)'/);
     expect(dq).toMatch(/l: 'max\(480px, 56vh\)'/);
-    expect(dq).toMatch(/full: 'max\(360px, calc\(100vh - var\(--vh-offset\) - 380px\)\)'/);
+    /* 1038 满=结果优先：构建区收细条，结果区吃满其余（锚随批迁移） */
+    expect(dq).toMatch(/full: '160px'/);
   });
   it('dq-main 高度恒由内联 style 承接（CSS 固定 34vh 档退役=空白带根治）', () => {
     expect(dq.match(/\.dq-main \{[^}]*\}/)?.[0], 'CSS 不再定高').not.toMatch(/height:\s*max\(260px,\s*34vh\)/);
@@ -41,7 +42,10 @@ describe('高度链合一（549 批，用户实报「拉伸没用/回不去了�
   });
   it('拖柄=自定义态（四档钮全灭），点档位钮=重置回档位高度（「回不去」根治）', () => {
     expect(dq, '档位钮 on 判据含非自定义态').toMatch(/editorH === eh\.k && dqMainH <= 0/);
-    expect(dq, '点档位钮清自定义高度').toMatch(/@click="editorH = eh\.k; dqMainH = 0"/);
+    /* 1114：档位点击收敛到 onEditorTier（设高度+清自定义+折叠态展开），
+       清自定义高度语义由该处理函数承接 */
+    expect(dq, '点档位钮清自定义高度').toContain('@click="onEditorTier(eh.k)"');
+    expect(dq).toContain('dqMainH.value = 0;');
   });
   it('queryWorkbenchW1 的 34vh 字面锁已同步更新（本 spec 承接高度链契约）', () => {
     /* 原锁 queryWorkbenchW1.spec:101 断言 height: max(260px, 34vh) 在场——随退役改锚 */

@@ -180,6 +180,7 @@ import RawIoModal from '../components/RawIoModal.vue';
 import WorkbenchLayout, { type WorkbenchPaneSpec } from '../components/WorkbenchLayout.vue';
 import { useRouter } from 'vue-router';
 import { useAppStore } from '../stores/app';
+import { useGatedBootRead } from '../composables/usePageIdentityGate';
 import { useScopedDraft, useScopedDraftState } from '../composables/useScopedDraft';
 import CurrentIdxChip from '../components/CurrentIdxChip.vue';
 import FieldPicker from '../components/FieldPicker.vue';
@@ -251,7 +252,9 @@ const fieldTypes = computed<Record<string, string>>(() => {
   for (const f of idxFields.value) m[f.path] = f.type;
   return m;
 });
-watch(index, () => { idxEnsure(); }, { immediate: true });
+/* 1125：字段/类型清单挂载即拉，身份未落地先拉会带旧 target */
+const boostBoot = useGatedBootRead('boost-tuner', () => idxEnsure());
+watch(index, () => { void boostBoot.run(); }, { immediate: true });
 const { suggestions: kwSugList, suggest: kwSuggest } = useTermsSuggest(() => index.value, () => fieldTypes.value);
 const kwField = computed(() => fields.value.find(f => f.disabled !== true && f.name.trim())?.name.trim() || '');
 watch([keyword, kwField], ([kw, f]) => { kwSuggest(f, kw); });

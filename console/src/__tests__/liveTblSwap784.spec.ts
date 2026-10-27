@@ -152,4 +152,26 @@ describe('784：挂载级改用验证', () => {
     await settle(8);
     expect(host.querySelectorAll('table.tbl.zebra.ld-hist-hist-t').length, '再展开后告警表格仍在场（单容器重开）').toBeGreaterThanOrEqual(1);
   });
+  it('1158：三表行右键接线在挂载态不炸（菜单组件随面板渲染）', async () => {
+    const host = hostEl!;
+    const detailToggle = host.querySelector<HTMLButtonElement>('.ld-detail-toggle');
+    expect(detailToggle, '监控明细容器钮在场').toBeTruthy();
+    detailToggle!.click();
+    await settle(8);
+    /* 告警历史视图：无 seed 告警时渲染空态行，右键不应抛错（事件挂在有数据的 tr 上） */
+    const segBtns = [...host.querySelectorAll<HTMLButtonElement>('.ld-detail-seg button')];
+    segBtns.find(b => (b.textContent || '').includes('告警历史'))?.click();
+    await settle(8);
+    const table = host.querySelector('table.tbl.zebra.ld-hist-hist-t');
+    expect(table, '告警历史表在场').toBeTruthy();
+    const emptyRow = table!.querySelector('tbody tr');
+    if (emptyRow) {
+      emptyRow.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+      await settle(4);
+    }
+    /* 菜单未开时 CellContextMenu 不渲染（v-if ldMenu）——这是预期 */
+    expect(document.querySelectorAll('.ccm-mask').length).toBe(0);
+    /* 视图仍然稳定（面板未因右键事件崩掉） */
+    expect(host.querySelector('table.tbl.zebra.ld-hist-hist-t')).toBeTruthy();
+  });
 });

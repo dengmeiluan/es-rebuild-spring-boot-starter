@@ -22,6 +22,11 @@
  搜索定位归 QRT Ctrl+F 网格查找（命中计数 n/n + Enter 导航 + 当前命中高亮），
  排序归 QRT 列头点击（es_tbl_sort:browser:indices 记忆）；bw 搜索框只承担
  行过滤 + MarkText 命中源，900 档 .bw-search 独占行形态（528 W-E）不变 -->
+    <!-- 只读身份前置说明（1124）：行内段合并/删除索引与「新建索引」隐藏时给出原因，
+         避免只读身份看到「工具栏少一半」却无处可查（RestView/Aliases 同一语言） -->
+    <div v-if="auth.probed && !canOps && !canForceMerge && !canCreateIdx" class="bw-perm-note" role="status">
+      <ShieldAlert :size="13" /> 当前身份只读：浏览与检索可用；段合并、删除索引、新建索引需要对应的连接页面写权限。
+    </div>
     <div class="bw-bar">
       <!-- bw-search 改用 SearchFilterBar 统一件（全站第 16 胞）——547「异形豁免册」
  条目由合并约定推翻：胶囊壳三件套与 Search 内建图标归组件单源（bw-search-ic 绝对
@@ -110,10 +115,20 @@
         <template #cell-操作="{ row }">
           <div class="bw-acts" @click.stop>
             <button aria-label="索引工作区（文档/查询/配置/分片/运维）" class="btn sm" title="索引工作区（文档/查询/配置/分片/运维）" @click="goHub(row[1])"><Boxes :size="11" /></button>
-            <button aria-label="DSL 查询" class="btn sm" title="DSL 查询" @click="openIdx(row[1])"><TerminalSquare :size="11" /></button>
-            <button aria-label="Mapping" class="btn sm" title="Mapping" @click="goMapping(row[1])"><Braces :size="11" /></button>
-            <button v-if="canForceMerge" aria-label="ForceMerge 段合并" class="btn sm" title="ForceMerge 段合并" @click="askFmRow(row)"><Shrink :size="11" /></button>
-            <button v-if="canOps" aria-label="删除索引" class="btn sm danger" title="删除索引" @click="askDelRow(row)"><Trash2 :size="11" /></button>
+            <n-popover trigger="click" placement="left" :show="rowMore === row[1]" @update:show="(v: boolean) => (rowMore = v ? String(row[1]) : '')">
+              <template #trigger>
+                <button :aria-label="'更多操作：' + row[1]" aria-haspopup="menu" class="btn sm ghost bw-more-trig"
+                  title="更多：DSL 查询 / Mapping / 段合并 / 删除" @click.stop>
+                  <Ellipsis :size="11" /><span class="bw-more-lb">更多</span>
+                </button>
+              </template>
+              <div class="bw-more" role="menu" :aria-label="'索引操作：' + row[1]">
+                <button class="bw-more-it" role="menuitem" @click="rowMore = ''; openIdx(row[1])"><TerminalSquare :size="12" /> DSL 查询</button>
+                <button class="bw-more-it" role="menuitem" @click="rowMore = ''; goMapping(row[1])"><Braces :size="12" /> Mapping</button>
+                <button v-if="canForceMerge" class="bw-more-it" role="menuitem" @click="rowMore = ''; askFmRow(row)"><Shrink :size="12" /> ForceMerge 段合并</button>
+                <button v-if="canOps" class="bw-more-it danger" role="menuitem" @click="rowMore = ''; askDelRow(row)"><Trash2 :size="12" /> 删除索引</button>
+              </div>
+            </n-popover>
           </div>
         </template>
         <!-- 「复制行信息」随行右键菜单退役改走 QRT 行尾注入位（hover 与行复制钮同排）：
@@ -151,13 +166,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, type Ref } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch, type Ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { NPopover } from 'naive-ui'; /* 1148：行内「更多操作」弹层 */
 import EmptyState from '../components/EmptyState.vue';
 import SkeletonBox from '../components/SkeletonBox.vue'; /* ：加载态骨架收口 */
 import MarkText from '../components/MarkText.vue';
 import StatusPill from '../components/StatusPill.vue'; /* ：状态徽标统一件 */
-import { Search, LayoutGrid, RefreshCw, TerminalSquare, Braces, Shrink, Trash2, Boxes, Plus, FileDown, ClipboardCopy, FileJson } from 'lucide-vue-next';
+import { Search, LayoutGrid, RefreshCw, TerminalSquare, Braces, Shrink, Trash2, Boxes, Plus, FileDown, ClipboardCopy, FileJson, ShieldAlert, Ellipsis } from 'lucide-vue-next';
 import { api } from '../api';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth'; /* ：权限写门真源 */
@@ -196,6 +212,8 @@ const canCreateIdx = computed(() => auth.canEndpoint('ops', 'POST', '/internal/e
 const kw = useUrlState('kw');
 /* 导出聚合菜单（导出 ▾）状态——Esc/点外关闭；开层挂 document 监听、卸载摘卸对称 */
 const bwExpOpen = ref(false);
+/* 1148：行内「更多」弹层当前打开的索引名（空=全关；同一时刻只开一行） */
+const rowMore = ref('');
 function closeBwExp() { bwExpOpen.value = false; }
 function onDocBwClick(e: Event) {
   if (!(e.target as HTMLElement | null)?.closest('.menu-wrap')) closeBwExp();
@@ -269,13 +287,26 @@ const bwQrt = ref<InstanceType<typeof QueryResultTable> | null>(null);
 onMounted(() => {
   if (!store.indices.length) store.loadIndices();
   /* 深链消费——pickedIdx 已由 useIdxState 落定，doc 非空即打开文档查看。
- 消费即清防刷新重灌；文档内容经既有 _source 展示通道（读原文档塞进详情区） */
+ 消费即清防刷新重灌；文档内容经既有 _source 展示通道（读原文档塞进详情区）。
+ 1125：深链读取同样要过身份门——宿主换 token 的窗口里 probed 未落地，
+ 旧 target 的文档会先拉回来（只读也会 403 噪声，结果还可能串到新账号界面）。 */
   const docId = (docLink.value || '').trim();
   if (docId && store.pickedIdx) {
-    void openLinkedDoc(store.pickedIdx, docId);
     docLink.value = '';
     idxLink.value = '';
+    if (linkDocAllowed()) void openLinkedDoc(store.pickedIdx, docId);
+    else pendingLinkDocId.value = docId;
   }
+});
+/* 与 DslQuery autoRunAllowed 同口径：未鉴权/探测未启动视同身份已定；否则必须身份落地且本页可读 */
+const linkDocAllowed = () => auth.authDisabled || !auth.probeStarted
+  || (auth.probed && auth.me != null && auth.canReadPage('indices', store.target));
+const pendingLinkDocId = ref('');
+watch(() => [auth.probed, auth.authDisabled, auth.me?.username, store.target], () => {
+  const id = pendingLinkDocId.value;
+  if (!id || !store.pickedIdx || !linkDocAllowed()) return;
+  pendingLinkDocId.value = '';
+  void openLinkedDoc(store.pickedIdx, id);
 });
 /* 深链打开文档：拉原文档 → 弹详情（highlightJson 范式着色展示；json-view 全局类管排版，
  v-html 仅消费 utils/jsonc 的 highlightJson 输出——转义安全）。
@@ -438,6 +469,8 @@ function askDelRow(row: any[]) { return askDel(rowToIdx(row)); }
 .bw { display: flex; flex-direction: column; gap: var(--sp-3); height: 100%; }
 /* 窄屏工具条允许换行，避免挤压 */
 .bw-bar { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; row-gap: var(--sp-1); }
+/* 只读身份说明条（RestView .rt-perm-note 同款形态） */
+.bw-perm-note { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); margin: 0 0 var(--sp-2); }
 /* 导出聚合菜单（导出 ▾）——浮层四要素（白底 bg1/边框/阴影 --shadow-pop/圆角 r-m），
  查询结果表 qrt-menu 同配方；menu-wrap 定位壳承接 absolute 展开 */
 .menu-wrap { position: relative; flex: none; }
@@ -479,7 +512,19 @@ function askDelRow(row: any[]) { return askDel(rowToIdx(row)); }
 /* .bw-picked 行选中高亮改走 QRT rowClass 契约——类挂在内核 tr 上，
  视图 scoped 样式须经 :deep 穿透（!important 压过内核斑马纹/hover 行底） */
 .bw :deep(.bw-picked) { background: var(--ac-soft) !important; }
-.bw-acts { display: flex; gap: var(--sp-1); }
+/* 1148：行内操作收敛——五个图标钮常驻会把「操作」列撑到 300px+ 并把其他列挤窄；
+ 静息态只留最常用的「打开工作区」+ 更多（⋯），其余四个收进 ⋯ 弹层（一个都不删）。
+ 悬停行时仍只显示这两颗，避免 6 个图标在窄列里互相贴脸。 */
+.bw-acts { display: flex; gap: var(--sp-1); align-items: center; }
+/* 行内「更多」弹层（DSL 查询 / Mapping / 段合并 / 删除）——与右键菜单同语言 */
+.bw-more { display: flex; flex-direction: column; gap: 1px; min-width: 168px; }
+/* 触发钮：图标 + 文字（纯图标在操作列里最难认；「更多」两字给出可点范围） */
+.bw-more-trig { gap: var(--sp-1); }
+.bw-more-lb { font-size: var(--fs-xs); }
+.bw-more-it { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-1h) var(--sp-2); border: 0; border-radius: var(--r-s);
+  background: none; color: var(--tx1); font-size: var(--fs-sm); text-align: left; cursor: pointer; }
+.bw-more-it:hover { background: var(--bg2); color: var(--ac-hi); }
+.bw-more-it.danger:hover { background: var(--err-soft); color: var(--err); }
 /* y3：列宽拖拽柄（.bw-rs 全家）随换 QRT 壳退役——列宽归内核 qrt-rs（es_tbl_cols 记忆） */
 /* y3：分页条（.bw-foot 计数行保留；翻页/已筛选提示随换壳退役——翻页由 QRT renderMore
  增量渲染接管、「已筛选 N 列」由 QRT 工具行 .qrt-filtered 接管） */

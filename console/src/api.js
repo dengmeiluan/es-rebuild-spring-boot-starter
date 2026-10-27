@@ -393,8 +393,8 @@ export const api = {
     /* 监控快照落库批④:多集群监控历史(GET /monitor-history,VIEWER 只读;overview 页 apiPrefixes) */
     monitorHistory: (p) => get(`/monitor-history?${q(p)}`),
     /* 查询（可选 AbortSignal——长查询可取消，不再只能干等） */
-    clusterQuery: (index, dsl, size = 20, signal) => post(`/cluster/query?${q({ index, size })}`, dsl, undefined, signal ? { signal } : undefined),
-    profile: (index, dsl, signal) => post(`/cluster/profile?${q({ index })}`, dsl, undefined, signal ? { signal } : undefined),
+    clusterQuery: (index, dsl, size = 20, signal, req) => post(`/cluster/query?${q({ index, size, ...(req || {}) })}`, dsl, undefined, signal ? { signal } : undefined),
+    profile: (index, dsl, signal, req) => post(`/cluster/profile?${q({ index, ...(req || {}) })}`, dsl, undefined, signal ? { signal } : undefined),
     count: (index, dsl) => post(`/cluster/count?${q({ index })}`, dsl),
     raw: (method, path, body, signal) => post('/cluster/raw', { method, path, body: body || '' }, undefined, signal ? { signal } : undefined),
     /* DevTools 独立执行端点（devtools 页写键或 rest 写键；执行内核/守卫与 raw 同源） */
@@ -502,7 +502,7 @@ export const api = {
    本次只开通道不打标（clusterQuery 等，避免面铺开，消费侧按需补）。 */
     sqlJson: (body, signal) => post('/cluster/sql/query', body, undefined, { ...(signal ? { signal } : undefined), ioKind: 'sql' }),
     sqlTranslate: (body) => post('/cluster/sql/translate', body),
-    sqlCursor: (cursor) => post(`/cluster/sql/cursor?${q({ cursor })}`, undefined, undefined, { ioKind: 'sql' }),
+    sqlCursor: (cursor, timeZone, columnar) => post(`/cluster/sql/cursor?${q({ cursor, timeZone, columnar })}`, undefined, undefined, { ioKind: 'sql' }),
     sqlClose: (cursor) => post(`/cluster/sql/close?${q({ cursor })}`, undefined, undefined, { ioKind: 'sql' }),
     getDoc: (index, id) => get(`/cluster/doc?${q({ index, id })}`),
     putDoc: (index, id, body, refresh) => post(`/cluster/doc?${q({ index, id, refresh })}`, body),

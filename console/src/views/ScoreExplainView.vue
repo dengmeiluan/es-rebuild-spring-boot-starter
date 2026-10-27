@@ -121,6 +121,7 @@ import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环） */
 import RawIoModal from '../components/RawIoModal.vue';
 import { useAppStore } from '../stores/app';
+import { useGatedBootRead } from '../composables/usePageIdentityGate';
 import { useIdxState } from '../composables/urlState';
 import { useTierCycle } from '../composables/useTierCycle'; /* ：se.edH 三件套合并 */
 import { useScopedDraft } from '../composables/useScopedDraft';
@@ -148,12 +149,18 @@ const index = useIdxState({ follow: true });
 /* Query 接 dsl-assist——fields 闭包现调现读（DslQueryView 同范式）。
  fields() 侧惰性 ensure：补全触发才拉 mapping（挂载零请求），cache 命中后直读；
  不 await 零降级，失败仅无候选 */
-const { fields: assistFields, ensure: ensureAssistFields } = useIndexFields(() => index.value);
+const { fields: assistFields, ensure: seEnsureRaw } = useIndexFields(() => index.value);
+/* 1125：挂载即拉 mapping 属当前目标的数据——身份未落地先拉会带上一账号的 target。
+   门放行才发，未放行则记挂起，身份落地后补跑（useGatedBootRead 负责补跑时机）。 */
+const seAssistBoot = useGatedBootRead('score-explain', () => { void seEnsureRaw(); });
+function ensureAssistFields() { seAssistBoot.run(); }
 /* terms 闭包接线——索引源=index 与 fields 同源现调现读（fields 惰性 ensure 形态保持，554 F 口径不变） */
 const seTerms = useTermsSuggest(() => index.value);
 const dslAssist = { fields: () => { if (!assistFields.value.length) ensureAssistFields(); return assistFields.value; }, terms: (f: string, p: string) => seTerms.suggestAsync(f, p) };
 /* lint ctx 字段表与 dsl-assist 同源——挂载即 ensure（UpdateByQueryView immediate
  范式，只读 mapping 请求、失败零降级），fields 空=类型系规则自动跳过，零 ctx 规则始终生效 */
+/* 1125：挂载即拉 mapping 属当前目标的数据——身份未落地先拉会带旧 target；
+   未放行则挂起，身份/索引变化后补跑。 */
 watch(index, () => { void ensureAssistFields(); }, { immediate: true });
 /* lintDsl 静态体检（UpdateByQueryView 最简接线同款）——JSON 解析失败静默不阻塞 */
 const seLint = computed(() => {

@@ -7,7 +7,8 @@ import { ref, watch, type Ref } from 'vue';
 
 export function useJsonDraft(
   watchSource: () => unknown,
-  onValid: (v: Record<string, unknown>) => void,
+  onValid: (v: unknown) => void,
+  opts: { allowArray?: boolean } = {},
 ): { text: Ref<string>; bad: Ref<boolean>; onInput: (raw: string) => void } {
   const text = ref('');
   const bad = ref(false);
@@ -24,7 +25,12 @@ export function useJsonDraft(
     text.value = raw;
     try {
       const v = JSON.parse(raw);
-      if (typeof v !== 'object' || v === null || Array.isArray(v)) { bad.value = true; return; }
+      /* 1045：向量值（knn query_vector）合法形态就是数组，allowArray 档放行；
+         其余（percolate document / like 对象项）保持只收对象。 */
+      const shapeBad = opts.allowArray
+        ? (typeof v !== 'object' || v === null)
+        : (typeof v !== 'object' || v === null || Array.isArray(v));
+      if (shapeBad) { bad.value = true; return; }
       bad.value = false;
       onValid(v);
     } catch { bad.value = true; }   // 半截 JSON：只留草稿不写树

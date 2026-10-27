@@ -150,6 +150,17 @@
                 <span>{{ docsPartialHint }}</span>
                 <button class="ih-partial-x" aria-label="关闭提示" title="关闭提示" @click="docsPartialDismissed = true"><X :size="11" /></button>
               </div>
+              <!-- 有旧结果时再检索失败：结果表仍在（docsRan 不复位），错误只能挤在右下角 toast
+                   里、盖住表格正文。原位错误条把它搬回表格上方——不遮挡、可重试、旧结果标明
+                   「上一版」，用户知道看到的是什么数据。首查失败走下方 docsErr 空态分支。 -->
+              <div v-if="docsErr && docsRan" role="alert" class="err-bar rise-in ih-docs-err ih-docs-err-inline">
+                <pre class="mono" v-html="errPreHtml(docsErr, errMeta(docsErrRaw))"></pre>
+                <div class="ih-docs-err-acts">
+                  <span class="ih-docs-err-note">下方仍是上一次检索成功的结果</span>
+                  <button class="btn sm" @click="runDocs()" :disabled="docsLoading">重试</button>
+                  <button class="btn sm ghost" aria-label="收起本次错误提示" @click="dismissDocsErr">收起</button>
+                </div>
+              </div>
               <template v-if="docsRan">
                 <!-- 裁决「独立提示行太刺眼不划算」:教育文案收进表格工具行 Info 钮 tooltip;
  放大/查找内建表格(ResultTable focusable),不再视图层接线。
@@ -667,6 +678,7 @@
               class="ih-row" :class="{ on: idx.index === cur, 'ih-kb-focus': ihKb && i === ihFocus, 'ih-compact': rowH === 'compact', 'ih-cozy': rowH === 'cozy' }"
               :data-hit-idx="i + 1"
               @click="select(idx.index)"
+              @contextmenu.prevent="openIdxMenu($event, idx.index)"
               role="button" tabindex="0" @keydown.enter.prevent="select(idx.index)" @keydown.space.prevent="select(idx.index)">
               <span class="ih-hdot" :style="{ background: healthColor(idx.health) }"></span>
               <div class="ih-row-main">
@@ -695,6 +707,11 @@
   </div>
 
   <ReconcileReportDrawer v-model:show="rrOpen" />
+
+  <!-- 1142：索引行右键（此前列表行无右键）——选中/复制/打开工作区四 tab/带词进查询/
+       别名与 Mapping 直达；分组菜单两跳可达，列表只留行选中与复制钮不膨胀。 -->
+  <CellContextMenu v-if="idxMenu" :x="idxMenu.x" :y="idxMenu.y" :title="'索引 · ' + idxMenu.name"
+    :items="idxMenuItems" @close="idxMenu = null" />
 
   <!-- 查询 tab 页内历史（mode=dsl 单档全量，不做 index 过滤——简单优先：
        就地 DSL 常跨索引复制调参，索引维度过滤反而藏条目；模式维度过滤在查询工作台抽屉已有）。
@@ -731,6 +748,7 @@ import {
 
 import PageHeader from '../components/PageHeader.vue';
 import MarkText from '../components/MarkText.vue';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue'; /* 1142：索引行右键 */
 import { stripJsonComments, prettyJson, highlightJson } from '../utils/jsonc'; /* ：prettyJson/highlightJson——alt JSON 视图渲染源（DQ 同款） */
 import { errPreHtml, errMeta } from '../utils/errPre'; /* ：失败态 err-bar pre v-html 内核+错误码/失败端点双参（DQ/Xmigrate 同源） */
 import Pagination from '../components/Pagination.vue';
@@ -792,6 +810,7 @@ import { lintDsl } from '../utils/dslLint'; /* ：查询 tab JsonArea 划线体�
 import { shardsHint } from '../utils/shardsHint'; /* ：部分分片失败黄条（DQ .dq-partial 先例同件同口径） */
 import { useQueryRun } from '../composables/useQueryRun'; /*  P0-A：执行读秒+可取消（ 范式统一件） */
 import { writeStoredRaw } from '../utils/safeJson';
+import { resolveSortField } from '../utils/sortField';
 
 const router = useRouter();
 const store = useAppStore();
@@ -810,6 +829,9 @@ const canDeleteDoc = computed(() => auth.canEndpoint('ops', 'POST', '/internal/e
 const canRebuild = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/adhoc-rebuild/start', store.target));
 const canCreateIdx = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/create-index', store.target));
 const canSettings = computed(() => auth.canEndpoint('ops', 'POST', '/internal/es/index/cluster/index-settings/update', store.target));
+/* DevTools 入口能力（1124）：与 Snapshots/Ilm 同源（admin 档 = DevTools/REST 页写键或 ADMIN） */
+const canDevtools = computed(() => auth.canEndpoint('admin', 'POST',
+  '/internal/es/index/cluster/devtools/execute', store.target));
 /* raw 系分节全是系统管理面（refresh/flush/cache/forcemerge/close/open）：
    非 ADMIN 即使持 w:rest 也会被 raw 守卫 403，入口与执行体同档。 */
 const canAdmin = computed(() => auth.canAdminOps());
@@ -1131,12 +1153,17 @@ const fieldCount = computed(() => {
 });
 
 /* 字段类型映射（列名→ES 类型）——传给 RT 列头类型徽标（dbx 学习）。
-   只取顶层叶子字段（与 docs 检索返回的 _source 扁平键一致）；object 容器不进。 */
+   只取顶层叶子字段（与 docs 检索返回的 _source 扁平键一致）；object 容器不进。
+   multi-field 子域（title.keyword 等）同表登记：表头点击排序要按子域类型裁决
+   （text 主字段只有 .keyword 子域可排），漏登记会把可排的 text 列误判成不可排。 */
 const fieldTypesMap = computed<Record<string, string>>(() => {
   if (!mpProps.value) return {};
   const out: Record<string, string> = {};
   for (const [name, def] of Object.entries<any>(mpProps.value)) {
     if (def?.type) out[name] = def.type;
+    for (const [sub, sd] of Object.entries<any>(def?.fields || {})) {
+      if (sd?.type) out[name + '.' + sub] = sd.type;
+    }
   }
   return out;
 });
@@ -1311,6 +1338,13 @@ function runDocsNew() {
   void runDocs();
 }
 
+/* 收起表格上方的本次错误提示（旧结果仍在，用户已读完原因）——
+   只清提示不清错误态以外的东西；下次失败会重新出现。 */
+function dismissDocsErr() {
+  docsErr.value = '';
+  docsErrRaw.value = null;
+}
+
 /* ═══  W3：remoteSort 消费侧接线（y 遗留，dbx「排序下推」对标）═══
    RT remote 档只 emit 意图（{f,d:'asc'|'desc'}|null，null=取消排序回原始序），取数归宿主：
    排序变化携 ES sort body 重查当前页（不归页 1——排序是浏览态，页码语义与翻页一致）；
@@ -1318,14 +1352,25 @@ function runDocsNew() {
    查询 tab（qryTbl）不接线：DSL 是用户手写，服务端 sort 下推会与用户 sort 子句冲突。 */
 const docsSort = ref<{ f: string; d: 'asc' | 'desc' } | null>(null);
 function onDocsSortChange(s: { f: string; d: 'asc' | 'desc' } | null) {
+  /* 点 text 列直接下发 sort = fielddata 400；先裁决可排性（有 .keyword 子域→改写子域，
+     没有则拦下并给可行动提示，查询现场不动）。docsSort 仍存列名，箭头回显对得上列头。 */
+  if (s) {
+    const r = resolveSortField(s.f, fieldTypesMap.value);
+    if (!r.ok) { store.notify('warning', r.reason || '该列不支持排序'); return; }
+  }
   docsSort.value = s;
   void runDocs();
 }
 /* sort body 注入收口：parse-merge 包一层（buildDocsDsl 是共享纯函数且 源码锁锚其
-   字面调用形态，不改 utils/workbench.ts）；unmapped_type 防动态列/跨分片映射缺失 400。 */
+   字面调用形态，不改 utils/workbench.ts）；unmapped_type 防动态列/跨分片映射缺失 400。
+   列名→真实 sort 路径在此裁决（text 有子域走 .keyword），避免 fielddata 400。 */
 function buildDocsDslWithSort(): string {
   const o = JSON.parse(buildDocsDsl(docsQ.value, docsSize.value, (docsPage.value - 1) * docsSize.value)) as Record<string, unknown>;
-  if (docsSort.value) o.sort = [{ [docsSort.value.f]: { order: docsSort.value.d, unmapped_type: 'long' } }];
+  if (docsSort.value) {
+    const r = resolveSortField(docsSort.value.f, fieldTypesMap.value);
+    if (!r.ok) return JSON.stringify(o);
+    o.sort = [{ [r.field]: { order: docsSort.value.d, unmapped_type: 'long' } }];
+  }
   return JSON.stringify(o);
 }
 /* syncSort 回填通道（约定遗留收口）——docsSort 是宿主权威排序态，
@@ -1357,6 +1402,27 @@ const docsQLint = computed(() => {
    主动取消同形——按世代甄别：当前拍=真取消（播报），过期拍=静默丢弃；loading 与
    finish 同收世代（过期拍 finish 会清掉在途新拍的 AbortController=新拍取消钮失效） */
 let docsSeq = 0;
+/* 自动执行身份门（DQ autoRunAllowed 同口径）：挂载/切 tab/切索引/历史回放在宿主换 token
+   的窗口里都可能触发——probe 未落地时 me=null，旧 target 的查询会先发出去，结果串到新账号
+   界面。只读请求也必须在「身份已落地 + 当前目标可读」后才发。 */
+const docsAutoAllowed = () => auth.authDisabled
+  /* 探测未启动（无鉴权嵌入/测试宿主）视同身份已定——与 store.identityKnown 同口径；
+     一旦开始探测，必须等 probed 且身份落地，防旧 target 请求串到新账号 */
+  || !auth.probeStarted
+  || (auth.probed && auth.me != null && auth.canReadPage('indices', store.target));
+let docsAutoPending = false;
+/* 用户主动点「检索/重试」不走挂起通道：弹一次提示即可，不排队等身份。
+   自动通道（挂载/切 tab/切索引/历史回放）必须等身份落地——回放载荷可能来自上一账号。 */
+function runDocsAuto() {
+  if (docsAutoAllowed()) { docsAutoPending = false; void runDocs(); return; }
+  /* 身份未落地/目标不可读：保留挂起，等 watch 补跑；不让旧 target 的请求先发出去 */
+  docsAutoPending = true;
+}
+watch(() => [auth.probed, auth.authDisabled, auth.me?.username, store.target], () => {
+  if (!docsAutoPending || !docsAutoAllowed()) return;
+  docsAutoPending = false;
+  void runDocs();
+});
 async function runDocs() {
   if (!cur.value) return;
   const seq = ++docsSeq;
@@ -1425,7 +1491,9 @@ async function runDocs() {
     else {
       docsErr.value = '文档检索失败：' + friendlyEsError(String(e?.message ?? e));
       docsErrRaw.value = e; /* ：原始对象旁路（errMeta 读 code/endpoint） */
-      store.notify('error', docsErr.value);
+      /* 原位错误条已占位（首查失败=全页错误态；有旧结果=表格上方条），不再叠一个
+         右下角 toast 盖住结果表正文——历史仍记，需要时通知面板可回看。 */
+      store.notify('error', docsErr.value, { logOnly: true });
       if (docsQ.value.trim()) useQueryHistoryStore().push('lucene', docsQ.value, idx, -1, false); /* 失败也标记（红点口径）；空词不入历史同上 */
     }
   } finally {
@@ -1594,6 +1662,8 @@ function goQryPage(p: number) {
 /* 就地 DSL 带到 DevTools（_prefill 会话契约） */
 function openQryInDevTools() {
   if (!qryResp.value) return;
+  /* 入口能力前置（1124）：无 DevTools 权限时目标页只会「填入不执行」，在来源页就说清楚 */
+  if (!canDevtools.value) { store.notify('warning', 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'); return; }
   const idxPath = cur.value ? `/${cur.value}/_search` : '/_search';
   writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
     title: cur.value || '_search',
@@ -1616,6 +1686,17 @@ function runDslNew() {
    切索引后旧拍返回时 idx===cur 恒假，qryLoading 永久卡死（执行/重试钮永久 disabled、
    取消钮常驻，query 链无 docs 链的自动重拉自愈路径） */
 let qrySeq = 0;
+/* 查询 tab 同款身份门：dsl 草稿可能是上一账号回放/carry 来的，身份未落地前不发。 */
+let qryAutoPending = false;
+function runDslAuto() {
+  if (docsAutoAllowed()) { qryAutoPending = false; void runDsl(); return; }
+  qryAutoPending = true;
+}
+watch(() => [auth.probed, auth.authDisabled, auth.me?.username, store.target], () => {
+  if (!qryAutoPending || !docsAutoAllowed()) return;
+  qryAutoPending = false;
+  void runDsl();
+});
 async function runDsl() {
   if (!cur.value || qryLoading.value) return;
   const seq = ++qrySeq;
@@ -1712,19 +1793,22 @@ function replayIhHist(row: { query: string; mode?: string }, runIt: boolean) {
   if (row.mode === 'lucene') {
     tab.value = 'docs';
     docsQ.value = row.query;
+    docsPage.value = 1; /* runDocsNew 原语义：历史回放从第 1 页看起 */
     histOpen.value = false;
-    if (runIt) runDocsNew();
+    if (runIt) runDocsAuto();
     return;
   }
   dsl.value = row.query;
+  qryPage.value = 1; /* runDslNew 原语义 */
   histOpen.value = false;
-  if (runIt) runDslNew();
+  if (runIt) runDslAuto();
 }
 /* 历史行带到 DevTools 新 Tab（openQryInDevTools :252 _prefill 通道平移）——
    lucene 行不适用（DevTools Tab body 是 DSL 语义），notify 引导走 docs 检索框回放；
    dsl 行组装 POST /{index}/_search -d body（行自持 query/index） */
 function ihHistNewTab(h: { query?: string; index?: string; mode?: string }) {
   if (h.mode && h.mode !== 'dsl') { store.notify('info', 'Lucene 检索词请回 docs 检索框回放（DevTools 新 Tab 仅收 DSL）'); return; }
+  if (!canDevtools.value) { store.notify('warning', 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'); return; }
   const idxPath = (h.index ? '/' + h.index : '') + '/_search';
   let body = h.query || '';
   try { body = JSON.stringify(JSON.parse(stripJsonComments(body)), null, 2); } catch { /* 非 JSON 原样带过去 */ }
@@ -1918,7 +2002,7 @@ function refreshHits() {
 }
 
 /* Tab 首次进文档页自动拉一批（免手动点检索才见数据） */
-watch(tab, t => { if (t === 'docs' && cur.value && !docsRan.value && !docsLoading.value) runDocs(); });
+watch(tab, t => { if (t === 'docs' && cur.value && !docsRan.value && !docsLoading.value) runDocsAuto(); });
 
 watch(cur, () => {
   loadDetail(true);
@@ -1929,15 +2013,24 @@ watch(cur, () => {
   docsErr.value = ''; docsErrRaw.value = null; /* ：错误条属上个索引的检索，随切清场（qryErr 同款） */
   qryResp.value = null; qryErr.value = ''; qryPage.value = 1; qryProfileTree.value = null; /* ：查询 tab 翻页同步归位 */
   docsHist.reset(); qryHist.reset(); /* ：切索引清直方图桶态（ES 拒绝拉黑按索引维度保留，DQ 同语义） */
-  if (tab.value === 'docs' && cur.value) runDocs();
+  if (tab.value === 'docs' && cur.value) runDocsAuto();
 });
 onMounted(() => {
   if (!store.indices.length) store.loadIndices();
+  /* 1125：挂载期两处读取（别名清单 / 当前索引详情）此前不过身份门——宿主换 token 的
+     窗口里 probed 未落地，旧 target 的别名与 mapping 会先拉回来（结果串到新账号界面）。
+     runDocsAuto 已有自己的 autoRun 门，这里只补这两条。 */
+  if (indexHubReadReady()) { loadAliases(); if (cur.value) { loadDetail(); if (tab.value === 'docs') runDocsAuto(); } }
+  else indexHubPendingBoot = true;
+});
+const indexHubReadReady = () => auth.authDisabled || !auth.probeStarted
+  || (auth.probed && auth.me != null && auth.canReadPage('indices', store.target));
+let indexHubPendingBoot = false;
+watch(() => [auth.probed, auth.authDisabled, auth.me?.username, store.target], () => {
+  if (!indexHubPendingBoot || !indexHubReadReady()) return;
+  indexHubPendingBoot = false;
   loadAliases();
-  if (cur.value) {
-    loadDetail();
-    if (tab.value === 'docs') runDocs();
-  }
+  if (cur.value) { loadDetail(); if (tab.value === 'docs') runDocsAuto(); }
 });
 
 /* ==== 操作 ==== */
@@ -1970,6 +2063,39 @@ async function doCopyName(name: string) {
   if (await copyText(name)) store.notify('success', '已复制：' + name); /* */
   else store.notify('error', '复制失败，请手动选中后 Ctrl+C');
 }
+
+/* 1142：索引行右键菜单——动作全是本页既有能力的快捷入口（select/tab/goto/复制），
+ 不新增写操作；分组只收低频项，避免一级 >6 平铺。 */
+const idxMenu = ref<{ x: number; y: number; name: string } | null>(null);
+function openIdxMenu(e: MouseEvent, name: string) {
+  idxMenu.value = { x: e.clientX, y: e.clientY, name };
+}
+const idxMenuItems = computed<CcmItem[]>(() => {
+  const m = idxMenu.value; if (!m) return [];
+  const nm = m.name;
+  const goTab = (t: TabKey) => () => { select(nm); tab.value = t; };
+  return [
+    { key: 'open', label: '选中并打开工作区', icon: Boxes, run: () => select(nm) },
+    { key: 'copy-name', label: '复制索引名', icon: Copy, run: () => void doCopyName(nm) },
+    {
+      key: 'tabs-group', label: '打开分页…', icon: List, sep: true, children: [
+        { key: 'tab-docs', label: '文档', icon: FileSearch, run: goTab('docs') },
+        { key: 'tab-query', label: '查询', icon: Search, run: goTab('query') },
+        { key: 'tab-mapping', label: 'Mapping', icon: FolderTree, run: goTab('mapping') },
+        { key: 'tab-settings', label: 'Settings', icon: Sliders, run: goTab('settings') },
+        { key: 'tab-shards', label: '分片', icon: Boxes, run: goTab('shards') },
+        { key: 'tab-ops', label: '运维', icon: Hammer, run: goTab('ops') },
+      ],
+    },
+    {
+      key: 'goto-group', label: '在其它页打开…', icon: ExternalLink, children: [
+        { key: 'goto-search', label: '查询工作台（预填此索引）', icon: Search, run: () => { store.pick(nm); goto('/search?mode=dsl'); } },
+        { key: 'goto-browser', label: '数据浏览器', icon: FileSearch, run: () => { store.pick(nm); router.push({ path: '/browser', query: { idx: nm } }); } },
+        { key: 'goto-aliases', label: '别名管理', icon: Link2, run: () => { store.pick(nm); goto('/aliases'); } },
+      ],
+    },
+  ];
+});
 
 /* ═══ ：分片分布复制（运维真实高频——贴工单/群聊问「为什么黄了」）═══ */
 async function copyShardTable() {
@@ -2304,6 +2430,12 @@ async function askDelIndex() {
  docs tab err-bar（ih-docs-err）同步裸插值升级 pre 双参共用此组 */
 .ih-qerr, .ih-docs-err { align-items: flex-start; }
 .ih-qerr { margin-top: var(--sp-2h); margin-bottom: 0; }
+/* 有旧结果的检索失败：错误条压在结果表上方，给结果表留出下边距，不与工具行贴死 */
+.ih-docs-err-inline { margin-bottom: var(--sp-2); }
+/* pre 在 inline 档限高更紧（240px 已是半屏，盖过结果表），正文让位给表格 */
+.ih-docs-err-inline pre { max-height: 132px; }
+.ih-docs-err-acts { display: flex; align-items: center; gap: var(--sp-1h); flex: none; flex-wrap: wrap; }
+.ih-docs-err-note { font-size: var(--fs-xs); color: var(--tx2); }
 .ih-qerr pre, .ih-docs-err pre {
   flex: 1 1 auto; min-width: 0; font-size: var(--fs-xs); color: var(--tx1); line-height: 1.5;
   white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; margin: 0;

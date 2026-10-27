@@ -143,6 +143,7 @@ import RawIoModal from '../components/RawIoModal.vue';
 import PermModal from '../components/PermModal.vue';
 import { friendlyEsError } from '../utils/esError';
 import { useAppStore } from '../stores/app';
+import { useGatedBootRead } from '../composables/usePageIdentityGate';
 import { useAuthStore } from '../stores/auth';
 import { useScopedDraft } from '../composables/useScopedDraft';
 import { askConfirm } from '../composables/confirm';
@@ -359,7 +360,9 @@ function injectUbq() {
   } catch { store.notify('warning', 'params JSON 无效'); }
 }
 
-onMounted(loadStored);
+/* 1125：存储脚本清单属当前目标的数据，身份未落地先拉会把上一账号的脚本源带进新会话 */
+const storedBoot = useGatedBootRead('painless-lab', loadStored);
+onMounted(() => storedBoot.run());
 
 /* err 态 EmptyState「重试」入口——在途短路承接原钮 :disabled="storedLoading"
  防重入语义（loadStored 本体不设防：onMounted 首载时 storedLoading 初值即 true（G7-B2

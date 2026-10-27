@@ -201,7 +201,8 @@ describe('五百六十批源码锁：QRT JSON 钮+双内核接线', () => {
 
   it('frozenStyleOf / buildExportSheets 双内核接线（基数 98/52 常参在场）', () => {
     expect(rt).toContain('frozenStyleOf(visibleCols.value, colWidths.value, col, freezeN.value, 98, true)');
-    expect(qrt).toContain('frozenStyleOf(visibleCols.value, colWidths.value, col, freezeN.value, 52, prefsOn.value)');
+    /* 1141：门控从 prefsOn 放宽到 barOn（内存态工具行也可冻结） */
+    expect(qrt).toContain('frozenStyleOf(visibleCols.value, colWidths.value, col, freezeN.value, 52, barOn.value)');
     expect(rt).toContain('buildExportSheets(');
     expect(qrt).toContain('buildExportSheets(');
   });

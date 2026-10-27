@@ -80,15 +80,27 @@ describe('BrowserView 索引表右键能力（132 批 → 529 QRT 消费形态�
     expect(document.querySelector('.ccm-mask .ccm-hd')?.textContent).toContain('索引');
     const labels = menuButtons().map(b => b.textContent?.trim());
     expect(labels).toContain('复制值');
-    expect(labels).toContain('复制行 JSON');
-    /* 操作列五钮齐（旧菜单 hub/dsl/mapping/del 四项经槽保真 + ForceMerge 钮） */
+    /* 1142：复制行 JSON 收进「复制…」二级（与 QRT/RT 同一分组语言） */
+    const copyGroup = [...document.querySelectorAll('.ccm-mask .ccm-it')]
+      .find(b => (b.textContent ?? '').includes('复制…') && b.getAttribute('aria-haspopup') === 'menu') as HTMLButtonElement;
+    expect(copyGroup, '复制分组父行在场').toBeTruthy();
+    copyGroup.click();
+    for (let i = 0; i < 6; i++) { await nextTick(); await Promise.resolve(); }
+    const subLabels = [...document.querySelectorAll('.ccm-mask .ccm-sub .ccm-it')].map(b => b.textContent?.trim());
+    expect(subLabels).toContain('复制行 JSON');
+    /* 1148：操作列常驻只留「索引工作区 + 更多 ⋯」（五颗图标钮会把操作列撑到 300px+），
+       其余四项收进 ⋯ 弹层，能力零删除。 */
     const acts = host.querySelector('.bw-acts')!;
-    const actLabels = [...acts.querySelectorAll('button')].map(b => b.getAttribute('aria-label'));
-    expect(actLabels).toContain('索引工作区（文档/查询/配置/分片/运维）');
-    expect(actLabels).toContain('DSL 查询');
-    expect(actLabels).toContain('Mapping');
-    expect(actLabels).toContain('ForceMerge 段合并');
-    expect(actLabels).toContain('删除索引');
+    expect(acts.querySelectorAll('button').length, '常驻两钮（工作区 + 更多）').toBe(2);
+    expect([...acts.querySelectorAll('button')].map(b => b.getAttribute('aria-label')))
+      .toContain('索引工作区（文档/查询/配置/分片/运维）');
+    expect([...acts.querySelectorAll('button')].map(b => b.getAttribute('aria-label'))[1])
+      .toMatch(/^更多操作：/);
+    /* 打开「更多」：DSL 查询 / Mapping / ForceMerge / 删除索引 全在 */
+    (acts.querySelectorAll('button')[1] as HTMLButtonElement).click();
+    for (let i = 0; i < 8; i++) { await nextTick(); await Promise.resolve(); }
+    const moreLabels = [...document.querySelectorAll('.bw-more .bw-more-it')].map(b => (b.textContent ?? '').trim());
+    expect(moreLabels).toEqual(['DSL 查询', 'Mapping', 'ForceMerge 段合并', '删除索引']);
   });
 
   it('「复制值」（索引名格）走剪贴板', async () => {
@@ -101,11 +113,14 @@ describe('BrowserView 索引表右键能力（132 批 → 529 QRT 消费形态�
     expect(writeText).toHaveBeenCalledWith('idx-rt');
   });
 
-  it('操作列「删除索引」钮 danger 红色分层（旧菜单 danger+sep 语义保真）', async () => {
+  it('「更多」里的删除索引仍带 danger 语义（旧菜单 danger+sep 保真）', async () => {
     await mountBrowser();
-    const del = [...host.querySelectorAll<HTMLButtonElement>('.bw-acts button')]
-      .find(b => b.getAttribute('aria-label') === '删除索引')!;
-    expect(del.className).toContain('danger');
+    const more = [...host.querySelectorAll<HTMLButtonElement>('.bw-acts button')][1];
+    more.click();
+    for (let i = 0; i < 8; i++) { await nextTick(); await Promise.resolve(); }
+    const del = [...document.querySelectorAll<HTMLButtonElement>('.bw-more .bw-more-it')]
+      .find(b => (b.textContent ?? '').includes('删除索引'))!;
+    expect(del.classList.contains('danger')).toBe(true);
   });
 
   it('操作列「索引工作区」钮触发 goHub（router.push 落 /indices）', async () => {

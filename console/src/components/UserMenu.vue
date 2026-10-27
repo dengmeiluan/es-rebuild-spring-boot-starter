@@ -1,17 +1,17 @@
 <template>
   <n-popover v-if="auth.me" trigger="click" placement="bottom-end" :show-arrow="false" raw :show="umOpen" @update:show="v => umOpen = v">
     <template #trigger>
-      <button class="um-chip" :title="'当前身份：' + primaryName + '（' + auth.me.role + '）'"
-        :aria-label="'用户菜单：' + primaryName + '（' + auth.me.role + '）'" :aria-expanded="umOpen">
-        <span class="um-avatar" :class="'av-' + auth.me.role.toLowerCase()">{{ initial }}</span>
+      <button class="um-chip" :title="'当前身份：' + primaryName + '（' + roleText + '）'"
+        :aria-label="'用户菜单：' + primaryName + '（' + roleText + '）'" :aria-expanded="umOpen">
+        <span class="um-avatar" :class="'av-' + roleText.toLowerCase()">{{ initial }}</span>
         <span class="um-name">{{ primaryName }}</span>
-        <span class="um-dot" :class="'r-' + auth.me.role.toLowerCase()" />
+        <span class="um-dot" :class="'r-' + roleText.toLowerCase()" />
         <ChevronDown :size="11" class="um-caret" />
       </button>
     </template>
     <div class="um-panel" role="dialog" aria-label="用户菜单">
       <div class="um-head">
-        <span class="um-avatar lg" :class="'av-' + auth.me.role.toLowerCase()">{{ initial }}</span>
+        <span class="um-avatar lg" :class="'av-' + roleText.toLowerCase()">{{ initial }}</span>
         <div class="um-head-txt">
           <div class="um-head-name">{{ primaryName }}</div>
           <div v-if="auth.me.displayName && auth.me.displayName !== auth.me.username" class="um-head-sub mono" :title="auth.me.username">
@@ -23,7 +23,7 @@
         <div class="um-row">
           <span class="um-k">角色</span>
           <span class="um-v">
-            <span class="role-tag" :class="'r-' + auth.me.role.toLowerCase()">{{ auth.me.role }}</span>
+            <span class="role-tag" :class="'r-' + roleText.toLowerCase()">{{ roleText }}</span>
             <span class="um-hint">{{ roleHint }}</span>
           </span>
         </div>
@@ -78,7 +78,8 @@ const primaryName = computed(() => {
   const m = auth.me;
   if (!m) return '';
   if (m.displayName) return m.displayName;
-  return m.username.length > 18 ? m.username.slice(0, 8) + '…' + m.username.slice(-4) : m.username;
+  const u = String(m.username ?? '（未命名身份）');
+  return u.length > 18 ? u.slice(0, 8) + '…' + u.slice(-4) : u;
 });
 
 const shortUsername = computed(() => {
@@ -89,8 +90,12 @@ const shortUsername = computed(() => {
 /** 头像字：取主显名首个字符（中文名取姓、英文名取首字母） */
 const initial = computed(() => {
   const n = auth.me?.displayName || auth.me?.username || '?';
-  return n.charAt(0).toUpperCase();
+  return String(n).charAt(0).toUpperCase();
 });
+
+/* 身份可能来自宿主委托且字段不全（role 缺席）——模板直读 .toLowerCase() 会白屏，
+   这里统一出口：缺席按 VIEWER 档渲染（与后端「无写权限」默认一致）。 */
+const roleText = computed(() => String(auth.me?.role || 'VIEWER'));
 
 const roleHint = computed(() => {
   const r = auth.me?.role;

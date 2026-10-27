@@ -22,10 +22,26 @@ function mount(node: LeafNode, types: Record<string, string> = { status: 'keywor
     app.provide(TREE_BUS, {
       move: (...args: unknown[]) => bus.moves.push(args),
       toggleDisabled: (id: string, disabled: boolean) => bus.toggles.push([id, disabled]),
+      defineRuntime: () => false,
     });
   }
   app.mount(host);
   return { host, cur };
+}
+
+/* 1124：智能换算子只在「从候选弹层明确选中字段」时发生；输入半截不再换算子。
+ 测试用 helper：输入 → 等候选 → 点选目标项（等价真人从下拉选中）。 */
+async function pickField(host: HTMLElement, value: string) {
+  const inp = host.querySelector('.fs-inp') as HTMLInputElement;
+  inp.focus();
+  inp.value = value;
+  inp.dispatchEvent(new Event('input'));
+  await new Promise(r => setTimeout(r));
+  const item = [...document.querySelectorAll('.fs-pop .fs-item')]
+    .find(e => (e.textContent || '').includes(value)) as HTMLElement | undefined;
+  expect(item, '候选 ' + value + ' 应出现在字段弹层').toBeTruthy();
+  item!.click();
+  await new Promise(r => setTimeout(r));
 }
 
 beforeEach(() => { document.body.innerHTML = ''; localStorage.clear(); });
@@ -47,10 +63,7 @@ describe('ClauseNode', () => {
   });
   it('换字段后算子不合法时回落到该类型首算子', async () => {
     const { host, cur } = mount(mk({ op: 'match' }), { status: 'date' });
-    const inp = host.querySelector('.fs-inp') as HTMLInputElement;
-    inp.value = 'status';
-    inp.dispatchEvent(new Event('input'));
-    await new Promise(r => setTimeout(r));
+    await pickField(host, 'status');
     expect(cur.value.op).toBe('range');   // date 推荐首算子
   });
   it('exists 不渲染值输入', () => {
@@ -135,10 +148,7 @@ describe('ClauseNode', () => {
 
   it('换字段算子不兼容被静默替换时行内微提示出现（aria-live=polite），兼容替换不提示', async () => {
     const { host, cur } = mount(mk({ op: 'match' }), { status: 'date' });
-    const inp = host.querySelector('.fs-inp') as HTMLInputElement;
-    inp.value = 'status';
-    inp.dispatchEvent(new Event('input'));
-    await new Promise(r => setTimeout(r));
+    await pickField(host, 'status');
     expect(cur.value.op).toBe('range');
     const nudge = host.querySelector('.cn-nudge') as HTMLElement;
     expect(nudge, '静默换算子必须行内告知').not.toBeNull();
@@ -147,10 +157,7 @@ describe('ClauseNode', () => {
     expect(nudge.getAttribute('aria-live')).toBe('polite');
 
     const h2 = mount(mk({ op: 'term' }), { status: 'keyword' });
-    const inp2 = h2.host.querySelector('.fs-inp') as HTMLInputElement;
-    inp2.value = 'status';
-    inp2.dispatchEvent(new Event('input'));
-    await new Promise(r => setTimeout(r));
+    await pickField(h2.host, 'status');
     expect(h2.host.querySelector('.cn-nudge'), '算子兼容（term 仍在 keyword 推荐表）不提示').toBeNull();
   });
 
@@ -161,6 +168,11 @@ describe('ClauseNode', () => {
       const inp = host.querySelector('.fs-inp') as HTMLInputElement;
       inp.value = 'status';
       inp.dispatchEvent(new Event('input'));
+      await vi.advanceTimersByTimeAsync(0);
+      const item = [...document.querySelectorAll('.fs-pop .fs-item')]
+        .find(e => (e.textContent || '').includes('status')) as HTMLElement | undefined;
+      expect(item, '候选 status 应出现').toBeTruthy();
+      item!.click();
       await vi.advanceTimersByTimeAsync(0);
       const nudge = host.querySelector('.cn-nudge') as HTMLElement;
       expect(nudge).not.toBeNull();
@@ -350,5 +362,111 @@ describe('1005 terms/ids 值 chip 视觉化', () => {
     inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
     await tick();
     expect(cur.value.value).toEqual(['1', '2', '3']);
+  });
+});
+
+/* 1124：输入半截字段不再被当成「未知字段」换算子；只有候选选中才做类型智能切换 */
+describe('1124 字段输入与算子切换解耦', () => {
+  it('rank_feature 输入半截/未知字段保持算子；选中 rank_features 字段仍保持', async () => {
+    const { host, cur } = mount(mk({ op: 'rank_feature', field: '', value: 1 }), { status: 'keyword', rank_score: 'rank_features' });
+    const inp = host.querySelector('.fs-inp') as HTMLInputElement;
+    inp.value = 'ran';
+    inp.dispatchEvent(new Event('input'));
+    await new Promise(r => setTimeout(r));
+    expect(cur.value.op, '半截输入不得降为 exists').toBe('rank_feature');
+    await pickField(host, 'rank_score');
+    expect(cur.value.op).toBe('rank_feature');
+    const inp2 = host.querySelector('.fs-inp') as HTMLInputElement;
+    inp2.value = 'ghost';
+    inp2.dispatchEvent(new Event('input'));
+    await new Promise(r => setTimeout(r));
+    expect(cur.value.op, '未知字段也不得静默换算子').toBe('rank_feature');
+  });
+
+  it('distance_feature 的 pivot 字符串切到 rank_feature：boost 回落 1（不留 7d 非法串）', async () => {
+    const { host, cur } = mount(mk({ op: 'distance_feature', field: 'publish_time', value: '7d' }), { publish_time: 'date' });
+    const sel = host.querySelector('.cn-op') as HTMLSelectElement;
+    sel.value = 'rank_feature';
+    sel.dispatchEvent(new Event('change'));
+    await new Promise(r => setTimeout(r));
+    expect(cur.value.op).toBe('rank_feature');
+    expect(cur.value.value).toBe(1);
+  });
+});
+
+/* 1045 ClauseNode 智能值守卫 */
+describe('1045 ClauseNode 智能值守卫', () => {
+  const tick = () => new Promise(r => setTimeout(r));
+
+  it('keyword term → date 字段：算子回落 range 且旧标量值不残留为 range 值', async () => {
+    const { host, cur } = mount(mk({ field: 'status', op: 'term', value: 'active' }), { status: 'keyword', pub: 'date' });
+    await pickField(host, 'pub');
+    expect(cur.value.op).toBe('range');
+    expect(cur.value.value).toEqual({});   // 旧 'active' 不得成为 {range:{pub:'active'}}
+    const ranges = host.querySelectorAll('.cn-range') as NodeListOf<HTMLInputElement>;
+    expect(ranges.length).toBe(4);
+    expect([...ranges].every(r => r.value === '')).toBe(true);
+  });
+
+  it('空值 term → date 字段：值形态也必须落 {}（不能留空串让 DSL 出现 range:""）', async () => {
+    const { host, cur } = mount(mk({ field: 'status', op: 'term', value: '' }), { status: 'keyword', pub: 'date' });
+    await pickField(host, 'pub');
+    expect(cur.value.op).toBe('range');
+    expect(cur.value.value).toEqual({});
+  });
+
+  it('单值位粘贴 Excel 一列/换行文本 → 自动升为 terms 多值精确', async () => {
+    const { host, cur } = mount(mk({ field: 'tag', op: 'term', value: '' }), { tag: 'keyword' });
+    const inp = host.querySelector('.cn-val') as HTMLInputElement;
+    const ev = new Event('paste', { bubbles: true }) as any;
+    Object.defineProperty(ev, 'clipboardData', { value: { getData: () => 'alpha\nbeta\n"gamma"' } });
+    inp.dispatchEvent(ev);
+    await tick();
+    expect(cur.value.op).toBe('terms');
+    expect(cur.value.value).toEqual(['alpha', 'beta', 'gamma']);
+    expect(host.querySelectorAll('.cn-chip').length).toBe(3);
+  });
+
+  it('单值位粘贴 JSON 数组 → 按项落入 terms', async () => {
+    const { host, cur } = mount(mk({ field: 'tag', op: 'term', value: '' }), { tag: 'keyword' });
+    const inp = host.querySelector('.cn-val') as HTMLInputElement;
+    const ev = new Event('paste', { bubbles: true }) as any;
+    Object.defineProperty(ev, 'clipboardData', { value: { getData: () => '["a","b"]' } });
+    inp.dispatchEvent(ev);
+    await tick();
+    expect(cur.value.op).toBe('terms');
+    expect(cur.value.value).toEqual(['a', 'b']);
+  });
+});
+
+/* 1045 批：向量查询值 JSON 编辑位（knn 数组 / sparse_vector 对象） */
+describe('1045 ClauseNode 向量值编辑', () => {
+  const tick = () => new Promise(r => setTimeout(r));
+
+  it('knn query_vector 数组渲染 JSON 编辑区；合法改动写树，半截标红不写', async () => {
+    const { host, cur } = mount(mk({ op: 'knn', field: 'emb', value: [0.1, 0.2] }), { emb: 'dense_vector' });
+    const ta = host.querySelector<HTMLTextAreaElement>('.cn-perc');
+    expect(ta, '向量值不得落 String(array) 标量输入').toBeTruthy();
+    expect(ta!.value).toBe('[\n  0.1,\n  0.2\n]');
+    ta!.value = '[0.3, 0.4]';
+    ta!.dispatchEvent(new Event('input'));
+    await tick();
+    expect(cur.value.value).toEqual([0.3, 0.4]);
+    expect(ta!.classList.contains('bad')).toBe(false);
+    ta!.value = '[0.3,';
+    ta!.dispatchEvent(new Event('input'));
+    await tick();
+    expect(ta!.classList.contains('bad')).toBe(true);
+    expect(cur.value.value, '半截 JSON 不写树').toEqual([0.3, 0.4]);
+  });
+
+  it('sparse_vector query_vector 对象同用 JSON 编辑区', async () => {
+    const { host, cur } = mount(mk({ op: 'sparse_vector', field: 'ml.tokens', value: { 债: 2.1 } }), { 'ml.tokens': 'sparse_vector' });
+    const ta = host.querySelector<HTMLTextAreaElement>('.cn-perc')!;
+    expect(ta.value).toContain('"债": 2.1');
+    ta.value = '{"债": 1.5, "券": 0.8}';
+    ta.dispatchEvent(new Event('input'));
+    await tick();
+    expect(cur.value.value).toEqual({ 债: 1.5, 券: 0.8 });
   });
 });

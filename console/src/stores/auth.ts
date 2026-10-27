@@ -92,6 +92,13 @@ export const useAuthStore = defineStore('auth', () => {
     'es-console.qw.session:', 'es_console_terms_stash', 'es-console.qb.subtree',
     'es-console.pref.sqlbridge.sql', 'es-console.health-report.last', 'es_vars',
     'es_confirm_skip:',
+    /* 账号切换审计补齐（1008）：SQL 位置参数原文、DSL 请求级参数、查询沙盒 body、
+       大屏全屏意图——都是上一账号的查询现场，换人后不得回填/沿用。
+       1100 续：`es-console.pref.sql.*` 整族（timeZone/pageTimeout/columnar/fetchSize/
+       lenient/aggChartOpen）同样是执行口径——换人后沿用上一账号的时区会让日期列与
+       cursor 续页口径错位，仅保护 `.params` 一个键不够。 */
+    'es-console.pref.sql.', 'es-console.pref.dq.req.', 'ss_dsl_body',
+    'es-console.live.',
   ];
   function purgeUserRequestState() {
     for (const storage of [localStorage, sessionStorage]) {
@@ -210,6 +217,9 @@ export const useAuthStore = defineStore('auth', () => {
        下一账号登录时 prev='' 同样触发一次清理（幂等）。 */
     removeStoredRaw(localStorage, LAST_USER_KEY);
     ioRecorder.clear();
+    /* 连接目录 → env 模板映射是上一账号的连接可见性产物：残留会让新账号按旧 env
+       判页面（该拦的放行、该放的误拦）。 */
+    connEnvById.value = {};
     try {
       window.dispatchEvent(new CustomEvent('es-console:identity-changed', { detail: { username: '' } }));
     } catch { /* 非浏览器/派发失败：内存重置由调用方兜底 */ }
@@ -222,7 +232,9 @@ export const useAuthStore = defineStore('auth', () => {
     probeSeq++; /* 作废在飞/待重试的身份探测，避免退出后又被旧回包填回 me */
     clearProbeRetry();
     clearToken();
-    ioRecorder.clear(); /* 请求原文（可能含连接口令）不得留给下一个登录用户 */
+    /* 内置登录的本地登出同样要清工作现场：此前只清 me/token，草稿/目标/历史留在
+       磁盘到下一次登录才清——共享工位登出后仍可被后来者读到上一账号查询原文。 */
+    purgeLocalUserState();
     me.value = null;
     showLogin.value = true;
   }
@@ -278,6 +290,11 @@ export const useAuthStore = defineStore('auth', () => {
   };
 
   const isAdmin = () => me.value?.role === 'ADMIN';
+  /* 环境封顶与实际角色无关：ADMIN 不受页面白名单约束，但要受「这个连接是生产库」约束。
+     后端 ConsoleAuthInterceptor.envCapViolation 同口径（该判定在 ADMIN 豁免之前）。
+     判不出页面归属时返回 null = 不封顶，避免把 keys/indices 这类基础读误拦掉。 */
+  const envCapOf = (pageKey: string | null | undefined, targetId?: string | null): string | null =>
+    !pageKey || envAllows(pageKey, targetId) ? null : pageKey;
   /* 连接元数据可见性：ADMIN/未启用鉴权/静态键模型看全部；conn 模型只看授权连接，防未授权连接名/host 外泄 */
   const canSeeConn = (connId: string): boolean => {
     if (!identityKnown()) return false; /* 探测中/探测失败：连接名也不外泄 */
@@ -564,7 +581,31 @@ export const useAuthStore = defineStore('auth', () => {
   const canEndpoint = (cap: ConsoleCap, method: string, path: string, targetId: string | null | undefined) => {
     if (!identityKnown()) return false;
     if (me.value == null) return true;
-    if (isAdmin()) return true; /* 超管全局端点权：与后端 ADMIN 页面门豁免镜像 */
+    /* 委派身份（含委派 ADMIN）不得写本地账号——先于 isAdmin() 豁免，与后端
+       BuiltinConsoleAuthService.forbidDelegatedLocalUserWrite 同口径。放在能力层而不是
+       单个视图中：任何按此能力渲染的入口都自动同源，不会再冒出第二个「亮着必失败」的钮。 */
+    if (me.value.delegated && String(path || '').includes('/auth/users')
+        && String(method || 'GET').toUpperCase() !== 'GET') return false;
+    /* 环境封顶先于 ADMIN 豁免（后端 envCapViolation 同序）：ADMIN 不受页面白名单约束，
+       但要受「当前连接是生产库」约束。判不出页归属时 envCapOf 返回 null → 不封顶。 */
+    if (isAdmin()) {
+      const cleanPath = String(path || '').split('?')[0].split('#')[0];
+      /* host-bound 端点恒在宿主执行，不吃连接 env 模板（后端 isHostBoundPath 同口径）。
+         实测：当前这些自举路径即便去掉本行也会因「判不出页归属」而放行，所以它是
+         **防御性**的——防的是 pageCatalog 将来给某个自举端点挂上页前缀后，
+         PROD 视图把 /auth/me 之类封掉、让人失去自助能力。 */
+      if (isHostBoundPath(cleanPath)) return true;
+      const tid = (!targetId || String(targetId).toLowerCase() === 'host') ? 'host' : String(targetId);
+      const ownerKey = pageOwnerOf(cleanPath);
+      if (ownerKey) return envCapOf(ownerKey, tid) == null;
+      /* 无页前缀的复用端点（raw / devtools / sql…）落在共享表：任一归属页在模板内即可 */
+      const sharedKeys = sharedWritePageKeys(path) || sharedReadPageKeys(path)
+        /* raw 透传只列在 ADMIN_WRITE_HINTS（角色专属，无 conn 写键形态），共享表里没有它；
+           它的页面语义就是「DevTools/REST 写」。漏掉这条会让 PROD 连接上 raw 仍然亮着。 */
+        || (cleanPath.includes('/cluster/raw') ? ['devtools', 'rest'] : null);
+      if (sharedKeys && sharedKeys.length) return sharedKeys.some(k => envAllows(k, tid));
+      return true;
+    }
     const gp = me.value.grantedPages;
     if (Array.isArray(gp) && gp.length === 0) return false; /* 空集=全拒：与后端 isEmpty 分支同源 */
     const isConn = Array.isArray(gp) && gp.some(g => g.startsWith('conn:'));
@@ -662,12 +703,14 @@ export const useAuthStore = defineStore('auth', () => {
     /* 用户管理/重绑是授权载体本身：后端始终要求 ADMIN（系统管理域先于页面门），
        conn:{tid}:w:security 不得在客户端把请求发车。初始化窗口（me 尚未认出）仍放行，
        否则首次绑定会被自己的客户端门拦住。 */
+    /* 委派身份（含委派 ADMIN，产线 deng_test_x2 即 role=ADMIN + delegated=true）一律不得写
+       本地账号——先于角色判断，与 BuiltinConsoleAuthService.forbidDelegatedLocalUserWrite 同口径。
+       旧顺序在 isAdmin() 处放行，请求会发出但必被后端拒绝，形成「点亮即失败」的假入口。 */
+    if (clean.includes('/auth/users') && me.value?.delegated) return false;
     if (clean.includes('/auth/users') && !isAdmin()
         && (me.value != null || (probeStarted.value && !authDisabled.value))) return false;
     if ((clean.endsWith('/setup/apply') || clean.endsWith('/setup/test') || clean.endsWith('/setup/rebind'))
         && me.value != null && !isAdmin()) return false;
-    /* 委派非 ADMIN 不得写本地账号（BuiltinConsoleAuthService 同口径）：客户端也不发车。 */
-    if (clean.includes('/auth/users') && me.value?.delegated && !isAdmin()) return false;
     /* 与后端同源特例：托管重建向导「校验并继续」持 adhoc 写键即可调用
        config-lab/validate，不额外要求 config-validator 页。 */
     if (clean.endsWith('/config-lab/validate')

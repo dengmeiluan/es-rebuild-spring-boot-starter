@@ -106,6 +106,10 @@ function jump(e: Event) {
   if (clamped !== props.page) {
     emit('update:page', clamped);
     scrollToHead();
+    /* 1107：父级可能拒绝翻页（如 from+size 超 10000 窗口守卫）——输入框必须回显
+       真实页，不能让用户看到「501 / 1000」却仍在第 1 页。接受时 props.page 已更新，
+       这里回写新值无视觉跳变。 */
+    nextTick(() => { inp.value = String(props.page); });
   }
 }
 

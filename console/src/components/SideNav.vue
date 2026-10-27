@@ -36,7 +36,11 @@
       <!-- 身份未确认 ≠ 无权限：探测失败时菜单会保持「全量」形态，此时点进去必被 403。
            给一条可解释的状态条，避免用户把「后端不可达」当成「系统坏了」。 -->
       <div v-else-if="!auth.authDisabled && auth.me == null" class="nav-empty nav-degraded" role="status">
-        身份未确认：正在重试连接鉴权服务。菜单可能多于实际权限，操作以服务端校验为准。
+        <p>身份未确认：宿主凭证未到达或已失效。菜单可能多于实际权限，操作以服务端校验为准。</p>
+        <p class="nav-degraded-act">
+          请从宿主系统重新进入；如刚完成登录，可
+          <button class="btn ghost xs" @click="retryIdentity">重试身份探测</button>
+        </p>
       </div>
       <div v-else-if="!grouped.length" class="nav-empty">
         {{ navQuery.trim() ? '无匹配功能' : '当前身份/目标连接下没有可访问的页面——请在「安全中心 → 我的账号」查看授权，或联系管理员勾选菜单' }}
@@ -237,6 +241,15 @@ const footTitle = computed(() => {
   return `集群健康：${h}${un > 0 ? ` · 未分配分片 ${un}` : ''}`;
 });
 
+/* 手动重试不仅重探，还补发一次 ready：宿主监听晚挂时，子页初期的重播窗口可能已过，
+   只重探只会再拿一次 401。补发让宿主有机会立刻回凭证。 */
+function retryIdentity() {
+  try {
+    if (window.parent !== window) window.parent.postMessage({ type: 'es-console-ready' }, '*');
+  } catch { /* 跨域限制时静默 */ }
+  auth.probe();
+}
+
 /* 图标态：文字全隐，tooltip 是唯一可读入口——名称+快捷键都要在 title 里给全 */
 function itemTip(item: { name: string; key?: string }) {
   return item.key ? `${item.name} · 快捷键 ${item.key}` : item.name;
@@ -281,6 +294,8 @@ function itemTip(item: { name: string; key?: string }) {
 .nav-search-x:hover { opacity: 1; color: var(--tx0); }
 .nav-empty { padding: var(--sp-4) var(--sp-2); font-size: var(--fs-xs); color: var(--tx2); text-align: center; }
 .nav-degraded { text-align: left; line-height: 1.5; border: 1px solid var(--warn-line, var(--line)); border-radius: var(--r-s); background: var(--warn-soft); color: var(--tx1); margin-bottom: var(--sp-2); }
+.nav-degraded p { margin: 0; }
+.nav-degraded-act { margin-top: var(--sp-1h); }
 
 .nav-list { flex: 1; padding: var(--sp-2); overflow-y: auto; overflow-x: hidden; }
 .nav-group { margin-bottom: var(--sp-0); }

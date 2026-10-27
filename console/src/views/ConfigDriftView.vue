@@ -208,7 +208,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, defineComponent, h, type PropType } from 'vue';
+import { ref, computed, onMounted, watch, defineComponent, h, type PropType } from 'vue';
 import { useRouter } from 'vue-router';
 import { GitCompareArrows, RefreshCw, MousePointer, AlertTriangle, Copy, Wrench, CheckCircle2, Info, FileDown, Terminal } from 'lucide-vue-next';
 
@@ -224,12 +224,14 @@ import RawIoModal from '../components/RawIoModal.vue'; /* G206：原始 IO 快�
 import { api, ioRecorder, type RawIoRec } from '../api';
 import { useScopedDraft } from '../composables/useScopedDraft';
 import { useAppStore } from '../stores/app';
+import { useAuthStore } from '../stores/auth';
 import { useUrlState } from '../composables/urlState';
 import { useHitLocate } from '../composables/useHitNav';
 import { copyText } from '../utils/format';
 import { friendlyEsError } from '../utils/esError';
 
 const store = useAppStore();
+const auth = useAuthStore();
 
 /* 清单+详情可调工作台声明（清单可折叠，拖拽/预设/记忆由 WorkbenchLayout 统一负责）。
  轨4：竖排标题轨退役（v 刀①）——「对象清单」落 cd-list-head 行首横排、
@@ -536,10 +538,24 @@ const diffHunks = computed<Array<DiffLine | { op: 'gap'; n: number; tx?: string 
   return out;
 });
 
-onMounted(async () => {
+/* 1125：挂载期读取（key 清单 + 分享现场漂移检测）同样过身份门——宿主换 token 的窗口里
+   probed 未落地，旧 target 的漂移结果会先拉回来。不放行则挂起，身份落地补跑。 */
+const driftReady = () => auth.authDisabled || !auth.probeStarted
+  || (auth.probed && auth.me != null && auth.canReadPage('config-drift', store.target));
+let driftPendingBoot = false;
+async function bootDrift() {
   await loadKeys();
   /* URL 带 key 时自动加载对应漂移检测，还原分享现场 */
-  if (picked.value) loadDrift(picked.value);
+  if (picked.value) void loadDrift(picked.value);
+}
+onMounted(() => {
+  if (driftReady()) void bootDrift();
+  else driftPendingBoot = true;
+});
+watch(() => [auth.probed, auth.authDisabled, auth.me?.username, store.target], () => {
+  if (!driftPendingBoot || !driftReady()) return;
+  driftPendingBoot = false;
+  void bootDrift();
 });
 </script>
 

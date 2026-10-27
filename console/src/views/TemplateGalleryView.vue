@@ -21,7 +21,8 @@
     </div>
 
     <div class="tg-grid">
-      <div v-for="t in filtered" :key="t.id" class="tg-card" :class="{ open: expanded.has(t.id) }">
+      <div v-for="t in filtered" :key="t.id" class="tg-card" :class="{ open: expanded.has(t.id) }"
+        @contextmenu.prevent="openTgMenu($event, t)">
         <div class="tg-c-hd">
           <div class="tg-c-tt">
             <component :is="ICONS[t.icon] || Sparkles" :size="13" class="tg-c-ic" />
@@ -73,6 +74,11 @@
         @action="kw = ''; cat = '全部'"
       />
     </div>
+
+    <!-- 1155：模板卡右键——卡片底部原本五颗钮平铺（复制/沙盒/DSL/收藏/展开），
+         右键把同一批能力按「打开去向 / 复制 / 收藏 / 代码区」分两级，鼠标用户不必扫按钮行。 -->
+    <CellContextMenu v-if="tgMenu" :x="tgMenu.x" :y="tgMenu.y"
+      :title="'模板 · ' + tgMenu.t.title" :items="tgMenuItems" @close="tgMenu = null" />
   </div>
 </template>
 
@@ -82,7 +88,7 @@ import { useRouter } from 'vue-router';
 import {
   BookOpen, Copy, Beaker, Play, Sparkles, LayoutTemplate, Star, ChevronDown, ChevronUp,
   Search as IcSearch, ListFilter, BarChart3, TrendingUp, Calendar, Layers, Gauge,
-  Filter, Highlighter, GitCompare, Boxes, Percent, Sigma,
+  Filter, Highlighter, GitCompare, Boxes, Percent, Sigma, CornerDownRight, Code2,
 } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { useAppStore } from '../stores/app';
@@ -95,6 +101,7 @@ import { useScopedDraft } from '../composables/useScopedDraft';
 import { copyText } from '../utils/format';
 import { highlightJson } from '../utils/jsonc';
 import EmptyState from '../components/EmptyState.vue';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import { writeStoredRaw } from '../utils/safeJson';
 
 const router = useRouter();
@@ -186,6 +193,47 @@ function toQuery(t: Tpl) {
 function isFav(t: Tpl) {
   return store.favorites.some(f => f.kind === 'template' && f.title === t.title);
 }
+/* ═══ 1155：模板卡右键（与 watch/ILM 卡片菜单同一两级语言）═══
+ 一级 = 去向（沙盒 / 查询工作台）+ 分组父行；复制、收藏、代码区折叠收进二级。
+ 底部按钮行原样保留（触屏无右键），右键是给鼠标用户的快通道。 */
+const tgMenu = ref<{ x: number; y: number; t: Tpl } | null>(null);
+function openTgMenu(e: MouseEvent, t: Tpl) {
+  tgMenu.value = { x: e.clientX, y: e.clientY, t };
+}
+const tgMenuItems = computed<CcmItem[]>(() => {
+  const m = tgMenu.value; if (!m) return [];
+  const t = m.t;
+  const body = pretty(t);
+  return [
+    { key: 'to-sandbox', label: '送入搜索沙盒', icon: Beaker, run: () => toSandbox(t) },
+    { key: 'to-query', label: '送入查询工作台（DSL）', icon: Play, run: () => toQuery(t) },
+    {
+      key: 'copy-group', label: '复制…', icon: Copy, sep: true, children: [
+        { key: 'copy-json', label: '复制模板 JSON', icon: Copy, run: () => copy(t) },
+        { key: 'copy-title', label: '复制模板标题', icon: CornerDownRight, run: async () => {
+          const ok = await copyText(t.title);
+          store.notify(ok ? 'success' : 'error', ok ? '已复制标题：' + t.title : '复制失败');
+        } },
+        { key: 'copy-body-curl', label: '复制为 cURL（POST _search）', icon: Code2, run: async () => {
+          const curl = `curl -XPOST '<你的集群>/_search' -H 'Content-Type: application/json' -d '${body.replace(/'/g, "'\''")}'`;
+          const ok = await copyText(curl);
+          store.notify(ok ? 'success' : 'error', ok ? '已复制 cURL' : '复制失败');
+        } },
+      ],
+    },
+    {
+      key: 'fav-group', label: '收藏…', icon: Star, children: [
+        { key: 'fav-toggle', label: isFav(t) ? '取消收藏该模板' : '收藏该模板', icon: Star, run: () => toggleFav(t) },
+      ],
+    },
+    {
+      key: 'view-group', label: '代码区…', icon: ChevronDown, children: [
+        { key: 'exp-toggle', label: expanded.value.has(t.id) ? '收起代码区' : '展开查看完整模板', icon: ChevronDown, run: () => toggleExpand(t) },
+      ],
+    },
+  ];
+});
+
 function toggleFav(t: Tpl) {
   const hit = store.favorites.find(f => f.kind === 'template' && f.title === t.title);
   if (hit) {

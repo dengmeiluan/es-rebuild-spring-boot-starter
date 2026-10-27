@@ -50,7 +50,9 @@ type LintRule =
   | 'root-bare-clause' | 'collapse-structure' | 'sort-order-typo' | 'highlight-fields' | 'script-inline'
   | 'agg-text-field' | 'body-value-type' | 'agg-interval-key' | 'nested-path' | 'query-structure'
   | 'ndjson-pair' | 'settings-key' | 'settings-value' | 'mapping-key' | 'mapping-type'
-  | 'agg-type-typo' | 'date-term-value' | 'should-in-filter';
+  | 'agg-type-typo' | 'date-term-value' | 'should-in-filter'
+  | 'query-subsearches-conflict' | 'subsearches-no-rank' | 'retriever-conflict'
+  | 'rare-type';
 
 export interface Finding {
   rule: LintRule;
@@ -81,6 +83,37 @@ const NON_SCORING = new Set(['term', 'terms', 'range', 'exists']);
  收 exists：其值形态是 {"field": "x"}，字段引用在值位（键恒 'field'），
  walk 分派入口对 exists 换参后同走 lintFieldUsage；root-bare-clause 顺带覆盖根层裸 exists。 */
 const FIELD_CLAUSES = new Set(['term', 'terms', 'range', 'match', 'match_phrase', 'prefix', 'fuzzy', 'wildcard', 'exists']);
+/* 1116：字段名同样作为键的稀疏子句——此前只有上面九员参与 unknown-field 体检，
+ regexp / match_phrase_prefix / rank_feature 等写错字段会静默零命中。只收 body 顶层
+ 「除字段键外无其它参数」的形态；boost 等仍在字段对象内（span_term 顶层 boost 例外，
+ 由 NON_FIELD_KEYS 排除）。 */
+const RARE_FIELD_CLAUSES = new Set([
+  'match_phrase_prefix', 'match_bool_prefix', 'regexp', 'span_term',
+  'text_expansion', 'weighted_tokens', 'shape', 'geo_shape', 'geo_grid', 'terms_set',
+]);
+/* 值位字段形态 {field: 'x', …}（与 exists 同构）——rank_feature / distance_feature /
+ percolate / semantic / sparse_vector / bitmap_terms 的字段引用不在键位。 */
+const FIELD_VALUE_CLAUSES = new Set([
+  'rank_feature', 'distance_feature', 'percolate', 'semantic', 'sparse_vector', 'bitmap_terms',
+]);
+/* 稀疏子句 body 顶层的非字段键（参数/结构键），不参与字段拼写判定。 */
+const CLAUSE_NON_FIELD_KEYS: Record<string, Set<string>> = {
+  span_term: new Set(['boost', '_name']),
+  terms_set: new Set(['minimum_should_match_field', 'minimum_should_match_script', 'boost', '_name']),
+  regexp: new Set(['flags', 'case_insensitive', 'max_determinized_states', 'boost', '_name']),
+};
+/* 1117：稀疏子句的字段类型期望——只收官方语义明确的组合（distance_feature 支持
+ date/date_nanos/geo_point、terms_set 官方只写 keyword 等不确定档一律不判，宁缺勿错）。
+ 类型明确不符 = 该子句必然零命中或 400，warning 档给「换字段/换算子」两条出路。 */
+const RARE_TYPE_EXPECT: Record<string, { types: string[]; hint: string }> = {
+  regexp: { types: ['keyword', 'text', 'wildcard'], hint: 'keyword / text / wildcard' },
+  match_phrase_prefix: { types: ['text', 'keyword'], hint: 'text / keyword' },
+  match_bool_prefix: { types: ['text', 'keyword'], hint: 'text / keyword' },
+  rank_feature: { types: ['rank_feature', 'rank_features'], hint: 'rank_feature / rank_features' },
+  distance_feature: { types: ['date', 'date_nanos', 'geo_point'], hint: 'date / date_nanos / geo_point' },
+  percolate: { types: ['percolator'], hint: 'percolator' },
+  sparse_vector: { types: ['sparse_vector'], hint: 'sparse_vector' },
+};
 const NUMERIC_TYPES = new Set(['long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float', 'unsigned_long']);
 const RANGE_OPS = new Set(['gte', 'gt', 'lte', 'lt']);
 /** date 系类型集（同 NUMERIC_TYPES 的类型集常量范式）——date range 值判型的判定域 */
@@ -101,6 +134,8 @@ const ROOT_KEY_WHITELIST = new Set([
  preference / routing（路由与副本偏好）/ ext（请求扩展段）/ stats（统计分组）——
  六键都是 ES 合法根键，缺席此前会被 root-key-typo 按编辑距离误报。 */
   'pit', 'runtime_mappings', 'preference', 'routing', 'ext', 'stats',
+  /* 1047：多路召回融合（sub_searches + rank）——合法 search 根键，避免被拼写规则误报 */
+  'sub_searches', 'rank',
 ]);
 /** range 值对象里非比较操作符的合法键——不算操作符拼写错 */
 const RANGE_META_KEYS = new Set(['format', 'time_zone', 'boost', 'relation']);
@@ -334,13 +369,21 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
  'field' 不是字段名），入口换成值位字段名再走统一口径；字段名是串值非键，
  nth 走发现时补记（text-sort 纯串形态同款 selfMark 契约）。非串值（变量/
  对象形态）不判。 */
-      if (fieldMap && parentKey && FIELD_CLAUSES.has(parentKey) && typeof k === 'string') {
+      if (fieldMap && parentKey && typeof k === 'string') {
         if (parentKey === 'exists') {
           if (k === 'field' && typeof v === 'string' && v) {
             out.push(...lintFieldUsage('exists', v, v, p, markOccurrence(v), fieldMap));
           }
-        } else {
-          out.push(...lintFieldUsage(parentKey, k, v, p, kNth, fieldMap));
+        } else if (FIELD_VALUE_CLAUSES.has(parentKey)) {
+          /* 1116：值位字段（rank_feature/distance_feature/percolate…）——只认 field 键 */
+          if (k === 'field' && typeof v === 'string' && v) {
+            out.push(...lintFieldUsage(parentKey, v, v, p, markOccurrence(v), fieldMap));
+          }
+        } else if (FIELD_CLAUSES.has(parentKey) || RARE_FIELD_CLAUSES.has(parentKey)) {
+          /* 稀疏子句的顶层参数键（span_term.boost 等）不是字段名 */
+          if (!CLAUSE_NON_FIELD_KEYS[parentKey]?.has(k)) {
+            out.push(...lintFieldUsage(parentKey, k, v, p, kNth, fieldMap));
+          }
         }
       }
       /* ---- 规则①：聚合类型拼写（agg-type-typo，warning 档，零 ctx）----
@@ -790,6 +833,38 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
     });
   }
 
+  /* ---- 1047：多路召回融合结构（sub_searches 与 query/knn 互斥，且必须配 rank）----
+     ES 8.14+：sub_searches 是多路召回入口；同时写 query/knn 属二义请求，
+     缺 rank 则融合算法缺席（ES 拒绝/无意义）。两条都锚 sub_searches。 */
+  /* 1047：retriever 与 query/knn/sub_searches 是并列检索面，不能同体（ES 8.14+） */
+  if (!opts?.skipRoot && root.retriever !== undefined
+      && (root.query !== undefined || root.knn !== undefined || root.sub_searches !== undefined)) {
+    out.push({
+      rule: 'retriever-conflict', severity: 'error',
+      message: 'retriever 与 query/knn/sub_searches 互斥：检索面只能选一种写法',
+      suggestion: '保留 retriever（声明式检索）并移除 query/knn/sub_searches；或反之',
+      path: 'retriever', anchor: 'retriever', nth: nthByPath.get('retriever') ?? 0,
+    });
+  }
+  if (!opts?.skipRoot && root.sub_searches !== undefined) {
+    if (root.query !== undefined || root.knn !== undefined) {
+      out.push({
+        rule: 'query-subsearches-conflict', severity: 'error',
+        message: 'sub_searches 与 query/knn 互斥：多路召回只能写在 sub_searches 数组里',
+        suggestion: '把原 query/knn 移入 sub_searches 的某一项，再补 rank（如 rrf）做融合',
+        path: 'sub_searches', anchor: 'sub_searches', nth: nthByPath.get('sub_searches') ?? 0,
+      });
+    }
+    if (root.rank === undefined) {
+      out.push({
+        rule: 'subsearches-no-rank', severity: 'warning',
+        message: 'sub_searches 缺少 rank：多路召回没有融合算法（RRF）就失去排序依据',
+        suggestion: '补 "rank": { "rrf": { "rank_constant": 60, "rank_window_size": 100 } }',
+        path: 'sub_searches', anchor: 'sub_searches', nth: nthByPath.get('sub_searches') ?? 0,
+      });
+    }
+  }
+
   return out;
 }
 
@@ -840,6 +915,18 @@ function lintFieldUsage(
       return out; // 未知类型不再做 ①②④ 判断
     }
     return out;
+  }
+
+  /* 1117：稀疏子句字段类型错配（官方明确不支持的组合）——只对已知类型判，
+ 与 unknown-field 同「宁缺勿错」口径；数值 regexp / text rank_feature 等必然零命中或 400。 */
+  const rareExpect = RARE_TYPE_EXPECT[clause];
+  if (rareExpect && !rareExpect.types.includes(type)) {
+    out.push({
+      rule: 'rare-type', severity: 'warning',
+      message: `${clause} 打在不支持的字段类型上：${field} 是 ${type}，该子句只适用于 ${rareExpect.hint}`,
+      suggestion: `改用 ${rareExpect.hint} 类型的字段，或换用适用于 ${type} 的算子（字段选择器会按类型推荐）`,
+      path, anchor: field, nth,
+    });
   }
 
   /* ① term/terms/wildcard 打 text（无 .keyword 后缀）——分词后倒排词与原值不一致，大概率查空。

@@ -146,6 +146,7 @@ import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, 
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
 import RawIoModal from '../components/RawIoModal.vue';
 import { useAppStore } from '../stores/app';
+import { useGatedBootRead } from '../composables/usePageIdentityGate';
 import { useAuthStore } from '../stores/auth';
 import { useIdxState, usePref } from '../composables/urlState';
 import { useScopedDraft } from '../composables/useScopedDraft';
@@ -373,7 +374,9 @@ async function doReload() {
   } finally { busy.value = false; }
 }
 
-watch(index, v => { if (v) doLoad(); });
+/* 1125：索引/目标变化触发的分析配置读取同样过身份门 */
+const synBoot = useGatedBootRead('synonyms', () => doLoad(), { targetId: () => index.value || null });
+watch(index, v => { if (v) synBoot.run(); });
 </script>
 
 <style scoped>

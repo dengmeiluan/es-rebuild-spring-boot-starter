@@ -184,7 +184,11 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             "/cluster/scripts/put", "/cluster/scripts/delete",
             "/cluster/templates/delete", "/cluster/ilm/stop", "/cluster/slm/execute",
             "/cluster/settings/put", "/cluster/reroute", "/auth/users/delete",
-            "/auth/users/upsert", "/xmigrate/start", "/xmigrate/resume");
+            "/auth/users/upsert", "/xmigrate/start", "/xmigrate/resume",
+            /* 1132：这两个此前只落 WRITE。rebuild-empty 删索引后重建（数据不可逆），
+               adhoc confirm-switch 把写别名切到新索引（流量归属切换，回退需另一次切换）——
+               都属「破坏性/控制面」，与 delete-index、xmigrate/start 同级。 */
+            "/rebuild-empty", "adhoc-rebuild/confirm-switch");
     /** 执行类只读 POST（零数据写入但执行脚本/消耗资源）——落 EXEC 审计留痕。 */
     private static final List<String> EXEC_AUDIT_POST_KEYWORDS = Arrays.asList(
             "/cluster/analyze", "/cluster/reindex-preview", "/config-lab/validate",
@@ -380,6 +384,47 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
      */
     static boolean isHostBoundPath(String path) {
         return isHostBoundPath(path, "GET");
+    }
+
+    /**
+     * 环境封顶裁决：该请求所属页面是否被连接的 env 模板排除。返回被排除的页面 key（未越界返回 null）。
+     *
+     * <p>与 {@code effectivePages} 的「取交集」不同，这里是<b>逐请求</b>判定：交集只决定
+     * 「授权集里还剩哪些页」，而 ADMIN 会在页面门提前放行、根本不看交集。要让 env 真正约束
+     * ADMIN，必须在 ADMIN 豁免之前单独判一次「这个请求归哪个页、这个页在不在环境模板里」。</p>
+     *
+     * <p>页面归属的取法（从严）：页面前缀优先；无前缀时看共享写映射（raw/devtools 这类
+     * 多页复用端点），任一归属页在模板内即放行——共享端点本就允许被多页复用，只要环境
+     * 允许其中一页就不该拦。<b>两者都判不出归属时不封顶</b>（读端点如 keys/desired-state
+     * 是跨页基础读，封顶会误伤有权限的人）。</p>
+     */
+    private String envCapViolation(String path, javax.servlet.http.HttpServletRequest request) {
+        if (envPagesResolver == null || path == null) return null;
+        String method = request == null ? "GET" : request.getMethod();
+        /* 宿主专属端点恒在宿主执行：带了远端目标头也不落在那个环境里。
+           实测：当前自举端点（auth/me、clusters、setup、keys 等）即便没有这一行也会因
+           「判不出页归属」返回 null 而放行，所以它是**防御性**的——防的是将来 pageCatalog
+           给某个自举端点挂上页前缀后，PROD 视图把自助面封掉（看不见菜单/退不出）。 */
+        if (isHostBoundPath(path, method)) return null;
+        String targetId = request == null ? null : request.getHeader("X-Es-Target");
+        java.util.Set<String> cap = envPagesResolver.pagesFor(
+                targetId == null || targetId.trim().isEmpty() ? "host" : targetId.trim());
+        if (cap == null) return null; /* 该连接未配环境模板：不收缩（原样行为） */
+        ConsolePageCatalog.Page page = pageCatalog.pageOf(path);
+        if (page != null) {
+            return cap.contains(page.getKey()) ? null : page.getKey();
+        }
+        if (!"GET".equalsIgnoreCase(method) && !"HEAD".equalsIgnoreCase(method)
+                && !"OPTIONS".equalsIgnoreCase(method)) {
+            List<String> shared = sharedWritePages(path);
+            if (shared != null && !shared.isEmpty()) {
+                for (String k : shared) {
+                    if (cap.contains(k)) return null;
+                }
+                return shared.get(0);
+            }
+        }
+        return null;
     }
 
     /**
@@ -670,16 +715,33 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
            POST 数百 MB JSON 会被 Jackson 全量读入，属内存耗尽面。32MB 与 raw 对齐。 */
         String reqMethod = request.getMethod();
         long bodyLen;
+        boolean lenKnown = true;
         try {
             bodyLen = request.getContentLengthLong();
         } catch (UnsupportedOperationException e) {
-            bodyLen = -1; /* 最小 stub/老容器无此方法：无 body 信息，不据此拒绝 */
+            /* 最小桩/极老容器没有这个方法：**不是攻击面**（真实 Servlet 容器都实现它），
+               不能因此拒绝——否则所有不带该方法的合法调用方都会被 411 掉。 */
+            bodyLen = -1;
+            lenKnown = false;
         }
-        if (!"GET".equalsIgnoreCase(reqMethod) && !"HEAD".equalsIgnoreCase(reqMethod)
-                && !"OPTIONS".equalsIgnoreCase(reqMethod)
-                && bodyLen > MAX_BODY_BYTES) {
-            deny(response, 413, "{\"code\":\"BODY_TOO_LARGE\",\"message\":\"请求体超过 32MB 上限\"}");
-            return false;
+        boolean bodyless = "GET".equalsIgnoreCase(reqMethod) || "HEAD".equalsIgnoreCase(reqMethod)
+                || "OPTIONS".equalsIgnoreCase(reqMethod);
+        if (!bodyless) {
+            if (bodyLen > MAX_BODY_BYTES) {
+                deny(response, 413, "{\"code\":\"BODY_TOO_LARGE\",\"message\":\"请求体超过 32MB 上限\"}");
+                return false;
+            }
+            /* 长度未知（chunked transfer-encoding 不带 Content-Length，容器报 -1）：
+               旧实现把 -1 当作「没超限」直接放行，于是换一个传输编码就能把任意体积
+               推给 Jackson 全量读入——32MB 上限对分块请求完全失效。
+               判据必须是「容器明确回了 -1」；抛 UnsupportedOperationException 的情形
+               由上方的 lenKnown=false 排除，不能混为一谈。 */
+            if (lenKnown && bodyLen < 0) {
+                deny(response, 411, "{\"code\":\"LENGTH_REQUIRED\",\"message\":"
+                        + "写请求必须携带 Content-Length（不接受长度未知的分块传输）；"
+                        + "如需流式上传请走专门的导入接口\"}");
+                return false;
+            }
         }
         /* CSRF/跨站写防护（先于任何放行分支，含 SETUP 窗口与登录白名单）：
            委托 header 模式下身份来自「网关注入头 + 浏览器自动携带的宿主 cookie」，
@@ -759,6 +821,35 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
            静态 key(无 conn: 前缀)=全局页,对所有连接生效,仍受 env 模板收缩;无 conn 键=现状行为。 */
         /* 页面白名单对所有非 ADMIN 身份生效：内置/委托/自定义授权器返回的非空
            grantedPages 都是同一语义，否则前端按页收缩而后端仍按角色放行（执法分叉）。 */
+        /* 环境级封顶先于一切角色/页面裁决——env 模板约束的是「这个连接是生产库」，
+           与角色、与是否下发 grantedPages 都正交。此前它只出现在
+           `grantedPages != null` 分支内部且排在 ADMIN 豁免之后：内置 ADMIN（grantedPages=null）
+           与委派 ADMIN 都不走这里，「x1 生产只读」对超管形同虚设（raw/devtools 实测均放行）。 */
+        /* 环境级封顶：env 模板约束的是「这个连接是生产库」，与角色、与是否下发 grantedPages 都正交。
+           它必须排在 ADMIN 豁免之前——产线 deng_test_x1 在测试环境的角色档就是 ADMIN，
+           而页面门对 ADMIN 是提前 return 的，env 判定若在其后就永远走不到：
+           「生产环境只读」对超管形同虚设（raw / devtools/execute 实测均放行）。
+           放在 grantedPages 分支之外：内置 ADMIN 的 grantedPages 就是 null，同样要吃环境封顶。 */
+        if (pageAuthEnabled) {
+            String envCapped = envCapViolation(path, request);
+            if (envCapped != null) {
+                opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
+                        "ENV_PAGE_DENIED", 403, "env-cap page=" + envCapped
+                                + " target=" + request.getHeader("X-Es-Target")));
+                deny(response, 403, EnvPagesResolver.denyBody(envCapped));
+                return false;
+            }
+        }
+        if (pageAuthEnabled && principal.getGrantedPages() != null) {
+            String envCapped = envCapViolation(path, request);
+            if (envCapped != null) {
+                opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
+                        "ENV_PAGE_DENIED", 403, "env-cap page=" + envCapped
+                                + " target=" + request.getHeader("X-Es-Target")));
+                deny(response, 403, EnvPagesResolver.denyBody(envCapped));
+                return false;
+            }
+        }
         if (pageAuthEnabled && principal.getGrantedPages() != null) {
             /* 超管域优先裁决：用户管理/重绑/连接档案是授权载体本身，任何连接写键都不放行；
                必须 ADMIN 角色；ADMIN 不受页面写键限制（全局管理权）。
@@ -766,6 +857,10 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
             if ((isSystemAdminUri(path) || isClustersRootWrite(path, request.getMethod()))
                     && !("GET".equalsIgnoreCase(request.getMethod()) && path.endsWith("/clusters/sync"))) {
                 if (!principal.getRole().atLeast(ConsoleRole.ADMIN)) {
+                    /* 越权尝试必须留痕：这是攻击者最常探测的一类高价值端点（账号库/连接档案/重绑），
+                       此前直接 deny 不落审计，等于「有人试过但查不到」。同批其它拒绝点均已有记录。 */
+                    opsAuditStore.record(auditEvent(principal, request, request.getMethod(), path,
+                            "ADMIN_DENIED", 403, "required=ADMIN uri-family=system-admin"));
                     deny(response, 403, "{\"code\":\"FORBIDDEN\",\"message\":\"该操作属管理员专属（用户管理/连接档案/重绑），连接页面授权不放行\",\"required\":\"ADMIN\"}");
                     return false;
                 }

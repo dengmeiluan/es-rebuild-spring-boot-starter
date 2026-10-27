@@ -18,6 +18,9 @@ import { rankTermsByType } from '../utils/fieldSearch';
 
 type CacheEntry = { at: number; values: string[] };
 const cache = new Map<string, CacheEntry>();
+/* 换号代际：清理后旧请求的响应不得再写回 cache/stash/suggestions（否则新账号
+   聚焦同 target+index+field 时零网络回填上一账号读出的业务值）。 */
+let epoch = 0;
 const TTL = 5 * 60 * 1000;
 const MAX_CACHE = 200;
 /* 缓存上界：先删过期项，仍超则按 Map 插入序逐最旧，直至回到上限内 */
@@ -31,7 +34,7 @@ function pruneCache() {
   }
 }
 /** 测试专用：清空缓存 */
-export function __clearSuggestCache() { cache.clear(); }
+export function __clearSuggestCache() { epoch++; cache.clear(); }
 /* ═══ ：词项持久档（localStorage）═══
  TTL 内存缓存之外的「上次 top20」快照：跨会话/缓存过期后的首轮 suggest 同步候选来源
  （零网络零防抖即刻回填，权威词项到达后 merge 刷新）。key 前三段与内存缓存同构；
@@ -52,6 +55,7 @@ function writeStash(key: string, values: string[]) {
 }
 /** 换号清理：词项持久档是上一身份从目标集群读出的业务值（邮箱/ID），不能跨账号同步回填。 */
 export function clearTermsStash() {
+  epoch++;
   cache.clear();
   try {
     const keys: string[] = [];
@@ -163,6 +167,7 @@ export function useTermsSuggest(index: () => string, types?: () => Record<string
         setSuggestions(rankTermsByType(hit.values, types?.()[field])); suggesting.value = false; resolveSeq(mySeq, hit.values); return;
       }
       suggesting.value = true;
+      const reqEpoch = epoch;
       try {
         /* prefix 转义 Lucene RegExp 元字符；空前缀省略 include（=top 20 by doc_count，免高基数字段正则求值） */
         const esc = prefix.replace(/[.?*+^$[\]{}()|\\]/g, '\\$&');
@@ -172,6 +177,7 @@ export function useTermsSuggest(index: () => string, types?: () => Record<string
         const r: any = await api.searchRaw(idx, body);
         const buckets = r?.aggregations?.suggest?.buckets ?? r?.raw?.aggregations?.suggest?.buckets ?? [];
         const values = buckets.map((b: any) => String(b.key)).slice(0, 20);
+        if (reqEpoch !== epoch) { resolveSeq(mySeq, []); return; } /* 换号代际：旧账号结果丢弃 */
         if (mySeq !== seq) { resolveSeq(mySeq, values); return; } /* 序号守卫：已有更新请求 */
         if (cache.size > MAX_CACHE) pruneCache();
         cache.set(key, { at: Date.now(), values });

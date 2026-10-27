@@ -225,11 +225,31 @@ update-by-query/delete-by-query/SQL/别名与模板的受控写入被拒、快�
 标准写法在所有版本都生效，能力不缺。前端 DevTools/REST 页已镜像同一套规则：不可执行时
 tooltip 直接给出改法（`/{index}/_search`、PIT、控制面索引不可用），不再「点下去 403」。
 
+**同一规则的查询串与批量形态**（1124 实测补钉）：
+
+| 形态 | 非 ADMIN 裁决 | 原因 |
+|---|---|---|
+| `GET /_search?q=*`、`?q=*&size=N` | 拒 | 不带 body 也能全量读 |
+| `GET /_count?q=*` | 拒 | 同上（计数也是全量） |
+| `GET /_search?source={...}` | 拒 | `source` 与 body 同权 |
+| `GET /_search_shards` | 拒 | 分片视图枚举索引名 |
+| `POST /_msearch`（空头 `{}`） | 拒 | 根路径空头 = 不限索引（全量） |
+| `POST /{index}/_msearch`（空头） | **放行** | ES 语义：路径索引是头的默认索引，只查该索引 |
+| `POST /logs/_bulk`（`{"index":{}}`） | 放行 | 同上：继承路径索引 |
+| `POST /_bulk`（显式 `_index: 控制面`） | 拒 | 请求体通道 |
+| `GET /_cat/aliases`、`/_cat/shards`（`format=json`） | 放行 + 结果侧行过滤 | 与 `_cat/indices` 同族，逐行剔除控制面 |
+| `GET /_cat/count`、`/_stats`、`/_cluster/state`、`/_nodes` | 拒 | 聚合形态无法按行过滤 |
+
 **前后端同一份金标准**：`console/src/__tests__/fixtures/devtoolsScope.golden.json` 是两边
 共用的作用域样例（`allow`=内核裁决，`ui`=前端应有态）。后端 `DevtoolsScopeGolden1005Test`
 断言内核与 `allow` 逐条一致，前端 `devtoolsScopeGolden1005.spec` 断言 UI 与 `ui` 逐条一致，
 并额外锁死不变量：**allow=true ⇒ 前端必须可执行**（有权限的人不能被拦）。改任一侧规则
 未同步样例 → 该侧红。
+
+**跨页「到 DevTools」入口门**：任何写 `sessionStorage['es-console.devtools.open']` 的跳转
+（含 `run:true` 自动执行档）都必须在**写入点附近**有 `canDevtools.value` 判定；收藏回放这类
+通用件用注入的 `canOpen(path)` 页面门。`console/scripts/perm-scan.mjs` 对其做机械检查，且
+`permScanSelfCheck1124.spec` 会注入违规反证规则本身仍有效——规则失效比没有规则更危险。
 
 **透传内核的越权矩阵**（`DevtoolsEscalationMatrix1004Test` 逐条锁定，约 60 条向量）：
 A 集群/系统管理写全拒（settings/security/template/script/ingest/ilm/slm/snapshot/reindex/
@@ -266,6 +286,38 @@ E 数据面放行；F 根级 PIT/scroll 仅 DELETE 形态（释放）放行。
   user-header）会在启动期直接失败——否则部署正常启动但内置登录已关闭，所有身份都 401。
 - 配置了 `setup-token` 时，安全中心的重绑表单会显示令牌输入框并随请求发送 `X-Setup-Token`
   （此前后端要求、前端不传，ADMIN 重绑必 403）。
+
+### 权限矩阵集成测试（三身份口径，可直接接发版冒烟）
+
+`console/scripts/perm-matrix.mjs`（`npm --prefix console run perm:matrix`）用真实 HTTP 跑
+「授权用户 / 超管 / 零授权」三类身份，断言：
+
+- 授权用户：至少一个连接可写、至少一个只读；可写连接 DevTools 数据面放行、管理面读 403；
+  只读连接 DevTools 读被拒，且**写探针必须被授权层拒绝（403）**——探针是对不存在索引发
+  `DELETE`，即便授权被绕过也只会得到 ES 的 404，产线零副作用，但足以区分「拦住了」与「放行了」；
+- 超管：连接目录可见、管理面读放行；
+- 零授权：连接目录为空、页面集为空、目标连接 403、用户管理/全量审计 403；
+- **跨身份污染**：拿授权用户的连接 id 配零授权身份的令牌 → 403（连接可见性只认当前身份，
+  不认请求里残留的目标头）；
+- **控制面全量读形态**：根级 `_msearch` 空头 → 403；带索引前缀的同类请求不得被误拒
+  （有权限的人不能被拦）；
+- 登出两条路径都必须即时失效：宿主 `/api/auth/logout`（Redis 黑名单）后同一 token 访问
+  控制台 401；控制台 `/auth/logout` 后同一**委托** token 也应 401（自定义委托只实现
+  `tokenOf` 时由内核兜底登记拒绝表，见「已知边界」）。
+
+凭据只走环境变量，不写入仓库/日志：
+
+~~~bash
+CONSOLE_BASE=https://host/quotehub \
+CONSOLE_USER_X1=... CONSOLE_PASS_X1=... \
+CONSOLE_USER_X2=... CONSOLE_PASS_X2=... \
+CONSOLE_USER_X3=... CONSOLE_PASS_X3=... \
+npm --prefix console run perm:matrix
+~~~
+
+退出码 1=矩阵不符（附逐项 expected/actual），0=全部通过；只输出状态与计数，不打印 token。
+（脚本用 `process.exitCode` 收敛而非强退：Windows 上 fetch 的 keep-alive 套接字未关闭时
+强退会触发 libuv 断言，退出码会变成 127 而不是 1，CI 会读错状态。）
 
 ## 连接中心自动同步（es.rebuild.console.conn-sync）
 
@@ -366,14 +418,27 @@ E 数据面放行；F 根级 PIT/scroll 仅 DELETE 形态（释放）放行。
   连接模型下需 rank3 或 `w:cluster-settings`。
 - **jobId 不可预测**：xmigrate 为 `dest_<毫秒>_<16 hex>`、adhoc 为 `adhoc-<16 hex>`；日志检索
   仍可按前缀匹配。旧格式历史作业照常读取。
-- **jwt/endpoint 委托登出会在本实例登记拒绝表**（jwt 到 exp、endpoint 到裁决缓存窗口）；
-  进程内表，多实例部署只在当前实例生效，需要全局即时失效请缩短 TTL 或走宿主侧吊销。
-  `header` 模式无令牌原文，无法本地吊销。
+- **委托登出会在本实例登记拒绝表**（jwt 到 exp、endpoint 到裁决缓存窗口）；自定义
+  `ConsoleAuthDelegate` 只要实现 `tokenOf(request)` 报出原始令牌，内核会在认证前查同一张
+  拒绝表——即使 `revoke` 未实现（返回默认 `false`），`/auth/logout` 也由内核按
+  `max(内置 token-ttl-ms, 24h)` 兜底登记（quotehub 形态无需改代码即生效）；委托已自行登记
+  时不重复写。未实现 `tokenOf` 的委托控制台无法得知令牌原文，`/auth/logout` 不承诺吊销，
+  账号切换以宿主自己的 logout（Redis 黑名单）为准。
+  进程内表，多实例部署只在当前实例生效，需要全局即时失效请缩短 TTL 或走宿主侧
+  `revoke`（多实例共享存储）。`header` 模式无令牌原文，无法本地吊销。
+- **委托鉴权异常不回落内置身份**：宿主 `authenticate` 抛异常时，若请求携带宿主凭证
+  （`hasCredential` 返回 true，**或** `tokenOf` 报出非空令牌）则直接 401，不再回落到浏览器
+  残留的内置 token——否则宿主任一 5xx 都能把已撤销会话升级成本地 ADMIN。只实现
+  `tokenOf`、未实现 `hasCredential` 的委托同样受保护；任一探测抛异常按「携带」处理。
+  未携带宿主凭证的独立部署仍走内置登录，避免误拦。
 - **内置登录的兜底账号 `admin`/`es-console`** 仅在 `builtin-login-enabled` 打开时可用，
   委托部署默认关闭；用户库为空时还要求 loopback 直连。独立部署请在本机首登改密或配置强
   `fallback-password`（启动日志有 ERROR 提醒）。
-- 读侧「内网拓扑」（节点 host/IP、远端集群 seeds、脚本源码、`path.repo`）对**持有对应页面
-  读键**的身份可见——这是页面授权语义，不再按 ADMIN 二次收窄；如需收窄请只授必要页面。
+- 读侧「内网拓扑」按**页面语义**收窄：节点 host/IP、远端 seeds、painless 源码只对
+  `topology` / `remote-clusters` / `painless-lab` 页读键可见；`overview` / `indices` / `live` /
+  `workspace` 等顺带消费的共享读端点会摘除分片行的 `ip`、节点 `host`，只回远端连接数、
+  脚本仅回 mustache。`path.repo` 没有页面端点直出（快照页只回仓库 `location`，凭据已脱敏）；
+  ADMIN 的 raw 通道仍可读全量。静态/内置模型（无页面语义）维持历史可见性，不受此收窄影响。
 
 ### 首次绑定（setup）与重绑
 

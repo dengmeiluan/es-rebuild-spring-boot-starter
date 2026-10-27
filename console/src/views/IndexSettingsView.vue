@@ -1,6 +1,11 @@
 <template>
   <div class="is">
     <PageHeader :icon="Sliders" title="索引设置（热更）" subtitle="动态设置热更新，静态项需 close/open" />
+    <!-- 只读身份前置说明（1124）：保存钮隐藏时说明缺什么，避免只读身份只看到「没有保存」 -->
+    <div v-if="auth.probed && !canOps" class="is-perm-note" role="status">
+      <ShieldAlert :size="13" /> 当前身份只读：设置可查看与对比；保存需要该连接的索引设置/索引页写权限（或 CLUSTER_OP 及以上角色）。
+    </div>
+
     <!-- 顶栏。：card 壳退役（约定③）——裸 lr-bar 行直贴页面流，border-bottom 分界 -->
     <div class="is-bar lr-bar freeze">
       <div class="is-bar-l lr-bar-l">
@@ -254,7 +259,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   Sliders, Save, RefreshCw, Zap, GitCompare, ArrowRight, FileJson,
-  Plus, X, Activity, Hammer, AlertTriangle, Settings2, Copy, Terminal,
+  Plus, X, Activity, Hammer, AlertTriangle, Settings2, Copy, Terminal, ShieldAlert,
 } from 'lucide-vue-next';
 import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
@@ -662,6 +667,8 @@ function coerce(v: any): any {
  （失败态改 EmptyState centered 直贴，留白归组件单源，原 34px 契约由组件承担） */
 /* card 壳退役——裸行只留竖距与分界线，横距归页面流（与卡/空态同缘对齐） */
 .is-bar { padding: var(--sp-3) 0; border-bottom: 1px solid var(--line); }
+/* 只读身份说明条（RestView .rt-perm-note 同款形态） */
+.is-perm-note { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); }
 /* .is-title（fs-sm/650）为 PageHeader 接管后的死规则，随标题四档合并退役 */
 .is-time { font-size: var(--fs-xs); color: var(--tx2); }
 /* 工具行尺寸统一：GAB 根按钮（.btn.pri 默认号）对齐全行 sm 基准（GAB 多根组件 class 不透传，行内对齐） */

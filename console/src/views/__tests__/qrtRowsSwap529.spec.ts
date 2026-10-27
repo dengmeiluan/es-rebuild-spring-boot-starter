@@ -236,8 +236,13 @@ describe('529 换壳：BrowserView 索引表 QRT rows 型行为锁', () => {
 
   it('ForceMerge 钮走 askConfirm 确认门（旧 askFm 执行体保真）', async () => {
     const { app, host } = await mountBrowser();
-    const fmBtn = [...host.querySelectorAll<HTMLButtonElement>('.bw-acts button')]
-      .find(b => b.getAttribute('aria-label') === 'ForceMerge 段合并')!;
+    /* 1148：ForceMerge 收进行内「更多 ⋯」弹层——先开菜单再点项 */
+    const moreBtn = [...host.querySelectorAll<HTMLButtonElement>('.bw-acts button')][1];
+    moreBtn.click();
+    await settle(8);
+    const fmBtn = [...document.querySelectorAll<HTMLButtonElement>('.bw-more .bw-more-it')]
+      .find(b => (b.textContent ?? '').includes('ForceMerge'))!;
+    expect(fmBtn, '「更多」里应有 ForceMerge').toBeTruthy();
     fmBtn.click();
     await settle(8);
     const modal = [...document.querySelectorAll('body > *')].map(m => m.textContent || '').join('');

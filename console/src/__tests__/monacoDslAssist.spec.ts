@@ -5,7 +5,7 @@
  *   ① dslAssist 缺席零影响——mount 不炸、registerCompletionItemProvider 不被调；
  *   ② 传了则注册（'json' + triggerCharacters ['"']），dispose 随卸载调用；
  *   ③ root 键位出 ROOT_KEYS（2.6.0：八键全 Snippet 骨架 + detail + commaAffixes 逗号自适应）；
- *   ④ query-type 键位出 8 条 snippets（Snippet + InsertAsSnippet 规则）；
+ *   ④ query-type 键位出全量算子 snippets（Snippet + InsertAsSnippet 规则）；
  *   ⑤ field 键位出 dslAssist.fields() 清单（2.6.0：Snippet 值骨架，detail=type）；
  *      附：第二键位（',' 后开串）仍出——锁定守卫 ',' 分支；
  *   ⑥ 值位/值串内三档均不出（T12 评审守卫）：
@@ -306,18 +306,24 @@ describe('W4-T13 MonacoEditor dslAssist provider 接线', () => {
     expect(q3.insertText.startsWith(',')).toBe(true);
   });
 
-  it('④ query-type 键位出 8 条 snippet（Snippet + InsertAsSnippet）', () => {
+  it('④ query-type 键位出全量算子 snippet（Snippet + InsertAsSnippet）', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
     const s = suggest('{"query": {"');
-    expect(Object.keys(QUERY_SNIPPETS).length).toBe(8);
-    expect(s.length).toBe(8);
+    expect(Object.keys(QUERY_SNIPPETS).length).toBe(63);
+    expect(s.length).toBe(63);
     for (const i of s) {
       expect(i.kind).toBe(Kind.Snippet);
       expect(i.insertTextRules).toBe(Rule.InsertAsSnippet);
       expect(i.insertText).toBe((QUERY_SNIPPETS as Record<string, string>)[i.label]);
+      /* 1133：63 条英文键旁必须有中文语义，列表可扫读 */
+      expect(i.detail, i.label + ' 缺中文语义').toBeTruthy();
       /* 2.6.2：接受即格式化 command 挂载（幂等归一的正解——落位形态随动回滚，规整交给 formatDocument） */
       expect(i.command?.id, i.label + ' 挂接受即格式化 command').toBe('editor.action.formatDocument');
     }
+    expect(s.find((i: any) => i.label === 'match')?.detail).toBe('全文匹配');
+    expect(s.find((i: any) => i.label === 'nested')?.detail).toBe('嵌套');
+    expect(s.find((i: any) => i.label === 'span_near')?.detail).toBe('近邻跨度');
+    expect(s.find((i: any) => i.label === 'bool')?.detail).toBe('布尔组合');
   });
 
   it('④-b 深层嵌套位：snippet 后续行叠加当前行缩进（选关键字后不再塌缩）', () => {
@@ -488,7 +494,7 @@ describe('W4-T13 MonacoEditor dslAssist provider 接线', () => {
     const doc = '{"query": {}, "size": 10}';
     const cursor = doc.indexOf('{}') + 1; /* {"query": {⏎}, "size": 10}——query 值对象内键位 */
     const s = suggest(doc, cursor);
-    expect(s.length).toBe(8); /* query-type 档照出 */
+    expect(s.length).toBe(Object.keys(QUERY_SNIPPETS).length); /* query-type 档照出 */
     const item = s.find(i => i.label === 'match');
     /* range=[光标,光标) 纯插入——无已敲引号（insertText 自带引号正好），不吞 }, " */
     expect(rangeOffsets(doc, item.range)).toEqual([cursor, cursor]);
@@ -517,9 +523,9 @@ describe('W4-T13 MonacoEditor dslAssist provider 接线', () => {
     /* 栈顶 '['：手动 Ctrl+Space 不再出 query-type snippet（接受即数组元素位塞键值对，非法 JSON） */
     expect(suggest('{"query": {"bool": {"must": [')).toEqual([]);
     expect(suggest('{"query": {"bool": {"must": ["match_all", ')).toEqual([]);
-    /* 元素对象已开（栈顶 '{'）：既有行为保留，8 条 snippet 照出 */
+    /* 元素对象已开（栈顶 '{'）：既有行为保留，全量 snippet 照出 */
     const s = suggest('{"query": {"bool": {"must": [{');
-    expect(s.length).toBe(8);
+    expect(s.length).toBe(Object.keys(QUERY_SNIPPETS).length);
     for (const i of s) expect(i.kind).toBe(Kind.Snippet);
   });
 

@@ -10,6 +10,7 @@
  * 4) 默认序=拉取序（node-1 优先；QRT 无预置排序，原「默认 name 升序」在此数据下等价）。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { allLabels } from '../../__tests__/helpers/ctxMenu'; /* 1142：二级菜单能力面 */
 import { createApp, h, nextTick } from 'vue';
 import { createPinia } from 'pinia';
 
@@ -124,7 +125,9 @@ describe('PluginsView raw 表 QRT 内核化（天罗W6 graft→五百二十五�
     await settle(6);
     const menu = document.querySelector('.ccm');
     expect(menu, 'QRT 右键菜单必须弹出').not.toBeNull();
-    expect(menu!.textContent, 'QRT 右键菜单必须含整表 TSV 复制项（内核接管原「数值」/「TSV」钮）')
+    /* 1142：整表 TSV 住「复制…」二级——展开分组后断言能力面 */
+    const labels = await allLabels();
+    expect(labels.join(' | '), 'QRT 右键菜单必须含整表 TSV 复制项（内核接管原「数值」/「TSV」钮）')
       .toContain('复制整表（当前页）为 TSV');
     app_unmount_all();
   });

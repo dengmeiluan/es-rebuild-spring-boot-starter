@@ -594,7 +594,8 @@
                 <tr><th>集群</th><th>索引</th><th>查询 QPS</th><th>写入速率(doc/秒)</th><th>存储(MB)</th></tr>
               </thead>
               <tbody>
-                <tr v-for="t in topRows" :key="t.cluster + '|' + t.index">
+                <tr v-for="t in topRows" :key="t.cluster + '|' + t.index"
+                  @contextmenu.prevent="openLdRowMenu($event, 'top', t)">
                   <td>{{ t.cluster }}</td>
                   <!-- 高频交互闭环：索引名可点=setTarget 到来源集群+深链数据浏览器 -->
                   <td class="mono"><a class="ld-top-link" role="link" tabindex="0" @click="gotoBrowser(t)" @keydown.enter.prevent="gotoBrowser(t)">{{ t.index }}</a></td>
@@ -623,7 +624,8 @@
                   <tr><th>时间</th><th>用户</th><th>集群</th><th>方法</th><th>URI</th><th>耗时(ms)</th><th>HTTP</th></tr>
                 </thead>
                 <tbody>
-                  <tr v-for="r in slowRows" :key="(r.timestamp || 0) + '|' + (r.uri || '') + '|' + (r.costMs || 0)">
+                  <tr v-for="r in slowRows" :key="(r.timestamp || 0) + '|' + (r.uri || '') + '|' + (r.costMs || 0)"
+                  @contextmenu.prevent="openLdRowMenu($event, 'slow', r)">
                     <td class="mono">{{ fmtTime(r.timestamp) }}</td>
                     <td>{{ r.username || '-' }}</td>
                     <td>{{ r.connName || r.connId || '-' }}</td>
@@ -655,7 +657,8 @@
                 <tr><th>时间</th><th>集群</th><th>级别</th><th>指标</th><th>值</th><th>阈值</th><th>状态</th><th>文案</th></tr>
               </thead>
               <tbody>
-                <tr v-for="a in alertHistRows" :key="a.timestamp + '|' + (a.connId || '') + '|' + a.metric + '|' + (a.recovered ? 'r' : 'a')">
+                <tr v-for="a in alertHistRows" :key="a.timestamp + '|' + (a.connId || '') + '|' + a.metric + '|' + (a.recovered ? 'r' : 'a')"
+                  @contextmenu.prevent="openLdRowMenu($event, 'alert', a)">
                   <td class="mono">{{ fmtTime(a.timestamp) }}</td>
                   <td>{{ a.connName || a.connId || '未知集群' }}</td>
                   <td><StatusPill :tone="a.level === 'CRIT' ? 'r' : a.level === 'WARN' ? 'y' : 'n'" :label="a.level" /></td>
@@ -687,6 +690,11 @@
       </div>
     </div>
 
+    <!-- 1158：监控屏三表（Top 索引 / 慢请求 / 告警历史）行右键——
+         同一批「看一眼 / 拷一条 / 跳到该集群现场」的动作不再靠列内链接硬闯，
+         复制类收进二级（与全站卡片菜单同一两级语言）。 -->
+    <CellContextMenu v-if="ldMenu" :x="ldMenu.x" :y="ldMenu.y" :title="ldMenu.title"
+      :items="ldMenuItems" @close="ldMenu = null" />
   </FocusableSurface>
 </template>
 
@@ -694,7 +702,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
-import { MonitorSpeaker, Pause, Play, Maximize2, Minimize2, AlertTriangle, CheckCircle2, RotateCw, GitCompareArrows, ChevronDown } from 'lucide-vue-next';
+import { MonitorSpeaker, Pause, Play, Maximize2, Minimize2, AlertTriangle, CheckCircle2, RotateCw, GitCompareArrows, ChevronDown, Copy, Braces, ExternalLink } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';
 import FocusableSurface from '../components/FocusableSurface.vue';
@@ -705,11 +713,13 @@ import StatusPill from '../components/StatusPill.vue'; /* ：运行任务/告警
 import { useLiveMonitorStore, type LiveAlert } from '../stores/liveMonitor';
 import { useAuthStore } from '../stores/auth';
 import { useAppStore } from '../stores/app';
+import { useGatedBootRead } from '../composables/usePageIdentityGate';
 /* 第四卡单源——全局作业跟踪器（App.vue 登录就绪后常驻轮询），本页只读不拉新端点 */
 import { useJobTrackerStore } from '../stores/jobTracker';
 import { fmtTime, fmtDur, fmtWindow, fmtNum, copyText } from '../utils/format';
 import { removeStoredRaw } from '../utils/safeJson';
 import { matrixText } from '../utils/copyMatrix';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import { METRIC_THRESHOLDS, metricTone } from '../utils/metricThresholds';
 /* 天罗W6：节点角色分档收口 utils/esEnumZh（data=蓝/master=紫单一出处，DiagView 节点表同源）；
  行为等价迁移：模板绑定的 roleLabel/roleClass 与 sortedNodes 的 isDataNode 语义不变。
@@ -1394,6 +1404,64 @@ const detailCanExport = computed(() => {
 });
 /* Z1：toggleTop/toggleSlow 函数随 CollapsePanel v-model:open 合并退役——
  首开懒加载语义保留（watch open 起手拉取，与旧 toggle 内 if 分支等价） */
+/* ═══ 1158：监控屏三表行右键（Top 索引 / 慢请求 / 告警历史）═══
+ 一级 = 该行最常用的一步（慢请求=复制 URI；告警=复制文案；Top=在数据浏览器打开）；
+ 复制整行 JSON 与其余项收进「复制…」二级（与全站卡片菜单同一两级语言）。
+ 只读视图：不提供任何写动作，避免监控屏变成误操作面。 */
+type LdMenuKind = 'top' | 'slow' | 'alert';
+const ldMenu = ref<{ x: number; y: number; title: string; kind: LdMenuKind; row: any } | null>(null);
+function openLdRowMenu(e: MouseEvent, kind: LdMenuKind, row: any) {
+  const title = kind === 'top' ? `索引 · ${row.index}` : kind === 'slow' ? `慢请求 · ${row.uri || '-'}` : `告警 · ${metricZh(row.metric)}`;
+  ldMenu.value = { x: e.clientX, y: e.clientY, title, kind, row };
+}
+const ldMenuItems = computed<CcmItem[]>(() => {
+  const m = ldMenu.value; if (!m) return [];
+  const row = m.row;
+  const json = JSON.stringify(row, null, 2);
+  const copy = async (text: string, ok: string) => {
+    const done = await copyText(text);
+    store.notify(done ? 'success' : 'error', done ? ok : '复制失败');
+  };
+  const copyGroup: CcmItem = {
+    key: 'copy-group', label: '复制…', icon: Copy, sep: true, children: [
+      { key: 'copy-json', label: '复制整行 JSON', icon: Braces, run: () => void copy(json, '已复制整行 JSON') },
+      { key: 'copy-tsv', label: '复制为 TSV（可直接贴表格）', icon: Copy, run: () => {
+        const vals = Object.values(row).map(v => (v === null || v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v)));
+        void copy(vals.join('	'), '已复制该行（TSV）');
+      } },
+    ],
+  };
+  if (m.kind === 'top') {
+    return [
+      { key: 'open-browser', label: '在数据浏览器打开该索引', icon: ExternalLink, run: () => gotoBrowser(row) },
+      { key: 'browse-index', label: '在索引工作区查看', icon: Braces, run: () => {
+        if (row.connId && !auth.canSeeConn(row.connId)) { store.notify('warning', '暂无该连接的访问权限'); return; }
+        if (row.connId && row.connId !== store.target) store.setTarget(row.connId, row.clusterName ?? row.cluster ?? row.connId);
+        store.pick(row.index);
+        router.push('/indices');
+      } },
+      { key: 'copy-index', label: '复制索引名', icon: Copy, sep: true, run: () => void copy(String(row.index ?? ''), '已复制索引名：' + row.index) },
+      copyGroup,
+    ];
+  }
+  if (m.kind === 'slow') {
+    return [
+      { key: 'copy-uri', label: '复制 URI', icon: Copy, run: () => void copy(String(row.uri ?? ''), '已复制 URI') },
+      { key: 'copy-curl', label: '复制为 cURL', icon: ExternalLink, run: () => {
+        const conn = row.connName || row.connId || '当前集群';
+        const curl = `curl -X${String(row.method || 'GET').toUpperCase()} '<${conn}>${row.uri || '/'}' -H 'Content-Type: application/json'`;
+        void copy(curl, '已复制 cURL');
+      } },
+      copyGroup,
+    ];
+  }
+  return [
+    { key: 'copy-msg', label: '复制告警文案', icon: Copy, run: () => void copy(String(row.message ?? ''), '已复制告警文案') },
+    { key: 'copy-metric', label: `复制指标名（${metricZh(row.metric)}）`, icon: Braces, sep: true, run: () => void copy(String(row.metric ?? ''), '已复制指标名') },
+    copyGroup,
+  ];
+});
+
 function gotoBrowser(t: any) {
   /* 963：下钻换集群必须走 store.setTarget——裸 setTargetId 只改数据面，SideNav 授权过滤/页面门/
    router key 仍停在旧目标（切过去落在未授权页=403 死路）；setTarget 一并刷新目标名/清旧索引现场。
@@ -1510,7 +1578,14 @@ async function loadSlow() {
 /* 历史自动刷新（对标阿里云自动刷新开关）：复用 useAutoRefresh 全生命周期
  （页面隐藏/KeepAlive 失活自动停续），tick guard=加载中互斥；偏好记忆 live.histAuto 默认关 */
 const histAutoMs = usePref<number>('live.histAuto', 0);
-const { setOn: histAutoSetOn } = useAutoRefresh(() => { void loadHist(); if (detailShows('slow')) void loadSlow(); }, {
+/* 1125：轮询同样过身份门——宿主换 token 的窗口里 tick 会带旧 target 拉监控曲线；
+   本拍不放行就跳过，下一拍身份到位自然恢复（轮询不需要挂起重试）。 */
+const liveReady = () => auth.authDisabled || !auth.probeStarted
+  || (auth.probed && auth.me != null && auth.canReadPage('live', store.target));
+const { setOn: histAutoSetOn } = useAutoRefresh(() => {
+  if (!liveReady()) return;
+  void loadHist(); if (detailShows('slow')) void loadSlow();
+}, {
   ms: () => Number(histAutoMs.value) || 0,
   guard: () => !histLoading.value,
 });
@@ -1824,8 +1899,10 @@ watch([mh2Range, clusterFilter, nodeMode, mhAgg, customFrom, customTo], () => { 
 /* 周期档切换即重查——独立 watch（不动上方被 monitorHistoryTrend 逐字锁的数组字面）。
  histGroup 仍**不入**重查依赖：分组是用户导航过滤（切集群/范围/档位均不得重置。 */
 watch(histPeriod, () => { void loadHist(); if (detailShows('slow')) void loadSlow(); if (detailShows('top')) void loadTop(); });
+/* 1125：首载监控曲线同门（挂起待身份落地补跑） */
+const liveBoot = useGatedBootRead('live', () => loadHist());
 onMounted(() => {
-  loadHist();
+  liveBoot.run();
   /* 命令面板「实时大屏·全屏切换」的一次性载荷：读后即清（刷新不再重复进入挂墙态）。 */
   if (sessionStorage.getItem('es-console.live.fullscreen') === '1') {
     fullscreen.value = true;

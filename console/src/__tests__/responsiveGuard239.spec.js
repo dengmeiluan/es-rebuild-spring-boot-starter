@@ -161,7 +161,7 @@ describe('五百二十八批：锚⑤ 弹层 :width prop 视口钳制', () => {
                 if (!m || Number(m[1]) < 300)
                     continue;
                 hitsByFile.set(rel, (hitsByFile.get(rel) || 0) + 1);
-                const clamped = /max-width|drawer-style/.test(line);
+                const clamped = /max-width|drawer-style|:style="\{[^"]*maxWidth/.test(line);
                 expect(clamped || exemptions.includes(rel), `${rel} 弹层 :width=${m[1]} 无视口钳制（窄视口整条溢出）：${line.trim()}`).toBe(true);
             }
         }

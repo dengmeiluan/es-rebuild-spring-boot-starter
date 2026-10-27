@@ -374,11 +374,17 @@ function diffToScript(): string {
   return diffs.join('\n');
 }
 
-/* URL 带齐 idx+id（收藏重放/分享直达）时自动拉取，免一次手动点击 */
-onMounted(() => {
-  /* 收藏重放带回的编辑稿（一次性 carry 键）——拉取最新版后恢复，直接呈现 diff */
+/* URL 带齐 idx+id（收藏重放/分享直达）时自动拉取，免一次手动点击。
+   1125：与 DslQuery autoRunAllowed 同口径——宿主换 token 的窗口里 probed 未落地，
+   旧 target 的文档会先拉回来（403 噪声 + 结果串到新账号界面）；不放行就挂起，身份落地补跑。 */
+const docReadAllowed = () => auth.authDisabled || !auth.probeStarted
+  || (auth.probed && auth.me != null && auth.canReadPage('doc-diff', store.target));
+let mountReadPending = false;
+function mountAutoRead() {
   const carry = sessionStorage.getItem('es-console.doc-diff.carry.source');
   removeStoredRaw(sessionStorage, 'es-console.doc-diff.carry.source');
+  if (!docReadAllowed()) { mountReadPending = true; return; }
+  mountReadPending = false;
   if (isCompare.value) { fetchCompare(); return; }   // 只读对比走独立拉取，不碰 patch 的编辑稿恢复
   if (index.value.trim() && id.value.trim()) {
     doFetch().then(() => {
@@ -388,6 +394,10 @@ onMounted(() => {
       }
     });
   }
+}
+onMounted(mountAutoRead);
+watch(() => [auth.probed, auth.authDisabled, auth.me?.username, store.target], () => {
+  if (mountReadPending && docReadAllowed()) mountAutoRead();
 });
 
 const patchPreview = computed(() => {

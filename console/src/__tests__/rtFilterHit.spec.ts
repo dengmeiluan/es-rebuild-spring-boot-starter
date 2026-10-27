@@ -7,6 +7,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createApp, h, nextTick } from 'vue';
+import { findMenuItem } from './helpers/ctxMenu';
 import { createPinia } from 'pinia';
 
 vi.mock('../api', async (importOriginal) => {
@@ -51,8 +52,8 @@ function ctxOnCell(col: string, ri = 0) {
   td.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 10, clientY: 10 }));
 }
 
-const menuItem = (label: string) =>
-  [...document.body.querySelectorAll('.ccm-it') as any].find(b => b.textContent?.includes(label));
+/* 1142：动作项住分组二级——findMenuItem 会按需展开分组 */
+const menuItem = (label: string) => findMenuItem(label);
 
 beforeEach(() => {
   localStorage.clear();
@@ -75,7 +76,7 @@ describe('RT 以此值过滤并重查（W7 filter-hit）', () => {
     /* age（long）→ term */
     ctxOnCell('age');
     await tick();
-    const termBtn = menuItem('以此值过滤并重查');
+    const termBtn = await menuItem('以此值过滤并重查');
     expect(termBtn, '右键菜单应有「以此值过滤并重查」').toBeTruthy();
     (termBtn as HTMLElement).click();
     await tick();
@@ -86,14 +87,14 @@ describe('RT 以此值过滤并重查（W7 filter-hit）', () => {
     /* msg（text）→ match */
     ctxOnCell('msg');
     await tick();
-    (menuItem('以此值过滤并重查') as HTMLElement).click();
+    ((await menuItem('以此值过滤并重查')) as HTMLElement).click();
     await tick();
     expect(events[1]).toEqual({ field: 'msg', value: 'hello world', op: 'match' });
 
     /* name（keyword）→ term */
     ctxOnCell('name');
     await tick();
-    (menuItem('以此值过滤并重查') as HTMLElement).click();
+    ((await menuItem('以此值过滤并重查')) as HTMLElement).click();
     await tick();
     expect(events[2]).toEqual({ field: 'name', value: 'banana', op: 'term' });
     /* 事件只发不做路由：组件自身不应发起查询（无通知/无 DSL 复制副作用） */
@@ -106,19 +107,19 @@ describe('RT 以此值过滤并重查（W7 filter-hit）', () => {
     /* 无 fieldTypes：age → term */
     ctxOnCell('age', 1);
     await tick();
-    (menuItem('以此值过滤并重查') as HTMLElement).click();
+    ((await menuItem('以此值过滤并重查')) as HTMLElement).click();
     await tick();
     expect(events[0]).toEqual({ field: 'age', value: 3, op: 'term' });
     /* 空值格（hole=null）不出项 */
     ctxOnCell('hole');
     await tick();
-    expect(menuItem('以此值过滤并重查'), '空值格不应出 filter-hit 项').toBeFalsy();
+    expect(await menuItem('以此值过滤并重查'), '空值格不应出 filter-hit 项').toBeFalsy();
     /* 既有项文案逐字保留（契约同步更新锚点） */
     ctxOnCell('age');
     await tick();
-    expect(menuItem('复制值')).toBeTruthy();
-    expect(menuItem('筛选此列')).toBeTruthy();
-    expect(menuItem('复制为 term 查询')).toBeTruthy();
-    expect(menuItem('查看完整值')).toBeTruthy();
+    expect(await menuItem('复制值')).toBeTruthy();
+    expect(await menuItem('筛选此列')).toBeTruthy();
+    expect(await menuItem('复制为 term 查询')).toBeTruthy();
+    expect(await menuItem('查看完整值')).toBeTruthy();
   });
 });

@@ -1,5 +1,5 @@
 <template>
-  <NDrawer :show="show" :width="560" :drawer-style="{ maxWidth: '94vw' }" placement="right" @update:show="v => emit('update:show', v)">
+  <NDrawer :show="show" :width="560" :style="{ maxWidth: '94vw' }" placement="right" @update:show="v => emit('update:show', v)">
     <NDrawerContent title="接入文档" closable>
       <div class="ig-meta mono">{{ coordinate }}</div>
       <div v-for="s in tintedSections" :key="s.id" class="ig-sec">

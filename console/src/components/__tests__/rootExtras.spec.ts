@@ -86,14 +86,15 @@ describe('RootExtrasPane', () => {
     (host.querySelector('.rx-sort-add') as HTMLElement).click();
     await tick();
     expect(cur.value.sort!.length).toBe(1);
-    expect(cur.value.sort![0].field).toBe('a');
+    /* 1100：默认字段改为「可排序 + 时间优先」——fixture 的 date 字段 d 优先于 a/b */
+    expect(cur.value.sort![0].field).toBe('d');
     expect(cur.value.sort![0].params.order).toBe('desc');
     const sel = host.querySelector('.rx-sort-order') as HTMLSelectElement;
     sel.value = 'asc';
     sel.dispatchEvent(new Event('change'));
     await tick();
     expect(cur.value.sort![0].params.order).toBe('asc');
-    expect(serializeTree(cur.value).sort).toEqual([{ a: 'asc' }]);
+    expect(serializeTree(cur.value).sort).toEqual([{ d: 'asc' }]);
   });
 
   it('删除排序行 → 空数组保键', async () => {

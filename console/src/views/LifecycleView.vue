@@ -132,7 +132,7 @@
  widthPct 下限）× track 约 600px ≈ 48px，中文「删除/冻结」1-2 字（≤24px）比英文裸串
  （delete 6 字符 mono ≈ 43px）更窄——条内亦收中文不溢出，title 恒双语「中文（english）」兜底 -->
       <div v-else-if="policies.length" class="lc-gantt">
-        <div v-for="p in policies" :key="p.name" class="lc-gantt-row">
+        <div v-for="p in policies" :key="p.name" class="lc-gantt-row" @contextmenu.prevent="openLcMenu($event, p)">
           <div class="lc-gantt-label" :title="p.name">{{ p.name }}</div>
           <div class="lc-gantt-track">
             <div v-for="ph in p.phases" :key="ph.name" class="lc-gantt-bar" :class="'ph-' + ph.name"
@@ -202,16 +202,23 @@
 
     <!-- 原始 IO 弹窗（宿主受控开关；rec 取 rollover / explain 各自最近一条记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
+
+    <!-- 1169：甘特策略行右键——此前这条列表只能「看」，想拿策略名或阶段表只能手抄。
+         一级只放高频两项，其余复制动作收进二级（与表格/卡片右键同语言）。 -->
+    <CellContextMenu v-if="lcMenu" :x="lcMenu.x" :y="lcMenu.y"
+      :title="'ILM 策略 · ' + lcMenu.p.name" :items="lcMenuItems" @close="lcMenu = null" />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Shield, Layers, RefreshCw, PlayCircle, PauseCircle, Rocket, Search, GitBranch, FastForward, Terminal } from 'lucide-vue-next';
+import { Shield, Layers, RefreshCw, PlayCircle, PauseCircle, Rocket, Search, GitBranch, FastForward, Terminal, Copy, Braces, ListOrdered } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
 import RawIoModal from '../components/RawIoModal.vue';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
+import { copyText } from '../utils/format';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
 import IndexPicker from '../components/IndexPicker.vue';
@@ -232,6 +239,42 @@ import { useDebounceFn } from '../composables/useDebounceFn'; /* ：划线注入
 import { removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
+
+/* 1169：甘特策略行右键菜单（只读数据 → 只给「看/抄」两类动作，不含写） */
+const lcMenu = ref<{ x: number; y: number; p: any } | null>(null);
+function openLcMenu(e: MouseEvent, p: any) {
+  lcMenu.value = { x: e.clientX, y: e.clientY, p };
+}
+const lcMenuItems = computed<CcmItem[]>(() => {
+  const m = lcMenu.value; if (!m) return [];
+  const p = m.p;
+  const phases = (p.phases || []) as any[];
+  const phaseLine = (ph: any) => `${phaseZh(ph.name) || ph.name}（${ph.name}） min_age=${ph.minAge}`;
+  return [
+    { key: 'lc-copy-name', label: '复制策略名', icon: Copy, run: async () => {
+      const ok = await copyText(String(p.name || ''));
+      store.notify(ok ? 'success' : 'error', ok ? '已复制策略名：' + p.name : '复制失败');
+    } },
+    { key: 'lc-copy-json', label: '复制整条策略 JSON', icon: Braces, run: async () => {
+      const ok = await copyText(JSON.stringify(p, null, 2));
+      store.notify(ok ? 'success' : 'error', ok ? '策略 JSON 已复制' : '复制失败');
+    } },
+    {
+      key: 'lc-copy-group', label: '复制…', icon: Copy, sep: true, children: [
+        { key: 'lc-copy-phase', label: '复制阶段表（每行：中文（english） min_age）', icon: ListOrdered, run: async () => {
+          const txt = phases.map(phaseLine).join('\n');
+          const ok = await copyText(txt);
+          store.notify(ok ? 'success' : 'error', ok ? `已复制 ${phases.length} 个阶段` : '复制失败');
+        } },
+        { key: 'lc-copy-phase-en', label: '复制阶段英文原名（逗号分隔）', icon: Braces, run: async () => {
+          const txt = phases.map((ph: any) => ph.name).join(',');
+          const ok = await copyText(txt);
+          store.notify(ok ? 'success' : 'error', ok ? '已复制阶段序列' : '复制失败');
+        } },
+      ],
+    },
+  ].filter(Boolean) as CcmItem[];
+});
 /* 权限门禁——ILM 起停/rollover/move step=/cluster/ilm/start|stop|move、/cluster/rollover=CLUSTER 档（rank3+）；
  甘特图/explain 全角色可用；本页写门统一按 lifecycle 页 start 端点做连接感知裁决 */
 const auth = useAuthStore();

@@ -297,6 +297,11 @@ export const useAppStore = defineStore('app', () => {
       let msg: string;
       if (d.denied === 'CLIENT_WRITE_DENIED') {
         msg = `当前身份无权执行${who}，请求已在客户端拦截（未发出）；请核对当前页面/目标连接的写授权，刚被撤权时刷新页面可同步菜单`;
+      } else if (d.denied === 'ENV_PAGE_DENIED') {
+        /* 环境限制不是「没权限」：页面上限由连接的 env 模板决定，找管理员勾页面是白跑一趟。
+           后端 EnvPagesResolver.denyBody 带 page + 这条 code，dedicated 文案才对得上原因。 */
+        msg = `当前连接的运行环境未开放「${page || '该'}」页面：${who}未发出（由环境模板限制，与账号页面授权无关）；`
+          + `如需在该环境使用，请联系管理员调整连接的 env 模板或改连其他环境`;
       } else if (page) {
         msg = `暂无「${page}」页面权限：${who}未发出（后端拒绝）`;
       } else if (required) {

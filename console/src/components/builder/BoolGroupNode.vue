@@ -1,6 +1,7 @@
 <template>
-  <div class="bgn" :class="{ folded: collapsed }" :data-nid="node.id">
+  <div ref="rootEl" class="bgn" :class="{ folded: collapsed }" :data-nid="node.id">
     <div class="bgn-hd">
+      <NodeSelectBox :id="node.id" />
       <span class="bgn-grip" title="拖拽整组排序（按住拖动）" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
       <button aria-label="折叠或展开整组" class="btn sm ghost" :title="collapsed ? '展开整组' : '折叠整组'"
               @click="collapsed = !collapsed">
@@ -111,6 +112,7 @@ import { X, Group, Ungroup, Plus, SlidersHorizontal, ChevronDown, ChevronRight, 
 import { subtreeStash, readStashSubtree, copySubtreeToStash } from '../../utils/queryStash';
 import GenericParams from './GenericParams.vue';
 import NodeRenderer from './NodeRenderer.vue';
+import NodeSelectBox from './NodeSelectBox.vue';
 import { TREE_BUS, DRAG_KEY, DRAG_EVENT, fireDrag } from './treeBus';
 import { defaultLeafTarget, curFieldSearchIndex } from '../../utils/fieldSearch';
 import { useScopedDraft } from '../../composables/useScopedDraft';
@@ -162,8 +164,22 @@ function defaultLeaf(): LeafNode {
     ? { id: nid(), type: 'leaf', op: t.op, field: t.field, value: '', params: {}, raw: null }
     : { id: nid(), type: 'leaf', op: 'match_all', field: null, value: {}, params: {}, raw: null };
 }
+/* 1045：新条件落位后把焦点送到它的字段输入——大树/长分区里不再「点了加条件却看不见
+   新行落在哪」。只在本组 DOM 内找新节点 id，不跨组抢焦点。 */
+const rootEl = ref<HTMLElement>();
+function focusNewNode(id: string) {
+  /* 双 nextTick：NodeRenderer 分派出 ClauseNode 需要额外一拍 */
+  nextTick(() => nextTick(() => {
+    const el = rootEl.value?.querySelector<HTMLElement>(`[data-nid="${id}"]`);
+    const target = el?.querySelector<HTMLElement>('.fs-inp, input, select, textarea');
+    target?.focus({ preventScroll: false });
+    el?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  }));
+}
 function addClause(o: Occur) {
-  emit('update:node', { ...props.node, children: [...props.node.children, { occur: o, node: defaultLeaf() }] });
+  const leaf = defaultLeaf();
+  emit('update:node', { ...props.node, children: [...props.node.children, { occur: o, node: leaf }] });
+  focusNewNode(leaf.id);
 }
 
 /* ═══ 1036：粘贴子树（跨查询剪贴）═══
@@ -208,7 +224,9 @@ function addAdvanced(op: string) {
   if (!advOpen.value) return;
   const o = advOpen.value;
   advOpen.value = null;
-  emit('update:node', { ...props.node, children: [...props.node.children, { occur: o, node: makeNodeByOp(op) }] });
+  const node = makeNodeByOp(op);
+  emit('update:node', { ...props.node, children: [...props.node.children, { occur: o, node }] });
+  focusNewNode(node.id);
 }
 /* 过滤后 Enter 直插首个命中（键盘流：搜索 → Enter 即得，不用碰鼠标） */
 /* 993：↑↓ 键盘导航——跨组扁平序列游标；过滤词变化重置（Enter 未导航仍首个命中） */
@@ -235,8 +253,10 @@ const onAdvOutside = () => { advOpen.value = null; };
 onMounted(() => window.addEventListener('click', onAdvOutside));
 onBeforeUnmount(() => window.removeEventListener('click', onAdvOutside));
 function addGroup(o: Occur) {
-  const g: BoolNode = { id: nid(), type: 'bool', children: [{ occur: 'must', node: defaultLeaf() }], params: {}, arrForm: { must: true } };
+  const inner = defaultLeaf();
+  const g: BoolNode = { id: nid(), type: 'bool', children: [{ occur: 'must', node: inner }], params: {}, arrForm: { must: true } };
   emit('update:node', { ...props.node, children: [...props.node.children, { occur: o, node: g }] });
+  focusNewNode(inner.id);
 }
 function replaceChild(id: string, n: QueryNode) {
   emit('update:node', {
@@ -293,6 +313,8 @@ onBeforeUnmount(() => window.removeEventListener(BGN_COLLAPSE_EVENT, onCollapseE
 .bgn-hd { display: flex; align-items: center; gap: var(--sp-0); margin: 0 0 var(--sp-0); flex-wrap: wrap;
   opacity: 0; height: 24px; transition: opacity var(--tr); }
 .bgn:hover > .bgn-hd, .bgn:focus-within > .bgn-hd { opacity: 1; }
+/* 多选开启时组头常显——否则复选框随组头透明不可见/不可点 */
+.bgn-hd:has(.nsb) { opacity: 1; }
 /* 折叠态组头恒可见——hover 才浮现的设计让折叠组成一行不可见空白（触屏完全不可操作），
  折叠后 DOM 只剩 header，必须常显才能再展开/看到摘要 */
 .bgn.folded > .bgn-hd { opacity: 1; }

@@ -15,6 +15,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createApp, h, nextTick } from 'vue';
 import { createPinia } from 'pinia';
 import QueryResultTable from '../components/QueryResultTable.vue';
+import { findMenuItem } from './helpers/ctxMenu'; /* 1142：二级菜单取项 */
 import ResultTable from '../components/ResultTable.vue';
 import { useColFilters } from '../composables/useColFilters';
 
@@ -63,7 +64,8 @@ async function openCellMenu(sel: string) {
   await tick(4);
 }
 const menuButtons = () => [...document.querySelectorAll('.ccm-mask .ccm-it')] as HTMLButtonElement[];
-const menuIt = (txt: string) => menuButtons().find(b => b.textContent?.includes(txt));
+/* 1142：动作项住分组二级——menuIt 按需展开分组（helper 统一口径） */
+const menuIt = (txt: string) => findMenuItem(txt) as Promise<HTMLButtonElement | null>;
 
 /* ═══════════ 一、QRT 格右键缺口语径补齐（①②） ═══════════ */
 describe('五百五十六批 A：QRT 单元格菜单补「筛选此列」+「全列适应内容」（RT 对称件）', () => {
@@ -72,7 +74,7 @@ describe('五百五十六批 A：QRT 单元格菜单补「筛选此列」+「全
       cols: ['name', 'n'], rows: [['banana', 1], ['apple', 2]] as any, storageKey: 'w556q1',
     });
     await openCellMenu('tbody tr td.qrt-cell');
-    const it1 = menuIt('筛选此列');
+    const it1 = await menuIt('筛选此列');
     expect(it1, 'QRT 格右键有「筛选此列」项（RT 230 批对称件）').toBeTruthy();
     it1!.click();
     await tick(6);
@@ -84,22 +86,23 @@ describe('五百五十六批 A：QRT 单元格菜单补「筛选此列」+「全
   it('① QRT：无 storageKey（prefsOn=false）「筛选此列」仍可达（筛选内存态，与列头 filter-col 同口径）', async () => {
     await mountTbl(QueryResultTable, { cols: ['v'], rows: [[1]] as any });
     await openCellMenu('tbody tr td.qrt-cell');
-    expect(menuIt('筛选此列'), '无记忆通道筛选直达仍在（内存态）').toBeTruthy();
+    expect(await menuIt('筛选此列'), '无记忆通道筛选直达仍在（内存态）').toBeTruthy();
   });
 
   it('② QRT：格右键「全列适应内容」prefsOn 门控（storageKey 在场出、不在场不出）', async () => {
     await mountTbl(QueryResultTable, { cols: ['v', 'w'], rows: [[1, 'x']] as any, storageKey: 'w556q2' });
     await openCellMenu('tbody tr td.qrt-cell');
-    expect(menuIt('此列适应内容'), '前置：fit-col 既有项在场').toBeTruthy();
-    expect(menuIt('全列适应内容'), '格右键补 fit-all（RT 254 批对位项）').toBeTruthy();
+    expect(await menuIt('此列适应内容'), '前置：fit-col 既有项在场').toBeTruthy();
+    expect(await menuIt('全列适应内容'), '格右键补 fit-all（RT 254 批对位项）').toBeTruthy();
     /* happy-dom 无布局（scrollWidth=0）→ fitAll 安全 no-op，点击不炸不写宽 */
-    expect(() => menuIt('全列适应内容')!.click(), '点击安全（max=0 no-op 契约）').not.toThrow();
+    const fitAllIt = (await menuIt('全列适应内容'))!;
+    expect(() => fitAllIt.click(), '点击安全（max=0 no-op 契约）').not.toThrow();
     await tick(4);
     expect(localStorage.getItem('es_tbl_w:w556q2'), '无测量宽不落盘（no-op 不造假宽）').toBeNull();
     lastUnmount();
     await mountTbl(QueryResultTable, { cols: ['v'], rows: [[1]] as any });
     await openCellMenu('tbody tr td.qrt-cell');
-    expect(menuIt('全列适应内容'), '无 storageKey 不出空操作假菜单项（tableRangeAggCopy 同口径）').toBeUndefined();
+    expect(await menuIt('全列适应内容'), '无 storageKey 不出空操作假菜单项（tableRangeAggCopy 同口径）').toBeNull();
   });
 });
 
@@ -111,8 +114,8 @@ describe('五百五十六批 B：RT 对照锚 + filterMode OR 跨三档补锚', 
     ] as any;
     await mountTbl(ResultTable, { hits: HITS, total: 2, index: 'w556r3' });
     await openCellMenu('tbody tr td.rt-cell');
-    expect(menuIt('筛选此列'), 'RT 格右键筛选直达在场（基准侧）').toBeTruthy();
-    expect(menuIt('全列适应内容'), 'RT 格右键 fit-all 在场（254 批件）').toBeTruthy();
+    expect(await menuIt('筛选此列'), 'RT 格右键筛选直达在场（基准侧）').toBeTruthy();
+    expect(await menuIt('全列适应内容'), 'RT 格右键 fit-all 在场（254 批件）').toBeTruthy();
   });
 
   it('④ useColFilters：OR 档=等值∪区间∪包含三档并集（区间进 OR 首锚；AND 交叉回归）', () => {

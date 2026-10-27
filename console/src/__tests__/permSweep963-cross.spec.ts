@@ -67,12 +67,18 @@ describe('963 CmdPalette：端点级门禁（设置下发/分词热重载/ILM �
 /* ═══ ② SecurityView：执行体守卫 + facets 按全量审计档 ═══ */
 describe('963 SecurityView：用户/重绑执行体守卫与 facets 档位', () => {
   it('doUpsert/doDelete 首行 canWriteUsers 守卫（委派非 ADMIN 不得写全局账号）', () => {
-    expect(sec).toMatch(/async function doUpsert\(\) \{\n\s*if \(!canWriteUsers\.value\) return;/);
-    expect(sec).toMatch(/async function doDelete\(username: string\) \{\n\s*if \(!canWriteUsers\.value\) return;/);
+    /* 守卫生效即可：源码此处先 notify（说明「缺什么」）再 return，不静默吞点击 */
+    expect(sec).toMatch(/async function doUpsert\(\) \{[\s\S]{0,400}?if \(!canWriteUsers\.value\) \{[\s\S]{0,200}?return; \}/);
+    expect(sec).toMatch(/async function doDelete\(username: string\) \{[\s\S]{0,400}?if \(!canWriteUsers\.value\) \{[\s\S]{0,200}?return; \}/);
     expect(sec).toContain("if (auth.authDisabled || !auth.probeStarted) return true;");
     expect(sec).toContain("return Array.isArray(gp) && gp.some(g => g.startsWith('conn:'))");
     expect(sec).toContain("auth.canEndpoint('admin', 'GET', '/internal/es/index/auth/users', store.target)");
     expect(sec).toContain('if (Array.isArray(auth.grantedPages)) return false;'); /* 1007：页面授权身份仅 ADMIN 可管本地账号 */
+    /* 委派判断必须先于 isAdmin()：产线 deng_test_x2 = role=ADMIN + delegated=true，
+       旧顺序在 isAdmin() 处放行，页面亮出必被后端 400 拒绝的死表单。 */
+    expect(sec).toMatch(/if \(auth\.me\.delegated\) return false;\s*\n\s*if \(auth\.isAdmin\(\)\) return true;/);
+    expect(sec).not.toMatch(/if \(auth\.isAdmin\(\)\) return true;\s*\n\s*if \(auth\.me\.delegated\) return false;/);
+    expect(authSrc).toMatch(/clean\.includes\('\/auth\/users'\) && me\.value\?\.delegated\) return false;[\s\S]{0,400}?if \(clean\.includes\('\/auth\/users'\) && !isAdmin\(\)/);
     expect(sec).toMatch(/async function loadUsers\(\) \{\n\s*if \(!canReadUsers\.value\) return;/);
   });
 
@@ -207,6 +213,12 @@ describe('可选加固：命令面板目录/连接元数据 + 宿主消息来源
   });
   it('auth store 暴露 canSeeConn 且 ADMIN 走全局短路', () => {
     expect(authSrc).toContain('const canSeeConn = (connId: string): boolean =>');
-    expect(authSrc).toContain('if (isAdmin()) return true; /* 超管全局端点权：与后端 ADMIN 页面门豁免镜像 */');
+    /* ADMIN 全局短路仍在（canEndpoint / canPage 各一处），但已收紧为「环境封顶先于 ADMIN 豁免」：
+       旧锚「超管全局端点权：与后端 ADMIN 页面门豁免镜像」已随该收紧移除，改为断言现行两层语义。
+       canEndpoint 的 ADMIN 分支里有 host-bound 早退与判页注释，`const tid` 不在紧跟下一行，
+       故用定长跨行窗口而不是紧邻匹配（1165：锚太紧会在合法排版变化下假红）。 */
+    expect(authSrc).toContain('环境封顶先于 ADMIN 豁免');
+    expect(authSrc).toMatch(/if \(isAdmin\(\)\) \{[\s\S]{0,700}?const tid = /);
+    expect(authSrc).toContain('if (isAdmin()) return true; /* 超管全局页面权：页面白名单/连接键不拖累 */');
   });
 });

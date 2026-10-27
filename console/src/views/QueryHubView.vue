@@ -75,10 +75,17 @@
                 </button>
               </template>
               <div class="qh-tasks-pop">
+                <div v-if="store.pickedIdx" class="qh-task-avail">按当前 mapping 自动匹配：{{ availCount }}/{{ roleTaskCount }} 个字段绑定场景可用</div>
+                <div v-if="store.pickedIdx && recAuto.length" class="qh-task-rec">
+                  <span class="qh-task-rec-hd">按当前 mapping 推荐</span>
+                  <button v-for="r in recAuto" :key="'rec-' + r.task.k" type="button" class="qh-task qh-task-rec-btn"
+                    :title="recTitle(r)" @click="applyTask(r.task)">{{ r.task.t }}</button>
+                </div>
                 <template v-for="t in QUICK_TASKS" :key="t.k">
+          <div v-if="t.head" class="qh-task-sec">{{ t.head }}</div>
           <n-popover v-if="t.input" trigger="click" placement="bottom" :show="taskOpen === t.k" @update:show="(v: boolean) => (taskOpen = v ? t.k : '')">
             <template #trigger>
-              <button class="qh-task" :title="t.scene">{{ t.t }}</button>
+              <button class="qh-task" :class="{ 'qh-task-off': !taskReady(t) }" :title="taskTitle(t)" :disabled="!taskReady(t)">{{ t.t }}</button>
             </template>
             <div class="qh-task-pop">
               <div class="qh-task-scene">{{ t.scene }}</div>
@@ -93,11 +100,16 @@
                   :placeholder="t.input.placeholder" :type-filter="t.input.typeFilter" :type-priority="['keyword']" :to="false" width="100%" class="qh-task-fp"
                   @enter="applyTask(t)" />
                 <input v-else v-model="taskInput" class="inp" :placeholder="t.input.placeholder" @keyup.enter="applyTask(t)" />
-                <button class="btn sm pri" :disabled="!taskInput.trim()" @click="applyTask(t)"><Play :size="11" /> 生成</button>
+                <button v-if="!t.input2" class="btn sm pri" :disabled="!taskInput.trim() || !taskReady(t)" @click="applyTask(t)"><Play :size="11" /> 生成</button>
+              </div>
+              <!-- 1069 续：双输入组合（主体 + 关键词）——第二行独立输入，二者都填才生成 -->
+              <div v-if="t.input2" class="qh-task-row">
+                <input v-model="taskInput2" class="inp" :placeholder="t.input2.placeholder" @keyup.enter="applyTask(t)" />
+                <button class="btn sm pri" :disabled="!taskInput.trim() || !taskInput2.trim() || !taskReady(t)" @click="applyTask(t)"><Play :size="11" /> 生成</button>
               </div>
             </div>
           </n-popover>
-          <button v-else class="qh-task" :title="t.scene" @click="applyTask(t)">{{ t.t }}</button>
+          <button v-else class="qh-task" :class="{ 'qh-task-off': !taskReady(t) }" :title="taskTitle(t)" :disabled="!taskReady(t)" @click="applyTask(t)">{{ t.t }}</button>
                 </template>
               </div>
             </n-popover>
@@ -118,7 +130,7 @@
           <Copy :size="12" /> 导入历史
         </button>
         <QueryHistoryPanel
-          :items="hist.items" :actions="['play', 'fav', 'copy', 'del']" show-mode clickable
+          :items="histRows" :actions="['play', 'fav', 'copy', 'del']" show-mode clickable
           empty-text="暂无跨模式查询历史。在任一通道执行一次查询后，这里会按时间倒序沉淀。"
           @play="replay" @del="row => hist.removeOne(row.id)" @clear="doClearHist" @fav="favHistRow"
         />
@@ -137,6 +149,7 @@ import {
 import { useAppStore } from '../stores/app';
 import { RELEVANCE_LABS } from '../utils/relevanceLabs';
 import { useQueryHistoryStore } from '../stores/queryHistory';
+import { describeSqlOpts } from '../utils/sqlOpts';
 import { useUrlState, readHashQuery, usePref } from '../composables/urlState';
 import { askConfirm } from '../composables/confirm';
 import QueryHistoryPanel from '../components/QueryHistoryPanel.vue';
@@ -146,8 +159,9 @@ import SkeletonBox from '../components/SkeletonBox.vue';
 /* 页头只读当前索引 chip（静默消费 pickedIdx 的可视锚，空索引不渲染） */
 import CurrentIdxChip from '../components/CurrentIdxChip.vue';
 import StatusPill from '../components/StatusPill.vue'; /* ：版本门槛徽标统一件 */
-import { QUERY_MODES, DEFAULT_MODE, normalizeMode, QUICK_TASKS, encodeDslParam, type QuickTask } from '../utils/queryHub';
-import { writeStoredRaw } from '../utils/safeJson';
+import { QUERY_MODES, DEFAULT_MODE, normalizeMode, QUICK_TASKS, encodeDslParam, quickTaskDsl, quickTaskAvailability, quickTaskBindingLabel, recommendQuickTasks, type QuickTask } from '../utils/queryHub';
+import { useIndexFields } from '../composables/useIndexFields';
+import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
 const router = useRouter();
@@ -219,15 +233,21 @@ const stamp = ref(0);
 
 
 /* 路由级 KeepAlive(App.vue 白名单)后本页切回不重挂,onMounted 的深链消费不再跑——activated 补一次:
- 命令面板/收藏回放把预填落在 ?dsl= 或一次性 carry 键时,切到 dsl 模式并 stamp++ 强制内部组件重挂读取 */
+ 命令面板/收藏回放把预填落在 ?dsl= 或一次性 carry 键时,切到对应模式并 stamp++ 强制内部组件重挂读取。
+ 1086：回放预填不只 DSL——SQL/Lucene/沙盒/PIT 的一次性键同样要触发重挂，否则缓存页不消费、点了没反应 */
 let activatedEver = false;
 onActivated(() => {
   /* 首次挂载也会触发 activated——首次的深链由 onMounted 链路负责,这里必须跳过,否则双重消费(两次执行查询) */
   if (!activatedEver) { activatedEver = true; return; }
   const usp = readHashQuery();
-  const wantsDsl = usp.get('dsl') || sessionStorage.getItem('es-console.dsl.carry');
-  if (wantsDsl) {
-    mode.value = 'dsl';
+  let next = '';
+  if (usp.get('dsl') || sessionStorage.getItem('es-console.dsl.carry')) next = 'dsl';
+  else if (sessionStorage.getItem('es-console.sql.prefill') != null) next = 'sql';
+  else if (sessionStorage.getItem('es-console.lucene.q') != null) next = 'lucene';
+  else if (sessionStorage.getItem('es-console.sandbox.body') != null || sessionStorage.getItem('ss_dsl_body') != null) next = 'sandbox';
+  else if (sessionStorage.getItem('es-console.pit.filter') != null || sessionStorage.getItem('es-console.pit.prefill') != null) next = 'pit';
+  if (next) {
+    mode.value = next;
     stamp.value++;
   }
 });
@@ -238,18 +258,63 @@ function switchMode(k: string) {
 
 const taskOpen = ref('');
 const taskInput = ref('');
+const taskInput2 = ref('');
 /* 换一个任务弹窗时清掉上个任务的输入残留（字段名不会撞上文档 _id） */
-watch(taskOpen, () => { taskInput.value = ''; });
+watch(taskOpen, () => { taskInput.value = ''; taskInput2.value = ''; });
 
 function applyTask(t: QuickTask) {
+  return applyTaskAsync(t);
+}
+/* 1062：生产场景先按 mapping 角色解析字段；缺字段明确拒绝，不在编辑器里留假字段 */
+const taskFields = useIndexFields(() => store.pickedIdx || '');
+/* 1069 续：按当前 mapping 角色自动判断场景可用性（开源通用：不认业务字段名）——
+   缺字段的任务预禁用并说明缺什么，不再等用户点下去才报错。 */
+watch(() => store.pickedIdx, (idx) => { if (idx) void taskFields.ensure(); }, { immediate: true });
+const taskAvail = computed(() => new Map(QUICK_TASKS.map(t => [t.k, quickTaskAvailability(t, taskFields.fields.value)])));
+const roleTaskCount = computed(() => QUICK_TASKS.filter(t => t.autoRole || t.autoRoles?.length).length);
+const availCount = computed(() => QUICK_TASKS.filter(t => (t.autoRole || t.autoRoles?.length) && taskAvail.value.get(t.k)?.available).length);
+/* 1069 续：自动推荐（无输入、角色齐全、覆盖多者优先）——不改变完整目录顺序 */
+const recAuto = computed(() => recommendQuickTasks(taskFields.fields.value, 3));
+function recTitle(r: { task: QuickTask }) {
+  const bind = quickTaskBindingLabel(r.task, taskFields.fields.value);
+  return bind ? `${r.task.scene} · ${bind.startsWith('缺：') ? '当前索引' + bind : '自动绑定：' + bind}` : r.task.scene;
+}
+function taskReady(t: QuickTask) { return taskAvail.value.get(t.k)?.available !== false; }
+function taskTitle(t: QuickTask) {
+  const bind = quickTaskBindingLabel(t, taskFields.fields.value);
+  return bind ? `${t.scene} · ${bind.startsWith('缺：') ? '当前索引' + bind : '自动绑定：' + bind}` : t.scene;
+}
+async function applyTaskAsync(t: QuickTask) {
   const input = taskInput.value.trim();
+  const input2 = taskInput2.value.trim();
   /* 反馈链路补口：Generate 钮在空输入时 disabled，但 Enter 路径（裸 input keyup.enter /
  FieldPicker @enter）会静默 return——补一条 warn 提示，弹窗不再"点了没反应" */
   if (t.input && !input) {
     store.notify('warning', '「' + t.t + '」需要先填写输入（' + t.input.placeholder + '）再生成');
     return;
   }
-  const dsl = t.build(input);
+  if (t.input2 && !input2) {
+    store.notify('warning', '「' + t.t + '」需要先填写第二项输入（' + t.input2.placeholder + '）再生成');
+    return;
+  }
+  let dsl = '';
+  let bound = '';
+  if (t.autoRole || t.autoRoles?.length) {
+    if (!store.pickedIdx) {
+      store.notify('warning', `「${t.t}」需要先选择索引（按 mapping 自动绑定字段）`);
+      return;
+    }
+    try { await taskFields.ensure(); } catch { /* 字段源失败：按缺角色处理 */ }
+    const r = quickTaskDsl(t, input, taskFields.fields.value, input2);
+    if (!r.dsl) {
+      store.notify('warning', `当前索引缺少${r.missing}，无法生成「${t.t}」——请换含该字段的索引，或在编辑器手写`);
+      return;
+    }
+    dsl = r.dsl;
+    bound = quickTaskBindingLabel(t, taskFields.fields.value);
+  } else {
+    dsl = t.build(input, undefined, undefined, input2);
+  }
   /* 先落 ?dsl=（分享契约同 DslQueryView），再切 dsl 模式重挂载读取 */
   const usp = readHashQuery();
   usp.set('dsl', encodeDslParam(dsl));
@@ -260,24 +325,39 @@ function applyTask(t: QuickTask) {
   stamp.value++;
   taskOpen.value = '';
   taskInput.value = '';
-  store.notify('success', '已按「' + t.t + '」生成 DSL，看看语句就学会了', { duration: 4000 });
+  taskInput2.value = '';
+  store.notify('success', `已按「${t.t}」生成 DSL${bound ? ' · 绑定 ' + bound : ''}，看看语句就学会了`, { duration: 4000 });
 }
 
 /* ═══ ：跨模式查询历史抽屉 ═══ */
 const hist = useQueryHistoryStore();
 const histOpen = ref(false);
+/* 1091：SQL 行在抽屉里显示执行上下文摘要（时区/取数/列式等），点开前就知道会以什么选项回放 */
+const histRows = computed(() => hist.items.map(i => {
+  if (i.mode !== 'sql') return i;
+  const sub = describeSqlOpts(i.opts);
+  return sub ? { ...i, sub } : i;
+}));
 
 /** 回放：复用各视图既有预填/深链通道（与 favReplay 同源契约），不新造 */
-function replay(it: { mode?: string; query: string; index?: string }) {
+function replay(it: { mode?: string; query: string; index?: string; params?: string; opts?: Record<string, unknown> }) {
   histOpen.value = false;
   const m = it.mode;
   if (!m) return; // 无模式标记的历史条目无法跨模式回放（ HistRow 口径）
   const idx = it.index || '';
+  /* 1071：参数快照只对 sql 回放有效——先清旧键，任何非 SQL 回放都不会把上一条
+     SQL 的参数偷偷带进后续进页的 SQL 草稿。 */
+  removeStoredRaw(sessionStorage, 'es-console.sql.prefill.params');
   if (m === 'dsl') {
     writeStoredRaw(sessionStorage, 'es-console.dsl.carry', it.query);
     if (idx) writeStoredRaw(sessionStorage, 'es-console.dsl.carry.index', idx);
   } else if (m === 'sql') {
     writeStoredRaw(sessionStorage, 'es-console.sql.prefill', it.query);
+    /* 1071：参数化 SQL 的参数快照随文本回放（缺参数会直接执行失败/语义错位） */
+    if (it.params) writeStoredRaw(sessionStorage, 'es-console.sql.prefill.params', it.params);
+    /* 1089：执行选项随历史回放（时区/页超时/列式/宽容/取数） */
+    removeStoredRaw(sessionStorage, 'es-console.sql.prefill.opts');
+    if (it.opts) writeStoredRaw(sessionStorage, 'es-console.sql.prefill.opts', JSON.stringify(it.opts));
     /* SQL 回放补索引上下文跟随（dsl/lucene/sandbox/pit 分支同款）——
  否则原在索引 A 执行的 SQL 会在当前选中索引上回放，上下文错配 */
     if (idx) store.pick(idx);
@@ -436,6 +516,14 @@ function favHistRow(it: { mode?: string; query: string; index?: string; ts?: num
   transition: border-color var(--tr), background var(--tr), color var(--tr);
 }
 .qh-task:hover { border-color: var(--ac-line); background: var(--ac-soft); color: var(--ac); }
+/* 1062：场景弹层分组——生产场景独占一行标签，任务钮等距换行 */
+.qh-tasks-pop { display: flex; flex-wrap: wrap; gap: var(--sp-1h); align-items: center; }
+.qh-task-sec { flex-basis: 100%; margin-top: var(--sp-1); font-size: var(--fs-2xs); color: var(--tx2); }
+.qh-task-avail { font-size: var(--fs-2xs); color: var(--tx2); padding-bottom: var(--sp-1h); }
+.qh-task-rec { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1h); padding-bottom: var(--sp-1h); border-bottom: 1px solid var(--line); }
+.qh-task-rec-hd { font-size: var(--fs-2xs); color: var(--ac-hi); }
+.qh-task-rec-btn { border-color: var(--ac-line); color: var(--ac-hi); background: var(--ac-soft); }
+.qh-task-off { opacity: .45; cursor: not-allowed; }
 .qh-task-pop { display: flex; flex-direction: column; gap: var(--sp-2); width: 280px; }
 .qh-task-scene { font-size: var(--fs-xs); color: var(--tx2); }
 .qh-task-row { display: flex; gap: var(--sp-1h); }

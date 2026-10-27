@@ -65,11 +65,27 @@
  .br-sql-lint 私造形态改用 theme.css .lint-bar 单源（锚并存） -->
           <MonacoEditor ref="brSqlMonaco" v-model="sql" language="sql" height="100%" @execute="doAll" />
           <div v-if="brSqlLint.length" class="lint-bar br-sql-lint lint-bar-warn" role="status">
-            <span v-for="(f, i) in brSqlLint" :key="i">· 第 {{ f.line }} 行：{{ f.message }} — {{ f.suggestion }}</span>
+            <span v-for="(f, i) in brSqlLint" :key="i">· <button type="button" class="br-lint-ln"
+              :title="'定位到第 ' + f.line + ' 行'" @click="locateBrLine(f.line)">第 {{ f.line }} 行</button>：{{ f.message }} — {{ f.suggestion }}</span>
           </div>
           <!-- G239：结果条补 role=status（试跑后动态出现，SR 自动播报；lint-bar 族同款） -->
           <div v-if="sqlResult" role="status" class="br-result" :class="{ err: sqlResult.err }">
-            <b>{{ sqlResult.err ? '❌ 失败' : '✅ 成功' }}：</b>{{ sqlResult.msg }}
+            <div>
+              <b>{{ sqlResult.err ? '❌ 失败' : '✅ 成功' }}：</b>{{ sqlResult.msg }}
+              <!-- 1111：与 SQL 控制台同一套「错误定位到手」——锚点 chip/上一版标记 -->
+              <template v-if="sqlResult.err">
+                <button v-if="brErrPos && !brResultStale" type="button" class="br-err-loc mono" data-test="br-err-locate"
+                        :title="'ES 报错位置：第 ' + brErrPos.line + ' 行第 ' + brErrPos.column + ' 列——点击定位到该处'"
+                        @click="locateBrErr">定位 {{ brErrPos.line }}:{{ brErrPos.column }}</button>
+                <span v-if="brResultStale" class="br-err-stale" data-test="br-err-stale">错误来自上一版 SQL</span>
+              </template>
+            </div>
+            <div v-if="brFnFix && brFnFix.suggestions.length && !brResultStale" class="br-fnfix" role="group" aria-label="相近函数建议">
+              <span class="br-fnfix-t">函数 [{{ brFnFix.fn }}] 不存在——相近函数：</span>
+              <button v-for="s in brFnFix.suggestions" :key="s.name" type="button" class="btn sm" data-test="br-fn-fix"
+                      :title="'替换 SQL 中的 ' + brFnFix.fn + ' 为 ' + s.name"
+                      @click="applyBrFnFix(s.name)">{{ s.name }}</button>
+            </div>
           </div>
           <!-- W1：试跑结果文本行 → 真表格（表头=cols、行=lastRows 前 20 行）。
  W5：预览裸表换 QRT rows 型——lastCols+lastRows 天然就是
@@ -209,12 +225,18 @@ import WorkbenchLayout, { type WorkbenchPaneSpec } from '../components/Workbench
  monaco 实例与字段源仍由本页供给（monaco 单例模块与 MonacoEditor 同实例，字段源幂等缓存） */
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import { useIndexFields } from '../composables/useIndexFields';
-import { ensureSqlCompletion, type SqlCompletionCtx } from '../utils/sqlCompletion';
+import { ensureSqlCompletion, suggestFunctionsFor, type SqlCompletionCtx } from '../utils/sqlCompletion';
 import { lintSql } from '../utils/sqlLint'; /* P0-3：SQL 静态 lint */
+/* 1111：与 SQL 控制台同源的错误锚点解析（line X:Y → 行列定位） */
+import { parseSqlErrorPos } from '../utils/sqlErrorPos';
+/* 1123：跨模式历史回放——执行选项摘要 + 语法桥不支持的参数/选项须明示 */
+import { describeSqlOpts } from '../utils/sqlOpts';
 import { useDebounceFn } from '../composables/useDebounceFn'; /* P0-3：划线防抖统一件 */
 import { writeStoredRaw } from '../utils/safeJson';
+import { useAuthStore } from '../stores/auth'; /* 回放自动试跑的身份/读页门（与 SQL 控制台同源） */
 
 const store = useAppStore();
+const auth = useAuthStore();
 const router = useRouter();
 
 /* 三栏可调工作台声明。W2 批修复「柄在但拖不动」：三 pane 全 'flex' 时
@@ -258,6 +280,34 @@ const lucene = useScopedDraft('lucene-out', { route: 'sqlbridge', mode: () => sq
 /* 试跑结果落内存（rows/columns 可预览可复制）——此前只报「X 行 × Y 列」即弃。
  W1：preview 文本行/cols 随真表格化退役——展示直接吃 lastRows/lastCols 单一数据源 */
 const sqlResult = ref<{ err: boolean; msg: string } | null>(null);
+/* 1111：错误锚点/函数纠错绑定失败时的 SQL 快照；改稿后旧位置不可信 → chip/红线撤下，
+ 结果条保留并标「错误来自上一版 SQL」（SQL 控制台 1109 同语义）。 */
+const brResultSql = ref('');
+const brErrPos = computed(() => (sqlResult.value?.err ? parseSqlErrorPos(sqlResult.value.msg) : null));
+const brResultStale = computed(() => !!sqlResult.value?.err && sql.value !== brResultSql.value);
+const brFnFix = computed(() => (sqlResult.value?.err && !brResultStale.value ? suggestFunctionsFor(sqlResult.value.msg) : null));
+function locateBrErr() {
+  const p = brErrPos.value;
+  if (p) brSqlMonaco.value?.revealPosition?.(p.line, p.column);
+}
+function locateBrLine(line: number) {
+  brSqlMonaco.value?.revealPosition?.(line, 1);
+}
+function applyBrFnFix(name: string) {
+  const fn = brFnFix.value?.fn;
+  if (!fn) return;
+  const re = new RegExp('\\b' + fn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
+  sql.value = sql.value.replace(re, name);
+  store.notify('info', `已将函数 ${fn} 替换为 ${name}，可重新试跑`);
+}
+function syncBrErrMarker() {
+  const p = brResultStale.value ? null : brErrPos.value;
+  brSqlMonaco.value?.setLineMarkers?.(
+    p ? [{ line: p.line, message: '执行错误：' + (sqlResult.value?.msg || '') }] : [],
+    'es-sql-runerr', 'error',
+  );
+}
+watch(sql, () => { if (sqlResult.value?.err) syncBrErrMarker(); });
 /* 保留原始行列（复制全量数据源；表格预览吃前 20 行） */
 const lastRows = ref<any[][]>([]);
 const lastCols = ref<string[]>([]);
@@ -344,10 +394,17 @@ async function runSql() {
   if (!sql.value.trim() || busy.value || qr.running.value) return;
   busy.value = true;
   const signal = qr.begin(); /* 取消以 AbortError 落此 */
+  /* 1111：回包锚定实际发出的那一版 SQL（await 期间可能继续改稿） */
+  const sqlSnapshot = sql.value;
   try {
     const r: any = await api.sqlLenient(JSON.stringify({ query: sql.value }), signal);
     lastRaw.value = r;
-    if (r?.available === false) { sqlResult.value = { err: true, msg: r.reason || 'unknown' }; return; }
+    if (r?.available === false) {
+      sqlResult.value = { err: true, msg: r.reason || 'unknown' };
+      brResultSql.value = sqlSnapshot;
+      syncBrErrMarker();
+      return;
+    }
     const rows: any[][] = r.rows || [];
     const cols: string[] = r.columns || [];
     lastRows.value = rows;
@@ -356,6 +413,8 @@ async function runSql() {
       err: false,
       msg: `返回 ${rows.length} 行 × ${cols.length} 列`,
     };
+    brResultSql.value = '';
+    brSqlMonaco.value?.setLineMarkers?.([], 'es-sql-runerr', 'error');
     /* u：试跑成功记跨模式历史（mode='sql' 与 SqlConsole 共池，Lead 裁决）；
  索引锚 pickedIdx 优先，缺省解析 FROM 表名（引号壳兼容；解析不到留空由 store 归 undefined） */
     qh.push('sql', sql.value, store.pickedIdx || /\bFROM\s+"?([\w.-]+)"?/i.exec(sql.value)?.[1] || '');
@@ -365,6 +424,8 @@ async function runSql() {
     if (e?.name === 'AbortError') { store.notify('info', '已取消试跑'); return; }
     lastRaw.value = { error: String(e?.message || e) };
     sqlResult.value = { err: true, msg: e?.message || String(e) };
+    brResultSql.value = sqlSnapshot;
+    syncBrErrMarker();
   } finally { busy.value = false; qr.finish(); }
 }
 
@@ -373,12 +434,48 @@ async function runSql() {
  DslQueryView 弹窗范式合并 QueryHistoryPanel 共享件，导入/清空入口关闭（同沙盒口径） */
 const qh = useQueryHistoryStore();
 const histOpen = ref(false);
-const histRows = computed(() => qh.items.filter(i => i.mode === 'sql'));
-function replayHistRow(row: { query: string }, runIt: boolean) {
+/* 1123：与控制台/QueryHub 抽屉同口径显示执行选项摘要；失败红点由共享面板直接渲染 */
+const histRows = computed(() => qh.items.filter(i => i.mode === 'sql').map(i => {
+  const sub = describeSqlOpts(i.opts);
+  return sub ? { ...i, sub } : i;
+}));
+function replayHistRow(row: { query: string; params?: string; index?: string; opts?: Record<string, unknown> }, runIt: boolean) {
+  /* 1123：索引现场跟随（与 SQL 控制台 1085 同语义），避免历史来自 A、顶栏停在 B */
+  const idx = row.index || '';
+  if (idx && idx !== store.pickedIdx) {
+    store.pick(idx);
+    store.notify('info', `已切到历史记录索引 ${idx}`);
+  }
+  const hasParams = !!row.params?.trim();
+  const optSub = describeSqlOpts(row.opts);
   sql.value = row.query;
   histOpen.value = false;
-  if (runIt) runSql();
+  /* 语法桥的试跑只发送 {query}：位置参数与执行选项都无法还原。带这些现场的条目
+     只回填、不自动执行，避免用不同口径跑出「回放结果」的假象。 */
+  if (hasParams || optSub) {
+    const why = hasParams ? '位置参数' : `执行选项（${optSub}）`;
+    store.notify('info', `语法桥不支持${why}，已仅回填 SQL；请回 SQL 控制台回放`, { duration: 5200 });
+    return;
+  }
+  if (runIt) runSqlAuto();
 }
+
+/* 历史回放自动试跑的身份门（1123 续）：回放载荷可能来自上一账号，probe 未落地时
+   me=null，旧 target 的试跑会先发出去（只读 403 噪声 + 结果串号）。手动点「试跑」
+   不拦——用户已看到当前界面，后端仍按页面读键裁决。 */
+const sqlAutoAllowed = () => auth.authDisabled
+  || !auth.probeStarted /* 探测未启动（无鉴权嵌入/测试宿主）视同身份已定，与 store.identityKnown 同口径 */
+  || (auth.probed && auth.me != null && auth.canReadPage('search', store.target));
+let sqlAutoPending = false;
+function runSqlAuto() {
+  if (sqlAutoAllowed()) { sqlAutoPending = false; void runSql(); return; }
+  sqlAutoPending = true;
+}
+watch(() => [auth.probed, auth.authDisabled, auth.me?.username, store.target], () => {
+  if (!sqlAutoPending || !sqlAutoAllowed()) return;
+  sqlAutoPending = false;
+  void runSql();
+});
 
 /* W1：语义显示层（es_tbl_sem 口径）—— W5 换 QRT 壳后
  显示层归 QRT displayText 内建（epoch 毫秒人性化恒开；ISO 日期本地化/数值千分位右对齐
@@ -482,6 +579,18 @@ onBeforeUnmount(() => { sqlCompletion?.dispose(); sqlCompletion = null; });
  （err 分支同基类治：只覆写 background/color，无自有线） */
 .br-result { padding: var(--sp-1h) var(--sp-3); font-size: var(--fs-xs); background: var(--ok-soft); color: var(--ok); }
 .br-result.err { background: var(--err-soft); color: var(--err); }
+/* 1111：错误锚点 chip / 上一版标记 / 函数纠错行（与 SQL 控制台 .sq-err-loc 同语言） */
+.br-err-loc { margin-left: var(--sp-2); padding: 1px var(--sp-1h); font-size: var(--fs-2xs); line-height: 1.5;
+  color: var(--err); background: var(--err-soft);
+  border: 1px solid var(--err-line); border-radius: var(--r-xs); cursor: pointer; }
+.br-err-loc:hover { border-color: var(--err); }
+.br-err-stale { margin-left: var(--sp-2); padding: 1px var(--sp-1h); font-size: var(--fs-2xs);
+  color: var(--warn); background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: var(--r-xs); }
+.br-fnfix { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; margin-top: var(--sp-1h); }
+.br-fnfix-t { opacity: .85; }
+.br-lint-ln { padding: 0; border: 0; background: none; font: inherit; color: inherit;
+  text-decoration: underline dotted; text-underline-offset: 2px; cursor: pointer; }
+.br-lint-ln:hover { color: var(--brand); text-decoration-color: var(--brand); }
 /* .br-sql-lint 私造形态（含 warn-line 边线）随改用 theme.css .lint-bar 单源退役；
  自动高度 flex none 语义归 .lint-bar，编辑器既有弹性不动 */
 .br-cmp { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }

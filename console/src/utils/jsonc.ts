@@ -30,6 +30,14 @@ export function findCommentRanges(src: string): { start: number; end: number }[]
       ranges.push({ start, end: i });
       continue;
     }
+    /* `#` 行注释：Kibana Console 的第二种单行注释语法（官方键位/语法表列明）。
+       此前只认 `//`，用户照 Kibana 写 `# 说明` 会被原样发给 ES 报语法错。 */
+    if (c === '#') {
+      const start = i;
+      while (i < n && src[i] !== '\n') i++;
+      ranges.push({ start, end: i });
+      continue;
+    }
     if (c === '/' && i + 1 < n && src[i + 1] === '*') {
       const start = i;
       i += 2;

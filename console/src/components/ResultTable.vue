@@ -10,7 +10,7 @@
     <!-- 工具条 -->
     <!-- 容器结构随壳合并 TableShell（卡头语言单一出处），类名经 props 注入、
  内容经槽注入，DOM 与既有逐字节一致（守卫锚内核源码字面量，钮组不进壳） -->
-    <TableShell bar-class="rt-bar" bar-r-class="rt-bar-r">
+    <TableShell bar-class="rt-bar" bar-r-class="rt-bar-r" @bar-contextmenu="openBarMenu">
       <template #bar-left>
         <!-- 内建视图档分段（QRT 607 对称件）——seg 寄居 bar-left 最前（RT 单壳
  无独立壳通道，恒可达，寄居位在消费方 bar-prepend 槽之前）；数据驱动出档：
@@ -115,11 +115,8 @@
           <FileDown :size="13" />
           <span class="rt-exp-btn-t">导出</span>
         </button>
-        <span class="rt-bar-div" role="separator" />
-        <!-- 表格快照 PNG（dbx GridSnapshot 对位——分享/报障图，含工具行+表头） -->
-        <button :aria-label="'表格快照 PNG'" class="btn sm ghost rt-tool-btn" title="表格快照 PNG（当前页，含工具行与表头）" :disabled="!hits.length" @click="snapshotPng">
-          <Camera :size="13" /> 快照
-        </button>
+        <!-- 1148：表格快照 PNG 从工具行移入「视图 ⋯」——截图是低频分享动作，
+ 常驻在工具行上既占宽也在视觉上与「导出」抢注意力；同一 aria-label 保住测试与读屏。 -->
         <!-- 工具钮全部「图标+文字」自解释（dbx 工具栏语言，纯图标让人猜是散落感根源） -->
         <!-- 行高三档循环 + 列宽重置双钮合并「视图 ⋯」聚合钮（行高改显式三选带
  当前档 ✓，比连点循环可预期；列宽重置=低频破坏性弱操作，菜单底项+分隔线隔离） -->
@@ -127,7 +124,7 @@
           <button aria-label="视图设置" class="btn sm ghost rt-tool-btn" :class="{ on: viewMenuOpen }"
             aria-haspopup="menu" :aria-expanded="viewMenuOpen" title="视图：行高、列宽"
             @click.stop="viewMenuOpen = !viewMenuOpen">
-            视图 ⋯
+            <SlidersHorizontal :size="13" /><span class="rt-tool-t">视图 ⋯</span>
           </button>
           <div v-if="viewMenuOpen" class="rt-menu" role="menu" aria-label="视图设置">
             <div class="rt-m-t">行高（当前：{{ rowHLabel }}）</div>
@@ -142,6 +139,23 @@
               :disabled="!Object.keys(colWidths).length" @click="resetColWidths(); closeMenus()">
               ⤺ 重置全部列宽
             </button>
+            <!-- 1143：表格级视图开关归位——聚合行/转置/语义格式化作用于整张表，
+ 不属于「某一列」的列头菜单；与行高/列宽同属「视图」心智一处可达（QRT 同构）。 -->
+            <div class="rt-m-sep" role="separator"></div>
+            <button :aria-label="'表格快照 PNG'" class="rt-mi" role="menuitem" title="表格快照 PNG（当前页，含工具行与表头）"
+              :disabled="!hits.length" @click="snapshotPng(); closeMenus()">
+              <Camera :size="12" /> 快照 PNG（当前页）
+            </button>
+            <div class="rt-m-sep" role="separator"></div>
+            <div class="rt-m-t">表格视图</div>
+            <button class="rt-mi" role="menuitemcheckbox" :aria-checked="aggOn"
+              :aria-label="aggOn ? '聚合行：开' : '聚合行：关'" title="底部聚合行（数值列 Σ/avg；勾选行时只算所见集）"
+              @click="toggleAggRow(); closeMenus()">{{ aggOn ? '✓ ' : '' }}聚合行</button>
+            <button class="rt-mi" role="menuitemcheckbox" :aria-checked="transpose" :aria-label="transpose ? '转置视图：开' : '转置视图：关'"
+              title="转置视图（字段为行、文档为列）" @click="toggleTranspose(); closeMenus()">{{ transpose ? '✓ ' : '' }}转置视图</button>
+            <button class="rt-mi" role="menuitemcheckbox" :aria-checked="semPref" :aria-label="semPref ? '语义格式化：开' : '语义格式化：关'"
+              title="语义格式化（bytes/时长/百分比只改显示；复制与导出恒原始值）"
+              @click="semPref = !semPref; closeMenus()">{{ semPref ? '✓ ' : '' }}语义格式化</button>
           </div>
         </span>
         <!-- 列选合并 ColPicker 共享件（与 QueryResultTable 同一实现）；
@@ -193,26 +207,26 @@
             <th class="rt-idx">#</th>
             <th v-for="c in visibleCols" :key="c" class="rt-th" :class="{ 'rt-col-frozen': isFrozenCol(c), 'rt-col-flash': flashCol === c,
               'rt-drop-before': colDragOver === c && colDragPlace === 'before' && colDragCol !== c,
-              'rt-drop-after': colDragOver === c && colDragPlace === 'after' && colDragCol !== c }" :data-col="c" :style="frozenStyle(c)" title="点击排序：升序 → 降序 → 取消（回原始序）；Shift+点击：追加/翻转次键；拖列名可重排；右键：列管理"
+              'rt-drop-after': colDragOver === c && colDragPlace === 'after' && colDragCol !== c }" :data-col="c" :style="frozenStyle(c)" :title="thTitle(c)"
               :aria-sort="chainCount > 0 && dispChain[0].f === c ? (dispChain[0].d === 'asc' ? 'ascending' : 'descending') : undefined" @click="sortBy(c, undefined, $event.shiftKey)"
               @dragover="onDragOver($event, c)" @drop="onDrop($event, c)"
               @contextmenu.prevent="openColMenu($event, c)"
               @keydown="onColMenuKey($event, c)"
               tabindex="0" @keydown.enter.prevent.stop="sortBy(c)" @keydown.space.prevent.stop="sortBy(c)">
-              <!-- 列头双层结构（dbx 语言）——上行=列名+排序态，下行=类型徽标（蓝）
- 链内列显示方向箭头，多键时带优先级序号
- P1-6：name 绑 draggable 列拖拽（避让右缘 resize 柄；冻结列 dragstart 里禁） -->
+              <!-- 1147：列头静息态只显示列名（表头第一行元素过多会互相挤掉列名）。
+ 排序箭头与类型徽标都改为「悬停/聚焦/已排序」才出现，且不参与宽度分配——
+ 列宽始终留给列名本身；类型全称仍在 th title 里。 -->
               <span class="rt-th-in">
                 <span class="rt-th-name" :class="{ 'rt-drag-src': colDragCol === c }" draggable="true"
                   :title="isFrozenCol(c) ? '冻结列不可拖动（先取消冻结再移动）' : '拖动重排此列'"
                   @dragstart="onDragStart($event, c)" @dragend="onDragEnd">
-                  {{ c }}
+                  <span class="rt-th-label">{{ c }}</span>
+                  <span v-if="props.fieldTypes?.[c]" class="rt-th-type" :class="typeCls(props.fieldTypes[c])">{{ props.fieldTypes[c] }}</span>
                   <ArrowUpDown v-if="!chainHas(c)" :size="10" class="rt-th-sort-hint" />
-                  <ArrowUp v-else-if="chainDir(c) === 'asc'" :size="11" />
-                  <ArrowDown v-else :size="11" />
+                  <ArrowUp v-else-if="chainDir(c) === 'asc'" :size="11" class="rt-th-sort-on" />
+                  <ArrowDown v-else :size="11" class="rt-th-sort-on" />
                   <sup v-if="chainHas(c) && chainCount > 1" class="rt-sort-ord">{{ chainOrd(c) + 1 }}</sup>
                 </span>
-                <span class="rt-th-sub"><span v-if="props.fieldTypes?.[c]" class="rt-th-type" :class="typeCls(props.fieldTypes[c])">{{ props.fieldTypes[c] }}</span></span>
               </span>
               <!-- P0-4：列头筛选漏斗（QRT 同款；激活实色高亮；stop 防触发排序）；
  激活并集口径 funnelOn（等值∪区间∪包含，QRT 552 同构收尾——
@@ -560,6 +574,14 @@
       :items="colMenuItems"
       @close="colMenu = null"
     />
+    <!-- 1163：工具行右键——「表格格式/表格操作那个表头」上的动作与列头/单元格同源，
+         一级只放最常用几项，其余收进「更多…」二级。 -->
+    <CellContextMenu
+      v-if="barMenu"
+      :x="barMenu.x" :y="barMenu.y" :title="'表格工具 · ' + visibleCols.length + '/' + allCols.length + ' 列'"
+      :items="barMenuItems"
+      @close="barMenu = null"
+    />
     <!-- TableBacktop 迁往 rt-wrap-shell 定位壳内（原位锚 .rt 整卡底沿盖状态栏，修订） -->
     <!-- P2-8：文档对比弹窗——多选 2~3 篇右键直达，基准可换；传所属索引名芯片 -->
     <DocDiffModal v-model:show="docDiffShow" :hits="docDiffHits" :base-idx="docDiffBase" :index="index" @base="docDiffBase = $event" />
@@ -572,12 +594,12 @@ import { ref, computed, watch, nextTick, onBeforeUnmount, type Ref } from 'vue';
 import { usePref } from '../composables/urlState';
 import { NModal, NDrawer, NDrawerContent, NPopover } from 'naive-ui';
 import {
-  ArrowUp, ArrowDown, ArrowRight, ArrowUpDown, Eye, EyeOff, Pin, MoveHorizontal, Trash2, Copy, ClipboardList, FileDown, X, Pencil, SearchCheck, ScanSearch, Inbox, RotateCcw, ChevronDown, ChevronRight, Braces, Table, Send, FileText, Search, Filter, Camera, GitCompareArrows, Maximize2, Minimize2 } from 'lucide-vue-next';
+  ArrowUp, ArrowDown, ArrowRight, ArrowUpDown, Eye, EyeOff, Pin, MoveHorizontal, Trash2, Copy, ClipboardList, FileDown, X, Pencil, SearchCheck, ScanSearch, Inbox, RotateCcw, ChevronDown, ChevronRight, Braces, Table, Send, FileText, Search, Filter, Camera, GitCompareArrows, Maximize2, Minimize2, SlidersHorizontal } from 'lucide-vue-next';
 import ColPicker from './ColPicker.vue';
 /* 列布局方案共享件（652 preset 内核消费面，RT/QRT 单一出处） */
 import TablePresetMenu from './TablePresetMenu.vue';
 import FocusableSurface from './FocusableSurface.vue';
-import CellContextMenu from './CellContextMenu.vue';
+import CellContextMenu, { type CcmItem } from './CellContextMenu.vue';
 import DocDiffModal from './DocDiffModal.vue';
 import EmptyState from './EmptyState.vue';
 import SkeletonBox from './SkeletonBox.vue';
@@ -975,6 +997,14 @@ function frozenStyle(col: string): Record<string, string> | undefined {
 
 /* exportOpen 随 ▾ 菜单移除——格式切换收进单元格右键菜单（隐藏且可发现） */
 const pendOpen = ref(false);
+
+/* 1151：列头 tooltip 单源——首行「类型 · 列名」承载字段类型（窄列不再为徽标让宽），
+ 第二行是排序/列管理用法。类型未知时只留列名 + 用法。 */
+function thTitle(c: string): string {
+  const t = props.fieldTypes?.[c];
+  const head = t ? `${t} · ${c}` : c;
+  return `${head}\n点击排序：升序 → 降序 → 取消（回原始序）；Shift+点击：追加/翻转次键；拖列名可重排；右键：列管理`;
+}
 
 /* ═══ 排序（按索引/存储键维度记忆——重查不丢、切索引重读，
  与列选/列宽/密度同口径；排序列被列选关掉则清空排序，「所见即所序」。
@@ -2105,6 +2135,32 @@ function openCellMenu(e: MouseEvent, hit: SearchHit, col: string, ri: number) {
 }
 /* 列头右键=列管理菜单（不用先瞄单元格；复用同一 CellContextMenu 实例） */
 const colMenu = ref<{ x: number; y: number; col: string } | null>(null);
+
+/* ═══ 1163：工具行右键菜单（与列头/单元格同一两级语言）═══
+ 一级 = 导出当前页 / 行高切换 / 快照；其余（重置列宽、全列适应、聚合行、转置、语义格式化）
+ 收进「更多…」二级。不复用 colMenuItems（那是「某一列」的语境）。 */
+const barMenu = ref<{ x: number; y: number } | null>(null);
+function openBarMenu(e: MouseEvent) {
+  barMenu.value = { x: e.clientX, y: e.clientY };
+}
+const barMenuItems = computed<CcmItem[]>(() => {
+  if (!barMenu.value) return [];
+  const hasRows = props.hits.length > 0;
+  return [
+    { key: 'bar-export', label: `导出当前页（${expFmt.value.toUpperCase()}）`, icon: FileDown, run: () => { if (hasRows) exportRows(expFmt.value); } },
+    { key: 'bar-rowh', label: `行高：${rowHLabel.value}（点击切换）`, icon: MoveHorizontal, run: () => cycleRowH() },
+    { key: 'bar-snapshot', label: '快照 PNG（当前页）', icon: Camera, run: () => { if (hasRows) snapshotPng(); } },
+    {
+      key: 'bar-more', label: '更多…', icon: ChevronDown, sep: true, children: <CcmItem[]>[
+        { key: 'bar-reset-w', label: '重置全部列宽', icon: MoveHorizontal, run: () => resetColWidths() },
+        { key: 'bar-fit-all', label: '全部列适应内容', icon: MoveHorizontal, run: () => fitAll() },
+        { key: 'bar-agg', label: aggOn ? '✓ 聚合行' : '聚合行', icon: Table, run: () => toggleAggRow() },
+        { key: 'bar-transpose', label: transpose ? '✓ 转置视图' : '转置视图', icon: RotateCcw, run: () => toggleTranspose() },
+        { key: 'bar-sem', label: semPref ? '✓ 语义格式化' : '语义格式化', icon: Braces, run: () => { semPref.value = !semPref.value; } },
+      ],
+    },
+  ];
+});
 /* ═══ P2-3：列详情卡（dbx 列详情对位，轻量统计版）═══
  统计内核下沉 useColStats、弹窗下沉 ColDetailModal 共享件（QRT 同步接入）；
  口径=当前筛选后的行集（所见即所析）；labelOf 与筛选弹层同一函数 */
@@ -2190,47 +2246,45 @@ function onColMenuKey(e: KeyboardEvent, col: string) {
 }
 const colMenuItems = computed(() => {
   const m = colMenu.value; if (!m) return [];
-  return [
-    /* P2-3：列详情（类型/去重/空值/统计/高频值） */
-    { key: 'col-detail', label: '列详情', icon: Search, run: () => { colDetail.value = m.col; } },
-    /* 列头右键补排序直选+复制列名（dbx 列头菜单语言——列操作主场在列头） */
+  /* 与 QRT 同一分层语言：一级「列详情」+ 排序与筛选 / 复制 / 列与视图 三组，
+     二级项 label 逐字保留（能力零删除）。 */
+  const sortChildren = [
     { key: 'sort-asc', label: '升序排序', icon: ArrowUp, run: () => sortBy(m.col, 'asc') },
     { key: 'sort-desc', label: '降序排序', icon: ArrowDown, run: () => sortBy(m.col, 'desc') },
-    /* P0-4：筛选此列直达（列头漏斗同能力，菜单位更顺手） */
-    { key: 'filter-col', label: '筛选此列', icon: Filter, run: () => { openFilterAt(m.col, m.x, m.y); } },
+    { key: 'filter-col', label: '筛选此列', icon: Filter, sep: true, run: () => { openFilterAt(m.col, m.x, m.y); } },
+  ];
+  const copyChildren = [
     { key: 'copy-col-name', label: '复制列名', icon: Copy, run: async () => {
       const ok = await copyText(m.col);
       store.notify(ok ? 'success' : 'error', ok ? '已复制列名' : '复制失败');
     } },
-    /* 复制表头（TSV）—— P2 放弃项落地（QRT 同款平移）；空行集走
- matrixText 只出表头行（copyMatrix 口径铁律「表头行必含」），列=visibleCols 所见即所复 */
+    /* 复制表头（TSV）——空行集走 matrixText 只出表头行（「表头行必含」口径） */
     { key: 'copy-head-tsv', label: '复制表头（TSV）', icon: ClipboardList, run: async () => {
       const ok = await copyText(matrixText({ rows: [], cols: visibleCols.value, getVal: () => null }, 'tsv'));
       store.notify(ok ? 'success' : 'error', ok ? `已复制表头 ${visibleCols.value.length} 列（TSV）` : '复制失败');
     } },
-    /* 复制整列值——行集=过滤后（所见即所复），TSV 含表头行（copyMatrix 口径铁律） */
+    /* 复制整列值——行集=过滤后（所见即所复），TSV 含表头行 */
     { key: 'copy-col-vals', label: '复制整列值', icon: Copy, run: async () => {
       const rows = filteredHits.value;
       const ok = await copyText(matrixText({ rows, cols: [m.col], getVal: (h, c) => xCell(getSourceVal(h, c), c, h) }, 'tsv'));
       store.notify(ok ? 'success' : 'error', ok ? `已复制 ${m.col} 整列 ${rows.length} 行` : '复制失败');
     } },
-    /* 复制整表 JSON—— QRT 单侧落地的对称件（QRT 同款平移）；
- 行集=sortedHits（与区域复制/导出行序同源），列=visibleCols 所见即所复，值=raw
- （getSourceVal 原值——JSON 档不做显示加工，与「复制行 JSON」同语义）；零新键零持久化 */
+    /* 复制整表 JSON——行集=sortedHits，列=visibleCols 所见即所复，值=raw */
     { key: 'copy-table-json', label: '复制整表 JSON', icon: Braces, run: async () => {
       const rows = sortedHits.value;
       const ok = await copyText(matrixText({ rows, cols: visibleCols.value, getVal: (h, c) => getSourceVal(h, c) }, 'json'));
       store.notify(ok ? 'success' : 'error', ok ? `已复制 ${rows.length} 行（JSON）` : '复制失败');
     } },
-    { key: 'hide-col', label: '隐藏此列', icon: EyeOff, sep: true, run: () => {
+  ];
+  const viewChildren = [
+    { key: 'hide-col', label: '隐藏此列', icon: EyeOff, run: () => {
       if (visibleCols.value.length <= 1) { store.notify('error', '至少保留一列'); return; }
       visibleCols.value = visibleCols.value.filter(c => c !== m.col);
     } },
     { key: 'pin-col', label: '此列置首', icon: Pin, run: () => {
       visibleCols.value = [m.col, ...visibleCols.value.filter(c => c !== m.col)];
     } },
-    /* /：冻结窗格； P2-4 升级前缀多列——「冻结到此列」
- 保持列序冻结 0..idx 全部（不再强制置首），「取消冻结」整组解除 */
+    /* 冻结窗格（前缀多列）——「冻结到此列」保持列序 0..idx，「取消冻结」整组解除 */
     isFrozenCol(m.col)
       ? { key: 'unfreeze-col', label: freezeN.value > 1 ? `取消冻结（前 ${freezeN.value} 列）` : '取消冻结', icon: Pin, run: () => setFreezeN(0) }
       : { key: 'freeze-col', label: '冻结到此列', icon: Pin, run: () => {
@@ -2239,19 +2293,17 @@ const colMenuItems = computed(() => {
           store.notify('success', `已冻结前 ${idx + 1} 列（横向滚动时保持可见）`);
         } },
     { key: 'fit-col', label: '此列适应内容', icon: MoveHorizontal, run: () => fitCol(m.col) },
-    /* 列管理收尾两件——全列适应内容 + 重置列序（恢复原始顺序保留勾选） */
     { key: 'fit-all', label: '全列适应内容', icon: MoveHorizontal, run: () => fitAll() },
-    /* 聚合 footer 行开关（默认关；状态落盘 es_tbl_agg:<dim>） */
-    { key: 'toggle-agg', label: aggOn.value ? '聚合行：开 ✓' : '聚合行：关', icon: Table, run: () => toggleAggRow() },
-    /* W7：语义格式化开关（默认开；usePref 全局键 es_tbl_sem 记忆——只动显示层，
- 复制/导出/title 恒 raw） */
-    { key: 'toggle-sem', label: semPref.value ? '语义格式化：开 ✓' : '语义格式化：关', icon: Table, run: () => { semPref.value = !semPref.value; } },
-    /* reset-order 补 prefsOn 门控（与 QRT:1329 同款对称收口）——无记忆模式
- （dimension 缺）下 visibleCols 写了无处落=假菜单项，随 hide/fit 同口径门控退役 */
-    ...(prefsOn.value ? [{ key: 'reset-order', label: '重置列序', icon: RotateCcw, run: () => {
+    ...(prefsOn.value ? [{ key: 'reset-order', label: '重置列序', icon: RotateCcw, sep: true, run: () => {
       const cur = new Set(visibleCols.value);
       visibleCols.value = allCols.value.filter(c => cur.has(c));
     } }] : []),
+  ];
+  return [
+    { key: 'col-detail', label: '列详情', icon: Search, run: () => { colDetail.value = m.col; } },
+    { key: 'sort-group', label: '排序与筛选…', icon: Filter, sep: true, children: sortChildren },
+    { key: 'copy-group', label: '复制…', icon: Copy, children: copyChildren },
+    { key: 'view-group', label: '列与视图…', icon: MoveHorizontal, sep: true, children: viewChildren },
   ];
 });
 /* fit 逻辑提取复用（单列/全列共用）；：内核下沉 useColFit
@@ -2342,15 +2394,10 @@ onBeforeUnmount(() => unregisterTable(tableRegId));
 /* 菜单项交给共享 CellContextMenu 渲染（RT/QRT 复用） */
 const cellMenuItems = computed(() => {
   const m = cellMenu.value; if (!m) return [];
-  return [
+  /* 1142：按操作心智收成二级分组（与 QRT 同语言）——一级只留最高频两项 + 分组父行。
+ 二级 label 逐字保留（能力零删除）；锁面按「父行 + 二级项」同步更新。 */
+  const copyChildren = [
     { key: 'copy-val', label: '复制值', icon: Copy, run: () => void copyCell(m.hit, m.col) },
-    /* P0-2：单元格详情——完整值弹层（JSON 树/搜索/复制），不再只能看截断串 */
-    { key: 'detail-cell', label: '查看完整值', icon: Search, run: () => { cellDetail.value = { hit: m.hit, col: m.col }; } },
-    /* W7：行内展开详情（与操作列钮/E 键同态：expandedRows） */
-    { key: 'expand-row', label: expandedRows.value.has(rowKey(m.hit, m.ri)) ? '收起此行' : '展开此行', icon: ChevronDown, run: () => { toggleRowExpand(rowKey(m.hit, m.ri)); } },
-    /* W3：行详情侧拉入口平移 RT（QRT 同款；props.rowDrawer 门控缺省 false 无项零增量） */
-    ...(props.rowDrawer ? [{ key: 'row-drawer', label: '行详情', icon: Search, run: () => { rdwRow.value = { hit: m.hit, ri: m.ri }; } }] : []),
-    /* 复制列名（dbx 列操作语言） */
     { key: 'copy-col-name', label: '复制列名', icon: Copy, run: async () => {
       const ok = await copyText(m.col);
       store.notify(ok ? 'success' : 'error', ok ? '已复制列名' : '复制失败');
@@ -2364,13 +2411,38 @@ const cellMenuItems = computed(() => {
       for (const c of allCols.value) row[c] = m.hit._source?.[c] ?? null;
       copyText(JSON.stringify(row, null, 2)).then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制整行 JSON' : '复制失败'));
     } },
+    { key: 'copy-table-tsv', label: '复制整表（当前页）为 TSV', icon: ClipboardList, run: () => void copySelRows('tsv') },
+    /* 复制为 DSL 组（dbx 复制 extractor 的 ES 语义对位） */
+    ...(m.col === '_id'
+      ? [{ key: 'dsl-ids', label: '复制为 ids 查询', icon: Braces, run: () => menuCopyDsl('ids') }]
+      : (props.fieldTypes?.[m.col] === 'text'
+        ? [{ key: 'dsl-match', label: '复制为 match 查询（text 字段）', icon: Braces, run: () => menuCopyDsl('auto') }]
+        : [{ key: 'dsl-term', label: '复制为 term 查询', icon: Braces, run: () => menuCopyDsl('auto') }])),
+    ...(m.col !== '_id'
+      ? [{ key: 'dsl-exists', label: '复制为 exists 查询（字段存在）', icon: Braces, run: () => menuCopyDsl('exists') }]
+      : []),
+    /* 勾选行复制组（与导出三格式语义对齐，走剪贴板免下载） */
+    ...(selected.value.size ? [
+      { key: 'copy-sel-tsv', label: `复制 ${selected.value.size} 行为 TSV`, icon: ClipboardList, sep: true, run: () => void copySelRows('tsv') },
+      { key: 'copy-sel-md', label: `复制 ${selected.value.size} 行为 Markdown`, icon: ClipboardList, run: () => void copySelRows('md') },
+      { key: 'copy-sel-json', label: `复制 ${selected.value.size} 行为 JSON`, icon: ClipboardList, run: () => void copySelRows('json') },
+      { key: 'copy-sel-terms', label: `复制 ${selected.value.size} 行为 terms 查询（${m.col}）`, icon: Braces, run: () => menuCopySelTerms() },
+      ...(selected.value.size >= 2 && selected.value.size <= 3
+        ? [{ key: 'doc-diff', label: `文档对比（${selected.value.size} 篇）`, icon: GitCompareArrows, run: () => openDocDiff() }]
+        : []),
+    ] : []),
+  ];
+  const rowChildren = [
+    { key: 'detail-cell', label: '查看完整值', icon: Search, run: () => { cellDetail.value = { hit: m.hit, col: m.col }; } },
+    { key: 'expand-row', label: expandedRows.value.has(rowKey(m.hit, m.ri)) ? '收起此行' : '展开此行', icon: ChevronDown, run: () => { toggleRowExpand(rowKey(m.hit, m.ri)); } },
+    ...(props.rowDrawer ? [{ key: 'row-drawer', label: '行详情', icon: Search, run: () => { rdwRow.value = { hit: m.hit, ri: m.ri }; } }] : []),
+  ];
+  const queryChildren = [
     /* 排序两项直选（dbx 语言——升/降分开，免去循环三态猜测） */
     { key: 'sort-asc', label: '升序排序', icon: ArrowUp, run: () => sortBy(m.col, 'asc') },
     { key: 'sort-desc', label: '降序排序', icon: ArrowDown, run: () => sortBy(m.col, 'desc') },
-    /* P0-4：筛选此列直达（QRT 同款；弹层落在右键位置） */
     { key: 'filter-col', label: '筛选此列', icon: Filter, run: () => { openFilterAt(m.col, m.x, m.y); } },
-    /* W7：以此值过滤并重查——只 emit 'filter-hit'（field/value/op），op 由 fieldTypes 判：
- text→match（分词字段 term 查不到）、其余（含 keyword/无映射）→term；路由归消费端 */
+    /* W7：以此值过滤并重查——只 emit 'filter-hit' */
     ...(displayVal(m.hit, m.col) != null
       ? [{ key: 'filter-hit', label: '以此值过滤并重查', icon: Filter, run: () => {
           emit('filter-hit', {
@@ -2380,54 +2452,31 @@ const cellMenuItems = computed(() => {
           });
         } }]
       : []),
-    /* 复制为 DSL 组（dbx 复制 extractor 的 ES 语义对位）——
- _id 走 ids、text 字段走 match（term 查不到分词字段）、其余走 term；类型路由见 dslFromCell */
-    ...(m.col === '_id'
-      ? [{ key: 'dsl-ids', label: '复制为 ids 查询', icon: Braces, sep: true, run: () => menuCopyDsl('ids') }]
-      : (props.fieldTypes?.[m.col] === 'text'
-        ? [{ key: 'dsl-match', label: '复制为 match 查询（text 字段）', icon: Braces, sep: true, run: () => menuCopyDsl('auto') }]
-        : [{ key: 'dsl-term', label: '复制为 term 查询', icon: Braces, sep: true, run: () => menuCopyDsl('auto') }])),
-    /* exists——空值/缺字段排查语义（不依赖格值，业务列通用） */
-    ...(m.col !== '_id'
-      ? [{ key: 'dsl-exists', label: '复制为 exists 查询（字段存在）', icon: Braces, run: () => menuCopyDsl('exists') }]
-      : []),
-    { key: 'export-view', label: `导出当前视图（${expFmt.value.toUpperCase()}）`, icon: FileDown, sep: true, run: () => exportRows(expFmt.value) },
-    /* 整表复制（当前页）为 TSV——行集=currentExportRows（无勾选=当前页全量、
- 有勾选=勾选集，与导出钮同语义），格式化走 copySelRows/copyMatrix 同一口径 */
-    { key: 'copy-table-tsv', label: '复制整表（当前页）为 TSV', icon: ClipboardList, run: () => void copySelRows('tsv') },
-    /* 列管理直达（dbx 右键标配）——隐藏/置首都落在 visibleCols 上，
- 经 useTablePrefs watch 自动落盘，恢复走列选器 */
-    { key: 'hide-col', label: '隐藏此列', icon: EyeOff, sep: true, run: () => {
+  ];
+  const colChildren = [
+    { key: 'export-view', label: `导出当前视图（${expFmt.value.toUpperCase()}）`, icon: FileDown, run: () => exportRows(expFmt.value) },
+    { key: 'hide-col', label: '隐藏此列', icon: EyeOff, run: () => {
       if (visibleCols.value.length <= 1) { store.notify('error', '至少保留一列'); return; }
       visibleCols.value = visibleCols.value.filter(c => c !== m.col);
     } },
     { key: 'pin-col', label: '此列置首', icon: Pin, run: () => {
       visibleCols.value = [m.col, ...visibleCols.value.filter(c => c !== m.col)];
     } },
-    /* 此列适应内容——去重合并 fitCol（列头右键 同源函数） */
     { key: 'fit-col', label: '此列适应内容', icon: MoveHorizontal, run: () => fitCol(m.col) },
-    /* 格右键补「全列适应内容」——此前只有列头右键有（入口不对称；
- 改调共享 fitAll()（此前手写 for 循环与内核重复） */
     { key: 'fit-all', label: '全列适应内容', icon: MoveHorizontal, run: () => fitAll() },
-    /* 勾选行复制组（与导出三格式语义对齐，走剪贴板免下载——聊天/Excel 直贴）。
- 行集=currentExportRows（勾选集合+排序行序），列=visibleCols（所见即所得） */
-    ...(selected.value.size ? [
-      { key: 'copy-sel-tsv', label: `复制 ${selected.value.size} 行为 TSV`, icon: ClipboardList, sep: true, run: () => void copySelRows('tsv') },
-      { key: 'copy-sel-md', label: `复制 ${selected.value.size} 行为 Markdown`, icon: ClipboardList, run: () => void copySelRows('md') },
-      { key: 'copy-sel-json', label: `复制 ${selected.value.size} 行为 JSON`, icon: ClipboardList, run: () => void copySelRows('json') },
-      /* 勾选行同列值 → terms 查询（dbx IN 列表的 ES 对位；_id 列自动走 ids） */
-      { key: 'copy-sel-terms', label: `复制 ${selected.value.size} 行为 terms 查询（${m.col}）`, icon: Braces, run: () => menuCopySelTerms() },
-      /* P2-8：文档对比（Kibana Compare selected 对位）——勾 2~3 篇右键直达，字段级 diff 基准可换 */
-      ...(selected.value.size >= 2 && selected.value.size <= 3
-        ? [{ key: 'doc-diff', label: `文档对比（${selected.value.size} 篇）`, icon: GitCompareArrows, run: () => openDocDiff() }]
-        : []),
-    ] : []),
-    /* 默认导出格式切换收进右键菜单（主界面只留「⬇ 导出」一键直出）——
- 点选即设为默认（usePref 记忆），导出钮立即按新格式生效 */
+    /* 默认导出格式切换（主界面只留「⬇ 导出」一键直出） */
     { key: 'fmt-csv', label: `导出格式：CSV${expFmt.value === 'csv' ? ' ✓' : ''}`, icon: Table, sep: true, run: () => setExpFmt('csv') },
     { key: 'fmt-xlsx', label: `导出格式：XLSX${expFmt.value === 'xlsx' ? ' ✓' : ''}`, icon: Table, run: () => setExpFmt('xlsx') },
     { key: 'fmt-json', label: `导出格式：JSON${expFmt.value === 'json' ? ' ✓' : ''}`, icon: Braces, run: () => setExpFmt('json') },
     { key: 'fmt-md', label: `导出格式：Markdown${expFmt.value === 'md' ? ' ✓' : ''}`, icon: FileText, run: () => setExpFmt('md') },
+  ];
+  return [
+    { key: 'copy-val', label: '复制值', icon: Copy, run: copyChildren[0].run },
+    { key: 'detail-cell', label: '查看完整值', icon: Search, run: rowChildren[0].run },
+    { key: 'copy-group', label: '复制…', icon: ClipboardList, sep: true, children: copyChildren.filter(c => c.key !== 'copy-val') },
+    ...(rowChildren.length > 1 ? [{ key: 'row-group', label: '行操作…', icon: ChevronDown, children: rowChildren.filter(c => c.key !== 'detail-cell') }] : []),
+    { key: 'query-group', label: '筛选与排序…', icon: Filter, sep: true, children: queryChildren },
+    { key: 'col-group', label: '列与导出…', icon: MoveHorizontal, sep: true, children: colChildren },
   ];
 });
 
@@ -2468,8 +2517,34 @@ async function copySelRows(fmt: 'tsv' | 'md' | 'json') {
  scopeId 不传播永不命中壳内部元素——原 .rt-bar-r 内核规则即此死规则，迁出，
  字面新家见 TableShell， 形态锚同步更新）。缺省态 DOM 逐字节不变。 */
 .rt-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); padding: 5px var(--sp-2h); background: var(--bg1); border: 1px solid var(--line); border-bottom: 0; border-radius: var(--r-m) var(--r-m) 0 0; flex-wrap: nowrap; }
+/* 1146：窄档工具行换行而非裁切——1024 下左簇（视图档+顶满+分页）与右簇（导出/视图/
+ 列选/布局/放大）合计仍超一行，此前 overflow 直接切掉右侧钮（「快照」只露半个）。
+ DBX 的做法是窄档分两行：先保全部钮可达，再谈单行。宽档（>1280）仍单行零变化。 */
+/* 1150：1100 档之前先掉一档文字——1148 这类「非窄屏但也不宽」的窗口此前不掉标签，
+ 右簇 392px 把整行顶到 934px（可视 862px），右侧钮直接被切掉=用户说的「按钮文案遮挡」。
+ 1280 起就只留图标（title/aria-label 语义不丢），省约 130px；1100 以下再换行。
+ ⚠ColPicker/TablePresetMenu 的标签在子组件模板里，scoped 编译出的 `.cp-label[data-v]`
+ 永远打不中（子组件元素不带本组件 scopeId）——必须走 :deep() 把属性前移到 .rt-bar 上，
+ 否则「窄档只留图标」对这两个钮从未生效（实测 1148 下「列选/布局」仍是整词）。 */
+@media (max-width: 1280px) {
+  .rt-exp-btn-t, .rt-tool-t { display: none; }
+  .rt-bar :deep(.cp-label), .rt-bar :deep(.tpm-label) { display: none; }
+}
+/* 1164：换行阈值从 1100 提到 1180——实测（probe163）溢出起点是 1181px：
+  1180 起 scrollWidth 就超过 clientWidth，1160 溢出 21px、1120 溢出 61px，
+  而旧的 1100 断点在这段区间根本不触发 → 右簇末尾钮被直接切掉、rt-info 被压成 0 宽
+  （实测 1120 下命中数整块消失）。换行是「宁可两行也要全可达」，阈值必须≥溢出起点。 */
+@media (max-width: 1180px) {
+  .rt-bar { flex-wrap: wrap; row-gap: var(--sp-1); }
+  /* 右簇换行/贴右规则不在此处——.rt-bar-r 是 TableShell 模板元素，本组件 scoped
+     打不中（1164 实测写了也不生效）。规则住 TableShell 全局 style。 */
+}
 /* 554 工蚁1：左簇收缩缓冲——极限窄档优先牺牲计数文本完整性（省略号），保按钮全可达 */
-.rt-info { font-size: var(--fs-sm); color: var(--tx2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 1166：但「命中数」本身是这条带子的主信息（刚需读数），不能是第一个牺牲品。
+ 实测 1440 宽档：容器 64.8px / 内容 65px —— 差 0.2px 就把徽标最后一段吃掉，
+ 高倍截图里显示成 `1/1 · 1…`（`text-overflow` 是继承属性，省略号渗进 <b> 内部）。
+ 改为不可收缩：让位顺序交给快滤框（placeholder 是空态装饰），计数恒完整。 */
+.rt-info { font-size: var(--fs-sm); color: var(--tx2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
 /* 渲染截断提示行（弱化灰字，不抢数据视觉） */
 .rt-trunc-row td { text-align: center; color: var(--tx2); font-size: var(--fs-xs); padding: var(--sp-2); background: var(--bg1); }
 /* 工蚁1：.rt-bar-r 规则迁出—— TableShell 合并后此规则因 scopeId 不
@@ -2546,21 +2621,51 @@ async function copySelRows(fmt: 'tsv' | 'md' | 'json') {
 .rt-wrap { flex: 1; min-width: 0; overflow: auto; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 var(--r-m) var(--r-m); background: var(--bg1); }
 /* v3.0.1:列数少的宽索引在宽屏下表格不满容器(右侧死空间观感)——min-width 兜底拉满 */
 .rt-tbl { min-width: 100%; }
-.rt-tbl th { position: sticky; top: 0; }
+/* 1146：表头单行后收紧上下内衬（QRT 1136 同款 --sp-1）——旧 .tbl th 默认 var(--sp-2)
+ 是双层列头时代的衬距，单行后同样的值会让列头虚高 6px。 */
+.rt-tbl th { position: sticky; top: 0; padding-top: var(--sp-1); padding-bottom: var(--sp-1); }
 /* 勾选/序号列：窄列居中对齐 + 垂直居中，不再和正文列抢宽度/顶对齐错位 */
 .rt-chk { width: 34px; text-align: center; padding-left: var(--sp-2); padding-right: var(--sp-1); vertical-align: middle; }
 .rt-idx { width: 40px; color: var(--tx2); font-size: var(--fs-xs); text-align: right; padding-left: var(--sp-0); vertical-align: middle; }
+/* 1168：容器查询锚必须挂在 th 的内层 flex 元素上——实测 th（table-cell）带
+ container-type 也不命中（阈值放到 5000px 都不生效），.rt-th-in 一挂即中。
+ 只做查询锚，不改表格几何（列宽 70/60、行高 26 前后逐项不变）。 */
 .rt-th { cursor: pointer; position: relative; }
 .rt-rs { position: absolute; right: 0; top: 0; bottom: 0; width: 5px; cursor: col-resize; user-select: none; }
 .rt-rs:hover { background: var(--ac-soft); }
 body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-select: none !important; }
-/* 列头双层（dbx）——上行列名+排序态、下行类型；无类型列用空占位保持表头等高 */
-.rt-th-in { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; line-height: 1.25; }
-.rt-th-name { display: inline-flex; align-items: center; gap: var(--sp-1); }
+/* 1147：列头静息态只有列名——类型徽标与未排序 ⇅ 悬停/聚焦才出现，
+ 已排序箭头常亮（那是状态，不是噪音）。这样窄列里列名不会被邻居元素挤掉。 */
+.rt-th-in { display: flex; align-items: center; min-width: 0; line-height: 1.25; container-type: inline-size; }
+.rt-th-name { display: flex; align-items: center; gap: var(--sp-1); min-width: 0; flex: 1 1 auto; }
+/* 列名占满可用宽度并按字符截断（窄列不再与类型徽章互相挤爆）；
+ 右内衬留出常驻筛选漏斗（right:8px，约 12px 宽），列名文字永不压在漏斗下面 */
+.rt-th-label { min-width: 0; flex: 1 1 auto; padding-right: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 1151：静息不占位，悬停才浮出——`opacity:0` 只改可见性，元素仍参与 flex 宽度分配：
+ 110px 的 status 列里，看不见的类型徽标吃掉 42px、⇅ 再吃 10px，列名只剩 30px
+ （实测文字需 34px）→ 这正是「表头元素平铺互相挤占」的最后一处。
+ 静息 display:none 把宽度全留给列名；需要时再出现，且绝不压在列名文字上：
+ · 类型徽标彻底不浮出——列头 tooltip 首行就是「类型 · 列名」，信息不丢且零遮挡
+ （浮出档实测带底色的徽标会把 status 盖成 sta）；
+ · ⇅ 悬停时出现在漏斗左侧固定槽位（right:24px），同时列名让出 34px 沟槽，
+   文字改用省略号截断而不是被盖住。已排序箭头是状态，仍常驻占位。 */
+.rt-th-type { display: none; }
+.rt-th-sort-hint { display: none; position: absolute; right: 24px; top: 50%; transform: translateY(-50%); }
+.rt-th:hover .rt-th-sort-hint, .rt-th:focus-visible .rt-th-sort-hint, .rt-th:focus-within .rt-th-sort-hint { display: block; }
+.rt-th:hover .rt-th-label, .rt-th:focus-visible .rt-th-label, .rt-th:focus-within .rt-th-label { padding-right: 34px; }
+/* 1168：窄列悬停时列名让不出 34px —— 60px 列的内容盒只有 40px，让完只剩 6px，
+ 实测 `title` 被压成 `t…`（高倍截图确认），比静息态更糟：用户悬停想看名字，名字反而没了。
+ 优先保列名：窄列（≤96px）悬停不加大沟槽，只留常驻的 14px 给漏斗；⇅ 提示仍在
+ 漏斗左侧浮出并叠在文字尾部之上——短暂遮挡可接受，截掉列名不可接受。 */
+@container (max-width: 96px) {
+  .rt-th:hover .rt-th-label, .rt-th:focus-visible .rt-th-label, .rt-th:focus-within .rt-th-label { padding-right: 14px; }
+}
+.rt-th-sort-on { flex: none; color: var(--ac-hi); }
 .rt-th-sub { display: block; min-height: 13px; font-size: var(--fs-2xs); }
-/* 列头类型徽标（dbx 学习：列名下灰字类型，keyword/text/long…） */
-/* 类型徽标蓝色语义（dbx 类型=信息蓝，区别于灰注释）；未排序 ⇅ 弱提示 */
-.rt-th-type { font-size: var(--fs-2xs); font-weight: 400; color: var(--info); opacity: .85; }
+/* 列头类型徽标（dbx 学习：列名下灰字类型，keyword/text/long…）——
+ 1147 起静息态隐藏、悬停才出现（规则在上面 .rt-th-type 那一行），此处只留语义色。
+ 类型徽标蓝色语义（dbx 类型=信息蓝，区别于灰注释） */
+.rt-th-type { font-weight: 400; color: var(--info); }
 /* P2-1：类型语义着色简化版（五类——数值蓝/日期琥珀/布尔绿/文本中性/keyword 青；
  dbx 有 9 类方案管理，简化为内置一套不做管理面） */
 .rt-th-type.rt-ty-num { color: var(--info); }
@@ -2570,8 +2675,6 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
 .rt-th-type.rt-ty-kw { color: var(--ac-hi); }
 /* 多列排序优先级角标（dbx 语言——链内第 n 键显示 1/2/3）；：9px 裸值归 --fs-2xs */
 .rt-sort-ord { font-size: var(--fs-2xs); color: var(--ac-hi); font-weight: 650; margin-left: 1px; }
-.rt-th-sort-hint { color: var(--tx2); opacity: .45; }
-.rt-th-in:hover .rt-th-sort-hint, th.rt-th:hover .rt-th-sort-hint { opacity: .8; }
 /* 操作列横排 nowrap——竖排时 showRelevance/canOps 的按钮数量差异会把行高
  撑到 2~3 倍（实报「同一索引，索引工作区与查询工作台行高不一致」：查询工作台
  show-relevance 开启多两个取证钮，竖排溢出撑行）。横排高度恒为单钮高，行高

@@ -4,6 +4,7 @@
  * 挂载样板照抄 QueryResultTable.spec（裸 createApp + pinia，QRT 不依赖 api/router）。
  */
 import { describe, it, expect, beforeEach } from 'vitest';
+import { findMenuItem } from './helpers/ctxMenu'; /* 1142：二级菜单取项 */
 import { createApp, h, nextTick } from 'vue';
 import { createPinia } from 'pinia';
 import QueryResultTable from '../components/QueryResultTable.vue';
@@ -25,8 +26,8 @@ const keyOn = (sel: string, key: string, mods: KeyboardEventInit = {}) => {
   (host.querySelector(sel) as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...mods }));
 };
 const expandRows = () => [...host.querySelectorAll('tbody tr.rt-expand')];
-const menuItem = (label: string) =>
-  [...document.body.querySelectorAll('.ccm-it') as any].find(b => b.textContent?.includes(label));
+/* 1142：动作项住分组二级——helper 按需展开 */
+const menuItem = (label: string) => findMenuItem(label);
 function ctxOnCell(ri: number, ci: number) {
   const td = host.querySelector(`tbody td[data-col]:nth-child(${ci + 2})`) as HTMLElement | null
     ?? [...host.querySelectorAll('tbody tr')].filter(tr => !tr.classList.contains('rt-expand'))[ri]?.children[ci + 1] as HTMLElement;
@@ -74,14 +75,14 @@ describe('QRT 行内展开详情（W7 RT 镜像）', () => {
     /* 列序：#/_id/_index/name → 单元格 ci=0（_id 列） */
     ctxOnCell(0, 0);
     await tick();
-    const item = menuItem('展开此行');
+    const item = await menuItem('展开此行');
     expect(item, '单元格菜单应有「展开此行」').toBeTruthy();
     item!.click();
     await tick();
     expect(expandRows().length).toBe(1);
     ctxOnCell(0, 0);
     await tick();
-    expect(menuItem('收起此行')).toBeTruthy();
+    expect(await menuItem('收起此行')).toBeTruthy();
   });
 
   it('快捷键 E：焦点行展开/收起；Esc 全收（失焦前先收展开）', async () => {

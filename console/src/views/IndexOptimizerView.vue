@@ -24,6 +24,11 @@
       </PageHeader>
     </div>
 
+    <!-- 只读身份前置说明（1124）：应用建议/段合并在无权限时隐藏，给原因而不是留空工具栏 -->
+    <div v-if="auth.probed && !canApply && !canOps" class="io-perm-note" role="status">
+      <ShieldAlert :size="13" /> 当前身份只读：扫描与建议可照常查看；应用优化项、段合并需要该连接的索引设置/优化页写权限。
+    </div>
+
     <!-- G6-B8：扫描失败 err-bar 独立顶置（ 同构修复）——不再 toast + snap=null 伪装「尚未扫描」；
  有旧 snap 重扫失败时旧数据保留并存 -->
     <div v-if="scanErr" role="alert" class="err-bar rise-in">
@@ -153,8 +158,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted } from 'vue';
-import { Wand2, RefreshCcw, Play, CheckCircle2, ArrowRight, Layers, AlertTriangle, FileDown, Terminal } from 'lucide-vue-next';
+import { ref, computed, reactive, onMounted, watch } from 'vue';
+import { Wand2, RefreshCcw, Play, CheckCircle2, ArrowRight, Layers, AlertTriangle, FileDown, Terminal, ShieldAlert } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
@@ -463,7 +468,21 @@ async function runForceMerge() {
   } finally { segMerging.value = false; }
 }
 
-onMounted(() => { if (target.value) scan(); });
+/* 1125：挂载即扫描要过身份门——宿主换 token 的窗口里 probed 未落地，
+   旧 target 的索引设置/健康面会先拉回来（结果串到新账号界面）。不放行则挂起补跑。 */
+const scanReady = () => auth.authDisabled || !auth.probeStarted
+  || (auth.probed && auth.me != null && auth.canReadPage('optimizer', store.target));
+let scanPending = false;
+function bootScan() {
+  if (!target.value) return;
+  if (!scanReady()) { scanPending = true; return; }
+  scanPending = false;
+  void scan();
+}
+onMounted(bootScan);
+watch(() => [auth.probed, auth.authDisabled, auth.me?.username, store.target, target.value], () => {
+  if (scanPending && scanReady()) bootScan();
+});
 
 /* 原始 IO 快查（546/548 同款三件套）——特征 /cluster/index-settings（GET 扫描与
  PUT 下发 update 同族公共前缀，last 取最近一条=「plan/preview」双语义；：同前缀的
@@ -482,6 +501,8 @@ function openRawIo() {
 <style scoped>
 /* G6-S1：区块级间距 token 化（--sp-1..6 = 4/8/12/16/24/32）；控件内 padding / 亚阶梯(≤3px) / 行级密排不动 */
 .io-page { display: flex; flex-direction: column; gap: var(--sp-4); }
+/* 只读身份说明条（RestView .rt-perm-note 同款形态；io-page 是 flex gap 布局，下距归零） */
+.io-perm-note { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); }
 .io-hd { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-3); }
 /* W-F：.io-hd-l/.io-hd-ic/.io-hd-tt/.io-hd-sub/.io-hd-r 死规则删除（页头已迁 PageHeader）。
  .io-idx-sel span（「目标索引」标签）与 input（IndexPicker 内框）两条规则随选择器退役清零。

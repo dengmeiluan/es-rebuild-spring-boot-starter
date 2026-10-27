@@ -200,6 +200,7 @@ import { copyText } from '../utils/format';
 import { BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS, ANALYZER_COMPONENT_ZH } from '../utils/dslCompletionContext'; /* ：analyzer 族四输入 datalist 候选源（共享表只读消费）；：自定义组合三件套分表同源；：组件名中文释义表（option title 单源） */
 import { friendlyEsError } from '../utils/esError';
 import { useAppStore } from '../stores/app';
+import { useGatedBootRead } from '../composables/usePageIdentityGate';
 import { useIdxState, useUrlState, usePref } from '../composables/urlState';
 import { useTierCycle } from '../composables/useTierCycle'; /* ：al.toksH/fieldsH 三件套合并 */
 import { useScopedDraft, useScopedDraftState } from '../composables/useScopedDraft';
@@ -457,15 +458,18 @@ async function verifyField(f: TextField) {
 const afLink = useUrlState('analyzerField');
 /* 接收「查询X光」送词的手写 sessionStorage 键合并 useLinkCarry（发送侧由对方页负责） */
 const analyzerCarry = useLinkCarry<{ index?: string; text?: string }>('analyzer');
-watch(afLink, async (v) => {
-  const path = (v || '').trim();
+/* 1125：字段快验会拉 mapping 与真实样本；身份未落地先跑会把上一账号的目标带进来。
+   immediate watch 与 onMounted 的联动都改走同一门，未放行则挂起补跑。 */
+const analyzerLinkBoot = useGatedBootRead('analyzer-lab', async () => {
+  const path = (afLink.value || '').trim();
   if (!path) return;
   afLink.value = '';
   try {
     await verifyField({ path } as any);
     store.notify('info', '已从 Mapping 页带入字段快验：' + path);
   } catch { /* 快验失败走通道内 err 展示 */ }
-}, { immediate: true });
+});
+watch(afLink, () => analyzerLinkBoot.run(), { immediate: true });
 
 onMounted(() => {
   /* 手写「读→焚→解」接收侧换 useLinkCarry.receive() 统一件（语义等价：

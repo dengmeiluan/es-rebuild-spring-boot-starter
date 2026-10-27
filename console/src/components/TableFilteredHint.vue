@@ -5,7 +5,8 @@
  ⚠DOM 逐字节保真：结构/文案/渲染条件与两内核原模板零变动（534 fmode 双注入位与
  554 单行纪律锁同步更新读本文件）。 -->
 <template>
-  <span v-if="active" :class="spanCls">
+  <span v-if="active" :class="spanCls"
+        title="仅筛选当前结果集（前端内存），不修改查询；要改查询条件请用单元格菜单「加入查询条件并重查」">
   已筛选 {{ active }} 列 · {{ shown }}/{{ total }} 行
   <button :class="fmodeCls" :aria-label="'筛选组合档：' + mode + '（点击切换）'"
     :title="'多列筛选组合：' + mode + '（点击切换为 ' + (mode === 'AND' ? 'OR 任一列命中' : 'AND 全部命中') + '）'"

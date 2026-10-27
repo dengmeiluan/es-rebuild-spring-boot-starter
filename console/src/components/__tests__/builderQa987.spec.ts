@@ -60,6 +60,9 @@ describe('987 FieldSelect 未知字段护栏', () => {
     const unk = host.querySelector('.fs-unk') as HTMLElement;
     expect(unk, '未知字段必须亮护栏黄点').not.toBeNull();
     expect(unk.title).toContain('字段不在当前索引 mapping');
+    /* 1113：黄点是 8px 圆点，语义只走 title/aria-label——可见文案会逐字竖排溢出压住邻行 */
+    expect(unk.textContent?.trim(), '黄点内不得有可见文案').toBe('');
+    expect(unk.getAttribute('aria-label')).toContain('字段不在 mapping');
     const h2 = mount(FieldSelect, { modelValue: 'a', fields: ['a', 'b'], types: { a: 'keyword' } });
     expect(h2.querySelector('.fs-unk'), '已知字段不亮').toBeNull();
   });

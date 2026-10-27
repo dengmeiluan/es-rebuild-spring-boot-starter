@@ -47,8 +47,9 @@ const keyOn = (sel: string, key: string, mods: KeyboardEventInit = {}) => {
   (host.querySelector(sel) as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...mods }));
 };
 const expandRows = () => [...host.querySelectorAll('tbody tr.rt-expand')];
-const menuItem = (label: string) =>
-  [...document.body.querySelectorAll('.ccm-it') as any].find(b => b.textContent?.includes(label));
+/* 1142：动作项住分组二级——helper 内部按需展开 */
+import { findMenuItem } from './helpers/ctxMenu';
+const menuItem = (label: string) => findMenuItem(label);
 function ctxOnCell(col: string, ri = 0) {
   const td = [...host.querySelectorAll('td.rt-cell')].find(td => (td as HTMLElement).dataset.col === col
     && (td as HTMLElement).dataset.ri === String(ri)) as HTMLElement;
@@ -91,7 +92,7 @@ describe('RT 行内展开详情（W7）', () => {
     await mountTbl();
     ctxOnCell('name', 1);
     await tick();
-    const item = menuItem('展开此行');
+    const item = await menuItem('展开此行');
     expect(item, '单元格菜单应有「展开此行」').toBeTruthy();
     item!.click();
     await tick();
@@ -99,7 +100,7 @@ describe('RT 行内展开详情（W7）', () => {
     /* 再右键同格：label 翻转为收起 */
     ctxOnCell('name', 1);
     await tick();
-    expect(menuItem('收起此行')).toBeTruthy();
+    expect(await menuItem('收起此行')).toBeTruthy();
   });
 
   it('快捷键 E：焦点行展开/收起；Enter 保持既有打开文档弹窗不变', async () => {
