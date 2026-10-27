@@ -60,9 +60,13 @@
 
     <!-- 权限前置说明：执行钮在无写权时不再「静默消失」——告诉用户缺什么、能做什么。
          与 RestView.rt-perm-note 同一语言；两档区分「完全只读」与「仅数据面写」。 -->
-    <div v-if="auth.probed && !canAdmin" class="dt-perm-note" role="status">
-      <ShieldAlert :size="13" /> 当前身份只读：执行需要 ADMIN，或该连接的「DevTools / REST 直连」写权限。
+    <div v-if="auth.probed && !canExecRead" class="dt-perm-note" role="status">
+      <ShieldAlert :size="13" /> 当前身份无法执行：需要 ADMIN，或该连接的「DevTools / REST 直连」读权限（只读请求）／写权限（写请求）。
       现在仍可编辑请求、导入历史与查看响应；获权后执行钮自动出现。
+    </div>
+    <div v-else-if="auth.probed && canExecRead && !canAdmin" class="dt-perm-note dt-perm-note-readonly" role="status">
+      <ShieldAlert :size="13" /> 当前身份对该连接<b>只读</b>：可执行 GET / POST 查询类请求（_search、_count、_cat 等）；
+      写请求（PUT/DELETE/_bulk/_reindex 等）需要「DevTools / REST 直连」写权限。
     </div>
     <div v-else-if="auth.probed && canAdmin && !isAdminIdentity" class="dt-perm-note dt-perm-note-warn" role="status">
       <ShieldAlert :size="13" /> 当前为数据面写权限：可执行检索/文档/批量/delete-by-query；
@@ -78,7 +82,7 @@
         <!-- W3-T11：端点目录补全渗透；@keydown.ctrl.enter 经 attrs 落根 div，choose 后冒泡仍触发 run（选中即执行） -->
         <EndpointPathInput v-model="cur.path" class="dt-path" placeholder="/index/_search"
           @endpoint="onEndpoint" @keydown.ctrl.enter="run" />
-        <button v-if="canAdmin" class="btn primary sm btn-run-lock" @click="run"
+        <button v-if="runVisible" class="btn primary sm btn-run-lock" @click="run"
           :disabled="cur.busy || !currentSendable"
           :title="currentSendable ? (scopeAdvisory || '执行（Ctrl+Enter）') : scopeDenyHint">
           <!-- 主按钮中文化对齐两工作台（此前英文 Run 是中文界面孤例）；执行中态句式统一「执行中 X.Xs」 -->
@@ -542,7 +546,18 @@ const store = useAppStore();
  编辑/导入/复制响应全角色可用，非 ADMIN 给自述不给扳机 */
 const auth = useAuthStore();
 const permOpen = ref(false);
-const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/devtools/execute', store.target)); /* DevTools 页写键或 rest 写键（ADMIN 全局） */
+/* 透传执行能力**按当前 tab 的内层方法**分档（1133）：
+   读键 → 可执行内层只读请求；写键/ADMIN → 可执行写。
+   此前的 canAdmin 一律按 admin 写档判定，导致宿主持有 conn:{id}:devtools 读键的
+   只读身份连 GET /_cluster/health 都执行不了——「生产只读」退化成「生产不可用」。 */
+const canExecInner = (method: string, path: string) => auth.canExecutePassthrough(
+  method, path, '/internal/es/index/cluster/devtools/execute', store.target);
+/* 写档能力：仍用于「非 ADMIN 仅数据面」的判定与说明条分叉。 */
+const canAdmin = computed(() => auth.canPassthroughWrite(
+  '/internal/es/index/cluster/devtools/execute', store.target));
+/* 读档能力：只读身份也能进入可执行态（只读 tab 亮着「执行」）。 */
+const canExecRead = computed(() => auth.canPassthroughRead(
+  '/internal/es/index/cluster/devtools/execute', store.target));
 /* 页级可见性门（1131）：路由守卫在「身份尚未落地」窗口会放行（`pageAllowed` 对
    grantedPages=null 且 role=null 返回 true），零授权用户因此在探测完成前能进本页并
    点到工具栏（导出/导入/变量）。后端仍会拦写请求，但「可操作性必须与授权一致」
@@ -556,8 +571,14 @@ const isAdminIdentity = computed(() => auth.isAdmin());
    无角色概念，scope 门不得把管理写在前端拦死。 */
 const requestInScope = (method: string, path: string, body?: string | null) =>
   auth.isAdmin() || auth.me == null || auth.authDisabled || nonAdminDataPlaneWriteAllowed(method, path, body);
-const currentSendable = computed(() => canAdmin.value && !!cur.value
+const currentSendable = computed(() => !!cur.value
+  && canExecInner(cur.value.method, cur.value.path)
   && requestInScope(cur.value.method, cur.value.path, cur.value.body));
+/* 执行钮可见性：只要「内层方法可执行」就亮着——只读身份的只读 tab 也应有执行钮，
+   不能整块变灰（那会让只读部署看起来完全不可用）。 */
+const runVisible = computed(() => (!!cur.value
+  ? canExecInner(cur.value.method, cur.value.path)
+  : canExecRead.value));
 const SCOPE_DENY_HINT = '非 ADMIN 仅可执行数据面写（检索/文档/批量/SQL）；别名、快照、模板、脚本与集群管理写需 ADMIN';
 /* 不可用原因分档：根级检索缺索引范围是最高频的「看得见点不了」，单独说明怎么改 */
 const scopeAdvisory = computed(() => {
@@ -1222,8 +1243,14 @@ function tryFormatBody(body: string): string {
 }
 
 async function run() {
-  /* 权限门双保险：按钮 v-if 之外，键盘/历史/预填所有入口在执行体首行拦截（busy 置位前） */
-  if (!canAdmin.value) { store.notify('warning', '原始透传需要 ADMIN 或 DevTools/REST 页写权限'); return; }
+  /* 权限门双保险：按钮 v-if 之外，键盘/历史/预填所有入口在执行体首行拦截（busy 置位前）。
+     按**内层方法**分档：只读请求读键即可，写请求才要写键（1133）。 */
+  if (!cur.value || !canExecInner(cur.value.method, cur.value.path)) {
+    store.notify('warning', cur.value && canExecRead.value
+      ? '当前身份对该连接只有只读权限：内层写请求需要 DevTools / REST 直连的写权限'
+      : '原始透传需要 ADMIN，或该连接的 DevTools / REST 直连读/写权限');
+    return;
+  }
   if (!requestInScope(cur.value?.method || 'GET', cur.value?.path || '/', cur.value?.body)) {
     store.notify('warning', SCOPE_DENY_HINT);
     return;
@@ -1248,9 +1275,16 @@ async function run() {
  segLabel 在场=段执行：历史条目补 seg 标识（「seg i/n」）便于区分段现场；
  镜像 HistAllEntry 字段零增（跨 Tab 汇聚锁面零触），草稿 t.body 原稿零触。 */
 async function execSend(t: Tab, bodyOut: string, segLabel?: string): Promise<boolean> {
-  /* 内核单点门：全量/段执行/预填/历史回放最终都汇入此处，非 ADMIN 一律不发出 raw 透传。
+  /* 内核单点门：全量/段执行/预填/历史回放最终都汇入此处。
+     按内层方法分档（1133）：只读身份可执行只读请求，写请求必须写键/ADMIN。
      调用方已置 busy；此处拒绝必须复位，否则权限在等待期间被撤会永久锁死该 Tab。 */
-  if (!canAdmin.value) { store.notify('warning', '原始透传需要 ADMIN 或 DevTools/REST 页写权限'); t.busy = false; return false; }
+  if (!canExecInner(t.method, t.path)) {
+    store.notify('warning', canExecRead.value
+      ? '当前身份对该连接只有只读权限：内层写请求需要 DevTools / REST 直连的写权限'
+      : '原始透传需要 ADMIN，或该连接的 DevTools / REST 直连读/写权限');
+    t.busy = false;
+    return false;
+  }
   if (!requestInScope(t.method, t.path, t.body)) {
     store.notify('warning', SCOPE_DENY_HINT);
     t.busy = false;
@@ -1357,8 +1391,14 @@ function editorCursorOffset(): number | null {
 }
 function onBodyExecute() { void runSmart(false); }
 async function runSmart(all: boolean) {
-  /* 段执行（Monaco Ctrl+Enter / Shift+Ctrl+Enter）同样受 ADMIN 门，守卫先于 busy 置位 */
-  if (!canAdmin.value) { store.notify('warning', '原始透传需要 ADMIN 或 DevTools/REST 页写权限'); return; }
+  /* 段执行（Monaco Ctrl+Enter / Shift+Ctrl+Enter）同样受门，守卫先于 busy 置位。
+     按内层方法分档：只读段用读键即可（1133）。 */
+  if (!cur.value || !canExecInner(cur.value.method, cur.value.path)) {
+    store.notify('warning', cur.value && canExecRead.value
+      ? '当前身份对该连接只有只读权限：内层写请求需要 DevTools / REST 直连的写权限'
+      : '原始透传需要 ADMIN，或该连接的 DevTools / REST 直连读/写权限');
+    return;
+  }
   const t = cur.value;
   if (!t || t.busy) return;
   const segs = splitRequests(t.body || '');
@@ -1761,6 +1801,8 @@ function saveFav() {
 /* 权限前置说明条（RestView.rt-perm-note 同语言）：只在身份就绪后出现，不闪断首屏 */
 .dt-perm-note { display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-2) var(--sp-1) 0; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); line-height: 1.5; }
 .dt-perm-note-warn { border-color: var(--warn-line, var(--line)); background: var(--warn-soft); color: var(--tx1); }
+/* 只读档（读键可见、写被拒）：用中性强调色，与「完全无权」和「数据面写」都区分开 */
+.dt-perm-note-readonly { border-color: var(--ac-line); background: var(--ac-soft); color: var(--tx1); }
 .dt-tabs { display: flex; align-items: center; gap: var(--sp-2); border-bottom: 1px solid var(--border); padding: 0 var(--sp-1); overflow-x: auto; }.dt-tab { display: flex; align-items: center; gap: var(--sp-1h); padding: var(--sp-1h) var(--sp-2h); font-size: var(--fs-xs); cursor: pointer;
   border: 1px solid transparent; border-bottom: none; border-radius: 4px 4px 0 0; white-space: nowrap; }
 /* 重命名内联输入（贴 tab 同视觉密度） */

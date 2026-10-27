@@ -80,6 +80,15 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
      *  端点解析请求体后回填，afterCompletion 落入 HIGH_RISK detail（*  高危操作从「零法证」到「谁对哪个集群执行了什么」）。 */
     public static final String ATTR_RAW_SUMMARY = "es.console.raw.summary";
 
+    /**
+     * request attribute：本次 raw / devtools 透传<b>仅凭页面读键</b>准入（无写键、非 ADMIN）。
+     *
+     * <p>外层永远是 POST，拦截器看不到内层真实方法，所以这里只判「有没有资格进这个端点」，
+     * 真正的读/写分档由执行端（{@code executePassthrough}）拿到内层 method 后再裁决：
+     * 读方法放行、写方法拒绝。属性缺失=老路径/未打标，执行端按写口径 fail-closed。</p>
+     */
+    public static final String ATTR_PASSTHROUGH_READ_ONLY = "es.console.passthrough.readOnlyOnly";
+
     /** 带 body 请求的统一体积上限（字节）：与 raw 通道的 32M 字符守卫对齐，
      *  封住 @RequestBody 端点（Jackson 全量读入）的内存耗尽面。 */
     private static final long MAX_BODY_BYTES = 32L * 1024 * 1024;
@@ -975,6 +984,51 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                     && !"HEAD".equalsIgnoreCase(request.getMethod())
                     && !"OPTIONS".equalsIgnoreCase(request.getMethod())
                     && !isReadonlyPost(path);
+
+            /* raw / devtools 透传的外层恒 POST，内层真实方法只有执行端能看到。若这里按写门
+               一刀切，只读身份（宿主只授 conn:{id}:devtools 读键）连 GET /_cluster/health 都进不来，
+               「生产只读」退化成「生产不可用」。所以：写键持有者走下面的写门（照旧）；
+               仅当没有写键、但有归属页读键时先行准入并打标，由执行端按内层 method 再裁决读/写。
+               打标只放宽「能否进入」，不改变「能否写」——写判据仍在执行端。
+               必须放在页面前缀裁决之前：raw 的 rest 页有 apiPrefixes，devtools 页没有，
+               两者靠不同分支裁决，提前拦截才能对两者同口径。 */
+            if (writeReq && isPassthroughEndpoint(path)
+                    && envPagesResolver.inConnModel(principal.getGrantedPages())) {
+                /* 两个端点的页面归属来源不同：devtools 靠共享写表（表里登记 rest/devtools），
+                   raw 靠 rest 页的 apiPrefixes（页面前缀分支）。任一为空就取另一来源，
+                   两者必须同口径，否则修好 DevTools 却漏掉 REST 直连。 */
+                List<String> passthroughPages = sharedWritePages(path);
+                if (passthroughPages == null) {
+                    ConsolePageCatalog.Page owned = pageCatalog.pageOf(path);
+                    if (owned != null) {
+                        passthroughPages = java.util.Collections.singletonList(owned.getKey());
+                    }
+                }
+                if (passthroughPages != null) {
+                    boolean hasWrite = false;
+                    for (String pageKey : passthroughPages) {
+                        if (envPagesResolver.writeAllowed(targetId, pageKey, principal.getGrantedPages())
+                                || (envPagesResolver.staticWriteAllowed(targetId, pageKey, principal.getGrantedPages())
+                                    && principal.getRole().atLeast(requiredRole(request.getMethod(), path)))) {
+                            hasWrite = true;
+                            break;
+                        }
+                    }
+                    if (!hasWrite) {
+                        boolean hasRead = false;
+                        for (String pageKey : passthroughPages) {
+                            if (envPagesResolver.readAllowed(targetId, pageKey, principal.getGrantedPages())) {
+                                hasRead = true;
+                                break;
+                            }
+                        }
+                        if (hasRead) {
+                            request.setAttribute(ATTR_PASSTHROUGH_READ_ONLY, Boolean.TRUE);
+                            return true;
+                        }
+                    }
+                }
+            }
             /* insight 护栏动作 fail-closed（1031）：动态 actionId 的写请求在授权层双查——
                ①未注册动作：拒绝（执行器只会 400，授权层提前给出确定语义）；
                ②已注册但共享写映射漏登：拒绝（否则静态/混合模型回落 OPERATOR 角色门，
@@ -1699,6 +1753,58 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         }
         return uri.endsWith("/index/query") || uri.endsWith("/index/system-query") || uri.endsWith("/probe");
     }
+
+    /** raw 透传端点（外层恒 POST，内层真实方法藏在请求体里）。 */
+    public static boolean isPassthroughEndpoint(String path) {
+        if (path == null) return false;
+        return path.endsWith("/cluster/raw") || path.endsWith("/cluster/devtools/execute");
+    }
+
+    /**
+     * 内层 <b>ES 请求</b>是否为只读（raw / devtools 透传用）。
+     *
+     * <p>外层永远是 POST，权限层看不到真实动作，只能由执行端解析出内层 method + path 后回判。
+     * 口径（A 方案白名单，fail-closed）：</p>
+     * <ul>
+     *   <li>{@code GET}/{@code HEAD}/{@code OPTIONS} → 只读；外加 {@code POST <索引>/_search_source}；
+     *       注意 ES 的 {@code _search} 用 GET 时也可能带 body，按 method 判定即可。</li>
+     *   <li>{@code POST} 仅当路径命中明确无副作用的读端点（见 {@link #READONLY_ES_POST_SUFFIXES}）。</li>
+     *   <li>其余（含 {@code PUT}/{@code DELETE}/{@code PATCH}、{@code _bulk}、{@code _reindex}、
+     *       {@code _close}/{@code _open}/写别名等）→ 写。</li>
+     * </ul>
+     * <p><b>宁可判写</b>：名单没覆盖到的读端点会被拦（用户可申请权限或走 ADMIN），
+     * 但名单外的写端点绝不会被误放行。</p>
+     */
+    public static boolean isReadonlyEsRequest(String method, String path) {
+        String m = method == null ? "" : method.trim().toUpperCase(java.util.Locale.ROOT);
+        if ("GET".equals(m) || "HEAD".equals(m) || "OPTIONS".equals(m)) return true;
+        if (!"POST".equals(m)) return false;
+        String p = path == null ? "" : path.trim();
+        int q = p.indexOf('?');
+        if (q >= 0) p = p.substring(0, q);
+        while (p.length() > 1 && p.endsWith("/")) p = p.substring(0, p.length() - 1);
+        if (p.isEmpty()) return false;
+        String lower = p.toLowerCase(java.util.Locale.ROOT);
+        for (String suffix : READONLY_ES_POST_SUFFIXES) {
+            if (lower.endsWith(suffix)) return true;
+        }
+        /* _cat/* 全族都是只读观测（列表/计数），统一按前缀放行。 */
+        return lower.contains("/_cat/") || lower.startsWith("_cat/");
+    }
+
+    /**
+     * 无副作用的 ES 只读 POST 端点（尾匹配）。名单刻意保守：每一条都确认「不改集群状态、
+     * 只读文档/元数据」。{@code _scripts}、{@code _search_shards} 之类虽只读但极少在透传里用，
+     * 不收录——宁可判写，不放行拿不准的。
+     */
+    private static final List<String> READONLY_ES_POST_SUFFIXES = Arrays.asList(
+            "_search", "_async_search", "_search/template", "_render/template", "_msearch",
+            "_msearch/template", "_count", "_field_caps", "_validate/query", "_explain",
+            "_mget", "_get", "_source", "_termvectors", "_mtermvectors", "_analyze",
+            "_search_source", "_knn_search", "_rank_eval", "_terms_enum",
+            "_sql", "_sql/translate", "_eql/search", "_pit", "_search/point_in_time",
+            "_ilm/explain", "_reindex/preview", "_cluster/health", "_cluster/state",
+            "_cluster/stats", "_nodes/stats", "_cat", "_resolve/index");
 
     private static boolean containsAny(String uri, List<String> keywords) {
         for (String kw : keywords) {

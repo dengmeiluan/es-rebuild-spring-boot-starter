@@ -176,8 +176,7 @@ public class ConsolePermissionsController {
                         && p.getRole().atLeast(devtoolsRole)))
                 : p.getRole().atLeast(devtoolsRole)
                     && (!pageGateActive || effective.contains("devtools") || effective.contains("rest"))));
-        // 共享写档：ADMIN 全局可用；连接模型需持有真实使用共享端点的页面写键；
-        // 静态/内置模型按「页面可见 + 角色档」判定（不能只对 conn 模型报可用）
+        // 共享写档：ADMIN 全局可用；连接模型需持有真实使用共享端点的页面写键；        // 静态/内置模型按「页面可见 + 角色档」判定（不能只对 conn 模型报可用）
         boolean sharedWriteAllowed = targetAccessible && (admin
                 || (pageGateActive && connModel
                     && (ConsoleAuthInterceptor.hasSharedWriteGrant(tid, gp, effective)
@@ -213,8 +212,29 @@ public class ConsolePermissionsController {
         out.put("env", env);
         out.put("connModel", connModel);
         out.put("envPagesApplied", envPagesApplied);
+        /* 1133：读档能力与写档分开回报。执行端点外层恒 POST，只读身份凭读键也能执行内层只读请求，
+           面板若只报「写可用」就会与实际行为脱节（用户看到「不可用」但 GET 明明能跑）。 */
+        boolean rawReadAllowed = targetAccessible && (admin || (pageGateActive && connModel
+                ? (envPagesResolver.readAllowed(tid, "rest", gp)
+                    || envPagesResolver.writeAllowed(tid, "rest", gp)
+                    || (envPagesResolver.staticWriteAllowed(tid, "rest", gp)
+                        && p.getRole().atLeast(rawRole)))
+                : p.getRole().atLeast(rawRole)
+                    && (!pageGateActive || effective.contains("rest"))));
+        boolean devtoolsReadAllowed = targetAccessible && (admin || (pageGateActive && connModel
+                ? (envPagesResolver.readAllowed(tid, "devtools", gp)
+                    || envPagesResolver.readAllowed(tid, "rest", gp)
+                    || envPagesResolver.writeAllowed(tid, "devtools", gp)
+                    || envPagesResolver.writeAllowed(tid, "rest", gp)
+                    || ((envPagesResolver.staticWriteAllowed(tid, "devtools", gp)
+                        || envPagesResolver.staticWriteAllowed(tid, "rest", gp))
+                        && p.getRole().atLeast(devtoolsRole)))
+                : p.getRole().atLeast(devtoolsRole)
+                    && (!pageGateActive || effective.contains("devtools") || effective.contains("rest"))));
         out.put("rawAllowed", rawAllowed);
         out.put("devtoolsAllowed", devtoolsAllowed);
+        out.put("rawReadAllowed", rawReadAllowed);
+        out.put("devtoolsReadAllowed", devtoolsReadAllowed);
         out.put("sharedWriteAllowed", sharedWriteAllowed);
 
         Set<String> hostEffective = pageGateActive

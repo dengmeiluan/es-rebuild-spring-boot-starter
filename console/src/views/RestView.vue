@@ -5,8 +5,11 @@
     <PageHeader :icon="Zap" title="REST 直连" subtitle="单次透传任意 ES REST 请求（快速试跑）" />
 
     <!-- 只读身份的前置说明：发送钮隐藏时不让页面变成无解释的空壳 -->
-    <div v-if="auth.probed && !canAdmin" class="rt-perm-note" role="status">
-      <Shield :size="13" /> 当前身份只读：发送需要 ADMIN；连接模型下需勾选该连接的「REST 直连」写权限。
+    <div v-if="auth.probed && !canSendAny" class="rt-perm-note" role="status">
+      <Shield :size="13" /> 当前身份无法发送：需要 ADMIN，或该连接的「REST 直连」读权限（只读请求）／写权限（写请求）。
+    </div>
+    <div v-else-if="auth.probed && canSendAny && !canAdmin" class="rt-perm-note rt-perm-note-readonly" role="status">
+      <Shield :size="13" /> 当前身份对该连接<b>只读</b>：可发送 GET／POST 查询类请求；写请求需「REST 直连」写权限。
     </div>
 
     <!-- 请求行（全局 .card 壳退役——bg/border/radius 归 theme.css 单源不再消费，
@@ -25,7 +28,7 @@
         <!-- W3-T11：端点目录补全渗透；面板关/无候选 Enter 透发 enter → send（裸 Enter 执行语义保留） -->
         <EndpointPathInput v-model="path" class="inp mono rt-path" placeholder="/_cluster/health"
           @endpoint="onEndpoint" @enter="send" />
-        <button v-if="canAdmin" class="btn primary sm" :disabled="sending || !path.trim() || !currentSendable"
+        <button v-if="canSendAny" class="btn primary sm" :disabled="sending || !path.trim() || !currentSendable"
           :title="currentSendable ? (scopeAdvisory || undefined) : scopeDenyHint" @click="send">
           <Send :size="13" /> {{ sending ? '发送中（' + (qr.elapsedMs.value / 1000).toFixed(1) + 's）…' : '发送' }}
         </button>
@@ -96,7 +99,7 @@
           <div v-if="jqHint" class="il-hint" :class="'il-' + jqLevel">{{ jqHint }}</div>
           <button class="btn sm" @click="copyResp"><Copy :size="11" /> 复制</button>
         </template>
-        <button v-if="respErr && canAdmin" class="btn sm" :disabled="sending" @click="send"><RefreshCw :size="11" :class="{ spinning: sending }" /> 重试</button>
+        <button v-if="respErr && canSendAny" class="btn sm" :disabled="sending" @click="send"><RefreshCw :size="11" :class="{ spinning: sending }" /> 重试</button>
         <!-- 原始 IO 快查——最近一次 /cluster/raw 透传请求/响应原文（ioRecorder 记录环；
  置动作群末尾不进 resp-only 分组，失败响应同样可查） -->
         <button class="btn sm ghost" data-test="raw-io" aria-label="查看原始 IO（REST 直连）" title="最近一次透传请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIo"><Terminal :size="12" /> 原始 IO</button>
@@ -193,9 +196,15 @@ import { nonAdminDataPlaneWriteAllowed, nonAdminRootSearchNeedsIndex,
   nonAdminBodyTargetsControl, nonAdminCatNeedsJson, nonAdminAsyncResultRead } from '../utils/devtoolsScope';
 
 const store = useAppStore();
-/* 权限写门——raw 透传是 ADMIN 档（DevToolsView canAdmin 同口径），发送/重试钮仅 ADMIN 可见 */
+/* 权限门按**内层方法**分档（1133）：只读请求读键即可，写请求要写键/ADMIN。
+   此前一律按 admin 写档判定，宿主持 conn:{id}:rest 读键的只读身份连 GET 都发不出。 */
 const auth = useAuthStore();
-const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target)); /* ：管理域按 rest 页勾选 */
+const RAW_EP = '/internal/es/index/cluster/raw';
+const canExecInner = (m: string, p: string) => auth.canExecutePassthrough(m, p, RAW_EP, store.target);
+/* 写档（用于「非 ADMIN 仅数据面」与说明条分叉） */
+const canAdmin = computed(() => auth.canPassthroughWrite(RAW_EP, store.target));
+/* 读档：只读身份的只读请求也应有发送钮 */
+const canSendAny = computed(() => auth.canPassthroughRead(RAW_EP, store.target));
 /* 非 ADMIN 写范围预暴露与 DevTools 同口径（后端同执行内核 guardRawGuarded，双页单口径）。
    me==null（未启用鉴权/探测完成未登录）跟随 canEndpoint 放行语义——后端 authDisabled
    形态无角色概念，scope 门不得把管理写在前端拦死 */
@@ -203,7 +212,8 @@ const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/
    发 PIT 搜索会被前端误禁（有权限的人被拦）。 */
 const requestInScope = (m: string, p: string, b?: string | null) =>
   auth.isAdmin() || auth.me == null || auth.authDisabled || nonAdminDataPlaneWriteAllowed(m, p, b);
-const currentSendable = computed(() => canAdmin.value && requestInScope(method.value, path.value, body.value));
+const currentSendable = computed(() => canExecInner(method.value, path.value)
+  && requestInScope(method.value, path.value, body.value));
 const SCOPE_DENY_HINT = '非 ADMIN 仅可执行数据面写（检索/文档/批量/SQL）；别名、快照、模板、脚本与集群管理写需 ADMIN';
 /* 不可用原因分档（与 DevTools 同口径）：根级检索缺索引范围单列，直接说明怎么改 */
 const scopeAdvisory = computed(() => {
@@ -407,7 +417,12 @@ watch(body, () => { queueRtLintMarkers(); }, { immediate: true });
 async function send() {
   /* 执行体收口——raw 透传是 admin 档，裸 Enter（@enter="send"）与重试钮都汇入
  此函数，按点位隐藏发送钮挡不住键盘路径，守卫收到执行体才是单源 */
-  if (!canAdmin.value) { store.notify('warning', 'raw 透传需要 ADMIN 或 REST 页写权限'); return; }
+  if (!canExecInner(method.value, path.value)) {
+    store.notify('warning', canSendAny.value
+      ? '当前身份对该连接只有只读权限：写请求需要「REST 直连」写权限'
+      : 'raw 透传需要 ADMIN，或该连接的「REST 直连」读/写权限');
+    return;
+  }
   if (!path.value.trim().startsWith('/')) { store.notify('warning', 'path 必须以 / 开头'); return; }
   if (method.value === 'PUT' || method.value === 'DELETE') {
     const ok = await askConfirm({
@@ -424,7 +439,12 @@ async function send() {
 
 async function doSend() {
   /* 执行体单点门：send/重试/Enter/确认后目标切换最终都汇入此处，钮面隐藏不是唯一防线 */
-  if (!canAdmin.value) { store.notify('warning', 'raw 透传需要 ADMIN 或 REST 页写权限'); return; }
+  if (!canExecInner(method.value, path.value)) {
+    store.notify('warning', canSendAny.value
+      ? '当前身份对该连接只有只读权限：写请求需要「REST 直连」写权限'
+      : 'raw 透传需要 ADMIN，或该连接的「REST 直连」读/写权限');
+    return;
+  }
   /* 非 ADMIN 数据面口径与 DevTools 同源：越权形态在客户端即拒，不把请求发到后端才 403 */
   if (!requestInScope(method.value, path.value, body.value)) { store.notify('warning', scopeDenyHint.value); return; }
   /* G7-A2：path 输入框 Enter 路径不受按钮 :disabled 约束——执行体守卫管键盘重入（教训 7） */
@@ -546,6 +566,7 @@ function openRawIo() {
 /* 执行进度条贴页顶 */
 /* 全局 .card 壳退役（请求/响应两块不再消费 theme 壳类，restFav/devxThreeState
  锚类 rt-req-row/.rt-resp-scroll 零变动）；响应分节 border-top 承接约定①分界 */
+.rt-perm-note-readonly { border-color: var(--ac-line); background: var(--ac-soft); color: var(--tx1); }
 .rt-perm-note { display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-2) var(--sp-4) 0; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); }
 .rt-req { padding: var(--sp-3) var(--sp-4); }
 /* 非 ADMIN 数据面口径的按钮旁占位说明（dt-perm-dim 同形态） */

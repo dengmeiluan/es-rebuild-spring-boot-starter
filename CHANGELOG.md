@@ -5,6 +5,53 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.69]（未发布）
+
+### 修复：DevTools / REST 透传按内层请求分读、写两档（1133）
+
+**缺陷（产线 1.0.68 实测发现）**：宿主授权体系本来就分读写键
+（`conn:{id}:devtools` 读 / `conn:{id}:w:devtools` 写），但执行端点
+`/cluster/devtools/execute`、`/cluster/raw` 的外层恒为 POST，被 `isReadonlyPost`
+判成写请求后只认 `w:` 那一半——**读键被整段丢弃**。结果 `deng_test_x1` 在 PROD
+连接上（只授了 devtools/rest 读键）连 `GET /_cluster/health` 都执行不了，
+「生产只读」退化成「生产完全不可用」。前端同源镜像（`canAdmin` 按 admin 写档判定），
+执行钮对只读身份整块灰掉。
+
+**改法**：权限层与执行层分离，读判据仍在服务端、仍在真正执行之前。
+
+- 拦截器只判「能否进这个端点」：写键持有者走原写门（不变）；无写键但有归属页读键者
+  先行准入并打标 `ATTR_PASSTHROUGH_READ_ONLY`（只放宽「能否进入」，不改变「能否写」）。
+  提前到页面前缀裁决之前——`raw` 靠 `rest` 页的 apiPrefixes、`devtools` 靠共享写表，
+  两者页面归属来源不同，必须同口径拦截
+- 执行端 `executePassthrough` 拿到内层 `method`/`path` 后做最终裁决：
+  内层只读 → 执行；内层写 → 只有写键或 ADMIN 才执行，否则 403（`ControlPlaneGuardException`）。
+  属性缺失（老路径/未打标）走原有严格口径，fail-closed
+- 内层只读口径（A 方案白名单，宁可判写）：`GET`/`HEAD`/`OPTIONS`；`POST` 仅放行
+  尾匹配名单内无副作用的读端点（`_search`/`_msearch`/`_count`/`_field_caps`/`_sql`/
+  `_mget`/`_pit`/`_cat/*` 等 34 条）。名单没覆盖到的读会被拦（用户可申请），
+  名单外的写绝不会被误放
+- 前端 `utils/passthroughScope.ts` 与后端逐条同源；`auth` 新增
+  `canPassthroughRead/Write` 与 `canExecutePassthrough`。`canEmitWrite` 对透传端点
+  改为「读写都不行才拦」（外层 POST 不可据以判死只读请求）
+- DevToolsView / RestView：执行钮按**当前 tab 的内层方法**点亮，提示条拆成
+  「无法执行 / 只读可用 / 数据面写」三档；三处执行体守卫（run/runSmart/execSend 与
+  RestView send/doSend）全部改为按内层方法分档，首句早退强度不变
+- 权限面板新增 `rawReadAllowed`/`devtoolsReadAllowed`，显示「可读可写 / 只读 / 不可用」，
+  与真实执行门同裁
+
+**验证**
+
+- 后端新增 `PassthroughReadOnly1133Test`（15 条）：内层判定口径 9 条 + 拦截器打标 6 条，
+  并**真正驱动控制器**证明「只读标记 + 内层 PUT」被拒且不触达 ES
+- 负向自验：把 `_search` 从白名单删掉 → 2 条失败；把执行端守卫改成 `if (false)` → 1 条 error。
+  两处都能准确报出，随后还原
+- 既有「对拍锁」测试升级为读写两档（面板字段 ⇔ 拦截器同裁），并补一条
+  「无 rest 键必须拒绝」的负向对照
+- 前端新增 `passthroughReadWrite1133.spec.ts`（11 条）；`vue-tsc` 零错；`perm:scan` 通过
+- 全量：后端 1608+15 通过；前端 1246/1247 文件通过（唯一失败在
+  `AdhocRebuildView.vue` 的「本轮数据」文案触发注释卫生门，属另一工作流的在途改动，
+  与本轮无关）
+
 ## [1.0.68]（2026-10-27）
 
 ### 产线复验（2026-10-27，QuoteHub 生产 20261027175234）
@@ -247,6 +294,67 @@
   （否则等于把不可用动作放进可达路径）。新增 `templatesRowMenu1169.spec`（4 例，
   含「删除不得进右键」「无读权不得写 open 键」两条负向锁）
 
+- **Lucene 页的「文档 JSON」视图没有行右键**（右键补齐的下一处）。查询工作台的结果表
+  有两种视图：表格（走 TableKernel，单元格右键齐全）和「文档 JSON」（手写三列表 +
+  JsonTree 嵌套）——后者没有右键，于是「切个视图就丢了复制文档的能力」。
+  现在命中行可右键：一级「复制 _id / 复制文档 JSON（_id + _source）」，二级「复制…」
+  里是 _source（不含 _id）/ _score / **用 _id 在 DSL 工作台查此文档**（跳转带
+  `{"query":{"ids":{"values":[...]}}}`，不是空 DSL）。只读安全：menu 内只有复制与跳转。
+  实测（headless Chrome 1440×900 + mock）：切到「文档 JSON」，右键第三行 →
+  标题 `命中文档 · rr-1`，一级恰为三项，二级三项，菜单盒 708–941 / 435–565 全在视口内。
+  `luceneRowMenu1207.spec` 4 例；原有 `luceneJsonFind374` 的行锚点跟着放宽
+  （锁的仍是「该行由 jsonHits 驱动」，不是「行上没有别的属性」）
+
+- **Adhoc 托管重建的两张只读表不能取数**（全站右键补齐的下一处）。「期望 vs 实际」
+  差异表和轮次表此前只能看：比对出「哪个字段类型不对」之后，要拿路径/期望值去改注解、
+  贴工单或回给业务方，只能手拖选中再复制。
+  现在两表行都挂右键，一级只留最常用的两项（差异：复制路径 / 复制整行 TSV；轮次：
+  复制本轮 TSV / 复制本轮 JSON），其余收进「复制…／更多…」二级——与全站右键同一规矩，
+  不把动作平铺一级。标题带定位（`差异 · properties.x.type` / `第 N 轮 · 阶段`）。
+  只读安全：菜单只含复制语义，负控锁住 `runRollover/startJob/api.reindex/askConfirm`
+  这类写动词不得出现（差异行右键不能让人以为能直接改集群）。
+  验证：真挂载 `AdhocRebuildView` 走完整流程（粘贴期望 → 探测 → 校验并继续 → 策略步），
+  对差异行派发真 `contextmenu`，断言菜单开、标题含路径、一级恰为三项且分组项
+  `aria-haspopup="menu"`、点开后二级才出现「复制期望值 JSON / 复制实际值 JSON」；
+  负控：删掉行上的 `@contextmenu` → 该例转红。`adhocRowMenu1205.spec` 另有 4 条源码锁
+
+- **导出档位两内核分叉：索引工作区比 SQL 结果表少一个 NDJSON**（回答「为什么表格能力没有
+  完全共享」的实查结论）。逐项核对 `ResultTable` / `QueryResultTable` 的导出面：
+  QRT 早就有 `exportNdjson`（每行一个对象，给 jq / `_bulk` / 逐行 ingest），
+  RT 只有 CSV/XLSX/JSON/MD 四档——同样的数据在 SQL 那边能流式导、在索引工作台导不了。
+  现在 RT 补齐 `ndjson` 分支与「导出格式：NDJSON」菜单项，语义与 JSON 档对齐
+  （整文档 `_id + _source`，不经 exportCell 矩阵加工，只是行间换行、无外层数组）。
+  实测单元格右键 →「列与导出…」二级里出现「导出格式：NDJSON」。
+  新增 `exportParity1169.spec`（4 例，含「两侧格式集合必须一致」的分叉防线）
+
+- **反向缺口：SQL 结果表的单元格右键只能导 CSV**（同一次排查里发现的另一半）。
+  RT 的单元格右键一直能就地切默认导出格式；QRT 只有一条「导出当前视图（CSV）」，
+  想导 XLSX/JSON/MD/NDJSON 得另开工具行菜单——同一张表两套操作路径。
+  现在 QRT 的二级分组补齐五档导出（CSV/XLSX/JSON/Markdown + `exportNdjson` 开时的 NDJSON），
+  **复用工具行「导出 ▾」同一批函数，能力零新增，只是把入口补齐**。
+  两条容易做错的边界：
+  ① 标签写「导出当前视图（XLSX）」而不是「导出格式：XLSX」——QRT 没有 RT 那个
+  「默认格式」偏好（工具行是五档直选），写成「格式」会让用户以为点一下只改设置不下载。
+  RT 那五条 `fmt-*` 是 `setExpFmt()`（只改偏好，真正的下载走「⬇ 导出」），QRT 这五条是直接下载，
+  语义不同不能照抄标签。
+  ② 列管理项仍在「有记忆维度」门内（SQL 通道无 storageKey 时不出）；
+  补导出不能把这道门拆了，也不能让分组还叫「列与导出…」却没列可管——
+  无记忆时组名回落「导出…」、图标换下载。
+  实测（headless Chrome + mock 后端，1440×900）：SQL 结果表右键 →「列与导出…」二级十项
+  `隐藏此列 / 此列置首 / 此列适应内容 / 全列适应内容 / 导出当前视图（CSV|XLSX|JSON|Markdown|NDJSON）`；
+  点 XLSX 落「已导出 5 行（XLSX，含 meta 页）」（证明是下载而非改设置）。
+  `exportParity1169.spec` 扩到 6 例（含「QRT 不得出现『导出格式：』」「五档必须复用同一批函数」
+  「无记忆时组名回落」三条负向锁）
+
+- **只读身份进 DevTools/REST 直接崩页面（空指针）**：`grantedPages` 三态里 `null` 表示
+  「菜单 SPI 未启用」，但透传写门 `canPassthroughWrite` 直接用 `gp!.includes(...)`——
+  null 时 `Cannot read properties of null`，整个视图 setup 抛错、白屏。
+  同文件其余入口（`canEndpoint` / `canPage` / `canSeeConn`）都按 null 回落，只有这处漏了。
+  修为：null 时回落全局角色档（与 `canEndpoint` 同口径），并补 `me == null`（未启用鉴权）放行
+  分支——否则无鉴权部署会把透传整段关死。修复前两分片共 15 文件 / 67 例转红（绝大多数是同一个空指针），
+  修复后受影响的 `devtoolsSmartAssist` / `devtoolsResp561` / `dtSelectPresence947` /
+  `devtoolsGateCancel942` / `devxThreeState` 单跑 54 例全绿，两分片全量亦全绿
+
 - **窄列悬停时列名反而被吃掉（`title` → `t…`）**：1151 给悬停态加了 34px 右内衬，
   让 ⇅ 提示不压住列名——但那是按 110px 列算的。实测 70px 的 `title` 列内容盒只有 50px，
   让完只剩 16px，**悬停比静息更糟：想看名字，名字被省略号吃了**（高倍截图确认）。
@@ -402,12 +510,14 @@
 - 前端全量 `vitest run`：**1229 文件 / 10552 例**，其中 1 例失败来自测试运行期间别处
   正在改的 `tableKernelWave540`（陈旧排序锚点），该文件现态单跑 7 例全绿；本批新增/改动的
   5 个 spec 单跑与合跑均绿
-- 前端全量 2 分片（**串行**，避免并发争用）：**622 文件 / 5448 例** + **622 文件 / 5278 例全绿**，
-  `vue-tsc --noEmit` 零错。并发跑时 `reindexCancel538`（挂载 2.7s 超时）、
-  `devtoolsFileIO1128` 会因 CPU 争用假红；**运行中继续改源码**还会让 Vite 读到半写文件
-  （实测 5 例假红报 `Identifier 'stripJsonComments' has already been declared`，
-  落盘后单跑 38 例全绿、静态检查无重复声明）——门禁必须等代码冻结后再起，
-  这也是本批改成「串行 + 冻结」口径的原因
+- 前端全量 2 分片（**串行 + 代码冻结**）：**624 文件 / 5459 例** +
+  **623 文件 / 5289 例全绿**，`vue-tsc --noEmit` 零错。三处已知的「非代码」假红都已定位并单跑复绿：
+  ① `reindexCancel538`（挂载 2.7s 超时）、`devtoolsFileIO1128` 属 CPU 争用；
+  ② `permScanSelfCheck1124` 会往 `src/views` 写探针文件并扫描整个仓库——
+  **它必须独占 views 目录**，与其它并发跑的用例互斥（单跑 6 例全绿，落盘后 perm-scan 自检通过）
+  ③ 运行中继续改源码会让 Vite 读到半写文件（实测 5 例假红报
+  `Identifier 'stripJsonComments' has already been declared`，静态检查无重复声明）。
+  结论：门禁必须**代码冻结 + 串行**再起，这也是本批采用的取数口径
 - **新增 4 例源码锁并逐条负控**：① 模板根注释守卫（注入根注释 → 转红）；
   ② RT 换行断点 ≥1180（低阈值即失败）；③ 壳级 1180 档右簇贴右 + 内核 scoped
   持有同规则即失败（scopeId 打不中）；④ 窄列 `@container` 规则 + 容器锚必须挂

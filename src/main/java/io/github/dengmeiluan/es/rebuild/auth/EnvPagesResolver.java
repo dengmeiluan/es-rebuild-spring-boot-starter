@@ -201,6 +201,26 @@ public class EnvPagesResolver {
     }
 
     /**
+     * 连接<b>读</b>授权检查：{@code conn:{id}:{page}} 读键（不带 {@code w:}），且过 env 模板。
+     *
+     * <p>读键此前只用于「页面可见」，从没参与执行裁决——于是 raw / devtools 透传这类
+     * 外层恒 POST 的端点，只读身份连内层 {@code GET /_cluster/health} 都会被写门拒绝，
+     * 「宿主给了只读授权」这条信息在执行层被丢掉。写键持有者天然也读得到（页面可见性
+     * 两种键都认），所以这里只认读键形态，写键由 {@link #writeAllowed} 单独判。</p>
+     */
+    public boolean readAllowed(String targetId, String pageKey, Set<String> grantedPages) {
+        if (grantedPages == null || pageKey == null) return false;
+        if (!grantedPages.contains(CONN_KEY_PREFIX + targetId + ":" + pageKey)) return false;
+        Set<String> envPages = pagesFor(targetId);
+        return envPages == null || envPages.contains(pageKey);
+    }
+
+    /** 该连接上 pageKey 是否「可见」（读键或写键任一即可），且过 env 模板。 */
+    public boolean visible(String targetId, String pageKey, Set<String> grantedPages) {
+        return readAllowed(targetId, pageKey, grantedPages) || writeAllowed(targetId, pageKey, grantedPages);
+    }
+
+    /**
      * 静态页写权：授权集里的无前缀 pageKey（全局页授权）经 env 模板收缩后仍然可见。
      * 混合授权（conn 键 + 静态键）下，静态键不能被 conn 写法门吞掉——否则同一份
      * 静态页授权在纯静态模型可写、混入任一 conn 读键后反而 403（有权限人被拦）。

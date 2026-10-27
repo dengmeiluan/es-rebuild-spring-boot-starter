@@ -530,6 +530,19 @@ public class InternalEsIndexRebuildController {
             throw new IllegalArgumentException("透传请求体超过上限（约 32M 字符），请拆分批量任务");
         }
         boolean admin = adminOrFail(request);
+        /* 拦截器只判「能否进这个端点」；内层真实方法的读/写分档在这里做最终裁决。
+           只读身份（宿主只授 conn:{id}:devtools 读键）拿到的是一条**真正的只读通道**：
+           内层只读请求照常执行，内层写请求直接拒绝——而不是整个端点一起封死。
+           属性缺失（老路径/未打标）= 走原有严格口径，行为不变。 */
+        boolean readOnlyOnly = Boolean.TRUE.equals(
+                request.getAttribute(io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthInterceptor.ATTR_PASSTHROUGH_READ_ONLY));
+        if (readOnlyOnly && !io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthInterceptor
+                .isReadonlyEsRequest(req.get("method"), req.get("path"))) {
+            throw new io.github.dengmeiluan.es.rebuild.core.ControlPlaneGuardException(
+                    "当前身份对该连接只有只读权限：内层 " + req.get("method") + " " + req.get("path")
+                            + " 属写操作，已拒绝。如需写操作，请联系管理员在宿主系统中授予该连接的"
+                            + "「DevTools / REST 直连」写权限");
+        }
         try {
             org.springframework.web.context.request.RequestAttributes ra =
                     org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();

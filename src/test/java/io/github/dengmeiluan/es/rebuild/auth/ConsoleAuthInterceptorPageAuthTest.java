@@ -453,11 +453,16 @@ public class ConsoleAuthInterceptorPageAuthTest {
                 restWriter.preHandle(stubRequest("POST", "/internal/es/index/cluster/devtools/execute", target),
                         new StubResponse().proxy, null));
 
+        /* 1133：只读键现在允许**进入**端点（打只读标记），内层写由执行端拒绝。
+           改造前这里一刀切 403，导致只读身份连 GET 都执行不了。 */
         ConsoleAuthInterceptor readOnly = interceptor(delegatedAs(ConsoleRole.VIEWER,
                 Collections.singleton("conn:c1:devtools")), true, audit);
-        assertFalse("只读键不得执行 DevTools",
-                readOnly.preHandle(stubRequest("POST", "/internal/es/index/cluster/devtools/execute", target),
-                        new StubResponse().proxy, null));
+        javax.servlet.http.HttpServletRequest readOnlyReq =
+                stubRequest("POST", "/internal/es/index/cluster/devtools/execute", target);
+        assertTrue("只读键可进入执行端点（内层读写由执行端分档）",
+                readOnly.preHandle(readOnlyReq, new StubResponse().proxy, null));
+        assertEquals("必须打只读标记，执行端据此拒绝内层写",
+                Boolean.TRUE, readOnlyReq.getAttribute(ConsoleAuthInterceptor.ATTR_PASSTHROUGH_READ_ONLY));
     }
 
 

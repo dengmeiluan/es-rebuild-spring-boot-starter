@@ -410,18 +410,46 @@ public class ConsolePermissionsEndpoint888Test {
     /* ---------------- 对拍锁：端点判定 ⇔ 真拦截器 preHandle 同裁 ---------------- */
 
     @Test
-    public void 对拍锁_rest写拒绝与拦截器WRITE_DENIED同裁() throws Exception {
+    public void 对拍锁_rest只读身份进得去但写档不报可用() throws Exception {
+        /* 1133：面板的写档与拦截器的写档必须仍同裁（都 false）；
+           但拦截器不再整段拒绝——只读身份进入端点并打只读标记，内层写由执行端拒绝。 */
         ConsolePrincipal p = delegatedAs(ConsoleRole.VIEWER, set("conn:c1:rest", "conn:c1:search"));
         Map<String, Object> resp = call(ctrl(), p, "c1");
-        assertEquals(Boolean.FALSE, resp.get("rawAllowed"));
+        assertEquals("写档仍不可用", Boolean.FALSE, resp.get("rawAllowed"));
+        assertEquals("读档应可用（本轮修复的正面语义）", Boolean.TRUE, resp.get("rawReadAllowed"));
 
-        // 同一身份桩驱动真拦截器：POST /cluster/raw 必须同样被拒（WRITE_DENIED）
+        // 同一身份桩驱动真拦截器：POST /cluster/raw 进入并打只读标记（写不会被执行端放行）
+        ConsoleAuthInterceptor it = interceptor(p);
+        StubResponse sr = new StubResponse();
+        javax.servlet.http.HttpServletRequest req =
+                stubAuthRequest(p, "POST", "/internal/es/index/cluster/raw", "c1");
+        boolean pass = it.preHandle(req, sr.proxy, new Object());
+        assertTrue("只读身份可进入执行端点（内层读写由执行端分档）", pass);
+        assertEquals("必须打只读标记", Boolean.TRUE,
+                req.getAttribute(ConsoleAuthInterceptor.ATTR_PASSTHROUGH_READ_ONLY));
+    }
+
+    @Test
+    public void 对拍锁_无任何rest键时拦截器仍拒并落WRITE_DENIED() throws Exception {
+        ConsolePrincipal p = delegatedAs(ConsoleRole.VIEWER, set("conn:c1:search"));
+        Map<String, Object> resp = call(ctrl(), p, "c1");
+        assertEquals(Boolean.FALSE, resp.get("rawAllowed"));
+        assertEquals(Boolean.FALSE, resp.get("rawReadAllowed"));
+
         ConsoleAuthInterceptor it = interceptor(p);
         StubResponse sr = new StubResponse();
         boolean pass = it.preHandle(stubAuthRequest(p, "POST", "/internal/es/index/cluster/raw", "c1"),
                 sr.proxy, new Object());
-        assertFalse("拦截器应拒绝（WRITE_DENIED）", pass);
-        assertTrue(sr.bodyText().contains("WRITE_DENIED"));
+        assertFalse("无 rest 读写键必须拒绝", pass);
+        /* 拒绝码取决于被哪道门先拦：rest 页不可见时是 PAGE_DENIED，可见但无 w: 键时是 WRITE_DENIED。
+           两者都必须是阻断，不能出现「放行但不带标记」这种漏放。 */
+        String body = sr.bodyText();
+        /* 三道门都可能先拦（rest 页不可见=FORBIDDEN、env 排除=ENV_PAGE_DENIED、无写键=WRITE_DENIED）：
+           断言的是「一定被拦且带错误码」，不锁定具体是哪道门先命中。 */
+        assertTrue("拒绝必须带明确错误码: " + body, body.contains("\"code\":"));
+        assertNull("未放行就不得打只读标记",
+                stubAuthRequest(p, "POST", "/internal/es/index/cluster/raw", "c1")
+                        .getAttribute(ConsoleAuthInterceptor.ATTR_PASSTHROUGH_READ_ONLY));
     }
 
     /* ---------------- 拦截器桩装配（PageAuthTest 同构） ---------------- */

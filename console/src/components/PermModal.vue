@@ -16,11 +16,11 @@
       <div class="pm-sec-t">高危档位</div>
       <div class="pm-cap" data-test="perm-raw">
         <span class="pm-cap-k">REST 直连</span>
-        <span class="pm-cap-v" :class="d.rawAllowed ? 'is-ok' : 'is-no'">{{ d.rawAllowed ? '可用' : '不可用（需 ADMIN 或 rest 页写权限）' }}</span>
+        <span class="pm-cap-v" :class="d.rawAllowed ? 'is-ok' : (d.rawReadAllowed ? 'is-partial' : 'is-no')">{{ d.rawAllowed ? '可读可写' : (d.rawReadAllowed ? '只读（仅可发查询类请求）' : '不可用（需 ADMIN 或 rest 页读/写权限）') }}</span>
       </div>
       <div class="pm-cap" data-test="perm-devtools">
         <span class="pm-cap-k">Dev Tools 执行</span>
-        <span class="pm-cap-v" :class="d.devtoolsAllowed ? 'is-ok' : 'is-no'">{{ d.devtoolsAllowed ? '可用' : '不可用（需 ADMIN、devtools 或 rest 页写权限）' }}</span>
+        <span class="pm-cap-v" :class="d.devtoolsAllowed ? 'is-ok' : (d.devtoolsReadAllowed ? 'is-partial' : 'is-no')">{{ d.devtoolsAllowed ? '可读可写' : (d.devtoolsReadAllowed ? '只读（仅可发查询类请求）' : '不可用（需 ADMIN、devtools 或 rest 页读/写权限）') }}</span>
       </div>
       <div class="pm-cap">
         <span class="pm-cap-k">共享写端点（文档/任务/ILM/DevTools 等归属页）</span>

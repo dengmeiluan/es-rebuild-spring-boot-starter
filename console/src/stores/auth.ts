@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { api, setToken, clearToken, getToken, ioRecorder } from '../api';
 import { canCap, canViewAllAudit, roleRank, type ConsoleCap } from '../utils/capability';
+import { isReadonlyEsRequest, isPassthroughPath } from '../utils/passthroughScope';
 import { removeStoredRaw, writeStoredRaw } from '../utils/safeJson';
 
 /** 只读 POST 清单的段边界匹配（后端 ConsoleAuthInterceptor.isReadonlyPost 同源）：
@@ -692,6 +693,77 @@ export const useAuthStore = defineStore('auth', () => {
   };
 
   /**
+   * 透传端点（raw / devtools）的**写**能力：写键或 ADMIN。
+   * 与后端共享写门同源——这才是「能执行内层写请求」的判据。
+   */
+  const canPassthroughWrite = (path: string, targetId: string | null | undefined) => {
+    if (!identityKnown()) return false;
+    /* me=null（后端未启用鉴权/身份未落地）全放行——与 can()/canEndpoint 同口径；
+       有鉴权但未登录时整卡被 LoginOverlay 遮罩，此放行不可达。 */
+    if (me.value == null) return true;
+    if (isAdmin()) return true;
+    const gp = grantedPages.value;
+    if (Array.isArray(gp) && gp.length === 0) return false;
+    const clean = String(path || '').split('?')[0].split('#')[0];
+    const tid = !targetId || String(targetId).toLowerCase() === 'host' ? 'host' : String(targetId);
+    /* raw 有页面归属（rest 页），devtools 走共享表：两个来源都要认，与后端同口径。 */
+    const keys = sharedWritePageKeys(clean) || (pageOwnerOf(clean) ? [pageOwnerOf(clean)!] : null)
+      || (clean.includes('/cluster/raw') ? ['devtools', 'rest'] : null);
+    if (!keys || !keys.length) return false;
+    const isConn = Array.isArray(gp) && gp.some(g => g.startsWith('conn:'));
+    if (!isConn) {
+      /* 静态模型：归属页可见 + 角色达写档。
+         grantedPages=null（SPI 未启用）没有白名单可查——与 canEndpoint / canPage 同口径
+         回落全局角色档；此前直接 gp!.includes 会在这里空指针，把整个视图 setup 打崩。 */
+      if (!Array.isArray(gp)) return canCap(me.value?.role, capForWritePath(clean));
+      const owner = keys.find(k => gp.includes(k));
+      return !!owner && envAllows(owner, tid)
+        && canCap(me.value?.role, capForWritePath(clean));
+    }
+    return keys.some(k => envAllows(k, tid) && gp!.includes('conn:' + tid + ':w:' + k));
+  };
+
+  /**
+   * 透传端点的**读**能力：读键、写键或 ADMIN。
+   *
+   * <p>宿主给 {@code conn:{id}:devtools} 读键，即可执行内层只读请求——外层是 POST
+   * 不等于内层是写，按外层整段封死会让只读身份连 GET 都发不出。写仍走
+   * {@link canPassthroughWrite}。</p>
+   */
+  const canPassthroughRead = (path: string, targetId: string | null | undefined) => {
+    if (!identityKnown()) return false;
+    if (isAdmin()) return true;
+    if (canPassthroughWrite(path, targetId)) return true;
+    const gp = grantedPages.value;
+    if (Array.isArray(gp) && gp.length === 0) return false;
+    const clean = String(path || '').split('?')[0].split('#')[0];
+    const tid = !targetId || String(targetId).toLowerCase() === 'host' ? 'host' : String(targetId);
+    const keys = sharedWritePageKeys(clean) || (pageOwnerOf(clean) ? [pageOwnerOf(clean)!] : null)
+      || (clean.includes('/cluster/raw') ? ['devtools', 'rest'] : null);
+    if (!keys || !keys.length) return false;
+    const isConn = Array.isArray(gp) && gp.some(g => g.startsWith('conn:'));
+    if (!isConn) {
+      /* 静态模型没有读写键之分（宿主只给页授权，不给 w: 变体）：
+         保持既有 admin 档语义，与后端 staticSharedWrite→角色门同口径。
+         读/写键之分只存在于连接模型。 */
+      return canEndpoint('admin', 'POST', clean, targetId);
+    }
+    /* 读键（不带 w:）也算：只读授权正是内层只读请求的通行证。 */
+    return keys.some(k => envAllows(k, tid)
+      && (gp!.includes('conn:' + tid + ':' + k) || gp!.includes('conn:' + tid + ':w:' + k)));
+  };
+
+  /**
+   * 透传端点「按内层真实方法」的执行能力。
+   * 内层只读 → 读键即可；内层写 → 必须写键。未识别（非透传端点）回落原有写门。
+   */
+  const canExecutePassthrough = (innerMethod: string, innerPath: string,
+                                  endpoint: string, targetId: string | null | undefined) => {
+    if (isReadonlyEsRequest(innerMethod, innerPath)) return canPassthroughRead(endpoint, targetId);
+    return canPassthroughWrite(endpoint, targetId);
+  };
+
+  /**
    * API 层写门（api.request 在 fetch 前调用）：未授权写请求零发出。
    * 自助/引导写（登录/退出/改密/setup）与只读 POST 不拦；后端仍是最终边界。
    */
@@ -700,6 +772,12 @@ export const useAuthStore = defineStore('auth', () => {
     if (m === 'GET' || m === 'HEAD' || m === 'OPTIONS') return true;
     const clean = String(path || '').split('?')[0].split('#')[0];
     if (BOOTSTRAP_WRITE_HINTS.some(h => clean.includes(h))) return true;
+    /* 透传端点的内层方法在请求体里，这里只能看到外层 POST。整段按写拦会把只读身份
+       的只读请求一并挡住；真正的读/写分档由后端按内层 method 裁决，
+       客户端只在**明显无权**时提前拦截：读写都不行才拒。 */
+    if (isPassthroughPath(clean)) {
+      return canPassthroughRead(clean, targetId);
+    }
     /* 用户管理/重绑是授权载体本身：后端始终要求 ADMIN（系统管理域先于页面门），
        conn:{tid}:w:security 不得在客户端把请求发车。初始化窗口（me 尚未认出）仍放行，
        否则首次绑定会被自己的客户端门拦住。 */
@@ -728,5 +806,5 @@ export const useAuthStore = defineStore('auth', () => {
     });
   }
 
-  return { me, showLogin, probed, authDisabled, builtinLogin, probeStarted, beginProbe, canAdminOps, probe, login, logout, purgeLocalUserState, requireLogin, invalidateIdentity, isAdmin, canSeeConn, grantedPages, can, canWriteOn, canPage, canEndpoint, canEmitWrite, canReadPage, canAuditAll, canClusterScope, setConnEnvs, envAllows };
+  return { me, showLogin, probed, authDisabled, builtinLogin, probeStarted, beginProbe, canAdminOps, probe, login, logout, purgeLocalUserState, requireLogin, invalidateIdentity, isAdmin, canSeeConn, grantedPages, can, canWriteOn, canPage, canEndpoint, canEmitWrite, canReadPage, canAuditAll, canClusterScope, canPassthroughRead, canPassthroughWrite, canExecutePassthrough, setConnEnvs, envAllows };
 });
