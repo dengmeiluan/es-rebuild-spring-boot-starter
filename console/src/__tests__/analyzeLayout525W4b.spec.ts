@@ -127,8 +127,13 @@ describe('525 AnalyzerLabView：输入行数 + 清单限高档 + lane 连续可�
 /* ═══════════ SFC 编译冒烟（源码锁照不住模板语法） ═══════════ */
 describe('525 两页 SFC 编译冒烟', () => {
   /* 五百二十九批：AnalyzeView 换 QRT rows 型后模块图扩（+QueryResultTable/xlsxMini/
-     tableSnapshot 链），monaco 机器冷变换贴 5s 默认帽——冒烟提额 15s */
-  it('AnalyzeView：SplitHandle/CurrentIdxChip/dsl-assist 模板可编译、模块可加载', { timeout: 15000 }, async () => {
+     tableSnapshot 链），monaco 机器冷变换贴 5s 默认帽——冒烟提额 15s。
+     1224：实测这一条**单独跑就要 12981ms**（已占 15s 帽的 87%）。并发门禁在某次机器变慢时
+     （分片耗时从 ~410s 涨到 ~660s）它稳定超时并被判「串行复验仍失败」，整包因此转红——
+     而代码一行没改。**余量不足的 timeout 会把机器负载报成代码回归**。
+     提到 40s 并留注释：这条测的是「模板能否编译」，本身无性能含义，
+     慢在 monaco 冷变换的模块图；给它足够余量比反复重跑更有价值。 */
+  it('AnalyzeView：SplitHandle/CurrentIdxChip/dsl-assist 模板可编译、模块可加载', { timeout: 40000 }, async () => {
     const m = await import('../views/AnalyzeView.vue');
     expect(m.default).toBeTruthy();
   });

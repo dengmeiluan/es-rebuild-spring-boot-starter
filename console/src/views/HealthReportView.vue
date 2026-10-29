@@ -151,7 +151,8 @@
         <!-- 分节计数徽标改用 StatusPill n 档（中性计数；hr-sec-cnt 锚类保留，皮归 .pill 单源） -->
         <div class="card-t hr-sec-hd">检查项 <StatusPill class="hr-sec-cnt" tone="n" :label="String(data.checks?.length || 0)" /></div>
         <div class="hr-checks">
-          <div v-for="(c, i) in data.checks" :key="i" class="hr-check" :class="'lv-' + c.level">
+          <div v-for="(c, i) in data.checks" :key="i" class="hr-check" :class="'lv-' + c.level"
+            @contextmenu.prevent="openCheckMenu($event, c)">
             <span class="hr-lv"><Circle v-if="c.level==='info'" :size="8" fill="currentColor" /><AlertTriangle v-else-if="c.level==='warn'" :size="12" /><AlertOctagon v-else :size="13" /></span>
             <span class="hr-name">{{ c.name }}</span>
             <span class="hr-msg">{{ c.message }}</span>
@@ -236,16 +237,21 @@
 
     <!-- G263：受控弹窗挂页尾（777/778 同款） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
+
+    <!-- 1177：检查项行右键（warn/critical 正是贴工单的内容，此前只有行尾一颗左键钮） -->
+    <CellContextMenu v-if="checkMenu" :x="checkMenu.x" :y="checkMenu.y"
+      :title="'检查项 · ' + checkMenu.c.name" :items="checkMenuItems" @close="checkMenu = null" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { HeartPulse, Download, RefreshCcw, Circle, AlertTriangle, AlertOctagon, ClipboardCopy, ExternalLink, SearchX, Terminal } from 'lucide-vue-next';
+import { HeartPulse, Download, RefreshCcw, Circle, AlertTriangle, AlertOctagon, ClipboardCopy, ExternalLink, SearchX, Terminal, Copy, Braces, Info, Filter } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import EmptyState from '../components/EmptyState.vue';
 import StatusPill from '../components/StatusPill.vue'; /* ：状态徽标统一件 */
 import RawIoModal from '../components/RawIoModal.vue'; /* G263：原始 IO 快查弹窗（778 G259 同构） */
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import { useRouter } from 'vue-router';
 import { api, ioRecorder, type RawIoRec } from '../api';
 import { useAppStore } from '../stores/app';
@@ -579,6 +585,36 @@ async function copyCheck(c: any) {
   const ok = await copyText(`[${c.level}] ${c.name}: ${c.message}`);
   store.notify(ok ? 'success' : 'error', ok ? '检查项已复制' : '复制失败');
 }
+
+/* 1177：检查项行右键。行尾那颗「复制」是左键且只到得了鼠标；warn/critical 常常要
+ 「只抄详情」「只抄名字」或「按这一级筛一下再抄」，逐条手选太慢。
+ 一级只留最高频两项，其余收进「更多…」二级（与全站右键同一规矩）；
+ 只读安全：菜单里只有复制/筛选，没有任何写动作。 */
+const checkMenu = ref<{ x: number; y: number; c: any } | null>(null);
+function openCheckMenu(e: MouseEvent, c: any) {
+  checkMenu.value = { x: e.clientX, y: e.clientY, c };
+}
+async function copyCheckText(text: string, okMsg: string) {
+  const ok = await copyText(text);
+  store.notify(ok ? 'success' : 'error', ok ? okMsg : '复制失败');
+}
+const checkMenuItems = computed<CcmItem[]>(() => {
+  const m = checkMenu.value; if (!m) return [];
+  const c = m.c;
+  const line = `[${c.level}] ${c.name}: ${c.message}`;
+  const levelZh = c.level === 'critical' || c.level === 'error' ? '严重' : c.level === 'warn' ? '警告' : '提示';
+  return [
+    { key: 'check-copy-line', label: '复制此检查项（级别+名称+详情）', icon: ClipboardCopy, run: () => copyCheckText(line, '检查项已复制') },
+    { key: 'check-copy-msg', label: '只复制详情', icon: Copy, run: () => copyCheckText(String(c.message ?? ''), '详情已复制') },
+    {
+      key: 'check-more', label: '更多…', icon: Copy, sep: true, children: [
+        { key: 'check-copy-name', label: '只复制名称', icon: Info, run: () => copyCheckText(String(c.name ?? ''), '名称已复制') },
+        { key: 'check-copy-level', label: `复制级别（${levelZh}）`, icon: Braces, run: () => copyCheckText(`${c.level}`, '级别已复制') },
+        { key: 'check-copy-json', label: '复制整项 JSON', icon: Braces, run: () => copyCheckText(JSON.stringify(c, null, 2), '检查项 JSON 已复制') },
+      ],
+    },
+  ];
+});
 
 /* 主报告复制 Markdown（文件下载之外的剪贴板通道，贴群/工单直达） */
 async function copyReportMd() {

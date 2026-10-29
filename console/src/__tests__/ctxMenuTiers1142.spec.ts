@@ -119,8 +119,7 @@ describe('1142 ② RT/QRT 菜单分组（源码 + 行为）', () => {
     }
   });
 
-  it('QRT 挂载：一级项数 ≤6，二级「列与导出…」含隐藏此列', async () => {
-    mount(QueryResultTable, { cols: ['a', 'b'], rows: [['1', '2']], total: 1, storageKey: 'g1', sortable: true });
+  it('QRT 挂载：一级项数 ≤6，二级「列与导出…」含隐藏此列', async () => {    mount(QueryResultTable, { cols: ['a', 'b'], rows: [['1', '2']], total: 1, storageKey: 'g1', sortable: true });
     await tick(10);
     const cell = host.querySelector('tbody tr td.qrt-cell') as HTMLElement;
     cell.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 12, clientY: 12 }));
@@ -135,6 +134,42 @@ describe('1142 ② RT/QRT 菜单分组（源码 + 行为）', () => {
       .flatMap((el: any) => [...el.querySelectorAll('.ccm-it')].map((b: any) => (b.textContent ?? '').trim()));
     expect(sub).toContain('隐藏此列');
     expect(sub).toContain('全列适应内容');
+  });
+
+  /* 1169：QRT 勾选行之后的「复制选中 N 行」——RT 早有，QRT 此前只有「复制整表」。
+     真挂载：勾一行 → 右键 → 复制组二级里出现带数量的三个格式项。 */
+  it('QRT 勾选行后，复制组二级出「复制选中 1 行」三格式（与 RT 对齐）', async () => {
+    mount(QueryResultTable, { cols: ['a', 'b'], rows: [['1', '2'], ['3', '4']], total: 2, selectable: true });
+    await tick(10);
+    /* 未勾选时不得出现（否则「复制 0 行」是噪声） */
+    const cell0 = host.querySelector('tbody tr td.qrt-cell') as HTMLElement;
+    cell0.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 12, clientY: 12 }));
+    await tick();
+    let all = [...document.querySelectorAll('.ccm-it')].map(b => (b.textContent ?? '').trim());
+    expect(all.some(t => t.includes('复制选中'))).toBe(false);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await tick();
+
+    /* 勾第一行 */
+    const chk = host.querySelector('tbody tr input[type="checkbox"]') as HTMLInputElement;
+    expect(chk, 'selectable 必须有勾选列').toBeTruthy();
+    chk.checked = true;
+    chk.dispatchEvent(new Event('change', { bubbles: true }));
+    await tick(10);
+
+    const cell = host.querySelector('tbody tr td.qrt-cell') as HTMLElement;
+    cell.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 12, clientY: 12 }));
+    await tick();
+    /* 展开「复制…」二级 */
+    const grp = [...document.querySelectorAll('.ccm-mask > .ccm > .ccm-it')]
+      .find(b => (b.textContent ?? '').trim().startsWith('复制…')) as HTMLButtonElement;
+    expect(grp).toBeTruthy();
+    grp.click();
+    await tick();
+    all = [...document.querySelectorAll('.ccm-sub .ccm-it')].map(b => (b.textContent ?? '').trim());
+    expect(all).toContain('复制选中 1 行为 TSV');
+    expect(all).toContain('复制选中 1 行为 Markdown');
+    expect(all).toContain('复制选中 1 行为 JSON');
   });
 });
 

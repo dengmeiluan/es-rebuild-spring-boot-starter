@@ -226,6 +226,39 @@ describe('#68 .ar-diff 渲染接线', () => {
     await h.gotoStrategy();
     expect(h.diffRows()).toHaveLength(0);
   });
+
+  /* 1205：差异行右键——真挂载、真 contextmenu，不是源码锁。
+     此前这张表只能看不能取：用户要从差异行拿路径/值去改注解或贴工单。 */
+  it('差异行右键：开菜单、标题带路径、一级只留高频复制、二级才见低频项', async () => {
+    const h = await mountWizard();
+    await h.paste(JSON.stringify(EXPECT));
+    await h.probe();
+    await h.gotoStrategy();
+    const tr = h.host.querySelector('.ar-diff tbody tr.cd-real') as HTMLElement;
+    expect(tr, '前置：差异表必须有真差异行').toBeTruthy();
+    const path = (tr.querySelector('td.cd-path') as HTMLElement).textContent!.trim();
+
+    tr.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 60 }));
+    await new Promise(r => setTimeout(r, 40));
+
+    const mask = document.querySelector('.ccm-mask');
+    expect(mask, '右键必须开出 CellContextMenu').toBeTruthy();
+    expect((mask!.querySelector('.ccm-hd') as HTMLElement)?.textContent || '')
+      .toContain(path);
+
+    const top = [...mask!.querySelectorAll(':scope > .ccm > .ccm-it')].map(b => (b.textContent || '').trim());
+    /* 一级：高频两项 + 一个分组父行，不把动作平铺 */
+    expect(top).toEqual(['复制路径', '复制整行（TSV，可直接贴表格）', '复制…']);
+    /* 分组项是父行（aria-haspopup），点开才出二级 —— 平铺会让一级重新变长 */
+    const parent = [...mask!.querySelectorAll('.ccm-it')]
+      .find(b => (b.textContent || '').trim() === '复制…') as HTMLButtonElement;
+    expect(parent.getAttribute('aria-haspopup')).toBe('menu');
+    parent.click();
+    await new Promise(r => setTimeout(r, 40));
+    const sub = [...mask!.querySelectorAll('.ccm-sub .ccm-it')].map(b => (b.textContent || '').trim());
+    expect(sub).toContain('复制期望值 JSON');
+    expect(sub).toContain('复制实际值 JSON');
+  });
 });
 
 /**

@@ -120,8 +120,15 @@ defineProps<{
 /* 1164：工具行换行档（内核把 .rt-bar 放开 wrap）后，右簇成为第二行唯一的 flex item，
  父级 space-between 会把它摆在最左（实测 1148 下右缘还差 590px）。margin-left:auto
  把它压回右缘。必须住本壳全局 style：.rt-bar-r 是壳模板元素，内核 scoped 打不中
- （1164 实测：规则写在 ResultTable scoped 里 100% 不生效，右簇纹丝不动）。 */
-@media (max-width: 1180px) {
+ （1164 实测：规则写在 ResultTable scoped 里 100% 不生效，右簇纹丝不动）。
+ 1174：阈值跟内核换行档（1250）对齐——两处各写各的会在 1181~1250 出现
+ 「内核已换行、右簇却没贴右」的半截态（右簇被顶到第二行最左）。 */
+@media (max-width: 1250px) {
   .rt-bar-r { flex-wrap: wrap; margin-left: auto; }
 }
+/* 1188：margin-left:auto 改为**恒开**——换行可能由容器查询触发（工具行比窗口窄的场景，
+   视口断点不触发），此时右簇是第二行唯一 flex item，没有 auto 就会被甩到最左
+   （实测 1280 视口该入口 rightBeyond=-714，右簇贴左缘）。单行时 auto 与 space-between
+   等价，宽档零变化。 */
+.rt-bar > .rt-bar-r, .qrt-bar > .qrt-bar-r { margin-left: auto; }
 </style>

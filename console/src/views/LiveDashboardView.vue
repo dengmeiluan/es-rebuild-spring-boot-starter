@@ -573,12 +573,14 @@
               </span>
             </div>
             <!-- 逐序列窗内统计表（阿里云 min/max/avg/current 同形态）：按当前指标当前值降序 -->
+            <!-- 1194：行右键——这张表此前是屏上唯一没有右键的表（Top 表/慢请求/告警三张都有），
+                 统计行看的是同一个索引，右键动作也应同一套（打开浏览器/去索引工作区/复制名）。 -->
             <table v-if="topView === 'curve' && topStatRows.length" class="tbl zebra ld-top-stats">
               <thead>
                 <tr><th>索引</th><th>集群</th><th>最小</th><th>最大</th><th>均值</th><th>当前</th></tr>
               </thead>
               <tbody>
-                <tr v-for="r in topStatRows" :key="'st' + r.key">
+                <tr v-for="r in topStatRows" :key="'st' + r.key" @contextmenu.prevent="openLdRowMenu($event, 'top', r)">
                   <td class="mono" :title="r.name">{{ r.name }}</td>
                   <td>{{ r.cluster }}</td>
                   <td class="mono num">{{ fmtNum(r.min) }}</td>
@@ -675,13 +677,16 @@
         </div>
       </div>
       <!-- R4 节点一览（仅节点下钻模式）：每节点最新水位的紧凑表——图卡看趋势，本表看「现在」 -->
+      <!-- 1195：行右键——这张表是屏上最后一张没有右键的（1158 覆盖 Top/慢请求/告警，1194 补统计表）。
+           节点名是后面所有动作的输入（贴进节点详情、发给同事定位），必须能一键拿走。 -->
       <div v-if="nodeMode && nodeRows.length" class="ld-hist-ntab" role="table" aria-label="节点最新水位">
         <div class="ld-hist-ntab-t sec-t">节点最新水位</div>
         <div class="ld-hist-ntab-r" role="row">
           <span role="columnheader">节点</span><span role="columnheader">Heap %</span>
           <span role="columnheader">CPU %</span><span role="columnheader">磁盘 %</span>
         </div>
-        <div v-for="n in nodeRows" :key="n.nodeName || n.connId" class="ld-hist-ntab-r" role="row">
+        <div v-for="n in nodeRows" :key="n.nodeName || n.connId" class="ld-hist-ntab-r" role="row"
+          @contextmenu.prevent="openLdRowMenu($event, 'node', n)">
           <span class="mono" role="cell" :title="n.nodeName || n.connId || ''">{{ shortNode(n.nodeName || n.connId || '') }}</span>
           <span class="mono" role="cell">{{ fmtN(n.heapUsedPct) }}</span>
           <span class="mono" role="cell">{{ fmtN(n.cpuPct) }}</span>
@@ -1311,7 +1316,12 @@ const topStatRows = computed(() => topCurves.value
   .map(s => {
     const vals = s.data;
     const sum = vals.reduce((a, b) => a + b, 0);
-    return { key: s.key, name: s.name, cluster: s.cluster, min: Math.min(...vals), max: Math.max(...vals), avg: sum / vals.length, cur: s.cur };
+    /* 1194：带出 index/connId——统计行与 Top 表看的是同一个索引，右键菜单整段复用
+       （openLdRowMenu 'top' 分支读 row.index / row.connId），缺了这两个键菜单会复制空名。 */
+    return {
+      key: s.key, name: s.name, index: s.name, cluster: s.cluster, connId: s.connId,
+      min: Math.min(...vals), max: Math.max(...vals), avg: sum / vals.length, cur: s.cur,
+    };
   })
   .sort((a, b) => b.cur - a.cur));
 const topHasData = computed(() => topCurves.value.some(s => s.data.length > 1));
@@ -1408,10 +1418,13 @@ const detailCanExport = computed(() => {
  一级 = 该行最常用的一步（慢请求=复制 URI；告警=复制文案；Top=在数据浏览器打开）；
  复制整行 JSON 与其余项收进「复制…」二级（与全站卡片菜单同一两级语言）。
  只读视图：不提供任何写动作，避免监控屏变成误操作面。 */
-type LdMenuKind = 'top' | 'slow' | 'alert';
+type LdMenuKind = 'top' | 'slow' | 'alert' | 'node';
 const ldMenu = ref<{ x: number; y: number; title: string; kind: LdMenuKind; row: any } | null>(null);
 function openLdRowMenu(e: MouseEvent, kind: LdMenuKind, row: any) {
-  const title = kind === 'top' ? `索引 · ${row.index}` : kind === 'slow' ? `慢请求 · ${row.uri || '-'}` : `告警 · ${metricZh(row.metric)}`;
+  const title = kind === 'top' ? `索引 · ${row.index}`
+    : kind === 'slow' ? `慢请求 · ${row.uri || '-'}`
+    : kind === 'node' ? `节点 · ${row.nodeName || row.connId || '-'}`
+    : `告警 · ${metricZh(row.metric)}`;
   ldMenu.value = { x: e.clientX, y: e.clientY, title, kind, row };
 }
 const ldMenuItems = computed<CcmItem[]>(() => {
@@ -1451,6 +1464,21 @@ const ldMenuItems = computed<CcmItem[]>(() => {
         const conn = row.connName || row.connId || '当前集群';
         const curl = `curl -X${String(row.method || 'GET').toUpperCase()} '<${conn}>${row.uri || '/'}' -H 'Content-Type: application/json'`;
         void copy(curl, '已复制 cURL');
+      } },
+      copyGroup,
+    ];
+  }
+  if (m.kind === 'node') {
+    /* 1195：节点水位行。一级只留「最常用的一步」——复制节点名（下游所有排查都从它开始：
+       贴进节点详情 URL、发给同事、填进告警规则）；水位三项与整行 JSON 收进二级「复制…」。
+       监控面只读：动作只有 copy 一类。 */
+    const node = String(row.nodeName || row.connId || '');
+    return [
+      { key: 'copy-node', label: '复制节点名', icon: Copy, run: () => void copy(node, '已复制节点名：' + node) },
+      { key: 'copy-levels', label: '复制水位（Heap / CPU / 磁盘）', icon: Copy, run: () => {
+        /* 与表格同口径：后端 heapUsedPct/cpuPct/diskUsedPct 已是 0–100 的百分数
+           （jvm.mem.heap_used_percent / os.cpu.percent 直取），不要再乘 100。 */
+        void copy(`${node}  heap=${fmtN(row.heapUsedPct)}  cpu=${fmtN(row.cpuPct)}  disk=${fmtN(row.diskUsedPct)}`, '已复制该节点水位');
       } },
       copyGroup,
     ];

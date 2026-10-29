@@ -31,7 +31,7 @@
  表格档恒在；aria-pressed 可达。缺省 viewSeg=false 不渲染（全站零增量） -->
         <div v-if="viewSegOn" class="seg qrt-view-seg" role="group" aria-label="展示形式">
           <button type="button" :class="{ on: effView === 'table' }" :aria-pressed="effView === 'table'" @click="altView = 'table'">表格</button>
-          <button v-if="jsonHtml != null" type="button" :class="{ on: effView === 'json' }" :aria-pressed="effView === 'json'" @click="altView = 'json'">JSON</button>
+          <button v-if="effJsonHtml != null" type="button" :class="{ on: effView === 'json' }" :aria-pressed="effView === 'json'" @click="altView = 'json'">JSON</button>
           <button v-if="treeData != null" type="button" :class="{ on: effView === 'tree' }" :aria-pressed="effView === 'tree'" @click="altView = 'tree'">Tree</button>
           <button v-if="cardHits != null" type="button" :class="{ on: effView === 'cards' }" :aria-pressed="effView === 'cards'" @click="altView = 'cards'">卡片</button>
         </div>
@@ -184,7 +184,7 @@
  pagerInHead 同口径；注释详见 prefsOn 主壳分支） -->
         <div v-if="viewSegOn" class="seg qrt-view-seg" role="group" aria-label="展示形式">
           <button type="button" :class="{ on: effView === 'table' }" :aria-pressed="effView === 'table'" @click="altView = 'table'">表格</button>
-          <button v-if="jsonHtml != null" type="button" :class="{ on: effView === 'json' }" :aria-pressed="effView === 'json'" @click="altView = 'json'">JSON</button>
+          <button v-if="effJsonHtml != null" type="button" :class="{ on: effView === 'json' }" :aria-pressed="effView === 'json'" @click="altView = 'json'">JSON</button>
           <button v-if="treeData != null" type="button" :class="{ on: effView === 'tree' }" :aria-pressed="effView === 'tree'" @click="altView = 'tree'">Tree</button>
           <button v-if="cardHits != null" type="button" :class="{ on: effView === 'cards' }" :aria-pressed="effView === 'cards'" @click="altView = 'cards'">卡片</button>
         </div>
@@ -248,7 +248,7 @@
  高度链；卡片档网格容器（ih-cards 同构）+@open-doc 透传宿主。表格档（缺省/回落）恒
  不渲染（零增量） -->
     <div v-if="viewSegOn && effView !== 'table'" class="qrt-alt-body scroll-y" :class="{ 'is-cards': effView === 'cards' }" :style="{ maxHeight }">
-      <AltHitsViews v-if="effView === 'json'" view="json" :json-html="jsonHtml" />
+      <AltHitsViews v-if="effView === 'json'" view="json" :json-html="effJsonHtml" />
       <AltHitsViews v-else-if="effView === 'tree'" view="tree" :tree-data="treeData" />
       <AltHitsViews v-else view="cards" :hits="cardHitsAdapted" @open-doc="emit('open-doc', $event)" />
     </div>
@@ -530,7 +530,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, nextTick, onBeforeUnmount, useSlots, type Ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { RotateCcw, Inbox, Copy, Braces, ArrowDown, ArrowUp, EyeOff, Pin, MoveHorizontal, Filter, ExternalLink, Search, FileDown, Table, ClipboardList, Maximize2, Minimize2, ChevronDown, ChevronRight } from 'lucide-vue-next';
+import { RotateCcw, Inbox, Copy, Braces, ArrowDown, ArrowUp, EyeOff, Pin, MoveHorizontal, Filter, ExternalLink, Search, FileDown, Table, ClipboardList, Maximize2, Minimize2, ChevronDown, ChevronRight, FileText } from 'lucide-vue-next';
 import FocusableSurface from './FocusableSurface.vue';
 import EmptyState from './EmptyState.vue';
 import SkeletonBox from './SkeletonBox.vue';
@@ -538,6 +538,8 @@ import CellContextMenu, { type CcmItem } from './CellContextMenu.vue';
 import JsonTree from './JsonTree.vue';
 import AltHitsViews from './AltHitsViews.vue'; /* ：alt 三视图体共享件单源（内建视图档消费，勿再造壳） */
 import { createPressGuard } from '../utils/pressGuard';
+import { highlightJson } from '../utils/jsonc';
+import { buildDsl, buildExistsDsl } from '../utils/dslFromCell'; /* 1204：与 RT 共用同一 DSL 生成内核 */
 import ColDetailModal from './ColDetailModal.vue';
 import { NModal, NDrawer, NDrawerContent } from 'naive-ui';
 import ColPicker from './ColPicker.vue';
@@ -825,12 +827,32 @@ const props = withDefaults(defineProps<Props>(), {
  档（547 hideBody 语义内化，561 退聚焦 watch 源随之升级——viewSeg=false 时 bodyHidden≡
  hideBody 单独流转行为等值）。⚠声明必须在 props 之后（usePref/computed 依赖 props） */
 const viewSegOn = computed(() => props.viewSeg === true);
+/* 1187：rows 型内核（SQL/日志等 cols×rows 通道）自出 JSON 档。
+   此前 jsonHtml 只能由宿主传入（DQ/IH 的 markHtmlAll 链），于是同一种结果表在 SQL 控制台
+   只有表格档、在查询工作台却有 表格/JSON/Tree/卡片 —— 这是「三个入口能力不一致」的真实成因之一。
+   行对象语义与导出/复制同口径（键=可见列），逐行一个对象；行数设上限防超大结果集卡死。 */
+const ROW_JSON_MAX = 500;
+const derivedJsonHtml = computed<string | undefined>(() => {
+  const cols = props.cols ?? [];
+  const all = props.rows ?? [];
+  if (!cols.length || !all.length) return undefined;
+  const rows = all.slice(0, ROW_JSON_MAX).map(r => {
+    const o: Record<string, unknown> = {};
+    cols.forEach((c, i) => { o[c] = r[i]; });
+    return o;
+  });
+  const payload = all.length > ROW_JSON_MAX
+    ? { note: `仅显示前 ${ROW_JSON_MAX} 行（共 ${all.length} 行）`, rows }
+    : rows;
+  return highlightJson(JSON.stringify(payload, null, 2));
+});
+const effJsonHtml = computed(() => props.jsonHtml ?? derivedJsonHtml.value);
 const altView: Ref<'table' | 'json' | 'tree' | 'cards'> = props.viewPrefKey
   ? usePref<'table' | 'json' | 'tree' | 'cards'>(props.viewPrefKey, 'table')
   : ref<'table' | 'json' | 'tree' | 'cards'>('table');
 const effView = computed<'table' | 'json' | 'tree' | 'cards'>(() => {
   const v = altView.value;
-  if (v === 'json' && props.jsonHtml == null) return 'table';
+  if (v === 'json' && effJsonHtml.value == null) return 'table';
   if (v === 'tree' && props.treeData == null) return 'table';
   if (v === 'cards' && props.cardHits == null) return 'table';
   return v;
@@ -1103,10 +1125,20 @@ function directSort(col: string, ci: number, dir: 1 | -1) {
 /* G149：列头 th 悬浮 title 单源——colTips 有该列中文语义时两段拼接
  （中文语义+换行+内建排序/列管理提示），无 tip=纯内建提示（缺省零增量） */
 function thTitle(c: string): string {
+  /* 1192：本地排序的**作用域**必须说清。表头点击走 chain.sortBy（纯前端），
+     只排「已加载的这几行」；分页/游标通道（SQL、Lucene…）看到的结果可能远多于这些行，
+     旧文案只说「点击排序」等于承诺了全量序。SQL 侧早有「仅作用于已加载 N 行」的诚实标注，
+     这里把同一口径下沉到内核：只有确实存在未加载行时才加这句（已全量加载不加，避免噪音）。 */
+  const loaded = props.hits?.length ?? 0;
+  const partial = props.sortable && !props.useAsCondition
+    && Number(props.total ?? 0) > loaded;
+  const scopeNote = partial ? '（仅排序已加载的 ' + loaded + ' 行，全部结果请改查询侧排序）' : '';
   const base = props.sortable
     ? props.useAsCondition
       ? '点击本地排序：升序 → 降序 → 取消（不改 SQL）；Shift+点击：追加/翻转次键；右键：列管理 / 按此列升序或降序并重查（改 SQL）；拖列名可重排'
-      : '点击排序：升序 → 降序 → 取消（回原始序）；Shift+点击：追加/翻转次键；拖列名可重排；右键：列管理'
+      /* 基础串逐字保留（1134 以字面量锁「DSL 命中/普通只读表提示零变化」），
+         作用域说明只作**后缀**追加——不破坏既有契约，也不改宽表默认文案。 */
+      : '点击排序：升序 → 降序 → 取消（回原始序）；Shift+点击：追加/翻转次键；拖列名可重排；右键：列管理' + scopeNote
     : '右键：列管理；拖列名可重排';
   const tip = props.colTips?.[c];
   const type = effType(c);
@@ -1786,6 +1818,15 @@ const cellMenuItems = computed(() => {
       const ok = await copyText(col);
       store.notify(ok ? 'success' : 'error', ok ? '已复制列名' : '复制失败');
     } },
+    /* 1205：复制 _id——RT（索引工作区）一直有，QRT 只有 hits 型（Lucene 命中表）拿得到 _id，
+       SQL 结果集没有 _id 列（rowId 返回 null），所以这一项只在 hits 型出现。
+       复制主键去 DevTools / 数据浏览器 / 告警工单是最常见的一步，不该只在索引工作区有。 */
+    ...(rowId(m.ri)
+      ? [{ key: 'copy-id', label: '复制 _id', icon: Copy, run: async () => {
+          const ok = await copyText(rowId(m.ri)!);
+          store.notify(ok ? 'success' : 'error', ok ? '已复制 _id' : '复制失败');
+        } }]
+      : []),
     { key: 'copy-row', label: '复制行 JSON', icon: Braces, run: () => {
       const row = renderRows.value[m.ri] || [];
       const obj: Record<string, any> = {};
@@ -1797,6 +1838,65 @@ const cellMenuItems = computed(() => {
       const ok = await copyText(matrixText({ rows, cols: shownCols.value, getVal: (row, c) => xCell(qColVal(row, c), c, row) }, 'tsv'));
       store.notify(ok ? 'success' : 'error', ok ? `已复制 ${rows.length} 行（TSV）` : '复制失败');
     } },
+    /* 1204：复制为查询 DSL——索引工作区（RT）早就有这一组（dbx 19 种 extractor 的 ES 语义对位），
+       SQL / Lucene 结果表却只有「复制值」。同一内核 `dslFromCell` 直出，不另造。
+       只对**合法列名**开放：SQL 结果列常是表达式别名（COUNT(*) / DATE_TRUNC(...)），
+       拿它去拼 `{term:{"COUNT(*)":v}}` 会生成 ES 不认的字段（与同菜单 use-as-cond 同一道闸）。
+       值取 renderRows 的原始值（不是渲染串），日期列给 epoch 毫秒 ES 原生接受。 */
+    ...(!isHits.value && col && /^[A-Za-z_][\w.]*$/.test(col)
+      ? (() => {
+          const v = renderRows.value[m.ri]?.[m.ci];
+          const hasVal = v !== undefined && v !== null && v !== '';
+          const q = hasVal ? buildDsl(col, [v], cpTypes.value[col]) : null;
+          const ex = col === '_id' ? null : buildExistsDsl(col);
+          const out: CcmItem[] = [];
+          if (q) {
+            const op = Object.keys(q)[0]!;
+            out.push({
+              key: 'dsl-copy', label: `复制为 ${op} 查询`, icon: Braces,
+              run: async () => {
+                const ok = await copyText(JSON.stringify(q, null, 2));
+                store.notify(ok ? 'success' : 'error', ok ? `已复制 ${col} 的 ${op} 查询 DSL` : '复制失败');
+              },
+            });
+          }
+          if (ex) {
+            out.push({
+              key: 'dsl-exists', label: '复制为 exists 查询（字段存在）', icon: Braces,
+              run: async () => {
+                const ok = await copyText(JSON.stringify(ex, null, 2));
+                store.notify(ok ? 'success' : 'error', ok ? `已复制 ${col} 的 exists 查询` : '复制失败');
+              },
+            });
+          }
+          return out;
+        })()
+      : []),
+    /* 1169：勾选行之后只能「复制整表」——RT 那边早就有「复制 N 行为 TSV/MD/JSON」，
+      在 SQL 结果表勾了 20 行还是只能整页复制。这里补齐同一组（同一 matrixText 内核，
+      选中集按 rawRows 身份取行，与表尾「选中 N 行」徽标同源）。 */
+    ...(props.selectable && selSet.value.size
+      ? [
+          { key: 'copy-sel-tsv', label: `复制选中 ${selSet.value.size} 行为 TSV`, icon: ClipboardList, sep: true, run: () => copySelMatrix('tsv') },
+          { key: 'copy-sel-md', label: `复制选中 ${selSet.value.size} 行为 Markdown`, icon: FileText, run: () => copySelMatrix('md') },
+          { key: 'copy-sel-json', label: `复制选中 ${selSet.value.size} 行为 JSON`, icon: Braces, run: () => copySelMatrix('json') },
+          /* 1205：勾选行 + 当前列 → terms/ids 查询（RT 的 copy-sel-terms 同款）。
+             多行取值一次成一条 `{terms:{col:[…]}}`，是把「结果里这几条」搬回查询侧的最短路径。
+             仍只对合法列名开放（表达式别名会拼出非法字段），空值由 buildDsl 自身剔除。 */
+          ...(col && /^[A-Za-z_][\w.]*$/.test(col)
+            ? [{ key: 'copy-sel-terms', label: `复制选中 ${selSet.value.size} 行为查询（${col}）`, icon: Braces, run: async () => {
+                const idx = shownCols.value.indexOf(col!);
+                const vals = [...selSet.value]
+                  .map(ri => renderRows.value[ri]?.[idx])
+                  .filter(v => v !== null && v !== undefined && v !== '');
+                const q = buildDsl(col!, vals, cpTypes.value[col!]);
+                if (!q) { store.notify('warning', '选中的行在该列无值，未生成查询'); return; }
+                const ok = await copyText(JSON.stringify(q, null, 2));
+                store.notify(ok ? 'success' : 'error', ok ? `已复制 ${vals.length} 个值的查询 DSL` : '复制失败');
+              } }]
+            : []),
+        ]
+      : []),
   ];
   const rowChildren = [
     /* 单元格详情（RT P0-2 同款合并）——完整值弹层不再只能看截断串 */
@@ -1851,9 +1951,22 @@ const cellMenuItems = computed(() => {
       { key: 'fit-col', label: '此列适应内容', icon: MoveHorizontal, run: () => fitCol(col) },
       { key: 'fit-all', label: '全列适应内容', icon: MoveHorizontal, run: () => fitAll() },
     ] : []),
-    /* 导出当前视图（与工具行「导出 ▾」同函数五格式收口，见 exportMenu 项） */
-    { key: 'export-view', label: '导出当前视图（CSV）', icon: FileDown, run: () => exportCsv() },
+    /* 1169：RT 的单元格右键五档导出，QRT 此前只有 CSV 一条——同一张表在索引工作台
+       能就地从单元格导出 XLSX/JSON/MD/NDJSON，在 SQL 结果表得另开工具行菜单。
+       这里补齐剩余四档，复用工具行「导出 ▾」同一批函数（能力零新增，只补入口）。
+       标签写成「导出当前视图（X）」而非「X 格式」：QRT 没有 RT 那个
+       默认格式偏好（工具行是五档直选），写成格式会让人以为点一下只改设置不下载。 */
+    { key: 'export-csv', label: '导出当前视图（CSV）', icon: FileDown, sep: barOn.value, run: () => exportCsv() },
+    { key: 'export-xlsx', label: '导出当前视图（XLSX）', icon: Table, run: () => exportXlsx() },
+    { key: 'export-json', label: '导出当前视图（JSON）', icon: Braces, run: () => exportJson() },
+    { key: 'export-md', label: '导出当前视图（Markdown）', icon: FileText, run: () => exportMd() },
+    ...(props.exportNdjson ? [{ key: 'export-ndjson', label: '导出当前视图（NDJSON）', icon: ClipboardList, run: () => exportNdjsonFile() }] : []),
   ];
+  /* 无记忆维度（SQL 等通道）时列管理项整组不出——只剩导出，
+     分组名跟着换，不能叫「列与导出…」却没列可管。 */
+  const colGroup = barOn.value
+    ? { key: 'col-group', label: '列与导出…', icon: MoveHorizontal, sep: true, children: colChildren }
+    : { key: 'col-group', label: '导出…', icon: FileDown, sep: true, children: colChildren };
   return [
     /* 一级：当前格最高频两件事（复制值/完整值）——单击一步到位，不逼两级 */
     { key: 'copy-val', label: '复制值', icon: Copy, run: copyChildren[0].run },
@@ -1862,7 +1975,7 @@ const cellMenuItems = computed(() => {
     { key: 'copy-group', label: '复制…', icon: ClipboardList, sep: true, children: copyChildren.filter(c => c.key !== 'copy-val') },
     ...(rowChildren.length > 1 ? [{ key: 'row-group', label: '行操作…', icon: ChevronDown, children: rowChildren.filter(c => c.key !== 'detail-cell') }] : []),
     { key: 'query-group', label: '筛选与排序…', icon: Filter, sep: true, children: queryChildren },
-    ...(colChildren.length > 1 ? [{ key: 'col-group', label: '列与导出…', icon: MoveHorizontal, sep: true, children: colChildren }] : []),
+    ...(colChildren.length > 1 ? [colGroup] : []),
   ];
 });
 /* 删除 menuCopyVal/menuCopyRowJson/menuSortCol——独立函数版菜单实现，
@@ -2138,6 +2251,20 @@ function onTableCmd(e: Event) {
 }
 
 /* 导出合并为函数（table-cmd 与工具条「导出」钮共用）——RT 五件套对齐 */
+/* 选中行矩阵复制（RT copySelRows 同内核）：选中集按 rawRows 身份取行，
+ 列取 shownCols（所见即所得），值过 exportCell 管道——与「复制整表」同口径，
+ 只是行范围换成勾选。 */
+async function copySelMatrix(fmt: 'tsv' | 'md' | 'json') {
+  const all: any[] = isHits.value ? (props.hits ?? []) : (props.rows ?? []);
+  const rows = [...selSet.value].sort((a, b) => a - b).map(i => all[i]).filter(r => r !== undefined);
+  if (!rows.length) { store.notify('warning', '没有选中的行'); return; }
+  const text = matrixText({
+    rows, cols: shownCols.value,
+    getVal: (row, c) => xCell(qColVal(row, c), c, row),
+  }, fmt);
+  const ok = await copyText(text);
+  store.notify(ok ? 'success' : 'error', ok ? `已复制 ${rows.length} 行（${fmt.toUpperCase()}）` : '复制失败');
+}
 function exportCsv() {
   if (isEmpty.value) { store.notify('warning', '当前表格无数据可导出'); return; }
   const blk = csvBlock();
@@ -2313,6 +2440,11 @@ mark.qrt-mark { background: var(--warn); color: var(--tx-on-strong); border-radi
 /* 斑马纹密度态——紧凑密度行距过密时条纹反成噪音（dbx 紧凑场景无条纹），舒适态保留 */
 .qrt-tbl.dense tbody tr:nth-child(even) { background: transparent; }
 .qrt-tbl th, .qrt-tbl td { padding: var(--sp-1) var(--sp-2); border-bottom: 1px solid var(--line); text-align: left; }
+/* 1224：列头左右内距必须与全局 `.tbl th` 同档（`var(--sp-2h)`=10px，adaptive556 已锁该标准）。
+   此前 QRT 的 th 与 td 共用一条规则 → 列头左右只有 8px，与 RT 的 10px 差 2px；
+   两表并排时同一级列头看起来疏密不同。**只覆盖 th，不动 td**——表格体的 8px 是另一处既定密度，
+   改它会牵动所有 QRT 宿主的行宽。 */
+.qrt-tbl th { padding-left: var(--sp-2h); padding-right: var(--sp-2h); }
 .qrt-tbl.dense th, .qrt-tbl.dense td { padding-top: var(--sp-0); padding-bottom: var(--sp-0); }
 /* 行高宽松档（RT 同款 12px，两表一致） */
 .qrt-tbl.cozy th, .qrt-tbl.cozy td { padding-top: var(--sp-3); padding-bottom: var(--sp-3); }

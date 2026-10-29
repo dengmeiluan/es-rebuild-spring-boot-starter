@@ -114,8 +114,14 @@
               <TimeCell class="sv-tl-time" :ts="s.start_time_in_millis" abs />
               <span v-if="s.duration_in_millis" class="mono sv-tl-dur">耗时 {{ fmtMs(s.duration_in_millis) }}</span>
               <div style="margin-left:auto; display:flex; gap:var(--sp-1h)">
+                <!-- 1198：主行动「恢复」常驻；破坏性「删除」静息隐藏——
+                     它早已在行右键菜单（恢复此快照… / 删除快照…）里，常驻只是重复入口，
+                     且红色按钮挂在每一行上会在长列表里持续抢注意力。
+                     悬停 / 键盘聚焦 / 该行更多按钮展开时显现；触屏无 hover 恒显。 -->
                 <button v-if="canOps" class="btn sm" @click="openRestore(s)" :disabled="s.state === 'IN_PROGRESS'"><Undo2 :size="11" /> 恢复</button>
-                <button v-if="canOps" class="btn sm danger" @click="doDeleteSnapshot(s)" :disabled="s.state === 'IN_PROGRESS'"><Trash2 :size="11" /> 删除</button>
+                <span class="sv-row-del">
+                  <button v-if="canOps" class="btn sm danger" @click="doDeleteSnapshot(s)" :disabled="s.state === 'IN_PROGRESS'"><Trash2 :size="11" /> 删除</button>
+                </span>
                 <details class="sv-tl-more">
                   <summary class="btn sm ghost"><Info :size="11" /></summary>
                   <!-- W-C 批：快照原文 popover 走 highlightJson 范式（转义安全 v-html） -->
@@ -848,6 +854,12 @@ useModalEnter(restoreOpen, doRestore, () => canOps.value);
 .sv-tl { padding: var(--sp-2h) 14px; position: relative; }
 .sv-tl::before { content: ''; position: absolute; left: 27px; top: 20px; bottom: 20px; width: 2px; background: var(--line); }
 .sv-tl-row { display: flex; gap: var(--sp-3); padding: var(--sp-2h) 0; position: relative; }
+/* 1198：破坏性「删除」静息隐藏——与「恢复」并列常驻时，红色按钮在长列表里持续抢注意力，
+   而它早已在行右键菜单（删除快照…）里。悬停 / 键盘聚焦时显现；
+   触屏无 hover 恒显，右键始终是第二条完整通道。 */
+.sv-tl-row .sv-row-del { display: inline-flex; opacity: 0; transition: opacity var(--tr); }
+.sv-tl-row:hover .sv-row-del, .sv-tl-row:focus-within .sv-row-del { opacity: 1; }
+@media (hover: none) { .sv-tl-row .sv-row-del { opacity: 1; } }
 /* 当前命中行：柔底 + 左侧强调条 + 焦点环（.hit-cur 由 useHitScroll 运行时挂/摘） */
 .sv-tl-row.hit-cur { background: var(--ac-soft) !important; box-shadow: inset 3px 0 0 var(--ac-hi), var(--focus-ring); border-radius: var(--r-s); }
 .sv-tl-dot { width: 26px; height: 26px; border-radius: 50%; background: var(--bg1); border: 2px solid var(--line); display: flex; align-items: center; justify-content: center; z-index: 1; flex-shrink: 0; }

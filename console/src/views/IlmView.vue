@@ -84,7 +84,7 @@
             <div class="ilm-p-head">
               <b class="mono"><MarkText :text="p.name" :kw="filter" /></b>
               <span v-if="p.version != null" class="chip mono">v{{ p.version }}</span>
-              <span style="margin-left:auto;display:flex;gap:var(--sp-1)" @click.stop>
+              <span class="ilm-p-ops" style="margin-left:auto;display:flex;gap:var(--sp-1)" @click.stop>
                 <button v-if="canOps" aria-label="编辑策略" class="btn xs ghost" title="编辑策略" @click="openEditPolicy(p)"><Pencil :size="11" /></button>
                 <button v-if="canOps" aria-label="删除策略" class="btn xs ghost danger" title="删除策略" :disabled="deleting" @click="deletePolicy(p.name)"><Trash2 :size="11" /></button>
               </span>
@@ -653,6 +653,13 @@ const hasErr = computed(() => {
 /* 当前命中行：柔底 + 左侧强调条 + 焦点环（.hit-cur 由 useHitScroll 运行时挂/摘） */
 .ilm-p.hit-cur { background: var(--ac-soft) !important; box-shadow: inset 3px 0 0 var(--ac-hi), var(--focus-ring); }
 .ilm-p-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-1h); font-size: var(--fs-sm); }
+/* 1196：卡片头的编辑/删除静息隐藏（1147 列头 / 1189 窄列同款纪律）——这两颗是低频写操作，
+   常驻在每张卡片上既占位又与「查看相位/解释」抢注意力，且它们早已在行右键「策略写操作…」二级里。
+   保留可达性：悬停、键盘聚焦（:focus-within）或当前选中行（.on）时显现；
+   触屏无 hover——选中行即出，且右键菜单始终是完整入口。 */
+.ilm-p-ops { opacity: 0; transition: opacity var(--tr); }
+.ilm-p:hover .ilm-p-ops, .ilm-p:focus-within .ilm-p-ops, .ilm-p.on .ilm-p-ops { opacity: 1; }
+@media (hover: none) { .ilm-p-ops { opacity: 1; } }
 .ilm-p-phases { display: flex; gap: var(--sp-1); flex-wrap: wrap; margin-bottom: var(--sp-1); }
 .ilm-ph { display: inline-flex; align-items: center; gap: 5px; padding: var(--sp-0) var(--sp-2); border-radius: var(--r-m); color: var(--tx-on-strong); font-size: var(--fs-xs); font-weight: 600; }
 .ilm-ph-age { opacity: .85; font-size: var(--fs-xs); }

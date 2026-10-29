@@ -78,18 +78,27 @@ describe('API 层写门：无权限请求零发出', () => {
     expect(auth.canEmitWrite('POST', '/internal/es/index/auth/logout', '')).toBe(true);
   });
 
-  it('DevTools/REST：连接写键放行，只读键与静态低角色一律拒绝', () => {
+  it('DevTools/REST：连接写键放行，只读键放行到后端裁决，无键与跨连接一律拒绝', () => {
     const connWrite = login('VIEWER', ['conn:c1:w:devtools']);
     expect(connWrite.canEmitWrite('POST', '/internal/es/index/cluster/devtools/execute', 'c1')).toBe(true);
 
-    const connRead = login('CLUSTER_OP', ['conn:c1:r:devtools']);
-    expect(connRead.canEmitWrite('POST', '/internal/es/index/cluster/devtools/execute', 'c1')).toBe(false);
+    /* 1133：读键（conn:{id}:{page}，不带 w:）不再被客户端整段拦死——
+       外层恒 POST，内层真实方法由后端裁决；客户端只在读写都不行时拦。
+       「只读身份连 GET 都发不出」正是本轮修复的缺陷。 */
+    const connRead = login('VIEWER', ['conn:c1:devtools']);
+    expect(connRead.canEmitWrite('POST', '/internal/es/index/cluster/devtools/execute', 'c1')).toBe(true);
+    expect(connRead.canExecutePassthrough('GET', '/_cluster/health',
+      '/internal/es/index/cluster/devtools/execute', 'c1')).toBe(true);
+    /* 但内层写仍被客户端判死（后端同口径再拦一次） */
+    expect(connRead.canExecutePassthrough('PUT', '/new-index',
+      '/internal/es/index/cluster/devtools/execute', 'c1')).toBe(false);
 
     const rawConn = login('VIEWER', ['conn:c1:w:rest']);
     expect(rawConn.canEmitWrite('POST', '/internal/es/index/cluster/raw', 'c1')).toBe(true);
     const rawOtherConn = login('VIEWER', ['conn:c1:w:rest']);
     expect(rawOtherConn.canEmitWrite('POST', '/internal/es/index/cluster/raw', 'c2')).toBe(false);
 
+    /* 静态模型（无 w: 变体）保持既有 admin 档语义——有权限的人不被误拦，无 admin 者不亮入口 */
     const staticDevtools = login('OPERATOR', ['devtools']);
     expect(staticDevtools.canEmitWrite('POST', '/internal/es/index/cluster/devtools/execute', 'c1')).toBe(false);
     const admin = login('ADMIN', []);
@@ -139,7 +148,9 @@ describe('菜单/按钮校准', () => {
 
   it('DevTools 非 ADMIN 系统管理写不显示可执行态', () => {
     expect(devtools).toContain('nonAdminDataPlaneWriteAllowed');
-    expect(devtools).toContain('const currentSendable = computed(() => canAdmin.value && !!cur.value');
+    /* 1133：可执行性按**内层方法**分档（读键可执行只读请求），写档仍用于数据面收口 */
+    expect(devtools).toContain('const currentSendable = computed(() => !!cur.value');
+    expect(devtools).toContain('canExecInner(cur.value.method, cur.value.path)');
     /* 1004：门必须带 body——根级检索的 PIT 豁免要读 pit.id，否则 PIT 搜索被误禁 */
     expect(devtools).toContain('if (!requestInScope(cur.value?.method || \'GET\', cur.value?.path || \'/\', cur.value?.body))');
     expect(devtools).toContain('if (!requestInScope(t.method, t.path, t.body))');

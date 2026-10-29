@@ -26,6 +26,11 @@ Thumbs.db
 # local maintenance notes (kept out of the distribution; history lives in commit messages)
 console/docs/GOAL-*
 .tmp-prescan894.mjs
+# local test/verify artifacts (shard logs, JSON reports, browser profiles)
+.tmp/
+# local visual-test temp artifacts
+console/vite.browser.tmp.config.mjs
+console/vitest-final.json
 # one-off probe artifacts (screenshots / node dumps) — never distributed
 .tmp-*
 .workbuddy/

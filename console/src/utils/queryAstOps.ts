@@ -291,11 +291,16 @@ export function labelOfOp(op: string): string {
  的 origin 为必填，给 now 让新条件可直接跑（pivot 默认值由节点工厂/ClauseNode 给 7d）。
  1152：wrap 族参数表在 WRAP_PARAMS（nested/has_child/function_score/script_score…），
  只查 OPS_META 会把 script_score 的 min_score、nested 的 score_mode/inner_hits 等
- 合法参数当作「旧算子参数」静默丢掉——两表并集才是完整 schema。 */
+ 合法参数当作「旧算子参数」静默丢掉——两表并集才是完整 schema。
+ 1199：多容器族（boosting / dis_max / span_near / span_not …）的 schema 在 MULTI_META.params，
+ 它们**没有** OPS_META 条目，于是 span_near 的 slop/in_order、dis_max 的 tie_breaker、
+ boosting 的 negative_boost 在切到这些算子时被当成旧算子参数清空——用户刚配好的参数凭空消失。
+ 三表并集才是完整 schema（同一 bug 家族的第二例，1152 当时只补了 WRAP_PARAMS）。 */
 export function paramsForOp(op: string, old: Record<string, unknown>): Record<string, unknown> {
   const allowed = new Set(['_name',
     ...(OPS_META[op]?.params || []).map(p => p.key),
-    ...(WRAP_PARAMS[op] || []).map(p => p.key)]);
+    ...(WRAP_PARAMS[op] || []).map(p => p.key),
+    ...(MULTI_META[op]?.params || []).map(p => p.key)]);
   const kept: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(old || {})) if (allowed.has(k)) kept[k] = v;
   if (op === 'distance_feature' && !('origin' in kept)) kept.origin = 'now';
@@ -397,6 +402,12 @@ export const RETRIEVER_PARAMS: Record<string, ParamMeta[]> = {
 export const ADV_MENU: Array<{ group: string; ops: string[] }> = [
   { group: '全文检索', ops: ['multi_match', 'query_string', 'simple_query_string', 'combined_fields', 'match_bool_prefix', 'more_like_this', 'intervals'] },
   { group: '精确与集合', ops: ['ids', 'terms_set', 'bitmap_terms', 'parent_id', 'type'] },
+  /* 1199 续：wrap 容器族（nested / has_child / has_parent）此前**没有任何新建入口**——
+     有渲染器（WrapNodeRow）、有参数表（WRAP_PARAMS）、能无损往返，但「+ 条件」与算子下拉里
+     都找不到它们，用户只能先手写 DSL 才用得上。这是「双向映射不全面」最典型的一种：
+     支持读、支持改，就是不支持新建。单列一组（关系与嵌套）而不是塞进「复合容器」——
+     join 族的两个算子要选 join 字段、nested 要选路径，心智上与评分包装不同。 */
+  { group: '关系与嵌套', ops: ['nested', 'has_child', 'has_parent'] },
   { group: '地理位置', ops: ['geo_distance', 'geo_bounding_box', 'geo_polygon', 'geo_shape', 'geo_grid', 'shape', 'distance_feature'] },
   { group: '跨度位置', ops: ['span_near', 'span_or', 'span_not', 'span_first', 'span_containing', 'span_within', 'span_term', 'span_gap', 'span_multi', 'span_field_masking'] },
   { group: '向量与语义', ops: ['knn', 'sparse_vector', 'text_expansion', 'weighted_tokens', 'semantic'] },
@@ -530,6 +541,13 @@ export const AGG_BODY_PARAMS: Record<string, ParamMeta[]> = {
   max: [{ key: 'missing', kind: 'number' }],
   cardinality: [{ key: 'precision_threshold', kind: 'number' }],
   top_hits: [{ key: 'size', kind: 'number' }, { key: 'from', kind: 'number' }],
+  /* 1201：三个「必填主键不在自由表里就会被当普通键手打」的聚合——
+     stats 与 avg/min/max 同族（field 由 FIELD_BODY_AGGS 给选择器，这里只剩 missing）；
+     top_metrics 主键是 metrics 数组 + sort 数组（数组键留自由表，size 与 missing 升具名）；
+     matrix_stats 主键是 fields 数组（同上，只把 mode 提成枚举）。 */
+  stats: [{ key: 'missing', kind: 'number' }],
+  top_metrics: [{ key: 'size', kind: 'number' }, { key: 'missing', kind: 'text' }],
+  matrix_stats: [{ key: 'mode', kind: 'enum', options: ['avg', 'sum', 'median'] }, { key: 'missing', kind: 'json' }],
   /* 1030：管道族与地理网格族 schema——buckets_path（管道输入引用）升具名文本档，
    gap_policy 三档全族统一枚举；script/buckets 数组键（bucket_script.script、
    bucket_sort.sort、percentiles_bucket.percents）维持自由表零丢失 */
@@ -552,10 +570,25 @@ export const AGG_BODY_PARAMS: Record<string, ParamMeta[]> = {
     { key: 'gap_policy', kind: 'enum', options: GAP_POLICY },
   ],
   cumulative_sum: [{ key: 'buckets_path', kind: 'text' }, { key: 'format', kind: 'text' }],
-  cumulative_cardinality: [{ key: 'precision_threshold', kind: 'number' }],
-  bucket_script: [{ key: 'buckets_path', kind: 'text' }],
-  bucket_selector: [{ key: 'buckets_path', kind: 'text' }, { key: 'gap_policy', kind: 'enum', options: GAP_POLICY }],
-  bucket_sort: [{ key: 'gap_policy', kind: 'enum', options: GAP_POLICY }],
+  cumulative_cardinality: [{ key: 'buckets_path', kind: 'text' }, { key: 'precision_threshold', kind: 'number' }],
+  /* bucket_script 官方参数只有 buckets_path + script（gap_policy 是 bucket_selector 的，
+     加到这里会被 ES 当未知键拒绝；spec 里有一条正面锁）。 */
+  bucket_script: [{ key: 'buckets_path', kind: 'text' }, { key: 'script', kind: 'text' }],
+  bucket_selector: [
+    { key: 'buckets_path', kind: 'text' }, { key: 'script', kind: 'text' },
+    { key: 'gap_policy', kind: 'enum', options: GAP_POLICY },
+  ],
+  /* 1202：管道族的**必填主键**此前全在自由表里手打，新建后根本配不出能跑的聚合：
+     · bucket_script / bucket_selector 官方体必须同时有 buckets_path 与 script——只登记了前者；
+     · bucket_sort 必须给 sort（规则数组）；size/from 才是常调标量——此前只登记 gap_policy；
+     · cumulative_cardinality 是管道聚合，必须给 buckets_path——此前只登记 precision_threshold。
+     处理口径：标量键（script/size/from）升具名档；**数组键（sort）刻意不登记**——
+     GenericParams 的 json 档新建时默认 `{}`，而 bucket_sort.sort 要的是数组，
+     登记进去等于给一个 ES 会拒的默认值；留在自由表里由用户写 `[{...}]` 反而安全。 */
+  bucket_sort: [
+    { key: 'size', kind: 'number' }, { key: 'from', kind: 'number' },
+    { key: 'gap_policy', kind: 'enum', options: GAP_POLICY },
+  ],
   extended_stats_bucket: [
     { key: 'buckets_path', kind: 'text' }, { key: 'sigma', kind: 'number' },
     { key: 'gap_policy', kind: 'enum', options: GAP_POLICY },

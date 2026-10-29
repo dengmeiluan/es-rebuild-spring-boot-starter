@@ -136,11 +136,16 @@ describe('A sqlCompletion ② 限定列位语义排序', () => {
     h.dispose();
   });
 
-  it('colM 第二捕获组退役（此前从未消费的死捕获）', () => {
+  it('colM 第二捕获组：1207 起是**活捕获**（承载点后前缀），必须消费且进排序', () => {
     const src = readFileSync(join(SRC, 'utils/sqlCompletion.ts'), 'utf-8');
-    expect(src).toContain('before.match(/(\\w+)\\.\\w*$/)');
-    /* 旧 ② 正则（含死捕获组）不在場；④ 值位正则的 (\w*)$ 属别处契约不在锁内 */
-    expect(src).not.toContain('match(/(\\w+)\\.(\\w*)$/)');
+    /* 546 把它判为死捕获并退役——前提是"从未消费"。1207 让点后已敲前缀参与字段排序
+       （否则 `t.pub` 的候选只按字母序，`publish_time` 淹在中间），这个捕获组因此变成活代码。
+       锁改成**双向**：正则必须带第二组，且该组必须真的被传给 searchFields 的 query。 */
+    expect(src).toContain('before.match(/(\\w+)\\.(\\w*)$/)');
+    const i = src.indexOf('before.match(/(\\w+)\\.(\\w*)$/)');
+    const seg = src.slice(i, i + 900);
+    expect(seg, '第二组必须被取出').toMatch(/colM\[2\]/);
+    expect(seg, '必须参与 searchFields 排序').toMatch(/query:\s*colPrefix/);
   });
 });
 

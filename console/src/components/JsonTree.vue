@@ -12,16 +12,21 @@
       <button class="jt-btn" :title="'复制全文 JSON'" @click="copyAll"><Copy :size="11" /> {{ copied ? '已复制' : '复制' }}</button>
     </div>
     <JNode :kv="rootEntries" :depth="0" />
+    <!-- 行级右键的复制回执：在动作落点附近闪一条，不依赖全局 toast
+     （本组件大量用于表格行内嵌入，宿主不一定有 store 上下文） -->
+    <div v-if="flash" class="jt-flash" :style="{ left: flash.x + 'px', top: flash.y + 'px' }">{{ flash.text }}</div>
+    <CellContextMenu v-if="ctx" :x="ctx.x" :y="ctx.y" :title="ctx.title" :items="ctx.items" @close="ctx = null" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, defineComponent, h, ref, type PropType } from 'vue';
-import { ChevronRight, Copy } from 'lucide-vue-next';
+import { Braces, ChevronRight, ClipboardList, Copy, Info, Type } from 'lucide-vue-next';
 import { copyText } from '../utils/format';
 import { useHitLocate } from '../composables/useHitNav';
 import { splitMark } from '../composables/useGridSearch';
 import HitNav from './HitNav.vue';
+import CellContextMenu, { type CcmItem } from './CellContextMenu.vue';
 
 const props = withDefaults(defineProps<{
   data: any;
@@ -47,6 +52,54 @@ const copied = ref(false);
 async function copyAll() {
   const ok = await copyText(JSON.stringify(props.data, null, 2));
   if (ok) { copied.value = true; setTimeout(() => (copied.value = false), 1200); }
+}
+
+/* ═══ 1180：行级右键 ═══
+ JSON 视图此前只有工具条「复制全文」——想拿单个字段值只能手工框选。
+ 心智：右键点哪一行，动作就作用于那一行的「路径 / 值 / 子树」。
+ 路径用 `data-jid` 的点分路径（与搜索定位同源，数组下标即数字段），
+ 直接就是 _source 字段路径、可粘进 DSL/SQL。 */
+const ctx = ref<{ x: number; y: number; title: string; items: CcmItem[] } | null>(null);
+const flash = ref<{ x: number; y: number; text: string } | null>(null);
+let flashTimer: ReturnType<typeof setTimeout> | null = null;
+async function flashCopy(text: string, msg: string, e: MouseEvent) {
+  if (!text) return;
+  const ok = await copyText(text);
+  flash.value = { x: e.clientX + 10, y: e.clientY + 14, text: ok ? msg : '复制失败' };
+  if (flashTimer) clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => (flash.value = null), 1200);
+}
+/* 值位文本：字符串给原文（粘到 term 查询里不用再剥引号），
+ 对象/数组给缩进 JSON（可整段贴回 DSL 或文件） */
+function ctxValText(v: any): string {
+  if (v == null) return 'null';
+  if (typeof v === 'string') return v;
+  if (typeof v === 'object') return JSON.stringify(v, null, 2);
+  return String(v);
+}
+function openRowCtx(e: MouseEvent, id: string, k: string, v: any) {
+  /* 行树常嵌在表格单元格里——右侧表格的单元格菜单同键，必须先吃掉，
+     否则两个菜单同时挂出（更具体的这一层才该赢） */
+  e.preventDefault();
+  e.stopPropagation();
+  const isObj = v != null && typeof v === 'object';
+  ctx.value = {
+    x: e.clientX, y: e.clientY,
+    title: id,
+    items: [
+      { key: 'jt-copy-val', label: isObj ? '复制此节点 JSON' : '复制值', icon: Copy,
+        run: () => void flashCopy(ctxValText(v), isObj ? '已复制节点 JSON' : '已复制值', e) },
+      { key: 'jt-copy-path', label: '复制路径', icon: Info,
+        run: () => void flashCopy(id, '已复制路径：' + id, e) },
+      { key: 'jt-more', label: '更多…', icon: Copy, sep: true, children: [
+        { key: 'jt-copy-key', label: '复制键名', icon: Type, run: () => void flashCopy(k, '已复制键名', e) },
+        { key: 'jt-copy-pair', label: '复制「路径: 值」', icon: ClipboardList,
+          run: () => void flashCopy(id + ': ' + (isObj ? JSON.stringify(v) : ctxValText(v)), '已复制路径与值', e) },
+        { key: 'jt-copy-all', label: '复制整棵 JSON', icon: Braces,
+          run: () => void flashCopy(JSON.stringify(props.data, null, 2), '已复制整棵 JSON', e) },
+      ] },
+    ],
+  };
 }
 /* 命中片段包 <mark>：h() 渲染路径直接拆 vnode，无 v-html 注入面。
  手写 indexOf 切分循环退役（全站第三份切分实现收口）——切分改吃
@@ -149,6 +202,7 @@ const JNode: any = defineComponent({
               class: 'jrow', key,
               /* 点分路径（先序 DFS 同序）：宿主层「渲染数据直达」委托按首段定位文档 */
               'data-jid': id,
+              onContextmenu: (ev: MouseEvent) => openRowCtx(ev, id, k, v),
               ...(hitIdx != null ? { 'data-hit-idx': String(hitIdx) } : {}),
             }, [
               h('div', { class: 'jline' }, [
@@ -202,4 +256,6 @@ const JNode: any = defineComponent({
 :deep(.jmore) { color: var(--tx2); font-size: var(--fs-xs); padding-left: var(--sp-3); font-style: italic; }
 :deep(.j-clipped) { opacity: .75; }
 :deep(.j-str), :deep(.j-num), :deep(.j-bool), :deep(.j-null) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60vw; }
+/* 行级右键的复制回执（fixed 跟点，不吃布局、不挡点击） */
+.jt-flash { position: fixed; z-index: calc(var(--z-ctx) + 3); pointer-events: none; background: var(--bg1); border: 1px solid var(--line-strong); border-radius: var(--r-s); box-shadow: var(--shadow-pop); color: var(--tx0); font-size: var(--fs-2xs); padding: var(--sp-0) var(--sp-2); max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>

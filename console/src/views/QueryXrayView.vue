@@ -65,7 +65,8 @@
  vrErr 标题行 已是此口径，结论档漏网补齐） -->
         <span v-if="vr.error" class="qx-verr" :title="vr.error">{{ friendlyEsError(vr.error) }}</span>
       </div>
-      <div v-for="(ex, i) in vr?.explanations || []" :key="i" class="qx-card">
+      <div v-for="(ex, i) in vr?.explanations || []" :key="i" class="qx-card"
+        @contextmenu.prevent="openExMenu($event, ex)">
         <div class="qx-card-hd">
           <Regex :size="12" /> Lucene 实际执行（{{ ex.index }}）
           <button class="btn ghost xs qx-run" @click="copyText(ex.explanation).then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制解释全文' : '复制失败'))"><Copy :size="10" /> 复制</button>
@@ -168,18 +169,23 @@
 
     <!-- 原始 IO 弹窗（宿主受控开关；rec 取透视/词频各自最近一条记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
+
+    <!-- 1179：Lucene 实际执行卡片右键（排障时要「只抄索引名」「只抄某段」而不是整段） -->
+    <CellContextMenu v-if="exMenu" :x="exMenu.x" :y="exMenu.y"
+      :title="'实际执行 · ' + exMenu.ex.index" :items="exMenuItems" @close="exMenu = null" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { ScanSearch, Regex, BarChart3, FileJson, Play, CheckCircle2, XCircle, Copy, Lightbulb, FlaskConical, Terminal } from 'lucide-vue-next';
+import { ScanSearch, Regex, BarChart3, FileJson, Play, CheckCircle2, XCircle, Copy, Lightbulb, FlaskConical, Terminal, Braces, Info } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';
 import LabNav from '../components/LabNav.vue';import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环） */
 import RawIoModal from '../components/RawIoModal.vue';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import { useAppStore } from '../stores/app';
 import { useIdxState, usePref } from '../composables/urlState';
 import { useScopedDraft } from '../composables/useScopedDraft';
@@ -205,6 +211,36 @@ import QueryResultTable from '../components/QueryResultTable.vue'; /* ：term �
 
 const router = useRouter();
 const store = useAppStore();
+
+/* 1179：Lucene 实际执行卡片右键。排障时常见诉求是「只抄索引名去建任务」
+ 「只抄 MatchNoDocsQuery 那几行」「把这条解释存进工单」——全段复制再手删太慢。
+ 一级只留最高频两项，其余收进「更多…」二级（全站右键同一规矩）；只读安全。 */
+const exMenu = ref<{ x: number; y: number; ex: any } | null>(null);
+function openExMenu(e: MouseEvent, ex: any) {
+  exMenu.value = { x: e.clientX, y: e.clientY, ex };
+}
+async function copyEx(text: string, okMsg: string) {
+  const ok = await copyText(text);
+  store.notify(ok ? 'success' : 'error', ok ? okMsg : '复制失败');
+}
+const exMenuItems = computed<CcmItem[]>(() => {
+  const m = exMenu.value; if (!m) return [];
+  const ex = m.ex;
+  const full = String(ex.explanation ?? ex.error ?? '');
+  /* 「永远查不到东西」的子句是排障第一现场：摘出来单独能给 */
+  const noDocs = full.split(/\r?\n/).filter((l: string) => /MatchNoDocsQuery|MatchAllDocsQuery/.test(l)).join('\n');
+  return [
+    { key: 'ex-copy-all', label: '复制解释全文', icon: Copy, run: () => copyEx(full, '已复制解释全文') },
+    { key: 'ex-copy-index', label: '只复制索引名', icon: Info, run: () => copyEx(String(ex.index ?? ''), '已复制索引名：' + ex.index) },
+    {
+      key: 'ex-more', label: '更多…', icon: Copy, sep: true, children: [
+        { key: 'ex-copy-nodocs', label: '只复制「永远查不到」的子句', icon: Braces,
+          run: () => (noDocs ? copyEx(noDocs, '已复制 MatchNoDocsQuery 子句') : store.notify('info', '这条解释里没有 MatchNoDocsQuery')) },
+        { key: 'ex-copy-json', label: '复制整条解释 JSON', icon: Braces, run: () => copyEx(JSON.stringify(ex, null, 2), '已复制解释 JSON') },
+      ],
+    },
+  ];
+});
 /* 目标索引进 URL——刷新/分享链接可复原（可重入） */
 const index = useIdxState({ follow: true });
 /* Query DSL 接 dsl-assist——fields 闭包现调现读（DslQueryView 同范式）。

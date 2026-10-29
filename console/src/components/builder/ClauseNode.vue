@@ -24,11 +24,11 @@
  text→match 全文、数值/date→range 范围；mapping 缺失（types 无此字段）不渲染，零降级 -->
       <!-- 类型徽标挂全站色卡 .mft-type（theme.css），删局部三类型撞色规则 -->
       <span v-if="fieldType" class="cn-fty mono mft-type" :data-t="fieldType" :title="typeHint">{{ fieldType }}</span>
-      <!-- 1056：text 字段做精确算子且 mapping 有同名 .keyword 子域 → 一键改打子域。
-           text 的倒排是分词词项，term/terms/wildcard 拿整串原值大概率查空；
-           入口只给建议，点击才改（不静默改用户 DSL）。 -->
+      <!-- 1056：text 字段做词项级算子且 mapping 有同名 .keyword 子域 → 一键改打子域。
+           text 的倒排是分词词项，term/terms/wildcard/prefix/regexp/fuzzy/terms_set
+           拿整串原值大概率查空；入口只给建议，点击才改（不静默改用户 DSL）。 -->
       <button v-if="kwTwin" type="button" class="btn xs ghost cn-kwfix"
-              :title="'text 字段的 ' + label(node.op) + ' 按分词词项匹配，整串原值通常查不到；改打 ' + kwTwin + ' 精确匹配（值不变）'"
+              :title="'text 字段的 ' + label(node.op) + ' 按分词词项匹配，整串原值通常查不到；改打 ' + kwTwin + ' 按整串匹配（值不变）'"
               @click="applyKwTwin">打 .keyword</button>
     </template>
     <!-- 算子下拉：推荐（opsForType）+ 常用（单字段形态非推荐）+ 高级分组（ADV_MENU 同源）。
@@ -40,6 +40,21 @@
         <option v-for="o in g.ops" :key="o" :value="o">{{ label(o) }}</option>
       </optgroup>
     </select>
+
+    <!-- 1183：主值键缺席的行内说明——紧贴算子下拉、在值控件之前。
+         `{percolate:{field,id}}`、`{knn:{field,query_vector_builder}}` 都是合法写法，
+         但树里没有 document / query_vector：值位空白不是解析丢失。
+         不说清楚，用户要么以为数据没读进来，要么往空位补一个与现有键冲突的主值
+         （percolate 同时有 id 与 document，ES 直接拒）。
+         位置必须在值控件上方：说明放在行尾会被长体（4 行 textarea）挤到树面板折叠线以下，
+         用户看到空值框却看不到解释。 -->
+    <div v-if="mainKeyAbsent" class="cn-mainabs-bar" role="status">
+      <span class="cn-mainabs">
+        该写法未使用 <code>{{ mainKeyName }}</code> 主值键——值位留空是原 DSL 使然
+        <template v-if="presentParamKeys.length">（现有键：<code>{{ presentParamKeys.join(', ') }}</code>）</template>；
+        在此输入会新增 <code>{{ mainKeyName }}</code> 键
+      </span>
+    </div>
 
     <!-- 值控件：按算子形态分派（985：多字段/对象值/数组值分支加入） -->
     <template v-if="node.op === 'exists' || node.op === 'match_all' || node.op === 'match_none'">
@@ -216,19 +231,21 @@
       <!-- ⏰ 常驻——此前按字段名正则门控，「不像时间字段」的按钮直接消失，
  placeholder 却承诺「⏰ 转换」，用户找不到入口。常驻后任何字段都可点：
  值能解析成标准时间才转换，解析失败保持原值（title 说明适用面）。 -->
-      <button aria-label="标准时间转时间戳" class="btn sm ghost cn-act" title="⏰ 把标准时间（YYYY-MM-DD HH:mm[:ss]）转成 epoch 毫秒；值不是标准时间格式时点击不变"
+      <!-- ⏰ 低频（1215）：静息隐藏、行悬停/聚焦才浮现——右键盘里已有「复制为 DSL 片段」等全部同类动作，
+           常驻 6 个灰图标会把字段/值输入挤到一行不到一半（1440 实测动作簇占行宽 31%、整行折成 76px）。 -->
+      <button aria-label="标准时间转时间戳" class="btn sm ghost cn-act cn-act-lo" title="⏰ 把标准时间（YYYY-MM-DD HH:mm[:ss]）转成 epoch 毫秒；值不是标准时间格式时点击不变"
               @click="convertStdTime">
         <Clock :size="12" />
       </button>
 
       <!-- 具名参数（schema 内）+ 更多参数入口 -->
-      <button aria-label="参数（boost/operator…）" v-if="hasParams" class="btn sm ghost cn-act" title="参数（boost/operator…）" @click="paramsOpen = !paramsOpen">
+      <button aria-label="参数（boost/operator…）" v-if="hasParams" class="btn sm ghost cn-act cn-act-lo" title="参数（boost/operator…）" @click="paramsOpen = !paramsOpen">
         <Settings2 :size="12" />
       </button>
       <button aria-label="复制条件" class="btn sm ghost cn-act" title="复制条件（插到本条件之后）" @click="$emit('duplicate', node.id)"><Copy :size="12" /></button>
       <!-- 1036：复制子树入跨查询剪贴（含嵌套，任意条件组可粘贴） -->
-      <button aria-label="复制子树（跨查询粘贴用）" class="btn sm ghost cn-act" title="复制子树（含嵌套，可粘贴到任意条件组）" @click="onCopySubtree"><ClipboardCopy :size="12" /></button>
-      <button aria-label="包成 bool 组" class="btn sm ghost cn-act" title="包成 bool 组" @click="$emit('wrap')"><Group :size="12" /></button>
+      <button aria-label="复制子树（跨查询粘贴用）" class="btn sm ghost cn-act cn-act-lo" title="复制子树（含嵌套，可粘贴到任意条件组）" @click="onCopySubtree"><ClipboardCopy :size="12" /></button>
+      <button aria-label="包成 bool 组" class="btn sm ghost cn-act cn-act-lo" title="包成 bool 组" @click="$emit('wrap')"><Group :size="12" /></button>
       <button aria-label="删除" class="btn sm ghost cn-act danger" title="删除" @click="$emit('remove')"><X :size="12" /></button>
     </span>
     <div v-if="fieldUnknown" class="cn-defrt-bar">
@@ -312,6 +329,10 @@ const opGroups = computed(() => {
   const common = RICH_OPS.filter(o => !advSet.has(o) && OPS_META[o].form === 'field' && !seen.has(o));
   if (common.length) { groups.push({ label: '常用', ops: common }); common.forEach(o => seen.add(o)); }
   for (const g of ADV_MENU) {
+    /* 985：容器节点（wrap / multi）**不进叶子下拉**——叶子行只有一个 field+value 槽，
+       换成 nested 会写出 {term:{nested:…}} 这种非法体；容器只能从「+ 高级」插入，
+       那条路径走 makeNodeByOp 会造出正确的 wrap/multi 节点。因此这里仍只认 OPS_META，
+       ADV_MENU 里新增的容器组只服务于 BoolGroupNode 的「+ 高级」菜单。 */
     const ops = g.ops.filter(o => OPS_META[o] && !seen.has(o));
     if (ops.length) { groups.push({ label: g.group, ops }); ops.forEach(o => seen.add(o)); }
   }
@@ -367,9 +388,14 @@ function editRuntimeScript() {
   const f = props.node.field;
   if (f) bus?.editRuntime?.(f);
 }
-/* 1056：text 字段 + 精确算子（term/terms/wildcard）+ mapping 有同名 .keyword 子域 → 一键改打子域。
+/* 1056：text 字段 + 词项级算子 + mapping 有同名 .keyword 子域 → 一键改打子域。
    分词字段上拿整串原值做精确匹配大概率查空；只给入口，不静默改字段/算子。 */
-const KW_EXACT_OPS = new Set(['term', 'terms', 'wildcard']);
+/* 1193：补 prefix / regexp / fuzzy / terms_set。它们和 term/terms/wildcard 一样
+   作用在**分词后的词项**上——text 字段里拿整串原值/整串前缀去配，大概率零命中，
+   而这几个算子恰恰被 opsForType('text') 推荐给用户（自己推荐、自己不给补救入口，
+   正是「查不到也不知道为什么」的来源）。match_phrase_prefix 不收：它本就是
+   全文算子（按词项序列匹配），改打 .keyword 反而改变语义。 */
+const KW_EXACT_OPS = new Set(['term', 'terms', 'wildcard', 'prefix', 'regexp', 'fuzzy', 'terms_set']);
 const kwTwin = computed(() => {
   const f = props.node.field;
   if (!f || f.endsWith('.keyword') || !KW_EXACT_OPS.has(props.node.op)) return '';
@@ -720,6 +746,11 @@ function onChipKey(e: KeyboardEvent) {
 }
 /* 多字段形态：fields ↔ 逗号分隔（主值 placeholder 按 mainKey 语义） */
 const mainKeyPlaceholder = computed(() => `主值（${OPS_META[props.node.op]?.mainKey || 'query'}）`);
+/* 1183：主值键缺席（见模板注释）。只有 fields/named/none 三形态会写 hasMain；
+   field 形态恒 undefined（它没有独立主值键这一说），因此天然不触发。 */
+const mainKeyName = computed(() => OPS_META[props.node.op]?.mainKey || 'query');
+const presentParamKeys = computed(() => Object.keys(props.node.params || {}));
+const mainKeyAbsent = computed(() => props.node.hasMain === false);
 const fieldsText = computed(() => (Array.isArray(props.node.fields) ? props.node.fields.join(',') : ''));
 function onFields(raw: string) {
   patch({ fields: splitMulti(raw) });
@@ -1013,6 +1044,10 @@ function endDrag() { delete (window as any)[DRAG_KEY]; fireDrag(false); }
   background: var(--warn-soft);
 }
 .cn-defrt-hint { font-size: var(--fs-2xs); color: var(--warn); }
+/* 1183：主值键缺席说明——中性信息档，不抢警告色（这不是错，是另一种合法写法） */
+.cn-mainabs-bar { flex-basis: 100%; display: flex; align-items: center; padding: var(--sp-0) var(--sp-2); border: 1px dashed var(--line); border-radius: var(--r-s); background: var(--bg1); }
+.cn-mainabs { font-size: var(--fs-2xs); color: var(--tx2); line-height: 1.5; }
+.cn-mainabs code { font-size: var(--fs-2xs); color: var(--info); }
 .cn-defrt { flex: none; height: 20px; padding: 0 var(--sp-1h); font-size: var(--fs-2xs); white-space: nowrap; color: var(--warn); background: transparent; border-color: var(--warn-line); }
 .cn-val { height: 30px; font-size: var(--fs-sm); padding: 3px var(--sp-2); flex: 1 1 120px; min-width: 0; }
 /* 1039：长查询串 textarea——覆盖 cn-val 定高，纵向伸缩，行顶对齐由 flex wrap 承接 */
@@ -1024,6 +1059,16 @@ function endDrag() { delete (window as any)[DRAG_KEY]; fireDrag(false); }
 .cn-act { width: 22px; height: 22px; padding: 0; justify-content: center; border-radius: var(--r-s); color: var(--tx2); }
 .cn-act:hover { color: var(--tx0); background: var(--bg3); }
 .cn-act.danger:hover { color: var(--err); background: var(--err-soft); }
+/* 1215：低频动作静息隐藏（display:none 不占宽，同 RT 列头 1151 的裁决——opacity:0 仍参与
+ flex 分配，看不见也吃宽度）。右键盘里这些动作一个不少（1147：复制…/结构… 二级齐全），
+ 所以隐藏不丢能力；行悬停或行内任一控件获得焦点即整组浮现，键盘用户 Tab 到该行同样可见。
+ 1440 实测：常驻 6 钮占行宽 31%、整行折成 76px；收成 2 枚后动作簇降到 44px。 */
+.cn-act-lo { display: none; }
+.cn:hover .cn-act-lo, .cn:focus-within .cn-act-lo { display: inline-flex; }
+/* 触屏无 hover：常驻显示，不能让人摸不到（与 ILM/收藏卡/快照行的 @media (hover:none) 同款兜底） */
+@media (hover: none) {
+  .cn-act-lo { display: inline-flex; }
+}
 /* 985：多字段形态的字段列表输入（与主值并排换行）+ 对象值子表容器（独占一行，dashed 弱边框与 GenericNode 同语言） */
 .cn-fields { flex: 1 1 150px; }
 .cn-objval { flex-basis: 100%; padding: var(--sp-2); border: 1px dashed var(--line); border-radius: var(--r-s); background: var(--bg1); }

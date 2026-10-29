@@ -56,6 +56,8 @@
           <!-- -D3：分组快捷键速查面板（? 开关）。-13：goto 登记表已迁至 utils/hotkeys.ts，
  面板由该表渲染，不再是需要手工同步的第二份数据 -->
           <HotkeyPanel :show="helpOpen" @close="helpOpen = false" />
+          <SceneResumeTip :show="!!resumeScene" :label="resumeScene?.label || ''"
+            @resume="onResumeScene" @close="resumeScene = null" />
         </n-dialog-provider>
       </n-message-provider>
     </n-notification-provider>
@@ -75,6 +77,7 @@ import TopBar from './components/TopBar.vue';
 import CmdPalette from './components/CmdPalette.vue';
 import ConfirmModal from './components/ConfirmModal.vue';
 import HotkeyPanel from './components/HotkeyPanel.vue';
+import SceneResumeTip from './components/SceneResumeTip.vue';
 import { confirmState, resolveConfirm } from './composables/confirm';
 import WelcomeWizard from './components/WelcomeWizard.vue';
 import LoginOverlay from './components/LoginOverlay.vue';
@@ -532,6 +535,15 @@ function bootstrapIdentity() {
   settleAuthChain();
 }
 
+/* 1184：「上次工作现场」提示的状态（SceneResumeTip 渲染在模板尾部）。此前是右下角 toast——
+   右下正是结果表末行与回顶钮所在，一进站先压住数据。现在落左下、常驻，
+   直到用户点「继续上次」或「关闭」。 */
+const resumeScene = ref<{ label: string; fullPath: string } | null>(null);
+function onResumeScene() {
+  const s = resumeScene.value;
+  resumeScene.value = null;
+  if (s) router.push(s.fullPath);
+}
 onMounted(() => {
   window.addEventListener('keydown', onKey);
   window.addEventListener('es-console:identity-changed', onIdentityChanged);
@@ -573,12 +585,7 @@ onMounted(() => {
   // （purgeIfUserChanged），探测前提示会把上一账号的现场弹给新账号（产线实报）。
   const tryRestoreScene = () => {
     const rst = restorable(entryHash, readLastRoute());
-    if (rst) {
-      store.notify('info', '上次工作现场：' + rst.name, {
-        duration: 10000,
-        action: { label: '继续上次', onClick: () => router.push(rst.fullPath) },
-      });
-    }
+    if (rst) resumeScene.value = { label: rst.name, fullPath: rst.fullPath };
   };
   if (auth.probed) tryRestoreScene();
   else {

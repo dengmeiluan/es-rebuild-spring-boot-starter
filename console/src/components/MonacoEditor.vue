@@ -947,14 +947,24 @@ function setLineMarkers(
   const model = editor?.getModel();
   if (!model) return;
   lineMarkerOwners.add(owner);
-  monaco.editor.setModelMarkers(model, owner, markers.map(m => ({
-    severity: severity === 'error' ? monaco.MarkerSeverity.Error : monaco.MarkerSeverity.Warning,
-    message: m.message,
-    startLineNumber: m.line,
-    startColumn: 1,
-    endLineNumber: m.line,
-    endColumn: typeof model.getLineMaxColumn === 'function' ? model.getLineMaxColumn(m.line) : 1,
-  })));
+  /* 1178：行号必须先钳到模型范围——marker 的行号是**远端**给的（ES 报错里的
+     `line 4:9`、或 lint 期间刚被删掉的那一行），越过 getLineCount() 时 Monaco
+     直接抛 `Illegal value for lineNumber`，异常冒到 Vue 渲染层 → 整页白屏
+     「页面渲染异常」。revealPosition 早就钳了，这里漏了。
+     取不到行数（精简/桩 model）时不钳，避免把合法行号压成 1。 */
+  const maxLine = typeof model.getLineCount === 'function' ? model.getLineCount() : 0;
+  monaco.editor.setModelMarkers(model, owner, markers.map(m => {
+    const raw = Math.trunc(m.line) || 1;
+    const ln = maxLine > 0 ? Math.max(1, Math.min(raw, maxLine)) : Math.max(1, raw);
+    return {
+      severity: severity === 'error' ? monaco.MarkerSeverity.Error : monaco.MarkerSeverity.Warning,
+      message: m.message,
+      startLineNumber: ln,
+      startColumn: 1,
+      endLineNumber: ln,
+      endColumn: typeof model.getLineMaxColumn === 'function' ? model.getLineMaxColumn(ln) : 1,
+    };
+  }));
 }
 
 /* 1109：行列直射定位（SQL 执行错误/静态 lint 行号跳转）——钳到模型合法范围，

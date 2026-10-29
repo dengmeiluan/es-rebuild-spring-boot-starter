@@ -31,18 +31,22 @@ const devtools = V('DevToolsView.vue');
 const painless = V('PainlessLabView.vue');
 const palette = C('CmdPalette.vue');
 
-describe('972 RestView 实际发起写请求处必须再判 canAdmin', () => {
+/* 1133 起守卫按**内层方法**分档（只读身份可发只读请求），表达式由 canAdmin 换成
+ canExecInner；本条锁的意图不变——执行体首部必须自带能力门，且先于在途置位与实际发车。 */
+const EXEC_GUARD = 'if (!canExecInner(';
+
+describe('972 RestView 实际发起写请求处必须再判执行体门', () => {
   it('doSend 首部守卫先于在途置位与 api.raw', () => {
     const body = fnBody(rest, 'doSend');
-    const guard = body.indexOf('if (!canAdmin.value)');
+    const guard = body.indexOf(EXEC_GUARD);
     expect(guard, 'doSend 缺执行体守卫').toBeGreaterThanOrEqual(0);
     expect(guard).toBeLessThan(body.indexOf('sending.value = true'));
     expect(guard).toBeLessThan(body.indexOf('await api.raw('));
   });
   it('send 的确认前守卫保留', () => {
     const body = fnBody(rest, 'send');
-    expect(body.indexOf('if (!canAdmin.value)')).toBeGreaterThanOrEqual(0);
-    expect(body.indexOf('if (!canAdmin.value)')).toBeLessThan(body.indexOf('await askConfirm'));
+    expect(body.indexOf(EXEC_GUARD)).toBeGreaterThanOrEqual(0);
+    expect(body.indexOf(EXEC_GUARD)).toBeLessThan(body.indexOf('await askConfirm'));
   });
 });
 
@@ -55,8 +59,8 @@ describe('972 DevTools 全局执行键随 KeepAlive 生命周期装卸', () => {
     expect(deactivated).toContain("window.removeEventListener('keydown', onGlobalRunKey);");
     expect(fnBody(devtools, 'onGlobalRunKey')).toContain('run()');
   });
-  it('执行内核 execSend 仍有 ADMIN/rest 写门', () => {
-    expect(fnBody(devtools, 'execSend').indexOf('if (!canAdmin.value)')).toBeGreaterThanOrEqual(0);
+  it('执行内核 execSend 仍有执行体能力门（1133：按内层方法分档）', () => {
+    expect(fnBody(devtools, 'execSend').indexOf(EXEC_GUARD)).toBeGreaterThanOrEqual(0);
   });
 });
 

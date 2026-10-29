@@ -281,6 +281,39 @@ describe('525 setLineMarkers 契约（MonacoEditor expose）', () => {
     expect(ms[1].endLineNumber).toBe(5);
   });
 
+  it('1178：行号越界必须先钳位——远端行号（ES 报错 line 4:9）落在 1 行文档上时不得抛错', async () => {
+    mountEditor({ modelValue: 'SELECT 1' });
+    /* 真 Monaco 越界即抛 `Illegal value for lineNumber`（异常冒到 Vue 渲染层=整页白屏），
+       这里用「越界就 throw」的桩把该契约钉死，而不是只比对数字。 */
+    (monacoStub as any).__setCurrentModel({
+      getLineCount: () => 1,
+      getLineMaxColumn: (line: number) => {
+        if (line < 1 || line > 1) throw new Error('Illegal value for lineNumber');
+        return 9;
+      },
+      findMatches: () => [],
+    });
+    let exposed: any = null;
+    const app = createApp({ render: () => h(MonacoEditor as any, { modelValue: 'SELECT 1', ref: (v: any) => { exposed = v; } }) });
+    apps.push(app);
+    app.use(createPinia());
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    app.mount(host);
+    await nextTick();
+
+    expect(() => exposed.setLineMarkers([{ line: 4, message: 'line 4:9: Unknown column [bond_cod]' }], 'es-sql-runerr', 'error'))
+      .not.toThrow();
+    const mc = markerCalls(); const ms = mc[mc.length - 1].markers;
+    expect(ms[0].startLineNumber, '越界行号钳到末行').toBe(1);
+    expect(ms[0].endLineNumber).toBe(1);
+    expect(ms[0].severity, 'severity 仍按调用方给 error').toBe(Sev.Error);
+
+    /* 合法行号不被打扰（钳位不得改写在界内的行） */
+    exposed.setLineMarkers([{ line: 1, message: 'ok' }], 'es-sql-lint');
+    const mc2 = markerCalls(); expect(mc2[mc2.length - 1].markers[0].startLineNumber).toBe(1);
+  });
+
   it('多 lint 源互不清（es-syn-lint 与 es-dsl-lint 并存）；卸载清空各 owner', async () => {
     mountEditor({ modelValue: '' });
     (monacoStub as any).__setCurrentModel({

@@ -134,6 +134,36 @@ describe('FieldSelect 换代：fieldSearch 共享内核', () => {
     expect(names(), '精确 name 最前，前缀/包含按字母序').toEqual(['name', 'nickname', 'user.name']);
   });
 
+  /* 1170：段感知排序——真挂载，锁的是「用户在下拉里看到的顺序」。
+     此前只比整串，code 下 encode_flag 与 bond_code 同档按字母序，前者反而更靠前。 */
+  it('段边界整段命中优先于段内子串：code → bond_code/pub_code 压过 encode_flag', async () => {
+    const { host } = mountSelect({
+      fields: ['bond_code', 'encode_flag', 'pub_code', 'publish_code_x', 'publisher.org_code'],
+    });
+    await focus(host);
+    await type(host, 'code');
+    const got = names();
+    const enc = got.indexOf('encode_flag');
+    expect(enc, 'encode_flag 必须仍在候选里（不删候选，只排序）').toBeGreaterThan(-1);
+    for (const w of ['bond_code', 'pub_code']) {
+      expect(got.indexOf(w), `${w} 必须排在 encode_flag 之前`).toBeLessThan(enc);
+    }
+    expect(got[0]).not.toBe('encode_flag');
+  });
+
+  it('不同词根不得抢先：publish → publish* 全族排在 publisher.* 之前', async () => {
+    const { host } = mountSelect({
+      fields: ['publisher.org_name', 'publisher.org_code', 'publish_date', 'publishTime'],
+    });
+    await focus(host);
+    await type(host, 'publish');
+    const got = names();
+    const firstPublisher = Math.min(got.indexOf('publisher.org_name'), got.indexOf('publisher.org_code'));
+    for (const w of ['publish_date', 'publishTime']) {
+      expect(got.indexOf(w), `${w} 必须排在 publisher.* 之前`).toBeLessThan(firstPublisher);
+    }
+  });
+
   it('类型分组+组头+data-t 三色徽标（组序=字母序首现序）', async () => {
     const { host } = mountSelect({
       fields: ['created', 'status', 'user', 'user.name'],

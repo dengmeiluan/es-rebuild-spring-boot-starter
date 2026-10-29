@@ -298,6 +298,8 @@
           use-as-condition
           table-bar
           searchable
+          view-seg
+          view-pref-key="es-console.pref.sqlResultView"
           export-name="sql"
           export-ndjson
           :export-note="exportCaveat(!!cursor, resultStale)"

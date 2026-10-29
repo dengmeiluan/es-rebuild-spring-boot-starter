@@ -877,7 +877,9 @@ export function lintClause(obj: unknown, ctx?: LintCtx): Finding[] {
 }
 
 /* ═══ W-A：字段类型错配规则（需要 mapping 字段表） ═══
- ① text-term term/terms/wildcard 打在 text 字段且无 .keyword 后缀 → warning（terms 并入）
+ ① text-term term/terms/wildcard/prefix/regexp 打在 text 字段且无 .keyword 后缀 → warning
+ （terms 并入；1193 补 prefix/regexp——与构建器「打 .keyword」入口同口径。fuzzy/terms_set
+ 不判：模糊匹配与多值命中数在 text 上未必零命中，宁缺勿错）
  ② range-type range 值与字段类型错配（numeric 字段传非数值串）→ warning
  ③ unknown-field 字段名不在 mapping → hint 附编辑距离最近字段（≤2 才提示）
  ④ keyword-range range 打在 keyword 字段 → info「keyword 的 range 按字典序比较」
@@ -932,11 +934,12 @@ function lintFieldUsage(
   /* ① term/terms/wildcard 打 text（无 .keyword 后缀）——分词后倒排词与原值不一致，大概率查空。
  补 terms：值是数组、判型口径=数组元素存在即报（元素落分词词项与 term 同罪），
  字段类型判定与元素值形态无关（数字元素同样匹配不上分词词项）。 */
-  if ((clause === 'term' || clause === 'terms' || clause === 'wildcard') && type === 'text' && !field.endsWith('.keyword')) {
+  if ((clause === 'term' || clause === 'terms' || clause === 'wildcard'
+       || clause === 'prefix' || clause === 'regexp') && type === 'text' && !field.endsWith('.keyword')) {
     out.push({
       rule: 'text-term', severity: 'warning',
       message: `text 字段 ${clause} 不匹配分词：倒排里是分词后的词项，整串原值大概率查不到`,
-      suggestion: `改用 match，或打 ${field}.keyword 子字段做精确匹配`,
+      suggestion: `改用 match，或打 ${field}.keyword 子字段做整串匹配`,
       path, anchor: field, nth,
     });
   }

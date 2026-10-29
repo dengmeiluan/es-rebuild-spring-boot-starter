@@ -216,14 +216,17 @@ describe('权限隐藏第二波（，16 视图写按钮收尾）', () => {
 /* ═══ 第三波：写门收口——10 视图残余写/危险按钮按角色隐藏（源码锁） ═══ */
 describe('第三波：写门收口（10 视图写按钮 VIEWER 不可见）', () => {
   const V = (f: string) => readFileSync(join(__dirname, '../views', f), 'utf-8');
-  it('RestView：发送/失败重试=raw 透传 admin 档（canAdmin 定义）', () => {
+  it('RestView：发送/失败重试按内层方法分读写档（1133；写档仍走 canPassthroughWrite）', () => {
     const v = V('RestView.vue');
-    expect(v).toContain("const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/raw', store.target));");
-    /* 988：发送钮叠非 ADMIN 数据面预暴露门（DevTools 双门同口径），钮面 disabled 与 doSend 体首行同源 */
-    expect(v).toContain('<button v-if="canAdmin" class="btn primary sm" :disabled="sending || !path.trim() || !currentSendable"');
+    expect(v).toContain("const canAdmin = computed(() => auth.canPassthroughWrite(RAW_EP, store.target));");
+    expect(v).toContain("const canSendAny = computed(() => auth.canPassthroughRead(RAW_EP, store.target));");
+    expect(v).toContain("const canExecInner = (m: string, p: string) => auth.canExecutePassthrough(m, p, RAW_EP, store.target);");
+    /* 988：发送钮叠非 ADMIN 数据面预暴露门（DevTools 双门同口径），钮面 disabled 与 doSend 体首行同源
+       1133：只读身份也可发只读请求，钮的可见条件改为读档 canSendAny */
+    expect(v).toContain('<button v-if="canSendAny" class="btn primary sm" :disabled="sending || !path.trim() || !currentSendable"');
     /* 1004：门带 body（根级检索的 PIT 豁免要读 pit.id），提示分档（根级检索缺索引单列） */
     expect(v).toContain('if (!requestInScope(method.value, path.value, body.value)) { store.notify(\'warning\', scopeDenyHint.value); return; }');
-    expect(v).toContain('v-if="respErr && canAdmin" class="btn sm" :disabled="sending" @click="send"');
+    expect(v).toContain('v-if="respErr && canSendAny" class="btn sm" :disabled="sending" @click="send"');
   });
   it('BrowserView：新建索引/ForceMerge 行钮/删除索引行钮=ops', () => {
     const v = V('BrowserView.vue');
@@ -289,9 +292,12 @@ describe('第三波：写门收口（10 视图写按钮 VIEWER 不可见）', ()
     expect(v).toContain('<button v-if="canOps" class="btn pri" @click="submit" :disabled="running">');
     expect(v).toContain('v-if="result.error && canOps" class="btn ghost sm" :disabled="running" @click="submit"');
   });
-  it('RestView：send() 执行体收口 canAdmin（@enter 裸键盘与重试钮同汇入 send，点位隐藏挡不住键盘路径，守卫单源在执行体）', () => {
+  it('RestView：send()/doSend() 执行体按内层方法收口（@enter 裸键盘与重试钮同汇入，守卫单源在执行体）', () => {
     const v = V('RestView.vue');
-    expect(v).toContain("if (!canAdmin.value) { store.notify('warning', 'raw 透传需要 ADMIN 或 REST 页写权限'); return; }");
+    /* 1133：守卫条件改为内层方法分档，但「执行体首行即早退」的强度不变 */
+    const hits = v.split('if (!canExecInner(method.value, path.value)) {').length - 1;
+    expect(hits, 'send 与 doSend 都必须有该守卫').toBe(2);
+    expect(v).toContain("'当前身份对该连接只有只读权限：写请求需要「REST 直连」写权限'");
   });
   it('MappingDesignerView：添加字段=ops（mapping-put 是 rank3 写端点，令直接补刀+584 页面感知）', () => {
     const v = V('MappingDesignerView.vue');

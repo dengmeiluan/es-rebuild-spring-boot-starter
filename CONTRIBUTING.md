@@ -20,11 +20,33 @@ mvn clean test
 
 ## 提交前必须全绿
 
+一条命令并行跑完全部门禁（构建 → 后端测试 / 前端分片 / typecheck / 权限扫描）：
+
 ```bash
-mvn clean test -Dconsole.build.skip=true   # 后端全量（需先有 console 构建产物）
-cd console && npm run typecheck && npm test  # 前端：类型零错 + 全量用例
-cd console && npm run build                 # 前端产物（package 会校验其在场）
+node scripts/verify.mjs               # 本地全量（后端 fork 并行 + 前端分片并行）
+node scripts/verify.mjs --standalone  # 发版前追加 standalone 构建与冒烟
 ```
+
+也可以按需单跑：
+
+```bash
+cd console && npm test             # 前端全量（自动分片；失败文件自动串行复验）
+cd console && npm run test:serial  # 前端串行基准（排障/确认并发伪失败）
+mvn clean test -Dconsole.build.skip=true  # 后端全量（默认 4 fork；低核/CI 用 -DforkCount=N 覆盖）
+```
+
+> 并发不是无脑加线程：前端仍保持 `fileParallelism:false`（242 批的稳定性决定），
+> 并发度来自进程级分片；分片内 20s 超时只吸收并发慢时钟，失败文件会在全部分片退出后
+> 用原始 5s 串行基准复验，复验通过会明确标注，不会静默放行。
+> 后端用 Surefire `forkCount`（独立 JVM）而非同 JVM 多线程，避免测试静态状态串扰。
+> 实测（28 核）：前端串行 15–17min → 8 分片 5.2min；后端 clean 串行 74s → 4 fork 30s；
+> 统一门禁（构建 + typecheck + 权限扫描 + 后端 + 前端）5.9min。
+> 分片数用 `VITEST_SHARDS` 或 `--shards=N` 覆盖；`--serial` 可随时退回串行基准。
+> CI 前端为 8 路 matrix，每个作业只跑一个分片（`--only-shard=i/8`）；本地 `npm test`
+> 仍是一个进程编排 8 分片。矩阵是 CI 墙钟优化，不改变测试语义。
+> 共享工作区里若还有并行 vite/dev server、视觉测试或 chrome-headless 在跑，全量会被
+> 外部进程拖慢，并可能让挂载用例触发慢时钟超时；跑本地门禁前先停掉这些进程，
+> 或直接以 CI 矩阵结果为准。
 
 > 后端测试里有若干**源码契约锁**（readFileSync 读源码/文档断言形态），
 > 改包名、改文件路径、改文档结构时它们会红——红即提醒你随迁锁面，不是环境问题。

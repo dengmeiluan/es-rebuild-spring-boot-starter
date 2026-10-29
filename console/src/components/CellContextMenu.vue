@@ -7,7 +7,7 @@
  渲染成父行（右箭头），悬停即开二级；二级同样做视口翻转。键盘：→/Enter 开二级，
  ←/Esc 先关二级再关整菜单（ARIA menu 惯例）。 -->
   <teleport to="body">
-    <div class="ccm-mask" role="presentation" @click="emit('close')" @contextmenu.prevent="emit('close')" @keydown.esc="emit('close')" tabindex="-1">
+    <div ref="maskEl" class="ccm-mask" role="presentation" @click="emit('close')" @contextmenu.prevent="emit('close')" @keydown.esc="emit('close')" tabindex="-1">
       <div ref="menuEl" class="ccm" role="menu" :aria-label="title || '操作菜单'" :style="{ left: pos.x + 'px', top: pos.y + 'px' }"
         @click.stop @contextmenu.prevent @keydown.esc.stop="onEsc" @keydown="onMenuKey" tabindex="-1">
         <div v-if="title" class="ccm-hd mono">{{ title }}</div>
@@ -51,6 +51,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { ChevronRight } from 'lucide-vue-next';
+import zIndexManager from 'vdirs/es/zindexable/z-index-manager';
 import { fitPopupPos } from '../utils/popFit';
 
 export interface CcmItem {
@@ -98,6 +99,18 @@ watch(() => [props.x, props.y], () => { sub.value = null; void adjust(); });
 
 /* 首帧落位 + 复用时跟点（immediate 版已退役：immediate 回调早于下方 sub 声明） */
 onMounted(() => { void adjust(); });
+
+/* 层序动态跟随（1208）：静态档 --z-ctx 1200 压不过 naive 弹层——弹层从 2000 起自增，
+   而右键菜单常从弹层内触发（单元格/JSON 详情、连接管理、对比弹窗都在 n-modal 里），
+   实测弹窗容器 z=2000 而菜单 z=1201、elementFromPoint 命中的是弹窗内容，整张菜单不可见。
+   与 ModalShell 同解：确有已注册层时把 mask 注册进 naive 同款计数器（后开者胜，面板/二级在
+   mask 内部按 +1/+2 相对定位），卸载反注册；无层时保持 CSS 的 --z-ctx，页面内右键层序不变。 */
+const maskEl = ref<HTMLElement>();
+onMounted(() => {
+  const el = maskEl.value;
+  if (el && zIndexManager.elementCount > 0) zIndexManager.ensureZIndex(el);
+});
+onBeforeUnmount(() => { if (maskEl.value) zIndexManager.unregister(maskEl.value); });
 
 /* ═══ 1142：二级菜单 ═══ */
 const sub = ref<{ key: string; label: string; items: CcmItem[]; anchorTop: number; anchorRight: number } | null>(null);

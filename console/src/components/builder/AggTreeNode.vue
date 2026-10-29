@@ -151,8 +151,22 @@ function onBodyParams(v: Record<string, unknown> | unknown[]) {
 /* top 常见聚合的 body.field 是字段键——命中时 GenericParams 该行渲染 FieldSelect
  （rank/分组/类型徽标/mark 全套）。未知聚合名/其余聚合（top_hits/filters/nested…）body 无
  直接字段键语义，传空数组回落裸键值表（零降级）。 */
-const FIELD_BODY_AGGS = new Set(['terms', 'histogram', 'date_histogram', 'range', 'date_range', 'avg', 'max', 'min', 'sum', 'cardinality', 'value_count', 'percentiles', 'percentile_ranks', 'extended_stats', 'significant_terms', 'significant_text', 'rare_terms', 'missing', 'geo_bounds', 'geo_centroid', 'weighted_avg', 'median_absolute_deviation', 'boxplot', 'string_stats', 'auto_date_histogram', 'ip_range', 'variable_width_histogram', 'geohash_grid', 'geotile_grid', 'geohex_grid', 'geo_distance', 'rate']);
-const aggFieldKeys = computed(() => (FIELD_BODY_AGGS.has(props.node.op) ? ['field'] : []));
+/* 1201：stats 官方体是 {stats:{field}}——与 avg/min/max 同族却漏登记，
+   新建后 body 里没有 field 行，用户得手打 "field" 键才能跑（与 1200 的"有渲染无入口"同族）。
+   matrix_stats 的字段是 fields 数组（非 field），top_metrics 用 metrics 数组 + sort，
+   两者都不该塞进这里（塞了会给出一个 ES 只认单值的假入口），走自由键值表。 */
+const FIELD_BODY_AGGS = new Set(['terms', 'histogram', 'date_histogram', 'range', 'date_range', 'avg', 'max', 'min', 'sum', 'stats', 'cardinality', 'value_count', 'percentiles', 'percentile_ranks', 'extended_stats', 'significant_terms', 'significant_text', 'rare_terms', 'missing', 'geo_bounds', 'geo_centroid', 'weighted_avg', 'median_absolute_deviation', 'boxplot', 'string_stats', 'auto_date_histogram', 'ip_range', 'variable_width_histogram', 'geohash_grid', 'geotile_grid', 'geohex_grid', 'geo_distance', 'rate']);
+/* 1222：字段键不都叫 `field`——nested / reverse_nested 的字段键是 `path`（嵌套文档路径）。
+   实测（真浏览器，`nested.path` + `reverse_nested.path` 各一）：这两个算子的 path 行此前都是
+   **裸文本输入**，而同屏 terms 的 field 行有字段选择器（rank/分组/类型徽标/mark 全套）。
+   给 path 也接上 FieldSelect = 让使用者从 mapping 里挑嵌套路径，而不是凭记忆手打
+   （打错一个字母 ES 就找不到 nested 文档）。这是"同一件事两种待遇"的一致性缺口，不是新能力。
+   仅这两个算子——其余聚合的字段键仍叫 field，保持原表不动。 */
+const PATH_BODY_AGGS = new Set(['nested', 'reverse_nested']);
+const aggFieldKeys = computed(() => {
+  if (PATH_BODY_AGGS.has(props.node.op)) return ['path'];
+  return FIELD_BODY_AGGS.has(props.node.op) ? ['field'] : [];
+});
 
 /* 【W3b】聚合 field 行的类型置顶：候选分组按聚合语义排前（不改候选集）——
  date_histogram 打时间字段、terms 分桶常打 keyword（数值桶也常见，数值族次之）；
@@ -160,7 +174,7 @@ const aggFieldKeys = computed(() => (FIELD_BODY_AGGS.has(props.node.op) ? ['fiel
  会被 ES 拒或产出无意义桶）→ 数值族置顶；range 分桶 date+数值族皆常见 → date 置顶数值族次之；
  其余聚合无类型倾向，空数组 = GenericParams 归一 null 纯 rank 平铺（现状零增量） */
 const NUMERIC_TYPES = ['long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float'];
-const NUMERIC_AGGS = new Set(['avg', 'min', 'max', 'sum', 'cardinality', 'histogram', 'variable_width_histogram', 'rate']);
+const NUMERIC_AGGS = new Set(['avg', 'min', 'max', 'sum', 'stats', 'cardinality', 'histogram', 'variable_width_histogram', 'rate']);
 const GEO_AGGS = new Set(['geohash_grid', 'geotile_grid', 'geohex_grid', 'geo_distance']);
 const aggTypePriority = computed<string[]>(() => {
   if (props.node.op === 'date_histogram' || props.node.op === 'auto_date_histogram') return ['date'];

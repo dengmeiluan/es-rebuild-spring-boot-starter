@@ -49,24 +49,32 @@ function firstStmt(body: string): string {
 
 function expectFirstGuard(src: string, name: string, cond: string, ret: 'return;' | 'return false;') {
   const head = firstStmt(fnBody(src, name));
-  expect(head.startsWith(`if (!${cond}.value) { store.notify(`), `${name} 首行守卫`).toBe(true);
-  const guard = head.slice(0, head.indexOf('\n') + 1);
+  expect(head.startsWith(`if (!${cond}`), `${name} 首行守卫`).toBe(true);
+  /* 守卫体可能是多行（条件里带 canExecInner 后换行），取整个 if 块判早退 */
+  const guard = head.slice(0, head.indexOf('}') + 1);
   expect(guard, `${name} 守卫必须早退（${ret}）`).toContain(ret);
 }
 
 describe('963 DevTools：raw 透传 ADMIN 门（按钮+run/runSmart/execSend 三执行体）', () => {
-  it('canAdmin 定义=raw 端点', () => {
-    expect(devtools).toContain("const canAdmin = computed(() => auth.canEndpoint('admin', 'POST', '/internal/es/index/cluster/devtools/execute', store.target));");
+  it('写档能力按透传端点判定（1133 起读写分档，写档仍是 canPassthroughWrite）', () => {
+    expect(devtools).toContain("const canAdmin = computed(() => auth.canPassthroughWrite(");
+    expect(devtools).toContain("'/internal/es/index/cluster/devtools/execute'");
+    /* 读档能力同样必须存在——只读身份否则连只读请求都执行不了 */
+    expect(devtools).toContain("const canExecRead = computed(() => auth.canPassthroughRead(");
+    expect(devtools).toContain('const canExecInner = (method: string, path: string) => auth.canExecutePassthrough(');
   });
   it('run/runSmart 首行守卫先于 busy 置位', () => {
-    expectFirstGuard(devtools, 'run', 'canAdmin', 'return;');
-    expectFirstGuard(devtools, 'runSmart', 'canAdmin', 'return;');
+    /* 1133：守卫按内层方法分档，但「首句即早退」的强度不变 */
+    expectFirstGuard(devtools, 'run', 'cur.value || !canExecInner(cur.value.method, cur.value.path)', 'return;');
+    expectFirstGuard(devtools, 'runSmart', 'cur.value || !canExecInner(cur.value.method, cur.value.path)', 'return;');
     const run = fnBody(devtools, 'run');
-    expect(run.indexOf("if (!canAdmin.value)"), 'run 守卫必须在 t.busy = true 之前').toBeLessThan(run.indexOf('t.busy = true'));
+    expect(run.indexOf('if (!cur.value || !canExecInner('), 'run 守卫必须在 t.busy = true 之前')
+      .toBeLessThan(run.indexOf('t.busy = true'));
   });
   it('execSend 内核单点守卫返回 false（覆盖全量/段/预填/历史）', () => {
-    expectFirstGuard(devtools, 'execSend', 'canAdmin', 'return false;');
-    expect(fnBody(devtools, 'execSend').indexOf("if (!canAdmin.value)")).toBeLessThan(fnBody(devtools, 'execSend').indexOf('const t0 = performance.now();'));
+    expectFirstGuard(devtools, 'execSend', 'canExecInner(t.method, t.path)', 'return false;');
+    expect(fnBody(devtools, 'execSend').indexOf('if (!canExecInner(t.method, t.path))'))
+      .toBeLessThan(fnBody(devtools, 'execSend').indexOf('const t0 = performance.now();'));
   });
 });
 

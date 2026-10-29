@@ -30,7 +30,9 @@ describe('Lucene JSON 视图内查找（374 批，304 遗留收尾）', () => {
     expect(v).toMatch(/\{\{ jsonHits\.length \}\}\/\{\{ hits\.length \}\} 条/);
     expect(v).toMatch(/<button v-if="jsonKw" class="btn ghost xs" aria-label="清除 JSON 视图查找" @click="jsonKw = ''">✕<\/button>/);
     /* 五百二十一批同步更新：命中行加底色类 + aria-current（_id 套 MarkText），tr 键声明不变 */
-    expect(v).toMatch(/<tr v-for="h in jsonHits" :key="h\._id" :class="\{ 'lc-hit-row': !!jsonMarkKw \}" :aria-current="jsonMarkKw \? 'true' : undefined">/);
+    /* 1207：行上多了 @contextmenu（命中行右键），锚点跟着放宽——锁的是
+       「这一行确实由 jsonHits 驱动」，不是没别的属性 */
+    expect(v).toMatch(/<tr v-for="h in jsonHits" :key="h\._id" :class="\{ 'lc-hit-row': !!jsonMarkKw \}" :aria-current="jsonMarkKw \? 'true' : undefined"/);
   });
 
   it('查找条仅 JSON 视图渲染（表格视图查找归 QRT/HitNav，不双份）', () => {

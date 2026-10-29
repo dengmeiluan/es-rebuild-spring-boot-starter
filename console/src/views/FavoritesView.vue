@@ -87,11 +87,17 @@
           </details>
         </div>
         <div class="fv-card-r">
+          <!-- 1197：主行动「打开」常驻；「复制」「删除」静息隐藏——
+               这两个动作早已在卡片右键的二级菜单里（复制… / 删除…），
+               常驻在每张卡上既是重复入口，也和「打开」抢注意力（实报的头部平铺同族）。
+               悬停 / 键盘聚焦 / 已勾选（触屏无 hover 的替代通道）时显现。 -->
           <button class="btn pri sm" @click="replay(it)">
             <Play :size="12" /> 打开
           </button>
-          <button class="btn ghost sm" @click="copyPayload(it)"><Copy :size="12" /> 复制</button>
-          <button aria-label="删除这条收藏（仅本地数据）" class="btn danger sm" title="删除这条收藏（仅本地数据）" @click="del(it.id)"><Trash2 :size="12" /></button>
+          <span class="fv-card-ops">
+            <button class="btn ghost sm" @click="copyPayload(it)"><Copy :size="12" /> 复制</button>
+            <button aria-label="删除这条收藏（仅本地数据）" class="btn danger sm" title="删除这条收藏（仅本地数据）" @click="del(it.id)"><Trash2 :size="12" /></button>
+          </span>
         </div>
       </div>
     </div>
@@ -458,7 +464,12 @@ async function clearPrefs() {
 .fv-card-body { margin-top: var(--sp-2); font-size: var(--fs-xs); }
 .fv-card-body summary { cursor: pointer; color: var(--text-muted); }
 .fv-card-body pre { background: var(--code-bg); padding: var(--sp-2) var(--sp-3); border-radius: 5px; overflow-x: auto; margin-top: var(--sp-2); font-size: var(--fs-xs); }
-.fv-card-r { display: flex; gap: var(--sp-2); flex-shrink: 0; }
+.fv-card-r { display: flex; gap: var(--sp-2); flex-shrink: 0; align-items: center; }
+/* 1197：与「打开」并列的次级动作（复制/删除）静息隐藏——它们已在右键二级菜单里，
+   常驻只是重复入口。悬停 / 键盘聚焦 / 卡片被勾选时显现；触屏无 hover 走勾选与右键两条通道。 */
+.fv-card-ops { display: inline-flex; gap: var(--sp-2); opacity: 0; transition: opacity var(--tr); }
+.fv-card:hover .fv-card-ops, .fv-card:focus-within .fv-card-ops, .fv-card.fv-sel .fv-card-ops { opacity: 1; }
+@media (hover: none) { .fv-card-ops { opacity: 1; } }
 /* 当前命中卡片：柔底 + 左侧强调条 + 焦点环（.hit-cur 由 useHitScroll 运行时挂/摘） */
 .fv-card.hit-cur { background: var(--ac-soft) !important; border-color: var(--ac-line); box-shadow: inset 3px 0 0 var(--ac-hi), var(--focus-ring); }
 .btn.danger { background: var(--err-soft); color: var(--err); border-color: var(--err-line); }

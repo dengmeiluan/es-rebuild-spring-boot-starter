@@ -202,6 +202,9 @@ mapping <span class="dim">字段映射</span>
       </template>
     </div>
 
+    <CellContextMenu v-if="rowMenu" :x="rowMenu.x" :y="rowMenu.y"
+      :title="rowMenu.title" :items="rowMenuItems" @close="rowMenu = null" />
+
     <!-- ② 审编 settings/mapping -->
     <div v-if="step === 1" class="ar-sec">
       <!-- 粘贴导入入口——手里一串原始 JSON 直接识别拆填，不再手动分拆两侧 -->
@@ -356,7 +359,8 @@ mapping <span class="dim">字段映射</span>
  added/removed 对使用者天然歧义，必须给人话标签。
  -9 / I-4：标签与提示已提成纯函数并由断言看守，模板只做调用。 -->
             <!-- 真差异区始终展开。 -->
-            <tr v-for="row in cfgParts.real" :key="'r-' + row.path" class="cd-real" :class="'cd-' + row.kind">
+            <tr v-for="row in cfgParts.real" :key="'r-' + row.path" class="cd-real" :class="'cd-' + row.kind"
+              @contextmenu.prevent="openDiffMenu($event, row)">
               <td class="cd-path mono">{{ row.path }}</td>
               <td class="cd-kind">{{ kindLabel(row.kind) }}</td>
               <td class="cd-l mono">{{ fmtVal(row.expected) }}</td>
@@ -531,7 +535,7 @@ mapping <span class="dim">字段映射</span>
         <table class="tbl ar-rounds" v-if="job.rounds?.length">
           <thead><tr><th>轮次</th><th>阶段</th><th>总计</th><th>已建</th><th>已更新</th><th>冲突跳过</th></tr></thead>
           <tbody>
-            <tr v-for="r in job.rounds" :key="r.round + r.phase">
+            <tr v-for="r in job.rounds" :key="r.round + r.phase" @contextmenu.prevent="openRoundMenu($event, r)">
               <td>{{ r.round }}</td><td><StatusPill tone="b" :label="roundZh(r.phase) || r.phase" :en="roundZh(r.phase) ? r.phase : undefined" /></td><!-- ：r.phase 裸枚举 → roundZh 中文接线（Lead 收口实地核 addRound 四值 FULL/CATCHUP/CATCHUP_BLOCKED/FINAL 全收录）。：轮次阶段私造胶囊改用 StatusPill b 档——未收录新枚举回退原英文（label 兜底），en 英文小字归组件 sp-en -->
               <td>{{ r.total != null ? fmtNum(r.total) : '-' }}</td><td>{{ r.created != null ? fmtNum(r.created) : '-' }}</td><td>{{ r.updated != null ? fmtNum(r.updated) : '-' }}</td><td>{{ r.versionConflicts != null ? fmtNum(r.versionConflicts) : '-' }}</td>
             </tr>
@@ -700,10 +704,11 @@ import {
   Hammer, Search, ChevronRight, ChevronLeft, Play, Loader2,
   CircleStop, RotateCcw, History, RefreshCw, Eye, ShieldCheck, ShieldAlert,
   ClipboardPaste, TriangleAlert, ExternalLink, ClipboardCopy, ClipboardList,
-  Terminal, UnfoldVertical, Copy, Download,
+  Terminal, UnfoldVertical, Copy, Download, Info, Braces,
 } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, EP, ioRecorder, type RawIoRec } from '../api'; /* ：EP 供期望配置页外链（DesiredStateController 同前缀）；：ioRecorder 原始 IO 快查 */
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import WorkbenchLayout, { type WorkbenchPaneSpec } from '../components/WorkbenchLayout.vue';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
@@ -1441,6 +1446,54 @@ function fmtVal(v: unknown): string {
   if (v === undefined) return '—';
   return typeof v === 'string' ? v : JSON.stringify(v);
 }
+
+/* ═══ 两张只读表的行右键 ═══
+ 期望/实际差异表与轮次表此前只能看不能取——比对出「哪个字段类型不对」之后，
+ 要拿路径/值去改注解、贴工单或回给业务方，只能手拖选中再复制。
+ 一级只留最常用的「复制路径/复制行」，其余收进「复制…」二级（与全站右键同规矩）。
+ 两张表共用一个菜单状态：同一时刻只会有一个菜单开着。 */
+const rowMenu = ref<{ x: number; y: number; title: string; kind: 'diff' | 'round'; row: any } | null>(null);
+function openDiffMenu(e: MouseEvent, row: ConfigDiffRow) {
+  rowMenu.value = { x: e.clientX, y: e.clientY, title: '差异 · ' + row.path, kind: 'diff', row };
+}
+function openRoundMenu(e: MouseEvent, r: any) {
+  rowMenu.value = { x: e.clientX, y: e.clientY, title: '第 ' + r.round + ' 轮 · ' + (roundZh(r.phase) || r.phase), kind: 'round', row: r };
+}
+async function copyWithToast(text: string, okMsg: string) {
+  const ok = await copyText(text);
+  store.notify(ok ? 'success' : 'error', ok ? okMsg : '复制失败');
+}
+const rowMenuItems = computed<CcmItem[]>(() => {
+  const m = rowMenu.value; if (!m) return [];
+  if (m.kind === 'diff') {
+    const row = m.row as ConfigDiffRow;
+    const line = [row.path, kindLabel(row.kind), fmtVal(row.expected), fmtVal(row.actual)].join('\t');
+    return [
+      { key: 'diff-copy-path', label: '复制路径', icon: Copy, run: () => copyWithToast(row.path, '已复制路径：' + row.path) },
+      { key: 'diff-copy-row', label: '复制整行（TSV，可直接贴表格）', icon: ClipboardList, run: () => copyWithToast(line, '已复制差异行') },
+      {
+        key: 'diff-group', label: '复制…', icon: Copy, sep: true, children: [
+          { key: 'diff-copy-expected', label: '复制期望值 JSON', icon: Braces, run: () => copyWithToast(JSON.stringify(row.expected ?? null, null, 2), '已复制期望值') },
+          { key: 'diff-copy-actual', label: '复制实际值 JSON', icon: Braces, run: () => copyWithToast(JSON.stringify(row.actual ?? null, null, 2), '已复制实际值') },
+          ...(row.reason ? [{ key: 'diff-copy-reason', label: '复制忽略原因', icon: Info, run: () => copyWithToast(String(row.reason), '已复制原因') }] : []),
+        ],
+      },
+    ];
+  }
+  const r = m.row as any;
+  const num = (v: unknown) => (v != null ? fmtNum(v) : '-');
+  const line = [r.round, roundZh(r.phase) || r.phase, num(r.total), num(r.created), num(r.updated), num(r.versionConflicts)].join('\t');
+  return [
+    { key: 'round-copy-row', label: `复制第 ${r.round} 轮数据（TSV）`, icon: ClipboardList, run: () => copyWithToast(line, `已复制第 ${r.round} 轮数据`) },
+    { key: 'round-copy-json', label: `复制第 ${r.round} 轮 JSON`, icon: Braces, run: () => copyWithToast(JSON.stringify(r, null, 2), `已复制第 ${r.round} 轮 JSON`) },
+    {
+      key: 'round-group', label: '更多…', icon: Copy, sep: true, children: [
+        { key: 'round-copy-phase', label: '复制阶段名（中文 + 英文原名）', icon: Info, run: () => copyWithToast(`${roundZh(r.phase) || r.phase}（${r.phase}）`, '已复制阶段名') },
+        { key: 'round-copy-conflicts', label: '复制冲突数（版本冲突）', icon: ClipboardCopy, run: () => copyWithToast(String(r.versionConflicts ?? 0), '已复制冲突数') },
+      ],
+    },
+  ];
+});
 
 /* -9 / C-1：没有期望就没有「期望 vs 实际」这回事。
  原实现在未粘贴时用 {} 当期望，与 ES 读回的整棵 mapping 比，产出几十上百条

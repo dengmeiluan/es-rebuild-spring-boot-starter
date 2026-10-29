@@ -37,7 +37,9 @@ jobs:
         working-directory: console
         run: npm run build
       - name: Backend tests (default path, npm inside maven on POSIX)
-        run: mvn -B clean test
+        # 1710 批：Surefire 2 fork 并行（每 fork 独立 JVM，规避测试间静态状态串扰）；
+        # 2 核 runner 上 2 fork 已能覆盖编译后的主要等待，继续加 fork 收益递减
+        run: mvn -B clean test -DforkCount=2
       # surefire 失败明细以 ::error:: 注解上报（镜像 frontend 作业的 vitest 注解技法）：
       # 作业日志需 admin 权限，注解走公开 check-runs API 即可读取，定位不必升权
       - name: Report surefire failures as annotations
@@ -65,8 +67,38 @@ jobs:
           mvn -B install -DskipTests
           cd standalone && mvn -B test
 
-  frontend:
+  frontend-typecheck:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: console
+    env:
+      TZ: Asia/Shanghai
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: console/package-lock.json
+      - name: Install console deps
+        run: |
+          if ! npm ci; then
+            echo "### npm ci failed — falling back to npm install (self-heal)" >> "$GITHUB_STEP_SUMMARY"
+            npm install --no-audit --no-fund --loglevel=error || exit 1
+          fi
+      - name: Typecheck
+        run: npm run typecheck
+
+  # 前端全量按 8 路矩阵拆到独立 runner：每作业只跑一个分片，作业内仍串行 +
+  # 失败文件串行复验。2 核 runner 上 8 路是墙钟甜点（更多路只增加安装/构建重复），
+  # 私有仓想省 CI 分钟可把 matrix 改成 4 路并同步 --only-shard 的分母。
+  frontend-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     defaults:
       run:
         working-directory: console
@@ -81,24 +113,23 @@ jobs:
           node-version: "20"
           cache: npm
           cache-dependency-path: console/package-lock.json
-      - run: |
+      - name: Install console deps
+        run: |
           if ! npm ci; then
             echo "### npm ci failed — falling back to npm install (self-heal)" >> "$GITHUB_STEP_SUMMARY"
             npm install --no-audit --no-fund --loglevel=error || exit 1
           fi
-      # 产物体积守卫（bundleBudget436）扫描 vite 产物目录——测试前必须先 build
+      # 产物体积守卫（bundleBudget436）扫描 vite 产物目录——每个分片作业独立 build
       - name: Build console
         run: npm run build
-      - name: Typecheck
-        run: npm run typecheck
-      - name: Unit tests
-        run: |
-          set -o pipefail
-          npx vitest run --reporter=json --outputFile=/tmp/vitest.json > /tmp/vitest.log 2>&1 || true
-          node -e "
-            const r=require('/tmp/vitest.json');
-            const bad=[];
-            for(const f of r.testResults||[]) for(const t of f.assertionResults||[])
-              if(t.status==='failed') bad.push((f.name||'').split('/src/')[1]+' :: '+t.fullName+' :: '+String(t.failureMessages&&t.failureMessages[0]||'').split('\n').slice(0,4).join(' | '));
-            for(const b of bad.slice(0,50)) console.log('::error::'+b.slice(0,400));
-            if(bad.length) process.exit(1);"
+      - name: Unit tests (shard ${{ matrix.shard }}/8)
+        # runner 的 --only-shard 只跑当前分片；本作业内的并发伪失败会串行复验，
+        # 复验通过打 warning，复验失败才 ::error:: 并让该作业红。
+        run: node scripts/test-parallel.mjs --only-shard=${{ matrix.shard }}/8
+      - name: Upload shard logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-shard-${{ matrix.shard }}
+          path: console/.tmp/vitest-parallel/
+          retention-days: 7

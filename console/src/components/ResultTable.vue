@@ -1258,9 +1258,9 @@ async function copyIds() {
   store.notify(ok ? 'success' : 'error', ok ? `已复制 ${selected.value.size} 个 _id` : '复制失败：浏览器拦截了剪贴板');
 }
 /* 默认导出格式（usePref 记忆；切换入口在单元格右键菜单——主界面零菜单） */
-const expFmt = usePref('rt.export.fmt', 'csv') as Ref<'json' | 'csv' | 'md' | 'xlsx'>;
+const expFmt = usePref('rt.export.fmt', 'csv') as Ref<'json' | 'csv' | 'md' | 'xlsx' | 'ndjson'>;
 /* P2 引入、合并 useTablePrefs（RT/QRT 同内核同循环序） */
-function exportRows(fmt: 'json' | 'csv' | 'md' | 'xlsx') {
+function exportRows(fmt: 'json' | 'csv' | 'md' | 'xlsx' | 'ndjson') {
   /* 有勾选只导选中；无勾选导当前页全部（免去「先全选再导」的绕路）。
  行序取 sortedHits（与表格所见一致）——此前用 props.hits 原始序，
  排序后导出的文件行序与界面不符（28 批在 SQL 通道修过同款，RT 漏网）。
@@ -1293,6 +1293,12 @@ function exportRows(fmt: 'json' | 'csv' | 'md' | 'xlsx') {
   if (fmt === 'json') {
     content = JSON.stringify(rows.map(r => ({ _id: r._id, ...r._source })), null, 2);
     mime = 'application/json'; ext = 'json';
+  } else if (fmt === 'ndjson') {
+    /* 1169：NDJSON 与 QRT 同档（此前只有 QRT 有，索引工作区导不了）——
+       每行一个完整文档对象（_id + _source），供 jq / _bulk / 逐行流处理直接吃。
+       与 JSON 档同语义（整文档、不经 exportCell），只是行间不用逗号且无外层数组。 */
+    content = rows.map(r => JSON.stringify({ _id: r._id, ...r._source })).join(String.fromCharCode(10));
+    mime = 'application/x-ndjson'; ext = 'ndjson';
   } else if (fmt === 'md') {
     /* M3：csv/md 列集从 allCols 改 visibleCols——矩阵语义所见即所得，
  与剪贴板复制组（visibleCols）同口径（此前「文件含隐藏列、剪贴板不含」自相矛盾）；
@@ -2469,6 +2475,7 @@ const cellMenuItems = computed(() => {
     { key: 'fmt-xlsx', label: `导出格式：XLSX${expFmt.value === 'xlsx' ? ' ✓' : ''}`, icon: Table, run: () => setExpFmt('xlsx') },
     { key: 'fmt-json', label: `导出格式：JSON${expFmt.value === 'json' ? ' ✓' : ''}`, icon: Braces, run: () => setExpFmt('json') },
     { key: 'fmt-md', label: `导出格式：Markdown${expFmt.value === 'md' ? ' ✓' : ''}`, icon: FileText, run: () => setExpFmt('md') },
+    { key: 'fmt-ndjson', label: `导出格式：NDJSON${expFmt.value === 'ndjson' ? ' ✓' : ''}`, icon: ClipboardList, run: () => setExpFmt('ndjson') },
   ];
   return [
     { key: 'copy-val', label: '复制值', icon: Copy, run: copyChildren[0].run },
@@ -2481,7 +2488,7 @@ const cellMenuItems = computed(() => {
 });
 
 /* 切换默认导出格式（不触发导出——导出钮一键直出） */
-function setExpFmt(fmt: 'json' | 'csv' | 'md' | 'xlsx') {
+function setExpFmt(fmt: 'json' | 'csv' | 'md' | 'xlsx' | 'ndjson') {
   expFmt.value = fmt;
   store.notify('success', `默认导出格式已切换为 ${fmt.toUpperCase()}，「⬇ 导出」即按此格式下载`);
 }
@@ -2525,16 +2532,41 @@ async function copySelRows(fmt: 'tsv' | 'md' | 'json') {
  1280 起就只留图标（title/aria-label 语义不丢），省约 130px；1100 以下再换行。
  ⚠ColPicker/TablePresetMenu 的标签在子组件模板里，scoped 编译出的 `.cp-label[data-v]`
  永远打不中（子组件元素不带本组件 scopeId）——必须走 :deep() 把属性前移到 .rt-bar 上，
- 否则「窄档只留图标」对这两个钮从未生效（实测 1148 下「列选/布局」仍是整词）。 */
-@media (max-width: 1280px) {
+ 否则「窄档只留图标」对这两个钮从未生效（实测 1148 下「列选/布局」仍是整词）。
+ ⚠1174：断点从 1280 提到 1380——1280 是按旧右簇宽度定的，右簇后来多了视图档/原始 IO/
+ 布局/表格操作提示等钮，实测标签态溢出起点已经前移到 1370（1370 溢出 5px、1290 溢出 85px，
+ 「查看原始 IO / 表格操作提示 / 放大结果表」被整块裁掉）。1281–1370 这段「既不折标签
+ 也不换行」的死区，正是用户反复说的「按钮文案被遮挡」。 */
+@media (max-width: 1380px) {
   .rt-exp-btn-t, .rt-tool-t { display: none; }
   .rt-bar :deep(.cp-label), .rt-bar :deep(.tpm-label) { display: none; }
+}
+/* 1188：同一张表在三个入口的**可用宽度不同**——查询工作台是分栏，工具行比窗口窄
+  几百像素；按视口断点裁标签就必然有死区。实测该入口：1440 溢出 10px、1280 溢出 41px
+  （右簇越过右缘 40px = 末尾钮被切），而 1380/1250 两个视口断点都没触发。
+  改为**容器查询**：以工具行自身宽度为准（.rt-bar 是容器），表多宽就裁多少。
+  阈值取实测：标签态需要 ≈1180，图标态需要 ≈830。 */
+/* ⚠容器查询的容器不能是它自己——查询容器只对**后代**生效。
+   1188 第一版把 container-type 挂在 .rt-bar 上，结果 @container 永远不匹配（实测 flex-wrap 恒 nowrap）。
+   容器挂在根壳 .rt 上，工具行是它的后代，且壳宽 = 表格可用宽 = 我们要的口径。 */
+.rt { container-type: inline-size; container-name: rtbar; }
+@container rtbar (max-width: 1180px) {
+  .rt-exp-btn-t, .rt-tool-t { display: none; }
+  .rt-bar :deep(.cp-label), .rt-bar :deep(.tpm-label) { display: none; }
+}
+/* 换行同样按容器宽：容器查询看不到「内容溢出」，只能按容器宽度定阈——
+   实测该入口 1280 视口时容器 1014px，而图标态内容需 1053px（溢出 41px，末尾「放大」越过右缘 40px）。
+   所以阈值必须 ≥1060 才对得上这条带子的真实需求（旧值 860 只覆盖了更窄的形态）。 */
+@container rtbar (max-width: 1060px) {
+  .rt-bar { flex-wrap: wrap; row-gap: var(--sp-1); }
 }
 /* 1164：换行阈值从 1100 提到 1180——实测（probe163）溢出起点是 1181px：
   1180 起 scrollWidth 就超过 clientWidth，1160 溢出 21px、1120 溢出 61px，
   而旧的 1100 断点在这段区间根本不触发 → 右簇末尾钮被直接切掉、rt-info 被压成 0 宽
-  （实测 1120 下命中数整块消失）。换行是「宁可两行也要全可达」，阈值必须≥溢出起点。 */
-@media (max-width: 1180px) {
+  （实测 1120 下命中数整块消失）。换行是「宁可两行也要全可达」，阈值必须≥溢出起点。
+  1174：再提到 1250——只留图标之后溢出起点是 1240（1240 溢出 6px、1200 溢出 46px），
+  原 1180 仍留一段图标态溢出死区。 */
+@media (max-width: 1250px) {
   .rt-bar { flex-wrap: wrap; row-gap: var(--sp-1); }
   /* 右簇换行/贴右规则不在此处——.rt-bar-r 是 TableShell 模板元素，本组件 scoped
      打不中（1164 实测写了也不生效）。规则住 TableShell 全局 style。 */
@@ -2655,10 +2687,16 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
 .rt-th:hover .rt-th-label, .rt-th:focus-visible .rt-th-label, .rt-th:focus-within .rt-th-label { padding-right: 34px; }
 /* 1168：窄列悬停时列名让不出 34px —— 60px 列的内容盒只有 40px，让完只剩 6px，
  实测 `title` 被压成 `t…`（高倍截图确认），比静息态更糟：用户悬停想看名字，名字反而没了。
- 优先保列名：窄列（≤96px）悬停不加大沟槽，只留常驻的 14px 给漏斗；⇅ 提示仍在
- 漏斗左侧浮出并叠在文字尾部之上——短暂遮挡可接受，截掉列名不可接受。 */
+ 优先保列名：窄列（≤96px）悬停不加大沟槽，只留常驻的 14px 给漏斗。
+ 1189 修订：⇅ 也不再浮出（原「叠在文字尾部之上——短暂遮挡可接受」实测量到
+ 文字右缘 376 vs ⇅ 左缘 371 已经压在一起；鼠标停在表头就一直挡，没有「短暂」可言）。 */
 @container (max-width: 96px) {
   .rt-th:hover .rt-th-label, .rt-th:focus-visible .rt-th-label, .rt-th:focus-within .rt-th-label { padding-right: 14px; }
+  /* 1189：窄列悬停时**不出 ⇅ 提示**（1168 曾允许它叠在列名尾部之上——实测 60px 列里
+     列名文字右缘 376 与 ⇅ 左缘 371 已经压在一起，正是用户说的「按钮文案遮挡」）。
+     排序方向本来就有两处非遮挡的表达：aria-sort（读屏）+ 列头 title（悬浮查看）；
+     已排序时箭头是常驻状态，不受此规则影响。 */
+  .rt-th:hover .rt-th-sort-hint, .rt-th:focus-visible .rt-th-sort-hint, .rt-th:focus-within .rt-th-sort-hint { display: none; }
 }
 .rt-th-sort-on { flex: none; color: var(--ac-hi); }
 .rt-th-sub { display: block; min-height: 13px; font-size: var(--fs-2xs); }
@@ -2828,7 +2866,12 @@ tr.sel td { background: var(--ac-soft); }
 }
 .rt-stat { font-family: var(--mono); }
 .rt-stat-hint { color: var(--tx2); }
-.rt-transpose { display: flex; align-items: center; gap: 5px; font-size: var(--fs-xs); cursor: pointer; }
+/* 1185：状态栏窄宽度纪律——标签永不折字，先让提示文本让位。
+ 实测 1024 宽：「单行自动」被相邻提示挤成「单行自 / 动」两行（label 是 flex，
+ 中文可逐字换行）。勾选钮是可操作项、提示是可省略说明，优先级应当反过来：
+ 标签 nowrap 恒完整，提示类（.rt-stat-hint / .rt-kbd-hint）收缩 + 省略号。 */
+.rt-transpose { display: flex; align-items: center; gap: 5px; font-size: var(--fs-xs); cursor: pointer; white-space: nowrap; flex: none; }
+.rt-status .rt-stat-hint { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* 浮动栏从「悬浮胶囊」改为「卡尾状态栏」（dbx 状态栏语言）——
  不再悬浮遮挡数据行；与卡头/表格连体（贴表格底部，上圆角 0 下圆角随卡） */

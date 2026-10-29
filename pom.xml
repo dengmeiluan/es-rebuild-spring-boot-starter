@@ -15,7 +15,7 @@
 
     <groupId>io.github.dengmeiluan</groupId>
     <artifactId>es-rebuild-spring-boot-starter</artifactId>
-    <version>1.0.69</version>
+    <version>1.0.70</version>
     <packaging>jar</packaging>
     <name>es-rebuild-spring-boot-starter</name>
     <description>Zero-downtime Elasticsearch index rebuild Spring Boot starter: alias-based write-index
@@ -50,6 +50,9 @@
         <java.version>1.8</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <!-- Surefire 测试并行：每 fork 独立 JVM，规避测试间静态状态串扰。
+             低核机器/CI 用 -DforkCount=N 覆盖（CI 2 核取 2）。 -->
+        <forkCount>4</forkCount>
         <!-- 日常迭代脚本已先跑过 npm build（含 typecheck/vitest 质量门）时传 -Dconsole.build.skip=true 免双重构建；
              默认 false：package 永远自带最新前端产物，杆掉“忘跑 vite 就打包旧包”事故。 -->
         <console.build.skip>false</console.build.skip>

@@ -42,9 +42,9 @@
           </thead>
           <tbody>
             <tr v-for="r in rows" :key="r.path" :class="'k-' + r.status">
-              <td class="p mono" :title="r.path"><MarkText :text="r.path" :kw="pathKw" /></td>
-              <td class="v mono cell" :title="fmt(r.base)" tabindex="0" role="button" :aria-label="'复制基线值 ' + r.path" @keydown.enter.prevent="copyCell(r.path, r.base)" @keydown.space.prevent="copyCell(r.path, r.base)" @click="copyCell(r.path, r.base)">{{ fmt(r.base) }}<Copy v-if="r.base !== undefined" :size="10" class="c-ic" /></td>
-              <td v-for="(tv, ti) in r.targets" :key="ti" class="v mono cell" :class="cellCls(r.kinds[ti])" :title="fmt(tv)" tabindex="0" role="button" :aria-label="'复制目标值 ' + r.path" @keydown.enter.prevent="copyCell(r.path, tv)" @keydown.space.prevent="copyCell(r.path, tv)" @click="copyCell(r.path, tv)">
+              <td class="p mono" :title="r.path" @contextmenu.prevent="openCellMenu($event, r, -1)"><MarkText :text="r.path" :kw="pathKw" /></td>
+              <td class="v mono cell" :title="fmt(r.base)" tabindex="0" role="button" :aria-label="'复制基线值 ' + r.path" @contextmenu.prevent="openCellMenu($event, r, 0)" @keydown.enter.prevent="copyCell(r.path, r.base)" @keydown.space.prevent="copyCell(r.path, r.base)" @click="copyCell(r.path, r.base)">{{ fmt(r.base) }}<Copy v-if="r.base !== undefined" :size="10" class="c-ic" /></td>
+              <td v-for="(tv, ti) in r.targets" :key="ti" class="v mono cell" :class="cellCls(r.kinds[ti])" :title="fmt(tv)" tabindex="0" role="button" :aria-label="'复制目标值 ' + r.path" @contextmenu.prevent="openCellMenu($event, r, ti + 1)" @keydown.enter.prevent="copyCell(r.path, tv)" @keydown.space.prevent="copyCell(r.path, tv)" @click="copyCell(r.path, tv)">
                 {{ fmt(tv) }}<Copy v-if="tv !== undefined" :size="10" class="c-ic" />
               </td>
             </tr>
@@ -53,17 +53,22 @@
         </table>
       </div>
     </div>
+    <!-- 差异表右键（1209）：此前这张表只有左键逐格复制，没有任何右键。
+         一级只留最高频两项 + 分组父行，其余收二级（与项目右键约定一致）。 -->
+    <CellContextMenu v-if="cellMenu" :x="cellMenu.x" :y="cellMenu.y" :title="cellMenu.title"
+      :items="cellMenuItems" @close="cellMenu = null" />
   </n-modal>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { ClipboardList, Copy, ExternalLink } from 'lucide-vue-next';
+import { ClipboardList, Copy, ExternalLink, Filter } from 'lucide-vue-next';
 import { NModal } from 'naive-ui';
 import { docDiffMulti, docDiffToMarkdown, type MultiDocDiffRow } from '../utils/docDiffMulti';
 import { copyText } from '../utils/format';
 import MarkText from './MarkText.vue';
+import CellContextMenu, { type CcmItem } from './CellContextMenu.vue';
 import { useAppStore } from '../stores/app';
 import type { SearchHit } from '../types';
 
@@ -141,6 +146,72 @@ async function copyMd() {
   const ok = await copyText(docDiffToMarkdown(baseLabel, tLabels, diff.value));
   store.notify(ok ? 'success' : 'error', ok ? '对比结果已复制（Markdown 表格）' : '复制失败：浏览器拦截了剪贴板');
 }
+
+/* ═══ 1209：差异表右键 ═══
+ 这张表此前只有"左键逐格复制"一条路。按项目右键约定补齐：一级只放最高频两项
+ （复制值 / 复制路径），其余进「另存与筛选…」「复制整行…」两个分组，不做平铺。
+ 列号口径：-1=字段列，0=基准列，ti+1=第 ti 个目标列（与 targetNo 的展示位次一致）。 */
+const cellMenu = ref<{ x: number; y: number; title: string; row: MultiDocDiffRow; ci: number } | null>(null);
+
+function openCellMenu(e: MouseEvent, row: MultiDocDiffRow, ci: number) {
+  const label = ci < 0 ? '字段' : ci === 0 ? '基准' : `#${targetNo(ci - 1)}`;
+  cellMenu.value = { x: e.clientX, y: e.clientY, title: `${label} · ${row.path}`, row, ci };
+}
+
+/** 槽位值取数：字段列没有"值"，返回 undefined 由调用方判空 */
+function slotValue(row: MultiDocDiffRow, ci: number): unknown {
+  if (ci < 0) return undefined;
+  return ci === 0 ? row.base : row.targets[ci - 1];
+}
+
+const cellMenuItems = computed<CcmItem[]>(() => {
+  const m = cellMenu.value;
+  if (!m) return [];
+  const v = slotValue(m.row, m.ci);
+  const hasVal = m.ci >= 0 && v !== undefined;
+  const asText = (x: unknown) => (typeof x === 'object' ? JSON.stringify(x) : String(x));
+  const copyVal = async () => {
+    if (!hasVal) return;
+    const ok = await copyText(asText(v));
+    store.notify(ok ? 'success' : 'error', ok ? `已复制 ${m.row.path}` : '复制失败：浏览器拦截了剪贴板');
+  };
+  const copyPath = async () => {
+    const ok = await copyText(m.row.path);
+    store.notify(ok ? 'success' : 'error', ok ? '已复制字段路径' : '复制失败：浏览器拦截了剪贴板');
+  };
+  /* 整行 TSV：字段 + 基准 + 各目标，粘进表格软件即得一行对比 */
+  const rowTsv = () => [m.row.path, m.row.base, ...m.row.targets]
+    .map(x => (x === undefined ? '' : asText(x)).replace(/[\t\r\n]/g, ' ')).join('\t');
+  const copyRow = async () => {
+    const ok = await copyText(rowTsv());
+    store.notify(ok ? 'success' : 'error', ok ? '已复制整行（TSV）' : '复制失败：浏览器拦截了剪贴板');
+  };
+  const copyAllDiff = async () => {
+    const baseLabel = `#${props.baseIdx + 1} ${shortId(props.hits[props.baseIdx]?._id)}`;
+    const tLabels = targetHits.value.map((h, i) => `#${targetNo(i)} ${shortId(h?._id)}`);
+    const ok = await copyText(docDiffToMarkdown(baseLabel, tLabels, diff.value));
+    store.notify(ok ? 'success' : 'error', ok ? '对比结果已复制（Markdown 表格）' : '复制失败：浏览器拦截了剪贴板');
+  };
+  return [
+    ...(hasVal ? [{ key: 'copy-val', label: '复制值', icon: Copy, run: copyVal }] : []),
+    { key: 'copy-path', label: '复制字段路径', icon: Copy, run: copyPath },
+    {
+      key: 'row', label: '复制整行…', icon: ClipboardList, children: [
+        { key: 'copy-row-tsv', label: '为 TSV（可直接贴表格）', icon: Copy, run: copyRow },
+        { key: 'copy-all-md', label: '整张对比为 Markdown', icon: ClipboardList, run: copyAllDiff },
+      ],
+    },
+    {
+      key: 'filter', label: '筛选与定位…', icon: Filter, children: [
+        { key: 'filter-path', label: `只看「${m.row.path}」`, icon: Filter, run: () => { pathKw.value = m.row.path; } },
+        ...(onlyDiff.value
+          ? [{ key: 'show-same', label: '显示一致行', icon: Filter, run: () => { onlyDiff.value = false; } }]
+          : [{ key: 'only-diff', label: '只看差异行', icon: Filter, run: () => { onlyDiff.value = true; } }]),
+        { key: 'clear-filter', label: '清除全部筛选', icon: Filter, run: () => { onlyDiff.value = false; pathKw.value = ''; } },
+      ],
+    },
+  ];
+});
 </script>
 
 <style scoped>

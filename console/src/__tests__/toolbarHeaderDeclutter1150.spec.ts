@@ -20,7 +20,8 @@ const qs = readFileSync(join(__dirname, '../components/TableQSearch.vue'), 'utf-
 
 describe('1150：工具行窄档只留图标（:deep 必须，子组件标签 scoped 打不中）', () => {
   it('RT 窄档用 :deep 命中 ColPicker/TablePresetMenu 标签', () => {
-    expect(rt).toMatch(/@media \(max-width: 1280px\)/);
+    /* 1174：RT 掉标签断点 1280→1380（标签态实测 1370 就溢出 5px、1290 溢出 85px） */
+    expect(rt).toMatch(/@media \(max-width: 1380px\)/);
     expect(rt).toContain('.rt-bar :deep(.cp-label), .rt-bar :deep(.tpm-label) { display: none; }');
   });
 
@@ -35,10 +36,9 @@ describe('1150：工具行窄档只留图标（:deep 必须，子组件标签 sc
   });
 
   it('窄档换行兜底（先掉文字，再换行，绝不裁切）', () => {
-    /* 1164：RT 阈值 1100→1180。实测（probe163）溢出起点 1181px：1180 起 scrollWidth
-       就超 clientWidth，1120 溢出 61px，旧 1100 断点在 1100~1180 段根本不触发
-       → 右簇末尾钮被切掉、rt-info 被压成 0 宽（命中数整块消失）。 */
-    expect(rt).toMatch(/@media \(max-width: 1180px\) \{[^}]*\.rt-bar \{ flex-wrap: wrap;/s);
+    /* 1164：RT 阈值 1100→1180。1174：1180→1250——只留图标之后实测溢出起点是 1240
+       （1240 溢出 6px、1200 溢出 46px），1180 仍留一段图标态裁切死区。 */
+    expect(rt).toMatch(/@media \(max-width: 1250px\) \{[^}]*\.rt-bar \{ flex-wrap: wrap;/s);
     expect(qrt).toMatch(/@media \(max-width: 1100px\) \{[^}]*\.qrt-bar \{ flex-wrap: wrap;/s);
     /* 换行后右簇靠右（space-between 会把单 item 顶到最左）——规则必须住 TableShell
        全局 style：.rt-bar-r 是壳模板元素，写在内核 scoped 里 100% 不生效（1164 实测） */
@@ -46,15 +46,25 @@ describe('1150：工具行窄档只留图标（:deep 必须，子组件标签 sc
       .not.toMatch(/\.rt-bar-r \{ flex-wrap: wrap; margin-left: auto; \}/);
   });
 
-  it('壳级 1180 档右簇贴右（单源新家，内核 scoped 打不中）', () => {
+  it('壳级换行档右簇贴右，且阈值与内核换行档一致（1174）', () => {
     const shell = readFileSync(join(__dirname, '../components/TableShell.vue'), 'utf-8');
-    expect(shell).toMatch(/@media \(max-width: 1180px\) \{\s*\.rt-bar-r \{ flex-wrap: wrap; margin-left: auto; \}/);
+    const sh = shell.match(/@media \(max-width: (\d+)px\) \{\s*\.rt-bar-r \{ flex-wrap: wrap; margin-left: auto; \}/);
+    expect(sh, '壳级 .rt-bar-r 贴右规则在场').toBeTruthy();
+    /* 两处各写各的会在中间出现「内核已换行、右簇没贴右」的半截态 —— 必须同阈值 */
+    const bar = rt.match(/@media \(max-width: (\d+)px\) \{\s*\.rt-bar \{ flex-wrap: wrap;/);
+    expect(Number(sh![1]), '壳级贴右阈值必须等于内核换行阈值').toBe(Number(bar![1]));
   });
 
   it('RT 换行阈值必须 ≥ 实测溢出起点（假修复防线：阈值低于溢出点=可视区仍裁切）', () => {
     const bar = rt.match(/@media \(max-width: (\d+)px\) \{\s*\.rt-bar \{ flex-wrap: wrap;/);
     expect(bar, 'RT 换行断点存在').toBeTruthy();
-    expect(Number(bar![1]), '1180px 是实测首个溢出宽度（1200 无溢出/1180 溢出 1px），断点不得低于它').toBeGreaterThanOrEqual(1180);
+    expect(Number(bar![1]), '1174 实测图标态溢出起点 1240（1200 溢出 46px），断点不得低于它').toBeGreaterThanOrEqual(1240);
+    /* 掉标签断点同理：标签态溢出起点 1370，断点必须 ≥ 它，否则 1281–1370 是裁切死区 */
+    const lbl = rt.match(/@media \(max-width: (\d+)px\) \{\s*\.rt-exp-btn-t/);
+    expect(lbl, 'RT 掉标签断点存在').toBeTruthy();
+    expect(Number(lbl![1]), '1174 实测标签态溢出起点 1370（1370 溢出 5px/1290 溢出 85px）').toBeGreaterThanOrEqual(1360);
+    /* 两档必须分治：换行阈值严格小于掉标签阈值（否则图标态窗口比标签态还窄仍单行） */
+    expect(Number(bar![1])).toBeLessThan(Number(lbl![1]));
   });
 });
 

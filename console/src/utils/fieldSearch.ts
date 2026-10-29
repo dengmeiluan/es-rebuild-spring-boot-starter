@@ -85,10 +85,33 @@ export function searchFields(opts: {
   const kw = rawQ.toLowerCase();
   const wanted = opts.typeFilter?.length ? opts.typeFilter : null;
   const prio = opts.typePriority?.length ? opts.typePriority : null;
+  /* 1170：路径段感知——此前只比整串，于是输入 code 时 bond_code（尾段恰好是 code）与
+     encode_flag（en·code 只是段内子串）同档并列、按字母序排，真正想找的「编码」字段被淹；
+     输入 publish 时 publisher.org_name（另一个词根）还会排在 publish_date 前面。
+     分档（越靠前越像用户想找的那个字段）：某段**等于**查询词（首段/尾段/中段递减）
+     → 段**前缀**命中 → 段**子串**命中；段边界按 . 与 _ 切（ES 字段命名就这两套）。
+     单段路径（nickname / publishTime）不吃分段分：它们与顶层字段同属「顶层候选」，
+     维持既有「精确>前缀>包含，同级字母序」口径（fieldSelectPopup 锁面）——不能因为
+     user.name 的尾段等于 name 就压过 nickname，那会让**嵌套优先于顶层**，与直觉相反。 */
+  const segRank = (n: string): number => {
+    if (!kw) return 0;
+    const segs = n.toLowerCase().split(/[._]/).filter(Boolean);
+    if (segs.length < 2) return 0;
+    const eq = segs.findIndex(s => s === kw);
+    if (eq >= 0) return eq === 0 ? 1 : eq === segs.length - 1 ? 2 : 3;
+    const pre = segs.findIndex(s => s.startsWith(kw));
+    if (pre >= 0) return pre === 0 ? 4 : pre === segs.length - 1 ? 5 : 6;
+    const inc = segs.findIndex(s => s.includes(kw));
+    if (inc >= 0) return inc === 0 ? 7 : inc === segs.length - 1 ? 8 : 9;
+    return 10;
+  };
   const rankOf = (n: string) => n.toLowerCase() === kw ? 0 : n.toLowerCase().startsWith(kw) ? 1 : 2;
+  const cmp = (a: FieldItem, b: FieldItem) => rankOf(a.path) - rankOf(b.path)
+    || segRank(a.path) - segRank(b.path)
+    || a.path.localeCompare(b.path);
   const base = opts.fields
     .filter(f => (!wanted || wanted.includes(f.type)) && (!kw || f.path.toLowerCase().includes(kw)))
-    .sort((a, b) => rankOf(a.path) - rankOf(b.path) || a.path.localeCompare(b.path));
+    .sort(cmp);
   /* 1045：业务角色档——同一类型/同一优先组内，把「本算子最相关」的角色提前；
      稳定排序，不改变 rank 档与组内字母序。 */
   const rolePrio = opts.rolePriority?.length ? opts.rolePriority : null;

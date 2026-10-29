@@ -179,6 +179,7 @@
                   @sort-change="onDocsSortChange"
                   :editable="canWrite" @edit-doc="h => openDoc(h, true)"
                   @open-doc="openDoc" @delete-doc="askDelDoc" @batch-delete="askBatchDel" @refresh="runDocs"
+                  @filter-hit="onDocsFilterHit"
                 >
                   <!-- 分页器寄居表格工具行（#bar-prepend，与查询工作台 DslQueryView 同语言）
  ——同款真分页（from/size 真检索+共享页大小记忆 es_pager_size）同步更新表格头。
@@ -1340,6 +1341,23 @@ function runDocsNew() {
 
 /* 收起表格上方的本次错误提示（旧结果仍在，用户已读完原因）——
    只清提示不清错误态以外的东西；下次失败会重新出现。 */
+/* 1191：单元格右键「以此值过滤并重查」在索引工作区此前**点了没反应**——
+   RT 早已 emit filter-hit（DQ 侧接了），但本 View 的 ResultTable 实例没挂监听，
+   菜单项渲染出来却是个死键。索引工作区的查询面是 Lucene 查询词（docsQ），
+   所以这里把条件拼成 `field:"value"` 并与既有词 AND 起来再重查——
+   与 DQ「条件并入 DSL 再跑」同一心智（就地追加、可撤销、给出回执）。 */
+function onDocsFilterHit(p: { field: string; value: unknown; op?: 'term' | 'match' }) {
+  if (!p?.field) return;
+  const v = p.value == null ? '' : String(p.value);
+  if (!v) return;
+  /* Lucene 字面量：值里的引号是唯一需要转义的字符（其余按短语整体匹配） */
+  const clause = p.field + ':"' + v.replace(/"/g, '\\"') + '"';
+  const cur = (docsQ.value || '').trim();
+  docsQ.value = cur ? '(' + cur + ') AND ' + clause : clause;
+  store.notify('info', '已下钻 ' + p.field + '=' + v + '（条件已并进检索词，可编辑后再跑）');
+  runDocsNew();
+}
+
 function dismissDocsErr() {
   docsErr.value = '';
   docsErrRaw.value = null;

@@ -259,7 +259,8 @@
             <tbody>
               <!-- 过滤态命中行给锚点——_id 套 MarkText 高亮 + 行底色类 + aria-current
  （轻量版：滚动定位仍归 QRT/HitNav 链路；kw 空时无类无属性，零扰动） -->
-              <tr v-for="h in jsonHits" :key="h._id" :class="{ 'lc-hit-row': !!jsonMarkKw }" :aria-current="jsonMarkKw ? 'true' : undefined">
+              <tr v-for="h in jsonHits" :key="h._id" :class="{ 'lc-hit-row': !!jsonMarkKw }" :aria-current="jsonMarkKw ? 'true' : undefined"
+                @contextmenu.prevent="openHitMenu($event, h)">
                 <td><code><MarkText :text="h._id" :kw="jsonMarkKw" /></code></td>
                 <td>{{ fmtScore(h._score) }}</td>
                 <!-- 548 E2 回收——JsonTree 开 highlightKw 外部高亮通道（tools 私有
@@ -288,12 +289,16 @@
 
     <!-- 原始 IO 弹窗（宿主受控开关；rec 取该页最近一条 /cluster/lucene-search 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
+
+    <!-- JSON 视图命中行右键：复制文档 / 以 _id 查 / 转 DSL 工作台 -->
+    <CellContextMenu v-if="hitMenu" :x="hitMenu.x" :y="hitMenu.y"
+      :title="'命中文档 · ' + hitMenu.h._id" :items="hitMenuItems" @close="hitMenu = null" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, type Ref } from 'vue';
-import { SearchCode, BookOpen, Play, Star, ShieldAlert, FileDown, Link2, AlertCircle, ListTree, X, SearchX, History, Terminal } from 'lucide-vue-next';
+import { SearchCode, BookOpen, Play, Star, ShieldAlert, FileDown, Link2, AlertCircle, ListTree, X, SearchX, History, Terminal, Copy, Braces, Info } from 'lucide-vue-next';
 import { NModal } from 'naive-ui';
 /* 页内历史面板合并 QueryHistoryPanel 共享件（DslQueryView 弹窗范式） */
 import QueryHistoryPanel from '../components/QueryHistoryPanel.vue';
@@ -301,6 +306,7 @@ import QueryHistoryPanel from '../components/QueryHistoryPanel.vue';
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环） */
 import RawIoModal from '../components/RawIoModal.vue';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import Pagination from '../components/Pagination.vue';
 import { useAppStore } from '../stores/app';
 import { useQueryHistoryStore } from '../stores/queryHistory';
@@ -413,6 +419,46 @@ const jsonHits = computed(() => {
 const took = ref(0);
 /* JSON 视图过滤态命中标记关键词（MarkText kw；trim 后空串=无标记零扰动） */
 const jsonMarkKw = computed(() => jsonKw.value.trim());
+
+/* ═══ JSON 视图命中行右键 ═══
+ 这张表是手写的（_id/_score/_source 三列，走 JsonTree 嵌套），TableKernel 的单元格
+ 右键覆盖不到它——结果就是「表格视图能右键复制文档，切到 JSON 视图就没了」。
+ 一级只留最高频的两项，其余收进二级（全站右键同规矩）。
+ 只读安全：只有复制/跳转，没有任何写动作。 */
+const hitMenu = ref<{ x: number; y: number; h: any } | null>(null);
+function openHitMenu(e: MouseEvent, h: any) {
+  hitMenu.value = { x: e.clientX, y: e.clientY, h };
+}
+async function copyHit(text: string, okMsg: string) {
+  const ok = await copyText(text);
+  store.notify(ok ? 'success' : 'error', ok ? okMsg : '复制失败');
+}
+const hitMenuItems = computed<CcmItem[]>(() => {
+  const m = hitMenu.value; if (!m) return [];
+  const h = m.h;
+  const doc = { _id: h._id, ...(h._source ?? {}) };
+  return [
+    { key: 'hit-copy-id', label: '复制 _id', icon: Copy, run: () => copyHit(String(h._id ?? ''), '已复制 _id：' + h._id) },
+    { key: 'hit-copy-doc', label: '复制文档 JSON（_id + _source）', icon: Braces, run: () => copyHit(JSON.stringify(doc, null, 2), '已复制文档 JSON') },
+    {
+      key: 'hit-more', label: '更多…', icon: Copy, sep: true, children: [
+        { key: 'hit-copy-src', label: '复制 _source（不含 _id）', icon: Braces, run: () => copyHit(JSON.stringify(h._source ?? {}, null, 2), '已复制 _source') },
+        { key: 'hit-copy-score', label: '复制 _score', icon: Info, run: () => copyHit(String(h._score ?? ''), '已复制 _score') },
+        /* 命中行的下一步高频动作：拿 _id 去 DSL 工作台看这个文档为什么排在这 */
+        { key: 'hit-to-dsl', label: '用 _id 在 DSL 工作台查此文档', icon: Link2, run: () => {
+          router.push({
+            path: '/search',
+            query: {
+              mode: 'dsl',
+              ...(index.value.trim() ? { idx: index.value.trim() } : {}),
+              dsl: encodeDslParam(JSON.stringify({ query: { ids: { values: [String(h._id)] } }, size: 10 }, null, 2)),
+            },
+          });
+        } },
+      ],
+    },
+  ];
+});
 const totalShards = ref(0);
 const successfulShards = ref(0);
 const warnings = ref<string[]>([]);

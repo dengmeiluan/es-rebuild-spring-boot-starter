@@ -533,13 +533,23 @@ export function ensureSqlCompletion(monaco: MonacoApi, getCtx: () => SqlCompleti
  searchFields，首轮即出候选（原 fire-and-forget 首轮必空、要等下次触发）；
  token 取消弃迟到回填。ensure 失败静默 resolve（useIndexFields 零降级），
  回填口自然出空候选。 */
-        const colM = before.match(/(\w+)\.\w*$/);
+        const colM = before.match(/(\w+)\.(\w*)$/);
         if (colM) {
           tblName.value = colM[1];
+          /* 1207：点后已敲的前缀要参与排序——此前写死 `query: ''`，段感知与 rank 全变 0，
+             用户敲 `t.pub` 时 publish_date 与 publisher.org_name 仍按字母序并列。
+             与 ① FROM 表名位同口径（那里传的是 fromM[1]）：searchFields 的 query
+             同时承担「rank 档 + 段感知档 + 过滤」，Monaco 侧本来也会按前缀收窄候选，
+             所以这里传前缀不会让候选消失，只是把「真的想找的那个字段」顶上来。
+             colPrefix 只取点后的词字符（引号/空格形态已由正则排除），空串回退全量。 */
+          const colPrefix = colM[2] || '';
           return tblCtx!.ensure().then(() => {
             if (token?.isCancellationRequested) return { suggestions: [] };
             const clause = clauseOf(before);
-            const hits = searchFields({ fields: tblCtx!.fields.value, query: '', cap: 50, typePriority: CLAUSE_TYPE_PRIO[clause] });
+            const hits = searchFields({
+              fields: tblCtx!.fields.value, query: colPrefix, cap: 50,
+              typePriority: CLAUSE_TYPE_PRIO[clause],
+            });
             return { suggestions: preferKeywordField(hits.flat, tblCtx!.fields.value, clause).map((h, i) => ({
               label: h.path, kind: monaco.languages.CompletionItemKind.Property,
               insertText: h.path, detail: h.type + ' · 来自 ' + colM[1], sortText: sortAt(i), range,
