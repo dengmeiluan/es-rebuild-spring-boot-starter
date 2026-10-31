@@ -32,8 +32,11 @@
       <button v-if="tree.root && !isPlainMatchAll" type="button" class="btn sm ghost qtp-sel-tg" :class="{ on: selectMode }"
               :aria-pressed="selectMode" :title="selectMode ? '退出多选' : '进入多选：勾选条件后批量停用/启用/复制/删除'"
               @click="toggleSelectMode"><ListChecks :size="11" /> 多选</button>
-      <!-- 1396：撑开剩余宽度。空 span 默认按基线对齐，会被压到行底（实测比同行元素低 13px），
-           把后面的「过滤条件…」挤出一道视觉断口；self-stretch + 零高让它纯占位不参与对齐。 -->
+      <!-- 撑开剩余宽度（纯占位、不可见）。
+           1396 实测修正：这个空 span 在 flex 行里会按基线落到行底（比同行元素低 13px），
+           但它高度为 0、不参与布局，**并没有**把后面的「过滤条件…」挤歪（实测该框在改前
+           改后都在同一 y）。改 align-self:stretch 只是让占位元素自身归位、语义干净，
+           **不是**任何视觉缺陷的修复——原先那条「拉歪定位参照」的注释是错误归因，已删。 -->
       <span style="flex:1; align-self:stretch; min-height:0" aria-hidden="true"></span>
       <!-- 条件搜索定位——命中行柔底高亮并滚动定位，清空恢复；
  计数 N/M + Enter/Shift+Enter 逐命中轮转（当前命中加重档）。
