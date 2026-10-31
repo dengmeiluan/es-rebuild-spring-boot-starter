@@ -32,7 +32,9 @@
       <button v-if="tree.root && !isPlainMatchAll" type="button" class="btn sm ghost qtp-sel-tg" :class="{ on: selectMode }"
               :aria-pressed="selectMode" :title="selectMode ? '退出多选' : '进入多选：勾选条件后批量停用/启用/复制/删除'"
               @click="toggleSelectMode"><ListChecks :size="11" /> 多选</button>
-      <span style="flex:1"></span>
+      <!-- 1396：撑开剩余宽度。空 span 默认按基线对齐，会被压到行底（实测比同行元素低 13px），
+           把后面的「过滤条件…」挤出一道视觉断口；self-stretch + 零高让它纯占位不参与对齐。 -->
+      <span style="flex:1; align-self:stretch; min-height:0" aria-hidden="true"></span>
       <!-- 条件搜索定位——命中行柔底高亮并滚动定位，清空恢复；
  计数 N/M + Enter/Shift+Enter 逐命中轮转（当前命中加重档）。
  裸 input 合并 SearchFilterBar 统一件（继 wt/fv/tg 三处之后第四处消费，
@@ -748,7 +750,7 @@ provide(TREE_BUS, {
 <style scoped>
 .qtp { font-size: var(--fs-sm); }
 /* 吸顶工具区：背景必须实底（否则滚动内容透字）；负 margin 拉满面板宽再补回 padding */
-.qtp-sticky { position: sticky; top: 0; z-index: 6; background: var(--bg0); padding: var(--sp-0) 0 var(--sp-1); }
+.qtp-sticky { position: sticky; top: 0; z-index: 6; background: var(--bg0); padding: var(--sp-1) 0 var(--sp-1); }
 /* 面板头部计数徽标（chip.static 弱化档）+ 工具行（过滤输入/折叠/启停按钮）。
  行布局对齐 DQ 执行行（.dq-run-row 同式）——--ctl-h: 26px 控制线，
  输入框与按钮统一消费；间距 var(--sp-*) */
