@@ -719,6 +719,11 @@ function exportCsv() {
 </script>
 
 <style scoped>
+/* 1414：工具行里的「表格 / 文档 JSON」两档不许折行——全局 .seg 带 flex-wrap:wrap，
+   在 762px 宽的结果槽里被压成上下两行，把工具行从 41px 顶到 67px（实测 1440×900）。
+   seg 在 QRT 的 bar-prepend 插槽内（子组件作用域），要 :deep 才能命中。
+   与 QRT 内建 .qrt-view-seg { flex-wrap: nowrap } 同口径。 */
+.lc-result :deep(.seg) { flex-wrap: nowrap; }
 /* .lc-page 转纵向 flex 撑满——WorkbenchLayout 在有高度链的容器里吃满剩余，
  无高度链（QueryHub 嵌入）时由其内置 min-height 兜底 */
 .lc-page { padding: var(--sp-3) var(--sp-4) var(--sp-5); position: relative; display: flex; flex-direction: column; height: 100%; }
