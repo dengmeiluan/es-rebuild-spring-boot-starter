@@ -2765,6 +2765,12 @@ async function copySelRows(fmt: 'tsv' | 'md' | 'json') {
 .rt-wrap { --rt-row-h: 25.5px; background-image: linear-gradient(var(--line) 1px, transparent 1px); background-size: 100% var(--rt-row-h); background-repeat: repeat; background-position: 0 0; }
 .rt.dense .rt-wrap { --rt-row-h: 21.5px; }
 .rt.cozy .rt-wrap { --rt-row-h: 41.5px; }
+/* 1392：底纹只服务空白区——QRT 同款（那边实测同一条分隔线在 2px/4px 间交替：
+   表头 25px 与行高 25.5px 差 0.5px，底纹每条都比真实 border 矮半像素落线）。
+   RT 的斑马纹来自 .tbl.zebra（半透明罩），行仍会透出底纹，所以把行底落成不透明。 */
+.rt-tbl tbody tr { background: var(--bg1); }
+.rt-tbl tbody tr:nth-child(even) { background: linear-gradient(var(--tbl-zebra), var(--tbl-zebra)), var(--bg1); }
+.rt.dense .rt-tbl tbody tr:nth-child(even) { background: var(--bg1); }
 /* 1146：表头单行后收紧上下内衬（QRT 1136 同款 --sp-1）——旧 .tbl th 默认 var(--sp-2)
  是双层列头时代的衬距，单行后同样的值会让列头虚高 6px。 */
 .rt-tbl th { position: sticky; top: 0; padding-top: var(--sp-1); padding-bottom: var(--sp-1); }

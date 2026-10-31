@@ -2568,9 +2568,15 @@ mark.qrt-mark { background: var(--warn); color: var(--tx-on-strong); border-radi
 .qrt-wrap { --qrt-row-h: 25.5px; background-image: linear-gradient(var(--line) 1px, transparent 1px); background-size: 100% var(--qrt-row-h); background-repeat: repeat; background-position: 0 0; }
 .qrt-wrap:has(.qrt-tbl.dense) { --qrt-row-h: 21.5px; }
 .qrt-wrap:has(.qrt-tbl.cozy) { --qrt-row-h: 41.5px; }
+/* 1392：底纹**只服务空白区**。数据行此前是透明的，底纹就从行里透出来，与真实
+   border-bottom 叠在一起——实测同一条分隔线在 2px/4px 之间交替（表头 25px 与行高
+   25.5px 差 0.5px，每条底纹都比边框矮半像素落线），读起来就是「表格中间多了一条条纹」。
+   行改成不透明底色，底纹只剩最后一行之下可见（1359b 想要的「同一张网格」效果不减）。
+   偶行不能直接用 --hl-soft（半透明罩，底纹照样透出）——叠在同色底上才是实色。 */
+.qrt-tbl tbody tr { background: var(--bg1); }
+.qrt-tbl tbody tr:nth-child(even) { background: linear-gradient(var(--hl-soft), var(--hl-soft)), var(--bg1); }
 /* hover 对齐 RT 行语言（bg2+左侧 3px 品牌强调条） */
 .qrt-tbl tbody tr:hover { background: var(--bg2); box-shadow: inset 3px 0 0 var(--ac-hi); }
-.qrt-tbl tbody tr:nth-child(even) { background: var(--hl-soft); }
 /* 斑马纹密度态——紧凑密度行距过密时条纹反成噪音（dbx 紧凑场景无条纹），舒适态保留 */
 .qrt-tbl.dense tbody tr:nth-child(even) { background: transparent; }
 .qrt-tbl th, .qrt-tbl td { padding: var(--sp-1) var(--sp-2); border-bottom: 1px solid var(--line); text-align: left; }

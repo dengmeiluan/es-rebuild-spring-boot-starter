@@ -3452,9 +3452,12 @@ onBeforeUnmount(() => {
 .exp-fp { width: 100%; }
 .exp-hint { font-size: var(--fs-xs); color: var(--tx2); line-height: 1.5; }
 /* 1146：「更多」菜单（导出去处）——DBX 式紧凑项：左图标 + 主文案 + 右侧弱化说明。
-   主文案不折行（短标签），说明文字允许收缩省略——折行会让菜单项高度参差。 */
-.dq-more { display: flex; flex-direction: column; gap: 1px; width: 320px; }
-.dq-more .exp-t { padding: 0 0 var(--sp-1); }
+   主文案不折行（短标签），说明文字允许收缩省略——折行会让菜单项高度参差。
+   ⚠ 1392：这段只属于**菜单容器**（div.dq-more）。工具行的「更多」按钮也叫
+   `class="btn sm ghost dq-more"`，裸 `.dq-more` 选择器会把它一起命中——实测按钮被撑成
+   320px 宽、图标/文字/箭头竖排（截图里那个悬空的「更多」就是它）。用 `div.dq-more` 收窄。 */
+div.dq-more { display: flex; flex-direction: column; gap: 1px; width: 320px; }
+div.dq-more .exp-t { padding: 0 0 var(--sp-1); }
 .dq-more-it { display: flex; align-items: center; gap: var(--sp-2); width: 100%; padding: var(--sp-1h) var(--sp-2);
   border: 0; border-radius: var(--r-s); background: none; color: var(--tx1); font-size: var(--fs-sm); text-align: left; cursor: pointer; white-space: nowrap; }
 .dq-more-it:hover { background: var(--bg2); color: var(--ac-hi); }
