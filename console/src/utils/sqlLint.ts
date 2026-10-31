@@ -181,6 +181,36 @@ function textFieldRule(sql: string, fieldTypes: Record<string, string>, lineOf: 
   return out;
 }
 
+/** 8：LIKE / RLIKE 打在无 .keyword 子域的 text 字段上（1389 同族）。
+ *  官方原文（Like and RLike operators）：「If the field used with LIKE / RLIKE doesn't
+ *  have an exact not-normalized sub-field (of keyword type) Elasticsearch SQL will not be
+ *  able to run the query.」——有子域时 SQL 自己会用，没有就必失败。
+ *  与 ⑦ 一样只认精确类型证据（未知名/表达式/子域名不判）。 */
+function likeTextFieldRule(sql: string, fieldTypes: Record<string, string>, lineOf: (i: number) => number): SqlLintFinding[] {
+  const out: SqlLintFinding[] = [];
+  const seen = new Set<string>();
+  /* `field LIKE` / `field NOT LIKE` / `field RLIKE`——左侧允许引号标识符与点分路径 */
+  const re = /(?:"([^"]+)"|`([^`]+)`|([A-Za-z_][\w.]*))\s+(?:NOT\s+)?(?:LIKE|RLIKE)\b/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(sql)) !== null) {
+    const name = m[1] ?? m[2] ?? m[3] ?? '';
+    /* 子域名本身就是精确字段（xxx.keyword LIKE 合法） */
+    if (!name || name.endsWith('.keyword')) continue;
+    const type = fieldTypes[name];
+    if (!type || !SQL_TEXT_TYPES.has(type)) continue;
+    if (fieldTypes[name + '.keyword'] === 'keyword') continue;
+    if (seen.has(name)) continue;
+    seen.add(name);
+    out.push({
+      line: lineOf(m.index),
+      message: `「${name}」是 text 字段且没有 .keyword 子域，LIKE 在 ES SQL 里跑不了`,
+      suggestion: `LIKE 只能作用于精确（keyword）值：给该字段加 ${name}.keyword 子域后写成 `
+        + `"${name}.keyword" LIKE '…'；只想全文检索就改用 MATCH(${name}, '…')`,
+    });
+  }
+  return out;
+}
+
 /** SQL 静态 lint 主入口。空/全空白输入零误报返回 []。
  * `knownIndices`（可选）用于第 ⑥ 条规则：FROM 后的裸索引名若**精确命中**已知索引，
  * 说明用户是漏了双引号（ES SQL 要求标识符带引号，否则 `-`/`.` 会被当运算符报语法错）。
@@ -334,6 +364,7 @@ export function lintSql(sql: string, knownIndices: string[] = [], fieldTypes?: R
      需要字段类型证据；调用方没给类型就整条跳过（零增量）。 */
   if (fieldTypes && Object.keys(fieldTypes).length) {
     out.push(...textFieldRule(sql, fieldTypes, lineOf));
+    out.push(...likeTextFieldRule(sql, fieldTypes, lineOf));
   }
 
   return out;

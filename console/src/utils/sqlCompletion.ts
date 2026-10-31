@@ -304,6 +304,17 @@ export const SCALAR_FUNCS: Array<{ name: string; detail: string; insert?: string
   { name: 'CONVERT', detail: 'CONVERT(x, type) · 类型转换' },
 ];
 
+/* 1390：全文检索谓词（官方 sql-functions-search）。此前补全词表里完全没有它们——
+   用户在 WHERE 里想做全文检索只能想到 LIKE，而 LIKE 在 text 字段上跑不了
+   （官方原文：「will not be able to run the query」）。这三条是把「想搜正文」
+   引到正确语法上的入口，也是 lint 规则⑧建议里的落点。
+   MATCH/QUERY 是谓词而非标量函数，单独一张表（不进 SCALAR_FUNCS 的 SELECT 位）。 */
+export const SEARCH_PREDICATES: Array<{ name: string; detail: string; insert?: string }> = [
+  { name: 'MATCH', detail: "MATCH(field, 'text') · 全文检索（等价 match query）" },
+  { name: 'QUERY', detail: "QUERY('field:value') · 直接走 query_string 语法" },
+  { name: 'SCORE', detail: 'SCORE() · 命中相关性得分（double）', insert: 'SCORE()' },
+];
+
 /** 1045：按子句 + 已敲前缀过滤关键字候选（纯函数，供 provider 与测试共用） */
 export function completionKeywordItems(clause: string, word: string) {
   const wp = String(word || '').toLowerCase();
@@ -405,6 +416,8 @@ export function suggestIndicesFor(errText: string, indices: Array<{ index?: stri
 export const SQL_FUNC_NAMES: string[] = [...new Set([
   ...SCALAR_FUNCS.map(f => f.name),
   ...AGG_FUNCS.map(f => f.name),
+  /* 1390：搜索谓词也参与「未知函数」纠错——敲错 MATCHH 时应该能找到 MATCH */
+  ...SEARCH_PREDICATES.map(f => f.name),
 ])];
 
 export function suggestFunctionsFor(errText: string): { fn: string; suggestions: Array<{ name: string; score: number }> } | null {
@@ -742,7 +755,23 @@ export function ensureSqlCompletion(monaco: MonacoApi, getCtx: () => SqlCompleti
                 sortText: '!1' + String(i).padStart(2, '0'), range,
               };
             });
-          return { suggestions: [...kwSuggestions, ...aggSuggestions, ...aliasSuggestions, ...fnSuggestions, ...fieldSuggestions] };
+          /* 1390：全文检索谓词优先在 WHERE（也是 SELECT 里 SCORE() 的位置）。
+             与标量函数走同一道前缀过滤与「字段优先」护栏——敲 ma 想找 match 时，
+             若恰好有 match_* 字段，字段仍排第一屏（同 1110 收口口径）。 */
+          const searchPool = wp && !hasFieldPrefix && !hasAliasPrefix
+            && (clause === 'WHERE' || inSelect) ? SEARCH_PREDICATES : [];
+          const searchSuggestions = searchPool
+            .filter(f => f.name.toLowerCase().startsWith(wp))
+            .map((f, i) => {
+              const insert = f.insert ?? f.name + '(';
+              return {
+                label: insert, kind: monaco.languages.CompletionItemKind.Function,
+                insertText: insert, detail: f.detail,
+                /* 比标量函数更靠前：WHERE 位想做全文检索时，MATCH 才是正解 */
+                sortText: '!0' + String(i).padStart(2, '0'), range,
+              };
+            });
+          return { suggestions: [...kwSuggestions, ...aggSuggestions, ...aliasSuggestions, ...searchSuggestions, ...fnSuggestions, ...fieldSuggestions] };
         });
       },
     });
