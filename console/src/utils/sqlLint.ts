@@ -106,11 +106,88 @@ function keywordTypo(kw: string, t: SqlTok, pv: SqlTok | undefined, nx: SqlTok |
   return false;
 }
 
+/* ⑦（1389）：GROUP BY / ORDER BY 里排不了、分不了组的 text 字段。
+
+ 依据（ES SQL 官方）：text 字段的值依赖分词器，官方原文是它「not used for sorting
+ or aggregations」；能用的情况只有一种——SQL 自己找到一个**未归一化的 keyword 多字段**
+ 来代表精确值（"the first keyword that it can find that is not normalized"）。
+ 所以：text 字段有 `.keyword` 子域 → 合法，一个字都不报；没有子域 → 执行必失败，
+ 提前点名，别等用户拿到一个 400。
+
+ 只认**精确的字段名证据**：名字不在 fieldTypes 里（未加载/运行时字段/别名/表达式别名）
+ 一律不判——宁缺勿错。 */
+const SQL_TEXT_TYPES = new Set(['text', 'match_only_text']);
+
+/** 逐条找出「在 GROUP BY / ORDER BY 里、是 text 且没有 .keyword 子域」的字段。
+ *  `clause` 是掩码文本里该子句之后、下一个子句之前的那段。 */
+function unmaterializableSortField(
+  field: string, fieldTypes: Record<string, string>, lineOf: (i: number) => number, offset: number,
+): SqlLintFinding | null {
+  const name = field.trim();
+  if (!name || name.includes('(') || name.includes('.')) return null;
+  const type = fieldTypes[name];
+  if (!type || !SQL_TEXT_TYPES.has(type)) return null;
+  if (fieldTypes[name + '.keyword'] === 'keyword') return null;
+  return {
+    line: lineOf(offset),
+    message: `「${name}」是 text 字段且没有 .keyword 子域，ES SQL 排不了也分不了组`,
+    suggestion: `给该字段加 ${name}.keyword 子域后重建索引，或改用 keyword/date/数值字段；`
+      + `text 字段的分词值只能全文检索，不能排序/分组`,
+  };
+}
+
+/** 拆 GROUP BY / ORDER BY 的条目（逗号分隔，跳过括号内），返回 {name, offset} 列表 */
+function clauseItems(text: string, start: number): Array<{ name: string; offset: number }> {
+  const out: Array<{ name: string; offset: number }> = [];
+  let depth = 0, cur = '', curStart = -1;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '(') depth++;
+    else if (ch === ')') depth = Math.max(0, depth - 1);
+    if (depth === 0 && (ch === ',' || ch === ';')) {
+      if (cur.trim()) out.push({ name: cur.trim(), offset: start + (curStart < 0 ? i : curStart) });
+      cur = ''; curStart = -1; continue;
+    }
+    if (!cur.trim() && !/\s/.test(ch) && curStart < 0) curStart = i;
+    cur += ch;
+  }
+  if (cur.trim()) out.push({ name: cur.trim(), offset: start + (curStart < 0 ? 0 : curStart) });
+  return out;
+}
+
+/** 7：GROUP BY / ORDER BY 里不可排序的 text 字段（见上方依据）。
+ *  只用原文 sql（masked 已把引号壳挖空，字段名会丢）。 */
+function textFieldRule(sql: string, fieldTypes: Record<string, string>, lineOf: (i: number) => number): SqlLintFinding[] {
+  const out: SqlLintFinding[] = [];
+  const seen = new Set<string>();
+  const re = /\b(GROUP\s+BY|ORDER\s+BY)\b/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(sql)) !== null) {
+    const bodyStart = m.index + m[0].length;
+    const rest = sql.slice(bodyStart);
+    /* 子句结束点：下一个子句关键字 / 分号 / 文字末尾 */
+    const endM = /\b(?:HAVING|ORDER\s+BY|LIMIT|FETCH|GROUP\s+BY)\b|;/i.exec(rest);
+    const body = endM ? rest.slice(0, endM.index) : rest;
+    for (const item of clauseItems(body, bodyStart)) {
+      /* 只取纯字段名：`col DESC` / `"col"` / `col` 三种写法；表达式（函数/别名）不判 */
+      const fm = /^(?:"([^"]+)"|`([^`]+)`|([A-Za-z_][\w.]*))(?:\s+(?:ASC|DESC))?\s*$/.exec(item.name);
+      if (!fm) continue;
+      const field = fm[1] ?? fm[2] ?? fm[3] ?? '';
+      if (seen.has(field)) continue;
+      const hit = unmaterializableSortField(field, fieldTypes, lineOf, item.offset);
+      if (hit) { seen.add(field); out.push(hit); }
+    }
+  }
+  return out;
+}
+
 /** SQL 静态 lint 主入口。空/全空白输入零误报返回 []。
  * `knownIndices`（可选）用于第 ⑥ 条规则：FROM 后的裸索引名若**精确命中**已知索引，
  * 说明用户是漏了双引号（ES SQL 要求标识符带引号，否则 `-`/`.` 会被当运算符报语法错）。
- * 不传即零增量——其余规则与既有契约完全不变。 */
-export function lintSql(sql: string, knownIndices: string[] = []): SqlLintFinding[] {
+ * `fieldTypes`（可选，1389）用于第 ⑦ 条规则：GROUP BY / ORDER BY 里的 text 字段若
+ * 没有 `.keyword` 子域，ES SQL 排不了也分不了组。
+ * 两个都可省略——不传即零增量，其余规则与既有契约完全不变。 */
+export function lintSql(sql: string, knownIndices: string[] = [], fieldTypes?: Record<string, string>): SqlLintFinding[] {
   const out: SqlLintFinding[] = [];
   if (!sql || !sql.trim()) return out;
 
@@ -251,6 +328,12 @@ export function lintSql(sql: string, knownIndices: string[] = []): SqlLintFindin
         suggestion: 'AND/OR 两侧都要有完整条件表达式，或删去行尾悬空的运算符',
       });
     }
+  }
+
+  /* ⑦（1389）：GROUP BY / ORDER BY 里排不了也分不了组的 text 字段。
+     需要字段类型证据；调用方没给类型就整条跳过（零增量）。 */
+  if (fieldTypes && Object.keys(fieldTypes).length) {
+    out.push(...textFieldRule(sql, fieldTypes, lineOf));
   }
 
   return out;

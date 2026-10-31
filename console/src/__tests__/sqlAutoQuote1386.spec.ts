@@ -88,7 +88,9 @@ describe('1386 lint 提示（输入时就看得见）', () => {
 
   it('④ 接线确实把索引清单传进去了（源码锁）', () => {
     const src = readFileSync(join(__dirname, '../views/SqlConsoleView.vue'), 'utf-8');
-    expect(src, 'lint 必须带已知索引清单').toMatch(/lintSql\(sql\.value \|\| '', sqlIndexPool\.value\)/);
+    /* 1389：lintSql 多了第三个可选参数（字段类型），这里只锁「传了索引清单」这件事，
+       不再要求整串逐字——否则每加一个可选参数都要改一次这条断言。 */
+    expect(src, 'lint 必须带已知索引清单').toMatch(/lintSql\(sql\.value \|\| '', sqlIndexPool\.value/);
     expect(src, '执行链必须使用补引号后的文本').toMatch(/const body = buildBody\(execSql\)/);
   });
 });

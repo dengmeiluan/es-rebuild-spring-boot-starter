@@ -502,8 +502,15 @@ const sql = useScopedDraft('sql', {
  ② 页内 banner：sqlLintFindings 逐条「第 N 行」提示条（自动高度，不进编辑器高度链）。
  lint 纯函数规则宁少勿误报（合法语句零误报由 sqlLint534 契约钉），零阻塞不拦执行。 */
 const sqlMonaco = ref<InstanceType<typeof MonacoEditor> | null>(null);
-/* 1386：带已知索引清单——FROM 里的裸索引名能被认出是「漏了引号」而不是拼错。 */
-const sqlLintFindings = computed(() => lintSql(sql.value || '', sqlIndexPool.value));
+/* 1386：带已知索引清单——FROM 里的裸索引名能被认出是「漏了引号」而不是拼错。
+   1389：带字段类型——GROUP BY / ORDER BY 打在无 .keyword 子域的 text 字段上会必失败，
+   执行前就在编辑器里点名（类型来自同一个字段源，补全/体检/纠错共用）。 */
+const sqlLintFieldTypes = computed<Record<string, string>>(() => {
+  const out: Record<string, string> = {};
+  for (const f of sqlFieldsCtx.fields.value) out[f.path] = f.type;
+  return out;
+});
+const sqlLintFindings = computed(() => lintSql(sql.value || '', sqlIndexPool.value, sqlLintFieldTypes.value));
 /* 1050：成本/结构提示（编辑即算，纯函数；最多 2 条防噪音）——1130 起只评估当前
    选区/光标语句，多语句稿不会拿另一条的缺失来提示这一条 */
 const costHints = computed(() => sqlCostHints(advisoryText.value || ''));

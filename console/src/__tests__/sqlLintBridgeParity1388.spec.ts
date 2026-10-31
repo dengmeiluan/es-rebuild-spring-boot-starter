@@ -39,7 +39,8 @@ describe('1388 裸索引名提示在两页都生效', () => {
   });
 
   it('接线：SqlConsole 与 SqlBridge 调用点都传索引清单', () => {
-    expect(consoleView).toContain("lintSql(sql.value || '', sqlIndexPool.value)");
+    /* 1389：lintSql 多了第三个可选参数（字段类型），这里锁「传了索引清单」而不是整串。 */
+    expect(consoleView).toMatch(/lintSql\(sql\.value \|\| '', sqlIndexPool\.value/);
     expect(bridge).toContain("lintSql(sql.value || '', store.indices.map(i => String(i.index || '')).filter(Boolean))");
   });
 
