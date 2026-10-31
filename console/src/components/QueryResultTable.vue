@@ -310,7 +310,7 @@
             <!-- W-B：selectable 行多选通道——表头全选（口径=当前视图全量）；
  缺省 false 不渲染（零增量） -->
             <th v-if="selectable" class="qrt-sel-col">
-              <input type="checkbox" :checked="allSel" aria-label="全选当前视图行" title="全选/取消全选（当前视图全部行）" @click.stop @change="toggleAllSel" />
+              <input type="checkbox" :checked="allSel" :aria-label="allSelHint" :title="allSelHint" @click.stop @change="toggleAllSel" />
             </th>
             <!-- 冻结序号列（对齐 RT dbx 冻结窗格）——宽表横向滚动时行身份不滚走 -->
             <th class="qrt-idx">#</th>
@@ -658,6 +658,9 @@ interface Props {
   /* 命中总数+下界标注（hit 型可选；传了才在工具行显示，对齐 RT 计数条） */
   total?: number;
   totalGte?: boolean;
+  /* 1406：宿主声明「还有未加载行」（游标未取完 / 远端分页还有下一页）——
+ 让全选/反选的工具提示按「仅已加载」口径说话。缺省 undefined = 未声明（零增量）。 */
+  moreRows?: boolean;
   /* rows 型：SQL 的 cols + 二维 rows */
   cols?: string[];
   rows?: (string | number | boolean | null)[][];
@@ -1449,6 +1452,20 @@ const allSel = computed(() => {
     const i = rawIdxMap.value.get(row);
     return i != null && selSet.value.has(i);
   });
+});
+/* 1406：全选口径必须说清「已加载」——游标/远端分页下总数可能远大于本次加载行，
+ 一个「全选」让用户以为选中了全部命中，随后导出/复制就少了数据。RT 早有同款诚实标注。
+ moreRows 由宿主显式声明「还有未加载行」（SQL 游标 / 远端分页）；缺省时退回 total 比较，
+ 两个来源任一成立即按「仅已加载」口径说话。 */
+const partialScope = computed(() => props.moreRows === true
+  || Number(props.total ?? 0) > (props.rows?.length ?? props.hits?.length ?? 0));
+const allSelHint = computed(() => {
+  if (!partialScope.value) return '全选/取消全选（当前视图全部行）';
+  const n = sortedRows.value.length;
+  const total = Number(props.total ?? 0);
+  return total > n
+    ? `全选/取消全选（仅当前已加载的 ${n} 行；共 ${total} 条，未加载的不在其中）`
+    : `全选/取消全选（仅当前已加载的 ${n} 行；结果未取完，未加载的不在其中）`;
 });
 function toggleAllSel() {
   if (allSel.value) { selSet.value = new Set(); }

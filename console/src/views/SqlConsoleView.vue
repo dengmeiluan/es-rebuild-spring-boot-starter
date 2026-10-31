@@ -330,6 +330,7 @@
           :max-height="resultMaxHeight"
           :min-height="resultMinHeight"
           selectable
+          :more-rows="!!cursor"
           empty-text="查询成功但命中 0 行，检查 WHERE 条件或索引名"
           @use-as-condition="useAsCondition"
           @sort-by="sortByColumn"

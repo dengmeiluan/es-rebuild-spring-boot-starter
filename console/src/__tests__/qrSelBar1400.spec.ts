@@ -109,6 +109,36 @@ describe('1400 QRT 行选中动作条', () => {
     expect(boxes, '第 1 行取消、第 2 行选上').toEqual([false, true]);
     /* 负控：反选实现若只是清空，boxes 会变成 [false,false]——上面的 toEqual 会红 */
   });
+
+  it('⑥ 全选口径说清「已加载」——总数大于已加载时不得声称全选全部（1406）', async () => {
+    /* 全部加载：正常说法 */
+    mountQrt({ hits: HITS, total: 2, selectable: true, storageKey: 'k1400e' });
+    await tick();
+    expect((host.querySelector('thead .qrt-sel-col input') as HTMLInputElement).getAttribute('title')).toContain('当前视图全部行');
+    apps.forEach(a => { try { a.unmount(); } catch { /* noop */ } }); apps.length = 0; host.innerHTML = '';
+
+    /* 只加载 2 行但共 500 条（游标/远端分页）：必须标注“仅已加载” */
+    mountQrt({ hits: HITS, total: 500, selectable: true, storageKey: 'k1400f' });
+    await tick();
+    const t = (host.querySelector('thead .qrt-sel-col input') as HTMLInputElement).getAttribute('title')!;
+    expect(t, '必须说清只选已加载').toContain('仅当前已加载的 2 行');
+    expect(t).toContain('共 500 条');
+    expect(t, '不能再说“全部行”').not.toContain('当前视图全部行');
+  });
+
+  it('⑦ more-rows（游标未取完、total 缺失）同样按「仅已加载」说话；SQL 宿主接线', async () => {
+    mountQrt({ hits: HITS, total: 2, moreRows: true, selectable: true, storageKey: 'k1400g' });
+    await tick();
+    const t = (host.querySelector('thead .qrt-sel-col input') as HTMLInputElement).getAttribute('title')!;
+    expect(t, '不知道总数时不能说“共 N 条”').not.toContain('共 2 条');
+    expect(t).toContain('结果未取完');
+    expect(t).toContain('仅当前已加载的 2 行');
+    /* 宿主接线：SQL 游标在途时必须声明 */
+    const SQL = readFileSync(join(__dirname, '../views/SqlConsoleView.vue'), 'utf-8');
+    expect(SQL).toContain(':more-rows="!!cursor"');
+    /* 负控：去掉该接线条 → 本断言红 */
+    expect(SQL.replace(':more-rows="!!cursor"', '')).not.toContain(':more-rows="!!cursor"');
+  });
 });
 
 describe('1400 Lucene 宿主接线', () => {
