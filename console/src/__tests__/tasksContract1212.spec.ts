@@ -25,6 +25,14 @@ const read = (rel: string) => readFileSync(join(root, rel), 'utf-8');
 
 const mockSrc = () => read('.tmp/browser/mock.mjs');
 
+/* 1393：契约样例改读**受版本管理**的 fixture。
+   原先这里直接 read('.tmp/browser/mock.mjs')，而 `.tmp/` 在 .gitignore 里——
+   CI 上该文件根本不存在，两条用例以 ENOENT 报红（报的是「文件没有」，不是契约坏了）。
+   现在样例落在 console/src/__tests__/fixtures/tasksContract1212.json，
+   CI 可读；mock 也从同一份读，替身与守卫不再各写一份。 */
+const fixturePath = join(__dirname, 'fixtures', 'tasksContract1212.json');
+const tasksFixture = () => JSON.parse(readFileSync(fixturePath, 'utf-8'));
+
 describe('1212 /cluster/tasks 契约两侧对齐', () => {
   it('后端返回扁平 List（不是 { nodes, tasks } 包装）', () => {
     const java = read('src/main/java/io/github/dengmeiluan/es/rebuild/web/InternalEsIndexRebuildController.java');
@@ -38,25 +46,36 @@ describe('1212 /cluster/tasks 契约两侧对齐', () => {
     expect(view).toContain('tasks.value = (raw || []).map((t: any) => ({');
   });
 
-  it('浏览器巡检替身也返回扁平数组（否则巡检报的是替身的错）', () => {
-    const mock = mockSrc();
-    const block = mock.slice(mock.indexOf("p.includes('/cluster/tasks')"));
-    const body = block.slice(0, block.indexOf('});') + 3);
-    /* 不能出现包装对象的键 */
-    expect(body).not.toContain('nodes:');
-    expect(body).not.toMatch(/tasks:\s*\[/);
-    /* 必须是数组字面量直接返回 */
-    expect(body).toMatch(/return json\(res, \[\s*\{/);
+  it('巡检替身样例是扁平数组（不是 { nodes, tasks } 包装）', () => {
+    const data = tasksFixture();
+    expect(Array.isArray(data), '样例必须是数组').toBe(true);
+    expect(data.length).toBeGreaterThan(0);
+    /* 每条记录都不许出现包装对象的键 */
+    for (const row of data) {
+      expect(row).not.toHaveProperty('nodes');
+      expect(Array.isArray(row.tasks), '不许把 tasks 数组塞进记录里').toBe(false);
+    }
   });
 
-  it('替身里的任务字段与消费端读取的键同源（taskId/action/runningTimeNanos）', () => {
-    const mock = mockSrc();
-    const block = mock.slice(mock.indexOf("p.includes('/cluster/tasks')")).slice(0, 900);
+  it('样例里的任务字段与消费端读取的键同源（taskId/action/runningTimeNanos）', () => {
+    const data = tasksFixture();
+    const keys = new Set(data.flatMap((r: Record<string, unknown>) => Object.keys(r)));
     for (const key of ['taskId', 'action', 'runningTimeNanos', 'startTimeInMillis', 'description']) {
-      expect(block).toContain(key);
+      expect(keys.has(key), `样例缺少 ${key}`).toBe(true);
     }
     /* 消费端确实读这两项（tookMs 折算依赖 runningTimeNanos） */
     const view = read('console/src/views/TasksView.vue');
     expect(view).toContain('runningTimeNanos');
+  });
+
+  it('mock 与守卫读同一份样例（替身不许另写一份契约）', () => {
+    /* mock.mjs 在 .gitignore 里，CI 上不存在——只在本地存在时才核这一条，
+       缺失即跳过（不再 ENOENT 报假红）。 */
+    let mock: string;
+    try { mock = mockSrc(); } catch { return; }
+    expect(mock, 'mock 必须从受版本管理的 fixture 读').toContain('tasksContract1212.json');
+    expect(mock).toContain('TASKS_CONTRACT');
+    /* 内联旧副本必须已经删掉——它不是契约出处 */
+    expect(mock).not.toContain("indices:data/write/reindex', taskId: 'node-1:101'");
   });
 });
