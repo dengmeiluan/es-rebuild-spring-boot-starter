@@ -131,8 +131,11 @@ const res = computed(() => {
     cap: SCAN_CAP,
     typeFilter: props.typeFilter,
     typePriority: props.typePriority,
-    /* 空输入保持 mapping/最近使用的稳定顺序；一旦开始打字再按业务角色精排 */
-    rolePriority: props.modelValue ? props.rolePriority : undefined,
+    /* 1410：此前 rolePriority 仅在「已选字段」时生效（props.modelValue 有值），
+       于是**新加条件、字段还空**时角色排序完全不参与——候选退化成字母序，正是
+       用户说的「字段自动匹配排序」没做到的地方。角色序本就与输入无关，空输入同样成立；
+       已有选择时保留原行为（输入过滤后再精排）。 */
+    rolePriority: props.rolePriority,
   });
   /* recent 段之后再前置「树内已用」命中段——上下文智能排序：
  recent 段式全前置（既有行为不动）；used 在其余候选里做「rank 不变、同 rank 内前置」
@@ -146,7 +149,7 @@ const res = computed(() => {
   const isUsed = (h: FieldHit) => used.includes(h.path);
   const prioSeg = (h: FieldHit) => (prio && !prio.includes(h.type) ? 1 : 0);
   const prioIdx = (h: FieldHit) => (prio ? prio.indexOf(h.type) : 0);
-  const rp = props.modelValue && props.rolePriority?.length ? props.rolePriority : null;
+  const rp = props.rolePriority?.length ? props.rolePriority : null;
   const roleIdx = (h: FieldHit) => {
     if (!rp) return 0;
     const i = rp.indexOf(fieldRoleOf(h.path, h.type));
