@@ -217,7 +217,9 @@ describe('W10 视图落点源码锁', () => {
   it('SqlConsole：run 成功后台顺带 translate / 执行钮 title 随态 / 空态插入示例', () => {
     const v = read('views/SqlConsoleView.vue');
     /* 1071：translate 与执行共用同一份 body 快照（含 params），避免 await 期间改稿串味 */
-    expect(v).toContain('const body = buildBody(execSnapshot);');
+    /* 1386：body 改用 execSql（execSnapshot 的补引号版本，无改动时逐字相同）——
+       translate 与执行仍共用同一份 body 快照。 */
+    expect(v).toContain('const body = buildBody(execSql);');
     expect(v).toContain('void api.sqlTranslate(withoutColumnar(body)).then(r => {');
     expect(v).toContain(":title=\"sql.trim() ? (selScope ? '仅执行选中的 ' + selScope.lines + ' 行（' + execHint + '）；清除选区后执行整篇' : (multiStmt ? '仅执行光标所在语句（第 ' + cursorStmtNo + ' 条 / 共 ' + stmtScopes.length + ' 条；' + execHint + '）；选中一段可只跑选段' : '执行（' + execHint + '）')) : '请输入 SQL 语句'\"");
     expect(v).toContain('action-text="插入示例" @action="loadSample"');

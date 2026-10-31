@@ -466,6 +466,7 @@ import { ensureSqlCompletion, suggestColumnsFor, suggestFunctionsFor, suggestInd
 import { lintSql } from '../utils/sqlLint'; /* P0-3：SQL 静态 lint */
 /* 1109：ES 报错 `line X:Y` 锚点 → 编辑器行列定位 */
 import { parseSqlErrorPos } from '../utils/sqlErrorPos';
+import { autoQuoteFromIndex } from '../utils/sqlQuote';
 import { selectionScope, statementsOf, statementScopeAt, replaceScopeText, mapScopedPos, type SqlScope } from '../utils/sqlScope';
 /* 1121：LIMIT/OFFSET 超结果窗口（from+size ≤ 10000）→ 去掉 OFFSET / 压 LIMIT 用 cursor */
 import { fixSqlResultWindow } from '../utils/sqlWindowFix';
@@ -496,7 +497,8 @@ const sql = useScopedDraft('sql', {
  ② 页内 banner：sqlLintFindings 逐条「第 N 行」提示条（自动高度，不进编辑器高度链）。
  lint 纯函数规则宁少勿误报（合法语句零误报由 sqlLint534 契约钉），零阻塞不拦执行。 */
 const sqlMonaco = ref<InstanceType<typeof MonacoEditor> | null>(null);
-const sqlLintFindings = computed(() => lintSql(sql.value || ''));
+/* 1386：带已知索引清单——FROM 里的裸索引名能被认出是「漏了引号」而不是拼错。 */
+const sqlLintFindings = computed(() => lintSql(sql.value || '', sqlIndexPool.value));
 /* 1050：成本/结构提示（编辑即算，纯函数；最多 2 条防噪音）——1130 起只评估当前
    选区/光标语句，多语句稿不会拿另一条的缺失来提示这一条 */
 const costHints = computed(() => sqlCostHints(advisoryText.value || ''));
@@ -1165,6 +1167,12 @@ async function doRun() {
   const picked = currentSelectionScope();
   const scope = forced ?? picked ?? (multiStmt.value ? cursorStmt.value : null);
   const execSnapshot = scope ? scope.text.replace(/;+\s*$/, '') : sql.value;
+  /* 1386：FROM 里的索引名没加双引号时自动补上（只在**发出去的文本**上改，
+     编辑器里的稿子保持用户原样）。用户原话：「索引要求 ""，但用户自己录入的
+     索引名字没有带 ""，直接报错体验很差」。只在名字确实命中已知索引时才改，
+     通配符/多表/子查询/已有引号一律不动。 */
+  const quotedFix = autoQuoteFromIndex(execSnapshot, sqlIndexPool.value);
+  const execSql = quotedFix.sql;
   /* 新查询开始即释放上一轮 cursor（服务端上下文），旧行在成功回包前继续可见 */
   if (cursor.value) void closeCursorQuiet();
   busy.value = true; unavailable.value = false; reason.value = ''; runErr.value = ''; runErrObj.value = null;
@@ -1177,7 +1185,12 @@ async function doRun() {
      实际发出去的那一份（否则「回放」记到新稿、cursor 续页绑到新参数）。 */
   const sqlSnapshot = sql.value;
   const paramsSnapshot = pp.value.length ? paramsText.value.trim() : undefined;
-  const body = buildBody(execSnapshot);
+  const body = buildBody(execSql);
+  /* 1386：告诉用户「这次帮你补了引号」——静默改写会让人以为编辑器里本来就带引号，
+     下次复制走那段 SQL 又踩同一个坑。提示里给出正式写法，教一次。 */
+  if (quotedFix.quoted) {
+    store.notify('info', `索引名「${quotedFix.quoted}」已自动加双引号后执行（ES SQL 要求标识符带引号；编辑器原文未改动）`, { duration: 3600 });
+  }
   try {
     const r = lenient.value ? await api.sqlLenient(body, signal) : await api.sqlJson(body, signal);
     if (r?.available === false) { unavailable.value = true; reason.value = r.reason || ''; return; }

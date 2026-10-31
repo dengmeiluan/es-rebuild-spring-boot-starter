@@ -23,7 +23,9 @@ describe('1128 SQL 选区执行', () => {
     expect(src).toContain('const picked = currentSelectionScope();');
     expect(src).toContain('const scope = picked ?? (multiStmt.value ? cursorStmt.value : null);');
     expect(src).toContain("const execSnapshot = scope ? scope.text.replace(/;+\\s*$/, '') : sql.value;");
-    expect(src).toContain('const body = buildBody(execSnapshot);');
+    /* 1386: body 改用 execSql（= execSnapshot 经 FROM 索引名补引号后的结果，无改动时逐字相同）。
+       选段执行的意图不变：execSql 完全由 execSnapshot 推导，不含整篇 sql。 */
+    expect(src).toContain('const body = buildBody(execSql);');
     expect(src).toContain('const sqlSnapshot = sql.value;');
     expect(src).toContain('const runSql = ref<string | null>(null);');
     expect(src).toContain('runScope.value = scope;');
