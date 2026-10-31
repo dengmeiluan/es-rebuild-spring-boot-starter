@@ -374,8 +374,11 @@
             <td
               v-for="(cell, ci) in row" :key="ci"
               :data-ri="ri" :data-col="shownCols[ci]"
-              class="qrt-cell" :class="{ expanded: isExpanded(ri, ci), 'qrt-col-frozen': isFrozenCol(shownCols[ci]), 'qrt-hit': isSearchHit(ri, ci), 'rt-hit-cur': isSearchCur(ri, ci), 'num-col': isNumericCol(shownCols[ci]), 'ip-col': semPref && isIpCol(shownCols[ci] ?? ''), 'qrt-agg-sel': isAggCell(ri, ci), 'qrt-region': isRegionCell(ri, ci), ...semToneCls(cell, ci) }" :title="cell === null || cell === undefined ? '' : fullText(cell)"
+              class="qrt-cell" :class="{ expanded: isExpanded(ri, ci), 'qrt-col-frozen': isFrozenCol(shownCols[ci]), 'qrt-hit': isSearchHit(ri, ci), 'rt-hit-cur': isSearchCur(ri, ci), 'num-col': isNumericCol(shownCols[ci]), 'ip-col': semPref && isIpCol(shownCols[ci] ?? ''), 'qrt-agg-sel': isAggCell(ri, ci), 'qrt-region': isRegionCell(ri, ci), 'qrt-region-anchor': !!touchAnchor && touchAnchor.ri === ri && touchAnchor.ci === ci, ...semToneCls(cell, ci) }" :title="cell === null || cell === undefined ? '' : fullText(cell)"
               @mousedown="onCellDown($event); onRegionStart($event, ri, ci)"
+              @pointerdown="onCellPointerDown($event, ri, ci)"
+              @pointerup="onCellPointerUp"
+              @pointercancel="onCellPointerUp"
               @click="onCellClick($event, cell, ri, ci)"
               @keydown.enter.exact.prevent="onCellClick($event, cell, ri, ci)"
               @contextmenu.prevent="openCellMenu($event, ri, ci)"
@@ -480,7 +483,7 @@
         <button class="qrt-stat-x" aria-label="清除单元格聚合选择" title="清除选择（Esc 亦可）" @click="clearAggCells">清除</button>
       </template>
       <span v-else-if="aggCellStats" class="qrt-stat-hint">已选 {{ aggCellStats.picked }} 格（都不是数值，无数可算）· 再点一次取消</span>
-      <span v-else-if="!(selectable && selSet.size)" class="qrt-stat-hint">{{ region ? '拖动已框选矩阵 · 点「复制 TSV」贴进表格软件 · Esc 清除选区' : 'Ctrl+点击数值单元格可求和聚合 · 更可拖选一片单元格 · 右键单元格可复制/筛选用法' }}</span>
+      <span v-else-if="!(selectable && selSet.size)" class="qrt-stat-hint">{{ touchAnchor ? '已设框选起点 · 点另一个单元格完成框选（再点起点取消）' : region ? '拖动已框选矩阵 · 点「复制 TSV」贴进表格软件 · Esc 清除选区' : 'Ctrl+点击数值单元格可求和聚合 · 更可拖选一片单元格 · 右键单元格可复制/筛选用法' }}</span>
       <div style="flex:1"></div>
       <span v-if="tblFocus" class="qrt-kbd-hint mono">↑↓ 行 · Ctrl+F 查找 · Esc 退出</span>
     </div>
@@ -1612,10 +1615,51 @@ function isRegionCell(ri: number, ci: number): boolean { return regionKeys.value
 function onRegionStart(e: MouseEvent, ri: number, ci: number) {
   /* 左键才起框选；Ctrl/Cmd 留给数值聚合；右键走菜单 */
   if (e.button !== 0 || e.ctrlKey || e.metaKey) return;
+  /* 1408：触屏 tap 会在 pointer 之后补发合成 mousedown——那条路径会把触屏两击刚
+ 建好的矩形清空（region=null）。同一手势内的合成 mousedown 距 pointerdown 只有几毫秒，
+ 用时间窗短路；触屏设备接鼠标时（pointerType=mouse）不受影响。 */
+  if (lastPointerWasTouch && Date.now() - touchStamp < 700) return;
   regionAnchor.value = { ri, ci };
   region.value = null;
   window.addEventListener('mousemove', onRegionMove);
   window.addEventListener('mouseup', onRegionEnd, { once: true });
+}
+/* 触屏手势标记：pointerdown(touch) 置 true 并保持到本次手势的合成鼠标事件走完。
+ 用时间窗兜底（同一手势内合成 mousedown 紧跟 pointerup，远小于 700ms）。 */
+let lastPointerWasTouch = false;
+let touchStamp = 0;
+/* 1408：触屏没有「按下-拖动」语义（拖动=滚动页面），框选必须换一条路——
+ 长按（500ms）第一格设起点，再点另一格成矩形。只在没有 hover 的设备启用，
+ 鼠标用户的单击/双击语义零变化。 */
+const touchAnchor = ref<{ ri: number; ci: number } | null>(null);
+let touchTimer: ReturnType<typeof setTimeout> | null = null;
+function cancelTouchTimer() {
+  if (touchTimer) { clearTimeout(touchTimer); touchTimer = null; }
+}
+function onCellPointerDown(e: PointerEvent, ri: number, ci: number) {
+  if (e.pointerType !== 'touch') return;
+  lastPointerWasTouch = true;
+  touchStamp = Date.now();
+  cancelTouchTimer();
+  /* 已有起点：这一下就是第二个角 */
+  if (touchAnchor.value) {
+    const a = touchAnchor.value;
+    region.value = {
+      ri1: Math.min(a.ri, ri), ri2: Math.max(a.ri, ri),
+      ci1: Math.min(a.ci, ci), ci2: Math.max(a.ci, ci),
+    };
+    touchAnchor.value = null;
+    return;
+  }
+  touchTimer = setTimeout(() => {
+    touchAnchor.value = { ri, ci };
+    touchTimer = null;
+  }, 500);
+}
+/* 只有「没按满 500ms」才取消——按满后的抬手不该把刚设好的起点抹掉
+ （真实触屏 tap 也是 pointerdown→pointerup 紧邻，若抬手即取消就永远设不上） */
+function onCellPointerUp() {
+  if (touchTimer) cancelTouchTimer();
 }
 function onRegionMove(e: MouseEvent) {
   const a = regionAnchor.value;
@@ -1638,7 +1682,7 @@ function onRegionEnd() {
     setTimeout(() => { regionSuppressClick = false; }, 0);
   }
 }
-function clearRegion() { region.value = null; }
+function clearRegion() { region.value = null; touchAnchor.value = null; cancelTouchTimer(); }
 /* 选区数值摘要（框完即显 Σ/avg，dbx 选区底栏语言）——纯展示，不改数据 */
 const regionSummary = computed(() => {
   const r = region.value;
@@ -2437,8 +2481,8 @@ function onEscBlur(e: KeyboardEvent) {
   if (expandedRows.value.size) { expandedRows.value = new Set(); return; }
   /* 1366：聚合散选先清（与 RT「Esc 清框选」同裁决），再落失焦 */
   if (aggCells.value.size) { clearAggCells(); return; }
-  /* 1405：框选矩阵次之（先清散选，再清更“外”的选区） */
-  if (region.value) { clearRegion(); return; }
+  /* 1405：框选矩阵次之（先清散选，再清更“外”的选区）；1408 触屏起点同清 */
+  if (region.value || touchAnchor.value) { clearRegion(); return; }
   (e.currentTarget as HTMLElement | null)?.blur();
 }
 const wrapRef = ref<HTMLElement>();
@@ -2875,6 +2919,8 @@ th.qrt-drop-after { box-shadow: inset -3px 0 0 var(--info); }
 /* 1405：拖拽框选矩阵——与 RT .rt-region 同一视觉语言（软底+内描边），
  与散选聚合（.qrt-agg-sel 左缘强调条）区分：一个是矩阵，一个是点选集合 */
 .qrt-tbl td.qrt-region { background: var(--info-soft); box-shadow: inset 0 0 0 1px var(--info-line); }
+/* 1408：触屏两击框选的起点——虚线描边告诉用户「这一角已定，再点对角」 */
+.qrt-tbl td.qrt-region-anchor { outline: 2px dashed var(--info-line); outline-offset: -2px; }
 /* 框选时单元格文字不可被浏览器文本选择抢走（拖选语义是矩阵，不是复制文本） */
 .qrt-tbl tbody td.qrt-cell { user-select: none; }
 /* 1366：页脚状态栏（RT .rt-status 同款页脚语言）——贴死表体下沿、只留底部圆角；

@@ -115,4 +115,39 @@ describe('1405 QRT 拖拽框选矩阵', () => {
     /* 负控：删掉抑制位 → 本断言红 */
     expect(QRT.replace(' || regionSuppressClick', '')).not.toMatch(/cellGuard\.moved\(e\) \|\| regionSuppressClick/);
   });
+
+  it('⑥ 触屏两击框选：长按起点 + 点对角成矩形；鼠标路径不受影响（1408）', async () => {
+    mountQrt();
+    await tick();
+    /* jsdom 的 PointerEvent 可能不存在——用 MouseEvent 造型补 pointerType */
+    const pe = (type: string, el: HTMLElement) => {
+      const e: any = new MouseEvent(type, { bubbles: true, button: 0 });
+      Object.defineProperty(e, 'pointerType', { value: 'touch' });
+      el.dispatchEvent(e);
+    };
+    pe('pointerdown', cell(0, 0));
+    /* 真实长按：按住 500ms 以上才抬手（先抬手 = 普通 tap，不该立起点） */
+    await new Promise(r => setTimeout(r, 560));
+    pe('pointerup', cell(0, 0));
+    await tick();
+    expect(host.textContent, '起点已设要可见').toContain('已设框选起点');
+    expect(host.querySelectorAll('td.qrt-region-anchor').length, '起点格有虚线标记').toBe(1);
+    /* 点对角 → 成矩形 */
+    pe('pointerdown', cell(1, 1));
+    await tick();
+    expect(host.querySelectorAll('td.qrt-region').length, '2×2=4 格').toBe(4);
+    expect(host.textContent).toContain('已框选 4 格');
+    /* 鼠标（pointerType=mouse）不应触发起点/矩形 */
+    const me: any = new MouseEvent('pointerdown', { bubbles: true, button: 0 });
+    Object.defineProperty(me, 'pointerType', { value: 'mouse' });
+    cell(0, 2).dispatchEvent(me);
+    await new Promise(r => setTimeout(r, 560));
+    await tick();
+    expect(host.querySelectorAll('td.qrt-region').length, '鼠标不进入触屏框选态').toBe(4);
+    /* 负控（真实回归点）：合成 mousedown 会走 onRegionStart 把刚建好的矩形清空——
+       源码里必须有「触屏手势时间窗短路」这一行，删掉它真机上触屏两击就失效。 */
+    expect(QRT).toMatch(/if \(lastPointerWasTouch && Date\.now\(\) - touchStamp < 700\) return;/);
+    expect(QRT.replace(/if \(lastPointerWasTouch && Date\.now\(\) - touchStamp < 700\) return;/, ''))
+      .not.toMatch(/lastPointerWasTouch && Date\.now\(\)/);
+  });
 });

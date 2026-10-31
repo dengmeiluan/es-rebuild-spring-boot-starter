@@ -2895,6 +2895,12 @@ tr.sel td { background: var(--ac-soft); }
 th:hover > .rt-funnel, th:focus-within > .rt-funnel { opacity: .85; }
 .rt-funnel:hover { opacity: .9; color: var(--info); }
 .rt-funnel.on { opacity: 1; color: var(--info); }
+/* 1407：触屏没有 hover——悬停才出现的筛选漏斗/未排序 ⇅ 在触屏上等于不存在。
+   与 QRT `@media (hover: none)` 同口径：常驻弱提示（筛选生效仍是实色）。 */
+@media (hover: none) {
+  .rt-funnel { opacity: .55; }
+  .rt-th-sort-hint { display: block; opacity: .5; }
+}
 /* 554 工蚁1：nowrap 约定迁 TableFilteredHint 单源（bar-left 筛选态提示随 561 合并片段组件；
  弹层槽第二注入位的 .rt-fmode 规则留内核——两注入位共用类名、片段组件持同款复制） */
 /* W3：searchable 内建搜索框样式随 561 合并 TableQSearch 全局单源（迁出勿搬回） */

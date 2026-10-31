@@ -42,4 +42,12 @@ describe('1403 表头漏斗静息不占视觉', () => {
     expect(QRT).toMatch(/\.qrt-funnel\.on \{ opacity: 1;/);
     expect(QRT, '触屏没有 hover，必须常驻弱提示').toMatch(/@media \(hover: none\) \{[\s\S]{0,120}?\.qrt-funnel/);
   });
+
+  it('⑤ RT 触屏档：没有 hover 时漏斗与未排序 ⇅ 必须可达（否则筛选入口在平板上不存在）', () => {
+    expect(RT, '触屏常驻弱提示').toMatch(/@media \(hover: none\) \{\s*\.rt-funnel \{ opacity: \.55; \}/);
+    expect(RT, '⇅ 悬停档在触屏要显式显示').toMatch(/\.rt-th-sort-hint \{ display: block; opacity: \.5; \}/);
+    /* 负控：删掉触屏档 → 本断言红 */
+    const noTouch = RT.replace(/@media \(hover: none\) \{\s*\.rt-funnel \{ opacity: \.55; \}/, '');
+    expect(noTouch).not.toMatch(/@media \(hover: none\) \{\s*\.rt-funnel \{ opacity: \.55; \}/);
+  });
 });
