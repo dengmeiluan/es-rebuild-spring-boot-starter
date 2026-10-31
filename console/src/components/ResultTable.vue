@@ -2888,8 +2888,12 @@ tr.sel td { background: var(--ac-soft); }
 .rt-rdw-v { flex: 1; min-width: 0; overflow-wrap: anywhere; white-space: pre-wrap; font-family: var(--mono); }
 /* rt-cd 系列详情样式随弹窗迁入共享件 ColDetailModal（类名不变） */
 /* P0-4：列头漏斗（QRT qrt-funnel 同语言）+筛选态提示+筛选弹层 */
-.rt-funnel { position: absolute; right: 8px; top: 3px; display: inline-flex; align-items: center; padding: 1px; background: none; border: 0; color: var(--tx2); opacity: .45; cursor: pointer; }
-.rt-funnel:hover { opacity: .85; color: var(--info); }
+.rt-funnel { position: absolute; right: 8px; top: 3px; display: inline-flex; align-items: center; padding: 1px; background: none; border: 0; color: var(--tx2); opacity: 0; cursor: pointer; }
+/* 1403：漏斗从「常驻 45% 灰」改为悬停/键盘聚焦才出现（与 QRT 同口径）——
+ 每列表头同时挂排序箭头+类型徽标+漏斗+拖拽柄是用户说的「第一行太多元素平铺」；
+ 漏斗是低频动作，静息态不该占视觉。筛选生效(.on)仍常驻高亮（否则不知道列被筛了）。 */
+th:hover > .rt-funnel, th:focus-within > .rt-funnel { opacity: .85; }
+.rt-funnel:hover { opacity: .9; color: var(--info); }
 .rt-funnel.on { opacity: 1; color: var(--info); }
 /* 554 工蚁1：nowrap 约定迁 TableFilteredHint 单源（bar-left 筛选态提示随 561 合并片段组件；
  弹层槽第二注入位的 .rt-fmode 规则留内核——两注入位共用类名、片段组件持同款复制） */
