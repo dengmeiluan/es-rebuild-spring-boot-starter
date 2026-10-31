@@ -367,5 +367,10 @@ export function lintSql(sql: string, knownIndices: string[] = [], fieldTypes?: R
     out.push(...likeTextFieldRule(sql, fieldTypes, lineOf));
   }
 
+  /* 1391：按行号升序输出。各规则是独立扫描、结果按规则追加，命中多条时顺序是
+     「规则序」而不是「文档序」——实测同一条 SQL 出过 第1行/第3行/第2行 的排法，
+     用户读起来像乱的。同行的保持规则序（稳定排序），规则内部语义不受影响。 */
+  out.sort((a, b) => a.line - b.line);
+
   return out;
 }

@@ -84,9 +84,11 @@ describe('562①：lint-bar 改用第二波——scoped 私造形态退役（剥
     expect(s, 'warn 档不回流').not.toMatch(/\.uq-lint-warn \{/);
     expect(s, 'err 档不回流').not.toMatch(/\.uq-lint-err \{/);
   });
-  it('SqlConsoleView：.sq-sql-lint 整条退役（warn-line 边线随单源软底退役）', () => {
+  it('SqlConsoleView：.sq-sql-lint 私造外观整条退役（warn-line 边线随单源软底退役）', () => {
     const s = strip(sql);
-    expect(s).not.toMatch(/\.sq-sql-lint \{/);
+    /* 1391：.sq-sql-lint 有了功能性规则（max-height / overflow），但**外观**仍必须归
+       .lint-bar 单源——本条守的是「padding/背景/边框/warn-line 不回流」，不是禁止一切声明。 */
+    expect(s, '私造外观不回流').not.toMatch(/\.sq-sql-lint \{[^}]*(padding|background|border|border-radius)/);
     expect(s, 'warn-line 边线不回流').not.toMatch(/\.sq-sql-lint[^}]*warn-line/);
   });
   it('SqlBridgeView：.br-sql-lint 整条退役', () => {

@@ -125,8 +125,14 @@
  零阻塞不拦执行——lint 只提示，执行门仍是既有 doRun；自动高度不进编辑器高度链）。
  .sq-sql-lint 私造形态改用 theme.css .lint-bar 单源（sq-sql-lint 锚并存，role 与文案逐字不动） -->
         <div v-if="sqlLintFindings.length" class="lint-bar sq-sql-lint lint-bar-warn" role="status">
-          <span v-for="(f, i) in sqlLintFindings" :key="i">· <button type="button" class="sq-lint-ln"
+          <span v-for="(f, i) in shownLintFindings" :key="i">· <button type="button" class="sq-lint-ln"
             :title="'定位到第 ' + f.line + ' 行'" @click="locateLine(f.line)">第 {{ f.line }} 行</button>：{{ f.message }} — {{ f.suggestion }}</span>
+          <!-- 1391：默认只列前 2 条，其余折起。3 条以上会把编辑区挤到没法改稿（1280×720 实测），
+               但「看不见的问题」同样是坑——所以给一个明确的展开入口，条数一直写在按钮上。 -->
+          <button v-if="sqlLintFindings.length > LINT_VISIBLE" type="button" class="btn xs sq-lint-more"
+            :aria-expanded="lintExpanded" @click="lintExpanded = !lintExpanded">
+            {{ lintExpanded ? '收起' : `还有 ${sqlLintFindings.length - LINT_VISIBLE} 条` }}
+          </button>
         </div>
         <!-- 1050：高开销/易误读结构提示（GROUP BY 无 WHERE / SELECT * 无 LIMIT / 前置 % LIKE）
              ——只提示不拦截；可一键补 LIMIT 控制返回量（不宣称降低扫描成本）。 -->
@@ -511,6 +517,15 @@ const sqlLintFieldTypes = computed<Record<string, string>>(() => {
   return out;
 });
 const sqlLintFindings = computed(() => lintSql(sql.value || '', sqlIndexPool.value, sqlLintFieldTypes.value));
+/* 1391：默认只列 1 条（第一条通常就是最该先修的）。规则变多以后（⑥⑦⑧ 全命中 +
+   同字段多子句）提示条会顶到编辑器上方：1280×720 实测编辑区只剩 39~54px，
+   用户看得见问题却改不动稿——「自动高度不进编辑器高度链」这条注释是错的，实测它会挤。
+   「折叠」不是隐藏问题：按钮上写着还差几条，点开全可见（另有 88px 封顶 + 内部滚动）。 */
+const LINT_VISIBLE = 1;
+const lintExpanded = ref(false);
+const shownLintFindings = computed(() => (lintExpanded.value
+  ? sqlLintFindings.value
+  : sqlLintFindings.value.slice(0, LINT_VISIBLE)));
 /* 1050：成本/结构提示（编辑即算，纯函数；最多 2 条防噪音）——1130 起只评估当前
    选区/光标语句，多语句稿不会拿另一条的缺失来提示这一条 */
 const costHints = computed(() => sqlCostHints(advisoryText.value || ''));
@@ -1642,6 +1657,21 @@ function doFav() {
 .sq-editor > :deep(.monaco-host) { border: none; border-radius: 0; }
 /* .sq-sql-lint 私造形态（含 warn-line 边线）随改用 lint-bar 单源退役；
  自动高度 flex none 语义归 .lint-bar，编辑器 flex:1 min-height:0 既有高度链确定解不动 */
+/* 1391：命中多条时提示条要封顶。实测 1440×900 三条命中 → 条高 103px、编辑器从 268 掉到 113；
+   1280×720 同稿编辑器只剩 39px（基本没法改稿）。上限取 3 行正文高度（约 88px），超出内部滚动：
+   提示仍全部可达（可滚、可点行号定位），但永远不会把编辑器挤到没法用。 */
+/* 1391：有 lint 提示时，编辑格按内容长高而不是压 Monaco。
+   `.sq-grid` 的编辑器行是 `minmax(150px, 34vh)`，提示条与 Monaco 同在该格里；
+   提示条吃掉多少，Monaco 就少多少（1280×720 实测只剩 86px，改不动稿）。
+   做法：栅格行改成「至少装了 Monaco 150 + 提示条实际高度」，即 auto 行 + 内容自带
+   flex-basis 下限；页面本来允许滚动，多出来的高度不会把结果表挤走。 */
+.sq-grid:has(.sq-sql-lint), .sq-grid:has(.sq-cost-hint) { grid-template-rows: minmax(min-content, 34vh); }
+.sq-editor > :deep(.monaco-host) { flex: 1 0 150px; }
+.sq-editor > .sq-sql-lint, .sq-editor > .sq-cost-hint { flex: 0 0 auto; }
+.sq-sql-lint { max-height: 88px; overflow-y: auto; }
+.sq-sql-lint > span { flex: 0 0 auto; }
+/* 展开/收起按钮固定在条底（提示区滚到哪都在），浅色小钮 */
+.sq-lint-more { align-self: flex-start; }
 /* 1050：成本提示行——多条纵向/横向排布，动作钮右端 */
 .sq-cost-hint { display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; gap: var(--sp-2); }
 .sq-cost-item { flex: 1 1 260px; min-width: 0; }
