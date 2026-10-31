@@ -94,7 +94,7 @@
  原 textarea 的 Ctrl+Enter 执行语义由 @enter 承接——面板关时 Enter 透发即执行；
  弹层有候选时 Enter=回填不执行（补全与执行不打架）。 -->
         <div class="lc-qwrap">
-          <LuceneInput v-model="qs" :index="index" @enter="doRun"
+          <LuceneInput v-model="qs" :index="index" @enter="doRun" placeholder-value="*"
             placeholder="+status:ACTIVE tags:(red OR blue) name:hello*  或  * （全部）" />
         </div>
       </div>

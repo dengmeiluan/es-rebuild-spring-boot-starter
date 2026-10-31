@@ -16,6 +16,7 @@
       @keydown="onKey"
       @keyup="onKeyUp"
       @click="onCursorMove"
+      @focus="onFocusSelectPlaceholder"
     />
 
     <!-- 语义高亮轮：轻量语法检查提示条（升级双档：硬伤 error 红档/软提示 warn 黄档，
@@ -106,6 +107,12 @@ const props = withDefaults(defineProps<{
   placeholder?: string;
   /** 弹层挂载点：默认 'body'（Teleport）；false 就地渲染在 .li 根内（absolute 随根定位） */
   to?: string | false;
+  /* 1438：视为「空占位」的初值——聚焦时若内容仍是它，全选整段，
+     让用户直接输入就覆盖掉。
+     为什么要这个：Lucene 页的查询默认值是 `*`（match_all 简写）。用户点进去
+     直接敲 `status:ACTIVE`，得到的是 `*status:ACTIVE`——`*` 在 query_string 里是
+     通配符，语义完全变了，而用户毫无察觉。全选只改选区不改值，零副作用。 */
+  placeholderValue?: string;
 }>(), { to: 'body' });
 
 /* enter：面板关或无候选时 Enter 透发（宿主绑定执行查询—— 渗透用） */
@@ -410,6 +417,16 @@ function onCursorMove() {
   if (!open.value) return;
   const el = inputEl.value;
   if (el && (el.selectionStart ?? 0) !== segCursor.value) close();
+}
+
+/* 1438：聚焦时若内容仍是「空占位值」（如 `*`），全选让用户直接输入覆盖。
+   只改选区不改值——用户若想保留 `*` 也能照常按 Esc/箭头移动光标。 */
+function onFocusSelectPlaceholder() {
+  const el = inputEl.value;
+  const ph = props.placeholderValue;
+  if (!el || ph == null || !ph) return;
+  if (el.value !== ph) return;
+  el.select();
 }
 
 function choose(it: LiItem) {
