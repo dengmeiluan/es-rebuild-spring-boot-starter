@@ -61,8 +61,10 @@ describe('1410 字段候选按算子语义自动排序', () => {
     expect(defaultOpForField('amount', 'double')).toBe('range');
     expect(defaultOpForField('issuer_type', 'keyword')).toBe('term');
     expect(defaultOpForField('title', 'text')).toBe('match');
-    /* 角色兜底：无类型但有度量词根 → range；其余 → term */
+    /* 角色兜底：无类型但有度量/日期词根 → range；其余 → term */
     expect(defaultOpForField('trade_amount')).toBe('range');
+    expect(defaultOpForField('publish_time'), '日期词根无类型也该给范围').toBe('range');
+    expect(defaultOpForField('created_at')).toBe('range');
     expect(defaultOpForField('anything_else')).toBe('term');
   });
 

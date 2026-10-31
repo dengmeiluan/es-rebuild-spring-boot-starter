@@ -105,7 +105,10 @@ export function defaultOpForField(path: string, type?: string): string {
   if (t === 'percolator') return 'percolate';
   if (t === 'join') return 'parent_id';
   const role = fieldRoleOf(path, type);
-  if (role === 'metric') return 'range';
+  /* 1411：无 mapping 类型时，角色同样决定默认算子——date 词根字段给 range
+     （publish_time 这类在 mapping 未加载时此前落 term，用户还得手动换算子），
+     metric 已有同款兜底。entity/identifier/category 仍给 term（精确命中语义）。 */
+  if (role === 'metric' || role === 'date') return 'range';
   return 'term';
 }
 
