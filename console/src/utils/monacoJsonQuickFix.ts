@@ -97,8 +97,11 @@ export function ensureJsonQuickFixes(): void {
         if (!intersects(m, range)) continue;
         const code = markerCode(m);
         if (code === '528' || /doublequoted/i.test(m.message)) {
-          const raw = model.getValueInRange(m).replace(/^["']+|["']+$/g, ''); /* 2.6.0：单引号壳同剥 */
+          /* 脱壳后必须转义内部的双引号再包——`{'a"b': 1}` 直接拼会得到 `"a"b"`
+            （非法 JSON，修复反而把稿子改坏）。反斜杠也要转义，否则 `\"` 变 `\\"`。 */
+          const raw = model.getValueInRange(m).replace(/^["']+|["']+$/g, '');
           if (!raw) continue;
+          const quoted = '"' + raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
           actions.push({
             title: '键加双引号',
             kind: 'quickfix',
@@ -108,7 +111,7 @@ export function ensureJsonQuickFixes(): void {
               edits: [{
                 resource: model.uri,
                 versionId: undefined, /* 不校验模型版本（monaco 0.52 IWorkspaceTextEdit 必设字段） */
-                textEdit: { range: m, text: '"' + raw + '"' },
+                textEdit: { range: m, text: quoted },
               }],
             },
           });

@@ -99,6 +99,26 @@ describe('monacoJsonQuickFix', () => {
     expect(a.edit.edits[0].textEdit.text).toBe('"match"');
   });
 
+  it('528 键内含双引号/反斜杠时必须转义（否则修复产出非法 JSON）(1432)', () => {
+    /* 单引号壳内嵌双引号：{'a"b': 1} —— 切片 = 'a"b'（1 基列 2..7） */
+    const m1 = marker({ message: 'Property keys must be doublequoted', code: '528', startColumn: 2, endColumn: 7 });
+    caps.markers = [m1];
+    const a1 = caps.provider.provideCodeActions(fakeModel('{\'a"b\': 1}'), RANGE).actions[0];
+    expect(a1.edit.edits[0].textEdit.text).toBe('"a\\"b"');
+
+    /* 键内含反斜杠：{'a\b': 1} → 反斜杠要成对，否则 \" 会被读成转义引号 */
+    const m2 = marker({ message: 'Property keys must be doublequoted', code: '528', startColumn: 2, endColumn: 7 });
+    caps.markers = [m2];
+    const a2 = caps.provider.provideCodeActions(fakeModel('{\'a\\b\': 1}'), RANGE).actions[0];
+    expect(a2.edit.edits[0].textEdit.text).toBe('"a\\\\b"');
+
+    /* 负控：普通裸键不受影响（不多加反斜杠） */
+    const m3 = marker({ message: 'Property keys must be doublequoted', code: '528', startColumn: 2, endColumn: 7 });
+    caps.markers = [m3];
+    const a3 = caps.provider.provideCodeActions(fakeModel('{match: 1}'), RANGE).actions[0];
+    expect(a3.edit.edits[0].textEdit.text).toBe('"match"');
+  });
+
   it('519（code 形态 {value} 归一）→「删除尾逗号」：textEdit 空串、不设 isPreferred', () => {
     const m = marker({ message: 'Trailing comma', code: { value: '519' }, startColumn: 9, endColumn: 10 });
     caps.markers = [m];
