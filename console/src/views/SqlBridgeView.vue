@@ -260,7 +260,10 @@ const sql = usePref('sqlbridge.sql', '');
  ② 页内 banner：brSqlLint 逐条「第 N 行」提示条（自动高度，去壳后 pane 布局结构不动——
  与 .br-result 既有自动高兄弟同形态，编辑器 flex:1 1 0 min-height:260px 既有弹性不动）。 */
 const brSqlMonaco = ref<InstanceType<typeof MonacoEditor> | null>(null);
-const brSqlLint = computed(() => lintSql(sql.value || ''));
+/* 1388：带上索引清单——1386 的「FROM 后裸索引名缺双引号」规则靠**精确命中已知索引**
+   才敢报（不猜）。桥这边已有 store.indices（同页补全的 FROM 候选同源），此前没传，
+   于是同一条 SQL 在控制台会提示、在语法桥不提示——同一条规则两处不一致。 */
+const brSqlLint = computed(() => lintSql(sql.value || '', store.indices.map(i => String(i.index || '')).filter(Boolean)));
 const queueBrSqlLintMarkers = useDebounceFn(() => {
   brSqlMonaco.value?.setLineMarkers?.(
     brSqlLint.value.map(f => ({ line: f.line, message: f.message + '（' + f.suggestion + '）' })),
