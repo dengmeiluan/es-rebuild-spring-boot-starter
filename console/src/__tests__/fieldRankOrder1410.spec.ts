@@ -78,6 +78,22 @@ describe('1410 字段候选按算子语义自动排序', () => {
     expect(fieldRoleOf('publish_time', 'date')).toBe('date');
   });
 
+  it('容器字段（object/nested）默认算子必须是 exists，不能是 term（1422）', () => {
+    /* 官方只在叶子路径建索引：对 products 这类容器做 term 必然零命中或报错。
+       此前默认给 term → 用户点一下容器字段就得到注定失败的查询。 */
+    expect(defaultOpForField('products', 'object')).toBe('exists');
+    expect(defaultOpForField('products', 'nested')).toBe('exists');
+    /* 负控：叶子字段不受影响（否则「容器特判」被误写成「全都 exists」） */
+    expect(defaultOpForField('products.color', 'keyword')).toBe('term');
+    expect(defaultOpForField('title', 'text')).toBe('match');
+    expect(defaultOpForField('amount', 'double')).toBe('range');
+    /* 负控：删掉容器分支 → 上面两条必须变红（回到 term） */
+    const src = readFileSync(join(__dirname, '../utils/fieldRole.ts'), 'utf-8');
+    expect(src).toMatch(/if \(t === 'object' \|\| t === 'nested'\) return 'exists';/);
+    expect(src.replace(/if \(t === 'object' \|\| t === 'nested'\) return 'exists';/, ''))
+      .not.toMatch(/if \(t === 'object' \|\| t === 'nested'\) return 'exists';/);
+  });
+
   it('选字段弹层：字段还空（新加条件）时也必须按角色排序，不能退化成字母序', () => {
     const FS = readFileSync(join(__dirname, '../components/builder/FieldSelect.vue'), 'utf-8');
     /* 1410 实测缺口：此前 rolePriority 被 props.modelValue 门控，空字段时完全不参与排序 */

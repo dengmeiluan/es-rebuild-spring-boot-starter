@@ -104,6 +104,11 @@ export function defaultOpForField(path: string, type?: string): string {
   if (t === 'ip' || t === 'version') return 'term';
   if (t === 'percolator') return 'percolate';
   if (t === 'join') return 'parent_id';
+  /* 1422：容器字段（object / nested）没有可直接查询的值——官方只在叶子路径上建索引，
+     对容器路径做 term 必然零命中或报错。此前落 term，用户点一下就得到注定失败的查询。
+     容器上唯一有意义的默认是 exists（该字段有子值）。nested 想按内部字段查，
+     用户应选具体叶子路径（如 products.color）。 */
+  if (t === 'object' || t === 'nested') return 'exists';
   const role = fieldRoleOf(path, type);
   /* 1411：无 mapping 类型时，角色同样决定默认算子——date 词根字段给 range
      （publish_time 这类在 mapping 未加载时此前落 term，用户还得手动换算子），
