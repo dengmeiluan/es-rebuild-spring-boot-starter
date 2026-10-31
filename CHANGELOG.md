@@ -5,6 +5,47 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.76]
+
+### 修复：条件树头部那一行被空撑开元素压歪（1396）
+
+用户红箭头指出「过滤条件…」看起来孤悬在工具行右下方。
+
+先排除一个误判：过滤框与工具行**没有遮挡**——放大 5 倍看两者有清晰空隙，
+命中测试（`elementFromPoint`）打中的也是过滤框自己。
+
+真正成因在条件树头部那一行（撤销/重做 · 共 N 条件 · … · 过滤条件）：中间撑开右侧
+用的是一段**空 span**。行内其它元素 `y=181`，这个空 span `y=194`——**低了 13px**。
+空元素没有内容、行盒高度为 0，`align-items: center` 对它不起作用，它按基线落到行底。
+它自己看不见，但把右侧过滤框的定位参照拉歪了。
+
+这 13px 不是偶然：行高 26px、空盒高 0，居中后必然偏 13px。改成 `align-self: stretch`
+（纯占位、不参与对齐），并给吸顶区补上内衬，过滤框与工具行间距 3px → 5px。
+
+### 修复：`constant_keyword` 字段曾经只能查「字段存在」（1395）
+
+官方定义它是 keyword 的特化——「a specialization of the keyword field」，并明确
+「you can filter on a constant keyword」。它与 keyword 的差别只在**写入侧**（值恒定），
+查询语义完全一致。
+
+此前 `opsForType` 没有这个分支 → 落兜底 `['exists']`：用户选中 constant_keyword 字段后
+算子下拉只有「字段存在」，读成「这字段不能查」。与 `shape`（1.0.71 修过）完全同类。
+现在给同一套 keyword 族算子；组件级测试确认下拉「推荐」组里真的出现 term/terms。
+
+同时把整套 mapping 类型扫了一遍：`histogram` / `completion` / `binary` 等落 `exists`
+是**正确的**（官方明说不可查询），已钉成负控，防止后续"顺手改坏"。
+
+### 测试设施：CI 上三个既存失败
+
+- `usePrefRegistry` 用了 `node:fs` 的 `globSync`——**Node 22.0** 才进的 API，CI 跑 Node 20，
+  守卫直接抛 `globSync is not a function`，等于没守。改 `readdirSync`。
+- `tasksContract1212` 直接读 `.tmp/browser/mock.mjs`，而 `.tmp/` 在 `.gitignore` 里，
+  CI 上必 ENOENT。契约样例改放受版本管理的 `fixtures/tasksContract1212.json`。
+- `ElasticsearchOperationsMappingPortTest` 偶发 `Connection reset by peer`，且两次失败落在
+  **不同测试方法**上——是 socket 竞态不是业务断言（本地连跑 12 次 32/32 全过）。
+  fixture 写完 body 后依赖 `exchange.close()` 提交字节，但 JDK HttpServer 不保证送达；
+  改为显式 flush + close 输出流。
+
 ## [1.0.75]
 
 ### 修复：查询工作台工具行在 1101~1155px 裁掉「更多」并压住条件树（1393）
