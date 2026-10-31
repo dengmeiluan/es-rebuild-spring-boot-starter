@@ -154,7 +154,12 @@ export function ensureJsonQuickFixes(): void {
  补逗号」旧裁定不越界；',,' 在场仍走双逗号子集（既有优先级零漂移），两证据
  都不在（其余 513 场景无可靠修复点）维持零 action。 */
           const line = model.getLineContent(m.startLineNumber);
-          const cc = line.indexOf(',,');
+          /* 1432：此前是 line.indexOf(',,')——两个真坑：
+             ① 命中字符串字面量内部的 ',,'
+                （`{"a":"x,,y",,}`），把逗号删进字符串里，**改坏用户数据**；
+             ② 行内有多处 ',,` 时取第一处，而 marker 指的是出错的第二处。
+             改为：只认**字符串外**的 ',,', 并取距 marker 列最近的那个。 */
+          const cc = nearestDoubleCommaOutsideString(line, m.startColumn);
           const leadWs = line.length - line.trimStart().length;
           if (cc >= 0) {
             actions.push({
@@ -305,6 +310,35 @@ function prevNonBlankLine(model: monaco.editor.ITextModel, fromLine: number): nu
     if (model.getLineContent(ln).trim()) return ln;
   }
   return 0;
+}
+
+/**
+ * 1432：找一行里「字符串外部」的 `,,` 中**离 marker 列最近**的那个，返回其 0 基下标（找不到 -1）。
+ *
+ * 为什么不能直接 line.indexOf(',,')：
+ *  · `{"a":"x,,y",,}` —— 第一个 `,,` 在字符串里，删了会**改坏数据**；
+ *  · 同一行出现两处真语法错误时，marker 指向的那一处才是用户看到的错误点。
+ *
+ * 扫引号状态时按 JSON 规则处理 `\"` 转义（连续反斜杠需成对判断）。
+ */
+export function nearestDoubleCommaOutsideString(line: string, markerCol: number): number {
+  const hits: number[] = [];
+  let inStr = false;
+  for (let i = 0; i < line.length - 1; i++) {
+    const ch = line[i];
+    if (ch === '\\' && inStr) { i++; continue; }   /* 跳过被转义的字符 */
+    if (ch === '"') { inStr = !inStr; continue; }
+    if (!inStr && ch === ',' && line[i + 1] === ',') hits.push(i);
+  }
+  if (!hits.length) return -1;
+  /* markerCol 是 1 基列号；取距离最近的一处（并列时取靠前的） */
+  const target = Math.max(0, markerCol - 1);
+  let best = hits[0]; let bestD = Math.abs(hits[0] - target);
+  for (const h of hits) {
+    const d = Math.abs(h - target);
+    if (d < bestD) { best = h; bestD = d; }
+  }
+  return best;
 }
 
 /* ═════════ P0-2：es-dsl-lint 注册表 + quick fix ═════════ */
