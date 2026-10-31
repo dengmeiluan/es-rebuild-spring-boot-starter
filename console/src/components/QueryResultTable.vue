@@ -1,8 +1,8 @@
 <template>
-  <FocusableSurface pane-id="qrt.table" title="结果表" headless :enabled="focused" @update:enabled="focused = $event">
+  <FocusableSurface pane-id="qrt.table" title="结果表" headless :class="{ 'qrt-fs-fill': fill }" :enabled="focused" @update:enabled="focused = $event">
   <!-- 裁决:放大合并表格内建(FS headless 包根),与 RT 同构——消费方不再各自包 FS。
  ⚠注释必须在 FS 内:根级注释=fragment 根,T39 卸载断裂 -->
-  <div ref="rootEl" class="qrt" :class="{ 'is-hscrolled': hScrolled }" data-flex-fill tabindex="-1" role="region" aria-label="查询结果表格（Tab 聚焦后：↑↓ 行导航、Ctrl+F 查找、Esc 退出）"
+  <div ref="rootEl" class="qrt" :class="{ 'is-hscrolled': hScrolled, 'qrt-fill': fill }" data-flex-fill tabindex="-1" role="region" aria-label="查询结果表格（Tab 聚焦后：↑↓ 行导航、Ctrl+F 查找、Esc 退出）"
        @keydown="onQKeydown" @keydown.esc="onEscBlur" @keydown.ctrl.f.prevent="openSearch" @focus="tblFocus = true" @blur="tblFocus = false">
     <!-- 结果内查找（RT P0-1 同款合并，useGridSearch 共用件）——
  absolute 悬浮（kbd-hint 同区，prefsOn=false 的 SQL 通道同样可用）
@@ -756,6 +756,11 @@ interface Props {
  表格体区块（loading/empty/wrap/转置主体分支）与转置态提示行隐藏、工具行与分页行常驻：
  视图切换 seg 寄居 bar-prepend 槽，展示形式切换不再连工具行一起消失。缺省 false 零增量 */
   hideBody?: boolean;
+  /* 1401 填满档（opt-in）：宿主面板有确定高度时，表体吸收剩余高度——
+ 工具行/状态栏/分页行保持自然高，.qrt-wrap 成为唯一伸缩区；配合宿主把 FocusableSurface
+ 链接成高链（data-flex-fill 透传）。行少时不再塌成一条、面板下方不留空白。
+ 缺省 false → 现有各宿主逐字节不变。 */
+  fill?: boolean;
   /* ═══ ：syncSort 宿主权威排序态回填（RT 同款平移）═══
  remote 档箭头此前只随内部意图态 remoteSortCur（用户点击三态循环），宿主无从回填/重置。
  接线后：有值→回填 remoteSortCur（箭头/aria-sort 同步该态，此后用户点击仍走既有三态
@@ -852,6 +857,7 @@ const props = withDefaults(defineProps<Props>(), {
   /* 1141：内存态工具行缺省关（JS 侧 props 表补位，模板 default 见 props 声明） */
   tableBar: false,
   hideBody: false,
+  fill: false,
   /* syncSort 缺省 undefined=未接线零增量；骨架缺省 3 行 30px=现状 */
   syncSort: undefined,
   skeletonRows: 3,
@@ -2493,6 +2499,13 @@ onBeforeUnmount(() => window.removeEventListener('table-cmd', onTableCmd));
 .qrt-col-hint { display: flex; align-items: center; gap: var(--sp-2); padding: 3px var(--sp-3);
   background: var(--bg2); border-bottom: 1px solid var(--line); font-size: var(--fs-2xs); color: var(--tx2); }
 .qrt { position: relative; outline: none; }
+/* 1401 填满档（opt-in）：自身在宿主面板里吃满剩余高度，表体成为唯一伸缩区。
+ 三档分工：FS 根吸收面板余高 → .qrt 吸收 FS body 余高 → .qrt-wrap 吸收工具行/状态栏/分页行
+ 之外的高度。行少时表卡仍占满，不在面板下方留空白。 */
+.fs.qrt-fs-fill { flex: 1 1 auto; min-height: 0; }
+.qrt.qrt-fill { display: flex; flex-direction: column; min-height: 0; }
+.qrt.qrt-fill > .qrt-wrap-shell { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.qrt.qrt-fill > .qrt-wrap-shell > .qrt-wrap { flex: 1 1 auto; min-height: 0; }
 /* 内建聚焦面高度链 + 聚焦态滚动区吃满（内联 maxHeight 需 !important 接管） */
 .fs { display: flex; flex-direction: column; }
 .fs-active .qrt-wrap { max-height: none !important; height: 100%; }

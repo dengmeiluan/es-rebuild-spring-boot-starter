@@ -217,7 +217,7 @@
  QRT 内建聚焦面（FS headless，外层表格 FS 与 focusable 关断随收口退役；
  hideBody→true 自动退聚焦=RT 552 rtFix552 对称件）。外层 FS
  聚焦通道随本收口退役。 -->
-          <QueryResultTable ref="resultTbl" :hits="hits" :total="total" :total-gte="totalGte" :loading="busy" sortable selectable row-drawer :took="took" :page="page" :page-size="size" :pager-disabled="busy" @update:page="goPage" @update:page-size="setSize" :hide-body="viewMode !== 'table'" max-height="100%" :storage-key="index ? 'lucene:' + index : undefined" :field-types="fieldTypes" empty-hint="调整查询语句或时间范围后重查"
+          <QueryResultTable ref="resultTbl" :hits="hits" :total="total" :total-gte="totalGte" :loading="busy" sortable selectable row-drawer fill :took="took" :page="page" :page-size="size" :pager-disabled="busy" @update:page="goPage" @update:page-size="setSize" :hide-body="viewMode !== 'table'" max-height="100%" :storage-key="index ? 'lucene:' + index : undefined" :field-types="fieldTypes" empty-hint="调整查询语句或时间范围后重查"
             :searchable="viewMode === 'table'" refreshable @refresh="doRun">
             <template #bar-prepend>
               <!-- 特定能力保留在外层：扁平表格 vs 逐 hit JsonTree（嵌套展开）切换，不塞进通用表；
