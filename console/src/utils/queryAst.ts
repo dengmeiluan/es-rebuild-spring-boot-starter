@@ -1140,7 +1140,13 @@ export function makeNodeByOp(op: string): QueryNode {
     return { id: nid(), type: 'multi', op, children, params: {}, arrForm };
   }
   const meta = OPS_META[op];
-  if (!meta || op === 'match_all' || op === 'match_none') return matchAllLeafNode();
+  /* 1420：match_none 此前和 match_all 一起回落 matchAllLeafNode()——用户在下拉里选
+     「不匹配任何文档」，写回却成了 match_all（执行返回全部命中）。两者都无字段/无值，
+     但语义相反，必须各自成节点。 */
+  if (op === 'match_all' || op === 'match_none') {
+    return { id: nid(), type: 'leaf', op, field: null, value: {}, params: {}, raw: null };
+  }
+  if (!meta) return matchAllLeafNode();
   if (meta.form === 'field') {
     const objValue = meta.wrap === 'none' && op !== 'terms' && op !== 'terms_set';
     const value = (op === 'terms' || op === 'terms_set') ? [] : objValue ? {} : '';
