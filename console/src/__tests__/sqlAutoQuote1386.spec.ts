@@ -71,15 +71,15 @@ describe('1386 FROM 索引名自动补引号', () => {
 describe('1386 lint 提示（输入时就看得见）', () => {
   it('① 裸索引名命中已知列表 → 出提示，且建议里给出正式写法', () => {
     const f = lintSql('SELECT * FROM my-index LIMIT 10', IDX);
-    const hit = f.find(x => /未加双引号/.test(x.message));
+    const hit = f.find(x => /必须加双引号/.test(x.message));
     expect(hit, `应提示缺引号，实际 ${JSON.stringify(f.map(x => x.message))}`).toBeTruthy();
     expect(hit!.suggestion).toContain('FROM "my-index"');
   });
 
   it('② 已加引号 / 未知索引 / 通配符 → 零提示（不误报）', () => {
-    expect(lintSql('SELECT * FROM "my-index"', IDX).some(x => /未加双引号/.test(x.message))).toBe(false);
-    expect(lintSql('SELECT * FROM nobody_knows_this', IDX).some(x => /未加双引号/.test(x.message))).toBe(false);
-    expect(lintSql('SELECT * FROM logs-*', IDX).some(x => /未加双引号/.test(x.message))).toBe(false);
+    expect(lintSql('SELECT * FROM "my-index"', IDX).some(x => /必须加双引号/.test(x.message))).toBe(false);
+    expect(lintSql('SELECT * FROM nobody_knows_this', IDX).some(x => /必须加双引号/.test(x.message))).toBe(false);
+    expect(lintSql('SELECT * FROM logs-*', IDX).some(x => /必须加双引号/.test(x.message))).toBe(false);
   });
 
   it('③ 不传 knownIndices → 零增量（既有调用方行为不变）', () => {

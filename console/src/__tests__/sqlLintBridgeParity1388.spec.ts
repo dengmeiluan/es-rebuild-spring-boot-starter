@@ -17,25 +17,31 @@ const INDICES = ['research_report', 'bond_issuer', 'logs-2026'];
 
 describe('1388 裸索引名提示在两页都生效', () => {
   it('纯函数：清单命中原样裸名才报，未知名/通配/多表不报', () => {
-    const hit = lintSql('SELECT title FROM research_report LIMIT 5', INDICES)
-      .find(f => f.message.includes('未加双引号'));
-    expect(hit, '命中已知索引应报').toBeTruthy();
+    /* 1435：只对「不加引号会真的解析失败」的名字报（含 . / - 等非标识符字符）。
+       logs-2026 这类名字裸写 ES SQL 无法解析，必须引号。 */
+    const hit = lintSql('SELECT title FROM logs-2026 LIMIT 5', INDICES)
+      .find(f => f.message.includes('必须加双引号'));
+    expect(hit, '含连字符的已知索引应报').toBeTruthy();
     expect(hit!.line).toBe(1);
-    expect(hit!.message).toContain('research_report');
-    expect(hit!.suggestion).toContain('FROM "research_report"');
+    expect(hit!.message).toContain('logs-2026');
+    expect(hit!.suggestion).toContain('FROM "logs-2026"');
+
+    /* 纯下划线名是合法写法，不报（1435 收窄：此前对合法输入也报） */
+    expect(lintSql('SELECT title FROM research_report LIMIT 5', INDICES)
+      .some(f => f.message.includes('必须加双引号')), '合法裸名不得报').toBe(false);
 
     /* 未知名不猜 */
     expect(lintSql('SELECT title FROM someone_elses_index', INDICES)
-      .some(f => f.message.includes('未加双引号'))).toBe(false);
+      .some(f => f.message.includes('必须加双引号'))).toBe(false);
     /* 带引号是正确写法 */
-    expect(lintSql('SELECT title FROM "research_report"', INDICES)
-      .some(f => f.message.includes('未加双引号'))).toBe(false);
+    expect(lintSql('SELECT title FROM "logs-2026"', INDICES)
+      .some(f => f.message.includes('必须加双引号'))).toBe(false);
     /* 通配/多表：不猜单个索引 */
     expect(lintSql('SELECT * FROM "logs-*"', INDICES)
-      .some(f => f.message.includes('未加双引号'))).toBe(false);
+      .some(f => f.message.includes('必须加双引号'))).toBe(false);
     /* 不传清单=零增量（旧契约） */
-    expect(lintSql('SELECT title FROM research_report')
-      .some(f => f.message.includes('未加双引号'))).toBe(false);
+    expect(lintSql('SELECT title FROM logs-2026')
+      .some(f => f.message.includes('必须加双引号'))).toBe(false);
   });
 
   it('接线：SqlConsole 与 SqlBridge 调用点都传索引清单', () => {

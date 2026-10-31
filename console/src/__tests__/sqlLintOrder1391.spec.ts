@@ -14,14 +14,14 @@ const TYPES = {
   title: 'text', 'title.keyword': 'keyword',
 };
 
-const LINT_SQL = `SELECT issuer_name, COUNT(*) FROM research_report
+const LINT_SQL = `SELECT issuer_name, COUNT(*) FROM logs-2026
 WHERE issuer_name LIKE '%a%'
 GROUP BY issuer_name
 ORDER BY issuer_name`;
 
 describe('1391 lint 输出按行号排序', () => {
   it('三条不同行的命中 → 行号单调不减（不再出现 1/3/2）', () => {
-    const r = lintSql(LINT_SQL, ['research_report'], TYPES);
+    const r = lintSql(LINT_SQL, ['logs-2026'], TYPES);
     expect(r.length).toBeGreaterThanOrEqual(3);
     const lines = r.map(f => f.line);
     expect(lines).toEqual([...lines].sort((a, b) => a - b));
@@ -40,17 +40,17 @@ describe('1391 lint 输出按行号排序', () => {
     ];
     const monotone = unsorted.every((f, i) => i === 0 || f.line >= unsorted[i - 1]!.line);
     expect(monotone, '原始顺序必须是乱的，否则本用例没有守住任何东西').toBe(false);
-    const sorted = lintSql(LINT_SQL, ['research_report'], TYPES).map(f => f.line);
+    const sorted = lintSql(LINT_SQL, ['logs-2026'], TYPES).map(f => f.line);
     expect(sorted.every((l, i) => i === 0 || l >= sorted[i - 1]!)).toBe(true);
   });
 
   it('同行内的多条保持规则序（稳定排序，不重排同行的语义）', () => {
     /* 同一行既有裸索引名又有 LIKE 命中：两个都在第 1 行，顺序应为「规则⑥ 在前」 */
-    const one = 'SELECT * FROM research_report WHERE issuer_name LIKE \'%a%\'';
-    const r = lintSql(one, ['research_report'], TYPES);
+    const one = 'SELECT * FROM logs.2026 WHERE issuer_name LIKE \'%a%\'';
+    const r = lintSql(one, ['logs.2026'], TYPES);
     const atLine1 = r.filter(f => f.line === 1);
     expect(atLine1.length).toBe(2);
-    expect(atLine1[0]!.message).toContain('未加双引号');
+    expect(atLine1[0]!.message).toContain('必须加双引号');
     expect(atLine1[1]!.message).toContain('LIKE');
   });
 });

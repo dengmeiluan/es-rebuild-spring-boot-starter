@@ -330,18 +330,23 @@ export function lintSql(sql: string, knownIndices: string[] = [], fieldTypes?: R
   /* ⑥ FROM 后的裸索引名缺双引号（1386）——只在名字**精确命中已知索引**时报，不猜。
      ⚠ 必须在**原文 sql 上**匹配，不能用 masked：masked 把引号壳与串内容挖成空格，
      `FROM "my-index"` 会退化成看起来像裸名的形态，反而假报（实测踩到）。
-     排除规则与 utils/sqlQuote.autoQuoteFromIndex 完全一致：通配符 / 多表 / 子查询不动。 */
+     排除规则与 utils/sqlQuote.autoQuoteFromIndex 完全一致：通配符 / 多表 / 子查询不动。
+
+     1435：**只对「不加引号会真的解析失败」的名字报**（含 `.` / `-` 等非标识符字符）。
+     此前对所有裸名都报——`FROM research_report` 是完全合法的写法，用户写对了却看到
+     红字，正是「误报会让人改坏正确查询或无视告警」的典型。执行侧本来就会自动补引号
+     （autoQuoteFromIndex），没必要在编辑期对合法输入报问题。 */
   if (knownIndices.length) {
     const known = new Set(knownIndices);
     const fm = /\bFROM[ \t]+(?:("(?:[^"]|"")*")|`([^`]+)`|([A-Za-z0-9_][\w.\-*]*))/i.exec(sql);
     const bare = fm && fm[1] == null && fm[2] == null ? fm[3] : null;
-    if (fm && bare && !bare.includes('*') && known.has(bare)) {
+    if (fm && bare && !bare.includes('*') && known.has(bare) && /[^\w]/.test(bare)) {
       const after = sql.slice(fm.index + fm[0].length);
       if (!/^\s*,/.test(after)) {
         out.push({
           line: lineOf(fm.index),
-          message: `索引名「${bare}」未加双引号`,
-          suggestion: `ES SQL 的标识符需双引号包裹，写成 FROM "${bare}"（执行时会自动补上，但建议原文就带引号）`,
+          message: `索引名「${bare}」必须加双引号才合法`,
+          suggestion: `名字里有 . 或 - 等非标识符字符，ES SQL 无法裸写：改成 FROM "${bare}"`,
         });
       }
     }
