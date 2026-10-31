@@ -457,34 +457,42 @@
       <!-- 框选矩阵动作条（RT 同语义内核化）——拖选若干格后在此给出口：
  格数 + Σ/avg（有数值时）+ 复制 TSV/JSON + 清除。与行多选并存（两种选择语言各管各的）。 -->
       <template v-if="region">
-        <span class="qrt-stat-hint qrt-sel-badge">已框选 <b>{{ regionCellCount }}</b> 格<span v-if="regionSummary">（数值 {{ regionSummary.numCount }}/{{ regionSummary.count }}）</span></span>
-        <span v-if="regionSummary && regionSummary.numCount" class="qrt-stat mono">Σ {{ fmtNum(regionSummary.sum) }} · avg {{ regionSummary.avg != null ? regionSummary.avg.toFixed(2) : '—' }}</span>
-        <button class="qrt-stat-x" data-test="qrt-copy-region-tsv" title="复制框选区域为 TSV（不含表头；空值空串）" @click="copyRegionMatrix('tsv')">复制 TSV</button>
-        <button class="qrt-stat-x" data-test="qrt-copy-region-json" title="复制框选区域为 JSON 二维数组" @click="copyRegionMatrix('json')">复制 JSON</button>
-        <button class="qrt-stat-x" data-test="qrt-clear-region" aria-label="清除框选" title="清除框选（Esc 亦可）" @click="clearRegion">清除</button>
+        <span class="qrt-stat-seg">
+          <span class="qrt-stat-hint qrt-sel-badge">已框选 <b>{{ regionCellCount }}</b> 格<span v-if="regionSummary">（数值 {{ regionSummary.numCount }}/{{ regionSummary.count }}）</span></span>
+          <span v-if="regionSummary && regionSummary.numCount" class="qrt-stat mono">Σ {{ fmtNum(regionSummary.sum) }} · avg {{ regionSummary.avg != null ? regionSummary.avg.toFixed(2) : '—' }}</span>
+          <button class="qrt-stat-x" data-test="qrt-copy-region-tsv" title="复制框选区域为 TSV（不含表头；空值空串）" @click="copyRegionMatrix('tsv')">复制 TSV</button>
+          <button class="qrt-stat-x" data-test="qrt-copy-region-json" title="复制框选区域为 JSON 二维数组" @click="copyRegionMatrix('json')">复制 JSON</button>
+          <button class="qrt-stat-x" data-test="qrt-clear-region" aria-label="清除框选" title="清除框选（Esc 亦可）" @click="clearRegion">清除</button>
+        </span>
       </template>
       <!-- 行选中动作条（RT「选中浮动栏」同语义的内核版）——勾选后此处给出出口；
  此前 QRT 只有勾选框+右键菜单里的复制项，没有可见动作面（SQL/Lucene 都缺），
  勾了不知道能干什么。选行与 Ctrl+点格聚合可并存，两段同时显示、互不顶掉。 -->
       <template v-if="selectable && selSet.size">
-        <span class="qrt-stat-hint qrt-sel-badge">已选 <b>{{ selSet.size }}</b> 行</span>
-        <button class="qrt-stat-x" data-test="qrt-copy-sel-tsv" title="复制选中行为 TSV（首行列名，可直接贴进表格软件）" @click="copySelMatrix('tsv')">复制 TSV</button>
-        <button class="qrt-stat-x" data-test="qrt-copy-sel-json" title="复制选中行为 JSON 数组（键=可见列）" @click="copySelMatrix('json')">复制 JSON</button>
-        <button class="qrt-stat-x" data-test="qrt-invert-sel" title="反选：当前视图里已选的取消、没选的选上" @click="invertSelRows">反选</button>
-        <button class="qrt-stat-x" data-test="qrt-clear-sel" aria-label="清除已选行" title="清除已选行" @click="clearSelRows">清除</button>
+        <span class="qrt-stat-seg">
+          <span class="qrt-stat-hint qrt-sel-badge">已选 <b>{{ selSet.size }}</b> 行</span>
+          <button class="qrt-stat-x" data-test="qrt-copy-sel-tsv" title="复制选中行为 TSV（首行列名，可直接贴进表格软件）" @click="copySelMatrix('tsv')">复制 TSV</button>
+          <button class="qrt-stat-x" data-test="qrt-copy-sel-json" title="复制选中行为 JSON 数组（键=可见列）" @click="copySelMatrix('json')">复制 JSON</button>
+          <button class="qrt-stat-x" data-test="qrt-invert-sel" title="反选：当前视图里已选的取消、没选的选上" @click="invertSelRows">反选</button>
+          <button class="qrt-stat-x" data-test="qrt-clear-sel" aria-label="清除已选行" title="清除已选行" @click="clearSelRows">清除</button>
+        </span>
       </template>
       <template v-if="aggCellStats && aggCellStats.numCount">
-        <span class="qrt-stat mono">Σ {{ fmtNum(aggCellStats.sum) }}</span>
-        <span class="qrt-stat mono">avg {{ aggCellStats.avg != null ? fmtNum(aggCellStats.avg) : '—' }}</span>
-        <span class="qrt-stat mono">min {{ fmtNum(aggCellStats.min) }}</span>
-        <span class="qrt-stat mono">max {{ fmtNum(aggCellStats.max) }}</span>
-        <span class="qrt-stat mono">count {{ fmtNum(aggCellStats.count) }}</span>
-        <span class="qrt-stat-hint">已选 {{ aggCellStats.picked }} 格 · 再点一次取消</span>
-        <button class="qrt-stat-x" aria-label="清除单元格聚合选择" title="清除选择（Esc 亦可）" @click="clearAggCells">清除</button>
+        <span class="qrt-stat-seg" :title="`已选 ${aggCellStats.picked} 格 · Σ ${fmtNum(aggCellStats.sum)} · avg ${aggCellStats.avg != null ? fmtNum(aggCellStats.avg) : '—'} · min ${fmtNum(aggCellStats.min)} · max ${fmtNum(aggCellStats.max)} · count ${fmtNum(aggCellStats.count)}（再点一次取消）`">
+          <span class="qrt-stat mono">Σ {{ fmtNum(aggCellStats.sum) }}</span>
+          <span class="qrt-stat mono">avg {{ aggCellStats.avg != null ? fmtNum(aggCellStats.avg) : '—' }}</span>
+          <!-- 1413：min/max/count 收进 tooltip——三段并存时（框选+选行+聚合）这三项会把
+               「清除」挤出可视区（实测 803 > 760）。Σ/avg 是主信息，其余悬停可读且导出不受影响。 -->
+          <span class="qrt-stat-hint">已选 {{ aggCellStats.picked }} 格</span>
+          <button class="qrt-stat-x" aria-label="清除单元格聚合选择" title="清除选择（Esc 亦可）" @click="clearAggCells">清除</button>
+        </span>
       </template>
       <span v-else-if="aggCellStats" class="qrt-stat-hint">已选 {{ aggCellStats.picked }} 格（都不是数值，无数可算）· 再点一次取消</span>
       <span v-else-if="!(selectable && selSet.size)" class="qrt-stat-hint">{{ touchAnchor ? '已设框选起点 · 点另一个单元格完成框选（再点起点取消）' : region ? '拖动已框选矩阵 · 点「复制 TSV」贴进表格软件 · Esc 清除选区' : 'Ctrl+点击数值单元格可求和聚合 · 更可拖选一片单元格 · 右键单元格可复制/筛选用法' }}</span>
-      <div style="flex:1"></div>
+      <!-- 1413：弹性占位退成 margin-left:auto（在 .qrt-kbd-hint 上）——
+ 换成可换行布局后，flex:1 的空 div 会独占一整行、把内容推到两行。
+ 没有快捷键提示时，用占位把行尾留空（保持既有观感）。 -->
+      <div v-if="!tblFocus" class="qrt-status-fill" aria-hidden="true"></div>
       <span v-if="tblFocus" class="qrt-kbd-hint mono">↑↓ 行 · Ctrl+F 查找 · Esc 退出</span>
     </div>
 
@@ -2929,8 +2937,21 @@ th.qrt-drop-after { box-shadow: inset -3px 0 0 var(--info); }
   display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-1h) var(--sp-2h);
   background: var(--bg1); border: 1px solid var(--line); border-top: 0; border-radius: 0 0 var(--r-m) var(--r-m);
   font-size: var(--fs-xs); color: var(--tx1);
+  /* 1413：三段（框选 / 行选中 / 格聚合）可能同时在场——实测 1440 宽下「清除」被挤出
+     可视区（scrollWidth 803 > clientWidth 760）。两条一起做：①聚合段的 min/max/count
+     收进 tooltip（省约 200px）；②容器允许换行、但**段内绝不拆**——空间不够时整段下沉
+     而不是把行尾按钮裁掉。实测三段并存为两行（32px → 约 56px），按钮全部可点。 */
+  flex-wrap: wrap; row-gap: var(--sp-1);
 }
 .qrt-wrap.has-pgr + .qrt-status { border-radius: 0; }
+/* 1413：动作段成簇——段内永不拆行，容器可换行。三段并存时整段下沉，按钮不会被裁掉。 */
+.qrt-stat-seg { display: inline-flex; align-items: center; gap: var(--sp-3); min-width: 0; white-space: nowrap; }
+/* 1413：动作钮不可被压缩/裁切；段内提示是唯一可收缩项（省略号），空间不够时先丢字不丢钮 */
+.qrt-stat-seg > .qrt-stat-x { flex: none; }
+.qrt-stat-seg > .qrt-stat-hint { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.qrt-status > .qrt-kbd-hint { margin-left: auto; }
+/* 行尾留空：零内容、可收缩，不单独占一行（换行布局下 flex:1 的空块会撑出第二行） */
+.qrt-status-fill { flex: 1 1 0; min-width: 0; height: 0; }
 .qrt-status .qrt-stat { font-family: var(--mono); }
 .qrt-status .qrt-stat-hint { color: var(--tx2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .qrt-sel-badge { color: var(--tx1); }

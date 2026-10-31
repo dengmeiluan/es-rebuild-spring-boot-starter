@@ -96,6 +96,20 @@ describe('1405 QRT 拖拽框选矩阵', () => {
     expect(host.querySelectorAll('td.qrt-region').length).toBe(0);
   });
 
+  it('⑦ 状态栏三段并存不裁按钮：容器可换行、段内不拆、动作钮不压缩（1413）', () => {
+    /* 实测 1440 宽三段并存时 scrollWidth 803 > clientWidth 760，「清除」被挤出可视区 */
+    expect(QRT).toMatch(/\.qrt-status \{[\s\S]*?flex-wrap: wrap;/);
+    expect(QRT, '段内绝不拆行').toMatch(/\.qrt-stat-seg \{[^}]*white-space: nowrap;/);
+    expect(QRT, '动作钮不可压缩').toMatch(/\.qrt-stat-seg > \.qrt-stat-x \{ flex: none; \}/);
+    expect(QRT, '段内提示是可收缩的那一项').toMatch(/\.qrt-stat-seg > \.qrt-stat-hint \{ min-width: 0; overflow: hidden; text-overflow: ellipsis; \}/);
+    /* 聚合段 min/max/count 收进 title，避免三段并存时撑爆（Σ/avg 仍直读） */
+    expect(QRT).toMatch(/qrt-stat-seg" :title="`已选 \$\{aggCellStats\.picked\} 格 · Σ/);
+    /* 负控：改回 nowrap 容器 → 第一条红（限定在 .qrt-status 块内，不跨到别的规则） */
+    const block = QRT.match(/\.qrt-status \{[^}]*\}/)?.[0] ?? '';
+    expect(block, '必须找到 .qrt-status 块').toContain('flex-wrap: wrap;');
+    expect(block.replace(/flex-wrap: wrap;/, 'flex-wrap: nowrap;')).not.toContain('flex-wrap: wrap;');
+  });
+
   it('④ Esc 清选区；行集变化自动清选区', async () => {
     mountQrt();
     await tick();
