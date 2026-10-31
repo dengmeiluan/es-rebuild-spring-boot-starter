@@ -5,6 +5,40 @@
 版本号遵循 [语义化版本](https://semver.org/)；
 详细差异见 [GitHub Releases](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)。
 
+## [1.0.75]
+
+### 修复：查询工作台工具行在 1101~1155px 裁掉「更多」并压住条件树（1393）
+
+用户截图 1124×249：「过滤条件」浮在工具行上方，同时「新文档」被挤得竖排。
+
+两处成因，都在同一个宽度空档里：
+
+**① 换行规则的空档。** 工具行左段单行需要 871px 内容宽，而允许换行的媒体查询只挂在
+`max-width: 1100px`。1101~1155px 于是落进空档：仍是 `nowrap` + `overflow: hidden`，
+溢出按钮被静默裁掉——实测 1101px 裁 26px、1120px 裁 7px，被裁的都是最右的「更多」。
+断点按实测收到 1160px。
+
+**② 冻结行的负上边距在新高度下算错。** `.lr-bar.freeze` 用 `margin-top: -16px` 抵消
+`.page` 的 padding-top，让工具行贴住内容区顶部；代价是文档流里少算 16px。
+单行时这正好，**换行后**工具行实际 110px 却只占 94px：
+
+```
+工具行底边 244  →  下方 .dq-main 的 top 被算到 238  →  压住 6px
+吸顶的 .qtp-sticky（z-index:6）就浮到工具行上方
+```
+
+窄档把负上边距归零，A/B 实测 gap 从 -6px 回到 +10px。
+
+单行档（1440+）的 `nowrap` / 负边距 / `overflow: hidden` 三条逐字锁全部保持不动。
+
+### 修复：CI 上两个既存假红（测试设施）
+
+- `usePrefRegistry` 用了 `node:fs` 的 `globSync`——那是 **Node 22.0** 才进的 API，
+  CI 跑 Node 20，守卫直接抛 `globSync is not a function`，等于没守。改 `readdirSync`。
+- `tasksContract1212` 直接读 `.tmp/browser/mock.mjs`，而 `.tmp/` 在 `.gitignore` 里，
+  CI 上必 ENOENT。契约样例改放受版本管理的 `fixtures/tasksContract1212.json`，
+  mock 与守卫读同一份。
+
 ## [1.0.73]
 
 ### 修复：结果表中间多出一条条纹（1392）
