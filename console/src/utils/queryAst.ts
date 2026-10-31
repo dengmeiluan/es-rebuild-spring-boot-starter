@@ -1157,7 +1157,11 @@ export function makeNodeByOp(op: string): QueryNode {
     /* 无字段形态按主值语义给可用初值：ids 是数组（chip 编辑）、script 是对象
        （脚本体递归表）、其余标量。旧实现一律 ''，插入 ids/script 后无法直接编辑。 */
     if (op === 'ids') return { ...empty(), value: [] };
-    if (op === 'script') return { ...empty(), value: { source: '' } };
+    /* 1443：script / wrapper 的主值是**必填的脚本体/查询串**，空串写出去就是非法 DSL
+       （`{"script":{"script":{"source":""}}}`、`{"wrapper":{"query":""}}`），ES 直接 400，
+       而用户只看到「加了条件没生效」。用 hasMain=false 让刚创建时**不写主值键**
+       （缺少键=条件未完成，比写空串诚实），用户填好后写回自动带上。 */
+    if (op === 'script' || op === 'wrapper') return { ...empty(), value: '', hasMain: false };
     return empty();
   }
   /* 向量主值给可直接编辑的 JSON 形态（knn 数组 / sparse_vector 对象） */
