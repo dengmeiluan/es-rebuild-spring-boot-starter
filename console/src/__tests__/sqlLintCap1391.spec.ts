@@ -49,6 +49,15 @@ describe('1391 lint 提示条封顶，不把编辑器挤没', () => {
     expect(src).toContain('.sq-grid { grid-template-rows: minmax(150px, 34vh); }');
   });
 
+  it('结果表也要有下限：编辑器不被压后，不能把挤压转嫁给结果区', () => {
+    /* 实测 1280×720 + 提示条：编辑器保底后结果表从 106px 掉到 42px（表头一行就吃满）。
+       挤走的是「看得见的数据」——比让页面多滚一点更糟。 */
+    expect(src).toContain('const RESULT_MIN_FILL = 160;');
+    expect(src).toContain('? `${Math.max(resultAvailH.value, RESULT_MIN_FILL)}px`');
+    /* 1440×900 可用 276px > 160，行为与修复前逐字一致（不被这条下限改写） */
+    expect(Math.max(276, 160)).toBe(276);
+  });
+
   it('提示条挂点与 role 语义不动（既有契约不回退）', () => {
     expect(src).toContain('<div v-if="sqlLintFindings.length" class="lint-bar sq-sql-lint lint-bar-warn" role="status">');
     /* 行号按钮仍在（可定位），只是可能位于滚动区内 */

@@ -632,9 +632,13 @@ const resultHLabel = computed(() => resultH.value === 'fill' ? '填满剩余空�
    2560×1440 实测多出 136px。差值在任意滚动位置都成立。 */
 const resultAvailH = ref(0);
 /* 可用高度已按视口算好就直接用（不再与 320 取大：1440×900 实测可用 276px，
-   取大反而顶出视口 36px）。脏值/未测量时用 240px 保守兜底。 */
+   取大反而顶出视口 36px）。脏值/未测量时用 240px 保守兜底。
+   1391：但**下限要有**——1280×720 且带 lint 提示时实测只剩 42px（表头一行就占满），
+   结果等于看不见。低于 160px 时按 160 给，页面本来就允许滚动（多出来的高度无非要求
+   用户往下滚一点，比「结果区只有一条缝」好）。 */
+const RESULT_MIN_FILL = 160;
 const fillHeight = computed(() => resultAvailH.value > 0
-  ? `${resultAvailH.value}px`
+  ? `${Math.max(resultAvailH.value, RESULT_MIN_FILL)}px`
   : 'min(420px, 60vh)');
 const resultMaxHeight = computed(() => resultH.value === 'fill' ? fillHeight.value : resultH.value + 'px');
 /* 1354：表体下限同口径——max-height 只封顶不收底，行少时表体塌成一条（实测 52px、
