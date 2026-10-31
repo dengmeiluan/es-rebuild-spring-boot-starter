@@ -68,7 +68,8 @@
  「保留」裁决由合并约定覆盖） -->
             <EmptyState v-if="!g.shown || !Object.keys(g.shown).length" compact :icon="Info" text="-" />
             <div v-else class="as-items">
-              <div v-for="(cfg, name) in g.shown" :key="name" class="as-item" :class="{ expanded: openMap[g.key + ':' + name] }">
+              <div v-for="(cfg, name) in g.shown" :key="name" class="as-item" :class="{ expanded: openMap[g.key + ':' + name] }"
+                @contextmenu.prevent="openItemMenu($event, g.key, String(name), cfg)">
                 <div class="as-item-hd" role="button" tabindex="0" :aria-expanded="!!openMap[g.key + ':' + String(name)]" @click="toggle(g.key, String(name))" @keydown.enter.prevent="toggle(g.key, String(name))" @keydown.space.prevent="toggle(g.key, String(name))">
                   <ChevronRight :size="10" class="as-caret" :class="{ open: openMap[g.key + ':' + name] }" />
                   <!-- 条目名/类型走 MarkText 命中高亮（textContent 与原文一致，title 不受影响） -->
@@ -124,13 +125,23 @@
  fields 维持空数组不回归，见 script 注释） -->
       <JsonArea ref="asJaRef" v-model="rawText" :dsl-assist="asAssist" :rows="6" fill />
     </div>
+
+    <!-- 1367：分析组件条目右键菜单（项目统一 CellContextMenu）。
+     一级按右键约定只放最高频两件（复制名称 / 复制配置 JSON）+ 分组父行，
+     其余（复制引用代码片段、展开/收起）收进二级。 -->
+    <CellContextMenu
+      v-if="itemMenu"
+      :x="itemMenu.x" :y="itemMenu.y" :title="itemMenu.title"
+      :items="itemMenuItems"
+      @close="itemMenu = null"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, reactive, watch } from 'vue';
 import { Sliders, RefreshCw, Zap, Info, ExternalLink, ChevronRight, FileJson, Copy,
-  Wand2, Scissors, Filter, Eraser, Ruler, AlertTriangle, Save, Search, Shield } from 'lucide-vue-next';
+  Wand2, Scissors, Filter, Eraser, Ruler, AlertTriangle, Save, Search, Shield, Braces, ChevronsUpDown } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api } from '../api';
 import { askConfirm } from '../composables/confirm';
@@ -147,6 +158,7 @@ import type { BodyKind } from '../utils/dslCompletionContext'; /* 558b 批：asA
 import { ANALYSIS_PARAM_ZH } from '../utils/dslCompletionContext'; /* ：条目参数中文释义词表 */
 import { useDebounceFn } from '../composables/useDebounceFn'; /* P1-1：划线防抖统一件 */
 import EmptyState from '../components/EmptyState.vue'; /* ：as-empty 裸空态统一件 */
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue'; /* 1367：条目右键菜单（项目统一件） */
 import SearchFilterBar from '../components/SearchFilterBar.vue'; /* ：五类过滤行统一件（第 15 胞） */
 import { highlightJson, prettyJson } from '../utils/jsonc';
 /* 页头统计串合并 MetaStrip 统一件 + MarkText 命中高亮（过滤行用） */
@@ -217,6 +229,48 @@ function toggle(g: string, n: string) {
   const k = g + ':' + n;
   openMap[k] = !openMap[k];
 }
+
+/* ═══ 1367：分析组件条目右键菜单 ═══
+ 用户要求「鼠标右键必须极致的增强在整个项目，现在很多地方没有右键能力」——
+ 分析组件（60+ 条 analyzer/tokenizer/filter/char_filter/normalizer）此前右键是浏览器默认菜单。
+ 菜单按项目右键约定：一级 ≤2 高频动作 + 分组父行，绝不重复已在左键路径上的动作。
+ 复制「引用代码」生成的是**可直接粘进 mapping 的片段**，这是运营最高频的下一步动作。 */
+type AsItemMenu = { x: number; y: number; g: string; name: string; cfg: any; title: string };
+const itemMenu = ref<AsItemMenu | null>(null);
+function openItemMenu(e: MouseEvent, g: string, name: string, cfg: any) {
+  itemMenu.value = { x: e.clientX, y: e.clientY, g, name, cfg, title: `${g} · ${name}` };
+}
+/* 属性名按 ES settings.analysis 的段名走（用户要粘到 mapping 里能直接用） */
+const AS_SEG: Record<string, string> = {
+  analyzer: 'analyzer', tokenizer: 'tokenizer', filter: 'filter',
+  char_filter: 'char_filter', normalizer: 'normalizer',
+};
+function asRefSnippet(m: AsItemMenu): string {
+  const seg = AS_SEG[m.g] ?? m.g;
+  /* filter 段在 mapping 里是数组元素，其余是引用名——两种粘法都给了，避免猜错 */
+  return seg === 'filter'
+    ? JSON.stringify({ filter: [m.name] }, null, 2)
+    : JSON.stringify({ [seg]: m.name }, null, 2);
+}
+async function asCopy(text: string, okMsg: string) {
+  const ok = await copyText(text);
+  store.notify(ok ? 'success' : 'error', ok ? okMsg : '复制失败');
+}
+const itemMenuItems = computed<CcmItem[]>(() => {
+  const m = itemMenu.value;
+  if (!m) return [];
+  const open = !!openMap[m.g + ':' + m.name];
+  return [
+    { key: 'as-copy-name', label: '复制名称', icon: Copy, run: () => void asCopy(m.name, `已复制名称「${m.name}」`) },
+    { key: 'as-copy-json', label: '复制配置 JSON', icon: Braces, run: () => void asCopy(prettyJson(m.cfg), `已复制「${m.name}」配置`) },
+    {
+      key: 'as-more', label: '更多…', icon: ChevronsUpDown, sep: true, children: [
+        { key: 'as-ref', label: '复制引用代码（粘进 mapping）', icon: Copy, run: () => void asCopy(asRefSnippet(m), '已复制引用片段') },
+        { key: 'as-toggle', label: open ? '收起详情' : '展开详情', icon: ChevronRight, run: () => toggle(m.g, m.name) },
+      ],
+    },
+  ];
+});
 
 /* 条目参数释义串——ANALYSIS_PARAM_ZH 词表消费（在册键拼「键=人话 · …」，
  词表外键零扰动不出现；非对象配置体回落空串不渲染） */

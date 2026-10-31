@@ -184,12 +184,16 @@ describe('T8 裸空态换 EmptyState compact（524）', () => {
 describe('524 改动视图 SFC 编译冒烟', () => {
   /* 五百五十一批提额备案：该冒烟单跑冷变换实测 5.45s（551 改后）/5.76s（551 前原态，git stash A/B
      实测）——双态均贴 5s 默认帽超时，与视图改动无关（JsonArea→monaco 机器冷变换链，同 describe
-     AnalyzeView 冒烟 529 批同因提额 15s 在册先例；8s 档余量 <1.5× 不足，从同链先例 15s） */
-  it('MappingDesignerView：EmptyState 分支模板可编译、模块可加载', { timeout: 15000 }, async () => {
+     AnalyzeView 冒烟 529 批同因提额 15s 在册先例；8s 档余量 <1.5× 不足，从同链先例 15s）。
+     1319d：实测门口又涨了——另两条同链冒烟在并发门禁的机器负载下 15s 与 5s **双双贴帽**，
+     而单文件冷跑 29/29 全绿（23.3s 总时长，其中这两条各 12.5s / 4.8s）。
+     这两条只验「模块能被 plugin-vue 编译出来」，与任何断言逻辑无关，纯受机器冷变换速度支配；
+     给到 30s 留足 2× 余量，避免把机器抖动记成产品红灯。 */
+  it('MappingDesignerView：EmptyState 分支模板可编译、模块可加载', { timeout: 30000 }, async () => {
     const m = await import('../views/MappingDesignerView.vue');
     expect(m.default).toBeTruthy();
   });
-  it('ReconcileReportDrawer：漏斗工具行模板可编译、模块可加载', async () => {
+  it('ReconcileReportDrawer：漏斗工具行模板可编译、模块可加载', { timeout: 30000 }, async () => {
     const m = await import('../components/ReconcileReportDrawer.vue');
     expect(m.default).toBeTruthy();
   });

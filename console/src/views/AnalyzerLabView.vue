@@ -159,8 +159,11 @@
  几百 token 不再撑出一两屏）+ 密度二档（紧凑=--fs-2xs）
  token 胶囊挂 tokTier type 色档（type 此前只进 :title 全列同色） -->
           <div v-else class="al-toks" :class="{ dense: alDense }" :style="{ maxHeight: alToksH + 'px' }">
+            <!-- 1340：单个 token 右键——分词调试时最常干的事是「把这一个词拿走」
+     （比对词表 / 贴进 term 查询 / 报给同事），此前只能整列导出 TSV 再手工挑。 -->
             <span v-for="(t, ti) in l.tokens" :key="ti" class="al-tok" :class="tokTier(t.type)"
-                  :title="`pos=${t.position} · offsets=${t.start_offset}-${t.end_offset} · type=${t.type}`">
+                  :title="`pos=${t.position} · offsets=${t.start_offset}-${t.end_offset} · type=${t.type}`"
+                  @contextmenu.prevent.stop="openTokMenu($event, l, t)">
               {{ t.token }}
             </span>
           </div>
@@ -188,6 +191,9 @@
       </template>
     </div>
   </div>
+  <!-- 1340：token 右键菜单（共享件；点外部/选完自关） -->
+  <CellContextMenu v-if="tokMenu" :x="tokMenu.x" :y="tokMenu.y" :title="'token · ' + tokMenu.t.token"
+    :items="tokMenuItems" @close="tokMenu = null" />
 </template>
 
 <script setup lang="ts">
@@ -197,6 +203,7 @@ import { useRoute } from 'vue-router';
 
 import PageHeader from '../components/PageHeader.vue';import { api } from '../api';
 import { copyText } from '../utils/format';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import { BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS, ANALYZER_COMPONENT_ZH } from '../utils/dslCompletionContext'; /* ：analyzer 族四输入 datalist 候选源（共享表只读消费）；：自定义组合三件套分表同源；：组件名中文释义表（option title 单源） */
 import { friendlyEsError } from '../utils/esError';
 import { useAppStore } from '../stores/app';
@@ -223,6 +230,36 @@ async function copyLaneJson(l: Lane) {
   const ok = await copyText(JSON.stringify(l.tokens, null, 2));
   store.notify(ok ? 'success' : 'error', ok ? '已复制全量 meta JSON' : '复制失败');
 }
+
+/* 1340：token 右键。一级只留最高频的「复制这个词」+ 分组父项（项目右键约定：
+   一级 ≤2 个频繁动作 + 分组父项）。四个动作都只作用于**这一个 token**，
+   与既有「整列 TSV / 全量 JSON」两个按钮互补而不重复。 */
+const tokMenu = ref<{ x: number; y: number; t: any } | null>(null);
+function openTokMenu(e: MouseEvent, _lane: any, t: any) {
+  tokMenu.value = { x: e.clientX, y: e.clientY, t };
+}
+const tokMenuItems = computed<CcmItem[]>(() => {
+  const m = tokMenu.value;
+  if (!m) return [];
+  const t = m.t;
+  const copy = async (text: string, msg: string) => {
+    const ok = await copyText(text);
+    store.notify(ok ? 'success' : 'error', ok ? msg : '复制失败');
+  };
+  return [
+    { key: 'tok-copy', label: '复制这个词', run: () => void copy(String(t.token), `已复制「${t.token}」`) },
+    {
+      key: 'tok-more', label: '更多…', sep: true, children: [
+        { key: 'tok-meta', label: '复制词项信息（词 / 类型 / 位置 / 区间）', run: () => void copy(
+          `${t.token}\t${t.type}\t${t.position}\t${t.start_offset}-${t.end_offset}`, '已复制词项信息') },
+        { key: 'tok-offs', label: `复制位置区间（${t.start_offset}-${t.end_offset}）`, run: () => void copy(
+          `${t.start_offset}-${t.end_offset}`, '已复制位置区间') },
+        { key: 'tok-token-only', label: '复制为 JSON（{"token": "…"}）', run: () => void copy(
+          JSON.stringify({ token: t.token }), '已复制 JSON') },
+      ],
+    },
+  ];
+});
 
 /* token type → 色档 class（type 此前只进 :title 无视觉差）。
  档判据按 ES _analyze 常见 type 族：先剥 <>壳+小写，再**精确族匹配**——<ALPHANUM>

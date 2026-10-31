@@ -12,7 +12,7 @@
     <div class="scroll-y" :style="maxHeight ? { maxHeight } : undefined">
       <div
         v-for="(r, i) in shown" :key="r.k" class="sg-row" :class="{ 'sg-def': r.def }"
-        :data-hit-idx="i + 1"
+        :data-hit-idx="i + 1" @contextmenu.prevent="openRowMenu($event, r)"
       >
         <span class="sg-k">
           <DotKey :k="displayKey(r.k)" :full="r.k" />
@@ -39,6 +39,11 @@
       <!-- 裸 .empty 迁 EmptyState compact（settings 卡内嵌窄容器） -->
       <EmptyState v-if="!shown.length" compact :icon="SlidersHorizontal" :text="kw ? '无匹配 setting' : emptyText" />
     </div>
+    <!-- 1380：行右键——此前只有「点值=复制 key: value」一条路。运维场景真正要的是
+     「这条 setting 的 PUT 片段 / 只复制值 / 复制成 terms 查询」，都得手打。
+     一级两项直达 + 两个分组（其余动作收进去），与表格右键同约定。 -->
+    <CellContextMenu v-if="rowMenu" :x="rowMenu.x" :y="rowMenu.y" :title="displayKey(rowMenu.r.k)"
+      :items="rowMenuItems" @close="rowMenu = null" />
   </div>
 </template>
 
@@ -53,7 +58,7 @@
  */
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { FlaskConical, SlidersHorizontal } from 'lucide-vue-next';
+import { FlaskConical, SlidersHorizontal, Copy, Braces, ClipboardList } from 'lucide-vue-next';
 import { useAppStore } from '../stores/app';
 import { copyText } from '../utils/format';
 import { filterSettingRows, isStaticSettingKey, type SettingRow } from '../utils/settingsView';
@@ -64,6 +69,7 @@ import DotKey from './DotKey.vue';
 import HitNav from './HitNav.vue';
 /* sg-badge/sg-static 胶囊改用 StatusPill 统一件（r 静态档/n 默认档） */
 import StatusPill from './StatusPill.vue';
+import CellContextMenu, { type CcmItem } from './CellContextMenu.vue';
 
 const props = withDefaults(defineProps<{
   rows: SettingRow[];
@@ -107,6 +113,39 @@ function isStaticKey(k: string): boolean {
 async function copyRow(r: SettingRow) {
   if (await copyText(r.k + ': ' + r.v)) store.notify('success', '已复制 ' + displayKey(r.k));
 }
+
+/* ═══ 1380：行右键 ═══
+   此前 settings 行只有「点值复制 key: value」。排查时真正要的是：
+   把这一条拼进 PUT /_settings 的片段、只要值、或直接生成 term 查询去核对库里的实际值。
+   一级只放两条直达（复制键值 / 复制 PUT 片段），其余进「更多…」分组。 */
+const rowMenu = ref<{ x: number; y: number; r: SettingRow } | null>(null);
+function openRowMenu(e: MouseEvent, r: SettingRow) {
+  rowMenu.value = { x: e.clientX, y: e.clientY, r };
+}
+const rowMenuItems = computed<CcmItem[]>(() => {
+  const m = rowMenu.value;
+  if (!m) return [];
+  const r = m.r;
+  const putBody = JSON.stringify({ [r.k.replace(/^index\./, '')]: r.v }, null, 2);
+  return [
+    { key: 'copy-kv', label: '复制键值（key: value）', icon: Copy, run: () => void copyRow(r) },
+    { key: 'copy-put', label: '复制 PUT 设置片段', icon: Braces, run: () => {
+        void copyText(putBody).then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制 PUT 片段' : '复制失败'));
+      } },
+    { key: 'more-group', label: '更多…', icon: ClipboardList, sep: true, children: [
+      { key: 'copy-key', label: '只复制键名', icon: Copy, run: () => {
+          void copyText(r.k).then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制键名' : '复制失败'));
+        } },
+      { key: 'copy-val', label: '只复制值', icon: Copy, run: () => {
+          void copyText(r.v).then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制值' : '复制失败'));
+        } },
+      { key: 'copy-term', label: '复制为查询片段（term）', icon: Braces, run: () => {
+          const q = JSON.stringify({ term: { [r.k]: r.v } }, null, 2);
+          void copyText(q).then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制 term 查询' : '复制失败'));
+        } },
+    ] },
+  ];
+});
 
 /* ═══ ：分析器联动（analyzeIndex 传入才启用）═══
  定义行：index.analysis.<kind>.<name>(.*) 键 → 行名旁「试」钮（kind: analyzer/tokenizer/

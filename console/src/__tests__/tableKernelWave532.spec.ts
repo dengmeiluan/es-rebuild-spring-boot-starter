@@ -198,8 +198,15 @@ describe('五百三十二批 loading 接线渗透', () => {
     expect(sec).toContain('const auditSel = ref<unknown[]>([]);');
   });
   it('IndexHubView qryTbl：:loading（docsTbl 对称）', () => {
-    /* 675 同步更新（674-C1 复诊）：667~669 IH 演进在 ref 与 v-else-if 间入列 export-name="ih-qry" 行 */
-    expect(ih).toMatch(/<ResultTable ref="qryTbl"\s*\n\s+export-name="ih-qry"\s*\n\s+v-else-if="qryResp"[^>]*\n\s*:loading="qryLoading"/);
+    /* 675 同步更新（674-C1 复诊）：667~669 IH 演进在 ref 与 v-else-if 间入列 export-name="ih-qry" 行。
+       1330：该标签后续又追加了 :bar-menu-extra——属性间不再紧邻，断言改为
+       「同一个 <ResultTable ref="qryTbl"> 标签内同时具备这三项」，不再锁属性顺序。 */
+    const m = ih.match(/<ResultTable ref="qryTbl"[\s\S]*?>/);
+    expect(m, 'IndexHubView 必须有 qryTbl 表').toBeTruthy();
+    const tag = m![0];
+    expect(tag, '导出名').toContain('export-name="ih-qry"');
+    expect(tag, 'v-else-if 门控').toContain('v-else-if="qryResp"');
+    expect(tag, ':loading 接线').toContain(':loading="qryLoading"');
   });
   it('ProfileFlameView：:loading="busy"（semOn 形态核对后不接，见源内注）', () => {
     expect(pf).toMatch(/max-height="420px" :loading="busy"/);

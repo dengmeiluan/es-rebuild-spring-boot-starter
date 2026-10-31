@@ -32,8 +32,8 @@
         <div v-if="viewSegOn" class="seg qrt-view-seg" role="group" aria-label="展示形式">
           <button type="button" :class="{ on: effView === 'table' }" :aria-pressed="effView === 'table'" @click="altView = 'table'">表格</button>
           <button v-if="effJsonHtml != null" type="button" :class="{ on: effView === 'json' }" :aria-pressed="effView === 'json'" @click="altView = 'json'">JSON</button>
-          <button v-if="treeData != null" type="button" :class="{ on: effView === 'tree' }" :aria-pressed="effView === 'tree'" @click="altView = 'tree'">Tree</button>
-          <button v-if="cardHits != null" type="button" :class="{ on: effView === 'cards' }" :aria-pressed="effView === 'cards'" @click="altView = 'cards'">卡片</button>
+          <button v-if="effTreeData != null" type="button" :class="{ on: effView === 'tree' }" :aria-pressed="effView === 'tree'" @click="altView = 'tree'">Tree</button>
+          <button v-if="effCardHits != null" type="button" :class="{ on: effView === 'cards' }" :aria-pressed="effView === 'cards'" @click="altView = 'cards'">卡片</button>
         </div>
         <!-- bar-prepend 槽（bar-left 最前段，RT 541 同款平移）——QRT 宿主视图
  （SystemView/LuceneQueryView）的视图切换 seg/分页器寄居入口（「翻页、展示形式
@@ -69,8 +69,13 @@
  五格式 aria/title/实现函数逐字保留（525/560 锁面同步更新不破），只动入口不动引擎；
  空结果整组禁用（非 v-if 消失） -->
         <span class="menu-wrap">
-          <button aria-label="导出" class="btn sm ghost qrt-tool-btn" :class="{ on: expMenuOpen }"
-            aria-haspopup="menu" :aria-expanded="expMenuOpen" title="导出（CSV/XLSX/JSON/PNG/Markdown）"
+          <!-- 1345：aria-label 必须说清「导出什么、什么范围」。此前只有「导出」两个字，
+               读屏用户与窄档（标签被 .qrt-tool-t 隐藏、只剩图标）都无从判断。
+               同内核的 ResultTable 一直是「导出为 X（当前页/选中 N 行）」的口径，此处对齐；
+               范围口径取实现真相：导出的是**当前视图**（筛选+排序后所见）。
+               文案保留「导出」前缀——多处既有锁面按这个名字定位这个钮。 -->
+          <button :aria-label="`导出当前视图（${sortedRows.length} 行，CSV/XLSX/JSON/PNG/Markdown）`" class="btn sm ghost qrt-tool-btn" :class="{ on: expMenuOpen }"
+            aria-haspopup="menu" :aria-expanded="expMenuOpen" :title="`导出当前视图（筛选/排序所见即所得，共 ${sortedRows.length} 行）—— CSV / XLSX / JSON / PNG / Markdown`"
             @click.stop="expMenuOpen = !expMenuOpen">
             <FileDown :size="13" /><span class="qrt-tool-t">导出 ▾</span>
           </button>
@@ -113,7 +118,7 @@
           <button aria-label="视图设置" class="btn sm ghost qrt-tool-btn" :class="{ on: viewMenuOpen }"
             aria-haspopup="menu" :aria-expanded="viewMenuOpen" title="视图：行高、列宽"
             @click.stop="viewMenuOpen = !viewMenuOpen">
-            <span class="qrt-tool-t">视图 ⋯</span>
+            <SlidersHorizontal :size="13" /><span class="qrt-tool-t">视图 ⋯</span>
           </button>
           <div v-if="viewMenuOpen" class="qrt-menu" role="menu" aria-label="视图设置">
             <div class="qrt-m-t">行高（当前：{{ rowHLabel }}）</div>
@@ -185,8 +190,8 @@
         <div v-if="viewSegOn" class="seg qrt-view-seg" role="group" aria-label="展示形式">
           <button type="button" :class="{ on: effView === 'table' }" :aria-pressed="effView === 'table'" @click="altView = 'table'">表格</button>
           <button v-if="effJsonHtml != null" type="button" :class="{ on: effView === 'json' }" :aria-pressed="effView === 'json'" @click="altView = 'json'">JSON</button>
-          <button v-if="treeData != null" type="button" :class="{ on: effView === 'tree' }" :aria-pressed="effView === 'tree'" @click="altView = 'tree'">Tree</button>
-          <button v-if="cardHits != null" type="button" :class="{ on: effView === 'cards' }" :aria-pressed="effView === 'cards'" @click="altView = 'cards'">卡片</button>
+          <button v-if="effTreeData != null" type="button" :class="{ on: effView === 'tree' }" :aria-pressed="effView === 'tree'" @click="altView = 'tree'">Tree</button>
+          <button v-if="effCardHits != null" type="button" :class="{ on: effView === 'cards' }" :aria-pressed="effView === 'cards'" @click="altView = 'cards'">卡片</button>
         </div>
         <slot name="bar-prepend" />
         <Pagination v-if="pagerHeadOn" :page="pagerPage" :total-pages="pagerTotalPages" :page-size="pagerSize" :disabled="pagerDisabled"
@@ -247,9 +252,13 @@
  容器=border-top 分节+滚动区（ih-alt-body 同语言），maxHeight 与 qrt-wrap 一口径无新
  高度链；卡片档网格容器（ih-cards 同构）+@open-doc 透传宿主。表格档（缺省/回落）恒
  不渲染（零增量） -->
-    <div v-if="viewSegOn && effView !== 'table'" class="qrt-alt-body scroll-y" :class="{ 'is-cards': effView === 'cards' }" :style="{ maxHeight }">
-      <AltHitsViews v-if="effView === 'json'" view="json" :json-html="effJsonHtml" />
-      <AltHitsViews v-else-if="effView === 'tree'" view="tree" :tree-data="treeData" />
+    <div v-if="viewSegOn && effView !== 'table'" class="qrt-alt-body scroll-y" :class="{ 'is-cards': effView === 'cards' }" :style="{ maxHeight, minHeight }">
+      <!-- 1356：rows 派生档也要带上文档导航（此前只传 tree-data，导航条读不到条数
+           显示「0 命中」，_id 下拉也空着） -->
+      <AltHitsViews v-if="effView === 'json'" view="json" :json-html="effJsonHtml"
+        :doc-count="effDocs?.length || 0" :doc-ids="effDocIds" />
+      <AltHitsViews v-else-if="effView === 'tree'" view="tree" :tree-data="effTreeData"
+        :doc-count="effDocs?.length || 0" :doc-ids="effDocIds" />
       <AltHitsViews v-else view="cards" :hits="cardHitsAdapted" @open-doc="emit('open-doc', $event)" />
     </div>
     <!-- loading 骨架态（消费方执行中传 :loading——四态互斥 G1-B1 同款，骨架优先于空态）；
@@ -271,14 +280,14 @@
  三分支随壳包入保 v-else-if 相邻。QRT 根非 flex 布局，壳只承接定位（最小形态） -->
     <div class="qrt-wrap-shell">
     <template v-if="loading && !bodyHidden">
-      <div class="qrt-loading" :style="{ maxHeight }">
+      <div class="qrt-loading" :style="{ maxHeight, minHeight }">
         <!-- 骨架行数/行高参数化（RT 同款形态对齐）——缺省 3 行 30px=
  现状（缺省路径 DOM 逐字节不变） -->
         <SkeletonBox v-for="i in skeletonRows" :key="i" :height="skeletonH" round />
       </div>
     </template>
     <EmptyState v-else-if="isEmpty && !bodyHidden" :icon="Inbox" :text="emptyText" :hint="emptyHint" />
-    <div v-else-if="!bodyHidden" ref="wrapRef" class="qrt-wrap" :class="{ 'has-pgr': pagerOn }" :style="{ maxHeight }" @scroll.passive="onWrapScroll">
+    <div v-else-if="!bodyHidden" ref="wrapRef" class="qrt-wrap" :class="{ 'has-pgr': pagerOn }" :style="{ maxHeight, minHeight }" @scroll.passive="onWrapScroll">
       <!-- rows 型转置视图（RT 同款语言）——列名做首列（sticky），排序后前 N 行
  做横向列；只读镜像（排序/漏斗/行展开在转置态不渲染，退出即回主表） -->
       <table v-if="transposeOn" class="qrt-tbl qrt-transposed">
@@ -364,9 +373,9 @@
             <td class="qrt-idx mono">{{ ri + 1 }}</td>
             <td
               v-for="(cell, ci) in row" :key="ci"
-              class="qrt-cell" :class="{ expanded: isExpanded(ri, ci), 'qrt-col-frozen': isFrozenCol(shownCols[ci]), 'qrt-hit': isSearchHit(ri, ci), 'rt-hit-cur': isSearchCur(ri, ci), 'num-col': isNumericCol(shownCols[ci]), 'ip-col': semPref && isIpCol(shownCols[ci] ?? ''), ...semToneCls(cell, ci) }" :title="cell === null || cell === undefined ? '' : fullText(cell)"
+              class="qrt-cell" :class="{ expanded: isExpanded(ri, ci), 'qrt-col-frozen': isFrozenCol(shownCols[ci]), 'qrt-hit': isSearchHit(ri, ci), 'rt-hit-cur': isSearchCur(ri, ci), 'num-col': isNumericCol(shownCols[ci]), 'ip-col': semPref && isIpCol(shownCols[ci] ?? ''), 'qrt-agg-sel': isAggCell(ri, ci), ...semToneCls(cell, ci) }" :title="cell === null || cell === undefined ? '' : fullText(cell)"
               @mousedown="onCellDown($event)"
-              @click.exact="onCellClick($event, cell, ri, ci)"
+              @click="onCellClick($event, cell, ri, ci)"
               @keydown.enter.exact.prevent="onCellClick($event, cell, ri, ci)"
               @contextmenu.prevent="openCellMenu($event, ri, ci)"
             >
@@ -436,6 +445,24 @@
  随壳合并 TableBacktop（双表同款单一出处），class 透传 DOM 不变；
  移入 qrt-wrap-shell 定位壳（分支链之后兄弟），锚滚动视口底沿不再盖壳外分页行 -->
     <TableBacktop v-if="showTop" class="rt-backtop qrt-backtop" aria-label="回到顶部" title="回到顶部" @top="backToTop" />
+    </div>
+
+    <!-- 1366：页脚状态栏（RT 同款）——此前 QRT 只有分页行，缺 RT 的「选区聚合 + 操作提示」。
+ 放在表格卡内、分页行之前；分页行在场时由分页行接管卡底圆角（.has-pgr 既有规则）。 -->
+    <div v-if="!bodyHidden && !loading && !isEmpty" class="qrt-status">
+      <template v-if="aggCellStats && aggCellStats.numCount">
+        <span class="qrt-stat mono">Σ {{ fmtNum(aggCellStats.sum) }}</span>
+        <span class="qrt-stat mono">avg {{ aggCellStats.avg != null ? fmtNum(aggCellStats.avg) : '—' }}</span>
+        <span class="qrt-stat mono">min {{ fmtNum(aggCellStats.min) }}</span>
+        <span class="qrt-stat mono">max {{ fmtNum(aggCellStats.max) }}</span>
+        <span class="qrt-stat mono">count {{ fmtNum(aggCellStats.count) }}</span>
+        <span class="qrt-stat-hint">已选 {{ aggCellStats.picked }} 格 · 再点一次取消</span>
+        <button class="qrt-stat-x" aria-label="清除单元格聚合选择" title="清除选择（Esc 亦可）" @click="clearAggCells">清除</button>
+      </template>
+      <span v-else-if="aggCellStats" class="qrt-stat-hint">已选 {{ aggCellStats.picked }} 格（都不是数值，无数可算）· 再点一次取消</span>
+      <span v-else class="qrt-stat-hint">Ctrl+点击数值单元格可求和聚合 · 右键单元格可复制/筛选用法</span>
+      <div style="flex:1"></div>
+      <span v-if="tblFocus" class="qrt-kbd-hint mono">↑↓ 行 · Ctrl+F 查找 · Esc 退出</span>
     </div>
 
     <!-- 内建分页行（tfoot 后表格底部常驻）——共享 Pagination 组件；翻页/改页大小
@@ -528,9 +555,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, nextTick, onBeforeUnmount, useSlots, type Ref } from 'vue';
+import { computed, ref, watch, nextTick, onMounted, onBeforeUnmount, useSlots, type Ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { RotateCcw, Inbox, Copy, Braces, ArrowDown, ArrowUp, EyeOff, Pin, MoveHorizontal, Filter, ExternalLink, Search, FileDown, Table, ClipboardList, Maximize2, Minimize2, ChevronDown, ChevronRight, FileText } from 'lucide-vue-next';
+import { RotateCcw, Inbox, Copy, Braces, ArrowDown, ArrowUp, EyeOff, Pin, MoveHorizontal, Filter, ExternalLink, Search, FileDown, Table, ClipboardList, Maximize2, Minimize2, ChevronDown, ChevronRight, FileText, SlidersHorizontal } from 'lucide-vue-next';
 import FocusableSurface from './FocusableSurface.vue';
 import EmptyState from './EmptyState.vue';
 import SkeletonBox from './SkeletonBox.vue';
@@ -575,12 +602,14 @@ import { useColFit, COL_W_MIN, COL_W_MAX, frozenStyleOf } from '../composables/u
  科学计数字符串按值纠错；numeric() 科学计数/时长新档经此双内核生效）
  件②：sortableGuard 随接线引入（显式非语义列排序抑制单源） */
 import { compareVals, sortableGuard, useSortChain } from '../composables/tableSort';
+import { resolveSortField } from '../utils/sortField';
 import { useColDrag } from '../composables/useColDrag';
 import HitNav from './HitNav.vue';
 import { useGridSearch, splitMark } from '../composables/useGridSearch';
 import { registerTable, unregisterTable } from '../utils/tableRegistry';
 import { useAppStore } from '../stores/app';
 import { exportStamp, copyText, epochMsText, fmtNum, csvCell, downloadText, downloadBlob } from '../utils/format';
+import { summarize } from '../utils/summarize';
 import { matrixText } from '../utils/copyMatrix';
 /* XLSX 双 sheet 装配合并 exportSheets.buildExportSheets 单源（RT 同源） */
 import { buildExportSheets } from '../utils/exportSheets';
@@ -614,6 +643,10 @@ interface Props {
   rows?: (string | number | boolean | null)[][];
   /* 通用 */
   maxHeight?: string;   // 默认 '420px'，超限滚动
+  /* 1354：可选**下限**。maxHeight 只封顶不收底——结果只有 1~2 行时表体跟着塌到 52px，
+     用户看到「表格特别窄、下面一大片空白」。传了才生效（默认 undefined = 零行为变化，
+     RT/索引页不受影响）。SQL 控制台用它把表体撑到视口剩余高度。 */
+  minHeight?: string;
   emptyText?: string;   // 默认 '无数据'
   /* 空态下一步指引（EmptyState 三件套 hint）——不传不渲染，保持零增量 */
   emptyHint?: string;
@@ -631,6 +664,10 @@ interface Props {
   /* 默认可见列全集——列选无记忆时的缺省集（缺省=前 8 列启发式）。
  列数多于 8 的表（如审计表）传全列，避免尾列（详情/集群）默认被藏 */
   defaultCols?: string[];
+  /* 1334：只记列宽/密度，不记列选——列集每次查询都可能变的表（SQL）用它。
+      为何需要：把上一次查询的列集当成「用户选中的列」，会把本次新出现的列静默藏掉。
+      为何不干脆不传 storageKey：列宽/密度跟列集无关，丢掉纯属损失。 */
+  skipColsMemory?: boolean;
   /* 执行中骨架态——消费方 running/busy 时传 true，渲染骨架行优先于空态 */
   loading?: boolean;
   /* 字段类型映射（列名→ES 类型）——有值时列头启用双层结构（RT 同款
@@ -773,6 +810,7 @@ const props = withDefaults(defineProps<Props>(), {
   cols: undefined,
   rows: undefined,
   maxHeight: '420px',
+  minHeight: undefined,
   emptyText: '无数据',
   emptyHint: undefined,
   sortable: false,
@@ -847,19 +885,50 @@ const derivedJsonHtml = computed<string | undefined>(() => {
   return highlightJson(JSON.stringify(payload, null, 2));
 });
 const effJsonHtml = computed(() => props.jsonHtml ?? derivedJsonHtml.value);
+/* 1356：rows 通道也要有 Tree / 卡片两档——此前只有 hits 型宿主（DQ/IH）会传
+   treeData/cardHits，SQL 桌面的 rows 结果永远只有「表格 / JSON」两档，用户看到的是
+   「同一张表，换个页面就少两种看法」。这里在**内核内**由 cols+rows 派生（任何 rows 宿主
+   自动获得，不用每页各写一份）：文档 = {_id: 行号, ...列名: 值}。
+   行号用 1 起（与表格 # 列一致），列名缺失时退回 c{j}（空列名/表达式列的兜底）。 */
+const derivedRowDocs = computed<Record<string, unknown>[] | undefined>(() => {
+  const cs = props.cols;
+  const rs = props.rows;
+  if (!cs?.length || !rs?.length) return undefined;
+  const keys = cs.map((c, j) => (c && String(c).trim() ? String(c) : 'c' + j));
+  return rs.map((r, i) => {
+    const o: Record<string, unknown> = { _id: String(i + 1) };
+    keys.forEach((k, j) => { o[k] = r?.[j] ?? null; });
+    return o;
+  });
+});
+const effTreeData = computed(() => props.treeData ?? derivedRowDocs.value);
+/* 卡片档要 {_id, _source}：_source 就是这一行本身（不含 _id 冗余） */
+const derivedCardHits = computed<Hit[] | undefined>(() => {
+  const docs = derivedRowDocs.value;
+  if (!props.treeData && docs) return docs.map(d => {
+    const src: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(d)) if (k !== '_id') src[k] = v;
+    return { _id: String(d._id), _source: src } as unknown as Hit;
+  });
+  return undefined;
+});
+const effCardHits = computed(() => props.cardHits ?? derivedCardHits.value);
+/* 文档导航条的数据源：hits 型用宿主 hits，rows 型用派生行（两者都只在有数据时非空） */
+const effDocs = computed<Array<{ _id?: unknown }> | undefined>(() => props.hits?.length ? props.hits : derivedRowDocs.value);
+const effDocIds = computed<string[] | undefined>(() => effDocs.value?.map((d, i) => String(d?._id ?? i + 1)));
 const altView: Ref<'table' | 'json' | 'tree' | 'cards'> = props.viewPrefKey
   ? usePref<'table' | 'json' | 'tree' | 'cards'>(props.viewPrefKey, 'table')
   : ref<'table' | 'json' | 'tree' | 'cards'>('table');
 const effView = computed<'table' | 'json' | 'tree' | 'cards'>(() => {
   const v = altView.value;
   if (v === 'json' && effJsonHtml.value == null) return 'table';
-  if (v === 'tree' && props.treeData == null) return 'table';
-  if (v === 'cards' && props.cardHits == null) return 'table';
+  if (v === 'tree' && effTreeData.value == null) return 'table';
+  if (v === 'cards' && effCardHits.value == null) return 'table';
   return v;
 });
 const bodyHidden = computed(() => props.hideBody === true || (viewSegOn.value && effView.value !== 'table'));
 /* 卡片档 AltHitsViews SearchHit 契约桥——本地 Hit._score 可选，补缺省 null（结构补全非类型断言） */
-const cardHitsAdapted = computed(() => props.cardHits?.map(h => ({ ...h, _score: h._score ?? null })));
+const cardHitsAdapted = computed(() => effCardHits.value?.map(h => ({ ...h, _score: h._score ?? null })));
 
 /* hideBody→true 自动退出聚焦（RT rtFix552 对称件平移）——宿主切走
  表格视图（JSON/Tree 档）时聚焦面不能悬在隐藏表体上。只在 false→true 流转且聚焦中触发
@@ -1017,6 +1086,7 @@ const {
   /* 宿主可传 defaultCols 作默认可见列全集（如审计表新增「集群」列后
  不被前 8 列启发式藏掉尾列）；缺省维持前 8 列启发式，既有表零感知 */
   defaultVisibleCols: () => (props.defaultCols?.length ? [...props.defaultCols] : undefined),
+  skipColsMemory: !!props.skipColsMemory,
 });
 /* rows 型转置态（hit 型不提供——RT 转置语义即「字段为行、文档为列」的镜像，
  rows 型对位为「列名为行、前 N 行为列」）；转置渲染行集=排序后前 N 行 */
@@ -1103,6 +1173,16 @@ watch(() => props.syncSort, (s) => {
  _id/_index/_score/_seq_no 排序有语义豁免（semanticGuard 口径）。effType 同 useColStats
  fieldType 先例（显式 fieldTypes ∪ 按值采样推断，无类型列不抑制——零增量缺省）。 */
 const sortGuard = sortableGuard((c) => effType(c));
+/* 1376：远端档可排性预检（RT 同款单源）——宿主在 sort-change 里用 resolveSortField
+ 裁决，内核若先推箭头再被宿主拒绝，就留下「箭头亮了、数据没动」的暗状态。
+ effType 会把采样类型也算进来，这里只认显式 mapping（宿主下发 sort 的裁决依据）。 */
+function remoteSortBlocked(c: string): boolean {
+  if (!props.remoteSort) return false;
+  const r = resolveSortField(c, props.fieldTypes);
+  if (r.ok) return false;
+  store.notify('warning', r.reason || '该列不支持排序');
+  return true;
+}
 function onSort(i: number, shift = false) {
   if (!props.sortable) return;
   if (qDragClickSuppressed()) return; /* ：拖完 300ms 内的误触排序点击抑制（RT 同款双保险） */
@@ -1111,6 +1191,7 @@ function onSort(i: number, shift = false) {
   /* 件②：显式非语义列短路（本地/remote 双档同守——不落 sortSpec/不落盘/
  不 emit 远端意图；sortKey/indicator 零触碰） */
   if (!sortGuard(name)) return;
+  if (remoteSortBlocked(name)) return;
   /* remote 档机内只 emit 意图不改本地序（多键链是本地特性，塌缩单键）；
  本地档变更经 onLocalChange 钩子清展开态（W7：坐标键随行序变化一并清，rows 型无稳定 _id） */
   chain.sortBy(name, undefined, shift);
@@ -1120,6 +1201,7 @@ function onSort(i: number, shift = false) {
  （等值单键 no-op/远端直发意图/展开态清理全在机内） */
 function directSort(col: string, ci: number, dir: 1 | -1) {
   if (!props.sortable) return;
+  if (remoteSortBlocked(col)) return;
   chain.sortBy(col, dir === 1 ? 'asc' : 'desc');
 }
 /* G149：列头 th 悬浮 title 单源——colTips 有该列中文语义时两段拼接
@@ -1265,6 +1347,34 @@ const renderRows = computed<any[][]>(() => {
   return renderRowsRaw.value.map(r => idxs.map(ix => (ix >= 0 ? r[ix] : undefined)));
 });
 
+/* ═══ 1366：Ctrl/Cmd+点击单元格 = 数值聚合（RT 同款能力对齐）═══
+ SQL 结果表此前只有表尾「聚合行」开关（整列聚合），缺 RT 的**手挑单元格**聚合：
+ 运营在 SQL 结果里常要「这几格加起来是多少」（多笔金额、几个分片计数），
+ 而 QRT 没有任何散选通道。键用渲染坐标 ri:ci（排序/筛选会重排，渲染坐标即所见坐标）。 */
+const aggCells = ref<Set<string>>(new Set());
+const aggCellKey = (ri: number, ci: number) => ri + ':' + ci;
+const isAggCell = (ri: number, ci: number) => aggCells.value.has(aggCellKey(ri, ci));
+function toggleAggCell(ri: number, ci: number) {
+  const k = aggCellKey(ri, ci);
+  if (aggCells.value.has(k)) aggCells.value.delete(k);
+  else aggCells.value.add(k);
+  aggCells.value = new Set(aggCells.value);
+}
+const aggCellStats = computed(() => {
+  if (!aggCells.value.size) return null;
+  const vals: number[] = [];
+  for (const k of aggCells.value) {
+    const [ri, ci] = k.split(':').map(Number);
+    const v = renderRows.value[ri!]?.[ci!];
+    if (typeof v === 'number' && Number.isFinite(v)) vals.push(v);
+  }
+  return { picked: aggCells.value.size, ...summarize(vals) };
+});
+function clearAggCells() { aggCells.value = new Set(); }
+/* 行/列集合变化后悬空的格子要清掉（否则页脚还在报已消失单元格的和） */
+watch([() => renderRows.value.length, () => shownCols.value.length], () => clearAggCells());
+
+
 /* ═══ W-B：行多选通道（selectable）═══
  身份=原始行集索引（渲染行对象与 rawRows 元素同引用：filteredRows/sortedRows 均保引用，
  排序只动副本数组序）；emit('selection-change') 上报原始行对象（hit 型=hit、rows 型=矩阵行）；
@@ -1398,11 +1508,21 @@ function objChip(v: any): { label: string; n: number } | null {
 }
 function onCellClick(e: MouseEvent | KeyboardEvent, cell: any, ri: number, ci: number) {
   if (cell === null || cell === undefined) return;
-  /* 拖选守卫：格内文本拖选松手的 click 不当作单击（复制/展开都不抢）；
+  /* 拖选守卫：格内文本拖选松手的 click 不当作单击（展开不抢）；
    键盘事件不经守卫；单元格无导航代价，不做延迟仲裁（同位单击零变化） */
   if (e instanceof MouseEvent && cellGuard.moved(e)) return;
-  if (cellText(cell).length > MAX_CELL || isExpanded(ri, ci)) { toggleExpand(ri, ci); return; }
-  void copyCell(cell);
+  /* 1366：Ctrl/Cmd+点击 = 数值聚合（RT 同款「Ctrl+点击单元格加减」）。
+     必须在展开之前拦：聚合是显式修饰键动作，不该顺带改视图。 */
+  if ((e.ctrlKey || e.metaKey) && typeof cell === 'number') {
+    e.preventDefault();
+    toggleAggCell(ri, ci);
+    return;
+  }
+  /* 1374：单击自动复制退役——与 RT 同一裁决（原话「单击就复制不对，我本来想复制值进去，
+     那不就还要复制一次吗」）：双击的 click 先于 dblclick，自动复制会在「复制外部值→
+     双击编辑→粘贴」流里覆盖剪贴板。复制保留显式路径：右键「复制值」、Ctrl+C 复制行、
+     行尾悬浮钮、列头「复制整列值」、行详情抽屉「复制整行 JSON」。 */
+  if (cellText(cell).length > MAX_CELL || isExpanded(ri, ci)) toggleExpand(ri, ci);
 }
 const cellGuard = createPressGuard();
 function onCellDown(e: MouseEvent) { cellGuard.down(e); }
@@ -1939,7 +2059,17 @@ const cellMenuItems = computed(() => {
         ]
       : []),
   ];
-  const colChildren = [
+  /* 1385：与 RT 同构拆组——此前这里最多 9 项（4 列操作 + 5 导出）平铺在一张二级里，
+     「现在就导出」和「列操作」两种意图混着靠滚动找。拆成「导出…」与「列操作…」两个分组，
+     与 ResultTable 的分组名/语义完全一致（跨内核同一右键语言）。 */
+  const exportChildren = [
+    { key: 'export-csv', label: '导出当前视图（CSV）', icon: FileDown, sep: false, run: () => exportCsv() },
+    { key: 'export-xlsx', label: '导出当前视图（XLSX）', icon: Table, run: () => exportXlsx() },
+    { key: 'export-json', label: '导出当前视图（JSON）', icon: Braces, run: () => exportJson() },
+    { key: 'export-md', label: '导出当前视图（Markdown）', icon: FileText, run: () => exportMd() },
+    ...(props.exportNdjson ? [{ key: 'export-ndjson', label: '导出当前视图（NDJSON）', icon: ClipboardList, run: () => exportNdjsonFile() }] : []),
+  ];
+  const colOpsChildren = [
     ...(barOn.value ? [
       { key: 'hide-col', label: '隐藏此列', icon: EyeOff, run: () => {
         if (visibleCols.value.length <= 1) { store.notify('error', '至少保留一列'); return; }
@@ -1951,22 +2081,14 @@ const cellMenuItems = computed(() => {
       { key: 'fit-col', label: '此列适应内容', icon: MoveHorizontal, run: () => fitCol(col) },
       { key: 'fit-all', label: '全列适应内容', icon: MoveHorizontal, run: () => fitAll() },
     ] : []),
-    /* 1169：RT 的单元格右键五档导出，QRT 此前只有 CSV 一条——同一张表在索引工作台
-       能就地从单元格导出 XLSX/JSON/MD/NDJSON，在 SQL 结果表得另开工具行菜单。
-       这里补齐剩余四档，复用工具行「导出 ▾」同一批函数（能力零新增，只补入口）。
-       标签写成「导出当前视图（X）」而非「X 格式」：QRT 没有 RT 那个
-       默认格式偏好（工具行是五档直选），写成格式会让人以为点一下只改设置不下载。 */
-    { key: 'export-csv', label: '导出当前视图（CSV）', icon: FileDown, sep: barOn.value, run: () => exportCsv() },
-    { key: 'export-xlsx', label: '导出当前视图（XLSX）', icon: Table, run: () => exportXlsx() },
-    { key: 'export-json', label: '导出当前视图（JSON）', icon: Braces, run: () => exportJson() },
-    { key: 'export-md', label: '导出当前视图（Markdown）', icon: FileText, run: () => exportMd() },
-    ...(props.exportNdjson ? [{ key: 'export-ndjson', label: '导出当前视图（NDJSON）', icon: ClipboardList, run: () => exportNdjsonFile() }] : []),
   ];
-  /* 无记忆维度（SQL 等通道）时列管理项整组不出——只剩导出，
-     分组名跟着换，不能叫「列与导出…」却没列可管。 */
-  const colGroup = barOn.value
-    ? { key: 'col-group', label: '列与导出…', icon: MoveHorizontal, sep: true, children: colChildren }
-    : { key: 'col-group', label: '导出…', icon: FileDown, sep: true, children: colChildren };
+  /* 1169：RT 的单元格右键五档导出，QRT 此前只有 CSV 一条——同一张表在索引工作台
+     能就地从单元格导出 XLSX/JSON/MD/NDJSON，在 SQL 结果表得另开工具行菜单。
+     标签写成「导出当前视图（X）」而非「X 格式」：QRT 没有 RT 那个默认格式偏好
+     （工具行是五档直选），写成格式会让人以为点一下只改设置不下载。 */
+  const colChildren = [...colOpsChildren, ...exportChildren];
+  /* 无记忆维度（SQL 等通道）时列管理项整组不出——只剩导出，分组名跟着换。 */
+  const colGroup = { key: 'col-group', label: '列操作…', icon: MoveHorizontal, children: colOpsChildren };
   return [
     /* 一级：当前格最高频两件事（复制值/完整值）——单击一步到位，不逼两级 */
     { key: 'copy-val', label: '复制值', icon: Copy, run: copyChildren[0].run },
@@ -1975,7 +2097,8 @@ const cellMenuItems = computed(() => {
     { key: 'copy-group', label: '复制…', icon: ClipboardList, sep: true, children: copyChildren.filter(c => c.key !== 'copy-val') },
     ...(rowChildren.length > 1 ? [{ key: 'row-group', label: '行操作…', icon: ChevronDown, children: rowChildren.filter(c => c.key !== 'detail-cell') }] : []),
     { key: 'query-group', label: '筛选与排序…', icon: Filter, sep: true, children: queryChildren },
-    ...(colChildren.length > 1 ? [colGroup] : []),
+    { key: 'export-group', label: '导出…', icon: FileDown, sep: true, children: exportChildren },
+    ...(colOpsChildren.length ? [colGroup] : []),
   ];
 });
 /* 删除 menuCopyVal/menuCopyRowJson/menuSortCol——独立函数版菜单实现，
@@ -2164,9 +2287,12 @@ function onEscBlur(e: KeyboardEvent) {
   if (searchOpen.value) { closeSearch(); return; }
   /* W7：有行内展开先全收（与 RT 同裁决：全收），再落失焦 */
   if (expandedRows.value.size) { expandedRows.value = new Set(); return; }
+  /* 1366：聚合散选先清（与 RT「Esc 清框选」同裁决），再落失焦 */
+  if (aggCells.value.size) { clearAggCells(); return; }
   (e.currentTarget as HTMLElement | null)?.blur();
 }
 const wrapRef = ref<HTMLElement>();
+
 /* 换存储键时横向滚动位归零（新维度回列首，防上一维度残留的假遮挡态） */
 watch(dimension, () => { const el = wrapRef.value; if (el) el.scrollLeft = 0; });
 watch(focusIdx, (i) => {
@@ -2434,6 +2560,14 @@ mark.qrt-mark { background: var(--warn); color: var(--tx-on-strong); border-radi
 .qrt-backtop:hover { color: var(--ac-hi); border-color: var(--ac-line); }
 .qrt-wrap { overflow: auto; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 var(--r-m) var(--r-m); background: var(--bg1); }
 .qrt-tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-xs); }
+/* 1359b：行少时下方空白用表体底纹延伸（不改 DOM：填充行会被行计数/斑马纹
+   当成数据行，实测撞了 rtLocateFilter230 / rtQrtSearchMerge621） */
+/* 1365：底纹行距必须跟真实行高走，不能写死 32px——实测三档 21.5 / 25.5 / 41.5px，
+   写死 32px 时每个空行都比数据行歪，越往下越明显（读成「下面又起了一张歪表格」）。
+   档位类挂在 table 上，用 :has() 从容器下探（Chromium 105+ 起原生支持）。 */
+.qrt-wrap { --qrt-row-h: 25.5px; background-image: linear-gradient(var(--line) 1px, transparent 1px); background-size: 100% var(--qrt-row-h); background-repeat: repeat; background-position: 0 0; }
+.qrt-wrap:has(.qrt-tbl.dense) { --qrt-row-h: 21.5px; }
+.qrt-wrap:has(.qrt-tbl.cozy) { --qrt-row-h: 41.5px; }
 /* hover 对齐 RT 行语言（bg2+左侧 3px 品牌强调条） */
 .qrt-tbl tbody tr:hover { background: var(--bg2); box-shadow: inset 3px 0 0 var(--ac-hi); }
 .qrt-tbl tbody tr:nth-child(even) { background: var(--hl-soft); }
@@ -2464,10 +2598,31 @@ mark.qrt-mark { background: var(--warn); color: var(--tx-on-strong); border-radi
 .qrt-tbl th.sortable { cursor: pointer; }
 .qrt-tbl th.sortable:hover { color: var(--ac-hi); }
 .qrt-tbl th.on { color: var(--ac-hi); }
-/* 1136：列名是首行唯一常驻元素；长名截断、完整名与类型走 title */
-.qrt-th-name { display: inline-block; max-width: 220px; padding-right: 14px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
-/* 1151：悬停时给 ⇅ / 漏斗让出沟槽——文字改用省略号截断，而不是被图标盖住 */
-.qrt-tbl th:hover .qrt-th-name, .qrt-tbl th:focus-visible .qrt-th-name, .qrt-tbl th:focus-within .qrt-th-name { padding-right: var(--sp-6); }
+/* 1136：列名是首行唯一常驻元素；长名截断、完整名与类型走 title。
+   ⚠ 静息档右侧留白必须 ≥ 图标槽宽：排序 ⇅ 锚在 right:25px、漏斗锚在 right:6px 宽 16px，
+   两个图标都脱离文档流压在 th 右缘。此前静息只留 14px，列名一旦宽到 th-14 就压到 ⇅ 上
+   （实测 102px 的 issuer_name 列：文字右界比 ⇅ 左界多 11px，悬停更明显）。改 32px
+   = ⇅ 锚点 25px + 图标宽 11px 再留 4px 呼吸；悬停档（--sp-6=32px）保持等值，不再跳变。 */
+/* 1332：列名盒子必须止步于 th 的内容盒——`inline-block` + `max-width:220px` 时，
+ 它按**内容宽**排版且不受 th 约束：60px 列里 `region`（66px）盒子直接越过 th 右缘，
+ overflow:hidden 再裁也只是裁自己的盒子，越界那截照样压住 ⇅/漏斗（真机拖到最小实测：
+ score 列文字右缘越过 ⇅ 左缘 15px、越过漏斗 2px）。改 block + max-width:100%，
+ 盒子 = th 内容盒，省略号落在图标左侧。
+ 右内衬同时按可用宽度收敛（min(32px, 30%)，下限 12px）：60px 列若仍留 32px，列名只剩
+ 8px 连一个字都放不下；宽列 32px 不变（保 ⇅ 25px+图标 11px 的沟槽）。
+ ⚠30% 在极窄内容盒下会低于漏斗槽宽（56px 列内容盒 36px → 30%=10.8px，实测仍压 1px），
+ 所以再压一个 12px 地板——漏斗 left = th 右缘 − 22px，12px 内衬正好落在槽内不重叠。 */
+/* 1373：沟槽必须盖住**最靠左的图标**。实测两个 absolute 图标：
+   漏斗 right:6px 宽 16px（占右 22px）、排序 ⇅ right:25px 宽 10px（占右 35px）。
+   因此静息沟槽 = 35px；原比例制 min(32px, max(12px, 30%)) 在窄列只给 18.6px，
+   真机实测 score/region/status 文字压图标 13px、region 整词溢出。比例在窄列必然算不准。 */
+.qrt-th-name { display: block; max-width: 100%; padding-right: 35px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+/* 1151：悬停时同样是 35px（⇅ 与漏斗都在，等值不跳变） */
+.qrt-tbl th:hover .qrt-th-name, .qrt-tbl th:focus-visible .qrt-th-name, .qrt-tbl th:focus-within .qrt-th-name { padding-right: 35px; }
+/* 1373：窄列优先保列名（RT 1189 同裁决）——列宽被拖到 < 100px 时，35px 沟槽会把列名挤到
+   几乎无字可显（60px 内容盒只剩 17px）。用 min-width 把 th 撑到能同时放下「几个字 + 图标」，
+   而不是牺牲其中一个：icon 不重叠、列名也还在。表格整体仍可横向滚动。 */
+.qrt-tbl th:has(.qrt-th-name) { min-width: 96px; }
 /* 排序/筛选图标脱离文档流：不再把 8 列每列撑宽 20px；悬停/聚焦才出现，激活常亮 */
 .qrt-sort-i { position: absolute; right: 25px; top: 50%; transform: translateY(-50%); font-size: var(--fs-2xs); opacity: 0; transition: opacity var(--tr); }
 .qrt-tbl th:hover .qrt-sort-i, .qrt-tbl th:focus-visible .qrt-sort-i { opacity: .5; }
@@ -2551,6 +2706,23 @@ th.qrt-drop-after { box-shadow: inset -3px 0 0 var(--info); }
 }
 .qrt-tbl tbody tr:hover .qrt-row-copy { opacity: 1; pointer-events: auto; }
 .qrt-row-copy:hover { color: var(--ac-hi); border-color: var(--ac-line); }
+/* 1366：Ctrl+点击聚合的选中格——与 RT 的 .agg-sel 同语言（软底 + 左缘强调条） */
+.qrt-tbl td.qrt-agg-sel { background: var(--ac-soft); box-shadow: inset 2px 0 0 var(--ac-hi); }
+/* 1366：页脚状态栏（RT .rt-status 同款页脚语言）——贴死表体下沿、只留底部圆角；
+   分页行在场时由 .has-pgr 接管卡底（既有规则），此处让位 */
+.qrt-status {
+  display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-1h) var(--sp-2h);
+  background: var(--bg1); border: 1px solid var(--line); border-top: 0; border-radius: 0 0 var(--r-m) var(--r-m);
+  font-size: var(--fs-xs); color: var(--tx1);
+}
+.qrt-wrap.has-pgr + .qrt-status { border-radius: 0; }
+.qrt-status .qrt-stat { font-family: var(--mono); }
+.qrt-status .qrt-stat-hint { color: var(--tx2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qrt-stat-x {
+  flex: none; padding: 1px var(--sp-2); font-size: var(--fs-xs); cursor: pointer;
+  background: var(--bg2); color: var(--tx1); border: 1px solid var(--line); border-radius: var(--r-xs);
+}
+.qrt-stat-x:hover { border-color: var(--ac-line); color: var(--ac-hi); }
 /* _index 格跳转芯片——行内常驻小图标（悬浮不消失，与行复制钮同语言） */
 .qrt-idx-go {
   display: inline-flex; align-items: center; justify-content: center;
@@ -2634,7 +2806,8 @@ th.qrt-drop-after { box-shadow: inset -3px 0 0 var(--info); }
 /* 右簇聚合菜单（导出 ▾ / 视图 ⋯）——浮层四要素齐备（bg1 底/强边线/阴影/圆角） */
 .menu-wrap { position: relative; }
 .qrt-tool-btn.on { border-color: var(--ac-line); color: var(--ac-hi); }
-.qrt-menu { position: absolute; top: calc(100% + var(--sp-1)); right: 0; z-index: 60; background: var(--bg1); border: 1px solid var(--line-strong); border-radius: var(--r-m); box-shadow: 0 8px 24px rgba(0, 0, 0, .5); padding: var(--sp-1h); min-width: 230px; }
+/* 1375：与 RT 同修——封高 + 内部滚动，避免工具行靠下时末项被裁掉点不到 */
+.qrt-menu { position: absolute; top: calc(100% + var(--sp-1)); right: 0; z-index: 60; background: var(--bg1); border: 1px solid var(--line-strong); border-radius: var(--r-m); box-shadow: 0 8px 24px rgba(0, 0, 0, .5); padding: var(--sp-1h); min-width: 230px; max-height: min(70dvh, 420px); overflow-y: auto; overscroll-behavior: contain; }
 .qrt-mi { display: flex; align-items: center; gap: var(--sp-2); width: 100%; padding: var(--sp-1h) var(--sp-2h); border: 0; background: transparent; border-radius: var(--r-s); color: var(--tx1); font-size: var(--fs-xs); cursor: pointer; text-align: left; white-space: nowrap; }
 .qrt-mi:hover:not(:disabled) { background: var(--bg2); color: var(--tx0); }
 .qrt-mi:disabled { color: var(--tx2); opacity: .55; cursor: default; }

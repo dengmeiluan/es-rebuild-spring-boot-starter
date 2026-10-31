@@ -107,11 +107,17 @@ describe('R130 全站 UI 守卫', () => {
     expect(s).toContain('rx-chips');
     expect(s).toContain("toggle('aggs')");
     /* 五百八十二批同步更新：563 批用户实报「无效控制」清扫退役 page chip（6→5）——数量阈同步更新，
-       并补五颗具名 chip 锁（防进一步缩水成空壳也过） */
-    expect(s.match(/class="rx-chip"/g)!.length).toBeGreaterThanOrEqual(5);
+       并补五颗具名 chip 锁（防进一步缩水成空壳也过）。
+       1338：chip 改为 CHIP_META 数据驱动（模板只剩一个 v-for），逐字面量数 class="rx-chip"
+       的判据失效——改为量 CHIP_META 的具名 key 数（意图不变：仍是一排具名 chip）。 */
+    const meta = s.slice(s.indexOf('const CHIP_META'), s.indexOf('] as const'));
+    const keys = [...meta.matchAll(/k: '([a-z]+)'/g)].map(m => m[1]);
+    expect(keys.length, '具名 chip 数量不得缩水').toBeGreaterThanOrEqual(5);
     for (const k of ['sort', 'src', 'hl', 'aggs', 'ex']) {
-      expect(s, `chip ${k} 必须在场`).toContain(`toggle('${k}')`);
+      expect(keys, `chip ${k} 必须在场`).toContain(k);
     }
+    /* 仍是横向 chips（1338 起单行 nowrap + 横向滚动；防退回垂直折叠清单） */
+    expect(s, '参数条必须保持横向单行').toMatch(/\.rx-chips \{[^}]*flex-wrap:\s*nowrap/);
   });
 
   it('⑪ QRT 表头字重/线与密度斑马纹不回退（170 批：600+line-strong 层次；紧凑去条纹，dbx 视觉对齐）', () => {

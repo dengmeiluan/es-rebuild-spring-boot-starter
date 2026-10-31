@@ -31,7 +31,7 @@
             <artifactId>es-rebuild-spring-boot-starter</artifactId>
             <!-- 需要含完整委托 SPI（hasCredential/tokenOf/revoke）的版本；
                  1.0.39 只有 authenticate，照抄参考实现会编译失败。 -->
-            <version>1.0.70</version>
+            <version>1.0.71</version>
         </dependency>
         <!-- 嵌入式宿主自带的运行时栈（starter 对这三件是 provided——版本决定权在宿主） -->
         <dependency>

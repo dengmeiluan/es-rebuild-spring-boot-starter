@@ -21,10 +21,22 @@ describe('1136 表格首行减法', () => {
     expect(qrt).toContain('.qrt-funnel {\n  position: absolute; right: 6px;');
     expect(qrt).toContain('.qrt-tbl th:hover .qrt-funnel, .qrt-tbl th:focus-within .qrt-funnel, .qrt-funnel:focus-visible { opacity: .8; }');
     expect(qrt).toContain('.qrt-tbl th.on .qrt-sort-i { opacity: 1; }');
-    /* 1151：列名右内衬给常驻漏斗留槽（原「max-width: 220px;」尾随即为规则结束，现多一段
-       padding-right，改为前缀锚 + 单独断言内衬，语义不变） */
-    expect(qrt).toContain('.qrt-th-name { display: inline-block; max-width: 220px;');
-    expect(qrt).toMatch(/\.qrt-th-name \{[^}]*padding-right: 14px;/);
+    /* 1332：列名盒子上限从固定 220px 改为 100%（= th 内容盒）。
+       原锁守的是「列名是 inline-block 且限宽 220」，但真机证明这条恰恰是缺陷来源：
+       列被拖窄后盒子仍按内容宽排版、越出 th 压住 ⇅/漏斗。现在守的是更强的意图——
+       **列名盒子不得超出单元格**。限宽仍需要（长字段名别把列撑爆），但上限必须跟列宽联动。 */
+    expect(qrt).toMatch(/\.qrt-th-name \{\s*display: block; max-width: 100%;/);
+    /* 内衬宽度从 14 提到 32：排序 ⇅ 锚在 right:25px（宽约 11px），14px 内衬下
+       列名右界会压进 ⇅ 11px（实测 issuer_name 列 gapS=-11）。断言改为「内衬 ≥ 图标槽」，
+       不锁死具体像素值——只要还让得出 ⇅ + 漏斗两个槽就成立。
+       1332：值变成 min(32px, max(12px,30%)) 复合式，宽档口径取上限项（32px）。 */
+    /* 1373：判据从「出现 --sp-6」改为「解析出的内衬值 ≥ ⇅ 实际占位」。
+       真机实测 ⇅ 锚 right:25px 宽 10px = 占右 35px，32px 会压字 3px，所以值是 35px。 */
+    const qrtPad = qrt.match(/\.qrt-th-name \{[^}]*padding-right: (\d+)px[^;]*;/);
+    expect(qrtPad, 'QRT 列名必须有右内衬（像素值）').toBeTruthy();
+    const gutter = Number(qrtPad![1]);
+    const sortRight = Number((qrt.match(/\.qrt-sort-i \{[^}]*right: (\d+)px/) ?? [])[1] ?? 0);
+    expect(gutter, `内衬 ${gutter}px 必须 ≥ ⇅ 锚点 ${sortRight}px`).toBeGreaterThanOrEqual(sortRight);
   });
 
   it('列宽可拖：无 storageKey 走内存态；首拖固化宽度并按内容宽展开', () => {

@@ -534,6 +534,11 @@ function favHistRow(it: { mode?: string; query: string; index?: string; ts?: num
  原有的逐根 10px（--sp-2h）间距；min-width:0 防 DslQueryView 编辑器把面板撑出视口。
  淡入用 CSS 动画：子元素每次（重）插入 DOM 自动重放（KeepAlive 复活/stamp 重挂载都触发） */
 .qh-pane { display: flex; flex-direction: column; gap: var(--sp-2h); min-width: 0; }
+/* 1339：试过用 .qh:has(.dq-fill){min-height:100%} 撑满剩余空间——**已回退**：
+   实测它把 .dq 撑到 1047px（超出视口），.dq-result 的 min-height 链被顶到 505px，
+   页面反而要滚动才能看到结果（比改前更差）。根因是 .dq-main 是**定高**（dqMainH），
+   剩余空间只会把 .dq-result 的 min-height 顶大，不会分给真正需要的表格。
+   垂直预算问题已由 1338（参数条单行化，省 56px）解决，此处不再动高度链。 */
 .qh-pane > :deep(*) { animation: qh-fade-in var(--tr) ease; }
 @keyframes qh-fade-in { from { opacity: 0; } to { opacity: 1; } }
 

@@ -24,9 +24,12 @@ describe('DiagView 节点行右键菜单（一百八十七批→五百二十五�
   it('QRT rows 型接管（diag:nodes 维度）；行资源全量信息走内核复制行 JSON/行内展开', () => {
     expect(src).toContain(':cols="ND_COLS" :rows="nodesMatrix" sortable');
     expect(src).toContain('storage-key="diag:nodes"');
-    /* 旧自建菜单胶水不回潮 */
+    /* 旧自建菜单胶水不回潮（187 批的那套 openNodeMenu + 自绘菜单）。
+       1362：本条原先写死「本文件不许出现 <CellContextMenu」——那是把「不要回潮」
+       误写成了「这文件永不许用菜单组件」；pending task 行（纯展示三元组）是另一类行，
+       自带只读复制菜单不构成回潮。判据收回到真正的意图：旧胶水不回潮。 */
     expect(src).not.toContain('openNodeMenu');
-    expect(src).not.toMatch(/<CellContextMenu/);
+    expect(src).not.toContain('nodeMenuItems');
   });
   it('二百二十三批：趋势摘要随趋势列文本化延续（trendCell 与 trendTip 同源）', () => {
     expect(src).toContain("import { pushSample, trendTip } from '../utils/trendHist';");

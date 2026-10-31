@@ -76,7 +76,8 @@ async function openGroup(label: string) {
   parent!.click();
   for (let i = 0; i < 6; i++) { await nextTick(); await Promise.resolve(); }
 }
-async function clickItem(label: string, group = '列与导出…') {
+/* 1385：列管理从「列与导出…」拆出为「列操作…」；导出另成「导出…」组。 */
+async function clickItem(label: string, group = '列操作…') {
   if (!subButtons().some(b => (b.textContent ?? '').includes(label))) await openGroup(group);
   const it = subButtons().find(b => (b.textContent ?? '').includes(label))
     ?? menuButtons().find(b => (b.textContent ?? '').includes(label));
@@ -97,10 +98,10 @@ function headerCols(): string[] {
 }
 
 describe('RT 右键列管理（129 批）', () => {
-  it('菜单含隐藏/置首项（列与导出分组内），且有分组分隔线', async () => {
+  it('菜单含隐藏/置首项（列操作分组内），且有分组分隔线', async () => {
     await mountTbl(ResultTable, { hits: HITS, total: 2, index: 'i1', storageKey: 'cm1' });
     await openMenuAt('tbody tr:first-child td.rt-cell');
-    await openGroup('列与导出…');
+    await openGroup('列操作…');
     const labels = subButtons().map(b => b.textContent?.trim());
     expect(labels).toContain('隐藏此列');
     expect(labels).toContain('此列置首');
@@ -193,7 +194,7 @@ describe('右键 auto-fit（140 批）', () => {
   it('「此列适应内容」菜单项存在；happy-dom 下 scrollWidth=0 安全 no-op', async () => {
     await mountTbl(ResultTable, { hits: HITS, total: 2, index: 'i1', storageKey: 'af1' });
     await openMenuAt('tbody tr:first-child td.rt-cell');
-    await openGroup('列与导出…');
+    await openGroup('列操作…');   /* 1385：列管理已从「列与导出…」拆出 */
     const fit = subButtons().find(b => b.textContent?.includes('此列适应内容'));
     expect(fit).toBeTruthy();
     /* happy-dom 无布局引擎 scrollWidth 恒 0 → 不写入 colWidths（真实浏览器按内容实测） */

@@ -1,6 +1,7 @@
 <template>
   <div class="xt-node" :style="{ '--xt-depth': depth }">
-    <div class="xt-row" :class="kindClass" role="button" tabindex="0" :aria-expanded="open" @click="open = !open" @keydown.enter.prevent="open = !open" @keydown.space.prevent="open = !open">
+    <div class="xt-row" :class="kindClass" role="button" tabindex="0" :aria-expanded="open" @click="open = !open" @keydown.enter.prevent="open = !open" @keydown.space.prevent="open = !open"
+      @contextmenu.prevent.stop="openCtx($event)">
       <ChevronRight v-if="hasKids" :size="10" class="xt-caret" :class="{ open }" />
       <span v-else class="xt-caret-ph" />
       <span class="xt-val" :title="String(node.value)">{{ fmtVal(node.value) }}</span>
@@ -14,12 +15,16 @@
     <div v-if="open && hasKids" class="xt-kids">
       <ExplainTree v-for="(d, i) in node.details" :key="i" :node="d" :total="total" :depth="depth + 1" />
     </div>
+    <div v-if="flash" class="xt-flash" :style="{ left: flash.x + 'px', top: flash.y + 'px' }">{{ flash.text }}</div>
+    <CellContextMenu v-if="ctx" :x="ctx.x" :y="ctx.y" :title="ctx.title" :items="ctx.items" @close="ctx = null" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { ChevronRight } from 'lucide-vue-next';
+import { Braces, ChevronRight, ClipboardList, Copy, Hash, Info } from 'lucide-vue-next';
+import { copyText } from '../utils/format';
+import CellContextMenu, { type CcmItem } from './CellContextMenu.vue';
 
 /**
  * BM25 explanation 递归树。
@@ -66,6 +71,56 @@ function fmtVal(v: any) {
   if (Math.abs(n) >= 1000) return n.toFixed(0);
   return n.toFixed(4).replace(/\.?0+$/, '') || '0';
 }
+
+/* ═══ 1316：打分树行右键 ═══
+ 打分树此前是纯展示：看到一个可疑因子（norm 拖后腿 / idf 过低）只能靠眼睛记，
+ 想贴到工单/群里得手工框选整段 description。心智：右键点哪一行，拿到的就是
+ 「这一行的因子、分值、贡献占比、整棵子树」。
+ 分值/占比用与行内**同一套**格式化函数（fmtVal/pct），复制到的数与看到的数必须一致——
+ 否则用户贴到工单里的是另一份数（[[feedback-visual-verification]] 同款教训）。
+
+ 两处细节：
+ ① nested 树上每一层都是独立的 ExplainTree 实例（组件递归），因此 ctx/flash 各自持有一份——
+    点父行右键不会弹出 N 个菜单：事件冒泡被 .stop 吃掉，只有被点的那层开菜单。
+ ② 复制回执走就近 flash（位置钉在鼠标点），不依赖全局 store ——
+    本组件在 SearchSandbox 里可能被塞在 pane 深处，宿主 toast 不一定在同一视野。 */
+const ctx = ref<{ x: number; y: number; title: string; items: CcmItem[] } | null>(null);
+const flash = ref<{ x: number; y: number; text: string } | null>(null);
+let flashTimer: ReturnType<typeof setTimeout> | null = null;
+async function copyNear(text: string, msg: string, e: MouseEvent) {
+  if (!text) return;
+  const ok = await copyText(text);
+  flash.value = { x: e.clientX + 10, y: e.clientY + 14, text: ok ? msg : '复制失败' };
+  if (flashTimer) clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => (flash.value = null), 1200);
+}
+/* 行文本：人一眼能对上界面的一行摘要（分值 · 占比 · 因子档 · 描述） */
+function rowLine(): string {
+  const parts = [fmtVal(props.node?.value), pct.value.toFixed(1) + '%'];
+  if (kind.value) parts.push(kind.value);
+  const d = String(props.node?.description || '');
+  if (d) parts.push(d);
+  return parts.join(' · ');
+}
+function openCtx(e: MouseEvent) {
+  const d = String(props.node?.description || '');
+  ctx.value = {
+    x: e.clientX, y: e.clientY,
+    title: (kind.value ? kind.value + ' · ' : '') + pct.value.toFixed(1) + '%',
+    items: [
+      { key: 'xt-copy-line', label: '复制这一行（分值+占比+描述）', icon: ClipboardList,
+        run: () => void copyNear(rowLine(), '已复制该行', e) },
+      { key: 'xt-copy-desc', label: '只复制描述', icon: Info,
+        run: () => void copyNear(d, '已复制描述', e) },
+      { key: 'xt-more', label: '更多…', icon: Copy, sep: true, children: [
+        { key: 'xt-copy-val', label: '复制分值', icon: Hash, run: () => void copyNear(String(props.node?.value ?? ''), '已复制分值', e) },
+        { key: 'xt-copy-pct', label: '复制贡献占比', icon: Hash, run: () => void copyNear(pct.value.toFixed(1) + '%', '已复制占比', e) },
+        { key: 'xt-copy-sub', label: hasKids.value ? '复制此节点子树 JSON' : '复制此节点 JSON', icon: Braces,
+          run: () => void copyNear(JSON.stringify(props.node, null, 2), '已复制节点 JSON', e) },
+      ] },
+    ],
+  };
+}
 </script>
 
 <style scoped>
@@ -109,4 +164,12 @@ function fmtVal(v: any) {
 .xt-kind.xk-script { color: var(--dv-pink); background: var(--dv-pink-soft); } /* ：同上 -soft 修复 */
 .xk-const.xt-bar, .xt-bar.xk-const { background: var(--dv-slate); }
 .xt-kind.xk-const { color: var(--dv-slate); }
+/* 1316：复制回执就近闪一条（JsonTree .jt-flash 同款，z 走 ctx 注册档 +3） */
+.xt-flash {
+  position: fixed; z-index: calc(var(--z-ctx) + 3); pointer-events: none;
+  background: var(--bg1); border: 1px solid var(--line-strong); border-radius: var(--r-s);
+  box-shadow: var(--shadow-pop); color: var(--tx0); font-size: var(--fs-2xs);
+  padding: var(--sp-0) var(--sp-2); max-width: 46vw;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 </style>

@@ -55,7 +55,8 @@
             <div v-if="storedLoading && !storedList.length" class="pl-load-mini">正在拉取已存储脚本…</div>
             <EmptyState v-else-if="!storedErr && !storedList.length" compact :icon="Save" text="暂无存储脚本" hint="左侧写好后点「存储」入集群，供 script_score 等复用" />
             <div v-for="s in storedList" :key="s.id" class="pl-stored" :class="{ active: selectedStored === s.id }"
-              @click="pickStored(s)" role="button" tabindex="0" @keydown.enter.prevent="pickStored(s)" @keydown.space.prevent="pickStored(s)">
+              @click="pickStored(s)" role="button" tabindex="0" @keydown.enter.prevent="pickStored(s)" @keydown.space.prevent="pickStored(s)"
+              @contextmenu.prevent.stop="openStoredMenu($event, s)">
               <span class="pl-stored-id" :title="s.id">{{ s.id }}</span>
               <span class="pl-stored-lang">{{ s.lang }}</span>
               <X v-if="canOps" :size="10" class="pl-stored-x" :aria-label="'删除脚本 ' + s.id" @click.stop="deleteStored(s.id)" />
@@ -128,6 +129,9 @@
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
     <PermModal v-model:show="permOpen" :target="store.target" />
   </div>
+  <!-- 1343：已存脚本行右键 -->
+  <CellContextMenu v-if="storedMenu" :x="storedMenu.x" :y="storedMenu.y" :title="'脚本 · ' + storedMenu.s.id"
+    :items="storedMenuItems" @close="storedMenu = null" />
 </template>
 
 <script setup lang="ts">
@@ -135,6 +139,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { usePref } from '../composables/urlState';
 import { useTierCycle } from '../composables/useTierCycle'; /* ：painless.outH/railW 三件套合并 */
 import EmptyState from '../components/EmptyState.vue';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import { FlaskConical, RefreshCw, Save, Play, X, Send, Copy, Terminal, AlertCircle, Shield } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
@@ -339,6 +344,36 @@ function pickStored(s: any) {
   /* ：切脚本=旧结果/旧错误残留误导（ 读数铁证），双清同 loadTpl */
   result.value = ''; runErr.value = ''; runErrRaw.value = null;
 }
+
+/* 1343：已存脚本行右键。全站右键普查里本页的 `.pl-stored-list` 是「一个已存脚本一行」，
+   最常用的两个动作是「载入到编辑器」和「把脚本 ID 拿走」——ID 要贴进 script_score 的
+   `{script: {id: ...}}`、贴进 DevTools、发给同事。此前只能选中行再从别处绕。
+   一级 ≤2 个频繁动作 + 分组父项（项目右键约定）；复制项只作用于**这一行**。 */
+const storedMenu = ref<{ x: number; y: number; s: any } | null>(null);
+function openStoredMenu(e: MouseEvent, s: any) {
+  storedMenu.value = { x: e.clientX, y: e.clientY, s };
+}
+const storedMenuItems = computed<CcmItem[]>(() => {
+  const m = storedMenu.value;
+  if (!m) return [];
+  const s = m.s;
+  const copy = async (text: string, msg: string) => {
+    const ok = await copyText(text);
+    store.notify(ok ? 'success' : 'error', ok ? msg : '复制失败');
+  };
+  return [
+    { key: 'ps-load', label: '载入到编辑器', run: () => pickStored(s) },
+    {
+      key: 'ps-more', label: '更多…', sep: true, children: [
+        { key: 'ps-copy-id', label: `复制脚本 ID（${s.id}）`, run: () => void copy(String(s.id), `已复制「${s.id}」`) },
+        { key: 'ps-copy-ref', label: '复制引用片段（script_score 用的 {script:{id}}）', run: () => void copy(
+          JSON.stringify({ script: { id: s.id, lang: s.lang || 'painless' } }, null, 2), '已复制引用片段') },
+        { key: 'ps-copy-id-lang', label: '复制「id  lang」', run: () => void copy(`${s.id}  ${s.lang || 'painless'}`, '已复制 id 与 lang') },
+      ],
+    },
+  ];
+});
+
 async function deleteStored(id: string) {
   if (!canOps.value) { store.notify('warning', '存储脚本变更需要 CLUSTER_OP/ADMIN 角色'); return; }
   if (!await askConfirm({

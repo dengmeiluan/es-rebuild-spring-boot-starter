@@ -72,7 +72,8 @@
                     text="尚无打分解剖结果"
                     hint="左侧写 query 后点「执行解剖」，每个命中会展开 tf/idf/boost/norm 完整打分树" />
         <template v-else>
-        <div v-for="(h, i) in hits" :key="h._id" class="se-hit" :class="{ open: openIdx === i }">
+        <div v-for="(h, i) in hits" :key="h._id" class="se-hit" :class="{ open: openIdx === i }"
+             @contextmenu.prevent="openHitMenu($event, h)">
           <div class="se-hit-hd" role="button" tabindex="0" :aria-expanded="openIdx === i" @click="openIdx = openIdx === i ? -1 : i" @keydown.enter.prevent="openIdx = openIdx === i ? -1 : i" @keydown.space.prevent="openIdx = openIdx === i ? -1 : i">
             <span class="se-rank">#{{ i + 1 }}</span>
             <span class="se-id" :title="h._id">{{ h._id }}</span>
@@ -106,6 +107,8 @@
     </div>
 
     <!-- 原始 IO 弹窗（宿主受控开关；rec 取本页最近一条 search-raw 记录） -->
+    <CellContextMenu v-if="hitMenu" :x="hitMenu.x" :y="hitMenu.y" :title="hitMenu.title"
+      :items="hitMenuItems" @close="hitMenu = null" />
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
   </div>
 </template>
@@ -141,6 +144,7 @@ import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-
 import JsonArea from '../components/JsonArea.vue';
 import { lintDsl } from '../utils/dslLint'; /* ：DSL 静态体检 */
 import JsonTree from '../components/JsonTree.vue';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 
 const router = useRouter();
 const store = useAppStore();
@@ -284,6 +288,29 @@ function gotoXray(h: any) {
   xrayCarry.send({ index: index.value, id: h._id });
   router.push('/query-xray');
 }
+
+/* ═══ 命中行右键（此前这一整块只能靠行内按钮，行本身没有右键能力）═══
+ 一级只放最常用的两项 + 一个分组父项：行里能做的事（复制 _id / 送去排名侦探 /
+ 查 X 光 / 复制 explanation）在二级里一次看全，不再往行内塞更多按钮。 */
+const hitMenu = ref<{ x: number; y: number; title: string; h: any } | null>(null);
+function openHitMenu(e: MouseEvent, h: any) {
+  hitMenu.value = { x: e.clientX, y: e.clientY, title: '# ' + String(h?._id ?? ''), h };
+}
+const hitMenuItems = computed<CcmItem[]>(() => {
+  const h = hitMenu.value?.h;
+  if (!h) return [];
+  return [
+    { key: 'copyId', label: '复制 _id', icon: Copy, run: () => { void copyText(String(h._id ?? '')); } },
+    { key: 'copyJson', label: '复制命中文档 JSON', icon: FileJson, run: () => { void copyText(JSON.stringify(h._source ?? h, null, 2)); } },
+    {
+      key: 'go', label: '分析此命中…', children: [
+        { key: 'why', label: '送排名侦探（看打分）', run: () => gotoWhy(h) },
+        { key: 'xray', label: '查查询 X 光', run: () => gotoXray(h) },
+        { key: 'explain', label: '复制 explanation JSON', run: () => { void copyExplain(h); } },
+      ],
+    },
+  ];
+});
 </script>
 
 <style scoped>

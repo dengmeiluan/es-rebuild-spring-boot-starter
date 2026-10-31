@@ -26,7 +26,7 @@
       <div style="flex:1"></div>
     </div>
     <div v-show="open && buckets.length" class="dq-hist-body">
-      <AggBarChart :buckets="buckets" :height="80" @brush="(f, t) => emit('brush', f, t)" />
+      <AggBarChart :buckets="buckets" :height="80" @brush="(f, t, e) => emit('brush', f, t, e)" />
     </div>
   </div>
 </template>
@@ -61,7 +61,9 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: 'toggle'): void;
-  (e: 'brush', from: HistBucket, to: HistBucket): void;
+  /* 1319b：endKey = 选区**右开边界**（下一桶 key）。桶 key 是区间起点，
+     宿主必须用它而不是 to.key 作 range 上界，否则最后一桶的数据被切掉。 */
+  (e: 'brush', from: HistBucket, to: HistBucket, endKey: number | string): void;
   (e: 'clear-brush'): void;
   (e: 'update:autoHist', v: boolean): void;
 }>();

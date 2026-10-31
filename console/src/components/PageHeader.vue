@@ -55,5 +55,11 @@ withDefaults(defineProps<{
  与 .card-t 同 650 档，靠 16 vs 13 字号拉开层级） */
 .ph-tt { font-size: var(--fs-xl); font-weight: 650; display: flex; align-items: center; gap: var(--sp-2); }
 .ph-sub { font-size: var(--fs-xs); color: var(--muted); margin-top: var(--sp-0); }
-.ph-r { display: flex; align-items: center; gap: var(--sp-2); flex-shrink: 0; flex-wrap: wrap; }
+/* 操作簇：允许换行，但**必须同时允许收缩**。
+   此前只有 flex-shrink:0 —— 它永远不会被压窄，wrap 也就永远不触发，
+   整簇按 min-content 撑出页头，结果在 1024px（左侧导航 232px 时页头只剩 768）
+   SQL 控制台的「执行」按钮被顶到视口外 6px（实测 runRight=1029 / vw=1024）。
+   给 min-width:0 让 wrap 真正生效：按钮先换行，再谈放不下。
+   标题侧（.ph-l）已有 min-width:0，收缩时由它让位，不会被这簇挤扁。 */
+.ph-r { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; min-width: 0; }
 </style>

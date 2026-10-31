@@ -161,8 +161,9 @@ describe('529 W-B QRT 内核能力：排序+导出四格式+列选', () => {
     const firstCell = tbl.querySelector('tbody tr td:nth-child(2)')!;
     expect(firstCell.textContent).toBe('j-a');
     expect(tbl.querySelector('th[data-col="jobId"]')!.getAttribute('aria-sort')).toBe('ascending');
-    /* 导出四格式 + 列选（525 批五钮 → 835 批「导出 ▾」聚合菜单：开菜单验四格式项在场） */
-    (card.querySelector('button[aria-label="导出"]') as HTMLElement).click();
+    /* 导出四格式 + 列选（525 批五钮 → 835 批「导出 ▾」聚合菜单：开菜单验四格式项在场）
+       1345：导出钮 aria 升级为「导出当前视图（N 行，格式…）」，按前缀找钮。 */
+    ([...card.querySelectorAll('button')].find(b => (b.getAttribute('aria-label') || '').startsWith('导出')) as HTMLElement).click();
     await settle(2);
     for (const label of ['CSV', 'MD', 'XLSX', 'PNG']) {
       expect([...card.querySelectorAll('button')].some(bb => bb.textContent?.includes(label)), `导出 ${label} 项在场`).toBe(true);

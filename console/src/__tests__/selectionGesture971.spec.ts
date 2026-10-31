@@ -145,7 +145,7 @@ describe('B AltHitsViews 三档手势仲裁（行为锚）', () => {
 });
 
 describe('B QRT 单元格拖选守卫（行为锚）', () => {
-  it('拖选松手不复制；同位单击复制照旧（存量行为零变化）', async () => {
+  it('拖选松手不复制；同位单击也不复制（1374 单击复制退役）', async () => {
     const mod = await import('../utils/format');
     const spy = vi.spyOn(mod, 'copyText').mockResolvedValue(true);
     const hits = [{ _id: 'a', _source: { s: 'abc' } }] as unknown as SearchHit[];
@@ -153,12 +153,14 @@ describe('B QRT 单元格拖选守卫（行为锚）', () => {
     const tds = [...host.querySelectorAll('tbody tr')][0].querySelectorAll('td');
     const td = tds[2] as HTMLElement;
     expect(td).toBeTruthy();
+    /* 拖选守卫本身仍在：位移超阈的松手不触发复制 */
     td.dispatchEvent(mev('mousedown', 3, 3));
     td.dispatchEvent(mev('click', 100, 100));
     expect(spy, '拖选松手不触发复制').not.toHaveBeenCalled();
+    /* 1374：同位单击同样不复制（该守卫的「对照组」随之改变，守卫逻辑零改动） */
     td.dispatchEvent(mev('mousedown', 3, 3));
     td.dispatchEvent(mev('click', 3, 3));
-    expect(spy).toHaveBeenCalledWith('abc');
+    expect(spy, '同位单击也不再复制').not.toHaveBeenCalled();
     spy.mockRestore();
   });
 });

@@ -161,7 +161,8 @@
  _id/_index 裸 mark 改用 MarkText 统一件（splitMark 单源封装，
  mt-mark 全站统一命中底色；textContent 与原文一致、无 v-html 注入面契约不变），
  kw 空时单段平文零扰动 -->
-            <div v-for="({ h, i }) in shownHits" :key="h._id + '_' + i" class="ss-hit">
+            <div v-for="({ h, i }) in shownHits" :key="h._id + '_' + i" class="ss-hit"
+                 @contextmenu.prevent="openHitMenu($event, h)">
               <div class="ss-hit-head">
                 <b class="mono"><MarkText :text="String(h._index ?? '')" :kw="hitsMarkKw" /></b>
                 <span class="mono ss-hit-id">#<MarkText :text="String(h._id ?? '')" :kw="hitsMarkKw" /></span>
@@ -181,7 +182,7 @@
                 <JsonTree :data="h._source" />
               </details>
               <div v-if="expandedExplain === i && h._explanation" class="ss-explain">
-                <ExplainTree :node="h._explanation" />
+                <ExplainTree :node="h._explanation" :total="h._explanation.value || 1" :depth="0" />
               </div>
             </div>
             <!-- 裸 .empty 迁 EmptyState compact（0 命中语义，pane 结果区内嵌窄态） -->
@@ -204,7 +205,7 @@
  「查看单独 explain。」各自当独立项挤压换行，容器窄到 330px 时被撕成三栏乱码（实测） -->
                 <span>显示第一条命中的 explain 树；点击各命中卡片的 <b>why?</b> 查看单独 explain。</span>
               </div>
-              <ExplainTree :node="hits[0]._explanation" />
+              <ExplainTree :node="hits[0]._explanation" :total="hits[0]._explanation.value || 1" :depth="0" />
             </div>
             <!-- 裸 .empty 迁 EmptyState compact -->
             <!-- 视图钮点击已自动勾选对应请求选项：旧响应无载荷时空态改示「重新搜索后生效」
@@ -254,10 +255,12 @@
     <!-- 原始 IO 弹窗（宿主受控开关；rec 取该页最近一条 /cluster/search-dsl 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
   </div>
+    <CellContextMenu v-if="hitMenu" :x="hitMenu.x" :y="hitMenu.y" :title="hitMenu.title"
+      :items="hitMenuItems" @close="hitMenu = null" />
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, defineComponent, h as vueH } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { FlaskConical, Play, RotateCcw, Sparkles, FileCode2, FileText, PieChart, XCircle,
   Sigma, Braces, ListChecks, Info, AlertCircle, AlertTriangle, Activity, SearchX, ListTree, History, Terminal,
@@ -279,6 +282,7 @@ import { useIdxState } from '../composables/urlState';
 import { toCurl } from '../utils/codegen';
 import { encodeDslParam } from '../utils/queryHub'; /* ：沙盒→构建器 ?dsl= 桥 */
 import { copyText, totalOf, fmtNum } from '../utils/format';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import JsonArea from '../components/JsonArea.vue';
 import SearchFilterBar from '../components/SearchFilterBar.vue'; /* ：hits 结果面查找胶囊统一件 */
 /* 页内 IndexPicker 退役 → 只读 CurrentIdxChip（选择入口收敛顶栏；useIdxState
@@ -288,6 +292,11 @@ import { highlightDslJson } from '../utils/jsonc'; /* ：DSL 语义键 j-clause 
 import FocusableSurface from '../components/FocusableSurface.vue';
 import SkeletonBox from '../components/SkeletonBox.vue';
 import JsonTree from '../components/JsonTree.vue';
+/* 1316：解释树换共享件——此前本页自造一棵 render 函数版（.ss-ex-*），
+ 只有「分值 + 描述」两列，没有贡献占比条、没有因子分档（weight/tf/idf/norm…）、没有右键，
+ 与排名侦探 / 打分解剖用的是两套皮。同一份 _explanation 在两页看起来不一样，
+ 是「不要造轮子」的典型走样。共享件 props 全带默认值后可直接挂，视图侧只留容器壳。 */
+import ExplainTree from '../components/ExplainTree.vue';
 /* 双 pane 可调工作台、DSL 静态检查、字段智能补全源、错误人话 */
 import WorkbenchLayout, { type WorkbenchPaneSpec } from '../components/WorkbenchLayout.vue';
 import { lintDsl } from '../utils/dslLint';
@@ -565,6 +574,32 @@ function openRawIo() {
   rawIoShow.value = true;
 }
 
+/* ═══ 命中行右键（此前只能靠行内按钮）═══
+ 一级放两项高频（复制 _id / 复制 _source JSON）+ 一个分组父项；与「排序/筛选」解耦——
+ 沙盒是试错场，行级动作以"带回本地复现"为主。 */
+const hitMenu = ref<{ x: number; y: number; title: string; h: any } | null>(null);
+function openHitMenu(e: MouseEvent, h: any) {
+  hitMenu.value = { x: e.clientX, y: e.clientY, title: '# ' + String(h?._id ?? ''), h };
+}
+const hitMenuItems = computed<CcmItem[]>(() => {
+  const h = hitMenu.value?.h;
+  if (!h) return [];
+  const hl = h.highlight && Object.keys(h.highlight).length
+    ? { key: 'hl', label: '复制高亮片段 JSON', run: () => { void copyText(JSON.stringify(h.highlight, null, 2)); } }
+    : null;
+  const items: CcmItem[] = [
+    { key: 'copyId', label: '复制 _id', run: () => { void copyText(String(h._id ?? '')); } },
+    { key: 'copySrc', label: '复制 _source JSON', run: () => { void copyText(JSON.stringify(h._source ?? {}, null, 2)); } },
+    {
+      key: 'more', label: '更多…', children: [
+        { key: 'copyIdx', label: '复制 _index', run: () => { void copyText(String(h._index ?? '')); } },
+        { key: 'copyScore', label: '复制 _score', run: () => { void copyText(String(h._score ?? '')); } },
+        ...(hl ? [hl] : []),
+      ],
+    },
+  ];
+  return items;
+});
 function toggleExplain(i: number) {
   expandedExplain.value = expandedExplain.value === i ? null : i;
 }
@@ -599,27 +634,6 @@ onMounted(() => {
     }
     dslBody.value = legacy;
   }
-});
-
-/* Explain 树递归组件（内部定义，显式 any 打破自引用类型推断） */
-const ExplainTree: any = defineComponent({
-  name: 'ExplainTree',
-  props: { node: { type: Object, required: true }, depth: { type: Number, default: 0 } },
-  setup(props): any {
-    const open = ref(props.depth < 2);
-    return (): any => vueH('div', { class: 'ss-ex-node', style: { marginLeft: props.depth * 12 + 'px' } }, [
-      vueH('div', { class: 'ss-ex-head', onClick: () => (open.value = !open.value) }, [
-        vueH('span', { class: 'ss-ex-arrow' }, open.value ? '▾' : '▸'),
-        vueH('span', { class: 'ss-ex-val mono' }, (props.node.value ?? 0).toFixed(4)),
-        vueH('span', { class: 'ss-ex-desc' }, props.node.description || ''),
-      ]),
-      open.value && Array.isArray(props.node.details) && props.node.details.length
-        ? vueH('div', { class: 'ss-ex-kids' }, props.node.details.map((d: any): any =>
-            vueH(ExplainTree, { node: d, depth: props.depth + 1 })
-          ))
-        : null,
-    ]);
-  },
 });
 </script>
 
@@ -699,13 +713,8 @@ const ExplainTree: any = defineComponent({
 /* flex-start：整句折成两行时图标须对齐首行，center 会让图标飘到两行正中 */
 .ss-explain-hint { display: flex; align-items: flex-start; gap: var(--sp-1h); color: var(--tx2); font-size: var(--fs-xs); padding: var(--sp-1) 0 var(--sp-2h); }
 .ss-explain-hint > svg { flex: none; margin-top: var(--sp-0); }
-/* ExplainTree 是 render 函数内联组件，元素无 scope 属性，样式必须 :deep() */
-:deep(.ss-ex-node) { padding: var(--sp-0) 0; }
-:deep(.ss-ex-head) { display: flex; align-items: baseline; gap: var(--sp-2); cursor: pointer; padding: var(--sp-0) var(--sp-1); border-radius: 3px; }
-:deep(.ss-ex-head:hover) { background: var(--bg2); }
-:deep(.ss-ex-arrow) { color: var(--tx2); width: 14px; display: inline-block; }
-:deep(.ss-ex-val) { color: var(--info); font-size: var(--fs-xs); min-width: 66px; }
-:deep(.ss-ex-desc) { font-size: var(--fs-xs); color: var(--tx1); }
+/* 1316：.ss-ex-* 六条 :deep 规则随自造树退役——皮归 components/ExplainTree.vue 单源
+ （缩进/占比条/因子档/右键三页一致）。保留 .ss-explain 内边距与 .ss-explain-full 滚动壳。 */
 
 .ss-agg pre, .ss-raw pre { flex: 1; overflow: auto; padding: var(--sp-3); margin: 0; font-size: var(--fs-xs); }
 /* scoped .empty 覆盖（26px 紧凑留白）随四处空态迁 EmptyState compact 一并退役，留白归组件 */

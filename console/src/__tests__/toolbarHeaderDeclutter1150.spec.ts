@@ -82,8 +82,11 @@ describe('1150/1151：列头静息态只显示列名，且任何态都不压住�
     expect(rt).toMatch(/\.rt-th-sort-hint \{[^}]*display: none;/);
     expect(rt).toContain('.rt-th:hover .rt-th-sort-hint');
     expect(rt).toMatch(/\.rt-th:hover \.rt-th-label[^{]*\{ padding-right: 34px; \}/);
-    /* 列名常驻右内衬让出筛选漏斗（right:8px） */
-    expect(rt).toMatch(/\.rt-th-label \{ min-width: 0;[^}]*padding-right: 14px;/);
+    /* 列名常驻右内衬让出筛选漏斗（right:8px，宽约 12px → 需要 ≥20px）；
+       14px 只剩 4px 间隙，长列名会与漏斗视觉粘连（实测 gapToFilter=4） */
+    const rtPad = rt.match(/\.rt-th-label \{ min-width: 0;[^}]*padding-right: (\d+)px;/);
+    expect(rtPad, 'RT 列名必须有常驻右内衬').toBeTruthy();
+    expect(Number(rtPad![1]), '内衬须容得下漏斗槽（8 + 12）').toBeGreaterThanOrEqual(20);
   });
 
   it('QRT 类型徽标同口径（不占宽、不浮出）', () => {

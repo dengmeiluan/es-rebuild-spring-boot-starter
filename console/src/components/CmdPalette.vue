@@ -83,7 +83,7 @@ import { copyText, fmtTime } from '../utils/format';
 import { visibleTables } from '../utils/tableRegistry';
 import { replayFavorite } from '../utils/favReplay';
 import { trapTabKey } from '../utils/focusTrap';
-import { dslToLucene } from '../utils/dslToLucene';
+import { dslToLucene, dslToLuceneDetailed } from '../utils/dslToLucene';
 
 const props = defineProps<{ show: boolean }>();
 const emit = defineEmits<{ (e: 'update:show', v: boolean): void }>();
@@ -493,8 +493,16 @@ const commands = computed<Cmd[]>(() => {
         if (!body.trim()) { store.notify('warning', '无 DSL body，先在 DSL 页面写一份'); return; }
         try {
           const obj = JSON.parse(body);
-          const lc = dslToLucene(obj);
+          /* 同 DslQueryView——无法翻译的子句必须显性告知，不能静默丢弃后
+             让用户拿着"少了条件"的 Lucene 去跑 */
+          const { lucene: lc, lossy } = dslToLuceneDetailed(obj);
           writeStoredRaw(sessionStorage, 'es-console.lucene.q', lc);
+          if (lossy.length) {
+            writeStoredRaw(sessionStorage, 'es-console.lucene.lossy', JSON.stringify(lossy));
+            store.notify('warning', `已翻译，但 ${lossy.length} 处无法用 query_string 表达：${lossy.join('、')}`, { duration: 6000 });
+          } else {
+            removeStoredRaw(sessionStorage, 'es-console.lucene.lossy');
+          }
           /* lucene.index 同取 DSL 镜像的所属索引 */
           const idx = sessionStorage.getItem('es-console.dsl.index') || store.pickedIdx;
           if (idx) writeStoredRaw(sessionStorage, 'es-console.lucene.index', idx);

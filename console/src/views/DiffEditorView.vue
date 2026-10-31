@@ -151,13 +151,16 @@
           </div>
         </div>
         <div class="df-diff">
-          <div v-for="(l, i) in diffLines" :key="i" class="df-diff-line" :class="l.op">
+          <div v-for="(l, i) in diffLines" :key="i" class="df-diff-line" :class="l.op"
+               @contextmenu.prevent="openLineMenu($event, l, i)">
             <span class="df-diff-op">{{ l.op === 'add' ? '+' : l.op === 'del' ? '-' : ' ' }}</span>
             <span class="df-diff-tx">{{ l.tx }}</span>
           </div>
           <!-- 无差异占位合并 EmptyState compact（文案逐字保留，容器形态归组件） -->
           <EmptyState v-if="diffLines.length === 0" compact :icon="GitCompareArrows" text="无差异" />
         </div>
+        <CellContextMenu v-if="lineMenu" :x="lineMenu.x" :y="lineMenu.y" :title="lineMenu.title"
+          :items="lineMenuItems" @close="lineMenu = null" />
 
         <div class="df-patch">
           <div class="df-patch-hd">
@@ -197,6 +200,7 @@ import { askConfirm } from '../composables/confirm';
 /* 「编辑后」JsonArea 字段补全字段源（useIndexFields 全站字段源标准） */
 import { useIndexFields } from '../composables/useIndexFields';
 import { copyText } from '../utils/format';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import { lcsDiffLines } from '../utils/lcsDiff'; /* ：LCS 行对齐 diff（下标硬对齐错位放大根治） */
 import IndexPicker from '../components/IndexPicker.vue'; /* ：仅对比位 idxB 保留（主选换 CurrentIdxChip） */
 import CurrentIdxChip from '../components/CurrentIdxChip.vue'; /* ：主选换只读 chip */
@@ -357,6 +361,30 @@ const diffLines = computed<Array<{ op: 'add' | 'del' | 'eq'; tx: string }>>(() =
 /* G100：头计数只计真实增删行—— LCS 化后 diffLines 语义为全行
  （eq 混入），沿用其 length 会把未编辑文档显示成「9 处变更」（语义失真， 实锚） */
 const diffCount = computed(() => diffLines.value.filter(l => l.op !== 'eq').length);
+
+/* ═══ 差分行右键（此前整块只能靠"复制请求体"，单行无从取用）═══
+ 一级 = 2 个高频 + 1 个分组父项（项目右键约定）；写操作（提交/覆盖）**刻意不进右键**——
+ 那是页面上带确认语义的主按钮，不该藏在右键里被误触。 */
+const lineMenu = ref<{ x: number; y: number; title: string; line: { op: 'add' | 'del' | 'eq'; tx: string }; idx: number } | null>(null);
+function openLineMenu(e: MouseEvent, l: { op: 'add' | 'del' | 'eq'; tx: string }, i: number) {
+  const opZh = l.op === 'add' ? '新增' : l.op === 'del' ? '删除' : '未变';
+  lineMenu.value = { x: e.clientX, y: e.clientY, title: opZh + ' · 第 ' + (i + 1) + ' 行', line: l, idx: i };
+}
+const lineMenuItems = computed<CcmItem[]>(() => {
+  const m = lineMenu.value;
+  if (!m) return [];
+  const changed = diffLines.value.filter(l => l.op !== 'eq');
+  return [
+    { key: 'copyLine', label: '复制此行文本', run: () => { void copyText(m.line.tx); } },
+    {
+      key: 'more', label: '更多…', children: [
+        { key: 'copyWithOp', label: '复制带 +/- 前缀', run: () => { void copyText((m.line.op === 'add' ? '+ ' : m.line.op === 'del' ? '- ' : '  ') + m.line.tx); } },
+        { key: 'copyAllChanged', label: '复制全部变更行（' + changed.length + '）', run: () => { void copyText(changed.map(l => (l.op === 'add' ? '+ ' : '- ') + l.tx).join('\n')); } },
+        { key: 'copyEdited', label: '复制整份修改后 JSON', run: () => { void copyText(editedText.value || ''); } },
+      ],
+    },
+  ];
+});
 
 function diffToScript(): string {
   if (!editedSource.value) return '';

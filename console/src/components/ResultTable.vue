@@ -110,8 +110,10 @@
         </button>
         <span class="rt-bar-div" role="separator" />
         <!-- 导出唯一入口——一键按默认格式直出（默认 CSV 可在右键菜单切换，记住为偏好）；
- 格式清单从主界面彻底移除（用户裂开点：菜单不该常驻出现） -->
-        <button class="btn sm ghost rt-exp-btn" :title="`导出${selected.size ? `选中 ${selected.size} 行` : '当前页'}为 ${expFmt.toUpperCase()}（右键单元格可切换默认格式）`" :disabled="!hits.length" @click="exportRows(expFmt)">
+ 格式清单从主界面彻底移除（用户裂开点：菜单不该常驻出现）。
+ ⚠ aria-label 必须给：窄档（容器 ≤1180px）会把可见文字 .rt-exp-btn-t 隐藏只留图标，
+ 没有 aria-label 就成了**无名称按钮**（读屏只念「按钮」，键盘用户也无从得知这是导出）。 -->
+        <button class="btn sm ghost rt-exp-btn" :aria-label="`导出为 ${expFmt.toUpperCase()}（${selected.size ? '选中 ' + selected.size + ' 行' : '当前页'}）`" :title="`导出${selected.size ? `选中 ${selected.size} 行` : '当前页'}为 ${expFmt.toUpperCase()}（右键单元格可切换默认格式）`" :disabled="!hits.length" @click="exportRows(expFmt)">
           <FileDown :size="13" />
           <span class="rt-exp-btn-t">导出</span>
         </button>
@@ -123,10 +125,10 @@
         <span class="menu-wrap">
           <button aria-label="视图设置" class="btn sm ghost rt-tool-btn" :class="{ on: viewMenuOpen }"
             aria-haspopup="menu" :aria-expanded="viewMenuOpen" title="视图：行高、列宽"
-            @click.stop="viewMenuOpen = !viewMenuOpen">
+            @click.stop="toggleViewMenu($event)">
             <SlidersHorizontal :size="13" /><span class="rt-tool-t">视图 ⋯</span>
           </button>
-          <div v-if="viewMenuOpen" class="rt-menu" role="menu" aria-label="视图设置">
+          <div v-if="viewMenuOpen" class="rt-menu" role="menu" aria-label="视图设置" :style="{ maxHeight: viewMenuMaxH + 'px' }">
             <div class="rt-m-t">行高（当前：{{ rowHLabel }}）</div>
             <button class="rt-mi" :class="{ on: rowH === 'compact' }" role="menuitemradio" :aria-checked="rowH === 'compact'"
               @click="setRowH('compact'); closeMenus()">紧凑</button>
@@ -320,8 +322,11 @@
               </template>
             </td>
             <td class="rt-act">
+              <!-- 1364：行尾此前平铺 7 个 22px 图标钮（查看/编辑/展开/复制 JSON/解释得分/
+                   词频取证/删除），正对用户反复说的「太多功能平铺」。按项目右键约定收成
+                   一级 2 个高频 +「更多 ⋯」：查看、展开留在行内（点开文档/就地看整行是最高频），
+                   其余 5 个进菜单；动作本体、emit、守卫条件逐字不变。 -->
               <button aria-label="查看文档" class="btn sm ghost" title="查看文档" @click="emit('open-doc', hit)"><Eye :size="12" /></button>
-              <button v-if="editable && canWrite" aria-label="编辑文档" class="btn sm ghost" title="打开该文档并直接进入编辑（Monaco 编辑 raw JSON 后保存）" @click="emit('edit-doc', hit)"><Pencil :size="12" /></button>
               <!-- W7：行内展开详情钮（ChevronRight/Down）——free 多行展开，Esc 全收（E=焦点行同款） -->
               <button class="btn sm ghost rt-row-expand" :aria-label="expandedRows.has(rowKey(hit, ri)) ? '收起此行详情' : '展开此行详情'"
                 :title="expandedRows.has(rowKey(hit, ri)) ? '收起此行详情（Esc 全部收起）' : '展开此行详情（焦点行按 E）'"
@@ -329,12 +334,8 @@
                 <ChevronDown v-if="expandedRows.has(rowKey(hit, ri))" :size="12" />
                 <ChevronRight v-else :size="12" />
               </button>
-              <!-- hover 行内快捷钮（dbx 悬浮行内钮）——复制行 JSON，移出行消失 -->
-              <button class="btn sm ghost rt-row-copy" :aria-label="'复制行 JSON（第 ' + (ri + 1) + ' 行）'" title="复制行 JSON" @click="copyRowJson(hit)"><Copy :size="12" /></button>
-              <button v-if="showRelevance" aria-label="解释这条命中得分" class="btn sm ghost" title="解释这条命中得分（排名侦探）" @click="emit('explain-hit', hit)"><SearchCheck :size="12" /></button>
-              <button v-if="showRelevance" aria-label="词频取证" class="btn sm ghost" title="词频取证（查询 X 光）" @click="emit('xray-hit', hit)"><ScanSearch :size="12" /></button>
-              <!-- 删除文档 rank3+ 可见（delete-by-id=CLUSTER 档） -->
-              <button v-if="canOps" aria-label="删除文档" class="btn sm ghost danger" title="删除文档" @click="emit('delete-doc', hit)"><Trash2 :size="12" /></button>
+              <button class="btn sm ghost rt-row-more" aria-label="此行更多操作" title="此行更多操作（编辑 / 复制 JSON / 解释得分 / 词频取证 / 删除）"
+                aria-haspopup="menu" @click.stop="openActMenu($event, hit, ri)"><MoreHorizontal :size="12" /></button>
               <!-- W7：消费方行级行动注入位——无注入零占位 -->
               <slot name="row-actions" :hit="hit" :ri="ri" />
             </td>
@@ -582,6 +583,13 @@
       :items="barMenuItems"
       @close="barMenu = null"
     />
+    <!-- 1364：行尾「更多 ⋯」——把原来平铺的 5 个低频行操作收进一级一入口 -->
+    <CellContextMenu
+      v-if="actMenu"
+      :x="actMenu.x" :y="actMenu.y" :title="'第 ' + (actMenu.ri + 1) + ' 行 · 更多操作'"
+      :items="actMenuItems"
+      @close="actMenu = null"
+    />
     <!-- TableBacktop 迁往 rt-wrap-shell 定位壳内（原位锚 .rt 整卡底沿盖状态栏，修订） -->
     <!-- P2-8：文档对比弹窗——多选 2~3 篇右键直达，基准可换；传所属索引名芯片 -->
     <DocDiffModal v-model:show="docDiffShow" :hits="docDiffHits" :base-idx="docDiffBase" :index="index" @base="docDiffBase = $event" />
@@ -594,7 +602,7 @@ import { ref, computed, watch, nextTick, onBeforeUnmount, type Ref } from 'vue';
 import { usePref } from '../composables/urlState';
 import { NModal, NDrawer, NDrawerContent, NPopover } from 'naive-ui';
 import {
-  ArrowUp, ArrowDown, ArrowRight, ArrowUpDown, Eye, EyeOff, Pin, MoveHorizontal, Trash2, Copy, ClipboardList, FileDown, X, Pencil, SearchCheck, ScanSearch, Inbox, RotateCcw, ChevronDown, ChevronRight, Braces, Table, Send, FileText, Search, Filter, Camera, GitCompareArrows, Maximize2, Minimize2, SlidersHorizontal } from 'lucide-vue-next';
+  ArrowUp, ArrowDown, ArrowRight, ArrowUpDown, Eye, EyeOff, Pin, MoveHorizontal, Trash2, Copy, ClipboardList, FileDown, X, Pencil, SearchCheck, ScanSearch, Inbox, RotateCcw, ChevronDown, ChevronRight, Braces, Table, Send, FileText, Search, Filter, Camera, GitCompareArrows, Maximize2, Minimize2, SlidersHorizontal, MoreHorizontal } from 'lucide-vue-next';
 import ColPicker from './ColPicker.vue';
 /* 列布局方案共享件（652 preset 内核消费面，RT/QRT 单一出处） */
 import TablePresetMenu from './TablePresetMenu.vue';
@@ -637,6 +645,7 @@ import { useColFit, COL_W_MIN, COL_W_MAX, frozenStyleOf } from '../composables/u
 /* 比较器合并 tableSort.compareVals 单源（numeric 双试+沉底+localeCompare 兜底；
  numeric() 科学计数/时长新档经此双内核生效） */
 import { compareVals, sortableGuard, useSortChain } from '../composables/tableSort';
+import { resolveSortField } from '../utils/sortField';
 import { useColDrag } from '../composables/useColDrag';
 import { registerTable, unregisterTable } from '../utils/tableRegistry';
 import ColFilterPopover from './ColFilterPopover.vue';
@@ -685,6 +694,10 @@ const props = withDefaults(defineProps<{
  与既有 sel/焦点类并存）；undefined/null/空串跳过。row=当前渲染 hit，index=渲染行序。
  缺省零增量 */
   rowClass?: (row: any, index: number) => string | undefined;
+  /** 宿主在 bar-extra 槽里加了图标钮时，把等价的菜单项传进来——
+      工具行右键是「表格操作那个表头」的完整入口，图标钮必须在那里也有可读的一条，
+      否则窄档里清一色无文字图标，用户只能靠试。缺省空数组 = 既有行为零变化 */
+  barMenuExtra?: CcmItem[];
   /** W-D 契约：导出加工——exportName=下载文件名主段（缺省维持 index- 现状）；
  exportCell=导出/复制矩阵单元格值加工（仅 exportRows 矩阵分支/matrixText 管道消费，
  不改表格显示；JSON 文档导出恒 raw）。两者缺省均零增量 */
@@ -799,6 +812,17 @@ const props = withDefaults(defineProps<{
 const focused = ref(false);
 /* 右簇聚合菜单（视图 ⋯）状态——Esc/点外关闭 */
 const viewMenuOpen = ref(false);
+/* 1375：菜单可用高度按**触发器到视口底**算（真机实测固定 max-height 不解决：
+   296px 菜单在 420px 上限内照样溢出 28px，末项「语义格式化」被裁掉点不到）。
+   留 12px 呼吸 + 内部滚动兜底，任何视口高度都不会把最后一项顶出屏幕。 */
+const viewMenuMaxH = ref(420);
+function toggleViewMenu(e: MouseEvent) {
+  const next = !viewMenuOpen.value;
+  viewMenuOpen.value = next;
+  if (!next) return;
+  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  viewMenuMaxH.value = Math.max(160, Math.floor(window.innerHeight - r.bottom - 20));
+}
 function closeMenus() { viewMenuOpen.value = false; }
 function onDocMenusClick(e: Event) {
   if (!(e.target as HTMLElement | null)?.closest('.menu-wrap')) closeMenus();
@@ -1040,6 +1064,17 @@ watch(() => props.syncSort, (s) => {
  _id/_index/_score/_seq_no 排序有语义豁免（semanticGuard 口径）。RT 类型源=显式
  fieldTypes（无采样推断链），无类型列不抑制——零增量缺省与 QRT effType 缺省口径自洽。 */
 const sortGuard = sortableGuard((c) => props.fieldTypes?.[c]);
+/* 1376：远端档可排性预检——宿主在 sort-change 里用同一 resolveSortField 裁决
+ （text 无 .keyword 子域→不下发 sort 并提示），但内核若先把箭头推到新态再等宿主拒绝，
+ 就留下「箭头亮了、数据没动」的暗状态。这里用同一单源提前裁决：拦下即不落态不 emit。
+ 本地档不接（行序就在内存里，任何字段都能排，多这一层只会误伤）。 */
+function remoteSortBlocked(c: string): boolean {
+  if (!props.remoteSort) return false;
+  const r = resolveSortField(c, props.fieldTypes);
+  if (r.ok) return false;
+  store.notify('warning', r.reason || '该列不支持排序');
+  return true;
+}
 /* 薄壳守卫后委托状态机（单源）：remote 档机内只 emit 意图（多键链是本地特性，
  塌缩单键）；directDir 供右键「升序/降序」直选（ dbx 语义）。 */
 function sortBy(c: string, directDir?: 'asc' | 'desc', shift = false) {
@@ -1048,6 +1083,7 @@ function sortBy(c: string, directDir?: 'asc' | 'desc', shift = false) {
   /* 件②：显式非语义列短路（本地/remote 双档同守——不落 sortSpec/不落盘/
  不 emit 远端意图；右键 directDir 直选同经此入口一并受守） */
   if (!sortGuard(c)) return;
+  if (remoteSortBlocked(c)) return;
   chain.sortBy(c, directDir, shift);
 }
 /* 切索引/换存储键：重读该维度的排序记忆；横向滚动位归零（见下方 wrapEl 声明处的 watch；
@@ -2146,6 +2182,33 @@ const colMenu = ref<{ x: number; y: number; col: string } | null>(null);
  一级 = 导出当前页 / 行高切换 / 快照；其余（重置列宽、全列适应、聚合行、转置、语义格式化）
  收进「更多…」二级。不复用 colMenuItems（那是「某一列」的语境）。 */
 const barMenu = ref<{ x: number; y: number } | null>(null);
+/* 1364：行尾「更多…」菜单。行内只留「查看」「展开」两个高频动作，其余 5 个低频动作
+   （编辑 / 复制行 JSON / 解释得分 / 词频取证 / 删除）收进这里；守卫条件与 emit 逐字沿用。 */
+const actMenu = ref<{ x: number; y: number; hit: SearchHit; ri: number } | null>(null);
+function openActMenu(e: MouseEvent, hit: SearchHit, ri: number) {
+  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  actMenu.value = { x: Math.min(r.right - 8, window.innerWidth - 8), y: r.bottom + 4, hit, ri };
+}
+const actMenuItems = computed<CcmItem[]>(() => {
+  const m = actMenu.value;
+  if (!m) return [];
+  const hit = m.hit;
+  return [
+    ...(props.editable && canWrite.value
+      ? [{ key: 'act-edit', label: '编辑文档', icon: Pencil, run: () => emit('edit-doc', hit) }]
+      : []),
+    { key: 'act-copy', label: '复制行 JSON', icon: Copy, run: () => copyRowJson(hit) },
+    ...(props.showRelevance
+      ? [
+          { key: 'act-explain', label: '解释这条命中得分', icon: SearchCheck, run: () => emit('explain-hit', hit) },
+          { key: 'act-xray', label: '词频取证', icon: ScanSearch, run: () => emit('xray-hit', hit) },
+        ]
+      : []),
+    ...(canOps.value
+      ? [{ key: 'act-del', label: '删除文档', icon: Trash2, danger: true, sep: true, run: () => emit('delete-doc', hit) }]
+      : []),
+  ];
+});
 function openBarMenu(e: MouseEvent) {
   barMenu.value = { x: e.clientX, y: e.clientY };
 }
@@ -2163,6 +2226,10 @@ const barMenuItems = computed<CcmItem[]>(() => {
         { key: 'bar-agg', label: aggOn ? '✓ 聚合行' : '聚合行', icon: Table, run: () => toggleAggRow() },
         { key: 'bar-transpose', label: transpose ? '✓ 转置视图' : '转置视图', icon: RotateCcw, run: () => toggleTranspose() },
         { key: 'bar-sem', label: semPref ? '✓ 语义格式化' : '语义格式化', icon: Braces, run: () => { semPref.value = !semPref.value; } },
+        /* 宿主注入的菜单项（bar-extra 槽里那些图标钮的等价菜单入口）。
+           工具行右键是「表格操作那个表头」的完整入口，宿主往工具行加的钮
+           必须同时在这里可达——否则窄档收起图标后就只剩一枚无文字按钮。 */
+        ...(props.barMenuExtra || []),
       ],
     },
   ];
@@ -2459,8 +2526,21 @@ const cellMenuItems = computed(() => {
         } }]
       : []),
   ];
-  const colChildren = [
+  const exportChildren: CcmItem[] = [
     { key: 'export-view', label: `导出当前视图（${expFmt.value.toUpperCase()}）`, icon: FileDown, run: () => exportRows(expFmt.value) },
+    /* 1377：按格式直接导出（QRT 右键 export-csv/json/md/ndjson/xlsx 同语义）——
+      此前 RT 只能「按当前默认格式导出」，要换格式必须先改默认值再导一次（两步+副作用）。 */
+    ...([
+      ['csv', 'CSV', Table],
+      ['xlsx', 'XLSX', Table],
+      ['json', 'JSON', Braces],
+      ['md', 'Markdown', FileText],
+      ['ndjson', 'NDJSON', ClipboardList],
+    ] as const).map(([fmt, label, icon]) => ({
+      key: 'export-' + fmt, label: `导出为 ${label}`, icon, run: () => exportRows(fmt),
+    })),
+  ];
+  const colOpsChildren: CcmItem[] = [
     { key: 'hide-col', label: '隐藏此列', icon: EyeOff, run: () => {
       if (visibleCols.value.length <= 1) { store.notify('error', '至少保留一列'); return; }
       visibleCols.value = visibleCols.value.filter(c => c !== m.col);
@@ -2470,8 +2550,11 @@ const cellMenuItems = computed(() => {
     } },
     { key: 'fit-col', label: '此列适应内容', icon: MoveHorizontal, run: () => fitCol(m.col) },
     { key: 'fit-all', label: '全列适应内容', icon: MoveHorizontal, run: () => fitAll() },
-    /* 默认导出格式切换（主界面只留「⬇ 导出」一键直出） */
-    { key: 'fmt-csv', label: `导出格式：CSV${expFmt.value === 'csv' ? ' ✓' : ''}`, icon: Table, sep: true, run: () => setExpFmt('csv') },
+  ];
+  /* 1385：默认导出格式切换——低频（改的是工具行那颗钮将来按什么格式导出），
+     单独一层，不和「现在就导出」混在一起看。 */
+  const fmtChildren: CcmItem[] = [
+    { key: 'fmt-csv', label: `导出格式：CSV${expFmt.value === 'csv' ? ' ✓' : ''}`, icon: Table, run: () => setExpFmt('csv') },
     { key: 'fmt-xlsx', label: `导出格式：XLSX${expFmt.value === 'xlsx' ? ' ✓' : ''}`, icon: Table, run: () => setExpFmt('xlsx') },
     { key: 'fmt-json', label: `导出格式：JSON${expFmt.value === 'json' ? ' ✓' : ''}`, icon: Braces, run: () => setExpFmt('json') },
     { key: 'fmt-md', label: `导出格式：Markdown${expFmt.value === 'md' ? ' ✓' : ''}`, icon: FileText, run: () => setExpFmt('md') },
@@ -2483,7 +2566,12 @@ const cellMenuItems = computed(() => {
     { key: 'copy-group', label: '复制…', icon: ClipboardList, sep: true, children: copyChildren.filter(c => c.key !== 'copy-val') },
     ...(rowChildren.length > 1 ? [{ key: 'row-group', label: '行操作…', icon: ChevronDown, children: rowChildren.filter(c => c.key !== 'detail-cell') }] : []),
     { key: 'query-group', label: '筛选与排序…', icon: Filter, sep: true, children: queryChildren },
-    { key: 'col-group', label: '列与导出…', icon: MoveHorizontal, sep: true, children: colChildren },
+    /* 1385：此前这一组 15 项平铺（实测 467px 高，800 高屏只剩 8px 余量，
+       再矮一点就溢出视口）。按语义拆成三个二级分组：现在就导出 / 列操作 /
+       改默认导出格式（低频，与「现在导出」不混）。 */
+    { key: 'export-group', label: '导出…', icon: FileDown, sep: true, children: exportChildren },
+    { key: 'col-group', label: '列操作…', icon: MoveHorizontal, children: colOpsChildren },
+    { key: 'default-fmt-group', label: '默认导出格式…', icon: Table, children: fmtChildren },
   ];
 });
 
@@ -2649,10 +2737,34 @@ async function copySelRows(fmt: 'tsv' | 'md' | 'json') {
  数据少壳高=内容高（状态栏/横滚条贴到最后一行下面），数据多被 flex-shrink 压回可用
  空间、rt-wrap 内部滚动不变；回顶 absolute 锚与 thead 吸顶零触。高度红线自证：
  壳高由内容（行数×行高）决定，内容不因壳高变化=无正反馈回路。QRT 根非 flex 不适用。 */
-.rt-wrap-shell { position: relative; flex: 0 1 auto; min-height: 0; display: flex; }
-.rt-wrap { flex: 1; min-width: 0; overflow: auto; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 var(--r-m) var(--r-m); background: var(--bg1); }
+/* 1355：shell 必须**伸展**吃掉列向剩余高度。此前 flex:0 1 auto 只按内容高站住，
+   `.rt` 里 bar 41 + shell 72 + status 31 = 144，剩下 239px 全空着——DSL 工作台
+   1 行结果实测表格可视高只有 72px（表体 383px 被压进滚动区），正是用户说的
+   「默认可视表格特别窄，下面还有那么多空间」。空态/卡片视图同样受益（区域不变形）。 */
+/* 1355：壳给**下限**而不是吃满。562 实报的教训是 flex:1 吃满结果区会让「数据少时
+   表格下方一大片空白、横滚条飘在容器底沿」；但纯粹的 flex:0 1 auto（贴合内容）
+   在 1 行结果时把可视表体压到 72px（实测 DSL 工作台：.rt 383px 里只有 72px 是表格）。
+   两者调和 = 贴合内容 + 240px 地板（≈7 行）：少数据时表格仍有可读区域，
+   多数据时按 flex-shrink 收回到可用空间，滚动仍在 .rt-wrap 内。 */
+/* 1365：壳回 `flex:1 1 auto` —— 562 当时改 `0 1 auto` 是因为「数据少时下方一大片空白」，
+   但 1359b 给表体加了行线底纹后那块空白已是网格延续（DBeaver/dbx 同款），不再是死白；
+   而 `flex-grow:0` 的代价是 .rt 里 96px 完全没有子元素占用（实测 383px 容器只有 240px 被用），
+   正是用户反复说的「默认可视表格特别窄，下面还有那么多空间」。240px 地板保留：
+   极小窗口下仍保证可读行数。 */
+.rt-wrap-shell { position: relative; flex: 1 1 auto; min-height: 240px; display: flex; }
+/* 1365：底部圆角交给状态栏（它是同一张卡的页脚），表体自身不圆底。 */
+.rt-wrap { flex: 1; min-width: 0; overflow: auto; border: 1px solid var(--line); border-top: 0; border-radius: 0; background: var(--bg1); }
 /* v3.0.1:列数少的宽索引在宽屏下表格不满容器(右侧死空间观感)——min-width 兜底拉满 */
 .rt-tbl { min-width: 100%; }
+/* 1359b：行少时表格下方那块空白用**表体底纹**延伸进容器（不改 DOM：填充行会被
+   行计数/斑马纹/行导航当成数据行，实测撞了 rtLocateFilter230 / rtQrtSearchMerge621）。 */
+/* 1365：底纹行距必须跟**真实行高**走，不能写死 32px——实测三档行高是
+   21.5 / 25.5 / 41.5px（compact/standard/cozy），写死 32px 时每个空行都和上一行
+   错位 6~10px，越往下越歪，观感就是「表格下面又起了一张歪表格」。
+   改由 --rt-row-h 驱动，三档各自覆盖（值取自真机量测）。 */
+.rt-wrap { --rt-row-h: 25.5px; background-image: linear-gradient(var(--line) 1px, transparent 1px); background-size: 100% var(--rt-row-h); background-repeat: repeat; background-position: 0 0; }
+.rt.dense .rt-wrap { --rt-row-h: 21.5px; }
+.rt.cozy .rt-wrap { --rt-row-h: 41.5px; }
 /* 1146：表头单行后收紧上下内衬（QRT 1136 同款 --sp-1）——旧 .tbl th 默认 var(--sp-2)
  是双层列头时代的衬距，单行后同样的值会让列头虚高 6px。 */
 .rt-tbl th { position: sticky; top: 0; padding-top: var(--sp-1); padding-bottom: var(--sp-1); }
@@ -2672,7 +2784,10 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
 .rt-th-name { display: flex; align-items: center; gap: var(--sp-1); min-width: 0; flex: 1 1 auto; }
 /* 列名占满可用宽度并按字符截断（窄列不再与类型徽章互相挤爆）；
  右内衬留出常驻筛选漏斗（right:8px，约 12px 宽），列名文字永不压在漏斗下面 */
-.rt-th-label { min-width: 0; flex: 1 1 auto; padding-right: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 静息留白须 ≥ 漏斗槽宽：漏斗锚 right:8px 宽约 12px（压在 th 右缘、脱离文档流）。
+   此前 14px 只剩 4px 间隙——长列名一贴边就与漏斗视觉粘连（实测长字段名档 gapToFilter=4）。
+   22px = 8 + 12 + 2 呼吸。悬停档另加排序箭头（right:24px），见下条 34px。 */
+.rt-th-label { min-width: 0; flex: 1 1 auto; padding-right: 22px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* 1151：静息不占位，悬停才浮出——`opacity:0` 只改可见性，元素仍参与 flex 宽度分配：
  110px 的 status 列里，看不见的类型徽标吃掉 42px、⇅ 再吃 10px，列名只剩 30px
  （实测文字需 34px）→ 这正是「表头元素平铺互相挤占」的最后一处。
@@ -2717,7 +2832,10 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
  撑到 2~3 倍（实报「同一索引，索引工作区与查询工作台行高不一致」：查询工作台
  show-relevance 开启多两个取证钮，竖排溢出撑行）。横排高度恒为单钮高，行高
  完全由行高档位（compact/standard/cozy）决定，与任意 props 组合无关。 */
-.rt-act { white-space: nowrap; position: relative; }
+/* 1365：操作列宽度=内容宽（`width:1px` 让 table-layout:auto 按 max-content 分配，
+   多余宽度全部回流给数据列）。此前无约束，实测 1440 宽下吃走 500px、按钮只用 120px，
+   380px 空转把 title/status 压到 287px —— 用户反复说的「表格被挤窄」。 */
+.rt-act { width: 1px; white-space: nowrap; position: relative; }
 .rt-act .btn { vertical-align: middle; }
 .rt-cell { max-width: 320px; min-width: 40px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: copy; } /* ：260→320 与 QRT 同口径 */
 .rt-cell.expanded { white-space: normal; word-break: break-all; max-width: 520px; }
@@ -2831,15 +2949,9 @@ tr.sel td { background: var(--ac-soft); }
 .rt tbody tr.rt-row-focus td.rt-chk, .rt tbody tr.rt-row-focus td.rt-idx { background: var(--ac-soft); }
 /* hover 行内快捷钮（dbx 悬浮行内钮）——复制行 JSON 常驻会挤占操作列，
  hover 才现身，移出行消失 */
-/* hover 快捷复制钮绝对定位浮现行尾空白——绝不参与文档流：
- 曾经 display:none→inline-flex 插在 Eye 和 Trash 之间，hover 行时把删除钮挤右移一位，
- 用户瞄准「第二个钮」按下去成了复制（实报「删除按钮悬浮变成复制按钮」）。
- 对齐 QRT 的 qrt-row-copy 成熟写法：absolute + opacity/pointer-events 显隐（不占流、可淡入）。 */
-.rt-row-copy {
-  position: absolute; left: calc(100% + 3px); top: 50%; transform: translateY(-50%);
-  opacity: 0; pointer-events: none; transition: opacity .12s;
-}
-.rt-tbl tbody tr:hover .rt-row-copy { opacity: 1; pointer-events: auto; }
+/* 1365：hover 复制钮退役——它与「更多 ⋯」菜单里的「复制行 JSON」是同一动作，
+   两处并存违反「同一动作不重复」约定；且它 absolute 到单元格右缘，实测与「更多⋯」
+   钮重叠（1372–1402 vs 1365–1395）。QRT 没有操作列、无此重叠，故其悬浮钮保留。 */
 
 /* ═══ W7：行内展开详情行——随壳合并 TableExpandRow，
  .rt-expand 系样式迁 TableShell.vue 单一出处（此前与本文件逐字重复的双份定义）═══ */
@@ -2859,9 +2971,15 @@ tr.sel td { background: var(--ac-soft); }
 .rt-cell.rt-sem-b, .rt-cell.rt-sem-b .rt-val { color: var(--info); }
 .rt-cell.rt-sem-n, .rt-cell.rt-sem-n .rt-val { color: var(--tx2); }
 
+/* 1365：状态栏从「独立圆角卡」改为**表卡页脚**——此前它是带 --sp-2 上外边距的独立
+   卡片，与表体之间一道缝、下面再一截空白，用户圈着这一整行问「怎么变成双重表格」。
+   现在紧贴表体下沿、只留底部圆角、左右与表体同宽同边框，视觉上是一张表的页脚。
+   与表体之间的双线用 `border-top: 0` 消除（负 margin 会引入裸 px，且会与表体的
+   滚动区叠 1px 内容）。rtFix552 的定位语义不变：它仍是 rt-wrap-shell 之后的流内尾行。
+   rtFix552 的定位语义不变：它仍是 rt-wrap-shell 之后的流内尾行（回顶钮不盖它）。 */
 .rt-status {
-  display: flex; align-items: center; gap: 14px; padding: var(--sp-1h) var(--sp-2h); margin-top: var(--sp-2);
-  background: var(--bg1); border: 1px solid var(--line); border-radius: var(--r-m);
+  display: flex; align-items: center; gap: 14px; padding: var(--sp-1h) var(--sp-2h); margin-top: 0;
+  background: var(--bg1); border: 1px solid var(--line); border-top: 0; border-radius: 0 0 var(--r-m) var(--r-m);
   font-size: var(--fs-xs); color: var(--tx1);
 }
 .rt-stat { font-family: var(--mono); }
@@ -2901,7 +3019,11 @@ tr.sel td { background: var(--ac-soft); }
 /* 视图 ⋯ 聚合菜单——浮层四要素齐备（bg1 底/强边线/阴影/圆角） */
 .menu-wrap { position: relative; }
 .rt-tool-btn.on { border-color: var(--ac-line); color: var(--ac-hi); }
-.rt-menu { position: absolute; top: calc(100% + var(--sp-1)); right: 0; z-index: 60; background: var(--bg1); border: 1px solid var(--line-strong); border-radius: var(--r-m); box-shadow: 0 8px 24px rgba(0, 0, 0, .5); padding: var(--sp-1h); min-width: 210px; }
+/* 1375：菜单必须**永远够得着**——真机实测（1440×900，视图 ⋯ 展开）菜单底沿超出视口
+   28px 且 overflow:visible，最后一项「语义格式化」被裁掉、点不到。
+   触发器在工具行靠下时（本表就在结果区顶部、视口下缘附近）必然复现。
+   修法：封高 + 内部滚动，并用 dvh 跟随可视高度变化。 */
+.rt-menu { position: absolute; top: calc(100% + var(--sp-1)); right: 0; z-index: 60; background: var(--bg1); border: 1px solid var(--line-strong); border-radius: var(--r-m); box-shadow: 0 8px 24px rgba(0, 0, 0, .5); padding: var(--sp-1h); min-width: 210px; max-height: min(70dvh, 420px); overflow-y: auto; overscroll-behavior: contain; }
 .rt-mi { display: flex; align-items: center; width: 100%; padding: var(--sp-1h) var(--sp-2h); border: 0; background: transparent; border-radius: var(--r-s); color: var(--tx1); font-size: var(--fs-xs); cursor: pointer; text-align: left; white-space: nowrap; }
 .rt-mi:hover:not(:disabled) { background: var(--bg2); color: var(--tx0); }
 .rt-mi:disabled { color: var(--tx2); opacity: .55; cursor: default; }

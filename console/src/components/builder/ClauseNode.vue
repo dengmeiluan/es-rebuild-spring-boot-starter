@@ -250,6 +250,12 @@
     </span>
     <div v-if="fieldUnknown" class="cn-defrt-bar">
       <span class="cn-defrt-hint">字段不在 mapping：</span>
+      <!-- 1322：先给「你是不是想找」，再给「造新字段」。顺序有意为之——
+           拼错一个字母的人，最该做的是改回已有字段，而不是新建一个空壳字段。 -->
+      <button v-if="fieldSuggestion" type="button" class="btn xs cn-suggest"
+        :title="`把字段改为最接近的已有字段「${fieldSuggestion}」`" @click="useSuggestion">
+        是不是想找 <code class="mono">{{ fieldSuggestion }}</code>？
+      </button>
       <button type="button" class="btn xs ghost cn-defrt" :title="runtimeTitle" @click="defineRuntimeField">＋创建 {{ runtimeGuess }} 运行时字段</button>
     </div>
     <div v-else-if="runtimeNoScript" class="cn-defrt-bar" role="status">
@@ -298,6 +304,8 @@ import { stdTimeToEpochMs } from '../../utils/format';
 import { DRAG_KEY, TREE_BUS, fireDrag } from './treeBus';
 import { OPS_META, opsForType, RICH_OPS, ADV_MENU, typePriorityForOp, typeFilterForOp, NUMERIC_VALUE_TYPES, opFamilyOf, NAME_PARAM, paramsForOp } from '../../utils/queryAstOps';
 import { rolePriorityForOp, defaultOpForField } from '../../utils/fieldRole';
+/* 1322：未知字段的「你是不是想找」候选——与 LuceneInput/dslLint 共用同一编辑距离实现 */
+import { editDistance } from '../../utils/editDistance';
 import { guessRuntimeType, runtimeScriptMissing, type RuntimeFieldType } from '../../utils/runtimeFields';
 import type { LeafNode } from '../../utils/queryAst';
 
@@ -370,6 +378,23 @@ const fieldUnknown = computed(() => {
   return !!f && props.fields.length > 0 && !props.fields.includes(f) && !f.includes('.') && !f.includes('$');
 });
 const runtimeGuess = computed<RuntimeFieldType>(() => guessRuntimeType(props.node.field || '', props.node.op, props.node.value));
+/* 1322：手输字段不在 mapping 时，先回答「你是不是想找 xxx」。
+   此前这一行只有「创建运行时字段」一条出路——拼错一个字母的人会被引导去**
+   造一个新字段**，而真正该做的是改回已有字段。口径与 LuceneInput / dslLint 的
+   unknown-field 完全一致：编辑距离 ≤2 才算笔误候选（>2 大概率是全新字段，提示反而误导）。 */
+const fieldSuggestion = computed(() => {
+  if (!fieldUnknown.value) return '';
+  const f = props.node.field || '';
+  let best = '', bestD = Infinity;
+  for (const cand of props.fields) {
+    const d = editDistance(f.toLowerCase(), cand.toLowerCase());
+    if (d < bestD) { bestD = d; best = cand; }
+  }
+  return bestD <= 2 ? best : '';
+});
+function useSuggestion() {
+  if (fieldSuggestion.value) onFieldPicked(fieldSuggestion.value);
+}
 const runtimeTitle = computed(() =>
   `字段「${props.node.field}」不在 mapping：创建类型 ${runtimeGuess.value} 的运行时字段（script 到「检索参数 → 运行时字段」里补，补完即可查询）`);
 function defineRuntimeField() {
@@ -1049,6 +1074,10 @@ function endDrag() { delete (window as any)[DRAG_KEY]; fireDrag(false); }
 .cn-mainabs { font-size: var(--fs-2xs); color: var(--tx2); line-height: 1.5; }
 .cn-mainabs code { font-size: var(--fs-2xs); color: var(--info); }
 .cn-defrt { flex: none; height: 20px; padding: 0 var(--sp-1h); font-size: var(--fs-2xs); white-space: nowrap; color: var(--warn); background: transparent; border-color: var(--warn-line); }
+/* 1322：「是不是想找」——这是**改回正确值**的建议，不是警告，用主色而非警告色，
+   与旁边「创建运行时字段」（warn）在视觉上分层：先纠错，再造新字段。 */
+.cn-suggest { flex: none; height: 20px; padding: 0 var(--sp-1h); font-size: var(--fs-2xs); white-space: nowrap; color: var(--ac-hi); border-color: var(--ac-line); background: var(--ac-soft); }
+.cn-suggest code { font-size: var(--fs-2xs); }
 .cn-val { height: 30px; font-size: var(--fs-sm); padding: 3px var(--sp-2); flex: 1 1 120px; min-width: 0; }
 /* 1039：长查询串 textarea——覆盖 cn-val 定高，纵向伸缩，行顶对齐由 flex wrap 承接 */
 .cn-qry { height: auto; min-height: 52px; resize: vertical; line-height: 1.5; }

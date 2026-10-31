@@ -54,7 +54,7 @@ describe('五百四十七批：.card 原语约定正锁（单源保留裁决）'
     /* 五百五十一批同步更新（击穿者：551 轨2 刀⑥a——ih-card-flush 大卡壳退役）：
        547 豁免裁决备案保留，字面改退役形，.ih-ws 分节容器承接（锁意图=壳形态回归防线） */
     expect(read('../views/IndexHubView.vue'), 'IndexHub ih-card-flush 壳退役（551 击穿同步更新）').not.toMatch(/class="card ih-card-flush"/);
-    expect(read('../views/IndexHubView.vue'), 'ih-ws 分节容器承接（551）').toMatch(/<div class="ih-ws">/);
+    expect(read('../views/IndexHubView.vue'), 'ih-ws 分节容器承接（551）').toMatch(/<div class="ih-ws"(?:\s+:class="|>)/);
     /* 五百五十八批同步更新（击穿者：558 工蚁G——alv-panel 全站最后一个全局 .card 壳退役 →
        border-top 分节承接，554 ar-sec 同刀）：547 全豁免裁决字面改退役形 + 分节锚在场 */
     expect(read('../views/AliasesView.vue'), 'Aliases alv-panel 壳退役（558 击穿同步更新）').not.toMatch(/class="card alv-panel"/);

@@ -1,6 +1,6 @@
 <template>
   <div class="wnr" :data-nid="node.id">
-    <div class="wnr-hd">
+    <div class="wnr-hd" @contextmenu.prevent="openRowMenu">
       <NodeSelectBox :id="node.id" />
       <span class="wnr-grip" title="拖拽排序（按住拖动）；Alt+↑/↓ 上移/下移" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
       <span class="wnr-op">{{ WRAP_LABELS[node.op] || node.op }}</span>
@@ -63,6 +63,9 @@
       />
       <button v-else class="btn sm ghost" @click="addChild"><Plus :size="12" /> 加子查询（bool 组）</button>
     </div>
+    <!-- 1351：包装行右键（bool 组/条件行之后的第三类节点入口）——见脚本内说明 -->
+    <CellContextMenu v-if="rowMenu" :x="rowMenu.x" :y="rowMenu.y" :title="rowTitle"
+      :items="rowMenuItems" @close="rowMenu = null" />
   </div>
 </template>
 
@@ -71,12 +74,16 @@
  function_score/script_score/pinned 无路由字段族——字段段按 field!==null 分派）。
  child=null 时序列化兜底 match_all（ 契约）。子节点不传给解散入口（dissolve 仅支持 bool-in-bool）。 */
 import { ref, computed } from 'vue';
-import { X, Group, Plus, SlidersHorizontal } from 'lucide-vue-next';
+import { X, Group, Plus, SlidersHorizontal, Copy, Braces, Code2 } from 'lucide-vue-next';
 import FieldSelect from './FieldSelect.vue';
 import GenericParams from './GenericParams.vue';
 import FsFunctionsPanel from './FsFunctionsPanel.vue';
 import NodeRenderer from './NodeRenderer.vue';
 import NodeSelectBox from './NodeSelectBox.vue';
+import CellContextMenu, { type CcmItem } from '../CellContextMenu.vue'; /* 1351：包装行右键 */
+import { copyText } from '../../utils/format';
+import { useAppStore } from '../../stores/app';
+import { serQueryNode } from '../../utils/queryAst';
 import { DRAG_KEY, fireDrag } from './treeBus';
 import { WRAP_LABELS, WRAP_PARAMS, NAME_PARAM } from '../../utils/queryAstOps';
 import { WRAP_FIELD, nid, wrapInBool, type WrapNode, type BoolNode } from '../../utils/queryAst';
@@ -108,6 +115,50 @@ const nestedScope = computed(() => {
   return { ...s, prefix: s.prefix };
 });
 const childFields = computed(() => nestedScope.value ? nestedScope.value.fields : props.fields);
+
+/* ═══ 1351：包装行右键 ═══
+ nested / function_score / constant_score 这类容器只有行头 2~3 个图标钮，且容器往往是
+ 「整棵子树」语义——右键把「作用在这一层包装」的动作收成一级 2 项 + 分组，
+ 并补两条此前无入口的只读导出（本层 JSON / DSL 片段，排查嵌套形态用）。 */
+const rowMenu = ref<{ x: number; y: number } | null>(null);
+const rowTitle = computed(() => {
+  const n = props.node;
+  const who = n.field ? ' · ' + n.field : '';
+  return '包装 · ' + (WRAP_LABELS[n.op] || n.op) + who;
+});
+function openRowMenu(e: MouseEvent) {
+  const t = e.target as HTMLElement | null;
+  if (t?.closest('input, textarea, select, .monaco-editor')) return;
+  rowMenu.value = { x: e.clientX, y: e.clientY };
+}
+async function copyJson() {
+  const ok = await copyText(JSON.stringify(props.node, null, 2));
+  useAppStore().notify(ok ? 'success' : 'error', ok ? '已复制包装节点 JSON' : '复制失败');
+}
+async function copyDsl() {
+  const ok = await copyText(JSON.stringify(serQueryNode(props.node), null, 2));
+  useAppStore().notify(ok ? 'success' : 'error', ok ? '已复制为 DSL 片段（可直接贴到 Dev Tools）' : '复制失败');
+}
+const rowMenuItems = computed<CcmItem[]>(() => [
+  { key: 'copy-dsl-1', label: '复制为 DSL 片段', icon: Code2, run: () => void copyDsl() },
+  {
+    key: 'copy-more', label: '复制…', icon: Copy, sep: true, children: [
+      { key: 'copy-json', label: '复制包装节点 JSON', icon: Braces, run: () => void copyJson() },
+      ...(props.node.child ? [{ key: 'copy-child', label: '复制子查询为 DSL 片段', icon: Code2, run: () => void copyChildDsl() }] : []),
+    ],
+  },
+  {
+    key: 'shape-group', label: '结构…', icon: Group, children: [
+      { key: 'wrap', label: '包进新的 bool 组', icon: Group, run: () => emit('wrap') },
+    ],
+  },
+  { key: 'del', label: '删除此包装', icon: X, danger: true, sep: true, run: () => emit('remove') },
+]);
+async function copyChildDsl() {
+  if (!props.node.child) return;
+  const ok = await copyText(JSON.stringify(serQueryNode(props.node.child), null, 2));
+  useAppStore().notify(ok ? 'success' : 'error', ok ? '已复制子查询 DSL 片段' : '复制失败');
+}
 
 /* 1033：_name 命名查询恒在建议末位（nested/function_score 等容器子句同属查询子句，
    与 ClauseNode/MultiNodeRow 同语言）；未在册容器（pinned/span_multi 等）也给空

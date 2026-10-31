@@ -11,6 +11,8 @@
  * composable 单测经 dummy 组件 setup 走（watch 需要组件效果环境）。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createApp, h, nextTick, ref, reactive } from 'vue';
 import { createPinia } from 'pinia';
 
@@ -304,21 +306,25 @@ describe('QRT 单元格交互（三十六批对齐 ResultTable）', () => {
     expect(tdE.getAttribute('title')).toBe('');
   });
 
-  it('单击非空单元格触发复制成功 notify；空值单元格不触发', async () => {
+  it('非空单元格可复制（显式路径：右键「复制值」）；单击不再复制', async () => {
+    /* 1374：单击自动复制退役——与 RT 同一裁决（原话「单击就复制不对，我本来想复制值进去，
+       那不就还要复制一次吗」）。复制能力本身不变，入口改成右键菜单「复制值」。 */
     const mod = await import('../utils/format');
     const spy = vi.spyOn(mod, 'copyText').mockResolvedValue(true);
     await mountTbl({
       hits: [{ _id: 'a', _source: { v: 'hello', e: null } }] as any,
       storageKey: 'k',
     });
+    const src = readFileSync(join(__dirname, '../components/QueryResultTable.vue'), 'utf-8');
+    const at = src.indexOf("{ key: 'copy-val'");
+    expect(at, '右键菜单必须有「复制值」').toBeGreaterThan(-1);
+    /* 该项直接内联调 copyText（不走 copyCell），所以断言「真的写剪贴板」而不是某个函数名 */
+    expect(src.slice(at, at + 260), '「复制值」必须真的写剪贴板').toContain('copyText(');
+    /* 单击非空格：不得再写剪贴板 */
     const tds = [...host.querySelectorAll('tbody tr')][0].querySelectorAll('td');
-    (tds[2] as HTMLElement).click(); // v 列（# 序号列占 0）
+    (tds[2] as HTMLElement).click();
     await new Promise(r => setTimeout(r, 10));
-    expect(spy).toHaveBeenCalledWith('hello');
-    const calls = spy.mock.calls.length;
-    (tds[3] as HTMLElement).click();
-    await new Promise(r => setTimeout(r, 10));
-    expect(spy.mock.calls.length).toBe(calls);
+    expect(spy, '单击不得再写剪贴板').not.toHaveBeenCalled();
     spy.mockRestore();
   });
 });
@@ -401,10 +407,10 @@ describe('QRT 长值展开（五十一批）', () => {
     tdLong.click();
     await nextTick();
     expect(tdLong.className).not.toContain('expanded');
-    /* 非截断值单击 → 走复制，不进展开 */
+    /* 非截断值单击：既不展开、也不再复制（1374 单击复制退役） */
     (tdShort as HTMLElement).click();
     await new Promise(r => setTimeout(r, 10));
-    expect(spy).toHaveBeenCalledWith('abc');
+    expect(spy, '单击不再复制').not.toHaveBeenCalled();
     expect((tds[3] as HTMLElement).className).not.toContain('expanded');
     spy.mockRestore();
   });
@@ -446,8 +452,9 @@ describe('QRT 大整数千分位（五十四批）', () => {
     expect(tdTs.textContent?.trim()).toContain('2023-11-15');
     /* 复制原始值 */
     tdBig.click();
-    await new Promise(r => setTimeout(r, 10));
-    expect(spy).toHaveBeenCalledWith('1234567'); // copyCell 传 String(原始值)
+    /* 1374：单击复制退役后，这里只守「展示千分位、title/复制口径是原始值」。
+       复制本身走右键「复制值」（copyCell 传 String(原始值)），由 1374 的菜单绑定锁覆盖。 */
+    expect(tdBig.getAttribute('title')).toBe('1234567');
     spy.mockRestore();
   });
 });

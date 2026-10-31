@@ -90,6 +90,7 @@
              :transform="`translate(${12 + (si % COLS) * (CELL + GAP)}, ${g.headH + Math.floor(si / COLS) * (CELL + GAP)})`"
              @mouseenter="cellEnter($event, s)"
              @focus="cellFocus($event, s)" @blur="cellBlur(s)"
+             @contextmenu.prevent="openShardMenu($event, s)"
              @click="gotoShard(s)" @keydown.enter.prevent="gotoShard(s)" @keydown.space.prevent="gotoShard(s)">
             <rect
               class="tp-cell"
@@ -108,6 +109,12 @@
         text="暂无分片数据"
         hint="请调整索引通配符后重新加载"
       />
+      <!-- 1381：分片格右键——格子上此前只有「点击跳转定位」。排查分片异常时真正要的
+       是「这个分片的索引/分片号/主副/节点」快速带走：贴进 issue、拼进 exclude/_reroute、
+       或去问运维。一级两项直达 + 一个分组（其余动作收进去），与表格右键同约定。 -->
+      <CellContextMenu v-if="shardMenu" :x="shardMenu.x" :y="shardMenu.y"
+        :title="`${shardMenu.s.index} #${shardMenu.s.shard}`"
+        :items="shardMenuItems" @close="shardMenu = null" />
 
       <!-- Tooltip -->
       <div v-if="tip" class="tp-tip" :style="{ left: (tip.x + 14) + 'px', top: (tip.y - 8) + 'px' }">
@@ -161,7 +168,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Network, RefreshCw, Palette, ClipboardCopy } from 'lucide-vue-next';
+import { Network, RefreshCw, Palette, ClipboardCopy, Braces } from 'lucide-vue-next';
 import { api } from '../api';
 import PageHeader from '../components/PageHeader.vue';
 import { useAutoRefresh } from '../composables/useAutoRefresh';
@@ -178,7 +185,7 @@ import { friendlyEsError } from '../utils/esError';
 import { shardStateZh, shardStateTone } from '../utils/esEnumZh'; /* ：shard 状态收口 */
 import { semFormat } from '../composables/useSemFormat'; /* ：fmtB 手写档退役换 semFormat bytes */
 import { metricColor } from '../utils/metricThresholds'; /* ：磁盘水位色档全站单源（disk warn 80/bad 90，视图层不自造阈值） */
-
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 const store = useAppStore();
 const router = useRouter();
 /* 分片格可点：UNASSIGNED → 诊断未分配原因；已分配 → 该索引的分片 tab */
@@ -192,6 +199,38 @@ interface Shard {
   docs?: number | null; storeBytes?: number | null;
   node?: string | null; ip?: string | null;
 }
+
+/* ═══ 1381：分片格右键 ═══
+   取数场景：分片异常排查要把「索引 / 分片号 / 主副 / 所在节点」贴进 issue 或
+   拼进 `_cluster/reroute` 的 exclude 段；此前只能看着 tooltip 手抄。
+   一级两项直达（复制分片标识 / 复制诊断用 JSON），其余进「更多…」分组。 */
+const shardMenu = ref<{ x: number; y: number; s: Shard } | null>(null);
+function openShardMenu(e: MouseEvent, s: Shard) {
+  shardMenu.value = { x: e.clientX, y: e.clientY, s };
+}
+const shardMenuItems = computed<CcmItem[]>(() => {
+  const m = shardMenu.value;
+  if (!m) return [];
+  const s = m.s;
+  const label = `${s.index}[${s.shard}]${s.prirep === 'p' ? 'p' : 'r'}`;
+  const detail = {
+    index: s.index, shard: s.shard, primary: s.prirep === 'p',
+    state: s.state, node: s.node ?? null,
+    docs: s.docs ?? null, store: s.storeBytes ?? null,
+  };
+  const copy = (text: string, okMsg: string) => {
+    void copyText(text).then(ok => store.notify(ok ? 'success' : 'error', ok ? okMsg : '复制失败'));
+  };
+  return [
+    { key: 'copy-label', label: `复制分片标识（${label}）`, icon: ClipboardCopy, run: () => copy(label, '已复制分片标识') },
+    { key: 'copy-json', label: '复制分片详情 JSON', icon: Braces, run: () => copy(JSON.stringify(detail, null, 2), '已复制分片详情') },
+    { key: 'more-group', label: '更多…', icon: ClipboardCopy, sep: true, children: [
+      { key: 'copy-index', label: '只复制索引名', icon: ClipboardCopy, run: () => copy(s.index, '已复制索引名') },
+      { key: 'copy-node', label: '只复制节点名', icon: ClipboardCopy, run: () => copy(s.node || '', s.node ? '已复制节点名' : '该分片未分配节点') },
+      { key: 'copy-reroute', label: '复制 reroute exclude 片段', icon: ClipboardCopy, run: () => copy(JSON.stringify({ index: s.index, shard: s.shard, primary: s.prirep === 'p' }, null, 2), '已复制 reroute 片段') },
+    ] },
+  ];
+});
 
 const shards = ref<Shard[]>([]);
 const clusterHealth = ref<any>(null); /* ：未分配异常判定的拓扑判据 */

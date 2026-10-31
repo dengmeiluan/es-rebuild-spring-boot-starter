@@ -45,14 +45,37 @@
           <button aria-label="保存的搜索" class="btn sm" @click="savedOpen = true" title="保存的搜索（DSL+布局一体快照）"><Bookmark :size="13" /></button>
           <!-- 文档新增一等入口（此前全站只能写 NDJSON 或手写 REST 造数据）；：OPERATOR+ 可见（普通写档） -->
           <button v-if="canWrite" class="btn sm pri" @click="openNewDoc()" title="新建文档（mapping 骨架预填，ID 留空自动生成）"><FilePlus2 :size="13" /> 新文档</button>
-          <!-- W4-T14：构建器前置入口——携带当前 DSL 跳查询工作台（?dsl= 互转通道，URL 固化现场） -->
-          <button class="btn sm ghost" @click="openInBuilder" title="在查询工作台构建器中打开当前 DSL（深链可分享）"><ListTree :size="13" /> 在构建器中打开</button>
-          <!-- DSL→Lucene 一键翻译（dslToLucene 纯函数直连；结果复用命令面板
- r30-dsl-to-lucene 既有展示出口——es-console.lucene.q/index 会话键 → Lucene 通道回显） -->
-          <button class="btn sm ghost" @click="openInLucene" title="把当前 DSL 翻译为 Lucene query_string（跳转 Lucene 通道查看/执行）"><ArrowLeftRight :size="13" /> DSL→Lucene</button>
-          <!-- 联动性：对齐 IndexHub→查询工作台的既有反向入口——查完想看 docs/settings/mapping 一键直达（IndexHub 跟随全局选中索引）。
- 文案统一「索引工作区」（页面注册名与 PageHeader 同名，此前「工作台」是孤例） -->
-          <button aria-label="在索引工作区打开（docs/settings/mapping/就地查询）" class="btn sm ghost" title="在索引工作区打开当前索引（docs/settings/mapping/就地查询）" @click="router.push('/indices')"><ExternalLink :size="13" /> 索引工作区</button>
+          <!-- 1369：「跳去别处」的三个入口收进二级（实报「太多功能平铺」）。
+ 这三个都是**离开本页**的导航动作（去构建器/去 Lucene/去索引工作区），
+ 与左侧「在本页干什么」（模板/变量/历史/校验/保存/DevTools）心智不同类，
+ 平铺时占掉近 1/3 行宽、把保存类高频钮挤到中间。能力零删除，全部保留在菜单里。 -->
+          <n-popover trigger="click" placement="bottom-start" :show="tbMoreOpen" @update:show="(v: boolean) => (tbMoreOpen = v)">
+            <template #trigger>
+              <button class="btn sm ghost dq-more" data-test="dq-more" aria-haspopup="menu" :aria-expanded="tbMoreOpen"
+                title="更多：到构建器打开 / 转 Lucene / 到索引工作区">
+                <MoreHorizontal :size="13" /> 更多
+                <ChevronDown :size="11" :style="{ transform: tbMoreOpen ? 'rotate(180deg)' : '', transition: 'transform var(--tr)' }" />
+              </button>
+            </template>
+            <div class="dq-more-pop" role="menu" aria-label="跳转与其他入口">
+              <button class="dq-more-i" data-test="open-in-builder" role="menuitem" @click="openInBuilder(); tbMoreOpen = false"
+                title="在查询工作台构建器中打开当前 DSL（深链可分享）">
+                <ListTree :size="13" /> 在构建器中打开
+                <span class="dq-more-hint">跳去查询工作台</span>
+              </button>
+              <button class="dq-more-i" role="menuitem" @click="openInLucene(); tbMoreOpen = false"
+                title="把当前 DSL 翻译为 Lucene query_string（跳转 Lucene 通道查看/执行）">
+                <ArrowLeftRight :size="13" /> DSL → Lucene
+                <span class="dq-more-hint">翻译并跳转</span>
+              </button>
+              <button class="dq-more-i" role="menuitem" aria-label="在索引工作区打开（docs/settings/mapping/就地查询）"
+                @click="router.push('/indices'); tbMoreOpen = false"
+                title="在索引工作区打开当前索引（docs/settings/mapping/就地查询）">
+                <ExternalLink :size="13" /> 索引工作区
+                <span class="dq-more-hint">docs / settings / mapping</span>
+              </button>
+            </div>
+          </n-popover>
         </div>
         <div class="dq-tb-r lr-bar-r">
           <!-- 分栏档位 seg 进工具行右段首（独占态还原入口常驻可点）。
@@ -462,7 +485,12 @@
                 <span class="mono dq-agg-n">{{ fmtNum(b.doc_count) }}</span>
                 <span class="mono dq-agg-pct">{{ pctOf(a, b) }}</span>
               </div>
-              <div v-if="a.rest" class="dq-agg-more mono">其余 {{ a.rest }} 桶已折叠（合计 {{ fmtNum(a.total) }} 条）</div>
+              <div v-if="a.rest" class="dq-agg-more mono">其余 {{ a.rest }} 桶已折叠（返回桶合计 {{ fmtNum(a.total) }} 条）</div>
+              <!-- 1320：ES terms 只回前 N 桶，剩下的进 sum_other_doc_count。
+                   不写出来 = 让人把「前 N 桶的占比」误当全量分布。 -->
+              <div v-if="a.other" class="dq-agg-more mono dq-agg-other">
+                另有 {{ fmtNum(a.other) }} 条落在未返回的桶里（占比分母已含）——需要看全请调大 aggs.terms.size
+              </div>
             </div>
             <div v-for="m in metricAggs" :key="m.name" class="dq-agg">
               <div class="dq-agg-t mono">{{ m.name }}<span class="dq-agg-kind">{{ m.kindLabel }}</span></div>
@@ -501,6 +529,7 @@
             remote-sort
             :sync-sort="hitsSortSync"
             :editable="canWrite" @edit-doc="h => openDoc(h, true)"
+            :bar-menu-extra="dqBarMenuExtra"
             @sort-change="onHitsSortChange"
             @open-doc="openDoc"
             @delete-doc="askDeleteDoc"
@@ -554,9 +583,10 @@
             <template #bar-extra>
               <!-- 直方图开关三迁至直方图分布节头（被控对象旁）——
  542/547 两代的 bar-extra 段首位退役，本段只留工具钮族 -->
-              <!-- 原始 IO 快查——最近一次 /cluster/query 请求/响应原文（IndexHub docs/query 同款钮形） -->
-              <button class="btn sm ghost rt-tool-btn" aria-label="查看原始 IO（DSL 查询）"
-                title="最近一次查询的请求/响应原文（语义分档高亮 + 复制/curl 回放）" @click="openRawIo"><Terminal :size="13" /></button>
+              <!-- 1357：行内「原始 IO」钮退役——它与「更多 ⋯」里的 dq-raw-io 是同一动作
+ （同一个 openRawIo），项目右键约定明令「never duplicate an action」，而这里等于把一个
+ 动作同时摊在行内和菜单里。低频排查入口留在菜单内即可；退役后工具行少一格，
+ 1024 档「平铺成两行」的压力同时减轻。 -->
               <!-- 1146：低频宿主动作收进「更多 ⋯」——1024 档下工具行原 1283px 塞进 756px，
  导出本页/全量导出/按查询删除三个宽钮把单行挤成溢出。心智上它们都是
  「这份结果的额外去处」（导出/删除），与表格自带的「导出 ▾」同族，
@@ -763,8 +793,9 @@ import {
   FilePlus2, CopyPlus, Wand2, GitCompareArrows, ListTree, Clock, ExternalLink,
   ArrowLeftRight,
   AlertTriangle, FileSearch,
-  TerminalSquare, Terminal, PanelBottomClose, PanelBottomOpen, CircleAlert, ShieldCheck, SearchX, Ellipsis, } from 'lucide-vue-next';
+  TerminalSquare, Terminal, PanelBottomClose, PanelBottomOpen, CircleAlert, ShieldCheck, SearchX, Ellipsis, MoreHorizontal, } from 'lucide-vue-next';
 import MonacoEditor from '../components/MonacoEditor.vue';
+import type { CcmItem } from '../components/CellContextMenu.vue';
 import ResultTable from '../components/ResultTable.vue';
 import JsonTree from '../components/JsonTree.vue';
 import AltHitsViews from '../components/AltHitsViews.vue'; /* ：alt 三视图体共享件（与 IH 同构体收口；IH 已于 改用接入） */
@@ -810,7 +841,7 @@ import { usePagerSize, PAGER_SIZES } from '../composables/usePagerSize';
 import { REQUEST_PARAMS } from '../utils/queryBodyParams';
 import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-html 内核；：errMeta 双参（错误码/失败端点一眼可辨） */
 /* DSL→Lucene 一键翻译（语法桥纯函数，CmdPalette r30 出口同源） */
-import { dslToLucene } from '../utils/dslToLucene';
+import { dslToLucene, dslToLuceneDetailed } from '../utils/dslToLucene';
 import { encodeDslParam } from '../utils/queryHub';
 import { EDITOR_H_TIERS, EDITOR_FONT_TIERS, type EditorHKey } from '../utils/editorTiers';
 import { lintDsl, type Finding } from '../utils/dslLint';
@@ -1023,6 +1054,11 @@ const buildCollapsed = usePref('query.buildCollapsed', true);
  检索参数块自动随之收起（子级展开态残留是诡异感来源）；展开侧不自动展开，还原动作
  交还用户显式操作。新交互约定。 */
 watch(buildCollapsed, (collapsed) => { if (collapsed) paramsOpen.value = false; });
+/* ⚠上面那条 watch 只在**状态变化**时触发。而 buildCollapsed 是持久化偏好（缺省 true），
+ 用户上次把参数块展开过、构建区又收起时，刷新后就是「构建区收起 + 参数块展开 135px」的
+ 矛盾态：编辑器高度 0，页面上却挂着三行检索参数 chips（实测 dqMainH=0 / paramsBodyH=135）。
+ 挂载时补一次同步，把持久化残留的展开态收敛到与构建区一致。 */
+if (buildCollapsed.value && paramsOpen.value) paramsOpen.value = false;
 const queryCondCount = computed(() => queryTree.value?.root ? countNodes(queryTree.value.root) : 0);
 /* QueryNode 子节点计数（bool 组递归；叶子计 1）——摘要展示用，与构建器条件数同口径 */
 function countNodes(n: any): number {
@@ -1426,7 +1462,8 @@ watch(() => store.pickedIdx, (n, o) => {
   jqResult.value = null;
   profileTree.value = null;
   brushRange.value = '';
-  preBrushDsl = '';
+  preBrushQuery = null;
+  brushAppliedQuery = null;
   brushField = '';
   mappingFields.value = [];
   mappingDateFields.value = [];
@@ -1878,7 +1915,9 @@ const histHeadMeta = computed(() => {
 });
 const brushRange = ref('');
 let brushField = '';
-let preBrushDsl = '';
+/* 1319c：记录刷选注入前的 query 与本条注入后的 query（用于精确撤销，见 clearBrush） */
+let preBrushQuery: any = null;
+let brushAppliedQuery: any = null;
 function guessDateField(): string {
   if (brushField) return brushField;
   // 选字段交给纯函数——mapping date 字段优先，hits 嗅探只认值形态，
@@ -1886,7 +1925,7 @@ function guessDateField(): string {
   brushField = pickHistField(mappingDateFields.value, resp.value?.hits || []);
   return brushField;
 }
-function onBrush(from: any, to: any) {
+function onBrush(from: any, to: any, endKey?: number | string) {
   /* 在途刷选先闸后写：DSL/范围条保持触发前现场，不出现「已改写却没重查」的脱节 */
   if (running.value) {
     store.notify('info', '查询执行中，请等待完成或先取消');
@@ -1894,27 +1933,84 @@ function onBrush(from: any, to: any) {
   }
   const field = guessDateField();
   if (!field) return;
-  if (!brushRange.value) preBrushDsl = dsl.value;
   const obj = tryParse(applyVars(stripJsonComments(dsl.value))) || {};
+  /* 1319c：只在**首次**刷选时记撤销点；后续刷选沿用同一个撤销点（连刷多次后清除
+     仍回到最初的 query，不回到中间那一次）。 */
+  if (!brushRange.value) preBrushQuery = obj.query ?? null;
+  /* 1319b：桶 key 是**区间起点**——右界必须用下一桶 key（endKey），否则最后一个选中桶
+     的整天/整档数据被切掉（选中 09-02..09-04 实际只取到 09-04 00:00 那一刻）。
+     词条桶（keyword terms）语义不同：key 是**离散值**不是区间，必须闭区间含最后一项，
+     否则 "选到 CLOSED" 会把 CLOSED 自己排除掉。 */
+  const hi = endKey !== undefined && endKey !== null ? endKey : to.key;
+  const isRangeKey = typeof from?.key === 'number' || !!from?.key_as_string;
+  const band = isRangeKey ? { gte: from.key, lt: hi } : { gte: from.key, lte: to.key };
   obj.query = obj.query && Object.keys(obj.query).length
-    ? { bool: { must: [obj.query], filter: [{ range: { [field]: { gte: from.key, lte: to.key } } }] } }
-    : { range: { [field]: { gte: from.key, lte: to.key } } };
+    ? { bool: { must: [obj.query], filter: [{ range: { [field]: band } }] } }
+    : { range: { [field]: band } };
+  brushAppliedQuery = obj.query;
   dsl.value = JSON.stringify(obj, null, 2);
-  brushRange.value = `${from.key_as_string || from.key} → ${to.key_as_string || to.key}`;
+  brushRange.value = `${brushLabel(from)} → ${brushLabel(isRangeKey ? { key: hi } : to)}`;
   runQuery();
 }
+/* 刷选回显：此前直接吐 ISO 原文（2026-09-02T00:00:00.000Z），节头里读成一串机器码。
+   日期桶出 MM-DD（跨年带年），词条桶还原原文——与 x 轴刻度同一套读数语言。 */
+function brushLabel(b: any): string {
+  const ks = b?.key_as_string;
+  if (typeof ks === 'string' && /^\d{4}-\d{2}-\d{2}/.test(ks)) {
+    return Number(ks.slice(0, 4)) === new Date().getFullYear() ? ks.slice(5, 10) : ks.slice(0, 10);
+  }
+  const k = b?.key;
+  if (typeof k === 'number' && Number.isFinite(k)) {
+    const d = new Date(k);
+    if (!isNaN(d.getTime()) && k > 1e11) {
+      const mm = String(d.getMonth() + 1).padStart(2, '0'), dd = String(d.getDate()).padStart(2, '0');
+      return d.getFullYear() === new Date().getFullYear() ? `${mm}-${dd}` : `${d.getFullYear()}-${mm}-${dd}`;
+    }
+  }
+  return String(k ?? '');
+}
+/* 1319c：清除刷选 = **精确摘掉刷选注入的那一个 range**，不是整份回滚。
+ 旧实现把首次刷选前的 DSL 全文存进 preBrushDsl，清除时整份写回——
+ 用户刷选之后手改的任何内容（加字段、改 size、补 sort）都会被一起抹掉，
+ 而且没有任何提示。现在记住注入时的原 query 与本条 range，撤销时只把这条拆掉：
+   · bool.filter 里其它条件原样保留，本就没有 filter 的（刷选时是根 range）恢复成原 query；
+   · 期间用户又动过 query（不再是我们注入的形状）→ 不猜，只清范围条并提示，
+     让用户自己确认，宁可少做也不静默覆盖。 */
 function clearBrush() {
   brushRange.value = '';
-  if (preBrushDsl) {
-    dsl.value = preBrushDsl;
-    preBrushDsl = '';
+  if (!preBrushQuery) { return; }
+  const obj = tryParse(applyVars(stripJsonComments(dsl.value))) || {};
+  const cur = obj.query;
+  const injectedRange = brushAppliedQuery;
+  const sameShape = injectedRange && cur && JSON.stringify(cur) === JSON.stringify(injectedRange);
+  if (sameShape) {
+    obj.query = preBrushQuery;
+    dsl.value = JSON.stringify(obj, null, 2);
+    preBrushQuery = null;
+    brushAppliedQuery = null;
     runQuery();
+    return;
   }
+  /* query 已被用户改过：只清范围条，不动 DSL（并说清为什么） */
+  preBrushQuery = null;
+  brushAppliedQuery = null;
+  store.notify('info', '已清除刷选标记；DSL 已被手动修改，未自动回滚，请自行移除 range 条件');
 }
 
 /* ═══ Terms 聚合面板 ═══
- W-A：TermsAgg 增 total（全部桶 doc_count 合计，占比分母）与 rest（slice 折叠掉的桶数） */
-interface TermsAgg { name: string; buckets: { key: any; key_as_string?: string; doc_count: number }[]; total: number; rest: number }
+ W-A：TermsAgg 增 total（返回桶 doc_count 合计）与 rest（slice 折叠掉的桶数）。
+ 1320：再补 other（ES 的 sum_other_doc_count）——terms 聚合默认只回前 N 个桶，
+ 剩下的桶进了 sum_other_doc_count。旧实现把「返回桶合计」当占比分母，
+ 3 桶 21+9+5 就会显示 60%/26%/14%，把 57 条未返回的文档**算丢了**，
+ 让人以为这就是全量分布（[[feedback-data-honesty]]：宁缺勿错）。 */
+interface TermsAgg {
+  name: string;
+  buckets: { key: any; key_as_string?: string; doc_count: number }[];
+  total: number;
+  rest: number;
+  /** sum_other_doc_count：未返回桶的文档数（0 = 该字段的全量都在这里了） */
+  other: number;
+}
 const TERMS_SLICE = 12;
 const termsAggs = computed<TermsAgg[]>(() => {
   const aggs = resp.value?.aggregations as any;
@@ -1924,16 +2020,24 @@ const termsAggs = computed<TermsAgg[]>(() => {
     if (name === '__hist') continue;
     if (Array.isArray(v?.buckets) && v.buckets.length) {
       const total = v.buckets.reduce((s: number, b: any) => s + (b?.doc_count || 0), 0);
-      out.push({ name, buckets: v.buckets.slice(0, TERMS_SLICE), total, rest: Math.max(0, v.buckets.length - TERMS_SLICE) });
+      out.push({
+        name, buckets: v.buckets.slice(0, TERMS_SLICE), total,
+        rest: Math.max(0, v.buckets.length - TERMS_SLICE),
+        other: Number(v?.sum_other_doc_count) || 0,
+      });
     }
   }
   return out;
 });
 function maxOf(a: TermsAgg) { return Math.max(1, ...a.buckets.map(b => b.doc_count)); }
-/** W-A：桶占比（分母=该聚合全部桶合计，含折叠部分；空聚合不出百分号） */
+/** 占比分母 = 返回桶合计 + 未返回桶（sum_other_doc_count）。
+ * 后者缺失（非 terms 聚合或旧后端）时退化为返回桶合计——与旧行为一致，不会更糟。 */
+function denomOf(a: TermsAgg): number { return a.total + a.other; }
+/** W-A：桶占比（分母含未返回桶；空聚合不出百分号） */
 function pctOf(a: TermsAgg, b: TermsAgg['buckets'][number]): string {
-  if (!a.total || !b.doc_count) return '';
-  return ((b.doc_count / a.total) * 100).toFixed(1) + '%';
+  const d = denomOf(a);
+  if (!d || !b.doc_count) return '';
+  return ((b.doc_count / d) * 100).toFixed(1) + '%';
 }
 
 /* ═══ ：卡片视图/terms 桶行 kw 快滤（宿主侧过滤，纯展示层——DSL/查询不动）═══
@@ -1970,7 +2074,19 @@ const metricAggs = computed<MetricAgg[]>(() => {
     if (name === '__hist' || !v || typeof v !== 'object') continue;
     if (Array.isArray(v.buckets)) continue; // terms/date_histogram 已由 termsAggs 渲染
     if (v.values && typeof v.values === 'object' && !Array.isArray(v.values)) {
-      out.push({ name, kindLabel: '分位', rows: Object.entries<any>(v.values).map(([k, n]) => ({ k: k + '%', v: fmtNum(Number(n)) })) });
+      /* 1321：ES 的 percentiles 对「样本不足」的档位回 **null**，含义是「算不出来」。
+         旧实现 `fmtNum(Number(n))`：Number(null) === 0 → 页面把 P90/P99 显示成 0，
+         等于凭空造出一个统计值（真机上 P90 是 0 和 P90 算不出来，信息完全不同）。
+         null 必须原样表达为「无法计算」，不能被 Number 洗成 0。 */
+      out.push({ name, kindLabel: '分位', rows: Object.entries<any>(v.values).map(([k, n]) => ({
+        /* 1349：`k` 是 ES 的**分位键**（"50.0" 表示第 50 百分位 = 中位数），不是百分比。
+           旧实现拼成 `50.0%` 会让用户读成「50% 的文档」，而页面同屏的 terms 桶里
+           `22.8%` 才是真占比——同一个符号两种含义，是最容易误读的一处。
+           统一写成 `P50`：既是 ES/Kibana 的通行写法，也和同页的占比百分号区分开。
+           ES 的键是浮点串（"50.0"/"99.9"），整数分位去掉尾部 `.0`。 */
+        k: 'P' + String(k).replace(/\.0+$/, ''),
+        v: n == null ? '无法计算（样本不足）' : fmtNum(Number(n)),
+      })) });
       continue;
     }
     if (v.hits && typeof v.hits === 'object') {
@@ -1979,8 +2095,37 @@ const metricAggs = computed<MetricAgg[]>(() => {
       continue;
     }
     const statKeys = ['count', 'min', 'max', 'avg', 'sum'].filter(k => typeof v[k] === 'number');
-    if (statKeys.length >= 3) {
-      out.push({ name, kindLabel: '统计', rows: statKeys.map(k => ({ k, v: fmtNum(v[k]) })) });
+    /* 1321：空文档集时 ES 只给 count:0，avg/min/max/sum 全是 null。
+       旧判据「数值键 ≥3 才算统计」在空集下只剩 count 一个 → 整个聚合被丢弃，
+       界面上凭空消失（用户不知道是没数据还是没跑）。这里改成「有 count 就认」，
+       并把 null 的档位明确写成「无样本」。 */
+    if (statKeys.length >= 3 || typeof v.count === 'number') {
+      /* 1349b：`extended_stats` 的体比 `stats` 多出 sum_of_squares / variance /
+         std_deviation，以及 **std_deviation_bounds（嵌套对象）**。旧实现只列
+         count/min/max/avg/sum 五项——用户要的是 extended_stats，看到的却和
+         stats 一模一样，无从判断聚合到底按 extended 跑了没有；嵌套边界更是整块消失。
+         这里：① 五项固定档照旧；② 其余**标量**键按原键名追加（不改语义）；
+         ③ 嵌套对象展平成 `父.子` 两行（ES 的 bounds 就是 {upper:{…},lower:{…}}）。 */
+      const FIXED = ['count', 'min', 'max', 'avg', 'sum'];
+      const rows: { k: string; v: string }[] = FIXED
+        .filter(k => k in v)
+        .map(k => ({ k, v: typeof v[k] === 'number' ? fmtNum(v[k]) : (v[k] == null ? '无样本' : String(v[k])) }));
+      for (const [k, val] of Object.entries<any>(v)) {
+        if (FIXED.includes(k)) continue;
+        /* 展平到底：bounds 是**两层**（upper:{std_deviation_sampling,…}），
+           只展一层会得到 `[object Object]`——那比不显示更糟（看着像有值）。 */
+        const flat = (pre: string, o: any) => {
+          if (typeof o === 'number') { rows.push({ k: pre, v: fmtNum(o) }); return; }
+          if (o == null) { rows.push({ k: pre, v: '无样本' }); return; }
+          if (typeof o === 'object' && !Array.isArray(o)) {
+            for (const [ck, cv] of Object.entries<any>(o)) flat(`${pre}.${ck}`, cv);
+            return;
+          }
+          rows.push({ k: pre, v: String(o) });
+        };
+        flat(k, val);
+      }
+      out.push({ name, kindLabel: '统计', rows });
       continue;
     }
     if (typeof v.value === 'number') {
@@ -2698,8 +2843,18 @@ function importDsl() {
 function openInLucene() {
   const obj = tryParse(applyVars(stripJsonComments(dsl.value)));
   if (!obj) { store.notify('error', 'DSL 不是合法 JSON（已剥离注释后校验），无法翻译'); return; }
-  writeStoredRaw(sessionStorage, 'es-console.lucene.q', dslToLucene(obj));
+  /* 翻译是启发式的——query_string 表达不了 nested/geo/knn/script 等子句。
+     此前这些子句被静默丢弃，用户拿着"少了条件"的 Lucene 去执行还以为等价。
+     现在把无法翻译的子句名带到 Lucene 侧提示（写会话键，跳转后由宿主展示）。 */
+  const { lucene, lossy } = dslToLuceneDetailed(obj);
+  writeStoredRaw(sessionStorage, 'es-console.lucene.q', lucene);
   if (store.pickedIdx) writeStoredRaw(sessionStorage, 'es-console.lucene.index', store.pickedIdx);
+  if (lossy.length) {
+    writeStoredRaw(sessionStorage, 'es-console.lucene.lossy', JSON.stringify(lossy));
+    store.notify('warning', `已翻译，但 ${lossy.length} 处无法用 query_string 表达：${lossy.join('、')}`, { duration: 6000 });
+  } else {
+    removeStoredRaw(sessionStorage, 'es-console.lucene.lossy');
+  }
   router.push({ path: '/search', query: { mode: 'lucene' } });
 }
 
@@ -2751,6 +2906,20 @@ const moreOpen = ref(false);
 const expRunning = ref(false);
 const expFetched = ref(0);
 const expTotal = ref(0);
+/* 1333：工具行右键必须覆盖宿主注入的钮。bar-extra 里有「原始 IO」与自造「更多」
+ （导出本页 JSON / 全量导出 / 按查询删除）——它们此前在工具行右键里**一个都没有**，
+ 窄档下用户只能靠试图标。这里给等价的菜单项，可用性条件与按钮完全一致
+ （same guard：expRunning 时全量导出变成取消，canOps 才给删除）。 */
+const dqBarMenuExtra = computed<CcmItem[]>(() => [
+  { key: 'dq-raw-io', label: '查看原始 IO（最近一次查询请求/响应）', icon: Terminal, run: () => openRawIo() },
+  { key: 'dq-exp-page', label: '导出本页为 JSON（按表格排序与勾选）', icon: FileDown, run: () => exportJson() },
+  expRunning.value
+    ? { key: 'dq-exp-cancel', label: `取消全量导出（${fmtNum(expFetched.value)}/${expTotal.value ? fmtNum(expTotal.value) : '…'}）`, icon: X, run: () => cancelExport() }
+    : { key: 'dq-exp-all', label: '全量导出…（PIT + search_after，破 10000 上限）', icon: FileDown, run: () => { expOpen.value = true; } },
+  ...(canOps.value
+    ? [{ key: 'dq-del-by-query', label: '按当前 query 删除（delete-by-query，需二次确认）', icon: Trash2, run: () => askDeleteByQuery() }]
+    : []),
+]);
 /* 导出格式偏好 usePref 持久化——高频弹窗选项免每次重选 */
 const expMode = usePref<'jsonl' | 'values'>('query.expMode', 'jsonl');
 /* 导出字段偏好记忆化（usePref）——values 模式高频重复输入（业务主键
@@ -2858,6 +3027,9 @@ function protectDraftBeforeOverride(incoming: string) {
 
 /* ═══ 模板 ═══ */
 const tplOpen = ref(false);
+/* 1369：工具行「更多」二级入口——跳转类动作（构建器 / Lucene / 索引工作区）不占一级行宽。
+   与导出菜单的 moreOpen 分开命名，避免两个不同语义的弹层共用一个状态。 */
+const tbMoreOpen = ref(false);
 const templates = computed(() => [
   { name: 'match_all + 排序', dsl: '{\n  "query": { "match_all": {} },\n  "size": 20,\n  "sort": []\n}' },
   { name: 'term 精确匹配', dsl: '{\n  "query": { "term": { "FIELD": "VALUE" } },\n  "size": 20\n}' },
@@ -3093,6 +3265,16 @@ onBeforeUnmount(() => {
   .dq-toolbar .lr-bar-l { flex-wrap: wrap; overflow: visible; row-gap: var(--sp-1h); }
 }
 
+/* 1369：工具行「更多」二级入口（跳转类动作）——一级只留「在本页做什么」 */
+.dq-more-pop { display: flex; flex-direction: column; gap: 2px; min-width: 240px; padding: var(--sp-1); }
+.dq-more-i {
+  display: flex; align-items: center; gap: var(--sp-2); width: 100%;
+  padding: 6px var(--sp-2); border: 0; border-radius: var(--r-xs);
+  background: transparent; color: var(--tx1); font-size: var(--fs-sm);
+  cursor: pointer; text-align: left; white-space: nowrap;
+}
+.dq-more-i:hover, .dq-more-i:focus-visible { background: var(--bg2); color: var(--tx0); }
+.dq-more-hint { margin-left: auto; color: var(--tx2); font-size: var(--fs-xs); }
 .dq-split-seg { display: inline-flex; margin-left: auto; border: 1px solid var(--border); border-radius: var(--r-s); overflow: hidden; flex-shrink: 0; }
 /* 10px → var(--sp-2h)（token 同值 10px 零视觉变化；3px 刻意值保字面） */
 .dq-split-seg button { padding: 3px var(--sp-2h); font-size: var(--fs-xs); background: var(--bg2); color: var(--tx2); border: 0; cursor: pointer; transition: background var(--tr), color var(--tr); }

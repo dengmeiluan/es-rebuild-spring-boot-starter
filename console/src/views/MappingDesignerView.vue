@@ -33,7 +33,7 @@
       <div class="md-card">
         <div class="md-card-hd card-t">字段树</div>
         <div class="md-tree">
-          <MappingNode v-for="n in tree" :key="n.name" :node="n" :prefix="''" @pick="pickField" />
+          <MappingNode v-for="n in tree" :key="n.name" :node="n" :prefix="''" @pick="pickField" @ctx="openFieldMenu" />
           <!-- 加载中/失败/未加载三态分明；loading 位走 SkeletonBox 骨架（不复用空态文案/类名）。
  md-empty 裸 div 换 EmptyState compact 统一件（分支顺序与文案语义原样保留，
  mappingEmptyState 契约同步更新） -->
@@ -129,11 +129,14 @@
     <!-- 原始 IO 弹窗（宿主受控开关；rec 取本页最近一条 mapping-put 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
   </div>
+  <!-- 1344：字段树行右键 -->
+  <CellContextMenu v-if="fieldMenu" :x="fieldMenu.x" :y="fieldMenu.y" :title="'字段 · ' + fieldMenu.node.name"
+    :items="fieldMenuItems" @close="fieldMenu = null" />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, h, defineComponent, onBeforeUnmount, onMounted, watch } from 'vue';
-import { fmtNum } from '../utils/format';
+import { fmtNum, copyText } from '../utils/format';
 import { FolderTree, RefreshCw, Plus, Send, Shield, ShieldAlert, ChevronRight, ChevronDown, Terminal } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
@@ -146,6 +149,7 @@ import { useScopedDraft } from '../composables/useScopedDraft';
 import { useIdxState } from '../composables/urlState';
 import CurrentIdxChip from '../components/CurrentIdxChip.vue'; /* ：页内选择器退役换只读 chip */
 import JsonArea from '../components/JsonArea.vue';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import { lintMappingBody } from '../utils/dslLint'; /* P1-1：档路由静态 lint */
 import { BUILTIN_ANALYZERS } from '../utils/dslCompletionContext'; /* ：加字段弹窗 analyzer 族 datalist 候选源（共享表只读消费） */
 import { useDebounceFn } from '../composables/useDebounceFn'; /* P1-1：划线防抖统一件 */
@@ -226,7 +230,7 @@ const TYPES = [
 const MappingNode: any = defineComponent({
   name: 'MappingNode',
   props: { node: { type: Object, required: true }, prefix: { type: String, default: '' } },
-  emits: ['pick'],
+  emits: ['pick', 'ctx'],
   setup(props, { emit }) {
     const open = ref(true);
     return () => {
@@ -235,7 +239,10 @@ const MappingNode: any = defineComponent({
       const hasChild = !!(n.children && n.children.length);
       const cls = 'md-node t-' + n.type;
       return h('div', { class: 'md-branch' }, [
-        h('div', { class: cls, onClick: () => emit('pick', { ...n, name: full }) }, [
+        /* 1344：字段行右键——字段**全路径**（含嵌套前缀）是这页最常被拿走的东西：
+           贴进 DSL/查询、贴进 PUT mapping、发给同事。点选只喂「新建字段」表单，拿不到路径。 */
+        h('div', { class: cls, onClick: () => emit('pick', { ...n, name: full }),
+          onContextmenu: (e: any) => { e.preventDefault(); e.stopPropagation(); emit('ctx', { ev: e, node: { ...n, name: full } }); } }, [
           hasChild ? h('span', { class: 'md-caret', onClick: (e: any) => { e.stopPropagation(); open.value = !open.value; } },
             [h(open.value ? ChevronDown : ChevronRight, { size: 11 })]) : h('span', { class: 'md-caret-pl' }),
           h('span', { class: 'md-nm' }, n.name),
@@ -246,11 +253,41 @@ const MappingNode: any = defineComponent({
         ]),
         hasChild && open.value
           ? h('div', { class: 'md-children' }, n.children.map((c: any) =>
-              h(MappingNode, { node: c, prefix: full, onPick: (v: any) => emit('pick', v) })))
+              h(MappingNode, { node: c, prefix: full, onPick: (v: any) => emit('pick', v), onCtx: (v: any) => emit('ctx', v) })))
           : null,
       ]);
     };
   },
+});
+
+/* 1344：字段树行右键。全站右键普查里本页的字段树是「一个字段一行」，
+   而字段的**全路径**（含嵌套前缀，如 publisher.org_name）正是这页最常被拿走的东西：
+   贴进 DSL 查询、贴进 PUT mapping、发给同事。点选只把字段名喂给「新建字段」表单，拿不到全路径。
+   一级 ≤2 个频繁动作 + 分组父项（项目右键约定）。 */
+const fieldMenu = ref<{ x: number; y: number; node: any } | null>(null);
+function openFieldMenu(p: { ev: MouseEvent; node: any }) {
+  fieldMenu.value = { x: p.ev.clientX, y: p.ev.clientY, node: p.node };
+}
+const fieldMenuItems = computed<CcmItem[]>(() => {
+  const m = fieldMenu.value;
+  if (!m) return [];
+  const n = m.node;
+  const copy = async (text: string, msg: string) => {
+    const ok = await copyText(text);
+    store.notify(ok ? 'success' : 'error', ok ? msg : '复制失败');
+  };
+  return [
+    { key: 'md-copy-path', label: '复制字段全路径', run: () => void copy(String(n.name), `已复制「${n.name}」`) },
+    {
+      key: 'md-more', label: '更多…', sep: true, children: [
+        { key: 'md-copy-leaf', label: '复制末段字段名', run: () => void copy(String(n.name).split('.').pop() || String(n.name), '已复制末段名') },
+        { key: 'md-copy-exists', label: '复制 exists 查询片段', run: () => void copy(
+          JSON.stringify({ exists: { field: n.name } }, null, 2), '已复制 exists 片段') },
+        { key: 'md-copy-type', label: `复制「路径 类型」（${n.type || 'unknown'}）`, run: () => void copy(
+          `${n.name}\t${n.type || 'unknown'}`, '已复制路径与类型') },
+      ],
+    },
+  ];
 });
 
 const previewBody = computed(() => {

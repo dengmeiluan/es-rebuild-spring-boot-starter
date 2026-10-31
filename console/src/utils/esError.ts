@@ -35,6 +35,12 @@ const KNOWN: Array<{ match: string; friendly: string }> = [
   { match: 'es_rejected_execution_exception', friendly: '线程池拒绝——写入/查询队列已满（集群过载），请稍后重试或降低并发' },
   { match: 'too_many_buckets_exception', friendly: '聚合桶数超限——请缩小聚合范围或加大间隔（减小分桶数）后重试' },
   { match: 'search_phase_execution_exception', friendly: '查询执行失败（DSL 语法或字段类型不匹配）——展开「原始 IO」可看分片级原因' },
+  /* SQL 通道最常见的"能力边界"错误：ES SQL 引擎对表达不了的东西统一抛
+     verification_exception（nested 字段、数组字段、未知函数、窗口函数边界…）。
+     此前该 type 没进表 → 界面原样显示英文 JSON，用户既不知道能不能绕、也不知道该换哪个通道。
+     reason 本身已说明"为什么"，这里补的是**行动**。位置：列在 parsing_exception 等包装型之前，
+     与文件头注的"叶子原因先于包装型"约定一致。 */
+  { match: 'verification_exception', friendly: 'SQL 通道表达不了这个查询——换 DSL / Lucene 通道可完整表达（原因见下）' },
   { match: 'parsing_exception', friendly: 'DSL 解析失败（JSON 语法或查询结构有误）' },
   { match: 'illegal_argument_exception', friendly: '参数不合法' },
   { match: 'circuit_breaking_exception', friendly: '触发熔断（请求内存超限，缩小查询范围重试）' },

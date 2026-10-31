@@ -16,6 +16,11 @@ export function useTablePrefs(
     /* 默认可见列全集（缺省=前 8 列启发式）。列数增长会越过 8 列启发式
  把尾部列（如审计「详情」）静默藏掉的表，传全列作默认——列选记忆语义不变 */
     defaultVisibleCols?: () => string[] | undefined;
+    /* 1334：跳过列选记忆（只记列宽/密度/行高）。
+       SQL 结果每跑一次列集就可能变（SELECT 换字段），把上一次的列集当成「用户选中的列」
+       会静默藏掉本次新出现的列——这正是此前 SQL 通道刻意不给 storageKey 的原因。
+       但列宽/密度跟列集无关，丢掉了纯属损失。此开关让二者分开：列宽记得住，列选不记忆。 */
+    skipColsMemory?: boolean;
   },
 ) {
   const on = computed(() => !!dimension.value);
@@ -63,7 +68,7 @@ export function useTablePrefs(
   /* ── 列选 ── */
   const visibleCols = ref<string[]>([]);
   function restoreCols(cols: string[]) {
-    const d = dimension.value;
+    const d = opts?.skipColsMemory ? null : dimension.value;
     let saved: string[] = [];
     if (d) {
       try {
@@ -82,6 +87,7 @@ export function useTablePrefs(
   }
   watch(allCols, restoreCols, { immediate: true });
   function persistCols() {
+    if (opts?.skipColsMemory) return;
     if (dimension.value) writeStoredRaw(localStorage, 'es_cols:' + dimension.value, JSON.stringify(visibleCols.value));
   }
   watch(visibleCols, persistCols, { deep: true });

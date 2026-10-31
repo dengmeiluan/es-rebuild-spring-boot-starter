@@ -139,7 +139,8 @@
         </div>
         <div v-if="result.failedSample && result.failedSample.length" class="be-fail">
           <div class="be-fail-tt">前 20 条失败样例：</div>
-          <details v-for="(f, i) in result.failedSample" :key="i" class="be-fail-item">
+          <details v-for="(f, i) in result.failedSample" :key="i" class="be-fail-item"
+            @contextmenu.prevent="openFailMenu($event, f, i)">
             <!-- W4c：f.status 裸渲染 → W-D 改用 StatusPill（<300 g/<500 y/其余 r，RestView HTTP 状态徽标同款） -->
             <summary>#{{ i + 1 }} — <StatusPill :tone="statusPillCls(f.status)" :label="String(f.status)" /> — {{ (f.error && f.error.type) || 'error' }}</summary>
             <div class="be-fail-body"><JsonTree :data="f" /></div>
@@ -155,6 +156,15 @@
       </template>
     </WorkbenchLayout>
 
+    <!-- 1370：失败样例右键菜单（项目统一 CellContextMenu）。
+     运营拿到失败清单第一件事就是「把这条错误拿去搜/贴给同事」，此前只能手动选中文本。 -->
+    <CellContextMenu
+      v-if="failMenu"
+      :x="failMenu.x" :y="failMenu.y" :title="failMenu.title"
+      :items="failMenuItems"
+      @close="failMenu = null"
+    />
+
     <!-- 原始 IO 弹窗（宿主受控开关；rec 取该页最近一条 /cluster/bulk 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
   </div>
@@ -163,7 +173,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Trash2, Rows3, Wand2, Star, Send, AlertCircle, AlignLeft, RefreshCw, Search, Terminal } from 'lucide-vue-next';
+import { Trash2, Rows3, Wand2, Star, Send, AlertCircle, AlignLeft, RefreshCw, Search, Terminal, Copy, Braces, ChevronsUpDown } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环） */
@@ -172,12 +182,14 @@ import WorkbenchLayout, { type WorkbenchPaneSpec } from '../components/Workbench
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
 import { useIdxState, usePref } from '../composables/urlState';
+import { copyText } from '../utils/format';
 import { useScopedDraft } from '../composables/useScopedDraft';
 import CurrentIdxChip from '../components/CurrentIdxChip.vue'; /* ：页内选择器退役换只读 chip */
 import PickCurrentIdxBtn from '../components/PickCurrentIdxBtn.vue'; /* ：「用当前索引」回填钮统一件 */
 /* 编辑器高度四档（editorTiers 统一件，st.editorH 同源） */
 import { EDITOR_HEIGHTS, EDITOR_H_TIERS, type EditorHKey } from '../utils/editorTiers';
 import JsonTree from '../components/JsonTree.vue';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue'; /* 1370：失败样例右键 */
 import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue'; /* ：页头 stat 串统一件 */
 import TookBadge from '../components/TookBadge.vue'; /* ：took 四档语义徽标 */
 import StatusPill from '../components/StatusPill.vue'; /* W-D：状态徽标统一件 */
@@ -190,6 +202,54 @@ import { useIndexFields } from '../composables/useIndexFields';
 import { removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
+
+/* ═══ 1370：失败样例右键菜单 ═══
+ 批量写入后「前 20 条失败样例」是排查起点。此前只能手选文本复制；
+ 这里按项目右键约定给一级「复制这条（JSON）」+「复制错误原因」，
+ 二级放「复制全部失败」——错误原因要能直接粘进搜索/工单，JSON 要能贴给同事复现。 */
+const failMenu = ref<{ x: number; y: number; f: any; i: number; title: string } | null>(null);
+function openFailMenu(e: MouseEvent, f: any, i: number) {
+  const type = (f && f.error && f.error.type) || 'error';
+  failMenu.value = { x: e.clientX, y: e.clientY, f, i, title: `第 ${i + 1} 条 · ${type}` };
+}
+async function failCopy(text: string, okMsg: string) {
+  const ok = await copyText(text);
+  store.notify(ok ? 'success' : 'error', ok ? okMsg : '复制失败');
+}
+/* 失败样例的错误对象形状有两种：后端扁平 `{status,error}`，以及 ES 原生
+   `{index:{status,error}}`（用户直接贴 ES 响应时）。两种都认，否则「复制错误原因」
+   在一种形状下会静默复制空串——真机实测踩到过。 */
+function failErr(f: any): any {
+  return (f && (f.error || (f.index && f.index.error))) || null;
+}
+const failMenuItems = computed<CcmItem[]>(() => {
+  const m = failMenu.value;
+  if (!m) return [];
+  return [
+    { key: 'fail-copy-json', label: '复制这条（JSON）', icon: Braces, run: () => void failCopy(JSON.stringify(m.f, null, 2), `已复制第 ${m.i + 1} 条失败明细`) },
+    {
+      key: 'fail-copy-reason', label: '复制错误原因', icon: Copy,
+      run: () => {
+        const e = failErr(m.f);
+        const reason = (e && (e.reason || e.type)) || '';
+        void failCopy(String(reason), reason ? '已复制错误原因' : '这条没有错误原因字段');
+      },
+    },
+    {
+      key: 'fail-more', label: '更多…', icon: ChevronsUpDown, sep: true, children: [
+        {
+          key: 'fail-copy-all', label: '复制全部失败样例（JSON）', icon: Copy,
+          run: () => void failCopy(JSON.stringify(failSampleAll.value, null, 2), '已复制全部失败样例'),
+        },
+      ],
+    },
+  ];
+});
+/* 全部失败样例：结果里有几次失败就复制几条（超过 20 条也只复制被采样的这批，与页面所见一致） */
+const failSampleAll = computed<any[]>(() => {
+  const r: any = result.value;
+  return Array.isArray(r?.failedSample) ? r.failedSample : [];
+});
 
 /* 参数+编辑区可调工作台声明（参数栏可折叠，拖拽/预设/记忆由 WorkbenchLayout 统一负责） */
 

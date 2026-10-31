@@ -17,6 +17,10 @@ describe('AggBarChart 桶降采样（一百九十六批）', () => {
     expect(src).toContain('cnt += Number(props.buckets[j].doc_count) || 0;');
     expect(src).not.toMatch(/v-for="\(b, i\) in buckets"/);
     expect(src).not.toMatch(/props\.buckets\.length\) - 1\.5/);
-    expect(src).toMatch(/const from = bars\.value\[Math\.max\(0, i0\)\]/);
+    /* 1319b：边界钳位从内联 Math.max 提成 i0/i1 两个变量（右界还要 +1 取下一桶），
+       意图不变——brush 仍走降采样后的 bars，且下标仍被钳在合法范围。 */
+    expect(src).toMatch(/const i0 = Math\.max\(0, xToIdx\(/);
+    expect(src).toMatch(/const i1 = Math\.min\(bars\.value\.length - 1, xToIdx\(/);
+    expect(src).toMatch(/const from = bars\.value\[i0\], to = bars\.value\[i1\]/);
   });
 });

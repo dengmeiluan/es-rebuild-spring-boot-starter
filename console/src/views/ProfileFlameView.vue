@@ -64,7 +64,8 @@
         </div>
         <div class="pf-flame">
           <div v-for="(n, i) in focused.nodes" :key="i" class="pf-flame-row"
-            :style="{ paddingLeft: n.depth * 16 + 'px' }">
+            :style="{ paddingLeft: n.depth * 16 + 'px' }"
+            @contextmenu.prevent="openFlameMenu($event, n, i)">
             <div class="pf-flame-bar" :style="{ width: (n.took / focused.took * 100).toFixed(1) + '%', background: heatColor(n.took) }"
               :title="`${n.type} · ${n.description || ''} · ${(n.took / 1_000_000).toFixed(2)}ms`">
               <span class="pf-flame-type">{{ n.type }}</span>
@@ -72,6 +73,8 @@
             </div>
           </div>
         </div>
+        <CellContextMenu v-if="flameMenu" :x="flameMenu.x" :y="flameMenu.y" :title="flameMenu.title"
+          :items="flameMenuItems" @close="flameMenu = null" />
       </div>
 
       <div class="pf-section">
@@ -149,6 +152,7 @@ import { matrixText } from '../utils/copyMatrix'; /* ：最慢操作表 MD 复�
 /* 编辑器高度四档（SearchTemplatesView st.editorH 同款 editorTiers 统一件） */
 import { EDITOR_H_TIERS, type EditorHKey } from '../utils/editorTiers';
 import { copyText } from '../utils/format';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import { lintDsl } from '../utils/dslLint'; /* ：DSL 静态体检（RankDebugView 同款接线） */
 import { useDebounceFn } from '../composables/useDebounceFn'; /* ：lint 划线防抖统一件 */
 
@@ -198,6 +202,33 @@ watch(dsl, () => { queuePfLintMarkers(); }, { immediate: true });
 const busy = ref(false);
 const parsed = ref<any>(null);
 const focused = ref<any>(null);
+
+/* ═══ 火焰图行右键（此前只能靠悬浮 title 看全文，取不到也复制不了）═══
+ 一级 = 2 高频 + 1 分组父项（项目右键约定）。火焰行是只读分析数据，
+ 菜单刻意不含任何 danger / 配置写入动作。 */
+const flameMenu = ref<{ x: number; y: number; title: string; n: any } | null>(null);
+const msOf = (ns: number) => (Number(ns || 0) / 1e6).toFixed(2) + 'ms';
+function openFlameMenu(e: MouseEvent, n: any, i: number) {
+  flameMenu.value = { x: e.clientX, y: e.clientY, title: n.type + ' · ' + msOf(n.took) + ' · 第 ' + (i + 1) + ' 行', n };
+}
+const flameMenuItems = computed<CcmItem[]>(() => {
+  const m = flameMenu.value;
+  if (!m) return [];
+  const n = m.n;
+  const desc = String(n.description || '');
+  const pct = focused.value?.took ? ((n.took / focused.value.took) * 100).toFixed(1) + '%' : '';
+  return [
+    { key: 'copyDesc', label: '复制描述', run: () => { void copyText(desc || n.type || ''); } },
+    { key: 'copyMs', label: '复制耗时（' + msOf(n.took) + '）', run: () => { void copyText(msOf(n.took)); } },
+    {
+      key: 'more', label: '更多…', children: [
+        { key: 'copyType', label: '复制类型（' + (n.type || '-') + '）', run: () => { void copyText(String(n.type || '')); } },
+        { key: 'copyNode', label: '复制节点 JSON', run: () => { void copyText(JSON.stringify(n, null, 2)); } },
+        ...(pct ? [{ key: 'copyPct', label: '复制占比（' + pct + '）', run: () => { void copyText(pct); } }] : []),
+      ],
+    },
+  ];
+});
 const runErr = ref(''); // 分析失败全文，供内联面板回看
 /* 原始错误对象旁路留存——runErr 仍压串（全文回看语义逐字保留），
  ApiError 实例经 errMeta 出 code/endpoint 错误链（errPreHtml 双参喂入） */

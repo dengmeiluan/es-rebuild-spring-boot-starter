@@ -134,6 +134,6 @@ describe('五百四十七批：功能卡/仪表卡豁免域正锁（546 al-lane 
     /* 五百五十一批同步更新（击穿者：551 轨2 刀⑥a——ih-card-flush 大卡壳退役）：
        547「主卡在场不动」字面改退役形，.ih-ws 分节容器承接（锁意图=pane 壳回归防线） */
     expect(ih, 'ih-card-flush 主卡退役（551 击穿同步更新）').not.toMatch(/class="card ih-card-flush"/);
-    expect(ih, 'ih-ws 分节容器承接（551）').toMatch(/<div class="ih-ws">/);
+    expect(ih, 'ih-ws 分节容器承接（551）').toMatch(/<div class="ih-ws"(?:\s+:class="|>)/);
   });
 });

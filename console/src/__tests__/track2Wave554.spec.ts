@@ -60,8 +60,11 @@ describe('554 ①：IndexHub 失败态 RawIo 常驻（工具行 Terminal 钮）'
     expect(qryBar, "@click=\"openRawIo('query')\" 接线（560 同步更新同上）").toContain("@click=\"openRawIo('query')\"");
   });
   it('RT 内既有两钮零触 + openRawIo 取数特征（560 同步更新：query 档单源，ops 档双参回退保 552 由来）', () => {
-    expect(ih).toContain('aria-label="查看原始 IO（文档检索）"');
-    expect(ih).toContain('aria-label="查看原始 IO（DSL 查询）"');
+    /* 1357：两个 tab 的 RT 行内「原始 IO」钮退役（与工具行「更多 ⋯」菜单项同一动作，
+       重复平铺违反「never duplicate an action」）。本条意图是「两个 tab 都仍能取到原始 IO」，
+       随入口迁移到菜单项：判据从 aria-label 改为两条菜单 key。 */
+    expect(ih).toContain("key: 'ih-raw-io-docs'");
+    expect(ih).toContain("key: 'ih-raw-io-query'");
     expect(ih).toContain("ioRecorder.last('/cluster/raw') ?? ioRecorder.last('/cluster/query')");
   });
 });

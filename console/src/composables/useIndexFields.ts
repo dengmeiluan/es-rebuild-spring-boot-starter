@@ -14,16 +14,21 @@ let epoch = 0;
 /** 测试专用：清空缓存 */
 export function __clearFieldCache() { epoch++; cache.clear(); }
 
-function walk(props: any, prefix: string, out: FieldItem[]) {
+export function walkMappingFields(props: any, out: FieldItem[]): void { walkFields(props, '', out); }
+function walkFields(props: any, prefix: string, out: FieldItem[]) {
   if (!props) return;
   Object.entries(props).forEach(([name, def]: [string, any]) => {
     const path = prefix ? prefix + '.' + name : name;
+    /* 1336：容器字段**保留**在共享字段源里——lint 的 unknown-field 判定、DSL 补全的
+       键位上下文都需要知道 `publisher` 是一个合法路径（它是已知字段，只是不能直接当叶子查）。
+       「不要在字段选择器里把容器当候选」是**选择器那一层**的裁决，见 FieldSelect 的 container 过滤。
+       在此处剔除会连带把 lint/补全的合法路径判成 unknown（真机与 18 条既有契约一起证伪过）。 */
     if (def?.type) out.push({ path, type: def.type });
     else if (def?.properties) out.push({ path, type: 'object' });
     if (def?.fields) Object.entries(def.fields).forEach(([sub, sd]: [string, any]) => {
       out.push({ path: path + '.' + sub, type: sd?.type || '?' });
     });
-    if (def?.properties) walk(def.properties, path, out);
+    if (def?.properties) walkFields(def.properties, path, out);
   });
 }
 
@@ -67,7 +72,7 @@ export function useIndexFields(index: () => string) {
     try {
       const r: any = await api.mappingDetail(idx);
       const out: FieldItem[] = [];
-      walk(r?.raw?.properties, '', out);
+      walkMappingFields(r?.raw?.properties, out);
       out.sort((a, b) => a.path.localeCompare(b.path));
       if (reqEpoch === epoch) cache.set(key, out);
       if (isCurrent()) fields.value = out;

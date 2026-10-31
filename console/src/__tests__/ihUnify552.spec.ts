@@ -38,7 +38,8 @@ describe('552 ①：三新文件在场 + HistogramSection 契约（源码锁）'
   });
   it('emits：toggle / brush(from,to) / clear-brush / update:autoHist', () => {
     expect(hist).toMatch(/\(e: 'toggle'\): void/);
-    expect(hist).toMatch(/\(e: 'brush', from: HistBucket, to: HistBucket\): void/);
+    /* 1319b：brush 增第三参 endKey（选区右开边界）——契约只增不减，from/to 语义不变 */
+    expect(hist).toMatch(/\(e: 'brush', from: HistBucket, to: HistBucket, endKey: number \| string\): void/);
     expect(hist).toMatch(/\(e: 'clear-brush'\): void/);
     expect(hist).toMatch(/\(e: 'update:autoHist', v: boolean\): void/);
   });

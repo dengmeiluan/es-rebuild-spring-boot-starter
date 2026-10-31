@@ -725,8 +725,7 @@ function parseAggNode(name: string, body: unknown): AggNode {
   if (isObj(body.meta)) { n.meta = body.meta as Record<string, unknown>; n.hasMeta = true; }
   return n;
 }
-function serAggs(list: AggNode[]): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
+function serAggs(list: AggNode[]): Record<string, unknown> {  const out: Record<string, unknown> = {};
   for (const n of list) {
     const body: Record<string, unknown> = {};
     if (n.op) body[n.op] = n.body;
@@ -735,6 +734,12 @@ function serAggs(list: AggNode[]): Record<string, unknown> {
     out[n.name] = body;
   }
   return out;
+}
+
+/* 1351：单个聚合节点的官方形态（与整棵 aggs 走同一序列化器——复制出去贴回 DSL 必须能对上）。
+   命名键包一层 `{name: body}`，和用户写进请求体的 aggregates 片段同形。 */
+export function serAggNode(n: AggNode): Record<string, unknown> {
+  return serAggs([n]);
 }
 
 /* ================= 树不可变操作（组件层唯一编辑入口） =================

@@ -77,7 +77,7 @@ describe('五百四十七批③：IndexHubView ih-guide 引导空框退役', () 
     /* 重锁区防误伤：五百五十一批同步更新（击穿者：551 轨2 刀⑥a——ih-card-flush 大卡壳退役），
        547 豁免正锁字面改退役形，工作区分节容器 ih-ws 承接（锁意图=工作区容器形态回归防线） */
     expect(ih, 'ih-card-flush 主卡退役（551 击穿同步更新）').not.toMatch(/class="card ih-card-flush"/);
-    expect(ih, 'ih-ws 分节容器承接（551）').toMatch(/<div class="ih-ws">/);
+    expect(ih, 'ih-ws 分节容器承接（551）').toMatch(/<div class="ih-ws"(?:\s+:class="|>)/);
   });
 });
 

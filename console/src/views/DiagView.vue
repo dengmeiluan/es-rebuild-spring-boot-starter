@@ -111,7 +111,8 @@
             <button class="btn sm ghost" :disabled="!pending.length" style="margin-left:auto" @click.prevent="copyPending" title="复制 pending tasks 为 Markdown（群聊/工单直贴）"><ClipboardCopy :size="11" /> Markdown</button>
           </div>
           <div v-if="pending.length" class="dg-pending">
-            <div v-for="(p, i) in pending" :key="i" class="dg-pending-row">
+            <div v-for="(p, i) in pending" :key="i" class="dg-pending-row"
+                 @contextmenu.prevent="openPendingMenu($event, p)">
               <span class="chip mono" :style="p.priority === 'URGENT' ? 'color:var(--err)' : p.priority === 'HIGH' ? 'color:var(--warn)' : ''">{{ p.priority || '-' }}</span>
               <span class="mono" style="flex:1;color:var(--tx1)">{{ p.source }}</span>
               <!-- +'ms' 裸拼退役 → queueMsText（semFormat duration，≥1000 转 s 档） -->
@@ -192,6 +193,10 @@
     <!-- 节点行右键菜单（CellContextMenu）随 W5 换 QRT 壳退役：
  复制值/复制行 JSON/整表 TSV/排序/列管理归 QRT 内建单元格右键菜单，
  「按此节点采热线程」直达由表格 row-actions 注入钮承接 -->
+    <!-- 1362：pending task 行右键——这行是纯展示三元组（priority / source / queue 时长），
+ 排查时最常做的是「把这条贴给别人」，此前只能手选。只读动作，不新增写路径。 -->
+    <CellContextMenu v-if="pendingMenu" :x="pendingMenu.x" :y="pendingMenu.y"
+      :title="pendingMenu.title" :items="pendingMenuItems" @close="pendingMenu = null" />
   </div>
 </template>
 
@@ -212,6 +217,7 @@ import { usePref } from '../composables/urlState';
 import JsonTree from '../components/JsonTree.vue';
 import AutoRefreshSelect from '../components/AutoRefreshSelect.vue';
 import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 /* W5：节点表换 QRT rows 型——排序（useTableSort）/聚合 tfoot（useColStats）/
  复制矩阵（matrixText）/行右键菜单（CellContextMenu）/水位条+SparkLine 自造单元格壳全部退役，
  排序/漏斗/聚合行/整表 TSV/行内展开归 QRT 内核 */
@@ -564,6 +570,46 @@ function queueMsText(p: any): string {
   if (p.time_in_queue) return p.time_in_queue;
   return semFormat(p.time_in_queue_millis, 'millis')?.text ?? '-';
 }
+
+/* ═══ 1362：pending task 行右键 ═══
+ 这行只有三个只读值（priority / source / 排队时长），排查时的高频动作是「把这条贴给别人」
+ 或「贴进工单」——此前只能鼠标拖选。菜单全部只读，不新增写路径；
+ 「复制整段排队清单」在行菜单里也给了，省得为了整段再去找别处入口。 */
+const pendingMenu = ref<{ x: number; y: number; title: string; p: any } | null>(null);
+function pendingTsv(p: any): string {
+  return [p.priority || '-', p.source || '-', queueMsText(p)].join('\t');
+}
+function openPendingMenu(e: MouseEvent, p: any) {
+  pendingMenu.value = {
+    x: e.clientX, y: e.clientY,
+    title: '待处理任务 · ' + (p.source || '-'),
+    p,
+  };
+}
+function copyPendingText(text: string, msg: string) {
+  copyText(text).then(ok => store.notify(ok ? 'success' : 'error', ok ? msg : '复制失败'));
+}
+const pendingMenuItems = computed<CcmItem[]>(() => {
+  const m = pendingMenu.value;
+  if (!m) return [];
+  const p = m.p;
+  return [
+    { key: 'pg-copy-row', label: '复制这一条（TSV）', icon: Copy,
+      run: () => copyPendingText(pendingTsv(p), '已复制该条排队任务') },
+    {
+      key: 'pg-more', label: '复制…', icon: ClipboardCopy, sep: true, children: [
+        { key: 'pg-copy-source', label: '复制任务来源', icon: Copy,
+          run: () => copyPendingText(String(p.source ?? ''), '已复制任务来源') },
+        { key: 'pg-copy-json', label: '复制原始 JSON', icon: ClipboardCopy,
+          run: () => copyPendingText(JSON.stringify(p, null, 2), '已复制原始 JSON') },
+        { key: 'pg-copy-all', label: `复制整段排队清单（${pending.value.length} 条）`, icon: ClipboardList,
+          run: () => copyPendingText(
+            pending.value.map(pendingTsv).join('\n'),
+            `已复制 ${pending.value.length} 条排队任务`) },
+      ],
+    },
+  ];
+});
 
 /* ═══ ：节点资源快照导出（容量汇报双通道）—— W5：行集/列集改走
  QRT ref.getCsvBlock()（漏斗+排序+列选所见即所得）；容量汇报加工档（% 后缀/FS 人性化字节）

@@ -37,12 +37,25 @@ const EXEMPT: Record<string, string> = {
   '复制 bulk NDJSON（审计/复现/重放）': 'QRT 无 pending 编辑态（源码 pending 计数为 0），bulk NDJSON 只属于索引工作区的就地编辑链',
   "'表格快照 PNG'": 'QRT 同名动作在「导出 ⋯」菜单里（aria 为「导出表格快照 PNG」），只是菜单项 vs 菜单项',
   "transpose ? '转置视图：开' : '转置视图：关'": 'QRT 同名项变量是 transposeOn（both 都有转置）',
+  /* RT 的导出是**直接导出**（按当前默认格式一键直出）；QRT 的导出是**菜单触发器**
+     （aria 为静态「导出」+ aria-haspopup=menu，菜单里再选 CSV/XLSX/JSON/PNG/Markdown）。
+     同一动作、两种交互形态，不是能力缺口。RT 的 aria 做成动态（带格式与范围）
+     是因为窄档会隐藏可见文字「导出」，必须自带可访问名称——见 toolbarIconA11y1289。
+     ⚠key 里含反引号与 ${}，用「含 expFmt 即视为已核查」的宽松判据，避免模板串字面量对不上。 */
+  '导出（RT 直出 / QRT 菜单）': 'RT 直接导出 vs QRT 导出菜单（aria-haspopup=menu），形态不同非缺口；动态文案是窄档无文字时的可访问名称',
 };
+
+/** 除逐字 key 外，允许按前缀/特征认领（模板串字面量含 ${} 时逐字比对不可靠） */
+function exemptReason(k: string): string | undefined {
+  if (k in EXEMPT) return EXEMPT[k];
+  if (k.includes('expFmt')) return EXEMPT['导出（RT 直出 / QRT 菜单）'];
+  return undefined;
+}
 
 describe('1206 工具行互查', () => {
   it('RT 有而 QRT 没有的工具行 aria，必须全部有理由', () => {
     const onlyRt = [...rtAria].filter(k => !qrtAria.has(k));
-    const unexplained = onlyRt.filter(k => !(k in EXEMPT));
+    const unexplained = onlyRt.filter(k => !exemptReason(k));
     expect(unexplained, `这些工具行能力在 QRT 缺失且没写理由：${unexplained.join(' | ')}`).toEqual([]);
   });
 
@@ -73,6 +86,7 @@ describe('1206 工具行互查', () => {
 
   it('两侧的导出入口都在（RT 是单钮直出，QRT 是菜单）', () => {
     expect(rt).toMatch(/class="btn sm ghost rt-exp-btn"/);
-    expect(qrt).toMatch(/aria-label="导出"/);
+    /* 1345：QRT 导出钮 aria 升级为带范围/格式的动态文案（RT 侧同名口径同批对齐）。 */
+    expect(qrt).toMatch(/:aria-label="`导出当前视图（/);
   });
 });

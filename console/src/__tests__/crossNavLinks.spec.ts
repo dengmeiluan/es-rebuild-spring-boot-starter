@@ -102,7 +102,17 @@ describe('核心视图联动入口（三十四批）', () => {
     const store = useAppStore();
     store.pick('some-idx');
     await nextTick(); await nextTick();
-    expect(host.querySelector('button[aria-label^="在索引工作区打开"]')).not.toBeNull();
+    /* 1369：入口收进工具行「更多」二级菜单（一级只留本页高频写操作）。
+       入口本身仍在，aria-label 与文案逐字保留——先展开菜单再取。 */
+    const direct = host.querySelector('button[aria-label^="在索引工作区打开"]');
+    if (direct) {
+      expect(direct).not.toBeNull();
+    } else {
+      (host.querySelector('.dq-more') as HTMLButtonElement | null)?.click();
+      await nextTick(); await nextTick();
+      const inMenu = document.querySelector('.dq-more-pop button[aria-label^="在索引工作区打开"]');
+      expect(inMenu, '「更多」菜单里必须有索引工作区入口').not.toBeNull();
+    }
   });
 
   it('命名统一：全站禁「索引工作台」孤例（七十九批，页面注册名=索引工作区）', () => {

@@ -231,7 +231,7 @@ describe('沙盒 explain/profile 空态示能矛盾', () => {
     await settle();
     const full = host.querySelector('.ss-explain-full');
     expect(full, '重跑后必须停留在 explain 视图（视图不被强制重置回 hits）').toBeTruthy();
-    expect(full!.querySelector('.ss-ex-node'), '重跑请求已带 explain，解释树必须直接渲染').toBeTruthy();
+    expect(full!.querySelector('.xt-node'), '重跑请求已带 explain，解释树必须直接渲染').toBeTruthy();
     const explainOn = Array.from(host.querySelectorAll('.ss-result .seg button'))
       .find(b => b.textContent?.includes('explain'))?.classList.contains('on');
     expect(explainOn, 'seg 当前态必须仍在 explain').toBe(true);

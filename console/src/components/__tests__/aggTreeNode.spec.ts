@@ -34,7 +34,8 @@ describe('AggTreeNode', () => {
   it('渲染名称与聚合类型', () => {
     const { host } = mountAgg();
     expect((host.querySelector('.agn-name') as HTMLInputElement).value).toBe('by_status');
-    expect((host.querySelector('.agn-op') as HTMLInputElement).value).toBe('terms');
+    /* 聚合类型换二段式选择器后，值位在内层输入框（.agn-op → AggOpPicker 的 .agp-inp） */
+    expect((host.querySelector('.agn-op-pick .agp-inp') as HTMLInputElement).value).toBe('terms');
   });
 
   it('改名 emit 新节点', async () => {
@@ -49,7 +50,7 @@ describe('AggTreeNode', () => {
 
   it('换 op 保留 body（零降级，不静默丢参数）', async () => {
     const { host, cur } = mountAgg();
-    const inp = host.querySelector('.agn-op') as HTMLInputElement;
+    const inp = host.querySelector('.agn-op-pick .agp-inp') as HTMLInputElement;
     inp.value = 'avg';
     inp.dispatchEvent(new Event('input'));
     await tick();

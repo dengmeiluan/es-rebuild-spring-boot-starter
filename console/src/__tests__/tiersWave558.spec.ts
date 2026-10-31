@@ -79,7 +79,7 @@ describe('五百五十八批①：editorTiers 三件套合并 useTierCycle 单�
 
   it('SqlConsoleView：sql.railW / sql.resultH / sql.codeH 三处合并，原三件退役', () => {
     adopted(sqlConsole, 'sql.railW', ', RAIL_W_TIERS, 300');
-    adopted(sqlConsole, 'sql.resultH', ', RESULT_H_TIERS, 500');
+    adopted(sqlConsole, 'sql.resultH', ", RESULT_H_TIERS, 'fill'");
     adopted(sqlConsole, 'sql.codeH', ', CODE_H_TIERS, 300');
     cycleFnRetired(sqlConsole, 'cycleRailW');
     cycleFnRetired(sqlConsole, 'cycleResultH');
@@ -110,7 +110,10 @@ describe('五百五十八批①：editorTiers 三件套合并 useTierCycle 单�
     expect(aliases).toContain('const FILTER_H_TIERS = [3, 9, 16];');
     expect(lifecycle).toContain('const RO_H_TIERS = [4, 10, 18];');
     expect(sqlConsole).toContain('const RAIL_W_TIERS = [240, 300, 360];');
-    expect(sqlConsole).toContain('const RESULT_H_TIERS = [300, 500, 800];');
+    /* 1354：结果表默认档改「填满剩余空间」（用户反馈：默认 500px 屏幕越大浪费越多，
+       实测 2560×1440 表下方空 589px）。档位表加 'fill' 首项；300 档退役（从未被选中过，
+       填满已覆盖小窗口），500/800 两个手选档保留。判据意图不变：档值仍集中在一个字面数组。 */
+    expect(sqlConsole).toContain("const RESULT_H_TIERS = ['fill', 500, 800] as const;");
     expect(sqlConsole).toContain('const CODE_H_TIERS = [200, 300, 500];');
     expect(painless).toContain('const OUT_H_TIERS = [180, 260, 400];');
     expect(painless).toContain('const RAIL_W_TIERS = [200, 260, 320];');
@@ -122,7 +125,8 @@ describe('五百五十八批①：editorTiers 三件套合并 useTierCycle 单�
 describe('五百五十八批②：defVal 非首位显式传参（防默认档漂移到 tiers[0]）', () => {
   it('七处显式传参锚：sql 三处 300/500/300、painless 两处 260、al 两处 240/280', () => {
     expect(sqlConsole).toMatch(/useTierCycle\('sql\.railW', RAIL_W_TIERS, 300\)/);
-    expect(sqlConsole).toMatch(/useTierCycle\('sql\.resultH', RESULT_H_TIERS, 500\)/);
+    /* 1354：默认档改 fill（首项也不再是唯一可选——必须显式传，防漂移的意图保留） */
+    expect(sqlConsole).toMatch(/useTierCycle\('sql\.resultH', RESULT_H_TIERS, 'fill'\)/);
     expect(sqlConsole).toMatch(/useTierCycle\('sql\.codeH', CODE_H_TIERS, 300\)/);
     expect(painless).toMatch(/useTierCycle\('painless\.outH', OUT_H_TIERS, 260\)/);
     expect(painless).toMatch(/useTierCycle\('painless\.railW', RAIL_W_TIERS, 260\)/);

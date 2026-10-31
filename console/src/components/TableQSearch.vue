@@ -47,7 +47,12 @@ defineEmits<{ (e: 'update:kw', v: string): void; (e: 'enter'): void }>();
  「1/1 ·…」（scrollWidth 65 / 宽 50）。命中数是这条带子的主信息，快滤框的
  placeholder 是空态装饰：让位顺序必须反过来。地板 90px 仍是 placeholder
  「搜索结果…」的可读下限（1150 结论不变，只是不再分档）。 */
-.qrt-qsearch, .rt-qsearch { flex: 0 100 auto; min-width: 90px; }
+/* 1331：basis 从 auto(160px) 改成 90px 地板——换行决策用的是 hypothetical main size，
+ 收缩要等成行之后才发生。basis=auto 时这条带子先按 160px 排，放不下就直接换行，
+ 1166 想要的「快滤框先让位」在换行这一步根本不参与（实测 1100 档：工具行 68px 两行，
+ 把 basis 降到 90 后回到 41px 单行，框宽 98px 仍在地板之上）。max-width 保住宽档原宽，
+ 1440/1200 实测仍是 160px 零变化；1060 以下仍换行（1146 兜底不变）。 */
+.qrt-qsearch, .rt-qsearch { flex: 1 1 90px; min-width: 90px; max-width: 160px; }
 .qrt-qsearch-inp, .rt-qsearch-inp { flex: 1 1 auto; width: 100%; min-width: 0; max-width: 160px; }
 .qrt-qsearch-inp:focus, .rt-qsearch-inp:focus { border-color: var(--ac-line); }
 .qrt-qsearch-inp::placeholder, .rt-qsearch-inp::placeholder { color: var(--tx2); }

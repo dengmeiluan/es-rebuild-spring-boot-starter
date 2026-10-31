@@ -38,7 +38,8 @@ describe('934 文档编辑直达矩阵（源码锁）', () => {
 
   it('ResultTable：行内编辑钮受 editable 开关（edit-doc emit），内建 alt 档仅打开链', () => {
     expect(rt).toMatch(/editable\?: boolean;/);
-    expect(rt).toContain('<button v-if="editable && canWrite" aria-label="编辑文档"');
+    /* 1364：编辑钮收进行尾「更多 ⋯」菜单，门禁条件不变（editable && canWrite） */
+    expect(rt).toMatch(/props\.editable && canWrite\.value[\s\S]{0,24}key: 'act-edit', label: '编辑文档'/);
     expect(rt).toContain("(e: 'edit-doc', hit: SearchHit): void;");
     /* 内建 alt 档（无编辑链宿主经 RT 消费的 JSON/Tree）不传 editable=不渲染编辑钮 */
     expect(rt, '内建 alt 档仅打开链').toMatch(/@open-doc-at="i => \{ const h = props\.hits\[i\]; if \(h\) emit\('open-doc', h\) \}"/);

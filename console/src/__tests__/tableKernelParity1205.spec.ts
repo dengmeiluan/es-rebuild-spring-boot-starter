@@ -28,11 +28,9 @@ const EXEMPT: Record<string, string> = {
   // 工具行/导出：QRT 用 export-* 五个独立键 + 导出菜单里的 PNG 项；RT 用「默认格式」切换
   'bar-snapshot': 'QRT 走「导出 ⋯」菜单里的 PNG 项',
   'export-view': 'QRT 导出组是 export-csv/xlsx/json/md/ndjson，逐格式直出',
-  'fmt-csv': 'QRT 无「默认格式」概念',
-  'fmt-xlsx': '同上（QRT 逐格式直出）',
-  'fmt-json': '同上（QRT 逐格式直出）',
-  'fmt-md': '同上（QRT 逐格式直出）',
-  'fmt-ndjson': '同上（QRT 逐格式直出）',
+  /* RT 的「默认导出格式」五档整组：QRT 没有该概念，一律逐格式直出（export-* 五键）。
+     同源理由合并为一条通配——五条各占一行只会把上限撑满、挤掉真正需要解释的差异。 */
+  'fmt-*': 'QRT 无「默认格式」概念，导出走 export-csv/xlsx/json/md/ndjson 逐格式直出',
   // 查询级动作：QRT 的对应键是 use-as-cond / sort-by / filter-by-val
   'filter-hit': 'QRT 拆成 use-as-cond（改 SQL 重查）+ filter-by-val（只筛当前结果）',
   // 文档对比：QRT 的 rows 通道没有文档对象
@@ -41,12 +39,27 @@ const EXEMPT: Record<string, string> = {
   'dsl-ids': 'QRT 的 dsl-copy 在 _id 列自动生成 ids 形态',
   'dsl-match': 'QRT 的 dsl-copy 按 text 类型自动路由 match',
   'dsl-term': 'QRT 的 dsl-copy 自动路由 term',
+  /* 1364：RT 行尾「更多 ⋯」里的行动作。QRT 是 cols×rows 矩阵，没有文档对象——
+     整组只登记一条，逐项理由见下方注释（避免用 5 条豁免把清单撑大、掩盖真缺口）。
+       act-edit   需要可回写的 _source 文档        → 不适用
+       act-copy   等价项是 QRT 既有的 copy-row      → 已在 QRT
+       act-explain 需要 hit 的 _score/_explanation  → 不适用
+       act-xray   需要 hits 文档与查询串            → 不适用
+       act-del    需要文档 _id，SQL 结果行不是文档   → 不适用 */
+  /* 1385：RT 把「列与导出…」拆成三组后，多出一个「默认导出格式…」。
+     QRT 没有这个概念——它的工具行是五档直选（导出 ▾），没有「记住一个默认格式」
+     这层状态，所以没有对应的设置项。这是概念缺失，不是能力缺失：
+     QRT 的「导出…」组里五档齐全，右键直出能力与 RT 等价。 */
+  'default-fmt-group': 'QRT 无「默认导出格式」概念（工具行五档直选），导出能力在「导出…」组内等价',
+  'act-*': 'RT 行尾「更多 ⋯」整组（编辑/复制/解释得分/词频取证/删除）：QRT 是 cols×rows 矩阵、没有 _source 文档对象，其中仅复制一项在 QRT 有等价 copy-row',
 };
 
 describe('1205 两内核右键互查', () => {
   it('RT 有而 QRT 没有的菜单项，必须全部在豁免清单里', () => {
     const onlyRt = [...rtKeys].filter(k => !qrtKeys.has(k));
-    const unexplained = onlyRt.filter(k => !(k in EXEMPT));
+    /* 豁免键支持 `prefix-*` 通配：整组同源理由只登记一条，避免把上限撑爆 */
+    const exempt = (k: string) => k in EXEMPT || Object.keys(EXEMPT).some(e => e.endsWith('*') && k.startsWith(e.slice(0, -1)));
+    const unexplained = onlyRt.filter(k => !exempt(k));
     expect(unexplained, `这些项在 QRT 缺失且没有说明理由：${unexplained.join(', ')}`).toEqual([]);
   });
 

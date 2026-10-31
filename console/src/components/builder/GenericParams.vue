@@ -39,10 +39,10 @@
 
       <!-- 1094：json schema 参数（inner_hits 等）用 JSON 文本位——保留数字/布尔类型，
            不再被键值子表的字符串输入降级 -->
-      <textarea v-else-if="schemaKind(row.key) === 'json'" class="inp gp-v mono gp-json"
+      <textarea v-else-if="schemaKind(row.key) === 'json' || schemaKind(row.key) === 'json-array'" class="inp gp-v mono gp-json"
                 :class="{ bad: !!jsonBad[row.key] }" :data-path="pathPrefix + row.key"
                 :value="jsonText(row.key, row.val)" spellcheck="false"
-                :title="jsonBad[row.key] ? 'JSON 无效，暂未写入查询树' : 'JSON 对象（保留数字/布尔类型）'"
+                :title="jsonTitle(row.key)"
                 @input="onJson(row.key, ($event.target as HTMLTextAreaElement).value)" />
       <select v-else-if="schemaOpt(row.key)" class="inp gp-v" :value="String(row.val)" @change="setChild(row.key, ($event.target as HTMLSelectElement).value)">
         <option v-for="o in schemaOpt(row.key)" :key="o" :value="o">{{ o }}</option>
@@ -66,6 +66,18 @@
              :value="row.raw" :title="row.kind === 'numstr' ? '非数字，将作为字符串提交' : ''"
              @input="onScalar(row.key, ($event.target as HTMLInputElement).value, row.kind)" />
       <button aria-label="删除该参数键" class="btn sm ghost danger" @click="removeKey(row.key)"><X :size="12" /></button>
+    </div>
+    <!-- 未入体的已注册参数：此前只有「+ 键名」输入框的 datalist 提示——
+ 新建一个聚合时用户看到的是一个空框，不点开、不试输就发现不了这个聚合到底要哪些键
+ （weighted_avg 的 value/weight、t_test 的 a/b 都属此列）。这里把它们列成一排可点的键签：
+ 点一下即按类型补默认值并落进体里，随后在表内以类型化控件编辑。
+ 只提示不约束——仍可手打任意键（datalist 与「+ 键名」通道都保留）。 -->
+    <div v-if="!isArr && pendingSchema.length" class="gp-pending" role="group" aria-label="该聚合支持的参数">
+      <span class="gp-pending-lb">可加参数</span>
+      <button v-for="p in pendingSchema" :key="p.key" type="button" class="gp-pkey"
+        :title="KIND_ZH[p.kind] || '文本'" @click="addSchemaKey(p)">
+        {{ '+' + p.key }}
+      </button>
     </div>
     <div class="gp-add">
       <input v-if="!isArr" class="inp mono" v-model="newKey" placeholder="+ 键名" :list="'gpkeys-' + uid" @keydown.enter="addKey" />
@@ -116,7 +128,7 @@ const isArr = computed(() => Array.isArray(props.value));
    uid：递归组件多实例，datalist id 用模块计数器区分。 */
 let uidSeq = 0;
 const uid = 'gp' + (++uidSeq).toString(36);
-const KIND_ZH: Record<string, string> = { number: '数值', boolean: '布尔', enum: '枚举', text: '文本', json: '对象/JSON' };
+const KIND_ZH: Record<string, string> = { number: '数值', boolean: '布尔', enum: '枚举', text: '文本', json: '对象/JSON', 'json-array': '数组/JSON' };
 const pendingSchema = computed<ParamMeta[]>(() => {
   const body = props.value as Record<string, unknown>;
   if (isArr.value) return [];
@@ -221,6 +233,22 @@ function onJson(k: string, raw: string) {
   jsonBad.value = { ...jsonBad.value, [k]: !ok };
   if (ok) setChild(k, parsed);
 }
+/* JSON 文本位的标题：非法态优先，其次按对象/数组给示例引导 */
+function jsonTitle(k: string): string {
+  if (jsonBad.value[k]) return 'JSON 无效，暂未写入查询树';
+  return schemaKind(k) === 'json-array'
+    ? 'JSON 数组（保留数字/布尔类型），例如 [{"field":"a"}]'
+    : 'JSON 对象（保留数字/布尔类型）';
+}
+/* 新建参数的默认值——数组型给 `[]`（给 `{}` 会被 ES 直接拒：
+   top_metrics.metrics / matrix_stats.fields / bucket_sort.sort 都必须是数组），
+   对象型给 `{}`，布尔给 false，其余留空串由输入控件承接。 */
+function defaultValueFor(kind?: 'number' | 'text' | 'boolean' | 'enum' | 'json' | 'json-array'): unknown {
+  if (kind === 'boolean') return false;
+  if (kind === 'json-array') return [];
+  if (kind === 'json') return {};
+  return '';
+}
 function addKey() {
   if (Array.isArray(props.value)) {
     emit('update', [...props.value, '']); return;   // 数组添加 = 尾部推空串
@@ -229,8 +257,14 @@ function addKey() {
   if (!k || k in props.value) return;
   /* 1092：布尔 schema 给显式 false；1094：json schema 给空对象承接文本位；数值留空由数值控件承接 */
   const kind = schemaKind(k);
-  emit('update', { ...props.value, [k]: kind === 'boolean' ? false : kind === 'json' ? {} : '' });
+  emit('update', { ...props.value, [k]: defaultValueFor(kind) });
   newKey.value = '';
+}
+/* 一键补入已注册但未入体的参数键——默认值与 addKey 同口径（布尔 false / json {} / 其余空串），
+ 落体后由 rows 渲染成对应类型化控件 */
+function addSchemaKey(p: ParamMeta) {
+  if (Array.isArray(props.value) || p.key in props.value) return;
+  emit('update', { ...props.value, [p.key]: defaultValueFor(p.kind) });
 }
 function toggle(k: string) {
   const s = new Set(collapsed.value);
@@ -269,4 +303,16 @@ function toggle(k: string) {
 .gp-row :deep(.gp-fs .fs-inp) { height: 28px; }
 .gp-add { display: flex; gap: var(--sp-2); margin-top: var(--sp-1); margin-left: calc(var(--d, 0) * 10px); }
 .gp-add .inp { width: 110px; height: 28px; font-size: var(--fs-sm); }
+/* 未入体的已注册参数键签——只提示不约束（仍可手打任意键） */
+.gp-pending {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1);
+  margin-top: var(--sp-1); margin-left: calc(var(--d, 0) * 10px);
+}
+.gp-pending-lb { color: var(--tx3); font-size: var(--fs-xs); }
+.gp-pkey {
+  height: 22px; padding: 0 var(--sp-1h); border: 1px dashed var(--line-strong);
+  border-radius: 99px; background: transparent; color: var(--tx2);
+  font-size: var(--fs-xs); font-family: inherit; cursor: pointer; white-space: nowrap;
+}
+.gp-pkey:hover { color: var(--ac-hi); border-color: var(--ac-line); background: var(--ac-soft); }
 </style>

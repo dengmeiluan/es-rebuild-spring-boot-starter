@@ -12,10 +12,15 @@
         <button class="btn ghost sm" @click="doSchema" :disabled="!indexOf() || busy" title="探测当前索引字段，提前提醒哪些会引发 SQL 报错">
           <ShieldAlert :size="12" /> 字段体检
         </button>
-        <button class="btn ghost sm" @click="doTranslate" :disabled="!sql.trim() || busy">
+        <!-- 1328：此前这两个钮既无 title 也无 aria-label——页头一排里其余三个都有说明，
+             只有它俩要用户猜「转 DSL 是干什么的」「收藏存到哪」。补上，并让禁用原因可读
+             （禁用态浏览器不弹 title，所以文案本身要写清前置条件）。 -->
+        <button class="btn ghost sm" @click="doTranslate" :disabled="!sql.trim() || busy"
+          :title="busy ? '执行中，完成后再转换' : (!sql.trim() ? '先写一条 SQL，再用它翻译成等价的 DSL 请求体' : '把当前 SQL 翻译成等价的 DSL 请求体（_sql/translate），可带到 DSL 页继续改')">
           <Braces :size="12" /> 转 DSL
         </button>
-        <button class="btn ghost sm" @click="doFav" :disabled="!sql.trim()">
+        <button class="btn ghost sm" @click="doFav" :disabled="!sql.trim()"
+          :title="!sql.trim() ? '先写一条 SQL，再收藏为常用查询' : '收藏当前 SQL（可在「收藏夹」里一键回放）'">
           <Star :size="12" /> 收藏
         </button>
         <!-- 页内历史入口（四视图统一，DslQueryView 弹窗范式）——doRun 一直在
@@ -33,8 +38,7 @@
       </template>
     </PageHeader>
 
-    <div class="sq-grid" :class="{ 'rail-off': !railOpen }" :style="{ '--sq-rail-w': railW + 'px' }">
-      <!-- sq-editor 编辑器壳退役（约定③内容直贴，Kibana 同语言）——分界由
+    <div class="sq-grid" :class="{ 'rail-off': !railOpen }" :style="{ '--sq-rail-w': railW + 'px' }">      <!-- sq-editor 编辑器壳退役（约定③内容直贴，Kibana 同语言）——分界由
  sq-card-hd 既有 border-bottom 承接；Monaco 防撑破 overflow 承接保留（CSS 侧） -->
       <div class="sq-editor">
         <div class="sq-card-hd">
@@ -44,7 +48,7 @@
  分置两处的平铺双钮反模式，合并为工具行常驻单 toggle（data-sq-rail-toggle）：
  同钮随态换文案 模板/收起 + chevron 随态旋转（XmigrateView 页头单钮先例同语言）；
  railOpen usePref 状态机零改动（sqlConsoleAdjustW2 锚同步更新） -->
-            <button class="btn ghost xs" data-sq-rail-toggle :title="railOpen ? '收起模板侧栏' : '展开模板侧栏'" @click="railOpen = !railOpen">
+            <button ref="toggleEl" class="btn ghost xs" data-sq-rail-toggle :title="railOpen ? '收起模板侧栏' : '展开模板侧栏'" @click="railOpen = !railOpen">
               <ChevronRight :size="11" :style="{ transform: railOpen ? '' : 'rotate(180deg)', transition: 'transform var(--tr)' }" />
               {{ railOpen ? '收起' : '模板' }}
             </button>
@@ -142,7 +146,7 @@
       <!-- 模板侧栏壳降层（li:hover/键盘交互在行不在壳，wt/fv 不适用；
  分界同由 hd border-bottom 承接，与左侧编辑器行同语言对称）。
  头部「收起」钮随双钮合一退役（收起入口归工具行常驻单 toggle），宽度档钮留守 -->
-      <div v-if="railOpen" class="sq-samples">
+      <div v-if="railOpen" ref="samplesEl" class="sq-samples">
         <div class="sq-card-hd">
           <span>常用模板</span>
           <div class="sq-card-hd-r">
@@ -281,11 +285,14 @@
       </div>
 
         <!-- 结果大容器框退役（约定④，pt-sec 538 同语言）→ sq-sec border-top 分节 -->
-        <div v-if="cols.length" class="sq-sec wide">
+        <div v-if="cols.length" ref="resultSecEl" class="sq-sec wide">
         <!-- 1141：结果工具行并入表格内核工具行（QRT tableBar 内存态）——dbx 式单行
  chrome：左=计数 MetaStrip + 内建搜索，右=控制台独占动作（原始 IO/高度档/cursor 翻页）
  经 bar-extra 注入，导出/视图/列选由内核共享件承接（宿主不再手写 CSV/NDJSON 导出）。
  无 cursor 时不挂禁用翻页钮（1136）。 -->
+        <!-- 刷新钮（refreshable）= 按当前 SQL 与参数重跑，Lucene 结果表同口径；
+ 此前只有页头主钮，结果表内想「去掉快速过滤再取一次」得先把视线移回页头。
+ 只 emit 'refresh' 意图，取数仍走 doRun 单一路径，不另造取数链。 -->
         <QueryResultTable
           :key="runSeq"
           ref="resultTbl"
@@ -298,15 +305,22 @@
           use-as-condition
           table-bar
           searchable
+          refreshable
+          @refresh="doRun"
           view-seg
           view-pref-key="es-console.pref.sqlResultView"
           export-name="sql"
           export-ndjson
           :export-note="exportCaveat(!!cursor, resultStale)"
+          :storage-key="effectiveSqlIndex ? 'sql:' + effectiveSqlIndex : undefined"
+          skip-cols-memory
           :show-col-count="false"
           :sem-raw-cols="sqlSemRawCols"
           :field-types="sqlFieldTypes"
-          :max-height="resultH + 'px'"
+          :max-height="resultMaxHeight"
+          :min-height="resultMinHeight"
+          selectable
+          @selection-change="onSelChange"
           empty-text="查询成功但命中 0 行，检查 WHERE 条件或索引名"
           @use-as-condition="useAsCondition"
           @sort-by="sortByColumn"
@@ -316,15 +330,42 @@
             <MetaStrip :items="resultMeta" />
           </template>
           <template #bar-extra>
-            <button class="btn ghost xs sq-icon-btn" data-test="raw-io" aria-label="查看原始 IO（SQL 执行）" title="最近一次 SQL 请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIo">
-              <Terminal :size="12" />
+            <!-- 1353：宿主侧两项（原始 IO / 高度档）收成一个「结果表 ⋯」菜单。
+                 1440 下工具行原本挤成 2 行、1280 下 3 行——两个图标钮各占一格，
+                 而它们都是低频（原始 IO 只在排查时看、高度档调一次就记住）。
+                 内核 Actions/视图菜单同款形态（.qrt-menu：点开、点外关、Esc 关）。 -->
+            <!-- 1363：SQL 结果表此前没有多选（RT 有）——用户反复问「为什么能力没共享」。
+                 开启 selectable 后必须给出「选中能干什么」，否则勾选框就是死控件：
+                 有选中时这里出现「复制选中 N 行」，静息态零占位。 -->
+            <button v-if="selRows.length" class="btn ghost xs" data-test="sq-copy-sel"
+              :title="`复制选中的 ${selRows.length} 行为 TSV（可直接贴进表格软件）`"
+              @click="copySelectedRows">
+              <ClipboardCopy :size="12" /> 复制选中 {{ selRows.length }}
             </button>
-            <!-- 1167：图标原为 Maximize2——与内核右侧「放大结果表」同图标同尺寸且相邻，
-                 实测两个一模一样的 ↗ 并排，用户无法区分「调高度」和「全屏放大」。
-                 换成 UnfoldVertical（上下展开=高度档），语义与全屏放大正交。 -->
-            <button class="btn ghost xs sq-icon-btn" data-sq-result-h :aria-label="'结果表高度档：' + resultH + 'px'" :title="'结果表高度档：' + resultH + 'px'" @click="cycleResultH">
-              <UnfoldVertical :size="12" />
-            </button>
+            <span class="menu-wrap sq-bar-more-wrap">
+              <button class="btn ghost xs sq-icon-btn" data-test="sq-bar-more" aria-label="结果表更多（原始 IO / 高度档）"
+                aria-haspopup="menu" :aria-expanded="barMoreOpen" title="结果表更多：原始 IO、结果表高度档"
+                @click.stop="barMoreOpen = !barMoreOpen" @keydown.esc="barMoreOpen = false">
+                <MoreHorizontal :size="12" />
+              </button>
+              <div v-if="barMoreOpen" class="qrt-menu sq-bar-more" role="menu" aria-label="结果表更多" @click.stop>
+                <div class="qrt-m-t">结果表高度（当前 {{ resultHLabel }}）</div>
+                <button v-for="h in RESULT_H_TIERS" :key="h" class="qrt-mi" role="menuitemradio"
+                  :class="{ on: resultH === h }" :aria-checked="resultH === h"
+                  @click="setResultH(h)">{{ h === 'fill' ? '填满剩余空间' : h + 'px' }}</button>
+                <div class="qrt-m-sep" role="separator"></div>
+                <button v-if="selRows.length" class="qrt-mi" role="menuitem" data-test="sq-copy-sel-menu"
+                  :disabled="!selRows.length" @click="barMoreOpen = false; copySelectedRows()">
+                  <ClipboardCopy :size="12" /> 复制选中行（{{ selRows.length }} 行，TSV）
+                </button>
+                <div v-if="selRows.length" class="qrt-m-sep" role="separator"></div>
+                <button class="qrt-mi" role="menuitem" data-test="raw-io" aria-label="查看原始 IO（SQL 执行）"
+                  title="最近一次 SQL 请求/响应原文（复制/回放/语义分档高亮）"
+                  @click="barMoreOpen = false; openRawIo()">
+                  <Terminal :size="12" /> 查看原始 IO
+                </button>
+              </div>
+            </span>
             <template v-if="cursor">
               <button class="btn ghost xs" @click="nextPage" :disabled="busy">
                 <ChevronRight :size="11" /> 下一页
@@ -384,9 +425,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
-import { BookOpen, Braces, Star, Play, Copy, AlertCircle, ChevronRight, XCircle, ShieldAlert, Database, Loader2, History, Terminal, BarChart3, UnfoldVertical } from 'lucide-vue-next';
+import { BookOpen, Braces, Star, Play, Copy, AlertCircle, ChevronRight, XCircle, ShieldAlert, Database, Loader2, History, Terminal, BarChart3, MoreHorizontal, ClipboardCopy } from 'lucide-vue-next';
 import { NModal } from 'naive-ui';
 /* 页内历史面板合并 QueryHistoryPanel 共享件（DslQueryView 弹窗范式） */
 import QueryHistoryPanel from '../components/QueryHistoryPanel.vue';
@@ -526,12 +567,125 @@ const railOpen = usePref('sql.railOpen', true);
  缺省会漂到 tiers[0] 破坏「默认 300/500/300=原写死值」口径；cycle 语义等值 */
 const RAIL_W_TIERS = [240, 300, 360];
 const { v: railW, cycle: cycleRailW } = useTierCycle('sql.railW', RAIL_W_TIERS, 300);
-const RESULT_H_TIERS = [300, 500, 800];
-const { v: resultH, cycle: cycleResultH } = useTierCycle('sql.resultH', RESULT_H_TIERS, 500);
+const RESULT_H_TIERS = ['fill', 500, 800] as const;
+const { v: resultH } = useTierCycle('sql.resultH', RESULT_H_TIERS, 'fill');
+/* 1354：默认档改成「填满剩余空间」——此前默认写死 500px，实测结果卡下方空白：
+   2560×1440 = 589px、1920×1080 = 351px、1440×900 = 232px —— 屏幕越大浪费越多，
+   正是用户说的「默认可视表格特别窄，下面还有那么多空间」。
+   填满公式：视口高 − 结果卡顶部偏移（运行时量 ref，滚动/切档都不硬编码）− 底部呼吸 16px。
+   下限 320px 兜底（极矮视口仍可读）；上限不设——剩余空间本来就是给结果的。 */
+const resultSecEl = ref<HTMLElement | null>(null);
+const resultTopOffset = ref(0);
+/* 量的是**表体**（.qrt-wrap）的视口顶，不是结果卡顶：卡头 45px 在两者之间，
+   用卡顶会把表体顶高 45px；而表体尚未渲染（无结果/加载态）时用卡顶 + 卡头估计。 */
+function measureResultTop() {
+  const el = resultSecEl.value;
+  if (!el) return;
+  const wrap = el.querySelector<HTMLElement>('.qrt-wrap');
+  const top = Math.round((wrap || el).getBoundingClientRect().top);
+  resultTopOffset.value = top;
+  /* 32 = 结果卡下沿圆角 + 浏览器横向滚动条/安全区，实测 16 会差 8~36px 溢出 */
+  resultAvailH.value = Math.round(window.innerHeight - top - 32);
+}
+const resultHLabel = computed(() => resultH.value === 'fill' ? '填满剩余空间' : resultH.value + 'px');
+/* 可用高度 = 视口高 − 表体顶（视口坐标）− 16 呼吸。用实测差值而不是 100vh - offset：
+   页面自身可滚动（编辑器 34vh + 结果区），100vh 会把「已滚出的部分」也算进来，
+   2560×1440 实测多出 136px。差值在任意滚动位置都成立。 */
+const resultAvailH = ref(0);
+/* 可用高度已按视口算好就直接用（不再与 320 取大：1440×900 实测可用 276px，
+   取大反而顶出视口 36px）。脏值/未测量时用 240px 保守兜底。 */
+const fillHeight = computed(() => resultAvailH.value > 0
+  ? `${resultAvailH.value}px`
+  : 'min(420px, 60vh)');
+const resultMaxHeight = computed(() => resultH.value === 'fill' ? fillHeight.value : resultH.value + 'px');
+/* 1354：表体下限同口径——max-height 只封顶不收底，行少时表体塌成一条（实测 52px、
+   下方空 589px）。填满档同时给 min-height，行少也占满剩余视口。 */
+const resultMinHeight = computed(() => resultH.value === 'fill' ? fillHeight.value : undefined);
+
+/* 1353：高度档从「连点循环」升级为显式三选（菜单里带当前档），循环函数保留给键盘/兼容路径 */
+const barMoreOpen = ref(false);
+/* 1363：结果表多选（RT 同款通道，之前 SQL 页没接）——勾选后能「复制选中行」，
+   否则勾选框就是死控件。选中行由内核 emit 原始矩阵行，列名取当前 cols。 */
+const selRows = ref<unknown[][]>([]);
+function onSelChange(rows: unknown[]) { selRows.value = rows as unknown[][]; }
+function copySelectedRows() {
+  if (!selRows.value.length) return;
+  const SEP = '\t';
+  const head = colNames.value.join(SEP);
+  const body = selRows.value.map(r => (r || []).map(v => String(v ?? '')).join(SEP));
+  copyText([head, ...body].join('\n')).then(ok => store.notify(
+    ok ? 'success' : 'error',
+    ok ? `已复制 ${selRows.value.length} 行（含列名表头，TSV）` : '复制失败'));
+}
+function setResultH(h: (typeof RESULT_H_TIERS)[number]) {
+  resultH.value = h;
+  barMoreOpen.value = false;
+}
 const CODE_H_TIERS = [200, 300, 500];
 const { v: codeH, cycle: cycleCodeH } = useTierCycle('sql.codeH', CODE_H_TIERS, 300);
 const schemaWarnings = ref<string[]>([]);
+
+/* 模板栏变浮层后必须能随手关掉——它盖在编辑器内容区右上角（实测遮住约 23% 编辑区）。
+   收起方式沿用浮层惯例：点外部 / Esc。两个监听只在展开时挂，收起即摘（与 CellContextMenu 同款配对）。
+   toggle 钮本身与浮层内点击不算「外部」——否则点模板就把它自己关了。 */
+const samplesEl = ref<HTMLElement | null>(null);
+const toggleEl = ref<HTMLElement | null>(null);
+function onDocDownForRail(e: MouseEvent) {
+  const t = e.target as Node | null;
+  if (!t) return;
+  if (samplesEl.value?.contains(t)) return;
+  if (toggleEl.value?.contains(t)) return;
+  railOpen.value = false;
+}
+function onDocKeyForRail(e: KeyboardEvent) {
+  if (e.key === 'Escape') railOpen.value = false;
+}
+watch(railOpen, (v) => {
+  const on = v === true;
+  document.addEventListener('mousedown', onDocDownForRail, true);
+  document.addEventListener('keydown', onDocKeyForRail, true);
+  if (!on) {
+    document.removeEventListener('mousedown', onDocDownForRail, true);
+    document.removeEventListener('keydown', onDocKeyForRail, true);
+  }
+}, { immediate: true });
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', onDocDownForRail, true);
+  document.removeEventListener('keydown', onDocKeyForRail, true);
+  document.removeEventListener('mousedown', onDocDownForBarMore, true);
+  window.removeEventListener('resize', measureResultTop);
+  roResult?.disconnect();
+  roResult = null;
+});
+/* 1353：结果表「更多」菜单点外部关闭（与 rail 同一套 capture 监听，仅在展开时挂） */
+function onDocDownForBarMore(e: MouseEvent) {
+  const t = e.target as HTMLElement | null;
+  if (t?.closest('.sq-bar-more-wrap')) return;
+  barMoreOpen.value = false;
+}
+watch(barMoreOpen, on => {
+  if (on) document.addEventListener('mousedown', onDocDownForBarMore, true);
+  else document.removeEventListener('mousedown', onDocDownForBarMore, true);
+});
 const cols = ref<Array<{ name: string; type: string }>>([]);
+/* 测量时机：结果出来（cols 变化）→ 表体挂载 → 尺寸落定。
+   只在 nextTick 量会早一拍（.qrt-wrap 还没进 DOM 或还是旧高），用 ResizeObserver
+   跟住表体/容器尺寸，任何一次布局变化都重算——视口缩放、切档、结果增减都覆盖。 */
+watch([resultH, () => cols.value.length], async () => {
+  await nextTick(); measureResultTop();
+}, { immediate: true });
+let roResult: ResizeObserver | null = null;
+onMounted(() => {
+  measureResultTop();
+  window.addEventListener('resize', measureResultTop);
+  if (typeof ResizeObserver !== 'undefined') {
+    roResult = new ResizeObserver(() => measureResultTop());
+    const el = resultSecEl.value;
+    if (el) roResult.observe(el);
+    const page = document.querySelector('.sq-page');
+    if (page) roResult.observe(page);
+  }
+});
 const rows = ref<any[][]>([]);
 /* 通用表只读 cols 是 string[]；type 子标签属 SQL 特定细节，不塞进通用表 */
 const colNames = computed(() => cols.value.map(c => c.name));
@@ -1404,10 +1558,35 @@ function doFav() {
 /* --sp 间距 token 收口（theme.css:100-103 裁决，只收精确等值字面；
  14/20 等刻意值与 1px/5px 微调保字面） */
 .sq-page { padding: var(--sp-3) var(--sp-4) var(--sp-5); }
-/* W2 批：模板侧栏宽度档走 --sq-rail-w（usePref sql.railW，默认 300=原 minmax 上限），
- rail-off 折叠为单栏；窄容器塌单栏由底部 @media 覆盖（规则顺序在后） */
-.sq-grid { display: grid; grid-template-columns: minmax(0, 1fr) var(--sq-rail-w, 300px); gap: var(--sp-3); min-height: 0; }
-.sq-grid.rail-off { grid-template-columns: minmax(0, 1fr); }
+/* 1353：结果表「更多」菜单——与 QueryResultTable 的 .qrt-menu 同名同形，
+ 但那边是 scoped（样式不外溢），宿主这一份必须自带：此前只写类名不补样式，
+ 菜单会掉进文档流把工具栏挤成 3 行（实测）。数值逐字对齐内核口径。 */
+.sq-bar-more-wrap { position: relative; display: inline-flex; }
+.sq-bar-more { position: absolute; top: calc(100% + var(--sp-1)); right: 0; z-index: 60; background: var(--bg1);
+  border: 1px solid var(--line-strong); border-radius: var(--r-m); box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+  padding: var(--sp-1h); min-width: 200px; }
+.sq-bar-more .qrt-mi { display: flex; align-items: center; gap: var(--sp-2); width: 100%; padding: var(--sp-1h) var(--sp-2h);
+  border: 0; background: transparent; border-radius: var(--r-s); color: var(--tx1); font-size: var(--fs-xs);
+  cursor: pointer; text-align: left; white-space: nowrap; }
+.sq-bar-more .qrt-mi:hover:not(:disabled) { background: var(--bg2); color: var(--tx0); }
+.sq-bar-more .qrt-mi.on { color: var(--ac-hi); }
+.sq-bar-more .qrt-m-t { padding: var(--sp-1) var(--sp-2h) 0; font-size: var(--fs-2xs); color: var(--tx2); letter-spacing: .05em; }
+.sq-bar-more .qrt-m-sep { height: 1px; background: var(--line); margin: var(--sp-1) var(--sp-2); }
+/* 模板侧栏宽度档走 --sq-rail-w（usePref sql.railW，默认 300=原 minmax 上限）。
+ 模板栏改**浮层**——此前它是 grid 第二列，展开时把编辑器挤到 840px，
+ 而结果区 `.sq-sec.wide` 横跨两列占满 1152px，上下右缘差 312px（实际使用中反馈"不对齐"）。
+ 改成：grid 恒单列（编辑器始终满宽，与结果区右缘对齐）；模板栏绝对定位浮在编辑器右上方，
+ 不占栅格。浮层用与表格卡头同族的底色/描边/阴影，并限制高度内滚。 */
+.sq-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); min-height: 0; position: relative; }
+.sq-samples {
+  /* 下移到卡头之下——卡头右侧是 fetch_size / time_zone / page_timeout 等控件，
+     浮层若贴 top:0 会把它们盖住（实测截图：page_timeout 被切成 "page_time"）。
+     卡头高约 30px，+gap 留出呼吸后再起浮。 */
+  position: absolute; top: 38px; right: 0; z-index: 5;
+  width: var(--sq-rail-w, 300px); max-height: min(420px, calc(34vh - 50px)); overflow-y: auto;
+  background: var(--card-bg); border: 1px solid var(--line-strong); border-radius: var(--r-m);
+  box-shadow: var(--shadow-pop);
+}
 /* SQL 编辑器弹性（原 170px 写死）：首行行高 minmax(150px, 34vh) 随视口伸缩、150px 兜底；
  1136：42vh→34vh 把高度让给结果网格（DBX 式结果优先，编辑器内部仍可滚动）；
  页面需随结果表滚动，故不能把整页锁 100% 高，只弹编辑器行 */

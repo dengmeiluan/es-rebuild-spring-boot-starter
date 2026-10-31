@@ -75,7 +75,9 @@ describe('五百六十批②：--sp-0 精确等值合并 7 行（theme.css 档�
   it('AggTreeNode：agn-name/agn-op/agn-scalar 裸 2px 合并；agn-children 结构 border-left 2px 保字面', () => {
     const s = srcOf('components/builder/AggTreeNode.vue');
     expect(s).toMatch(/\.agn-name \{ width: 110px; height: 28px; font-size: var\(--fs-sm\); padding: var\(--sp-0\) var\(--sp-2\); \}/);
-    expect(s).toMatch(/\.agn-op \{ width: 130px; height: 28px; font-size: var\(--fs-sm\); padding: var\(--sp-0\) var\(--sp-2\); color: var\(--ac-hi\); \}/);
+    /* 聚合类型改二段式选择器（AggOpPicker）后 .agn-op 退役；尺寸锚移到包装类，
+       内层输入框的 2px 归零约束在全站选择器组件里同源（.agp-inp 无 padding 字面） */
+    expect(s).toMatch(/\.agn-op-pick \{ width: 130px; \}/);
     expect(s).toMatch(/\.agn-scalar \{ width: 180px; height: 28px; font-size: var\(--fs-sm\); padding: var\(--sp-0\) var\(--sp-2\); \}/);
     expect(s).toContain('.agn-children { margin-top: var(--sp-2); padding-left: var(--sp-2); border-left: 2px solid var(--line); }');
     expect(strip(s), 'agn 缩进域裸 2px padding 清零').not.toMatch(/\.(agn-name|agn-op|agn-scalar) \{[^}]*padding: 2px/);

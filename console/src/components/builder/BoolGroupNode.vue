@@ -1,6 +1,6 @@
 <template>
   <div ref="rootEl" class="bgn" :class="{ folded: collapsed }" :data-nid="node.id">
-    <div class="bgn-hd">
+    <div class="bgn-hd" @contextmenu.prevent="openRowMenu">
       <NodeSelectBox :id="node.id" />
       <span class="bgn-grip" title="拖拽整组排序（按住拖动）" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
       <button aria-label="折叠或展开整组" class="btn sm ghost" :title="collapsed ? '展开整组' : '折叠整组'"
@@ -93,6 +93,11 @@
         <div v-if="!advGroups.length" class="adv-none">无匹配算子</div>
       </div>
     </Teleport>
+    <!-- 1351：组头右键——条件行（1147）右键的同类入口。组头行尾 4 个 22px 图标钮
+     在小分组密集时同样难点准；右键把「作用在这一组」的动作一次列全，
+     并补两条此前无入口的只读导出（条件 JSON / DSL 片段）。写动作全部复用既有 emit。 -->
+    <CellContextMenu v-if="rowMenu" :x="rowMenu.x" :y="rowMenu.y" :title="rowTitle"
+      :items="rowMenuItems" @close="rowMenu = null" />
   </div>
 </template>
 
@@ -108,8 +113,12 @@ export const BGN_COLLAPSE_EVENT = 'qtp-collapse-all';
  不可变更新：remove/wrap/dissolve 经 queryAst 树操作函数；add/replace 本地展开新 children
  （insertChild 会标 arrForm 改变序列化形态，追加语义下不可用）。一切变更 emit 新对象。 */
 import { ref, computed, watch, inject, onMounted, onBeforeUnmount, nextTick } from 'vue';
-import { X, Group, Ungroup, Plus, SlidersHorizontal, ChevronDown, ChevronRight, Copy, Layers, ClipboardPaste, ClipboardCopy } from 'lucide-vue-next';
+import { X, Group, Ungroup, Plus, SlidersHorizontal, ChevronDown, ChevronRight, Copy, Layers, ClipboardPaste, ClipboardCopy, Braces, Code2 } from 'lucide-vue-next';
 import { subtreeStash, readStashSubtree, copySubtreeToStash } from '../../utils/queryStash';
+import CellContextMenu, { type CcmItem } from '../CellContextMenu.vue'; /* 1351：组头右键 */
+import { copyText } from '../../utils/format';
+import { useAppStore } from '../../stores/app';
+import { serQueryNode } from '../../utils/queryAst';
 import GenericParams from './GenericParams.vue';
 import NodeRenderer from './NodeRenderer.vue';
 import NodeSelectBox from './NodeSelectBox.vue';
@@ -197,6 +206,51 @@ function copyGroup() {
   copySubtreeToStash(props.node);
 }
 
+/* ═══ 1351：组头右键 ═══
+ 与条件行（1147）同一件 CellContextMenu。一级只留「高频 2 项 + 分组父项 + 删除」：
+ 组头行尾 4 个图标钮在深树里同样难点准，右键一次看全；另补两条此前完全没有入口的
+ 只读导出（条件 JSON / DSL 片段），排查「这组最终发出去长什么样」时不用手抄。
+ 写动作全部复用既有 emit / queryAst 工具，不新增写路径。 */
+const rowMenu = ref<{ x: number; y: number } | null>(null);
+const rowTitle = computed(() => {
+  const n = props.node;
+  const occ = OCCURS.filter(o => childrenOf(o).length).map(o => `${o}(${childrenOf(o).length})`).join(' ') || '空组';
+  return 'bool 组 · ' + occ;
+});
+function openRowMenu(e: MouseEvent) {
+  /* 输入框/下拉里右键留给浏览器原生复制粘贴（与条件行同口径） */
+  const t = e.target as HTMLElement | null;
+  if (t?.closest('input, textarea, select, .monaco-editor')) return;
+  rowMenu.value = { x: e.clientX, y: e.clientY };
+}
+async function copyJson() {
+  const ok = await copyText(JSON.stringify(props.node, null, 2));
+  useAppStore().notify(ok ? 'success' : 'error', ok ? '已复制组 JSON' : '复制失败');
+}
+async function copyDsl() {
+  const ok = await copyText(JSON.stringify(serQueryNode(props.node), null, 2));
+  useAppStore().notify(ok ? 'success' : 'error', ok ? '已复制为 DSL 片段（可直接贴到 Dev Tools）' : '复制失败');
+}
+const rowMenuItems = computed<CcmItem[]>(() => [
+  { key: 'copy-group-hd', label: '复制整组（跨查询粘贴）', icon: ClipboardCopy, run: copyGroup },
+  {
+    key: 'copy-group-more', label: '复制…', icon: Copy, sep: true, children: [
+      { key: 'copy-json', label: '复制组 JSON', icon: Braces, run: () => void copyJson() },
+      { key: 'copy-dsl', label: '复制为 DSL 片段', icon: Code2, run: () => void copyDsl() },
+    ],
+  },
+  {
+    key: 'shape-group', label: '结构…', icon: Group, children: [
+      { key: 'dup', label: '复制整组（插到下方）', icon: Copy, run: () => emit('duplicate', props.node.id) },
+      { key: 'wrap', label: '包进新的父组', icon: Group, run: () => emit('wrap') },
+      ...(props.canDissolve && !Object.keys(props.node.params).length
+        ? [{ key: 'dissolve', label: '解散本组（子句并入父组）', icon: Ungroup, run: () => emit('dissolve') }]
+        : []),
+    ],
+  },
+  { key: 'del', label: '删除整组', icon: X, danger: true, sep: true, run: () => emit('remove') },
+]);
+
 /* ═══ 985：高级算子菜单 ═══
  单开互斥（开一个分区关其他）；菜单定位锚在触发钮下方，右缘翻转防溢出；
  点外部关闭（capture 监听，菜单本体 @click.stop 免误关）；顶部过滤即时收缩分组。 */
@@ -270,8 +324,7 @@ function onParams(v: Record<string, unknown> | unknown[]) {
 }
 
 /* ---- 拖拽 ---- */
-function onDragStart(e: DragEvent) {
-  (window as any)[DRAG_KEY] = props.node.id;
+function onDragStart(e: DragEvent) {  (window as any)[DRAG_KEY] = props.node.id;
   e.dataTransfer?.setData('text/plain', props.node.id);
   fireDrag(true);
 }

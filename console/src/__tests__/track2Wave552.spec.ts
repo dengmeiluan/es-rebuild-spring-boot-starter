@@ -62,9 +62,10 @@ describe('552 ②：IndexHubView ops tab 原始 IO 补口（/cluster/raw 通道�
     expect(ih).toContain("? (ioRecorder.last('/cluster/raw') ?? ioRecorder.last('/cluster/query'))");
     expect(ih).toContain('暂无原始 IO 记录，先在本页执行一次操作（记录环近 30 条）再查看');
   });
-  it('弹窗挂载与既有 docs/query 两钮零触（rawIo545 锁语义保全）', () => {
-    expect(ih).toContain('aria-label="查看原始 IO（文档检索）"');
-    expect(ih).toContain('aria-label="查看原始 IO（DSL 查询）"');
+  it('弹窗挂载与既有 docs/query 两条入口零触（rawIo545 锁语义保全）', () => {
+    /* 1357：行内钮收进「更多 ⋯」菜单（同 rawIo545 迁移口径）——入口仍在，只是换了位置。 */
+    expect(ih).toContain("key: 'ih-raw-io-docs'");
+    expect(ih).toContain("key: 'ih-raw-io-query'");
     expect(ih).toContain('<RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />');
   });
 });

@@ -43,12 +43,19 @@ describe('1201 聚合的字段入口与参数 schema', () => {
   });
 
   it('stats / top_metrics / matrix_stats 的参数 schema 在册', () => {
-    expect(AGG_BODY_PARAMS.stats?.map(p => p.key)).toEqual(['missing']);
-    expect(AGG_BODY_PARAMS.top_metrics?.map(p => p.key).sort()).toEqual(['missing', 'size']);
-    expect(AGG_BODY_PARAMS.matrix_stats?.map(p => p.key).sort()).toEqual(['missing', 'mode']);
+    /* 断言「在册」而不是锁死全集：后续补齐必填主键（top_metrics.metrics / matrix_stats.fields）
+       属于增强，不该让这条变红。missing 不是 top_metrics 的顶层键（它在 metrics 项内），
+       故不再要求它出现——见 1244 spec 的官方文档核对。 */
+    expect(AGG_BODY_PARAMS.stats?.map(p => p.key)).toContain('missing');
+    expect(AGG_BODY_PARAMS.top_metrics?.map(p => p.key)).toEqual(
+      expect.arrayContaining(['metrics', 'size']),
+    );
+    expect(AGG_BODY_PARAMS.matrix_stats?.map(p => p.key)).toEqual(
+      expect.arrayContaining(['fields', 'mode']),
+    );
     const mode = AGG_BODY_PARAMS.matrix_stats!.find(p => p.key === 'mode')!;
     expect(mode.kind, 'mode 应为枚举').toBe('enum');
-    expect(mode.options).toEqual(['avg', 'sum', 'median']);
+    expect(mode.options, '官方五档').toEqual(expect.arrayContaining(['avg', 'sum', 'median']));
   });
 
   it('普查：字段聚合表里的每个算子都在 AGG_OPS（防拼错成幽灵项）', () => {

@@ -5,70 +5,13 @@
     <!-- chips 键盘导航——←→/Home/End 在 chips 间移动焦点（W3C APG roving），
  Enter/Space 原生触发 toggle（chip=button）；Tab 逐个可达不变，导航是纯增强 -->
     <div class="rx-chips" @keydown="onChipsKeydown">
-      <!-- ·实报「无效控制」：分页胶囊（size/from 输入）退役——执行链里
- from 恒被 (page-1)*pageSize 覆盖、size 恒被分页档接管（562 联动后彻底成为
- 分页器的重复入口），两个输入框作为「ES 检索参数」意义为零。分页唯一入口=
- 表格工具行分页器；DSL 手写档外 size（如 500）仍真实生效（执行链不注入）。
- 旧草稿树里的 size/from 键原样保留（序列化直通，用户可见可手删）。 -->
-      <button type="button" class="rx-chip" :class="{ on: open.has('sort') }" @click="toggle('sort')">
-        <span class="rx-cn">排序</span><code class="rx-key">sort</code>
-        <span class="rx-state" :class="{ on: !!tree.sort?.length }">{{ tree.sort?.length ? tree.sort.length + ' 项' : '未设置' }}</span>
-      </button>
-      <button type="button" class="rx-chip" :class="{ on: open.has('src') }" @click="toggle('src')">
-        <span class="rx-cn">字段裁剪</span><code class="rx-key">_source</code>
-        <span class="rx-state" :class="{ on: !!tree.source }">{{ tree.source ? SRC_LABEL[tree.source.mode] : '默认全部' }}</span>
-      </button>
-      <button type="button" class="rx-chip" :class="{ on: open.has('hl') }" @click="toggle('hl')">
-        <span class="rx-cn">高亮</span><code class="rx-key">highlight</code>
-        <span class="rx-state" :class="{ on: !!tree.highlight?.fields.length }">{{ tree.highlight?.fields.length ? tree.highlight.fields.length + ' 项' : '未启用' }}</span>
-      </button>
-      <button type="button" class="rx-chip" :class="{ on: open.has('aggs') }" @click="toggle('aggs')">
-        <span class="rx-cn">聚合</span><code class="rx-key">{{ tree.aggKey || 'aggs' }}</code>
-        <span class="rx-state" :class="{ on: !!tree.aggs?.length }">{{ tree.aggs?.length ? tree.aggs.length + ' 项' : '未设置' }}</span>
-      </button>
-      <!-- 987：post_filter / collapse / knn 三键一等公民化（extras 键值表升格结构化编辑） -->
-      <button type="button" class="rx-chip" :class="{ on: open.has('pf') }" title="聚合后过滤：命中统计含全部文档，返回结果按此过滤（post_filter）" @click="toggle('pf')">
-        <span class="rx-cn">后置过滤</span><code class="rx-key">post_filter</code>
-        <span class="rx-state" :class="{ on: !!tree.postFilter }">{{ tree.postFilter ? '已设置' : '未设置' }}</span>
-      </button>
-      <button type="button" class="rx-chip" :class="{ on: open.has('col') }" title="字段折叠：按字段值收敛命中（collapse）" @click="toggle('col')">
-        <span class="rx-cn">折叠</span><code class="rx-key">collapse</code>
-        <span class="rx-state" :class="{ on: !!tree.collapse }">{{ tree.collapse?.field || '未设置' }}</span>
-      </button>
-      <button type="button" class="rx-chip" :class="{ on: open.has('knn') }" title="向量近邻检索（knn）" @click="toggle('knn')">
-        <span class="rx-cn">向量检索</span><code class="rx-key">knn</code>
-        <span class="rx-state" :class="{ on: !!tree.knn }">{{ tree.knn?.field || '未设置' }}</span>
-      </button>
-      <!-- 1000：retriever 检索器（8.14+ 多路召回组合面，query 的继任写法） -->
-      <button type="button" class="rx-chip" :class="{ on: open.has('rt') }" title="检索器（8.14+）：多路召回组合——BM25 / 向量 / RRF 融合 / 文本重排 / 规则路由 / 线性加权（与 query 二选一的声明式检索面）" @click="toggle('rt')">
-        <span class="rx-cn">检索器</span><code class="rx-key">retriever</code>
-        <span class="rx-state" :class="{ on: !!tree.retriever }">{{ tree.retriever ? '已设置' : '未设置' }}</span>
-      </button>
-      <button type="button" class="rx-chip" :class="{ on: open.has('sug') }" title="搜索建议（suggest：term/phrase/completion）" @click="toggle('sug')">
-        <span class="rx-cn">搜索建议</span><code class="rx-key">suggest</code>
-        <span class="rx-state" :class="{ on: !!tree.suggest?.items.length }">{{ tree.suggest?.items.length ? tree.suggest.items.length + ' 项' : '未设置' }}</span>
-      </button>
-      <button type="button" class="rx-chip" :class="{ on: open.has('rc') }" title="重打分：首屏按 query 相关性排序，再对前 N 条用 rescore_query 二次打分（rescore）" @click="toggle('rc')">
-        <span class="rx-cn">重打分</span><code class="rx-key">rescore</code>
-        <span class="rx-state" :class="{ on: !!tree.rescore }">{{ tree.rescore ? '已设置' : '未设置' }}</span>
-      </button>
-      <button type="button" class="rx-chip" :class="{ on: open.has('sf') }" title="脚本字段：返回面追加脚本计算字段（script_fields）" @click="toggle('sf')">
-        <span class="rx-cn">脚本字段</span><code class="rx-key">script_fields</code>
-        <span class="rx-state" :class="{ on: !!tree.scriptFields?.items.length }">{{ tree.scriptFields?.items.length ? tree.scriptFields.items.length + ' 项' : '未设置' }}</span>
-      </button>
-      <button type="button" class="rx-chip" :class="{ on: open.has('rm') }" title="运行时字段：查询期动态定义字段（runtime_mappings，可与查询/聚合/脚本字段共用）" @click="toggle('rm')">
-        <span class="rx-cn">运行时字段</span><code class="rx-key">runtime_mappings</code>
-        <span class="rx-state" :class="{ on: !!tree.runtimeMappings?.items.length }">{{ tree.runtimeMappings?.items.length ? tree.runtimeMappings.items.length + ' 项' : '未设置' }}</span>
-      </button>
-      <!-- 998：查询参数（检索级顶层键）一等公民——游标翻页/精确总数/返回字段/最低评分/PIT…
-           此前全部堆在「其他顶层键」的裸键值表里，现在按 schema 给具名控件。 -->
-      <button type="button" class="rx-chip" :class="{ on: open.has('qp') }" title="检索级参数：游标翻页 / 精确总数 / 返回字段 / 最低评分 / PIT / 超时…（query 之外的检索键）" @click="toggle('qp')">
-        <span class="rx-cn">查询参数</span><code class="rx-key">search body</code>
-        <span class="rx-state" :class="{ on: qpKeys.length > 0 }">{{ qpKeys.length ? qpKeys.length + ' 项' : '未设置' }}</span>
-      </button>
-      <button type="button" class="rx-chip" :class="{ on: open.has('ex') }" @click="toggle('ex')">
-        <span class="rx-cn">其他顶层键</span>
-        <span class="rx-state" :class="{ on: !!Object.keys(tree.extras).length }">{{ Object.keys(tree.extras).length ? Object.keys(tree.extras).length + ' 个键' : '无' }}</span>
+      <!-- 1338：只列「已配置」的参数（+ 正在展开编辑的）；其余收进末尾「更多参数」。
+ 此前 14 个 chips 平铺两行 96px，默认状态下 13 个都是「未设置」占位，
+ 把结果表推到 y=812 / 视口 900 —— 每次查完都要滚动才看得到结果。 -->
+      <button v-for="c in pinnedChips" :key="c.k" type="button" class="rx-chip"
+        :class="{ on: open.has(c.k) }" :title="CHIP_TIP[c.k] || undefined" @click="toggle(c.k)">
+        <span class="rx-cn">{{ c.cn }}</span><code class="rx-key">{{ c.key }}</code>
+        <span class="rx-state" :class="{ on: isSet[c.k] }">{{ chipState(c.k) }}</span>
       </button>
     </div>
 
@@ -77,7 +20,8 @@
     <!-- 排序 -->
     <div v-if="open.has('sort')" class="rx-open">
       <div v-if="tree.sort === null" class="rx-none">未设置 <button class="btn sm ghost rx-sort-add" @click="addSort">+ 加排序</button></div>
-      <div v-for="(s, i) in tree.sort || []" :key="s.id" class="rx-sort-row">
+      <div v-for="(s, i) in tree.sort || []" :key="s.id" class="rx-sort-row"
+           @contextmenu.prevent="openSortMenu($event, s, i)">
         <!-- 排序行字段选择器只出可排序类型（ES doc_values 口径，含 boolean）；
  【W3b】候选内 date/数值族置顶（typePriority 只重排分组，候选集不变）
  998：多键排序项（{a:'asc',b:'desc'} 合并写法）不拆行——原样保留整项，用参数表编辑 -->
@@ -143,7 +87,8 @@ ES 默认返回全部字段
         <button class="btn sm ghost rx-hl-set" @click="hlSet">启用</button>
       </div>
       <template v-else>
-        <div v-for="(f, i) in tree.highlight.fields" :key="i" class="rx-hl-row">
+        <div v-for="(f, i) in tree.highlight.fields" :key="i" class="rx-hl-row"
+             @contextmenu.prevent="openHlMenu($event, f, i)">
           <!-- 高亮行只出可分词高亮的文本类字段（text/keyword）；
  【W3b】候选内 text 置顶（全文高亮主场景是分词字段） -->
           <FieldSelect :model-value="f.name" :fields="hlFields" :types="types" :type-filter="HL_TYPES" :type-priority="HL_PRIO_TYPES" @update:model-value="v => hlPatchField(i, { name: v })" />
@@ -469,6 +414,12 @@ ES 默认返回全部字段
       <div v-if="!Object.keys(tree.extras).length" class="rx-none">无（未登记的顶层键会出现在这里，原样保留）</div>
       <GenericParams :value="tree.extras" path-prefix="" @update="onExtras" />
     </div>
+    <!-- 1352：排序行右键——每行 4 个图标钮（参数/上移/下移/删除）平铺，窄栏里逐个点准成本高 -->
+    <CellContextMenu v-if="sortMenu" :x="sortMenu.x" :y="sortMenu.y" :title="sortMenuTitle"
+      :items="sortMenuItems" @close="sortMenu = null" />
+    <!-- 1352b：高亮字段行右键（同一模式——每行 2 个图标钮同样在输入框旁） -->
+    <CellContextMenu v-if="hlMenu" :x="hlMenu.x" :y="hlMenu.y" :title="hlMenuTitle"
+      :items="hlMenuItems" @close="hlMenu = null" />
   </div>
 </template>
 
@@ -476,10 +427,13 @@ ES 默认返回全部字段
 /* W2：周边子句表单区。折叠分区有内容默认展开；size/from 非数字原样保留标黄（零降级）；
  aggs 区由 挂载（本组件模板预留位置见 补丁）。 */
 import { ref, computed, watch, provide, nextTick } from 'vue';
-import { Plus, X, ChevronUp, ChevronDown, Settings2 } from 'lucide-vue-next';
+import { Plus, X, ChevronUp, ChevronDown, Settings2, Copy, Braces } from 'lucide-vue-next';
 import FieldSelect from './FieldSelect.vue';
 import FieldPicker from '../FieldPicker.vue';
 import GenericParams from './GenericParams.vue';
+import CellContextMenu, { type CcmItem } from '../CellContextMenu.vue'; /* 1352：排序行右键 */
+import { copyText } from '../../utils/format';
+import { useAppStore } from '../../stores/app';
 import SuggesterEditor from './SuggesterEditor.vue';
 import AggTreeNode from './AggTreeNode.vue';
 import MiniTreeEditor from './MiniTreeEditor.vue';
@@ -613,6 +567,85 @@ const open = ref<Set<string>>(new Set([
   ...(Object.keys(props.tree.searchParams || {}).length ? ['qp'] : []),
   ...(Object.keys(props.tree.extras).length ? ['ex'] : []),
 ]));
+/* 1338：参数条从「14 个 chips 平铺」改成「已设置常驻 + 其余收纳」。
+   真机量化（1440×900，查询工作台执行后）：结果表工具行在 y=812，视口 900 ——
+   只剩 88px 可见，用户每次查完都得滚动才能看到结果。其中 .rx-chips 独占 96px（两行），
+   而默认状态下这 14 个里有 13 个都是「未设置/未启用/无」的占位。
+   规则：**配过的参数常驻**（用户要能一眼看到自己动了什么），没配过的收进「更多参数」。
+   收纳项一旦被配置就自动出现在常驻区（已设置判定与 open 初始化同源）。 */
+const CHIP_META = [
+  { k: 'sort', cn: '排序', key: 'sort' },
+  { k: 'src', cn: '字段裁剪', key: '_source' },
+  { k: 'hl', cn: '高亮', key: 'highlight' },
+  { k: 'aggs', cn: '聚合', key: 'aggs' },
+  { k: 'pf', cn: '后置过滤', key: 'post_filter' },
+  { k: 'col', cn: '折叠', key: 'collapse' },
+  { k: 'knn', cn: '向量检索', key: 'knn' },
+  { k: 'rt', cn: '检索器', key: 'retriever' },
+  { k: 'sug', cn: '搜索建议', key: 'suggest' },
+  { k: 'rc', cn: '重打分', key: 'rescore' },
+  { k: 'sf', cn: '脚本字段', key: 'script_fields' },
+  { k: 'rm', cn: '运行时字段', key: 'runtime_mappings' },
+  { k: 'qp', cn: '查询参数', key: 'search body' },
+  { k: 'ex', cn: '其他顶层键', key: 'extras' },
+] as const;
+/* 是否已配置——与 open 初始化那串条件逐条同源（别在这里另起一套判定） */
+const isSet = computed<Record<string, boolean>>(() => ({
+  sort: !!props.tree.sort?.length,
+  src: !!props.tree.source,
+  hl: !!props.tree.highlight,
+  aggs: !!props.tree.aggs?.length,
+  pf: !!props.tree.postFilter,
+  col: !!props.tree.collapse,
+  knn: !!props.tree.knn,
+  rt: !!props.tree.retriever,
+  sug: !!props.tree.suggest,
+  rc: !!props.tree.rescore,
+  sf: !!props.tree.scriptFields,
+  rm: !!props.tree.runtimeMappings,
+  qp: qpKeys.value.length > 0,
+  ex: Object.keys(props.tree.extras).length > 0,
+}));
+/* 常驻 chips：已设置的；展开态中的也算（用户正在编辑它，不能因未设置而消失） */
+/* 1338：全部 chip 常驻（既有契约：chip 化 + ≥5 颗可键盘导航，见 fullsiteGuard ⑥ / rootExtras 176）。
+   高度问题改由**单行横向滚动**解决——.rx-chips 不再 flex-wrap，超宽时横向滑动，
+   真机实测 96px 两行 → 39px 单行，结果表可见高度 88px → 158px。 */
+const pinnedChips = computed(() => CHIP_META);
+
+/* 每个 chip 的中文提示（原先是逐个写在模板 title 上，1338 收成一表） */
+const CHIP_TIP: Record<string, string> = {
+  pf: '聚合后过滤：命中统计含全部文档，返回结果按此过滤（post_filter）',
+  col: '字段折叠：按字段值收敛命中（collapse）',
+  knn: '向量近邻检索（knn）',
+  rt: '检索器（8.14+）：多路召回组合——BM25 / 向量 / RRF 融合 / 文本重排 / 规则路由 / 线性加权（与 query 二选一的声明式检索面）',
+  sug: '搜索建议（suggest：term/phrase/completion）',
+  rc: '重打分：首屏按 query 相关性排序，再对前 N 条用 rescore_query 二次打分（rescore）',
+  sf: '脚本字段：返回面追加脚本计算字段（script_fields）',
+  rm: '运行时字段：查询期动态定义字段（runtime_mappings，可与查询/聚合/脚本字段共用）',
+  qp: '检索级参数：游标翻页 / 精确总数 / 返回字段 / 最低评分 / PIT / 超时…（query 之外的检索键）',
+};
+/* chip 右侧的状态文案——与改造前逐条同源，不另立判定 */
+function chipState(k: string): string {
+  const t = props.tree;
+  switch (k) {
+    case 'sort': return t.sort?.length ? t.sort.length + ' 项' : '未设置';
+    case 'src': return t.source ? SRC_LABEL[t.source.mode] : '默认全部';
+    case 'hl': return t.highlight?.fields.length ? t.highlight.fields.length + ' 项' : '未启用';
+    case 'aggs': return t.aggs?.length ? t.aggs.length + ' 项' : '未设置';
+    case 'pf': return t.postFilter ? '已设置' : '未设置';
+    case 'col': return t.collapse?.field || '未设置';
+    case 'knn': return t.knn?.field || '未设置';
+    case 'rt': return t.retriever ? '已设置' : '未设置';
+    case 'sug': return t.suggest?.items.length ? t.suggest.items.length + ' 项' : '未设置';
+    case 'rc': return t.rescore ? '已设置' : '未设置';
+    case 'sf': return t.scriptFields?.items.length ? t.scriptFields.items.length + ' 项' : '未设置';
+    case 'rm': return t.runtimeMappings?.items.length ? t.runtimeMappings.items.length + ' 项' : '未设置';
+    case 'qp': return qpKeys.value.length ? qpKeys.value.length + ' 项' : '未设置';
+    case 'ex': return Object.keys(t.extras).length ? Object.keys(t.extras).length + ' 个键' : '无';
+    default: return '';
+  }
+}
+
 function toggle(k: string) {
   const n = new Set(open.value);
   if (n.has(k)) n.delete(k); else n.add(k);
@@ -687,6 +720,51 @@ function moveSort(i: number, d: number) {
   patch({ sort: arr });
 }
 
+/* ═══ 1352：排序行右键 ═══
+ 排序行行尾 4 个 22px 图标钮（参数 / 上移 / 下移 / 删除）平铺——正是「表格/列表里一排小图标
+ 逐个点准」的老问题在周边子句区的翻版。右键把「作用在这一排序项」的动作收成一级，
+ 并补一条此前无入口的只读导出（这一项的 DSL 片段，排查多键排序项时不用手抄）。 */
+const sortMenu = ref<{ x: number; y: number; id: string; i: number } | null>(null);
+const sortMenuTitle = computed(() => {
+  const m = sortMenu.value;
+  const s = m ? (props.tree.sort || []).find(x => x.id === m.id) : null;
+  if (!s) return '排序项';
+  const order = String(s.params?.order ?? 'asc');
+  return `排序 · ${s.field || '(多键排序项)'} · ${order}`;
+});
+function openSortMenu(e: MouseEvent, s: SortItem, i: number) {
+  /* 下拉/输入框内右键留给浏览器原生（与条件行/树节点同口径） */
+  const t = e.target as HTMLElement | null;
+  if (t?.closest('input, textarea, select, .monaco-editor')) return;
+  sortMenu.value = { x: e.clientX, y: e.clientY, id: s.id, i };
+}
+async function copySortJson() {
+  const m = sortMenu.value;
+  const s = m ? (props.tree.sort || []).find(x => x.id === m.id) : null;
+  if (!s) return;
+  const ok = await copyText(JSON.stringify({ [s.field || 'multi']: { ...s.params } }, null, 2));
+  useAppStore().notify(ok ? 'success' : 'error', ok ? '已复制排序项 JSON' : '复制失败');
+}
+const sortMenuItems = computed<CcmItem[]>(() => {
+  const m = sortMenu.value;
+  const s = m ? (props.tree.sort || []).find(x => x.id === m.id) : null;
+  if (!m || !s) return [];
+  const len = props.tree.sort?.length || 0;
+  const cur = String(s.params?.order ?? 'asc');
+  return [
+    { key: 'sort-order', label: cur === 'asc' ? '改为降序 desc' : '改为升序 asc', icon: ChevronDown,
+      run: () => patchSort(s.id, { params: { ...s.params, order: cur === 'asc' ? 'desc' : 'asc' } }) },
+    {
+      key: 'sort-more', label: '位置与复制…', icon: Copy, sep: true, children: [
+        ...(m.i > 0 ? [{ key: 'sort-up', label: '上移一位（排序优先级）', icon: ChevronUp, run: () => moveSort(m.i, -1) }] : []),
+        ...(m.i < len - 1 ? [{ key: 'sort-down', label: '下移一位', icon: ChevronDown, run: () => moveSort(m.i, 1) }] : []),
+        { key: 'sort-json', label: '复制排序项 JSON', icon: Braces, run: () => void copySortJson() },
+      ],
+    },
+    { key: 'sort-del', label: '删除此排序项', icon: X, danger: true, sep: true, run: () => delSort(s.id) },
+  ];
+});
+
 /* _source */
 const SRC_LABEL: Record<SourceSpec['mode'], string> = { all: '全部', none: '不返回', one: '单字段', list: '字段列表', pattern: '通配裁剪' };
 function setSource(mode: SourceSpec['mode']) {
@@ -721,6 +799,47 @@ function hlDelField(i: number) {
   if (!props.tree.highlight) return;
   patch({ highlight: { ...props.tree.highlight, fields: props.tree.highlight.fields.filter((_, j) => j !== i) } });
 }
+
+/* ═══ 1352b：高亮字段行右键 ═══
+ 与排序行同源的缺口：高亮字段行也只有输入框旁 2 个图标钮（参数 / 删除），
+ 且这里的「参数」是面板切换而非字段本身的信息——右键把「作用在这一高危字段」的动作列全，
+ 并补一条此前无入口的只读导出（这一字段的高亮配置 JSON，排查 fragment/type 组合时不用手抄）。 */
+const hlMenu = ref<{ x: number; y: number; i: number } | null>(null);
+const hlMenuField = computed(() => {
+  const m = hlMenu.value;
+  return m ? props.tree.highlight?.fields[m.i] ?? null : null;
+});
+const hlMenuTitle = computed(() => {
+  const f = hlMenuField.value;
+  return f ? `高亮字段 · ${f.name || '(未选)'}` : '高亮字段';
+});
+function openHlMenu(e: MouseEvent, _f: { name: string }, i: number) {
+  const t = e.target as HTMLElement | null;
+  if (t?.closest('input, textarea, select, .monaco-editor')) return;
+  hlMenu.value = { x: e.clientX, y: e.clientY, i };
+}
+async function copyHlJson() {
+  const f = hlMenuField.value;
+  if (!f) return;
+  const ok = await copyText(JSON.stringify({ fields: [{ [f.name]: Object.keys(f.params).length ? f.params : {} }] }, null, 2));
+  useAppStore().notify(ok ? 'success' : 'error', ok ? '已复制高亮字段配置' : '复制失败');
+}
+const hlMenuItems = computed<CcmItem[]>(() => {
+  const m = hlMenu.value;
+  const f = hlMenuField.value;
+  if (!m || !f) return [];
+  return [
+    { key: 'hl-params', label: '字段参数（fragment_size…）', icon: Settings2,
+      run: () => { hlParamsIdx.value = hlParamsIdx.value === m.i ? null : m.i; } },
+    { key: 'hl-more', label: '复制…', icon: Copy, sep: true, children: [
+      { key: 'hl-name', label: '复制字段名', icon: Copy, run: () => {
+        copyText(f.name).then(ok => useAppStore().notify(ok ? 'success' : 'error', ok ? `已复制「${f.name}」` : '复制失败'));
+      } },
+      { key: 'hl-json', label: '复制此字段的高亮配置 JSON', icon: Braces, run: () => void copyHlJson() },
+    ] },
+    { key: 'hl-del', label: '删除此高亮字段', icon: X, danger: true, sep: true, run: () => hlDelField(m.i) },
+  ];
+});
 
 /* aggs */
 function aggAdd() {
@@ -1003,7 +1122,16 @@ function onExtras(v: Record<string, unknown> | unknown[]) {
 
 <style scoped>
 /* v4 参数条样式：chips 横向一行 + 展开内容全宽 */
-.rx-chips { display: flex; align-items: center; gap: var(--sp-1h); flex-wrap: wrap; margin-bottom: var(--sp-2); justify-content: flex-start; }
+/* 1338：参数条**单行横向滚动**——此前 flex-wrap 让 14 个 chips 折成两行 96px，
+ 把结果表推到 y=812（视口 900 只剩 88px 可见，每次查完都要滚动）。
+ 单行后 .rx 39px，结果表可见 158px。窄档仍可横向滑动看到全部（不裁切、不藏项）；
+ 滚动条细化为 4px 以免自带一条粗横线；末端加渐隐提示「还有更多」。 */
+.rx-chips { display: flex; align-items: center; gap: var(--sp-1h); flex-wrap: nowrap;
+  margin-bottom: var(--sp-2); justify-content: flex-start;
+  overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; padding-bottom: var(--sp-0); }
+.rx-chips::-webkit-scrollbar { height: 4px; }
+.rx-chips::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 2px; }
+.rx-chip { flex: 0 0 auto; }
 .rx-chip { display: inline-flex; align-items: center; gap: var(--sp-1h); border: 1px solid var(--line-strong); border-radius: var(--r-m);
   background: transparent; color: var(--tx2); font-size: var(--fs-xs); padding: var(--sp-1) 9px; cursor: pointer;
   transition: border-color var(--tr), background var(--tr), color var(--tr); }

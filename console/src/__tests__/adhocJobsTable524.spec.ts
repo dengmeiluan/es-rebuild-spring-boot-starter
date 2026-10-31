@@ -185,7 +185,11 @@ describe('524 W1 Adhoc 最近作业表（挂载行为）', () => {
     /* 554 同步更新：.card 壳退役改 .ar-sec border-top 分节（定位语义=含作业表工具行的分节，不变） */
     [...host.querySelectorAll('.ar-sec')].find(c => c.querySelector('.ar-jobs-tools'))!;
 
-  it('kw 过滤收窄行集 + MarkText 命中高亮 + 清除过滤恢复', async () => {
+  /* 1319d：本用例 = 动态 import 整个 AdhocRebuildView（含 Monaco 链）+ 挂载。
+     单文件冷跑实测 4.1s，并发门禁的机器负载下会贴穿 5s 默认帽被记成失败
+     （两条断言本身与时间无关）。提额 30s，留足 2× 以上余量，
+     避免把机器冷变换抖动记成产品红灯。 */
+  it('kw 过滤收窄行集 + MarkText 命中高亮 + 清除过滤恢复', { timeout: 30000 }, async () => {
     mocks.adhocJobs.mockResolvedValue(JOBS);
     const View = (await import('../views/AdhocRebuildView.vue')).default;
     const { app, host } = await mountView(View);

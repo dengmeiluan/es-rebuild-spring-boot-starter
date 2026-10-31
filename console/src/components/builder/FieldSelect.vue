@@ -114,6 +114,12 @@ function editRuntime() {
   rtCtx?.edit(props.modelValue);
 }
 
+/* 1336：容器（object/nested）被点中时记下它的路径——面板只显示该容器的子字段，
+   但**不改 modelValue**（改了就写坏 DSL）。输入框仍显示用户原本的字段值。 */
+const expandPath = ref('');
+/* 用户重新打字/重新聚焦字段框即退出展开态 */
+watch(() => props.modelValue, () => { if (expandPath.value) expandPath.value = ''; });
+
 /* 过滤+rank 排序+cap 收口 fieldSearch；最近使用（per-index）中命中当前搜索的置顶 */
 const res = computed(() => {
   /* typeFilter/typePriority 透传 searchFields；prio 空数组必须归一为 null
@@ -121,7 +127,7 @@ const res = computed(() => {
   const prio = props.typePriority?.length ? props.typePriority : null;
   const s = searchFields({
     fields: props.fields.map(f => ({ path: f, type: props.types[f] || '' })),
-    query: props.modelValue || '',
+    query: expandPath.value || props.modelValue || '',
     cap: SCAN_CAP,
     typeFilter: props.typeFilter,
     typePriority: props.typePriority,
@@ -158,7 +164,9 @@ const res = computed(() => {
     ...rec.map(f => s.flat.find(h => h.path === f)).filter((h): h is FieldHit => !!h),
     ...rest,
   ].map((h, i) => (h.i === i ? h : { ...h, i }));
-  return { total: s.total, capped: s.capped, flat, groups: groupByLabel(flat, prio) };
+  /* 1336：展开态只留子字段——容器自身不是可查叶子，留在列表里会再被点到 */
+  const shown = expandPath.value ? flat.filter(h => h.path !== expandPath.value) : flat;
+  return { total: s.total, capped: s.capped, flat: shown, groups: groupByLabel(shown, prio) };
 });
 const flat = computed(() => res.value.flat);
 const aliasCount = computed(() => flat.value.filter(h => h.alias).length);
@@ -259,6 +267,25 @@ function onInput(e: Event) {
 const valSuggest = getActivePinia() ? useTermsSuggest(curFieldSearchIndex, () => props.types) : null;
 
 function pick(h: FieldHit) {
+  /* 1336：object / nested 这类**容器**字段不能直接写成查询字段。
+     真机实证：选中 `publisher`(object) 后字段被清空，DSL 落成
+     `{"match":{"":""}}` —— 一条永不命中、且没有任何报错的条件。
+     容器本身不是叶子（查询要打它的子字段），所以这里不写回，而是把输入切成
+     「容器.」前缀，让它的子字段立刻成为候选——点一下就能继续选，不用重新打字。 */
+  /* 1336：object / nested 是**容器**，不能直接当查询字段。
+     真机实证：选中 `publisher`(object) 后字段被清空，DSL 落成 `{"match":{"":""}}`
+     —— 一条永不命中、且没有任何报错的条件。
+     容器要查的是它的子字段。这里不写回字段（会写坏 DSL），改成把它「展开」：
+     把子字段登记为最近使用并直接弹出子字段候选（输入框保持原值不动）。
+     子字段从 props.fields 里按 `path + '.'` 前缀取——共享字段源本来就带着它们。 */
+  if (h.type === 'object' || h.type === 'nested') {
+    /* 1336：容器不能当查询字段。真机实证：选中 `publisher`(object) 后字段被清空，
+       DSL 落成 `{"match":{"":""}}` —— 永不命中且零报错。
+       这里不写回、也不 emit picked，只把它展开成子字段候选（输入框值保持不动）。 */
+    expandPath.value = h.path;
+    cursor.value = 0;
+    return;
+  }
   rememberRecentField(curFieldSearchIndex(), h.path);
   if (valSuggest && KEYWORD_VALUE_TYPES.includes(h.type)) valSuggest.suggest(h.path, '');
   emit('update:modelValue', h.path);

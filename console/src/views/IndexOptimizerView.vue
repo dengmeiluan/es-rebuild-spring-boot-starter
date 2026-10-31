@@ -79,7 +79,8 @@
  Workspace/Plugins 先例，留白/图标档归组件单源） -->
         <EmptyState v-if="recs.length === 0" compact :icon="CheckCircle2" text="索引参数已符合推荐配置，无需调整" />
         <div v-else class="io-rec-list">
-          <div v-for="r in recs" :key="r.id" class="io-rec" :class="'sv-' + r.severity">
+          <div v-for="r in recs" :key="r.id" class="io-rec" :class="'sv-' + r.severity"
+            @contextmenu.prevent="openRecMenu($event, r)">
             <label class="io-rec-l">
               <input type="checkbox" v-model="checked[r.id]" />
               <span class="io-rec-tt sec-t">{{ r.title }}</span>
@@ -154,12 +155,21 @@
 
     <!-- 原始 IO 弹窗（宿主受控开关；rec 取本页最近一条 index-settings 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
+
+    <!-- 1368：建议条目右键菜单（项目统一 CellContextMenu）。
+     一级按右键约定：勾选此条（最高频）+ 复制建议配置（下一步直接粘进 PUT body）+ 分组父行。 -->
+    <CellContextMenu
+      v-if="recMenu"
+      :x="recMenu.x" :y="recMenu.y" :title="recMenu.title"
+      :items="recMenuItems"
+      @close="recMenu = null"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, reactive, onMounted, watch } from 'vue';
-import { Wand2, RefreshCcw, Play, CheckCircle2, ArrowRight, Layers, AlertTriangle, FileDown, Terminal, ShieldAlert } from 'lucide-vue-next';
+import { Wand2, RefreshCcw, Play, CheckCircle2, ArrowRight, Layers, AlertTriangle, FileDown, Terminal, ShieldAlert, Copy, Braces, ChevronsUpDown } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环，546/548 同款） */
@@ -167,13 +177,14 @@ import RawIoModal from '../components/RawIoModal.vue';
 import { useRouter } from 'vue-router';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
-import { exportStamp, downloadText } from '../utils/format';
+import { exportStamp, downloadText, copyText } from '../utils/format';
 import { useIdxState } from '../composables/urlState';
 import CurrentIdxChip from '../components/CurrentIdxChip.vue'; /* ：页内选择器退役换只读 chip */
 import PickCurrentIdxBtn from '../components/PickCurrentIdxBtn.vue'; /* ：「用当前索引」回填钮统一件 */
 import SkeletonBox from '../components/SkeletonBox.vue';
 import EmptyState from '../components/EmptyState.vue';
 import StatusPill from '../components/StatusPill.vue'; /* ：severity 徽标统一件 */
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue'; /* 1368：建议条目右键菜单 */
 import { askConfirm } from '../composables/confirm';
 /* W4：建议严重度中文标签收口 utils/esEnumZh 的 sevZh（别名保模板
  svLabel 字面量；critical→严重 / warn→警告 / 其余→建议，逐字同旧 svLabel）。
@@ -240,6 +251,49 @@ const segAdvice = computed<SegmentAdvice | null>(() => {
 });
 
 interface Rec { id: string; key: string; title: string; desc: string; current: any; suggest: any; severity: 'critical' | 'warn' | 'info'; path: string; }
+
+/* ═══ 1368：建议条目右键菜单 ═══
+ 用户要求「鼠标右键必须极致的增强在整个项目，现在很多地方没有右键能力」——
+ 优化建议列表此前右键是浏览器默认菜单。一级按右键约定：勾选此条 + 复制建议配置
+ （运营拿到建议后的下一步就是把它贴进 PUT _settings body）+ 分组父行。 */
+const recMenu = ref<{ x: number; y: number; rec: Rec; title: string } | null>(null);
+function openRecMenu(e: MouseEvent, r: Rec) {
+  recMenu.value = { x: e.clientX, y: e.clientY, rec: r, title: `${svLabel(r.severity)} · ${r.key}` };
+}
+/* 建议配置片段：与页面下方「Body 预览」同一形状（{ index: {…} } 根层 + dot-path 展开）。
+   注意 rec.path 是**相对 index. 的路径**（如 'refresh_interval'、'blocks.read_only_allow_delete'），
+   漏掉 index 根层会得到 {"refresh_interval":"30s"} —— PUT _settings 会被 ES 拒绝。 */
+function recBody(r: Rec): string {
+  const parts = (r.path || r.key).split('.').filter(Boolean);
+  const body: any = { index: {} };
+  let node: any = body.index;
+  for (let i = 0; i < parts.length - 1; i++) {
+    node[parts[i]!] = node[parts[i]!] || {};
+    node = node[parts[i]!];
+  }
+  node[parts[parts.length - 1]!] = r.suggest;
+  return JSON.stringify(body, null, 2);
+}
+async function recCopy(text: string, okMsg: string) {
+  const ok = await copyText(text);
+  store.notify(ok ? 'success' : 'error', ok ? okMsg : '复制失败');
+}
+const recMenuItems = computed<CcmItem[]>(() => {
+  const m = recMenu.value;
+  if (!m) return [];
+  const on = !!checked[m.rec.id];
+  return [
+    { key: 'rec-toggle', label: on ? '取消勾选此条' : '勾选此条', icon: CheckCircle2, run: () => { checked[m.rec.id] = !on; } },
+    { key: 'rec-copy-body', label: '复制建议配置（可直粘 PUT body）', icon: Braces, run: () => void recCopy(recBody(m.rec), `已复制「${m.rec.key}」建议配置`) },
+    {
+      key: 'rec-more', label: '更多…', icon: ChevronsUpDown, sep: true, children: [
+        { key: 'rec-copy-key', label: '复制键名', icon: Copy, run: () => void recCopy(m.rec.key, `已复制 ${m.rec.key}`) },
+        { key: 'rec-copy-cur', label: '复制当前值', icon: Copy, run: () => void recCopy(m.rec.current == null ? '(未设)' : String(m.rec.current), '已复制当前值') },
+        { key: 'rec-only', label: '只勾选此条', icon: CheckCircle2, run: () => { for (const k of Object.keys(checked)) checked[k] = false; checked[m.rec.id] = true; } },
+      ],
+    },
+  ];
+});
 
 function pickCurrent(s: any, path: string): any {
   return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), s);

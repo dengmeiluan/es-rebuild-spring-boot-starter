@@ -69,8 +69,10 @@ describe('963 DslQueryView：删除执行体按端点归属守卫', () => {
 });
 
 describe('963 ResultTable：行内编辑钮 + 本地写入/提交链', () => {
-  it('行内「编辑文档」钮 = editable && canWrite（宿主开关再叠本组件连接写档）', () => {
-    expect(rt).toContain('<button v-if="editable && canWrite" aria-label="编辑文档"');
+  it('「编辑文档」入口 = editable && canWrite（宿主开关再叠本组件连接写档）', () => {
+    /* 1364：行内钮收进「更多 ⋯」菜单——门禁条件原样跟着搬，语义不变：
+       非写权用户即使打开菜单也不出现「编辑文档」。 */
+    expect(rt).toMatch(/props\.editable && canWrite\.value[\s\S]{0,24}key: 'act-edit', label: '编辑文档'/);
   });
 
   it('applyEdit 首行 canWrite 早退（双击/Enter/blur/Tab 的本地 pending 写入先拦）', () => {

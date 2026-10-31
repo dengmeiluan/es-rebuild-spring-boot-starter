@@ -98,7 +98,7 @@ describe('551 ⑤：DevToolsView 历史行一键转收藏（store.addFavorite �
 describe('551 ⑥a：IndexHubView ih-card-flush 大卡壳退役（.ih-hd/.ih-tabs border-bottom 承接）', () => {
   it('card 壳退役，ih-ws 分节容器在场', () => {
     expect(ih, 'card ih-card-flush 双类壳退役').not.toContain('class="card ih-card-flush"');
-    expect(ih, 'ih-ws 分节容器在场').toContain('<div class="ih-ws">');
+    expect(ih, 'ih-ws 分节容器在场').toMatch(/<div class="ih-ws"(?:\s+:class="|>)/);
     expect(ih, '.ih-card-flush 样式行退役').not.toContain('.ih-card-flush { padding: 0; }');
   });
   it('.ih-hd/.ih-tabs 两条 border-bottom 分节线零触（承接面在场）', () => {

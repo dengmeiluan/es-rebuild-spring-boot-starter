@@ -125,11 +125,22 @@ describe('W2 批：SqlConsole 布局可调 + 补全单例', () => {
     await settle();
     /* 五百四十三批：sq-card 壳退役→结果卡 sq-sec border-top 分节，锁同步更新 */
     expect(host.querySelector('.sq-sec.wide'), '结果卡必须出').toBeTruthy();
-    btn(host, '[data-sq-result-h]').click();
+    /* 1353/1354：独立高度档钮进「结果表更多 ⋯」菜单（工具栏平铺收口），
+       默认档也从 500 改为「填满剩余空间」。本条意图不变：换档要真的落盘并作用到表格上。 */
+    btn(host, '[data-test="sq-bar-more"]').click();
+    await settle();
+    const t = readFileSync(join(__dirname, '../views/SqlConsoleView.vue'), 'utf-8');
+    expect(t, '默认档必须是填满').toMatch(/useTierCycle\('sql\.resultH', RESULT_H_TIERS, 'fill'\)/);
+    /* 选 800 档 */
+    const pick800 = Array.from(host.querySelectorAll<HTMLButtonElement>('.sq-bar-more .qrt-mi'))
+      .find(b => (b.textContent || '').trim() === '800px');
+    expect(pick800, '菜单里必须有 800px 档').toBeTruthy();
+    pick800!.click();
     await settle();
     expect(localStorage.getItem('es-console.pref.sql.resultH')).toBe('800');
     const v = readFileSync(join(__dirname, '../views/SqlConsoleView.vue'), 'utf-8');
-    expect(v).toContain(`:max-height="resultH + 'px'"`);
+    expect(v).toContain(':max-height="resultMaxHeight"');
+    expect(v).toContain(':min-height="resultMinHeight"');
   });
 
   it('③ DSL 预览高度档：转 DSL 出卡 → 默认 300 → 点高 → 500 落盘 + 内联 maxHeight', async () => {

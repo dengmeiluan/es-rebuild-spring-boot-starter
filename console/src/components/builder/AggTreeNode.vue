@@ -1,13 +1,12 @@
 <template>
   <div class="agn">
-    <div class="agn-hd">
+    <div class="agn-hd" @contextmenu.prevent="openRowMenu">
       <input class="inp agn-name mono" :value="node.name" title="聚合名"
              @input="emit('update:node', { ...node, name: ($event.target as HTMLInputElement).value })" />
-      <input class="inp agn-op mono" :value="node.op" :list="'aggops-' + node.id" placeholder="聚合类型" title="聚合类型（可手输任意 ES 聚合名）"
-             @input="emit('update:node', { ...node, op: ($event.target as HTMLInputElement).value })" />
-      <datalist :id="'aggops-' + node.id">
-        <option v-for="(lb, op) in AGG_OPS" :key="op" :value="op">{{ lb }}</option>
-      </datalist>
+      <!-- 聚合类型：族→算子二段式选择器（此前是 68 项平铺的原生 datalist，
+ 长列表里逐项认名字）；仍保留手输任意 ES 聚合名的既有契约 -->
+      <AggOpPicker class="agn-op-pick" :model-value="node.op" placeholder="聚合类型"
+        @update:model-value="v => emit('update:node', { ...node, op: v })" />
       <span style="flex:1"></span>
       <button aria-label="meta" class="btn sm ghost" :class="{ on: metaOpen }" title="meta" @click="metaOpen = !metaOpen"><Tag :size="12" /></button>
       <button aria-label="删除聚合" class="btn sm ghost danger" title="删除聚合" @click="emit('remove')"><X :size="12" /></button>
@@ -53,6 +52,9 @@
       />
       <button class="btn sm ghost agn-add" @click="addChild"><Plus :size="12" /> 子聚合</button>
     </div>
+    <!-- 1351：聚合节点右键——同批补齐的第四类节点入口（条件/组/包装/容器之后） -->
+    <CellContextMenu v-if="rowMenu" :x="rowMenu.x" :y="rowMenu.y" :title="rowTitle"
+      :items="rowMenuItems" @close="rowMenu = null" />
   </div>
 </template>
 
@@ -60,21 +62,60 @@
 /* W2：聚合树节点。op 用 datalist 自由输入（建议但不限制——未知聚合名零降级）。
  换 op 保留 body（参数用户自行调整，不静默丢）。组件经文件名自引用递归。 */
 import { ref, computed } from 'vue';
-import { X, Plus, Tag } from 'lucide-vue-next';
+import { X, Plus, Tag, Copy, Braces, Code2 } from 'lucide-vue-next';
 import GenericParams from './GenericParams.vue';
+import CellContextMenu, { type CcmItem } from '../CellContextMenu.vue'; /* 1351：聚合节点右键 */
+import { copyText } from '../../utils/format';
+import { useAppStore } from '../../stores/app';
 import AggRangesPanel from './AggRangesPanel.vue';
 import AggFiltersPanel from './AggFiltersPanel.vue';
 import AggOrderPanel from './AggOrderPanel.vue';
 import AggBoundsPanel from './AggBoundsPanel.vue';
 import AggCompositePanel from './AggCompositePanel.vue';
-import { AGG_OPS, AGG_BODY_PARAMS } from '../../utils/queryAstOps';
-import { nid, type AggNode } from '../../utils/queryAst';
+import AggOpPicker from './AggOpPicker.vue';
+import { AGG_BODY_PARAMS } from '../../utils/queryAstOps';
+import { nid, serAggNode, type AggNode } from '../../utils/queryAst';
 
 const props = defineProps<{ node: AggNode; fields: string[]; types: Record<string, string> }>();
 const emit = defineEmits<{ (e: 'update:node', n: AggNode): void; (e: 'remove'): void }>();
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const metaOpen = ref(false);
+
+/* ═══ 1351：聚合节点右键 ═══
+ 聚合树一节里每个节点只有「类型选择 / meta / 删除」三个入口，且它们**都在输入框旁**，
+ 窄栏里改聚合名时极易点错。右键把「作用在这个聚合」的动作收成一级 2 项 + 分组，
+ 并补两条此前完全无入口的只读导出：本聚合 JSON（含子聚合，和写进请求体的片段同形）与
+ 仅本层的 DSL 片段（排查「这个聚合最终长什么样」不用手抄）。 */
+const rowMenu = ref<{ x: number; y: number } | null>(null);
+const rowTitle = computed(() => `聚合 · ${props.node.name || '（未命名）'}${props.node.op ? ' · ' + props.node.op : ''}`);
+function openRowMenu(e: MouseEvent) {
+  const t = e.target as HTMLElement | null;
+  if (t?.closest('input, textarea, select, .monaco-editor')) return;
+  rowMenu.value = { x: e.clientX, y: e.clientY };
+}
+async function copyJson() {
+  const ok = await copyText(JSON.stringify(serAggNode(props.node), null, 2));
+  useAppStore().notify(ok ? 'success' : 'error', ok ? '已复制聚合 JSON' : '复制失败');
+}
+async function copyDsl() {
+  const ok = await copyText(JSON.stringify({ [props.node.aggKey || 'aggs']: serAggNode(props.node) }, null, 2));
+  useAppStore().notify(ok ? 'success' : 'error', ok ? '已复制为 DSL 片段（可直接贴到请求体）' : '复制失败');
+}
+const rowMenuItems = computed<CcmItem[]>(() => [
+  { key: 'copy-dsl-1', label: '复制为 DSL 片段', icon: Code2, run: () => void copyDsl() },
+  {
+    key: 'copy-more', label: '复制…', icon: Copy, sep: true, children: [
+      { key: 'copy-json', label: '复制聚合 JSON（含子聚合）', icon: Braces, run: () => void copyJson() },
+    ],
+  },
+  {
+    key: 'shape-group', label: '结构…', icon: Plus, children: [
+      { key: 'add-child', label: '加子聚合', icon: Plus, run: addChild },
+    ],
+  },
+  { key: 'del', label: '删除此聚合', icon: X, danger: true, sep: true, run: () => emit('remove') },
+]);
 
 /* 1022：面板专属键（ranges/filters）由面板权威编辑——参数表视图剥离，表内加出该键路由回流。
    1031：order 由 AggOrderPanel 权威编辑，但只接可投影形态（数组逐项单键/单键对象）——
@@ -212,7 +253,9 @@ function delChild(id: string) {
 .agn { border: 1px solid var(--line-strong); border-radius: var(--r-s); background: var(--bg1); padding: var(--sp-2) var(--sp-3); margin-bottom: var(--sp-2); }
 .agn-hd { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
 .agn-name { width: 110px; height: 28px; font-size: var(--fs-sm); padding: var(--sp-0) var(--sp-2); }
-.agn-op { width: 130px; height: 28px; font-size: var(--fs-sm); padding: var(--sp-0) var(--sp-2); color: var(--ac-hi); }
+.agn-op-pick { width: 130px; }
+.agn-op-pick :deep(.aop-box) { height: 28px; }
+.agn-op-pick :deep(.aop-inp) { color: var(--ac-hi); }
 .agn-sub { margin-top: var(--sp-2); padding: var(--sp-2) var(--sp-3); background: var(--bg2); border-radius: var(--r-s); }
 .agn-body { margin-top: var(--sp-2); }
 .agn-scalar { width: 180px; height: 28px; font-size: var(--fs-sm); padding: var(--sp-0) var(--sp-2); }

@@ -72,18 +72,18 @@
         <div class="is-form">
           <div class="card-t"><Zap :size="13" /> 热参数（点击即可动态生效）</div>
           <div class="is-rows">
-            <div class="is-row">
+            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)">
               <label><DotKey k="refresh_interval" /></label>
               <input v-model="form.refresh_interval" class="is-input mono" placeholder="1s / 30s / -1（禁用）" @blur="riCheck(form.refresh_interval)" />
               <div v-if="riHint" class="il-hint" :class="'il-' + riLevel">{{ riHint }}</div>
               <div class="is-hint">批量导入时改 <code>-1</code>，完成后再调回 <code>1s</code>；数值越大 CPU/IO 越省</div>
             </div>
-            <div class="is-row">
+            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)">
               <label><DotKey k="number_of_replicas" /></label>
               <input v-model="form.number_of_replicas" class="is-input mono" placeholder="0 / 1 / 2" />
               <div class="is-hint">调 <code>0</code> 加速导入；调回 <code>1+</code> 恢复高可用</div>
             </div>
-            <div class="is-row">
+            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)">
               <label><DotKey k="blocks.read_only" /></label>
               <select v-model="form['blocks.read_only']" class="is-input">
                 <option value="">- 未设置 -</option>
@@ -92,7 +92,7 @@
               </select>
               <div class="is-hint">紧急冻结索引写入；恢复用 <code>false</code></div>
             </div>
-            <div class="is-row">
+            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)">
               <label><DotKey k="blocks.read_only_allow_delete" /></label>
               <select v-model="form['blocks.read_only_allow_delete']" class="is-input">
                 <option value="">- 未设置 -</option>
@@ -101,7 +101,7 @@
               </select>
               <div class="is-hint">磁盘 flood-stage 时 ES 会置 <code>true</code>；清盘后手工置 <code>false</code></div>
             </div>
-            <div class="is-row">
+            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)">
               <label><DotKey k="blocks.write" /></label>
               <select v-model="form['blocks.write']" class="is-input">
                 <option value="">- 未设置 -</option>
@@ -110,17 +110,17 @@
               </select>
               <div class="is-hint">shrink/split/clone 前需临时置 true</div>
             </div>
-            <div class="is-row">
+            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)">
               <label><DotKey k="routing.allocation.total_shards_per_node" /></label>
               <input v-model="form['routing.allocation.total_shards_per_node']" type="number" class="is-input mono" placeholder="留空 = 不限" />
               <div class="is-hint">单节点承载该索引最大分片数；平衡热点</div>
             </div>
-            <div class="is-row">
+            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)">
               <label><DotKey k="max_result_window" /></label>
               <input v-model="form.max_result_window" type="number" class="is-input mono" placeholder="10000（默认）" />
               <div class="is-hint">深分页阈值；建议改用 search_after 而非提高该值</div>
             </div>
-            <div class="is-row">
+            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)">
               <label><DotKey k="highlight.max_analyzed_offset" /></label>
               <input v-model="form['highlight.max_analyzed_offset']" type="number" class="is-input mono" placeholder="1000000（默认）" />
               <div class="is-hint">解决长文本高亮 illegal_argument_exception</div>
@@ -252,6 +252,9 @@
     <!-- 原始 IO 弹窗（宿主受控开关；rec=最近一条 /cluster/index-settings 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
   </div>
+  <!-- 1341：设置行右键——键名/当前值/请求体片段一键带走 -->
+  <CellContextMenu v-if="rowMenu" :x="rowMenu.x" :y="rowMenu.y" :title="'设置 · ' + rowMenu.key"
+    :items="rowMenuItems" @close="rowMenu = null" />
 </template>
 
 <script setup lang="ts">
@@ -266,6 +269,7 @@ import { api, ioRecorder, type RawIoRec } from '../api';
 import RawIoModal from '../components/RawIoModal.vue';
 import SearchFilterBar from '../components/SearchFilterBar.vue'; /* ：raw 面过滤胶囊统一件（第 16 胞） */
 import PageHeader from '../components/PageHeader.vue';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import CurrentIdxChip from '../components/CurrentIdxChip.vue'; /* ：页内选择器退役换只读 chip */
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
@@ -351,6 +355,46 @@ function selectAllRaw(e: MouseEvent | KeyboardEvent) {
   sel.removeAllRanges();
   sel.addRange(range);
 }
+/* 1341：设置行右键。全站右键普查（按渲染表面扫 16 条路由）发现本页 9 个热参数行
+   完全没有右键；而这些行的键名正是用户下一步要贴进 DevTools / 设置 API 的东西，
+   当前只能靠肉眼抄。一级只留「复制键名」（最高频）+「更多…」分组父项（项目右键约定）。
+   ⚠键名取自该行 DotKey 的渲染文本，避免在模板里再写一份与 UI 可能漂移的对照表。 */
+const rowMenu = ref<{ x: number; y: number; key: string; val: string } | null>(null);
+
+/** 从被右键的 .is-row 里读出键名与当前值（值取该行 .is-input 的 value）。 */
+function openRowMenu(e: MouseEvent) {
+  const row = (e.currentTarget as HTMLElement) || null;
+  if (!row) return;
+  /* 键名只认 DotKey：它的 title 恒为完整键（.dotkey 内部用 <wbr> 断行，
+     textContent 可能被折成「refre sh_interval」，所以取 title 而不是文本）。 */
+  const dk = row.querySelector('.dotkey') as HTMLElement | null;
+  const key = (dk?.getAttribute('title') || dk?.textContent || '').replace(/\s+/g, '').trim();
+  if (!key) return;
+  const el = row.querySelector('input.is-input, select.is-input') as HTMLInputElement | HTMLSelectElement | null;
+  const val = el ? String(el.value ?? '') : '';
+  rowMenu.value = { x: e.clientX, y: e.clientY, key, val };
+}
+
+const rowMenuItems = computed<CcmItem[]>(() => {
+  const m = rowMenu.value;
+  if (!m) return [];
+  const copy = async (text: string, msg: string) => {
+    const ok = await copyText(text);
+    store.notify(ok ? 'success' : 'error', ok ? msg : '复制失败');
+  };
+  const body = JSON.stringify({ index: { [m.key]: m.val || null } }, null, 2);
+  return [
+    { key: 'is-copy-key', label: '复制设置键名', run: () => void copy(m.key, `已复制「${m.key}」`) },
+    {
+      key: 'is-more', label: '更多…', sep: true, children: [
+        { key: 'is-copy-val', label: `复制当前值（${m.val || '未设置'}）`, run: () => void copy(m.val, '已复制当前值') },
+        { key: 'is-copy-pair', label: '复制「键: 值」', run: () => void copy(`${m.key}: ${m.val}`, '已复制键值对') },
+        { key: 'is-copy-body', label: '复制为设置请求体（PUT _settings 片段）', run: () => void copy(body, '已复制请求体片段') },
+      ],
+    },
+  ];
+});
+
 /* 复制全部（ v3 范式）——失败必须出声，错误 toast 直接带「全选内容」动作 */
 async function copyRawSettings() {
   if (await copyText(rawText.value)) { store.notify('success', '完整 settings 已复制'); return; }

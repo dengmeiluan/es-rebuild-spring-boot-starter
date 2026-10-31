@@ -19,8 +19,13 @@ const SRC = join(__dirname, '..');
 const rt = readFileSync(join(SRC, 'components/ResultTable.vue'), 'utf-8');
 
 describe('562 实报④:RT 滚动壳贴合内容(数据少不再撑出大片空白)', () => {
-  it('rt-wrap-shell 改 flex:0 1 auto(贴内容+可收缩),定位语义与 min-height:0 保留', () => {
-    expect(rt).toMatch(/\.rt-wrap-shell \{ position: relative; flex: 0 1 auto; min-height: 0; display: flex; \}/);
+  it('rt-wrap-shell 撑满结果区（1365 回合：底纹已有，空区不再是死白）', () => {
+    /* 562 当年改 flex:0 1 auto 是为了消掉「数据少时下方一大片空白」；1359b 给表体加了
+       行线底纹后那块空白已是网格延续（dbx/DBeaver 同款），不再是死白；而 flex-grow:0
+       的代价是 .rt 里 96px 完全没被任何子元素占用（实测 383px 容器只用了 240px），
+       正是用户反复说的「默认可视表格特别窄，下面还有那么多空间」。1365 回 flex:1 1 auto，
+       240px 地板保留（极小窗口仍保可读行数）。 */
+    expect(rt).toMatch(/\.rt-wrap-shell \{ position: relative; flex: 1 1 auto; min-height: 240px; display: flex; \}/);
   });
   it('rt-wrap 滚动视口形态零触(overflow/flex:1 在壳内仍吃满壳)', () => {
     expect(rt).toMatch(/\.rt-wrap \{ flex: 1; min-width: 0; overflow: auto;/);

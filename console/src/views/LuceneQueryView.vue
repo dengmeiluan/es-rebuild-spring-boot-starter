@@ -48,6 +48,18 @@
       <div class="lc-pane-stack">
       <!-- 轨4：.lc-card 局部壳退役（四刀约定③④）——pane 已是容器，内容直贴，
  分界由 .lc-card-hd border-bottom 承接；warn 块为语义告警框（红框语义同族）自持边框 -->
+      <!-- DSL→Lucene 翻译缺失常驻提示：进站那一刻的 toast 看完就没了，刷新更是什么都不剩，
+ 用户会拿着「少了条件」的 query_string 去跑还以为等价。这里把它做成可关闭的常驻条，
+ 逐条列出 query_string 表达不了的子句名，并给出换通道指引。 -->
+      <div v-if="carriedLossy.length" class="lc-lossy" role="status">
+        <AlertTriangle :size="13" />
+        <div class="lc-lossy-body">
+          <b>这份查询从 DSL 翻译而来，但有 {{ carriedLossy.length }} 处 query_string 表达不了：</b>
+          <span class="lc-lossy-list mono">{{ carriedLossy.join('、') }}</span>
+          <span class="lc-lossy-hint">这些条件当前缺失——需要完整语义请回查询工作台用 DSL 通道执行。</span>
+        </div>
+        <button class="btn ghost xs lc-lossy-x" aria-label="关闭翻译缺失提示" title="关闭提示" @click="carriedLossy = []"><X :size="12" /></button>
+      </div>
       <div class="lc-editor">
         <div class="lc-card-hd">
           <div class="lc-inp-line">
@@ -205,7 +217,8 @@
  QRT 内建聚焦面（FS headless，外层表格 FS 与 focusable 关断随收口退役；
  hideBody→true 自动退聚焦=RT 552 rtFix552 对称件）。外层 FS
  聚焦通道随本收口退役。 -->
-          <QueryResultTable ref="resultTbl" :hits="hits" :total="total" :total-gte="totalGte" :loading="busy" sortable :took="took" :page="page" :page-size="size" :pager-disabled="busy" @update:page="goPage" @update:page-size="setSize" :hide-body="viewMode !== 'table'" max-height="100%" :storage-key="index ? 'lucene:' + index : undefined" :field-types="fieldTypes" empty-hint="调整查询语句或时间范围后重查">
+          <QueryResultTable ref="resultTbl" :hits="hits" :total="total" :total-gte="totalGte" :loading="busy" sortable :took="took" :page="page" :page-size="size" :pager-disabled="busy" @update:page="goPage" @update:page-size="setSize" :hide-body="viewMode !== 'table'" max-height="100%" :storage-key="index ? 'lucene:' + index : undefined" :field-types="fieldTypes" empty-hint="调整查询语句或时间范围后重查"
+            :searchable="viewMode === 'table'" refreshable @refresh="doRun">
             <template #bar-prepend>
               <!-- 特定能力保留在外层：扁平表格 vs 逐 hit JsonTree（嵌套展开）切换，不塞进通用表；
  seg 升格（容器 role=group+aria-label+钮 aria-pressed，G192 范式） -->
@@ -298,7 +311,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, type Ref } from 'vue';
-import { SearchCode, BookOpen, Play, Star, ShieldAlert, FileDown, Link2, AlertCircle, ListTree, X, SearchX, History, Terminal, Copy, Braces, Info } from 'lucide-vue-next';
+import { SearchCode, BookOpen, Play, Star, ShieldAlert, FileDown, Link2, AlertCircle, ListTree, X, SearchX, History, Terminal, Copy, Braces, Info, AlertTriangle } from 'lucide-vue-next';
 import { NModal } from 'naive-ui';
 /* 页内历史面板合并 QueryHistoryPanel 共享件（DslQueryView 弹窗范式） */
 import QueryHistoryPanel from '../components/QueryHistoryPanel.vue';
@@ -507,11 +520,24 @@ const TEMPLATES = [
   { k: 'boost',   d: '字段加权', q: 'title:hello^2 OR body:hello' },
 ];
 
+/* DSL→Lucene 翻译缺失清单（来自会话 carry，见 onMounted）；用户关掉即清空 */
+const carriedLossy = ref<string[]>([]);
+
 onMounted(() => {
   const carry = sessionStorage.getItem('es-console.lucene.q');
   if (carry) { qs.value = carry; removeStoredRaw(sessionStorage, 'es-console.lucene.q'); }
   const ci = sessionStorage.getItem('es-console.lucene.index');
   if (ci) { index.value = ci; removeStoredRaw(sessionStorage, 'es-console.lucene.index'); }
+  /* 翻译缺失清单同样是一次性 carry：读走即删，但保留在页面状态里直到用户关掉——
+     否则刷新一次提示就彻底消失，用户会以为翻译是等价的。 */
+  const lcLossy = sessionStorage.getItem('es-console.lucene.lossy');
+  if (lcLossy) {
+    removeStoredRaw(sessionStorage, 'es-console.lucene.lossy');
+    try {
+      const arr = JSON.parse(lcLossy);
+      if (Array.isArray(arr)) carriedLossy.value = arr.filter((x: unknown) => typeof x === 'string');
+    } catch { /* 坏数据当没有：宁可少提示，也不显示乱码清单 */ }
+  }
 });
 
 async function doRun() {
@@ -685,6 +711,18 @@ function exportCsv() {
 .lc-result { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
 /* 卡头字重 400→650 对齐标题四档（.st-card-hd/.qx-card-hd 同形态全站口径） */
 .lc-card-hd { padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--border); font-size: var(--fs-sm); font-weight: 650; }
+/* DSL→Lucene 翻译缺失常驻条：用告警色（与错误面板同族但更轻），常驻到用户手动关闭 */
+.lc-lossy {
+  display: flex; align-items: flex-start; gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3); margin-bottom: var(--sp-2);
+  background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: var(--r-m);
+  color: var(--tx0); font-size: var(--fs-xs); line-height: 1.55;
+}
+.lc-lossy > svg { flex: none; margin-top: 2px; color: var(--warn); }
+.lc-lossy-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lc-lossy-list { color: var(--warn); font-weight: 650; word-break: break-all; }
+.lc-lossy-hint { color: var(--tx2); }
+.lc-lossy-x { flex: none; margin-left: auto; }
 .lc-inp-line { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
 .lc-inp { display: flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-xs); color: var(--muted); }
 .lc-ii { border: 1px solid var(--border); border-radius: 3px; padding: 3px var(--sp-1h); font-size: var(--fs-xs); background: var(--card-bg); color: var(--fg); font-family: var(--mono); min-width: 140px; }

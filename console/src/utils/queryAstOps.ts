@@ -6,7 +6,10 @@
  'none'（inner 整体即值，range/terms/对象值算子）。
  mainKey 是 fields/named/none 形态 body 顶层主值键（match_all/match_none 走既有特判豁免）。
  params 是具名常用参数 → ClauseNode 渲染具名控件；其余参数走「更多参数」递归键值表。 */
-export interface ParamMeta { key: string; kind: 'number' | 'text' | 'boolean' | 'enum' | 'json'; options?: string[] }
+/* json=对象型参数（新建给 `{}`）；json-array=数组型参数（新建给 `[]`）。
+ 两者都走 JSON 文本框编辑，区别只在**新建默认值**——给数组型键塞 `{}` 会被 ES 直接拒
+ （top_metrics.metrics、matrix_stats.fields、bucket_sort.sort 都要求数组）。 */
+export interface ParamMeta { key: string; kind: 'number' | 'text' | 'boolean' | 'enum' | 'json' | 'json-array'; options?: string[] }
 interface OpMeta {
   form: 'field' | 'fields' | 'named' | 'none';
   wrap?: 'value' | 'query' | 'none';
@@ -193,6 +196,9 @@ export function opsForType(type: string | undefined): string[] {
   if (type === 'ip') return ['term', 'range', 'exists'];
   if (type === 'geo_point') return ['geo_distance', 'geo_bounding_box', 'geo_polygon', 'exists'];
   if (type === 'geo_shape') return ['geo_shape', 'exists'];
+  /* 1382：shape 类型此前落兜底 ['exists']——OPS_META.shape 早已注册且声明 types 含 shape，
+     选完 shape 字段却只看到「字段存在」，读成「不支持」（实报同类缺口 1199）。 */
+  if (type === 'shape') return ['shape', 'exists'];
   if (type === 'rank_feature') return ['rank_feature', 'exists'];
   /* rank_features 是 mapping 类型（多特征对象），查询入口仍是 rank_feature */
   if (type === 'rank_features') return ['rank_feature', 'exists'];
@@ -400,6 +406,11 @@ export const RETRIEVER_PARAMS: Record<string, ParamMeta[]> = {
 /* 高级算子分组（BoolGroupNode「+ 高级」菜单与 ClauseNode 下拉分组共用同源序）。
  全部成员必须是 OPS_META 或 WRAP_LABELS/MULTI_LABELS 已注册算子。 */
 export const ADV_MENU: Array<{ group: string; ops: string[] }> = [
+  /* 1372：match_all / match_none 此前**没有任何新建入口**——能解析、能渲染（ClauseNode 有
+     「（无值）」分支）、能往返，但「+ 条件」默认落 match_all、算子下拉又只列字段算子，
+     于是「想要一个 match_none」只能手写 DSL。这正是 1199 记录过的同一类缺口（读改支持、
+     新建不支持）。单列一组：它们不是字段算子，是整条查询的基准档，混进字段族反而误导。 */
+  { group: '无条件与无结果', ops: ['match_all', 'match_none'] },
   { group: '全文检索', ops: ['multi_match', 'query_string', 'simple_query_string', 'combined_fields', 'match_bool_prefix', 'more_like_this', 'intervals'] },
   { group: '精确与集合', ops: ['ids', 'terms_set', 'bitmap_terms', 'parent_id', 'type'] },
   /* 1199 续：wrap 容器族（nested / has_child / has_parent）此前**没有任何新建入口**——
@@ -435,7 +446,7 @@ export const AGG_OPS: Record<string, string> = {
   avg: '平均值', sum: '求和', min: '最小', max: '最大', cardinality: '去重计数',
   value_count: '计数', stats: '统计', extended_stats: '扩展统计', percentiles: '百分位',
   percentile_ranks: '百分位排名', significant_terms: '显著词项', rare_terms: '稀有词项',
-  sampler: '采样', diversified_sampler: '多样化采样',
+  sampler: '采样', diversified_sampler: '多样化采样', random_sampler: '随机采样',
   top_hits: 'Top 文档', top_metrics: 'Top 指标', missing: '缺值聚合',
   geo_bounds: '地理边界', geo_centroid: '地理质心', composite: '复合分桶',
   scripted_metric: '脚本聚合', median_absolute_deviation: '绝对中位差',
@@ -535,6 +546,9 @@ export const AGG_BODY_PARAMS: Record<string, ParamMeta[]> = {
   rare_terms: [{ key: 'max_doc_count', kind: 'number' }],
   sampler: [{ key: 'shard_size', kind: 'number' }],
   diversified_sampler: [{ key: 'shard_size', kind: 'number' }],
+  /* ES 7.1+ 的随机采样聚合（与 sampler 的 shard_size 取样不同：按 probability 概率抽）。
+     官方只有这两个标量键；seed 用于结果可复现。 */
+  random_sampler: [{ key: 'probability', kind: 'number' }, { key: 'seed', kind: 'number' }],
   avg: [{ key: 'missing', kind: 'number' }],
   sum: [{ key: 'missing', kind: 'number' }],
   min: [{ key: 'missing', kind: 'number' }],
@@ -546,8 +560,19 @@ export const AGG_BODY_PARAMS: Record<string, ParamMeta[]> = {
      top_metrics 主键是 metrics 数组 + sort 数组（数组键留自由表，size 与 missing 升具名）；
      matrix_stats 主键是 fields 数组（同上，只把 mode 提成枚举）。 */
   stats: [{ key: 'missing', kind: 'number' }],
-  top_metrics: [{ key: 'size', kind: 'number' }, { key: 'missing', kind: 'text' }],
-  matrix_stats: [{ key: 'mode', kind: 'enum', options: ['avg', 'sum', 'median'] }, { key: 'missing', kind: 'json' }],
+  /* top_metrics 的两个必填/高频键都是对象语义：metrics 收单个对象或对象数组（官方两者都收），
+     sort 收单个对象。这里用 json-array 给 metrics（新建 `[]` 比 `{}` 更接近官方示例），
+     sort 用 json（`{}`）。missing 不是 top_metrics 的顶层键（它在 metrics 项内），不登记。 */
+  top_metrics: [
+    { key: 'metrics', kind: 'json-array' }, { key: 'sort', kind: 'json' },
+    { key: 'size', kind: 'number' },
+  ],
+  /* matrix_stats 的必填主键是 fields 数组（字段名串数组），mode 五档、missing 是字段→值映射 */
+  matrix_stats: [
+    { key: 'fields', kind: 'json-array' },
+    { key: 'mode', kind: 'enum', options: ['avg', 'min', 'max', 'sum', 'median'] },
+    { key: 'missing', kind: 'json' },
+  ],
   /* 1030：管道族与地理网格族 schema——buckets_path（管道输入引用）升具名文本档，
    gap_policy 三档全族统一枚举；script/buckets 数组键（bucket_script.script、
    bucket_sort.sort、percentiles_bucket.percents）维持自由表零丢失 */
@@ -617,4 +642,72 @@ export const AGG_BODY_PARAMS: Record<string, ParamMeta[]> = {
   /* 1039：多键分组与复合分桶的 size（1032 schema 键提示对未入体键的建议通道覆盖） */
   multi_terms: [{ key: 'size', kind: 'number' }],
   composite: [{ key: 'size', kind: 'number' }],
+
+  /* ═══ 聚合参数 schema 补齐：此前 21 个算子在这里没有条目，参数只能靠用户手打自由表。
+     下面只登记**官方文档存在的标量/枚举键**，形状不确定或必须数组的键一律留在自由表
+     （原因：json 档新建时给 `{}`，登记数组型键等于给一个 ES 会拒的默认值）。
+     field / path 不在表内——由 AggTreeNode 的 FIELD_BODY_AGGS / PATH_BODY_AGGS 给字段选择器。 */
+
+  /* filter：唯一的体是 query 子句（树形编辑，不是标量），无标量可登记 */
+  filter: [],
+  /* nested / reverse_nested：唯一参数是 path（由 PATH_BODY_AGGS 给字段选择器） */
+  nested: [],
+  reverse_nested: [],
+  /* global：官方无参数 */
+  global: [],
+  /* value_count / geo_centroid：官方参数只有 field（已由字段选择器覆盖） */
+  value_count: [],
+  geo_centroid: [],
+
+  string_stats: [{ key: 'show_distribution', kind: 'boolean' }, { key: 'missing', kind: 'text' }],
+  missing: [{ key: 'missing', kind: 'text' }],
+  median_absolute_deviation: [{ key: 'missing', kind: 'number' }, { key: 'compression', kind: 'number' }],
+  boxplot: [{ key: 'missing', kind: 'number' }, { key: 'compression', kind: 'number' }],
+  geo_bounds: [{ key: 'wrap_longitude', kind: 'boolean' }],
+
+  /* 两个「必填主键是对象」的聚合：value/weight 与 a/b 都是 {field,…} 对象，
+     GenericParams 的 json 档新建时给空对象 `{}`（不是 ES 会拒的标量），用户补 field 即可。
+     这一条比「什么都不给、全靠手打」更有发现性——用户能看到缺的是哪两个键。 */
+  weighted_avg: [
+    { key: 'value', kind: 'json' }, { key: 'weight', kind: 'json' },
+    { key: 'format', kind: 'text' },
+  ],
+  t_test: [
+    { key: 'a', kind: 'json' }, { key: 'b', kind: 'json' },
+    {
+      key: 'type', kind: 'enum',
+      options: ['heteroscedastic', 'homoscedastic', 'paired'],
+    },
+  ],
+
+  /* scripted_metric 的四个生命周期脚本都是必填字符串（map/combine/reduce）——
+     script 档给具名文本行，比在自由表里逐个手打键名快得多 */
+  scripted_metric: [
+    { key: 'init_script', kind: 'text' }, { key: 'map_script', kind: 'text' },
+    { key: 'combine_script', kind: 'text' }, { key: 'reduce_script', kind: 'text' },
+  ],
+
+  /* 地理网格/距离桶的框选与精度（field 由字段选择器给） */
+  geo_distance: [
+    { key: 'origin', kind: 'json' }, { key: 'unit', kind: 'text' },
+    { key: 'distance_type', kind: 'enum', options: ['arc', 'plane'] },
+  ],
+  geo_line: [
+    { key: 'sort', kind: 'json' }, { key: 'point', kind: 'json' },
+    { key: 'size', kind: 'number' },
+  ],
+
+  /* children/parent 的关系类型键（type，不是 field） */
+  children: [{ key: 'type', kind: 'text' }],
+  parent: [{ key: 'type', kind: 'text' }],
+
+  /* 文本归类/频繁项集/推理：只登记确定性标量 */
+  categorize_text: [
+    { key: 'max_matches', kind: 'number' }, { key: 'min_doc_count', kind: 'number' },
+    { key: 'shard_size', kind: 'number' }, { key: 'size', kind: 'number' },
+  ],
+  frequent_item_sets: [
+    { key: 'minimum_set_size', kind: 'number' }, { key: 'size', kind: 'number' },
+  ],
+  inference: [{ key: 'model_id', kind: 'text' }],
 };

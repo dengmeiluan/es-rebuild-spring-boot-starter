@@ -143,9 +143,14 @@ function setSub(it: CcmItem, e?: Event) {
     subPos.value = { x, y };
   });
 }
+/* 点击父行 = 确保二级是「开着」的（不 toggle）。
+ 真机反例（1318）：鼠标移到「更多…」时 mouseenter 已把二级打开，紧接着按下鼠标，
+ 旧版 toggle 看到 sub.key 相同就关掉 —— 用户眼里是「我点了它，它反而收起来了」。
+ 而鼠标用户的自然动线必然是「先悬停到位，再点击」，所以 toggle 语义在这条路径上是纯 bug。
+ 收起二级的手势已有三条：Esc / ←（键盘）、移到别的项（mouseenter 调 closeSub）、
+ 关掉整个菜单。点击不再破坏已打开的子菜单。 */
 function toggleSub(it: CcmItem, e: Event) {
-  if (sub.value?.key === it.key) closeSub();
-  else setSub(it, e);
+  if (sub.value?.key !== it.key) setSub(it, e);
 }
 function onMenuKey(e: KeyboardEvent) {
   /* 键盘等价：→ 开当前父项二级；← 关二级；Esc 先关二级（整菜单的 Esc 见 onEsc） */

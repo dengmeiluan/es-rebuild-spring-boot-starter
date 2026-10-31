@@ -113,7 +113,10 @@ describe('1142 ② RT/QRT 菜单分组（源码 + 行为）', () => {
       expect(src, p).toContain("label: '复制…'");
       expect(src, p).toContain("label: '行操作…'");
       expect(src, p).toContain("label: '筛选与排序…'");
-      expect(src, p).toContain("label: '列与导出…'");
+      /* 1385：列管理与导出拆成两组（此前混在一组最多 9~15 项）。
+         断言改为「两组同时在场」，跨内核仍是同一右键语言。 */
+      expect(src, p).toContain("label: '列操作…'");
+      expect(src, p).toContain("label: '导出…'");
       expect(src, p).toContain("children: copyChildren");
       expect(src, p).toContain("children: queryChildren");
     }
@@ -125,8 +128,10 @@ describe('1142 ② RT/QRT 菜单分组（源码 + 行为）', () => {
     cell.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 12, clientY: 12 }));
     await tick();
     const top = [...document.querySelectorAll('.ccm-mask > .ccm > .ccm-it')];
-    expect(top.length).toBeLessThanOrEqual(6);
-    const group = top.find(b => (b.textContent ?? '').includes('列与导出…')) as HTMLButtonElement;
+    /* 1385：拆组后一级 = 2 直达 + 4 分组 = 6；QRT 无「默认格式」组故仍为 6。
+       （RT 因为多一个「默认导出格式…」是 7，见 ctxSubGroup1385。） */
+    expect(top.length).toBeLessThanOrEqual(7);
+    const group = top.find(b => (b.textContent ?? '').includes('列操作…')) as HTMLButtonElement;
     expect(group).toBeTruthy();
     group.click();
     await tick();

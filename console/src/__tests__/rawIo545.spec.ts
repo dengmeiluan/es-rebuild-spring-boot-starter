@@ -252,6 +252,12 @@ describe('五百四十五批③：SqlConsole 接线（行为锁）', () => {
     expect(run, '「执行」钮在场').toBeTruthy();
     run!.click();
     for (let i = 0; i < 12; i++) { await nextTick(); await Promise.resolve(); }
+    /* 1353：宿主两项收进「结果表更多 ⋯」菜单——按钮仍在，但要先展开菜单才可点。
+       这里先断言菜单触发器在场，再点开，再取 raw-io（判据意图不变：用户仍能一步到达）。 */
+    const more = host.querySelector<HTMLButtonElement>('[data-test="sq-bar-more"]');
+    expect(more, '1353 起「原始 IO」住在结果表更多菜单里，必须先有菜单触发器').toBeTruthy();
+    more!.click();
+    for (let i = 0; i < 8; i++) { await nextTick(); await Promise.resolve(); }
     const btn = host.querySelector<HTMLButtonElement>('[data-test="raw-io"]');
     expect(btn, '结果分节「原始 IO」钮必须在场').toBeTruthy();
     expect(btn!.getAttribute('aria-label'), 'aria-label 必备').toBeTruthy();
@@ -269,8 +275,11 @@ describe('五百四十五批③：IndexHub / Adhoc / Xmigrate 接线（字面锁
     const v = read('../views/IndexHubView.vue');
     expect(v).toContain("import RawIoModal from '../components/RawIoModal.vue'");
     expect(v).toMatch(/import \{ api, ioRecorder[^]*?from '\.\.\/api'/);
-    expect(v).toContain('aria-label="查看原始 IO（文档检索）"');
-    expect(v).toContain('aria-label="查看原始 IO（DSL 查询）"');
+    /* 1357：两个 tab 的 RT 行内钮退役（与「更多 ⋯」菜单项同一动作，重复平铺违反
+       「never duplicate an action」）。本条意图是「docs/query 两条链路都在」，
+       随入口迁移到菜单项 key（能力没少，只是收进菜单）。 */
+    expect(v).toContain("key: 'ih-raw-io-docs'");
+    expect(v).toContain("key: 'ih-raw-io-query'");
     expect(v).toMatch(/ioRecorder\.last\('\/cluster\/query'\)/);
     expect(v.match(/ioRecorder\.last\('\/cluster\/query'\)/)!.length).toBeGreaterThanOrEqual(1);
     expect(v).toContain('<RawIoModal');

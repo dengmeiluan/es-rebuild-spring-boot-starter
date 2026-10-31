@@ -121,7 +121,8 @@
       </div>
 
       <div v-if="report.issues.length" class="cv-issues" role="status" :style="{ maxHeight: cvIssuesH + 'px' }">
-        <div v-for="(iss, i) in report.issues" :key="i" class="cv-issue" :class="iss.severity.toLowerCase()">
+        <div v-for="(iss, i) in report.issues" :key="i" class="cv-issue" :class="iss.severity.toLowerCase()"
+          @contextmenu.prevent="openIssueMenu($event, iss)">
           <!-- severity 裸英文枚举换 StatusPill+sevZh（档位 sevPill 五主档已接，
  524 锚 cv-iss-sev pill 形态随组件化改锁 :tone 同源调用） -->
           <StatusPill class="cv-iss-sev" :tone="cvSevPill(iss.severity)" :label="cvSevZh(iss.severity)" />
@@ -145,6 +146,12 @@
 
     <!-- G249：原始 IO 弹窗（宿主受控开关；rec 取本页最近一条 config-lab/validate 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
+
+    <!-- 1317：问题行右键（校验出的每条问题都是要贴进工单/群聊的待办，
+ 此前只能一条条手抄） -->
+    <CellContextMenu v-if="issueMenu" :x="issueMenu.x" :y="issueMenu.y"
+      :title="'问题 · ' + (LAYER_NAMES[issueMenu.iss.layer] || issueMenu.iss.layer)"
+      :items="issueMenuItems" @close="issueMenu = null" />
   </div>
 </template>
 
@@ -152,7 +159,7 @@
 import { ref, computed, watch } from 'vue';
 import {
   ShieldCheck, Play, FlaskConical, BookOpen, Download,
-  Lightbulb, Hammer, Loader2, RefreshCw, Terminal,
+  Lightbulb, Hammer, Loader2, RefreshCw, Terminal, ClipboardList, Copy, Braces, Info,
 } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import MonacoEditor from '../components/MonacoEditor.vue';
@@ -170,6 +177,8 @@ import TookBadge from '../components/TookBadge.vue';
 /* cv-rp-meta 计数串 MetaStrip 统一件 + sev 徽标 StatusPill 统一件 */
 import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue';
 import StatusPill from '../components/StatusPill.vue';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
+import { copyText } from '../utils/format';
 import { api, ioRecorder, type RawIoRec } from '../api';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
@@ -268,6 +277,45 @@ function clampCvW(s: number) { return Math.round(Math.min(2000, Math.max(220, s)
 const { v: cvIssuesH, cycle: cycleIssuesH } = useTierCycle('configvalidator.issuesH', [240, 380, 560], 380);
 
 const LAYER_NAMES: Record<string, string> = { LINT: 'L1 Lint', DRYRUN: 'L2 Dry-run', ADVISOR: 'L3 建议' };
+
+/* ═══ 1317：校验问题行右键 ═══
+ 每条问题都是要贴进工单/群聊的待办，此前只能一条条手抄「哪一层、哪个码、说什么」。
+ 一级两动作（整条 / 只要修正建议），其余进「更多…」——与全站菜单两级语言一致。
+ 文案里带层名人类可读名（L1 Lint 而非 LINT 裸码），贴出去对方不用回来问。 */
+const issueMenu = ref<{ x: number; y: number; iss: any } | null>(null);
+function openIssueMenu(e: MouseEvent, iss: any) {
+  issueMenu.value = { x: e.clientX, y: e.clientY, iss };
+}
+async function copyIssueText(text: string, okMsg: string) {
+  const ok = await copyText(text);
+  store.notify(ok ? 'success' : 'error', ok ? okMsg : '复制失败');
+}
+const issueLine = (iss: any) =>
+  `[${iss.severity}] ${LAYER_NAMES[iss.layer] || iss.layer} · ${iss.code}`
+  + (iss.path ? ` @ ${iss.path}` : '') + `: ${iss.message}`;
+const issueMenuItems = computed<CcmItem[]>(() => {
+  const m = issueMenu.value;
+  if (!m) return [];
+  const iss = m.iss;
+  return [
+    { key: 'cv-iss-line', label: '复制此问题（级别+层+码+说明）', icon: ClipboardList,
+      run: () => void copyIssueText(issueLine(iss), '问题已复制') },
+    ...(iss.suggestion
+      ? [{ key: 'cv-iss-sug', label: '只复制修正建议', icon: Info,
+          run: () => void copyIssueText(String(iss.suggestion), '修正建议已复制') }]
+      : []),
+    { key: 'cv-iss-more', label: '更多…', icon: Copy, sep: true, children: [
+      { key: 'cv-iss-msg', label: '只复制说明', icon: Info,
+        run: () => void copyIssueText(String(iss.message ?? ''), '说明已复制') },
+      { key: 'cv-iss-path', label: '只复制字段路径', icon: Copy,
+        run: () => void copyIssueText(String(iss.path ?? ''), '路径已复制') },
+      { key: 'cv-iss-json', label: '复制整条 JSON', icon: Braces,
+        run: () => void copyIssueText(JSON.stringify(iss, null, 2), '问题 JSON 已复制') },
+      { key: 'cv-iss-all', label: `复制全部问题（${report.value?.issues?.length ?? 0} 条）`, icon: ClipboardList,
+        run: () => void copyIssueText((report.value?.issues ?? []).map(issueLine).join('\n'), '全部问题已复制') },
+    ] },
+  ];
+});
 
 /* 校验报告头计数串（MetaStrip 统一件 items）——err/warn/info 计数走组件 tone 档，
  Dry-run 结论收 text 段（文案逐字同步更新）；TookBadge 段走组件默认插槽（sep 自动化归组件） */

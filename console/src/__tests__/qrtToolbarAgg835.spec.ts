@@ -21,7 +21,8 @@ const rt = () => rd('../components/ResultTable.vue');
 
 describe('qrtToolbarAgg835 源码锚（聚合钮在位）', () => {
   it('QRT：导出 ▾ 聚合触发器在场（haspopup=menu）', () => {
-    expect(qrt()).toMatch(/aria-label="导出"[\s\S]{0,200}?aria-haspopup="menu"/);
+    /* 1345：aria 升级为带范围/格式的动态文案——守的仍是「触发器在场且是菜单」。 */
+    expect(qrt()).toMatch(/:aria-label="`导出当前视图（[\s\S]{0,240}?aria-haspopup="menu"/);
     expect(qrt()).toContain('导出 ▾');
   });
   it('QRT：导出菜单五格式 aria 逐字保留（525/560 锁面同步更新不破）', () => {
@@ -81,7 +82,8 @@ describe('qrtToolbarAgg835 行为链（挂载 QRT）', () => {
 
   it('导出 ▾：点击开菜单（五格式项在场，空结果禁用语义保留）→ Esc 关', async () => {
     await mountTbl();
-    const trig = [...host.querySelectorAll('button')].find(b => b.getAttribute('aria-label') === '导出');
+    /* 1345：aria 现在是「导出当前视图（N 行，格式…）」，按前缀认钮。 */
+    const trig = [...host.querySelectorAll('button')].find(b => (b.getAttribute('aria-label') || '').startsWith('导出'));
     expect(trig, '导出聚合触发器在场').toBeTruthy();
     trig!.click();
     for (let i = 0; i < 6; i++) await Promise.resolve();

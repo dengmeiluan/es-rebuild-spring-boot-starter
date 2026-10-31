@@ -110,8 +110,11 @@ describe('560 ⑤：openRawIo scope 分流', () => {
     expect(ih).toMatch(/function openRawIo\(scope: 'query' \| 'ops' = 'query'\) \{/);
     expect(ih).toMatch(/scope === 'ops'\s*\? \(ioRecorder\.last\('\/cluster\/raw'\) \?\? ioRecorder\.last\('\/cluster\/query'\)\)\s*: \(ioRecorder\.last\('\/cluster\/query'\)\s*\?\? ioRecorder\.last\('\/cluster\/profile'\)\s*\?\? ioRecorder\.last\('\/cluster\/update-document'\)\s*\?\? ioRecorder\.last\('\/cluster\/delete-by-id'\)\)/);
   });
-  it('调用点分流：docs/query 四钮传 query、ops 行钮传 ops', () => {
-    expect(ih.match(/@click="openRawIo\('query'\)"/g)?.length, 'docs 检索行+docs RT+query 执行行+query RT').toBe(4);
+  it('调用点分流：docs/query 失败行两钮传 query、ops 行钮传 ops', () => {
+    /* 1357：两个 tab 的 RT 行内钮退役（与「更多 ⋯」菜单项重复）→ query 档调用点 4 → 2，
+       剩下的正是**失败态常驻**两颗（检索行 / 查询行）——那才是 resp=null 时唯一的取数入口，
+       本条的意图（失败态有取数入口、ops 与 query 分流）不变。 */
+    expect(ih.match(/@click="openRawIo\('query'\)"/g)?.length, 'docs 检索行+query 执行行两失败态钮').toBe(2);
     expect(ih.match(/@click="openRawIo\('ops'\)"/g)?.length, 'ops 行尾钮').toBe(1);
   });
   it('判空 notify 文案随 scope 分档（不开空弹窗语义保留）', () => {

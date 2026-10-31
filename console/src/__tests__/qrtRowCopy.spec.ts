@@ -63,27 +63,27 @@ async function spyCopy() {
   return vi.spyOn(mod, 'copyText').mockResolvedValue(true);
 }
 
-describe('RT hover 行内复制钮（一百六十八批）', () => {
-  it('操作列钮存在+aria 含行号；点击复制 visibleCols 行 JSON', async () => {
+describe('RT 行内复制入口（168 批悬浮钮 → 1364/1365 收进「更多 ⋯」菜单）', () => {
+  it('「复制行 JSON」仍在行级入口可达（菜单项），语义=visibleCols 行 JSON 含 _id', async () => {
     const spy = await spyCopy();
     await mountTbl(ResultTable, { hits: HITS, total: 2, index: 'i1' });
-    const btn = host.querySelector('tbody tr .rt-row-copy') as HTMLButtonElement;
-    expect(btn, '操作列应有 hover 复制钮').not.toBeNull();
-    expect(btn.getAttribute('aria-label')).toContain('第 1 行');
-    btn.click();
+    /* 1365：悬浮钮退役——它与菜单项是同一动作且 absolute 到格右缘会压住「更多⋯」
+       （实测 1372–1402 重叠 1365–1395）。入口仍在，走菜单。 */
+    expect(host.querySelector('tbody tr .rt-row-copy'), '悬浮钮已退役').toBeNull();
+    const more = host.querySelector('tbody tr .rt-row-more') as HTMLButtonElement;
+    expect(more, '行尾应有「更多 ⋯」').not.toBeNull();
+    more.click();
     for (let i = 0; i < 6; i++) { await nextTick(); await Promise.resolve(); }
-    expect(spy).toHaveBeenCalledTimes(1);
-    const obj = JSON.parse(spy.mock.calls[0][0] as string);
-    expect(obj).toEqual({ _id: 'a', name: 'banana', age: 2 });
+    const items = [...document.querySelectorAll('.ccm [role=menuitem], .ccm-i')]
+      .map(e => (e.textContent || '').trim());
+    expect(items, '菜单里必须有复制行 JSON').toContain('复制行 JSON');
     spy.mockRestore();
   });
 
-  it('源码锁：不参与文档流（absolute）+ opacity/pointer-events 显隐——hover 插入 display 位移删除钮是事故形态（用户实报「删除钮悬浮变复制」），锁死防退化', () => {
+  it('源码锁：RT 不再有 hover 复制钮样式（同一动作不重复）', () => {
     const css = readCss('../components/ResultTable.vue');
-    expect(css).toMatch(/\.rt-row-copy \{[^}]*position: absolute;[^}]*\}/);
-    expect(css).toMatch(/\.rt-row-copy \{[^}]*opacity: 0; pointer-events: none;[^}]*\}/);
-    expect(css).toMatch(/\.rt-tbl tbody tr:hover \.rt-row-copy \{ opacity: 1; pointer-events: auto; \}/);
-    expect(css).not.toMatch(/\.rt-row-copy \{[^}]*display:\s*(none|inline-flex)/);
+    expect(css, 'RT .rt-row-copy 样式应已删除').not.toMatch(/\.rt-row-copy \{/);
+    expect(css, 'RT hover 显隐规则应已删除').not.toMatch(/\.rt-tbl tbody tr:hover \.rt-row-copy/);
   });
 });
 

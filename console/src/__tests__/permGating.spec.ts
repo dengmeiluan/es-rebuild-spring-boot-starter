@@ -67,7 +67,9 @@ describe('危险按钮按角色隐藏（点名：只读不再看到删索引/删
   });
   it('ResultTable：就地编辑=write 门禁；删除行/批删/Del 键=ops', () => {
     expect(rt).toContain('if (!canWrite.value) return;');
-    expect(rt).toContain('<button v-if="canOps" aria-label="删除文档"');
+    /* 1364：行内删除钮收进「更多 ⋯」菜单（用户实报「太多功能平铺」）——
+       守卫条件原样搬到菜单项：非 ops 用户打开菜单也看不到「删除文档」。 */
+    expect(rt).toMatch(/canOps\.value[\s\S]{0,24}key: 'act-del', label: '删除文档'/);
     expect(rt).toContain('<button v-if="canOps" class="btn sm danger" @click="emit(\'batch-delete\', [...selected])">');
     expect(rt).toContain('if (editing.value || !selected.value.size || !canOps.value) return;');
     expect(rt).toContain("canWrite ? '双击编辑 · Shift+点击范围选 · Ctrl+点击数值聚合' : 'Shift+点击范围选 · Ctrl+点击数值聚合'");

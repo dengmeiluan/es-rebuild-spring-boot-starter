@@ -104,10 +104,11 @@ describe('五百五十二批 ①：rt-wrap-shell 定位壳（回顶锚点下移�
     expect(statusAt, 'rt-status 状态栏在壳闭标签之后（流内尾行，不被壳吃掉）').toBeGreaterThan(shellClose);
   });
 
-  it('RT CSS 锁：壳=relative+min-height:0+flex 布局（562 实报④ flex:1→flex:0 1 auto 贴合内容，见 rtAutoFit562）；rt-wrap 补 min-width:0；backtop 仍 right/bottom 锚值', () => {
-    /* 五百六十二批同步更新（用户实报分页 10/页 下方大片空白）：壳改贴内容+上限收缩，
-       回顶锚点/状态栏流内位置语义不变 */
-    expect(rt).toMatch(/\.rt-wrap-shell \{ position: relative; flex: 0 1 auto; min-height: 0; display: flex; \}/);
+  it('RT CSS 锁：壳=relative+min-height:240px+flex 布局（1365 回 flex:1 1 auto，见 rtAutoFit562）；rt-wrap 补 min-width:0；backtop 仍 right/bottom 锚值', () => {
+    /* 562 → 1355 → 1365 的三次修订见 rtAutoFit562.spec.ts 注释：底纹（1359b）已经把
+       原来那块「死白」变成网格延续，所以 1365 把 flex-grow 放回 1（.rt 内不再有
+       96px 无子元素占用的空洞）。定位壳语义、回顶锚值、状态栏流内位置全部不变。 */
+    expect(rt).toMatch(/\.rt-wrap-shell \{ position: relative; flex: 1 1 auto; min-height: 240px; display: flex; \}/);
     expect(rt).toMatch(/\.rt-wrap \{ flex: 1; min-width: 0; overflow: auto;/);
     expect(rt).toMatch(/\.rt-backtop \{[^}]*right: 18px; bottom: 16px;/);
   });

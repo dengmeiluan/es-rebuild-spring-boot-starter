@@ -31,7 +31,7 @@
         <!-- card ih-card-flush 大卡壳退役 → .ih-ws 分节容器（547 壳退役语言续刀）——
  .ih-hd/.ih-tabs 两条 border-bottom+表格自带边框承接分节；547 豁免正锁同步更新
  （cardPrimitiveVerdict547/emptyFrameZero547/paneShellWave547 三处字面改退役形） -->
-        <div class="ih-ws">
+        <div class="ih-ws" :class="{ 'ih-ws-fill': tab === 'docs' && docsView === 'table' }">
           <div class="ih-hd">
             <div class="ih-hd-l">
               <span class="ih-hdot lg" :style="{ background: healthColor(curInfo?.health || '') }" :title="curInfo?.health"></span>
@@ -88,7 +88,7 @@
             </button>
           </div>
 
-          <div class="ih-tab-body">
+          <div class="ih-tab-body" :class="{ 'ih-fill': tab === 'docs' && docsView === 'table' }">
             <!-- -A2：详情拉取失败页面级透传（部分失败也提示，不能让 settings/mapping 区静默空白） -->
             <div v-if="detailErr && !detailLoading" role="alert" class="err-bar rise-in" style="margin:var(--sp-2)">
               {{ detailErr }}
@@ -169,6 +169,7 @@
  自动退聚焦 rtFix552 内建零增量 -->
                 <ResultTable ref="docsTbl"
                   export-name="ih-docs"
+                  :bar-menu-extra="docsBarMenuExtra"
                   :hide-body="docsView !== 'table'"
                   :hits="docsHits" :total="docsTotal" :took="docsTook" :index="cur" :loading="docsLoading" :total-gte="docsTotalGte"
                   :field-types="fieldTypesMap"
@@ -196,9 +197,8 @@
                       :disabled="docsLoading" @update:page="goDocsPage" @update:page-size="setDocsSize" />
                   </template>
                   <template #bar-extra>
-                    <!-- 原始 IO 快查（docs tab）——最近一次 /cluster/query 请求/响应原文 -->
-                    <button class="btn sm ghost rt-tool-btn" aria-label="查看原始 IO（文档检索）"
-                      title="最近一次检索的请求/响应原文（语义分档高亮 + 复制/curl 回放）" @click="openRawIo('query')"><Terminal :size="13" /></button>
+                    <!-- 1357：行内「原始 IO」钮退役——与工具行「更多 ⋯」里的 ih-raw-io-docs
+ 是同一动作同一入口函数，重复平铺违反项目右键约定；低频排查留在菜单内。 -->
                     <button class="btn sm ghost rt-tool-btn ih-tip-btn" aria-label="表格操作提示"
                       :title="`${docsQuerySummary(docsQ)}
 表格内 Ctrl+F 查找并高亮命中；双击单元格就地编辑（保存即全量覆盖 _source）${canWrite ? '' : '；当前角色只读，双击不会进入编辑'}；↑↓ 行导航、Enter 打开文档`">
@@ -323,6 +323,7 @@
               </div>
               <ResultTable ref="qryTbl"
                 export-name="ih-qry"
+                :bar-menu-extra="queryBarMenuExtra"
                 v-else-if="qryResp" style="margin-top:var(--sp-2)"
                 :hide-body="qryView !== 'table'"
                 :loading="qryLoading"
@@ -349,9 +350,7 @@
                     :disabled="qryLoading" @update:page="goQryPage" @update:page-size="setQrySize" />
                 </template>
                 <template #bar-extra>
-                  <!-- 原始 IO 快查（query tab）——与 docs tab 同一 /cluster/query 记录环特征 -->
-                  <button class="btn sm ghost rt-tool-btn" aria-label="查看原始 IO（DSL 查询）"
-                    title="最近一次查询的请求/响应原文（语义分档高亮 + 复制/curl 回放）" @click="openRawIo('query')"><Terminal :size="13" /></button>
+                  <!-- 1357：行内「原始 IO」钮退役（与 ih-raw-io-query 菜单项重复，同 1357 裁决） -->
                   <!-- 查询 tab 教育文案合并 Info 钮 tooltip（docs tab 同款裁决，去常驻独立行） -->
                   <button class="btn sm ghost rt-tool-btn ih-tip-btn" aria-label="查询操作提示"
                     :title="`对 ${cur} 就地执行 DSL（Ctrl+Enter 执行）；变量、聚合可视化、Profile 等深度调试去「查询工作台」；表格内 Ctrl+F 查找并高亮命中，↑↓ 行导航、Enter 打开文档`">
@@ -2088,6 +2087,24 @@ const idxMenu = ref<{ x: number; y: number; name: string } | null>(null);
 function openIdxMenu(e: MouseEvent, name: string) {
   idxMenu.value = { x: e.clientX, y: e.clientY, name };
 }
+/* bar-extra 槽里的两枚图标钮，在工具行右键的「更多…」里给出等价的可读菜单项。
+   工具行右键是「表格操作那个表头」的完整入口——只加图标钮不进菜单，
+   窄档里就只剩一排无文字图标，用户只能靠试。
+   「操作提示」原本只活在图标钮的 title 里，菜单里给一条同文的 toast，读得到也存不住丢失。 */
+const docsBarMenuExtra = computed<CcmItem[]>(() => [
+  { key: 'ih-raw-io-docs', label: '查看原始 IO（最近一次检索请求/响应）', icon: Terminal, run: () => openRawIo('query') },
+  {
+    key: 'ih-ops-tip-docs', label: '表格操作提示（快捷键 / 就地编辑）', icon: Info,
+    run: () => store.notify('info', `Ctrl+F 查找高亮；双击单元格就地编辑（保存即全量覆盖 _source）${canWrite.value ? '' : '；当前角色只读，双击不会进入编辑'}；↑↓ 行导航、Enter 打开文档`, { duration: 12000 }),
+  },
+]);
+const queryBarMenuExtra = computed<CcmItem[]>(() => [
+  { key: 'ih-raw-io-query', label: '查看原始 IO（最近一次查询请求/响应）', icon: Terminal, run: () => openRawIo('query') },
+  {
+    key: 'ih-ops-tip-query', label: '查询操作提示（快捷键 / 深调入口）', icon: Info,
+    run: () => store.notify('info', `对 ${cur.value} 就地执行 DSL（Ctrl+Enter）；变量/聚合可视化/Profile 去「查询工作台」；表格内 Ctrl+F 查找、↑↓ 行导航、Enter 打开文档`, { duration: 12000 }),
+  },
+]);
 const idxMenuItems = computed<CcmItem[]>(() => {
   const m = idxMenu.value; if (!m) return [];
   const nm = m.name;
@@ -2383,6 +2400,18 @@ async function askDelIndex() {
 /* min-height:180px 定底退役改 0 自撑——矮内容 tab 不再被强行撑高，
  空态/骨架由 EmptyState/SkeletonBox 自身留白承担（§四态位置口径） */
 .ih-tab-body { padding: var(--sp-3) 14px; min-height: 0; }
+/* 1384：文档 tab 的表格档撑满剩余高度。
+   实测（1440×900）：.ih-tab-body 高 497 而 .rt-wrap 只有 240 —— 链上
+   .ih-ws(block) / .ih-tab-body(block) 不吃 flex，.fs-body > * 又是 flex:0 0 auto，
+   于是表格停在自己的 max-height 上，下方留 248px 空白。这正是用户反复说的
+   「默认可视表格特别窄，下面还有那么多空间」。
+   只对「文档 tab + 表格视图」生效：settings/mapping/shards/ops/query 各 tab 与
+   JSON/Tree 视图的高度语义（自有档位、内容自适应）一律不动。 */
+.ih-ws.ih-ws-fill, .ih-tab-body.ih-fill { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.ih-tab-body.ih-fill { padding-bottom: 0; }
+.ih-tab-body.ih-fill > .fs { flex: 1 1 auto; min-height: 0; }
+.ih-tab-body.ih-fill > .fs > .fs-body > .rt { flex: 1 1 auto; min-height: 0; }
+
 .ih-tip { font-size: var(--fs-xs); color: var(--tx2); margin-bottom: var(--sp-2h); line-height: 1.5; }
 .ih-link { color: var(--ac-hi); cursor: pointer; }
 .ih-link:hover { text-decoration: underline; }

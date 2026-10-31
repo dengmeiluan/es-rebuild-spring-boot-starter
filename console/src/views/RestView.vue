@@ -104,7 +104,7 @@
  置动作群末尾不进 resp-only 分组，失败响应同样可查） -->
         <button class="btn sm ghost" data-test="raw-io" aria-label="查看原始 IO（REST 直连）" title="最近一次透传请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIo"><Terminal :size="12" /> 原始 IO</button>
       </div>
-      <div ref="respBox" class="scroll-y rt-resp-scroll">
+      <div ref="respBox" class="scroll-y rt-resp-scroll" @contextmenu.prevent="openRespMenu">
         <!-- respErr 裸 pre → highlightJson v-html（转义安全，jsonc.ts 单一出处）——
  错误保原文全文 + JSON 错误体上色（j-key/j-str 语义），非 JSON 纯文本不着色仍走 .rt-err-pre 红。
  补 friendly 人话标题行（双轨范式）+ 上色内核换 errPreHtml
@@ -144,6 +144,12 @@
 
     <!-- 原始 IO 弹窗（宿主受控开关；rec 取该页最近一条 /cluster/raw 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
+    <!-- 1379：响应体右键菜单——此前响应区只有工具行一个「复制」钮，
+ 想复制某一行/整段消息体或换成路径写法只能全选手动截取。
+ 一级两项常用（复制响应 / 复制请求行）+ 两个分组（导出/更少用），
+ 不把低频动作摊到一级（表格右键同约定）。 -->
+    <CellContextMenu v-if="respMenu" :x="respMenu.x" :y="respMenu.y" title="响应操作"
+      :items="respMenuItems" @close="respMenu = null" />
     <PermModal v-model:show="permOpen" :target="store.target" />
   </div>
 </template>
@@ -154,7 +160,7 @@ import { applyVars, missingVars, hasVars } from '../utils/vars';
 import { NModal } from 'naive-ui';
 import EmptyState from '../components/EmptyState.vue';
 import StatusPill from '../components/StatusPill.vue'; /* W-D：响应状态徽标统一件 */
-import { Send, History, Copy, Zap, RefreshCw, Braces, X, Star, Terminal, Shield } from 'lucide-vue-next';
+import { Send, History, Copy, Zap, RefreshCw, Braces, X, Star, Terminal, Shield, FileDown, Search } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';
 import PermModal from '../components/PermModal.vue';import { api, ioRecorder, type RawIoRec } from '../api';
@@ -178,6 +184,7 @@ import { stripJsonComments, highlightJson } from '../utils/jsonc';
 import { errPreHtml, errMeta } from '../utils/errPre';
 import { friendlyEsError } from '../utils/esError';
 import MonacoEditor from '../components/MonacoEditor.vue';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import { useIndexFields } from '../composables/useIndexFields';
 import { useTermsSuggest } from '../composables/useTermsSuggest';
 import { bodyKindForPath } from '../utils/dslCompletionContext';
@@ -547,6 +554,48 @@ async function copyResp() {
   const ok = await copyText(typeof v === 'string' ? v : JSON.stringify(v, null, 2));
   store.notify(ok ? 'success' : 'error', ok ? '已复制响应' : '复制失败');
 }
+
+/* ═══ 1379：响应体右键菜单 ═══
+   用户原话「鼠标右键必须极致的增强在整个项目，现在很多地方没有右键能力」。
+   响应区此前只有工具行一个「复制」钮；想只取当前这段（已 JQ 过滤后的结果）
+   或把请求行搬去 curl/历史，都得手工全选。
+   一级只放两条高频动作（复制响应 / 复制请求行），其余收进两个分组 —— 与
+   表格右键「一级 ≤2 + 分组父项」的既有约定同形。
+   复制范围与工具行「复制」同一取值链（jqResult 优先），不另造口径。 */
+const respMenu = ref<{ x: number; y: number } | null>(null);
+function openRespMenu(e: MouseEvent) {
+  if (!resp.value) return; /* 无响应不出菜单（与工具栏复制钮禁用同判） */
+  respMenu.value = { x: e.clientX, y: e.clientY };
+}
+function respText(): string {
+  const v = jqResult.value !== null ? jqResult.value : respParsed.value;
+  return typeof v === 'string' ? v : JSON.stringify(v, null, 2);
+}
+function respSizeText(): string {
+  const n = respText().length;
+  return n >= 1024 ? (n / 1024).toFixed(1) + ' KB' : n + ' B';
+}
+const respMenuItems = computed<CcmItem[]>(() => [
+  { key: 'copy-resp', label: '复制响应', icon: Copy, run: () => void copyResp() },
+  { key: 'copy-reqline', label: `复制请求行（${method.value} ${path.value.trim().slice(0, 28)}）`, icon: Braces, run: () => {
+      const line = `${method.value} ${path.value.trim()}`;
+      void copyText(line).then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制请求行' : '复制失败'));
+    } },
+  { key: 'export-group', label: '导出与过滤…', icon: FileDown, sep: true, children: [
+    { key: 'copy-resp-raw', label: '复制原始响应（绕过 JQ 过滤）', icon: Copy, run: () => {
+        const raw = respParsed.value;
+        void copyText(typeof raw === 'string' ? raw : JSON.stringify(raw, null, 2))
+          .then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制原始响应' : '复制失败'));
+      } },
+    { key: 'copy-resp-size', label: `复制并显示体积（当前 ${respSizeText()}）`, icon: FileDown, run: () => void copyResp() },
+    { key: 'clear-jq', label: '清除 JQ 过滤（回到原始响应）', icon: X, run: () => { jqExpr.value = ''; } },
+    { key: 'clear-search', label: '清除响应内搜索高亮', icon: Search, run: () => { searchExpr.value = ''; } },
+  ] },
+  { key: 'more-group', label: '更多…', icon: Terminal, children: [
+    { key: 'open-rawio', label: '查看原始 IO', icon: Terminal, run: () => openRawIo() },
+    { key: 'retry', label: '重发本次请求', icon: RefreshCw, run: () => void send() },
+  ] },
+]);
 
 /* 原始 IO 快查（545 四页同款）——特征 /cluster/raw；判空 rec=null（本页还没
  发过请求）时 notify 引导，不开空弹窗 */

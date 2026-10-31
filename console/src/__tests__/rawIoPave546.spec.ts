@@ -89,6 +89,12 @@ describe('五百四十六批①：SqlConsole 原始 IO 特征收紧（排除 tra
     /* 前置：translate 记录确实已在环内且新于执行记录（旧特征 last('/cluster/sql/') 误中的正是它） */
     expect(ioRecorder.last('/cluster/sql/translate'), 'translate 必须已落账').toBeTruthy();
     expect(ioRecorder.last('/cluster/sql/lenient'), '执行记录必须已落账').toBeTruthy();
+    /* 1353：宿主两项收进「结果表更多 ⋯」菜单——先展开菜单再取 raw-io（判据意图不变：
+       弹窗必须开执行记录而非 translate）。 */
+    const more = host.querySelector<HTMLButtonElement>('[data-test="sq-bar-more"]');
+    expect(more, '1353 起「原始 IO」住在结果表更多菜单里，必须先有菜单触发器').toBeTruthy();
+    more!.click();
+    for (let i = 0; i < 8; i++) { await nextTick(); await Promise.resolve(); }
     const btn = host.querySelector<HTMLButtonElement>('[data-test="raw-io"]');
     expect(btn, '结果分节「原始 IO」钮必须在场').toBeTruthy();
     btn!.click();

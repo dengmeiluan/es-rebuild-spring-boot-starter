@@ -48,9 +48,11 @@ describe('1169 RT/QRT 导出档位对齐', () => {
 /* 1169②：反向缺口——QRT 单元格右键此前只能导 CSV，RT 能就地从单元格导四/五档。
  * 同一次右键，在索引工作台能直达格式，在 SQL 结果表得另开工具行菜单。 */
 describe('1169 QRT 单元格右键补导出档', () => {
-  it('QRT colChildren 里出现五档导出（ndjson 随 exportNdjson 开关）', () => {
-    const at = qrt.indexOf('const colChildren = [');
-    const seg = qrt.slice(at, at + 1800);
+  it('QRT 导出组里出现五档导出（ndjson 随 exportNdjson 开关）', () => {
+    /* 1385：导出从「列与导出…」拆成独立的 exportChildren 组 */
+    const at = qrt.indexOf('const exportChildren = [');
+    expect(at, '找不到 exportChildren').toBeGreaterThan(-1);
+    const seg = qrt.slice(at, at + 1400);
     for (const k of ['export-csv', 'export-xlsx', 'export-json', 'export-md']) {
       expect(seg, `QRT 缺 ${k}`).toContain(`key: '${k}'`);
     }
@@ -63,20 +65,23 @@ describe('1169 QRT 单元格右键补导出档', () => {
     }
   });
 
-  it('无记忆维度时分组只剩导出：组名不得叫「列与导出…」', () => {
-    /* 分组名必须仍含「列与导出…」（1142 锁），且无记忆时换成「导出…」 */
-    expect(qrt).toMatch(/label: '列与导出…'/);
-    expect(qrt).toMatch(/label: '导出…'/);
+  it('无记忆维度时列操作组整组不出（只有「导出…」在场）', () => {
+    /* 1385：拆分后「导出…」恒在，「列操作…」随 barOn 门控 */
+    expect(qrt, '导出组恒在').toMatch(/label: '导出…'/);
+    expect(qrt, '列操作组在场').toMatch(/label: '列操作…'/);
+    expect(qrt, '列操作组必须受 colOpsChildren 长度门控').toMatch(/\.\.\.\(colOpsChildren\.length \? \[colGroup\]/);
     /* 反向：列管理项必须仍在 barOn 门内（不能因为补导出把门拆了） */
-    const seg = qrt.slice(qrt.indexOf('const colChildren = ['), qrt.indexOf('const colChildren = [') + 900);
+    const at = qrt.indexOf('const colOpsChildren = [');
+    expect(at, '找不到 colOpsChildren').toBeGreaterThan(-1);
+    const seg = qrt.slice(at, at + 900);
     expect(seg).toMatch(/\.\.\.\(barOn\.value \? \[/);
     expect(seg).toContain("key: 'hide-col'");
   });
 
   it('两侧导出能力面对齐：RT 五格式 ⇄ QRT 五格式', () => {
     const rtFmts = [...rt.matchAll(/key: 'fmt-(\w+)'/g)].map(m => m[1]).sort();
-    const qrtAt = qrt.indexOf('const colChildren = [');
-    const qrtFmts = [...qrt.slice(qrtAt, qrtAt + 1800).matchAll(/key: 'export-(\w+)'/g)].map(m => m[1]).sort();
+    const qrtAt = qrt.indexOf('const exportChildren = [');
+    const qrtFmts = [...qrt.slice(qrtAt, qrtAt + 1400).matchAll(/key: 'export-(\w+)'/g)].map(m => m[1]).sort();
     expect(qrtFmts).toEqual(['csv', 'json', 'md', 'ndjson', 'xlsx']);
     expect(rtFmts).toEqual(qrtFmts);
   });

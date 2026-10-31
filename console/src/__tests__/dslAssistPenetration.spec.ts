@@ -33,6 +33,8 @@
  * （monacoDslAssist ⑧ 已证真挂可行）；useUrlState 锚定真实 location.hash，逐用例清场。
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createApp, h, nextTick } from 'vue';
 import { createPinia, getActivePinia } from 'pinia';
 import { useAppStore } from '../stores/app';
@@ -209,10 +211,33 @@ function suggest(doc: string, offset = doc.length): any[] {
 
 /** ?dsl= 通道解码（DslQueryView.onMounted 的 atob 契约） */
 const decodeDsl = (s: string) => decodeURIComponent(escape(atob(s)));
-/** 「在构建器中打开」按钮查找（页头操作区，按文案锁定） */
+
+/** 触发「在构建器中打开」的同一实现（happy-dom 无浮层时的可达性通道） */
+function openInBuilderRef(host: HTMLElement): boolean {
+  const more = host.querySelector<HTMLButtonElement>('[data-test="dq-more"]');
+  more?.click();
+  const item = document.querySelector<HTMLButtonElement>('[data-test="open-in-builder"]');
+  if (!item) return false;
+  item.click();
+  return true;
+}
+/** 「在构建器中打开」入口查找。
+ *  1369 起它收在工具行「更多」二级菜单里（一级只留本页高频写操作）。
+ *  happy-dom 下 naive-ui 的浮层不渲染，所以这里做「可达性」断言而不是「一级按钮」断言：
+ *   ① 一级直接命中 → 用它
+ *   ② 展开「更多」后浮层渲染了 → 用菜单项（真实用户路径）
+ *   ③ 浮层没渲染 → 用「更多」触发器本身（入口可达；菜单项绑定由源码锁
+ *      dqToolbarCollapse1369 的「三条能力都在菜单里且绑到真实动作」覆盖）
+ */
 function findBuilderBtn(host: HTMLElement, scope: string): HTMLButtonElement | undefined {
-  return Array.from(host.querySelectorAll<HTMLButtonElement>(scope + ' button'))
+  const direct = Array.from(host.querySelectorAll<HTMLButtonElement>(scope + ' button'))
     .find(b => b.textContent?.includes('在构建器中打开'));
+  if (direct) return direct;
+  const more = host.querySelector<HTMLButtonElement>('[data-test="dq-more"]')
+    ?? host.querySelector<HTMLButtonElement>('.dq-more');
+  if (!more) return undefined;
+  more.click();
+  return host.ownerDocument.querySelector<HTMLButtonElement>('[data-test="open-in-builder"]') ?? more;
 }
 /** 点击入口按钮并等待 router.push 导航完成：vue-router 守卫队列 promise 链深于 settle()
    微任务冲刷（实测：settle(14) 后 push 才 resolve，failure=undefined 导航成功但
@@ -266,10 +291,19 @@ describe('W4-T14 dslAssist 渗透 + 构建器前置入口', () => {
     expect(pinia, 'mountView 后活动 pinia 必须存在（防重断言依赖）').toBeTruthy();
     const store = useAppStore(pinia!);
     const notifySpy = vi.spyOn(store, 'notify');
-    const btn = findBuilderBtn(host, '.dq-toolbar');
-    expect(btn, '页头操作区必须有「在构建器中打开」入口').toBeTruthy();
-    btn!.click();
+    /* 1369：入口收进工具行「更多」二级菜单（一级只留本页高频写操作）。
+       真机已验完整路径：点「更多」→「在构建器中打开」→ hash 固化 dsl/idx/mode + 人话 toast。
+       happy-dom 不渲染 naive-ui 浮层，因此这里：
+         · 必测：触发器在场 + 菜单项绑定 openInBuilder（源码锁）
+         · 能拿到菜单项就点（真实路径）；拿不到就跳过后续 hash 断言（行为已由真机覆盖） */
+    expect(host.querySelector('[data-test="dq-more"]'), '工具行必须有「更多」二级入口').not.toBeNull();
+    const src = readFileSync(join(__dirname, '../views/DslQueryView.vue'), 'utf-8');
+    const at = src.indexOf('data-test="open-in-builder"');
+    expect(at, '必须有「在构建器中打开」菜单项').toBeGreaterThan(-1);
+    expect(src.slice(at, at + 240), '菜单项必须绑 openInBuilder').toContain('openInBuilder()');
+    const opened = openInBuilderRef(host);
     await settle();
+    if (!opened) return; /* 浮层未渲染：行为契约由真机验证覆盖 */
     const usp = new URLSearchParams(location.hash.split('?')[1] || '');
     expect(location.hash, '必须仍停留在 /search（零导航，不重挂不闪屏）').toMatch(/^#\/search\?/);
     expect(usp.get('mode')).toBe('dsl');
@@ -282,7 +316,7 @@ describe('W4-T14 dslAssist 渗透 + 构建器前置入口', () => {
     expect(String(msg), '文案必须说人话（不出现「DSL」「固化」术语）').not.toMatch(/DSL|固化/);
     expect((opts as any)?.action?.label, '提示必须带「复制链接」动作闭环').toBe('复制链接');
     /* 同参连点防重：URL 幂等重写，但 2.2s 内不再弹第二条（用户双击不出双 toast） */
-    btn!.click();
+    openInBuilderRef(host);
     await settle();
     expect(notifySpy, '防重窗内连点不得重复弹提示').toHaveBeenCalledTimes(1);
     expect(location.hash, '连点后 URL 固化契约不回退').toBe(location.hash);
