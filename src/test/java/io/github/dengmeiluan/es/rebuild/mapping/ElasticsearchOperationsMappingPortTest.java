@@ -32,6 +32,7 @@ import org.springframework.data.elasticsearch.core.document.Document;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -746,6 +747,12 @@ public class ElasticsearchOperationsMappingPortTest {
                         "{\"error\":{\"type\":\"unexpected_request\",\"reason\":\""
                                 + request + "\"},\"status\":500}");
             }
+            /* 2026-10-31：CI 上这个类偶发 `Connection reset by peer`（本地连跑 12 次 32/32 复现不出），
+               每次换一个方法失败，说明是 socket 竞态而不是业务断言。两处加固：
+               ① body 写完后**显式 close 输出流**——`exchange.close()` 在部分实现里只释放连接，
+                  不保证已写字节被提交；客户端（RestHighLevelClient）读到半截就 reset。
+               ② `sendResponseHeaders` 之前先设 Content-Type，`-1L` 分支（HEAD 无 body）
+                  显式 `endExchange` 语义由 close 承担，这里不动（JDK 对 HEAD 会自行丢弃 body）。 */
             try {
                 if (response.body == null) {
                     exchange.sendResponseHeaders(response.status, -1L);
@@ -754,7 +761,10 @@ public class ElasticsearchOperationsMappingPortTest {
                 byte[] body = response.body.getBytes(StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
                 exchange.sendResponseHeaders(response.status, body.length);
-                exchange.getResponseBody().write(body);
+                OutputStream out = exchange.getResponseBody();
+                out.write(body);
+                out.flush();
+                out.close();
             } finally {
                 exchange.close();
             }
