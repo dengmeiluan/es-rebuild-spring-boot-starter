@@ -1034,6 +1034,9 @@ function switchAndRerun(c: { id: string; name: string }) {
   store.notify('success', `已切换到「${c.name}」，正在重跑 SQL`);
 }
 const busy = ref(false);
+/* 1388：自动补引号的「教一次」记忆（索引名 → 已提示）。同一条稿反复重查
+ （排序/下钻/翻页）只教一次；换索引才再提示。会话级即可，不落盘。 */
+const autoQuoteTaught = new Set<string>();
 const qr = useQueryRun(); // 长查询读秒 + 取消（ 范式）
 
 /* 原始 IO 快查——取记录环最近一条本页执行链记录开弹窗；判空口径见 openRawIo（548 统一 notify）。
@@ -1202,8 +1205,11 @@ async function doRun() {
   const paramsSnapshot = pp.value.length ? paramsText.value.trim() : undefined;
   const body = buildBody(execSql);
   /* 1386：告诉用户「这次帮你补了引号」——静默改写会让人以为编辑器里本来就带引号，
-     下次复制走那段 SQL 又踩同一个坑。提示里给出正式写法，教一次。 */
-  if (quotedFix.quoted) {
+     下次复制走那段 SQL 又踩同一个坑。提示里给出正式写法，教一次。
+     1388：同一条 SQL 反复重查（表头排序、下钻、翻页）不该每次都弹——见过一次就够了，
+     按「索引名」记忆，改的是稿子（换索引/别名）才会再教一回。 */
+  if (quotedFix.quoted && !autoQuoteTaught.has(quotedFix.quoted)) {
+    autoQuoteTaught.add(quotedFix.quoted);
     store.notify('info', `索引名「${quotedFix.quoted}」已自动加双引号后执行（ES SQL 要求标识符带引号；编辑器原文未改动）`, { duration: 3600 });
   }
   try {
