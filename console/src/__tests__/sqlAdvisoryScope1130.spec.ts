@@ -16,7 +16,9 @@ describe('1130 SQL 就地建议跟随选区/光标语句', () => {
   });
 
   it('展开字段 / 补 LIMIT 只改写该段并原位放回', () => {
-    expect(src).toContain('const next = advisoryText.value.replace(/\\bSELECT\\s+\\*/i, \'SELECT \' + cols);');
+    /* 1387：列清单改由 utils/sqlStar 产出（容器字段剔除），替换点仍是 advisoryText——
+       锚只跟着变量名走，语义「只改当前段」不变。 */
+    expect(src).toContain("const next = advisoryText.value.replace(/\\bSELECT\\s+\\*/i, 'SELECT ' + ex.cols);");
     expect(src).toContain("const semi = /;\\s*$/.test(src) ? ';' : '';");
     expect(src).toContain("const next = appendSqlLimit(src.replace(/;\\s*$/, ''), 1000) + semi;");
     expect(src).toContain('sql.value = replaceScopeText(sql.value, editScope.value, next);');

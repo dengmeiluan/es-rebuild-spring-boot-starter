@@ -130,7 +130,7 @@
         </div>
         <!-- 1050：高开销/易误读结构提示（GROUP BY 无 WHERE / SELECT * 无 LIMIT / 前置 % LIKE）
              ——只提示不拦截；可一键补 LIMIT 控制返回量（不宣称降低扫描成本）。 -->
-        <div v-if="costHints.length || canExpandStar" class="lint-bar sq-cost-hint lint-bar-warn" role="status">
+        <div v-if="costHints.length || canExpandStar || starBlockedReason" class="lint-bar sq-cost-hint lint-bar-warn" role="status">
           <span v-for="h in costHints" :key="h.id" class="sq-cost-item">
             <b>{{ h.message }}</b> — {{ h.suggestion }}
           </span>
@@ -139,6 +139,10 @@
           </span>
           <!-- 1105：SELECT * 一键展开为字段清单（按当前 mapping；超长截断并提示） -->
           <button v-if="canExpandStar" type="button" class="btn xs" data-test="sql-expand-star" @click="expandStar">展开字段</button>
+          <!-- 1387：有 SELECT * 但 FROM 不是单一具体索引时，不给按钮也不留死胡同 -->
+          <span v-else-if="starBlockedReason" class="sq-cost-item" data-test="sql-expand-star-blocked">
+            <b>SELECT *</b> — {{ starBlockedReason }}
+          </span>
           <button v-if="costFixLimit" type="button" class="btn xs" @click="applyCostLimit">补 LIMIT 1000</button>
         </div>
       </div>
@@ -467,6 +471,7 @@ import { lintSql } from '../utils/sqlLint'; /* P0-3：SQL 静态 lint */
 /* 1109：ES 报错 `line X:Y` 锚点 → 编辑器行列定位 */
 import { parseSqlErrorPos } from '../utils/sqlErrorPos';
 import { autoQuoteFromIndex } from '../utils/sqlQuote';
+import { expandStarColumns } from '../utils/sqlStar';
 import { selectionScope, statementsOf, statementScopeAt, replaceScopeText, mapScopedPos, type SqlScope } from '../utils/sqlScope';
 /* 1121：LIMIT/OFFSET 超结果窗口（from+size ≤ 10000）→ 去掉 OFFSET / 压 LIMIT 用 cursor */
 import { fixSqlResultWindow } from '../utils/sqlWindowFix';
@@ -505,20 +510,30 @@ const costHints = computed(() => sqlCostHints(advisoryText.value || ''));
 const costFixLimit = computed(() => costHints.value.some(h => h.fix === 'limit'));
 /* 1105：SELECT * 一键展开为字段清单——字段源跟随 FROM/顶栏（sqlFieldsCtx），
    上限 60 个以免把编辑器写爆；不在本地伪造字段（字段源空则不出现按钮）。
-   1130：只展开当前选区/光标语句里的 SELECT *，并原位放回，其他语句零触碰。 */
-const canExpandStar = computed(() => /\bSELECT\s+\*/i.test(advisoryText.value || '') && sqlFieldsCtx.fields.value.length > 0);
+   1130：只展开当前选区/光标语句里的 SELECT *，并原位放回，其他语句零触碰。
+   1387：两条真机缺陷收口——① 容器字段（object/nested）不能当列，剔除逻辑下沉
+   utils/sqlStar（此前 `publisher` 被写进 SELECT，展开完照样报错）；
+   ② 字段源必须属于语句自己的 FROM：通配/多表时 effectiveSqlIndex 回落顶栏索引，
+   展开会把 A 索引的列写进查 B 的语句。 */
+const STAR_CAP = 60;
+const starHasMarker = computed(() => /\bSELECT\s+\*/i.test(advisoryText.value || ''));
+const canExpandStar = computed(() => starHasMarker.value
+  && sqlFieldsCtx.fields.value.length > 0 && !!sqlFromIdx.value);
+const starBlockedReason = computed(() => {
+  if (!starHasMarker.value || !sqlFieldsCtx.fields.value.length || sqlFromIdx.value) return '';
+  return 'FROM 没有写明一个具体索引（通配 / 多表 / 未知名），无法确定用哪个索引的字段展开';
+});
 function expandStar() {
-  const all = sqlFieldsCtx.fields.value;
-  if (!all.length) return;
-  /* 多字段子域（title.keyword）默认不展开，减少冗余列；只有全是子域时才退化为全量 */
-  const pool = all.filter(f => !f.path.endsWith('.keyword'));
-  const base = pool.length ? pool : all;
-  const picked = base.slice(0, 60);
-  const cols = picked.map(f => '"' + String(f.path).replace(/"/g, '""') + '"').join(', ');
-  const next = advisoryText.value.replace(/\bSELECT\s+\*/i, 'SELECT ' + cols);
+  const ex = expandStarColumns(sqlFieldsCtx.fields.value, STAR_CAP);
+  if (!ex.picked) return;
+  const next = advisoryText.value.replace(/\bSELECT\s+\*/i, 'SELECT ' + ex.cols);
   if (next === advisoryText.value) return;
   applyScopedEdit(next);
-  store.notify('info', `已展开 ${picked.length} 个字段${base.length > picked.length ? `（共 ${base.length} 个，已截断前 60）` : ''}`, { duration: 3200 });
+  const extra = [
+    ex.pool > ex.picked ? `共 ${ex.pool} 个，已截断前 ${STAR_CAP}` : '',
+    ex.skippedContainers ? `跳过 ${ex.skippedContainers} 个 object/nested 容器字段（SQL 不能直接选）` : '',
+  ].filter(Boolean).join('；');
+  store.notify('info', `已展开 ${ex.picked} 个字段${extra ? '（' + extra + '）' : ''}`, { duration: 3200 });
 }
 function applyCostLimit() {
   const src = advisoryText.value;
