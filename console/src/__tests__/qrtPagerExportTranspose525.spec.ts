@@ -146,7 +146,10 @@ describe('QRT took prop（525 批对齐 RT 计数条）', () => {
 
 describe('宿主接线（525 批）', () => {
   it('LuceneQueryView：表格分页随 QRT 内建（事件回宿主远端分页），顶部分页器只剩 JSON 视图', () => {
-    expect(luceneSrc).toMatch(/:hits="hits" :total="total" :total-gte="totalGte" :loading="busy" sortable :took="took" :page="page" :page-size="size" :pager-disabled="busy" @update:page="goPage" @update:page-size="setSize"/);
+    /* 1400：属性串拆两段锁——中段新增 selectable/row-drawer 等无关属性不应打断分页契约锁；
+       分页契约本身（props+双向事件）仍逐字连续，删任一项都会红。 */
+    expect(luceneSrc).toMatch(/:hits="hits" :total="total" :total-gte="totalGte" :loading="busy" sortable/);
+    expect(luceneSrc).toMatch(/:took="took" :page="page" :page-size="size" :pager-disabled="busy" @update:page="goPage" @update:page-size="setSize"/);
     expect(luceneSrc).toMatch(/<Pagination v-if="viewMode === 'json'" :page="page"/);
     /* 五百六十一批同步更新：聚焦表格工具行整块退役（seg/JSONL 寄居 QRT bar-prepend、CSV 走
        内建导出钮、内建分页行既有）——工具可达语义由 QRT 工具行常驻承接（聚焦面内 rt-bar/qrt-bar

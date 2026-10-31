@@ -330,7 +330,6 @@
           :max-height="resultMaxHeight"
           :min-height="resultMinHeight"
           selectable
-          @selection-change="onSelChange"
           empty-text="查询成功但命中 0 行，检查 WHERE 条件或索引名"
           @use-as-condition="useAsCondition"
           @sort-by="sortByColumn"
@@ -345,13 +344,8 @@
                  而它们都是低频（原始 IO 只在排查时看、高度档调一次就记住）。
                  内核 Actions/视图菜单同款形态（.qrt-menu：点开、点外关、Esc 关）。 -->
             <!-- 1363：SQL 结果表此前没有多选（RT 有）——用户反复问「为什么能力没共享」。
-                 开启 selectable 后必须给出「选中能干什么」，否则勾选框就是死控件：
-                 有选中时这里出现「复制选中 N 行」，静息态零占位。 -->
-            <button v-if="selRows.length" class="btn ghost xs" data-test="sq-copy-sel"
-              :title="`复制选中的 ${selRows.length} 行为 TSV（可直接贴进表格软件）`"
-              @click="copySelectedRows">
-              <ClipboardCopy :size="12" /> 复制选中 {{ selRows.length }}
-            </button>
+                 开启 selectable 后必须给出「选中能干什么」：动作面收进 QRT 内核底部状态栏
+                 （复制 TSV / JSON / 清除），与本视图工具行不重复占位。 -->
             <span class="menu-wrap sq-bar-more-wrap">
               <button class="btn ghost xs sq-icon-btn" data-test="sq-bar-more" aria-label="结果表更多（原始 IO / 高度档）"
                 aria-haspopup="menu" :aria-expanded="barMoreOpen" title="结果表更多：原始 IO、结果表高度档"
@@ -364,11 +358,6 @@
                   :class="{ on: resultH === h }" :aria-checked="resultH === h"
                   @click="setResultH(h)">{{ h === 'fill' ? '填满剩余空间' : h + 'px' }}</button>
                 <div class="qrt-m-sep" role="separator"></div>
-                <button v-if="selRows.length" class="qrt-mi" role="menuitem" data-test="sq-copy-sel-menu"
-                  :disabled="!selRows.length" @click="barMoreOpen = false; copySelectedRows()">
-                  <ClipboardCopy :size="12" /> 复制选中行（{{ selRows.length }} 行，TSV）
-                </button>
-                <div v-if="selRows.length" class="qrt-m-sep" role="separator"></div>
                 <button class="qrt-mi" role="menuitem" data-test="raw-io" aria-label="查看原始 IO（SQL 执行）"
                   title="最近一次 SQL 请求/响应原文（复制/回放/语义分档高亮）"
                   @click="barMoreOpen = false; openRawIo()">
@@ -437,7 +426,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
-import { BookOpen, Braces, Star, Play, Copy, AlertCircle, ChevronRight, XCircle, ShieldAlert, Database, Loader2, History, Terminal, BarChart3, MoreHorizontal, ClipboardCopy } from 'lucide-vue-next';
+import { BookOpen, Braces, Star, Play, Copy, AlertCircle, ChevronRight, XCircle, ShieldAlert, Database, Loader2, History, Terminal, BarChart3, MoreHorizontal } from 'lucide-vue-next';
 import { NModal } from 'naive-ui';
 /* 页内历史面板合并 QueryHistoryPanel 共享件（DslQueryView 弹窗范式） */
 import QueryHistoryPanel from '../components/QueryHistoryPanel.vue';
@@ -647,19 +636,8 @@ const resultMinHeight = computed(() => resultH.value === 'fill' ? fillHeight.val
 
 /* 1353：高度档从「连点循环」升级为显式三选（菜单里带当前档），循环函数保留给键盘/兼容路径 */
 const barMoreOpen = ref(false);
-/* 1363：结果表多选（RT 同款通道，之前 SQL 页没接）——勾选后能「复制选中行」，
-   否则勾选框就是死控件。选中行由内核 emit 原始矩阵行，列名取当前 cols。 */
-const selRows = ref<unknown[][]>([]);
-function onSelChange(rows: unknown[]) { selRows.value = rows as unknown[][]; }
-function copySelectedRows() {
-  if (!selRows.value.length) return;
-  const SEP = '\t';
-  const head = colNames.value.join(SEP);
-  const body = selRows.value.map(r => (r || []).map(v => String(v ?? '')).join(SEP));
-  copyText([head, ...body].join('\n')).then(ok => store.notify(
-    ok ? 'success' : 'error',
-    ok ? `已复制 ${selRows.value.length} 行（含列名表头，TSV）` : '复制失败'));
-}
+/* 1363：结果表多选（RT 同款通道）——动作面（复制 TSV/JSON、清除）在 QRT 内核底部状态栏，
+   宿主只负责开启 selectable，不再维护第二套复制实现。 */
 function setResultH(h: (typeof RESULT_H_TIERS)[number]) {
   resultH.value = h;
   barMoreOpen.value = false;

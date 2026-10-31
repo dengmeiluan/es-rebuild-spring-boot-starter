@@ -1,27 +1,15 @@
 /**
- * 一千三百六十三批：SQL 结果表没有多选通道（查询/索引工作台有）。
+ * 一千三百六十三批（1400 修订）：SQL 结果表多选通道。
  *
- * 用户反复问「为什么三个表格能力没有完全共享」。这一批用**渲染出来的首行列集**取证：
+ * 1363 当时在 SQL 宿主工具行加了「复制选中 N」按钮——但 QRT（SQL/Lucene 共用）与 RT 的
+ * 动作面一个在工具行、一个在表下，用户看到的仍是「三个表格三套交互」。1400 把动作面
+ * **收进 QRT 内核底部状态栏**（复制 TSV/JSON/清除），SQL 宿主只留 `selectable` 开关。
  *
- *   RT （DSL 工作台） 5 列：[勾选] | # | title | status | 操作
- *   QRT（SQL 控制台） 2 列：# | title          ← 缺多选
- *
- * 查因：QRT 内核**本来就支持** `selectable`（首列勾选 / 表头全选 / tr 挂 qrt-sel /
- * emit `selection-change`，全是现成的），只是 SQL 宿主没开启。又一处「能力有、没接线」。
- *
- * 关键取舍：**开了勾选就必须给出「选中能干什么」**——否则勾选框是死控件，比没有更糟。
- * 所以同时接上「复制选中 N 行（TSV，含列名表头）」，且只在有选中时出现，静息态零占位
- * （1353 刚刚把工具行从 3 行压到 2 行，不能又塞回常驻钮）。
- *
- * 真机验证（1440×900，执行一条 SELECT）：
- *   修复后首行 `[chk] | # | title`；未勾选时「复制选中」钮不存在；
- *   勾 1 行 → 钮出现且文案「复制选中 1」，`tr.qrt-sel` 计数 = 1。
- *
- * 本 spec 锁：
- *  ① SQL 宿主传了 `selectable` 并接住 `selection-change`；
- *  ② 复制钮是**条件渲染**（无选中不占位），不是常驻；
- *  ③ 复制内容含列名表头（TSV）——贴进表格软件第一行就是字段名；
- *  ④ 负控：把 `selectable` 去掉 → ① 必须红。
+ * 本 spec 现在锁：
+ *  ① 宿主传 selectable（勾选列/全选/选中计数由内核出）；
+ *  ② 宿主不得再维护第二套复制实现（旧 sq-copy-sel 按钮/菜单项必须消失，否则两个入口）；
+ *  ③ 内核动作条存在且条件渲染（无选中零占位）——行为断言在 qrSelBar1400.spec.ts；
+ *  ④ 负控：去掉 selectable → ① 必须红。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -30,26 +18,23 @@ import { join } from 'node:path';
 const SQL = readFileSync(join(__dirname, '../views/SqlConsoleView.vue'), 'utf-8');
 const QRT = readFileSync(join(__dirname, '../components/QueryResultTable.vue'), 'utf-8');
 
-describe('1363 SQL 结果表补齐多选通道', () => {
-  it('① 宿主传 selectable 并接住 selection-change', () => {
+describe('1363/1400 SQL 结果表多选通道（内核动作面单源）', () => {
+  it('① 宿主传 selectable', () => {
     expect(SQL, '必须开启多选').toMatch(/^\s+selectable$/m);
-    expect(SQL).toContain('@selection-change="onSelChange"');
-    expect(SQL).toContain('function onSelChange(rows: unknown[])');
-    /* 内核通道本身必须是现成的（不是本批新造的） */
-    expect(QRT).toContain("(e: 'selection-change', rows: unknown[]): void");
   });
 
-  it('② 复制钮条件渲染（无选中不占位）', () => {
-    expect(SQL, '按钮必须 v-if 绑定选中数').toMatch(/<button v-if="selRows\.length"[^>]*data-test="sq-copy-sel"/);
-    /* 菜单里那条同样条件 */
-    expect(SQL).toMatch(/v-if="selRows\.length"[^>]*data-test="sq-copy-sel-menu"/);
+  it('② 宿主不维护第二套复制实现', () => {
+    expect(SQL, '旧按钮必须退役').not.toContain('data-test="sq-copy-sel"');
+    expect(SQL, '旧菜单项必须退役').not.toContain('data-test="sq-copy-sel-menu"');
+    expect(SQL, '旧宿主复制函数必须退役').not.toContain('function copySelectedRows');
   });
 
-  it('③ 复制内容含列名表头（TSV）', () => {
-    expect(SQL, '表头用当前列名').toMatch(/const head = colNames\.value\.join\(SEP\);/);
-    expect(SQL, '行按当前矩阵行拼').toMatch(/selRows\.value\.map\(r => \(r \|\| \[\]\)\.map\(v => String\(v \?\? ''\)\)\.join\(SEP\)\)/);
-    expect(SQL, '表头与行要拼成一段').toMatch(/\[head, \.\.\.body\]\.join\('\\n'\)/);
-    expect(SQL, '分隔符必须是制表符（TSV，不是逗号）').toMatch(/const SEP = '\\t';/);
+  it('③ 内核状态栏动作条存在且由选中数门控', () => {
+    expect(QRT).toContain('data-test="qrt-copy-sel-tsv"');
+    expect(QRT).toContain('data-test="qrt-copy-sel-json"');
+    expect(QRT).toMatch(/v-if="selectable && selSet\.size"/);
+    /* 复制内容走共享矩阵内核：TSV 口径含列名表头 */
+    expect(QRT).toMatch(/matrixText\(\{[\s\S]{0,160}?cols: shownCols\.value/);
   });
 
   it('④ 负控：去掉 selectable → ① 必须红', () => {

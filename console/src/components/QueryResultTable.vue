@@ -450,6 +450,15 @@
     <!-- 1366：页脚状态栏（RT 同款）——此前 QRT 只有分页行，缺 RT 的「选区聚合 + 操作提示」。
  放在表格卡内、分页行之前；分页行在场时由分页行接管卡底圆角（.has-pgr 既有规则）。 -->
     <div v-if="!bodyHidden && !loading && !isEmpty" class="qrt-status">
+      <!-- 行选中动作条（RT「选中浮动栏」同语义的内核版）——勾选后此处给出出口；
+ 此前 QRT 只有勾选框+右键菜单里的复制项，没有可见动作面（SQL/Lucene 都缺），
+ 勾了不知道能干什么。选行与 Ctrl+点格聚合可并存，两段同时显示、互不顶掉。 -->
+      <template v-if="selectable && selSet.size">
+        <span class="qrt-stat-hint qrt-sel-badge">已选 <b>{{ selSet.size }}</b> 行</span>
+        <button class="qrt-stat-x" data-test="qrt-copy-sel-tsv" title="复制选中行为 TSV（首行列名，可直接贴进表格软件）" @click="copySelMatrix('tsv')">复制 TSV</button>
+        <button class="qrt-stat-x" data-test="qrt-copy-sel-json" title="复制选中行为 JSON 数组（键=可见列）" @click="copySelMatrix('json')">复制 JSON</button>
+        <button class="qrt-stat-x" data-test="qrt-clear-sel" aria-label="清除已选行" title="清除已选行" @click="clearSelRows">清除</button>
+      </template>
       <template v-if="aggCellStats && aggCellStats.numCount">
         <span class="qrt-stat mono">Σ {{ fmtNum(aggCellStats.sum) }}</span>
         <span class="qrt-stat mono">avg {{ aggCellStats.avg != null ? fmtNum(aggCellStats.avg) : '—' }}</span>
@@ -460,7 +469,7 @@
         <button class="qrt-stat-x" aria-label="清除单元格聚合选择" title="清除选择（Esc 亦可）" @click="clearAggCells">清除</button>
       </template>
       <span v-else-if="aggCellStats" class="qrt-stat-hint">已选 {{ aggCellStats.picked }} 格（都不是数值，无数可算）· 再点一次取消</span>
-      <span v-else class="qrt-stat-hint">Ctrl+点击数值单元格可求和聚合 · 右键单元格可复制/筛选用法</span>
+      <span v-else-if="!(selectable && selSet.size)" class="qrt-stat-hint">Ctrl+点击数值单元格可求和聚合 · 右键单元格可复制/筛选用法</span>
       <div style="flex:1"></div>
       <span v-if="tblFocus" class="qrt-kbd-hint mono">↑↓ 行 · Ctrl+F 查找 · Esc 退出</span>
     </div>
@@ -1428,6 +1437,10 @@ function toggleAllSel() {
   }
   emitSelection();
 }
+function clearSelRows() {
+  selSet.value = new Set();
+  emitSelection();
+}
 /* 行集重建（props.rows/hits 换数据）→ 原始索引身份失效，残留勾选会错挂新行——清空；
  仅 selectable 启用且有残留时行动（缺省通道零触碰） */
 watch(rawRows, () => {
@@ -2005,9 +2018,10 @@ const cellMenuItems = computed(() => {
              仍只对合法列名开放（表达式别名会拼出非法字段），空值由 buildDsl 自身剔除。 */
           ...(col && /^[A-Za-z_][\w.]*$/.test(col)
             ? [{ key: 'copy-sel-terms', label: `复制选中 ${selSet.value.size} 行为查询（${col}）`, icon: Braces, run: async () => {
-                const idx = shownCols.value.indexOf(col!);
+                /* selSet 键=rawRows 索引，列位取 columns（排序/筛选只重排渲染序，不动 raw 身份） */
+                const ci = columns.value.indexOf(col!);
                 const vals = [...selSet.value]
-                  .map(ri => renderRows.value[ri]?.[idx])
+                  .map(ri => rawRows.value[ri]?.[ci])
                   .filter(v => v !== null && v !== undefined && v !== '');
                 const q = buildDsl(col!, vals, cpTypes.value[col!]);
                 if (!q) { store.notify('warning', '选中的行在该列无值，未生成查询'); return; }
@@ -2381,8 +2395,9 @@ function onTableCmd(e: Event) {
  列取 shownCols（所见即所得），值过 exportCell 管道——与「复制整表」同口径，
  只是行范围换成勾选。 */
 async function copySelMatrix(fmt: 'tsv' | 'md' | 'json') {
-  const all: any[] = isHits.value ? (props.hits ?? []) : (props.rows ?? []);
-  const rows = [...selSet.value].sort((a, b) => a - b).map(i => all[i]).filter(r => r !== undefined);
+  /* selSet 键=rawRows 索引；hits 型 rawRows 也是展开后的矩阵（_id/_score/_source 列），
+ 不能拿 props.hits（对象）当矩阵行取 qColVal——那会复制出一整行空格（1400 实测）。 */
+  const rows = [...selSet.value].sort((a, b) => a - b).map(i => rawRows.value[i]).filter(r => r !== undefined);
   if (!rows.length) { store.notify('warning', '没有选中的行'); return; }
   const text = matrixText({
     rows, cols: shownCols.value,
@@ -2724,6 +2739,8 @@ th.qrt-drop-after { box-shadow: inset -3px 0 0 var(--info); }
 .qrt-wrap.has-pgr + .qrt-status { border-radius: 0; }
 .qrt-status .qrt-stat { font-family: var(--mono); }
 .qrt-status .qrt-stat-hint { color: var(--tx2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qrt-sel-badge { color: var(--tx1); }
+.qrt-sel-badge b { color: var(--ac-hi); }
 .qrt-stat-x {
   flex: none; padding: 1px var(--sp-2); font-size: var(--fs-xs); cursor: pointer;
   background: var(--bg2); color: var(--tx1); border: 1px solid var(--line); border-radius: var(--r-xs);
