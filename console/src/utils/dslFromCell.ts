@@ -13,11 +13,22 @@ export function buildDsl(field: string, values: unknown[], fieldType?: string): 
   const vals: unknown[] = [];
   for (const v of values) {
     if (v === null || v === undefined || v === '') continue;
-    vals.push(typeof v === 'object' ? JSON.stringify(v) : v);
+    /* 1431：对象值不能当查询词——此前 JSON.stringify 后塞进 term/terms，ES 永远不会把
+       对象索引成那个字符串，必然零命中（用户以为在过滤，其实什么都没匹配）。
+       这类列（object/nested/数组）只能按子字段查，本函数无力生成，交调用方不提供入口。 */
+    if (typeof v === 'object') return null;
+    vals.push(v);
   }
   if (!vals.length) return null;
   const uniq = [...new Set(vals)];
   if (field === '_id') return { ids: { values: uniq } };
+  /* 1431：text 字段**多值**不能走 terms——ES 对 text 做 term/terms 查询要 fielddata，
+     默认关闭，必然 400（单值那条早就路由到 match 了，多值这条漏了）。
+     多值意义是「任一命中」，用 bool.should + match 表达。 */
+  if (fieldType === 'text') {
+    if (uniq.length === 1) return { match: { [field]: uniq[0] } };
+    return { bool: { should: uniq.map(v => ({ match: { [field]: v } })), minimum_should_match: 1 } };
+  }
   if (uniq.length > 1) return { terms: { [field]: uniq } };
   const v = uniq[0];
   /* text 字段 term 查不到（分词问题）——text 路由到 match；keyword/数值/未知走 term */

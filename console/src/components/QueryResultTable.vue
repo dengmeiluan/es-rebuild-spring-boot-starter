@@ -2210,7 +2210,15 @@ const cellMenuItems = computed(() => {
                   .map(ri => rawRows.value[ri]?.[ci])
                   .filter(v => v !== null && v !== undefined && v !== '');
                 const q = buildDsl(col!, vals, cpTypes.value[col!]);
-                if (!q) { store.notify('warning', '选中的行在该列无值，未生成查询'); return; }
+                if (!q) {
+                  /* 1431：对象/数组列无法按值匹配（ES 不会把对象索引成字符串）——
+                     说清是哪一种「生成不了」，不要一律报「无值」 */
+                  const hasObj = vals.some(v => v !== null && typeof v === 'object');
+                  store.notify('warning', hasObj
+                    ? `「${col}」是对象/数组列，无法按值生成查询；请改用其子字段`
+                    : '选中的行在该列无值，未生成查询');
+                  return;
+                }
                 const ok = await copyText(JSON.stringify(q, null, 2));
                 store.notify(ok ? 'success' : 'error', ok ? `已复制 ${vals.length} 个值的查询 DSL` : '复制失败');
               } }]

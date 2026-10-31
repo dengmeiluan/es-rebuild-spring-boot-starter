@@ -25,6 +25,16 @@ describe('buildDsl 类型路由（227 批）', () => {
     expect(buildDsl('level', ['warn', 'info', 'warn'])).toEqual({ terms: { level: ['warn', 'info'] } });
   });
 
+  it('text 字段多值 → bool.should+match（terms 打 text 要 fielddata，必然 400）', () => {
+    expect(buildDsl('title', ['a b', 'c d'], 'text')).toEqual({
+      bool: { should: [{ match: { title: 'a b' } }, { match: { title: 'c d' } }], minimum_should_match: 1 },
+    });
+    /* 去重后只剩一个 → 回落单值 match（不包 bool） */
+    expect(buildDsl('title', ['a b', 'a b'], 'text')).toEqual({ match: { title: 'a b' } });
+    /* keyword 多值仍走 terms（零变化） */
+    expect(buildDsl('status', ['A', 'B'], 'keyword')).toEqual({ terms: { status: ['A', 'B'] } });
+  });
+
   it('_id 多值仍走 ids 且去重', () => {
     expect(buildDsl('_id', ['a', 'b', 'a'])).toEqual({ ids: { values: ['a', 'b'] } });
   });
@@ -35,8 +45,14 @@ describe('buildDsl 类型路由（227 批）', () => {
     expect(buildDsl('level', [null, 'x'])).toEqual({ term: { level: 'x' } });
   });
 
-  it('对象值 JSON.stringify 后参与（与复制值口径一致）', () => {
-    expect(buildDsl('meta', [{ a: 1 }])).toEqual({ term: { meta: '{"a":1}' } });
+  it('对象值不参与查询生成（1431：ES 不会把对象索引成那个 JSON 串，旧行为必然零命中）', () => {
+    /* 227 批原有断言是 term:{meta:'{"a":1}'}——"与复制值口径一致"。
+       但 ES 里对象字段没有「值」，term 打上去永远零命中，用户以为在过滤。
+       改为返回 null（调用方不提供该入口 / 提示改用子字段）；复制值仍是原 JSON。 */
+    expect(buildDsl('meta', [{ a: 1 }])).toBeNull();
+    expect(buildDsl('meta', [{ a: 1 }, { b: 2 }])).toBeNull();
+    /* 与标量混选时整条不生成（不能只查标量、静默丢掉对象值那几行） */
+    expect(buildDsl('meta', [{ a: 1 }, 'x'])).toBeNull();
   });
 
   it('epoch 毫秒原值不被人性化转换（显示层职责不入侵 DSL）', () => {
