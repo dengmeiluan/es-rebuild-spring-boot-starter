@@ -266,6 +266,7 @@
                 'agg-sel': aggCells.has(cellKey(hit._id, c)),
                 expanded: expandedCells.has(cellKey(hit._id, c)),
                 'rt-region': regionKeys.has(ri + ':' + ci),
+                'rt-region-anchor': !!touchAnchor && touchAnchor.ri === ri && touchAnchor.ci === ci,
                 'num-col': numericCols.has(c),
                 'ip-col': semPref && isIpCol(c),
                 'rt-hit': isSearchHit(ri, ci),
@@ -278,6 +279,9 @@
               @dblclick="startEdit(hit, c)"
               @mousedown="onCellDown($event)"
               @mousedown.left="onRegionStart($event, ri, ci)"
+              @pointerdown="onCellPointerDown($event, ri, ci)"
+              @pointerup="onCellPointerUp"
+              @pointercancel="onCellPointerUp"
               @click.ctrl.exact="toggleAggCell(hit, c)"
               @click.exact="onCellClick($event, hit, c)"
               @contextmenu.prevent="openCellMenu($event, hit, c, ri)"
@@ -473,6 +477,14 @@
 
     <!-- 框选区域浮动栏（dbx 选区语言——框完即可复制矩阵，TSV 含表头行）；
  框选自动聚合直读（Σ/avg/数值占比） -->
+    <!-- 1441：触屏两击框选的第一步——起点已设，等第二角。没有这条，平板用户
+         长按后看不到任何变化，不知道自己在框选状态里 -->
+    <transition name="pop">
+      <div v-if="touchAnchor && !region" class="rt-float rt-float-anchor">
+        <span class="rt-float-n">已设框选起点 · 点另一个单元格完成框选</span>
+        <button aria-label="取消框选起点" class="btn sm ghost" @click="clearRegion"><X :size="12" /></button>
+      </div>
+    </transition>
     <transition name="pop">
       <div v-if="region && !regionAnchor" class="rt-float">
         <span class="rt-float-n">已框选 <b>{{ (region.ri2 - region.ri1 + 1) * (region.ci2 - region.ci1 + 1) }}</b> 格<span v-if="regionSummary">（数值 {{ regionSummary.numCount }}/{{ regionSummary.count }}）</span></span>
@@ -1279,7 +1291,7 @@ function invertSel() {
   sortedHits.value.forEach(h => { if (!selected.value.has(h._id)) next.add(h._id); });
   selected.value = next;
 }
-function clearSel() { selected.value = new Set(); region.value = null; } /* ：Esc 连带清框选区 */
+function clearSel() { selected.value = new Set(); region.value = null; touchAnchor.value = null; cancelTouchTimer(); } /* ：Esc 连带清框选区；1441 触屏起点同清 */
 /* Delete/Backspace=批量删除勾选行——仍走父组件 askBatchDel 确认链（防呆闭环），
  编辑中（editing）不接管（防把输入框内容删格外的语义）；
  rank3+ 才放行（delete-by-id=CLUSTER 档，VIEWER 按 Del 不再触发 403） */
@@ -1990,11 +2002,45 @@ const regionKeys = computed(() => {
 });
 function onRegionStart(e: MouseEvent, ri: number, ci: number) {
   if (editing.value || e.ctrlKey || e.metaKey) return;
+  /* 1441：触屏 tap 会在 pointer 之后补发合成 mousedown——那条路径会把触屏两击
+     刚建好的矩形清空。同一手势内的合成 mousedown 距 pointerdown 只有几毫秒，
+     用时间窗短路；触屏设备接鼠标时（pointerType=mouse）不受影响。
+     与 QRT 同款（1408 那边先落，RT 这侧此前完全没有触屏框选）。 */
+  if (lastPointerWasTouch && Date.now() - touchStamp < 700) return;
   regionAnchor.value = { ri, ci };
   region.value = null;
   window.addEventListener('mousemove', onRegionMove);
   window.addEventListener('mouseup', onRegionEnd, { once: true });
 }
+
+/* ═══ 1441：触屏两击框选（QRT 1408 同款下沉——此前 RT 只能鼠标拖选，平板用户框不出来）═══
+ 长按（500ms）第一格设起点，再点另一格成矩形；起点格虚线标记 + 浮动条引导。
+ 只在没有 hover 的设备上生效（pointerType=touch），鼠标语义零变化。 */
+const touchAnchor = ref<{ ri: number; ci: number } | null>(null);
+let touchTimer: ReturnType<typeof setTimeout> | null = null;
+let lastPointerWasTouch = false;
+let touchStamp = 0;
+function cancelTouchTimer() {
+  if (touchTimer) { clearTimeout(touchTimer); touchTimer = null; }
+}
+function onCellPointerDown(e: PointerEvent, ri: number, ci: number) {
+  if (e.pointerType !== 'touch') return;
+  lastPointerWasTouch = true;
+  touchStamp = Date.now();
+  cancelTouchTimer();
+  if (touchAnchor.value) {
+    const a = touchAnchor.value;
+    region.value = {
+      ri1: Math.min(a.ri, ri), ri2: Math.max(a.ri, ri),
+      ci1: Math.min(a.ci, ci), ci2: Math.max(a.ci, ci),
+    };
+    touchAnchor.value = null;
+    return;
+  }
+  touchTimer = setTimeout(() => { touchAnchor.value = { ri, ci }; touchTimer = null; }, 500);
+}
+/* 只有「没按满 500ms」才取消——按满后的抬手不该抹掉刚设的起点 */
+function onCellPointerUp() { if (touchTimer) cancelTouchTimer(); }
 function onRegionMove(e: MouseEvent) {
   const a = regionAnchor.value;
   if (!a) return;
@@ -2014,7 +2060,7 @@ function onRegionEnd() {
     setTimeout(() => { suppressClick = false; }, 0);
   }
 }
-function clearRegion() { region.value = null; }
+function clearRegion() { region.value = null; touchAnchor.value = null; cancelTouchTimer(); }
 async function copyRegionTsv(ext: 'tsv' | 'json') {
   const r = region.value;
   if (!r) return;
@@ -2860,6 +2906,8 @@ body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-sel
 .rt-cell.pended { background: var(--warn-soft); box-shadow: inset 2px 0 0 var(--warn); }
 /* 拖拽框选区域高亮（dbx 选区语言——蓝 soft 底+品牌描边） */
 .rt-cell.rt-region { background: var(--info-soft); box-shadow: inset 0 0 0 1px var(--info-line); }
+/* 1441：触屏两击框选的起点——虚线描边告诉用户「这一角已定，再点对角」（QRT 同款） */
+.rt-cell.rt-region-anchor { outline: 2px dashed var(--info-line); outline-offset: -2px; }
 /* P2-2：十字准星简化版——行 hover 带已有，格 hover 加信息色光环（行列交叉感） */
 .rt-cell.rt-cell:hover { box-shadow: inset 0 0 0 1px var(--info-line); }
 .rt-cell.agg-sel { background: var(--ac-soft); }
