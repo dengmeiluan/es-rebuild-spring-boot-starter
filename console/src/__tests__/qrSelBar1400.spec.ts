@@ -94,6 +94,21 @@ describe('1400 QRT 行选中动作条', () => {
     expect(host.querySelector('[data-test="qrt-copy-sel-tsv"]')).toBeNull();
     expect(host.textContent).not.toContain('已选');
   });
+
+  it('⑤ 反选：当前视图里已选取消、未选选上（RT invertSel 同口径）', async () => {
+    mountQrt({ hits: HITS, total: 2, selectable: true, storageKey: 'k1400d' });
+    await tick();
+    const chks = host.querySelectorAll<HTMLInputElement>('tbody .qrt-sel-col input');
+    chks[0].click();
+    await tick();
+    expect(host.textContent).toContain('已选 1 行');
+    (host.querySelector('[data-test="qrt-invert-sel"]') as HTMLButtonElement).click();
+    await tick();
+    expect(host.textContent, '反选后仍是 1 行（另一行）').toContain('已选 1 行');
+    const boxes = [...host.querySelectorAll<HTMLInputElement>('tbody .qrt-sel-col input')].map(i => i.checked);
+    expect(boxes, '第 1 行取消、第 2 行选上').toEqual([false, true]);
+    /* 负控：反选实现若只是清空，boxes 会变成 [false,false]——上面的 toEqual 会红 */
+  });
 });
 
 describe('1400 Lucene 宿主接线', () => {

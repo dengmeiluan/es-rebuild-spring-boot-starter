@@ -50,23 +50,25 @@ const PROD_DSL = {
 
 describe('1404 生产型整树往返', () => {
   const r = parseTree(PROD_DSL);
-  const back = r.ok ? serializeTree(r.tree) : null;
+  /* 判别联合：ok=false 分支没有 tree，窄化后取用（直接 r.tree! 过不了 vue-tsc） */
+  const tree = r.ok ? r.tree : null;
+  const back = tree ? serializeTree(tree) : null;
 
   it('解析成功且顶层键全部进结构化仓位（不是 extras 兜底）', () => {
-    expect(r.ok, !r.ok ? (r as any).reason : '').toBe(true);
-    const t = r.tree!;
-    expect(t.root, 'query 进了树根').toBeTruthy();
-    expect(t.postFilter, 'post_filter 结构化').toBeTruthy();
-    expect(t.sort?.length, 'sort 两个键').toBe(2);
-    expect(t.source, '_source 结构化').toBeTruthy();
-    expect(t.highlight, 'highlight 结构化').toBeTruthy();
-    expect(t.aggs, 'aggs 结构化').toBeTruthy();
-    expect(t.collapse, 'collapse 结构化').toBeTruthy();
-    expect(t.size).toBe(20);
-    expect(t.from).toBe(0);
-    expect(t.searchParams?.track_total_hits, 'track_total_hits 进参数舱').toBe(true);
-    expect(t.searchParams?.min_score, 'min_score 进参数舱').toBe(0.5);
-    expect(Object.keys(t.extras).length, '不应有任何键落 extras：' + Object.keys(t.extras).join(',')).toBe(0);
+    expect(r.ok, r.ok ? '' : r.reason).toBe(true);
+    if (!tree) throw new Error('解析失败：' + (r.ok ? '' : r.reason));
+    expect(tree.root, 'query 进了树根').toBeTruthy();
+    expect(tree.postFilter, 'post_filter 结构化').toBeTruthy();
+    expect(tree.sort?.length, 'sort 两个键').toBe(2);
+    expect(tree.source, '_source 结构化').toBeTruthy();
+    expect(tree.highlight, 'highlight 结构化').toBeTruthy();
+    expect(tree.aggs, 'aggs 结构化').toBeTruthy();
+    expect(tree.collapse, 'collapse 结构化').toBeTruthy();
+    expect(tree.size).toBe(20);
+    expect(tree.from).toBe(0);
+    expect(tree.searchParams?.track_total_hits, 'track_total_hits 进参数舱').toBe(true);
+    expect(tree.searchParams?.min_score, 'min_score 进参数舱').toBe(0.5);
+    expect(Object.keys(tree.extras).length, '不应有任何键落 extras：' + Object.keys(tree.extras).join(',')).toBe(0);
   });
 
   it('往返语义等价（键序无关，数组保序）', () => {
@@ -83,13 +85,16 @@ describe('1404 生产型整树往返', () => {
     /* 负控：把 bool 的 must_not 删掉，上面的断言集合必须能发现 */
     const broken = JSON.parse(JSON.stringify(PROD_DSL));
     delete broken.query.bool.must_not;
-    const bk = stable(serializeTree(parseTree(broken).tree!));
+    const rb = parseTree(broken);
+    if (!rb.ok) throw new Error('负控样例解析失败');
+    const bk = stable(serializeTree(rb.tree));
     expect(bk).not.toBe(stable(PROD_DSL));
     expect(bk).not.toContain('must_not');
   });
 
   it('再解析一次仍等价（幂等，不会被二次序列化改写）', () => {
-    const twice = serializeTree(parseTree(back).tree!);
-    expect(stable(twice)).toBe(stable(back));
+    const again = parseTree(back);
+    if (!again.ok) throw new Error('二次解析失败：' + again.reason);
+    expect(stable(serializeTree(again.tree))).toBe(stable(back));
   });
 });

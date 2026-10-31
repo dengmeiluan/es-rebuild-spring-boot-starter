@@ -373,8 +373,9 @@
             <td class="qrt-idx mono">{{ ri + 1 }}</td>
             <td
               v-for="(cell, ci) in row" :key="ci"
-              class="qrt-cell" :class="{ expanded: isExpanded(ri, ci), 'qrt-col-frozen': isFrozenCol(shownCols[ci]), 'qrt-hit': isSearchHit(ri, ci), 'rt-hit-cur': isSearchCur(ri, ci), 'num-col': isNumericCol(shownCols[ci]), 'ip-col': semPref && isIpCol(shownCols[ci] ?? ''), 'qrt-agg-sel': isAggCell(ri, ci), ...semToneCls(cell, ci) }" :title="cell === null || cell === undefined ? '' : fullText(cell)"
-              @mousedown="onCellDown($event)"
+              :data-ri="ri" :data-col="shownCols[ci]"
+              class="qrt-cell" :class="{ expanded: isExpanded(ri, ci), 'qrt-col-frozen': isFrozenCol(shownCols[ci]), 'qrt-hit': isSearchHit(ri, ci), 'rt-hit-cur': isSearchCur(ri, ci), 'num-col': isNumericCol(shownCols[ci]), 'ip-col': semPref && isIpCol(shownCols[ci] ?? ''), 'qrt-agg-sel': isAggCell(ri, ci), 'qrt-region': isRegionCell(ri, ci), ...semToneCls(cell, ci) }" :title="cell === null || cell === undefined ? '' : fullText(cell)"
+              @mousedown="onCellDown($event); onRegionStart($event, ri, ci)"
               @click="onCellClick($event, cell, ri, ci)"
               @keydown.enter.exact.prevent="onCellClick($event, cell, ri, ci)"
               @contextmenu.prevent="openCellMenu($event, ri, ci)"
@@ -450,6 +451,15 @@
     <!-- 1366：页脚状态栏（RT 同款）——此前 QRT 只有分页行，缺 RT 的「选区聚合 + 操作提示」。
  放在表格卡内、分页行之前；分页行在场时由分页行接管卡底圆角（.has-pgr 既有规则）。 -->
     <div v-if="!bodyHidden && !loading && !isEmpty" class="qrt-status">
+      <!-- 框选矩阵动作条（RT 同语义内核化）——拖选若干格后在此给出口：
+ 格数 + Σ/avg（有数值时）+ 复制 TSV/JSON + 清除。与行多选并存（两种选择语言各管各的）。 -->
+      <template v-if="region">
+        <span class="qrt-stat-hint qrt-sel-badge">已框选 <b>{{ regionCellCount }}</b> 格<span v-if="regionSummary">（数值 {{ regionSummary.numCount }}/{{ regionSummary.count }}）</span></span>
+        <span v-if="regionSummary && regionSummary.numCount" class="qrt-stat mono">Σ {{ fmtNum(regionSummary.sum) }} · avg {{ regionSummary.avg != null ? regionSummary.avg.toFixed(2) : '—' }}</span>
+        <button class="qrt-stat-x" data-test="qrt-copy-region-tsv" title="复制框选区域为 TSV（不含表头；空值空串）" @click="copyRegionMatrix('tsv')">复制 TSV</button>
+        <button class="qrt-stat-x" data-test="qrt-copy-region-json" title="复制框选区域为 JSON 二维数组" @click="copyRegionMatrix('json')">复制 JSON</button>
+        <button class="qrt-stat-x" data-test="qrt-clear-region" aria-label="清除框选" title="清除框选（Esc 亦可）" @click="clearRegion">清除</button>
+      </template>
       <!-- 行选中动作条（RT「选中浮动栏」同语义的内核版）——勾选后此处给出出口；
  此前 QRT 只有勾选框+右键菜单里的复制项，没有可见动作面（SQL/Lucene 都缺），
  勾了不知道能干什么。选行与 Ctrl+点格聚合可并存，两段同时显示、互不顶掉。 -->
@@ -457,6 +467,7 @@
         <span class="qrt-stat-hint qrt-sel-badge">已选 <b>{{ selSet.size }}</b> 行</span>
         <button class="qrt-stat-x" data-test="qrt-copy-sel-tsv" title="复制选中行为 TSV（首行列名，可直接贴进表格软件）" @click="copySelMatrix('tsv')">复制 TSV</button>
         <button class="qrt-stat-x" data-test="qrt-copy-sel-json" title="复制选中行为 JSON 数组（键=可见列）" @click="copySelMatrix('json')">复制 JSON</button>
+        <button class="qrt-stat-x" data-test="qrt-invert-sel" title="反选：当前视图里已选的取消、没选的选上" @click="invertSelRows">反选</button>
         <button class="qrt-stat-x" data-test="qrt-clear-sel" aria-label="清除已选行" title="清除已选行" @click="clearSelRows">清除</button>
       </template>
       <template v-if="aggCellStats && aggCellStats.numCount">
@@ -469,7 +480,7 @@
         <button class="qrt-stat-x" aria-label="清除单元格聚合选择" title="清除选择（Esc 亦可）" @click="clearAggCells">清除</button>
       </template>
       <span v-else-if="aggCellStats" class="qrt-stat-hint">已选 {{ aggCellStats.picked }} 格（都不是数值，无数可算）· 再点一次取消</span>
-      <span v-else-if="!(selectable && selSet.size)" class="qrt-stat-hint">Ctrl+点击数值单元格可求和聚合 · 右键单元格可复制/筛选用法</span>
+      <span v-else-if="!(selectable && selSet.size)" class="qrt-stat-hint">{{ region ? '拖动已框选矩阵 · 点「复制 TSV」贴进表格软件 · Esc 清除选区' : 'Ctrl+点击数值单元格可求和聚合 · 更可拖选一片单元格 · 右键单元格可复制/筛选用法' }}</span>
       <div style="flex:1"></div>
       <span v-if="tblFocus" class="qrt-kbd-hint mono">↑↓ 行 · Ctrl+F 查找 · Esc 退出</span>
     </div>
@@ -1452,6 +1463,17 @@ function clearSelRows() {
   selSet.value = new Set();
   emitSelection();
 }
+/* 反选（RT invertSel 同口径）——口径=当前视图（sortedRows），视图外的行不动：
+ 用户看到的“全选”就是这一屏，反选也必须只对这一屏成立。 */
+function invertSelRows() {
+  const view = new Set<number>();
+  for (const row of sortedRows.value) { const i = rawIdxMap.value.get(row); if (i != null) view.add(i); }
+  const n = new Set<number>();
+  for (const i of view) if (!selSet.value.has(i)) n.add(i);
+  for (const i of selSet.value) if (!view.has(i)) n.add(i);
+  selSet.value = n;
+  emitSelection();
+}
 /* 行集重建（props.rows/hits 换数据）→ 原始索引身份失效，残留勾选会错挂新行——清空；
  仅 selectable 启用且有残留时行动（缺省通道零触碰） */
 watch(rawRows, () => {
@@ -1533,8 +1555,8 @@ function objChip(v: any): { label: string; n: number } | null {
 function onCellClick(e: MouseEvent | KeyboardEvent, cell: any, ri: number, ci: number) {
   if (cell === null || cell === undefined) return;
   /* 拖选守卫：格内文本拖选松手的 click 不当作单击（展开不抢）；
-   键盘事件不经守卫；单元格无导航代价，不做延迟仲裁（同位单击零变化） */
-  if (e instanceof MouseEvent && cellGuard.moved(e)) return;
+ 1405：框选矩阵松手后的 click 同样不当作单击（否则拖完顺手触发展开） */
+  if (e instanceof MouseEvent && (cellGuard.moved(e) || regionSuppressClick)) return;
   /* 1366：Ctrl/Cmd+点击 = 数值聚合（RT 同款「Ctrl+点击单元格加减」）。
      必须在展开之前拦：聚合是显式修饰键动作，不该顺带改视图。 */
   if ((e.ctrlKey || e.metaKey) && typeof cell === 'number') {
@@ -1550,6 +1572,90 @@ function onCellClick(e: MouseEvent | KeyboardEvent, cell: any, ri: number, ci: n
 }
 const cellGuard = createPressGuard();
 function onCellDown(e: MouseEvent) { cellGuard.down(e); }
+
+/* ═══ 1405：拖拽框选矩阵（RT「dbx 灵魂操作」同语义下沉）═══
+ 左键在格内按下 → 跨格拖动出矩形 → 松开选区；纯点击（无位移）不启动，单击展开/
+ Ctrl+点聚合不受影响。选区坐标=渲染坐标（排序/筛选后即所见坐标），
+ 行集或列集变化即清（坐标键会错挂到新数据上）。 */
+const regionAnchor = ref<{ ri: number; ci: number } | null>(null);
+const region = ref<{ ri1: number; ri2: number; ci1: number; ci2: number } | null>(null);
+let regionSuppressClick = false;
+/* 选区身份键：与 expandedCells/cellKey 同格式，供单元格高亮判定 */
+const regionKeys = computed(() => {
+  const s = new Set<string>();
+  const r = region.value;
+  if (r) for (let ri = r.ri1; ri <= r.ri2; ri++) for (let ci = r.ci1; ci <= r.ci2; ci++) s.add(cellKey(ri, ci));
+  return s;
+});
+const regionCellCount = computed(() => {
+  const r = region.value;
+  return r ? (r.ri2 - r.ri1 + 1) * (r.ci2 - r.ci1 + 1) : 0;
+});
+function isRegionCell(ri: number, ci: number): boolean { return regionKeys.value.has(cellKey(ri, ci)); }
+function onRegionStart(e: MouseEvent, ri: number, ci: number) {
+  /* 左键才起框选；Ctrl/Cmd 留给数值聚合；右键走菜单 */
+  if (e.button !== 0 || e.ctrlKey || e.metaKey) return;
+  regionAnchor.value = { ri, ci };
+  region.value = null;
+  window.addEventListener('mousemove', onRegionMove);
+  window.addEventListener('mouseup', onRegionEnd, { once: true });
+}
+function onRegionMove(e: MouseEvent) {
+  const a = regionAnchor.value;
+  if (!a) return;
+  const td = (e.target as HTMLElement | null)?.closest?.('td.qrt-cell') as HTMLElement | null;
+  if (!td?.dataset.ri || !td.dataset.col) return;
+  const ri = Number(td.dataset.ri);
+  const ci = shownCols.value.indexOf(td.dataset.col);
+  if (isNaN(ri) || ci < 0) return;
+  /* 只有真的换过格（或跨了列）才成立选区——同一格内拖选文字不该弹动作条 */
+  if (ri === a.ri && ci === a.ci) { region.value = null; return; }
+  region.value = { ri1: Math.min(a.ri, ri), ri2: Math.max(a.ri, ri), ci1: Math.min(a.ci, ci), ci2: Math.max(a.ci, ci) };
+}
+function onRegionEnd() {
+  window.removeEventListener('mousemove', onRegionMove);
+  regionAnchor.value = null;
+  if (region.value) {
+    /* 拖出过矩形：抑制紧随的 click（否则会顺带触发展开/复制） */
+    regionSuppressClick = true;
+    setTimeout(() => { regionSuppressClick = false; }, 0);
+  }
+}
+function clearRegion() { region.value = null; }
+/* 选区数值摘要（框完即显 Σ/avg，dbx 选区底栏语言）——纯展示，不改数据 */
+const regionSummary = computed(() => {
+  const r = region.value;
+  if (!r) return null;
+  const vals: unknown[] = [];
+  for (let ri = r.ri1; ri <= r.ri2; ri++) {
+    const row = renderRows.value[ri];
+    if (!row) continue;
+    for (let ci = r.ci1; ci <= r.ci2; ci++) vals.push(row[ci]);
+  }
+  const nums = vals.filter((v): v is number => typeof v === 'number' && isFinite(v));
+  if (!nums.length) return { numCount: 0, count: vals.length, sum: 0, avg: null as number | null };
+  const sum = nums.reduce((a, b) => a + b, 0);
+  return { numCount: nums.length, count: vals.length, sum, avg: sum / nums.length };
+});
+async function copyRegionMatrix(fmt: 'tsv' | 'json') {
+  const r = region.value;
+  if (!r) return;
+  const cols = shownCols.value.slice(r.ci1, r.ci2 + 1);
+  const rows: any[][] = [];
+  for (let ri = r.ri1; ri <= r.ri2; ri++) {
+    const row = renderRows.value[ri];
+    if (row) rows.push(cols.map((c) => { const ci = shownCols.value.indexOf(c); return row[ci] ?? null; }));
+  }
+  if (!rows.length) return;
+  /* 选区复制是「矩阵片段」：不带表头（用户框的就是这几格），与整表/选中行复制区分开 */
+  const text = fmt === 'tsv'
+    ? rows.map(r => r.map(v => (v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v)).replace(/[\t\r\n]/g, ' ')).join('\t')).join('\n')
+    : JSON.stringify(rows, null, 2);
+  const ok = await copyText(text);
+  store.notify(ok ? 'success' : 'error', ok ? `已复制选区 ${rows.length} 行 × ${cols.length} 列（${fmt.toUpperCase()}）` : '复制失败');
+}
+/* 行集/列集变化→选区失效（渲染坐标会错挂新数据） */
+watch([() => renderRows.value.length, () => shownCols.value.length], () => { region.value = null; });
 
 /* 大整数（|v|>=1e4 的整数）千分位显示——title/复制仍为原始值；
  epoch 毫秒优先（其自身已是人性化形态），小数与短数字不加工 */
@@ -2314,6 +2420,8 @@ function onEscBlur(e: KeyboardEvent) {
   if (expandedRows.value.size) { expandedRows.value = new Set(); return; }
   /* 1366：聚合散选先清（与 RT「Esc 清框选」同裁决），再落失焦 */
   if (aggCells.value.size) { clearAggCells(); return; }
+  /* 1405：框选矩阵次之（先清散选，再清更“外”的选区） */
+  if (region.value) { clearRegion(); return; }
   (e.currentTarget as HTMLElement | null)?.blur();
 }
 const wrapRef = ref<HTMLElement>();
@@ -2747,6 +2855,11 @@ th.qrt-drop-after { box-shadow: inset -3px 0 0 var(--info); }
 .qrt-row-copy:hover { color: var(--ac-hi); border-color: var(--ac-line); }
 /* 1366：Ctrl+点击聚合的选中格——与 RT 的 .agg-sel 同语言（软底 + 左缘强调条） */
 .qrt-tbl td.qrt-agg-sel { background: var(--ac-soft); box-shadow: inset 2px 0 0 var(--ac-hi); }
+/* 1405：拖拽框选矩阵——与 RT .rt-region 同一视觉语言（软底+内描边），
+ 与散选聚合（.qrt-agg-sel 左缘强调条）区分：一个是矩阵，一个是点选集合 */
+.qrt-tbl td.qrt-region { background: var(--info-soft); box-shadow: inset 0 0 0 1px var(--info-line); }
+/* 框选时单元格文字不可被浏览器文本选择抢走（拖选语义是矩阵，不是复制文本） */
+.qrt-tbl tbody td.qrt-cell { user-select: none; }
 /* 1366：页脚状态栏（RT .rt-status 同款页脚语言）——贴死表体下沿、只留底部圆角；
    分页行在场时由 .has-pgr 接管卡底（既有规则），此处让位 */
 .qrt-status {
