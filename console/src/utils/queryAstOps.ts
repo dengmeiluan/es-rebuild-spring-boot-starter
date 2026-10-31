@@ -186,6 +186,12 @@ export function opsForType(type: string | undefined): string[] {
   if (!type) return ['exists'];
   if (type === 'text') return ['match', 'match_phrase', 'match_phrase_prefix', 'wildcard', 'prefix', 'regexp', 'fuzzy', 'exists'];
   if (type === 'keyword' || type === 'wildcard') return ['term', 'terms', 'prefix', 'wildcard', 'regexp', 'fuzzy', 'match', 'exists'];
+  /* 1395：constant_keyword 是 keyword 的特化（官方：「a specialization of the keyword field
+     for the case that all documents in the index have the same value」，并明确可以
+     「filter on a constant keyword」）。此前没有分支 → 落兜底 ['exists']，选完字段只看到
+     「字段存在」，与 shape 同类的「支持读改、不支持新建」缺口。
+     它与 keyword 的差别只在写入侧（值恒定），查询语义完全一致，故共用 keyword 族。 */
+  if (type === 'constant_keyword') return ['term', 'terms', 'prefix', 'wildcard', 'regexp', 'fuzzy', 'match', 'exists'];
   if (NUM.includes(type)) return ['term', 'terms', 'range', 'exists'];
   /* 548 B：date 分支并入 date_nanos（纳秒精度同族——此前落兜底 ['exists']，range 推荐缺失） */
   if (type === 'date' || type === 'date_nanos') return ['range', 'exists'];

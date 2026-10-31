@@ -73,4 +73,14 @@ describe('1382 推荐算子在下拉里真的可见', () => {
     const all = optionsByGroup().flatMap(g => g.ops);
     expect(all, '叶子下拉不得出现 nested 容器').not.toContain('nested');
   });
+
+  it('1395：constant_keyword 字段的推荐组里有 term/terms（此前只有 exists）', async () => {
+    host.innerHTML = '';
+    await mount('tenant_tag', 'constant_keyword', 'term');
+    const rec = optionsByGroup().find(g => g.group === '推荐');
+    expect(rec, '推荐组必须存在').toBeTruthy();
+    expect(rec!.ops, 'constant_keyword 与 keyword 查询语义一致').toContain('term');
+    expect(rec!.ops).toContain('terms');
+    expect(rec!.ops.length, '只有 exists 就是本缺陷的原始形态').toBeGreaterThan(1);
+  });
 });
