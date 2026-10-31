@@ -217,7 +217,7 @@
  QRT 内建聚焦面（FS headless，外层表格 FS 与 focusable 关断随收口退役；
  hideBody→true 自动退聚焦=RT 552 rtFix552 对称件）。外层 FS
  聚焦通道随本收口退役。 -->
-          <QueryResultTable ref="resultTbl" :hits="hits" :total="total" :total-gte="totalGte" :loading="busy" sortable selectable row-drawer fill :took="took" :page="page" :page-size="size" :pager-disabled="busy" @update:page="goPage" @update:page-size="setSize" :hide-body="viewMode !== 'table'" max-height="100%" :storage-key="index ? 'lucene:' + index : undefined" :field-types="fieldTypes" empty-hint="调整查询语句或时间范围后重查"
+          <QueryResultTable ref="resultTbl" :hits="hits" :total="total" :total-gte="totalGte" :loading="busy" sortable remote-sort :sync-sort="luceneSortSync" @sort-change="onSortChange" selectable row-drawer fill :took="took" :page="page" :page-size="size" :pager-disabled="busy" @update:page="goPage" @update:page-size="setSize" :hide-body="viewMode !== 'table'" max-height="100%" :storage-key="index ? 'lucene:' + index : undefined" :field-types="fieldTypes" empty-hint="调整查询语句或时间范围后重查"
             :searchable="viewMode === 'table'" refreshable @refresh="doRun">
             <template #bar-prepend>
               <!-- 特定能力保留在外层：扁平表格 vs 逐 hit JsonTree（嵌套展开）切换，不塞进通用表；
@@ -412,6 +412,33 @@ function goPage(p: number) {
 }
 const sortField = useUrlState('sort');
 const sortOrder = useUrlState('order', 'desc') as Ref<'desc' | 'asc'>;
+/* 1402：表头排序=服务端排序（此前 QRT 本地档只排「当前页」——用户点了箭头，
+ 跨页顺序却没变，是「看起来排了、换页又乱」的经典心智错位）。内核 remote 档只
+  emit 意图，这里写回 sortField/sortOrder 并回第一页重查；箭头由 sync-sort 回填。 */
+const luceneSortSync = computed(() => {
+  const f = sortField.value.trim();
+  if (!f) return null;
+  /* 箭头按「列名」回填：text 列实际下发的是 .keyword 子域，但表头列叫 title。
+ 只有「基列确实是 text 且存在同名 keyword 子域」时才剥离，避免把用户手输的
+ 真实子域列名（a.keyword）错误还原。 */
+  const base = f.endsWith('.keyword') ? f.slice(0, -'.keyword'.length) : '';
+  const col = base && fieldTypes.value?.[base] === 'text' && fieldTypes.value?.[f] === 'keyword' ? base : f;
+  return { f: col, d: (sortOrder.value === 'asc' ? 1 : -1) as 1 | -1 };
+});
+function onSortChange(s: { f: string; d: 'asc' | 'desc' } | null) {
+  if (busy.value) { store.notify('info', '查询执行中，请等待完成'); return; }
+  /* text → .keyword 子域；无子域的 text 列不可排序，就地拦下不发注定 400 的请求 */
+  if (s) {
+    const res = resolveSortField(s.f, fieldTypes.value);
+    if (!res.ok) { store.notify('warning', res.reason || '该字段不支持排序'); return; }
+    sortField.value = res.field;
+    sortOrder.value = s.d;
+  } else {
+    sortField.value = '';
+  }
+  from.value = 0;
+  void doRun();
+}
 const hits = ref<any[]>([]);
 const total = ref(0);
 const totalGte = ref(false);

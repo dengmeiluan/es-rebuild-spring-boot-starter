@@ -1227,12 +1227,17 @@ function thTitle(c: string): string {
      旧文案只说「点击排序」等于承诺了全量序。SQL 侧早有「仅作用于已加载 N 行」的诚实标注，
      这里把同一口径下沉到内核：只有确实存在未加载行时才加这句（已全量加载不加，避免噪音）。 */
   const loaded = props.hits?.length ?? 0;
-  const partial = props.sortable && !props.useAsCondition
+  /* 1402：远端档的排序是服务端全量序（Lucene 已接线），不能再挂「仅排已加载 N 行」的
+ 前缀——那句话会让用户以为跨页顺序不会变。本地档才成立。 */
+  const partial = props.sortable && !props.useAsCondition && !props.remoteSort
     && Number(props.total ?? 0) > loaded;
   const scopeNote = partial ? '（仅排序已加载的 ' + loaded + ' 行，全部结果请改查询侧排序）' : '';
   const base = props.sortable
     ? props.useAsCondition
       ? '点击本地排序：升序 → 降序 → 取消（不改 SQL）；Shift+点击：追加/翻转次键；右键：列管理 / 按此列升序或降序并重查（改 SQL）；拖列名可重排'
+      : props.remoteSort
+      /* 1402：远端档必须说清「换页也跟着排」——否则用户会以为只是排眼前这几行 */
+      ? '点击排序：升序 → 降序 → 取消（按服务端排序重查，跨页一致）；右键：列管理 / 按此列升序或降序并重查；拖列名可重排'
       /* 基础串逐字保留（1134 以字面量锁「DSL 命中/普通只读表提示零变化」），
          作用域说明只作**后缀**追加——不破坏既有契约，也不改宽表默认文案。 */
       : '点击排序：升序 → 降序 → 取消（回原始序）；Shift+点击：追加/翻转次键；拖列名可重排；右键：列管理' + scopeNote
