@@ -172,6 +172,21 @@ describe('monacoJsonQuickFix', () => {
     expect(te.range).toEqual({ startLineNumber: 1, startColumn: 8, endLineNumber: 1, endColumn: 8 });
   });
 
+  it('上一行已带逗号时不出「补逗号」（1432：否则补出 ,,，把合法 JSON 改坏）', () => {
+    /* 真实退化路径：用户刚补完逗号、marker 还没重建，再点一次就补出 ,, */
+    const m = marker({ message: 'Expected comma', startLineNumber: 3, startColumn: 3, endLineNumber: 3, endColumn: 6 });
+    caps.markers = [m];
+    const model = fakeModelLines(['{', '  "a": 1,', '  "b": 2}', '}']);
+    const range3 = { startLineNumber: 1, startColumn: 1, endLineNumber: 4, endColumn: 30 };
+    const titles = caps.provider.provideCodeActions(model, range3).actions.map((x: any) => x.title);
+    expect(titles, '已带逗号时不得再补').not.toContain('补逗号');
+    /* 负控：把上一行逗号去掉 → 必须重新出现（证明判据打中的是「上一行内容」，
+       而不是恰好这次没生成任何 action） */
+    const model2 = fakeModelLines(['{', '  "a": 1', '  "b": 2}', '}']);
+    const titles2 = caps.provider.provideCodeActions(model2, range3).actions.map((x: any) => x.title);
+    expect(titles2, '缺逗号时应给修复').toContain('补逗号');
+  });
+
   it('528 剥壳扩单引号：\'match 键位 → "match"（2.6.0）', () => {
     const m = marker({ message: 'Property keys must be doublequoted', code: '528', startColumn: 2, endColumn: 8 });
     caps.markers = [m];

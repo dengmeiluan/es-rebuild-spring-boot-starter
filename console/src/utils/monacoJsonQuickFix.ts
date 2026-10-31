@@ -130,7 +130,12 @@ export function ensureJsonQuickFixes(): void {
  不设 isPreferred（与 519 同口径，防误顶首选）。 */
           const fixLine = prevNonBlankLine(model, m.startLineNumber);
           if (fixLine < 1) continue;
-          const col = model.getLineContent(fixLine).length + 1;
+          const prevText = model.getLineContent(fixLine);
+          /* 1432：上一行已经以逗号结尾时不能补——否则补出 ',,',
+             把本来只是「marker 未刷新」的合法 JSON 改成语法错误。
+             这是真实退化路径：用户刚补完逗号、marker 还没重建时再点一次。 */
+          if (/,\s*$/.test(prevText)) continue;
+          const col = prevText.length + 1;
           actions.push({
             title: '补逗号',
             kind: 'quickfix',
