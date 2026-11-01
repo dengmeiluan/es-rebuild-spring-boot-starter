@@ -49,6 +49,23 @@ describe('1439 聚合体键位补全', () => {
     expect(bad, '聚合体键位问题：\n' + bad.join('\n')).toEqual([]);
   });
 
+  it('filter 聚合的体是查询——那里必须出 query-type，不是参数键', () => {
+    const flat = '{"aggs":{"a":{"filter":{';
+    expect((dslContext(flat, flat.length) as any).kind).toBe('query-type');
+    const nested = '{"aggs":{"a":{"terms":{"field":"x"},"aggs":{"b":{"filter":{';
+    expect((dslContext(nested, nested.length) as any).kind).toBe('query-type');
+    /* 负控：同形但类型是 terms 时仍走参数键（特判只认 filter） */
+    const terms = '{"aggs":{"a":{"terms":{';
+    expect((dslContext(terms, terms.length) as any).kind).toBe('agg-body-key');
+  });
+
+  it('filters 聚合的具名子过滤器体也是查询；命名位不出 query-type', () => {
+    const body = '{"aggs":{"a":{"filters":{"filters":{"x":{';
+    expect((dslContext(body, body.length) as any).kind).toBe('query-type');
+    const naming = '{"aggs":{"a":{"filters":{"filters":{';
+    expect((dslContext(naming, naming.length) as any).kind).not.toBe('query-type');
+  });
+
   it('负控：聚合类型名带错 → 上下文档位仍是该名，参数键跟着类型走', () => {
     const doc = '{"aggs":{"a":{"date_histogram":{';
     const ctx: any = dslContext(doc, doc.length);

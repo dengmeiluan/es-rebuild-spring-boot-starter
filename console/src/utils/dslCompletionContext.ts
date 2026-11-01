@@ -378,7 +378,18 @@ export function dslContext(doc: string, offset: number): DslCtx {
          此前这里什么都没有，Ctrl+Space 只给文档里出现过的词（a/aggs/terms），
          真实参数键（size/min_doc_count/field…）一个也补不出来。 */
       if (innerA.length === 3 && innerA[2].type === '{' && innerA[1].lastKey && !valuePos) {
+        /* filter 聚合的体是**查询子句**（{"filter":{"term":{…}}}），不是聚合参数——
+           这里必须出 query-type（match/term/bool…），否则只剩一个 aggs 候选。 */
+        if (innerA[1].lastKey === 'filter') return { kind: 'query-type' };
         return { kind: 'agg-body-key', op: innerA[1].lastKey };
+      }
+      /* 1439：filters 聚合的**具名子过滤器体**同样是查询：
+         {"filters":{"filters":{"x":{ <cursor> }}}} → aggs → filters(类型) → filters(参数) → 名 → {}
+         命名位本身（再上一层的 { 仍在 filters 参数对象里）不出 query-type。 */
+      if (stack.length >= 5 && stack[stack.length - 1].type === '{'
+          && stack[stack.length - 3].lastKey === 'filters'
+          && stack[stack.length - 4].lastKey === 'filters' && !valuePos) {
+        return { kind: 'query-type' };
       }
     }
     /* 1439：建议器类型键位——suggest → 建议器名 → {} 的内层键位（与 aggs 同形） */
