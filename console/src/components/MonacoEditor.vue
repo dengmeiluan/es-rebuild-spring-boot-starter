@@ -925,10 +925,16 @@ onMounted(() => {
           })) };
         }
         if (ctx.kind === 'agg-order-key') {
-          /* 1439：terms/multi_terms 的 order 对象键位——三个内置排序依据（键+方向一步落位） */
+          /* 1439：terms/multi_terms 的 order 对象键位——三个内置排序依据（键+方向一步落位）；
+             terms 另有同实例下的单值数值子聚合名（ES 允许按子聚合排序） */
           const indent = lineIndentAt(doc, startOff);
           const affix = commaAffixes(doc, startOff, end);
           const opts: Array<{ key: string; insert: string; detail: string }> = [
+            ...ctx.subAggs.map(a => ({
+              key: a.name,
+              insert: JSON.stringify(a.name) + ': "${1|desc,asc|}"',
+              detail: '按子聚合 ' + a.type + ' 排序',
+            })),
             { key: '_count', insert: '"_count": "${1|desc,asc|}"', detail: '按桶内文档数' },
             { key: '_key', insert: '"_key": "${1|asc,desc|}"', detail: '按键值' },
             { key: '_key_as_string', insert: '"_key_as_string": "${1|asc,desc|}"', detail: '按键的字符串形式' },

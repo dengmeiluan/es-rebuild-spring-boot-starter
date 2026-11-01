@@ -101,4 +101,32 @@ describe('1439 terms.order 键位上下文', () => {
     expect((at('{"aggs":{"a":{"terms":{"order":{"_count": "') as any).kind).toBe('agg-order-dir');
     expect((at('{"aggs":{"a":{"histogram":{"order":{"_count": "') as any).kind).not.toBe('agg-order-dir');
   });
+
+  it('terms 实例下的子聚合名按单值数值度量过滤（桶/多值不列，深层不列，multi_terms 不列）', () => {
+    const at = (s: string, off = s.length) => dslContext(s, off) as any;
+    /* 子聚合写在 terms 之前（与书写顺序无关） */
+    const before = '{"aggs":{"a":{"aggs":{"avg_price":{"avg":{"field":"p"}},'
+      + '"tops":{"top_hits":{}},"st":{"stats":{"field":"x"}}},"terms":{"field":"t","order":{';
+    expect(at(before).kind).toBe('agg-order-key');
+    expect(at(before).subAggs).toEqual([{ name: 'avg_price', type: 'avg' }]);
+
+    /* 子聚合写在 order 之后：光标在 order 内，仍要读到后面的兄弟 */
+    const after = '{"aggs":{"a":{"terms":{"field":"t","order":{}},"aggs":{'
+      + '"m":{"max":{"field":"x"}},"vc":{"value_count":{"field":"x"}},'
+      + '"card":{"cardinality":{"field":"x"}},"sub":{"terms":{"field":"y"},"aggs":{"inner":{"min":{"field":"z"}}}}}}}}';
+    expect(() => JSON.parse(after)).not.toThrow();
+    const cursor = after.indexOf('"order":{') + '"order":{'.length;
+    const ctxAfter = at(after, cursor);
+    expect(ctxAfter.kind).toBe('agg-order-key');
+    expect(ctxAfter.subAggs).toEqual([
+      { name: 'm', type: 'max' },
+      { name: 'vc', type: 'value_count' },
+      { name: 'card', type: 'cardinality' },
+    ]);
+
+    /* multi_terms 的 order 只认 _count/_key 系 */
+    const mt = '{"aggs":{"a":{"aggs":{"m":{"max":{"field":"x"}}},"multi_terms":{"order":{';
+    expect(at(mt).kind).toBe('agg-order-key');
+    expect(at(mt).subAggs).toEqual([]);
+  });
 });

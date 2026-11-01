@@ -1160,6 +1160,23 @@ describe('1439 terms.order 键位补全', () => {
     expect(suggest('{"aggs":{"a":{"multi_terms":{"order":{').map((i: any) => i.label))
       .toEqual(['_count', '_key', '_key_as_string']);
   });
+
+  it('terms 实例下的单值数值子聚合名进 order 键位（桶聚合不列，接受后 JSON 合法）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    const doc = '{"aggs":{"by_tag":{"aggs":{"avg_price":{"avg":{"field":"price"}},'
+      + '"max_stock":{"max":{"field":"stock"}},"tops":{"top_hits":{}}},'
+      + '"terms":{"field":"tag","order":{';
+    const items = suggest(doc);
+    expect(items.map((i: any) => i.label))
+      .toEqual(['avg_price', 'max_stock', '_count', '_key', '_key_as_string']);
+    for (const i of items) {
+      const after = acceptSnippet(doc, i);
+      expect(() => JSON.parse(after + '}}}}}'), i.label + ' 接受后非法：' + after).not.toThrow();
+      expect(after).toContain('"' + i.label + '": "');
+    }
+    const avg = acceptSnippet(doc, items[0]);
+    expect(avg).toContain('"avg_price": "desc"');
+  });
 });
 
 describe('1439 terms.order 方向值补全', () => {

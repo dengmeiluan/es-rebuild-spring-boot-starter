@@ -19,8 +19,9 @@ type DslCtx = { kind: 'root' } | { kind: 'query-type' } | { kind: 'field'; claus
   | { kind: 'suggester-type' }
   /* 1439：聚合体键位（terms: { 内）——参数键/字段键/嵌套 aggs */
   | { kind: 'agg-body-key'; op: string }
-  /* 1439：terms/multi_terms 的 order 对象键位（_count/_key/_key_as_string） */
-  | { kind: 'agg-order-key' }
+  /* 1439：terms/multi_terms 的 order 对象键位（_count/_key/_key_as_string；
+     terms 另带同实例下可排序的子聚合名） */
+  | { kind: 'agg-order-key'; subAggs: Array<{ name: string; type: string }> }
   /* 1439：order 对象的值位（排序方向 asc/desc） */
   | { kind: 'agg-order-dir' }
   /* 1439：子句体内的键位（bool must/filter、nested path/query、multi_match query/fields…）
@@ -655,7 +656,7 @@ const DSL_ARRAY_OBJKEY_CHAINS = new Set(['sort', 'fields']);
 /* 'sort'：简写串形态（"sort": ["ts"] / top_hits.sort）元素就是字段名——1439 补 */
 export const DSL_ARRAY_ELEM_CHAINS = new Set(['_source', 'stored_fields', 'docvalue_fields', 'fields', 'includes', 'excludes', 'sort']);
 
-type Frame = { type: '{' | '['; lastKey: string | null };
+type Frame = { type: '{' | '['; lastKey: string | null; start: number };
 
 /* 引号是否被转义：紧邻的反斜杠 run 长度为奇数才算转义（偶数含 0 → \\ 自身是转义反斜杠，其后的引号仍关闭字符串）。
  单一真源：luceneContext / MonacoEditor（dslKeyGuard、scanStringEnd）复用，口径不各自重写。 */
@@ -698,6 +699,65 @@ function atValuePosition(text: string, inStr: boolean): boolean {
   return i >= 0 && text[i] === ':';
 }
 
+/* terms.order 还能按同实例下的子聚合排序，但 ES 只接受**单值数值度量**
+   （single-value numeric metric）；桶聚合/top_hits/stats 这类写进去会被拒。 */
+const ORDERABLE_SUB_AGG_TYPES = new Set([
+  'avg', 'min', 'max', 'sum', 'cardinality', 'value_count',
+  'median_absolute_deviation', 'weighted_avg',
+]);
+
+/** 从聚合实例对象（instanceStart 处的 `{`）扫出它自己的 aggs 容器里的子聚合名与类型。
+    只认单值数值度量；实例内更深层的 aggs、数组元素、字符串值都不会误收。 */
+function aggOrderSubAggsAt(doc: string, instanceStart: number): Array<{ name: string; type: string }> {
+  type F = { key: string | null; parent: number; firstKey: string | null };
+  /* all 保留全部节点（含已闭合的 aggs 容器）；open 只存仍开着的节点下标 */
+  const all: F[] = [{ key: null, parent: -1, firstKey: null }];
+  const open: number[] = [0];
+  let inStr = false; let cur = ''; let pending: string | null = null;
+  for (let i = instanceStart + 1; i < doc.length; i++) {
+    const ch = doc[i];
+    if (inStr) {
+      if (ch === '"' && !isEscapedQuote(doc, i)) {
+        inStr = false;
+        let j = i + 1;
+        while (j < doc.length && /\s/.test(doc[j])) j++;
+        if (doc[j] === ':') {
+          const top = all[open[open.length - 1]];
+          if (top.firstKey === null) top.firstKey = cur;
+          pending = cur;
+        }
+      } else cur += ch;
+      continue;
+    }
+    const cEnd = commentEnd(doc, i);
+    if (cEnd !== -1) { i = cEnd - 1; continue; }
+    if (ch === '"') { inStr = true; cur = ''; continue; }
+    if (ch === '{') {
+      all.push({ key: pending, parent: open[open.length - 1], firstKey: null });
+      open.push(all.length - 1);
+      pending = null;
+      continue;
+    }
+    if (ch === '}') {
+      if (open.length === 1) break; /* 实例对象闭合，后面的结构与本实例无关 */
+      open.pop(); pending = null;
+      continue;
+    }
+    if (!/[\s:]/.test(ch)) pending = null; /* 键后面不是对象（字符串/数组/数字）→ 不挂到下一帧 */
+  }
+  const aggsIdx = all.findIndex(f => f.parent === 0 && (f.key === 'aggs' || f.key === 'aggregations'));
+  if (aggsIdx < 0) return [];
+  const out: Array<{ name: string; type: string }> = [];
+  const seen = new Set<string>();
+  for (const f of all) {
+    if (f.parent !== aggsIdx || !f.key || !f.firstKey || seen.has(f.key)) continue;
+    if (!ORDERABLE_SUB_AGG_TYPES.has(f.firstKey)) continue;
+    seen.add(f.key);
+    out.push({ name: f.key, type: f.firstKey });
+  }
+  return out;
+}
+
 export function dslContext(doc: string, offset: number): DslCtx {
   const text = doc.slice(0, Math.max(0, Math.min(offset, doc.length)));
   const stack: Frame[] = [];
@@ -716,8 +776,8 @@ export function dslContext(doc: string, offset: number): DslCtx {
     const cEnd = commentEnd(text, i);
     if (cEnd !== -1) { i = cEnd - 1; continue; }  // for 的 i++ 会让下次从 cEnd 开始
     if (ch === '"') { inStr = true; curKey = ''; continue; }
-    if (ch === '{') stack.push({ type: '{', lastKey: null });
-    else if (ch === '[') stack.push({ type: '[', lastKey: null });
+    if (ch === '{') stack.push({ type: '{', lastKey: null, start: i });
+    else if (ch === '[') stack.push({ type: '[', lastKey: null, start: i });
     else if (ch === '}' || ch === ']') stack.pop();
   }
   if (!stack.length) return { kind: 'root' };
@@ -761,7 +821,11 @@ export function dslContext(doc: string, offset: number): DslCtx {
          此前这层什么都不出（只能凭记忆）。innerA[1]=聚合类型帧。 */
       if (innerA.length === 4 && innerA[3].type === '{' && !valuePos
           && (innerA[1].lastKey === 'terms' || innerA[1].lastKey === 'multi_terms')) {
-        return { kind: 'agg-order-key' };
+        return {
+          kind: 'agg-order-key',
+          /* multi_terms 的 order 只认 _count/_key 系，子聚合名只有 terms 支持 */
+          subAggs: innerA[1].lastKey === 'terms' ? aggOrderSubAggsAt(doc, innerA[1].start) : [],
+        };
       }
       /* 1439：同一 order 对象的**值位**给方向 asc/desc（键位补完就该补方向） */
       if (innerA.length === 4 && valuePos
@@ -1363,7 +1427,7 @@ export function aliasKeyItems(): AssistItem[] {
   ];
 }
 
-/** SQL 体（_sql / _sql/translate）的键 */
+/** SQL 体（_sql / _sql/translate）的键——官方 8.x SQL 搜索 API 的全部体字段 */
 export function sqlBodyKeyItems(): AssistItem[] {
   return [
     { label: 'query', detail: 'SQL 语句', snippet: true,
@@ -1371,10 +1435,27 @@ export function sqlBodyKeyItems(): AssistItem[] {
     { label: 'fetch_size', detail: '每批返回行数（游标分页）', snippet: true, insertText: '"fetch_size": ${1:1000}' },
     { label: 'time_zone', detail: '时区（日期函数按它解释）', snippet: true, insertText: '"time_zone": "${1:UTC}"' },
     { label: 'columnar', detail: '列式返回（true=按列组织）', snippet: true, insertText: '"columnar": ${1|false,true|}' },
-    { label: 'runtime_mappings', detail: '本次查询的运行时字段', snippet: true,
-      insertText: '"runtime_mappings": {\n  ${0}\n}' },
     { label: 'params', detail: '参数化查询的命名参数（?name）', snippet: true,
       insertText: '"params": {\n  ${0}\n}' },
+    { label: 'runtime_mappings', detail: '本次查询的运行时字段', snippet: true,
+      insertText: '"runtime_mappings": {\n  ${0}\n}' },
+    { label: 'filter', detail: '对结果再做 Query DSL 过滤', snippet: true,
+      insertText: '"filter": {\n  ${0}\n}' },
+    { label: 'field_multi_value_leniency', detail: '数组字段遇到多值时是否放宽', snippet: true,
+      insertText: '"field_multi_value_leniency": ${1|false,true|}' },
+    { label: 'allow_partial_search_results', detail: '分片超时/失败时是否返回部分结果', snippet: true,
+      insertText: '"allow_partial_search_results": ${1|true,false|}' },
+    { label: 'keep_alive', detail: '异步/同步搜索结果的保留时长', snippet: true, insertText: '"keep_alive": "${1:1m}"' },
+    { label: 'keep_on_completion', detail: '同步等待时也把结果存起来（配合 wait_for_completion_timeout）', snippet: true,
+      insertText: '"keep_on_completion": ${1|false,true|}' },
+    { label: 'wait_for_completion_timeout', detail: '超过该时长转异步（返回 id）', snippet: true,
+      insertText: '"wait_for_completion_timeout": "${1:1s}"' },
+    { label: 'page_timeout', detail: '游标翻页的最短保留时长', snippet: true, insertText: '"page_timeout": "${1:1m}"' },
+    { label: 'request_timeout', detail: '整个请求的超时', snippet: true, insertText: '"request_timeout": "${1:30s}"' },
+    { label: 'catalog', detail: '查询默认集群（仅本地数据）', snippet: true, insertText: '"catalog": "${1:my-cluster}"' },
+    { label: 'cursor', detail: '翻页游标（上次响应里的 cursor）', snippet: true, insertText: '"cursor": "${1:cursor}"' },
+    { label: 'index_include_frozen', detail: '是否允许查询冻结索引', snippet: true,
+      insertText: '"index_include_frozen": ${1|false,true|}' },
   ];
 }
 

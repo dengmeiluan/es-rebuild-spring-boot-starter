@@ -111,7 +111,13 @@ describe('1439 SQL 体', () => {
     expect(bodyKindForPath('/_sql', 'POST')).toBe('sql-body');
     expect(bodyKindForPath('/_sql/translate', 'POST')).toBe('sql-body');
     const keys = sqlBodyKeyItems().map(i => i.label);
-    expect(keys).toEqual(expect.arrayContaining(['query', 'fetch_size', 'time_zone', 'columnar', 'runtime_mappings', 'params']));
+    /* 官方 8.x SQL 搜索 API 的体字段全表（少一个就少一处补全入口） */
+    expect(keys).toEqual([
+      'query', 'fetch_size', 'time_zone', 'columnar', 'params', 'runtime_mappings',
+      'filter', 'field_multi_value_leniency', 'allow_partial_search_results',
+      'keep_alive', 'keep_on_completion', 'wait_for_completion_timeout',
+      'page_timeout', 'request_timeout', 'catalog', 'cursor', 'index_include_frozen',
+    ]);
     for (const s2 of SQL_VALUE_SNIPPETS) {
       /* text 已按 JSON 串转义：包一层引号必须能被 JSON.parse 吃下，且内容含 SELECT */
       const parsed = JSON.parse('"' + s2.text + '"');
