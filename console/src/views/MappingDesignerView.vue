@@ -143,6 +143,7 @@ import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, 
 /* 原始请求/响应快查弹窗（数据源=api.ts ioRecorder 记录环） */
 import RawIoModal from '../components/RawIoModal.vue';
 import { trapTabKey } from '../utils/focusTrap';
+import { MAPPING_TYPES } from '../utils/dslCompletionContext';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth'; /* ：权限写门真源（令直接补刀） */
 import { useScopedDraft } from '../composables/useScopedDraft';
@@ -220,11 +221,9 @@ const queueMdLintMarkers = useDebounceFn(() => {
 }, 250);
 watch(newExtra, () => { queueMdLintMarkers(); }, { immediate: true });
 
-const TYPES = [
-  'keyword', 'text', 'long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float',
-  'boolean', 'date', 'date_nanos', 'binary', 'object', 'nested',
-  'ip', 'geo_point', 'geo_shape', 'range', 'completion', 'flattened', 'search_as_you_type', 'histogram',
-];
+/* 类型下拉吃 dslCompletionContext.MAPPING_TYPES 单源（与补全/lint 同一目录）——
+   此前本页另抄 24 项，还包含并不存在的裸 `range`（选了就产 ES 400 的非法 mapping）。 */
+const TYPES = MAPPING_TYPES;
 
 /* 递归子组件：字段节点 */
 const MappingNode: any = defineComponent({

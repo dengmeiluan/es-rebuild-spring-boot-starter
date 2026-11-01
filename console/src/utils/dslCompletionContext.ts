@@ -1164,8 +1164,29 @@ export function settingsKeyItems(): AssistItem[] {
   }));
 }
 
-export const MAPPING_TYPES = ['keyword', 'text', 'long', 'integer', 'short', 'byte', 'double', 'float',
-  'half_float', 'date', 'date_nanos', 'boolean', 'ip', 'object', 'nested', 'flattened', 'geo_point', 'alias'];
+/** 核心字段类型目录（ES 8.x mapping 文档）——补全、mapping-type lint、
+    设计器类型下拉三处共用单源。1439：此前是 18 项残缺表，设计器另抄 24 项
+    （还写着并不存在的裸 `range`，选了就产 ES 400 的非法 mapping）。 */
+export const MAPPING_TYPES = [
+  /* 字符串族 */
+  'text', 'keyword', 'constant_keyword', 'wildcard', 'match_only_text',
+  'search_as_you_type', 'annotated_text', 'semantic_text',
+  /* 数值族 */
+  'long', 'integer', 'short', 'byte', 'double', 'float', 'half_float',
+  'scaled_float', 'unsigned_long', 'token_count',
+  /* 日期 / 布尔 / IP */
+  'date', 'date_nanos', 'boolean', 'ip',
+  /* 范围族（裸 range 不是合法类型名） */
+  'integer_range', 'long_range', 'float_range', 'double_range', 'date_range', 'ip_range',
+  /* 结构化 */
+  'object', 'nested', 'flattened', 'join', 'alias', 'version',
+  'aggregate_metric_double', 'histogram',
+  /* 地理 / 形状 */
+  'geo_point', 'geo_shape', 'shape', 'point',
+  /* 特化 */
+  'binary', 'completion', 'percolator', 'rank_feature', 'rank_features',
+  'dense_vector', 'sparse_vector',
+];
 
 export function mappingKeyItems(): AssistItem[] {
   return [
