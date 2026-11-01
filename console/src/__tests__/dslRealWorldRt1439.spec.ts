@@ -63,6 +63,30 @@ const CASES: Array<[string, string]> = [
   ['match_none', '{"match_none":{}}'],
   ['exists 无 field（畸形）', '{"exists":{}}'],
   ['term 多字段并列', '{"term":{"a":1,"b":2}}'],
+  /* ── 1439：官方罕见子句（形状按 8.15 文档核对），与 lint 普查同一批输入 ── */
+  ['geo_grid（字段键 + geohash）', '{"geo_grid":{"location":{"geohash":"u0"}}}'],
+  ['geo_grid geotile', '{"geo_grid":{"location":{"geotile":{"precision":4}}}}'],
+  ['geo_polygon', '{"geo_polygon":{"location":{"points":[{"lat":1,"lon":2},{"lat":3,"lon":4}]}}}'],
+  ['shape envelope', '{"shape":{"location":{"type":"envelope","coordinates":[[1,2],[3,4]]}}}'],
+  ['intervals all_of + gap', '{"intervals":{"content":{"all_of":{"ordered":true,"intervals":[{"match":{"query":"a"}},{"gap":{"width":5}}]}}}}'],
+  ['rank_feature 饱和', '{"rank_feature":{"amount":{"boost":2,"saturation":{"pivot":3}}}}'],
+  ['distance_feature', '{"distance_feature":{"field":"location","origin":"now-1d","pivot":"7d"}}'],
+  ['sparse_vector', '{"sparse_vector":{"field":"vec","query_vector":{"a":1,"b":2}}}'],
+  ['text_expansion', '{"text_expansion":{"ml.tokens":{"model_id":".elser_model_2","model_text":"hi"}}}'],
+  ['terms lookup', '{"terms":{"tags":{"index":"other","id":"1","path":"tags"}}}'],
+  ['percolate document', '{"percolate":{"field":"query","document":{"a":1}}}'],
+  ['more_like_this', '{"more_like_this":{"fields":["title"],"like":["a b"],"min_term_freq":2}}'],
+  ['pinned', '{"pinned":{"ids":["1","2"],"organic":{"match":{"title":"x"}}}}'],
+  ['rule', '{"rule":{"match_criteria":{"status":"A"},"ruleset_id":"rs-1"}}'],
+  ['type（已弃用仍合法）', '{"type":{"value":"doc"}}'],
+  ['wrapper', '{"wrapper":{"query":"eyJ0ZXJtIjp7ImEiOjF9fQ=="}}'],
+  ['script + params', '{"script":{"script":{"source":"doc[\'a\'].value > params.n","params":{"n":1}}}}'],
+  ['script_score', '{"script_score":{"query":{"match_all":{}},"script":{"source":"_score*2"}}}'],
+  ['has_child', '{"has_child":{"type":"reply","query":{"match_all":{}},"score_mode":"max"}}'],
+  ['has_parent', '{"has_parent":{"parent_type":"post","query":{"match_all":{}}}}'],
+  ['parent_id', '{"parent_id":{"type":"reply","id":"1"}}'],
+  ['span_near', '{"span_near":{"clauses":[{"span_term":{"title":"a"}},{"span_term":{"title":"b"}}],"slop":2,"in_order":true}}'],
+  ['span_not', '{"span_not":{"include":{"span_term":{"title":"a"}},"exclude":{"span_term":{"title":"b"}}}}'],
 ];
 
 describe('1439 真实世界形态 DSL 往返', () => {
@@ -116,6 +140,42 @@ describe('1439 真实世界形态 DSL 往返', () => {
     expectValue('query_string', '{"query_string":{"query":"a AND b"}}', 'a AND b');
     expectValue('ids', '{"ids":{"values":["1","2"]}}', ['1', '2']);
     expectField('nested', '{"nested":{"path":"c","query":{"match_all":{}}}}', 'c');
+
+    /* ── 1439：官方罕见子句也要落进语义位（否则往返只是 raw 回写）── */
+    expectField('geo_grid', '{"geo_grid":{"location":{"geohash":"u0"}}}', 'location');
+    expectField('intervals', '{"intervals":{"content":{"all_of":{"ordered":true,"intervals":[{"match":{"query":"a"}}]}}}}', 'content');
+    expectField('rank_feature（官方 field 键）', '{"rank_feature":{"field":"amount","boost":2}}', 'amount');
+    expectField('distance_feature', '{"distance_feature":{"field":"loc","origin":"now-1d","pivot":"7d"}}', 'loc');
+    expectField('sparse_vector', '{"sparse_vector":{"field":"vec","query_vector":{"a":1}}}', 'vec');
+    expectField('text_expansion', '{"text_expansion":{"ml.tokens":{"model_id":"m","model_text":"hi"}}}', 'ml.tokens');
+    expectField('percolate', '{"percolate":{"field":"query","document":{"a":1}}}', 'query');
+    expectField('terms lookup', '{"terms":{"tags":{"index":"other","id":"1","path":"tags"}}}', 'tags');
+    expectField('has_child（父类型进字段位）', '{"has_child":{"type":"reply","query":{"match_all":{}}}}', 'reply');
+    expectField('has_parent（父类型进字段位）', '{"has_parent":{"parent_type":"post","query":{"match_all":{}}}}', 'post');
+    {
+      /* 容器类：必须真是 wrap/multi 节点并带子节点，不能整条 raw */
+      const wrap = (dsl: string, op: string) => {
+        const n: any = parseQueryNode(JSON.parse(dsl));
+        if (n?.type !== 'wrap' || n?.op !== op) problems.push(`${op}：期望 wrap/${op}，实得 ${n?.type}/${n?.op}`);
+        else if (!n.child) problems.push(`${op}：wrap 节点没有子查询`);
+      };
+      wrap('{"script_score":{"query":{"match_all":{}},"script":{"source":"_score*2"}}}', 'script_score');
+      const multi = (dsl: string, op: string) => {
+        const n: any = parseQueryNode(JSON.parse(dsl));
+        if (n?.type !== 'multi' || n?.op !== op) problems.push(`${op}：期望 multi/${op}，实得 ${n?.type}/${n?.op}`);
+      };
+      multi('{"span_near":{"clauses":[{"span_term":{"title":"a"}}],"slop":2}}', 'span_near');
+      /* 无值算子：value 位不是必需的（span/rule/type 用参数表达），但必须非 raw */
+      for (const [name, dsl] of [
+        ['rule', '{"rule":{"match_criteria":{"status":"A"},"ruleset_id":"rs-1"}}'],
+        ['type', '{"type":{"value":"doc"}}'],
+        ['wrapper', '{"wrapper":{"query":"eyJ0ZXJtIjp7ImEiOjF9fQ=="}}'],
+        ['parent_id', '{"parent_id":{"type":"reply","id":"1"}}'],
+      ] as Array<[string, string]>) {
+        const n: any = parseQueryNode(JSON.parse(dsl));
+        if (!n || n.raw) problems.push(`${name}：落回 raw，用户看不到可编辑控件`);
+      }
+    }
     expect(problems, '语义位未填充：\n' + problems.join('\n')).toEqual([]);
   });
 });
