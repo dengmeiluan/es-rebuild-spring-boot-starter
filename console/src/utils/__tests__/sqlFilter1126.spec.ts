@@ -53,8 +53,10 @@ describe('1126 SQL 结果值 → 条件', () => {
   it('接线：QRT 菜单只 emit 意图；SQL 控制台改写并重查、失败降级复制', () => {
     /* 1439：payload 增 not?: boolean（排除分支），正向用例仍是同一条通道 */
     expect(qrt).toContain("(e: 'use-as-condition', p: { field: string; value: unknown; type?: string; not?: boolean }): void;");
-    expect(qrt).toContain("label: '加入查询条件并重查（改 SQL）'");
-    expect(qrt).toContain("label: '排除此值并重查（改 SQL）'");
+    /* 1439：文案随 condTarget（缺省 'SQL'，SQL 宿主看到的仍是「改 SQL」） */
+    expect(qrt).toContain('label: `加入查询条件并重查（改 ${props.condTarget}）`');
+    expect(qrt).toContain('label: `排除此值并重查（改 ${props.condTarget}）`');
+    expect(qrt).toContain("condTarget: 'SQL'");
     expect(view).toContain('use-as-condition');
     expect(view).toContain('const r = appendSqlFilter(sql.value, field, value, type, negate);');
     expect(view).toContain('void doRun();');

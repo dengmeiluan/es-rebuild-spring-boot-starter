@@ -217,7 +217,7 @@
  QRT 内建聚焦面（FS headless，外层表格 FS 与 focusable 关断随收口退役；
  hideBody→true 自动退聚焦=RT 552 rtFix552 对称件）。外层 FS
  聚焦通道随本收口退役。 -->
-          <QueryResultTable ref="resultTbl" :hits="hits" :total="total" :total-gte="totalGte" :loading="busy" sortable remote-sort :sync-sort="luceneSortSync" @sort-change="onSortChange" selectable row-drawer fill :took="took" :page="page" :page-size="size" :pager-disabled="busy" @update:page="goPage" @update:page-size="setSize" :hide-body="viewMode !== 'table'" max-height="100%" :storage-key="index ? 'lucene:' + index : undefined" :field-types="fieldTypes" empty-hint="调整查询语句或时间范围后重查"
+          <QueryResultTable ref="resultTbl" :hits="hits" :total="total" :total-gte="totalGte" :loading="busy" sortable remote-sort :sync-sort="luceneSortSync" @sort-change="onSortChange" selectable row-drawer fill use-as-condition cond-target="Lucene" :cond-sort="false" @use-as-condition="useAsCondition" :took="took" :page="page" :page-size="size" :pager-disabled="busy" @update:page="goPage" @update:page-size="setSize" :hide-body="viewMode !== 'table'" max-height="100%" :storage-key="index ? 'lucene:' + index : undefined" :field-types="fieldTypes" empty-hint="调整查询语句或时间范围后重查"
             :searchable="viewMode === 'table'" refreshable @refresh="doRun">
             <template #bar-prepend>
               <!-- 特定能力保留在外层：扁平表格 vs 逐 hit JsonTree（嵌套展开）切换，不塞进通用表；
@@ -346,6 +346,7 @@ import { usePagerSize, PAGER_SIZES } from '../composables/usePagerSize';
 import { useQueryRun } from '../composables/useQueryRun';
 import { useIndexFieldTypes } from '../composables/useIndexFieldTypes';
 import { resolveSortField } from '../utils/sortField';
+import { appendLuceneClause } from '../utils/filterMerge';
 import { useRouter } from 'vue-router';
 import { encodeDslParam } from '../utils/queryHub';
 import { exportStamp, copyText, fmtTime, downloadText, totalOf, fmtNum, csvCell, fmtCell } from '../utils/format';
@@ -425,8 +426,20 @@ const luceneSortSync = computed(() => {
   const col = base && fieldTypes.value?.[base] === 'text' && fieldTypes.value?.[f] === 'keyword' ? base : f;
   return { f: col, d: (sortOrder.value === 'asc' ? 1 : -1) as 1 | -1 };
 });
-function onSortChange(s: { f: string; d: 'asc' | 'desc' } | null) {
-  if (busy.value) { store.notify('info', '查询执行中，请等待完成'); return; }
+/* 1439：结果单元格「加入查询条件 / 排除此值」——把值拼成 phrase 子句并进检索词后重查。
+   与索引工作区 onDocsFilterHit 同一合并件（appendLuceneClause），不另造拼接。 */
+function useAsCondition(p: { field: string; value: unknown; not?: boolean }) {
+  if (!p?.field) return;
+  /* 短语化：值里的引号是唯一需要转义的字符，其余按整串短语匹配 */
+  const v = p.value == null ? '' : String(p.value);
+  if (!v) { store.notify('warning', '空值无法生成 Lucene 条件'); return; }
+  const clause = p.field + ':"' + v.replace(/"/g, '\\"') + '"';
+  qs.value = appendLuceneClause(qs.value, clause, !!p.not);
+  store.notify('info', `已${p.not ? '排除' : '追加'}条件 ${clause}，正在重查`);
+  void doRun();
+}
+
+function onSortChange(s: { f: string; d: 'asc' | 'desc' } | null) {  if (busy.value) { store.notify('info', '查询执行中，请等待完成'); return; }
   /* text → .keyword 子域；无子域的 text 列不可排序，就地拦下不发注定 400 的请求 */
   if (s) {
     const res = resolveSortField(s.f, fieldTypes.value);

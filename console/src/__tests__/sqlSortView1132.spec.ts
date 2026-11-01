@@ -10,11 +10,13 @@ const view = readFileSync(join(__dirname, '../views/SqlConsoleView.vue'), 'utf-8
 describe('1132 SQL 结果按列排序并重查', () => {
   it('QRT 单元格菜单出改 SQL 的升/降序两项，且受 SQL 宿主门控', () => {
     expect(qrt).toContain("(e: 'sort-by', p: { field: string; dir: 'asc' | 'desc' }): void;");
-    expect(qrt).toContain("label: '按此列升序并重查（改 SQL）'");
-    expect(qrt).toContain("label: '按此列降序并重查（改 SQL）'");
+    /* 1439：文案随 condTarget（缺省 'SQL'），且加 condSort 开关 */
+    expect(qrt).toContain('label: `按此列升序并重查（改 ${props.condTarget}）`');
+    expect(qrt).toContain('label: `按此列降序并重查（改 ${props.condTarget}）`');
     expect(qrt).toContain("emit('sort-by', { field: col, dir: 'asc' })");
     expect(qrt).toContain("emit('sort-by', { field: col, dir: 'desc' })");
-    expect(qrt).toContain('props.useAsCondition && !isHits.value');
+    expect(qrt).toContain("condTarget: 'SQL'");
+    expect(qrt).toContain('props.useAsCondition && props.condSort');
   });
 
   it('SQL 控制台接线：改写顶层 ORDER BY 并自动重跑', () => {

@@ -19,6 +19,7 @@ describe('1134 列头查询级排序入口与本地/查询语义标注', () => {
     expect(qrt).toContain("key: 'sql-sort-desc'");
     expect(qrt).toContain("emit('sort-by', { field: m.col, dir: 'asc' })");
     expect(qrt).toContain("emit('sort-by', { field: m.col, dir: 'desc' })");
-    expect(qrt).toContain('props.useAsCondition && ci >= 0');
+    /* 1439：加 condSort 开关——Lucene 宿主不接线 sort-by，不该看到这两项 */
+    expect(qrt).toContain('props.useAsCondition && props.condSort && ci >= 0');
   });
 });

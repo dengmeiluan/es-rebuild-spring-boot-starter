@@ -10,7 +10,9 @@ const hint = readFileSync(join(__dirname, '../components/TableFilteredHint.vue')
 describe('1127 本地筛选 vs 查询下钻文案', () => {
   it('单元格菜单两项显式区分', () => {
     expect(qrt).toContain("label: '仅筛选当前结果（不改查询）'");
-    expect(qrt).toContain("label: '加入查询条件并重查（改 SQL）'");
+    /* 1439：文案随 condTarget（缺省 SQL，SQL 宿主渲染结果与旧字面量一致） */
+    expect(qrt).toContain('label: `加入查询条件并重查（改 ${props.condTarget}）`');
+    expect(qrt).toContain("condTarget: 'SQL'");
     expect(qrt).not.toContain("label: '按此值筛选'");
   });
 

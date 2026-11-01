@@ -685,9 +685,14 @@ interface Props {
   /* 空态下一步指引（EmptyState 三件套 hint）——不传不渲染，保持零增量 */
   emptyHint?: string;
   sortable?: boolean;   // 是否支持点击表头排序（SQL 通道需要，hit 型可 false）
-  /* 1126：rows 型结果值下钻——开启时单元格菜单出现「以此值筛选并重查」，
-  只 emit 意图，SQL 改写/执行归宿主（与 RT filter-hit 同一动线） */
+  /* 1126：结果值下钻——开启时单元格菜单出现「加入查询条件并重查」，
+  只 emit 意图，改写/执行归宿主（与 RT filter-hit 同一动线）。
+  1439：hits 型结果（Lucene）也可用——宿主传 prop 才出现，未接宿主零增量。 */
   useAsCondition?: boolean;
+  /* 1439：下钻文案里的目标语言（'SQL' / 'Lucene'），只影响菜单文案 */
+  condTarget?: string;
+  /* 1439：是否同时给「按此列排序并重查」两项（只有 SQL 宿主接线 sort-by） */
+  condSort?: boolean;
   /* remoteSort 远端排序契约（dbx 对标，分页同构——只 emit 意图、
  排序/取数归宿主）。缺省 false=客户端排序逐字节不变；true 时表头排序入口（点击/键盘/
  右键直选）不改本地行序，只 emit 'sort-change'（载荷 {f,d:'asc'|'desc'}，null=取消排序）；
@@ -883,6 +888,8 @@ const props = withDefaults(defineProps<Props>(), {
   tableBar: false,
   hideBody: false,
   fill: false,
+  condTarget: 'SQL',
+  condSort: true,
   /* syncSort 缺省 undefined=未接线零增量；骨架缺省 3 行 30px=现状 */
   syncSort: undefined,
   skeletonRows: 3,
@@ -1902,10 +1909,11 @@ const colMenuItems = computed(() => {
       { key: 'sort-asc', label: '升序排序', icon: ArrowUp, run: () => directSort(m.col, ci, 1) },
       { key: 'sort-desc', label: '降序排序', icon: ArrowDown, run: () => directSort(m.col, ci, -1) },
     ] : []),
-    /* 1134：列头菜单也暴露查询级排序（与本地排序分组区分） */
-    ...(props.useAsCondition && ci >= 0 ? [
-      { key: 'sql-sort-asc', label: '按此列升序并重查（改 SQL）', icon: ArrowUp, sep: true, run: () => emit('sort-by', { field: m.col, dir: 'asc' }) },
-      { key: 'sql-sort-desc', label: '按此列降序并重查（改 SQL）', icon: ArrowDown, run: () => emit('sort-by', { field: m.col, dir: 'desc' }) },
+    /* 1134：列头菜单也暴露查询级排序（与本地排序分组区分）
+       1439：只有接线了 sort-by 的宿主（condSort）才给，文案跟随 condTarget */
+    ...(props.useAsCondition && props.condSort && ci >= 0 ? [
+      { key: 'sql-sort-asc', label: `按此列升序并重查（改 ${props.condTarget}）`, icon: ArrowUp, sep: true, run: () => emit('sort-by', { field: m.col, dir: 'asc' }) },
+      { key: 'sql-sort-desc', label: `按此列降序并重查（改 ${props.condTarget}）`, icon: ArrowDown, run: () => emit('sort-by', { field: m.col, dir: 'desc' }) },
     ] : []),
     { key: 'filter-col', label: '筛选此列', icon: Filter, sep: true, run: () => {
       filterPop.value = { col: m.col, x: m.x, y: m.y };
@@ -2255,20 +2263,23 @@ const cellMenuItems = computed(() => {
       } },
     ] : []),
     /* 1126：结果值下钻到查询（SQL 宿主改写 WHERE 并重查；RT 的 filter-hit 同动线）。
-       只对合法列名开放，null 值由宿主生成 IS NULL。 */
-    ...(props.useAsCondition && !isHits.value && col && /^[A-Za-z_][\w.]*$/.test(col)
-      ? [{ key: 'use-as-cond', label: '加入查询条件并重查（改 SQL）', icon: Filter, run: () => {
+       只对合法列名开放，null 值由宿主生成 IS NULL。
+       1439：hits 型（Lucene）同开——宿主传 useAsCondition 才出现，文案语言由 condTarget 给。 */
+    ...(props.useAsCondition && col && /^[A-Za-z_][\w.]*$/.test(col)
+      ? [{ key: 'use-as-cond', label: `加入查询条件并重查（改 ${props.condTarget}）`, icon: Filter, run: () => {
           const v = renderRows.value[m.ri]?.[m.ci];
           emit('use-as-condition', { field: col, value: v === undefined ? null : v, type: props.fieldTypes?.[col] });
         } },
         /* 1439：排除（<> / IS NOT NULL；空值行保留，与 ES must_not 同语义） */
-        { key: 'use-as-cond-not', label: '排除此值并重查（改 SQL）', icon: Filter, run: () => {
+        { key: 'use-as-cond-not', label: `排除此值并重查（改 ${props.condTarget}）`, icon: Filter, run: () => {
           const v = renderRows.value[m.ri]?.[m.ci];
           emit('use-as-condition', { field: col, value: v === undefined ? null : v, type: props.fieldTypes?.[col], not: true });
         } },
-        /* 1132：查询级排序——与本地排序明确分开 */
-        { key: 'sort-asc', label: '按此列升序并重查（改 SQL）', icon: ArrowUp, run: () => emit('sort-by', { field: col, dir: 'asc' }) },
-        { key: 'sort-desc', label: '按此列降序并重查（改 SQL）', icon: ArrowDown, run: () => emit('sort-by', { field: col, dir: 'desc' }) },
+        /* 1132：查询级排序——与本地排序明确分开（只有接线了 sort-by 的宿主才给） */
+        ...(props.condSort
+          ? [{ key: 'sort-asc', label: `按此列升序并重查（改 ${props.condTarget}）`, icon: ArrowUp, run: () => emit('sort-by', { field: col, dir: 'asc' }) },
+             { key: 'sort-desc', label: `按此列降序并重查（改 ${props.condTarget}）`, icon: ArrowDown, run: () => emit('sort-by', { field: col, dir: 'desc' }) }]
+          : []),
         ]
       : []),
   ];
