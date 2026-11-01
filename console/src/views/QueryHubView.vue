@@ -533,12 +533,18 @@ function favHistRow(it: { mode?: string; query: string; index?: string; ts?: num
 /* 模式视图面板：flex+gap 与 .qh 同构——fragment 视图（PIT 多根）在面板内保持
  原有的逐根 10px（--sp-2h）间距；min-width:0 防 DslQueryView 编辑器把面板撑出视口。
  淡入用 CSS 动画：子元素每次（重）插入 DOM 自动重放（KeepAlive 复活/stamp 重挂载都触发） */
+/* 1439：.qh 撑满 .page 内容盒——「顶满当前页」收起构建区后，页面会缩到内容高
+   （实测 687px），结果区仍停在 505px 下限，白空 177px 表格不涨。
+   1339 曾试过同一句并回退：当时 RT 没有 fill，多出来的高度只会把 .dq-result 的
+   下限顶大、表格仍是内容高；现在结果表有 fill（表体在 rt-wrap 内滚），
+   多出来的高度会真正落到表格行数上，前提已变。 */
+.qh:has(.dq-fill) { min-height: 100%; }
+/* 光把 .qh 撑满不够：.qh-pane 是 flex 项但 basis 为 auto，仍取内容高。
+   让它吃满 .qh 剩余高度后，.dq 的 height:100% 仍解析不出来——父高来自 min-height
+   而非确定高度，百分比高度退化为 auto（实测 267px）。改成 flex 填满，不靠百分比。 */
+.qh:has(.dq-fill) > .qh-pane { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.qh:has(.dq-fill) > .qh-pane > .dq.dq-fill { flex: 1 1 auto; min-height: 0; height: auto; }
 .qh-pane { display: flex; flex-direction: column; gap: var(--sp-2h); min-width: 0; }
-/* 1339：试过用 .qh:has(.dq-fill){min-height:100%} 撑满剩余空间——**已回退**：
-   实测它把 .dq 撑到 1047px（超出视口），.dq-result 的 min-height 链被顶到 505px，
-   页面反而要滚动才能看到结果（比改前更差）。根因是 .dq-main 是**定高**（dqMainH），
-   剩余空间只会把 .dq-result 的 min-height 顶大，不会分给真正需要的表格。
-   垂直预算问题已由 1338（参数条单行化，省 56px）解决，此处不再动高度链。 */
 .qh-pane > :deep(*) { animation: qh-fade-in var(--tr) ease; }
 @keyframes qh-fade-in { from { opacity: 0; } to { opacity: 1; } }
 
