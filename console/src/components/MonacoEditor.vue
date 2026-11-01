@@ -867,10 +867,11 @@ onMounted(() => {
           })) };
         }
         if (ctx.kind === 'suggester-type') {
-          /* 1439：suggest.<名> {} 内——3 种建议器类型骨架 */
+          /* 1439：suggest.<名> {} 内——3 种建议器类型骨架 + 与类型同层的 text/prefix
+             （官方把输入文本放在类型键旁边；只给类型会让人以为 text 在类型体里） */
           const indent = lineIndentAt(doc, startOff);
           const affix = commaAffixes(doc, startOff, end);
-          return { suggestions: Object.entries(SUGGESTER_SNIPPETS).map(([k, snip], i) => ({
+          const items: any[] = Object.entries(SUGGESTER_SNIPPETS).map(([k, snip], i) => ({
             label: k, kind: monaco.languages.CompletionItemKind.Snippet,
             detail: snip.detail,
             insertText: wrapSnippet(doc, startOff, end, indent, snip.text, affix),
@@ -878,7 +879,23 @@ onMounted(() => {
             range, command: ACCEPT_FORMAT_COMMAND,
             filterText: dslFilterText(k),
             sortText: dslSortText(i, k),
-          })) };
+          }));
+          const shared = [
+            { key: 'text', insert: '"text": "${1:query}"', detail: '输入文本（与类型键同层）' },
+            { key: 'prefix', insert: '"prefix": "${1:prefix}"', detail: '前缀输入（优先于 text）' },
+          ];
+          for (const s of shared) {
+            items.push({
+              label: s.key, kind: monaco.languages.CompletionItemKind.Property,
+              detail: s.detail,
+              insertText: wrapSnippet(doc, startOff, end, indent, s.insert, affix),
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              range, command: ACCEPT_FORMAT_COMMAND,
+              filterText: dslFilterText(s.key),
+              sortText: dslSortText(Object.keys(SUGGESTER_SNIPPETS).length + shared.indexOf(s), s.key),
+            });
+          }
+          return { suggestions: items };
         }
         if (ctx.kind === 'retriever-type') {
           /* 1439：retriever 体内——9 种检索器变体骨架（此前只有根键骨架里写死的 standard） */

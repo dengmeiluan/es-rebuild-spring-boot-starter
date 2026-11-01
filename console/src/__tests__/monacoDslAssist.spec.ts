@@ -994,7 +994,15 @@ describe('1439 新补全档（提供器层接线）', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
     expect(suggest('{"retriever": {').map((i: any) => i.label))
       .toEqual(expect.arrayContaining(['standard', 'rrf', 'linear', 'pinned']));
-    expect(suggest('{"suggest": {"s1": {').map((i: any) => i.label)).toEqual(['term', 'phrase', 'completion']);
+    /* 1439：类型骨架之外，text/prefix 与类型键同层（官方体）——只给类型会让人误以为
+       text 在类型体里；接受 text 后 JSON 必须合法 */
+    const sugDoc = '{\n  \"suggest\": {\n    \"s1\": {\n      \n    }\n  }\n}';
+    const at = sugDoc.indexOf('      \n') + 6;
+    const sug = suggest(sugDoc, at);
+    const sugLabels = sug.map((i: any) => i.label);
+    expect(sugLabels).toEqual(expect.arrayContaining(['term', 'phrase', 'completion', 'text', 'prefix']));
+    const textItem = sug.find((i: any) => i.label === 'text');
+    expect(() => JSON.parse(acceptSnippet(sugDoc, textItem)), 'text 接受后非法').not.toThrow();
   });
 });
 
