@@ -518,6 +518,7 @@
             :hide-body="view !== 'table'"
             :loading="running"
             refreshable
+            fill
             :hits="resp.hits"
             :total="resp.total"
             :total-gte="resp.totalGte"

@@ -1,10 +1,10 @@
 <template>
-  <FocusableSurface pane-id="rt.table" title="结果表" headless :enabled="focused" @update:enabled="focused = $event">
+  <FocusableSurface pane-id="rt.table" title="结果表" headless :enabled="focused" @update:enabled="focused = $event" :class="{ 'rt-fs-fill': fill }">
   <!-- 裁决「放大/查找直接集成在表格上」:FocusableSurface 合并为表格内建——
  放大钮内建在 rt-bar 工具簇末尾,消费方不再各自包 FS/接 focusPaneId(此前 4 视图各自接线的
  不一致根源);headless 模式 fs-body 链路靠 data-flex-fill 保高度,聚焦态整表铺满,
  工具行(查找/导出/行高/列选)随行可达。⚠本注释必须在 FS 内:根级注释=fragment 根,T39 卸载断裂 -->
-  <div ref="rootEl" class="rt" :class="{ dense: rowH === 'compact', cozy: rowH === 'cozy', 'rt-nav-on': tblFocus, 'is-hscrolled': hScrolled }" data-flex-fill tabindex="-1"
+  <div ref="rootEl" class="rt" :class="{ dense: rowH === 'compact', cozy: rowH === 'cozy', 'rt-nav-on': tblFocus, 'is-hscrolled': hScrolled, 'rt-fill': fill }" data-flex-fill tabindex="-1"
        role="region" aria-label="查询结果表格（Tab 聚焦后：↑↓ 行导航、Ctrl+F 查找、Enter 打开文档）"
        @keydown="onGridKeydown" @focus="tblFocus = true" @blur="tblFocus = false">
     <!-- 工具条 -->
@@ -794,6 +794,10 @@ const props = withDefaults(defineProps<{
  RT open-doc 通道既有）。 */
   viewSeg?: boolean;
   viewPrefKey?: string;
+  /* 1439：fill=父容器定高、表体内部滚动（QRT 同款契约，查询工作台结果区用）。
+ 此前 RT 只能按内容高——结果区要么写死 min-height 505px 把表顶出视口，
+ 要么让整页滚动、首屏只剩一两行表。 */
+  fill?: boolean;
   jsonHtml?: string;
   treeData?: unknown;
   cardHits?: SearchHit[];
@@ -818,6 +822,9 @@ const props = withDefaults(defineProps<{
   pagerDisabled: false,
   /* 内建视图档缺省关（全站零增量） */
   viewSeg: false,
+  /* fill 缺省关=表格按内容高（既有宿主逐字节不变）；true 时由父容器定高、
+ 表体在 rt-wrap 内滚动（QRT 788 同款 fill 契约，查询工作台结果区需要它） */
+  fill: false,
 });
 
 /* 内建聚焦面状态(FS headless 双向绑定) */
@@ -2811,6 +2818,16 @@ async function copySelRows(fmt: 'tsv' | 'md' | 'json') {
 .rt-wrap { --rt-row-h: 25.5px; background-image: linear-gradient(var(--line) 1px, transparent 1px); background-size: 100% var(--rt-row-h); background-repeat: repeat; background-position: 0 0; }
 .rt.dense .rt-wrap { --rt-row-h: 21.5px; }
 .rt.cozy .rt-wrap { --rt-row-h: 41.5px; }
+/* 1439：fill 档高度链（QRT 788 同款契约）——父容器给高时整表撑满、表体在 rt-wrap 内滚。
+   240px 地板在 fill 档让位：那时高度来自父容器分配，地板会把父容器重新顶破。
+   ⚠ 本条必须排在上面的 `.rt-wrap {` 之后：1355/1365 的 ruleBody 用 indexOf 取**第一条**，
+   写在前面会把锚点抢到这里。 */
+.fs.rt-fs-fill { flex: 1 1 auto; min-height: 0; }
+.rt.rt-fill { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.rt.rt-fill > .rt-wrap-shell { flex: 1 1 auto; min-height: 0; }
+.rt.rt-fill > .rt-wrap-shell > .rt-wrap{ min-height: 0; }
+/* 表体外的固定行（工具条/状态栏/分页）不参与压缩，剩余高度全给表体 */
+.rt.rt-fill > .rt-bar, .rt.rt-fill > .rt-status, .rt.rt-fill > .rt-res-bar { flex: 0 0 auto; }
 /* 1392：底纹只服务空白区——QRT 同款（那边实测同一条分隔线在 2px/4px 间交替：
    表头 25px 与行高 25.5px 差 0.5px，底纹每条都比真实 border 矮半像素落线）。
    RT 的斑马纹来自 .tbl.zebra（半透明罩），行仍会透出底纹，所以把行底落成不透明。 */
