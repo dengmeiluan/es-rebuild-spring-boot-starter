@@ -52,7 +52,7 @@ type LintRule =
   | 'agg-text-field' | 'body-value-type' | 'agg-interval-key' | 'nested-path' | 'query-structure'
   | 'ndjson-pair' | 'settings-key' | 'settings-value' | 'mapping-key' | 'mapping-type'
   | 'agg-type-typo' | 'date-term-value' | 'should-in-filter' | 'body-key-typo' | 'agg-field-key-typo'
-  | 'shard-doc-sort'
+  | 'shard-doc-sort' | 'agg-required-param'
   | 'query-subsearches-conflict' | 'subsearches-no-rank' | 'retriever-conflict'
   | 'rare-type';
 
@@ -176,6 +176,20 @@ const SORT_ORDERS = new Set(['asc', 'desc']);
 const AGG_FIELD_METRICS = new Set([
   'terms', 'avg', 'sum', 'min', 'max', 'stats',
   'cardinality', 'date_histogram', 'histogram', 'value_count', 'percentiles',
+]);
+
+/* 1439：聚合必填参数——缺了 ES 直接 400，但此前发送前无任何提示。
+   · field 或 script 二选一：terms + 常规指标族（script 可替代 field）
+   · 只能 field：significant_terms / significant_text / rare_terms / missing
+   · nested 必须 path；multi_terms 必须 terms（取值源数组） */
+const AGG_FIELD_REQUIRED = new Set([
+  'terms', 'avg', 'sum', 'min', 'max', 'value_count', 'cardinality', 'stats',
+  'extended_stats', 'percentiles', 'percentile_ranks', 'median_absolute_deviation',
+  'boxplot', 'significant_terms', 'significant_text', 'rare_terms', 'missing',
+]);
+const AGG_FIELD_SCRIPT_OK = new Set([
+  'terms', 'avg', 'sum', 'min', 'max', 'value_count', 'cardinality', 'stats',
+  'extended_stats', 'percentiles', 'percentile_ranks', 'median_absolute_deviation', 'boxplot',
 ]);
 
 /** 聚合类型白名单——直接派生自 AGG_OPS（类型下拉/补全/往返六表共用单源），
@@ -503,6 +517,36 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
             path: p, anchor: k, nth: kNth,
           });
           break;
+        }
+      }
+      /* ---- 1439：聚合必填参数（agg-required-param，error 档，零 ctx）----
+         terms/指标聚合缺 field（且无 script）、nested 缺 path、multi_terms 缺 terms ——
+         这些是 ES 直接拒绝请求（400）的硬性缺参，发送前点名。锚点=聚合类型键。 */
+      if (isAggTypePosition(p) && v && typeof v === 'object' && !Array.isArray(v)) {
+        const d = v as Record<string, unknown>;
+        let msg: string | null = null;
+        let sug = '';
+        if (AGG_FIELD_REQUIRED.has(k) && !('field' in d)
+            && !(AGG_FIELD_SCRIPT_OK.has(k) && 'script' in d)) {
+          msg = AGG_FIELD_SCRIPT_OK.has(k)
+            ? `聚合「${k}」缺 field（也没有 script）：ES 会拒绝请求（400）`
+            : `聚合「${k}」缺 field：ES 会拒绝请求（400）`;
+          sug = AGG_FIELD_SCRIPT_OK.has(k)
+            ? '补 "field": "字段名"；或用 "script" 从脚本取值'
+            : '补 "field": "字段名"（该聚合不支持 script 替代）';
+        } else if (k === 'nested' && !('path' in d)) {
+          msg = 'nested 聚合缺 path：ES 会拒绝请求（400）';
+          sug = '补 "path": "嵌套路径"（与 mapping 的 nested 字段一致）';
+        } else if (k === 'multi_terms' && !('terms' in d)) {
+          msg = 'multi_terms 聚合缺 terms：ES 会拒绝请求（400）';
+          sug = '补 "terms": [{ "field": "a" }, { "field": "b" }] 取值源数组';
+        }
+        if (msg) {
+          out.push({
+            rule: 'agg-required-param', severity: 'error',
+            message: msg, suggestion: sug,
+            path: p, anchor: k, nth: kNth,
+          });
         }
       }
       /* ---- 规则③：filter/must_not 语境纯 should（should-in-filter，hint 档，零 ctx）----
