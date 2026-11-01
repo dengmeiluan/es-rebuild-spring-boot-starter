@@ -27,8 +27,11 @@ import { AGG_OPS, AGG_BODY_PARAMS } from '../utils/queryAstOps';
 import { parseTree, serializeTree } from '../utils/queryAst';
 
 const aggSrc = readFileSync(join(__dirname, '../components/builder/AggTreeNode.vue'), 'utf-8');
+/* 1439：字段键集合上收到 queryAstOps（补全侧要同源），字段证据从那里取；
+   数值聚合倾向表仍在组件内。 */
+const opsSrc = readFileSync(join(__dirname, '../utils/queryAstOps.ts'), 'utf-8');
 const fieldAggs = (() => {
-  const m = /FIELD_BODY_AGGS = new Set\(\[([\s\S]*?)\]\)/.exec(aggSrc);
+  const m = /FIELD_BODY_AGGS: ReadonlySet<string> = new Set\(\[([\s\S]*?)\]\)/.exec(opsSrc);
   return m ? [...m[1].matchAll(/'([^']+)'/g)].map(x => x[1]) : [];
 })();
 const numericAggs = (() => {

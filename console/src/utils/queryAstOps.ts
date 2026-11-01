@@ -446,6 +446,18 @@ export const BOOL_PARAMS: ParamMeta[] = [
   { key: 'boost', kind: 'number' },
 ];
 
+/* 1439：聚合体的「字段键」集合从 AggTreeNode 上收到这里——
+ 补全（dslCompletionContext.aggBodyKeys）与构建器字段选择器必须用同一份清单，
+ 否则一边给字段选择器、另一边补不出这个键。 */
+export const FIELD_BODY_AGGS: ReadonlySet<string> = new Set(['terms', 'histogram', 'date_histogram', 'range', 'date_range', 'avg', 'max', 'min', 'sum', 'stats', 'cardinality', 'value_count', 'percentiles', 'percentile_ranks', 'extended_stats', 'significant_terms', 'significant_text', 'rare_terms', 'missing', 'geo_bounds', 'geo_centroid', 'weighted_avg', 'median_absolute_deviation', 'boxplot', 'string_stats', 'auto_date_histogram', 'ip_range', 'variable_width_histogram', 'geohash_grid', 'geotile_grid', 'geohex_grid', 'geo_distance', 'rate',
+  /* 1439：官方体就是 {field} 却没登记 → 字段行退化成裸文本输入（同屏 terms 有选择器）。
+     categorize_text: {"categorize_text":{"field":"message"}}；
+     diversified_sampler: {"diversified_sampler":{"field":"author"}}（field 可选，
+     没有该键时这里不会凭空加行——isFieldKey 只升级已有键）。 */
+  'categorize_text', 'diversified_sampler']);
+/* nested / reverse_nested 的字段键是 path（嵌套文档路径），不是 field */
+export const PATH_BODY_AGGS: ReadonlySet<string> = new Set(['nested', 'reverse_nested']);
+
 export const AGG_OPS: Record<string, string> = {
   terms: 'Terms 分组', date_histogram: '日期直方图', histogram: '数值直方图',
   range: '范围分组', date_range: '日期范围', filters: '多过滤分组', filter: '单过滤',

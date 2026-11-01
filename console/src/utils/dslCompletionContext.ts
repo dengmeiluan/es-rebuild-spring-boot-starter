@@ -8,7 +8,7 @@ import { SETTINGS_CATALOG } from './indexSettingsCatalog';
  本链此前未消费——sqlCompletion/ClauseNode 同源，不另起算子映射表防漂移）
  keyword/number 两族改吃 queryAstOps 族表单源（KEYWORD_VALUE_TYPES 三员同值；
  number 滤 token_count 保持九口径——AFFINITY 族序零变，dslValueTiers545 行为锁保形） */
-import { typePriorityForOp, KEYWORD_VALUE_TYPES, NUMERIC_VALUE_TYPES, labelOfOp } from './queryAstOps';
+import { typePriorityForOp, KEYWORD_VALUE_TYPES, NUMERIC_VALUE_TYPES, labelOfOp, AGG_BODY_PARAMS, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
 
 type DslCtx = { kind: 'root' } | { kind: 'query-type' } | { kind: 'field'; clause: string }
   | { kind: 'range-op' } | { kind: 'exists-key' }
@@ -17,6 +17,8 @@ type DslCtx = { kind: 'root' } | { kind: 'query-type' } | { kind: 'field'; claus
   | { kind: 'retriever-type' }
   /* 1439：建议器类型键位（suggest.<名> {} 内） */
   | { kind: 'suggester-type' }
+  /* 1439：聚合体键位（terms: { 内）——参数键/字段键/嵌套 aggs */
+  | { kind: 'agg-body-key'; op: string }
   | { kind: 'array-elem-key'; owner: string } | { kind: 'none' };
 
 export const QUERY_SNIPPETS: Record<string, string> = {
@@ -216,8 +218,31 @@ export const SUGGESTER_SNIPPETS: Record<string, { text: string; detail: string }
   phrase:     { text: '"phrase": {\n  "field": "${1:field}",\n  "size": ${2:5}\n}', detail: '短语 phrase 建议器' },
   completion: { text: '"completion": {\n  "field": "${1:suggestField}"\n}', detail: '自动补全 completion 建议器' },
 };
-/* 2.6.0 root 键骨架（spec ）：每键定制值形态，detail 一句话（H 发现性）。
- query/aggs/highlight 对象容器；sort 数组（多字段通用）；_source 数组；from/size 数字；track_total_hits choice。
+/**
+ * 1439：聚合体内部可补全的键——字段键 + AGG_BODY_PARAMS 参数键 + 嵌套 aggs。
+ * 字段键与构建器同源（queryAstOps.FIELD_BODY_AGGS / PATH_BODY_AGGS），
+ * 参数键与 GenericParams 同源，避免「界面有输入框、编辑时却补不出来」。
+ */
+export function aggBodyKeys(op: string): Array<{ key: string; insert: string; detail: string }> {
+  const out: Array<{ key: string; insert: string; detail: string }> = [];
+  if (PATH_BODY_AGGS.has(op)) out.push({ key: 'path', insert: '"path": "${1:path}"', detail: '嵌套文档路径' });
+  else if (FIELD_BODY_AGGS.has(op)) out.push({ key: 'field', insert: '"field": "${1:field}"', detail: '聚合字段' });
+  for (const p of AGG_BODY_PARAMS[op] || []) {
+    const opts = p.options || [];
+    const ph = p.kind === 'number' ? '${1:10}'
+      : p.kind === 'boolean' ? '${1|true,false|}'
+      /* 枚举取的都是字符串值（map / min_max / mmr…）——必须带引号，否则插出来是裸词 */
+      : p.kind === 'enum' && opts.length ? '"${1|' + opts.join(',') + '|}"'
+      : p.kind === 'json' ? '${1:{}}'
+      : p.kind === 'json-array' ? '${1:[]}'
+      : '"${1:text}"';
+    out.push({ key: p.key, insert: `"${p.key}": ${ph}`, detail: p.kind });
+  }
+  out.push({ key: 'aggs', insert: '"aggs": {\n  ${0}\n}', detail: '嵌套子聚合' });
+  return out;
+}
+
+/* 2.6.0 root 键骨架（spec ）：每键定制值形态，detail 一句话（H 发现性）。 query/aggs/highlight 对象容器；sort 数组（多字段通用）；_source 数组；from/size 数字；track_total_hits choice。
  1138：补树已支持的结构化顶层键（查询后置过滤 / 顶层向量 / 折叠 / 重打分 / 检索器 / 建议器 / 脚本字段 / 运行时字段 / 深分页 / 最低分）。 */
 export const ROOT_KEY_SNIPPETS: Record<string, { text: string; detail: string }> = {
   query:            { text: '"query": {\n  ${0}\n}',                                        detail: '查询主体' },
@@ -283,6 +308,22 @@ export function commentEnd(text: string, i: number): number {
   return -1;
 }
 
+/**
+ * 1439：光标是否在**值位**（`"key": |` 的冒号之后）。
+ * 聚合体/建议器/检索器的键补全只看栈结构会把值位也当键位
+ * （`{"aggs":{"a":{"terms":{"field": "` 会错误地给出参数键）。判据：取当前串的开引号
+ * （不在串内则取光标前）往前看最后一个非空字符是不是冒号。
+ */
+function atValuePosition(text: string, inStr: boolean): boolean {
+  let i = text.length - 1;
+  if (inStr) {
+    while (i >= 0 && !(text[i] === '"' && !isEscapedQuote(text, i))) i--;
+    i--;
+  }
+  while (i >= 0 && /\s/.test(text[i])) i--;
+  return i >= 0 && text[i] === ':';
+}
+
 export function dslContext(doc: string, offset: number): DslCtx {
   const text = doc.slice(0, Math.max(0, Math.min(offset, doc.length)));
   const stack: Frame[] = [];
@@ -307,6 +348,8 @@ export function dslContext(doc: string, offset: number): DslCtx {
   }
   if (!stack.length) return { kind: 'root' };
   const keys = stack.map(f => f.lastKey);
+  /* 1439：值位（冒号之后）不出键位档——否则 `"field": "` 这种位置会被当成键位 */
+  const valuePos = atValuePosition(text, inStr);
   let qIdx = keys.lastIndexOf('query');
   /* 1138：post_filter / 顶层 knn.filter 也是查询容器——此前只认 query 键，
      这两处合法查询位不出 query-type/字段候选。顶层 knn 是首选 kNN 形态。 */
@@ -331,12 +374,18 @@ export function dslContext(doc: string, offset: number): DslCtx {
       const innerA = stack.slice(aIdx + 1);
       if (innerA.length === 1 && innerA[0].type === '{') return { kind: 'agg-name' };
       if (innerA.length === 2 && innerA[1].type === '{') return { kind: 'agg-type' };
+      /* 1439：聚合体内部键位（aggs → 实例名 → 类型键 → body {}）——
+         此前这里什么都没有，Ctrl+Space 只给文档里出现过的词（a/aggs/terms），
+         真实参数键（size/min_doc_count/field…）一个也补不出来。 */
+      if (innerA.length === 3 && innerA[2].type === '{' && innerA[1].lastKey && !valuePos) {
+        return { kind: 'agg-body-key', op: innerA[1].lastKey };
+      }
     }
     /* 1439：建议器类型键位——suggest → 建议器名 → {} 的内层键位（与 aggs 同形） */
     const sIdx = keys.lastIndexOf('suggest');
     if (sIdx >= 0 && sIdx < stack.length - 1) {
       const innerS = stack.slice(sIdx + 1);
-      if (innerS.length === 2 && innerS[1].type === '{') return { kind: 'suggester-type' };
+      if (innerS.length === 2 && innerS[1].type === '{' && !valuePos) return { kind: 'suggester-type' };
     }
     /* 1439：检索器变体键位（8.14+ retriever 面）。
        · 顶层/嵌套：光标在 retriever 的值对象里（keys 末位是 retriever，栈顶是它刚开的 {）
@@ -345,11 +394,11 @@ export function dslContext(doc: string, offset: number): DslCtx {
     const rIdx = keys.lastIndexOf('retriever');
     if (rIdx >= 0) {
       const topF = stack[stack.length - 1];
-      if (rIdx === stack.length - 2 && topF.type === '{') return { kind: 'retriever-type' };
+      if (rIdx === stack.length - 2 && topF.type === '{' && !valuePos) return { kind: 'retriever-type' };
       if (stack.length >= 4 && topF.type === '{'
           && stack[stack.length - 2].type === '['
           && stack[stack.length - 3].lastKey === 'retrievers'
-          && stack[stack.length - 4].lastKey !== 'linear') return { kind: 'retriever-type' };
+          && stack[stack.length - 4].lastKey !== 'linear' && !valuePos) return { kind: 'retriever-type' };
     }
     /* 数组元素对象键位（键链白名单位）——栈顶 { 的下层是 [ 数组帧、数组帧属主键
  ∈ DSL_ARRAY_OBJKEY_CHAINS（=sort，排序字段键位；top_hits 等嵌套 sort 同构命中）。

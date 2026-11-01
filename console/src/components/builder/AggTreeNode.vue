@@ -73,7 +73,7 @@ import AggOrderPanel from './AggOrderPanel.vue';
 import AggBoundsPanel from './AggBoundsPanel.vue';
 import AggCompositePanel from './AggCompositePanel.vue';
 import AggOpPicker from './AggOpPicker.vue';
-import { AGG_BODY_PARAMS } from '../../utils/queryAstOps';
+import { AGG_BODY_PARAMS, FIELD_BODY_AGGS, PATH_BODY_AGGS } from '../../utils/queryAstOps';
 import { nid, serAggNode, type AggNode } from '../../utils/queryAst';
 
 const props = defineProps<{ node: AggNode; fields: string[]; types: Record<string, string> }>();
@@ -195,20 +195,14 @@ function onBodyParams(v: Record<string, unknown> | unknown[]) {
 /* 1201：stats 官方体是 {stats:{field}}——与 avg/min/max 同族却漏登记，
    新建后 body 里没有 field 行，用户得手打 "field" 键才能跑（与 1200 的"有渲染无入口"同族）。
    matrix_stats 的字段是 fields 数组（非 field），top_metrics 用 metrics 数组 + sort，
-   两者都不该塞进这里（塞了会给出一个 ES 只认单值的假入口），走自由键值表。 */
-const FIELD_BODY_AGGS = new Set(['terms', 'histogram', 'date_histogram', 'range', 'date_range', 'avg', 'max', 'min', 'sum', 'stats', 'cardinality', 'value_count', 'percentiles', 'percentile_ranks', 'extended_stats', 'significant_terms', 'significant_text', 'rare_terms', 'missing', 'geo_bounds', 'geo_centroid', 'weighted_avg', 'median_absolute_deviation', 'boxplot', 'string_stats', 'auto_date_histogram', 'ip_range', 'variable_width_histogram', 'geohash_grid', 'geotile_grid', 'geohex_grid', 'geo_distance', 'rate',
-  /* 1439：官方体就是 {field} 却没登记 → 字段行退化成裸文本输入（同屏 terms 有选择器）。
-     categorize_text: {"categorize_text":{"field":"message"}}；
-     diversified_sampler: {"diversified_sampler":{"field":"author"}}（field 可选，
-     没有该键时这里不会凭空加行——isFieldKey 只升级已有键）。 */
-  'categorize_text', 'diversified_sampler']);
+   两者都不该塞进这里（塞了会给出一个 ES 只认单值的假入口），走自由键值表。
+   1439：清单上收到 queryAstOps——补全侧（aggBodyKeys）必须与这里同源。 */
 /* 1222：字段键不都叫 `field`——nested / reverse_nested 的字段键是 `path`（嵌套文档路径）。
    实测（真浏览器，`nested.path` + `reverse_nested.path` 各一）：这两个算子的 path 行此前都是
    **裸文本输入**，而同屏 terms 的 field 行有字段选择器（rank/分组/类型徽标/mark 全套）。
    给 path 也接上 FieldSelect = 让使用者从 mapping 里挑嵌套路径，而不是凭记忆手打
    （打错一个字母 ES 就找不到 nested 文档）。这是"同一件事两种待遇"的一致性缺口，不是新能力。
    仅这两个算子——其余聚合的字段键仍叫 field，保持原表不动。 */
-const PATH_BODY_AGGS = new Set(['nested', 'reverse_nested']);
 const aggFieldKeys = computed(() => {
   if (PATH_BODY_AGGS.has(props.node.op)) return ['path'];
   return FIELD_BODY_AGGS.has(props.node.op) ? ['field'] : [];
