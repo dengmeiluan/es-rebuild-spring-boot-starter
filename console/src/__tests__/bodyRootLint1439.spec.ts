@@ -11,6 +11,7 @@ import {
   updateBodyRootKeys, rolloverBodyRootKeys, rolloverConditionKeys, dbqBodyRootKeys,
   ubqBodyRootKeys, queryOnlyBodyRootKeys, templateSearchBodyRootKeys, sqlBodyRootKeys, mgetBodyRootKeys,
   storedScriptBodyRootKeys, aliasesBodyRootKeys, scrollBodyRootKeys, clearScrollBodyRootKeys,
+  termvectorsBodyRootKeys, mtermvectorsBodyRootKeys,
 } from '../utils/dslCompletionContext';
 
 describe('1439 结构化体根键 lint', () => {
@@ -43,6 +44,8 @@ describe('1439 结构化体根键 lint', () => {
       [aliasesBodyRootKeys, '别名动作'],
       [scrollBodyRootKeys, '游标翻页'],
       [clearScrollBodyRootKeys, '清理游标'],
+      [termvectorsBodyRootKeys, '词项向量'],
+      [mtermvectorsBodyRootKeys, '多词项向量'],
     ];
     for (const [keys, label] of tables) {
       const obj = Object.fromEntries(keys.map(k => [k, 1]));

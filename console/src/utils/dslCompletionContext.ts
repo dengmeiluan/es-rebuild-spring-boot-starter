@@ -1107,7 +1107,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'scroll-body' | 'clear-scroll-body' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1248,6 +1248,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：游标翻页/清理的体是 {scroll,scroll_id}/{scroll_id}，不是无档 */
   if (/(^|\/)_clear_scroll(\/|$)/.test(p)) return 'clear-scroll-body';
   if (/(^|\/)_search\/scroll(\/|$)/.test(p)) return 'scroll-body';
+  /* 1439：词项向量两端点的体是结构化配置（mtermvectors 先判，避免被 termvectors 吞） */
+  if (/(^|\/)_mtermvectors(\/|$)/.test(p)) return 'mtermvectors-body';
+  if (/(^|\/)_termvectors(\/|$)/.test(p)) return 'termvectors-body';
   if (p.includes('/_scripts') || p.includes('/_script/')
       || p.includes('/_close') || p.includes('/_open') || p.includes('/_forcemerge')) return 'none';
   return 'search';
@@ -1708,6 +1711,10 @@ export const STRUCTURED_VALUE_ENUMS: Record<string, { values: string[]; quoted: 
   keep_on_completion: { values: ['true', 'false'], quoted: false, detail: '完成后保留结果' },
   index_include_frozen: { values: ['true', 'false'], quoted: false, detail: '含冻结索引' },
   _source: { values: ['true', 'false'], quoted: false, detail: '回源开关（也可传字段数组）' },
+  offsets: { values: ['false', 'true'], quoted: false, detail: '返回词项偏移' },
+  positions: { values: ['false', 'true'], quoted: false, detail: '返回词项位置' },
+  term_statistics: { values: ['false', 'true'], quoted: false, detail: '词项全局统计' },
+  field_statistics: { values: ['true', 'false'], quoted: false, detail: '字段级统计' },
 };
 
 /** SQL 体的区域：根层给 SQL 键；filter 内是 Query DSL（回落到整棵查询补全）；其余子对象不出键 */
@@ -1806,6 +1813,43 @@ export function clearScrollBodyKeyItems(): AssistItem[] {
   ];
 }
 
+/** 词项向量体（GET/POST /<索引>/_termvectors/<id>）的配置键 */
+export function termvectorsKeyItems(): AssistItem[] {
+  return [
+    { label: 'fields', detail: '要统计的字段（数组）', snippet: true, insertText: '"fields": ["${1:field}"]' },
+    { label: 'doc', detail: '直接给文档内容（不按 id 取）', snippet: true, insertText: '"doc": {\n  ${0}\n}' },
+    { label: 'filter', detail: '词项过滤（频率/长度区间）', snippet: true,
+      insertText: '"filter": {\n  "min_term_freq": ${1:1},\n  "max_num_terms": ${2:25}\n}' },
+    { label: 'offsets', detail: '返回词项偏移', snippet: true, insertText: '"offsets": ${1|false,true|}' },
+    { label: 'positions', detail: '返回词项位置', snippet: true, insertText: '"positions": ${1|false,true|}' },
+    { label: 'term_statistics', detail: '返回词项全局统计', snippet: true, insertText: '"term_statistics": ${1|false,true|}' },
+    { label: 'field_statistics', detail: '返回字段级统计', snippet: true, insertText: '"field_statistics": ${1|true,false|}' },
+    { label: 'per_field_analyzer', detail: '按字段指定分词器', snippet: true,
+      insertText: '"per_field_analyzer": {\n  "${1:field}": "${2:standard}"\n}' },
+    { label: 'routing', detail: '取文档的路由值', snippet: true, insertText: '"routing": "${1:routing}"' },
+    { label: 'version', detail: '期望版本', snippet: true, insertText: '"version": ${1:1}' },
+    { label: 'version_type', detail: '版本类型', snippet: true, insertText: '"version_type": "${1|internal,external|}"' },
+  ];
+}
+
+/** 多词项向量体的根键 */
+export function mtermvectorsBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'docs', detail: '按 _index/_id 批量取词项向量', snippet: true,
+      insertText: '"docs": [\n  {\n    "_index": "${1:my-index}",\n    "_id": "${2:1}"\n  }\n]' },
+    { label: 'ids', detail: '按 id 批量取（索引由路径指定）', snippet: true, insertText: '"ids": ["${1:1}"]' },
+  ];
+}
+
+/** 多词项向量体 docs[] 元素键：_index/_id + 单文档的全部配置键 */
+export function mtermvectorsDocKeyItems(): AssistItem[] {
+  return [
+    { label: '_index', detail: '文档所在索引（路径无索引时必填）', snippet: true, insertText: '"_index": "${1:my-index}"' },
+    { label: '_id', detail: '文档 id', snippet: true, insertText: '"_id": "${1:1}"' },
+    ...termvectorsKeyItems(),
+  ];
+}
+
 /* 结构体根键清单——与补全目录同源（目录改名时 lint 白名单自动跟随），
    DevTools dtLint 对未知根键给「ES 会拒绝」告警。 */
 export const updateBodyRootKeys = updateBodyKeyItems().map(i => i.label);
@@ -1821,6 +1865,8 @@ export const storedScriptBodyRootKeys = storedScriptBodyKeyItems().map(i => i.la
 export const aliasesBodyRootKeys = aliasesBodyKeyItems().map(i => i.label);
 export const scrollBodyRootKeys = scrollBodyKeyItems().map(i => i.label);
 export const clearScrollBodyRootKeys = clearScrollBodyKeyItems().map(i => i.label);
+export const termvectorsBodyRootKeys = termvectorsKeyItems().map(i => i.label);
+export const mtermvectorsBodyRootKeys = mtermvectorsBodyKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

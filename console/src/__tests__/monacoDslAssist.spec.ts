@@ -1531,3 +1531,33 @@ describe('1439 结构化体值位枚举', () => {
     expect(suggest('{"_source": "').map((i: any) => i.label)).not.toContain('true');
   });
 });
+
+describe('1439 词项向量体键位补全', () => {
+  it('termvectors：根键十一项（接受即合法）；fields 值位给字段名；offsets 值位给布尔', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'termvectors-body' as const } });
+    const root = suggest('{"');
+    expect(root.map((i: any) => i.label)).toEqual([
+      'fields', 'doc', 'filter', 'offsets', 'positions', 'term_statistics', 'field_statistics',
+      'per_field_analyzer', 'routing', 'version', 'version_type',
+    ]);
+    for (const i of root) {
+      expect(() => JSON.parse(acceptSnippet('{', i) + '}'), i.label + ' 接受后非法').not.toThrow();
+    }
+    expect(suggest('{"fields": ["').map((i: any) => i.label)).toEqual(expect.arrayContaining(['title', 'price']));
+    const en = suggest('{"offsets": "');
+    expect(en.map((i: any) => i.label)).toEqual(['false', 'true']);
+    const after = acceptSnippet('{"offsets": "', en[0]);
+    expect(after).toContain('"offsets": false');
+    expect(() => JSON.parse(after + '}')).not.toThrow();
+  });
+
+  it('mtermvectors：根 docs/ids；元素给 _index/_id + 配置键；ids 数组与深层不出键', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'mtermvectors-body' as const } });
+    expect(suggest('{"').map((i: any) => i.label)).toEqual(['docs', 'ids']);
+    const el = suggest('{"docs": [{"').map((i: any) => i.label);
+    expect(el.slice(0, 2)).toEqual(['_index', '_id']);
+    expect(el).toContain('term_statistics');
+    expect(suggest('{"ids": ["')).toEqual([]);
+    expect(suggest('{"docs": [{"doc": {"')).toEqual([]);
+  });
+});
