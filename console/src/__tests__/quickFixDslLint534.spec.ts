@@ -118,6 +118,15 @@ describe('A 规则→fix 白名单九条（行为逐条）', () => {
     expect(a.edit.edits[0].textEdit.text).toBe('"query"');
   });
 
+  it('agg-field-key-typo →「键改为「field」」：terms 体里的 filed（1439 并入键改名）', () => {
+    const model = fakeModel('{"aggs":{"a":{"terms":{"filed":"x"}}}}');
+    caps.markers = [markerAt(24, 31)];
+    recordDslLintMarkers(URI_STR, [entry(24, 31, 'agg-field-key-typo', '聚合「terms」的字段键「filed」疑似拼写错误（最接近：field）——ES 不认该键')]);
+    const a = dslProvider().provideCodeActions(model, RANGE).actions[0];
+    expect(a.title).toBe('键改为「field」');
+    expect(a.edit.edits[0].textEdit.text).toBe('"field"');
+  });
+
   it('root-key-typo / settings-key / mapping-key 同款键改名（最接近候选拆自消息）', () => {
     const cases: [string, string, string][] = [
       ['root-key-typo', '{"querry": {}}', '键改为「query」'],

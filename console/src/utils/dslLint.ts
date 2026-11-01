@@ -39,7 +39,7 @@
  should 键、无 minimum_should_match、处于 filter/must_not 语境 → hint，walk 递归带语境
  单调传递，零 ctx）。 */
 import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys } from './dslCompletionContext';
-import { AGG_OPS, NUMERIC_FIELD_TYPES } from './queryAstOps';
+import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
 import { SETTINGS_CATALOG } from './indexSettingsCatalog';
 
 type LintRule =
@@ -51,7 +51,7 @@ type LintRule =
   | 'root-bare-clause' | 'collapse-structure' | 'sort-order-typo' | 'highlight-fields' | 'script-inline'
   | 'agg-text-field' | 'body-value-type' | 'agg-interval-key' | 'nested-path' | 'query-structure'
   | 'ndjson-pair' | 'settings-key' | 'settings-value' | 'mapping-key' | 'mapping-type'
-  | 'agg-type-typo' | 'date-term-value' | 'should-in-filter' | 'body-key-typo'
+  | 'agg-type-typo' | 'date-term-value' | 'should-in-filter' | 'body-key-typo' | 'agg-field-key-typo'
   | 'query-subsearches-conflict' | 'subsearches-no-rank' | 'retriever-conflict'
   | 'rare-type';
 
@@ -146,6 +146,8 @@ function bodyKeysOf(op: string): Set<string> {
 }
 /** 查询语境路径（query / post_filter / 顶层 knn.filter 的子树）——aggs 下的同名聚合体不走本表 */
 const IN_QUERY_BODY = /^(query|post_filter|knn\.filter)([.\[]|$)/;
+/** 聚合语境路径（aggs / aggregations 的子树） */
+const IN_AGG_BODY = /^(aggs|aggregations)([.\[]|$)/;
 /** search body 根级合法键：dslCompletionContext ROOT_KEYS 只读复用 + 常用外围键补集。
  aggs/aggregations 双合法（双拼写都在表内，互不为「拼错」）。 */
 const ROOT_KEY_WHITELIST = new Set([
@@ -454,6 +456,21 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
               path: p, anchor: k, nth: kNth,
             });
           }
+        }
+      }
+      /* ---- 1439：聚合字段键拼写（agg-field-key-typo，warning 档，零 ctx）----
+         例：terms 体的 "filed"、nested 聚合的 "pth"——ES 不认该键，聚合直接失败或
+         问不到字段。只判 field 型/ path 型聚合体的体键；查询侧 nested 由 body-key-typo 判。 */
+      if (parentKey && IN_AGG_BODY.test(path) && !k.startsWith('_') && !k.includes('${')) {
+        const target = FIELD_BODY_AGGS.has(parentKey) ? 'field'
+          : PATH_BODY_AGGS.has(parentKey) ? 'path' : null;
+        if (target && k !== target && editDistance(k, target) <= 2) {
+          out.push({
+            rule: 'agg-field-key-typo', severity: 'warning',
+            message: `聚合「${parentKey}」的字段键「${k}」疑似拼写错误（最接近：${target}）——ES 不认该键，聚合会失败或无字段可用`,
+            suggestion: `改为「${target}」`,
+            path: p, anchor: k, nth: kNth,
+          });
         }
       }
       /* ---- 规则③：filter/must_not 语境纯 should（should-in-filter，hint 档，零 ctx）----
