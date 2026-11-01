@@ -956,3 +956,44 @@ describe('JSONC 注释跳过（dslKeyGuard 负向钉）', () => {
     expect(suggest(doc).map((i: any) => i.label)).toEqual(['title', 'price']);
   });
 });
+
+/* 1439：本批新增的补全档在**提供器层**的接线——
+   浏览器验证不进 CI，这里锁住「上下文档 → 候选」这条链，尤其是
+   sort 简写方向值必须在 dslKeyGuard 早退之前判定（字段键不在值白名单）。
+   全量清单见 aggBodyKeys1439 / retrieverCompletion1439 / suggesterCompletion1439 /
+   highlightFields1439 / sortChain1439（纯函数与上下文层）。 */
+describe('1439 新补全档（提供器层接线）', () => {
+  it('sort 简写方向值给 asc/desc（guard 早退之前的路由）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    expect(suggest('{"sort": [{"@timestamp": "').map((i: any) => i.label)).toEqual(['asc', 'desc']);
+  });
+
+  it('sort 字段配置键给 order/mode/missing/unmapped_type/nested', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    const labels = suggest('{"sort": [{"@timestamp": {').map((i: any) => i.label);
+    expect(labels).toEqual(expect.arrayContaining(['order', 'mode', 'missing', 'unmapped_type', 'nested']));
+  });
+
+  it('highlight.fields 的键给 mapping 字段', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    expect(suggest('{"highlight": {"fields": {').map((i: any) => i.label)).toEqual(['title', 'price']);
+  });
+
+  it('聚合体内部给字段键 + 参数键 + 嵌套 aggs', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    const labels = suggest('{"aggs": {"a": {"terms": {').map((i: any) => i.label);
+    expect(labels).toEqual(expect.arrayContaining(['field', 'size', 'min_doc_count', 'aggs']));
+  });
+
+  it('filter 聚合体给查询子句（体是查询）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    expect(suggest('{"aggs": {"a": {"filter": {').map((i: any) => i.label)).toContain('match');
+  });
+
+  it('retriever / suggest 体内给变体清单', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    expect(suggest('{"retriever": {').map((i: any) => i.label))
+      .toEqual(expect.arrayContaining(['standard', 'rrf', 'linear', 'pinned']));
+    expect(suggest('{"suggest": {"s1": {').map((i: any) => i.label)).toEqual(['term', 'phrase', 'completion']);
+  });
+});
