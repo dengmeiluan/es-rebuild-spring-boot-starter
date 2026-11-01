@@ -4,7 +4,7 @@
    none→非 query/aggs 区深层不出层。 */
 import { describe, it, expect } from 'vitest';
 import { dslContext, QUERY_SNIPPETS, ROOT_KEYS } from '../utils/dslCompletionContext';
-import { bodyKindForPath, settingsKeyItems, mappingKeyItems, MAPPING_TYPES, templateKeyItems } from '../utils/dslCompletionContext';
+import { bodyKindForPath, settingsKeyItems, mappingKeyItems, MAPPING_TYPES, templateKeyItems, templateRegionAt } from '../utils/dslCompletionContext';
 import { lineIndentAt, reindentSnippet, commaAffixes } from '../utils/dslCompletionContext';
 
 const E = (doc: string) => dslContext(doc, doc.length); // 光标在尾
@@ -103,6 +103,21 @@ describe('dslContext 注释跳过（JSONC // 与 /* */，字符串内不算注�
   it('字符串内 // 与 /* 不算注释（inStr 保护优先，回归钉）', () => {
     expect(E('{"query": {"wildcard": {"f": "a//b{c"}}}')).toEqual({ kind: 'root' });
     expect(E('{"query": {"wildcard": {"f": "a/*b{c"}}}')).toEqual({ kind: 'root' });
+  });
+});
+
+describe('1439 templateRegionAt（模板体内分区）', () => {
+  it('顶层/模板名层 → template；template.settings/mappings/aliases 各自分区', () => {
+    const at = (s: string) => templateRegionAt(s, s.length);
+    expect(at('{"index_patterns": [], "')).toBe('template');
+    expect(at('{"template": { "')).toBe('template');
+    expect(at('{"template": {"settings": { "')).toBe('settings');
+    expect(at('{"template": {"settings": {"number_of_shards": "1", "')).toBe('settings');
+    expect(at('{"template": {"mappings": { "')).toBe('mapping');
+    expect(at('{"template": {"mappings": {"properties": {"x": { "')).toBe('mapping');
+    expect(at('{"template": {"aliases": { "')).toBe('none');
+    /* 注释内不产键链（扫描与 dslContext 同口径） */
+    expect(at('{"template": {"settings": { // "mappings": { "')).toBe('settings');
   });
 });
 

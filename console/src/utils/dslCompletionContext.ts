@@ -1242,6 +1242,39 @@ export function reindentSnippet(text: string, indent: string): string {
   return text.replace(/\n/g, '\n' + indent);
 }
 
+/** 索引模板体内的语义区域（1439）：模板的 template.settings/mappings 里应给设置键/映射键，
+    而不是继续给模板八键。扫描口径与 dslContext 同源（注释跳过、转义引号判定共享）。
+    'none' = template.aliases（别名体是自由配置，不出键档）。 */
+export function templateRegionAt(doc: string, offset: number): 'template' | 'settings' | 'mapping' | 'none' {
+  const text = doc.slice(0, Math.max(0, Math.min(offset, doc.length)));
+  const stack: Array<string | null> = [];
+  let inStr = false; let curKey = '';
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inStr) {
+      if (ch === '"' && !isEscapedQuote(text, i)) {
+        inStr = false;
+        let j = i + 1;
+        while (j < text.length && /\s/.test(text[j])) j++;
+        if (text[j] === ':' && stack.length) stack[stack.length - 1] = curKey;
+      } else curKey += ch;
+      continue;
+    }
+    const cEnd = commentEnd(text, i);
+    if (cEnd !== -1) { i = cEnd - 1; continue; }
+    if (ch === '"') { inStr = true; curKey = ''; continue; }
+    if (ch === '{' || ch === '[') stack.push(null);
+    else if (ch === '}' || ch === ']') stack.pop();
+  }
+  const t = stack.lastIndexOf('template');
+  if (t < 0) return 'template';
+  const sub = t + 1 < stack.length ? stack[t + 1] : null;
+  if (sub === 'settings') return 'settings';
+  if (sub === 'mappings' || sub === 'mapping') return 'mapping';
+  if (sub === 'aliases') return 'none';
+  return 'template';
+}
+
 /* ux2 ：index_template / component_template body 键档（TemplatesView editBody 用）。
  八键全 snippet 骨架——模板 body 键集封闭且层级固定，骨架比裸键名省事；
  component_template 同用（其 body={ template: {...} } 子集，容器骨架兼容）。 */

@@ -1197,3 +1197,18 @@ describe('1439 sort 简写串数组出字段候选', () => {
     expect(suggest('{"aggs":{"a":{"terms":{"field":["')).toEqual([]);
   });
 });
+
+describe('1439 模板体内补全分区', () => {
+  it('template.settings 给设置键、template.mappings 给映射键、aliases 不出键档', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'template' as const } });
+    const st = suggest('{"template": {"settings": { "').map((i: any) => i.label);
+    expect(st).toContain('number_of_shards');
+    expect(st).not.toContain('index_patterns');
+    const mp = suggest('{"template": {"mappings": { "').map((i: any) => i.label);
+    expect(mp).toEqual(expect.arrayContaining(['properties', 'dynamic']));
+    expect(mp).not.toContain('index_patterns');
+    expect(suggest('{"template": {"aliases": { "')).toEqual([]);
+    /* 顶层仍是模板八键 */
+    expect(suggest('{"').map((i: any) => i.label)).toContain('index_patterns');
+  });
+});
