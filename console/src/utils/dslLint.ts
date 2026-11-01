@@ -207,7 +207,7 @@ const AGG_NO_SUB = new Set([
 ]);
 /* 其余「缺了必 400」的结构键（与 field/script 规则并集判定，见 agg-required-param） */
 const AGG_REQUIRED_KEYS: Record<string, string[]> = {
-  nested: ['path'],
+  /* nested 的 path 缺失由既有 nested-path 规则（查询/聚合同判）负责，这里不重判 */
   children: ['type'],
   parent: ['type'],
   multi_terms: ['terms'],

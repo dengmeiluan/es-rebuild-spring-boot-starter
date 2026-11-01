@@ -50,7 +50,6 @@ describe('1439 聚合必填参数', () => {
       ['terms 只有 size', { aggs: { a: { terms: { size: 10 } } } }, 'field'],
       ['avg 只有 missing', { aggs: { a: { avg: { missing: 0 } } } }, 'field'],
       ['cardinality 缺 field', { aggs: { a: { cardinality: { precision_threshold: 100 } } } }, 'field'],
-      ['nested 缺 path', { aggs: { a: { nested: { aggs: { b: { terms: { field: 'x' } } } } } } }, 'path'],
       ['multi_terms 缺 terms', { aggs: { a: { multi_terms: { size: 5 } } } }, 'terms'],
       ['filters 缺 filters', { aggs: { a: { filters: { other_bucket: true } } } }, 'filters'],
       ['range 缺 ranges', { aggs: { a: { range: { field: 'amount' } } } }, 'ranges'],
@@ -67,6 +66,12 @@ describe('1439 聚合必填参数', () => {
       expect(f[0].message, name).toContain(token);
       expect(f[0].anchor, name).toBeTruthy();
     }
+  });
+
+  it('nested 缺 path 不重判（既有 nested-path 规则负责，避免双条 finding）', () => {
+    const dsl = { aggs: { a: { nested: {} } } };
+    expect(req(dsl)).toEqual([]);
+    expect(lintDsl(dsl as any).some((f: any) => f.rule === 'nested-path')).toBe(true);
   });
 
   it('嵌套聚合内同样判（第二层 aggs）', () => {
