@@ -1038,7 +1038,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1147,6 +1147,8 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   if (p.includes('_mapping')) return 'mapping';
   /* 1439：PUT /<索引名> = 创建索引——体是 {settings, mappings, aliases}，不是 search body */
   if (method.toUpperCase() === 'PUT' && /^\/[^\/_]+$/.test(p)) return 'index-body';
+  /* 1439：PUT /<索引名>/_alias/<别名> 的体是别名配置（filter/routing/is_write_index…） */
+  if (p.includes('/_alias/')) return 'alias-body';
   if (p.includes('/_search/scroll') || p.includes('/_clear_scroll') || p.includes('/_aliases')
       || p.includes('_reindex') || p.includes('_sql') || p.includes('/_mget')
       || p.includes('/_scripts') || p.includes('/_script/') || p.includes('/_rollover')
@@ -1311,14 +1313,14 @@ function frameKeysAt(doc: string, offset: number): Array<string | null> {
   return stack;
 }
 
-export function templateRegionAt(doc: string, offset: number): 'template' | 'settings' | 'mapping' | 'none' {
+export function templateRegionAt(doc: string, offset: number): 'template' | 'settings' | 'mapping' | 'aliases' {
   const stack = frameKeysAt(doc, offset);
   const t = stack.lastIndexOf('template');
   if (t < 0) return 'template';
   const sub = t + 1 < stack.length ? stack[t + 1] : null;
   if (sub === 'settings') return 'settings';
   if (sub === 'mappings' || sub === 'mapping') return 'mapping';
-  if (sub === 'aliases') return 'none';
+  if (sub === 'aliases') return 'aliases';
   return 'template';
 }
 
@@ -1342,6 +1344,26 @@ export function indexBodyKeyItems(): AssistItem[] {
     { label: 'aliases', detail: '别名', snippet: true,
       insertText: '"aliases": {\n  ${0}\n}' },
   ];
+}
+
+/** 别名配置键（template.aliases.<名>.{} / PUT /idx/_alias/<名> 的体） */
+export function aliasKeyItems(): AssistItem[] {
+  return [
+    { label: 'filter', detail: '别名过滤查询（只有命中的文档能通过别名访问）', snippet: true,
+      insertText: '"filter": {\n  ${0}\n}' },
+    { label: 'index_routing', detail: '写入路由值', snippet: true, insertText: '"index_routing": "${1:routing}"' },
+    { label: 'routing', detail: '读写路由值', snippet: true, insertText: '"routing": "${1:routing}"' },
+    { label: 'search_routing', detail: '检索路由值', snippet: true, insertText: '"search_routing": "${1:routing}"' },
+    { label: 'is_write_index', detail: '是否作为该别名的写索引', snippet: true, insertText: '"is_write_index": ${1|true,false|}' },
+    { label: 'is_hidden', detail: '别名是否隐藏', snippet: true, insertText: '"is_hidden": ${1|false,true|}' },
+  ];
+}
+
+/** 光标是否在「某个别名的配置对象」里（aliases.<名>.{}）——命名位不出键档 */
+export function aliasConfigAt(doc: string, offset: number): boolean {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length < 3) return false;
+  return stack[stack.length - 3] === 'aliases' && !!stack[stack.length - 2];
 }
 
 /* ux2 ：index_template / component_template body 键档（TemplatesView editBody 用）。

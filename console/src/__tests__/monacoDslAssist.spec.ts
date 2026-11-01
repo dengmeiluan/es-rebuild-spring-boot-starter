@@ -1207,7 +1207,8 @@ describe('1439 模板体内补全分区', () => {
     const mp = suggest('{"template": {"mappings": { "').map((i: any) => i.label);
     expect(mp).toEqual(expect.arrayContaining(['properties', 'dynamic']));
     expect(mp).not.toContain('index_patterns');
-    expect(suggest('{"template": {"aliases": { "')).toEqual([]);
+    expect(suggest('{"template": {"aliases": { "')).toEqual([]); /* 命名位不给键档 */
+    expect(suggest('{"template": {"aliases": {"old": { "').map((i: any) => i.label)).toContain('filter');
     /* 顶层仍是模板八键 */
     expect(suggest('{"').map((i: any) => i.label)).toContain('index_patterns');
   });
@@ -1239,5 +1240,15 @@ describe('1439 创建索引体补全', () => {
     expect(suggest('{"mappings": { "').map((i: any) => i.label)).toContain('properties');
     expect(suggest('{"mappings": {"properties": {"a": { "').map((i: any) => i.label)).toContain('analyzer');
     expect(suggest('{"aliases": { "')).toEqual([]);
+  });
+});
+
+describe('1439 别名体补全', () => {
+  it('PUT /idx/_alias/<名> 体给 filter/routing/is_write_index', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'alias-body' as const } });
+    const labels = suggest('{"').map((i: any) => i.label);
+    expect(labels).toEqual(expect.arrayContaining(['filter', 'routing', 'index_routing', 'search_routing', 'is_write_index']));
+    const items = suggest('{"');
+    expect(() => JSON.parse(acceptSnippet('{', items.find((i: any) => i.label === 'filter')) + '}')).not.toThrow();
   });
 });

@@ -4,7 +4,7 @@
    none→非 query/aggs 区深层不出层。 */
 import { describe, it, expect } from 'vitest';
 import { dslContext, QUERY_SNIPPETS, ROOT_KEYS } from '../utils/dslCompletionContext';
-import { bodyKindForPath, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, MAPPING_TYPES, templateKeyItems, templateRegionAt, indexBodyRegionAt, indexBodyKeyItems } from '../utils/dslCompletionContext';
+import { bodyKindForPath, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, MAPPING_TYPES, templateKeyItems, templateRegionAt, indexBodyRegionAt, indexBodyKeyItems, aliasKeyItems, aliasConfigAt } from '../utils/dslCompletionContext';
 import { lineIndentAt, reindentSnippet, commaAffixes } from '../utils/dslCompletionContext';
 
 const E = (doc: string) => dslContext(doc, doc.length); // 光标在尾
@@ -106,6 +106,28 @@ describe('dslContext 注释跳过（JSONC // 与 /* */，字符串内不算注�
   });
 });
 
+describe('1439 别名体', () => {
+  it('PUT /idx/_alias/<名> → alias-body；/_aliases 动作体仍 none', () => {
+    expect(bodyKindForPath('/idx/_alias/a1', 'PUT')).toBe('alias-body');
+    expect(bodyKindForPath('/_alias/a1', 'PUT')).toBe('alias-body');
+    expect(bodyKindForPath('/_aliases', 'POST')).toBe('none');
+    expect(bodyKindForPath('/idx/_alias/a1', 'GET')).toBe('alias-body'); /* GET 无体，bodyKind 不影响 */
+  });
+
+  it('aliasConfigAt：别名配置对象内为真，命名位/别名容器为假', () => {
+    const at = (s: string) => aliasConfigAt(s, s.length);
+    expect(at('{"aliases": {"a": { "')).toBe(true);
+    expect(at('{"aliases": {"a": {"filter": {}, "')).toBe(true);
+    expect(at('{"aliases": { "')).toBe(false);
+    expect(at('{"template": {"aliases": {"a": { "')).toBe(true);
+  });
+
+  it('aliasKeyItems 覆盖官方别名配置键', () => {
+    const labels = aliasKeyItems().map(i => i.label);
+    expect(labels).toEqual(['filter', 'index_routing', 'routing', 'search_routing', 'is_write_index', 'is_hidden']);
+  });
+});
+
 describe('1439 创建索引体（PUT /<索引名>）', () => {
   it('PUT 单段路径 → index-body；GET/带下划线端点不受影响', () => {
     expect(bodyKindForPath('/new-idx', 'PUT')).toBe('index-body');
@@ -168,7 +190,8 @@ describe('1439 templateRegionAt（模板体内分区）', () => {
     expect(at('{"template": {"settings": {"number_of_shards": "1", "')).toBe('settings');
     expect(at('{"template": {"mappings": { "')).toBe('mapping');
     expect(at('{"template": {"mappings": {"properties": {"x": { "')).toBe('mapping');
-    expect(at('{"template": {"aliases": { "')).toBe('none');
+    expect(at('{"template": {"aliases": { "')).toBe('aliases');
+    expect(at('{"template": {"aliases": {"old": { "')).toBe('aliases');
     /* 注释内不产键链（扫描与 dslContext 同口径） */
     expect(at('{"template": {"settings": { // "mappings": { "')).toBe('settings');
   });
