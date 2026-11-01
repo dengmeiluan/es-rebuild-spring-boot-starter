@@ -11,8 +11,9 @@ import { describe, it, expect } from 'vitest';
 import {
   QUERY_BODY_KEYS, CLAUSE_VALUE_KEYS, SUGGEST_BODY_KEYS,
   QUERY_SNIPPETS, AGG_SNIPPETS, ROOT_KEY_SNIPPETS, ROOT_KEYS,
-  retrieverBodyKeys,
+  retrieverBodyKeys, queryBodyKeys, clauseValueKeys, suggesterBodyKeys, aggBodyKeys,
 } from '../utils/dslCompletionContext';
+import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
 type Keyed = { text: string; key?: string };
 
@@ -44,14 +45,19 @@ export function snippetProblems(label: string, items: Keyed[]): string[] {
 
 function allProblems(): string[] {
   const out: string[] = [];
-  for (const [op, list] of Object.entries(QUERY_BODY_KEYS)) {
-    out.push(...snippetProblems('QB:' + op, list.map(k => ({ text: k.insert, key: k.key }))));
+  /* 用函数而不是裸表：参数表并集（OPS_META/WRAP_PARAMS/MULTI_META/AGG_BODY_PARAMS）里
+     自动生成的骨架同样是用户能接受进文档的，必须一起过闸。 */
+  for (const op of Object.keys(QUERY_BODY_KEYS)) {
+    out.push(...snippetProblems('QB:' + op, queryBodyKeys(op).map(k => ({ text: k.insert, key: k.key }))));
   }
-  for (const [op, list] of Object.entries(CLAUSE_VALUE_KEYS)) {
-    out.push(...snippetProblems('CV:' + op, list.map(k => ({ text: k.insert, key: k.key }))));
+  for (const op of Object.keys(CLAUSE_VALUE_KEYS)) {
+    out.push(...snippetProblems('CV:' + op, clauseValueKeys(op).map(k => ({ text: k.insert, key: k.key }))));
   }
-  for (const [op, list] of Object.entries(SUGGEST_BODY_KEYS)) {
-    out.push(...snippetProblems('SB:' + op, list.map(k => ({ text: k.insert, key: k.key }))));
+  for (const op of Object.keys(SUGGEST_BODY_KEYS)) {
+    out.push(...snippetProblems('SB:' + op, suggesterBodyKeys(op).map(k => ({ text: k.insert, key: k.key }))));
+  }
+  for (const op of Object.keys(AGG_BODY_PARAMS)) {
+    out.push(...snippetProblems('AB:' + op, aggBodyKeys(op).map(k => ({ text: k.insert, key: k.key }))));
   }
   for (const op of ['standard', 'knn', 'rrf', 'linear', 'text_similarity_reranker', 'rule', 'pinned', 'diversify', 'rescorer']) {
     out.push(...snippetProblems('RB:' + op, retrieverBodyKeys(op).map(k => ({ text: k.insert, key: k.key }))));
