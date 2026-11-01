@@ -78,6 +78,19 @@ describe('1439 聚合体键位补全', () => {
   });
 });
 
+describe('1439 聚合体官方标量参数补齐', () => {
+  it('terms/histogram/date_histogram/top_hits/significant_terms 的官方参数在候选中', () => {
+    const keys = (op: string) => aggBodyKeys(op).map(k => k.key);
+    expect(keys('terms')).toEqual(expect.arrayContaining([
+      'shard_size', 'shard_min_doc_count', 'include', 'exclude', 'show_term_doc_count_error', 'collect_mode',
+    ]));
+    expect(keys('histogram')).toEqual(expect.arrayContaining(['offset', 'keyed']));
+    expect(keys('date_histogram')).toContain('keyed');
+    expect(keys('top_hits')).toEqual(expect.arrayContaining(['track_scores', 'explain', 'version']));
+    expect(keys('significant_terms')).toContain('shard_size');
+  });
+});
+
 describe('1439 terms.order 键位上下文', () => {
   it('terms / multi_terms 的 order 对象 → agg-order-key；其他聚合不命中', () => {
     const at = (s: string) => dslContext(s, s.length);

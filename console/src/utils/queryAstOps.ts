@@ -548,14 +548,21 @@ export const AGG_BODY_PARAMS: Record<string, ParamMeta[]> = {
     { key: 'size', kind: 'number' }, { key: 'min_doc_count', kind: 'number' },
     { key: 'missing', kind: 'text' },
     { key: 'execution_hint', kind: 'enum', options: ['map', 'global_ordinals', 'term_ordinals'] },
+    /* 1439：官方标量参数补齐（order/ranges 等结构键仍由专用面板承担） */
+    { key: 'shard_size', kind: 'number' }, { key: 'shard_min_doc_count', kind: 'number' },
+    { key: 'include', kind: 'text' }, { key: 'exclude', kind: 'text' },
+    { key: 'show_term_doc_count_error', kind: 'boolean' },
+    { key: 'collect_mode', kind: 'enum', options: ['breadth_first', 'depth_first'] },
   ],
   date_histogram: [
     { key: 'calendar_interval', kind: 'text' }, { key: 'fixed_interval', kind: 'text' },
     { key: 'format', kind: 'text' }, { key: 'min_doc_count', kind: 'number' },
     { key: 'offset', kind: 'text' }, { key: 'time_zone', kind: 'text' },
+    { key: 'keyed', kind: 'boolean' },
   ],
   histogram: [
     { key: 'interval', kind: 'number' }, { key: 'min_doc_count', kind: 'number' },
+    { key: 'offset', kind: 'number' }, { key: 'keyed', kind: 'boolean' },
   ],
   range: [{ key: 'keyed', kind: 'boolean' }],
   /* 1022：date_range（ranges 由 AggRangesPanel 权威编辑）/ filters（buckets 由 AggFiltersPanel） */
@@ -576,6 +583,7 @@ export const AGG_BODY_PARAMS: Record<string, ParamMeta[]> = {
   significant_terms: [
     { key: 'size', kind: 'number' }, { key: 'min_doc_count', kind: 'number' },
     { key: 'exclude_frequent', kind: 'boolean' },
+    { key: 'shard_size', kind: 'number' },
   ],
   rare_terms: [{ key: 'max_doc_count', kind: 'number' }],
   sampler: [{ key: 'shard_size', kind: 'number' }],
@@ -588,7 +596,12 @@ export const AGG_BODY_PARAMS: Record<string, ParamMeta[]> = {
   min: [{ key: 'missing', kind: 'number' }],
   max: [{ key: 'missing', kind: 'number' }],
   cardinality: [{ key: 'precision_threshold', kind: 'number' }],
-  top_hits: [{ key: 'size', kind: 'number' }, { key: 'from', kind: 'number' }],
+  top_hits: [
+    { key: 'size', kind: 'number' }, { key: 'from', kind: 'number' },
+    /* 1439：官方标量开关补齐（sort/_source/highlight 等结构键由自由表或面板承担） */
+    { key: 'track_scores', kind: 'boolean' }, { key: 'explain', kind: 'boolean' },
+    { key: 'version', kind: 'boolean' },
+  ],
   /* 1201：三个「必填主键不在自由表里就会被当普通键手打」的聚合——
      stats 与 avg/min/max 同族（field 由 FIELD_BODY_AGGS 给选择器，这里只剩 missing）；
      top_metrics 主键是 metrics 数组 + sort 数组（数组键留自由表，size 与 missing 升具名）；
