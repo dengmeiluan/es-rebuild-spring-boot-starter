@@ -1038,7 +1038,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'reindex-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1149,8 +1149,10 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   if (method.toUpperCase() === 'PUT' && /^\/[^\/_]+$/.test(p)) return 'index-body';
   /* 1439：PUT /<索引名>/_alias/<别名> 的体是别名配置（filter/routing/is_write_index…） */
   if (p.includes('/_alias/')) return 'alias-body';
+  /* 1439：_reindex 的体是 {source,dest,script,…}，不是 search body 也不是纯无档 */
+  if (p.includes('_reindex')) return 'reindex-body';
   if (p.includes('/_search/scroll') || p.includes('/_clear_scroll') || p.includes('/_aliases')
-      || p.includes('_reindex') || p.includes('_sql') || p.includes('/_mget')
+      || p.includes('_sql') || p.includes('/_mget')
       || p.includes('/_scripts') || p.includes('/_script/') || p.includes('/_rollover')
       || p.includes('/_close') || p.includes('/_open') || p.includes('/_forcemerge')) return 'none';
   return 'search';
@@ -1356,6 +1358,52 @@ export function aliasKeyItems(): AssistItem[] {
     { label: 'search_routing', detail: '检索路由值', snippet: true, insertText: '"search_routing": "${1:routing}"' },
     { label: 'is_write_index', detail: '是否作为该别名的写索引', snippet: true, insertText: '"is_write_index": ${1|true,false|}' },
     { label: 'is_hidden', detail: '别名是否隐藏', snippet: true, insertText: '"is_hidden": ${1|false,true|}' },
+  ];
+}
+
+/** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
+    source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */
+export function reindexBodyRegionAt(doc: string, offset: number): 'root' | 'source' | 'dest' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  const k0 = stack[0];
+  if (stack.length === 2 && k0 === 'source') return 'source';
+  if (stack.length === 2 && k0 === 'dest') return 'dest';
+  if (k0 === 'source' || k0 === 'dest') return 'deep';
+  return 'root';
+}
+
+/** 重建索引体的键（根层 / source 体 / dest 体三档） */
+export function reindexBodyKeyItems(region: 'root' | 'source' | 'dest' | 'deep'): AssistItem[] {
+  if (region === 'deep') return [];
+  if (region === 'source') {
+    return [
+      { label: 'index', detail: '源索引（可写单名或数组）', snippet: true, insertText: '"index": "${1:src-index}"' },
+      { label: 'query', detail: '只重建命中的文档（查询体）', snippet: true, insertText: '"query": {\n  ${0}\n}' },
+      { label: 'size', detail: '每批处理的文档数', snippet: true, insertText: '"size": ${1:1000}' },
+      { label: '_source', detail: '取哪些源字段', snippet: true, insertText: '"_source": ["${1:field}"]' },
+      { label: 'sort', detail: '处理顺序', snippet: true, insertText: '"sort": [\n  ${0}\n]' },
+      { label: 'remote', detail: '跨集群重建（远端连接与索引）', snippet: true, insertText: '"remote": {\n  "host": "${1:http://remote:9200}"\n}' },
+    ];
+  }
+  if (region === 'dest') {
+    return [
+      { label: 'index', detail: '目标索引名', snippet: true, insertText: '"index": "${1:dst-index}"' },
+      { label: 'op_type', detail: '写入形态（create=已存在则失败）', snippet: true, insertText: '"op_type": "${1|index,create|}"' },
+      { label: 'pipeline', detail: '写入管道', snippet: true, insertText: '"pipeline": "${1:pipeline}"' },
+      { label: 'routing', detail: '写入路由', snippet: true, insertText: '"routing": "${1:routing}"' },
+      { label: 'version_type', detail: '版本冲突策略', snippet: true, insertText: '"version_type": "${1|internal,external|}"' },
+    ];
+  }
+  return [
+    { label: 'source', detail: '源索引与查询', snippet: true,
+      insertText: '"source": {\n  "index": "${1:src-index}"\n}' },
+    { label: 'dest', detail: '目标索引', snippet: true,
+      insertText: '"dest": {\n  "index": "${1:dst-index}"\n}' },
+    { label: 'script', detail: '重建时改写文档的脚本', snippet: true, insertText: '"script": {\n  ${0}\n}' },
+    { label: 'conflicts', detail: '版本冲突处理（proceed 覆盖 / abort 中止）', snippet: true, insertText: '"conflicts": "${1|proceed,abort|}"' },
+    { label: 'max_docs', detail: '最多重建多少条', snippet: true, insertText: '"max_docs": ${1:1000}' },
+    { label: 'size', detail: '每批处理的文档数', snippet: true, insertText: '"size": ${1:1000}' },
   ];
 }
 

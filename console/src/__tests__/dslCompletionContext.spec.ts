@@ -4,7 +4,7 @@
    none→非 query/aggs 区深层不出层。 */
 import { describe, it, expect } from 'vitest';
 import { dslContext, QUERY_SNIPPETS, ROOT_KEYS } from '../utils/dslCompletionContext';
-import { bodyKindForPath, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, MAPPING_TYPES, templateKeyItems, templateRegionAt, indexBodyRegionAt, indexBodyKeyItems, aliasKeyItems, aliasConfigAt } from '../utils/dslCompletionContext';
+import { bodyKindForPath, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, MAPPING_TYPES, templateKeyItems, templateRegionAt, indexBodyRegionAt, indexBodyKeyItems, aliasKeyItems, aliasConfigAt, reindexBodyRegionAt, reindexBodyKeyItems } from '../utils/dslCompletionContext';
 import { lineIndentAt, reindentSnippet, commaAffixes } from '../utils/dslCompletionContext';
 
 const E = (doc: string) => dslContext(doc, doc.length); // 光标在尾
@@ -103,6 +103,30 @@ describe('dslContext 注释跳过（JSONC // 与 /* */，字符串内不算注�
   it('字符串内 // 与 /* 不算注释（inStr 保护优先，回归钉）', () => {
     expect(E('{"query": {"wildcard": {"f": "a//b{c"}}}')).toEqual({ kind: 'root' });
     expect(E('{"query": {"wildcard": {"f": "a/*b{c"}}}')).toEqual({ kind: 'root' });
+  });
+});
+
+describe('1439 重建索引体（_reindex）', () => {
+  it('bodyKind 分档 + 区域判定（根/source/dest，深层不出档）', () => {
+    expect(bodyKindForPath('/_reindex', 'POST')).toBe('reindex-body');
+    const at = (s: string) => reindexBodyRegionAt(s, s.length);
+    expect(at('{ "')).toBe('root');
+    expect(at('{"source": { "')).toBe('source');
+    expect(at('{"source": {"index": "a", "')).toBe('source');
+    expect(at('{"dest": { "')).toBe('dest');
+    expect(at('{"dest": {"index": "b", "')).toBe('dest');
+    expect(at('{"source": {"query": { "')).toBe('deep');
+    expect(at('{"source": {"sort": [{ "')).toBe('deep');
+  });
+
+  it('三档键表覆盖官方结构且深层为空', () => {
+    const root = reindexBodyKeyItems('root').map(i => i.label);
+    expect(root).toEqual(expect.arrayContaining(['source', 'dest', 'script', 'conflicts', 'max_docs']));
+    const src = reindexBodyKeyItems('source').map(i => i.label);
+    expect(src).toEqual(expect.arrayContaining(['index', 'query', 'size', '_source', 'sort', 'remote']));
+    const dst = reindexBodyKeyItems('dest').map(i => i.label);
+    expect(dst).toEqual(expect.arrayContaining(['index', 'op_type', 'pipeline', 'routing', 'version_type']));
+    expect(reindexBodyKeyItems('deep')).toEqual([]);
   });
 });
 
@@ -215,7 +239,7 @@ describe('bodyKindForPath', () => {
       expect(bodyKindForPath(p), p).toBe('template');
     }
     for (const p of ['/idx/_search/scroll', '/_search/scroll', '/_clear_scroll', '/_aliases', '/idx/_aliases',
-      '/_reindex', '/_sql', '/_script/p1', '/_scripts/p1', '/idx/_mget', '/idx/_rollover', '/idx/_close',
+      '/_sql', '/_script/p1', '/_scripts/p1', '/idx/_mget', '/idx/_rollover', '/idx/_close',
       '/idx/_open', '/idx/_forcemerge']) {
       expect(bodyKindForPath(p), p).toBe('none');
     }

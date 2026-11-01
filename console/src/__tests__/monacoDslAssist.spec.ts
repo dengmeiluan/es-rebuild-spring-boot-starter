@@ -1252,3 +1252,13 @@ describe('1439 别名体补全', () => {
     expect(() => JSON.parse(acceptSnippet('{', items.find((i: any) => i.label === 'filter')) + '}')).not.toThrow();
   });
 });
+
+describe('1439 重建索引体补全', () => {
+  it('根层给 source/dest/script；source/dest 体内给各自键；source.query 内不出档', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'reindex-body' as const } });
+    expect(suggest('{"').map((i: any) => i.label)).toEqual(expect.arrayContaining(['source', 'dest', 'script', 'conflicts']));
+    expect(suggest('{"source": { "').map((i: any) => i.label)).toEqual(expect.arrayContaining(['index', 'query', 'size']));
+    expect(suggest('{"dest": { "').map((i: any) => i.label)).toEqual(expect.arrayContaining(['index', 'op_type', 'pipeline']));
+    expect(suggest('{"source": {"query": { "')).toEqual([]);
+  });
+});

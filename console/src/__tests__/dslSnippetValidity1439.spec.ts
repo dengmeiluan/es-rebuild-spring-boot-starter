@@ -12,7 +12,7 @@ import {
   QUERY_BODY_KEYS, CLAUSE_VALUE_KEYS, SUGGEST_BODY_KEYS,
   QUERY_SNIPPETS, AGG_SNIPPETS, ROOT_KEY_SNIPPETS, ROOT_KEYS,
   retrieverBodyKeys, queryBodyKeys, clauseValueKeys, suggesterBodyKeys, aggBodyKeys,
-  mappingKeyItems, mappingFieldKeyItems, templateKeyItems, indexBodyKeyItems, aliasKeyItems,
+  mappingKeyItems, mappingFieldKeyItems, templateKeyItems, indexBodyKeyItems, aliasKeyItems, reindexBodyKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -72,6 +72,9 @@ function allProblems(): string[] {
   out.push(...snippetProblems('TK', templateKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('IB', indexBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('AL', aliasKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  for (const region of ['root', 'source', 'dest'] as const) {
+    out.push(...snippetProblems('RX:' + region, reindexBodyKeyItems(region).map(i => ({ text: i.insertText, key: i.label }))));
+  }
   return out;
 }
 
