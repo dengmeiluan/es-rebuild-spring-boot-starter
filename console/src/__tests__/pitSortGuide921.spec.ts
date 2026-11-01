@@ -18,7 +18,9 @@ const src = readFileSync(join(__dirname, '../views/PitScrollView.vue'), 'utf-8')
 
 describe('PIT _shard_doc 400 指引可执行性', () => {
   it('请求形态 canonical：sort 恒显式（空档回退 _shard_doc），省略绕行形态不回潮', () => {
-    expect(src).toMatch(/\[\{ \[sortField\.value\.trim\(\) \|\| '_shard_doc'\]: \{ order: sortOrder\.value\.v \} \}\]/);
+    /* 1439：sort 改读会话快照（sessionSortField/sessionSortOrder）——形态仍是
+       恒显式 + 空档回退 _shard_doc，省略 sort 的绕行形态同样禁止 */
+    expect(src).toMatch(/\[\{ \[sessionSortField\.value \|\| '_shard_doc'\]: \{ order: sessionSortOrder\.value \} \}\]/);
     expect(src, '省略 sort 的绕行形态（hits 丢排序值断 search_after）禁止回潮')
       .not.toMatch(/sortField\.value\.trim\(\) !== '_shard_doc'\) body\.sort/);
   });

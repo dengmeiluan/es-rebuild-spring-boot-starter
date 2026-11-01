@@ -73,7 +73,8 @@ describe('五百五十批②：pt-card-hd / be-card-hd 并 fs-head 行首横排�
     expect((pt.match(/class="pt-card-hd"/g) || []).length, '四张分节各一头条（538 正锁随行复核）').toBe(4);
     expect(pt, '标题-only 头行裸文本（uq-card-hd 先例模板形态）').toContain('<div class="pt-card-hd">参数</div>');
     expect(pt, '进度头行裸文本').toContain('<div class="pt-card-hd">进度</div>');
-    expect(pt, '预览头行裸文本').toContain('<div class="pt-card-hd">预览（最近 100 条）</div>');
+    /* 1439：预览头追加「条件已修改」芯片——裸文本头不变，尾随标签为条件渲染 */
+    expect(pt, '预览头行裸文本').toContain('<div class="pt-card-hd">预览（最近 100 条）');
   });
 
   it('BulkEditorView：卡头样式并 uq 先例档逐字在场；span+hd-r 先例模板结构不动（三锁逐字锚）', () => {

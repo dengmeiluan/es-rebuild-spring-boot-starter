@@ -102,7 +102,11 @@
       </div>
 
       <div class="pt-sec wide">
-        <div class="pt-card-hd">预览（最近 100 条）</div>
+        <!-- 1439：条件改了但没重置——已拉取条目来自本次滚动开始时的条件（裸文本头 + 条件芯片） -->
+        <div class="pt-card-hd">预览（最近 100 条）
+          <span v-if="pitFilterChanged" class="pill warn stale-chip" role="status"
+            title="筛选条件/排序已修改——下方已拉取条目来自本次滚动开始时的条件；点「重置」后重新开始才会生效">条件已修改</span>
+        </div>
         <!-- 预览表聚焦放大（423 同款推广） -->
         <FocusableSurface pane-id="pit.preview" title="预览表" :enabled="focusPaneId === 'pit.preview'"
           @update:enabled="v => (focusPaneId = v ? 'pit.preview' : null)">
@@ -158,6 +162,7 @@ import { useAppStore } from '../stores/app';
 import { useQueryHistoryStore } from '../stores/queryHistory';
 import { useIdxState } from '../composables/urlState';
 import { useScopedDraft, useScopedDraftState } from '../composables/useScopedDraft';
+import { useResultStale } from '../composables/useResultStale';
 import { exportStamp, fmtTime, downloadText, fmtCell, csvText } from '../utils/format';
 import { friendlyEsError } from '../utils/esError'; /* ：三处裸 err 合并单源翻译 */
 import CurrentIdxChip from '../components/CurrentIdxChip.vue'; /* ：页内选择器退役换只读 chip */
@@ -271,6 +276,15 @@ const startTs = ref(0);
  提为 ref 才能跨「暂停→继续」存活；null = 尚未开始或已重新开始 */
 const searchAfter = ref<any>(null);
 const elapsed = ref(0);
+/* 1439：滚动会话的条件快照——开拉时取一次，整个会话（含暂停继续）都用它。
+   此前循环每批重读 filterDsl/sortField/sortOrder：暂停期间改条件再点「继续拉取」，
+   会带着旧 search_after 用新查询接着拉，同一缓冲区混两套条件的数据。
+   条件改了但没重置时，预览头挂「条件已修改」（共享 useResultStale 判据）。 */
+const pitRunSig = computed(() => JSON.stringify([filterDsl.value, sortField.value.trim(), sortOrder.value.v]));
+const { stale: pitFilterChanged, markRun: markPitRun } = useResultStale(() => pitRunSig.value, () => fetched.value > 0);
+const sessionFilter = ref('');
+const sessionSortField = ref('_shard_doc');
+const sessionSortOrder = ref<'asc' | 'desc'>('asc');
 const rate = computed(() => elapsed.value > 0 ? Math.round(fetched.value / elapsed.value) : 0);
 
 interface LogRow { time: string; level: 'info' | 'ok' | 'warn' | 'err'; msg: string }
@@ -343,6 +357,8 @@ function reset() {
   fetched.value = 0; total.value = 0; batches.value = 0; elapsed.value = 0;
   searchAfter.value = null; startTs.value = 0;
   logs.value = [];
+  /* 会话条件快照随缓冲一起归零（芯片随 fetched=0 自然消失） */
+  sessionFilter.value = ''; sessionSortField.value = '_shard_doc'; sessionSortOrder.value = 'asc';
 }
 
 async function doStart() {
@@ -357,6 +373,8 @@ async function doStart() {
     }
   }
   running.value = true; pause.value = false;
+  /* 1439：本次是「继续」还是新会话——必须在下面的分支（reset 会清 search_after）之前判定 */
+  const continuing = !!searchAfter.value;
   /* w79：拆分「暂停→继续」与「重新开始」——暂停时 pitId 与 search_after 都还活着，
  续拉不清缓冲区/计数/日志，从断点游标接着走；只有「重置」（或自然跑完清游标）才归零 */
   if (searchAfter.value) {
@@ -387,6 +405,15 @@ async function doStart() {
         log('info', `排序字段已改用 ${res.field}（text 字段靠 .keyword 子域排序，原字段无法排序）`);
       }
     }
+    /* 1439：新会话在排序归一之后取一次条件快照；续拉沿用同一份，绝不半路换条件 */
+    if (!continuing) {
+      sessionFilter.value = filterDsl.value.trim();
+      sessionSortField.value = sortField.value.trim();
+      sessionSortOrder.value = sortOrder.value.v;
+      markPitRun();
+    } else if (pitFilterChanged.value) {
+      log('warn', '筛选/排序条件与本次滚动开始时不同——「继续拉取」仍按开始时的条件；要按新条件请先「重置」');
+    }
     while (running.value && !pause.value) {
       /* 缓冲上限保护——buffer 全量驻内存，深分页无限拉取会 OOM 浏览器。
  达到上限自动暂停（不 reset），导出清空后可再继续拉取 */
@@ -395,8 +422,9 @@ async function doStart() {
         log('warn', `缓冲已达上限 ${BUFFER_MAX} 条，已自动暂停——请先导出（JSONL/CSV），再点「继续」拉取余量`);
         break;
       }
-      const query = filterDsl.value.trim()
-        ? JSON.parse(filterDsl.value.trim())
+      /* 会话快照，不是当前稿——改条件必须在「重置」后重开才生效 */
+      const query = sessionFilter.value
+        ? JSON.parse(sessionFilter.value)
         : { match_all: {} };
 
       const body: any = {
@@ -405,7 +433,7 @@ async function doStart() {
         pit: { id: pitId.value, keep_alive: keepAlive.value.trim() || '5m' },
         /* sort 恒显式（空档回退 _shard_doc=canonical；省略会让 hits 丢排序值、
          search_after 断链原地重拉），部分版本对显式 _shard_doc 400 时走 catch 指引 */
-        sort: [{ [sortField.value.trim() || '_shard_doc']: { order: sortOrder.value.v } }],
+        sort: [{ [sessionSortField.value || '_shard_doc']: { order: sessionSortOrder.value } }],
         track_total_hits: fetched.value === 0,
       };
       if (searchAfter.value) body.search_after = searchAfter.value;

@@ -18,6 +18,7 @@ import { useResultStale, staleOf } from '../composables/useResultStale';
 const DQ = readFileSync(join(__dirname, '../views/DslQueryView.vue'), 'utf8');
 const LC = readFileSync(join(__dirname, '../views/LuceneQueryView.vue'), 'utf8');
 const IH = readFileSync(join(__dirname, '../views/IndexHubView.vue'), 'utf8');
+const PIT = readFileSync(join(__dirname, '../views/PitScrollView.vue'), 'utf8');
 
 describe('1439 结果过期判据（useResultStale）', () => {
   it('真相表：从未执行 / 无结果 / 与执行版一致 / 改稿未执行', () => {
@@ -131,6 +132,40 @@ describe('1439 历史记的是发送快照', () => {
     expect(lc).not.toBe(LC);
     expect(ih).not.toBe(IH);
     expect(historyProblems(dq, lc, ih)).not.toEqual([]);
+  });
+});
+
+/* PIT 滚动会话：条件快照必须进循环，改条件只能靠「重置」重开——否则暂停期间
+   改条件再继续，会带着旧 search_after 用新查询接着拉，缓冲区混两套条件的数据 */
+function pitProblems(src: string): string[] {
+  const out: string[] = [];
+  if (!src.includes('useResultStale(() => pitRunSig.value, () => fetched.value > 0)')) out.push('PIT 判据未接共享件');
+  if (!/const continuing = !!searchAfter\.value;/.test(src)) out.push('PIT 未在 reset 前判定「继续」');
+  if (!/sessionFilter\.value = filterDsl\.value\.trim\(\);/.test(src)) out.push('PIT 新会话未取条件快照');
+  if (!/const query = sessionFilter\.value/.test(src)) out.push('PIT 循环仍读当前稿 filter');
+  if (!/sort: \[\{ \[sessionSortField\.value/.test(src)) out.push('PIT 循环仍读当前稿 sort');
+  if (!src.includes('v-if="pitFilterChanged"') || !src.includes('class="pill warn stale-chip"') || !src.includes('条件已修改')) {
+    out.push('PIT 缺「条件已修改」芯片');
+  }
+  if (!/sessionFilter\.value = '';/.test(src)) out.push('PIT 重置未清会话快照');
+  return out;
+}
+
+describe('1439 PIT 滚动会话条件快照', () => {
+  it('快照进循环 + 改条件可见 + 重置清场', () => {
+    expect(pitProblems(PIT)).toEqual([]);
+  });
+
+  it('负控：循环改回读当前稿 / 去掉芯片 / 重置不清快照 → 判据点名', () => {
+    const live = PIT.replace('const query = sessionFilter.value', 'const query = filterDsl.value.trim()');
+    const noChip = PIT.replace('v-if="pitFilterChanged"', 'v-if="false"');
+    const noClear = PIT.replace("  sessionFilter.value = '';", '');
+    expect(live).not.toBe(PIT);
+    expect(noChip).not.toBe(PIT);
+    expect(noClear).not.toBe(PIT);
+    expect(pitProblems(live)).not.toEqual([]);
+    expect(pitProblems(noChip)).not.toEqual([]);
+    expect(pitProblems(noClear)).not.toEqual([]);
   });
 });
 

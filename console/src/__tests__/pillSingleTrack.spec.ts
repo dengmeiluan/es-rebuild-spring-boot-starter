@@ -205,7 +205,9 @@ describe('第四轮：徽标并轨 .pill 防回退', () => {
      本条看的是另一半：新挂的这些 .pill 每个都真带了色款。
      动态色款（:class="x ? 'g' : 'r'"）也要算进来，否则会误判。 */
   it('并轨的 .pill 挂载点都带色款', () => {
-    const VALID = ['g', 'y', 'r', 'b', 'n', 'cyan', 'blue', 'violet', 'purple', 'pink'];
+    /* 1439：补 theme.css 的语义别名档（.pill.err/.warn/.info 与 r/y/b 同 token，
+       「写侧统一 --err/--warn」裁决）——只认短码会把新挂的 pill warn 误判成无底色 */
+    const VALID = ['g', 'y', 'r', 'b', 'n', 'cyan', 'blue', 'violet', 'purple', 'pink', 'err', 'warn', 'info'];
     const bad: string[] = [];
     for (const rel of Object.keys(MERGED)) {
       const tpl = tplOf(readFileSync(join(SRC, rel), 'utf8'));
