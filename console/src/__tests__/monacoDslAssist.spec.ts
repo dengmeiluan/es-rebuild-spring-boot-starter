@@ -1399,3 +1399,24 @@ describe('1439 query-only / 模板执行体键位补全', () => {
     expect(suggest('{"params": {"')).toEqual([]);
   });
 });
+
+describe('1439 _mget 体键位补全', () => {
+  it('根键 docs/ids（接受即合法）；docs 元素给七个文档级键；ids 数组不出键', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'mget-body' as const } });
+    const root = suggest('{"');
+    expect(root.map((i: any) => i.label)).toEqual(['docs', 'ids']);
+    for (const i of root) {
+      expect(() => JSON.parse(acceptSnippet('{', i) + '}'), i.label + ' 接受后非法').not.toThrow();
+    }
+    const docKeys = suggest('{"docs": [{"');
+    expect(docKeys.map((i: any) => i.label))
+      .toEqual(['_index', '_id', 'routing', '_source', 'stored_fields', 'version', 'version_type']);
+    for (const i of docKeys) {
+      expect(() => JSON.parse(acceptSnippet('{"docs": [{"', i) + '}]}'), i.label + ' 接受后非法').not.toThrow();
+    }
+    expect(suggest('{"ids": ["')).toEqual([]);
+    /* 负控：根键位不掺 search/update 的键 */
+    expect(root.map((i: any) => i.label)).not.toContain('query');
+    expect(root.map((i: any) => i.label)).not.toContain('doc');
+  });
+});

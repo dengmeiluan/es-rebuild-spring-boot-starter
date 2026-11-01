@@ -15,6 +15,7 @@ import {
   mappingKeyItems, mappingFieldKeyItems, templateKeyItems, indexBodyKeyItems, aliasKeyItems, reindexBodyKeyItems,
   sqlBodyKeyItems, updateBodyKeyItems, scriptObjectKeyItems, rolloverBodyKeyItems, rolloverConditionKeyItems,
   dbqBodyKeyItems, ubqBodyKeyItems, queryOnlyBodyKeyItems, templateSearchBodyKeyItems,
+  mgetBodyKeyItems, mgetDocKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -86,6 +87,8 @@ function allProblems(): string[] {
   out.push(...snippetProblems('UQ', ubqBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('QO', queryOnlyBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('TS', templateSearchBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('MG', mgetBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('MD', mgetDocKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;
 }
 

@@ -1104,7 +1104,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1234,8 +1234,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：只收 query 的端点——给 sort/aggs/size 都是非法根键 */
   if (/(^|\/)_count(\/|$)/.test(p) || /(^|\/)_explain(\/|$)/.test(p)
       || /(^|\/)_validate\/query(\/|$)/.test(p)) return 'query-body';
+  /* 1439：_mget 的体是 {docs:[{_index,_id,…}]} 或 {ids:[…]}——结构化体，不是无档 */
+  if (/(^|\/)_mget(\/|$)/.test(p)) return 'mget-body';
   if (p.includes('/_search/scroll') || p.includes('/_clear_scroll') || p.includes('/_aliases')
-      || p.includes('/_mget')
       || p.includes('/_scripts') || p.includes('/_script/')
       || p.includes('/_close') || p.includes('/_open') || p.includes('/_forcemerge')) return 'none';
   return 'search';
@@ -1622,6 +1623,38 @@ export function rootOnlyRegionAt(doc: string, offset: number): 'root' | 'deep' {
   return frameKeysAt(doc, offset).length <= 1 ? 'root' : 'deep';
 }
 
+/** 多文档取回体（GET/POST /<索引>/_mget、/_mget）的根键：docs 与 ids 二选一 */
+export function mgetBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'docs', detail: '按 _index/_id 精确取回多篇文档', snippet: true,
+      insertText: '"docs": [\n  {\n    "_index": "${1:my-index}",\n    "_id": "${2:1}"\n  }\n]' },
+    { label: 'ids', detail: '按 id 批量取回（索引由路径或下面 index 指定）', snippet: true,
+      insertText: '"ids": ["${1:1}"]' },
+  ];
+}
+
+/** _mget docs[] 元素键——官方多取 API 允许的文档级参数 */
+export function mgetDocKeyItems(): AssistItem[] {
+  return [
+    { label: '_index', detail: '文档所在索引（路径无索引时必填）', snippet: true, insertText: '"_index": "${1:my-index}"' },
+    { label: '_id', detail: '文档 id', snippet: true, insertText: '"_id": "${1:1}"' },
+    { label: 'routing', detail: '取回时使用的路由值', snippet: true, insertText: '"routing": "${1:routing}"' },
+    { label: '_source', detail: '是否/如何回源字段', snippet: true, insertText: '"_source": ${1|true,false|}' },
+    { label: 'stored_fields', detail: '返回的 stored 字段', snippet: true, insertText: '"stored_fields": ["${1:field}"]' },
+    { label: 'version', detail: '期望版本（配合 version_type）', snippet: true, insertText: '"version": ${1:1}' },
+    { label: 'version_type', detail: '版本类型（internal/external）', snippet: true,
+      insertText: '"version_type": "${1|internal,external|}"' },
+  ];
+}
+
+/** _mget 体区域：根层给 docs/ids；docs 数组元素对象内给文档级键；ids 数组/更深层不出键 */
+export function mgetRegionAt(doc: string, offset: number): 'root' | 'doc' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack.length === 3 && stack[0] === 'docs') return 'doc';
+  return 'deep';
+}
+
 /* 结构体根键清单——与补全目录同源（目录改名时 lint 白名单自动跟随），
    DevTools dtLint 对未知根键给「ES 会拒绝」告警。 */
 export const updateBodyRootKeys = updateBodyKeyItems().map(i => i.label);
@@ -1632,6 +1665,7 @@ export const ubqBodyRootKeys = ubqBodyKeyItems().map(i => i.label);
 export const queryOnlyBodyRootKeys = queryOnlyBodyKeyItems().map(i => i.label);
 export const templateSearchBodyRootKeys = templateSearchBodyKeyItems().map(i => i.label);
 export const sqlBodyRootKeys = sqlBodyKeyItems().map(i => i.label);
+export const mgetBodyRootKeys = mgetBodyKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

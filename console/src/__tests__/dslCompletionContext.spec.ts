@@ -259,10 +259,12 @@ describe('bodyKindForPath', () => {
       expect(bodyKindForPath(p), p).toBe('template');
     }
     for (const p of ['/idx/_search/scroll', '/_search/scroll', '/_clear_scroll', '/_aliases', '/idx/_aliases',
-      '/_script/p1', '/_scripts/p1', '/idx/_mget', '/idx/_close',
+      '/_script/p1', '/_scripts/p1', '/idx/_close',
       '/idx/_open', '/idx/_forcemerge']) {
       expect(bodyKindForPath(p), p).toBe('none');
     }
+    /* 1439 迁移：_mget 从 none 升 mget-body（docs/ids 结构化体，见 mgetBody1439.spec） */
+    expect(bodyKindForPath('/idx/_mget')).toBe('mget-body');
     /* 1439 迁移：_rollover 从 none 升 rollover-body、_update 从 doc 升 update-body
        （两者的体都是结构化对象，键位应出官方键；见 updateRolloverBody1439.spec） */
     expect(bodyKindForPath('/idx/_rollover')).toBe('rollover-body');

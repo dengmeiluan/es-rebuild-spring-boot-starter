@@ -511,7 +511,7 @@ import { useTermsSuggest } from '../composables/useTermsSuggest';
 import { useDebounceFn } from '../composables/useDebounceFn';
 import { bodyKindForPath,
   updateBodyRootKeys, rolloverBodyRootKeys, rolloverConditionKeys, dbqBodyRootKeys,
-  ubqBodyRootKeys, queryOnlyBodyRootKeys, templateSearchBodyRootKeys, sqlBodyRootKeys,
+  ubqBodyRootKeys, queryOnlyBodyRootKeys, templateSearchBodyRootKeys, sqlBodyRootKeys, mgetBodyRootKeys,
 } from '../utils/dslCompletionContext';
 /* dtLint 档路由——search→lintDsl / bulk→ndjsonLint（bulkNdjson 既有件复用不改）/
  settings→lintSettingsBody / mapping→lintMappingBody；结构化体→lintBodyKeys 根键校验；
@@ -787,6 +787,7 @@ const dtLint = computed<Finding[]>(() => {
     if (kind === 'query-body') return lintBodyKeys(JSON.parse(body), queryOnlyBodyRootKeys, '仅查询体');
     if (kind === 'template-search-body') return lintBodyKeys(JSON.parse(body), templateSearchBodyRootKeys, '模板执行体');
     if (kind === 'sql-body') return lintBodyKeys(JSON.parse(body), sqlBodyRootKeys, 'SQL 体');
+    if (kind === 'mget-body') return lintBodyKeys(JSON.parse(body), mgetBodyRootKeys, '_mget 体');
     if (kind === 'rollover-body') {
       const b = JSON.parse(body) as any;
       return [...lintBodyKeys(b, rolloverBodyRootKeys, '滚动索引体'),

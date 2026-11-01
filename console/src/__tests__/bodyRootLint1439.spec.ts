@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { lintBodyKeys } from '../utils/dslLint';
 import {
   updateBodyRootKeys, rolloverBodyRootKeys, rolloverConditionKeys, dbqBodyRootKeys,
-  ubqBodyRootKeys, queryOnlyBodyRootKeys, templateSearchBodyRootKeys, sqlBodyRootKeys,
+  ubqBodyRootKeys, queryOnlyBodyRootKeys, templateSearchBodyRootKeys, sqlBodyRootKeys, mgetBodyRootKeys,
 } from '../utils/dslCompletionContext';
 
 describe('1439 结构化体根键 lint', () => {
@@ -37,6 +37,7 @@ describe('1439 结构化体根键 lint', () => {
       [queryOnlyBodyRootKeys, '仅查询'],
       [templateSearchBodyRootKeys, '模板'],
       [sqlBodyRootKeys, 'SQL'],
+      [mgetBodyRootKeys, '_mget'],
     ];
     for (const [keys, label] of tables) {
       const obj = Object.fromEntries(keys.map(k => [k, 1]));

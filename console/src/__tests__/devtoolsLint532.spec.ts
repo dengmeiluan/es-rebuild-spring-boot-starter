@@ -202,6 +202,20 @@ describe('532 dtLint 档路由五分派（视图级 · 底部条观测）', () =
     const bar = lintBar(host);
     expect(bar?.textContent ?? '').not.toContain('按查询删除体');
   });
+
+  it('⑩ _mget 体根键校验：ide → 未知根键 + 列出 docs/ids；合法体静默', async () => {
+    const { host } = await mountView(DevToolsView, '#/devtools');
+    await type(dtInp(host), '/logs/_mget');
+    bodyCap().emit('update:modelValue', '{"ide":["1"]}');
+    await settle(6);
+    const bar = lintBar(host);
+    expect(bar, '_mget 非法根键应有底部条').toBeTruthy();
+    expect(bar!.textContent).toContain('_mget 体');
+    expect(bar!.textContent).toContain('ids');
+    bodyCap().emit('update:modelValue', '{"ids":["1"]}');
+    await settle(6);
+    expect(lintBar(host), '合法体应静默').toBeNull();
+  });
 });
 
 describe('532 lintSettingsBody（纯函数）', () => {
