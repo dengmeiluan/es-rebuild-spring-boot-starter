@@ -96,10 +96,48 @@ function leaf(n: any, lossy: string[]): string {
   return '';
 }
 
+/**
+ * 1439：查询子句之外、query_string 通道表达不了、但会改变语义的顶层键。
+ * 此前只报「query 里翻不了的子句」，post_filter/sort/aggs/knn 这些整段被静默丢弃——
+ * 用户拿着少了过滤/排序的 Lucene 去执行，还以为等价。
+ *
+ * 判据按「是否真的写了」：构建器默认会写 `sort: []`、`size: 20`，
+ * 空数组与 Lucene 页默认页大小不算丢失，避免每次跳转都刷一条无意义告警。
+ */
+const LOSSY_EXTRAS: Array<[string, (v: any) => boolean, string]> = [
+  ['post_filter', nonEmptyObj, 'post_filter(结果后过滤)'],
+  ['sort', nonEmptyArr, 'sort(排序)'],
+  ['aggs', nonEmptyObj, 'aggs(聚合)'],
+  ['aggregations', nonEmptyObj, 'aggregations(聚合)'],
+  ['collapse', nonEmptyObj, 'collapse(折叠)'],
+  ['knn', (v) => nonEmptyObj(v) || nonEmptyArr(v), 'knn(向量检索)'],
+  ['highlight', nonEmptyObj, 'highlight(高亮)'],
+  ['rescore', nonEmptyObj, 'rescore(二次打分)'],
+  ['suggest', nonEmptyObj, 'suggest(建议器)'],
+  ['script_fields', nonEmptyObj, 'script_fields(脚本字段)'],
+  ['runtime_mappings', nonEmptyObj, 'runtime_mappings(运行时字段)'],
+  ['min_score', (v) => typeof v === 'number', 'min_score(最低分)'],
+  ['search_after', nonEmptyArr, 'search_after(游标)'],
+  ['_source', (v) => v !== undefined && v !== null, '_source(字段裁剪)'],
+  ['fields', nonEmptyArr, 'fields(字段列表)'],
+  ['from', (v) => typeof v === 'number' && v > 0, 'from(偏移)'],
+  ['size', (v) => typeof v === 'number' && v !== 20, 'size(每页条数)'],
+];
+
+function nonEmptyObj(v: any): boolean {
+  return !!v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length > 0;
+}
+function nonEmptyArr(v: any): boolean {
+  return Array.isArray(v) && v.length > 0;
+}
+
 /** 内部：连同「无法翻译的子句名」一起返回，供调用方提示 */
 export function dslToLuceneDetailed(dslObj: any): { lucene: string; lossy: string[] } {
   const parts: string[] = [];
   const lossy: string[] = [];
+  for (const [key, present, label] of LOSSY_EXTRAS) {
+    if (present(dslObj?.[key])) lossy.push(label);
+  }
   const q = dslObj?.query;
   if (!q) return { lucene: '*', lossy };
 
