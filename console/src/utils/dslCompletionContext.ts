@@ -15,6 +15,8 @@ type DslCtx = { kind: 'root' } | { kind: 'query-type' } | { kind: 'field'; claus
   | { kind: 'agg-name' } | { kind: 'agg-type' }
   /* 1439：检索器变体键位（retriever 值对象 / rrf.retrievers[] 元素） */
   | { kind: 'retriever-type' }
+  /* 1439：建议器类型键位（suggest.<名> {} 内） */
+  | { kind: 'suggester-type' }
   | { kind: 'array-elem-key'; owner: string } | { kind: 'none' };
 
 export const QUERY_SNIPPETS: Record<string, string> = {
@@ -204,6 +206,16 @@ export const RETRIEVER_SNIPPETS: Record<string, { text: string; detail: string }
   diversify:               { text: '"diversify": {\n  "retriever": { "standard": { "query": { "match_all": {} } } },\n  "field": "${1:vectorField}",\n  "lambda": ${2:0.5}\n}', detail: 'MMR 多样性重排' },
   rescorer:                { text: '"rescorer": {\n  "retriever": { "standard": { "query": { "match_all": {} } } },\n  "rescore": { "window_size": ${1:50} }\n}', detail: '重打分' },
 };
+/**
+ * 1439：建议器类型补全（suggest.<名> {} 内）。
+ * 产品注册了 3 种建议器（SUGGESTER_TYPES：term/phrase/completion），根键骨架只写死 term；
+ * 光标进到建议器对象里按 Ctrl+Space 此前什么也拿不到。
+ */
+export const SUGGESTER_SNIPPETS: Record<string, { text: string; detail: string }> = {
+  term:       { text: '"term": {\n  "field": "${1:field}"\n}', detail: '纠错 term 建议器' },
+  phrase:     { text: '"phrase": {\n  "field": "${1:field}",\n  "size": ${2:5}\n}', detail: '短语 phrase 建议器' },
+  completion: { text: '"completion": {\n  "field": "${1:suggestField}"\n}', detail: '自动补全 completion 建议器' },
+};
 /* 2.6.0 root 键骨架（spec ）：每键定制值形态，detail 一句话（H 发现性）。
  query/aggs/highlight 对象容器；sort 数组（多字段通用）；_source 数组；from/size 数字；track_total_hits choice。
  1138：补树已支持的结构化顶层键（查询后置过滤 / 顶层向量 / 折叠 / 重打分 / 检索器 / 建议器 / 脚本字段 / 运行时字段 / 深分页 / 最低分）。 */
@@ -319,6 +331,12 @@ export function dslContext(doc: string, offset: number): DslCtx {
       const innerA = stack.slice(aIdx + 1);
       if (innerA.length === 1 && innerA[0].type === '{') return { kind: 'agg-name' };
       if (innerA.length === 2 && innerA[1].type === '{') return { kind: 'agg-type' };
+    }
+    /* 1439：建议器类型键位——suggest → 建议器名 → {} 的内层键位（与 aggs 同形） */
+    const sIdx = keys.lastIndexOf('suggest');
+    if (sIdx >= 0 && sIdx < stack.length - 1) {
+      const innerS = stack.slice(sIdx + 1);
+      if (innerS.length === 2 && innerS[1].type === '{') return { kind: 'suggester-type' };
     }
     /* 1439：检索器变体键位（8.14+ retriever 面）。
        · 顶层/嵌套：光标在 retriever 的值对象里（keys 末位是 retriever，栈顶是它刚开的 {）
