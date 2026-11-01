@@ -8,7 +8,7 @@ import { SETTINGS_CATALOG } from './indexSettingsCatalog';
  本链此前未消费——sqlCompletion/ClauseNode 同源，不另起算子映射表防漂移）
  keyword/number 两族改吃 queryAstOps 族表单源（KEYWORD_VALUE_TYPES 三员同值；
  number 滤 token_count 保持九口径——AFFINITY 族序零变，dslValueTiers545 行为锁保形） */
-import { typePriorityForOp, KEYWORD_VALUE_TYPES, NUMERIC_VALUE_TYPES, labelOfOp, AGG_BODY_PARAMS, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
+import { typePriorityForOp, KEYWORD_VALUE_TYPES, NUMERIC_VALUE_TYPES, labelOfOp, AGG_BODY_PARAMS, FIELD_BODY_AGGS, PATH_BODY_AGGS, OPS_META, WRAP_PARAMS, MULTI_META, RETRIEVER_PARAMS, type ParamMeta } from './queryAstOps';
 
 type DslCtx = { kind: 'root' } | { kind: 'query-type' } | { kind: 'field'; clause: string }
   | { kind: 'range-op' } | { kind: 'exists-key' }
@@ -19,6 +19,13 @@ type DslCtx = { kind: 'root' } | { kind: 'query-type' } | { kind: 'field'; claus
   | { kind: 'suggester-type' }
   /* 1439：聚合体键位（terms: { 内）——参数键/字段键/嵌套 aggs */
   | { kind: 'agg-body-key'; op: string }
+  /* 1439：子句体内的键位（bool must/filter、nested path/query、multi_match query/fields…）
+     ——此前这里一律给 query-type（算子骨架），写进子句体全是非法键 */
+  | { kind: 'query-body-key'; op: string }
+  /* 1439：字段子句的字段配置对象（match.<field>.{query/operator}、fuzzy.<field>.{value/…}） */
+  | { kind: 'clause-field-key'; op: string }
+  /* 1439：检索器变体体键位（retriever.standard.{query}、knn.{field/query_vector}） */
+  | { kind: 'retriever-body-key'; op: string }
   /* 1439：字段名作键的容器（highlight.fields { <字段>: {} }） */
   | { kind: 'field-key' }
   /* 1439：排序链——sort 元素的简写方向值 / 字段配置键 */
@@ -295,8 +302,242 @@ export const ROOT_KEY_SNIPPETS: Record<string, { text: string; detail: string }>
   profile:          { text: '"profile": ${1|true,false|}',                                  detail: '耗时剖析（profile 树）' },
 };
 /** 叶子查询子句（值位是字段名对象）。
- 2.6.0：exists 移出——其键位钉死 "field"（exists-key 档），出字段名档是语义误导 */
-const FIELD_CLAUSES = new Set(['match', 'match_phrase', 'term', 'terms', 'range', 'wildcard', 'prefix', 'fuzzy', 'regexp']);
+ 2.6.0：exists 移出——其键位钉死 "field"（exists-key 档），出字段名档是语义误导。
+ 1439：改由 OPS_META.form==='field' 派生——match_phrase_prefix / intervals / span_term /
+ text_expansion / geo_* / shape 等同类子句此前不在册，其体里敲引号给的是 query-type（算子
+ 骨架写进字段位必非法）。单一真源派生，新增字段形态算子自动并档。 */
+const FIELD_CLAUSES: ReadonlySet<string> = new Set(
+  Object.entries(OPS_META).filter(([op, meta]) => meta.form === 'field' && op !== 'exists').map(([op]) => op),
+);
+
+/* ═══ 1439：子句体键位补全（非字段形态）═══
+   表内是官方体的结构键；queryBodyKeys 再并上 OPS_META/WRAP_PARAMS/MULTI_META 的参数键，
+   参数表扩容时补全自动跟随，不另抄一份。 */
+export interface BodyKey { key: string; insert: string; detail: string }
+const B = (key: string, insert: string, detail: string): BodyKey => ({ key, insert, detail });
+const NAME_KEY = B('_name', '"_name": "${1:name}"', '命名查询（命中归因）');
+
+export const QUERY_BODY_KEYS: Record<string, BodyKey[]> = {
+  bool: [
+    B('must', '"must": [\n  ${0}\n]', '全部必须匹配（参与评分）'),
+    B('filter', '"filter": [\n  ${0}\n]', '全部必须匹配（不计分，可缓存）'),
+    B('should', '"should": [\n  ${0}\n]', '满足任一（配合 minimum_should_match）'),
+    B('must_not', '"must_not": [\n  ${0}\n]', '全部必须不匹配'),
+    B('minimum_should_match', '"minimum_should_match": "${1:1}"', 'should 至少满足的个数/百分比'),
+    B('boost', '"boost": ${1:1}', '加权'),
+    NAME_KEY,
+  ],
+  constant_score: [B('filter', '"filter": {\n  ${0}\n}', '计分来源查询（恒定分）'), B('boost', '"boost": ${1:1}', '恒定分'), NAME_KEY],
+  dis_max: [B('queries', '"queries": [\n  ${0}\n]', '子查询列表（取最高分）'), B('tie_breaker', '"tie_breaker": ${1:0.7}', '近似命中的折算系数'), B('boost', '"boost": ${1:1}', '加权')],
+  function_score: [
+    B('query', '"query": {\n  ${0}\n}', '基础查询（可选）'),
+    B('functions', '"functions": [\n  ${0}\n]', '评分函数列表'),
+    B('boost', '"boost": ${1:1}', '全局加权'),
+    B('boost_mode', '"boost_mode": "${1|multiply,replace,sum,avg,max,min|}"', '函数分与查询分的合并方式'),
+    B('score_mode', '"score_mode": "${1|multiply,sum,avg,first,max,min|}"', '多个函数分的合并方式'),
+    B('min_score', '"min_score": ${1:0}', '低于此分的命中丢弃'),
+    B('max_boost', '"max_boost": ${1:10}', '函数分上限'),
+  ],
+  /* function_score.functions[] 元素（数组帧 lastKey='functions'） */
+  __function__: [
+    B('filter', '"filter": {\n  ${0}\n}', '只对该查询命中的文档生效'),
+    B('weight', '"weight": ${1:1}', '固定权重'),
+    B('random_score', '"random_score": { "seed": ${1:1}, "field": "${2:_seq_no}" }', '随机分（可复现要固定 seed）'),
+    B('script_score', '"script_score": { "script": { "source": "${1:params.w ?? 1}" } }', '脚本分'),
+    B('field_value_factor', '"field_value_factor": { "field": "${1:field}", "factor": ${2:1}, "missing": ${3:1} }', '字段值转分'),
+    B('gauss', '"gauss": { "${1:field}": { "origin": "${2:0}", "scale": "${3:10}" } }', '高斯衰减'),
+    B('linear', '"linear": { "${1:field}": { "origin": "${2:0}", "scale": "${3:10}" } }', '线性衰减'),
+    B('exp', '"exp": { "${1:field}": { "origin": "${2:0}", "scale": "${3:10}" } }', '指数衰减'),
+  ],
+  boosting: [B('positive', '"positive": {\n  ${0}\n}', '必须匹配的正例'), B('negative', '"negative": {\n  ${0}\n}', '匹配则降权'), B('negative_boost', '"negative_boost": ${1:0.5}', '反例降权系数')],
+  script_score: [B('query', '"query": {\n  ${0}\n}', '基础查询'), B('script', '"script": { "source": "${1:_score}" }', '评分脚本'), B('min_score', '"min_score": ${1:0}', '最低分')],
+  pinned: [
+    B('ids', '"ids": [${1:\"id\"}]', '置顶文档 ID'),
+    B('docs', '"docs": [\n  { "_id": "${1:id}", "_index": "${2:index}" }\n]', '跨索引置顶文档'),
+    B('organic', '"organic": {\n  ${0}\n}', '其余文档的召回查询'),
+    B('boost', '"boost": ${1:1}', '置顶文档加权'),
+  ],
+  nested: [
+    B('path', '"path": "${1:path}"', '嵌套文档路径'),
+    B('query', '"query": {\n  ${0}\n}', '嵌套文档内的查询'),
+    B('score_mode', '"score_mode": "${1|avg,sum,max,min,none|}"', '多根文档评分合并'),
+    B('ignore_unmapped', '"ignore_unmapped": ${1|false,true|}', '路径未映射时忽略'),
+  ],
+  has_child: [
+    B('type', '"type": "${1:childType}"', '子文档 join 名'),
+    B('query', '"query": {\n  ${0}\n}', '对子文档的查询'),
+    B('score_mode', '"score_mode": "${1|avg,sum,max,min,none|}"', '多个子文档的评分合并'),
+    B('min_children', '"min_children": ${1:1}', '至少命中几个子文档'),
+    B('max_children', '"max_children": ${1:10}', '至多命中几个子文档'),
+    B('ignore_unmapped', '"ignore_unmapped": ${1|false,true|}', '类型未映射时忽略'),
+  ],
+  has_parent: [
+    B('parent_type', '"parent_type": "${1:parentType}"', '父文档 join 名'),
+    B('query', '"query": {\n  ${0}\n}', '对父文档的查询'),
+    B('score_mode', '"score_mode": "${1|none,score|}"', '父文档评分是否计入'),
+    B('ignore_unmapped', '"ignore_unmapped": ${1|false,true|}', '类型未映射时忽略'),
+  ],
+  multi_match: [
+    B('query', '"query": "${1:value}"', '检索文本'),
+    B('fields', '"fields": ["${1:field}"]', '参与检索的字段（可用 field^2 加权）'),
+    B('type', '"type": "${1|best_fields,most_fields,cross_fields,phrase,phrase_prefix,bool_prefix|}"', '匹配策略'),
+  ],
+  query_string: [
+    B('query', '"query": "${1:value}"', '查询串（支持 AND/OR/字段:值）'),
+    B('default_field', '"default_field": "${1:field}"', '未写字段时的默认字段'),
+    B('fields', '"fields": ["${1:field}"]', '搜索字段列表'),
+  ],
+  simple_query_string: [
+    B('query', '"query": "${1:+value -exclude}"', '简单查询串（+/-/短语/通配）'),
+    B('fields', '"fields": ["${1:field}"]', '搜索字段列表'),
+  ],
+  combined_fields: [
+    B('query', '"query": "${1:value}"', '检索文本'),
+    B('fields', '"fields": ["${1:field}"]', '组合检索的字段'),
+  ],
+  more_like_this: [
+    B('fields', '"fields": ["${1:field}"]', '相似度比较字段'),
+    B('like', '"like": "${1:text}"', '示例文本/文档'),
+    B('ids', '"ids": [${1:\"id\"}]', '以这些文档为示例'),
+  ],
+  ids: [B('values', '"values": ["${1:id}"]', '文档 ID 列表')],
+  script: [B('script', '"script": { "source": "${1:params._source}" }', '过滤脚本')],
+  wrapper: [B('query', '"query": "${1:base64}"', 'Base64 编码的查询')],
+  percolate: [B('field', '"field": "${1:queryField}"', 'percolator 字段'), B('document', '"document": {\n  ${0}\n}', '要反查的文档')],
+  rule: [B('ruleset_id', '"ruleset_id": "${1:ruleset}"', '规则集 ID'), B('match_criteria', '"match_criteria": {\n  ${0}\n}', '规则匹配条件'), B('match_predicate', '"match_predicate": {\n  ${0}\n}', '规则命中后的查询')],
+  template: [B('id', '"id": "${1:templateId}"', '搜索模板 ID'), B('params', '"params": {\n  ${0}\n}', '模板参数')],
+  parent_id: [B('type', '"type": "${1:parentType}"', '父文档 join 名'), B('id', '"id": "${1:parentId}"', '父文档 ID')],
+  type: [B('value', '"value": "${1:type}"', '7.x 映射类型名')],
+  rank_feature: [B('field', '"field": "${1:rankField}"', '特征字段'), B('boost', '"boost": ${1:1}', '加权'), B('saturation', '"saturation": { "pivot": ${1:1} }', '饱和函数'), B('log', '"log": { "scaling_factor": ${1:1} }', '对数函数'), B('sigmoid', '"sigmoid": { "pivot": ${1:1}, "exponent": ${2:1} }', 'S 型函数'), B('linear', '"linear": {}', '线性函数')],
+  distance_feature: [B('field', '"field": "${1:field}"', '距离特征字段'), B('origin', '"origin": "${1:now}"', '原点'), B('pivot', '"pivot": "${1:7d}"', '距离尺度'), B('boost', '"boost": ${1:1}', '加权')],
+  knn: [
+    B('field', '"field": "${1:vectorField}"', '向量字段'),
+    B('query_vector', '"query_vector": [${1:0.1}]', '查询向量'),
+    B('k', '"k": ${1:10}', '返回近邻数'),
+    B('num_candidates', '"num_candidates": ${1:100}', '每分片候选数'),
+    B('filter', '"filter": {\n  ${0}\n}', '近邻过滤查询'),
+    B('similarity', '"similarity": ${1:0.8}', '相似度下限'),
+    B('boost', '"boost": ${1:1}', '加权'),
+  ],
+  semantic: [B('field', '"field": "${1:semanticField}"', '语义字段'), B('query', '"query": "${1:text}"', '语义检索文本')],
+  sparse_vector: [B('field', '"field": "${1:sparseField}"', '稀疏向量字段'), B('query_vector', '"query_vector": { "${1:token}": ${2:0.5} }', '稀疏查询向量')],
+  bitmap_terms: [B('field', '"field": "${1:field}"', '字段'), B('value', '"value": "${1:base64}"', 'Base64 位图')],
+  span_near: [B('clauses', '"clauses": [\n  ${0}\n]', '子跨度列表'), B('slop', '"slop": ${1:1}', '允许的最大间隔'), B('in_order', '"in_order": ${1|true,false|}', '是否要求顺序')],
+  span_or: [B('clauses', '"clauses": [\n  ${0}\n]', '任一命中的子跨度')],
+  span_not: [B('include', '"include": {\n  ${0}\n}', '包含跨度'), B('exclude', '"exclude": {\n  ${0}\n}', '排除跨度')],
+  span_first: [B('match', '"match": {\n  ${0}\n}', '内部跨度'), B('end', '"end": ${1:3}', '必须出现在前 N 个位置')],
+  span_containing: [B('little', '"little": {\n  ${0}\n}', '内部跨度'), B('big', '"big": {\n  ${0}\n}', '外部跨度')],
+  span_within: [B('little', '"little": {\n  ${0}\n}', '内部跨度'), B('big', '"big": {\n  ${0}\n}', '外部跨度')],
+  span_multi: [B('match', '"match": {\n  ${0}\n}', '多词查询（term/prefix/wildcard 等）')],
+  span_field_masking: [B('query', '"query": {\n  ${0}\n}', '被掩码的查询'), B('field', '"field": "${1:field}"', '掩码字段')],
+  collapse: [B('field', '"field": "${1:field}"', '折叠字段（每个值只留一条）'), B('inner_hits', '"inner_hits": { "name": "${1:group}", "size": ${2:1} }', '折叠组内命中')],
+  highlight: [
+    B('fields', '"fields": {\n  ${0}\n}', '高亮字段'),
+    B('type', '"type": "${1|unified,plain,fvh|}"', '高亮器类型'),
+    B('pre_tags', '"pre_tags": ["${1:<em>}"]', '前置标记'),
+    B('post_tags', '"post_tags": ["${1:</em>}"]', '后置标记'),
+    B('require_field_match', '"require_field_match": ${1|false,true|}', '是否只高亮命中的字段'),
+    B('number_of_fragments', '"number_of_fragments": ${1:3}', '片段数'),
+    B('fragment_size', '"fragment_size": ${1:100}', '片段长度'),
+  ],
+};
+
+/** 参数 → 键骨架（与 aggBodyKeys 同手法；只给键位，值形态按 kind 给默认占位） */
+function paramInsert(p: ParamMeta): string {
+  if (p.kind === 'number') return '"' + p.key + '": ${1:10}';
+  if (p.kind === 'boolean') return '"' + p.key + '": ${1|true,false|}';
+  if (p.kind === 'enum') return '"' + p.key + '": "${1|' + (p.options || []).join(',') + '|}"';
+  if (p.kind === 'json') return '"' + p.key + '": {\n  ${0}\n}';
+  if (p.kind === 'json-array') return '"' + p.key + '": [\n  ${0}\n]';
+  return '"' + p.key + '": "${1:' + p.key + '}"';
+}
+
+/** 子句体键位（结构键 + 参数表并集）——参数表扩容自动跟随，不另抄清单 */
+export function queryBodyKeys(op: string): BodyKey[] {
+  const out = [...(QUERY_BODY_KEYS[op] || [])];
+  const seen = new Set(out.map(x => x.key));
+  const params: ParamMeta[] = [
+    ...(OPS_META[op]?.params || []),
+    ...(WRAP_PARAMS[op] || []),
+    ...(MULTI_META[op]?.params || []),
+  ];
+  for (const p of params) {
+    if (seen.has(p.key)) continue;
+    out.push({ key: p.key, insert: paramInsert(p), detail: '可选参数' });
+    seen.add(p.key);
+  }
+  return out;
+}
+
+/* 字段子句的字段配置对象键（match.<field>.{query/operator} / fuzzy.<field>.{value/…}）——
+   字段名是自由键，配置键才是可枚举的；此前这里同样回 query-type。 */
+export const CLAUSE_VALUE_KEYS: Record<string, BodyKey[]> = {
+  match: [
+    B('query', '"query": "${1:value}"', '检索文本'),
+    B('operator', '"operator": "${1|and,or|}"', '词项逻辑'),
+    B('fuzziness', '"fuzziness": "${1:AUTO}"', '模糊度'),
+    B('minimum_should_match', '"minimum_should_match": "${1:1}"', '至少命中词数'),
+    B('analyzer', '"analyzer": "${1:standard}"', '分词器'),
+    B('boost', '"boost": ${1:1}', '加权'),
+  ],
+  match_phrase: [B('query', '"query": "${1:value}"', '短语文本'), B('slop', '"slop": ${1:0}', '允许的词间间隔'), B('boost', '"boost": ${1:1}', '加权')],
+  match_phrase_prefix: [B('query', '"query": "${1:value}"', '短语前缀文本'), B('max_expansions', '"max_expansions": ${1:50}', '前缀展开上限'), B('slop', '"slop": ${1:0}', '允许的词间间隔')],
+  match_bool_prefix: [B('query', '"query": "${1:value}"', '文本（末词按前缀）'), B('operator', '"operator": "${1|and,or|}"', '词项逻辑')],
+  term: [B('value', '"value": "${1:value}"', '精确值'), B('case_insensitive', '"case_insensitive": ${1|true,false|}', '忽略大小写'), B('boost', '"boost": ${1:1}', '加权')],
+  prefix: [B('value', '"value": "${1:prefix}"', '前缀'), B('case_insensitive', '"case_insensitive": ${1|true,false|}', '忽略大小写')],
+  wildcard: [B('value', '"value": "${1:pref*}"', '通配模式'), B('case_insensitive', '"case_insensitive": ${1|true,false|}', '忽略大小写'), B('rewrite', '"rewrite": "${1:constant_score}"', '重写策略')],
+  regexp: [B('value', '"value": "${1:pattern.*}"', '正则'), B('flags', '"flags": "${1:ALL}"', '正则选项'), B('max_determinized_states', '"max_determinized_states": ${1:10000}', '自动机状态上限')],
+  fuzzy: [B('value', '"value": "${1:value}"', '目标词'), B('fuzziness', '"fuzziness": "${1:AUTO}"', '模糊度'), B('prefix_length', '"prefix_length": ${1:0}', '前缀不变长度'), B('transpositions', '"transpositions": ${1|true,false|}', '允许换位')],
+  span_term: [B('value', '"value": "${1:term}"', '词项')],
+  intervals: [
+    B('match', '"match": { "query": "${1:value}" }', '匹配文本'),
+    B('all_of', '"all_of": {\n  "ordered": ${1|true,false|},\n  "intervals": [\n    ${0}\n  ]\n}', '有序/无序全部命中'),
+    B('any_of', '"any_of": { "intervals": [\n  ${0}\n] }', '任一命中'),
+    B('prefix', '"prefix": { "prefix": "${1:pre}" }', '前缀'),
+    B('wildcard', '"wildcard": { "pattern": "${1:pre*}" }', '通配'),
+    B('fuzzy', '"fuzzy": { "term": "${1:term}" }', '模糊'),
+    B('filter', '"filter": { "script": { "source": "true" } }', '脚本过滤'),
+  ],
+  geo_shape: [B('shape', '"shape": {\n  ${0}\n}', '形状对象'), B('relation', '"relation": "${1|INTERSECTS,DISJOINT,WITHIN|}"', '空间关系')],
+  geo_bounding_box: [B('top_left', '"top_left": { "lat": ${1:0}, "lon": ${2:0} }', '左上角点'), B('bottom_right', '"bottom_right": { "lat": ${1:0}, "lon": ${2:0} }', '右下角点')],
+  geo_polygon: [B('points', '"points": [\n  { "lat": ${1:0}, "lon": ${2:0} }\n]', '多边形顶点')],
+  text_expansion: [B('model_id', '"model_id": "${1:model}"', '推理模型 ID'), B('model_text', '"model_text": "${1:text}"', '待扩展文本')],
+};
+
+/** 字段配置键位（结构键 + OPS_META 参数并集，同上不另抄清单） */
+export function clauseValueKeys(op: string): BodyKey[] {
+  const out = [...(CLAUSE_VALUE_KEYS[op] || [])];
+  const seen = new Set(out.map(x => x.key));
+  for (const p of OPS_META[op]?.params || []) {
+    if (seen.has(p.key)) continue;
+    out.push({ key: p.key, insert: paramInsert(p), detail: '可选参数' });
+    seen.add(p.key);
+  }
+  return out;
+}
+
+/* 检索器变体体键（结构键 + RETRIEVER_PARAMS 参数并集） */
+const RETRIEVER_STRUCT: Record<string, BodyKey[]> = {
+  standard: [B('query', '"query": {\n  ${0}\n}', '召回查询（BM25）')],
+  knn: [B('field', '"field": "${1:vectorField}"', '向量字段'), B('query_vector', '"query_vector": [${1:0.1}]', '查询向量'), B('filter', '"filter": {\n  ${0}\n}', '近邻过滤查询')],
+  rrf: [B('retrievers', '"retrievers": [\n  ${0}\n]', '参与融合的子检索器')],
+  linear: [B('retrievers', '"retrievers": [\n  { "retriever": {}, "weight": ${1:1} }\n]', '线性加权的子检索器（带 weight）')],
+  text_similarity_reranker: [B('retriever', '"retriever": {\n  ${0}\n}', '召回源检索器')],
+  rule: [B('retriever', '"retriever": {\n  ${0}\n}', '召回源检索器（可缺席）'), B('match_criteria', '"match_criteria": {\n  ${0}\n}', '规则匹配条件')],
+  pinned: [B('retriever', '"retriever": {\n  ${0}\n}', '召回源检索器'), B('docs', '"docs": [\n  ${0}\n]', '置顶文档'), B('ids', '"ids": [${1:\"id\"}]', '置顶文档 ID')],
+  diversify: [B('retriever', '"retriever": {\n  ${0}\n}', '召回源检索器'), B('query_vector', '"query_vector": [${1:0.1}]', '多样性参考向量')],
+  rescorer: [B('retriever', '"retriever": {\n  ${0}\n}', '召回源检索器'), B('rescore', '"rescore": {\n  ${0}\n}', '重打分体')],
+};
+export function retrieverBodyKeys(op: string): BodyKey[] {
+  const out = [...(RETRIEVER_STRUCT[op] || [])];
+  const seen = new Set(out.map(x => x.key));
+  for (const p of RETRIEVER_PARAMS[op] || []) {
+    if (seen.has(p.key)) continue;
+    out.push({ key: p.key, insert: paramInsert(p), detail: '可选参数' });
+    seen.add(p.key);
+  }
+  return out;
+}
 
 /* 数组键链白名单位（对标 Kibana sort/_source 补全）。两类白名单各管一个位：
  - 元素对象键位（"sort": [{ "<光标" }]）：数组属主键 ∈ DSL_ARRAY_OBJKEY_CHAINS（=sort，
@@ -458,6 +699,22 @@ export function dslContext(doc: string, offset: number): DslCtx {
           && stack[stack.length - 2].type === '['
           && stack[stack.length - 3].lastKey === 'retrievers'
           && stack[stack.length - 4].lastKey !== 'linear' && !valuePos) return { kind: 'retriever-type' };
+      /* 1439：检索器变体体键位——retriever.standard.{query}、retriever.knn.{field/query_vector}；
+         此前这层什么都不出（Ctrl+Space 只有文档词）。 */
+      if (rIdx === stack.length - 3) {
+        const variant = stack[rIdx + 1].lastKey;
+        if (variant && RETRIEVER_STRUCT[variant] && topF.type === '{' && !valuePos) {
+          return { kind: 'retriever-body-key', op: variant };
+        }
+      }
+    }
+    /* 1439：根层/嵌套容器里的 collapse / highlight / knn 体键位——此前 none */
+    if (stack[stack.length - 1].type === '{' && !valuePos) {
+      for (const ck of ['collapse', 'highlight', 'knn']) {
+        /* ci >= 0 必查：根帧时 lastIndexOf 与 stack.length-2 同为 -1，缺键会假命中 */
+        const ci = keys.lastIndexOf(ck);
+        if (ci >= 0 && ci === stack.length - 2) return { kind: 'query-body-key', op: ck };
+      }
     }
     /* 数组元素对象键位（键链白名单位）——栈顶 { 的下层是 [ 数组帧、数组帧属主键
  ∈ DSL_ARRAY_OBJKEY_CHAINS（=sort，排序字段键位；top_hits 等嵌套 sort 同构命中）。
@@ -496,6 +753,23 @@ export function dslContext(doc: string, offset: number): DslCtx {
     /* exists-key：exists 值对象键位钉死 "field"（2.6.0 语义纠错，spec 规则 4） */
     if (top.type === '{' && clauseFrame.lastKey === 'exists') {
       return { kind: 'exists-key' };
+    }
+    /* 1439：字段子句的字段配置对象——{"match":{"title":{ <光标> }}} 是配 query/operator
+       的位置，此前回 query-type（键位给出 bool/term 等算子骨架，写进去必非法）。 */
+    if (top.type === '{' && inner.length >= 3) {
+      const op = inner[inner.length - 3].lastKey;
+      if (op && CLAUSE_VALUE_KEYS[op]) return { kind: 'clause-field-key', op };
+    }
+    /* 1439：子句体键位——bool 的 must/filter、nested 的 path/query、multi_match 的
+       query/fields、ids 的 values…；此前一律 query-type。函数数组元素单独一档
+       （frame 是数组帧，"functions" 不是子句名）。 */
+    if (top.type === '{') {
+      /* 数组帧自身的 lastKey 恒 null——属主键在下层帧（"functions": [ 的 'functions'） */
+      if (clauseFrame.type === '[' && inner.length >= 3 && inner[inner.length - 3].lastKey === 'functions') {
+        return { kind: 'query-body-key', op: '__function__' };
+      }
+      const op = clauseFrame.lastKey;
+      if (op && QUERY_BODY_KEYS[op]) return { kind: 'query-body-key', op };
     }
   }
   return { kind: 'query-type' };

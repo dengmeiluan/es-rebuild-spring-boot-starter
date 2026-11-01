@@ -997,3 +997,63 @@ describe('1439 新补全档（提供器层接线）', () => {
     expect(suggest('{"suggest": {"s1": {').map((i: any) => i.label)).toEqual(['term', 'phrase', 'completion']);
   });
 });
+
+describe('1439 子句体键位（query-body-key / clause-field-key / retriever-body-key）', () => {
+  it('bool 体给 must/filter/should/must_not，接受后 JSON 合法', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    const doc = '{\n  "query": {\n    "bool": {\n      \n    }\n  }\n}';
+    const at = doc.indexOf('      \n') + 6;
+    const items = suggest(doc, at);
+    const labels = items.map((i: any) => i.label);
+    expect(labels).toEqual(expect.arrayContaining(['must', 'filter', 'should', 'must_not', 'minimum_should_match']));
+    expect(labels).not.toContain('match');
+    for (const it of items) {
+      expect(it.kind).toBe(Kind.Property);
+      expect(it.insertTextRules).toBe(Rule.InsertAsSnippet);
+      const after = acceptSnippet(doc, it);
+      expect(() => JSON.parse(after), it.label + ' 接受后非法：' + after).not.toThrow();
+    }
+  });
+
+  it('bool.must 的元素对象仍是算子档（不过度扩张）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    const labels = suggest('{"query":{"bool":{"must":[{"').map((i: any) => i.label);
+    expect(labels).toContain('bool');
+    expect(labels).not.toContain('must');
+  });
+
+  it('nested / multi_match / ids / knn 体给各自的结构键', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    expect(suggest('{"query":{"nested":{"').map((i: any) => i.label))
+      .toEqual(expect.arrayContaining(['path', 'query', 'score_mode', 'inner_hits']));
+    expect(suggest('{"query":{"multi_match":{"').map((i: any) => i.label))
+      .toEqual(expect.arrayContaining(['query', 'fields', 'type']));
+    expect(suggest('{"query":{"ids":{"').map((i: any) => i.label)).toEqual(['values']);
+    expect(suggest('{"knn":{"').map((i: any) => i.label))
+      .toEqual(expect.arrayContaining(['field', 'query_vector', 'k', 'num_candidates', 'filter']));
+  });
+
+  it('collapse / highlight 体给根层键位', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    expect(suggest('{"collapse":{"').map((i: any) => i.label)).toEqual(expect.arrayContaining(['field', 'inner_hits']));
+    expect(suggest('{"highlight":{"').map((i: any) => i.label)).toEqual(expect.arrayContaining(['fields', 'type', 'pre_tags']));
+  });
+
+  it('match.<field> 配置对象给 query/operator', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    expect(suggest('{"query":{"match":{"title":{"').map((i: any) => i.label))
+      .toEqual(expect.arrayContaining(['query', 'operator', 'fuzziness', 'boost']));
+  });
+
+  it('retriever.standard 体给 query（此前空档）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    const labels = suggest('{"retriever":{"standard":{"').map((i: any) => i.label);
+    expect(labels).toContain('query');
+    expect(labels).not.toContain('standard');
+  });
+
+  it('值位不出键位档（"must": " 恒空）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    expect(suggest('{"query":{"bool":{"must": "')).toEqual([]);
+  });
+});

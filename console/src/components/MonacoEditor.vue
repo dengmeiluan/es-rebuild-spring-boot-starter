@@ -19,7 +19,7 @@ import 'monaco-editor/esm/vs/editor/contrib/comment/browser/comment';   // jsonc
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import { useAppStore } from '../stores/app';
-import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS, RETRIEVER_SNIPPETS, SUGGESTER_SNIPPETS, aggBodyKeys, ROOT_KEYS, ROOT_KEY_SNIPPETS, commaAffixes, settingsKeyItems, mappingKeyItems, templateKeyItems, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
+import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS, RETRIEVER_SNIPPETS, SUGGESTER_SNIPPETS, aggBodyKeys, queryBodyKeys, clauseValueKeys, retrieverBodyKeys, ROOT_KEYS, ROOT_KEY_SNIPPETS, commaAffixes, settingsKeyItems, mappingKeyItems, templateKeyItems, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
 import { makeDslValueSuggestProvider } from '../utils/dslValueSuggest';
 import type { AssistItem, BodyKind } from '../utils/dslCompletionContext';
 import { ensureLanguages } from '../utils/monacoLanguages';
@@ -794,6 +794,48 @@ onMounted(() => {
             range, command: ACCEPT_FORMAT_COMMAND,
             filterText: dslFilterText(f.path),
             sortText: dslSortText(i, f.path),
+          })) };
+        }
+        if (ctx.kind === 'query-body-key') {
+          /* 1439：子句体内的键位——结构键（must/path/query…）+ 参数表并集（与构建器同源） */
+          const indent = lineIndentAt(doc, startOff);
+          const affix = commaAffixes(doc, startOff, end);
+          return { suggestions: queryBodyKeys(ctx.op).map((it, i) => ({
+            label: it.key, kind: monaco.languages.CompletionItemKind.Property,
+            detail: it.detail,
+            insertText: wrapSnippet(doc, startOff, end, indent, it.insert, affix),
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range, command: ACCEPT_FORMAT_COMMAND,
+            filterText: dslFilterText(it.key),
+            sortText: dslSortText(i, it.key),
+          })) };
+        }
+        if (ctx.kind === 'clause-field-key') {
+          /* 1439：字段配置对象（match.<field>.{query/operator}、fuzzy.<field>.{value/…}） */
+          const indent = lineIndentAt(doc, startOff);
+          const affix = commaAffixes(doc, startOff, end);
+          return { suggestions: clauseValueKeys(ctx.op).map((it, i) => ({
+            label: it.key, kind: monaco.languages.CompletionItemKind.Property,
+            detail: it.detail,
+            insertText: wrapSnippet(doc, startOff, end, indent, it.insert, affix),
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range, command: ACCEPT_FORMAT_COMMAND,
+            filterText: dslFilterText(it.key),
+            sortText: dslSortText(i, it.key),
+          })) };
+        }
+        if (ctx.kind === 'retriever-body-key') {
+          /* 1439：检索器变体体键位（standard.query / knn.field+query_vector / rrf.retrievers…） */
+          const indent = lineIndentAt(doc, startOff);
+          const affix = commaAffixes(doc, startOff, end);
+          return { suggestions: retrieverBodyKeys(ctx.op).map((it, i) => ({
+            label: it.key, kind: monaco.languages.CompletionItemKind.Property,
+            detail: it.detail,
+            insertText: wrapSnippet(doc, startOff, end, indent, it.insert, affix),
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range, command: ACCEPT_FORMAT_COMMAND,
+            filterText: dslFilterText(it.key),
+            sortText: dslSortText(i, it.key),
           })) };
         }
         if (ctx.kind === 'agg-body-key') {
