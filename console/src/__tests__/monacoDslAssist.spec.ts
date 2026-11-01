@@ -1181,3 +1181,19 @@ describe('1439 terms.order 方向值补全', () => {
       .toEqual(['_count', '_key', '_key_as_string']);
   });
 });
+
+describe('1439 sort 简写串数组出字段候选', () => {
+  it('根级 sort 与 top_hits.sort 的串元素给字段名（接受后 JSON 合法）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    const root = suggest('{"sort": ["');
+    expect(root.map((i: any) => i.label)).toEqual(expect.arrayContaining(['title', 'price']));
+    expect(() => JSON.parse(acceptSnippet('{"sort": [', root.find((i: any) => i.label === 'title')) + ']}')).not.toThrow();
+    const th = suggest('{"aggs":{"a":{"top_hits":{"sort":["');
+    expect(th.map((i: any) => i.label)).toEqual(expect.arrayContaining(['title', 'price']));
+  });
+
+  it('负控：非白名单数组（terms 的 field 值数组）不出字段候选', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    expect(suggest('{"aggs":{"a":{"terms":{"field":["')).toEqual([]);
+  });
+});

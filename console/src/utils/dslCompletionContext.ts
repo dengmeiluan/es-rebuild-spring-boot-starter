@@ -652,7 +652,8 @@ export function suggesterBodyKeys(op: string): BodyKey[] {
  是新增位，两既有钉面不沾。⚠ dslArrayElemFieldAt 本体零改动（dslValueTiers544 B 段把
  ('_source', null)→null 钉死，_source 走本白名单新轨，不共函数）。 */
 const DSL_ARRAY_OBJKEY_CHAINS = new Set(['sort', 'fields']);
-export const DSL_ARRAY_ELEM_CHAINS = new Set(['_source', 'stored_fields', 'docvalue_fields', 'fields', 'includes', 'excludes']);
+/* 'sort'：简写串形态（"sort": ["ts"] / top_hits.sort）元素就是字段名——1439 补 */
+export const DSL_ARRAY_ELEM_CHAINS = new Set(['_source', 'stored_fields', 'docvalue_fields', 'fields', 'includes', 'excludes', 'sort']);
 
 type Frame = { type: '{' | '['; lastKey: string | null };
 
