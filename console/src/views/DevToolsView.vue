@@ -744,7 +744,12 @@ watch(() => dtPathIdx.value || store.pickedIdx, () => { ensureDtFieldsDebounced(
 const dtBodyKind = computed(() => bodyKindForPath(curEp.value?.path ?? cur.value?.path ?? '', cur.value?.method ?? ''));
 /* P0-2a：body 语言跟档——_bulk 的多行 NDJSON 恒吃 json 语言会被 json worker
  多根对象全线误报语法红线；切 ndjson（自研 monarch，无 JSON LS 校验）红线消失、高亮保留 */
-const bodyLang = computed(() => ((cur.value?.path || '').includes('_bulk') ? 'ndjson' : 'json'));
+/* 1439：_bulk 与 _msearch 族都是 NDJSON（每行一个独立 JSON）——此前只有 _bulk 切 ndjson，
+   _msearch 体被当普通 JSON 高亮/报错。段匹配让相对写法（_msearch）也生效。 */
+const bodyLang = computed(() => {
+  const p = (cur.value?.path || '').toLowerCase();
+  return p.includes('_bulk') || /(^|\/)_msearch(\/|$)/.test(p) ? 'ndjson' : 'json';
+});
 /* dslAssist 闭包在 setup 作用域声明（T14 实证：模板内联字面量走 _ctx 代理，ref 顶层 unwrap 后 .value 取 undefined） */
 /* terms 通道接值位动态候选（658 DqlQueryView 首发姊妹刀）——索引源与 dtFields
  同源闭包（dtPathIdx||pickedIdx）现调现读：body 索引随 path 变时 suggest 请求跟着走

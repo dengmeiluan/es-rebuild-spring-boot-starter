@@ -14,7 +14,7 @@ import {
   retrieverBodyKeys, queryBodyKeys, clauseValueKeys, suggesterBodyKeys, aggBodyKeys,
   mappingKeyItems, mappingFieldKeyItems, templateKeyItems, indexBodyKeyItems, aliasKeyItems, reindexBodyKeyItems,
   sqlBodyKeyItems, updateBodyKeyItems, scriptObjectKeyItems, rolloverBodyKeyItems, rolloverConditionKeyItems,
-  dbqBodyKeyItems, ubqBodyKeyItems,
+  dbqBodyKeyItems, ubqBodyKeyItems, queryOnlyBodyKeyItems, templateSearchBodyKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -84,6 +84,8 @@ function allProblems(): string[] {
   out.push(...snippetProblems('RC', rolloverConditionKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('DQ', dbqBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('UQ', ubqBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('QO', queryOnlyBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('TS', templateSearchBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;
 }
 

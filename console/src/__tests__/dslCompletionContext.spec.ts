@@ -275,13 +275,17 @@ describe('bodyKindForPath', () => {
   });
 
   it('search 族 → search', () => {
-    for (const p of ['/{index}/_search', '/_search', '/{index}/_count', '/{index}/_validate/query',
-      '/{index}/_explain/1']) {
+    for (const p of ['/{index}/_search', '/_search']) {
       expect(bodyKindForPath(p), p).toBe('search');
     }
     /* 1439 迁移：按查询删/改不再按 search 处理（根键是 query/max_docs/…，不是 search 全套） */
     expect(bodyKindForPath('/{index}/_update_by_query')).toBe('ubq-body');
     expect(bodyKindForPath('/{index}/_delete_by_query')).toBe('dbq-body');
+    /* 1439 迁移：只收 query 的三端点单列 query-body；模板执行/渲染体单列 */
+    expect(bodyKindForPath('/{index}/_count')).toBe('query-body');
+    expect(bodyKindForPath('/{index}/_validate/query')).toBe('query-body');
+    expect(bodyKindForPath('/{index}/_explain/1')).toBe('query-body');
+    expect(bodyKindForPath('/{index}/_search/template')).toBe('template-search-body');
   });
   it('query string / 大小写容错', () => {
     expect(bodyKindForPath('/{index}/_Search?pretty')).toBe('search');

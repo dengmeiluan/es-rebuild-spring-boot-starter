@@ -1104,7 +1104,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1226,6 +1226,14 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：按查询删/改的体是 {query,max_docs,…}——query 内要回落到整棵查询补全 */
   if (p.includes('_delete_by_query')) return 'dbq-body';
   if (p.includes('_update_by_query')) return 'ubq-body';
+  /* 1439：_msearch 是 NDJSON 请求对（每行一个独立 JSON），不是 search 体。
+     路径段正则同时吃 '_msearch' / '/_msearch' / '/idx/_msearch' 三种写法。 */
+  if (/(^|\/)_msearch(\/|$)/.test(p)) return 'none';
+  /* 1439：执行/渲染模板的体是 {id|source, params}，不是 search 体 */
+  if (/(^|\/)_(search|render)\/template(\/|$)/.test(p)) return 'template-search-body';
+  /* 1439：只收 query 的端点——给 sort/aggs/size 都是非法根键 */
+  if (/(^|\/)_count(\/|$)/.test(p) || /(^|\/)_explain(\/|$)/.test(p)
+      || /(^|\/)_validate\/query(\/|$)/.test(p)) return 'query-body';
   if (p.includes('/_search/scroll') || p.includes('/_clear_scroll') || p.includes('/_aliases')
       || p.includes('/_mget')
       || p.includes('/_scripts') || p.includes('/_script/')
@@ -1589,6 +1597,29 @@ export function queryWriteRegionAt(doc: string, offset: number): 'root' | 'query
   if (rootKey === 'query') return 'query';
   if (rootKey === 'script') return stack.length === 2 ? 'script' : 'deep';
   return 'deep';
+}
+
+/** 只收 query 的体（_count / _explain / _validate/query）——根键只有一个 query，
+    sort/aggs/size 等写进去 ES 直接 400。 */
+export function queryOnlyBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'query', detail: '查询条件（此体只有 query 一个根键）', snippet: true,
+      insertText: '"query": {\n  ${0}\n}' },
+  ];
+}
+
+/** 执行/渲染模板体（_search/template、_render/template）：id 与 source 二选一 + params */
+export function templateSearchBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'id', detail: '已存模板 id（与 source 二选一）', snippet: true, insertText: '"id": "${1:my-template}"' },
+    { label: 'source', detail: '内联 Mustache 模板', snippet: true, insertText: '"source": {\n  ${0}\n}' },
+    { label: 'params', detail: '模板参数', snippet: true, insertText: '"params": {\n  ${0}\n}' },
+  ];
+}
+
+/** 只有根层的体：根键位 → root，进入任一子对象 → deep（不再给根键） */
+export function rootOnlyRegionAt(doc: string, offset: number): 'root' | 'deep' {
+  return frameKeysAt(doc, offset).length <= 1 ? 'root' : 'deep';
 }
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、

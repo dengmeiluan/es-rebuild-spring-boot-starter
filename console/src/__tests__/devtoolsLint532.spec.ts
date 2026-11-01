@@ -3,7 +3,7 @@
  *  ① dtLint 档路由五分派（视图级挂载 + 底部条渗透）：
  *     search→lintDsl（root-key-typo）/ bulk（_bulk→none 档）→ndjsonLint 配对告警 /
  *     settings→lintSettingsBody / mapping→lintMappingBody / 其他（doc 档）→[] 恒静默；
- *  ② bodyLang computed：_bulk→ndjson、其余→json（Monaco stub language prop 渗透）；
+ *  ② bodyLang computed：_bulk / _msearch 族→ndjson、其余→json（Monaco stub language prop 渗透）；
  *  ③ lintSettingsBody / lintMappingBody 纯函数基本用例（键拼写 + 数值值型 + 宁少勿误报豁免）；
  *  ④ P2-3 跨 Tab 历史汇聚：写历史镜像 es_devtools_hist_all + 「全部」chip 跨 Tab 渲染 + fill 回当前 Tab。
  * mount 范式同 devtoolsSmartAssist.spec（Monaco stub 捕获 props/emit；stub 无 setMarkers 出口 →
@@ -158,10 +158,13 @@ describe('532 dtLint 档路由五分派（视图级 · 底部条观测）', () =
     expect(lintBar(host), 'doc 档不出 lint 底部条').toBeNull();
   });
 
-  it('⑥ bodyLang 随路径切换往返：_bulk→ndjson、改回 search→json', async () => {
+  it('⑥ bodyLang 随路径切换往返：_bulk/_msearch→ndjson、改回 search→json', async () => {
     const { host } = await mountView(DevToolsView, '#/devtools');
     await type(dtInp(host), '/_bulk');
     expect(bodyCap().props.language).toBe('ndjson');
+    /* 1439：_msearch 族体也是 NDJSON（每行一个独立 JSON） */
+    await type(dtInp(host), '/_msearch');
+    expect(bodyCap().props.language, '_msearch 应切 ndjson').toBe('ndjson');
     await type(dtInp(host), '/_search');
     expect(bodyCap().props.language, '切回 search 档语言回 json').toBe('json');
   });
@@ -289,7 +292,10 @@ describe('532 源码锁（行号漂移自适应：只锁语义串）', () => {
     expect(v).toContain("if (kind === 'settings') return lintSettingsBody(JSON.parse(body));");
     expect(v).toContain("if (kind === 'mapping') return lintMappingBody(JSON.parse(body));");
     expect(v).toContain("if (kind === 'search') return lintDsl(JSON.parse(body), { fields: dtFields.value });");
-    expect(v).toContain("const bodyLang = computed(() => ((cur.value?.path || '').includes('_bulk') ? 'ndjson' : 'json'));");
+    /* 1439：bodyLang 改多行 computed（_bulk + _msearch 段匹配）——锁语义不锁单行形态 */
+    expect(v).toMatch(/const bodyLang = computed\(\(\) => \{[\s\S]{0,240}?\}\);/);
+    expect(v).toContain("p.includes('_bulk')");
+    expect(v).toContain('_msearch');
   });
 
   it('P0-1 行内 marker 接线：bodyMonacoRef + setMarkers + info→hint 降级 + unplaced 兜底', () => {

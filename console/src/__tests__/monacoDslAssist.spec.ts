@@ -1373,3 +1373,29 @@ describe('1439 按查询删/改体键位补全', () => {
     expect(suggest('{"slice": {"')).toEqual([]);
   });
 });
+
+describe('1439 query-only / 模板执行体键位补全', () => {
+  it('query-body：根键只有 query（不出 sort/aggs/size）；query 内回落整棵查询补全', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'query-body' as const } });
+    const root = suggest('{"');
+    expect(root.map((i: any) => i.label)).toEqual(['query']);
+    expect(() => JSON.parse(acceptSnippet('{', root[0]) + '}')).not.toThrow();
+    expect(suggest('{"query": {"').map((i: any) => i.label)).toContain('match');
+    expect(suggest('{"query": {"bool": {"').map((i: any) => i.label)).toContain('must');
+    /* 负控：根键位不掺 search 独有键（count/explain 体里 sort/aggs 是非法根键） */
+    expect(root.map((i: any) => i.label)).not.toContain('sort');
+    expect(root.map((i: any) => i.label)).not.toContain('aggs');
+  });
+
+  it('template-search-body：根键 id/source/params；进入子对象后不再出根键', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'template-search-body' as const } });
+    const root = suggest('{"');
+    expect(root.map((i: any) => i.label)).toEqual(['id', 'source', 'params']);
+    expect(root.map((i: any) => i.label)).not.toContain('query');
+    for (const i of root) {
+      expect(() => JSON.parse(acceptSnippet('{', i) + '}'), i.label + ' 接受后非法').not.toThrow();
+    }
+    expect(suggest('{"source": {"')).toEqual([]);
+    expect(suggest('{"params": {"')).toEqual([]);
+  });
+});
