@@ -514,7 +514,7 @@ import { bodyKindForPath } from '../utils/dslCompletionContext';
  settings→lintSettingsBody / mapping→lintMappingBody；Finding 形态供行内 marker 与底部条共用 */
 import { lintDsl, lintSettingsBody, lintMappingBody, type Finding } from '../utils/dslLint';
 import { ndjsonLint } from '../utils/bulkNdjson';
-import { parseCurl } from '../utils/curlParse';
+import { parseCurl, diagnoseCurl } from '../utils/curlParse';
 import { friendlyEsError } from '../utils/esError';
 import { toJs, toPython } from '../utils/codegen';
 import { stripJsonComments } from '../utils/jsonc';
@@ -1693,17 +1693,8 @@ watch(curlText, v => {
   } catch { /* 存储满/隐私模式容忍 */ }
 });
 const curlErr = ref('');
-function diagnoseCurl(text: string): string {
-  const flat = text.trim();
-  if (!flat) return '未粘贴任何内容——请粘贴完整 curl 命令';
-  const one = flat.replace(/\\\r?\n/g, ' ').replace(/\^\r?\n/g, ' ').replace(/\r?\n/g, ' ').trim();
-  if (!/^curl(\s|$)/i.test(one)) return '不是 curl 命令——须以 curl 开头，如 curl -X GET \'http://es:9200/_cat/indices\'';
-  const bare = one.replace(/\\./g, '');
-  if ((bare.match(/"/g) || []).length % 2 === 1) return '双引号未闭合——检查 URL 或 -d 请求体的成对引号';
-  if ((bare.match(/'/g) || []).length % 2 === 1) return '单引号未闭合——检查 URL 或 -d 请求体的成对引号';
-  if (!parseCurl(text)) return '未找到 URL——curl 后必须带请求地址（协议+主机+路径），如 http://es:9200/_cluster/health';
-  return '';
-}
+/* 1439：诊断改为 utils/curlParse.diagnoseCurl（引号感知）——此前分别数两种引号，
+   双引号体里的 `it's` 会被判成「单引号未闭合」，导致本产品自己生成的 curl 导不回来。 */
 function doImportCurl() {
   const why = diagnoseCurl(curlText.value);
   if (why || !cur.value) {

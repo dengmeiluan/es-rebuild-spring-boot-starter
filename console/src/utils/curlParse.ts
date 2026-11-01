@@ -34,6 +34,37 @@ function joinLinesOutsideQuotes(text: string): string {
   return out;
 }
 
+/** 1439：返回未闭合的引号类型（'' = 配平）。引号感知扫描，不能分别数两种引号：
+ *  双引号体里的 `it's` 是普通字符，按「' 出现奇数次」判会把合法命令判成未闭合。
+ *  双引号内反斜杠转义下一个字符（与 parseCurl 的还原口径一致）；单引号内无反义。 */
+function unclosedQuote(s: string): '"' | "'" | '' {
+  let q: '"' | "'" | null = null;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (q === '"') {
+      if (ch === '\\') { i++; continue; }
+      if (ch === '"') q = null;
+      continue;
+    }
+    if (q === "'") { if (ch === "'") q = null; continue; }
+    if (ch === '"' || ch === "'") q = ch;
+  }
+  return q ?? '';
+}
+
+/** 1439：curl 导入前的就地诊断（纯函数，返回空串=可导入）。与 parseCurl 同一份还原口径。 */
+export function diagnoseCurl(text: string): string {
+  const flat = (text || '').trim();
+  if (!flat) return '未粘贴任何内容——请粘贴完整 curl 命令';
+  const one = flat.replace(/\\\r?\n/g, ' ').replace(/\^\r?\n/g, ' ').replace(/\r?\n/g, ' ').trim();
+  if (!/^curl(\s|$)/i.test(one)) return '不是 curl 命令——须以 curl 开头，如 curl -X GET \'http://es:9200/_cat/indices\'';
+  const bad = unclosedQuote(one);
+  if (bad === '"') return '双引号未闭合——检查 URL 或 -d 请求体的成对引号';
+  if (bad === "'") return '单引号未闭合——检查 URL 或 -d 请求体的成对引号';
+  if (!parseCurl(text)) return '未找到 URL——curl 后必须带请求地址（协议+主机+路径），如 http://es:9200/_cluster/health';
+  return '';
+}
+
 export function parseCurl(text: string): ParsedCurl | null {
   if (!text) return null;
   /* 1439：只在**引号外**拍平换行。此前无条件 replace(/\r?\n/g,' ')，会把多行 JSON 体
