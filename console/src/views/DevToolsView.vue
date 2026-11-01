@@ -509,10 +509,14 @@ import MonacoEditor from '../components/MonacoEditor.vue';
 import { useIndexFields } from '../composables/useIndexFields';
 import { useTermsSuggest } from '../composables/useTermsSuggest';
 import { useDebounceFn } from '../composables/useDebounceFn';
-import { bodyKindForPath } from '../utils/dslCompletionContext';
+import { bodyKindForPath,
+  updateBodyRootKeys, rolloverBodyRootKeys, rolloverConditionKeys, dbqBodyRootKeys,
+  ubqBodyRootKeys, queryOnlyBodyRootKeys, templateSearchBodyRootKeys, sqlBodyRootKeys,
+} from '../utils/dslCompletionContext';
 /* dtLint 档路由——search→lintDsl / bulk→ndjsonLint（bulkNdjson 既有件复用不改）/
- settings→lintSettingsBody / mapping→lintMappingBody；Finding 形态供行内 marker 与底部条共用 */
-import { lintDsl, lintSettingsBody, lintMappingBody, type Finding } from '../utils/dslLint';
+ settings→lintSettingsBody / mapping→lintMappingBody；结构化体→lintBodyKeys 根键校验；
+ Finding 形态供行内 marker 与底部条共用 */
+import { lintDsl, lintSettingsBody, lintMappingBody, lintBodyKeys, type Finding } from '../utils/dslLint';
 import { ndjsonLint } from '../utils/bulkNdjson';
 import { parseCurl, diagnoseCurl } from '../utils/curlParse';
 import { friendlyEsError } from '../utils/esError';
@@ -758,7 +762,8 @@ const dtTerms = useTermsSuggest(() => dtPathIdx.value || store.pickedIdx || '');
 const dslAssist = { fields: () => dtFields.value, bodyKind: () => dtBodyKind.value, terms: (f: string, p: string) => dtTerms.suggestAsync(f, p) };
 /* 请求体 lint 静态体检。：按 dtBodyKind 路由分派——
  search→lintDsl / bulk（_bulk→none 档）→ndjsonLint（bulkNdjson 既有件复用不改）/
- settings→lintSettingsBody / mapping→lintMappingBody / 其他（doc 等）→[]。
+ settings→lintSettingsBody / mapping→lintMappingBody / 结构化体→lintBodyKeys 根键校验 /
+ 其他（doc 等）→[]。
  search/settings/mapping 档 JSON 解析失败静默（格式化按钮的校验已在）；bulk 档吃原文不进 JSON.parse */
 const dtLint = computed<Finding[]>(() => {
   const kind = dtBodyKind.value;
@@ -775,6 +780,18 @@ const dtLint = computed<Finding[]>(() => {
     if (kind === 'settings') return lintSettingsBody(JSON.parse(body));
     if (kind === 'mapping') return lintMappingBody(JSON.parse(body));
     if (kind === 'search') return lintDsl(JSON.parse(body), { fields: dtFields.value });
+    /* 1439：结构化体的根键校验——补全目录同源派生，未知根键 ES 会拒 */
+    if (kind === 'dbq-body') return lintBodyKeys(JSON.parse(body), dbqBodyRootKeys, '按查询删除体');
+    if (kind === 'ubq-body') return lintBodyKeys(JSON.parse(body), ubqBodyRootKeys, '按查询更新体');
+    if (kind === 'update-body') return lintBodyKeys(JSON.parse(body), updateBodyRootKeys, '更新文档体');
+    if (kind === 'query-body') return lintBodyKeys(JSON.parse(body), queryOnlyBodyRootKeys, '仅查询体');
+    if (kind === 'template-search-body') return lintBodyKeys(JSON.parse(body), templateSearchBodyRootKeys, '模板执行体');
+    if (kind === 'sql-body') return lintBodyKeys(JSON.parse(body), sqlBodyRootKeys, 'SQL 体');
+    if (kind === 'rollover-body') {
+      const b = JSON.parse(body) as any;
+      return [...lintBodyKeys(b, rolloverBodyRootKeys, '滚动索引体'),
+        ...lintBodyKeys(b?.conditions, rolloverConditionKeys, '滚动条件')];
+    }
     return [];
   } catch { return []; }
 });

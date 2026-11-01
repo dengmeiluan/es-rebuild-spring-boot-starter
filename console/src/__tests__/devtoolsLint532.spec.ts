@@ -168,6 +168,40 @@ describe('532 dtLint 档路由五分派（视图级 · 底部条观测）', () =
     await type(dtInp(host), '/_search');
     expect(bodyCap().props.language, '切回 search 档语言回 json').toBe('json');
   });
+
+  it('⑦ 结构化体根键校验：_delete_by_query 的 sort 进底部条；合法体静默', async () => {
+    const { host } = await mountView(DevToolsView, '#/devtools');
+    await type(dtInp(host), '/orders/_delete_by_query');
+    bodyCap().emit('update:modelValue', '{"sort":[]}');
+    await settle(6);
+    const bar = lintBar(host);
+    expect(bar, '按查询删除体的非法根键应有底部条').toBeTruthy();
+    expect(bar!.textContent).toContain('按查询删除体');
+    expect(bar!.textContent).toContain('sort');
+    bodyCap().emit('update:modelValue', '{"query":{"match_all":{}},"max_docs":10}');
+    await settle(6);
+    expect(lintBar(host), '合法体应静默').toBeNull();
+  });
+
+  it('⑧ rollover conditions 笔误：max_doc → 建议 max_docs', async () => {
+    const { host } = await mountView(DevToolsView, '#/devtools');
+    await type(dtInp(host), '/logs/_rollover');
+    bodyCap().emit('update:modelValue', '{"conditions":{"max_doc":10}}');
+    await settle(6);
+    const bar = lintBar(host);
+    expect(bar, '滚动条件笔误应有底部条').toBeTruthy();
+    expect(bar!.textContent).toContain('滚动条件');
+    expect(bar!.textContent).toContain('max_docs');
+  });
+
+  it('⑨ 负控：同样 {"sort":[]} 在 _search 档不产生结构化体告警（sort 是合法 search 根键）', async () => {
+    const { host } = await mountView(DevToolsView, '#/devtools');
+    await type(dtInp(host), '/orders/_search');
+    bodyCap().emit('update:modelValue', '{"sort":[]}');
+    await settle(6);
+    const bar = lintBar(host);
+    expect(bar?.textContent ?? '').not.toContain('按查询删除体');
+  });
 });
 
 describe('532 lintSettingsBody（纯函数）', () => {

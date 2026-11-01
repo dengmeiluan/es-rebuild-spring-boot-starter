@@ -1622,6 +1622,17 @@ export function rootOnlyRegionAt(doc: string, offset: number): 'root' | 'deep' {
   return frameKeysAt(doc, offset).length <= 1 ? 'root' : 'deep';
 }
 
+/* 结构体根键清单——与补全目录同源（目录改名时 lint 白名单自动跟随），
+   DevTools dtLint 对未知根键给「ES 会拒绝」告警。 */
+export const updateBodyRootKeys = updateBodyKeyItems().map(i => i.label);
+export const rolloverBodyRootKeys = rolloverBodyKeyItems().map(i => i.label);
+export const rolloverConditionKeys = rolloverConditionKeyItems().map(i => i.label);
+export const dbqBodyRootKeys = dbqBodyKeyItems().map(i => i.label);
+export const ubqBodyRootKeys = ubqBodyKeyItems().map(i => i.label);
+export const queryOnlyBodyRootKeys = queryOnlyBodyKeyItems().map(i => i.label);
+export const templateSearchBodyRootKeys = templateSearchBodyKeyItems().map(i => i.label);
+export const sqlBodyRootKeys = sqlBodyKeyItems().map(i => i.label);
+
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */
 export function reindexBodyRegionAt(doc: string, offset: number): 'root' | 'source' | 'dest' | 'deep' {

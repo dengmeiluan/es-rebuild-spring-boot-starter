@@ -61,8 +61,12 @@ describe('五百三十四批：高度结构语义零变动同步更新声明（2
     expect(dt.slice(wlEndAt, histAt)).not.toContain('pane-devtools');
   });
 
-  it('⚠devtoolsLint532 22 例零破坏声明：关键源码字面逐条在场（lint 档路由 + 汇聚镜像双行）', () => {
-    expect(dt).toContain("import { lintDsl, lintSettingsBody, lintMappingBody, type Finding } from '../utils/dslLint';");
+  it('⚠devtoolsLint532 用例零破坏声明：关键源码字面逐条在场（lint 档路由 + 汇聚镜像双行）', () => {
+    /* 1439 迁移：导入清单允许增长（lintBodyKeys 等新分派），锁「模块 + 关键符号」不锁整行 */
+    expect(dt).toMatch(/import \{[\s\S]*?\} from '\.\.\/utils\/dslLint';/);
+    for (const sym of ['lintDsl', 'lintSettingsBody', 'lintMappingBody', 'lintBodyKeys']) {
+      expect(dt).toMatch(new RegExp(`\\b${sym}\\b`));
+    }
     expect(dt).toContain("import { ndjsonLint } from '../utils/bulkNdjson';");
     expect(dt).toContain('const dtLint = computed<Finding[]>(() => {');
     expect(dt).toContain('if (kind === \'settings\') return lintSettingsBody(JSON.parse(body));');

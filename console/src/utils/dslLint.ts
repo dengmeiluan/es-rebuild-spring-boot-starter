@@ -53,6 +53,7 @@ type LintRule =
   | 'ndjson-pair' | 'settings-key' | 'settings-value' | 'mapping-key' | 'mapping-type'
   | 'agg-type-typo' | 'date-term-value' | 'should-in-filter' | 'body-key-typo' | 'agg-field-key-typo'
   | 'shard-doc-sort' | 'agg-required-param' | 'agg-sub-aggs'
+  | 'body-root-key'
   | 'query-subsearches-conflict' | 'subsearches-no-rank' | 'retriever-conflict'
   | 'rare-type';
 
@@ -1318,8 +1319,29 @@ function walkSettingsContainer(node: unknown, prefix: string, out: Finding[], oc
 /** P0-2b：settings body 精简 lint（PUT _settings / create-index settings 段）。
  容器分派：root.index / root.settings 在场吃之（两者并存都吃）；全无包裹键 → 根即容器
  （裸平铺形态）。JSON 解析失败由调用侧静默（与 lintDsl 同契约）。 */
-export function lintSettingsBody(obj: unknown): Finding[] {
-  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return [];
+/** 结构化体的根键校验（_update / _rollover / 按查询删改 / query-only / 模板执行 / SQL）：
+    未知根键 ES 直接 400；与合法键编辑距离 ≤2 时给「最接近」改名建议。
+    allowed 由补全目录派生（同一真源），目录增删后 lint 自动跟随。 */
+export function lintBodyKeys(obj: unknown, allowed: readonly string[], label: string): Finding[] {
+  const out: Finding[] = [];
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return out;
+  const vocab = new Set(allowed);
+  for (const k of Object.keys(obj as Record<string, unknown>)) {
+    if (vocab.has(k)) continue;
+    const near = nearestKey(k, vocab);
+    out.push({
+      rule: 'body-root-key', severity: 'warning',
+      message: near
+        ? `${label}根键「${k}」疑似拼写错误（最接近：${near}）——ES 会拒绝未知字段`
+        : `${label}没有根键「${k}」——ES 会拒绝未知字段`,
+      suggestion: near ? `改为 "${near}"（可用 Ctrl+Space 查看全部根键）` : `可用根键：${allowed.join(' / ')}`,
+      path: k, anchor: k, nth: 0,
+    });
+  }
+  return out;
+}
+
+export function lintSettingsBody(obj: unknown): Finding[] {  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return [];
   const root = obj as Record<string, unknown>;
   const out: Finding[] = [];
   const occur = new Map<string, number>();
