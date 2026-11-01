@@ -196,7 +196,12 @@ function onBodyParams(v: Record<string, unknown> | unknown[]) {
    新建后 body 里没有 field 行，用户得手打 "field" 键才能跑（与 1200 的"有渲染无入口"同族）。
    matrix_stats 的字段是 fields 数组（非 field），top_metrics 用 metrics 数组 + sort，
    两者都不该塞进这里（塞了会给出一个 ES 只认单值的假入口），走自由键值表。 */
-const FIELD_BODY_AGGS = new Set(['terms', 'histogram', 'date_histogram', 'range', 'date_range', 'avg', 'max', 'min', 'sum', 'stats', 'cardinality', 'value_count', 'percentiles', 'percentile_ranks', 'extended_stats', 'significant_terms', 'significant_text', 'rare_terms', 'missing', 'geo_bounds', 'geo_centroid', 'weighted_avg', 'median_absolute_deviation', 'boxplot', 'string_stats', 'auto_date_histogram', 'ip_range', 'variable_width_histogram', 'geohash_grid', 'geotile_grid', 'geohex_grid', 'geo_distance', 'rate']);
+const FIELD_BODY_AGGS = new Set(['terms', 'histogram', 'date_histogram', 'range', 'date_range', 'avg', 'max', 'min', 'sum', 'stats', 'cardinality', 'value_count', 'percentiles', 'percentile_ranks', 'extended_stats', 'significant_terms', 'significant_text', 'rare_terms', 'missing', 'geo_bounds', 'geo_centroid', 'weighted_avg', 'median_absolute_deviation', 'boxplot', 'string_stats', 'auto_date_histogram', 'ip_range', 'variable_width_histogram', 'geohash_grid', 'geotile_grid', 'geohex_grid', 'geo_distance', 'rate',
+  /* 1439：官方体就是 {field} 却没登记 → 字段行退化成裸文本输入（同屏 terms 有选择器）。
+     categorize_text: {"categorize_text":{"field":"message"}}；
+     diversified_sampler: {"diversified_sampler":{"field":"author"}}（field 可选，
+     没有该键时这里不会凭空加行——isFieldKey 只升级已有键）。 */
+  'categorize_text', 'diversified_sampler']);
 /* 1222：字段键不都叫 `field`——nested / reverse_nested 的字段键是 `path`（嵌套文档路径）。
    实测（真浏览器，`nested.path` + `reverse_nested.path` 各一）：这两个算子的 path 行此前都是
    **裸文本输入**，而同屏 terms 的 field 行有字段选择器（rank/分组/类型徽标/mark 全套）。
@@ -223,6 +228,8 @@ const aggTypePriority = computed<string[]>(() => {
   if (props.node.op === 'range' || props.node.op === 'date_range') return ['date', ...NUMERIC_TYPES];
   if (GEO_AGGS.has(props.node.op)) return ['geo_point', 'geo_shape'];
   if (NUMERIC_AGGS.has(props.node.op)) return [...NUMERIC_TYPES];
+  /* categorize_text 打文本字段（ES 要求 text；keyword 也可但语义较弱） */
+  if (props.node.op === 'categorize_text') return ['text'];
   return [];
 });
 
