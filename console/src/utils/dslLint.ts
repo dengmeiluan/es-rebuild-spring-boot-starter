@@ -52,7 +52,7 @@ type LintRule =
   | 'agg-text-field' | 'body-value-type' | 'agg-interval-key' | 'nested-path' | 'query-structure'
   | 'ndjson-pair' | 'settings-key' | 'settings-value' | 'mapping-key' | 'mapping-type'
   | 'agg-type-typo' | 'date-term-value' | 'should-in-filter' | 'body-key-typo' | 'agg-field-key-typo'
-  | 'shard-doc-sort' | 'agg-required-param'
+  | 'shard-doc-sort' | 'agg-required-param' | 'agg-sub-aggs'
   | 'query-subsearches-conflict' | 'subsearches-no-rank' | 'retriever-conflict'
   | 'rare-type';
 
@@ -192,6 +192,18 @@ const AGG_FIELD_SCRIPT_OK = new Set([
   'terms', 'avg', 'sum', 'min', 'max', 'value_count', 'cardinality', 'stats',
   'extended_stats', 'percentiles', 'percentile_ranks', 'median_absolute_deviation', 'boxplot',
   'string_stats',
+]);
+/* 1439：不能带子聚合的聚合（指标/管道/叶子）——ES 对「avg 下挂 aggs」直接 400；
+   桶聚合（terms/range/filters/nested/…）不在此表。 */
+const AGG_NO_SUB = new Set([
+  'avg', 'sum', 'min', 'max', 'stats', 'extended_stats', 'value_count', 'cardinality',
+  'percentiles', 'percentile_ranks', 'median_absolute_deviation', 'boxplot', 'string_stats',
+  'top_hits', 'top_metrics', 'weighted_avg', 'scripted_metric', 'matrix_stats', 't_test',
+  'rate', 'geo_bounds', 'geo_centroid', 'significant_text',
+  'bucket_script', 'bucket_selector', 'bucket_sort', 'cumulative_cardinality', 'cumulative_sum',
+  'derivative', 'extended_stats_bucket', 'moving_fn', 'moving_percentiles', 'moving_avg',
+  'normalize', 'percentiles_bucket', 'serial_diff', 'stats_bucket',
+  'avg_bucket', 'sum_bucket', 'min_bucket', 'max_bucket',
 ]);
 /* 其余「缺了必 400」的结构键（与 field/script 规则并集判定，见 agg-required-param） */
 const AGG_REQUIRED_KEYS: Record<string, string[]> = {
@@ -574,6 +586,22 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
           out.push({
             rule: 'agg-required-param', severity: 'error',
             message: msg, suggestion: sug,
+            path: p, anchor: k, nth: kNth,
+          });
+        }
+      }
+      /* ---- 1439：指标/管道聚合挂子聚合（agg-sub-aggs，error 档，零 ctx）----
+         {"aggs":{"a":{"avg":{…},"aggs":{…}}}} → ES 400「Aggregator [avg] cannot accept
+         sub-aggregations」。子聚合要挂在桶聚合下。anchor=aggs 键本身。 */
+      if ((k === 'aggs' || k === 'aggregations') && isAggInstancePath(p)) {
+        /* aggs 是**实例对象的兄弟键**（与类型键同层），不是类型体的键——
+           看同一实例里有没有「不能带子聚合」的类型键 */
+        const sib = Object.keys(node as Record<string, unknown>).find(x => AGG_NO_SUB.has(x));
+        if (sib) {
+          out.push({
+            rule: 'agg-sub-aggs', severity: 'error',
+            message: `聚合「${sib}」不能带子聚合：ES 直接拒绝请求（400）`,
+            suggestion: '把子聚合挂到桶聚合（terms / date_histogram / range …）下，指标聚合只能作为叶子',
             path: p, anchor: k, nth: kNth,
           });
         }
