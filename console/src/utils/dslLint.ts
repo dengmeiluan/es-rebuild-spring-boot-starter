@@ -39,6 +39,7 @@
  should 键、无 minimum_should_match、处于 filter/must_not 语境 → hint，walk 递归带语境
  单调传递，零 ctx）。 */
 import { ROOT_KEYS, MAPPING_TYPES } from './dslCompletionContext';
+import { AGG_OPS } from './queryAstOps';
 import { SETTINGS_CATALOG } from './indexSettingsCatalog';
 
 type LintRule =
@@ -151,28 +152,12 @@ const AGG_FIELD_METRICS = new Set([
   'cardinality', 'date_histogram', 'histogram', 'value_count', 'percentiles',
 ]);
 
-/** 聚合类型白名单（AGG_SNIPPETS 既有 11 键为基础补常规聚合族）——
- agg-type-typo 规则的判定域。桶/指标/管道三族 + 聚合体伴随键 meta（与类型键同层合法）。
- aggs 容器自身不入表（类型位判定天然豁免，见 isAggTypePosition）；geo 系等表外聚合
- 只是不提示（覆盖面缺口），nearestKey 距离 ≤2 闸保证不误报。 */
-const AGG_TYPES = new Set([
-  /* 桶聚合 */
-  'terms', 'filter', 'filters', 'nested', 'reverse_nested', 'global', 'missing',
-  'histogram', 'date_histogram', 'auto_date_histogram', 'range', 'date_range', 'ip_range',
-  'sampler', 'diversified_sampler', 'composite', 'multi_terms', 'rare_terms',
-  'significant_terms', 'significant_text', 'adjacency_matrix',
-  /* 指标聚合 */
-  'avg', 'sum', 'min', 'max', 'stats', 'extended_stats', 'cardinality', 'value_count',
-  'percentiles', 'percentile_ranks', 'median_absolute_deviation', 'top_hits', 'top_metrics',
-  'weighted_avg', 'string_stats', 'boxplot', 'scripted_metric',
-  /* 管道聚合 */
-  'avg_bucket', 'sum_bucket', 'min_bucket', 'max_bucket', 'stats_bucket', 'extended_stats_bucket',
-  'percentiles_bucket', 'derivative', 'cumulative_sum', 'cumulative_cardinality',
-  'bucket_script', 'bucket_selector', 'bucket_sort', 'serial_diff', 'moving_fn',
-  'moving_percentiles', 'normalize',
-  /* 聚合体伴随键（与类型键同层：{"aggs": {"x": {"terms": …, "meta": …}}}） */
-  'meta',
-]);
+/** 聚合类型白名单——直接派生自 AGG_OPS（类型下拉/补全/往返六表共用单源），
+ 只补聚合体伴随键 meta（与类型键同层合法）。此前是手抄的第二份清单：新增/漏收的聚合
+ （geo 网格族、rate、matrix_stats、t_test…）会静默失去拼写提示，且官方名落在
+ 已知名编辑距离 ≤2 内时反而被误报。派生后「注册即入判定域」，不再两处对账。
+ aggs 容器自身不入表（类型位判定天然豁免，见 isAggTypePosition）。 */
+const AGG_TYPES = new Set([...Object.keys(AGG_OPS), 'meta']);
 
 /** 键路径是否落在「聚合类型位」（aggs.<名>.<类型> 的第三段起）——
  距最近 aggs/aggregations 容器恰好两层才是类型位；一层=实例名（自由命名不判）；
