@@ -40,7 +40,9 @@ export const QUERY_SNIPPETS: Record<string, string> = {
   match: '"match": {\n  "${1:field}": "${2:value}"\n}',
   match_phrase: '"match_phrase": {\n  "${1:field}": "${2:value}"\n}',
   term: '"term": {\n  "${1:field}": "${2:value}"\n}',
-  terms: '"terms": {\n  "${1:field}": [${2:value}]\n}',
+  /* 1439：占位值必须带引号——Monaco 把 ${2:value} 原样插成 value，裸数组 [value]
+     接受即非法 JSON（其余 snippet 都带引号，只有该条漏了） */
+  terms: '"terms": {\n  "${1:field}": ["${2:value}"]\n}',
   range: '"range": {\n  "${1:field}": {\n    "gte": "${2:now-1d/d}",\n    "lt": "${3:now/d}"\n  }\n}',
   exists: '"exists": {\n  "field": "${1:field}"\n}',
   wildcard: '"wildcard": {\n  "${1:field}": "${2:pref*}"\n}',
