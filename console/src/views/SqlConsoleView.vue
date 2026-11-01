@@ -1492,29 +1492,31 @@ function rewriteRunScope(nextText: string, note: string): boolean {
 
 /* 1126：结果单元格 → 查询条件下钻（与 DSL 命中表 filter-hit 同动线）。
    简单 SELECT 追加 WHERE 并重查；GROUP BY/JOIN/派生表不猜，降级为复制条件。 */
-async function useAsCondition({ field, value, type }: { field: string; value: unknown; type?: string }) {
+async function useAsCondition({ field, value, type, not }: { field: string; value: unknown; type?: string; not?: boolean }) {
+  const negate = !!not;
+  const verb = negate ? '排除' : '追加';
   /* 1128/1135：结果来自局部执行时，稿未变就只改那条语句并重跑它（不再要求用户手动改）；
      稿已改/结构不支持才降级为复制条件。 */
   const sc = runScope.value;
   if (sc && (sc.start > 0 || sc.end < sql.value.length)) {
     if (sql.value === runSql.value) {
-      const sr = appendSqlFilter(sc.text, field, value, type);
-      if (sr && rewriteRunScope(sr.sql, `已在当前语句追加条件 ${sr.predicate}，正在重查`)) return;
+      const sr = appendSqlFilter(sc.text, field, value, type, negate);
+      if (sr && rewriteRunScope(sr.sql, `已在当前语句${verb}条件 ${sr.predicate}，正在重查`)) return;
     }
-    const p = sqlPredicate(field, value, type);
+    const p = sqlPredicate(field, value, type, negate);
     if (!p) { store.notify('warning', '该列名无法安全转成 SQL 条件'); return; }
     const copied = await copyText(p);
     store.notify('warning', `当前结果来自局部执行（选段/单条语句），不自动改写整篇 SQL；${copied ? '条件已复制：' + p : '复制条件失败'}`);
     return;
   }
-  const r = appendSqlFilter(sql.value, field, value, type);
+  const r = appendSqlFilter(sql.value, field, value, type, negate);
   if (r) {
     sql.value = r.sql;
-    store.notify('info', `已追加条件 ${r.predicate}，正在重查`);
+    store.notify('info', `已${verb}条件 ${r.predicate}，正在重查`);
     void doRun();
     return;
   }
-  const p = sqlPredicate(field, value, type);
+  const p = sqlPredicate(field, value, type, negate);
   if (!p) { store.notify('warning', '该列名无法安全转成 SQL 条件'); return; }
   const ok = await copyText(p);
   store.notify('warning', `当前 SQL 含 GROUP BY/JOIN/派生表，不自动改写；${ok ? '条件已复制：' + p : '复制条件失败'}`);

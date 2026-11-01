@@ -33,6 +33,9 @@ const EXEMPT: Record<string, string> = {
   'fmt-*': 'QRT 无「默认格式」概念，导出走 export-csv/xlsx/json/md/ndjson 逐格式直出',
   // 查询级动作：QRT 的对应键是 use-as-cond / sort-by / filter-by-val
   'filter-hit': 'QRT 拆成 use-as-cond（改 SQL 重查）+ filter-by-val（只筛当前结果）',
+  /* 1439：RT「排除此值并重查」→ QRT 同能力写在 use-as-cond-not
+     （改 SQL 为 <> / IS NOT NULL，空值行保留，见 sqlExclude1439）。 */
+  'filter-hit-not': 'QRT 对应键 use-as-cond-not（SQL <> / IS NOT NULL）',
   // 文档对比：QRT 的 rows 通道没有文档对象
   'doc-diff': 'QRT 是 cols×rows 矩阵，无 _source 文档，比对不适用',
   // DSL 生成：RT 拆三项，QRT 用一个 dsl-copy 按值/类型自动路由
@@ -52,10 +55,6 @@ const EXEMPT: Record<string, string> = {
      QRT 的「导出…」组里五档齐全，右键直出能力与 RT 等价。 */
   'default-fmt-group': 'QRT 无「默认导出格式」概念（工具行五档直选），导出能力在「导出…」组内等价',
   'act-*': 'RT 行尾「更多 ⋯」整组（编辑/复制/解释得分/词频取证/删除）：QRT 是 cols×rows 矩阵、没有 _source 文档对象，其中仅复制一项在 QRT 有等价 copy-row',
-  /* 1439：RT 新增「排除此值并重查」（ES 侧 must_not）。QRT 的排除要改写 SQL WHERE
-     （= 变 <>、IS NULL 变 IS NOT NULL，还要处理局部执行/GROUP BY 降级），
-     那套改写尚未实现——不是不适用，是待补；补上时把本条豁免删掉。 */
-  'filter-hit-not': 'QRT 排除需 SQL WHERE 改写（<>/IS NOT NULL + 局部执行降级），待补',
 };
 
 describe('1205 两内核右键互查', () => {

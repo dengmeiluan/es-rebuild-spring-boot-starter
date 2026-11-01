@@ -22,11 +22,20 @@ export function sqlLiteral(value: unknown, type?: string): string {
   return "'" + String(value).replace(/'/g, "''") + "'";
 }
 
-export function sqlPredicate(column: string, value: unknown, type?: string): string | null {
+/**
+ * 1439：negate=true 生成「排除该值」的条件。
+ *
+ * 空值排除 = IS NOT NULL。
+ * 非空值用 `(col <> v OR col IS NULL)` 而不是裸 `col <> v`：ES 侧
+ * `must_not: term(col, v)` 会保留「该字段缺失」的文档，SQL 的 `<>` 会把 NULL 行一起滤掉——
+ * 同一个「排除」动作在两条通道上结果不同。带上 OR IS NULL 才与 ES 语义一致。
+ */
+export function sqlPredicate(column: string, value: unknown, type?: string, negate = false): string | null {
   if (!/^[A-Za-z_][\w.]*$/.test(String(column || ''))) return null;
   const ident = '"' + column.replace(/"/g, '""') + '"';
-  if (value === null || value === undefined) return `${ident} IS NULL`;
-  return `${ident} = ${sqlLiteral(value, type)}`;
+  if (value === null || value === undefined) return negate ? `${ident} IS NOT NULL` : `${ident} IS NULL`;
+  const lit = sqlLiteral(value, type);
+  return negate ? `(${ident} <> ${lit} OR ${ident} IS NULL)` : `${ident} = ${lit}`;
 }
 
 /** 顶层 ORDER BY / LIMIT / FETCH / ; 的起点（跳过字符串、引号标识符、注释与括号内） */
@@ -56,13 +65,13 @@ function topLevelTailStart(src: string): number {
 }
 
 export function appendSqlFilter(
-  sql: string, column: string, value: unknown, type?: string,
+  sql: string, column: string, value: unknown, type?: string, negate = false,
 ): { sql: string; predicate: string } | null {
   const src = String(sql || '').trim();
   if (!src) return null;
   if (/\b(group\s+by|having|union|join)\b/i.test(src)) return null;
   if (/\bfrom\s*\(/i.test(src)) return null;   // 派生表：外层 WHERE 位置不可靠
-  const predicate = sqlPredicate(column, value, type);
+  const predicate = sqlPredicate(column, value, type, negate);
   if (!predicate) return null;
   const cut = topLevelTailStart(src);
   const head = (cut >= 0 ? src.slice(0, cut) : src).trimEnd();

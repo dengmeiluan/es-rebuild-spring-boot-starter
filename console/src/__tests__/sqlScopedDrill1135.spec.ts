@@ -22,8 +22,9 @@ describe('1135 局部结果下钻/排序原位改写', () => {
   });
 
   it('下钻与排序都先试当前语句改写，失败才走既有复制降级', () => {
-    expect(view).toContain('const sr = appendSqlFilter(sc.text, field, value, type);');
-    expect(view).toContain('已在当前语句追加条件 ${sr.predicate}');
+    /* 1439：调用多一个 negate 参数（「排除此值并重查」复用同一路径） */
+    expect(view).toContain('const sr = appendSqlFilter(sc.text, field, value, type, negate);');
+    expect(view).toContain('已在当前语句${verb}条件 ${sr.predicate}');
     expect(view).toContain('const sr = appendSqlOrder(sc.text, field, dir);');
     expect(view).toContain('已在当前语句按 ${field} ${dir === \'asc\' ? \'升序\' : \'降序\'}排序');
     /* 降级路径仍在（稿已改/结构不支持） */

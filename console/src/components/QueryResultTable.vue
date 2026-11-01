@@ -992,7 +992,7 @@ const emit = defineEmits<{
   /* 内建卡片档开文档意图透传（AltHitsViews @open-doc 桥，弹窗/取数归宿主） */
   (e: 'open-doc', hit: Hit): void;
   /* 1126：结果值下钻意图（rows 型）——field/value/type 原样给宿主，SQL 改写归宿主 */
-  (e: 'use-as-condition', p: { field: string; value: unknown; type?: string }): void;
+  (e: 'use-as-condition', p: { field: string; value: unknown; type?: string; not?: boolean }): void;
   /* 1132：结果区按列排序并改 SQL 重查（与本地表头排序区分） */
   (e: 'sort-by', p: { field: string; dir: 'asc' | 'desc' }): void;
 }>();
@@ -2260,6 +2260,11 @@ const cellMenuItems = computed(() => {
       ? [{ key: 'use-as-cond', label: '加入查询条件并重查（改 SQL）', icon: Filter, run: () => {
           const v = renderRows.value[m.ri]?.[m.ci];
           emit('use-as-condition', { field: col, value: v === undefined ? null : v, type: props.fieldTypes?.[col] });
+        } },
+        /* 1439：排除（<> / IS NOT NULL；空值行保留，与 ES must_not 同语义） */
+        { key: 'use-as-cond-not', label: '排除此值并重查（改 SQL）', icon: Filter, run: () => {
+          const v = renderRows.value[m.ri]?.[m.ci];
+          emit('use-as-condition', { field: col, value: v === undefined ? null : v, type: props.fieldTypes?.[col], not: true });
         } },
         /* 1132：查询级排序——与本地排序明确分开 */
         { key: 'sort-asc', label: '按此列升序并重查（改 SQL）', icon: ArrowUp, run: () => emit('sort-by', { field: col, dir: 'asc' }) },
