@@ -618,6 +618,19 @@ onMounted(() => {
  sort/track_total_hits 值位的 dslContext 是 none（非 query 深层）/root（根键值位），
  提前拦会把值位白名单档拦死；纯函数换位对既有三档零行为差（guard 压制位依旧 []）。 */
         const guard = dslKeyGuard(doc, offset);
+        /* 1439：排序元素的简写方向值（{"sort":[{"title":"|"}]}）——字段键不在值白名单，
+           guard.ok 为假会落进下面的压制分支，所以必须在早退之前按上下文判定。 */
+        if (guard.inStr && dslContext(doc, offset).kind === 'sort-order') {
+          const cEnd = scanStringEnd(doc, Math.max(0, Math.min(offset, doc.length)));
+          const csp = model.getPositionAt(guard.strStart);
+          const cep = model.getPositionAt(cEnd);
+          const cRange = { startLineNumber: csp.lineNumber, startColumn: csp.column, endLineNumber: cep.lineNumber, endColumn: cep.column };
+          return { suggestions: ['asc', 'desc'].map((v, i) => ({
+            label: v, kind: monaco.languages.CompletionItemKind.Value,
+            insertText: '"' + v + '"', range: cRange, command: ACCEPT_FORMAT_COMMAND,
+            filterText: dslFilterText(v), sortText: dslSortText(i, v),
+          })) };
+        }
         if (!guard.ok) {
           /* 数组键链白名单位（_source 元素串位）——数组元素即字段名本尊（非某字段
  的值），与 dslArrayElemFieldAt 的「值位字段解析」不同轨（dslValueTiers544 把
@@ -737,6 +750,35 @@ onMounted(() => {
             range, command: ACCEPT_FORMAT_COMMAND,
             filterText: dslFilterText(k),
             sortText: dslSortText(i, k),
+          })) };
+        }
+        if (ctx.kind === 'sort-order') {
+          /* 1439：sort 简写方向值——只给 asc/desc，不掺文档词 */
+          const dirs = ['asc', 'desc'];
+          return { suggestions: dirs.map((v, i) => ({
+            label: v, kind: monaco.languages.CompletionItemKind.Value,
+            insertText: '"' + v + '"', range, command: ACCEPT_FORMAT_COMMAND,
+            filterText: dslFilterText(v), sortText: dslSortText(i, v),
+          })) };
+        }
+        if (ctx.kind === 'sort-opt-key') {
+          /* 1439：sort 字段配置键（order/mode/missing/unmapped_type/nested） */
+          const indent = lineIndentAt(doc, startOff);
+          const affix = commaAffixes(doc, startOff, end);
+          const opts: Array<{ key: string; insert: string; detail: string }> = [
+            { key: 'order', insert: '"order": "${1|asc,desc|}"', detail: '方向' },
+            { key: 'mode', insert: '"mode": "${1|min,max,sum,avg,median|}"', detail: '多值字段取哪个值排序' },
+            { key: 'missing', insert: '"missing": "${1:_last}"', detail: '缺值放最前/最后' },
+            { key: 'unmapped_type', insert: '"unmapped_type": "${1:keyword}"', detail: '未映射字段按此类型忽略' },
+            { key: 'nested', insert: '"nested": { "path": "${1:path}" }', detail: '按嵌套路径排序' },
+          ];
+          return { suggestions: opts.map((o, i) => ({
+            label: o.key, kind: monaco.languages.CompletionItemKind.Property,
+            detail: o.detail,
+            insertText: wrapSnippet(doc, startOff, end, indent, o.insert, affix),
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range, command: ACCEPT_FORMAT_COMMAND,
+            filterText: dslFilterText(o.key), sortText: dslSortText(i, o.key),
           })) };
         }
         if (ctx.kind === 'field-key') {

@@ -345,10 +345,17 @@ describe('F sort/_source 数组位字段名补全（任务5·行为锁）', () =
     expect(() => JSON.parse(after + ']}')).not.toThrow();
   });
 
-  it('压制面零回归：terms 值数组首元素位（540 钉）/ must 续元素位（544 钉）/ sort 值对象键位（⑦ 钉）不出候选', () => {
+  it('压制面零回归：terms 值数组首元素位（540 钉）/ must 续元素位（544 钉）不出候选', () => {
     expect(suggest546('{"query": {"terms": {"host": ["19')).toEqual([]);
     expect(suggest546('{"query": {"bool": {"must": ["match", "')).toEqual([]);
-    expect(suggest546('{"sort": [{"@timestamp": {"')).toEqual([]);
+    /* 1439：sort 值对象键位（⑦ 原 pin）已改为出一等补全（order/mode/missing/…），
+       压制面改 pin 一个仍无档的深层：高亮字段的配置对象键位。 */
+    expect(suggest546('{"highlight": {"fields": {"title": {"')).toEqual([]);
+  });
+
+  it('1439：sort 值对象键位出排序参数（原 ⑦ 压制 pin 的正向替换）', () => {
+    const items = suggest546('{"sort": [{"@timestamp": {"').map(i => i.label);
+    expect(items).toEqual(expect.arrayContaining(['order', 'mode', 'missing', 'unmapped_type', 'nested']));
   });
 
   it('白名单外数组元素对象键位既有出档零变化：must 元素对象键位仍 query-type 骨架', () => {

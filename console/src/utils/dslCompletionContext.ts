@@ -21,6 +21,9 @@ type DslCtx = { kind: 'root' } | { kind: 'query-type' } | { kind: 'field'; claus
   | { kind: 'agg-body-key'; op: string }
   /* 1439：字段名作键的容器（highlight.fields { <字段>: {} }） */
   | { kind: 'field-key' }
+  /* 1439：排序链——sort 元素的简写方向值 / 字段配置键 */
+  | { kind: 'sort-order' }
+  | { kind: 'sort-opt-key' }
   | { kind: 'array-elem-key'; owner: string } | { kind: 'none' };
 
 export const QUERY_SNIPPETS: Record<string, string> = {
@@ -418,6 +421,18 @@ export function dslContext(doc: string, offset: number): DslCtx {
           && stack[stack.length - 4].lastKey === 'filters' && !valuePos) {
         return { kind: 'query-type' };
       }
+    }
+    /* 1439：排序链两个位置此前只给文档词——
+       · 简写方向值 {"sort":[{"title":" → asc/desc
+       · 字段配置键 {"sort":[{"title":{ → order/mode/missing/unmapped_type/nested */
+    if (valuePos && stack.length >= 3 && stack[stack.length - 1].type === '{'
+        && stack[stack.length - 2].type === '[' && stack[stack.length - 3].lastKey === 'sort') {
+      return { kind: 'sort-order' };
+    }
+    if (!valuePos && stack.length >= 4 && stack[stack.length - 1].type === '{'
+        && stack[stack.length - 2].type === '{' && stack[stack.length - 3].type === '['
+        && stack[stack.length - 4].lastKey === 'sort') {
+      return { kind: 'sort-opt-key' };
     }
     /* 1439：highlight.fields 的键是**字段名**——此前这里只给文档里出现过的词，
        而高亮字段必须来自 mapping（打错就是静默不高亮）。 */

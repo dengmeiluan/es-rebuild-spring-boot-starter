@@ -611,8 +611,10 @@ describe('W4-T13 MonacoEditor dslAssist provider 接线', () => {
   it('⑦ none 档（非 query/aggs 深层区）恒空', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
     /* 2.6.0 Task 8 随动：原断言文档 '{"aggs": {"a": {"' 现落 agg-type 档（十一键骨架）——
-       none 场景改 pin sort 深层（非 query/aggs 容器，不出层口径不变） */
-    expect(suggest('{"sort": [{"@timestamp": {"')).toEqual([]);
+       none 场景改 pin sort 深层（非 query/aggs 容器，不出层口径不变）。
+       1439 再随动：sort 值对象键位已出一等补全（order/mode/missing…），
+       none 场景改 pin 高亮字段的配置对象（仍无档）。 */
+    expect(suggest('{"highlight": {"fields": {"title": {"')).toEqual([]);
   });
 
   it('⑧ DslQueryView 冒烟：mount 不炸；W4-T14 渗透后 dslAssist 签名注册恰 1 条', async () => {
