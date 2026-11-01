@@ -1139,8 +1139,16 @@ export function bodyKindForPath(rawPath: string): BodyKind {
   /* doc 档四端点（带斜杠前缀防误伤——'_update/' 不吃 _update_by_query（后者是
  search 族，dslCompletionContext.spec 既有断言钉死），'/_source' 尾形态与 /_doc/1/_source 双保险 */
   if (p.includes('/_doc/') || p.includes('/_create/') || p.includes('/_update/') || p.includes('/_source')) return 'doc';
+  /* 1439：这些端点的体不是 search body——此前一律给 query/sort/aggs 骨架
+     （模板体里出 match：写下去就是 ES 400；analyze 体里出 query：同样的错） */
+  if (p.includes('_analyze')) return 'analyze';
+  if (p.includes('_index_template') || p.includes('_component_template') || p.includes('/_template')) return 'template';
   if (p.includes('_settings')) return 'settings';
   if (p.includes('_mapping')) return 'mapping';
+  if (p.includes('/_search/scroll') || p.includes('/_clear_scroll') || p.includes('/_aliases')
+      || p.includes('_reindex') || p.includes('_sql') || p.includes('/_mget')
+      || p.includes('/_scripts') || p.includes('/_script/') || p.includes('/_rollover')
+      || p.includes('/_close') || p.includes('/_open') || p.includes('/_forcemerge')) return 'none';
   return 'search';
 }
 

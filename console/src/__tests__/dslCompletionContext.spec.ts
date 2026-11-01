@@ -118,6 +118,23 @@ describe('bodyKindForPath', () => {
   it('_mapping → mapping', () => {
     expect(bodyKindForPath('/{index}/_mapping')).toBe('mapping');
   });
+  it('1439：非 search 体端点不再误给 search 骨架', () => {
+    for (const p of ['/{index}/_analyze', '/_analyze']) expect(bodyKindForPath(p), p).toBe('analyze');
+    for (const p of ['/_index_template/t1', '/_component_template/c1', '/_template/legacy']) {
+      expect(bodyKindForPath(p), p).toBe('template');
+    }
+    for (const p of ['/idx/_search/scroll', '/_search/scroll', '/_clear_scroll', '/_aliases', '/idx/_aliases',
+      '/_reindex', '/_sql', '/_script/p1', '/_scripts/p1', '/idx/_mget', '/idx/_rollover', '/idx/_close',
+      '/idx/_open', '/idx/_forcemerge']) {
+      expect(bodyKindForPath(p), p).toBe('none');
+    }
+    /* 既有语义不被吞：settings/mapping/doc/search 族照旧 */
+    expect(bodyKindForPath('/idx/_settings')).toBe('settings');
+    expect(bodyKindForPath('/idx/_mapping')).toBe('mapping');
+    expect(bodyKindForPath('/idx/_doc/1')).toBe('doc');
+    expect(bodyKindForPath('/idx/_search')).toBe('search');
+  });
+
   it('search 族 → search', () => {
     for (const p of ['/{index}/_search', '/_search', '/{index}/_count', '/{index}/_validate/query',
       '/{index}/_explain/1', '/{index}/_update_by_query', '/{index}/_delete_by_query']) {
