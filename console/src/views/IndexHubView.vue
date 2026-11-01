@@ -811,6 +811,7 @@ import { shardsHint } from '../utils/shardsHint'; /* ：部分分片失败黄条
 import { useQueryRun } from '../composables/useQueryRun'; /*  P0-A：执行读秒+可取消（ 范式统一件） */
 import { writeStoredRaw } from '../utils/safeJson';
 import { resolveSortField } from '../utils/sortField';
+import { appendLuceneClause } from '../utils/filterMerge';
 
 const router = useRouter();
 const store = useAppStore();
@@ -1345,15 +1346,14 @@ function runDocsNew() {
    菜单项渲染出来却是个死键。索引工作区的查询面是 Lucene 查询词（docsQ），
    所以这里把条件拼成 `field:"value"` 并与既有词 AND 起来再重查——
    与 DQ「条件并入 DSL 再跑」同一心智（就地追加、可撤销、给出回执）。 */
-function onDocsFilterHit(p: { field: string; value: unknown; op?: 'term' | 'match' }) {
+function onDocsFilterHit(p: { field: string; value: unknown; op?: 'term' | 'match'; not?: boolean }) {
   if (!p?.field) return;
   const v = p.value == null ? '' : String(p.value);
   if (!v) return;
   /* Lucene 字面量：值里的引号是唯一需要转义的字符（其余按短语整体匹配） */
   const clause = p.field + ':"' + v.replace(/"/g, '\\"') + '"';
-  const cur = (docsQ.value || '').trim();
-  docsQ.value = cur ? '(' + cur + ') AND ' + clause : clause;
-  store.notify('info', '已下钻 ' + p.field + '=' + v + '（条件已并进检索词，可编辑后再跑）');
+  docsQ.value = appendLuceneClause(docsQ.value, clause, !!p.not);
+  store.notify('info', (p.not ? '已排除 ' : '已下钻 ') + p.field + '=' + v + '（条件已并进检索词，可编辑后再跑）');
   runDocsNew();
 }
 

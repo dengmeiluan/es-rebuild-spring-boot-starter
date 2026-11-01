@@ -30,8 +30,10 @@ describe('1191 索引工作区 filter-hit 接线', () => {
     expect(seg).toContain('docsQ.value');
     expect(seg, '必须重查，否则只是改了个输入框').toContain('runDocsNew()');
     expect(seg).toContain('store.notify');
-    /* 既有词不清空——是 AND 追加 */
-    expect(seg).toMatch(/AND /);
+    /* 既有词不清空——是 AND 追加。1439 起合并逻辑收进 utils/filterMerge
+       （排除分支也在那儿），此处锁「走的是那个共用件」，AND 语义由
+       filterMerge1439.spec 的 appendLuceneClause 用例逐字验证。 */
+    expect(seg).toContain('appendLuceneClause(');
   });
 
   it('负控：值里的引号必须转义（否则拼出非法 Lucene）', () => {

@@ -830,6 +830,7 @@ import { jq } from '../utils/minijq';
 import { exportStamp, stdTimeToEpochMs, fmtNum, copyText, downloadText, totalOf  } from '../utils/format'; /* ：trunc 随卡片内脏迁 AltHitsViews（本页零引用退役） */
 import { buildDocsDsl } from '../utils/workbench';
 import { buildDsl } from '../utils/dslFromCell';
+import { mergeFilterIntoQuery } from '../utils/filterMerge';
 import { shardsHint } from '../utils/shardsHint';
 import { pickHistField, buildHistAgg, sniffDateField } from '../utils/histField';
 import { walkMappingTypes, flattenSubFieldTypes } from '../utils/mappingTypes';
@@ -2168,18 +2169,14 @@ function drillAgg(a: TermsAgg, b: TermsAgg['buckets'][number], exclude: boolean)
  emit 由 ResultTable 新增（W7 批：cell 右键「以此值过滤并重查」，payload={field,value,op}；
  W7 未合流时本监听 inert 无害）。组装与 drillAgg 同款：buildDsl → 并入当前 query → 重查；
  op（term/match）语义由 buildDsl 按字段类型路由（text→match、其余→term）承担 */
-function onFilterHit(p: { field: string; value: unknown; op?: 'term' | 'match' }) {
+function onFilterHit(p: { field: string; value: unknown; op?: 'term' | 'match'; not?: boolean }) {
   if (!p?.field) return;
   const obj = (tryParse(applyVars(stripJsonComments(dsl.value))) || {}) as any;
   const built = buildDsl(p.field, [p.value], builderTypes.value[p.field]);
   if (!built) return;
-  if (obj.query && Object.keys(obj.query).length) {
-    obj.query = { bool: { must: [obj.query], filter: [built] } };
-  } else {
-    obj.query = built;
-  }
+  obj.query = mergeFilterIntoQuery(obj, built, !!p.not);
   dsl.value = JSON.stringify(obj, null, 2);
-  store.notify('info', '已下钻 ' + p.field + '=' + String(p.value) + '（条件已追加进 DSL，编辑器内可撤销）');
+  store.notify('info', (p.not ? '已排除 ' : '已下钻 ') + p.field + '=' + String(p.value) + '（条件已追加进 DSL，编辑器内可撤销）');
   runQuery();
 }
 

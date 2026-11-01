@@ -891,7 +891,7 @@ const emit = defineEmits<{
   (e: 'explain-hit', hit: SearchHit): void;
   (e: 'xray-hit', hit: SearchHit): void;
   /* W7：以单元格值过滤并重查——事件只发不路由，重查/跳转由消费端（DqlQueryView 等）接线 */
-  (e: 'filter-hit', p: { field: string; value: any; op: 'term' | 'match' }): void;
+  (e: 'filter-hit', p: { field: string; value: any; op: 'term' | 'match'; not?: boolean }): void;
   /* W-B：selectable 行多选通道（rows=选中 hit 原始对象数组，sortedHits 序） */
   (e: 'selection-change', rows: unknown[]): void;
   /* remoteSort 远端排序意图（只 emit 不取数；null=取消排序回宿主原始序；
@@ -2570,13 +2570,24 @@ const cellMenuItems = computed(() => {
     { key: 'filter-col', label: '筛选此列', icon: Filter, run: () => { openFilterAt(m.col, m.x, m.y); } },
     /* W7：以此值过滤并重查——只 emit 'filter-hit' */
     ...(displayVal(m.hit, m.col) != null
-      ? [{ key: 'filter-hit', label: '以此值过滤并重查', icon: Filter, run: () => {
-          emit('filter-hit', {
-            field: m.col,
-            value: displayVal(m.hit, m.col),
-            op: props.fieldTypes?.[m.col] === 'text' ? 'match' : 'term',
-          });
-        } }]
+      ? [
+          { key: 'filter-hit', label: '以此值过滤并重查', icon: Filter, run: () => {
+              emit('filter-hit', {
+                field: m.col,
+                value: displayVal(m.hit, m.col),
+                op: props.fieldTypes?.[m.col] === 'text' ? 'match' : 'term',
+              });
+            } },
+          /* 1439：排除是排障最常用的反向动作，此前只能手改 DSL 加 must_not */
+          { key: 'filter-hit-not', label: '排除此值并重查', icon: Filter, run: () => {
+              emit('filter-hit', {
+                field: m.col,
+                value: displayVal(m.hit, m.col),
+                op: props.fieldTypes?.[m.col] === 'text' ? 'match' : 'term',
+                not: true,
+              });
+            } },
+        ]
       : []),
   ];
   const exportChildren: CcmItem[] = [
