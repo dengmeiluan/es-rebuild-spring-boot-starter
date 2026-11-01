@@ -444,6 +444,15 @@
       />
 
       <!-- 结果区 -->
+      <!-- 1439：DSL 解析失败时结果区不会自动清空——旧表原样留着却没有任何标记，
+ 用户切走再回来会把上一次的命中当成这一版的。错误 toast 会消失，这条常驻。 -->
+      <div v-if="parseErr && resp" role="alert" class="err-bar dq-parse-stale" data-test="dsl-parse-stale">
+        <CircleAlert :size="14" />
+        <div class="dq-parse-stale-body">
+          <span><b>当前 DSL 无法解析</b> · 下方结果来自上一次查询，不是这一版</span>
+          <button v-if="lastGoodDsl" type="button" class="btn xs" @click="restoreLastGood" title="把编辑器内容恢复为上一次能解析的版本">恢复上次可执行版本</button>
+        </div>
+      </div>
       <div v-if="resp" class="dq-result" :style="resultStyle">
         <!-- .card 大卡壳退役（真机反馈卡壳与 rt-bar/alt-body 双层框线冗余）——
  dq-res-body 只留布局容器职责（flex 链+--dq-view-cap 契约不动），
@@ -980,6 +989,10 @@ const partialDismissed = ref(false);
 const partialHint = computed(() => shardsHint(resp.value?.shards));
 watch(() => resp.value, () => { partialDismissed.value = false; });
 const queryErr = ref('');
+/* 1439：解析失败不自动清旧结果——必须留一条常驻标记，否则旧表看起来像本次命中。
+   lastGoodDsl 给「恢复上次可执行版本」用（只记能解析的那一版）。 */
+const parseErr = ref('');
+const lastGoodDsl = ref('');
 /* 1115：错误锚点绑定失败时实际执行的 DSL 快照——改稿后字段/条件定位不再可信，
  chip 撤下并标「错误来自上一版 DSL」，避免旧行号/旧字段指认当前稿。 */
 const queryErrDsl = ref('');
@@ -1137,6 +1150,17 @@ const queueLint = useDebounceFn((v: string) => {
   lintUnplaced.value = r ? r.unplaced : [];
 }, 250);
 watch(dsl, (v) => queueLint(v), { immediate: true });
+/* 1439：用户把 DSL 改回可解析后，过期标记立刻撤下（不等到下次执行） */
+watch(dsl, (v) => {
+  if (!parseErr.value) return;
+  if (tryParse(applyVars(stripJsonComments(v)))) parseErr.value = '';
+});
+function restoreLastGood() {
+  if (!lastGoodDsl.value) return;
+  dsl.value = lastGoodDsl.value;
+  parseErr.value = '';
+  store.notify('info', '已恢复上一次可解析的 DSL');
+}
 
 /* W1：条件树 ↔ DSL 双向同步（useTreeDslSync 承载防环/回解/冻结，dslTreeSync.spec 覆盖）。 */
 const { tree: queryTree, stale: treeStale, onTreeUpdate, resyncNow } = useTreeDslSync(dsl);
@@ -1627,9 +1651,13 @@ async function execQuery(recordHist = false) {
   if (!store.pickedIdx) return;
   const cleaned = applyVars(stripJsonComments(dsl.value));
   if (!tryParse(cleaned)) {
+    /* 1439：旧结果不会自动清空，必须常驻标记（下方表格不是这一版 DSL 的结果） */
+    parseErr.value = '当前 DSL 不是合法 JSON（已剥离注释后校验）';
     store.notify('error', 'DSL 不是合法 JSON（已剥离注释后校验）');
     return;
   }
+  parseErr.value = '';
+  lastGoodDsl.value = dsl.value;
   running.value = true;
   const seq = ++runSeq;
   const idx = store.pickedIdx;
@@ -3567,6 +3595,10 @@ div.dq-more .exp-t { padding: 0 0 var(--sp-1); }
 .dq-err-locate .btn { margin-left: 0; }
 /* 1115：上一版 DSL 的错误标记（旧字段/条件定位撤下）——warning 语义，与红色错误正文区分 */
 .dq-err-stale { color: var(--warn); border-bottom-color: var(--warn-line); }
+/* 1439：解析失败的常驻提示（旧结果仍在屏上，必须说明它来自上一版） */
+.dq-parse-stale { margin-top: var(--sp-2h); align-items: center; }
+.dq-parse-stale-body { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; min-width: 0; }
+.dq-parse-stale-body b { color: var(--err); }
 
 /* 900 紧凑微调档（ 口径；q 遗留补齐，W-D）——本页分栏/高度链已由
  WorkbenchLayout 宽度驱动 stacked 机制与 P0 定高链接管（1100 档只留条件树限高，
