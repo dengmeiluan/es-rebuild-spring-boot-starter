@@ -557,6 +557,10 @@
               <div class="seg">
                 <button v-for="v in views" :key="v.k" :class="{ on: view === v.k }" @click="view = v.k">{{ v.t }}</button>
               </div>
+              <!-- 1439：改稿未重跑时结果表其实是上一次的——SQL 页有「已过期」芯片，这里对齐。
+ 不能只靠用户记得「我还没跑」，也不能每次改稿都弹 toast（敲一个字弹一次）。 -->
+              <span v-if="resultStale" class="dq-stale-chip" role="status"
+                title="当前 DSL 已修改但还没执行——下方结果仍来自上一次执行（点「执行」更新）">结果已过期</span>
               <!-- 表格顶满当前页快捷（实报「没看到顶满当前页的快捷键，
  放大按钮是全局，不一样的」——RT 内建 ⤢ 是全局聚焦面覆盖整页，本钮=本页级：
  收起条件树/编辑器构建区，结果区吃满页面 flex；再点还原。动线=构建区整体
@@ -993,6 +997,10 @@ const queryErr = ref('');
    lastGoodDsl 给「恢复上次可执行版本」用（只记能解析的那一版）。 */
 const parseErr = ref('');
 const lastGoodDsl = ref('');
+/* 1439：上次**实际发出**的那版 DSL——改稿后结果表其实是旧结果，必须可见地过期
+ （与 SQL 控制台的 resultStale 同语义）。 */
+const lastRunDsl = ref('');
+const resultStale = computed(() => !!resp.value && !!lastRunDsl.value && dsl.value !== lastRunDsl.value);
 /* 1115：错误锚点绑定失败时实际执行的 DSL 快照——改稿后字段/条件定位不再可信，
  chip 撤下并标「错误来自上一版 DSL」，避免旧行号/旧字段指认当前稿。 */
 const queryErrDsl = ref('');
@@ -1674,6 +1682,8 @@ async function execQuery(recordHist = false) {
   const idx = store.pickedIdx;
   /* 1115：错误锚点绑定实际发出的那一版 DSL（await 期间可能继续改稿） */
   const dslSnapshot = dsl.value;
+  /* 1439：记住实际发出的那一版——结果表的「已过期」芯片据此判定 */
+  lastRunDsl.value = dslSnapshot;
   queryErr.value = '';
   queryErrDsl.value = '';
   queryErrRaw.value = null;
@@ -3454,6 +3464,12 @@ onBeforeUnmount(() => {
 /* 无 date 字段弱化徽标（嗅探语义 title 随开关在执行行承担，视觉降档不抢行） */
 .dq-hist-none { font-size: var(--fs-xs); color: var(--tx2); padding: 0 var(--sp-1); }
 .dq-fillpage.on { color: var(--ac-hi); border-color: var(--ac-line); background: var(--ac-soft); }
+/* 1439：结果过期芯片（改稿未重跑）——warn 语义、不占主操作位、只读提示 */
+.dq-stale-chip {
+  flex: none; padding: 1px var(--sp-2); border-radius: 99px;
+  font-size: var(--fs-xs); color: var(--warn); background: var(--warn-soft);
+  border: 1px solid var(--warn-line); white-space: nowrap;
+}
 
 /* 错误详情限高 200px → 视口弹性档 max(240px, 42vh)（与 profile 树同一口径）。
  .dq-err 私造壳（padding+err-line 边框+radius）与独立标题行退役——
