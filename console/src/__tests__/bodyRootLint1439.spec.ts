@@ -10,7 +10,7 @@ import { lintBodyKeys, lintStructuredBody } from '../utils/dslLint';
 import {
   updateBodyRootKeys, rolloverBodyRootKeys, rolloverConditionKeys, dbqBodyRootKeys,
   ubqBodyRootKeys, queryOnlyBodyRootKeys, templateSearchBodyRootKeys, sqlBodyRootKeys, mgetBodyRootKeys,
-  storedScriptBodyRootKeys, aliasesBodyRootKeys,
+  storedScriptBodyRootKeys, aliasesBodyRootKeys, scrollBodyRootKeys, clearScrollBodyRootKeys,
 } from '../utils/dslCompletionContext';
 
 describe('1439 结构化体根键 lint', () => {
@@ -41,6 +41,8 @@ describe('1439 结构化体根键 lint', () => {
       [mgetBodyRootKeys, '_mget'],
       [storedScriptBodyRootKeys, '存脚本'],
       [aliasesBodyRootKeys, '别名动作'],
+      [scrollBodyRootKeys, '游标翻页'],
+      [clearScrollBodyRootKeys, '清理游标'],
     ];
     for (const [keys, label] of tables) {
       const obj = Object.fromEntries(keys.map(k => [k, 1]));
@@ -62,6 +64,8 @@ describe('1439 lintStructuredBody 共享分派（DevTools / RestView 同源）',
     expect(lintStructuredBody('dbq-body', '{"query":{},"max_docs":1}')).toEqual([]);
     expect(lintStructuredBody('rollover-body', '{"conditions":{"max_doc":1}}')[0].message).toContain('滚动条件');
     expect(lintStructuredBody('aliases-body', '{"action":[]}')[0].message).toContain('别名动作体');
+    expect(lintStructuredBody('scroll-body', '{"scrol":true}')[0].message).toContain('游标翻页体');
+    expect(lintStructuredBody('clear-scroll-body', '{"scroll_id":["x"]}')).toEqual([]);
     expect(lintStructuredBody('search', '{"sort":[]}')).toEqual([]);
     expect(lintStructuredBody('settings', '{"a":1}')).toEqual([]);
     expect(lintStructuredBody('dbq-body', '{bad')).toEqual([]);

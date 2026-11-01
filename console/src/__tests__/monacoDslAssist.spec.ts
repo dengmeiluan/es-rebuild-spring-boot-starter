@@ -1470,3 +1470,22 @@ describe('1439 别名批量动作体键位补全', () => {
     expect(suggest('{"actions": [{"add": {"filter": {"')).toEqual([]);
   });
 });
+
+describe('1439 游标翻页 / 清理游标体补全', () => {
+  it('scroll 体：根键 scroll/scroll_id（接受即合法）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'scroll-body' as const } });
+    const root = suggest('{"');
+    expect(root.map((i: any) => i.label)).toEqual(['scroll', 'scroll_id']);
+    for (const i of root) {
+      expect(() => JSON.parse(acceptSnippet('{', i) + '}'), i.label + ' 接受后非法').not.toThrow();
+    }
+  });
+
+  it('clear-scroll 体：只 scroll_id（接受即合法）；不掺翻页体的 scroll', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'clear-scroll-body' as const } });
+    const root = suggest('{"');
+    expect(root.map((i: any) => i.label)).toEqual(['scroll_id']);
+    expect(root.map((i: any) => i.label)).not.toContain('scroll');
+    expect(() => JSON.parse(acceptSnippet('{', root[0]) + '}')).not.toThrow();
+  });
+});

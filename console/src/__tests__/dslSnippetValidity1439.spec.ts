@@ -18,6 +18,7 @@ import {
   mgetBodyKeyItems, mgetDocKeyItems,
   storedScriptBodyKeyItems, storedScriptKeyItems,
   aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems,
+  scrollBodyKeyItems, clearScrollBodyKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -98,6 +99,8 @@ function allProblems(): string[] {
   out.push(...snippetProblems('AC', aliasAddConfigKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('AR', aliasRemoveConfigKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('AI', aliasRemoveIndexConfigKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('SC', scrollBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('CC', clearScrollBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;
 }
 

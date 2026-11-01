@@ -258,14 +258,15 @@ describe('bodyKindForPath', () => {
     for (const p of ['/_index_template/t1', '/_component_template/c1', '/_template/legacy']) {
       expect(bodyKindForPath(p), p).toBe('template');
     }
-    for (const p of ['/idx/_search/scroll', '/_search/scroll', '/_clear_scroll',
-      '/_script/p1', '/_scripts/p1', '/idx/_close',
+    for (const p of ['/_script/p1', '/_scripts/p1', '/idx/_close',
       '/idx/_open', '/idx/_forcemerge']) {
       expect(bodyKindForPath(p), p).toBe('none');
     }
-    /* 1439 迁移：_mget 升 mget-body、_aliases 动作体升 aliases-body */
+    /* 1439 迁移：_mget→mget-body、_aliases→aliases-body、游标两端点各自成档 */
     expect(bodyKindForPath('/idx/_mget')).toBe('mget-body');
     expect(bodyKindForPath('/idx/_aliases')).toBe('aliases-body');
+    expect(bodyKindForPath('/idx/_search/scroll')).toBe('scroll-body');
+    expect(bodyKindForPath('/idx/_clear_scroll')).toBe('clear-scroll-body');
     /* 1439 迁移：_rollover 从 none 升 rollover-body、_update 从 doc 升 update-body
        （两者的体都是结构化对象，键位应出官方键；见 updateRolloverBody1439.spec） */
     expect(bodyKindForPath('/idx/_rollover')).toBe('rollover-body');

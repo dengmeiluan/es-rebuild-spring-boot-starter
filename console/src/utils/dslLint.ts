@@ -41,7 +41,7 @@
 import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   updateBodyRootKeys, rolloverBodyRootKeys, rolloverConditionKeys, dbqBodyRootKeys, ubqBodyRootKeys,
   queryOnlyBodyRootKeys, templateSearchBodyRootKeys, sqlBodyRootKeys, mgetBodyRootKeys,
-  storedScriptBodyRootKeys, aliasesBodyRootKeys,
+  storedScriptBodyRootKeys, aliasesBodyRootKeys, scrollBodyRootKeys, clearScrollBodyRootKeys,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -1364,6 +1364,8 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
     case 'mget-body': return lintBodyKeys(obj, mgetBodyRootKeys, '_mget 体');
     case 'stored-script-body': return lintBodyKeys(obj, storedScriptBodyRootKeys, '存储脚本体');
     case 'aliases-body': return lintBodyKeys(obj, aliasesBodyRootKeys, '别名动作体');
+    case 'scroll-body': return lintBodyKeys(obj, scrollBodyRootKeys, '游标翻页体');
+    case 'clear-scroll-body': return lintBodyKeys(obj, clearScrollBodyRootKeys, '清理游标体');
     default: return [];
   }
 }

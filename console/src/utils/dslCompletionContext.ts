@@ -1107,7 +1107,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'scroll-body' | 'clear-scroll-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1245,8 +1245,10 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
       && !p.includes('_execute')) return 'stored-script-body';
   /* 1439：POST /_aliases 的体是 {actions:[{add|remove|remove_index:{…}}]}——结构化体 */
   if (/(^|\/)_aliases(\/|$)/.test(p)) return 'aliases-body';
-  if (p.includes('/_search/scroll') || p.includes('/_clear_scroll')
-      || p.includes('/_scripts') || p.includes('/_script/')
+  /* 1439：游标翻页/清理的体是 {scroll,scroll_id}/{scroll_id}，不是无档 */
+  if (/(^|\/)_clear_scroll(\/|$)/.test(p)) return 'clear-scroll-body';
+  if (/(^|\/)_search\/scroll(\/|$)/.test(p)) return 'scroll-body';
+  if (p.includes('/_scripts') || p.includes('/_script/')
       || p.includes('/_close') || p.includes('/_open') || p.includes('/_forcemerge')) return 'none';
   return 'search';
 }
@@ -1769,6 +1771,22 @@ export function aliasesBodyRegionAt(doc: string, offset: number):
   return 'deep';
 }
 
+/** 游标翻页体（GET/POST /_search/scroll）：scroll 时长 + scroll_id */
+export function scrollBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'scroll', detail: '保持游标的时长（如 1m/30s）', snippet: true, insertText: '"scroll": "${1:1m}"' },
+    { label: 'scroll_id', detail: '上一页返回的游标 id', snippet: true, insertText: '"scroll_id": "${1:scroll-id}"' },
+  ];
+}
+
+/** 清理游标体（DELETE/POST /_clear_scroll）：scroll_id（可传数组） */
+export function clearScrollBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'scroll_id', detail: '要清理的游标 id（可数组）', snippet: true,
+      insertText: '"scroll_id": ["${1:scroll-id}"]' },
+  ];
+}
+
 /* 结构体根键清单——与补全目录同源（目录改名时 lint 白名单自动跟随），
    DevTools dtLint 对未知根键给「ES 会拒绝」告警。 */
 export const updateBodyRootKeys = updateBodyKeyItems().map(i => i.label);
@@ -1782,6 +1800,8 @@ export const sqlBodyRootKeys = sqlBodyKeyItems().map(i => i.label);
 export const mgetBodyRootKeys = mgetBodyKeyItems().map(i => i.label);
 export const storedScriptBodyRootKeys = storedScriptBodyKeyItems().map(i => i.label);
 export const aliasesBodyRootKeys = aliasesBodyKeyItems().map(i => i.label);
+export const scrollBodyRootKeys = scrollBodyKeyItems().map(i => i.label);
+export const clearScrollBodyRootKeys = clearScrollBodyKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */
