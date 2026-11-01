@@ -648,6 +648,19 @@ onMounted(() => {
             filterText: dslFilterText(v), sortText: dslSortText(i, v),
           })) };
         }
+        /* 1439：terms/multi_terms 的 order 方向值（{"order":{"_count":"|"}}）——
+           与 sort-order 同形态，guard 早退前按上下文判定 */
+        if (guard.inStr && dslContext(doc, offset).kind === 'agg-order-dir') {
+          const dEnd = scanStringEnd(doc, Math.max(0, Math.min(offset, doc.length)));
+          const dsp = model.getPositionAt(guard.strStart);
+          const dep = model.getPositionAt(dEnd);
+          const dRange = { startLineNumber: dsp.lineNumber, startColumn: dsp.column, endLineNumber: dep.lineNumber, endColumn: dep.column };
+          return { suggestions: ['asc', 'desc'].map((v, i) => ({
+            label: v, kind: monaco.languages.CompletionItemKind.Value,
+            insertText: '"' + v + '"', range: dRange, command: ACCEPT_FORMAT_COMMAND,
+            filterText: dslFilterText(v), sortText: dslSortText(i, v),
+          })) };
+        }
         if (!guard.ok) {
           /* 数组键链白名单位（_source 元素串位）——数组元素即字段名本尊（非某字段
  的值），与 dslArrayElemFieldAt 的「值位字段解析」不同轨（dslValueTiers544 把
@@ -1047,7 +1060,9 @@ onMounted(() => {
           })) };
         }
         /* 收口消费共享 orderFieldsByTypeForOp（本地 orderFieldsByType 原样平移，
- 行为逐字节等值——原始序不做亲和族展开，与 orderFieldsByClauseOp 的语义分界见共享侧注释） */
+ 行为逐字节等值——原始序不做亲和族展开，与 orderFieldsByClauseOp 的语义分界见共享侧注释）。
+ 其余上下文档（agg-order-dir 等）必须已在上方各自返回——这里只兜字段档。 */
+        if (ctx.kind !== 'field') return { suggestions: [] };
         const opFields = orderFieldsByTypeForOp(props.dslAssist!.fields(), ctx.clause);
         return { suggestions: opFields.map((f, i) => ({
           label: f.path, kind: monaco.languages.CompletionItemKind.Snippet,

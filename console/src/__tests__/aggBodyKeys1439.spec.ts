@@ -84,7 +84,8 @@ describe('1439 terms.order 键位上下文', () => {
     expect((at('{"aggs":{"a":{"terms":{"order":{') as any).kind).toBe('agg-order-key');
     expect((at('{"aggs":{"a":{"multi_terms":{"order":{') as any).kind).toBe('agg-order-key');
     expect((at('{"aggs":{"a":{"histogram":{"order":{') as any).kind).not.toBe('agg-order-key');
-    /* 值位（"_count": " 之后）不出键位档——方向值位没有键候选 */
-    expect((at('{"aggs":{"a":{"terms":{"order":{"_count": "') as any).kind).not.toBe('agg-order-key');
+    /* 值位（"_count": " 之后）改出方向档，不再给键位档 */
+    expect((at('{"aggs":{"a":{"terms":{"order":{"_count": "') as any).kind).toBe('agg-order-dir');
+    expect((at('{"aggs":{"a":{"histogram":{"order":{"_count": "') as any).kind).not.toBe('agg-order-dir');
   });
 });

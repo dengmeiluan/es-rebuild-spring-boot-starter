@@ -1161,3 +1161,23 @@ describe('1439 terms.order 键位补全', () => {
       .toEqual(['_count', '_key', '_key_as_string']);
   });
 });
+
+describe('1439 terms.order 方向值补全', () => {
+  it('order 对象的值位给 asc/desc（接受后 JSON 合法）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    const doc = '{"aggs":{"a":{"terms":{"order":{"_count": "';
+    const items = suggest(doc);
+    expect(items.map((i: any) => i.label)).toEqual(['asc', 'desc']);
+    for (const i of items) {
+      expect(i.insertText).toBe('"' + i.label + '"');
+      expect(() => JSON.parse(acceptSnippet(doc, i) + '}}}}}'), i.label).not.toThrow();
+    }
+  });
+
+  it('非 terms 聚合的 order 值位不出方向；order 键位仍出三键', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    expect(suggest('{"aggs":{"a":{"histogram":{"order":{"_count": "')).toEqual([]);
+    expect(suggest('{"aggs":{"a":{"terms":{"order":{').map((i: any) => i.label))
+      .toEqual(['_count', '_key', '_key_as_string']);
+  });
+});

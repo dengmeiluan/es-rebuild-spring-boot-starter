@@ -21,6 +21,8 @@ type DslCtx = { kind: 'root' } | { kind: 'query-type' } | { kind: 'field'; claus
   | { kind: 'agg-body-key'; op: string }
   /* 1439：terms/multi_terms 的 order 对象键位（_count/_key/_key_as_string） */
   | { kind: 'agg-order-key' }
+  /* 1439：order 对象的值位（排序方向 asc/desc） */
+  | { kind: 'agg-order-dir' }
   /* 1439：子句体内的键位（bool must/filter、nested path/query、multi_match query/fields…）
      ——此前这里一律给 query-type（算子骨架），写进子句体全是非法键 */
   | { kind: 'query-body-key'; op: string }
@@ -759,6 +761,11 @@ export function dslContext(doc: string, offset: number): DslCtx {
       if (innerA.length === 4 && innerA[3].type === '{' && !valuePos
           && (innerA[1].lastKey === 'terms' || innerA[1].lastKey === 'multi_terms')) {
         return { kind: 'agg-order-key' };
+      }
+      /* 1439：同一 order 对象的**值位**给方向 asc/desc（键位补完就该补方向） */
+      if (innerA.length === 4 && valuePos
+          && (innerA[1].lastKey === 'terms' || innerA[1].lastKey === 'multi_terms')) {
+        return { kind: 'agg-order-dir' };
       }
       /* 1439：filters 聚合的**具名子过滤器体**同样是查询：
          {"filters":{"filters":{"x":{ <cursor> }}}} → aggs → filters(类型) → filters(参数) → 名 → {}
