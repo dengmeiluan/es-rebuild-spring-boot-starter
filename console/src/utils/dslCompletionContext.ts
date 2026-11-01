@@ -1227,6 +1227,65 @@ export function mappingKeyItems(): AssistItem[] {
   ];
 }
 
+/** 单个字段的 mapping 配置键（properties.<字段>.{} / fields.<子域>.{} 内）——
+    此前这层仍给 properties/dynamic 等顶层键，analyzer/format/ignore_above 一个都补不出。 */
+export function mappingFieldKeyItems(): AssistItem[] {
+  return [
+    { label: 'type', detail: '字段类型', snippet: true,
+      insertText: '"type": "${1|text,keyword,long,integer,double,float,date,boolean,ip,object,nested|}"' },
+    { label: 'analyzer', detail: '索引分词器', snippet: true, insertText: '"analyzer": "${1:standard}"' },
+    { label: 'search_analyzer', detail: '检索分词器', snippet: true, insertText: '"search_analyzer": "${1:standard}"' },
+    { label: 'normalizer', detail: 'keyword 归一化器', snippet: true, insertText: '"normalizer": "${1:lowercase}"' },
+    { label: 'format', detail: '日期格式（date 字段）', snippet: true, insertText: '"format": "${1:yyyy-MM-dd HH:mm:ss}"' },
+    { label: 'ignore_above', detail: '超过该长度的值不索引（keyword）', snippet: true, insertText: '"ignore_above": ${1:256}' },
+    { label: 'ignore_malformed', detail: '类型不符的值忽略而非报错', snippet: true, insertText: '"ignore_malformed": ${1|false,true|}' },
+    { label: 'index', detail: '是否索引（false=不可检索）', snippet: true, insertText: '"index": ${1|true,false|}' },
+    { label: 'doc_values', detail: '列式存储（排序/聚合依赖）', snippet: true, insertText: '"doc_values": ${1|true,false|}' },
+    { label: 'null_value', detail: '显式 null 的替代值', snippet: true, insertText: '"null_value": "${1:NULL}"' },
+    { label: 'copy_to', detail: '复制到组合字段', snippet: true, insertText: '"copy_to": ["${1:all_text}"]' },
+    { label: 'fields', detail: '多字段（子字段）', snippet: true,
+      insertText: '"fields": {\n  "${1:keyword}": { "type": "keyword" }\n}' },
+    { label: 'properties', detail: '子字段映射（object/nested）', snippet: true,
+      insertText: '"properties": {\n  ${0}\n}' },
+    { label: 'dynamic', detail: '对象的动态映射策略', snippet: true,
+      insertText: '"dynamic": "${1|true,false,strict|}"' },
+    { label: 'enabled', detail: 'object 是否解析（false=整对象原样存档）', snippet: true, insertText: '"enabled": ${1|true,false|}' },
+    { label: 'index_options', detail: '倒排索引选项（text）', snippet: true,
+      insertText: '"index_options": "${1|docs,freqs,positions,offsets|}"' },
+    { label: 'norms', detail: '是否存评分归一因子', snippet: true, insertText: '"norms": ${1|true,false|}' },
+    { label: 'store', detail: '是否单独存储字段值', snippet: true, insertText: '"store": ${1|false,true|}' },
+  ];
+}
+
+/** 光标是否在「单个字段配置对象」里（properties.<字段>.{} / fields.<子域>.{}，可多层嵌套）。
+    只做结构判定——调用方仅在 mapping 档消费（search 的 highlight.fields 同形但另有语义）。 */
+export function mappingFieldConfigAt(doc: string, offset: number): boolean {
+  const text = doc.slice(0, Math.max(0, Math.min(offset, doc.length)));
+  const stack: Array<string | null> = [];
+  let inStr = false; let curKey = '';
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inStr) {
+      if (ch === '"' && !isEscapedQuote(text, i)) {
+        inStr = false;
+        let j = i + 1;
+        while (j < text.length && /\s/.test(text[j])) j++;
+        if (text[j] === ':' && stack.length) stack[stack.length - 1] = curKey;
+      } else curKey += ch;
+      continue;
+    }
+    const cEnd = commentEnd(text, i);
+    if (cEnd !== -1) { i = cEnd - 1; continue; }
+    if (ch === '"') { inStr = true; curKey = ''; continue; }
+    if (ch === '{' || ch === '[') stack.push(null);
+    else if (ch === '}' || ch === ']') stack.pop();
+  }
+  if (stack.length < 3) return false;
+  const owner = stack[stack.length - 3];
+  const field = stack[stack.length - 2];
+  return (owner === 'properties' || owner === 'fields') && !!field;
+}
+
 /* snippet 缩进适配：monaco 多行 snippet 插入是字面量替换，不会叠加当前行缩进——
  深层嵌套位（如 must 数组内，8 列）选骨架后后续行塌到字面量固定 2/0 列（真机实锤）。
  统一口径：换行后叠加「range 起点行前导空白」，snippet 相对缩进保留。 */

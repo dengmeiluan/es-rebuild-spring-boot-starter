@@ -1212,3 +1212,21 @@ describe('1439 模板体内补全分区', () => {
     expect(suggest('{"').map((i: any) => i.label)).toContain('index_patterns');
   });
 });
+
+describe('1439 mapping 字段配置键位', () => {
+  it('properties.<字段> 内给 analyzer/format 等；映射顶层仍给 properties/dynamic', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'mapping' as const } });
+    const fld = suggest('{"properties": {"title": { "').map((i: any) => i.label);
+    expect(fld).toEqual(expect.arrayContaining(['type', 'analyzer', 'format', 'ignore_above', 'doc_values']));
+    expect(fld).not.toContain('index_patterns');
+    const top = suggest('{"').map((i: any) => i.label);
+    expect(top).toEqual(expect.arrayContaining(['properties', 'dynamic', 'type', 'fields']));
+    expect(top).not.toContain('analyzer');
+  });
+
+  it('嵌套对象与多字段子域的字段配置位同样分派', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'mapping' as const } });
+    expect(suggest('{"properties": {"a": {"properties": {"b": { "').map((i: any) => i.label)).toContain('analyzer');
+    expect(suggest('{"properties": {"a": {"fields": {"raw": { "').map((i: any) => i.label)).toContain('analyzer');
+  });
+});

@@ -4,7 +4,7 @@
    none→非 query/aggs 区深层不出层。 */
 import { describe, it, expect } from 'vitest';
 import { dslContext, QUERY_SNIPPETS, ROOT_KEYS } from '../utils/dslCompletionContext';
-import { bodyKindForPath, settingsKeyItems, mappingKeyItems, MAPPING_TYPES, templateKeyItems, templateRegionAt } from '../utils/dslCompletionContext';
+import { bodyKindForPath, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, MAPPING_TYPES, templateKeyItems, templateRegionAt } from '../utils/dslCompletionContext';
 import { lineIndentAt, reindentSnippet, commaAffixes } from '../utils/dslCompletionContext';
 
 const E = (doc: string) => dslContext(doc, doc.length); // 光标在尾
@@ -103,6 +103,30 @@ describe('dslContext 注释跳过（JSONC // 与 /* */，字符串内不算注�
   it('字符串内 // 与 /* 不算注释（inStr 保护优先，回归钉）', () => {
     expect(E('{"query": {"wildcard": {"f": "a//b{c"}}}')).toEqual({ kind: 'root' });
     expect(E('{"query": {"wildcard": {"f": "a/*b{c"}}}')).toEqual({ kind: 'root' });
+  });
+});
+
+describe('1439 mappingFieldConfigAt / mappingFieldKeyItems', () => {
+  it('properties.<字段>.{} 与 fields.<子域>.{} 内为字段配置位；顶层不是', () => {
+    const at = (s: string) => mappingFieldConfigAt(s, s.length);
+    expect(at('{"properties": {"title": { "')).toBe(true);
+    expect(at('{"properties": {"title": {"type": "text", "')).toBe(true);
+    expect(at('{"properties": {"a": {"properties": {"b": { "')).toBe(true);
+    expect(at('{"properties": {"a": {"fields": {"raw": { "')).toBe(true);
+    expect(at('{ "')).toBe(false);
+    expect(at('{"properties": { "')).toBe(false);
+  });
+
+  it('字段配置键表含 analyzer/format/ignore_above 等（骨架都写全了键和值）', () => {
+    const items = mappingFieldKeyItems();
+    const labels = items.map(i => i.label);
+    expect(labels).toEqual(expect.arrayContaining([
+      'type', 'analyzer', 'search_analyzer', 'normalizer', 'format', 'ignore_above',
+      'ignore_malformed', 'index', 'doc_values', 'null_value', 'copy_to', 'fields', 'properties', 'dynamic',
+    ]));
+    for (const it of items) {
+      expect(it.insertText, it.label).toMatch(new RegExp('^"' + it.label + '"\s*:'));
+    }
   });
 });
 

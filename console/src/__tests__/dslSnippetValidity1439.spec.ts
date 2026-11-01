@@ -12,6 +12,7 @@ import {
   QUERY_BODY_KEYS, CLAUSE_VALUE_KEYS, SUGGEST_BODY_KEYS,
   QUERY_SNIPPETS, AGG_SNIPPETS, ROOT_KEY_SNIPPETS, ROOT_KEYS,
   retrieverBodyKeys, queryBodyKeys, clauseValueKeys, suggesterBodyKeys, aggBodyKeys,
+  mappingKeyItems, mappingFieldKeyItems, templateKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -65,6 +66,10 @@ function allProblems(): string[] {
   out.push(...snippetProblems('QS', Object.entries(QUERY_SNIPPETS).map(([k, t]) => ({ text: t, key: k }))));
   out.push(...snippetProblems('AS', Object.entries(AGG_SNIPPETS).map(([k, t]) => ({ text: t.text, key: k }))));
   out.push(...snippetProblems('RK', ROOT_KEYS.map(k => ({ text: ROOT_KEY_SNIPPETS[k].text, key: k }))));
+  /* 1439：mapping/模板档的键骨架同样是「接受即写进文档」的整段键值 */
+  out.push(...snippetProblems('MK', mappingKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('MF', mappingFieldKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('TK', templateKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;
 }
 
