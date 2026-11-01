@@ -38,6 +38,8 @@ describe('1439 聚合体键位补全', () => {
       if (PATH_BODY_AGGS.has(op) && !keys.includes('path')) bad.push(`${op}：缺 path`);
       else if (FIELD_BODY_AGGS.has(op) && !keys.includes('field')) bad.push(`${op}：缺 field`);
       if (!keys.includes('aggs')) bad.push(`${op}：缺嵌套 aggs`);
+      /* 1439：meta 是每个聚合体都合法的伴随键 */
+      if (!keys.includes('meta')) bad.push(`${op}：缺 meta`);
       for (const p of AGG_BODY_PARAMS[op] || []) {
         if (!keys.includes(p.key)) bad.push(`${op}：缺参数 ${p.key}`);
       }

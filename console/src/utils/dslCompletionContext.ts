@@ -264,6 +264,8 @@ export function aggBodyKeys(op: string): Array<{ key: string; insert: string; de
       : '"${1:text}"';
     out.push({ key: p.key, insert: `"${p.key}": ${ph}`, detail: p.kind });
   }
+  /* 1439：每个聚合体都允许 meta（原样回显的元数据），此前补不出来 */
+  out.push({ key: 'meta', insert: '"meta": {\n  ${0}\n}', detail: '聚合元数据（原样回显）' });
   out.push({ key: 'aggs', insert: '"aggs": {\n  ${0}\n}', detail: '嵌套子聚合' });
   return out;
 }

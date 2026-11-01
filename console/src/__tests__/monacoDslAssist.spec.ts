@@ -970,10 +970,10 @@ describe('1439 新补全档（提供器层接线）', () => {
     expect(suggest('{"sort": [{"@timestamp": "').map((i: any) => i.label)).toEqual(['asc', 'desc']);
   });
 
-  it('sort 字段配置键给 order/mode/missing/unmapped_type/nested', () => {
+  it('sort 字段配置键给 order/mode/missing/unmapped_type/nested/format/numeric_type', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
     const labels = suggest('{"sort": [{"@timestamp": {').map((i: any) => i.label);
-    expect(labels).toEqual(expect.arrayContaining(['order', 'mode', 'missing', 'unmapped_type', 'nested']));
+    expect(labels).toEqual(expect.arrayContaining(['order', 'mode', 'missing', 'unmapped_type', 'nested', 'format', 'numeric_type']));
   });
 
   it('highlight.fields 的键给 mapping 字段', () => {

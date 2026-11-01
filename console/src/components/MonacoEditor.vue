@@ -790,6 +790,9 @@ onMounted(() => {
             { key: 'missing', insert: '"missing": "${1:_last}"', detail: '缺值放最前/最后' },
             { key: 'unmapped_type', insert: '"unmapped_type": "${1:keyword}"', detail: '未映射字段按此类型忽略' },
             { key: 'nested', insert: '"nested": { "path": "${1:path}" }', detail: '按嵌套路径排序' },
+            /* 1439：官方 sort 字段参数补两员（日期显示格式 / 数值类型声明） */
+            { key: 'format', insert: '"format": "${1:yyyy-MM-dd}"', detail: '日期显示格式' },
+            { key: 'numeric_type', insert: '"numeric_type": "${1|long,double,date_nanos|}"', detail: '按此数值类型排序' },
           ];
           return { suggestions: opts.map((o, i) => ({
             label: o.key, kind: monaco.languages.CompletionItemKind.Property,
