@@ -4,7 +4,7 @@
    none→非 query/aggs 区深层不出层。 */
 import { describe, it, expect } from 'vitest';
 import { dslContext, QUERY_SNIPPETS, ROOT_KEYS } from '../utils/dslCompletionContext';
-import { bodyKindForPath, bodyLangForPath, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, MAPPING_TYPES, templateKeyItems, templateRegionAt, indexBodyRegionAt, indexBodyKeyItems, aliasKeyItems, aliasConfigAt, reindexBodyRegionAt, reindexBodyKeyItems, sqlBodyKeyItems, SQL_VALUE_SNIPPETS } from '../utils/dslCompletionContext';
+import { bodyKindForPath, bodyLangForPath, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, MAPPING_TYPES, templateKeyItems, templateRegionAt, indexBodyRegionAt, indexBodyKeyItems, aliasKeyItems, aliasConfigAt, reindexBodyRegionAt, reindexBodyKeyItems, sqlBodyKeyItems, SQL_VALUE_SNIPPETS, SQL_KEYWORD_SNIPPETS } from '../utils/dslCompletionContext';
 import { lineIndentAt, reindentSnippet, commaAffixes } from '../utils/dslCompletionContext';
 
 const E = (doc: string) => dslContext(doc, doc.length); // 光标在尾
@@ -122,6 +122,12 @@ describe('1439 SQL 体', () => {
       /* text 已按 JSON 串转义：包一层引号必须能被 JSON.parse 吃下，且内容含 SELECT */
       const parsed = JSON.parse('"' + s2.text + '"');
       expect(parsed).toContain('SELECT');
+    }
+    /* 串内中途关键字：不含引号/反斜杠，插进 JSON 串始终安全 */
+    expect(SQL_KEYWORD_SNIPPETS.length).toBeGreaterThanOrEqual(12);
+    for (const k of SQL_KEYWORD_SNIPPETS) {
+      expect(k.text, k.label).not.toMatch(/["\\]/);
+      expect(() => JSON.parse('{"q": "SELECT ' + k.text + '"}')).not.toThrow();
     }
   });
 });

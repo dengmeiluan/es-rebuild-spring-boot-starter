@@ -1302,6 +1302,27 @@ describe('1439 SQL 体补全', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'settings' as const } });
     expect(suggest('{"query": "')).toEqual([]);
   });
+  it('串内已有内容：只给关键字/函数并在光标处插入，绝不用骨架整串替换', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'sql-body' as const } });
+    const doc = '{"query": "SELECT * FROM my-index WHERE ';
+    const labels = suggest(doc).map((i: any) => i.label);
+    expect(labels).toEqual(expect.arrayContaining(['WHERE', 'GROUP BY', 'LIMIT', 'COUNT(*)']));
+    expect(labels).not.toContain('SELECT *');
+    const w = suggest(doc).find((i: any) => i.label === 'WHERE');
+    const after = acceptSnippet(doc, w);
+    expect(after).toContain('SELECT * FROM my-index');
+    expect(after).toContain('WHERE WHERE ');
+    expect(() => JSON.parse(after + '"}')).not.toThrow();
+    /* 闭合串、光标在串中也同口径（不吞后文结构） */
+    const closed = '{"query": "SELECT * FROM my-index ORDER BY ts "}';
+    const off = closed.indexOf('"}');
+    const items = suggest(closed, off);
+    const lim = items.find((i: any) => i.label === 'LIMIT');
+    expect(lim, '闭合串中途应给关键字').toBeTruthy();
+    const after2 = acceptSnippet(closed, lim);
+    expect(after2).toContain('SELECT * FROM my-index ORDER BY ts');
+    expect(() => JSON.parse(after2)).not.toThrow();
+  });
   it('负控：search 档的 query 值位不出 SELECT 骨架', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'search' as const } });
     expect(suggest('{"query": "').filter((i: any) => /^SELECT /.test(i.label))).toEqual([]);

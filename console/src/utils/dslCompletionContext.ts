@@ -1506,6 +1506,29 @@ export const SQL_VALUE_SNIPPETS: Array<{ label: string; text: string; detail: st
   { label: 'SELECT GROUP BY', text: 'SELECT field, COUNT(*) AS c FROM \\"my-index\\" GROUP BY field LIMIT 100', detail: '分组计数' },
 ];
 
+/** SQL 串**中途**的关键字/函数候选——值位已有内容时只插入不替换（此前整串被骨架覆盖）。
+    文本不含引号/反斜杠，落进 JSON 串内始终安全。 */
+export const SQL_KEYWORD_SNIPPETS: Array<{ label: string; text: string; detail: string }> = [
+  { label: 'WHERE', text: 'WHERE ', detail: '条件' },
+  { label: 'AND', text: 'AND ', detail: '与' },
+  { label: 'OR', text: 'OR ', detail: '或' },
+  { label: 'NOT', text: 'NOT ', detail: '取反' },
+  { label: 'GROUP BY', text: 'GROUP BY ', detail: '分组' },
+  { label: 'HAVING', text: 'HAVING ', detail: '分组后过滤' },
+  { label: 'ORDER BY', text: 'ORDER BY ', detail: '排序' },
+  { label: 'LIMIT', text: 'LIMIT ', detail: '限制行数' },
+  { label: 'JOIN', text: 'JOIN ', detail: '连接' },
+  { label: 'LIKE', text: 'LIKE ', detail: '模式匹配' },
+  { label: 'IN', text: 'IN (', detail: '集合' },
+  { label: 'IS NULL', text: 'IS NULL', detail: '空值判断' },
+  { label: 'BETWEEN', text: 'BETWEEN ', detail: '区间' },
+  { label: 'COUNT(*)', text: 'COUNT(*)', detail: '计数' },
+  { label: 'AVG(', text: 'AVG(', detail: '平均' },
+  { label: 'SUM(', text: 'SUM(', detail: '求和' },
+  { label: 'MIN(', text: 'MIN(', detail: '最小' },
+  { label: 'MAX(', text: 'MAX(', detail: '最大' },
+];
+
 /** 更新文档体（POST/PUT /<索引>/_update/<id>）的根键 */
 export function updateBodyKeyItems(): AssistItem[] {
   return [
