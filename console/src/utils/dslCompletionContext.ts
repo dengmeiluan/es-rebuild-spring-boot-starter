@@ -1104,7 +1104,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1223,6 +1223,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   if (p.includes('_sql')) return 'sql-body';
   /* 1439：_rollover 的体是 {conditions,settings,mappings,aliases}，不是无档 */
   if (p.includes('_rollover')) return 'rollover-body';
+  /* 1439：按查询删/改的体是 {query,max_docs,…}——query 内要回落到整棵查询补全 */
+  if (p.includes('_delete_by_query')) return 'dbq-body';
+  if (p.includes('_update_by_query')) return 'ubq-body';
   if (p.includes('/_search/scroll') || p.includes('/_clear_scroll') || p.includes('/_aliases')
       || p.includes('/_mget')
       || p.includes('/_scripts') || p.includes('/_script/')
@@ -1491,7 +1494,7 @@ export function updateBodyKeyItems(): AssistItem[] {
 }
 
 /** 更新体里 script 对象的键（source/id 二选一，lang 默认 painless） */
-export function updateScriptKeyItems(): AssistItem[] {
+export function scriptObjectKeyItems(): AssistItem[] {
   return [
     { label: 'source', detail: 'painless 脚本文本', snippet: true,
       insertText: '"source": "${1:ctx._source.field = params.value}"' },
@@ -1548,6 +1551,43 @@ export function rolloverBodyRegionAt(doc: string, offset: number):
   if (rootKey === 'settings') return 'settings';
   if (rootKey === 'mappings' || rootKey === 'mapping') return 'mapping';
   if (rootKey === 'aliases') return 'aliases';
+  return 'deep';
+}
+
+/** 按查询删除体（POST /<索引>/_delete_by_query）的根键——官方体字段只有这四类，
+    conflicts/refresh/requests_per_second 是 URL 参数不是体字段。 */
+export function dbqBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'query', detail: '选择要删除的文档', snippet: true,
+      insertText: '"query": {\n  "match_all": {}\n}' },
+    { label: 'max_docs', detail: '最多删除多少条', snippet: true, insertText: '"max_docs": ${1:1000}' },
+    { label: 'slices', detail: '并行切片数（auto 或数字）', snippet: true, insertText: '"slices": "${1:auto}"' },
+    { label: 'slice', detail: '手工切片（id/max 自己分配）', snippet: true,
+      insertText: '"slice": {\n  "id": ${1:0},\n  "max": ${2:2}\n}' },
+  ];
+}
+
+/** 按查询更新体（POST /<索引>/_update_by_query）的根键——比 DBQ 多 script 与 pipeline。 */
+export function ubqBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'query', detail: '选择要更新的文档', snippet: true,
+      insertText: '"query": {\n  "match_all": {}\n}' },
+    { label: 'script', detail: '对命中文档执行的脚本', snippet: true,
+      insertText: '"script": {\n  "source": "${1:ctx._source.field = params.value}"\n}' },
+    { label: 'max_docs', detail: '最多更新多少条', snippet: true, insertText: '"max_docs": ${1:1000}' },
+    { label: 'pipeline', detail: '写入前经过的 ingest pipeline', snippet: true, insertText: '"pipeline": "${1:my-pipeline}"' },
+    { label: 'slices', detail: '并行切片数（auto 或数字）', snippet: true, insertText: '"slices": "${1:auto}"' },
+  ];
+}
+
+/** 按查询删/改体的区域：根层给根键；query 内交给 search 三档（整棵查询补全）；
+    script 内给脚本键（仅 UBQ 有 script）；更深层不出档。 */
+export function queryWriteRegionAt(doc: string, offset: number): 'root' | 'query' | 'script' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  const rootKey = stack[0] ?? null;
+  if (rootKey === 'query') return 'query';
+  if (rootKey === 'script') return stack.length === 2 ? 'script' : 'deep';
   return 'deep';
 }
 

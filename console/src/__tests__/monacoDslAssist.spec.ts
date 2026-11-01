@@ -1345,3 +1345,31 @@ describe('1439 更新体 / 滚动体键位补全', () => {
     expect(suggest('{"field": "').map((i: any) => i.label)).toEqual(expect.arrayContaining(['title', 'price']));
   });
 });
+
+describe('1439 按查询删/改体键位补全', () => {
+  it('ubq 体：根键五项（接受即合法）；query 内回落整棵查询补全；script 内给脚本键', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'ubq-body' as const } });
+    const root = suggest('{"');
+    expect(root.map((i: any) => i.label)).toEqual(['query', 'script', 'max_docs', 'pipeline', 'slices']);
+    for (const i of root) {
+      expect(() => JSON.parse(acceptSnippet('{', i) + '}'), i.label + ' 接受后非法').not.toThrow();
+    }
+    expect(suggest('{"query": {"').map((i: any) => i.label)).toContain('match');
+    expect(suggest('{"query": {"bool": {"').map((i: any) => i.label)).toContain('must');
+    expect(suggest('{"script": {"').map((i: any) => i.label)).toEqual(['source', 'lang', 'params', 'id']);
+    expect(suggest('{"script": {"params": {"')).toEqual([]);
+    /* 负控：根键位不掺 search 独有键（sort/aggs 写进 UBQ 会被 ES 拒） */
+    expect(root.map((i: any) => i.label)).not.toContain('aggs');
+    expect(root.map((i: any) => i.label)).not.toContain('sort');
+  });
+
+  it('dbq 体：根键四项，不出 script/pipeline；query 内同样回落；深层不出根键', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'dbq-body' as const } });
+    const root = suggest('{"');
+    expect(root.map((i: any) => i.label)).toEqual(['query', 'max_docs', 'slices', 'slice']);
+    expect(root.map((i: any) => i.label)).not.toContain('script');
+    expect(root.map((i: any) => i.label)).not.toContain('pipeline');
+    expect(suggest('{"query": {"').map((i: any) => i.label)).toContain('match');
+    expect(suggest('{"slice": {"')).toEqual([]);
+  });
+});

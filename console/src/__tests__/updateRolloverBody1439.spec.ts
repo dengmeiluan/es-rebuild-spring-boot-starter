@@ -7,15 +7,15 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
-  bodyKindForPath, updateBodyKeyItems, updateScriptKeyItems, updateBodyRegionAt,
+  bodyKindForPath, updateBodyKeyItems, scriptObjectKeyItems, updateBodyRegionAt,
   rolloverBodyKeyItems, rolloverConditionKeyItems, rolloverBodyRegionAt,
 } from '../utils/dslCompletionContext';
 
 describe('1439 更新体 / 滚动体分档', () => {
-  it('bodyKind 分档：_update 单列、_update_by_query 不误伤、_rollover 单列、_doc 回归为 doc', () => {
+  it('bodyKind 分档：_update 单列、_update_by_query 走 ubq 专档、_rollover 单列、_doc 回归为 doc', () => {
     expect(bodyKindForPath('/idx/_update/1', 'POST')).toBe('update-body');
     expect(bodyKindForPath('/idx/_update/1?refresh=wait_for', 'POST')).toBe('update-body');
-    expect(bodyKindForPath('/idx/_update_by_query', 'POST')).toBe('search');
+    expect(bodyKindForPath('/idx/_update_by_query', 'POST')).toBe('ubq-body');
     expect(bodyKindForPath('/logs/_rollover', 'POST')).toBe('rollover-body');
     expect(bodyKindForPath('/logs/_doc/1', 'PUT')).toBe('doc');
     expect(bodyKindForPath('/logs/_create/1', 'PUT')).toBe('doc');
@@ -50,7 +50,7 @@ describe('1439 更新体 / 滚动体分档', () => {
     expect(updateBodyKeyItems().map(i => i.label)).toEqual([
       'doc', 'upsert', 'doc_as_upsert', 'script', 'scripted_upsert', 'detect_noop', '_source',
     ]);
-    expect(updateScriptKeyItems().map(i => i.label)).toEqual(['source', 'lang', 'params', 'id']);
+    expect(scriptObjectKeyItems().map(i => i.label)).toEqual(['source', 'lang', 'params', 'id']);
     expect(rolloverBodyKeyItems().map(i => i.label)).toEqual(['conditions', 'settings', 'mappings', 'aliases']);
     const cond = rolloverConditionKeyItems().map(i => i.label);
     expect(cond).toEqual([

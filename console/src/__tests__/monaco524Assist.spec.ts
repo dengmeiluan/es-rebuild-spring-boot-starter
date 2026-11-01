@@ -196,9 +196,9 @@ describe('524 ① BodyKind doc 档', () => {
     expect(bodyKindForPath('/{index}/_DOC/1?pretty')).toBe('doc');
   });
 
-  it('分支顺序安全钉：_update_by_query/_delete_by_query 仍 search（doc 前缀不吃 search 族）', () => {
-    expect(bodyKindForPath('/{index}/_update_by_query')).toBe('search');
-    expect(bodyKindForPath('/{index}/_delete_by_query')).toBe('search');
+  it('分支顺序安全钉：_update_by_query/_delete_by_query 不落 update-body/doc（1439 起各有专档）', () => {
+    expect(bodyKindForPath('/{index}/_update_by_query')).toBe('ubq-body');
+    expect(bodyKindForPath('/{index}/_delete_by_query')).toBe('dbq-body');
     expect(bodyKindForPath('/{index}/_bulk')).toBe('none');
     expect(bodyKindForPath('/my-index')).toBe('search');
   });

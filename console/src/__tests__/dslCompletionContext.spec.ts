@@ -276,9 +276,12 @@ describe('bodyKindForPath', () => {
 
   it('search 族 → search', () => {
     for (const p of ['/{index}/_search', '/_search', '/{index}/_count', '/{index}/_validate/query',
-      '/{index}/_explain/1', '/{index}/_update_by_query', '/{index}/_delete_by_query']) {
+      '/{index}/_explain/1']) {
       expect(bodyKindForPath(p), p).toBe('search');
     }
+    /* 1439 迁移：按查询删/改不再按 search 处理（根键是 query/max_docs/…，不是 search 全套） */
+    expect(bodyKindForPath('/{index}/_update_by_query')).toBe('ubq-body');
+    expect(bodyKindForPath('/{index}/_delete_by_query')).toBe('dbq-body');
   });
   it('query string / 大小写容错', () => {
     expect(bodyKindForPath('/{index}/_Search?pretty')).toBe('search');
