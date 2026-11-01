@@ -739,6 +739,21 @@ onMounted(() => {
             sortText: dslSortText(i, k),
           })) };
         }
+        if (ctx.kind === 'field-key') {
+          /* 1439：字段名作键（highlight.fields）——字段来自 mapping，键值给空配置对象 */
+          const indent = lineIndentAt(doc, startOff);
+          const affix = commaAffixes(doc, startOff, end);
+          const fields = props.dslAssist?.fields?.() ?? [];
+          return { suggestions: fields.map((f, i) => ({
+            label: f.path, kind: monaco.languages.CompletionItemKind.Property,
+            detail: f.type || '字段',
+            insertText: wrapSnippet(doc, startOff, end, indent, '"' + f.path + '": {}', affix),
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range, command: ACCEPT_FORMAT_COMMAND,
+            filterText: dslFilterText(f.path),
+            sortText: dslSortText(i, f.path),
+          })) };
+        }
         if (ctx.kind === 'agg-body-key') {
           /* 1439：聚合体内部键位——字段键/参数键/嵌套 aggs（与构建器、GenericParams 同源） */
           const indent = lineIndentAt(doc, startOff);

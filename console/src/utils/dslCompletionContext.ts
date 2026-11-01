@@ -19,6 +19,8 @@ type DslCtx = { kind: 'root' } | { kind: 'query-type' } | { kind: 'field'; claus
   | { kind: 'suggester-type' }
   /* 1439：聚合体键位（terms: { 内）——参数键/字段键/嵌套 aggs */
   | { kind: 'agg-body-key'; op: string }
+  /* 1439：字段名作键的容器（highlight.fields { <字段>: {} }） */
+  | { kind: 'field-key' }
   | { kind: 'array-elem-key'; owner: string } | { kind: 'none' };
 
 export const QUERY_SNIPPETS: Record<string, string> = {
@@ -416,6 +418,12 @@ export function dslContext(doc: string, offset: number): DslCtx {
           && stack[stack.length - 4].lastKey === 'filters' && !valuePos) {
         return { kind: 'query-type' };
       }
+    }
+    /* 1439：highlight.fields 的键是**字段名**——此前这里只给文档里出现过的词，
+       而高亮字段必须来自 mapping（打错就是静默不高亮）。 */
+    if (!valuePos && stack.length >= 3 && stack[stack.length - 1].type === '{'
+        && keys[keys.length - 2] === 'fields' && keys[keys.length - 3] === 'highlight') {
+      return { kind: 'field-key' };
     }
     /* 1439：建议器类型键位——suggest → 建议器名 → {} 的内层键位（与 aggs 同形） */
     const sIdx = keys.lastIndexOf('suggest');
