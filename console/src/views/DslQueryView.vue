@@ -831,7 +831,7 @@ import { useScopedDraft } from '../composables/useScopedDraft';
 import { useQueryHistoryStore } from '../stores/queryHistory';
 import { stripJsonComments, tryParse, prettyJson, highlightJson } from '../utils/jsonc';
 import { friendlyEsError } from '../utils/esError'; /* ：六写路径裸 err 合并单源翻译 */
-import { loadVars, saveVars, applyVars } from '../utils/vars';
+import { loadVars, saveVars, applyVars, missingVars } from '../utils/vars';
 import { useUrlState, readHashQuery, usePref } from '../composables/urlState';
 import { askConfirm } from '../composables/confirm';
 import { generate, type CodeLang } from '../utils/codegen';
@@ -1649,6 +1649,17 @@ let runSeq = 0;
 async function execQuery(recordHist = false) {
   if (running.value) return; /* ：并发重入守卫——Monaco @execute 与 RT @refresh 路径此前无守卫，连按 Ctrl+Enter 会覆盖 abortCtl 丢请求（window 全局键路径 onGlobalRunKey 已有同款守卫） */
   if (!store.pickedIdx) return;
+  /* 1439：未定义变量必须在发送前拦下（与 DevTools execSend 同口径）——
+     applyVars 会把 `${x}` 原样留下，ES 侧要么当字面量静默 0 命中、要么 400，
+     用户看不出是变量没定义。missingVars 此前只有实现和单测、没有调用方。 */
+  const missing = missingVars(dsl.value);
+  if (missing.length) {
+    store.notify('warning', '变量未定义：' + missing.map(n => '${' + n + '}').join('、') + '——已阻止发送（否则占位符会被当成字面量发给 ES）', {
+      duration: 6500,
+      action: { label: '去定义变量', onClick: () => { varsOpen.value = true; } },
+    });
+    return;
+  }
   const cleaned = applyVars(stripJsonComments(dsl.value));
   if (!tryParse(cleaned)) {
     /* 1439：旧结果不会自动清空，必须常驻标记（下方表格不是这一版 DSL 的结果） */
