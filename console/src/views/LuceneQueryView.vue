@@ -226,6 +226,9 @@
                 <button :class="{ on: viewMode === 'table' }" :aria-pressed="viewMode === 'table'" @click="viewMode = 'table'">表格</button>
                 <button :class="{ on: viewMode === 'json' }" :aria-pressed="viewMode === 'json'" @click="viewMode = 'json'">文档 JSON</button>
               </div>
+              <!-- 1439：改词/改排序未重跑时结果还是上一次的——DSL/索引工作区同款芯片 -->
+              <span v-if="resultStale" class="pill warn stale-chip" role="status"
+                title="当前查询已修改但还没执行——下方结果仍来自上一次执行（回车或点执行更新）">结果已过期</span>
               <button class="btn ghost xs" @click="exportJsonl">
                 <FileDown :size="11" /> JSONL
               </button>
@@ -344,6 +347,7 @@ import { errPreHtml, errMeta } from '../utils/errPre';
 import { useUrlState, useIdxState, usePref } from '../composables/urlState';
 import { usePagerSize, PAGER_SIZES } from '../composables/usePagerSize';
 import { useQueryRun } from '../composables/useQueryRun';
+import { useResultStale } from '../composables/useResultStale';
 import { useIndexFieldTypes } from '../composables/useIndexFieldTypes';
 import { resolveSortField } from '../utils/sortField';
 import { appendLuceneClause } from '../utils/filterMerge';
@@ -413,6 +417,13 @@ function goPage(p: number) {
 }
 const sortField = useUrlState('sort');
 const sortOrder = useUrlState('order', 'desc') as Ref<'desc' | 'asc'>;
+/* 1439：结果「已过期」判据（DSL 工作台同款，useResultStale 共享件）——
+   查询词/排序/翻页偏移改了但还没重跑时，结果表里仍是上一次执行的内容。
+   签名取「实际请求口径」：sortField 在执行时会被 resolveSortField 归一
+   （title → title.keyword），故快照在归一后、发请求前取，否则一执行完就误报过期；
+   from 手输框没有执行副作用，只能靠这里标过期（分页器/页大小档是自动重跑）。 */
+const runSig = computed(() => JSON.stringify([qs.value, sortField.value.trim(), sortOrder.value, from.value, size.value]));
+const { stale: resultStale, markRun: markRunSig } = useResultStale(() => runSig.value, () => searched.value);
 /* 1402：表头排序=服务端排序（此前 QRT 本地档只排「当前页」——用户点了箭头，
  跨页顺序却没变，是「看起来排了、换页又乱」的经典心智错位）。内核 remote 档只
   emit 意图，这里写回 sortField/sortOrder 并回第一页重查；箭头由 sync-sort 回填。 */
@@ -527,6 +538,21 @@ const runErr = ref('');
 const runErrRaw = ref<unknown>(null);
 /* runErr 面板标题行的人话摘要（pre 仍保全文） */
 const friendlyRunErr = computed(() => friendlyEsError(runErr.value));
+/* 切索引清结果（DSL 工作台 watch(pickedIdx) 同语义）——旧索引的命中留在新索引标签下
+   就是「结果看起来属于当前索引」的假现场；查询词草稿保留，等用户自己回车。 */
+watch(index, (n, o) => {
+  if (n === o) return;
+  hits.value = [];
+  total.value = 0;
+  totalGte.value = false;
+  took.value = 0;
+  totalShards.value = 0;
+  successfulShards.value = 0;
+  searched.value = false;
+  from.value = 0;
+  runErr.value = '';
+  runErrRaw.value = null;
+});
 /* 结果头元信息串（MetaStrip 值对）——took 已合并 TookBadge（只留 shards */
 const metaItems = computed(() => [
   { value: `${successfulShards.value}/${totalShards.value}`, label: 'shards' },
@@ -599,8 +625,12 @@ async function doRun() {
       }
       sortField.value = res.field;
     }
-    const r: any = await api.luceneSearch(index.value.trim(), qs.value.trim(), size.value, from.value,
+    const sigAtSend = runSig.value;
+    const idxAtSend = index.value.trim();
+    const r: any = await api.luceneSearch(idxAtSend, qs.value.trim(), size.value, from.value,
       sfRaw ? sortField.value.trim() : undefined, sortOrder.value, signal);
+    /* 在途切索引：旧索引响应不得落进新索引现场（IndexHub runDocs 同判据） */
+    if (index.value.trim() !== idxAtSend) return;
     took.value = r.took || 0;
     totalShards.value = r._shards?.total || 0;
     successfulShards.value = r._shards?.successful || 0;
@@ -609,6 +639,7 @@ async function doRun() {
     total.value = typeof r.hits?.total === 'object' ? (r.hits.total.value || 0) : (r.hits?.total || 0);
     totalGte.value = totalOf(r.hits).gte;
     searched.value = true;
+    markRunSig(sigAtSend);
     /* 执行成功记跨模式历史（query_string 原文 + 目标索引） */
     /* 记录查询耗时 */
     useQueryHistoryStore().push('lucene', qs.value.trim(), index.value.trim() || undefined, took.value || undefined);

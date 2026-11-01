@@ -192,6 +192,9 @@
                     <div class="seg ih-view-seg">
                       <button v-for="v in IH_VIEWS" :key="v.k" :class="{ on: docsView === v.k }" @click="docsView = v.k">{{ v.t }}</button>
                     </div>
+                    <!-- 1439：改了检索词没重新检索时，表格里仍是上一次的结果——DSL/Lucene 同款芯片 -->
+                    <span v-if="docsStale" class="pill warn stale-chip" role="status"
+                      title="当前检索词已修改但还没执行——下方结果仍来自上一次检索（回车或点「检索」更新）">结果已过期</span>
                     <Pagination v-if="docsView !== 'json' && docsView !== 'tree'"
                       :page="docsPage" :total-pages="docsTotalPages" :page-size="docsSize"
                       :disabled="docsLoading" @update:page="goDocsPage" @update:page-size="setDocsSize" />
@@ -763,6 +766,7 @@ import { useAuthStore } from '../stores/auth';
 import { useUrlState, useIdxState, usePref } from '../composables/urlState';
 import { useTierCycle } from '../composables/useTierCycle'; /* ：抽屉宽度档循环合并统一件（ih.drawerW 键/档位零迁移） */
 import { useScopedDraft } from '../composables/useScopedDraft';
+import { useResultStale } from '../composables/useResultStale';
 import { useHitLocate } from '../composables/useHitNav';
 import { useRowNav } from '../composables/useRowNav';
 import { askConfirm } from '../composables/confirm';
@@ -1287,6 +1291,10 @@ const docsTotal = ref(0);
 const docsTook = ref(-1);
 const docsLoading = ref(false);
 const docsRan = ref(false);
+/* 1439：结果「已过期」判据（DSL/Lucene 同款，useResultStale 共享件）——
+   检索词改了但还没按回车/点检索时，表格里仍是上一次执行的内容。
+   空词=浏览全部文档，签名就是空串，故哨兵用 null 而不是空串判「从未执行」。 */
+const { stale: docsStale, markRun: markDocsRun } = useResultStale(() => docsQ.value, () => docsRan.value);
 const docsErr = ref('');
 /* 原始错误对象旁路（errMeta 读 code/endpoint；DslQueryView queryErrRaw 同款——
    catch 压串丢结构化字段，失败条双参展示要喂原对象） */
@@ -1445,6 +1453,8 @@ async function runDocs() {
   const seq = ++docsSeq;
   docsLoading.value = true;
   const idx = cur.value;
+  /* 1439：快照取发送时的检索词——await 期间继续输入，结果回来仍要标过期 */
+  const sigAtSend = docsQ.value;
   const signal = docsQr.begin(); /*  P0-A：signal 传 post() init；取消以 AbortError 落此 */
   try {
     /* 字段源到位再裁决直方图字段（DQ preloadMapping().then(firstRun) 等位
@@ -1474,6 +1484,7 @@ async function runDocs() {
     docsShards.value = (r as any)._shards ?? r.shards ?? null; /* ：分片统计旁路（黄条消费位；qryResp 直通对位——响应不整存只留此件） */
     docsPartialDismissed.value = false; /* ：新响应黄条自动重现（DQ watch(resp) 等价语义——docs 响应不整存，直接在成功路径复位，免对象身份判定） */
     docsRan.value = true;
+    markDocsRun(sigAtSend);
     docsErr.value = '';
     docsErrRaw.value = null; /* 原始错误对象随清（失败条旁路态） */
     docsHist.onResp(r); /* ：响应 aggregations.__hist 回填直方图桶 */

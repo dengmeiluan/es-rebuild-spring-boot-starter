@@ -467,6 +467,8 @@ select option { background: var(--bg1); color: var(--tx0); }
 /* （轨5）：6px 精确等值收 --sp-1h（1px 微衬刻意值保字面，wt-act 554 判例同款） */
 .pill.xs { font-size: var(--fs-2xs); padding: 1px var(--sp-1h); }
 .pill.sm { font-size: var(--fs-2xs); padding: 1.5px 7px; }
+/* 结果「已过期」芯片（DSL/Lucene/索引工作区共用形态）：表格工具行里不许被压缩换行 */
+.stale-chip { flex: none; white-space: nowrap; }
 .pill.cyan { background: var(--dv-cyan-soft); color: var(--cyan); }
 .pill.blue { background: var(--dv-blue-soft); color: var(--blue); }
 .pill.violet { background: var(--dv-violet-soft); color: var(--violet); }
