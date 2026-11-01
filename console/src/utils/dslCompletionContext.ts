@@ -1107,7 +1107,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1243,7 +1243,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
      _execute 是执行脚本，体形态不同，不并进本档 */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_scripts\/[^/]+(\/|$)/.test(p)
       && !p.includes('_execute')) return 'stored-script-body';
-  if (p.includes('/_search/scroll') || p.includes('/_clear_scroll') || p.includes('/_aliases')
+  /* 1439：POST /_aliases 的体是 {actions:[{add|remove|remove_index:{…}}]}——结构化体 */
+  if (/(^|\/)_aliases(\/|$)/.test(p)) return 'aliases-body';
+  if (p.includes('/_search/scroll') || p.includes('/_clear_scroll')
       || p.includes('/_scripts') || p.includes('/_script/')
       || p.includes('/_close') || p.includes('/_open') || p.includes('/_forcemerge')) return 'none';
   return 'search';
@@ -1695,6 +1697,78 @@ export function sqlFilterRegionAt(doc: string, offset: number): 'root' | 'query'
   return 'deep';
 }
 
+/** 别名批量动作体（POST /_aliases）的根键 */
+export function aliasesBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'actions', detail: '一条或多条别名动作', snippet: true,
+      insertText: '"actions": [\n  { "add": { "index": "${1:my-index}", "alias": "${2:my-alias}" } }\n]' },
+  ];
+}
+
+/** actions[] 元素的动作键 */
+export function aliasActionKeyItems(): AssistItem[] {
+  return [
+    { label: 'add', detail: '给索引加别名（可带 filter/routing）', snippet: true,
+      insertText: '"add": {\n  "index": "${1:my-index}",\n  "alias": "${2:my-alias}"\n}' },
+    { label: 'remove', detail: '移除索引上的别名', snippet: true,
+      insertText: '"remove": {\n  "index": "${1:my-index}",\n  "alias": "${2:my-alias}"\n}' },
+    { label: 'remove_index', detail: '连索引一起删除（危险）', snippet: true,
+      insertText: '"remove_index": {\n  "index": "${1:my-index}"\n}' },
+  ];
+}
+
+/** add 动作的配置键（官方 add 支持别名过滤/路由/写索引等） */
+export function aliasAddConfigKeyItems(): AssistItem[] {
+  return [
+    { label: 'index', detail: '目标索引', snippet: true, insertText: '"index": "${1:my-index}"' },
+    { label: 'indices', detail: '多个目标索引', snippet: true, insertText: '"indices": ["${1:my-index}"]' },
+    { label: 'alias', detail: '别名', snippet: true, insertText: '"alias": "${1:my-alias}"' },
+    { label: 'aliases', detail: '多个别名', snippet: true, insertText: '"aliases": ["${1:my-alias}"]' },
+    { label: 'filter', detail: '别名过滤查询（只透出命中文档）', snippet: true, insertText: '"filter": {\n  ${0}\n}' },
+    { label: 'routing', detail: '读写路由值', snippet: true, insertText: '"routing": "${1:routing}"' },
+    { label: 'index_routing', detail: '写入路由值', snippet: true, insertText: '"index_routing": "${1:routing}"' },
+    { label: 'search_routing', detail: '检索路由值', snippet: true, insertText: '"search_routing": "${1:routing}"' },
+    { label: 'is_write_index', detail: '是否作为该别名的写索引', snippet: true,
+      insertText: '"is_write_index": ${1|true,false|}' },
+    { label: 'is_hidden', detail: '别名是否隐藏', snippet: true, insertText: '"is_hidden": ${1|false,true|}' },
+    { label: 'must_exist', detail: '目标索引/别名不存在时是否报错', snippet: true,
+      insertText: '"must_exist": ${1|false,true|}' },
+  ];
+}
+
+/** remove 动作的配置键（只到索引/别名粒度） */
+export function aliasRemoveConfigKeyItems(): AssistItem[] {
+  return [
+    { label: 'index', detail: '目标索引', snippet: true, insertText: '"index": "${1:my-index}"' },
+    { label: 'indices', detail: '多个目标索引', snippet: true, insertText: '"indices": ["${1:my-index}"]' },
+    { label: 'alias', detail: '别名', snippet: true, insertText: '"alias": "${1:my-alias}"' },
+    { label: 'aliases', detail: '多个别名', snippet: true, insertText: '"aliases": ["${1:my-alias}"]' },
+    { label: 'must_exist', detail: '目标不存在时是否报错', snippet: true, insertText: '"must_exist": ${1|false,true|}' },
+  ];
+}
+
+/** remove_index 动作的配置键（只认索引） */
+export function aliasRemoveIndexConfigKeyItems(): AssistItem[] {
+  return [
+    { label: 'index', detail: '要删除的索引', snippet: true, insertText: '"index": "${1:my-index}"' },
+    { label: 'indices', detail: '要删除的多个索引', snippet: true, insertText: '"indices": ["${1:my-index}"]' },
+  ];
+}
+
+/** 别名动作体区域：根 actions / actions 元素动作键 / 各动作配置对象 / 更深层 */
+export function aliasesBodyRegionAt(doc: string, offset: number):
+  'root' | 'action' | 'config-add' | 'config-remove' | 'config-remove-index' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack.length === 3 && stack[0] === 'actions') return 'action';
+  if (stack.length === 4 && stack[0] === 'actions') {
+    if (stack[2] === 'add') return 'config-add';
+    if (stack[2] === 'remove') return 'config-remove';
+    if (stack[2] === 'remove_index') return 'config-remove-index';
+  }
+  return 'deep';
+}
+
 /* 结构体根键清单——与补全目录同源（目录改名时 lint 白名单自动跟随），
    DevTools dtLint 对未知根键给「ES 会拒绝」告警。 */
 export const updateBodyRootKeys = updateBodyKeyItems().map(i => i.label);
@@ -1707,6 +1781,7 @@ export const templateSearchBodyRootKeys = templateSearchBodyKeyItems().map(i => 
 export const sqlBodyRootKeys = sqlBodyKeyItems().map(i => i.label);
 export const mgetBodyRootKeys = mgetBodyKeyItems().map(i => i.label);
 export const storedScriptBodyRootKeys = storedScriptBodyKeyItems().map(i => i.label);
+export const aliasesBodyRootKeys = aliasesBodyKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

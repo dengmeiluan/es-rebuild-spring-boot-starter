@@ -233,6 +233,20 @@ describe('532 dtLint 档路由五分派（视图级 · 底部条观测）', () =
     await settle(6);
     expect(lintBar(host), '合法体应静默').toBeNull();
   });
+
+  it('⑫ 别名动作体根键校验：action → 最接近 actions；合法体静默', async () => {
+    const { host } = await mountView(DevToolsView, '#/devtools');
+    await type(dtInp(host), '/_aliases');
+    bodyCap().emit('update:modelValue', '{"action":[{"add":{"index":"a","alias":"b"}}]}');
+    await settle(6);
+    const bar = lintBar(host);
+    expect(bar, '别名动作体根键笔误应有底部条').toBeTruthy();
+    expect(bar!.textContent).toContain('别名动作体');
+    expect(bar!.textContent).toContain('actions');
+    bodyCap().emit('update:modelValue', '{"actions":[{"add":{"index":"a","alias":"b"}}]}');
+    await settle(6);
+    expect(lintBar(host), '合法体应静默').toBeNull();
+  });
 });
 
 describe('532 lintSettingsBody（纯函数）', () => {

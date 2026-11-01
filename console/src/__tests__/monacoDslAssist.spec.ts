@@ -1445,3 +1445,28 @@ describe('1439 SQL filter 回落 / 存储脚本体', () => {
     expect(suggest('{"script": {"params": {"')).toEqual([]);
   });
 });
+
+describe('1439 别名批量动作体键位补全', () => {
+  it('四层区域：根 actions / 动作三键 / add 配置键 / remove_index 只给索引；深层压制', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'aliases-body' as const } });
+    const root = suggest('{"');
+    expect(root.map((i: any) => i.label)).toEqual(['actions']);
+    expect(() => JSON.parse(acceptSnippet('{', root[0]) + '}')).not.toThrow();
+    expect(suggest('{"actions": [{"').map((i: any) => i.label)).toEqual(['add', 'remove', 'remove_index']);
+
+    const addItems = suggest('{"actions": [{"add": {"');
+    expect(addItems.map((i: any) => i.label)).toEqual([
+      'index', 'indices', 'alias', 'aliases', 'filter', 'routing', 'index_routing',
+      'search_routing', 'is_write_index', 'is_hidden', 'must_exist',
+    ]);
+    for (const i of addItems) {
+      expect(() => JSON.parse(acceptSnippet('{"actions": [{"add": {"', i) + '}}]}'), i.label + ' 接受后非法').not.toThrow();
+    }
+    const removeLabels = suggest('{"actions": [{"remove": {"').map((i: any) => i.label);
+    expect(removeLabels).toEqual(['index', 'indices', 'alias', 'aliases', 'must_exist']);
+    expect(removeLabels).not.toContain('filter');
+    expect(suggest('{"actions": [{"remove_index": {"').map((i: any) => i.label)).toEqual(['index', 'indices']);
+    /* 负控：filter 查询对象内不再给别名配置键 */
+    expect(suggest('{"actions": [{"add": {"filter": {"')).toEqual([]);
+  });
+});

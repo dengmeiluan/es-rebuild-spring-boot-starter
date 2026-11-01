@@ -151,10 +151,10 @@ describe('1439 重建索引体（_reindex）', () => {
 });
 
 describe('1439 别名体', () => {
-  it('PUT /idx/_alias/<名> → alias-body；/_aliases 动作体仍 none', () => {
+  it('PUT /idx/_alias/<名> → alias-body；/_aliases 动作体 1439 起单列 aliases-body', () => {
     expect(bodyKindForPath('/idx/_alias/a1', 'PUT')).toBe('alias-body');
     expect(bodyKindForPath('/_alias/a1', 'PUT')).toBe('alias-body');
-    expect(bodyKindForPath('/_aliases', 'POST')).toBe('none');
+    expect(bodyKindForPath('/_aliases', 'POST')).toBe('aliases-body');
     expect(bodyKindForPath('/idx/_alias/a1', 'GET')).toBe('alias-body'); /* GET 无体，bodyKind 不影响 */
   });
 
@@ -258,13 +258,14 @@ describe('bodyKindForPath', () => {
     for (const p of ['/_index_template/t1', '/_component_template/c1', '/_template/legacy']) {
       expect(bodyKindForPath(p), p).toBe('template');
     }
-    for (const p of ['/idx/_search/scroll', '/_search/scroll', '/_clear_scroll', '/_aliases', '/idx/_aliases',
+    for (const p of ['/idx/_search/scroll', '/_search/scroll', '/_clear_scroll',
       '/_script/p1', '/_scripts/p1', '/idx/_close',
       '/idx/_open', '/idx/_forcemerge']) {
       expect(bodyKindForPath(p), p).toBe('none');
     }
-    /* 1439 迁移：_mget 从 none 升 mget-body（docs/ids 结构化体，见 mgetBody1439.spec） */
+    /* 1439 迁移：_mget 升 mget-body、_aliases 动作体升 aliases-body */
     expect(bodyKindForPath('/idx/_mget')).toBe('mget-body');
+    expect(bodyKindForPath('/idx/_aliases')).toBe('aliases-body');
     /* 1439 迁移：_rollover 从 none 升 rollover-body、_update 从 doc 升 update-body
        （两者的体都是结构化对象，键位应出官方键；见 updateRolloverBody1439.spec） */
     expect(bodyKindForPath('/idx/_rollover')).toBe('rollover-body');

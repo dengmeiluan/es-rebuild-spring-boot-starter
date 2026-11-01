@@ -512,7 +512,7 @@ import { useDebounceFn } from '../composables/useDebounceFn';
 import { bodyKindForPath,
   updateBodyRootKeys, rolloverBodyRootKeys, rolloverConditionKeys, dbqBodyRootKeys,
   ubqBodyRootKeys, queryOnlyBodyRootKeys, templateSearchBodyRootKeys, sqlBodyRootKeys, mgetBodyRootKeys,
-  storedScriptBodyRootKeys,
+  storedScriptBodyRootKeys, aliasesBodyRootKeys,
 } from '../utils/dslCompletionContext';
 /* dtLint 档路由——search→lintDsl / bulk→ndjsonLint（bulkNdjson 既有件复用不改）/
  settings→lintSettingsBody / mapping→lintMappingBody；结构化体→lintBodyKeys 根键校验；
@@ -790,6 +790,7 @@ const dtLint = computed<Finding[]>(() => {
     if (kind === 'sql-body') return lintBodyKeys(JSON.parse(body), sqlBodyRootKeys, 'SQL 体');
     if (kind === 'mget-body') return lintBodyKeys(JSON.parse(body), mgetBodyRootKeys, '_mget 体');
     if (kind === 'stored-script-body') return lintBodyKeys(JSON.parse(body), storedScriptBodyRootKeys, '存储脚本体');
+    if (kind === 'aliases-body') return lintBodyKeys(JSON.parse(body), aliasesBodyRootKeys, '别名动作体');
     if (kind === 'rollover-body') {
       const b = JSON.parse(body) as any;
       return [...lintBodyKeys(b, rolloverBodyRootKeys, '滚动索引体'),
