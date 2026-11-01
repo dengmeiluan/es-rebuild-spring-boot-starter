@@ -1420,3 +1420,28 @@ describe('1439 _mget 体键位补全', () => {
     expect(root.map((i: any) => i.label)).not.toContain('doc');
   });
 });
+
+describe('1439 SQL filter 回落 / 存储脚本体', () => {
+  it('sql-body：filter 内回落到整棵查询补全；params 内不出 SQL 根键；根键与 SELECT 骨架仍在', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'sql-body' as const } });
+    expect(suggest('{"filter": {"').map((i: any) => i.label)).toContain('match');
+    expect(suggest('{"filter": {"bool": {"').map((i: any) => i.label)).toContain('must');
+    expect(suggest('{"params": {"')).toEqual([]);
+    expect(suggest('{"').map((i: any) => i.label)).toContain('query');
+    expect(suggest('{"query": "').map((i: any) => i.label)).toEqual(expect.arrayContaining(['SELECT *']));
+  });
+
+  it('stored-script-body：根 script（接受即合法）；script 内 lang/source/params；params 内压制；不出 id', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'stored-script-body' as const } });
+    const root = suggest('{"');
+    expect(root.map((i: any) => i.label)).toEqual(['script']);
+    expect(() => JSON.parse(acceptSnippet('{', root[0]) + '}')).not.toThrow();
+    const inner = suggest('{"script": {"');
+    expect(inner.map((i: any) => i.label)).toEqual(['lang', 'source', 'params']);
+    expect(inner.map((i: any) => i.label)).not.toContain('id');
+    for (const i of inner) {
+      expect(() => JSON.parse(acceptSnippet('{"script": {"', i) + '}}'), i.label + ' 接受后非法').not.toThrow();
+    }
+    expect(suggest('{"script": {"params": {"')).toEqual([]);
+  });
+});

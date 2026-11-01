@@ -216,6 +216,23 @@ describe('532 dtLint 档路由五分派（视图级 · 底部条观测）', () =
     await settle(6);
     expect(lintBar(host), '合法体应静默').toBeNull();
   });
+
+  it('⑪ 存储脚本体（PUT /_scripts/<id>）：非法根键进底部条；合法体静默', async () => {
+    const { host } = await mountView(DevToolsView, '#/devtools');
+    await type(dtInp(host), '/_scripts/my-script');
+    const sel = host.querySelector<HTMLSelectElement>('select.dt-method')!;
+    sel.value = 'PUT';
+    sel.dispatchEvent(new Event('change'));
+    await settle();
+    bodyCap().emit('update:modelValue', '{"scriptt":{"lang":"painless"}}');
+    await settle(6);
+    const bar = lintBar(host);
+    expect(bar, '存储脚本体非法根键应有底部条').toBeTruthy();
+    expect(bar!.textContent).toContain('存储脚本体');
+    bodyCap().emit('update:modelValue', '{"script":{"lang":"painless","source":"1"}}');
+    await settle(6);
+    expect(lintBar(host), '合法体应静默').toBeNull();
+  });
 });
 
 describe('532 lintSettingsBody（纯函数）', () => {

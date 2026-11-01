@@ -16,6 +16,7 @@ import {
   sqlBodyKeyItems, updateBodyKeyItems, scriptObjectKeyItems, rolloverBodyKeyItems, rolloverConditionKeyItems,
   dbqBodyKeyItems, ubqBodyKeyItems, queryOnlyBodyKeyItems, templateSearchBodyKeyItems,
   mgetBodyKeyItems, mgetDocKeyItems,
+  storedScriptBodyKeyItems, storedScriptKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -89,6 +90,8 @@ function allProblems(): string[] {
   out.push(...snippetProblems('TS', templateSearchBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('MG', mgetBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('MD', mgetDocKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('SS', storedScriptBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('SI', storedScriptKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;
 }
 

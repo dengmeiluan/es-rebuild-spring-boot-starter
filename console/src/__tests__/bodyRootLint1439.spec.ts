@@ -10,6 +10,7 @@ import { lintBodyKeys } from '../utils/dslLint';
 import {
   updateBodyRootKeys, rolloverBodyRootKeys, rolloverConditionKeys, dbqBodyRootKeys,
   ubqBodyRootKeys, queryOnlyBodyRootKeys, templateSearchBodyRootKeys, sqlBodyRootKeys, mgetBodyRootKeys,
+  storedScriptBodyRootKeys,
 } from '../utils/dslCompletionContext';
 
 describe('1439 结构化体根键 lint', () => {
@@ -38,6 +39,7 @@ describe('1439 结构化体根键 lint', () => {
       [templateSearchBodyRootKeys, '模板'],
       [sqlBodyRootKeys, 'SQL'],
       [mgetBodyRootKeys, '_mget'],
+      [storedScriptBodyRootKeys, '存脚本'],
     ];
     for (const [keys, label] of tables) {
       const obj = Object.fromEntries(keys.map(k => [k, 1]));

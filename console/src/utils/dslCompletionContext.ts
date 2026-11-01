@@ -794,6 +794,9 @@ export function dslContext(doc: string, offset: number): DslCtx {
       const knn = keys.lastIndexOf('knn');
       const knnFilter = keys.lastIndexOf('filter');
       if (knn >= 0 && knnFilter > knn && knnFilter < stack.length - 1) qIdx = knnFilter;
+      /* 1439：顶层 filter 也是查询容器（SQL 体的 "filter" 是 Query DSL；
+         别名 filter 同形）——此前这里零候选。只认根层，避免 aggs.filter 等深层误扩 */
+      else if (keys[0] === 'filter' && stack.length > 1) qIdx = 0;
     }
   }
   /* 在 query 内 ⟺ 某层帧 lastKey='query' 且其上方还有帧（query 值容器未闭合）。
@@ -1104,7 +1107,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1236,6 +1239,10 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
       || /(^|\/)_validate\/query(\/|$)/.test(p)) return 'query-body';
   /* 1439：_mget 的体是 {docs:[{_index,_id,…}]} 或 {ids:[…]}——结构化体，不是无档 */
   if (/(^|\/)_mget(\/|$)/.test(p)) return 'mget-body';
+  /* 1439：PUT /_scripts/<id> 存脚本的体是 {script:{lang,source,params}}；
+     _execute 是执行脚本，体形态不同，不并进本档 */
+  if (method.toUpperCase() === 'PUT' && /(^|\/)_scripts\/[^/]+(\/|$)/.test(p)
+      && !p.includes('_execute')) return 'stored-script-body';
   if (p.includes('/_search/scroll') || p.includes('/_clear_scroll') || p.includes('/_aliases')
       || p.includes('/_scripts') || p.includes('/_script/')
       || p.includes('/_close') || p.includes('/_open') || p.includes('/_forcemerge')) return 'none';
@@ -1655,6 +1662,39 @@ export function mgetRegionAt(doc: string, offset: number): 'root' | 'doc' | 'dee
   return 'deep';
 }
 
+/** 存脚本体（PUT /_scripts/<id>）的根键 */
+export function storedScriptBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'script', detail: '脚本对象（lang + source）', snippet: true,
+      insertText: '"script": {\n  "lang": "${1:painless}",\n  "source": "${2:ctx._source.field = 1}"\n}' },
+  ];
+}
+
+/** 存脚本体里 script 对象的键——官方只有 lang/source/params（id 是引用别的脚本，存自身无意义） */
+export function storedScriptKeyItems(): AssistItem[] {
+  return [
+    { label: 'lang', detail: '脚本语言（默认 painless）', snippet: true, insertText: '"lang": "${1:painless}"' },
+    { label: 'source', detail: '脚本文本', snippet: true, insertText: '"source": "${1:ctx._source.field = 1}"' },
+    { label: 'params', detail: '脚本参数默认值', snippet: true, insertText: '"params": {\n  ${0}\n}' },
+  ];
+}
+
+/** 存脚本体区域：根层 / script 对象 / 更深层（params 内自由命名） */
+export function storedScriptRegionAt(doc: string, offset: number): 'root' | 'script' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] === 'script') return stack.length === 2 ? 'script' : 'deep';
+  return 'deep';
+}
+
+/** SQL 体的区域：根层给 SQL 键；filter 内是 Query DSL（回落到整棵查询补全）；其余子对象不出键 */
+export function sqlFilterRegionAt(doc: string, offset: number): 'root' | 'query' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] === 'filter') return 'query';
+  return 'deep';
+}
+
 /* 结构体根键清单——与补全目录同源（目录改名时 lint 白名单自动跟随），
    DevTools dtLint 对未知根键给「ES 会拒绝」告警。 */
 export const updateBodyRootKeys = updateBodyKeyItems().map(i => i.label);
@@ -1666,6 +1706,7 @@ export const queryOnlyBodyRootKeys = queryOnlyBodyKeyItems().map(i => i.label);
 export const templateSearchBodyRootKeys = templateSearchBodyKeyItems().map(i => i.label);
 export const sqlBodyRootKeys = sqlBodyKeyItems().map(i => i.label);
 export const mgetBodyRootKeys = mgetBodyKeyItems().map(i => i.label);
+export const storedScriptBodyRootKeys = storedScriptBodyKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */
