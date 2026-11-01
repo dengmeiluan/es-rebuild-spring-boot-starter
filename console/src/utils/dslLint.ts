@@ -38,7 +38,12 @@
  「昨天」→ warning，isLegalDateValue 白名单复用，需 ctx）+ should-in-filter（bool 仅含
  should 键、无 minimum_should_match、处于 filter/must_not 语境 → hint，walk 递归带语境
  单调传递，零 ctx）。 */
-import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys } from './dslCompletionContext';
+import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
+  updateBodyRootKeys, rolloverBodyRootKeys, rolloverConditionKeys, dbqBodyRootKeys, ubqBodyRootKeys,
+  queryOnlyBodyRootKeys, templateSearchBodyRootKeys, sqlBodyRootKeys, mgetBodyRootKeys,
+  storedScriptBodyRootKeys, aliasesBodyRootKeys,
+} from './dslCompletionContext';
+import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
 import { SETTINGS_CATALOG } from './indexSettingsCatalog';
 
@@ -1339,6 +1344,28 @@ export function lintBodyKeys(obj: unknown, allowed: readonly string[], label: st
     });
   }
   return out;
+}
+
+/** 结构化体的统一 lint 入口（DevTools 与 RestView 共用同一分派，防两页口径漂移）：
+    非结构化档（search/settings/mapping/doc/bulk）返回空，调用方各自走专用 rule。 */
+export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
+  let obj: any;
+  try { obj = JSON.parse(body || ''); } catch { return []; }
+  switch (kind) {
+    case 'dbq-body': return lintBodyKeys(obj, dbqBodyRootKeys, '按查询删除体');
+    case 'ubq-body': return lintBodyKeys(obj, ubqBodyRootKeys, '按查询更新体');
+    case 'update-body': return lintBodyKeys(obj, updateBodyRootKeys, '更新文档体');
+    case 'rollover-body':
+      return [...lintBodyKeys(obj, rolloverBodyRootKeys, '滚动索引体'),
+        ...lintBodyKeys(obj?.conditions, rolloverConditionKeys, '滚动条件')];
+    case 'query-body': return lintBodyKeys(obj, queryOnlyBodyRootKeys, '仅查询体');
+    case 'template-search-body': return lintBodyKeys(obj, templateSearchBodyRootKeys, '模板执行体');
+    case 'sql-body': return lintBodyKeys(obj, sqlBodyRootKeys, 'SQL 体');
+    case 'mget-body': return lintBodyKeys(obj, mgetBodyRootKeys, '_mget 体');
+    case 'stored-script-body': return lintBodyKeys(obj, storedScriptBodyRootKeys, '存储脚本体');
+    case 'aliases-body': return lintBodyKeys(obj, aliasesBodyRootKeys, '别名动作体');
+    default: return [];
+  }
 }
 
 export function lintSettingsBody(obj: unknown): Finding[] {  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return [];

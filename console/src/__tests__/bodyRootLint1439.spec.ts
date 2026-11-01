@@ -6,7 +6,7 @@
  * 反向普查：每个目录里的全部根键必须零输出——否则合法输入会被自己的 lint 骂。
  */
 import { describe, it, expect } from 'vitest';
-import { lintBodyKeys } from '../utils/dslLint';
+import { lintBodyKeys, lintStructuredBody } from '../utils/dslLint';
 import {
   updateBodyRootKeys, rolloverBodyRootKeys, rolloverConditionKeys, dbqBodyRootKeys,
   ubqBodyRootKeys, queryOnlyBodyRootKeys, templateSearchBodyRootKeys, sqlBodyRootKeys, mgetBodyRootKeys,
@@ -53,5 +53,18 @@ describe('1439 结构化体根键 lint', () => {
     expect(lintBodyKeys(null, dbqBodyRootKeys, 'x')).toEqual([]);
     expect(lintBodyKeys([1, 2], dbqBodyRootKeys, 'x')).toEqual([]);
     expect(lintBodyKeys('x', dbqBodyRootKeys, 'x')).toEqual([]);
+  });
+});
+
+describe('1439 lintStructuredBody 共享分派（DevTools / RestView 同源）', () => {
+  it('按 kind 解析 body 字符串分派；合法体、非结构化档、非法 JSON 均零输出', () => {
+    expect(lintStructuredBody('dbq-body', '{"sort":[]}').map(f => f.rule)).toEqual(['body-root-key']);
+    expect(lintStructuredBody('dbq-body', '{"query":{},"max_docs":1}')).toEqual([]);
+    expect(lintStructuredBody('rollover-body', '{"conditions":{"max_doc":1}}')[0].message).toContain('滚动条件');
+    expect(lintStructuredBody('aliases-body', '{"action":[]}')[0].message).toContain('别名动作体');
+    expect(lintStructuredBody('search', '{"sort":[]}')).toEqual([]);
+    expect(lintStructuredBody('settings', '{"a":1}')).toEqual([]);
+    expect(lintStructuredBody('dbq-body', '{bad')).toEqual([]);
+    expect(lintStructuredBody('dbq-body', '')).toEqual([]);
   });
 });
