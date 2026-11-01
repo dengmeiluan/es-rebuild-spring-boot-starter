@@ -348,6 +348,9 @@
                   <div class="seg ih-view-seg">
                     <button v-for="v in IH_VIEWS" :key="v.k" :class="{ on: qryView === v.k }" @click="qryView = v.k">{{ v.t }}</button>
                   </div>
+                  <!-- 1439：改了 DSL 没重新执行时结果还是上一次的——docs/Lucene/工作台同款芯片 -->
+                  <span v-if="qryStale" class="pill warn stale-chip" role="status"
+                    title="当前 DSL 已修改但还没执行——下方结果仍来自上一次执行（Ctrl+Enter 或点「执行查询」更新）">结果已过期</span>
                   <Pagination v-if="qryView !== 'json' && qryView !== 'tree'"
                     :page="qryPage" :total-pages="qryTotalPages" :page-size="qrySize"
                     :disabled="qryLoading" @update:page="goQryPage" @update:page-size="setQrySize" />
@@ -1578,6 +1581,8 @@ function onQryHResize(size: number) {
   qryH.value = Math.round(Math.max(200, size));
 }
 const qryResp = ref<SearchResp | null>(null);
+/* 1439：查询 tab 的结果过期判据（docs/Lucene/DSL 工作台同款共享件）——改了 DSL 没重新执行 */
+const { stale: qryStale, markRun: markQryRun } = useResultStale(() => dsl.value, () => !!qryResp.value);
 const qryErr = ref('');
 /* 原始错误对象旁路（docsErrRaw 同款；DslQueryView queryErrRaw 同源） */
 const qryErrRaw = ref<unknown>(null);
@@ -1735,6 +1740,8 @@ async function runDsl() {
   qryErrRaw.value = null; /* ：原始错误对象随清（DslQueryView execQuery 同款） */
   qryProfileTree.value = null; /* 565：新执行清旧树（DQ execQuery 同款） */
   const idx = cur.value;
+  /* 1439：快照取发送时的 DSL——await 期间继续改稿，结果回来仍要标过期 */
+  const qrySigAtSend = dsl.value;
   const signal = qryQr.begin(); /*  P0-A：signal 传 post() init；取消以 AbortError 落此 */
   try {
     /* 字段源到位再裁决直方图字段（runDocs 同款等位语义，ensure 幂等+缓存） */
@@ -1789,6 +1796,7 @@ async function runDsl() {
     }
     /* 跨模式查询历史接线（DslQueryView 同款 push 形态）——就地 DSL 不再断链 */
     useQueryHistoryStore().push('dsl', dsl.value, cur.value, r.took);
+    markQryRun(qrySigAtSend);
   } catch (e: any) {
     /*  P0-A：用户主动取消不算错误，不进 qryErr 红条（DslQueryView  同语义）；
        过期拍静默（世代双支，与 docs 链同构） */

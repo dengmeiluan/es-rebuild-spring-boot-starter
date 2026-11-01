@@ -94,7 +94,13 @@ function ihProblems(src: string): string[] {
   if (!src.includes('useResultStale(() => docsQ.value, () => docsRan.value)')) out.push('索引工作区判据未接共享件');
   if (!/const sigAtSend = docsQ\.value;/.test(src)) out.push('索引工作区未在发送时取快照');
   if (!/docsRan\.value = true;\s*\n\s*markDocsRun\(sigAtSend\);/.test(src)) out.push('索引工作区未在成功路径记账');
-  if (!src.includes('class="pill warn stale-chip"') || !src.includes('结果已过期')) out.push('索引工作区缺可见芯片');
+  /* 查询 tab 的 DSL 编辑器与 docs 检索是同页两张结果表，判据必须各接一份 */
+  if (!src.includes('useResultStale(() => dsl.value, () => !!qryResp.value)')) out.push('索引工作区查询 tab 判据未接共享件');
+  if (!/const qrySigAtSend = dsl\.value;/.test(src)) out.push('索引工作区查询 tab 未在发送时取快照');
+  if (!/markQryRun\(qrySigAtSend\);/.test(src)) out.push('索引工作区查询 tab 未在成功路径记账');
+  if ((src.match(/class="pill warn stale-chip"/g) || []).length < 2 || !src.includes('结果已过期')) {
+    out.push('索引工作区缺可见芯片（docs/query 两处）');
+  }
   return out;
 }
 
@@ -115,6 +121,21 @@ describe('1439 三处宿主接线', () => {
     expect(dqProblems(dq)).not.toEqual([]);
     expect(lcProblems(lc)).not.toEqual([]);
     expect(ihProblems(ih)).not.toEqual([]);
+  });
+
+  it('负控：索引工作区查询 tab 去掉记账/芯片 → 判据点名', () => {
+    const noMark = IH.replace('    markQryRun(qrySigAtSend);\n', '');
+    const oneChip = IH.replace(
+      '                  <!-- 1439：改了 DSL 没重新执行时结果还是上一次的——docs/Lucene/工作台同款芯片 -->\n',
+      '',
+    ).replace(
+      '                  <span v-if="qryStale" class="pill warn stale-chip" role="status"\n                    title="当前 DSL 已修改但还没执行——下方结果仍来自上一次执行（Ctrl+Enter 或点「执行查询」更新）">结果已过期</span>\n',
+      '',
+    );
+    expect(noMark).not.toBe(IH);
+    expect(oneChip).not.toBe(IH);
+    expect(ihProblems(noMark)).not.toEqual([]);
+    expect(ihProblems(oneChip)).not.toEqual([]);
   });
 
   it('负控：Lucene 切索引不清结果 / 去掉在途索引守卫 → 判据点名', () => {
