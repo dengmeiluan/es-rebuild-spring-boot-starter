@@ -42,7 +42,7 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   updateBodyRootKeys, rolloverBodyRootKeys, rolloverConditionKeys, dbqBodyRootKeys, ubqBodyRootKeys,
   queryOnlyBodyRootKeys, templateSearchBodyRootKeys, sqlBodyRootKeys, mgetBodyRootKeys,
   storedScriptBodyRootKeys, aliasesBodyRootKeys, scrollBodyRootKeys, clearScrollBodyRootKeys,
-  termvectorsBodyRootKeys, mtermvectorsBodyRootKeys,
+  termvectorsBodyRootKeys, mtermvectorsBodyRootKeys, reindexBodyRootKeys,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -1380,6 +1380,7 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
     case 'clear-scroll-body': return lintBodyKeys(obj, clearScrollBodyRootKeys, '清理游标体');
     case 'termvectors-body': return lintBodyKeys(obj, termvectorsBodyRootKeys, '词项向量体');
     case 'mtermvectors-body': return lintBodyKeys(obj, mtermvectorsBodyRootKeys, '多词项向量体');
+    case 'reindex-body': return lintBodyKeys(obj, reindexBodyRootKeys, '重建索引体');
     default: return [];
   }
 }

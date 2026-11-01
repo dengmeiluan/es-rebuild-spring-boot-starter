@@ -9,6 +9,7 @@ import { describe, it, expect } from 'vitest';
 import {
   STRUCTURED_VALUE_ENUMS, mgetDocKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems,
   updateBodyKeyItems, dbqBodyKeyItems, ubqBodyKeyItems, sqlBodyKeyItems, termvectorsKeyItems,
+  reindexBodyKeyItems,
 } from '../utils/dslCompletionContext';
 
 describe('1439 结构化体值枚举', () => {
@@ -17,6 +18,9 @@ describe('1439 结构化体值枚举', () => {
       values: ['internal', 'external', 'external_gte'], quoted: true, detail: '版本类型',
     });
     expect(STRUCTURED_VALUE_ENUMS.slices.quoted).toBe(true);
+    expect(STRUCTURED_VALUE_ENUMS.op_type).toEqual({
+      values: ['index', 'create'], quoted: true, detail: '写入形态（create=已存在则失败）',
+    });
     for (const k of ['is_write_index', 'is_hidden', 'must_exist', 'detect_noop', 'scripted_upsert',
       'doc_as_upsert', 'columnar', 'field_multi_value_leniency', 'allow_partial_search_results',
       'keep_on_completion', 'index_include_frozen', '_source',
@@ -32,6 +36,7 @@ describe('1439 结构化体值枚举', () => {
       ...mgetDocKeyItems(), ...aliasAddConfigKeyItems(), ...aliasRemoveConfigKeyItems(),
       ...updateBodyKeyItems(), ...dbqBodyKeyItems(), ...ubqBodyKeyItems(), ...sqlBodyKeyItems(),
       ...termvectorsKeyItems(),
+      ...reindexBodyKeyItems('dest'),
     ].map(i => i.label));
     for (const k of Object.keys(STRUCTURED_VALUE_ENUMS)) {
       expect(union.has(k), k + ' 已不在任何结构化体目录中').toBe(true);

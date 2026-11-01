@@ -79,7 +79,7 @@ function allProblems(): string[] {
   out.push(...snippetProblems('TK', templateKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('IB', indexBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('AL', aliasKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
-  for (const region of ['root', 'source', 'dest'] as const) {
+  for (const region of ['root', 'source', 'dest', 'script'] as const) {
     out.push(...snippetProblems('RX:' + region, reindexBodyKeyItems(region).map(i => ({ text: i.insertText, key: i.label }))));
   }
   out.push(...snippetProblems('SQ', sqlBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));

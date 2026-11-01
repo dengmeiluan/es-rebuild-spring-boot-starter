@@ -1271,12 +1271,12 @@ describe('1439 别名体补全', () => {
 });
 
 describe('1439 重建索引体补全', () => {
-  it('根层给 source/dest/script；source/dest 体内给各自键；source.query 内不出档', () => {
+  it('根层给 source/dest/script；source/dest 体内给各自键；source.query 内回落整棵查询补全', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'reindex-body' as const } });
     expect(suggest('{"').map((i: any) => i.label)).toEqual(expect.arrayContaining(['source', 'dest', 'script', 'conflicts']));
     expect(suggest('{"source": { "').map((i: any) => i.label)).toEqual(expect.arrayContaining(['index', 'query', 'size']));
     expect(suggest('{"dest": { "').map((i: any) => i.label)).toEqual(expect.arrayContaining(['index', 'op_type', 'pipeline']));
-    expect(suggest('{"source": {"query": { "')).toEqual([]);
+    expect(suggest('{"source": {"query": { "').map((i: any) => i.label)).toContain('match');
   });
 });
 
@@ -1587,5 +1587,17 @@ describe('1439 mapping 值通道扩展到建索引体/模板', () => {
     });
     expect(suggest('{"settings": {"index": {"analyzer": "')).toEqual([]);
     expect(suggest('{"settings": {"x": {"type": "').map((i: any) => i.label)).not.toContain('keyword');
+  });
+});
+
+describe('1439 _reindex 查询回落 / 脚本键', () => {
+  it('source.query 内回落整棵查询补全；根层 script 给脚本键；sort 元素仍压制', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'reindex-body' as const } });
+    expect(suggest('{"source": {"query": {"').map((i: any) => i.label)).toContain('match');
+    expect(suggest('{"source": {"query": {"bool": {"').map((i: any) => i.label)).toContain('must');
+    expect(suggest('{"script": {"').map((i: any) => i.label)).toEqual(['source', 'lang', 'params', 'id']);
+    expect(suggest('{"script": {"params": {"')).toEqual([]);
+    expect(suggest('{"source": {"sort": [{')).toEqual([]);
+    expect(suggest('{"').map((i: any) => i.label)).toContain('source');
   });
 });

@@ -127,7 +127,7 @@ describe('1439 SQL 体', () => {
 });
 
 describe('1439 重建索引体（_reindex）', () => {
-  it('bodyKind 分档 + 区域判定（根/source/dest，深层不出档）', () => {
+  it('bodyKind 分档 + 区域判定（根/source/dest/script/source.query，深层不出档）', () => {
     expect(bodyKindForPath('/_reindex', 'POST')).toBe('reindex-body');
     const at = (s: string) => reindexBodyRegionAt(s, s.length);
     expect(at('{ "')).toBe('root');
@@ -135,18 +135,25 @@ describe('1439 重建索引体（_reindex）', () => {
     expect(at('{"source": {"index": "a", "')).toBe('source');
     expect(at('{"dest": { "')).toBe('dest');
     expect(at('{"dest": {"index": "b", "')).toBe('dest');
-    expect(at('{"source": {"query": { "')).toBe('deep');
+    /* 1439：source.query 内回落整棵查询补全（此前当深层压掉）；sort 元素仍不出档 */
+    expect(at('{"source": {"query": { "')).toBe('query');
+    expect(at('{"source": {"query": {"bool": {"')).toBe('query');
     expect(at('{"source": {"sort": [{ "')).toBe('deep');
+    /* 1439：根层 script 对象给脚本键 */
+    expect(at('{"script": { "')).toBe('script');
+    expect(at('{"script": {"params": { "')).toBe('deep');
   });
 
-  it('三档键表覆盖官方结构且深层为空', () => {
+  it('四档键表覆盖官方结构且深层/查询区为空', () => {
     const root = reindexBodyKeyItems('root').map(i => i.label);
     expect(root).toEqual(expect.arrayContaining(['source', 'dest', 'script', 'conflicts', 'max_docs']));
     const src = reindexBodyKeyItems('source').map(i => i.label);
     expect(src).toEqual(expect.arrayContaining(['index', 'query', 'size', '_source', 'sort', 'remote']));
     const dst = reindexBodyKeyItems('dest').map(i => i.label);
     expect(dst).toEqual(expect.arrayContaining(['index', 'op_type', 'pipeline', 'routing', 'version_type']));
+    expect(reindexBodyKeyItems('script').map(i => i.label)).toEqual(['source', 'lang', 'params', 'id']);
     expect(reindexBodyKeyItems('deep')).toEqual([]);
+    expect(reindexBodyKeyItems('query')).toEqual([]);
   });
 });
 

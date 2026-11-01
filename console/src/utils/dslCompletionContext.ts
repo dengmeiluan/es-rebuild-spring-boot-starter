@@ -1722,6 +1722,7 @@ export const STRUCTURED_VALUE_ENUMS: Record<string, { values: string[]; quoted: 
   positions: { values: ['false', 'true'], quoted: false, detail: '返回词项位置' },
   term_statistics: { values: ['false', 'true'], quoted: false, detail: '词项全局统计' },
   field_statistics: { values: ['true', 'false'], quoted: false, detail: '字段级统计' },
+  op_type: { values: ['index', 'create'], quoted: true, detail: '写入形态（create=已存在则失败）' },
 };
 
 /** SQL 体的区域：根层给 SQL 键；filter 内是 Query DSL（回落到整棵查询补全）；其余子对象不出键 */
@@ -1874,22 +1875,31 @@ export const scrollBodyRootKeys = scrollBodyKeyItems().map(i => i.label);
 export const clearScrollBodyRootKeys = clearScrollBodyKeyItems().map(i => i.label);
 export const termvectorsBodyRootKeys = termvectorsKeyItems().map(i => i.label);
 export const mtermvectorsBodyRootKeys = mtermvectorsBodyKeyItems().map(i => i.label);
+export const reindexBodyRootKeys = reindexBodyKeyItems('root').map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */
-export function reindexBodyRegionAt(doc: string, offset: number): 'root' | 'source' | 'dest' | 'deep' {
+export function reindexBodyRegionAt(doc: string, offset: number):
+  'root' | 'source' | 'dest' | 'script' | 'query' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
   const k0 = stack[0];
-  if (stack.length === 2 && k0 === 'source') return 'source';
-  if (stack.length === 2 && k0 === 'dest') return 'dest';
-  if (k0 === 'source' || k0 === 'dest') return 'deep';
+  if (k0 === 'source') {
+    if (stack.length === 2) return 'source';
+    /* 1439：source.query 内是整棵 Query DSL——回落到查询补全，不再当深层压掉 */
+    if (stack[1] === 'query') return 'query';
+    return 'deep';
+  }
+  if (k0 === 'dest') return stack.length === 2 ? 'dest' : 'deep';
+  /* 1439：根层 script 对象给脚本键（source/lang/params/id） */
+  if (k0 === 'script') return stack.length === 2 ? 'script' : 'deep';
   return 'root';
 }
 
-/** 重建索引体的键（根层 / source 体 / dest 体三档） */
-export function reindexBodyKeyItems(region: 'root' | 'source' | 'dest' | 'deep'): AssistItem[] {
-  if (region === 'deep') return [];
+/** 重建索引体的键（根层 / source 体 / dest 体 / script 对象四档） */
+export function reindexBodyKeyItems(region: 'root' | 'source' | 'dest' | 'script' | 'query' | 'deep'): AssistItem[] {
+  if (region === 'deep' || region === 'query') return [];
+  if (region === 'script') return scriptObjectKeyItems();
   if (region === 'source') {
     return [
       { label: 'index', detail: '源索引（可写单名或数组）', snippet: true, insertText: '"index": "${1:src-index}"' },

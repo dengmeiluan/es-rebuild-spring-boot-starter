@@ -620,7 +620,9 @@ onMounted(() => {
         const ssRegion = bk === 'stored-script-body' ? storedScriptRegionAt(doc, offset) : null;
         const alRegion = bk === 'aliases-body' ? aliasesBodyRegionAt(doc, offset) : null;
         const scRegion = (bk === 'scroll-body' || bk === 'clear-scroll-body') ? rootOnlyRegionAt(doc, offset) : null;
-        if (qwRegion !== 'query' && sfRegion !== 'query' && (bk === 'settings' || bk === 'mapping' || bk === 'template' || bk === 'index-body' || bk === 'alias-body' || bk === 'aliases-body' || bk === 'reindex-body' || bk === 'sql-body' || bk === 'update-body' || bk === 'rollover-body' || bk === 'dbq-body' || bk === 'ubq-body' || bk === 'query-body' || bk === 'template-search-body' || bk === 'mget-body' || bk === 'stored-script-body' || bk === 'scroll-body' || bk === 'clear-scroll-body' || bk === 'termvectors-body' || bk === 'mtermvectors-body')) {
+        /* 1439：_reindex 的 source.query 同样是 Query DSL——区域为 query 时回落查询补全 */
+        const rIdxRegion = bk === 'reindex-body' ? reindexBodyRegionAt(doc, offset) : 'root';
+        if (qwRegion !== 'query' && sfRegion !== 'query' && rIdxRegion !== 'query' && (bk === 'settings' || bk === 'mapping' || bk === 'template' || bk === 'index-body' || bk === 'alias-body' || bk === 'aliases-body' || bk === 'reindex-body' || bk === 'sql-body' || bk === 'update-body' || bk === 'rollover-body' || bk === 'dbq-body' || bk === 'ubq-body' || bk === 'query-body' || bk === 'template-search-body' || bk === 'mget-body' || bk === 'stored-script-body' || bk === 'scroll-body' || bk === 'clear-scroll-body' || bk === 'termvectors-body' || bk === 'mtermvectors-body')) {
           const g = dslKeyGuard(doc, offset);
           /* 1439：SQL 体的 "query": 值位——给 SELECT 骨架（值本身是长串，键骨架的默认值太短）。
              必须放在下面「值位一律不出档」的压制之前，否则永远到不了。 */
@@ -690,7 +692,6 @@ onMounted(() => {
           /* 1439：创建索引体（PUT /<索引名>）按 settings/mappings/aliases 区域分派 */
           const idxRegion = bk === 'index-body' ? indexBodyRegionAt(doc, offset) : 'root';
           const aliasItems = (): AssistItem[] => (aliasConfigAt(doc, offset) ? aliasKeyItems() : []);
-          const rIdxRegion = bk === 'reindex-body' ? reindexBodyRegionAt(doc, offset) : 'root';
           /* 1439：更新体/滚动体按区域分派——doc/upsert 内是裸文档、conditions 只给 max_* */
           const uRegion = bk === 'update-body' ? updateBodyRegionAt(doc, offset) : 'root';
           const rRegion = bk === 'rollover-body' ? rolloverBodyRegionAt(doc, offset) : 'root';
