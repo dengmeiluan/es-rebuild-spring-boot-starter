@@ -28,6 +28,16 @@ interface OpMeta {
 export const KEYWORD_VALUE_TYPES = ['keyword', 'wildcard', 'constant_keyword'];
 export const NUMERIC_VALUE_TYPES = ['long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float', 'unsigned_long', 'token_count'];
 
+/* 可排序字段类型（Lucene 排序行 / PIT 排序行 / 构建器排序与折叠行共用单源）：
+   有 doc_values、ES 不会因 fielddata 400 的类型。text 需开 fielddata（默认关）不进表；
+   wildcard / ip 等官方排序语义未明示的类型宁缺勿错不列（手输仍可）。
+   1439：此前三处各抄一份——PIT 与构建器漏 unsigned_long、三处都漏 date_nanos
+   （官方 sort 文档明确可排序）。 */
+export const SORTABLE_FIELD_TYPES: string[] = [
+  'keyword', 'date', 'date_nanos', 'boolean',
+  ...NUMERIC_VALUE_TYPES.filter(t => t !== 'token_count'),
+];
+
 /* NUM 补 unsigned_long（数值族九口径——AFFINITY_FAMILIES.number/LuceneInput
  NUMERIC_TYPES/sqlCompletion 数值档同表九种，此前 opsForType 对 unsigned_long 字段只推荐 exists）
  本表改吃 NUMERIC_VALUE_TYPES 单源滤 token_count（分词计数无 term/range 精确语义，

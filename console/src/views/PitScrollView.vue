@@ -173,6 +173,7 @@ import { useInputLint, patternRule, TIME_RE } from '../composables/useInputLint'
 import { useDebounceFn } from '../composables/useDebounceFn'; /* ：防抖统一件（卸载自动清 timer） */
 import { useIndexFieldTypes } from '../composables/useIndexFieldTypes';
 import { resolveSortField } from '../utils/sortField';
+import { SORTABLE_FIELD_TYPES } from '../utils/queryAstOps';
 import { useIndexFields } from '../composables/useIndexFields';
 import { useTermsSuggest } from '../composables/useTermsSuggest'; /* ：值位动态候选（661 范式） */
 import JsonArea from '../components/JsonArea.vue';
@@ -205,7 +206,8 @@ watch(keepAlive, () => keepAliveClear());
 const batchSize = useScopedDraftState<{ v: number }>('batch-size', { route: 'pit-scroll', index: () => store.pickedIdx || '' }, { v: 500 }).state;
 const sortField = useScopedDraft('sort-field', { route: 'pit-scroll', index: () => store.pickedIdx || '' }, '_shard_doc').text;
 /* sort 候选只出可排序类型（与 LuceneQueryView 同口径单一语义；text 排序会被 ES 400 fielddata） */
-const SORTABLE_TYPES = 'keyword,date,long,integer,short,byte,double,float,half_float,scaled_float,boolean';
+/* 可排序类型单源（queryAstOps）——此前漏 unsigned_long、date_nanos */
+const SORTABLE_TYPES = SORTABLE_FIELD_TYPES.join(',');
 const sortOrder = useScopedDraftState<{ v: 'asc' | 'desc' }>('sort-order', { route: 'pit-scroll', index: () => store.pickedIdx || '' }, { v: 'asc' }).state;
 /* _shard_doc 是 PIT 默认快排但只认 asc —— desc 会被 ES 直接 400。
  选中（或留空兜底等同）_shard_doc 时锁死 asc 并禁用 desc 控件，防误触 */

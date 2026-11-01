@@ -350,6 +350,7 @@ import { useQueryRun } from '../composables/useQueryRun';
 import { useResultStale } from '../composables/useResultStale';
 import { useIndexFieldTypes } from '../composables/useIndexFieldTypes';
 import { resolveSortField } from '../utils/sortField';
+import { SORTABLE_FIELD_TYPES } from '../utils/queryAstOps';
 import { appendLuceneClause } from '../utils/filterMerge';
 import { useRouter } from 'vue-router';
 import { encodeDslParam } from '../utils/queryHub';
@@ -362,7 +363,8 @@ const auth = useAuthStore();
 const router = useRouter();
 /* sort 字段 FieldPicker 的可排序类型过滤（逗号分隔字符串，同 PIT/构建器排序行口径）。
  补 unsigned_long（545 数值族九口径对齐——此前排序字段选择器漏第九种数值类型） */
-const SORTABLE_TYPES = 'keyword,date,long,integer,short,byte,double,float,half_float,scaled_float,unsigned_long,boolean';
+/* 可排序类型单源（queryAstOps；与 PIT/构建器同表——此前三处各抄一份会漂） */
+const SORTABLE_TYPES = SORTABLE_FIELD_TYPES.join(',');
 /* 可调工作台声明（照 AnalyzeView 形态）——条件区可折叠，结果区吃剩余；
  本视图经 QueryHubView 嵌入（route 恒为 /search），mode 维度区分记忆键 */
 const lcScope = { target: store.target || 'host', route: '/search', mode: 'lucene', profile: 'standard' as const };

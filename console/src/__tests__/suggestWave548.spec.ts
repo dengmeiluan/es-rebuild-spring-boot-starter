@@ -17,6 +17,7 @@
  *    前缀过滤；源锚断言同 boostTunerWorkbench408 形态——挂载整视图依赖面过重）。
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { SORTABLE_FIELD_TYPES } from '../utils/queryAstOps';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createApp, defineComponent, h, type App } from 'vue';
@@ -237,7 +238,13 @@ describe('D2/E1 源锚', () => {
   });
 
   it('E1 SORTABLE_TYPES 补 unsigned_long（545 数值族九口径对齐；531 date/long 提前次序零变动）', () => {
-    expect(lqv).toContain("const SORTABLE_TYPES = 'keyword,date,long,integer,short,byte,double,float,half_float,scaled_float,unsigned_long,boolean';");
+    /* 1439：改吃 queryAstOps 单源 SORTABLE_FIELD_TYPES（Lucene/PIT/构建器同表）——
+       原锁意图「数值族九口径齐 + unsigned_long 在册」保留，另加官方可排序的 date_nanos */
+    expect(lqv).toContain("const SORTABLE_TYPES = SORTABLE_FIELD_TYPES.join(',');");
+    expect(SORTABLE_FIELD_TYPES).toEqual(expect.arrayContaining([
+      'keyword', 'date', 'date_nanos', 'long', 'integer', 'short', 'byte',
+      'double', 'float', 'half_float', 'scaled_float', 'unsigned_long', 'boolean',
+    ]));
   });
 });
 

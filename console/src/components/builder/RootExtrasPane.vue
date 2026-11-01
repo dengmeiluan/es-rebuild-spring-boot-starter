@@ -443,6 +443,7 @@ import { runtimeScriptMissing } from '../../utils/runtimeFields';
 import { RUNTIME_FIELD_CTX } from './runtimeFieldContext';
 import { SEARCH_PARAM_META, SEARCH_PARAM_GROUPS } from '../../utils/queryBodyParams';
 import { setFieldSearchIndex } from '../../utils/fieldSearch';
+import { SORTABLE_FIELD_TYPES } from '../../utils/queryAstOps';
 
 const props = defineProps<{ tree: QueryTree; fields: string[]; types: Record<string, string>; index?: string }>();
 const emit = defineEmits<{ (e: 'update:tree', t: QueryTree): void }>();
@@ -450,7 +451,7 @@ const emit = defineEmits<{ (e: 'update:tree', t: QueryTree): void }>();
 /* 排序/高亮行 FieldSelect 的类型过滤口径——
  可排序=有 doc_values 的类型（keyword/date/数值族/boolean）；高亮=text/keyword 文本类。
  数组经 props 透传 searchFields.typeFilter，mapping 缺失类型时仍可清空输入框自由手输 */
-const SORTABLE_TYPES = ['keyword', 'date', 'long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float', 'boolean'];
+const SORTABLE_TYPES = SORTABLE_FIELD_TYPES;
 const HL_TYPES = ['text', 'keyword'];
 /* 1021：高亮字段级参数 schema（GenericParams 消费——常用五参数升类型化控件：
    type 三档枚举 plain/postings/fvh，fragment 系/size 数值档；未登记键
