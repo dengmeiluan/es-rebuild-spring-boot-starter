@@ -567,8 +567,13 @@ onMounted(() => {
         }
         /* +1：mapping 值位 analyzers 通道——组件名四键的值串位出
  analyzers() 实名候选（range 覆盖整串 I-1 同形态）；候选空/非 mapping 档
- 落到下方既有压制口，零增量。 */
-        if (bk === 'mapping') {
+ 落到下方既有压制口，零增量。
+ 1439：建索引体（PUT /<索引>）与索引模板的 mappings 区同样算 mapping 语境——
+ 此前只有 mapping 档生效，create-index 流程里 analyzer 实名一条都不出。 */
+        const mappingValueCtx = bk === 'mapping'
+          || (bk === 'index-body' && indexBodyRegionAt(doc, offset) === 'mapping')
+          || (bk === 'template' && templateRegionAt(doc, offset) === 'mapping');
+        if (mappingValueCtx) {
           const g0 = dslKeyGuard(doc, offset);
           if (g0.ok && g0.inStr && g0.valueKey && ANALYZER_VALUE_KEYS.has(g0.valueKey)) {
             const names = props.dslAssist!.analyzers?.() ?? [];
@@ -585,9 +590,10 @@ onMounted(() => {
             }
           }
         }
-        /* 1439：mapping 档 type 值位出字段类型目录——type 是 mapping 里唯一值域封闭的键
-           （analyzer 走上面的实名通道），其余值位仍维持「值位不出档」口径。 */
-        if (bk === 'mapping') {
+        /* 1439：mapping 语境 type 值位出字段类型目录——type 是 mapping 里唯一值域封闭的键
+           （analyzer 走上面的实名通道），其余值位仍维持「值位不出档」口径。
+           建索引体/模板的 mappings 区同口径（见上 mappingValueCtx）。 */
+        if (mappingValueCtx) {
           const gt = dslKeyGuard(doc, offset);
           if (!gt.ok && gt.inStr && gt.valueKey === 'type' && !gt.arrayElem) {
             const tEnd = scanStringEnd(doc, Math.max(0, Math.min(offset, doc.length)));

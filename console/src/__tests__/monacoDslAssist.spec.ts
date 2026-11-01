@@ -1561,3 +1561,31 @@ describe('1439 词项向量体键位补全', () => {
     expect(suggest('{"docs": [{"doc": {"')).toEqual([]);
   });
 });
+
+describe('1439 mapping 值通道扩展到建索引体/模板', () => {
+  it('index-body 的 mappings 区：type 值目录 + analyzer 实名', () => {
+    mountEditor({
+      modelValue: '{}',
+      dslAssist: { fields: () => FIELDS, bodyKind: () => 'index-body' as const, analyzers: () => ['my_analyzer'] },
+    });
+    expect(suggest('{"mappings": {"properties": {"a": {"type": "').map((i: any) => i.label))
+      .toEqual(expect.arrayContaining(['keyword', 'text']));
+    expect(suggest('{"mappings": {"properties": {"a": {"analyzer": "').map((i: any) => i.label))
+      .toContain('my_analyzer');
+  });
+
+  it('template 的 mappings 区同口径给 type 目录', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'template' as const } });
+    expect(suggest('{"template": {"mappings": {"properties": {"a": {"type": "').map((i: any) => i.label))
+      .toEqual(expect.arrayContaining(['keyword', 'text']));
+  });
+
+  it('负控：index-body settings 区不出 type 目录/analyzer 实名', () => {
+    mountEditor({
+      modelValue: '{}',
+      dslAssist: { fields: () => FIELDS, bodyKind: () => 'index-body' as const, analyzers: () => ['my_analyzer'] },
+    });
+    expect(suggest('{"settings": {"index": {"analyzer": "')).toEqual([]);
+    expect(suggest('{"settings": {"x": {"type": "').map((i: any) => i.label)).not.toContain('keyword');
+  });
+});
