@@ -1691,6 +1691,25 @@ export function storedScriptRegionAt(doc: string, offset: number): 'root' | 'scr
   return 'deep';
 }
 
+/** 结构化体里值域封闭的键 → 值位枚举候选（quoted=串值需加引号）。
+    只用于 W6 结构化体分派；search 体的 _source 等形态更多，不走本表。 */
+export const STRUCTURED_VALUE_ENUMS: Record<string, { values: string[]; quoted: boolean; detail: string }> = {
+  version_type: { values: ['internal', 'external', 'external_gte'], quoted: true, detail: '版本类型' },
+  slices: { values: ['auto'], quoted: true, detail: '自动切片（也可填数字）' },
+  is_write_index: { values: ['true', 'false'], quoted: false, detail: '写索引开关' },
+  is_hidden: { values: ['true', 'false'], quoted: false, detail: '隐藏别名开关' },
+  must_exist: { values: ['true', 'false'], quoted: false, detail: '不存在时报错' },
+  detect_noop: { values: ['true', 'false'], quoted: false, detail: '无变化不写' },
+  scripted_upsert: { values: ['true', 'false'], quoted: false, detail: '文档不存在时脚本照常执行' },
+  doc_as_upsert: { values: ['true', 'false'], quoted: false, detail: 'doc 作为 upsert 写入' },
+  columnar: { values: ['true', 'false'], quoted: false, detail: '列式返回' },
+  field_multi_value_leniency: { values: ['true', 'false'], quoted: false, detail: '多值字段放宽' },
+  allow_partial_search_results: { values: ['true', 'false'], quoted: false, detail: '允许部分结果' },
+  keep_on_completion: { values: ['true', 'false'], quoted: false, detail: '完成后保留结果' },
+  index_include_frozen: { values: ['true', 'false'], quoted: false, detail: '含冻结索引' },
+  _source: { values: ['true', 'false'], quoted: false, detail: '回源开关（也可传字段数组）' },
+};
+
 /** SQL 体的区域：根层给 SQL 键；filter 内是 Query DSL（回落到整棵查询补全）；其余子对象不出键 */
 export function sqlFilterRegionAt(doc: string, offset: number): 'root' | 'query' | 'deep' {
   const stack = frameKeysAt(doc, offset);

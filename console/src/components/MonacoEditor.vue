@@ -19,7 +19,7 @@ import 'monaco-editor/esm/vs/editor/contrib/comment/browser/comment';   // jsonc
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import { useAppStore } from '../stores/app';
-import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS, RETRIEVER_SNIPPETS, SUGGESTER_SNIPPETS, aggBodyKeys, queryBodyKeys, clauseValueKeys, retrieverBodyKeys, suggesterBodyKeys, ROOT_KEYS, ROOT_KEY_SNIPPETS, commaAffixes, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, indexBodyKeyItems, indexBodyRegionAt, aliasKeyItems, aliasConfigAt, reindexBodyKeyItems, reindexBodyRegionAt, sqlBodyKeyItems, SQL_VALUE_SNIPPETS, updateBodyKeyItems, scriptObjectKeyItems, updateBodyRegionAt, rolloverBodyKeyItems, rolloverConditionKeyItems, rolloverBodyRegionAt, dbqBodyKeyItems, ubqBodyKeyItems, queryWriteRegionAt, queryOnlyBodyKeyItems, templateSearchBodyKeyItems, rootOnlyRegionAt, mgetBodyKeyItems, mgetDocKeyItems, mgetRegionAt, storedScriptBodyKeyItems, storedScriptKeyItems, storedScriptRegionAt, sqlFilterRegionAt, aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems, aliasesBodyRegionAt, scrollBodyKeyItems, clearScrollBodyKeyItems, MAPPING_TYPES, templateKeyItems, templateRegionAt, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
+import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS, RETRIEVER_SNIPPETS, SUGGESTER_SNIPPETS, aggBodyKeys, queryBodyKeys, clauseValueKeys, retrieverBodyKeys, suggesterBodyKeys, ROOT_KEYS, ROOT_KEY_SNIPPETS, commaAffixes, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, indexBodyKeyItems, indexBodyRegionAt, aliasKeyItems, aliasConfigAt, reindexBodyKeyItems, reindexBodyRegionAt, sqlBodyKeyItems, SQL_VALUE_SNIPPETS, updateBodyKeyItems, scriptObjectKeyItems, updateBodyRegionAt, rolloverBodyKeyItems, rolloverConditionKeyItems, rolloverBodyRegionAt, dbqBodyKeyItems, ubqBodyKeyItems, queryWriteRegionAt, queryOnlyBodyKeyItems, templateSearchBodyKeyItems, rootOnlyRegionAt, mgetBodyKeyItems, mgetDocKeyItems, mgetRegionAt, storedScriptBodyKeyItems, storedScriptKeyItems, storedScriptRegionAt, sqlFilterRegionAt, aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems, aliasesBodyRegionAt, scrollBodyKeyItems, clearScrollBodyKeyItems, STRUCTURED_VALUE_ENUMS, MAPPING_TYPES, templateKeyItems, templateRegionAt, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
 import { makeDslValueSuggestProvider } from '../utils/dslValueSuggest';
 import type { AssistItem, BodyKind } from '../utils/dslCompletionContext';
 import { ensureLanguages } from '../utils/monacoLanguages';
@@ -630,6 +630,24 @@ onMounted(() => {
               insertText: '"' + s2.text + '"', range: vRange, command: ACCEPT_FORMAT_COMMAND,
               detail: s2.detail,
               filterText: dslFilterText(s2.label), sortText: dslSortText(i, s2.label),
+            })) };
+          }
+          /* 1439：结构化体值域封闭的键在值位给枚举（version_type/布尔开关/slices:auto）——
+             布尔值插裸 true/false，串枚举带引号；range 覆盖整串，接受即合法。 */
+          const enumHint = g.inStr && g.valueKey ? STRUCTURED_VALUE_ENUMS[g.valueKey] : undefined;
+          if (enumHint) {
+            const eEnd = scanStringEnd(doc, Math.max(0, Math.min(offset, doc.length)));
+            const esp = model.getPositionAt(g.strStart);
+            const eep = model.getPositionAt(eEnd);
+            const eRange = {
+              startLineNumber: esp.lineNumber, startColumn: esp.column,
+              endLineNumber: eep.lineNumber, endColumn: eep.column,
+            };
+            return { suggestions: enumHint.values.map((v, i) => ({
+              label: v, kind: monaco.languages.CompletionItemKind.Value,
+              insertText: enumHint.quoted ? '"' + v + '"' : v, range: eRange, command: ACCEPT_FORMAT_COMMAND,
+              detail: enumHint.detail,
+              filterText: dslFilterText(v), sortText: dslSortText(i, v),
             })) };
           }
           /* g.valueKey 一并压住：W6 三档语义是「值位一律不出档」，2.6.0 白名单口仅限 search 路径 */

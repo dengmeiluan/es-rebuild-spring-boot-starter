@@ -1489,3 +1489,45 @@ describe('1439 游标翻页 / 清理游标体补全', () => {
     expect(() => JSON.parse(acceptSnippet('{', root[0]) + '}')).not.toThrow();
   });
 });
+
+describe('1439 结构化体值位枚举', () => {
+  it('mget 文档项的 version_type 值位给 internal/external/external_gte（串值带引号，接受即合法）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'mget-body' as const } });
+    const doc = '{"docs": [{"version_type": "';
+    const items = suggest(doc);
+    expect(items.map((i: any) => i.label)).toEqual(['internal', 'external', 'external_gte']);
+    for (const i of items) {
+      const after = acceptSnippet(doc, i);
+      expect(after).toContain('"version_type": "' + i.label + '"');
+      expect(() => JSON.parse(after + '}]}'), i.label + ' 接受后非法').not.toThrow();
+    }
+  });
+
+  it('布尔键插裸 true/false（aliases is_write_index）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'aliases-body' as const } });
+    const doc = '{"actions": [{"add": {"is_write_index": "';
+    const items = suggest(doc);
+    expect(items.map((i: any) => i.label)).toEqual(['true', 'false']);
+    for (const i of items) {
+      const after = acceptSnippet(doc, i);
+      expect(after).toContain('"is_write_index": ' + i.label);
+      expect(after).not.toContain('"true"');
+      expect(() => JSON.parse(after + '}}]}'), i.label + ' 接受后非法').not.toThrow();
+    }
+  });
+
+  it('dbq slices 值位给 auto（串值带引号）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'dbq-body' as const } });
+    const doc = '{"slices": "';
+    const items = suggest(doc);
+    expect(items.map((i: any) => i.label)).toEqual(['auto']);
+    const after = acceptSnippet(doc, items[0]);
+    expect(after).toContain('"slices": "auto"');
+    expect(() => JSON.parse(after + '}')).not.toThrow();
+  });
+
+  it('负控：search 档同名字段不套结构化枚举表', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'search' as const } });
+    expect(suggest('{"_source": "').map((i: any) => i.label)).not.toContain('true');
+  });
+});
