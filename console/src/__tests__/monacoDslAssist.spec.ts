@@ -1307,3 +1307,41 @@ describe('1439 SQL 体补全', () => {
     expect(suggest('{"query": "').filter((i: any) => /^SELECT /.test(i.label))).toEqual([]);
   });
 });
+
+describe('1439 更新体 / 滚动体键位补全', () => {
+  it('update 体：根键七项（接受即合法）；doc/upsert 裸文档零候选；script 内给脚本键且更深层压制', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'update-body' as const } });
+    const root = suggest('{"');
+    expect(root.map((i: any) => i.label))
+      .toEqual(['doc', 'upsert', 'doc_as_upsert', 'script', 'scripted_upsert', 'detect_noop', '_source']);
+    for (const i of root) {
+      expect(() => JSON.parse(acceptSnippet('{', i) + '}'), i.label + ' 接受后非法').not.toThrow();
+    }
+    expect(suggest('{"doc": {"')).toEqual([]);
+    expect(suggest('{"upsert": {"')).toEqual([]);
+    expect(suggest('{"script": {"').map((i: any) => i.label)).toEqual(['source', 'lang', 'params', 'id']);
+    expect(suggest('{"script": {"params": {"')).toEqual([]);
+  });
+
+  it('rollover 体：根块键 / conditions 只给 max_* / settings·mappings·aliases 按区域分派', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'rollover-body' as const } });
+    expect(suggest('{"').map((i: any) => i.label)).toEqual(['conditions', 'settings', 'mappings', 'aliases']);
+    expect(suggest('{"conditions": {"').map((i: any) => i.label))
+      .toEqual(['max_age', 'max_docs', 'max_size', 'max_primary_shard_size', 'max_primary_shard_docs']);
+    expect(suggest('{"conditions": {"max_age": "1d", "').map((i: any) => i.label))
+      .toContain('max_docs');
+    expect(suggest('{"conditions": {"max_age": {"')).toEqual([]);
+    const st = suggest('{"settings": {"').map((i: any) => i.label);
+    expect(st).toContain('number_of_shards');
+    expect(suggest('{"mappings": {"').map((i: any) => i.label)).toContain('properties');
+    expect(suggest('{"aliases": {"a": {"').map((i: any) => i.label)).toContain('filter');
+    expect(suggest('{"aliases": {"')).toEqual([]);
+  });
+
+  it('负控：_doc 裸文档体仍是 doc 档（键位零候选），field 值位白名单不回归', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'doc' as const } });
+    expect(suggest('{"')).toEqual([]);
+    expect(suggest('{"doc": {"')).toEqual([]);
+    expect(suggest('{"field": "').map((i: any) => i.label)).toEqual(expect.arrayContaining(['title', 'price']));
+  });
+});

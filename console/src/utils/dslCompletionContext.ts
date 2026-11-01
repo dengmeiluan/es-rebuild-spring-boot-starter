@@ -1097,12 +1097,14 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
 
 /* W6：DevTools body 端点语义分级——bodyKind 判定 + settings/mapping 档数据源。
  纯函数零请求；settings 档复用 W1 SETTINGS_CATALOG（带中文说明）。
- 增 'doc' 档——文档体（GET/PUT /idx/_doc/1、_create、_update、_source 端点）
+ 增 'doc' 档——文档体（GET/PUT /idx/_doc/1、_create、_source 端点）
  键位零候选（_source 字段名自由，出 root 查询键骨架是误导）、仅 field 值位白名单出字段候选。
+ 增 'update-body' 档——_update 的体是 {doc/upsert/script…} 结构化体（doc 内仍按裸文档压制）；
+ 增 'rollover-body' 档——_rollover 体按 {conditions/settings/mappings/aliases} 分区给键。
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'reindex-body' | 'sql-body' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1201,8 +1203,10 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   const p = (rawPath || '').split('?')[0].toLowerCase();
   if (p.includes('_bulk')) return 'none';
   /* doc 档四端点（带斜杠前缀防误伤——'_update/' 不吃 _update_by_query（后者是
- search 族，dslCompletionContext.spec 既有断言钉死），'/_source' 尾形态与 /_doc/1/_source 双保险 */
-  if (p.includes('/_doc/') || p.includes('/_create/') || p.includes('/_update/') || p.includes('/_source')) return 'doc';
+ search 族，dslCompletionContext.spec 既有断言钉死），'/_source' 尾形态与 /_doc/1/_source 双保险）
+ _update 体是 {doc/upsert/script…} 的结构化体，不是裸文档——单列 update-body 档。 */
+  if (p.includes('/_update/')) return 'update-body';
+  if (p.includes('/_doc/') || p.includes('/_create/') || p.includes('/_source')) return 'doc';
   /* 1439：这些端点的体不是 search body——此前一律给 query/sort/aggs 骨架
      （模板体里出 match：写下去就是 ES 400；analyze 体里出 query：同样的错） */
   if (p.includes('_analyze')) return 'analyze';
@@ -1217,9 +1221,11 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   if (p.includes('_reindex')) return 'reindex-body';
   /* 1439：_sql（含 _sql/translate）的体是 {query:"SELECT …"}，不是 search body */
   if (p.includes('_sql')) return 'sql-body';
+  /* 1439：_rollover 的体是 {conditions,settings,mappings,aliases}，不是无档 */
+  if (p.includes('_rollover')) return 'rollover-body';
   if (p.includes('/_search/scroll') || p.includes('/_clear_scroll') || p.includes('/_aliases')
       || p.includes('/_mget')
-      || p.includes('/_scripts') || p.includes('/_script/') || p.includes('/_rollover')
+      || p.includes('/_scripts') || p.includes('/_script/')
       || p.includes('/_close') || p.includes('/_open') || p.includes('/_forcemerge')) return 'none';
   return 'search';
 }
@@ -1466,6 +1472,84 @@ export const SQL_VALUE_SNIPPETS: Array<{ label: string; text: string; detail: st
   { label: 'SELECT WHERE', text: 'SELECT * FROM \\"my-index\\" WHERE field = \'x\' LIMIT 100', detail: '带条件过滤' },
   { label: 'SELECT GROUP BY', text: 'SELECT field, COUNT(*) AS c FROM \\"my-index\\" GROUP BY field LIMIT 100', detail: '分组计数' },
 ];
+
+/** 更新文档体（POST/PUT /<索引>/_update/<id>）的根键 */
+export function updateBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'doc', detail: '需要部分更新的字段', snippet: true, insertText: '"doc": {\n  ${0}\n}' },
+    { label: 'upsert', detail: '文档不存在时插入的全文', snippet: true, insertText: '"upsert": {\n  ${0}\n}' },
+    { label: 'doc_as_upsert', detail: '不存在时把 doc 当 upsert 写入', snippet: true,
+      insertText: '"doc_as_upsert": ${1|true,false|}' },
+    { label: 'script', detail: '脚本更新（与 doc 二选一）', snippet: true,
+      insertText: '"script": {\n  "source": "${1:ctx._source.field = params.value}"\n}' },
+    { label: 'scripted_upsert', detail: '文档不存在时脚本照常执行（配合 upsert）', snippet: true,
+      insertText: '"scripted_upsert": ${1|false,true|}' },
+    { label: 'detect_noop', detail: '内容无变化时不写（默认 true）', snippet: true,
+      insertText: '"detect_noop": ${1|true,false|}' },
+    { label: '_source', detail: '响应里是否回源文档', snippet: true, insertText: '"_source": ${1|true,false|}' },
+  ];
+}
+
+/** 更新体里 script 对象的键（source/id 二选一，lang 默认 painless） */
+export function updateScriptKeyItems(): AssistItem[] {
+  return [
+    { label: 'source', detail: 'painless 脚本文本', snippet: true,
+      insertText: '"source": "${1:ctx._source.field = params.value}"' },
+    { label: 'lang', detail: '脚本语言（默认 painless）', snippet: true, insertText: '"lang": "${1:painless}"' },
+    { label: 'params', detail: '脚本参数', snippet: true, insertText: '"params": {\n  ${0}\n}' },
+    { label: 'id', detail: '引用已存脚本（与 source 二选一）', snippet: true, insertText: '"id": "${1:my-script}"' },
+  ];
+}
+
+/** 更新体区域：根层给根键；doc/upsert 内是裸文档（不给键）；script 内给脚本键；
+    更深层（script.params 里的任意参数名）不给。 */
+export function updateBodyRegionAt(doc: string, offset: number): 'root' | 'doc' | 'script' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  const rootKey = stack[0] ?? null;
+  if (rootKey === 'doc' || rootKey === 'upsert') return 'doc';
+  if (rootKey === 'script') return stack.length === 2 ? 'script' : 'deep';
+  return 'deep';
+}
+
+/** 滚动索引体（POST /<别名>/_rollover）的根键 */
+export function rolloverBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'conditions', detail: '滚动条件（满足任一即滚）', snippet: true,
+      insertText: '"conditions": {\n  "max_age": "${1:7d}"\n}' },
+    { label: 'settings', detail: '新索引的设置', snippet: true, insertText: '"settings": {\n  ${0}\n}' },
+    { label: 'mappings', detail: '新索引的字段映射', snippet: true,
+      insertText: '"mappings": {\n  "properties": {\n    ${0}\n  }\n}' },
+    { label: 'aliases', detail: '新索引的别名配置', snippet: true, insertText: '"aliases": {\n  ${0}\n}' },
+  ];
+}
+
+/** rollover 的 conditions 键——只认 max_*（min_* 是 ILM 的条件，rollover API 不认） */
+export function rolloverConditionKeyItems(): AssistItem[] {
+  return [
+    { label: 'max_age', detail: '索引最大年龄（时间串）', snippet: true, insertText: '"max_age": "${1:7d}"' },
+    { label: 'max_docs', detail: '索引最大文档数', snippet: true, insertText: '"max_docs": ${1:1000000}' },
+    { label: 'max_size', detail: '索引最大总大小', snippet: true, insertText: '"max_size": "${1:50gb}"' },
+    { label: 'max_primary_shard_size', detail: '单主分片最大大小', snippet: true,
+      insertText: '"max_primary_shard_size": "${1:50gb}"' },
+    { label: 'max_primary_shard_docs', detail: '单主分片最大文档数', snippet: true,
+      insertText: '"max_primary_shard_docs": ${1:200000}' },
+  ];
+}
+
+/** 滚动索引体区域：settings/mappings/aliases 各自给对应键档，conditions 给条件键，
+    更深层（conditions 内部、别名词条内部）由调用方压制。 */
+export function rolloverBodyRegionAt(doc: string, offset: number):
+  'root' | 'conditions' | 'settings' | 'mapping' | 'aliases' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  const rootKey = stack[0] ?? null;
+  if (rootKey === 'conditions') return stack.length === 2 ? 'conditions' : 'deep';
+  if (rootKey === 'settings') return 'settings';
+  if (rootKey === 'mappings' || rootKey === 'mapping') return 'mapping';
+  if (rootKey === 'aliases') return 'aliases';
+  return 'deep';
+}
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

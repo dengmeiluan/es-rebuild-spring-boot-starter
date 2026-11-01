@@ -13,7 +13,7 @@ import {
   QUERY_SNIPPETS, AGG_SNIPPETS, ROOT_KEY_SNIPPETS, ROOT_KEYS,
   retrieverBodyKeys, queryBodyKeys, clauseValueKeys, suggesterBodyKeys, aggBodyKeys,
   mappingKeyItems, mappingFieldKeyItems, templateKeyItems, indexBodyKeyItems, aliasKeyItems, reindexBodyKeyItems,
-  sqlBodyKeyItems,
+  sqlBodyKeyItems, updateBodyKeyItems, updateScriptKeyItems, rolloverBodyKeyItems, rolloverConditionKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -77,6 +77,10 @@ function allProblems(): string[] {
     out.push(...snippetProblems('RX:' + region, reindexBodyKeyItems(region).map(i => ({ text: i.insertText, key: i.label }))));
   }
   out.push(...snippetProblems('SQ', sqlBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('UB', updateBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('US', updateScriptKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('RB2', rolloverBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('RC', rolloverConditionKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;
 }
 

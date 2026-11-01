@@ -1,7 +1,8 @@
 /**
  * 五百二十四批 W6：Monaco 智能层三深化。
- * ① BodyKind 'doc' 档：bodyKindForPath 四端点（/_doc/、/_create/、/_update/、/_source）归 doc、
- *    _update_by_query 仍 search（分支顺序安全钉）；doc 档分派语义——键位零候选、
+ * ① BodyKind 'doc' 档：bodyKindForPath 三端点（/_doc/、/_create/、/_source）归 doc、
+ *    _update 1439 起单列 update-body（结构化体）；_update_by_query 仍 search（分支顺序安全钉）；
+ *    doc 档分派语义——键位零候选、
  *    field 值位白名单出字段候选（Value kind + W5-1 filterText/sortText 双关）；
  *    DiffEditorView（dfEditedAssist）/IndexHubView（docEdit）消费迁移源码锁。
  * ② painless 语言 assist：dslAssist 在档时 painless 补全 +1、hover +1（签名互不串档——
@@ -188,7 +189,8 @@ describe('524 ① BodyKind doc 档', () => {
     expect(bodyKindForPath('/{index}/_doc/1')).toBe('doc');
     expect(bodyKindForPath('/alarm_record-20260524/_doc/abc-123')).toBe('doc');
     expect(bodyKindForPath('/{index}/_create/1')).toBe('doc');
-    expect(bodyKindForPath('/{index}/_update/1')).toBe('doc');
+    /* 1439 迁移：_update 体是 {doc/upsert/script…} 的结构化体，单列 update-body 档（不再当裸文档） */
+    expect(bodyKindForPath('/{index}/_update/1')).toBe('update-body');
     expect(bodyKindForPath('/{index}/_source/1')).toBe('doc');
     expect(bodyKindForPath('/{index}/_doc/1/_source')).toBe('doc');
     expect(bodyKindForPath('/{index}/_DOC/1?pretty')).toBe('doc');
