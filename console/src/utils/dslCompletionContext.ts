@@ -26,6 +26,8 @@ type DslCtx = { kind: 'root' } | { kind: 'query-type' } | { kind: 'field'; claus
   | { kind: 'clause-field-key'; op: string }
   /* 1439：检索器变体体键位（retriever.standard.{query}、knn.{field/query_vector}） */
   | { kind: 'retriever-body-key'; op: string }
+  /* 1439：建议器体键位（suggest.<名>.<term|phrase|completion>.{}） */
+  | { kind: 'suggester-body-key'; op: string }
   /* 1439：字段名作键的容器（highlight.fields { <字段>: {} }） */
   | { kind: 'field-key' }
   /* 1439：排序链——sort 元素的简写方向值 / 字段配置键 */
@@ -430,6 +432,35 @@ export const QUERY_BODY_KEYS: Record<string, BodyKey[]> = {
   span_within: [B('little', '"little": {\n  ${0}\n}', '内部跨度'), B('big', '"big": {\n  ${0}\n}', '外部跨度')],
   span_multi: [B('match', '"match": {\n  ${0}\n}', '多词查询（term/prefix/wildcard 等）')],
   span_field_masking: [B('query', '"query": {\n  ${0}\n}', '被掩码的查询'), B('field', '"field": "${1:field}"', '掩码字段')],
+  match_all: [B('boost', '"boost": ${1:1}', '加权'), NAME_KEY],
+  /* inner_hits：nested / has_child / collapse / top_hits 共用（父键判定见 dslContext） */
+  inner_hits: [
+    B('from', '"from": ${1:0}', '组内跳过条数'),
+    B('size', '"size": ${1:3}', '组内返回条数'),
+    B('name', '"name": "${1:hits}"', '结果里的命名（拿回 inner_hits）'),
+    B('sort', '"sort": [\n  ${0}\n]', '组内排序'),
+    B('_source', '"_source": ${1|false,true|}', '组内返回字段'),
+    B('highlight', '"highlight": {\n  ${0}\n}', '组内高亮'),
+  ],
+  rescore: [
+    B('window_size', '"window_size": ${1:50}', '前 N 条参与重排'),
+    B('query', '"query": {\n  ${0}\n}', '重排查询（配合 rescore_query）'),
+    B('query_weight', '"query_weight": ${1:1}', '原分权重'),
+    B('rescore_query', '"rescore_query": {\n  ${0}\n}', '重排查询'),
+    B('rescore_query_weight', '"rescore_query_weight": ${1:1}', '重排分权重'),
+    B('score_mode', '"score_mode": "${1|total,multiply,avg,max,min|}"', '合并方式'),
+  ],
+  pit: [B('id', '"id": "${1:pitId}"', 'Point-in-time ID'), B('keep_alive', '"keep_alive": "${1:1m}"', '保活时长')],
+  /* function_score.functions[] 里的 decay / random_score / field_value_factor 体 */
+  gauss: [B('origin', '"origin": "${1:0}"', '原点'), B('scale', '"scale": "${1:10}"', '衰减尺度'), B('offset', '"offset": ${1:0}', '无衰减区间'), B('decay', '"decay": ${1:0.5}', '衰减到该比例')],
+  linear: [B('origin', '"origin": "${1:0}"', '原点'), B('scale', '"scale": "${1:10}"', '衰减尺度'), B('offset', '"offset": ${1:0}', '无衰减区间'), B('decay', '"decay": ${1:0.5}', '衰减到该比例')],
+  exp: [B('origin', '"origin": "${1:0}"', '原点'), B('scale', '"scale": "${1:10}"', '衰减尺度'), B('offset', '"offset": ${1:0}', '无衰减区间'), B('decay', '"decay": ${1:0.5}', '衰减到该比例')],
+  random_score: [B('seed', '"seed": ${1:1}', '随机种子（固定后结果可复现）'), B('field', '"field": "${1:_seq_no}"', '按该字段值参与随机')],
+  field_value_factor: [B('field', '"field": "${1:field}"', '取值字段'), B('factor', '"factor": ${1:1}', '放大系数'), B('modifier', '"modifier": "${1|none,log,log1p,log2p,ln,ln1p,ln2p,square,sqrt,reciprocal|}"', '取值变换'), B('missing', '"missing": ${1:1}', '缺值时的默认值')],
+  /* 合成档：根层容器体（owner 键判定） */
+  __script_field__: [B('script', '"script": {\n  ${0}\n}', '脚本（source/lang/params）')],
+  __script__: [B('source', '"source": "${1:doc[\'field\'].value}"', '脚本源码'), B('lang', '"lang": "${1:painless}"', '脚本语言'), B('params', '"params": {\n  ${0}\n}', '脚本参数'), B('id', '"id": "${1:storedScriptId}"', '已存脚本 ID')],
+  __runtime_field__: [B('type', '"type": "${1|keyword,long,double,date,boolean,ip|}"', '运行时字段类型'), B('script', '"script": {\n  ${0}\n}', '取值脚本'), B('format', '"format": "${1:yyyy-MM-dd}"', 'date 格式')],
   collapse: [B('field', '"field": "${1:field}"', '折叠字段（每个值只留一条）'), B('inner_hits', '"inner_hits": { "name": "${1:group}", "size": ${2:1} }', '折叠组内命中')],
   highlight: [
     B('fields', '"fields": {\n  ${0}\n}', '高亮字段'),
@@ -539,6 +570,46 @@ export function retrieverBodyKeys(op: string): BodyKey[] {
   return out;
 }
 
+/* 建议器体键（suggest.<名>.<term|phrase|completion>.{}）——此前该层什么都不出 */
+export const SUGGEST_BODY_KEYS: Record<string, BodyKey[]> = {
+  term: [
+    B('field', '"field": "${1:field}"', '候选来源字段'),
+    B('text', '"text": "${1:query}"', '输入文本'),
+    B('prefix', '"prefix": "${1:prefix}"', '前缀（优先于 text）'),
+    B('suggest_mode', '"suggest_mode": "${1|missing,popular,always|}"', '建议策略'),
+    B('min_word_length', '"min_word_length": ${1:3}', '最短词长'),
+    B('max_edits', '"max_edits": ${1:2}', '最大编辑距离'),
+    B('sort', '"sort": "${1|score,frequency|}"', '候选排序'),
+    B('size', '"size": ${1:5}', '每个词的建议数'),
+    B('analyzer', '"analyzer": "${1:standard}"', '分词器'),
+  ],
+  phrase: [
+    B('field', '"field": "${1:field}"', '候选来源字段'),
+    B('text', '"text": "${1:query}"', '输入文本'),
+    B('prefix', '"prefix": "${1:prefix}"', '前缀（优先于 text）'),
+    B('gram_size', '"gram_size": ${1:3}', 'n-gram 大小'),
+    B('analyzer', '"analyzer": "${1:standard}"', '分词器'),
+    B('highlight', '"highlight": { "pre_tag": "${1:<em>}", "post_tag": "${2:</em>}" }', '候选中的纠错高亮'),
+    B('collate', '"collate": {\n  ${0}\n}', '候选校验查询'),
+    B('size', '"size": ${1:5}', '候选数'),
+    B('max_errors', '"max_errors": ${1:1}', '最大错误数'),
+  ],
+  completion: [
+    B('field', '"field": "${1:suggestField}"', 'completion 字段'),
+    B('text', '"text": "${1:query}"', '输入文本'),
+    B('prefix', '"prefix": "${1:prefix}"', '前缀（优先于 text）'),
+    B('contexts', '"contexts": {\n  ${0}\n}', '上下文过滤（category/geo）'),
+    B('fuzzy', '"fuzzy": { "fuzziness": ${1:1} }', '模糊匹配'),
+    B('skip_duplicates', '"skip_duplicates": ${1|true,false|}', '同文本去重'),
+    B('size', '"size": ${1:5}', '候选数'),
+    B('analyzer', '"analyzer": "${1:simple}"', '输入分词器'),
+    B('search_analyzer', '"search_analyzer": "${1:simple}"', '索引侧分词器'),
+  ],
+};
+export function suggesterBodyKeys(op: string): BodyKey[] {
+  return [...(SUGGEST_BODY_KEYS[op] || [])];
+}
+
 /* 数组键链白名单位（对标 Kibana sort/_source 补全）。两类白名单各管一个位：
  - 元素对象键位（"sort": [{ "<光标" }]）：数组属主键 ∈ DSL_ARRAY_OBJKEY_CHAINS（=sort，
  排序字段位；top_hits 等嵌套 sort 同构命中），dslContext 出 array-elem-key 档；
@@ -550,7 +621,7 @@ export function retrieverBodyKeys(op: string): BodyKey[] {
  是新增位，两既有钉面不沾。⚠ dslArrayElemFieldAt 本体零改动（dslValueTiers544 B 段把
  ('_source', null)→null 钉死，_source 走本白名单新轨，不共函数）。 */
 const DSL_ARRAY_OBJKEY_CHAINS = new Set(['sort']);
-export const DSL_ARRAY_ELEM_CHAINS = new Set(['_source']);
+export const DSL_ARRAY_ELEM_CHAINS = new Set(['_source', 'stored_fields', 'docvalue_fields']);
 
 type Frame = { type: '{' | '['; lastKey: string | null };
 
@@ -708,13 +779,23 @@ export function dslContext(doc: string, offset: number): DslCtx {
         }
       }
     }
-    /* 1439：根层/嵌套容器里的 collapse / highlight / knn 体键位——此前 none */
+    /* 1439：根层/嵌套容器的体键位——collapse/highlight/knn/rescore/pit/inner_hits，
+       以及 script_fields / runtime_mappings 下的自由字段体（合成键）。owner 键 = 栈顶容器
+       的上一层帧 lastKey；此前这些位置一律 none。 */
     if (stack[stack.length - 1].type === '{' && !valuePos) {
-      for (const ck of ['collapse', 'highlight', 'knn']) {
-        /* ci >= 0 必查：根帧时 lastIndexOf 与 stack.length-2 同为 -1，缺键会假命中 */
-        const ci = keys.lastIndexOf(ck);
-        if (ci >= 0 && ci === stack.length - 2) return { kind: 'query-body-key', op: ck };
+      /* opening = 打开栈顶对象的那把键；container = 再上层的容器键（自由字段名容器用） */
+      const opening = stack.length >= 2 ? stack[stack.length - 2].lastKey : null;
+      const container = stack.length >= 3 ? stack[stack.length - 3].lastKey : null;
+      /* 建议器体必须先判：suggest.<名>.<term|…>.{} 的 opening 是建议器类型名，
+         落到同名查询子句表会给出 value/fuzziness 之类错误的键。 */
+      const sIdx2 = keys.lastIndexOf('suggest');
+      if (sIdx2 >= 0 && keys.length >= sIdx2 + 3 && opening && SUGGEST_BODY_KEYS[opening]) {
+        return { kind: 'suggester-body-key', op: opening };
       }
+      if (opening === 'script') return { kind: 'query-body-key', op: '__script__' };
+      if (opening && QUERY_BODY_KEYS[opening]) return { kind: 'query-body-key', op: opening };
+      if (container === 'script_fields') return { kind: 'query-body-key', op: '__script_field__' };
+      if (container === 'runtime_mappings') return { kind: 'query-body-key', op: '__runtime_field__' };
     }
     /* 数组元素对象键位（键链白名单位）——栈顶 { 的下层是 [ 数组帧、数组帧属主键
  ∈ DSL_ARRAY_OBJKEY_CHAINS（=sort，排序字段键位；top_hits 等嵌套 sort 同构命中）。
@@ -770,6 +851,18 @@ export function dslContext(doc: string, offset: number): DslCtx {
       }
       const op = clauseFrame.lastKey;
       if (op && QUERY_BODY_KEYS[op]) return { kind: 'query-body-key', op };
+      /* function_score.functions[] 的函数体（gauss/linear/exp.<字段>.{}）——
+         函数名在数组元素帧上，字段名在它下一层，普通子句判定看不到 */
+      if (inner.length >= 5) {
+        const fnFrame = inner[inner.length - 3];
+        const arrFrame = inner[inner.length - 4];
+        /* 数组帧的属主键在下一层帧上（"functions": [ 的 'functions'）——
+           函数体可能嵌在 bool 元素里，不能假设 function_score 帧固定相对位置 */
+        if (arrFrame.type === '[' && inner[inner.length - 5].lastKey === 'functions'
+            && fnFrame.lastKey && QUERY_BODY_KEYS[fnFrame.lastKey]) {
+          return { kind: 'query-body-key', op: fnFrame.lastKey };
+        }
+      }
     }
   }
   return { kind: 'query-type' };

@@ -12,8 +12,8 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
-  dslContext, queryBodyKeys, clauseValueKeys, retrieverBodyKeys,
-  QUERY_BODY_KEYS, CLAUSE_VALUE_KEYS,
+  dslContext, queryBodyKeys, clauseValueKeys, retrieverBodyKeys, suggesterBodyKeys,
+  QUERY_BODY_KEYS, CLAUSE_VALUE_KEYS, SUGGEST_BODY_KEYS,
 } from '../utils/dslCompletionContext';
 
 /** [名字, 光标前文本, 期望 kind, 期望 op（可选）] */
@@ -59,6 +59,24 @@ const BODY_CASES: Array<[string, string, string, string?]> = [
   ['match 字段配置', '{"query":{"match":{"title":{"', 'clause-field-key', 'match'],
   ['fuzzy 字段配置', '{"query":{"fuzzy":{"title":{"', 'clause-field-key', 'fuzzy'],
   ['term 字段配置', '{"query":{"term":{"title":{"', 'clause-field-key', 'term'],
+  /* 根层/嵌套容器与函数体 */
+  ['inner_hits（nested 内）', '{"query":{"nested":{"inner_hits":{"', 'query-body-key', 'inner_hits'],
+  ['inner_hits（collapse 内）', '{"collapse":{"inner_hits":{"', 'query-body-key', 'inner_hits'],
+  ['rescore', '{"rescore":{"', 'query-body-key', 'rescore'],
+  ['pit', '{"pit":{"', 'query-body-key', 'pit'],
+  ['match_all', '{"query":{"match_all":{"', 'query-body-key', 'match_all'],
+  ['gauss 字段体', '{"query":{"function_score":{"functions":[{"gauss":{"price":{"', 'query-body-key', 'gauss'],
+  ['random_score 体', '{"query":{"function_score":{"functions":[{"random_score":{"', 'query-body-key', 'random_score'],
+  ['script_fields 字段体', '{"script_fields":{"s1":{"', 'query-body-key', '__script_field__'],
+  ['script 对象体', '{"script_fields":{"s1":{"script":{"', 'query-body-key', '__script__'],
+  ['runtime_mappings 字段体', '{"runtime_mappings":{"f":{"', 'query-body-key', '__runtime_field__'],
+];
+
+/** 建议器体（suggest.<名>.<类型>.{}）——另一张表，键与查询子句不同名 */
+const SUGGEST_CASES: Array<[string, string, string]> = [
+  ['suggest.term 体', '{"suggest":{"s1":{"term":{"', 'term'],
+  ['suggest.phrase 体', '{"suggest":{"s1":{"phrase":{"', 'phrase'],
+  ['suggest.completion 体', '{"suggest":{"s1":{"completion":{"', 'completion'],
 ];
 
 /** 1439：字段形态子句（体是字段名对象）——此前只有 9 个在册，其余给算子骨架 */
@@ -110,6 +128,16 @@ describe('1439 子句体键位判定', () => {
     }
   });
 
+  it('建议器体出 suggester-body-key（不落到同名查询子句表）', () => {
+    for (const [name, doc, op] of SUGGEST_CASES) {
+      const c = ctxAt(doc) as any;
+      expect(c.kind, name).toBe('suggester-body-key');
+      expect(c.op, name).toBe(op);
+    }
+    /* 建议器名层仍给三种类型（term/phrase/completion），不是体键 */
+    expect(ctxAt('{"suggest":{"s1":{"')).toEqual({ kind: 'suggester-type' });
+  });
+
   it('该出算子的位置仍是 query-type（不过度扩张）', () => {
     for (const [name, doc] of STILL_QUERY_TYPE) {
       expect(ctxAt(doc).kind, name).toBe('query-type');
@@ -141,6 +169,7 @@ describe('1439 子句体键表', () => {
   it('结构键表自洽（无重复、骨架键名一致）', () => {
     expect(tableProblems(QUERY_BODY_KEYS)).toEqual([]);
     expect(tableProblems(CLAUSE_VALUE_KEYS)).toEqual([]);
+    expect(tableProblems(SUGGEST_BODY_KEYS)).toEqual([]);
   });
 
   it('负控：键表自洽探针能抓到重复/错键', () => {

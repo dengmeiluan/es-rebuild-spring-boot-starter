@@ -1057,3 +1057,37 @@ describe('1439 子句体键位（query-body-key / clause-field-key / retriever-b
     expect(suggest('{"query":{"bool":{"must": "')).toEqual([]);
   });
 });
+
+describe('1439-b 容器体 / 建议器体 / 字段数组键位', () => {
+  it('inner_hits / rescore / pit / match_all 体给结构键', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    expect(suggest('{"query":{"nested":{"inner_hits":{"').map((i: any) => i.label))
+      .toEqual(expect.arrayContaining(['from', 'size', 'name', '_source']));
+    expect(suggest('{"rescore":{"').map((i: any) => i.label))
+      .toEqual(expect.arrayContaining(['window_size', 'query', 'rescore_query', 'score_mode']));
+    expect(suggest('{"pit":{"').map((i: any) => i.label)).toEqual(['id', 'keep_alive']);
+    expect(suggest('{"query":{"match_all":{"').map((i: any) => i.label)).toEqual(expect.arrayContaining(['boost', '_name']));
+  });
+
+  it('script_fields / runtime_mappings 的自由字段体给 script/type', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    expect(suggest('{"script_fields":{"s1":{"').map((i: any) => i.label)).toEqual(['script']);
+    expect(suggest('{"script_fields":{"s1":{"script":{"').map((i: any) => i.label))
+      .toEqual(expect.arrayContaining(['source', 'lang', 'params']));
+    expect(suggest('{"runtime_mappings":{"f":{"').map((i: any) => i.label)).toEqual(expect.arrayContaining(['type', 'script']));
+  });
+
+  it('suggest.<名>.term 体给 field/text/suggest_mode（不是查询 term 的 value）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    const labels = suggest('{"suggest":{"s1":{"term":{"').map((i: any) => i.label);
+    expect(labels).toEqual(expect.arrayContaining(['field', 'text', 'prefix', 'suggest_mode']));
+    expect(labels).not.toContain('value');
+  });
+
+  it('stored_fields / docvalue_fields 数组出字段候选（同 _source 轨）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    expect(suggest('{"stored_fields":["').map((i: any) => i.label)).toEqual(expect.arrayContaining(['title', 'price']));
+    expect(suggest('{"docvalue_fields":["').map((i: any) => i.label)).toEqual(expect.arrayContaining(['title', 'price']));
+    expect(suggest('{"_source":["').map((i: any) => i.label)).toEqual(expect.arrayContaining(['title', 'price']));
+  });
+});
