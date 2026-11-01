@@ -6,7 +6,7 @@
  * 反向普查：每个目录里的全部根键必须零输出——否则合法输入会被自己的 lint 骂。
  */
 import { describe, it, expect } from 'vitest';
-import { lintBodyKeys, lintStructuredBody } from '../utils/dslLint';
+import { lintBodyKeys, lintStructuredBody, lintNdjsonBody } from '../utils/dslLint';
 import {
   updateBodyRootKeys, rolloverBodyRootKeys, rolloverConditionKeys, dbqBodyRootKeys,
   ubqBodyRootKeys, queryOnlyBodyRootKeys, templateSearchBodyRootKeys, sqlBodyRootKeys, mgetBodyRootKeys,
@@ -73,5 +73,14 @@ describe('1439 lintStructuredBody 共享分派（DevTools / RestView 同源）',
     expect(lintStructuredBody('settings', '{"a":1}')).toEqual([]);
     expect(lintStructuredBody('dbq-body', '{bad')).toEqual([]);
     expect(lintStructuredBody('dbq-body', '')).toEqual([]);
+  });
+
+  it('lintNdjsonBody：成对零输出、落单告警（两页共用入口）', () => {
+    expect(lintNdjsonBody('{"index":{}}\n{"a":1}')).toEqual([]);
+    const bad = lintNdjsonBody('{"index":{}}\n{"index":{}}\n{"a":1}');
+    expect(bad.map(f => f.rule)).toEqual(['ndjson-pair']);
+    expect(bad[0].severity).toBe('warning');
+    expect(bad[0].message).toContain('数量不匹配');
+    expect(lintNdjsonBody('')).toEqual([]);
   });
 });

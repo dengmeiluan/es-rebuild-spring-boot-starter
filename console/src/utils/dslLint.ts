@@ -47,6 +47,7 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
 import { SETTINGS_CATALOG } from './indexSettingsCatalog';
+import { ndjsonLint } from './bulkNdjson';
 
 type LintRule =
   | 'prefix-wildcard' | 'deep-paging' | 'huge-size' | 'missing-filter'
@@ -1345,6 +1346,16 @@ export function lintBodyKeys(obj: unknown, allowed: readonly string[], label: st
     });
   }
   return out;
+}
+
+/** NDJSON 体的配对 lint（_bulk/_msearch 每行一条）——DevTools 与 REST 两页共用同一 Finding 形态。 */
+export function lintNdjsonBody(body: string): Finding[] {
+  const r = ndjsonLint(body);
+  return r && r.level === 'warn' ? [{
+    rule: 'ndjson-pair', severity: 'warning', message: r.msg,
+    suggestion: '动作行（index/create/update/delete）与文档行必须逐行成对，每行都是单行合法 JSON',
+    path: '', anchor: '', nth: 0,
+  }] : [];
 }
 
 /** 结构化体的统一 lint 入口（DevTools 与 RestView 共用同一分派，防两页口径漂移）：

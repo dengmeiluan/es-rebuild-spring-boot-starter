@@ -10,11 +10,13 @@ import { draftStorageKey } from '../composables/useScopedDraft';
 import { createApp, h, nextTick } from 'vue';
 import { createPinia } from 'pinia';
 
+const monacoCaps: { props: any }[] = [];
 vi.mock('../components/MonacoEditor.vue', () => ({
   default: {
     name: 'MonacoEditor',
     props: ['modelValue', 'language', 'height', 'readonly', 'dslAssist'],
     emits: ['update:modelValue', 'execute'],
+    setup(props: any) { monacoCaps.push({ props }); return {}; },
     template: '<div class="monaco-stub"></div>',
   },
 }));
@@ -65,6 +67,7 @@ beforeEach(() => {
   document.body.innerHTML = '';
   sessionStorage.clear();
   localStorage.clear();
+  monacoCaps.length = 0;
 });
 
 describe('1439 RestView 结构化体 lint', () => {
@@ -99,5 +102,31 @@ describe('1439 RestView 结构化体 lint', () => {
     const { host } = mountRest();
     await settle();
     expect(host.querySelector('.lint-bar')).toBeNull();
+  });
+
+  it('_bulk（none 档）：NDJSON 配对告警进底部条，语言切 ndjson（与 DevTools 同源）', async () => {
+    presetDraft('POST', '/logs/_bulk', '{"index":{}}\n{"index":{}}\n{"a":1}');
+    const { host } = mountRest();
+    await settle();
+    expect(monacoCaps[0]?.props.language, '_bulk 体语言').toBe('ndjson');
+    const bar = host.querySelector('.lint-bar');
+    expect(bar, 'bulk 配对告警应有底部条').toBeTruthy();
+    expect(bar!.textContent).toContain('数量不匹配');
+  });
+
+  it('_msearch：语言切 ndjson', async () => {
+    presetDraft('POST', '/_msearch', '{"index":"logs"}\n{"query":{"match_all":{}}}');
+    mountRest();
+    await settle();
+    expect(monacoCaps[0]?.props.language, '_msearch 体语言').toBe('ndjson');
+  });
+
+  it('settings 档走 lintSettingsBody：设置键笔误进底部条', async () => {
+    presetDraft('PUT', '/logs/_settings', '{"index":{"number_of_shardss":1}}');
+    const { host } = mountRest();
+    await settle();
+    const bar = host.querySelector('.lint-bar');
+    expect(bar, 'settings 档应有底部条').toBeTruthy();
+    expect(bar!.textContent).toContain('number_of_shardss');
   });
 });

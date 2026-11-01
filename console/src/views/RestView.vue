@@ -60,7 +60,7 @@
           <button class="btn ghost xs" data-test="rest-body-h" :title="'body 编辑器高度档：' + restEdH" @click="cycleRestEdH">高</button>
         </div>
         <!-- P0-1：编辑器划线通道挂点（banner 保留双通道，见 script queueRtLintMarkers） -->
-        <MonacoEditor ref="rtBodyMonaco" v-model="body" :height="restEdH" class="rt-body-ed" :dsl-assist="dslAssist" />
+        <MonacoEditor ref="rtBodyMonaco" v-model="body" :height="restEdH" :language="bodyLang" class="rt-body-ed" :dsl-assist="dslAssist" />
         <!-- .rt-lint 私造三档随同构改用 theme.css .lint-bar 单源（软/硬档
  lint-bar-warn/lint-bar-err，role/status 语义与文案逐字不动） -->
         <div v-if="rtLintErrors.length" role="alert" class="lint-bar lint-bar-err">
@@ -187,8 +187,8 @@ import MonacoEditor from '../components/MonacoEditor.vue';
 import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import { useIndexFields } from '../composables/useIndexFields';
 import { useTermsSuggest } from '../composables/useTermsSuggest';
-import { bodyKindForPath } from '../utils/dslCompletionContext';
-import { lintDsl, lintStructuredBody } from '../utils/dslLint'; /* ：DSL 静态体检 */
+import { bodyKindForPath, bodyLangForPath } from '../utils/dslCompletionContext';
+import { lintDsl, lintStructuredBody, lintSettingsBody, lintMappingBody, lintNdjsonBody } from '../utils/dslLint'; /* ：DSL 静态体检（与 DevTools 同源分派） */
 import { useDebounceFn } from '../composables/useDebounceFn'; /* P0-1：划线防抖统一件 */
 import EndpointPathInput from '../components/devtools/EndpointPathInput.vue';
 import { REST_METHODS, type EsEndpoint } from '../utils/esEndpoints';
@@ -398,17 +398,23 @@ const rtBodyKind = computed(() => bodyKindForPath(curEp.value?.path ?? path.valu
  与 rtFields 同源（Rest 无路径索引派生，fields 同口径）；未选索引/异常恒 resolve [] 零扰动 */
 const rtTerms = useTermsSuggest(() => store.pickedIdx || '');
 const dslAssist = { fields: () => rtFields.value, bodyKind: () => rtBodyKind.value, terms: (f: string, p: string) => rtTerms.suggestAsync(f, p) };
-/* body lint 静态体检——search 档走查询规则；结构化体（_update/_mget/_aliases/按查询删改/
- rollover/count 等）走与 DevTools 同一分派 lintStructuredBody（根键校验）；
- settings/mapping/bulk 等非结构化档恒静默；JSON 解析失败静默 */
+/* body lint 静态体检——与 DevTools 同一分派：bulk/msearch→NDJSON 配对、
+ settings→lintSettingsBody、mapping→lintMappingBody、search→查询规则、
+ 结构化体→lintStructuredBody（根键校验）；JSON 解析失败静默 */
 const rtLint = computed(() => {
   if (!hasBody.value) return [];
-  if (rtBodyKind.value === 'search') {
+  const kind = rtBodyKind.value;
+  if (kind === 'none') return lintNdjsonBody(body.value || '');
+  if (kind === 'settings') { try { return lintSettingsBody(JSON.parse(body.value || '')); } catch { return []; } }
+  if (kind === 'mapping') { try { return lintMappingBody(JSON.parse(body.value || '')); } catch { return []; } }
+  if (kind === 'search') {
     try { return lintDsl(JSON.parse(body.value || ''), { fields: rtFields.value }); }
     catch { return []; }
   }
-  return lintStructuredBody(rtBodyKind.value, body.value || '');
+  return lintStructuredBody(kind, body.value || '');
 });
+/* 1439：体语言与 DevTools 同源（_bulk/_msearch → ndjson） */
+const bodyLang = computed(() => bodyLangForPath(path.value || ''));
 const rtLintErrors = computed(() => rtLint.value.filter(f => f.severity === 'error'));
 const rtLintWarns = computed(() => rtLint.value.filter(f => f.severity === 'warning' || f.severity === 'hint'));
 

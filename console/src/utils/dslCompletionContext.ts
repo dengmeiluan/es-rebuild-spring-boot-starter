@@ -1256,6 +1256,13 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   return 'search';
 }
 
+/** 体编辑器语言：_bulk 与 _msearch 族是 NDJSON（每行一个独立 JSON），其余 json。
+    DevTools 与 REST 两页同源（此前 REST 的 bulk 体被当普通 JSON 高亮/报错）。 */
+export function bodyLangForPath(rawPath: string): 'ndjson' | 'json' {
+  const p = (rawPath || '').split('?')[0].toLowerCase();
+  return /(^|\/)_bulk(\/|$)/.test(p) || /(^|\/)_msearch(\/|$)/.test(p) ? 'ndjson' : 'json';
+}
+
 /** 补全项统一形态：insertText 已是完整插入串（含引号/snippet 语法），provider 直接消费 */
 export type AssistItem = { label: string; detail?: string; insertText: string; snippet?: boolean };
 

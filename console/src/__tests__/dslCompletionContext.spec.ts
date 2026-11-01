@@ -4,7 +4,7 @@
    none→非 query/aggs 区深层不出层。 */
 import { describe, it, expect } from 'vitest';
 import { dslContext, QUERY_SNIPPETS, ROOT_KEYS } from '../utils/dslCompletionContext';
-import { bodyKindForPath, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, MAPPING_TYPES, templateKeyItems, templateRegionAt, indexBodyRegionAt, indexBodyKeyItems, aliasKeyItems, aliasConfigAt, reindexBodyRegionAt, reindexBodyKeyItems, sqlBodyKeyItems, SQL_VALUE_SNIPPETS } from '../utils/dslCompletionContext';
+import { bodyKindForPath, bodyLangForPath, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, MAPPING_TYPES, templateKeyItems, templateRegionAt, indexBodyRegionAt, indexBodyKeyItems, aliasKeyItems, aliasConfigAt, reindexBodyRegionAt, reindexBodyKeyItems, sqlBodyKeyItems, SQL_VALUE_SNIPPETS } from '../utils/dslCompletionContext';
 import { lineIndentAt, reindentSnippet, commaAffixes } from '../utils/dslCompletionContext';
 
 const E = (doc: string) => dslContext(doc, doc.length); // 光标在尾
@@ -298,6 +298,14 @@ describe('bodyKindForPath', () => {
   it('自由路径默认 search（补全只是建议，零降级）', () => {
     expect(bodyKindForPath('/my-index')).toBe('search');
     expect(bodyKindForPath('')).toBe('search');
+  });
+  it('1439 bodyLangForPath：_bulk 与 _msearch 族（含相对写法）→ ndjson，其余 json', () => {
+    expect(bodyLangForPath('/idx/_bulk')).toBe('ndjson');
+    expect(bodyLangForPath('/_msearch')).toBe('ndjson');
+    expect(bodyLangForPath('_msearch/template')).toBe('ndjson');
+    expect(bodyLangForPath('/idx/_search')).toBe('json');
+    expect(bodyLangForPath('/idx/_bulk_like_index/_search')).toBe('json');
+    expect(bodyLangForPath('')).toBe('json');
   });
 });
 

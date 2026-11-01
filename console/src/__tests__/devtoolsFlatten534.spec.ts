@@ -64,10 +64,11 @@ describe('五百三十四批：高度结构语义零变动同步更新声明（2
   it('⚠devtoolsLint532 用例零破坏声明：关键源码字面逐条在场（lint 档路由 + 汇聚镜像双行）', () => {
     /* 1439 迁移：导入清单允许增长（lintStructuredBody 共享分派），锁「模块 + 关键符号」不锁整行 */
     expect(dt).toMatch(/import \{[\s\S]*?\} from '\.\.\/utils\/dslLint';/);
-    for (const sym of ['lintDsl', 'lintSettingsBody', 'lintMappingBody', 'lintStructuredBody']) {
+    for (const sym of ['lintDsl', 'lintSettingsBody', 'lintMappingBody', 'lintStructuredBody', 'lintNdjsonBody']) {
       expect(dt).toMatch(new RegExp(`\\b${sym}\\b`));
     }
-    expect(dt).toContain("import { ndjsonLint } from '../utils/bulkNdjson';");
+    /* 1439：NDJSON 配对 lint 抽到 dslLint（与 REST 同源），DevTools 不再直连 bulkNdjson */
+    expect(dt).not.toContain("from '../utils/bulkNdjson'");
     expect(dt).toContain('const dtLint = computed<Finding[]>(() => {');
     expect(dt).toContain('if (kind === \'settings\') return lintSettingsBody(JSON.parse(body));');
     expect(dt).toContain('if (kind === \'mapping\') return lintMappingBody(JSON.parse(body));');

@@ -371,10 +371,9 @@ describe('532 源码锁（行号漂移自适应：只锁语义串）', () => {
     expect(v).toContain("if (kind === 'settings') return lintSettingsBody(JSON.parse(body));");
     expect(v).toContain("if (kind === 'mapping') return lintMappingBody(JSON.parse(body));");
     expect(v).toContain("if (kind === 'search') return lintDsl(JSON.parse(body), { fields: dtFields.value });");
-    /* 1439：bodyLang 改多行 computed（_bulk + _msearch 段匹配）——锁语义不锁单行形态 */
-    expect(v).toMatch(/const bodyLang = computed\(\(\) => \{[\s\S]{0,240}?\}\);/);
-    expect(v).toContain("p.includes('_bulk')");
-    expect(v).toContain('_msearch');
+    /* 1439：bodyLang 抽到共享 bodyLangForPath（REST 同源）——DevTools 只消费，锁接线符号 */
+    expect(v).toContain("const bodyLang = computed(() => bodyLangForPath(cur.value?.path || ''));");
+    expect(v).toContain('bodyLangForPath');
   });
 
   it('P0-1 行内 marker 接线：bodyMonacoRef + setMarkers + info→hint 降级 + unplaced 兜底', () => {

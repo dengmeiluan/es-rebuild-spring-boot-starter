@@ -509,12 +509,11 @@ import MonacoEditor from '../components/MonacoEditor.vue';
 import { useIndexFields } from '../composables/useIndexFields';
 import { useTermsSuggest } from '../composables/useTermsSuggest';
 import { useDebounceFn } from '../composables/useDebounceFn';
-import { bodyKindForPath } from '../utils/dslCompletionContext';
-/* dtLint 档路由——search→lintDsl / bulk→ndjsonLint（bulkNdjson 既有件复用不改）/
+import { bodyKindForPath, bodyLangForPath } from '../utils/dslCompletionContext';
+/* dtLint 档路由——search→lintDsl / bulk→lintNdjsonBody（与 REST 同源）/
  settings→lintSettingsBody / mapping→lintMappingBody / 结构化体→lintStructuredBody（与 RestView 同源）；
  Finding 形态供行内 marker 与底部条共用 */
-import { lintDsl, lintSettingsBody, lintMappingBody, lintStructuredBody, type Finding } from '../utils/dslLint';
-import { ndjsonLint } from '../utils/bulkNdjson';
+import { lintDsl, lintSettingsBody, lintMappingBody, lintStructuredBody, lintNdjsonBody, type Finding } from '../utils/dslLint';
 import { parseCurl, diagnoseCurl } from '../utils/curlParse';
 import { friendlyEsError } from '../utils/esError';
 import { toJs, toPython } from '../utils/codegen';
@@ -745,12 +744,8 @@ watch(() => dtPathIdx.value || store.pickedIdx, () => { ensureDtFieldsDebounced(
 const dtBodyKind = computed(() => bodyKindForPath(curEp.value?.path ?? cur.value?.path ?? '', cur.value?.method ?? ''));
 /* P0-2a：body 语言跟档——_bulk 的多行 NDJSON 恒吃 json 语言会被 json worker
  多根对象全线误报语法红线；切 ndjson（自研 monarch，无 JSON LS 校验）红线消失、高亮保留 */
-/* 1439：_bulk 与 _msearch 族都是 NDJSON（每行一个独立 JSON）——此前只有 _bulk 切 ndjson，
-   _msearch 体被当普通 JSON 高亮/报错。段匹配让相对写法（_msearch）也生效。 */
-const bodyLang = computed(() => {
-  const p = (cur.value?.path || '').toLowerCase();
-  return p.includes('_bulk') || /(^|\/)_msearch(\/|$)/.test(p) ? 'ndjson' : 'json';
-});
+/* 1439：体语言抽成共享纯函数（_bulk/_msearch → ndjson）——REST 页同源 */
+const bodyLang = computed(() => bodyLangForPath(cur.value?.path || ''));
 /* dslAssist 闭包在 setup 作用域声明（T14 实证：模板内联字面量走 _ctx 代理，ref 顶层 unwrap 后 .value 取 undefined） */
 /* terms 通道接值位动态候选（658 DqlQueryView 首发姊妹刀）——索引源与 dtFields
  同源闭包（dtPathIdx||pickedIdx）现调现读：body 索引随 path 变时 suggest 请求跟着走
@@ -766,14 +761,7 @@ const dtLint = computed<Finding[]>(() => {
   const kind = dtBodyKind.value;
   const body = cur.value?.body || '';
   try {
-    if (kind === 'none') {
-      const r = ndjsonLint(body);
-      return r && r.level === 'warn' ? [{
-        rule: 'ndjson-pair', severity: 'warning', message: r.msg,
-        suggestion: '动作行（index/create/update/delete）与文档行必须逐行成对，每行都是单行合法 JSON',
-        path: '', anchor: '', nth: 0,
-      }] : [];
-    }
+    if (kind === 'none') return lintNdjsonBody(body);
     if (kind === 'settings') return lintSettingsBody(JSON.parse(body));
     if (kind === 'mapping') return lintMappingBody(JSON.parse(body));
     if (kind === 'search') return lintDsl(JSON.parse(body), { fields: dtFields.value });
