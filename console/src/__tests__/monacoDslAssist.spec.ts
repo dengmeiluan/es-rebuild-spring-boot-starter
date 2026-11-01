@@ -1262,3 +1262,31 @@ describe('1439 重建索引体补全', () => {
     expect(suggest('{"source": {"query": { "')).toEqual([]);
   });
 });
+
+describe('1439 SQL 体补全', () => {
+  it('键位给 query/fetch_size；"query": 值位给 SELECT 骨架且接受后 JSON 合法', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'sql-body' as const } });
+    expect(suggest('{"').map((i: any) => i.label)).toEqual(expect.arrayContaining(['query', 'fetch_size', 'time_zone', 'columnar']));
+    const doc = '{"query": "';
+    const items = suggest(doc);
+    expect(items.map((i: any) => i.label)).toEqual(expect.arrayContaining(['SELECT *', 'SELECT WHERE']));
+    for (const i of items) {
+      const after = acceptSnippet(doc, i);
+      expect(() => JSON.parse(after + '}'), i.label + ' 接受后非法：' + after).not.toThrow();
+      expect(after).toMatch(/SELECT .* FROM \\"my-index\\"/);
+    }
+  });
+  it('负控：sql-body 非 query 值位仍压制', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'sql-body' as const } });
+    expect(suggest('{"time_zone": "')).toEqual([]);
+    expect(suggest('{"params": "')).toEqual([]);
+  });
+  it('负控：settings 档的 query 值位不套 SELECT 骨架', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'settings' as const } });
+    expect(suggest('{"query": "')).toEqual([]);
+  });
+  it('负控：search 档的 query 值位不出 SELECT 骨架', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'search' as const } });
+    expect(suggest('{"query": "').filter((i: any) => /^SELECT /.test(i.label))).toEqual([]);
+  });
+});

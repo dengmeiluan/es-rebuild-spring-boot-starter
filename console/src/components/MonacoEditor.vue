@@ -19,7 +19,7 @@ import 'monaco-editor/esm/vs/editor/contrib/comment/browser/comment';   // jsonc
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import { useAppStore } from '../stores/app';
-import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS, RETRIEVER_SNIPPETS, SUGGESTER_SNIPPETS, aggBodyKeys, queryBodyKeys, clauseValueKeys, retrieverBodyKeys, suggesterBodyKeys, ROOT_KEYS, ROOT_KEY_SNIPPETS, commaAffixes, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, indexBodyKeyItems, indexBodyRegionAt, aliasKeyItems, aliasConfigAt, reindexBodyKeyItems, reindexBodyRegionAt, MAPPING_TYPES, templateKeyItems, templateRegionAt, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
+import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS, RETRIEVER_SNIPPETS, SUGGESTER_SNIPPETS, aggBodyKeys, queryBodyKeys, clauseValueKeys, retrieverBodyKeys, suggesterBodyKeys, ROOT_KEYS, ROOT_KEY_SNIPPETS, commaAffixes, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, indexBodyKeyItems, indexBodyRegionAt, aliasKeyItems, aliasConfigAt, reindexBodyKeyItems, reindexBodyRegionAt, sqlBodyKeyItems, SQL_VALUE_SNIPPETS, MAPPING_TYPES, templateKeyItems, templateRegionAt, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
 import { makeDslValueSuggestProvider } from '../utils/dslValueSuggest';
 import type { AssistItem, BodyKind } from '../utils/dslCompletionContext';
 import { ensureLanguages } from '../utils/monacoLanguages';
@@ -602,8 +602,25 @@ onMounted(() => {
             })) };
           }
         }
-        if (bk === 'settings' || bk === 'mapping' || bk === 'template' || bk === 'index-body' || bk === 'alias-body' || bk === 'reindex-body') {
+        if (bk === 'settings' || bk === 'mapping' || bk === 'template' || bk === 'index-body' || bk === 'alias-body' || bk === 'reindex-body' || bk === 'sql-body') {
           const g = dslKeyGuard(doc, offset);
+          /* 1439：SQL 体的 "query": 值位——给 SELECT 骨架（值本身是长串，键骨架的默认值太短）。
+             必须放在下面「值位一律不出档」的压制之前，否则永远到不了。 */
+          if (bk === 'sql-body' && g.inStr && g.valueKey === 'query') {
+            const vEnd = scanStringEnd(doc, Math.max(0, Math.min(offset, doc.length)));
+            const vsp = model.getPositionAt(g.strStart);
+            const vep = model.getPositionAt(vEnd);
+            const vRange = {
+              startLineNumber: vsp.lineNumber, startColumn: vsp.column,
+              endLineNumber: vep.lineNumber, endColumn: vep.column,
+            };
+            return { suggestions: SQL_VALUE_SNIPPETS.map((s2, i) => ({
+              label: s2.label, kind: monaco.languages.CompletionItemKind.Value,
+              insertText: '"' + s2.text + '"', range: vRange, command: ACCEPT_FORMAT_COMMAND,
+              detail: s2.detail,
+              filterText: dslFilterText(s2.label), sortText: dslSortText(i, s2.label),
+            })) };
+          }
           /* g.valueKey 一并压住：W6 三档语义是「值位一律不出档」，2.6.0 白名单口仅限 search 路径 */
           if (!g.ok || !g.inStr || g.valueKey) return { suggestions: [] };
           /* range 与 W4 I-1/N-1 同形态：起=串起始，右扫闭合引号遇 \n 即停（本分支已锁 inStr，
@@ -623,6 +640,7 @@ onMounted(() => {
           const aliasItems = (): AssistItem[] => (aliasConfigAt(doc, offset) ? aliasKeyItems() : []);
           const rIdxRegion = bk === 'reindex-body' ? reindexBodyRegionAt(doc, offset) : 'root';
           const items: AssistItem[] = bk === 'settings' ? settingsKeyItems()
+            : bk === 'sql-body' ? sqlBodyKeyItems()
             : bk === 'reindex-body' ? reindexBodyKeyItems(rIdxRegion)
             : bk === 'alias-body' ? aliasKeyItems()
             : bk === 'mapping' ? (mappingFieldConfigAt(doc, offset) ? mappingFieldKeyItems() : mappingKeyItems())

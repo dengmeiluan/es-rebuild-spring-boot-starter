@@ -1038,7 +1038,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'reindex-body' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'reindex-body' | 'sql-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1151,8 +1151,10 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   if (p.includes('/_alias/')) return 'alias-body';
   /* 1439：_reindex 的体是 {source,dest,script,…}，不是 search body 也不是纯无档 */
   if (p.includes('_reindex')) return 'reindex-body';
+  /* 1439：_sql（含 _sql/translate）的体是 {query:"SELECT …"}，不是 search body */
+  if (p.includes('_sql')) return 'sql-body';
   if (p.includes('/_search/scroll') || p.includes('/_clear_scroll') || p.includes('/_aliases')
-      || p.includes('_sql') || p.includes('/_mget')
+      || p.includes('/_mget')
       || p.includes('/_scripts') || p.includes('/_script/') || p.includes('/_rollover')
       || p.includes('/_close') || p.includes('/_open') || p.includes('/_forcemerge')) return 'none';
   return 'search';
@@ -1360,6 +1362,29 @@ export function aliasKeyItems(): AssistItem[] {
     { label: 'is_hidden', detail: '别名是否隐藏', snippet: true, insertText: '"is_hidden": ${1|false,true|}' },
   ];
 }
+
+/** SQL 体（_sql / _sql/translate）的键 */
+export function sqlBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'query', detail: 'SQL 语句', snippet: true,
+      insertText: '"query": "SELECT * FROM ${1:my-index} LIMIT 10"' },
+    { label: 'fetch_size', detail: '每批返回行数（游标分页）', snippet: true, insertText: '"fetch_size": ${1:1000}' },
+    { label: 'time_zone', detail: '时区（日期函数按它解释）', snippet: true, insertText: '"time_zone": "${1:UTC}"' },
+    { label: 'columnar', detail: '列式返回（true=按列组织）', snippet: true, insertText: '"columnar": ${1|false,true|}' },
+    { label: 'runtime_mappings', detail: '本次查询的运行时字段', snippet: true,
+      insertText: '"runtime_mappings": {\n  ${0}\n}' },
+    { label: 'params', detail: '参数化查询的命名参数（?name）', snippet: true,
+      insertText: '"params": {\n  ${0}\n}' },
+  ];
+}
+
+/** "query": 值位的 SQL 骨架。text 是**已按 JSON 串转义**的 SQL（索引名带 \\"），
+    消费侧再包一层引号即可安全落进 JSON。 */
+export const SQL_VALUE_SNIPPETS: Array<{ label: string; text: string; detail: string }> = [
+  { label: 'SELECT *', text: 'SELECT * FROM \\"my-index\\" LIMIT 100', detail: '取前 100 行' },
+  { label: 'SELECT WHERE', text: 'SELECT * FROM \\"my-index\\" WHERE field = \'x\' LIMIT 100', detail: '带条件过滤' },
+  { label: 'SELECT GROUP BY', text: 'SELECT field, COUNT(*) AS c FROM \\"my-index\\" GROUP BY field LIMIT 100', detail: '分组计数' },
+];
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

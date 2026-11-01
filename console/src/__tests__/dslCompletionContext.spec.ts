@@ -4,7 +4,7 @@
    none→非 query/aggs 区深层不出层。 */
 import { describe, it, expect } from 'vitest';
 import { dslContext, QUERY_SNIPPETS, ROOT_KEYS } from '../utils/dslCompletionContext';
-import { bodyKindForPath, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, MAPPING_TYPES, templateKeyItems, templateRegionAt, indexBodyRegionAt, indexBodyKeyItems, aliasKeyItems, aliasConfigAt, reindexBodyRegionAt, reindexBodyKeyItems } from '../utils/dslCompletionContext';
+import { bodyKindForPath, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, MAPPING_TYPES, templateKeyItems, templateRegionAt, indexBodyRegionAt, indexBodyKeyItems, aliasKeyItems, aliasConfigAt, reindexBodyRegionAt, reindexBodyKeyItems, sqlBodyKeyItems, SQL_VALUE_SNIPPETS } from '../utils/dslCompletionContext';
 import { lineIndentAt, reindentSnippet, commaAffixes } from '../utils/dslCompletionContext';
 
 const E = (doc: string) => dslContext(doc, doc.length); // 光标在尾
@@ -103,6 +103,20 @@ describe('dslContext 注释跳过（JSONC // 与 /* */，字符串内不算注�
   it('字符串内 // 与 /* 不算注释（inStr 保护优先，回归钉）', () => {
     expect(E('{"query": {"wildcard": {"f": "a//b{c"}}}')).toEqual({ kind: 'root' });
     expect(E('{"query": {"wildcard": {"f": "a/*b{c"}}}')).toEqual({ kind: 'root' });
+  });
+});
+
+describe('1439 SQL 体', () => {
+  it('bodyKind 分档 + 键表 + 值骨架可落进 JSON', () => {
+    expect(bodyKindForPath('/_sql', 'POST')).toBe('sql-body');
+    expect(bodyKindForPath('/_sql/translate', 'POST')).toBe('sql-body');
+    const keys = sqlBodyKeyItems().map(i => i.label);
+    expect(keys).toEqual(expect.arrayContaining(['query', 'fetch_size', 'time_zone', 'columnar', 'runtime_mappings', 'params']));
+    for (const s2 of SQL_VALUE_SNIPPETS) {
+      /* text 已按 JSON 串转义：包一层引号必须能被 JSON.parse 吃下，且内容含 SELECT */
+      const parsed = JSON.parse('"' + s2.text + '"');
+      expect(parsed).toContain('SELECT');
+    }
   });
 });
 
@@ -239,7 +253,7 @@ describe('bodyKindForPath', () => {
       expect(bodyKindForPath(p), p).toBe('template');
     }
     for (const p of ['/idx/_search/scroll', '/_search/scroll', '/_clear_scroll', '/_aliases', '/idx/_aliases',
-      '/_sql', '/_script/p1', '/_scripts/p1', '/idx/_mget', '/idx/_rollover', '/idx/_close',
+      '/_script/p1', '/_scripts/p1', '/idx/_mget', '/idx/_rollover', '/idx/_close',
       '/idx/_open', '/idx/_forcemerge']) {
       expect(bodyKindForPath(p), p).toBe('none');
     }
