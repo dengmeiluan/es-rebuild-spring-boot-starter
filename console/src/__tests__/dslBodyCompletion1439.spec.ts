@@ -72,6 +72,7 @@ const BODY_CASES: Array<[string, string, string, string?]> = [
   ['runtime_mappings 字段体', '{"runtime_mappings":{"f":{"', 'query-body-key', '__runtime_field__'],
   ['highlight 字段级配置', '{"highlight":{"fields":{"title":{"', 'query-body-key', '__highlight_field__'],
   ['fields 数组元素对象', '{"fields":[{"', 'array-elem-key'],
+  ['_source 对象形态', '{"_source":{"', 'query-body-key', '_source'],
 ];
 
 /** 建议器体（suggest.<名>.<类型>.{}）——另一张表，键与查询子句不同名 */

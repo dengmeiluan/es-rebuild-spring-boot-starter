@@ -1105,6 +1105,14 @@ describe('1439-b 容器体 / 建议器体 / 字段数组键位', () => {
       .toEqual(expect.arrayContaining(['title', 'price']));
   });
 
+  it('_source 对象形态给 includes/excludes，数组元素出字段候选', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    expect(suggest('{"_source":{"').map((i: any) => i.label))
+      .toEqual(expect.arrayContaining(['includes', 'excludes', 'include', 'exclude']));
+    expect(suggest('{"_source":{"includes":["').map((i: any) => i.label)).toEqual(expect.arrayContaining(['title', 'price']));
+    expect(suggest('{"_source":{"excludes":["').map((i: any) => i.label)).toEqual(expect.arrayContaining(['title', 'price']));
+  });
+
   it('stored_fields / docvalue_fields 数组出字段候选（同 _source 轨）', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
     expect(suggest('{"stored_fields":["').map((i: any) => i.label)).toEqual(expect.arrayContaining(['title', 'price']));

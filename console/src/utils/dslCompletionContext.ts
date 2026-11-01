@@ -475,6 +475,13 @@ export const QUERY_BODY_KEYS: Record<string, BodyKey[]> = {
     B('boundary_scanner', '"boundary_scanner": "${1|sentence,word|}"', '片段边界扫描'),
   ],
   collapse: [B('field', '"field": "${1:field}"', '折叠字段（每个值只留一条）'), B('inner_hits', '"inner_hits": { "name": "${1:group}", "size": ${2:1} }', '折叠组内命中')],
+  /* _source 对象形态（裁剪返回字段）；串/数组形态走数组白名单轨 */
+  _source: [
+    B('includes', '"includes": [\n  "${1:field}"\n]', '只返回这些字段（支持通配）'),
+    B('excludes', '"excludes": [\n  "${1:field}"\n]', '排除这些字段（支持通配）'),
+    B('include', '"include": ["${1:field}"]', '旧式写法：只返回这些字段'),
+    B('exclude', '"exclude": ["${1:field}"]', '旧式写法：排除这些字段'),
+  ],
   highlight: [
     B('fields', '"fields": {\n  ${0}\n}', '高亮字段'),
     B('type', '"type": "${1|unified,plain,fvh|}"', '高亮器类型'),
@@ -634,7 +641,7 @@ export function suggesterBodyKeys(op: string): BodyKey[] {
  是新增位，两既有钉面不沾。⚠ dslArrayElemFieldAt 本体零改动（dslValueTiers544 B 段把
  ('_source', null)→null 钉死，_source 走本白名单新轨，不共函数）。 */
 const DSL_ARRAY_OBJKEY_CHAINS = new Set(['sort', 'fields']);
-export const DSL_ARRAY_ELEM_CHAINS = new Set(['_source', 'stored_fields', 'docvalue_fields', 'fields']);
+export const DSL_ARRAY_ELEM_CHAINS = new Set(['_source', 'stored_fields', 'docvalue_fields', 'fields', 'includes', 'excludes']);
 
 type Frame = { type: '{' | '['; lastKey: string | null };
 
