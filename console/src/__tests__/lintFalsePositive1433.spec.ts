@@ -78,12 +78,52 @@ const LEGIT: Array<[string, any]> = [
   ['knn', { knn: { field: 'vec', query_vector: [1, 2], k: 10, num_candidates: 100 } }],
   ['suggest', { query: { match_all: {} }, suggest: { s: { text: 'x', term: { field: 'title' } } } }],
   ['rescore', { query: { match: { title: 'x' } }, rescore: { window_size: 50, query: { rescore_query: { match_phrase: { title: 'x' } }, query_weight: 1, rescore_query_weight: 2 } } }],
+  /* ── 1439：官方罕见子句（形状按 8.15 文档逐条核对）──────────────────────────
+     这批不是「应该能解析」的期望，而是「官方文档就是这么写」的合法输入：
+     lint 若对它们出声，就是边界过宽。 */
+  ['geo_grid（官方形状：字段键 + geohash）', { query: { geo_grid: { location: { geohash: 'u0' } } } }],
+  ['geo_grid geotile + precision', { query: { geo_grid: { location: { geotile: { precision: 4 } } } } }],
+  ['geo_polygon', { query: { geo_polygon: { location: { points: [{ lat: 1, lon: 2 }, { lat: 3, lon: 4 }, { lat: 5, lon: 6 }] } } } }],
+  ['geo_bounding_box', { query: { geo_bounding_box: { location: { top_left: [1, 2], bottom_right: [3, 4] } } } }],
+  ['shape envelope', { query: { shape: { location: { type: 'envelope', coordinates: [[1, 2], [3, 4]] } } } }],
+  ['intervals all_of + gap', { query: { intervals: { content: { all_of: { ordered: true, intervals: [{ match: { query: 'a' } }, { gap: { width: 5 } }] } } } } }],
+  ['intervals any_of', { query: { intervals: { content: { any_of: { intervals: [{ match: { query: 'a' } }, { wildcard: { pattern: 'b*' } }] } } } } }],
+  ['rank_feature + saturation', { query: { rank_feature: { amount: { boost: 2, saturation: { pivot: 3 } } } } }],
+  ['distance_feature', { query: { distance_feature: { field: 'location', origin: 'now-1d', pivot: '7d', boost: 2 } } }],
+  ['sparse_vector', { query: { sparse_vector: { field: 'vec', query_vector: { a: 1, b: 2 } } } }],
+  ['text_expansion', { query: { text_expansion: { 'ml.tokens': { model_id: '.elser_model_2', model_text: 'hi' } } } }],
+  ['terms_set + script', { query: { terms_set: { tags: { terms: ['a', 'b'], minimum_should_match_script: { source: '1' } } } } }],
+  ['terms lookup', { query: { terms: { tags: { index: 'other', id: '1', path: 'tags' } } } }],
+  ['percolate document', { query: { percolate: { field: 'query', document: { a: 1 } } } }],
+  ['more_like_this', { query: { more_like_this: { fields: ['title'], like: ['a b'], min_term_freq: 2 } } }],
+  ['pinned', { query: { pinned: { ids: ['1', '2'], organic: { match: { title: 'x' } } } } }],
+  ['rule', { query: { rule: { match_criteria: { status: 'A' }, ruleset_id: 'rs-1', organic: { match: { title: 'x' } } } } }],
+  ['type 查询（已弃用但仍合法）', { query: { type: { value: 'doc' } } }],
+  ['wrapper', { query: { wrapper: { query: 'eyJ0ZXJtIjp7ImEiOjF9fQ==' } } }],
+  ['script 查询 + params', { query: { script: { script: { source: 'doc["amount"].value > params.n', params: { n: 1 } } } } }],
+  ['script_score', { query: { script_score: { query: { match_all: {} }, script: { source: '_score * 2' } } } }],
+  ['has_child', { query: { has_child: { type: 'reply', query: { match_all: {} }, score_mode: 'max' } } }],
+  ['has_parent', { query: { has_parent: { parent_type: 'post', query: { match_all: {} } } } }],
+  ['parent_id', { query: { parent_id: { type: 'reply', id: '1' } } }],
+  ['span_near', { query: { span_near: { clauses: [{ span_term: { title: 'a' } }, { span_term: { title: 'b' } }], slop: 2, in_order: true } } }],
+  ['span_not', { query: { span_not: { include: { span_term: { title: 'a' } }, exclude: { span_term: { title: 'b' } } } } }],
+  ['multi_terms agg', { query: { match_all: {} }, aggs: { mt: { multi_terms: { terms: [{ field: 'status' }, { field: 'issuer_name' }] } } } }],
+  ['auto_date_histogram agg', { query: { match_all: {} }, aggs: { h: { auto_date_histogram: { field: 'publish_time', buckets: 10 } } } }],
+  ['filters agg', { query: { match_all: {} }, aggs: { f: { filters: { filters: { a: { term: { status: 'A' } }, b: { term: { status: 'B' } } } } } } }],
+  ['significant_terms agg', { query: { match_all: {} }, aggs: { st: { significant_terms: { field: 'status' } } } }],
+  ['top_hits agg', { query: { match_all: {} }, aggs: { th: { top_hits: { size: 3, _source: ['title'] } } } }],
+  ['rare_terms agg', { query: { match_all: {} }, aggs: { rt: { rare_terms: { field: 'status' } } } }],
+  ['composite agg', { query: { match_all: {} }, aggs: { c: { composite: { sources: [{ s: { terms: { field: 'status' } } }] } } } }],
+  ['pipeline agg bucket_sort', { query: { match_all: {} }, aggs: { a: { terms: { field: 'status' }, aggs: { bs: { bucket_sort: { sort: [{ _count: { order: 'desc' } }] } } } } } }],
+  ['nested + reverse_nested', { query: { nested: { path: 'products', query: { match_all: {} } } }, aggs: { p: { nested: { path: 'products' }, aggs: { r: { reverse_nested: {} } } } } }],
 ];
 
 describe('1433 lint 对合法 DSL 零误报', () => {
   /* match-all 是**性能告警**（「全量扫描会遍历全索引」），对不带过滤条件的查询本来就会提示，
-     属设计内行为，不算误报。除此之外的规则若对合法写法出声，才是边界过宽。 */
-  const PERF_ADVISORY = new Set(['match-all', 'missing-filter', 'deep-paging', 'huge-size']);
+     属设计内行为，不算误报。除此之外的规则若对合法写法出声，才是边界过宽。
+     1439：agg-size-default 同理——「terms 未写 size 默认只回 10 桶」是事实且可操作，
+     对真·terms 聚合提示属设计内（composite 的 sources 不是聚合体，必须不提示，见下条）。 */
+  const PERF_ADVISORY = new Set(['match-all', 'missing-filter', 'deep-paging', 'huge-size', 'agg-size-default']);
 
   it('生产级合法写法逐条扫描：除性能告警外不得有任何 finding', () => {
     const bad: string[] = [];
@@ -93,6 +133,19 @@ describe('1433 lint 对合法 DSL 零误报', () => {
       if (fs.length) bad.push(`${label} → ${fs.map(f => f.rule + '(' + f.message.slice(0, 40) + ')').join('; ')}`);
     }
     expect(bad, '合法写法被误报：\n' + bad.join('\n')).toEqual([]);
+  });
+
+  it('composite 的 sources.terms 不是聚合体，不得提示「未写 size」', () => {
+    const ctx = { fields: Object.entries(MAP).map(([path, type]) => ({ path, type })) };
+    const composite = { query: { match_all: {} }, aggs: { c: { composite: { sources: [{ s: { terms: { field: 'status' } } }], size: 100 } } } };
+    const fs1 = lintDsl(composite, ctx).filter(f => f.rule === 'agg-size-default');
+    expect(fs1, 'composite 的取值源不支持 size，提示属误报').toEqual([]);
+    /* 对照：真·terms 聚合缺 size 仍要提示（证明上面的豁免没有把规则整体关掉） */
+    const plain = { query: { match_all: {} }, aggs: { by_status: { terms: { field: 'status' } } } };
+    expect(lintDsl(plain, ctx).some(f => f.rule === 'agg-size-default'), '真 terms 聚合必须仍提示').toBe(true);
+    /* 嵌套 terms（aggs.a.aggs.b.terms）同样仍提示 */
+    const nested = { query: { match_all: {} }, aggs: { a: { terms: { field: 'status', size: 5 }, aggs: { b: { terms: { field: 'issuer_name' } } } } } };
+    expect(lintDsl(nested, ctx).some(f => f.rule === 'agg-size-default'), '嵌套 terms 必须仍提示').toBe(true);
   });
 
   it('负控：确实有问题的写法必须仍被报出（证明上面的零误报不是「规则全哑」）', () => {

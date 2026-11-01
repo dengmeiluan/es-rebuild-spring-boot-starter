@@ -185,6 +185,19 @@ function isAggTypePosition(p: string): boolean {
   return false;
 }
 
+/**
+ * 1439：p 是否为「聚合体里的键」路径。
+ * walk 传入的 path 含当前键（`aggs.<实例>.<键>` / `aggs.<a>.aggs.<b>.<键>`），
+ * 所以判倒数第三段是 aggs/aggregations。用来区分「这个键是聚合体」与
+ * 「它是某个聚合参数里的同名键」——composite 的 sources[].terms 是取值源，不是聚合体。
+ */
+function isAggInstancePath(p: string): boolean {
+  const segs = p.split('.');
+  if (segs.length < 3) return false;
+  const grand = segs[segs.length - 3];
+  return grand === 'aggs' || grand === 'aggregations';
+}
+
 /** W3：词表内编辑距离 ≤2 的最近合法键（找不到返回 null）——键拼写纠错的统一口径 */
 function nearestKey(k: string, vocab: Set<string>): string | null {
   let best: string | null = null;
@@ -468,8 +481,12 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
       /* ---- 规则：aggs 下 terms 桶未写 size（agg-size-default，hint 档）----
  terms 聚合缺 size 时 ES 默认只回 10 桶，长尾分布被静默截断（查询不报错、结果少得无声）。
  路径前缀口径与 terms-scalar 的豁免正好互补（aggs./aggregations. 前缀=聚合体）；
- anchor=terms 键自身、nth 走 kNth（bool-key-typo / multi-match-fields 同口径）。 */
-      if (k === 'terms' && (p.startsWith('aggs.') || p.startsWith('aggregations.'))
+ anchor=terms 键自身、nth 走 kNth（bool-key-typo / multi-match-fields 同口径）。
+
+ 1439：光看前缀会误伤 composite 的 sources（`composite.sources[].s.terms` 里的 terms
+ 是**取值源**，不支持 size，本就不该写）——实测合法 composite 聚合被判「未写 size」。
+ 收紧为「terms 的父路径必须是一个聚合实例名，且它的父段是 aggs/aggregations」。 */
+      if (k === 'terms' && isAggInstancePath(p)
           && v !== null && typeof v === 'object' && !Array.isArray(v)
           && (v as Record<string, unknown>).size === undefined) {
         out.push({
