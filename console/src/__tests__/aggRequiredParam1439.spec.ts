@@ -26,6 +26,16 @@ describe('1439 聚合必填参数', () => {
       { aggs: { a: { global: {} } } },
       { aggs: { a: { weighted_avg: { value: { field: 'v' }, weight: { field: 'w' } } } } },
       { aggs: { a: { composite: { sources: [{ r: { terms: { field: 'region' } } }] } } } },
+      { aggs: { a: { filters: { filters: { x: { match_all: {} } } } } } },
+      { aggs: { a: { range: { field: 'amount', ranges: [{ to: 100 }] } } } },
+      { aggs: { a: { histogram: { field: 'amount', interval: 10 } } } },
+      { aggs: { a: { variable_width_histogram: { field: 'amount', buckets: 10 } } } },
+      { aggs: { a: { geo_distance: { field: 'location', origin: { lat: 1, lon: 2 }, ranges: [{ to: 10 }] } } } },
+      { aggs: { a: { children: { type: 'reply' } } } },
+      { aggs: { a: { parent: { type: 'post' } } } },
+      { aggs: { a: { top_metrics: { metrics: [{ field: 'v', metric: 'max' }] } } } },
+      { aggs: { a: { bucket_script: { buckets_path: { x: 'agg>v' }, script: 'params.x' } } } },
+      { aggs: { a: { bucket_sort: { sort: [{ ts: 'desc' }] } } } },
       /* 变量体（非对象）不判——模板占位交给执行期 */
       { aggs: { a: { terms: '${agg}' } } },
     ];
@@ -42,6 +52,13 @@ describe('1439 聚合必填参数', () => {
       ['cardinality 缺 field', { aggs: { a: { cardinality: { precision_threshold: 100 } } } }, 'field'],
       ['nested 缺 path', { aggs: { a: { nested: { aggs: { b: { terms: { field: 'x' } } } } } } }, 'path'],
       ['multi_terms 缺 terms', { aggs: { a: { multi_terms: { size: 5 } } } }, 'terms'],
+      ['filters 缺 filters', { aggs: { a: { filters: { other_bucket: true } } } }, 'filters'],
+      ['range 缺 ranges', { aggs: { a: { range: { field: 'amount' } } } }, 'ranges'],
+      ['histogram 缺 interval', { aggs: { a: { histogram: { field: 'amount' } } } }, 'interval'],
+      ['composite 缺 sources', { aggs: { a: { composite: { size: 5 } } } }, 'sources'],
+      ['children 缺 type', { aggs: { a: { children: {} } } }, 'type'],
+      ['bucket_script 缺 buckets_path', { aggs: { a: { bucket_script: { script: '1' } } } }, 'buckets_path'],
+      ['bucket_sort 缺 sort', { aggs: { a: { bucket_sort: { size: 3 } } } }, 'sort'],
     ];
     for (const [name, dsl, token] of cases) {
       const f = req(dsl);

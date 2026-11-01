@@ -186,11 +186,32 @@ const AGG_FIELD_REQUIRED = new Set([
   'terms', 'avg', 'sum', 'min', 'max', 'value_count', 'cardinality', 'stats',
   'extended_stats', 'percentiles', 'percentile_ranks', 'median_absolute_deviation',
   'boxplot', 'significant_terms', 'significant_text', 'rare_terms', 'missing',
+  'geohash_grid', 'geotile_grid', 'geohex_grid', 'geo_distance', 'variable_width_histogram', 'string_stats',
 ]);
 const AGG_FIELD_SCRIPT_OK = new Set([
   'terms', 'avg', 'sum', 'min', 'max', 'value_count', 'cardinality', 'stats',
   'extended_stats', 'percentiles', 'percentile_ranks', 'median_absolute_deviation', 'boxplot',
+  'string_stats',
 ]);
+/* 其余「缺了必 400」的结构键（与 field/script 规则并集判定，见 agg-required-param） */
+const AGG_REQUIRED_KEYS: Record<string, string[]> = {
+  nested: ['path'],
+  children: ['type'],
+  parent: ['type'],
+  multi_terms: ['terms'],
+  filters: ['filters'],
+  range: ['ranges'],
+  date_range: ['ranges'],
+  ip_range: ['ranges'],
+  geo_distance: ['origin', 'ranges'],
+  histogram: ['interval'],
+  variable_width_histogram: ['buckets'],
+  composite: ['sources'],
+  top_metrics: ['metrics'],
+  bucket_script: ['buckets_path', 'script'],
+  bucket_selector: ['buckets_path', 'script'],
+  bucket_sort: ['sort'],
+};
 
 /** 聚合类型白名单——直接派生自 AGG_OPS（类型下拉/补全/往返六表共用单源），
  只补聚合体伴随键 meta（与类型键同层合法）。此前是手抄的第二份清单：新增/漏收的聚合
@@ -534,12 +555,20 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
           sug = AGG_FIELD_SCRIPT_OK.has(k)
             ? '补 "field": "字段名"；或用 "script" 从脚本取值'
             : '补 "field": "字段名"（该聚合不支持 script 替代）';
-        } else if (k === 'nested' && !('path' in d)) {
-          msg = 'nested 聚合缺 path：ES 会拒绝请求（400）';
-          sug = '补 "path": "嵌套路径"（与 mapping 的 nested 字段一致）';
-        } else if (k === 'multi_terms' && !('terms' in d)) {
-          msg = 'multi_terms 聚合缺 terms：ES 会拒绝请求（400）';
-          sug = '补 "terms": [{ "field": "a" }, { "field": "b" }] 取值源数组';
+        } else {
+          const need = AGG_REQUIRED_KEYS[k];
+          const miss = need ? need.find(key => !(key in d)) : undefined;
+          if (miss) {
+            msg = `聚合「${k}」缺 ${miss}：ES 会拒绝请求（400）`;
+            sug = miss === 'path' ? '补 "path": "嵌套路径"（与 mapping 的 nested 字段一致）'
+              : miss === 'terms' ? '补 "terms": [{ "field": "a" }, { "field": "b" }] 取值源数组'
+              : miss === 'filters' ? '补 "filters": { "组名": { 查询 } }'
+              : miss === 'ranges' ? '补 "ranges": [{ "to": 100 }, { "from": 100 }]'
+              : miss === 'sources' ? '补 "sources": [{ "名": { "terms": { "field": … } } }]'
+              : miss === 'metrics' ? '补 "metrics": [{ "field": …, "metric": "max" }]'
+              : miss === 'sort' ? '补 "sort": [{ "字段": "desc" }]（bucket_sort 必填）'
+              : `补 "${miss}"`;
+          }
         }
         if (msg) {
           out.push({
