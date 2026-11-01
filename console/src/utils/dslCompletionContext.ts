@@ -13,6 +13,8 @@ import { typePriorityForOp, KEYWORD_VALUE_TYPES, NUMERIC_VALUE_TYPES, labelOfOp 
 type DslCtx = { kind: 'root' } | { kind: 'query-type' } | { kind: 'field'; clause: string }
   | { kind: 'range-op' } | { kind: 'exists-key' }
   | { kind: 'agg-name' } | { kind: 'agg-type' }
+  /* 1439：检索器变体键位（retriever 值对象 / rrf.retrievers[] 元素） */
+  | { kind: 'retriever-type' }
   | { kind: 'array-elem-key'; owner: string } | { kind: 'none' };
 
 export const QUERY_SNIPPETS: Record<string, string> = {
@@ -184,6 +186,24 @@ export const ROOT_KEYS = [
   /* 1138：树已支持的结构化顶层键——原始 DSL 手写不再只能盲打 */
   'post_filter', 'knn', 'collapse', 'rescore', 'retriever', 'suggest', 'script_fields', 'runtime_mappings', 'search_after', 'min_score',
 ];
+/**
+ * 1439：检索器变体补全（8.14+ 的 retriever 面）。
+ * 此前 retriever 只有根键骨架（内部写死 standard），用户进到 retriever 体内按 Ctrl+Space
+ * 什么都拿不到——而产品本身支持 9 种变体（RETRIEVER_META）。
+ * 骨架以产品自己的序列化形态为准；aggCompletionWide1439 之外的
+ * retrieverCompletion1439 会逐条喂给 parseTree，防止骨架与解析器漂移。
+ */
+export const RETRIEVER_SNIPPETS: Record<string, { text: string; detail: string }> = {
+  standard:                { text: '"standard": {\n  "query": { "match_all": {} }\n}', detail: '标准 BM25 检索' },
+  knn:                     { text: '"knn": {\n  "field": "${1:vectorField}",\n  "query_vector": [${2:0.1}, ${3:0.2}],\n  "k": ${4:10},\n  "num_candidates": ${5:100}\n}', detail: '向量近邻召回' },
+  rrf:                     { text: '"rrf": {\n  "retrievers": [\n    { "standard": { "query": { "match_all": {} } } },\n    { "standard": { "query": { "match_all": {} } } }\n  ],\n  "rank_constant": ${1:60}\n}', detail: 'RRF 倒数排名融合（多路召回）' },
+  linear:                  { text: '"linear": {\n  "retrievers": [\n    { "retriever": { "standard": { "query": { "match_all": {} } } }, "weight": ${1:1} }\n  ],\n  "normalizer": "${2|none,minmax,l2_norm|}"\n}', detail: '线性加权融合' },
+  text_similarity_reranker: { text: '"text_similarity_reranker": {\n  "retriever": { "standard": { "query": { "match_all": {} } } },\n  "field": "${1:field}",\n  "inference_id": "${2:modelId}",\n  "inference_text": "${3:text}"\n}', detail: '文本相似度重排' },
+  rule:                    { text: '"rule": {\n  "ruleset_id": "${1:rulesetId}"\n}', detail: '规则路由（按 ruleset 改写）' },
+  pinned:                  { text: '"pinned": {\n  "docs": [ { "_id": "${1:docId}", "_index": "${2:index}" } ],\n  "retriever": { "standard": { "query": { "match_all": {} } } }\n}', detail: '置顶优选（指定文档排最前）' },
+  diversify:               { text: '"diversify": {\n  "retriever": { "standard": { "query": { "match_all": {} } } },\n  "field": "${1:vectorField}",\n  "lambda": ${2:0.5}\n}', detail: 'MMR 多样性重排' },
+  rescorer:                { text: '"rescorer": {\n  "retriever": { "standard": { "query": { "match_all": {} } } },\n  "rescore": { "window_size": ${1:50} }\n}', detail: '重打分' },
+};
 /* 2.6.0 root 键骨架（spec ）：每键定制值形态，detail 一句话（H 发现性）。
  query/aggs/highlight 对象容器；sort 数组（多字段通用）；_source 数组；from/size 数字；track_total_hits choice。
  1138：补树已支持的结构化顶层键（查询后置过滤 / 顶层向量 / 折叠 / 重打分 / 检索器 / 建议器 / 脚本字段 / 运行时字段 / 深分页 / 最低分）。 */
@@ -299,6 +319,19 @@ export function dslContext(doc: string, offset: number): DslCtx {
       const innerA = stack.slice(aIdx + 1);
       if (innerA.length === 1 && innerA[0].type === '{') return { kind: 'agg-name' };
       if (innerA.length === 2 && innerA[1].type === '{') return { kind: 'agg-type' };
+    }
+    /* 1439：检索器变体键位（8.14+ retriever 面）。
+       · 顶层/嵌套：光标在 retriever 的值对象里（keys 末位是 retriever，栈顶是它刚开的 {）
+       · 列表元素：rrf.retrievers[] / linear.retrievers[] 的元素对象键位——但 linear 的元素
+         必须是 {retriever, weight} 包裹，那里给裸变体键会产生非法 DSL，故按父键排除。 */
+    const rIdx = keys.lastIndexOf('retriever');
+    if (rIdx >= 0) {
+      const topF = stack[stack.length - 1];
+      if (rIdx === stack.length - 2 && topF.type === '{') return { kind: 'retriever-type' };
+      if (stack.length >= 4 && topF.type === '{'
+          && stack[stack.length - 2].type === '['
+          && stack[stack.length - 3].lastKey === 'retrievers'
+          && stack[stack.length - 4].lastKey !== 'linear') return { kind: 'retriever-type' };
     }
     /* 数组元素对象键位（键链白名单位）——栈顶 { 的下层是 [ 数组帧、数组帧属主键
  ∈ DSL_ARRAY_OBJKEY_CHAINS（=sort，排序字段键位；top_hits 等嵌套 sort 同构命中）。

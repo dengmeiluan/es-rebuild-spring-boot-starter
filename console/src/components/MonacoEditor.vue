@@ -19,7 +19,7 @@ import 'monaco-editor/esm/vs/editor/contrib/comment/browser/comment';   // jsonc
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import { useAppStore } from '../stores/app';
-import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS, ROOT_KEYS, ROOT_KEY_SNIPPETS, commaAffixes, settingsKeyItems, mappingKeyItems, templateKeyItems, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
+import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS, RETRIEVER_SNIPPETS, ROOT_KEYS, ROOT_KEY_SNIPPETS, commaAffixes, settingsKeyItems, mappingKeyItems, templateKeyItems, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
 import { makeDslValueSuggestProvider } from '../utils/dslValueSuggest';
 import type { AssistItem, BodyKind } from '../utils/dslCompletionContext';
 import { ensureLanguages } from '../utils/monacoLanguages';
@@ -730,6 +730,20 @@ onMounted(() => {
           const indent = lineIndentAt(doc, startOff);
           const affix = commaAffixes(doc, startOff, end);
           return { suggestions: Object.entries(AGG_SNIPPETS).map(([k, snip], i) => ({
+            label: k, kind: monaco.languages.CompletionItemKind.Snippet,
+            detail: snip.detail,
+            insertText: wrapSnippet(doc, startOff, end, indent, snip.text, affix),
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range, command: ACCEPT_FORMAT_COMMAND,
+            filterText: dslFilterText(k),
+            sortText: dslSortText(i, k),
+          })) };
+        }
+        if (ctx.kind === 'retriever-type') {
+          /* 1439：retriever 体内——9 种检索器变体骨架（此前只有根键骨架里写死的 standard） */
+          const indent = lineIndentAt(doc, startOff);
+          const affix = commaAffixes(doc, startOff, end);
+          return { suggestions: Object.entries(RETRIEVER_SNIPPETS).map(([k, snip], i) => ({
             label: k, kind: monaco.languages.CompletionItemKind.Snippet,
             detail: snip.detail,
             insertText: wrapSnippet(doc, startOff, end, indent, snip.text, affix),
