@@ -627,7 +627,8 @@ async function doRun() {
     }
     const sigAtSend = runSig.value;
     const idxAtSend = index.value.trim();
-    const r: any = await api.luceneSearch(idxAtSend, qs.value.trim(), size.value, from.value,
+    const qsAtSend = qs.value.trim();
+    const r: any = await api.luceneSearch(idxAtSend, qsAtSend, size.value, from.value,
       sfRaw ? sortField.value.trim() : undefined, sortOrder.value, signal);
     /* 在途切索引：旧索引响应不得落进新索引现场（IndexHub runDocs 同判据） */
     if (index.value.trim() !== idxAtSend) return;
@@ -642,7 +643,7 @@ async function doRun() {
     markRunSig(sigAtSend);
     /* 执行成功记跨模式历史（query_string 原文 + 目标索引） */
     /* 记录查询耗时 */
-    useQueryHistoryStore().push('lucene', qs.value.trim(), index.value.trim() || undefined, took.value || undefined);
+    useQueryHistoryStore().push('lucene', qsAtSend, idxAtSend || undefined, took.value || undefined);
   } catch (e: any) {
     /* 主动取消不报失败（DslQueryView 取消甄别同语义）：轻提示即返，错误面板留给真失败 */
     if (e?.name === 'AbortError') { store.notify('info', `已取消查询（${(qr.elapsedMs.value / 1000).toFixed(1)}s）`); return; }

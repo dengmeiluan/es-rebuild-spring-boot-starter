@@ -104,6 +104,36 @@ function ihProblems(src: string): string[] {
   return out;
 }
 
+/* 历史必须记「实际发出的那版」：await 期间改稿时记当前稿，回放会得到另一组结果 */
+function historyProblems(dq: string, lc: string, ih: string): string[] {
+  const out: string[] = [];
+  if ((dq.match(/push\('dsl', dslSnapshot, idx/g) || []).length < 2) out.push('DSL 历史未用发送快照（成功/失败两条）');
+  if (!/history\.value\.find\(h => h\.dsl === dslSnapshot/.test(dq)) out.push('DSL 历史回填未按发送快照查找');
+  if (!/const qsAtSend = qs\.value\.trim\(\);/.test(lc)) out.push('Lucene 未保存发送时的查询词');
+  if (!/api\.luceneSearch\(idxAtSend, qsAtSend,/.test(lc)) out.push('Lucene 请求未用发送快照');
+  if (!/push\('lucene', qsAtSend, idxAtSend/.test(lc)) out.push('Lucene 历史未用发送快照');
+  if ((ih.match(/push\('lucene', sigAtSend, idx/g) || []).length < 2) out.push('索引工作区 docs 历史未用发送快照');
+  if ((ih.match(/push\('dsl', qrySigAtSend, idx/g) || []).length < 2) out.push('索引工作区 query 历史未用发送快照');
+  return out;
+}
+
+describe('1439 历史记的是发送快照', () => {
+  it('三处宿主全部按发送时快照记账', () => {
+    expect(historyProblems(DQ, LC, IH)).toEqual([]);
+  });
+
+  it('负控：改回当前稿记账 → 判据点名', () => {
+    const dq = DQ.replace("push('dsl', dslSnapshot, idx, took)", "push('dsl', dsl.value, idx, took)");
+    const lc = LC.replace("push('lucene', qsAtSend, idxAtSend", "push('lucene', qs.value.trim(), index.value.trim()");
+    const ih = IH.replace("push('lucene', sigAtSend, idx, r.took)", "push('lucene', docsQ.value, idx, r.took)")
+      .replace("push('dsl', qrySigAtSend, idx, r.took)", "push('dsl', dsl.value, cur.value, r.took)");
+    expect(dq).not.toBe(DQ);
+    expect(lc).not.toBe(LC);
+    expect(ih).not.toBe(IH);
+    expect(historyProblems(dq, lc, ih)).not.toEqual([]);
+  });
+});
+
 describe('1439 三处宿主接线', () => {
   it('DSL 工作台 / Lucene / 索引工作区 全部齐备', () => {
     expect(dqProblems(DQ)).toEqual([]);

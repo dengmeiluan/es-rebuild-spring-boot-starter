@@ -1514,7 +1514,7 @@ async function runDocs() {
        store 按 mode+query+index 去重（翻页/刷新同词不刷屏）。
        空词不入历史：切 docs tab 自动浏览（watch tab 的 runDocs 兜底）是页面行为不是用户查询，
        真机实证空串条目会每次进环刷屏，故仅显式词检索留痕 */
-    if (docsQ.value.trim()) useQueryHistoryStore().push('lucene', docsQ.value, idx, r.took);
+    if (sigAtSend.trim()) useQueryHistoryStore().push('lucene', sigAtSend, idx, r.took);
   } catch (e: any) {
     /*  P0-A：用户主动取消不算错误（DslQueryView  同语义），不进 docsErr 红条；
        被新拍 begin 作废的过期拍静默（假「已取消」播报退役=世代双支甄别） */
@@ -1525,7 +1525,7 @@ async function runDocs() {
       /* 原位错误条已占位（首查失败=全页错误态；有旧结果=表格上方条），不再叠一个
          右下角 toast 盖住结果表正文——历史仍记，需要时通知面板可回看。 */
       store.notify('error', docsErr.value, { logOnly: true });
-      if (docsQ.value.trim()) useQueryHistoryStore().push('lucene', docsQ.value, idx, -1, false); /* 失败也标记（红点口径）；空词不入历史同上 */
+      if (sigAtSend.trim()) useQueryHistoryStore().push('lucene', sigAtSend, idx, -1, false); /* 失败也标记（红点口径）；空词不入历史同上 */
     }
   } finally {
     if (seq === docsSeq) { docsLoading.value = false; docsQr.finish(); }
@@ -1795,7 +1795,7 @@ async function runDsl() {
       }
     }
     /* 跨模式查询历史接线（DslQueryView 同款 push 形态）——就地 DSL 不再断链 */
-    useQueryHistoryStore().push('dsl', dsl.value, cur.value, r.took);
+    useQueryHistoryStore().push('dsl', qrySigAtSend, idx, r.took);
     markQryRun(qrySigAtSend);
   } catch (e: any) {
     /*  P0-A：用户主动取消不算错误，不进 qryErr 红条（DslQueryView  同语义）；
@@ -1807,7 +1807,7 @@ async function runDsl() {
       qryErr.value = '查询失败：' + friendlyEsError(String(e?.message ?? e));
       qryErrRaw.value = e; /* ：原始对象旁路（errMeta 读 code/endpoint，DslQueryView :1079 同款） */
       qryResp.value = null;
-      useQueryHistoryStore().push('dsl', dsl.value, cur.value, -1, false); /* ：失败也标记（红点口径） */
+      useQueryHistoryStore().push('dsl', qrySigAtSend, idx, -1, false); /* ：失败也标记（红点口径） */
     }
   } finally {
     if (seq === qrySeq) { qryLoading.value = false; qryQr.finish(); }

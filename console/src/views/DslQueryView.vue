@@ -1807,8 +1807,9 @@ async function execQuery(recordHist = false) {
     /* 记录查询耗时用于慢查询回溯与调优对比 */
     if (recordHist) {
       const took = resp.value?.took;
-      useQueryHistoryStore().push('dsl', dsl.value, idx, took);
-      const h0 = history.value.find(h => h.dsl === dsl.value && h.idx === idx);
+      /* 1439：历史记「实际发出的那版」——await 期间改稿时记当前稿，回放会得到另一组结果 */
+      useQueryHistoryStore().push('dsl', dslSnapshot, idx, took);
+      const h0 = history.value.find(h => h.dsl === dslSnapshot && h.idx === idx);
       if (h0 && took != null) h0.took = took; /* 耗时回填（pushHistory 先记后补口径） */
       if (h0?.ok === false) { h0.ok = true; writeStoredRaw(localStorage, HIST_KEY, JSON.stringify(history.value)); } /* ：重试成功翻转红点 */
       saveQwSession(dsl.value);
@@ -1825,9 +1826,9 @@ async function execQuery(recordHist = false) {
       /* 失败也标记历史（旧历史条目+跨模式 store 双路 ok:false 红点）——重试有入口，失败不该消失 */
       if (recordHist) {
         try {
-          const h0 = history.value.find(h => h.dsl === dsl.value && h.idx === idx);
+          const h0 = history.value.find(h => h.dsl === dslSnapshot && h.idx === idx);
           if (h0) { h0.ok = false; writeStoredRaw(localStorage, HIST_KEY, JSON.stringify(history.value)); }
-          useQueryHistoryStore().push('dsl', dsl.value, idx, -1, false);
+          useQueryHistoryStore().push('dsl', dslSnapshot, idx, -1, false);
         } catch { /* 历史失败不阻塞错误提示 */ }
       }
       /* 失败 toast 行动化——msg 传原始错误（friendlyEsError 翻译+

@@ -22,7 +22,9 @@ describe('查询历史失败标记（274 批）', () => {
   it('DslQueryView：失败双路标记+成功翻转红点+histRows 透传', () => {
     expect(dq).toMatch(/h0\.ok = false; writeStoredRaw\(localStorage, HIST_KEY/);
     expect(dq).toMatch(/h0\?\.ok === false\) \{ h0\.ok = true;/);
-    expect(dq).toMatch(/push\('dsl', dsl\.value, idx, -1, false\)/); /* idx=execQuery 选择源快照（执行链世代守卫随迁：快照即执行时的 pickedIdx，防切索引在途拍把失败标记记错索引） */
+    /* 1439 迁移：记账版从「当前稿」改成「发送快照」——await 期间改稿时，记当前稿会让
+       回放得到另一组结果；idx 仍是执行时快照（世代守卫同语义） */
+    expect(dq).toMatch(/push\('dsl', dslSnapshot, idx, -1, false\)/);
     expect(dq).toMatch(/ts: h\.ts, ok: h\.ok \}/);
   });
   it('面板失败红点渲染', () => {

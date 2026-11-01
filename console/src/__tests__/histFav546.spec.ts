@@ -163,11 +163,12 @@ describe('D DevToolsView 本 Tab 历史清空（源锚）', () => {
 
 describe('E IndexHubView docs 检索入跨模式历史（源锚）', () => {
   it('runDocs 成功 push lucene（took 直通）/ 失败 push lucene（-1, false 红点口径）', () => {
-    expect(ihSrc).toContain("push('lucene', docsQ.value, idx, r.took)");
-    expect(ihSrc).toContain("push('lucene', docsQ.value, idx, -1, false)");
+    /* 1439 迁移：记发送时快照（runDocs 的 sigAtSend）而不是响应时的当前稿 */
+    expect(ihSrc).toContain("push('lucene', sigAtSend, idx, r.took)");
+    expect(ihSrc).toContain("push('lucene', sigAtSend, idx, -1, false)");
   });
   it('空词不入历史（切 docs tab 自动浏览是页面行为非用户查询，真机 546 实证空串刷屏）', () => {
-    const guarded = ihSrc.match(/if \(docsQ\.value\.trim\(\)\) useQueryHistoryStore\(\)\.push\('lucene'/g) || [];
+    const guarded = ihSrc.match(/if \(sigAtSend\.trim\(\)\) useQueryHistoryStore\(\)\.push\('lucene'/g) || [];
     expect(guarded.length).toBe(2);
   });
 });
