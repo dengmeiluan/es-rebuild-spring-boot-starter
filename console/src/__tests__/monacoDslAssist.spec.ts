@@ -1120,3 +1120,25 @@ describe('1439-b 容器体 / 建议器体 / 字段数组键位', () => {
     expect(suggest('{"_source":["').map((i: any) => i.label)).toEqual(expect.arrayContaining(['title', 'price']));
   });
 });
+
+describe('1439 mapping 档 type 值位补全', () => {
+  it('mapping 档给字段类型目录（含 date_nanos/unsigned_long/dense_vector）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'mapping' as const } });
+    const doc = '{"properties": {"x": {"type": "';
+    const items = suggest(doc);
+    const labels = items.map((i: any) => i.label);
+    expect(labels).toEqual(expect.arrayContaining(['keyword', 'text', 'long', 'date_nanos', 'unsigned_long', 'dense_vector']));
+    for (const i of items) {
+      expect(i.kind).toBe(Kind.Value);
+      expect(i.insertText).toBe('"' + i.label + '"');
+    }
+    const after = acceptSnippet(doc, items.find((i: any) => i.label === 'keyword'));
+    expect(() => JSON.parse(after + '}}}')).not.toThrow();
+  });
+
+  it('search 档同位置不出（7.x type 查询的文档类型名 ≠ 字段类型）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'search' as const } });
+    expect(suggest('{"properties": {"x": {"type": "')).toEqual([]);
+    expect(suggest('{"query": {"type": {"value": "')).toEqual([]);
+  });
+});

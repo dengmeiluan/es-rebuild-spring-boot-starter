@@ -19,7 +19,7 @@ import 'monaco-editor/esm/vs/editor/contrib/comment/browser/comment';   // jsonc
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import { useAppStore } from '../stores/app';
-import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS, RETRIEVER_SNIPPETS, SUGGESTER_SNIPPETS, aggBodyKeys, queryBodyKeys, clauseValueKeys, retrieverBodyKeys, suggesterBodyKeys, ROOT_KEYS, ROOT_KEY_SNIPPETS, commaAffixes, settingsKeyItems, mappingKeyItems, templateKeyItems, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
+import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS, RETRIEVER_SNIPPETS, SUGGESTER_SNIPPETS, aggBodyKeys, queryBodyKeys, clauseValueKeys, retrieverBodyKeys, suggesterBodyKeys, ROOT_KEYS, ROOT_KEY_SNIPPETS, commaAffixes, settingsKeyItems, mappingKeyItems, MAPPING_TYPES, templateKeyItems, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
 import { makeDslValueSuggestProvider } from '../utils/dslValueSuggest';
 import type { AssistItem, BodyKind } from '../utils/dslCompletionContext';
 import { ensureLanguages } from '../utils/monacoLanguages';
@@ -585,6 +585,23 @@ onMounted(() => {
             }
           }
         }
+        /* 1439：mapping 档 type 值位出字段类型目录——type 是 mapping 里唯一值域封闭的键
+           （analyzer 走上面的实名通道），其余值位仍维持「值位不出档」口径。 */
+        if (bk === 'mapping') {
+          const gt = dslKeyGuard(doc, offset);
+          if (!gt.ok && gt.inStr && gt.valueKey === 'type' && !gt.arrayElem) {
+            const tEnd = scanStringEnd(doc, Math.max(0, Math.min(offset, doc.length)));
+            const tsp = model.getPositionAt(gt.strStart);
+            const tep = model.getPositionAt(tEnd);
+            const tRange = { startLineNumber: tsp.lineNumber, startColumn: tsp.column, endLineNumber: tep.lineNumber, endColumn: tep.column };
+            return { suggestions: MAPPING_TYPES.map((t, i) => ({
+              label: t, kind: monaco.languages.CompletionItemKind.Value,
+              insertText: '"' + t + '"', range: tRange, command: ACCEPT_FORMAT_COMMAND,
+              detail: '字段类型',
+              filterText: dslFilterText(t), sortText: dslSortText(i, t),
+            })) };
+          }
+        }
         if (bk === 'settings' || bk === 'mapping' || bk === 'template') {
           const g = dslKeyGuard(doc, offset);
           /* g.valueKey 一并压住：W6 三档语义是「值位一律不出档」，2.6.0 白名单口仅限 search 路径 */
@@ -680,6 +697,8 @@ onMounted(() => {
               })) };
             }
           }
+          /* 1439：mapping 档的 type 值位出字段类型目录（此前 Ctrl+Space 恒空）；
+             search 档同名键是 7.x type 查询的文档类型名，不套字段类型表 */
           return { suggestions: [] };
         }
         /* I-1：range 覆盖闭合串——起=当前串起始（无串=光标位）。三档 insertText 均自带引号，
