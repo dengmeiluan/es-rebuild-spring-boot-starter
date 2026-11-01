@@ -45,6 +45,7 @@ const FAMILY_MEMBERS: Record<AggFamily, readonly string[]> = {
     'bucket_script', 'bucket_selector', 'bucket_sort',
     'cumulative_cardinality', 'cumulative_sum', 'derivative', 'serial_diff',
     'extended_stats_bucket', 'percentiles_bucket', 'stats_bucket',
+    'avg_bucket', 'sum_bucket', 'min_bucket', 'max_bucket',
     'moving_fn', 'moving_percentiles', 'moving_avg', 'normalize',
   ],
 };

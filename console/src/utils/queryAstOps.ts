@@ -486,6 +486,9 @@ export const AGG_OPS: Record<string, string> = {
   moving_fn: '移动函数', moving_percentiles: '移动百分位', moving_avg: '移动平均（旧）',
   normalize: '归一化', percentiles_bucket: '桶百分位', serial_diff: '串行差分',
   stats_bucket: '桶统计',
+  /* 1439：官方桶均值/求和/最小/最大四员（与 stats_bucket 同族）此前两表都缺 */
+  avg_bucket: '桶均值（管道）', sum_bucket: '桶求和（管道）',
+  min_bucket: '桶最小（管道）', max_bucket: '桶最大（管道）',
 };
 
 /* 1030：gap_policy 三档全族单源（管道聚合对空桶的取数策略） */
@@ -638,6 +641,10 @@ export const AGG_BODY_PARAMS: Record<string, ParamMeta[]> = {
   ],
   stats_bucket: [{ key: 'buckets_path', kind: 'text' }, { key: 'gap_policy', kind: 'enum', options: GAP_POLICY }],
   percentiles_bucket: [{ key: 'buckets_path', kind: 'text' }, { key: 'gap_policy', kind: 'enum', options: GAP_POLICY }],
+  avg_bucket: [{ key: 'buckets_path', kind: 'text' }, { key: 'gap_policy', kind: 'enum', options: GAP_POLICY }, { key: 'format', kind: 'text' }],
+  sum_bucket: [{ key: 'buckets_path', kind: 'text' }, { key: 'gap_policy', kind: 'enum', options: GAP_POLICY }, { key: 'format', kind: 'text' }],
+  min_bucket: [{ key: 'buckets_path', kind: 'text' }, { key: 'gap_policy', kind: 'enum', options: GAP_POLICY }, { key: 'format', kind: 'text' }],
+  max_bucket: [{ key: 'buckets_path', kind: 'text' }, { key: 'gap_policy', kind: 'enum', options: GAP_POLICY }, { key: 'format', kind: 'text' }],
   moving_fn: [
     { key: 'buckets_path', kind: 'text' }, { key: 'window', kind: 'number' }, { key: 'shift', kind: 'number' },
     { key: 'gap_policy', kind: 'enum', options: GAP_POLICY },

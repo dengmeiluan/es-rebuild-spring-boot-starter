@@ -188,6 +188,11 @@ export const AGG_SNIPPETS: Record<string, { text: string; detail: string }> = {
 
   stats_bucket:   { text: '"stats_bucket": { "buckets_path": "${1:agg>metric}" }',                                      detail: '对兄弟桶统计做统计' },
   extended_stats_bucket: { text: '"extended_stats_bucket": { "buckets_path": "${1:agg>metric}" }',                      detail: '对兄弟桶做扩展统计' },
+  /* 1439：官方桶均值/求和/最小/最大四员（与 stats_bucket 同族） */
+  avg_bucket:     { text: '"avg_bucket": { "buckets_path": "${1:agg>metric}" }',                                        detail: '对兄弟桶求均值' },
+  sum_bucket:     { text: '"sum_bucket": { "buckets_path": "${1:agg>metric}" }',                                        detail: '对兄弟桶求和' },
+  min_bucket:     { text: '"min_bucket": { "buckets_path": "${1:agg>metric}" }',                                        detail: '对兄弟桶求最小' },
+  max_bucket:     { text: '"max_bucket": { "buckets_path": "${1:agg>metric}" }',                                        detail: '对兄弟桶求最大' },
   percentiles_bucket: { text: '"percentiles_bucket": { "buckets_path": "${1:agg>metric}" }',                            detail: '对兄弟桶求分位' },
   derivative:     { text: '"derivative": { "buckets_path": "${1:agg>metric}" }',                                        detail: '相邻桶差值' },
   cumulative_sum: { text: '"cumulative_sum": { "buckets_path": "${1:agg>metric}" }',                                    detail: '累计和' },
