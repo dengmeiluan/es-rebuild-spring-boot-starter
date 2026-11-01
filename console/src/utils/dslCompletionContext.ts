@@ -189,6 +189,11 @@ export const ROOT_KEYS = [
   'query', 'sort', 'aggs', '_source', 'highlight', 'from', 'size', 'track_total_hits',
   /* 1138：树已支持的结构化顶层键——原始 DSL 手写不再只能盲打 */
   'post_filter', 'knn', 'collapse', 'rescore', 'retriever', 'suggest', 'script_fields', 'runtime_mappings', 'search_after', 'min_score',
+  /* 1439：lint 的 ROOT_KEY_WHITELIST 早已接受、补全却从不提供的合法根键——
+     同一件事两种待遇：写出来不报错，想补全却没有。 */
+  'aggregations', 'pit', 'docvalue_fields', 'stored_fields', 'fields', 'indices_boost',
+  'search_type', 'terminate_after', 'timeout', 'explain', 'version', 'seq_no_primary_term',
+  'track_scores', 'slice', 'routing', 'preference', 'ext', 'stats', 'profile',
 ];
 /**
  * 1439：检索器变体补全（8.14+ 的 retriever 面）。
@@ -263,6 +268,26 @@ export const ROOT_KEY_SNIPPETS: Record<string, { text: string; detail: string }>
   runtime_mappings: { text: '"runtime_mappings": {\n  "${1:runtime_field}": {\n    "type": "${2|keyword,long,double,date,boolean|}",\n    "script": { "source": "${3:emit(params.x)}" }\n  }\n}', detail: '运行时字段' },
   search_after:     { text: '"search_after": ["${1:value}"]',                              detail: '深分页游标' },
   min_score:        { text: '"min_score": ${1:0}',                                          detail: '最低评分过滤' },
+  /* 1439：lint 白名单已接受的合法根键，补全补齐 */
+  aggregations:     { text: '"aggregations": {\n  ${0}\n}',                                 detail: '聚合统计（aggs 的别名）' },
+  pit:              { text: '"pit": {\n  "id": "${1:pitId}",\n  "keep_alive": "${2:1m}"\n}',   detail: '时间点（PIT）检索' },
+  docvalue_fields:  { text: '"docvalue_fields": [ "${1:field}" ]',                          detail: '按列存取值（doc_values）返回字段' },
+  stored_fields:    { text: '"stored_fields": [ "${1:field}" ]',                            detail: '返回 stored 字段' },
+  fields:           { text: '"fields": [ "${1:field}" ]',                                   detail: 'fields API 返回字段' },
+  indices_boost:    { text: '"indices_boost": [ { "${1:index}": ${2:1.2} } ]',               detail: '按索引加权' },
+  search_type:      { text: '"search_type": "${1|query_then_fetch,dfs_query_then_fetch|}"',  detail: '搜索类型（打分一致性/两阶段）' },
+  terminate_after:  { text: '"terminate_after": ${1:1000}',                                 detail: '最多检查 N 篇后提前结束' },
+  timeout:          { text: '"timeout": "${1:1s}"',                                         detail: '搜索超时（到时返回部分结果）' },
+  explain:          { text: '"explain": ${1|true,false|}',                                  detail: '返回打分解释' },
+  version:          { text: '"version": ${1|true,false|}',                                  detail: '返回文档版本号' },
+  seq_no_primary_term: { text: '"seq_no_primary_term": ${1|true,false|}',                   detail: '返回 seq_no / primary_term（乐观并发）' },
+  track_scores:     { text: '"track_scores": ${1|true,false|}',                             detail: '排序时仍计算得分' },
+  slice:            { text: '"slice": {\n  "field": "${1:_id}",\n  "id": ${2:0},\n  "max": ${3:2}\n}', detail: '切片并行检索' },
+  routing:          { text: '"routing": "${1:routing}"',                                     detail: '路由值（定向分片）' },
+  preference:       { text: '"preference": "${1|_local,_primary,_only_local|}"',             detail: '分片偏好（缓存/主副选择）' },
+  ext:              { text: '"ext": {\n  ${0}\n}',                                          detail: '搜索扩展参数（插件用）' },
+  stats:            { text: '"stats": [ "${1:group}" ]',                                    detail: '统计分组标签（打点用）' },
+  profile:          { text: '"profile": ${1|true,false|}',                                  detail: '耗时剖析（profile 树）' },
 };
 /** 叶子查询子句（值位是字段名对象）。
  2.6.0：exists 移出——其键位钉死 "field"（exists-key 档），出字段名档是语义误导 */
