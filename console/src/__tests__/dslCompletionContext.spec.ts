@@ -4,7 +4,7 @@
    none→非 query/aggs 区深层不出层。 */
 import { describe, it, expect } from 'vitest';
 import { dslContext, QUERY_SNIPPETS, ROOT_KEYS } from '../utils/dslCompletionContext';
-import { bodyKindForPath, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, MAPPING_TYPES, templateKeyItems, templateRegionAt } from '../utils/dslCompletionContext';
+import { bodyKindForPath, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, MAPPING_TYPES, templateKeyItems, templateRegionAt, indexBodyRegionAt, indexBodyKeyItems } from '../utils/dslCompletionContext';
 import { lineIndentAt, reindentSnippet, commaAffixes } from '../utils/dslCompletionContext';
 
 const E = (doc: string) => dslContext(doc, doc.length); // 光标在尾
@@ -103,6 +103,35 @@ describe('dslContext 注释跳过（JSONC // 与 /* */，字符串内不算注�
   it('字符串内 // 与 /* 不算注释（inStr 保护优先，回归钉）', () => {
     expect(E('{"query": {"wildcard": {"f": "a//b{c"}}}')).toEqual({ kind: 'root' });
     expect(E('{"query": {"wildcard": {"f": "a/*b{c"}}}')).toEqual({ kind: 'root' });
+  });
+});
+
+describe('1439 创建索引体（PUT /<索引名>）', () => {
+  it('PUT 单段路径 → index-body；GET/带下划线端点不受影响', () => {
+    expect(bodyKindForPath('/new-idx', 'PUT')).toBe('index-body');
+    expect(bodyKindForPath('/{index}', 'PUT')).toBe('index-body');
+    expect(bodyKindForPath('/new-idx', 'GET')).toBe('search');
+    expect(bodyKindForPath('/idx/_settings', 'PUT')).toBe('settings');
+    expect(bodyKindForPath('/_index_template/t1', 'PUT')).toBe('template');
+    expect(bodyKindForPath('/new-idx?pretty', 'put')).toBe('index-body');
+  });
+
+  it('indexBodyRegionAt：三块各自分区，根层为 root', () => {
+    const at = (s: string) => indexBodyRegionAt(s, s.length);
+    expect(at('{ "')).toBe('root');
+    expect(at('{"settings": { "')).toBe('settings');
+    expect(at('{"settings": {"number_of_shards": 1, "')).toBe('settings');
+    expect(at('{"mappings": { "')).toBe('mapping');
+    expect(at('{"mappings": {"properties": {"a": { "')).toBe('mapping');
+    expect(at('{"aliases": { "')).toBe('aliases');
+    /* 先写 mappings 再进 settings：区域取当前所在容器 */
+    expect(at('{"mappings": {}, "settings": { "')).toBe('settings');
+  });
+
+  it('indexBodyKeyItems：三键骨架都写出键和值', () => {
+    const items = indexBodyKeyItems();
+    expect(items.map(i => i.label)).toEqual(['settings', 'mappings', 'aliases']);
+    for (const it of items) expect(it.insertText).toMatch(new RegExp('^"' + it.label + '"\s*:'));
   });
 });
 

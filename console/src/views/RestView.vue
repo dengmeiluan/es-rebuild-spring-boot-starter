@@ -392,7 +392,7 @@ function insertBody() { if (curEp.value?.body) body.value = curEp.value.body; }
  bodyKind 随端点/path 派生：选中端点吃模板 path，自由文本按裸 path 判定（无特殊段回 search）。 */
 const { fields: rtFields, ensure: ensureRtFields } = useIndexFields(() => store.pickedIdx || '');
 watch(() => store.pickedIdx, () => { ensureRtFields(); }, { immediate: true });
-const rtBodyKind = computed(() => bodyKindForPath(curEp.value?.path ?? path.value ?? ''));
+const rtBodyKind = computed(() => bodyKindForPath(curEp.value?.path ?? path.value ?? '', method.value));
 /* dslAssist 闭包在 setup 作用域声明（T14 实证：模板内联字面量走 _ctx 代理，ref 顶层 unwrap 后 .value 取 undefined） */
 /* terms 通道接值位动态候选（658 DqlQueryView 首发姊妹刀）——索引源=store.pickedIdx
  与 rtFields 同源（Rest 无路径索引派生，fields 同口径）；未选索引/异常恒 resolve [] 零扰动 */

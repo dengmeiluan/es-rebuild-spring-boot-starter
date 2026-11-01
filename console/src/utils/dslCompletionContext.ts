@@ -1038,7 +1038,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1133,7 +1133,7 @@ export const ANALYSIS_PARAM_ZH: Record<string, string> = {
 };
 
 /** 端点 path → body 语义档。自由路径默认 search（补全只是建议，零降级）。 */
-export function bodyKindForPath(rawPath: string): BodyKind {
+export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   const p = (rawPath || '').split('?')[0].toLowerCase();
   if (p.includes('_bulk')) return 'none';
   /* doc 档四端点（带斜杠前缀防误伤——'_update/' 不吃 _update_by_query（后者是
@@ -1145,6 +1145,8 @@ export function bodyKindForPath(rawPath: string): BodyKind {
   if (p.includes('_index_template') || p.includes('_component_template') || p.includes('/_template')) return 'template';
   if (p.includes('_settings')) return 'settings';
   if (p.includes('_mapping')) return 'mapping';
+  /* 1439：PUT /<索引名> = 创建索引——体是 {settings, mappings, aliases}，不是 search body */
+  if (method.toUpperCase() === 'PUT' && /^\/[^\/_]+$/.test(p)) return 'index-body';
   if (p.includes('/_search/scroll') || p.includes('/_clear_scroll') || p.includes('/_aliases')
       || p.includes('_reindex') || p.includes('_sql') || p.includes('/_mget')
       || p.includes('/_scripts') || p.includes('/_script/') || p.includes('/_rollover')
@@ -1260,26 +1262,7 @@ export function mappingFieldKeyItems(): AssistItem[] {
 /** 光标是否在「单个字段配置对象」里（properties.<字段>.{} / fields.<子域>.{}，可多层嵌套）。
     只做结构判定——调用方仅在 mapping 档消费（search 的 highlight.fields 同形但另有语义）。 */
 export function mappingFieldConfigAt(doc: string, offset: number): boolean {
-  const text = doc.slice(0, Math.max(0, Math.min(offset, doc.length)));
-  const stack: Array<string | null> = [];
-  let inStr = false; let curKey = '';
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (inStr) {
-      if (ch === '"' && !isEscapedQuote(text, i)) {
-        inStr = false;
-        let j = i + 1;
-        while (j < text.length && /\s/.test(text[j])) j++;
-        if (text[j] === ':' && stack.length) stack[stack.length - 1] = curKey;
-      } else curKey += ch;
-      continue;
-    }
-    const cEnd = commentEnd(text, i);
-    if (cEnd !== -1) { i = cEnd - 1; continue; }
-    if (ch === '"') { inStr = true; curKey = ''; continue; }
-    if (ch === '{' || ch === '[') stack.push(null);
-    else if (ch === '}' || ch === ']') stack.pop();
-  }
+  const stack = frameKeysAt(doc, offset);
   if (stack.length < 3) return false;
   const owner = stack[stack.length - 3];
   const field = stack[stack.length - 2];
@@ -1304,7 +1287,7 @@ export function reindentSnippet(text: string, indent: string): string {
 /** 索引模板体内的语义区域（1439）：模板的 template.settings/mappings 里应给设置键/映射键，
     而不是继续给模板八键。扫描口径与 dslContext 同源（注释跳过、转义引号判定共享）。
     'none' = template.aliases（别名体是自由配置，不出键档）。 */
-export function templateRegionAt(doc: string, offset: number): 'template' | 'settings' | 'mapping' | 'none' {
+function frameKeysAt(doc: string, offset: number): Array<string | null> {
   const text = doc.slice(0, Math.max(0, Math.min(offset, doc.length)));
   const stack: Array<string | null> = [];
   let inStr = false; let curKey = '';
@@ -1325,6 +1308,11 @@ export function templateRegionAt(doc: string, offset: number): 'template' | 'set
     if (ch === '{' || ch === '[') stack.push(null);
     else if (ch === '}' || ch === ']') stack.pop();
   }
+  return stack;
+}
+
+export function templateRegionAt(doc: string, offset: number): 'template' | 'settings' | 'mapping' | 'none' {
+  const stack = frameKeysAt(doc, offset);
   const t = stack.lastIndexOf('template');
   if (t < 0) return 'template';
   const sub = t + 1 < stack.length ? stack[t + 1] : null;
@@ -1332,6 +1320,28 @@ export function templateRegionAt(doc: string, offset: number): 'template' | 'set
   if (sub === 'mappings' || sub === 'mapping') return 'mapping';
   if (sub === 'aliases') return 'none';
   return 'template';
+}
+
+/** 创建索引体（PUT /<索引名>）的语义区域：settings/mappings/aliases 三块各自给对应键档。 */
+export function indexBodyRegionAt(doc: string, offset: number): 'root' | 'settings' | 'mapping' | 'aliases' {
+  const stack = frameKeysAt(doc, offset);
+  const rootKey = stack[0] ?? null;
+  if (rootKey === 'settings') return 'settings';
+  if (rootKey === 'mappings' || rootKey === 'mapping') return 'mapping';
+  if (rootKey === 'aliases') return 'aliases';
+  return 'root';
+}
+
+/** 创建索引体的顶层键（settings/mappings/aliases） */
+export function indexBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'settings', detail: '索引设置（分片/副本/刷新间隔…）', snippet: true,
+      insertText: '"settings": {\n  ${0}\n}' },
+    { label: 'mappings', detail: '字段映射', snippet: true,
+      insertText: '"mappings": {\n  "properties": {\n    ${0}\n  }\n}' },
+    { label: 'aliases', detail: '别名', snippet: true,
+      insertText: '"aliases": {\n  ${0}\n}' },
+  ];
 }
 
 /* ux2 ：index_template / component_template body 键档（TemplatesView editBody 用）。

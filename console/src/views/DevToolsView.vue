@@ -741,7 +741,7 @@ const dtPathIdx = computed(() => {
 const { fields: dtFields, ensure: ensureDtFields } = useIndexFields(() => dtPathIdx.value || store.pickedIdx || '');
 const ensureDtFieldsDebounced = useDebounceFn(() => { ensureDtFields(); }, 400);
 watch(() => dtPathIdx.value || store.pickedIdx, () => { ensureDtFieldsDebounced(); }, { immediate: true });
-const dtBodyKind = computed(() => bodyKindForPath(curEp.value?.path ?? cur.value?.path ?? ''));
+const dtBodyKind = computed(() => bodyKindForPath(curEp.value?.path ?? cur.value?.path ?? '', cur.value?.method ?? ''));
 /* P0-2a：body 语言跟档——_bulk 的多行 NDJSON 恒吃 json 语言会被 json worker
  多根对象全线误报语法红线；切 ndjson（自研 monarch，无 JSON LS 校验）红线消失、高亮保留 */
 const bodyLang = computed(() => ((cur.value?.path || '').includes('_bulk') ? 'ndjson' : 'json'));

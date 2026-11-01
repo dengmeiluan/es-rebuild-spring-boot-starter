@@ -1230,3 +1230,14 @@ describe('1439 mapping 字段配置键位', () => {
     expect(suggest('{"properties": {"a": {"fields": {"raw": { "').map((i: any) => i.label)).toContain('analyzer');
   });
 });
+
+describe('1439 创建索引体补全', () => {
+  it('根层给 settings/mappings/aliases；各块内给对应键；aliases 不出键档', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'index-body' as const } });
+    expect(suggest('{"').map((i: any) => i.label)).toEqual(expect.arrayContaining(['settings', 'mappings', 'aliases']));
+    expect(suggest('{"settings": { "').map((i: any) => i.label)).toContain('number_of_shards');
+    expect(suggest('{"mappings": { "').map((i: any) => i.label)).toContain('properties');
+    expect(suggest('{"mappings": {"properties": {"a": { "').map((i: any) => i.label)).toContain('analyzer');
+    expect(suggest('{"aliases": { "')).toEqual([]);
+  });
+});
