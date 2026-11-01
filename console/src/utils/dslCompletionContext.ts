@@ -19,6 +19,8 @@ type DslCtx = { kind: 'root' } | { kind: 'query-type' } | { kind: 'field'; claus
   | { kind: 'suggester-type' }
   /* 1439：聚合体键位（terms: { 内）——参数键/字段键/嵌套 aggs */
   | { kind: 'agg-body-key'; op: string }
+  /* 1439：terms/multi_terms 的 order 对象键位（_count/_key/_key_as_string） */
+  | { kind: 'agg-order-key' }
   /* 1439：子句体内的键位（bool must/filter、nested path/query、multi_match query/fields…）
      ——此前这里一律给 query-type（算子骨架），写进子句体全是非法键 */
   | { kind: 'query-body-key'; op: string }
@@ -751,6 +753,12 @@ export function dslContext(doc: string, offset: number): DslCtx {
            这里必须出 query-type（match/term/bool…），否则只剩一个 aggs 候选。 */
         if (innerA[1].lastKey === 'filter') return { kind: 'query-type' };
         return { kind: 'agg-body-key', op: innerA[1].lastKey };
+      }
+      /* 1439：terms / multi_terms 的 order 对象键位——排序依据只有 _count/_key 系，
+         此前这层什么都不出（只能凭记忆）。innerA[1]=聚合类型帧。 */
+      if (innerA.length === 4 && innerA[3].type === '{' && !valuePos
+          && (innerA[1].lastKey === 'terms' || innerA[1].lastKey === 'multi_terms')) {
+        return { kind: 'agg-order-key' };
       }
       /* 1439：filters 聚合的**具名子过滤器体**同样是查询：
          {"filters":{"filters":{"x":{ <cursor> }}}} → aggs → filters(类型) → filters(参数) → 名 → {}

@@ -77,3 +77,14 @@ describe('1439 聚合体键位补全', () => {
     expect(keys).not.toContain('execution_hint');
   });
 });
+
+describe('1439 terms.order 键位上下文', () => {
+  it('terms / multi_terms 的 order 对象 → agg-order-key；其他聚合不命中', () => {
+    const at = (s: string) => dslContext(s, s.length);
+    expect((at('{"aggs":{"a":{"terms":{"order":{') as any).kind).toBe('agg-order-key');
+    expect((at('{"aggs":{"a":{"multi_terms":{"order":{') as any).kind).toBe('agg-order-key');
+    expect((at('{"aggs":{"a":{"histogram":{"order":{') as any).kind).not.toBe('agg-order-key');
+    /* 值位（"_count": " 之后）不出键位档——方向值位没有键候选 */
+    expect((at('{"aggs":{"a":{"terms":{"order":{"_count": "') as any).kind).not.toBe('agg-order-key');
+  });
+});

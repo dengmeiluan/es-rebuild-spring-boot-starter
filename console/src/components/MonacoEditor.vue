@@ -874,6 +874,24 @@ onMounted(() => {
             sortText: dslSortText(i, it.key),
           })) };
         }
+        if (ctx.kind === 'agg-order-key') {
+          /* 1439：terms/multi_terms 的 order 对象键位——三个内置排序依据（键+方向一步落位） */
+          const indent = lineIndentAt(doc, startOff);
+          const affix = commaAffixes(doc, startOff, end);
+          const opts: Array<{ key: string; insert: string; detail: string }> = [
+            { key: '_count', insert: '"_count": "${1|desc,asc|}"', detail: '按桶内文档数' },
+            { key: '_key', insert: '"_key": "${1|asc,desc|}"', detail: '按键值' },
+            { key: '_key_as_string', insert: '"_key_as_string": "${1|asc,desc|}"', detail: '按键的字符串形式' },
+          ];
+          return { suggestions: opts.map((o, i) => ({
+            label: o.key, kind: monaco.languages.CompletionItemKind.Property,
+            detail: o.detail,
+            insertText: wrapSnippet(doc, startOff, end, indent, o.insert, affix),
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range, command: ACCEPT_FORMAT_COMMAND,
+            filterText: dslFilterText(o.key), sortText: dslSortText(i, o.key),
+          })) };
+        }
         if (ctx.kind === 'agg-body-key') {
           /* 1439：聚合体内部键位——字段键/参数键/嵌套 aggs（与构建器、GenericParams 同源） */
           const indent = lineIndentAt(doc, startOff);

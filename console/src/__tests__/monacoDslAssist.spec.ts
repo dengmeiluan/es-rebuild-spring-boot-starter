@@ -1142,3 +1142,22 @@ describe('1439 mapping 档 type 值位补全', () => {
     expect(suggest('{"query": {"type": {"value": "')).toEqual([]);
   });
 });
+
+describe('1439 terms.order 键位补全', () => {
+  it('terms 的 order 对象给 _count/_key/_key_as_string（接受后 JSON 合法）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    const doc = '{"aggs":{"a":{"terms":{"order":{';
+    const items = suggest(doc);
+    expect(items.map((i: any) => i.label)).toEqual(['_count', '_key', '_key_as_string']);
+    for (const i of items) {
+      expect(() => JSON.parse(acceptSnippet(doc, i) + '}}}}}'), i.label).not.toThrow();
+    }
+  });
+
+  it('非 terms 聚合体的 order 不出档；multi_terms 出档', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    expect(suggest('{"aggs":{"a":{"histogram":{"order":{')).toEqual([]);
+    expect(suggest('{"aggs":{"a":{"multi_terms":{"order":{').map((i: any) => i.label))
+      .toEqual(['_count', '_key', '_key_as_string']);
+  });
+});
