@@ -52,6 +52,7 @@ type LintRule =
   | 'agg-text-field' | 'body-value-type' | 'agg-interval-key' | 'nested-path' | 'query-structure'
   | 'ndjson-pair' | 'settings-key' | 'settings-value' | 'mapping-key' | 'mapping-type'
   | 'agg-type-typo' | 'date-term-value' | 'should-in-filter' | 'body-key-typo' | 'agg-field-key-typo'
+  | 'shard-doc-sort'
   | 'query-subsearches-conflict' | 'subsearches-no-rank' | 'retriever-conflict'
   | 'rare-type';
 
@@ -471,6 +472,37 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
             suggestion: `改为「${target}」`,
             path: p, anchor: k, nth: kNth,
           });
+        }
+      }
+      /* ---- 1439：_shard_doc 排序形态（shard-doc-sort，error 档，零 ctx）----
+         _shard_doc 是 PIT 深分页的默认快排：① 只能配 PIT（普通检索 400）；
+         ② 官方只认 asc（desc 会被 ES 直接拒绝）。导出的深分页示例常被贴到普通检索里，
+         这里在发送前点名。只判根级 sort（top_hits 内的 sort 不是本规则域）。 */
+      if (path === '' && k === 'sort' && !opts?.skipRoot) {
+        const entries: unknown[] = Array.isArray(v) ? v : [v];
+        for (const e of entries) {
+          let f: string | undefined;
+          let dir: unknown;
+          if (typeof e === 'string') f = e;
+          else if (e && typeof e === 'object' && !Array.isArray(e)) {
+            const keys = Object.keys(e as Record<string, unknown>);
+            if (keys.length === 1) { f = keys[0]; dir = (e as any)[f]; }
+          }
+          if (f !== '_shard_doc') continue;
+          const d = dir && typeof dir === 'object' ? (dir as any).order : dir;
+          const isDesc = String(d ?? '').toLowerCase() === 'desc';
+          if (!isDesc && root.pit !== undefined) break; /* PIT + asc = 合法 canonical 形态 */
+          out.push({
+            rule: 'shard-doc-sort', severity: 'error',
+            message: isDesc
+              ? '_shard_doc 只支持 asc：desc 排序会被 ES 拒绝请求（400）'
+              : '_shard_doc 只能配合 PIT 使用：普通检索按它排序会被 ES 拒绝请求（400）',
+            suggestion: isDesc
+              ? '把方向改为 asc；需要倒序时请改用可排序字段（date/keyword 等）'
+              : '深分页请改用 PIT：先开 PIT 再带 "pit" 参数检索；普通排序换成 _doc 或可排序字段',
+            path: p, anchor: k, nth: kNth,
+          });
+          break;
         }
       }
       /* ---- 规则③：filter/must_not 语境纯 should（should-in-filter，hint 档，零 ctx）----
