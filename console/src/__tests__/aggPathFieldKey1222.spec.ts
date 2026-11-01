@@ -27,7 +27,10 @@ describe('1222 聚合字段键的一致性', () => {
   it('nested / reverse_nested 的字段键是 path，且接上了字段选择器', () => {
     expect(opsSrc).toContain("export const PATH_BODY_AGGS: ReadonlySet<string> = new Set(['nested', 'reverse_nested']);");
     expect(src).toContain("if (PATH_BODY_AGGS.has(props.node.op)) return ['path'];");
-    expect(src).toContain("import { AGG_BODY_PARAMS, FIELD_BODY_AGGS, PATH_BODY_AGGS } from '../../utils/queryAstOps';");
+    /* 1439：import 同源口径不变，名单随单源收口扩容（NUMERIC_FIELD_TYPES 也在这里） */
+    /* 1439: import 同源口径不变，名单随单源收口扩容 */
+    expect(src).toContain("FIELD_BODY_AGGS, PATH_BODY_AGGS");
+    expect(src).toContain("} from '../../utils/queryAstOps';");
   });
 
   it('其余聚合仍走 field（不被 path 表误伤）', () => {

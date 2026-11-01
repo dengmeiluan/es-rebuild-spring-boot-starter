@@ -443,7 +443,7 @@ import { runtimeScriptMissing } from '../../utils/runtimeFields';
 import { RUNTIME_FIELD_CTX } from './runtimeFieldContext';
 import { SEARCH_PARAM_META, SEARCH_PARAM_GROUPS } from '../../utils/queryBodyParams';
 import { setFieldSearchIndex } from '../../utils/fieldSearch';
-import { SORTABLE_FIELD_TYPES } from '../../utils/queryAstOps';
+import { SORTABLE_FIELD_TYPES, NUMERIC_FIELD_TYPES } from '../../utils/queryAstOps';
 
 const props = defineProps<{ tree: QueryTree; fields: string[]; types: Record<string, string>; index?: string }>();
 const emit = defineEmits<{ (e: 'update:tree', t: QueryTree): void }>();
@@ -472,7 +472,7 @@ const COLLAPSE_PARAMS: Array<{ key: string; kind: 'number' | 'text' | 'boolean' 
 /* 【W3b】排序/高亮行的候选类型置顶（typePriority 只调候选分组排序，不改候选集）：
  排序行 date 打头、数值族紧随（时间/数值范围排序是主场景，keyword 字典序排序殿后）；
  高亮行 text 置顶（全文命中高亮主场景），keyword 次之 */
-const NUMERIC_PRIO = ['long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float'];
+const NUMERIC_PRIO = NUMERIC_FIELD_TYPES;
 const SORT_PRIO_TYPES = ['date', ...NUMERIC_PRIO];
 const HL_PRIO_TYPES = ['text'];
 

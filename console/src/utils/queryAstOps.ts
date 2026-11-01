@@ -27,6 +27,9 @@ interface OpMeta {
  NUMERIC_TYPES 原表逐字同形，含 token_count 分词计数数值语义） */
 export const KEYWORD_VALUE_TYPES = ['keyword', 'wildcard', 'constant_keyword'];
 export const NUMERIC_VALUE_TYPES = ['long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float', 'unsigned_long', 'token_count'];
+/* 数值字段族（去掉分词计数 token_count）——构建器值提示/聚合置顶/排序置顶/lint 判型共用单源；
+   1439：构建器两处与排序置顶此前是 8 项手抄表，漏 unsigned_long。 */
+export const NUMERIC_FIELD_TYPES: string[] = NUMERIC_VALUE_TYPES.filter(t => t !== 'token_count');
 
 /* 可排序字段类型（Lucene 排序行 / PIT 排序行 / 构建器排序与折叠行共用单源）：
    有 doc_values、ES 不会因 fielddata 400 的类型。text 需开 fielddata（默认关）不进表；

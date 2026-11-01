@@ -73,7 +73,7 @@ import AggOrderPanel from './AggOrderPanel.vue';
 import AggBoundsPanel from './AggBoundsPanel.vue';
 import AggCompositePanel from './AggCompositePanel.vue';
 import AggOpPicker from './AggOpPicker.vue';
-import { AGG_BODY_PARAMS, FIELD_BODY_AGGS, PATH_BODY_AGGS } from '../../utils/queryAstOps';
+import { AGG_BODY_PARAMS, FIELD_BODY_AGGS, PATH_BODY_AGGS, NUMERIC_FIELD_TYPES } from '../../utils/queryAstOps';
 import { nid, serAggNode, type AggNode } from '../../utils/queryAst';
 
 const props = defineProps<{ node: AggNode; fields: string[]; types: Record<string, string> }>();
@@ -213,7 +213,7 @@ const aggFieldKeys = computed(() => {
  补全：avg/min/max/sum/cardinality/histogram 是数值聚合/数值直方图（非数值字段
  会被 ES 拒或产出无意义桶）→ 数值族置顶；range 分桶 date+数值族皆常见 → date 置顶数值族次之；
  其余聚合无类型倾向，空数组 = GenericParams 归一 null 纯 rank 平铺（现状零增量） */
-const NUMERIC_TYPES = ['long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float'];
+const NUMERIC_TYPES = NUMERIC_FIELD_TYPES;
 const NUMERIC_AGGS = new Set(['avg', 'min', 'max', 'sum', 'stats', 'cardinality', 'histogram', 'variable_width_histogram', 'rate']);
 const GEO_AGGS = new Set(['geohash_grid', 'geotile_grid', 'geohex_grid', 'geo_distance']);
 const aggTypePriority = computed<string[]>(() => {

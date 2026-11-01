@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { SORTABLE_FIELD_TYPES } from '../utils/queryAstOps';
+import { SORTABLE_FIELD_TYPES, NUMERIC_FIELD_TYPES } from '../utils/queryAstOps';
 
 const read = (p: string) => readFileSync(join(__dirname, p), 'utf-8');
 
@@ -37,8 +37,27 @@ describe('1439 可排序字段类型单源', () => {
     expect(lucene).toContain("const SORTABLE_TYPES = SORTABLE_FIELD_TYPES.join(',');");
     expect(pit).toContain("import { SORTABLE_FIELD_TYPES } from '../utils/queryAstOps';");
     expect(pit).toContain("const SORTABLE_TYPES = SORTABLE_FIELD_TYPES.join(',');");
-    expect(root).toContain("import { SORTABLE_FIELD_TYPES } from '../../utils/queryAstOps';");
+    expect(root).toContain("import { SORTABLE_FIELD_TYPES, NUMERIC_FIELD_TYPES } from '../../utils/queryAstOps';");
     expect(root).toContain('const SORTABLE_TYPES = SORTABLE_FIELD_TYPES;');
+  });
+
+  it('数值字段族单源：构建器值提示/聚合置顶/排序置顶/lint 判型同表', () => {
+    expect(NUMERIC_FIELD_TYPES).toContain('unsigned_long');
+    expect(NUMERIC_FIELD_TYPES).not.toContain('token_count');
+    const clause = read('../components/builder/ClauseNode.vue');
+    const agg = read('../components/builder/AggTreeNode.vue');
+    const root = read('../components/builder/RootExtrasPane.vue');
+    const lint = read('../utils/dslLint.ts');
+    expect(clause).toContain('const NUMERIC_TYPES = NUMERIC_FIELD_TYPES;');
+    expect(agg).toContain('const NUMERIC_TYPES = NUMERIC_FIELD_TYPES;');
+    expect(root).toContain('const NUMERIC_PRIO = NUMERIC_FIELD_TYPES;');
+    expect(lint).toContain('const NUMERIC_TYPES = new Set(NUMERIC_FIELD_TYPES);');
+  });
+
+  it('负控：旧 8 项数值表样本（缺 unsigned_long）会被点名', () => {
+    const old = ['long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float'];
+    expect(old).not.toContain('unsigned_long');
+    expect(NUMERIC_FIELD_TYPES.filter(t => !old.includes(t))).toEqual(['unsigned_long']);
   });
 
   it('负控：旧的三处手抄表样本都会被判缺失（date_nanos/unsigned_long）', () => {

@@ -39,7 +39,7 @@
  should 键、无 minimum_should_match、处于 filter/must_not 语境 → hint，walk 递归带语境
  单调传递，零 ctx）。 */
 import { ROOT_KEYS, MAPPING_TYPES } from './dslCompletionContext';
-import { AGG_OPS } from './queryAstOps';
+import { AGG_OPS, NUMERIC_FIELD_TYPES } from './queryAstOps';
 import { SETTINGS_CATALOG } from './indexSettingsCatalog';
 
 type LintRule =
@@ -115,7 +115,7 @@ const RARE_TYPE_EXPECT: Record<string, { types: string[]; hint: string }> = {
   percolate: { types: ['percolator'], hint: 'percolator' },
   sparse_vector: { types: ['sparse_vector'], hint: 'sparse_vector' },
 };
-const NUMERIC_TYPES = new Set(['long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float', 'unsigned_long']);
+const NUMERIC_TYPES = new Set(NUMERIC_FIELD_TYPES);
 const RANGE_OPS = new Set(['gte', 'gt', 'lte', 'lt']);
 /** date 系类型集（同 NUMERIC_TYPES 的类型集常量范式）——date range 值判型的判定域 */
 const DATE_TYPES = new Set(['date', 'date_nanos']);

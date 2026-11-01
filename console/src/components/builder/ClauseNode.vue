@@ -302,7 +302,7 @@ import { useJsonDraft } from '../../composables/useJsonDraft';
 import MltLikeEditor from './MltLikeEditor.vue';
 import { stdTimeToEpochMs } from '../../utils/format';
 import { DRAG_KEY, TREE_BUS, fireDrag } from './treeBus';
-import { OPS_META, opsForType, RICH_OPS, ADV_MENU, typePriorityForOp, typeFilterForOp, NUMERIC_VALUE_TYPES, opFamilyOf, NAME_PARAM, paramsForOp } from '../../utils/queryAstOps';
+import { OPS_META, opsForType, RICH_OPS, ADV_MENU, typePriorityForOp, typeFilterForOp, NUMERIC_VALUE_TYPES, NUMERIC_FIELD_TYPES, opFamilyOf, NAME_PARAM, paramsForOp } from '../../utils/queryAstOps';
 import { rolePriorityForOp, defaultOpForField } from '../../utils/fieldRole';
 /* 1322：未知字段的「你是不是想找」候选——与 LuceneInput/dslLint 共用同一编辑距离实现 */
 import { editDistance } from '../../utils/editDistance';
@@ -357,7 +357,7 @@ const hasParams = computed(() => paramSchema.value.length > 0 || Object.keys(pro
 /* ═══ 字段类型匹配：徽标 tooltip + 值输入 placeholder 按类型给形态提示 ═══
  操作符侧的类型匹配已由 onField/opsForType 承担（换字段自动回落该类型首算子）；
  这里补输入侧教育：选定字段后输入什么形态的值、该用哪类算子。mapping 缺失全回落现状文案。 */
-const NUMERIC_TYPES = ['long', 'integer', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float'];
+const NUMERIC_TYPES = NUMERIC_FIELD_TYPES;
 /* 字段候选按算子场景类型置顶（typePriority 只调候选分组排序，不改候选集；
  fields 传参与 dsl-assist 计数链路不动——fieldPickerPenetration 契约）。
  优先序下沉为 queryAstOps.typePriorityForOp（DSL/非 Vue 语境可复用），
