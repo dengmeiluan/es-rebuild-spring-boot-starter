@@ -979,6 +979,23 @@ onMounted(() => {
  逗号自适应与 root 档同手法。白名单外数组（must/filter 元素对象键位）不进本档，
  既有 query-type 出档零变化。 */
         if (ctx.kind === 'array-elem-key') {
+          /* 1439：根层 fields 数组的元素对象是 {field, format}，不是 sort 的「字段+order」 */
+          if (ctx.owner === 'fields') {
+            const indent = lineIndentAt(doc, startOff);
+            const elemKeys = [
+              { key: 'field', insert: '"field": "${1:field}"', detail: '字段名' },
+              { key: 'format', insert: '"format": "${1:0.0}"', detail: '值格式（数值/日期）' },
+            ];
+            return { suggestions: elemKeys.map((k, i) => ({
+              label: k.key, kind: monaco.languages.CompletionItemKind.Property,
+              detail: k.detail,
+              insertText: wrapSnippet(doc, startOff, end, indent, k.insert, fieldAffix),
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              range, command: ACCEPT_FORMAT_COMMAND,
+              filterText: dslFilterText(k.key),
+              sortText: dslSortText(i, k.key),
+            })) };
+          }
           return { suggestions: props.dslAssist!.fields().map((f, i) => ({
             label: f.path, kind: monaco.languages.CompletionItemKind.Snippet,
             detail: f.type,

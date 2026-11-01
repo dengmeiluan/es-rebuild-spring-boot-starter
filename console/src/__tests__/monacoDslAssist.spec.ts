@@ -610,11 +610,13 @@ describe('W4-T13 MonacoEditor dslAssist provider 接线', () => {
 
   it('⑦ none 档（非 query/aggs 深层区）恒空', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
-    /* 2.6.0 Task 8 随动：原断言文档 '{"aggs": {"a": {"' 现落 agg-type 档（十一键骨架）——
-       none 场景改 pin sort 深层（非 query/aggs 容器，不出层口径不变）。
-       1439 再随动：sort 值对象键位已出一等补全（order/mode/missing…），
-       none 场景改 pin 高亮字段的配置对象（仍无档）。 */
-    expect(suggest('{"highlight": {"fields": {"title": {"')).toEqual([]);
+    /* 哨兵迁移史：{"aggs":{"a":{" → agg-type；sort 深层 → sort-opt-key；
+       highlight 字段配置 → 本轮升为一等档（__highlight_field__）。none 档改 pin
+       插件私有顶层容器（{"my_plugin":{"x":{）：既非 query/aggs，也不在
+       体键表/建议器/检索器/字段数组中，必须继续零候选。 */
+    expect(suggest('{"highlight": {"fields": {"title": {"').map(i => i.label))
+      .toEqual(expect.arrayContaining(['fragment_size', 'pre_tags']));
+    expect(suggest('{"my_plugin": {"x": {')).toEqual([]);
   });
 
   it('⑧ DslQueryView 冒烟：mount 不炸；W4-T14 渗透后 dslAssist 签名注册恰 1 条', async () => {
@@ -1090,6 +1092,17 @@ describe('1439-b 容器体 / 建议器体 / 字段数组键位', () => {
     const labels = suggest('{"suggest":{"s1":{"term":{"').map((i: any) => i.label);
     expect(labels).toEqual(expect.arrayContaining(['field', 'text', 'prefix', 'suggest_mode']));
     expect(labels).not.toContain('value');
+  });
+
+  it('highlight.<字段> 给字段级配置 / fields 数组元素对象给 field+format', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
+    expect(suggest('{"highlight":{"fields":{"title":{"').map((i: any) => i.label))
+      .toEqual(expect.arrayContaining(['type', 'fragment_size', 'pre_tags', 'number_of_fragments']));
+    expect(suggest('{"fields":[{"').map((i: any) => i.label)).toEqual(['field', 'format']);
+    /* fields 串数组（根层 / multi_match）同 _source 轨出字段候选 */
+    expect(suggest('{"fields":["').map((i: any) => i.label)).toEqual(expect.arrayContaining(['title', 'price']));
+    expect(suggest('{"query":{"multi_match":{"query":"x","fields":["').map((i: any) => i.label))
+      .toEqual(expect.arrayContaining(['title', 'price']));
   });
 
   it('stored_fields / docvalue_fields 数组出字段候选（同 _source 轨）', () => {

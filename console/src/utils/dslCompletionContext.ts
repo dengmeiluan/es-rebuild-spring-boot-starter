@@ -461,6 +461,17 @@ export const QUERY_BODY_KEYS: Record<string, BodyKey[]> = {
   __script_field__: [B('script', '"script": {\n  ${0}\n}', '脚本（source/lang/params）')],
   __script__: [B('source', '"source": "${1:doc[\'field\'].value}"', '脚本源码'), B('lang', '"lang": "${1:painless}"', '脚本语言'), B('params', '"params": {\n  ${0}\n}', '脚本参数'), B('id', '"id": "${1:storedScriptId}"', '已存脚本 ID')],
   __runtime_field__: [B('type', '"type": "${1|keyword,long,double,date,boolean,ip|}"', '运行时字段类型'), B('script', '"script": {\n  ${0}\n}', '取值脚本'), B('format', '"format": "${1:yyyy-MM-dd}"', 'date 格式')],
+  /* highlight.fields.<字段>.{} 的字段级配置（比根层 highlight 体少了 fields） */
+  __highlight_field__: [
+    B('type', '"type": "${1|unified,plain,fvh|}"', '该字段的高亮器'),
+    B('fragment_size', '"fragment_size": ${1:100}', '片段长度'),
+    B('number_of_fragments', '"number_of_fragments": ${1:3}', '片段数'),
+    B('pre_tags', '"pre_tags": ["${1:<em>}"]', '前置标记'),
+    B('post_tags', '"post_tags": ["${1:</em>}"]', '后置标记'),
+    B('require_field_match', '"require_field_match": ${1|false,true|}', '是否只高亮命中字段'),
+    B('no_match_size', '"no_match_size": ${1:0}', '未命中时返回的片段长度'),
+    B('boundary_scanner', '"boundary_scanner": "${1|sentence,word|}"', '片段边界扫描'),
+  ],
   collapse: [B('field', '"field": "${1:field}"', '折叠字段（每个值只留一条）'), B('inner_hits', '"inner_hits": { "name": "${1:group}", "size": ${2:1} }', '折叠组内命中')],
   highlight: [
     B('fields', '"fields": {\n  ${0}\n}', '高亮字段'),
@@ -620,8 +631,8 @@ export function suggesterBodyKeys(op: string): BodyKey[] {
  值位 regime 与 terms 值数组元素位（dslValueTiers540 C 段/544 C 段既有断言），键链白名单
  是新增位，两既有钉面不沾。⚠ dslArrayElemFieldAt 本体零改动（dslValueTiers544 B 段把
  ('_source', null)→null 钉死，_source 走本白名单新轨，不共函数）。 */
-const DSL_ARRAY_OBJKEY_CHAINS = new Set(['sort']);
-export const DSL_ARRAY_ELEM_CHAINS = new Set(['_source', 'stored_fields', 'docvalue_fields']);
+const DSL_ARRAY_OBJKEY_CHAINS = new Set(['sort', 'fields']);
+export const DSL_ARRAY_ELEM_CHAINS = new Set(['_source', 'stored_fields', 'docvalue_fields', 'fields']);
 
 type Frame = { type: '{' | '['; lastKey: string | null };
 
@@ -795,6 +806,10 @@ export function dslContext(doc: string, offset: number): DslCtx {
       if (opening === 'script') return { kind: 'query-body-key', op: '__script__' };
       if (opening && QUERY_BODY_KEYS[opening]) return { kind: 'query-body-key', op: opening };
       if (container === 'script_fields') return { kind: 'query-body-key', op: '__script_field__' };
+      /* highlight.fields.<字段>.{} —— 字段级高亮配置（fragment_size/pre_tags…） */
+      if (container === 'fields' && stack.length >= 4 && stack[stack.length - 4].lastKey === 'highlight') {
+        return { kind: 'query-body-key', op: '__highlight_field__' };
+      }
       if (container === 'runtime_mappings') return { kind: 'query-body-key', op: '__runtime_field__' };
     }
     /* 数组元素对象键位（键链白名单位）——栈顶 { 的下层是 [ 数组帧、数组帧属主键
