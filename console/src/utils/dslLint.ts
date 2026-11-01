@@ -38,7 +38,7 @@
  「昨天」→ warning，isLegalDateValue 白名单复用，需 ctx）+ should-in-filter（bool 仅含
  should 键、无 minimum_should_match、处于 filter/must_not 语境 → hint，walk 递归带语境
  单调传递，零 ctx）。 */
-import { ROOT_KEYS, MAPPING_TYPES } from './dslCompletionContext';
+import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES } from './queryAstOps';
 import { SETTINGS_CATALOG } from './indexSettingsCatalog';
 
@@ -51,7 +51,7 @@ type LintRule =
   | 'root-bare-clause' | 'collapse-structure' | 'sort-order-typo' | 'highlight-fields' | 'script-inline'
   | 'agg-text-field' | 'body-value-type' | 'agg-interval-key' | 'nested-path' | 'query-structure'
   | 'ndjson-pair' | 'settings-key' | 'settings-value' | 'mapping-key' | 'mapping-type'
-  | 'agg-type-typo' | 'date-term-value' | 'should-in-filter'
+  | 'agg-type-typo' | 'date-term-value' | 'should-in-filter' | 'body-key-typo'
   | 'query-subsearches-conflict' | 'subsearches-no-rank' | 'retriever-conflict'
   | 'rare-type';
 
@@ -123,6 +123,29 @@ const DATE_TYPES = new Set(['date', 'date_nanos']);
 /* ---- W3：键拼写纠错包的数据域 ---- */
 /** bool 组合法键白名单：拼错键（shoud/fitler/mustnot…）被 ES 静默忽略、条件无声丢失 */
 const BOOL_KEYS = new Set(['must', 'should', 'must_not', 'filter', 'minimum_should_match', 'boost', '_name']);
+
+/* 1439：查询语境下「体键集合封闭」的算子——键拼错（qurey / pth / scor_mode）会被
+   ES 静默忽略或直接 400。只收官方体键固定的算子；percolate/rule/template/knn 等
+   体内含用户自定结构的不收（防误报）。known 集取补全侧 queryBodyKeys（参数表并集），
+   与「补全给的键」同源——补不出的键也不会被这里判成拼写。 */
+const BODY_KEY_OPS = new Set([
+  'nested', 'has_child', 'has_parent', 'constant_score', 'dis_max', 'boosting', 'pinned',
+  'script_score', 'match_all', 'multi_match', 'query_string', 'simple_query_string',
+  'combined_fields', 'more_like_this', 'ids', 'parent_id', 'rank_feature', 'distance_feature',
+  'span_near', 'span_or', 'span_not', 'span_first', 'span_containing', 'span_within',
+  'span_multi', 'span_field_masking',
+]);
+const BODY_KEYS_CACHE = new Map<string, Set<string>>();
+function bodyKeysOf(op: string): Set<string> {
+  let s = BODY_KEYS_CACHE.get(op);
+  if (!s) {
+    s = new Set(['boost', '_name', ...queryBodyKeys(op).map(k => k.key)]);
+    BODY_KEYS_CACHE.set(op, s);
+  }
+  return s;
+}
+/** 查询语境路径（query / post_filter / 顶层 knn.filter 的子树）——aggs 下的同名聚合体不走本表 */
+const IN_QUERY_BODY = /^(query|post_filter|knn\.filter)([.\[]|$)/;
 /** search body 根级合法键：dslCompletionContext ROOT_KEYS 只读复用 + 常用外围键补集。
  aggs/aggregations 双合法（双拼写都在表内，互不为「拼错」）。 */
 const ROOT_KEY_WHITELIST = new Set([
@@ -413,6 +436,24 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
             suggestion: `bool 组合法键：must / should / must_not / filter / minimum_should_match / boost / _name；请确认「${k}」是否为「${near}」的笔误`,
             path: p, anchor: k, nth: kNth,
           });
+        }
+      }
+      /* ---- 1439：子句体键拼写（body-key-typo，warning 档，零 ctx）----
+         例：{"query":{"nested":{"qurey":…}}} / has_child 的 "scor_mode"——ES 不认该键，
+         要么静默忽略条件、要么 400。只判查询语境；变量占位与 _ 前缀元键不判。 */
+      if (parentKey && BODY_KEY_OPS.has(parentKey) && IN_QUERY_BODY.test(path)
+          && !k.startsWith('_') && !k.includes('${')) {
+        const known = bodyKeysOf(parentKey);
+        if (!known.has(k)) {
+          const near = nearestKey(k, known);
+          if (near) {
+            out.push({
+              rule: 'body-key-typo', severity: 'warning',
+              message: `查询子句「${parentKey}」的键「${k}」疑似拼写错误（最接近：${near}）——ES 不认该键（静默忽略或 400）`,
+              suggestion: `改为「${near}」；该子句的合法键可 Ctrl+Space 补全查看`,
+              path: p, anchor: k, nth: kNth,
+            });
+          }
         }
       }
       /* ---- 规则③：filter/must_not 语境纯 should（should-in-filter，hint 档，零 ctx）----

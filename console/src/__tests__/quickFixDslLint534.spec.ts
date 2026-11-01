@@ -109,6 +109,15 @@ describe('A 规则→fix 白名单九条（行为逐条）', () => {
     expect(a.edit.edits[0].textEdit.range).toEqual(markerAt(11, 18));
   });
 
+  it('body-key-typo →「键改为「query」」：nested 体里的 qurey（1439 新规则并入键改名）', () => {
+    const model = fakeModel('{"query": {"nested": {"qurey": {}}}}');
+    caps.markers = [markerAt(23, 30)];
+    recordDslLintMarkers(URI_STR, [entry(23, 30, 'body-key-typo', '查询子句「nested」的键「qurey」疑似拼写错误（最接近：query）——ES 不认该键')]);
+    const a = dslProvider().provideCodeActions(model, RANGE).actions[0];
+    expect(a.title).toBe('键改为「query」');
+    expect(a.edit.edits[0].textEdit.text).toBe('"query"');
+  });
+
   it('root-key-typo / settings-key / mapping-key 同款键改名（最接近候选拆自消息）', () => {
     const cases: [string, string, string][] = [
       ['root-key-typo', '{"querry": {}}', '键改为「query」'],

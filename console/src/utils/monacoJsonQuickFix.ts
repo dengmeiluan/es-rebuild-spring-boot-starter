@@ -660,7 +660,7 @@ function dslLintAction(model: monaco.editor.ITextModel, m: monaco.editor.IMarker
     return mk(hit, '"' + near + '"', '操作符改为「' + near + '」');
   }
   if (rule === 'bool-key-typo' || rule === 'root-key-typo' || rule === 'settings-key' || rule === 'mapping-key'
-      || rule === 'agg-type-typo') {
+      || rule === 'agg-type-typo' || rule === 'body-key-typo') {
     /* marker 覆盖的就是坏键本体（anchor=拼错键），整段改名。
  并入 agg-type-typo（bool-key-typo 同消息形态，nearestOf 拆「最接近：」候选） */
     const near = nearestOf(message);
