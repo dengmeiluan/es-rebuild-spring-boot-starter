@@ -590,6 +590,21 @@ export function lintDsl(obj: unknown, ctx?: LintCtx, opts?: { skipRoot?: boolean
           });
         }
       }
+      /* ---- 1439：聚合 order 对象的方向值（sort-order-typo，warning 档，零 ctx）----
+         {"terms":{"order":{"_count":"dsc"}}}——聚合排序方向同样只认 asc/desc，
+         拼错 ES 直接 400；口径与根级 sort 方向一致（共用 quick-fix 改名）。 */
+      if (parentKey === 'order' && IN_AGG_BODY.test(path)
+          && typeof v === 'string' && !SORT_ORDERS.has(v)) {
+        const near = v.startsWith('asc') ? 'asc'
+          : v.startsWith('des') ? 'desc'
+          : (nearestKey(v, SORT_ORDERS) ?? 'desc');
+        out.push({
+          rule: 'sort-order-typo', severity: 'warning',
+          message: `order 方向「${v}」疑似拼写错误（最接近：${near}）——聚合排序方向只认 asc / desc，拼错 ES 直接拒绝请求（400）`,
+          suggestion: `改为 "${k}": "${near}"`,
+          path: p, anchor: k, nth: kNth,
+        });
+      }
       /* ---- 1439：指标/管道聚合挂子聚合（agg-sub-aggs，error 档，零 ctx）----
          {"aggs":{"a":{"avg":{…},"aggs":{…}}}} → ES 400「Aggregator [avg] cannot accept
          sub-aggregations」。子聚合要挂在桶聚合下。anchor=aggs 键本身。 */
