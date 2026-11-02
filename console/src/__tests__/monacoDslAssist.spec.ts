@@ -1292,6 +1292,26 @@ describe('1439 安全体系写体补全', () => {
   });
 });
 
+describe('1439 Ingest 管道体补全', () => {
+  it('根五键；processors/on_failure 元素给处理器类型；参数内不出键', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'ingest-pipeline-body' } });
+    const root = '{\n  "\n}';
+    expect(suggest(root, 5).map(i => i.label)).toEqual(['description', 'version', 'processors', 'on_failure', '_meta']);
+
+    const procs = '{\n  "processors": [\n    {\n      "\n    }\n  ]\n}';
+    const labels = suggest(procs, procs.lastIndexOf('"') + 1).map(i => i.label);
+    for (const p of ['set', 'rename', 'remove', 'convert', 'date', 'grok', 'dissect', 'json', 'script', 'pipeline', 'foreach']) {
+      expect(labels, p).toContain(p);
+    }
+
+    const of = '{\n  "on_failure": {\n    "\n  }\n}';
+    expect(suggest(of, of.lastIndexOf('"') + 1).map(i => i.label)).toContain('set');
+
+    const deep = '{\n  "processors": [\n    {\n      "set": {\n        "\n      }\n    }\n  ]\n}';
+    expect(suggest(deep, deep.lastIndexOf('"') + 1), '处理器参数内不出键').toEqual([]);
+  });
+});
+
 describe('1439 子句体键位（query-body-key / clause-field-key / retriever-body-key）', () => {
   it('bool 体给 must/filter/should/must_not，接受后 JSON 合法', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });

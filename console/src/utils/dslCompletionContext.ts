@@ -1111,7 +1111,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
 export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'msearch-template-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'eql-body' | 'cluster-settings-body' | 'reroute-body' | 'allocation-explain-body'
 | 'snapshot-repo-body' | 'snapshot-create-body' | 'snapshot-restore-body' | 'slm-policy-body' | 'ilm-policy-body' | 'watch-body'
-| 'security-role-body' | 'security-user-body' | 'security-role-mapping-body' | 'security-api-key-body' | 'none';
+| 'security-role-body' | 'security-user-body' | 'security-role-mapping-body' | 'security-api-key-body' | 'ingest-pipeline-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1245,6 +1245,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
     if (/(^|\/)_(?:xpack\/)?security\/role_mapping\/[^/]+(\/|$)/.test(p)) return 'security-role-mapping-body';
   }
   if (secMethod === 'POST' && /(^|\/)_(?:xpack\/)?security\/api_key\/?$/.test(p)) return 'security-api-key-body';
+  /* 1439：Ingest 管道体（PUT /_ingest/pipeline/<id>）是 {description,version,processors,on_failure,_meta}；
+     _simulate（POST）是另一种体，不并进本档。 */
+  if (method.toUpperCase() === 'PUT' && /(^|\/)_ingest\/pipeline\/[^/]+(\/|$)/.test(p)) return 'ingest-pipeline-body';
   if (p.includes('/_snapshot/')) {
     const segs = p.split('/').filter(Boolean);
     const si = segs.indexOf('_snapshot');
@@ -2020,6 +2023,97 @@ export function securityApiKeyBodyKeyItems(): AssistItem[] {
   ];
 }
 
+/** Ingest 处理器全目录（lint 白名单；补全为常用处理器给可接受骨架） */
+export const INGEST_PROCESSOR_TYPES = [
+  'append', 'attachment', 'bytes', 'circle', 'community_id', 'convert', 'csv', 'date',
+  'date_index_name', 'dissect', 'dot_expander', 'drop', 'enrich', 'fail', 'fingerprint',
+  'foreach', 'geoip', 'grok', 'gsub', 'html_strip', 'inference', 'ip_location', 'join', 'json',
+  'kv', 'lowercase', 'network_direction', 'pipeline', 'redact', 'registered_domain', 'remove',
+  'rename', 'reroute', 'script', 'set', 'set_security_user', 'sort', 'split', 'trim',
+  'uppercase', 'uri_parts', 'user_agent',
+] as const;
+/** 处理器对象的公共开关（与处理器类型并存，lint 不得误报） */
+export const INGEST_PROCESSOR_COMMON_KEYS = ['tag', 'description', 'if', 'ignore_failure', 'on_failure'] as const;
+
+/** Ingest 管道体（PUT /_ingest/pipeline/<id>）的根键 */
+export function ingestPipelineBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'description', detail: '管道用途说明', snippet: true, insertText: '"description": "${1:parse logs}"' },
+    { label: 'version', detail: '管道版本号（便于回滚识别）', snippet: true, insertText: '"version": ${1:1}' },
+    { label: 'processors', detail: '处理器链（按序执行）', snippet: true,
+      insertText: '"processors": [\n  {\n    "set": { "field": "${1:field}", "value": "${2:value}" }\n  }\n]' },
+    { label: 'on_failure', detail: '任一处理器失败时执行的动作链', snippet: true,
+      insertText: '"on_failure": [\n  { "set": { "field": "error.message", "value": "{{ _ingest.on_failure_message }}" } }\n]' },
+    { label: '_meta', detail: '管道的自定义元数据', snippet: true, insertText: '"_meta": {\n  ${0}\n}' },
+  ];
+}
+
+/** processors[] / on_failure 里可用的处理器类型（常用类型带参数骨架） */
+export function ingestProcessorKeyItems(): AssistItem[] {
+  const skeleton: Record<string, { text: string; detail: string }> = {
+    set: { text: '"set": { "field": "${1:field}", "value": "${2:value}" }', detail: '设置字段值' },
+    rename: { text: '"rename": { "field": "${1:old_field}", "target_field": "${2:new_field}" }', detail: '重命名字段' },
+    remove: { text: '"remove": { "field": "${1:field}" }', detail: '删除字段' },
+    convert: { text: '"convert": { "field": "${1:field}", "type": "${2|integer,long,float,double,string,boolean,ip|}" }', detail: '类型转换' },
+    date: { text: '"date": { "field": "${1:timestamp}", "formats": ["${2:ISO8601}"] }', detail: '日期解析' },
+    grok: { text: '"grok": { "field": "${1:message}", "patterns": ["${2:pattern}"] }', detail: 'grok 正则解析' },
+    dissect: { text: '"dissect": { "field": "${1:message}", "pattern": "${2:pattern}" }', detail: 'dissect 分隔解析' },
+    json: { text: '"json": { "field": "${1:message}", "target_field": "${2:json}" }', detail: 'JSON 字符串展开' },
+    kv: { text: '"kv": { "field": "${1:message}" }', detail: '键值对解析' },
+    csv: { text: '"csv": { "field": "${1:message}", "target_fields": ["${2:col1}", "${3:col2}"] }', detail: 'CSV 解析' },
+    lowercase: { text: '"lowercase": { "field": "${1:field}" }', detail: '转小写' },
+    uppercase: { text: '"uppercase": { "field": "${1:field}" }', detail: '转大写' },
+    trim: { text: '"trim": { "field": "${1:field}" }', detail: '去首尾空白' },
+    split: { text: '"split": { "field": "${1:field}", "separator": "${2:,}" }', detail: '按分隔符拆成数组' },
+    join: { text: '"join": { "field": "${1:field}", "separator": "${2:,}" }', detail: '数组拼成字符串' },
+    script: { text: '"script": { "lang": "${1:painless}", "source": "${2:ctx.field = ctx.field.toUpperCase()}" }', detail: '脚本处理' },
+    pipeline: { text: '"pipeline": { "name": "${1:my-pipeline}" }', detail: '调用另一条管道' },
+    foreach: { text: '"foreach": { "field": "${1:field}", "processor": { "set": { "field": "_ingest._value", "value": "${2:value}" } } }', detail: '对数组元素逐个处理' },
+    fail: { text: '"fail": { "message": "${1:ingest failed}" }', detail: '主动失败' },
+    drop: { text: '"drop": {}', detail: '丢弃文档' },
+    append: { text: '"append": { "field": "${1:field}", "value": "${2:value}" }', detail: '追加值到数组' },
+    enrich: { text: '"enrich": { "policy_name": "${1:my-policy}", "field": "${2:field}", "target_field": "${3:enriched}" }', detail: 'enrich 策略关联' },
+    geoip: { text: '"geoip": { "field": "${1:ip}", "target_field": "${2:geoip}" }', detail: 'IP 地理位置' },
+    user_agent: { text: '"user_agent": { "field": "${1:user_agent}" }', detail: 'UA 解析' },
+    uri_parts: { text: '"uri_parts": { "field": "${1:url}" }', detail: 'URL 拆解' },
+    registered_domain: { text: '"registered_domain": { "field": "${1:host}" }', detail: '注册域提取' },
+    dot_expander: { text: '"dot_expander": { "field": "${1:field.with.dots}" }', detail: '点号字段展开' },
+    gsub: { text: '"gsub": { "field": "${1:field}", "pattern": "${2:pattern}", "replacement": "${3:_}" }', detail: '正则替换' },
+    inference: { text: '"inference": { "model_id": "${1:model}", "field_map": {} }', detail: '推理模型' },
+    redact: { text: '"redact": { "field": "${1:field}" }', detail: '敏感信息脱敏' },
+  };
+  const extra: Record<string, string> = {
+    attachment: '附件元数据提取', bytes: '字节数处理', circle: '圆形地理区域', community_id: '网络流 community_id',
+    date_index_name: '按日期路由索引名', fingerprint: '内容指纹', html_strip: 'HTML 标签剥离',
+    ip_location: 'IP 位置字段', network_direction: '网络方向判定', reroute: '改路由/索引',
+    set_security_user: '设置安全用户上下文', sort: '数组排序',
+  };
+  /* 高频处理器置顶（补全面板首屏就是 set/rename/…，其余按目录序跟随） */
+  const priority = ['set', 'rename', 'remove', 'convert', 'date', 'grok', 'dissect', 'json', 'script', 'pipeline', 'foreach'];
+  const ordered = [
+    ...priority.filter(t => (INGEST_PROCESSOR_TYPES as readonly string[]).includes(t)),
+    ...(INGEST_PROCESSOR_TYPES as readonly string[]).filter(t => !priority.includes(t)),
+  ];
+  return ordered.map(t => {
+    const sk = skeleton[t];
+    return {
+      label: t,
+      detail: sk?.detail ?? extra[t] ?? 'Ingest 处理器',
+      snippet: true,
+      insertText: sk?.text ?? '"' + t + '": {\n  ${0}\n}',
+    };
+  });
+}
+
+/** Ingest 体区域：根 / processors[] 元素 / on_failure（数组元素或单对象）；更深不出键 */
+export function ingestPipelineRegionAt(doc: string, offset: number): 'root' | 'processor' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] === 'processors' && stack.length === 3) return 'processor';
+  if (stack[0] === 'on_failure' && (stack.length === 2 || stack.length === 3)) return 'processor';
+  return 'deep';
+}
+
 /** 分片分配诊断体（POST /_cluster/allocation/explain）的根键 */
 export function allocationExplainBodyKeyItems(): AssistItem[] {
   return [
@@ -2768,6 +2862,8 @@ export const securityUserBodyRootKeys = securityUserBodyKeyItems().map(i => i.la
 export const securityRoleTemplateKeys = securityRoleTemplateKeyItems().map(i => i.label);
 export const securityRoleMappingBodyRootKeys = securityRoleMappingBodyKeyItems().map(i => i.label);
 export const securityApiKeyBodyRootKeys = securityApiKeyBodyKeyItems().map(i => i.label);
+export const ingestPipelineBodyRootKeys = ingestPipelineBodyKeyItems().map(i => i.label);
+export const ingestProcessorLintKeys = [...INGEST_PROCESSOR_TYPES, ...INGEST_PROCESSOR_COMMON_KEYS];
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

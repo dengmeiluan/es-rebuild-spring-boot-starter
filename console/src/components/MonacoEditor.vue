@@ -30,6 +30,7 @@ import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS
   securityRoleBodyKeyItems, securityRoleIndexKeyItems, securityRoleFieldSecurityKeyItems, securityRoleAppKeyItems, securityRoleRegionAt,
   securityUserBodyKeyItems, securityUserRegionAt, securityRoleTemplateKeyItems,
   securityRoleMappingBodyKeyItems, securityApiKeyBodyKeyItems,
+  ingestPipelineBodyKeyItems, ingestProcessorKeyItems, ingestPipelineRegionAt,
   scriptExecuteBodyKeyItems, msearchHeaderKeyItems, msearchHeaderLineAt, msearchTemplateBodyKeyItems, bulkActionKeyItems, bulkActionMetaKeyItems, bulkLineKindAt, bulkActionMetaAt, fieldCapsBodyKeyItems, termsEnumBodyKeyItems, indexFilterRegionAt, rankEvalBodyKeyItems, rankEvalRequestKeyItems, rankEvalMetricKeyItems, rankEvalRegionAt, RUNTIME_FIELD_TYPES, runtimeFieldTypeAt, inRuntimeMappingsAt, aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems, aliasesBodyRegionAt, scrollBodyKeyItems, clearScrollBodyKeyItems, termvectorsKeyItems, mtermvectorsBodyKeyItems, mtermvectorsDocKeyItems, STRUCTURED_VALUE_ENUMS, MAPPING_TYPES, templateKeyItems, templateRegionAt, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
 import { makeDslValueSuggestProvider } from '../utils/dslValueSuggest';
 import type { AssistItem, BodyKind } from '../utils/dslCompletionContext';
@@ -836,6 +837,8 @@ onMounted(() => {
            安全用户按根/role_templates 元素分派 */
         const sRoleRegion = bk === 'security-role-body' ? securityRoleRegionAt(doc, offset) : null;
         const sUserRegion = bk === 'security-user-body' ? securityUserRegionAt(doc, offset) : null;
+        /* 1439：Ingest 体按根层 / processors[]·on_failure 处理器对象分派 */
+        const ingestRegion = bk === 'ingest-pipeline-body' ? ingestPipelineRegionAt(doc, offset) : null;
         const ssRegion = (bk === 'stored-script-body' || bk === 'script-execute-body') ? storedScriptRegionAt(doc, offset) : null;
         const alRegion = bk === 'aliases-body' ? aliasesBodyRegionAt(doc, offset) : null;
         const scRegion = (bk === 'scroll-body' || bk === 'clear-scroll-body') ? rootOnlyRegionAt(doc, offset) : null;
@@ -852,7 +855,8 @@ onMounted(() => {
           || bk === 'snapshot-repo-body' || bk === 'snapshot-create-body' || bk === 'snapshot-restore-body'
           || bk === 'slm-policy-body' || bk === 'ilm-policy-body' || bk === 'watch-body'
           || bk === 'security-role-body' || bk === 'security-user-body'
-          || bk === 'security-role-mapping-body' || bk === 'security-api-key-body')) {
+          || bk === 'security-role-mapping-body' || bk === 'security-api-key-body'
+          || bk === 'ingest-pipeline-body')) {
           const g = dslKeyGuard(doc, offset);
           /* 1439：_reindex 的 source.sort / source._source 数组元素是字段名位 */
           if (g.inStr && g.arrayElem && (rIdxRegion === 'sort' || rIdxRegion === 'source-fields')) {
@@ -1086,6 +1090,10 @@ onMounted(() => {
                 : [])
             : bk === 'security-role-mapping-body' ? securityRoleMappingBodyKeyItems()
             : bk === 'security-api-key-body' ? securityApiKeyBodyKeyItems()
+            : bk === 'ingest-pipeline-body'
+              ? (ingestRegion === 'root' ? ingestPipelineBodyKeyItems()
+                : ingestRegion === 'processor' ? ingestProcessorKeyItems()
+                : [])
             : bk === 'stored-script-body'
               ? (ssRegion === 'root' ? storedScriptBodyKeyItems()
                 : ssRegion === 'script' ? storedScriptKeyItems()

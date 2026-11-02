@@ -30,6 +30,7 @@ import {
   watchBodyKeyItems, watchTriggerKeyItems, watchScheduleKeyItems, watchInputKeyItems, watchConditionKeyItems, watchActionTypeKeyItems,
   securityRoleBodyKeyItems, securityRoleIndexKeyItems, securityRoleFieldSecurityKeyItems, securityRoleAppKeyItems,
   securityUserBodyKeyItems, securityRoleTemplateKeyItems, securityRoleMappingBodyKeyItems, securityApiKeyBodyKeyItems,
+  ingestPipelineBodyKeyItems, ingestProcessorKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -159,6 +160,8 @@ function allProblems(): string[] {
   out.push(...snippetProblems('SRT', securityRoleTemplateKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('SRM', securityRoleMappingBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('SAK', securityApiKeyBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('IPL', ingestPipelineBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('IPR', ingestProcessorKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;
 }
 

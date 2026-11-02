@@ -52,6 +52,7 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   WATCH_CONDITION_TYPES, WATCH_ACTION_TYPES,
   securityRoleBodyRootKeys, securityRoleIndexKeys, securityRoleFieldSecurityKeys, securityRoleAppKeys,
   securityUserBodyRootKeys, securityRoleTemplateKeys, securityRoleMappingBodyRootKeys, securityApiKeyBodyRootKeys,
+  ingestPipelineBodyRootKeys, ingestProcessorLintKeys,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -1469,6 +1470,24 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
     }
     case 'security-role-mapping-body': return lintBodyKeys(obj, securityRoleMappingBodyRootKeys, '角色映射体');
     case 'security-api-key-body': return lintBodyKeys(obj, securityApiKeyBodyRootKeys, 'API Key 体');
+    case 'ingest-pipeline-body': {
+      const out = [...lintBodyKeys(obj, ingestPipelineBodyRootKeys, 'Ingest 管道体')];
+      if (Array.isArray(obj?.processors)) {
+        obj.processors.forEach((p: any, i: number) => {
+          if (!p || typeof p !== 'object' || Array.isArray(p)) return;
+          out.push(...lintBodyKeys(p, ingestProcessorLintKeys, `Ingest 处理器 #${i + 1}`));
+        });
+      }
+      if (Array.isArray(obj?.on_failure)) {
+        obj.on_failure.forEach((p: any, i: number) => {
+          if (!p || typeof p !== 'object' || Array.isArray(p)) return;
+          out.push(...lintBodyKeys(p, ingestProcessorLintKeys, `Ingest on_failure #${i + 1}`));
+        });
+      } else if (obj?.on_failure && typeof obj.on_failure === 'object') {
+        out.push(...lintBodyKeys(obj.on_failure, ingestProcessorLintKeys, 'Ingest on_failure'));
+      }
+      return out;
+    }
     default: return [];
   }
 }
