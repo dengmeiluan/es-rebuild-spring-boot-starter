@@ -1443,6 +1443,29 @@ describe('1439 runtime_mappings 类型位', () => {
   });
 });
 
+describe('1439 _rank_eval 补全', () => {
+  it('根 requests/metric；评估项 request/ratings；metric 指标键；命名位/深层压制', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'rank-eval-body' as const } });
+    const root = suggest('{"');
+    expect(root.map((i: any) => i.label)).toEqual(['requests', 'metric']);
+    for (const i of root) {
+      expect(() => JSON.parse(acceptSnippet('{', i) + '}'), i.label + ' 接受后非法').not.toThrow();
+    }
+    const item = suggest('{"requests": {"q1": {"');
+    expect(item.map((i: any) => i.label)).toEqual(['request', 'ratings']);
+    for (const i of item) {
+      expect(() => JSON.parse(acceptSnippet('{"requests": {"q1": {"', i) + '}}}'), i.label + ' 接受后非法').not.toThrow();
+    }
+    const metric = suggest('{"metric": {"');
+    expect(metric.map((i: any) => i.label)).toEqual(['dcg', 'ndcg', 'precision', 'recall', 'mean_reciprocal_rank']);
+    for (const i of metric) {
+      expect(() => JSON.parse(acceptSnippet('{"metric": {"', i) + '}}'), i.label + ' 接受后非法').not.toThrow();
+    }
+    expect(suggest('{"requests": {"')).toEqual([]);
+    expect(suggest('{"requests": {"q1": {"request": {"')).toEqual([]);
+  });
+});
+
 describe('1439 field_caps / terms_enum 补全', () => {
   it('field-caps：根三键（接受即合法）；index_filter 内回落查询；runtime type 值位给目录', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'field-caps-body' as const } });

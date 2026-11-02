@@ -43,7 +43,7 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   queryOnlyBodyRootKeys, templateSearchBodyRootKeys, sqlBodyRootKeys, mgetBodyRootKeys,
   storedScriptBodyRootKeys, aliasesBodyRootKeys, scrollBodyRootKeys, clearScrollBodyRootKeys,
   termvectorsBodyRootKeys, mtermvectorsBodyRootKeys, reindexBodyRootKeys, scriptExecuteBodyRootKeys,
-  BULK_ACTIONS, msearchHeaderKeyItems, fieldCapsBodyRootKeys, termsEnumBodyRootKeys,
+  BULK_ACTIONS, msearchHeaderKeyItems, fieldCapsBodyRootKeys, termsEnumBodyRootKeys, rankEvalBodyRootKeys,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -1388,6 +1388,7 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
     case 'reindex-body': return lintBodyKeys(obj, reindexBodyRootKeys, '重建索引体');
     case 'field-caps-body': return lintBodyKeys(obj, fieldCapsBodyRootKeys, '字段能力体');
     case 'terms-enum-body': return lintBodyKeys(obj, termsEnumBodyRootKeys, '词项枚举体');
+    case 'rank-eval-body': return lintBodyKeys(obj, rankEvalBodyRootKeys, '排序评估体');
     default: return [];
   }
 }

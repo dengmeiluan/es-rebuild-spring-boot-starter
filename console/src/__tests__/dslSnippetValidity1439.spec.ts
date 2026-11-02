@@ -18,6 +18,7 @@ import {
   mgetBodyKeyItems, mgetDocKeyItems,
   storedScriptBodyKeyItems, storedScriptKeyItems, scriptExecuteBodyKeyItems, msearchHeaderKeyItems,
   bulkActionKeyItems, bulkActionMetaKeyItems, fieldCapsBodyKeyItems, termsEnumBodyKeyItems,
+  rankEvalBodyKeyItems, rankEvalRequestKeyItems, rankEvalMetricKeyItems,
   aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems,
   scrollBodyKeyItems, clearScrollBodyKeyItems,
   termvectorsKeyItems, mtermvectorsBodyKeyItems, mtermvectorsDocKeyItems,
@@ -103,6 +104,9 @@ function allProblems(): string[] {
   out.push(...snippetProblems('BM2', bulkActionMetaKeyItems('index').map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('FC', fieldCapsBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('TE', termsEnumBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('RE', rankEvalBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('RR', rankEvalRequestKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('RM', rankEvalMetricKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('AB', aliasesBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('AA', aliasActionKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('AC', aliasAddConfigKeyItems().map(i => ({ text: i.insertText, key: i.label }))));

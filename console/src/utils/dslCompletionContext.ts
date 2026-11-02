@@ -1109,7 +1109,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1262,6 +1262,8 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
      index_filter 内的查询由 dslContext 根级查询容器识别后回落 */
   if (/(^|\/)_field_caps(\/|$)/.test(p)) return 'field-caps-body';
   if (/(^|\/)_terms_enum(\/|$)/.test(p)) return 'terms-enum-body';
+  /* 1439：_rank_eval 的体是 {requests, metric}，不是 search 体 */
+  if (/(^|\/)_rank_eval(\/|$)/.test(p)) return 'rank-eval-body';
   if (p.includes('/_scripts') || p.includes('/_script/')
       || p.includes('/_close') || p.includes('/_open') || p.includes('/_forcemerge')) return 'none';
   return 'search';
@@ -1385,6 +1387,48 @@ export function indexFilterRegionAt(doc: string, offset: number = doc.length): '
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
   if (stack[0] === 'index_filter') return 'query';
+  return 'deep';
+}
+
+/** 排序评估体（POST /_rank_eval）的根键 */
+export function rankEvalBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'requests', detail: '命名排序评估请求（每项含 request/ratings）', snippet: true,
+      insertText: '"requests": {\n  "${1:query}": {\n    "request": { "query": { "match_all": {} } },\n    "ratings": []\n  }\n}' },
+    { label: 'metric', detail: '评估指标（dcg/ndcg/precision/recall/mean_reciprocal_rank）', snippet: true,
+      insertText: '"metric": {\n  "${1|dcg,ndcg,precision,recall,mean_reciprocal_rank|}": {}\n}' },
+  ];
+}
+
+/** 评估请求项的键 */
+export function rankEvalRequestKeyItems(): AssistItem[] {
+  return [
+    { label: 'request', detail: '搜索请求体（query/size/sort…）', snippet: true,
+      insertText: '"request": {\n  "query": { "match_all": {} }\n}' },
+    { label: 'ratings', detail: '评分（文档 id 与评分对）', snippet: true,
+      insertText: '"ratings": [\n  { "_index": "${1:my-index}", "_id": "${2:1}", "rating": ${3:1} }\n]' },
+  ];
+}
+
+/** metric 对象的指标键 */
+export function rankEvalMetricKeyItems(): AssistItem[] {
+  return [
+    { label: 'dcg', detail: '折损累计增益', snippet: true,
+      insertText: '"dcg": {\n  "k": ${1:10},\n  "normalize": ${2|false,true|}\n}' },
+    { label: 'ndcg', detail: '归一化折损累计增益', snippet: true,
+      insertText: '"ndcg": {\n  "k": ${1:10},\n  "normalize": ${2|false,true|}\n}' },
+    { label: 'precision', detail: '前 k 命中精度', snippet: true, insertText: '"precision": {\n  "k": ${1:10}\n}' },
+    { label: 'recall', detail: '前 k 召回', snippet: true, insertText: '"recall": {\n  "k": ${1:10}\n}' },
+    { label: 'mean_reciprocal_rank', detail: '平均倒数排名', snippet: true, insertText: '"mean_reciprocal_rank": {}' },
+  ];
+}
+
+/** 排序评估体区域：根 / requests 项 / metric 对象 / 深层（request 内部属搜索请求体，暂不出档） */
+export function rankEvalRegionAt(doc: string, offset: number = doc.length): 'root' | 'request-item' | 'metric' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] === 'requests' && stack.length === 3) return 'request-item';
+  if (stack[0] === 'metric' && stack.length === 2) return 'metric';
   return 'deep';
 }
 
@@ -2068,6 +2112,7 @@ export const mtermvectorsBodyRootKeys = mtermvectorsBodyKeyItems().map(i => i.la
 export const reindexBodyRootKeys = reindexBodyKeyItems('root').map(i => i.label);
 export const fieldCapsBodyRootKeys = fieldCapsBodyKeyItems().map(i => i.label);
 export const termsEnumBodyRootKeys = termsEnumBodyKeyItems().map(i => i.label);
+export const rankEvalBodyRootKeys = rankEvalBodyKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */
