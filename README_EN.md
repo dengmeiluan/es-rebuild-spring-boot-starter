@@ -311,6 +311,7 @@ searchdeck/
 ├─ platform/                 searchdeck-platform: page contract, packs, branding, host SPI
 ├─ modules/console/          searchdeck-console: engine + console + embedded UI assets
 ├─ apps/server/              searchdeck-server: Kibana-style standalone deployment
+├─ extensions/               Chrome MV3 extension / DBX plugin launcher
 ├─ ui/                       @searchdeck/ui: Vue 3 console source
 └─ examples/demo-host/       runnable host example
 ```

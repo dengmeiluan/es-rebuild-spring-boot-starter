@@ -300,6 +300,7 @@ searchdeck/
 ├─ platform/                 searchdeck-platform：页面契约、功能包、品牌、宿主 SPI
 ├─ modules/console/          searchdeck-console：引擎 + 控制台 + 内嵌 UI 资源
 ├─ apps/server/              searchdeck-server：Kibana 式独立部署
+├─ extensions/               Chrome MV3 扩展 / DBX 插件启动器
 ├─ ui/                       @searchdeck/ui：Vue 3 控制台源码
 └─ examples/demo-host/       可运行宿主示例
 ```
