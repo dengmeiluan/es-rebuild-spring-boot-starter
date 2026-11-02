@@ -59,6 +59,7 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   rollupJobBodyRootKeys, rollupGroupKeys, rollupDateGroupKeys, rollupTermsGroupKeys,
   rollupHistogramGroupKeys, rollupMetricKeys,
   mlDatafeedBodyRootKeys, mlDelayedKeys, mlChunkingKeys, mlIndicesOptionsKeys,
+  mlJobBodyRootKeys, mlAnalysisConfigKeys, mlDetectorKeys, mlAnalysisLimitsKeys, mlDataDescriptionKeys,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -1504,6 +1505,19 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
         ...lintBodyKeys(obj?.delayed_data_check_config, mlDelayedKeys, 'ML 延迟检查'),
         ...lintBodyKeys(obj?.chunking_config, mlChunkingKeys, 'ML 分块配置'),
         ...lintBodyKeys(obj?.indices_options, mlIndicesOptionsKeys, 'ML 索引选项')];
+    case 'ml-job-body': {
+      const out = [...lintBodyKeys(obj, mlJobBodyRootKeys, 'ML 作业体'),
+        ...lintBodyKeys(obj?.analysis_config, mlAnalysisConfigKeys, 'ML 分析配置'),
+        ...lintBodyKeys(obj?.analysis_limits, mlAnalysisLimitsKeys, 'ML 分析上限'),
+        ...lintBodyKeys(obj?.data_description, mlDataDescriptionKeys, 'ML 数据描述')];
+      if (Array.isArray(obj?.analysis_config?.detectors)) {
+        obj.analysis_config.detectors.forEach((d: any, i: number) => {
+          if (!d || typeof d !== 'object' || Array.isArray(d)) return;
+          out.push(...lintBodyKeys(d, mlDetectorKeys, `ML 检测器 #${i + 1}`));
+        });
+      }
+      return out;
+    }
     case 'rollup-job-body': {
       const out = [...lintBodyKeys(obj, rollupJobBodyRootKeys, 'Rollup 作业体'),
         ...lintBodyKeys(obj?.groups, rollupGroupKeys, 'Rollup 分组')];

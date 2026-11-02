@@ -1111,7 +1111,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
 export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'msearch-template-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'eql-body' | 'cluster-settings-body' | 'reroute-body' | 'allocation-explain-body'
 | 'snapshot-repo-body' | 'snapshot-create-body' | 'snapshot-restore-body' | 'slm-policy-body' | 'ilm-policy-body' | 'watch-body'
-| 'security-role-body' | 'security-user-body' | 'security-role-mapping-body' | 'security-api-key-body' | 'ingest-pipeline-body' | 'enrich-policy-body' | 'transform-body' | 'rollup-job-body' | 'ml-datafeed-body' | 'none';
+| 'security-role-body' | 'security-user-body' | 'security-role-mapping-body' | 'security-api-key-body' | 'ingest-pipeline-body' | 'enrich-policy-body' | 'transform-body' | 'rollup-job-body' | 'ml-datafeed-body' | 'ml-job-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1259,6 +1259,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：ML 数据馈送体（PUT /_ml/datafeeds/<id>，6.x 兼容 _xpack/ml）：
      {job_id,indexes,query,frequency,scroll_size,chunking_config,…} */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_(?:xpack\/)?ml\/datafeeds\/[^/]+(\/|$)/.test(p)) return 'ml-datafeed-body';
+  /* 1439：ML 异常检测作业体（PUT /_ml/anomaly_detectors/<id>，6.x 兼容 _xpack/ml）：
+     {analysis_config,analysis_limits,data_description,…}；_update 是 POST，不并进本档。 */
+  if (method.toUpperCase() === 'PUT' && /(^|\/)_(?:xpack\/)?ml\/anomaly_detectors\/[^/]+(\/|$)/.test(p)) return 'ml-job-body';
   if (p.includes('/_snapshot/')) {
     const segs = p.split('/').filter(Boolean);
     const si = segs.indexOf('_snapshot');
@@ -2405,6 +2408,93 @@ export function mlDatafeedRegionAt(doc: string, offset: number):
   return 'deep';
 }
 
+/** ML 异常检测作业体（PUT /_ml/anomaly_detectors/<id>）的根键 */
+export function mlJobBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'analysis_config', detail: '分析配置（bucket_span + detectors，作业核心）', snippet: true,
+      insertText: '"analysis_config": {\n  "bucket_span": "${1:15m}",\n  "detectors": [\n    { "function": "${2:mean}", "field_name": "${3:responsetime}" }\n  ]\n}' },
+    { label: 'analysis_limits', detail: '资源上限（模型内存/分类示例数）', snippet: true,
+      insertText: '"analysis_limits": {\n  "model_memory_limit": "${1:1024mb}",\n  "categorization_examples_limit": ${2:4}\n}' },
+    { label: 'data_description', detail: '时间字段描述（time_field 必填）', snippet: true,
+      insertText: '"data_description": { "time_field": "${1:@timestamp}" }' },
+    { label: 'description', detail: '作业用途说明', snippet: true, insertText: '"description": "${1:latency anomaly job}"' },
+    { label: 'groups', detail: '作业分组（便于批量管理）', snippet: true, insertText: '"groups": ["${1:default}"]' },
+    { label: 'model_snapshot_retention_days', detail: '模型快照保留天数', snippet: true, insertText: '"model_snapshot_retention_days": ${1:10}' },
+    { label: 'daily_model_snapshot_retention_after_days', detail: '近期快照按天保留天数', snippet: true,
+      insertText: '"daily_model_snapshot_retention_after_days": ${1:1}' },
+    { label: 'results_index_name', detail: '结果索引名（shared=共用索引）', snippet: true, insertText: '"results_index_name": "${1:shared}"' },
+    { label: 'allow_lazy_open', detail: '允许惰性打开（不预加载模型）', snippet: true, insertText: '"allow_lazy_open": ${1|false,true|}' },
+    { label: 'custom_settings', detail: '自定义设置（结果索引等）', snippet: true, insertText: '"custom_settings": {\n  ${0}\n}' },
+    { label: 'datafeed_config', detail: '同时创建数据馈送（取数配置）', snippet: true,
+      insertText: '"datafeed_config": {\n  "indices": ["${1:logs-*}"],\n  "query": { "match_all": {} }\n}' },
+  ];
+}
+
+/** analysis_config 的键 */
+export function mlAnalysisConfigKeyItems(): AssistItem[] {
+  return [
+    { label: 'bucket_span', detail: '桶跨度（如 15m；决定分析粒度）', snippet: true, insertText: '"bucket_span": "${1:15m}"' },
+    { label: 'latency', detail: '额外延迟（等待迟到数据）', snippet: true, insertText: '"latency": "${1:0s}"' },
+    { label: 'detectors', detail: '检测器列表（function + field_name）', snippet: true,
+      insertText: '"detectors": [\n  { "function": "${1:mean}", "field_name": "${2:responsetime}" }\n]' },
+    { label: 'influencers', detail: '影响因子字段（用于结果解释）', snippet: true, insertText: '"influencers": ["${1:airline}"]' },
+    { label: 'categorization_field_name', detail: '分类字段（消息聚类）', snippet: true,
+      insertText: '"categorization_field_name": "${1:message}"' },
+    { label: 'categorization_filters', detail: '分类过滤模式', snippet: true, insertText: '"categorization_filters": ["${1:pattern}"]' },
+    { label: 'summary_count_field_name', detail: '预聚合计数字段（datafeed 聚合场景）', snippet: true,
+      insertText: '"summary_count_field_name": "${1:doc_count}"' },
+  ];
+}
+
+/** detectors[] 元素的键 */
+export function mlDetectorKeyItems(): AssistItem[] {
+  return [
+    { label: 'function', detail: '检测函数（mean/min/max/sum/count/rare/distinct_count…）', snippet: true,
+      insertText: '"function": "${1|mean,min,max,sum,count,non_zero_count,distinct_count,rare,low_count,high_count,low_mean,high_mean,info_content,time_of_day,time_of_week|}"' },
+    { label: 'field_name', detail: '被分析字段', snippet: true, insertText: '"field_name": "${1:responsetime}"' },
+    { label: 'by_field_name', detail: '按该字段分组分别建模', snippet: true, insertText: '"by_field_name": "${1:airline}"' },
+    { label: 'over_field_name', detail: '总体对比字段', snippet: true, insertText: '"over_field_name": "${1:clientip}"' },
+    { label: 'partition_field_name', detail: '分区字段（每个分区独立建模）', snippet: true,
+      insertText: '"partition_field_name": "${1:region}"' },
+    { label: 'detector_description', detail: '检测器说明', snippet: true, insertText: '"detector_description": "${1:mean latency}"' },
+    { label: 'exclude_frequent', detail: '排除高频值（all/none/by/over）', snippet: true,
+      insertText: '"exclude_frequent": "${1|all,none,by,over|}"' },
+    { label: 'use_null', detail: '缺失值是否作为独立值', snippet: true, insertText: '"use_null": ${1|false,true|}' },
+  ];
+}
+
+/** analysis_limits 的键 */
+export function mlAnalysisLimitsKeyItems(): AssistItem[] {
+  return [
+    { label: 'model_memory_limit', detail: '模型内存上限（如 1024mb）', snippet: true, insertText: '"model_memory_limit": "${1:1024mb}"' },
+    { label: 'categorization_examples_limit', detail: '分类示例保留条数', snippet: true, insertText: '"categorization_examples_limit": ${1:4}' },
+  ];
+}
+
+/** data_description 的键 */
+export function mlDataDescriptionKeyItems(): AssistItem[] {
+  return [
+    { label: 'time_field', detail: '时间戳字段（必填）', snippet: true, insertText: '"time_field": "${1:@timestamp}"' },
+    { label: 'time_format', detail: '时间格式（epoch_ms 或自定义 pattern）', snippet: true, insertText: '"time_format": "${1:epoch_ms}"' },
+  ];
+}
+
+/** ML 作业体区域：根 / analysis_config / detectors 元素 / analysis_limits / data_description */
+export function mlJobRegionAt(doc: string, offset: number):
+  'root' | 'analysis-config' | 'detector' | 'analysis-limits' | 'data-description' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] === 'analysis_config') {
+    if (stack.length === 2) return 'analysis-config';
+    /* detectors[] 元素对象：['analysis_config','detectors',<array>,null] */
+    if (stack[1] === 'detectors' && stack.length === 4) return 'detector';
+    return 'deep';
+  }
+  if (stack[0] === 'analysis_limits' && stack.length === 2) return 'analysis-limits';
+  if (stack[0] === 'data_description' && stack.length === 2) return 'data-description';
+  return 'deep';
+}
+
 /** 分片分配诊断体（POST /_cluster/allocation/explain）的根键 */
 export function allocationExplainBodyKeyItems(): AssistItem[] {
   return [
@@ -2961,6 +3051,9 @@ export const STRUCTURED_VALUE_ENUMS: Record<string, { values: string[]; quoted: 
   include_aliases: { values: ['true', 'false'], quoted: false, detail: '恢复时包含别名' },
   enabled: { values: ['true', 'false'], quoted: false, detail: '是否启用' },
   allow_restricted_indices: { values: ['false', 'true'], quoted: false, detail: '允许访问受限系统索引' },
+  allow_lazy_open: { values: ['false', 'true'], quoted: false, detail: '允许惰性打开作业' },
+  use_null: { values: ['false', 'true'], quoted: false, detail: '缺失值作为独立值' },
+  exclude_frequent: { values: ['all', 'none', 'by', 'over'], quoted: true, detail: '排除高频值范围' },
   index_include_frozen: { values: ['true', 'false'], quoted: false, detail: '含冻结索引' },
   _source: { values: ['true', 'false'], quoted: false, detail: '回源开关（也可传字段数组）' },
   offsets: { values: ['false', 'true'], quoted: false, detail: '返回词项偏移' },
@@ -3176,6 +3269,11 @@ export const mlDatafeedBodyRootKeys = mlDatafeedBodyKeyItems().map(i => i.label)
 export const mlDelayedKeys = mlDelayedCheckKeyItems().map(i => i.label);
 export const mlChunkingKeys = mlChunkingKeyItems().map(i => i.label);
 export const mlIndicesOptionsKeys = mlIndicesOptionsKeyItems().map(i => i.label);
+export const mlJobBodyRootKeys = mlJobBodyKeyItems().map(i => i.label);
+export const mlAnalysisConfigKeys = mlAnalysisConfigKeyItems().map(i => i.label);
+export const mlDetectorKeys = mlDetectorKeyItems().map(i => i.label);
+export const mlAnalysisLimitsKeys = mlAnalysisLimitsKeyItems().map(i => i.label);
+export const mlDataDescriptionKeys = mlDataDescriptionKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

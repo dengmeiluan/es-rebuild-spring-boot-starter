@@ -1431,6 +1431,43 @@ describe('1439 ML 数据馈送体补全', () => {
   });
 });
 
+describe('1439 ML 作业体补全', () => {
+  it('根 → analysis_config → detectors 元素 → 上限/时间描述；布尔/枚举值位', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'ml-job-body' } });
+    const root = '{\n  "\n}';
+    const rootLabels = suggest(root, 5).map(i => i.label);
+    for (const k of ['analysis_config', 'analysis_limits', 'data_description', 'description', 'groups', 'allow_lazy_open', 'datafeed_config']) {
+      expect(rootLabels, k).toContain(k);
+    }
+
+    const cfg = '{\n  "analysis_config": {\n    "\n  }\n}';
+    const cfgLabels = suggest(cfg, cfg.lastIndexOf('"') + 1).map(i => i.label);
+    for (const k of ['bucket_span', 'latency', 'detectors', 'influencers', 'categorization_field_name']) {
+      expect(cfgLabels, k).toContain(k);
+    }
+
+    const det = '{\n  "analysis_config": {\n    "detectors": [\n      {\n        "\n      }\n    ]\n  }\n}';
+    const detLabels = suggest(det, det.lastIndexOf('"') + 1).map(i => i.label);
+    for (const k of ['function', 'field_name', 'by_field_name', 'over_field_name', 'partition_field_name', 'exclude_frequent', 'use_null']) {
+      expect(detLabels, k).toContain(k);
+    }
+
+    const lim = '{\n  "analysis_limits": {\n    "\n  }\n}';
+    expect(suggest(lim, lim.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['model_memory_limit', 'categorization_examples_limit']);
+
+    const dd = '{\n  "data_description": {\n    "\n  }\n}';
+    expect(suggest(dd, dd.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['time_field', 'time_format']);
+
+    const useNull = '{"use_null": }';
+    expect(suggest(useNull, useNull.indexOf('}')).map(i => i.label)).toEqual(['false', 'true']);
+    const excl = '{"exclude_frequent": "';
+    expect(suggest(excl).map(i => i.label)).toEqual(['all', 'none', 'by', 'over']);
+
+    const deep = '{"analysis_config": {"detectors": [{"function": {';
+    expect(suggest(deep).map(i => i.label), 'function 值对象内不出键').toEqual([]);
+  });
+});
+
 describe('1439 子句体键位（query-body-key / clause-field-key / retriever-body-key）', () => {
   it('bool 体给 must/filter/should/must_not，接受后 JSON 合法', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });

@@ -13,6 +13,7 @@ import {
   rerouteCommandParamKeyItems, allocationExplainBodyKeyItems,
   snapshotRepoBodyKeyItems, snapshotCreateBodyKeyItems, snapshotRestoreBodyKeyItems,
   securityUserBodyKeyItems, securityRoleMappingBodyKeyItems, securityRoleIndexKeyItems,
+  mlJobBodyKeyItems, mlDetectorKeyItems,
 } from '../utils/dslCompletionContext';
 
 describe('1439 结构化体值枚举', () => {
@@ -30,7 +31,7 @@ describe('1439 结构化体值枚举', () => {
       'keep_on_completion', 'index_include_frozen', '_source', 'case_sensitive',
       'allow_primary', 'accept_data_loss', 'primary', 'include_disk_info', 'include_yes_decisions',
       'verify', 'ignore_unavailable', 'include_global_state', 'partial', 'include_aliases',
-      'enabled', 'allow_restricted_indices',
+      'enabled', 'allow_restricted_indices', 'allow_lazy_open', 'use_null',
       'offsets', 'positions', 'term_statistics', 'field_statistics']) {
       expect(STRUCTURED_VALUE_ENUMS[k], k).toBeTruthy();
       expect(STRUCTURED_VALUE_ENUMS[k].quoted, k).toBe(false);
@@ -55,6 +56,8 @@ describe('1439 结构化体值枚举', () => {
       ...securityUserBodyKeyItems(),
       ...securityRoleMappingBodyKeyItems(),
       ...securityRoleIndexKeyItems(),
+      ...mlJobBodyKeyItems(),
+      ...mlDetectorKeyItems(),
     ].map(i => i.label));
     for (const k of Object.keys(STRUCTURED_VALUE_ENUMS)) {
       expect(union.has(k), k + ' 已不在任何结构化体目录中').toBe(true);
