@@ -313,6 +313,13 @@ describe('1439 外围写体：区域助手（query 位回落 / 元素分派）',
     expect(watchInlineExecuteRegionAt(...at('{ "watch": { "|": 1 } }'))).toBe('watch');
     expect(watchInlineExecuteRegionAt(...at('{ "watch": { "trigger": { "|": 1 } } }'))).toBe('watch-trigger');
     expect(watchInlineExecuteRegionAt(...at('{ "watch": { "trigger": { "schedule": { "|": 1 } } } }'))).toBe('watch-schedule');
+    expect(watchInlineExecuteRegionAt(...at('{ "watch": { "trigger": { "chain": [ { "|": 1 } ] } } }'))).toBe('chain-trigger');
+    expect(watchInlineExecuteRegionAt(
+      ...at('{ "watch": { "trigger": { "chain": [ { "trigger": { "|": 1 } } ] } } }'),
+    )).toBe('chain-trigger-container');
+    expect(watchInlineExecuteRegionAt(
+      ...at('{ "watch": { "trigger": { "chain": [ { "trigger": { "schedule": { "|": 1 } } } ] } } }'),
+    )).toBe('watch-schedule');
     expect(watchInlineExecuteRegionAt(...at('{ "watch": { "input": { "|": 1 } } }'))).toBe('watch-input');
     expect(watchInlineExecuteRegionAt(...at('{ "watch": { "condition": { "|": 1 } } }'))).toBe('watch-condition');
     expect(watchInlineExecuteRegionAt(...at('{ "watch": { "actions": { "log": { "|": 1 } } } }'))).toBe('watch-action');

@@ -1237,6 +1237,15 @@ describe('1439 Watcher 体补全', () => {
     const trg = '{\n  "trigger": {\n    "\n  }\n}';
     expect(suggest(trg, trg.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['schedule', 'chain']);
 
+    const chainItem = '{\n  "trigger": {\n    "chain": [\n      {\n        "\n      }\n    ]\n  }\n}';
+    expect(suggest(chainItem, chainItem.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['inputs', 'trigger']);
+
+    const chainTrg = '{\n  "trigger": {\n    "chain": [\n      {\n        "trigger": {\n          "\n        }\n      }\n    ]\n  }\n}';
+    expect(suggest(chainTrg, chainTrg.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['schedule']);
+
+    const chainSch = '{\n  "trigger": {\n    "chain": [\n      {\n        "trigger": {\n          "schedule": {\n            "\n          }\n        }\n      }\n    ]\n  }\n}';
+    expect(suggest(chainSch, chainSch.lastIndexOf('"') + 1).map(i => i.label)).toContain('interval');
+
     const sch = '{\n  "trigger": {\n    "schedule": {\n      "\n    }\n  }\n}';
     expect(suggest(sch, sch.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
       'interval', 'cron', 'daily', 'hourly', 'weekly', 'monthly', 'yearly',

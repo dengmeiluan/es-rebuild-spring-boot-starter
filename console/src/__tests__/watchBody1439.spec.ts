@@ -11,6 +11,7 @@ import {
   WATCH_TRIGGER_TYPES, WATCH_SCHEDULE_TYPES, WATCH_INPUT_TYPES, WATCH_CONDITION_TYPES,
   WATCH_ACTION_TYPES, watchRegionAt, watchActionParamsKeyItems, watchConditionParamsKeyItems,
   watchSearchInputKeyItems, watchSearchRequestKeyItems, watchHttpInputKeyItems, httpRequestKeyItems,
+  watchChainTriggerKeyItems, watchChainNestedTriggerKeyItems,
 } from '../utils/dslCompletionContext';
 import { lintStructuredBody } from '../utils/dslLint';
 
@@ -64,6 +65,8 @@ describe('1439 Watcher 体分档', () => {
     ]);
     expect(watchHttpInputKeyItems().map(i => i.label)).toEqual(['request', 'extract', 'response_content_type']);
     expect(httpRequestKeyItems().map(i => i.label)).toContain('url');
+    expect(watchChainTriggerKeyItems().map(i => i.label)).toEqual(['inputs', 'trigger']);
+    expect(watchChainNestedTriggerKeyItems().map(i => i.label)).toEqual(['schedule']);
   });
 
   it('区域：根 / trigger / schedule / input / condition / action / 更深', () => {
@@ -83,6 +86,9 @@ describe('1439 Watcher 体分档', () => {
     expect(at('{"actions": {"notify": {')).toBe('action');
     expect(at('{"actions": {"notify": {"logging": {')).toBe('action-params');
     expect(at('{"trigger": {"chain": [')).toBe('deep');
+    expect(at('{"trigger": {"chain": [{')).toBe('chain-trigger');
+    expect(at('{"trigger": {"chain": [{"trigger": {')).toBe('chain-trigger-container');
+    expect(at('{"trigger": {"chain": [{"trigger": {"schedule": {')).toBe('schedule');
   });
 
   it('lint：样例体静默；触发器/输入/条件/动作类型拼错分段点名；search 根键被拒', () => {

@@ -1949,6 +1949,20 @@ export function watchTriggerKeyItems(): AssistItem[] {
   ];
 }
 
+/** trigger.chain[] 元素的键 */
+export function watchChainTriggerKeyItems(): AssistItem[] {
+  return [
+    { label: 'inputs', detail: '前序 input 名称清单（按序执行）', snippet: true, insertText: '"inputs": ["${1:first_input}"]' },
+    { label: 'trigger', detail: '链式触发器内的定时调度', snippet: true,
+      insertText: '"trigger": { "schedule": { "interval": "${1:5m}" } }' },
+  ];
+}
+
+/** 链式触发器内层 trigger 对象只接受 schedule 键 */
+export function watchChainNestedTriggerKeyItems(): AssistItem[] {
+  return watchTriggerKeyItems().filter(i => i.label === 'schedule');
+}
+
 /** schedule 对象的调度键 */
 export function watchScheduleKeyItems(): AssistItem[] {
   return [
@@ -2148,12 +2162,18 @@ export function watchActionParamsKeyItemsAt(doc: string, offset: number): Assist
 export function watchRegionAt(doc: string, offset: number):
   'root' | 'trigger' | 'schedule' | 'input' | 'search-input' | 'search-request'
   | 'search-body' | 'search-query' | 'http-input' | 'http-request'
+  | 'chain-trigger' | 'chain-trigger-container'
   | 'condition' | 'condition-params' | 'action' | 'action-params' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
   if (stack[0] === 'trigger') {
     if (stack.length === 2) return 'trigger';
     if (stack.length === 3 && stack[1] === 'schedule') return 'schedule';
+    if (stack[1] === 'chain') {
+      if (stack.length === 4) return 'chain-trigger';
+      if (stack.length === 5 && stack[3] === 'trigger') return 'chain-trigger-container';
+      if (stack.length === 6 && stack[3] === 'trigger' && stack[4] === 'schedule') return 'schedule';
+    }
     return 'deep';
   }
   if (stack[0] === 'input') {
@@ -3156,6 +3176,7 @@ export function watchInlineExecuteBodyKeyItems(): AssistItem[] {
 export function watchInlineExecuteRegionAt(doc: string, offset: number):
   'root' | 'watch' | 'watch-trigger' | 'watch-schedule' | 'watch-input' | 'search-input' | 'search-request'
   | 'watch-search-body' | 'watch-search-query' | 'http-input' | 'http-request'
+  | 'chain-trigger' | 'chain-trigger-container'
   | 'watch-condition' | 'condition-params' | 'watch-action' | 'action-params' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
@@ -3164,6 +3185,11 @@ export function watchInlineExecuteRegionAt(doc: string, offset: number):
   if (stack[1] === 'trigger') {
     if (stack.length === 3) return 'watch-trigger';
     if (stack.length === 4 && stack[2] === 'schedule') return 'watch-schedule';
+    if (stack[2] === 'chain') {
+      if (stack.length === 5) return 'chain-trigger';
+      if (stack.length === 6 && stack[4] === 'trigger') return 'chain-trigger-container';
+      if (stack.length === 7 && stack[4] === 'trigger' && stack[5] === 'schedule') return 'watch-schedule';
+    }
     return 'deep';
   }
   if (stack[1] === 'input') {
