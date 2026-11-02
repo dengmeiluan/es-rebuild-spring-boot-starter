@@ -52,6 +52,14 @@
               <ChevronRight :size="11" :style="{ transform: railOpen ? '' : 'rotate(180deg)', transition: 'transform var(--tr)' }" />
               {{ railOpen ? '收起' : '模板' }}
             </button>
+            <!-- 1439：预览折叠时不再常驻一行「DSL 预览」标题条——展开入口收进 SQL 工具行，
+                 结果表直接上移（此前折叠态也占 45px，表格头被推到页面中部，用户反馈「表头横在中间」）。 -->
+            <button v-if="dslPreview" type="button" class="btn ghost xs" data-test="sql-preview-toggle"
+              :aria-expanded="previewOpen" aria-controls="sq-dsl-preview"
+              :title="previewOpen ? '收起 DSL 预览（给结果表让位）' : '展开 DSL 预览（_sql/translate）'"
+              @click="previewOpen = !previewOpen">
+              <Braces :size="11" /> {{ previewOpen ? '收起预览' : 'DSL 预览' }}
+            </button>
             <label class="sq-fs">
               fetch_size
               <input type="number" v-model.number="fetchSize" min="1" max="10000" class="sq-fs-i" />
@@ -174,17 +182,14 @@
         </ul>
       </div>
 
-      <!-- DSL 预览大容器框退役（约定④，pt-sec 538 同语言）→ sq-sec border-top 分节 -->
-      <div v-if="dslPreview" class="sq-sec wide">
+      <!-- DSL 预览大容器框退役（约定④，pt-sec 538 同语言）→ sq-sec border-top 分节
+           1439：折叠态整段不渲染（展开入口在 SQL 工具行）——此前折叠仍占 45px 标题条，把表格头推到页面中部 -->
+      <div v-if="dslPreview && previewOpen" class="sq-sec wide">
         <div class="sq-card-hd">
           <span>DSL 预览（_sql/translate）<em v-if="dslPreviewStale" class="sq-prev-stale" data-test="sql-preview-stale"
             title="SQL 已修改，预览仍是上一版——点顶部「到 DSL」重新生成">预览来自上一版 SQL</em></span>
           <div class="sq-card-hd-r">
-            <button class="btn ghost xs" data-test="sql-preview-toggle" :aria-expanded="previewOpen" aria-controls="sq-dsl-preview"
-              :title="previewOpen ? '收起 DSL 预览（结果网格优先）' : '展开 DSL 预览'" @click="previewOpen = !previewOpen">
-              {{ previewOpen ? '收起' : '展开' }}
-            </button>
-            <button v-if="previewOpen" class="btn ghost xs" data-sq-code-h :title="'DSL 预览高度档：' + codeH + 'px'" @click="cycleCodeH">高</button>
+            <button class="btn ghost xs" data-sq-code-h :title="'DSL 预览高度档：' + codeH + 'px'" @click="cycleCodeH">高</button>
             <button class="btn ghost xs" @click="gotoDsl" :disabled="!dslPreview || dslPreviewStale"
                     :title="dslPreviewStale ? '预览来自上一版 SQL——请先点顶部「到 DSL」重新生成' : '先执行 SQL 转换生成 DSL'"><ChevronRight :size="11" /> 到 DSL 页</button>
             <button class="btn ghost xs" @click="copyDsl" :disabled="dslPreviewStale"
@@ -194,7 +199,7 @@
         </div>
         <!-- 裸插值 → highlightJson 范式（SynonymsManager/ClusterSettings 同款，输出已转义）；
  W2 批：封顶高度走 usePref（默认 300=原值），「高」档位钮切换记忆；1136 默认折叠让结果表吃满 -->
-        <pre v-show="previewOpen" id="sq-dsl-preview" class="sq-code json-view" :class="{ 'sq-prev-dim': dslPreviewStale }" v-html="dslHtml" :style="{ maxHeight: codeH + 'px' }"></pre>
+        <pre id="sq-dsl-preview" class="sq-code json-view" :class="{ 'sq-prev-dim': dslPreviewStale }" v-html="dslHtml" :style="{ maxHeight: codeH + 'px' }"></pre>
       </div>
 
       <!-- err/warn 语义卡豁免（语义边框保留约定）——sq-card 壳迁 sq-panel 语义面板，视觉零变化 -->

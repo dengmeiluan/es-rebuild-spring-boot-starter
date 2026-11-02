@@ -13,13 +13,14 @@ describe('1136 DSL 预览默认折叠（结果优先）', () => {
     expect(view).toContain('previewOpen = false');
   });
 
-  it('预览头常驻：展开/收起、到 DSL、复制、关闭；正文 v-show 折叠', () => {
+  it('折叠态不占行：展开入口在 SQL 工具行；展开后头部给高/到 DSL/复制/关闭', () => {
     expect(view).toContain('data-test="sql-preview-toggle"');
     expect(view).toContain(':aria-expanded="previewOpen"');
     expect(view).toContain('aria-controls="sq-dsl-preview"');
-    expect(view).toContain('v-show="previewOpen" id="sq-dsl-preview"');
-    expect(view).toContain("{{ previewOpen ? '收起' : '展开' }}");
-    /* 高度档只在展开时出现，折叠态头部保持 3 个动作 */
-    expect(view).toContain('v-if="previewOpen" class="btn ghost xs" data-sq-code-h');
+    expect(view).toContain('v-if="dslPreview && previewOpen" class="sq-sec wide"');
+    expect(view).toContain('<pre id="sq-dsl-preview"');
+    expect(view).toContain("{{ previewOpen ? '收起预览' : 'DSL 预览' }}");
+    /* 高度档随整段只在展开时渲染（1439：折叠态不再有标题条） */
+    expect(view).toContain('data-sq-code-h');
   });
 });
