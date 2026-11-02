@@ -15,8 +15,9 @@
 ## 报告漏洞
 
 请勿公开 issue 披露可被利用的问题。通过 GitHub
-[Security Advisories](https://github.com/dengmeiluan/searchdeck/security/advisories/new)
-私密报告。预计 7 天内回应。报告时请附版本、部署模式、复现步骤和影响范围；
+[Security 页面](https://github.com/dengmeiluan/searchdeck/security) 的
+**Report a vulnerability** 私密报告；若该按钮尚未开放，请先在仓库 Discussions 联系维护者，
+不要公开披露细节。预计 7 天内回应。报告时请附版本、部署模式、复现步骤和影响范围；
 不要附加真实凭据或客户数据。
 
 ## 支持版本

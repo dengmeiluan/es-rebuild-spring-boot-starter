@@ -112,5 +112,5 @@ mvn -P release -DskipTests -Dconsole.build.skip=true verify  # 发布档案：so
 提 issue 时请附：SearchDeck / Spring Boot / ES 服务端与客户端版本、部署模式、复现步骤、
 期望与实际行为、相关日志（`[EsStackContract]`/`[MappingReconcile]`/rebuild 前缀）。
 **不要贴凭据或客户数据。** 安全问题请走
-[私密 Security Advisory](https://github.com/dengmeiluan/searchdeck/security/advisories/new)，
+[GitHub Security 页面](https://github.com/dengmeiluan/searchdeck/security)（Report a vulnerability），
 不要开 public issue。

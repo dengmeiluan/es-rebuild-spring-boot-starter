@@ -9,7 +9,7 @@ SearchDeck is maintained on a best-effort basis. There is no commercial SLA.
 | Usage questions, design discussions, show your setup | [GitHub Discussions](https://github.com/dengmeiluan/searchdeck/discussions) |
 | Reproducible bug | [Bug report](https://github.com/dengmeiluan/searchdeck/issues/new?template=bug_report.yml) |
 | Feature request | [Feature request](https://github.com/dengmeiluan/searchdeck/issues/new?template=feature_request.yml) |
-| Security vulnerability | [Private Security Advisory](https://github.com/dengmeiluan/searchdeck/security/advisories/new) — never a public issue |
+| Security vulnerability | [GitHub Security tab](https://github.com/dengmeiluan/searchdeck/security) — use “Report a vulnerability” when available; never a public issue |
 
 ## Supported versions
 
