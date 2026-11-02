@@ -1330,6 +1330,9 @@ describe('1439 Watcher 体补全', () => {
     const hookProxy = '{\n  "actions": {\n    "hook": {\n      "webhook": {\n        "proxy": {\n          "\n        }\n      }\n    }\n  }\n}';
     expect(suggest(hookProxy, hookProxy.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['host', 'port']);
 
+    const pdCtx = '{\n  "actions": {\n    "pd": {\n      "pagerduty": {\n        "contexts": [\n          {\n            "\n          }\n        ]\n      }\n    }\n  }\n}';
+    expect(suggest(pdCtx, pdCtx.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['type', 'href', 'src']);
+
     const inputProxy = '{\n  "input": {\n    "http": {\n      "request": {\n        "proxy": {\n          "\n        }\n      }\n    }\n  }\n}';
     expect(suggest(inputProxy, inputProxy.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['host', 'port']);
   });

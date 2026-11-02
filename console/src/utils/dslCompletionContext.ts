@@ -2194,6 +2194,15 @@ export function watchJiraFieldsKeyItems(): AssistItem[] {
   ];
 }
 
+/** pagerduty contexts[] 元素的键 */
+export function watchPagerdutyContextKeyItems(): AssistItem[] {
+  return [
+    { label: 'type', detail: '上下文类型（link/image）', snippet: true, insertText: '"type": "${1|link,image|}"' },
+    { label: 'href', detail: '上下文链接', snippet: true, insertText: '"href": "${1:https://example.com}"' },
+    { label: 'src', detail: '图片地址（type=image 时）', snippet: true, insertText: '"src": "${1:https://example.com/a.png}"' },
+  ];
+}
+
 /** 按栈定位 condition 类型并给参数键（兼容内联试跑的 watch 前缀） */
 export function watchConditionParamsKeyItemsAt(doc: string, offset: number): AssistItem[] {
   const stack = frameKeysAt(doc, offset);
@@ -2222,7 +2231,7 @@ export function watchRegionAt(doc: string, offset: number):
   | 'chain-trigger' | 'chain-trigger-container'
   | 'condition' | 'condition-params' | 'action' | 'action-params'
   | 'action-email-body' | 'action-slack-message' | 'action-jira-fields'
-  | 'http-auth-basic' | 'http-proxy' | 'deep' {
+  | 'http-auth-basic' | 'http-proxy' | 'pagerduty-context' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
   if (stack[0] === 'trigger') {
@@ -2279,6 +2288,7 @@ export function watchRegionAt(doc: string, offset: number):
       return 'http-auth-basic';
     }
     if (stack.length === 5 && stack[2] === 'webhook' && stack[3] === 'proxy') return 'http-proxy';
+    if (stack.length === 6 && stack[2] === 'pagerduty' && stack[3] === 'contexts') return 'pagerduty-context';
     return 'deep';
   }
   return 'deep';
@@ -3295,7 +3305,7 @@ export function watchInlineExecuteRegionAt(doc: string, offset: number):
   | 'chain-trigger' | 'chain-trigger-container'
   | 'watch-condition' | 'condition-params' | 'watch-action' | 'action-params'
   | 'action-email-body' | 'action-slack-message' | 'action-jira-fields'
-  | 'http-auth-basic' | 'http-proxy' | 'deep' {
+  | 'http-auth-basic' | 'http-proxy' | 'pagerduty-context' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
   if (stack[0] !== 'watch') return 'deep';
@@ -3353,6 +3363,7 @@ export function watchInlineExecuteRegionAt(doc: string, offset: number):
       return 'http-auth-basic';
     }
     if (stack.length === 6 && stack[3] === 'webhook' && stack[4] === 'proxy') return 'http-proxy';
+    if (stack.length === 7 && stack[3] === 'pagerduty' && stack[4] === 'contexts') return 'pagerduty-context';
     return 'deep';
   }
   return 'deep';

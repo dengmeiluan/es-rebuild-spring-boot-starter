@@ -13,7 +13,7 @@ import {
   watchSearchInputKeyItems, watchSearchRequestKeyItems, watchHttpInputKeyItems, httpRequestKeyItems,
   watchChainTriggerKeyItems, watchChainNestedTriggerKeyItems, watchChainInputKeyItems,
   watchEmailBodyKeyItems, watchSlackMessageKeyItems, watchJiraFieldsKeyItems,
-  httpAuthBasicKeyItems, httpProxyKeyItems,
+  httpAuthBasicKeyItems, httpProxyKeyItems, watchPagerdutyContextKeyItems,
 } from '../utils/dslCompletionContext';
 import { lintStructuredBody } from '../utils/dslLint';
 
@@ -75,6 +75,7 @@ describe('1439 Watcher 体分档', () => {
     expect(watchJiraFieldsKeyItems().map(i => i.label)).toContain('project');
     expect(httpAuthBasicKeyItems().map(i => i.label)).toEqual(['username', 'password']);
     expect(httpProxyKeyItems().map(i => i.label)).toEqual(['host', 'port']);
+    expect(watchPagerdutyContextKeyItems().map(i => i.label)).toEqual(['type', 'href', 'src']);
   });
 
   it('区域：根 / trigger / schedule / input / condition / action / 更深', () => {
@@ -103,6 +104,7 @@ describe('1439 Watcher 体分档', () => {
     expect(at('{"actions": {"hook": {"webhook": {"proxy": {')).toBe('http-proxy');
     expect(at('{"input": {"http": {"request": {"auth": {"basic": {')).toBe('http-auth-basic');
     expect(at('{"input": {"http": {"request": {"proxy": {')).toBe('http-proxy');
+    expect(at('{"actions": {"pd": {"pagerduty": {"contexts": [{')).toBe('pagerduty-context');
     expect(at('{"trigger": {"chain": [')).toBe('deep');
     expect(at('{"trigger": {"chain": [{')).toBe('chain-trigger');
     expect(at('{"trigger": {"chain": [{"trigger": {')).toBe('chain-trigger-container');
