@@ -15,7 +15,7 @@ import {
   securityUserBodyKeyItems, securityRoleMappingBodyKeyItems, securityRoleIndexKeyItems,
   mlJobBodyKeyItems, mlDetectorKeyItems, ingestSimulateBodyKeyItems,
   mlCalendarEventKeyItems, graphControlsKeyItems, securityApiKeyGrantBodyKeyItems,
-  securityApiKeyInvalidateBodyKeyItems,
+  securityApiKeyInvalidateBodyKeyItems, watchExecuteBodyKeyItems,
 } from '../utils/dslCompletionContext';
 
 describe('1439 结构化体值枚举', () => {
@@ -38,6 +38,7 @@ describe('1439 结构化体值枚举', () => {
       'verify', 'ignore_unavailable', 'include_global_state', 'partial', 'include_aliases',
       'enabled', 'allow_restricted_indices', 'allow_lazy_open', 'use_null', 'verbose',
       'skip_result', 'skip_model_update', 'use_significance', 'owner',
+      'ignore_condition', 'record_execution',
       'offsets', 'positions', 'term_statistics', 'field_statistics']) {
       expect(STRUCTURED_VALUE_ENUMS[k], k).toBeTruthy();
       expect(STRUCTURED_VALUE_ENUMS[k].quoted, k).toBe(false);
@@ -69,6 +70,7 @@ describe('1439 结构化体值枚举', () => {
       ...graphControlsKeyItems(),
       ...securityApiKeyGrantBodyKeyItems(),
       ...securityApiKeyInvalidateBodyKeyItems(),
+      ...watchExecuteBodyKeyItems(),
     ].map(i => i.label));
     for (const k of Object.keys(STRUCTURED_VALUE_ENUMS)) {
       expect(union.has(k), k + ' 已不在任何结构化体目录中').toBe(true);

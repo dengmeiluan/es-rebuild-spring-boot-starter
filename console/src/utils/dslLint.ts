@@ -66,6 +66,8 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   securityApiKeyGrantBodyRootKeys, securityApiKeyGrantKeys,
   licenseBodyRootKeys, licenseEntryKeys,
   securityApiKeyQueryBodyRootKeys, securityApiKeyInvalidateBodyRootKeys, mlFilterUpdateBodyRootKeys,
+  securityCrossClusterApiKeyBodyRootKeys, securityCrossClusterAccessKeys, securityCrossClusterAccessEntryKeys,
+  watchExecuteBodyRootKeys,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -1485,6 +1487,20 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
     case 'security-api-key-body': return lintBodyKeys(obj, securityApiKeyBodyRootKeys, 'API Key 体');
     case 'security-api-key-query-body': return lintBodyKeys(obj, securityApiKeyQueryBodyRootKeys, 'API Key 检索体');
     case 'security-api-key-invalidate-body': return lintBodyKeys(obj, securityApiKeyInvalidateBodyRootKeys, 'API Key 吊销体');
+    case 'security-cross-cluster-api-key-body': {
+      const out = [...lintBodyKeys(obj, securityCrossClusterApiKeyBodyRootKeys, '跨集群 API Key 体'),
+        ...lintBodyKeys(obj?.access, securityCrossClusterAccessKeys, '跨集群访问范围')];
+      for (const scope of ['search', 'replication']) {
+        const list = obj?.access?.[scope];
+        if (!Array.isArray(list)) continue;
+        list.forEach((entry: any, i: number) => {
+          if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return;
+          out.push(...lintBodyKeys(entry, securityCrossClusterAccessEntryKeys, `跨集群 ${scope} #${i + 1}`));
+        });
+      }
+      return out;
+    }
+    case 'watch-execute-body': return lintBodyKeys(obj, watchExecuteBodyRootKeys, '试跑 Watch 体');
     case 'ingest-pipeline-body': {
       const out = [...lintBodyKeys(obj, ingestPipelineBodyRootKeys, 'Ingest 管道体')];
       if (Array.isArray(obj?.processors)) {

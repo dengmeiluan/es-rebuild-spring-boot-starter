@@ -1114,7 +1114,8 @@ export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 
 | 'security-role-body' | 'security-user-body' | 'security-role-mapping-body' | 'security-api-key-body' | 'ingest-pipeline-body' | 'ingest-simulate-body' | 'enrich-policy-body' | 'transform-body' | 'rollup-job-body' | 'ml-datafeed-body' | 'ml-job-body'
 | 'ml-filter-body' | 'ml-calendar-body' | 'ml-calendar-events-body' | 'graph-explore-body'
 | 'ccr-follow-body' | 'ccr-auto-follow-body' | 'security-api-key-grant-body' | 'license-body'
-| 'security-api-key-query-body' | 'security-api-key-invalidate-body' | 'ml-filter-update-body' | 'none';
+| 'security-api-key-query-body' | 'security-api-key-invalidate-body' | 'ml-filter-update-body'
+| 'security-cross-cluster-api-key-body' | 'watch-execute-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1240,6 +1241,10 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：Watcher watch 体（PUT /_watcher/watch/<id>，6.x 兼容 _xpack/watcher）：
      {trigger,input,condition,actions,metadata,throttle_period} */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_(?:xpack\/)?watcher\/watch\/[^/]+(\/|$)/.test(p)) return 'watch-body';
+  /* 1439：试跑 watch（POST /_watcher/watch/<id>/_execute）体是
+     {trigger_data,alternative_input,ignore_condition,action_modes,record_execution}。 */
+  if (method.toUpperCase() === 'POST'
+      && /(^|\/)_(?:xpack\/)?watcher\/watch\/[^/]+\/_execute\/?$/.test(p)) return 'watch-execute-body';
   /* 1439：安全体系写体（PUT/POST /_security/<resource>/<name>）——各自根键与 SQL 查询无关 */
   const secMethod = method.toUpperCase();
   if (secMethod === 'PUT' || secMethod === 'POST') {
@@ -1257,6 +1262,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
       && /(^|\/)_(?:xpack\/)?security\/api_key\/_query\/?$/.test(p)) return 'security-api-key-query-body';
   /* 1439：吊销 API Key（DELETE /_security/api_key）体是 {ids,name,owner,realm_name,username} */
   if (secMethod === 'DELETE' && /(^|\/)_(?:xpack\/)?security\/api_key\/?$/.test(p)) return 'security-api-key-invalidate-body';
+  /* 1439：跨集群 API Key 体（POST /_security/cross_cluster/api_key）是
+     {name,access:{search:[…],replication:[…]},expiration,metadata}。 */
+  if (secMethod === 'POST' && /(^|\/)_(?:xpack\/)?security\/cross_cluster\/api_key\/?$/.test(p)) return 'security-cross-cluster-api-key-body';
   /* 1439：Ingest 管道体（PUT /_ingest/pipeline/<id>）是 {description,version,processors,on_failure,_meta}；
      _simulate（POST）是另一种体，不并进本档。 */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_ingest\/pipeline\/[^/]+(\/|$)/.test(p)) return 'ingest-pipeline-body';
@@ -2753,6 +2761,61 @@ export function securityApiKeyInvalidateBodyKeyItems(): AssistItem[] {
   ];
 }
 
+/** 跨集群 API Key 体（POST /_security/cross_cluster/api_key）的根键 */
+export function securityCrossClusterApiKeyBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'name', detail: '跨集群 Key 名称', snippet: true, insertText: '"name": "${1:ccs-key}"' },
+    { label: 'access', detail: '跨集群访问范围（search / replication）', snippet: true,
+      insertText: '"access": {\n  "search": [ { "names": ["${1:logs-*}"] } ]\n}' },
+    { label: 'expiration', detail: '有效期（如 1d/30d；省略=不过期）', snippet: true, insertText: '"expiration": "${1:1d}"' },
+    { label: 'metadata', detail: '附加到 Key 的自定义元数据', snippet: true, insertText: '"metadata": {\n  ${0}\n}' },
+  ];
+}
+
+/** 跨集群 Key 的 access 对象键 */
+export function securityCrossClusterAccessKeyItems(): AssistItem[] {
+  return [
+    { label: 'search', detail: '可搜索的远端索引', snippet: true, insertText: '"search": [ { "names": ["${1:logs-*}"] } ]' },
+    { label: 'replication', detail: '可复制的远端索引', snippet: true, insertText: '"replication": [ { "names": ["${1:archive-*}"] } ]' },
+  ];
+}
+
+/** access.search / access.replication 元素（远端索引权限）的键 */
+export function securityCrossClusterAccessEntryKeyItems(): AssistItem[] {
+  return [
+    { label: 'names', detail: '索引/数据流名清单', snippet: true, insertText: '"names": ["${1:logs-*}"]' },
+    { label: 'field_security', detail: '字段级权限（grant/except）', snippet: true,
+      insertText: '"field_security": { "grant": ["${1:*}"] }' },
+    { label: 'query', detail: '文档级查询限制（Query DSL）', snippet: true, insertText: '"query": { "match_all": {} }' },
+  ];
+}
+
+/** 跨集群 Key 体区域：根 / access / access 元素 / 更深 */
+export function securityCrossClusterApiKeyRegionAt(doc: string, offset: number):
+  'root' | 'access' | 'entry' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] === 'access' && stack.length === 2) return 'access';
+  if (stack[0] === 'access' && (stack[1] === 'search' || stack[1] === 'replication') && stack.length === 4) return 'entry';
+  return 'deep';
+}
+
+/** 试跑 Watch 体（POST /_watcher/watch/<id>/_execute）的根键 */
+export function watchExecuteBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'trigger_data', detail: '模拟触发数据（triggered_time/scheduled_time）', snippet: true,
+      insertText: '"trigger_data": {\n  "triggered_time": "${1:now}"\n}' },
+    { label: 'alternative_input', detail: '替换 watch 输入（试跑不同数据）', snippet: true,
+      insertText: '"alternative_input": {\n  ${0}\n}' },
+    { label: 'ignore_condition', detail: '忽略 condition（强制继续动作）', snippet: true,
+      insertText: '"ignore_condition": ${1|false,true|}' },
+    { label: 'action_modes', detail: '逐动作执行模式（force_execute/simulate/skip…）', snippet: true,
+      insertText: '"action_modes": {\n  "${1:notify}": "${2|force_execute,simulate,skip,execute,force_simulate|}"\n}' },
+    { label: 'record_execution', detail: '是否记录本次执行', snippet: true,
+      insertText: '"record_execution": ${1|false,true|}' },
+  ];
+}
+
 /** 许可证更新体（PUT|POST /_license）的根键 */
 export function licenseBodyKeyItems(): AssistItem[] {
   return [
@@ -3398,6 +3461,8 @@ export const STRUCTURED_VALUE_ENUMS: Record<string, { values: string[]; quoted: 
   skip_model_update: { values: ['true', 'false'], quoted: false, detail: '事件期内不更新模型' },
   use_significance: { values: ['true', 'false'], quoted: false, detail: 'Graph 只保留显著关联' },
   owner: { values: ['true', 'false'], quoted: false, detail: '只吊销当前用户拥有的 API Key' },
+  ignore_condition: { values: ['false', 'true'], quoted: false, detail: '试跑 Watch 时忽略条件' },
+  record_execution: { values: ['false', 'true'], quoted: false, detail: '是否记录本次 Watch 执行' },
 };
 
 /** SQL 体的区域：根层给 SQL 键；filter 内是 Query DSL（回落到整棵查询补全）；其余子对象不出键 */
@@ -3630,6 +3695,10 @@ export const licenseEntryKeys = licenseEntryKeyItems().map(i => i.label);
 export const securityApiKeyQueryBodyRootKeys = securityApiKeyQueryBodyKeyItems().map(i => i.label);
 export const securityApiKeyInvalidateBodyRootKeys = securityApiKeyInvalidateBodyKeyItems().map(i => i.label);
 export const mlFilterUpdateBodyRootKeys = mlFilterUpdateBodyKeyItems().map(i => i.label);
+export const securityCrossClusterApiKeyBodyRootKeys = securityCrossClusterApiKeyBodyKeyItems().map(i => i.label);
+export const securityCrossClusterAccessKeys = securityCrossClusterAccessKeyItems().map(i => i.label);
+export const securityCrossClusterAccessEntryKeys = securityCrossClusterAccessEntryKeyItems().map(i => i.label);
+export const watchExecuteBodyRootKeys = watchExecuteBodyKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

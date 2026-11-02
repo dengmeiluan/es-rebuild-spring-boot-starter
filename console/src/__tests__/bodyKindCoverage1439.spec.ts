@@ -80,6 +80,8 @@ const MATRIX: Row[] = [
   ['/_security/api_key/grant', 'POST', 'security-api-key-grant-body'],
   ['/_security/api_key/_query', 'POST', 'security-api-key-query-body'],
   ['/_security/api_key', 'DELETE', 'security-api-key-invalidate-body'],
+  ['/_security/cross_cluster/api_key', 'POST', 'security-cross-cluster-api-key-body'],
+  ['/_watcher/watch/error-rate/_execute', 'POST', 'watch-execute-body'],
   ['/_license', 'PUT', 'license-body'],
   ['/idx/_close', 'POST', 'none'],
   ['/idx/_forcemerge', 'POST', 'none'],
@@ -100,7 +102,8 @@ const ALL_KINDS: BodyKind[] = [
   'ml-datafeed-body', 'ml-job-body', 'ml-filter-body', 'ml-calendar-body',
   'ml-calendar-events-body', 'graph-explore-body', 'ccr-follow-body', 'ccr-auto-follow-body',
   'security-api-key-grant-body', 'license-body', 'security-api-key-query-body',
-  'security-api-key-invalidate-body', 'ml-filter-update-body', 'none',
+  'security-api-key-invalidate-body', 'ml-filter-update-body',
+  'security-cross-cluster-api-key-body', 'watch-execute-body', 'none',
 ];
 
 describe('1439 请求体档位路由矩阵', () => {
@@ -126,7 +129,8 @@ describe('1439 请求体档位路由矩阵', () => {
       ['/_security/user/jdoe', 'DELETE', 'search'],
       ['/_ilm/policy/nightly', 'GET', 'search'],
       ['/_slm/policy/nightly', 'DELETE', 'search'],
-      ['/_watcher/watch/error-rate/_execute', 'POST', 'search'],
+      ['/_watcher/watch/error-rate/_execute', 'GET', 'search'],
+      ['/_watcher/watch/_execute', 'POST', 'search'],
       ['/_transform/daily/_start', 'POST', 'search'],
       ['/_rollup/job/daily/_start', 'POST', 'search'],
       ['/_ml/anomaly_detectors/latency/_update', 'POST', 'search'],
@@ -177,6 +181,8 @@ describe('1439 请求体档位路由矩阵', () => {
       ['/_security/api_key', 'security-api-key-body'],
       ['/_security/api_key/grant', 'security-api-key-grant-body'],
       ['/_security/api_key/_query', 'security-api-key-query-body'],
+      ['/_security/cross_cluster/api_key', 'security-cross-cluster-api-key-body'],
+      ['/_watcher/watch/{watch_id}/_execute', 'watch-execute-body'],
       ['/_ml/filters/{filter_id}', 'ml-filter-body'],
       ['/_ml/filters/{filter_id}/_update', 'ml-filter-update-body'],
       ['/_ml/calendars/{calendar_id}', 'ml-calendar-body'],
