@@ -72,6 +72,7 @@ FolderTree, BookText, PackageOpen,
 import { NAV_ITEMS } from '../router';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
+import { useUiConfigStore } from '../stores/uiConfig';
 import { aliasForTitle } from '../utils/cmdAlias';
 import { readStoredJson, writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 import { askConfirm } from '../composables/confirm';
@@ -91,6 +92,7 @@ const emit = defineEmits<{ (e: 'update:show', v: boolean): void }>();
 const router = useRouter();
 const store = useAppStore();
 const auth = useAuthStore();
+const ui = useUiConfigStore();
 const query = ref('');
 const active = ref(0);
 const palRef = ref<HTMLElement>();
@@ -128,6 +130,7 @@ FolderTree, BookText, PackageOpen,
 /* 命令面板导航门：与路由守卫/侧栏同一 pageAllowed 真源，未授权页面动作不执行。
    探测在途同侧栏口径不出导航项（null 全量语义未可信，防未授权清单闪现）。 */
 const canGo = (path: string) => auth.probed
+  && ui.routeEnabled(path)
   && (auth.isAdmin()
   || pageAllowed(auth.grantedPages, path, store.target, auth.envAllows, auth.me?.role));
 const go = (to: any) => {
@@ -142,8 +145,8 @@ const go = (to: any) => {
 const commands = computed<Cmd[]>(() => {
   /* 导航命令与侧栏同源过滤：未授权页面不出现在命令面板，防低权看到未授权页面目录。
      pageAllowed 已含 host-bound 页与 REST→DevTools 别名，避免与菜单可见性分叉。 */
-  const list: Cmd[] = NAV_ITEMS.filter(n => auth.isAdmin()
-    || pageAllowed(auth.grantedPages, n.path, store.target, auth.envAllows, auth.me?.role)).map(n => ({
+  const list: Cmd[] = NAV_ITEMS.filter(n => ui.pageEnabled(n.pageKey) && (auth.isAdmin()
+    || pageAllowed(auth.grantedPages, n.path, store.target, auth.envAllows, auth.me?.role))).map(n => ({
     id: 'nav' + n.path,
     title: '前往：' + n.name,
     /* 版本不足的功能在命令面板同步降级提示，与侧边栏徽标一致 */

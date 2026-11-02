@@ -64,7 +64,7 @@ public class ConsoleMeFallback985Test {
         assertEquals("REBUILD_OP", out.get("role"));
         assertEquals(Collections.singletonList("search"), out.get("grantedPages"));
         Map<String, Object> pages = (Map<String, Object>) out.get("pages");
-        assertEquals(12, ((List<Object>) pages.get("groups")).size());
+        assertEquals(13, ((List<Object>) pages.get("groups")).size());
     }
 
     @Test

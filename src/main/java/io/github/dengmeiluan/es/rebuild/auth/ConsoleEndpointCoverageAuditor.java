@@ -67,6 +67,9 @@ public class ConsoleEndpointCoverageAuditor {
             "/internal/es/index/cluster/health",
             "/internal/es/index/health",
             "/internal/es/index/keys",
+            /* 运行时 UI 配置（品牌/功能包/停用页）：零敏感信息，空页集身份也要能读，
+               否则前端无法区分「模块未启用」与「无权限」。 */
+            "/internal/es/index/ui/",
             /* 全局索引选择器的基线读（服务端已按 ADMIN 过滤控制面索引名） */
             "/internal/es/index/cluster/indices",
             "/internal/es/xmigrate/jobs",

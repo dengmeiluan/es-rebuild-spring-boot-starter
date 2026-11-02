@@ -59,13 +59,13 @@ public class ConsoleCacheConfigurerTest {
     public void htmlEntriesGetNoCache() throws Exception {
         Object html = null;
         for (Object reg : registrations()) {
-            if (patternsOf(reg).length == 3) {
+            if (patternsOf(reg).length == 4) {
                 html = reg;
             }
         }
-        assertNotNull("必须注册三个 html 入口的专属 handler", html);
+        assertNotNull("必须注册四个 html 入口的专属 handler", html);
         assertArrayEquals("html 入口集合必须与 static 根实际入口一一对应",
-                new String[]{"/console/index.html", "/es-rebuild.html", "/es-xmigrate.html"},
+                new String[]{"/console/index.html", "/searchdeck.html", "/es-rebuild.html", "/es-xmigrate.html"},
                 patternsOf(html));
 
         assertEquals("html 入口必须 no-cache（发版后即刻拿到引用新 hash 资产的新 HTML）",

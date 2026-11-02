@@ -58,7 +58,7 @@ describe('P0 超宽屏：meta.wide 豁免机制（router.ts + App.vue）', () =>
         const wideBlock = routerSrc.slice(routerSrc.indexOf('const WIDE_ROUTES'), routerSrc.indexOf('export const router'));
         const routesBlock = routerSrc.slice(routerSrc.indexOf('routes: ['), routerSrc.indexOf("].map(r => (WIDE_ROUTES"));
         const routePaths = [...routesBlock.matchAll(/path: '([^']+)'/g)].map(m => m[1]).filter(p => p.startsWith('/'));
-        const centered = new Set(['/', '/cluster-map', '/templates-gallery', '/favorites', '/forbidden', '/:pathMatch(.*)*']);
+        const centered = new Set(['/', '/cluster-map', '/templates-gallery', '/favorites', '/forbidden', '/module-off', '/:pathMatch(.*)*']);
         const dataPages = routePaths.filter(p => !centered.has(p));
         expect(dataPages.length, '对账基数：数据页必须非空（正则失配时防静默绿）').toBeGreaterThan(40);
         for (const p of dataPages)

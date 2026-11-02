@@ -269,7 +269,7 @@ describe('561 ②：docs/query 两 RT export-name（ih-docs / ih-qry，命名不
 /* ═══════════ ③：HotkeyPanel Ctrl+I「查询工作台编辑器补全」行（B1 已落件补锚） ═══════════ */
 describe('561 ③：HotkeyPanel「查询工作台编辑器补全」Ctrl+I 行（B1 已完成件，零触碰补锚）', () => {
     it('登记行字面在场 + 备案注释', () => {
-        expect(hkp).toContain("{ keys: ['Ctrl', 'I'], desc: '查询工作台编辑器补全' }");
+        expect(hkp).toContain("{ keys: ['Ctrl', 'I'], desc: '查询工作台编辑器补全', pageKeys: ['search'] }");
         expect(hkp).toContain('查询工作台 DSL 编辑器 Ctrl+I 补全登记');
     });
 });

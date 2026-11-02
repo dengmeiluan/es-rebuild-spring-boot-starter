@@ -161,8 +161,8 @@ describe('963 auth.canEndpoint：只读 POST 对齐后端 isReadonlyPost', () =>
 describe('可选加固：命令面板目录/连接元数据 + 宿主消息来源', () => {
     it('CmdPalette 导航按 pageAllowed 过滤、集群切换按 canSeeConn 过滤', () => {
         expect(pal).toContain("import { pageAllowed } from '../router';");
-        expect(pal).toContain('NAV_ITEMS.filter(n => auth.isAdmin()');
-        expect(pal).toContain('|| pageAllowed(auth.grantedPages, n.path, store.target, auth.envAllows, auth.me?.role)).map(n => ({');
+        expect(pal).toContain('NAV_ITEMS.filter(n => ui.pageEnabled(n.pageKey) && (auth.isAdmin()');
+        expect(pal).toContain('|| pageAllowed(auth.grantedPages, n.path, store.target, auth.envAllows, auth.me?.role))).map(n => ({');
         expect(pal).toContain('for (const c of store.conns.filter(c => auth.canSeeConn(c.id)))');
     });
     it('超管全局可见：SideNav/路由守卫/App 复核/Forbidden 均对 ADMIN 短路', () => {

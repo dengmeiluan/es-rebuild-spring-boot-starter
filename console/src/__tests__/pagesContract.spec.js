@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import contract from '../../../src/main/resources/META-INF/es-console-pages.json';
 import { NAV_GROUPS, NAV_ITEMS } from '../router';
 describe('页面契约 → 导航派生', () => {
-    it('组/页数量与契约一致（12 组 52 页）', () => {
-        expect(contract.groups.length).toBe(12);
+    it('组/页数量与契约一致（13 组 52 页）', () => {
+        expect(contract.groups.length).toBe(13);
         expect(contract.pages.length).toBe(52);
         expect(NAV_GROUPS.length).toBe(contract.groups.length);
         expect(NAV_ITEMS.length).toBe(contract.pages.length);

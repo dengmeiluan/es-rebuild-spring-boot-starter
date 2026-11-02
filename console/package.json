@@ -1,5 +1,5 @@
 {
-  "name": "es-rebuild-console",
+  "name": "searchdeck-console",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -39,7 +39,7 @@
     "vitest": "^4.1.10",
     "vue-tsc": "^2.1.10"
   },
-  "description": "Ops console frontend of es-rebuild-spring-boot-starter",
+  "description": "SearchDeck console — embeddable Elasticsearch operations platform",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

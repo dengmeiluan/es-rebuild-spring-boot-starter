@@ -12,7 +12,7 @@
     <template #header>
       <div class="wz-hd">
         <Sparkles :size="18" />
-        <span>欢迎使用 ES Console <span class="wz-hd-sub">· 傻瓜化 30 秒上手</span></span>
+        <span>欢迎使用 {{ ui.product.name }} <span class="wz-hd-sub">· 傻瓜化 30 秒上手</span></span>
       </div>
     </template>
 
@@ -116,6 +116,7 @@ import { NModal } from 'naive-ui';
 import { useRouter } from 'vue-router';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
+import { useUiConfigStore } from '../stores/uiConfig';
 import {
   Sparkles, Database, Check, LayoutDashboard, HeartPulse, BookOpen,
   TerminalSquare, PartyPopper,
@@ -123,12 +124,18 @@ import {
 import { GOTO_TARGETS } from '../utils/hotkeys';
 import { writeStoredRaw } from '../utils/safeJson';
 
+const ui = useUiConfigStore();
 /* -13：首启引导里的 goto 示例原是硬编码「g h = 历史」——HistoryView 已退役，
- 属于和速查面板同一类的「撒谎的界面」。改为从登记表取前三条，不再手工维护。 */
-const gotoHint = (() => {
-  const sample = Object.entries(GOTO_TARGETS).filter(([k]) => k !== 'g').slice(0, 3);
-  return sample.map(([k, t]) => `g ${k} = ${t.label}`).join('、') + '…';
-})();
+ 属于和速查面板同一类的「撒谎的界面」。改为从登记表取前三条，不再手工维护。
+ 功能包裁剪后只展示当前启用的页面，避免引导里宣传停用模块。 */
+const gotoHint = computed(() => {
+  const sample = Object.entries(GOTO_TARGETS)
+    .filter(([k, t]) => k !== 'g' && ui.routeEnabled(t.path))
+    .slice(0, 3);
+  return sample.length
+    ? sample.map(([k, t]) => `g ${k} = ${t.label}`).join('、') + '…'
+    : '当前功能包未包含快捷键示例';
+});
 
 const store = useAppStore();
 /* 登录遮罩弹出时收起引导：n-modal 的焦点陷阱会和登录框抢焦点，导致账号密码输不了字 */

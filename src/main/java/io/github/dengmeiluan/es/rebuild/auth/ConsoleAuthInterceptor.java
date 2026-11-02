@@ -520,6 +520,9 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
         return path.endsWith("/auth/me") || path.endsWith("/auth/logout")
                 || path.endsWith("/auth/change-password") || path.endsWith("/auth/permissions")
                 || path.endsWith("/auth/ops-audit/mine") || path.endsWith("/setup/status")
+                /* 平台 UI 配置（品牌/功能包/停用页）零敏感信息：空页集身份也要能读，
+                   否则前端无法区分「模块未启用」与「无权限」。 */
+                || path.endsWith("/ui/config")
                 || path.endsWith("/cluster/health")
                 || path.endsWith("/internal/es/index/health")
                 || path.endsWith("/internal/es/index/clusters")

@@ -8,7 +8,7 @@
           <div class="lo-brand">
             <ShieldCheck :size="26" class="lo-ic" />
             <div>
-              <div class="lo-title">ES Console</div>
+              <div class="lo-title">{{ ui.product.name }}</div>
               <div class="lo-sub">请登录后继续操作</div>
             </div>
           </div>
@@ -47,10 +47,12 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { ShieldCheck, ShieldAlert, LogIn, Loader2, Info } from 'lucide-vue-next';
 import { useAuthStore } from '../stores/auth';
 import { useAppStore } from '../stores/app';
+import { useUiConfigStore } from '../stores/uiConfig';
 import { friendlyEsError } from '../utils/esError'; /* ：登录错误一行收口 */
 
 const auth = useAuthStore();
 const store = useAppStore();
+const ui = useUiConfigStore();
 const username = ref('');
 const password = ref('');
 const error = ref('');

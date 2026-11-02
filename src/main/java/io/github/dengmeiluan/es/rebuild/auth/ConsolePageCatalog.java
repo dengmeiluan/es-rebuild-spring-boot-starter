@@ -56,10 +56,12 @@ public class ConsolePageCatalog {
     private static final Pattern KEY_PATTERN = Pattern.compile("[a-z0-9-]+");
 
     private final List<Group> groups;
+    private final List<Pack> packs;
     private final List<Page> pages;
 
-    private ConsolePageCatalog(List<Group> groups, List<Page> pages) {
+    private ConsolePageCatalog(List<Group> groups, List<Pack> packs, List<Page> pages) {
         this.groups = Collections.unmodifiableList(groups);
+        this.packs = Collections.unmodifiableList(packs);
         this.pages = Collections.unmodifiableList(pages);
     }
 
@@ -72,7 +74,7 @@ public class ConsolePageCatalog {
         InputStream in = cl.getResourceAsStream(RESOURCE);
         if (in == null) {
             throw new IllegalStateException("控制台页面契约缺失: classpath:" + RESOURCE
-                    + "（es-rebuild-spring-boot-starter 构建产物不完整）");
+                    + "（SearchDeck 控制台构建产物不完整）");
         }
         try {
             return parse(in);
@@ -103,6 +105,28 @@ public class ConsolePageCatalog {
             for (JsonNode g : root.required("groups")) {
                 groups.add(new Group(g.required("id").asText(), g.required("name").asText(), g.required("sort").asInt()));
             }
+            List<Pack> packs = new ArrayList<>();
+            /* packs 为可选扩展：旧契约（无 packs）按「单包全量」读取，保证宿主自定义契约不被迫升级。 */
+            if (root.has("packs")) {
+                for (JsonNode p : root.get("packs")) {
+                    List<String> packGroups = new ArrayList<>();
+                    for (JsonNode g : p.required("groups")) {
+                        packGroups.add(g.asText());
+                    }
+                    packs.add(new Pack(
+                            p.required("id").asText(),
+                            p.required("name").asText(),
+                            p.has("description") ? p.get("description").asText() : "",
+                            packGroups));
+                }
+            }
+            if (packs.isEmpty()) {
+                List<String> allGroups = new ArrayList<>();
+                for (Group g : groups) {
+                    allGroups.add(g.getId());
+                }
+                packs.add(new Pack("all", "全部功能", "未声明功能包的兼容模式", allGroups));
+            }
             List<Page> pages = new ArrayList<>();
             for (JsonNode p : root.required("pages")) {
                 List<String> prefixes = new ArrayList<>();
@@ -119,19 +143,47 @@ public class ConsolePageCatalog {
                         prefixes,
                         p.has("minVer") && !p.get("minVer").isNull() ? p.get("minVer").asText() : null));
             }
-            validate(groups, pages);
-            return new ConsolePageCatalog(groups, pages);
+            validate(groups, packs, pages);
+            return new ConsolePageCatalog(groups, packs, pages);
         } catch (IllegalArgumentException e) {
             // Jackson required() 缺字段抛 IAE，统一包装成类 Javadoc 承诺的 ISE（fail-fast 单一异常形态）
             throw new IllegalStateException("控制台页面契约结构非法: " + RESOURCE, e);
         }
     }
 
-    private static void validate(List<Group> groups, List<Page> pages) {
+    private static void validate(List<Group> groups, List<Pack> packs, List<Page> pages) {
         Set<String> groupIds = new HashSet<>();
         for (Group g : groups) {
             if (!groupIds.add(g.getId())) {
                 throw new IllegalStateException("控制台页面契约非法：分组 id 重复: " + g.getId());
+            }
+        }
+        Set<String> packIds = new HashSet<>();
+        Set<String> assignedGroups = new HashSet<>();
+        for (Pack p : packs) {
+            if (!KEY_PATTERN.matcher(p.getId()).matches()) {
+                throw new IllegalStateException("控制台页面契约非法：功能包 id 只允许小写字母/数字/连字符: \""
+                        + p.getId() + "\"");
+            }
+            if (!packIds.add(p.getId())) {
+                throw new IllegalStateException("控制台页面契约非法：功能包 id 重复: " + p.getId());
+            }
+            if (p.getGroups().isEmpty()) {
+                throw new IllegalStateException("控制台页面契约非法：功能包未声明分组: " + p.getId());
+            }
+            for (String groupId : p.getGroups()) {
+                if (!groupIds.contains(groupId)) {
+                    throw new IllegalStateException("控制台页面契约非法：功能包 " + p.getId()
+                            + " 引用了不存在的分组: " + groupId);
+                }
+                if (!assignedGroups.add(groupId)) {
+                    throw new IllegalStateException("控制台页面契约非法：分组 " + groupId + " 被多个功能包声明");
+                }
+            }
+        }
+        for (String groupId : groupIds) {
+            if (!assignedGroups.contains(groupId)) {
+                throw new IllegalStateException("控制台页面契约非法：分组 " + groupId + " 未归属任何功能包");
             }
         }
         Set<String> keys = new HashSet<>();
@@ -168,8 +220,32 @@ public class ConsolePageCatalog {
         return groups;
     }
 
+    /** 功能包（部署时可选择的产品单元）；旧契约自动合成为单包 {@code all}。 */
+    public List<Pack> getPacks() {
+        return packs;
+    }
+
     public List<Page> getPages() {
         return pages;
+    }
+
+    /** 分组 → 功能包；契约校验保证每个分组恰好归属一个包。 */
+    public Pack packOfGroup(String groupId) {
+        for (Pack p : packs) {
+            if (p.getGroups().contains(groupId)) {
+                return p;
+            }
+        }
+        return null;
+    }
+
+    public Pack packOfPage(String pageKey) {
+        for (Page p : pages) {
+            if (p.getKey().equals(pageKey)) {
+                return packOfGroup(p.getGroup());
+            }
+        }
+        return null;
     }
 
     /** 指定分组下的页面（契约声明序）。宿主菜单注册器按组建目录用。 */
@@ -214,6 +290,26 @@ public class ConsolePageCatalog {
             return path.startsWith(prefix);
         }
         return path.equals(prefix) || path.startsWith(prefix + "/");
+    }
+
+    /** 功能包：一组分组的部署选择单元（导航裁剪的最小粒度；不参与权限判定）。 */
+    public static class Pack {
+        private final String id;
+        private final String name;
+        private final String description;
+        private final List<String> groups;
+
+        Pack(String id, String name, String description, List<String> groups) {
+            this.id = id;
+            this.name = name;
+            this.description = description;
+            this.groups = Collections.unmodifiableList(new ArrayList<>(groups));
+        }
+
+        public String getId() { return id; }
+        public String getName() { return name; }
+        public String getDescription() { return description; }
+        public List<String> getGroups() { return groups; }
     }
 
     /** 分组（console 侧栏组 / 宿主菜单目录）。 */

@@ -57,7 +57,7 @@ public class ConsoleCacheConfigurer implements WebMvcConfigurer {
                 // 无 immutable()：当前 Spring 版本的 CacheControl 无此方法（5.2 才引入）；
                 // max-age 一年内浏览器本不回源，增量收益仅在用户显式刷新时省一次条件 GET，可弃
                 .setCacheControl(CacheControl.maxAge(ASSETS_MAX_AGE_DAYS, TimeUnit.DAYS).cachePublic());
-        registry.addResourceHandler("/console/index.html", "/es-rebuild.html", "/es-xmigrate.html")
+        registry.addResourceHandler("/console/index.html", "/searchdeck.html", "/es-rebuild.html", "/es-xmigrate.html")
                 .addResourceLocations("classpath:/static/")
                 .setCacheControl(CacheControl.noCache());
     }

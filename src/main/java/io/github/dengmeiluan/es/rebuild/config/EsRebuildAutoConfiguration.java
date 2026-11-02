@@ -30,6 +30,10 @@ import io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthInterceptor;
 import io.github.dengmeiluan.es.rebuild.auth.EnvPagesResolver;
 import io.github.dengmeiluan.es.rebuild.auth.ConsoleOpsAuditStore;
 import io.github.dengmeiluan.es.rebuild.auth.ConsolePageCatalog;
+import io.github.dengmeiluan.es.rebuild.platform.ConsoleHostIntegration;
+import io.github.dengmeiluan.es.rebuild.platform.ConsoleUiConfigController;
+import io.github.dengmeiluan.es.rebuild.platform.ConsoleUiConfigService;
+import io.github.dengmeiluan.es.rebuild.platform.PlatformUiProperties;
 import io.github.dengmeiluan.es.rebuild.auth.DelegatingConsoleAuthorizer;
 import io.github.dengmeiluan.es.rebuild.auth.DedupConsoleOpsAuditStore;
 import io.github.dengmeiluan.es.rebuild.auth.EsConsoleAuthorizer;
@@ -141,7 +145,7 @@ import java.util.Map;
  */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnClass({ElasticsearchOperations.class, RestHighLevelClient.class})
-@EnableConfigurationProperties(EsRebuildProperties.class)
+@EnableConfigurationProperties({EsRebuildProperties.class, PlatformUiProperties.class})
 @AutoConfigureAfter(ElasticsearchDataAutoConfiguration.class)
 public class EsRebuildAutoConfiguration {
 
@@ -1168,8 +1172,27 @@ public class EsRebuildAutoConfiguration {
         @Bean
         @ConditionalOnMissingBean
         public ConsolePageCatalog consolePageCatalog() {
-            // 2.5.0：页面契约唯一事实源；宿主注册自定义 Bean 可覆盖（如裁剪页面集）
+            // 页面契约唯一事实源；宿主注册自定义 Bean 可覆盖（如裁剪页面集）
             return ConsolePageCatalog.load();
+        }
+
+        /**
+         * 运行时 UI 配置：品牌 + 功能包 + 单页排除。宿主注册 {@link ConsoleHostIntegration}
+         * Bean 提供默认品牌/包选择，显式 searchdeck.console.* 配置可覆盖。
+         */
+        @Bean
+        @ConditionalOnMissingBean
+        public ConsoleUiConfigService consoleUiConfigService(ConsolePageCatalog consolePageCatalog,
+                                                             PlatformUiProperties platformUiProperties,
+                                                             ObjectProvider<ConsoleHostIntegration> integrationProvider) {
+            return new ConsoleUiConfigService(consolePageCatalog, platformUiProperties, integrationProvider);
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        @ConditionalOnProperty(prefix = "es.rebuild", name = "web-enabled", matchIfMissing = true)
+        public ConsoleUiConfigController consoleUiConfigController(ConsoleUiConfigService consoleUiConfigService) {
+            return new ConsoleUiConfigController(consoleUiConfigService);
         }
 
         /**
@@ -1337,7 +1360,7 @@ public class EsRebuildAutoConfiguration {
             /* 控制台 HTML/静态资源同样要过安全头：被 iframe 嵌入的是 HTML 文档而非 JSON API，
                frame-ancestors 只下发到 API 路径等于配置虚设；nosniff 对 JS/CSS 同样适用。 */
             reg.addUrlPatterns("/internal/es/index/*", "/internal/es/xmigrate/*",
-                    "/console/*", "/es-rebuild.html", "/es-xmigrate.html");
+                    "/console/*", "/searchdeck.html", "/es-rebuild.html", "/es-xmigrate.html");
             reg.setOrder(org.springframework.core.Ordered.HIGHEST_PRECEDENCE);
             reg.setName("consoleSecurityHeadersFilter");
             return reg;

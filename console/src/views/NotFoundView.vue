@@ -25,15 +25,17 @@ import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Compass, Home, ArrowLeft } from 'lucide-vue-next';
 import { NAV_ITEMS } from '../router';
+import { useUiConfigStore } from '../stores/uiConfig';
 
 const route = useRoute();
 const router = useRouter();
+const ui = useUiConfigStore();
 
 /* 简易相近度：路径子串互含或去掉分隔符后的编辑距离 ≤2，最多给 3 个候选 */
 const guesses = computed(() => {
   const raw = String(route.params.pathMatch || route.path).replace(/^\/+/, '').toLowerCase();
   if (!raw) return [];
-  const scored = NAV_ITEMS.map(n => {
+  const scored = NAV_ITEMS.filter(n => ui.pageEnabled(n.pageKey)).map(n => {
     const p = n.path.slice(1).toLowerCase();
     let score = Infinity;
     // 子串包含是最强信号（/xray → /query-xray），永远优于编辑距离命中

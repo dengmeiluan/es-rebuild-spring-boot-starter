@@ -75,7 +75,7 @@ public class ConsoleAuthControllerMeTest {
         Map<String, Object> out = controller(true).me(requestWith(p));
         assertEquals(Arrays.asList("overview", "search"), out.get("grantedPages"));
         Map<String, Object> pages = (Map<String, Object>) out.get("pages");
-        assertEquals(12, ((List<Object>) pages.get("groups")).size());
+        assertEquals(13, ((List<Object>) pages.get("groups")).size());
     }
 
     @Test
@@ -163,7 +163,7 @@ public class ConsoleAuthControllerMeTest {
         // 逃生阀只关授权判定与 grantedPages；pages 契约非秘密，无条件下发（Forbidden 取名数据源）
         Map<String, Object> pages = (Map<String, Object>) out.get("pages");
         assertNotNull(pages);
-        assertEquals(12, ((List<Object>) pages.get("groups")).size());
+        assertEquals(13, ((List<Object>) pages.get("groups")).size());
     }
 
     @Test
@@ -173,7 +173,7 @@ public class ConsoleAuthControllerMeTest {
         Map<String, Object> out = controller(true).me(requestWith(p));
         Map<String, Object> pages = (Map<String, Object>) out.get("pages");
         List<Map<String, Object>> groups = (List<Map<String, Object>>) pages.get("groups");
-        assertEquals(12, groups.size());
+        assertEquals(13, groups.size());
         int total = 0;
         for (Map<String, Object> g : groups) {
             List<Map<String, Object>> ps = (List<Map<String, Object>>) g.get("pages");

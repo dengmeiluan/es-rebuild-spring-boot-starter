@@ -53,15 +53,16 @@ client 默认配置：
     {
         id: 'static-page',
         title: '2. 静态页接入（免登录直达）',
-        body: `starter 自带两个直达页（无需前端工程即可用）：
+        body: `starter 自带三个直达页（无需前端工程即可用）：
 
-  /es-rebuild.html   —— ES 控制台（本面板）
+  /searchdeck.html   —— SearchDeck 控制台（新入口）
+  /es-rebuild.html   —— 兼容入口（跳转 /searchdeck.html）
   /es-xmigrate.html  —— 跨集群迁移向导
 
 宿主 Security 只需放行静态路径与 API 前缀，鉴权由 starter 的 ConsoleAuthInterceptor 完成：
 
   .antMatchers("/internal/es/**").permitAll()
-  .antMatchers("/es-rebuild.html", "/es-xmigrate.html", "/console/**").permitAll()
+  .antMatchers("/searchdeck.html", "/es-rebuild.html", "/es-xmigrate.html", "/console/**").permitAll()
 
 默认开启内置 token 鉴权（兜底账号 admin），可通过 es.rebuild.console.auth.enabled=false 关闭。`,
     },

@@ -43,17 +43,21 @@ public class ReadmeBilingualContractTest {
     private final String readme = read(starterRoot.resolve("README.md"));
     private final String readmeEn = read(starterRoot.resolve("README_EN.md"));
 
-    /** 双语一级节主题锚对（中文标题 → 英文标题），顺序=文档出现顺序。 */
+    /** 双语一级节主题锚对（中文标题 → 英文标题），顺序=文档出现顺序。
+     * SearchDeck 重定位后结构更新：平台身份 → 功能包 → 控制台 → 交付/接入 → 架构/验证/路线图。 */
     private static final String[][] SECTION_ANCHORS = {
-            {"## 它解决什么问题", "## The problem it solves"},
-            {"## 特性", "## Features"},
-            {"## 两种部署形态", "## Two deployment shapes"},
-            {"## 快速开始", "## Quick start"},
-            {"## 可运行示例", "## Runnable example"},
-            {"## 运维控制台", "## The ops console"},
-            {"## 从源码构建", "## Build from source"},
-            {"## 兼容性", "## Compatibility"},
-            {"## 设计文档", "## Design docs"},
+            {"## 🛳️ 它是什么", "## 🛳️ What it is"},
+            {"## 🧩 为什么是 SearchDeck", "## 🧩 Why SearchDeck"},
+            {"## 📦 功能包：11 个模块，按需上甲板", "## 📦 Feature packs"},
+            {"## 🖥️ 控制台一览", "## 🖥️ Console gallery"},
+            {"## 🚀 三种交付形态", "## 🚀 Three delivery modes"},
+            {"## ⚡ 5 分钟接入", "## ⚡ Five-minute integration"},
+            {"## 🏗️ 架构", "## 🏗️ Architecture"},
+            {"## 🎛️ 交互宪法", "## 🎛️ Interaction constitution"},
+            {"## ✅ 质量与验证", "## ✅ Quality and verification"},
+            {"## 🗺️ 路线图", "## 🗺️ Roadmap"},
+            {"## 🛠️ 从源码构建", "## 🛠️ Build from source"},
+            {"## 贡献", "## Contributing"},
             {"## License", "## License"},
     };
 
@@ -82,6 +86,13 @@ public class ReadmeBilingualContractTest {
         for (String anchor : en) {
             assertTrue("README_EN ops console 应含能力清单项 " + anchor,
                     readmeEn.contains(anchor));
+        }
+        /* 功能包表是新的能力目录：11 个 pack 必须在双语 README 同时出现。 */
+        String[] packs = {"`platform`", "`search`", "`index`", "`quality`", "`data`", "`text`",
+                "`relevance`", "`lifecycle`", "`observe`", "`security`", "`devtools`"};
+        for (String pack : packs) {
+            assertTrue("README 功能包表缺少 " + pack, readme.contains(pack));
+            assertTrue("README_EN feature pack table missing " + pack, readmeEn.contains(pack));
         }
     }
 

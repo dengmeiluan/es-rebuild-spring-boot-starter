@@ -18,6 +18,7 @@ const EXEMPT: ReadonlySet<string> = new Set([
   '/templates-gallery', /* 模板画廊：纯阅读卡片墙（查看/复制模板），非数据密集 */
   '/favorites', /* 收藏列表：纯阅读列表页（router.ts 注释点名豁免） */
   '/forbidden', /* 2.5.0 页面级授权拒绝落地页：错误提示页，非数据页 */
+  '/module-off', /* 功能包停用落地页：提示页，非数据页 */
   '/:pathMatch(.*)*', /* R42 404 兜底页：提示页，非数据页 */
 ]);
 

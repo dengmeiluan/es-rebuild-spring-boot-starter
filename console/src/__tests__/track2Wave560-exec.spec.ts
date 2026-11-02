@@ -208,11 +208,11 @@ describe('560 ⑨：ar-jobs-kw / xm-jobs-kw 改用 SearchFilterBar 统一件（5
 /* ═══ 十、HotkeyPanel 两行登记 ═══ */
 describe('560 ⑩：HotkeyPanel「查询与编辑」组加两行（固定文案）', () => {
   it('Ctrl+Enter DevTools 全局执行（任意焦点）行在场', () => {
-    expect(hk).toContain("{ keys: ['Ctrl', 'Enter'], desc: 'DevTools 全局执行请求（任意焦点；输入控件 / 编辑器内让路）' },");
+    expect(hk).toContain("{ keys: ['Ctrl', 'Enter'], desc: 'DevTools 全局执行请求（任意焦点；输入控件 / 编辑器内让路）', pageKeys: ['devtools'] },");
   });
   it('Ctrl+I 索引工作区 query 编辑器补全行在场（557 既有 Ctrl+I 行零触）', () => {
-    expect(hk).toContain("{ keys: ['Ctrl', 'I'], desc: '索引工作区 query 编辑器补全' },");
+    expect(hk).toContain("{ keys: ['Ctrl', 'I'], desc: '索引工作区 query 编辑器补全', pageKeys: ['indices'] },");
     /* 1129：Ctrl+I 改绑格式化（对齐 Kibana Auto-indent），本行文案同步 */
-    expect(hk).toContain("{ keys: ['Ctrl', 'I'], desc: '格式化当前请求体（DevTools；草稿同步，等价手改）' }");
+    expect(hk).toContain("{ keys: ['Ctrl', 'I'], desc: '格式化当前请求体（DevTools；草稿同步，等价手改）', pageKeys: ['devtools'] }");
   });
 });

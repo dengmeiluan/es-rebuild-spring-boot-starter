@@ -2,8 +2,10 @@ import { createRouter, createWebHashHistory, type LocationQuery } from 'vue-rout
 import { legacyRedirect, LEGACY_QUERY_PATHS } from './utils/queryHub';
 import { useAuthStore } from './stores/auth';
 import { useAppStore } from './stores/app';
+import { useUiConfigStore } from './stores/uiConfig';
 import pagesContract from '../../src/main/resources/META-INF/es-console-pages.json';
 import { writeStoredRaw, removeStoredRaw } from './utils/safeJson';
+import { PAGE_BY_ROUTE } from './utils/uiConfig';
 
 /* 侧边栏分组与导航项（2.5.0 起）从页面契约 es-console-pages.json 派生——
  契约是 Java 拦截器 / 本前端 / 宿主菜单注册器三端的唯一事实源，禁止回到手工维护（防漂移）。
@@ -142,6 +144,25 @@ export function pageDeniedRedirect(
   return { path: '/forbidden', query: { page: item.pageKey, name: item.name } };
 }
 
+/* 功能包停用：深链/收藏/旧标签页访问未启用的模块时，落到可解释的 ModuleOff 页，
+   而不是 404/空白。功能包是部署选择，不是权限——先于身份页面门判定。 */
+export function moduleOffRedirect(path: string) {
+  const page = PAGE_BY_ROUTE.get(normalizeRoutePath(path));
+  if (!page) return null;
+  const ui = useUiConfigStore();
+  if (ui.pageEnabled(page.key)) return null;
+  const pack = ui.packOf(page.key);
+  return {
+    path: '/module-off',
+    query: {
+      page: page.key,
+      name: page.name,
+      pack: pack?.id || '',
+      packName: pack?.name || '',
+    },
+  };
+}
+
 /* 超宽屏（≥1920）居中豁免：theme.css 「.page 用 padding 居中，表格密度页可豁免」的
  承诺由本集合 + App.vue（.page.page-wide 覆盖居中 padding）兑现（theme.css 冻结，
  机制落 router/App）。wide 判据 = 内容主体是表格/编辑器/宽表单的数据密集页：
@@ -237,6 +258,8 @@ export const router = createRouter({
     { path: '/search-templates', component: () => import('./views/SearchTemplatesView.vue') },
     /* */
     { path: '/security', component: () => import('./views/SecurityView.vue') },
+    /* 功能包停用落地页（不进 NAV_ITEMS；非页面路由，页面门不拦） */
+    { path: '/module-off', component: () => import('./views/ModuleOffView.vue') },
     { path: '/adhoc-rebuild', component: () => import('./views/AdhocRebuildView.vue') },
     /* */
     { path: '/config-validator', component: () => import('./views/ConfigValidatorView.vue') },
@@ -264,6 +287,9 @@ router.onError((err, to) => {
  身份到达后由 App.vue watch grantedPages 复核当前路由兜底纠正（跳转构造收敛在 pageDeniedRedirect）。
  判定按当前目标连接收缩（conn:{id}:{page} 键只对目标连接生效）。 */
 router.beforeEach((to) => {
+  /* 功能包停用优先：ADMIN 也受部署选择约束（这不是权限，是产品面裁剪）。 */
+  const off = moduleOffRedirect(to.path);
+  if (off) return off;
   const auth = useAuthStore();
   /* 超级管理员全局可见：宿主白名单/连接键不拦 ADMIN */
   if (auth.isAdmin()) return true;
@@ -288,5 +314,5 @@ router.afterEach((to) => {
   /* 导航成功即清自愈标记，下次部署后仍可再自愈 */
   removeStoredRaw(sessionStorage, CHUNK_RETRY_KEY);
   const item = NAV_ITEMS.find(n => n.path === normalizeRoutePath(to.path));
-  document.title = (item ? item.name + ' · ' : '') + 'ES Console';
+  document.title = (item ? item.name + ' · ' : '') + useUiConfigStore().product.name;
 });

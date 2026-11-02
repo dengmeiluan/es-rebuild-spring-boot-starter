@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { createApp, h, nextTick } from 'vue';
+import { createPinia, setActivePinia } from 'pinia';
 import { createRouter, createMemoryHistory } from 'vue-router';
 import HotkeyPanel from '../../components/HotkeyPanel.vue';
 import { GOTO_TARGETS } from '../hotkeys';
@@ -26,7 +27,10 @@ import { NAV_ITEMS } from '../../router';
 async function renderPanelRows() {
     const host = document.createElement('div');
     document.body.appendChild(host);
+    const pinia = createPinia();
+    setActivePinia(pinia);
     const app = createApp({ render: () => h(HotkeyPanel, { show: true }) });
+    app.use(pinia);
     app.mount(host);
     await nextTick();
     // 逐行取 .hk-desc：整页 textContent 会把相邻行首尾粘连（"a分词验证" 紧接 "g 字母"）

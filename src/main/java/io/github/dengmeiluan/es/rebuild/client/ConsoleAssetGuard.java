@@ -30,8 +30,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * 给它<b>空 location 列表</b>，于是任何命中请求都找不到资源 → 404。
  * 注意 jar 里那 6MB 资源仍然存在（spec D5 明确接受），本类只管可访问性。</p>
  *
- * <p>覆盖面不止 {@code /console/**}：{@code static/} 根下还有两个平级的控制台入口页
- * （{@code es-rebuild.html} / {@code es-xmigrate.html}），它们不在 {@code /console/} 前缀下，
+ * <p>覆盖面不止 {@code /console/**}：{@code static/} 根下还有三个平级的控制台入口页
+ * （{@code searchdeck.html} / {@code es-rebuild.html} / {@code es-xmigrate.html}），它们不在 {@code /console/} 前缀下，
  * 漏掉就会让业务应用仍然对外露出一个「跳转到 ES 控制台」的入口。
  * {@code ConsoleAssetGuardTest} 有一条护栏断言：{@code static/} 根下的实际内容必须与
  * {@link #GUARDED_PATTERNS} 逐一对应 —— 将来有人往 {@code static/} 加文件，测试会红。</p>
@@ -47,6 +47,7 @@ public class ConsoleAssetGuard implements WebMvcConfigurer {
      */
     static final String[] GUARDED_PATTERNS = {
             "/console/**",
+            "/searchdeck.html",
             "/es-rebuild.html",
             "/es-xmigrate.html"
     };

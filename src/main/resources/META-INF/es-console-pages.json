@@ -12,7 +12,21 @@
     { "id": "protect", "name": "备份与生命周期", "sort": 9 },
     { "id": "health", "name": "健康与诊断", "sort": 10 },
     { "id": "cluster", "name": "集群管理", "sort": 11 },
-    { "id": "devx", "name": "开发者工具", "sort": 12 }
+    { "id": "security", "name": "身份与审计", "sort": 12 },
+    { "id": "devx", "name": "开发者工具", "sort": 13 }
+  ],
+  "packs": [
+    { "id": "platform", "name": "平台核心", "description": "总览、索引工作区、工作台与收藏", "groups": ["core"] },
+    { "id": "search", "name": "查询与检索", "description": "DSL / SQL / Lucene 查询工作台、搜索模板与数据浏览", "groups": ["search"] },
+    { "id": "index", "name": "索引工程", "description": "Mapping、Setting、别名与系统索引", "groups": ["index"] },
+    { "id": "quality", "name": "配置质量", "description": "模板、配置校验、漂移检测与优化向导", "groups": ["quality"] },
+    { "id": "data", "name": "数据操作", "description": "Bulk、Update By Query 与文档 Diff", "groups": ["data"] },
+    { "id": "text", "name": "文本分析", "description": "分词验证、实验室、同义词与 Analysis 全景", "groups": ["text"] },
+    { "id": "relevance", "name": "相关性实验室", "description": "打分解剖、排名调试、Boost、命中矩阵与 Profile", "groups": ["rank"] },
+    { "id": "lifecycle", "name": "生命周期", "description": "托管重建、跨集群迁移、快照、SLM 与 ILM", "groups": ["rebuild", "protect"] },
+    { "id": "observe", "name": "观测与治理", "description": "诊断、体检、拓扑、Watcher、任务与集群设置", "groups": ["health", "cluster"] },
+    { "id": "security", "name": "身份与审计", "description": "账号、权限面与操作审计", "groups": ["security"] },
+    { "id": "devtools", "name": "开发者工具", "description": "REST 直连、Dev Tools 与 Painless 沙盒", "groups": ["devx"] }
   ],
   "pages": [
     { "key": "overview", "name": "概览", "group": "core", "route": "/overview", "icon": "LayoutDashboard", "hotkey": "1", "apiPrefixes": ["/internal/es/index/overview", "/internal/es/index/monitor-history", "/internal/es/index/monitor-metrics", "/internal/es/index/monitor-alerts", "/internal/es/index/ring-usage"], "minVer": null },
@@ -20,7 +34,7 @@
     { "key": "workspace", "name": "工作台", "group": "core", "route": "/workspace", "icon": "LayoutGrid", "hotkey": "h", "apiPrefixes": [], "minVer": null },
     { "key": "live", "name": "实时大屏", "group": "core", "route": "/live", "icon": "MonitorSpeaker", "hotkey": "", "apiPrefixes": [], "minVer": null },
     { "key": "favorites", "name": "收藏夹", "group": "core", "route": "/favorites", "icon": "Star", "hotkey": "b", "apiPrefixes": [], "minVer": null },
-    { "key": "security", "name": "安全中心", "group": "core", "route": "/security", "icon": "ShieldCheck", "hotkey": "", "apiPrefixes": ["/internal/es/index/auth/users", "/internal/es/index/auth/audit-facets", "/internal/es/index/auth/ops-audit"], "minVer": null },
+    { "key": "security", "name": "安全中心", "group": "security", "route": "/security", "icon": "ShieldCheck", "hotkey": "", "apiPrefixes": ["/internal/es/index/auth/users", "/internal/es/index/auth/audit-facets", "/internal/es/index/auth/ops-audit"], "minVer": null },
     { "key": "search", "name": "查询工作台", "group": "search", "route": "/search", "icon": "TerminalSquare", "hotkey": "2", "apiPrefixes": ["/internal/es/index/cluster/sql", "/internal/es/index/cluster/count", "/internal/es/index/cluster/lucene-search", "/internal/es/index/cluster/resolve-schema", "/internal/es/index/cluster/pit/"], "minVer": null },
     { "key": "search-templates", "name": "搜索模板中心", "group": "search", "route": "/search-templates", "icon": "LayoutTemplate", "hotkey": "", "apiPrefixes": ["/internal/es/index/cluster/render-template", "/internal/es/index/cluster/search-template"], "minVer": null },
     { "key": "browser", "name": "数据浏览器", "group": "search", "route": "/browser", "icon": "Database", "hotkey": "4", "apiPrefixes": [], "minVer": null },

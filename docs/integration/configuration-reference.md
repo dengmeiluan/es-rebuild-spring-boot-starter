@@ -548,6 +548,23 @@ es:
             trusted-proxies: []
 ```
 
+## SearchDeck 平台层（`searchdeck.console`）
+
+平台层只决定「产品面」：品牌、功能包与单页排除；引擎运行参数仍在 `es.rebuild.*`。
+
+| 配置键 | 默认值 | 说明 |
+|---|---|---|
+| `searchdeck.console.features.packs` | `[]`（全部 11 个包） | 显式列表只启用列出的功能包；未知包名 WARN 忽略，全部未知则启动失败 |
+| `searchdeck.console.features.exclude-pages` | `[]` | 在功能包之上再隐藏单页（page key，如 `security`） |
+| `searchdeck.console.branding.product-name` | `SearchDeck` | 产品名（侧栏/登录层/标题） |
+| `searchdeck.console.branding.tagline` | `Search operations, on deck.` | 品牌副标语 |
+| `searchdeck.console.branding.integration-id` | `generic` | 宿主集成标识；注册 `ConsoleHostIntegration` Bean 时默认取 Bean 值 |
+| `searchdeck.console.branding.integration-name` | `""` | 宿主展示名（如 `QuoteHub`），作为侧栏副标题 |
+| `searchdeck.console.branding.docs-url` | `""` | 宿主帮助/文档链接（透传前端） |
+
+运行时前端读取 `GET /internal/es/index/ui/config` 获取合并后的配置；该端点零敏感信息，
+属于自举面（空页面授权身份也可读），不参与页面级授权判定。
+
 ## 行为边界
 
 - 键名允许值在属性校验阶段检查，拼写错误会拒绝 Spring 上下文启动（含 retry 退避区间、lock 租约 ≥ 编排超时等不变量）。

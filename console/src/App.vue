@@ -82,11 +82,12 @@ import { confirmState, resolveConfirm } from './composables/confirm';
 import WelcomeWizard from './components/WelcomeWizard.vue';
 import LoginOverlay from './components/LoginOverlay.vue';
 import SetupWizard from './components/SetupWizard.vue';
-import { NAV_ITEMS, pageDeniedRedirect, peekDeniedPage, consumeDeniedPage, clearDeniedPage } from './router';
+import { NAV_ITEMS, pageDeniedRedirect, peekDeniedPage, consumeDeniedPage, clearDeniedPage, moduleOffRedirect } from './router';
 import { GOTO_MAP } from './utils/hotkeys';
 import { readLastRoute, saveLastRoute, restorable } from './composables/continuity';
 import { useAppStore } from './stores/app';
 import { useAuthStore } from './stores/auth';
+import { useUiConfigStore } from './stores/uiConfig';
 import { useLiveMonitorStore } from './stores/liveMonitor';
 import { useJobTrackerStore } from './stores/jobTracker';
 import { useQueryHistoryStore } from './stores/queryHistory';
@@ -114,6 +115,7 @@ const route = useRoute();
 const router = useRouter();
 const store = useAppStore();
 const auth = useAuthStore();
+const ui = useUiConfigStore();
 
 /* 宿主换发令牌可能切换为另一个用户（角色相同也不罕见）：页面缓存/请求原文必须随
    用户名切换失效，否则后一个用户能看到前一个用户的查询结果与连接口令。 */
@@ -181,6 +183,20 @@ watch(() => store.eventBus, (ev) => {
   if (ev?.name === 'open-hotkeys') helpOpen.value = true;
   /* 命令面板关闭后焦点归还触发钮（键盘用户 Esc 后不悬空） */
   if (ev?.name === 'palette-closed') topBarRef.value?.focusPaletteBtn?.();
+});
+
+/* 平台 UI 配置（品牌/功能包/停用页）：身份探测完成后拉取；失败回落全开。
+   身份就绪后再请求，避免 iframe 握手期无凭证空跑 401。 */
+watch(() => auth.probed, (probed) => {
+  if (probed) void ui.load();
+}, { immediate: true });
+
+/* 配置到达后复核当前深链：未启用模块 → 可解释的 ModuleOff（不是 404/空白）。
+   也覆盖「配置晚于首屏路由」的时序：默认全开先放行，落地后立即纠正。 */
+watch([() => ui.loaded, () => route.path], () => {
+  if (!ui.loaded) return;
+  const off = moduleOffRedirect(route.path);
+  if (off) void router.replace(off);
 });
 
 /* 采样器在「已登录 + 集群可达」后全局启动，不再要求先进过大屏——
@@ -400,11 +416,11 @@ function onKey(e: KeyboardEvent) {
   if (Date.now() < gWaitUntil) {
     gWaitUntil = 0;
     const target = GOTO_MAP[e.key.toLowerCase()];
-    if (target) { router.push(target); e.preventDefault(); return; }
+    if (target && ui.routeEnabled(target)) { router.push(target); e.preventDefault(); return; }
   }
   if (e.key === 'g') { gWaitUntil = Date.now() + 1500; return; }
 
-  const item = NAV_ITEMS.find(n => n.key === e.key);
+  const item = NAV_ITEMS.find(n => n.key === e.key && ui.pageEnabled(n.pageKey));
   if (item) router.push(item.path);
 }
 

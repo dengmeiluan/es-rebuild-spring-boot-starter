@@ -44,6 +44,7 @@ import { ref, computed, onBeforeUnmount } from 'vue';
 import { Keyboard, X } from 'lucide-vue-next';
 import { trapTabKey } from '../utils/focusTrap';
 import { GOTO_TARGETS } from '../utils/hotkeys';
+import { useUiConfigStore } from '../stores/uiConfig';
 import MarkText from './MarkText.vue';
 import SearchFilterBar from './SearchFilterBar.vue'; /* 轨4：过滤框统一件（第 18 胞） */
 import pagesContract from '../../../src/main/resources/META-INF/es-console-pages.json';
@@ -51,6 +52,7 @@ import pagesContract from '../../../src/main/resources/META-INF/es-console-pages
 const props = defineProps<{ show: boolean }>();
 const emit = defineEmits<{ (e: 'close'): void }>();
 const panelRef = ref<HTMLElement | null>(null);
+const ui = useUiConfigStore();
 
 /* -D3：快捷键登记表——全站快捷键唯一权威清单。
  * -13：goto 那几行不再硬编码文案，改为从 utils/hotkeys.ts 的 GOTO_TARGETS 渲染。
@@ -58,15 +60,18 @@ const panelRef = ref<HTMLElement | null>(null);
  * 面板因此宣传两个不存在的绑定；且 f/i/j/k/w/y/z 七个真实绑定从未被宣传。
  * 现在两者同源，漂移在结构上不可能发生；hotkeys.spec.ts 另做双向断言兜底。
  * 非 goto 的行（Ctrl+K / 数字键 / ? 等）仍手写，它们不在 GOTO_TARGETS 管辖内。 */
-type HkRow = { keys: string[]; desc: string; sep?: string };
+/* pageKeys：该行描述的页面；全部停用时该行隐藏（静态文案也要跟随功能包裁剪，
+   否则停用「查询工作台」后速查里仍会宣传它的快捷键）。缺省=跨页/全局，恒显示。 */
+type HkRow = { keys: string[]; desc: string; sep?: string; pageKeys?: string[] };
 
 /* g+字母：按登记顺序切成每行 9 项，避免单行过长。
  条目分隔用「·」而非空格——「REST 直连」「Watcher 告警」等 label 自身含空格，
  用空格分隔会让人和机器都断不准词（hotkeys.spec.ts 的解析同样依赖这个分隔符）。 */
 const GOTO_PER_ROW = 9;
 const GOTO_SEP = ' · ';
-const gotoRows: HkRow[] = (() => {
-  const entries = Object.entries(GOTO_TARGETS).filter(([k]) => k !== 'g');
+const gotoRows = computed<HkRow[]>(() => {
+  const entries = Object.entries(GOTO_TARGETS)
+    .filter(([k, t]) => k !== 'g' && ui.routeEnabled(t.path));
   const rows: HkRow[] = [];
   for (let i = 0; i < entries.length; i += GOTO_PER_ROW) {
     const chunk = entries.slice(i, i + GOTO_PER_ROW);
@@ -77,7 +82,7 @@ const gotoRows: HkRow[] = (() => {
     });
   }
   return rows;
-})();
+});
 
 /* 字母单键投影——pages 合约 hotkey 字段（与 router 的 NAV_ITEMS 同源）。
  真机烟测发现 24 个字母单键（b 收藏夹 / m Bulk / v 一键体检…）从未进速查面板，
@@ -85,10 +90,11 @@ const gotoRows: HkRow[] = (() => {
  独立键位空间（g,b=数据浏览器 而 b=收藏夹，均为设计内）。数字单键也是 NAV hotkey，
  已有「1~0」行；此处只投影字母键（len 1 且非数字），gg chord 已在 gotoRows 尾部。 */
 const ALPHA_PER_ROW = 8;
-const alphaRows: HkRow[] = (() => {
+const alphaRows = computed<HkRow[]>(() => {
   const raw: any[] = Array.isArray(pagesContract) ? pagesContract : (pagesContract as any).pages ?? [];
   const items = raw
     .filter((p: any) => typeof p.hotkey === 'string' && p.hotkey.length === 1 && !/^\d$/.test(p.hotkey))
+    .filter((p: any) => ui.pageEnabled(p.key))
     .map((p: any) => p.hotkey + ' ' + p.name)
     .sort();
   const rows: HkRow[] = [];
@@ -100,9 +106,11 @@ const alphaRows: HkRow[] = (() => {
     });
   }
   return rows;
-})();
+});
 
-const GROUPS: { title: string; rows: HkRow[] }[] = [
+/* 分组在每次读取时构建：功能包配置到达后，导航行即时收敛（不在 setup 时定格）。 */
+function buildGroups(): { title: string; rows: HkRow[] }[] {
+  return [
   {
     title: '全局导航',
     rows: [
@@ -113,8 +121,8 @@ const GROUPS: { title: string; rows: HkRow[] }[] = [
  此前从未进速查面板，「有功能没人知道」防重演。注：/ 不是 goto 键，不入 utils/hotkeys.ts */
       { keys: ['/'], desc: '聚焦侧栏功能搜索（输入即过滤导航项；侧栏图标态时不可用）' },
       { keys: ['1', '0'], desc: '数字单键切页（对应侧边栏顺序）', sep: '~' },
-      ...alphaRows,
-      ...gotoRows,
+      ...alphaRows.value,
+      ...gotoRows.value,
       { keys: ['g', 'g'], desc: GOTO_TARGETS.g.label + '（vim 风 chord）', sep: ' ' },
       { keys: ['?'], desc: '打开 / 关闭本速查面板' },
     ],
@@ -122,28 +130,28 @@ const GROUPS: { title: string; rows: HkRow[] }[] = [
   {
     title: '查询与编辑',
     rows: [
-      { keys: ['Ctrl', 'Enter'], desc: '执行查询（DSL / SQL / Lucene / REST / DevTools）' },
+      { keys: ['Ctrl', 'Enter'], desc: '执行查询（DSL / SQL / Lucene / REST / DevTools）', pageKeys: ['search', 'devtools', 'rest'] },
       /* DevTools Ctrl+I = 格式化请求体（对齐 Kibana Console 键位表：Ctrl+I=Auto-indent；
  补全由 Monaco 默认 Ctrl+Space / Enter / Tab 承担，不再抢占 Ctrl+I） */
-      { keys: ['Ctrl', 'I'], desc: '格式化当前请求体（DevTools；草稿同步，等价手改）' },
+      { keys: ['Ctrl', 'I'], desc: '格式化当前请求体（DevTools；草稿同步，等价手改）', pageKeys: ['devtools'] },
       /* DevTools 全局执行（视图级 window keydown，任意焦点可达——输入控件/编辑器内让路）
  与索引工作区 query 编辑器补全（Ctrl+I 第二落点）登记（「有功能没人知道」防重演） */
-      { keys: ['Ctrl', 'Enter'], desc: 'DevTools 全局执行请求（任意焦点；输入控件 / 编辑器内让路）' },
+      { keys: ['Ctrl', 'Enter'], desc: 'DevTools 全局执行请求（任意焦点；输入控件 / 编辑器内让路）', pageKeys: ['devtools'] },
       /* Kibana Console 键位表另外两条（1132 补齐后登记）：Ctrl+↑/↓ 在我们这里落在
          「相邻请求起始行」（每个 Tab 即一条请求）；Ctrl+L 由 Monaco 原生提供跳转行。 */
-      { keys: ['Ctrl', '↑'], desc: '跳到上一条请求起始行（DevTools 编辑器内）' },
-      { keys: ['Ctrl', '↓'], desc: '跳到下一条请求起始行（DevTools 编辑器内）' },
-      { keys: ['Ctrl', 'L'], desc: '跳到指定行号（DevTools 编辑器内，Monaco 原生）' },
-      { keys: ['Ctrl', 'I'], desc: '索引工作区 query 编辑器补全' },
+      { keys: ['Ctrl', '↑'], desc: '跳到上一条请求起始行（DevTools 编辑器内）', pageKeys: ['devtools'] },
+      { keys: ['Ctrl', '↓'], desc: '跳到下一条请求起始行（DevTools 编辑器内）', pageKeys: ['devtools'] },
+      { keys: ['Ctrl', 'L'], desc: '跳到指定行号（DevTools 编辑器内，Monaco 原生）', pageKeys: ['devtools'] },
+      { keys: ['Ctrl', 'I'], desc: '索引工作区 query 编辑器补全', pageKeys: ['indices'] },
       /* 查询工作台 DSL 编辑器 Ctrl+I 补全登记（与 DevTools 历史同键第三落点；
  「有功能没人知道」防重演） */
-      { keys: ['Ctrl', 'I'], desc: '查询工作台编辑器补全' },
-      { keys: ['Ctrl', 'S'], desc: '保存当前查询（DSL 页）/ 保存模板（模板页）' },
+      { keys: ['Ctrl', 'I'], desc: '查询工作台编辑器补全', pageKeys: ['search'] },
+      { keys: ['Ctrl', 'S'], desc: '保存当前查询（DSL 页）/ 保存模板（模板页）', pageKeys: ['search', 'templates'] },
       { keys: ['Enter'], desc: '单行输入提交（JQ 过滤 / 连接串解析 / 检索词）' },
       /* +登记（「有功能没人知道」防重演）：
  分页器 ←/→ 翻页、聚焦面 Esc 层级退出（输入控件内先收内嵌查找） */
       { keys: ['←', '→'], desc: '分页器内翻页（焦点在分页器任一控件时，跳页输入框内为移动光标）', sep: '/' },
-      { keys: ['Esc'], desc: '退出结果区聚焦全屏（Lucene/PIT/模板/DSL/DevTools；Monaco 查找栏内先收查找）' },
+      { keys: ['Esc'], desc: '退出结果区聚焦全屏（Lucene/PIT/模板/DSL/DevTools；Monaco 查找栏内先收查找）', pageKeys: ['search', 'devtools', 'templates'] },
     ],
   },
   {
@@ -179,8 +187,8 @@ const GROUPS: { title: string; rows: HkRow[] }[] = [
     /* 双中心键盘导航闭环——「有功能没人知道」防重演（173 同口径登记） */
     title: '索引 / 查询双中心（先点击或 Tab 聚焦）',
     rows: [
-      { keys: ['↑', '↓'], desc: '索引工作区·索引列表：浏览高亮，Enter 选中；搜索框内 ↓ 直入列表', sep: '/' },
-      { keys: ['←', '→'], desc: '查询工作台·模式条：六通道间移动焦点（Enter/Space 切换）', sep: '/' },
+      { keys: ['↑', '↓'], desc: '索引工作区·索引列表：浏览高亮，Enter 选中；搜索框内 ↓ 直入列表', sep: '/', pageKeys: ['indices'] },
+      { keys: ['←', '→'], desc: '查询工作台·模式条：六通道间移动焦点（Enter/Space 切换）', sep: '/', pageKeys: ['search'] },
     ],
   },
   {
@@ -190,21 +198,23 @@ const GROUPS: { title: string; rows: HkRow[] }[] = [
       { keys: ['Tab', 'Shift+Tab'], desc: '焦点循环（不逃出弹窗）', sep: '/' },
     ],
   },
-];
+  ];
+}
 
 /* ══ ：面板内过滤 ══
  kw 按 desc/keys includes 大小写不敏感过滤（SnapshotsView filtered 同口径）；
  kw 空 = 原样全量（既有挂载渲染 spec 的 textContent 断言不受影响——MarkText 只包不改文） */
 const hkKw = ref('');
 const filteredGroups = computed(() => {
+  const GROUPS = buildGroups();
   const k = hkKw.value.trim().toLowerCase();
-  if (!k) return GROUPS;
+  const pageVisible = (r: HkRow) => !r.pageKeys || r.pageKeys.some(key => ui.pageEnabled(key));
   return GROUPS
     .map(g => ({
       title: g.title,
-      rows: g.rows.filter(r =>
+      rows: g.rows.filter(r => pageVisible(r) && (!k ||
         r.desc.toLowerCase().includes(k) ||
-        r.keys.some(x => x.toLowerCase().includes(k))),
+        r.keys.some(x => x.toLowerCase().includes(k)))),
     }))
     .filter(g => g.rows.length);
 });

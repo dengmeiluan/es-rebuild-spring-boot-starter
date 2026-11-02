@@ -30,16 +30,37 @@ import static org.junit.Assert.fail;
 
 /**
  * 2.5.0 菜单 SPI：页面契约是 Java 拦截 / console 前端 / 宿主菜单注册三端的唯一事实源，
- * 本类钉死它的结构（12 组 52 页、key 唯一）与匹配语义（最长前缀 + 段边界）。
+ * 本类钉死它的结构（13 组 52 页、11 个功能包、key 唯一）与匹配语义（最长前缀 + 段边界）。
  */
 public class ConsolePageCatalogTest {
 
     private final ConsolePageCatalog catalog = ConsolePageCatalog.load();
 
     @Test
-    public void 契约加载_12组52页() {
-        assertEquals(12, catalog.getGroups().size());
+    public void 契约加载_13组52页() {
+        assertEquals(13, catalog.getGroups().size());
         assertEquals(52, catalog.getPages().size());
+    }
+
+    @Test
+    public void 功能包_11包覆盖全部组且页数合计52() {
+        assertEquals(11, catalog.getPacks().size());
+        Set<String> assigned = new HashSet<>();
+        int pages = 0;
+        for (ConsolePageCatalog.Pack pack : catalog.getPacks()) {
+            for (String group : pack.getGroups()) {
+                pages += catalog.pagesOf(group).size();
+                assertTrue("分组被多个包声明: " + group, assigned.add(group));
+                assertTrue("功能包引用了不存在分组: " + group,
+                        catalog.getGroups().stream().anyMatch(g -> g.getId().equals(group)));
+            }
+        }
+        assertEquals("每个分组都必须归属一个功能包", catalog.getGroups().size(), assigned.size());
+        assertEquals(52, pages);
+        assertEquals("security", catalog.packOfPage("security").getId());
+        assertEquals("platform", catalog.packOfPage("overview").getId());
+        assertEquals("lifecycle", catalog.packOfPage("adhoc-rebuild").getId());
+        assertEquals("devtools", catalog.packOfPage("devtools").getId());
     }
 
     @Test
@@ -56,13 +77,14 @@ public class ConsolePageCatalogTest {
     }
 
     @Test
-    public void 每组页面数合计52_core6_rank6() {
+    public void 每组页面数合计52_core5_security1_rank6() {
         int sum = 0;
         for (ConsolePageCatalog.Group g : catalog.getGroups()) {
             sum += catalog.pagesOf(g.getId()).size();
         }
         assertEquals(52, sum);
-        assertEquals(6, catalog.pagesOf("core").size());
+        assertEquals(5, catalog.pagesOf("core").size());
+        assertEquals(1, catalog.pagesOf("security").size());
         assertEquals(6, catalog.pagesOf("rank").size());
         assertEquals(3, catalog.pagesOf("devx").size());
     }
@@ -143,6 +165,50 @@ public class ConsolePageCatalogTest {
         assertNull(catalog.pageOf("/internal/es/index/cluster/ilm/policies")); // ilm+lifecycle 共用 → 共享
         assertEquals("lifecycle", catalog.pageOf("/internal/es/index/cluster/ilm/move").getKey());
         assertEquals("templates", catalog.pageOf("/internal/es/index/cluster/templates/put").getKey());
+    }
+
+    /** 旧契约没有 packs 字段：自动合成单包 all，不让宿主自定义契约被迫升级。 */
+    @Test
+    public void 兼容契约_无packs字段_合成单包all() {
+        String json = "{\"version\":1,\"groups\":[{\"id\":\"g\",\"name\":\"G\",\"sort\":1}],"
+                + "\"pages\":[{\"key\":\"a\",\"name\":\"A\",\"group\":\"g\",\"route\":\"/a\",\"icon\":\"I\","
+                + "\"hotkey\":\"\",\"apiPrefixes\":[],\"minVer\":null}]}";
+        ConsolePageCatalog legacy = ConsolePageCatalog.parse(
+                new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
+        assertEquals(1, legacy.getPacks().size());
+        assertEquals("all", legacy.getPacks().get(0).getId());
+        assertEquals("all", legacy.packOfGroup("g").getId());
+    }
+
+    /** 反向对照：功能包引用不存在的分组必须拒载。 */
+    @Test
+    public void 非法契约_功能包悬空分组_拒载() {
+        String bad = "{\"version\":1,\"groups\":[{\"id\":\"g\",\"name\":\"G\",\"sort\":1}],"
+                + "\"packs\":[{\"id\":\"p\",\"name\":\"P\",\"groups\":[\"g\",\"missing\"]}],"
+                + "\"pages\":[{\"key\":\"a\",\"name\":\"A\",\"group\":\"g\",\"route\":\"/a\",\"icon\":\"I\","
+                + "\"hotkey\":\"\",\"apiPrefixes\":[],\"minVer\":null}]}";
+        try {
+            ConsolePageCatalog.parse(new ByteArrayInputStream(bad.getBytes(StandardCharsets.UTF_8)));
+            fail("功能包悬空分组必须拒载");
+        } catch (IllegalStateException expected) {
+            assertTrue(expected.getMessage().contains("分组"));
+        }
+    }
+
+    /** 反向对照：分组未归属任何功能包必须拒载（否则该分组永远无法被配置选中）。 */
+    @Test
+    public void 非法契约_分组未归属功能包_拒载() {
+        String bad = "{\"version\":1,\"groups\":[{\"id\":\"g\",\"name\":\"G\",\"sort\":1},"
+                + "{\"id\":\"h\",\"name\":\"H\",\"sort\":2}],"
+                + "\"packs\":[{\"id\":\"p\",\"name\":\"P\",\"groups\":[\"g\"]}],"
+                + "\"pages\":[{\"key\":\"a\",\"name\":\"A\",\"group\":\"g\",\"route\":\"/a\",\"icon\":\"I\","
+                + "\"hotkey\":\"\",\"apiPrefixes\":[],\"minVer\":null}]}";
+        try {
+            ConsolePageCatalog.parse(new ByteArrayInputStream(bad.getBytes(StandardCharsets.UTF_8)));
+            fail("未归属分组必须拒载");
+        } catch (IllegalStateException expected) {
+            assertTrue(expected.getMessage().contains("未归属"));
+        }
     }
 
     /** 反向对照：契约缺 key 重复时 load 必须拒载（否则上面的全量断言可能因恒真校验而无意义）。 */

@@ -129,7 +129,7 @@ describe('557 二：DT Ctrl+I 宿主接线 + run() 前置 auto-format（Kibana �
 /* ═══════════ 三、HotkeyPanel：Ctrl+I 登记 ═══════════ */
 describe('557 三：HotkeyPanel 登记 Ctrl+I（hotkeyParityGuard293 合规：>15 行+无重复）', () => {
   it('查询与编辑组新增唯一 Ctrl+I 行（DevTools 补全唤起，Ctrl+Space 同效语义写实）', () => {
-    expect(hk).toMatch(/\{ keys: \['Ctrl', 'I'\], desc: '格式化当前请求体（DevTools；草稿同步，等价手改）' \}/);
+    expect(hk).toMatch(/\{ keys: \['Ctrl', 'I'\], desc: '格式化当前请求体（DevTools；草稿同步，等价手改）', pageKeys: \['devtools'\] \}/);
   });
 });
 

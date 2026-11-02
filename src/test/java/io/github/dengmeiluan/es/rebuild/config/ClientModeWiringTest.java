@@ -266,8 +266,9 @@ public class ClientModeWiringTest {
         new ConsoleAssetGuard().addResourceHandlers(registry);
 
         org.junit.Assert.assertArrayEquals(
-                "守卫必须接管 /console/** 与两个平级控制台入口页",
-                new String[]{"/console/**", "/es-rebuild.html", "/es-xmigrate.html"}, registeredPatterns());
+                "守卫必须接管 /console/** 与三个平级控制台入口页",
+                new String[]{"/console/**", "/searchdeck.html", "/es-rebuild.html", "/es-xmigrate.html"},
+                registeredPatterns());
 
         java.lang.reflect.Field regsField = ResourceHandlerRegistry.class.getDeclaredField("registrations");
         regsField.setAccessible(true);
@@ -287,7 +288,7 @@ public class ClientModeWiringTest {
      * 防复发护栏：{@code static/} 根下的实际内容必须与守卫已覆盖的 pattern 集合<b>恰好相等</b>。
      *
      * <p>本 Task 的缺陷根因就是「有人往 {@code static/} 根加了文件，而守卫 pattern 是手写枚举，
-     * 加了也没人知道」——`es-rebuild.html` / `es-xmigrate.html` 因此漏网。本条把两边钉在一起：
+     * 加了也没人知道」——`searchdeck.html` / `es-rebuild.html` / `es-xmigrate.html` 因此漏网。本条把两边钉在一起：
      * 将来再加第三个静态文件，本测试会红并逼出一次决策（挡它、或显式豁免它），
      * 而不是静默重现今天这个洞。</p>
      *

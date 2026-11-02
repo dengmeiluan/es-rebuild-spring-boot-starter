@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-label="SearchDeck — Search operations, on deck.">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a1011"/>
+      <stop offset="0.58" stop-color="#0c1516"/>
+      <stop offset="1" stop-color="#0b1a1a"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.82" cy="0.28" r="0.62">
+      <stop offset="0" stop-color="#14b8a6" stop-opacity="0.22"/>
+      <stop offset="0.55" stop-color="#14b8a6" stop-opacity="0.05"/>
+      <stop offset="1" stop-color="#14b8a6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2dd4bf"/>
+      <stop offset="1" stop-color="#0d9488"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#172324"/>
+      <stop offset="1" stop-color="#101a1b"/>
+    </linearGradient>
+    <linearGradient id="wave" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2dd4bf" stop-opacity="0.1"/>
+      <stop offset="0.5" stop-color="#2dd4bf" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#5eead4" stop-opacity="0.2"/>
+    </linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#c8f0eb" stroke-opacity="0.045" stroke-width="1"/>
+    </pattern>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="320" fill="url(#bg)"/>
+  <rect width="1280" height="320" fill="url(#grid)"/>
+  <rect width="1280" height="320" fill="url(#glow)"/>
+
+  <!-- deck frame -->
+  <g transform="translate(812 44)">
+    <rect x="0" y="0" width="404" height="232" rx="16" fill="url(#panel)" stroke="#c8f0eb" stroke-opacity="0.13"/>
+    <rect x="0" y="0" width="64" height="232" rx="16" fill="#0d1718" stroke="#c8f0eb" stroke-opacity="0.08"/>
+    <rect x="18" y="22" width="28" height="28" rx="8" fill="url(#accent)" opacity="0.95"/>
+    <rect x="24" y="30" width="16" height="2.5" rx="1.25" fill="#06201d"/>
+    <rect x="24" y="36" width="11" height="2.5" rx="1.25" fill="#06201d" opacity="0.7"/>
+    <g fill="#c8f0eb" opacity="0.28">
+      <rect x="20" y="78" width="24" height="5" rx="2.5"/>
+      <rect x="20" y="94" width="18" height="5" rx="2.5"/>
+      <rect x="20" y="110" width="22" height="5" rx="2.5"/>
+      <rect x="20" y="126" width="14" height="5" rx="2.5"/>
+      <rect x="20" y="142" width="20" height="5" rx="2.5"/>
+    </g>
+    <rect x="20" y="196" width="24" height="4" rx="2" fill="#2dd4bf" opacity="0.55"/>
+
+    <g transform="translate(84 20)">
+      <rect x="0" y="0" width="300" height="34" rx="9" fill="#0e191a" stroke="#c8f0eb" stroke-opacity="0.08"/>
+      <circle cx="16" cy="17" r="3" fill="#2dd4bf"/>
+      <rect x="27" y="13" width="108" height="8" rx="4" fill="#c8f0eb" opacity="0.16"/>
+      <rect x="252" y="11" width="36" height="12" rx="6" fill="#2dd4bf" opacity="0.16"/>
+      <text x="270" y="20" text-anchor="middle" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="7" fill="#5eead4" letter-spacing="1">LIVE</text>
+
+      <g transform="translate(0 50)">
+        <rect x="0" y="0" width="146" height="60" rx="9" fill="#0e191a" stroke="#c8f0eb" stroke-opacity="0.08"/>
+        <text x="14" y="20" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="7" fill="#8fb3ad" letter-spacing="1.4">CLUSTER</text>
+        <text x="14" y="44" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="20" font-weight="650" fill="#e6fffb">green</text>
+        <circle cx="126" cy="18" r="3" fill="#34d399"/>
+
+        <rect x="156" y="0" width="144" height="60" rx="9" fill="#0e191a" stroke="#c8f0eb" stroke-opacity="0.08"/>
+        <text x="170" y="20" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="7" fill="#8fb3ad" letter-spacing="1.4">QUERY P95</text>
+        <text x="170" y="44" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="20" font-weight="650" fill="#e6fffb">18 ms</text>
+        <path d="M170 52h116" stroke="#c8f0eb" stroke-opacity="0.12"/>
+      </g>
+
+      <g transform="translate(0 122)">
+        <rect x="0" y="0" width="300" height="66" rx="9" fill="#0e191a" stroke="#c8f0eb" stroke-opacity="0.08"/>
+        <text x="14" y="18" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="7" fill="#8fb3ad" letter-spacing="1.4">THROUGHPUT</text>
+        <path d="M14 52 L34 42 L54 47 L74 31 L94 39 L114 24 L134 36 L154 28 L174 40 L194 22 L214 33 L234 27 L254 38 L274 30 L286 34"
+              fill="none" stroke="url(#wave)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M14 52 L34 42 L54 47 L74 31 L94 39 L114 24 L134 36 L154 28 L174 40 L194 22 L214 33 L234 27 L254 38 L274 30 L286 34 L286 58 L14 58 Z"
+              fill="#14b8a6" opacity="0.07"/>
+      </g>
+    </g>
+    <rect x="84" y="212" width="300" height="1" fill="#c8f0eb" opacity="0.08"/>
+  </g>
+
+  <!-- wordmark -->
+  <g transform="translate(64 76)">
+    <rect x="0" y="0" width="34" height="6" rx="3" fill="url(#accent)"/>
+    <text x="0" y="72" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="58" font-weight="700" letter-spacing="-1.8" fill="#f0fffc">SearchDeck</text>
+    <text x="2" y="106" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="13" letter-spacing="3.6" fill="#7fd8cc">SEARCH OPERATIONS, ON DECK.</text>
+
+    <g transform="translate(2 138)" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="10" letter-spacing="1.6">
+      <rect x="0" y="0" width="104" height="24" rx="12" fill="#2dd4bf" fill-opacity="0.09" stroke="#2dd4bf" stroke-opacity="0.28"/>
+      <text x="52" y="16" text-anchor="middle" fill="#8fe9dd">EMBEDDABLE</text>
+      <rect x="114" y="0" width="128" height="24" rx="12" fill="#2dd4bf" fill-opacity="0.09" stroke="#2dd4bf" stroke-opacity="0.28"/>
+      <text x="178" y="16" text-anchor="middle" fill="#8fe9dd">11 FEATURE PACKS</text>
+      <rect x="252" y="0" width="92" height="24" rx="12" fill="#2dd4bf" fill-opacity="0.09" stroke="#2dd4bf" stroke-opacity="0.28"/>
+      <text x="298" y="16" text-anchor="middle" fill="#8fe9dd">ES 7.6+</text>
+    </g>
+  </g>
+
+  <g transform="translate(64 276)">
+    <rect x="0" y="0" width="6" height="6" rx="3" fill="#34d399"/>
+    <text x="14" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="10" letter-spacing="1.2" fill="#6f8b83">FIRST INTEGRATION</text>
+    <text x="126" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="10" letter-spacing="1.2" fill="#b7d7d1">QUOTEHUB</text>
+    <text x="208" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="10" letter-spacing="1.2" fill="#3f5b55">·</text>
+    <text x="222" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="10" letter-spacing="1.2" fill="#b7d7d1">ZERO-DOWNTIME REBUILD</text>
+    <text x="384" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="10" letter-spacing="1.2" fill="#3f5b55">·</text>
+    <text x="398" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="10" letter-spacing="1.2" fill="#b7d7d1">QUERY WORKBENCH</text>
+  </g>
+
+  <rect x="0" y="318" width="1280" height="2" fill="url(#accent)" opacity="0.55"/>
+</svg>

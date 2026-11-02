@@ -1,12 +1,12 @@
 <template>
   <aside class="snav" :class="{ icon: store.navIcon }">
-    <div class="brand" :title="store.navIcon ? 'ES Console · Rebuild Ops' : ''">
+    <div class="brand" :title="store.navIcon ? brandTitle : ''">
       <div class="brand-logo">
         <Layers :size="18" :stroke-width="2.2" />
       </div>
       <div class="brand-tx">
-        <div class="brand-name">ES Console</div>
-        <div class="brand-sub">Rebuild Ops</div>
+        <div class="brand-name">{{ ui.product.name }}</div>
+        <div class="brand-sub">{{ brandSub }}</div>
       </div>
     </div>
 
@@ -47,7 +47,7 @@
       </div>
       <div v-for="g in grouped" :key="g.id" class="nav-group">
         <!-- 组标题与图标态分隔线同时常驻：两态高度互补渐变，宽度动画全程不跳行高 -->
-        <div class="nav-g-hd" role="button" tabindex="0" :aria-expanded="isOpen(g)" @click="toggleGroup(g.id)" @keydown.enter.prevent="toggleGroup(g.id)" @keydown.space.prevent="toggleGroup(g.id)">
+        <div class="nav-g-hd" role="button" tabindex="0" :aria-expanded="isOpen(g)" :title="packTip(g.id)" @click="toggleGroup(g.id)" @keydown.enter.prevent="toggleGroup(g.id)" @keydown.space.prevent="toggleGroup(g.id)">
           <ChevronDown :size="11" class="nav-g-caret" :class="{ closed: !isOpen(g) }" />
           <span class="nav-g-nm">{{ g.name }}</span>
           <span class="nav-g-cnt">{{ g.items.length }}</span>
@@ -93,7 +93,7 @@
         <span class="foot-tx">⌘K 命令面板</span>
       </div>
       <!-- 当前版本号可见（发版核验最后一米：UI 即所见版本） -->
-      <div class="foot-row dim" :title="'es-console 当前版本 ' + STARTER_VERSION">
+      <div class="foot-row dim" :title="ui.product.name + ' 当前版本 ' + STARTER_VERSION">
         <span class="foot-tx mono v-num">v{{ STARTER_VERSION }}</span>
       </div>
       <!-- 速查面板鼠标入口（? 键之外的第二可达路径；点击发事件总线） -->
@@ -128,10 +128,14 @@ import {
 import { NAV_ITEMS, NAV_GROUPS, pageAllowed } from '../router';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
+import { useUiConfigStore } from '../stores/uiConfig';
 import MarkText from './MarkText.vue';
 import { useRoute } from 'vue-router';
 
 const store = useAppStore();
+const ui = useUiConfigStore();
+const brandSub = computed(() => ui.product.integrationName || 'Search Ops');
+const brandTitle = computed(() => ui.product.name + ' · ' + ui.product.tagline);
 const icons: Record<string, any> = {
   LayoutDashboard, TerminalSquare, Braces, Database, Zap,
   Wrench, History, Stethoscope, Rocket, Settings2,
@@ -173,14 +177,21 @@ const grouped = computed(() => {
     return pageAllowed(gp, i.path, store.target, auth.envAllows, auth.me?.role);
   };
   return NAV_GROUPS
+    .filter(g => ui.groupEnabled(g.id))
     .map(g => ({
       id: g.id as string, name: g.name,
       items: NAV_ITEMS.filter(i => i.group === g.id
+        && ui.pageEnabled(i.pageKey)
         && visible(i)
         && (!q || i.name.toLowerCase().includes(q) || i.path.toLowerCase().includes(q))),
     }))
     .filter(g => g.items.length);
 });
+/* 组标题悬停显示所属功能包：部署裁剪后，用户仍能理解这一组属于哪个产品模块 */
+function packTip(groupId: string) {
+  const pack = ui.packs.find(p => p.groups.includes(groupId));
+  return pack ? pack.name + (pack.description ? ' · ' + pack.description : '') : '';
+}
 function isOpen(g: { id: string; items: readonly { path: string }[] }) {
   if (navQuery.value.trim()) return true; // 搜索中：命中组无视折叠状态
   return !collapsed.value[g.id];
