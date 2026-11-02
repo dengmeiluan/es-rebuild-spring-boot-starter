@@ -2,13 +2,20 @@
   <!-- follow 档视图页内只读「当前索引」chip——选索引入口收敛 TopBar 唯一处
  （别名组/recent/健康度都在顶栏），本件只读 store 自显 + 三个助攻动作。
  未选索引整件不渲染（根 v-if），页内空态兜底契约留给各视图。 -->
-  <span v-if="store.pickedIdx" ref="rootEl" class="cic" :title="store.pickedIdx">
+  <span v-if="store.pickedIdx" ref="rootEl" class="cic" :title="store.pickedIdx"
+        @contextmenu.prevent="openMenu">
     <span class="cic-dot" :class="'h-' + (store.pickedInfo?.health || 'grey')" aria-hidden="true"></span>
     <span class="cic-nm">{{ store.pickedIdx }}</span>
     <span v-if="meta" class="cic-meta">{{ meta }}</span>
     <button aria-label="去索引工作区" class="cic-btn" title="去索引工作区" @click="gotoIndices"><ExternalLink :size="11" /></button>
     <button aria-label="复制深链" class="cic-btn" title="复制深链（含 ?idx=，分享直达本页）" @click="copyLink"><Copy :size="11" /></button>
     <button aria-label="清除当前索引" class="cic-btn" title="清除当前索引（清除后跟随顶栏）" @click="store.pick('')"><X :size="11" /></button>
+    <!-- 右键复用共享 CellContextMenu；只读/本地动作，不触发集群写 -->
+    <CellContextMenu
+      v-if="menu"
+      :x="menu.x" :y="menu.y" :title="'当前索引 · ' + store.pickedIdx"
+      :items="menuItems" @close="menu = null"
+    />
   </span>
 </template>
 
@@ -19,12 +26,14 @@
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Copy, ExternalLink, X } from 'lucide-vue-next';
+import CellContextMenu, { type CcmItem } from './CellContextMenu.vue';
 import { useAppStore } from '../stores/app';
 import { copyText, fmtNum, fmtSize } from '../utils/format';
 
 const store = useAppStore();
 const router = useRouter();
 const rootEl = ref<HTMLElement>();
+const menu = ref<{ x: number; y: number } | null>(null);
 
 /* 1024：所在行冻结推广——挂载时给 cic 所在页头行注入全局 .cic-row-sticky
  （theme.css 定义 sticky/实底/负边距拉满宽，26 个消费视图一次覆盖、新视图自动获得）。
@@ -62,6 +71,19 @@ async function copyLink() {
   const ok = await copyText(url);
   store.notify(ok ? 'success' : 'error', ok ? '深链已复制' : '复制失败：浏览器拦截了剪贴板');
 }
+
+function openMenu(e: MouseEvent) {
+  menu.value = { x: e.clientX, y: e.clientY };
+}
+const menuItems = computed<CcmItem[]>(() => [
+  { key: 'copy-name', label: '复制索引名', icon: Copy, run: async () => {
+    const ok = await copyText(store.pickedIdx);
+    store.notify(ok ? 'success' : 'error', ok ? '已复制索引名' : '复制失败：浏览器拦截了剪贴板');
+  } },
+  { key: 'copy-link', label: '复制深链', icon: Copy, run: () => { void copyLink(); } },
+  { key: 'goto-indices', label: '去索引工作区', icon: ExternalLink, run: gotoIndices },
+  { key: 'clear', label: '清除当前索引', icon: X, danger: true, sep: true, run: () => store.pick('') },
+]);
 </script>
 
 <style scoped>

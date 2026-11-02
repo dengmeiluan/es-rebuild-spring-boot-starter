@@ -105,14 +105,36 @@ describe('CurrentIdxChip（五百二十五批）', () => {
     expect(store.notifyQueue[0]?.kind).toBe('success');
   });
 
-  it('去索引工作区钮：router.push(\'/indices\')', async () => {
+  it('右键菜单：复制索引名/去索引工作区/清除索引（只读与本地动作）', async () => {
     const { host, store } = await mountChip();
     store.pick('orders-2024');
     await settle();
-    const gotoBtn = [...host.querySelectorAll<HTMLButtonElement>('.cic-btn')]
-      .find(b => b.title.includes('去索引工作区'));
-    gotoBtn!.click();
+    const root = host.querySelector<HTMLElement>('.cic')!;
+    const openMenu = async () => {
+      root.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 20, clientY: 20 }));
+      await settle();
+      const menu = document.body.querySelector<HTMLElement>('.ccm');
+      expect(menu, '右键菜单').toBeTruthy();
+      return menu!;
+    };
+    let menu = await openMenu();
+    expect(menu.textContent).toContain('当前索引 · orders-2024');
+    for (const label of ['复制索引名', '复制深链', '去索引工作区', '清除当前索引']) {
+      expect(menu.textContent, `菜单项 ${label}`).toContain(label);
+    }
+    (menu.querySelector('[data-key="copy-name"]') as HTMLElement).click();
+    await settle();
+    expect(mocks.copyText).toHaveBeenLastCalledWith('orders-2024');
+
+    menu = await openMenu();
+    (menu.querySelector('[data-key="goto-indices"]') as HTMLElement).click();
     await settle();
     expect(mocks.push).toHaveBeenCalledWith('/indices');
+
+    menu = await openMenu();
+    (menu.querySelector('[data-key="clear"]') as HTMLElement).click();
+    await settle();
+    expect(store.pickedIdx).toBe('');
+    expect(host.querySelector('.cic'), '清除后 chip 移除').toBeNull();
   });
 });
