@@ -181,6 +181,10 @@ public ConsoleHostIntegration searchDeckHostIntegration() {
 | 已有 Spring Boot 业务应用 | `searchdeck-console` 嵌入式 | 声明 `@Document` 实体；可选认证委托 |
 | 与宿主账号、菜单、审计一体化 | `searchdeck-console` + 宿主 SPI | 实现 `ConsoleHostIntegration` 与 `ConsoleAuthDelegate` |
 | 只要重建 / 迁移引擎 | `searchdeck-console`，`mode=rebuild-only` | 不暴露控制台页面与静态资源 |
+| 在 Chrome 中快速打开 | `extensions/chrome`（Manifest V3） | 保存控制台 URL；按 origin 授权 |
+| 在 DBX 工作台启动 | `extensions/dbx`（`.dbxp`） | 安装插件；保存/复制控制台 URL |
+
+**浏览器与客户端启动器**：`extensions/chrome/` 提供 Manifest V3 扩展，`extensions/dbx/` 提供 DBX 插件工作台。两者都只保存控制台地址，不接管登录态或 ES 凭据；Chrome 扩展按 origin 授权，DBX 插件遵守其沙箱边界（详见 [Chrome 扩展](docs/integration/browser-extension.md) · [DBX 插件](docs/integration/dbx-plugin.md)）。
 
 ---
 
@@ -311,7 +315,7 @@ searchdeck/
 | Spring Boot | 2.3.x 基线；宿主 2.7.x 已验证 |
 | Elasticsearch | 7.x（7.6+ 推荐；内置 6.7 日期兼容转换器） |
 | 操作系统 | Linux / macOS / Windows，纯 JVM 运行 |
-| 部署形态 | 独立 jar、嵌入式模块、宿主 SPI 集成、`rebuild-only` 引擎 |
+| 部署形态 | 独立 jar、嵌入式模块、宿主 SPI 集成、`rebuild-only` 引擎、Chrome MV3 / DBX 工作台启动器 |
 | 浏览器 | 现代 Chromium / Firefox / Safari，支持 iframe 嵌入与主题跟随 |
 
 ---

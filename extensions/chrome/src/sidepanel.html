@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SearchDeck</title>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body class="panel-body">
+  <header class="panel-header">
+    <span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>
+    <div class="brand">
+      <div>
+        <div class="brand-name">SearchDeck</div>
+        <div id="panelHost" class="brand-sub">Not configured</div>
+      </div>
+    </div>
+    <div class="panel-actions">
+      <button id="reload" class="icon-button" type="button" title="Reload console" aria-label="Reload console">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+      </button>
+      <button id="openTab" class="icon-button" type="button" title="Open in tab" aria-label="Open in tab">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 5h5v5"/><path d="M19 5l-8 8"/><path d="M19 14v5H5V5h5"/></svg>
+      </button>
+      <button id="settings" class="icon-button" type="button" title="Settings" aria-label="Settings">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9"/><path d="M17 7h3"/><circle cx="15" cy="7" r="2"/><path d="M4 17h3"/><path d="M11 17h9"/><circle cx="9" cy="17" r="2"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div id="accessBanner" class="panel-banner" hidden>
+    <span>Site access is not granted; connection checks are disabled.</span>
+    <button id="grant" class="link-button" type="button">Grant</button>
+  </div>
+
+  <div id="empty" class="panel-empty">
+    <div class="panel-empty-inner">
+      <span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <h1>Connect a SearchDeck server</h1>
+      <p>The side panel opens the console you already run. Nothing is bundled and no credentials are stored.</p>
+      <button id="configure" class="button primary" type="button">Configure SearchDeck</button>
+    </div>
+  </div>
+
+  <iframe id="frame" class="panel-frame" title="SearchDeck console" hidden
+          allow="clipboard-read; clipboard-write" referrerpolicy="no-referrer"></iframe>
+
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>

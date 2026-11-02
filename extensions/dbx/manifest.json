@@ -1,0 +1,43 @@
+{
+  "$schema": "https://raw.githubusercontent.com/t8y2/dbx/main/plugins/manifest.schema.json",
+  "manifest_version": 1,
+  "id": "io.github.dengmeiluan.searchdeck",
+  "name": "SearchDeck",
+  "icon": "assets/plugin.svg",
+  "version": "2.0.0",
+  "publisher": "dengmeiluan",
+  "description": "Open a SearchDeck console from DBX. The plugin is a launcher: SearchDeck credentials and sessions stay in your browser.",
+  "source": "https://github.com/dengmeiluan/searchdeck",
+  "homepage": "https://github.com/dengmeiluan/searchdeck/tree/main/extensions/dbx",
+  "engines": {
+    "dbx": ">=0.6.0",
+    "host_api": "1"
+  },
+  "permissions": ["host.storage"],
+  "entrypoints": {
+    "ui": {
+      "root": "ui",
+      "entry": "ui/index.html"
+    }
+  },
+  "contributions": [
+    {
+      "type": "workbench",
+      "id": "io.github.dengmeiluan.searchdeck.main",
+      "label": "SearchDeck",
+      "description": "Pick a SearchDeck server, copy its console URL, or open it in your browser."
+    }
+  ],
+  "localizations": {
+    "zh-CN": {
+      "name": "SearchDeck",
+      "description": "在 DBX 中打开 SearchDeck 控制台。插件只做启动器，登录态与 ES 凭据仍留在浏览器。",
+      "contributions": {
+        "io.github.dengmeiluan.searchdeck.main": {
+          "label": "SearchDeck",
+          "description": "选择 SearchDeck 服务器，复制控制台地址，或在浏览器中打开。"
+        }
+      }
+    }
+  }
+}

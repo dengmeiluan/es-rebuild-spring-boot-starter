@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SearchDeck</title>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body class="popup">
+  <main class="popup-main">
+    <header class="popup-header">
+      <div class="brand">
+        <span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <div>
+          <div class="brand-name">SearchDeck</div>
+          <div class="brand-sub">Search operations, on deck.</div>
+        </div>
+      </div>
+      <span id="status" class="chip">Checking</span>
+    </header>
+
+    <section class="server-card" aria-labelledby="serverLabel">
+      <div id="serverLabel" class="server-label">Console</div>
+      <div id="serverHost" class="server-host">Not configured</div>
+      <div id="serverHint" class="hint">Connect a SearchDeck server to open the console in a tab or side panel.</div>
+    </section>
+
+    <div class="popup-actions">
+      <button id="openConsole" class="button primary" type="button">Open console</button>
+      <button id="openPanel" class="button" type="button">Open side panel</button>
+    </div>
+
+    <footer class="popup-footer">
+      <span>No ES credentials stored</span>
+      <button id="openOptions" class="link-button" type="button">Settings</button>
+    </footer>
+  </main>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

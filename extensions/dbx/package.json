@@ -1,0 +1,11 @@
+{
+  "name": "@searchdeck/dbx-plugin",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "SearchDeck launcher for DBX (frontend-only plugin)",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "pack": "python scripts/package.py"
+  }
+}

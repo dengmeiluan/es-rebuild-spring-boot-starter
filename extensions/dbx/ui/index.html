@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SearchDeck for DBX</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <div>
+          <div class="brand-name">SearchDeck</div>
+          <div class="brand-sub">for DBX</div>
+        </div>
+      </div>
+      <span id="hostChip" class="chip">Standalone preview</span>
+    </header>
+
+    <section class="hero">
+      <div class="eyebrow">Plugin workbench</div>
+      <h1>Your search operations deck, one click from DBX.</h1>
+      <p>DBX plugins run in a sandbox without arbitrary network or frame access. This workbench keeps the SearchDeck address and hands the console to your browser, where its own login and ES credentials stay.</p>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <span class="card-title">Console endpoint</span>
+        <span id="preview" class="preview">—</span>
+      </div>
+      <div class="card-body">
+        <label for="baseUrl">Console URL</label>
+        <div class="field">
+          <span id="schemePrefix" class="prefix">https://</span>
+          <input id="baseUrl" type="text" inputmode="url" autocomplete="off" spellcheck="false"
+                 placeholder="searchdeck.example.com">
+        </div>
+        <div class="hint">Bare hosts default to https; loopback defaults to http. Context paths are supported.</div>
+
+        <details class="advanced">
+          <summary>Advanced entry path</summary>
+          <label for="entryPath">Entry path</label>
+          <div class="field">
+            <input id="entryPath" type="text" autocomplete="off" spellcheck="false" placeholder="/searchdeck.html">
+          </div>
+        </details>
+
+        <div class="actions">
+          <button id="save" class="primary" type="button">Save</button>
+          <button id="copy" type="button">Copy console URL</button>
+          <button id="open" type="button">Open in browser</button>
+          <button id="clear" class="ghost" type="button">Clear</button>
+        </div>
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <aside class="note">
+      <strong>Why a launcher?</strong>
+      <p>A DBX plugin iframe is intentionally isolated: it cannot freely reach your intranet or embed arbitrary remote pages. SearchDeck therefore stays open in the browser you already trust; this workbench only remembers the address. A future sidecar-backed mode can bring read-only panels into DBX without weakening that boundary.</p>
+    </aside>
+
+    <footer>
+      <span>SearchDeck 2.0 · DBX host API 1</span>
+      <a href="https://github.com/dengmeiluan/searchdeck/blob/main/docs/integration/dbx-plugin.md" target="_blank" rel="noreferrer">Plugin guide</a>
+    </footer>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

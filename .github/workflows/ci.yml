@@ -63,6 +63,22 @@ jobs:
             echo "::error::backend mvn step failed with no surefire failure files - see raw log (compile/build error?)"
           fi
 
+  extension:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Chrome extension contract tests
+        run: node --test extensions/chrome/test/*.test.mjs
+      - name: DBX plugin contract tests
+        run: node --test extensions/dbx/test/*.test.mjs
+      - name: Build and verify DBX package
+        run: |
+          python extensions/dbx/scripts/package.py
+          python extensions/dbx/scripts/verify_package.py
+
   frontend-typecheck:
     runs-on: ubuntu-latest
     defaults:

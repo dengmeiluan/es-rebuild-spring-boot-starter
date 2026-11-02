@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SearchDeck — Chrome setup</title>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body class="options-body">
+  <main class="options-shell">
+    <header class="options-header">
+      <div class="brand">
+        <span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <div>
+          <div class="brand-name">SearchDeck</div>
+          <div class="brand-sub">Chrome extension</div>
+        </div>
+      </div>
+      <span id="permissionChip" class="chip">Checking</span>
+    </header>
+
+    <div class="eyebrow">Connection</div>
+    <h1>Connect Chrome to SearchDeck</h1>
+    <p>Point the extension at a running SearchDeck server. The console keeps its own session; this extension only stores the address.</p>
+
+    <section class="card" style="margin-top: 22px">
+      <div class="card-head">
+        <span class="card-title">Console endpoint</span>
+        <span id="preview" class="hint">—</span>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label for="baseUrl">Console URL</label>
+          <div class="input-wrap">
+            <span class="prefix">https://</span>
+            <input id="baseUrl" type="text" inputmode="url" autocomplete="off" spellcheck="false"
+                   placeholder="searchdeck.example.com" aria-describedby="baseUrlHint">
+          </div>
+          <div id="baseUrlHint" class="hint">Bare hosts default to https. Loopback hosts default to http. Context paths are supported.</div>
+        </div>
+
+        <details class="advanced">
+          <summary>Advanced entry path</summary>
+          <div class="field">
+            <label for="entryPath">Entry path</label>
+            <div class="input-wrap">
+              <input id="entryPath" type="text" autocomplete="off" spellcheck="false" placeholder="/searchdeck.html">
+            </div>
+            <div class="hint">Default <span class="note-code">/searchdeck.html</span>. Change only for a custom host mount.</div>
+          </div>
+        </details>
+
+        <div class="actions">
+          <button id="save" class="button primary" type="button">Save and grant access</button>
+          <button id="test" class="button" type="button">Test connection</button>
+          <button id="clear" class="button ghost" type="button">Clear</button>
+        </div>
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><span class="card-title">Security model</span></div>
+      <div class="card-body">
+        <div class="note">
+          <span aria-hidden="true">01</span>
+          <div><strong>No credentials stored.</strong> SearchDeck login, cookies and host tokens stay in the console’s own browser session. The extension never reads or writes them.</div>
+        </div>
+        <div class="note" style="margin-top: 10px">
+          <span aria-hidden="true">02</span>
+          <div><strong>Per-origin permission.</strong> Chrome asks only for the server origin you save. Granting access enables connection checks; revoke it any time from <span class="note-code">chrome://extensions</span>.</div>
+        </div>
+        <div class="note" style="margin-top: 10px">
+          <span aria-hidden="true">03</span>
+          <div><strong>Remote UI in a frame.</strong> The extension loads the server’s own console. It does not bundle a second copy of the UI or inject scripts into pages.</div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span>Chrome 116+ · Manifest V3</span>
+      <a href="https://github.com/dengmeiluan/searchdeck/blob/main/docs/integration/browser-extension.md" target="_blank" rel="noreferrer">Extension guide</a>
+    </footer>
+  </main>
+  <script type="module" src="options.js"></script>
+</body>
+</html>

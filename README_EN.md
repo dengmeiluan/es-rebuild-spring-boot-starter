@@ -185,6 +185,14 @@ surface and acceptance checklist: [docs/integration/README.md](docs/integration/
 | Existing Spring Boot application | `searchdeck-console` embedded | Declare `@Document` entities; optionally delegate auth |
 | Unified host accounts, menus, and audit | `searchdeck-console` + host SPIs | Implement `ConsoleHostIntegration` and `ConsoleAuthDelegate` |
 | Engine only (rebuild/migration) | `searchdeck-console`, `mode=rebuild-only` | No console pages or static assets exposed |
+| Quick access from Chrome | `extensions/chrome` (Manifest V3) | Save the console URL; grant access per origin |
+| Launch from a DBX workbench | `extensions/dbx` (`.dbxp`) | Install the plugin; save/copy the console URL |
+
+**Browser and desktop launchers**: `extensions/chrome/` is a Manifest V3 extension and
+`extensions/dbx/` is a DBX plugin workbench. Both store only the console address — never the login
+session or ES credentials. The Chrome extension requests access per origin; the DBX plugin stays
+inside DBX's sandbox boundaries (see [Chrome extension](docs/integration/browser-extension.md) ·
+[DBX plugin](docs/integration/dbx-plugin.md)).
 
 ---
 
@@ -319,7 +327,7 @@ a separate artifact.
 | Spring Boot | 2.3.x baseline; host 2.7.x verified |
 | Elasticsearch | 7.x (7.6+ recommended; built-in ES 6.7 date compat converters) |
 | OS | Linux / macOS / Windows, pure JVM |
-| Deployment | standalone jar, embedded module, host SPI, `rebuild-only` engine |
+| Deployment | standalone jar, embedded module, host SPI, `rebuild-only` engine, Chrome MV3 / DBX workbench launchers |
 | Browser | modern Chromium / Firefox / Safari; iframe embedding and theme follow |
 
 ---

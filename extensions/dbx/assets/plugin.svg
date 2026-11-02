@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="SearchDeck">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2dd4bf"/>
+      <stop offset="1" stop-color="#0f766e"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#g)"/>
+  <rect x="28" y="36" width="72" height="11" rx="5.5" fill="#06201d" opacity="0.88"/>
+  <rect x="28" y="58" width="53" height="11" rx="5.5" fill="#06201d" opacity="0.88"/>
+  <rect x="28" y="80" width="35" height="11" rx="5.5" fill="#06201d" opacity="0.88"/>
+</svg>
