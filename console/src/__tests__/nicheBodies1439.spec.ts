@@ -344,6 +344,12 @@ describe('1439 外围写体：区域助手（query 位回落 / 元素分派）',
       ...at('{ "watch": { "input": { "chain": { "inputs": [ { "first": { "|": 1 } } ] } } } }'),
     )).toBe('chain-input');
     expect(watchInlineExecuteRegionAt(
+      ...at('{ "watch": { "actions": { "mail": { "email": { "body": { "|": 1 } } } } } }'),
+    )).toBe('action-email-body');
+    expect(watchInlineExecuteRegionAt(
+      ...at('{ "watch": { "actions": { "chat": { "slack": { "message": { "|": 1 } } } } } }'),
+    )).toBe('action-slack-message');
+    expect(watchInlineExecuteRegionAt(
       ...at('{ "watch": { "input": { "search": { "request": { "body": { "|": 1 } } } } } }'),
     )).toBe('watch-search-body');
     expect(watchInlineExecuteRegionAt(

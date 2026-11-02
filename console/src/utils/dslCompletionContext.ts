@@ -2146,6 +2146,38 @@ export function watchActionParamsKeyItems(type: string): AssistItem[] {
   }
 }
 
+/** email 动作 body 对象的键 */
+export function watchEmailBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'text', detail: '纯文本正文（可含 mustache）', snippet: true, insertText: '"text": "${1:detail}"' },
+    { label: 'html', detail: 'HTML 正文（可含 mustache）', snippet: true, insertText: '"html": "${1:<p>detail</p>}"' },
+  ];
+}
+
+/** slack 动作 message 对象的键 */
+export function watchSlackMessageKeyItems(): AssistItem[] {
+  return [
+    { label: 'text', detail: '消息正文（可含 mustache）', snippet: true, insertText: '"text": "${1:watch fired}"' },
+    { label: 'from', detail: '发送者显示名', snippet: true, insertText: '"from": "${1:watcher}"' },
+    { label: 'to', detail: '接收频道/用户清单', snippet: true, insertText: '"to": ["${1:#alerts}"]' },
+    { label: 'attachments', detail: 'Slack 附件清单', snippet: true, insertText: '"attachments": [\n  ${0}\n]' },
+  ];
+}
+
+/** jira 动作 fields 对象的键 */
+export function watchJiraFieldsKeyItems(): AssistItem[] {
+  return [
+    { label: 'project', detail: '目标项目（key）', snippet: true, insertText: '"project": { "key": "${1:OPS}" }' },
+    { label: 'issuetype', detail: '工单类型（name）', snippet: true, insertText: '"issuetype": { "name": "${1:Task}" }' },
+    { label: 'summary', detail: '工单标题', snippet: true, insertText: '"summary": "${1:watch fired}"' },
+    { label: 'description', detail: '工单描述', snippet: true, insertText: '"description": "${1:detail}"' },
+    { label: 'labels', detail: '标签清单', snippet: true, insertText: '"labels": ["${1:watcher}"]' },
+    { label: 'priority', detail: '优先级（name）', snippet: true, insertText: '"priority": { "name": "${1:High}" }' },
+    { label: 'assignee', detail: '经办人（name）', snippet: true, insertText: '"assignee": { "name": "${1:jdoe}" }' },
+    { label: 'reporter', detail: '报告人（name）', snippet: true, insertText: '"reporter": { "name": "${1:watcher}" }' },
+  ];
+}
+
 /** 按栈定位 condition 类型并给参数键（兼容内联试跑的 watch 前缀） */
 export function watchConditionParamsKeyItemsAt(doc: string, offset: number): AssistItem[] {
   const stack = frameKeysAt(doc, offset);
@@ -2172,7 +2204,8 @@ export function watchRegionAt(doc: string, offset: number):
   | 'search-body' | 'search-query' | 'http-input' | 'http-request'
   | 'chain-input-container' | 'chain-input'
   | 'chain-trigger' | 'chain-trigger-container'
-  | 'condition' | 'condition-params' | 'action' | 'action-params' | 'deep' {
+  | 'condition' | 'condition-params' | 'action' | 'action-params'
+  | 'action-email-body' | 'action-slack-message' | 'action-jira-fields' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
   if (stack[0] === 'trigger') {
@@ -2218,6 +2251,9 @@ export function watchRegionAt(doc: string, offset: number):
   if (stack[0] === 'actions') {
     if (stack.length === 3) return 'action';
     if (stack.length === 4) return 'action-params';
+    if (stack.length === 5 && stack[2] === 'email' && stack[3] === 'body') return 'action-email-body';
+    if (stack.length === 5 && stack[2] === 'slack' && stack[3] === 'message') return 'action-slack-message';
+    if (stack.length === 5 && stack[2] === 'jira' && stack[3] === 'fields') return 'action-jira-fields';
     return 'deep';
   }
   return 'deep';
@@ -3196,7 +3232,8 @@ export function watchInlineExecuteRegionAt(doc: string, offset: number):
   | 'watch-search-body' | 'watch-search-query' | 'http-input' | 'http-request'
   | 'chain-input-container' | 'chain-input'
   | 'chain-trigger' | 'chain-trigger-container'
-  | 'watch-condition' | 'condition-params' | 'watch-action' | 'action-params' | 'deep' {
+  | 'watch-condition' | 'condition-params' | 'watch-action' | 'action-params'
+  | 'action-email-body' | 'action-slack-message' | 'action-jira-fields' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
   if (stack[0] !== 'watch') return 'deep';
@@ -3243,6 +3280,9 @@ export function watchInlineExecuteRegionAt(doc: string, offset: number):
   if (stack[1] === 'actions') {
     if (stack.length === 4) return 'watch-action';
     if (stack.length === 5) return 'action-params';
+    if (stack.length === 6 && stack[3] === 'email' && stack[4] === 'body') return 'action-email-body';
+    if (stack.length === 6 && stack[3] === 'slack' && stack[4] === 'message') return 'action-slack-message';
+    if (stack.length === 6 && stack[3] === 'jira' && stack[4] === 'fields') return 'action-jira-fields';
     return 'deep';
   }
   return 'deep';

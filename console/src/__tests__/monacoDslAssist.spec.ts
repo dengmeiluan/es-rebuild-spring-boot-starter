@@ -1312,6 +1312,17 @@ describe('1439 Watcher 体补全', () => {
 
     const deep = '{\n  "actions": {\n    "notify": {\n      "webhook": {\n        "headers": {\n          "\n        }\n      }\n    }\n  }\n}';
     expect(suggest(deep, deep.lastIndexOf('"') + 1), '动作参数更深层不出键').toEqual([]);
+
+    const emailBody = '{\n  "actions": {\n    "mail": {\n      "email": {\n        "body": {\n          "\n        }\n      }\n    }\n  }\n}';
+    expect(suggest(emailBody, emailBody.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['text', 'html']);
+
+    const slackMsg = '{\n  "actions": {\n    "chat": {\n      "slack": {\n        "message": {\n          "\n        }\n      }\n    }\n  }\n}';
+    expect(suggest(slackMsg, slackMsg.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
+      'text', 'from', 'to', 'attachments',
+    ]);
+
+    const jiraFields = '{\n  "actions": {\n    "ticket": {\n      "jira": {\n        "fields": {\n          "\n        }\n      }\n    }\n  }\n}';
+    expect(suggest(jiraFields, jiraFields.lastIndexOf('"') + 1).map(i => i.label)).toContain('project');
   });
 });
 

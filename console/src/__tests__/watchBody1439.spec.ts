@@ -12,6 +12,7 @@ import {
   WATCH_ACTION_TYPES, watchRegionAt, watchActionParamsKeyItems, watchConditionParamsKeyItems,
   watchSearchInputKeyItems, watchSearchRequestKeyItems, watchHttpInputKeyItems, httpRequestKeyItems,
   watchChainTriggerKeyItems, watchChainNestedTriggerKeyItems, watchChainInputKeyItems,
+  watchEmailBodyKeyItems, watchSlackMessageKeyItems, watchJiraFieldsKeyItems,
 } from '../utils/dslCompletionContext';
 import { lintStructuredBody } from '../utils/dslLint';
 
@@ -68,6 +69,9 @@ describe('1439 Watcher 体分档', () => {
     expect(watchChainTriggerKeyItems().map(i => i.label)).toEqual(['inputs', 'trigger']);
     expect(watchChainNestedTriggerKeyItems().map(i => i.label)).toEqual(['schedule']);
     expect(watchChainInputKeyItems().map(i => i.label)).toEqual(['inputs']);
+    expect(watchEmailBodyKeyItems().map(i => i.label)).toEqual(['text', 'html']);
+    expect(watchSlackMessageKeyItems().map(i => i.label)).toEqual(['text', 'from', 'to', 'attachments']);
+    expect(watchJiraFieldsKeyItems().map(i => i.label)).toContain('project');
   });
 
   it('区域：根 / trigger / schedule / input / condition / action / 更深', () => {
@@ -89,6 +93,9 @@ describe('1439 Watcher 体分档', () => {
     expect(at('{"condition": {"script": {')).toBe('condition-params');
     expect(at('{"actions": {"notify": {')).toBe('action');
     expect(at('{"actions": {"notify": {"logging": {')).toBe('action-params');
+    expect(at('{"actions": {"mail": {"email": {"body": {')).toBe('action-email-body');
+    expect(at('{"actions": {"chat": {"slack": {"message": {')).toBe('action-slack-message');
+    expect(at('{"actions": {"ticket": {"jira": {"fields": {')).toBe('action-jira-fields');
     expect(at('{"trigger": {"chain": [')).toBe('deep');
     expect(at('{"trigger": {"chain": [{')).toBe('chain-trigger');
     expect(at('{"trigger": {"chain": [{"trigger": {')).toBe('chain-trigger-container');
