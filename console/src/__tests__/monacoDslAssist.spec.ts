@@ -1333,6 +1333,14 @@ describe('1439 Watcher 体补全', () => {
     const pdCtx = '{\n  "actions": {\n    "pd": {\n      "pagerduty": {\n        "contexts": [\n          {\n            "\n          }\n        ]\n      }\n    }\n  }\n}';
     expect(suggest(pdCtx, pdCtx.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['type', 'href', 'src']);
 
+    const slackAtt = '{\n  "actions": {\n    "chat": {\n      "slack": {\n        "message": {\n          "attachments": [\n            {\n              "\n            }\n          ]\n        }\n      }\n    }\n  }\n}';
+    const saLabels = suggest(slackAtt, slackAtt.lastIndexOf('"') + 1).map(i => i.label);
+    expect(saLabels).toContain('title');
+    expect(saLabels).toContain('fields');
+
+    const slackField = '{\n  "actions": {\n    "chat": {\n      "slack": {\n        "message": {\n          "attachments": [\n            {\n              "fields": [\n                {\n                  "\n                }\n              ]\n            }\n          ]\n        }\n      }\n    }\n  }\n}';
+    expect(suggest(slackField, slackField.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['short', 'title', 'value']);
+
     const inputProxy = '{\n  "input": {\n    "http": {\n      "request": {\n        "proxy": {\n          "\n        }\n      }\n    }\n  }\n}';
     expect(suggest(inputProxy, inputProxy.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['host', 'port']);
   });

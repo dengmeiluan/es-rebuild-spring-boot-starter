@@ -2180,6 +2180,37 @@ export function watchSlackMessageKeyItems(): AssistItem[] {
   ];
 }
 
+/** slack 动作 attachments[] 元素的键 */
+export function watchSlackAttachmentKeyItems(): AssistItem[] {
+  return [
+    { label: 'title', detail: '附件标题', snippet: true, insertText: '"title": "${1:watch fired}"' },
+    { label: 'text', detail: '附件正文', snippet: true, insertText: '"text": "${1:detail}"' },
+    { label: 'author_name', detail: '作者名', snippet: true, insertText: '"author_name": "${1:watcher}"' },
+    { label: 'author_link', detail: '作者链接', snippet: true, insertText: '"author_link": "${1:https://example.com}"' },
+    { label: 'author_icon', detail: '作者头像', snippet: true, insertText: '"author_icon": "${1:https://example.com/a.png}"' },
+    { label: 'color', detail: '侧边颜色（如 danger/good/#ff0000）', snippet: true, insertText: '"color": "${1:danger}"' },
+    { label: 'fallback', detail: '纯文本回退摘要', snippet: true, insertText: '"fallback": "${1:watch fired}"' },
+    { label: 'fields', detail: '字段列表（title/value/short）', snippet: true,
+      insertText: '"fields": [\n  { "title": "${1:Field}", "value": "${2:value}", "short": ${3|true,false|} }\n]' },
+    { label: 'footer', detail: '页脚文字', snippet: true, insertText: '"footer": "${1:watcher}"' },
+    { label: 'footer_icon', detail: '页脚图标', snippet: true, insertText: '"footer_icon": "${1:https://example.com/f.png}"' },
+    { label: 'image_url', detail: '大图地址', snippet: true, insertText: '"image_url": "${1:https://example.com/img.png}"' },
+    { label: 'pretext', detail: '正文前导文字', snippet: true, insertText: '"pretext": "${1:alert}"' },
+    { label: 'thumb_url', detail: '缩略图地址', snippet: true, insertText: '"thumb_url": "${1:https://example.com/t.png}"' },
+    { label: 'title_link', detail: '标题链接', snippet: true, insertText: '"title_link": "${1:https://example.com}"' },
+    { label: 'ts', detail: '时间戳（epoch 秒）', snippet: true, insertText: '"ts": ${1:1700000000}' },
+  ];
+}
+
+/** slack attachment fields[] 元素的键 */
+export function watchSlackAttachmentFieldKeyItems(): AssistItem[] {
+  return [
+    { label: 'short', detail: '是否半宽显示', snippet: true, insertText: '"short": ${1|true,false|}' },
+    { label: 'title', detail: '字段标题', snippet: true, insertText: '"title": "${1:Field}"' },
+    { label: 'value', detail: '字段值', snippet: true, insertText: '"value": "${1:value}"' },
+  ];
+}
+
 /** jira 动作 fields 对象的键 */
 export function watchJiraFieldsKeyItems(): AssistItem[] {
   return [
@@ -2231,6 +2262,7 @@ export function watchRegionAt(doc: string, offset: number):
   | 'chain-trigger' | 'chain-trigger-container'
   | 'condition' | 'condition-params' | 'action' | 'action-params'
   | 'action-email-body' | 'action-slack-message' | 'action-jira-fields'
+  | 'slack-attachment' | 'slack-attachment-field'
   | 'http-auth-basic' | 'http-proxy' | 'pagerduty-context' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
@@ -2289,6 +2321,11 @@ export function watchRegionAt(doc: string, offset: number):
     }
     if (stack.length === 5 && stack[2] === 'webhook' && stack[3] === 'proxy') return 'http-proxy';
     if (stack.length === 6 && stack[2] === 'pagerduty' && stack[3] === 'contexts') return 'pagerduty-context';
+    if (stack.length === 7 && stack[2] === 'slack' && stack[3] === 'message' && stack[4] === 'attachments') {
+      return 'slack-attachment';
+    }
+    if (stack.length === 9 && stack[2] === 'slack' && stack[3] === 'message'
+        && stack[4] === 'attachments' && stack[6] === 'fields') return 'slack-attachment-field';
     return 'deep';
   }
   return 'deep';
@@ -3305,6 +3342,7 @@ export function watchInlineExecuteRegionAt(doc: string, offset: number):
   | 'chain-trigger' | 'chain-trigger-container'
   | 'watch-condition' | 'condition-params' | 'watch-action' | 'action-params'
   | 'action-email-body' | 'action-slack-message' | 'action-jira-fields'
+  | 'slack-attachment' | 'slack-attachment-field'
   | 'http-auth-basic' | 'http-proxy' | 'pagerduty-context' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
@@ -3364,6 +3402,11 @@ export function watchInlineExecuteRegionAt(doc: string, offset: number):
     }
     if (stack.length === 6 && stack[3] === 'webhook' && stack[4] === 'proxy') return 'http-proxy';
     if (stack.length === 7 && stack[3] === 'pagerduty' && stack[4] === 'contexts') return 'pagerduty-context';
+    if (stack.length === 8 && stack[3] === 'slack' && stack[4] === 'message' && stack[5] === 'attachments') {
+      return 'slack-attachment';
+    }
+    if (stack.length === 10 && stack[3] === 'slack' && stack[4] === 'message'
+        && stack[5] === 'attachments' && stack[7] === 'fields') return 'slack-attachment-field';
     return 'deep';
   }
   return 'deep';
