@@ -1383,6 +1383,14 @@ describe('1439 安全体系写体补全', () => {
     ]);
   });
 
+  it('角色映射 rules 与 all 元素给规则键', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'security-role-mapping-body' } });
+    const rules = '{\n  "rules": {\n    "\n  }\n}';
+    expect(suggest(rules, rules.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['field', 'all', 'any', 'except']);
+    const all = '{\n  "rules": {\n    "all": [\n      {\n        "\n      }\n    ]\n  }\n}';
+    expect(suggest(all, all.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['field', 'all', 'any', 'except']);
+  });
+
   it('API Key 根键', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'security-api-key-body' } });
     const root = '{\n  "\n}';

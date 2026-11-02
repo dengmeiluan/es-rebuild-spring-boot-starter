@@ -2394,6 +2394,34 @@ export function securityRoleMappingBodyKeyItems(): AssistItem[] {
   ];
 }
 
+/** 角色映射 rules 对象与 all/any 元素的规则键 */
+export function securityRoleMappingRuleKeyItems(): AssistItem[] {
+  return [
+    { label: 'field', detail: '字段匹配（字段名 → 值）', snippet: true,
+      insertText: '"field": { "${1:username}": "${2:jdoe}" }' },
+    { label: 'all', detail: '全部子规则满足', snippet: true,
+      insertText: '"all": [\n  { "field": { "${1:username}": "${2:jdoe}" } }\n]' },
+    { label: 'any', detail: '任一子规则满足', snippet: true,
+      insertText: '"any": [\n  { "field": { "${1:username}": "${2:jdoe}" } }\n]' },
+    { label: 'except', detail: '排除子规则', snippet: true,
+      insertText: '"except": { "field": { "${1:username}": "${2:jdoe}" } }' },
+  ];
+}
+
+/** 角色映射区域：根 / rules 对象 / all/any 元素·except 对象 / 更深 */
+export function securityRoleMappingRegionAt(doc: string, offset: number):
+  'root' | 'rules' | 'rule' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] === 'rules') {
+    if (stack.length === 2) return 'rules';
+    if (stack.length === 4 && (stack[1] === 'all' || stack[1] === 'any')) return 'rule';
+    if (stack.length === 3 && stack[1] === 'except') return 'rule';
+    return 'deep';
+  }
+  return 'deep';
+}
+
 /** API Key 创建体（POST /_security/api_key）的根键 */
 export function securityApiKeyBodyKeyItems(): AssistItem[] {
   return [

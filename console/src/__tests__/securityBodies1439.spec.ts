@@ -14,6 +14,7 @@ import {
   securityRoleTemplateKeyItems, securityRoleMappingBodyKeyItems, securityApiKeyBodyKeyItems,
   securityRoleBodyRootKeys, securityRoleIndexKeys, securityRoleFieldSecurityKeys, securityRoleAppKeys,
   securityUserBodyRootKeys, securityRoleTemplateKeys, securityRoleMappingBodyRootKeys, securityApiKeyBodyRootKeys,
+  securityRoleMappingRuleKeyItems, securityRoleMappingRegionAt,
 } from '../utils/dslCompletionContext';
 import { lintStructuredBody } from '../utils/dslLint';
 
@@ -64,6 +65,7 @@ describe('1439 安全体系写体分档', () => {
     expect(securityRoleMappingBodyRootKeys).toEqual([
       'roles', 'enabled', 'rules', 'role_templates', 'run_as', 'metadata',
     ]);
+    expect(securityRoleMappingRuleKeyItems().map(i => i.label)).toEqual(['field', 'all', 'any', 'except']);
     expect(securityApiKeyBodyRootKeys).toEqual(['name', 'expiration', 'role_descriptors', 'metadata']);
     expect(securityRoleBodyKeyItems().find(i => i.label === 'indices')?.detail).toContain('索引权限');
     expect(securityUserBodyKeyItems().find(i => i.label === 'enabled')?.detail).toContain('启用');
@@ -84,6 +86,14 @@ describe('1439 安全体系写体分档', () => {
     expect(userAt('{')).toBe('root');
     expect(userAt('{"role_templates": [{')).toBe('role-template');
     expect(userAt('{"role_templates": [{"template": {')).toBe('deep');
+
+    const rmAt = (s: string) => securityRoleMappingRegionAt(s, s.length);
+    expect(rmAt('{')).toBe('root');
+    expect(rmAt('{"rules": {')).toBe('rules');
+    expect(rmAt('{"rules": {"all": [{')).toBe('rule');
+    expect(rmAt('{"rules": {"any": [{')).toBe('rule');
+    expect(rmAt('{"rules": {"except": {')).toBe('rule');
+    expect(rmAt('{"rules": {"field": {')).toBe('deep');
   });
 
   it('lint：合法体静默；根键/索引权限/应用/角色模板拼错分段点名；search 根键被拒', () => {
