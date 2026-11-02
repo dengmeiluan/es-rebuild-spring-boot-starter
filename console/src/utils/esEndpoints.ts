@@ -102,6 +102,22 @@ export const ES_ENDPOINTS: EsEndpoint[] = [
     body: '{\n  "roles": ["viewer"],\n  "enabled": true,\n  "rules": { "field": { "username": "jdoe" } }\n}' },
   { methods: ['POST'], path: '/_security/api_key', doc: '创建 API Key',
     body: '{\n  "name": "my-api-key",\n  "expiration": "30d"\n}' },
+  { methods: ['PUT'], path: '/_ml/filters/{filter_id}', doc: '创建/更新 ML 过滤器',
+    body: '{\n  "description": "safe domains",\n  "items": ["*.example.com"]\n}' },
+  { methods: ['PUT'], path: '/_ml/calendars/{calendar_id}', doc: '创建/更新 ML 日历',
+    body: '{\n  "job_ids": ["latency-job"],\n  "description": "planned outages"\n}' },
+  { methods: ['POST'], path: '/_ml/calendars/{calendar_id}/events', doc: '向 ML 日历添加计划事件',
+    body: '{\n  "events": [\n    {\n      "description": "maintenance",\n      "start_time": 1700000000000,\n      "end_time": 1700003600000,\n      "skip_result": true\n    }\n  ]\n}' },
+  { methods: ['POST'], path: '/{index}/_graph/explore', doc: 'Graph 关系探索（种子查询 + 顶点/边）',
+    body: '{\n  "query": { "match": { "title": "elasticsearch" } },\n  "vertices": [ { "field": "product", "size": 5 } ],\n  "connections": { "vertices": [ { "field": "query.raw", "size": 5 } ] }\n}' },
+  { methods: ['PUT'], path: '/{index}/_ccr/follow', doc: 'CCR 跟随远端索引',
+    body: '{\n  "remote_cluster": "leader_cluster",\n  "leader_index": "leader-index"\n}' },
+  { methods: ['PUT'], path: '/_ccr/auto_follow/{cluster}', doc: '创建 CCR 自动跟随模式',
+    body: '{\n  "remote_cluster": "leader_cluster",\n  "follow_index_pattern": "{{leader_index}}-follower",\n  "leader_index_patterns": ["logs-*"]\n}' },
+  { methods: ['POST'], path: '/_security/api_key/grant', doc: '代授 API Key（access_token / password）',
+    body: '{\n  "grant_type": "access_token",\n  "access_token": "token",\n  "api_key": { "name": "granted-key" }\n}' },
+  { methods: ['PUT'], path: '/_license', doc: '更新许可证（licenses 清单）',
+    body: '{\n  "licenses": [\n    {\n      "uid": "license-uid",\n      "type": "enterprise",\n      "issue_date_in_millis": 1700000000000,\n      "expiry_date_in_millis": 1800000000000,\n      "issued_to": "company",\n      "issuer": "elastic",\n      "signature": "signature"\n    }\n  ]\n}' },
 ];
 
 export function filterEndpoints(kw: string): EsEndpoint[] {

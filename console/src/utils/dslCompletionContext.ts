@@ -1111,7 +1111,9 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
 export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'msearch-template-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'eql-body' | 'cluster-settings-body' | 'reroute-body' | 'allocation-explain-body'
 | 'snapshot-repo-body' | 'snapshot-create-body' | 'snapshot-restore-body' | 'slm-policy-body' | 'ilm-policy-body' | 'watch-body'
-| 'security-role-body' | 'security-user-body' | 'security-role-mapping-body' | 'security-api-key-body' | 'ingest-pipeline-body' | 'ingest-simulate-body' | 'enrich-policy-body' | 'transform-body' | 'rollup-job-body' | 'ml-datafeed-body' | 'ml-job-body' | 'none';
+| 'security-role-body' | 'security-user-body' | 'security-role-mapping-body' | 'security-api-key-body' | 'ingest-pipeline-body' | 'ingest-simulate-body' | 'enrich-policy-body' | 'transform-body' | 'rollup-job-body' | 'ml-datafeed-body' | 'ml-job-body'
+| 'ml-filter-body' | 'ml-calendar-body' | 'ml-calendar-events-body' | 'graph-explore-body'
+| 'ccr-follow-body' | 'ccr-auto-follow-body' | 'security-api-key-grant-body' | 'license-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1245,6 +1247,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
     if (/(^|\/)_(?:xpack\/)?security\/role_mapping\/[^/]+(\/|$)/.test(p)) return 'security-role-mapping-body';
   }
   if (secMethod === 'POST' && /(^|\/)_(?:xpack\/)?security\/api_key\/?$/.test(p)) return 'security-api-key-body';
+  /* 1439：代授 API Key（POST /_security/api_key/grant）体是
+     {grant_type,access_token|username+password,api_key}——与创建体根键不同。 */
+  if (secMethod === 'POST' && /(^|\/)_(?:xpack\/)?security\/api_key\/grant\/?$/.test(p)) return 'security-api-key-grant-body';
   /* 1439：Ingest 管道体（PUT /_ingest/pipeline/<id>）是 {description,version,processors,on_failure,_meta}；
      _simulate（POST）是另一种体，不并进本档。 */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_ingest\/pipeline\/[^/]+(\/|$)/.test(p)) return 'ingest-pipeline-body';
@@ -1264,6 +1269,22 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：ML 异常检测作业体（PUT /_ml/anomaly_detectors/<id>，6.x 兼容 _xpack/ml）：
      {analysis_config,analysis_limits,data_description,…}；_update 是 POST，不并进本档。 */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_(?:xpack\/)?ml\/anomaly_detectors\/[^/]+(\/|$)/.test(p)) return 'ml-job-body';
+  /* 1439：ML 过滤器体（PUT /_ml/filters/<id>）是 {description,items}；
+     ML 日历体（PUT /_ml/calendars/<id>）是 {job_ids,description}；
+     日历事件（POST /_ml/calendars/<id>/events）是 {events:[…]}——事件体先于日历体判定。 */
+  if (method.toUpperCase() === 'PUT' && /(^|\/)_(?:xpack\/)?ml\/filters\/[^/]+\/?$/.test(p)) return 'ml-filter-body';
+  if (method.toUpperCase() === 'POST' && /(^|\/)_(?:xpack\/)?ml\/calendars\/[^/]+\/events\/?$/.test(p)) return 'ml-calendar-events-body';
+  if (method.toUpperCase() === 'PUT' && /(^|\/)_(?:xpack\/)?ml\/calendars\/[^/]+\/?$/.test(p)) return 'ml-calendar-body';
+  /* 1439：Graph 探索体（POST /<索引>/_graph/explore）是 {query,vertices,connections,controls}——
+     根键不是 search 档，且 query/hop.query 内要回落整棵查询补全。 */
+  if (method.toUpperCase() === 'POST' && /(^|\/)_graph\/explore(\/|$)/.test(p)) return 'graph-explore-body';
+  /* 1439：CCR 跟随体（PUT /<索引>/_ccr/follow）与自动跟随模式
+     （PUT /_ccr/auto_follow/<cluster>）各自根键，不是 search 体。 */
+  if (method.toUpperCase() === 'PUT' && /(^|\/)_ccr\/follow(\/|$)/.test(p)) return 'ccr-follow-body';
+  if (method.toUpperCase() === 'PUT' && /(^|\/)_ccr\/auto_follow\/[^/]+(\/|$)/.test(p)) return 'ccr-auto-follow-body';
+  /* 1439：许可证更新体（PUT|POST /_license）是 {license|licenses:[…]}；
+     start_trial/start_basic 的 acknowledge 是查询参数，不含在本档。 */
+  if ((secMethod === 'PUT' || secMethod === 'POST') && /(^|\/)_license\/?$/.test(p)) return 'license-body';
   if (p.includes('/_snapshot/')) {
     const segs = p.split('/').filter(Boolean);
     const si = segs.indexOf('_snapshot');
@@ -2497,6 +2518,231 @@ export function mlJobRegionAt(doc: string, offset: number):
   return 'deep';
 }
 
+/** ML 过滤器体（PUT /_ml/filters/<id>）的根键 */
+export function mlFilterBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'description', detail: '过滤器用途说明', snippet: true, insertText: '"description": "${1:safe domains}"' },
+    { label: 'items', detail: '条目清单（支持首尾通配 *，上限 10000）', snippet: true,
+      insertText: '"items": ["${1:*.example.com}"]' },
+  ];
+}
+
+/** ML 日历体（PUT /_ml/calendars/<id>）的根键 */
+export function mlCalendarBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'job_ids', detail: '关联的异常检测作业 id 清单', snippet: true, insertText: '"job_ids": ["${1:my-job}"]' },
+    { label: 'description', detail: '日历用途说明', snippet: true, insertText: '"description": "${1:planned outages}"' },
+  ];
+}
+
+/** ML 日历事件体（POST /_ml/calendars/<id>/events）的根键 */
+export function mlCalendarEventsBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'events', detail: '计划事件（起止时间 + 跳过策略）', snippet: true,
+      insertText: '"events": [\n  {\n    "description": "${1:maintenance}",\n    "start_time": ${2:1700000000000},\n    "end_time": ${3:1700003600000}\n  }\n]' },
+  ];
+}
+
+/** 日历 events[] 元素的键（CalendarEvent） */
+export function mlCalendarEventKeyItems(): AssistItem[] {
+  return [
+    { label: 'description', detail: '事件说明', snippet: true, insertText: '"description": "${1:maintenance}"' },
+    { label: 'start_time', detail: '开始时间（epoch 毫秒或 ISO 8601）', snippet: true, insertText: '"start_time": ${1:1700000000000}' },
+    { label: 'end_time', detail: '结束时间（epoch 毫秒或 ISO 8601）', snippet: true, insertText: '"end_time": ${1:1700003600000}' },
+    { label: 'skip_result', detail: '事件期内不产生异常结果', snippet: true, insertText: '"skip_result": ${1|true,false|}' },
+    { label: 'skip_model_update', detail: '事件期内不更新模型', snippet: true, insertText: '"skip_model_update": ${1|true,false|}' },
+    { label: 'force_time_shift', detail: '时间平移秒数（如夏令时调整）', snippet: true, insertText: '"force_time_shift": ${1:3600}' },
+  ];
+}
+
+/** 日历事件体区域：根 / events 元素 / 更深 */
+export function mlCalendarEventsRegionAt(doc: string, offset: number): 'root' | 'event' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] === 'events' && stack.length === 3) return 'event';
+  return 'deep';
+}
+
+/** Graph 探索体（POST /<索引>/_graph/explore）的根键 */
+export function graphExploreBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'query', detail: '种子查询（任意合法 Query DSL）', snippet: true, insertText: '"query": {\n  ${0}\n}' },
+    { label: 'vertices', detail: '起始顶点字段（field/size/阈值）', snippet: true,
+      insertText: '"vertices": [\n  { "field": "${1:product}", "size": ${2:5} }\n]' },
+    { label: 'connections', detail: '关联边探索（hop 可嵌套）', snippet: true,
+      insertText: '"connections": {\n  "vertices": [\n    { "field": "${1:query.raw}", "size": ${2:5} }\n  ]\n}' },
+    { label: 'controls', detail: '探索控制（采样/超时/显著性）', snippet: true,
+      insertText: '"controls": {\n  "sample_size": ${1:100},\n  "use_significance": ${2|true,false|}\n}' },
+  ];
+}
+
+/** Graph 顶点定义（vertices[] 元素）的键 */
+export function graphVertexKeyItems(): AssistItem[] {
+  return [
+    { label: 'field', detail: '抽取词项的字段', snippet: true, insertText: '"field": "${1:product}"' },
+    { label: 'size', detail: '每个字段最多返回的顶点数', snippet: true, insertText: '"size": ${1:5}' },
+    { label: 'min_doc_count', detail: '全局成对出现的最小文档数', snippet: true, insertText: '"min_doc_count": ${1:3}' },
+    { label: 'shard_min_doc_count', detail: '单分片成对出现的最小文档数', snippet: true,
+      insertText: '"shard_min_doc_count": ${1:2}' },
+    { label: 'include', detail: '包含的起始词项（term/boost）', snippet: true,
+      insertText: '"include": [\n  { "term": "${1:elasticsearch}", "boost": ${2:1.0} }\n]' },
+    { label: 'exclude', detail: '排除的词项', snippet: true, insertText: '"exclude": ["${1:excluded-term}"]' },
+  ];
+}
+
+/** Graph controls 的键 */
+export function graphControlsKeyItems(): AssistItem[] {
+  return [
+    { label: 'sample_size', detail: '每次 hop 每分片采样的文档数', snippet: true, insertText: '"sample_size": ${1:100}' },
+    { label: 'timeout', detail: '探索超时（如 1s）', snippet: true, insertText: '"timeout": "${1:1s}"' },
+    { label: 'use_significance', detail: '只保留显著关联的词项', snippet: true, insertText: '"use_significance": ${1|true,false|}' },
+    { label: 'sample_diversity', detail: '采样多样性（field + max_docs_per_value）', snippet: true,
+      insertText: '"sample_diversity": { "field": "${1:category}", "max_docs_per_value": ${2:1} }' },
+  ];
+}
+
+/** sample_diversity 的键 */
+export function graphSampleDiversityKeyItems(): AssistItem[] {
+  return [
+    { label: 'field', detail: '用于多样性的单值字段', snippet: true, insertText: '"field": "${1:category}"' },
+    { label: 'max_docs_per_value', detail: '每个值最多保留的文档数', snippet: true, insertText: '"max_docs_per_value": ${1:1}' },
+  ];
+}
+
+/** Graph hop（connections 对象）的键；hop 可递归嵌套 */
+export function graphHopKeyItems(): AssistItem[] {
+  return [
+    { label: 'vertices', detail: '本跳要抽取的字段', snippet: true,
+      insertText: '"vertices": [\n  { "field": "${1:product}", "size": ${2:5} }\n]' },
+    { label: 'query', detail: '引导查询（约束本跳探索）', snippet: true, insertText: '"query": {\n  ${0}\n}' },
+    { label: 'connections', detail: '再下一跳（同结构，可嵌套）', snippet: true,
+      insertText: '"connections": {\n  "vertices": [\n    { "field": "${1:query.raw}", "size": ${2:5} }\n  ]\n}' },
+  ];
+}
+
+/** Graph 探索体区域：根 / query（回落查询补全）/ 顶点元素 / controls / 多样性 / hop / 更深 */
+export function graphExploreRegionAt(doc: string, offset: number):
+  'root' | 'query' | 'vertex' | 'controls' | 'sample-diversity' | 'hop' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  /* 根 query 与 hop.query 内都是整棵 Query DSL */
+  if (stack.includes('query')) return 'query';
+  if (stack.length >= 2 && stack[stack.length - 2] === 'controls' && stack[stack.length - 1] === null) return 'controls';
+  if (stack.length >= 2 && stack[stack.length - 2] === 'sample_diversity' && stack[stack.length - 1] === null) return 'sample-diversity';
+  if (stack.length >= 2 && stack[stack.length - 2] === 'connections' && stack[stack.length - 1] === null) return 'hop';
+  if (stack.length >= 3 && stack[stack.length - 1] === null && stack[stack.length - 2] === null
+      && stack[stack.length - 3] === 'vertices') return 'vertex';
+  return 'deep';
+}
+
+/** CCR 跟随/自动跟随共用的调优键 */
+export function ccrTuningKeyItems(): AssistItem[] {
+  return [
+    { label: 'max_outstanding_read_requests', detail: '远端集群最大未完成读请求数', snippet: true,
+      insertText: '"max_outstanding_read_requests": ${1:12}' },
+    { label: 'max_outstanding_write_requests', detail: '跟随侧最大未完成写请求数', snippet: true,
+      insertText: '"max_outstanding_write_requests": ${1:9}' },
+    { label: 'max_read_request_operation_count', detail: '单次读取的最大操作数', snippet: true,
+      insertText: '"max_read_request_operation_count": ${1:5120}' },
+    { label: 'max_read_request_size', detail: '单次读取的最大字节量', snippet: true, insertText: '"max_read_request_size": "${1:32mb}"' },
+    { label: 'max_retry_delay', detail: '异常重试的最大退避时间', snippet: true, insertText: '"max_retry_delay": "${1:500ms}"' },
+    { label: 'max_write_buffer_count', detail: '待写操作队列上限（条数）', snippet: true, insertText: '"max_write_buffer_count": ${1:2147483647}' },
+    { label: 'max_write_buffer_size', detail: '待写操作队列上限（字节）', snippet: true, insertText: '"max_write_buffer_size": "${1:512mb}"' },
+    { label: 'max_write_request_operation_count', detail: '单次批量写的最大操作数', snippet: true,
+      insertText: '"max_write_request_operation_count": ${1:5120}' },
+    { label: 'max_write_request_size', detail: '单次批量写的最大字节量', snippet: true, insertText: '"max_write_request_size": "${1:9223372036854775807b}"' },
+    { label: 'read_poll_timeout', detail: '远端拉取新操作的轮询超时', snippet: true, insertText: '"read_poll_timeout": "${1:1m}"' },
+    { label: 'settings', detail: '覆盖 leader 索引的设置', snippet: true, insertText: '"settings": {\n  ${0}\n}' },
+  ];
+}
+
+/** CCR 跟随体（PUT /<索引>/_ccr/follow）的根键 */
+export function ccrFollowBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'remote_cluster', detail: '远端集群别名', snippet: true, insertText: '"remote_cluster": "${1:leader_cluster}"' },
+    { label: 'leader_index', detail: '远端被跟随的索引名', snippet: true, insertText: '"leader_index": "${1:leader-index}"' },
+    { label: 'data_stream_name', detail: 'leader 为数据流时的本地数据流名', snippet: true,
+      insertText: '"data_stream_name": "${1:follower-stream}"' },
+    ...ccrTuningKeyItems(),
+  ];
+}
+
+/** CCR 自动跟随模式（PUT /_ccr/auto_follow/<cluster>）的根键 */
+export function ccrAutoFollowBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'remote_cluster', detail: '远端集群别名', snippet: true, insertText: '"remote_cluster": "${1:leader_cluster}"' },
+    { label: 'follow_index_pattern', detail: '跟随索引命名模板（{{leader_index}} 可用）', snippet: true,
+      insertText: '"follow_index_pattern": "{{leader_index}}-follower"' },
+    { label: 'leader_index_patterns', detail: '匹配远端索引的模式清单', snippet: true,
+      insertText: '"leader_index_patterns": ["${1:logs-*}"]' },
+    { label: 'leader_index_exclusion_patterns', detail: '排除的远端索引模式', snippet: true,
+      insertText: '"leader_index_exclusion_patterns": ["${1:*-test}"]' },
+    ...ccrTuningKeyItems(),
+  ];
+}
+
+/** 代授 API Key 体（POST /_security/api_key/grant）的根键 */
+export function securityApiKeyGrantBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'grant_type', detail: '授权方式（access_token / password）', snippet: true,
+      insertText: '"grant_type": "${1|access_token,password|}"' },
+    { label: 'access_token', detail: 'access_token 方式的访问令牌', snippet: true, insertText: '"access_token": "${1:token}"' },
+    { label: 'username', detail: 'password 方式的用户名', snippet: true, insertText: '"username": "${1:jdoe}"' },
+    { label: 'password', detail: 'password 方式的密码', snippet: true, insertText: '"password": "${1:secret}"' },
+    { label: 'api_key', detail: '要创建的 API Key 参数', snippet: true,
+      insertText: '"api_key": {\n  "name": "${1:granted-key}"\n}' },
+  ];
+}
+
+/** 代授体里 api_key 对象的键（与创建体同口径） */
+export function securityApiKeyGrantKeyItems(): AssistItem[] {
+  return securityApiKeyBodyKeyItems();
+}
+
+/** 代授体区域：根 / api_key 对象 / 更深（role_descriptors 内按角色体自由填写） */
+export function securityApiKeyGrantRegionAt(doc: string, offset: number): 'root' | 'api-key' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] === 'api_key' && stack.length === 2) return 'api-key';
+  return 'deep';
+}
+
+/** 许可证更新体（PUT|POST /_license）的根键 */
+export function licenseBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'licenses', detail: '许可证清单（多张许可）', snippet: true,
+      insertText: '"licenses": [\n  {\n    "uid": "${1:license-uid}",\n    "type": "${2|enterprise,platinum,gold,silver,standard,basic,trial,dev|}",\n    "issue_date_in_millis": ${3:1700000000000},\n    "expiry_date_in_millis": ${4:1800000000000},\n    "issued_to": "${5:company}",\n    "issuer": "${6:elastic}",\n    "signature": "${7:signature}"\n  }\n]' },
+    { label: 'license', detail: '单张许可证（与 licenses 二选一）', snippet: true,
+      insertText: '"license": {\n  "uid": "${1:license-uid}",\n  "type": "${2|enterprise,platinum,gold,silver,standard,basic,trial,dev|}",\n  "issue_date_in_millis": ${3:1700000000000},\n  "expiry_date_in_millis": ${4:1800000000000},\n  "issued_to": "${5:company}",\n  "issuer": "${6:elastic}",\n  "signature": "${7:signature}"\n}' },
+  ];
+}
+
+/** 许可证条目的键 */
+export function licenseEntryKeyItems(): AssistItem[] {
+  return [
+    { label: 'uid', detail: '许可证唯一标识', snippet: true, insertText: '"uid": "${1:license-uid}"' },
+    { label: 'type', detail: '许可证级别', snippet: true,
+      insertText: '"type": "${1|enterprise,platinum,gold,silver,standard,basic,trial,dev|}"' },
+    { label: 'issue_date_in_millis', detail: '签发时间（epoch 毫秒）', snippet: true, insertText: '"issue_date_in_millis": ${1:1700000000000}' },
+    { label: 'expiry_date_in_millis', detail: '到期时间（epoch 毫秒）', snippet: true, insertText: '"expiry_date_in_millis": ${1:1800000000000}' },
+    { label: 'start_date_in_millis', detail: '生效时间（epoch 毫秒，可选）', snippet: true, insertText: '"start_date_in_millis": ${1:1700000000000}' },
+    { label: 'issued_to', detail: '被授权方', snippet: true, insertText: '"issued_to": "${1:company}"' },
+    { label: 'issuer', detail: '签发方', snippet: true, insertText: '"issuer": "${1:elastic}"' },
+    { label: 'max_nodes', detail: '最大节点数', snippet: true, insertText: '"max_nodes": ${1:100}' },
+    { label: 'max_resource_units', detail: '最大资源单元数（企业版）', snippet: true, insertText: '"max_resource_units": ${1:200}' },
+    { label: 'signature', detail: '许可证签名', snippet: true, insertText: '"signature": "${1:signature}"' },
+  ];
+}
+
+/** 许可证体区域：根 / 许可证条目（licenses[] 元素或 license 对象）/ 更深 */
+export function licenseRegionAt(doc: string, offset: number): 'root' | 'entry' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] === 'license' && stack.length === 2) return 'entry';
+  if (stack[0] === 'licenses' && stack.length === 3) return 'entry';
+  return 'deep';
+}
+
 /** 管道试跑体（POST /_ingest/pipeline[_/<id>]/_simulate）的根键 */
 export function ingestSimulateBodyKeyItems(): AssistItem[] {
   return [
@@ -3101,6 +3347,10 @@ export const STRUCTURED_VALUE_ENUMS: Record<string, { values: string[]; quoted: 
   field_statistics: { values: ['true', 'false'], quoted: false, detail: '字段级统计' },
   op_type: { values: ['index', 'create'], quoted: true, detail: '写入形态（create=已存在则失败）' },
   context: { values: ['painless_test', 'score', 'filter'], quoted: true, detail: '脚本执行上下文' },
+  grant_type: { values: ['access_token', 'password'], quoted: true, detail: '代授 API Key 的授权方式' },
+  skip_result: { values: ['true', 'false'], quoted: false, detail: '事件期内不产生异常结果' },
+  skip_model_update: { values: ['true', 'false'], quoted: false, detail: '事件期内不更新模型' },
+  use_significance: { values: ['true', 'false'], quoted: false, detail: 'Graph 只保留显著关联' },
 };
 
 /** SQL 体的区域：根层给 SQL 键；filter 内是 Query DSL（回落到整棵查询补全）；其余子对象不出键 */
@@ -3315,6 +3565,21 @@ export const mlAnalysisConfigKeys = mlAnalysisConfigKeyItems().map(i => i.label)
 export const mlDetectorKeys = mlDetectorKeyItems().map(i => i.label);
 export const mlAnalysisLimitsKeys = mlAnalysisLimitsKeyItems().map(i => i.label);
 export const mlDataDescriptionKeys = mlDataDescriptionKeyItems().map(i => i.label);
+export const mlFilterBodyRootKeys = mlFilterBodyKeyItems().map(i => i.label);
+export const mlCalendarBodyRootKeys = mlCalendarBodyKeyItems().map(i => i.label);
+export const mlCalendarEventsBodyRootKeys = mlCalendarEventsBodyKeyItems().map(i => i.label);
+export const mlCalendarEventKeys = mlCalendarEventKeyItems().map(i => i.label);
+export const graphExploreBodyRootKeys = graphExploreBodyKeyItems().map(i => i.label);
+export const graphVertexKeys = graphVertexKeyItems().map(i => i.label);
+export const graphControlsKeys = graphControlsKeyItems().map(i => i.label);
+export const graphSampleDiversityKeys = graphSampleDiversityKeyItems().map(i => i.label);
+export const graphHopKeys = graphHopKeyItems().map(i => i.label);
+export const ccrFollowBodyRootKeys = ccrFollowBodyKeyItems().map(i => i.label);
+export const ccrAutoFollowBodyRootKeys = ccrAutoFollowBodyKeyItems().map(i => i.label);
+export const securityApiKeyGrantBodyRootKeys = securityApiKeyGrantBodyKeyItems().map(i => i.label);
+export const securityApiKeyGrantKeys = securityApiKeyGrantKeyItems().map(i => i.label);
+export const licenseBodyRootKeys = licenseBodyKeyItems().map(i => i.label);
+export const licenseEntryKeys = licenseEntryKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

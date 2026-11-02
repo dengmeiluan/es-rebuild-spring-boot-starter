@@ -60,6 +60,11 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   rollupHistogramGroupKeys, rollupMetricKeys,
   mlDatafeedBodyRootKeys, mlDelayedKeys, mlChunkingKeys, mlIndicesOptionsKeys,
   mlJobBodyRootKeys, mlAnalysisConfigKeys, mlDetectorKeys, mlAnalysisLimitsKeys, mlDataDescriptionKeys,
+  mlFilterBodyRootKeys, mlCalendarBodyRootKeys, mlCalendarEventsBodyRootKeys, mlCalendarEventKeys,
+  graphExploreBodyRootKeys, graphVertexKeys, graphControlsKeys, graphSampleDiversityKeys, graphHopKeys,
+  ccrFollowBodyRootKeys, ccrAutoFollowBodyRootKeys,
+  securityApiKeyGrantBodyRootKeys, securityApiKeyGrantKeys,
+  licenseBodyRootKeys, licenseEntryKeys,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -1539,6 +1544,57 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
         obj.analysis_config.detectors.forEach((d: any, i: number) => {
           if (!d || typeof d !== 'object' || Array.isArray(d)) return;
           out.push(...lintBodyKeys(d, mlDetectorKeys, `ML 检测器 #${i + 1}`));
+        });
+      }
+      return out;
+    }
+    case 'ml-filter-body': return lintBodyKeys(obj, mlFilterBodyRootKeys, 'ML 过滤器体');
+    case 'ml-calendar-body': return lintBodyKeys(obj, mlCalendarBodyRootKeys, 'ML 日历体');
+    case 'ml-calendar-events-body': {
+      const out = [...lintBodyKeys(obj, mlCalendarEventsBodyRootKeys, 'ML 日历事件体')];
+      if (Array.isArray(obj?.events)) {
+        obj.events.forEach((ev: any, i: number) => {
+          if (!ev || typeof ev !== 'object' || Array.isArray(ev)) return;
+          out.push(...lintBodyKeys(ev, mlCalendarEventKeys, `日历事件 #${i + 1}`));
+        });
+      }
+      return out;
+    }
+    case 'graph-explore-body': {
+      const out = [...lintBodyKeys(obj, graphExploreBodyRootKeys, 'Graph 探索体'),
+        ...lintBodyKeys(obj?.controls, graphControlsKeys, 'Graph 控制'),
+        ...lintBodyKeys(obj?.controls?.sample_diversity, graphSampleDiversityKeys, 'Graph 采样多样性')];
+      const lintVertexList = (list: any, label: string) => {
+        if (!Array.isArray(list)) return;
+        list.forEach((v: any, i: number) => {
+          if (!v || typeof v !== 'object' || Array.isArray(v)) return;
+          out.push(...lintBodyKeys(v, graphVertexKeys, `${label}顶点 #${i + 1}`));
+        });
+      };
+      lintVertexList(obj?.vertices, 'Graph ');
+      /* connections 是可递归的 hop（hop.connections 同构），逐层校验 */
+      let hop = obj?.connections;
+      for (let depth = 0; hop && typeof hop === 'object' && !Array.isArray(hop) && depth < 10; depth++) {
+        out.push(...lintBodyKeys(hop, graphHopKeys, `Graph hop #${depth + 1}`));
+        lintVertexList(hop.vertices, `Graph hop #${depth + 1} `);
+        hop = hop.connections;
+      }
+      return out;
+    }
+    case 'ccr-follow-body': return lintBodyKeys(obj, ccrFollowBodyRootKeys, 'CCR 跟随体');
+    case 'ccr-auto-follow-body': return lintBodyKeys(obj, ccrAutoFollowBodyRootKeys, 'CCR 自动跟随模式');
+    case 'security-api-key-grant-body':
+      return [...lintBodyKeys(obj, securityApiKeyGrantBodyRootKeys, '代授 API Key 体'),
+        ...lintBodyKeys(obj?.api_key, securityApiKeyGrantKeys, '代授 API Key 参数')];
+    case 'license-body': {
+      const out = [...lintBodyKeys(obj, licenseBodyRootKeys, '许可证体')];
+      if (obj?.license && typeof obj.license === 'object' && !Array.isArray(obj.license)) {
+        out.push(...lintBodyKeys(obj.license, licenseEntryKeys, '许可证条目'));
+      }
+      if (Array.isArray(obj?.licenses)) {
+        obj.licenses.forEach((l: any, i: number) => {
+          if (!l || typeof l !== 'object' || Array.isArray(l)) return;
+          out.push(...lintBodyKeys(l, licenseEntryKeys, `许可证 #${i + 1}`));
         });
       }
       return out;

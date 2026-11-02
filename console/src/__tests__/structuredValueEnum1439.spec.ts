@@ -14,6 +14,7 @@ import {
   snapshotRepoBodyKeyItems, snapshotCreateBodyKeyItems, snapshotRestoreBodyKeyItems,
   securityUserBodyKeyItems, securityRoleMappingBodyKeyItems, securityRoleIndexKeyItems,
   mlJobBodyKeyItems, mlDetectorKeyItems, ingestSimulateBodyKeyItems,
+  mlCalendarEventKeyItems, graphControlsKeyItems, securityApiKeyGrantBodyKeyItems,
 } from '../utils/dslCompletionContext';
 
 describe('1439 结构化体值枚举', () => {
@@ -26,12 +27,16 @@ describe('1439 结构化体值枚举', () => {
       values: ['index', 'create'], quoted: true, detail: '写入形态（create=已存在则失败）',
     });
     expect(STRUCTURED_VALUE_ENUMS.context.values).toEqual(['painless_test', 'score', 'filter']);
+    expect(STRUCTURED_VALUE_ENUMS.grant_type).toEqual({
+      values: ['access_token', 'password'], quoted: true, detail: '代授 API Key 的授权方式',
+    });
     for (const k of ['is_write_index', 'is_hidden', 'must_exist', 'detect_noop', 'scripted_upsert',
       'doc_as_upsert', 'columnar', 'field_multi_value_leniency', 'allow_partial_search_results',
       'keep_on_completion', 'index_include_frozen', '_source', 'case_sensitive',
       'allow_primary', 'accept_data_loss', 'primary', 'include_disk_info', 'include_yes_decisions',
       'verify', 'ignore_unavailable', 'include_global_state', 'partial', 'include_aliases',
       'enabled', 'allow_restricted_indices', 'allow_lazy_open', 'use_null', 'verbose',
+      'skip_result', 'skip_model_update', 'use_significance',
       'offsets', 'positions', 'term_statistics', 'field_statistics']) {
       expect(STRUCTURED_VALUE_ENUMS[k], k).toBeTruthy();
       expect(STRUCTURED_VALUE_ENUMS[k].quoted, k).toBe(false);
@@ -59,6 +64,9 @@ describe('1439 结构化体值枚举', () => {
       ...mlJobBodyKeyItems(),
       ...mlDetectorKeyItems(),
       ...ingestSimulateBodyKeyItems(),
+      ...mlCalendarEventKeyItems(),
+      ...graphControlsKeyItems(),
+      ...securityApiKeyGrantBodyKeyItems(),
     ].map(i => i.label));
     for (const k of Object.keys(STRUCTURED_VALUE_ENUMS)) {
       expect(union.has(k), k + ' 已不在任何结构化体目录中').toBe(true);

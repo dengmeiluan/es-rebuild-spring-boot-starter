@@ -108,7 +108,11 @@ const pendingEp = ref<EsEndpoint | null>(null);
  不作过滤词，回退全量清单，避免「选完端点清单必空」的死路。
  rank 口径复用 fieldSearch（精确=0 > 前缀=1 > 包含=2，同级字母序），cap 50 页脚报余量。 */
 const SLOT_CAP = 50;
-const slotTail = computed(() => (props.modelValue || '').split('?')[0].split('/').filter(Boolean).pop() || '');
+/* 段二过滤基准：目录里用「关键词」选中含槽位端点时，输入不是索引前缀——
+   若仍拿输入尾段过滤，会出现「没有匹配 graph 的索引」且无索引项可点（输入又会退回段一）。
+   纯关键词（不含 /）进入段二回退全量索引；带 / 的手输路径仍按尾段过滤。 */
+const slotBasis = ref<string | null>(null);
+const slotTail = computed(() => ((slotBasis.value ?? props.modelValue) || '').split('?')[0].split('/').filter(Boolean).pop() || '');
 const slotItems = computed(() => {
   const kw = slotTail.value;
   const filterKw = kw.startsWith('_') ? '' : kw;
@@ -169,6 +173,7 @@ function onInput(e: Event) {
   /* 输入即回端点段（段二打开时改字=放弃槽位选择回端点过滤） */
   stage.value = 'endpoint';
   pendingEp.value = null;
+  slotBasis.value = null;
   cursor.value = 0;
   if (!open.value) openPanel();
 }
@@ -179,6 +184,8 @@ function choose(it: EpiItem) {
     emit('endpoint', it.ep);
     if (tplHasIndexSlot(it.ep.path)) {
       pendingEp.value = it.ep;
+      /* 关键词（无 /）不是索引前缀：段二回退全量清单，避免「无匹配索引」死路 */
+      slotBasis.value = (props.modelValue || '').includes('/') ? null : '';
       stage.value = 'slot';
       cursor.value = 0;
       return; /* 弹层保持开切段二；不回填 v-model（v-model 只承载最终路径） */
@@ -201,7 +208,7 @@ function refocusEnd() {
 }
 
 /* 段回退统一收口：任何关层路径（Esc/点击外部/无候选 Enter/choose 完成）都回 endpoint 段 */
-watch(open, v => { if (!v) { stage.value = 'endpoint'; pendingEp.value = null; } });
+watch(open, v => { if (!v) { stage.value = 'endpoint'; pendingEp.value = null; slotBasis.value = null; } });
 </script>
 
 <style scoped>

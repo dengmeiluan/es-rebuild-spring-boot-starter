@@ -37,6 +37,11 @@ import {
   rollupJobBodyKeyItems, rollupGroupsKeyItems, rollupDateGroupKeyItems, rollupFieldGroupKeyItems, rollupMetricKeyItems,
   mlDatafeedBodyKeyItems, mlDelayedCheckKeyItems, mlChunkingKeyItems, mlIndicesOptionsKeyItems,
   mlJobBodyKeyItems, mlAnalysisConfigKeyItems, mlDetectorKeyItems, mlAnalysisLimitsKeyItems, mlDataDescriptionKeyItems,
+  mlFilterBodyKeyItems, mlCalendarBodyKeyItems, mlCalendarEventsBodyKeyItems, mlCalendarEventKeyItems,
+  graphExploreBodyKeyItems, graphVertexKeyItems, graphControlsKeyItems, graphSampleDiversityKeyItems, graphHopKeyItems,
+  ccrFollowBodyKeyItems, ccrAutoFollowBodyKeyItems,
+  securityApiKeyGrantBodyKeyItems, securityApiKeyGrantKeyItems,
+  licenseBodyKeyItems, licenseEntryKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -194,6 +199,21 @@ function allProblems(): string[] {
   out.push(...snippetProblems('MDT', mlDetectorKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('MAL', mlAnalysisLimitsKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('MDS', mlDataDescriptionKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('MF', mlFilterBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('MC', mlCalendarBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('MCE', mlCalendarEventsBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('MCEV', mlCalendarEventKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('GX', graphExploreBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('GV', graphVertexKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('GC', graphControlsKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('GSD', graphSampleDiversityKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('GH', graphHopKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('CF', ccrFollowBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('CAF', ccrAutoFollowBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('AKG', securityApiKeyGrantBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('AKGK', securityApiKeyGrantKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('LIC', licenseBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('LICE', licenseEntryKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;
 }
 

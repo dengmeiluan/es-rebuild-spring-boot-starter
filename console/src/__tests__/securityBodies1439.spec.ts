@@ -41,10 +41,12 @@ describe('1439 安全体系写体分档', () => {
     expect(bodyKindForPath('/_security/user/jdoe', 'PUT')).toBe('security-user-body');
     expect(bodyKindForPath('/_security/role_mapping/devs', 'PUT')).toBe('security-role-mapping-body');
     expect(bodyKindForPath('/_security/api_key', 'POST')).toBe('security-api-key-body');
+    /* 代授 API Key 是独立体（grant_type + api_key），不与创建体并档 */
+    expect(bodyKindForPath('/_security/api_key/grant', 'POST')).toBe('security-api-key-grant-body');
     /* 只读/其他动作不抢档 */
     expect(bodyKindForPath('/_security/role/analyst', 'GET')).toBe('search');
     expect(bodyKindForPath('/_security/user/jdoe', 'DELETE')).toBe('search');
-    expect(bodyKindForPath('/_security/api_key/grant', 'POST')).toBe('search');
+    expect(bodyKindForPath('/_security/api_key/grant', 'GET')).toBe('search');
   });
 
   it('目录：角色根键与三层嵌套；用户/映射/API Key 根键', () => {

@@ -191,6 +191,22 @@ describe('EndpointPathInput 双段弹层', () => {
     expect(pop(), '点击索引后弹层必须关闭').toBeNull();
   });
 
+  it('目录关键词选含槽位端点：段二回退全量索引（关键词不当索引过滤词，避免无候选死路）', async () => {
+    const { host, state } = await mountInput();
+    /* 'search' 是目录搜索词，不是索引前缀：修复前段二按 'search' 过滤 → 0 个索引项 */
+    await type(host, 'search');
+    const row = items().find(el => el.querySelector('.epi-p')?.textContent === '/{index}/_search')!;
+    row.click();
+    await settle();
+    expect(stageBar(), '必须进段二').toBeTruthy();
+    expect(slotNames(), '关键词不当索引过滤词：段二出全量索引').toEqual(['logs-2026.08', 'bond_index']);
+    items()[0].click();
+    await settle();
+    expect(state.modelValue, '选索引回填最终路径').toBe('/logs-2026.08/_search');
+    await flushLeave();
+    expect(pop(), '回填后弹层必须关闭').toBeNull();
+  });
+
   it('⑤⑧ 无槽位端点直接回填：Enter 选中 /_reindex → 回填+emit endpoint+关层，不进段二', async () => {
     const { host, state, endpoints } = await mountInput();
     await type(host, 'reindex');
