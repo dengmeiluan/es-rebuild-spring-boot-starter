@@ -1250,7 +1250,7 @@ describe('1439 安全体系写体补全', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'security-role-body' } });
     const root = '{\n  "\n}';
     expect(suggest(root, 5).map(i => i.label)).toEqual([
-      'cluster', 'indices', 'applications', 'run_as', 'metadata', 'transient_metadata',
+      'cluster', 'indices', 'applications', 'global', 'run_as', 'metadata', 'transient_metadata',
     ]);
 
     const ix = '{\n  "indices": [\n    {\n      "\n    }\n  ]\n}';

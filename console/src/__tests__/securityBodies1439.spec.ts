@@ -21,6 +21,7 @@ const ROLE = {
   cluster: ['monitor'],
   indices: [{ names: ['logs-*'], privileges: ['read'], field_security: { grant: ['*'], except: ['secret'] }, allow_restricted_indices: false }],
   applications: [{ application: 'kibana', privileges: ['read'], resources: ['*'] }],
+  global: { application: { manage: ['myapp'] } },
   run_as: ['user1'],
   metadata: {},
   transient_metadata: { enabled: true },
@@ -50,7 +51,9 @@ describe('1439 安全体系写体分档', () => {
   });
 
   it('目录：角色根键与三层嵌套；用户/映射/API Key 根键', () => {
-    expect(securityRoleBodyRootKeys).toEqual(['cluster', 'indices', 'applications', 'run_as', 'metadata', 'transient_metadata']);
+    expect(securityRoleBodyRootKeys).toEqual([
+      'cluster', 'indices', 'applications', 'global', 'run_as', 'metadata', 'transient_metadata',
+    ]);
     expect(securityRoleIndexKeys).toEqual(['names', 'privileges', 'field_security', 'query', 'allow_restricted_indices']);
     expect(securityRoleFieldSecurityKeys).toEqual(['grant', 'except']);
     expect(securityRoleAppKeys).toEqual(['application', 'privileges', 'resources']);

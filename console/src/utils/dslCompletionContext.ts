@@ -2025,6 +2025,8 @@ export function securityRoleBodyKeyItems(): AssistItem[] {
       insertText: '"indices": [\n  {\n    "names": ["${1:logs-*}"],\n    "privileges": ["${2:read}"]\n  }\n]' },
     { label: 'applications', detail: '应用权限（application/privileges/resources）', snippet: true,
       insertText: '"applications": [\n  {\n    "application": "${1:my-app}",\n    "privileges": ["${2:read}"],\n    "resources": ["*"]\n  }\n]' },
+    { label: 'global', detail: '全局权限（请求感知，当前支持 application.manage 等）', snippet: true,
+      insertText: '"global": {\n  "application": {\n    "manage": ["${1:myapp}"]\n  }\n}' },
     { label: 'run_as', detail: '允许代表其执行请求的用户', snippet: true, insertText: '"run_as": ["${1:user1}"]' },
     { label: 'metadata', detail: '附加到角色的自定义元数据', snippet: true, insertText: '"metadata": {\n  ${0}\n}' },
     { label: 'transient_metadata', detail: '临时元数据（启用/禁用等）', snippet: true,
