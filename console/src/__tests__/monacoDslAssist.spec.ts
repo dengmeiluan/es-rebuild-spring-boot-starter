@@ -1164,6 +1164,25 @@ describe('1439 快照写体（仓库 / 创建 / 恢复）补全', () => {
   });
 });
 
+describe('1439 SLM 策略体补全', () => {
+  it('根层 → config → retention 三段分派；更深层不出键', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'slm-policy-body' } });
+    const root = '{\n  "\n}';
+    expect(suggest(root, 5).map(i => i.label)).toEqual(['schedule', 'name', 'repository', 'config', 'retention']);
+
+    const cfg = '{\n  "config": {\n    "\n  }\n}';
+    const cfgKeys = suggest(cfg, cfg.lastIndexOf('"') + 1).map(i => i.label);
+    expect(cfgKeys).toEqual(['indices', 'ignore_unavailable', 'include_global_state', 'partial', 'metadata', 'feature_states']);
+
+    const rt = '{\n  "retention": {\n    "\n  }\n}';
+    const rtKeys = suggest(rt, rt.lastIndexOf('"') + 1).map(i => i.label);
+    expect(rtKeys).toEqual(['expire_after', 'min_count', 'max_count']);
+
+    const deep = '{\n  "config": {\n    "metadata": {\n      "\n    }\n  }\n}';
+    expect(suggest(deep, deep.lastIndexOf('"') + 1), 'metadata 内不出键').toEqual([]);
+  });
+});
+
 describe('1439 子句体键位（query-body-key / clause-field-key / retriever-body-key）', () => {
   it('bool 体给 must/filter/should/must_not，接受后 JSON 合法', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });

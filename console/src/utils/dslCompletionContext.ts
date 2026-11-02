@@ -1110,7 +1110,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
 export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'msearch-template-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'eql-body' | 'cluster-settings-body' | 'reroute-body' | 'allocation-explain-body'
-| 'snapshot-repo-body' | 'snapshot-create-body' | 'snapshot-restore-body' | 'none';
+| 'snapshot-repo-body' | 'snapshot-create-body' | 'snapshot-restore-body' | 'slm-policy-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1228,6 +1228,8 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：_snapshot 三个写体——注册仓库（PUT /_snapshot/<repo>）、创建快照
      （PUT|POST /_snapshot/<repo>/<snap>）、恢复（POST …/_restore）。
      其余 _snapshot 子路径（_status/GET/DELETE）无体，不抢 search 默认档。 */
+  /* 1439：SLM 策略体（PUT /_slm/policy/<id>）是 {schedule,name,repository,config,retention} */
+  if (method.toUpperCase() === 'PUT' && /(^|\/)_slm\/policy\/[^/]+(\/|$)/.test(p)) return 'slm-policy-body';
   if (p.includes('/_snapshot/')) {
     const segs = p.split('/').filter(Boolean);
     const si = segs.indexOf('_snapshot');
@@ -1648,6 +1650,48 @@ export function snapshotRestoreBodyKeyItems(): AssistItem[] {
       insertText: '"ignore_index_settings": ["${1:index.refresh_interval}"]' },
     { label: 'feature_states', detail: '要恢复的功能状态', snippet: true, insertText: '"feature_states": ["${1:geoip}"]' },
   ];
+}
+
+/** SLM 策略体（PUT /_slm/policy/<id>）的根键 */
+export function slmPolicyBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'schedule', detail: '执行计划（cron，如 0 30 1 * * ?）', snippet: true, insertText: '"schedule": "${1:0 30 1 * * ?}"' },
+    { label: 'name', detail: '快照名模板（支持 <date-{now/d}> 等日期数学）', snippet: true,
+      insertText: '"name": "${1:<snapshot-{now/d}>}"' },
+    { label: 'repository', detail: '目标快照仓库', snippet: true, insertText: '"repository": "${1:my_repo}"' },
+    { label: 'config', detail: '快照内容配置（索引/全局状态等）', snippet: true, insertText: '"config": {\n  ${0}\n}' },
+    { label: 'retention', detail: '保留策略（过期时间/最大最小份数）', snippet: true, insertText: '"retention": {\n  ${0}\n}' },
+  ];
+}
+
+/** SLM config 对象的键（与创建快照体同源语义） */
+export function slmConfigKeyItems(): AssistItem[] {
+  return [
+    { label: 'indices', detail: '要包含的索引（通配/逗号串或数组）', snippet: true, insertText: '"indices": "${1:*}"' },
+    { label: 'ignore_unavailable', detail: '忽略不存在的索引', snippet: true, insertText: '"ignore_unavailable": ${1|true,false|}' },
+    { label: 'include_global_state', detail: '包含集群全局状态', snippet: true, insertText: '"include_global_state": ${1|false,true|}' },
+    { label: 'partial', detail: '允许部分分片缺失的快照', snippet: true, insertText: '"partial": ${1|false,true|}' },
+    { label: 'metadata', detail: '附加到快照的自定义元数据', snippet: true, insertText: '"metadata": {\n  ${0}\n}' },
+    { label: 'feature_states', detail: '要包含的功能状态（如 geoip）', snippet: true, insertText: '"feature_states": ["${1:geoip}"]' },
+  ];
+}
+
+/** SLM retention 对象的键 */
+export function slmRetentionKeyItems(): AssistItem[] {
+  return [
+    { label: 'expire_after', detail: '保留时长（如 30d；到期删除）', snippet: true, insertText: '"expire_after": "${1:30d}"' },
+    { label: 'min_count', detail: '最少保留份数（即使过期也保留）', snippet: true, insertText: '"min_count": ${1:5}' },
+    { label: 'max_count', detail: '最多保留份数（超出删除最旧）', snippet: true, insertText: '"max_count": ${1:50}' },
+  ];
+}
+
+/** SLM 策略体区域：根层 / config / retention / 更深 */
+export function slmPolicyRegionAt(doc: string, offset: number): 'root' | 'config' | 'retention' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] === 'config' && stack.length === 2) return 'config';
+  if (stack[0] === 'retention' && stack.length === 2) return 'retention';
+  return 'deep';
 }
 
 /** 分片分配诊断体（POST /_cluster/allocation/explain）的根键 */
@@ -2381,6 +2425,9 @@ export const allocationExplainBodyRootKeys = allocationExplainBodyKeyItems().map
 export const snapshotRepoBodyRootKeys = snapshotRepoBodyKeyItems().map(i => i.label);
 export const snapshotCreateBodyRootKeys = snapshotCreateBodyKeyItems().map(i => i.label);
 export const snapshotRestoreBodyRootKeys = snapshotRestoreBodyKeyItems().map(i => i.label);
+export const slmPolicyBodyRootKeys = slmPolicyBodyKeyItems().map(i => i.label);
+export const slmConfigKeys = slmConfigKeyItems().map(i => i.label);
+export const slmRetentionKeys = slmRetentionKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

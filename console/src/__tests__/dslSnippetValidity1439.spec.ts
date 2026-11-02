@@ -25,6 +25,7 @@ import {
   eqlBodyKeyItems, clusterSettingsBodyKeyItems,
   rerouteBodyKeyItems, rerouteCommandKeyItems, rerouteCommandParamKeyItems, allocationExplainBodyKeyItems,
   snapshotRepoBodyKeyItems, snapshotCreateBodyKeyItems, snapshotRestoreBodyKeyItems,
+  slmPolicyBodyKeyItems, slmConfigKeyItems, slmRetentionKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -132,6 +133,9 @@ function allProblems(): string[] {
   out.push(...snippetProblems('SR', snapshotRepoBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('SD', snapshotCreateBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('ST', snapshotRestoreBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('LP', slmPolicyBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('LC', slmConfigKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('LR', slmRetentionKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;
 }
 

@@ -46,6 +46,7 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   BULK_ACTIONS, msearchHeaderKeyItems, msearchTemplateBodyKeyItems, fieldCapsBodyRootKeys, termsEnumBodyRootKeys, rankEvalBodyRootKeys,
   eqlBodyRootKeys, clusterSettingsBodyRootKeys, rerouteBodyRootKeys, allocationExplainBodyRootKeys,
   snapshotRepoBodyRootKeys, snapshotCreateBodyRootKeys, snapshotRestoreBodyRootKeys,
+  slmPolicyBodyRootKeys, slmConfigKeys, slmRetentionKeys,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -1398,6 +1399,10 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
     case 'snapshot-repo-body': return lintBodyKeys(obj, snapshotRepoBodyRootKeys, '快照仓库体');
     case 'snapshot-create-body': return lintBodyKeys(obj, snapshotCreateBodyRootKeys, '创建快照体');
     case 'snapshot-restore-body': return lintBodyKeys(obj, snapshotRestoreBodyRootKeys, '恢复快照体');
+    case 'slm-policy-body':
+      return [...lintBodyKeys(obj, slmPolicyBodyRootKeys, 'SLM 策略体'),
+        ...lintBodyKeys(obj?.config, slmConfigKeys, 'SLM 快照配置'),
+        ...lintBodyKeys(obj?.retention, slmRetentionKeys, 'SLM 保留策略')];
     default: return [];
   }
 }
