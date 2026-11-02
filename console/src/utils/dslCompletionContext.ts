@@ -1110,7 +1110,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
 export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'msearch-template-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'eql-body' | 'cluster-settings-body' | 'reroute-body' | 'allocation-explain-body'
-| 'snapshot-repo-body' | 'snapshot-create-body' | 'snapshot-restore-body' | 'slm-policy-body' | 'ilm-policy-body' | 'none';
+| 'snapshot-repo-body' | 'snapshot-create-body' | 'snapshot-restore-body' | 'slm-policy-body' | 'ilm-policy-body' | 'watch-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1233,6 +1233,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：ILM 策略体（PUT /_ilm/policy/<id>，6.x 兼容 _xpack/ilm）是
      {policy:{phases:{hot|warm|cold|frozen|delete:{min_age,actions}}}} */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_(?:xpack\/)?ilm\/policy\/[^/]+(\/|$)/.test(p)) return 'ilm-policy-body';
+  /* 1439：Watcher watch 体（PUT /_watcher/watch/<id>，6.x 兼容 _xpack/watcher）：
+     {trigger,input,condition,actions,metadata,throttle_period} */
+  if (method.toUpperCase() === 'PUT' && /(^|\/)_(?:xpack\/)?watcher\/watch\/[^/]+(\/|$)/.test(p)) return 'watch-body';
   if (p.includes('/_snapshot/')) {
     const segs = p.split('/').filter(Boolean);
     const si = segs.indexOf('_snapshot');
@@ -1784,6 +1787,114 @@ export function ilmPolicyRegionAt(doc: string, offset: number): 'root' | 'policy
   if (stack.length === 4 && stack[2] && (ILM_PHASE_NAMES as readonly string[]).includes(stack[2])) return 'phase';
   if (stack.length === 5 && stack[2] && (ILM_PHASE_NAMES as readonly string[]).includes(stack[2])
       && stack[3] === 'actions') return 'actions';
+  return 'deep';
+}
+
+/** Watcher watch 的触发器类型 / 调度类型 / 输入 / 条件 / 动作类型（lint 白名单同源） */
+export const WATCH_TRIGGER_TYPES = ['schedule', 'chain'] as const;
+export const WATCH_SCHEDULE_TYPES = ['interval', 'cron', 'daily', 'hourly', 'weekly', 'monthly', 'yearly'] as const;
+export const WATCH_INPUT_TYPES = ['search', 'simple', 'http', 'chain'] as const;
+export const WATCH_CONDITION_TYPES = ['always', 'never', 'compare', 'array_compare', 'script'] as const;
+export const WATCH_ACTION_TYPES = ['email', 'webhook', 'index', 'logging', 'slack', 'pagerduty', 'jira'] as const;
+
+/** Watcher watch 体（PUT /_watcher/watch/<id>）的根键 */
+export function watchBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'trigger', detail: '触发方式（schedule/chain）', snippet: true,
+      insertText: '"trigger": { "schedule": { "interval": "${1:5m}" } }' },
+    { label: 'input', detail: '输入（search/simple/http/chain）', snippet: true,
+      insertText: '"input": {\n  "search": {\n    "request": { "indices": ["${1:logs-*}"], "body": { "query": { "match_all": {} } } }\n  }\n}' },
+    { label: 'condition', detail: '执行条件（always/never/compare/script…）', snippet: true,
+      insertText: '"condition": { "compare": { "ctx.payload.hits.total": { "gt": ${1:0} } } }' },
+    { label: 'actions', detail: '动作（动作名自由命名，值为动作类型）', snippet: true,
+      insertText: '"actions": {\n  "notify": {\n    "logging": { "text": "${1:watch fired}" }\n  }\n}' },
+    { label: 'metadata', detail: '附加到 watch 的自定义元数据', snippet: true, insertText: '"metadata": {\n  ${0}\n}' },
+    { label: 'throttle_period', detail: '动作节流窗口（如 5m；窗口内只执行一次）', snippet: true,
+      insertText: '"throttle_period": "${1:5m}"' },
+  ];
+}
+
+/** trigger 对象的触发器类型 */
+export function watchTriggerKeyItems(): AssistItem[] {
+  return [
+    { label: 'schedule', detail: '定时触发（interval/cron/日历）', snippet: true,
+      insertText: '"schedule": { "interval": "${1:5m}" }' },
+    { label: 'chain', detail: '链式触发（前序 watch 完成后触发）', snippet: true,
+      insertText: '"chain": [\n  { "inputs": ["${1:first_watch}"], "trigger": { "schedule": { "interval": "${2:5m}" } } }\n]' },
+  ];
+}
+
+/** schedule 对象的调度键 */
+export function watchScheduleKeyItems(): AssistItem[] {
+  return [
+    { label: 'interval', detail: '固定间隔（如 5m/30s）', snippet: true, insertText: '"interval": "${1:5m}"' },
+    { label: 'cron', detail: 'cron 表达式（如 0 0/5 * * * ?）', snippet: true, insertText: '"cron": "${1:0 0/5 * * * ?}"' },
+    { label: 'daily', detail: '每天固定时刻', snippet: true, insertText: '"daily": { "at": ["${1:12:00}"] }' },
+    { label: 'hourly', detail: '每小时固定分钟', snippet: true, insertText: '"hourly": { "minute": [${1:0}] }' },
+    { label: 'weekly', detail: '每周固定时刻', snippet: true, insertText: '"weekly": { "on": ["${1:monday}"], "at": ["${2:12:00}"] }' },
+    { label: 'monthly', detail: '每月固定日/时刻', snippet: true, insertText: '"monthly": { "on": [${1:1}], "at": ["${2:12:00}"] }' },
+    { label: 'yearly', detail: '每年固定月/日/时刻', snippet: true, insertText: '"yearly": { "in": ["${1:january}"], "on": [${2:1}], "at": ["${3:12:00}"] }' },
+  ];
+}
+
+/** input 对象的输入类型 */
+export function watchInputKeyItems(): AssistItem[] {
+  return [
+    { label: 'search', detail: '执行一次检索作为 payload', snippet: true,
+      insertText: '"search": {\n  "request": { "indices": ["${1:logs-*}"], "body": { "query": { "match_all": {} } } }\n}' },
+    { label: 'simple', detail: '静态 payload（不请求 ES）', snippet: true, insertText: '"simple": {\n  ${0}\n}' },
+    { label: 'http', detail: '调用外部 HTTP 接口', snippet: true,
+      insertText: '"http": { "request": { "host": "${1:example.com}", "port": ${2:443}, "scheme": "${3:https}", "path": "${4:/}" } }' },
+    { label: 'chain', detail: '串联多个输入', snippet: true, insertText: '"chain": { "inputs": [\n  ${0}\n] }' },
+  ];
+}
+
+/** condition 对象的条件类型 */
+export function watchConditionKeyItems(): AssistItem[] {
+  return [
+    { label: 'always', detail: '恒真（每次触发都执行动作）', snippet: true, insertText: '"always": {}' },
+    { label: 'never', detail: '恒假（只记录不执行）', snippet: true, insertText: '"never": {}' },
+    { label: 'compare', detail: '比较 payload 路径与值', snippet: true,
+      insertText: '"compare": { "ctx.payload.hits.total": { "gt": ${1:0} } }' },
+    { label: 'array_compare', detail: '比较数组元素', snippet: true,
+      insertText: '"array_compare": { "ctx.payload.hits.hits": { "path": "${1:_source.level}", "gte": "${2:error}" } }' },
+    { label: 'script', detail: '用脚本判定', snippet: true,
+      insertText: '"script": { "source": "${1:return ctx.payload.hits.total > 0}" }' },
+  ];
+}
+
+/** actions.<名> 对象内的动作类型 */
+export function watchActionTypeKeyItems(): AssistItem[] {
+  return [
+    { label: 'email', detail: '发邮件（需配置邮件账户）', snippet: true,
+      insertText: '"email": { "to": "${1:ops@example.com}", "subject": "${2:watch fired}", "body": { "text": "${3:detail}" } }' },
+    { label: 'webhook', detail: 'POST 到外部 URL', snippet: true,
+      insertText: '"webhook": { "method": "${1:POST}", "url": "${2:https://example.com/hook}", "body": "${3:payload}" }' },
+    { label: 'index', detail: '把 payload 写入索引', snippet: true,
+      insertText: '"index": { "index": "${1:watch-results}", "doc_id": "${2:{{ctx.watch_id}}}" }' },
+    { label: 'logging', detail: '写一条日志（最简，便于验证）', snippet: true,
+      insertText: '"logging": { "text": "${1:watch fired}" }' },
+    { label: 'slack', detail: '发 Slack 消息', snippet: true,
+      insertText: '"slack": { "message": { "text": "${1:watch fired}" } }' },
+    { label: 'pagerduty', detail: '触发 PagerDuty 事件', snippet: true,
+      insertText: '"pagerduty": { "event_type": "${1:trigger}", "description": "${2:watch fired}" }' },
+    { label: 'jira', detail: '创建 Jira 工单', snippet: true,
+      insertText: '"jira": { "project_key": "${1:OPS}", "issue_type": "${2:Task}", "summary": "${3:watch fired}" }' },
+  ];
+}
+
+/** Watcher 体区域：根 / 触发器 / 调度 / 输入 / 条件 / 动作类型；更深层不出键 */
+export function watchRegionAt(doc: string, offset: number): 'root' | 'trigger' | 'schedule' | 'input' | 'condition' | 'action' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] === 'trigger') {
+    if (stack.length === 2) return 'trigger';
+    if (stack.length === 3 && stack[1] === 'schedule') return 'schedule';
+    return 'deep';
+  }
+  if (stack[0] === 'input' && stack.length === 2) return 'input';
+  if (stack[0] === 'condition' && stack.length === 2) return 'condition';
+  if (stack[0] === 'actions' && stack.length === 3) return 'action';
   return 'deep';
 }
 
@@ -2524,6 +2635,7 @@ export const slmRetentionKeys = slmRetentionKeyItems().map(i => i.label);
 export const ilmPolicyBodyRootKeys = ilmPolicyBodyKeyItems().map(i => i.label);
 export const ilmPolicyKeys = ilmPolicyKeyItems().map(i => i.label);
 export const ilmActionKeys = [...ILM_ACTIONS];
+export const watchBodyRootKeys = watchBodyKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

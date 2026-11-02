@@ -27,6 +27,7 @@ import {
   snapshotRepoBodyKeyItems, snapshotCreateBodyKeyItems, snapshotRestoreBodyKeyItems,
   slmPolicyBodyKeyItems, slmConfigKeyItems, slmRetentionKeyItems,
   ilmPolicyBodyKeyItems, ilmPolicyKeyItems, ilmPhaseKeyItems, ilmPhaseConfigKeyItems, ilmActionKeyItems,
+  watchBodyKeyItems, watchTriggerKeyItems, watchScheduleKeyItems, watchInputKeyItems, watchConditionKeyItems, watchActionTypeKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -142,6 +143,12 @@ function allProblems(): string[] {
   out.push(...snippetProblems('IF', ilmPhaseKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('IC', ilmPhaseConfigKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('IA', ilmActionKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('WB', watchBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('WT', watchTriggerKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('WS', watchScheduleKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('WI', watchInputKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('WC', watchConditionKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('WA', watchActionTypeKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;
 }
 

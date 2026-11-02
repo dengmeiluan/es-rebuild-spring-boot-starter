@@ -48,6 +48,8 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   snapshotRepoBodyRootKeys, snapshotCreateBodyRootKeys, snapshotRestoreBodyRootKeys,
   slmPolicyBodyRootKeys, slmConfigKeys, slmRetentionKeys,
   ilmPolicyBodyRootKeys, ilmPolicyKeys, ILM_PHASE_NAMES, ILM_PHASE_CONFIG_KEYS, ilmActionKeys,
+  watchBodyRootKeys, WATCH_TRIGGER_TYPES, WATCH_SCHEDULE_TYPES, WATCH_INPUT_TYPES,
+  WATCH_CONDITION_TYPES, WATCH_ACTION_TYPES,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -1417,6 +1419,21 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
           if (acts && typeof acts === 'object' && !Array.isArray(acts)) {
             out.push(...lintBodyKeys(acts, ilmActionKeys, `ILM 阶段 ${name} 动作`));
           }
+        }
+      }
+      return out;
+    }
+    case 'watch-body': {
+      const out = [...lintBodyKeys(obj, watchBodyRootKeys, 'Watch 体'),
+        ...lintBodyKeys(obj?.trigger, WATCH_TRIGGER_TYPES, 'Watch 触发器'),
+        ...lintBodyKeys(obj?.trigger?.schedule, WATCH_SCHEDULE_TYPES, 'Watch 调度'),
+        ...lintBodyKeys(obj?.input, WATCH_INPUT_TYPES, 'Watch 输入'),
+        ...lintBodyKeys(obj?.condition, WATCH_CONDITION_TYPES, 'Watch 条件')];
+      const actions = obj?.actions;
+      if (actions && typeof actions === 'object' && !Array.isArray(actions)) {
+        for (const [name, act] of Object.entries(actions)) {
+          if (!act || typeof act !== 'object' || Array.isArray(act)) continue;
+          out.push(...lintBodyKeys(act, WATCH_ACTION_TYPES, `Watch 动作 ${name}`));
         }
       }
       return out;

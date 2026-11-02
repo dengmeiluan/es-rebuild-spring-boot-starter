@@ -1210,6 +1210,40 @@ describe('1439 ILM 策略体补全', () => {
   });
 });
 
+describe('1439 Watcher 体补全', () => {
+  it('六段：根 → trigger/schedule → input → condition → 动作类型', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'watch-body' } });
+    const root = '{\n  "\n}';
+    expect(suggest(root, 5).map(i => i.label)).toEqual([
+      'trigger', 'input', 'condition', 'actions', 'metadata', 'throttle_period',
+    ]);
+
+    const trg = '{\n  "trigger": {\n    "\n  }\n}';
+    expect(suggest(trg, trg.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['schedule', 'chain']);
+
+    const sch = '{\n  "trigger": {\n    "schedule": {\n      "\n    }\n  }\n}';
+    expect(suggest(sch, sch.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
+      'interval', 'cron', 'daily', 'hourly', 'weekly', 'monthly', 'yearly',
+    ]);
+
+    const inp = '{\n  "input": {\n    "\n  }\n}';
+    expect(suggest(inp, inp.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['search', 'simple', 'http', 'chain']);
+
+    const cond = '{\n  "condition": {\n    "\n  }\n}';
+    expect(suggest(cond, cond.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
+      'always', 'never', 'compare', 'array_compare', 'script',
+    ]);
+
+    const acts = '{\n  "actions": {\n    "notify": {\n      "\n    }\n  }\n}';
+    expect(suggest(acts, acts.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
+      'email', 'webhook', 'index', 'logging', 'slack', 'pagerduty', 'jira',
+    ]);
+
+    const deep = '{\n  "actions": {\n    "notify": {\n      "logging": {\n        "\n      }\n    }\n  }\n}';
+    expect(suggest(deep, deep.lastIndexOf('"') + 1), '动作参数内不出键').toEqual([]);
+  });
+});
+
 describe('1439 子句体键位（query-body-key / clause-field-key / retriever-body-key）', () => {
   it('bool 体给 must/filter/should/must_not，接受后 JSON 合法', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
