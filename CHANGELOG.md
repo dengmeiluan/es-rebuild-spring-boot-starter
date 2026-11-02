@@ -15,7 +15,10 @@ All notable changes to SearchDeck are documented here. The format follows
   attestation.
 - Maven `release` profile: attached sources/Javadoc jars, aggregate CycloneDX SBOM, enforcer rules,
   and a fixed `project.build.outputTimestamp` for reproducible archives.
-- Local verification now includes Chrome/DBX launcher tests and DBX package verification.
+- Local verification now includes Chrome/DBX launcher tests, DBX package verification, a
+  documentation relative-link guard, and module-boundary/release-version tests.
+- Community and package metadata: homepage/bugs/keywords for npm packages, Maven issue/CI metadata,
+  CODEOWNERS, and release version alignment across POM, UI, launchers, and CITATION.
 
 ### Changed
 
