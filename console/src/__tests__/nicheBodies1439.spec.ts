@@ -23,7 +23,8 @@ import {
   securityApiKeyGrantBodyRootKeys, securityApiKeyGrantKeys,
   securityApiKeyQueryBodyRootKeys, securityApiKeyInvalidateBodyRootKeys,
   securityCrossClusterApiKeyBodyRootKeys, securityCrossClusterAccessKeys, securityCrossClusterAccessEntryKeys,
-  watchExecuteBodyRootKeys, securityPrivilegeBodyRootKeys, ilmMoveBodyRootKeys, ilmMoveStepKeys,
+  watchExecuteBodyRootKeys, securityPrivilegeEntryKeys, securityPrivilegeRegionAt,
+  ilmMoveBodyRootKeys, ilmMoveStepKeys,
   snapshotCloneBodyRootKeys, watchInlineExecuteBodyRootKeys, snapshotMountBodyRootKeys,
   nodesReloadSecureSettingsBodyRootKeys,
   licenseBodyRootKeys, licenseEntryKeys,
@@ -42,15 +43,17 @@ describe('1439 外围写体：路由按方法/子路径精确分派', () => {
     expect(bodyKindForPath('/follower/_ccr/follow', 'PUT')).toBe('ccr-follow-body');
     expect(bodyKindForPath('/_ccr/auto_follow/leader', 'PUT')).toBe('ccr-auto-follow-body');
     expect(bodyKindForPath('/_security/api_key/grant', 'POST')).toBe('security-api-key-grant-body');
-    expect(bodyKindForPath('/_security/api_key/_query', 'POST')).toBe('security-api-key-query-body');
-    expect(bodyKindForPath('/_security/api_key/_query', 'GET')).toBe('security-api-key-query-body');
+    expect(bodyKindForPath('/_security/_query/api_key', 'POST')).toBe('security-api-key-query-body');
+    expect(bodyKindForPath('/_security/_query/api_key', 'GET')).toBe('security-api-key-query-body');
+    expect(bodyKindForPath('/_security/api_key', 'PUT')).toBe('security-api-key-body');
     expect(bodyKindForPath('/_security/api_key', 'DELETE')).toBe('security-api-key-invalidate-body');
     expect(bodyKindForPath('/_ml/filters/safe-domains/_update', 'POST')).toBe('ml-filter-update-body');
     expect(bodyKindForPath('/_security/cross_cluster/api_key', 'POST')).toBe('security-cross-cluster-api-key-body');
     expect(bodyKindForPath('/_watcher/watch/error-rate/_execute', 'POST')).toBe('watch-execute-body');
-    expect(bodyKindForPath('/_security/privilege/myapp/read', 'PUT')).toBe('security-privilege-body');
+    expect(bodyKindForPath('/_security/privilege', 'PUT')).toBe('security-privilege-body');
+    expect(bodyKindForPath('/_security/privilege', 'POST')).toBe('security-privilege-body');
     expect(bodyKindForPath('/_ilm/move/logs', 'POST')).toBe('ilm-move-body');
-    expect(bodyKindForPath('/_snapshot/repo/snap/_clone', 'PUT')).toBe('snapshot-clone-body');
+    expect(bodyKindForPath('/_snapshot/repo/snap/_clone/target', 'PUT')).toBe('snapshot-clone-body');
     expect(bodyKindForPath('/_snapshot/repo/snap/_mount', 'POST')).toBe('snapshot-mount-body');
     expect(bodyKindForPath('/_watcher/watch/_execute', 'POST')).toBe('watch-inline-execute-body');
     expect(bodyKindForPath('/_nodes/reload_secure_settings', 'POST')).toBe('nodes-reload-secure-settings-body');
@@ -76,15 +79,17 @@ describe('1439 外围写体：路由按方法/子路径精确分派', () => {
     expect(bodyKindForPath('/_license', 'GET')).toBe('search');
     expect(bodyKindForPath('/_license/start_trial', 'POST')).toBe('search');
     expect(bodyKindForPath('/_security/api_key/grant', 'GET')).toBe('search');
-    expect(bodyKindForPath('/_security/api_key/_query', 'PUT')).toBe('search');
-    expect(bodyKindForPath('/_security/api_key/_query', 'DELETE')).toBe('search');
+    expect(bodyKindForPath('/_security/_query/api_key', 'DELETE')).toBe('search');
+    /* 旧的非官方路径形态不再抢档（真实检索路径是 /_security/_query/api_key） */
+    expect(bodyKindForPath('/_security/api_key/_query', 'POST')).toBe('search');
     expect(bodyKindForPath('/_ml/filters/safe-domains/_update', 'PUT')).toBe('search');
     expect(bodyKindForPath('/_ml/filters/safe-domains/_update', 'DELETE')).toBe('search');
     expect(bodyKindForPath('/_security/cross_cluster/api_key', 'GET')).toBe('search');
     expect(bodyKindForPath('/_watcher/watch/error-rate/_execute', 'GET')).toBe('search');
-    expect(bodyKindForPath('/_security/privilege/myapp/read', 'GET')).toBe('search');
+    expect(bodyKindForPath('/_security/privilege/myapp/read', 'PUT')).toBe('search');
     expect(bodyKindForPath('/_ilm/move/logs', 'GET')).toBe('search');
     expect(bodyKindForPath('/_snapshot/repo/snap/_clone', 'POST')).toBe('search');
+    expect(bodyKindForPath('/_snapshot/repo/snap/_clone', 'PUT')).toBe('search');
     expect(bodyKindForPath('/_snapshot/repo/snap/_mount', 'GET')).toBe('search');
     expect(bodyKindForPath('/_snapshot/repo/snap/_mount', 'PUT')).toBe('search');
     expect(bodyKindForPath('/_watcher/watch/_execute', 'GET')).toBe('search');
@@ -124,7 +129,7 @@ describe('1439 外围写体：目录与 lint 同源', () => {
     expect(watchExecuteBodyRootKeys).toEqual([
       'trigger_data', 'alternative_input', 'ignore_condition', 'action_modes', 'record_execution',
     ]);
-    expect(securityPrivilegeBodyRootKeys).toEqual(['actions', 'metadata']);
+    expect(securityPrivilegeEntryKeys).toEqual(['actions', 'metadata']);
     expect(ilmMoveBodyRootKeys).toEqual(['current_step', 'next_step']);
     expect(ilmMoveStepKeys).toEqual(['phase', 'action', 'name']);
     expect(snapshotCloneBodyRootKeys).toEqual(['indices', 'index_settings', 'ignore_index_settings']);
@@ -152,7 +157,8 @@ describe('1439 外围写体：目录与 lint 同源', () => {
       '{"name":"ccs","access":{"search":[{"names":["logs-*"]}],"replication":[{"names":["archive-*"]}]}}')).toEqual([]);
     expect(lintStructuredBody('watch-execute-body',
       '{"ignore_condition":false,"record_execution":true,"action_modes":{"notify":"force_execute"}}')).toEqual([]);
-    expect(lintStructuredBody('security-privilege-body', '{"actions":["read"],"metadata":{}}')).toEqual([]);
+    expect(lintStructuredBody('security-privilege-body',
+      '{"myapp":{"read":{"actions":["read"],"metadata":{}}}}')).toEqual([]);
     expect(lintStructuredBody('ilm-move-body',
       '{"current_step":{"phase":"hot","action":"rollover"},"next_step":{"phase":"warm","action":"forcemerge"}}')).toEqual([]);
     expect(lintStructuredBody('snapshot-clone-body',
@@ -206,8 +212,8 @@ describe('1439 外围写体：目录与 lint 同源', () => {
       .some(f => f.message.includes('跨集群 search #1'))).toBe(true);
     expect(lintStructuredBody('watch-execute-body', '{"record":true}')
       .some(f => f.message.includes('试跑 Watch 体'))).toBe(true);
-    expect(lintStructuredBody('security-privilege-body', '{"action":[]}')
-      .some(f => f.message.includes('应用权限体'))).toBe(true);
+    expect(lintStructuredBody('security-privilege-body', '{"myapp":{"read":{"action":[]}}}')
+      .some(f => f.message.includes('应用权限 myapp/read'))).toBe(true);
     expect(lintStructuredBody('ilm-move-body', '{"current_step":{"phas":"hot"}}')
       .some(f => f.message.includes('ILM 当前步骤'))).toBe(true);
     expect(lintStructuredBody('snapshot-clone-body', '{"index":[]}')
@@ -272,6 +278,13 @@ describe('1439 外围写体：区域助手（query 位回落 / 元素分派）',
     expect(graphExploreRegionAt(...at('{ "controls": { "sample_diversity": { "|": 1 } } }'))).toBe('sample-diversity');
     expect(graphExploreRegionAt(...at('{ "connections": { "|": 1 } }'))).toBe('hop');
     expect(graphExploreRegionAt(...at('{ "connections": { "connections": { "|": 1 } } }'))).toBe('hop');
+  });
+
+  it('应用权限区域：根 / 应用层 / 权限条目 / 更深', () => {
+    expect(securityPrivilegeRegionAt(...at('{ "|": 1 }'))).toBe('root');
+    expect(securityPrivilegeRegionAt(...at('{ "myapp": { "|": 1 } }'))).toBe('app');
+    expect(securityPrivilegeRegionAt(...at('{ "myapp": { "read": { "|": 1 } } }'))).toBe('privilege');
+    expect(securityPrivilegeRegionAt(...at('{ "myapp": { "read": { "metadata": { "|": 1 } } } }'))).toBe('deep');
   });
 
   it('API Key 检索区域：根 / query 回落 / 更深', () => {

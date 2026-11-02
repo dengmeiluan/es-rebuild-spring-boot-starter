@@ -1272,22 +1272,25 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
     if (/(^|\/)_(?:xpack\/)?security\/user\/[^/]+(\/|$)/.test(p)) return 'security-user-body';
     if (/(^|\/)_(?:xpack\/)?security\/role_mapping\/[^/]+(\/|$)/.test(p)) return 'security-role-mapping-body';
   }
-  if (secMethod === 'POST' && /(^|\/)_(?:xpack\/)?security\/api_key\/?$/.test(p)) return 'security-api-key-body';
+  /* 1439：创建 API Key 官方 spec 同时接受 PUT/POST（路径 /_security/api_key） */
+  if ((secMethod === 'PUT' || secMethod === 'POST')
+      && /(^|\/)_(?:xpack\/)?security\/api_key\/?$/.test(p)) return 'security-api-key-body';
   /* 1439：代授 API Key（POST /_security/api_key/grant）体是
      {grant_type,access_token|username+password,api_key}——与创建体根键不同。 */
   if (secMethod === 'POST' && /(^|\/)_(?:xpack\/)?security\/api_key\/grant\/?$/.test(p)) return 'security-api-key-grant-body';
-  /* 1439：API Key 检索体（GET|POST /_security/api_key/_query）是 {query,from,size}——
+  /* 1439：API Key 检索体（GET|POST /_security/_query/api_key）是 {query,from,size}——
      query 内是 Query DSL，根键不含 sort/aggs。 */
   if ((secMethod === 'GET' || secMethod === 'POST')
-      && /(^|\/)_(?:xpack\/)?security\/api_key\/_query\/?$/.test(p)) return 'security-api-key-query-body';
+      && /(^|\/)_(?:xpack\/)?security\/_query\/api_key\/?$/.test(p)) return 'security-api-key-query-body';
   /* 1439：吊销 API Key（DELETE /_security/api_key）体是 {ids,name,owner,realm_name,username} */
   if (secMethod === 'DELETE' && /(^|\/)_(?:xpack\/)?security\/api_key\/?$/.test(p)) return 'security-api-key-invalidate-body';
   /* 1439：跨集群 API Key 体（POST /_security/cross_cluster/api_key）是
      {name,access:{search:[…],replication:[…]},expiration,metadata}。 */
   if (secMethod === 'POST' && /(^|\/)_(?:xpack\/)?security\/cross_cluster\/api_key\/?$/.test(p)) return 'security-cross-cluster-api-key-body';
-  /* 1439：应用权限体（PUT /_security/privilege/<application>/<privilege>）是 {actions,metadata} */
-  if (secMethod === 'PUT'
-      && /(^|\/)_(?:xpack\/)?security\/privilege\/[^/]+\/[^/]+\/?$/.test(p)) return 'security-privilege-body';
+  /* 1439：应用权限体（PUT|POST /_security/privilege）是两层动态映射：
+     {<application>: {<privilege>: {actions, metadata}}}——根层与权限名都非固定键。 */
+  if ((secMethod === 'PUT' || secMethod === 'POST')
+      && /(^|\/)_(?:xpack\/)?security\/privilege\/?$/.test(p)) return 'security-privilege-body';
   /* 1439：Ingest 管道体（PUT /_ingest/pipeline/<id>）是 {description,version,processors,on_failure,_meta}；
      _simulate（POST）是另一种体，不并进本档。 */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_ingest\/pipeline\/[^/]+(\/|$)/.test(p)) return 'ingest-pipeline-body';
@@ -1340,13 +1343,13 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
     const si = segs.indexOf('_snapshot');
     const after = si >= 0 ? segs.length - si - 1 : -1;
     const m = method.toUpperCase();
-    if (after === 1 && m === 'PUT' && !segs[si + 1].startsWith('_')) return 'snapshot-repo-body';
+    if (after === 1 && (m === 'PUT' || m === 'POST') && !segs[si + 1].startsWith('_')) return 'snapshot-repo-body';
     if (after === 2 && (m === 'PUT' || m === 'POST')
         && !segs[si + 1].startsWith('_') && !segs[si + 2].startsWith('_')) return 'snapshot-create-body';
     if (after === 3 && m === 'POST' && segs[si + 3] === '_restore') return 'snapshot-restore-body';
-    /* 1439：克隆快照（PUT /_snapshot/<repo>/<snap>/_clone）体是
-       {indices,index_settings,ignore_index_settings} */
-    if (after === 3 && m === 'PUT' && segs[si + 3] === '_clone') return 'snapshot-clone-body';
+    /* 1439：克隆快照（PUT /_snapshot/<repo>/<snap>/_clone/<target>）体是
+       {indices,index_settings,ignore_index_settings}；目标快照名在路径上。 */
+    if (after === 4 && m === 'PUT' && segs[si + 3] === '_clone') return 'snapshot-clone-body';
     /* 1439：挂载快照（POST /_snapshot/<repo>/<snap>/_mount）体是
        {index,renamed_index,index_settings,ignore_index_settings,storage} */
     if (after === 3 && m === 'POST' && segs[si + 3] === '_mount') return 'snapshot-mount-body';
@@ -2865,12 +2868,30 @@ export function watchExecuteBodyKeyItems(): AssistItem[] {
   ];
 }
 
-/** 应用权限体（PUT /_security/privilege/<application>/<privilege>）的根键 */
+/** 应用权限体（PUT|POST /_security/privilege）骨架：应用名/权限名都是动态键 */
 export function securityPrivilegeBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'myapp', detail: '应用名 → 权限名 → {actions, metadata}（两层键均自定）', snippet: true,
+      insertText: '"${1:myapp}": {\n  "${2:read}": {\n    "actions": ["${3:read}"]\n  }\n}' },
+  ];
+}
+
+/** 应用权限条目（<privilege> 对象）的键 */
+export function securityPrivilegeEntryKeyItems(): AssistItem[] {
   return [
     { label: 'actions', detail: '该应用权限包含的动作清单', snippet: true, insertText: '"actions": ["${1:read}"]' },
     { label: 'metadata', detail: '应用自定义元数据', snippet: true, insertText: '"metadata": {\n  ${0}\n}' },
   ];
+}
+
+/** 应用权限体区域：根 / 应用层（权限名动态）/ 权限条目 / 更深 */
+export function securityPrivilegeRegionAt(doc: string, offset: number):
+  'root' | 'app' | 'privilege' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack.length === 2) return 'app';
+  if (stack.length === 3) return 'privilege';
+  return 'deep';
 }
 
 /** ILM 手动推进体（POST /_ilm/move/<索引>）的根键 */
@@ -3842,7 +3863,7 @@ export const securityCrossClusterApiKeyBodyRootKeys = securityCrossClusterApiKey
 export const securityCrossClusterAccessKeys = securityCrossClusterAccessKeyItems().map(i => i.label);
 export const securityCrossClusterAccessEntryKeys = securityCrossClusterAccessEntryKeyItems().map(i => i.label);
 export const watchExecuteBodyRootKeys = watchExecuteBodyKeyItems().map(i => i.label);
-export const securityPrivilegeBodyRootKeys = securityPrivilegeBodyKeyItems().map(i => i.label);
+export const securityPrivilegeEntryKeys = securityPrivilegeEntryKeyItems().map(i => i.label);
 export const ilmMoveBodyRootKeys = ilmMoveBodyKeyItems().map(i => i.label);
 export const ilmMoveStepKeys = ilmMoveStepKeyItems().map(i => i.label);
 export const snapshotCloneBodyRootKeys = snapshotCloneBodyKeyItems().map(i => i.label);

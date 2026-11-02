@@ -67,7 +67,7 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   licenseBodyRootKeys, licenseEntryKeys,
   securityApiKeyQueryBodyRootKeys, securityApiKeyInvalidateBodyRootKeys, mlFilterUpdateBodyRootKeys,
   securityCrossClusterApiKeyBodyRootKeys, securityCrossClusterAccessKeys, securityCrossClusterAccessEntryKeys,
-  watchExecuteBodyRootKeys, securityPrivilegeBodyRootKeys, ilmMoveBodyRootKeys, ilmMoveStepKeys,
+  watchExecuteBodyRootKeys, securityPrivilegeEntryKeys, ilmMoveBodyRootKeys, ilmMoveStepKeys,
   snapshotCloneBodyRootKeys, watchInlineExecuteBodyRootKeys, snapshotMountBodyRootKeys,
   nodesReloadSecureSettingsBodyRootKeys,
 } from './dslCompletionContext';
@@ -1519,7 +1519,20 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
       }
       return out;
     }
-    case 'security-privilege-body': return lintBodyKeys(obj, securityPrivilegeBodyRootKeys, '应用权限体');
+    case 'security-privilege-body': {
+      /* 根层应用名与权限名都是动态键；只校验最终权限条目的 actions/metadata */
+      const out: Finding[] = [];
+      if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+        for (const [app, privs] of Object.entries(obj)) {
+          if (!privs || typeof privs !== 'object' || Array.isArray(privs)) continue;
+          for (const [name, def] of Object.entries(privs)) {
+            if (!def || typeof def !== 'object' || Array.isArray(def)) continue;
+            out.push(...lintBodyKeys(def, securityPrivilegeEntryKeys, `应用权限 ${app}/${name}`));
+          }
+        }
+      }
+      return out;
+    }
     case 'ilm-move-body':
       return [...lintBodyKeys(obj, ilmMoveBodyRootKeys, 'ILM 推进体'),
         ...lintBodyKeys(obj?.current_step, ilmMoveStepKeys, 'ILM 当前步骤'),
