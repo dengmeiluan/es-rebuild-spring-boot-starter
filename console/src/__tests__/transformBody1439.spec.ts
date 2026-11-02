@@ -33,6 +33,14 @@ describe('1439 Transform 体分档', () => {
   it('路径分派：PUT /_transform/<id>（含 transforms 形态）；_start/GET 不抢', () => {
     expect(bodyKindForPath('/_transform/daily', 'PUT')).toBe('transform-body');
     expect(bodyKindForPath('/_transform/transforms/daily', 'PUT')).toBe('transform-body');
+    /* 预览未创建作业 / 更新作业：体同为 transform 定义档 */
+    expect(bodyKindForPath('/_transform/_preview', 'POST')).toBe('transform-body');
+    expect(bodyKindForPath('/_transform/daily/_update', 'POST')).toBe('transform-body');
+    expect(bodyKindForPath('/_transform/transforms/daily/_update', 'POST')).toBe('transform-body');
+    expect(bodyKindForPath('/_transform/daily/_update/', 'POST')).toBe('transform-body');
+    /* 已存作业的 preview 无体、动作子路由不受扰 */
+    expect(bodyKindForPath('/_transform/daily/_preview', 'POST')).toBe('search');
+    expect(bodyKindForPath('/_transform/_preview', 'GET')).toBe('search');
     expect(bodyKindForPath('/_transform/daily/_start', 'POST')).toBe('search');
     expect(bodyKindForPath('/_transform/daily', 'GET')).toBe('search');
   });

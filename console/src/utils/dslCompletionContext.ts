@@ -1219,7 +1219,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* doc 档四端点（带斜杠前缀防误伤——'_update/' 不吃 _update_by_query（后者是
  search 族，dslCompletionContext.spec 既有断言钉死），'/_source' 尾形态与 /_doc/1/_source 双保险）
  _update 体是 {doc/upsert/script…} 的结构化体，不是裸文档——单列 update-body 档。 */
-  if (p.includes('/_update/')) return 'update-body';
+  /* 段精确：/<索引>/_update/<id>——不能只认 '/_update/'，否则 _transform/<id>/_update、
+     _ml/filters/<id>/_update 这类更新体（根键完全不同）会被抢成文档更新体。 */
+  if (/(^|\/)_update\/[^/]+\/?$/.test(p)) return 'update-body';
   /* 自增 ID 的 POST /<索引>/_doc 没有尾斜杠：此前漏档落 search，文档体被当查询体
      给出 query/sort/aggs 并误报根键——段尾精确匹配补上。 */
   if (/(^|\/)_doc\/?$/.test(p) || p.includes('/_doc/') || p.includes('/_create/') || p.includes('/_source')) return 'doc';
@@ -1289,6 +1291,12 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：Transform 体（PUT /_transform/<id>，兼容 _transform/transforms/<id>）：
      {source,dest,pivot|latest,sync,retention_policy,…}；_start/_stop 是 POST，不并进本档。 */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_transform\/(?:transforms\/)?[^/]+(\/|$)/.test(p)) return 'transform-body';
+  /* 1439：预览未创建作业（POST /_transform/_preview）与更新作业
+     （POST /_transform/<id>/_update）体同为 transform 定义档；
+     已存作业的 POST /<id>/_preview 无体，不并档。 */
+  if (method.toUpperCase() === 'POST' && /(^|\/)_transform\/_preview\/?$/.test(p)) return 'transform-body';
+  if (method.toUpperCase() === 'POST'
+      && /(^|\/)_transform\/(?:transforms\/)?[^/]+\/_update\/?$/.test(p)) return 'transform-body';
   /* 1439：Rollup 作业体（PUT /_rollup/job/<id>，6.x 兼容 _xpack/rollup）：
      {index_pattern,rollup_index,cron,page_size,groups,metrics,…} */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_(?:xpack\/)?rollup\/job\/[^/]+(\/|$)/.test(p)) return 'rollup-job-body';
