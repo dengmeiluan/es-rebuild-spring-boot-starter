@@ -2057,6 +2057,14 @@ export function watchHttpInputKeyItems(): AssistItem[] {
   ];
 }
 
+/** input.chain 对象的键 */
+export function watchChainInputKeyItems(): AssistItem[] {
+  return [
+    { label: 'inputs', detail: '串联的命名输入（每项一个 input 定义）', snippet: true,
+      insertText: '"inputs": [\n  { "${1:first}": { "simple": {} } }\n]' },
+  ];
+}
+
 /** input.search 对象的键 */
 export function watchSearchInputKeyItems(): AssistItem[] {
   return [
@@ -2162,6 +2170,7 @@ export function watchActionParamsKeyItemsAt(doc: string, offset: number): Assist
 export function watchRegionAt(doc: string, offset: number):
   'root' | 'trigger' | 'schedule' | 'input' | 'search-input' | 'search-request'
   | 'search-body' | 'search-query' | 'http-input' | 'http-request'
+  | 'chain-input-container' | 'chain-input'
   | 'chain-trigger' | 'chain-trigger-container'
   | 'condition' | 'condition-params' | 'action' | 'action-params' | 'deep' {
   const stack = frameKeysAt(doc, offset);
@@ -2191,6 +2200,13 @@ export function watchRegionAt(doc: string, offset: number):
     if (stack[1] === 'http') {
       if (stack.length === 3) return 'http-input';
       if (stack.length === 4 && stack[2] === 'request') return 'http-request';
+    }
+    if (stack[1] === 'chain') {
+      if (stack.length === 3) return 'chain-input-container';
+      /* inputs 元素是「命名输入」对象：名字动态，名字值里再给 input 类型 */
+      if (stack.length === 6 && stack[2] === 'inputs' && stack[3] === null && stack[4] && stack[5] === null) {
+        return 'chain-input';
+      }
     }
     return 'deep';
   }
@@ -3176,6 +3192,7 @@ export function watchInlineExecuteBodyKeyItems(): AssistItem[] {
 export function watchInlineExecuteRegionAt(doc: string, offset: number):
   'root' | 'watch' | 'watch-trigger' | 'watch-schedule' | 'watch-input' | 'search-input' | 'search-request'
   | 'watch-search-body' | 'watch-search-query' | 'http-input' | 'http-request'
+  | 'chain-input-container' | 'chain-input'
   | 'chain-trigger' | 'chain-trigger-container'
   | 'watch-condition' | 'condition-params' | 'watch-action' | 'action-params' | 'deep' {
   const stack = frameKeysAt(doc, offset);
@@ -3207,6 +3224,12 @@ export function watchInlineExecuteRegionAt(doc: string, offset: number):
     if (stack[2] === 'http') {
       if (stack.length === 4) return 'http-input';
       if (stack.length === 5 && stack[3] === 'request') return 'http-request';
+    }
+    if (stack[2] === 'chain') {
+      if (stack.length === 4) return 'chain-input-container';
+      if (stack.length === 7 && stack[3] === 'inputs' && stack[4] === null && stack[5] && stack[6] === null) {
+        return 'chain-input';
+      }
     }
     return 'deep';
   }

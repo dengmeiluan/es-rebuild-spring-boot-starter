@@ -11,7 +11,7 @@ import {
   WATCH_TRIGGER_TYPES, WATCH_SCHEDULE_TYPES, WATCH_INPUT_TYPES, WATCH_CONDITION_TYPES,
   WATCH_ACTION_TYPES, watchRegionAt, watchActionParamsKeyItems, watchConditionParamsKeyItems,
   watchSearchInputKeyItems, watchSearchRequestKeyItems, watchHttpInputKeyItems, httpRequestKeyItems,
-  watchChainTriggerKeyItems, watchChainNestedTriggerKeyItems,
+  watchChainTriggerKeyItems, watchChainNestedTriggerKeyItems, watchChainInputKeyItems,
 } from '../utils/dslCompletionContext';
 import { lintStructuredBody } from '../utils/dslLint';
 
@@ -67,6 +67,7 @@ describe('1439 Watcher 体分档', () => {
     expect(httpRequestKeyItems().map(i => i.label)).toContain('url');
     expect(watchChainTriggerKeyItems().map(i => i.label)).toEqual(['inputs', 'trigger']);
     expect(watchChainNestedTriggerKeyItems().map(i => i.label)).toEqual(['schedule']);
+    expect(watchChainInputKeyItems().map(i => i.label)).toEqual(['inputs']);
   });
 
   it('区域：根 / trigger / schedule / input / condition / action / 更深', () => {
@@ -79,6 +80,9 @@ describe('1439 Watcher 体分档', () => {
     expect(at('{"input": {"search": {"request": {')).toBe('search-request');
     expect(at('{"input": {"http": {')).toBe('http-input');
     expect(at('{"input": {"http": {"request": {')).toBe('http-request');
+    expect(at('{"input": {"chain": {')).toBe('chain-input-container');
+    expect(at('{"input": {"chain": {"inputs": [{')).toBe('deep');
+    expect(at('{"input": {"chain": {"inputs": [{"first": {')).toBe('chain-input');
     expect(at('{"input": {"search": {"request": {"body": {')).toBe('search-body');
     expect(at('{"input": {"search": {"request": {"body": {"query": {')).toBe('search-query');
     expect(at('{"condition": {')).toBe('condition');

@@ -47,7 +47,7 @@ import {
   watchExecuteBodyKeyItems, securityPrivilegeBodyKeyItems, ilmMoveBodyKeyItems, ilmMoveStepKeyItems,
   watchActionParamsKeyItems, watchConditionParamsKeyItems,
   watchSearchInputKeyItems, watchSearchRequestKeyItems, watchHttpInputKeyItems, httpRequestKeyItems,
-  watchChainTriggerKeyItems, watchChainNestedTriggerKeyItems,
+  watchChainTriggerKeyItems, watchChainNestedTriggerKeyItems, watchChainInputKeyItems,
   snapshotCloneBodyKeyItems, watchInlineExecuteBodyKeyItems, snapshotMountBodyKeyItems,
   nodesReloadSecureSettingsBodyKeyItems,
 } from '../utils/dslCompletionContext';
@@ -246,6 +246,7 @@ function allProblems(): string[] {
   out.push(...snippetProblems('HRI', httpRequestKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('WCT', watchChainTriggerKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('WCN', watchChainNestedTriggerKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('WCI', watchChainInputKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('SMT', snapshotMountBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('NRS', nodesReloadSecureSettingsBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;

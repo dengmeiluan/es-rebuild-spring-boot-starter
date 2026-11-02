@@ -332,6 +332,12 @@ describe('1439 外围写体：区域助手（query 位回落 / 元素分派）',
       ...at('{ "watch": { "input": { "http": { "request": { "|": 1 } } } } }'),
     )).toBe('http-request');
     expect(watchInlineExecuteRegionAt(
+      ...at('{ "watch": { "input": { "chain": { "|": 1 } } } }'),
+    )).toBe('chain-input-container');
+    expect(watchInlineExecuteRegionAt(
+      ...at('{ "watch": { "input": { "chain": { "inputs": [ { "first": { "|": 1 } } ] } } } }'),
+    )).toBe('chain-input');
+    expect(watchInlineExecuteRegionAt(
       ...at('{ "watch": { "input": { "search": { "request": { "body": { "|": 1 } } } } } }'),
     )).toBe('watch-search-body');
     expect(watchInlineExecuteRegionAt(

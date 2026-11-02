@@ -1271,6 +1271,14 @@ describe('1439 Watcher 体补全', () => {
     const hr = '{\n  "input": {\n    "http": {\n      "request": {\n        "\n      }\n    }\n  }\n}';
     expect(suggest(hr, hr.lastIndexOf('"') + 1).map(i => i.label)).toContain('url');
 
+    const chainInp = '{\n  "input": {\n    "chain": {\n      "\n    }\n  }\n}';
+    expect(suggest(chainInp, chainInp.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['inputs']);
+
+    const chainNamed = '{\n  "input": {\n    "chain": {\n      "inputs": [\n        {\n          "first": {\n            "\n          }\n        }\n      ]\n    }\n  }\n}';
+    expect(suggest(chainNamed, chainNamed.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
+      'search', 'simple', 'http', 'chain',
+    ]);
+
     const searchBody = '{\n  "input": {\n    "search": {\n      "request": {\n        "body": {\n          "\n        }\n      }\n    }\n  }\n}';
     const sbLabels = suggest(searchBody, searchBody.lastIndexOf('"') + 1).map(i => i.label);
     expect(sbLabels).toContain('query');
