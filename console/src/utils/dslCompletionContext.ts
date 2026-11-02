@@ -1215,7 +1215,7 @@ export const ANALYSIS_PARAM_ZH: Record<string, string> = {
 export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   const p = (rawPath || '').split('?')[0].toLowerCase();
   /* 1439：_bulk 是 NDJSON（动作行 + 文档行）——动作行给动作/元数据键；文档行是裸文档不出键 */
-  if (p.includes('_bulk')) return 'bulk-body';
+  if (/(^|\/)_bulk(\/|$)/.test(p)) return 'bulk-body';
   /* doc 档四端点（带斜杠前缀防误伤——'_update/' 不吃 _update_by_query（后者是
  search 族，dslCompletionContext.spec 既有断言钉死），'/_source' 尾形态与 /_doc/1/_source 双保险）
  _update 体是 {doc/upsert/script…} 的结构化体，不是裸文档——单列 update-body 档。 */
@@ -1224,11 +1224,14 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   if (/(^|\/)_update\/[^/]+\/?$/.test(p)) return 'update-body';
   /* 自增 ID 的 POST /<索引>/_doc 没有尾斜杠：此前漏档落 search，文档体被当查询体
      给出 query/sort/aggs 并误报根键——段尾精确匹配补上。 */
-  if (/(^|\/)_doc\/?$/.test(p) || p.includes('/_doc/') || p.includes('/_create/') || p.includes('/_source')) return 'doc';
+  if (/(^|\/)_doc\/?$/.test(p) || p.includes('/_doc/') || p.includes('/_create/')
+      || /(^|\/)_source(\/|$)/.test(p)) return 'doc';
   /* 1439：这些端点的体不是 search body——此前一律给 query/sort/aggs 骨架
      （模板体里出 match：写下去就是 ES 400；analyze 体里出 query：同样的错） */
-  if (p.includes('_analyze')) return 'analyze';
-  if (p.includes('_index_template') || p.includes('_component_template') || p.includes('/_template')) return 'template';
+  if (/(^|\/)_analyze(\/|$)/.test(p)) return 'analyze';
+  /* 段精确：索引名里含 _index_template/_component_template/_template 不能被当成模板端点 */
+  if (/(^|\/)_index_template(\/|$)/.test(p) || /(^|\/)_component_template(\/|$)/.test(p)
+      || /(^|\/)_template(\/|$)/.test(p)) return 'template';
   /* 1439：_cluster/settings 的体是 {persistent,transient} 两层集群设置，
      不是 search 体也不是索引设置体——默认档此前给 query/sort/aggs，写下去 ES 直接拒。 */
   if (/(^|\/)_cluster\/settings(\/|$)/.test(p)) return 'cluster-settings-body';
@@ -1348,22 +1351,24 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
      子串口径会把 /_nodes/reload_secure_settings、/_security/role_mapping 误吃。 */
   if (/(^|\/)_settings(\/|$)/.test(p)) return 'settings';
   if (/(^|\/)_mapping(\/|$)/.test(p)) return 'mapping';
-  /* 1439：PUT /<索引名> = 创建索引——体是 {settings, mappings, aliases}，不是 search body */
-  if (method.toUpperCase() === 'PUT' && /^\/[^\/_]+$/.test(p)) return 'index-body';
+  /* 1439：PUT /<索引名> = 创建索引——体是 {settings, mappings, aliases}，不是 search body。
+     索引名允许下划线（my_index），只排除以 _ 开头的系统路径；此前 [^\/_]+ 把带下划线
+     的索引全漏成 search 档。 */
+  if (method.toUpperCase() === 'PUT' && /^\/[^/]+$/.test(p) && !/^\/_/.test(p)) return 'index-body';
   /* 1439：PUT /<索引名>/_alias/<别名> 的体是别名配置（filter/routing/is_write_index…） */
   if (p.includes('/_alias/')) return 'alias-body';
   /* 1439：_reindex 的体是 {source,dest,script,…}，不是 search body 也不是纯无档 */
-  if (p.includes('_reindex')) return 'reindex-body';
+  if (/(^|\/)_reindex(\/|$)/.test(p)) return 'reindex-body';
   /* 1439：_sql（含 _sql/translate）的体是 {query:"SELECT …"}，不是 search body */
-  if (p.includes('_sql')) return 'sql-body';
+  if (/(^|\/)_sql(\/|$)/.test(p)) return 'sql-body';
   /* 1439：_eql/search 的 query 是 EQL 串（不是 {match…}），filter 才是 Query DSL——
      默认 search 档会在 query 值位给 DSL 算子，写进去 ES 直接解析失败。 */
   if (/(^|\/)_eql\/search(\/|$)/.test(p)) return 'eql-body';
   /* 1439：_rollover 的体是 {conditions,settings,mappings,aliases}，不是无档 */
-  if (p.includes('_rollover')) return 'rollover-body';
+  if (/(^|\/)_rollover(\/|$)/.test(p)) return 'rollover-body';
   /* 1439：按查询删/改的体是 {query,max_docs,…}——query 内要回落到整棵查询补全 */
-  if (p.includes('_delete_by_query')) return 'dbq-body';
-  if (p.includes('_update_by_query')) return 'ubq-body';
+  if (/(^|\/)_delete_by_query(\/|$)/.test(p)) return 'dbq-body';
+  if (/(^|\/)_update_by_query(\/|$)/.test(p)) return 'ubq-body';
   /* 1439：_msearch 头行是请求头对象（index/search_type/routing…），下文查询体行回落 search；
      /_msearch/template 头行同款、体行给模板 id/source/params */
   if (/(^|\/)_msearch\/template(\/|$)/.test(p)) return 'msearch-template-body';
