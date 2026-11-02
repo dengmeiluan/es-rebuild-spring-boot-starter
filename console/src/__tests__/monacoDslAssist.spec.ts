@@ -1421,6 +1421,28 @@ describe('1439 query-only / 模板执行体键位补全', () => {
   });
 });
 
+describe('1439 runtime_mappings 类型位', () => {
+  it('search 体：type 值位给 runtime 类型目录（接受即合法）；键位仍给 type/script；mapping type 不受影响', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'search' as const } });
+    const doc = '{"runtime_mappings": {"day": {"type": "';
+    const items = suggest(doc);
+    expect(items.map((i: any) => i.label)).toEqual([
+      'boolean', 'composite', 'date', 'double', 'geo_point', 'ip', 'keyword', 'long', 'lookup',
+    ]);
+    for (const i of items) {
+      expect(() => JSON.parse(acceptSnippet(doc, i) + '}}}'), i.label + ' 接受后非法').not.toThrow();
+    }
+    expect(suggest('{"runtime_mappings": {"day": {"').map((i: any) => i.label)).toEqual(expect.arrayContaining(['type', 'script']));
+    expect(suggest('{"mappings": {"properties": {"a": {"type": "').map((i: any) => i.label)).not.toContain('composite');
+  });
+
+  it('sql 体：runtime 字段配置跳过 W6——键位给 type/script、值位给类型目录', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'sql-body' as const } });
+    expect(suggest('{"runtime_mappings": {"day": {"').map((i: any) => i.label)).toEqual(expect.arrayContaining(['type', 'script']));
+    expect(suggest('{"runtime_mappings": {"day": {"type": "').map((i: any) => i.label)).toContain('composite');
+  });
+});
+
 describe('1439 _mget 体键位补全', () => {
   it('根键 docs/ids（接受即合法）；docs 元素给七个文档级键；ids 数组不出键', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'mget-body' as const } });

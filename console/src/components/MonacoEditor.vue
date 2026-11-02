@@ -19,7 +19,7 @@ import 'monaco-editor/esm/vs/editor/contrib/comment/browser/comment';   // jsonc
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import { useAppStore } from '../stores/app';
-import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS, RETRIEVER_SNIPPETS, SUGGESTER_SNIPPETS, aggBodyKeys, queryBodyKeys, clauseValueKeys, retrieverBodyKeys, suggesterBodyKeys, ROOT_KEYS, ROOT_KEY_SNIPPETS, commaAffixes, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, indexBodyKeyItems, indexBodyRegionAt, aliasKeyItems, aliasConfigAt, reindexBodyKeyItems, reindexBodyRegionAt, sqlBodyKeyItems, SQL_VALUE_SNIPPETS, SQL_KEYWORD_SNIPPETS, updateBodyKeyItems, scriptObjectKeyItems, updateBodyRegionAt, rolloverBodyKeyItems, rolloverConditionKeyItems, rolloverBodyRegionAt, dbqBodyKeyItems, ubqBodyKeyItems, queryWriteRegionAt, queryOnlyBodyKeyItems, templateSearchBodyKeyItems, rootOnlyRegionAt, mgetBodyKeyItems, mgetDocKeyItems, mgetRegionAt, storedScriptBodyKeyItems, storedScriptKeyItems, storedScriptRegionAt, sqlFilterRegionAt, scriptExecuteBodyKeyItems, aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems, aliasesBodyRegionAt, scrollBodyKeyItems, clearScrollBodyKeyItems, termvectorsKeyItems, mtermvectorsBodyKeyItems, mtermvectorsDocKeyItems, STRUCTURED_VALUE_ENUMS, MAPPING_TYPES, templateKeyItems, templateRegionAt, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
+import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS, RETRIEVER_SNIPPETS, SUGGESTER_SNIPPETS, aggBodyKeys, queryBodyKeys, clauseValueKeys, retrieverBodyKeys, suggesterBodyKeys, ROOT_KEYS, ROOT_KEY_SNIPPETS, commaAffixes, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, indexBodyKeyItems, indexBodyRegionAt, aliasKeyItems, aliasConfigAt, reindexBodyKeyItems, reindexBodyRegionAt, sqlBodyKeyItems, SQL_VALUE_SNIPPETS, SQL_KEYWORD_SNIPPETS, updateBodyKeyItems, scriptObjectKeyItems, updateBodyRegionAt, rolloverBodyKeyItems, rolloverConditionKeyItems, rolloverBodyRegionAt, dbqBodyKeyItems, ubqBodyKeyItems, queryWriteRegionAt, queryOnlyBodyKeyItems, templateSearchBodyKeyItems, rootOnlyRegionAt, mgetBodyKeyItems, mgetDocKeyItems, mgetRegionAt, storedScriptBodyKeyItems, storedScriptKeyItems, storedScriptRegionAt, sqlFilterRegionAt, scriptExecuteBodyKeyItems, RUNTIME_FIELD_TYPES, runtimeFieldTypeAt, inRuntimeMappingsAt, aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems, aliasesBodyRegionAt, scrollBodyKeyItems, clearScrollBodyKeyItems, termvectorsKeyItems, mtermvectorsBodyKeyItems, mtermvectorsDocKeyItems, STRUCTURED_VALUE_ENUMS, MAPPING_TYPES, templateKeyItems, templateRegionAt, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
 import { makeDslValueSuggestProvider } from '../utils/dslValueSuggest';
 import type { AssistItem, BodyKind } from '../utils/dslCompletionContext';
 import { ensureLanguages } from '../utils/monacoLanguages';
@@ -590,6 +590,26 @@ onMounted(() => {
             filterText: dslFilterText(k), sortText: dslSortText(i, k),
           })) };
         }
+        /* 1439：runtime_mappings 字段配置的 "type" 值位给 runtime 类型目录
+           （search 与 SQL 体同源；不在表内的类型写进去 ES 会拒）。 */
+        if (runtimeFieldTypeAt(doc, offset)) {
+          const grt = dslKeyGuard(doc, offset);
+          if (grt.inStr && grt.valueKey === 'type') {
+            const rtEnd = scanStringEnd(doc, Math.max(0, Math.min(offset, doc.length)));
+            const rtsp = model.getPositionAt(grt.strStart);
+            const rtep = model.getPositionAt(rtEnd);
+            const rtRange = {
+              startLineNumber: rtsp.lineNumber, startColumn: rtsp.column,
+              endLineNumber: rtep.lineNumber, endColumn: rtep.column,
+            };
+            return { suggestions: RUNTIME_FIELD_TYPES.map((t, i) => ({
+              label: t.label, kind: monaco.languages.CompletionItemKind.Value,
+              insertText: '"' + t.label + '"', range: rtRange, command: ACCEPT_FORMAT_COMMAND,
+              detail: t.detail,
+              filterText: dslFilterText(t.label), sortText: dslSortText(i, t.label),
+            })) };
+          }
+        }
         /* +1：mapping 值位 analyzers 通道——组件名四键的值串位出
  analyzers() 实名候选（range 覆盖整串 I-1 同形态）；候选空/非 mapping 档
  落到下方既有压制口，零增量。
@@ -652,7 +672,9 @@ onMounted(() => {
         const scRegion = (bk === 'scroll-body' || bk === 'clear-scroll-body') ? rootOnlyRegionAt(doc, offset) : null;
         /* 1439：_reindex 的 source.query 同样是 Query DSL——区域为 query 时回落查询补全 */
         const rIdxRegion = bk === 'reindex-body' ? reindexBodyRegionAt(doc, offset) : 'root';
-        if (qwRegion !== 'query' && sfRegion !== 'query' && rIdxRegion !== 'query' && (bk === 'settings' || bk === 'mapping' || bk === 'template' || bk === 'index-body' || bk === 'alias-body' || bk === 'aliases-body' || bk === 'reindex-body' || bk === 'sql-body' || bk === 'update-body' || bk === 'rollover-body' || bk === 'dbq-body' || bk === 'ubq-body' || bk === 'query-body' || bk === 'template-search-body' || bk === 'mget-body' || bk === 'stored-script-body' || bk === 'script-execute-body' || bk === 'scroll-body' || bk === 'clear-scroll-body' || bk === 'termvectors-body' || bk === 'mtermvectors-body')) {
+        /* 1439：SQL 体的 runtime_mappings 字段配置走通用 runtime 键/值档（W6 会把它压成 []） */
+        const rtCtx = bk === 'sql-body' && inRuntimeMappingsAt(doc, offset);
+        if (!rtCtx && qwRegion !== 'query' && sfRegion !== 'query' && rIdxRegion !== 'query' && (bk === 'settings' || bk === 'mapping' || bk === 'template' || bk === 'index-body' || bk === 'alias-body' || bk === 'aliases-body' || bk === 'reindex-body' || bk === 'sql-body' || bk === 'update-body' || bk === 'rollover-body' || bk === 'dbq-body' || bk === 'ubq-body' || bk === 'query-body' || bk === 'template-search-body' || bk === 'mget-body' || bk === 'stored-script-body' || bk === 'script-execute-body' || bk === 'scroll-body' || bk === 'clear-scroll-body' || bk === 'termvectors-body' || bk === 'mtermvectors-body')) {
           const g = dslKeyGuard(doc, offset);
           /* 1439：_reindex 的 source.sort / source._source 数组元素是字段名位 */
           if (g.inStr && g.arrayElem && (rIdxRegion === 'sort' || rIdxRegion === 'source-fields')) {

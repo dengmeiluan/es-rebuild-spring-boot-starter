@@ -1341,6 +1341,34 @@ export function mappingKeyItems(): AssistItem[] {
   ];
 }
 
+/** runtime_mappings 字段配置的 type 值域——官方 runtime 字段支持的类型 */
+export const RUNTIME_FIELD_TYPES: Array<{ label: string; detail: string }> = [
+  { label: 'boolean', detail: '布尔' },
+  { label: 'composite', detail: '组合（多字段脚本，8.10+）' },
+  { label: 'date', detail: '日期' },
+  { label: 'double', detail: '双精度浮点' },
+  { label: 'geo_point', detail: '地理点' },
+  { label: 'ip', detail: 'IP 地址' },
+  { label: 'keyword', detail: '关键字' },
+  { label: 'long', detail: '长整型' },
+  { label: 'lookup', detail: '查表（需 index + lookup 配置）' },
+];
+
+/** 光标是否在 runtime_mappings.<字段>.{} 的 "type" 值位（search / SQL 体的运行时字段） */
+export function runtimeFieldTypeAt(doc: string, offset: number = doc.length): boolean {
+  const stack = frameKeysAt(doc, offset);
+  const i = stack.lastIndexOf('runtime_mappings');
+  if (i < 0) return false;
+  return i + 2 === stack.length - 1 && stack[stack.length - 1] === 'type' && !!stack[i + 1];
+}
+
+/** 光标是否已在 runtime_mappings 的字段配置内（SQL 体借此跳过 W6，走通用 runtime 键值档） */
+export function inRuntimeMappingsAt(doc: string, offset: number = doc.length): boolean {
+  const stack = frameKeysAt(doc, offset);
+  const i = stack.lastIndexOf('runtime_mappings');
+  return i >= 0 && i < stack.length - 1;
+}
+
 /** 单个字段的 mapping 配置键（properties.<字段>.{} / fields.<子域>.{} 内）——
     此前这层仍给 properties/dynamic 等顶层键，analyzer/format/ignore_above 一个都补不出。 */
 export function mappingFieldKeyItems(): AssistItem[] {
