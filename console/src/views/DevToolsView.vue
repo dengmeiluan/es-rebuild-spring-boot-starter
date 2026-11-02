@@ -761,10 +761,11 @@ const dtLint = computed<Finding[]>(() => {
   const kind = dtBodyKind.value;
   const body = cur.value?.body || '';
   try {
-    if (kind === 'none' || kind === 'msearch-body' || kind === 'bulk-body') {
-      const mode = kind === 'msearch-body' ? 'msearch' as const : 'bulk' as const;
+    if (kind === 'none' || kind === 'msearch-body' || kind === 'msearch-template-body' || kind === 'bulk-body') {
+      const mode = kind === 'msearch-body' ? 'msearch' as const
+        : kind === 'msearch-template-body' ? 'msearch-template' as const : 'bulk' as const;
       const base = lintNdjsonBody(body, mode);
-      return (kind === 'msearch-body' || kind === 'bulk-body')
+      return kind !== 'none'
         ? [...base, ...lintNdjsonLineKeys(body, mode)]
         : base;
     }

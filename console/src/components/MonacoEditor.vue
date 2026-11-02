@@ -19,7 +19,7 @@ import 'monaco-editor/esm/vs/editor/contrib/comment/browser/comment';   // jsonc
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import { useAppStore } from '../stores/app';
-import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS, RETRIEVER_SNIPPETS, SUGGESTER_SNIPPETS, aggBodyKeys, queryBodyKeys, clauseValueKeys, retrieverBodyKeys, suggesterBodyKeys, ROOT_KEYS, ROOT_KEY_SNIPPETS, commaAffixes, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, indexBodyKeyItems, indexBodyRegionAt, aliasKeyItems, aliasConfigAt, reindexBodyKeyItems, reindexBodyRegionAt, sqlBodyKeyItems, SQL_VALUE_SNIPPETS, SQL_KEYWORD_SNIPPETS, updateBodyKeyItems, scriptObjectKeyItems, updateBodyRegionAt, rolloverBodyKeyItems, rolloverConditionKeyItems, rolloverBodyRegionAt, dbqBodyKeyItems, ubqBodyKeyItems, queryWriteRegionAt, queryOnlyBodyKeyItems, templateSearchBodyKeyItems, rootOnlyRegionAt, mgetBodyKeyItems, mgetDocKeyItems, mgetRegionAt, storedScriptBodyKeyItems, storedScriptKeyItems, storedScriptRegionAt, sqlFilterRegionAt, scriptExecuteBodyKeyItems, msearchHeaderKeyItems, msearchHeaderLineAt, bulkActionKeyItems, bulkActionMetaKeyItems, bulkLineKindAt, bulkActionMetaAt, fieldCapsBodyKeyItems, termsEnumBodyKeyItems, indexFilterRegionAt, rankEvalBodyKeyItems, rankEvalRequestKeyItems, rankEvalMetricKeyItems, rankEvalRegionAt, RUNTIME_FIELD_TYPES, runtimeFieldTypeAt, inRuntimeMappingsAt, aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems, aliasesBodyRegionAt, scrollBodyKeyItems, clearScrollBodyKeyItems, termvectorsKeyItems, mtermvectorsBodyKeyItems, mtermvectorsDocKeyItems, STRUCTURED_VALUE_ENUMS, MAPPING_TYPES, templateKeyItems, templateRegionAt, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
+import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS, RETRIEVER_SNIPPETS, SUGGESTER_SNIPPETS, aggBodyKeys, queryBodyKeys, clauseValueKeys, retrieverBodyKeys, suggesterBodyKeys, ROOT_KEYS, ROOT_KEY_SNIPPETS, commaAffixes, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, indexBodyKeyItems, indexBodyRegionAt, aliasKeyItems, aliasConfigAt, reindexBodyKeyItems, reindexBodyRegionAt, sqlBodyKeyItems, SQL_VALUE_SNIPPETS, SQL_KEYWORD_SNIPPETS, updateBodyKeyItems, scriptObjectKeyItems, updateBodyRegionAt, rolloverBodyKeyItems, rolloverConditionKeyItems, rolloverBodyRegionAt, dbqBodyKeyItems, ubqBodyKeyItems, queryWriteRegionAt, queryOnlyBodyKeyItems, templateSearchBodyKeyItems, rootOnlyRegionAt, mgetBodyKeyItems, mgetDocKeyItems, mgetRegionAt, storedScriptBodyKeyItems, storedScriptKeyItems, storedScriptRegionAt, sqlFilterRegionAt, scriptExecuteBodyKeyItems, msearchHeaderKeyItems, msearchHeaderLineAt, msearchTemplateBodyKeyItems, bulkActionKeyItems, bulkActionMetaKeyItems, bulkLineKindAt, bulkActionMetaAt, fieldCapsBodyKeyItems, termsEnumBodyKeyItems, indexFilterRegionAt, rankEvalBodyKeyItems, rankEvalRequestKeyItems, rankEvalMetricKeyItems, rankEvalRegionAt, RUNTIME_FIELD_TYPES, runtimeFieldTypeAt, inRuntimeMappingsAt, aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems, aliasesBodyRegionAt, scrollBodyKeyItems, clearScrollBodyKeyItems, termvectorsKeyItems, mtermvectorsBodyKeyItems, mtermvectorsDocKeyItems, STRUCTURED_VALUE_ENUMS, MAPPING_TYPES, templateKeyItems, templateRegionAt, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
 import { makeDslValueSuggestProvider } from '../utils/dslValueSuggest';
 import type { AssistItem, BodyKind } from '../utils/dslCompletionContext';
 import { ensureLanguages } from '../utils/monacoLanguages';
@@ -614,7 +614,7 @@ onMounted(() => {
         }
         /* 1439：_msearch 头行给请求头键（index/search_type/routing…）；
            查询体行不拦截，回落下方 search 三档（体行本身就是一个完整查询）。 */
-        if (bk === 'msearch-body' && msearchHeaderLineAt(doc, offset)) {
+        if ((bk === 'msearch-body' || bk === 'msearch-template-body') && msearchHeaderLineAt(doc, offset)) {
           const gm = dslKeyGuard(doc, offset);
           if (!gm.inStr) return { suggestions: [] };
           if (gm.valueKey) {
@@ -653,6 +653,27 @@ onMounted(() => {
             insertText: wrapSnippet(doc, gm.strStart, mEnd, lineIndentAt(doc, gm.strStart), it.insertText, mAffix),
             insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             range: mRange, command: ACCEPT_FORMAT_COMMAND,
+            filterText: dslFilterText(it.label), sortText: dslSortText(i, it.label),
+          })) };
+        }
+        /* 1439：_msearch/template 体行给模板执行键（id/source/params） */
+        if (bk === 'msearch-template-body' && !msearchHeaderLineAt(doc, offset)) {
+          const gtm = dslKeyGuard(doc, offset);
+          if (!gtm.inStr || gtm.valueKey) return { suggestions: [] };
+          const tmEnd = scanStringEnd(doc, Math.max(0, Math.min(offset, doc.length)));
+          const tmsp = model.getPositionAt(gtm.strStart);
+          const tmepp = model.getPositionAt(tmEnd);
+          const tmRange = {
+            startLineNumber: tmsp.lineNumber, startColumn: tmsp.column,
+            endLineNumber: tmepp.lineNumber, endColumn: tmepp.column,
+          };
+          const tmAffix = commaAffixes(doc, gtm.strStart, tmEnd);
+          return { suggestions: msearchTemplateBodyKeyItems().map((it, i) => ({
+            label: it.label, kind: monaco.languages.CompletionItemKind.Snippet,
+            detail: it.detail,
+            insertText: wrapSnippet(doc, gtm.strStart, tmEnd, lineIndentAt(doc, gtm.strStart), it.insertText, tmAffix),
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            range: tmRange, command: ACCEPT_FORMAT_COMMAND,
             filterText: dslFilterText(it.label), sortText: dslSortText(i, it.label),
           })) };
         }

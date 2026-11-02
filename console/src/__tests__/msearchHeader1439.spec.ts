@@ -14,7 +14,7 @@ describe('1439 _msearch 头行补全', () => {
     expect(bodyKindForPath('/_msearch', 'POST')).toBe('msearch-body');
     expect(bodyKindForPath('/idx/_msearch', 'POST')).toBe('msearch-body');
     expect(bodyKindForPath('_msearch', 'POST')).toBe('msearch-body');
-    expect(bodyKindForPath('/idx/_msearch/template', 'POST')).toBe('none');
+    expect(bodyKindForPath('/idx/_msearch/template', 'POST')).toBe('msearch-template-body');
   });
 
   it('头行判定：第 1、3… 个非空行为头行；体行与空行前后奇偶正确', () => {

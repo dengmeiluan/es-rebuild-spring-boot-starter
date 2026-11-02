@@ -394,8 +394,8 @@ describe('532 P2-3 跨 Tab 历史汇聚（视图级）', () => {
 describe('532 源码锁（行号漂移自适应：只锁语义串）', () => {
   it('dtLint 按档路由分派五支 + bodyLang computed 在场', () => {
     expect(v).toMatch(/const dtLint = computed<Finding\[\]>\(\(\) => \{/);
-    /* 1439：none 档扩到 msearch-body/bulk-body（NDJSON 头体/动作文档对同一条配对规则） */
-    expect(v).toMatch(/if \(kind === 'none' \|\| kind === 'msearch-body' \|\| kind === 'bulk-body'\)/);
+    /* 1439：none 档扩到 msearch/msearch-template/bulk（NDJSON 同一条配对规则） */
+    expect(v).toMatch(/if \(kind === 'none' \|\| kind === 'msearch-body' \|\| kind === 'msearch-template-body' \|\| kind === 'bulk-body'\)/);
     expect(v).toContain("if (kind === 'settings') return lintSettingsBody(JSON.parse(body));");
     expect(v).toContain("if (kind === 'mapping') return lintMappingBody(JSON.parse(body));");
     expect(v).toContain("if (kind === 'search') return lintDsl(JSON.parse(body), { fields: dtFields.value });");

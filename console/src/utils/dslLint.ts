@@ -43,7 +43,7 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   queryOnlyBodyRootKeys, templateSearchBodyRootKeys, sqlBodyRootKeys, mgetBodyRootKeys,
   storedScriptBodyRootKeys, aliasesBodyRootKeys, scrollBodyRootKeys, clearScrollBodyRootKeys,
   termvectorsBodyRootKeys, mtermvectorsBodyRootKeys, reindexBodyRootKeys, scriptExecuteBodyRootKeys,
-  BULK_ACTIONS, msearchHeaderKeyItems, fieldCapsBodyRootKeys, termsEnumBodyRootKeys, rankEvalBodyRootKeys,
+  BULK_ACTIONS, msearchHeaderKeyItems, msearchTemplateBodyKeyItems, fieldCapsBodyRootKeys, termsEnumBodyRootKeys, rankEvalBodyRootKeys,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -1351,11 +1351,11 @@ export function lintBodyKeys(obj: unknown, allowed: readonly string[], label: st
 
 /** NDJSON 体的配对 lint（_bulk/_msearch）——DevTools 与 REST 两页共用同一 Finding 形态。
     mode=msearch 时按「头行+查询体行」口径，不用 bulk 的动作/文档文案。 */
-export function lintNdjsonBody(body: string, mode: 'bulk' | 'msearch' = 'bulk'): Finding[] {
+export function lintNdjsonBody(body: string, mode: 'bulk' | 'msearch' | 'msearch-template' = 'bulk'): Finding[] {
   const r = ndjsonLint(body, mode);
   return r && r.level === 'warn' ? [{
     rule: 'ndjson-pair', severity: 'warning', message: r.msg,
-    suggestion: mode === 'msearch'
+    suggestion: mode !== 'bulk'
       ? '头行（索引/检索参数）与查询体行必须逐行成对，每行都是单行合法 JSON'
       : '动作行（index/create/update/delete）与文档行必须逐行成对，每行都是单行合法 JSON',
     path: '', anchor: '', nth: 0,
@@ -1396,7 +1396,7 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
 /** NDJSON 行键校验：_msearch 头行 / _bulk 动作行的顶层键必须来自官方目录。
     nth 按 anchor 在全文中的同名键出现次数计（含查询体/文档行里的同名键），
     保证 Monaco findMatches 定位到正确的一处。 */
-export function lintNdjsonLineKeys(text: string, mode: 'msearch' | 'bulk'): Finding[] {
+export function lintNdjsonLineKeys(text: string, mode: 'msearch' | 'msearch-template' | 'bulk'): Finding[] {
   const lines = String(text || '').split('\n').map(l => l.trim()).filter(Boolean);
   if (!lines.length) return [];
   const parsed = lines.map(l => {
@@ -1417,29 +1417,37 @@ export function lintNdjsonLineKeys(text: string, mode: 'msearch' | 'bulk'): Find
     }
     return m;
   });
-  const allowed = mode === 'msearch' ? msearchHeaderKeyItems().map(i => i.label) : [...BULK_ACTIONS];
-  const vocab = new Set(allowed);
+  const headerAllowed = msearchHeaderKeyItems().map(i => i.label);
+  const templateBodyAllowed = msearchTemplateBodyKeyItems().map(i => i.label);
+  const bulkAllowed = [...BULK_ACTIONS];
   const out: Finding[] = [];
   let expectDoc = false;
   parsed.forEach((obj, idx) => {
     if (!obj) return;
     const keys = Object.keys(obj);
-    const isHeader = mode === 'msearch' ? idx % 2 === 0 : !expectDoc;
-    if (!isHeader) {
-      /* bulk 文档行消费掉「待文档」状态；msearch 体行无需状态 */
-      if (mode === 'bulk') expectDoc = false;
-      return;
-    }
+    let allowed: string[] | null = null;
+    let label = '';
     if (mode === 'bulk') {
-      const op = ('delete' in obj) && keys.length === 1 ? 'delete' : BULK_ACTIONS.find(k => k in obj);
+      const isAction = !expectDoc;
+      expectDoc = false;
+      const op = isAction ? (('delete' in obj) && keys.length === 1 ? 'delete' : BULK_ACTIONS.find(k => k in obj)) : undefined;
+      if (!isAction) return;
       expectDoc = !!op && op !== 'delete';
+      allowed = bulkAllowed;
+      label = '批量动作行';
+    } else {
+      const isHeader = idx % 2 === 0;
+      if (isHeader) { allowed = headerAllowed; label = '_msearch 头行'; }
+      else if (mode === 'msearch-template') { allowed = templateBodyAllowed; label = '_msearch/template 体行'; }
+      else return;
     }
+    const vocab = new Set(allowed);
     for (const k of keys) {
       if (vocab.has(k)) continue;
       const near = nearestKey(k, vocab);
       out.push({
         rule: 'ndjson-line-key', severity: 'warning',
-        message: `${mode === 'msearch' ? '_msearch 头行' : '批量动作行'}键「${k}」${near ? `疑似拼写错误（最接近：${near}）` : '不是合法键'}——ES 会拒绝该行`,
+        message: `${label}键「${k}」${near ? `疑似拼写错误（最接近：${near}）` : '不是合法键'}——ES 会拒绝该行`,
         suggestion: near ? `改为 "${near}"（可用 Ctrl+Space 查看全部键）` : `可用键：${allowed.join(' / ')}`,
         path: k, anchor: k, nth: nthPerLine[idx].get(k) ?? 0,
       });

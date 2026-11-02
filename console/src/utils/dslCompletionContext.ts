@@ -1109,7 +1109,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'msearch-template-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1233,8 +1233,8 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   if (p.includes('_delete_by_query')) return 'dbq-body';
   if (p.includes('_update_by_query')) return 'ubq-body';
   /* 1439：_msearch 头行是请求头对象（index/search_type/routing…），下文查询体行回落 search；
-     _msearch/template 的头体形态不同（模板 id/params），维持无档 */
-  if (/(^|\/)_msearch\/template(\/|$)/.test(p)) return 'none';
+     /_msearch/template 头行同款、体行给模板 id/source/params */
+  if (/(^|\/)_msearch\/template(\/|$)/.test(p)) return 'msearch-template-body';
   if (/(^|\/)_msearch(\/|$)/.test(p)) return 'msearch-body';
   /* 1439：执行/渲染模板的体是 {id|source, params}，不是 search 体 */
   if (/(^|\/)_(search|render)\/template(\/|$)/.test(p)) return 'template-search-body';
@@ -1298,6 +1298,15 @@ export function msearchHeaderLineAt(doc: string, offset: number): boolean {
   const lineStart = doc.lastIndexOf('\n', Math.max(0, cursor - 1)) + 1;
   const prior = doc.slice(0, lineStart).split('\n').filter(l => l.trim().length > 0).length;
   return prior % 2 === 0;
+}
+
+/** _msearch/template 体行键（模板执行参数） */
+export function msearchTemplateBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'id', detail: '已存搜索模板 id（与 source 二选一）', snippet: true, insertText: '"id": "${1:my-template}"' },
+    { label: 'source', detail: '内联 Mustache 模板', snippet: true, insertText: '"source": {\n  ${0}\n}' },
+    { label: 'params', detail: '模板参数', snippet: true, insertText: '"params": {\n  ${0}\n}' },
+  ];
 }
 
 /** _bulk 动作键（动作行顶层） */

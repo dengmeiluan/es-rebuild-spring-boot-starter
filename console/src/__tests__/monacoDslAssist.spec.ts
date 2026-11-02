@@ -1572,6 +1572,24 @@ describe('1439 _msearch 头行补全', () => {
   });
 });
 
+describe('1439 _msearch/template 头体补全', () => {
+  it('头行给请求头键；体行给 id/source/params（接受后该行 JSON 合法）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'msearch-template-body' as const } });
+    expect(suggest('{"').map((i: any) => i.label)).toEqual([
+      'index', 'search_type', 'routing', 'preference', 'ignore_unavailable',
+      'allow_no_indices', 'expand_wildcards', 'ccs_minimize_roundtrips',
+    ]);
+    const doc = '{"index":"logs"}\n{"';
+    const bodyItems = suggest(doc);
+    expect(bodyItems.map((i: any) => i.label)).toEqual(['id', 'source', 'params']);
+    for (const i of bodyItems) {
+      const after = acceptSnippet(doc, i);
+      const bodyPart = after.slice(after.indexOf('\n') + 1);
+      expect(() => JSON.parse(bodyPart + '}'), i.label + ' 接受后非法').not.toThrow();
+    }
+  });
+});
+
 describe('1439 _mget 体键位补全', () => {
   it('根键 docs/ids（接受即合法）；docs 元素给七个文档级键；ids 数组不出键', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'mget-body' as const } });

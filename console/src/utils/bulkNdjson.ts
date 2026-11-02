@@ -24,10 +24,10 @@ type NdjsonLint = { level: 'ok' | 'warn'; msg: string } | null;
 
 const BULK_OPS = ['index', 'create', 'update', 'delete'];
 
-export function ndjsonLint(text: string, mode: 'bulk' | 'msearch' = 'bulk'): NdjsonLint {
+export function ndjsonLint(text: string, mode: 'bulk' | 'msearch' | 'msearch-template' = 'bulk'): NdjsonLint {
   const lines = String(text || '').split('\n').map(l => l.trim()).filter(Boolean);
   if (!lines.length) return null;
-  if (mode === 'msearch') {
+  if (mode !== 'bulk') {
     let badJson = 0;
     for (const l of lines) {
       try { JSON.parse(l); } catch { badJson++; }

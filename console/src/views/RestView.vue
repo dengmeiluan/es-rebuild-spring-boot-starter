@@ -404,10 +404,11 @@ const dslAssist = { fields: () => rtFields.value, bodyKind: () => rtBodyKind.val
 const rtLint = computed(() => {
   if (!hasBody.value) return [];
   const kind = rtBodyKind.value;
-  if (kind === 'none' || kind === 'msearch-body' || kind === 'bulk-body') {
-    const mode = kind === 'msearch-body' ? 'msearch' as const : 'bulk' as const;
+  if (kind === 'none' || kind === 'msearch-body' || kind === 'msearch-template-body' || kind === 'bulk-body') {
+    const mode = kind === 'msearch-body' ? 'msearch' as const
+        : kind === 'msearch-template-body' ? 'msearch-template' as const : 'bulk' as const;
     const base = lintNdjsonBody(body.value || '', mode);
-    return (kind === 'msearch-body' || kind === 'bulk-body')
+    return kind !== 'none'
       ? [...base, ...lintNdjsonLineKeys(body.value || '', mode)]
       : base;
   }

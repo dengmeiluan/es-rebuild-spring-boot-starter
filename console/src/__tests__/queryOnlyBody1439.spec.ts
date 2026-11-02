@@ -3,7 +3,7 @@
  *
  * 这些端点此前一律按 search 体处理：根键位给 sort/aggs/size（ES 直接 400），
  * 而真正的根键（count 的 query、模板的 id/source/params）一个都不出。
- * _msearch 是 NDJSON：头行给请求头键、查询体行回落 search；_msearch/template 仍无档。
+ * _msearch 是 NDJSON：头行给请求头键、查询体行回落 search；_msearch/template 体行给模板键。
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -22,10 +22,10 @@ describe('1439 query-only / 模板体 / _msearch 分档', () => {
     for (const p of ['/_msearch', '/idx/_msearch']) {
       expect(bodyKindForPath(p, 'POST'), p).toBe('msearch-body');
     }
-    expect(bodyKindForPath('/idx/_msearch/template', 'POST')).toBe('none');
+    expect(bodyKindForPath('/idx/_msearch/template', 'POST')).toBe('msearch-template-body');
     /* 相对写法（用户没敲前导斜杠）同样分档——段匹配不是裸 includes */
     expect(bodyKindForPath('_msearch', 'POST')).toBe('msearch-body');
-    expect(bodyKindForPath('_msearch/template', 'POST')).toBe('none');
+    expect(bodyKindForPath('_msearch/template', 'POST')).toBe('msearch-template-body');
     expect(bodyKindForPath('_count', 'POST')).toBe('query-body');
     expect(bodyKindForPath('logs/_count', 'GET')).toBe('query-body');
     expect(bodyKindForPath('logs/_search/template', 'POST')).toBe('template-search-body');
