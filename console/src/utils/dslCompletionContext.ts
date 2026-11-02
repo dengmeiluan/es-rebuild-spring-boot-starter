@@ -2785,12 +2785,19 @@ export function securityApiKeyGrantRegionAt(doc: string, offset: number): 'root'
   return 'deep';
 }
 
-/** API Key 检索体（GET|POST /_security/api_key/_query）的根键 */
+/** API Key 检索体（GET|POST /_security/_query/api_key）的根键 */
 export function securityApiKeyQueryBodyKeyItems(): AssistItem[] {
   return [
-    { label: 'query', detail: 'API Key 查询条件（Query DSL）', snippet: true, insertText: '"query": {\n  ${0}\n}' },
+    { label: 'query', detail: 'API Key 查询条件（Query DSL 子集）', snippet: true, insertText: '"query": {\n  ${0}\n}' },
     { label: 'from', detail: '分页起点', snippet: true, insertText: '"from": ${1:0}' },
     { label: 'size', detail: '返回条数', snippet: true, insertText: '"size": ${1:10}' },
+    { label: 'sort', detail: '排序（API Key 公共字段，如 creation/name/expiration）', snippet: true,
+      insertText: '"sort": [ { "${1:creation}": { "order": "desc" } } ]' },
+    { label: 'search_after', detail: '深分页游标（上一页最后一条的排序值）', snippet: true,
+      insertText: '"search_after": ["${1:value}"]' },
+    { label: 'aggregations', detail: '聚合（对 API Key 公共字段）', snippet: true,
+      insertText: '"aggregations": {\n  ${0}\n}' },
+    { label: 'aggs', detail: '聚合简写（与 aggregations 等价）', snippet: true, insertText: '"aggs": {\n  ${0}\n}' },
   ];
 }
 

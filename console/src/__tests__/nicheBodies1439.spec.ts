@@ -121,7 +121,9 @@ describe('1439 外围写体：目录与 lint 同源', () => {
       'grant_type', 'access_token', 'username', 'password', 'api_key',
     ]);
     expect(securityApiKeyGrantKeys).toEqual(['name', 'expiration', 'role_descriptors', 'metadata']);
-    expect(securityApiKeyQueryBodyRootKeys).toEqual(['query', 'from', 'size']);
+    expect(securityApiKeyQueryBodyRootKeys).toEqual([
+      'query', 'from', 'size', 'sort', 'search_after', 'aggregations', 'aggs',
+    ]);
     expect(securityApiKeyInvalidateBodyRootKeys).toEqual(['ids', 'name', 'owner', 'realm_name', 'username']);
     expect(securityCrossClusterApiKeyBodyRootKeys).toEqual(['name', 'access', 'expiration', 'metadata']);
     expect(securityCrossClusterAccessKeys).toEqual(['search', 'replication']);
@@ -150,7 +152,8 @@ describe('1439 外围写体：目录与 lint 同源', () => {
     expect(lintStructuredBody('ml-filter-update-body',
       '{"description":"safe","add_items":["*.example.com"],"remove_items":["*.old.com"]}')).toEqual([]);
     expect(lintStructuredBody('security-api-key-query-body',
-      '{"query":{"wildcard":{"name":"my-api-*"}},"from":0,"size":10}')).toEqual([]);
+      '{"query":{"wildcard":{"name":"my-api-*"}},"from":0,"size":10,'
+      + '"sort":[{"creation":{"order":"desc"}}],"search_after":["v"],"aggs":{}}')).toEqual([]);
     expect(lintStructuredBody('security-api-key-invalidate-body',
       '{"ids":["k1"],"owner":true,"realm_name":"native1","username":"u"}')).toEqual([]);
     expect(lintStructuredBody('security-cross-cluster-api-key-body',
@@ -201,7 +204,7 @@ describe('1439 外围写体：目录与 lint 同源', () => {
       .some(f => f.message.includes('日历事件 #1'))).toBe(true);
     expect(lintStructuredBody('ml-filter-update-body', '{"item":[]}')
       .some(f => f.message.includes('ML 过滤器更新体'))).toBe(true);
-    expect(lintStructuredBody('security-api-key-query-body', '{"sort":[]}')
+    expect(lintStructuredBody('security-api-key-query-body', '{"sorts":[]}')
       .some(f => f.message.includes('API Key 检索体'))).toBe(true);
     expect(lintStructuredBody('security-api-key-invalidate-body', '{"key_ids":[]}')
       .some(f => f.message.includes('API Key 吊销体'))).toBe(true);

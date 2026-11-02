@@ -56,4 +56,21 @@ describe('esEndpoints', () => {
     expect(ES_ENDPOINTS.find(e => e.path === '/{index}/_refresh')!.methods).toEqual(['POST', 'GET']);
     expect(ES_ENDPOINTS.find(e => e.path === '/{index}/_bulk')!.methods).toEqual(['POST', 'PUT']);
   });
+
+  it('管理面预设方法跟官方 spec：PUT/POST 双方法不误灰（1439）', () => {
+    const methodsOf = (path: string) => ES_ENDPOINTS.find(e => e.path === path)!.methods;
+    expect(methodsOf('/_security/api_key')).toEqual(['PUT', 'POST']);
+    expect(methodsOf('/_security/_query/api_key')).toEqual(['POST']);
+    expect(methodsOf('/_security/privilege')).toEqual(['PUT', 'POST']);
+    expect(methodsOf('/_security/role/{name}')).toEqual(['PUT', 'POST']);
+    expect(methodsOf('/_security/user/{name}')).toEqual(['PUT', 'POST']);
+    expect(methodsOf('/_security/role_mapping/{name}')).toEqual(['PUT', 'POST']);
+    expect(methodsOf('/_snapshot/{repository}')).toEqual(['PUT', 'POST']);
+    expect(methodsOf('/_snapshot/{repository}/{snapshot}/_clone/{target_snapshot}')).toEqual(['PUT']);
+    expect(methodsOf('/_index_template/{name}')).toEqual(['PUT', 'POST']);
+    expect(methodsOf('/_component_template/{name}')).toEqual(['PUT', 'POST']);
+    expect(methodsOf('/_license')).toEqual(['PUT', 'POST']);
+    expect(methodsOf('/_watcher/watch/{watch_id}')).toEqual(['PUT', 'POST']);
+    expect(methodsOf('/_scripts/{id}')).toEqual(['PUT', 'POST']);
+  });
 });
