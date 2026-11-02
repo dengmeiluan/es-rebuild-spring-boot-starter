@@ -1443,6 +1443,33 @@ describe('1439 runtime_mappings 类型位', () => {
   });
 });
 
+describe('1439 field_caps / terms_enum 补全', () => {
+  it('field-caps：根三键（接受即合法）；index_filter 内回落查询；runtime type 值位给目录', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'field-caps-body' as const } });
+    const root = suggest('{"');
+    expect(root.map((i: any) => i.label)).toEqual(['fields', 'index_filter', 'runtime_mappings']);
+    for (const i of root) {
+      expect(() => JSON.parse(acceptSnippet('{', i) + '}'), i.label + ' 接受后非法').not.toThrow();
+    }
+    expect(suggest('{"index_filter": {"').map((i: any) => i.label)).toContain('match');
+    expect(suggest('{"index_filter": {"bool": {"').map((i: any) => i.label)).toContain('must');
+    expect(suggest('{"runtime_mappings": {"day": {"type": "').map((i: any) => i.label)).toContain('composite');
+  });
+
+  it('terms-enum：根七键；field 值位给字段名；index_filter 内回落查询', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'terms-enum-body' as const } });
+    const root = suggest('{"');
+    expect(root.map((i: any) => i.label)).toEqual([
+      'field', 'string', 'size', 'case_insensitive', 'index_filter', 'timeout', 'search_after',
+    ]);
+    for (const i of root) {
+      expect(() => JSON.parse(acceptSnippet('{', i) + '}'), i.label + ' 接受后非法').not.toThrow();
+    }
+    expect(suggest('{"field": "').map((i: any) => i.label)).toEqual(expect.arrayContaining(['title', 'price']));
+    expect(suggest('{"index_filter": {"').map((i: any) => i.label)).toContain('match');
+  });
+});
+
 describe('1439 _bulk 动作行补全', () => {
   it('动作行给动作键（接受即合法）；文档行不出键；下一对动作行再给键', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'bulk-body' as const } });

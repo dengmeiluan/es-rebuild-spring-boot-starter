@@ -12,6 +12,7 @@ import {
   ubqBodyRootKeys, queryOnlyBodyRootKeys, templateSearchBodyRootKeys, sqlBodyRootKeys, mgetBodyRootKeys,
   storedScriptBodyRootKeys, aliasesBodyRootKeys, scrollBodyRootKeys, clearScrollBodyRootKeys,
   termvectorsBodyRootKeys, mtermvectorsBodyRootKeys, reindexBodyRootKeys, scriptExecuteBodyRootKeys,
+  fieldCapsBodyRootKeys, termsEnumBodyRootKeys,
 } from '../utils/dslCompletionContext';
 
 describe('1439 结构化体根键 lint', () => {
@@ -48,6 +49,8 @@ describe('1439 结构化体根键 lint', () => {
       [mtermvectorsBodyRootKeys, '多词项向量'],
       [reindexBodyRootKeys, '重建索引'],
       [scriptExecuteBodyRootKeys, '执行脚本'],
+      [fieldCapsBodyRootKeys, '字段能力'],
+      [termsEnumBodyRootKeys, '词项枚举'],
     ];
     for (const [keys, label] of tables) {
       const obj = Object.fromEntries(keys.map(k => [k, 1]));
@@ -73,6 +76,8 @@ describe('1439 lintStructuredBody 共享分派（DevTools / RestView 同源）',
     expect(lintStructuredBody('clear-scroll-body', '{"scroll_id":["x"]}')).toEqual([]);
     expect(lintStructuredBody('reindex-body', '{"sources":{}}')[0].message).toContain('重建索引体');
     expect(lintStructuredBody('script-execute-body', '{"scripts":{}}')[0].message).toContain('执行脚本体');
+    expect(lintStructuredBody('field-caps-body', '{"fieldz":[]}')[0].message).toContain('字段能力体');
+    expect(lintStructuredBody('terms-enum-body', '{"fieldz":"x"}')[0].message).toContain('词项枚举体');
     expect(lintStructuredBody('search', '{"sort":[]}')).toEqual([]);
     expect(lintStructuredBody('settings', '{"a":1}')).toEqual([]);
     expect(lintStructuredBody('dbq-body', '{bad')).toEqual([]);

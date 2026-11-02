@@ -17,7 +17,7 @@ import {
   dbqBodyKeyItems, ubqBodyKeyItems, queryOnlyBodyKeyItems, templateSearchBodyKeyItems,
   mgetBodyKeyItems, mgetDocKeyItems,
   storedScriptBodyKeyItems, storedScriptKeyItems, scriptExecuteBodyKeyItems, msearchHeaderKeyItems,
-  bulkActionKeyItems, bulkActionMetaKeyItems,
+  bulkActionKeyItems, bulkActionMetaKeyItems, fieldCapsBodyKeyItems, termsEnumBodyKeyItems,
   aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems,
   scrollBodyKeyItems, clearScrollBodyKeyItems,
   termvectorsKeyItems, mtermvectorsBodyKeyItems, mtermvectorsDocKeyItems,
@@ -101,6 +101,8 @@ function allProblems(): string[] {
   out.push(...snippetProblems('BK', bulkActionKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('BM', bulkActionMetaKeyItems('update').map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('BM2', bulkActionMetaKeyItems('index').map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('FC', fieldCapsBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('TE', termsEnumBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('AB', aliasesBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('AA', aliasActionKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('AC', aliasAddConfigKeyItems().map(i => ({ text: i.insertText, key: i.label }))));

@@ -797,6 +797,8 @@ export function dslContext(doc: string, offset: number): DslCtx {
       /* 1439：顶层 filter 也是查询容器（SQL 体的 "filter" 是 Query DSL；
          别名 filter 同形）——此前这里零候选。只认根层，避免 aggs.filter 等深层误扩 */
       else if (keys[0] === 'filter' && stack.length > 1) qIdx = 0;
+      /* 1439：_field_caps / _terms_enum 的 index_filter 是 Query DSL——同样回落查询补全 */
+      else if (keys[0] === 'index_filter' && stack.length > 1) qIdx = 0;
     }
   }
   /* 在 query 内 ⟺ 某层帧 lastKey='query' 且其上方还有帧（query 值容器未闭合）。
@@ -1107,7 +1109,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'bulk-body' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1256,6 +1258,10 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：词项向量两端点的体是结构化配置（mtermvectors 先判，避免被 termvectors 吞） */
   if (/(^|\/)_mtermvectors(\/|$)/.test(p)) return 'mtermvectors-body';
   if (/(^|\/)_termvectors(\/|$)/.test(p)) return 'termvectors-body';
+  /* 1439：_field_caps / _terms_enum 的体是检索能力/词项枚举配置，不是 search 体；
+     index_filter 内的查询由 dslContext 根级查询容器识别后回落 */
+  if (/(^|\/)_field_caps(\/|$)/.test(p)) return 'field-caps-body';
+  if (/(^|\/)_terms_enum(\/|$)/.test(p)) return 'terms-enum-body';
   if (p.includes('/_scripts') || p.includes('/_script/')
       || p.includes('/_close') || p.includes('/_open') || p.includes('/_forcemerge')) return 'none';
   return 'search';
@@ -1348,6 +1354,38 @@ export function bulkActionMetaAt(doc: string, offset: number = doc.length): stri
   if (stack.length < 2) return null;
   const k = stack[0];
   return k && (BULK_ACTIONS as readonly string[]).includes(k) ? k : null;
+}
+
+/** 字段能力体（GET/POST /<索引>/_field_caps）的根键 */
+export function fieldCapsBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'fields', detail: '要查询能力的字段（数组，可用通配）', snippet: true, insertText: '"fields": ["${1:field}"]' },
+    { label: 'index_filter', detail: '只看命中文档的字段能力（Query DSL）', snippet: true,
+      insertText: '"index_filter": {\n  ${0}\n}' },
+    { label: 'runtime_mappings', detail: '本次查询的运行时字段', snippet: true,
+      insertText: '"runtime_mappings": {\n  ${0}\n}' },
+  ];
+}
+
+/** 词项枚举体（POST /<索引>/_terms_enum）的根键 */
+export function termsEnumBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'field', detail: '枚举哪个字段的词项', snippet: true, insertText: '"field": "${1:field}"' },
+    { label: 'string', detail: '前缀/模糊串', snippet: true, insertText: '"string": "${1:prefix}"' },
+    { label: 'size', detail: '最多返回多少个词项', snippet: true, insertText: '"size": ${1:10}' },
+    { label: 'case_insensitive', detail: '大小写不敏感', snippet: true, insertText: '"case_insensitive": ${1|true,false|}' },
+    { label: 'index_filter', detail: '只看命中文档（Query DSL）', snippet: true, insertText: '"index_filter": {\n  ${0}\n}' },
+    { label: 'timeout', detail: '超时时间', snippet: true, insertText: '"timeout": "${1:1s}"' },
+    { label: 'search_after', detail: '翻页游标（上一页最后的词项）', snippet: true, insertText: '"search_after": "${1:term}"' },
+  ];
+}
+
+/** field-caps / terms-enum 的区域：根层 / index_filter（查询，回落 search）/ 深层 */
+export function indexFilterRegionAt(doc: string, offset: number = doc.length): 'root' | 'query' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] === 'index_filter') return 'query';
+  return 'deep';
 }
 
 /** 补全项统一形态：insertText 已是完整插入串（含引号/snippet 语法），provider 直接消费 */
@@ -2028,6 +2066,8 @@ export const clearScrollBodyRootKeys = clearScrollBodyKeyItems().map(i => i.labe
 export const termvectorsBodyRootKeys = termvectorsKeyItems().map(i => i.label);
 export const mtermvectorsBodyRootKeys = mtermvectorsBodyKeyItems().map(i => i.label);
 export const reindexBodyRootKeys = reindexBodyKeyItems('root').map(i => i.label);
+export const fieldCapsBodyRootKeys = fieldCapsBodyKeyItems().map(i => i.label);
+export const termsEnumBodyRootKeys = termsEnumBodyKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */
