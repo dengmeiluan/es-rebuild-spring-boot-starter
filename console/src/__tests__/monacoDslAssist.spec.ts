@@ -774,11 +774,12 @@ describe('W6 bodyKind 分派', () => {
       .toBe('"properties": {\n      "${1:field}": { "type": "${2:keyword}" }\n    }');
   });
 
-  it('template：串内键位出模板八键（全 Snippet + W5-1 双关），串外压住', () => {
+  it('template：串内键位出模板十键（全 Snippet + W5-1 双关），串外压住', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'template' } });
     const s = suggest('{\n  "\n}', 5);
     expect(s.map(i => i.label)).toEqual([
-      'index_patterns', 'priority', 'template', 'settings', 'mappings', 'aliases', 'composed_of', '_meta',
+      'index_patterns', 'priority', 'template', 'settings', 'mappings', 'aliases', 'composed_of',
+      'data_stream', 'version', '_meta',
     ]);
     for (const i of s) {
       expect(i.kind, i.label).toBe(Kind.Snippet);

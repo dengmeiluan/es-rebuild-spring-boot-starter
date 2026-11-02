@@ -342,10 +342,11 @@ describe('settingsKeyItems / mappingKeyItems', () => {
     expect(prop?.insertText).toContain('${1:field}');
     expect(items.some(i => i.label === 'type')).toBe(true);
   });
-  it('ux2 template 档：八键齐、全 snippet、带中文 detail', () => {
+  it('ux2 template 档：十键齐、全 snippet、带中文 detail', () => {
     const items = templateKeyItems();
     expect(items.map(i => i.label)).toEqual([
-      'index_patterns', 'priority', 'template', 'settings', 'mappings', 'aliases', 'composed_of', '_meta',
+      'index_patterns', 'priority', 'template', 'settings', 'mappings', 'aliases', 'composed_of',
+      'data_stream', 'version', '_meta',
     ]);
     for (const it of items) {
       expect(it.snippet, it.label).toBe(true);

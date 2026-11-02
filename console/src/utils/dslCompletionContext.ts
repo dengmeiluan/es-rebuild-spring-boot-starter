@@ -3399,6 +3399,9 @@ export function templateKeyItems(): AssistItem[] {
       insertText: '"aliases": {\n  "${1:alias}": {}\n}' },
     { label: 'composed_of', detail: '组合 component_template 名清单（按序叠加）', snippet: true,
       insertText: '"composed_of": ["${1:component-template}"]' },
+    { label: 'data_stream', detail: '开启数据流（模板命中建为 data stream）', snippet: true,
+      insertText: '"data_stream": {}' },
+    { label: 'version', detail: '模板版本号（便于识别迭代）', snippet: true, insertText: '"version": ${1:1}' },
     { label: '_meta', detail: '模板自定义元数据（用途/负责人等备注）', snippet: true,
       insertText: '"_meta": {\n  "${1:description}": "${2:用途说明}"\n}' },
   ];
