@@ -2066,9 +2066,12 @@ export function securityRoleAppKeyItems(): AssistItem[] {
 }
 
 /** 安全角色体区域：根 / indices 元素 / field_security / applications 元素 */
-export function securityRoleRegionAt(doc: string, offset: number): 'root' | 'index' | 'field-security' | 'app' | 'deep' {
+export function securityRoleRegionAt(doc: string, offset: number):
+  'root' | 'index' | 'field-security' | 'query' | 'app' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
+  /* indices[] 里的 query 是整棵 Query DSL——回落到查询补全 */
+  if (stack[0] === 'indices' && stack.includes('query')) return 'query';
   if (stack[0] === 'indices' && stack.length === 3) return 'index';
   if (stack[0] === 'indices' && stack.length === 4 && stack[2] === 'field_security') return 'field-security';
   if (stack[0] === 'applications' && stack.length === 3) return 'app';

@@ -1261,6 +1261,11 @@ describe('1439 安全体系写体补全', () => {
     const fs = '{\n  "indices": [\n    {\n      "field_security": {\n        "\n      }\n    }\n  ]\n}';
     expect(suggest(fs, fs.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['grant', 'except']);
 
+    const q = '{\n  "indices": [\n    {\n      "query": {\n        "\n      }\n    }\n  ]\n}';
+    const qLabels = suggest(q, q.lastIndexOf('"') + 1).map(i => i.label);
+    expect(qLabels).toContain('match');
+    expect(qLabels).toContain('bool');
+
     const app = '{\n  "applications": [\n    {\n      "\n    }\n  ]\n}';
     expect(suggest(app, app.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['application', 'privileges', 'resources']);
 

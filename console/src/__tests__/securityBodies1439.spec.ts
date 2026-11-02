@@ -75,6 +75,8 @@ describe('1439 安全体系写体分档', () => {
     expect(roleAt('{')).toBe('root');
     expect(roleAt('{"indices": [{')).toBe('index');
     expect(roleAt('{"indices": [{"field_security": {')).toBe('field-security');
+    expect(roleAt('{"indices": [{"query": {')).toBe('query');
+    expect(roleAt('{"indices": [{"query": {"bool": {')).toBe('query');
     expect(roleAt('{"applications": [{')).toBe('app');
     expect(roleAt('{"indices": [{"names": [')).toBe('deep');
 
