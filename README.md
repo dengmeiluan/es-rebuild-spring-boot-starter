@@ -303,6 +303,17 @@ searchdeck/
 引擎与 console 的包依赖目前存在环（auth ↔ multicluster ↔ xmigrate ↔ config），
 因此 `engine/` 先作为 console 内的边界目录隔离，待接口反转后再独立成 artifact。
 
+### 兼容矩阵
+
+| 维度 | 支持范围 |
+|---|---|
+| JDK | 8+（独立 jar 与嵌入式一致） |
+| Spring Boot | 2.3.x 基线；宿主 2.7.x 已验证 |
+| Elasticsearch | 7.x（7.6+ 推荐；内置 6.7 日期兼容转换器） |
+| 操作系统 | Linux / macOS / Windows，纯 JVM 运行 |
+| 部署形态 | 独立 jar、嵌入式模块、宿主 SPI 集成、`rebuild-only` 引擎 |
+| 浏览器 | 现代 Chromium / Firefox / Safari，支持 iframe 嵌入与主题跟随 |
+
 ---
 
 ## 🎛️ 交互宪法

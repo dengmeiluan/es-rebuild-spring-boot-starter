@@ -311,6 +311,17 @@ The engine and console packages still contain cycles (auth ↔ multicluster ↔ 
 so `engine/` remains an isolated boundary directory inside console until interface inversion allows
 a separate artifact.
 
+### Compatibility matrix
+
+| Dimension | Supported |
+|---|---|
+| JDK | 8+ (standalone jar and embedded mode alike) |
+| Spring Boot | 2.3.x baseline; host 2.7.x verified |
+| Elasticsearch | 7.x (7.6+ recommended; built-in ES 6.7 date compat converters) |
+| OS | Linux / macOS / Windows, pure JVM |
+| Deployment | standalone jar, embedded module, host SPI, `rebuild-only` engine |
+| Browser | modern Chromium / Firefox / Safari; iframe embedding and theme follow |
+
 ---
 
 ## 🎛️ Interaction constitution
