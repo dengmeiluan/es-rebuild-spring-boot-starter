@@ -1338,6 +1338,40 @@ describe('1439 Enrich 策略体补全', () => {
   });
 });
 
+describe('1439 Transform 体补全', () => {
+  it('根 → source/dest/pivot/sync(.time)/retention(.time)；source.query 回落查询', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'transform-body' } });
+    const root = '{\n  "\n}';
+    const rootLabels = suggest(root, 5).map(i => i.label);
+    for (const k of ['source', 'dest', 'pivot', 'latest', 'sync', 'retention_policy', 'description', 'settings', 'frequency', 'max_page_search_size', '_meta']) {
+      expect(rootLabels, k).toContain(k);
+    }
+
+    const src = '{\n  "source": {\n    "\n  }\n}';
+    expect(suggest(src, src.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['index', 'query', 'remote']);
+
+    const dest = '{\n  "dest": {\n    "\n  }\n}';
+    expect(suggest(dest, dest.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['index', 'pipeline']);
+
+    const pivot = '{\n  "pivot": {\n    "\n  }\n}';
+    expect(suggest(pivot, pivot.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['group_by', 'aggregations']);
+
+    const st = '{\n  "sync": {\n    "time": {\n      "\n    }\n  }\n}';
+    expect(suggest(st, st.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['field', 'delay']);
+
+    const rt = '{\n  "retention_policy": {\n    "time": {\n      "\n    }\n  }\n}';
+    expect(suggest(rt, rt.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['field', 'max_age']);
+
+    const q = '{"source": {"query": {"';
+    const qLabels = suggest(q).map(i => i.label);
+    expect(qLabels).toContain('match');
+    expect(qLabels).toContain('term');
+
+    const deep = '{"source": {"index": ["';
+    expect(suggest(deep).map(i => i.label), '索引数组位不出键').toEqual([]);
+  });
+});
+
 describe('1439 子句体键位（query-body-key / clause-field-key / retriever-body-key）', () => {
   it('bool 体给 must/filter/should/must_not，接受后 JSON 合法', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });

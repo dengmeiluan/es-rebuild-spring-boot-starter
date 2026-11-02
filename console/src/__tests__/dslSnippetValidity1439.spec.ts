@@ -32,6 +32,8 @@ import {
   securityUserBodyKeyItems, securityRoleTemplateKeyItems, securityRoleMappingBodyKeyItems, securityApiKeyBodyKeyItems,
   ingestPipelineBodyKeyItems, ingestProcessorKeyItems,
   enrichPolicyBodyKeyItems, enrichMatchPolicyKeyItems, enrichRangePolicyKeyItems,
+  transformBodyKeyItems, transformSourceKeyItems, transformDestKeyItems, transformPivotKeyItems,
+  transformTimeKeyItems, transformTimeConfigKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -166,6 +168,14 @@ function allProblems(): string[] {
   out.push(...snippetProblems('EP', enrichPolicyBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('EM', enrichMatchPolicyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('ER', enrichRangePolicyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('TF', transformBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('TS', transformSourceKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('TD', transformDestKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('TP', transformPivotKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('TSY', transformTimeKeyItems('sync').map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('TSYT', transformTimeConfigKeyItems('sync').map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('TRT', transformTimeKeyItems('retention').map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('TRTT', transformTimeConfigKeyItems('retention').map(i => ({ text: i.insertText, key: i.label }))));
   return out;
 }
 

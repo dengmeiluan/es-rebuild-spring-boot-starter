@@ -1111,7 +1111,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
 export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'msearch-template-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'eql-body' | 'cluster-settings-body' | 'reroute-body' | 'allocation-explain-body'
 | 'snapshot-repo-body' | 'snapshot-create-body' | 'snapshot-restore-body' | 'slm-policy-body' | 'ilm-policy-body' | 'watch-body'
-| 'security-role-body' | 'security-user-body' | 'security-role-mapping-body' | 'security-api-key-body' | 'ingest-pipeline-body' | 'enrich-policy-body' | 'none';
+| 'security-role-body' | 'security-user-body' | 'security-role-mapping-body' | 'security-api-key-body' | 'ingest-pipeline-body' | 'enrich-policy-body' | 'transform-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1250,6 +1250,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   if (method.toUpperCase() === 'PUT' && /(^|\/)_ingest\/pipeline\/[^/]+(\/|$)/.test(p)) return 'ingest-pipeline-body';
   /* 1439：Enrich 策略体（PUT /_enrich/policy/<name>）：match / geo_match / range 三型 */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_enrich\/policy\/[^/]+(\/|$)/.test(p)) return 'enrich-policy-body';
+  /* 1439：Transform 体（PUT /_transform/<id>，兼容 _transform/transforms/<id>）：
+     {source,dest,pivot|latest,sync,retention_policy,…}；_start/_stop 是 POST，不并进本档。 */
+  if (method.toUpperCase() === 'PUT' && /(^|\/)_transform\/(?:transforms\/)?[^/]+(\/|$)/.test(p)) return 'transform-body';
   if (p.includes('/_snapshot/')) {
     const segs = p.split('/').filter(Boolean);
     const si = segs.indexOf('_snapshot');
@@ -2165,6 +2168,102 @@ export function enrichPolicyRegionAt(doc: string, offset: number): 'root' | 'mat
   return 'deep';
 }
 
+/** Transform 体（PUT /_transform/<id>）的根键 */
+export function transformBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'source', detail: '源索引与过滤查询', snippet: true,
+      insertText: '"source": {\n  "index": ["${1:logs-*}"],\n  "query": { "match_all": {} }\n}' },
+    { label: 'dest', detail: '目标索引（可指定写入 pipeline）', snippet: true,
+      insertText: '"dest": { "index": "${1:transformed-index}" }' },
+    { label: 'pivot', detail: '透视聚合（group_by + aggregations）', snippet: true,
+      insertText: '"pivot": {\n  "group_by": {\n    "${1:key}": { "terms": { "field": "${2:field}" } }\n  },\n  "aggregations": {\n    "${3:metric}": { "avg": { "field": "${4:value}" } }\n  }\n}' },
+    { label: 'latest', detail: '取每个键最新文档（unique_key + sort）', snippet: true,
+      insertText: '"latest": { "unique_key": "${1:id}", "sort": "${2:@timestamp}" }' },
+    { label: 'sync', detail: '持续同步（time 字段与延迟）', snippet: true,
+      insertText: '"sync": { "time": { "field": "${1:@timestamp}", "delay": "${2:1m}" } }' },
+    { label: 'retention_policy', detail: '目标索引保留策略（max_age）', snippet: true,
+      insertText: '"retention_policy": { "time": { "field": "${1:@timestamp}", "max_age": "${2:30d}" } }' },
+    { label: 'description', detail: 'Transform 用途说明', snippet: true, insertText: '"description": "${1:transform logs}"' },
+    { label: 'settings', detail: '执行调优（docs_per_second 等）', snippet: true, insertText: '"settings": {\n  ${0}\n}' },
+    { label: 'frequency', detail: '检查源索引变化的频率（如 1m）', snippet: true, insertText: '"frequency": "${1:1m}"' },
+    { label: 'max_page_search_size', detail: '单页最大检索文档数', snippet: true, insertText: '"max_page_search_size": ${1:500}' },
+    { label: '_meta', detail: '自定义元数据', snippet: true, insertText: '"_meta": {\n  ${0}\n}' },
+  ];
+}
+
+/** source 对象的键（query 内回落整棵查询补全） */
+export function transformSourceKeyItems(): AssistItem[] {
+  return [
+    { label: 'index', detail: '源索引（数组/通配）', snippet: true, insertText: '"index": ["${1:logs-*}"]' },
+    { label: 'query', detail: '源文档过滤（Query DSL）', snippet: true, insertText: '"query": {\n  ${0}\n}' },
+    { label: 'remote', detail: '远程集群源（cluster + index）', snippet: true,
+      insertText: '"remote": { "host": "${1:https://remote:9200}", "username": "${2:user}", "password": "${3:pass}", "index": ["${4:logs-*}"] }' },
+  ];
+}
+
+/** dest 对象的键 */
+export function transformDestKeyItems(): AssistItem[] {
+  return [
+    { label: 'index', detail: '目标索引名', snippet: true, insertText: '"index": "${1:transformed-index}"' },
+    { label: 'pipeline', detail: '写入前经过的 ingest 管道', snippet: true, insertText: '"pipeline": "${1:my-pipeline}"' },
+  ];
+}
+
+/** pivot 对象的键 */
+export function transformPivotKeyItems(): AssistItem[] {
+  return [
+    { label: 'group_by', detail: '分组键（字段聚合）', snippet: true,
+      insertText: '"group_by": {\n  "${1:key}": { "terms": { "field": "${2:field}" } }\n}' },
+    { label: 'aggregations', detail: '指标聚合', snippet: true,
+      insertText: '"aggregations": {\n  "${1:metric}": { "avg": { "field": "${2:value}" } }\n}' },
+  ];
+}
+
+/** sync / retention_policy 的时间配置键 */
+export function transformTimeKeyItems(kind: 'sync' | 'retention'): AssistItem[] {
+  return [
+    { label: 'time', detail: '时间字段配置', snippet: true,
+      insertText: kind === 'sync'
+        ? '"time": { "field": "${1:@timestamp}", "delay": "${2:1m}" }'
+        : '"time": { "field": "${1:@timestamp}", "max_age": "${2:30d}" }' },
+  ];
+}
+
+/** sync.time / retention_policy.time 的键 */
+export function transformTimeConfigKeyItems(kind: 'sync' | 'retention'): AssistItem[] {
+  return [
+    { label: 'field', detail: '时间字段', snippet: true, insertText: '"field": "${1:@timestamp}"' },
+    kind === 'sync'
+      ? { label: 'delay', detail: '同步延迟（避免读到未完成写入）', snippet: true, insertText: '"delay": "${1:1m}"' }
+      : { label: 'max_age', detail: '目标文档最长保留时间', snippet: true, insertText: '"max_age": "${1:30d}"' },
+  ];
+}
+
+/** Transform 体区域：根 / source / source.query / dest / pivot / sync(.time) / retention(.time) */
+export function transformRegionAt(doc: string, offset: number):
+  'root' | 'source' | 'source-query' | 'dest' | 'pivot' | 'sync' | 'sync-time' | 'retention' | 'retention-time' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] === 'source') {
+    if (stack.length === 2) return 'source';
+    if (stack[1] === 'query' && stack.length >= 3) return 'source-query';
+    return 'deep';
+  }
+  if (stack[0] === 'dest' && stack.length === 2) return 'dest';
+  if (stack[0] === 'pivot' && stack.length === 2) return 'pivot';
+  if (stack[0] === 'sync') {
+    if (stack.length === 2) return 'sync';
+    if (stack[1] === 'time' && stack.length === 3) return 'sync-time';
+    return 'deep';
+  }
+  if (stack[0] === 'retention_policy') {
+    if (stack.length === 2) return 'retention';
+    if (stack[1] === 'time' && stack.length === 3) return 'retention-time';
+    return 'deep';
+  }
+  return 'deep';
+}
+
 /** 分片分配诊断体（POST /_cluster/allocation/explain）的根键 */
 export function allocationExplainBodyKeyItems(): AssistItem[] {
   return [
@@ -2918,6 +3017,14 @@ export const ingestProcessorLintKeys = [...INGEST_PROCESSOR_TYPES, ...INGEST_PRO
 export const enrichPolicyBodyRootKeys = enrichPolicyBodyKeyItems().map(i => i.label);
 export const enrichMatchKeys = enrichMatchPolicyKeyItems().map(i => i.label);
 export const enrichRangeKeys = enrichRangePolicyKeyItems().map(i => i.label);
+export const transformBodyRootKeys = transformBodyKeyItems().map(i => i.label);
+export const transformSourceKeys = transformSourceKeyItems().map(i => i.label);
+export const transformDestKeys = transformDestKeyItems().map(i => i.label);
+export const transformPivotKeys = transformPivotKeyItems().map(i => i.label);
+export const transformSyncKeys = transformTimeKeyItems('sync').map(i => i.label);
+export const transformSyncTimeKeys = transformTimeConfigKeyItems('sync').map(i => i.label);
+export const transformRetentionKeys = transformTimeKeyItems('retention').map(i => i.label);
+export const transformRetentionTimeKeys = transformTimeConfigKeyItems('retention').map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

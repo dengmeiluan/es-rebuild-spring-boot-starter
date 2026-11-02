@@ -54,6 +54,8 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   securityUserBodyRootKeys, securityRoleTemplateKeys, securityRoleMappingBodyRootKeys, securityApiKeyBodyRootKeys,
   ingestPipelineBodyRootKeys, ingestProcessorLintKeys,
   enrichPolicyBodyRootKeys, enrichMatchKeys, enrichRangeKeys,
+  transformBodyRootKeys, transformSourceKeys, transformDestKeys, transformPivotKeys,
+  transformSyncKeys, transformSyncTimeKeys, transformRetentionKeys, transformRetentionTimeKeys,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -1494,6 +1496,15 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
         ...lintBodyKeys(obj?.match, enrichMatchKeys, 'Enrich match 策略'),
         ...lintBodyKeys(obj?.geo_match, enrichMatchKeys, 'Enrich geo_match 策略'),
         ...lintBodyKeys(obj?.range, enrichRangeKeys, 'Enrich range 策略')];
+    case 'transform-body':
+      return [...lintBodyKeys(obj, transformBodyRootKeys, 'Transform 体'),
+        ...lintBodyKeys(obj?.source, transformSourceKeys, 'Transform 源'),
+        ...lintBodyKeys(obj?.dest, transformDestKeys, 'Transform 目标'),
+        ...lintBodyKeys(obj?.pivot, transformPivotKeys, 'Transform 透视'),
+        ...lintBodyKeys(obj?.sync, transformSyncKeys, 'Transform 同步'),
+        ...lintBodyKeys(obj?.sync?.time, transformSyncTimeKeys, 'Transform 同步时间'),
+        ...lintBodyKeys(obj?.retention_policy, transformRetentionKeys, 'Transform 保留策略'),
+        ...lintBodyKeys(obj?.retention_policy?.time, transformRetentionTimeKeys, 'Transform 保留时间')];
     default: return [];
   }
 }
