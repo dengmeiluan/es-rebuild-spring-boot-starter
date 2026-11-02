@@ -41,6 +41,17 @@
   },
   "description": "SearchDeck console — embeddable Elasticsearch operations platform",
   "license": "Apache-2.0",
+  "homepage": "https://github.com/dengmeiluan/searchdeck#readme",
+  "bugs": {
+    "url": "https://github.com/dengmeiluan/searchdeck/issues"
+  },
+  "keywords": [
+    "elasticsearch",
+    "operations",
+    "observability",
+    "vue",
+    "search"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dengmeiluan/searchdeck.git"

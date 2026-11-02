@@ -19,6 +19,17 @@
     <description>Embeddable Elasticsearch operations platform: platform kernel, console,
         standalone server and host integrations.</description>
     <url>https://github.com/dengmeiluan/searchdeck</url>
+    <inceptionYear>2026</inceptionYear>
+
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/dengmeiluan/searchdeck/issues</url>
+    </issueManagement>
+
+    <ciManagement>
+        <system>GitHub Actions</system>
+        <url>https://github.com/dengmeiluan/searchdeck/actions</url>
+    </ciManagement>
 
     <licenses>
         <license>

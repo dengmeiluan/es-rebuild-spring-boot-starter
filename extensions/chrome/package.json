@@ -4,6 +4,16 @@
   "private": true,
   "type": "module",
   "description": "SearchDeck Chrome launcher (Manifest V3)",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/dengmeiluan/searchdeck/tree/main/extensions/chrome",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dengmeiluan/searchdeck.git",
+    "directory": "extensions/chrome"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "test": "node --test test/*.test.mjs",
     "icons": "python scripts/generate-icons.py"
