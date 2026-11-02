@@ -10,6 +10,7 @@ import {
   watchInputKeyItems, watchConditionKeyItems, watchActionTypeKeyItems, watchBodyRootKeys,
   WATCH_TRIGGER_TYPES, WATCH_SCHEDULE_TYPES, WATCH_INPUT_TYPES, WATCH_CONDITION_TYPES,
   WATCH_ACTION_TYPES, watchRegionAt, watchActionParamsKeyItems, watchConditionParamsKeyItems,
+  watchSearchInputKeyItems, watchSearchRequestKeyItems, watchHttpInputKeyItems, httpRequestKeyItems,
 } from '../utils/dslCompletionContext';
 import { lintStructuredBody } from '../utils/dslLint';
 
@@ -57,6 +58,12 @@ describe('1439 Watcher 体分档', () => {
     expect(watchActionParamsKeyItems('jira').map(i => i.label)).toEqual(['account', 'fields']);
     expect(watchConditionParamsKeyItems('script').map(i => i.label)).toEqual(['source', 'lang', 'params', 'id']);
     expect(watchConditionParamsKeyItems('compare')).toEqual([]);
+    expect(watchSearchInputKeyItems().map(i => i.label)).toEqual(['request', 'extract', 'timeout']);
+    expect(watchSearchRequestKeyItems().map(i => i.label)).toEqual([
+      'indices', 'body', 'template', 'search_type', 'indices_options', 'rest_total_hits_as_int',
+    ]);
+    expect(watchHttpInputKeyItems().map(i => i.label)).toEqual(['request', 'extract', 'response_content_type']);
+    expect(httpRequestKeyItems().map(i => i.label)).toContain('url');
   });
 
   it('区域：根 / trigger / schedule / input / condition / action / 更深', () => {
@@ -65,6 +72,10 @@ describe('1439 Watcher 体分档', () => {
     expect(at('{"trigger": {')).toBe('trigger');
     expect(at('{"trigger": {"schedule": {')).toBe('schedule');
     expect(at('{"input": {')).toBe('input');
+    expect(at('{"input": {"search": {')).toBe('search-input');
+    expect(at('{"input": {"search": {"request": {')).toBe('search-request');
+    expect(at('{"input": {"http": {')).toBe('http-input');
+    expect(at('{"input": {"http": {"request": {')).toBe('http-request');
     expect(at('{"input": {"search": {"request": {"body": {')).toBe('search-body');
     expect(at('{"input": {"search": {"request": {"body": {"query": {')).toBe('search-query');
     expect(at('{"condition": {')).toBe('condition');

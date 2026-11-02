@@ -2013,6 +2013,62 @@ export function watchConditionParamsKeyItems(type: string): AssistItem[] {
   return type === 'script' ? scriptObjectKeyItems() : [];
 }
 
+/** HTTP 请求定义（webhook 动作与 input.http.request 共用） */
+export function httpRequestKeyItems(): AssistItem[] {
+  return [
+    { label: 'url', detail: '完整 URL（与 scheme/host/path 二选一）', snippet: true, insertText: '"url": "${1:https://example.com/hook}"' },
+    { label: 'method', detail: 'HTTP 方法', snippet: true, insertText: '"method": "${1|POST,GET,PUT,DELETE|}"' },
+    { label: 'scheme', detail: '协议', snippet: true, insertText: '"scheme": "${1|https,http|}"' },
+    { label: 'host', detail: '主机名', snippet: true, insertText: '"host": "${1:example.com}"' },
+    { label: 'port', detail: '端口', snippet: true, insertText: '"port": ${1:443}' },
+    { label: 'path', detail: '路径', snippet: true, insertText: '"path": "${1:/hook}"' },
+    { label: 'params', detail: '查询参数', snippet: true, insertText: '"params": {\n  "${1:key}": "${2:value}"\n}' },
+    { label: 'headers', detail: '请求头', snippet: true, insertText: '"headers": {\n  "${1:Content-Type}": "${2:application/json}"\n}' },
+    { label: 'body', detail: '请求体（字符串，常配 mustache）', snippet: true, insertText: '"body": "${1:{{ctx.payload}}}"' },
+    { label: 'auth', detail: '认证（basic 等）', snippet: true, insertText: '"auth": {\n  ${0}\n}' },
+    { label: 'connection_timeout', detail: '连接超时', snippet: true, insertText: '"connection_timeout": "${1:10s}"' },
+    { label: 'read_timeout', detail: '读取超时', snippet: true, insertText: '"read_timeout": "${1:10s}"' },
+    { label: 'proxy', detail: '代理配置', snippet: true, insertText: '"proxy": {\n  ${0}\n}' },
+  ];
+}
+
+/** input.http 对象的键 */
+export function watchHttpInputKeyItems(): AssistItem[] {
+  return [
+    { label: 'request', detail: 'HTTP 请求定义（url/method/headers/body…）', snippet: true,
+      insertText: '"request": {\n  "url": "${1:https://example.com/input}"\n}' },
+    { label: 'extract', detail: '从响应中提取的字段清单', snippet: true, insertText: '"extract": ["${1:field}"]' },
+    { label: 'response_content_type', detail: '响应内容类型', snippet: true,
+      insertText: '"response_content_type": "${1|json,yaml,text|}"' },
+  ];
+}
+
+/** input.search 对象的键 */
+export function watchSearchInputKeyItems(): AssistItem[] {
+  return [
+    { label: 'request', detail: '检索请求定义（indices/body/template…）', snippet: true,
+      insertText: '"request": {\n  "indices": ["${1:logs-*}"],\n  "body": { "query": { "match_all": {} } }\n}' },
+    { label: 'extract', detail: '从命中中提取的字段清单', snippet: true, insertText: '"extract": ["${1:field}"]' },
+    { label: 'timeout', detail: '检索超时', snippet: true, insertText: '"timeout": "${1:1m}"' },
+  ];
+}
+
+/** input.search.request 对象的键 */
+export function watchSearchRequestKeyItems(): AssistItem[] {
+  return [
+    { label: 'indices', detail: '检索目标索引（数组/通配）', snippet: true, insertText: '"indices": ["${1:logs-*}"]' },
+    { label: 'body', detail: '检索体（query/sort/aggs…）', snippet: true, insertText: '"body": {\n  ${0}\n}' },
+    { label: 'template', detail: '检索模板（id/source/params）', snippet: true,
+      insertText: '"template": { "id": "${1:my-template}" }' },
+    { label: 'search_type', detail: '查询类型', snippet: true,
+      insertText: '"search_type": "${1|query_then_fetch,dfs_query_then_fetch|}"' },
+    { label: 'indices_options', detail: '索引选项（通配展开/忽略缺失）', snippet: true,
+      insertText: '"indices_options": {\n  "expand_wildcards": ["${1:open}"],\n  "ignore_unavailable": ${2|true,false|}\n}' },
+    { label: 'rest_total_hits_as_int', detail: 'hits.total 以整数返回', snippet: true,
+      insertText: '"rest_total_hits_as_int": ${1|false,true|}' },
+  ];
+}
+
 /** actions.<名>.<类型> 对象的参数键（按动作类型；官方 spec 字段） */
 export function watchActionParamsKeyItems(type: string): AssistItem[] {
   switch (type) {
@@ -2041,21 +2097,7 @@ export function watchActionParamsKeyItems(type: string): AssistItem[] {
       { label: 'priority', detail: '邮件优先级', snippet: true, insertText: '"priority": "${1|normal,lowest,low,high,highest|}"' },
       { label: 'attachments', detail: '附件（http/reporting/data 三类）', snippet: true, insertText: '"attachments": {\n  ${0}\n}' },
     ];
-    case 'webhook': return [
-      { label: 'url', detail: '完整 URL（与 scheme/host/path 二选一）', snippet: true, insertText: '"url": "${1:https://example.com/hook}"' },
-      { label: 'method', detail: 'HTTP 方法', snippet: true, insertText: '"method": "${1|POST,GET,PUT,DELETE|}"' },
-      { label: 'scheme', detail: '协议', snippet: true, insertText: '"scheme": "${1|https,http|}"' },
-      { label: 'host', detail: '主机名', snippet: true, insertText: '"host": "${1:example.com}"' },
-      { label: 'port', detail: '端口', snippet: true, insertText: '"port": ${1:443}' },
-      { label: 'path', detail: '路径', snippet: true, insertText: '"path": "${1:/hook}"' },
-      { label: 'params', detail: '查询参数', snippet: true, insertText: '"params": {\n  "${1:key}": "${2:value}"\n}' },
-      { label: 'headers', detail: '请求头', snippet: true, insertText: '"headers": {\n  "${1:Content-Type}": "${2:application/json}"\n}' },
-      { label: 'body', detail: '请求体（字符串，常配 mustache）', snippet: true, insertText: '"body": "${1:{{ctx.payload}}}"' },
-      { label: 'auth', detail: '认证（basic 等）', snippet: true, insertText: '"auth": {\n  ${0}\n}' },
-      { label: 'connection_timeout', detail: '连接超时', snippet: true, insertText: '"connection_timeout": "${1:10s}"' },
-      { label: 'read_timeout', detail: '读取超时', snippet: true, insertText: '"read_timeout": "${1:10s}"' },
-      { label: 'proxy', detail: '代理配置', snippet: true, insertText: '"proxy": {\n  ${0}\n}' },
-    ];
+    case 'webhook': return httpRequestKeyItems();
     case 'slack': return [
       { label: 'account', detail: 'Slack 账户（省略用默认）', snippet: true, insertText: '"account": "${1:slack-account}"' },
       { label: 'message', detail: '消息体（text/from/to/attachments）', snippet: true,
@@ -2104,7 +2146,8 @@ export function watchActionParamsKeyItemsAt(doc: string, offset: number): Assist
 
 /** Watcher 体区域：根 / 触发器 / 调度 / 输入 / 条件 / 动作类型；更深层不出键 */
 export function watchRegionAt(doc: string, offset: number):
-  'root' | 'trigger' | 'schedule' | 'input' | 'search-body' | 'search-query'
+  'root' | 'trigger' | 'schedule' | 'input' | 'search-input' | 'search-request'
+  | 'search-body' | 'search-query' | 'http-input' | 'http-request'
   | 'condition' | 'condition-params' | 'action' | 'action-params' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
@@ -2115,10 +2158,19 @@ export function watchRegionAt(doc: string, offset: number):
   }
   if (stack[0] === 'input') {
     if (stack.length === 2) return 'input';
-    /* input.search.request.body 是整棵 search body：根层给 search 根键，query 子树回落查询补全 */
-    if (stack[1] === 'search' && stack[2] === 'request' && stack[3] === 'body') {
-      if (stack.length === 5) return 'search-body';
-      if (stack.includes('query')) return 'search-query';
+    if (stack[1] === 'search') {
+      /* input.search.request.body 是整棵 search body：根层给 search 根键，query 子树回落查询补全 */
+      if (stack[2] === 'request' && stack[3] === 'body') {
+        if (stack.length === 5) return 'search-body';
+        if (stack.includes('query')) return 'search-query';
+      }
+      if (stack.length === 3) return 'search-input';
+      if (stack.length === 4 && stack[2] === 'request') return 'search-request';
+      return 'deep';
+    }
+    if (stack[1] === 'http') {
+      if (stack.length === 3) return 'http-input';
+      if (stack.length === 4 && stack[2] === 'request') return 'http-request';
     }
     return 'deep';
   }
@@ -3102,8 +3154,9 @@ export function watchInlineExecuteBodyKeyItems(): AssistItem[] {
 
 /** 内联试跑体区域：根 / watch 定义（复用 watch 各子区）/ 更深 */
 export function watchInlineExecuteRegionAt(doc: string, offset: number):
-  'root' | 'watch' | 'watch-trigger' | 'watch-schedule' | 'watch-input' | 'watch-search-body'
-  | 'watch-search-query' | 'watch-condition' | 'condition-params' | 'watch-action' | 'action-params' | 'deep' {
+  'root' | 'watch' | 'watch-trigger' | 'watch-schedule' | 'watch-input' | 'search-input' | 'search-request'
+  | 'watch-search-body' | 'watch-search-query' | 'http-input' | 'http-request'
+  | 'watch-condition' | 'condition-params' | 'watch-action' | 'action-params' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
   if (stack[0] !== 'watch') return 'deep';
@@ -3115,10 +3168,19 @@ export function watchInlineExecuteRegionAt(doc: string, offset: number):
   }
   if (stack[1] === 'input') {
     if (stack.length === 3) return 'watch-input';
-    /* watch.input.search.request.body 同样是 search body：根层给根键，query 子树回落查询 */
-    if (stack[2] === 'search' && stack[3] === 'request' && stack[4] === 'body') {
-      if (stack.length === 6) return 'watch-search-body';
-      if (stack.includes('query')) return 'watch-search-query';
+    if (stack[2] === 'search') {
+      /* watch.input.search.request.body 同样是 search body：根层给根键，query 子树回落查询 */
+      if (stack[3] === 'request' && stack[4] === 'body') {
+        if (stack.length === 6) return 'watch-search-body';
+        if (stack.includes('query')) return 'watch-search-query';
+      }
+      if (stack.length === 4) return 'search-input';
+      if (stack.length === 5 && stack[3] === 'request') return 'search-request';
+      return 'deep';
+    }
+    if (stack[2] === 'http') {
+      if (stack.length === 4) return 'http-input';
+      if (stack.length === 5 && stack[3] === 'request') return 'http-request';
     }
     return 'deep';
   }

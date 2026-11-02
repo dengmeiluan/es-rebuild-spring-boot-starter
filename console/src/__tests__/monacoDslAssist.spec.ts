@@ -1245,6 +1245,23 @@ describe('1439 Watcher 体补全', () => {
     const inp = '{\n  "input": {\n    "\n  }\n}';
     expect(suggest(inp, inp.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['search', 'simple', 'http', 'chain']);
 
+    const si = '{\n  "input": {\n    "search": {\n      "\n    }\n  }\n}';
+    expect(suggest(si, si.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['request', 'extract', 'timeout']);
+
+    const sr = '{\n  "input": {\n    "search": {\n      "request": {\n        "\n      }\n    }\n  }\n}';
+    const srLabels = suggest(sr, sr.lastIndexOf('"') + 1).map(i => i.label);
+    expect(srLabels).toEqual([
+      'indices', 'body', 'template', 'search_type', 'indices_options', 'rest_total_hits_as_int',
+    ]);
+
+    const hi = '{\n  "input": {\n    "http": {\n      "\n    }\n  }\n}';
+    expect(suggest(hi, hi.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
+      'request', 'extract', 'response_content_type',
+    ]);
+
+    const hr = '{\n  "input": {\n    "http": {\n      "request": {\n        "\n      }\n    }\n  }\n}';
+    expect(suggest(hr, hr.lastIndexOf('"') + 1).map(i => i.label)).toContain('url');
+
     const searchBody = '{\n  "input": {\n    "search": {\n      "request": {\n        "body": {\n          "\n        }\n      }\n    }\n  }\n}';
     const sbLabels = suggest(searchBody, searchBody.lastIndexOf('"') + 1).map(i => i.label);
     expect(sbLabels).toContain('query');

@@ -46,6 +46,7 @@ import {
   securityCrossClusterApiKeyBodyKeyItems, securityCrossClusterAccessKeyItems, securityCrossClusterAccessEntryKeyItems,
   watchExecuteBodyKeyItems, securityPrivilegeBodyKeyItems, ilmMoveBodyKeyItems, ilmMoveStepKeyItems,
   watchActionParamsKeyItems, watchConditionParamsKeyItems,
+  watchSearchInputKeyItems, watchSearchRequestKeyItems, watchHttpInputKeyItems, httpRequestKeyItems,
   snapshotCloneBodyKeyItems, watchInlineExecuteBodyKeyItems, snapshotMountBodyKeyItems,
   nodesReloadSecureSettingsBodyKeyItems,
 } from '../utils/dslCompletionContext';
@@ -238,6 +239,10 @@ function allProblems(): string[] {
   }
   out.push(...snippetProblems('WCP:script',
     watchConditionParamsKeyItems('script').map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('WSI', watchSearchInputKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('WSR', watchSearchRequestKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('WHI', watchHttpInputKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('HRI', httpRequestKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('SMT', snapshotMountBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('NRS', nodesReloadSecureSettingsBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;

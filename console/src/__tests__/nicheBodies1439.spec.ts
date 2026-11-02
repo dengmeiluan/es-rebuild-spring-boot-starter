@@ -317,7 +317,13 @@ describe('1439 外围写体：区域助手（query 位回落 / 元素分派）',
     expect(watchInlineExecuteRegionAt(...at('{ "watch": { "condition": { "|": 1 } } }'))).toBe('watch-condition');
     expect(watchInlineExecuteRegionAt(...at('{ "watch": { "actions": { "log": { "|": 1 } } } }'))).toBe('watch-action');
     expect(watchInlineExecuteRegionAt(...at('{ "trigger_data": { "|": 1 } }'))).toBe('deep');
-    expect(watchInlineExecuteRegionAt(...at('{ "watch": { "input": { "search": { "|": 1 } } } }'))).toBe('deep');
+    expect(watchInlineExecuteRegionAt(...at('{ "watch": { "input": { "search": { "|": 1 } } } }'))).toBe('search-input');
+    expect(watchInlineExecuteRegionAt(
+      ...at('{ "watch": { "input": { "search": { "request": { "|": 1 } } } } }'),
+    )).toBe('search-request');
+    expect(watchInlineExecuteRegionAt(
+      ...at('{ "watch": { "input": { "http": { "request": { "|": 1 } } } } }'),
+    )).toBe('http-request');
     expect(watchInlineExecuteRegionAt(
       ...at('{ "watch": { "input": { "search": { "request": { "body": { "|": 1 } } } } } }'),
     )).toBe('watch-search-body');
