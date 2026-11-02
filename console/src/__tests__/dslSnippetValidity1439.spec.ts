@@ -22,6 +22,7 @@ import {
   aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems,
   scrollBodyKeyItems, clearScrollBodyKeyItems,
   termvectorsKeyItems, mtermvectorsBodyKeyItems, mtermvectorsDocKeyItems,
+  eqlBodyKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -118,6 +119,7 @@ function allProblems(): string[] {
   out.push(...snippetProblems('TV', termvectorsKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('MT', mtermvectorsBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('MD2', mtermvectorsDocKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('EQ', eqlBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;
 }
 

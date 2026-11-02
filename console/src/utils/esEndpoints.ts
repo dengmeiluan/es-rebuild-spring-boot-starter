@@ -53,6 +53,8 @@ export const ES_ENDPOINTS: EsEndpoint[] = [
   { methods: ['GET', 'POST'], path: '/{index}/_search/template', doc: '搜索模板执行' },
   { methods: ['GET', 'POST'], path: '/{index}/_validate/query', doc: '查询校验', body: '{\n  "query": { "match_all": {} }\n}' },
   { methods: ['GET', 'POST'], path: '/{index}/_explain/{id}', doc: '打分明细', body: '{\n  "query": { "match_all": {} }\n}' },
+  { methods: ['POST'], path: '/{index}/_eql/search', doc: 'EQL 事件检索（query 是 EQL 串，filter 才是 Query DSL）',
+    body: '{\n  "query": "any where true",\n  "size": 10\n}' },
 ];
 
 export function filterEndpoints(kw: string): EsEndpoint[] {

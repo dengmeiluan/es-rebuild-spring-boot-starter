@@ -1109,7 +1109,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'msearch-template-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'msearch-template-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'eql-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1227,6 +1227,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   if (p.includes('_reindex')) return 'reindex-body';
   /* 1439：_sql（含 _sql/translate）的体是 {query:"SELECT …"}，不是 search body */
   if (p.includes('_sql')) return 'sql-body';
+  /* 1439：_eql/search 的 query 是 EQL 串（不是 {match…}），filter 才是 Query DSL——
+     默认 search 档会在 query 值位给 DSL 算子，写进去 ES 直接解析失败。 */
+  if (/(^|\/)_eql\/search(\/|$)/.test(p)) return 'eql-body';
   /* 1439：_rollover 的体是 {conditions,settings,mappings,aliases}，不是无档 */
   if (p.includes('_rollover')) return 'rollover-body';
   /* 1439：按查询删/改的体是 {query,max_docs,…}——query 内要回落到整棵查询补全 */
@@ -1859,6 +1862,58 @@ export function queryOnlyBodyKeyItems(): AssistItem[] {
   ];
 }
 
+/** EQL 检索体（POST /<索引>/_eql/search）的根键——query 是 EQL 串，
+    filter 才是 Query DSL；其余键控制时间字段/分页/异步结果保留。 */
+export function eqlBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'query', detail: 'EQL 查询串（如 any where true / process where …）', snippet: true,
+      insertText: '"query": "${1:any where true}"' },
+    { label: 'filter', detail: 'Query DSL 过滤（与 EQL 结果取交集）', snippet: true,
+      insertText: '"filter": {\n  ${0}\n}' },
+    { label: 'case_sensitive', detail: '字符串比较是否区分大小写（默认 false）', snippet: true,
+      insertText: '"case_sensitive": ${1|true,false|}' },
+    { label: 'event_category_field', detail: '事件类别字段（默认 event.category）', snippet: true,
+      insertText: '"event_category_field": "${1:event.category}"' },
+    { label: 'timestamp_field', detail: '时间戳字段（默认 @timestamp）', snippet: true,
+      insertText: '"timestamp_field": "${1:@timestamp}"' },
+    { label: 'tiebreaker_field', detail: '排序去重字段（时间戳相同时的稳定序）', snippet: true,
+      insertText: '"tiebreaker_field": "${1:event.id}"' },
+    { label: 'size', detail: '每页事件数（默认 10）', snippet: true, insertText: '"size": ${1:10}' },
+    { label: 'fields', detail: '随结果返回的字段清单', snippet: true, insertText: '"fields": ["${1:field}"]' },
+    { label: 'max_samples_per_key', detail: 'sample 查询每个键的最大事件数', snippet: true,
+      insertText: '"max_samples_per_key": ${1:10}' },
+    { label: 'keep_alive', detail: '异步结果保留时间（如 5d；到期后结果被清理）', snippet: true,
+      insertText: '"keep_alive": "${1:5d}"' },
+    { label: 'keep_on_completion', detail: '查询完成后是否保留结果（默认 false）', snippet: true,
+      insertText: '"keep_on_completion": ${1|true,false|}' },
+    { label: 'wait_for_completion_timeout', detail: '同步等待上限，超时转异步', snippet: true,
+      insertText: '"wait_for_completion_timeout": "${1:1s}"' },
+    { label: 'runtime_mappings', detail: '运行时字段（只在本查询生效）', snippet: true,
+      insertText: '"runtime_mappings": {\n  ${0}\n}' },
+  ];
+}
+
+/** EQL query 串的起步骨架（值位插入；含引号的文本由 Monaco 侧按 JSON 串转义） */
+export const EQL_VALUE_SNIPPETS: Array<{ label: string; text: string; detail: string }> = [
+  { label: 'any where', text: 'any where true', detail: '任意事件（EQL 最小查询）' },
+  { label: 'process where', text: 'process where process.name == "cmd.exe"', detail: '进程事件过滤' },
+  { label: 'sequence by', text: 'sequence by process.entity_id [process where true] [network where true]',
+    detail: '按键排序的有序事件序列（可配 with maxspan）' },
+  { label: 'sample by', text: 'sample by process.entity_id [process where true]',
+    detail: '按键采样事件（每键最多 max_samples_per_key 条）' },
+];
+
+/** EQL 串中段的语法关键字（光标处插入，不替换已有内容） */
+export const EQL_KEYWORD_SNIPPETS: Array<{ label: string; text: string; detail: string }> = [
+  { label: 'where', text: 'where ', detail: '事件类别后的过滤条件' },
+  { label: 'and', text: ' and ', detail: '条件与' },
+  { label: 'or', text: ' or ', detail: '条件或' },
+  { label: 'not', text: 'not ', detail: '条件取反' },
+  { label: 'by', text: ' by ', detail: 'sequence/sample 的分组键' },
+  { label: 'with maxspan=', text: 'with maxspan=', detail: '序列最大时间跨度（如 5m）' },
+  { label: 'until', text: ' until ', detail: '序列终止条件' },
+];
+
 /** 执行/渲染模板体（_search/template、_render/template）：id 与 source 二选一 + params */
 export function templateSearchBodyKeyItems(): AssistItem[] {
   return [
@@ -1957,6 +2012,7 @@ export const STRUCTURED_VALUE_ENUMS: Record<string, { values: string[]; quoted: 
   field_multi_value_leniency: { values: ['true', 'false'], quoted: false, detail: '多值字段放宽' },
   allow_partial_search_results: { values: ['true', 'false'], quoted: false, detail: '允许部分结果' },
   keep_on_completion: { values: ['true', 'false'], quoted: false, detail: '完成后保留结果' },
+  case_sensitive: { values: ['false', 'true'], quoted: false, detail: 'EQL 字符串比较区分大小写' },
   index_include_frozen: { values: ['true', 'false'], quoted: false, detail: '含冻结索引' },
   _source: { values: ['true', 'false'], quoted: false, detail: '回源开关（也可传字段数组）' },
   offsets: { values: ['false', 'true'], quoted: false, detail: '返回词项偏移' },
@@ -1973,6 +2029,11 @@ export function sqlFilterRegionAt(doc: string, offset: number): 'root' | 'query'
   if (stack.length <= 1) return 'root';
   if (stack[0] === 'filter') return 'query';
   return 'deep';
+}
+
+/** EQL 体（_eql/search）的 filter 同样是根级 Query DSL——区域判定与 SQL 体同形 */
+export function eqlFilterRegionAt(doc: string, offset: number): 'root' | 'query' | 'deep' {
+  return sqlFilterRegionAt(doc, offset);
 }
 
 /** 别名批量动作体（POST /_aliases）的根键 */
@@ -2122,6 +2183,7 @@ export const reindexBodyRootKeys = reindexBodyKeyItems('root').map(i => i.label)
 export const fieldCapsBodyRootKeys = fieldCapsBodyKeyItems().map(i => i.label);
 export const termsEnumBodyRootKeys = termsEnumBodyKeyItems().map(i => i.label);
 export const rankEvalBodyRootKeys = rankEvalBodyKeyItems().map(i => i.label);
+export const eqlBodyRootKeys = eqlBodyKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

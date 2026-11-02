@@ -19,7 +19,7 @@ import 'monaco-editor/esm/vs/editor/contrib/comment/browser/comment';   // jsonc
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import { useAppStore } from '../stores/app';
-import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS, RETRIEVER_SNIPPETS, SUGGESTER_SNIPPETS, aggBodyKeys, queryBodyKeys, clauseValueKeys, retrieverBodyKeys, suggesterBodyKeys, ROOT_KEYS, ROOT_KEY_SNIPPETS, commaAffixes, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, indexBodyKeyItems, indexBodyRegionAt, aliasKeyItems, aliasConfigAt, reindexBodyKeyItems, reindexBodyRegionAt, sqlBodyKeyItems, SQL_VALUE_SNIPPETS, SQL_KEYWORD_SNIPPETS, updateBodyKeyItems, scriptObjectKeyItems, updateBodyRegionAt, rolloverBodyKeyItems, rolloverConditionKeyItems, rolloverBodyRegionAt, dbqBodyKeyItems, ubqBodyKeyItems, queryWriteRegionAt, queryOnlyBodyKeyItems, templateSearchBodyKeyItems, rootOnlyRegionAt, mgetBodyKeyItems, mgetDocKeyItems, mgetRegionAt, storedScriptBodyKeyItems, storedScriptKeyItems, storedScriptRegionAt, sqlFilterRegionAt, scriptExecuteBodyKeyItems, msearchHeaderKeyItems, msearchHeaderLineAt, msearchTemplateBodyKeyItems, bulkActionKeyItems, bulkActionMetaKeyItems, bulkLineKindAt, bulkActionMetaAt, fieldCapsBodyKeyItems, termsEnumBodyKeyItems, indexFilterRegionAt, rankEvalBodyKeyItems, rankEvalRequestKeyItems, rankEvalMetricKeyItems, rankEvalRegionAt, RUNTIME_FIELD_TYPES, runtimeFieldTypeAt, inRuntimeMappingsAt, aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems, aliasesBodyRegionAt, scrollBodyKeyItems, clearScrollBodyKeyItems, termvectorsKeyItems, mtermvectorsBodyKeyItems, mtermvectorsDocKeyItems, STRUCTURED_VALUE_ENUMS, MAPPING_TYPES, templateKeyItems, templateRegionAt, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
+import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS, RETRIEVER_SNIPPETS, SUGGESTER_SNIPPETS, aggBodyKeys, queryBodyKeys, clauseValueKeys, retrieverBodyKeys, suggesterBodyKeys, ROOT_KEYS, ROOT_KEY_SNIPPETS, commaAffixes, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, indexBodyKeyItems, indexBodyRegionAt, aliasKeyItems, aliasConfigAt, reindexBodyKeyItems, reindexBodyRegionAt, sqlBodyKeyItems, SQL_VALUE_SNIPPETS, SQL_KEYWORD_SNIPPETS, updateBodyKeyItems, scriptObjectKeyItems, updateBodyRegionAt, rolloverBodyKeyItems, rolloverConditionKeyItems, rolloverBodyRegionAt, dbqBodyKeyItems, ubqBodyKeyItems, queryWriteRegionAt, queryOnlyBodyKeyItems, templateSearchBodyKeyItems, rootOnlyRegionAt, mgetBodyKeyItems, mgetDocKeyItems, mgetRegionAt, storedScriptBodyKeyItems, storedScriptKeyItems, storedScriptRegionAt, sqlFilterRegionAt, eqlFilterRegionAt, eqlBodyKeyItems, EQL_VALUE_SNIPPETS, EQL_KEYWORD_SNIPPETS, scriptExecuteBodyKeyItems, msearchHeaderKeyItems, msearchHeaderLineAt, msearchTemplateBodyKeyItems, bulkActionKeyItems, bulkActionMetaKeyItems, bulkLineKindAt, bulkActionMetaAt, fieldCapsBodyKeyItems, termsEnumBodyKeyItems, indexFilterRegionAt, rankEvalBodyKeyItems, rankEvalRequestKeyItems, rankEvalMetricKeyItems, rankEvalRegionAt, RUNTIME_FIELD_TYPES, runtimeFieldTypeAt, inRuntimeMappingsAt, aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems, aliasesBodyRegionAt, scrollBodyKeyItems, clearScrollBodyKeyItems, termvectorsKeyItems, mtermvectorsBodyKeyItems, mtermvectorsDocKeyItems, STRUCTURED_VALUE_ENUMS, MAPPING_TYPES, templateKeyItems, templateRegionAt, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
 import { makeDslValueSuggestProvider } from '../utils/dslValueSuggest';
 import type { AssistItem, BodyKind } from '../utils/dslCompletionContext';
 import { ensureLanguages } from '../utils/monacoLanguages';
@@ -212,6 +212,12 @@ function dslSortText(idx: number, label: string): string {
 /* W5-1 过滤关：让敲 " 后的过滤 pattern（含已敲引号）能匹配上——见 dslSortText 上注释①。 */
 function dslFilterText(label: string): string {
   return '"' + label;
+}
+
+/* 值位插入「含引号文本」时的 JSON 字符串字面量（EQL 串里常有 "cmd.exe"）——
+   JSON.stringify 一次产出正确转义，接受即仍是合法 JSON。 */
+function jsonStringLiteral(text: string): string {
+  return JSON.stringify(String(text));
 }
 
 /* 2.6.0 snippet 统一包装：逗号自适应（affix）+ 缩进叠加（reindentSnippet）。
@@ -800,18 +806,20 @@ onMounted(() => {
         const tvRegion = bk === 'termvectors-body' ? rootOnlyRegionAt(doc, offset) : null;
         /* 1439：SQL 体的 filter 是 Query DSL——区域为 query 时回落整棵查询补全，不进 W6 */
         const sfRegion = bk === 'sql-body' ? sqlFilterRegionAt(doc, offset) : null;
+        /* 1439：EQL 体的 filter 也是 Query DSL——区域为 query 时回落整棵查询补全 */
+        const eqRegion = bk === 'eql-body' ? eqlFilterRegionAt(doc, offset) : null;
         const ssRegion = (bk === 'stored-script-body' || bk === 'script-execute-body') ? storedScriptRegionAt(doc, offset) : null;
         const alRegion = bk === 'aliases-body' ? aliasesBodyRegionAt(doc, offset) : null;
         const scRegion = (bk === 'scroll-body' || bk === 'clear-scroll-body') ? rootOnlyRegionAt(doc, offset) : null;
         /* 1439：_reindex 的 source.query 同样是 Query DSL——区域为 query 时回落查询补全 */
         const rIdxRegion = bk === 'reindex-body' ? reindexBodyRegionAt(doc, offset) : 'root';
         /* 1439：SQL 体的 runtime_mappings 字段配置走通用 runtime 键/值档（W6 会把它压成 []） */
-        const rtCtx = bk === 'sql-body' && inRuntimeMappingsAt(doc, offset);
+        const rtCtx = (bk === 'sql-body' || bk === 'eql-body') && inRuntimeMappingsAt(doc, offset);
         /* 1439：field-caps / terms-enum 的 index_filter 是 Query DSL——区域为 query 时回落 */
         const fcRegion = (bk === 'field-caps-body' || bk === 'terms-enum-body') ? indexFilterRegionAt(doc, offset) : null;
         /* 1439：_rank_eval 按根/评估项/metric 区域分派 */
         const rankRegion = bk === 'rank-eval-body' ? rankEvalRegionAt(doc, offset) : null;
-        if (!rtCtx && fcRegion !== 'query' && qwRegion !== 'query' && sfRegion !== 'query' && rIdxRegion !== 'query' && (bk === 'settings' || bk === 'mapping' || bk === 'template' || bk === 'index-body' || bk === 'alias-body' || bk === 'aliases-body' || bk === 'reindex-body' || bk === 'sql-body' || bk === 'update-body' || bk === 'rollover-body' || bk === 'dbq-body' || bk === 'ubq-body' || bk === 'query-body' || bk === 'template-search-body' || bk === 'mget-body' || bk === 'stored-script-body' || bk === 'script-execute-body' || bk === 'scroll-body' || bk === 'clear-scroll-body' || bk === 'termvectors-body' || bk === 'mtermvectors-body' || bk === 'field-caps-body' || bk === 'terms-enum-body' || bk === 'rank-eval-body')) {
+        if (!rtCtx && fcRegion !== 'query' && qwRegion !== 'query' && sfRegion !== 'query' && eqRegion !== 'query' && rIdxRegion !== 'query' && (bk === 'settings' || bk === 'mapping' || bk === 'template' || bk === 'index-body' || bk === 'alias-body' || bk === 'aliases-body' || bk === 'reindex-body' || bk === 'sql-body' || bk === 'update-body' || bk === 'rollover-body' || bk === 'dbq-body' || bk === 'ubq-body' || bk === 'query-body' || bk === 'template-search-body' || bk === 'mget-body' || bk === 'stored-script-body' || bk === 'script-execute-body' || bk === 'scroll-body' || bk === 'clear-scroll-body' || bk === 'termvectors-body' || bk === 'mtermvectors-body' || bk === 'field-caps-body' || bk === 'terms-enum-body' || bk === 'rank-eval-body' || bk === 'eql-body')) {
           const g = dslKeyGuard(doc, offset);
           /* 1439：_reindex 的 source.sort / source._source 数组元素是字段名位 */
           if (g.inStr && g.arrayElem && (rIdxRegion === 'sort' || rIdxRegion === 'source-fields')) {
@@ -859,8 +867,55 @@ onMounted(() => {
               filterText: dslFilterText(s2.label), sortText: dslSortText(i, s2.label),
             })) };
           }
-          /* 1439：词项向量的 "fields" 值位给查询字段名（字段数组元素串位） */
-          if (g.inStr && g.valueKey === 'fields' && (bk === 'termvectors-body' || bk === 'mtermvectors-body')) {
+          /* 1439：EQL 的 "query" 值位——空串给 EQL 起步骨架；串内已有内容在光标处插关键字，
+             不整串替换（同 SQL 值位口径）。含引号的骨架按 JSON 串转义后插入。 */
+          if (bk === 'eql-body' && g.inStr && g.valueKey === 'query') {
+            if (offset > g.strStart + 1) {
+              const cp = model.getPositionAt(Math.max(0, Math.min(offset, doc.length)));
+              const cRange = {
+                startLineNumber: cp.lineNumber, startColumn: cp.column,
+                endLineNumber: cp.lineNumber, endColumn: cp.column,
+              };
+              return { suggestions: EQL_KEYWORD_SNIPPETS.map((k, i) => ({
+                label: k.label, kind: monaco.languages.CompletionItemKind.Keyword,
+                insertText: k.text, range: cRange, detail: k.detail,
+                filterText: dslFilterText(k.label), sortText: dslSortText(i, k.label),
+              })) };
+            }
+            const eEnd = scanStringEnd(doc, Math.max(0, Math.min(offset, doc.length)));
+            const esp = model.getPositionAt(g.strStart);
+            const eep = model.getPositionAt(eEnd);
+            const eRange = {
+              startLineNumber: esp.lineNumber, startColumn: esp.column,
+              endLineNumber: eep.lineNumber, endColumn: eep.column,
+            };
+            return { suggestions: EQL_VALUE_SNIPPETS.map((s2, i) => ({
+              label: s2.label, kind: monaco.languages.CompletionItemKind.Value,
+              insertText: jsonStringLiteral(s2.text), range: eRange, command: ACCEPT_FORMAT_COMMAND,
+              detail: s2.detail,
+              filterText: dslFilterText(s2.label), sortText: dslSortText(i, s2.label),
+            })) };
+          }
+          /* 1439：EQL 的事件类别/时间戳/去重字段值位给查询字段名 */
+          if (g.inStr && g.valueKey && bk === 'eql-body'
+              && (g.valueKey === 'event_category_field' || g.valueKey === 'timestamp_field' || g.valueKey === 'tiebreaker_field')) {
+            const efEnd = scanStringEnd(doc, Math.max(0, Math.min(offset, doc.length)));
+            const efsp = model.getPositionAt(g.strStart);
+            const efep = model.getPositionAt(efEnd);
+            const efRange = {
+              startLineNumber: efsp.lineNumber, startColumn: efsp.column,
+              endLineNumber: efep.lineNumber, endColumn: efep.column,
+            };
+            return { suggestions: props.dslAssist!.fields().map((f, i) => ({
+              label: f.path, kind: monaco.languages.CompletionItemKind.Value,
+              insertText: jsonStringLiteral(f.path), range: efRange, command: ACCEPT_FORMAT_COMMAND,
+              detail: f.type,
+              filterText: dslFilterText(f.path), sortText: dslSortText(i, f.path),
+            })) };
+          }
+          /* 1439：词项向量的 "fields" 值位给查询字段名（字段数组元素串位）；
+             EQL 的 fields 同语义（随结果返回的字段清单） */
+          if (g.inStr && g.valueKey === 'fields' && (bk === 'termvectors-body' || bk === 'mtermvectors-body' || bk === 'eql-body')) {
             const fEnd = scanStringEnd(doc, Math.max(0, Math.min(offset, doc.length)));
             const fsp = model.getPositionAt(g.strStart);
             const fep = model.getPositionAt(fEnd);
@@ -915,6 +970,7 @@ onMounted(() => {
           const rRegion = bk === 'rollover-body' ? rolloverBodyRegionAt(doc, offset) : 'root';
           const items: AssistItem[] = bk === 'settings' ? settingsKeyItems()
             : bk === 'sql-body' ? (sfRegion === 'root' ? sqlBodyKeyItems() : [])
+            : bk === 'eql-body' ? (eqRegion === 'root' ? eqlBodyKeyItems() : [])
             : bk === 'stored-script-body'
               ? (ssRegion === 'root' ? storedScriptBodyKeyItems()
                 : ssRegion === 'script' ? storedScriptKeyItems()

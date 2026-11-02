@@ -1008,6 +1008,66 @@ describe('1439 新补全档（提供器层接线）', () => {
   });
 });
 
+describe('1439 EQL 体（_eql/search）补全', () => {
+  const eqlMount = () => mountEditor({
+    modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'eql-body' },
+  });
+
+  it('根键位给 EQL 目录；普通值位仍压制（不出根键）', () => {
+    eqlMount();
+    const doc = '{\n  "\n}';
+    const s = suggest(doc, 5);
+    const labels = s.map(i => i.label);
+    for (const k of ['query', 'filter', 'event_category_field', 'timestamp_field', 'runtime_mappings']) {
+      expect(labels, k).toContain(k);
+    }
+    const q = s.find(i => i.label === 'query');
+    const after = acceptSnippet(doc, q);
+    expect(() => JSON.parse(after), after).not.toThrow();
+    const val = '{\n  "keep_alive": "\n}';
+    expect(suggest(val, val.indexOf('\n}')), 'keep_alive 值位不出根键').toEqual([]);
+  });
+
+  it('query 值位：空串给 EQL 起步骨架，含引号骨架接受后仍是合法 JSON', () => {
+    eqlMount();
+    const doc = '{"query": ""}';
+    const items = suggest(doc, 11);
+    expect(items.map(i => i.label)).toEqual(['any where', 'process where', 'sequence by', 'sample by']);
+    const proc = items.find(i => i.label === 'process where');
+    const after = acceptSnippet(doc, proc);
+    expect(() => JSON.parse(after), after).not.toThrow();
+    expect(JSON.parse(after).query).toContain('cmd.exe');
+  });
+
+  it('query 串中段：关键字在光标处插入，不整串替换', () => {
+    eqlMount();
+    const doc = '{"query": "any where true"}';
+    const items = suggest(doc, doc.indexOf('"', 12));
+    expect(items.map(i => i.label)).toContain('and');
+    const and = items.find(i => i.label === 'and');
+    const after = acceptSnippet(doc, and);
+    expect(after, '已输入内容必须保留').toContain('any where true');
+    expect(after.endsWith(' and "}'), after).toBe(true);
+    expect(() => JSON.parse(after), after).not.toThrow();
+  });
+
+  it('filter 内回落 Query DSL：match 可出（不套 EQL 根键）', () => {
+    eqlMount();
+    const items = suggest('{"filter": {"');
+    const labels = items.map(i => i.label);
+    expect(labels).toContain('match');
+    expect(labels, 'filter 内不给 EQL 根键').not.toContain('query');
+  });
+
+  it('event_category_field / fields 值位给真实字段名', () => {
+    eqlMount();
+    const cat = suggest('{"event_category_field": "');
+    expect(cat.map(i => i.label)).toEqual(['title', 'price']);
+    const fields = suggest('{"fields": ["');
+    expect(fields.map(i => i.label)).toEqual(['title', 'price']);
+  });
+});
+
 describe('1439 子句体键位（query-body-key / clause-field-key / retriever-body-key）', () => {
   it('bool 体给 must/filter/should/must_not，接受后 JSON 合法', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
