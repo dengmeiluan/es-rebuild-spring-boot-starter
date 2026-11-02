@@ -1252,15 +1252,19 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   if (method.toUpperCase() === 'POST' && /(^|\/)_(?:xpack\/)?ilm\/move\/[^/]+(\/|$)/.test(p)) return 'ilm-move-body';
   /* 1439：Watcher watch 体（PUT /_watcher/watch/<id>，6.x 兼容 _xpack/watcher）：
      {trigger,input,condition,actions,metadata,throttle_period} */
-  if (method.toUpperCase() === 'PUT' && /(^|\/)_(?:xpack\/)?watcher\/watch\/[^/]+(\/|$)/.test(p)) return 'watch-body';
   /* 1439：试跑 watch（POST /_watcher/watch/<id>/_execute）体是
-     {trigger_data,alternative_input,ignore_condition,action_modes,record_execution}。 */
+     {trigger_data,alternative_input,ignore_condition,action_modes,record_execution}。
+     必须先于 watch 定义规则判定，否则 POST watch 定义会吞掉 _execute。 */
   if (method.toUpperCase() === 'POST'
       && /(^|\/)_(?:xpack\/)?watcher\/watch\/[^/]+\/_execute\/?$/.test(p)) return 'watch-execute-body';
   /* 1439：内联试跑（POST /_watcher/watch/_execute）体多一层 watch 定义：
      {watch,trigger_data,alternative_input,ignore_condition,action_modes,record_execution}。 */
   if (method.toUpperCase() === 'POST'
       && /(^|\/)_(?:xpack\/)?watcher\/watch\/_execute\/?$/.test(p)) return 'watch-inline-execute-body';
+  /* 1439：watch 定义体（PUT|POST /_watcher/watch/<id>，官方 spec 两种方法都收）；
+     段尾精确，_execute 由上面的动作子路由先接。 */
+  if ((method.toUpperCase() === 'PUT' || method.toUpperCase() === 'POST')
+      && /(^|\/)_(?:xpack\/)?watcher\/watch\/[^/]+\/?$/.test(p)) return 'watch-body';
   /* 1439：安全体系写体（PUT/POST /_security/<resource>/<name>）——各自根键与 SQL 查询无关 */
   const secMethod = method.toUpperCase();
   if (secMethod === 'PUT' || secMethod === 'POST') {
@@ -1383,10 +1387,12 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：执行脚本 POST /_scripts/<id>/[_<context>/]_execute 的体是 {script,context,context_setup} */
   if (method.toUpperCase() === 'POST'
       && /(^|\/)_scripts\/[^/]+\/(?:[^/]+\/)?_execute(\/|$)/.test(p)) return 'script-execute-body';
-  /* 1439：PUT /_scripts/<id> 存脚本的体是 {script:{lang,source,params}}；
-     _execute 是执行脚本，体形态不同，不并进本档 */
-  if (method.toUpperCase() === 'PUT' && /(^|\/)_scripts\/[^/]+(\/|$)/.test(p)
-      && !p.includes('_execute')) return 'stored-script-body';
+  /* 1439：PUT|POST /_scripts/<id>[/<context>] 存脚本的体是 {script:{lang,source,params}}；
+     _execute 是执行脚本，体形态不同，按段排除（脚本 id 含 _execute 不误伤）。
+     官方 REST spec 的 put_script 同时接受 PUT/POST。 */
+  if ((method.toUpperCase() === 'PUT' || method.toUpperCase() === 'POST')
+      && /(^|\/)_scripts\/[^/]+(\/|$)/.test(p)
+      && !/(^|\/)_execute(\/|$)/.test(p)) return 'stored-script-body';
   /* 1439：POST /_aliases 的体是 {actions:[{add|remove|remove_index:{…}}]}——结构化体 */
   if (/(^|\/)_aliases(\/|$)/.test(p)) return 'aliases-body';
   /* 1439：游标翻页/清理的体是 {scroll,scroll_id}/{scroll_id}，不是无档 */

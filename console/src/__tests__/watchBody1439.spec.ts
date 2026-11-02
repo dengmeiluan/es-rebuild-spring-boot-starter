@@ -23,12 +23,16 @@ const SAMPLE = {
 describe('1439 Watcher 体分档', () => {
   it('路径分派：PUT /_watcher/watch/<id>（含 _xpack）；GET/DELETE 不抢；_execute 单列试跑体', () => {
     expect(bodyKindForPath('/_watcher/watch/error-rate', 'PUT')).toBe('watch-body');
+    expect(bodyKindForPath('/_watcher/watch/error-rate', 'POST')).toBe('watch-body');
     expect(bodyKindForPath('/_xpack/watcher/watch/error-rate', 'PUT')).toBe('watch-body');
+    expect(bodyKindForPath('/_xpack/watcher/watch/error-rate', 'POST')).toBe('watch-body');
     expect(bodyKindForPath('/_watcher/watch/error-rate', 'GET')).toBe('search');
     expect(bodyKindForPath('/_watcher/watch/error-rate', 'DELETE')).toBe('search');
     /* 试跑体的根键是 trigger_data/action_modes 等，不是 watch 定义 */
     expect(bodyKindForPath('/_watcher/watch/error-rate/_execute', 'POST')).toBe('watch-execute-body');
     expect(bodyKindForPath('/_watcher/watch/error-rate/_execute', 'GET')).toBe('search');
+    expect(bodyKindForPath('/_watcher/watch/error-rate/_execute', 'PUT')).toBe('search');
+    expect(bodyKindForPath('/_watcher/watch/_execute', 'POST')).toBe('watch-inline-execute-body');
   });
 
   it('目录：根六键 + 触发器/调度/输入/条件/动作类型', () => {
