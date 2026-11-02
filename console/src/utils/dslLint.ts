@@ -65,6 +65,7 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   ccrFollowBodyRootKeys, ccrAutoFollowBodyRootKeys,
   securityApiKeyGrantBodyRootKeys, securityApiKeyGrantKeys,
   licenseBodyRootKeys, licenseEntryKeys,
+  securityApiKeyQueryBodyRootKeys, securityApiKeyInvalidateBodyRootKeys, mlFilterUpdateBodyRootKeys,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -1482,6 +1483,8 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
     }
     case 'security-role-mapping-body': return lintBodyKeys(obj, securityRoleMappingBodyRootKeys, '角色映射体');
     case 'security-api-key-body': return lintBodyKeys(obj, securityApiKeyBodyRootKeys, 'API Key 体');
+    case 'security-api-key-query-body': return lintBodyKeys(obj, securityApiKeyQueryBodyRootKeys, 'API Key 检索体');
+    case 'security-api-key-invalidate-body': return lintBodyKeys(obj, securityApiKeyInvalidateBodyRootKeys, 'API Key 吊销体');
     case 'ingest-pipeline-body': {
       const out = [...lintBodyKeys(obj, ingestPipelineBodyRootKeys, 'Ingest 管道体')];
       if (Array.isArray(obj?.processors)) {
@@ -1549,6 +1552,7 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
       return out;
     }
     case 'ml-filter-body': return lintBodyKeys(obj, mlFilterBodyRootKeys, 'ML 过滤器体');
+    case 'ml-filter-update-body': return lintBodyKeys(obj, mlFilterUpdateBodyRootKeys, 'ML 过滤器更新体');
     case 'ml-calendar-body': return lintBodyKeys(obj, mlCalendarBodyRootKeys, 'ML 日历体');
     case 'ml-calendar-events-body': {
       const out = [...lintBodyKeys(obj, mlCalendarEventsBodyRootKeys, 'ML 日历事件体')];

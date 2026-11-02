@@ -71,12 +71,15 @@ const MATRIX: Row[] = [
   ['/_ml/datafeeds/latency', 'PUT', 'ml-datafeed-body'],
   ['/_ml/anomaly_detectors/latency', 'PUT', 'ml-job-body'],
   ['/_ml/filters/safe-domains', 'PUT', 'ml-filter-body'],
+  ['/_ml/filters/safe-domains/_update', 'POST', 'ml-filter-update-body'],
   ['/_ml/calendars/outages', 'PUT', 'ml-calendar-body'],
   ['/_ml/calendars/outages/events', 'POST', 'ml-calendar-events-body'],
   ['/idx/_graph/explore', 'POST', 'graph-explore-body'],
   ['/follower/_ccr/follow', 'PUT', 'ccr-follow-body'],
   ['/_ccr/auto_follow/leader', 'PUT', 'ccr-auto-follow-body'],
   ['/_security/api_key/grant', 'POST', 'security-api-key-grant-body'],
+  ['/_security/api_key/_query', 'POST', 'security-api-key-query-body'],
+  ['/_security/api_key', 'DELETE', 'security-api-key-invalidate-body'],
   ['/_license', 'PUT', 'license-body'],
   ['/idx/_close', 'POST', 'none'],
   ['/idx/_forcemerge', 'POST', 'none'],
@@ -96,7 +99,8 @@ const ALL_KINDS: BodyKind[] = [
   'ingest-simulate-body', 'enrich-policy-body', 'transform-body', 'rollup-job-body',
   'ml-datafeed-body', 'ml-job-body', 'ml-filter-body', 'ml-calendar-body',
   'ml-calendar-events-body', 'graph-explore-body', 'ccr-follow-body', 'ccr-auto-follow-body',
-  'security-api-key-grant-body', 'license-body', 'none',
+  'security-api-key-grant-body', 'license-body', 'security-api-key-query-body',
+  'security-api-key-invalidate-body', 'ml-filter-update-body', 'none',
 ];
 
 describe('1439 请求体档位路由矩阵', () => {
@@ -127,7 +131,8 @@ describe('1439 请求体档位路由矩阵', () => {
       ['/_rollup/job/daily/_start', 'POST', 'search'],
       ['/_ml/anomaly_detectors/latency/_update', 'POST', 'search'],
       ['/_ml/datafeeds/latency/_update', 'POST', 'search'],
-      ['/_ml/filters/safe-domains/_update', 'POST', 'search'],
+      ['/_ml/filters/safe-domains/_update', 'PUT', 'search'],
+      ['/_ml/filters/safe-domains/_update', 'DELETE', 'search'],
       ['/_ml/filters/safe-domains', 'GET', 'search'],
       ['/_ml/calendars/outages', 'DELETE', 'search'],
       ['/_ml/calendars/outages/events', 'GET', 'search'],
@@ -138,6 +143,8 @@ describe('1439 请求体档位路由矩阵', () => {
       ['/_license', 'GET', 'search'],
       ['/_license/start_trial', 'POST', 'search'],
       ['/_security/api_key/grant', 'GET', 'search'],
+      ['/_security/api_key/_query', 'PUT', 'search'],
+      ['/_security/api_key/_query', 'DELETE', 'search'],
       ['/_enrich/policy/users/_execute', 'POST', 'search'],
     ];
     for (const [path, method, kind] of guards) {
@@ -169,7 +176,9 @@ describe('1439 请求体档位路由矩阵', () => {
       ['/_security/role_mapping/{name}', 'security-role-mapping-body'],
       ['/_security/api_key', 'security-api-key-body'],
       ['/_security/api_key/grant', 'security-api-key-grant-body'],
+      ['/_security/api_key/_query', 'security-api-key-query-body'],
       ['/_ml/filters/{filter_id}', 'ml-filter-body'],
+      ['/_ml/filters/{filter_id}/_update', 'ml-filter-update-body'],
       ['/_ml/calendars/{calendar_id}', 'ml-calendar-body'],
       ['/_ml/calendars/{calendar_id}/events', 'ml-calendar-events-body'],
       ['/{index}/_graph/explore', 'graph-explore-body'],
@@ -189,5 +198,9 @@ describe('1439 请求体档位路由矩阵', () => {
       const concrete = path.replace('{index}', 'logs').replace(/\{[^}]+\}/g, 'x');
       expect(bodyKindForPath(concrete, ep!.methods[0]), `${ep!.methods[0]} ${concrete}`).toBe(kind);
     }
+    /* 同路径双方法（创建/吊销）：吊销预设按 DELETE 单独校验 */
+    const invalidate = ES_ENDPOINTS.find(e => e.path === '/_security/api_key' && e.methods.includes('DELETE'));
+    expect(invalidate?.body, '吊销 API Key 预设必须有骨架').toBeTruthy();
+    expect(bodyKindForPath('/_security/api_key', 'DELETE')).toBe('security-api-key-invalidate-body');
   });
 });

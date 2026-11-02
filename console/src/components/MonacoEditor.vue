@@ -39,7 +39,7 @@ import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS
   rollupMetricKeyItems, rollupRegionAt,
   mlDatafeedBodyKeyItems, mlDelayedCheckKeyItems, mlChunkingKeyItems, mlIndicesOptionsKeyItems, mlDatafeedRegionAt,
   mlJobBodyKeyItems, mlAnalysisConfigKeyItems, mlDetectorKeyItems, mlAnalysisLimitsKeyItems, mlDataDescriptionKeyItems, mlJobRegionAt,
-  scriptExecuteBodyKeyItems, msearchHeaderKeyItems, msearchHeaderLineAt, msearchTemplateBodyKeyItems, bulkActionKeyItems, bulkActionMetaKeyItems, bulkLineKindAt, bulkActionMetaAt, fieldCapsBodyKeyItems, termsEnumBodyKeyItems, indexFilterRegionAt, rankEvalBodyKeyItems, rankEvalRequestKeyItems, rankEvalMetricKeyItems, rankEvalRegionAt, RUNTIME_FIELD_TYPES, runtimeFieldTypeAt, inRuntimeMappingsAt, aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems, aliasesBodyRegionAt, scrollBodyKeyItems, clearScrollBodyKeyItems, termvectorsKeyItems, mtermvectorsBodyKeyItems, mtermvectorsDocKeyItems, STRUCTURED_VALUE_ENUMS, MAPPING_TYPES, templateKeyItems, templateRegionAt, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS, mlFilterBodyKeyItems, mlCalendarBodyKeyItems, mlCalendarEventsBodyKeyItems, mlCalendarEventKeyItems, mlCalendarEventsRegionAt, graphExploreBodyKeyItems, graphVertexKeyItems, graphControlsKeyItems, graphSampleDiversityKeyItems, graphHopKeyItems, graphExploreRegionAt, ccrFollowBodyKeyItems, ccrAutoFollowBodyKeyItems, securityApiKeyGrantBodyKeyItems, securityApiKeyGrantKeyItems, securityApiKeyGrantRegionAt, licenseBodyKeyItems, licenseEntryKeyItems, licenseRegionAt } from '../utils/dslCompletionContext';
+  scriptExecuteBodyKeyItems, msearchHeaderKeyItems, msearchHeaderLineAt, msearchTemplateBodyKeyItems, bulkActionKeyItems, bulkActionMetaKeyItems, bulkLineKindAt, bulkActionMetaAt, fieldCapsBodyKeyItems, termsEnumBodyKeyItems, indexFilterRegionAt, rankEvalBodyKeyItems, rankEvalRequestKeyItems, rankEvalMetricKeyItems, rankEvalRegionAt, RUNTIME_FIELD_TYPES, runtimeFieldTypeAt, inRuntimeMappingsAt, aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems, aliasesBodyRegionAt, scrollBodyKeyItems, clearScrollBodyKeyItems, termvectorsKeyItems, mtermvectorsBodyKeyItems, mtermvectorsDocKeyItems, STRUCTURED_VALUE_ENUMS, MAPPING_TYPES, templateKeyItems, templateRegionAt, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS, mlFilterBodyKeyItems, mlCalendarBodyKeyItems, mlCalendarEventsBodyKeyItems, mlCalendarEventKeyItems, mlCalendarEventsRegionAt, graphExploreBodyKeyItems, graphVertexKeyItems, graphControlsKeyItems, graphSampleDiversityKeyItems, graphHopKeyItems, graphExploreRegionAt, ccrFollowBodyKeyItems, ccrAutoFollowBodyKeyItems, securityApiKeyGrantBodyKeyItems, securityApiKeyGrantKeyItems, securityApiKeyGrantRegionAt, licenseBodyKeyItems, licenseEntryKeyItems, licenseRegionAt, mlFilterUpdateBodyKeyItems, securityApiKeyQueryBodyKeyItems, securityApiKeyQueryRegionAt, securityApiKeyInvalidateBodyKeyItems } from '../utils/dslCompletionContext';
 import { makeDslValueSuggestProvider } from '../utils/dslValueSuggest';
 import type { AssistItem, BodyKind } from '../utils/dslCompletionContext';
 import { ensureLanguages } from '../utils/monacoLanguages';
@@ -860,8 +860,11 @@ onMounted(() => {
         /* 1439：ML 作业体按根/analysis_config/detectors/analysis_limits/data_description 分派 */
         const mlJobRegion = bk === 'ml-job-body' ? mlJobRegionAt(doc, offset) : null;
         /* 1439：ML 过滤器/日历、CCR 跟随体是平铺根键——只在根层出档 */
-        const flatRootRegion = (bk === 'ml-filter-body' || bk === 'ml-calendar-body'
-          || bk === 'ccr-follow-body' || bk === 'ccr-auto-follow-body') ? rootOnlyRegionAt(doc, offset) : null;
+        const flatRootRegion = (bk === 'ml-filter-body' || bk === 'ml-filter-update-body' || bk === 'ml-calendar-body'
+          || bk === 'ccr-follow-body' || bk === 'ccr-auto-follow-body'
+          || bk === 'security-api-key-invalidate-body') ? rootOnlyRegionAt(doc, offset) : null;
+        /* 1439：API Key 检索体的 query 内回落整棵查询补全 */
+        const akqRegion = bk === 'security-api-key-query-body' ? securityApiKeyQueryRegionAt(doc, offset) : null;
         /* 1439：日历事件体按根 / events 元素分派 */
         const mlCalEvRegion = bk === 'ml-calendar-events-body' ? mlCalendarEventsRegionAt(doc, offset) : null;
         /* 1439：Graph 体按 query/顶点/controls/采样多样性/hop 分派；query 内回落整棵查询补全 */
@@ -880,7 +883,7 @@ onMounted(() => {
         const fcRegion = (bk === 'field-caps-body' || bk === 'terms-enum-body') ? indexFilterRegionAt(doc, offset) : null;
         /* 1439：_rank_eval 按根/评估项/metric 区域分派 */
         const rankRegion = bk === 'rank-eval-body' ? rankEvalRegionAt(doc, offset) : null;
-        if (!rtCtx && fcRegion !== 'query' && gphRegion !== 'query' && qwRegion !== 'query' && sfRegion !== 'query' && eqRegion !== 'query' && enrichRegion !== 'query' && trRegion !== 'source-query' && mlRegion !== 'query' && rIdxRegion !== 'query' && (bk === 'settings' || bk === 'mapping' || bk === 'template' || bk === 'index-body' || bk === 'alias-body' || bk === 'aliases-body' || bk === 'reindex-body' || bk === 'sql-body' || bk === 'update-body' || bk === 'rollover-body' || bk === 'dbq-body' || bk === 'ubq-body' || bk === 'query-body' || bk === 'template-search-body' || bk === 'mget-body' || bk === 'stored-script-body' || bk === 'script-execute-body' || bk === 'scroll-body' || bk === 'clear-scroll-body' || bk === 'termvectors-body' || bk === 'mtermvectors-body' || bk === 'field-caps-body' || bk === 'terms-enum-body' || bk === 'rank-eval-body' || bk === 'eql-body' || bk === 'cluster-settings-body'
+        if (!rtCtx && fcRegion !== 'query' && gphRegion !== 'query' && akqRegion !== 'query' && qwRegion !== 'query' && sfRegion !== 'query' && eqRegion !== 'query' && enrichRegion !== 'query' && trRegion !== 'source-query' && mlRegion !== 'query' && rIdxRegion !== 'query' && (bk === 'settings' || bk === 'mapping' || bk === 'template' || bk === 'index-body' || bk === 'alias-body' || bk === 'aliases-body' || bk === 'reindex-body' || bk === 'sql-body' || bk === 'update-body' || bk === 'rollover-body' || bk === 'dbq-body' || bk === 'ubq-body' || bk === 'query-body' || bk === 'template-search-body' || bk === 'mget-body' || bk === 'stored-script-body' || bk === 'script-execute-body' || bk === 'scroll-body' || bk === 'clear-scroll-body' || bk === 'termvectors-body' || bk === 'mtermvectors-body' || bk === 'field-caps-body' || bk === 'terms-enum-body' || bk === 'rank-eval-body' || bk === 'eql-body' || bk === 'cluster-settings-body'
           || bk === 'reroute-body' || bk === 'allocation-explain-body'
           || bk === 'snapshot-repo-body' || bk === 'snapshot-create-body' || bk === 'snapshot-restore-body'
           || bk === 'slm-policy-body' || bk === 'ilm-policy-body' || bk === 'watch-body'
@@ -891,7 +894,9 @@ onMounted(() => {
           || bk === 'rollup-job-body' || bk === 'ml-datafeed-body' || bk === 'ml-job-body'
           || bk === 'ml-filter-body' || bk === 'ml-calendar-body' || bk === 'ml-calendar-events-body'
           || bk === 'graph-explore-body' || bk === 'ccr-follow-body' || bk === 'ccr-auto-follow-body'
-          || bk === 'security-api-key-grant-body' || bk === 'license-body')) {
+          || bk === 'security-api-key-grant-body' || bk === 'license-body'
+          || bk === 'security-api-key-query-body' || bk === 'security-api-key-invalidate-body'
+          || bk === 'ml-filter-update-body')) {
           const g = dslKeyGuard(doc, offset);
           /* 1439：_reindex 的 source.sort / source._source 数组元素是字段名位 */
           if (g.inStr && g.arrayElem && (rIdxRegion === 'sort' || rIdxRegion === 'source-fields')) {
@@ -1172,6 +1177,7 @@ onMounted(() => {
                 : mlJobRegion === 'data-description' ? mlDataDescriptionKeyItems()
                 : [])
             : bk === 'ml-filter-body' ? (flatRootRegion === 'root' ? mlFilterBodyKeyItems() : [])
+            : bk === 'ml-filter-update-body' ? (flatRootRegion === 'root' ? mlFilterUpdateBodyKeyItems() : [])
             : bk === 'ml-calendar-body' ? (flatRootRegion === 'root' ? mlCalendarBodyKeyItems() : [])
             : bk === 'ml-calendar-events-body'
               ? (mlCalEvRegion === 'root' ? mlCalendarEventsBodyKeyItems()
@@ -1190,6 +1196,9 @@ onMounted(() => {
               ? (grantRegion === 'root' ? securityApiKeyGrantBodyKeyItems()
                 : grantRegion === 'api-key' ? securityApiKeyGrantKeyItems()
                 : [])
+            : bk === 'security-api-key-query-body' ? (akqRegion === 'root' ? securityApiKeyQueryBodyKeyItems() : [])
+            : bk === 'security-api-key-invalidate-body'
+              ? (flatRootRegion === 'root' ? securityApiKeyInvalidateBodyKeyItems() : [])
             : bk === 'license-body'
               ? (licRegion === 'root' ? licenseBodyKeyItems()
                 : licRegion === 'entry' ? licenseEntryKeyItems()

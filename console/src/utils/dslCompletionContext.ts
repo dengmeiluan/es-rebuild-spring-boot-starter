@@ -1113,7 +1113,8 @@ export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 
 | 'snapshot-repo-body' | 'snapshot-create-body' | 'snapshot-restore-body' | 'slm-policy-body' | 'ilm-policy-body' | 'watch-body'
 | 'security-role-body' | 'security-user-body' | 'security-role-mapping-body' | 'security-api-key-body' | 'ingest-pipeline-body' | 'ingest-simulate-body' | 'enrich-policy-body' | 'transform-body' | 'rollup-job-body' | 'ml-datafeed-body' | 'ml-job-body'
 | 'ml-filter-body' | 'ml-calendar-body' | 'ml-calendar-events-body' | 'graph-explore-body'
-| 'ccr-follow-body' | 'ccr-auto-follow-body' | 'security-api-key-grant-body' | 'license-body' | 'none';
+| 'ccr-follow-body' | 'ccr-auto-follow-body' | 'security-api-key-grant-body' | 'license-body'
+| 'security-api-key-query-body' | 'security-api-key-invalidate-body' | 'ml-filter-update-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1250,6 +1251,12 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：代授 API Key（POST /_security/api_key/grant）体是
      {grant_type,access_token|username+password,api_key}——与创建体根键不同。 */
   if (secMethod === 'POST' && /(^|\/)_(?:xpack\/)?security\/api_key\/grant\/?$/.test(p)) return 'security-api-key-grant-body';
+  /* 1439：API Key 检索体（GET|POST /_security/api_key/_query）是 {query,from,size}——
+     query 内是 Query DSL，根键不含 sort/aggs。 */
+  if ((secMethod === 'GET' || secMethod === 'POST')
+      && /(^|\/)_(?:xpack\/)?security\/api_key\/_query\/?$/.test(p)) return 'security-api-key-query-body';
+  /* 1439：吊销 API Key（DELETE /_security/api_key）体是 {ids,name,owner,realm_name,username} */
+  if (secMethod === 'DELETE' && /(^|\/)_(?:xpack\/)?security\/api_key\/?$/.test(p)) return 'security-api-key-invalidate-body';
   /* 1439：Ingest 管道体（PUT /_ingest/pipeline/<id>）是 {description,version,processors,on_failure,_meta}；
      _simulate（POST）是另一种体，不并进本档。 */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_ingest\/pipeline\/[^/]+(\/|$)/.test(p)) return 'ingest-pipeline-body';
@@ -1273,6 +1280,8 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
      ML 日历体（PUT /_ml/calendars/<id>）是 {job_ids,description}；
      日历事件（POST /_ml/calendars/<id>/events）是 {events:[…]}——事件体先于日历体判定。 */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_(?:xpack\/)?ml\/filters\/[^/]+\/?$/.test(p)) return 'ml-filter-body';
+  /* 1439：ML 过滤器更新体（POST /_ml/filters/<id>/_update）是 {description,add_items,remove_items} */
+  if (method.toUpperCase() === 'POST' && /(^|\/)_(?:xpack\/)?ml\/filters\/[^/]+\/_update\/?$/.test(p)) return 'ml-filter-update-body';
   if (method.toUpperCase() === 'POST' && /(^|\/)_(?:xpack\/)?ml\/calendars\/[^/]+\/events\/?$/.test(p)) return 'ml-calendar-events-body';
   if (method.toUpperCase() === 'PUT' && /(^|\/)_(?:xpack\/)?ml\/calendars\/[^/]+\/?$/.test(p)) return 'ml-calendar-body';
   /* 1439：Graph 探索体（POST /<索引>/_graph/explore）是 {query,vertices,connections,controls}——
@@ -2527,6 +2536,15 @@ export function mlFilterBodyKeyItems(): AssistItem[] {
   ];
 }
 
+/** ML 过滤器更新体（POST /_ml/filters/<id>/_update）的根键 */
+export function mlFilterUpdateBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'description', detail: '过滤器用途说明（覆盖）', snippet: true, insertText: '"description": "${1:safe domains}"' },
+    { label: 'add_items', detail: '新增条目（支持首尾通配 *）', snippet: true, insertText: '"add_items": ["${1:*.example.com}"]' },
+    { label: 'remove_items', detail: '移除条目', snippet: true, insertText: '"remove_items": ["${1:*.old.com}"]' },
+  ];
+}
+
 /** ML 日历体（PUT /_ml/calendars/<id>）的根键 */
 export function mlCalendarBodyKeyItems(): AssistItem[] {
   return [
@@ -2705,6 +2723,34 @@ export function securityApiKeyGrantRegionAt(doc: string, offset: number): 'root'
   if (stack.length <= 1) return 'root';
   if (stack[0] === 'api_key' && stack.length === 2) return 'api-key';
   return 'deep';
+}
+
+/** API Key 检索体（GET|POST /_security/api_key/_query）的根键 */
+export function securityApiKeyQueryBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'query', detail: 'API Key 查询条件（Query DSL）', snippet: true, insertText: '"query": {\n  ${0}\n}' },
+    { label: 'from', detail: '分页起点', snippet: true, insertText: '"from": ${1:0}' },
+    { label: 'size', detail: '返回条数', snippet: true, insertText: '"size": ${1:10}' },
+  ];
+}
+
+/** API Key 检索体区域：根 / query（回落整棵查询补全）/ 更深 */
+export function securityApiKeyQueryRegionAt(doc: string, offset: number): 'root' | 'query' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack.includes('query')) return 'query';
+  return 'deep';
+}
+
+/** 吊销 API Key 体（DELETE /_security/api_key）的根键 */
+export function securityApiKeyInvalidateBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'ids', detail: '按 Key id 吊销', snippet: true, insertText: '"ids": ["${1:key-id}"]' },
+    { label: 'name', detail: '按 Key 名称吊销', snippet: true, insertText: '"name": "${1:my-api-key}"' },
+    { label: 'owner', detail: '只吊销当前用户拥有的 Key', snippet: true, insertText: '"owner": ${1|true,false|}' },
+    { label: 'realm_name', detail: '按认证域过滤', snippet: true, insertText: '"realm_name": "${1:native1}"' },
+    { label: 'username', detail: '按用户名过滤', snippet: true, insertText: '"username": "${1:myuser}"' },
+  ];
 }
 
 /** 许可证更新体（PUT|POST /_license）的根键 */
@@ -3351,6 +3397,7 @@ export const STRUCTURED_VALUE_ENUMS: Record<string, { values: string[]; quoted: 
   skip_result: { values: ['true', 'false'], quoted: false, detail: '事件期内不产生异常结果' },
   skip_model_update: { values: ['true', 'false'], quoted: false, detail: '事件期内不更新模型' },
   use_significance: { values: ['true', 'false'], quoted: false, detail: 'Graph 只保留显著关联' },
+  owner: { values: ['true', 'false'], quoted: false, detail: '只吊销当前用户拥有的 API Key' },
 };
 
 /** SQL 体的区域：根层给 SQL 键；filter 内是 Query DSL（回落到整棵查询补全）；其余子对象不出键 */
@@ -3580,6 +3627,9 @@ export const securityApiKeyGrantBodyRootKeys = securityApiKeyGrantBodyKeyItems()
 export const securityApiKeyGrantKeys = securityApiKeyGrantKeyItems().map(i => i.label);
 export const licenseBodyRootKeys = licenseBodyKeyItems().map(i => i.label);
 export const licenseEntryKeys = licenseEntryKeyItems().map(i => i.label);
+export const securityApiKeyQueryBodyRootKeys = securityApiKeyQueryBodyKeyItems().map(i => i.label);
+export const securityApiKeyInvalidateBodyRootKeys = securityApiKeyInvalidateBodyKeyItems().map(i => i.label);
+export const mlFilterUpdateBodyRootKeys = mlFilterUpdateBodyKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

@@ -42,6 +42,7 @@ import {
   ccrFollowBodyKeyItems, ccrAutoFollowBodyKeyItems,
   securityApiKeyGrantBodyKeyItems, securityApiKeyGrantKeyItems,
   licenseBodyKeyItems, licenseEntryKeyItems,
+  mlFilterUpdateBodyKeyItems, securityApiKeyQueryBodyKeyItems, securityApiKeyInvalidateBodyKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -214,6 +215,9 @@ function allProblems(): string[] {
   out.push(...snippetProblems('AKGK', securityApiKeyGrantKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('LIC', licenseBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('LICE', licenseEntryKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('MFU', mlFilterUpdateBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('AKQ', securityApiKeyQueryBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('AKI', securityApiKeyInvalidateBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;
 }
 

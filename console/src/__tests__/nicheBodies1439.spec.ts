@@ -15,11 +15,12 @@ import { join } from 'node:path';
 import {
   bodyKindForPath, STRUCTURED_VALUE_ENUMS,
   mlCalendarEventsRegionAt, graphExploreRegionAt,
-  securityApiKeyGrantRegionAt, licenseRegionAt,
-  mlFilterBodyRootKeys, mlCalendarBodyRootKeys, mlCalendarEventKeys,
+  securityApiKeyGrantRegionAt, securityApiKeyQueryRegionAt, licenseRegionAt,
+  mlFilterBodyRootKeys, mlFilterUpdateBodyRootKeys, mlCalendarBodyRootKeys, mlCalendarEventKeys,
   graphExploreBodyRootKeys, graphVertexKeys, graphHopKeys,
   ccrFollowBodyRootKeys, ccrAutoFollowBodyRootKeys,
   securityApiKeyGrantBodyRootKeys, securityApiKeyGrantKeys,
+  securityApiKeyQueryBodyRootKeys, securityApiKeyInvalidateBodyRootKeys,
   licenseBodyRootKeys, licenseEntryKeys,
 } from '../utils/dslCompletionContext';
 import { lintStructuredBody } from '../utils/dslLint';
@@ -36,6 +37,10 @@ describe('1439 外围写体：路由按方法/子路径精确分派', () => {
     expect(bodyKindForPath('/follower/_ccr/follow', 'PUT')).toBe('ccr-follow-body');
     expect(bodyKindForPath('/_ccr/auto_follow/leader', 'PUT')).toBe('ccr-auto-follow-body');
     expect(bodyKindForPath('/_security/api_key/grant', 'POST')).toBe('security-api-key-grant-body');
+    expect(bodyKindForPath('/_security/api_key/_query', 'POST')).toBe('security-api-key-query-body');
+    expect(bodyKindForPath('/_security/api_key/_query', 'GET')).toBe('security-api-key-query-body');
+    expect(bodyKindForPath('/_security/api_key', 'DELETE')).toBe('security-api-key-invalidate-body');
+    expect(bodyKindForPath('/_ml/filters/safe-domains/_update', 'POST')).toBe('ml-filter-update-body');
     expect(bodyKindForPath('/_license', 'PUT')).toBe('license-body');
     expect(bodyKindForPath('/_license', 'POST')).toBe('license-body');
   });
@@ -47,7 +52,6 @@ describe('1439 外围写体：路由按方法/子路径精确分派', () => {
 
   it('只读/动作子路由回落 search（不误吞无体端点）', () => {
     expect(bodyKindForPath('/_ml/filters/safe-domains', 'GET')).toBe('search');
-    expect(bodyKindForPath('/_ml/filters/safe-domains/_update', 'POST')).toBe('search');
     expect(bodyKindForPath('/_ml/calendars/outages', 'DELETE')).toBe('search');
     expect(bodyKindForPath('/_ml/calendars/outages/events', 'PUT')).toBe('search');
     expect(bodyKindForPath('/_ml/calendars/outages/events', 'GET')).toBe('search');
@@ -58,12 +62,17 @@ describe('1439 外围写体：路由按方法/子路径精确分派', () => {
     expect(bodyKindForPath('/_license', 'GET')).toBe('search');
     expect(bodyKindForPath('/_license/start_trial', 'POST')).toBe('search');
     expect(bodyKindForPath('/_security/api_key/grant', 'GET')).toBe('search');
+    expect(bodyKindForPath('/_security/api_key/_query', 'PUT')).toBe('search');
+    expect(bodyKindForPath('/_security/api_key/_query', 'DELETE')).toBe('search');
+    expect(bodyKindForPath('/_ml/filters/safe-domains/_update', 'PUT')).toBe('search');
+    expect(bodyKindForPath('/_ml/filters/safe-domains/_update', 'DELETE')).toBe('search');
   });
 });
 
 describe('1439 外围写体：目录与 lint 同源', () => {
   it('根键目录覆盖官方字段', () => {
     expect(mlFilterBodyRootKeys).toEqual(['description', 'items']);
+    expect(mlFilterUpdateBodyRootKeys).toEqual(['description', 'add_items', 'remove_items']);
     expect(mlCalendarBodyRootKeys).toEqual(['job_ids', 'description']);
     expect(mlCalendarEventKeys).toEqual([
       'description', 'start_time', 'end_time', 'skip_result', 'skip_model_update', 'force_time_shift',
@@ -81,6 +90,8 @@ describe('1439 外围写体：目录与 lint 同源', () => {
       'grant_type', 'access_token', 'username', 'password', 'api_key',
     ]);
     expect(securityApiKeyGrantKeys).toEqual(['name', 'expiration', 'role_descriptors', 'metadata']);
+    expect(securityApiKeyQueryBodyRootKeys).toEqual(['query', 'from', 'size']);
+    expect(securityApiKeyInvalidateBodyRootKeys).toEqual(['ids', 'name', 'owner', 'realm_name', 'username']);
     expect(licenseBodyRootKeys).toEqual(['licenses', 'license']);
     expect(licenseEntryKeys).toContain('uid');
     expect(licenseEntryKeys).toContain('max_resource_units');
@@ -88,6 +99,12 @@ describe('1439 外围写体：目录与 lint 同源', () => {
 
   it('合法体零告警', () => {
     expect(lintStructuredBody('ml-filter-body', '{"description":"safe","items":["*.example.com"]}')).toEqual([]);
+    expect(lintStructuredBody('ml-filter-update-body',
+      '{"description":"safe","add_items":["*.example.com"],"remove_items":["*.old.com"]}')).toEqual([]);
+    expect(lintStructuredBody('security-api-key-query-body',
+      '{"query":{"wildcard":{"name":"my-api-*"}},"from":0,"size":10}')).toEqual([]);
+    expect(lintStructuredBody('security-api-key-invalidate-body',
+      '{"ids":["k1"],"owner":true,"realm_name":"native1","username":"u"}')).toEqual([]);
     expect(lintStructuredBody('ml-calendar-body', '{"job_ids":["j1"],"description":"outages"}')).toEqual([]);
     expect(lintStructuredBody('ml-calendar-events-body',
       '{"events":[{"description":"m","start_time":1700000000000,"end_time":1700003600000,'
@@ -116,6 +133,12 @@ describe('1439 外围写体：目录与 lint 同源', () => {
     expect(lintStructuredBody('ml-calendar-events-body',
       '{"events":[{"start_time":1,"end_time":2,"skip":true}]}')
       .some(f => f.message.includes('日历事件 #1'))).toBe(true);
+    expect(lintStructuredBody('ml-filter-update-body', '{"item":[]}')
+      .some(f => f.message.includes('ML 过滤器更新体'))).toBe(true);
+    expect(lintStructuredBody('security-api-key-query-body', '{"sort":[]}')
+      .some(f => f.message.includes('API Key 检索体'))).toBe(true);
+    expect(lintStructuredBody('security-api-key-invalidate-body', '{"key_ids":[]}')
+      .some(f => f.message.includes('API Key 吊销体'))).toBe(true);
     expect(lintStructuredBody('graph-explore-body',
       '{"vertices":[{"filed":"a"}],"connections":{"vertex":[]}}')
       .some(f => f.message.includes('顶点 #1'))).toBe(true);
@@ -164,6 +187,13 @@ describe('1439 外围写体：区域助手（query 位回落 / 元素分派）',
     expect(graphExploreRegionAt(...at('{ "connections": { "connections": { "|": 1 } } }'))).toBe('hop');
   });
 
+  it('API Key 检索区域：根 / query 回落 / 更深', () => {
+    expect(securityApiKeyQueryRegionAt(...at('{ "|": 1 }'))).toBe('root');
+    expect(securityApiKeyQueryRegionAt(...at('{ "query": { "|": 1 } }'))).toBe('query');
+    expect(securityApiKeyQueryRegionAt(...at('{ "query": { "wildcard": { "|": 1 } } }'))).toBe('query');
+    expect(securityApiKeyQueryRegionAt(...at('{ "query": { "wildcard": { "name": "x" } }, "from": { "|": 1 } }'))).toBe('deep');
+  });
+
   it('代授区域：根 / api_key 对象 / 更深', () => {
     expect(securityApiKeyGrantRegionAt(...at('{ "|": 1 }'))).toBe('root');
     expect(securityApiKeyGrantRegionAt(...at('{ "api_key": { "|": 1 } }'))).toBe('api-key');
@@ -182,6 +212,7 @@ describe('1439 外围写体：区域助手（query 位回落 / 元素分派）',
     expect(STRUCTURED_VALUE_ENUMS.skip_result.values).toEqual(['true', 'false']);
     expect(STRUCTURED_VALUE_ENUMS.skip_model_update.values).toEqual(['true', 'false']);
     expect(STRUCTURED_VALUE_ENUMS.use_significance.values).toEqual(['true', 'false']);
+    expect(STRUCTURED_VALUE_ENUMS.owner.values).toEqual(['true', 'false']);
   });
 });
 
@@ -190,6 +221,7 @@ describe('1439 外围写体：W6/lint 接线在（只加路由不算完成）', 
     for (const k of [
       'ml-filter-body', 'ml-calendar-body', 'ml-calendar-events-body', 'graph-explore-body',
       'ccr-follow-body', 'ccr-auto-follow-body', 'security-api-key-grant-body', 'license-body',
+      'security-api-key-query-body', 'security-api-key-invalidate-body', 'ml-filter-update-body',
     ]) {
       expect(monacoSrc, k).toContain(`bk === '${k}'`);
     }
@@ -200,6 +232,7 @@ describe('1439 外围写体：W6/lint 接线在（只加路由不算完成）', 
     for (const k of [
       'ml-filter-body', 'ml-calendar-body', 'ml-calendar-events-body', 'graph-explore-body',
       'ccr-follow-body', 'ccr-auto-follow-body', 'security-api-key-grant-body', 'license-body',
+      'security-api-key-query-body', 'security-api-key-invalidate-body', 'ml-filter-update-body',
     ]) {
       expect(lintSrc, k).toContain(`case '${k}'`);
     }
