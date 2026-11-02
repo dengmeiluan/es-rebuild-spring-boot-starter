@@ -119,6 +119,8 @@ describe('1439 Watcher 体分档', () => {
     expect(at('{"actions": {"mail": {"email": {"attachments": {"report": {"http": {')).toBe('email-att-http');
     expect(at('{"actions": {"mail": {"email": {"attachments": {"report": {"reporting": {')).toBe('email-att-reporting');
     expect(at('{"actions": {"mail": {"email": {"attachments": {"report": {"data": {')).toBe('email-att-data');
+    expect(at('{"actions": {"mail": {"email": {"attachments": {"report": {"http": {"request": {')).toBe('http-request');
+    expect(at('{"actions": {"mail": {"email": {"attachments": {"report": {"reporting": {"request": {')).toBe('http-request');
     expect(at('{"actions": {"chat": {"slack": {"message": {')).toBe('action-slack-message');
     expect(at('{"actions": {"ticket": {"jira": {"fields": {')).toBe('action-jira-fields');
     expect(at('{"actions": {"hook": {"webhook": {"auth": {"basic": {')).toBe('http-auth-basic');

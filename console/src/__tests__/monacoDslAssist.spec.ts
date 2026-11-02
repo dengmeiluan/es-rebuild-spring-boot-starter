@@ -1332,6 +1332,9 @@ describe('1439 Watcher 体补全', () => {
       'content_type', 'inline', 'request',
     ]);
 
+    const emailAttReq = '{\n  "actions": {\n    "mail": {\n      "email": {\n        "attachments": {\n          "report": {\n            "http": {\n              "request": {\n                "\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}';
+    expect(suggest(emailAttReq, emailAttReq.lastIndexOf('"') + 1).map(i => i.label)).toContain('url');
+
     const slackMsg = '{\n  "actions": {\n    "chat": {\n      "slack": {\n        "message": {\n          "\n        }\n      }\n    }\n  }\n}';
     expect(suggest(slackMsg, slackMsg.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
       'text', 'from', 'to', 'attachments',

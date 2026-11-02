@@ -2393,6 +2393,9 @@ export function watchRegionAt(doc: string, offset: number):
       if (stack.length === 7 && stack[5] === 'http') return 'email-att-http';
       if (stack.length === 7 && stack[5] === 'reporting') return 'email-att-reporting';
       if (stack.length === 7 && stack[5] === 'data') return 'email-att-data';
+      if (stack.length === 8 && (stack[5] === 'http' || stack[5] === 'reporting') && stack[6] === 'request') {
+        return 'http-request';
+      }
     }
     if (stack.length === 6 && stack[2] === 'webhook' && stack[3] === 'auth' && stack[4] === 'basic') {
       return 'http-auth-basic';
@@ -3486,6 +3489,9 @@ export function watchInlineExecuteRegionAt(doc: string, offset: number):
       if (stack.length === 8 && stack[6] === 'http') return 'email-att-http';
       if (stack.length === 8 && stack[6] === 'reporting') return 'email-att-reporting';
       if (stack.length === 8 && stack[6] === 'data') return 'email-att-data';
+      if (stack.length === 9 && (stack[6] === 'http' || stack[6] === 'reporting') && stack[7] === 'request') {
+        return 'http-request';
+      }
     }
     if (stack.length === 7 && stack[3] === 'webhook' && stack[4] === 'auth' && stack[5] === 'basic') {
       return 'http-auth-basic';
