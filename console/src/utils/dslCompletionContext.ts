@@ -1218,7 +1218,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
  search 族，dslCompletionContext.spec 既有断言钉死），'/_source' 尾形态与 /_doc/1/_source 双保险）
  _update 体是 {doc/upsert/script…} 的结构化体，不是裸文档——单列 update-body 档。 */
   if (p.includes('/_update/')) return 'update-body';
-  if (p.includes('/_doc/') || p.includes('/_create/') || p.includes('/_source')) return 'doc';
+  /* 自增 ID 的 POST /<索引>/_doc 没有尾斜杠：此前漏档落 search，文档体被当查询体
+     给出 query/sort/aggs 并误报根键——段尾精确匹配补上。 */
+  if (/(^|\/)_doc\/?$/.test(p) || p.includes('/_doc/') || p.includes('/_create/') || p.includes('/_source')) return 'doc';
   /* 1439：这些端点的体不是 search body——此前一律给 query/sort/aggs 骨架
      （模板体里出 match：写下去就是 ES 400；analyze 体里出 query：同样的错） */
   if (p.includes('_analyze')) return 'analyze';

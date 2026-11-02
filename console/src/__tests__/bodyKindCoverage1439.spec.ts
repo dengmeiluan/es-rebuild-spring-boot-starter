@@ -17,6 +17,7 @@ const MATRIX: Row[] = [
   ['/idx/_mapping', 'PUT', 'mapping'],
   ['/_index_template/logs', 'PUT', 'template'],
   ['/_component_template/base', 'PUT', 'template'],
+  ['/idx/_doc', 'POST', 'doc'],
   ['/idx/_doc/1', 'PUT', 'doc'],
   ['/idx/_create/1', 'PUT', 'doc'],
   ['/idx/_source', 'GET', 'doc'],
