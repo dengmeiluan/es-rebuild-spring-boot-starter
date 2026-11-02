@@ -1068,6 +1068,33 @@ describe('1439 EQL 体（_eql/search）补全', () => {
   });
 });
 
+describe('1439 集群设置体（_cluster/settings）补全', () => {
+  const csMount = () => mountEditor({
+    modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'cluster-settings-body' },
+  });
+
+  it('根键给 persistent/transient；两层内给集群设置键目录；更深值位压住', () => {
+    csMount();
+    const rootDoc = '{\n  "\n}';
+    const root = suggest(rootDoc, 5);
+    expect(root.map(i => i.label)).toEqual(['persistent', 'transient']);
+    const p = root.find(i => i.label === 'persistent');
+    const after = acceptSnippet(rootDoc, p);
+    expect(() => JSON.parse(after), after).not.toThrow();
+
+    const inner = '{\n  "persistent": {\n    "\n  }\n}';
+    const innerOff = inner.lastIndexOf('"') + 1;
+    const keys = suggest(inner, innerOff);
+    expect(keys.map(i => i.label)).toContain('cluster.routing.allocation.enable');
+    expect(keys.map(i => i.label)).toContain('indices.breaker.total.limit');
+    expect(keys.find(i => i.label === 'cluster.routing.allocation.enable')?.detail).toContain('例：');
+
+    const val = '{\n  "persistent": {\n    "cluster.routing.allocation.enable": "\n  }\n}';
+    const valOff = val.lastIndexOf('"') + 1;
+    expect(suggest(val, valOff), '设置值位不出键').toEqual([]);
+  });
+});
+
 describe('1439 子句体键位（query-body-key / clause-field-key / retriever-body-key）', () => {
   it('bool 体给 must/filter/should/must_not，接受后 JSON 合法', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });

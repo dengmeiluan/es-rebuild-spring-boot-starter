@@ -46,6 +46,8 @@ export const ES_ENDPOINTS: EsEndpoint[] = [
   { methods: ['GET'], path: '/_cluster/health', doc: '集群健康' },
   { methods: ['GET'], path: '/_cluster/stats', doc: '集群统计' },
   { methods: ['GET'], path: '/_cluster/settings', doc: '集群设置' },
+  { methods: ['PUT'], path: '/_cluster/settings', doc: '热更集群设置（persistent 持久 / transient 临时）',
+    body: '{\n  "persistent": {\n    "cluster.routing.allocation.enable": "all"\n  }\n}' },
   { methods: ['GET', 'POST'], path: '/_cluster/allocation/explain', doc: '分片分配原因诊断',
     body: '{\n  "index": "my-index",\n  "shard": 0,\n  "primary": true\n}' },
   { methods: ['GET'], path: '/_nodes/stats', doc: '节点统计' },

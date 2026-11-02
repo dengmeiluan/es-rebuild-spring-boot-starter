@@ -3,7 +3,7 @@
  root→根层键补全；query-type→查询类型 snippet；field→叶子子句字段名位（clause=子句名）；
  range-op→range 字段值对象内操作符位（gte/gt/lt/lte）；exists-key→exists 键位钉死 "field"；
  agg-name→aggs 容器键位（实例自由命名）；agg-type→实例值对象键位（聚合类型骨架）；none→不出层。 */
-import { SETTINGS_CATALOG } from './indexSettingsCatalog';
+import { SETTINGS_CATALOG, CLUSTER_SETTINGS_CATALOG } from './indexSettingsCatalog';
 /* 字段位类型亲和置顶序的语义源（下沉 queryAstOps 的单一出处，
  本链此前未消费——sqlCompletion/ClauseNode 同源，不另起算子映射表防漂移）
  keyword/number 两族改吃 queryAstOps 族表单源（KEYWORD_VALUE_TYPES 三员同值；
@@ -1109,7 +1109,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'msearch-template-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'eql-body' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'msearch-template-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'eql-body' | 'cluster-settings-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1217,6 +1217,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
      （模板体里出 match：写下去就是 ES 400；analyze 体里出 query：同样的错） */
   if (p.includes('_analyze')) return 'analyze';
   if (p.includes('_index_template') || p.includes('_component_template') || p.includes('/_template')) return 'template';
+  /* 1439：_cluster/settings 的体是 {persistent,transient} 两层集群设置，
+     不是 search 体也不是索引设置体——默认档此前给 query/sort/aggs，写下去 ES 直接拒。 */
+  if (/(^|\/)_cluster\/settings(\/|$)/.test(p)) return 'cluster-settings-body';
   if (p.includes('_settings')) return 'settings';
   if (p.includes('_mapping')) return 'mapping';
   /* 1439：PUT /<索引名> = 创建索引——体是 {settings, mappings, aliases}，不是 search body */
@@ -1480,6 +1483,33 @@ export function settingsKeyItems(): AssistItem[] {
     detail: `${s.desc}（例：${s.example}）`,
     insertText: '"' + s.key + '"',
   }));
+}
+
+/** 集群设置体（PUT /_cluster/settings）的根键：持久层与临时层 */
+export function clusterSettingsBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'persistent', detail: '持久化集群设置（重启后仍生效）', snippet: true,
+      insertText: '"persistent": {\n  ${0}\n}' },
+    { label: 'transient', detail: '临时集群设置（重启后丢失）', snippet: true,
+      insertText: '"transient": {\n  ${0}\n}' },
+  ];
+}
+
+/** persistent/transient 内的集群设置键（CLUSTER_SETTINGS_CATALOG 派生，解释+示例进 detail） */
+export function clusterSettingsKeyItems(): AssistItem[] {
+  return CLUSTER_SETTINGS_CATALOG.map(s => ({
+    label: s.key,
+    detail: `${s.desc}（例：${s.example}）`,
+    insertText: '"' + s.key + '"',
+  }));
+}
+
+/** 集群设置体区域：根层给 persistent/transient；两层设置对象内给设置键；更深层不出键 */
+export function clusterSettingsRegionAt(doc: string, offset: number): 'root' | 'settings' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if ((stack[0] === 'persistent' || stack[0] === 'transient') && stack.length === 2) return 'settings';
+  return 'deep';
 }
 
 /** 核心字段类型目录（ES 8.x mapping 文档）——补全、mapping-type lint、
@@ -2184,6 +2214,7 @@ export const fieldCapsBodyRootKeys = fieldCapsBodyKeyItems().map(i => i.label);
 export const termsEnumBodyRootKeys = termsEnumBodyKeyItems().map(i => i.label);
 export const rankEvalBodyRootKeys = rankEvalBodyKeyItems().map(i => i.label);
 export const eqlBodyRootKeys = eqlBodyKeyItems().map(i => i.label);
+export const clusterSettingsBodyRootKeys = clusterSettingsBodyKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */
