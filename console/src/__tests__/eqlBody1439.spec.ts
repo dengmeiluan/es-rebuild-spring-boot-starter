@@ -24,7 +24,8 @@ describe('1439 EQL 体分档', () => {
     expect(eqlBodyRootKeys).toEqual([
       'query', 'filter', 'case_sensitive', 'event_category_field', 'timestamp_field', 'tiebreaker_field',
       'size', 'fields', 'max_samples_per_key', 'keep_alive', 'keep_on_completion',
-      'wait_for_completion_timeout', 'runtime_mappings',
+      'wait_for_completion_timeout', 'allow_partial_sequence_results', 'result_position',
+      'runtime_mappings',
     ]);
     expect(eqlBodyKeyItems().find(i => i.label === 'filter')?.detail).toContain('Query DSL');
   });

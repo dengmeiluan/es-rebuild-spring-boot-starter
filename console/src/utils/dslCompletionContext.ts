@@ -3479,6 +3479,10 @@ export function eqlBodyKeyItems(): AssistItem[] {
       insertText: '"keep_on_completion": ${1|true,false|}' },
     { label: 'wait_for_completion_timeout', detail: '同步等待上限，超时转异步', snippet: true,
       insertText: '"wait_for_completion_timeout": "${1:1s}"' },
+    { label: 'allow_partial_sequence_results', detail: 'sequence 分片缺失时是否返回部分结果', snippet: true,
+      insertText: '"allow_partial_sequence_results": ${1|false,true|}' },
+    { label: 'result_position', detail: '结果位置（tail 默认 / head）', snippet: true,
+      insertText: '"result_position": "${1|tail,head|}"' },
     { label: 'runtime_mappings', detail: '运行时字段（只在本查询生效）', snippet: true,
       insertText: '"runtime_mappings": {\n  ${0}\n}' },
   ];
@@ -3636,6 +3640,8 @@ export const STRUCTURED_VALUE_ENUMS: Record<string, { values: string[]; quoted: 
   ignore_condition: { values: ['false', 'true'], quoted: false, detail: '试跑 Watch 时忽略条件' },
   record_execution: { values: ['false', 'true'], quoted: false, detail: '是否记录本次 Watch 执行' },
   storage: { values: ['shared_cache', 'full_copy'], quoted: true, detail: '挂载快照的存储方式' },
+  allow_partial_sequence_results: { values: ['false', 'true'], quoted: false, detail: 'EQL sequence 允许部分分片结果' },
+  result_position: { values: ['tail', 'head'], quoted: true, detail: 'EQL 结果位置' },
 };
 
 /** SQL 体的区域：根层给 SQL 键；filter 内是 Query DSL（回落到整棵查询补全）；其余子对象不出键 */

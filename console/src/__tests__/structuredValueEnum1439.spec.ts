@@ -31,6 +31,9 @@ describe('1439 结构化体值枚举', () => {
     expect(STRUCTURED_VALUE_ENUMS.grant_type).toEqual({
       values: ['access_token', 'password'], quoted: true, detail: '代授 API Key 的授权方式',
     });
+    expect(STRUCTURED_VALUE_ENUMS.result_position).toEqual({
+      values: ['tail', 'head'], quoted: true, detail: 'EQL 结果位置',
+    });
     for (const k of ['is_write_index', 'is_hidden', 'must_exist', 'detect_noop', 'scripted_upsert',
       'doc_as_upsert', 'columnar', 'field_multi_value_leniency', 'allow_partial_search_results',
       'keep_on_completion', 'index_include_frozen', '_source', 'case_sensitive',
@@ -38,7 +41,7 @@ describe('1439 结构化体值枚举', () => {
       'verify', 'ignore_unavailable', 'include_global_state', 'partial', 'include_aliases',
       'enabled', 'allow_restricted_indices', 'allow_lazy_open', 'use_null', 'verbose',
       'skip_result', 'skip_model_update', 'use_significance', 'owner',
-      'ignore_condition', 'record_execution',
+      'ignore_condition', 'record_execution', 'allow_partial_sequence_results',
       'offsets', 'positions', 'term_statistics', 'field_statistics']) {
       expect(STRUCTURED_VALUE_ENUMS[k], k).toBeTruthy();
       expect(STRUCTURED_VALUE_ENUMS[k].quoted, k).toBe(false);
