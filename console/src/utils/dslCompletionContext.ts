@@ -1111,7 +1111,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
 export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'msearch-template-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'eql-body' | 'cluster-settings-body' | 'reroute-body' | 'allocation-explain-body'
 | 'snapshot-repo-body' | 'snapshot-create-body' | 'snapshot-restore-body' | 'slm-policy-body' | 'ilm-policy-body' | 'watch-body'
-| 'security-role-body' | 'security-user-body' | 'security-role-mapping-body' | 'security-api-key-body' | 'ingest-pipeline-body' | 'enrich-policy-body' | 'transform-body' | 'rollup-job-body' | 'ml-datafeed-body' | 'ml-job-body' | 'none';
+| 'security-role-body' | 'security-user-body' | 'security-role-mapping-body' | 'security-api-key-body' | 'ingest-pipeline-body' | 'ingest-simulate-body' | 'enrich-policy-body' | 'transform-body' | 'rollup-job-body' | 'ml-datafeed-body' | 'ml-job-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1248,6 +1248,8 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：Ingest 管道体（PUT /_ingest/pipeline/<id>）是 {description,version,processors,on_failure,_meta}；
      _simulate（POST）是另一种体，不并进本档。 */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_ingest\/pipeline\/[^/]+(\/|$)/.test(p)) return 'ingest-pipeline-body';
+  /* 1439：管道试跑体（POST /_ingest/pipeline[_/<id>]/_simulate）：{pipeline?,docs,verbose} */
+  if (method.toUpperCase() === 'POST' && /(^|\/)_ingest\/pipeline\/(?:[^/]+\/)?_simulate(\/|$)/.test(p)) return 'ingest-simulate-body';
   /* 1439：Enrich 策略体（PUT /_enrich/policy/<name>）：match / geo_match / range 三型 */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_enrich\/policy\/[^/]+(\/|$)/.test(p)) return 'enrich-policy-body';
   /* 1439：Transform 体（PUT /_transform/<id>，兼容 _transform/transforms/<id>）：
@@ -2495,6 +2497,42 @@ export function mlJobRegionAt(doc: string, offset: number):
   return 'deep';
 }
 
+/** 管道试跑体（POST /_ingest/pipeline[_/<id>]/_simulate）的根键 */
+export function ingestSimulateBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'pipeline', detail: '内联管道定义（省略则用路径上的已存管道）', snippet: true,
+      insertText: '"pipeline": {\n  "processors": [\n    { "set": { "field": "${1:field}", "value": "${2:value}" } }\n  ]\n}' },
+    { label: 'docs', detail: '待试跑文档（_source 为文档内容）', snippet: true,
+      insertText: '"docs": [\n  {\n    "_source": { "${1:field}": "${2:value}" }\n  }\n]' },
+    { label: 'verbose', detail: '返回每个处理器的中间结果', snippet: true, insertText: '"verbose": ${1|true,false|}' },
+  ];
+}
+
+/** 试跑 docs[] 元素的键 */
+export function ingestSimulateDocKeyItems(): AssistItem[] {
+  return [
+    { label: '_index', detail: '模拟文档所属索引', snippet: true, insertText: '"_index": "${1:my-index}"' },
+    { label: '_id', detail: '模拟文档 id', snippet: true, insertText: '"_id": "${1:1}"' },
+    { label: '_source', detail: '文档内容', snippet: true, insertText: '"_source": {\n  ${0}\n}' },
+    { label: '_routing', detail: '路由值', snippet: true, insertText: '"_routing": "${1:routing}"' },
+  ];
+}
+
+/** 管道试跑体区域：根 / pipeline / pipeline.processors·on_failure / docs 元素 / 更深 */
+export function ingestSimulateRegionAt(doc: string, offset: number):
+  'root' | 'pipeline' | 'pipeline-processor' | 'doc' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] === 'pipeline') {
+    if (stack.length === 2) return 'pipeline';
+    if (stack[1] === 'processors' && stack.length === 4) return 'pipeline-processor';
+    if (stack[1] === 'on_failure' && (stack.length === 3 || stack.length === 4)) return 'pipeline-processor';
+    return 'deep';
+  }
+  if (stack[0] === 'docs' && stack.length === 3) return 'doc';
+  return 'deep';
+}
+
 /** 分片分配诊断体（POST /_cluster/allocation/explain）的根键 */
 export function allocationExplainBodyKeyItems(): AssistItem[] {
   return [
@@ -3053,6 +3091,7 @@ export const STRUCTURED_VALUE_ENUMS: Record<string, { values: string[]; quoted: 
   allow_restricted_indices: { values: ['false', 'true'], quoted: false, detail: '允许访问受限系统索引' },
   allow_lazy_open: { values: ['false', 'true'], quoted: false, detail: '允许惰性打开作业' },
   use_null: { values: ['false', 'true'], quoted: false, detail: '缺失值作为独立值' },
+  verbose: { values: ['true', 'false'], quoted: false, detail: '返回处理器中间结果' },
   exclude_frequent: { values: ['all', 'none', 'by', 'over'], quoted: true, detail: '排除高频值范围' },
   index_include_frozen: { values: ['true', 'false'], quoted: false, detail: '含冻结索引' },
   _source: { values: ['true', 'false'], quoted: false, detail: '回源开关（也可传字段数组）' },
@@ -3248,6 +3287,8 @@ export const securityRoleMappingBodyRootKeys = securityRoleMappingBodyKeyItems()
 export const securityApiKeyBodyRootKeys = securityApiKeyBodyKeyItems().map(i => i.label);
 export const ingestPipelineBodyRootKeys = ingestPipelineBodyKeyItems().map(i => i.label);
 export const ingestProcessorLintKeys = [...INGEST_PROCESSOR_TYPES, ...INGEST_PROCESSOR_COMMON_KEYS];
+export const ingestSimulateBodyRootKeys = ingestSimulateBodyKeyItems().map(i => i.label);
+export const ingestSimulateDocKeys = ingestSimulateDocKeyItems().map(i => i.label);
 export const enrichPolicyBodyRootKeys = enrichPolicyBodyKeyItems().map(i => i.label);
 export const enrichMatchKeys = enrichMatchPolicyKeyItems().map(i => i.label);
 export const enrichRangeKeys = enrichRangePolicyKeyItems().map(i => i.label);

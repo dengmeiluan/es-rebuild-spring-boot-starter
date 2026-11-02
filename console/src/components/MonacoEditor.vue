@@ -31,6 +31,7 @@ import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS
   securityUserBodyKeyItems, securityUserRegionAt, securityRoleTemplateKeyItems,
   securityRoleMappingBodyKeyItems, securityApiKeyBodyKeyItems,
   ingestPipelineBodyKeyItems, ingestProcessorKeyItems, ingestPipelineRegionAt,
+  ingestSimulateBodyKeyItems, ingestSimulateDocKeyItems, ingestSimulateRegionAt,
   enrichPolicyBodyKeyItems, enrichMatchPolicyKeyItems, enrichRangePolicyKeyItems, enrichPolicyRegionAt,
   transformBodyKeyItems, transformSourceKeyItems, transformDestKeyItems, transformPivotKeyItems,
   transformTimeKeyItems, transformTimeConfigKeyItems, transformRegionAt,
@@ -846,6 +847,8 @@ onMounted(() => {
         const sUserRegion = bk === 'security-user-body' ? securityUserRegionAt(doc, offset) : null;
         /* 1439：Ingest 体按根层 / processors[]·on_failure 处理器对象分派 */
         const ingestRegion = bk === 'ingest-pipeline-body' ? ingestPipelineRegionAt(doc, offset) : null;
+        /* 1439：管道试跑体按根 / pipeline / pipeline.processors / docs 元素分派 */
+        const simRegion = bk === 'ingest-simulate-body' ? ingestSimulateRegionAt(doc, offset) : null;
         /* 1439：Enrich 体按根/match·geo_match/range 分派；query 内回落整棵查询补全 */
         const enrichRegion = bk === 'enrich-policy-body' ? enrichPolicyRegionAt(doc, offset) : null;
         /* 1439：Transform 体按根/source/dest/pivot/sync(.time)/retention(.time) 分派 */
@@ -873,7 +876,8 @@ onMounted(() => {
           || bk === 'slm-policy-body' || bk === 'ilm-policy-body' || bk === 'watch-body'
           || bk === 'security-role-body' || bk === 'security-user-body'
           || bk === 'security-role-mapping-body' || bk === 'security-api-key-body'
-          || bk === 'ingest-pipeline-body' || bk === 'enrich-policy-body' || bk === 'transform-body'
+          || bk === 'ingest-pipeline-body' || bk === 'ingest-simulate-body'
+          || bk === 'enrich-policy-body' || bk === 'transform-body'
           || bk === 'rollup-job-body' || bk === 'ml-datafeed-body' || bk === 'ml-job-body')) {
           const g = dslKeyGuard(doc, offset);
           /* 1439：_reindex 的 source.sort / source._source 数组元素是字段名位 */
@@ -1111,6 +1115,12 @@ onMounted(() => {
             : bk === 'ingest-pipeline-body'
               ? (ingestRegion === 'root' ? ingestPipelineBodyKeyItems()
                 : ingestRegion === 'processor' ? ingestProcessorKeyItems()
+                : [])
+            : bk === 'ingest-simulate-body'
+              ? (simRegion === 'root' ? ingestSimulateBodyKeyItems()
+                : simRegion === 'pipeline' ? ingestPipelineBodyKeyItems()
+                : simRegion === 'pipeline-processor' ? ingestProcessorKeyItems()
+                : simRegion === 'doc' ? ingestSimulateDocKeyItems()
                 : [])
             : bk === 'enrich-policy-body'
               ? (enrichRegion === 'root' ? enrichPolicyBodyKeyItems()

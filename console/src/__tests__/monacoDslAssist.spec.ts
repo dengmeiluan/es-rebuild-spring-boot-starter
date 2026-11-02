@@ -1468,6 +1468,32 @@ describe('1439 ML 作业体补全', () => {
   });
 });
 
+describe('1439 管道试跑体补全', () => {
+  it('根三键 → pipeline 复用管道键 → processors 复用处理器目录 → docs 元素键', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'ingest-simulate-body' } });
+    const root = '{\n  "\n}';
+    expect(suggest(root, 5).map(i => i.label)).toEqual(['pipeline', 'docs', 'verbose']);
+
+    const pol = '{\n  "pipeline": {\n    "\n  }\n}';
+    expect(suggest(pol, pol.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
+      'description', 'version', 'processors', 'on_failure', '_meta',
+    ]);
+
+    const procs = '{\n  "pipeline": {\n    "processors": [\n      {\n        "\n      }\n    ]\n  }\n}';
+    const procLabels = suggest(procs, procs.lastIndexOf('"') + 1).map(i => i.label);
+    expect(procLabels).toContain('set');
+    expect(procLabels).toContain('grok');
+
+    const docs = '{\n  "docs": [\n    {\n      "\n    }\n  ]\n}';
+    expect(suggest(docs, docs.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
+      '_index', '_id', '_source', '_routing',
+    ]);
+
+    const ver = '{"verbose": }';
+    expect(suggest(ver, ver.indexOf('}')).map(i => i.label)).toEqual(['true', 'false']);
+  });
+});
+
 describe('1439 子句体键位（query-body-key / clause-field-key / retriever-body-key）', () => {
   it('bool 体给 must/filter/should/must_not，接受后 JSON 合法', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });

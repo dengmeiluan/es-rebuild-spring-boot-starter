@@ -25,10 +25,10 @@ const SAMPLE = {
 };
 
 describe('1439 Ingest 管道体分档', () => {
-  it('路径分派：PUT /_ingest/pipeline/<id>；_simulate/GET 不抢', () => {
+  it('路径分派：PUT /_ingest/pipeline/<id>；_simulate 归试跑体、GET 不抢', () => {
     expect(bodyKindForPath('/_ingest/pipeline/logs-v1', 'PUT')).toBe('ingest-pipeline-body');
     expect(bodyKindForPath('/_ingest/pipeline/logs-v1', 'GET')).toBe('search');
-    expect(bodyKindForPath('/_ingest/pipeline/_simulate', 'POST')).toBe('search');
+    expect(bodyKindForPath('/_ingest/pipeline/_simulate', 'POST')).toBe('ingest-simulate-body');
   });
 
   it('目录：根五键；处理器类型全目录与公共开关', () => {

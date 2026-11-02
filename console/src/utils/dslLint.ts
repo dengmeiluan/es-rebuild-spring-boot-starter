@@ -52,7 +52,7 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   WATCH_CONDITION_TYPES, WATCH_ACTION_TYPES,
   securityRoleBodyRootKeys, securityRoleIndexKeys, securityRoleFieldSecurityKeys, securityRoleAppKeys,
   securityUserBodyRootKeys, securityRoleTemplateKeys, securityRoleMappingBodyRootKeys, securityApiKeyBodyRootKeys,
-  ingestPipelineBodyRootKeys, ingestProcessorLintKeys,
+  ingestPipelineBodyRootKeys, ingestProcessorLintKeys, ingestSimulateBodyRootKeys, ingestSimulateDocKeys,
   enrichPolicyBodyRootKeys, enrichMatchKeys, enrichRangeKeys,
   transformBodyRootKeys, transformSourceKeys, transformDestKeys, transformPivotKeys,
   transformSyncKeys, transformSyncTimeKeys, transformRetentionKeys, transformRetentionTimeKeys,
@@ -1492,6 +1492,31 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
         });
       } else if (obj?.on_failure && typeof obj.on_failure === 'object') {
         out.push(...lintBodyKeys(obj.on_failure, ingestProcessorLintKeys, 'Ingest on_failure'));
+      }
+      return out;
+    }
+    case 'ingest-simulate-body': {
+      const out = [...lintBodyKeys(obj, ingestSimulateBodyRootKeys, '管道试跑体'),
+        ...lintBodyKeys(obj?.pipeline, ingestPipelineBodyRootKeys, '试跑管道')];
+      if (Array.isArray(obj?.pipeline?.processors)) {
+        obj.pipeline.processors.forEach((p: any, i: number) => {
+          if (!p || typeof p !== 'object' || Array.isArray(p)) return;
+          out.push(...lintBodyKeys(p, ingestProcessorLintKeys, `试跑处理器 #${i + 1}`));
+        });
+      }
+      if (Array.isArray(obj?.pipeline?.on_failure)) {
+        obj.pipeline.on_failure.forEach((p: any, i: number) => {
+          if (!p || typeof p !== 'object' || Array.isArray(p)) return;
+          out.push(...lintBodyKeys(p, ingestProcessorLintKeys, `试跑 on_failure #${i + 1}`));
+        });
+      } else if (obj?.pipeline?.on_failure && typeof obj.pipeline.on_failure === 'object') {
+        out.push(...lintBodyKeys(obj.pipeline.on_failure, ingestProcessorLintKeys, '试跑 on_failure'));
+      }
+      if (Array.isArray(obj?.docs)) {
+        obj.docs.forEach((d: any, i: number) => {
+          if (!d || typeof d !== 'object' || Array.isArray(d)) return;
+          out.push(...lintBodyKeys(d, ingestSimulateDocKeys, `试跑文档 #${i + 1}`));
+        });
       }
       return out;
     }
