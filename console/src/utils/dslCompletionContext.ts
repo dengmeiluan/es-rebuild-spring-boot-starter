@@ -1116,7 +1116,8 @@ export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 
 | 'ccr-follow-body' | 'ccr-auto-follow-body' | 'security-api-key-grant-body' | 'license-body'
 | 'security-api-key-query-body' | 'security-api-key-invalidate-body' | 'ml-filter-update-body'
 | 'security-cross-cluster-api-key-body' | 'watch-execute-body'
-| 'security-privilege-body' | 'ilm-move-body' | 'snapshot-clone-body' | 'watch-inline-execute-body' | 'none';
+| 'security-privilege-body' | 'ilm-move-body' | 'snapshot-clone-body' | 'watch-inline-execute-body'
+| 'snapshot-mount-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1327,6 +1328,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
     /* 1439：克隆快照（PUT /_snapshot/<repo>/<snap>/_clone）体是
        {indices,index_settings,ignore_index_settings} */
     if (after === 3 && m === 'PUT' && segs[si + 3] === '_clone') return 'snapshot-clone-body';
+    /* 1439：挂载快照（POST /_snapshot/<repo>/<snap>/_mount）体是
+       {index,renamed_index,index_settings,ignore_index_settings,storage} */
+    if (after === 3 && m === 'POST' && segs[si + 3] === '_mount') return 'snapshot-mount-body';
   }
   if (p.includes('_settings')) return 'settings';
   if (p.includes('_mapping')) return 'mapping';
@@ -2904,6 +2908,19 @@ export function watchInlineExecuteRegionAt(doc: string, offset: number):
   return 'deep';
 }
 
+/** 挂载快照体（POST /_snapshot/<repo>/<snap>/_mount）的根键 */
+export function snapshotMountBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'index', detail: '快照中要挂载的索引', snippet: true, insertText: '"index": "${1:logs}"' },
+    { label: 'renamed_index', detail: '挂载后的索引名（省略沿用原名）', snippet: true, insertText: '"renamed_index": "${1:logs-restored}"' },
+    { label: 'index_settings', detail: '挂载时覆盖的索引设置', snippet: true, insertText: '"index_settings": {\n  ${0}\n}' },
+    { label: 'ignore_index_settings', detail: '忽略的索引设置清单', snippet: true,
+      insertText: '"ignore_index_settings": ["${1:index.refresh_interval}"]' },
+    { label: 'storage', detail: '存储方式（shared_cache 共享缓存 / full_copy 完整副本）', snippet: true,
+      insertText: '"storage": "${1|shared_cache,full_copy|}"' },
+  ];
+}
+
 /** 许可证更新体（PUT|POST /_license）的根键 */
 export function licenseBodyKeyItems(): AssistItem[] {
   return [
@@ -3551,6 +3568,7 @@ export const STRUCTURED_VALUE_ENUMS: Record<string, { values: string[]; quoted: 
   owner: { values: ['true', 'false'], quoted: false, detail: '只吊销当前用户拥有的 API Key' },
   ignore_condition: { values: ['false', 'true'], quoted: false, detail: '试跑 Watch 时忽略条件' },
   record_execution: { values: ['false', 'true'], quoted: false, detail: '是否记录本次 Watch 执行' },
+  storage: { values: ['shared_cache', 'full_copy'], quoted: true, detail: '挂载快照的存储方式' },
 };
 
 /** SQL 体的区域：根层给 SQL 键；filter 内是 Query DSL（回落到整棵查询补全）；其余子对象不出键 */
@@ -3792,6 +3810,7 @@ export const ilmMoveBodyRootKeys = ilmMoveBodyKeyItems().map(i => i.label);
 export const ilmMoveStepKeys = ilmMoveStepKeyItems().map(i => i.label);
 export const snapshotCloneBodyRootKeys = snapshotCloneBodyKeyItems().map(i => i.label);
 export const watchInlineExecuteBodyRootKeys = watchInlineExecuteBodyKeyItems().map(i => i.label);
+export const snapshotMountBodyRootKeys = snapshotMountBodyKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

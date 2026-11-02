@@ -15,7 +15,7 @@ import {
   securityUserBodyKeyItems, securityRoleMappingBodyKeyItems, securityRoleIndexKeyItems,
   mlJobBodyKeyItems, mlDetectorKeyItems, ingestSimulateBodyKeyItems,
   mlCalendarEventKeyItems, graphControlsKeyItems, securityApiKeyGrantBodyKeyItems,
-  securityApiKeyInvalidateBodyKeyItems, watchExecuteBodyKeyItems,
+  securityApiKeyInvalidateBodyKeyItems, watchExecuteBodyKeyItems, snapshotMountBodyKeyItems,
 } from '../utils/dslCompletionContext';
 
 describe('1439 结构化体值枚举', () => {
@@ -71,6 +71,7 @@ describe('1439 结构化体值枚举', () => {
       ...securityApiKeyGrantBodyKeyItems(),
       ...securityApiKeyInvalidateBodyKeyItems(),
       ...watchExecuteBodyKeyItems(),
+      ...snapshotMountBodyKeyItems(),
     ].map(i => i.label));
     for (const k of Object.keys(STRUCTURED_VALUE_ENUMS)) {
       expect(union.has(k), k + ' 已不在任何结构化体目录中').toBe(true);

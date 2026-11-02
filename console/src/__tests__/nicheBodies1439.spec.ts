@@ -24,7 +24,7 @@ import {
   securityApiKeyQueryBodyRootKeys, securityApiKeyInvalidateBodyRootKeys,
   securityCrossClusterApiKeyBodyRootKeys, securityCrossClusterAccessKeys, securityCrossClusterAccessEntryKeys,
   watchExecuteBodyRootKeys, securityPrivilegeBodyRootKeys, ilmMoveBodyRootKeys, ilmMoveStepKeys,
-  snapshotCloneBodyRootKeys, watchInlineExecuteBodyRootKeys,
+  snapshotCloneBodyRootKeys, watchInlineExecuteBodyRootKeys, snapshotMountBodyRootKeys,
   licenseBodyRootKeys, licenseEntryKeys,
 } from '../utils/dslCompletionContext';
 import { lintStructuredBody } from '../utils/dslLint';
@@ -50,6 +50,7 @@ describe('1439 外围写体：路由按方法/子路径精确分派', () => {
     expect(bodyKindForPath('/_security/privilege/myapp/read', 'PUT')).toBe('security-privilege-body');
     expect(bodyKindForPath('/_ilm/move/logs', 'POST')).toBe('ilm-move-body');
     expect(bodyKindForPath('/_snapshot/repo/snap/_clone', 'PUT')).toBe('snapshot-clone-body');
+    expect(bodyKindForPath('/_snapshot/repo/snap/_mount', 'POST')).toBe('snapshot-mount-body');
     expect(bodyKindForPath('/_watcher/watch/_execute', 'POST')).toBe('watch-inline-execute-body');
     expect(bodyKindForPath('/_license', 'PUT')).toBe('license-body');
     expect(bodyKindForPath('/_license', 'POST')).toBe('license-body');
@@ -81,6 +82,8 @@ describe('1439 外围写体：路由按方法/子路径精确分派', () => {
     expect(bodyKindForPath('/_security/privilege/myapp/read', 'GET')).toBe('search');
     expect(bodyKindForPath('/_ilm/move/logs', 'GET')).toBe('search');
     expect(bodyKindForPath('/_snapshot/repo/snap/_clone', 'POST')).toBe('search');
+    expect(bodyKindForPath('/_snapshot/repo/snap/_mount', 'GET')).toBe('search');
+    expect(bodyKindForPath('/_snapshot/repo/snap/_mount', 'PUT')).toBe('search');
     expect(bodyKindForPath('/_watcher/watch/_execute', 'GET')).toBe('search');
     /* 按 id 试跑仍是独立档，不被内联规则吞 */
     expect(bodyKindForPath('/_watcher/watch/error-rate/_execute', 'POST')).toBe('watch-execute-body');
@@ -120,6 +123,9 @@ describe('1439 外围写体：目录与 lint 同源', () => {
     expect(ilmMoveBodyRootKeys).toEqual(['current_step', 'next_step']);
     expect(ilmMoveStepKeys).toEqual(['phase', 'action', 'name']);
     expect(snapshotCloneBodyRootKeys).toEqual(['indices', 'index_settings', 'ignore_index_settings']);
+    expect(snapshotMountBodyRootKeys).toEqual([
+      'index', 'renamed_index', 'index_settings', 'ignore_index_settings', 'storage',
+    ]);
     expect(watchInlineExecuteBodyRootKeys).toEqual([
       'watch', 'trigger_data', 'alternative_input', 'ignore_condition', 'action_modes', 'record_execution',
     ]);
@@ -145,6 +151,8 @@ describe('1439 外围写体：目录与 lint 同源', () => {
       '{"current_step":{"phase":"hot","action":"rollover"},"next_step":{"phase":"warm","action":"forcemerge"}}')).toEqual([]);
     expect(lintStructuredBody('snapshot-clone-body',
       '{"indices":"logs-*","index_settings":{"index.number_of_replicas":1},"ignore_index_settings":["index.refresh_interval"]}')).toEqual([]);
+    expect(lintStructuredBody('snapshot-mount-body',
+      '{"index":"logs","renamed_index":"logs-restored","storage":"shared_cache"}')).toEqual([]);
     expect(lintStructuredBody('watch-inline-execute-body',
       '{"watch":{"trigger":{"schedule":{"interval":"5m"}},"input":{"simple":{}},'
       + '"condition":{"always":{}},"actions":{"log":{"logging":{"text":"fired"}}}},'
@@ -196,6 +204,8 @@ describe('1439 外围写体：目录与 lint 同源', () => {
       .some(f => f.message.includes('ILM 当前步骤'))).toBe(true);
     expect(lintStructuredBody('snapshot-clone-body', '{"index":[]}')
       .some(f => f.message.includes('克隆快照体'))).toBe(true);
+    expect(lintStructuredBody('snapshot-mount-body', '{"idx":[]}')
+      .some(f => f.message.includes('挂载快照体'))).toBe(true);
     expect(lintStructuredBody('watch-inline-execute-body', '{"watc":{}}')
       .some(f => f.message.includes('内联试跑 Watch 体'))).toBe(true);
     expect(lintStructuredBody('watch-inline-execute-body', '{"watch":{"triger":{}}}')
@@ -309,6 +319,9 @@ describe('1439 外围写体：区域助手（query 位回落 / 元素分派）',
     expect(STRUCTURED_VALUE_ENUMS.owner.values).toEqual(['true', 'false']);
     expect(STRUCTURED_VALUE_ENUMS.ignore_condition.values).toEqual(['false', 'true']);
     expect(STRUCTURED_VALUE_ENUMS.record_execution.values).toEqual(['false', 'true']);
+    expect(STRUCTURED_VALUE_ENUMS.storage).toEqual({
+      values: ['shared_cache', 'full_copy'], quoted: true, detail: '挂载快照的存储方式',
+    });
   });
 });
 
@@ -320,6 +333,7 @@ describe('1439 外围写体：W6/lint 接线在（只加路由不算完成）', 
       'security-api-key-query-body', 'security-api-key-invalidate-body', 'ml-filter-update-body',
       'security-cross-cluster-api-key-body', 'watch-execute-body',
       'security-privilege-body', 'ilm-move-body', 'snapshot-clone-body', 'watch-inline-execute-body',
+      'snapshot-mount-body',
     ]) {
       expect(monacoSrc, k).toContain(`bk === '${k}'`);
     }
@@ -333,6 +347,7 @@ describe('1439 外围写体：W6/lint 接线在（只加路由不算完成）', 
       'security-api-key-query-body', 'security-api-key-invalidate-body', 'ml-filter-update-body',
       'security-cross-cluster-api-key-body', 'watch-execute-body',
       'security-privilege-body', 'ilm-move-body', 'snapshot-clone-body', 'watch-inline-execute-body',
+      'snapshot-mount-body',
     ]) {
       expect(lintSrc, k).toContain(`case '${k}'`);
     }

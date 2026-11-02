@@ -78,6 +78,8 @@ export const ES_ENDPOINTS: EsEndpoint[] = [
     body: '{\n  "indices": "logs-*",\n  "include_global_state": false,\n  "partial": false\n}' },
   { methods: ['PUT'], path: '/_snapshot/{repository}/{snapshot}/_clone', doc: '克隆快照（可改索引设置）',
     body: '{\n  "indices": "logs-*"\n}' },
+  { methods: ['POST'], path: '/_snapshot/{repository}/{snapshot}/_mount', doc: '挂载快照为可搜索索引',
+    body: '{\n  "index": "logs",\n  "renamed_index": "logs-restored",\n  "storage": "shared_cache"\n}' },
   { methods: ['POST'], path: '/_snapshot/{repository}/{snapshot}/_restore', doc: '恢复快照',
     body: '{\n  "indices": "logs-*",\n  "ignore_unavailable": true,\n  "rename_pattern": "(.+)",\n  "rename_replacement": "restored_$1"\n}' },
   { methods: ['PUT'], path: '/_slm/policy/{policy_id}', doc: '创建/更新 SLM 备份策略',

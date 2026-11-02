@@ -58,6 +58,7 @@ const MATRIX: Row[] = [
   ['/_snapshot/repo/snap', 'PUT', 'snapshot-create-body'],
   ['/_snapshot/repo/snap/_restore', 'POST', 'snapshot-restore-body'],
   ['/_snapshot/repo/snap/_clone', 'PUT', 'snapshot-clone-body'],
+  ['/_snapshot/repo/snap/_mount', 'POST', 'snapshot-mount-body'],
   ['/_slm/policy/nightly', 'PUT', 'slm-policy-body'],
   ['/_ilm/policy/nightly', 'PUT', 'ilm-policy-body'],
   ['/_ilm/move/logs', 'POST', 'ilm-move-body'],
@@ -110,7 +111,7 @@ const ALL_KINDS: BodyKind[] = [
   'security-api-key-invalidate-body', 'ml-filter-update-body',
   'security-cross-cluster-api-key-body', 'watch-execute-body',
   'security-privilege-body', 'ilm-move-body', 'snapshot-clone-body',
-  'watch-inline-execute-body', 'none',
+  'watch-inline-execute-body', 'snapshot-mount-body', 'none',
 ];
 
 describe('1439 请求体档位路由矩阵', () => {
@@ -131,6 +132,8 @@ describe('1439 请求体档位路由矩阵', () => {
       ['/_snapshot/repo', 'GET', 'search'],
       ['/_snapshot/repo/snap/_status', 'GET', 'search'],
       ['/_snapshot/repo/snap/_clone', 'POST', 'search'],
+      ['/_snapshot/repo/snap/_mount', 'GET', 'search'],
+      ['/_snapshot/repo/snap/_mount', 'PUT', 'search'],
       ['/_ingest/pipeline/logs-v1', 'GET', 'search'],
       ['/_security/api_key', 'GET', 'search'],
       ['/_security/role/analyst', 'GET', 'search'],
@@ -166,6 +169,21 @@ describe('1439 请求体档位路由矩阵', () => {
     }
   });
 
+  it('全量普查：目录里所有带骨架的预设都有语义档（search 仅限搜索端点）', () => {
+    /* 缺陷形态：POST /{index}/_doc 曾因分档只看 '/_doc/' 而落 search，文档体被根键误报。
+       这里对目录全量扫描，新增预设若忘了接分档会直接红。 */
+    const searchPaths = new Set(['/{index}/_search', '/_search']);
+    for (const ep of ES_ENDPOINTS.filter(e => e.body)) {
+      const concrete = ep.path.replace('{index}', 'logs').replace(/\{[^}]+\}/g, 'x');
+      const kinds = ep.methods.map(m => bodyKindForPath(concrete, m));
+      if (searchPaths.has(ep.path)) {
+        expect(kinds.every(k => k === 'search'), ep.path).toBe(true);
+        continue;
+      }
+      expect(kinds.some(k => k !== 'search'), `${ep.methods.join('/')} ${ep.path}`).toBe(true);
+    }
+  });
+
   it('端点目录里的管理面预设体都落到对应档位（发现入口与补全同源）', () => {
     const expectByPath: Array<[string, BodyKind]> = [
       ['/_index_template/{name}', 'template'],
@@ -178,6 +196,7 @@ describe('1439 请求体档位路由矩阵', () => {
       ['/_snapshot/{repository}/{snapshot}', 'snapshot-create-body'],
       ['/_snapshot/{repository}/{snapshot}/_restore', 'snapshot-restore-body'],
       ['/_snapshot/{repository}/{snapshot}/_clone', 'snapshot-clone-body'],
+      ['/_snapshot/{repository}/{snapshot}/_mount', 'snapshot-mount-body'],
       ['/_slm/policy/{policy_id}', 'slm-policy-body'],
       ['/_ilm/policy/{policy_id}', 'ilm-policy-body'],
       ['/_ilm/move/{index}', 'ilm-move-body'],
