@@ -26,6 +26,7 @@ import {
   rerouteBodyKeyItems, rerouteCommandKeyItems, rerouteCommandParamKeyItems, allocationExplainBodyKeyItems,
   snapshotRepoBodyKeyItems, snapshotCreateBodyKeyItems, snapshotRestoreBodyKeyItems,
   slmPolicyBodyKeyItems, slmConfigKeyItems, slmRetentionKeyItems,
+  ilmPolicyBodyKeyItems, ilmPolicyKeyItems, ilmPhaseKeyItems, ilmPhaseConfigKeyItems, ilmActionKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -136,6 +137,11 @@ function allProblems(): string[] {
   out.push(...snippetProblems('LP', slmPolicyBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('LC', slmConfigKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('LR', slmRetentionKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('IP', ilmPolicyBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('IL', ilmPolicyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('IF', ilmPhaseKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('IC', ilmPhaseConfigKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('IA', ilmActionKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;
 }
 

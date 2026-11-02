@@ -24,6 +24,7 @@ import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS
   rerouteBodyKeyItems, rerouteCommandKeyItems, rerouteCommandParamKeyItems, rerouteRegionAt, rerouteCommandNameAt,
   allocationExplainBodyKeyItems, snapshotRepoBodyKeyItems, snapshotCreateBodyKeyItems, snapshotRestoreBodyKeyItems,
   SNAPSHOT_REPO_TYPES, slmPolicyBodyKeyItems, slmConfigKeyItems, slmRetentionKeyItems, slmPolicyRegionAt,
+  ilmPolicyBodyKeyItems, ilmPolicyKeyItems, ilmPhaseKeyItems, ilmPhaseConfigKeyItems, ilmActionKeyItems, ilmPolicyRegionAt,
   scriptExecuteBodyKeyItems, msearchHeaderKeyItems, msearchHeaderLineAt, msearchTemplateBodyKeyItems, bulkActionKeyItems, bulkActionMetaKeyItems, bulkLineKindAt, bulkActionMetaAt, fieldCapsBodyKeyItems, termsEnumBodyKeyItems, indexFilterRegionAt, rankEvalBodyKeyItems, rankEvalRequestKeyItems, rankEvalMetricKeyItems, rankEvalRegionAt, RUNTIME_FIELD_TYPES, runtimeFieldTypeAt, inRuntimeMappingsAt, aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems, aliasesBodyRegionAt, scrollBodyKeyItems, clearScrollBodyKeyItems, termvectorsKeyItems, mtermvectorsBodyKeyItems, mtermvectorsDocKeyItems, STRUCTURED_VALUE_ENUMS, MAPPING_TYPES, templateKeyItems, templateRegionAt, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
 import { makeDslValueSuggestProvider } from '../utils/dslValueSuggest';
 import type { AssistItem, BodyKind } from '../utils/dslCompletionContext';
@@ -822,6 +823,8 @@ onMounted(() => {
         const aeRegion = bk === 'allocation-explain-body' ? rootOnlyRegionAt(doc, offset) : null;
         /* 1439：SLM 策略体按根层/config/retention 分派 */
         const slmRegion = bk === 'slm-policy-body' ? slmPolicyRegionAt(doc, offset) : null;
+        /* 1439：ILM 策略体按根层/policy/phases/阶段/actions 五段分派 */
+        const ilmRegion = bk === 'ilm-policy-body' ? ilmPolicyRegionAt(doc, offset) : null;
         const ssRegion = (bk === 'stored-script-body' || bk === 'script-execute-body') ? storedScriptRegionAt(doc, offset) : null;
         const alRegion = bk === 'aliases-body' ? aliasesBodyRegionAt(doc, offset) : null;
         const scRegion = (bk === 'scroll-body' || bk === 'clear-scroll-body') ? rootOnlyRegionAt(doc, offset) : null;
@@ -836,7 +839,7 @@ onMounted(() => {
         if (!rtCtx && fcRegion !== 'query' && qwRegion !== 'query' && sfRegion !== 'query' && eqRegion !== 'query' && rIdxRegion !== 'query' && (bk === 'settings' || bk === 'mapping' || bk === 'template' || bk === 'index-body' || bk === 'alias-body' || bk === 'aliases-body' || bk === 'reindex-body' || bk === 'sql-body' || bk === 'update-body' || bk === 'rollover-body' || bk === 'dbq-body' || bk === 'ubq-body' || bk === 'query-body' || bk === 'template-search-body' || bk === 'mget-body' || bk === 'stored-script-body' || bk === 'script-execute-body' || bk === 'scroll-body' || bk === 'clear-scroll-body' || bk === 'termvectors-body' || bk === 'mtermvectors-body' || bk === 'field-caps-body' || bk === 'terms-enum-body' || bk === 'rank-eval-body' || bk === 'eql-body' || bk === 'cluster-settings-body'
           || bk === 'reroute-body' || bk === 'allocation-explain-body'
           || bk === 'snapshot-repo-body' || bk === 'snapshot-create-body' || bk === 'snapshot-restore-body'
-          || bk === 'slm-policy-body')) {
+          || bk === 'slm-policy-body' || bk === 'ilm-policy-body')) {
           const g = dslKeyGuard(doc, offset);
           /* 1439：_reindex 的 source.sort / source._source 数组元素是字段名位 */
           if (g.inStr && g.arrayElem && (rIdxRegion === 'sort' || rIdxRegion === 'source-fields')) {
@@ -1042,6 +1045,13 @@ onMounted(() => {
               ? (slmRegion === 'root' ? slmPolicyBodyKeyItems()
                 : slmRegion === 'config' ? slmConfigKeyItems()
                 : slmRegion === 'retention' ? slmRetentionKeyItems()
+                : [])
+            : bk === 'ilm-policy-body'
+              ? (ilmRegion === 'root' ? ilmPolicyBodyKeyItems()
+                : ilmRegion === 'policy' ? ilmPolicyKeyItems()
+                : ilmRegion === 'phases' ? ilmPhaseKeyItems()
+                : ilmRegion === 'phase' ? ilmPhaseConfigKeyItems()
+                : ilmRegion === 'actions' ? ilmActionKeyItems()
                 : [])
             : bk === 'stored-script-body'
               ? (ssRegion === 'root' ? storedScriptBodyKeyItems()

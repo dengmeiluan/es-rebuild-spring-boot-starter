@@ -1183,6 +1183,33 @@ describe('1439 SLM 策略体补全', () => {
   });
 });
 
+describe('1439 ILM 策略体补全', () => {
+  it('五段区域：根 → policy → phases → 阶段 → actions；更深层压住', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'ilm-policy-body' } });
+    const root = '{\n  "\n}';
+    expect(suggest(root, 5).map(i => i.label)).toEqual(['policy']);
+
+    const pol = '{\n  "policy": {\n    "\n  }\n}';
+    expect(suggest(pol, pol.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['phases']);
+
+    const phases = '{\n  "policy": {\n    "phases": {\n      "\n    }\n  }\n}';
+    expect(suggest(phases, phases.lastIndexOf('"') + 1).map(i => i.label))
+      .toEqual(['hot', 'warm', 'cold', 'frozen', 'delete']);
+
+    const phase = '{\n  "policy": {\n    "phases": {\n      "hot": {\n        "\n      }\n    }\n  }\n}';
+    expect(suggest(phase, phase.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['min_age', 'actions']);
+
+    const actions = '{\n  "policy": {\n    "phases": {\n      "hot": {\n        "actions": {\n          "\n        }\n      }\n    }\n  }\n}';
+    const labels = suggest(actions, actions.lastIndexOf('"') + 1).map(i => i.label);
+    for (const a of ['rollover', 'forcemerge', 'shrink', 'allocate', 'delete', 'set_priority', 'searchable_snapshot']) {
+      expect(labels, a).toContain(a);
+    }
+
+    const deep = '{\n  "policy": {\n    "phases": {\n      "hot": {\n        "actions": {\n          "rollover": {\n            "\n          }\n        }\n      }\n    }\n  }\n}';
+    expect(suggest(deep, deep.lastIndexOf('"') + 1), '动作参数内不出键').toEqual([]);
+  });
+});
+
 describe('1439 子句体键位（query-body-key / clause-field-key / retriever-body-key）', () => {
   it('bool 体给 must/filter/should/must_not，接受后 JSON 合法', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });

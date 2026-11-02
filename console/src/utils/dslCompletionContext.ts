@@ -1110,7 +1110,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
 export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'msearch-template-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'eql-body' | 'cluster-settings-body' | 'reroute-body' | 'allocation-explain-body'
-| 'snapshot-repo-body' | 'snapshot-create-body' | 'snapshot-restore-body' | 'slm-policy-body' | 'none';
+| 'snapshot-repo-body' | 'snapshot-create-body' | 'snapshot-restore-body' | 'slm-policy-body' | 'ilm-policy-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1230,6 +1230,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
      其余 _snapshot 子路径（_status/GET/DELETE）无体，不抢 search 默认档。 */
   /* 1439：SLM 策略体（PUT /_slm/policy/<id>）是 {schedule,name,repository,config,retention} */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_slm\/policy\/[^/]+(\/|$)/.test(p)) return 'slm-policy-body';
+  /* 1439：ILM 策略体（PUT /_ilm/policy/<id>，6.x 兼容 _xpack/ilm）是
+     {policy:{phases:{hot|warm|cold|frozen|delete:{min_age,actions}}}} */
+  if (method.toUpperCase() === 'PUT' && /(^|\/)_(?:xpack\/)?ilm\/policy\/[^/]+(\/|$)/.test(p)) return 'ilm-policy-body';
   if (p.includes('/_snapshot/')) {
     const segs = p.split('/').filter(Boolean);
     const si = segs.indexOf('_snapshot');
@@ -1691,6 +1694,96 @@ export function slmPolicyRegionAt(doc: string, offset: number): 'root' | 'config
   if (stack.length <= 1) return 'root';
   if (stack[0] === 'config' && stack.length === 2) return 'config';
   if (stack[0] === 'retention' && stack.length === 2) return 'retention';
+  return 'deep';
+}
+
+/** ILM 五个官方阶段 */
+export const ILM_PHASE_NAMES = ['hot', 'warm', 'cold', 'frozen', 'delete'] as const;
+/** 阶段对象允许的配置键 */
+export const ILM_PHASE_CONFIG_KEYS = ['min_age', 'actions'] as const;
+/** ILM 动作全集（lint 白名单；补全只为常用动作给骨架） */
+export const ILM_ACTIONS = [
+  'rollover', 'forcemerge', 'shrink', 'allocate', 'freeze', 'unfreeze', 'delete',
+  'set_priority', 'searchable_snapshot', 'readonly', 'unfollow', 'wait_for_snapshot',
+  'migrate', 'downsample',
+] as const;
+
+/** ILM 策略体（PUT /_ilm/policy/<id>）的根键 */
+export function ilmPolicyBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'policy', detail: '生命周期策略（内含 phases）', snippet: true, insertText: '"policy": {\n  ${0}\n}' },
+  ];
+}
+
+/** policy 对象内：阶段表 */
+export function ilmPolicyKeyItems(): AssistItem[] {
+  return [
+    { label: 'phases', detail: '阶段表（hot/warm/cold/frozen/delete）', snippet: true,
+      insertText: '"phases": {\n  ${0}\n}' },
+  ];
+}
+
+/** phases 对象的阶段键（每个阶段值对象含 min_age/actions） */
+export function ilmPhaseKeyItems(): AssistItem[] {
+  return [
+    { label: 'hot', detail: '热阶段（写入/滚动）', snippet: true,
+      insertText: '"hot": {\n  "actions": {\n    "rollover": { "max_size": "${1:50gb}", "max_age": "${2:30d}" }\n  }\n}' },
+    { label: 'warm', detail: '温阶段（合并/降副本）', snippet: true,
+      insertText: '"warm": {\n  "min_age": "${1:30d}",\n  "actions": {\n    "forcemerge": { "max_num_segments": ${2:1} }\n  }\n}' },
+    { label: 'cold', detail: '冷阶段（冻结/可搜索快照）', snippet: true,
+      insertText: '"cold": {\n  "min_age": "${1:60d}",\n  "actions": {\n    "set_priority": { "priority": ${2:0} }\n  }\n}' },
+    { label: 'frozen', detail: '冻结阶段（部分/完全冻结）', snippet: true,
+      insertText: '"frozen": {\n  "min_age": "${1:90d}",\n  "actions": {\n    "searchable_snapshot": { "snapshot_repository": "${2:my_repo}" }\n  }\n}' },
+    { label: 'delete', detail: '删除阶段（到期删除）', snippet: true,
+      insertText: '"delete": {\n  "min_age": "${1:180d}",\n  "actions": { "delete": {} }\n}' },
+  ];
+}
+
+/** 阶段对象内的配置键 */
+export function ilmPhaseConfigKeyItems(): AssistItem[] {
+  return [
+    { label: 'min_age', detail: '进入该阶段的最小年龄（如 30d/12h/0ms）', snippet: true, insertText: '"min_age": "${1:30d}"' },
+    { label: 'actions', detail: '该阶段要执行的动作', snippet: true, insertText: '"actions": {\n  ${0}\n}' },
+  ];
+}
+
+/** actions 对象的动作键（常用动作给可接受骨架） */
+export function ilmActionKeyItems(): AssistItem[] {
+  const skeleton: Record<string, { text: string; detail: string }> = {
+    rollover: { text: '"rollover": { "max_size": "${1:50gb}", "max_age": "${2:30d}" }', detail: '滚动到新索引' },
+    forcemerge: { text: '"forcemerge": { "max_num_segments": ${1:1} }', detail: '强制合并段' },
+    shrink: { text: '"shrink": { "number_of_shards": ${1:1} }', detail: '缩减主分片数' },
+    allocate: { text: '"allocate": { "number_of_replicas": ${1:1}, "total_shards_per_node": ${2:-1} }', detail: '调整副本/分片分配' },
+    freeze: { text: '"freeze": {}', detail: '冻结索引（关闭写入释放内存）' },
+    unfreeze: { text: '"unfreeze": {}', detail: '取消冻结索引（恢复写入）' },
+    delete: { text: '"delete": {}', detail: '删除索引（不可恢复）' },
+    set_priority: { text: '"set_priority": { "priority": ${1:50} }', detail: '调整恢复优先级' },
+    searchable_snapshot: { text: '"searchable_snapshot": { "snapshot_repository": "${1:my_repo}" }', detail: '转可搜索快照' },
+    readonly: { text: '"readonly": {}', detail: '设为只读' },
+    unfollow: { text: '"unfollow": {}', detail: '停止跟随远程集群' },
+    wait_for_snapshot: { text: '"wait_for_snapshot": { "policy": "${1:my_policy}" }', detail: '等待指定 SLM 快照' },
+    migrate: { text: '"migrate": { "number_of_replicas": ${1:1} }', detail: '迁移分片（旧版）' },
+    downsample: { text: '"downsample": { "fixed_interval": "${1:1d}" }', detail: '降采样时间序列索引' },
+  };
+  return (ILM_ACTIONS as readonly string[]).map(a => ({
+    label: a,
+    detail: skeleton[a]?.detail ?? 'ILM 动作',
+    snippet: true,
+    insertText: skeleton[a]?.text ?? '"' + a + '": {\n  ${0}\n}',
+  }));
+}
+
+/** ILM 策略体区域：根 / policy / phases 阶段表 / 阶段对象 / actions */
+export function ilmPolicyRegionAt(doc: string, offset: number): 'root' | 'policy' | 'phases' | 'phase' | 'actions' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] !== 'policy') return 'deep';
+  if (stack.length === 2) return 'policy';
+  if (stack[1] !== 'phases') return 'deep';
+  if (stack.length === 3) return 'phases';
+  if (stack.length === 4 && stack[2] && (ILM_PHASE_NAMES as readonly string[]).includes(stack[2])) return 'phase';
+  if (stack.length === 5 && stack[2] && (ILM_PHASE_NAMES as readonly string[]).includes(stack[2])
+      && stack[3] === 'actions') return 'actions';
   return 'deep';
 }
 
@@ -2428,6 +2521,9 @@ export const snapshotRestoreBodyRootKeys = snapshotRestoreBodyKeyItems().map(i =
 export const slmPolicyBodyRootKeys = slmPolicyBodyKeyItems().map(i => i.label);
 export const slmConfigKeys = slmConfigKeyItems().map(i => i.label);
 export const slmRetentionKeys = slmRetentionKeyItems().map(i => i.label);
+export const ilmPolicyBodyRootKeys = ilmPolicyBodyKeyItems().map(i => i.label);
+export const ilmPolicyKeys = ilmPolicyKeyItems().map(i => i.label);
+export const ilmActionKeys = [...ILM_ACTIONS];
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

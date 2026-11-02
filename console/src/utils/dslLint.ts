@@ -47,6 +47,7 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   eqlBodyRootKeys, clusterSettingsBodyRootKeys, rerouteBodyRootKeys, allocationExplainBodyRootKeys,
   snapshotRepoBodyRootKeys, snapshotCreateBodyRootKeys, snapshotRestoreBodyRootKeys,
   slmPolicyBodyRootKeys, slmConfigKeys, slmRetentionKeys,
+  ilmPolicyBodyRootKeys, ilmPolicyKeys, ILM_PHASE_NAMES, ILM_PHASE_CONFIG_KEYS, ilmActionKeys,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -1403,6 +1404,23 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
       return [...lintBodyKeys(obj, slmPolicyBodyRootKeys, 'SLM 策略体'),
         ...lintBodyKeys(obj?.config, slmConfigKeys, 'SLM 快照配置'),
         ...lintBodyKeys(obj?.retention, slmRetentionKeys, 'SLM 保留策略')];
+    case 'ilm-policy-body': {
+      const out = [...lintBodyKeys(obj, ilmPolicyBodyRootKeys, 'ILM 策略体'),
+        ...lintBodyKeys(obj?.policy, ilmPolicyKeys, 'ILM 策略')];
+      const phases = obj?.policy?.phases;
+      if (phases && typeof phases === 'object' && !Array.isArray(phases)) {
+        out.push(...lintBodyKeys(phases, ILM_PHASE_NAMES, 'ILM 阶段表'));
+        for (const [name, ph] of Object.entries(phases)) {
+          if (!ph || typeof ph !== 'object' || Array.isArray(ph)) continue;
+          out.push(...lintBodyKeys(ph, ILM_PHASE_CONFIG_KEYS, `ILM 阶段 ${name}`));
+          const acts = (ph as any).actions;
+          if (acts && typeof acts === 'object' && !Array.isArray(acts)) {
+            out.push(...lintBodyKeys(acts, ilmActionKeys, `ILM 阶段 ${name} 动作`));
+          }
+        }
+      }
+      return out;
+    }
     default: return [];
   }
 }
