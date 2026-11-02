@@ -130,6 +130,7 @@ describe('1439 外围写体：目录与 lint 同源', () => {
     expect(securityCrossClusterAccessEntryKeys).toEqual(['names', 'field_security', 'query']);
     expect(watchExecuteBodyRootKeys).toEqual([
       'trigger_data', 'alternative_input', 'ignore_condition', 'action_modes', 'record_execution',
+      'simulated_actions',
     ]);
     expect(securityPrivilegeEntryKeys).toEqual(['actions', 'metadata']);
     expect(ilmMoveBodyRootKeys).toEqual(['current_step', 'next_step']);
@@ -140,6 +141,7 @@ describe('1439 外围写体：目录与 lint 同源', () => {
     ]);
     expect(watchInlineExecuteBodyRootKeys).toEqual([
       'watch', 'trigger_data', 'alternative_input', 'ignore_condition', 'action_modes', 'record_execution',
+      'simulated_actions',
     ]);
     expect(nodesReloadSecureSettingsBodyRootKeys).toEqual(['secure_settings_password']);
     expect(licenseBodyRootKeys).toEqual(['licenses', 'license']);
@@ -159,7 +161,8 @@ describe('1439 外围写体：目录与 lint 同源', () => {
     expect(lintStructuredBody('security-cross-cluster-api-key-body',
       '{"name":"ccs","access":{"search":[{"names":["logs-*"]}],"replication":[{"names":["archive-*"]}]}}')).toEqual([]);
     expect(lintStructuredBody('watch-execute-body',
-      '{"ignore_condition":false,"record_execution":true,"action_modes":{"notify":"force_execute"}}')).toEqual([]);
+      '{"ignore_condition":false,"record_execution":true,"action_modes":{"notify":"force_execute"},'
+      + '"simulated_actions":{"use_all":true}}')).toEqual([]);
     expect(lintStructuredBody('security-privilege-body',
       '{"myapp":{"read":{"actions":["read"],"metadata":{}}}}')).toEqual([]);
     expect(lintStructuredBody('ilm-move-body',

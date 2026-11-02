@@ -2872,6 +2872,8 @@ export function watchExecuteBodyKeyItems(): AssistItem[] {
       insertText: '"action_modes": {\n  "${1:notify}": "${2|force_execute,simulate,skip,execute,force_simulate|}"\n}' },
     { label: 'record_execution', detail: '是否记录本次执行', snippet: true,
       insertText: '"record_execution": ${1|false,true|}' },
+    { label: 'simulated_actions', detail: '模拟动作（指定 actions 或 use_all）', snippet: true,
+      insertText: '"simulated_actions": { "use_all": ${1|true,false|} }' },
   ];
 }
 
