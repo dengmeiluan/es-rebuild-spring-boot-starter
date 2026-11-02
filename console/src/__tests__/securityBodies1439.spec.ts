@@ -58,7 +58,9 @@ describe('1439 安全体系写体分档', () => {
       'password', 'password_hash', 'roles', 'full_name', 'email', 'metadata', 'enabled', 'role_templates',
     ]);
     expect(securityRoleTemplateKeys).toEqual(['template', 'format']);
-    expect(securityRoleMappingBodyRootKeys).toEqual(['roles', 'enabled', 'rules', 'metadata']);
+    expect(securityRoleMappingBodyRootKeys).toEqual([
+      'roles', 'enabled', 'rules', 'role_templates', 'run_as', 'metadata',
+    ]);
     expect(securityApiKeyBodyRootKeys).toEqual(['name', 'expiration', 'role_descriptors', 'metadata']);
     expect(securityRoleBodyKeyItems().find(i => i.label === 'indices')?.detail).toContain('索引权限');
     expect(securityUserBodyKeyItems().find(i => i.label === 'enabled')?.detail).toContain('启用');

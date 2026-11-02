@@ -2114,6 +2114,9 @@ export function securityRoleMappingBodyKeyItems(): AssistItem[] {
     { label: 'enabled', detail: '是否启用该映射（默认 true）', snippet: true, insertText: '"enabled": ${1|true,false|}' },
     { label: 'rules', detail: '匹配规则（field/all/any/except…）', snippet: true,
       insertText: '"rules": {\n  "field": { "${1:username}": "${2:jdoe}" }\n}' },
+    { label: 'role_templates', detail: '角色模板（按模板动态解析角色）', snippet: true,
+      insertText: '"role_templates": [\n  {\n    "template": { "source": "${1:mustache-template}" },\n    "format": "${2|string,json|}"\n  }\n]' },
+    { label: 'run_as', detail: '允许映射用户以这些身份运行', snippet: true, insertText: '"run_as": ["${1:user}"]' },
     { label: 'metadata', detail: '附加到映射的自定义元数据', snippet: true, insertText: '"metadata": {\n  ${0}\n}' },
   ];
 }

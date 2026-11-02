@@ -1283,7 +1283,9 @@ describe('1439 安全体系写体补全', () => {
   it('角色映射根键', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'security-role-mapping-body' } });
     const root = '{\n  "\n}';
-    expect(suggest(root, 5).map(i => i.label)).toEqual(['roles', 'enabled', 'rules', 'metadata']);
+    expect(suggest(root, 5).map(i => i.label)).toEqual([
+      'roles', 'enabled', 'rules', 'role_templates', 'run_as', 'metadata',
+    ]);
   });
 
   it('API Key 根键', () => {
