@@ -1107,7 +1107,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1229,9 +1229,10 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：按查询删/改的体是 {query,max_docs,…}——query 内要回落到整棵查询补全 */
   if (p.includes('_delete_by_query')) return 'dbq-body';
   if (p.includes('_update_by_query')) return 'ubq-body';
-  /* 1439：_msearch 是 NDJSON 请求对（每行一个独立 JSON），不是 search 体。
-     路径段正则同时吃 '_msearch' / '/_msearch' / '/idx/_msearch' 三种写法。 */
-  if (/(^|\/)_msearch(\/|$)/.test(p)) return 'none';
+  /* 1439：_msearch 头行是请求头对象（index/search_type/routing…），下文查询体行回落 search；
+     _msearch/template 的头体形态不同（模板 id/params），维持无档 */
+  if (/(^|\/)_msearch\/template(\/|$)/.test(p)) return 'none';
+  if (/(^|\/)_msearch(\/|$)/.test(p)) return 'msearch-body';
   /* 1439：执行/渲染模板的体是 {id|source, params}，不是 search 体 */
   if (/(^|\/)_(search|render)\/template(\/|$)/.test(p)) return 'template-search-body';
   /* 1439：只收 query 的端点——给 sort/aggs/size 都是非法根键 */
@@ -1264,6 +1265,30 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
 export function bodyLangForPath(rawPath: string): 'ndjson' | 'json' {
   const p = (rawPath || '').split('?')[0].toLowerCase();
   return /(^|\/)_bulk(\/|$)/.test(p) || /(^|\/)_msearch(\/|$)/.test(p) ? 'ndjson' : 'json';
+}
+
+/** _msearch 头行键（每一对：头行 + 查询体行） */
+export function msearchHeaderKeyItems(): AssistItem[] {
+  return [
+    { label: 'index', detail: '检索目标索引（可数组或用逗号分隔）', snippet: true, insertText: '"index": "${1:my-index}"' },
+    { label: 'search_type', detail: '查询类型（默认 query_then_fetch）', snippet: true,
+      insertText: '"search_type": "${1|query_then_fetch,dfs_query_then_fetch|}"' },
+    { label: 'routing', detail: '检索路由值', snippet: true, insertText: '"routing": "${1:routing}"' },
+    { label: 'preference', detail: '副本偏好（如 _local）', snippet: true, insertText: '"preference": "${1:_local}"' },
+    { label: 'ignore_unavailable', detail: '索引缺失时是否跳过', snippet: true, insertText: '"ignore_unavailable": ${1|true,false|}' },
+    { label: 'allow_no_indices', detail: '通配无匹配时是否报错', snippet: true, insertText: '"allow_no_indices": ${1|true,false|}' },
+    { label: 'expand_wildcards', detail: '通配展开范围', snippet: true, insertText: '"expand_wildcards": "${1|open,closed,none,all|}"' },
+    { label: 'ccs_minimize_roundtrips', detail: '跨集群检索减少往返', snippet: true,
+      insertText: '"ccs_minimize_roundtrips": ${1|true,false|}' },
+  ];
+}
+
+/** 光标所在 _msearch 行是否为头行——非空行计数偶数（按「头+体」单行对，与 ndjsonLint 同口径）。 */
+export function msearchHeaderLineAt(doc: string, offset: number): boolean {
+  const cursor = Math.max(0, Math.min(offset, doc.length));
+  const lineStart = doc.lastIndexOf('\n', Math.max(0, cursor - 1)) + 1;
+  const prior = doc.slice(0, lineStart).split('\n').filter(l => l.trim().length > 0).length;
+  return prior % 2 === 0;
 }
 
 /** 补全项统一形态：insertText 已是完整插入串（含引号/snippet 语法），provider 直接消费 */

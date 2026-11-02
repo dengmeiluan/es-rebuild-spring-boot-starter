@@ -1443,6 +1443,29 @@ describe('1439 runtime_mappings 类型位', () => {
   });
 });
 
+describe('1439 _msearch 头行补全', () => {
+  it('头行键给请求头目录（接受即合法）；查询体行回落 search；第二对头行仍给头键', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'msearch-body' as const } });
+    const doc = '{"';
+    const headers = suggest(doc);
+    expect(headers.map((i: any) => i.label)).toEqual([
+      'index', 'search_type', 'routing', 'preference', 'ignore_unavailable',
+      'allow_no_indices', 'expand_wildcards', 'ccs_minimize_roundtrips',
+    ]);
+    for (const i of headers) {
+      expect(() => JSON.parse(acceptSnippet(doc, i) + '}'), i.label + ' 接受后非法').not.toThrow();
+    }
+    expect(suggest('{"index":"a"}\n{"query": {"').map((i: any) => i.label)).toContain('match');
+    expect(suggest('{"index":"a"}\n{"query": {"bool": {"').map((i: any) => i.label)).toContain('must');
+    expect(suggest('{"index":"a"}\n{"query":{}}\n{"').map((i: any) => i.label)).toContain('search_type');
+  });
+
+  it('负控：头行值位不出 search 根键/头键', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'msearch-body' as const } });
+    expect(suggest('{"index": "')).toEqual([]);
+  });
+});
+
 describe('1439 _mget 体键位补全', () => {
   it('根键 docs/ids（接受即合法）；docs 元素给七个文档级键；ids 数组不出键', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'mget-body' as const } });

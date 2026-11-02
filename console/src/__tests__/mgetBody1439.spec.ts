@@ -15,7 +15,7 @@ describe('1439 _mget 体', () => {
     for (const p of ['/idx/_mget', '/_mget', '_mget', '/idx/_mget?pretty']) {
       expect(bodyKindForPath(p, 'POST'), p).toBe('mget-body');
     }
-    expect(bodyKindForPath('/idx/_msearch', 'POST')).toBe('none');
+    expect(bodyKindForPath('/idx/_msearch', 'POST')).toBe('msearch-body');
     expect(bodyKindForPath('/idx/_update/1', 'POST')).toBe('update-body');
     expect(bodyKindForPath('/idx/_search', 'POST')).toBe('search');
   });

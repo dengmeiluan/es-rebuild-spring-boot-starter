@@ -16,7 +16,7 @@ import {
   sqlBodyKeyItems, updateBodyKeyItems, scriptObjectKeyItems, rolloverBodyKeyItems, rolloverConditionKeyItems,
   dbqBodyKeyItems, ubqBodyKeyItems, queryOnlyBodyKeyItems, templateSearchBodyKeyItems,
   mgetBodyKeyItems, mgetDocKeyItems,
-  storedScriptBodyKeyItems, storedScriptKeyItems, scriptExecuteBodyKeyItems,
+  storedScriptBodyKeyItems, storedScriptKeyItems, scriptExecuteBodyKeyItems, msearchHeaderKeyItems,
   aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems,
   scrollBodyKeyItems, clearScrollBodyKeyItems,
   termvectorsKeyItems, mtermvectorsBodyKeyItems, mtermvectorsDocKeyItems,
@@ -96,6 +96,7 @@ function allProblems(): string[] {
   out.push(...snippetProblems('SS', storedScriptBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('SI', storedScriptKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('SE', scriptExecuteBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('MH', msearchHeaderKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('AB', aliasesBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('AA', aliasActionKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('AC', aliasAddConfigKeyItems().map(i => ({ text: i.insertText, key: i.label }))));

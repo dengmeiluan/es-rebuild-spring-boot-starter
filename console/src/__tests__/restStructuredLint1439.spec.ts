@@ -129,4 +129,13 @@ describe('1439 RestView 结构化体 lint', () => {
     expect(bar, 'settings 档应有底部条').toBeTruthy();
     expect(bar!.textContent).toContain('number_of_shardss');
   });
+
+  it('_msearch 档（msearch-body）：头体对落单仍出 NDJSON 配对告警', async () => {
+    presetDraft('POST', '/_msearch', '{"index":"a"}\n{"query":{}}\n{"index":"b"}');
+    const { host } = mountRest();
+    await settle();
+    const bar = host.querySelector('.lint-bar');
+    expect(bar, 'msearch 落单头行应有底部条').toBeTruthy();
+    expect(bar!.textContent).toContain('数量不匹配');
+  });
 });

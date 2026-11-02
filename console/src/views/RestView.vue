@@ -404,7 +404,7 @@ const dslAssist = { fields: () => rtFields.value, bodyKind: () => rtBodyKind.val
 const rtLint = computed(() => {
   if (!hasBody.value) return [];
   const kind = rtBodyKind.value;
-  if (kind === 'none') return lintNdjsonBody(body.value || '');
+  if (kind === 'none' || kind === 'msearch-body') return lintNdjsonBody(body.value || '');
   if (kind === 'settings') { try { return lintSettingsBody(JSON.parse(body.value || '')); } catch { return []; } }
   if (kind === 'mapping') { try { return lintMappingBody(JSON.parse(body.value || '')); } catch { return []; } }
   if (kind === 'search') {
