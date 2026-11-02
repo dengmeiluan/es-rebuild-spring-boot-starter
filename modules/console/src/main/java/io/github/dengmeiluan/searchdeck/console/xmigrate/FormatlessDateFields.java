@@ -35,7 +35,7 @@ import java.util.Map;
  *
  * <p>本任务原方案是 {@code DateFormatWidener}——建目标索引时把 date 字段的 {@code format} 加宽成
  * {@code strict_date_optional_time||epoch_millis||epoch_second||...}，宣称「只增宽容度」。
- * <b>该方案已被 QA 6.7.2 实测推翻</b>，两条独立证据：</p>
+ * <b>该方案已被 ES 6.7.2 实测推翻</b>，两条独立证据：</p>
  * <ol>
  *   <li><b>它没做到它声称要做的事。</b> 无 format 的 date 字段写入 10 位 {@code 1754000000}，
  *       读回 {@code 1970-01-21T07:13:20Z}；加宽成含 {@code epoch_second} 的串后<b>读回完全相同</b>。

@@ -5427,7 +5427,7 @@ public class EsIndexAdmin {
      * body: {"query":"SELECT ...","fetch_size":100} 或 {"cursor":"xx"} 分页。
      * <p>：6.x 的 SQL 端点挂在 {@code /_xpack/sql} 前缀下（6.3+ 就有 SQL 能力），
      * 打 7.x 路径 {@code /_sql} 会 405/400——此前被当成「未启用 _sql」假降级，
-     * 实际 QA 6.7 实测 {@code POST /_xpack/sql} 可用，经 {@link #performSqlVersionAware} 修复。
+     * 实际 ES 6.7 实测 {@code POST /_xpack/sql} 可用，经 {@link #performSqlVersionAware} 修复。
      */
     public Map<String, Object> sqlQuery(String body) throws IOException {
         if (body == null || body.trim().isEmpty()) throw new IllegalArgumentException("sql body 不能为空");

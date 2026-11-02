@@ -297,7 +297,7 @@ public class MappingReconcilerTest {
 
     @Test
     public void analyzerMissingPutFailureIsConflictWithAdhocGuidance() {
-        // QA 实证(2026-09-02): 索引缺实体引用的自定义分词器(my_wildcard_analyzer)时
+        // ES 实证(2026-09-02): 索引缺实体引用的自定义分词器(my_wildcard_analyzer)时
         // 增量 PUT 被 ES 拒——语义上是「需要带 analyzer 配置的 adhoc 重建」而非环境故障
         String desired = "{\"properties\":{\"code\":{\"type\":\"keyword\"},\"name\":{\"type\":\"keyword\"},\"legs\":{\"type\":\"nested\",\"properties\":{\"id\":{\"type\":\"keyword\"}}}}}";
         RecordingPort port = new RecordingPort()

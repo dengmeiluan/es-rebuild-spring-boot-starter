@@ -1,6 +1,6 @@
 /**
  * R130 四十一批：PIT 拉取 _shard_doc 兼容性提示守卫（源码静态锁定）。
- * 背景：QA ES（10.68.24.5:9200）对 body pit + 显式 _shard_doc 排序返回
+ * 背景：控制集群 ES（10.68.24.5:9200）对 body pit + 显式 _shard_doc 排序返回
  * 400 No mapping found（版本限制）——PitScrollView 拉取 catch 需对该错误给出
  * 「清空 sort field 重试」的可行动指引，而非裸 toast。
  * 不挂组件原因：拉取循环依赖真实 ES 响应与 setInterval 轮询，静态锁定+真机已验。

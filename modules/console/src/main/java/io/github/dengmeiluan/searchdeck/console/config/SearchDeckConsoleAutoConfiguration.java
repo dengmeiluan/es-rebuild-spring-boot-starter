@@ -1046,7 +1046,7 @@ public class SearchDeckConsoleAutoConfiguration {
                 }
             return new JdbcConsoleOpsAuditStore(ds);
         }
-        /* 20260922 统一只用 QA ES 单载体约定：环形开启时按日索引写（快筛+双闸保留仅在 ES 档承诺） */
+        /* 20260922 统一只用控制集群 ES 单载体约定：环形开启时按日索引写（快筛+双闸保留仅在 ES 档承诺） */
         return new EsConsoleOpsAuditStore(controlClusterResolver::client, properties.getConsole().getAuth().getOpsAuditIndexName(),
                 properties.getConsole().getAuth().getAuditRetention().isEnabled());
     }
@@ -1082,7 +1082,7 @@ public class SearchDeckConsoleAutoConfiguration {
 
     /**
      * 监控快照落库器（20260922 批4）：服务端定时任务=唯一写入方——每轮把全部连接的最近
-     * 探活结果落 QA ES 监控日期索引；用户页面轮询只读不入库。探活器/连接档案缺席（探活
+     * 探活结果落控制集群 ES 监控日期索引；用户页面轮询只读不入库。探活器/连接档案缺席（探活
      * 关闭等）时供给恒空=零写入空转；连接清单拉取失败由器内节流告警整轮跳过。
      */
     @Bean

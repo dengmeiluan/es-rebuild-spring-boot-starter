@@ -178,7 +178,7 @@ public class ClusterMetricsCollector {
     private final ConnStore connStore;
     /** connId → 目标集群 client（装配期传 {@code router::clientFor}，测试传桩）。 */
     private final java.util.function.Function<String, RestHighLevelClient> targetClientFor;
-    /** 落档目标=控制集群（QA ES），与探活快照同一写入载体。 */
+    /** 落档目标=控制集群（控制集群 ES），与探活快照同一写入载体。 */
     private final java.util.function.Supplier<RestHighLevelClient> controlClient;
     private final String indexPrefix;
     private final int intervalSeconds;

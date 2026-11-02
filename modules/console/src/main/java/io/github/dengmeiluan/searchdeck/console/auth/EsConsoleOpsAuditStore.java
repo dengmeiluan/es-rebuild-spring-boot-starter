@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * <p>与重建域的 {@code RebuildAuditStore}（记录索引重建生命周期）互补：本店记录的是
  * <b>控制台人机操作</b>——登录、写操作、高危操作，供安全回溯。</p>
  *
- * <p><b>20260922 环形约定（统一只用 QA ES 单载体）</b>：rollover 开启时写路径按日滚动——
+ * <p><b>20260922 环形约定（统一只用控制集群 ES 单载体）</b>：rollover 开启时写路径按日滚动——
  * 目标索引为 {@code <前缀>-yyyy.MM.dd}（宿主本地时区日界），首笔落档前惰性幂等建当日索引
  * （显式 keyword/long mapping 契约 + {@code replicas:0} + {@code refresh_interval:30s}，
  * 6.x 目标 typed 形态重试；建失败仅节流告警、文档照写由动态映射兜底——审计不反噬）；

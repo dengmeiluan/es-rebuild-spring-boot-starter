@@ -329,7 +329,7 @@ public class SearchDeckElasticsearchProperties {
     /**
      * 监控快照落库参数（前缀 {@code searchdeck.elasticsearch.console.monitor}，20260922）：
      * 多集群监控历史的唯一写入方是服务端定时任务——每轮把全部连接的最近探活结果
-     * （连通/时延/版本）落控制集群 QA ES 的 {@code searchdeck_monitor-yyyy.MM.dd}
+     * （连通/时延/版本）落控制集群 ES 的 {@code searchdeck_monitor-yyyy.MM.dd}
      * 日期索引，与审计共用双闸环形清理（合计不超总量上限）。用户页面轮询只读不入库。
      */
     public static class Monitor {
@@ -412,7 +412,7 @@ public class SearchDeckElasticsearchProperties {
         private String userIndexName = "searchdeck_user";
         /** 控制台操作审计索引名：环形开启时为「日期索引前缀」，关闭时为固定单索引名。 */
         private String opsAuditIndexName = "searchdeck_ops_audit";
-        /** 20260922 环形保留约定（统一只用 QA ES 单载体）：按日索引 + 双闸清理。 */
+        /** 20260922 环形保留约定（统一只用控制集群 ES 单载体）：按日索引 + 双闸清理。 */
         private AuditRetention auditRetention = new AuditRetention();
         /**
          * 宿主审计并入开关（裁决<b>默认关</b>）：开启后宿主注册的
@@ -463,7 +463,7 @@ public class SearchDeckElasticsearchProperties {
 
     /**
      * 审计环形保留参数（前缀 {@code searchdeck.elasticsearch.console.auth.audit-retention}，20260922）：
-     * 统一只用 QA ES（控制集群）单载体的环形约定——审计写 {@code <索引名前缀>-yyyy.MM.dd}
+     * 统一只用控制集群 ES 单载体的环形约定——审计写 {@code <索引名前缀>-yyyy.MM.dd}
      * 按日索引，{@link io.github.dengmeiluan.searchdeck.console.auth.AuditIndexRetentionSweeper} 按
      * 双闸（超龄 + 总量）整索引删最旧。{@code enabled=false} 一键回到旧固定单索引行为
      * （既不滚动也不清理），是发版期的回退开关。
@@ -729,7 +729,7 @@ public class SearchDeckElasticsearchProperties {
          * <b>属性级</b>转换器接管，抢在本开关注册的 {@code ElasticsearchCustomConversions}
          * 之前生效。对这类字段<b>打开开关什么也不会发生，而且不报错</b> ——
          * 使用者很容易误以为已经修好。这类字段应改 {@code @Field(format = ...)}
-         * 或把实体类型换成 {@code Long} 自行转换。（QA 6.7.2 实测）</p>
+         * 或把实体类型换成 {@code Long} 自行转换。（ES 6.7.2 实测）</p>
          *
          * <p>能救的是<b>不带</b>日期注解、而存储形态是 epoch 数值的
          * {@code Timestamp} / {@code Date} / {@code Instant} 字段。</p>

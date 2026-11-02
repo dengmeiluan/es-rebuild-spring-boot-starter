@@ -349,7 +349,7 @@ public class EsIndexRebuildService {
     /**
      * 采样索引的 date 字段实际存储形态。
      *
-     * <p><b>为什么不是 match_all</b>：QA 6.7.2 实测（40 条文档 = 先写 20 条 epoch_millis、
+     * <p><b>为什么不是 match_all</b>：ES 6.7.2 实测（40 条文档 = 先写 20 条 epoch_millis、
      * 后写 20 条 ISO 串），{@code {"query":{"match_all":{}},"size":20}} 连续三次<b>全部</b>返回
      * 最先写入的 {@code a1..a20}，命中 0 条。而本端点存在的理由正是<b>发现存储形态
      * 发生过变化</b>（老文档一种形态、新文档另一种）——一个偏向老文档的采样口径与被测性质

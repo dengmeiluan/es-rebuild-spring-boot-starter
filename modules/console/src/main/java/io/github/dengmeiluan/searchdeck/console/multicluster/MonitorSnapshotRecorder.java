@@ -36,14 +36,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 多集群监控快照落库器（20260922 统一只用 QA ES 单载体约定·批4）：服务端定时任务按轮把
+ * 多集群监控快照落库器（20260922 统一只用控制集群 ES 单载体约定）：服务端定时任务按轮把
  * 全部连接的探活快照落 {@code searchdeck_monitor-yyyy.MM.dd} 日期索引——
  * <b>服务端调度器是唯一写入方，用户页面轮询只做读取展示、永不构成入库路径</b>
  * （多用户多页面不会造成重复落库，也不会因「没人开页面」而出现数据空洞）。
  *
  * <p><b>数据源</b>：{@link ConnHealthProber} 服务端探活每轮已产出全集群连通/时延/版本
  * （此前只存内存，重启即失）；本器按独立节奏（默认 60s，与探活解耦可调）拉取
- * 连接档案 × 最近探活结果合成快照 doc，异步落到控制集群（QA ES）。</p>
+ * 连接档案 × 最近探活结果合成快照 doc，异步落到控制集群（控制集群 ES）。</p>
  *
  * <p><b>契约</b>：与审计档同一套环形机制（{@link ControlDailyIndex}：显式 mapping +
  * {@code replicas:0} + {@code refresh_interval:30s} + 6.x typed 重试 + 建索引失败文档照写

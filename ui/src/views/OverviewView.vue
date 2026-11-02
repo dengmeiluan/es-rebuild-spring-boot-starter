@@ -173,7 +173,7 @@
     </div>
 
     <!-- 监控快照落库批④:多集群监控历史。服务端定时任务=唯一写入方(每分钟全集群探活快照落
- QA ES searchdeck_monitor 日期索引,双闸 90 天/30GB 环形),本区纯只读——页面轮询永不入库。
+ 控制集群 ES searchdeck_monitor 日期索引,双闸 90 天/30GB 环形),本区纯只读——页面轮询永不入库。
  筛选全量下推(集群/状态/时间范围),消费 /monitor-history(overview 页 apiPrefixes,VIEWER 只读) -->
     <div class="ov-cell ov-mh">
       <div class="card-t"><Activity :size="13" /> 集群监控历史

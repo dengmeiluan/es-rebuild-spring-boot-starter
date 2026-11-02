@@ -176,7 +176,7 @@
       "name": "searchdeck.elasticsearch.console.auth.audit-retention.enabled",
       "type": "java.lang.Boolean",
       "defaultValue": true,
-      "description": "审计环形保留总开关（统一只用 QA ES 单载体立法）：审计按日索引写入+周期双闸清理；false 回到旧固定单索引行为（既不滚动也不清理），是发版期回退开关。"
+      "description": "审计环形保留总开关（统一只用控制集群 ES 单载体立法）：审计按日索引写入+周期双闸清理；false 回到旧固定单索引行为（既不滚动也不清理），是发版期回退开关。"
     },
     {
       "name": "searchdeck.elasticsearch.console.auth.audit-retention.max-days",
@@ -200,7 +200,7 @@
       "name": "searchdeck.elasticsearch.console.monitor.enabled",
       "type": "java.lang.Boolean",
       "defaultValue": true,
-      "description": "监控快照落库总开关：服务端定时任务=唯一写入方，每轮把全部连接最近探活结果落 QA ES 监控日期索引；false=不启动落库调度（页面探活展示不受影响）。用户页面轮询永不构成入库路径。"
+      "description": "监控快照落库总开关：服务端定时任务=唯一写入方，每轮把全部连接最近探活结果落控制集群 ES 监控日期索引；false=不启动落库调度（页面探活展示不受影响）。用户页面轮询永不构成入库路径。"
     },
     {
       "name": "searchdeck.elasticsearch.console.monitor.interval-seconds",

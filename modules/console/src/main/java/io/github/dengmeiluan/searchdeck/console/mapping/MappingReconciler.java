@@ -140,7 +140,7 @@ public final class MappingReconciler {
         try {
             port.put(pinnedPhysicalIndex, additionsJson);
         } catch (IOException e) {
-            /* QA 实证(2026-09-02): 索引缺实体引用的自定义分词器时 ES 拒增量(analyzer ... has not
+            /* ES 实证(2026-09-02): 索引缺实体引用的自定义分词器时 ES 拒增量(analyzer ... has not
                been configured)——语义是需要带 analyzer 配置的重建,归 CONFLICT 引导 adhoc,而非 FAILED_ES */
             if (String.valueOf(e.getMessage()).contains("has not been configured in mappings")) {
                 return report(indexKey, logicalIndex, physicalIndices, requiredSource,

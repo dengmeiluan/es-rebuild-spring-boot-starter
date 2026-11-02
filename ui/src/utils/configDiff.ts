@@ -3,7 +3,7 @@
  数组语义不同（配置里的数组是有序集合，逐元素 diff 噪声大），强行共用两边都别扭。
 
  === 为什么必须先规范化再比对 ===
- 对 QA ES 6.7.2 实测：写入一份平铺 settings 再读回，有四类系统性失真，
+ 对控制集群 ES 6.7.2 实测：写入一份平铺 settings 再读回，有四类系统性失真，
  不规范化的话每一类都产生假差异，diff 会变成 100% 噪音 ——
  而一个总在喊狼来了的对比工具比没有更糟，人会直接不看它，真实漂移也被一起忽略。
 
@@ -46,7 +46,7 @@ export interface ConfigDiffRow {
  * ES 建索引时注入的只读元数据 —— 业务侧不可能声明，留着必然是恒定假 removed。
  * 名单按「剥掉 index. 前缀后的绝对路径」匹配，深层同名键不受影响。
  *
- * 每一项都在 QA ES 6.7.2 裸索引（只写 number_of_shards）读回结果中实测确认存在。
+ * 每一项都在控制集群 ES 6.7.2 裸索引（只写 number_of_shards）读回结果中实测确认存在。
  * 刻意不含的（实测在裸索引与带 analysis 索引上均未出现，只在 shrink/split/rollover
  * 后才产生，超出本函数覆盖场景）：history_uuid、resize.*、
  * routing.allocation.initial_recovery.*、version.upgraded。
