@@ -185,7 +185,9 @@ function dslKeyGuard(doc: string, offset: number): { ok: boolean; strStart: numb
     }
     return { ok: false, strStart, inStr };
   }
-  if (text[j] === ':') return { ok: false, strStart: cursor, inStr };
+  /* 1439：裸值位（`"boolKey": ␣`）也回传当前键——布尔枚举（true/false）不需要引号，
+     此前只有串内值位能命中 STRUCTURED_VALUE_ENUMS，裸值位永远不出档。 */
+  if (text[j] === ':') return { ok: false, strStart: cursor, inStr, valueKey: topKey ?? undefined };
   if (stack[stack.length - 1] && stack[stack.length - 1].type === '[') return { ok: false, strStart: cursor, inStr };
   return { ok: true, strStart: cursor, inStr };
 }
@@ -941,15 +943,25 @@ onMounted(() => {
           }
           /* 1439：结构化体值域封闭的键在值位给枚举（version_type/布尔开关/slices:auto）——
              布尔值插裸 true/false，串枚举带引号；range 覆盖整串，接受即合法。 */
-          const enumHint = g.inStr && g.valueKey ? STRUCTURED_VALUE_ENUMS[g.valueKey] : undefined;
+          const enumHint = g.valueKey ? STRUCTURED_VALUE_ENUMS[g.valueKey] : undefined;
           if (enumHint) {
-            const eEnd = scanStringEnd(doc, Math.max(0, Math.min(offset, doc.length)));
-            const esp = model.getPositionAt(g.strStart);
-            const eep = model.getPositionAt(eEnd);
-            const eRange = {
-              startLineNumber: esp.lineNumber, startColumn: esp.column,
-              endLineNumber: eep.lineNumber, endColumn: eep.column,
-            };
+            /* 串内：覆盖整串（接受即替换）；裸值位：只在光标处插入（true/false 不包引号） */
+            let eRange;
+            if (g.inStr) {
+              const eEnd = scanStringEnd(doc, Math.max(0, Math.min(offset, doc.length)));
+              const esp = model.getPositionAt(g.strStart);
+              const eep = model.getPositionAt(eEnd);
+              eRange = {
+                startLineNumber: esp.lineNumber, startColumn: esp.column,
+                endLineNumber: eep.lineNumber, endColumn: eep.column,
+              };
+            } else {
+              const cp = model.getPositionAt(Math.max(0, Math.min(offset, doc.length)));
+              eRange = {
+                startLineNumber: cp.lineNumber, startColumn: cp.column,
+                endLineNumber: cp.lineNumber, endColumn: cp.column,
+              };
+            }
             return { suggestions: enumHint.values.map((v, i) => ({
               label: v, kind: monaco.languages.CompletionItemKind.Value,
               insertText: enumHint.quoted ? '"' + v + '"' : v, range: eRange, command: ACCEPT_FORMAT_COMMAND,

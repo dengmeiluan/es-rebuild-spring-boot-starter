@@ -1845,6 +1845,31 @@ describe('1439 结构化体值位枚举', () => {
     expect(() => JSON.parse(after + '}')).not.toThrow();
   });
 
+  it('裸值位布尔键也出 true/false（此前只有敲了开引号才命中）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'aliases-body' as const } });
+    const doc = '{"is_write_index": }';
+    const items = suggest(doc, doc.indexOf('}'));
+    expect(items.map((i: any) => i.label)).toEqual(['true', 'false']);
+    const after = acceptSnippet(doc, items[0]);
+    expect(() => JSON.parse(after), after).not.toThrow();
+    expect(after).toContain('"is_write_index": true');
+  });
+
+  it('裸值位串枚举也出档（slices → "auto"，带引号插入）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'dbq-body' as const } });
+    const doc = '{"slices": }';
+    const items = suggest(doc, doc.indexOf('}'));
+    expect(items.map((i: any) => i.label)).toEqual(['auto']);
+    const after = acceptSnippet(doc, items[0]);
+    expect(after).toContain('"slices": "auto"');
+    expect(() => JSON.parse(after), after).not.toThrow();
+  });
+
+  it('负控：非枚举键的裸值位仍被压制（不因裸值位改造而泄漏键位档）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'dbq-body' as const } });
+    expect(suggest('{"query": }', '{"query": }'.indexOf('}'))).toEqual([]);
+  });
+
   it('负控：search 档同名字段不套结构化枚举表', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'search' as const } });
     expect(suggest('{"_source": "').map((i: any) => i.label)).not.toContain('true');
