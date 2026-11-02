@@ -1312,6 +1312,32 @@ describe('1439 Ingest 管道体补全', () => {
   });
 });
 
+describe('1439 Enrich 策略体补全', () => {
+  it('根三型 → match/range 键；query 内回落 Query DSL', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'enrich-policy-body' } });
+    const root = '{\n  "\n}';
+    expect(suggest(root, 5).map(i => i.label)).toEqual(['match', 'geo_match', 'range']);
+
+    const match = '{\n  "match": {\n    "\n  }\n}';
+    expect(suggest(match, match.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
+      'indices', 'query', 'match_field', 'enrich_fields',
+    ]);
+
+    const range = '{\n  "range": {\n    "\n  }\n}';
+    expect(suggest(range, range.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
+      'indices', 'query', 'field', 'ranges', 'enrich_fields',
+    ]);
+
+    const q = '{"match": {"query": {"';
+    const qLabels = suggest(q).map(i => i.label);
+    expect(qLabels).toContain('match');
+    expect(qLabels).toContain('term');
+
+    const deep = '{"match": {"indices": ["';
+    expect(suggest(deep).map(i => i.label), 'indices 数组位不出键').toEqual([]);
+  });
+});
+
 describe('1439 子句体键位（query-body-key / clause-field-key / retriever-body-key）', () => {
   it('bool 体给 must/filter/should/must_not，接受后 JSON 合法', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });

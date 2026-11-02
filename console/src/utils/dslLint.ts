@@ -53,6 +53,7 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   securityRoleBodyRootKeys, securityRoleIndexKeys, securityRoleFieldSecurityKeys, securityRoleAppKeys,
   securityUserBodyRootKeys, securityRoleTemplateKeys, securityRoleMappingBodyRootKeys, securityApiKeyBodyRootKeys,
   ingestPipelineBodyRootKeys, ingestProcessorLintKeys,
+  enrichPolicyBodyRootKeys, enrichMatchKeys, enrichRangeKeys,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -1488,6 +1489,11 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
       }
       return out;
     }
+    case 'enrich-policy-body':
+      return [...lintBodyKeys(obj, enrichPolicyBodyRootKeys, 'Enrich 策略体'),
+        ...lintBodyKeys(obj?.match, enrichMatchKeys, 'Enrich match 策略'),
+        ...lintBodyKeys(obj?.geo_match, enrichMatchKeys, 'Enrich geo_match 策略'),
+        ...lintBodyKeys(obj?.range, enrichRangeKeys, 'Enrich range 策略')];
     default: return [];
   }
 }

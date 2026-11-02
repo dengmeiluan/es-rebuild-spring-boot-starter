@@ -1111,7 +1111,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
 export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'msearch-template-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'eql-body' | 'cluster-settings-body' | 'reroute-body' | 'allocation-explain-body'
 | 'snapshot-repo-body' | 'snapshot-create-body' | 'snapshot-restore-body' | 'slm-policy-body' | 'ilm-policy-body' | 'watch-body'
-| 'security-role-body' | 'security-user-body' | 'security-role-mapping-body' | 'security-api-key-body' | 'ingest-pipeline-body' | 'none';
+| 'security-role-body' | 'security-user-body' | 'security-role-mapping-body' | 'security-api-key-body' | 'ingest-pipeline-body' | 'enrich-policy-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1248,6 +1248,8 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：Ingest 管道体（PUT /_ingest/pipeline/<id>）是 {description,version,processors,on_failure,_meta}；
      _simulate（POST）是另一种体，不并进本档。 */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_ingest\/pipeline\/[^/]+(\/|$)/.test(p)) return 'ingest-pipeline-body';
+  /* 1439：Enrich 策略体（PUT /_enrich/policy/<name>）：match / geo_match / range 三型 */
+  if (method.toUpperCase() === 'PUT' && /(^|\/)_enrich\/policy\/[^/]+(\/|$)/.test(p)) return 'enrich-policy-body';
   if (p.includes('/_snapshot/')) {
     const segs = p.split('/').filter(Boolean);
     const si = segs.indexOf('_snapshot');
@@ -2114,6 +2116,55 @@ export function ingestPipelineRegionAt(doc: string, offset: number): 'root' | 'p
   return 'deep';
 }
 
+/** Enrich 策略三型（match / geo_match / range） */
+export const ENRICH_POLICY_TYPES = ['match', 'geo_match', 'range'] as const;
+
+/** Enrich 策略体（PUT /_enrich/policy/<name>）的根键 */
+export function enrichPolicyBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'match', detail: '按字段等值匹配源索引', snippet: true,
+      insertText: '"match": {\n  "indices": ["${1:source-index}"],\n  "match_field": "${2:key}",\n  "enrich_fields": ["${3:value}"]\n}' },
+    { label: 'geo_match', detail: '按地理形状匹配', snippet: true,
+      insertText: '"geo_match": {\n  "indices": ["${1:source-index}"],\n  "match_field": "${2:location}",\n  "enrich_fields": ["${3:value}"]\n}' },
+    { label: 'range', detail: '按数值区间匹配', snippet: true,
+      insertText: '"range": {\n  "indices": ["${1:source-index}"],\n  "match_field": "${2:range_field}",\n  "enrich_fields": ["${3:value}"]\n}' },
+  ];
+}
+
+/** match / geo_match 策略对象内的键 */
+export function enrichMatchPolicyKeyItems(): AssistItem[] {
+  return [
+    { label: 'indices', detail: '源索引（可数组/通配；单索引只读）', snippet: true, insertText: '"indices": ["${1:source-index}"]' },
+    { label: 'query', detail: '源索引过滤查询（Query DSL）', snippet: true, insertText: '"query": {\n  ${0}\n}' },
+    { label: 'match_field', detail: '用于匹配的字段', snippet: true, insertText: '"match_field": "${1:key}"' },
+    { label: 'enrich_fields', detail: '随命中携带的字段', snippet: true, insertText: '"enrich_fields": ["${1:value}"]' },
+  ];
+}
+
+/** range 策略对象内的键 */
+export function enrichRangePolicyKeyItems(): AssistItem[] {
+  return [
+    { label: 'indices', detail: '源索引（可数组/通配；单索引只读）', snippet: true, insertText: '"indices": ["${1:source-index}"]' },
+    { label: 'query', detail: '源索引过滤查询（Query DSL）', snippet: true, insertText: '"query": {\n  ${0}\n}' },
+    { label: 'field', detail: '区间字段（数值/日期）', snippet: true, insertText: '"field": "${1:range_field}"' },
+    { label: 'ranges', detail: '区间定义（from/to 数组）', snippet: true,
+      insertText: '"ranges": [\n  { "from": ${1:0}, "to": ${2:100} }\n]' },
+    { label: 'enrich_fields', detail: '随命中携带的字段', snippet: true, insertText: '"enrich_fields": ["${1:value}"]' },
+  ];
+}
+
+/** Enrich 策略体区域：根 / match·geo_match / range / query（交给查询补全）/ 更深 */
+export function enrichPolicyRegionAt(doc: string, offset: number): 'root' | 'match' | 'range' | 'query' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack.length >= 3 && stack[1] === 'query'
+      && (ENRICH_POLICY_TYPES as readonly string[]).includes(stack[0] ?? '')) return 'query';
+  if (stack.length === 2 && (ENRICH_POLICY_TYPES as readonly string[]).includes(stack[0] ?? '')) {
+    return stack[0] === 'range' ? 'range' : 'match';
+  }
+  return 'deep';
+}
+
 /** 分片分配诊断体（POST /_cluster/allocation/explain）的根键 */
 export function allocationExplainBodyKeyItems(): AssistItem[] {
   return [
@@ -2864,6 +2915,9 @@ export const securityRoleMappingBodyRootKeys = securityRoleMappingBodyKeyItems()
 export const securityApiKeyBodyRootKeys = securityApiKeyBodyKeyItems().map(i => i.label);
 export const ingestPipelineBodyRootKeys = ingestPipelineBodyKeyItems().map(i => i.label);
 export const ingestProcessorLintKeys = [...INGEST_PROCESSOR_TYPES, ...INGEST_PROCESSOR_COMMON_KEYS];
+export const enrichPolicyBodyRootKeys = enrichPolicyBodyKeyItems().map(i => i.label);
+export const enrichMatchKeys = enrichMatchPolicyKeyItems().map(i => i.label);
+export const enrichRangeKeys = enrichRangePolicyKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

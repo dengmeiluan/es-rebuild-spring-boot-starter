@@ -31,6 +31,7 @@ import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS
   securityUserBodyKeyItems, securityUserRegionAt, securityRoleTemplateKeyItems,
   securityRoleMappingBodyKeyItems, securityApiKeyBodyKeyItems,
   ingestPipelineBodyKeyItems, ingestProcessorKeyItems, ingestPipelineRegionAt,
+  enrichPolicyBodyKeyItems, enrichMatchPolicyKeyItems, enrichRangePolicyKeyItems, enrichPolicyRegionAt,
   scriptExecuteBodyKeyItems, msearchHeaderKeyItems, msearchHeaderLineAt, msearchTemplateBodyKeyItems, bulkActionKeyItems, bulkActionMetaKeyItems, bulkLineKindAt, bulkActionMetaAt, fieldCapsBodyKeyItems, termsEnumBodyKeyItems, indexFilterRegionAt, rankEvalBodyKeyItems, rankEvalRequestKeyItems, rankEvalMetricKeyItems, rankEvalRegionAt, RUNTIME_FIELD_TYPES, runtimeFieldTypeAt, inRuntimeMappingsAt, aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems, aliasesBodyRegionAt, scrollBodyKeyItems, clearScrollBodyKeyItems, termvectorsKeyItems, mtermvectorsBodyKeyItems, mtermvectorsDocKeyItems, STRUCTURED_VALUE_ENUMS, MAPPING_TYPES, templateKeyItems, templateRegionAt, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
 import { makeDslValueSuggestProvider } from '../utils/dslValueSuggest';
 import type { AssistItem, BodyKind } from '../utils/dslCompletionContext';
@@ -839,6 +840,8 @@ onMounted(() => {
         const sUserRegion = bk === 'security-user-body' ? securityUserRegionAt(doc, offset) : null;
         /* 1439：Ingest 体按根层 / processors[]·on_failure 处理器对象分派 */
         const ingestRegion = bk === 'ingest-pipeline-body' ? ingestPipelineRegionAt(doc, offset) : null;
+        /* 1439：Enrich 体按根/match·geo_match/range 分派；query 内回落整棵查询补全 */
+        const enrichRegion = bk === 'enrich-policy-body' ? enrichPolicyRegionAt(doc, offset) : null;
         const ssRegion = (bk === 'stored-script-body' || bk === 'script-execute-body') ? storedScriptRegionAt(doc, offset) : null;
         const alRegion = bk === 'aliases-body' ? aliasesBodyRegionAt(doc, offset) : null;
         const scRegion = (bk === 'scroll-body' || bk === 'clear-scroll-body') ? rootOnlyRegionAt(doc, offset) : null;
@@ -850,13 +853,13 @@ onMounted(() => {
         const fcRegion = (bk === 'field-caps-body' || bk === 'terms-enum-body') ? indexFilterRegionAt(doc, offset) : null;
         /* 1439：_rank_eval 按根/评估项/metric 区域分派 */
         const rankRegion = bk === 'rank-eval-body' ? rankEvalRegionAt(doc, offset) : null;
-        if (!rtCtx && fcRegion !== 'query' && qwRegion !== 'query' && sfRegion !== 'query' && eqRegion !== 'query' && rIdxRegion !== 'query' && (bk === 'settings' || bk === 'mapping' || bk === 'template' || bk === 'index-body' || bk === 'alias-body' || bk === 'aliases-body' || bk === 'reindex-body' || bk === 'sql-body' || bk === 'update-body' || bk === 'rollover-body' || bk === 'dbq-body' || bk === 'ubq-body' || bk === 'query-body' || bk === 'template-search-body' || bk === 'mget-body' || bk === 'stored-script-body' || bk === 'script-execute-body' || bk === 'scroll-body' || bk === 'clear-scroll-body' || bk === 'termvectors-body' || bk === 'mtermvectors-body' || bk === 'field-caps-body' || bk === 'terms-enum-body' || bk === 'rank-eval-body' || bk === 'eql-body' || bk === 'cluster-settings-body'
+        if (!rtCtx && fcRegion !== 'query' && qwRegion !== 'query' && sfRegion !== 'query' && eqRegion !== 'query' && enrichRegion !== 'query' && rIdxRegion !== 'query' && (bk === 'settings' || bk === 'mapping' || bk === 'template' || bk === 'index-body' || bk === 'alias-body' || bk === 'aliases-body' || bk === 'reindex-body' || bk === 'sql-body' || bk === 'update-body' || bk === 'rollover-body' || bk === 'dbq-body' || bk === 'ubq-body' || bk === 'query-body' || bk === 'template-search-body' || bk === 'mget-body' || bk === 'stored-script-body' || bk === 'script-execute-body' || bk === 'scroll-body' || bk === 'clear-scroll-body' || bk === 'termvectors-body' || bk === 'mtermvectors-body' || bk === 'field-caps-body' || bk === 'terms-enum-body' || bk === 'rank-eval-body' || bk === 'eql-body' || bk === 'cluster-settings-body'
           || bk === 'reroute-body' || bk === 'allocation-explain-body'
           || bk === 'snapshot-repo-body' || bk === 'snapshot-create-body' || bk === 'snapshot-restore-body'
           || bk === 'slm-policy-body' || bk === 'ilm-policy-body' || bk === 'watch-body'
           || bk === 'security-role-body' || bk === 'security-user-body'
           || bk === 'security-role-mapping-body' || bk === 'security-api-key-body'
-          || bk === 'ingest-pipeline-body')) {
+          || bk === 'ingest-pipeline-body' || bk === 'enrich-policy-body')) {
           const g = dslKeyGuard(doc, offset);
           /* 1439：_reindex 的 source.sort / source._source 数组元素是字段名位 */
           if (g.inStr && g.arrayElem && (rIdxRegion === 'sort' || rIdxRegion === 'source-fields')) {
@@ -1093,6 +1096,11 @@ onMounted(() => {
             : bk === 'ingest-pipeline-body'
               ? (ingestRegion === 'root' ? ingestPipelineBodyKeyItems()
                 : ingestRegion === 'processor' ? ingestProcessorKeyItems()
+                : [])
+            : bk === 'enrich-policy-body'
+              ? (enrichRegion === 'root' ? enrichPolicyBodyKeyItems()
+                : enrichRegion === 'match' ? enrichMatchPolicyKeyItems()
+                : enrichRegion === 'range' ? enrichRangePolicyKeyItems()
                 : [])
             : bk === 'stored-script-body'
               ? (ssRegion === 'root' ? storedScriptBodyKeyItems()
