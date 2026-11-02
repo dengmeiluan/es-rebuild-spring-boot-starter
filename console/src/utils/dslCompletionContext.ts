@@ -2046,6 +2046,22 @@ export function httpRequestKeyItems(): AssistItem[] {
   ];
 }
 
+/** HTTP basic 认证对象的键 */
+export function httpAuthBasicKeyItems(): AssistItem[] {
+  return [
+    { label: 'username', detail: 'Basic 认证用户名', snippet: true, insertText: '"username": "${1:user}"' },
+    { label: 'password', detail: 'Basic 认证密码', snippet: true, insertText: '"password": "${1:secret}"' },
+  ];
+}
+
+/** HTTP 代理对象的键 */
+export function httpProxyKeyItems(): AssistItem[] {
+  return [
+    { label: 'host', detail: '代理主机', snippet: true, insertText: '"host": "${1:proxy.example.com}"' },
+    { label: 'port', detail: '代理端口', snippet: true, insertText: '"port": ${1:8080}' },
+  ];
+}
+
 /** input.http 对象的键 */
 export function watchHttpInputKeyItems(): AssistItem[] {
   return [
@@ -2205,7 +2221,8 @@ export function watchRegionAt(doc: string, offset: number):
   | 'chain-input-container' | 'chain-input'
   | 'chain-trigger' | 'chain-trigger-container'
   | 'condition' | 'condition-params' | 'action' | 'action-params'
-  | 'action-email-body' | 'action-slack-message' | 'action-jira-fields' | 'deep' {
+  | 'action-email-body' | 'action-slack-message' | 'action-jira-fields'
+  | 'http-auth-basic' | 'http-proxy' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
   if (stack[0] === 'trigger') {
@@ -2233,6 +2250,10 @@ export function watchRegionAt(doc: string, offset: number):
     if (stack[1] === 'http') {
       if (stack.length === 3) return 'http-input';
       if (stack.length === 4 && stack[2] === 'request') return 'http-request';
+      if (stack.length === 6 && stack[2] === 'request' && stack[3] === 'auth' && stack[4] === 'basic') {
+        return 'http-auth-basic';
+      }
+      if (stack.length === 5 && stack[2] === 'request' && stack[3] === 'proxy') return 'http-proxy';
     }
     if (stack[1] === 'chain') {
       if (stack.length === 3) return 'chain-input-container';
@@ -2254,6 +2275,10 @@ export function watchRegionAt(doc: string, offset: number):
     if (stack.length === 5 && stack[2] === 'email' && stack[3] === 'body') return 'action-email-body';
     if (stack.length === 5 && stack[2] === 'slack' && stack[3] === 'message') return 'action-slack-message';
     if (stack.length === 5 && stack[2] === 'jira' && stack[3] === 'fields') return 'action-jira-fields';
+    if (stack.length === 6 && stack[2] === 'webhook' && stack[3] === 'auth' && stack[4] === 'basic') {
+      return 'http-auth-basic';
+    }
+    if (stack.length === 5 && stack[2] === 'webhook' && stack[3] === 'proxy') return 'http-proxy';
     return 'deep';
   }
   return 'deep';
@@ -3233,7 +3258,8 @@ export function watchInlineExecuteRegionAt(doc: string, offset: number):
   | 'chain-input-container' | 'chain-input'
   | 'chain-trigger' | 'chain-trigger-container'
   | 'watch-condition' | 'condition-params' | 'watch-action' | 'action-params'
-  | 'action-email-body' | 'action-slack-message' | 'action-jira-fields' | 'deep' {
+  | 'action-email-body' | 'action-slack-message' | 'action-jira-fields'
+  | 'http-auth-basic' | 'http-proxy' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
   if (stack[0] !== 'watch') return 'deep';
@@ -3263,6 +3289,10 @@ export function watchInlineExecuteRegionAt(doc: string, offset: number):
     if (stack[2] === 'http') {
       if (stack.length === 4) return 'http-input';
       if (stack.length === 5 && stack[3] === 'request') return 'http-request';
+      if (stack.length === 7 && stack[3] === 'request' && stack[4] === 'auth' && stack[5] === 'basic') {
+        return 'http-auth-basic';
+      }
+      if (stack.length === 6 && stack[3] === 'request' && stack[4] === 'proxy') return 'http-proxy';
     }
     if (stack[2] === 'chain') {
       if (stack.length === 4) return 'chain-input-container';
@@ -3283,6 +3313,10 @@ export function watchInlineExecuteRegionAt(doc: string, offset: number):
     if (stack.length === 6 && stack[3] === 'email' && stack[4] === 'body') return 'action-email-body';
     if (stack.length === 6 && stack[3] === 'slack' && stack[4] === 'message') return 'action-slack-message';
     if (stack.length === 6 && stack[3] === 'jira' && stack[4] === 'fields') return 'action-jira-fields';
+    if (stack.length === 7 && stack[3] === 'webhook' && stack[4] === 'auth' && stack[5] === 'basic') {
+      return 'http-auth-basic';
+    }
+    if (stack.length === 6 && stack[3] === 'webhook' && stack[4] === 'proxy') return 'http-proxy';
     return 'deep';
   }
   return 'deep';

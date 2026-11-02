@@ -1323,6 +1323,15 @@ describe('1439 Watcher 体补全', () => {
 
     const jiraFields = '{\n  "actions": {\n    "ticket": {\n      "jira": {\n        "fields": {\n          "\n        }\n      }\n    }\n  }\n}';
     expect(suggest(jiraFields, jiraFields.lastIndexOf('"') + 1).map(i => i.label)).toContain('project');
+
+    const hookAuth = '{\n  "actions": {\n    "hook": {\n      "webhook": {\n        "auth": {\n          "basic": {\n            "\n          }\n        }\n      }\n    }\n  }\n}';
+    expect(suggest(hookAuth, hookAuth.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['username', 'password']);
+
+    const hookProxy = '{\n  "actions": {\n    "hook": {\n      "webhook": {\n        "proxy": {\n          "\n        }\n      }\n    }\n  }\n}';
+    expect(suggest(hookProxy, hookProxy.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['host', 'port']);
+
+    const inputProxy = '{\n  "input": {\n    "http": {\n      "request": {\n        "proxy": {\n          "\n        }\n      }\n    }\n  }\n}';
+    expect(suggest(inputProxy, inputProxy.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['host', 'port']);
   });
 });
 

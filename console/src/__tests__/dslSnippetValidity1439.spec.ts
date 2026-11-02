@@ -48,7 +48,7 @@ import {
   watchActionParamsKeyItems, watchConditionParamsKeyItems,
   watchSearchInputKeyItems, watchSearchRequestKeyItems, watchHttpInputKeyItems, httpRequestKeyItems,
   watchChainTriggerKeyItems, watchChainNestedTriggerKeyItems, watchChainInputKeyItems,
-  watchEmailBodyKeyItems, watchSlackMessageKeyItems, watchJiraFieldsKeyItems,
+  watchEmailBodyKeyItems, watchSlackMessageKeyItems, watchJiraFieldsKeyItems, httpAuthBasicKeyItems, httpProxyKeyItems,
   snapshotCloneBodyKeyItems, watchInlineExecuteBodyKeyItems, snapshotMountBodyKeyItems,
   nodesReloadSecureSettingsBodyKeyItems,
 } from '../utils/dslCompletionContext';
@@ -251,6 +251,8 @@ function allProblems(): string[] {
   out.push(...snippetProblems('WEB', watchEmailBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('WSM', watchSlackMessageKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('WJF', watchJiraFieldsKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('HAB', httpAuthBasicKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('HPX', httpProxyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('SMT', snapshotMountBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('NRS', nodesReloadSecureSettingsBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;

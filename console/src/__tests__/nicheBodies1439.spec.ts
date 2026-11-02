@@ -350,6 +350,9 @@ describe('1439 外围写体：区域助手（query 位回落 / 元素分派）',
       ...at('{ "watch": { "actions": { "chat": { "slack": { "message": { "|": 1 } } } } } }'),
     )).toBe('action-slack-message');
     expect(watchInlineExecuteRegionAt(
+      ...at('{ "watch": { "input": { "http": { "request": { "auth": { "basic": { "|": 1 } } } } } } }'),
+    )).toBe('http-auth-basic');
+    expect(watchInlineExecuteRegionAt(
       ...at('{ "watch": { "input": { "search": { "request": { "body": { "|": 1 } } } } } }'),
     )).toBe('watch-search-body');
     expect(watchInlineExecuteRegionAt(
