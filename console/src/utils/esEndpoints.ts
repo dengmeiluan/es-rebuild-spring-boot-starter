@@ -90,6 +90,8 @@ export const ES_ENDPOINTS: EsEndpoint[] = [
     body: '{\n  "trigger": { "schedule": { "interval": "5m" } },\n  "input": { "search": { "request": { "indices": ["logs-*"], "body": { "query": { "match_all": {} } } } } },\n  "condition": { "compare": { "ctx.payload.hits.total": { "gt": 0 } } },\n  "actions": { "notify": { "logging": { "text": "watch fired" } } }\n}' },
   { methods: ['POST'], path: '/_watcher/watch/{watch_id}/_execute', doc: '试跑 Watcher 告警（模拟触发/动作）',
     body: '{\n  "ignore_condition": false,\n  "record_execution": true\n}' },
+  { methods: ['POST'], path: '/_watcher/watch/_execute', doc: '内联试跑 Watch（不保存告警）',
+    body: '{\n  "watch": {\n    "trigger": { "schedule": { "interval": "5m" } },\n    "input": { "simple": {} },\n    "condition": { "always": {} },\n    "actions": { "log": { "logging": { "text": "fired" } } }\n  },\n  "record_execution": false\n}' },
   { methods: ['PUT'], path: '/_transform/{transform_id}', doc: '创建/更新 Transform 作业',
     body: '{\n  "source": { "index": ["logs-*"] },\n  "dest": { "index": "logs-transformed" },\n  "pivot": {\n    "group_by": { "day": { "date_histogram": { "field": "@timestamp", "calendar_interval": "1d" } } },\n    "aggregations": { "avg_bytes": { "avg": { "field": "bytes" } } }\n  }\n}' },
   { methods: ['PUT'], path: '/_rollup/job/{job_id}', doc: '创建 Rollup 汇总作业',

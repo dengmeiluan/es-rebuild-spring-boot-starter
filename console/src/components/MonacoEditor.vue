@@ -39,7 +39,7 @@ import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS
   rollupMetricKeyItems, rollupRegionAt,
   mlDatafeedBodyKeyItems, mlDelayedCheckKeyItems, mlChunkingKeyItems, mlIndicesOptionsKeyItems, mlDatafeedRegionAt,
   mlJobBodyKeyItems, mlAnalysisConfigKeyItems, mlDetectorKeyItems, mlAnalysisLimitsKeyItems, mlDataDescriptionKeyItems, mlJobRegionAt,
-  scriptExecuteBodyKeyItems, msearchHeaderKeyItems, msearchHeaderLineAt, msearchTemplateBodyKeyItems, bulkActionKeyItems, bulkActionMetaKeyItems, bulkLineKindAt, bulkActionMetaAt, fieldCapsBodyKeyItems, termsEnumBodyKeyItems, indexFilterRegionAt, rankEvalBodyKeyItems, rankEvalRequestKeyItems, rankEvalMetricKeyItems, rankEvalRegionAt, RUNTIME_FIELD_TYPES, runtimeFieldTypeAt, inRuntimeMappingsAt, aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems, aliasesBodyRegionAt, scrollBodyKeyItems, clearScrollBodyKeyItems, termvectorsKeyItems, mtermvectorsBodyKeyItems, mtermvectorsDocKeyItems, STRUCTURED_VALUE_ENUMS, MAPPING_TYPES, templateKeyItems, templateRegionAt, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS, mlFilterBodyKeyItems, mlCalendarBodyKeyItems, mlCalendarEventsBodyKeyItems, mlCalendarEventKeyItems, mlCalendarEventsRegionAt, graphExploreBodyKeyItems, graphVertexKeyItems, graphControlsKeyItems, graphSampleDiversityKeyItems, graphHopKeyItems, graphExploreRegionAt, ccrFollowBodyKeyItems, ccrAutoFollowBodyKeyItems, securityApiKeyGrantBodyKeyItems, securityApiKeyGrantKeyItems, securityApiKeyGrantRegionAt, licenseBodyKeyItems, licenseEntryKeyItems, licenseRegionAt, mlFilterUpdateBodyKeyItems, securityApiKeyQueryBodyKeyItems, securityApiKeyQueryRegionAt, securityApiKeyInvalidateBodyKeyItems, securityCrossClusterApiKeyBodyKeyItems, securityCrossClusterAccessKeyItems, securityCrossClusterAccessEntryKeyItems, securityCrossClusterApiKeyRegionAt, watchExecuteBodyKeyItems, securityPrivilegeBodyKeyItems, ilmMoveBodyKeyItems, ilmMoveStepKeyItems, ilmMoveRegionAt, snapshotCloneBodyKeyItems } from '../utils/dslCompletionContext';
+  scriptExecuteBodyKeyItems, msearchHeaderKeyItems, msearchHeaderLineAt, msearchTemplateBodyKeyItems, bulkActionKeyItems, bulkActionMetaKeyItems, bulkLineKindAt, bulkActionMetaAt, fieldCapsBodyKeyItems, termsEnumBodyKeyItems, indexFilterRegionAt, rankEvalBodyKeyItems, rankEvalRequestKeyItems, rankEvalMetricKeyItems, rankEvalRegionAt, RUNTIME_FIELD_TYPES, runtimeFieldTypeAt, inRuntimeMappingsAt, aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems, aliasesBodyRegionAt, scrollBodyKeyItems, clearScrollBodyKeyItems, termvectorsKeyItems, mtermvectorsBodyKeyItems, mtermvectorsDocKeyItems, STRUCTURED_VALUE_ENUMS, MAPPING_TYPES, templateKeyItems, templateRegionAt, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS, mlFilterBodyKeyItems, mlCalendarBodyKeyItems, mlCalendarEventsBodyKeyItems, mlCalendarEventKeyItems, mlCalendarEventsRegionAt, graphExploreBodyKeyItems, graphVertexKeyItems, graphControlsKeyItems, graphSampleDiversityKeyItems, graphHopKeyItems, graphExploreRegionAt, ccrFollowBodyKeyItems, ccrAutoFollowBodyKeyItems, securityApiKeyGrantBodyKeyItems, securityApiKeyGrantKeyItems, securityApiKeyGrantRegionAt, licenseBodyKeyItems, licenseEntryKeyItems, licenseRegionAt, mlFilterUpdateBodyKeyItems, securityApiKeyQueryBodyKeyItems, securityApiKeyQueryRegionAt, securityApiKeyInvalidateBodyKeyItems, securityCrossClusterApiKeyBodyKeyItems, securityCrossClusterAccessKeyItems, securityCrossClusterAccessEntryKeyItems, securityCrossClusterApiKeyRegionAt, watchExecuteBodyKeyItems, securityPrivilegeBodyKeyItems, ilmMoveBodyKeyItems, ilmMoveStepKeyItems, ilmMoveRegionAt, snapshotCloneBodyKeyItems, watchInlineExecuteBodyKeyItems, watchInlineExecuteRegionAt } from '../utils/dslCompletionContext';
 import { makeDslValueSuggestProvider } from '../utils/dslValueSuggest';
 import type { AssistItem, BodyKind } from '../utils/dslCompletionContext';
 import { ensureLanguages } from '../utils/monacoLanguages';
@@ -871,6 +871,8 @@ onMounted(() => {
         /* 1439：跨集群 Key 体按根 / access / access 元素分派 */
         const cckRegion = bk === 'security-cross-cluster-api-key-body'
           ? securityCrossClusterApiKeyRegionAt(doc, offset) : null;
+        /* 1439：内联试跑 Watch 体按根 / watch 定义及其子区分派 */
+        const wieRegion = bk === 'watch-inline-execute-body' ? watchInlineExecuteRegionAt(doc, offset) : null;
         /* 1439：日历事件体按根 / events 元素分派 */
         const mlCalEvRegion = bk === 'ml-calendar-events-body' ? mlCalendarEventsRegionAt(doc, offset) : null;
         /* 1439：Graph 体按 query/顶点/controls/采样多样性/hop 分派；query 内回落整棵查询补全 */
@@ -904,7 +906,8 @@ onMounted(() => {
           || bk === 'security-api-key-query-body' || bk === 'security-api-key-invalidate-body'
           || bk === 'ml-filter-update-body'
           || bk === 'security-cross-cluster-api-key-body' || bk === 'watch-execute-body'
-          || bk === 'security-privilege-body' || bk === 'ilm-move-body' || bk === 'snapshot-clone-body')) {
+          || bk === 'security-privilege-body' || bk === 'ilm-move-body' || bk === 'snapshot-clone-body'
+          || bk === 'watch-inline-execute-body')) {
           const g = dslKeyGuard(doc, offset);
           /* 1439：_reindex 的 source.sort / source._source 数组元素是字段名位 */
           if (g.inStr && g.arrayElem && (rIdxRegion === 'sort' || rIdxRegion === 'source-fields')) {
@@ -1214,6 +1217,15 @@ onMounted(() => {
                 : [])
             : bk === 'watch-execute-body'
               ? (flatRootRegion === 'root' ? watchExecuteBodyKeyItems() : [])
+            : bk === 'watch-inline-execute-body'
+              ? (wieRegion === 'root' ? watchInlineExecuteBodyKeyItems()
+                : wieRegion === 'watch' ? watchBodyKeyItems()
+                : wieRegion === 'watch-trigger' ? watchTriggerKeyItems()
+                : wieRegion === 'watch-schedule' ? watchScheduleKeyItems()
+                : wieRegion === 'watch-input' ? watchInputKeyItems()
+                : wieRegion === 'watch-condition' ? watchConditionKeyItems()
+                : wieRegion === 'watch-action' ? watchActionTypeKeyItems()
+                : [])
             : bk === 'security-privilege-body'
               ? (flatRootRegion === 'root' ? securityPrivilegeBodyKeyItems() : [])
             : bk === 'ilm-move-body'

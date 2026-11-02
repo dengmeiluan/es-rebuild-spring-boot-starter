@@ -45,7 +45,7 @@ import {
   mlFilterUpdateBodyKeyItems, securityApiKeyQueryBodyKeyItems, securityApiKeyInvalidateBodyKeyItems,
   securityCrossClusterApiKeyBodyKeyItems, securityCrossClusterAccessKeyItems, securityCrossClusterAccessEntryKeyItems,
   watchExecuteBodyKeyItems, securityPrivilegeBodyKeyItems, ilmMoveBodyKeyItems, ilmMoveStepKeyItems,
-  snapshotCloneBodyKeyItems,
+  snapshotCloneBodyKeyItems, watchInlineExecuteBodyKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -229,6 +229,7 @@ function allProblems(): string[] {
   out.push(...snippetProblems('ILM', ilmMoveBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('ILMS', ilmMoveStepKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('SCL', snapshotCloneBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('WIE', watchInlineExecuteBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;
 }
 

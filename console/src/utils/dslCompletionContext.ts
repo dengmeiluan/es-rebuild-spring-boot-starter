@@ -1116,7 +1116,7 @@ export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 
 | 'ccr-follow-body' | 'ccr-auto-follow-body' | 'security-api-key-grant-body' | 'license-body'
 | 'security-api-key-query-body' | 'security-api-key-invalidate-body' | 'ml-filter-update-body'
 | 'security-cross-cluster-api-key-body' | 'watch-execute-body'
-| 'security-privilege-body' | 'ilm-move-body' | 'snapshot-clone-body' | 'none';
+| 'security-privilege-body' | 'ilm-move-body' | 'snapshot-clone-body' | 'watch-inline-execute-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1251,6 +1251,10 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
      {trigger_data,alternative_input,ignore_condition,action_modes,record_execution}。 */
   if (method.toUpperCase() === 'POST'
       && /(^|\/)_(?:xpack\/)?watcher\/watch\/[^/]+\/_execute\/?$/.test(p)) return 'watch-execute-body';
+  /* 1439：内联试跑（POST /_watcher/watch/_execute）体多一层 watch 定义：
+     {watch,trigger_data,alternative_input,ignore_condition,action_modes,record_execution}。 */
+  if (method.toUpperCase() === 'POST'
+      && /(^|\/)_(?:xpack\/)?watcher\/watch\/_execute\/?$/.test(p)) return 'watch-inline-execute-body';
   /* 1439：安全体系写体（PUT/POST /_security/<resource>/<name>）——各自根键与 SQL 查询无关 */
   const secMethod = method.toUpperCase();
   if (secMethod === 'PUT' || secMethod === 'POST') {
@@ -2873,6 +2877,33 @@ export function snapshotCloneBodyKeyItems(): AssistItem[] {
   ];
 }
 
+/** 内联试跑 Watch 体（POST /_watcher/watch/_execute）的根键 */
+export function watchInlineExecuteBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'watch', detail: '内联 Watch 定义（trigger/input/condition/actions）', snippet: true,
+      insertText: '"watch": {\n  "trigger": { "schedule": { "interval": "5m" } },\n  "input": { "simple": {} },\n  "condition": { "always": {} },\n  "actions": { "log": { "logging": { "text": "fired" } } }\n}' },
+    ...watchExecuteBodyKeyItems(),
+  ];
+}
+
+/** 内联试跑体区域：根 / watch 定义（复用 watch 各子区）/ 更深 */
+export function watchInlineExecuteRegionAt(doc: string, offset: number):
+  'root' | 'watch' | 'watch-trigger' | 'watch-schedule' | 'watch-input' | 'watch-condition' | 'watch-action' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] !== 'watch') return 'deep';
+  if (stack.length === 2) return 'watch';
+  if (stack[1] === 'trigger') {
+    if (stack.length === 3) return 'watch-trigger';
+    if (stack.length === 4 && stack[2] === 'schedule') return 'watch-schedule';
+    return 'deep';
+  }
+  if (stack[1] === 'input' && stack.length === 3) return 'watch-input';
+  if (stack[1] === 'condition' && stack.length === 3) return 'watch-condition';
+  if (stack[1] === 'actions' && stack.length === 4) return 'watch-action';
+  return 'deep';
+}
+
 /** 许可证更新体（PUT|POST /_license）的根键 */
 export function licenseBodyKeyItems(): AssistItem[] {
   return [
@@ -3760,6 +3791,7 @@ export const securityPrivilegeBodyRootKeys = securityPrivilegeBodyKeyItems().map
 export const ilmMoveBodyRootKeys = ilmMoveBodyKeyItems().map(i => i.label);
 export const ilmMoveStepKeys = ilmMoveStepKeyItems().map(i => i.label);
 export const snapshotCloneBodyRootKeys = snapshotCloneBodyKeyItems().map(i => i.label);
+export const watchInlineExecuteBodyRootKeys = watchInlineExecuteBodyKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

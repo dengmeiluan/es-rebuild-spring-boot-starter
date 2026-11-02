@@ -68,7 +68,7 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   securityApiKeyQueryBodyRootKeys, securityApiKeyInvalidateBodyRootKeys, mlFilterUpdateBodyRootKeys,
   securityCrossClusterApiKeyBodyRootKeys, securityCrossClusterAccessKeys, securityCrossClusterAccessEntryKeys,
   watchExecuteBodyRootKeys, securityPrivilegeBodyRootKeys, ilmMoveBodyRootKeys, ilmMoveStepKeys,
-  snapshotCloneBodyRootKeys,
+  snapshotCloneBodyRootKeys, watchInlineExecuteBodyRootKeys,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -1502,6 +1502,22 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
       return out;
     }
     case 'watch-execute-body': return lintBodyKeys(obj, watchExecuteBodyRootKeys, '试跑 Watch 体');
+    case 'watch-inline-execute-body': {
+      const out = [...lintBodyKeys(obj, watchInlineExecuteBodyRootKeys, '内联试跑 Watch 体'),
+        ...lintBodyKeys(obj?.watch, watchBodyRootKeys, '内联 Watch 定义'),
+        ...lintBodyKeys(obj?.watch?.trigger, WATCH_TRIGGER_TYPES, '内联 Watch 触发器'),
+        ...lintBodyKeys(obj?.watch?.trigger?.schedule, WATCH_SCHEDULE_TYPES, '内联 Watch 调度'),
+        ...lintBodyKeys(obj?.watch?.input, WATCH_INPUT_TYPES, '内联 Watch 输入'),
+        ...lintBodyKeys(obj?.watch?.condition, WATCH_CONDITION_TYPES, '内联 Watch 条件')];
+      const actions = obj?.watch?.actions;
+      if (actions && typeof actions === 'object' && !Array.isArray(actions)) {
+        for (const [name, act] of Object.entries(actions)) {
+          if (!act || typeof act !== 'object' || Array.isArray(act)) continue;
+          out.push(...lintBodyKeys(act, WATCH_ACTION_TYPES, `内联 Watch 动作 ${name}`));
+        }
+      }
+      return out;
+    }
     case 'security-privilege-body': return lintBodyKeys(obj, securityPrivilegeBodyRootKeys, '应用权限体');
     case 'ilm-move-body':
       return [...lintBodyKeys(obj, ilmMoveBodyRootKeys, 'ILM 推进体'),

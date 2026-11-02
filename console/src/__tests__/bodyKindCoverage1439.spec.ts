@@ -86,6 +86,7 @@ const MATRIX: Row[] = [
   ['/_security/cross_cluster/api_key', 'POST', 'security-cross-cluster-api-key-body'],
   ['/_security/privilege/myapp/read', 'PUT', 'security-privilege-body'],
   ['/_watcher/watch/error-rate/_execute', 'POST', 'watch-execute-body'],
+  ['/_watcher/watch/_execute', 'POST', 'watch-inline-execute-body'],
   ['/_license', 'PUT', 'license-body'],
   ['/idx/_close', 'POST', 'none'],
   ['/idx/_forcemerge', 'POST', 'none'],
@@ -108,7 +109,8 @@ const ALL_KINDS: BodyKind[] = [
   'security-api-key-grant-body', 'license-body', 'security-api-key-query-body',
   'security-api-key-invalidate-body', 'ml-filter-update-body',
   'security-cross-cluster-api-key-body', 'watch-execute-body',
-  'security-privilege-body', 'ilm-move-body', 'snapshot-clone-body', 'none',
+  'security-privilege-body', 'ilm-move-body', 'snapshot-clone-body',
+  'watch-inline-execute-body', 'none',
 ];
 
 describe('1439 请求体档位路由矩阵', () => {
@@ -137,7 +139,7 @@ describe('1439 请求体档位路由矩阵', () => {
       ['/_ilm/move/logs', 'GET', 'search'],
       ['/_slm/policy/nightly', 'DELETE', 'search'],
       ['/_watcher/watch/error-rate/_execute', 'GET', 'search'],
-      ['/_watcher/watch/_execute', 'POST', 'search'],
+      ['/_watcher/watch/_execute', 'GET', 'search'],
       ['/_transform/daily/_start', 'POST', 'search'],
       ['/_rollup/job/daily/_start', 'POST', 'search'],
       ['/_ml/anomaly_detectors/latency/_update', 'POST', 'search'],
@@ -194,6 +196,7 @@ describe('1439 请求体档位路由矩阵', () => {
       ['/_security/cross_cluster/api_key', 'security-cross-cluster-api-key-body'],
       ['/_security/privilege/{application}/{privilege_name}', 'security-privilege-body'],
       ['/_watcher/watch/{watch_id}/_execute', 'watch-execute-body'],
+      ['/_watcher/watch/_execute', 'watch-inline-execute-body'],
       ['/_ml/filters/{filter_id}', 'ml-filter-body'],
       ['/_ml/filters/{filter_id}/_update', 'ml-filter-update-body'],
       ['/_ml/calendars/{calendar_id}', 'ml-calendar-body'],
