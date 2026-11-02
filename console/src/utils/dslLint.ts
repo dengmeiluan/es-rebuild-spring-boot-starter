@@ -1375,6 +1375,17 @@ export function lintBodyKeys(obj: unknown, allowed: readonly string[], label: st
   return out;
 }
 
+/** role_descriptors 映射：角色名是动态键，只校验每个角色定义本身的根键 */
+function lintRoleDescriptors(rd: unknown, label: string): Finding[] {
+  const out: Finding[] = [];
+  if (!rd || typeof rd !== 'object' || Array.isArray(rd)) return out;
+  for (const [name, role] of Object.entries(rd as Record<string, unknown>)) {
+    if (!role || typeof role !== 'object' || Array.isArray(role)) continue;
+    out.push(...lintBodyKeys(role, securityRoleBodyRootKeys, `${label} ${name}`));
+  }
+  return out;
+}
+
 /** NDJSON 体的配对 lint（_bulk/_msearch）——DevTools 与 REST 两页共用同一 Finding 形态。
     mode=msearch 时按「头行+查询体行」口径，不用 bulk 的动作/文档文案。 */
 export function lintNdjsonBody(body: string, mode: 'bulk' | 'msearch' | 'msearch-template' = 'bulk'): Finding[] {
@@ -1486,7 +1497,9 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
       return out;
     }
     case 'security-role-mapping-body': return lintBodyKeys(obj, securityRoleMappingBodyRootKeys, '角色映射体');
-    case 'security-api-key-body': return lintBodyKeys(obj, securityApiKeyBodyRootKeys, 'API Key 体');
+    case 'security-api-key-body':
+      return [...lintBodyKeys(obj, securityApiKeyBodyRootKeys, 'API Key 体'),
+        ...lintRoleDescriptors(obj?.role_descriptors, 'API Key 角色')];
     case 'security-api-key-query-body': return lintBodyKeys(obj, securityApiKeyQueryBodyRootKeys, 'API Key 检索体');
     case 'security-api-key-invalidate-body': return lintBodyKeys(obj, securityApiKeyInvalidateBodyRootKeys, 'API Key 吊销体');
     case 'security-cross-cluster-api-key-body': {
@@ -1645,7 +1658,8 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
     case 'ccr-auto-follow-body': return lintBodyKeys(obj, ccrAutoFollowBodyRootKeys, 'CCR 自动跟随模式');
     case 'security-api-key-grant-body':
       return [...lintBodyKeys(obj, securityApiKeyGrantBodyRootKeys, '代授 API Key 体'),
-        ...lintBodyKeys(obj?.api_key, securityApiKeyGrantKeys, '代授 API Key 参数')];
+        ...lintBodyKeys(obj?.api_key, securityApiKeyGrantKeys, '代授 API Key 参数'),
+        ...lintRoleDescriptors(obj?.api_key?.role_descriptors, '代授 Key 角色')];
     case 'license-body': {
       const out = [...lintBodyKeys(obj, licenseBodyRootKeys, '许可证体')];
       if (obj?.license && typeof obj.license === 'object' && !Array.isArray(obj.license)) {

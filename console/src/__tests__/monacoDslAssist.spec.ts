@@ -1293,6 +1293,22 @@ describe('1439 安全体系写体补全', () => {
     const root = '{\n  "\n}';
     expect(suggest(root, 5).map(i => i.label)).toEqual(['name', 'expiration', 'role_descriptors', 'metadata']);
   });
+
+  it('API Key role_descriptors 内给角色体键；动态角色名位不出键', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'security-api-key-body' } });
+    const role = '{\n  "role_descriptors": {\n    "admin": {\n      "\n    }\n  }\n}';
+    expect(suggest(role, role.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
+      'cluster', 'indices', 'applications', 'global', 'run_as', 'metadata', 'transient_metadata',
+    ]);
+    const namePos = '{\n  "role_descriptors": {\n    "\n  }\n}';
+    expect(suggest(namePos, namePos.lastIndexOf('"') + 1), '角色名是动态键').toEqual([]);
+  });
+
+  it('代授 Key api_key.role_descriptors 内给角色体键', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'security-api-key-grant-body' } });
+    const role = '{\n  "api_key": {\n    "role_descriptors": {\n      "admin": {\n        "\n      }\n    }\n  }\n}';
+    expect(suggest(role, role.lastIndexOf('"') + 1).map(i => i.label)).toContain('cluster');
+  });
 });
 
 describe('1439 Ingest 管道体补全', () => {

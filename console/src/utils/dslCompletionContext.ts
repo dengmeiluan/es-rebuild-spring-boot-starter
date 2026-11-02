@@ -2134,6 +2134,14 @@ export function securityApiKeyBodyKeyItems(): AssistItem[] {
   ];
 }
 
+/** API Key 体区域：根 / role_descriptors 里的角色定义 / 更深（角色名是动态键） */
+export function securityApiKeyRegionAt(doc: string, offset: number): 'root' | 'role' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] === 'role_descriptors' && stack.length === 3) return 'role';
+  return 'deep';
+}
+
 /** Ingest 处理器全目录（lint 白名单；补全为常用处理器给可接受骨架） */
 export const INGEST_PROCESSOR_TYPES = [
   'append', 'attachment', 'bytes', 'circle', 'community_id', 'convert', 'csv', 'date',
@@ -2796,11 +2804,13 @@ export function securityApiKeyGrantKeyItems(): AssistItem[] {
   return securityApiKeyBodyKeyItems();
 }
 
-/** 代授体区域：根 / api_key 对象 / 更深（role_descriptors 内按角色体自由填写） */
-export function securityApiKeyGrantRegionAt(doc: string, offset: number): 'root' | 'api-key' | 'deep' {
+/** 代授体区域：根 / api_key 对象 / api_key.role_descriptors 里的角色定义 / 更深 */
+export function securityApiKeyGrantRegionAt(doc: string, offset: number):
+  'root' | 'api-key' | 'role' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
   if (stack[0] === 'api_key' && stack.length === 2) return 'api-key';
+  if (stack[0] === 'api_key' && stack[1] === 'role_descriptors' && stack.length === 4) return 'role';
   return 'deep';
 }
 

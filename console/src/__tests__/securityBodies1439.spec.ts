@@ -93,6 +93,9 @@ describe('1439 安全体系写体分档', () => {
     expect(lintStructuredBody('security-api-key-body', JSON.stringify({
       name: 'k1', expiration: '1d', role_descriptors: {}, metadata: {},
     }))).toEqual([]);
+    expect(lintStructuredBody('security-api-key-body', JSON.stringify({
+      name: 'k1', role_descriptors: { admin: { cluster: ['monitor'], indices: [{ names: ['*'], privileges: ['read'] }] } },
+    }))).toEqual([]);
 
     const root = lintStructuredBody('security-role-body', JSON.stringify({ clusters: [] }));
     expect(root.some(f => f.message.includes('安全角色体') && f.message.includes('最接近：cluster'))).toBe(true);
@@ -108,5 +111,16 @@ describe('1439 安全体系写体分档', () => {
 
     const q = lintStructuredBody('security-api-key-body', JSON.stringify({ query: {}, name: 'k' }));
     expect(q.some(f => f.message.includes('API Key 体') && f.message.includes('query'))).toBe(true);
+
+    const rdc = lintStructuredBody('security-api-key-body', JSON.stringify({
+      name: 'k', role_descriptors: { admin: { clusterr: [] } },
+    }));
+    expect(rdc.some(f => f.message.includes('API Key 角色 admin') && f.message.includes('最接近：cluster'))).toBe(true);
+
+    const grdc = lintStructuredBody('security-api-key-grant-body', JSON.stringify({
+      grant_type: 'access_token', access_token: 't',
+      api_key: { name: 'k', role_descriptors: { admin: { clusterr: [] } } },
+    }));
+    expect(grdc.some(f => f.message.includes('代授 Key 角色 admin') && f.message.includes('最接近：cluster'))).toBe(true);
   });
 });
