@@ -258,9 +258,9 @@ describe('1439 templateRegionAt（模板体内分区）', () => {
 });
 
 describe('bodyKindForPath', () => {
-  it('_bulk → none（NDJSON 不补全）', () => {
-    expect(bodyKindForPath('/{index}/_bulk')).toBe('none');
-    expect(bodyKindForPath('/_bulk')).toBe('none');
+  it('_bulk → bulk-body（NDJSON 动作行补全；文档行不出键）', () => {
+    expect(bodyKindForPath('/{index}/_bulk')).toBe('bulk-body');
+    expect(bodyKindForPath('/_bulk')).toBe('bulk-body');
   });
   it('_settings → settings', () => {
     expect(bodyKindForPath('/{index}/_settings')).toBe('settings');

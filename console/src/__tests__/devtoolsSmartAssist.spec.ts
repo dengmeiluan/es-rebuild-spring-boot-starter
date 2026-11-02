@@ -339,7 +339,7 @@ describe('W6 DevTools/Rest body 智能渗透', () => {
     await type(inp, '_bulk');
     await key(inp, 'Enter');
     await type(inp, '/idx-a/_bulk');
-    expect(lastCap().props.dslAssist.bodyKind(), '_bulk 端点必须 none 档').toBe('none');
+    expect(lastCap().props.dslAssist.bodyKind(), '_bulk 端点 1439 起为 bulk-body（动作行补全）').toBe('bulk-body');
     /* 自由文本脱钩（epMatch 不上 → curEp=null，按裸 path 判定，无特殊段回 search） */
     await type(inp, '/_custom/thing');
     expect(lastCap().props.dslAssist.bodyKind(), '自由文本必须回 search 档').toBe('search');

@@ -199,7 +199,7 @@ describe('524 ① BodyKind doc 档', () => {
   it('分支顺序安全钉：_update_by_query/_delete_by_query 不落 update-body/doc（1439 起各有专档）', () => {
     expect(bodyKindForPath('/{index}/_update_by_query')).toBe('ubq-body');
     expect(bodyKindForPath('/{index}/_delete_by_query')).toBe('dbq-body');
-    expect(bodyKindForPath('/{index}/_bulk')).toBe('none');
+    expect(bodyKindForPath('/{index}/_bulk')).toBe('bulk-body');
     expect(bodyKindForPath('/my-index')).toBe('search');
   });
 

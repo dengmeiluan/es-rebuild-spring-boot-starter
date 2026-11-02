@@ -761,7 +761,7 @@ const dtLint = computed<Finding[]>(() => {
   const kind = dtBodyKind.value;
   const body = cur.value?.body || '';
   try {
-    if (kind === 'none' || kind === 'msearch-body') {
+    if (kind === 'none' || kind === 'msearch-body' || kind === 'bulk-body') {
       return lintNdjsonBody(body, kind === 'msearch-body' ? 'msearch' : 'bulk');
     }
     if (kind === 'settings') return lintSettingsBody(JSON.parse(body));

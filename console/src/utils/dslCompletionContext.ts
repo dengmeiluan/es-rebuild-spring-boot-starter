@@ -1107,7 +1107,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'bulk-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1204,7 +1204,8 @@ export const ANALYSIS_PARAM_ZH: Record<string, string> = {
 /** 端点 path → body 语义档。自由路径默认 search（补全只是建议，零降级）。 */
 export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   const p = (rawPath || '').split('?')[0].toLowerCase();
-  if (p.includes('_bulk')) return 'none';
+  /* 1439：_bulk 是 NDJSON（动作行 + 文档行）——动作行给动作/元数据键；文档行是裸文档不出键 */
+  if (p.includes('_bulk')) return 'bulk-body';
   /* doc 档四端点（带斜杠前缀防误伤——'_update/' 不吃 _update_by_query（后者是
  search 族，dslCompletionContext.spec 既有断言钉死），'/_source' 尾形态与 /_doc/1/_source 双保险）
  _update 体是 {doc/upsert/script…} 的结构化体，不是裸文档——单列 update-body 档。 */
@@ -1289,6 +1290,64 @@ export function msearchHeaderLineAt(doc: string, offset: number): boolean {
   const lineStart = doc.lastIndexOf('\n', Math.max(0, cursor - 1)) + 1;
   const prior = doc.slice(0, lineStart).split('\n').filter(l => l.trim().length > 0).length;
   return prior % 2 === 0;
+}
+
+/** _bulk 动作键（动作行顶层） */
+export const BULK_ACTIONS = ['index', 'create', 'update', 'delete'] as const;
+
+export function bulkActionKeyItems(): AssistItem[] {
+  return [
+    { label: 'index', detail: '写入/覆盖文档', snippet: true,
+      insertText: '"index": { "_index": "${1:my-index}", "_id": "${2:1}" }' },
+    { label: 'create', detail: '仅新建（已存在则失败）', snippet: true,
+      insertText: '"create": { "_index": "${1:my-index}", "_id": "${2:1}" }' },
+    { label: 'update', detail: '部分更新（下一行 {"doc": …}）', snippet: true,
+      insertText: '"update": { "_index": "${1:my-index}", "_id": "${2:1}" }' },
+    { label: 'delete', detail: '删除（不带文档行）', snippet: true,
+      insertText: '"delete": { "_index": "${1:my-index}", "_id": "${2:1}" }' },
+  ];
+}
+
+/** 动作行的元数据键；update 动作另有 retry_on_conflict */
+export function bulkActionMetaKeyItems(op: string): AssistItem[] {
+  const base: AssistItem[] = [
+    { label: '_index', detail: '目标索引', snippet: true, insertText: '"_index": "${1:my-index}"' },
+    { label: '_id', detail: '文档 id', snippet: true, insertText: '"_id": "${1:1}"' },
+    { label: 'routing', detail: '路由值', snippet: true, insertText: '"routing": "${1:routing}"' },
+    { label: 'version', detail: '期望版本', snippet: true, insertText: '"version": ${1:1}' },
+    { label: 'version_type', detail: '版本类型', snippet: true, insertText: '"version_type": "${1|internal,external|}"' },
+    { label: 'if_seq_no', detail: '并发控制：序号', snippet: true, insertText: '"if_seq_no": ${1:1}' },
+    { label: 'if_primary_term', detail: '并发控制：主任期', snippet: true, insertText: '"if_primary_term": ${1:1}' },
+  ];
+  if (op === 'update') {
+    base.push({ label: 'retry_on_conflict', detail: '版本冲突重试次数', snippet: true,
+      insertText: '"retry_on_conflict": ${1:3}' });
+  }
+  return base;
+}
+
+/** 当前 _bulk 行类型：动作行 / 文档行（delete 动作不带文档行，沿用 ndjsonLint 状态机口径） */
+export function bulkLineKindAt(doc: string, offset: number = doc.length): 'action' | 'doc' {
+  const cursor = Math.max(0, Math.min(offset, doc.length));
+  const lineStart = doc.lastIndexOf('\n', Math.max(0, cursor - 1)) + 1;
+  const prior = doc.slice(0, lineStart).split('\n').map(l => l.trim()).filter(Boolean);
+  let expectDoc = false;
+  for (const line of prior) {
+    if (expectDoc) { expectDoc = false; continue; }
+    let obj: any = null;
+    try { obj = JSON.parse(line); } catch { continue; }
+    const op = obj && typeof obj === 'object' ? BULK_ACTIONS.find(k => k in obj) : undefined;
+    expectDoc = !!op && op !== 'delete';
+  }
+  return expectDoc ? 'doc' : 'action';
+}
+
+/** 动作行内层对象（{"update": {"…）的动作名；非该形态返回 null */
+export function bulkActionMetaAt(doc: string, offset: number = doc.length): string | null {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length < 2) return null;
+  const k = stack[0];
+  return k && (BULK_ACTIONS as readonly string[]).includes(k) ? k : null;
 }
 
 /** 补全项统一形态：insertText 已是完整插入串（含引号/snippet 语法），provider 直接消费 */

@@ -1443,6 +1443,36 @@ describe('1439 runtime_mappings 类型位', () => {
   });
 });
 
+describe('1439 _bulk 动作行补全', () => {
+  it('动作行给动作键（接受即合法）；文档行不出键；下一对动作行再给键', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'bulk-body' as const } });
+    const items = suggest('{"');
+    expect(items.map((i: any) => i.label)).toEqual(['index', 'create', 'update', 'delete']);
+    for (const i of items) {
+      expect(() => JSON.parse(acceptSnippet('{', i) + '}'), i.label + ' 接受后非法').not.toThrow();
+    }
+    /* 文档行是裸文档 */
+    expect(suggest('{"index":{"_index":"a","_id":"1"}}\n{"')).toEqual([]);
+    /* 第二对动作行 */
+    expect(suggest('{"index":{"_index":"a"}}\n{"title":"x"}\n{"').map((i: any) => i.label))
+      .toEqual(['index', 'create', 'update', 'delete']);
+  });
+
+  it('动作内层给元数据键；update 多 retry_on_conflict；顶层动作不含', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'bulk-body' as const } });
+    expect(suggest('{"update": {"').map((i: any) => i.label)).toEqual([
+      '_index', '_id', 'routing', 'version', 'version_type', 'if_seq_no', 'if_primary_term', 'retry_on_conflict',
+    ]);
+    const idx = suggest('{"index": {"').map((i: any) => i.label);
+    expect(idx).toContain('_index');
+    expect(idx).not.toContain('retry_on_conflict');
+    const meta = suggest('{"update": {"');
+    for (const i of meta) {
+      expect(() => JSON.parse(acceptSnippet('{"update": {"', i) + '}}'), i.label + ' 接受后非法').not.toThrow();
+    }
+  });
+});
+
 describe('1439 _msearch 头行补全', () => {
   it('头行键给请求头目录（接受即合法）；查询体行回落 search；第二对头行仍给头键', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'msearch-body' as const } });
