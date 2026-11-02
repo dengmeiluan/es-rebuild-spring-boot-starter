@@ -25,6 +25,11 @@ All notable changes to SearchDeck are documented here. The format follows
 - Contributor, PR, issue, security, and README entry points now link the community and
   architecture documentation.
 
+### Fixed
+
+- The audit observability test now drains its asynchronous tasks before returning, preventing a
+  late WARN from leaking into the next test method and flaking CI.
+
 ## [2.0.0] — 2026-11-02
 
 ### Added

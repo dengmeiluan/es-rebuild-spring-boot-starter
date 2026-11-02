@@ -126,13 +126,15 @@ public class ConsoleOpsAuditStoreObservabilityTest {
 
     /** 既有契约顺带锁：record 永不抛（审计不反噬业务），失败只进日志面。 */
     @Test
-    public void recordNeverThrowsEvenWhenBackingStoreBroken() {
+    public void recordNeverThrowsEvenWhenBackingStoreBroken() throws Exception {
         JdbcConsoleOpsAuditStore jdbc = new JdbcConsoleOpsAuditStore(brokenDataSource());
         EsConsoleOpsAuditStore es = new EsConsoleOpsAuditStore(() -> null, "searchdeck_ops_audit");
 
         jdbc.record(ev("u1", null, "/api/x", "a"));
         es.record(ev("u1", null, "/api/x", "a"));
-        /* 不抛即过 */
+        /* 不抛即过；同时排空异步任务，避免迟到的 WARN 污染后续用例的 appender。 */
+        awaitTasks(jdbc, 1);
+        awaitTasks(es, 1);
     }
 
     /* ── 桩与工具 ── */
