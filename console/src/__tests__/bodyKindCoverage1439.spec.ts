@@ -7,6 +7,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { bodyKindForPath, type BodyKind } from '../utils/dslCompletionContext';
+import { ES_ENDPOINTS } from '../utils/esEndpoints';
 
 type Row = [string, string, BodyKind];
 
@@ -120,6 +121,44 @@ describe('1439 请求体档位路由矩阵', () => {
     ];
     for (const [path, method, kind] of guards) {
       expect(bodyKindForPath(path, method), `${method} ${path}`).toBe(kind);
+    }
+  });
+
+  it('端点目录里的管理面预设体都落到对应档位（发现入口与补全同源）', () => {
+    const expectByPath: Array<[string, BodyKind]> = [
+      ['/_index_template/{name}', 'template'],
+      ['/_component_template/{name}', 'template'],
+      ['/_ingest/pipeline/{pipeline_id}', 'ingest-pipeline-body'],
+      ['/_ingest/pipeline/_simulate', 'ingest-simulate-body'],
+      ['/_scripts/{id}', 'stored-script-body'],
+      ['/_scripts/{id}/_execute', 'script-execute-body'],
+      ['/_snapshot/{repository}', 'snapshot-repo-body'],
+      ['/_snapshot/{repository}/{snapshot}', 'snapshot-create-body'],
+      ['/_snapshot/{repository}/{snapshot}/_restore', 'snapshot-restore-body'],
+      ['/_slm/policy/{policy_id}', 'slm-policy-body'],
+      ['/_ilm/policy/{policy_id}', 'ilm-policy-body'],
+      ['/_watcher/watch/{watch_id}', 'watch-body'],
+      ['/_transform/{transform_id}', 'transform-body'],
+      ['/_rollup/job/{job_id}', 'rollup-job-body'],
+      ['/_enrich/policy/{policy_id}', 'enrich-policy-body'],
+      ['/_ml/anomaly_detectors/{job_id}', 'ml-job-body'],
+      ['/_ml/datafeeds/{datafeed_id}', 'ml-datafeed-body'],
+      ['/_security/role/{name}', 'security-role-body'],
+      ['/_security/user/{name}', 'security-user-body'],
+      ['/_security/role_mapping/{name}', 'security-role-mapping-body'],
+      ['/_security/api_key', 'security-api-key-body'],
+      ['/_cluster/reroute', 'reroute-body'],
+      ['/_cluster/allocation/explain', 'allocation-explain-body'],
+      ['/_cluster/settings', 'cluster-settings-body'],
+      ['/{index}/_eql/search', 'eql-body'],
+    ];
+    for (const [path, kind] of expectByPath) {
+      /* 同一路径可能有 GET（无体）与 PUT（有体）两条预设，取带骨架的那条。 */
+      const ep = ES_ENDPOINTS.find(e => e.path === path && e.body) ?? ES_ENDPOINTS.find(e => e.path === path);
+      expect(ep, `目录缺少 ${path}`).toBeTruthy();
+      expect(ep!.body, `${path} 必须有可插入骨架`).toBeTruthy();
+      const concrete = path.replace('{index}', 'logs').replace(/\{[^}]+\}/g, 'x');
+      expect(bodyKindForPath(concrete, ep!.methods[0]), `${ep!.methods[0]} ${concrete}`).toBe(kind);
     }
   });
 });

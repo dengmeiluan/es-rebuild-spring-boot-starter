@@ -59,6 +59,49 @@ export const ES_ENDPOINTS: EsEndpoint[] = [
   { methods: ['GET', 'POST'], path: '/{index}/_explain/{id}', doc: '打分明细', body: '{\n  "query": { "match_all": {} }\n}' },
   { methods: ['POST'], path: '/{index}/_eql/search', doc: 'EQL 事件检索（query 是 EQL 串，filter 才是 Query DSL）',
     body: '{\n  "query": "any where true",\n  "size": 10\n}' },
+  /* 1439：管理面写体（补全已支持，目录同步给发现入口；占位符沿用 {index}/{id} 约定） */
+  { methods: ['PUT'], path: '/_index_template/{name}', doc: '创建/更新索引模板',
+    body: '{\n  "index_patterns": ["logs-*"],\n  "priority": 100,\n  "template": {\n    "settings": { "number_of_shards": 1 },\n    "mappings": { "properties": { "@timestamp": { "type": "date" } } }\n  }\n}' },
+  { methods: ['PUT'], path: '/_component_template/{name}', doc: '创建/更新组件模板',
+    body: '{\n  "template": {\n    "settings": { "number_of_replicas": 1 }\n  }\n}' },
+  { methods: ['PUT'], path: '/_ingest/pipeline/{pipeline_id}', doc: '创建/更新 Ingest 管道',
+    body: '{\n  "description": "parse logs",\n  "processors": [\n    { "set": { "field": "env", "value": "prod" } }\n  ]\n}' },
+  { methods: ['POST'], path: '/_ingest/pipeline/_simulate', doc: '管道试跑（内联 pipeline + docs）',
+    body: '{\n  "pipeline": { "processors": [ { "set": { "field": "env", "value": "prod" } } ] },\n  "docs": [ { "_source": { "message": "hello" } } ],\n  "verbose": true\n}' },
+  { methods: ['PUT'], path: '/_scripts/{id}', doc: '保存 Painless 脚本',
+    body: '{\n  "script": {\n    "lang": "painless",\n    "source": "return 1;"\n  }\n}' },
+  { methods: ['POST'], path: '/_scripts/{id}/_execute', doc: '执行已存脚本',
+    body: '{\n  "script": {\n    "source": "return 1;"\n  }\n}' },
+  { methods: ['PUT'], path: '/_snapshot/{repository}', doc: '注册快照仓库',
+    body: '{\n  "type": "fs",\n  "settings": { "location": "/mnt/backup" }\n}' },
+  { methods: ['PUT', 'POST'], path: '/_snapshot/{repository}/{snapshot}', doc: '创建快照',
+    body: '{\n  "indices": "logs-*",\n  "include_global_state": false,\n  "partial": false\n}' },
+  { methods: ['POST'], path: '/_snapshot/{repository}/{snapshot}/_restore', doc: '恢复快照',
+    body: '{\n  "indices": "logs-*",\n  "ignore_unavailable": true,\n  "rename_pattern": "(.+)",\n  "rename_replacement": "restored_$1"\n}' },
+  { methods: ['PUT'], path: '/_slm/policy/{policy_id}', doc: '创建/更新 SLM 备份策略',
+    body: '{\n  "schedule": "0 30 1 * * ?",\n  "name": "<snapshot-{now/d}>",\n  "repository": "my_repo",\n  "config": { "indices": "logs-*", "include_global_state": false },\n  "retention": { "expire_after": "30d", "min_count": 5, "max_count": 50 }\n}' },
+  { methods: ['PUT'], path: '/_ilm/policy/{policy_id}', doc: '创建/更新 ILM 生命周期策略',
+    body: '{\n  "policy": {\n    "phases": {\n      "hot": { "actions": { "rollover": { "max_size": "50gb" } } },\n      "delete": { "min_age": "90d", "actions": { "delete": {} } }\n    }\n  }\n}' },
+  { methods: ['PUT'], path: '/_watcher/watch/{watch_id}', doc: '创建/更新 Watcher 告警',
+    body: '{\n  "trigger": { "schedule": { "interval": "5m" } },\n  "input": { "search": { "request": { "indices": ["logs-*"], "body": { "query": { "match_all": {} } } } } },\n  "condition": { "compare": { "ctx.payload.hits.total": { "gt": 0 } } },\n  "actions": { "notify": { "logging": { "text": "watch fired" } } }\n}' },
+  { methods: ['PUT'], path: '/_transform/{transform_id}', doc: '创建/更新 Transform 作业',
+    body: '{\n  "source": { "index": ["logs-*"] },\n  "dest": { "index": "logs-transformed" },\n  "pivot": {\n    "group_by": { "day": { "date_histogram": { "field": "@timestamp", "calendar_interval": "1d" } } },\n    "aggregations": { "avg_bytes": { "avg": { "field": "bytes" } } }\n  }\n}' },
+  { methods: ['PUT'], path: '/_rollup/job/{job_id}', doc: '创建 Rollup 汇总作业',
+    body: '{\n  "index_pattern": "logs-*",\n  "rollup_index": "logs-rollup",\n  "cron": "0 */30 * * * ?",\n  "page_size": 1000,\n  "groups": { "date_histogram": { "field": "@timestamp", "calendar_interval": "1h" } },\n  "metrics": [ { "field": "bytes", "metrics": ["min", "max", "sum"] } ]\n}' },
+  { methods: ['PUT'], path: '/_enrich/policy/{policy_id}', doc: '创建/更新 Enrich 策略',
+    body: '{\n  "match": {\n    "indices": ["users"],\n    "match_field": "email",\n    "enrich_fields": ["name"]\n  }\n}' },
+  { methods: ['PUT'], path: '/_ml/anomaly_detectors/{job_id}', doc: '创建 ML 异常检测作业',
+    body: '{\n  "analysis_config": {\n    "bucket_span": "15m",\n    "detectors": [ { "function": "mean", "field_name": "responsetime" } ]\n  },\n  "data_description": { "time_field": "@timestamp" }\n}' },
+  { methods: ['PUT'], path: '/_ml/datafeeds/{datafeed_id}', doc: '创建 ML 数据馈送',
+    body: '{\n  "job_id": "latency-job",\n  "indexes": ["logs-*"],\n  "query": { "match_all": {} },\n  "frequency": "60s"\n}' },
+  { methods: ['PUT'], path: '/_security/role/{name}', doc: '创建/更新安全角色',
+    body: '{\n  "cluster": ["monitor"],\n  "indices": [ { "names": ["logs-*"], "privileges": ["read"] } ]\n}' },
+  { methods: ['PUT'], path: '/_security/user/{name}', doc: '创建/更新安全用户',
+    body: '{\n  "password": "change-me",\n  "roles": ["viewer"],\n  "full_name": "User"\n}' },
+  { methods: ['PUT'], path: '/_security/role_mapping/{name}', doc: '创建/更新角色映射',
+    body: '{\n  "roles": ["viewer"],\n  "enabled": true,\n  "rules": { "field": { "username": "jdoe" } }\n}' },
+  { methods: ['POST'], path: '/_security/api_key', doc: '创建 API Key',
+    body: '{\n  "name": "my-api-key",\n  "expiration": "30d"\n}' },
 ];
 
 export function filterEndpoints(kw: string): EsEndpoint[] {
@@ -66,11 +109,14 @@ export function filterEndpoints(kw: string): EsEndpoint[] {
   if (!k) return ES_ENDPOINTS;
   const rank = (p: string) => {
     const bare = p.replace(/^\//, '').toLowerCase().replace('{index}/', '');
-    return bare.startsWith(k) ? 0 : bare.includes(k) ? 1 : 2;
+    if (bare.startsWith(k)) return 0;
+    /* 整段命中优先于子串命中：搜 mapping 应命中 _mapping，而不是 role_mapping。 */
+    if (bare.split('/').some(s => s === k || s === '_' + k)) return 1;
+    return bare.includes(k) ? 2 : 3;
   };
   return ES_ENDPOINTS
     .map(e => ({ e, r: rank(e.path) }))
-    .filter(x => x.r < 2 || x.e.doc.toLowerCase().includes(k))
+    .filter(x => x.r < 3 || x.e.doc.toLowerCase().includes(k))
     .sort((a, b) => a.r - b.r || a.e.path.localeCompare(b.e.path))
     .map(x => x.e).slice(0, 30);
 }
