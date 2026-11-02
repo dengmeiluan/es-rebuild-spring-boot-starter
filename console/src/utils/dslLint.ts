@@ -56,6 +56,8 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   enrichPolicyBodyRootKeys, enrichMatchKeys, enrichRangeKeys,
   transformBodyRootKeys, transformSourceKeys, transformDestKeys, transformPivotKeys,
   transformSyncKeys, transformSyncTimeKeys, transformRetentionKeys, transformRetentionTimeKeys,
+  rollupJobBodyRootKeys, rollupGroupKeys, rollupDateGroupKeys, rollupTermsGroupKeys,
+  rollupHistogramGroupKeys, rollupMetricKeys,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -1496,6 +1498,20 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
         ...lintBodyKeys(obj?.match, enrichMatchKeys, 'Enrich match 策略'),
         ...lintBodyKeys(obj?.geo_match, enrichMatchKeys, 'Enrich geo_match 策略'),
         ...lintBodyKeys(obj?.range, enrichRangeKeys, 'Enrich range 策略')];
+    case 'rollup-job-body': {
+      const out = [...lintBodyKeys(obj, rollupJobBodyRootKeys, 'Rollup 作业体'),
+        ...lintBodyKeys(obj?.groups, rollupGroupKeys, 'Rollup 分组')];
+      out.push(...lintBodyKeys(obj?.groups?.date_histogram, rollupDateGroupKeys, 'Rollup 时间分组'));
+      out.push(...lintBodyKeys(obj?.groups?.terms, rollupTermsGroupKeys, 'Rollup terms 分组'));
+      out.push(...lintBodyKeys(obj?.groups?.histogram, rollupHistogramGroupKeys, 'Rollup histogram 分组'));
+      if (Array.isArray(obj?.metrics)) {
+        obj.metrics.forEach((m: any, i: number) => {
+          if (!m || typeof m !== 'object' || Array.isArray(m)) return;
+          out.push(...lintBodyKeys(m, rollupMetricKeys, `Rollup 指标 #${i + 1}`));
+        });
+      }
+      return out;
+    }
     case 'transform-body':
       return [...lintBodyKeys(obj, transformBodyRootKeys, 'Transform 体'),
         ...lintBodyKeys(obj?.source, transformSourceKeys, 'Transform 源'),

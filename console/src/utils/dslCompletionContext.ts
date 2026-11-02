@@ -1111,7 +1111,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
 export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'msearch-template-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'eql-body' | 'cluster-settings-body' | 'reroute-body' | 'allocation-explain-body'
 | 'snapshot-repo-body' | 'snapshot-create-body' | 'snapshot-restore-body' | 'slm-policy-body' | 'ilm-policy-body' | 'watch-body'
-| 'security-role-body' | 'security-user-body' | 'security-role-mapping-body' | 'security-api-key-body' | 'ingest-pipeline-body' | 'enrich-policy-body' | 'transform-body' | 'none';
+| 'security-role-body' | 'security-user-body' | 'security-role-mapping-body' | 'security-api-key-body' | 'ingest-pipeline-body' | 'enrich-policy-body' | 'transform-body' | 'rollup-job-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1253,6 +1253,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：Transform 体（PUT /_transform/<id>，兼容 _transform/transforms/<id>）：
      {source,dest,pivot|latest,sync,retention_policy,…}；_start/_stop 是 POST，不并进本档。 */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_transform\/(?:transforms\/)?[^/]+(\/|$)/.test(p)) return 'transform-body';
+  /* 1439：Rollup 作业体（PUT /_rollup/job/<id>，6.x 兼容 _xpack/rollup）：
+     {index_pattern,rollup_index,cron,page_size,groups,metrics,…} */
+  if (method.toUpperCase() === 'PUT' && /(^|\/)_(?:xpack\/)?rollup\/job\/[^/]+(\/|$)/.test(p)) return 'rollup-job-body';
   if (p.includes('/_snapshot/')) {
     const segs = p.split('/').filter(Boolean);
     const si = segs.indexOf('_snapshot');
@@ -2264,6 +2267,83 @@ export function transformRegionAt(doc: string, offset: number):
   return 'deep';
 }
 
+/** Rollup 分组类型（date_histogram / terms / histogram） */
+export const ROLLUP_GROUP_TYPES = ['date_histogram', 'terms', 'histogram'] as const;
+
+/** Rollup 作业体（PUT /_rollup/job/<id>）的根键 */
+export function rollupJobBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'index_pattern', detail: '源索引模式（单一索引/通配）', snippet: true, insertText: '"index_pattern": "${1:logs-*}"' },
+    { label: 'rollup_index', detail: '汇总结果索引（独立索引）', snippet: true, insertText: '"rollup_index": "${1:logs-rollup}"' },
+    { label: 'cron', detail: '执行计划（cron）', snippet: true, insertText: '"cron": "${1:0 */30 * * * ?}"' },
+    { label: 'page_size', detail: '每批处理文档数', snippet: true, insertText: '"page_size": ${1:1000}' },
+    { label: 'groups', detail: '分组维度（时间/字段）', snippet: true,
+      insertText: '"groups": {\n  "date_histogram": {\n    "field": "${1:@timestamp}",\n    "calendar_interval": "${2:1h}"\n  },\n  "terms": {\n    "fields": ["${3:host}"]\n  }\n}' },
+    { label: 'metrics', detail: '指标字段与聚合', snippet: true,
+      insertText: '"metrics": [\n  { "field": "${1:bytes}", "metrics": ["${2:min}", "${3:max}", "${4:sum}"] }\n]' },
+    { label: 'timeout', detail: '单批处理超时（如 20s）', snippet: true, insertText: '"timeout": "${1:20s}"' },
+    { label: 'headers', detail: '请求头（跨集群/安全场景）', snippet: true, insertText: '"headers": {\n  ${0}\n}' },
+  ];
+}
+
+/** groups 对象的分组类型 */
+export function rollupGroupsKeyItems(): AssistItem[] {
+  return [
+    { label: 'date_histogram', detail: '时间桶分组', snippet: true,
+      insertText: '"date_histogram": { "field": "${1:@timestamp}", "calendar_interval": "${2:1h}" }' },
+    { label: 'terms', detail: '字段值分组', snippet: true, insertText: '"terms": { "fields": ["${1:host}"] }' },
+    { label: 'histogram', detail: '数值区间分组', snippet: true,
+      insertText: '"histogram": { "fields": ["${1:latency}"], "interval": ${2:100} }' },
+  ];
+}
+
+/** date_histogram 分组的键 */
+export function rollupDateGroupKeyItems(): AssistItem[] {
+  return [
+    { label: 'field', detail: '时间字段', snippet: true, insertText: '"field": "${1:@timestamp}"' },
+    { label: 'calendar_interval', detail: '日历区间（1m/1h/1d…）', snippet: true, insertText: '"calendar_interval": "${1:1h}"' },
+    { label: 'fixed_interval', detail: '固定区间（30s/5m…）', snippet: true, insertText: '"fixed_interval": "${1:30m}"' },
+    { label: 'time_zone', detail: '时区（影响日历分桶边界）', snippet: true, insertText: '"time_zone": "${1:UTC}"' },
+  ];
+}
+
+/** terms / histogram 分组的键 */
+export function rollupFieldGroupKeyItems(kind: 'terms' | 'histogram'): AssistItem[] {
+  return [
+    { label: 'fields', detail: '分组字段（数组）', snippet: true, insertText: '"fields": ["${1:host}"]' },
+    ...(kind === 'histogram'
+      ? [{ label: 'interval', detail: '区间宽度', snippet: true, insertText: '"interval": ${1:100}' }]
+      : []),
+  ];
+}
+
+/** metrics[] 元素的键 */
+export function rollupMetricKeyItems(): AssistItem[] {
+  return [
+    { label: 'field', detail: '指标字段', snippet: true, insertText: '"field": "${1:bytes}"' },
+    { label: 'metrics', detail: '统计方式（min/max/sum/value_count/avg）', snippet: true,
+      insertText: '"metrics": ["${1:min}", "${2:max}", "${3:sum}"]' },
+  ];
+}
+
+/** Rollup 体区域：根 / groups / 分组类型 / metrics 元素 / 更深 */
+export function rollupRegionAt(doc: string, offset: number):
+  'root' | 'groups' | 'date-group' | 'terms-group' | 'histogram-group' | 'metric' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] === 'groups') {
+    if (stack.length === 2) return 'groups';
+    if (stack.length === 3) {
+      if (stack[1] === 'date_histogram') return 'date-group';
+      if (stack[1] === 'terms') return 'terms-group';
+      if (stack[1] === 'histogram') return 'histogram-group';
+    }
+    return 'deep';
+  }
+  if (stack[0] === 'metrics' && stack.length === 3) return 'metric';
+  return 'deep';
+}
+
 /** 分片分配诊断体（POST /_cluster/allocation/explain）的根键 */
 export function allocationExplainBodyKeyItems(): AssistItem[] {
   return [
@@ -3025,6 +3105,12 @@ export const transformSyncKeys = transformTimeKeyItems('sync').map(i => i.label)
 export const transformSyncTimeKeys = transformTimeConfigKeyItems('sync').map(i => i.label);
 export const transformRetentionKeys = transformTimeKeyItems('retention').map(i => i.label);
 export const transformRetentionTimeKeys = transformTimeConfigKeyItems('retention').map(i => i.label);
+export const rollupJobBodyRootKeys = rollupJobBodyKeyItems().map(i => i.label);
+export const rollupGroupKeys = rollupGroupsKeyItems().map(i => i.label);
+export const rollupDateGroupKeys = rollupDateGroupKeyItems().map(i => i.label);
+export const rollupTermsGroupKeys = rollupFieldGroupKeyItems('terms').map(i => i.label);
+export const rollupHistogramGroupKeys = rollupFieldGroupKeyItems('histogram').map(i => i.label);
+export const rollupMetricKeys = rollupMetricKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

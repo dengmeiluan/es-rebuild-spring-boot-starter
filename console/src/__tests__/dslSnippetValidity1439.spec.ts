@@ -34,6 +34,7 @@ import {
   enrichPolicyBodyKeyItems, enrichMatchPolicyKeyItems, enrichRangePolicyKeyItems,
   transformBodyKeyItems, transformSourceKeyItems, transformDestKeyItems, transformPivotKeyItems,
   transformTimeKeyItems, transformTimeConfigKeyItems,
+  rollupJobBodyKeyItems, rollupGroupsKeyItems, rollupDateGroupKeyItems, rollupFieldGroupKeyItems, rollupMetricKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -176,6 +177,12 @@ function allProblems(): string[] {
   out.push(...snippetProblems('TSYT', transformTimeConfigKeyItems('sync').map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('TRT', transformTimeKeyItems('retention').map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('TRTT', transformTimeConfigKeyItems('retention').map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('RJ', rollupJobBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('RG', rollupGroupsKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('RD', rollupDateGroupKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('RT', rollupFieldGroupKeyItems('terms').map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('RH', rollupFieldGroupKeyItems('histogram').map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('RM', rollupMetricKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;
 }
 

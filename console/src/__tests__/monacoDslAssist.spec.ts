@@ -1372,6 +1372,35 @@ describe('1439 Transform 体补全', () => {
   });
 });
 
+describe('1439 Rollup 作业体补全', () => {
+  it('根 → groups → 分组类型 → metrics 元素；更深层压住', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'rollup-job-body' } });
+    const root = '{\n  "\n}';
+    expect(suggest(root, 5).map(i => i.label)).toEqual([
+      'index_pattern', 'rollup_index', 'cron', 'page_size', 'groups', 'metrics', 'timeout', 'headers',
+    ]);
+
+    const groups = '{\n  "groups": {\n    "\n  }\n}';
+    expect(suggest(groups, groups.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
+      'date_histogram', 'terms', 'histogram',
+    ]);
+
+    const date = '{\n  "groups": {\n    "date_histogram": {\n      "\n    }\n  }\n}';
+    expect(suggest(date, date.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
+      'field', 'calendar_interval', 'fixed_interval', 'time_zone',
+    ]);
+
+    const hist = '{\n  "groups": {\n    "histogram": {\n      "\n    }\n  }\n}';
+    expect(suggest(hist, hist.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['fields', 'interval']);
+
+    const metric = '{\n  "metrics": [\n    {\n      "\n    }\n  ]\n}';
+    expect(suggest(metric, metric.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['field', 'metrics']);
+
+    const deep = '{\n  "groups": {\n    "terms": {\n      "fields": [\n        "\n      ]\n    }\n  }\n}';
+    expect(suggest(deep, deep.lastIndexOf('"') + 1), '分组字段数组位不出键').toEqual([]);
+  });
+});
+
 describe('1439 子句体键位（query-body-key / clause-field-key / retriever-body-key）', () => {
   it('bool 体给 must/filter/should/must_not，接受后 JSON 合法', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
