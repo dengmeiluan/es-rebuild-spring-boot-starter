@@ -43,7 +43,7 @@
         <dependency>
             <groupId>org.xerial</groupId>
             <artifactId>sqlite-jdbc</artifactId>
-            <version>3.42.0.0</version>
+            <version>3.54.1.0</version>
             <optional>true</optional>
         </dependency>
         <dependency>
@@ -92,7 +92,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <version>3.1.0</version>
+                <version>3.6.4</version>
                 <executions>
                     <execution>
                         <id>console-vite-build</id>
