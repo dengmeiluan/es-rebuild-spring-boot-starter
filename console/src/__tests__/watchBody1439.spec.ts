@@ -9,7 +9,7 @@ import {
   bodyKindForPath, watchBodyKeyItems, watchTriggerKeyItems, watchScheduleKeyItems,
   watchInputKeyItems, watchConditionKeyItems, watchActionTypeKeyItems, watchBodyRootKeys,
   WATCH_TRIGGER_TYPES, WATCH_SCHEDULE_TYPES, WATCH_INPUT_TYPES, WATCH_CONDITION_TYPES,
-  WATCH_ACTION_TYPES, watchRegionAt,
+  WATCH_ACTION_TYPES, watchRegionAt, watchActionParamsKeyItems, watchConditionParamsKeyItems,
 } from '../utils/dslCompletionContext';
 import { lintStructuredBody } from '../utils/dslLint';
 
@@ -48,6 +48,15 @@ describe('1439 Watcher 体分档', () => {
     expect(watchInputKeyItems().map(i => i.label)).toEqual([...WATCH_INPUT_TYPES]);
     expect(watchConditionKeyItems().map(i => i.label)).toEqual([...WATCH_CONDITION_TYPES]);
     expect(watchActionTypeKeyItems().map(i => i.label)).toEqual([...WATCH_ACTION_TYPES]);
+    expect(watchActionParamsKeyItems('index').map(i => i.label)).toEqual([
+      'index', 'doc_id', 'refresh', 'op_type', 'timeout', 'execution_time_field',
+    ]);
+    expect(watchActionParamsKeyItems('logging').map(i => i.label)).toEqual(['level', 'text', 'category']);
+    expect(watchActionParamsKeyItems('webhook').map(i => i.label)).toContain('url');
+    expect(watchActionParamsKeyItems('slack').map(i => i.label)).toEqual(['account', 'message']);
+    expect(watchActionParamsKeyItems('jira').map(i => i.label)).toEqual(['account', 'fields']);
+    expect(watchConditionParamsKeyItems('script').map(i => i.label)).toEqual(['source', 'lang', 'params', 'id']);
+    expect(watchConditionParamsKeyItems('compare')).toEqual([]);
   });
 
   it('区域：根 / trigger / schedule / input / condition / action / 更深', () => {
@@ -59,8 +68,9 @@ describe('1439 Watcher 体分档', () => {
     expect(at('{"input": {"search": {"request": {"body": {')).toBe('search-body');
     expect(at('{"input": {"search": {"request": {"body": {"query": {')).toBe('search-query');
     expect(at('{"condition": {')).toBe('condition');
+    expect(at('{"condition": {"script": {')).toBe('condition-params');
     expect(at('{"actions": {"notify": {')).toBe('action');
-    expect(at('{"actions": {"notify": {"logging": {')).toBe('deep');
+    expect(at('{"actions": {"notify": {"logging": {')).toBe('action-params');
     expect(at('{"trigger": {"chain": [')).toBe('deep');
   });
 

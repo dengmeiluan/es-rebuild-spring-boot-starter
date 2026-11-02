@@ -2004,13 +2004,108 @@ export function watchActionTypeKeyItems(): AssistItem[] {
     { label: 'pagerduty', detail: '触发 PagerDuty 事件', snippet: true,
       insertText: '"pagerduty": { "event_type": "${1:trigger}", "description": "${2:watch fired}" }' },
     { label: 'jira', detail: '创建 Jira 工单', snippet: true,
-      insertText: '"jira": { "project_key": "${1:OPS}", "issue_type": "${2:Task}", "summary": "${3:watch fired}" }' },
+      insertText: '"jira": { "fields": { "project": { "key": "${1:OPS}" }, "issuetype": { "name": "${2:Task}" }, "summary": "${3:watch fired}" } }' },
   ];
+}
+
+/** condition.<类型> 对象的参数键（script 复用脚本体目录；compare/array_compare 是动态表达式） */
+export function watchConditionParamsKeyItems(type: string): AssistItem[] {
+  return type === 'script' ? scriptObjectKeyItems() : [];
+}
+
+/** actions.<名>.<类型> 对象的参数键（按动作类型；官方 spec 字段） */
+export function watchActionParamsKeyItems(type: string): AssistItem[] {
+  switch (type) {
+    case 'index': return [
+      { label: 'index', detail: '写入目标索引（可含日期数学）', snippet: true, insertText: '"index": "${1:watch-results}"' },
+      { label: 'doc_id', detail: '文档 id（可含 mustache 变量）', snippet: true, insertText: '"doc_id": "${1:{{ctx.watch_id}}}"' },
+      { label: 'refresh', detail: '写入后刷新策略', snippet: true, insertText: '"refresh": "${1|false,true,wait_for|}"' },
+      { label: 'op_type', detail: '写入形态（create=已存在则失败）', snippet: true, insertText: '"op_type": "${1|create,index|}"' },
+      { label: 'timeout', detail: '写入超时', snippet: true, insertText: '"timeout": "${1:60s}"' },
+      { label: 'execution_time_field', detail: '执行时间写入的字段名', snippet: true,
+        insertText: '"execution_time_field": "${1:execution_time}"' },
+    ];
+    case 'logging': return [
+      { label: 'level', detail: '日志级别', snippet: true, insertText: '"level": "${1|info,warn,error,debug|}"' },
+      { label: 'text', detail: '日志正文（可含 mustache）', snippet: true, insertText: '"text": "${1:watch fired}"' },
+      { label: 'category', detail: '日志分类（logger 后缀）', snippet: true, insertText: '"category": "${1:watch}"' },
+    ];
+    case 'email': return [
+      { label: 'to', detail: '收件人（数组或逗号串）', snippet: true, insertText: '"to": ["${1:ops@example.com}"]' },
+      { label: 'subject', detail: '邮件主题（可含 mustache）', snippet: true, insertText: '"subject": "${1:watch fired}"' },
+      { label: 'body', detail: '邮件正文（text/html）', snippet: true, insertText: '"body": { "text": "${1:detail}" }' },
+      { label: 'from', detail: '发件人（覆盖账户默认）', snippet: true, insertText: '"from": "${1:watcher@example.com}"' },
+      { label: 'cc', detail: '抄送', snippet: true, insertText: '"cc": ["${1:cc@example.com}"]' },
+      { label: 'bcc', detail: '密送', snippet: true, insertText: '"bcc": ["${1:bcc@example.com}"]' },
+      { label: 'reply_to', detail: '回复地址', snippet: true, insertText: '"reply_to": "${1:reply@example.com}"' },
+      { label: 'priority', detail: '邮件优先级', snippet: true, insertText: '"priority": "${1|normal,lowest,low,high,highest|}"' },
+      { label: 'attachments', detail: '附件（http/reporting/data 三类）', snippet: true, insertText: '"attachments": {\n  ${0}\n}' },
+    ];
+    case 'webhook': return [
+      { label: 'url', detail: '完整 URL（与 scheme/host/path 二选一）', snippet: true, insertText: '"url": "${1:https://example.com/hook}"' },
+      { label: 'method', detail: 'HTTP 方法', snippet: true, insertText: '"method": "${1|POST,GET,PUT,DELETE|}"' },
+      { label: 'scheme', detail: '协议', snippet: true, insertText: '"scheme": "${1|https,http|}"' },
+      { label: 'host', detail: '主机名', snippet: true, insertText: '"host": "${1:example.com}"' },
+      { label: 'port', detail: '端口', snippet: true, insertText: '"port": ${1:443}' },
+      { label: 'path', detail: '路径', snippet: true, insertText: '"path": "${1:/hook}"' },
+      { label: 'params', detail: '查询参数', snippet: true, insertText: '"params": {\n  "${1:key}": "${2:value}"\n}' },
+      { label: 'headers', detail: '请求头', snippet: true, insertText: '"headers": {\n  "${1:Content-Type}": "${2:application/json}"\n}' },
+      { label: 'body', detail: '请求体（字符串，常配 mustache）', snippet: true, insertText: '"body": "${1:{{ctx.payload}}}"' },
+      { label: 'auth', detail: '认证（basic 等）', snippet: true, insertText: '"auth": {\n  ${0}\n}' },
+      { label: 'connection_timeout', detail: '连接超时', snippet: true, insertText: '"connection_timeout": "${1:10s}"' },
+      { label: 'read_timeout', detail: '读取超时', snippet: true, insertText: '"read_timeout": "${1:10s}"' },
+      { label: 'proxy', detail: '代理配置', snippet: true, insertText: '"proxy": {\n  ${0}\n}' },
+    ];
+    case 'slack': return [
+      { label: 'account', detail: 'Slack 账户（省略用默认）', snippet: true, insertText: '"account": "${1:slack-account}"' },
+      { label: 'message', detail: '消息体（text/from/to/attachments）', snippet: true,
+        insertText: '"message": {\n  "text": "${1:watch fired}"\n}' },
+    ];
+    case 'pagerduty': return [
+      { label: 'account', detail: 'PagerDuty 账户（省略用默认）', snippet: true, insertText: '"account": "${1:pagerduty-account}"' },
+      { label: 'description', detail: '事件描述', snippet: true, insertText: '"description": "${1:watch fired}"' },
+      { label: 'incident_key', detail: '事件去重键（同名事件合并）', snippet: true, insertText: '"incident_key": "${1:{{ctx.watch_id}}}"' },
+      { label: 'event_type', detail: '事件类型（trigger/resolve/acknowledge）', snippet: true,
+        insertText: '"event_type": "${1|trigger,resolve,acknowledge|}"' },
+      { label: 'client', detail: '客户端名称', snippet: true, insertText: '"client": "${1:watcher}"' },
+      { label: 'client_url', detail: '客户端链接', snippet: true, insertText: '"client_url": "${1:https://example.com}"' },
+      { label: 'attach_payload', detail: '附带完整 payload', snippet: true, insertText: '"attach_payload": ${1|false,true|}' },
+      { label: 'contexts', detail: '上下文链接清单', snippet: true, insertText: '"contexts": [\n  ${0}\n]' },
+      { label: 'proxy', detail: '代理配置', snippet: true, insertText: '"proxy": {\n  ${0}\n}' },
+    ];
+    case 'jira': return [
+      { label: 'account', detail: 'Jira 账户（省略用默认）', snippet: true, insertText: '"account": "${1:jira-account}"' },
+      { label: 'fields', detail: '工单字段（project/issuetype/summary…）', snippet: true,
+        insertText: '"fields": {\n  "project": { "key": "${1:OPS}" },\n  "issuetype": { "name": "${2:Task}" },\n  "summary": "${3:watch fired}"\n}' },
+    ];
+    default: return [];
+  }
+}
+
+/** 按栈定位 condition 类型并给参数键（兼容内联试跑的 watch 前缀） */
+export function watchConditionParamsKeyItemsAt(doc: string, offset: number): AssistItem[] {
+  const stack = frameKeysAt(doc, offset);
+  const ci = stack.indexOf('condition');
+  if (ci < 0) return [];
+  const type = stack[ci + 1];
+  if (!type || stack.length !== ci + 3) return [];
+  return watchConditionParamsKeyItems(type);
+}
+
+/** 按栈定位动作类型并给参数键（actions.<名>.<类型>；兼容 watch 前缀） */
+export function watchActionParamsKeyItemsAt(doc: string, offset: number): AssistItem[] {
+  const stack = frameKeysAt(doc, offset);
+  const ai = stack.indexOf('actions');
+  if (ai < 0) return [];
+  const type = stack[ai + 2];
+  if (!type || stack.length !== ai + 4) return [];
+  return watchActionParamsKeyItems(type);
 }
 
 /** Watcher 体区域：根 / 触发器 / 调度 / 输入 / 条件 / 动作类型；更深层不出键 */
 export function watchRegionAt(doc: string, offset: number):
-  'root' | 'trigger' | 'schedule' | 'input' | 'search-body' | 'search-query' | 'condition' | 'action' | 'deep' {
+  'root' | 'trigger' | 'schedule' | 'input' | 'search-body' | 'search-query'
+  | 'condition' | 'condition-params' | 'action' | 'action-params' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
   if (stack[0] === 'trigger') {
@@ -2027,8 +2122,16 @@ export function watchRegionAt(doc: string, offset: number):
     }
     return 'deep';
   }
-  if (stack[0] === 'condition' && stack.length === 2) return 'condition';
-  if (stack[0] === 'actions' && stack.length === 3) return 'action';
+  if (stack[0] === 'condition') {
+    if (stack.length === 2) return 'condition';
+    if (stack.length === 3) return 'condition-params';
+    return 'deep';
+  }
+  if (stack[0] === 'actions') {
+    if (stack.length === 3) return 'action';
+    if (stack.length === 4) return 'action-params';
+    return 'deep';
+  }
   return 'deep';
 }
 
@@ -3000,7 +3103,7 @@ export function watchInlineExecuteBodyKeyItems(): AssistItem[] {
 /** 内联试跑体区域：根 / watch 定义（复用 watch 各子区）/ 更深 */
 export function watchInlineExecuteRegionAt(doc: string, offset: number):
   'root' | 'watch' | 'watch-trigger' | 'watch-schedule' | 'watch-input' | 'watch-search-body'
-  | 'watch-search-query' | 'watch-condition' | 'watch-action' | 'deep' {
+  | 'watch-search-query' | 'watch-condition' | 'condition-params' | 'watch-action' | 'action-params' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
   if (stack[0] !== 'watch') return 'deep';
@@ -3019,8 +3122,16 @@ export function watchInlineExecuteRegionAt(doc: string, offset: number):
     }
     return 'deep';
   }
-  if (stack[1] === 'condition' && stack.length === 3) return 'watch-condition';
-  if (stack[1] === 'actions' && stack.length === 4) return 'watch-action';
+  if (stack[1] === 'condition') {
+    if (stack.length === 3) return 'watch-condition';
+    if (stack.length === 4) return 'condition-params';
+    return 'deep';
+  }
+  if (stack[1] === 'actions') {
+    if (stack.length === 4) return 'watch-action';
+    if (stack.length === 5) return 'action-params';
+    return 'deep';
+  }
   return 'deep';
 }
 

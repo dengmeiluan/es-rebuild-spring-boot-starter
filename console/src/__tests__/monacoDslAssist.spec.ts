@@ -1222,6 +1222,9 @@ describe('1439 Watcher 体补全', () => {
     const sbQuery = '{\n  "watch": {\n    "input": {\n      "search": {\n        "request": {\n          "body": {\n            "query": {\n              "\n            }\n          }\n        }\n      }\n    }\n  }\n}';
     const qLabels = suggest(sbQuery, sbQuery.lastIndexOf('"') + 1).map(i => i.label);
     expect(qLabels).toContain('match');
+
+    const inlineAct = '{\n  "watch": {\n    "actions": {\n      "notify": {\n        "logging": {\n          "\n        }\n      }\n    }\n  }\n}';
+    expect(suggest(inlineAct, inlineAct.lastIndexOf('"') + 1).map(i => i.label)).toContain('level');
   });
 
   it('六段：根 → trigger/schedule → input → condition → 动作类型', () => {
@@ -1257,13 +1260,24 @@ describe('1439 Watcher 体补全', () => {
       'always', 'never', 'compare', 'array_compare', 'script',
     ]);
 
+    const condParams = '{\n  "condition": {\n    "script": {\n      "\n    }\n  }\n}';
+    expect(suggest(condParams, condParams.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
+      'source', 'lang', 'params', 'id',
+    ]);
+
     const acts = '{\n  "actions": {\n    "notify": {\n      "\n    }\n  }\n}';
     expect(suggest(acts, acts.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
       'email', 'webhook', 'index', 'logging', 'slack', 'pagerduty', 'jira',
     ]);
 
-    const deep = '{\n  "actions": {\n    "notify": {\n      "logging": {\n        "\n      }\n    }\n  }\n}';
-    expect(suggest(deep, deep.lastIndexOf('"') + 1), '动作参数内不出键').toEqual([]);
+    const logParams = '{\n  "actions": {\n    "notify": {\n      "logging": {\n        "\n      }\n    }\n  }\n}';
+    expect(suggest(logParams, logParams.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['level', 'text', 'category']);
+
+    const idxParams = '{\n  "actions": {\n    "notify": {\n      "index": {\n        "\n      }\n    }\n  }\n}';
+    expect(suggest(idxParams, idxParams.lastIndexOf('"') + 1).map(i => i.label)).toContain('index');
+
+    const deep = '{\n  "actions": {\n    "notify": {\n      "webhook": {\n        "headers": {\n          "\n        }\n      }\n    }\n  }\n}';
+    expect(suggest(deep, deep.lastIndexOf('"') + 1), '动作参数更深层不出键').toEqual([]);
   });
 });
 

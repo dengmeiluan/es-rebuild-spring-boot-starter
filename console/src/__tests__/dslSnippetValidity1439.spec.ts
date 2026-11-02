@@ -45,6 +45,7 @@ import {
   mlFilterUpdateBodyKeyItems, securityApiKeyQueryBodyKeyItems, securityApiKeyInvalidateBodyKeyItems,
   securityCrossClusterApiKeyBodyKeyItems, securityCrossClusterAccessKeyItems, securityCrossClusterAccessEntryKeyItems,
   watchExecuteBodyKeyItems, securityPrivilegeBodyKeyItems, ilmMoveBodyKeyItems, ilmMoveStepKeyItems,
+  watchActionParamsKeyItems, watchConditionParamsKeyItems,
   snapshotCloneBodyKeyItems, watchInlineExecuteBodyKeyItems, snapshotMountBodyKeyItems,
   nodesReloadSecureSettingsBodyKeyItems,
 } from '../utils/dslCompletionContext';
@@ -231,6 +232,12 @@ function allProblems(): string[] {
   out.push(...snippetProblems('ILMS', ilmMoveStepKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('SCL', snapshotCloneBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('WIE', watchInlineExecuteBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  for (const t of ['email', 'webhook', 'index', 'logging', 'slack', 'pagerduty', 'jira']) {
+    out.push(...snippetProblems('WAP:' + t,
+      watchActionParamsKeyItems(t).map(i => ({ text: i.insertText, key: i.label }))));
+  }
+  out.push(...snippetProblems('WCP:script',
+    watchConditionParamsKeyItems('script').map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('SMT', snapshotMountBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('NRS', nodesReloadSecureSettingsBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;
