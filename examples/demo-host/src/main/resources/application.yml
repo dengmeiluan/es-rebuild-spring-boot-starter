@@ -16,8 +16,8 @@ spring:
       repositories:
         enabled: false
 
-es:
-  rebuild:
+searchdeck:
+  elasticsearch:
     # console 模式：重建能力 + 运维控制台全套（改 client 则只保留重建，不开控制台）
     mode: console
     mapping:

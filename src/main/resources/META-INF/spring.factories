@@ -1,3 +1,0 @@
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-io.github.dengmeiluan.es.rebuild.config.EsRebuildAutoConfiguration,\
-io.github.dengmeiluan.es.rebuild.compat.EsDateCompatAutoConfiguration

@@ -5,8 +5,8 @@
 > three delivery modes. 52 pages, **11 feature packs**: all on by default, trimmed by the host.
 > First integration: **QuoteHub**, already running in production.
 
-[![Release](https://img.shields.io/github/v/release/dengmeiluan/es-rebuild-spring-boot-starter?display_name=release)](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)
-[![CI](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/actions/workflows/ci.yml/badge.svg)](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/dengmeiluan/searchdeck?display_name=release)](https://github.com/dengmeiluan/searchdeck/releases)
+[![CI](https://github.com/dengmeiluan/searchdeck/actions/workflows/ci.yml/badge.svg)](https://github.com/dengmeiluan/searchdeck/actions/workflows/ci.yml)
 [![Java](https://img.shields.io/badge/Java-8%2B-007396?logo=openjdk&logoColor=white)](https://openjdk.java.net)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.3.x-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Elasticsearch](https://img.shields.io/badge/Elasticsearch-7.6%2B-005571?logo=elasticsearch&logoColor=white)](https://www.elastic.co)
@@ -126,13 +126,13 @@ read/write keys in `grantedPages`.
 ### A. Standalone (Kibana-style)
 
 ```bash
-java -jar searchdeck-standalone.jar
+java -jar searchdeck-server.jar
 ```
 
 Ships its own web server (default port `5601`) and ES client stack. Open
 `http://localhost:5601/searchdeck.html` and follow the setup wizard. The bootstrap profile lives
-in `~/.es-console/` and survives restarts. (2.0 asset name; 1.x releases remain
-`es-rebuild-standalone-*.jar` and are renamed in phase 2.)
+in `~/.es-console/` and survives restarts. (2.0 multi-module asset name; 1.x releases remain
+`es-rebuild-standalone-*.jar`.)
 
 ### B. Embedded console module
 
@@ -233,16 +233,15 @@ searchdeck:
     features:
       packs: [platform, search, index, lifecycle, observe, devtools]
       exclude-pages: []
-es:
-  rebuild:
+  elasticsearch:
     mode: console
     console:
       store: sqlite
 ```
 
 The platform layer (`searchdeck.console.*`) describes the product surface; the engine layer
-(`es.rebuild.*`) describes rebuild/migration/storage runtime parameters. They do not override
-each other.
+(`searchdeck.elasticsearch.*`) describes rebuild/migration/storage runtime parameters.
+Legacy `es.rebuild.*` keys remain available through a transparent environment bridge.
 
 ### 4. HTTP endpoints
 
@@ -285,6 +284,22 @@ flowchart LR
 **Layers**: platform kernel (branding/packs/host SPIs) → console modules (query/index/observability/security)
 → engine modules (rebuild/migration/mapping). Packs are declared in the contract; backend page gates
 still enforce the complete contract.
+
+### Repository layout
+
+```text
+searchdeck/
+├─ platform/                 searchdeck-platform: page contract, packs, branding, host SPI
+├─ modules/console/          searchdeck-console: engine + console + embedded UI assets
+├─ apps/server/              searchdeck-server: Kibana-style standalone deployment
+├─ integrations/quotehub/    searchdeck-quotehub: first host adapter
+├─ ui/                       @searchdeck/ui: Vue 3 console source
+└─ examples/demo-host/       runnable host example
+```
+
+The engine and console packages still contain cycles (auth ↔ multicluster ↔ xmigrate ↔ config),
+so `engine/` remains an isolated boundary directory inside console until interface inversion allows
+a separate artifact.
 
 ---
 
@@ -337,11 +352,14 @@ npm test
 ## 🛠️ Build from source
 
 ```bash
-git clone https://github.com/dengmeiluan/es-rebuild-spring-boot-starter.git
-cd es-rebuild-spring-boot-starter
+git clone https://github.com/dengmeiluan/searchdeck.git
+cd searchdeck
 
-cd console && npm ci && npm run build && cd ..
-mvn clean package
+cd ui && npm ci && npm run build && cd ..
+./mvnw clean package
+
+cd ui && npm test && cd ..
+./mvnw test -Dconsole.build.skip=true
 ```
 
 Runnable example: [examples/demo-host](examples/demo-host/).

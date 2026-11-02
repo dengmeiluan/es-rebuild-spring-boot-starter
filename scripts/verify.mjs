@@ -2,17 +2,17 @@
 /* 全量验证并行编排：把互不依赖的门禁放到同一时间窗口跑。
  *
  * 依赖关系（不能打乱）：
- *   build ──┬─> backend（antrun 校验 static/console/index.html）
+ *   build ──┬─> backend（antrun 校验 static/searchdeck/index.html）
  *           ├─> frontend（bundleBudget436 读构建产物）
- *           └─> standalone（install 后跑独立应用冒烟）
+ *           └─> server（install 后跑独立应用冒烟）
  *   typecheck / perm:scan 与 build 同时起跑。
  *
- * 后端与 standalone 都会写 target/，必须串行；standalone 排在 backend 之后。
+ * 后端与 server 都会写 target/，必须串行；server 排在 backend 之后。
  * 其余 lane 并行，总时长由前端全量（分片）决定。
  *
  * 用法：
  *   node scripts/verify.mjs                 # 后端 4 fork + 前端 8 分片 + 构建/typecheck/权限扫描
- *   node scripts/verify.mjs --standalone    # 追加 standalone 构建与冒烟
+ *   node scripts/verify.mjs --server        # 追加 server 构建与冒烟
  *   node scripts/verify.mjs --serial        # 全部走串行基准（排障用）
  *   node scripts/verify.mjs --online        # Maven 不强制离线
  */
@@ -23,7 +23,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const consoleDir = join(root, 'console');
+const consoleDir = join(root, 'ui');
 const outDir = join(root, '.tmp', 'verify');
 const isWin = process.platform === 'win32';
 const npm = isWin ? 'npm.cmd' : 'npm';
@@ -75,7 +75,7 @@ async function main() {
 
   const build = earlyResults.find((r) => r.name === 'build');
   if (build && !build.ok) {
-    console.error('[verify] build 失败，后端/前端/standalone 不再启动');
+    console.error('[verify] build 失败，后端/前端/server 不再启动');
     manifest.push(...results);
     finish(started, manifest);
     process.exitCode = 1;
@@ -85,16 +85,16 @@ async function main() {
   const later = [];
   if (!opts.noBackend) later.push(runLane('backend', mvnTestArgs()));
   if (!opts.noFrontend) later.push(runLane('frontend', npmCmd(opts.serial ? ['run', 'test:serial'] : ['test'])));
-  if (opts.standalone) {
+  if (opts.server) {
     later.push((async () => {
       if (!opts.noBackend) {
         const backend = await later[0];
         if (!backend || !backend.ok) {
-          console.error('[verify] backend 未通过，跳过 standalone');
-          return { name: 'standalone', ok: false, ms: 0, skipped: true, log: '' };
+          console.error('[verify] backend 未通过，跳过 server');
+          return { name: 'server', ok: false, ms: 0, skipped: true, log: '' };
         }
       }
-      return runLane('standalone', standaloneArgs());
+      return runLane('server', serverArgs());
     })());
   }
   const laterResults = await Promise.all(later);
@@ -133,7 +133,7 @@ function runProcess(name, cmd, args, extraEnv, announce = true, cwd = '') {
   const stream = createWriteStream(log, { flags: 'a' });
   if (announce) console.log(`[verify] ${name} 开始`);
   const started = Date.now();
-  const workdir = cwd || (name === 'backend' || name === 'standalone' ? root : consoleDir);
+  const workdir = cwd || (name === 'backend' || name === 'server' ? root : consoleDir);
   return new Promise((resolveRun) => {
     const child = spawnCommand(cmd, args, {
       cwd: workdir,
@@ -171,7 +171,7 @@ function mvnTestArgs() {
   return { cmd: mvnw, args };
 }
 
-function standaloneArgs() {
+function serverArgs() {
   const install = ['-B', 'install', '-DskipTests', '-Dconsole.build.skip=true'];
   if (!opts.online) install.unshift('-o');
   const test = ['-B', 'test'];
@@ -179,7 +179,7 @@ function standaloneArgs() {
   return {
     chain: [
       { cmd: mvnw, args: install },
-      { cmd: mvnw, args: test, cwd: join(root, 'standalone') },
+      { cmd: mvnw, args: test, cwd: join(root, 'apps/server') },
     ],
   };
 }
@@ -248,14 +248,15 @@ function rel(file) {
 
 function parseArgs(argv) {
   const out = {
-    serial: false, standalone: false, online: false, help: false,
+    serial: false, server: false, online: false, help: false,
     noBuild: false, noBackend: false, noFrontend: false, noTypecheck: false, noPermScan: false,
     shards: 0, backendForks: 0,
   };
   for (const arg of argv) {
     if (arg === '--help' || arg === '-h') out.help = true;
     else if (arg === '--serial') out.serial = true;
-    else if (arg === '--standalone') out.standalone = true;
+    else if (arg === '--server') out.server = true;
+    else if (arg === '--standalone') out.server = true;
     else if (arg === '--online') out.online = true;
     else if (arg === '--no-build') out.noBuild = true;
     else if (arg === '--no-backend') out.noBackend = true;
@@ -275,12 +276,12 @@ function parseArgs(argv) {
 function printHelp() {
   console.log(`用法: node scripts/verify.mjs [选项]
 
-  --standalone          追加 standalone 构建与冒烟测试（排在 backend 之后）
+  --server              追加 server 构建与冒烟测试（排在 backend 之后）
   --serial              后端不分 fork、前端串行全量
   --online              Maven 不强制离线（默认 -o）
   --shards=N            前端分片数（默认按核数，最多 8）
   --backend-forks=N     后端 Surefire fork 数（默认最多 4）
-  --no-build            跳过 console 构建（要求产物已存在）
+  --no-build            跳过 ui 构建（要求产物已存在）
   --no-backend          跳过后端
   --no-frontend         跳过前端全量
   --no-typecheck        跳过 vue-tsc

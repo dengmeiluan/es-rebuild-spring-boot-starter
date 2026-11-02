@@ -172,3 +172,18 @@ QuoteHub 现有接入面（已产线验证）：
 - 后端：`mvnw -q -Dtest=ConsolePageCatalogTest,ConsoleUiConfigServiceTest test`；至少一次全量 `mvn test`。
 - 真浏览器：mock 5210 + 5174/5211 + CDP；验证默认全开、配置裁剪、QuoteHub 品牌、`ModuleOff` 深链、快捷键过滤。
 - 证据：配置前后的侧栏组数/条目数、`/ui/config` 响应、停用页可达性、浏览器截图。
+
+## 9. 实施记录（2026-11-02）
+
+- **Reactor**：`searchdeck` 2.0.0，模块 `searchdeck-platform`、`searchdeck-console`、
+  `searchdeck-server`、`searchdeck-quotehub`；前端位于 `ui/`，静态产物输出到
+  `modules/console/src/main/resources/static/searchdeck/`。
+- **后端全量**：`./mvnw -o -Dconsole.build.skip=true test` → console 1595 例、server 5 例，
+  BUILD SUCCESS（platform/quotehub 随 reactor 构建）。
+- **前端全量**：`ui` 下 `vue-tsc --noEmit` 0；8 分片 1482 文件 / 12014 例全绿。
+- **首个接入**：QuoteHub 编译通过；六个接入契约测试 49 例全绿；demo-host 11 例全绿。
+- **真实浏览器**：功能包全开/QuoteHub 裁剪/停用页深链/命令面板/快捷键探针 PASS。
+- **兼容**：`es.rebuild.*` 与 `/es-rebuild.html` 保留一代别名；`searchdeck.elasticsearch.*`
+  为 2.0 主前缀。
+- **剩余**：GitHub 仓库更名、浏览器事件/存储键迁移、engine artifact 的接口反转（当前
+  包环不允许独立成模块）。

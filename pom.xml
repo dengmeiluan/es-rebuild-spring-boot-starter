@@ -4,8 +4,6 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- 继承 Spring Boot 官方 parent：spring-boot 2.3.12.RELEASE / spring-data-elasticsearch 4.0.9 /
-         elasticsearch 7.6.2 / RHLC 7.6.2 全部由它的 BOM 统一管理，ES/Spring 依赖均免写 version。 -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -14,14 +12,13 @@
     </parent>
 
     <groupId>io.github.dengmeiluan</groupId>
-    <artifactId>es-rebuild-spring-boot-starter</artifactId>
-    <version>1.0.76</version>
-    <packaging>jar</packaging>
-    <name>es-rebuild-spring-boot-starter</name>
-    <description>Zero-downtime Elasticsearch index rebuild Spring Boot starter: alias-based write-index
-        flip + server-side _reindex, with job tracking, delete-resurrection compensation and a
-        batteries-included ops console. Implement ManagedEsIndex and you are done.</description>
-    <url>https://github.com/dengmeiluan/es-rebuild-spring-boot-starter</url>
+    <artifactId>searchdeck</artifactId>
+    <version>2.0.0</version>
+    <packaging>pom</packaging>
+    <name>SearchDeck</name>
+    <description>Embeddable Elasticsearch operations platform: platform kernel, console,
+        standalone server and host integrations.</description>
+    <url>https://github.com/dengmeiluan/searchdeck</url>
 
     <licenses>
         <license>
@@ -40,27 +37,26 @@
     </developers>
 
     <scm>
-        <url>https://github.com/dengmeiluan/es-rebuild-spring-boot-starter</url>
-        <connection>scm:git:git://github.com/dengmeiluan/es-rebuild-spring-boot-starter.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/dengmeiluan/es-rebuild-spring-boot-starter.git</developerConnection>
-        <tag>v1.0.39</tag>
+        <url>https://github.com/dengmeiluan/searchdeck</url>
+        <connection>scm:git:git://github.com/dengmeiluan/searchdeck.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/dengmeiluan/searchdeck.git</developerConnection>
     </scm>
+
+    <modules>
+        <module>platform</module>
+        <module>modules/console</module>
+        <module>apps/server</module>
+        <module>integrations/quotehub</module>
+    </modules>
 
     <properties>
         <java.version>1.8</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <!-- Surefire 测试并行：每 fork 独立 JVM，规避测试间静态状态串扰。
-             低核机器/CI 用 -DforkCount=N 覆盖（CI 2 核取 2）。 -->
         <forkCount>4</forkCount>
-        <!-- 日常迭代脚本已先跑过 npm build（含 typecheck/vitest 质量门）时传 -Dconsole.build.skip=true 免双重构建；
-             默认 false：package 永远自带最新前端产物，杆掉“忘跑 vite 就打包旧包”事故。 -->
         <console.build.skip>false</console.build.skip>
     </properties>
 
-    <!-- npm 可执行物跨平台：Windows 是 npm.cmd，POSIX（Linux/macOS）是 npm——
-         硬编码任一形态都会让另一半世界的 fresh clone 在 generate-resources 阶段必炸。
-         OS 自动激活的 profile 各自给 ${npm.executable} 赋值，exec 插件只引用属性。 -->
     <profiles>
         <profile>
             <id>npm-windows</id>
@@ -86,180 +82,28 @@
         </profile>
     </profiles>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-        </dependency>
-        <!-- ES 底座：ElasticsearchOperations + RHLC + es-core(ReindexRequest)。
-
-             scope=provided —— starter 不向宿主传递自己的 sdes/ES 版本：宿主几乎必然自带 ES 栈，
-             若 starter 也用 compile 声明，两套版本会被 Maven 就近原则静默裁决，错配只在运行时
-             特定路径炸（且常在建出目标索引之后，留下半拷贝）。provided 把版本决定权完整交回宿主；
-             宿主是否选对由 EsStackContractValidator 在启动期校验（比签名，不比版本号）。
-
-             ⚠ 代价（README 已写明）：starter 从「引入即可用」变成「引入后需自备 ES 栈」。
-             全新接入方必须自己声明 spring-boot-starter-data-elasticsearch，
-             否则启动即 ClassNotFoundException。这是 1.0.0 的既定契约。 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <!-- EsIndexAdmin 直接 import org.elasticsearch.client.*，遵循「直接依赖直接声明」（version 由 BOM 管理）。 -->
-        <dependency>
-            <groupId>org.elasticsearch.client</groupId>
-            <artifactId>elasticsearch-rest-high-level-client</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <!-- 内置运维 Controller / 静态面板 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-        <!-- EsWriteAspect 环绕可重试写入 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-aop</artifactId>
-        </dependency>
-        <!-- 本地 SQLite 档驱动（es.rebuild.console.store=sqlite：作业+审计落一个本地库文件）。
-             optional：不向嵌入宿主传递——默认档 control-es 不需要它；显式选 sqlite 档的宿主
-             自行引入 org.xerial:sqlite-jdbc（缺驱动时装配回落 control-es 并 WARN 留痕）。
-             standalone 应用以 compile 自带，开箱即持久。 -->
-        <dependency>
-            <groupId>org.xerial</groupId>
-            <artifactId>sqlite-jdbc</artifactId>
-            <version>3.42.0.0</version>
-            <optional>true</optional>
-        </dependency>
-        <!-- 配置项元数据（IDE 提示），编译期生成、不参与运行 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-configuration-processor</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <!-- 形态兼容解析逻辑（parseHitsTotal/unwrapTypeLayer/legacyBulkNdjson 等）的单测基建。
-             Java 8 工程用 junit4 最稳；纯静态方法测试无需 spring-boot-starter-test 全家桶。 -->
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.13.2</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <!-- ApplicationContextRunner 的 ContextConsumer 泛型上界引用 AssertJ 的 AssertProvider，
-             spring-boot-test 把 assertj 声明为 optional 不会传递进来，编译期必须显式补上。 -->
-        <dependency>
-            <groupId>org.assertj</groupId>
-            <artifactId>assertj-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <!-- JdbcAdhocJobStore 真往返测试用嵌入式 H2（save→find→listRecent 真跑 SQL）。
-             仅测试期使用，不进产物、不向宿主传递。 -->
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
-
     <build>
-        <plugins>
-            <!-- javadoc 容错：内部方法注释量大，部分缺 @param/@return 标注——
-                 顶级 OSS 工具（javadoc.io 等）拉取时不应因这些警告而失败；
-                 公共 SPI（ManagedEsIndex 等）的 javadoc 已完备，渐进改善 -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <configuration>
-                    <failOnError>false</failOnError>
-                    <doclint>none</doclint>
-                </configuration>
-            </plugin>
-            <!-- 关键：spring-boot-starter-parent 在 pluginManagement 里为 spring-boot-maven-plugin 绑定了
-                 repackage goal，库 jar 若被 repackage 会把类塞进 BOOT-INF/classes/、变成不可被依赖的
-                 可执行 fat jar。用 skip=true 关闭（对所有 execution 生效，不依赖 execution id）。 -->
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <skip>true</skip>
-                </configuration>
-            </plugin>
-            <!-- console 前端接入 maven 生命周期：generate-resources 阶段调本机 npm 跑 vite build，
-                 产物直出 src/main/resources/static/console/（vite outDir 已指向），随后 resources 阶段自然打包。
-                 用 exec 调系统 npm 而非 frontend-maven-plugin：免下载 node、兼容离线构建。 -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.1.0</version>
-                <executions>
-                    <execution>
-                        <id>console-vite-build</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <configuration>
-                            <skip>${console.build.skip}</skip>
-                            <executable>${npm.executable}</executable>
-                            <workingDirectory>${project.basedir}/console</workingDirectory>
-                            <arguments>
-                                <argument>run</argument>
-                                <argument>build</argument>
-                            </arguments>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <!-- console 构建产物（static/console/）不入库（见 .gitignore）。exec 默认会现构；
-                 这里在 exec 之后（process-resources）兜底校验 index.html 存在，防 skip=true 且未预构建时打出空 jar。 -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <version>1.8</version>
-                <executions>
-                    <!-- 先清 target 里的旧 console 产物，再让 resources 阶段复制新产物。
-                         maven-resources-plugin 只做覆盖式复制、**从不删除**目标目录里多余的旧文件：
-                         增量构建（不跑 mvn clean）会让每一轮 vite 的哈希文件名都堆在
-                         target/classes/static/console/assets/ 下（实测 5849 个 vs 源码 278 个），
-                         这些文件经 /console/assets/** 是**可被 HTTP 直接请求**的——旧 bundle 仍可访问，
-                         等于把修复前的控制台代码继续对外提供，jar 也被撑到 37MB。
-                         ⚠ 必须挂在 initialize（resources:resources 之前）；绑定 process-resources 会因
-                         同阶段按插件声明序执行而**排在复制之后**，把刚复制好的产物删掉（实测打出 797KB
-                         的空 jar，控制台整体丢失）。 -->
-                    <execution>
-                        <id>purge-stale-console-assets</id>
-                        <phase>initialize</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <target>
-                                <delete dir="${project.build.outputDirectory}/static/console" quiet="true"/>
-                            </target>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>require-console-assets</id>
-                        <phase>process-resources</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <target>
-                                <available file="${project.basedir}/src/main/resources/static/console/index.html" property="console.assets.present"/>
-                                <fail unless="console.assets.present" message="Missing console build output (static/console/index.html). It is git-ignored by design; a default build runs vite automatically (exec-maven-plugin). If you pass -Dconsole.build.skip=true, run `npm run build` in console/ first."/>
-                            </target>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <configuration>
+                        <failOnError>false</failOnError>
+                        <doclint>none</doclint>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <configuration>
+                        <systemPropertyVariables>
+                            <searchdeck.root>${maven.multiModuleProjectDirectory}</searchdeck.root>
+                        </systemPropertyVariables>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
 
 </project>

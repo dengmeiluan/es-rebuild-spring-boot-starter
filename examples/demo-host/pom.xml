@@ -15,10 +15,10 @@
     <artifactId>demo-host</artifactId>
     <version>1.0.0</version>
     <name>demo-host</name>
-    <description>Minimal embedded host for the ES rebuild starter: one @Document entity, the full
+    <description>Minimal embedded host for the SearchDeck console: one @Document entity, the full
         ops console, zero extra wiring. Build the starter first (mvn install at the repository
         root), then run this module.</description>
-    <url>https://github.com/dengmeiluan/es-rebuild-spring-boot-starter</url>
+    <url>https://github.com/dengmeiluan/searchdeck</url>
 
     <properties>
         <java.version>1.8</java.version>
@@ -28,10 +28,10 @@
         <!-- 被演示的主角：starter（先在仓库根 mvn install 安装到本地仓） -->
         <dependency>
             <groupId>io.github.dengmeiluan</groupId>
-            <artifactId>es-rebuild-spring-boot-starter</artifactId>
+            <artifactId>searchdeck-console</artifactId>
             <!-- 需要含完整委托 SPI（hasCredential/tokenOf/revoke）的版本；
                  1.0.39 只有 authenticate，照抄参考实现会编译失败。 -->
-            <version>1.0.76</version>
+            <version>2.0.0</version>
         </dependency>
         <!-- 嵌入式宿主自带的运行时栈（starter 对这三件是 provided——版本决定权在宿主） -->
         <dependency>

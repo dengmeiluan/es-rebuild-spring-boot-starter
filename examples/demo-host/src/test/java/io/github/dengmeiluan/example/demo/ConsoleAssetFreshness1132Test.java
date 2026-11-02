@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>背景（实测缺陷）：`maven-resources-plugin` 只覆盖式复制、从不删除目标目录里多出的文件，
  * 而 vite 每次构建都换哈希名。不跑 `mvn clean` 的增量构建会让
- * `target/classes/static/console/assets/` 堆积历史 bundle（实测 5849 个 vs 源码 278 个）。
+ * `target/classes/static/searchdeck/assets/` 堆积历史 bundle（实测 5849 个 vs 源码 278 个）。
  * 这些文件经 `/console/assets/**`（直连 classpath，正常启用时无白名单）**可被 HTTP 直接请求**——
  * 拿旧文件名就能加载修复前的控制台代码，等于绕过本轮全部权限加固。</p>
  *
@@ -33,8 +33,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * </ol>
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"es.rebuild.console.home-dir=target/demo-asset-probe",
-                "es.rebuild.console.sqlite-path=target/demo-asset-probe/jobs.db"})
+        properties = {"searchdeck.elasticsearch.console.home-dir=target/demo-asset-probe",
+                "searchdeck.elasticsearch.console.sqlite-path=target/demo-asset-probe/jobs.db"})
 class ConsoleAssetFreshness1132Test {
 
     @LocalServerPort
@@ -45,7 +45,7 @@ class ConsoleAssetFreshness1132Test {
 
     @Test
     void 当前bundle可访问且index页可加载() {
-        int html = rest.getForEntity("http://localhost:" + port + "/es-rebuild.html", String.class)
+        int html = rest.getForEntity("http://localhost:" + port + "/searchdeck.html", String.class)
                 .getStatusCodeValue();
         assertEquals(200, html, "控制台入口页必须可访问");
     }
@@ -56,7 +56,7 @@ class ConsoleAssetFreshness1132Test {
      * <p>为什么必须双向比对：只逐个请求源码里的文件名，只能证明「该有的都有」，
      * 证不出「没有多余的」（实测：塞一个陈旧 bundle 后，那种写法依然全绿 = 假通过）。</p>
      *
-     * <p>实现上直接枚举 starter jar 内的 `static/console/assets/` 条目：
+     * <p>实现上直接枚举 starter jar 内的 `static/searchdeck/assets/` 条目：
      * `ClassLoader.getResource` 只会返回**第一个**命中（demo-host 自己的 classes 或依赖 jar），
      * 拿它做目录列举会漏掉另一侧，进而把「少了一个空名条目」误判成泄漏。</p>
      */
@@ -81,7 +81,7 @@ class ConsoleAssetFreshness1132Test {
         assertTrue(jar != null, "本地仓库里必须能找到已安装的 starter jar");
 
         java.util.Set<String> jarNames = new java.util.TreeSet<>();
-        String prefix = "static/console/assets/";
+        String prefix = "static/searchdeck/assets/";
         try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(jar.toFile())) {
             java.util.Enumeration<? extends java.util.zip.ZipEntry> en = zf.entries();
             while (en.hasMoreElements()) {
@@ -111,11 +111,11 @@ class ConsoleAssetFreshness1132Test {
     private static Path findStarterJar() {
         String home = System.getProperty("user.home");
         Path repo = Paths.get(home, ".m2", "repository",
-                "io", "github", "dengmeiluan", "es-rebuild-spring-boot-starter");
+                "io", "github", "dengmeiluan", "searchdeck-console");
         if (!Files.isDirectory(repo)) {
             /* 本机约定：仓库根 pom 的 localRepository 可能指向 D:/mvn_repository */
             repo = Paths.get("D:", "mvn_repository",
-                    "io", "github", "dengmeiluan", "es-rebuild-spring-boot-starter");
+                    "io", "github", "dengmeiluan", "searchdeck-console");
         }
         if (!Files.isDirectory(repo)) return null;
         try (Stream<Path> s = Files.walk(repo, 3)) {

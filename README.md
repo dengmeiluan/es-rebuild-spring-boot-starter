@@ -4,8 +4,8 @@
 > 一套能力，三种交付。52 个页面收敛成 **11 个功能包**：默认全开，宿主按需裁剪。
 > 首个接入方 **QuoteHub** 已在产线运行。
 
-[![Release](https://img.shields.io/github/v/release/dengmeiluan/es-rebuild-spring-boot-starter?display_name=release)](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/releases)
-[![CI](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/actions/workflows/ci.yml/badge.svg)](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/dengmeiluan/searchdeck?display_name=release)](https://github.com/dengmeiluan/searchdeck/releases)
+[![CI](https://github.com/dengmeiluan/searchdeck/actions/workflows/ci.yml/badge.svg)](https://github.com/dengmeiluan/searchdeck/actions/workflows/ci.yml)
 [![Java](https://img.shields.io/badge/Java-8%2B-007396?logo=openjdk&logoColor=white)](https://openjdk.java.net)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.3.x-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Elasticsearch](https://img.shields.io/badge/Elasticsearch-7.6%2B-005571?logo=elasticsearch&logoColor=white)](https://www.elastic.co)
@@ -123,12 +123,12 @@ SearchDeck 不是一个只解决「索引重建」的单点工具，而是一块
 ### A. 独立部署（Kibana 式）
 
 ```bash
-java -jar searchdeck-standalone.jar
+java -jar searchdeck-server.jar
 ```
 
 内置 Web 服务器（默认端口 `5601`）与 ES 客户端栈，不依赖宿主应用。打开
 `http://localhost:5601/searchdeck.html`，按 Setup 向导完成控制集群首连；
-（2.0 资产名；1.x 发布包仍为 `es-rebuild-standalone-*.jar`，阶段 2 随坐标迁移更名。）
+（2.0 多模块资产名；1.x 发布包仍为 `es-rebuild-standalone-*.jar`。）
 
 首连档案持久在 `~/.es-console/`，重启即达。详见 [standalone/README.md](standalone/README.md)。
 
@@ -228,15 +228,15 @@ searchdeck:
     features:
       packs: [platform, search, index, lifecycle, observe, devtools]
       exclude-pages: []                 # 再隐藏单页，例如 [security]
-es:
-  rebuild:
+  elasticsearch:
     mode: console                       # rebuild-only：纯引擎；console：引擎 + 控制台
     console:
       store: sqlite                     # 作业+审计存哪：control-es / sqlite / jdbc
 ```
 
-平台层 `searchdeck.console.*` 与引擎层 `es.rebuild.*` 分离：前者描述「产品长什么样、
-暴露哪些模块」，后者描述重建/迁移/存储等运行参数。
+平台层 `searchdeck.console.*` 与引擎层 `searchdeck.elasticsearch.*` 分离：前者描述
+「产品长什么样、暴露哪些模块」，后者描述重建/迁移/存储等运行参数。一代 `es.rebuild.*`
+键仍作为别名可用（由环境后处理器透明桥接）。
 
 ### 4. HTTP 端点
 
@@ -277,6 +277,21 @@ flowchart LR
 
 **分层**：平台内核（品牌/功能包/宿主 SPI）→ 控制台模块（查询/索引/观测/安全）→
 引擎模块（重建/迁移/映射）。功能包在合约层显式声明，后端页面门仍按完整契约执法。
+
+### 项目结构
+
+```text
+searchdeck/
+├─ platform/                 searchdeck-platform：页面契约、功能包、品牌、宿主 SPI
+├─ modules/console/          searchdeck-console：引擎 + 控制台 + 内嵌 UI 资源
+├─ apps/server/              searchdeck-server：Kibana 式独立部署
+├─ integrations/quotehub/    searchdeck-quotehub：首个宿主适配器
+├─ ui/                       @searchdeck/ui：Vue 3 控制台源码
+└─ examples/demo-host/       可运行宿主示例
+```
+
+引擎与 console 的包依赖目前存在环（auth ↔ multicluster ↔ xmigrate ↔ config），
+因此 `engine/` 先作为 console 内的边界目录隔离，待接口反转后再独立成 artifact。
 
 ---
 
@@ -328,14 +343,18 @@ npm test                   # 分片全量
 ## 🛠️ 从源码构建
 
 ```bash
-git clone https://github.com/dengmeiluan/es-rebuild-spring-boot-starter.git
-cd es-rebuild-spring-boot-starter
+git clone https://github.com/dengmeiluan/searchdeck.git
+cd searchdeck
 
 # 前端（Node 18+）
-cd console && npm ci && npm run build && cd ..
+cd ui && npm ci && npm run build && cd ..
 
-# 后端（JDK 8+，会自动复用 console 构建产物）
-mvn clean package           # 未装 Maven 时用 ./mvnw clean package
+# 后端（JDK 8+，reactor 自动复用 ui 构建产物）
+./mvnw clean package
+
+# 测试
+cd ui && npm test && cd ..
+./mvnw test -Dconsole.build.skip=true
 ```
 
 可运行示例：[examples/demo-host](examples/demo-host/) —— 一个 `@Document` 实体 +

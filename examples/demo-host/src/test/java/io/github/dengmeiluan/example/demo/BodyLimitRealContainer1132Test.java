@@ -27,8 +27,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 且不依赖任何外部 ES。</p>
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"es.rebuild.console.home-dir=target/demo-body-probe",
-                "es.rebuild.console.sqlite-path=target/demo-body-probe/jobs.db"})
+        properties = {"searchdeck.elasticsearch.console.home-dir=target/demo-body-probe",
+                "searchdeck.elasticsearch.console.sqlite-path=target/demo-body-probe/jobs.db"})
 class BodyLimitRealContainer1132Test {
 
     @LocalServerPort

@@ -1,4 +1,9 @@
-# 配置参考（es.rebuild.*）
+# 配置参考
+
+> **2.0 前缀**：引擎层新前缀为 `searchdeck.elasticsearch.*`；下表保留 `es.rebuild.*`
+> 是因为它仍是一代兼容别名（启动期由 `SearchDeckConfigAliasPostProcessor` 透明映射），
+> 且现有测试/宿主配置以旧键为契约。新接入方建议使用新前缀。
+（es.rebuild.*）
 
 全部配置键来自 `EsRebuildProperties` 属性树，本页逐键对账 Java 默认值；
 `ConfigurationReferenceContractTest` 反射遍历属性树与本页逐键核对——**新增配置键忘写本页即测试红**。
@@ -240,7 +245,7 @@ tooltip 直接给出改法（`/{index}/_search`、PIT、控制面索引不可用
 | `GET /_cat/aliases`、`/_cat/shards`（`format=json`） | 放行 + 结果侧行过滤 | 与 `_cat/indices` 同族，逐行剔除控制面 |
 | `GET /_cat/count`、`/_stats`、`/_cluster/state`、`/_nodes` | 拒 | 聚合形态无法按行过滤 |
 
-**前后端同一份金标准**：`console/src/__tests__/fixtures/devtoolsScope.golden.json` 是两边
+**前后端同一份金标准**：`ui/src/__tests__/fixtures/devtoolsScope.golden.json` 是两边
 共用的作用域样例（`allow`=内核裁决，`ui`=前端应有态）。后端 `DevtoolsScopeGolden1005Test`
 断言内核与 `allow` 逐条一致，前端 `devtoolsScopeGolden1005.spec` 断言 UI 与 `ui` 逐条一致，
 并额外锁死不变量：**allow=true ⇒ 前端必须可执行**（有权限的人不能被拦）。改任一侧规则
@@ -248,7 +253,7 @@ tooltip 直接给出改法（`/{index}/_search`、PIT、控制面索引不可用
 
 **跨页「到 DevTools」入口门**：任何写 `sessionStorage['es-console.devtools.open']` 的跳转
 （含 `run:true` 自动执行档）都必须在**写入点附近**有 `canDevtools.value` 判定；收藏回放这类
-通用件用注入的 `canOpen(path)` 页面门。`console/scripts/perm-scan.mjs` 对其做机械检查，且
+通用件用注入的 `canOpen(path)` 页面门。`ui/scripts/perm-scan.mjs` 对其做机械检查，且
 `permScanSelfCheck1124.spec` 会注入违规反证规则本身仍有效——规则失效比没有规则更危险。
 
 **透传内核的越权矩阵**（`DevtoolsEscalationMatrix1004Test` 逐条锁定，约 60 条向量）：
@@ -289,7 +294,7 @@ E 数据面放行；F 根级 PIT/scroll 仅 DELETE 形态（释放）放行。
 
 ### 权限矩阵集成测试（三身份口径，可直接接发版冒烟）
 
-`console/scripts/perm-matrix.mjs`（`npm --prefix console run perm:matrix`）用真实 HTTP 跑
+`ui/scripts/perm-matrix.mjs`（`npm --prefix ui run perm:matrix`）用真实 HTTP 跑
 「授权用户 / 超管 / 零授权」三类身份，断言：
 
 - 授权用户：至少一个连接可写、至少一个只读；可写连接 DevTools 数据面放行、管理面读 403；

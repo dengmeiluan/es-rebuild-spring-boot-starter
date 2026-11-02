@@ -1,16 +1,16 @@
 # 贡献指南
 
-感谢关注 es-rebuild-spring-boot-starter！这是一个克制而专注的项目：**零停机重建 + 开箱即用的运维控制台**，
+感谢关注 searchdeck！这是一个克制而专注的项目：**零停机重建 + 开箱即用的运维控制台**，
 一个 jar 交付，宿主实现一个接口即可接入。提交贡献前请先读完本页，能省掉一轮返工。
 
 ## 环境准备
 
 ```bash
-git clone https://github.com/dengmeiluan/es-rebuild-spring-boot-starter.git
-cd es-rebuild-spring-boot-starter
+git clone https://github.com/dengmeiluan/searchdeck.git
+cd searchdeck
 
 # 前端（Node 18+；产物 git-ignored，构建时现生成）
-cd console && npm ci && cd ..
+cd ui && npm ci && cd ..
 
 # 后端（JDK 8+；默认构建会在 generate-resources 阶段自动调 vite）
 mvn clean test
@@ -24,14 +24,14 @@ mvn clean test
 
 ```bash
 node scripts/verify.mjs               # 本地全量（后端 fork 并行 + 前端分片并行）
-node scripts/verify.mjs --standalone  # 发版前追加 standalone 构建与冒烟
+node scripts/verify.mjs --server  # 发版前追加 server 构建与冒烟
 ```
 
 也可以按需单跑：
 
 ```bash
-cd console && npm test             # 前端全量（自动分片；失败文件自动串行复验）
-cd console && npm run test:serial  # 前端串行基准（排障/确认并发伪失败）
+cd ui && npm test             # 前端全量（自动分片；失败文件自动串行复验）
+cd ui && npm run test:serial  # 前端串行基准（排障/确认并发伪失败）
 mvn clean test -Dconsole.build.skip=true  # 后端全量（默认 4 fork；低核/CI 用 -DforkCount=N 覆盖）
 ```
 
@@ -72,7 +72,7 @@ mvn clean test -Dconsole.build.skip=true  # 后端全量（默认 4 fork；低�
 ## 提交规范
 
 - 提交信息一句话说清「改了什么、为什么」；一个提交一个主题。
-- 构建产物（`src/main/resources/static/console/`）、IDE 文件、本地日志不入库（`.gitignore` 已拦）。
+- 构建产物（`modules/console/src/main/resources/static/searchdeck/`）、IDE 文件、本地日志不入库（`.gitignore` 已拦）。
 - 文档现在时、无时间线、无占位符（`TODO`/`TBD`/`待补充` 会被文档契约测试拦截）。
 
 ## 报告问题

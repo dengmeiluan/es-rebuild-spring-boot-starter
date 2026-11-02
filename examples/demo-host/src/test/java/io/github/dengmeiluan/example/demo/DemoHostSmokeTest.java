@@ -15,8 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 控制台入口页、Setup 向导、实体自动注册扫描器全部就位。
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"es.rebuild.console.home-dir=target/demo-bootstrap",
-                "es.rebuild.console.sqlite-path=target/demo-bootstrap/jobs.db"})
+        properties = {"searchdeck.elasticsearch.console.home-dir=target/demo-bootstrap",
+                "searchdeck.elasticsearch.console.sqlite-path=target/demo-bootstrap/jobs.db"})
 class DemoHostSmokeTest {
 
     @LocalServerPort
@@ -28,7 +28,7 @@ class DemoHostSmokeTest {
     @Test
     public void bootsEmbeddedConsoleWithoutAnyHost() {
         ResponseEntity<String> page =
-                rest.getForEntity("http://localhost:" + port + "/es-rebuild.html", String.class);
+                rest.getForEntity("http://localhost:" + port + "/searchdeck.html", String.class);
         assertEquals(200, page.getStatusCodeValue(), "console entry page must be served");
 
         ResponseEntity<String> status =

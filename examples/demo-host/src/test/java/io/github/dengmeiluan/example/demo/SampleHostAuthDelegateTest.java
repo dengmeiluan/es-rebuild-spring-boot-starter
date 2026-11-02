@@ -1,8 +1,8 @@
 package io.github.dengmeiluan.example.demo;
 
-import io.github.dengmeiluan.es.rebuild.auth.ConsolePrincipal;
-import io.github.dengmeiluan.es.rebuild.auth.ConsoleRole;
-import io.github.dengmeiluan.es.rebuild.auth.DelegatedTokenRevocations;
+import io.github.dengmeiluan.searchdeck.console.auth.ConsolePrincipal;
+import io.github.dengmeiluan.searchdeck.console.auth.ConsoleRole;
+import io.github.dengmeiluan.searchdeck.console.auth.DelegatedTokenRevocations;
 import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletRequest;

@@ -5,7 +5,8 @@ target/
 !.mvn/wrapper/maven-wrapper.jar
 
 # 前端构建产物（打包时由 vite 现生成；pom 里有 require-console-assets 兜底校验）
-src/main/resources/static/console/
+modules/console/src/main/resources/static/console/
+modules/console/src/main/resources/static/searchdeck/
 
 # Node
 node_modules/
@@ -24,13 +25,13 @@ node_modules/
 Thumbs.db
 
 # local maintenance notes (kept out of the distribution; history lives in commit messages)
-console/docs/GOAL-*
+ui/docs/GOAL-*
 .tmp-prescan894.mjs
 # local test/verify artifacts (shard logs, JSON reports, browser profiles)
 .tmp/
 # local visual-test temp artifacts
-console/vite.browser.tmp.config.mjs
-console/vitest-final.json
+ui/vite.browser.tmp.config.mjs
+ui/vitest-final.json
 # one-off probe artifacts (screenshots / node dumps) — never distributed
 .tmp-*
 .workbuddy/

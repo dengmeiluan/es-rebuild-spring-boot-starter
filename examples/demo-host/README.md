@@ -1,21 +1,21 @@
-# demo-host — minimal embedded host
+# demo-host — minimal SearchDeck host
 
 The runnable version of the quick start: one `@Document` entity, one
-`@SpringBootApplication` class, and the full ops console (Setup wizard,
+`@SpringBootApplication` class, and the full SearchDeck console (Setup wizard,
 mapping auto-reconcile, adhoc rebuilds, live monitoring) — no other wiring.
 
 ## Run it
 
 ```bash
-# 1. install the starter into your local repository (from the repository root)
-mvn -o clean install -DskipTests
+# 1. install SearchDeck modules into your local repository (from the repository root)
+./mvnw -o clean install -DskipTests
 
 # 2. build & start the demo host
 cd examples/demo-host
 mvn spring-boot:run
 ```
 
-Open `http://localhost:8081/es-rebuild.html`, complete the Setup wizard with
+Open `http://localhost:8081/searchdeck.html`, complete the Setup wizard with
 your Elasticsearch address, then:
 
 - `Article` (`demo-article` index) is managed by mapping auto-register —
@@ -57,5 +57,5 @@ your permission system actually grants (see the authorization-key table in
 `docs/integration/configuration-reference.md`). Leave pages `null` only when you really
 want role-wide access.
 
-> The sample requires starter **1.0.66+** — earlier versions don't have the
+> The sample requires SearchDeck **2.0.0+** — earlier versions don't have the
 > `hasCredential`/`tokenOf`/`revoke` methods, and copying the sample against them won't compile.

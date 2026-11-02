@@ -42,9 +42,14 @@ searchdeck:
         - devtools
       # 单页再排除（例如不需要审计页时只留账号页）
       exclude-pages: []
+  elasticsearch:
+    mode: console
+    console:
+      store: sqlite
 ```
 
-- `searchdeck.console.*` 是平台层；`es.rebuild.*` 仍是引擎层，两者互不覆盖。
+- `searchdeck.console.*` 是平台层；`searchdeck.elasticsearch.*` 是引擎层，两者互不覆盖。
+  一代 `es.rebuild.*` 键仍可用（`SearchDeckConfigAliasPostProcessor` 透明桥接）。
 - 配置拼错的处理：未知包名 WARN 后忽略；显式列表全部未知时**启动失败**，避免静默空导航。
 - 前端导航、命令面板、数字/字母快捷键、深链守卫共用同一份运行时配置
   （`GET /internal/es/index/ui/config`）。
@@ -124,6 +129,8 @@ for (ConsolePageCatalog.Page page : catalog.getPages()) {
    `/internal/es/index/auth/ops-audit*`（保留 `/auth/ops-audit/mine` 自助面则按需放行）。
 
 ## 5. 升级与验收清单
+
+> 2026-11-02 本地验证：QuoteHub `mvn compile` 通过；六个接入契约测试 49 例全绿。
 
 - [ ] 依赖替换为 `io.github.dengmeiluan:searchdeck-console:2.0.0`（传递 `searchdeck-platform`）；
 - [ ] `EsConsoleAuthDelegate` / `LinkMenuProvisioner` / 连接中心贡献者编译通过；

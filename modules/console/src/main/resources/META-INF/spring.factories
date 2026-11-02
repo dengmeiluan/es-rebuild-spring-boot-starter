@@ -1,0 +1,6 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+io.github.dengmeiluan.searchdeck.console.config.EsRebuildAutoConfiguration,\
+io.github.dengmeiluan.searchdeck.console.compat.EsDateCompatAutoConfiguration
+
+org.springframework.boot.env.EnvironmentPostProcessor=\
+io.github.dengmeiluan.searchdeck.console.config.SearchDeckConfigAliasPostProcessor
