@@ -1160,10 +1160,13 @@ onMounted(() => {
             : bk === 'security-user-body'
               ? (sUserRegion === 'root' ? securityUserBodyKeyItems()
                 : sUserRegion === 'role-template' ? securityRoleTemplateKeyItems()
+                : sUserRegion === 'template-script' ? scriptObjectKeyItems()
                 : [])
             : bk === 'security-role-mapping-body'
               ? (rmRegion === 'root' ? securityRoleMappingBodyKeyItems()
                 : rmRegion === 'rules' || rmRegion === 'rule' ? securityRoleMappingRuleKeyItems()
+                : rmRegion === 'role-template' ? securityRoleTemplateKeyItems()
+                : rmRegion === 'template-script' ? scriptObjectKeyItems()
                 : [])
             : bk === 'security-api-key-body'
               ? (akRegion === 'root' ? securityApiKeyBodyKeyItems()

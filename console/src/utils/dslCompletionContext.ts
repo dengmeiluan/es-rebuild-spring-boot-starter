@@ -2364,10 +2364,14 @@ export function securityUserBodyKeyItems(): AssistItem[] {
 }
 
 /** 安全用户体区域：根 / role_templates 元素 */
-export function securityUserRegionAt(doc: string, offset: number): 'root' | 'role-template' | 'deep' {
+export function securityUserRegionAt(doc: string, offset: number):
+  'root' | 'role-template' | 'template-script' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
-  if (stack[0] === 'role_templates' && stack.length === 3) return 'role-template';
+  if (stack[0] === 'role_templates') {
+    if (stack.length === 3) return 'role-template';
+    if (stack.length === 4 && stack[2] === 'template') return 'template-script';
+  }
   return 'deep';
 }
 
@@ -2410,7 +2414,7 @@ export function securityRoleMappingRuleKeyItems(): AssistItem[] {
 
 /** 角色映射区域：根 / rules 对象 / all/any 元素·except 对象 / 更深 */
 export function securityRoleMappingRegionAt(doc: string, offset: number):
-  'root' | 'rules' | 'rule' | 'deep' {
+  'root' | 'rules' | 'rule' | 'role-template' | 'template-script' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
   if (stack[0] === 'rules') {
@@ -2418,6 +2422,10 @@ export function securityRoleMappingRegionAt(doc: string, offset: number):
     if (stack.length === 4 && (stack[1] === 'all' || stack[1] === 'any')) return 'rule';
     if (stack.length === 3 && stack[1] === 'except') return 'rule';
     return 'deep';
+  }
+  if (stack[0] === 'role_templates') {
+    if (stack.length === 3) return 'role-template';
+    if (stack.length === 4 && stack[2] === 'template') return 'template-script';
   }
   return 'deep';
 }

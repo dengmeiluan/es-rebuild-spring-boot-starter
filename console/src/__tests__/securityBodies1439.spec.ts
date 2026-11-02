@@ -85,7 +85,7 @@ describe('1439 安全体系写体分档', () => {
     const userAt = (s: string) => securityUserRegionAt(s, s.length);
     expect(userAt('{')).toBe('root');
     expect(userAt('{"role_templates": [{')).toBe('role-template');
-    expect(userAt('{"role_templates": [{"template": {')).toBe('deep');
+    expect(userAt('{"role_templates": [{"template": {')).toBe('template-script');
 
     const rmAt = (s: string) => securityRoleMappingRegionAt(s, s.length);
     expect(rmAt('{')).toBe('root');
@@ -94,6 +94,8 @@ describe('1439 安全体系写体分档', () => {
     expect(rmAt('{"rules": {"any": [{')).toBe('rule');
     expect(rmAt('{"rules": {"except": {')).toBe('rule');
     expect(rmAt('{"rules": {"field": {')).toBe('deep');
+    expect(rmAt('{"role_templates": [{')).toBe('role-template');
+    expect(rmAt('{"role_templates": [{"template": {')).toBe('template-script');
   });
 
   it('lint：合法体静默；根键/索引权限/应用/角色模板拼错分段点名；search 根键被拒', () => {

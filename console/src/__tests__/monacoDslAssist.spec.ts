@@ -1383,6 +1383,16 @@ describe('1439 安全体系写体补全', () => {
     ]);
   });
 
+  it('用户/映射 role_templates 的 template 给脚本键', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'security-user-body' } });
+    const u = '{\n  "role_templates": [\n    {\n      "template": {\n        "\n      }\n    }\n  ]\n}';
+    expect(suggest(u, u.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['source', 'lang', 'params', 'id']);
+
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'security-role-mapping-body' } });
+    const m = '{\n  "role_templates": [\n    {\n      "template": {\n        "\n      }\n    }\n  ]\n}';
+    expect(suggest(m, m.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['source', 'lang', 'params', 'id']);
+  });
+
   it('角色映射 rules 与 all 元素给规则键', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'security-role-mapping-body' } });
     const rules = '{\n  "rules": {\n    "\n  }\n}';
