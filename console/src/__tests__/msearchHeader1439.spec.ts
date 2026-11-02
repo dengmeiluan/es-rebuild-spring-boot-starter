@@ -7,6 +7,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { bodyKindForPath, msearchHeaderKeyItems, msearchHeaderLineAt } from '../utils/dslCompletionContext';
+import { ndjsonLint } from '../utils/bulkNdjson';
 
 describe('1439 _msearch 头行补全', () => {
   it('bodyKind：_msearch 升 msearch-body；模板版仍无档', () => {
@@ -35,5 +36,19 @@ describe('1439 _msearch 头行补全', () => {
       'index', 'search_type', 'routing', 'preference', 'ignore_unavailable',
       'allow_no_indices', 'expand_wildcards', 'ccs_minimize_roundtrips',
     ]);
+  });
+
+  it('配对口径：头行不含 index 也合法；落单/非法行给头体文案（不再套 bulk 动作文案）', () => {
+    expect(ndjsonLint('{"routing":"x"}\n{"query":{}}', 'msearch')?.level).toBe('ok');
+    const odd = ndjsonLint('{"index":"a"}\n{"query":{}}\n{"routing":"x"}', 'msearch');
+    expect(odd?.level).toBe('warn');
+    expect(odd?.msg).toContain('头行 2 行、查询体行 1 行');
+    expect(odd?.msg).not.toContain('动作');
+    const bad = ndjsonLint('{"routing":"x"}\n{bad', 'msearch');
+    expect(bad?.level).toBe('warn');
+    expect(bad?.msg).toContain('头行/查询体行');
+    expect(ndjsonLint('', 'msearch')).toBeNull();
+    /* 默认（bulk）口径不回归 */
+    expect(ndjsonLint('{"index":{}}\n{"a":1}')?.level).toBe('ok');
   });
 });

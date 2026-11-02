@@ -1348,12 +1348,15 @@ export function lintBodyKeys(obj: unknown, allowed: readonly string[], label: st
   return out;
 }
 
-/** NDJSON 体的配对 lint（_bulk/_msearch 每行一条）——DevTools 与 REST 两页共用同一 Finding 形态。 */
-export function lintNdjsonBody(body: string): Finding[] {
-  const r = ndjsonLint(body);
+/** NDJSON 体的配对 lint（_bulk/_msearch）——DevTools 与 REST 两页共用同一 Finding 形态。
+    mode=msearch 时按「头行+查询体行」口径，不用 bulk 的动作/文档文案。 */
+export function lintNdjsonBody(body: string, mode: 'bulk' | 'msearch' = 'bulk'): Finding[] {
+  const r = ndjsonLint(body, mode);
   return r && r.level === 'warn' ? [{
     rule: 'ndjson-pair', severity: 'warning', message: r.msg,
-    suggestion: '动作行（index/create/update/delete）与文档行必须逐行成对，每行都是单行合法 JSON',
+    suggestion: mode === 'msearch'
+      ? '头行（索引/检索参数）与查询体行必须逐行成对，每行都是单行合法 JSON'
+      : '动作行（index/create/update/delete）与文档行必须逐行成对，每行都是单行合法 JSON',
     path: '', anchor: '', nth: 0,
   }] : [];
 }

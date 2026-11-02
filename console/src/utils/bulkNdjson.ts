@@ -24,9 +24,25 @@ type NdjsonLint = { level: 'ok' | 'warn'; msg: string } | null;
 
 const BULK_OPS = ['index', 'create', 'update', 'delete'];
 
-export function ndjsonLint(text: string): NdjsonLint {
+export function ndjsonLint(text: string, mode: 'bulk' | 'msearch' = 'bulk'): NdjsonLint {
   const lines = String(text || '').split('\n').map(l => l.trim()).filter(Boolean);
   if (!lines.length) return null;
+  if (mode === 'msearch') {
+    let badJson = 0;
+    for (const l of lines) {
+      try { JSON.parse(l); } catch { badJson++; }
+    }
+    if (badJson) return { level: 'warn', msg: `${badJson} 行不是合法 JSON（头行/查询体行都必须是单行 JSON）` };
+    if (lines.length % 2 !== 0) {
+      const heads = Math.ceil(lines.length / 2);
+      const bodies = Math.floor(lines.length / 2);
+      return {
+        level: 'warn',
+        msg: `头行 ${heads} 行、查询体行 ${bodies} 行——数量不匹配（缺少${lines.length % 2 === 1 ? '查询体行' : '头行'}），执行会失败`,
+      };
+    }
+    return { level: 'ok', msg: `配对正常：头行 ${lines.length / 2} · 查询体行 ${lines.length / 2}` };
+  }
   let actions = 0, docs = 0, deletes = 0, badJson = 0;
   for (const l of lines) {
     let obj: any = null;
