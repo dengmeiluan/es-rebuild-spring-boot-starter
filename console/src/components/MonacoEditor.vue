@@ -268,6 +268,8 @@ const props = withDefaults(defineProps<{
     normalizers?: () => string[];
     filters?: () => string[];
     charFilters?: () => string[];
+    /** 1439：当前目标集群的索引名（_msearch 头行 index / _bulk 动作 _index 值位） */
+    indices?: () => string[];
     terms?: (field: string, prefix: string) => Promise<string[]>;
   };
 }>(), {
@@ -614,7 +616,29 @@ onMounted(() => {
            查询体行不拦截，回落下方 search 三档（体行本身就是一个完整查询）。 */
         if (bk === 'msearch-body' && msearchHeaderLineAt(doc, offset)) {
           const gm = dslKeyGuard(doc, offset);
-          if (!gm.inStr || gm.valueKey) return { suggestions: [] };
+          if (!gm.inStr) return { suggestions: [] };
+          if (gm.valueKey) {
+            /* 1439：头行 "index" 值位给当前集群索引名 */
+            if (gm.valueKey === 'index') {
+              const names = props.dslAssist!.indices?.() ?? [];
+              if (names.length) {
+                const iEnd = scanStringEnd(doc, Math.max(0, Math.min(offset, doc.length)));
+                const isp = model.getPositionAt(gm.strStart);
+                const iep = model.getPositionAt(iEnd);
+                const iRange = {
+                  startLineNumber: isp.lineNumber, startColumn: isp.column,
+                  endLineNumber: iep.lineNumber, endColumn: iep.column,
+                };
+                return { suggestions: names.map((v, i) => ({
+                  label: v, kind: monaco.languages.CompletionItemKind.Value,
+                  insertText: '"' + v + '"', range: iRange, command: ACCEPT_FORMAT_COMMAND,
+                  detail: '索引',
+                  filterText: dslFilterText(v), sortText: dslSortText(i, v),
+                })) };
+              }
+            }
+            return { suggestions: [] };
+          }
           const mEnd = scanStringEnd(doc, Math.max(0, Math.min(offset, doc.length)));
           const msp = model.getPositionAt(gm.strStart);
           const mep = model.getPositionAt(mEnd);
@@ -636,8 +660,30 @@ onMounted(() => {
            文档行是裸文档不出键。 */
         if (bk === 'bulk-body') {
           const gb = dslKeyGuard(doc, offset);
-          if (!gb.inStr || gb.valueKey) return { suggestions: [] };
+          if (!gb.inStr) return { suggestions: [] };
           if (bulkLineKindAt(doc, offset) === 'doc') return { suggestions: [] };
+          if (gb.valueKey) {
+            /* 1439：动作元数据 "_index" 值位给当前集群索引名 */
+            if (gb.valueKey === '_index') {
+              const names = props.dslAssist!.indices?.() ?? [];
+              if (names.length) {
+                const biEnd = scanStringEnd(doc, Math.max(0, Math.min(offset, doc.length)));
+                const bisp = model.getPositionAt(gb.strStart);
+                const biep = model.getPositionAt(biEnd);
+                const biRange = {
+                  startLineNumber: bisp.lineNumber, startColumn: bisp.column,
+                  endLineNumber: biep.lineNumber, endColumn: biep.column,
+                };
+                return { suggestions: names.map((v, i) => ({
+                  label: v, kind: monaco.languages.CompletionItemKind.Value,
+                  insertText: '"' + v + '"', range: biRange, command: ACCEPT_FORMAT_COMMAND,
+                  detail: '索引',
+                  filterText: dslFilterText(v), sortText: dslSortText(i, v),
+                })) };
+              }
+            }
+            return { suggestions: [] };
+          }
           const metaOp = bulkActionMetaAt(doc, offset);
           const bItems = metaOp ? bulkActionMetaKeyItems(metaOp) : bulkActionKeyItems();
           const bEnd = scanStringEnd(doc, Math.max(0, Math.min(offset, doc.length)));

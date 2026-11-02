@@ -397,7 +397,7 @@ const rtBodyKind = computed(() => bodyKindForPath(curEp.value?.path ?? path.valu
 /* terms 通道接值位动态候选（658 DqlQueryView 首发姊妹刀）——索引源=store.pickedIdx
  与 rtFields 同源（Rest 无路径索引派生，fields 同口径）；未选索引/异常恒 resolve [] 零扰动 */
 const rtTerms = useTermsSuggest(() => store.pickedIdx || '');
-const dslAssist = { fields: () => rtFields.value, bodyKind: () => rtBodyKind.value, terms: (f: string, p: string) => rtTerms.suggestAsync(f, p) };
+const dslAssist = { fields: () => rtFields.value, bodyKind: () => rtBodyKind.value, indices: () => store.indices.map(i => i.index), terms: (f: string, p: string) => rtTerms.suggestAsync(f, p) };
 /* body lint 静态体检——与 DevTools 同一分派：bulk/msearch→NDJSON 配对、
  settings→lintSettingsBody、mapping→lintMappingBody、search→查询规则、
  结构化体→lintStructuredBody（根键校验）；JSON 解析失败静默 */

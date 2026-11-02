@@ -1471,6 +1471,19 @@ describe('1439 _bulk 动作行补全', () => {
       expect(() => JSON.parse(acceptSnippet('{"update": {"', i) + '}}'), i.label + ' 接受后非法').not.toThrow();
     }
   });
+
+  it('动作元数据 "_index" 值位给当前集群索引名（接受即合法）', () => {
+    mountEditor({
+      modelValue: '{}',
+      dslAssist: { fields: () => FIELDS, bodyKind: () => 'bulk-body' as const, indices: () => ['logs-2026', 'metrics'] },
+    });
+    const doc = '{"index": {"_index": "';
+    const items = suggest(doc);
+    expect(items.map((i: any) => i.label)).toEqual(['logs-2026', 'metrics']);
+    for (const i of items) {
+      expect(() => JSON.parse(acceptSnippet(doc, i) + '}}'), i.label + ' 接受后非法').not.toThrow();
+    }
+  });
 });
 
 describe('1439 _msearch 头行补全', () => {
@@ -1493,6 +1506,19 @@ describe('1439 _msearch 头行补全', () => {
   it('负控：头行值位不出 search 根键/头键', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'msearch-body' as const } });
     expect(suggest('{"index": "')).toEqual([]);
+  });
+
+  it('头行 "index" 值位给当前集群索引名（接受即合法）', () => {
+    mountEditor({
+      modelValue: '{}',
+      dslAssist: { fields: () => FIELDS, bodyKind: () => 'msearch-body' as const, indices: () => ['logs-2026', 'metrics'] },
+    });
+    const doc = '{"index": "';
+    const items = suggest(doc);
+    expect(items.map((i: any) => i.label)).toEqual(['logs-2026', 'metrics']);
+    for (const i of items) {
+      expect(() => JSON.parse(acceptSnippet(doc, i) + '}'), i.label + ' 接受后非法').not.toThrow();
+    }
   });
 });
 

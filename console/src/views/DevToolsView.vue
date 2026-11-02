@@ -751,7 +751,7 @@ const bodyLang = computed(() => bodyLangForPath(cur.value?.path || ''));
  同源闭包（dtPathIdx||pickedIdx）现调现读：body 索引随 path 变时 suggest 请求跟着走
  （655 设计 -4：terms 闭包索引绑定=视图责任）；未选索引/异常恒 resolve [] 零扰动 */
 const dtTerms = useTermsSuggest(() => dtPathIdx.value || store.pickedIdx || '');
-const dslAssist = { fields: () => dtFields.value, bodyKind: () => dtBodyKind.value, terms: (f: string, p: string) => dtTerms.suggestAsync(f, p) };
+const dslAssist = { fields: () => dtFields.value, bodyKind: () => dtBodyKind.value, indices: () => store.indices.map(i => i.index), terms: (f: string, p: string) => dtTerms.suggestAsync(f, p) };
 /* 请求体 lint 静态体检。：按 dtBodyKind 路由分派——
  search→lintDsl / bulk（_bulk→none 档）→ndjsonLint（bulkNdjson 既有件复用不改）/
  settings→lintSettingsBody / mapping→lintMappingBody / 结构化体→lintBodyKeys 根键校验 /
