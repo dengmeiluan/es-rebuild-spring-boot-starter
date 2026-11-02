@@ -28,6 +28,8 @@ import {
   slmPolicyBodyKeyItems, slmConfigKeyItems, slmRetentionKeyItems,
   ilmPolicyBodyKeyItems, ilmPolicyKeyItems, ilmPhaseKeyItems, ilmPhaseConfigKeyItems, ilmActionKeyItems,
   watchBodyKeyItems, watchTriggerKeyItems, watchScheduleKeyItems, watchInputKeyItems, watchConditionKeyItems, watchActionTypeKeyItems,
+  securityRoleBodyKeyItems, securityRoleIndexKeyItems, securityRoleFieldSecurityKeyItems, securityRoleAppKeyItems,
+  securityUserBodyKeyItems, securityRoleTemplateKeyItems, securityRoleMappingBodyKeyItems, securityApiKeyBodyKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -149,6 +151,14 @@ function allProblems(): string[] {
   out.push(...snippetProblems('WI', watchInputKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('WC', watchConditionKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('WA', watchActionTypeKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('SRO', securityRoleBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('SRI', securityRoleIndexKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('SRF', securityRoleFieldSecurityKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('SRA', securityRoleAppKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('SU', securityUserBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('SRT', securityRoleTemplateKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('SRM', securityRoleMappingBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('SAK', securityApiKeyBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;
 }
 

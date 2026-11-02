@@ -50,6 +50,8 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   ilmPolicyBodyRootKeys, ilmPolicyKeys, ILM_PHASE_NAMES, ILM_PHASE_CONFIG_KEYS, ilmActionKeys,
   watchBodyRootKeys, WATCH_TRIGGER_TYPES, WATCH_SCHEDULE_TYPES, WATCH_INPUT_TYPES,
   WATCH_CONDITION_TYPES, WATCH_ACTION_TYPES,
+  securityRoleBodyRootKeys, securityRoleIndexKeys, securityRoleFieldSecurityKeys, securityRoleAppKeys,
+  securityUserBodyRootKeys, securityRoleTemplateKeys, securityRoleMappingBodyRootKeys, securityApiKeyBodyRootKeys,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -1438,6 +1440,35 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
       }
       return out;
     }
+    case 'security-role-body': {
+      const out = [...lintBodyKeys(obj, securityRoleBodyRootKeys, '安全角色体')];
+      if (Array.isArray(obj?.indices)) {
+        obj.indices.forEach((ix: any) => {
+          if (!ix || typeof ix !== 'object' || Array.isArray(ix)) return;
+          out.push(...lintBodyKeys(ix, securityRoleIndexKeys, '安全角色索引权限'));
+          out.push(...lintBodyKeys(ix.field_security, securityRoleFieldSecurityKeys, '安全角色字段权限'));
+        });
+      }
+      if (Array.isArray(obj?.applications)) {
+        obj.applications.forEach((ap: any) => {
+          if (!ap || typeof ap !== 'object' || Array.isArray(ap)) return;
+          out.push(...lintBodyKeys(ap, securityRoleAppKeys, '安全角色应用权限'));
+        });
+      }
+      return out;
+    }
+    case 'security-user-body': {
+      const out = [...lintBodyKeys(obj, securityUserBodyRootKeys, '安全用户体')];
+      if (Array.isArray(obj?.role_templates)) {
+        obj.role_templates.forEach((rt: any) => {
+          if (!rt || typeof rt !== 'object' || Array.isArray(rt)) return;
+          out.push(...lintBodyKeys(rt, securityRoleTemplateKeys, '安全用户角色模板'));
+        });
+      }
+      return out;
+    }
+    case 'security-role-mapping-body': return lintBodyKeys(obj, securityRoleMappingBodyRootKeys, '角色映射体');
+    case 'security-api-key-body': return lintBodyKeys(obj, securityApiKeyBodyRootKeys, 'API Key 体');
     default: return [];
   }
 }

@@ -1110,7 +1110,8 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
 export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'msearch-template-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'eql-body' | 'cluster-settings-body' | 'reroute-body' | 'allocation-explain-body'
-| 'snapshot-repo-body' | 'snapshot-create-body' | 'snapshot-restore-body' | 'slm-policy-body' | 'ilm-policy-body' | 'watch-body' | 'none';
+| 'snapshot-repo-body' | 'snapshot-create-body' | 'snapshot-restore-body' | 'slm-policy-body' | 'ilm-policy-body' | 'watch-body'
+| 'security-role-body' | 'security-user-body' | 'security-role-mapping-body' | 'security-api-key-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1236,6 +1237,14 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：Watcher watch 体（PUT /_watcher/watch/<id>，6.x 兼容 _xpack/watcher）：
      {trigger,input,condition,actions,metadata,throttle_period} */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_(?:xpack\/)?watcher\/watch\/[^/]+(\/|$)/.test(p)) return 'watch-body';
+  /* 1439：安全体系写体（PUT/POST /_security/<resource>/<name>）——各自根键与 SQL 查询无关 */
+  const secMethod = method.toUpperCase();
+  if (secMethod === 'PUT' || secMethod === 'POST') {
+    if (/(^|\/)_(?:xpack\/)?security\/role\/[^/]+(\/|$)/.test(p)) return 'security-role-body';
+    if (/(^|\/)_(?:xpack\/)?security\/user\/[^/]+(\/|$)/.test(p)) return 'security-user-body';
+    if (/(^|\/)_(?:xpack\/)?security\/role_mapping\/[^/]+(\/|$)/.test(p)) return 'security-role-mapping-body';
+  }
+  if (secMethod === 'POST' && /(^|\/)_(?:xpack\/)?security\/api_key\/?$/.test(p)) return 'security-api-key-body';
   if (p.includes('/_snapshot/')) {
     const segs = p.split('/').filter(Boolean);
     const si = segs.indexOf('_snapshot');
@@ -1898,6 +1907,119 @@ export function watchRegionAt(doc: string, offset: number): 'root' | 'trigger' |
   return 'deep';
 }
 
+/** 安全角色体（PUT/POST /_security/role/<name>）的根键 */
+export function securityRoleBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'cluster', detail: '集群级权限（monitor/manage_index_templates…）', snippet: true,
+      insertText: '"cluster": ["${1:monitor}"]' },
+    { label: 'indices', detail: '索引权限组（索引模式 + 权限 + 字段/查询限制）', snippet: true,
+      insertText: '"indices": [\n  {\n    "names": ["${1:logs-*}"],\n    "privileges": ["${2:read}"]\n  }\n]' },
+    { label: 'applications', detail: '应用权限（application/privileges/resources）', snippet: true,
+      insertText: '"applications": [\n  {\n    "application": "${1:my-app}",\n    "privileges": ["${2:read}"],\n    "resources": ["*"]\n  }\n]' },
+    { label: 'run_as', detail: '允许代表其执行请求的用户', snippet: true, insertText: '"run_as": ["${1:user1}"]' },
+    { label: 'metadata', detail: '附加到角色的自定义元数据', snippet: true, insertText: '"metadata": {\n  ${0}\n}' },
+    { label: 'transient_metadata', detail: '临时元数据（启用/禁用等）', snippet: true,
+      insertText: '"transient_metadata": {\n  ${0}\n}' },
+  ];
+}
+
+/** indices[] 元素的键 */
+export function securityRoleIndexKeyItems(): AssistItem[] {
+  return [
+    { label: 'names', detail: '索引/索引模式（支持通配）', snippet: true, insertText: '"names": ["${1:logs-*}"],\n    "privileges": ["${2:read}"]' },
+    { label: 'privileges', detail: '索引权限（read/write/manage/view_index_metadata…）', snippet: true,
+      insertText: '"privileges": ["${1:read}"]' },
+    { label: 'field_security', detail: '字段级安全（grant/except）', snippet: true,
+      insertText: '"field_security": {\n  "grant": ["${1:*}"],\n  "except": []\n}' },
+    { label: 'query', detail: '文档级查询限制（Query DSL 或 JSON 串）', snippet: true, insertText: '"query": {\n  ${0}\n}' },
+    { label: 'allow_restricted_indices', detail: '允许访问受限系统索引（默认 false）', snippet: true,
+      insertText: '"allow_restricted_indices": ${1|false,true|}' },
+  ];
+}
+
+/** indices[].field_security 的键 */
+export function securityRoleFieldSecurityKeyItems(): AssistItem[] {
+  return [
+    { label: 'grant', detail: '允许访问的字段（支持通配）', snippet: true, insertText: '"grant": ["${1:*}"],\n  "except": []' },
+    { label: 'except', detail: '从 grant 中排除的字段', snippet: true, insertText: '"except": ["${1:secret_field}"]' },
+  ];
+}
+
+/** applications[] 元素的键 */
+export function securityRoleAppKeyItems(): AssistItem[] {
+  return [
+    { label: 'application', detail: '应用名（如 kibana）', snippet: true, insertText: '"application": "${1:my-app}"' },
+    { label: 'privileges', detail: '应用内权限', snippet: true, insertText: '"privileges": ["${1:read}"]' },
+    { label: 'resources', detail: '资源范围（* 或具体对象）', snippet: true, insertText: '"resources": ["${1:*}"]' },
+  ];
+}
+
+/** 安全角色体区域：根 / indices 元素 / field_security / applications 元素 */
+export function securityRoleRegionAt(doc: string, offset: number): 'root' | 'index' | 'field-security' | 'app' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] === 'indices' && stack.length === 3) return 'index';
+  if (stack[0] === 'indices' && stack.length === 4 && stack[2] === 'field_security') return 'field-security';
+  if (stack[0] === 'applications' && stack.length === 3) return 'app';
+  return 'deep';
+}
+
+/** 安全用户体（PUT/POST /_security/user/<name>）的根键 */
+export function securityUserBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'password', detail: '明文密码（服务端哈希后存储；与 password_hash 二选一）', snippet: true,
+      insertText: '"password": "${1:change-me}"' },
+    { label: 'password_hash', detail: '已哈希密码（bcrypt），批量创建时用', snippet: true,
+      insertText: '"password_hash": "${1:$2a$10$...}"' },
+    { label: 'roles', detail: '授予的角色清单', snippet: true, insertText: '"roles": ["${1:viewer}"]' },
+    { label: 'full_name', detail: '显示名', snippet: true, insertText: '"full_name": "${1:张三}"' },
+    { label: 'email', detail: '邮箱', snippet: true, insertText: '"email": "${1:user@example.com}"' },
+    { label: 'metadata', detail: '附加到用户的自定义元数据', snippet: true, insertText: '"metadata": {\n  ${0}\n}' },
+    { label: 'enabled', detail: '是否启用（默认 true）', snippet: true, insertText: '"enabled": ${1|true,false|}' },
+    { label: 'role_templates', detail: '角色模板（按模板动态解析角色）', snippet: true,
+      insertText: '"role_templates": [\n  {\n    "template": { "source": "${1:mustache-template}" },\n    "format": "${2|string,json|}"\n  }\n]' },
+  ];
+}
+
+/** 安全用户体区域：根 / role_templates 元素 */
+export function securityUserRegionAt(doc: string, offset: number): 'root' | 'role-template' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] === 'role_templates' && stack.length === 3) return 'role-template';
+  return 'deep';
+}
+
+/** role_templates[] 元素的键 */
+export function securityRoleTemplateKeyItems(): AssistItem[] {
+  return [
+    { label: 'template', detail: '模板对象（source 为 Mustache 表达式）', snippet: true,
+      insertText: '"template": { "source": "${1:mustache-template}" }' },
+    { label: 'format', detail: '模板输出格式（string/json）', snippet: true, insertText: '"format": "${1|string,json|}"' },
+  ];
+}
+
+/** 角色映射体（PUT/POST /_security/role_mapping/<name>）的根键 */
+export function securityRoleMappingBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'roles', detail: '匹配时授予的角色清单', snippet: true, insertText: '"roles": ["${1:viewer}"]' },
+    { label: 'enabled', detail: '是否启用该映射（默认 true）', snippet: true, insertText: '"enabled": ${1|true,false|}' },
+    { label: 'rules', detail: '匹配规则（field/all/any/except…）', snippet: true,
+      insertText: '"rules": {\n  "field": { "${1:username}": "${2:jdoe}" }\n}' },
+    { label: 'metadata', detail: '附加到映射的自定义元数据', snippet: true, insertText: '"metadata": {\n  ${0}\n}' },
+  ];
+}
+
+/** API Key 创建体（POST /_security/api_key）的根键 */
+export function securityApiKeyBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'name', detail: 'API Key 名称（便于识别/吊销）', snippet: true, insertText: '"name": "${1:my-api-key}"' },
+    { label: 'expiration', detail: '有效期（如 1d/30d；省略=不过期）', snippet: true, insertText: '"expiration": "${1:1d}"' },
+    { label: 'role_descriptors', detail: '该 Key 的角色权限（结构同安全角色体）', snippet: true,
+      insertText: '"role_descriptors": {\n  ${0}\n}' },
+    { label: 'metadata', detail: '附加到 Key 的自定义元数据', snippet: true, insertText: '"metadata": {\n  ${0}\n}' },
+  ];
+}
+
 /** 分片分配诊断体（POST /_cluster/allocation/explain）的根键 */
 export function allocationExplainBodyKeyItems(): AssistItem[] {
   return [
@@ -2452,6 +2574,8 @@ export const STRUCTURED_VALUE_ENUMS: Record<string, { values: string[]; quoted: 
   include_global_state: { values: ['false', 'true'], quoted: false, detail: '包含集群全局状态（高危）' },
   partial: { values: ['false', 'true'], quoted: false, detail: '允许部分分片/恢复' },
   include_aliases: { values: ['true', 'false'], quoted: false, detail: '恢复时包含别名' },
+  enabled: { values: ['true', 'false'], quoted: false, detail: '是否启用' },
+  allow_restricted_indices: { values: ['false', 'true'], quoted: false, detail: '允许访问受限系统索引' },
   index_include_frozen: { values: ['true', 'false'], quoted: false, detail: '含冻结索引' },
   _source: { values: ['true', 'false'], quoted: false, detail: '回源开关（也可传字段数组）' },
   offsets: { values: ['false', 'true'], quoted: false, detail: '返回词项偏移' },
@@ -2636,6 +2760,14 @@ export const ilmPolicyBodyRootKeys = ilmPolicyBodyKeyItems().map(i => i.label);
 export const ilmPolicyKeys = ilmPolicyKeyItems().map(i => i.label);
 export const ilmActionKeys = [...ILM_ACTIONS];
 export const watchBodyRootKeys = watchBodyKeyItems().map(i => i.label);
+export const securityRoleBodyRootKeys = securityRoleBodyKeyItems().map(i => i.label);
+export const securityRoleIndexKeys = securityRoleIndexKeyItems().map(i => i.label);
+export const securityRoleFieldSecurityKeys = securityRoleFieldSecurityKeyItems().map(i => i.label);
+export const securityRoleAppKeys = securityRoleAppKeyItems().map(i => i.label);
+export const securityUserBodyRootKeys = securityUserBodyKeyItems().map(i => i.label);
+export const securityRoleTemplateKeys = securityRoleTemplateKeyItems().map(i => i.label);
+export const securityRoleMappingBodyRootKeys = securityRoleMappingBodyKeyItems().map(i => i.label);
+export const securityApiKeyBodyRootKeys = securityApiKeyBodyKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

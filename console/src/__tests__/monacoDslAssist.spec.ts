@@ -1244,6 +1244,54 @@ describe('1439 Watcher 体补全', () => {
   });
 });
 
+describe('1439 安全体系写体补全', () => {
+  it('角色：根六键 → indices 元素 → field_security → applications 元素', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'security-role-body' } });
+    const root = '{\n  "\n}';
+    expect(suggest(root, 5).map(i => i.label)).toEqual([
+      'cluster', 'indices', 'applications', 'run_as', 'metadata', 'transient_metadata',
+    ]);
+
+    const ix = '{\n  "indices": [\n    {\n      "\n    }\n  ]\n}';
+    expect(suggest(ix, ix.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
+      'names', 'privileges', 'field_security', 'query', 'allow_restricted_indices',
+    ]);
+
+    const fs = '{\n  "indices": [\n    {\n      "field_security": {\n        "\n      }\n    }\n  ]\n}';
+    expect(suggest(fs, fs.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['grant', 'except']);
+
+    const app = '{\n  "applications": [\n    {\n      "\n    }\n  ]\n}';
+    expect(suggest(app, app.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['application', 'privileges', 'resources']);
+
+    const deep = '{\n  "indices": [\n    {\n      "names": [\n        "\n      ]\n    }\n  ]\n}';
+    expect(suggest(deep, deep.lastIndexOf('"') + 1), '索引模式数组位不出键').toEqual([]);
+  });
+
+  it('用户：根八键 → role_templates 元素两键；布尔裸值位给 true/false', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'security-user-body' } });
+    const root = '{\n  "\n}';
+    expect(suggest(root, 5).map(i => i.label)).toEqual([
+      'password', 'password_hash', 'roles', 'full_name', 'email', 'metadata', 'enabled', 'role_templates',
+    ]);
+    const rt = '{\n  "role_templates": [\n    {\n      "\n    }\n  ]\n}';
+    expect(suggest(rt, rt.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['template', 'format']);
+    const en = '{"enabled": }';
+    expect(suggest(en, en.indexOf('}')).map(i => i.label)).toEqual(['true', 'false']);
+  });
+
+  it('角色映射根键', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'security-role-mapping-body' } });
+    const root = '{\n  "\n}';
+    expect(suggest(root, 5).map(i => i.label)).toEqual(['roles', 'enabled', 'rules', 'metadata']);
+  });
+
+  it('API Key 根键', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'security-api-key-body' } });
+    const root = '{\n  "\n}';
+    expect(suggest(root, 5).map(i => i.label)).toEqual(['name', 'expiration', 'role_descriptors', 'metadata']);
+  });
+});
+
 describe('1439 子句体键位（query-body-key / clause-field-key / retriever-body-key）', () => {
   it('bool 体给 must/filter/should/must_not，接受后 JSON 合法', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
