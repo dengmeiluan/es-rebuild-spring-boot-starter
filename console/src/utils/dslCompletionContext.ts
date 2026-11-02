@@ -1117,7 +1117,7 @@ export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 
 | 'security-api-key-query-body' | 'security-api-key-invalidate-body' | 'ml-filter-update-body'
 | 'security-cross-cluster-api-key-body' | 'watch-execute-body'
 | 'security-privilege-body' | 'ilm-move-body' | 'snapshot-clone-body' | 'watch-inline-execute-body'
-| 'snapshot-mount-body' | 'none';
+| 'snapshot-mount-body' | 'nodes-reload-secure-settings-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1324,6 +1324,10 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：许可证更新体（PUT|POST /_license）是 {license|licenses:[…]}；
      start_trial/start_basic 的 acknowledge 是查询参数，不含在本档。 */
   if ((secMethod === 'PUT' || secMethod === 'POST') && /(^|\/)_license\/?$/.test(p)) return 'license-body';
+  /* 1439：重载节点密钥库（POST /_nodes[/<node_id>]/reload_secure_settings）体是
+     {secure_settings_password}——默认 search 档会给 query/aggs 全非法键。 */
+  if (method.toUpperCase() === 'POST'
+      && /(^|\/)_nodes\/(?:[^/]+\/)?reload_secure_settings\/?$/.test(p)) return 'nodes-reload-secure-settings-body';
   if (p.includes('/_snapshot/')) {
     const segs = p.split('/').filter(Boolean);
     const si = segs.indexOf('_snapshot');
@@ -1340,8 +1344,10 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
        {index,renamed_index,index_settings,ignore_index_settings,storage} */
     if (after === 3 && m === 'POST' && segs[si + 3] === '_mount') return 'snapshot-mount-body';
   }
-  if (p.includes('_settings')) return 'settings';
-  if (p.includes('_mapping')) return 'mapping';
+  /* 段精确：只能认路径里的 _settings / _mapping 段。
+     子串口径会把 /_nodes/reload_secure_settings、/_security/role_mapping 误吃。 */
+  if (/(^|\/)_settings(\/|$)/.test(p)) return 'settings';
+  if (/(^|\/)_mapping(\/|$)/.test(p)) return 'mapping';
   /* 1439：PUT /<索引名> = 创建索引——体是 {settings, mappings, aliases}，不是 search body */
   if (method.toUpperCase() === 'PUT' && /^\/[^\/_]+$/.test(p)) return 'index-body';
   /* 1439：PUT /<索引名>/_alias/<别名> 的体是别名配置（filter/routing/is_write_index…） */
@@ -2929,6 +2935,14 @@ export function snapshotMountBodyKeyItems(): AssistItem[] {
   ];
 }
 
+/** 重载节点密钥库体（POST /_nodes[/<node_id>]/reload_secure_settings）的根键 */
+export function nodesReloadSecureSettingsBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'secure_settings_password', detail: '密钥库密码（无密码库可省略）', snippet: true,
+      insertText: '"secure_settings_password": "${1:keystore-password}"' },
+  ];
+}
+
 /** 许可证更新体（PUT|POST /_license）的根键 */
 export function licenseBodyKeyItems(): AssistItem[] {
   return [
@@ -3819,6 +3833,7 @@ export const ilmMoveStepKeys = ilmMoveStepKeyItems().map(i => i.label);
 export const snapshotCloneBodyRootKeys = snapshotCloneBodyKeyItems().map(i => i.label);
 export const watchInlineExecuteBodyRootKeys = watchInlineExecuteBodyKeyItems().map(i => i.label);
 export const snapshotMountBodyRootKeys = snapshotMountBodyKeyItems().map(i => i.label);
+export const nodesReloadSecureSettingsBodyRootKeys = nodesReloadSecureSettingsBodyKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

@@ -91,6 +91,8 @@ const MATRIX: Row[] = [
   ['/_watcher/watch/error-rate/_execute', 'POST', 'watch-execute-body'],
   ['/_watcher/watch/_execute', 'POST', 'watch-inline-execute-body'],
   ['/_license', 'PUT', 'license-body'],
+  ['/_nodes/reload_secure_settings', 'POST', 'nodes-reload-secure-settings-body'],
+  ['/_nodes/node-a/reload_secure_settings', 'POST', 'nodes-reload-secure-settings-body'],
   ['/idx/_close', 'POST', 'none'],
   ['/idx/_forcemerge', 'POST', 'none'],
   ['/_scripts', 'GET', 'none'],
@@ -113,7 +115,7 @@ const ALL_KINDS: BodyKind[] = [
   'security-api-key-invalidate-body', 'ml-filter-update-body',
   'security-cross-cluster-api-key-body', 'watch-execute-body',
   'security-privilege-body', 'ilm-move-body', 'snapshot-clone-body',
-  'watch-inline-execute-body', 'snapshot-mount-body', 'none',
+  'watch-inline-execute-body', 'snapshot-mount-body', 'nodes-reload-secure-settings-body', 'none',
 ];
 
 describe('1439 请求体档位路由矩阵', () => {
@@ -139,6 +141,7 @@ describe('1439 请求体档位路由矩阵', () => {
       ['/_ingest/pipeline/logs-v1', 'GET', 'search'],
       ['/_security/api_key', 'GET', 'search'],
       ['/_security/role/analyst', 'GET', 'search'],
+      ['/_security/role_mapping/devs', 'GET', 'search'],
       ['/_security/user/jdoe', 'DELETE', 'search'],
       ['/_ilm/policy/nightly', 'GET', 'search'],
       ['/_ilm/move/logs', 'GET', 'search'],
@@ -162,6 +165,8 @@ describe('1439 请求体档位路由矩阵', () => {
       ['/_ccr/auto_follow/leader', 'GET', 'search'],
       ['/_ccr/auto_follow', 'PUT', 'search'],
       ['/_license', 'GET', 'search'],
+      ['/_nodes/reload_secure_settings', 'GET', 'search'],
+      ['/_nodes/stats', 'POST', 'search'],
       ['/_license/start_trial', 'POST', 'search'],
       ['/_security/api_key/grant', 'GET', 'search'],
       ['/_security/privilege/myapp/read', 'GET', 'search'],
@@ -231,6 +236,7 @@ describe('1439 请求体档位路由矩阵', () => {
       ['/{index}/_ccr/follow', 'ccr-follow-body'],
       ['/_ccr/auto_follow/{cluster}', 'ccr-auto-follow-body'],
       ['/_license', 'license-body'],
+      ['/_nodes/reload_secure_settings', 'nodes-reload-secure-settings-body'],
       ['/_cluster/reroute', 'reroute-body'],
       ['/_cluster/allocation/explain', 'allocation-explain-body'],
       ['/_cluster/settings', 'cluster-settings-body'],

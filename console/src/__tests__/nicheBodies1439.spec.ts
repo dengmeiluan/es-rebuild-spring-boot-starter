@@ -25,6 +25,7 @@ import {
   securityCrossClusterApiKeyBodyRootKeys, securityCrossClusterAccessKeys, securityCrossClusterAccessEntryKeys,
   watchExecuteBodyRootKeys, securityPrivilegeBodyRootKeys, ilmMoveBodyRootKeys, ilmMoveStepKeys,
   snapshotCloneBodyRootKeys, watchInlineExecuteBodyRootKeys, snapshotMountBodyRootKeys,
+  nodesReloadSecureSettingsBodyRootKeys,
   licenseBodyRootKeys, licenseEntryKeys,
 } from '../utils/dslCompletionContext';
 import { lintStructuredBody } from '../utils/dslLint';
@@ -52,6 +53,8 @@ describe('1439 外围写体：路由按方法/子路径精确分派', () => {
     expect(bodyKindForPath('/_snapshot/repo/snap/_clone', 'PUT')).toBe('snapshot-clone-body');
     expect(bodyKindForPath('/_snapshot/repo/snap/_mount', 'POST')).toBe('snapshot-mount-body');
     expect(bodyKindForPath('/_watcher/watch/_execute', 'POST')).toBe('watch-inline-execute-body');
+    expect(bodyKindForPath('/_nodes/reload_secure_settings', 'POST')).toBe('nodes-reload-secure-settings-body');
+    expect(bodyKindForPath('/_nodes/node-a/reload_secure_settings', 'POST')).toBe('nodes-reload-secure-settings-body');
     expect(bodyKindForPath('/_license', 'PUT')).toBe('license-body');
     expect(bodyKindForPath('/_license', 'POST')).toBe('license-body');
   });
@@ -85,6 +88,8 @@ describe('1439 外围写体：路由按方法/子路径精确分派', () => {
     expect(bodyKindForPath('/_snapshot/repo/snap/_mount', 'GET')).toBe('search');
     expect(bodyKindForPath('/_snapshot/repo/snap/_mount', 'PUT')).toBe('search');
     expect(bodyKindForPath('/_watcher/watch/_execute', 'GET')).toBe('search');
+    expect(bodyKindForPath('/_nodes/reload_secure_settings', 'GET')).toBe('search');
+    expect(bodyKindForPath('/_nodes/stats', 'POST')).toBe('search');
     /* 按 id 试跑仍是独立档，不被内联规则吞 */
     expect(bodyKindForPath('/_watcher/watch/error-rate/_execute', 'POST')).toBe('watch-execute-body');
   });
@@ -129,6 +134,7 @@ describe('1439 外围写体：目录与 lint 同源', () => {
     expect(watchInlineExecuteBodyRootKeys).toEqual([
       'watch', 'trigger_data', 'alternative_input', 'ignore_condition', 'action_modes', 'record_execution',
     ]);
+    expect(nodesReloadSecureSettingsBodyRootKeys).toEqual(['secure_settings_password']);
     expect(licenseBodyRootKeys).toEqual(['licenses', 'license']);
     expect(licenseEntryKeys).toContain('uid');
     expect(licenseEntryKeys).toContain('max_resource_units');
@@ -153,6 +159,8 @@ describe('1439 外围写体：目录与 lint 同源', () => {
       '{"indices":"logs-*","index_settings":{"index.number_of_replicas":1},"ignore_index_settings":["index.refresh_interval"]}')).toEqual([]);
     expect(lintStructuredBody('snapshot-mount-body',
       '{"index":"logs","renamed_index":"logs-restored","storage":"shared_cache"}')).toEqual([]);
+    expect(lintStructuredBody('nodes-reload-secure-settings-body',
+      '{"secure_settings_password":"secret"}')).toEqual([]);
     expect(lintStructuredBody('watch-inline-execute-body',
       '{"watch":{"trigger":{"schedule":{"interval":"5m"}},"input":{"simple":{}},'
       + '"condition":{"always":{}},"actions":{"log":{"logging":{"text":"fired"}}}},'
@@ -206,6 +214,8 @@ describe('1439 外围写体：目录与 lint 同源', () => {
       .some(f => f.message.includes('克隆快照体'))).toBe(true);
     expect(lintStructuredBody('snapshot-mount-body', '{"idx":[]}')
       .some(f => f.message.includes('挂载快照体'))).toBe(true);
+    expect(lintStructuredBody('nodes-reload-secure-settings-body', '{"password":"x"}')
+      .some(f => f.message.includes('重载密钥库体'))).toBe(true);
     expect(lintStructuredBody('watch-inline-execute-body', '{"watc":{}}')
       .some(f => f.message.includes('内联试跑 Watch 体'))).toBe(true);
     expect(lintStructuredBody('watch-inline-execute-body', '{"watch":{"triger":{}}}')
@@ -333,7 +343,7 @@ describe('1439 外围写体：W6/lint 接线在（只加路由不算完成）', 
       'security-api-key-query-body', 'security-api-key-invalidate-body', 'ml-filter-update-body',
       'security-cross-cluster-api-key-body', 'watch-execute-body',
       'security-privilege-body', 'ilm-move-body', 'snapshot-clone-body', 'watch-inline-execute-body',
-      'snapshot-mount-body',
+      'snapshot-mount-body', 'nodes-reload-secure-settings-body',
     ]) {
       expect(monacoSrc, k).toContain(`bk === '${k}'`);
     }
@@ -347,7 +357,7 @@ describe('1439 外围写体：W6/lint 接线在（只加路由不算完成）', 
       'security-api-key-query-body', 'security-api-key-invalidate-body', 'ml-filter-update-body',
       'security-cross-cluster-api-key-body', 'watch-execute-body',
       'security-privilege-body', 'ilm-move-body', 'snapshot-clone-body', 'watch-inline-execute-body',
-      'snapshot-mount-body',
+      'snapshot-mount-body', 'nodes-reload-secure-settings-body',
     ]) {
       expect(lintSrc, k).toContain(`case '${k}'`);
     }

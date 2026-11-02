@@ -53,6 +53,8 @@ export const ES_ENDPOINTS: EsEndpoint[] = [
   { methods: ['POST'], path: '/_cluster/reroute', doc: '分片重路由（move / allocate_* / cancel）',
     body: '{\n  "commands": [\n    { "move": { "index": "my-index", "shard": 0, "from_node": "node-a", "to_node": "node-b" } }\n  ]\n}' },
   { methods: ['GET'], path: '/_nodes/stats', doc: '节点统计' },
+  { methods: ['POST'], path: '/_nodes/reload_secure_settings', doc: '重载节点密钥库（改 secure settings 后）',
+    body: '{\n  "secure_settings_password": "keystore-password"\n}' },
   { methods: ['GET'], path: '/_tasks', doc: '任务清单' },
   { methods: ['GET', 'POST'], path: '/{index}/_search/template', doc: '搜索模板执行' },
   { methods: ['GET', 'POST'], path: '/{index}/_validate/query', doc: '查询校验', body: '{\n  "query": { "match_all": {} }\n}' },
