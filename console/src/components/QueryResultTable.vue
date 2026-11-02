@@ -31,9 +31,9 @@
  表格档恒在；aria-pressed 可达。缺省 viewSeg=false 不渲染（全站零增量） -->
         <div v-if="viewSegOn" class="seg qrt-view-seg" role="group" aria-label="展示形式">
           <button type="button" :class="{ on: effView === 'table' }" :aria-pressed="effView === 'table'" @click="altView = 'table'">表格</button>
-          <button v-if="effJsonHtml != null" type="button" :class="{ on: effView === 'json' }" :aria-pressed="effView === 'json'" @click="altView = 'json'">JSON</button>
-          <button v-if="effTreeData != null" type="button" :class="{ on: effView === 'tree' }" :aria-pressed="effView === 'tree'" @click="altView = 'tree'">Tree</button>
-          <button v-if="effCardHits != null" type="button" :class="{ on: effView === 'cards' }" :aria-pressed="effView === 'cards'" @click="altView = 'cards'">卡片</button>
+          <button v-if="altJsonAvailable" type="button" :class="{ on: effView === 'json' }" :aria-pressed="effView === 'json'" @click="altView = 'json'">JSON</button>
+          <button v-if="altTreeAvailable" type="button" :class="{ on: effView === 'tree' }" :aria-pressed="effView === 'tree'" @click="altView = 'tree'">Tree</button>
+          <button v-if="altCardAvailable" type="button" :class="{ on: effView === 'cards' }" :aria-pressed="effView === 'cards'" @click="altView = 'cards'">卡片</button>
         </div>
         <!-- bar-prepend 槽（bar-left 最前段，RT 541 同款平移）——QRT 宿主视图
  （SystemView/LuceneQueryView）的视图切换 seg/分页器寄居入口（「翻页、展示形式
@@ -189,9 +189,9 @@
  pagerInHead 同口径；注释详见 prefsOn 主壳分支） -->
         <div v-if="viewSegOn" class="seg qrt-view-seg" role="group" aria-label="展示形式">
           <button type="button" :class="{ on: effView === 'table' }" :aria-pressed="effView === 'table'" @click="altView = 'table'">表格</button>
-          <button v-if="effJsonHtml != null" type="button" :class="{ on: effView === 'json' }" :aria-pressed="effView === 'json'" @click="altView = 'json'">JSON</button>
-          <button v-if="effTreeData != null" type="button" :class="{ on: effView === 'tree' }" :aria-pressed="effView === 'tree'" @click="altView = 'tree'">Tree</button>
-          <button v-if="effCardHits != null" type="button" :class="{ on: effView === 'cards' }" :aria-pressed="effView === 'cards'" @click="altView = 'cards'">卡片</button>
+          <button v-if="altJsonAvailable" type="button" :class="{ on: effView === 'json' }" :aria-pressed="effView === 'json'" @click="altView = 'json'">JSON</button>
+          <button v-if="altTreeAvailable" type="button" :class="{ on: effView === 'tree' }" :aria-pressed="effView === 'tree'" @click="altView = 'tree'">Tree</button>
+          <button v-if="altCardAvailable" type="button" :class="{ on: effView === 'cards' }" :aria-pressed="effView === 'cards'" @click="altView = 'cards'">卡片</button>
         </div>
         <slot name="bar-prepend" />
         <Pagination v-if="pagerHeadOn" :page="pagerPage" :total-pages="pagerTotalPages" :page-size="pagerSize" :disabled="pagerDisabled"
@@ -256,10 +256,10 @@
       <!-- 1356：rows 派生档也要带上文档导航（此前只传 tree-data，导航条读不到条数
            显示「0 命中」，_id 下拉也空着） -->
       <AltHitsViews v-if="effView === 'json'" view="json" :json-html="effJsonHtml"
-        :doc-count="effDocs?.length || 0" :doc-ids="effDocIds" />
+        :doc-count="effDocs?.length || 0" :doc-ids="effDocIds" @open-doc-at="openAltDocAt" />
       <AltHitsViews v-else-if="effView === 'tree'" view="tree" :tree-data="effTreeData"
-        :doc-count="effDocs?.length || 0" :doc-ids="effDocIds" />
-      <AltHitsViews v-else view="cards" :hits="cardHitsAdapted" @open-doc="emit('open-doc', $event)" />
+        :doc-count="effDocs?.length || 0" :doc-ids="effDocIds" @open-doc-at="openAltDocAt" />
+      <AltHitsViews v-else view="cards" :hits="cardHitsAdapted" @open-doc="openAltCardDoc" />
     </div>
     <!-- loading 骨架态（消费方执行中传 :loading——四态互斥 G1-B1 同款，骨架优先于空态）；
  hideBody（RT 541 同款平移）——三分支链各加缺省恒真的 !hideBody 守卫，
@@ -542,15 +542,15 @@
     <n-drawer v-model:show="rdwOpen" :width="rdwW" placement="right">
       <n-drawer-content title="行详情" closable>
         <div v-if="rdwRow" class="qrt-rdw-body">
-          <div class="qrt-rdw-meta mono">第 {{ rdwRow.ri + 1 }} 行 · {{ shownCols.length }} 列</div>
-          <div v-for="(c, i) in shownCols" :key="c" class="qrt-rdw-row">
+          <div class="qrt-rdw-meta mono">第 {{ rdwRow.ri + 1 }} 行 · {{ rdwCols.length }} 列</div>
+          <div v-for="(c, i) in rdwCols" :key="c" class="qrt-rdw-row">
             <span class="qrt-rdw-k mono" :title="c">{{ c }}</span>
-            <span class="qrt-rdw-v mono" :title="rdwRow ? fullText(renderRows[rdwRow.ri]?.[i]) : ''">{{ rdwRow ? cellText(renderRows[rdwRow.ri]?.[i]) : '' }}</span>
-            <button class="btn ghost xs" :aria-label="'复制 ' + c" title="复制该格全文" @click="copyDrawerCell(rdwRow.ri, i)"><Copy :size="11" /></button>
+            <span class="qrt-rdw-v mono" :title="fullText(rdwCells?.[i])">{{ cellText(rdwCells?.[i]) }}</span>
+            <button class="btn ghost xs" :aria-label="'复制 ' + c" title="复制该格全文" @click="copyDrawerCell(i)"><Copy :size="11" /></button>
           </div>
         </div>
         <template #footer>
-          <button v-if="rdwRow" class="btn sm" :aria-label="'复制行 JSON（第 ' + (rdwRow.ri + 1) + ' 行）'" @click="copyRowJson(rdwRow.ri)"><Braces :size="12" /> 复制整行 JSON</button>
+          <button v-if="rdwRow" class="btn sm" :aria-label="'复制行 JSON（第 ' + (rdwRow.ri + 1) + ' 行）'" @click="copyDrawerRowJson()"><Braces :size="12" /> 复制整行 JSON</button>
         </template>
       </n-drawer-content>
     </n-drawer>
@@ -932,6 +932,12 @@ const derivedJsonHtml = computed<string | undefined>(() => {
   return highlightJson(JSON.stringify(payload, null, 2));
 });
 const effJsonHtml = computed(() => props.jsonHtml ?? derivedJsonHtml.value);
+/* 1439：工具栏按钮只问「这档有没有数据」，不要为了出按钮而提前把 200×23 行
+   拼成 JSON 高亮 HTML（首屏一次 ~40-60ms）。真正的内容等切到该档再算（computed 懒求值）。 */
+const rowsDerivable = computed(() => !!(props.cols?.length && props.rows?.length));
+const altJsonAvailable = computed(() => props.jsonHtml != null || rowsDerivable.value);
+const altTreeAvailable = computed(() => props.treeData != null || rowsDerivable.value);
+const altCardAvailable = computed(() => props.cardHits != null || (!props.treeData && rowsDerivable.value));
 /* 1356：rows 通道也要有 Tree / 卡片两档——此前只有 hits 型宿主（DQ/IH）会传
    treeData/cardHits，SQL 桌面的 rows 结果永远只有「表格 / JSON」两档，用户看到的是
    「同一张表，换个页面就少两种看法」。这里在**内核内**由 cols+rows 派生（任何 rows 宿主
@@ -963,14 +969,31 @@ const effCardHits = computed(() => props.cardHits ?? derivedCardHits.value);
 /* 文档导航条的数据源：hits 型用宿主 hits，rows 型用派生行（两者都只在有数据时非空） */
 const effDocs = computed<Array<{ _id?: unknown }> | undefined>(() => props.hits?.length ? props.hits : derivedRowDocs.value);
 const effDocIds = computed<string[] | undefined>(() => effDocs.value?.map((d, i) => String(d?._id ?? i + 1)));
+/* 1439：alt 视图的「打开文档」在 rows 通道也要有落点——此前 emit 出去没人接
+   （SQL 宿主未监听），与查询树/索引工作区同位置的开文档动作点了没反应。
+   rows 派生文档没有 ES _id：按**原始行**开 QRT 的「行详情」侧拉（rowDrawer 开启时）；
+   宿主自带 hits/treeData/cardHits/jsonHtml 时仍是宿主数据，意图原样透传。 */
+const altDocsDerived = computed(() => !props.hits?.length && props.treeData == null && props.cardHits == null && props.jsonHtml == null);
+function openAltDocAt(i: number) {
+  if (altDocsDerived.value && props.rowDrawer) { rdwRow.value = { ri: i, raw: true }; return; }
+  const d = effDocs.value?.[i];
+  if (d) emit('open-doc', d as unknown as Hit);
+}
+function openAltCardDoc(hit: Hit) {
+  if (altDocsDerived.value && props.rowDrawer) {
+    const i = Number(hit?._id);
+    if (Number.isFinite(i) && i > 0) { rdwRow.value = { ri: i - 1, raw: true }; return; }
+  }
+  emit('open-doc', hit);
+}
 const altView: Ref<'table' | 'json' | 'tree' | 'cards'> = props.viewPrefKey
   ? usePref<'table' | 'json' | 'tree' | 'cards'>(props.viewPrefKey, 'table')
   : ref<'table' | 'json' | 'tree' | 'cards'>('table');
 const effView = computed<'table' | 'json' | 'tree' | 'cards'>(() => {
   const v = altView.value;
-  if (v === 'json' && effJsonHtml.value == null) return 'table';
-  if (v === 'tree' && effTreeData.value == null) return 'table';
-  if (v === 'cards' && effCardHits.value == null) return 'table';
+  if (v === 'json' && !altJsonAvailable.value) return 'table';
+  if (v === 'tree' && !altTreeAvailable.value) return 'table';
+  if (v === 'cards' && !altCardAvailable.value) return 'table';
   return v;
 });
 const bodyHidden = computed(() => props.hideBody === true || (viewSegOn.value && effView.value !== 'table'));
@@ -1816,7 +1839,10 @@ function displayText(cell: any, ri: number, ci: number): string {
  显式非语义类型（binary/dense_vector/histogram… 16 型族）同效抑制——
  守卫并上 if 条件位（semFormat 调用字面 534 源码锁钉死改旁不改锚；行为等价于 noInfer
  并上 isNonSemanticType：非语义型永不在 useSemFormat 显式标注白名单内） */
-  if (props.semOn && !isNonSemanticType(effType(col))) {
+  /* 1439：semOn 也必须受「语义格式化」开关约束——此前只关 pref 层，percent/bytes/
+     duration 仍由 semOn 格式化，用户点「语义格式化」后 93.2%/500000.0s 原样保留，
+     与查询树/索引工作区的同款开关表现不一致（实报）。关掉开关=整层回落 raw。 */
+  if (props.semOn && semPref.value && !isNonSemanticType(effType(col))) {
     const f = semFormat(cell, effType(col) ?? '', { noInfer: semRawSet.value.has(col) });
     if (f) return f.text;
   }
@@ -1836,7 +1862,7 @@ function displayText(cell: any, ri: number, ci: number): string {
  显式非语义类型同守卫（557 displayText 对称；tone 分档随推断一起沉默） */
 function semToneCls(cell: any, ci: number): Record<string, boolean> {
   const col = shownCols.value[ci] ?? '';
-  if (!props.semOn || cell === null || cell === undefined || isNonSemanticType(effType(col))) return {};
+  if (!props.semOn || !semPref.value || cell === null || cell === undefined || isNonSemanticType(effType(col))) return {};
   const f = semFormat(cell, effType(col) ?? '', { noInfer: semRawSet.value.has(col) });
   return f?.tone ? { ['qrt-sem-' + f.tone]: true } : {};
 }
@@ -2007,18 +2033,34 @@ const detailMeta = computed(() => {
  入口=单元格右键菜单「行详情」项（props.rowDrawer 门控，缺省 false 无项零增量）；
  面板=整行 shownCols 键值对 + 逐格复制 + 「复制整行 JSON」（copyRowJson 同一口径）；
  关闭即清空行位（坐标键随行集变化会错位，不留悬挂引用）。 */
-const rdwRow = ref<{ ri: number } | null>(null);
+/* raw：alt 视图（JSON/Tree/卡片）里 rows 派生出来的“文档”按**原始行**定位——
+   它们的数据源是 props.rows，不经过排序/筛选投影，用 renderRows 下标会错行。 */
+const rdwRow = ref<{ ri: number; raw?: boolean } | null>(null);
 const rdwOpen = computed({
   get: () => !!rdwRow.value,
   set: (v: boolean) => { if (!v) rdwRow.value = null; },
 });
+/* 侧拉列/值源：表格右键通道=所见列与排序后行；alt 视图通道=原始列与原始行 */
+const rdwCols = computed<string[]>(() => rdwRow.value?.raw ? (props.cols ?? []) : shownCols.value);
+const rdwCells = computed<any[] | undefined>(() => {
+  const r = rdwRow.value;
+  if (!r) return undefined;
+  return r.raw ? (props.rows ?? [])[r.ri] : renderRows.value[r.ri];
+});
 /* ReconcileReportDrawer 同款视口钳制：窄视口按 94% 收口，上限 520 */
 const rdwW = Math.min(520, Math.round(window.innerWidth * 0.94));
 /* 逐格复制（与右键「复制值」同一口径：对象 JSON 串化、null 空串） */
-async function copyDrawerCell(ri: number, ci: number) {
-  const v = renderRows.value[ri]?.[ci];
+async function copyDrawerCell(ci: number) {
+  const v = rdwCells.value?.[ci];
   const ok = await copyText(v === null || v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v));
   store.notify(ok ? 'success' : 'error', ok ? '已复制' : '复制失败');
+}
+async function copyDrawerRowJson() {
+  const r = rdwRow.value; if (!r) return;
+  const obj: Record<string, any> = {};
+  rdwCols.value.forEach((c, ci) => { obj[c] = rdwCells.value?.[ci] ?? null; });
+  const ok = await copyText(JSON.stringify(obj, null, 2));
+  store.notify(ok ? 'success' : 'error', ok ? '已复制行 JSON' : '复制失败');
 }
 
 /* ═══ ：列详情（RT P2-3 对齐合并）═══
@@ -2792,7 +2834,12 @@ mark.qrt-mark { background: var(--warn); color: var(--tx-on-strong); border-radi
   font-size: var(--fs-xs); cursor: pointer; box-shadow: var(--shadow-pop); transition: all var(--tr);
 }
 .qrt-backtop:hover { color: var(--ac-hi); border-color: var(--ac-line); }
-.qrt-wrap { overflow: auto; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 var(--r-m) var(--r-m); background: var(--bg1); }
+.qrt-wrap {
+  overflow: auto; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 var(--r-m) var(--r-m); background: var(--bg1);
+  /* 1439：表格是独立滚动区，paint containment 把上方编辑器每次按键的重绘隔离在表格之外
+     （200×23 实测逐键 37ms → 24ms）；弹层/回顶钮都在壳外，不会被子树裁切影响。 */
+  contain: paint;
+}
 .qrt-tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-xs); }
 /* 1359b：行少时下方空白用表体底纹延伸（不改 DOM：填充行会被行计数/斑马纹
    当成数据行，实测撞了 rtLocateFilter230 / rtQrtSearchMerge621） */

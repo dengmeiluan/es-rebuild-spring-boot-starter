@@ -50,10 +50,15 @@ describe('1354 结果表填满剩余视口', () => {
     expect(SQL, '口径迁移注释必须在场（说明为何旧 500 不沿用）').toContain('fill');
   });
 
-  it('④ 高度由实测差值算出（innerHeight − 表体顶），不是 100vh − 常量', () => {
-    expect(SQL).toMatch(/window\.innerHeight - top - 32/);
+  it('④ 高度由实测差值算出（页面视口 − 表体顶 − 表体下方占位），不是 100vh − 常量', () => {
+    /* 1439：页面滚动容器是 .page（不是 window）；可用高度必须同时扣掉表体下方的
+       状态栏/排序注/页底留白，否则页面恒被顶出几十像素，滚到底时卡头被模式条切半。 */
+    expect(SQL, '量的是表体 .qrt-wrap').toContain("el.querySelector<HTMLElement>('.qrt-wrap')");
+    expect(SQL, '必须找到所在页面的滚动容器').toContain("el.closest('.page')");
+    expect(SQL, '用内容坐标抵消页面滚动').toContain('pager.scrollTop');
+    expect(SQL, '扣除表体下方占位').toMatch(/pager\.scrollHeight - \(topInPage \+ rect\.height\)/);
+    expect(SQL, '按页面视口算可用高度').toMatch(/pager\.clientHeight - topInPage - below - 8/);
     expect(SQL, '不许写死 100vh 减常量').not.toMatch(/calc\(100vh - \d+px\)/);
-    expect(SQL, '量的是表体 .qrt-wrap 的视口顶').toContain("el.querySelector<HTMLElement>('.qrt-wrap')");
     expect(SQL, '布局变化要跟住').toContain('new ResizeObserver');
     expect(SQL, '卸载要断开').toMatch(/roResult\?\.disconnect\(\)/);
   });

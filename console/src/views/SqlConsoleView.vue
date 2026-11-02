@@ -104,10 +104,10 @@
              解释补全/体检/列名纠错为何按另一索引匹配（独立行，不挤占工具行） -->
         <div v-if="fromMismatch" class="sq-from-note" role="note">
           <span class="chip xs static" data-test="sql-from-chip"
-            :title="`字段补全/体检/列名纠错跟随 FROM「${effectiveSqlIndex}」；顶栏仍选中「${store.pickedIdx}」`">
+            :title="`字段补全/体检/列名纠错跟随 FROM「${effectiveSqlIndex}」；执行成功后顶栏切到该索引（当前「${store.pickedIdx}」）`">
             FROM {{ effectiveSqlIndex }}
           </span>
-          <span>字段补全 / 字段体检 / 列名纠错按此索引匹配；顶栏仍选中 <b>{{ store.pickedIdx }}</b></span>
+          <span>字段补全 / 字段体检 / 列名纠错按此索引匹配；执行成功后顶栏索引跟随 FROM（别名/未知索引除外，当前停在 <b>{{ store.pickedIdx }}</b>）</span>
         </div>
         <!-- P0-3：SQL 静态 lint 划线通道挂点（banner 保留双通道，见 script queueSqlLintMarkers） -->
         <MonacoEditor ref="sqlMonaco" v-model="sql" language="sql" height="100%" @execute="doRun" @selection="selScope = $event" @cursor="cursorPos = $event" />
@@ -303,7 +303,11 @@
         <!-- 刷新钮（refreshable）= 按当前 SQL 与参数重跑，Lucene 结果表同口径；
  此前只有页头主钮，结果表内想「去掉快速过滤再取一次」得先把视线移回页头。
  只 emit 'refresh' 意图，取数仍走 doRun 单一路径，不另造取数链。 -->
+        <!-- 1439：SQL 正文每次敲键都会重渲染本视图；不加缓存时 200×23 的结果表
+             会跟着父级重渲染（实测逐键 70ms、尖峰 196ms）。下表列出的都是结果侧
+             真正会变的输入——打字不碰它们，Vue 直接跳过整个子树的更新。 -->
         <QueryResultTable
+          v-memo="[runSeq, rows, colNames, busy, cursor, barMoreOpen, resultH, fillHeight, timeZone, resultStale, effectiveSqlIndex]"
           :key="runSeq"
           ref="resultTbl"
           :loading="busy"
@@ -605,28 +609,43 @@ const { v: resultH } = useTierCycle('sql.resultH', RESULT_H_TIERS, 'fill');
    下限 320px 兜底（极矮视口仍可读）；上限不设——剩余空间本来就是给结果的。 */
 const resultSecEl = ref<HTMLElement | null>(null);
 const resultTopOffset = ref(0);
-/* 量的是**表体**（.qrt-wrap）的视口顶，不是结果卡顶：卡头 45px 在两者之间，
-   用卡顶会把表体顶高 45px；而表体尚未渲染（无结果/加载态）时用卡顶 + 卡头估计。 */
+/* 量的是**表体**（.qrt-wrap）的顶，不是结果卡顶：卡头 45px 在两者之间，
+   用卡顶会把表体顶高 45px；而表体尚未渲染（无结果/加载态）时用卡顶估计。
+   1439：可用高度必须把表体**下方**仍要占位的行扣掉（状态栏/排序注/图表/页底呼吸）——
+   只算到视口底会把页面撑高几十像素，滚动到最大时 SQL 卡头正好卡在 sticky 模式条下
+   被切掉半行（用户反馈「表头横在中间」）。滚动位置用「内容坐标」抵消：页面已滚动时
+   量到的 rect.top 会带上 scrollTop，必须加回去，否则每次滚动都会改高度、反复抖动。 */
 function measureResultTop() {
   const el = resultSecEl.value;
   if (!el) return;
   const wrap = el.querySelector<HTMLElement>('.qrt-wrap');
-  const top = Math.round((wrap || el).getBoundingClientRect().top);
-  resultTopOffset.value = top;
-  /* 32 = 结果卡下沿圆角 + 浏览器横向滚动条/安全区，实测 16 会差 8~36px 溢出 */
-  resultAvailH.value = Math.round(window.innerHeight - top - 32);
+  const target = wrap || el;
+  const pager = el.closest('.page') as HTMLElement | null;
+  if (!pager) {
+    resultAvailH.value = Math.round(window.innerHeight - target.getBoundingClientRect().top - 32);
+    return;
+  }
+  const pagerRect = pager.getBoundingClientRect();
+  const rect = target.getBoundingClientRect();
+  /* 内容坐标（含 .page 顶部内衬），与当前滚动位置无关 */
+  const topInPage = rect.top - pagerRect.top + pager.scrollTop;
+  /* 表体之下的一切（状态栏/排序注/图表/页底留白）= 页面可滚内容总高 − 表体底 */
+  const below = Math.max(0, pager.scrollHeight - (topInPage + rect.height));
+  const avail = Math.floor(pager.clientHeight - topInPage - below - 8);
+  resultTopOffset.value = Math.round(rect.top);
+  resultAvailH.value = avail;
 }
 const resultHLabel = computed(() => resultH.value === 'fill' ? '填满剩余空间' : resultH.value + 'px');
-/* 可用高度 = 视口高 − 表体顶（视口坐标）− 16 呼吸。用实测差值而不是 100vh - offset：
-   页面自身可滚动（编辑器 34vh + 结果区），100vh 会把「已滚出的部分」也算进来，
-   2560×1440 实测多出 136px。差值在任意滚动位置都成立。 */
+/* 可用高度 = 页面视口高 − 表体顶（内容坐标）− 表体下方占位 − 8px 呼吸。
+   用实测差值而不是 100vh - offset：页面自身可滚动，100vh 会把「已滚出的部分」
+   也算进来，2560×1440 实测多出 136px。 */
 const resultAvailH = ref(0);
-/* 可用高度已按视口算好就直接用（不再与 320 取大：1440×900 实测可用 276px，
-   取大反而顶出视口 36px）。脏值/未测量时用 240px 保守兜底。
-   1391：但**下限要有**——1280×720 且带 lint 提示时实测只剩 42px（表头一行就占满），
-   结果等于看不见。低于 160px 时按 160 给，页面本来就允许滚动（多出来的高度无非要求
-   用户往下滚一点，比「结果区只有一条缝」好）。 */
-const RESULT_MIN_FILL = 160;
+/* 脏值/未测量时用 240px 保守兜底。
+   1391：**下限要有**——1280×720 且带 lint 提示时实测只剩 42px（表头一行就占满），
+   结果等于看不见。1439：下限从 160 调成 96（表头 + 约 2 行）——160 在有状态栏/排序注
+   的页面上会把页面顶出视口，滚动后卡头被 sticky 模式条切半（用户反馈）；96 只占
+   「能放两行」的底线，再小的视口仍允许页面滚动，但正常 1440×760 起不再产生溢出。 */
+const RESULT_MIN_FILL = 96;
 const fillHeight = computed(() => resultAvailH.value > 0
   ? `${Math.max(resultAvailH.value, RESULT_MIN_FILL)}px`
   : 'min(420px, 60vh)');
@@ -1238,6 +1257,15 @@ async function doRun() {
     }
     runSeq.value++; // ：新结果回到 SQL 原始行序（重挂表重置排序），避免陈旧排序误导
     runScope.value = scope;
+    /* 1439：顶栏跟随 SQL FROM——用户反馈「查询的不是这个索引」（FROM 指向 A、
+       顶栏还停在 B，字段补全/体检却按 A 解释）。成功回包才切：失败/索引不存在不动；
+       多表/通配 indexFromSql 返回空也不猜；执行期间稿子已改成别的 FROM 时不抢上下文。 */
+    const executedIdx = indexFromSql(execSql, sqlIndexPool.value);
+    if (!inputChanged && executedIdx && executedIdx !== store.pickedIdx
+        && sqlIndexPool.value.includes(executedIdx)) {
+      store.pick(executedIdx);
+      store.notify('info', `顶栏索引已跟随 SQL FROM 切到「${executedIdx}」`, { duration: 2800 });
+    }
     /* 执行成功记跨模式历史（目标索引从实际执行的文本推导，选段/整篇同口径）；
        1071：参数一并入历史，回放时恢复，避免带 ? 的语句回放变成无参执行 */
     useQueryHistoryStore().push('sql', execSnapshot, indexFromSql(execSnapshot, sqlIndexPool.value) || indexOf(), undefined, true, paramsSnapshot, sqlRunOpts());

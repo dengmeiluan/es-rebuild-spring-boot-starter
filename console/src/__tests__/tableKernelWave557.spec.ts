@@ -120,8 +120,10 @@ describe('五百五十七批 ②：QRT semOn 显示链非语义抑制', () => {
     /* 534 批锁面（tableKernelWave534:66/67）字面原样在场——守卫走条件位不改锚 */
     expect(qrt).toMatch(/semFormat\(cell, effType\(col\) \?\? '', \{ noInfer: semRawSet\.value\.has\(col\) \}\)/);
     expect(qrt).toMatch(/const semRawSet = computed\(\(\) => new Set\(props\.semRawCols \?\? \[\]\)\);/);
-    expect(qrt, 'displayText 守卫位扩源').toMatch(/if \(props\.semOn && !isNonSemanticType\(effType\(col\)\)\) \{/);
-    expect(qrt, 'semToneCls 守卫位扩源').toMatch(/isNonSemanticType\(effType\(col\)\)\) return \{\};/);
+    /* 1439 迁移：守卫位并上 semPref——「语义格式化」开关关掉时 semOn 也要回落 raw
+       （与查询树/索引工作区同款开关表现一致）。534 semFormat 调用字面仍未动。 */
+    expect(qrt, 'displayText 守卫位扩源（1439 并上 semPref）').toMatch(/if \(props\.semOn && semPref\.value && !isNonSemanticType\(effType\(col\)\)\) \{/);
+    expect(qrt, 'semToneCls 守卫位扩源（1439 并上 semPref）').toMatch(/if \(!props\.semOn \|\| !semPref\.value \|\| cell === null/);
   });
 
   it('行为锚：binary 列 1500 显 1500 不判「1.5s」、0.5 显 0.5 不判「50%」且无 tone 类；普通列照旧推断', async () => {
