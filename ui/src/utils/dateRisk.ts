@@ -42,7 +42,7 @@ export type StoredForm = typeof STORED_FORMS[number];
 type RiskLevel = 'error' | 'warning' | 'info' | 'ok';
 
 /** 的 starter 开关属性名。抽成常量以便两处对齐——改名时不会只改一半。 */
-export const COMPAT_DATE_CONVERTERS_KEY = 'es.rebuild.compat.date-converters';
+export const COMPAT_DATE_CONVERTERS_KEY = 'searchdeck.elasticsearch.compat.date-converters';
 
 interface DateFieldRisk {
   field: string;
@@ -189,7 +189,7 @@ function isInvalidDateAnnotation(field: DateRiskField): boolean {
  *
  * 后者才是「兼容开关对它有没有用」的判据： 实测，带 `@Field(type=Date, format=…)`
  * 的属性由 sdes 安装**属性级**日期转换器，它**抢在** `ElasticsearchCustomConversions`
- * 之前生效 —— 打开 `es.rebuild.compat.date-converters` **什么也不会发生，而且不报错**。
+ * 之前生效 —— 打开 `searchdeck.elasticsearch.compat.date-converters` **什么也不会发生，而且不报错**。
  */
 function hasAnyDateAnnotation(field: DateRiskField): boolean {
   return field.annType != null && DATE_FIELD_TYPES.has(field.annType);
@@ -485,7 +485,7 @@ export function assessDateRisks(input: {
         `业务侧未提供该字段的 Java 类型，读取兼容性（矩阵红格 / 自伤闭环 / 时区漂移）`
         + `**测不出** —— 需业务侧 desired-state payload 才能精确判定。`
         + `这不表示没风险，只表示本次缺少判定所需的输入。`,
-        `让业务应用升级到 es-rebuild-spring-boot-starter 2.0.0 并上报 desired-state，`
+        `让业务应用升级到 SearchDeck 2.0.0 并上报 desired-state，`
         + `payload 会带上每个字段的 javaType 与 @Field 注解值。`);
     }
 

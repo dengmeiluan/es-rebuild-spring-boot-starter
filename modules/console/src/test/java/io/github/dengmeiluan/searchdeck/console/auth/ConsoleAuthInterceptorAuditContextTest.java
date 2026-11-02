@@ -20,7 +20,7 @@ import io.github.dengmeiluan.searchdeck.platform.pages.ConsolePageCatalog;
 import io.github.dengmeiluan.searchdeck.console.control.ControlClusterResolver;
 import io.github.dengmeiluan.searchdeck.console.multicluster.ConnStore;
 import io.github.dengmeiluan.searchdeck.console.xmigrate.RemoteClusterConn;
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import org.junit.Test;
 
 import javax.servlet.ServletOutputStream;
@@ -142,7 +142,7 @@ public class ConsoleAuthInterceptorAuditContextTest {
             @Override public boolean bound() { return true; }
         };
         ConnStore stubStore = connStoreStub();
-        EnvPagesResolver envPagesResolver = new EnvPagesResolver(stubStore, new EsRebuildProperties());
+        EnvPagesResolver envPagesResolver = new EnvPagesResolver(stubStore, new SearchDeckElasticsearchProperties());
         return new ConsoleAuthInterceptor(authorizer, audit, resolver, ConsolePageCatalog.load(),
                 true, envPagesResolver, stubStore);
     }

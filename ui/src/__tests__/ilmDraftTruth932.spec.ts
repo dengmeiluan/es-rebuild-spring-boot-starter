@@ -15,8 +15,8 @@ import { createApp, h, nextTick } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
 import { createRouter, createWebHashHistory } from 'vue-router';
 
-const KEY_BODY = 'es-console.draft2:ilm:host:-:-:policy-body';
-const KEY_NAME = 'es-console.draft2:ilm:host:-:-:policy-name';
+const KEY_BODY = 'searchdeck.draft2:ilm:host:-:-:policy-body';
+const KEY_NAME = 'searchdeck.draft2:ilm:host:-:-:policy-name';
 
 vi.mock('../api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api')>();

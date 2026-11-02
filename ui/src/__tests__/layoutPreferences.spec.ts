@@ -37,7 +37,7 @@ describe('scoped layout preferences', () => {
   });
 
   it('migrates the old query-builder split only into the new scope', () => {
-    localStorage.setItem('es_console_qb_split', '560');
+    localStorage.setItem('searchdeck_qb_split', '560');
     const migrated = createLayoutPreferences({ ...scope, route: '/search', mode: 'builder' });
     expect(migrated.snapshot.value.panes['query-builder.tree']).toEqual({ size: 560 });
     expect(localStorage.getItem(layoutStorageKey({ ...scope, route: '/search', mode: 'builder' }))).toContain('560');

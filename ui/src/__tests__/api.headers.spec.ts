@@ -30,7 +30,7 @@ describe('api request 头合并（R55 回归防御）', () => {
     await get('/cluster/health');
     const h = sentHeaders();
     expect(h['Content-Type']).toBe('application/json');
-    expect(h['X-Es-Console-Token']).toBe('t-123');
+    expect(h['X-SearchDeck-Token']).toBe('t-123');
   });
 
   it('localStorage target 自动带 X-Es-Target', async () => {
@@ -45,7 +45,7 @@ describe('api request 头合并（R55 回归防御）', () => {
     await api.sqlProbe('conn-other');
     const h = sentHeaders();
     // R55 修复前：这两个头会被 init.headers 整体覆盖后丢失 → 401
-    expect(h['X-Es-Console-Token']).toBe('t-123');
+    expect(h['X-SearchDeck-Token']).toBe('t-123');
     expect(h['Content-Type']).toBe('application/json');
     expect(h['X-Es-Target']).toBe('conn-other');
   });

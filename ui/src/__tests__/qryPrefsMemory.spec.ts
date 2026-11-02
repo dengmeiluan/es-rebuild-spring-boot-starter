@@ -5,13 +5,13 @@ import { expect, test } from 'vitest';
 /**
  * 第四十一/四十三批守卫：查询工作台偏好持久化。
  * 四十二批手写 es_qry_prefs，四十三批按复用纪律收敛到既有 usePref 封装
- * （es-console.pref.*，与 SqlConsole lenient / Tasks·Topology autoRefresh 同款）。
+ * （searchdeck.pref.*，与 SqlConsole lenient / Tasks·Topology autoRefresh 同款）。
  * DslQueryView 挂载即初始化 Monaco（happy-dom 抛错），沿用三十七批源码静态守卫口径。
  */
 const src = readFileSync(
   join(__dirname, '..', 'views', 'DslQueryView.vue'), 'utf-8');
 
-test('查询偏好接 usePref（复用既有封装，键空间 es-console.pref.query.*）', () => {
+test('查询偏好接 usePref（复用既有封装，键空间 searchdeck.pref.query.*）', () => {
   expect(src).toContain("usePref('query.profile', false)");
   expect(src).toContain("usePref('query.autoHist', true)");
   expect(src).toContain('usePref } from');

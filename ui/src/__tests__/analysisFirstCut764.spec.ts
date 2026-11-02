@@ -166,8 +166,8 @@ describe('764 G230 过滤词接 useScopedDraft（一致性·次刀·21 面主流
     const host = await mountView();
     await loadMain(host);
     await setKw(host, 'syn');
-    /* 键前缀=es-console.draft2（useScopedDraft PREFIX），startsWith 须带全前缀 */
-    const draftKeys = Object.keys(sessionStorage).filter(k => k.startsWith('es-console.draft2:analysis-settings:') && k.endsWith(':filter'));
+    /* 键前缀=searchdeck.draft2（useScopedDraft PREFIX），startsWith 须带全前缀 */
+    const draftKeys = Object.keys(sessionStorage).filter(k => k.startsWith('searchdeck.draft2:analysis-settings:') && k.endsWith(':filter'));
     expect(draftKeys.length, '草稿键在场（useScopedDraft sessionStorage 通道）').toBeGreaterThan(0);
     expect(draftKeys[0], '按索引作用域（A 索引过滤词不串 B）').toContain('logs-x');
     expect(sessionStorage.getItem(draftKeys[0])).toBe('syn');

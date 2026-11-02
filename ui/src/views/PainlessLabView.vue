@@ -389,7 +389,7 @@ async function deleteStored(id: string) {
 function injectUbq() {
   try {
     const payload = { script: { source: source.value, lang: 'painless', params: JSON.parse(params.value || '{}') } };
-    writeStoredRaw(sessionStorage, 'es-console.ubq.injected', JSON.stringify(payload));
+    writeStoredRaw(sessionStorage, 'searchdeck.ubq.injected', JSON.stringify(payload));
     store.notify('success', '已注入，跳转 UpdateByQuery 面板…');
     router.push('/update-by-query');
   } catch { store.notify('warning', 'params JSON 无效'); }

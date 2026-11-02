@@ -63,7 +63,7 @@ beforeEach(() => {
   sessionStorage.clear();
   /* 关语义格式化：锁「date 原始串（slash/dot 形态）」第三遍归一路径
      （开着时显示层本地化为 dash 形态、kw 走第一遍 includes 即命中，锁不到本件） */
-  localStorage.setItem('es-console.pref.es_tbl_sem', 'false');
+  localStorage.setItem('searchdeck.pref.es_tbl_sem', 'false');
   apps.forEach(a => { try { a.unmount(); } catch { /* 已卸载 */ } });
   apps.length = 0;
   host.innerHTML = '';

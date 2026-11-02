@@ -91,7 +91,7 @@ describe('ColPicker 受控契约', () => {
   });
 });
 
-/* ═══ 一百七十七批：「前 N」N 值偏好（usePref es-console.pref.table.firstn，全站共享，
+/* ═══ 一百七十七批：「前 N」N 值偏好（usePref searchdeck.pref.table.firstn，全站共享，
    默认 6 与历史硬编码一致）——−/＋ 只调 N 落盘，「前 N」按当前 N 应用 ═══ */
 describe('ColPicker 前 N 值偏好（一百七十七批）', () => {
   it('＋ 调 N 落盘；「前 N」按当前 N emit；重挂载恢复', async () => {
@@ -102,7 +102,7 @@ describe('ColPicker 前 N 值偏好（一百七十七批）', () => {
     btns()[3].click();
     await nextTick();
     expect(btns()[1].textContent?.trim()).toBe('前 7');
-    expect(JSON.parse(localStorage.getItem('es-console.pref.table.firstn') || '0')).toBe(7);
+    expect(JSON.parse(localStorage.getItem('searchdeck.pref.table.firstn') || '0')).toBe(7);
     /* 「前 7」按当前 N emit */
     btns()[1].click();
     await nextTick();
@@ -113,7 +113,7 @@ describe('ColPicker 前 N 值偏好（一百七十七批）', () => {
   });
 
   it('− 下限 1 不下探；文案/aria 可达', async () => {
-    localStorage.setItem('es-console.pref.table.firstn', JSON.stringify(1));
+    localStorage.setItem('searchdeck.pref.table.firstn', JSON.stringify(1));
     await mountPicker({ cols: COLS, selected: [] });
     const btns = () => [...document.querySelectorAll('.col-pick-row button')] as HTMLButtonElement[];
     expect((btns()[2] as HTMLButtonElement).disabled).toBe(true); // − 到下限

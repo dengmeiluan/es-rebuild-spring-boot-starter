@@ -42,7 +42,7 @@ import static org.junit.Assert.assertTrue;
  */
 public class DesiredStatePageTest {
 
-    private static final String PATH = "es-rebuild/desired-state.html";
+    private static final String PATH = "searchdeck/desired-state.html";
 
     private static String html() throws Exception {
         try (InputStream is = new ClassPathResource(PATH).getInputStream()) {
@@ -73,7 +73,9 @@ public class DesiredStatePageTest {
     @Test
     public void pageIsNotUnderStatic() {
         assertFalse("desired-state.html 不得放在 static/ 下",
-                new ClassPathResource("static/es-rebuild/desired-state.html").exists());
+                new ClassPathResource("static/searchdeck/desired-state.html").exists());
+        assertFalse("desired-state.html 不得回到旧的 static/searchdeck/ 下",
+                new ClassPathResource("static/searchdeck/desired-state.html").exists());
         assertFalse("desired-state.html 不得放在 static/ 根下",
                 new ClassPathResource("static/desired-state.html").exists());
     }

@@ -598,14 +598,14 @@ function openRawIoSearch() {
 }
 
 /* ═══ W-B：QueryHub 跨模式历史回放 template 分支接收口（q 遗留）══
- QueryHubView replay 的 mode='template' 分支经 es-console.search-templates.carry
+ QueryHubView replay 的 mode='template' 分支经 searchdeck.search-templates.carry
  （dsl.carry 同款一次性通道，favReplay bulk.carry/ubq.carry 跨页同构）把查询体送达这里，
  接收端只做「预填 source 草稿」，读走即删（普通重挂载不误吃）。play/run 行为由页内
  既有防呆承担：含 {{占位符}} 的模板源快照 → 参数表单 + run() 参数防呆照常接管；
  纯 JSON 的渲染产物 → 参数已凝固无法逆向还原模板源（ replayTplRow 双形态裁决
  同口径），如实预填 + toast 明示形态，不静默假装是模板源还原。
  本页不在路由级 KeepAlive 白名单（App.vue），SPA 内每次进入都重挂载，onMounted 单口即可。 */
-const ST_SOURCE_CARRY = 'es-console.search-templates.carry';
+const ST_SOURCE_CARRY = 'searchdeck.search-templates.carry';
 function consumeSourceCarry() {
   let raw: string | null = null;
   try { raw = sessionStorage.getItem(ST_SOURCE_CARRY); } catch { return; }

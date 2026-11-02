@@ -191,7 +191,7 @@ describe('QueryXray 词频表表格化修边（五百二十五批源码锁；531
     /* 531 批：裸 sessionStorage 换 useLinkCarry 统一件（键与 payload 逐字保持） */
     expect(v).toContain("useLinkCarry<{ index?: string; id?: string }>('xray')");
     expect(v).toContain("useLinkCarry<{ index: string; text: string }>('analyzer')");
-    expect(v).not.toContain("sessionStorage.getItem('es-console.link.");
+    expect(v).not.toContain("sessionStorage.getItem('searchdeck.link.");
     expect(v).toMatch(/@media \(max-width: 900px\)/);
     expect(v, '全文禁 min-width:901px 倒挂档').not.toMatch(/min-width:\s*901px/);
   });

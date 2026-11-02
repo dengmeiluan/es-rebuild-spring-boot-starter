@@ -566,9 +566,9 @@ async function doMove() {
 
 onMounted(() => {
   /* 命令面板「Rollover Dry Run」预填接收 */
-  const prefill = sessionStorage.getItem('es-console.lifecycle.rollover');
+  const prefill = sessionStorage.getItem('searchdeck.lifecycle.rollover');
   if (prefill) {
-    removeStoredRaw(sessionStorage, 'es-console.lifecycle.rollover');
+    removeStoredRaw(sessionStorage, 'searchdeck.lifecycle.rollover');
     rolloverAlias.value = prefill;
   }
   load();

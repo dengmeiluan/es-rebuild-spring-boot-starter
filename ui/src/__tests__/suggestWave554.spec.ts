@@ -283,7 +283,7 @@ describe('C LuceneInput 值位首轮预载', () => {
   afterEach(() => { apps.forEach(a => a.unmount()); apps.length = 0; vi.useRealTimers(); vi.restoreAllMocks(); });
 
   it('C1 fields 到位即预载最近 keyword 字段：冒号前 searchRaw 已发，值位缓存命中零新请求', async () => {
-    localStorage.setItem('es_console_qb_field_recent::logs-2026.08', JSON.stringify(['rec']));
+    localStorage.setItem('searchdeck_qb_field_recent::logs-2026.08', JSON.stringify(['rec']));
     const { host } = await mountInput();
     await type(host, 'rec'); /* 手输字段名 → ensure → fields 到位 → watch 预载 */
     await vi.advanceTimersByTimeAsync(400);
@@ -295,7 +295,7 @@ describe('C LuceneInput 值位首轮预载', () => {
   });
 
   it('C2 非 keyword 族最近字段零预载', async () => {
-    localStorage.setItem('es_console_qb_field_recent::logs-2026.08', JSON.stringify(['geo']));
+    localStorage.setItem('searchdeck_qb_field_recent::logs-2026.08', JSON.stringify(['geo']));
     const { host } = await mountInput();
     await type(host, 'geo');
     await vi.advanceTimersByTimeAsync(400);

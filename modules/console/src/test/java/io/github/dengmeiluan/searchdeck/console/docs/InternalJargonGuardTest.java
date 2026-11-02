@@ -52,7 +52,7 @@ public class InternalJargonGuardTest {
                 root.resolve("modules/console/src"),
                 root.resolve("platform/src"),
                 root.resolve("apps/server/src"),
-                root.resolve("integrations")).flatMap(p -> {
+                root.resolve("examples")).flatMap(p -> {
                     try { return Files.walk(p); } catch (IOException e) { throw new RuntimeException(e); }
                 })) {
             walk.filter(p -> p.toString().endsWith(".java")).forEach(p -> {

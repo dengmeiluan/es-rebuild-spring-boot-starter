@@ -39,7 +39,7 @@ interface TrackedJob {
 /** 已完成作业的结局——用于「最近完成」与通知去重 */
 interface DoneMark { id: string; status: string; at: number }
 
-const SEEN_PREFIX = 'es-console.jobs.seen';
+const SEEN_PREFIX = 'searchdeck.jobs.seen';
 /** 有作业在跑时的轮询间隔（与原视图内 3s 同量级，略放宽省请求） */
 const ACTIVE_MS = 5000;
 /** 全部空闲时的巡检间隔——不能停轮询，否则别处/别人提交的作业永远发现不了 */

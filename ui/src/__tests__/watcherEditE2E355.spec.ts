@@ -1,6 +1,6 @@
 /**
  * 三百五十五批：Watcher PUT 编辑变体端到端契约验证——
- * sessionStorage 'es-console.devtools.open' 契约（method=PUT/body=现定义/run=false）
+ * sessionStorage 'searchdeck.devtools.open' 契约（method=PUT/body=现定义/run=false）
  * 由 DevTools 消费（mkTab 三字段全落位）。锁跨视图契约防单侧漂移。
  */
 import { describe, it, expect } from 'vitest';

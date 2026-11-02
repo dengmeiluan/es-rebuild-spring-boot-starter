@@ -115,12 +115,12 @@ describe('681 B：fontSize 真值到达两处 Monaco + rim.font 落盘还原', (
     await settle();
     expect(stubs()[0]!.dataset.fontSize).toBe('14');
     expect(stubs()[1]!.dataset.fontSize).toBe('14');
-    expect(localStorage.getItem('es-console.pref.rim.font'), 'rim.font 落盘').toBe('14');
+    expect(localStorage.getItem('searchdeck.pref.rim.font'), 'rim.font 落盘').toBe('14');
     btns[2]!.click();
     await settle();
     expect(stubs()[0]!.dataset.fontSize).toBe('16');
     expect(stubs()[1]!.dataset.fontSize).toBe('16');
-    expect(localStorage.getItem('es-console.pref.rim.font')).toBe('16');
+    expect(localStorage.getItem('searchdeck.pref.rim.font')).toBe('16');
     expect(btns[2]!.classList.contains('on'), '激活态跟随').toBe(true);
   });
 

@@ -29,8 +29,8 @@ describe('1046 账号切换：工作现场与词项缓存不再跨账号', () =>
 
   it('查询工作台会话/词项持久档/暂存/健康快照/确认免打扰纳入换人清理', () => {
     for (const key of [
-      "'es-console.qw.session:'", "'es_console_terms_stash'", "'es-console.qb.subtree'",
-      "'es-console.pref.sqlbridge.sql'", "'es-console.health-report.last'", "'es_vars'", "'es_confirm_skip:'",
+      "'searchdeck.qw.session:'", "'searchdeck_terms_stash'", "'searchdeck.qb.subtree'",
+      "'searchdeck.pref.sqlbridge.sql'", "'searchdeck.health-report.last'", "'es_vars'", "'es_confirm_skip:'",
     ]) {
       expect(auth).toContain(key);
     }
@@ -66,35 +66,35 @@ describe('1046 账号切换：工作现场与词项缓存不再跨账号', () =>
 
 describe('1046 DevTools 前后端同口径（UI 不再亮必 403 的执行钮）', () => {
   it('系统 API 路径的后续索引用段同样做控制面判定', () => {
-    expect(nonAdminControlIndexDenied('/_cat/indices/es_console_user')).toBe(true);
-    expect(nonAdminControlIndexDenied('/_cluster/state/metadata/es_console_users')).toBe(true);
+    expect(nonAdminControlIndexDenied('/_cat/indices/searchdeck_user')).toBe(true);
+    expect(nonAdminControlIndexDenied('/_cluster/state/metadata/searchdeck_users')).toBe(true);
     expect(nonAdminControlIndexDenied('/_cat/indices/_all')).toBe(true);
     expect(nonAdminControlIndexDenied('/_all')).toBe(true);
   });
 
   it('业务索引/文档 id 不被过度误杀', () => {
     expect(nonAdminControlIndexDenied('/logs/_search')).toBe(false);
-    expect(nonAdminControlIndexDenied('/app_es_console_logs/_search')).toBe(false);
+    expect(nonAdminControlIndexDenied('/app_searchdeck_logs/_search')).toBe(false);
     expect(nonAdminControlIndexDenied('/logs/_doc/1')).toBe(false);
   });
 
   it('_msearch 的 indices 字符串形态也校验', () => {
-    expect(nonAdminBodyTargetsControl('/_msearch', '{"indices":"es_console_user"}\n{"query":{"match_all":{}}}\n')).toBe(true);
+    expect(nonAdminBodyTargetsControl('/_msearch', '{"indices":"searchdeck_user"}\n{"query":{"match_all":{}}}\n')).toBe(true);
     expect(nonAdminBodyTargetsControl('/_msearch', '{"indices":"logs"}\n{"query":{"match_all":{}}}\n')).toBe(false);
   });
 
   it('SQL FROM 逗号列表逐个目标校验', () => {
-    expect(nonAdminBodyTargetsControl('/_sql', '{"query":"SELECT * FROM logs, es_console_user"}')).toBe(true);
+    expect(nonAdminBodyTargetsControl('/_sql', '{"query":"SELECT * FROM logs, searchdeck_user"}')).toBe(true);
     expect(nonAdminBodyTargetsControl('/_sql', '{"query":"SELECT * FROM logs"}')).toBe(false);
   });
 
   it('检索 body 的二级数据源（terms lookup / wrapper / MLT）同权校验', () => {
     const lookup = '{"query":{"terms":{"u":{"index":".security","id":"1","path":"username"}}}}';
     expect(nonAdminBodyTargetsControl('/logs/_search', lookup)).toBe(true);
-    const inner = JSON.stringify({ terms: { u: { index: 'es_console_user' } } });
+    const inner = JSON.stringify({ terms: { u: { index: 'searchdeck_user' } } });
     const wrapper = JSON.stringify({ query: { wrapper: { query: inner } } });
     expect(nonAdminBodyTargetsControl('/_search', wrapper)).toBe(true);
-    const mlt = '{"query":{"more_like_this":{"like":[{"_index":"es_console_user","_id":"1"}]}}}';
+    const mlt = '{"query":{"more_like_this":{"like":[{"_index":"searchdeck_user","_id":"1"}]}}}';
     expect(nonAdminBodyTargetsControl('/logs/_search', mlt)).toBe(true);
     expect(nonAdminBodyTargetsControl('/logs/_search', '{"query":{"term":{"user":"alice"}}}')).toBe(false);
   });

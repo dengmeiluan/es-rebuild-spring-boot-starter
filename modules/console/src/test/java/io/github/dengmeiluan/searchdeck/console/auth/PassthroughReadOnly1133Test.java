@@ -17,7 +17,7 @@
 package io.github.dengmeiluan.searchdeck.console.auth;
 import io.github.dengmeiluan.searchdeck.platform.pages.ConsolePageCatalog;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.control.ControlClusterResolver;
 import io.github.dengmeiluan.searchdeck.console.core.ControlPlaneGuardException;
 import org.junit.Test;
@@ -173,7 +173,7 @@ public class PassthroughReadOnly1133Test {
         ConsoleAuthInterceptor it = new ConsoleAuthInterceptor(
                 req -> who, new DelegatedAdminEscalation1132Test.CapturingAuditStore(),
                 boundResolver(), ConsolePageCatalog.load(), true,
-                new EnvPagesResolver(store(env), new EsRebuildProperties()), store(env));
+                new EnvPagesResolver(store(env), new SearchDeckElasticsearchProperties()), store(env));
         HttpServletRequest req = request("POST", uri, target);
         StubResponse resp = new StubResponse();
         boolean allowed;
@@ -268,7 +268,7 @@ public class PassthroughReadOnly1133Test {
     @Test
     public void env模板排除该页时读键也不放行() {
         /* PROD 模板只开 indices：devtools 被排除，读键不得成为旁路。 */
-        EsRebuildProperties props = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties props = new SearchDeckElasticsearchProperties();
         Map<String, Set<String>> envPages = new HashMap<>();
         envPages.put("PROD", new HashSet<>(java.util.Collections.singletonList("indices")));
         props.setEnvPages(envPages);

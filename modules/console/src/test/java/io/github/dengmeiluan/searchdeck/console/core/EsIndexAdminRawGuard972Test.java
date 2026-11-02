@@ -66,7 +66,7 @@ public class EsIndexAdminRawGuard972Test {
         assertRejected(() -> admin.guardRawGuarded("POST", "/_msearch",
                 "{\"index\":\"*\"}\n{}\n"), "通配索引头");
         assertRejected(() -> admin.guardRawGuarded("POST", "/_msearch",
-                "{\"index\":\"es_console_user\"}\n{}\n"), "控制面索引头");
+                "{\"index\":\"searchdeck_user\"}\n{}\n"), "控制面索引头");
         assertAllowed(() -> admin.guardRawGuarded("POST", "/_msearch",
                 "{\"index\":\"logs-*\"}\n{}\n"), "业务索引头");
     }
@@ -74,7 +74,7 @@ public class EsIndexAdminRawGuard972Test {
     @Test
     public void mget不得读取控制面文档() {
         assertRejected(() -> admin.guardRawGuarded("GET", "/_mget",
-                "{\"docs\":[{\"_index\":\"es_console_user\",\"_id\":\"admin\"}]}"), "控制面 _index");
+                "{\"docs\":[{\"_index\":\"searchdeck_user\",\"_id\":\"admin\"}]}"), "控制面 _index");
         assertAllowed(() -> admin.guardRawGuarded("GET", "/_mget",
                 "{\"docs\":[{\"_index\":\"logs-2026\",\"_id\":\"1\"}]}"), "业务 _index");
     }
@@ -84,7 +84,7 @@ public class EsIndexAdminRawGuard972Test {
         assertRejected(() -> admin.guardRawGuarded("POST", "/_reindex",
                 "{\"source\":{\"index\":\"*\"},\"dest\":{\"index\":\"copy\"}}"), "source 通配");
         assertRejected(() -> admin.guardRawGuarded("POST", "/_reindex",
-                "{\"source\":{\"index\":\"logs-*\"},\"dest\":{\"index\":\"es_console_copy\"}}"), "dest 控制面");
+                "{\"source\":{\"index\":\"logs-*\"},\"dest\":{\"index\":\"searchdeck_copy\"}}"), "dest 控制面");
         assertRejected(() -> admin.guardRawGuarded("POST", "/_reindex",
                 "{\"source\":{\"index\":\"logs-*\"},\"dest\":{\"index\":\"copy\"}}"), "raw 业务 reindex");
         assertAllowed(() -> admin.guardReindexBody(
@@ -107,7 +107,7 @@ public class EsIndexAdminRawGuard972Test {
         assertRejected(() -> admin.guardRawGuarded("POST", "/_aliases",
                 "{\"actions\":[{\"add\":{\"index\":\"*\",\"alias\":\"rest\"}}]}"), "通配别名");
         assertRejected(() -> admin.guardRawGuarded("POST", "/_aliases",
-                "{\"actions\":[{\"add\":{\"index\":\"es_console*\",\"alias\":\"rest\"}}]}"), "控制面别名");
+                "{\"actions\":[{\"add\":{\"index\":\"searchdeck*\",\"alias\":\"rest\"}}]}"), "控制面别名");
         assertRejected(() -> admin.guardRawGuarded("POST", "/_aliases",
                 "{\"actions\":[{\"add\":{\"indices\":[\"*\"],\"alias\":\"rest\"}}]}"), "复数通配别名");
         assertRejected(() -> admin.guardRawGuarded("POST", "/_aliases",
@@ -123,7 +123,7 @@ public class EsIndexAdminRawGuard972Test {
         assertRejected(() -> admin.guardRawGuarded("PUT", "/_index_template/x",
                 "{\"index_patterns\":[\"*\"],\"template\":{}}"), "索引模板 catch-all");
         assertRejected(() -> admin.guardRawGuarded("PUT", "/_template/x",
-                "{\"index_patterns\":[\"es_*\"],\"settings\":{}}"), "旧模板 catch-all");
+                "{\"index_patterns\":[\"searchdeck_*\"],\"settings\":{}}"), "旧模板 catch-all");
         assertRejected(() -> admin.guardRawGuarded("PUT", "/_index_template/x",
                 "{\"index_patterns\":[\"logs-*\"],\"template\":{}}"), "raw 业务模板");
         assertAllowed(() -> admin.guardIndexTemplateBody(
@@ -135,14 +135,14 @@ public class EsIndexAdminRawGuard972Test {
         assertRejected(() -> admin.guardRawGuarded("POST", "/_sql",
                 "{\"query\":\"SELECT * FROM *\"}"), "SQL 全量");
         assertRejected(() -> admin.guardRawGuarded("POST", "/_sql/translate",
-                "{\"query\":\"SELECT * FROM es_console_user\"}"), "SQL 控制面");
+                "{\"query\":\"SELECT * FROM searchdeck_user\"}"), "SQL 控制面");
         assertAllowed(() -> admin.guardRawGuarded("POST", "/_sql",
                 "{\"query\":\"SELECT * FROM logs-*\"}"), "SQL 业务索引");
     }
 
     @Test
     public void 请求体unicode转义不得绕过控制面名扫描() {
-        String body = "{\"delete\":{\"_index\":\"\\u0065s_console_user\",\"_id\":\"admin\"}}\n";
+        String body = "{\"delete\":{\"_index\":\"\\u0073earchdeck_user\",\"_id\":\"admin\"}}\n";
         assertRejected(() -> admin.guardRawGuarded("POST", "/_bulk", body), "bulk 转义控制面");
         assertRejected(() -> admin.guardControlBody(body), "body 守卫转义");
     }
@@ -154,7 +154,7 @@ public class EsIndexAdminRawGuard972Test {
             catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "结构化 SQL 全量");
         assertRejected(() -> {
-            try { admin.executeSql("SELECT * FROM es_console_user", 100); }
+            try { admin.executeSql("SELECT * FROM searchdeck_user", 100); }
             catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "结构化 SQL 控制面");
         assertRejected(() -> {

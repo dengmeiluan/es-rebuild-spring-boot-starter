@@ -13,20 +13,20 @@ describe('1050 宿主登出清理', () => {
 
   it('purgeLocalUserState 清掉草稿/目标/词项/历史等账号视角键', () => {
     const keys = [
-      'es-console.qw.session:host:x',
-      'es_console_terms_stash::host|x|f',
-      'es-console.target',
-      'es-console.target.name',
-      'es-console.notify.log',
+      'searchdeck.qw.session:host:x',
+      'searchdeck_terms_stash::host|x|f',
+      'searchdeck.target',
+      'searchdeck.target.name',
+      'searchdeck.notify.log',
       'es_devtools_draft',
       'es_confirm_skip:z',
       'es_vars',
     ];
     for (const k of keys) localStorage.setItem(k, 'x');
-    localStorage.setItem('es-console.last-user', 'deng_test_x2');
+    localStorage.setItem('searchdeck.last-user', 'deng_test_x2');
     useAuthStore().purgeLocalUserState();
     for (const k of keys) expect(localStorage.getItem(k), k).toBeNull();
-    expect(localStorage.getItem('es-console.last-user')).toBeNull();
+    expect(localStorage.getItem('searchdeck.last-user')).toBeNull();
   });
 
   it('App 收到空 host token 时清现场并回到登录态', () => {

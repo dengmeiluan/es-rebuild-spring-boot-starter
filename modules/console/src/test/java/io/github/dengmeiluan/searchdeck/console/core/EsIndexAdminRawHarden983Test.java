@@ -54,14 +54,14 @@ public class EsIndexAdminRawHarden983Test {
     @Test
     public void bulk动作行带BOM不能绕过控制面守卫() {
         assertRejected(() -> admin.guardRawGuarded("POST", "/_bulk",
-                        "\uFEFF{\"delete\":{\"_index\":\"es_console_user\",\"_id\":\"admin\"}}\n"),
+                        "\uFEFF{\"delete\":{\"_index\":\"searchdeck_user\",\"_id\":\"admin\"}}\n"),
                 "BOM 前缀动作行");
     }
 
     @Test
     public void bulk动作行的index值带BOM同样拒绝() {
         assertRejected(() -> admin.guardRawGuarded("POST", "/_bulk",
-                        "{\"index\":{\"_index\":\"\uFEFFes_console_user\"}}\n{\"x\":1}\n"),
+                        "{\"index\":{\"_index\":\"\uFEFFsearchdeck_user\"}}\n{\"x\":1}\n"),
                 "BOM 前缀 _index 值");
     }
 
@@ -88,7 +88,7 @@ public class EsIndexAdminRawHarden983Test {
 
     @Test
     public void Mustache注释前缀不能隐藏模板二级索引() throws Exception {
-        String source = "{{!x}}{\"query\":{\"terms\":{\"u\":{\"index\":\"e*\",\"id\":\"a\",\"path\":\"u\"}}}}";
+        String source = "{{!x}}{\"query\":{\"terms\":{\"u\":{\"index\":\"s*\",\"id\":\"a\",\"path\":\"u\"}}}}";
         String body = new com.fasterxml.jackson.databind.ObjectMapper()
                 .writeValueAsString(java.util.Collections.singletonMap("source", source));
         assertRejected(() -> admin.guardSearchBody(body), "Mustache 前缀 source");
@@ -115,20 +115,20 @@ public class EsIndexAdminRawHarden983Test {
 
     @Test
     public void BOM前缀不能跳过结构化二级索引守卫() {
-        String search = "\uFEFF{\"query\":{\"terms\":{\"user\":{\"index\":\"e*\",\"id\":\"admin\","
+        String search = "\uFEFF{\"query\":{\"terms\":{\"user\":{\"index\":\"s*\",\"id\":\"admin\","
                 + "\"path\":\"username\"}}}}";
         assertRejected(() -> admin.guardSearchBody(search), "BOM 搜索体");
-        String reindex = "\uFEFF{\"source\":{\"index\":\"e*\"},\"dest\":{\"index\":\"logs-1\"}}";
+        String reindex = "\uFEFF{\"source\":{\"index\":\"s*\"},\"dest\":{\"index\":\"logs-1\"}}";
         assertRejected(() -> admin.guardReindexBody(reindex), "BOM reindex 源");
-        String aliases = "\uFEFF{\"actions\":[{\"add\":{\"index\":\"e*\",\"alias\":\"a1\"}}]}";
+        String aliases = "\uFEFF{\"actions\":[{\"add\":{\"index\":\"s*\",\"alias\":\"a1\"}}]}";
         assertRejected(() -> admin.guardAliasActionsBody(aliases), "BOM 别名通配");
-        String template = "\uFEFF{\"index_patterns\":[\"e*\"]}";
+        String template = "\uFEFF{\"index_patterns\":[\"s*\"]}";
         assertRejected(() -> admin.guardIndexTemplateBody(template), "BOM 模板通配");
     }
 
     @Test
     public void wrapper编码查询不能藏控制面lookup() {
-        String inner = "{\"terms\":{\"user\":{\"index\":\"es_console_user\",\"id\":\"admin\","
+        String inner = "{\"terms\":{\"user\":{\"index\":\"searchdeck_user\",\"id\":\"admin\","
                 + "\"path\":\"username\"}}}";
         String encoded = Base64.getEncoder().encodeToString(inner.getBytes(StandardCharsets.UTF_8));
         String body = "{\"query\":{\"wrapper\":{\"query\":\"" + encoded + "\"}}}";
@@ -166,7 +166,7 @@ public class EsIndexAdminRawHarden983Test {
     public void 非管理员不能删除含控制面的快照() {
         List<Map<String, Object>> snapshots = new ArrayList<>();
         snapshots.add(snapshot("snap-ok", "logs-1", "logs-2"));
-        snapshots.add(snapshot("snap-ctl", "logs-1", "es_console_user"));
+        snapshots.add(snapshot("snap-ctl", "logs-1", "searchdeck_user"));
         snapshots.add(snapshot("snap-system", ".security-7"));
         assertRejected(() -> admin.guardSnapshotDeletion(snapshots, "snap-ctl"), "控制面快照");
         assertRejected(() -> admin.guardSnapshotDeletion(snapshots, "snap-system"), "系统索引快照");

@@ -99,9 +99,9 @@ public class CrossClusterMigrateEnvRef973Test {
     @Test
     public void 控制台鉴权秘密引用被拒绝() {
         Map<String, Object> props = new HashMap<>();
-        props.put("es.rebuild.console.auth.token-secret", "hmac-secret");
+        props.put("searchdeck.elasticsearch.console.auth.token-secret", "hmac-secret");
         RemoteClusterConn c = conn();
-        c.setHostRef("es.rebuild.console.auth.token-secret");
+        c.setHostRef("searchdeck.elasticsearch.console.auth.token-secret");
         try {
             service(props).resolvePreview(c);
             fail("控制台 token secret 引用必须拒绝");
@@ -113,7 +113,7 @@ public class CrossClusterMigrateEnvRef973Test {
     @Test
     public void 字面量控制台秘密占位符同样拒绝() {
         RemoteClusterConn c = conn();
-        c.setHost("${es.rebuild.console.auth.fallback-password}");
+        c.setHost("${searchdeck.elasticsearch.console.auth.fallback-password}");
         try {
             service(new HashMap<String, Object>()).resolvePreview(c);
             fail("控制台兜底密码占位符必须拒绝");

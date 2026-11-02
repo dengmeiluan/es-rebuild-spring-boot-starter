@@ -32,7 +32,7 @@ import java.util.Map;
 
 /**
  * 多集群监控历史端点（20260922 批④前端配套）：只读查询服务端定时任务落库的
- * 连接探活快照（{@code es_console_monitor-yyyy.MM.dd}）。
+ * 连接探活快照（{@code searchdeck_monitor-yyyy.MM.dd}）。
  *
  * <p>路径刻意挂在 {@code /internal/es/index/monitor-history}（避开 {@code /clusters/}
  * ADMIN 关键字与 {@code /cluster/} 透传白名单），并登记进 overview 页 apiPrefixes——

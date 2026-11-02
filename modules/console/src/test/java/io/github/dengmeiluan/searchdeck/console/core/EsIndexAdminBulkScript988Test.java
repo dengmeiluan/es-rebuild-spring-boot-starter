@@ -49,11 +49,11 @@ public class EsIndexAdminBulkScript988Test {
     public void bulkUpdate脚本改写目标索引拒绝() {
         assertRejected(() -> admin.guardRawGuarded("POST", "/_bulk",
                         "{\"update\":{\"_index\":\"logs\",\"_id\":\"1\"}}\n"
-                                + "{\"script\":{\"source\":\"ctx._index='es_console_user'\"}}\n"),
+                                + "{\"script\":{\"source\":\"ctx._index='searchdeck_user'\"}}\n"),
                 "bulk update 伴生行脚本把文档改写到控制面索引");
         assertRejected(() -> admin.guardRawGuarded("POST", "/logs/_bulk",
                         "{\"update\":{\"_id\":\"1\"}}\n"
-                                + "{\"script\":{\"source\":\"ctx['_index']='x_es_rebuild_lock'\"}}\n"),
+                                + "{\"script\":{\"source\":\"ctx['_index']='x_searchdeck_lock'\"}}\n"),
                 "方括号字面量形态同样改写目标索引");
     }
 

@@ -16,7 +16,7 @@
 
 package io.github.dengmeiluan.searchdeck.console.control;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import org.elasticsearch.client.EsFakeClients;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.RestHighLevelClient;
@@ -52,11 +52,11 @@ public class ControlIndexInitializerIdempotencyTest {
     /** 真实形态：ES 对重复建索引的 400 回包（type 在 error.type，不在顶层）。 */
     private static final String ALREADY_EXISTS_BODY =
             "{\"error\":{\"root_cause\":[{\"type\":\"resource_already_exists_exception\","
-                    + "\"reason\":\"index [es_console_user/abc123] already exists\","
-                    + "\"index_uuid\":\"abc123\",\"index\":\"es_console_user\"}],"
+                    + "\"reason\":\"index [searchdeck_user/abc123] already exists\","
+                    + "\"index_uuid\":\"abc123\",\"index\":\"searchdeck_user\"}],"
                     + "\"type\":\"resource_already_exists_exception\","
-                    + "\"reason\":\"index [es_console_user/abc123] already exists\","
-                    + "\"index_uuid\":\"abc123\",\"index\":\"es_console_user\"},\"status\":400}";
+                    + "\"reason\":\"index [searchdeck_user/abc123] already exists\","
+                    + "\"index_uuid\":\"abc123\",\"index\":\"searchdeck_user\"},\"status\":400}";
 
     /** 真实形态：6.x 对 typeless mappings 的 400 回包。 */
     private static final String MAPPER_PARSING_BODY =
@@ -89,7 +89,7 @@ public class ControlIndexInitializerIdempotencyTest {
             throw EsFakeClients.responseException(400, ALREADY_EXISTS_BODY);
         });
 
-        new ControlIndexInitializer(new EsRebuildProperties()).ensureAll(client);
+        new ControlIndexInitializer(new SearchDeckElasticsearchProperties()).ensureAll(client);
 
         assertEquals("三个控制索引都应被尝试创建", 3, puts.size());
     }
@@ -110,7 +110,7 @@ public class ControlIndexInitializerIdempotencyTest {
             throw EsFakeClients.responseException(400, ALREADY_EXISTS_BODY);
         });
 
-        new ControlIndexInitializer(new EsRebuildProperties()).ensureAll(client);
+        new ControlIndexInitializer(new SearchDeckElasticsearchProperties()).ensureAll(client);
 
         assertEquals("每个索引只应发一次 PUT，不得因误判而 typed 重试", 3, bodies.size());
         for (String b : bodies) {
@@ -140,7 +140,7 @@ public class ControlIndexInitializerIdempotencyTest {
             return "{\"acknowledged\":true}";
         });
 
-        new ControlIndexInitializer(new EsRebuildProperties()).ensureAll(client);
+        new ControlIndexInitializer(new SearchDeckElasticsearchProperties()).ensureAll(client);
 
         assertEquals("三个索引各发两次（typeless 被拒 + typed 重试）", 6, bodies.size());
         assertFalse("首发必须是 typeless", bodies.get(0).contains("\"_doc\""));
@@ -160,7 +160,7 @@ public class ControlIndexInitializerIdempotencyTest {
             return "{\"acknowledged\":true}";
         });
 
-        new ControlIndexInitializer(new EsRebuildProperties()).ensureAll(client);
+        new ControlIndexInitializer(new SearchDeckElasticsearchProperties()).ensureAll(client);
 
         assertEquals("已知 6.x 时每个索引只需一发", 3, bodies.size());
         assertTrue("已知 6.x 首发就必须带 _doc 包层",
@@ -183,7 +183,7 @@ public class ControlIndexInitializerIdempotencyTest {
         });
 
         try {
-            new ControlIndexInitializer(new EsRebuildProperties()).ensureAll(client);
+            new ControlIndexInitializer(new SearchDeckElasticsearchProperties()).ensureAll(client);
             fail("非「已存在」的错误必须抛出，不得被幂等判据吞掉");
         } catch (IllegalStateException expected) {
             assertTrue("异常应指明是初始化控制索引失败: " + expected.getMessage(),
@@ -225,7 +225,7 @@ public class ControlIndexInitializerIdempotencyTest {
         });
 
         try {
-            new ControlIndexInitializer(new EsRebuildProperties()).ensureAll(client);
+            new ControlIndexInitializer(new SearchDeckElasticsearchProperties()).ensureAll(client);
             fail("error.type 是 mapper_parsing_exception，必须抛；"
                     + "仅因 reason 文本里出现 resource_already_exists_exception 就判为幂等成功，"
                     + "会让索引没建出来却报绑定成功");

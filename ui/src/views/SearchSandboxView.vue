@@ -616,17 +616,17 @@ function onEditorKey(e: KeyboardEvent) {
 onMounted(() => {
   if (!store.indices.length) store.loadIndices();
   /* 五个送达入口（历史回放/收藏/模板库/远程集群/BoostTuner）经一次性通道送达沙盒：
-   es-console.sandbox.body 与 ss_dsl_body（sessionStorage；localStorage 旧落点残留读后清不再消费）。
-   送达必达——非默认旧稿先暂存（es-console.sandbox.prev + toast 一键找回）再覆盖，
+   searchdeck.sandbox.body 与 ss_dsl_body（sessionStorage；localStorage 旧落点残留读后清不再消费）。
+   送达必达——非默认旧稿先暂存（searchdeck.sandbox.prev + toast 一键找回）再覆盖，
    与 DSL 页回放的覆盖保护同语义 */
-  const legacy = sessionStorage.getItem('es-console.sandbox.body') || sessionStorage.getItem('ss_dsl_body');
-  removeStoredRaw(sessionStorage, 'es-console.sandbox.body');
+  const legacy = sessionStorage.getItem('searchdeck.sandbox.body') || sessionStorage.getItem('ss_dsl_body');
+  removeStoredRaw(sessionStorage, 'searchdeck.sandbox.body');
   removeStoredRaw(sessionStorage, 'ss_dsl_body');
   removeStoredRaw(localStorage, 'ss_dsl_body');
   if (legacy) {
     const cur = dslBody.value;
     if (cur && cur !== legacy && cur !== DEFAULT_DSL) {
-      writeStoredRaw(sessionStorage, 'es-console.sandbox.prev', JSON.stringify({ idx: indexName.value, dsl: cur }));
+      writeStoredRaw(sessionStorage, 'searchdeck.sandbox.prev', JSON.stringify({ idx: indexName.value, dsl: cur }));
       store.notify('info', '已载入新查询，你之前编辑的 DSL 已暂存', {
         action: { label: '恢复我的 DSL', onClick: () => { dslBody.value = cur; } },
         duration: 10000,

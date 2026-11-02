@@ -193,7 +193,7 @@ describe('BoostTuner 表格化修边（五百二十五批源码锁；531 批同�
     expect(v).toMatch(/\.bt-right :deep\(tr\.row-up td\)/);
     /* 531 批：裸 sessionStorage 接收换 useLinkCarry（键与 payload 逐字保持） */
     expect(v).toContain("useLinkCarry<{ index?: string; keyword?: string }>('boost')");
-    expect(v).not.toContain("sessionStorage.getItem('es-console.link.boost')");
+    expect(v).not.toContain("sessionStorage.getItem('searchdeck.link.boost')");
     expect(v).toMatch(/@media \(max-width: 900px\)/);
     expect(v, '全文禁 min-width:901px 倒挂档').not.toMatch(/min-width:\s*901px/);
     /* 管理件在位（525 批契约不变；554 批同步更新：计数徽标改用 StatusPill 统一件，

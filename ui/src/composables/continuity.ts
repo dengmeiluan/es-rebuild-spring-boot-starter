@@ -6,7 +6,7 @@ import { writeStoredRaw } from '../utils/safeJson';
  下次裸进站（#/ 或 #/overview，无深链意图）时 toast 提供「继续上次」一键回；
  深链进站是明确意图，不打扰；现场超过 7 天视为过期不再提示。 */
 
-const LAST_KEY = 'es-console.last-route';
+const LAST_KEY = 'searchdeck.last-route';
 const MAX_AGE_MS = 7 * 24 * 3600 * 1000;
 
 interface LastRoute { fullPath: string; name: string; ts: number }

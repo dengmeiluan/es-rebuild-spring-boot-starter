@@ -22,7 +22,7 @@ export interface ArchivedReport {
   data: any;
 }
 
-export const ARCHIVE_KEY = 'es-console.healthReport.archive.v1';
+export const ARCHIVE_KEY = 'searchdeck.healthReport.archive.v1';
 /** 存档上限：报告体含节点/索引明细（十 KB 级/份），8 份在 localStorage 5MB 限额内安全 */
 export const ARCHIVE_MAX = 8;
 

@@ -195,7 +195,7 @@ describe('ResultTable 转置偏好记忆（四十批）', () => {
 describe('ResultTable 导出行序（七十七批）', () => {
   it('排序后导出 JSON 行序与表格所见一致；无排序导原始序；勾选只导选中', async () => {
     /* 一百五十四批：导出改「⬇ 一键直出默认格式」——预置默认格式 JSON（usePref 初始化读 LS） */
-    localStorage.setItem('es-console.pref.rt.export.fmt', '"json"');
+    localStorage.setItem('searchdeck.pref.rt.export.fmt', '"json"');
     await mountTbl({ hits: HITS, total: 3, index: 'idx-1', storageKey: 'k1' });
     const exportJsonBtn = [...host.querySelectorAll('button')].find(b => b.textContent?.trim().startsWith('导出'))!;
     /* 无排序：原始序 banana,apple,cherry */

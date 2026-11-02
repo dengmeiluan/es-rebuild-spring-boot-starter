@@ -20,7 +20,7 @@ import io.github.dengmeiluan.searchdeck.platform.pages.ConsolePageCatalog;
 import io.github.dengmeiluan.searchdeck.console.control.ControlClusterResolver;
 import io.github.dengmeiluan.searchdeck.console.multicluster.ConnStore;
 import io.github.dengmeiluan.searchdeck.console.xmigrate.RemoteClusterConn;
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import org.junit.Test;
 
 import javax.servlet.ServletOutputStream;
@@ -180,7 +180,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
             @Override public void delete(String id) { }
             @Override public void updateVersion(String id, String version) { }
         };
-        EnvPagesResolver envPagesResolver = new EnvPagesResolver(stubStore, new EsRebuildProperties());
+        EnvPagesResolver envPagesResolver = new EnvPagesResolver(stubStore, new SearchDeckElasticsearchProperties());
         return new ConsoleAuthInterceptor(authorizer, audit, resolver, ConsolePageCatalog.load(), pageAuthEnabled,
                 envPagesResolver, stubStore);
     }
@@ -208,7 +208,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
             @Override public void delete(String id) { }
             @Override public void updateVersion(String id, String version) { }
         };
-        EnvPagesResolver envPagesResolver = new EnvPagesResolver(stubStore, new EsRebuildProperties());
+        EnvPagesResolver envPagesResolver = new EnvPagesResolver(stubStore, new SearchDeckElasticsearchProperties());
         return new ConsoleAuthInterceptor(authorizer, audit, resolver, ConsolePageCatalog.load(), true,
                 envPagesResolver, stubStore);
     }
@@ -326,7 +326,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
 
     @Test
     public void 自救通道_残留跨账号目标头不死于连接可见性() throws Exception {
-        // 产线实报：换号后 localStorage 残留上一账号的 es-console.target，/auth/me 与 /clusters
+        // 产线实报：换号后 localStorage 残留上一账号的 searchdeck.target，/auth/me 与 /clusters
         // 带着它发出——零页集身份对该连接不可见 → 连身份探测都 403（「身份未确认」全量菜单假态）
         // + 连接目录加载失败，要等兜底重置目标才自愈。自助通道不得死于连接可见性：
         // 目录本身按可见性过滤行级，身份探测与目标无关，数据面另有 EsTargetInterceptor 独立闸。
@@ -954,7 +954,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
 
     /* ------------- ·管理域放开（裁决「管理域放」）：raw/users 归属菜单页按勾选裁决 -------------
        raw 归 rest 页（POST /cluster/raw 归 REST 直连页写勾选）、users 归 security 页（用户管理
-       归安全中心写勾选）——es-console-pages.json apiPrefixes 归属后页面门自然接管（读键可见+
+       归安全中心写勾选）——searchdeck-pages.json apiPrefixes 归属后页面门自然接管（读键可见+
        写键 WRITE_DENIED）；系统管理（/setup/rebind 重绑、/clusters/ 连接档案）无菜单勾选项
        对应且为授权体系载体，维持 ADMIN 专属。静态模型（SPI 未启用）维持角色档 ADMIN。 */
     @Test
@@ -1371,7 +1371,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
     }
 
     /* ═══ 1131：page-auth 逃生阀关闭时的角色档底线 ═══
-       背景：`es.rebuild.console.page-auth.enabled=false` 是运维逃生阀（启动期有 WARN 留痕），
+       背景：`searchdeck.elasticsearch.console.page-auth.enabled=false` 是运维逃生阀（启动期有 WARN 留痕），
        关闭后回退「纯角色档」。审计要确认这个回退**不会**把写端点一并放开——
        否则误配一次就等于全站放开写，比不开页面级授权更危险。 */
     @Test
@@ -1445,7 +1445,7 @@ public class ConsoleAuthInterceptorPageAuthTest {
         };
         Map<String, Set<String>> templates = new HashMap<>();
         templates.put("PROD", new HashSet<>(Collections.singletonList("overview")));
-        EsRebuildProperties props = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties props = new SearchDeckElasticsearchProperties();
         props.setEnvPages(templates);
         return new ConsoleAuthInterceptor(authorizer, new CapturingAudit(), resolver,
                 ConsolePageCatalog.load(), true, new EnvPagesResolver(stubStore, props), stubStore);

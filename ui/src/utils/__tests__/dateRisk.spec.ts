@@ -1,6 +1,5 @@
-/* 本文件的期望值逐格来自 R94 实测矩阵：
-   docs/superpowers/notes/2026-08-01-r94-es6to7-date-compat-findings.md §1 / §4 / §5b
-   探针可复跑：cd es-rebuild-spring-boot-starter && mvn -o test -Dtest='DateConversionMatrixProbe+DateFixMatrixProbe'
+/* 本文件的期望值逐格来自 R94 实测矩阵（历史记录见 git 提交）：
+   探针可复跑：cd searchdeck && mvn -o test -Dtest='DateConversionMatrixProbe+DateFixMatrixProbe'
    ⚠️ 改这里的任何期望值之前，先复跑探针确认矩阵没变。矩阵是事实，断言只是它的镜像。 */
 
 import { describe, it, expect } from 'vitest';
@@ -448,7 +447,7 @@ describe('assessDateRisks · 修复建议按 sdes 版本分叉（R94 §4 关键�
 
   it('sdes 4.0.9 + 数字存储 → 首推开关，且绝不提 DateFormat.epoch_millis', () => {
     const hit = numeric('4.0.9.RELEASE');
-    expect(hit.fix).toMatch(/es\.rebuild\.compat\.date-converters/);
+    expect(hit.fix).toMatch(/searchdeck\.elasticsearch\.compat\.date-converters/);
     expect(hit.fix).not.toMatch(/DateFormat\.epoch_millis/);
   });
 
@@ -458,7 +457,7 @@ describe('assessDateRisks · 修复建议按 sdes 版本分叉（R94 §4 关键�
 
   it('sdes 版本未知 → 两套都给，不赌', () => {
     const hit = numeric(null);
-    expect(hit.fix).toMatch(/es\.rebuild\.compat\.date-converters/);
+    expect(hit.fix).toMatch(/searchdeck\.elasticsearch\.compat\.date-converters/);
     expect(hit.fix).toMatch(/版本|未知/);
   });
 
@@ -473,7 +472,7 @@ describe('assessDateRisks · 修复建议按 sdes 版本分叉（R94 §4 关键�
 
   it('版本串解析不了 → 按未知处理，两套都给', () => {
     const hit = numeric('banana');
-    expect(hit.fix).toMatch(/es\.rebuild\.compat\.date-converters/);
+    expect(hit.fix).toMatch(/searchdeck\.elasticsearch\.compat\.date-converters/);
     expect(hit.fix).toMatch(/版本|未知/);
   });
 
@@ -481,7 +480,7 @@ describe('assessDateRisks · 修复建议按 sdes 版本分叉（R94 §4 关键�
      旁边这条字面量锚中和「常量比自己」：断言两端若都派生自 COMPAT_DATE_CONVERTERS_KEY，
      把常量改成 'banana' 照样全绿。 */
   it('配置键常量就是 Task 18 的属性名字面量', () => {
-    expect(COMPAT_DATE_CONVERTERS_KEY).toBe('es.rebuild.compat.date-converters');
+    expect(COMPAT_DATE_CONVERTERS_KEY).toBe('searchdeck.elasticsearch.compat.date-converters');
     expect(numeric('4.0.9.RELEASE').fix).toContain(COMPAT_DATE_CONVERTERS_KEY);
   });
 

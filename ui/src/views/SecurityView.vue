@@ -395,7 +395,7 @@
       <!-- 裸 .empty 迁 EmptyState compact（审计卡内嵌窄态）；补
  !auditLoading 门控——在途骨架与空态互斥（QRT v-if 已含 loadingOps 分支） -->
       <EmptyState v-if="!auditLoading && !auditRows.length && auth.me && !auditErr" compact :icon="ScrollText"
-        text="暂无审计记录" hint="写操作与登录会自动落档到 es_console_ops_audit" />
+        text="暂无审计记录" hint="写操作与登录会自动落档到 searchdeck_ops_audit" />
 
       <!-- 审计详情查看器(长 detail 完整查看+一键复制,不再只有 title 截断) -->
       <n-modal v-model:show="detailOpen" preset="card" title="审计详情" style="width:640px;max-width:92vw" :bordered="false">

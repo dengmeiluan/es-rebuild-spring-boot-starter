@@ -22,7 +22,7 @@ export interface DraftScope {
   mode?: () => string;
 }
 
-const PREFIX = 'es-console.draft2';
+const PREFIX = 'searchdeck.draft2';
 
 /** 凭据样键（大小写不敏感）命中即掩埋其值，防误粘贴的连接串/配置带密码落盘 */
 const CREDENTIAL_KEY_RE = /("(?:[^"]*(?:password|passwd|secret|token|api[_-]?key|authorization|auth)[^"]*)"\s*:\s*")([^"]*)(")/gi;

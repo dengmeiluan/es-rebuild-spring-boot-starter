@@ -540,7 +540,7 @@ function stopReadyAnnounce() {
 }
 function announceHostReady() {
   if (getHostToken()) { stopReadyAnnounce(); return; }
-  try { window.parent.postMessage({ type: 'es-console-ready' }, '*'); } catch { /* 跨域限制时静默 */ }
+  try { window.parent.postMessage({ type: 'searchdeck-ready' }, '*'); } catch { /* 跨域限制时静默 */ }
 }
 function bootstrapIdentity() {
   if (bootstrapped) return;
@@ -562,8 +562,8 @@ function onResumeScene() {
 }
 onMounted(() => {
   window.addEventListener('keydown', onKey);
-  window.addEventListener('es-console:identity-changed', onIdentityChanged);
-  window.addEventListener('es-console:forbidden', refreshIdentityIfStale);
+  window.addEventListener('searchdeck:identity-changed', onIdentityChanged);
+  window.addEventListener('searchdeck:forbidden', refreshIdentityIfStale);
   window.addEventListener('focus', onWindowFocusPermRefresh);
   document.addEventListener('visibilitychange', onVisibilityPermRefresh);
   /* v3.0.0：th.sortable 键盘可达的 tabindex 注入（事件委托代理 focus 不可行，
@@ -582,7 +582,7 @@ onMounted(() => {
   mo.observe(document.body, { childList: true, subtree: true });
   (window as any).__esSortableMo = mo;
   // iframe 嵌入宿主页面时的 postMessage 握手 ——
-  // 子页就绪即发 es-console-ready，宿主回 es-console-host-token 下发宿主凭证（内存态），
+  // 子页就绪即发 searchdeck-ready，宿主回 searchdeck-host-token 下发宿主凭证（内存态），
   // 收到后重探身份：委托鉴权认出即免内置登录。独立开页（非 iframe）零开销。
   if (window.parent !== window) {
     window.addEventListener('message', onHostMessage);
@@ -617,15 +617,15 @@ onBeforeUnmount(() => {
   window.clearTimeout(hostWaitTimer);
   window.removeEventListener('keydown', onKey);
   window.removeEventListener('message', onHostMessage);
-  window.removeEventListener('es-console:identity-changed', onIdentityChanged);
-  window.removeEventListener('es-console:forbidden', refreshIdentityIfStale);
+  window.removeEventListener('searchdeck:identity-changed', onIdentityChanged);
+  window.removeEventListener('searchdeck:forbidden', refreshIdentityIfStale);
   window.removeEventListener('focus', onWindowFocusPermRefresh);
   document.removeEventListener('visibilitychange', onVisibilityPermRefresh);
   (window as any).__esSortableMo?.disconnect();
 });
 
 /* iframe 嵌入：宿主 postMessage 下发凭证与主题。
- token 消息可顺带带 theme 字段（首握一次到位）；es-console-host-theme 是运行期热切通道。
+ token 消息可顺带带 theme 字段（首握一次到位）；searchdeck-host-theme 是运行期热切通道。
  用户手切主题档后宿主热推不再生效（反超语义在 store.setHostTheme）。 */
 function onHostMessage(e: MessageEvent) {
   /* 只接受宿主父窗口消息：任意可 postMessage 的第三方窗口不得替换 hostToken/主题。
@@ -635,7 +635,7 @@ function onHostMessage(e: MessageEvent) {
   if (window.parent && e.source !== window.parent) return;
   const d = e.data;
   if (!d || typeof d !== 'object') return;
-  if (d.type === 'es-console-host-token' && typeof d.token === 'string') {
+  if (d.type === 'searchdeck-host-token' && typeof d.token === 'string') {
     stopReadyAnnounce();
     /* 运行期换发：旧 token 对应的授权必须立即失效，probe 落地前写门 fail-closed。
        否则新 token 已生效、旧 grantedPages 仍在，旧写权限可在换人窗口发出请求。 */
@@ -660,7 +660,7 @@ function onHostMessage(e: MessageEvent) {
       store.loadConns();
     }
     else bootstrapIdentity();
-  } else if (d.type === 'es-console-host-theme') {
+  } else if (d.type === 'searchdeck-host-theme') {
     /* 非法载荷忽略（保留当前主题）而非钳回 dark——浅色宿主下被误翻深比不收消息更糟 */
     if (d.mode === 'dark' || d.mode === 'light') store.setHostTheme(d.mode);
   }

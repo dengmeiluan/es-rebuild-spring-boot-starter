@@ -40,7 +40,7 @@ import java.util.Map;
  * 持久化到本地磁盘，重启后免向导自动重连——对标 Kibana 的 {@code kibana.yml} 角色，
  * 但档案由平台自身管理（原子写 + 密码加密），宿主零配置。
  *
- * <p><b>安全</b>：密码 AES-256-GCM 加密存储（{@code es-console-home.key} 32 字节随机密钥，
+ * <p><b>安全</b>：密码 AES-256-GCM 加密存储（{@code searchdeck-home.key} 32 字节随机密钥，
  * 首次生成；12 字节随机 IV 前置密文一起 Base64）。档案与密钥同目录，语义 = 「持有该机器
  * 文件系统权限即持有控制台」，与本地配置文件明文密码的传统模式相比只强不弱。</p>
  *
@@ -52,8 +52,8 @@ public class BootstrapHomeStore {
 
     private static final Logger LOG = LoggerFactory.getLogger(BootstrapHomeStore.class);
 
-    private static final String HOME_FILE = "es-console-home.json";
-    private static final String KEY_FILE = "es-console-home.key";
+    private static final String HOME_FILE = "searchdeck-home.json";
+    private static final String KEY_FILE = "searchdeck-home.key";
     private static final int GCM_IV_LEN = 12;
     private static final int GCM_TAG_BITS = 128;
 
@@ -62,7 +62,7 @@ public class BootstrapHomeStore {
     private final SecureRandom random = new SecureRandom();
 
     /**
-     * @param configuredDir es.rebuild.console.home-dir（可空）
+     * @param configuredDir searchdeck.elasticsearch.console.home-dir（可空）
      * @param appName       spring.application.name（可空，空取 default）
      */
     public BootstrapHomeStore(String configuredDir, String appName) {
@@ -70,7 +70,7 @@ public class BootstrapHomeStore {
         if (configuredDir != null && !configuredDir.trim().isEmpty()) {
             this.homeDir = Paths.get(configuredDir.trim());
         } else {
-            this.homeDir = Paths.get(System.getProperty("user.home"), ".es-console", app);
+            this.homeDir = Paths.get(System.getProperty("user.home"), ".searchdeck", app);
         }
     }
 

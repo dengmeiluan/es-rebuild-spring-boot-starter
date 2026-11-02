@@ -65,7 +65,7 @@ public class ConsoleAuthControllerOpsAuditFilterTest {
 
     private static ConsoleAuthController controller(ConsoleOpsAuditStore store) {
         BuiltinConsoleAuthService authService = new BuiltinConsoleAuthService(
-                () -> null, "es_console_user", "admin", "es-console", 1000L, "s") {
+                () -> null, "searchdeck_user", "admin", "searchdeck", 1000L, "s") {
             @Override public boolean hasAnyUser() { return true; }
         };
         return new ConsoleAuthController(authService, store, ConsolePageCatalog.load(), true);

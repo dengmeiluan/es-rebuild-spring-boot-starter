@@ -39,7 +39,7 @@ export function __clearSuggestCache() { epoch++; cache.clear(); }
  TTL 内存缓存之外的「上次 top20」快照：跨会话/缓存过期后的首轮 suggest 同步候选来源
  （零网络零防抖即刻回填，权威词项到达后 merge 刷新）。key 前三段与内存缓存同构；
  读写 try/catch（隐私模式/存储满静默，不影响主流程）。 */
-const STASH_KEY = 'es_console_terms_stash';
+const STASH_KEY = 'searchdeck_terms_stash';
 const STASH_CAP = 20;
 function stashKeyOf(target: string, idx: string, field: string) {
   return STASH_KEY + '::' + [target, idx, field].join('|');

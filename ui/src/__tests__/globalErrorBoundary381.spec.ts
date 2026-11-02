@@ -3,7 +3,7 @@
  * 渲染异常=白屏+控制台裸奔；未捕获 Promise 拒绝无任何痕迹。
  * 修：errorHandler（完整堆栈进控制台+经 store.notify 弹一次，R85 风暴抑制防轰炸）
  * + unhandledrejection 监听（留痕）。挂载点在 pinia/router 之后（store 可用）。
- * 附：localStorage 键命名空间两代并存（es-console.* 草稿/日志 vs es_ 偏好键）
+ * 附：localStorage 键命名空间两代并存（searchdeck.* 草稿/日志 vs es_ 偏好键）
  * 定性为历史分层不统一——统一会砸存量用户偏好，迁移成本大于收益，明确不动。
  */
 import { describe, it, expect } from 'vitest';
@@ -15,7 +15,7 @@ const s = readFileSync(join(__dirname, '../main.ts'), 'utf-8');
 describe('全局异常兜底（381 批）', () => {
   it('errorHandler：控制台堆栈+notify 弹一次+store 防护', () => {
     expect(s).toMatch(/app\.config\.errorHandler = \(err: unknown, _inst, info\) => \{/);
-    expect(s).toMatch(/console\.error\('\[es-console\] 渲染异常', err, '\\n处理链:', info\)/);
+    expect(s).toMatch(/console\.error\('\[searchdeck\] 渲染异常', err, '\\n处理链:', info\)/);
     expect(s).toMatch(/useAppStore\(\)\.notify\('error', `页面渲染异常：/);
     expect(s).toMatch(/\} catch \{ \/\* store 不可用时不二次炸 \*\/ \}/);
   });

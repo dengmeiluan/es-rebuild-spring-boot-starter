@@ -124,7 +124,7 @@
       <!-- dq-build-hd 独立行退役——折叠钮与分栏 seg 已并入顶部工具行单行
  （状态读写仍走 WorkbenchLayout expose 的 maximizedId/setMaximize） -->
       <div class="dq-main" ref="dqMainEl" v-show="!buildCollapsed" :style="dqMainStyle">
-        <!-- P1 workbench：tree/workspace 进统一可调布局；旧 es_console_qb_split 一次性迁移（只读兼容）。
+        <!-- P1 workbench：tree/workspace 进统一可调布局；旧 searchdeck_qb_split 一次性迁移（只读兼容）。
  fill-viewport=false：本页自建真高度链（.dq-fill 定高 flex 分配），.wl 视口兜底会让
  常规流的结果区 res-bar 被顶到视口底沿（P0 实报）。
  预设钮换「条件区/编辑器」口径：editor-first 实调条件树拉宽、result-first 实调
@@ -1119,7 +1119,7 @@ const paramsSummary = computed(() => {
   return '已设置 · ' + parts.slice(0, 3).join(' · ') + (parts.length > 3 ? ' 等' : '') + ' · 其余默认';
 });
 /* 查询偏好持久化重构——手写 es_qry_prefs 收敛到既有 usePref
- 封装（es-console.pref.*，SqlConsole lenient/Tasks·Topology autoRefresh 同款），
+ 封装（searchdeck.pref.*，SqlConsole lenient/Tasks·Topology autoRefresh 同款），
  复用纪律：Ref 直接供 v-model，usePref 内部 watch 落盘。profile 默认关、直方图默认开。 */
 const profileOn = usePref('query.profile', false);
 const autoHist = usePref('query.autoHist', true);
@@ -1129,14 +1129,14 @@ const histBrokenIdx = new Set<string>();
 watch(autoHist, (on) => { if (on) histBrokenIdx.delete(store.pickedIdx); });
 
 /* dsl 实时镜像到 sessionStorage——命令面板「收藏当前 DSL / 送火焰图 / 翻译 Lucene」
- 都读 es-console.dsl.body，此前无人写过，三个命令恒报「无内容」。
- 同时镜像所属索引（es-console.dsl.index）——用户在别的页收藏/送火焰图时
+ 都读 searchdeck.dsl.body，此前无人写过，三个命令恒报「无内容」。
+ 同时镜像所属索引（searchdeck.dsl.index）——用户在别的页收藏/送火焰图时
  store.pickedIdx 可能已切到别的索引，payload 带错 index 会让 DSL 回放到错误的索引上。
  原 localStorage['es_dsl:<idx>'] 写侧退役（草稿持久化归 useScopedDraft），本 watch 只留镜像。 */
 watch(dsl, (v) => {
   try {
-    writeStoredRaw(sessionStorage, 'es-console.dsl.body', v);
-    if (store.pickedIdx) writeStoredRaw(sessionStorage, 'es-console.dsl.index', store.pickedIdx);
+    writeStoredRaw(sessionStorage, 'searchdeck.dsl.body', v);
+    if (store.pickedIdx) writeStoredRaw(sessionStorage, 'searchdeck.dsl.index', store.pickedIdx);
   } catch { /* 存储满容忍 */ }
 }, { immediate: true });
 
@@ -1380,7 +1380,7 @@ watch(monacoRef, async m => {
 onBeforeUnmount(() => { cursorSub?.dispose?.(); cursorSub = undefined; });
 
 /* P1 workbench：tree 宽度交 WorkbenchLayout 管理（偏好 key 含 target/route/mode/档位），
- 旧 es_console_qb_split 由 useLayoutPreferences 在 route='/search' 首建时一次性迁移。 */
+ 旧 searchdeck_qb_split 由 useLayoutPreferences 在 route='/search' 首建时一次性迁移。 */
 const wbScope = { target: store.target || 'host', route: '/search', mode: 'builder', profile: 'standard' as const };
 const DSL_PANES: import('../components/WorkbenchLayout.vue').WorkbenchPaneSpec[] = [
   /* v4: title 置空+不可折叠——竖排侧标退役，条件树即左面板本体；
@@ -1471,7 +1471,7 @@ function tcConvert() {
   tcOut.value = out;
 }
 
-function qwSessionKey() { return 'es-console.qw.session:' + (store.target || 'host') + ':' + (store.pickedIdx || ''); }
+function qwSessionKey() { return 'searchdeck.qw.session:' + (store.target || 'host') + ':' + (store.pickedIdx || ''); }
 function saveQwSession(d: string) {
   writeStoredRaw(sessionStorage, qwSessionKey(), d);
 }
@@ -1574,7 +1574,7 @@ async function goPage(p: number) {
 function goPitDeep() {
   try {
     const obj: any = JSON.parse(applyVars(stripJsonComments(dsl.value)));
-    if (obj?.query) writeStoredRaw(sessionStorage, 'es-console.pit.filter', JSON.stringify(obj.query));
+    if (obj?.query) writeStoredRaw(sessionStorage, 'searchdeck.pit.filter', JSON.stringify(obj.query));
     const s = Array.isArray(obj?.sort) ? obj.sort[0] : obj?.sort;
     let sf = '';
     let so: 'asc' | 'desc' = 'asc';
@@ -1588,7 +1588,7 @@ function goPitDeep() {
         if (o === 'asc' || o === 'desc') so = o;
       }
     }
-    if (sf) writeStoredRaw(sessionStorage, 'es-console.pit.prefill', JSON.stringify({ sort: sf, order: so }));
+    if (sf) writeStoredRaw(sessionStorage, 'searchdeck.pit.prefill', JSON.stringify({ sort: sf, order: so }));
   } catch { /* 坏 DSL 只切通道，不写预填 */ }
   const usp = readHashQuery();
   usp.set('mode', 'pit');
@@ -2363,7 +2363,7 @@ function openTreeDocAt(i: number, goEdit = false) {
 }
 /* 结果表相关性调试入口：带当前 index+_id+dsl 送去排名侦探 / 查询 X 光（复用实验室 sessionStorage 契约）。
  手写 sessionStorage.setItem 换 useLinkCarry 统一件——键名与 payload 结构逐字保持
- （es-console.link.rankdebug={index,id,query} / es-console.link.xray={index,id}），消费端零感 */
+ （searchdeck.link.rankdebug={index,id,query} / searchdeck.link.xray={index,id}），消费端零感 */
 const rankDebugCarry = useLinkCarry<{ index: string; id: string; query: string }>('rankdebug');
 const xrayCarry = useLinkCarry<{ index: string; id: string }>('xray');
 function gotoWhy(hit: SearchHit) {
@@ -2779,7 +2779,7 @@ function openInDevTools() {
   if (!resp.value) return;
   if (!canDevtools.value) { store.notify('warning', 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'); return; }
   const idxPath = store.pickedIdx ? `/${store.pickedIdx}/_search` : '/_search';
-  writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
+  writeStoredRaw(sessionStorage, 'searchdeck.devtools.open', JSON.stringify({
     title: store.pickedIdx || '_search',
     method: 'POST',
     path: idxPath,
@@ -2795,7 +2795,7 @@ function histNewTab(h: { query: string; index?: string }) {
   const idxPath = (h.index ? '/' + h.index : '') + '/_search';
   let body = h.query || '';
   try { body = JSON.stringify(JSON.parse(stripJsonComments(body)), null, 2); } catch { /* 非 JSON 原样带过去 */ }
-  writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
+  writeStoredRaw(sessionStorage, 'searchdeck.devtools.open', JSON.stringify({
     title: h.index || '_search',
     method: 'POST',
     path: idxPath,
@@ -2886,7 +2886,7 @@ function importDsl() {
 }
 /* ═══ ：DSL→Lucene 一键翻译（工具行钮）═══
  CmdPalette r30-dsl-to-lucene 既有出口同线：dslToLucene 纯函数（启发式抽取 query_string）
- → es-console.lucene.q/index 会话键 → 跳 /search?mode=lucene（QueryHub lucene 通道经
+ → searchdeck.lucene.q/index 会话键 → 跳 /search?mode=lucene（QueryHub lucene 通道经
  useUrlState 响应式切档，LuceneQueryView 挂载消费 carry 回显）。DSL 非法 notify 不跳。 */
 function openInLucene() {
   const obj = tryParse(applyVars(stripJsonComments(dsl.value)));
@@ -2895,13 +2895,13 @@ function openInLucene() {
      此前这些子句被静默丢弃，用户拿着"少了条件"的 Lucene 去执行还以为等价。
      现在把无法翻译的子句名带到 Lucene 侧提示（写会话键，跳转后由宿主展示）。 */
   const { lucene, lossy } = dslToLuceneDetailed(obj);
-  writeStoredRaw(sessionStorage, 'es-console.lucene.q', lucene);
-  if (store.pickedIdx) writeStoredRaw(sessionStorage, 'es-console.lucene.index', store.pickedIdx);
+  writeStoredRaw(sessionStorage, 'searchdeck.lucene.q', lucene);
+  if (store.pickedIdx) writeStoredRaw(sessionStorage, 'searchdeck.lucene.index', store.pickedIdx);
   if (lossy.length) {
-    writeStoredRaw(sessionStorage, 'es-console.lucene.lossy', JSON.stringify(lossy));
+    writeStoredRaw(sessionStorage, 'searchdeck.lucene.lossy', JSON.stringify(lossy));
     store.notify('warning', `已翻译，但 ${lossy.length} 处无法用 query_string 表达：${lossy.join('、')}`, { duration: 6000 });
   } else {
-    removeStoredRaw(sessionStorage, 'es-console.lucene.lossy');
+    removeStoredRaw(sessionStorage, 'searchdeck.lucene.lossy');
   }
   router.push({ path: '/search', query: { mode: 'lucene' } });
 }
@@ -3066,7 +3066,7 @@ function protectDraftBeforeOverride(incoming: string) {
  （挂载时已从新键/一次性迁移载入）；默认模板视同无稿不暂存（对齐旧「无持久稿」语义）。 */
   const cur = dsl.value;
   if (!cur || cur === incoming || cur === DEFAULT_DSL) return;
-  writeStoredRaw(sessionStorage, 'es-console.dsl.prev', JSON.stringify({ idx: store.pickedIdx, dsl: cur }));
+  writeStoredRaw(sessionStorage, 'searchdeck.dsl.prev', JSON.stringify({ idx: store.pickedIdx, dsl: cur }));
   store.notify('info', '已载入新查询，你之前编辑的 DSL 已暂存', {
     action: { label: '恢复我的 DSL', onClick: () => { dsl.value = cur; runQuery(); } },
     duration: 10000,
@@ -3144,10 +3144,10 @@ onMounted(() => {
   /* 分栏宽度防呆：localStorage 记忆的宽屏值在小窗会把编辑器推出视口，挂载时按容器实宽 clamp */
   resyncNow();
   /* 收藏夹/命令面板重放通道（一次性 carry 键，用后即删）——此前重放只有写侧无读侧 */
-  const carry = sessionStorage.getItem('es-console.dsl.carry');
-  const carryIdx = sessionStorage.getItem('es-console.dsl.carry.index');
-  removeStoredRaw(sessionStorage, 'es-console.dsl.carry');
-  removeStoredRaw(sessionStorage, 'es-console.dsl.carry.index');
+  const carry = sessionStorage.getItem('searchdeck.dsl.carry');
+  const carryIdx = sessionStorage.getItem('searchdeck.dsl.carry.index');
+  removeStoredRaw(sessionStorage, 'searchdeck.dsl.carry');
+  removeStoredRaw(sessionStorage, 'searchdeck.dsl.carry.index');
   if (carry != null) {
     if (carryIdx && carryIdx !== store.pickedIdx) { suppressIdxDslLoad = true; store.pick(carryIdx); }
     protectDraftBeforeOverride(carry);

@@ -27,7 +27,7 @@ const coordinate = computed(() => mavenCoordinate());
 
 /* W-C 批：片段轻量着色——安全口径与 DiagView 热线程/highlightJson 同规：
  先整段转义（& < >），再对已转义文本按序包受控 span。两档：
- ① XML 标签（&lt;tag&gt; / 带属性 / 自闭合）→ --info；② 点分 config key（行首 es.rebuild.*:）→ --ac-hi。
+ ① XML 标签（&lt;tag&gt; / 带属性 / 自闭合）→ --info；② 点分 config key（行首 searchdeck.elasticsearch.*:）→ --ac-hi。
  内联 style 直用 token：双主题自适应，v-html 内容拿不到 scoped 属性。
  三连转义合并 utils/highlightSanitize escapeHtml 导出单源 */
 function tintGuide(src: string): string {

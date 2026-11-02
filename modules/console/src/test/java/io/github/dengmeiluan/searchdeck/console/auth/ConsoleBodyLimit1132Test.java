@@ -17,7 +17,7 @@
 package io.github.dengmeiluan.searchdeck.console.auth;
 import io.github.dengmeiluan.searchdeck.platform.pages.ConsolePageCatalog;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.control.ControlClusterResolver;
 import io.github.dengmeiluan.searchdeck.console.multicluster.ConnStore;
 import io.github.dengmeiluan.searchdeck.console.xmigrate.RemoteClusterConn;
@@ -139,7 +139,7 @@ public class ConsoleBodyLimit1132Test {
             @Override public void updateVersion(String id, String version) { }
         };
         return new ConsoleAuthInterceptor(req -> admin, noopAudit(), resolver,
-                ConsolePageCatalog.load(), true, new EnvPagesResolver(store, new EsRebuildProperties()), store);
+                ConsolePageCatalog.load(), true, new EnvPagesResolver(store, new SearchDeckElasticsearchProperties()), store);
     }
 
     @Test

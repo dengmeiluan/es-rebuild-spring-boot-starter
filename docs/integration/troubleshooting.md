@@ -11,8 +11,8 @@
 
 | 症状或状态 | 第一条日志 / 检查 | 常见原因 | 安全修复 | Adhoc |
 |---|---|---|---|---|
-| 没有任何 `MappingReconcile` 日志 | 检查 `es.rebuild.mode`、`es.rebuild.mapping.auto-register` 和应用是否已发布 ApplicationReady | 非 client 模式、配置为 `off`、日志级别过滤，或进程在 ready 前失败 | 业务应用用 `mode=client`；需要自动对账时设 `startup`；先修复更早的启动失败 | 否 |
-| `DISABLED` | 检查 `es.rebuild.mapping.auto-register` | 直接调用 reconciler 时配置为 `off`；正常自动装配下 runner 本身不会创建 | 改为 `startup` 并重启，或保留关闭状态 | 否 |
+| 没有任何 `MappingReconcile` 日志 | 检查 `searchdeck.elasticsearch.mode`、`searchdeck.elasticsearch.mapping.auto-register` 和应用是否已发布 ApplicationReady | 非 client 模式、配置为 `off`、日志级别过滤，或进程在 ready 前失败 | 业务应用用 `mode=client`；需要自动对账时设 `startup`；先修复更早的启动失败 | 否 |
+| `DISABLED` | 检查 `searchdeck.elasticsearch.mapping.auto-register` | 直接调用 reconciler 时配置为 `off`；正常自动装配下 runner 本身不会创建 | 改为 `startup` 并重启，或保留关闭状态 | 否 |
 | `SKIPPED_NO_CLIENT` | 查宿主是否存在 `ElasticsearchOperations` Bean，再读 `[EsStackContract]` | 宿主未提供 ES 栈、ES 自动配置未生效，或 Bean 被排除 | 补齐并配套宿主 ES 依赖与连接配置，不要让 starter 决定版本 | 否 |
 | `FAILED_ES reason=AMBIGUOUS_CLIENT` | 搜索同一行的 `candidates=N`，盘点全部 `ElasticsearchOperations` Bean 及其目标集群 | 宿主存在多个客户端，它们可能连接不同集群；runner 无法证明哪一个是业务写入目标，因此即使其中一个标了 `@Primary` 也拒绝猜测 | 立即方案是只保留一个业务 `ElasticsearchOperations`；确需多客户端时，应显式重新设计 mapping 客户端选择契约，不要靠 `@Primary` 猜目标 | 否 |
 | `FAILED_ES reason=AMBIGUOUS_ALIAS_TARGET targets=N` | 用宿主同一个 ES 客户端执行 `GET /_alias/{name}`，核对顶层物理索引键数量 | 初始解析为多目标别名，startup 无法证明 PUT 只影响一个索引 | 把 alias 收敛为唯一物理索引目标后重启；禁止对多目标 alias 直接 PUT mapping | 否 |
@@ -35,7 +35,7 @@
 
 | 内部 detail | 可观察 status / 阶段 | 第一项安全检查 |
 |---|---|---|
-| `AUTO_REGISTER_OFF` | `DISABLED`；自动装配通常因 `off` 根本没有 runner 日志 | 检查 `es.rebuild.mapping.auto-register`，不要把无日志当成 ES 故障 |
+| `AUTO_REGISTER_OFF` | `DISABLED`；自动装配通常因 `off` 根本没有 runner 日志 | 检查 `searchdeck.elasticsearch.mapping.auto-register`，不要把无日志当成 ES 故障 |
 | `READ_FAILED` | 初始 GET mapping 后为 `FAILED_CONNECTIVITY` 或 `FAILED_ES` | 核对宿主 ES 连接、目标索引读取权限及同时间客户端/服务端日志 |
 | `AMBIGUOUS_ALIAS_TARGET` | 初始 alias 解析后为 `FAILED_ES`，且零 PUT | 检查是否为多目标别名；必须先收敛为一个唯一物理索引，禁止猜测写目标 |
 | `INDEX_MISSING` | `SKIPPED_INDEX_MISSING` 或 `FAILED_INDEX_MISSING` | 核对日志 index、别名和真实物理索引；starter 不创建索引 |

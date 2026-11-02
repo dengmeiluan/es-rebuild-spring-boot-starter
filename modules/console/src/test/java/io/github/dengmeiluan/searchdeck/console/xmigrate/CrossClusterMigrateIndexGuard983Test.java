@@ -41,7 +41,7 @@ public class CrossClusterMigrateIndexGuard983Test {
 
     @Test
     public void 源索引不得是控制面或通配() {
-        for (String source : new String[]{"es_console_user", "e*", "logs-2026*", "logs,es_console_user", ".security-7"}) {
+        for (String source : new String[]{"searchdeck_user", "s*", "logs-2026*", "logs,searchdeck_user", ".security-7"}) {
             try {
                 service().validate(request(source, "logs-1"));
                 fail("源索引应拒绝：" + source);
@@ -53,7 +53,7 @@ public class CrossClusterMigrateIndexGuard983Test {
 
     @Test
     public void 目标索引不得是控制面或系统索引() {
-        for (String dest : new String[]{"es_console_ops_audit", "e*", "logs-1,es_console_user", ".kibana"}) {
+        for (String dest : new String[]{"searchdeck_ops_audit", "s*", "logs-1,searchdeck_user", ".kibana"}) {
             try {
                 service().validate(request("logs-1", dest));
                 fail("目标索引应拒绝：" + dest);

@@ -17,7 +17,7 @@
 package io.github.dengmeiluan.searchdeck.console.docs;
 
 import java.util.Locale;
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -38,15 +38,15 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 配置参考文档全量对账守卫：反射遍历 {@link EsRebuildProperties} 属性树，
+ * 配置参考文档全量对账守卫：反射遍历 {@link SearchDeckElasticsearchProperties} 属性树，
  * 断言 docs/integration/configuration-reference.md 覆盖<b>全部</b>叶键且
  * 文档默认值与 Java 实际逐键一致；反向断言文档不出现属性树之外的幽灵键。
  * 新增配置键忘写文档 → 本守卫即红（文档现在时纪律的机械化）。
  */
 public class ConfigurationReferenceContractTest {
 
-    private static final String PROPS_PKG = EsRebuildProperties.class.getName() + "$";
-    private static final Pattern ROW_KEY = Pattern.compile("^\\|\\s*`(es\\.rebuild[^`]*)`\\s*\\|");
+    private static final String PROPS_PKG = SearchDeckElasticsearchProperties.class.getName() + "$";
+    private static final Pattern ROW_KEY = Pattern.compile("^\\|\\s*`(searchdeck\\.elasticsearch[^`]*)`\\s*\\|");
 
     private final Path starterRoot = Paths.get(System.getProperty("searchdeck.root", System.getProperty("basedir", ".")))
             .toAbsolutePath().normalize();
@@ -54,9 +54,9 @@ public class ConfigurationReferenceContractTest {
 
     @Test
     public void everyPropertyLeafIsDocumentedWithExactDefault() throws Exception {
-        EsRebuildProperties props = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties props = new SearchDeckElasticsearchProperties();
         Map<String, String> actual = new TreeMap<>();
-        walk(props, "es.rebuild", actual);
+        walk(props, "searchdeck.elasticsearch", actual);
 
         String doc = read(reference);
         Map<String, String> documented = documentedRows(doc);
@@ -76,9 +76,9 @@ public class ConfigurationReferenceContractTest {
 
     @Test
     public void documentedKeysNeverReferencePhantomProperties() throws Exception {
-        EsRebuildProperties props = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties props = new SearchDeckElasticsearchProperties();
         Map<String, String> actual = new TreeMap<>();
-        walk(props, "es.rebuild", actual);
+        walk(props, "searchdeck.elasticsearch", actual);
 
         String doc = read(reference);
         List<String> phantoms = new ArrayList<>();

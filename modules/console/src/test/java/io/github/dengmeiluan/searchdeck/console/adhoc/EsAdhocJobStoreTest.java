@@ -46,7 +46,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class EsAdhocJobStoreTest {
 
-    private static final String INDEX = "es_rebuild_adhoc_job";
+    private static final String INDEX = "searchdeck_adhoc_job";
 
     private AdhocRebuildJob job(String id, String status) {
         AdhocRebuildJob j = AdhocRebuildJob.minimal(id);

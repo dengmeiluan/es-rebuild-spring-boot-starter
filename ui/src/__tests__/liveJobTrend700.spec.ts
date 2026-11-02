@@ -18,7 +18,7 @@ const viewSrc = readFileSync(join(__dirname, '../views/LiveDashboardView.vue'), 
 const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/<!--[\s\S]*?-->/g, ' ');
 const st = strip(storeSrc).replace(/\s+/g, ' ');
 const vt = strip(viewSrc).replace(/\s+/g, ' ');
-const SNAP_KEY = 'es-console.live.snapshot:host';
+const SNAP_KEY = 'searchdeck.live.snapshot:host';
 
 describe('七百批② 任务卡走势（jobCountSeries 会话窗+快照续采）', () => {
   beforeEach(() => {

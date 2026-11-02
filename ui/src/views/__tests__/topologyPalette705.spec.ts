@@ -87,7 +87,7 @@ function metaShardTotal(host: HTMLElement): number {
   return Number(el?.querySelector('b')?.textContent ?? NaN);
 }
 
-const PREF_KEY = 'es-console.pref.shards.paletteExpanded';
+const PREF_KEY = 'searchdeck.pref.shards.paletteExpanded';
 beforeEach(() => {
   hoist.shards = bigShards();
   localStorage.removeItem(PREF_KEY);

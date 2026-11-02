@@ -16,7 +16,7 @@
 
 package io.github.dengmeiluan.searchdeck.console.core;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.lock.RebuildLock;
 import io.github.dengmeiluan.searchdeck.platform.spi.ManagedEsIndex;
 import org.junit.Test;
@@ -83,7 +83,7 @@ public class EsIndexRebuildServiceSurvivingBehaviorTest {
         RebuildLock lock;
 
         FakeLockGuard() {
-            super(null, new EsRebuildProperties());
+            super(null, new SearchDeckElasticsearchProperties());
         }
 
         @Override public void acquire(String indexKey) { calls.add("acquire:" + indexKey); }
@@ -107,7 +107,7 @@ public class EsIndexRebuildServiceSurvivingBehaviorTest {
     }
 
     private static EsIndexRebuildService service(RecordingAdmin admin, FakeLockGuard guard) {
-        EsRebuildProperties props = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties props = new SearchDeckElasticsearchProperties();
         return new EsIndexRebuildService(registryWithFoo(), admin, guard,
                 new IndexNameResolver(admin, props, null), props);
     }
@@ -331,19 +331,19 @@ public class EsIndexRebuildServiceSurvivingBehaviorTest {
     public void inspectSystemUsesInjectedLockIndexName() throws IOException {
         RecordingAdmin admin = new RecordingAdmin();
         EsIndexRebuildService svc = service(admin, new FakeLockGuard());
-        svc.setLockIndexName("prod_app_es_rebuild_lock");
+        svc.setLockIndexName("prod_app_searchdeck_lock");
 
         svc.inspectSystem("lock");
 
         assertTrue("必须查注入的那个锁索引，实际调用=" + admin.calls,
-                admin.calls.contains("inspect:prod_app_es_rebuild_lock"));
+                admin.calls.contains("inspect:prod_app_searchdeck_lock"));
     }
 
     /** job / audit 已退役，再查必须明确报错，而不是静默查一个不存在的索引。 */
     @Test
     public void inspectSystemRejectsRetiredJobAndAudit() {
         EsIndexRebuildService svc = service(new RecordingAdmin(), new FakeLockGuard());
-        svc.setLockIndexName("prod_app_es_rebuild_lock");
+        svc.setLockIndexName("prod_app_searchdeck_lock");
 
         for (String retired : new String[]{"job", "audit"}) {
             try {

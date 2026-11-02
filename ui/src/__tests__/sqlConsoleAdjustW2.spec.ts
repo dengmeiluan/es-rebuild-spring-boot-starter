@@ -96,12 +96,12 @@ describe('W2 批：SqlConsole 布局可调 + 补全单例', () => {
     btn(host, '[data-sq-rail-toggle]').click();
     await settle();
     expect(host.querySelector('.sq-samples'), '收起后模板卡必须出 DOM').toBeNull();
-    expect(localStorage.getItem('es-console.pref.sql.railOpen')).toBe('false');
+    expect(localStorage.getItem('searchdeck.pref.sql.railOpen')).toBe('false');
     expect(host.querySelector('.sq-grid')!.classList.contains('rail-off')).toBe(true);
     btn(host, '[data-sq-rail-toggle]').click();
     await settle();
     expect(host.querySelector('.sq-samples'), '展开后模板卡回来').toBeTruthy();
-    expect(localStorage.getItem('es-console.pref.sql.railOpen')).toBe('true');
+    expect(localStorage.getItem('searchdeck.pref.sql.railOpen')).toBe('true');
   });
 
   it('① 宽度三档：默认 300 → 点宽 → 360 落盘 + --sq-rail-w 内联变量', async () => {
@@ -109,7 +109,7 @@ describe('W2 批：SqlConsole 布局可调 + 补全单例', () => {
     expect(host.querySelector('.sq-grid')!.getAttribute('style')).toContain('--sq-rail-w: 300px');
     btn(host, '[data-sq-rail-w]').click();
     await settle();
-    expect(localStorage.getItem('es-console.pref.sql.railW')).toBe('360');
+    expect(localStorage.getItem('searchdeck.pref.sql.railW')).toBe('360');
     expect(host.querySelector('.sq-grid')!.getAttribute('style')).toContain('--sq-rail-w: 360px');
   });
 
@@ -137,7 +137,7 @@ describe('W2 批：SqlConsole 布局可调 + 补全单例', () => {
     expect(pick800, '菜单里必须有 800px 档').toBeTruthy();
     pick800!.click();
     await settle();
-    expect(localStorage.getItem('es-console.pref.sql.resultH')).toBe('800');
+    expect(localStorage.getItem('searchdeck.pref.sql.resultH')).toBe('800');
     const v = readFileSync(join(__dirname, '../views/SqlConsoleView.vue'), 'utf-8');
     expect(v).toContain(':max-height="resultMaxHeight"');
     expect(v).toContain(':min-height="resultMinHeight"');
@@ -160,7 +160,7 @@ describe('W2 批：SqlConsole 布局可调 + 补全单例', () => {
     expect(code!.style.maxHeight).toBe('300px');
     btn(host, '[data-sq-code-h]').click();
     await settle();
-    expect(localStorage.getItem('es-console.pref.sql.codeH')).toBe('500');
+    expect(localStorage.getItem('searchdeck.pref.sql.codeH')).toBe('500');
     expect(host.querySelector<HTMLElement>('.sq-code')!.style.maxHeight).toBe('500px');
   });
 

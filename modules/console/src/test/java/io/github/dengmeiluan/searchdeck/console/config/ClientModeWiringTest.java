@@ -59,11 +59,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class ClientModeWiringTest {
 
     /** 控制台目录对应的 pattern，用于识别「前端未构建」这一特征。 */
-    private static final String CONSOLE_DIR_PATTERN = "/console/**";
+    private static final String SEARCHDECK_DIR_PATTERN = "/searchdeck/**";
 
     private ApplicationContextRunner runner() {
         return new ApplicationContextRunner()
-                .withConfiguration(AutoConfigurations.of(EsRebuildAutoConfiguration.class));
+                .withConfiguration(AutoConfigurations.of(SearchDeckConsoleAutoConfiguration.class));
     }
 
     /** 不配 mode（默认 client）：控制台侧的重家伙一个都不该在。 */
@@ -75,7 +75,7 @@ public class ClientModeWiringTest {
             org.junit.Assert.assertFalse("client 模式不该装 ControlClusterResolver",
                     ctx.getBeanNamesForType(ControlClusterResolver.class).length > 0);
             org.junit.Assert.assertEquals("默认 mode 必须是 client",
-                    "client", ctx.getBean(EsRebuildProperties.class).getMode());
+                    "client", ctx.getBean(SearchDeckElasticsearchProperties.class).getMode());
         });
     }
 
@@ -125,7 +125,7 @@ public class ClientModeWiringTest {
     /** 配 mode=console：控制台侧的重家伙必须回来。 */
     @Test
     public void consoleModeWiresEverything() {
-        runner().withPropertyValues("es.rebuild.mode=console").run(ctx -> {
+        runner().withPropertyValues("searchdeck.elasticsearch.mode=console").run(ctx -> {
             org.junit.Assert.assertTrue("console 模式必须装 EsIndexAdmin",
                     ctx.getBeanNamesForType(EsIndexAdmin.class).length > 0);
             org.junit.Assert.assertTrue("console 模式必须装 ControlClusterResolver",
@@ -145,7 +145,7 @@ public class ClientModeWiringTest {
      */
     @Test
     public void consoleModeInjectsRebuildLockStoreIntoAdhocService() {
-        runner().withPropertyValues("es.rebuild.mode=console").run(ctx -> {
+        runner().withPropertyValues("searchdeck.elasticsearch.mode=console").run(ctx -> {
             org.junit.Assert.assertTrue("console 模式必须装 AdhocRebuildService",
                     ctx.getBeanNamesForType(AdhocRebuildService.class).length > 0);
             AdhocRebuildService service = ctx.getBean(AdhocRebuildService.class);
@@ -162,12 +162,12 @@ public class ClientModeWiringTest {
     @Test
     public void consoleModeInjectsLockLeaseIntoAdhocService() {
         // 取值须同时满足既有交叉校验 lease-ms >= orchestration.timeout-ms（默认 1800000）
-        runner().withPropertyValues("es.rebuild.mode=console", "es.rebuild.lock.lease-ms=7200000")
+        runner().withPropertyValues("searchdeck.elasticsearch.mode=console", "searchdeck.elasticsearch.lock.lease-ms=7200000")
                 .run(ctx -> {
                     AdhocRebuildService service = ctx.getBean(AdhocRebuildService.class);
                     java.lang.reflect.Field f = AdhocRebuildService.class.getDeclaredField("lockLeaseMs");
                     f.setAccessible(true);
-                    org.junit.Assert.assertEquals("租约未从 es.rebuild.lock.lease-ms 注入",
+                    org.junit.Assert.assertEquals("租约未从 searchdeck.elasticsearch.lock.lease-ms 注入",
                             7200000L, f.get(service));
                 });
     }
@@ -182,7 +182,7 @@ public class ClientModeWiringTest {
      */
     @Test
     public void consoleModeInjectsRouterIntoAdhocService() {
-        runner().withPropertyValues("es.rebuild.mode=console").run(ctx -> {
+        runner().withPropertyValues("searchdeck.elasticsearch.mode=console").run(ctx -> {
             AdhocRebuildService service = ctx.getBean(AdhocRebuildService.class);
             java.lang.reflect.Field router = AdhocRebuildService.class.getDeclaredField("router");
             router.setAccessible(true);
@@ -200,10 +200,10 @@ public class ClientModeWiringTest {
     /** mode 非法值必须启动失败，而不是静默回落。 */
     @Test
     public void illegalModeFailsFast() {
-        runner().withPropertyValues("es.rebuild.mode=whatever").run(ctx -> {
+        runner().withPropertyValues("searchdeck.elasticsearch.mode=whatever").run(ctx -> {
             org.junit.Assert.assertNotNull("非法 mode 必须让上下文启动失败", ctx.getStartupFailure());
-            org.junit.Assert.assertTrue("失败信息要点名 es.rebuild.mode 与可选值",
-                    rootMessage(ctx.getStartupFailure()).contains("es.rebuild.mode"));
+            org.junit.Assert.assertTrue("失败信息要点名 searchdeck.elasticsearch.mode 与可选值",
+                    rootMessage(ctx.getStartupFailure()).contains("searchdeck.elasticsearch.mode"));
         });
     }
 
@@ -217,7 +217,7 @@ public class ClientModeWiringTest {
     /** console 模式不该装守卫，否则 宿主的控制台自己被挡掉。 */
     @Test
     public void consoleModeHasNoConsoleAssetGuard() {
-        runner().withPropertyValues("es.rebuild.mode=console").run(ctx ->
+        runner().withPropertyValues("searchdeck.elasticsearch.mode=console").run(ctx ->
                 org.junit.Assert.assertEquals("console 模式不该装 ConsoleAssetGuard",
                         0, ctx.getBeanNamesForType(ConsoleAssetGuard.class).length));
     }
@@ -231,26 +231,26 @@ public class ClientModeWiringTest {
      */
     @Test
     public void consoleModeInstallsConsoleCacheConfigurer() {
-        runner().withPropertyValues("es.rebuild.mode=console").run(ctx ->
+        runner().withPropertyValues("searchdeck.elasticsearch.mode=console").run(ctx ->
                 org.junit.Assert.assertTrue("console 模式必须装 ConsoleCacheConfigurer",
                         ctx.getBeanNamesForType(
                                 io.github.dengmeiluan.searchdeck.console.web.ConsoleCacheConfigurer.class).length > 0));
     }
 
     /**
-     * client 模式必须<b>不装</b>缓存策略——否则其精确 pattern {@code /console/assets/**}
-     * 优先于守卫的 {@code /console/**}，资产会绕过守卫的 404 被服务出去，静默解除资源封锁。
+     * client 模式必须<b>不装</b>缓存策略——否则其精确 pattern {@code /searchdeck/assets/**}
+     * 优先于守卫的 {@code /searchdeck/**}，资产会绕过守卫的 404 被服务出去，静默解除资源封锁。
      */
     @Test
     public void clientModeHasNoConsoleCacheConfigurer() {
         runner().run(ctx -> org.junit.Assert.assertEquals(
-                "client 模式不该装 ConsoleCacheConfigurer（其精确 pattern 会抢先于守卫 /console/**，静默解封资产）",
+                "client 模式不该装 ConsoleCacheConfigurer（其精确 pattern 会抢先于守卫 /searchdeck/**，静默解封资产）",
                 0, ctx.getBeanNamesForType(
                         io.github.dengmeiluan.searchdeck.console.web.ConsoleCacheConfigurer.class).length));
     }
 
     /**
-     * 光有 Bean 不等于真挡住：本条钉住守卫「注册了 /console/** 且 locations 为空」这一实质内容。
+     * 光有 Bean 不等于真挡住：本条钉住守卫「注册了 /searchdeck/** 且 locations 为空」这一实质内容。
      *
      * <p>{@code ResourceHandlerRegistry#getHandlerMapping()} 是 protected、跨包调不到，
      * 故用反射读 {@code registrations} 私有字段（spring-webmvc 5.2.15 字段名核对过）。
@@ -266,8 +266,8 @@ public class ClientModeWiringTest {
         new ConsoleAssetGuard().addResourceHandlers(registry);
 
         org.junit.Assert.assertArrayEquals(
-                "守卫必须接管 /console/**、/searchdeck/** 与三个平级控制台入口页",
-                new String[]{"/console/**", "/searchdeck/**", "/searchdeck.html", "/es-rebuild.html", "/es-xmigrate.html"},
+                "守卫必须接管 /searchdeck/** 与统一入口页",
+                new String[]{"/searchdeck/**", "/searchdeck.html"},
                 registeredPatterns());
 
         java.lang.reflect.Field regsField = ResourceHandlerRegistry.class.getDeclaredField("registrations");
@@ -288,17 +288,17 @@ public class ClientModeWiringTest {
      * 防复发护栏：{@code static/} 根下的实际内容必须与守卫已覆盖的 pattern 集合<b>恰好相等</b>。
      *
      * <p>本 Task 的缺陷根因就是「有人往 {@code static/} 根加了文件，而守卫 pattern 是手写枚举，
-     * 加了也没人知道」——`searchdeck.html` / `es-rebuild.html` / `es-xmigrate.html` 因此漏网。本条把两边钉在一起：
-     * 将来再加第三个静态文件，本测试会红并逼出一次决策（挡它、或显式豁免它），
+     * 加了也没人知道」——`searchdeck.html` 因此漏网。本条把两边钉在一起：
+     * 将来再加第二个静态文件，本测试会红并逼出一次决策（挡它、或显式豁免它），
      * 而不是静默重现今天这个洞。</p>
      *
      * <p>实现说明：测试跑在 exploded 的 {@code target/classes} 上，{@code getResource("static/")}
      * 返回 {@code file:} URL、可直接列目录。若哪天换成 jar 内运行（{@code jar:} 协议）本方式失效——
      * 那时本测试会<b>直接失败</b>而不是静默跳过，因为一条恒真的护栏比没有护栏更糟。</p>
      *
-     * <p><b>隐式依赖：本断言依赖前端构建产物已生成。</b>{@code static/console/} 是 vite 构建产物、
+     * <p><b>隐式依赖：本断言依赖前端构建产物已生成。</b>{@code static/searchdeck/} 是 vite 构建产物、
      * 被 .gitignore 忽略（{@code git ls-files} 下 0 个文件）。在没跑过前端构建的干净 checkout 上，
-     * {@code static/} 根下只有两个 html、没有 {@code console/} 目录，本断言会因缺 {@code /console/**}
+     * {@code static/} 根下只有入口 html、没有 {@code searchdeck/} 目录，本断言会因缺 {@code /searchdeck/**}
      * 而变红——那是<b>假红</b>，与守卫代码无关。为此下方对这一特征专门给出自解释的失败信息，
      * 避免有人跑去查一个并不存在的守卫 bug。</p>
      */
@@ -321,17 +321,17 @@ public class ClientModeWiringTest {
         }
         Set<String> guarded = new TreeSet<>(Arrays.asList(registeredPatterns()));
 
-        // 特征识别：唯一的差异是「守卫有 /console/**、实际没有」且 console/ 目录确实不在
+        // 特征识别：唯一的差异是「守卫有 /searchdeck/**、实际没有」且 searchdeck/ 目录确实不在
         // —— 这是前端没构建，不是守卫漏挡。假红与假绿一样有害，必须让信息自己解释清楚。
-        boolean onlyConsoleMissing = guarded.contains(CONSOLE_DIR_PATTERN)
-                && !actual.contains(CONSOLE_DIR_PATTERN)
-                && !new File(new File(staticRoot.toURI()), "console").isDirectory();
+        boolean onlyAssetsMissing = guarded.contains(SEARCHDECK_DIR_PATTERN)
+                && !actual.contains(SEARCHDECK_DIR_PATTERN)
+                && !new File(new File(staticRoot.toURI()), "searchdeck").isDirectory();
         Set<String> otherDiff = new TreeSet<>(actual);
         otherDiff.removeAll(guarded);
 
-        if (onlyConsoleMissing && otherDiff.isEmpty()) {
+        if (onlyAssetsMissing && otherDiff.isEmpty()) {
             org.junit.Assert.fail("前端构建产物缺失，不是守卫的问题："
-                    + "static/console/ 是 vite 构建产物且被 .gitignore 忽略，当前 checkout 下不存在。"
+                    + "static/searchdeck/ 是 vite 构建产物且被 .gitignore 忽略，当前 checkout 下不存在。"
                     + " 请先跑前端构建（mvn 打包链会自动执行 vite build）再跑本测试；"
                     + " 守卫本身无需改动。实际=" + actual + " 守卫=" + guarded);
         }
@@ -479,7 +479,7 @@ public class ClientModeWiringTest {
     /** console 模式也要有它 —— 宿主 自己没有声明索引，但端点存在无害且便于自检。 */
     @Test
     public void consoleModeAlsoInstallsDesiredStateController() {
-        runner().withPropertyValues("es.rebuild.mode=console").run(ctx ->
+        runner().withPropertyValues("searchdeck.elasticsearch.mode=console").run(ctx ->
                 org.junit.Assert.assertTrue("console 模式也应装 DesiredStateController",
                         ctx.getBeanNamesForType(DesiredStateController.class).length > 0));
     }
@@ -504,7 +504,7 @@ public class ClientModeWiringTest {
     /** 正向对照：console 模式必须有它，否则上一条可能只是「它压根没被装过」。 */
     @Test
     public void r98_控制台模式装keys所在的controller() {
-        runner().withPropertyValues("es.rebuild.mode=console").run(ctx ->
+        runner().withPropertyValues("searchdeck.elasticsearch.mode=console").run(ctx ->
                 org.junit.Assert.assertTrue(
                         "console 模式必须装 InternalEsIndexRebuildController",
                         ctx.getBeanNamesForType(
@@ -619,7 +619,7 @@ public class ClientModeWiringTest {
                 "client 模式必须装 StaleWriteBlockDetector——业务侧才是写阻断的受害者",
                 ctx.getBeanNamesForType(StaleWriteBlockDetector.class).length > 0));
 
-        runner().withPropertyValues("es.rebuild.mode=console").run(ctx -> org.junit.Assert.assertTrue(
+        runner().withPropertyValues("searchdeck.elasticsearch.mode=console").run(ctx -> org.junit.Assert.assertTrue(
                 "console 模式也必须装 StaleWriteBlockDetector——宿主 一旦声明索引就同样是写入方",
                 ctx.getBeanNamesForType(StaleWriteBlockDetector.class).length > 0));
     }
@@ -649,7 +649,7 @@ public class ClientModeWiringTest {
                     ctx.getBeanNamesForType(EsWriteRetryTemplate.class).length > 0);
         });
 
-        runner().withPropertyValues("es.rebuild.mode=console").run(ctx -> {
+        runner().withPropertyValues("searchdeck.elasticsearch.mode=console").run(ctx -> {
             org.junit.Assert.assertTrue(
                     "console 模式也必须装 EsWriteRetryAspect——宿主 一旦声明索引就同样是写入方",
                     ctx.getBeanNamesForType(EsWriteRetryAspect.class).length > 0);

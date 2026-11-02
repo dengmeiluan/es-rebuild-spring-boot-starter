@@ -655,7 +655,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
      *  设 false 时，非 ADMIN 不得借残留的 conn:host 授权直捣宿主数据面/托管重建 provider。 */
     private boolean hostClusterVisible = true;
 
-    /** 由自动配置注入（见 EsRebuildAutoConfiguration）；测试可显式设置。 */
+    /** 由自动配置注入（见 SearchDeckConsoleAutoConfiguration）；测试可显式设置。 */
     public void setHostClusterVisible(boolean hostClusterVisible) {
         this.hostClusterVisible = hostClusterVisible;
     }
@@ -1077,7 +1077,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                 /* 文案必须可操作：宿主委托部署下「无任何页面授权」最常见根因是
                    委托侧实体没拿到授权（如飞书 SSO 自动新建账号只挂默认角色），
                    直接告诉用户去哪配，而不是一句无上下文的拒绝。 */
-                deny(response, 403, "{\"code\":\"PAGE_DENIED\",\"message\":\"当前身份没有任何 ES 控制台页面授权——宿主委托部署请到宿主系统（如 quotehub）的角色菜单勾选 ES 控制台连接授权；若用飞书等 SSO 登录，请确认登录绑定的是被授权的账号（SSO 自动新建的账号不带任何授权）\"}");
+                deny(response, 403, "{\"code\":\"PAGE_DENIED\",\"message\":\"当前身份没有任何 ES 控制台页面授权——宿主委托部署请到宿主系统（宿主内嵌委托）的角色菜单勾选 ES 控制台连接授权；若用飞书等 SSO 登录，请确认登录绑定的是被授权的账号（SSO 自动新建的账号不带任何授权）\"}");
                 return false;
             }
             /* 共享读端点按归属页裁决——静态页白名单与连接模型同一口径：
@@ -1479,7 +1479,7 @@ public class ConsoleAuthInterceptor implements HandlerInterceptor {
                     .build());
         } catch (Exception e) {
             /* 审计落档失败不得改变拒绝结果（拒绝是安全决策，审计是留痕） */
-            LOG.warn("[es-console] 跨站写拦截审计落档失败（拒绝结果不变）", e);
+            LOG.warn("[searchdeck] 跨站写拦截审计落档失败（拒绝结果不变）", e);
         }
     }
 

@@ -2,7 +2,7 @@
  * 五百三十批「大屏与全栈可观测」看守 spec（W-E 工蚁）。
  *
  * 七件可观测/响应式改造的源码锁 + 行为锁：
- *  A 慢请求可观测：api.request 计时（>10s）→ es-console:slow-request 事件桥 →
+ *  A 慢请求可观测：api.request 计时（>10s）→ searchdeck:slow-request 事件桥 →
  *    app store 转发既有 notify('warning')（8s 同文去重内建）；失败链路不打扰。
  *  B 跨页任务进度：jobTracker 吞 /cluster/tasks?detailed 的 RUNNING reindex 任务与
  *    /cluster/snapshot/status 的 IN_PROGRESS 快照，归一 TrackedJob；消失即完成通知。
@@ -72,8 +72,8 @@ describe('A 慢请求可观测（api 计时 + 事件桥 + notify warning）', ()
     expect(apiSrc).toMatch(/costMs > SLOW_REQUEST_MS/);
   });
 
-  it('慢请求经 es-console:slow-request 事件广播（与 unauthorized 同范式，不反依赖 store）', () => {
-    expect(apiSrc).toContain("new CustomEvent('es-console:slow-request'");
+  it('慢请求经 searchdeck:slow-request 事件广播（与 unauthorized 同范式，不反依赖 store）', () => {
+    expect(apiSrc).toContain("new CustomEvent('searchdeck:slow-request'");
     expect(apiSrc).toContain('window.dispatchEvent');
     expect(apiSrc).toMatch(/detail: \{ path, seconds: \+\(costMs \/ 1000\)\.toFixed\(1\) \}/);
   });
@@ -86,11 +86,11 @@ describe('A 慢请求可观测（api 计时 + 事件桥 + notify warning）', ()
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ ok: 1 }), { status: 200 })));
     const events: any[] = [];
     const lst = (e: Event) => events.push(e);
-    window.addEventListener('es-console:slow-request', lst);
+    window.addEventListener('searchdeck:slow-request', lst);
     try {
       await apiGet('/slow-endpoint');
     } finally {
-      window.removeEventListener('es-console:slow-request', lst);
+      window.removeEventListener('searchdeck:slow-request', lst);
       vi.unstubAllGlobals();
     }
     expect(events.length).toBe(1);
@@ -105,11 +105,11 @@ describe('A 慢请求可观测（api 计时 + 事件桥 + notify warning）', ()
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ ok: 1 }), { status: 200 })));
     const events: any[] = [];
     const lst = (e: Event) => events.push(e);
-    window.addEventListener('es-console:slow-request', lst);
+    window.addEventListener('searchdeck:slow-request', lst);
     try {
       await apiGet('/fast-endpoint');
     } finally {
-      window.removeEventListener('es-console:slow-request', lst);
+      window.removeEventListener('searchdeck:slow-request', lst);
       vi.unstubAllGlobals();
     }
     expect(events.length).toBe(0);
@@ -123,18 +123,18 @@ describe('A 慢请求可观测（api 计时 + 事件桥 + notify warning）', ()
     vi.stubGlobal('fetch', vi.fn(async () => new Response('{"message":"boom"}', { status: 500 })));
     const events: any[] = [];
     const lst = (e: Event) => events.push(e);
-    window.addEventListener('es-console:slow-request', lst);
+    window.addEventListener('searchdeck:slow-request', lst);
     try {
       await expect(apiGet('/broken-endpoint')).rejects.toThrow();
     } finally {
-      window.removeEventListener('es-console:slow-request', lst);
+      window.removeEventListener('searchdeck:slow-request', lst);
       vi.unstubAllGlobals();
     }
     expect(events.length).toBe(0);
   });
 
   it('app store 监听事件桥转发既有 notify warning 档（8s 同文去重吸收轮询重弹）', () => {
-    expect(appSrc).toContain("window.addEventListener('es-console:slow-request'");
+    expect(appSrc).toContain("window.addEventListener('searchdeck:slow-request'");
     expect(appSrc).toContain("notify('warning', `${d.path} 耗时 ${d.seconds}s`)");
   });
 
@@ -143,7 +143,7 @@ describe('A 慢请求可观测（api 计时 + 事件桥 + notify warning）', ()
     setActivePinia(createPinia());
     const { useAppStore } = await import('../stores/app');
     const app = useAppStore();
-    window.dispatchEvent(new CustomEvent('es-console:slow-request', { detail: { path: '/adhoc-rebuild/status', seconds: 12.5 } }));
+    window.dispatchEvent(new CustomEvent('searchdeck:slow-request', { detail: { path: '/adhoc-rebuild/status', seconds: 12.5 } }));
     const last = app.notifyQueue[app.notifyQueue.length - 1];
     expect(last.kind).toBe('warning');
     expect(last.msg).toBe('/adhoc-rebuild/status 耗时 12.5s');

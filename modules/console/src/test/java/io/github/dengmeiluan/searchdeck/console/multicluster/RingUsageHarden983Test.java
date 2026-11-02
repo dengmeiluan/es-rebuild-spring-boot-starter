@@ -49,7 +49,7 @@ public class RingUsageHarden983Test {
     @Test
     public void 非管理员响应不含控制面索引前缀() {
         RingUsageController c = new RingUsageController(
-                new MonitorMetricsStore(null, "es_console_monitor"), "es_console_ops_audit", 1024L);
+                new MonitorMetricsStore(null, "searchdeck_monitor"), "searchdeck_ops_audit", 1024L);
         ConsolePrincipal viewer = new ConsolePrincipal("v", ConsoleRole.VIEWER, false, true, "V",
                 null, new HashSet<>(Collections.singletonList("conn:c1:overview")));
         Map<String, Object> out = c.usage(requestWith(viewer));
@@ -61,7 +61,7 @@ public class RingUsageHarden983Test {
     @Test
     public void 管理员仍可见前缀() {
         RingUsageController c = new RingUsageController(
-                new MonitorMetricsStore(null, "es_console_monitor"), "es_console_ops_audit", 1024L);
+                new MonitorMetricsStore(null, "searchdeck_monitor"), "searchdeck_ops_audit", 1024L);
         ConsolePrincipal admin = new ConsolePrincipal("a", ConsoleRole.ADMIN, false, false);
         Map<String, Object> out = c.usage(requestWith(admin));
         assertTrue(out.containsKey("auditPrefix"));

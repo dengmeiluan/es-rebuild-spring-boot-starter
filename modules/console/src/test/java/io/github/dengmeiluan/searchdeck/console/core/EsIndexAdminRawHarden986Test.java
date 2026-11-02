@@ -57,21 +57,21 @@ public class EsIndexAdminRawHarden986Test {
     @Test
     public void update脚本即使拼接index也不能放行() {
         assertRejected(() -> admin.guardRawGuarded("POST", "/logs/_update/1",
-                        "{\"script\":{\"source\":\"ctx['_'+'index']='es_console_user'\"}}"),
+                        "{\"script\":{\"source\":\"ctx['_'+'index']='searchdeck_user'\"}}"),
                 "_update 脚本可改写目标索引");
         assertRejected(() -> admin.guardRawGuarded("POST", "/logs/_update_by_query",
-                        "{\"query\":{\"match_all\":{}},\"script\":{\"source\":\"ctx['_'+'index']='es_console_user'\"}}"),
+                        "{\"query\":{\"match_all\":{}},\"script\":{\"source\":\"ctx['_'+'index']='searchdeck_user'\"}}"),
                 "update_by_query 拼接 _index");
         assertRejected(() -> admin.guardRawGuarded("POST", "/logs/_update_by_query",
                         "{\"query\":{\"match_all\":{}},\"script\":{\"id\":\"stored-script\"}}"),
                 "已存脚本无法静态审计");
         assertRejected(() -> admin.guardRawGuarded("POST", "/logs/_update_by_query",
                         "{\"query\":{\"match_all\":{}},\"script\":{\"source\":"
-                                + "\"ctx['_'+params.s]='es_console_user'\",\"params\":{\"s\":\"index\"}}}"),
+                                + "\"ctx['_'+params.s]='searchdeck_user'\",\"params\":{\"s\":\"index\"}}}"),
                 "ctx 方括号拼接参数");
         assertRejected(() -> admin.guardRawGuarded("POST", "/logs/_update_by_query",
                         "{\"query\":{\"match_all\":{}},\"script\":{\"source\":"
-                                + "\"ctx['_'.concat(params.s)]='es_console_user'\",\"params\":{\"s\":\"index\"}}}"),
+                                + "\"ctx['_'.concat(params.s)]='searchdeck_user'\",\"params\":{\"s\":\"index\"}}}"),
                 "ctx concat 参数");
     }
 
@@ -102,7 +102,7 @@ public class EsIndexAdminRawHarden986Test {
                         "{\"docs\":[{\"_index\":\".security\",\"_id\":\"x\",\"fields\":[\"username\"]}]}"),
                 "根路径 docs[]._index");
         assertRejected(() -> admin.guardRawGuarded("GET", "/logs/_mtermvectors",
-                        "{\"docs\":[{\"_index\":\"es_console_user\",\"_id\":\"x\"}]}"),
+                        "{\"docs\":[{\"_index\":\"searchdeck_user\",\"_id\":\"x\"}]}"),
                 "索引前缀 docs[]._index");
         assertRejected(() -> admin.guardRawGuarded("GET", "/_mtermvectors",
                         "{\"ids\":[\"x\"],\"parameters\":{\"index\":\".security\",\"fields\":[\"username\"]}}"),

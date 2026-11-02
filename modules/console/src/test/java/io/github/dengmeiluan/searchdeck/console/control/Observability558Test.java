@@ -55,7 +55,7 @@ import static org.junit.Assert.assertTrue;
  *       与  ConnHealthProber.skipRoundCount 对齐）。返回 false 契约不变。</li>
  *   <li>io.github.dengmeiluan.searchdeck.console.web.InternalEsIndexRebuildController clusterRaw
  *       审计摘要回填 {@code catch (Exception ignore)} 静默（源码契约锚）：必须直接 WARN
- *       （低频用户路径不节流），文案带 [es-console-raw] 前缀与「本次高危审计缺执行摘要」
+ *       （低频用户路径不节流），文案带 [searchdeck-raw] 前缀与「本次高危审计缺执行摘要」
  *       语义；回填失败不影响执行契约不变。</li>
  * </ol>
  *
@@ -149,7 +149,7 @@ public class Observability558Test {
     /* ══ 3. clusterRaw 审计摘要回填吞臂 → 直接 WARN（源码契约锚） ══ */
 
     /**
-     * 源码锚：回填臂必须具名 catch (Exception e) 并落带 [es-console-raw] 前缀的
+     * 源码锚：回填臂必须具名 catch (Exception e) 并落带 [searchdeck-raw] 前缀的
      * WARN——「谁执行了什么」的执行摘要缺失且无痕 = 高危审计链断点。低频用户路径，
      * 不节流（与 ping 高频路径的节流策略刻意相反）。
      */
@@ -170,8 +170,8 @@ public class Observability558Test {
         int warnIdx = src.indexOf("审计摘要回填失败", catchIdx);
         assertTrue("回填失败必须落 WARN（本次高危审计缺执行摘要，静默=审计链断点无痕）",
                 warnIdx > -1 && warnIdx < exec);
-        assertTrue("WARN 文案须带 [es-console-raw] 前缀与「本次高危审计缺执行摘要」语义",
-                src.contains("[es-console-raw] 审计摘要回填失败(本次高危审计缺执行摘要)"));
+        assertTrue("WARN 文案须带 [searchdeck-raw] 前缀与「本次高危审计缺执行摘要」语义",
+                src.contains("[searchdeck-raw] 审计摘要回填失败(本次高危审计缺执行摘要)"));
         assertTrue("不得再有无日志的空吞 catch (Exception ignore)",
                 !Pattern.compile("catch \\(Exception ignore\\)").matcher(src).find());
     }

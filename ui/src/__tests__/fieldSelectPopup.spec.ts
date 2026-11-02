@@ -228,11 +228,11 @@ describe('FieldSelect 换代：fieldSearch 共享内核', () => {
     await focus(host);
     items()[0].click();
     await settle();
-    expect(JSON.parse(localStorage.getItem('es_console_qb_field_recent::idx-a') || '[]'), '必须写 per-index 键').toEqual(['alpha']);
-    expect(localStorage.getItem('es_console_qb_field_recent'), '全局键必须不动').toBeNull();
+    expect(JSON.parse(localStorage.getItem('searchdeck_qb_field_recent::idx-a') || '[]'), '必须写 per-index 键').toEqual(['alpha']);
+    expect(localStorage.getItem('searchdeck_qb_field_recent'), '全局键必须不动').toBeNull();
     /* per-index 无记录 → 回退读全局（老记录不丢）：全局最近字段置顶 */
     localStorage.clear();
-    localStorage.setItem('es_console_qb_field_recent', JSON.stringify(['beta']));
+    localStorage.setItem('searchdeck_qb_field_recent', JSON.stringify(['beta']));
     setFieldSearchIndex('idx-b');
     const { host: h2 } = mountSelect({ fields: ['alpha', 'beta'] });
     await focus(h2);
@@ -242,7 +242,7 @@ describe('FieldSelect 换代：fieldSearch 共享内核', () => {
 
 describe('defaultLeaf 记忆与面板增强', () => {
   it('「加条件」默认叶子优先取本索引最近字段+其兼容算子；无记录回退 fields[0]+term', async () => {
-    localStorage.setItem('es_console_qb_field_recent::idx-a', JSON.stringify(['b']));
+    localStorage.setItem('searchdeck_qb_field_recent::idx-a', JSON.stringify(['b']));
     const { host, tree } = mountTree({ query: { match_all: {} } },
       { fields: ['a', 'b', 'c'], types: { a: 'keyword', b: 'date', c: 'keyword' }, index: 'idx-a' });
     (host.querySelector('.qtp-none button') as HTMLElement).click();
@@ -251,7 +251,7 @@ describe('defaultLeaf 记忆与面板增强', () => {
     expect(leaf.field, '必须取最近使用的字段 b').toBe('b');
     expect(leaf.op, '必须取 date 类型兼容首算子 range').toBe('range');
     /* 无记录回退：fields[0] + keyword→term（既有现状） */
-    localStorage.removeItem('es_console_qb_field_recent::idx-a');
+    localStorage.removeItem('searchdeck_qb_field_recent::idx-a');
     const r2 = mountTree({ query: { match_all: {} } },
       { fields: ['a', 'b', 'c'], types: { a: 'keyword', b: 'date', c: 'keyword' }, index: 'idx-a' });
     (r2.host.querySelector('.qtp-none button') as HTMLElement).click();

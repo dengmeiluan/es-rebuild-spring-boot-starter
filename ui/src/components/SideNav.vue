@@ -155,7 +155,7 @@ const icons: Record<string, any> = {
 /* 分组折叠——状态持久化；当前路由所在组强制展开 */
 const route = useRoute();
 const auth = useAuthStore();
-const LS_KEY = 'es-console.nav.collapsed';
+const LS_KEY = 'searchdeck.nav.collapsed';
 /* 脏值防御读取：手改/残留坏 JSON 不得炸全站导航挂载 */
 const collapsed = ref<Record<string, boolean>>(readStoredJson(localStorage, LS_KEY, {}, (v) => v != null && typeof v === 'object' && !Array.isArray(v)));
 
@@ -256,7 +256,7 @@ const footTitle = computed(() => {
    只重探只会再拿一次 401。补发让宿主有机会立刻回凭证。 */
 function retryIdentity() {
   try {
-    if (window.parent !== window) window.parent.postMessage({ type: 'es-console-ready' }, '*');
+    if (window.parent !== window) window.parent.postMessage({ type: 'searchdeck-ready' }, '*');
   } catch { /* 跨域限制时静默 */ }
   auth.probe();
 }

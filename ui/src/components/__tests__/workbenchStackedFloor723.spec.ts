@@ -64,7 +64,7 @@ describe('workbench stacked pane height floor (723 G78)', () => {
   });
 
   it('stacked vertical sized pane honours a persisted size as its height floor', async () => {
-    localStorage.setItem('es-console.layout.v2:qa:/reindex-preview:reindexPreview:embedded', JSON.stringify({
+    localStorage.setItem('searchdeck.layout.v2:qa:/reindex-preview:reindexPreview:embedded', JSON.stringify({
       version: 1, updatedAt: Date.now(), panes: { query: { size: 600 } },
     }));
     const host = mountWorkbench({ profile: 'embedded' });
@@ -73,7 +73,7 @@ describe('workbench stacked pane height floor (723 G78)', () => {
   });
 
   it('stacked vertical collapsed/hidden sized pane keeps no height floor', async () => {
-    localStorage.setItem('es-console.layout.v2:qa:/reindex-preview:reindexPreview:embedded', JSON.stringify({
+    localStorage.setItem('searchdeck.layout.v2:qa:/reindex-preview:reindexPreview:embedded', JSON.stringify({
       version: 1, updatedAt: Date.now(), panes: { query: { size: 420, collapsed: true } },
     }));
     const host = mountWorkbench({ profile: 'embedded' });

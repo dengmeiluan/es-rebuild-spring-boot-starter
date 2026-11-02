@@ -409,8 +409,8 @@ const docReadAllowed = () => auth.authDisabled || !auth.probeStarted
   || (auth.probed && auth.me != null && auth.canReadPage('doc-diff', store.target));
 let mountReadPending = false;
 function mountAutoRead() {
-  const carry = sessionStorage.getItem('es-console.doc-diff.carry.source');
-  removeStoredRaw(sessionStorage, 'es-console.doc-diff.carry.source');
+  const carry = sessionStorage.getItem('searchdeck.doc-diff.carry.source');
+  removeStoredRaw(sessionStorage, 'searchdeck.doc-diff.carry.source');
   if (!docReadAllowed()) { mountReadPending = true; return; }
   mountReadPending = false;
   if (isCompare.value) { fetchCompare(); return; }   // 只读对比走独立拉取，不碰 patch 的编辑稿恢复

@@ -6,7 +6,7 @@
  *    (srcQuery+body 两路)/QueryXray：lint computed/banner 已有但编辑器内零划线，补
  *    ref + watch + setMarkers（SearchSandboxView 524 批范式：debounce → info 降级 hint →
  *    jaRef.value?.setMarkers?.；banner 保留双通道）；
- *  B RankDebug 手写 sessionStorage 'es-console.link.rankdebug' 三连退役换 useLinkCarry
+ *  B RankDebug 手写 sessionStorage 'searchdeck.link.rankdebug' 三连退役换 useLinkCarry
  *    （负向断言锁字面键名不得回潮，正向锁 receive 消费链）；
  *  C RD/SE 编辑器三档高度循环（RD/SE_ED_H_TIERS + usePref('rd.edH'/'se.edH')），
  *    红线：不引入 height:100% 结构——规则体逐字锁；
@@ -84,8 +84,8 @@ describe('A 五视图 setMarkers 挂法锚（banner 保留双通道）', () => {
 });
 
 describe('B RankDebug useLinkCarry 合并（手写 sessionStorage 三连退役）', () => {
-  it('负向：字面键名 es-console.link.rankdebug 不得回潮（统一件内拼前缀）', () => {
-    expect(rd).not.toContain('es-console.link.rankdebug');
+  it('负向：字面键名 searchdeck.link.rankdebug 不得回潮（统一件内拼前缀）', () => {
+    expect(rd).not.toContain('searchdeck.link.rankdebug');
   });
   it('正向：useLinkCarry(\'rankdebug\') + receive 先焚再解消费链在場', () => {
     expect(rd).toContain("rankDebugCarry = useLinkCarry<{ index?: string; id?: string; query?: string }>('rankdebug')");

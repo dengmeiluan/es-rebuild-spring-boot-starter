@@ -885,7 +885,7 @@ const filtered = computed(() => {
 /* 搜索定位：过滤结果即命中集，行按渲染序带 data-hit-idx，Enter/Shift+Enter 逐个跳 */
 /* v3.0.1 三竖幅重造:列表列退役改抽屉(实报「不还是三竖幅吗」)——
    两竖幅(导航+全宽详情);选索引=抽屉(全能力)或引导页;起选中不自动关抽屉 */
-/* 交互修复：listOpen 持久化（usePref 全站范式，键 es-console.pref.ih.listOpen）——
+/* 交互修复：listOpen 持久化（usePref 全站范式，键 searchdeck.pref.ih.listOpen）——
    刷新后保持用户上次的开合状态；首次无存值默认关，与原行为一致 */
 const listOpen = usePref('ih.listOpen', false) as Ref<boolean>;
 const drawerEl = ref<HTMLElement | null>(null);
@@ -1510,7 +1510,7 @@ async function runDocs() {
       }
     }
     /* docs 检索入跨模式历史（mode='lucene'，下方 runDsl push('dsl') 契约同构）——
-       查询词原文即 Lucene 串，回放走 QueryHubView replay 的 es-console.lucene.q 既有通道；
+       查询词原文即 Lucene 串，回放走 QueryHubView replay 的 searchdeck.lucene.q 既有通道；
        store 按 mode+query+index 去重（翻页/刷新同词不刷屏）。
        空词不入历史：切 docs tab 自动浏览（watch tab 的 runDocs 兜底）是页面行为不是用户查询，
        真机实证空串条目会每次进环刷屏，故仅显式词检索留痕 */
@@ -1698,7 +1698,7 @@ function openQryInDevTools() {
   /* 入口能力前置（1124）：无 DevTools 权限时目标页只会「填入不执行」，在来源页就说清楚 */
   if (!canDevtools.value) { store.notify('warning', 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'); return; }
   const idxPath = cur.value ? `/${cur.value}/_search` : '/_search';
-  writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
+  writeStoredRaw(sessionStorage, 'searchdeck.devtools.open', JSON.stringify({
     title: cur.value || '_search',
     method: 'POST',
     path: idxPath,
@@ -1848,7 +1848,7 @@ function ihHistNewTab(h: { query?: string; index?: string; mode?: string }) {
   const idxPath = (h.index ? '/' + h.index : '') + '/_search';
   let body = h.query || '';
   try { body = JSON.stringify(JSON.parse(stripJsonComments(body)), null, 2); } catch { /* 非 JSON 原样带过去 */ }
-  writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
+  writeStoredRaw(sessionStorage, 'searchdeck.devtools.open', JSON.stringify({
     title: h.index || '_search',
     method: 'POST',
     path: idxPath,
@@ -2071,7 +2071,7 @@ watch(() => [auth.probed, auth.authDisabled, auth.me?.username, store.target], (
 
 /* ==== 操作 ==== */
 /* 相关性实验室联动入口——与 DslQueryView 同一 sessionStorage 契约
- （es-console.link.rankdebug/xray），query 取本页 qry tab 的 DSL 草稿。
+ （searchdeck.link.rankdebug/xray），query 取本页 qry tab 的 DSL 草稿。
  裸 setItem 合并 useLinkCarry 统一件（键前缀/序列化契约不变）；
  payload 逐字保持 {index,id,query}/{index,id}——index 顺修 ref 直传旧账
  （原 index: cur 序列化的是 Ref 对象，消费方读到的是壳不是值），统一传 cur.value 字符串 */

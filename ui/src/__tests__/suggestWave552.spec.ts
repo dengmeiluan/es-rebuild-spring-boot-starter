@@ -142,7 +142,7 @@ describe('A 裸挂载静默契约（无 pinia 零降级，histEntry528/fieldSele
   it('A2 FieldSelect 裸挂载：选中 keyword 字段零崩溃、最近字段记忆照写、零预载', async () => {
     const host = mountSelect({ pinia: false });
     await focusAndPick(host);
-    expect(JSON.parse(localStorage.getItem('es_console_qb_field_recent') || '[]'), '记忆通道不受影响').toEqual(['status']);
+    expect(JSON.parse(localStorage.getItem('searchdeck_qb_field_recent') || '[]'), '记忆通道不受影响').toEqual(['status']);
     expect(searchRawFn, '裸挂载零预载').not.toHaveBeenCalled();
   });
 });

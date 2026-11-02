@@ -161,8 +161,7 @@ public class StaleWriteBlockDetector implements ApplicationRunner {
      *
      * <p><b>必须同时认字符串与布尔</b>：ES 的 settings 回包会把布尔<b>字符串化</b>
      * （{@code true} → {@code "true"}）。只写 {@code Boolean.TRUE.equals(v)} 在线上
-     * <b>永远识别不到</b>挡写，而若测试也用布尔构造 fixture 就会一路假绿到线上。
-     * 见 {@code docs/superpowers/notes/2026-08-01-r95-transform-pipeline-findings.md}。</p>
+     * <b>永远识别不到</b>挡写，而若测试也用布尔构造 fixture 就会一路假绿到线上。</p>
      */
     @SuppressWarnings("unchecked")
     static boolean isWriteBlocked(Map<String, Object> settings) {

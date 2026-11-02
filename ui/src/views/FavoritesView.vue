@@ -331,7 +331,7 @@ async function clearAll() {
   store.notify('success', '收藏夹已清空');
 }
 function exportAll() {
-  downloadText(`es-console-favorites-${exportStamp()}.json`, JSON.stringify(items.value, null, 2), 'application/json;charset=utf-8');
+  downloadText(`searchdeck-favorites-${exportStamp()}.json`, JSON.stringify(items.value, null, 2), 'application/json;charset=utf-8');
 }
 function importFile(e: Event) {
   const f = (e.target as HTMLInputElement).files?.[0];
@@ -371,12 +371,12 @@ function importFile(e: Event) {
 /* ═══ ：本地偏好备份（记忆性轴收口）═══
  白名单严格限定本站键前缀——es console 以 iframe 嵌宿主，同源 localStorage 共享，
  绝不可按「非本站即删」或全量导入，波及宿主页面数据。 */
-const PREF_KEY_RE = /^(es-console\.pref\.|es-console\.draft\.|es-console\.jobs\.seen|es_cols:|es_tbl_|es_pager_size$|es_recent_idx$|es_console_ihub_w$)/;
+const PREF_KEY_RE = /^(searchdeck\.pref\.|searchdeck\.draft\.|searchdeck\.jobs\.seen|es_cols:|es_tbl_|es_pager_size$|es_recent_idx$|searchdeck_ihub_w$)/;
 const prefKeys = computed(() => Object.keys(localStorage).filter(k => PREF_KEY_RE.test(k)));
 function exportPrefs() {
   const dump: Record<string, string | null> = {};
   for (const k of prefKeys.value) dump[k] = localStorage.getItem(k);
-  downloadText(`es-console-prefs-${exportStamp()}.json`, JSON.stringify({ kind: 'es-console-prefs', keys: dump }, null, 2), 'application/json;charset=utf-8');
+  downloadText(`searchdeck-prefs-${exportStamp()}.json`, JSON.stringify({ kind: 'searchdeck-prefs', keys: dump }, null, 2), 'application/json;charset=utf-8');
   store.notify('success', `已导出 ${prefKeys.value.length} 个偏好键`);
 }
 function importPrefs(e: Event) {
@@ -386,7 +386,7 @@ function importPrefs(e: Event) {
   r.onload = () => {
     try {
       const parsed = JSON.parse(String(r.result));
-      const dump = parsed && parsed.kind === 'es-console-prefs' ? parsed.keys : null;
+      const dump = parsed && parsed.kind === 'searchdeck-prefs' ? parsed.keys : null;
       if (!dump || typeof dump !== 'object') throw new Error('格式错误：需要「导出偏好」生成的文件');
       let applied = 0;
       let skipped = 0;

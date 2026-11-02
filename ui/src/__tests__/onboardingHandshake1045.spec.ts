@@ -20,21 +20,21 @@ describe('1045 宿主握手：ready 多拍重播直到凭证到达', () => {
 
   it('拿到宿主 token / 卸载时停止重播（不留后台定时器）', () => {
     expect(app).toContain('function stopReadyAnnounce()');
-    expect(app).toContain('if (d.type === \'es-console-host-token\' && typeof d.token === \'string\') {\n    stopReadyAnnounce();');
+    expect(app).toContain('if (d.type === \'searchdeck-host-token\' && typeof d.token === \'string\') {\n    stopReadyAnnounce();');
     expect(app).toContain('onBeforeUnmount(() => {\n  stopReadyAnnounce();');
   });
 
   it('身份未确认态给出可操作的重试入口，且不再谎称“正在重试”', () => {
     expect(sideNav).toContain('重试身份探测');
     expect(sideNav).toContain('@click="retryIdentity"');
-    expect(sideNav).toContain("window.parent.postMessage({ type: 'es-console-ready' }, '*')");
+    expect(sideNav).toContain("window.parent.postMessage({ type: 'searchdeck-ready' }, '*')");
     expect(sideNav).not.toContain('正在重试连接鉴权服务');
   });
 });
 
 describe('1045 首启引导：只对真正的首次使用自动弹', () => {
   it('已有身份记录（回访）在挂载时即跳过自动弹；主动取消勾选（0）仍尊重重看意图', () => {
-    expect(wizard).toContain("if (done !== '0' && localStorage.getItem('es-console.last-user')) return;");
+    expect(wizard).toContain("if (done !== '0' && localStorage.getItem('searchdeck.last-user')) return;");
     expect(wizard).toContain("writeStoredRaw(localStorage, LS_KEY, dontShow.value ? '1' : '0');");
   });
 

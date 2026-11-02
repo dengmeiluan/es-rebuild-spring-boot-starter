@@ -2,7 +2,7 @@
  * 五百二十批：QueryXrayView 编辑器卡片高度持久化（usePref qx.taH）。
  *
  * 契约：
- * ① 初始读偏好：预置 es-console.pref.qx.taH 挂载即恢复（卡片内联 height）；
+ * ① 初始读偏好：预置 searchdeck.pref.qx.taH 挂载即恢复（卡片内联 height）；
  * ② 默认 260px 保持历史视觉（未拖拽过无内联覆写偏好时）；
  * ③ pointerup 落盘接线（源码锁）：拖拽结束读实高落盘，0 高（无布局）守卫不写。
  *
@@ -91,7 +91,7 @@ describe('QueryXray 编辑器卡高度持久化（五百二十批）', () => {
     expect(card().style.height).toBe('260px');
     apps.forEach(a => a.unmount()); apps.length = 0;
     document.body.innerHTML = '';
-    localStorage.setItem('es-console.pref.qx.taH', JSON.stringify('300px'));
+    localStorage.setItem('searchdeck.pref.qx.taH', JSON.stringify('300px'));
     const host2 = await mountView();
     expect(host2.querySelector<HTMLElement>('.qx-card-ed')!.style.height).toBe('300px');
   });
@@ -102,7 +102,7 @@ describe('QueryXray 编辑器卡高度持久化（五百二十批）', () => {
     /* happy-dom 无布局：rect 高 0 → 守卫拦住，不把 '0px' 写进偏好 */
     card.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
     await settle();
-    expect(localStorage.getItem('es-console.pref.qx.taH')).toBe(null);
+    expect(localStorage.getItem('searchdeck.pref.qx.taH')).toBe(null);
     /* 源码锁：resize 落盘链在位（卡片 resize + pointerup 实高落盘） */
     const v = readFileSync(join(__dirname, '../views/QueryXrayView.vue'), 'utf-8');
     expect(v).toMatch(/\.qx-card-ed \{[^}]*resize: vertical/);

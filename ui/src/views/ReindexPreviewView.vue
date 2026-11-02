@@ -183,7 +183,7 @@ function goAdvanced() {
   const body: any = { source: { index: source.value } };
   const q = tryParse(queryBody.value);
   if (q != null) body.source.query = q;
-  writeStoredRaw(sessionStorage, 'es-console.reindex-advanced.body', JSON.stringify(body, null, 2));
+  writeStoredRaw(sessionStorage, 'searchdeck.reindex-advanced.body', JSON.stringify(body, null, 2));
   router.push('/reindex-advanced');
 }
 

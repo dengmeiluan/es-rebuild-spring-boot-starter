@@ -436,7 +436,7 @@ function copyText(s: string) {
 
 /* ==================== ：实验室联动 ==================== */
 /* 接收「打分解剖」送来的文档 —— 自动切到词频取证并开查。
- 接收侧换 useLinkCarry 统一件（键 es-console.link.xray 与 payload
+ 接收侧换 useLinkCarry 统一件（键 searchdeck.link.xray 与 payload
  {index,id} 逐字保持，发送方 ScoreExplain 零改；receive 取后即焚语义同旧三行）。 */
 const xrayCarry = useLinkCarry<{ index?: string; id?: string }>('xray');
 /* 1125：联动 id 可能来自上一账号的现场——身份未落地就开查会把旧 target 的词频/文档
@@ -459,7 +459,7 @@ onMounted(() => {
   applyXrayCarry(p);
 });
 /* term 一键送去分词实验室——：发送侧换 useLinkCarry（键
- es-console.link.analyzer 与 payload {index,text} 逐字保持，消费方 AnalyzerLab 零改） */
+ searchdeck.link.analyzer 与 payload {index,text} 逐字保持，消费方 AnalyzerLab 零改） */
 const analyzerCarry = useLinkCarry<{ index: string; text: string }>('analyzer');
 function gotoAnalyzer(term: string) {
   analyzerCarry.send({ index: index.value, text: term });

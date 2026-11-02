@@ -133,33 +133,33 @@ public class DevtoolsEscalationMatrix1004Test {
     @Test
     public void C_控制面索引三通道全拒() {
         /* 路径通道 */
-        blocked("PUT", "/es_console_user/_doc/1", "{\"password\":\"x\"}", "直写账号索引");
-        blocked("DELETE", "/es_console_user/_doc/1", null, "删账号文档");
-        blocked("POST", "/es_console_user/_search", "{}", "查账号索引");
+        blocked("PUT", "/searchdeck_user/_doc/1", "{\"password\":\"x\"}", "直写账号索引");
+        blocked("DELETE", "/searchdeck_user/_doc/1", null, "删账号文档");
+        blocked("POST", "/searchdeck_user/_search", "{}", "查账号索引");
         blocked("POST", "/.security/_search", "{}", "系统隐藏索引");
-        blocked("POST", "/_es_rebuild_lock/_doc/1", "{}", "控制索引（下划线前缀）");
+        blocked("POST", "/_searchdeck_lock/_doc/1", "{}", "控制索引（下划线前缀）");
         /* 通配通道：可能命中控制面的一律拒 */
-        blocked("POST", "/logs*_es_rebuild_lock/_delete_by_query", "{\"query\":{\"match_all\":{}}}", "后缀控制索引");
-        blocked("POST", "/es_console*/_search", "{}", "控制面通配");
+        blocked("POST", "/logs*_searchdeck_lock/_delete_by_query", "{\"query\":{\"match_all\":{}}}", "后缀控制索引");
+        blocked("POST", "/searchdeck*/_search", "{}", "控制面通配");
         blocked("DELETE", "/logs-*", null, "通配删索引（可能命中控制面）");
         /* 请求体通道 */
         blocked("POST", "/_bulk",
-                "{\"index\":{\"_index\":\"es_console_user\",\"_id\":\"1\"}}\n{\"role\":\"ADMIN\"}\n",
+                "{\"index\":{\"_index\":\"searchdeck_user\",\"_id\":\"1\"}}\n{\"role\":\"ADMIN\"}\n",
                 "bulk 夹带控制索引");
         blocked("POST", "/logs/_bulk",
-                "{\"index\":{\"_index\":\"es_console_user\"}}\n{\"role\":\"ADMIN\"}\n",
+                "{\"index\":{\"_index\":\"searchdeck_user\"}}\n{\"role\":\"ADMIN\"}\n",
                 "索引前缀 bulk 夹带控制索引");
         blocked("POST", "/_msearch",
-                "{\"index\":\"es_console_user\"}\n{\"query\":{\"match_all\":{}}}\n", "msearch 夹带");
+                "{\"index\":\"searchdeck_user\"}\n{\"query\":{\"match_all\":{}}}\n", "msearch 夹带");
         blocked("POST", "/logs/_msearch",
-                "{\"index\":\"es_console_user\"}\n{}\n", "索引前缀 msearch 夹带");
-        blocked("POST", "/_mget", "{\"docs\":[{\"_index\":\"es_console_user\",\"_id\":\"1\"}]}", "mget 夹带");
-        blocked("POST", "/_sql", "{\"query\":\"SELECT * FROM es_console_user\"}", "SQL 读控制面");
-        blocked("POST", "/_sql", "{\"query\":\"DELETE FROM es_console_user\"}", "SQL 写控制面");
+                "{\"index\":\"searchdeck_user\"}\n{}\n", "索引前缀 msearch 夹带");
+        blocked("POST", "/_mget", "{\"docs\":[{\"_index\":\"searchdeck_user\",\"_id\":\"1\"}]}", "mget 夹带");
+        blocked("POST", "/_sql", "{\"query\":\"SELECT * FROM searchdeck_user\"}", "SQL 读控制面");
+        blocked("POST", "/_sql", "{\"query\":\"DELETE FROM searchdeck_user\"}", "SQL 写控制面");
         blocked("POST", "/logs/_update/1",
-                "{\"script\":{\"source\":\"ctx._index='es_console_user'\"}}", "_index 改写脚本");
+                "{\"script\":{\"source\":\"ctx._index='searchdeck_user'\"}}", "_index 改写脚本");
         blocked("POST", "/logs/_update_by_query",
-                "{\"script\":{\"source\":\"ctx._index='es_console_user'\"}}", "UBQ 改目标索引");
+                "{\"script\":{\"source\":\"ctx._index='searchdeck_user'\"}}", "UBQ 改目标索引");
         blocked("POST", "/_render/template", "{\"id\":\"evil\"}", "按已存 id 渲染");
         blocked("GET", "/_render/template/evil", null, "路径形态已存模板");
         blocked("POST", "/_search/template", "{\"id\":\"evil\"}", "按已存 id 搜索");
@@ -243,13 +243,13 @@ public class DevtoolsEscalationMatrix1004Test {
         blocked("POST", "/_msearch", "{}\n{\"query\":{\"match_all\":{}}}\n", "空头=全量读");
         blocked("POST", "/_msearch", "{}\n{}\n", "空头+空体=全量读");
         blocked("POST", "/logs/_msearch",
-                "{\"index\":\"es_console_user\"}\n{\"query\":{\"match_all\":{}}}\n", "头行夹带控制索引");
+                "{\"index\":\"searchdeck_user\"}\n{\"query\":{\"match_all\":{}}}\n", "头行夹带控制索引");
         /* ES 语义：路径里的索引是头的默认索引。空头 = 只查路径索引（logs），不是全量读；
            只有**根路径** /_msearch 的空头才是全量（已在上面拒绝）。 */
         allowed("POST", "/logs/_msearch", "{}\n{\"query\":{\"match_all\":{}}}\n",
                 "空头继承路径索引（ES 既有语义，非全量）");
         /* bulk 显式控制索引必须拒；路径继承业务索引的简写放行 */
-        blocked("POST", "/_bulk", "{\"index\":{\"_index\":\"es_console_user\"}}\n{}\n", "bulk 显式控制索引");
+        blocked("POST", "/_bulk", "{\"index\":{\"_index\":\"searchdeck_user\"}}\n{}\n", "bulk 显式控制索引");
         allowed("POST", "/logs/_bulk", "{\"index\":{}}\n{\"a\":1}\n", "bulk 继承路径索引（ES 既有语义）");
     }
 
@@ -283,7 +283,7 @@ public class DevtoolsEscalationMatrix1004Test {
     public void G_非GET动词不得绕过控制面守卫() {
         for (String m : new String[]{"PATCH", "PUT", "DELETE", "POST"}) {
             blocked(m, "/.security/_doc/1", "{\"x\":1}", m + " 写控制面索引");
-            blocked(m, "/es_console_jobs/_doc/1", "{\"x\":1}", m + " 写控制面索引");
+            blocked(m, "/searchdeck_jobs/_doc/1", "{\"x\":1}", m + " 写控制面索引");
         }
         /* 大小写变体同样拦（目标端/代理可能大小写不敏感） */
         blocked("patch", "/.security/_doc/1", "{}", "小写 patch 变体");

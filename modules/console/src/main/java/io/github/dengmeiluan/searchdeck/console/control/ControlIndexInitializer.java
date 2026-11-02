@@ -17,7 +17,7 @@
 package io.github.dengmeiluan.searchdeck.console.control;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.multicluster.EsVersionCaps;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
@@ -64,9 +64,9 @@ public class ControlIndexInitializer {
     /** ES 对「索引已存在」的 {@code error.type} 取值——幂等判据就是这个值。 */
     private static final String ALREADY_EXISTS_TYPE = "resource_already_exists_exception";
 
-    private final EsRebuildProperties properties;
+    private final SearchDeckElasticsearchProperties properties;
 
-    public ControlIndexInitializer(EsRebuildProperties properties) {
+    public ControlIndexInitializer(SearchDeckElasticsearchProperties properties) {
         this.properties = properties;
     }
 

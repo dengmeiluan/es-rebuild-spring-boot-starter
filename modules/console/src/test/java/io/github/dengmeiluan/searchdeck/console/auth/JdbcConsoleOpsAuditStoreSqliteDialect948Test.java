@@ -37,7 +37,7 @@ import static org.junit.Assert.assertTrue;
 
 /**
  * JDBC 审计档建表方言契约——{@code ensureSchema} 的自增主键 DDL 必须
- * 按库方言分支：SQLite 档（standalone 默认 {@code store=sqlite}，~/.es-console/<app>/jobs.db）
+ * 按库方言分支：SQLite 档（standalone 默认 {@code store=sqlite}，~/.searchdeck/<app>/jobs.db）
  * 用 {@code INTEGER PRIMARY KEY AUTOINCREMENT}，MySQL 档保持既有
  * {@code BIGINT PRIMARY KEY AUTO_INCREMENT}。方言探测不可得（受限连接代理）回落
  * MySQL 形态。既有富列契约测试用 JDK 代理假库（方言不敏感，任意 DDL 都被桩吞下），
@@ -52,7 +52,7 @@ public class JdbcConsoleOpsAuditStoreSqliteDialect948Test {
 
     @Before
     public void setUp() throws Exception {
-        dbFile = Files.createTempFile("es-console-audit-dialect-", ".db");
+        dbFile = Files.createTempFile("searchdeck-audit-dialect-", ".db");
         Files.deleteIfExists(dbFile); /* SQLite 首连自建，先摘临时文件占位 */
         SQLiteDataSource ds = new SQLiteDataSource();
         ds.setUrl("jdbc:sqlite:" + dbFile.toAbsolutePath());
@@ -68,7 +68,7 @@ public class JdbcConsoleOpsAuditStoreSqliteDialect948Test {
     @Test
     public void sqlite档_建表幂等_查询空集不炸() {
         /* 修复前：ensureSchema 的 MySQL 方言 DDL 在 SQLite 上抛
-           IllegalStateException(初始化 es_console_ops_audit 表失败…AUTO_INCREMENT…) */
+           IllegalStateException(初始化 searchdeck_ops_audit 表失败…AUTO_INCREMENT…) */
         List<ConsoleOpsAuditEvent> first = store.search(null, null, 10, 0, null);
         assertTrue("全新库首次查询应得空集：" + first, first.isEmpty());
         List<ConsoleOpsAuditEvent> second = store.search(null, null, 10, 0, null);
@@ -94,7 +94,7 @@ public class JdbcConsoleOpsAuditStoreSqliteDialect948Test {
         try (Connection c = open(dbFile);
              Statement st = c.createStatement();
              ResultSet rs = st.executeQuery(
-                     "SELECT id FROM " + "es_console_ops_audit")) {
+                     "SELECT id FROM " + "searchdeck_ops_audit")) {
             assertTrue(rs.next());
             assertTrue("自增 id 必须 >0", rs.getLong(1) > 0);
         }

@@ -105,10 +105,10 @@ public class ConsoleOpsAuditFilterPushdownTest {
         ZoneId shanghai = ZoneId.of("Asia/Shanghai");
         long beforeMidnight = LocalDate.of(2026, 9, 22).atTime(23, 59).atZone(shanghai).toInstant().toEpochMilli();
         long afterMidnight = LocalDate.of(2026, 9, 23).atStartOfDay(shanghai).toInstant().toEpochMilli();
-        assertEquals("es_console_ops_audit-2026.09.22",
-                EsConsoleOpsAuditStore.datedIndexName("es_console_ops_audit", beforeMidnight, shanghai));
-        assertEquals("es_console_ops_audit-2026.09.23",
-                EsConsoleOpsAuditStore.datedIndexName("es_console_ops_audit", afterMidnight, shanghai));
+        assertEquals("searchdeck_ops_audit-2026.09.22",
+                EsConsoleOpsAuditStore.datedIndexName("searchdeck_ops_audit", beforeMidnight, shanghai));
+        assertEquals("searchdeck_ops_audit-2026.09.23",
+                EsConsoleOpsAuditStore.datedIndexName("searchdeck_ops_audit", afterMidnight, shanghai));
     }
 
     /** 环形索引契约：显式 keyword/long mapping + replicas:0 + refresh 30s——把现网偶然形态变索引级契约。 */

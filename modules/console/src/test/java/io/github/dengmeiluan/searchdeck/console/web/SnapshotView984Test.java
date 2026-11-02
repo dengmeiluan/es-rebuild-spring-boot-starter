@@ -45,14 +45,14 @@ public class SnapshotView984Test {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("snapshot", "snap-1");
             row.put("indices", new ArrayList<>(Arrays.asList(
-                    "logs-1", "es_console_user", "logs_2026_es_rebuild_lock", "orders")));
+                    "logs-1", "searchdeck_user", "logs_2026_searchdeck_lock", "orders")));
             return Collections.singletonList(row);
         }
 
         @Override public Map<String, Object> snapshotStatus(String repo, String name) {
             Map<String, Object> indices = new LinkedHashMap<>();
             indices.put("logs-1", Collections.singletonMap("shards", 1));
-            indices.put("es_console_ops_audit", Collections.singletonMap("shards", 1));
+            indices.put("searchdeck_ops_audit", Collections.singletonMap("shards", 1));
             Map<String, Object> snap = new LinkedHashMap<>();
             snap.put("snapshot", "snap-1");
             snap.put("indices", indices);
@@ -91,7 +91,7 @@ public class SnapshotView984Test {
         List<Map<String, Object>> rows = c.clusterSnapshotList("repo", request(ConsoleRole.ADMIN));
         @SuppressWarnings("unchecked")
         List<Object> indices = (List<Object>) rows.get(0).get("indices");
-        assertTrue(indices.contains("es_console_user"));
+        assertTrue(indices.contains("searchdeck_user"));
     }
 
     @Test
@@ -104,6 +104,6 @@ public class SnapshotView984Test {
         @SuppressWarnings("unchecked")
         Map<String, Object> indices = (Map<String, Object>) snaps.get(0).get("indices");
         assertTrue(indices.containsKey("logs-1"));
-        assertFalse(indices.containsKey("es_console_ops_audit"));
+        assertFalse(indices.containsKey("searchdeck_ops_audit"));
     }
 }

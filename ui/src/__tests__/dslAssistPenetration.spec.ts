@@ -359,13 +359,13 @@ describe('W4-T14 dslAssist 渗透 + 构建器前置入口', () => {
   });
 
   it('②b lastMode 记忆：用户显式选择过的通道不被默认值覆盖', async () => {
-    localStorage.setItem('es-console.pref.qh.mode', JSON.stringify('lucene'));
+    localStorage.setItem('searchdeck.pref.qh.mode', JSON.stringify('lucene'));
     const { host } = await mountView(QueryHubView, '/search');
     expect(host.querySelector('.qh-mode.on')?.textContent).toContain('Lucene');
   });
 
   it('②c 深链优先：?mode= 深链压过 lastMode 记忆', async () => {
-    localStorage.setItem('es-console.pref.qh.mode', JSON.stringify('pit'));
+    localStorage.setItem('searchdeck.pref.qh.mode', JSON.stringify('pit'));
     history.replaceState(null, '', '#/search?mode=lucene');
     const { host } = await mountView(QueryHubView, '/search?mode=lucene');
     expect(host.querySelector('.qh-mode.on')?.textContent).toContain('Lucene');

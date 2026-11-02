@@ -30,7 +30,7 @@ import java.util.Map;
 
 /**
  * 多集群告警端点（R7）：只读查询服务端阈值评估落库的告警/恢复事件
- * （{@code es_console_monitor-yyyy.MM.dd} 里 kind=alert 的 doc），供概览页告警面板。
+ * （{@code searchdeck_monitor-yyyy.MM.dd} 里 kind=alert 的 doc），供概览页告警面板。
  *
  * <p>路径刻意挂在 {@code /internal/es/index/monitor-alerts}（与 monitor-metrics 同族，
  * 避开 {@code /clusters/} ADMIN 关键字与 {@code /cluster/} 透传白名单），并登记进

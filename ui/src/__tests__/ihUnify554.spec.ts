@@ -326,7 +326,7 @@ describe('554 四：视图 seg 行为网（点击切档 + hideBody 隐表格体 
     const jsonBtn = [...seg.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent?.trim() === 'JSON')!;
     jsonBtn.click();
     await settle();
-    expect(localStorage.getItem('es-console.pref.ih.docs.view'), 'usePref 落盘 json').toBe('"json"');
+    expect(localStorage.getItem('searchdeck.pref.ih.docs.view'), 'usePref 落盘 json').toBe('"json"');
     const wrap = host.querySelector<HTMLElement>('.rt-wrap');
     expect(wrap, '表格体节点在场（v-hideBody 为 v-show 非 v-if）').toBeTruthy();
     expect(wrap!.style.display, '非表格档 RT 表格体自动隐藏').toBe('none');

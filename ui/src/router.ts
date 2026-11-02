@@ -273,7 +273,7 @@ export const router = createRouter({
 
 /* 部署换 hash 后，旧标签页点新路由会动态 import 旧资产 404 白屏——
  检测到 chunk 加载失败则整页刷新拉新资产（sessionStorage 防死循环，同一轮只自愈一次） */
-const CHUNK_RETRY_KEY = 'es-console.chunk-retry';
+const CHUNK_RETRY_KEY = 'searchdeck.chunk-retry';
 router.onError((err, to) => {
   const msg = String((err as any)?.message || err);
   if (!/dynamically imported module|Loading chunk|module script failed/i.test(msg)) return;

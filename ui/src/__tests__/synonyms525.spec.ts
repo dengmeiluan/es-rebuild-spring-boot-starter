@@ -85,7 +85,7 @@ vi.mock('../api', async (importOriginal) => {
 
 import SynonymsManagerView from '../views/SynonymsManagerView.vue';
 
-const DRAFT_KEY = 'es-console.draft2:synonyms:host:-:-:raw';
+const DRAFT_KEY = 'searchdeck.draft2:synonyms:host:-:-:raw';
 
 async function settle(n = 12) {
   for (let i = 0; i < n; i++) { await nextTick(); await Promise.resolve(); }

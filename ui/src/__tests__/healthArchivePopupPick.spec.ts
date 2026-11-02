@@ -33,7 +33,7 @@ function seedArchive(): ArchivedReport[] {
   ];
   localStorage.setItem(ARCHIVE_KEY, JSON.stringify(arr));
   /* 对比卡在 hr-body 内（v-if="data"）：种一份「上次报告」让报告区渲染（R51 sessionStorage 复原语义） */
-  sessionStorage.setItem('es-console.health-report.last', JSON.stringify({ score: 90, generatedAt: now, summary: {} }));
+  sessionStorage.setItem('searchdeck.health-report.last', JSON.stringify({ score: 90, generatedAt: now, summary: {} }));
   return arr;
 }
 

@@ -81,7 +81,7 @@ describe('RT 语义格式化（W7 es_tbl_sem）', () => {
     expect(cellByCol('price').getAttribute('title')).toBe('1234567');
   });
 
-  it('列头菜单开关：关→回落原样显示；落盘 es-console.pref.es_tbl_sem；新实例读盘保持关', async () => {
+  it('列头菜单开关：关→回落原样显示；落盘 searchdeck.pref.es_tbl_sem；新实例读盘保持关', async () => {
     await mountTbl(ResultTable, { hits: HITS, total: 1, index: 'sf2', fieldTypes: TYPES });
     /* 1143：语义格式化已归位工具行「视图 ⋯」（不再需要先开列头菜单） */
     expect(await openViewMenu(), '视图 ⋯ 必须可达').toBe(true);
@@ -89,7 +89,7 @@ describe('RT 语义格式化（W7 es_tbl_sem）', () => {
     expect(onItem, '视图菜单应有语义格式化开关（默认开）').toBeTruthy();
     onItem!.click();
     await tick();
-    expect(localStorage.getItem('es-console.pref.es_tbl_sem')).toBe('false');
+    expect(localStorage.getItem('searchdeck.pref.es_tbl_sem')).toBe('false');
     expect(cellByCol('price').textContent?.trim(), '关后回落原样').toBe('1234567');
     /* 新实例读盘：保持关 */
     apps.forEach(a => { try { a.unmount(); } catch { /* 已卸载 */ } });
@@ -135,6 +135,6 @@ describe('QRT 语义格式化（W7 RT 镜像）', () => {
     const after = [...host.querySelectorAll('tbody tr')][0].querySelectorAll('td.qrt-cell');
     expect(after[3].textContent?.trim(), '关后小数值回落原样').toBe('1234');
     expect(after[4].textContent?.trim(), '既有大整数格式化不受开关影响').toBe('1,234,567');
-    expect(localStorage.getItem('es-console.pref.es_tbl_sem')).toBe('false');
+    expect(localStorage.getItem('searchdeck.pref.es_tbl_sem')).toBe('false');
   });
 });

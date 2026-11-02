@@ -33,7 +33,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * 本地 SQLite 档（{@code es.rebuild.console.store=sqlite}）契约：审计与作业元数据同宿
+ * 本地 SQLite 档（{@code searchdeck.elasticsearch.console.store=sqlite}）契约：审计与作业元数据同宿
  * 落一个本地数据库文件，零外部服务依赖。核心承诺=<b>重启恢复</b>——同一文件重开新
  * store 实例必须读回此前写入的作业（「重启后历史可查」）。
  */
@@ -51,7 +51,7 @@ public class SqliteStoreContractTest {
 
     @Test
     public void resolveDatabaseFileDefaultsToConsoleHomeDir() {
-        Path expected = Paths.get(System.getProperty("user.home"), ".es-console", "myapp", "jobs.db");
+        Path expected = Paths.get(System.getProperty("user.home"), ".searchdeck", "myapp", "jobs.db");
         assertEquals(expected, SqliteStores.resolveDatabaseFile(null, "myapp"));
         assertEquals(expected, SqliteStores.resolveDatabaseFile("", "myapp"));
         assertEquals(expected, SqliteStores.resolveDatabaseFile("   ", "myapp"));

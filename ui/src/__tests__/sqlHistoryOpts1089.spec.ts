@@ -36,7 +36,7 @@ describe('1089 SQL 历史执行选项', () => {
   });
 
   it('跨模式历史回放把选项写入 prefill 通道（无选项先清旧键）', () => {
-    expect(hub).toContain("removeStoredRaw(sessionStorage, 'es-console.sql.prefill.opts');");
-    expect(hub).toContain("if (it.opts) writeStoredRaw(sessionStorage, 'es-console.sql.prefill.opts', JSON.stringify(it.opts));");
+    expect(hub).toContain("removeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.opts');");
+    expect(hub).toContain("if (it.opts) writeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.opts', JSON.stringify(it.opts));");
   });
 });

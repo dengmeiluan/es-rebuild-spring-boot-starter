@@ -199,7 +199,7 @@ import { highlightDslJson } from '../utils/jsonc'; /* ：DSL 语义键 j-clause 
 import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-html 内核；534 收口波：双参改用（errMeta 旁路） */
 import { useIdxState } from '../composables/urlState';
 /* 裸 sessionStorage 接收换 useLinkCarry 统一件（530 W-D 遗留清单合并，
- 键 es-console.link.boost 与 payload {index,keyword} 逐字保持，发送方 MatchMatrix 零改） */
+ 键 searchdeck.link.boost 与 payload {index,keyword} 逐字保持，发送方 MatchMatrix 零改） */
 import { useLinkCarry } from '../composables/useLinkCarry';
 import { writeStoredRaw } from '../utils/safeJson';
 
@@ -386,11 +386,11 @@ async function exportDsl() {
   store.notify(ok ? 'success' : 'error', ok ? '最终 DSL 已复制到剪贴板' : '复制失败：浏览器拦截了剪贴板');
 }
 
-/* 前继/：送入搜索沙盒——sessionStorage 契约（es-console.sandbox.body），
+/* 前继/：送入搜索沙盒——sessionStorage 契约（searchdeck.sandbox.body），
  沙盒四通道回放兜底已消费该键（w78）；与 TemplateGallery toSandbox 同范式 */
 function toSandbox() {
   if (!canRun.value) return;
-  writeStoredRaw(sessionStorage, 'es-console.sandbox.body', JSON.stringify(builtQuery.value, null, 2));
+  writeStoredRaw(sessionStorage, 'searchdeck.sandbox.body', JSON.stringify(builtQuery.value, null, 2));
   router.push({ path: '/search', query: { mode: 'sandbox' } });
   store.notify('info', '调参 DSL 已送入搜索沙盒');
 }
@@ -429,7 +429,7 @@ function openRawIo() {
 }
 
 /* 接收「命中矩阵」送来的索引+关键词 —— 填好就等你加字段跑基准。
- 接收侧换 useLinkCarry（键 es-console.link.boost 与 payload
+ 接收侧换 useLinkCarry（键 searchdeck.link.boost 与 payload
  {index,keyword} 逐字保持；receive 取后即焚语义同旧三行）。 */
 const boostCarry = useLinkCarry<{ index?: string; keyword?: string }>('boost');
 onMounted(() => {

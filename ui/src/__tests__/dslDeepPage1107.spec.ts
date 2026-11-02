@@ -18,8 +18,8 @@ describe('1107 深分页窗口守卫', () => {
   it('视图接线：超窗即提示并可一键去 PIT（query/sort 接力）', () => {
     expect(dq).toContain('import { exceedsResultWindow } from \'../utils/resultWindow\';');
     expect(dq).toMatch(/if \(exceedsResultWindow\(np, pageSize\.value\)\) \{[\s\S]{0,260}action: \{ label: '去 PIT 分页', onClick: goPitDeep \}/);
-    expect(dq).toContain("writeStoredRaw(sessionStorage, 'es-console.pit.filter', JSON.stringify(obj.query));");
-    expect(dq).toContain("writeStoredRaw(sessionStorage, 'es-console.pit.prefill', JSON.stringify({ sort: sf, order: so }));");
+    expect(dq).toContain("writeStoredRaw(sessionStorage, 'searchdeck.pit.filter', JSON.stringify(obj.query));");
+    expect(dq).toContain("writeStoredRaw(sessionStorage, 'searchdeck.pit.prefill', JSON.stringify({ sort: sf, order: so }));");
     expect(dq).toContain("usp.set('mode', 'pit');");
   });
 });

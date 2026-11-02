@@ -70,7 +70,7 @@ public class ConsoleUiConfigServiceTest {
     @Test
     public void 宿主默认包_仅在平台配置为空时生效() {
         PlatformUiProperties empty = new PlatformUiProperties();
-        Map<String, Object> fromHost = service(empty, integration("quotehub", "QuoteHub",
+        Map<String, Object> fromHost = service(empty, integration("acme", "Acme",
                 Collections.singletonList("observe"))).view();
         assertTrue(enabled(fromHost, "observe"));
         assertFalse(enabled(fromHost, "platform"));
@@ -78,7 +78,7 @@ public class ConsoleUiConfigServiceTest {
         PlatformUiProperties explicit = new PlatformUiProperties();
         explicit.getFeatures().setPacks(Collections.singletonList("devtools"));
         Map<String, Object> fromConfig = service(explicit,
-                integration("quotehub", "QuoteHub", Collections.singletonList("observe"))).view();
+                integration("acme", "Acme", Collections.singletonList("observe"))).view();
         assertTrue("显式配置优先于宿主默认", enabled(fromConfig, "devtools"));
         assertFalse(enabled(fromConfig, "observe"));
     }
@@ -87,11 +87,11 @@ public class ConsoleUiConfigServiceTest {
     public void 宿主品牌_填充集成身份但不覆盖产品名() {
         PlatformUiProperties props = new PlatformUiProperties();
         Map<String, Object> view = service(props,
-                integration("quotehub", "QuoteHub", Collections.emptyList())).view();
+                integration("acme", "Acme", Collections.emptyList())).view();
         Map<String, Object> product = product(view);
         assertEquals("SearchDeck", product.get("name"));
-        assertEquals("quotehub", product.get("integrationId"));
-        assertEquals("QuoteHub", product.get("integrationName"));
+        assertEquals("acme", product.get("integrationId"));
+        assertEquals("Acme", product.get("integrationName"));
     }
 
     @Test
@@ -100,7 +100,7 @@ public class ConsoleUiConfigServiceTest {
         props.getBranding().setProductName("Acme Search");
         props.getBranding().setIntegrationName("Acme Ops");
         Map<String, Object> product = product(service(props,
-                integration("quotehub", "QuoteHub", Collections.emptyList())).view());
+                integration("acme", "Acme", Collections.emptyList())).view());
         assertEquals("Acme Search", product.get("name"));
         assertEquals("Acme Ops", product.get("integrationName"));
     }

@@ -38,9 +38,9 @@ import java.util.EnumSet;
  * 主体（或索引泄露事件）即取得全部目标集群凭据。本内核把落库值统一加密：</p>
  * <ul>
  *   <li>密文形态 {@code enc:v1:<base64(iv[12] || ciphertext+tag[16]>)}；</li>
- *   <li>密钥源：显式配置 {@code es.rebuild.console.auth.conn-secret}（base64 的 32 字节）
+ *   <li>密钥源：显式配置 {@code searchdeck.elasticsearch.console.auth.conn-secret}（base64 的 32 字节）
  *       优先——多实例部署必须显式配置共享同一密钥；未配置时自动生成并落自举档案目录
- *       {@code ~/.es-console/<appName>/conn.key}（单实例零配置可用，尽力收敛文件权限）；</li>
+ *       {@code ~/.searchdeck/<appName>/conn.key}（单实例零配置可用，尽力收敛文件权限）；</li>
  *   <li><b>存量明文兼容</b>：读取无前缀值原样返回（透明兼容），保存一律加密——存量档案
  *       被再次编辑/同步时自动升级为密文；</li>
  *   <li>带前缀但解密失败=显性异常（密钥轮换错误绝不能静默把密文当明文用）；</li>
@@ -100,7 +100,7 @@ public final class ConnCrypto {
                 Files.write(file, Base64.getEncoder().encodeToString(keyBytes).getBytes(StandardCharsets.UTF_8));
                 restrictPermissions(file);
                 LOG.info("[ConnCrypto] 已生成连接档案加密密钥并落盘 {}（多实例部署请改用显式配置"
-                        + " es.rebuild.console.auth.conn-secret 共享同一密钥）", file);
+                        + " searchdeck.elasticsearch.console.auth.conn-secret 共享同一密钥）", file);
             } catch (IOException e) {
                 throw new IllegalStateException("无法写入连接加密密钥文件 " + file + ": " + e.getMessage(), e);
             }

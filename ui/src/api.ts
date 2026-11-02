@@ -11,14 +11,14 @@ export const EP = `${CTX}/internal/es/index`;
 const XB = `${CTX}/internal/es/xmigrate`;
 
 /* ==================== ：控制台鉴权 token ==================== */
-const TOKEN_KEY = 'es-console.auth.token';
+const TOKEN_KEY = 'searchdeck.auth.token';
 export const getToken = () => localStorage.getItem(TOKEN_KEY) || '';
 export const setToken = (t: string) => writeStoredRaw(localStorage, TOKEN_KEY, t);
 export const clearToken = () => removeStoredRaw(localStorage, TOKEN_KEY);
 /** 鉴权头（裸 fetch 场景复用，如 hotThreads） */
 const authHeaders = (): Record<string, string> => {
   const t = getToken();
-  return t ? { 'X-Es-Console-Token': t } : {};
+  return t ? { 'X-SearchDeck-Token': t } : {};
 };
 
 /* ==================== ：宿主委托凭证（X-Es-Host-Token） ==================== */
@@ -38,7 +38,7 @@ const hostHeaders = (): Record<string, string> =>
 
 /* ==================== ：多集群目标（X-Es-Target） ==================== */
 /* 后端只对数据面（/cluster/**、/insight、/config-lab/validate）生效；控制面（鉴权/重建/连接管理）恒定宿主，全局带头无害 */
-const TARGET_KEY = 'es-console.target';
+const TARGET_KEY = 'searchdeck.target';
 export const getTarget = () => localStorage.getItem(TARGET_KEY) || '';
 export const setTargetId = (id: string) => {
   if (id) writeStoredRaw(localStorage, TARGET_KEY, id);
@@ -108,7 +108,7 @@ export class ApiError extends Error {
  Overview 骨架屏永挂就是这个病。默认 60s 宽松兜底（重建/快照等重操作不误伤）；
  超时抛可读 ApiError(408)，与调用方主动取消（AbortError， 轻提示路径）严格区分 */
 const REQUEST_TIMEOUT_MS = 60_000;
-const TIMEOUT_REASON = Symbol('es-console.timeout');
+const TIMEOUT_REASON = Symbol('searchdeck.timeout');
 
 /* 慢请求可观测——成功响应耗时超过该阈值经全局事件桥弹 warning。
  失败链路已有 error 通知，不重复打扰；快请求零输出 */
@@ -266,7 +266,7 @@ async function request<T = any>(path: string, init?: RequestInit & { timeoutMs?:
     if (!apiWriteGuard(fetchMethod, cleanBase + path, targetId)) {
       const message = '当前身份无权执行该写操作（请求未发出）——请确认当前页面与目标连接的写授权；如需申请，请联系管理员勾选对应页面/连接的写权限';
       /* 与后端 403 走同一条全局通道：客户端拦截同样要能回答「缺什么」。 */
-      window.dispatchEvent(new CustomEvent('es-console:forbidden', {
+      window.dispatchEvent(new CustomEvent('searchdeck:forbidden', {
         detail: { path: cleanBase + path, method: fetchMethod, message, denied: 'CLIENT_WRITE_DENIED' },
       }));
       throw new ApiError(403, message, 'CLIENT_WRITE_DENIED');
@@ -312,11 +312,11 @@ async function request<T = any>(path: string, init?: RequestInit & { timeoutMs?:
     // 忽略避免把刚认出的身份又顶回遮罩（.2：iframe 握手与首次 probe 存在天然竞态）
     if (resp.status === 401 && !path.includes('/auth/login')
         && getToken() === tokenAtRequest && hostToken === hostTokenAtRequest) {
-      window.dispatchEvent(new CustomEvent('es-console:unauthorized'));
+      window.dispatchEvent(new CustomEvent('searchdeck:unauthorized'));
     }
     // 控制台未绑定控制集群 → 广播弹首连向导（SetupWizard 监听）
     if (resp.status === 409 && data && data.code === 'SETUP_REQUIRED') {
-      window.dispatchEvent(new CustomEvent('es-console:setup-required'));
+      window.dispatchEvent(new CustomEvent('searchdeck:setup-required'));
     }
     // 集群级权限隔离/档案失效的统一友好文案（后端 code 见 EsTargetInterceptor / MigrateExceptionAdvice）
     let msg = (data && data.message) || text || `HTTP ${resp.status}`;
@@ -345,7 +345,7 @@ async function request<T = any>(path: string, init?: RequestInit & { timeoutMs?:
     /* 403 全局广播：各视图不必再各自发明「没权限」的说法。
        轮询型读请求由 app store 的通知去重兜住；写请求被客户端硬门拦下时走同一条通道。 */
     if (resp.status === 403) {
-      window.dispatchEvent(new CustomEvent('es-console:forbidden', {
+      window.dispatchEvent(new CustomEvent('searchdeck:forbidden', {
         detail: { path, method: fetchMethod, message: msg, ...(denied || {}) },
       }));
     }
@@ -360,7 +360,7 @@ async function request<T = any>(path: string, init?: RequestInit & { timeoutMs?:
  warning 档（8s 同文去重内建）。事件桥与上方 unauthorized/setup-required 同范式：
  api 层不反依赖 pinia store（会成环），监听侧见 stores/app.ts */
   if (costMs > SLOW_REQUEST_MS) {
-    window.dispatchEvent(new CustomEvent('es-console:slow-request', {
+    window.dispatchEvent(new CustomEvent('searchdeck:slow-request', {
       detail: { path, seconds: +(costMs / 1000).toFixed(1) },
     }));
   }
@@ -786,7 +786,7 @@ export const api = {
   /* 控制集群首连向导 —— status 免鉴权，test/apply 仅未绑定开放，rebind 走 ADMIN 高危 */
   setup: {
     status: () => get<{ bound: boolean; mode: string; endpoint: string | null; appName: string; hostVisible: boolean; authEnabled?: boolean; builtinLogin?: boolean; setupTokenRequired?: boolean }>('/setup/status'),
-    /* 可选首连令牌：配置 es.rebuild.console.setup-token 后未绑定窗口必须携带（防匿名绑定）。 */
+    /* 可选首连令牌：配置 searchdeck.elasticsearch.console.setup-token 后未绑定窗口必须携带（防匿名绑定）。 */
     test: (c: { url: string; username?: string; password?: string }, setupToken?: string) =>
       post<any>('/setup/test', c, undefined, setupToken ? { headers: { 'X-Setup-Token': setupToken } } : undefined),
     apply: (c: { url: string; username?: string; password?: string }, setupToken?: string) =>

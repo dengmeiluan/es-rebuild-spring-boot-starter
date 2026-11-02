@@ -20,7 +20,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -63,7 +63,7 @@ public class SliceWorkerBulkRetryLogTest {
     @Test
     public void bulkRetryLeavesWarnWithFeatureString() throws Exception {
         SliceWorker worker = new SliceWorker(7, 8, "src", "dst", 100, 30,
-                null, null, null, null, new EsRebuildProperties.Retry());
+                null, null, null, null, new SearchDeckElasticsearchProperties.Retry());
 
         invokeWarnBulkRetry(worker, 1, 3);
 

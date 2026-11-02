@@ -23,7 +23,7 @@ import static org.junit.Assert.fail;
 /**
  * 控制面索引守卫深水补强：别名操作通配、索引详情直读、空首段路径三个绕过面。
  *
- * <p>风险：{@code "es_console*"} 通配不含控制名字面、字面 body 闸拦不住，别名绑上
+ * <p>风险：{@code "searchdeck*"} 通配不含控制名字面、字面 body 闸拦不住，别名绑上
  * 控制索引后按名守卫全部失明；索引详情接口混用高级客户端调用绕过路径闸；双斜杠
  * 前缀的空首段被静默放行。三者均可由 VIEWER/OPERATOR 档端点触达控制面数据。</p>
  */
@@ -43,11 +43,11 @@ public class EsIndexAdminControlGuardDeep969Test {
     @Test
     public void 索引详情接口对控制索引名与通配一律拒绝() {
         assertRejected(() -> {
-            try { admin.inspect("es_console_user", 50); }
+            try { admin.inspect("searchdeck_user", 50); }
             catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "详情直读控制索引");
         assertRejected(() -> {
-            try { admin.inspect("es_console_*", 10); }
+            try { admin.inspect("searchdeck_*", 10); }
             catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "详情通配控制索引");
     }
@@ -65,11 +65,11 @@ public class EsIndexAdminControlGuardDeep969Test {
     @Test
     public void 别名操作拒绝通配与全量绑定控制索引() {
         assertRejected(() -> {
-            try { admin.aliasActions("{\"actions\":[{\"add\":{\"index\":\"es_console*\",\"alias\":\"pwn\"}}]}"); }
+            try { admin.aliasActions("{\"actions\":[{\"add\":{\"index\":\"searchdeck*\",\"alias\":\"pwn\"}}]}"); }
             catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "别名通配绑定");
         assertRejected(() -> {
-            try { admin.aliasActions("{\"actions\":[{\"add\":{\"index\":\"e*\",\"alias\":\"pwn\"}}]}"); }
+            try { admin.aliasActions("{\"actions\":[{\"add\":{\"index\":\"s*\",\"alias\":\"pwn\"}}]}"); }
             catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "短前缀通配");
         assertRejected(() -> {
@@ -81,11 +81,11 @@ public class EsIndexAdminControlGuardDeep969Test {
             catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "全量别名");
         assertRejected(() -> {
-            try { admin.aliasActions("{\"actions\":[{\"add\":{\"index\":[\"logs-*\",\"es_console_user\"],\"alias\":\"pwn\"}}]}"); }
+            try { admin.aliasActions("{\"actions\":[{\"add\":{\"index\":[\"logs-*\",\"searchdeck_user\"],\"alias\":\"pwn\"}}]}"); }
             catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "数组夹带精确名");
         assertRejected(() -> {
-            try { admin.aliasActions("{\"actions\":[{\"remove\":{\"index\":\"es_console_ops_audit\",\"alias\":\"old\"}}]}"); }
+            try { admin.aliasActions("{\"actions\":[{\"remove\":{\"index\":\"searchdeck_ops_audit\",\"alias\":\"old\"}}]}"); }
             catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "remove 精确控制索引");
     }
@@ -116,12 +116,12 @@ public class EsIndexAdminControlGuardDeep969Test {
 
     @Test
     public void 双斜杠空首段折叠出真实首段再判定() {
-        assertRejected(() -> admin.guardControlPath("//es_console_user/_search"), "双斜杠控制索引");
-        assertRejected(() -> admin.guardControlPath("//ES_CONSOLE_USER/_search"), "双斜杠大小写变体");
-        assertRejected(() -> admin.guardControlPath("///es_console_user/_search"), "三斜杠");
-        assertRejected(() -> admin.guardControlPath("//es_console_user"), "双斜杠无后续段");
-        assertRejected(() -> admin.guardControlPath("//es_console*/_search"), "双斜杠通配");
-        assertRejected(() -> admin.guardControlPath("//%65s_console_user/_search"), "双斜杠百分号编码");
+        assertRejected(() -> admin.guardControlPath("//searchdeck_user/_search"), "双斜杠控制索引");
+        assertRejected(() -> admin.guardControlPath("//SEARCHDECK_ELASTICSEARCH_USER/_search"), "双斜杠大小写变体");
+        assertRejected(() -> admin.guardControlPath("///searchdeck_user/_search"), "三斜杠");
+        assertRejected(() -> admin.guardControlPath("//searchdeck_user"), "双斜杠无后续段");
+        assertRejected(() -> admin.guardControlPath("//searchdeck*/_search"), "双斜杠通配");
+        assertRejected(() -> admin.guardControlPath("//%73earchdeck_user/_search"), "双斜杠百分号编码");
     }
 
     @Test
@@ -136,11 +136,11 @@ public class EsIndexAdminControlGuardDeep969Test {
     @Test
     public void 集群级操作body同样不得引用控制索引() {
         assertRejected(() -> {
-            try { admin.clusterReroute("{\"commands\":[{\"allocate_stale_primary\":{\"index\":\"es_console_user\",\"shard\":0,\"node\":\"n1\",\"accept_data_loss\":true}}]}", false, false); }
+            try { admin.clusterReroute("{\"commands\":[{\"allocate_stale_primary\":{\"index\":\"searchdeck_user\",\"shard\":0,\"node\":\"n1\",\"accept_data_loss\":true}}]}", false, false); }
             catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "reroute 引用控制索引");
         assertRejected(() -> {
-            try { admin.putClusterSettings("{\"persistent\":{\"action.destructive_requires_name\":\"es_console_user\"}}"); }
+            try { admin.putClusterSettings("{\"persistent\":{\"action.destructive_requires_name\":\"searchdeck_user\"}}"); }
             catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "集群设置引用控制索引");
     }

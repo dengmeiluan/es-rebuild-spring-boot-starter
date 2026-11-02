@@ -98,7 +98,7 @@ import SearchFilterBar from '../components/SearchFilterBar.vue'; /* ：工具条
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
 import { useScopedDraft, useScopedDraftState } from '../composables/useScopedDraft';
-/* G175：showDefaults 偏好落盘（urlState usePref——es-console.pref.* 键） */
+/* G175：showDefaults 偏好落盘（urlState usePref——searchdeck.pref.* 键） */
 import { usePref } from '../composables/urlState';
 
 import { askConfirm } from '../composables/confirm';

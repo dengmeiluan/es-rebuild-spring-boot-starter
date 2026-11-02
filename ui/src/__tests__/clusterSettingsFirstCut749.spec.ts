@@ -210,7 +210,7 @@ describe('749 G176 R52 注释对齐（史志失实根治·注释对齐支）', (
 
 describe('749 G175 showDefaults 落盘（铁律 B 弱形态·usePref 一行刀）', () => {
   it('预置偏好 true→挂载即勾选+Default 列在场（病灶：修前恒 false）', async () => {
-    localStorage.setItem('es-console.pref.cs.showDefaults', 'true');
+    localStorage.setItem('searchdeck.pref.cs.showDefaults', 'true');
     const host = await mountView();
     const chk = host.querySelector('.cs-chk input') as HTMLInputElement;
     expect(chk.checked, 'G175 病灶：勾选不落盘 reload 丢（修前红）').toBe(true);
@@ -224,7 +224,7 @@ describe('749 G175 showDefaults 落盘（铁律 B 弱形态·usePref 一行刀�
     expect(chk.checked).toBe(false);
     chk.click();
     await settle(6);
-    expect(localStorage.getItem('es-console.pref.cs.showDefaults'), 'usePref 落盘').toBe('true');
+    expect(localStorage.getItem('searchdeck.pref.cs.showDefaults'), 'usePref 落盘').toBe('true');
     const heads = [...host.querySelectorAll('.qrt-tbl thead th')].map(th => (th.textContent || '').trim());
     expect(heads.some(h => h.startsWith('Default'))).toBe(true);
   });

@@ -17,7 +17,7 @@
 package io.github.dengmeiluan.searchdeck.console.auth;
 import io.github.dengmeiluan.searchdeck.platform.pages.ConsolePageCatalog;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import org.junit.Test;
 import org.springframework.http.ResponseEntity;
 
@@ -78,7 +78,7 @@ public class ConsoleMeFallback985Test {
     @Test
     @SuppressWarnings("unchecked")
     public void env模板随身份下发() {
-        EsRebuildProperties props = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties props = new SearchDeckElasticsearchProperties();
         Map<String, Set<String>> templates = new HashMap<>();
         templates.put("prod", new LinkedHashSet<>(Arrays.asList("search", "overview")));
         props.setEnvPages(templates);

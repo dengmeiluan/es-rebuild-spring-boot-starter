@@ -24,7 +24,7 @@ import java.util.List;
 /**
  * 平台层配置（前缀 {@code searchdeck.console}）：品牌与功能包选择。
  *
- * <p>与引擎层 {@code es.rebuild.*} 分离：这里只描述「产品长什么样、暴露哪些模块」，
+ * <p>与引擎层 {@code searchdeck.elasticsearch.*} 分离：这里只描述「产品长什么样、暴露哪些模块」，
  * 不影响重建/迁移/存储等运行参数。宿主可以用 {@link ConsoleHostIntegration} Bean
  * 提供默认值，再用本配置覆盖。</p>
  *

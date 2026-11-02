@@ -60,7 +60,7 @@ async function mountView() {
 
 async function flush(n = 6) { for (let i = 0; i < n; i++) { await nextTick(); await Promise.resolve(); } }
 
-const LS_KEY = 'es-console.workspace.v1';
+const LS_KEY = 'searchdeck.workspace.v1';
 const DEF_LAYOUT = [
   { k: 'health', span: 1 }, { k: 'indices', span: 1 }, { k: 'favorites', span: 1 },
   { k: 'quick-sql', span: 2 }, { k: 'remote', span: 1 }, { k: 'tasks', span: 1 },

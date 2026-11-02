@@ -6,7 +6,7 @@
  * 1) 默认不写：未点击时 localStorage 无 es_tbl_sort:browser:indices（默认值不落盘口径）；
  * 2) 点击落盘：点「索引」列头后写 es_tbl_sort:browser:indices:m（asc 起步，227 批 M2 统一口径）；
  * 3) 预置恢复：预置 desc 挂载后「索引」列头呈降序（aria-sort=descending + ↓）。
- * usePref 键空间 es-console.pref.* 退役；挂载：裸 createApp + pinia（useRouter mock）。
+ * usePref 键空间 searchdeck.pref.* 退役；挂载：裸 createApp + pinia（useRouter mock）。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
@@ -57,7 +57,7 @@ beforeEach(() => {
   document.body.appendChild(host);
 });
 
-/* 五百二十九批锚同步更新：es-console.pref.browser.sortReversed（方向钮翻转位）
+/* 五百二十九批锚同步更新：searchdeck.pref.browser.sortReversed（方向钮翻转位）
    → es_tbl_sort:browser:indices（QRT 列头排序记忆，键+方向一体） */
 const KEY = 'es_tbl_sort:browser:indices:m';
 const nameTh = () => host.querySelector<HTMLTableCellElement>('table.qrt-tbl thead th[data-col="索引"]');

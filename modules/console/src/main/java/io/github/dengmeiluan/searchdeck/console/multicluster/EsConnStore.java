@@ -35,7 +35,7 @@ import java.util.UUID;
 
 /**
  * 多集群连接存储（把「自定义 ES 连接串」持久化到<b>控制集群</b>内部索引
- * {@code es_console_conn}，密码只在服务端流转——列表/详情接口一律脱敏，前端永远拿不到明文。
+ * {@code searchdeck_conn}，密码只在服务端流转——列表/详情接口一律脱敏，前端永远拿不到明文。
  *
  * <p>与 {@link RemoteClusterConn}（xmigrate 一次性连接，用完即弃）互补：本店保存的是
  * <b>可反复切换的目标集群档案</b>，供 {@link EsClientRouter} 按 connId 建立长连接。

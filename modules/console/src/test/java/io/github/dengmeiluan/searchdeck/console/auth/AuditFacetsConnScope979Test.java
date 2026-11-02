@@ -50,7 +50,7 @@ public class AuditFacetsConnScope979Test {
     }
 
     private static AuditFacetsStore leakingStore() {
-        return new AuditFacetsStore(() -> null, "es_console_ops_audit") {
+        return new AuditFacetsStore(() -> null, "searchdeck_ops_audit") {
             @Override public Map<String, Object> facets() {
                 Map<String, Object> out = new LinkedHashMap<>();
                 out.put("actions", Collections.emptyList());

@@ -16,7 +16,7 @@
 
 package io.github.dengmeiluan.searchdeck.console.auth;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import org.junit.Test;
 
 import javax.servlet.http.HttpServletRequest;
@@ -72,7 +72,7 @@ public class AuthSwitchHardening1007Test {
 
     @Test
     public void 委托登出使用宿主令牌原文() {
-        EsRebuildProperties.Delegate props = new EsRebuildProperties.Delegate();
+        SearchDeckElasticsearchProperties.Delegate props = new SearchDeckElasticsearchProperties.Delegate();
         props.setMode("jwt");
         props.getJwt().setSecret("0123456789abcdef0123456789abcdef");
         PropertiesAuthDelegate delegate = new PropertiesAuthDelegate(props);
@@ -80,7 +80,7 @@ public class AuthSwitchHardening1007Test {
         assertTrue(delegate.hasCredential(req));
         assertEquals("host-token-abc", delegate.tokenOf(req));
 
-        EsRebuildProperties.Delegate headerMode = new EsRebuildProperties.Delegate();
+        SearchDeckElasticsearchProperties.Delegate headerMode = new SearchDeckElasticsearchProperties.Delegate();
         headerMode.setMode("header");
         headerMode.getHeader().setUserHeader("X-User");
         PropertiesAuthDelegate header = new PropertiesAuthDelegate(headerMode);
@@ -127,16 +127,16 @@ public class AuthSwitchHardening1007Test {
         expectInvalid("endpoint 缺 verify-url", p -> p.getConsole().getAuth().getDelegate().setMode("endpoint"));
         expectInvalid("header 缺 user-header", p -> p.getConsole().getAuth().getDelegate().setMode("header"));
 
-        EsRebuildProperties okHeader = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties okHeader = new SearchDeckElasticsearchProperties();
         okHeader.getConsole().getAuth().getDelegate().setMode("header");
         okHeader.getConsole().getAuth().getDelegate().getHeader().setUserHeader("X-User");
         okHeader.validate();
     }
 
-    private interface Mutator { void apply(EsRebuildProperties p); }
+    private interface Mutator { void apply(SearchDeckElasticsearchProperties p); }
 
     private static void expectInvalid(String why, Mutator m) {
-        EsRebuildProperties p = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties p = new SearchDeckElasticsearchProperties();
         m.apply(p);
         try {
             p.validate();
@@ -148,7 +148,7 @@ public class AuthSwitchHardening1007Test {
 
     @Test
     public void 无委托配置保持零变更() {
-        EsRebuildProperties p = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties p = new SearchDeckElasticsearchProperties();
         p.getConsole().getAuth().getDelegate().setMode("");
         p.validate();
         assertEquals("", p.getConsole().getAuth().getDelegate().getMode());

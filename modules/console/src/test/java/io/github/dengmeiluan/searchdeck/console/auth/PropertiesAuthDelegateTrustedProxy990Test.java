@@ -16,7 +16,7 @@
 
 package io.github.dengmeiluan.searchdeck.console.auth;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import org.junit.Test;
 
 import javax.servlet.http.HttpServletRequest;
@@ -37,8 +37,8 @@ import static org.junit.Assert.assertNull;
  */
 public class PropertiesAuthDelegateTrustedProxy990Test {
 
-    private static EsRebuildProperties.Delegate headerProps(String... trustedProxies) {
-        EsRebuildProperties.Delegate p = new EsRebuildProperties.Delegate();
+    private static SearchDeckElasticsearchProperties.Delegate headerProps(String... trustedProxies) {
+        SearchDeckElasticsearchProperties.Delegate p = new SearchDeckElasticsearchProperties.Delegate();
         p.setMode("header");
         p.getHeader().setUserHeader("X-User");
         p.getHeader().setRolesHeader("X-Roles");

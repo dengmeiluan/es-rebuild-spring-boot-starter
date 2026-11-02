@@ -250,7 +250,7 @@ for (const f of files) {
   }
 }
 
-/* 5g. DevTools 跨页 carry 必须带入口门（1124）：写 `es-console.devtools.open` 的页面
+/* 5g. DevTools 跨页 carry 必须带入口门（1124）：写 `searchdeck.devtools.open` 的页面
    （含 `run: true` 自动执行档）必须持有 DevTools/REST 写能力判定，否则只读身份会被送进
    一个「点了只会被拒」的页面。DevToolsView 自身的二次拦截是最后一道，不是唯一一道。
    收藏回放这类通用件用 `canOpen(path)` 注入页面门（/devtools 可见性=conn:devtools|w:rest，
@@ -266,7 +266,7 @@ for (const f of files) {
    不把任何 canReadPage 调用都当门（否则别的页面读门也能蒙混过关）。 */
 const DEVTOOLS_GATE = /canDevtools\s*(?:\.value|\(|&&|\|\|)/;
 const DEVTOOLS_PAGE_GATE = /canReadPage\s*\(\s*['"]devtools['"]/;
-const CARRY_KEY = 'es-console.devtools.open';
+const CARRY_KEY = 'searchdeck.devtools.open';
 for (const f of files) {
   const s = fs.readFileSync(f, 'utf8');
   const rel = path.relative(CONSOLE, f).replace(/\\/g, '/');

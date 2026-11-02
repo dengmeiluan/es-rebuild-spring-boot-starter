@@ -66,40 +66,40 @@ export const useAuthStore = defineStore('auth', () => {
   const canAdminOps = () => authDisabled.value || isAdmin() || !probeStarted.value;
 
   /** 上一登录用户（localStorage）：换人时清掉上一用户的请求草稿/历史，防同标签页串数据。 */
-  const LAST_USER_KEY = 'es-console.last-user';
+  const LAST_USER_KEY = 'searchdeck.last-user';
   const USER_STATE_PREFIXES = [
     /* DevTools/REST 草稿与历史（旧命名空间 + draft2 新命名空间覆盖全部视图 route） */
-    'es_devtools_', 'es-console.devtools.', 'es_rest_hist', 'es-console.draft2:',
+    'es_devtools_', 'searchdeck.devtools.', 'es_rest_hist', 'searchdeck.draft2:',
     /* 收藏/查询历史/保存的搜索/命令面板最近使用 */
-    'es-console.favorites.v1', 'es_query_hist_v2', 'es_query_saved', 'es_cmd_recent',
+    'searchdeck.favorites.v1', 'es_query_hist_v2', 'es_query_saved', 'es_cmd_recent',
     /* 一次性 carry/预填键：换人后自动回填上一用户的载荷（部分入口还会自动执行） */
-    'es-console.dsl.', 'es-console.bulk.', 'es-console.ubq.', 'es-console.doc-diff.',
-    'es-console.reindex-advanced.', 'es-console.sql.', 'es-console.lucene.',
-    'es-console.sandbox.', 'es-console.pit.', 'es-console.rebuild-paste',
-    'es-console.search-templates.carry', 'es-console.flame.',
-    'es-console.lifecycle.rollover', 'es-console.link.',
+    'searchdeck.dsl.', 'searchdeck.bulk.', 'searchdeck.ubq.', 'searchdeck.doc-diff.',
+    'searchdeck.reindex-advanced.', 'searchdeck.sql.', 'searchdeck.lucene.',
+    'searchdeck.sandbox.', 'searchdeck.pit.', 'searchdeck.rebuild-paste',
+    'searchdeck.search-templates.carry', 'searchdeck.flame.',
+    'searchdeck.lifecycle.rollover', 'searchdeck.link.',
     /* 旧命名空间的历史/列宽/字段记忆/监控快照/健康报告/作业已读位：同样是账号视角产物 */
     'es_dsl:', 'es_query_hist', 'es_cols:', 'es_tbl_', 'es_recent_idx', 'es_picked',
-    'es_console_qb_field_recent', 'es-console.live.snapshot:',
-    'es-console.healthReport.archive.v1', 'es-console.jobs.seen',
+    'searchdeck_qb_field_recent', 'searchdeck.live.snapshot:',
+    'searchdeck.healthReport.archive.v1', 'searchdeck.jobs.seen',
     /* 目标选择是账号可见性产物：换人不清零，残留目标会以 X-Es-Target 毒化
        数据面请求（对不可见连接必 403）——管理面已在 api 层剥头，这里兜数据面。 */
-    'es-console.target', 'es-console.target.name',
+    'searchdeck.target', 'searchdeck.target.name',
     /* 通知历史/已读位/工作现场是账号视角产物：换人不清零，x3 的历史里会躺着
        x1 的「已切到 es_excel_conn」、恢复提示会把 x1 的现场弹给 x3（产线实报）。 */
-    'es-console.notify.log', 'es-console.notify.seen', 'es-console.last-route',
+    'searchdeck.notify.log', 'searchdeck.notify.seen', 'searchdeck.last-route',
     /* 查询工作台会话/深链自动执行、字段词项持久档、建树暂存、SQL 桥预填、健康报告快照、
        变量编辑器内容、确认「不再提示」：都是上一身份的工作现场/决定，不能跨账号沿用。 */
-    'es-console.qw.session:', 'es_console_terms_stash', 'es-console.qb.subtree',
-    'es-console.pref.sqlbridge.sql', 'es-console.health-report.last', 'es_vars',
+    'searchdeck.qw.session:', 'searchdeck_terms_stash', 'searchdeck.qb.subtree',
+    'searchdeck.pref.sqlbridge.sql', 'searchdeck.health-report.last', 'es_vars',
     'es_confirm_skip:',
     /* 账号切换审计补齐（1008）：SQL 位置参数原文、DSL 请求级参数、查询沙盒 body、
        大屏全屏意图——都是上一账号的查询现场，换人后不得回填/沿用。
-       1100 续：`es-console.pref.sql.*` 整族（timeZone/pageTimeout/columnar/fetchSize/
+       1100 续：`searchdeck.pref.sql.*` 整族（timeZone/pageTimeout/columnar/fetchSize/
        lenient/aggChartOpen）同样是执行口径——换人后沿用上一账号的时区会让日期列与
        cursor 续页口径错位，仅保护 `.params` 一个键不够。 */
-    'es-console.pref.sql.', 'es-console.pref.dq.req.', 'ss_dsl_body',
-    'es-console.live.',
+    'searchdeck.pref.sql.', 'searchdeck.pref.dq.req.', 'ss_dsl_body',
+    'searchdeck.live.',
   ];
   function purgeUserRequestState() {
     for (const storage of [localStorage, sessionStorage]) {
@@ -125,7 +125,7 @@ export const useAuthStore = defineStore('auth', () => {
          下一次写入时把旧账号的收藏/历史又落回磁盘）。 */
       purgeUserRequestState();
       try {
-        window.dispatchEvent(new CustomEvent('es-console:identity-changed',
+        window.dispatchEvent(new CustomEvent('searchdeck:identity-changed',
           { detail: { username } }));
       } catch { /* 非浏览器/派发失败：内存重置由 App.vue 的 username watcher 兜底 */ }
     }
@@ -148,7 +148,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (me.value) showLogin.value = false;
     } catch (e: any) {
       if (seq !== probeSeq) return;
-      // 401 已由 api.ts 广播 es-console:unauthorized；404 需二次确认（下方）
+      // 401 已由 api.ts 广播 searchdeck:unauthorized；404 需二次确认（下方）
       me.value = null;
       /* 404 可能是「无鉴权部署」（/auth 控制器未装配），也可能是代理/版本错配。
          必须由 setup/status 明确报告 authEnabled=false 才放开写门；否则 fail-closed。 */
@@ -222,7 +222,7 @@ export const useAuthStore = defineStore('auth', () => {
        判页面（该拦的放行、该放的误拦）。 */
     connEnvById.value = {};
     try {
-      window.dispatchEvent(new CustomEvent('es-console:identity-changed', { detail: { username: '' } }));
+      window.dispatchEvent(new CustomEvent('searchdeck:identity-changed', { detail: { username: '' } }));
     } catch { /* 非浏览器/派发失败：内存重置由调用方兜底 */ }
   }
 
@@ -800,7 +800,7 @@ export const useAuthStore = defineStore('auth', () => {
      新 token 到达即作废旧身份并重探，身份落地前写门 fail-closed。 */
   if (typeof window !== 'undefined') {
     window.addEventListener('storage', (e) => {
-      if (e.key !== 'es-console.auth.token') return;
+      if (e.key !== 'searchdeck.auth.token') return;
       invalidateIdentity();
       void probe();
     });

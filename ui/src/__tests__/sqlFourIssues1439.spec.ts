@@ -64,7 +64,7 @@ describe('② 「语义格式化」开关对 semOn 也生效（与查询树/索�
   });
 
   it('关掉后回落原始值 0.42，且不再挂语义分档色', async () => {
-    localStorage.setItem('es-console.pref.es_tbl_sem', 'false');
+    localStorage.setItem('searchdeck.pref.es_tbl_sem', 'false');
     await mountQrt({ cols: ['p'], rows: [[0.42]], fieldTypes: { p: 'percent' }, semOn: true });
     const td = cell('p')!;
     expect(td.textContent?.trim(), '关开关后不能再显示 42%').toBe('0.42');

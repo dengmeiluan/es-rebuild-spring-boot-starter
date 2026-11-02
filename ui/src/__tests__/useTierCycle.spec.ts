@@ -4,7 +4,7 @@
  * ① 默认档 defVal 优先、缺省回 tiers[0]；
  * ② cycle 顺序循环、末档回首档；
  * ③ 越档脏值（存储里不在档内的历史值）cycle 一次回 tiers[0]；
- * ④ 落盘走 usePref 键（es-console.pref.<key>，JSON 序列化）；
+ * ④ 落盘走 usePref 键（searchdeck.pref.<key>，JSON 序列化）；
  * ⑤ 泛型罩 string 档（vh 档形态）。
  * 键名/档值序的行为锁在 configValidatorAdjustW2.spec.ts（configvalidator.issuesH 240/380/560），
  * 此处只锁统一件自身语义。
@@ -37,20 +37,20 @@ describe('useTierCycle 泛型档循环统一件（W9 五百三十五批）', () 
   });
 
   it('③ 越档脏值：cycle 一次回 tiers[0]', async () => {
-    localStorage.setItem('es-console.pref.tierc.dirty', JSON.stringify(999));
+    localStorage.setItem('searchdeck.pref.tierc.dirty', JSON.stringify(999));
     const { v, cycle } = useTierCycle('tierc.dirty', [10, 20, 30]);
     expect(v.value).toBe(999);
     cycle();
     await flush();
     expect(v.value).toBe(10);
-    expect(localStorage.getItem('es-console.pref.tierc.dirty')).toBe('10');
+    expect(localStorage.getItem('searchdeck.pref.tierc.dirty')).toBe('10');
   });
 
-  it('④ 落盘走 usePref 键（es-console.pref.<key>，JSON 序列化）', async () => {
+  it('④ 落盘走 usePref 键（searchdeck.pref.<key>，JSON 序列化）', async () => {
     const { cycle } = useTierCycle('tierc.persist', [240, 380, 560], 380);
     cycle();
     await flush();
-    expect(localStorage.getItem('es-console.pref.tierc.persist')).toBe('560');
+    expect(localStorage.getItem('searchdeck.pref.tierc.persist')).toBe('560');
   });
 
   it('⑤ 泛型罩 string 档（vh 档形态）', async () => {
@@ -59,6 +59,6 @@ describe('useTierCycle 泛型档循环统一件（W9 五百三十五批）', () 
     cycle();
     await flush();
     expect(v.value).toBe('60vh');
-    expect(localStorage.getItem('es-console.pref.tierc.vh')).toBe('"60vh"');
+    expect(localStorage.getItem('searchdeck.pref.tierc.vh')).toBe('"60vh"');
   });
 });

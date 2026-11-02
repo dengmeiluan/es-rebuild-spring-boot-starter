@@ -23,10 +23,10 @@ your Elasticsearch address, then:
   field without downtime;
 - the console exposes adhoc rebuild, data browser, query workbench and live
   monitoring against the connected cluster;
-- jobs and the ops-audit trail persist in `~/.es-console/demo-host/jobs.db`
+- jobs and the ops-audit trail persist in `~/.searchdeck/demo-host/jobs.db`
   (`store=sqlite`), so history survives restarts.
 
-Default login is `admin` / `es-console` while the user index is empty —
+Default login is `admin` / `searchdeck` while the user index is empty —
 create your own user before exposing the console beyond localhost.
 
 ## What to look at

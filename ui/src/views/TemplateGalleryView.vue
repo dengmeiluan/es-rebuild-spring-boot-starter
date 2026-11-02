@@ -173,12 +173,12 @@ function copy(t: Tpl) {
   copyText(pretty(t)).then(ok => store.notify(ok ? 'success' : 'error', ok ? `模板已复制：${t.title}` : '复制失败'));
 }
 function toSandbox(t: Tpl) {
-  writeStoredRaw(sessionStorage, 'es-console.sandbox.body', pretty(t));
+  writeStoredRaw(sessionStorage, 'searchdeck.sandbox.body', pretty(t));
   router.push({ path: '/search', query: { mode: 'sandbox' } });
   store.notify('info', `模板已送入搜索沙盒：${t.title}`);
 }
 function toQuery(t: Tpl) {
-  writeStoredRaw(sessionStorage, 'es-console.dsl.body', pretty(t));
+  writeStoredRaw(sessionStorage, 'searchdeck.dsl.body', pretty(t));
   /* ：显式 mode=dsl 落点钉死——QueryHub 无 ?mode= 时按 qh.mode 记忆
  回落上次模式（上次停留沙盒 tab 时本动线被带进沙盒页， 读数实证）；深链
  mode 优先于记忆，与 toSandbox 显式带 mode 同范式（铁律 B 落点恒定） */

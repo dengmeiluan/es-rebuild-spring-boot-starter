@@ -17,7 +17,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import { useAppStore } from '../app';
 
 function fire(detail: Record<string, unknown>) {
-  window.dispatchEvent(new CustomEvent('es-console:forbidden', { detail }));
+  window.dispatchEvent(new CustomEvent('searchdeck:forbidden', { detail }));
 }
 
 function lastError(): string {

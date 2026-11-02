@@ -3,7 +3,7 @@
  *
  * 同域比对法定谳：storage→JSON.parse 域 37 消费点里形态守卫（Array.isArray/谓词）
  * 全线在场（useTablePrefs.restoreCols/readPresets、queryHistory、liveMonitor、
- * loadRecent、settings……），唯 favorites 键（es-console.favorites.v1）漏网——
+ * loadRecent、settings……），唯 favorites 键（searchdeck.favorites.v1）漏网——
  * 现状 try/catch 只挡「坏 JSON」，不挡「合法 JSON 非数组」：该键被写入对象/
  * 字符串形态后 favorites 变非数组，收藏页 forEach、命令面板 slice、全站收藏
  * 星标 findIndex/unshift/filter 全链路 TypeError，三面瘫痪直到手动清键。
@@ -14,7 +14,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { useAppStore } from '../stores/app';
 
-const FAV_KEY = 'es-console.favorites.v1';
+const FAV_KEY = 'searchdeck.favorites.v1';
 const FAV = [{ id: 'f1', kind: 'dsl', title: 'T', payload: {}, ts: 1 }];
 
 beforeEach(() => {

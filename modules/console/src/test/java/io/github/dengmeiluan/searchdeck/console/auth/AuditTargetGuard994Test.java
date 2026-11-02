@@ -65,7 +65,7 @@ public class AuditTargetGuard994Test {
             @Override public void delete(String id) { }
             @Override public void updateVersion(String id, String version) { }
         };
-        EnvPagesResolver envPagesResolver = new EnvPagesResolver(stubStore, new io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties());
+        EnvPagesResolver envPagesResolver = new EnvPagesResolver(stubStore, new io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties());
         return new ConsoleAuthInterceptor(authorizer, audit, resolver, ConsolePageCatalog.load(),
                 true, envPagesResolver, stubStore);
     }

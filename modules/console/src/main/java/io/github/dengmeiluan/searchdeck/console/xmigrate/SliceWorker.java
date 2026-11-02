@@ -17,7 +17,7 @@
 package io.github.dengmeiluan.searchdeck.console.xmigrate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import org.elasticsearch.action.DocWriteRequest;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkRequest;
@@ -62,12 +62,12 @@ public class SliceWorker implements Runnable {
     private final RestHighLevelClient localClient;
     private final MigrationHandle handle;
     private final MigrateJobTracker tracker;
-    private final EsRebuildProperties.Retry retry;
+    private final SearchDeckElasticsearchProperties.Retry retry;
 
     public SliceWorker(int sliceId, int totalSlices, String sourceIndex, String destIndex,
                        int batchSize, int scrollKeepAliveSec,
                        RestClient remoteLowLevel, RestHighLevelClient localClient,
-                       MigrationHandle handle, MigrateJobTracker tracker, EsRebuildProperties.Retry retry) {
+                       MigrationHandle handle, MigrateJobTracker tracker, SearchDeckElasticsearchProperties.Retry retry) {
         this.sliceId = sliceId;
         this.totalSlices = totalSlices;
         this.sourceIndex = sourceIndex;

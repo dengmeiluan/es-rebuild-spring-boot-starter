@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 控制台操作审计——宿主数据库档（ 平台化底座）：审计落宿主 {@code DataSource}
- * 的 {@code es_console_ops_audit} 表（首次使用自动建表），接入方可用自己的 BI/SQL
+ * 的 {@code searchdeck_ops_audit} 表（首次使用自动建表），接入方可用自己的 BI/SQL
  * 直接分析控制台操作流水，并与其用户体系（username/displayName）天然对齐。
  *
  * <p>异步单线程 + 队列满丢弃，与 ES 档同一契约：审计永不反噬业务可用性。
@@ -48,7 +48,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class JdbcConsoleOpsAuditStore implements ConsoleOpsAuditStore {
 
     private static final Logger LOG = LoggerFactory.getLogger(JdbcConsoleOpsAuditStore.class);
-    private static final String TABLE = "es_console_ops_audit";
+    private static final String TABLE = "searchdeck_ops_audit";
 
     private final DataSource dataSource;
     private final ThreadPoolExecutor executor;
@@ -64,7 +64,7 @@ public class JdbcConsoleOpsAuditStore implements ConsoleOpsAuditStore {
         this.executor = new ThreadPoolExecutor(1, 1, 60, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(1000),
                 r -> {
-                    Thread t = new Thread(r, "es-console-ops-audit-jdbc");
+                    Thread t = new Thread(r, "searchdeck-ops-audit-jdbc");
                     t.setDaemon(true);
                     return t;
                 },
@@ -123,7 +123,7 @@ public class JdbcConsoleOpsAuditStore implements ConsoleOpsAuditStore {
             } catch (SQLException e) {
                 // 列缺失/权限不足：永久降级旧列（后续 INSERT 不再踩富列），本次降级重试
                 richColumns = false;
-                LOG.info("[es-console-audit-jdbc] 富列不可用（{}），永久回退旧 9 列落档", e.getMessage(), e);
+                LOG.info("[searchdeck-audit-jdbc] 富列不可用（{}），永久回退旧 9 列落档", e.getMessage(), e);
             }
         }
         try (Connection c = dataSource.getConnection();
@@ -159,7 +159,7 @@ public class JdbcConsoleOpsAuditStore implements ConsoleOpsAuditStore {
     private void warnAuditDrop(String where, Exception e) {
         long drops = dropCount.incrementAndGet();
         if (drops == 1) {
-            LOG.warn("[es-console-audit-jdbc] {}（首次，后续失败仅累计不再打）：{}", where, e.getMessage(), e);
+            LOG.warn("[searchdeck-audit-jdbc] {}（首次，后续失败仅累计不再打）：{}", where, e.getMessage(), e);
         }
     }
 
@@ -272,7 +272,7 @@ public class JdbcConsoleOpsAuditStore implements ConsoleOpsAuditStore {
                     // MySQL 无 CREATE INDEX IF NOT EXISTS：重复建索引报错直接吞（幂等语义自实现）
                     st.execute("CREATE INDEX idx_" + TABLE + "_ts ON " + TABLE + " (ts)");
                 } catch (SQLException ignore) {
-                    LOG.debug("[es-console-audit-jdbc] ts 索引已存在，跳过");
+                    LOG.debug("[searchdeck-audit-jdbc] ts 索引已存在，跳过");
                 }
                 /* 存量表补富列（幂等 best-effort）+ 探测定降级——
                    ALTER 全败/探测失败（无权限等）即永久旧 9 列，审计照记不丢。
@@ -288,11 +288,11 @@ public class JdbcConsoleOpsAuditStore implements ConsoleOpsAuditStore {
                         st.execute(col);
                     } catch (SQLException ignore) {
                         alterFailed++;
-                        LOG.debug("[es-console-audit-jdbc] 富列已存在或不可加，跳过：{}", col);
+                        LOG.debug("[searchdeck-audit-jdbc] 富列已存在或不可加，跳过：{}", col);
                     }
                 }
                 if (alterFailed == 4) {
-                    LOG.warn("[es-console-audit-jdbc] 审计富列补齐失败,永久 9 列(检查 DB 账号 ALTER 权限)");
+                    LOG.warn("[searchdeck-audit-jdbc] 审计富列补齐失败,永久 9 列(检查 DB 账号 ALTER 权限)");
                 }
                 try (java.sql.ResultSet probe = st.executeQuery(
                         "SELECT conn_id, conn_name, ip, cost_ms FROM " + TABLE + " LIMIT 1")) {
@@ -300,7 +300,7 @@ public class JdbcConsoleOpsAuditStore implements ConsoleOpsAuditStore {
                     richColumns = true;
                 } catch (SQLException e) {
                     richColumns = false;
-                    LOG.info("[es-console-audit-jdbc] 富列探测失败（{}），按旧 9 列运行", e.getMessage(), e);
+                    LOG.info("[searchdeck-audit-jdbc] 富列探测失败（{}），按旧 9 列运行", e.getMessage(), e);
                 }
                 schemaReady = true;
                 LOG.info("[JdbcConsoleOpsAuditStore] schema ready: {} (richColumns={})", TABLE, richColumns);

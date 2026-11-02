@@ -3,9 +3,9 @@
  *
  * 契约（对齐 DslQueryView protectDraftBeforeOverride 同语义）：
  * ① 五个送达入口（QueryHub 历史回放 / favReplay 收藏 / 模板库 / 远程集群 / BoostTuner
- *    「送入搜索沙盒」）经 es-console.sandbox.body / ss_dsl_body 一次性通道送达沙盒，
+ *    「送入搜索沙盒」）经 searchdeck.sandbox.body / ss_dsl_body 一次性通道送达沙盒，
  *    消费端读到即载入——旧编辑稿非默认且不同于送达稿时，先暂存 sessionStorage
- *    「es-console.sandbox.prev」+ toast 提供一键找回，再覆盖（送达必达，不得因旧稿丢弃）。
+ *    「searchdeck.sandbox.prev」+ toast 提供一键找回，再覆盖（送达必达，不得因旧稿丢弃）。
  * ② ss_dsl_body 通道归一 sessionStorage（与其余四模式 carry 键同口径）；
  *    localStorage 旧落点残留读后清（一次性清理，不再消费）。
  * ③ 消费后通道键必清（读一次即清语义保持）。
@@ -121,14 +121,14 @@ const CARRY = '{"term":{"status":"CARRY-IN"}}';
 const MY_DRAFT = '{"term":{"status":"MY-OLD-DRAFT"}}';
 
 describe('沙盒送达通道：必达 + 旧稿暂存找回', () => {
-  it('有旧稿时送达必达：载入送达稿 + 旧稿暂存 es-console.sandbox.prev + toast 找回', async () => {
+  it('有旧稿时送达必达：载入送达稿 + 旧稿暂存 searchdeck.sandbox.prev + toast 找回', async () => {
     const draftKey = draftStorageKey({ route: 'search-sandbox', index: () => '' }, 'dsl');
     sessionStorage.setItem(draftKey, MY_DRAFT);
-    sessionStorage.setItem('es-console.sandbox.body', CARRY);
+    sessionStorage.setItem('searchdeck.sandbox.body', CARRY);
     let notify: any;
     const { host, store, unmount } = await mountView(s => { notify = vi.spyOn(s, 'notify'); });
     expect(host.querySelector('.monaco-stub')!.textContent, '送达稿必达（不得因旧稿丢弃）').toContain('CARRY-IN');
-    const prev = sessionStorage.getItem('es-console.sandbox.prev');
+    const prev = sessionStorage.getItem('searchdeck.sandbox.prev');
     expect(prev, '旧稿暂存键在场').toBeTruthy();
     expect(String(prev)).toContain('MY-OLD-DRAFT');
     expect(notify, '暂存提示出场').toHaveBeenCalledWith('info', expect.stringContaining('暂存'), expect.objectContaining({ action: expect.anything() }));
@@ -136,11 +136,11 @@ describe('沙盒送达通道：必达 + 旧稿暂存找回', () => {
   });
 
   it('无旧稿时送达直载（既有行为），默认模板稿视同无稿不暂存', async () => {
-    sessionStorage.setItem('es-console.sandbox.body', CARRY);
+    sessionStorage.setItem('searchdeck.sandbox.body', CARRY);
     const { host, store, unmount } = await mountView();
     const notify = vi.spyOn(store, 'notify');
     expect(host.querySelector('.monaco-stub')!.textContent).toContain('CARRY-IN');
-    expect(sessionStorage.getItem('es-console.sandbox.prev'), '无稿不暂存').toBeNull();
+    expect(sessionStorage.getItem('searchdeck.sandbox.prev'), '无稿不暂存').toBeNull();
     expect(notify).not.toHaveBeenCalled();
     unmount();
   });
@@ -148,10 +148,10 @@ describe('沙盒送达通道：必达 + 旧稿暂存找回', () => {
   it('送达与旧稿相同内容时不重复暂存', async () => {
     const draftKey = draftStorageKey({ route: 'search-sandbox', index: () => '' }, 'dsl');
     sessionStorage.setItem(draftKey, CARRY);
-    sessionStorage.setItem('es-console.sandbox.body', CARRY);
+    sessionStorage.setItem('searchdeck.sandbox.body', CARRY);
     const { host, unmount } = await mountView();
     expect(host.querySelector('.monaco-stub')!.textContent).toContain('CARRY-IN');
-    expect(sessionStorage.getItem('es-console.sandbox.prev'), '同内容不暂存').toBeNull();
+    expect(sessionStorage.getItem('searchdeck.sandbox.prev'), '同内容不暂存').toBeNull();
     unmount();
   });
 });

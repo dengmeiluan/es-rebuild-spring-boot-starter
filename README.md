@@ -2,7 +2,7 @@
 
 > **可嵌入的 Elasticsearch 运维平台。** 零停机重建、查询工作台、观测治理、数据浏览与宿主集成，
 > 一套能力，三种交付。52 个页面收敛成 **11 个功能包**：默认全开，宿主按需裁剪。
-> 首个接入方 **QuoteHub** 已在产线运行。
+> 已在真实宿主的生产环境完成接入验证。
 
 [![Release](https://img.shields.io/github/v/release/dengmeiluan/searchdeck?display_name=release)](https://github.com/dengmeiluan/searchdeck/releases)
 [![CI](https://github.com/dengmeiluan/searchdeck/actions/workflows/ci.yml/badge.svg)](https://github.com/dengmeiluan/searchdeck/actions/workflows/ci.yml)
@@ -14,7 +14,7 @@
 
 ![SearchDeck — Search operations, on deck.](docs/screenshots/searchdeck-banner.svg)
 
-**[快速开始](#-5-分钟接入)** · [English README](README_EN.md) · [功能包](#-功能包11-个模块按需上甲板) · [QuoteHub 接入](docs/integrations/quotehub.md) · [交互宪法](docs/design.md)
+**[快速开始](#-5-分钟接入)** · [English README](README_EN.md) · [功能包](#-功能包11-个模块按需上甲板) · [宿主集成](docs/integration/README.md) · [交互宪法](docs/design.md)
 
 ---
 
@@ -30,7 +30,7 @@ SearchDeck 不是一个只解决「索引重建」的单点工具，而是一块
 - **观测与治理**：节点 KPI、告警、慢请求、Top 索引、任务树、拓扑、体检报告、
   配置漂移与权限面。
 - **宿主集成**：认证委托、连接目录、页面契约菜单、品牌与功能包裁剪；
-  QuoteHub 是第一个接入方。
+  通过 `ConsoleHostIntegration` SPI 适配任意 Spring Boot 宿主，不绑定具体业务系统。
 
 ### 它不是什么
 
@@ -73,12 +73,26 @@ SearchDeck 不是一个只解决「索引重建」的单点工具，而是一块
 | `security` | 1 | 安全中心：账号、权限面、操作审计 |
 | `devtools` | 3 | REST 直连、Dev Tools 多标签、Painless 沙盒 |
 
-> 页面契约 `META-INF/es-console-pages.json` 是唯一事实源：前端导航、后端页面级拦截、
+> 页面契约 `META-INF/searchdeck-pages.json` 是唯一事实源：前端导航、后端页面级拦截、
 > 宿主菜单注册器都从这里派生。功能包只改变「暴露面」，不改变 page key。
 
-**QuoteHub 裁剪后的控制台**（演示数据）——品牌副标题跟随宿主，导航只剩 2 组 6 页：
+**页面地图**（13 个分组 / 52 页，宿主可按分组或单页裁剪）：
 
-![QuoteHub 裁剪后的导航（演示数据）](docs/screenshots/searchdeck-quotehub-nav.png)
+| 分组 | 页面 | 代表能力 |
+|---|---:|---|
+| `core` | 5 | 集群总览、索引工作区、Dev 工作台、实时大屏、收藏夹 |
+| `search` | 3 | 六模式查询工作台、搜索模板、数据浏览器 |
+| `index` | 5 | Mapping 与设计器、热 Setting、别名管控、系统索引 |
+| `quality` | 5 | 索引模板、模板画廊、配置校验、配置漂移、优化向导 |
+| `data` | 3 | Bulk 编辑、Update By Query、文档 Diff |
+| `text` | 4 | 分词验证、分词实验室、同义词字典、Analysis 全景 |
+| `rank` | 6 | 打分解剖、排名侦探、Boost 调参、命中矩阵、查询 X 光、Profile 火焰图 |
+| `rebuild` | 4 | 托管重建、跨集群迁移、Reindex 高级与预估 |
+| `protect` | 4 | 快照、SLM、ILM、生命周期 |
+| `health` | 4 | 诊断、一键体检、拓扑、Watcher |
+| `cluster` | 5 | 任务/任务树、集群设置、插件、远程集群 |
+| `security` | 1 | 安全中心：账号、权限面、操作审计 |
+| `devx` | 3 | REST 直连、Dev Tools 多标签、Painless 沙盒 |
 
 **停用模块的可解释落地页**（演示数据）——深链访问未启用模块不再空白或 404：
 
@@ -127,27 +141,26 @@ java -jar searchdeck-server.jar
 ```
 
 内置 Web 服务器（默认端口 `5601`）与 ES 客户端栈，不依赖宿主应用。打开
-`http://localhost:5601/searchdeck.html`，按 Setup 向导完成控制集群首连；
-（2.0 多模块资产名；1.x 发布包仍为 `es-rebuild-standalone-*.jar`。）
+`http://localhost:5601/searchdeck.html`，按 Setup 向导完成控制集群首连。
 
-首连档案持久在 `~/.es-console/`，重启即达。详见 [standalone/README.md](standalone/README.md)。
+首连档案持久在 `~/.searchdeck/`，重启即达。详见 [apps/server/README.md](apps/server/README.md)。
 
 ### B. 嵌入式 console 模块
 
 把 `searchdeck-console` 加进宿主 Spring Boot 应用，控制台静态资源与 HTTP 端点自动注册；
 认证可委托宿主（iframe 共享登录态）。适合与业务系统一体化交付。
 
-### C. 宿主集成（QuoteHub 首个）
+### C. 宿主集成（SPI 驱动，不绑定具体宿主）
 
-QuoteHub 已经通过认证委托、连接中心贡献、页面契约菜单与宿主审计贡献接入产线。
-SearchDeck 在此基础上新增 **品牌 + 功能包** 声明：
+SearchDeck 不要求宿主改造成某一种业务形态。实现 `ConsoleHostIntegration` 声明品牌与
+默认功能包，再按需接入认证委托、连接目录与审计贡献即可：
 
 ```java
 @Bean
-public ConsoleHostIntegration searchDeckQuoteHubIntegration() {
+public ConsoleHostIntegration searchDeckHostIntegration() {
     return new ConsoleHostIntegration() {
-        public String id() { return "quotehub"; }
-        public String displayName() { return "QuoteHub"; }
+        public String id() { return "acme"; }
+        public String displayName() { return "Acme Search"; }
         public List<String> preferredPacks() {
             return Arrays.asList("platform", "search", "index", "data",
                     "lifecycle", "observe", "security", "devtools");
@@ -156,32 +169,31 @@ public ConsoleHostIntegration searchDeckQuoteHubIntegration() {
 }
 ```
 
-完整接入面、QA 期审计退场方式与验收清单：[docs/integrations/quotehub.md](docs/integrations/quotehub.md)。
+宿主自定义面全部是接口：`ConsoleAuthDelegate`（认证）、`ConnStore`（连接目录）、
+`ConsoleAuditContributor`（审计）、`ConsolePageCatalog`（菜单）。完整接入面与验收清单：
+[docs/integration/README.md](docs/integration/README.md)。
+
+**按场景选择**：
+
+| 你的场景 | 选用 | 额外工作 |
+|---|---|---|
+| 独立运维一个或多个 ES 集群 | `searchdeck-server` 独立 jar | 无，打开 Setup 向导即可 |
+| 已有 Spring Boot 业务应用 | `searchdeck-console` 嵌入式 | 声明 `@Document` 实体；可选认证委托 |
+| 与宿主账号、菜单、审计一体化 | `searchdeck-console` + 宿主 SPI | 实现 `ConsoleHostIntegration` 与 `ConsoleAuthDelegate` |
+| 只要重建 / 迁移引擎 | `searchdeck-console`，`mode=rebuild-only` | 不暴露控制台页面与静态资源 |
 
 ---
 
 ## ⚡ 5 分钟接入
 
-> **坐标迁移说明**：仓库正在从单 jar 的 `es-rebuild-spring-boot-starter` 迁移到多模块
-> `searchdeck-*`（2.0 线）：`searchdeck-platform`（内核）、`searchdeck-console`（可嵌入控制台）、
-> `searchdeck-server`（独立应用）、`searchdeck-quotehub`（首个宿主适配器）。
-> 下面的平台配置已经可用；1.x 坐标在迁移期保留。
-
 ### 1. 引入依赖
 
 ```xml
-<!-- SearchDeck 2.0：嵌入式控制台模块（传递 platform 内核） -->
+<!-- 嵌入式控制台模块（传递 searchdeck-platform 内核） -->
 <dependency>
     <groupId>io.github.dengmeiluan</groupId>
     <artifactId>searchdeck-console</artifactId>
     <version>2.0.0</version>
-</dependency>
-
-<!-- 1.x 兼容坐标（当前已发布版本） -->
-<dependency>
-    <groupId>io.github.dengmeiluan</groupId>
-    <artifactId>es-rebuild-spring-boot-starter</artifactId>
-    <version>1.0.76</version>
 </dependency>
 ```
 
@@ -223,8 +235,8 @@ searchdeck:
     branding:
       product-name: SearchDeck          # 宿主可改成自己的产品名
       tagline: Search operations, on deck.
-      integration-id: quotehub
-      integration-name: QuoteHub
+      integration-id: acme
+      integration-name: Acme Search
     features:
       packs: [platform, search, index, lifecycle, observe, devtools]
       exclude-pages: []                 # 再隐藏单页，例如 [security]
@@ -235,8 +247,7 @@ searchdeck:
 ```
 
 平台层 `searchdeck.console.*` 与引擎层 `searchdeck.elasticsearch.*` 分离：前者描述
-「产品长什么样、暴露哪些模块」，后者描述重建/迁移/存储等运行参数。一代 `es.rebuild.*`
-键仍作为别名可用（由环境后处理器透明桥接）。
+「产品长什么样、暴露哪些模块」，后者描述重建/迁移/存储等运行参数。
 
 ### 4. HTTP 端点
 
@@ -250,8 +261,8 @@ searchdeck:
 
 ### 5. 映射自动对账
 
-启动期由 `MappingReconcile` 承担：`es.rebuild.mapping.auto-register=startup` 时新字段自动补入；
-冲突按 `es.rebuild.mapping.conflict-policy` 处置（`fail` 拒绝启动 / `warn` 仅提交无冲突 additions）；
+启动期由 `MappingReconcile` 承担：`searchdeck.elasticsearch.mapping.auto-register=startup` 时新字段自动补入；
+冲突按 `searchdeck.elasticsearch.mapping.conflict-policy` 处置（`fail` 拒绝启动 / `warn` 仅提交无冲突 additions）；
 冲突修复建议返回 `USE_ADHOC_REBUILD` 走托管重建。详见[接入文档](docs/integration/README.md)。
 
 ---
@@ -260,7 +271,7 @@ searchdeck:
 
 ```mermaid
 flowchart LR
-  Host["QuoteHub / 宿主应用"] -->|ConsoleHostIntegration| Platform
+  Host["宿主应用 / Host App"] -->|ConsoleHostIntegration| Platform
 
   subgraph Platform["SearchDeck Platform"]
     Packs["功能包 Registry"]
@@ -285,7 +296,6 @@ searchdeck/
 ├─ platform/                 searchdeck-platform：页面契约、功能包、品牌、宿主 SPI
 ├─ modules/console/          searchdeck-console：引擎 + 控制台 + 内嵌 UI 资源
 ├─ apps/server/              searchdeck-server：Kibana 式独立部署
-├─ integrations/quotehub/    searchdeck-quotehub：首个宿主适配器
 ├─ ui/                       @searchdeck/ui：Vue 3 控制台源码
 └─ examples/demo-host/       可运行宿主示例
 ```
@@ -318,12 +328,12 @@ searchdeck/
 
 ```bash
 # 前端
-cd console && npm ci
+cd ui && npm ci
 npm run typecheck          # vue-tsc 0
 npm test                   # 分片全量
 
 # 后端
-./mvnw clean package       # 自动复用 console 构建产物
+./mvnw clean package       # 自动复用 ui 构建产物
 ./mvnw test -Dconsole.build.skip=true
 ```
 
@@ -331,12 +341,16 @@ npm test                   # 分片全量
 
 ## 🗺️ 路线图
 
-- [x] **阶段 1 · 平台化身份**：SearchDeck 品牌、合约功能包、运行时 UI 配置、
-      宿主 `ConsoleHostIntegration` SPI、QuoteHub 接入文档、停用页与快捷键收敛。
-- [ ] **阶段 2 · 坐标与包结构迁移**：Maven 坐标、Java 包、前端目录与组件命名；
-      QuoteHub 同步升级并回归三账号矩阵。
-- [ ] **阶段 3 · 开源发布**：GitHub 仓库更名、静态入口/事件/存储键迁移、
-      发布资产与完整文档站。
+- [x] **阶段 1 · 平台化身份**：SearchDeck 品牌、页面契约功能包、运行时 UI 配置、
+      宿主 `ConsoleHostIntegration` SPI、停用页与快捷键收敛。
+- [x] **阶段 2 · 多模块与组件化**：`platform` / `console` / `server` 三模块拆分，
+      Java 包、Maven 坐标、前端目录与组件命名统一迁移，宿主升级回归。
+- [x] **阶段 3 · 开源发布**：仓库更名、README 双语与能力目录、静态入口与运行时键迁移、
+      示例宿主与集成文档。
+- [ ] **阶段 4 · 引擎独立**：解除 `auth ↔ multicluster ↔ xmigrate ↔ config` 依赖环，
+      把重建/迁移引擎拆成独立 artifact，支持只引入引擎的场景。
+- [ ] **阶段 5 · 生态与成本**：版本化页面契约、插件清单、更多宿主模板与
+      一键接入脚手架；持续降低首次接入与升级成本。
 
 ---
 

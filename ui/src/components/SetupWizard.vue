@@ -27,7 +27,7 @@
             <template v-if="tokenRequired">
               <label class="sw-label">初始化令牌 <span class="sw-req">*</span></label>
               <input v-model.trim="setupToken" type="password" class="ipt sw-ipt mono"
-                autocomplete="off" placeholder="X-Setup-Token（服务端 es.rebuild.console.setup-token）"
+                autocomplete="off" placeholder="X-Setup-Token（服务端 searchdeck.elasticsearch.console.setup-token）"
                 @keydown.enter.prevent="onSubmit" />
             </template>
 
@@ -64,7 +64,7 @@
           <div class="sw-hint">
             <Info :size="12" />
             <span>绑定后将在目标集群上幂等创建控制索引（用户/连接档案/操作审计），并把连接档案落在服务器本地
-              <code class="mono">~/.es-console/{{ appName }}/</code>；重绑需 ADMIN 在「安全中心」操作。绑定动作只允许执行一次，请先测试连接。</span>
+              <code class="mono">~/.searchdeck/{{ appName }}/</code>；重绑需 ADMIN 在「安全中心」操作。绑定动作只允许执行一次，请先测试连接。</span>
           </div>
         </div>
       </div>
@@ -161,7 +161,7 @@ async function refreshStatus() {
 }
 
 onMounted(async () => {
-  window.addEventListener('es-console:setup-required', onSetupRequired);
+  window.addEventListener('searchdeck:setup-required', onSetupRequired);
   // 启动主动探测：NONE 模式下首屏请求可能被并发 409，主动查更快弹出
   try {
     const s = await api.setup.status();
@@ -172,7 +172,7 @@ onMounted(async () => {
     // 后端老版本无此端点（404）：静默，永不弹
   }
 });
-onBeforeUnmount(() => window.removeEventListener('es-console:setup-required', onSetupRequired));
+onBeforeUnmount(() => window.removeEventListener('searchdeck:setup-required', onSetupRequired));
 </script>
 
 <style scoped>

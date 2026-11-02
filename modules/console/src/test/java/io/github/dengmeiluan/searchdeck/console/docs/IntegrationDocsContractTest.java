@@ -17,7 +17,7 @@
 package io.github.dengmeiluan.searchdeck.console.docs;
 
 import java.util.Locale;
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -48,7 +48,7 @@ public class IntegrationDocsContractTest {
 
     private static final List<String> REQUIRED_ENTRYPOINT_TERMS = Arrays.asList(
             "/internal/es/index/desired-state.html",
-            "es.rebuild.mapping.auto-register",
+            "searchdeck.elasticsearch.mapping.auto-register",
             "MappingReconcile",
             "conflict-policy",
             "USE_ADHOC_REBUILD"
@@ -138,31 +138,31 @@ public class IntegrationDocsContractTest {
     @Test
     public void configurationReferenceShowsJavaDefaults() throws IOException {
         String reference = read(integrationRoot.resolve("configuration-reference.md"));
-        EsRebuildProperties.Mapping defaults = new EsRebuildProperties().getMapping();
+        SearchDeckElasticsearchProperties.Mapping defaults = new SearchDeckElasticsearchProperties().getMapping();
 
-        assertMarkdownTableDefault(reference, "es.rebuild.mapping.auto-register",
+        assertMarkdownTableDefault(reference, "searchdeck.elasticsearch.mapping.auto-register",
                 defaults.getAutoRegister());
-        assertMarkdownTableDefault(reference, "es.rebuild.mapping.conflict-policy",
+        assertMarkdownTableDefault(reference, "searchdeck.elasticsearch.mapping.conflict-policy",
                 defaults.getConflictPolicy());
-        assertMarkdownTableDefault(reference, "es.rebuild.mapping.missing-index-policy",
+        assertMarkdownTableDefault(reference, "searchdeck.elasticsearch.mapping.missing-index-policy",
                 defaults.getMissingIndexPolicy());
     }
 
     @Test
     public void configurationDefaultComparisonRejectsWrongTableValues() {
-        EsRebuildProperties.Mapping defaults = new EsRebuildProperties().getMapping();
+        SearchDeckElasticsearchProperties.Mapping defaults = new SearchDeckElasticsearchProperties().getMapping();
         String mutatedTable = "| 配置键 | Java 默认值 | 允许值 | 行为 |\n"
                 + "|---|---|---|---|\n"
-                + "| `es.rebuild.mapping.auto-register` | `off` | `startup`, `off` | wrong |\n"
-                + "| `es.rebuild.mapping.conflict-policy` | `warn` | `fail`, `warn` | wrong |\n"
-                + "| `es.rebuild.mapping.missing-index-policy` | `fail` | `skip`, `fail` | wrong |\n";
+                + "| `searchdeck.elasticsearch.mapping.auto-register` | `off` | `startup`, `off` | wrong |\n"
+                + "| `searchdeck.elasticsearch.mapping.conflict-policy` | `warn` | `fail`, `warn` | wrong |\n"
+                + "| `searchdeck.elasticsearch.mapping.missing-index-policy` | `fail` | `skip`, `fail` | wrong |\n";
 
         assertThrows(AssertionError.class, () -> assertMarkdownTableDefault(
-                mutatedTable, "es.rebuild.mapping.auto-register", defaults.getAutoRegister()));
+                mutatedTable, "searchdeck.elasticsearch.mapping.auto-register", defaults.getAutoRegister()));
         assertThrows(AssertionError.class, () -> assertMarkdownTableDefault(
-                mutatedTable, "es.rebuild.mapping.conflict-policy", defaults.getConflictPolicy()));
+                mutatedTable, "searchdeck.elasticsearch.mapping.conflict-policy", defaults.getConflictPolicy()));
         assertThrows(AssertionError.class, () -> assertMarkdownTableDefault(
-                mutatedTable, "es.rebuild.mapping.missing-index-policy", defaults.getMissingIndexPolicy()));
+                mutatedTable, "searchdeck.elasticsearch.mapping.missing-index-policy", defaults.getMissingIndexPolicy()));
     }
 
     @Test

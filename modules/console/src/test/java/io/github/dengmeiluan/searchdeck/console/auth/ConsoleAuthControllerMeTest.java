@@ -40,7 +40,7 @@ public class ConsoleAuthControllerMeTest {
 
     /** hasAnyUser 固定 true 的桩（client supplier 给 null——me 路径不触 ES）。 */
     private static BuiltinConsoleAuthService stubAuthService() {
-        return new BuiltinConsoleAuthService(() -> null, "es_console_user", "admin", "es-console", 1000L, "s") {
+        return new BuiltinConsoleAuthService(() -> null, "searchdeck_user", "admin", "searchdeck", 1000L, "s") {
             @Override public boolean hasAnyUser() { return true; }
         };
     }
@@ -97,8 +97,8 @@ public class ConsoleAuthControllerMeTest {
     @Test
     @SuppressWarnings("unchecked")
     public void 委托身份_下发env页面模板供前端同口径收缩() throws Exception {
-        io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties props =
-                new io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties();
+        io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties props =
+                new io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties();
         java.util.Map<String, java.util.Set<String>> templates = new java.util.HashMap<>();
         templates.put("prod", new java.util.LinkedHashSet<>(Arrays.asList("search", "overview")));
         templates.put("qa", Collections.<String>emptySet());
@@ -117,8 +117,8 @@ public class ConsoleAuthControllerMeTest {
 
     @Test
     public void 内置身份或未下发页面授权时不下发env模板() throws Exception {
-        io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties props =
-                new io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties();
+        io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties props =
+                new io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties();
         java.util.Map<String, java.util.Set<String>> templates = new java.util.HashMap<>();
         templates.put("PROD", Collections.singleton("search"));
         props.setEnvPages(templates);
@@ -212,7 +212,7 @@ public class ConsoleAuthControllerMeTest {
         for (Map<String, Object> pm : byKey.values()) {
             assertTrue("页 " + pm.get("key") + " 缺 apiPrefixes 键", pm.containsKey("apiPrefixes"));
         }
-        // 已知页：indices 的端点归属前缀原样下发（与契约 META-INF/es-console-pages.json 一致）
+        // 已知页：indices 的端点归属前缀原样下发（与契约 META-INF/searchdeck-pages.json 一致）
         List<String> indicesPrefixes = (List<String>) byKey.get("indices").get("apiPrefixes");
         assertNotNull(indicesPrefixes);
         assertTrue(indicesPrefixes.contains("/internal/es/index/cluster/delete-index"));

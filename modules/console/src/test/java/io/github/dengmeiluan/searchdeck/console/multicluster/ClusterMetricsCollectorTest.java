@@ -394,12 +394,12 @@ public class ClusterMetricsCollectorTest {
         });
         ClusterMetricsCollector collector = new ClusterMetricsCollector(
                 connStoreOf(Collections.singletonList(conn("c1", "腾讯云QA", "QA"))),
-                connId -> target, () -> control, "es_console_monitor", 60);
+                connId -> target, () -> control, "searchdeck_monitor", 60);
         collector.collectOnce();
         assertEquals("同日只建一次索引", 1, puts.size());
-        assertTrue(puts.get(0).startsWith("/es_console_monitor-2"));
+        assertTrue(puts.get(0).startsWith("/searchdeck_monitor-2"));
         assertEquals("1 cluster doc + 2 node docs", 3, posts.size());
-        assertTrue(posts.get(0).startsWith("/es_console_monitor-2"));
+        assertTrue(posts.get(0).startsWith("/searchdeck_monitor-2"));
         assertTrue("首条=cluster doc", bodies.get(0).contains("\"scope\":\"cluster\"")
                 && bodies.get(0).contains("\"kind\":\"metrics\"") && bodies.get(0).contains("\"connId\":\"c1\""));
         assertTrue("后两条=node docs", bodies.get(1).contains("\"nodeName\":\"node-1\"")
@@ -425,14 +425,14 @@ public class ClusterMetricsCollectorTest {
         ClusterMetricsCollector collector = new ClusterMetricsCollector(
                 connStoreOf(Arrays.asList(conn("c1", "失联集群", "PROD"), conn("c2", "腾讯云QA", "QA"))),
                 connId -> "c1".equals(connId) ? dead : alive,
-                () -> control, "es_console_monitor", 60);
+                () -> control, "searchdeck_monitor", 60);
         collector.collectOnce();
         /* 本轮改为断链落 RED doc：c1=1 ensure PUT + 1 RED POST；c2 照落 cluster+node 共 2 POST（同日 ensure 已过） */
         assertEquals("c1 失败落 RED doc（1PUT+1POST）不拦 c2：c2 照落 cluster+node 共 2 POST", 4, requests.size());
 
         ClusterMetricsCollector empty = new ClusterMetricsCollector(
                 connStoreOf(Collections.<Map<String, Object>>emptyList()),
-                connId -> dead, () -> control, "es_console_monitor", 60);
+                connId -> dead, () -> control, "searchdeck_monitor", 60);
         empty.collectOnce();
         assertEquals("空清单=零写入", 4, requests.size());
     }
@@ -526,7 +526,7 @@ public class ClusterMetricsCollectorTest {
         });
         ClusterMetricsCollector collector = new ClusterMetricsCollector(
                 connStoreOf(Collections.singletonList(conn("c1", "失联集群", "PROD"))),
-                connId -> target, () -> control, "es_console_monitor", 60);
+                connId -> target, () -> control, "searchdeck_monitor", 60);
         collector.collectOnce();
         assertEquals("stats 拉取失败仍落 1 条 RED doc（图表断档有解释）", 1, bodies.size());
         Map<String, Object> doc = MAPPER.readValue(bodies.get(0), Map.class);
@@ -704,7 +704,7 @@ public class ClusterMetricsCollectorTest {
         });
         ClusterMetricsCollector collector = new ClusterMetricsCollector(
                 connStoreOf(Collections.singletonList(conn("c1", "腾讯云QA", "QA"))),
-                connId -> target, () -> control, "es_console_monitor", 60);
+                connId -> target, () -> control, "searchdeck_monitor", 60);
 
         /* 轮 1：首次超限 → cluster+node+告警 共 3 POST */
         collector.collectOnce();
@@ -764,7 +764,7 @@ public class ClusterMetricsCollectorTest {
         });
         ClusterMetricsCollector collector = new ClusterMetricsCollector(
                 connStoreOf(Collections.singletonList(conn("c1", "腾讯云QA", "QA"))),
-                connId -> target, () -> control, "es_console_monitor", 60);
+                connId -> target, () -> control, "searchdeck_monitor", 60);
         collector.collectOnce();
         assertEquals("轮 1 超限：cluster+node+告警", 3, bodies.size());
         collector.collectOnce();
@@ -808,7 +808,7 @@ public class ClusterMetricsCollectorTest {
         });
         ClusterMetricsCollector collector = new ClusterMetricsCollector(
                 connStoreOf(Collections.singletonList(conn("c1", "腾讯云QA", "QA"))),
-                connId -> target, () -> control, "es_console_monitor", 60);
+                connId -> target, () -> control, "searchdeck_monitor", 60);
         collector.collectOnce();
         assertEquals("轮 1 首轮基线：cluster+node=2 POST（delta 省略无告警）", 2, bodies.size());
         Map<String, Object> cluster1 = MAPPER.readValue(bodies.get(0), Map.class);
@@ -1122,7 +1122,7 @@ public class ClusterMetricsCollectorTest {
         });
         ClusterMetricsCollector collector = new ClusterMetricsCollector(
                 connStoreOf(Collections.singletonList(conn("c1", "腾讯云QA", "QA"))),
-                connId -> target, () -> control, "es_console_monitor", 60);
+                connId -> target, () -> control, "searchdeck_monitor", 60);
         collector.collectOnce();
         boolean clusterDocHasDocsTotal = false;
         for (String body : bodies) {

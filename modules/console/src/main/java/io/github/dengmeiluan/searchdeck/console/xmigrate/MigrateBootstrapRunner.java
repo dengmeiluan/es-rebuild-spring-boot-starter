@@ -48,7 +48,7 @@ public class MigrateBootstrapRunner {
             } catch (Exception e) {
                 logger.warn("[MigrateBootstrapRunner] bootstrap failed: {}", e.getMessage(), e);
             }
-        }, "es-xmigrate-bootstrap");
+        }, "searchdeck-xmigrate-bootstrap");
         t.setDaemon(true);
         t.start();
     }

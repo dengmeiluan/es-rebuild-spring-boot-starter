@@ -274,14 +274,14 @@ const scriptSource = useScopedDraft('script', {
   index: () => index.value,
 }).text;
 /* 收藏回放 carry——favReplay 写一次性键，挂载即消费（取 body.query 入查询草稿；
- 旧 es-console.draft.update-by-query.query 是草稿治理前命名空间，无人消费，「已恢复」提示是假的） */
-const ubqCarry = sessionStorage.getItem('es-console.ubq.carry');
+ 旧 searchdeck.draft.update-by-query.query 是草稿治理前命名空间，无人消费，「已恢复」提示是假的） */
+const ubqCarry = sessionStorage.getItem('searchdeck.ubq.carry');
 if (ubqCarry && ubqCarry.trim()) {
   try {
     const q = JSON.parse(ubqCarry).query;
     if (q) queryStr.value = JSON.stringify(q, null, 2);
   } catch { queryStr.value = ubqCarry; }
-  removeStoredRaw(sessionStorage, 'es-console.ubq.carry');
+  removeStoredRaw(sessionStorage, 'searchdeck.ubq.carry');
 }
 const estimateN = ref<number | null>(null);
 const estimating = ref(false);
@@ -447,7 +447,7 @@ async function doSubmit() {
 function goTaskTree() {
   if (result.value?.taskId) {
     /* W4c·完成去向链：合并进 ?taskId= 深链（与 RA 同链，TaskTree 挂载消费直选）——
- 原 es-console.task-tree.focus 会话键在 TaskTree 改 query 消费后无读者（死链），一并退役 */
+ 原 searchdeck.task-tree.focus 会话键在 TaskTree 改 query 消费后无读者（死链），一并退役 */
     router.push({ path: '/task-tree', query: { taskId: String(result.value.taskId) } });
   }
 }

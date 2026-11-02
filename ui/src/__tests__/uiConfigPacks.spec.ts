@@ -42,11 +42,11 @@ describe('功能包契约', () => {
 describe('运行时功能包裁剪', () => {
   it('只启用 platform + security：其余页面/路由关闭', () => {
     const cfg = normalizeUiConfig({
-      product: { name: 'QuoteHub Search', integrationId: 'quotehub', integrationName: 'QuoteHub' },
+      product: { name: 'Acme Search', integrationId: 'acme', integrationName: 'Acme' },
       packs: PACKS.map(p => ({ id: p.id, enabled: p.id === 'platform' || p.id === 'security' })),
       disabledPages: [],
     });
-    expect(cfg.product.name).toBe('QuoteHub Search');
+    expect(cfg.product.name).toBe('Acme Search');
     expect(isGroupEnabled(cfg, 'core')).toBe(true);
     expect(isGroupEnabled(cfg, 'security')).toBe(true);
     expect(isPageEnabled(cfg, 'security')).toBe(true);

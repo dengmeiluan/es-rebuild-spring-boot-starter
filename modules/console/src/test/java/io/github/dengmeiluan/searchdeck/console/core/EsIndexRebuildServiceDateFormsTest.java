@@ -16,7 +16,7 @@
 
 package io.github.dengmeiluan.searchdeck.console.core;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -87,7 +87,7 @@ public class EsIndexRebuildServiceDateFormsTest {
     }
 
     private static EsIndexRebuildService service(CapturingAdmin admin) {
-        EsRebuildProperties props = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties props = new SearchDeckElasticsearchProperties();
         IndexMetaRegistry registry = new IndexMetaRegistry(null, java.util.Collections.emptyList());
         return new EsIndexRebuildService(registry, admin, null,
                 new IndexNameResolver(admin, props, null), props);

@@ -148,7 +148,7 @@ describe('G1-B2/C4/C5 TaskTreeView：互斥链 + 过滤致空 + 行 title', () =
   it('过滤致空 → 「无匹配任务」提示 + 清除过滤按钮在（照 AliasesView 范式）', async () => {
     tasksFn.mockResolvedValue([TT_TASK]);
     /* R121: 过滤词改走会话草稿（不再进 URL）——预填草稿即旧深链等价物 */
-    sessionStorage.setItem('es-console.draft2:task-tree:host:-:-:filter', 'zzz_no_match');
+    sessionStorage.setItem('searchdeck.draft2:task-tree:host:-:-:filter', 'zzz_no_match');
     const { app, host } = await mountView(TaskTreeView);
     const left = host.querySelector('.tt-left')!;
     expect(left.textContent).toContain('无匹配任务');
@@ -194,7 +194,7 @@ describe('G1-B3 RemoteClustersView：首载骨架与三态互斥', () => {
 describe('G1-C7/C8 ClusterSettingsView：过滤致空 + 全局 pill', () => {
   it('过滤无匹配 → 「无匹配设置项」提示 + 清除过滤按钮在', async () => {
     settingsFn.mockResolvedValue({ persistent: {}, transient: {}, defaults: {} });
-    sessionStorage.setItem('es-console.draft2:cluster-settings:host:-:-:q', 'zzz_no_match');
+    sessionStorage.setItem('searchdeck.draft2:cluster-settings:host:-:-:q', 'zzz_no_match');
     const { app, host } = await mountView(ClusterSettingsView);
     expect(host.textContent).toContain('无匹配设置项');
     expect(host.textContent).toContain('清除过滤');

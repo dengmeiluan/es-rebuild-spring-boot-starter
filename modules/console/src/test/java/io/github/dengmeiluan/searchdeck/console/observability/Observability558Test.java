@@ -26,7 +26,7 @@ import io.github.dengmeiluan.searchdeck.console.auth.ConsoleOpsAuditStore;
 import io.github.dengmeiluan.searchdeck.console.auth.ConsolePrincipal;
 import io.github.dengmeiluan.searchdeck.console.auth.ConsoleRole;
 import io.github.dengmeiluan.searchdeck.console.auth.PropertiesAuthDelegate;
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.control.ConsoleSetupController;
 import io.github.dengmeiluan.searchdeck.console.control.ControlClusterResolver;
 import io.github.dengmeiluan.searchdeck.console.core.EsIndexAdmin;
@@ -115,7 +115,7 @@ public class Observability558Test {
     private PropertiesAuthDelegate jwtDelegate(ListAppender<ILoggingEvent> appender) {
         appender.start();
         ((Logger) LoggerFactory.getLogger(PropertiesAuthDelegate.class)).addAppender(appender);
-        EsRebuildProperties.Delegate props = new EsRebuildProperties.Delegate();
+        SearchDeckElasticsearchProperties.Delegate props = new SearchDeckElasticsearchProperties.Delegate();
         props.setMode("jwt");
         props.getJwt().setSecret(JWT_SECRET);
         return new PropertiesAuthDelegate(props);
@@ -489,7 +489,7 @@ public class Observability558Test {
         appender.start();
         svcLogger.addAppender(appender);
         try {
-            EsRebuildProperties props = new EsRebuildProperties();
+            SearchDeckElasticsearchProperties props = new SearchDeckElasticsearchProperties();
             InspectingAdmin admin = new InspectingAdmin();
             EsIndexRebuildService svc = new EsIndexRebuildService(mixedRegistry(), admin, null,
                     new IndexNameResolver(admin, props, null), props);

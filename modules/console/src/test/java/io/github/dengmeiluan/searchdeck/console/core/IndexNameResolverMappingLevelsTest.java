@@ -16,7 +16,7 @@
 
 package io.github.dengmeiluan.searchdeck.console.core;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.control.EntityMappingDeriver;
 import io.github.dengmeiluan.searchdeck.platform.spi.ManagedEsIndex;
 import org.junit.Test;
@@ -87,7 +87,7 @@ public class IndexNameResolverMappingLevelsTest {
     private static IndexNameResolver resolverOf(StubAdmin admin) {
         AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
         ctx.refresh();
-        return new IndexNameResolver(admin, new EsRebuildProperties(), new EntityMappingDeriver(ctx));
+        return new IndexNameResolver(admin, new SearchDeckElasticsearchProperties(), new EntityMappingDeriver(ctx));
     }
 
     /**

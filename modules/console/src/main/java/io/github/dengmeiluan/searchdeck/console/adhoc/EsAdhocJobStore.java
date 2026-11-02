@@ -69,13 +69,13 @@ public class EsAdhocJobStore implements AdhocJobStore {
     /**
      * 默认索引名（仅当构造未指定时兜底；装配侧显式传名）。
      *
-     * <p><b>刻意不带前导点</b>：本工程既有控制索引（{@code es_console_ops_audit} /
-     * {@code es_console_user} / {@code es_console_conn}）全部无点，且 ES 7.x 对
+     * <p><b>刻意不带前导点</b>：本工程既有控制索引（{@code searchdeck_ops_audit} /
+     * {@code searchdeck_user} / {@code searchdeck_conn}）全部无点，且 ES 7.x 对
      * 「非系统索引却以 . 开头」发弃用告警。代价是本索引会出现在
      * {@code EsIndexAdmin} 的索引列表里（该处按 {@code startsWith(".")} 过滤系统索引）——
      * 但既有控制索引本就同样可见，一致性优先于藏起来。</p>
      */
-    public static final String DEFAULT_INDEX = "es_rebuild_adhoc_job";
+    public static final String DEFAULT_INDEX = "searchdeck_adhoc_job";
 
     private static final Logger logger = LoggerFactory.getLogger(EsAdhocJobStore.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -142,7 +142,7 @@ public class EsAdhocJobStore implements AdhocJobStore {
             req.setJsonEntity(MAPPER.writeValueAsString(doc));
             client.get().getLowLevelClient().performRequest(req);
         } catch (Exception e) {
-            logger.warn("[es-rebuild-adhoc-es] 落作业失败（忽略，不反噬重建）：jobId={} {}",
+            logger.warn("[searchdeck-adhoc-es] 落作业失败（忽略，不反噬重建）：jobId={} {}",
                     job.getJobId(), e.getMessage(), e);
         }
     }
@@ -215,7 +215,7 @@ public class EsAdhocJobStore implements AdhocJobStore {
             Request req = new Request("DELETE", "/" + jobIndex + "/" + DOC_TYPE + "/" + jobId + "?refresh=true");
             client.get().getLowLevelClient().performRequest(req);
         } catch (Exception e) {
-            logger.warn("[es-rebuild-adhoc-es] 删除作业失败（忽略）：jobId={} {}", jobId, e.getMessage(), e);
+            logger.warn("[searchdeck-adhoc-es] 删除作业失败（忽略）：jobId={} {}", jobId, e.getMessage(), e);
         }
     }
 
@@ -276,7 +276,7 @@ public class EsAdhocJobStore implements AdhocJobStore {
             }
         } catch (Exception e) {
             // 反序列化失败不致命：至少返回带 jobId 的骨架，列表/查看仍能显示 id。
-            logger.warn("[es-rebuild-adhoc-es] payload 反序列化失败，返回骨架：jobId={} {}",
+            logger.warn("[searchdeck-adhoc-es] payload 反序列化失败，返回骨架：jobId={} {}",
                     jobId, e.getMessage(), e);
         }
         return job;

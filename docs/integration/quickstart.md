@@ -97,8 +97,8 @@ Spring Boot 发布 `ApplicationReadyEvent` 后，starter 才在线程 `es-mappin
 | `GET /internal/es/index/keys` | 枚举已注册的 `ManagedEsIndex` 键 |
 | `GET /internal/es/index/desired-state.html` | 期望配置页：业务侧声明 mapping 期望，宿主应用确认后受控执行 |
 
-启动期映射自动对账由 `MappingReconcile` 承担，配置键 `es.rebuild.mapping.auto-register` 开启；
-`es.rebuild.mapping.conflict-policy` 决定冲突语义——`fail`（默认）检测到冲突即拒绝启动，
+启动期映射自动对账由 `MappingReconcile` 承担，配置键 `searchdeck.elasticsearch.mapping.auto-register` 开启；
+`searchdeck.elasticsearch.mapping.conflict-policy` 决定冲突语义——`fail`（默认）检测到冲突即拒绝启动，
 冲突修复建议返回 `USE_ADHOC_REBUILD` 走托管重建；`warn` 仅提交无冲突的 `properties` additions，
 冲突记入报告。全量状态/原因与排查手册见 [mapping-auto-register.md](mapping-auto-register.md)
 与 [troubleshooting.md](troubleshooting.md)。

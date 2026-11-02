@@ -277,7 +277,7 @@ async function copyExplain(h: any) {
 
 /* ==================== ：实验室联动 —— hit 一键送去排名侦探 / 查询X光 ====================
  手写 sessionStorage.setItem 换 useLinkCarry 统一件——键名与 payload 结构逐字保持
- （es-console.link.rankdebug={index,id,query} / es-console.link.xray={index,id}），消费端零感 */
+ （searchdeck.link.rankdebug={index,id,query} / searchdeck.link.xray={index,id}），消费端零感 */
 const rankDebugCarry = useLinkCarry<{ index: string; id: string; query: string }>('rankdebug');
 const xrayCarry = useLinkCarry<{ index: string; id: string }>('xray');
 function gotoWhy(h: any) {

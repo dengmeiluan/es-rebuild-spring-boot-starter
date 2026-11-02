@@ -124,13 +124,13 @@ public class MonitorSnapshotRecorderTest {
                 () -> Arrays.asList(
                         MonitorSnapshotRecorder.buildDoc(conn("a", "生产集群", "PROD"), green(10L, "7.10.0"), 1L),
                         MonitorSnapshotRecorder.buildDoc(conn("b", "腾讯云QA", "QA"), red("timeout"), 1L)),
-                "es_console_monitor", 60);
+                "searchdeck_monitor", 60);
         recorder.recordOnce();
         assertEquals("同日只建一次索引", 1, puts.size());
-        assertTrue(puts.get(0).startsWith("/es_console_monitor-2"));
+        assertTrue(puts.get(0).startsWith("/searchdeck_monitor-2"));
         assertEquals("每连接一条快照", 2, posts.size());
-        assertTrue(posts.get(0).startsWith("/es_console_monitor-2"));
-        assertTrue(posts.get(1).startsWith("/es_console_monitor-2"));
+        assertTrue(posts.get(0).startsWith("/searchdeck_monitor-2"));
+        assertTrue(posts.get(1).startsWith("/searchdeck_monitor-2"));
         /* 索引已 ensure，仅追加快照 */
         recorder.recordOnce();
         assertEquals("同日不再重复建索引", 1, puts.size());
@@ -146,12 +146,12 @@ public class MonitorSnapshotRecorderTest {
             return "{}";
         });
         MonitorSnapshotRecorder failing = new MonitorSnapshotRecorder(() -> client,
-                () -> { throw new IllegalStateException("control cluster down"); }, "es_console_monitor", 60);
+                () -> { throw new IllegalStateException("control cluster down"); }, "searchdeck_monitor", 60);
         failing.recordOnce();
         assertTrue("供给抛错=整轮跳过零请求", requests.isEmpty());
 
         MonitorSnapshotRecorder empty = new MonitorSnapshotRecorder(() -> client,
-                Collections::emptyList, "es_console_monitor", 60);
+                Collections::emptyList, "searchdeck_monitor", 60);
         empty.recordOnce();
         assertTrue("空清单=零写入", requests.isEmpty());
     }

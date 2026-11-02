@@ -48,7 +48,7 @@ import java.nio.charset.StandardCharsets;
 @RequestMapping("internal/es/index")
 public class DesiredStateController {
 
-    private static final String PAGE = "es-rebuild/desired-state.html";
+    private static final String PAGE = "searchdeck/desired-state.html";
 
     private final IndexMetaRegistry registry;
     private final EntityMappingDeriver mappingDeriver;

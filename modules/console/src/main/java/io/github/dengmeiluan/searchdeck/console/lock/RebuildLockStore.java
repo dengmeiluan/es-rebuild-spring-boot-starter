@@ -66,7 +66,7 @@ public interface RebuildLockStore {
     String owner();
 
     /**
-     * 本实现是否<b>真的在提供互斥</b>（{@code es.rebuild.lock.enabled}）。
+     * 本实现是否<b>真的在提供互斥</b>（{@code searchdeck.elasticsearch.lock.enabled}）。
      *
      * <p><b>为什么必须由 store 自己回答，而不能让调用方从 {@link #get} 反推。</b>
      * {@code enabled=false} 时 {@code get} 恒 null，但 {@code get} 返回 null 还有另外两种成因：

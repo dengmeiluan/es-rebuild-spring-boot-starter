@@ -4,7 +4,7 @@
  * 却无处创建）。锁定 TemplateGallery 每个模板卡片出「⭐」收藏钮，点击后：
  * 1) favorites 增 1 条 kind:'template'、payload 为 JSON 字符串（favReplay 同态消费）；
  * 2) title/subtitle 与模板元数据一致。
- * 读侧闭环静态锁：favReplay case 'template' 仍在（写 es-console.sandbox.body + 跳沙盒）。
+ * 读侧闭环静态锁：favReplay case 'template' 仍在（写 searchdeck.sandbox.body + 跳沙盒）。
  * 挂真组件（TemplateGallery 无 Monaco；mock router/pinia，静态数据免 mock API）。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -73,7 +73,7 @@ describe('TemplateGallery 模板收藏写侧（六十九批）', () => {
     const calls: Array<[string, string]> = [];
     const fakeRouter = { push: (v: any) => calls.push(['push', typeof v === 'string' ? v : JSON.stringify(v)]) } as any;
     replayFavorite({ kind: 'template', payload: '{"size":20}' } as any, fakeRouter, () => {});
-    expect(sessionStorage.getItem('es-console.sandbox.body')).toBe('{"size":20}');
+    expect(sessionStorage.getItem('searchdeck.sandbox.body')).toBe('{"size":20}');
     expect(calls.some(([, v]) => v.includes('/search'))).toBe(true);
   });
 });

@@ -77,6 +77,6 @@ describe('FieldSelect', () => {
       .find(el => el.textContent?.includes('title'));
     target!.click();
     expect(val.value).toBe('title');
-    expect(JSON.parse(localStorage.getItem('es_console_qb_field_recent') || '[]')).toContain('title');
+    expect(JSON.parse(localStorage.getItem('searchdeck_qb_field_recent') || '[]')).toContain('title');
   });
 });

@@ -25,7 +25,7 @@ public class MappingPropertiesTest {
 
     @Test
     public void mappingDefaultsAreStartupFailSkip() {
-        EsRebuildProperties p = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties p = new SearchDeckElasticsearchProperties();
 
         assertThat(p.getMapping().getAutoRegister()).isEqualTo("startup");
         assertThat(p.getMapping().getConflictPolicy()).isEqualTo("fail");
@@ -34,7 +34,7 @@ public class MappingPropertiesTest {
 
     @Test
     public void documentedNonDefaultValuesAreValid() {
-        EsRebuildProperties p = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties p = new SearchDeckElasticsearchProperties();
 
         p.getMapping().setAutoRegister("off");
         p.getMapping().setConflictPolicy("warn");
@@ -45,55 +45,55 @@ public class MappingPropertiesTest {
 
     @Test
     public void unknownAutoRegisterFailsValidation() {
-        EsRebuildProperties p = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties p = new SearchDeckElasticsearchProperties();
         p.getMapping().setAutoRegister("later");
 
         assertThatThrownBy(p::validate).isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("es.rebuild.mapping.auto-register");
+                .hasMessageContaining("searchdeck.elasticsearch.mapping.auto-register");
     }
 
     @Test
     public void nullAutoRegisterFailsValidation() {
-        EsRebuildProperties p = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties p = new SearchDeckElasticsearchProperties();
         p.getMapping().setAutoRegister(null);
 
         assertThatThrownBy(p::validate).isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("es.rebuild.mapping.auto-register");
+                .hasMessageContaining("searchdeck.elasticsearch.mapping.auto-register");
     }
 
     @Test
     public void unknownConflictPolicyFailsValidation() {
-        EsRebuildProperties p = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties p = new SearchDeckElasticsearchProperties();
         p.getMapping().setConflictPolicy("ignore");
 
         assertThatThrownBy(p::validate).isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("es.rebuild.mapping.conflict-policy");
+                .hasMessageContaining("searchdeck.elasticsearch.mapping.conflict-policy");
     }
 
     @Test
     public void nullConflictPolicyFailsValidation() {
-        EsRebuildProperties p = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties p = new SearchDeckElasticsearchProperties();
         p.getMapping().setConflictPolicy(null);
 
         assertThatThrownBy(p::validate).isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("es.rebuild.mapping.conflict-policy");
+                .hasMessageContaining("searchdeck.elasticsearch.mapping.conflict-policy");
     }
 
     @Test
     public void unknownMissingIndexPolicyFailsValidation() {
-        EsRebuildProperties p = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties p = new SearchDeckElasticsearchProperties();
         p.getMapping().setMissingIndexPolicy("create");
 
         assertThatThrownBy(p::validate).isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("es.rebuild.mapping.missing-index-policy");
+                .hasMessageContaining("searchdeck.elasticsearch.mapping.missing-index-policy");
     }
 
     @Test
     public void nullMissingIndexPolicyFailsValidation() {
-        EsRebuildProperties p = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties p = new SearchDeckElasticsearchProperties();
         p.getMapping().setMissingIndexPolicy(null);
 
         assertThatThrownBy(p::validate).isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("es.rebuild.mapping.missing-index-policy");
+                .hasMessageContaining("searchdeck.elasticsearch.mapping.missing-index-policy");
     }
 }

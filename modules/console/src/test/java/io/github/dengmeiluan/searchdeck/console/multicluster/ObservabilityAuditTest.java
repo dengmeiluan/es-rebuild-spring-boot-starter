@@ -110,7 +110,7 @@ public class ObservabilityAuditTest {
     /** ES 档案版本回写失败必须落 WARN（控制 client 不可达时无痕=版本不刷新无从排查），且仍不抛。 */
     @Test
     public void esStoreUpdateVersionFailureLeavesWarn() {
-        EsConnStore store = new EsConnStore(() -> null, "es_console_conn", null);
+        EsConnStore store = new EsConnStore(() -> null, "searchdeck_conn", null);
 
         store.updateVersion("conn-1", "7.17.0");
 
@@ -121,7 +121,7 @@ public class ObservabilityAuditTest {
     /** 既有契约顺带锁：空 id/空版本早退零日志。 */
     @Test
     public void esStoreGuardClausesStaySilent() {
-        EsConnStore store = new EsConnStore(() -> null, "es_console_conn", null);
+        EsConnStore store = new EsConnStore(() -> null, "searchdeck_conn", null);
 
         store.updateVersion(null, "7.17.0");
         store.updateVersion("  ", "7.17.0");
@@ -186,7 +186,7 @@ public class ObservabilityAuditTest {
     @Test
     public void fallbackTokenIoFailureLeavesWarnAndStillRejects() throws Exception {
         BuiltinConsoleAuthService svc = new BuiltinConsoleAuthService(
-                () -> null, "es_console_user", "admin", "es-console", 3_600_000L, "it-secret") {
+                () -> null, "searchdeck_user", "admin", "searchdeck", 3_600_000L, "it-secret") {
             @Override
             public boolean hasAnyUser() throws IOException {
                 throw new IOException("用户索引不可达(桩)");
@@ -207,7 +207,7 @@ public class ObservabilityAuditTest {
     @Test
     public void fallbackTokenStillWorksWhenIndexEmpty() throws Exception {
         BuiltinConsoleAuthService svc = new BuiltinConsoleAuthService(
-                () -> null, "es_console_user", "admin", "es-console", 3_600_000L, "it-secret") {
+                () -> null, "searchdeck_user", "admin", "searchdeck", 3_600_000L, "it-secret") {
             @Override
             public boolean hasAnyUser() {
                 return false;

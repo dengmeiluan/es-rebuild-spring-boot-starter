@@ -38,7 +38,7 @@ import static org.junit.Assert.assertTrue;
  *
  * <p>面板徽标与接入文档抽屉里的版本号来自 vite define 的构建期注入
  * （{@code __STARTER_VERSION__} ← 仓根 pom.xml 的 {@code <version>}），烧录在构建产物
- * {@code src/main/resources/static/console/} 内；该目录不入 git，clean 也不清除（在 src 树内）。
+ * {@code src/main/resources/static/searchdeck/} 内；该目录不入 git，clean 也不清除（在 src 树内）。
  * 若 pom bump 后未重跑前端构建（如发版门禁带 console build 跳过参数），旧产物会带着旧版本
  * 字面量原样打进 jar——面板徽标就停在旧版本。</p>
  *

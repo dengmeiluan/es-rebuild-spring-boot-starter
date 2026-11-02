@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 多集群监控快照落库器（20260922 统一只用 QA ES 单载体约定·批4）：服务端定时任务按轮把
- * 全部连接的探活快照落 {@code es_console_monitor-yyyy.MM.dd} 日期索引——
+ * 全部连接的探活快照落 {@code searchdeck_monitor-yyyy.MM.dd} 日期索引——
  * <b>服务端调度器是唯一写入方，用户页面轮询只做读取展示、永不构成入库路径</b>
  * （多用户多页面不会造成重复落库，也不会因「没人开页面」而出现数据空洞）。
  *
@@ -98,7 +98,7 @@ public class MonitorSnapshotRecorder {
             private final AtomicInteger n = new AtomicInteger();
             @Override
             public Thread newThread(Runnable r) {
-                Thread t = new Thread(r, "es-console-monitor-" + n.incrementAndGet());
+                Thread t = new Thread(r, "searchdeck-monitor-" + n.incrementAndGet());
                 t.setDaemon(true);
                 return t;
             }
@@ -111,7 +111,7 @@ public class MonitorSnapshotRecorder {
                 warnThrottled("监控落库轮失败", e);
             }
         }, INITIAL_DELAY_SECONDS, intervalSeconds, TimeUnit.SECONDS);
-        LOG.info("[es-console-monitor] started, prefix={}, intervalSeconds={}", indexPrefix, intervalSeconds);
+        LOG.info("[searchdeck-monitor] started, prefix={}, intervalSeconds={}", indexPrefix, intervalSeconds);
     }
 
     @PreDestroy
@@ -156,7 +156,7 @@ public class MonitorSnapshotRecorder {
         try {
             ControlDailyIndex.ensure(client.get(), dated, MONITOR_MAPPING_JSON);
             ensuredDay = day;
-            LOG.info("[es-console-monitor] daily monitor index ready: {}", dated);
+            LOG.info("[searchdeck-monitor] daily monitor index ready: {}", dated);
         } catch (Exception e) {
             warnThrottled("建当日监控索引失败（快照照写，动态映射兜底）", e);
         }
@@ -200,7 +200,7 @@ public class MonitorSnapshotRecorder {
     private void warnThrottled(String where, Exception e) {
         long failures = failureCount.incrementAndGet();
         if (failures == 1) {
-            LOG.warn("[es-console-monitor] {}（首次，后续失败仅累计不再打）：{}", where, e.getMessage(), e);
+            LOG.warn("[searchdeck-monitor] {}（首次，后续失败仅累计不再打）：{}", where, e.getMessage(), e);
         }
     }
 }

@@ -20,7 +20,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.After;
 import org.junit.Before;
@@ -68,7 +68,7 @@ public class Observability550Test {
 
     private HttpServer server;
     private ListAppender<ILoggingEvent> appender;
-    private EsRebuildProperties.Delegate props;
+    private SearchDeckElasticsearchProperties.Delegate props;
     /** 桩状态：HTTP 状态码与下发的 token（换 token 绕过负结果缓存，直打校验路径）。 */
     private final AtomicReference<String> stubToken = new AtomicReference<>("token-1");
     private volatile int stubStatus = 401;
@@ -93,7 +93,7 @@ public class Observability550Test {
         });
         server.start();
 
-        props = new EsRebuildProperties.Delegate();
+        props = new SearchDeckElasticsearchProperties.Delegate();
         props.setMode("endpoint");
         props.getEndpoint().setVerifyUrl(
                 "http://localhost:" + server.getAddress().getPort() + "/auth/verify");

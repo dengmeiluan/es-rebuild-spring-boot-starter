@@ -46,7 +46,6 @@
         <module>platform</module>
         <module>modules/console</module>
         <module>apps/server</module>
-        <module>integrations/quotehub</module>
     </modules>
 
     <properties>

@@ -136,12 +136,12 @@ describe('索引列表抽屉不自动关（五百三十一批，行为锁）', (
 });
 
 describe('useLinkCarry 合并（五百三十一批）', () => {
-  it('whyHit/xrayHit 换统一件，payload 逐字保持；裸 es-console.link.* setItem 字面退役', () => {
+  it('whyHit/xrayHit 换统一件，payload 逐字保持；裸 searchdeck.link.* setItem 字面退役', () => {
     expect(ih).toContain("useLinkCarry<{ index: string; id: string; query: string }>('rankdebug')");
     expect(ih).toContain("useLinkCarry<{ index: string; id: string }>('xray')");
     expect(ih).toContain('rankDebugCarry.send({ index: cur.value, id: hit._id, query: dsl.value });');
     expect(ih).toContain('xrayCarry.send({ index: cur.value, id: hit._id });');
-    expect(ih, '裸 setItem 字面不回流（crossNavLinks 旧锚已随批改形）').not.toContain("sessionStorage.setItem('es-console.link.");
+    expect(ih, '裸 setItem 字面不回流（crossNavLinks 旧锚已随批改形）').not.toContain("sessionStorage.setItem('searchdeck.link.");
   });
 });
 

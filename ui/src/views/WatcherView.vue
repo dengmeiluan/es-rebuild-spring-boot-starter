@@ -283,7 +283,7 @@ function copyBody(w: any) {
 /* -f 跨工具联动——在 DevTools 里打开该 watch 定义，改完直接 PUT 回去 */
 function toDevTools(w: any) {
   if (!canDevtools.value) { store.notify('warning', 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'); return; }
-  writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
+  writeStoredRaw(sessionStorage, 'searchdeck.devtools.open', JSON.stringify({
     title: 'watch/' + w._id, method: 'GET', path: '/_watcher/watch/' + encodeURIComponent(w._id), run: true,
   }));
   router.push('/devtools');
@@ -341,7 +341,7 @@ function toDevToolsSample() {
     input: { search: { request: { indices: ['*'], body: { query: { match_all: {} } } } } },
     actions: { log: { action: { logging: { text: 'watch fired' } } } },
   }, null, 2);
-  writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
+  writeStoredRaw(sessionStorage, 'searchdeck.devtools.open', JSON.stringify({
     title: 'watch/sample', method: 'PUT', path: '/_watcher/watch/sample', body, run: false,
   }));
   router.push('/devtools');
@@ -351,7 +351,7 @@ function toDevToolsSample() {
 function toDevToolsEdit(w: any) {
   if (!canDevtools.value) { store.notify('warning', 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'); return; }
   const body = JSON.stringify(w.watch ?? w, null, 2);
-  writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
+  writeStoredRaw(sessionStorage, 'searchdeck.devtools.open', JSON.stringify({
     title: 'watch/' + w._id + ' 编辑', method: 'PUT',
     path: '/_watcher/watch/' + encodeURIComponent(w._id), body, run: false,
   }));

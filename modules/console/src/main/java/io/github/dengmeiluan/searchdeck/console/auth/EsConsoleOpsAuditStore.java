@@ -102,7 +102,7 @@ public class EsConsoleOpsAuditStore implements ConsoleOpsAuditStore {
         this.executor = new ThreadPoolExecutor(1, 1, 60, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(1000),
                 r -> {
-                    Thread t = new Thread(r, "es-console-ops-audit");
+                    Thread t = new Thread(r, "searchdeck-ops-audit");
                     t.setDaemon(true);
                     return t;
                 },
@@ -159,7 +159,7 @@ public class EsConsoleOpsAuditStore implements ConsoleOpsAuditStore {
             io.github.dengmeiluan.searchdeck.console.control.ControlDailyIndex.ensure(
                     client.get(), datedIndex, DAILY_MAPPING_JSON);
             ensuredDay = day;
-            LOG.info("[es-console-audit] daily audit index ready: {}", datedIndex);
+            LOG.info("[searchdeck-audit] daily audit index ready: {}", datedIndex);
         } catch (Exception e) {
             warnAuditDrop("建当日审计索引失败（文档照写，动态映射兜底）", e);
         }
@@ -213,7 +213,7 @@ public class EsConsoleOpsAuditStore implements ConsoleOpsAuditStore {
     private void warnAuditDrop(String where, Exception e) {
         long drops = dropCount.incrementAndGet();
         if (drops == 1) {
-            LOG.warn("[es-console-audit] {}（首次，后续失败仅累计不再打）：{}", where, e.getMessage(), e);
+            LOG.warn("[searchdeck-audit] {}（首次，后续失败仅累计不再打）：{}", where, e.getMessage(), e);
         }
     }
 

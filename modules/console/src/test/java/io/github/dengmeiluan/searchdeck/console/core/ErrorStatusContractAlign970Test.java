@@ -22,7 +22,7 @@ import io.github.dengmeiluan.searchdeck.console.auth.ConsolePermissionsControlle
 import io.github.dengmeiluan.searchdeck.console.auth.ConsolePrincipal;
 import io.github.dengmeiluan.searchdeck.console.auth.ConsoleRole;
 import io.github.dengmeiluan.searchdeck.console.auth.EnvPagesResolver;
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.multicluster.ConnStore;
 import io.github.dengmeiluan.searchdeck.console.web.InternalEsIndexRebuildController;
 import io.github.dengmeiluan.searchdeck.console.web.InternalEsRebuildExceptionAdvice;
@@ -73,10 +73,10 @@ public class ErrorStatusContractAlign970Test {
     public void guardIndexName_throwsControlPlaneGuardException_forControlIndex() {
         EsIndexAdmin admin = new EsIndexAdmin(null);
         try {
-            admin.guardIndexName("es_console_user");
+            admin.guardIndexName("searchdeck_user");
             fail("控制面索引应被守卫拒绝");
         } catch (ControlPlaneGuardException expected) {
-            assertTrue(expected.getMessage().contains("es_console_user"));
+            assertTrue(expected.getMessage().contains("searchdeck_user"));
         }
     }
 
@@ -84,7 +84,7 @@ public class ErrorStatusContractAlign970Test {
     public void guardControlPath_throwsControlPlaneGuardException_forDoubleSlashControlPath() {
         EsIndexAdmin admin = new EsIndexAdmin(null);
         try {
-            admin.guardControlPath("//es_console_user/_search");
+            admin.guardControlPath("//searchdeck_user/_search");
             fail("双斜杠穿透控制路径应被守卫拒绝");
         } catch (ControlPlaneGuardException expected) {
             // 拒绝文案由既有守卫锁面覆盖，此处只锁异常型别
@@ -95,7 +95,7 @@ public class ErrorStatusContractAlign970Test {
     public void guardControlBody_throwsControlPlaneGuardException_forControlIndexInBody() {
         EsIndexAdmin admin = new EsIndexAdmin(null);
         try {
-            admin.guardControlBody("{\"dest\":{\"index\":\"es_console_user\"}}");
+            admin.guardControlBody("{\"dest\":{\"index\":\"searchdeck_user\"}}");
             fail("请求体引用控制面索引应被守卫拒绝");
         } catch (ControlPlaneGuardException expected) {
             // 拒绝文案由既有守卫锁面覆盖，此处只锁异常型别
@@ -108,7 +108,7 @@ public class ErrorStatusContractAlign970Test {
     public void rebuildAdvice_resolvesGuardDenial_toDedicatedForbiddenHandler() throws Exception {
         ExceptionHandlerMethodResolver resolver =
                 new ExceptionHandlerMethodResolver(InternalEsRebuildExceptionAdvice.class);
-        ControlPlaneGuardException e = new ControlPlaneGuardException("控制面索引不对通用数据接口开放：es_console_user");
+        ControlPlaneGuardException e = new ControlPlaneGuardException("控制面索引不对通用数据接口开放：searchdeck_user");
         Method m = resolver.resolveMethod(e);
         assertEquals("advice 必须以专用 handler（而非 IAE 通用臂）接住守卫拒绝", "controlPlaneGuard", m.getName());
         @SuppressWarnings("unchecked")
@@ -118,7 +118,7 @@ public class ErrorStatusContractAlign970Test {
         assertEquals("FORBIDDEN", resp.getBody().get("code"));
         assertEquals("守卫拒绝错误体保留原文与 endpoint 上下文", "POST /internal/es/index/cluster/search",
                 resp.getBody().get("endpoint"));
-        assertEquals("控制面索引不对通用数据接口开放：es_console_user", resp.getBody().get("message"));
+        assertEquals("控制面索引不对通用数据接口开放：searchdeck_user", resp.getBody().get("message"));
     }
 
     @Test
@@ -126,7 +126,7 @@ public class ErrorStatusContractAlign970Test {
         ExceptionHandlerMethodResolver resolver =
                 new ExceptionHandlerMethodResolver(InternalEsIndexRebuildController.class);
         Method m = resolver.resolveMethod(
-                new ControlPlaneGuardException("控制面索引不对通用数据接口开放：es_console_user"));
+                new ControlPlaneGuardException("控制面索引不对通用数据接口开放：searchdeck_user"));
         assertEquals("控制器本地 handler 优先于 advice：守卫拒绝必须由专用本地 handler 接住委派 advice，"
                 + "否则恒落本地 IAE 臂被映射 400", "handleControlPlaneGuard", m.getName());
     }
@@ -171,7 +171,7 @@ public class ErrorStatusContractAlign970Test {
     private static ConsolePermissionsController ctrl() {
         ConnStore store = emptyConnStore();
         return new ConsolePermissionsController(ConsolePageCatalog.load(),
-                new EnvPagesResolver(store, new EsRebuildProperties()), store, true);
+                new EnvPagesResolver(store, new SearchDeckElasticsearchProperties()), store, true);
     }
 
     private static ConnStore emptyConnStore() {

@@ -341,12 +341,12 @@ function heatColor(t: number) {
 onMounted(() => {
   /* 命令面板「把当前 DSL 送去火焰图分析」的一次性载荷：读后即清（防刷新重复覆盖
      用户后续手改的草稿）；profile:true 由 run() 自行注入，这里只回填原始 body。 */
-  const carried = sessionStorage.getItem('es-console.flame.body');
+  const carried = sessionStorage.getItem('searchdeck.flame.body');
   if (carried && carried.trim()) {
     dsl.value = carried;
-    removeStoredRaw(sessionStorage, 'es-console.flame.body');
-    const carriedIdx = sessionStorage.getItem('es-console.flame.index');
-    if (carriedIdx) { index.value = carriedIdx; removeStoredRaw(sessionStorage, 'es-console.flame.index'); }
+    removeStoredRaw(sessionStorage, 'searchdeck.flame.body');
+    const carriedIdx = sessionStorage.getItem('searchdeck.flame.index');
+    if (carriedIdx) { index.value = carriedIdx; removeStoredRaw(sessionStorage, 'searchdeck.flame.index'); }
     return;
   }
   if (!index.value) index.value = store.pickedIdx || '';

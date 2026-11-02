@@ -69,7 +69,7 @@ describe('六百零四批：实时区趋势窗长切换', () => {
       expect(mon.windowPts).toBe(120);
       mon.windowPts = 60;
       await settle(4);
-      expect(JSON.parse(localStorage.getItem('es-console.pref.live.windowPts') || '0')).toBe(60);
+      expect(JSON.parse(localStorage.getItem('searchdeck.pref.live.windowPts') || '0')).toBe(60);
     } finally {
       app.unmount();
       host.remove();

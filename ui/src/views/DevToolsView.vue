@@ -1116,7 +1116,7 @@ watch(active, persist);
 function flushDraft() { if (draftTimer) { clearTimeout(draftTimer); draftTimer = null; writeDraft(); } }
 onMounted(() => {
   window.addEventListener('pagehide', flushDraft);
-  window.addEventListener('es-console:identity-changed', onIdentityReset);
+  window.addEventListener('searchdeck:identity-changed', onIdentityReset);
   let restored = false;
   try {
     const raw = JSON.parse(sessionStorage.getItem(DRAFT_KEY.value) || 'null');
@@ -1136,7 +1136,7 @@ onMounted(() => {
 });
 /* KeepAlive 白名单再进入仍消费预填（实报「打开不自动填充」根因②）——
  本页在 KEEP_ALIVE_VIEWS 名单（App.vue line95 明文要求「深链预填在 onActivated 下仍可消费」，
- 入名单时漏）；es-console.devtools.open 既有 5 写入方（DslQuery/Watcher/IndexHub/Ilm/
+ 入名单时漏）；searchdeck.devtools.open 既有 5 写入方（DslQuery/Watcher/IndexHub/Ilm/
  CmdPalette）+827 favReplay devtools 分支第 6 写入方，缓存态此前全被吞。键读后即删=与
  onMounted 双挂载幂等无害 */
 onActivated(() => {
@@ -1175,7 +1175,7 @@ function onIdentityReset() {
 
 onBeforeUnmount(() => {
   window.removeEventListener('pagehide', flushDraft);
-  window.removeEventListener('es-console:identity-changed', onIdentityReset);
+  window.removeEventListener('searchdeck:identity-changed', onIdentityReset);
   window.removeEventListener('keydown', onGlobalRunKey); /* ：全局键随挂载对摘除 */
   flushDraft(); /* 卸载前冲刷防抖尾窗，草稿不丢 */
 });
@@ -1199,15 +1199,15 @@ function onGlobalRunKey(e: KeyboardEvent) {
 /* -f 跨工具联动入口——命令面板「新开标签」与其他视图（Watcher 等）
  通过 sessionStorage 预填一个请求后跳转过来，这里统一消费。 */
 function consumePrefill() {
-  if (sessionStorage.getItem('es-console.devtools.newtab')) {
-    removeStoredRaw(sessionStorage, 'es-console.devtools.newtab');
+  if (sessionStorage.getItem('searchdeck.devtools.newtab')) {
+    removeStoredRaw(sessionStorage, 'searchdeck.devtools.newtab');
     tabs.value.push(mkTab(undefined, 'GET', '/', ''));
     active.value = tabs.value.length - 1;
     persist();
   }
-  const raw = sessionStorage.getItem('es-console.devtools.open');
+  const raw = sessionStorage.getItem('searchdeck.devtools.open');
   if (!raw) return;
-  removeStoredRaw(sessionStorage, 'es-console.devtools.open');
+  removeStoredRaw(sessionStorage, 'searchdeck.devtools.open');
   try {
     const p = JSON.parse(raw);
     const tab = mkTab(p.title, p.method || 'GET', p.path || '/', p.body || '');

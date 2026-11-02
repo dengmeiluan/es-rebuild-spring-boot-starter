@@ -16,7 +16,7 @@
 
 package io.github.dengmeiluan.searchdeck.console.compat;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -31,7 +31,7 @@ import java.util.Arrays;
 
 /**
  * epoch 日期兼容转换器的自动配置。<b>默认不装</b>
- * （{@code es.rebuild.compat.date-converters} 默认 {@code false}）。
+ * （{@code searchdeck.elasticsearch.compat.date-converters} 默认 {@code false}）。
  *
  * <h3>⚠ 开启前必读：它救不了带日期注解的字段</h3>
  *
@@ -45,7 +45,7 @@ import java.util.Arrays;
  * 建一个<b>空的</b> {@link ElasticsearchCustomConversions}。若本配置晚于它装配，
  * 那个空 Bean 已经在容器里，本配置的 {@code @ConditionalOnMissingBean}
  * <b>永远轮不到</b>：Bean 看着在、实际是空的，<b>静默失效</b>。
- * 故本类<b>不能</b>并入 {@code EsRebuildAutoConfiguration}（那个是
+ * 故本类<b>不能</b>并入 {@code SearchDeckConsoleAutoConfiguration}（那个是
  * {@code @AutoConfigureAfter(...)}），必须作为 {@code spring.factories} 的<b>独立条目</b>。</p>
  *
  * <p><b>注意 Boot 的排序兜底</b>：{@code AutoConfigurationSorter} 先按 <b>FQN 字母序</b>
@@ -61,8 +61,8 @@ import java.util.Arrays;
 @Configuration
 @ConditionalOnClass(ElasticsearchCustomConversions.class)
 @AutoConfigureBefore(ElasticsearchDataAutoConfiguration.class)
-@EnableConfigurationProperties(EsRebuildProperties.class)
-@ConditionalOnProperty(prefix = "es.rebuild.compat", name = "date-converters", havingValue = "true")
+@EnableConfigurationProperties(SearchDeckElasticsearchProperties.class)
+@ConditionalOnProperty(prefix = "searchdeck.elasticsearch.compat", name = "date-converters", havingValue = "true")
 public class EsDateCompatAutoConfiguration {
 
     /**

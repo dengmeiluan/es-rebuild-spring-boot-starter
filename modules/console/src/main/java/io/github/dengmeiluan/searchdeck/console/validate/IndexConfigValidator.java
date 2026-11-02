@@ -36,7 +36,7 @@ import static io.github.dengmeiluan.searchdeck.console.validate.ConfigIssue.LAYE
  *  配置门禁——校验编排内核：L1/L3（{@link IndexConfigLinter}）+ L2 服务端 Dry-run。
  *
  * <p><b>L2 Dry-run 原理</b>：ES 7.10 没有 validate-config API，唯一的零副作用真校验是
- * 「临时索引试建」——用被校验的 settings+mapping 建 {@code es_console_validate_<ts>_<rand>}，
+ * 「临时索引试建」——用被校验的 settings+mapping 建 {@code searchdeck_validate_<ts>_<rand>}，
  * 成功即立刻删除；失败则捕获 ES 原生报错逐条解析。这是服务端语义的最终裁决
  * （analyzer 插件是否存在、settings 键是否合法等 L1 只能给 WARN 的疑点在此定论）。</p>
  *
@@ -51,7 +51,7 @@ public class IndexConfigValidator {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /** 临时索引名前缀（拦截器 ADMIN 清单外；建后即删，泄漏时可按前缀批量清理） */
-    public static final String DRYRUN_PREFIX = "es_console_validate_";
+    public static final String DRYRUN_PREFIX = "searchdeck_validate_";
 
     /** ES 异常消息形如 {@code Elasticsearch exception [type=xxx_exception, reason=...]}，可嵌套多段 */
     private static final Pattern ES_REASON = Pattern.compile("type=([a-z_]+), reason=(.*?)]");

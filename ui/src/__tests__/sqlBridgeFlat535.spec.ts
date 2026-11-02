@@ -115,7 +115,7 @@ function seedHist(items: Array<Partial<{ id: string; mode: string; query: string
   ));
 }
 function seedSqlDraft(q: string) {
-  localStorage.setItem('es-console.pref.sqlbridge.sql', JSON.stringify(q));
+  localStorage.setItem('searchdeck.pref.sqlbridge.sql', JSON.stringify(q));
 }
 function findBtn(root: ParentNode, sel: string, attr = 'aria-label'): HTMLButtonElement | undefined {
   return Array.from(root.querySelectorAll<HTMLButtonElement>(sel)).find(b => b.getAttribute(attr));

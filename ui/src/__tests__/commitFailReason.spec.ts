@@ -83,7 +83,7 @@ describe('编辑提交失败原因透传（136 批）', () => {
     const commitBtn = findCommitBtn()!;
     commitBtn.click();
     for (let i = 0; i < 10; i++) { await nextTick(); await Promise.resolve(); }
-    const log = JSON.parse(localStorage.getItem('es-console.notify.log') || '[]');
+    const log = JSON.parse(localStorage.getItem('searchdeck.notify.log') || '[]');
     const err = log.filter((e: any) => e.kind === 'error').pop();
     expect(err.msg).toContain('失败 1 条');
     /* 通知明细含「id: 原因」结构（原文经 friendlyEsError 友好化，不锁原始串字面） */
@@ -105,7 +105,7 @@ describe('编辑提交失败原因透传（136 批）', () => {
     const commitBtn = findCommitBtn();
     if (commitBtn) commitBtn.click();
     for (let i = 0; i < 10; i++) { await nextTick(); await Promise.resolve(); }
-    const log = JSON.parse(localStorage.getItem('es-console.notify.log') || '[]');
+    const log = JSON.parse(localStorage.getItem('searchdeck.notify.log') || '[]');
     expect(log.filter((e: any) => e.kind === 'success').length).toBeGreaterThan(0);
   });
 });

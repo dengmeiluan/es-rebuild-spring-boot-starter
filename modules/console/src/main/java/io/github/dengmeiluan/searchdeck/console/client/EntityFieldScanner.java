@@ -58,7 +58,7 @@ import java.util.Map;
  *
  * <p><b>{@code mappingParsed} 为何必要</b>（修订一）：业务侧的 mappingJson 由
  * {@code IndexMetaRegistry.readAnnotationPath} 原样读取 classpath 资源，<b>不做任何 JSON 校验</b>；
- * 而唯一会校验它的 {@code IndexConfigValidator} 只在 {@code es.rebuild.mode=console} 下装配，
+ * 而唯一会校验它的 {@code IndexConfigValidator} 只在 {@code searchdeck.elasticsearch.mode=console} 下装配，
  * client 模式的业务应用根本没有它。所以「坏 JSON」在本方法是<b>可达</b>路径，
  * 必须让「解析失败」成为一等值，而不是伪装成「字段不在 mapping 里」。</p>
  *

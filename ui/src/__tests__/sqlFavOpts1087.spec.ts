@@ -26,18 +26,18 @@ describe('1087 SQL 收藏执行选项', () => {
       { push: vi.fn() } as any,
       () => {},
     );
-    expect(JSON.parse(sessionStorage.getItem('es-console.sql.prefill.opts') || '{}')).toEqual({ fetchSize: 50, timeZone: 'Asia/Shanghai', columnar: true });
+    expect(JSON.parse(sessionStorage.getItem('searchdeck.sql.prefill.opts') || '{}')).toEqual({ fetchSize: 50, timeZone: 'Asia/Shanghai', columnar: true });
     sessionStorage.clear();
     replayFavorite(
       { kind: 'rest', tags: ['sql'], payload: { sql: 'SELECT 1', fetchSize: 200 } },
       { push: vi.fn() } as any,
       () => {},
     );
-    expect(JSON.parse(sessionStorage.getItem('es-console.sql.prefill.opts') || '{}')).toEqual({ fetchSize: 200 });
+    expect(JSON.parse(sessionStorage.getItem('searchdeck.sql.prefill.opts') || '{}')).toEqual({ fetchSize: 200 });
   });
 
   it('控制台挂载恢复并夹取选项（损坏快照不阻塞回放）', () => {
-    expect(view).toContain("const prefillOpts = sessionStorage.getItem('es-console.sql.prefill.opts');");
+    expect(view).toContain("const prefillOpts = sessionStorage.getItem('searchdeck.sql.prefill.opts');");
     expect(view).toContain('function applySqlOpts(o: Record<string, unknown>) {');
     expect(view).toContain('if (Number.isFinite(o.fetchSize) && Number(o.fetchSize) > 0) fetchSize.value = Math.min(Number(o.fetchSize), 10000);');
     expect(view).toContain("if (typeof o.timeZone === 'string') timeZone.value = o.timeZone;");

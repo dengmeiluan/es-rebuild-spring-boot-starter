@@ -104,7 +104,7 @@ describe('WorkbenchLayout + FocusableSurface', () => {
   });
 
   it('restores a persisted pane size after remount', async () => {
-    localStorage.setItem('es-console.layout.v2:qa:/devtools:search:standard', JSON.stringify({
+    localStorage.setItem('searchdeck.layout.v2:qa:/devtools:search:standard', JSON.stringify({
       version: 1, updatedAt: Date.now(), panes: { response: { size: 600 } },
     }));
     const { host } = mountWorkbench();
@@ -131,7 +131,7 @@ describe('WorkbenchLayout + FocusableSurface', () => {
       { id: 'tree', role: 'tree', minSize: 320, defaultSize: 560, maxSize: 'available' as const, collapsible: true },
       { id: 'workspace', role: 'workspace', minSize: 360, defaultSize: 'flex' as const },
     ];
-    localStorage.setItem('es-console.layout.v2:qa:/devtools:search:standard', JSON.stringify({
+    localStorage.setItem('searchdeck.layout.v2:qa:/devtools:search:standard', JSON.stringify({
       version: 1, updatedAt: Date.now(), panes: { tree: { size: 1000 } },
     }));
     const { host } = mountWorkbench({ panes });
@@ -190,7 +190,7 @@ describe('WorkbenchLayout + FocusableSurface', () => {
       { id: 'request', role: 'request', minSize: 240, defaultSize: 360, collapsible: true },
       { id: 'response', role: 'response', minSize: 240, defaultSize: 420, collapsible: true },
     ];
-    localStorage.setItem('es-console.layout.v2:qa:/devtools:search:standard', JSON.stringify({
+    localStorage.setItem('searchdeck.layout.v2:qa:/devtools:search:standard', JSON.stringify({
       version: 1, updatedAt: Date.now(), panes: { request: { size: 360, collapsed: true } },
     }));
     const { host } = mountWorkbench({ panes });

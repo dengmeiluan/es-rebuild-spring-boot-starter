@@ -73,7 +73,7 @@ describe('G40：toQuery 显式 mode 落点钉死（铁律 B 位置/落点恒定�
     expect(typeof arg).toBe('object');
     expect(arg.path).toBe('/search');
     expect(arg.query?.mode).toBe('dsl');
-    expect(sessionStorage.getItem('es-console.dsl.body'), 'DSL 体仍走 sessionStorage 契约').toBeTruthy();
+    expect(sessionStorage.getItem('searchdeck.dsl.body'), 'DSL 体仍走 sessionStorage 契约').toBeTruthy();
   });
 
   it('源码锁：toSandbox 对称件原样（mode sandbox），两动线均显式带 mode', () => {

@@ -592,15 +592,15 @@ const TEMPLATES = [
 const carriedLossy = ref<string[]>([]);
 
 onMounted(() => {
-  const carry = sessionStorage.getItem('es-console.lucene.q');
-  if (carry) { qs.value = carry; removeStoredRaw(sessionStorage, 'es-console.lucene.q'); }
-  const ci = sessionStorage.getItem('es-console.lucene.index');
-  if (ci) { index.value = ci; removeStoredRaw(sessionStorage, 'es-console.lucene.index'); }
+  const carry = sessionStorage.getItem('searchdeck.lucene.q');
+  if (carry) { qs.value = carry; removeStoredRaw(sessionStorage, 'searchdeck.lucene.q'); }
+  const ci = sessionStorage.getItem('searchdeck.lucene.index');
+  if (ci) { index.value = ci; removeStoredRaw(sessionStorage, 'searchdeck.lucene.index'); }
   /* 翻译缺失清单同样是一次性 carry：读走即删，但保留在页面状态里直到用户关掉——
      否则刷新一次提示就彻底消失，用户会以为翻译是等价的。 */
-  const lcLossy = sessionStorage.getItem('es-console.lucene.lossy');
+  const lcLossy = sessionStorage.getItem('searchdeck.lucene.lossy');
   if (lcLossy) {
-    removeStoredRaw(sessionStorage, 'es-console.lucene.lossy');
+    removeStoredRaw(sessionStorage, 'searchdeck.lucene.lossy');
     try {
       const arr = JSON.parse(lcLossy);
       if (Array.isArray(arr)) carriedLossy.value = arr.filter((x: unknown) => typeof x === 'string');

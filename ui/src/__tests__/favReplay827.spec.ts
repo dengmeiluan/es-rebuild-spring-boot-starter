@@ -8,7 +8,7 @@ import { replayFavorite, replayTarget } from '../utils/favReplay';
 // 根因①favReplay 缺 devtools 分支：DevTools saveFav 落 tags ['rest','devtools']，重放坠 /rest
 // 通用兜底=不回源视图（用户预期=回到 DevTools 且请求装好）。
 // 根因②DevToolsView consumePrefill 只挂 onMounted 而 DevToolsView 在 KEEP_ALIVE_VIEWS 白名单
-// =缓存实例再进入不消费——es-console.devtools.open 既有 5 写入方（DslQuery/Watcher/IndexHub/
+// =缓存实例再进入不消费——searchdeck.devtools.open 既有 5 写入方（DslQuery/Watcher/IndexHub/
 // Ilm/CmdPalette）预填在缓存态全被吞（App.vue 白名单注释 line95「深链预填在 onActivated 下仍可
 // 消费」的入名单漏）。
 // 全类清点（826 批⑥在案）：9 支 carry 键消费方余 7 支全在位=A4 全类守卫锚固化。
@@ -31,7 +31,7 @@ const settle = async () => { await new Promise(r => setTimeout(r, 0)); for (let 
 describe('favReplay827 devtools 分支（实报根因①）', () => {
   beforeEach(() => { sessionStorage.clear(); });
 
-  it('A1 kind=rest tags=[rest,devtools] → 写 es-console.devtools.open+push /devtools（不坠 /rest 兜底）', async () => {
+  it('A1 kind=rest tags=[rest,devtools] → 写 searchdeck.devtools.open+push /devtools（不坠 /rest 兜底）', async () => {
     const router = mkRouter();
     await router.push('/'); await router.isReady();
     const notify = vi.fn();
@@ -41,7 +41,7 @@ describe('favReplay827 devtools 分支（实报根因①）', () => {
     );
     await settle();
     expect(router.currentRoute.value.path).toBe('/devtools');
-    const raw = sessionStorage.getItem('es-console.devtools.open');
+    const raw = sessionStorage.getItem('searchdeck.devtools.open');
     expect(raw).toBeTruthy();
     const p = JSON.parse(raw!);
     expect(p.method).toBe('GET');
@@ -88,15 +88,15 @@ describe('favReplay827 KeepAlive 预填（实报根因②）', () => {
 
 describe('favReplay827 全类守卫（9 支 carry 键消费方在位=826 批⑥清点固化）', () => {
   const FAMILY: Array<[string, string]> = [
-    ['es-console.dsl.carry', '../views/QueryHubView.vue'],
-    ['es-console.sql.prefill', '../views/QueryHubView.vue'],
-    ['es-console.lucene.q', '../views/QueryHubView.vue'],
-    ['es-console.bulk.carry', '../views/BulkEditorView.vue'],
-    ['es-console.ubq.carry', '../views/UpdateByQueryView.vue'],
-    ['es-console.reindex-advanced.body', '../views/ReindexAdvancedView.vue'],
-    ['es-console.doc-diff.carry.source', '../views/DiffEditorView.vue'],
-    ['es-console.sandbox.body', '../views/SearchSandboxView.vue'],
-    ['es-console.devtools.open', '../views/DevToolsView.vue'],
+    ['searchdeck.dsl.carry', '../views/QueryHubView.vue'],
+    ['searchdeck.sql.prefill', '../views/QueryHubView.vue'],
+    ['searchdeck.lucene.q', '../views/QueryHubView.vue'],
+    ['searchdeck.bulk.carry', '../views/BulkEditorView.vue'],
+    ['searchdeck.ubq.carry', '../views/UpdateByQueryView.vue'],
+    ['searchdeck.reindex-advanced.body', '../views/ReindexAdvancedView.vue'],
+    ['searchdeck.doc-diff.carry.source', '../views/DiffEditorView.vue'],
+    ['searchdeck.sandbox.body', '../views/SearchSandboxView.vue'],
+    ['searchdeck.devtools.open', '../views/DevToolsView.vue'],
   ];
   it.each(FAMILY)('%s 消费方在位', (key, consumer) => {
     expect(rd(consumer)).toContain(key);

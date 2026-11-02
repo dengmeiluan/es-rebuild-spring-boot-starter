@@ -196,7 +196,7 @@ public class ControlClusterResolver {
         // controlMode=spring 显式钉死一种可能，属配置错误，快速失败给出明确指引
         if (springClient == null) {
             throw new IllegalStateException("controlMode=spring 需要宿主装配 ES（RestHighLevelClient Bean），"
-                    + "当前宿主未装配；请改用 es.rebuild.console.control-mode=auto 并走 Setup 首连向导绑定控制集群");
+                    + "当前宿主未装配；请改用 searchdeck.elasticsearch.console.control-mode=auto 并走 Setup 首连向导绑定控制集群");
         }
         control.set(springClient);
         // 宿主只提供 RHLC、未装 spring-data ops 的形态：用 RHLC 自建 template 兼容
@@ -231,7 +231,7 @@ public class ControlClusterResolver {
     /** 带硬超时的探活（RHLC 自身超时可能远大于期望，独立线程包一层）。 */
     private boolean ping(RestHighLevelClient client, long timeoutMs) {
         ExecutorService es = Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "es-console-control-probe");
+            Thread t = new Thread(r, "searchdeck-control-probe");
             t.setDaemon(true);
             return t;
         });

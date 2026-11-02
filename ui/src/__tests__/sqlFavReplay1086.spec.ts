@@ -19,42 +19,42 @@ describe('1086 SQL 收藏回放索引与参数', () => {
   });
 
   it('回放投递索引/参数键，并清掉上一条 SQL 的残留', () => {
-    sessionStorage.setItem('es-console.sql.prefill.params', '["old"]');
-    sessionStorage.setItem('es-console.sql.prefill.index', 'old-idx');
+    sessionStorage.setItem('searchdeck.sql.prefill.params', '["old"]');
+    sessionStorage.setItem('searchdeck.sql.prefill.index', 'old-idx');
     const push = vi.fn();
     replayFavorite(
       { kind: 'rest', tags: ['sql'], payload: { sql: 'SELECT * FROM "bond_issuer"', index: 'bond_issuer', params: '["B-1"]' } },
       { push } as any,
       () => {},
     );
-    expect(sessionStorage.getItem('es-console.sql.prefill')).toContain('bond_issuer');
-    expect(sessionStorage.getItem('es-console.sql.prefill.index')).toBe('bond_issuer');
-    expect(sessionStorage.getItem('es-console.sql.prefill.params')).toBe('["B-1"]');
+    expect(sessionStorage.getItem('searchdeck.sql.prefill')).toContain('bond_issuer');
+    expect(sessionStorage.getItem('searchdeck.sql.prefill.index')).toBe('bond_issuer');
+    expect(sessionStorage.getItem('searchdeck.sql.prefill.params')).toBe('["B-1"]');
     expect(push).toHaveBeenCalledWith({ path: '/search', query: { mode: 'sql' } });  });
 
   it('无参数/索引的旧收藏清掉旧键（不让上一条上下文串入）', () => {
-    sessionStorage.setItem('es-console.sql.prefill.params', '["old"]');
-    sessionStorage.setItem('es-console.sql.prefill.index', 'old-idx');
+    sessionStorage.setItem('searchdeck.sql.prefill.params', '["old"]');
+    sessionStorage.setItem('searchdeck.sql.prefill.index', 'old-idx');
     replayFavorite(
       { kind: 'rest', tags: ['sql'], payload: { sql: 'SELECT 1' } },
       { push: vi.fn() } as any,
       () => {},
     );
-    expect(sessionStorage.getItem('es-console.sql.prefill.params')).toBeNull();
-    expect(sessionStorage.getItem('es-console.sql.prefill.index')).toBeNull();
+    expect(sessionStorage.getItem('searchdeck.sql.prefill.params')).toBeNull();
+    expect(sessionStorage.getItem('searchdeck.sql.prefill.index')).toBeNull();
   });
 
   it('SQL 控制台挂载消费索引键（先切源再自动执行）', () => {
-    expect(view).toContain("const prefillIdx = sessionStorage.getItem('es-console.sql.prefill.index');");
+    expect(view).toContain("const prefillIdx = sessionStorage.getItem('searchdeck.sql.prefill.index');");
     expect(view).toContain("if (prefillIdx && prefillIdx !== store.pickedIdx) store.pick(prefillIdx);");
-    expect(view).toContain("removeStoredRaw(sessionStorage, 'es-console.sql.prefill.index');");
+    expect(view).toContain("removeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.index');");
   });
 
   it('宿主 KeepAlive 回页时按预填键重挂对应模式（SQL/Lucene/沙盒/PIT 不只 DSL）', () => {
-    expect(hub).toContain("sessionStorage.getItem('es-console.sql.prefill') != null) next = 'sql'");
-    expect(hub).toContain("sessionStorage.getItem('es-console.lucene.q') != null) next = 'lucene'");
-    expect(hub).toContain("sessionStorage.getItem('es-console.sandbox.body') != null || sessionStorage.getItem('ss_dsl_body') != null) next = 'sandbox'");
-    expect(hub).toContain("sessionStorage.getItem('es-console.pit.filter') != null || sessionStorage.getItem('es-console.pit.prefill') != null) next = 'pit'");
+    expect(hub).toContain("sessionStorage.getItem('searchdeck.sql.prefill') != null) next = 'sql'");
+    expect(hub).toContain("sessionStorage.getItem('searchdeck.lucene.q') != null) next = 'lucene'");
+    expect(hub).toContain("sessionStorage.getItem('searchdeck.sandbox.body') != null || sessionStorage.getItem('ss_dsl_body') != null) next = 'sandbox'");
+    expect(hub).toContain("sessionStorage.getItem('searchdeck.pit.filter') != null || sessionStorage.getItem('searchdeck.pit.prefill') != null) next = 'pit'");
     expect(hub).toMatch(/if \(next\) \{\r?\n\s*mode\.value = next;\r?\n\s*stamp\.value\+\+;/);
   });
 });

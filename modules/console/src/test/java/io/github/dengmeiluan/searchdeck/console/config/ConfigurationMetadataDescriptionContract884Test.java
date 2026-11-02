@@ -33,7 +33,7 @@ import static org.junit.Assert.assertTrue;
  * <p>README 构建一节声称：全部配置项带 IDE 提示（{@code spring-boot-configuration-processor}
  * 元数据随 jar 分发）。该元数据的 description 取自字段 javadoc——字段裸声明、或说明写进
  * {@code /*}（非 javadoc）注释块时提取静默丢失，IDE 提示即空。本契约锁：
- * {@code es.rebuild.*} 全键 description 非空白，声称与元数据恒一致。</p>
+ * {@code searchdeck.elasticsearch.*} 全键 description 非空白，声称与元数据恒一致。</p>
  */
 public class ConfigurationMetadataDescriptionContract884Test {
 
@@ -48,7 +48,7 @@ public class ConfigurationMetadataDescriptionContract884Test {
         List<String> missing = new ArrayList<>();
         for (Map<String, Object> p : props) {
             String name = String.valueOf(p.get("name"));
-            if (!name.startsWith("es.rebuild.")) {
+            if (!name.startsWith("searchdeck.elasticsearch.")) {
                 continue;
             }
             Object d = p.get("description");

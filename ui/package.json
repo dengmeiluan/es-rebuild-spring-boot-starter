@@ -1,7 +1,7 @@
 {
   "name": "@searchdeck/ui",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
   "engines": {
     "node": ">=18"
@@ -43,7 +43,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dengmeiluan/es-rebuild-spring-boot-starter.git"
+    "url": "git+https://github.com/dengmeiluan/searchdeck.git"
   },
   "optionalDependencies": {
     "@rollup/rollup-darwin-arm64": "^4.62.2",

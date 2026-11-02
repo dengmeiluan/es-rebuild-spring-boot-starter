@@ -36,7 +36,7 @@ public class BuiltinConsoleAuthServicePrivilegeTest {
                     }
                     return "{}";
                 }),
-                "es_console_user", "admin", "es-console", 3_600_000L, "it-secret");
+                "searchdeck_user", "admin", "searchdeck", 3_600_000L, "it-secret");
     }
 
     private static ConsolePrincipal nonAdmin() {

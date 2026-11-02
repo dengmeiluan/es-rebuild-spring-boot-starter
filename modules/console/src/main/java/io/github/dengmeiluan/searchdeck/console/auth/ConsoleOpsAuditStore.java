@@ -24,7 +24,7 @@ import java.util.List;
  *
  * <p>存储可插拔（平台化底座）：独立部署默认落控制集群 ES 索引
  * （{@link EsConsoleOpsAuditStore}）；嵌入宿主时可切宿主数据库表
- * （{@link JdbcConsoleOpsAuditStore}，配置 {@code es.rebuild.console.store=jdbc}）；
+ * （{@link JdbcConsoleOpsAuditStore}，配置 {@code searchdeck.elasticsearch.console.store=jdbc}）；
  * 宿主注册自定义本接口 Bean 则完全接管。</p>
  *
  * <p>契约红线：审计永不反噬业务——record 必须异步/尽力而为，任何失败只记日志不上抛。</p>

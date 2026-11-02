@@ -21,7 +21,7 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import io.github.dengmeiluan.searchdeck.console.control.ControlIndexInitializer;
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.core.EsIndexAdmin;
 import org.elasticsearch.client.EsFakeClients;
 import org.elasticsearch.client.RestHighLevelClient;
@@ -162,14 +162,14 @@ public class Observability552Test {
             }
             throw EsFakeClients.responseException(400, "<html>not-es-standard</html>");
         });
-        ControlIndexInitializer init = new ControlIndexInitializer(new EsRebuildProperties());
+        ControlIndexInitializer init = new ControlIndexInitializer(new SearchDeckElasticsearchProperties());
 
         try {
             init.ensureAll(fake);
             fail("初始化控制索引失败必须上抛 ISE（绑定流程整体回滚契约）");
         } catch (IllegalStateException e) {
             assertTrue("ISE 文案须带索引名（哪个索引没建出来）",
-                    e.getMessage().contains("es_console_user"));
+                    e.getMessage().contains("searchdeck_user"));
         }
         assertEquals("判据解析失败臂刻意静默：全 logger 零 WARN（失败由 ISE 上抛响亮兜底）",
                 0, warnCountFrom(ControlIndexInitializer.class));

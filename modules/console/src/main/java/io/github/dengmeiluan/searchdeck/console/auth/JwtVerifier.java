@@ -126,7 +126,7 @@ public class JwtVerifier {
             JsonNode exp = claims.get("exp");
             if (exp == null) {
                 /* 缺 exp = 永不过期凭证：requireExp 开启时直接拒绝（生产默认）。
-                   旧宿主未签发 exp 可通过 es.rebuild.console.auth.delegate.jwt.require-exp=false 显式放行。 */
+                   旧宿主未签发 exp 可通过 searchdeck.elasticsearch.console.auth.delegate.jwt.require-exp=false 显式放行。 */
                 if (requireExp) {
                     return null;
                 }

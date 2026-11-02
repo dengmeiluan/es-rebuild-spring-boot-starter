@@ -33,7 +33,7 @@ import java.util.Map;
 
 /**
  * 多集群指标端点（指标时序批）：只读查询服务端定时任务落库的 cluster/node 指标时序
- * （{@code es_console_monitor-yyyy.MM.dd} 里 kind=metrics 的 doc），供概览页图表。
+ * （{@code searchdeck_monitor-yyyy.MM.dd} 里 kind=metrics 的 doc），供概览页图表。
  *
  * <p>路径刻意挂在 {@code /internal/es/index/monitor-metrics}（与 monitor-history 同族，
  * 避开 {@code /clusters/} ADMIN 关键字与 {@code /cluster/} 透传白名单），并登记进

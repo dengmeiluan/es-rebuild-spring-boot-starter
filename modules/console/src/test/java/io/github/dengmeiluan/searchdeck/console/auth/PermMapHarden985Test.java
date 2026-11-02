@@ -16,7 +16,7 @@
 
 package io.github.dengmeiluan.searchdeck.console.auth;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -46,7 +46,7 @@ public class PermMapHarden985Test {
 
     @Test
     public void env模板重复键先到先得与执行侧一致() {
-        EsRebuildProperties props = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties props = new SearchDeckElasticsearchProperties();
         Map<String, Set<String>> templates = new LinkedHashMap<>();
         templates.put("prod", new LinkedHashSet<>(Arrays.asList("search", "overview")));
         templates.put("PROD", new LinkedHashSet<>(Collections.singletonList("overview")));

@@ -327,7 +327,7 @@ function openInDevtools(method: string, path: string, title: string) {
   if (!canDevtools.value) { store.notify('warning', 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'); return; }
   /* 与 Watcher/Ilm/DslQuery 同一 sessionStorage 契约；此前用 ?_prefill= 查询串，
      DevToolsView.consumePrefill 只读本键——点了打开空 Tab（ADMIN 也一样）。 */
-  writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({ title, method, path }));
+  writeStoredRaw(sessionStorage, 'searchdeck.devtools.open', JSON.stringify({ title, method, path }));
   router.push('/devtools');
 }
 const router = useRouter();
@@ -367,7 +367,7 @@ const currentRepo = ref<string | null>(repoDraft.value || null);
 
 /* 二批清零：卡片流排序状态（BrowserView clickSort 范式同款——各字段自然方向比较器 + 方向钮整体翻转）。
  默认键 start_time、默认 sortRev=false=自然方向=新→旧降序，即迁移前 loadSnapshots 的固定序；
- usePref 偏好落盘 es-console.pref.sv.*，同值赋值不触发 watch（默认值不落盘，BrowserView 同口径） */
+ usePref 偏好落盘 searchdeck.pref.sv.*，同值赋值不触发 watch（默认值不落盘，BrowserView 同口径） */
 const sortBy = usePref('sv.sortBy', 'start_time');
 const sortRev = usePref('sv.sortRev', false);
 const sortOpts = [

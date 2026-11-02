@@ -50,7 +50,7 @@ public class SearchTemplateGuard1046Test {
 
     @Test
     public void 校验器临时索引前缀不再对通用写通道豁免() {
-        assertThrows(RuntimeException.class, () -> admin.guardIndexName("es_console_validate_123_ab"));
-        assertThrows(RuntimeException.class, () -> admin.guardIndexName("ES_CONSOLE_VALIDATE_123_AB"));
+        assertThrows(RuntimeException.class, () -> admin.guardIndexName("searchdeck_validate_123_ab"));
+        assertThrows(RuntimeException.class, () -> admin.guardIndexName("SEARCHDECK_ELASTICSEARCH_VALIDATE_123_AB"));
     }
 }

@@ -16,7 +16,7 @@
 
 package io.github.dengmeiluan.searchdeck.console.core;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.control.EntityMappingDeriver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +42,7 @@ public class IndexNameResolver {
     private final DateTimeFormatter versionFormat;
     private final EntityMappingDeriver mappingDeriver;
 
-    public IndexNameResolver(EsIndexAdmin esIndexAdmin, EsRebuildProperties properties,
+    public IndexNameResolver(EsIndexAdmin esIndexAdmin, SearchDeckElasticsearchProperties properties,
                              EntityMappingDeriver mappingDeriver) {
         this.esIndexAdmin = esIndexAdmin;
         this.versionFormat = DateTimeFormatter.ofPattern(properties.getVersionFormat());

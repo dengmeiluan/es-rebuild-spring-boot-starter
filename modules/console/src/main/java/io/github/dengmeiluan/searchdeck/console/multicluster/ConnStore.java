@@ -24,7 +24,7 @@ import java.util.Map;
 /**
  * 多集群连接档案存储 SPI（ 平台化底座）：把「集群档案存哪」从实现里解耦——
  * 独立部署默认落控制集群 ES 索引（{@link EsConnStore}）；嵌入宿主（如 宿主）时
- * 可切宿主数据库表（{@link JdbcConnStore}，配置 {@code es.rebuild.console.store=jdbc}）；
+ * 可切宿主数据库表（{@link JdbcConnStore}，配置 {@code searchdeck.elasticsearch.console.store=jdbc}）；
  * 宿主注册自定义本接口 Bean 则完全接管（{@code @ConditionalOnMissingBean} 让位）。
  *
  * <p>契约红线：密码只在服务端流转——{@link #list()} 一律脱敏（只给 hasPassword 布尔），

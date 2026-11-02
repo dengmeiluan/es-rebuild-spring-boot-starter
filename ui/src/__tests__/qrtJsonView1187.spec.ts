@@ -77,6 +77,6 @@ describe('1187 rows 型内核的 JSON 档', () => {
   it('SQL 控制台已接线：view-seg 打开 + 档位落下记忆键', () => {
     const src = readFileSync(join(__dirname, '../views/SqlConsoleView.vue'), 'utf-8');
     expect(src).toMatch(/view-seg/);
-    expect(src).toContain('view-pref-key="es-console.pref.sqlResultView"');
+    expect(src).toContain('view-pref-key="searchdeck.pref.sqlResultView"');
   });
 });

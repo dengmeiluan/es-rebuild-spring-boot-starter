@@ -24,12 +24,12 @@ describe('1071 SQL 历史参数快照', () => {
   });
 
   it('跨页 prefill 与切集群重跑都携带参数键', () => {
-    expect(sqlView).toContain("sessionStorage.getItem('es-console.sql.prefill.params')");
-    expect(sqlView).toContain("removeStoredRaw(sessionStorage, 'es-console.sql.prefill.params')");
-    expect(sqlView).toContain("writeStoredRaw(sessionStorage, 'es-console.sql.prefill.params', carryParams)");
-    expect(hub).toContain("if (it.params) writeStoredRaw(sessionStorage, 'es-console.sql.prefill.params', it.params);");
+    expect(sqlView).toContain("sessionStorage.getItem('searchdeck.sql.prefill.params')");
+    expect(sqlView).toContain("removeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.params')");
+    expect(sqlView).toContain("writeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.params', carryParams)");
+    expect(hub).toContain("if (it.params) writeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.params', it.params);");
     /* 非 SQL 回放不得把上一条 SQL 的参数残留带下去 */
-    expect(hub).toContain("removeStoredRaw(sessionStorage, 'es-console.sql.prefill.params');");
+    expect(hub).toContain("removeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.params');");
   });
 
   it('历史面板可见参数徽标，导出保留参数且无参数条目形态不变', () => {

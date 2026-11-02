@@ -43,8 +43,8 @@ public class ConsoleCacheConfigurerTest {
 
     @Test
     public void assetsPatternGetsImmutableLongCache() throws Exception {
-        Object assets = findByPattern("/console/assets/**");
-        assertNotNull("必须注册 /console/assets/** 专属 handler（带 hash 资产长缓存）", assets);
+        Object assets = findByPattern("/searchdeck/assets/**");
+        assertNotNull("必须注册 /searchdeck/assets/** 专属 handler（带 hash 资产长缓存）", assets);
 
         String header = cacheHeaderOf(assets);
         assertTrue("资产缓存头须含一年 max-age，实际=" + header, header.contains("max-age=31536000"));
@@ -52,27 +52,20 @@ public class ConsoleCacheConfigurerTest {
 
         String locations = locationsOf(assets);
         assertTrue("assets handler 的 location 必须直指 assets 目录（通配段只含文件名），实际=" + locations,
-                locations.contains("static/console/assets"));
-
-        Object newAssets = findByPattern("/searchdeck/assets/**");
-        assertNotNull("必须注册 /searchdeck/assets/** 专属 handler", newAssets);
-        assertTrue("searchdeck 资产缓存头须含一年 max-age",
-                cacheHeaderOf(newAssets).contains("max-age=31536000"));
-        assertTrue("searchdeck assets handler location 必须直指 searchdeck/assets，实际=" + locationsOf(newAssets),
-                locationsOf(newAssets).contains("static/searchdeck/assets"));
+                locations.contains("static/searchdeck/assets"));
     }
 
     @Test
     public void htmlEntriesGetNoCache() throws Exception {
         Object html = null;
         for (Object reg : registrations()) {
-            if (patternsOf(reg).length == 5) {
+            if (patternsOf(reg).length == 2) {
                 html = reg;
             }
         }
-        assertNotNull("必须注册五个 html 入口的专属 handler", html);
+        assertNotNull("必须注册两个 html 入口的专属 handler", html);
         assertArrayEquals("html 入口集合必须与 static 根实际入口一一对应",
-                new String[]{"/console/index.html", "/searchdeck/index.html", "/searchdeck.html", "/es-rebuild.html", "/es-xmigrate.html"},
+                new String[]{"/searchdeck/index.html", "/searchdeck.html"},
                 patternsOf(html));
 
         assertEquals("html 入口必须 no-cache（发版后即刻拿到引用新 hash 资产的新 HTML）",
@@ -83,13 +76,13 @@ public class ConsoleCacheConfigurerTest {
                 + locations, locations.contains("classpath:/static/"));
     }
 
-    /** 守卫：本 configurer 不允许接管整个 /console/**（那会与 client 模式 guard 的职责混淆，且拖慢解析） */
+    /** 守卫：本 configurer 不允许接管整个 /searchdeck/**（那会与 client 模式 guard 的职责混淆，且拖慢解析） */
     @Test
-    public void doesNotTakeOverBroadConsolePattern() throws Exception {
+    public void doesNotTakeOverBroadSearchdeckPattern() throws Exception {
         for (Object reg : registrations()) {
             for (String p : patternsOf(reg)) {
-                assertTrue("不允许注册宽泛 pattern /console/**（只能精确到 assets 与 html 入口），实际=" + p,
-                        !"/console/**".equals(p));
+                assertTrue("不允许注册宽泛 pattern /searchdeck/**（只能精确到 assets 与 html 入口），实际=" + p,
+                        !"/searchdeck/**".equals(p));
             }
         }
     }
@@ -103,7 +96,7 @@ public class ConsoleCacheConfigurerTest {
         f.setAccessible(true);
         List<?> regs = (List<?>) f.get(registry);
         assertNotNull("反射未取到 registrations，字段名或结构已变", regs);
-        assertEquals("应注册 3 条 handler（console/searchdeck assets 长缓存 + html no-cache）", 3, regs.size());
+        assertEquals("应注册 2 条 handler（searchdeck assets 长缓存 + html no-cache）", 2, regs.size());
         return regs;
     }
 

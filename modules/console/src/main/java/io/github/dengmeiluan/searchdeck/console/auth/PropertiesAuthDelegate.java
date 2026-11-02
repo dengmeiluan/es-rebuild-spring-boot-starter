@@ -18,7 +18,7 @@ package io.github.dengmeiluan.searchdeck.console.auth;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 配置式宿主鉴权委托（{@code es.rebuild.console.auth.delegate.*} 纯 properties
+ * 配置式宿主鉴权委托（{@code searchdeck.elasticsearch.console.auth.delegate.*} 纯 properties
  * 即可对接宿主凭据体系，不写一行 Java——与  代码 SPI（{@link ConsoleAuthDelegate}）
  * 同一插槽，代码 SPI 优先（AutoConfiguration 用 {@code @ConditionalOnMissingBean} 让位）。
  *
@@ -53,7 +53,7 @@ public class PropertiesAuthDelegate implements ConsoleAuthDelegate {
     /** endpoint 故障 warn 日志节流间隔（避免宿主接口宕机刷屏）。 */
     private static final long WARN_THROTTLE_MS = 60_000L;
 
-    private final EsRebuildProperties.Delegate props;
+    private final SearchDeckElasticsearchProperties.Delegate props;
     private final HostRoleMapper roleMapper;
     /** jwt 模式验签器（其余模式为 null）。 */
     private final JwtVerifier jwtVerifier;
@@ -65,7 +65,7 @@ public class PropertiesAuthDelegate implements ConsoleAuthDelegate {
     /** header 模式公网来源拒识 WARN 节流计数（同范式）。 */
     private final AtomicLong lastHeaderWarnAt = new AtomicLong(0);
 
-    public PropertiesAuthDelegate(EsRebuildProperties.Delegate props) {
+    public PropertiesAuthDelegate(SearchDeckElasticsearchProperties.Delegate props) {
         this.props = props;
         this.roleMapper = new HostRoleMapper(props.getRoleMapping());
         this.jwtVerifier = "jwt".equalsIgnoreCase(props.getMode())
@@ -294,7 +294,7 @@ public class PropertiesAuthDelegate implements ConsoleAuthDelegate {
             if (now - last > WARN_THROTTLE_MS && lastHeaderWarnAt.compareAndSet(last, now)) {
                 LOG.warn("[PropertiesAuthDelegate] header 模式拒绝非受信来源的身份头 remote={}（{}s 内不再重复告警）。"
                         + "若这是反向网关/容器的真实地址（容器网段/CGNAT/IPv6 直连都会命中），"
-                        + "请将其加入 es.rebuild.console.auth.delegate.header.trusted-proxies"
+                        + "请将其加入 searchdeck.elasticsearch.console.auth.delegate.header.trusted-proxies"
                         + "（精确 IP 或 CIDR，逗号分隔）；清单为空时默认仅信任回环/私网/链路本地地址",
                         remote, WARN_THROTTLE_MS / 1000);
             }

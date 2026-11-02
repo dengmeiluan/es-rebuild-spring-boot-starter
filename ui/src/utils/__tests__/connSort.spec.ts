@@ -23,11 +23,11 @@ describe('sortConns：status 模式（默认）', () => {
     const cs = [
       conn({ id: '1', name: '生产集群', health: { status: 'GREEN', latencyMs: 15 } }),
       conn({ id: '2', name: 'es_preview', health: { status: 'RED' } }),
-      conn({ id: '3', name: 'es_example_qa', health: { status: 'RED' } }),
+      conn({ id: '3', name: 'es_example_staging', health: { status: 'RED' } }),
       conn({ id: '4', name: 'es_price', health: { status: 'GREEN', latencyMs: 22 } }),
     ];
     const out = sortConns(cs, 'status');
-    expect(names(out)).toEqual(['es_example_qa', 'es_preview', 'es_price', '生产集群']);
+    expect(names(out)).toEqual(['es_example_staging', 'es_preview', 'es_price', '生产集群']);
     expect(out).not.toBe(cs); /* 纯函数：不改入参 */
   });
   it('无 health/未知状态按异常组处理（看不见的状态更要置顶排查）', () => {

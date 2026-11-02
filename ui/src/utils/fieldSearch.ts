@@ -187,9 +187,9 @@ export function nestedFieldScope(fields: string[], path: string | null | undefin
 }
 
 /* ═══ per-index 最近字段记忆（FieldSelect recent 升级 + defaultLeaf 记忆共用） ═══
- key 规则：拼当前索引（es_console_qb_field_recent::<idx>）；读不到（无记录）回退全局键，
+ key 规则：拼当前索引（searchdeck_qb_field_recent::<idx>）；读不到（无记录）回退全局键，
  升级前写过的全局记录不丢。idx 为空（无索引语境/测试直挂）即全局键本身。 */
-const RECENT_KEY = 'es_console_qb_field_recent';
+const RECENT_KEY = 'searchdeck_qb_field_recent';
 const RECENT_CAP = 10;
 
 /* 当前索引上下文：FieldSelect 深嵌在 NodeRenderer 子树，逐层透传 index prop 会波及组件树

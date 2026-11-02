@@ -54,7 +54,7 @@ describe('perm-scan 规则自检（反向）', () => {
 
   it('写 DevTools carry 不带门会被报出', () => {
     withTemporaryFile('__scanProbeCarry.vue',
-      `<script setup lang="ts">\nfunction go() {\n  sessionStorage.setItem('es-console.devtools.open', '{}');\n}\n</script>\n`,
+      `<script setup lang="ts">\nfunction go() {\n  sessionStorage.setItem('searchdeck.devtools.open', '{}');\n}\n</script>\n`,
       () => {
         const { code, out } = runScan();
         expect(out).toContain('__scanProbeCarry.vue');
@@ -66,7 +66,7 @@ describe('perm-scan 规则自检（反向）', () => {
   it('门写在调用处（非能力定义行）才算数', () => {
     /* 只有定义、没有调用：这正是本轮踩到的假绿形态，必须仍然报红 */
     withTemporaryFile('__scanProbeDefOnly.vue',
-      `<script setup lang="ts">\nconst canDevtools = computed(() => auth.canEndpoint('admin', 'POST', '/x'));\nfunction go() {\n  sessionStorage.setItem('es-console.devtools.open', '{}');\n}\n</script>\n`,
+      `<script setup lang="ts">\nconst canDevtools = computed(() => auth.canEndpoint('admin', 'POST', '/x'));\nfunction go() {\n  sessionStorage.setItem('searchdeck.devtools.open', '{}');\n}\n</script>\n`,
       () => {
         const { code, out } = runScan();
         expect(out).toContain('__scanProbeDefOnly.vue');

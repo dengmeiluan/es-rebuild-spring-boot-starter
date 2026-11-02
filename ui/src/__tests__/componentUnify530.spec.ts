@@ -1,11 +1,11 @@
 /**
  * 530 批 W-D「组件统一批」spec：
  * ① StatusPill 统一件——五 tone 语义档 + 缺省 n + en 英文小字档 + title 兜底；
- * ② useLinkCarry——sessionStorage 一次性 carry（es-console.link.{key}），取后即焚、异常吞掉；
+ * ② useLinkCarry——sessionStorage 一次性 carry（searchdeck.link.{key}），取后即焚、异常吞掉；
  * ③ useDebounceFn——缺省 250ms 防抖，连发只跑最后一次，卸载自动清理；
  * ④ 八视图改用静态锁（AnalysisSettings/BulkEditor/ConfigDrift/Plugins/Rest/SearchSandbox/Snapshots/System）。
  *
- * 【待合并清单】其余视图的裸 es-console.link.* 写法（不属 W-D 独占面，逐个 lane 合并时换 useLinkCarry）：
+ * 【待合并清单】其余视图的裸 searchdeck.link.* 写法（不属 W-D 独占面，逐个 lane 合并时换 useLinkCarry）：
  *   - views/AnalyzerLabView.vue ✅531 已合并（useLinkCarry('analyzer')）
  *   - views/BoostTunerView.vue ✅531 已合并（接收侧 useLinkCarry('boost')）
  *   - views/DslQueryView.vue ✅531 已合并（rankdebug/xray 发送侧）
@@ -14,8 +14,8 @@
  *   - views/ScoreExplainView.vue ✅531 已合并（rankdebug/xray 发送侧）
  *   - views/QueryXrayView.vue ✅531 已合并（analyzer 发送 + xray 接收侧）
  *   - views/RankDebugView.vue（唯一遗留：接收侧裸实现，下批合并）
- * 另外 BulkEditorView 的 es-console.bulk.carry 键前缀不同且写侧在 favReplay（favReplayCarry.spec 看守），
- * 不属 es-console.link.* 合并面，保持原样。
+ * 另外 BulkEditorView 的 searchdeck.bulk.carry 键前缀不同且写侧在 favReplay（favReplayCarry.spec 看守），
+ * 不属 searchdeck.link.* 合并面，保持原样。
  * 【改用进度 531 批更新】状态徽标层（StatusPill 改用）在八视图（上表）基础上再收十四视图：
  *   Aliases/Browser/ConfigValidator/IndexOptimizer/LiveDashboard/Overview/Tasks/HealthReport/
  *   Snapshots/Slm/ReindexPreview/IndexSettings/System（部分为槽内徽标/徽标档位收口）——
@@ -92,11 +92,11 @@ describe('StatusPill 统一件', () => {
 });
 
 describe('useLinkCarry 统一件', () => {
-  it('send 后 sessionStorage 键为 es-console.link.{key} 且 JSON 序列化', async () => {
+  it('send 后 sessionStorage 键为 searchdeck.link.{key} 且 JSON 序列化', async () => {
     const { useLinkCarry } = await import('../composables/useLinkCarry');
     const { send } = useLinkCarry<{ idx: string }>('probe-a');
     send({ idx: 'order-1' });
-    expect(sessionStorage.getItem('es-console.link.probe-a')).toBe(JSON.stringify({ idx: 'order-1' }));
+    expect(sessionStorage.getItem('searchdeck.link.probe-a')).toBe(JSON.stringify({ idx: 'order-1' }));
   });
 
   it('receive 还原对象且取后即焚（键清除、二次 receive 恒 null）', async () => {
@@ -104,7 +104,7 @@ describe('useLinkCarry 统一件', () => {
     const { send, receive } = useLinkCarry<{ idx: string }>('probe-b');
     send({ idx: 'order-2' });
     expect(receive()).toEqual({ idx: 'order-2' });
-    expect(sessionStorage.getItem('es-console.link.probe-b')).toBeNull();
+    expect(sessionStorage.getItem('searchdeck.link.probe-b')).toBeNull();
     expect(receive()).toBeNull();
   });
 
@@ -116,10 +116,10 @@ describe('useLinkCarry 统一件', () => {
 
   it('异常吞掉：非法 JSON 返回 null 且键已被焚（不残留陈稿）', async () => {
     const { useLinkCarry } = await import('../composables/useLinkCarry');
-    sessionStorage.setItem('es-console.link.probe-d', '{oops');
+    sessionStorage.setItem('searchdeck.link.probe-d', '{oops');
     const { receive } = useLinkCarry<{ idx: string }>('probe-d');
     expect(receive()).toBeNull();
-    expect(sessionStorage.getItem('es-console.link.probe-d')).toBeNull();
+    expect(sessionStorage.getItem('searchdeck.link.probe-d')).toBeNull();
   });
 });
 

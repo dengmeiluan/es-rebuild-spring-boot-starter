@@ -138,7 +138,7 @@ describe('五百九十九批：历史趋势口径跟随集群维度', () => {
       appStore.conns = [{ id: 'c1', name: 'qa-es' }] as any;
       appStore.target = 'c1';
       /* 816 件4：byNode 默认 true=nodeMode 立真副标题走「节点叠加」——本用例测集群视图实名语义。
-         byNode=视图内 usePref('live.byNode', true)（键 es-console.pref.live.byNode，setup 初读）——
+         byNode=视图内 usePref('live.byNode', true)（键 searchdeck.pref.live.byNode，setup 初读）——
          裸 ref/store 通道都到不了，直接写 pref 键（挂载后 watch 不回写未动过的键=值稳） */
       const byNodeCb = host.querySelector('.ld-hist-node input') as HTMLInputElement | null;
       if (byNodeCb && byNodeCb.checked) {

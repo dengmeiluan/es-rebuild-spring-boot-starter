@@ -3,7 +3,7 @@
  * 病灶家族：组件 setup 顶层 `ref(JSON.parse(localStorage.getItem(k) || '…'))` 裸形态——
  * localStorage 由用户环境共有（手改/旧版残留/跨版本键形变皆可写入任意文本），
  * parse 抛错即挂载崩溃。851 实勘三处：CmdPalette es_cmd_recent / SideNav
- * es-console.nav.collapsed（全站导航件，崩=白屏级）/ RestView es_rest_hist。
+ * searchdeck.nav.collapsed（全站导航件，崩=白屏级）/ RestView es_rest_hist。
  * 修法三处统一走 utils/safeJson readStoredJson 单源（try+形态校验+回落）。
  *
  * ── 断言口径 ─────────────────────────────────────────────────

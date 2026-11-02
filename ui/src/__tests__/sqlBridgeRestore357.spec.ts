@@ -70,7 +70,7 @@ describe('SqlBridge 输出持久化行为验证（357 批）', () => {
   it('draft2 预置 dsl-out → 挂载后 DSL 栏真实恢复旧转换结果', async () => {
     /* key 与组件同式：route:target:index:mode:field；空 SQL 时指纹='0:'（mode 槽） */
     sessionStorage.setItem(
-      'es-console.draft2:sqlbridge:host:-:0::dsl-out',
+      'searchdeck.draft2:sqlbridge:host:-:0::dsl-out',
       '{"query":{"match_all":{}}}',
     );
     const host = await mountView();

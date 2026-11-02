@@ -152,9 +152,9 @@ public class ConsoleAuthController {
             err.put("message", "本部署已启用宿主统一登录，控制台本地账号登录已关闭；请从宿主系统进入控制台");
             return err;
         }
-        /* 出厂默认口令（admin/es-console）是公开已知凭据：空用户库时只允许本机登录。
+        /* 出厂默认口令（admin/searchdeck）是公开已知凭据：空用户库时只允许本机登录。
            否则任何能访问 /auth/login 的人都能直接拿到 ADMIN，再「首登改密」把真管理员锁在门外。
-           远程部署请显式配置 es.rebuild.console.auth.fallback-password（强口令），
+           远程部署请显式配置 searchdeck.elasticsearch.console.auth.fallback-password（强口令），
            或先在本机建好首个账号——有权限的运维能力不受影响。 */
         if (authService.usesFactoryDefaultCredential() && !isLoopbackRequest(request)
                 && !hasAnyUserQuietly()) {
@@ -169,7 +169,7 @@ public class ConsoleAuthController {
             Map<String, Object> err = new LinkedHashMap<>();
             err.put("code", "DEFAULT_PASSWORD_LOCAL_ONLY");
             err.put("message", "兜底账号仍使用出厂默认口令，仅允许服务器本机（loopback）登录。"
-                    + "请在本机登录后立即改密，或配置 es.rebuild.console.auth.fallback-password 为强口令"
+                    + "请在本机登录后立即改密，或配置 searchdeck.elasticsearch.console.auth.fallback-password 为强口令"
                     + "（也可在首个账号建好后关闭 builtin-login-enabled）");
             return err;
         }
@@ -231,7 +231,7 @@ public class ConsoleAuthController {
            「已在本控制台退出」的令牌，避免登出只清 localStorage、被复制令牌继续可用。
            必须用委托自己的令牌头（X-Es-Host-Token 等）——拿内置 token 去调 revoke
            只会登记一个不相关的指纹，托管登录的退出实际从未生效。
-           自定义委托（如 quotehub）只实现 tokenOf、不实现 revoke：此前登出回 200 但令牌
+           自定义委托（宿主内嵌委托）只实现 tokenOf、不实现 revoke：此前登出回 200 但令牌
            在 TTL 内继续可用（产线实测）。委托报出令牌而自己没登记时，由内核按保守 TTL
            兜底登记——「退出后同一令牌必须失效」不能依赖每个宿主实现自觉。 */
         boolean delegatedRevoked = false;
@@ -243,7 +243,7 @@ public class ConsoleAuthController {
                 try {
                     revokedByDelegate = d.revoke(delegatedToken);
                 } catch (Exception revokeFailed) {
-                    LOG.warn("[es-console-auth] 委托 revoke 异常，改由内核拒绝表兜底: {}",
+                    LOG.warn("[searchdeck-auth] 委托 revoke 异常，改由内核拒绝表兜底: {}",
                             revokeFailed.getMessage(), revokeFailed);
                     revokedByDelegate = false;
                 }
@@ -257,7 +257,7 @@ public class ConsoleAuthController {
                 if (revokedByDelegate) delegatedRevoked = true;
             } catch (Exception e) {
                 /* 委托实现异常不得让登出失败（拒绝/放行决策已由清本地 + 内置吊销完成） */
-                LOG.warn("[es-console-auth] 委托令牌登出吊销失败（忽略，登出仍成功）: {}", e.getMessage(), e);
+                LOG.warn("[searchdeck-auth] 委托令牌登出吊销失败（忽略，登出仍成功）: {}", e.getMessage(), e);
             }
         }
         Object p = request.getAttribute(ConsoleAuthInterceptor.ATTR_PRINCIPAL);

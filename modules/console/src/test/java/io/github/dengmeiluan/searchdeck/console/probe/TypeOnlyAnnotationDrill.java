@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
 
 /**
  *   / Q2 演练：<b>{@code @Field(type = FieldType.Date)} 但<u>不写</u> {@code format}</b>
- * 的字段，对 {@code es.rebuild.compat.date-converters} 开关是否免疫。
+ * 的字段，对 {@code searchdeck.elasticsearch.compat.date-converters} 开关是否免疫。
  *
  * <h3>为什么必须实测这一格</h3>
  *

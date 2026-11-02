@@ -19,12 +19,12 @@ const guide = read('data/integrationGuide.ts');
 
 describe('1008 账号切换：查询工作台现场与在飞回填', () => {
   it('新增查询现场键纳入清理（SQL 参数/DSL 请求参数/沙盒 body/大屏）', () => {
-    /* 1100 起 `.params` 单键扩为整族 `es-console.pref.sql.`：时区/超时/columnar 同样
+    /* 1100 起 `.params` 单键扩为整族 `searchdeck.pref.sql.`：时区/超时/columnar 同样
        决定执行口径，只清参数原文仍会把上一账号的时区套到新账号的日期列与 cursor 续页。 */
-    expect(auth).toContain("'es-console.pref.sql.'");
-    expect(auth).toContain("'es-console.pref.dq.req.'");
+    expect(auth).toContain("'searchdeck.pref.sql.'");
+    expect(auth).toContain("'searchdeck.pref.dq.req.'");
     expect(auth).toContain("'ss_dsl_body'");
-    expect(auth).toContain("'es-console.live.'");
+    expect(auth).toContain("'searchdeck.live.'");
   });
 
   it('内置登出也清工作现场，并清连接 env 映射', () => {
@@ -57,7 +57,7 @@ describe('1008 账号切换：查询工作台现场与在飞回填', () => {
   });
 
   it('命令面板最近使用在身份事件后归零', () => {
-    expect(palette).toContain("window.addEventListener('es-console:identity-changed'");
+    expect(palette).toContain("window.addEventListener('searchdeck:identity-changed'");
     expect(palette).toContain('recent.value = [];');
   });
 

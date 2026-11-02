@@ -16,7 +16,7 @@
 
 package io.github.dengmeiluan.searchdeck.console.auth;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.multicluster.ConnStore;
 import io.github.dengmeiluan.searchdeck.console.xmigrate.RemoteClusterConn;
 import org.springframework.stereotype.Component;
@@ -44,9 +44,9 @@ public class EnvPagesResolver {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(EnvPagesResolver.class);
 
     private final ConnStore connStore;
-    private final EsRebuildProperties properties;
+    private final SearchDeckElasticsearchProperties properties;
 
-    public EnvPagesResolver(ConnStore connStore, EsRebuildProperties properties) {
+    public EnvPagesResolver(ConnStore connStore, SearchDeckElasticsearchProperties properties) {
         this.connStore = connStore;
         this.properties = properties;
         /* 空模板不是「未配置」而是显式全拒：启动时点名，避免上线后被静默锁死。 */
@@ -54,7 +54,7 @@ public class EnvPagesResolver {
         if (templates != null) {
             for (Map.Entry<String, java.util.Set<String>> e : templates.entrySet()) {
                 if (e.getValue() == null || e.getValue().isEmpty()) {
-                    log.warn("[es-console] env-pages[{}] 为空：该环境所有页面读写均被拒绝（显式全拒语义）",
+                    log.warn("[searchdeck] env-pages[{}] 为空：该环境所有页面读写均被拒绝（显式全拒语义）",
                             e.getKey());
                 }
             }

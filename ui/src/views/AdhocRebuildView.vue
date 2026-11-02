@@ -1274,7 +1274,7 @@ function doPasteImport() {
 
 /* Mapping 页「发送到托管重建」直通消费——sessionStorage 契约（REBUILD_HANDOFF_KEY），
  零剪贴板参与必然成功；直达审编步并自动解析拆填。mounted 与 KeepAlive activated 双口消费。 */
-const REBUILD_HANDOFF_KEY = 'es-console.rebuild-paste';
+const REBUILD_HANDOFF_KEY = 'searchdeck.rebuild-paste';
 function consumeRebuildHandoff() {
   let raw: string | null = null;
   try { raw = sessionStorage.getItem(REBUILD_HANDOFF_KEY); } catch { return; }

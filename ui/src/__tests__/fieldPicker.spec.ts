@@ -396,13 +396,13 @@ describe('FieldPicker 行为保护网', () => {
 
   /* ==== 五百一十九批：记忆闭环——per-index recent 回写 + 页脚 N/M 匹配计数 ==== */
 
-  it('选中字段写 per-index 最近使用（es_console_qb_field_recent::<idx>，FieldSelect 同通道）', async () => {
+  it('选中字段写 per-index 最近使用（searchdeck_qb_field_recent::<idx>，FieldSelect 同通道）', async () => {
     const { host } = await mountPicker({ index: 'a-idx' });
     await focus(host);
     await type(host, 'status');
     (document.body.querySelector('.fxp-item') as HTMLElement).click();
     await settle();
-    const recent = JSON.parse(localStorage.getItem('es_console_qb_field_recent::a-idx') || '[]');
+    const recent = JSON.parse(localStorage.getItem('searchdeck_qb_field_recent::a-idx') || '[]');
     expect(recent, '选择必须回写本索引最近使用').toContain('status');
   });
 

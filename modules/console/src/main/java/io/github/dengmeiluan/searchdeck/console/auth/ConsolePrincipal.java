@@ -34,7 +34,7 @@ public class ConsolePrincipal {
 
     private final String username;
     private final ConsoleRole role;
-    /** 是否为兜底默认账号（ES 用户索引为空时的 admin/es-console）。 */
+    /** 是否为兜底默认账号（ES 用户索引为空时的 admin/searchdeck）。 */
     private final boolean fallback;
     /** 是否来自宿主鉴权委托（ {@link ConsoleAuthDelegate}）：凭据归宿主管，控制台不提供改密/退出。 */
     private final boolean delegated;

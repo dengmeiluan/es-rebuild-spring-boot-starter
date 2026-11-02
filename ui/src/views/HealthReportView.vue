@@ -340,7 +340,7 @@ const ndRowClass = (row: any[]): string | undefined => {
 };
 
 /* 报告可重入——最近一次体检落 sessionStorage，刷新后自动复原（生成时间行可辨新旧） */
-const SS_KEY = 'es-console.health-report.last';
+const SS_KEY = 'searchdeck.health-report.last';
 /* 多份存档 + 任选两次对比（202 单份 PREV_KEY「与上次对比」升级）——
  localStorage 环形存档 8 份，对比卡任选基准/对照两份 diff */
 const archive = ref<ArchivedReport[]>([]);

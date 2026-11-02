@@ -16,7 +16,7 @@
 
 package io.github.dengmeiluan.searchdeck.console.core;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.lock.RebuildLock;
 import io.github.dengmeiluan.searchdeck.console.validate.DateFormSampler;
 import org.slf4j.Logger;
@@ -47,11 +47,11 @@ public class EsIndexRebuildService {
     private final EsIndexAdmin esIndexAdmin;
     private final RebuildLockGuard lockGuard;
     private final IndexNameResolver nameResolver;
-    private final EsRebuildProperties properties;
+    private final SearchDeckElasticsearchProperties properties;
 
     public EsIndexRebuildService(IndexMetaRegistry registry, EsIndexAdmin esIndexAdmin,
                                  RebuildLockGuard lockGuard, IndexNameResolver nameResolver,
-                                 EsRebuildProperties properties) {
+                                 SearchDeckElasticsearchProperties properties) {
         this.registry = registry;
         this.esIndexAdmin = esIndexAdmin;
         this.lockGuard = lockGuard;

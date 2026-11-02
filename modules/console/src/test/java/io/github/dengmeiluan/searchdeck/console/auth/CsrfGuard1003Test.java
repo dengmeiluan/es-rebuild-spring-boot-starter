@@ -17,7 +17,7 @@
 package io.github.dengmeiluan.searchdeck.console.auth;
 import io.github.dengmeiluan.searchdeck.platform.pages.ConsolePageCatalog;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.control.ControlClusterResolver;
 import io.github.dengmeiluan.searchdeck.console.multicluster.ConnStore;
 import io.github.dengmeiluan.searchdeck.console.xmigrate.RemoteClusterConn;
@@ -144,7 +144,7 @@ public class CsrfGuard1003Test {
             @Override public void delete(String id) { }
             @Override public void updateVersion(String id, String version) { }
         };
-        EnvPagesResolver envPagesResolver = new EnvPagesResolver(stubStore, new EsRebuildProperties());
+        EnvPagesResolver envPagesResolver = new EnvPagesResolver(stubStore, new SearchDeckElasticsearchProperties());
         return new ConsoleAuthInterceptor(authorizer, audit, resolver, ConsolePageCatalog.load(), true,
                 envPagesResolver, stubStore, trustedProxies);
     }

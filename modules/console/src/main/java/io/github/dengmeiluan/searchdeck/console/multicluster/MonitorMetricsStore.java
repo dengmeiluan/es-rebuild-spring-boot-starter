@@ -31,7 +31,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 多集群指标读侧（指标时序批）：查询 {@code es_console_monitor-yyyy.MM.dd} 日期索引族里
+ * 多集群指标读侧（指标时序批）：查询 {@code searchdeck_monitor-yyyy.MM.dd} 日期索引族里
  * kind=metrics 的指标 doc（写入方={@link ClusterMetricsCollector} 服务端定时任务，本类纯只读）。
  *
  * <p>查询形态与 {@link MonitorHistoryStore} 同构，两处刻意不同：①恒定过滤
@@ -120,7 +120,7 @@ public class MonitorMetricsStore {
     private void warnUsageThrottled(String where, Exception e) {
         usageWarnCount.incrementAndGet();
         if (usageWarnCount.get() == 1) {
-            LOG.warn("[es-console-monitor] {}（首次，后续失败仅累计不再打）：{}", where, e.getMessage(), e);
+            LOG.warn("[searchdeck-monitor] {}（首次，后续失败仅累计不再打）：{}", where, e.getMessage(), e);
         }
     }
 

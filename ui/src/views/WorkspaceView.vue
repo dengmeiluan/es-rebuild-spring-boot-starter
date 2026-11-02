@@ -171,7 +171,7 @@ const ALL_WIDGETS = [
   { k: 'wanquan', name: '会话状态', icon: Layers, defSpan: 1 },
 ] as const;
 
-const LS_KEY = 'es-console.workspace.v1';
+const LS_KEY = 'searchdeck.workspace.v1';
 type Layout = { k: string; on: boolean; span: number };
 const layout = ref<Layout[]>([]);
 const showConfig = ref(false);

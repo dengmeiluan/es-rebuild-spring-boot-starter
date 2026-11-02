@@ -97,10 +97,10 @@ describe('1124 身份窗口的自动执行门', () => {
     const start = auth.indexOf('const USER_STATE_PREFIXES');
     const end = auth.indexOf('];', start);
     const body = auth.slice(start, end);
-    expect(body).toContain("'es-console.pref.sql.'");
-    /* 整族必须以带点前缀出现——`es-console.pref.sql` 会连 sqlbridge 等无关键一起清 */
-    expect(body).toContain("'es-console.pref.sql.'");
-    expect(body).not.toContain("'es-console.pref.sql'\n");
+    expect(body).toContain("'searchdeck.pref.sql.'");
+    /* 整族必须以带点前缀出现——`searchdeck.pref.sql` 会连 sqlbridge 等无关键一起清 */
+    expect(body).toContain("'searchdeck.pref.sql.'");
+    expect(body).not.toContain("'searchdeck.pref.sql'\n");
   });
 
   it('隐藏写控件的地方都有「缺什么」说明（不静默减半工具栏）', () => {

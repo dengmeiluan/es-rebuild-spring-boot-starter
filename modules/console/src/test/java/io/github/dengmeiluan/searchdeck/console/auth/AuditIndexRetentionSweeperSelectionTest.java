@@ -39,7 +39,7 @@ import static org.junit.Assert.assertTrue;
  */
 public class AuditIndexRetentionSweeperSelectionTest {
 
-    private static final String PREFIX = "es_console_ops_audit";
+    private static final String PREFIX = "searchdeck_ops_audit";
 
     private static Map.Entry<String, Long> idx(String name, long bytes) {
         return new AbstractMap.SimpleEntry<>(name, bytes);
@@ -138,7 +138,7 @@ public class AuditIndexRetentionSweeperSelectionTest {
     /** 跨族管辖：审计+监控两族同轮清理，同日各为一个删除单元、按日期同轮淘汰。 */
     @Test
     public void selectForDeletion_跨族同日双单元按日期同轮淘汰() {
-        String monitor = "es_console_monitor";
+        String monitor = "searchdeck_monitor";
         List<Map.Entry<String, Long>> indices = Arrays.asList(
                 idx(day(TODAY.minusDays(300)), 100L),
                 idx(monitor + "-" + AuditIndexRetentionSweeper.DAY_FMT.format(TODAY.minusDays(300)), 100L),

@@ -205,8 +205,8 @@ describe('w29 向导状态机矩阵', () => {
   });
 
   it('P14 w45 撕裂自愈:localStorage 只剩 name 无 id → 视为脏态清名,不再「显示生产实发空头」', async () => {
-    localStorage.setItem('es-console.target.name', '生产集群');
-    localStorage.removeItem('es-console.target');
+    localStorage.setItem('searchdeck.target.name', '生产集群');
+    localStorage.removeItem('searchdeck.target');
     const { createPinia, setActivePinia } = await import('pinia');
     const { useAppStore } = await import('../stores/app');
     setActivePinia(createPinia());

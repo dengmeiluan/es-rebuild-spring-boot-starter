@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * 每个连接经 {@link EsClientRouter#clientFor} 拉目标集群的
  * {@code /_cluster/health} + {@code /_nodes/stats}（filter_path 收窄到所需字段），
  * 合成 <b>1 条 cluster 指标 doc + 每节点 1 条 node 指标 doc</b>，落
- * {@code es_console_monitor-yyyy.MM.dd} 日期索引——与探活快照
+ * {@code searchdeck_monitor-yyyy.MM.dd} 日期索引——与探活快照
  * （{@link MonitorSnapshotRecorder}）同族同环形（同一双闸清理器管辖）。
  *
  * <p><b>契约</b>：doc 字段名逐字固定（前端图表依赖）；cluster doc=
@@ -215,7 +215,7 @@ public class ClusterMetricsCollector {
             private final AtomicInteger n = new AtomicInteger();
             @Override
             public Thread newThread(Runnable r) {
-                Thread t = new Thread(r, "es-console-metrics-" + n.incrementAndGet());
+                Thread t = new Thread(r, "searchdeck-metrics-" + n.incrementAndGet());
                 t.setDaemon(true);
                 return t;
             }
@@ -228,7 +228,7 @@ public class ClusterMetricsCollector {
                 warnThrottled("指标采集轮失败", e);
             }
         }, INITIAL_DELAY_SECONDS, intervalSeconds, TimeUnit.SECONDS);
-        LOG.info("[es-console-metrics] started, prefix={}, intervalSeconds={}", indexPrefix, intervalSeconds);
+        LOG.info("[searchdeck-metrics] started, prefix={}, intervalSeconds={}", indexPrefix, intervalSeconds);
     }
 
     @PreDestroy
@@ -960,9 +960,9 @@ public class ClusterMetricsCollector {
             return true;
         }
         String n = name.toLowerCase(java.util.Locale.ROOT);
-        return n.startsWith(".") || n.startsWith("es_console_")
-                || n.startsWith("es_rebuild_adhoc_job") || n.endsWith("_es_rebuild_lock")
-                || n.endsWith("_es_xmigrate_job");
+        return n.startsWith(".") || n.startsWith("searchdeck_")
+                || n.startsWith("searchdeck_adhoc_job") || n.endsWith("_searchdeck_lock")
+                || n.endsWith("_searchdeck_migrate_job");
     }
 
     static List<Map<String, Object>> buildTopIndexes(Map<String, Object> indexStats,
@@ -1339,7 +1339,7 @@ public class ClusterMetricsCollector {
         try {
             ControlDailyIndex.ensure(controlClient.get(), dated, METRICS_MAPPING_JSON);
             ensuredDay = day;
-            LOG.info("[es-console-metrics] daily metrics index ready: {}", dated);
+            LOG.info("[searchdeck-metrics] daily metrics index ready: {}", dated);
         } catch (Exception e) {
             warnThrottled("建当日指标索引失败（指标照写，动态映射兜底）", e);
         }
@@ -1348,7 +1348,7 @@ public class ClusterMetricsCollector {
     private void warnThrottled(String where, Exception e) {
         long failures = failureCount.incrementAndGet();
         if (failures == 1) {
-            LOG.warn("[es-console-metrics] {}（首次，后续失败仅累计不再打）：{}", where, e.getMessage(), e);
+            LOG.warn("[searchdeck-metrics] {}（首次，后续失败仅累计不再打）：{}", where, e.getMessage(), e);
         }
     }
 }

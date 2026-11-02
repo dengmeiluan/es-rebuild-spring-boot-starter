@@ -101,7 +101,7 @@
   <g transform="translate(64 276)">
     <rect x="0" y="0" width="6" height="6" rx="3" fill="#34d399"/>
     <text x="14" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="10" letter-spacing="1.2" fill="#6f8b83">FIRST INTEGRATION</text>
-    <text x="126" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="10" letter-spacing="1.2" fill="#b7d7d1">QUOTEHUB</text>
+    <text x="126" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="10" letter-spacing="1.2" fill="#b7d7d1">PLUGGABLE</text>
     <text x="208" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="10" letter-spacing="1.2" fill="#3f5b55">·</text>
     <text x="222" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="10" letter-spacing="1.2" fill="#b7d7d1">ZERO-DOWNTIME REBUILD</text>
     <text x="384" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="10" letter-spacing="1.2" fill="#3f5b55">·</text>

@@ -139,7 +139,7 @@ public class AdhocRebuildService {
     }
 
     /**
-     * 既有 5 参构造：store 默认内存实现，委托给全参构造。装配处（EsRebuildAutoConfiguration）
+     * 既有 5 参构造：store 默认内存实现，委托给全参构造。装配处（SearchDeckConsoleAutoConfiguration）
      * 仍走本签名， 独立可编译； 再把装配改为注入 store bean（走下面的 6 参构造）。
      */
     public AdhocRebuildService(EsIndexAdmin esIndexAdmin, java.util.function.Supplier<RestHighLevelClient> client,

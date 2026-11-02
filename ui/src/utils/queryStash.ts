@@ -8,7 +8,7 @@ import { ref } from 'vue';
 import { writeStoredRaw, removeStoredRaw } from './safeJson';
 import { parseQueryNode, serQueryNode, type QueryNode } from './queryAst';
 
-const KEY = 'es-console.qb.subtree';
+const KEY = 'searchdeck.qb.subtree';
 
 /** 暂存现状（null=空）；组件读它决定粘贴钮显隐 */
 export const subtreeStash = ref<string | null>(null);

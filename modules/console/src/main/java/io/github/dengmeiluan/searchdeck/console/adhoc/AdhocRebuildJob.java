@@ -101,7 +101,7 @@ public class AdhocRebuildJob {
     /**
      * 本作业的分布式锁是否<b>真的在提供互斥</b>（取自 {@code RebuildLockStore.isEnabled()}）。
      *
-     * <p>{@code es.rebuild.lock.enabled=false}（受支持的生产开关）时，store 的
+     * <p>{@code searchdeck.elasticsearch.lock.enabled=false}（受支持的生产开关）时，store 的
      * {@code tryAcquire}/{@code renew} 恒 true 而 {@code get} 恒 null。若把该 null 当成
      * "锁没了"，关掉分布式锁就会让每个作业在第一个续约点被误判失锁、拒绝切换 ——
      * 即<b>关掉锁 = 重建功能整体失效</b>。</p>

@@ -1,7 +1,7 @@
 /**
  * 四百六十二批：命令面板「重置全部显示偏好」——调乱行高/列宽/布局后的救急入口。
- * 只清显示类键（es_tbl_* / es_density / es_pager_size / es-console.layout.v2 /
- * es_console_qb_split）；草稿（draft2/dsl.body）/历史/收藏/主题不动；
+ * 只清显示类键（es_tbl_* / es_density / es_pager_size / searchdeck.layout.v2 /
+ * searchdeck_qb_split）；草稿（draft2/dsl.body）/历史/收藏/主题不动；
  * 提示「刷新页面后生效」（诚实告知，不伪装即时生效）。
  */
 import { describe, it, expect } from 'vitest';
@@ -15,7 +15,7 @@ describe('重置全部显示偏好命令（462 批）', () => {
     expect(s).toContain("id: 'act-reset-prefs', title: '重置全部显示偏好");
     expect(s).toContain("k.startsWith('es_tbl_')");
     expect(s).toContain("k === 'es_density'");
-    expect(s).toContain("k.startsWith('es-console.layout.v2')");
+    expect(s).toContain("k.startsWith('searchdeck.layout.v2')");
   });
 
   it('用户数据豁免：不清草稿/历史/收藏/主题', () => {

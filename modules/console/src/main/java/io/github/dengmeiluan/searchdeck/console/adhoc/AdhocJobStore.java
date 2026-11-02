@@ -22,7 +22,7 @@ import java.util.Optional;
 /**
  * Adhoc（无 provider）托管重建作业存储 SPI。照
  * {@link io.github.dengmeiluan.searchdeck.console.auth.ConsoleOpsAuditStore} 范式：
- * 存储可插拔（Es/Jdbc/内存），由 {@code es.rebuild.console.store} 开关 +
+ * 存储可插拔（Es/Jdbc/内存），由 {@code searchdeck.elasticsearch.console.store} 开关 +
  * {@code @ConditionalOnMissingBean} 装配；宿主可注册自定义 Bean 完全接管。
  *
  * <p>契约红线：持久化永不反噬重建——{@link #save} 失败只记日志不上抛，

@@ -139,7 +139,7 @@ public class ConsoleSetupController {
     private ResponseEntity<Map<String, Object>> localSetupOnly() {
         Map<String, Object> b = new LinkedHashMap<>();
         b.put("code", "SETUP_LOCAL_ONLY");
-        b.put("message", "未配置 setup-token 时只允许本机完成初始化；远程初始化请配置 es.rebuild.console.setup-token");
+        b.put("message", "未配置 setup-token 时只允许本机完成初始化；远程初始化请配置 searchdeck.elasticsearch.console.setup-token");
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(b);
     }
 
@@ -155,7 +155,7 @@ public class ConsoleSetupController {
     private ResponseEntity<Map<String, Object>> setupTokenDenied() {
         Map<String, Object> b = new LinkedHashMap<>();
         b.put("code", "SETUP_TOKEN_REQUIRED");
-        b.put("message", "初始化需要 X-Setup-Token（见 es.rebuild.console.setup-token 配置）");
+        b.put("message", "初始化需要 X-Setup-Token（见 searchdeck.elasticsearch.console.setup-token 配置）");
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(b);
     }
 
@@ -256,7 +256,7 @@ public class ConsoleSetupController {
         if (!setupTokenValid(request)) {
             Map<String, Object> denied = new LinkedHashMap<>();
             denied.put("code", "SETUP_TOKEN_REQUIRED");
-            denied.put("message", "重绑需要 X-Setup-Token（见 es.rebuild.console.setup-token 配置）");
+            denied.put("message", "重绑需要 X-Setup-Token（见 searchdeck.elasticsearch.console.setup-token 配置）");
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(denied);
         }
         RemoteClusterConn conn = parseConn(body);

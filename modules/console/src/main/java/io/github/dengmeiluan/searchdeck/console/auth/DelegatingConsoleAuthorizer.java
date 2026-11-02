@@ -51,7 +51,7 @@ public class DelegatingConsoleAuthorizer implements EsConsoleAuthorizer {
         if (delegate != null) {
             try {
                 /* 登出吊销必须对**任何**委托生效，不能只靠各实现自觉：
-                   自定义委托（如 quotehub）默认 revoke=false、tokenOf=null 时，
+                   自定义委托（宿主内嵌委托）默认 revoke=false、tokenOf=null 时，
                    控制台 /auth/logout 会回 200 但令牌仍可用。只要委托报出原始令牌，
                    本实例的拒绝表就先裁决一次（PropertiesAuthDelegate 内部也查，双保险）。 */
                 String delegatedToken = delegate.tokenOf(request);
@@ -90,7 +90,7 @@ public class DelegatingConsoleAuthorizer implements EsConsoleAuthorizer {
     /**
      * 本请求是否携带宿主凭证——两种信号取并：
      * ① 委托自觉实现的 {@code hasCredential}；
-     * ② 委托报出的令牌原文 {@code tokenOf}（quotehub 形态常只实现这条）。
+     * ② 委托报出的令牌原文 {@code tokenOf}（宿主内嵌形态常只实现这条）。
      *
      * <p>只看 ① 会漏掉「实现了 tokenOf、没实现 hasCredential」的自定义委托：默认 false 让
      * 异常/拒绝分支继续回落到内置 token，绕过 1007 的防升级约束。任一信号异常都按

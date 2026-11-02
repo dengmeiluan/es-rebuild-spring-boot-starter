@@ -32,15 +32,15 @@ describe('draftStorageKey 维度隔离', () => {
     const byMode = draftStorageKey(scope({ mode: () => 'edit' }), 'body');
     expect(new Set([base, byTarget, byIndex, byMode]).size).toBe(4);
     /* 键形态契约：前缀:route:target:index:mode:field，缺省归一 host/-/- */
-    expect(base).toBe('es-console.draft2:rest:host:-:-:body');
-    expect(byTarget).toBe('es-console.draft2:rest:conn-a:-:-:body');
-    expect(byIndex).toBe('es-console.draft2:rest:host:logs-*:-:body');
-    expect(byMode).toBe('es-console.draft2:rest:host:-:edit:body');
+    expect(base).toBe('searchdeck.draft2:rest:host:-:-:body');
+    expect(byTarget).toBe('searchdeck.draft2:rest:conn-a:-:-:body');
+    expect(byIndex).toBe('searchdeck.draft2:rest:host:logs-*:-:body');
+    expect(byMode).toBe('searchdeck.draft2:rest:host:-:edit:body');
   });
 
   it('getter 空串/空白按缺省归一（host / -）', () => {
     expect(draftStorageKey(scope({ target: () => '  ', index: () => '' }), 'f'))
-      .toBe('es-console.draft2:rest:host:-:-:f');
+      .toBe('searchdeck.draft2:rest:host:-:-:f');
   });
 });
 

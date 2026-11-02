@@ -19,14 +19,14 @@ const SUBTREE = { id: 'b1', type: 'bool' as const, children: [
 
 describe('1036 queryStash 单源', () => {
   beforeEach(() => {
-    sessionStorage.removeItem('es-console.qb.subtree');
+    sessionStorage.removeItem('searchdeck.qb.subtree');
     subtreeStash.value = null;
   });
   it('复制入暂存：sessionStorage 键与响应式 ref 同步、文本为序列化子树', () => {
     expect(copySubtreeToStash(SUBTREE as any)).toBe(true);
     expect(subtreeStash.value).toBeTruthy();
-    expect(sessionStorage.getItem('es-console.qb.subtree')).toBe(subtreeStash.value);
-    expect(sessionStorage.getItem('es-console.qb.subtree')).toContain('"term"');
+    expect(sessionStorage.getItem('searchdeck.qb.subtree')).toBe(subtreeStash.value);
+    expect(sessionStorage.getItem('searchdeck.qb.subtree')).toContain('"term"');
   });
   it('读暂存=全新节点（id 重生成、序列化等值——零纠缠契约）', () => {
     copySubtreeToStash(SUBTREE as any);

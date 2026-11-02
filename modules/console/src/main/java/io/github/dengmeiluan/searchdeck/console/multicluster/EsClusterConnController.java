@@ -169,7 +169,7 @@ public class EsClusterConnController {
         Map<String, Object> r = new LinkedHashMap<>();
         if (prober == null) {
             r.put("status", "UNKNOWN");
-            r.put("error", "探活已禁用（es.rebuild.console.conn-probe-enabled=false）");
+            r.put("error", "探活已禁用（searchdeck.elasticsearch.console.conn-probe-enabled=false）");
             /* 补 code+endpoint（additive，:191 PROBE_FAILED 先例同口径）。
                裁决备案：error 字段保留 string 只 additive——前端 ConnHealth.error 契约是
                string|null，ClusterSwitcher.probeConn 直接渲染「探活失败：${h.error}」，
@@ -341,7 +341,7 @@ public class EsClusterConnController {
     public ClusterConnSyncReport syncRun() {
         if (syncEngine == null) {
             throw new IllegalStateException(
-                    "未启用连接中心同步(需注册 ClusterConnContributor 并开启 es.rebuild.console.conn-sync.enabled)");
+                    "未启用连接中心同步(需注册 ClusterConnContributor 并开启 searchdeck.elasticsearch.console.conn-sync.enabled)");
         }
         return syncEngine.runOnce("manual");
     }

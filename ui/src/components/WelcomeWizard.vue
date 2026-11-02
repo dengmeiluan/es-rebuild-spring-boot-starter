@@ -141,7 +141,7 @@ const store = useAppStore();
 /* 登录遮罩弹出时收起引导：n-modal 的焦点陷阱会和登录框抢焦点，导致账号密码输不了字 */
 const auth = useAuthStore();
 const router = useRouter();
-const LS_KEY = 'es-console.wizard.done';
+const LS_KEY = 'searchdeck.wizard.done';
 
 const show = ref(false);
 const step = ref(0);
@@ -188,7 +188,7 @@ onMounted(() => {
   /* 回访用户不再自动弹：done 标志可能因换域名/存储分区/清站点数据而丢失，
      但「已有身份记录」说明引导早就看过——继续自动弹只会每次进页挡一层。
      done === '0' 是用户主动取消「本设备不再显示」，须尊重其重看意图。 */
-  if (done !== '0' && localStorage.getItem('es-console.last-user')) return;
+  if (done !== '0' && localStorage.getItem('searchdeck.last-user')) return;
   // .2：等真加载到索引再弹——connections-only 未选连接/集群不通时，
   // 第一步「选默认索引」是空态死胡同，弹了反而挡住选集群的引导横幅
   let fired = false;

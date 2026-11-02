@@ -16,7 +16,7 @@
 
 package io.github.dengmeiluan.searchdeck.console.core;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.lock.RebuildLock;
 import io.github.dengmeiluan.searchdeck.console.lock.RebuildLockStore;
 import org.slf4j.Logger;
@@ -36,9 +36,9 @@ public class RebuildLockGuard {
     private static final Logger logger = LoggerFactory.getLogger(RebuildLockGuard.class);
 
     private final RebuildLockStore lockStore;
-    private final EsRebuildProperties properties;
+    private final SearchDeckElasticsearchProperties properties;
 
-    public RebuildLockGuard(RebuildLockStore lockStore, EsRebuildProperties properties) {
+    public RebuildLockGuard(RebuildLockStore lockStore, SearchDeckElasticsearchProperties properties) {
         this.lockStore = lockStore;
         this.properties = properties;
     }

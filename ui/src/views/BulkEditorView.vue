@@ -290,11 +290,11 @@ const body = useScopedDraft('body', {
   index: () => index.value || store.pickedIdx,
 }).text;
 /* 收藏回放 carry——favReplay 写一次性键，挂载即消费转入自身草稿
- （旧 es-console.draft.bulk-editor.body 是草稿治理前命名空间，无人消费，「已恢复」提示是假的） */
-const bulkCarry = sessionStorage.getItem('es-console.bulk.carry');
+ （旧 searchdeck.draft.bulk-editor.body 是草稿治理前命名空间，无人消费，「已恢复」提示是假的） */
+const bulkCarry = sessionStorage.getItem('searchdeck.bulk.carry');
 if (bulkCarry) {
   body.value = bulkCarry;
-  removeStoredRaw(sessionStorage, 'es-console.bulk.carry');
+  removeStoredRaw(sessionStorage, 'searchdeck.bulk.carry');
 }
 const submitting = ref(false);
 const result = ref<any>(null);

@@ -71,7 +71,7 @@ async function mountView() {
 describe('1169 模板行右键', () => {
   beforeEach(() => {
     templatesFn.mockResolvedValue(TPL);
-    sessionStorage.removeItem('es-console.devtools.open');
+    sessionStorage.removeItem('searchdeck.devtools.open');
   });
   afterEach(() => {
     for (const a of apps.splice(0)) { try { a.unmount(); } catch { /* noop */ } }
@@ -123,6 +123,6 @@ describe('1169 模板行右键', () => {
     expect(dev, 'DevTools 项存在').toBeTruthy();
     dev.click();
     await settle();
-    expect(sessionStorage.getItem('es-console.devtools.open'), '无读权不得写 open 键').toBeNull();
+    expect(sessionStorage.getItem('searchdeck.devtools.open'), '无读权不得写 open 键').toBeNull();
   }, 20000);
 });

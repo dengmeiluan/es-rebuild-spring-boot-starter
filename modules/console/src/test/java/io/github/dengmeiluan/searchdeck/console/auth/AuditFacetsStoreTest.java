@@ -34,7 +34,7 @@ import static org.junit.Assert.assertTrue;
  */
 public class AuditFacetsStoreTest {
 
-    private static final String PREFIX = "es_console_ops_audit";
+    private static final String PREFIX = "searchdeck_ops_audit";
 
     @Test
     public void buildFacetsBody_四terms含byUserByUri_mustNot排除混居() {

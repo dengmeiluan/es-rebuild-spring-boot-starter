@@ -54,14 +54,14 @@ public class EsIndexAdminRawSource984Test {
 
     @Test
     public void source参数不能绕过SQL控制面守卫() {
-        String body = "{\"query\":\"SELECT * FROM es_console_user\"}";
+        String body = "{\"query\":\"SELECT * FROM searchdeck_user\"}";
         assertRejected(() -> admin.guardRawGuarded("GET", "/_sql?source=" + enc(body), null),
                 "source SQL 读取控制面");
     }
 
     @Test
     public void source参数不能绕过mget控制面守卫() {
-        String body = "{\"docs\":[{\"_index\":\"es_console_user\",\"_id\":\"admin\"}]}";
+        String body = "{\"docs\":[{\"_index\":\"searchdeck_user\",\"_id\":\"admin\"}]}";
         assertRejected(() -> admin.guardRawGuarded("GET", "/_mget?source=" + enc(body), null),
                 "source mget 读取控制面");
     }
@@ -77,7 +77,7 @@ public class EsIndexAdminRawSource984Test {
     @Test
     public void 重复source参数拒绝以免首末值口径分裂() {
         String clean = "{\"query\":{\"match_all\":{}}}";
-        String evil = "{\"query\":\"SELECT * FROM es_console_user\"}";
+        String evil = "{\"query\":\"SELECT * FROM searchdeck_user\"}";
         assertRejected(() -> admin.guardRawGuarded("GET",
                         "/_sql?source=" + enc(evil) + "&source=" + enc(clean), null),
                 "重复 source 首恶末净");
@@ -93,7 +93,7 @@ public class EsIndexAdminRawSource984Test {
 
     @Test
     public void msearch复数indices头不能绕过() {
-        String body = "{\"indices\":\"es_console_user\"}\n{\"query\":{\"match_all\":{}}}\n";
+        String body = "{\"indices\":\"searchdeck_user\"}\n{\"query\":{\"match_all\":{}}}\n";
         assertRejected(() -> admin.guardRawGuarded("POST", "/_msearch", body),
                 "_msearch indices 头");
     }
@@ -108,7 +108,7 @@ public class EsIndexAdminRawSource984Test {
     @Test
     public void msearch内部空行导致头体错位一律拒绝() {
         String body = "{\"index\":\"logs\"}\n\n"
-                + "{\"indices\":\"es_console_user\"}\n{\"query\":{\"match_all\":{}}}\n";
+                + "{\"indices\":\"searchdeck_user\"}\n{\"query\":{\"match_all\":{}}}\n";
         assertRejected(() -> admin.guardRawGuarded("POST", "/logs/_msearch", body),
                 "_msearch 空行错位");
     }
@@ -122,14 +122,14 @@ public class EsIndexAdminRawSource984Test {
 
     @Test
     public void msearch路径前缀形态同样检查复数头() {
-        String body = "{\"indices\":\"es_console_ops_audit\"}\n{\"query\":{\"match_all\":{}}}\n";
+        String body = "{\"indices\":\"searchdeck_ops_audit\"}\n{\"query\":{\"match_all\":{}}}\n";
         assertRejected(() -> admin.guardRawGuarded("GET", "/logs/_msearch?source=" + enc(body), null),
                 "路径前缀 _msearch source");
     }
 
     @Test
     public void 搜索模板inline字段同样过二级索引守卫() {
-        String inline = "{\"query\":{\"terms\":{\"f\":{\"index\":\"es_console_user\","
+        String inline = "{\"query\":{\"terms\":{\"f\":{\"index\":\"searchdeck_user\","
                 + "\"id\":\"1\",\"path\":\"p\"}}}}";
         assertRejected(() -> admin.guardRawGuarded("POST", "/logs/_search/template",
                         "{\"inline\":" + quote(inline) + "}"),
@@ -138,7 +138,7 @@ public class EsIndexAdminRawSource984Test {
 
     @Test
     public void 模板参数不得出现在lookup结构键位() {
-        String inline = "{\"query\":{\"terms\":{\"f\":{\"{{k}}\":\"es_console_user\","
+        String inline = "{\"query\":{\"terms\":{\"f\":{\"{{k}}\":\"searchdeck_user\","
                 + "\"id\":\"1\",\"path\":\"p\"}}}}";
         assertRejected(() -> admin.guardRawGuarded("POST", "/logs/_search/template",
                         "{\"inline\":" + quote(inline) + "}"),
@@ -170,13 +170,13 @@ public class EsIndexAdminRawSource984Test {
     @Test
     public void 合法业务搜索正文中的控制面字样不再误杀() {
         assertAllowed(() -> admin.guardRawGuarded("POST", "/logs/_search",
-                        "{\"query\":{\"match\":{\"message\":\"es_console_user .security\"}}}"),
+                        "{\"query\":{\"match\":{\"message\":\"searchdeck_user .security\"}}}"),
                 "业务日志检索控制面字样");
     }
 
     @Test
     public void 合法业务source搜索仍放行() {
-        String body = "{\"query\":{\"match\":{\"message\":\"es_console_user\"}}}";
+        String body = "{\"query\":{\"match\":{\"message\":\"searchdeck_user\"}}}";
         assertAllowed(() -> admin.guardRawGuarded("GET", "/logs/_search?source=" + enc(body), null),
                 "业务 source 搜索");
     }

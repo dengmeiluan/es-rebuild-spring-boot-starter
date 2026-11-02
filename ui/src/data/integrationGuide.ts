@@ -13,7 +13,7 @@ export const STARTER_VERSION: string = __STARTER_VERSION__;
 
 /** Maven 坐标单点拼装——所有节的坐标引用统一走这里 */
 export function mavenCoordinate(): string {
-  return 'io.github.dengmeiluan:es-rebuild-spring-boot-starter:' + STARTER_VERSION;
+  return 'io.github.dengmeiluan:searchdeck-console:' + STARTER_VERSION;
 }
 
 export const GUIDE_SECTIONS: GuideSection[] = [
@@ -32,10 +32,10 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   docs/integration/mapping-conflict-to-adhoc.md
 
 client 默认配置：
-  es.rebuild.mode: client
-  es.rebuild.mapping.auto-register: startup
-  es.rebuild.mapping.conflict-policy: fail
-  es.rebuild.mapping.missing-index-policy: skip
+  searchdeck.elasticsearch.mode: client
+  searchdeck.elasticsearch.mapping.auto-register: startup
+  searchdeck.elasticsearch.mapping.conflict-policy: fail
+  searchdeck.elasticsearch.mapping.missing-index-policy: skip
 
 期望配置页：/internal/es/index/desired-state.html
 启动日志检索：MappingReconcile
@@ -49,7 +49,7 @@ client 默认配置：
 
 <dependency>
   <groupId>io.github.dengmeiluan</groupId>
-  <artifactId>es-rebuild-spring-boot-starter</artifactId>
+  <artifactId>searchdeck-console</artifactId>
   <version>${STARTER_VERSION}</version>
 </dependency>
 
@@ -62,25 +62,23 @@ client 默认配置：
   {
     id: 'static-page',
     title: '2. 静态页接入（免登录直达）',
-    body: `starter 自带三个直达页（无需前端工程即可用）：
+    body: `控制台自带统一入口（无需前端工程即可用）：
 
-  /searchdeck.html   —— SearchDeck 控制台（新入口）
-  /es-rebuild.html   —— 兼容入口（跳转 /searchdeck.html）
-  /es-xmigrate.html  —— 跨集群迁移向导
+  /searchdeck.html   —— SearchDeck 控制台（自动进入 /searchdeck/index.html）
 
-宿主 Security 只需放行静态路径与 API 前缀，鉴权由 starter 的 ConsoleAuthInterceptor 完成：
+宿主 Security 只需放行静态资源与 API 前缀，鉴权由 starter 的 ConsoleAuthInterceptor 完成：
 
   .antMatchers("/internal/es/**").permitAll()
-  .antMatchers("/searchdeck.html", "/es-rebuild.html", "/es-xmigrate.html", "/console/**").permitAll()
+  .antMatchers("/searchdeck.html", "/searchdeck/**").permitAll()
 
-默认开启内置 token 鉴权（兜底账号 admin），可通过 es.rebuild.console.auth.enabled=false 关闭。`,
+默认开启内置 token 鉴权（兜底账号 admin），可通过 searchdeck.elasticsearch.console.auth.enabled=false 关闭。`,
   },
   {
     id: 'iframe',
     title: '3. iframe 嵌入与鉴权委托',
     body: `嵌入宿主页面后，可实现「宿主登录态直通控制台、免二次登录」：
 
-① 宿主后端实现 io.github.dengmeiluan.es.rebuild.auth.ConsoleAuthDelegate 并注册为 Spring Bean：
+① 宿主后端实现 io.github.dengmeiluan.searchdeck.console.auth.ConsoleAuthDelegate 并注册为 Spring Bean：
    - 从请求头 X-Es-Host-Token 读宿主凭证，认出则返回 ConsolePrincipal（含角色映射）
    - 认不出返回 null，自动交回控制台内置 token 鉴权（不视为失败）
 
@@ -90,14 +88,14 @@ client 默认配置：
    window.addEventListener('message', (e) => {
      if (e.origin !== CONSOLE_ORIGIN) return;
      if (e.source !== iframe.contentWindow) return;
-     if (e.data?.type === 'es-console-ready') {
+     if (e.data?.type === 'searchdeck-ready') {
        iframe.contentWindow.postMessage(
-         { type: 'es-console-host-token', token: <宿主JWT> }, CONSOLE_ORIGIN);
+         { type: 'searchdeck-host-token', token: <宿主JWT> }, CONSOLE_ORIGIN);
      }
    });
 
 ③ 凭证变化（重新登录）时重发同一消息即可，控制台会重新探测身份；宿主登出时发
-   { type: 'es-console-host-token', token: '' }，控制台会立即清理上一账号工作现场。`,
+   { type: 'searchdeck-host-token', token: '' }，控制台会立即清理上一账号工作现场。`,
   },
   {
     id: 'auth',
@@ -126,23 +124,22 @@ AUDIT_OP 同 rank）/ ADMIN 全部 + 用户管理 + raw 透传。委托鉴权时
     连接模型下除页写键外还需 rank3 或该连接的 w:cluster-settings
   · /cluster/raw 与 /cluster/devtools/execute 共用透传内核：非 ADMIN 被收窄到数据面
     （检索/文档/bulk/UBQ/DBQ/SQL），但数据面内是全权——w:devtools 应按「数据面写权」评估
-  · 非 ADMIN 的 PIT keep_alive 夹到 es.rebuild.console.pit.max-keep-alive-minutes（默认 60）
+  · 非 ADMIN 的 PIT keep_alive 夹到 searchdeck.elasticsearch.console.pit.max-keep-alive-minutes（默认 60）
 
 跨站写（CSRF）一律拒绝：状态变更请求若由跨站页面发起（Sec-Fetch-Site: cross-site）返回
 403 CSRF_BLOCKED 并落审计；iframe 嵌入与同站子域集成不受影响（iframe 内请求即 same-origin）。
 委托 header 模式请配置 delegate.header.trusted-proxies——它同时约束身份采信、审计来源 IP
 与登录节流（否则内网直连者可伪造 XFF、换 IP 绕过登录限流）。
 
-逃生阀：es.rebuild.console.page-auth.enabled=false 可整体关闭页面级拦截（回退纯角色档）。`,
+逃生阀：searchdeck.elasticsearch.console.page-auth.enabled=false 可整体关闭页面级拦截（回退纯角色档）。`,
   },
   {
     id: 'menu-spi',
     title: '5. 菜单注册与主题跟随（宿主侧对接）',
-    body: `【菜单注册】starter classpath 提供 io.github.dengmeiluan.es.rebuild.console.ConsolePageCatalog，
-宿主启动时直读契约注册菜单（12 目录 + 52 页面），perms 约定：
-  ops:es-console:conn:{connId}:{page}     读
-  ops:es-console:conn:{connId}:w:{page}   写
-（旧静态前缀 ops:es-console:page:{page} 仍在读取侧兼容，仅建议存量迁移期使用）
+    body: `【菜单注册】starter classpath 提供 io.github.dengmeiluan.searchdeck.platform.pages.ConsolePageCatalog，
+宿主启动时直读契约注册菜单（13 目录 + 52 页面），perms 约定：
+  ops:searchdeck:conn:{connId}:{page}     读
+  ops:searchdeck:conn:{connId}:w:{page}   写
 
 授权查询：从用户权限集合中筛上述前缀、剥前缀即 grantedPages（空集原样返回=全拒，
 不得折叠成 null——null 语义是「不启用页面级」）。
@@ -150,8 +147,8 @@ AUDIT_OP 同 rank）/ ADMIN 全部 + 用户管理 + raw 透传。委托鉴权时
 
   Set<String> granted = new LinkedHashSet<>();
   for (String p : permsOfUser) {
-    if (p.startsWith("ops:es-console:conn:")) {
-      granted.add(p.substring("ops:es-console:conn:".length()));  // 剥到 page / w:page
+    if (p.startsWith("ops:searchdeck:conn:")) {
+      granted.add(p.substring("ops:searchdeck:conn:".length()));  // 剥到 page / w:page
     }
   }
   return new ConsolePrincipal(username, role, false, true, nickname, attrs, granted);
@@ -161,7 +158,7 @@ writeDeny（PAGE_DENIED / WRITE_DENIED / CLUSTER_SCOPE_REQUIRED / HOST_DEST_WRIT
 与真实执行门同序——排障时先看它，不要靠猜。
 
 【主题跟随】iframe src 拼 ?hostTheme=dark|light 防首屏闪；
-主题切换时 postMessage { type:'es-console-host-theme', mode:'dark'|'light' } 热切。
+主题切换时 postMessage { type:'searchdeck-host-theme', mode:'dark'|'light' } 热切。
 用户也可在控制台顶栏手切主题档反超宿主（host 档才吃热推）。`,
   },
 ];

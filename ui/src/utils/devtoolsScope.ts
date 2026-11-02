@@ -256,7 +256,7 @@ export function nonAdminAsyncResultRead(rawPath: string): boolean {
 
 /** 首段是否指向控制面/系统索引（含通配可能命中）——非 ADMIN 提前禁用。
  * 与后端 guardRawGuarded 的段判定同口径：首段是系统 API（_ 前缀）时逐段检查后续
- * 索引位（_cat/indices/es_console* 这类形态），首段是索引时只检查首段（与后端一致，
+ * 索引位（_cat/indices/searchdeck* 这类形态），首段是索引时只检查首段（与后端一致，
  * 文档 id 不按索引名解释）。_all 在任何段都等于隐式全量。 */
 export function nonAdminControlIndexDenied(rawPath: string): boolean {
   const clean = canonicalPath(rawPath);
@@ -269,13 +269,13 @@ export function nonAdminControlIndexDenied(rawPath: string): boolean {
     if (!t) return false;
     if (t === '*' || t === '_all') return true;
     if (t.startsWith('.')) return true;
-    if (t.startsWith('es_console')
-      || t === 'es_rebuild_adhoc_job' || t.startsWith('es_rebuild_adhoc_job-')
-      || t.endsWith('_es_rebuild_lock') || t.endsWith('_es_xmigrate_job')) return true;
+    if (t.startsWith('searchdeck')
+      || t === 'searchdeck_adhoc_job' || t.startsWith('searchdeck_adhoc_job-')
+      || t.endsWith('_searchdeck_lock') || t.endsWith('_searchdeck_migrate_job')) return true;
     /* 通配字面前缀可覆盖控制索引（es_*、e* 等）时同样拒绝（后端 couldMatchControl 镜像）。 */
     const literal = t.replace(/[*?].*$/, '');
     if (literal !== t
-      && ['es_console', 'es_rebuild_adhoc_job', '_es_rebuild_lock', '_es_xmigrate_job']
+      && ['searchdeck', 'searchdeck_adhoc_job', '_searchdeck_lock', '_searchdeck_migrate_job']
         .some((r) => r.startsWith(literal))) return true;
     return false;
   };
@@ -397,7 +397,7 @@ export function nonAdminBodyTargetsControl(path: string, body?: string | null): 
         .replace(/\/\*[\s\S]*?\*\//g, ' ')
         .replace(/--[^\n\r]*/g, ' ');
       /* FROM/JOIN 后的逗号列表是多个目标：旧正则只吃到第一个逗号前
-         （FROM logs, es_console_user 漏检后者）。整段捕获后逐个 token 判定。 */
+         （FROM logs, searchdeck_user 漏检后者）。整段捕获后逐个 token 判定。 */
       const re = /\b(?:FROM|JOIN)\s+([^\s,;()]+(?:\s*,\s*[^\s,;()]+)*)/gi;
       let m: RegExpExecArray | null;
       while ((m = re.exec(q)) !== null) {

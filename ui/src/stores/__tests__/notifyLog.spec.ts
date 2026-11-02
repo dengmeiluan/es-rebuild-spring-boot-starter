@@ -59,7 +59,7 @@ describe('notifyLog 通知历史（R80）', () => {
     store.notify('error', 'boom');
     store.clearNotifyLog();
     expect(store.notifyLog).toHaveLength(0);
-    expect(localStorage.getItem('es-console.notify.log')).toBeNull();
+    expect(localStorage.getItem('searchdeck.notify.log')).toBeNull();
   });
 
   it('localStorage 持久化，重建 store 后历史与已读位都恢复', () => {
@@ -75,7 +75,7 @@ describe('notifyLog 通知历史（R80）', () => {
   });
 
   it('坏值静默回落空历史', () => {
-    localStorage.setItem('es-console.notify.log', '{oops');
+    localStorage.setItem('searchdeck.notify.log', '{oops');
     const store = useAppStore();
     expect(store.notifyLog).toEqual([]);
   });
@@ -95,7 +95,7 @@ describe('notifyLog 通知历史（R80）', () => {
     store.notify('error', 'boom');
     expect(store.notifyLog).toHaveLength(3);
     /* 聚合计数一并持久化 */
-    const raw = JSON.parse(localStorage.getItem('es-console.notify.log')!);
+    const raw = JSON.parse(localStorage.getItem('searchdeck.notify.log')!);
     expect(raw[2].count).toBe(5);
   });
 
@@ -117,7 +117,7 @@ describe('notifyLog 通知历史（R80）', () => {
       expect(head.firstTs).toBe(born);       // 风暴起点可追溯
       expect(head.ts).toBe(born + 120000);   // 最近一次保持鲜活
       /* firstTs 一并持久化，重建 store 后时间线证据不丢 */
-      const raw = JSON.parse(localStorage.getItem('es-console.notify.log')!);
+      const raw = JSON.parse(localStorage.getItem('searchdeck.notify.log')!);
       expect(raw[0].firstTs).toBe(born);
     } finally {
       vi.useRealTimers();

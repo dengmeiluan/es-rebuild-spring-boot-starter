@@ -89,7 +89,7 @@ describe('组件统一合并扫描（迁移面静态断言）', () => {
     expect(reindexPreview).toContain('<WorkbenchLayout :scope="rpScope" :panes="RP_PANES"');
     expect(reindexPreview).toContain('#pane-rp-query');
     expect(reindexPreview).toContain('#pane-rp-result');
-    expect(reindexPreview).toContain("'es-console.reindex-advanced.body'");
+    expect(reindexPreview).toContain("'searchdeck.reindex-advanced.body'");
     expect(reindexPreview).toContain('goAdvanced');
     expect(reindexPreview).not.toContain('.rp-body');
   });

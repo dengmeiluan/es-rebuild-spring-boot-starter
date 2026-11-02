@@ -22,11 +22,11 @@ describe('1007 账号切换：内存态与磁盘同清', () => {
   it('auth 换人时清理并广播 identity-changed', () => {
     expect(auth).toContain('if (prev !== username)');
     expect(auth).toContain('purgeUserRequestState();');
-    expect(auth).toContain("'es-console:identity-changed'");
+    expect(auth).toContain("'searchdeck:identity-changed'");
   });
 
   it('App 收到事件后重置 app/job/live/queryHistory 并从新身份重拉', () => {
-    expect(app).toContain("window.addEventListener('es-console:identity-changed', onIdentityChanged)");
+    expect(app).toContain("window.addEventListener('searchdeck:identity-changed', onIdentityChanged)");
     expect(app).toContain('store.resetIdentityState();');
     expect(app).toContain('jt.resetIdentityState();');
     expect(app).toContain('mon.resetIdentityState();');
@@ -61,7 +61,7 @@ describe('1007 账号切换：内存态与磁盘同清', () => {
   });
 
   it('同名降权/撤页：403 与聚焦触发节流重探', () => {
-    expect(app).toContain("window.addEventListener('es-console:forbidden', refreshIdentityIfStale)");
+    expect(app).toContain("window.addEventListener('searchdeck:forbidden', refreshIdentityIfStale)");
     expect(app).toContain("window.addEventListener('focus', onWindowFocusPermRefresh)");
     expect(app).toContain('30_000');
   });
@@ -84,7 +84,7 @@ describe('1007 页面授权身份与管理员入口同口径', () => {
   });
 
   it('Snapshots 的 DevTools 入口使用 sessionStorage 契约（不再是无消费者的 _prefill 查询串）', () => {
-    expect(snapshots).toContain("writeStoredRaw(sessionStorage, 'es-console.devtools.open'");
+    expect(snapshots).toContain("writeStoredRaw(sessionStorage, 'searchdeck.devtools.open'");
     expect(snapshots).not.toContain("query: { _prefill:");
   });
 });

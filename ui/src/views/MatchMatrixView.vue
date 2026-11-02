@@ -321,7 +321,7 @@ function firstKeyword(): string {
   } catch { return ''; }
 }
 /* 手写 sessionStorage.setItem 换 useLinkCarry 统一件——键名与 payload 结构逐字保持
- （es-console.link.boost={index,keyword}），消费端零感 */
+ （searchdeck.link.boost={index,keyword}），消费端零感 */
 const boostCarry = useLinkCarry<{ index: string; keyword: string }>('boost');
 function gotoBoost() {
   boostCarry.send({ index: index.value, keyword: firstKeyword() });

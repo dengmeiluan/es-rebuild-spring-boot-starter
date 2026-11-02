@@ -250,7 +250,7 @@ const tplMenuItems = computed<CcmItem[]>(() => {
             store.notify('warning', 'DevTools 入口需要 DevTools 页面读权限或 ADMIN');
             return;
           }
-          writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
+          writeStoredRaw(sessionStorage, 'searchdeck.devtools.open', JSON.stringify({
             title: (tab.value === 'index' ? 'index_template/' : 'component_template/') + t.name,
             method: 'GET', path, body: '', run: false,
           }));

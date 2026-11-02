@@ -83,7 +83,7 @@ async function mountView() {
   return host;
 }
 
-const INSPECT_933 = { name: 'es_rebuild_sys_lock', docCount: 42 };
+const INSPECT_933 = { name: 'searchdeck_sys_lock', docCount: 42 };
 const HITS_933 = [
   { _id: 'lock-1', _source: { job_id: 'J-933-001', status_name: 'RUNNING', index_name: 'orders-v9', created_ts: 1759800000000 } },
   { _id: 'lock-2', _source: { job_id: 'J-933-002', status_name: 'DONE', index_name: 'logs-x', created_ts: 1759800100000 } },

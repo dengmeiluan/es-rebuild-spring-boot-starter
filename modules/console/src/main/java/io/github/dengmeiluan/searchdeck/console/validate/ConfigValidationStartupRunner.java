@@ -16,7 +16,7 @@
 
 package io.github.dengmeiluan.searchdeck.console.validate;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.control.EntityMappingDeriver;
 import io.github.dengmeiluan.searchdeck.console.core.IndexMetaRegistry;
 import io.github.dengmeiluan.searchdeck.console.core.RebuildableIndexMeta;
@@ -51,12 +51,12 @@ public class ConfigValidationStartupRunner implements ApplicationRunner {
 
     private final IndexConfigValidator validator;
     private final ObjectProvider<IndexMetaRegistry> registryProvider;
-    private final EsRebuildProperties properties;
+    private final SearchDeckElasticsearchProperties properties;
     private final EntityMappingDeriver mappingDeriver;
 
     public ConfigValidationStartupRunner(IndexConfigValidator validator,
                                          ObjectProvider<IndexMetaRegistry> registryProvider,
-                                         EsRebuildProperties properties,
+                                         SearchDeckElasticsearchProperties properties,
                                          EntityMappingDeriver mappingDeriver) {
         this.validator = validator;
         this.registryProvider = registryProvider;
@@ -66,7 +66,7 @@ public class ConfigValidationStartupRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        EsRebuildProperties.ConfigValidation cfg = properties.getConfigValidation();
+        SearchDeckElasticsearchProperties.ConfigValidation cfg = properties.getConfigValidation();
         if ("off".equals(cfg.getMode())) {
             return;
         }
@@ -105,8 +105,8 @@ public class ConfigValidationStartupRunner implements ApplicationRunner {
         }
         String detail = String.join("\n  ", fatal);
         if ("strict".equals(cfg.getMode())) {
-            throw new IllegalStateException("[es-rebuild] 索引配置校验失败（" + fatal.size()
-                    + " 处确定性错误，修复后再启动；临时降级可配 es.rebuild.config-validation.mode=warn）:\n  " + detail);
+            throw new IllegalStateException("[searchdeck] 索引配置校验失败（" + fatal.size()
+                    + " 处确定性错误，修复后再启动；临时降级可配 searchdeck.elasticsearch.config-validation.mode=warn）:\n  " + detail);
         }
         logger.error("[ConfigValidation] 发现 {} 处配置错误（mode=warn 不阻断启动，建索引/重建时必失败）:\n  {}",
                 fatal.size(), detail);

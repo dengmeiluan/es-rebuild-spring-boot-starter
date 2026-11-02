@@ -20,7 +20,7 @@ import io.github.dengmeiluan.searchdeck.console.auth.ConsoleAuthInterceptor;
 import io.github.dengmeiluan.searchdeck.console.auth.ConsolePrincipal;
 import io.github.dengmeiluan.searchdeck.console.auth.ConsoleRole;
 import io.github.dengmeiluan.searchdeck.console.auth.EnvPagesResolver;
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.multicluster.ConnStore;
 import io.github.dengmeiluan.searchdeck.console.xmigrate.CrossClusterMigrateService;
 import io.github.dengmeiluan.searchdeck.console.xmigrate.MigrateJobES;
@@ -154,7 +154,7 @@ public class CrossClusterMigrateControllerTargetTest {
 
     private static CrossClusterMigrateController controller(FakeService service, ConnStore connStore) {
         return new CrossClusterMigrateController(service, connStore,
-                new EnvPagesResolver(connStore, new EsRebuildProperties()), true);
+                new EnvPagesResolver(connStore, new SearchDeckElasticsearchProperties()), true);
     }
 
     private static void expectForbidden(Runnable r, String why) {

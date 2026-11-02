@@ -253,7 +253,7 @@ describe('G2-B6/C4/C5 WatcherView：首载骨架 + 过滤致空 + id title', () 
 
   it('过滤致空 → 「无匹配 watch」+ 清除过滤按钮在，点击后列表恢复', async () => {
     watcherFn.mockResolvedValue(WATCH_RAW);
-    sessionStorage.setItem('es-console.draft2:watcher:host:-:-:kw', 'zzz_no_match');
+    sessionStorage.setItem('searchdeck.draft2:watcher:host:-:-:kw', 'zzz_no_match');
     const { app, host } = await mountView(WatcherView);
     expect(host.textContent).toContain('无匹配 watch');
     const clearBtn = Array.from(host.querySelectorAll<HTMLButtonElement>('.empty-state button'))

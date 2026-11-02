@@ -174,8 +174,8 @@ function ccsQuery(name: string) {
     index: `${name}:*`,
     body: JSON.stringify(body, null, 2),
   };
-  writeStoredRaw(sessionStorage, 'es-console.sandbox.body', payload.body);
-  writeStoredRaw(sessionStorage, 'es-console.sandbox.index', payload.index);
+  writeStoredRaw(sessionStorage, 'searchdeck.sandbox.body', payload.body);
+  writeStoredRaw(sessionStorage, 'searchdeck.sandbox.index', payload.index);
   store.notify('info', `已生成 CCS 跨集群查询：index=${name}:*`);
   router.push({ path: '/search', query: { mode: 'sandbox' } });
 }
@@ -202,7 +202,7 @@ const rcMenuItems = computed<CcmItem[]>(() => {
       store.notify('warning', 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN');
       return;
     }
-    writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
+    writeStoredRaw(sessionStorage, 'searchdeck.devtools.open', JSON.stringify({
       title: 'cluster.settings（remote）', method: 'GET',
       path: '/_cluster/settings?include_defaults=true&flat_settings=true', run: true,
     }));

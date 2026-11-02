@@ -230,7 +230,7 @@ describe('857 族A：async 竞态回包卫生——旧回包后到不得覆盖�
 
 describe('857 族B：BoostTuner 权重草稿类型防御——合法 JSON 非预期类型不得炸渲染', () => {
   it('草稿里 string boost（旧数据/手改存储）挂载不抛 TypeError，×2.5 归一显示', async () => {
-    sessionStorage.setItem('es-console.draft2:boost-tuner:host:-:-:fields',
+    sessionStorage.setItem('searchdeck.draft2:boost-tuner:host:-:-:fields',
       JSON.stringify([{ name: 'title', boost: '2.5' }]));
     const host = await mountView(BoostTunerView, '/boost-tuner');
     expect(host.textContent).toContain('×2.5');

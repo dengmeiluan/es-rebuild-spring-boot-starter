@@ -59,59 +59,59 @@ export function replayFavorite(
   switch (it.kind) {
     case 'dsl':
       /* 一次性 carry 键，DslQueryView onMounted 消费后即删（与实时镜像键分离） */
-      writeStoredRaw(sessionStorage, 'es-console.dsl.carry', typeof p === 'string' ? p : (p.body || JSON.stringify(p, null, 2)));
-      if (p.index) writeStoredRaw(sessionStorage, 'es-console.dsl.carry.index', p.index);
+      writeStoredRaw(sessionStorage, 'searchdeck.dsl.carry', typeof p === 'string' ? p : (p.body || JSON.stringify(p, null, 2)));
+      if (p.index) writeStoredRaw(sessionStorage, 'searchdeck.dsl.carry.index', p.index);
       router.push({ path: '/search', query: { mode: 'dsl' } });
       notify('success', 'DSL 已恢复至查询窗口');
       break;
     case 'rest':
       if (tags.includes('sql')) {
         if (p.sql) {
-          writeStoredRaw(sessionStorage, 'es-console.sql.prefill', p.sql);
+          writeStoredRaw(sessionStorage, 'searchdeck.sql.prefill', p.sql);
           /* 1086：SQL 收藏还原索引/参数现场——旧键先清，避免上一条 SQL 的上下文串到本条 */
-          removeStoredRaw(sessionStorage, 'es-console.sql.prefill.params');
-          if (p.params) writeStoredRaw(sessionStorage, 'es-console.sql.prefill.params', p.params);
-          removeStoredRaw(sessionStorage, 'es-console.sql.prefill.index');
-          if (p.index) writeStoredRaw(sessionStorage, 'es-console.sql.prefill.index', p.index);
+          removeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.params');
+          if (p.params) writeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.params', p.params);
+          removeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.index');
+          if (p.index) writeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.index', p.index);
           /* 1087：执行选项现场（时区/页超时/列式/宽容/取数）；旧收藏只有 fetchSize 时降级还原 */
-          removeStoredRaw(sessionStorage, 'es-console.sql.prefill.opts');
+          removeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.opts');
           const opts = p.opts && typeof p.opts === 'object' ? p.opts : (p.fetchSize ? { fetchSize: p.fetchSize } : null);
-          if (opts) writeStoredRaw(sessionStorage, 'es-console.sql.prefill.opts', JSON.stringify(opts));
+          if (opts) writeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.opts', JSON.stringify(opts));
           router.push({ path: '/search', query: { mode: 'sql' } });
           notify('success', 'SQL 已恢复并自动执行');
         } else { router.push({ path: '/search', query: { mode: 'sql' } }); partial('ES-SQL 控制台'); }
       } else if (tags.includes('lucene')) {
-        if (p.q) writeStoredRaw(sessionStorage, 'es-console.lucene.q', p.q);
-        if (p.index) writeStoredRaw(sessionStorage, 'es-console.lucene.index', p.index);
+        if (p.q) writeStoredRaw(sessionStorage, 'searchdeck.lucene.q', p.q);
+        if (p.index) writeStoredRaw(sessionStorage, 'searchdeck.lucene.index', p.index);
         /* 排序现场本就是 URL 状态，走 query 带齐——重放不再丢排序 */
         router.push({ path: '/search', query: { mode: 'lucene', ...(p.sortField ? { sort: p.sortField } : {}), ...(p.sortOrder ? { order: p.sortOrder } : {}) } });
         if (p.q || p.index) notify('success', 'Lucene 查询已恢复');
         else partial('Lucene 查询');
       } else if (tags.includes('bulk')) {
         if (p.body) {
-          /* 改写一次性 carry 键（旧 es-console.draft.bulk-editor.body 是草稿前的
+          /* 改写一次性 carry 键（旧 searchdeck.draft.bulk-editor.body 是草稿前的
  死命名空间，无消费方，恢复提示是假的）——BulkEditorView 挂载即消费并转入自身草稿 */
-          writeStoredRaw(sessionStorage, 'es-console.bulk.carry', p.body);
+          writeStoredRaw(sessionStorage, 'searchdeck.bulk.carry', p.body);
           router.push({ path: '/bulk', query: p.index ? { idx: p.index } : {} });
           notify('success', 'Bulk 操作体已恢复');
         } else { router.push({ path: '/bulk', query: p.index ? { idx: p.index } : {} }); partial('Bulk 编辑器'); }
       } else if (tags.includes('ubq') || tags.includes('dbq')) {
-        /* 同理改 es-console.ubq.carry（UpdateByQueryView 挂载消费，取 .query 入草稿） */
+        /* 同理改 searchdeck.ubq.carry（UpdateByQueryView 挂载消费，取 .query 入草稿） */
         const ok = !!(p.body && p.body.trim());
-        if (ok) writeStoredRaw(sessionStorage, 'es-console.ubq.carry', p.body);
+        if (ok) writeStoredRaw(sessionStorage, 'searchdeck.ubq.carry', p.body);
         router.push({ path: '/update-by-query', query: { ...(p.index ? { idx: p.index } : {}), ...(p.mode ? { mode: p.mode } : {}) } });
         if (ok) notify('success', '查询体已恢复，执行前请再次核对');
         else partial('Update by Query');
       } else if (tags.includes('reindex')) {
         if (p.body) {
-          writeStoredRaw(sessionStorage, 'es-console.reindex-advanced.body', p.body);
+          writeStoredRaw(sessionStorage, 'searchdeck.reindex-advanced.body', p.body);
           router.push('/reindex-advanced');
           notify('success', 'Reindex 配置已恢复');
         } else { router.push('/reindex-advanced'); partial('Reindex 配置页'); }
       } else if (tags.includes('doc')) {
         if (p.index && p.id) {
           /* 收藏时的编辑稿走一次性 carry 键带回——拉取最新版后自动恢复，正好落在 diff 对比区 */
-          if (p.source) writeStoredRaw(sessionStorage, 'es-console.doc-diff.carry.source', p.source);
+          if (p.source) writeStoredRaw(sessionStorage, 'searchdeck.doc-diff.carry.source', p.source);
           router.push({ path: '/doc-diff', query: { idx: p.index, id: p.id } });
           notify('success', '已定位文档，正在拉取最新版本');
         } else { router.push('/doc-diff'); partial('文档 Diff 编辑器'); }
@@ -121,7 +121,7 @@ export function replayFavorite(
  实报「打开跳转无效+不自动填充」根因①（payload 缺失仍到 DevTools=partial 诚实） */
         const ok = !!(p.method || p.path);
         if (ok) {
-          writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
+          writeStoredRaw(sessionStorage, 'searchdeck.devtools.open', JSON.stringify({
             title: (p.method || 'GET') + ' ' + (p.path || '/'),
             method: p.method || 'GET', path: p.path || '/', body: p.body || '',
           }));
@@ -153,7 +153,7 @@ export function replayFavorite(
       }
       break;
     case 'template':
-      writeStoredRaw(sessionStorage, 'es-console.sandbox.body', typeof p === 'string' ? p : JSON.stringify(p, null, 2));
+      writeStoredRaw(sessionStorage, 'searchdeck.sandbox.body', typeof p === 'string' ? p : JSON.stringify(p, null, 2));
       router.push({ path: '/search', query: { mode: 'sandbox' } });
       notify('success', '模板已送到搜索沙盒');
       break;

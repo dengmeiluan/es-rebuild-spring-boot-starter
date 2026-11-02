@@ -235,7 +235,7 @@ describe('525 AnalyzerLabView 运行时：lane 档位与纵缝', () => {
   });
 
   it('预置 al.laneW=500 + 双栏：duo 档 + --al-lane-w 内联变量', async () => {
-    localStorage.setItem('es-console.pref.al.laneW', '500');
+    localStorage.setItem('searchdeck.pref.al.laneW', '500');
     const host = await mountLab();
     const lane = btn(host, '.al-lane-hd .btn[aria-label="删除分词通道"]');
     lane.click(); await settle();
@@ -246,7 +246,7 @@ describe('525 AnalyzerLabView 运行时：lane 档位与纵缝', () => {
   });
 
   it('两档预设点按：双栏 split-4060 生效且清连续宽度（回比例档）', async () => {
-    localStorage.setItem('es-console.pref.al.laneW', '500');
+    localStorage.setItem('searchdeck.pref.al.laneW', '500');
     const host = await mountLab();
     const lane = btn(host, '.al-lane-hd .btn[aria-label="删除分词通道"]');
     lane.click(); await settle();
@@ -255,8 +255,8 @@ describe('525 AnalyzerLabView 运行时：lane 档位与纵缝', () => {
     const lanes = host.querySelector('.al-lanes') as HTMLElement;
     expect(lanes.classList.contains('split-4060')).toBe(true);
     expect(lanes.classList.contains('duo')).toBe(false);
-    expect(localStorage.getItem('es-console.pref.al.laneW')).toBe('0');
-    expect(localStorage.getItem('es-console.pref.al.laneSplit')).toBe(JSON.stringify('4060'));
+    expect(localStorage.getItem('searchdeck.pref.al.laneW')).toBe('0');
+    expect(localStorage.getItem('searchdeck.pref.al.laneSplit')).toBe(JSON.stringify('4060'));
   });
 });
 
@@ -272,7 +272,7 @@ describe('525 AnalyzerLabView 运行时：字段清单高度档', () => {
     expect(flds.style.maxHeight).toBe('280px');
     const tier = btn(host, '[data-al-flds-h]');
     tier.click(); await settle();
-    expect(localStorage.getItem('es-console.pref.al.fieldsH')).toBe('420');
+    expect(localStorage.getItem('searchdeck.pref.al.fieldsH')).toBe('420');
     expect((host.querySelector('.al-fields') as HTMLElement).style.maxHeight).toBe('420px');
   });
 });

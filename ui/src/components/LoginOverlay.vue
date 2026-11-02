@@ -34,7 +34,7 @@
           </form>
           <div class="lo-hint">
             <Info :size="12" />
-            <span>首次使用（尚未创建任何账号）可用默认账号 <code class="mono">admin / es-console</code> 登录，登录后请尽快在「安全中心」修改密码。</span>
+            <span>首次使用（尚未创建任何账号）可用默认账号 <code class="mono">admin / searchdeck</code> 登录，登录后请尽快在「安全中心」修改密码。</span>
           </div>
         </div>
       </div>
@@ -88,8 +88,8 @@ function retryHost() {
   void auth.probe();
 }
 
-onMounted(() => window.addEventListener('es-console:unauthorized', onUnauthorized));
-onBeforeUnmount(() => window.removeEventListener('es-console:unauthorized', onUnauthorized));
+onMounted(() => window.addEventListener('searchdeck:unauthorized', onUnauthorized));
+onBeforeUnmount(() => window.removeEventListener('searchdeck:unauthorized', onUnauthorized));
 </script>
 
 <style scoped>

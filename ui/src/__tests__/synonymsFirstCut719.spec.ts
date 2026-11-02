@@ -175,7 +175,7 @@ describe('719 G66 热重载在途守卫（doReload busy 管理）', () => {
 
   it('下发链零回归：doSave 成功自动热重载，upsert/reload 双命中且 busy 复常', async () => {
     /* 前置态先验（709-C1）：默认示例稿含「=> 与 , 混用」坏行会禁用下发——种干净草稿 */
-    sessionStorage.setItem('es-console.draft2:synonyms:host:-:-:raw', 'elasticsearch, es');
+    sessionStorage.setItem('searchdeck.draft2:synonyms:host:-:-:raw', 'elasticsearch, es');
     const host = await mountSy();
     const send = findSendBtn(host);
     expect(send.disabled, '默认示例稿有合法行=可下发').toBe(false);

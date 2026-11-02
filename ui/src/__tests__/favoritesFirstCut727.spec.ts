@@ -41,7 +41,7 @@ vi.mock('../api', async (importOriginal) => {
 import FavoritesView from '../views/FavoritesView.vue';
 import { NAV_ITEMS } from '../router';
 
-const FAV_KEY = 'es-console.favorites.v1';
+const FAV_KEY = 'searchdeck.favorites.v1';
 const apps: ReturnType<typeof createApp>[] = [];
 
 /* 挂载 favorites（localStorage 直种 store 初始化读）并渲染出卡片列表 */

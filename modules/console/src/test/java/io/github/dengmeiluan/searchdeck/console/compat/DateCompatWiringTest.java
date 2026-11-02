@@ -89,7 +89,7 @@ public class DateCompatWiringTest {
     /** 打开开关：转换器必须真的在 conversions 里，不是只有 Bean 在。 */
     @Test
     public void switchOnRegistersEpochConverters() {
-        runner().withPropertyValues("es.rebuild.compat.date-converters=true").run(ctx -> {
+        runner().withPropertyValues("searchdeck.elasticsearch.compat.date-converters=true").run(ctx -> {
             ElasticsearchCustomConversions c = ctx.getBean(ElasticsearchCustomConversions.class);
             assertTrue("打开开关后 Timestamp 必须有自定义写目标（说明转换器进来了）",
                     c.hasCustomWriteTarget(Timestamp.class));
@@ -101,7 +101,7 @@ public class DateCompatWiringTest {
     /** 宿主自己定义了 conversions 时我们必须让位（@ConditionalOnMissingBean）。 */
     @Test
     public void hostOwnConversionsWin() {
-        runner().withPropertyValues("es.rebuild.compat.date-converters=true")
+        runner().withPropertyValues("searchdeck.elasticsearch.compat.date-converters=true")
                 .withBean(ElasticsearchCustomConversions.class,
                         () -> new ElasticsearchCustomConversions(java.util.Collections.emptyList()))
                 .run(ctx -> {

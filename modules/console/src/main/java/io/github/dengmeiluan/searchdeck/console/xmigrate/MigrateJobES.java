@@ -33,13 +33,13 @@ import java.util.Map;
  * 供展示与 resume 提示，不含 user/password。</p>
  *
  * <p>索引名走 {@code @Document} + SpEL（与 {@code EsRebuildJobES} 同风格），默认
- * {@code ${POLARDB_PROFILES_ACTIVE:}${spring.application.name}_es_xmigrate_job}；
- * 接入方可用 {@code es.rebuild.migrate.job-index-name=...} 覆盖整名。{@code createIndex=false}，
+ * {@code ${POLARDB_PROFILES_ACTIVE:}${spring.application.name}_searchdeck_migrate_job}；
+ * 接入方可用 {@code searchdeck.elasticsearch.migrate.job-index-name=...} 覆盖整名。{@code createIndex=false}，
  * 由 {@link MigrateJobStore#ensureIndex()} 在启动后主动建。</p>
  */
-@Document(indexName = "#{@environment.getProperty('es.rebuild.migrate.job-index-name', "
+@Document(indexName = "#{@environment.getProperty('searchdeck.elasticsearch.migrate.job-index-name', "
         + "@environment.getProperty('POLARDB_PROFILES_ACTIVE', '') "
-        + "+ @environment.getProperty('spring.application.name', '') + '_es_xmigrate_job')}",
+        + "+ @environment.getProperty('spring.application.name', '') + '_searchdeck_migrate_job')}",
         createIndex = false)
 public class MigrateJobES {
 

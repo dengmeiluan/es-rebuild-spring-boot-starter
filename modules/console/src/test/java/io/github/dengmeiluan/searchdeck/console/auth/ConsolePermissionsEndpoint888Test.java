@@ -17,7 +17,7 @@
 package io.github.dengmeiluan.searchdeck.console.auth;
 import io.github.dengmeiluan.searchdeck.platform.pages.ConsolePageCatalog;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.multicluster.ConnStore;
 import io.github.dengmeiluan.searchdeck.console.xmigrate.RemoteClusterConn;
 import org.junit.Test;
@@ -163,10 +163,10 @@ public class ConsolePermissionsEndpoint888Test {
     private static ConsolePermissionsController ctrl() {
         ConnStore store = connStoreWithProd();
         return new ConsolePermissionsController(ConsolePageCatalog.load(),
-                new EnvPagesResolver(store, new EsRebuildProperties()), store, true);
+                new EnvPagesResolver(store, new SearchDeckElasticsearchProperties()), store, true);
     }
 
-    private static ConsolePermissionsController ctrlWithProps(EsRebuildProperties props) {
+    private static ConsolePermissionsController ctrlWithProps(SearchDeckElasticsearchProperties props) {
         ConnStore store = connStoreWithProd();
         return new ConsolePermissionsController(ConsolePageCatalog.load(),
                 new EnvPagesResolver(store, props), store, true);
@@ -304,7 +304,7 @@ public class ConsolePermissionsEndpoint888Test {
     public void env模板收缩_静态键页集未入模板页不可读() {
         // env 模板收缩只作用于纯静态键授权（conn 键授权=宿主按连接明示，与 env 模板双轨不收缩——
         // EnvPagesResolver.effectivePages 同口径），故本用例用静态键形态。
-        EsRebuildProperties props = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties props = new SearchDeckElasticsearchProperties();
         props.setEnvPages(Collections.singletonMap("PROD", new HashSet<>(Collections.singletonList("overview"))));
         Map<String, Object> resp = call(ctrlWithProps(props), delegatedAs(ConsoleRole.VIEWER,
                 set("rest", "overview")), "c1");
@@ -398,7 +398,7 @@ public class ConsolePermissionsEndpoint888Test {
 
     @Test
     public void env模板_静态页与conn页同为环境封顶() {
-        EsRebuildProperties props = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties props = new SearchDeckElasticsearchProperties();
         props.setEnvPages(Collections.singletonMap("PROD", new HashSet<>(Collections.singletonList("overview"))));
         Map<String, Object> resp = call(ctrlWithProps(props), delegatedAs(ConsoleRole.VIEWER,
                 set("conn:c1:search", "conn:c1:w:search", "rest", "overview")), "c1");
@@ -469,6 +469,6 @@ public class ConsolePermissionsEndpoint888Test {
                     @Override public boolean bound() { return true; }
                 };
         return new ConsoleAuthInterceptor(authorizer, new CapturingAudit(), resolver, ConsolePageCatalog.load(),
-                true, new EnvPagesResolver(connStoreWithProd(), new EsRebuildProperties()), connStoreWithProd());
+                true, new EnvPagesResolver(connStoreWithProd(), new SearchDeckElasticsearchProperties()), connStoreWithProd());
     }
 }

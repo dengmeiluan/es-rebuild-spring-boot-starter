@@ -49,7 +49,7 @@ describe('IndexHub 放大/还原（五百三十批回补）', () => {
   });
 
   it('工具行双态钮 → .fs-active 聚焦面 → 面内卡片头还原钮可退出', async () => {
-    localStorage.setItem('es-console.pref.ih.listOpen', 'true'); /* 抽屉开（放大钮在抽屉工具行内） */
+    localStorage.setItem('searchdeck.pref.ih.listOpen', 'true'); /* 抽屉开（放大钮在抽屉工具行内） */
     const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/', component: { template: '<div/>' } }] });
     await router.push('/');
     await router.isReady();

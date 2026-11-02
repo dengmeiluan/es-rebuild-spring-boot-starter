@@ -1,6 +1,6 @@
 /**
  * 四百五十七批：DevTools active 标签持久化——刷新后回到用户所在标签
- * （此前 tabs 恢复但 active 恒归 0）。独立键 es-console.devtools.active.v1:<target>
+ * （此前 tabs 恢复但 active 恒归 0）。独立键 searchdeck.devtools.active.v1:<target>
  * （不动 tabs 数组结构保持旧数据兼容），恢复钳位防越界，预填跳转（consumePrefill）
  * 优先于还原。
  */

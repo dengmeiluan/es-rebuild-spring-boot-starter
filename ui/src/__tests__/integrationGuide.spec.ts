@@ -13,9 +13,9 @@ describe('integrationGuide 数据', () => {
   it('integration 首节列出默认配置与七个主题路径', () => {
     const integration = GUIDE_SECTIONS[0];
     expect(integration.id).toBe('integration');
-    expect(integration.body).toContain('es.rebuild.mapping.auto-register: startup');
-    expect(integration.body).toContain('es.rebuild.mapping.conflict-policy: fail');
-    expect(integration.body).toContain('es.rebuild.mapping.missing-index-policy: skip');
+    expect(integration.body).toContain('searchdeck.elasticsearch.mapping.auto-register: startup');
+    expect(integration.body).toContain('searchdeck.elasticsearch.mapping.conflict-policy: fail');
+    expect(integration.body).toContain('searchdeck.elasticsearch.mapping.missing-index-policy: skip');
     for (const path of [
       'docs/integration/quickstart.md',
       'docs/integration/configuration-reference.md',
@@ -40,13 +40,13 @@ describe('integrationGuide 数据', () => {
     expect(STARTER_VERSION).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
-  it('mavenCoordinate 坐标 = io.github.dengmeiluan:es-rebuild-spring-boot-starter:<注入版本>（字面量锚定 pom 真实 groupId，防自比锁错）', () => {
+  it('mavenCoordinate 坐标 = io.github.dengmeiluan:searchdeck-console:<注入版本>（字面量锚定 pom 真实 groupId，防自比锁错）', () => {
     expect(mavenCoordinate()).toBe(
-      'io.github.dengmeiluan:es-rebuild-spring-boot-starter:' + STARTER_VERSION);
+      'io.github.dengmeiluan:searchdeck-console:' + STARTER_VERSION);
   });
 
   it('menu-spi 节包含 perms 前缀约定（接入方契约）', () => {
     const spi = GUIDE_SECTIONS.find(s => s.id === 'menu-spi')!;
-    expect(spi.body).toContain('ops:es-console:page:');
+    expect(spi.body).toContain('ops:searchdeck:conn:');
   });
 });

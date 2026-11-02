@@ -42,7 +42,7 @@ public class MonitorMetricsStoreTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private static final String PREFIX = "es_console_monitor";
+    private static final String PREFIX = "searchdeck_monitor";
 
     /** 三值同返：统计子串出现次数（逐字段全覆盖锚）。 */
     private static int count(String hay, String needle) {

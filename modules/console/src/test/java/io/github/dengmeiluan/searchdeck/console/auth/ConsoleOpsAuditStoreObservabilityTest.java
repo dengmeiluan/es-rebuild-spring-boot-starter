@@ -83,7 +83,7 @@ public class ConsoleOpsAuditStoreObservabilityTest {
 
         awaitTasks(store, 1);
         assertTrue("JDBC 档落审计失败必须落服务端 WARN（首次留痕），此前只有 debug",
-                countDropWarn("[es-console-audit-jdbc]") >= 1);
+                countDropWarn("[searchdeck-audit-jdbc]") >= 1);
     }
 
     /** JDBC 档：首条 WARN 后计数静默——第二笔失败不追加 WARN（防宿主库宕机期间刷屏）。 */
@@ -96,39 +96,39 @@ public class ConsoleOpsAuditStoreObservabilityTest {
 
         awaitTasks(store, 2);
         assertEquals("首条 WARN 后必须静默（两笔失败只允许一条 WARN，防高频刷屏）",
-                1, countDropWarn("[es-console-audit-jdbc]"));
+                1, countDropWarn("[searchdeck-audit-jdbc]"));
     }
 
     /** ES 档：落库失败（client 不可用）首次必须落 WARN——与 JDBC 档同一观测口径。 */
     @Test
     public void esStoreFirstDropLeavesWarn() throws Exception {
-        EsConsoleOpsAuditStore store = new EsConsoleOpsAuditStore(() -> null, "es_console_ops_audit");
+        EsConsoleOpsAuditStore store = new EsConsoleOpsAuditStore(() -> null, "searchdeck_ops_audit");
 
         store.record(ev("u1", null, "/api/x", "rebuild.start"));
 
         awaitTasks(store, 1);
         assertTrue("ES 档落审计失败必须落服务端 WARN（首次留痕），此前只有 debug",
-                countDropWarn("[es-console-audit]") >= 1);
+                countDropWarn("[searchdeck-audit]") >= 1);
     }
 
     /** ES 档：首条 WARN 后计数静默。 */
     @Test
     public void esStoreThrottleSilenceAfterFirstWarn() throws Exception {
-        EsConsoleOpsAuditStore store = new EsConsoleOpsAuditStore(() -> null, "es_console_ops_audit");
+        EsConsoleOpsAuditStore store = new EsConsoleOpsAuditStore(() -> null, "searchdeck_ops_audit");
 
         store.record(ev("u1", null, "/api/x", "rebuild.start"));
         store.record(ev("u2", null, "/api/y", "rebuild.cancel"));
 
         awaitTasks(store, 2);
         assertEquals("首条 WARN 后必须静默（两笔失败只允许一条 WARN）",
-                1, countDropWarn("[es-console-audit]"));
+                1, countDropWarn("[searchdeck-audit]"));
     }
 
     /** 既有契约顺带锁：record 永不抛（审计不反噬业务），失败只进日志面。 */
     @Test
     public void recordNeverThrowsEvenWhenBackingStoreBroken() {
         JdbcConsoleOpsAuditStore jdbc = new JdbcConsoleOpsAuditStore(brokenDataSource());
-        EsConsoleOpsAuditStore es = new EsConsoleOpsAuditStore(() -> null, "es_console_ops_audit");
+        EsConsoleOpsAuditStore es = new EsConsoleOpsAuditStore(() -> null, "searchdeck_ops_audit");
 
         jdbc.record(ev("u1", null, "/api/x", "a"));
         es.record(ev("u1", null, "/api/x", "a"));

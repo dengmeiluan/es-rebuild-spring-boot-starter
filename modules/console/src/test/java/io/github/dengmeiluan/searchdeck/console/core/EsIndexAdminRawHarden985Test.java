@@ -190,7 +190,7 @@ public class EsIndexAdminRawHarden985Test {
         assertRejected(() -> admin.guardRawGuarded("POST", "/logs/_update_by_query",
                         "{\"query\":{\"match_all\":{}},"
                                 + "\"script\":{\"lang\":\"painless\","
-                                + "\"source\":\"ctx._index='es_console_user'\"}}"),
+                                + "\"source\":\"ctx._index='searchdeck_user'\"}}"),
                 "旧版 ES 可用脚本改写目标索引");
     }
 

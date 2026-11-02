@@ -42,7 +42,7 @@ describe('auth.logout 服务端失效接线（999）', () => {
     expect(calls.length).toBe(1);
     expect(calls[0]!.url.endsWith('/internal/es/index/auth/logout')).toBe(true);
     expect(calls[0]!.init.method).toBe('POST');
-    expect(((calls[0]!.init.headers || {}) as Record<string, string>)['X-Es-Console-Token']).toBe('t-999');
+    expect(((calls[0]!.init.headers || {}) as Record<string, string>)['X-SearchDeck-Token']).toBe('t-999');
     expect(getToken()).toBe('');
     await new Promise(r => setTimeout(r, 0));
     expect(auth.me).toBeNull();

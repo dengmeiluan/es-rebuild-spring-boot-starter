@@ -32,10 +32,10 @@ describe('1004:根级检索缺索引范围 → 前端提前禁用', () => {
   });
 
   it('控制面/系统索引与通配提前禁用', () => {
-    expect(nonAdminControlIndexDenied('/es_console_user/_doc/1')).toBe(true);
+    expect(nonAdminControlIndexDenied('/searchdeck_user/_doc/1')).toBe(true);
     expect(nonAdminControlIndexDenied('/.security/_search')).toBe(true);
-    expect(nonAdminControlIndexDenied('/logs*_es_rebuild_lock/_search')).toBe(true);
-    expect(nonAdminControlIndexDenied('/es_con*/_search')).toBe(true);
+    expect(nonAdminControlIndexDenied('/logs*_searchdeck_lock/_search')).toBe(true);
+    expect(nonAdminControlIndexDenied('/sear*/_search')).toBe(true);
     expect(nonAdminControlIndexDenied('/*/_search')).toBe(true);
     expect(nonAdminControlIndexDenied('/logs/_search')).toBe(false);
     expect(nonAdminControlIndexDenied('/orders-2026/_doc/1')).toBe(false);

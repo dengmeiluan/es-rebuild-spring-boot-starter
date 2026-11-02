@@ -16,7 +16,7 @@
 
 package io.github.dengmeiluan.searchdeck.console.auth;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildAutoConfiguration;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckConsoleAutoConfiguration;
 import org.junit.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -36,8 +36,8 @@ public class ConsolePermissionsWiring897Test {
 
     private ApplicationContextRunner runner() {
         return new ApplicationContextRunner()
-                .withConfiguration(AutoConfigurations.of(EsRebuildAutoConfiguration.class))
-                .withPropertyValues("es.rebuild.mode=console");
+                .withConfiguration(AutoConfigurations.of(SearchDeckConsoleAutoConfiguration.class))
+                .withPropertyValues("searchdeck.elasticsearch.mode=console");
     }
 
     @Test

@@ -34,7 +34,7 @@ import FavoritesView from '../views/FavoritesView.vue';
 const favSrc = readFileSync(join(__dirname, '../views/FavoritesView.vue'), 'utf-8');
 const codeOf = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/<!--[\s\S]*?-->/g, ' ');
 
-const FAV_KEY = 'es-console.favorites.v1';
+const FAV_KEY = 'searchdeck.favorites.v1';
 const apps: ReturnType<typeof createApp>[] = [];
 
 async function mountFav(items: any[]): Promise<HTMLElement> {

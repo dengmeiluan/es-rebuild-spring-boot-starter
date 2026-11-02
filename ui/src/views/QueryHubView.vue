@@ -241,11 +241,11 @@ onActivated(() => {
   if (!activatedEver) { activatedEver = true; return; }
   const usp = readHashQuery();
   let next = '';
-  if (usp.get('dsl') || sessionStorage.getItem('es-console.dsl.carry')) next = 'dsl';
-  else if (sessionStorage.getItem('es-console.sql.prefill') != null) next = 'sql';
-  else if (sessionStorage.getItem('es-console.lucene.q') != null) next = 'lucene';
-  else if (sessionStorage.getItem('es-console.sandbox.body') != null || sessionStorage.getItem('ss_dsl_body') != null) next = 'sandbox';
-  else if (sessionStorage.getItem('es-console.pit.filter') != null || sessionStorage.getItem('es-console.pit.prefill') != null) next = 'pit';
+  if (usp.get('dsl') || sessionStorage.getItem('searchdeck.dsl.carry')) next = 'dsl';
+  else if (sessionStorage.getItem('searchdeck.sql.prefill') != null) next = 'sql';
+  else if (sessionStorage.getItem('searchdeck.lucene.q') != null) next = 'lucene';
+  else if (sessionStorage.getItem('searchdeck.sandbox.body') != null || sessionStorage.getItem('ss_dsl_body') != null) next = 'sandbox';
+  else if (sessionStorage.getItem('searchdeck.pit.filter') != null || sessionStorage.getItem('searchdeck.pit.prefill') != null) next = 'pit';
   if (next) {
     mode.value = next;
     stamp.value++;
@@ -347,45 +347,45 @@ function replay(it: { mode?: string; query: string; index?: string; params?: str
   const idx = it.index || '';
   /* 1071：参数快照只对 sql 回放有效——先清旧键，任何非 SQL 回放都不会把上一条
      SQL 的参数偷偷带进后续进页的 SQL 草稿。 */
-  removeStoredRaw(sessionStorage, 'es-console.sql.prefill.params');
+  removeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.params');
   if (m === 'dsl') {
-    writeStoredRaw(sessionStorage, 'es-console.dsl.carry', it.query);
-    if (idx) writeStoredRaw(sessionStorage, 'es-console.dsl.carry.index', idx);
+    writeStoredRaw(sessionStorage, 'searchdeck.dsl.carry', it.query);
+    if (idx) writeStoredRaw(sessionStorage, 'searchdeck.dsl.carry.index', idx);
   } else if (m === 'sql') {
-    writeStoredRaw(sessionStorage, 'es-console.sql.prefill', it.query);
+    writeStoredRaw(sessionStorage, 'searchdeck.sql.prefill', it.query);
     /* 1071：参数化 SQL 的参数快照随文本回放（缺参数会直接执行失败/语义错位） */
-    if (it.params) writeStoredRaw(sessionStorage, 'es-console.sql.prefill.params', it.params);
+    if (it.params) writeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.params', it.params);
     /* 1089：执行选项随历史回放（时区/页超时/列式/宽容/取数） */
-    removeStoredRaw(sessionStorage, 'es-console.sql.prefill.opts');
-    if (it.opts) writeStoredRaw(sessionStorage, 'es-console.sql.prefill.opts', JSON.stringify(it.opts));
+    removeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.opts');
+    if (it.opts) writeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.opts', JSON.stringify(it.opts));
     /* SQL 回放补索引上下文跟随（dsl/lucene/sandbox/pit 分支同款）——
  否则原在索引 A 执行的 SQL 会在当前选中索引上回放，上下文错配 */
     if (idx) store.pick(idx);
   } else if (m === 'lucene') {
-    writeStoredRaw(sessionStorage, 'es-console.lucene.q', it.query);
-    if (idx) writeStoredRaw(sessionStorage, 'es-console.lucene.index', idx);
+    writeStoredRaw(sessionStorage, 'searchdeck.lucene.q', it.query);
+    if (idx) writeStoredRaw(sessionStorage, 'searchdeck.lucene.index', idx);
   } else if (m === 'sandbox') {
     writeStoredRaw(sessionStorage, 'ss_dsl_body', it.query);
     if (idx) store.pick(idx);
   } else if (m === 'pit') {
     /* PIT 回放补 filter/sort 预填——queryHistory 条目形状扩展（store 文件）不在
  文件清单，降级 sessionStorage 直传：filter 用历史条目原文（准确）；sort/order 用
- pit 执行时写的 es-console.pit.carry 快照转运为 es-console.pit.prefill（仅本次回放消费，
+ pit 执行时写的 searchdeck.pit.carry 快照转运为 searchdeck.pit.prefill（仅本次回放消费，
  PitScrollView onMounted 读走即删，普通重挂载不误吃）；无快照时退化为只带 filter（此前现状） */
-    writeStoredRaw(sessionStorage, 'es-console.pit.filter', it.query || '');
-    const carry = sessionStorage.getItem('es-console.pit.carry');
-    if (carry) writeStoredRaw(sessionStorage, 'es-console.pit.prefill', carry);
+    writeStoredRaw(sessionStorage, 'searchdeck.pit.filter', it.query || '');
+    const carry = sessionStorage.getItem('searchdeck.pit.carry');
+    if (carry) writeStoredRaw(sessionStorage, 'searchdeck.pit.prefill', carry);
     if (idx) store.pick(idx);
   } else if (m === 'template') {
     /* W-B（q 遗留）：template 通道回放=跨页跳搜索模板中心——template 不是
  QueryHub 六模式之一（QUERY_MODES 无此键，mode.value 赋它会被 normalizeMode 静默回落
  dsl 且污染 URL），故照 dsl.carry 同款 sessionStorage 一次性通道 + router.push 跨页，
  送达后立即 return（不入下方 mode 切换）。
- 送达目的地=SearchTemplatesView 的 source 草稿（接收端 onMounted 消费 es-console.
+ 送达目的地=SearchTemplatesView 的 source 草稿（接收端 onMounted 消费 searchdeck.
  search-templates.carry 即删）；条目 query= push 的 rendered||source 快照，
  模板源快照/渲染产物双形态由页内既有防呆承担（占位符参数表单+run() 参数防呆），
  这里只管如实送达——与 favReplay bulk.carry/ubq.carry 跨页 carry 同构。 */
-    writeStoredRaw(sessionStorage, 'es-console.search-templates.carry', it.query || '');
+    writeStoredRaw(sessionStorage, 'searchdeck.search-templates.carry', it.query || '');
     if (idx) store.pick(idx); /* 执行上下文跟随（sql/sandbox/pit 分支同款），进页 useIdxState(follow) 接住 */
     router.push('/search-templates');
     store.notify('success', '模板查询已送到搜索模板中心的源草稿');

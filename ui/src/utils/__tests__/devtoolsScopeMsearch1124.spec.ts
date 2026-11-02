@@ -31,7 +31,7 @@ describe('1124 DevTools scope：_msearch 空头语义', () => {
 
   it('根路径显式业务索引放行；显式控制面索引禁用', () => {
     expect(nonAdminDataPlaneWriteAllowed('POST', '/_msearch', head('{"index":"logs"}'))).toBe(true);
-    expect(nonAdminDataPlaneWriteAllowed('POST', '/_msearch', head('{"index":"es_console_user"}'))).toBe(false);
+    expect(nonAdminDataPlaneWriteAllowed('POST', '/_msearch', head('{"index":"searchdeck_user"}'))).toBe(false);
   });
 
   it('查询串形态的根级检索同样禁用（q=* / source=）', () => {

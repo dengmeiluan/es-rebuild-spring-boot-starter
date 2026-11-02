@@ -310,7 +310,7 @@ const SAMPLE_ILM_BODY = JSON.stringify({
 function createSample() {
   /* 与 explain 跳转同源门（1124）：样例是 PUT 策略，无 DevTools 权限跳过去也发不出去 */
   if (!canDevtools.value) { store.notify('warning', 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'); return; }
-  writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
+  writeStoredRaw(sessionStorage, 'searchdeck.devtools.open', JSON.stringify({
     title: 'ILM 示例策略', method: 'PUT', path: '/_ilm/policy/sample-policy', body: SAMPLE_ILM_BODY,
   }));
   router.push('/devtools');
@@ -558,7 +558,7 @@ onMounted(() => {
 function explainToDevtools() {
   if (!canDevtools.value) { store.notify('warning', 'DevTools 入口需要 DevTools/REST 页写权限或 ADMIN'); return; }
   if (!explainIndex.value) return;
-  writeStoredRaw(sessionStorage, 'es-console.devtools.open', JSON.stringify({
+  writeStoredRaw(sessionStorage, 'searchdeck.devtools.open', JSON.stringify({
     title: 'explain/' + explainIndex.value, method: 'GET',
     path: '/' + encodeURIComponent(explainIndex.value) + '/_ilm/explain', run: true,
   }));

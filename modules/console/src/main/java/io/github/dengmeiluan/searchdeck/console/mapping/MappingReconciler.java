@@ -19,7 +19,7 @@ package io.github.dengmeiluan.searchdeck.console.mapping;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.core.RebuildableIndexMeta;
 import org.apache.http.conn.ConnectTimeoutException;
 import org.slf4j.Logger;
@@ -43,11 +43,11 @@ public final class MappingReconciler {
     private static final String USE_ADHOC_REBUILD = "USE_ADHOC_REBUILD";
 
     private final MappingPort port;
-    private final EsRebuildProperties.Mapping config;
+    private final SearchDeckElasticsearchProperties.Mapping config;
 
-    public MappingReconciler(MappingPort port, EsRebuildProperties properties) {
+    public MappingReconciler(MappingPort port, SearchDeckElasticsearchProperties properties) {
         this.port = Objects.requireNonNull(port, "port");
-        EsRebuildProperties requiredProperties = Objects.requireNonNull(properties, "properties");
+        SearchDeckElasticsearchProperties requiredProperties = Objects.requireNonNull(properties, "properties");
         this.config = Objects.requireNonNull(requiredProperties.getMapping(), "properties.mapping");
     }
 

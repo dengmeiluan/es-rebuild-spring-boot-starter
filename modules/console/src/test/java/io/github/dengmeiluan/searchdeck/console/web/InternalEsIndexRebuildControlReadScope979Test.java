@@ -39,15 +39,15 @@ public class InternalEsIndexRebuildControlReadScope979Test {
         FakeAdmin() { super(null); }
 
         @Override public List<Map<String, Object>> listClusterIndices() {
-            return rows("logs-2026", "es_console_user", ".kibana");
+            return rows("logs-2026", "searchdeck_user", ".kibana");
         }
 
         @Override public List<Map<String, Object>> listAllAliases() {
-            return rows("logs-2026", "es_console_conn");
+            return rows("logs-2026", "searchdeck_conn");
         }
 
         @Override public List<Map<String, Object>> shardsDistribution(String indexPattern) {
-            return rows("logs-2026", "logs_es_rebuild_lock");
+            return rows("logs-2026", "logs_searchdeck_lock");
         }
 
         private static List<Map<String, Object>> rows(String... names) {

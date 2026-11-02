@@ -42,7 +42,7 @@ import java.util.Map;
  * cleanup / abort / jobs / lock-release / diagnostics）已整体退役，重建改由
  * {@code adhoc} 路径按索引名执行。本类保留索引诊断、巡检查询与集群级只读能力。</p>
  *
- * <p>由 {@code es.rebuild.web-enabled=false} 可整体关闭本接口与静态面板。</p>
+ * <p>由 {@code searchdeck.elasticsearch.web-enabled=false} 可整体关闭本接口与静态面板。</p>
  *
  * @author aicoding
  **/
@@ -554,7 +554,7 @@ public class InternalEsIndexRebuildController {
         } catch (Exception e) {
             // 原 catch(Exception ignore) 整段静默——本次高危审计将缺执行摘要
             // 且无痕（审计链断点）。低频用户路径直接 WARN 不节流；回填失败不影响执行契约不变
-            log.warn("[es-console-raw] 审计摘要回填失败(本次高危审计缺执行摘要): {}", e.getMessage(), e);
+            log.warn("[searchdeck-raw] 审计摘要回填失败(本次高危审计缺执行摘要): {}", e.getMessage(), e);
         }
         /* PIT id 是服务端资源的持有凭据：控制台内打开的 id 绑定执行者，换号/他人不得续用。
            ES 的 ?source= 与请求体同权——只查 body 会让「GET /{index}/_search?source={"pit":...}」

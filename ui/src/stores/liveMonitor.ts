@@ -22,7 +22,7 @@ export interface LiveAlert {
   firstAt: number; lastAt: number; active: boolean; resolvedAt?: number;
 }
 
-const SNAP_PREFIX = 'es-console.live.snapshot:';
+const SNAP_PREFIX = 'searchdeck.live.snapshot:';
 /** 快照超过该时长视为陈旧（趋势断层没有延续价值），丢弃重采。
  A：localStorage 持久化后拉长到 30 分钟——短时间关浏览器重开仍可续接趋势 */
 const SNAP_TTL_MS = 30 * 60 * 1000;

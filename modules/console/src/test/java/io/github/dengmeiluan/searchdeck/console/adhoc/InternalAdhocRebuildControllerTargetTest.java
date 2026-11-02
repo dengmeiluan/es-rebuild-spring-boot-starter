@@ -20,7 +20,7 @@ import io.github.dengmeiluan.searchdeck.console.auth.ConsoleAuthInterceptor;
 import io.github.dengmeiluan.searchdeck.console.auth.ConsolePrincipal;
 import io.github.dengmeiluan.searchdeck.console.auth.ConsoleRole;
 import io.github.dengmeiluan.searchdeck.console.auth.EnvPagesResolver;
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import org.junit.Test;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -105,7 +105,7 @@ public class InternalAdhocRebuildControllerTargetTest {
 
     private static InternalAdhocRebuildController controller(FakeService service) {
         return new InternalAdhocRebuildController(service,
-                new EnvPagesResolver(null, new EsRebuildProperties()), true);
+                new EnvPagesResolver(null, new SearchDeckElasticsearchProperties()), true);
     }
 
     private static ResponseStatusException expectForbidden(Runnable r) {

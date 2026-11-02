@@ -34,12 +34,12 @@ public class MonitorTopologyGuard994Test {
     @Test
     public void topIndex榜单不收录控制面索引() {
         assertFalse("业务索引保留", ClusterMetricsCollector.isControlIndexLike("logs-2026.10"));
-        assertTrue("监控索引滤除", ClusterMetricsCollector.isControlIndexLike("es_console_monitor-2026.10.22"));
+        assertTrue("监控索引滤除", ClusterMetricsCollector.isControlIndexLike("searchdeck_monitor-2026.10.22"));
         assertTrue("点号系统索引滤除", ClusterMetricsCollector.isControlIndexLike(".security-7"));
-        assertTrue("审计索引滤除", ClusterMetricsCollector.isControlIndexLike("es_console_ops_audit-2026.10.22"));
-        assertTrue("重建锁后缀滤除", ClusterMetricsCollector.isControlIndexLike("foo_es_rebuild_lock"));
-        assertTrue("xmigrate 作业后缀滤除", ClusterMetricsCollector.isControlIndexLike("bar_es_xmigrate_job"));
-        assertTrue("adhoc 作业前缀滤除", ClusterMetricsCollector.isControlIndexLike("es_rebuild_adhoc_job"));
+        assertTrue("审计索引滤除", ClusterMetricsCollector.isControlIndexLike("searchdeck_ops_audit-2026.10.22"));
+        assertTrue("重建锁后缀滤除", ClusterMetricsCollector.isControlIndexLike("foo_searchdeck_lock"));
+        assertTrue("xmigrate 作业后缀滤除", ClusterMetricsCollector.isControlIndexLike("bar_searchdeck_migrate_job"));
+        assertTrue("adhoc 作业前缀滤除", ClusterMetricsCollector.isControlIndexLike("searchdeck_adhoc_job"));
     }
 
     @Test

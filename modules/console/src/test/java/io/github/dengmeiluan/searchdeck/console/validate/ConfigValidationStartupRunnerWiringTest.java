@@ -19,7 +19,7 @@ package io.github.dengmeiluan.searchdeck.console.validate;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.control.EntityIndexNames;
 import io.github.dengmeiluan.searchdeck.console.control.EntityMappingDeriver;
 import io.github.dengmeiluan.searchdeck.console.core.EsIndexAdmin;
@@ -153,7 +153,7 @@ public class ConfigValidationStartupRunnerWiringTest {
 
         RecordingValidator validator = new RecordingValidator();
         new ConfigValidationStartupRunner(validator, registryProvider,
-                new EsRebuildProperties(), new EntityMappingDeriver(ctx)).run(null);
+                new SearchDeckElasticsearchProperties(), new EntityMappingDeriver(ctx)).run(null);
 
         // registry.listIndexKeys() 的顺序即 validate 的调用顺序，据此配对
         received = new LinkedHashMap<String, String>();

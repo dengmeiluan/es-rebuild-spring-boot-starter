@@ -391,7 +391,7 @@ async function copyRaw() {
 }
 /* 跨页直通——原始 JSON 经 sessionStorage 契约直达托管重建审编步（零剪贴板，
  必然成功）。落地端 AdhocRebuildView 在 mounted/activated 消费并自动解析拆填。 */
-const REBUILD_HANDOFF_KEY = 'es-console.rebuild-paste';
+const REBUILD_HANDOFF_KEY = 'searchdeck.rebuild-paste';
 function sendToRebuild() {
   writeStoredRaw(sessionStorage, REBUILD_HANDOFF_KEY, rawJson.value);
   rawOpen.value = false;

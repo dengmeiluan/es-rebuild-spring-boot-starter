@@ -16,7 +16,7 @@
 
 package io.github.dengmeiluan.searchdeck.console.auth;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.multicluster.ConnStore;
 import io.github.dengmeiluan.searchdeck.console.xmigrate.RemoteClusterConn;
 import org.junit.Test;
@@ -58,7 +58,7 @@ public class EnvPagesResolver983Test {
     }
 
     private static EnvPagesResolver resolver(String env, Map<String, Set<String>> templates) {
-        EsRebuildProperties props = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties props = new SearchDeckElasticsearchProperties();
         props.setEnvPages(templates);
         return new EnvPagesResolver(storeWithEnv(env), props);
     }

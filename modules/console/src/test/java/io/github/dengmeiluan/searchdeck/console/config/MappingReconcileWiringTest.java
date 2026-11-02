@@ -68,19 +68,19 @@ public class MappingReconcileWiringTest {
                 assertThat(context).hasSingleBean(MappingReconcileBootstrapRunner.class));
 
         runner().withUserConfiguration(OperationsConfiguration.class)
-                .withPropertyValues("es.rebuild.mode=client")
+                .withPropertyValues("searchdeck.elasticsearch.mode=client")
                 .run(context -> assertThat(context)
                         .hasSingleBean(MappingReconcileBootstrapRunner.class));
     }
 
     @Test
     public void consoleModeAndDisabledAutoRegisterDoNotWireRunner() {
-        runner().withPropertyValues("es.rebuild.mode=console")
+        runner().withPropertyValues("searchdeck.elasticsearch.mode=console")
                 .run(context -> assertThat(context)
                         .doesNotHaveBean(MappingReconcileBootstrapRunner.class));
 
         runner().withUserConfiguration(OperationsConfiguration.class)
-                .withPropertyValues("es.rebuild.mapping.auto-register=off")
+                .withPropertyValues("searchdeck.elasticsearch.mapping.auto-register=off")
                 .run(context -> assertThat(context)
                         .doesNotHaveBean(MappingReconcileBootstrapRunner.class));
     }
@@ -270,8 +270,8 @@ public class MappingReconcileWiringTest {
     @Test
     public void defaultMappingPropertiesRemainBound() {
         runner().run(context -> {
-            EsRebuildProperties.Mapping mapping =
-                    context.getBean(EsRebuildProperties.class).getMapping();
+            SearchDeckElasticsearchProperties.Mapping mapping =
+                    context.getBean(SearchDeckElasticsearchProperties.class).getMapping();
 
             assertThat(mapping.getAutoRegister()).isEqualTo("startup");
             assertThat(mapping.getConflictPolicy()).isEqualTo("fail");
@@ -411,7 +411,7 @@ public class MappingReconcileWiringTest {
 
     private ApplicationContextRunner runner() {
         return new ApplicationContextRunner()
-                .withConfiguration(AutoConfigurations.of(EsRebuildAutoConfiguration.class));
+                .withConfiguration(AutoConfigurations.of(SearchDeckConsoleAutoConfiguration.class));
     }
 
     private static MappingReconcileBootstrapRunner bootstrap(ElasticsearchOperations operations,
@@ -425,7 +425,7 @@ public class MappingReconcileWiringTest {
             IndexMetaRegistry registry,
             EntityMappingDeriver deriver) {
         return new MappingReconcileBootstrapRunner(
-                beanFactory, registry, deriver, new EsRebuildProperties());
+                beanFactory, registry, deriver, new SearchDeckElasticsearchProperties());
     }
 
     private static DefaultListableBeanFactory beanFactory(ElasticsearchOperations operations) {

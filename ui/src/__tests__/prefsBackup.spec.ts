@@ -16,14 +16,14 @@ const src = readFileSync(join(__dirname, '../views/FavoritesView.vue'), 'utf-8')
 describe('本地偏好备份（143 批）', () => {
   it('白名单正则：本站前缀命中、宿主键不匹配', () => {
     expect(src).toMatch(/const PREF_KEY_RE = \//);
-    expect(src).toContain('es-console\\.');
+    expect(src).toContain('searchdeck\\.');
     expect(src).toContain('es_cols:');
     expect(src).toContain('es_tbl_');
   });
 
   it('导出带 kind 标识 + 导入校验 kind 与白名单', () => {
-    expect(src).toContain("kind: 'es-console-prefs'");
-    expect(src).toMatch(/parsed\.kind === 'es-console-prefs'/);
+    expect(src).toContain("kind: 'searchdeck-prefs'");
+    expect(src).toMatch(/parsed\.kind === 'searchdeck-prefs'/);
     expect(src).toMatch(/!PREF_KEY_RE\.test\(k\)/);
     expect(src).toContain('刷新页面生效');
   });
@@ -39,6 +39,6 @@ describe('本地偏好备份（143 批）', () => {
 
 describe('偏好白名单补 jobs.seen（一百九十八批）', () => {
   it('作业通知去重键纳入备份白名单（换端不重复通知）', () => {
-    expect(src).toContain('es-console\\.jobs\\.seen');
+    expect(src).toContain('searchdeck\\.jobs\\.seen');
   });
 });

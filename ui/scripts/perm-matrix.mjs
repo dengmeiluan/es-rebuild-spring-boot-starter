@@ -3,13 +3,13 @@
  * 控制台权限矩阵集成测试（会真实发请求，只读为主）。
  *
  * 用法（凭据只走环境变量，不写进仓库）：
- *   CONSOLE_BASE=http://host:port/quotehub \
+ *   CONSOLE_BASE=http://host:port/acme \
  *   CONSOLE_USER_X1=... CONSOLE_PASS_X1=... \
  *   CONSOLE_USER_X2=... CONSOLE_PASS_X2=... \
  *   CONSOLE_USER_X3=... CONSOLE_PASS_X3=... \
  *   node scripts/perm-matrix.mjs
  *
- * 期望（与 quotehub 三账号产线口径一致）：
+ * 期望（与 acme 三账号产线口径一致）：
  *   x1 授权用户：至少一个连接可写（测试环境）、至少一个连接只读（生产）；
  *                只读连接上 DevTools 数据面被拒、管理面读被拒；可写连接上数据面放行、管理面仍拒。
  *   x2 超管：连接目录可见、DevTools 管理面读放行。
@@ -171,7 +171,7 @@ async function main() {
     record('x1', 'msearch.prefix-not-denied', pfx.status !== 403, true);
   }
 
-  // 宿主登出：quotehub 的 /api/auth/logout 从 Authorization 读令牌（X-Es-Host-Token
+  // 宿主登出：acme 的 /api/auth/logout 从 Authorization 读令牌（X-Es-Host-Token
   // 只用于控制台委托），必须同时带 Bearer 才会进 Redis 黑名单。
   const logoutRes = await fetch(BASE + '/api/auth/logout', {
     method: 'POST',

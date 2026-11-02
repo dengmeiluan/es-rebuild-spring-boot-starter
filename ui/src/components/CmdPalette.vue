@@ -178,7 +178,7 @@ const commands = computed<Cmd[]>(() => {
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
         if (!k) continue;
-        if (k.startsWith('es_tbl_') || k === 'es_density' || k === 'es_pager_size' || k.startsWith('es-console.layout.v2') || k.startsWith('es_console_qb_split')) kill.push(k);
+        if (k.startsWith('es_tbl_') || k === 'es_density' || k === 'es_pager_size' || k.startsWith('searchdeck.layout.v2') || k.startsWith('searchdeck_qb_split')) kill.push(k);
       }
       kill.forEach(k => removeStoredRaw(localStorage, k));
       store.notify('success', `已重置 ${kill.length} 项显示偏好，刷新页面后生效`);
@@ -384,10 +384,10 @@ const commands = computed<Cmd[]>(() => {
       action: () => go('/reindex-advanced') },
     { id: 'ops-fav-current-dsl', title: '收藏当前 DSL', sub: '把当前查询页 body 存到收藏夹', cat: 'ops', icon: Star,
       action: () => {
-        const body = sessionStorage.getItem('es-console.dsl.body') || '';
+        const body = sessionStorage.getItem('searchdeck.dsl.body') || '';
         if (!body.trim()) { store.notify('warning', '当前查询页无可收藏内容'); return; }
         /* index 取 DSL 镜像的所属索引（别页收藏时 pickedIdx 可能已切换） */
-        const idx = sessionStorage.getItem('es-console.dsl.index') || store.pickedIdx;
+        const idx = sessionStorage.getItem('searchdeck.dsl.index') || store.pickedIdx;
         store.addFavorite({ kind: 'dsl', title: `DSL @${fmtTime(Date.now())}`, subtitle: `${body.slice(0, 80)}…`, payload: { body, index: idx }, tags: ['dsl', 'manual'] });
         store.notify('success', '当前 DSL 已收藏');
       } },
@@ -407,30 +407,30 @@ const commands = computed<Cmd[]>(() => {
         /* 原生 prompt() 废弃，改为预填 + 路由到成熟视图；先判页权再写一次性键——
            无权被拒时键不残留（残留会让下次合法进入时意外执行陈旧预填）。 */
         if (!canGo('/search')) { go({ path: '/search', query: { mode: 'sql' } }); return; }
-        writeStoredRaw(sessionStorage, 'es-console.sql.prefill', store.pickedIdx ? `SELECT * FROM "${store.pickedIdx}" LIMIT 5` : 'SELECT * FROM "my-index" LIMIT 5');
+        writeStoredRaw(sessionStorage, 'searchdeck.sql.prefill', store.pickedIdx ? `SELECT * FROM "${store.pickedIdx}" LIMIT 5` : 'SELECT * FROM "my-index" LIMIT 5');
         go({ path: '/search', query: { mode: 'sql' } });
       } },
     /* 开发者工具 / 拓扑 / 火焰图 / 实时大屏 / painless / 生命周期 */
     { id: 'dev-devtools', title: 'Dev Tools 多标签编辑器', sub: 'Kibana 风格 · 多标签持久化 · Ctrl+Enter', cat: 'dev', icon: TerminalSquare,
       action: () => go('/devtools') },
     { id: 'dev-devtools-new-tab', title: 'Dev Tools 新开标签', sub: '直接打开一个空 GET / 请求', cat: 'dev', icon: TerminalSquare,
-      action: () => { if (!canGo('/devtools')) { go('/devtools'); return; } writeStoredRaw(sessionStorage, 'es-console.devtools.newtab', '1'); go('/devtools'); } },
+      action: () => { if (!canGo('/devtools')) { go('/devtools'); return; } writeStoredRaw(sessionStorage, 'searchdeck.devtools.newtab', '1'); go('/devtools'); } },
     { id: 'dev-flame', title: 'Profile 火焰图', sub: 'DSL profile 递归展开 · 热力条 · Top10 慢操作', cat: 'dev', icon: Flame,
       action: () => go('/profile-flame') },
     { id: 'dev-flame-current', title: '把当前 DSL 送去火焰图分析', sub: '带 profile=true 重跑', cat: 'dev', icon: Flame,
       action: () => {
-        const body = sessionStorage.getItem('es-console.dsl.body') || '';
+        const body = sessionStorage.getItem('searchdeck.dsl.body') || '';
         if (!body.trim()) { store.notify('warning', 'DSL 查询页尚无 body'); return; }
-        writeStoredRaw(sessionStorage, 'es-console.flame.body', body);
+        writeStoredRaw(sessionStorage, 'searchdeck.flame.body', body);
         /* flame.index 同取 DSL 镜像的所属索引 */
-        const idx = sessionStorage.getItem('es-console.dsl.index') || store.pickedIdx;
-        if (idx) writeStoredRaw(sessionStorage, 'es-console.flame.index', idx);
+        const idx = sessionStorage.getItem('searchdeck.dsl.index') || store.pickedIdx;
+        if (idx) writeStoredRaw(sessionStorage, 'searchdeck.flame.index', idx);
         go('/profile-flame');
       } },
     { id: 'dev-live', title: '实时监控大屏', sub: '轮询 nodes-stats · Sparkline QPS/写入/heap', cat: 'dev', icon: MonitorSpeaker,
       action: () => go('/live') },
     { id: 'dev-live-fs', title: '实时大屏 · 全屏切换', sub: '进入沉浸式监控模式', cat: 'dev', icon: Maximize2,
-      action: () => { writeStoredRaw(sessionStorage, 'es-console.live.fullscreen', '1'); go('/live'); } },
+      action: () => { writeStoredRaw(sessionStorage, 'searchdeck.live.fullscreen', '1'); go('/live'); } },
     { id: 'dev-painless', title: 'Painless 脚本沙盒', sub: '试跑 · 6 模板 · stored CRUD · UBQ 注入', cat: 'dev', icon: FlaskConical,
       action: () => go('/painless-lab') },
     { id: 'dev-lifecycle', title: 'ILM 生命周期视图', sub: '甘特图 phase · rollover Dry Run · move step', cat: 'dev', icon: Layers,
@@ -463,7 +463,7 @@ const commands = computed<Cmd[]>(() => {
     { id: 'dev-rollover-dry', title: 'Rollover Dry Run（当前索引/别名）', sub: '预填目标并跳转生命周期视图预检', cat: 'dev', icon: Recycle,
       action: () => {
         /* 原生 prompt() 废弃，改为预填 + 路由到成熟视图（Dry Run/条件可视化可编辑） */
-        if (store.pickedIdx) writeStoredRaw(sessionStorage, 'es-console.lifecycle.rollover', store.pickedIdx);
+        if (store.pickedIdx) writeStoredRaw(sessionStorage, 'searchdeck.lifecycle.rollover', store.pickedIdx);
         go('/lifecycle');
       } },
     ...(canNodesRead ? [{ id: 'dev-nodes-brief', title: '节点简要统计（后台）', sub: 'heap/cpu/disk 一览 · toast 摘要', cat: 'dev', icon: GaugeCircle,
@@ -492,23 +492,23 @@ const commands = computed<Cmd[]>(() => {
       } }] : []),
     { id: 'monitor-dsl-to-lucene', title: '把当前 DSL 翻译为 Lucene', sub: '从 DSL 页读 body · 启发式抽取 query_string · 跳转 /lucene', cat: 'monitor', icon: ArrowLeftRight,
       action: () => {
-        const body = sessionStorage.getItem('es-console.dsl.body') || '';
+        const body = sessionStorage.getItem('searchdeck.dsl.body') || '';
         if (!body.trim()) { store.notify('warning', '无 DSL body，先在 DSL 页面写一份'); return; }
         try {
           const obj = JSON.parse(body);
           /* 同 DslQueryView——无法翻译的子句必须显性告知，不能静默丢弃后
              让用户拿着"少了条件"的 Lucene 去跑 */
           const { lucene: lc, lossy } = dslToLuceneDetailed(obj);
-          writeStoredRaw(sessionStorage, 'es-console.lucene.q', lc);
+          writeStoredRaw(sessionStorage, 'searchdeck.lucene.q', lc);
           if (lossy.length) {
-            writeStoredRaw(sessionStorage, 'es-console.lucene.lossy', JSON.stringify(lossy));
+            writeStoredRaw(sessionStorage, 'searchdeck.lucene.lossy', JSON.stringify(lossy));
             store.notify('warning', `已翻译，但 ${lossy.length} 处无法用 query_string 表达：${lossy.join('、')}`, { duration: 6000 });
           } else {
-            removeStoredRaw(sessionStorage, 'es-console.lucene.lossy');
+            removeStoredRaw(sessionStorage, 'searchdeck.lucene.lossy');
           }
           /* lucene.index 同取 DSL 镜像的所属索引 */
-          const idx = sessionStorage.getItem('es-console.dsl.index') || store.pickedIdx;
-          if (idx) writeStoredRaw(sessionStorage, 'es-console.lucene.index', idx);
+          const idx = sessionStorage.getItem('searchdeck.dsl.index') || store.pickedIdx;
+          if (idx) writeStoredRaw(sessionStorage, 'searchdeck.lucene.index', idx);
           go({ path: '/search', query: { mode: 'lucene' } });
         } catch (e: any) { store.notify('error', '解析失败：' + (e?.message || e)); }
       } },
@@ -614,7 +614,7 @@ const recent = ref<string[]>(readStoredJson(localStorage, 'es_cmd_recent', [], A
 /* 换号：auth 已清磁盘键，但常驻组件的 recent ref 仍在内存——新账号的「最近使用」
    会显示上一账号的索引名/命令。身份事件到达即归零，避免旧现场复现。 */
 if (typeof window !== 'undefined') {
-  window.addEventListener('es-console:identity-changed', () => { recent.value = []; });
+  window.addEventListener('searchdeck:identity-changed', () => { recent.value = []; });
 }
 
 /* /：中文别名表（拼音首字母）+ 查表逻辑抽到 utils/cmdAlias.ts——

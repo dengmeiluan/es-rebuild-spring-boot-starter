@@ -76,7 +76,7 @@ public class BuiltinConsoleLogoutRevocation999Test {
                     }
                     return "{}";
                 }),
-                "es_console_user", "admin", "es-console", 3_600_000L, "it-secret");
+                "searchdeck_user", "admin", "searchdeck", 3_600_000L, "it-secret");
     }
 
     @Test
@@ -129,7 +129,7 @@ public class BuiltinConsoleLogoutRevocation999Test {
                     }
                     return "{}";
                 }),
-                "es_console_user", "admin", "es-console", 3_600_000L, "it-secret");
+                "searchdeck_user", "admin", "searchdeck", 3_600_000L, "it-secret");
         svc.upsertUser(null, "reborn", PASSWORD, ConsoleRole.VIEWER);
         String body = putBody.get();
         assertNotNull("应写入用户档案", body);

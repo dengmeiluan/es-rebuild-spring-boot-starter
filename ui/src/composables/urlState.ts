@@ -5,7 +5,7 @@ import { writeStoredRaw } from '../utils/safeJson';
 
 /* 横切设施——URL 状态同步 + 偏好持久化。
  useUrlState：把视图关键状态写进 hash query，刷新/分享后现场可复原；
- usePref：用户偏好落 localStorage（命名空间 es-console.pref.*），跨会话记忆。 */
+ usePref：用户偏好落 localStorage（命名空间 searchdeck.pref.*），跨会话记忆。 */
 
 export function readHashQuery(): URLSearchParams {
   return new URLSearchParams(location.hash.split('?')[1] || '');
@@ -75,7 +75,7 @@ export function useIdxState(opts?: { follow?: boolean | (() => boolean) }): Ref<
 
 /** 用户偏好：localStorage 持久化，JSON 序列化，坏值静默回落默认（容错型静默，允许） */
 export function usePref<T>(key: string, defVal: T): Ref<T> {
-  const lsKey = 'es-console.pref.' + key;
+  const lsKey = 'searchdeck.pref.' + key;
   let init = defVal;
   try {
     const raw = localStorage.getItem(lsKey);
@@ -88,7 +88,7 @@ export function usePref<T>(key: string, defVal: T): Ref<T> {
   return state;
 }
 
-/* 旧 useDraft（es-console.draft.* 命名空间）已删除——全站零调用
- （草稿全面迁移 useScopedDraft/es-console.draft2:*），AdhocRebuildView 注释
- 引用同步更正。历史遗留的 es-console.draft.* sessionStorage 键不主动清除（用户可
+/* 旧 useDraft（searchdeck.draft.* 命名空间）已删除——全站零调用
+ （草稿全面迁移 useScopedDraft/searchdeck.draft2:*），AdhocRebuildView 注释
+ 引用同步更正。历史遗留的 searchdeck.draft.* sessionStorage 键不主动清除（用户可
  自行清理，或下次同 key 写入时自然覆盖）。 */

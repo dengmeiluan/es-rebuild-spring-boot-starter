@@ -5,7 +5,7 @@
 - starter 是**库**：不持有、不存储任何 ES 凭据。连接凭据完全由宿主的
   `spring.data.elasticsearch.*` 与 `ElasticsearchRestClient` 配置供给，starter 只消费
   宿主容器里现成的 client bean。
-- 运维控制台（`es.rebuild.mode=console`）**自带鉴权是可选的**：默认 `client` 模式
+- 运维控制台（`searchdeck.elasticsearch.mode=console`）**自带鉴权是可选的**：默认 `client` 模式
   无 starter 级鉴权，依赖部署网络隔离。暴露到共享网络前，务必：
   - 实现 `ConsoleAuthDelegate` SPI 接入宿主账号体系（`mode=console` 下的审计/角色面）；
   - 或在网关层拦截 `/internal/es/**`。
@@ -15,7 +15,7 @@
 ## 报告漏洞
 
 请勿公开 issue 披露可被利用的问题。通过 GitHub
-[Security Advisories](https://github.com/dengmeiluan/es-rebuild-spring-boot-starter/security/advisories/new)
+[Security Advisories](https://github.com/dengmeiluan/searchdeck/security/advisories/new)
 私密报告，或私信仓库所有者。预计 7 天内回应。
 
 ## 已知取舍

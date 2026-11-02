@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 多集群监控历史读侧（20260922 批④前端配套）：查询 {@code es_console_monitor-yyyy.MM.dd}
+ * 多集群监控历史读侧（20260922 批④前端配套）：查询 {@code searchdeck_monitor-yyyy.MM.dd}
  * 日期索引族（写入方= {@link MonitorSnapshotRecorder} 服务端定时任务，本类纯只读）。
  *
  * <p>查询形态与审计快筛同构：目标 {@code <前缀>-*} 日期通配（时间范围天然只打命中日期分片）、

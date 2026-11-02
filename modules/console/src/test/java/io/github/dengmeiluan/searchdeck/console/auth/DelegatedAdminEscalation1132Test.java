@@ -17,7 +17,7 @@
 package io.github.dengmeiluan.searchdeck.console.auth;
 import io.github.dengmeiluan.searchdeck.platform.pages.ConsolePageCatalog;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.control.ControlClusterResolver;
 import io.github.dengmeiluan.searchdeck.console.multicluster.ConnStore;
 import io.github.dengmeiluan.searchdeck.console.xmigrate.RemoteClusterConn;
@@ -151,7 +151,7 @@ public class DelegatedAdminEscalation1132Test {
         ConsoleOpsAuditStore audit = new CapturingAuditStore();
         ConsoleAuthInterceptor it = new ConsoleAuthInterceptor(
                 req -> who, audit, resolver, ConsolePageCatalog.load(), true,
-                new EnvPagesResolver(store, new EsRebuildProperties()), store);
+                new EnvPagesResolver(store, new SearchDeckElasticsearchProperties()), store);
 
         /* 同一个 request 对象贯穿拦截器与控制器：拦截器把 principal 写进 attribute，
            控制器再从同一个 attribute 读——分两次 new 会让桩各持一份 attrs，链路就断了 */
@@ -178,7 +178,7 @@ public class DelegatedAdminEscalation1132Test {
      */
     private static BuiltinConsoleAuthService realService() {
         return new BuiltinConsoleAuthService(
-                () -> null, "es_console_users", "admin", "admin-pw", 3600_000L, "test-secret", true);
+                () -> null, "searchdeck_users", "admin", "admin-pw", 3600_000L, "test-secret", true);
     }
 
     /** 只记内存的审计口（接口是 record + search 两个方法）。 */
@@ -240,7 +240,7 @@ public class DelegatedAdminEscalation1132Test {
         ConsoleAuthInterceptor it = new ConsoleAuthInterceptor(
                 req -> delegatedAdmin(), new CapturingAuditStore(), resolver,
                 ConsolePageCatalog.load(), true,
-                new EnvPagesResolver(store, new EsRebuildProperties()), store);
+                new EnvPagesResolver(store, new SearchDeckElasticsearchProperties()), store);
         HttpServletRequest req = request(
                 "POST", "/internal/es/index/auth/users/delete?username=victim", new HashMap<>());
         StubResponse resp = new StubResponse();

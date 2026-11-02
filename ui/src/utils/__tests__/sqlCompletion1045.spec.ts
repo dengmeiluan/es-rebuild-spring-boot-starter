@@ -34,11 +34,11 @@ describe('1045 SQL 子句级补全', () => {
 });
 
 describe('1045 SQL 索引名纠错', () => {
-  const indices = [{ index: 'quotehub_entity' }, { index: 'quotehub_report' }, { index: 'logs-2026' }];
+  const indices = [{ index: 'acme_entity' }, { index: 'acme_report' }, { index: 'logs-2026' }];
 
   it('Unknown index / no such index 两种错误文案都识别', () => {
-    expect(suggestIndicesFor('Unknown index [quotehub_entty]', indices)?.suggestions[0].path).toBe('quotehub_entity');
-    expect(suggestIndicesFor('no such index [quotehub_repor]', indices)?.suggestions[0].path).toBe('quotehub_report');
+    expect(suggestIndicesFor('Unknown index [acme_entty]', indices)?.suggestions[0].path).toBe('acme_entity');
+    expect(suggestIndicesFor('no such index [acme_repor]', indices)?.suggestions[0].path).toBe('acme_report');
   });
 
   it('无错误文案/无相近项返回 null 或空建议', () => {

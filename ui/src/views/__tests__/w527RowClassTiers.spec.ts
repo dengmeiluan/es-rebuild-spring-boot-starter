@@ -133,7 +133,7 @@ describe('五百二十七批 W-F：HealthReportView 节点表水位行色档（h
 
   it('水位行判档：bad 列 → hr-row-hot；仅 warn 列 → hr-row-warm；多列取最严重档', async () => {
     /* R51：最近一次体检落 sessionStorage，挂载即复原（数据无需真跑 run） */
-    sessionStorage.setItem('es-console.health-report.last', JSON.stringify(REPORT));
+    sessionStorage.setItem('searchdeck.health-report.last', JSON.stringify(REPORT));
     const { app } = await mountView(HealthReportView);
     expect(capturedRowClass, '节点负载表必须传 rowClass（QRT rowClass 契约）').toBeTypeOf('function');
     const fn = capturedRowClass!;

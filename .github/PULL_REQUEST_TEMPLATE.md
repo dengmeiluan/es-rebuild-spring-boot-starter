@@ -4,9 +4,9 @@
 
 ## 验证
 
-- [ ] `mvn clean test -Dconsole.build.skip=true` 全绿（需先有 console 构建产物）
-- [ ] `cd console && npm run typecheck` 0 错
-- [ ] `cd console && npm test` 全绿
+- [ ] `mvn clean test -Dconsole.build.skip=true` 全绿（需先有 UI 构建产物）
+- [ ] `cd ui && npm run typecheck` 0 错
+- [ ] `cd ui && npm test` 全绿
 - [ ] 新能力配 spec 锚（TDD 先红后绿）
 
 ## 补充

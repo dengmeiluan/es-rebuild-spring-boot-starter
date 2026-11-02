@@ -47,7 +47,7 @@ public final class MappingReconcileBootstrapRunner {
     private final ListableBeanFactory beanFactory;
     private final IndexMetaRegistry registry;
     private final EntityMappingDeriver entityMappingDeriver;
-    private final EsRebuildProperties properties;
+    private final SearchDeckElasticsearchProperties properties;
     private final AtomicBoolean started = new AtomicBoolean();
 
     /** 最近一次启动对账的报告快照(ES Console「启动对账」抽屉的数据源;容量上限 200 条)。 */
@@ -62,7 +62,7 @@ public final class MappingReconcileBootstrapRunner {
     public MappingReconcileBootstrapRunner(ListableBeanFactory beanFactory,
                                            IndexMetaRegistry registry,
                                            EntityMappingDeriver entityMappingDeriver,
-                                           EsRebuildProperties properties) {
+                                           SearchDeckElasticsearchProperties properties) {
         this.beanFactory = Objects.requireNonNull(beanFactory, "beanFactory");
         this.registry = Objects.requireNonNull(registry, "registry");
         this.entityMappingDeriver = Objects.requireNonNull(entityMappingDeriver, "entityMappingDeriver");

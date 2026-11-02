@@ -100,11 +100,11 @@ public class AdhocTargetPersistenceTest {
         DataSource db = freshDb();
         // 先造一个「旧版本 schema + 旧 payload（无 targetId 字段）」的存量行
         try (Connection c = db.getConnection(); Statement st = c.createStatement()) {
-            st.execute("CREATE TABLE es_rebuild_adhoc_job ("
+            st.execute("CREATE TABLE searchdeck_adhoc_job ("
                     + "job_id VARCHAR(64) PRIMARY KEY, status_name VARCHAR(32), index_name VARCHAR(256),"
                     + "created_ts BIGINT NOT NULL, updated_ts BIGINT NOT NULL,"
                     + "payload_json TEXT, result_json TEXT)");
-            st.execute("INSERT INTO es_rebuild_adhoc_job VALUES ('legacy-1','SUCCEEDED','old-idx',"
+            st.execute("INSERT INTO searchdeck_adhoc_job VALUES ('legacy-1','SUCCEEDED','old-idx',"
                     + "1,2,'{\"jobId\":\"legacy-1\",\"status\":\"SUCCEEDED\"}',NULL)");
         }
         JdbcAdhocJobStore store = new JdbcAdhocJobStore(db);
@@ -117,11 +117,11 @@ public class AdhocTargetPersistenceTest {
     public void jdbcSchemaMigrationAddsTargetColumnsWithoutDroppingRows() throws Exception {
         DataSource db = freshDb();
         try (Connection c = db.getConnection(); Statement st = c.createStatement()) {
-            st.execute("CREATE TABLE es_rebuild_adhoc_job ("
+            st.execute("CREATE TABLE searchdeck_adhoc_job ("
                     + "job_id VARCHAR(64) PRIMARY KEY, status_name VARCHAR(32), index_name VARCHAR(256),"
                     + "created_ts BIGINT NOT NULL, updated_ts BIGINT NOT NULL,"
                     + "payload_json TEXT, result_json TEXT)");
-            st.execute("INSERT INTO es_rebuild_adhoc_job VALUES ('legacy-2','RUNNING','old-idx',"
+            st.execute("INSERT INTO searchdeck_adhoc_job VALUES ('legacy-2','RUNNING','old-idx',"
                     + "1,2,'{\"jobId\":\"legacy-2\",\"status\":\"RUNNING\"}',NULL)");
         }
         JdbcAdhocJobStore store = new JdbcAdhocJobStore(db);

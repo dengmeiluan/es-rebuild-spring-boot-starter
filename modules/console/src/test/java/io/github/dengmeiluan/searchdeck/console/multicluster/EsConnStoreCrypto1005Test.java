@@ -72,7 +72,7 @@ public class EsConnStoreCrypto1005Test {
     public void 新密码落库为密文且get还原明文() {
         InMemoryConnEs es = new InMemoryConnEs();
         EsConnStore store = new EsConnStore(
-                () -> EsFakeClients.scripted(es.handler), "es_console_conn", null,
+                () -> EsFakeClients.scripted(es.handler), "searchdeck_conn", null,
                 ConnCrypto.resolve(null, null));
 
         store.save("c1", "生产集群", "http://es.prod:9200", "elastic", "plain-pw-123", null, null, null, null);
@@ -90,7 +90,7 @@ public class EsConnStoreCrypto1005Test {
     public void 编辑留空沿用旧密码_绝不二次加密() {
         InMemoryConnEs es = new InMemoryConnEs();
         EsConnStore store = new EsConnStore(
-                () -> EsFakeClients.scripted(es.handler), "es_console_conn", null,
+                () -> EsFakeClients.scripted(es.handler), "searchdeck_conn", null,
                 ConnCrypto.resolve(null, null));
 
         store.save("c2", "集群A", "http://a:9200", "u", "first-pw", null, null, null, null);
@@ -110,7 +110,7 @@ public class EsConnStoreCrypto1005Test {
         InMemoryConnEs es = new InMemoryConnEs();
         ConnCrypto crypto = ConnCrypto.resolve(null, null);
         EsConnStore store = new EsConnStore(
-                () -> EsFakeClients.scripted(es.handler), "es_console_conn", null, crypto);
+                () -> EsFakeClients.scripted(es.handler), "searchdeck_conn", null, crypto);
 
         /* 预置一份存量明文档案（升级前的存量形态） */
         es.docs.put("c3", "{\"name\":\"老档案\",\"scheme\":\"http\",\"host\":\"b\",\"port\":9200,"

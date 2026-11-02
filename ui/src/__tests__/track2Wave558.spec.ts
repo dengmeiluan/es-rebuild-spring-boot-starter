@@ -315,7 +315,7 @@ describe('558 五：AR 行为网（err-bar 现场回看 + piH 档循环落盘）
     cyc!.click();
     await settle();
     expect(cyc!.getAttribute('title'), '进第二档（title 实时回显当前档）').toBe('粘贴区高度档：min(70vh, 720px)（点击循环）');
-    expect(localStorage.getItem('es-console.pref.adhoc.piH'), 'usePref 落盘').toBe('"min(70vh, 720px)"');
+    expect(localStorage.getItem('searchdeck.pref.adhoc.piH'), 'usePref 落盘').toBe('"min(70vh, 720px)"');
   });
 });
 

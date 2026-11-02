@@ -11,7 +11,7 @@
  *    （本页无命名弹窗，同名跳过防静默覆盖）；
  *  D DevToolsView 本 Tab 历史清空（源锚）：clearable 按汇聚范围开（仅本 Tab 档）+ @clear 确认链；
  *  E IndexHubView docs 检索入跨模式历史（源锚）：runDocs 成功/失败各 push 一条 mode='lucene'
- *    （:1157 push('dsl') 契约同构，回放走 es-console.lucene.q 既有通道）。
+ *    （:1157 push('dsl') 契约同构，回放走 searchdeck.lucene.q 既有通道）。
  *
  * 面板挂载范式同 queryHistoryPanel.spec.ts（裸 createApp + pinia + vue-router mock）。
  */

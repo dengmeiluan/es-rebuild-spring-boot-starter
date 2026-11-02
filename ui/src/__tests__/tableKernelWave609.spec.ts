@@ -143,7 +143,7 @@ describe('六百零九批三：viewPrefKey 落盘与回落', () => {
   it('viewPrefKey：切档落盘+重挂载恢复持久化档', async () => {
     await mountTbl(() => ({ hits: K609_HITS, total: 2, storageKey: 'k609p', viewSeg: true, jsonHtml: K609_JSON_HTML, treeData: K609_TREE, viewPrefKey: 'k609view' }));
     await clickIt(segBtn('Tree')!);
-    expect(localStorage.getItem('es-console.pref.k609view'), 'usePref 落盘（es-console.pref.* 命名空间）').toBe(JSON.stringify('tree'));
+    expect(localStorage.getItem('searchdeck.pref.k609view'), 'usePref 落盘（searchdeck.pref.* 命名空间）').toBe(JSON.stringify('tree'));
     /* 重挂载（同 key）：持久化档恢复——非表格档直接生效（状态不重置） */
     apps.forEach(a => { try { a.unmount(); } catch { /* 已卸载 */ } });
     apps.length = 0;
@@ -153,12 +153,12 @@ describe('六百零九批三：viewPrefKey 落盘与回落', () => {
     expect(host.querySelector('.rt-alt-body .jtree'), 'Tree 体直接在场').toBeTruthy();
   });
   it('数据缺席诚实回落：持久化档=tree 但 treeData 缺席 → 表格档照常出体，偏好保留不回写', async () => {
-    localStorage.setItem('es-console.pref.k609view2', JSON.stringify('tree'));
+    localStorage.setItem('searchdeck.pref.k609view2', JSON.stringify('tree'));
     await mountTbl(() => ({ hits: K609_HITS, total: 2, storageKey: 'k609f', viewSeg: true, jsonHtml: K609_JSON_HTML, viewPrefKey: 'k609view2' }));
     expect(segLabels(), '数据驱动只出两档').toEqual(['表格', 'JSON']);
     expect(wrapEl()!.style.display, '缺席档位回落表格（体可见）').not.toBe('none');
     expect(host.querySelector('.rt-alt-body'), '回落不渲染 alt 体').toBeNull();
-    expect(localStorage.getItem('es-console.pref.k609view2'), '偏好保留不回写').toBe(JSON.stringify('tree'));
+    expect(localStorage.getItem('searchdeck.pref.k609view2'), '偏好保留不回写').toBe(JSON.stringify('tree'));
   });
 });
 

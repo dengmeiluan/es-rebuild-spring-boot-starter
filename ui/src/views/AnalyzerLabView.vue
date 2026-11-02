@@ -510,7 +510,7 @@ watch(afLink, () => analyzerLinkBoot.run(), { immediate: true });
 
 onMounted(() => {
   /* 手写「读→焚→解」接收侧换 useLinkCarry.receive() 统一件（语义等价：
- 取后即焚、坏 JSON 吞掉返 null）；键名与 payload 结构逐字保持 es-console.link.analyzer */
+ 取后即焚、坏 JSON 吞掉返 null）；键名与 payload 结构逐字保持 searchdeck.link.analyzer */
   const p = analyzerCarry.receive();
   if (p) {
     if (p.index) index.value = p.index;

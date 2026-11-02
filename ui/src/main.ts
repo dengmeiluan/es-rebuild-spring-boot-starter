@@ -21,13 +21,13 @@ setApiWriteGuard((method, path, targetId) => useAuthStore().canEmitWrite(method,
  完整堆栈进控制台（调试可用）；用户侧经 store.notify 弹一次（自带 风暴抑制，
  轮询炸裂期不轰炸）。errorHandler 在 pinia/router 之后挂，store 已可用。 */
 app.config.errorHandler = (err: unknown, _inst, info) => {
-  console.error('[es-console] 渲染异常', err, '\n处理链:', info);
+  console.error('[searchdeck] 渲染异常', err, '\n处理链:', info);
   try {
     useAppStore().notify('error', `页面渲染异常：${err instanceof Error ? err.message : String(err)}`);
   } catch { /* store 不可用时不二次炸 */ }
 };
 window.addEventListener('unhandledrejection', (e) => {
-  console.error('[es-console] 未捕获的 Promise 拒绝', e.reason);
+  console.error('[searchdeck] 未捕获的 Promise 拒绝', e.reason);
   /* 漏 catch 的请求失败此前纯静默（用户点完没反应）。403 已由全局 forbidden 通道提示，
      这里只兜其余错误，避免同一次拒绝弹两条。 */
   try {

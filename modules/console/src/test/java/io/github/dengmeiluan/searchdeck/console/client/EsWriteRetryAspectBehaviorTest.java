@@ -16,7 +16,7 @@
 
 package io.github.dengmeiluan.searchdeck.console.client;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildAutoConfiguration;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckConsoleAutoConfiguration;
 import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.rest.RestStatus;
 import org.junit.Test;
@@ -63,12 +63,12 @@ public class EsWriteRetryAspectBehaviorTest {
     private ApplicationContextRunner runnerWithMaxAttempts(int maxAttempts) {
         return new ApplicationContextRunner()
                 .withConfiguration(AutoConfigurations.of(
-                        AopAutoConfiguration.class, EsRebuildAutoConfiguration.class))
+                        AopAutoConfiguration.class, SearchDeckConsoleAutoConfiguration.class))
                 .withUserConfiguration(StubOpsConfiguration.class)
                 .withPropertyValues(
-                        "es.rebuild.retry.max-attempts=" + maxAttempts,
-                        "es.rebuild.retry.init-backoff-ms=1",
-                        "es.rebuild.retry.max-backoff-ms=2");
+                        "searchdeck.elasticsearch.retry.max-attempts=" + maxAttempts,
+                        "searchdeck.elasticsearch.retry.init-backoff-ms=1",
+                        "searchdeck.elasticsearch.retry.max-backoff-ms=2");
     }
 
     /**
@@ -170,9 +170,9 @@ public class EsWriteRetryAspectBehaviorTest {
     }
 
     /**
-     * {@code es.rebuild.retry.max-attempts=1} 就是<b>关闭重试</b>的开关。
+     * {@code searchdeck.elasticsearch.retry.max-attempts=1} 就是<b>关闭重试</b>的开关。
      *
-     * <p><b>为什么需要本条</b>：{@code EsRebuildProperties.Retry} 没有 {@code enabled} 字段，
+     * <p><b>为什么需要本条</b>：{@code SearchDeckElasticsearchProperties.Retry} 没有 {@code enabled} 字段，
      * 想关掉重试的人唯一的路就是把 {@code max-attempts} 设成 1。而「1」到底是
      * <b>总尝试次数</b>还是<b>重试次数</b>，只看配置名是<b>看不出来</b>的 ——
      * 若是后者，设 1 反而还会重试一次。本条把「1 = 只调一次 = 关闭」这个语义钉死，

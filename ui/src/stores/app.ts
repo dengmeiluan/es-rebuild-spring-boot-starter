@@ -121,13 +121,13 @@ export const useAppStore = defineStore('app', () => {
  列表已按登录角色过滤 minRole（低于档案门槛的连接后端直接不返回），并附 health 探活结果
  .2：hostVisible=false（纯管理平台形态）时切换器藏掉宿主项，无目标时自动映射首个可见连接 */
   const target = ref<string>(getTarget());
-  const targetName = ref<string>(localStorage.getItem('es-console.target.name') || '');
+  const targetName = ref<string>(localStorage.getItem('searchdeck.target.name') || '');
   /* w45:双键撕裂自愈——id 与 name 是两个独立 localStorage 键,部分清理/异常可致
  「顶栏显示生产集群、实际请求不带 X-Es-Target(打宿主)」的撕裂态,这是用户
  「明明选了生产还报宿主侧错误」的系统性根源之一。恢复时以 id 为准,name 必须依附 id。 */
   if (!target.value && targetName.value) {
     targetName.value = '';
-    removeStoredRaw(localStorage, 'es-console.target.name');
+    removeStoredRaw(localStorage, 'searchdeck.target.name');
   }
   const conns = ref<ClusterConnView[]>([]);
   const isRemote = computed(() => !!target.value);
@@ -187,8 +187,8 @@ export const useAppStore = defineStore('app', () => {
      类（产线实报「切换集群连接的时候，索引选择信息没有置空」）。setTarget 与跨标签
      同步两条路径统一走这里清。 */
   const TARGET_INDEX_KEYS = [
-    'es-console.dsl.index', 'es-console.dsl.carry.index', 'es-console.lucene.index',
-    'es-console.sandbox.index', 'es-console.sql.prefill.index', 'es-console.flame.index',
+    'searchdeck.dsl.index', 'searchdeck.dsl.carry.index', 'searchdeck.lucene.index',
+    'searchdeck.sandbox.index', 'searchdeck.sql.prefill.index', 'searchdeck.flame.index',
   ];
   function clearTargetIndexMemory() {
     /* sql.prefill.index 在 sessionStorage（SqlConsoleView 会话域），其余在 localStorage */
@@ -201,7 +201,7 @@ export const useAppStore = defineStore('app', () => {
     target.value = id;
     targetName.value = id ? name : '';
     setTargetId(id);
-    writeStoredRaw(localStorage, 'es-console.target.name', targetName.value);
+    writeStoredRaw(localStorage, 'searchdeck.target.name', targetName.value);
     pick(''); // 切集群后旧 picked 索引大概率不存在，清空避免误导
     recentIdx.value = []; // ：最近索引同理随集群失效，避免跨集群误导
     removeStoredRaw(localStorage, RECENT_KEY);
@@ -273,18 +273,18 @@ export const useAppStore = defineStore('app', () => {
   }
   function shiftNotify() { notifyQueue.value.shift(); }
 
-  /* 慢请求可观测——api 层对 >10s 的成功请求广播 es-console:slow-request
+  /* 慢请求可观测——api 层对 >10s 的成功请求广播 searchdeck:slow-request
  （事件桥与 unauthorized/setup-required 同范式，api 层不反依赖 store），此处转发
  既有 notify warning 档；同 path+文案的轮询重弹由 notify 内建 8s 去重吸收 */
   if (typeof window !== 'undefined') {
-    window.addEventListener('es-console:slow-request', (e: Event) => {
+    window.addEventListener('searchdeck:slow-request', (e: Event) => {
       const d = (e as CustomEvent).detail || {};
       if (d.path) notify('warning', `${d.path} 耗时 ${d.seconds}s`);
     });
     /* 权限拒绝的全局出口（后端 403 与客户端写硬门共用）：此前 215 处 catch 静默吞掉，
        用户只看到「点了没反应」。统一给出「缺什么 + 怎么办 + 可复制申请」，各视图不必再造轮子。
        轮询型读请求由 notify 的 8s 同文去重吸收；写操作永远提示（那是用户主动动作）。 */
-    window.addEventListener('es-console:forbidden', (e: Event) => {
+    window.addEventListener('searchdeck:forbidden', (e: Event) => {
       const d = (e as CustomEvent).detail || {};
       const page = typeof d.page === 'string' && d.page ? d.page : '';
       const required = typeof d.required === 'string' && d.required ? d.required : '';
@@ -330,8 +330,8 @@ export const useAppStore = defineStore('app', () => {
   interface NotifyLogItem { kind: NotifyItem['kind']; msg: string; ts: number; count?: number; firstTs?: number;
     /** 该通知的动作 label 清单（回调不可序列化；历史侧展示徽标提示错过了可操作按钮） */
     actions?: string[] }
-  const NLOG_KEY = 'es-console.notify.log';
-  const NSEEN_KEY = 'es-console.notify.seen';
+  const NLOG_KEY = 'searchdeck.notify.log';
+  const NSEEN_KEY = 'searchdeck.notify.seen';
   const NLOG_MAX = 50;
   const notifyLog = ref<NotifyLogItem[]>(loadNotifyLog());
   const notifySeenTs = ref(Number(localStorage.getItem(NSEEN_KEY) || 0));
@@ -377,7 +377,7 @@ export const useAppStore = defineStore('app', () => {
     ts: number;
     tags?: string[];
   }
-  const FAV_KEY = 'es-console.favorites.v1';
+  const FAV_KEY = 'searchdeck.favorites.v1';
   const favorites = ref<Favorite[]>(loadFav());
   function loadFav(): Favorite[] {
     try {
@@ -519,9 +519,9 @@ export const useAppStore = defineStore('app', () => {
      另一标签切换目标而本页不跟随，会出现「界面显示 QA、请求打到 PROD」的目标撕裂。 */
   if (typeof window !== 'undefined') {
     window.addEventListener('storage', (e) => {
-      if (e.key !== 'es-console.target' && e.key !== 'es-console.target.name') return;
+      if (e.key !== 'searchdeck.target' && e.key !== 'searchdeck.target.name') return;
       const id = getTarget();
-      const name = id ? (localStorage.getItem('es-console.target.name') || '') : '';
+      const name = id ? (localStorage.getItem('searchdeck.target.name') || '') : '';
       if (id === target.value) {
         targetName.value = name;
         return;
@@ -560,7 +560,7 @@ export const useAppStore = defineStore('app', () => {
     target.value = '';
     targetName.value = '';
     setTargetId('');
-    removeStoredRaw(localStorage, 'es-console.target.name');
+    removeStoredRaw(localStorage, 'searchdeck.target.name');
     removeStoredRaw(localStorage, 'es_picked');
     removeStoredRaw(localStorage, RECENT_KEY);
     favorites.value = [];

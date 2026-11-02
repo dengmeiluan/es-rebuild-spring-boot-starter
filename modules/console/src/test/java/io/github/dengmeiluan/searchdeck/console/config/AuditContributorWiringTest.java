@@ -36,7 +36,7 @@ import static org.junit.Assert.assertTrue;
 
 /**
  * 审计 SPI 装配级布线测试——直接调用
- * {@code EsRebuildAutoConfiguration.ConsoleModeConfiguration#consoleOpsAuditStore}
+ * {@code SearchDeckConsoleAutoConfiguration.ConsoleModeConfiguration#consoleOpsAuditStore}
  * 的 @Bean 方法体（jdbc 档 + 桩 DataSource + ObjectProvider 桩），锁定装配分支：
  * <ul>
  *   <li>宿主注册 {@link ConsoleAuditContributor} 且显式开启 host-audit-merge → 查询期并入
@@ -117,20 +117,20 @@ public class AuditContributorWiringTest {
         };
     }
 
-    private static EsRebuildProperties jdbcProps() {
-        EsRebuildProperties props = new EsRebuildProperties();
+    private static SearchDeckElasticsearchProperties jdbcProps() {
+        SearchDeckElasticsearchProperties props = new SearchDeckElasticsearchProperties();
         props.getConsole().setStore("jdbc");
         return props;
     }
 
-    private static EsRebuildProperties jdbcPropsWithHostMerge() {
-        EsRebuildProperties props = jdbcProps();
+    private static SearchDeckElasticsearchProperties jdbcPropsWithHostMerge() {
+        SearchDeckElasticsearchProperties props = jdbcProps();
         props.getConsole().getAuth().setHostAuditMerge(true);
         return props;
     }
 
-    private static ConsoleOpsAuditStore build(EsRebuildAutoConfiguration.ConsoleModeConfiguration cfg,
-                                              EsRebuildProperties props,
+    private static ConsoleOpsAuditStore build(SearchDeckConsoleAutoConfiguration.ConsoleModeConfiguration cfg,
+                                              SearchDeckElasticsearchProperties props,
                                               ConsoleAuditContributor contributor) {
         return cfg.consoleOpsAuditStore(null, props, provider(emptyDb()), provider(contributor),
                 new org.springframework.core.env.StandardEnvironment());
@@ -145,7 +145,7 @@ public class AuditContributorWiringTest {
 
     @Test
     public void 宿主注册贡献者且显式开启hostMerge_装配分支包上合并层_查询并入宿主记录且source_stamp为host() {
-        EsRebuildAutoConfiguration.ConsoleModeConfiguration cfg = new EsRebuildAutoConfiguration.ConsoleModeConfiguration();
+        SearchDeckConsoleAutoConfiguration.ConsoleModeConfiguration cfg = new SearchDeckConsoleAutoConfiguration.ConsoleModeConfiguration();
         ConsoleOpsAuditStore store = build(cfg, jdbcPropsWithHostMerge(), HOST_ONE);
 
         List<ConsoleOpsAuditEvent> out = store.search(null, null, 10, 0, null);
@@ -159,7 +159,7 @@ public class AuditContributorWiringTest {
      *  非本控制台请求（匿名登录族等 null 用户宿主记录）不进控制台审计视图。 */
     @Test
     public void 宿主注册但默认关hostMerge_装配分支不包合并层_宿主记录不进控制台审计() {
-        EsRebuildAutoConfiguration.ConsoleModeConfiguration cfg = new EsRebuildAutoConfiguration.ConsoleModeConfiguration();
+        SearchDeckConsoleAutoConfiguration.ConsoleModeConfiguration cfg = new SearchDeckConsoleAutoConfiguration.ConsoleModeConfiguration();
         ConsoleOpsAuditStore store = build(cfg, jdbcProps(), HOST_ONE);
 
         List<ConsoleOpsAuditEvent> out = store.search(null, null, 10, 0, null);
@@ -168,7 +168,7 @@ public class AuditContributorWiringTest {
 
     @Test
     public void 宿主未注册_装配分支不包合并层_查询仅控制台记录() {
-        EsRebuildAutoConfiguration.ConsoleModeConfiguration cfg = new EsRebuildAutoConfiguration.ConsoleModeConfiguration();
+        SearchDeckConsoleAutoConfiguration.ConsoleModeConfiguration cfg = new SearchDeckConsoleAutoConfiguration.ConsoleModeConfiguration();
         ConsoleOpsAuditStore store = build(cfg, jdbcProps(), null);
 
         List<ConsoleOpsAuditEvent> out = store.search(null, null, 10, 0, null);

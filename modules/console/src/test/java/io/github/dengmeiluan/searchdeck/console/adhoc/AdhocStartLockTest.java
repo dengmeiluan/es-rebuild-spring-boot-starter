@@ -75,7 +75,7 @@ public class AdhocStartLockTest {
         final AtomicInteger acquireCalls = new AtomicInteger();
         final AtomicInteger releaseCalls = new AtomicInteger();
         volatile boolean acquireResult = true;
-        /** 对应 es.rebuild.lock.enabled：false 时 tryAcquire/renew 恒 true、get 恒 null、release 空转 */
+        /** 对应 searchdeck.elasticsearch.lock.enabled：false 时 tryAcquire/renew 恒 true、get 恒 null、release 空转 */
         volatile boolean enabled = true;
         /** 锁文档是否存在；false 对应真实 get() 的 !isExists() → null */
         volatile boolean docExists = true;

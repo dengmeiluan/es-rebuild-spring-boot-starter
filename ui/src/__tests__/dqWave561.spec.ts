@@ -78,13 +78,13 @@ describe('③ 卡片视图/terms 桶行 kw 快滤（宿主侧过滤）', () => {
 });
 
 describe('④ 工具行 DSL→Lucene 钮（CmdPalette r30 既有出口同线）', () => {
-  it('dslToLucene 纯函数直连 + es-console.lucene.q/index 会话键 + 跳 Lucene 通道', () => {
+  it('dslToLucene 纯函数直连 + searchdeck.lucene.q/index 会话键 + 跳 Lucene 通道', () => {
     /* 1230：出口改用 dslToLuceneDetailed（能拿到 lossy 子句名并提示用户），
        仍是同一个纯函数内核——锁「引了内核」而不是锁具体某个导出名 */
     expect(dq).toMatch(/import \{ dslToLucene(Detailed)?[, ][^}]*\} from '\.\.\/utils\/dslToLucene';/);
     expect(dq).toMatch(/function openInLucene\(\)/);
-    expect(dq).toContain("writeStoredRaw(sessionStorage, 'es-console.lucene.q', lucene)");
-    expect(dq).toContain("writeStoredRaw(sessionStorage, 'es-console.lucene.index', store.pickedIdx)");
+    expect(dq).toContain("writeStoredRaw(sessionStorage, 'searchdeck.lucene.q', lucene)");
+    expect(dq).toContain("writeStoredRaw(sessionStorage, 'searchdeck.lucene.index', store.pickedIdx)");
     expect(dq).toContain("router.push({ path: '/search', query: { mode: 'lucene' } })");
     expect(dq).toMatch(/DSL 不是合法 JSON（已剥离注释后校验），无法翻译/);
     /* 1230：无法翻译的子句必须告知用户，不能静默丢条件 */

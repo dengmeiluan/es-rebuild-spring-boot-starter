@@ -89,7 +89,7 @@ describe('W2 批：分词实验室结果区可调', () => {
     expect((toks[0] as HTMLElement).style.maxHeight).toBe('240px');
     btn(host, '[data-al-toks-h]').click();
     await settle();
-    expect(localStorage.getItem('es-console.pref.al.toksH')).toBe('360');
+    expect(localStorage.getItem('searchdeck.pref.al.toksH')).toBe('360');
     expect((host.querySelector('.al-toks') as HTMLElement).style.maxHeight).toBe('360px');
   });
 
@@ -99,7 +99,7 @@ describe('W2 批：分词实验室结果区可调', () => {
     expect(dense.classList.contains('on')).toBe(false);
     dense.click();
     await settle();
-    expect(localStorage.getItem('es-console.pref.al.dense')).toBe('true');
+    expect(localStorage.getItem('searchdeck.pref.al.dense')).toBe('true');
     expect(dense.getAttribute('aria-pressed')).toBe('true');
     const toks = await runAllWithTokens(host);
     expect((toks[0] as HTMLElement).classList.contains('dense')).toBe(true);
@@ -120,7 +120,7 @@ describe('W2 批：分词实验室结果区可调', () => {
     await settle();
     expect(lanes.classList.contains('split-4060')).toBe(true);
     expect(lanes.classList.contains('split-half')).toBe(false);
-    expect(localStorage.getItem('es-console.pref.al.laneSplit')).toBe(JSON.stringify('4060'));
+    expect(localStorage.getItem('searchdeck.pref.al.laneSplit')).toBe(JSON.stringify('4060'));
     /* 单 lane 回退 auto-fit：删到只剩 1 列 */
     lane.click(); await settle();
     expect(host.querySelectorAll('.al-lane').length).toBe(1);

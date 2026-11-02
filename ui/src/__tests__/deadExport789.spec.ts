@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
  * Phase 0 四折修正扫描器分型（118 export 符号）：产品活 94+spec 孤儿 0
  *   +内部活 20（同文件自用，export 关键字冗余非死码——类型 19+useHitScroll 值 1）
  *   +真死 2（useLayoutPreferences LayoutPreferences/LayoutSnapshotRef：
- *   零产品消费+零自用+零 spec 文本锁〔legacyKeyCleanup350 锁的是 es_console_qb_split
+ *   零产品消费+零自用+零 spec 文本锁〔legacyKeyCleanup350 锁的是 searchdeck_qb_split
  *   迁移串〕——ReturnType 别名与 Ref 别名均为「声明即终点」形态）。
  * 刀A=真死 2 type 整删+type Ref import 孤儿清理；
  * 刀B=内部活 20 处去 export 关键字（typecheck 0=零漏判铁证）；

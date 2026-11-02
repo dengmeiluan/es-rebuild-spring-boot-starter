@@ -138,8 +138,8 @@ public final class DateFormSamplingDrill {
     /** 组装真实 EsIndexRebuildService（空 registry：索引名直传，正是集群级只读端点的路径）。 */
     private static io.github.dengmeiluan.searchdeck.console.core.EsIndexRebuildService dateFormsService(
             RestHighLevelClient client, EsIndexAdmin admin) {
-        io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties props =
-                new io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties();
+        io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties props =
+                new io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties();
         io.github.dengmeiluan.searchdeck.console.core.IndexMetaRegistry registry =
                 new io.github.dengmeiluan.searchdeck.console.core.IndexMetaRegistry(
                         null, java.util.Collections.emptyList());

@@ -58,7 +58,7 @@ async function mountView() {
    logs-archive（proxy+skip true）/beta-cluster（单 seed 未连接无 skip） */
 function seedRemotes() {
   remoteFn.mockResolvedValue({
-    localClusterName: 'es-console-main',
+    localClusterName: 'searchdeck-main',
     localVersion: { number: '8.11.4' },
     remotes: {
       'search-prod': {

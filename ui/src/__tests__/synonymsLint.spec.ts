@@ -8,7 +8,7 @@
  * ③ filter 名校验：仅小写字母/数字/下划线，非法即红字（.sy-lint-err）+ 下发禁用；
  * ④ 全合法输入零 lint 提示、下发可用（有索引语境时）。
  *
- * 驱动方式：raw 走 useScopedDraft sessionStorage 键（es-console.draft2:synonyms:host:-:-:raw）
+ * 驱动方式：raw 走 useScopedDraft sessionStorage 键（searchdeck.draft2:synonyms:host:-:-:raw）
  * 挂载前种稿；filterName 是真实 <input v-model>——value+dispatchEvent(input) 驱动。
  * 设施同 dslAssistPenetration：monaco stub + api 出口 mock。
  */
@@ -89,7 +89,7 @@ vi.mock('../api', async (importOriginal) => {
 
 import SynonymsManagerView from '../views/SynonymsManagerView.vue';
 
-const DRAFT_KEY = 'es-console.draft2:synonyms:host:-:-:raw';
+const DRAFT_KEY = 'searchdeck.draft2:synonyms:host:-:-:raw';
 
 async function settle(n = 12) {
   for (let i = 0; i < n; i++) { await nextTick(); await Promise.resolve(); }

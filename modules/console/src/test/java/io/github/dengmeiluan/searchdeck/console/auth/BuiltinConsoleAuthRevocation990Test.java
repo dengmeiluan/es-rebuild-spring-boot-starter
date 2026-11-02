@@ -90,7 +90,7 @@ public class BuiltinConsoleAuthRevocation990Test {
                     }
                     return "{}";
                 }),
-                "es_console_user", "admin", "es-console", 3_600_000L, "it-secret");
+                "searchdeck_user", "admin", "searchdeck", 3_600_000L, "it-secret");
     }
 
     private static Map<String, Object> login(BuiltinConsoleAuthService svc) throws IOException {

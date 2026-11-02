@@ -327,7 +327,7 @@
           refreshable
           @refresh="doRun"
           view-seg
-          view-pref-key="es-console.pref.sqlResultView"
+          view-pref-key="searchdeck.pref.sqlResultView"
           export-name="sql"
           export-ndjson
           :export-note="exportCaveat(!!cursor, resultStale)"
@@ -1020,7 +1020,7 @@ const probed = ref(false);
 const probedN = ref(0);
 const sqlCapable = ref<Array<{ id: string; name: string }>>([]);
 /* 探测结论 5 分钟缓存（集群 SQL 能力短期不变）——反复触发降级时秒回，不重复打全部集群 */
-const PROBE_CACHE_KEY = 'es-console.sql.probe-cache';
+const PROBE_CACHE_KEY = 'searchdeck.sql.probe-cache';
 const PROBE_TTL = 5 * 60 * 1000;
 async function probeSqlTargets() {
   const cached = (() => {
@@ -1054,11 +1054,11 @@ async function probeSqlTargets() {
 function switchAndRerun(c: { id: string; name: string }) {
   /* 切 target 会按 key 整页重挂载，直接 doRun 的结果会写进已卸载的旧实例——
  改走 prefill 键，新实例 onMounted 消费后自动执行（与命令面板快速 SQL 同一链路） */
-  writeStoredRaw(sessionStorage, 'es-console.sql.prefill', sql.value);
+  writeStoredRaw(sessionStorage, 'searchdeck.sql.prefill', sql.value);
   /* 1071：切集群重跑同样要带上参数，否则重跑的「同一条 SQL」语义已变 */
   const carryParams = paramsText.value.trim();
-  if (carryParams) writeStoredRaw(sessionStorage, 'es-console.sql.prefill.params', carryParams);
-  else removeStoredRaw(sessionStorage, 'es-console.sql.prefill.params');
+  if (carryParams) writeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.params', carryParams);
+  else removeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.params');
   store.setTarget(c.id, c.name);
   store.notify('success', `已切换到「${c.name}」，正在重跑 SQL`);
 }
@@ -1336,30 +1336,30 @@ onMounted(() => {
   /* W2 批：SQL 补全单例——字段源吃当前工作索引（与顶栏选中同源），FROM 表名位由单例模块内部解析 */
   sqlCompletion = ensureSqlCompletion(monaco, sqlCtx);
   /* 1071：跨模式历史回放会随 SQL 一起投递参数快照（无参数则不留旧键） */
-  const prefillParams = sessionStorage.getItem('es-console.sql.prefill.params');
+  const prefillParams = sessionStorage.getItem('searchdeck.sql.prefill.params');
   if (prefillParams != null) {
-    removeStoredRaw(sessionStorage, 'es-console.sql.prefill.params');
+    removeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.params');
     paramsText.value = prefillParams;
     paramOpen.value = true;
   }
   /* 1086：收藏/回放携带的索引现场——先切源再执行（无键则维持顶栏选择） */
-  const prefillIdx = sessionStorage.getItem('es-console.sql.prefill.index');
+  const prefillIdx = sessionStorage.getItem('searchdeck.sql.prefill.index');
   if (prefillIdx != null) {
-    removeStoredRaw(sessionStorage, 'es-console.sql.prefill.index');
+    removeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.index');
     if (prefillIdx && prefillIdx !== store.pickedIdx) store.pick(prefillIdx);
   }
   /* 1087：执行选项随收藏/回放恢复（数值夹取同 buildBody 口径） */
-  const prefillOpts = sessionStorage.getItem('es-console.sql.prefill.opts');
+  const prefillOpts = sessionStorage.getItem('searchdeck.sql.prefill.opts');
   if (prefillOpts != null) {
-    removeStoredRaw(sessionStorage, 'es-console.sql.prefill.opts');
+    removeStoredRaw(sessionStorage, 'searchdeck.sql.prefill.opts');
     try {
       const o = JSON.parse(prefillOpts) || {};
       applySqlOpts(o);
     } catch { /* 损坏的选项快照不阻塞 SQL 回放 */ }
   }
-  const prefill = sessionStorage.getItem('es-console.sql.prefill');
+  const prefill = sessionStorage.getItem('searchdeck.sql.prefill');
   if (prefill) {
-    removeStoredRaw(sessionStorage, 'es-console.sql.prefill');
+    removeStoredRaw(sessionStorage, 'searchdeck.sql.prefill');
     sql.value = prefill;
     /* 身份/读页门：probe 未落地不发；无鉴权/有读页权限才自动执行 */
     if (prefillAutoAllowed()) doRun();
@@ -1581,10 +1581,10 @@ async function sortByColumn({ field, dir }: { field: string; dir: 'asc' | 'desc'
   void doRun();
 }
 
-/* 转出的 DSL 继续去查询工作台调试（复用 SqlBridge 的 es-console.dsl.body 契约） */
+/* 转出的 DSL 继续去查询工作台调试（复用 SqlBridge 的 searchdeck.dsl.body 契约） */
 function gotoDsl() {
   if (!dslPreview.value) return;
-  /* w77 修复:原走 es-console.dsl.body 死信箱(DslQueryView 不读且会被旧稿覆写),改走 ?dsl= 深链 */
+  /* w77 修复:原走 searchdeck.dsl.body 死信箱(DslQueryView 不读且会被旧稿覆写),改走 ?dsl= 深链 */
   /* 1083：目标索引随语句走——SQL 的 FROM 可能是另一索引，DSL 页若沿用顶栏选中会在错索引上执行 */
   const idx = dslPreviewIdx.value || indexOf();
   router.push({ path: '/search', query: { mode: 'dsl', ...(idx ? { idx } : {}), dsl: encodeDslParam(dslPreview.value) } });

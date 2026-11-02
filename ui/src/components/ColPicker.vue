@@ -76,7 +76,7 @@ const kw = ref('');
 watch(open, () => { kw.value = ''; });
 
 /* 「前 N」N 值偏好（全站共享的操作习惯，非数据语义故不按维度）——
- usePref 落盘 es-console.pref.table.firstn，默认 6 与既有硬编码行为一致 */
+ usePref 落盘 searchdeck.pref.table.firstn，默认 6 与既有硬编码行为一致 */
 const firstN = usePref<number>('table.firstn', 6);
 
 const filtered = computed(() => {

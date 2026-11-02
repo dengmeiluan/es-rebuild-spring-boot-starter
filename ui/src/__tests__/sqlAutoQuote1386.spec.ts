@@ -22,7 +22,7 @@ import { join } from 'node:path';
 import { autoQuoteFromIndex } from '../utils/sqlQuote';
 import { lintSql } from '../utils/sqlLint';
 
-const IDX = ['quotehub_entity', 'my-index', 'logs-2026'];
+const IDX = ['acme_entity', 'my-index', 'logs-2026'];
 
 describe('1386 FROM 索引名自动补引号', () => {
   it('① 裸索引名命中已知列表 → 补双引号', () => {
@@ -51,7 +51,7 @@ describe('1386 FROM 索引名自动补引号', () => {
   });
 
   it('⑤ 多表 / 子查询不动', () => {
-    const multi = 'SELECT * FROM my-index, quotehub_entity';
+    const multi = 'SELECT * FROM my-index, acme_entity';
     expect(autoQuoteFromIndex(multi, IDX).quoted).toBeNull();
     const sub = 'SELECT * FROM (SELECT * FROM my-index) t';
     /* 首个 FROM 后是 ( ；正则不吃，保持不动 */
@@ -64,7 +64,7 @@ describe('1386 FROM 索引名自动补引号', () => {
   });
 
   it('⑦ 大小写/下划线/点号形态都能命中', () => {
-    expect(autoQuoteFromIndex('SELECT * FROM quotehub_entity', IDX).quoted).toBe('quotehub_entity');
+    expect(autoQuoteFromIndex('SELECT * FROM acme_entity', IDX).quoted).toBe('acme_entity');
   });
 });
 

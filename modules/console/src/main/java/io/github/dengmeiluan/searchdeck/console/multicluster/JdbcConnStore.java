@@ -35,7 +35,7 @@ import java.util.UUID;
 
 /**
  * 多集群连接档案——宿主数据库档（ 平台化底座）：档案落宿主 {@code DataSource}
- * 的 {@code es_console_conn} 表（首次使用自动建表），让接入方（如 宿主）用
+ * 的 {@code searchdeck_conn} 表（首次使用自动建表），让接入方（如 宿主）用
  * 自己的数据库统一管理多套集群，并纳入其备份/权限/运维体系。
  *
  * <p>只依赖 {@code javax.sql.DataSource}（JDK 标准接口），零新增 maven 依赖；
@@ -46,7 +46,7 @@ import java.util.UUID;
 public class JdbcConnStore implements ConnStore {
 
     private static final Logger LOG = LoggerFactory.getLogger(JdbcConnStore.class);
-    private static final String TABLE = "es_console_conn";
+    private static final String TABLE = "searchdeck_conn";
 
     private final DataSource dataSource;
     private volatile boolean schemaReady;

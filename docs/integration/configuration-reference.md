@@ -1,141 +1,136 @@
 # 配置参考
 
-> **2.0 前缀**：引擎层新前缀为 `searchdeck.elasticsearch.*`；下表保留 `es.rebuild.*`
-> 是因为它仍是一代兼容别名（启动期由 `SearchDeckConfigAliasPostProcessor` 透明映射），
-> 且现有测试/宿主配置以旧键为契约。新接入方建议使用新前缀。
-（es.rebuild.*）
-
-全部配置键来自 `EsRebuildProperties` 属性树，本页逐键对账 Java 默认值；
+引擎层统一前缀为 `searchdeck.elasticsearch.*`。全部配置键来自 `SearchDeckElasticsearchProperties` 属性树，本页逐键对账 Java 默认值；
 `ConfigurationReferenceContractTest` 反射遍历属性树与本页逐键核对——**新增配置键忘写本页即测试红**。
 
-键名遵循 Spring Boot 宽松绑定：文档按 kebab-case 书写，`application.yml` / 环境变量（`ES_REBUILD_...`）等价。
+键名遵循 Spring Boot 宽松绑定：文档按 kebab-case 书写，`application.yml` / 环境变量（`SEARCHDECK_ELASTICSEARCH_...`）等价。
 
 ## 基础
 
 | 配置键 | Java 默认值 | 说明 |
 |---|---|---|
-| `es.rebuild.mode` | `client` | 装配模式：`client`=业务应用侧只装索引声明；`console`=宿主侧全量装配（控制台+AOP 切面+控制集群解析）。允许值 `client` / `console`，拼写错误拒绝启动 |
-| `es.rebuild.web-enabled` | `true` | 是否启用内置运维 Controller 与静态面板 |
-| `es.rebuild.version-format` | `yyyyMMddHHmmss` | 物理索引版本号时间格式（物理索引名为 原名_v时间戳），非法 pattern 拒绝启动 |
-| `es.rebuild.env-pages` | （空 Map） | 连接环境 → 页面 key 白名单集合（键=PROD/STAGING/QA/DEV）；整个 Map 为空=不启用，未配置的 env 原样透传；**显式配置的 env 为空集/null=该环境全拒**（启动 WARN 点名）。`/auth/me` 会把模板下发给前端，菜单/按钮与后端同口径收缩 |
-| `es.rebuild.console.setup-token` | （空串） | 未绑定首连初始化令牌；非空时 `/setup/test`、`/setup/apply` 必须携带 `X-Setup-Token`（防匿名绑定/SSRF 探测）。空=仅允许本机（回环且无 `X-Forwarded-For`/`X-Real-IP`/`Forwarded` 头）匿名首连；远程初始化必须配置令牌 |
+| `searchdeck.elasticsearch.mode` | `client` | 装配模式：`client`=业务应用侧只装索引声明；`console`=宿主侧全量装配（控制台+AOP 切面+控制集群解析）。允许值 `client` / `console`，拼写错误拒绝启动 |
+| `searchdeck.elasticsearch.web-enabled` | `true` | 是否启用内置运维 Controller 与静态面板 |
+| `searchdeck.elasticsearch.version-format` | `yyyyMMddHHmmss` | 物理索引版本号时间格式（物理索引名为 原名_v时间戳），非法 pattern 拒绝启动 |
+| `searchdeck.elasticsearch.env-pages` | （空 Map） | 连接环境 → 页面 key 白名单集合（键=PROD/STAGING/QA/DEV）；整个 Map 为空=不启用，未配置的 env 原样透传；**显式配置的 env 为空集/null=该环境全拒**（启动 WARN 点名）。`/auth/me` 会把模板下发给前端，菜单/按钮与后端同口径收缩 |
+| `searchdeck.elasticsearch.console.setup-token` | （空串） | 未绑定首连初始化令牌；非空时 `/setup/test`、`/setup/apply` 必须携带 `X-Setup-Token`（防匿名绑定/SSRF 探测）。空=仅允许本机（回环且无 `X-Forwarded-For`/`X-Real-IP`/`Forwarded` 头）匿名首连；远程初始化必须配置令牌 |
 
-## 写入重试（es.rebuild.retry）
+## 写入重试（searchdeck.elasticsearch.retry）
 
 | 配置键 | Java 默认值 | 说明 |
 |---|---|---|
-| `es.rebuild.retry.max-attempts` | `5` | 最大尝试次数（**含首次**）：`1`=只调用一次=完全关闭重试，这也是关闭重试的唯一方式（刻意不设 enabled，避免双开关语义重叠） |
-| `es.rebuild.retry.init-backoff-ms` | `500` | 首次退避毫秒；须 ≤ max-backoff-ms |
-| `es.rebuild.retry.max-backoff-ms` | `8000` | 退避上限毫秒 |
+| `searchdeck.elasticsearch.retry.max-attempts` | `5` | 最大尝试次数（**含首次**）：`1`=只调用一次=完全关闭重试，这也是关闭重试的唯一方式（刻意不设 enabled，避免双开关语义重叠） |
+| `searchdeck.elasticsearch.retry.init-backoff-ms` | `500` | 首次退避毫秒；须 ≤ max-backoff-ms |
+| `searchdeck.elasticsearch.retry.max-backoff-ms` | `8000` | 退避上限毫秒 |
 
-## 重建锁（es.rebuild.lock）
+## 重建锁（searchdeck.elasticsearch.lock）
 
 ES 文档锁（以 indexKey 为锁文档 _id）。
 
 | 配置键 | Java 默认值 | 说明 |
 |---|---|---|
-| `es.rebuild.lock.enabled` | `true` | 是否启用分布式锁；单实例或测试场景可关 |
-| `es.rebuild.lock.index-name` | （空串） | 锁索引名；空=按默认规则自动推导（唯一推导处在自动配置） |
-| `es.rebuild.lock.lease-ms` | `3600000` | 锁租约毫秒；必须 ≥ `orchestration.timeout-ms`，否则长 reindex 中途锁被强夺（启动期校验） |
+| `searchdeck.elasticsearch.lock.enabled` | `true` | 是否启用分布式锁；单实例或测试场景可关 |
+| `searchdeck.elasticsearch.lock.index-name` | （空串） | 锁索引名；空=按默认规则自动推导（唯一推导处在自动配置） |
+| `searchdeck.elasticsearch.lock.lease-ms` | `3600000` | 锁租约毫秒；必须 ≥ `orchestration.timeout-ms`，否则长 reindex 中途锁被强夺（启动期校验） |
 
-## 一键编排（es.rebuild.orchestration）
+## 一键编排（searchdeck.elasticsearch.orchestration）
 
 编程式一键重建的轮询/超时参数。
 
 | 配置键 | Java 默认值 | 说明 |
 |---|---|---|
-| `es.rebuild.orchestration.poll-interval-ms` | `2000` | reindex 进度轮询间隔毫秒 |
-| `es.rebuild.orchestration.timeout-ms` | `1800000` | 单次编排总超时毫秒（默认 30 分钟） |
+| `searchdeck.elasticsearch.orchestration.poll-interval-ms` | `2000` | reindex 进度轮询间隔毫秒 |
+| `searchdeck.elasticsearch.orchestration.timeout-ms` | `1800000` | 单次编排总超时毫秒（默认 30 分钟） |
 
-## 托管重建确认门（es.rebuild.adhoc）
+## 托管重建确认门（searchdeck.elasticsearch.adhoc）
 
 | 配置键 | Java 默认值 | 说明 |
 |---|---|---|
-| `es.rebuild.adhoc.confirm-timeout-ms` | `1800000` | 人工确认切换的等待超时（默认 30 分钟，上限 7 天）。超时按 abort 处理且对 WRITE_BLOCK 策略强制解除写阻断——绝不允许业务因「忘了点确认」永久写不进 |
+| `searchdeck.elasticsearch.adhoc.confirm-timeout-ms` | `1800000` | 人工确认切换的等待超时（默认 30 分钟，上限 7 天）。超时按 abort 处理且对 WRITE_BLOCK 策略强制解除写阻断——绝不允许业务因「忘了点确认」永久写不进 |
 
-## 跨集群迁移（es.rebuild.migrate）
+## 跨集群迁移（searchdeck.elasticsearch.migrate）
 
 客户端 scroll+bulk 迁移参数。
 
 | 配置键 | Java 默认值 | 说明 |
 |---|---|---|
-| `es.rebuild.migrate.enabled` | `true` | 迁移能力子开关（与 web-enabled 同时为 true 才暴露接口/面板） |
-| `es.rebuild.migrate.default-slices` | `4` | sliced scroll 路数/worker 数（建议 ≈ 源索引主分片数） |
-| `es.rebuild.migrate.default-batch-size` | `2000` | 每 scroll/bulk 批大小 |
-| `es.rebuild.migrate.scroll-keep-alive-sec` | `120` | scroll 上下文存活秒 |
-| `es.rebuild.migrate.connect-timeout-ms` | `5000` | 临时旧集群 client 连接超时毫秒 |
-| `es.rebuild.migrate.socket-timeout-ms` | `60000` | 临时旧集群 client socket 超时毫秒 |
-| `es.rebuild.migrate.job-index-name` | （空串） | 迁移作业索引名；空=由实体 @Document SpEL 自动拼装 |
+| `searchdeck.elasticsearch.migrate.enabled` | `true` | 迁移能力子开关（与 web-enabled 同时为 true 才暴露接口/面板） |
+| `searchdeck.elasticsearch.migrate.default-slices` | `4` | sliced scroll 路数/worker 数（建议 ≈ 源索引主分片数） |
+| `searchdeck.elasticsearch.migrate.default-batch-size` | `2000` | 每 scroll/bulk 批大小 |
+| `searchdeck.elasticsearch.migrate.scroll-keep-alive-sec` | `120` | scroll 上下文存活秒 |
+| `searchdeck.elasticsearch.migrate.connect-timeout-ms` | `5000` | 临时旧集群 client 连接超时毫秒 |
+| `searchdeck.elasticsearch.migrate.socket-timeout-ms` | `60000` | 临时旧集群 client socket 超时毫秒 |
+| `searchdeck.elasticsearch.migrate.job-index-name` | （空串） | 迁移作业索引名；空=由实体 @Document SpEL 自动拼装 |
 
-## 索引映射对账（es.rebuild.mapping）
+## 索引映射对账（searchdeck.elasticsearch.mapping）
 
-这些键来自 `EsRebuildProperties.Mapping` 的 Java 默认值。启动自动对账要求宿主处于 `es.rebuild.mode=client`；`console` 模式不装配对账 runner。
+这些键来自 `SearchDeckElasticsearchProperties.Mapping` 的 Java 默认值。启动自动对账要求宿主处于 `searchdeck.elasticsearch.mode=client`；`console` 模式不装配对账 runner。
 
 | 配置键 | Java 默认值 | 允许值 | 行为 |
 |---|---|---|---|
-| `es.rebuild.mapping.auto-register` | `startup` | `startup`, `off` | `startup` 在 ApplicationReady 后异步执行一次；`off` 不装配启动 runner |
-| `es.rebuild.mapping.conflict-policy` | `fail` | `fail`, `warn` | `fail` 不提交含冲突的 additions；`warn` 仅可继续提交独立兼容 additions，冲突字段仍不改 |
-| `es.rebuild.mapping.missing-index-policy` | `skip` | `skip`, `fail` | `skip` 报 `SKIPPED_INDEX_MISSING`；`fail` 报 `FAILED_INDEX_MISSING` |
+| `searchdeck.elasticsearch.mapping.auto-register` | `startup` | `startup`, `off` | `startup` 在 ApplicationReady 后异步执行一次；`off` 不装配启动 runner |
+| `searchdeck.elasticsearch.mapping.conflict-policy` | `fail` | `fail`, `warn` | `fail` 不提交含冲突的 additions；`warn` 仅可继续提交独立兼容 additions，冲突字段仍不改 |
+| `searchdeck.elasticsearch.mapping.missing-index-policy` | `skip` | `skip`, `fail` | `skip` 报 `SKIPPED_INDEX_MISSING`；`fail` 报 `FAILED_INDEX_MISSING` |
 
-## 索引配置校验（es.rebuild.config-validation）
+## 索引配置校验（searchdeck.elasticsearch.config-validation）
 
 启动期对所有注册 provider 实体的 @Setting/@Mapping JSON 做 L1 静态 Lint + L2 临时索引 Dry-run，把「代码里写错索引配置、发到服务上建索引才炸」提前到启动那一刻暴露。
 
 | 配置键 | Java 默认值 | 说明 |
 |---|---|---|
-| `es.rebuild.config-validation.mode` | `strict` | `strict`=确定性配置错误挡启动 / `warn`=只告警 / `off`=关闭 |
-| `es.rebuild.config-validation.dry-run-on-startup` | `true` | 启动期是否追加 L2 dry-run（临时索引试建）；ES 不可达降级 WARN 不误杀启动 |
+| `searchdeck.elasticsearch.config-validation.mode` | `strict` | `strict`=确定性配置错误挡启动 / `warn`=只告警 / `off`=关闭 |
+| `searchdeck.elasticsearch.config-validation.dry-run-on-startup` | `true` | 启动期是否追加 L2 dry-run（临时索引试建）；ES 不可达降级 WARN 不误杀启动 |
 
-## 日期兼容（es.rebuild.compat）
-
-| 配置键 | Java 默认值 | 说明 |
-|---|---|---|
-| `es.rebuild.compat.date-converters` | `false` | 注册 epoch↔日期转换器。⚠ 只救**不带**日期注解而存储形态为 epoch 数值的 Timestamp/Date/Instant 字段；带 `@Field(type=Date)` 的字段由属性级转换器接管，打开开关什么也不会发生且不报错 |
-
-## 控制台（es.rebuild.console）
+## 日期兼容（searchdeck.elasticsearch.compat）
 
 | 配置键 | Java 默认值 | 说明 |
 |---|---|---|
-| `es.rebuild.console.conn-index-name` | `es_console_conn` | 多集群连接档案索引名（存控制集群，密码只留服务端） |
-| `es.rebuild.console.home-dir` | （空串） | 控制集群自举档案目录；空=用户目录下 `.es-console/<appName>/` |
-| `es.rebuild.console.control-mode` | `auto` | 控制集群解析模式：`auto`（自举档案→spring 探测→Setup 向导）/ `spring`（钉死宿主 ES，向导永不出现） |
-| `es.rebuild.console.conn-probe-enabled` | `true` | 连接档案后台周期探活开关（列表/顶栏状态点数据源） |
-| `es.rebuild.console.conn-probe-interval-seconds` | `60` | 探活间隔秒（最小 10） |
-| `es.rebuild.console.host-cluster-visible` | `true` | 数据面是否暴露「宿主集群」目标；纯管理平台形态设 `false`——控制集群降级为纯元数据存储，后端同步拒绝 host 目标直捣 |
-| `es.rebuild.console.store` | `control-es` | 元数据存储模式：`control-es`（落控制集群 ES 索引）/ `jdbc`（落宿主 DataSource 数据库表）/ `sqlite`（落本地 SQLite 库文件，见 `sqlite-path`——零外部服务依赖，重启后历史可查）。影响作业元数据与控制台操作审计两处（两者同宿）；classpath 缺 sqlite 驱动（`org.xerial:sqlite-jdbc`，starter 中为 optional）时回落 `control-es` 并 WARN |
-| `es.rebuild.console.sqlite-path` | （空串） | `store=sqlite` 时的本地库文件路径；空 → `~/.es-console/<appName>/jobs.db`（与控制集群自举档案同目录） |
+| `searchdeck.elasticsearch.compat.date-converters` | `false` | 注册 epoch↔日期转换器。⚠ 只救**不带**日期注解而存储形态为 epoch 数值的 Timestamp/Date/Instant 字段；带 `@Field(type=Date)` 的字段由属性级转换器接管，打开开关什么也不会发生且不报错 |
 
-## 控制台鉴权（es.rebuild.console.auth）
+## 控制台（searchdeck.elasticsearch.console）
 
 | 配置键 | Java 默认值 | 说明 |
 |---|---|---|
-| `es.rebuild.console.auth.enabled` | `true` | 控制台鉴权开关；关闭后恢复无鉴权行为，仅限内网/演示 |
-| `es.rebuild.console.auth.fallback-username` | `admin` | 兜底账号：仅当用户索引一个账号都没有时可登录（角色 ADMIN） |
-| `es.rebuild.console.auth.fallback-password` | `es-console` | 兜底密码；enabled=true 时账号/密码不可为空（启动期校验）——**上线务必修改** |
-| `es.rebuild.console.auth.token-ttl-ms` | `43200000` | token 有效期毫秒（默认 12 小时） |
-| `es.rebuild.console.auth.token-secret` | （空串） | token HMAC secret；空=启动随机生成（重启后需重新登录）；多实例部署必须显式配置保证互通。**注意**：登出吊销表与登录节流均为实例内存态——多实例下登出只吊销处理该请求的实例，被盗 token 在其余实例继续有效至 TTL（单实例或短 TTL 部署无此窗口） |
-| `es.rebuild.console.auth.conn-secret` | （空串） | 连接档案凭据加密密钥（base64 的 32 字节 AES-256-GCM）。空=自动生成并落自举档案目录 `conn.key`（单实例零配置；**多实例必须显式配置共享同一密钥**，否则各实例互相解不开对方加密的档案）。存量明文档案读取透明兼容；带新凭据的保存自动升级为密文（`enc:v1:` 前缀），密钥不一致时显性报错绝不静默降级 |
-| `es.rebuild.console.auth.user-index-name` | `es_console_user` | 控制台用户索引名 |
-| `es.rebuild.console.auth.ops-audit-index-name` | `es_console_ops_audit` | 操作审计索引名：环形开启时为日期索引前缀，关闭时为固定单索引名 |
-| `es.rebuild.console.auth.host-audit-merge` | `false` | 宿主审计并入开关：开启后宿主注册的 ConsoleAuditContributor 记录才并入控制台审计视图 |
-| `es.rebuild.console.auth.builtin-login-enabled` | （未设置） | 内置账号登录三态：未设置=有宿主委托时自动关闭、独立部署开启；true/false 强制开/关。关闭后 `/auth/login` 回 403 `BUILTIN_LOGIN_DISABLED`（防默认兜底账号绕过宿主鉴权）。**联动提示**：只要宿主注册了 `ConsoleAuthDelegate`（代码 SPI 或 header 模式）且本键未设置，内置登录即自动关闭——存量双轨部署（委托+本地账号并用）升级后需显式置 `true` 恢复本地登录 |
+| `searchdeck.elasticsearch.console.conn-index-name` | `searchdeck_conn` | 多集群连接档案索引名（存控制集群，密码只留服务端） |
+| `searchdeck.elasticsearch.console.home-dir` | （空串） | 控制集群自举档案目录；空=用户目录下 `.searchdeck/<appName>/` |
+| `searchdeck.elasticsearch.console.control-mode` | `auto` | 控制集群解析模式：`auto`（自举档案→spring 探测→Setup 向导）/ `spring`（钉死宿主 ES，向导永不出现） |
+| `searchdeck.elasticsearch.console.conn-probe-enabled` | `true` | 连接档案后台周期探活开关（列表/顶栏状态点数据源） |
+| `searchdeck.elasticsearch.console.conn-probe-interval-seconds` | `60` | 探活间隔秒（最小 10） |
+| `searchdeck.elasticsearch.console.host-cluster-visible` | `true` | 数据面是否暴露「宿主集群」目标；纯管理平台形态设 `false`——控制集群降级为纯元数据存储，后端同步拒绝 host 目标直捣 |
+| `searchdeck.elasticsearch.console.store` | `control-es` | 元数据存储模式：`control-es`（落控制集群 ES 索引）/ `jdbc`（落宿主 DataSource 数据库表）/ `sqlite`（落本地 SQLite 库文件，见 `sqlite-path`——零外部服务依赖，重启后历史可查）。影响作业元数据与控制台操作审计两处（两者同宿）；classpath 缺 sqlite 驱动（`org.xerial:sqlite-jdbc`，starter 中为 optional）时回落 `control-es` 并 WARN |
+| `searchdeck.elasticsearch.console.sqlite-path` | （空串） | `store=sqlite` 时的本地库文件路径；空 → `~/.searchdeck/<appName>/jobs.db`（与控制集群自举档案同目录） |
 
-## 审计环形保留（es.rebuild.console.auth.audit-retention）
+## 控制台鉴权（searchdeck.elasticsearch.console.auth）
+
+| 配置键 | Java 默认值 | 说明 |
+|---|---|---|
+| `searchdeck.elasticsearch.console.auth.enabled` | `true` | 控制台鉴权开关；关闭后恢复无鉴权行为，仅限内网/演示 |
+| `searchdeck.elasticsearch.console.auth.fallback-username` | `admin` | 兜底账号：仅当用户索引一个账号都没有时可登录（角色 ADMIN） |
+| `searchdeck.elasticsearch.console.auth.fallback-password` | `searchdeck` | 兜底密码；enabled=true 时账号/密码不可为空（启动期校验）——**上线务必修改** |
+| `searchdeck.elasticsearch.console.auth.token-ttl-ms` | `43200000` | token 有效期毫秒（默认 12 小时） |
+| `searchdeck.elasticsearch.console.auth.token-secret` | （空串） | token HMAC secret；空=启动随机生成（重启后需重新登录）；多实例部署必须显式配置保证互通。**注意**：登出吊销表与登录节流均为实例内存态——多实例下登出只吊销处理该请求的实例，被盗 token 在其余实例继续有效至 TTL（单实例或短 TTL 部署无此窗口） |
+| `searchdeck.elasticsearch.console.auth.conn-secret` | （空串） | 连接档案凭据加密密钥（base64 的 32 字节 AES-256-GCM）。空=自动生成并落自举档案目录 `conn.key`（单实例零配置；**多实例必须显式配置共享同一密钥**，否则各实例互相解不开对方加密的档案）。存量明文档案读取透明兼容；带新凭据的保存自动升级为密文（`enc:v1:` 前缀），密钥不一致时显性报错绝不静默降级 |
+| `searchdeck.elasticsearch.console.auth.user-index-name` | `searchdeck_user` | 控制台用户索引名 |
+| `searchdeck.elasticsearch.console.auth.ops-audit-index-name` | `searchdeck_ops_audit` | 操作审计索引名：环形开启时为日期索引前缀，关闭时为固定单索引名 |
+| `searchdeck.elasticsearch.console.auth.host-audit-merge` | `false` | 宿主审计并入开关：开启后宿主注册的 ConsoleAuditContributor 记录才并入控制台审计视图 |
+| `searchdeck.elasticsearch.console.auth.builtin-login-enabled` | （未设置） | 内置账号登录三态：未设置=有宿主委托时自动关闭、独立部署开启；true/false 强制开/关。关闭后 `/auth/login` 回 403 `BUILTIN_LOGIN_DISABLED`（防默认兜底账号绕过宿主鉴权）。**联动提示**：只要宿主注册了 `ConsoleAuthDelegate`（代码 SPI 或 header 模式）且本键未设置，内置登录即自动关闭——存量双轨部署（委托+本地账号并用）升级后需显式置 `true` 恢复本地登录 |
+
+## 审计环形保留（searchdeck.elasticsearch.console.auth.audit-retention）
 
 审计写日期索引（`<索引名前缀>-yyyy.MM.dd`），双闸（超龄+总量）整索引删最旧；`enabled=false` 一键回退固定单索引行为（发版期回退开关）。
 
 | 配置键 | Java 默认值 | 说明 |
 |---|---|---|
-| `es.rebuild.console.auth.audit-retention.enabled` | `true` | 按日环形写+周期双闸清理；false=旧固定单索引行为 |
-| `es.rebuild.console.auth.audit-retention.max-days` | `90` | 超龄闸（天）：严格早于「今天-N 天」的日期索引整索引删除 |
-| `es.rebuild.console.auth.audit-retention.max-total-bytes` | `32212254720` | 总量闸（字节，默认 30GB）：日期索引族 store.size 合计上限，超限从最旧删起 |
-| `es.rebuild.console.auth.audit-retention.dry-run` | `false` | 演练模式：清理轮只记待删清单不执行删除（上线初期观察面） |
+| `searchdeck.elasticsearch.console.auth.audit-retention.enabled` | `true` | 按日环形写+周期双闸清理；false=旧固定单索引行为 |
+| `searchdeck.elasticsearch.console.auth.audit-retention.max-days` | `90` | 超龄闸（天）：严格早于「今天-N 天」的日期索引整索引删除 |
+| `searchdeck.elasticsearch.console.auth.audit-retention.max-total-bytes` | `32212254720` | 总量闸（字节，默认 30GB）：日期索引族 store.size 合计上限，超限从最旧删起 |
+| `searchdeck.elasticsearch.console.auth.audit-retention.dry-run` | `false` | 演练模式：清理轮只记待删清单不执行删除（上线初期观察面） |
 
-## 页面级授权（es.rebuild.console.page-auth）
+## 页面级授权（searchdeck.elasticsearch.console.page-auth）
 
 | 配置键 | Java 默认值 | 说明 |
 |---|---|---|
-| `es.rebuild.console.page-auth.enabled` | `true` | 页面级授权开关（仅 delegated 身份+宿主下发 grantedPages 时生效）；false=逃生阀，紧急回退纯角色档 |
+| `searchdeck.elasticsearch.console.page-auth.enabled` | `true` | 页面级授权开关（仅 delegated 身份+宿主下发 grantedPages 时生效）；false=逃生阀，紧急回退纯角色档 |
 
 ### 授权键与判定顺序（宿主集成契约）
 
@@ -144,8 +139,8 @@ ES 文档锁（以 indexKey 为锁文档 _id）。
 | 键形态 | 语义 | 例 |
 |---|---|---|
 | `{page}` | 静态全局页授权（对所有连接生效） | `search` |
-| `conn:{connId}:{page}` | 该连接上该页**可见**（读） | `conn:quotehub-qa:search` |
-| `conn:{connId}:w:{page}` | 该连接上该页**可写** | `conn:quotehub-qa:w:bulk` |
+| `conn:{connId}:{page}` | 该连接上该页**可见**（读） | `conn:acme-qa:search` |
+| `conn:{connId}:w:{page}` | 该连接上该页**可写** | `conn:acme-qa:w:bulk` |
 
 判定顺序（`ConsoleAuthInterceptor#preHandle`，前端 `auth.canEndpoint` 逐步镜像）：
 
@@ -203,7 +198,7 @@ rank2 的 `w:lifecycle` 仍可做单索引 rollover / `ilm/move`，`w:diag` 仍�
   绑定开启者（ADMIN 可接管），cursor 轮换登记新 id 并释放旧 id；
 - `query.template.inline` 等 Mustache 模板在任意深度都做「去标签后的控制面字面扫描」（含拆
   section 拼接）并拒绝分隔符切换；嵌套模板解析失败不再静默放行；
-- `es_console_validate_*` 仅校验器专用的 `createValidatorTempIndex` / `deleteValidatorTempIndex`
+- `searchdeck_validate_*` 仅校验器专用的 `createValidatorTempIndex` / `deleteValidatorTempIndex`
   通道可用，通用建/删/查/模式守卫一律按控制面拒绝；
 - 搜索模板页覆盖已存脚本时先读回目标 id 的 lang：非 mustache 覆盖需要 painless-lab 页写权；
 - 委托部署 `builtin-login-enabled=false` 时，浏览器残留的内置 token 也立即失效（不再成为
@@ -251,7 +246,7 @@ tooltip 直接给出改法（`/{index}/_search`、PIT、控制面索引不可用
 并额外锁死不变量：**allow=true ⇒ 前端必须可执行**（有权限的人不能被拦）。改任一侧规则
 未同步样例 → 该侧红。
 
-**跨页「到 DevTools」入口门**：任何写 `sessionStorage['es-console.devtools.open']` 的跳转
+**跨页「到 DevTools」入口门**：任何写 `sessionStorage['searchdeck.devtools.open']` 的跳转
 （含 `run:true` 自动执行档）都必须在**写入点附近**有 `canDevtools.value` 判定；收藏回放这类
 通用件用注入的 `canOpen(path)` 页面门。`ui/scripts/perm-scan.mjs` 对其做机械检查，且
 `permScanSelfCheck1124.spec` 会注入违规反证规则本身仍有效——规则失效比没有规则更危险。
@@ -265,18 +260,18 @@ D 路径与方法变形（`//`、`/./`、`..`、`%5F`、大写、绝对 URL、TR
 E 数据面放行；F 根级 PIT/scroll 仅 DELETE 形态（释放）放行。
 
 **PIT 资源上限**：非 ADMIN 的 `POST /cluster/pit/open` 会把 `keep_alive` 夹到
-`-Des.rebuild.console.pit.max-keep-alive-minutes`（默认 60 分钟），响应回填
+`-Dsearchdeck.elasticsearch.console.pit.max-keep-alive-minutes`（默认 60 分钟），响应回填
 `keepAliveRequested/keepAliveApplied/keepAliveClamped` 供前端提示；ADMIN 不受限。
 
 **身份切换与委托凭据（1007）**：
 - 登录换人/宿主 token 换人时，除清理 localStorage/sessionStorage 外，前端会同步清零内存态
-  （目标连接、索引清单、收藏、通知、查询历史、作业清单、监控序列）并广播 `es-console:identity-changed`；
+  （目标连接、索引清单、收藏、通知、查询历史、作业清单、监控序列）并广播 `searchdeck:identity-changed`；
   只清磁盘会让单例 ref 在下一笔写入时把旧账号数据落回，或让请求在「界面显示 A 的集群、实际不带
   X-Es-Target」的状态下打到宿主。同名账号被降权/撤页不做整页重挂：403 / 窗口聚焦 /
   标签页恢复会触发 30s 节流 `/auth/me` 重探，按钮与菜单随 `me` 响应式收敛。
-- **工作现场与词项缓存同属账号视角（1046）**：`es-console.qw.session:`（DSL 会话）、
-  `es_console_terms_stash`（字段词项持久档）、`es-console.qb.subtree`、`es-console.pref.sqlbridge.sql`、
-  `es-console.health-report.last`、`es_vars`、`es_confirm_skip:` 随换人清理；App 同步清空模块级
+- **工作现场与词项缓存同属账号视角（1046）**：`searchdeck.qw.session:`（DSL 会话）、
+  `searchdeck_terms_stash`（字段词项持久档）、`searchdeck.qb.subtree`、`searchdeck.pref.sqlbridge.sql`、
+  `searchdeck.health-report.last`、`es_vars`、`es_confirm_skip:` 随换人清理；App 同步清空模块级
   词项/字段/别名缓存并剥掉当前路由 query（防 `?dsl=` 用新身份自动执行旧查询）。登录顺序固定为
   `setToken → invalidateIdentity → purgeIfUserChanged`，否则作业/监控轮询会带上一身份跑第一拍。
 - `delegate.mode=jwt|endpoint` 的登出会用**宿主令牌头**原文登记本地拒绝表（此前误用内置 token，
@@ -285,7 +280,7 @@ E 数据面放行；F 根级 PIT/scroll 仅 DELETE 形态（释放）放行。
   静默变成浏览器里残留的内置 ADMIN。只有「本请求没带宿主凭证」才回退内置登录。
 - 新建本地账号的 `epoch` 使用随机正值（不再固定 1）：删号→同名重建后，旧账号未变更时签发的
   token 不会在新账号上复活。任何改密/改角色仍递增 epoch。
-- 出厂的 `admin/es-console` 默认口令在用户库为空时**只允许 loopback 登录**；远程部署请先在本机登录
+- 出厂的 `admin/searchdeck` 默认口令在用户库为空时**只允许 loopback 登录**；远程部署请先在本机登录
   改密，或配置强 `fallback-password`。默认口令比较改为常量时间。
 - `delegate.mode` 拼写错误或该模式必填项缺失（jwt 无密钥/公钥、endpoint 无 verify-url、header 无
   user-header）会在启动期直接失败——否则部署正常启动但内置登录已关闭，所有身份都 401。
@@ -313,7 +308,7 @@ E 数据面放行；F 根级 PIT/scroll 仅 DELETE 形态（释放）放行。
 凭据只走环境变量，不写入仓库/日志：
 
 ~~~bash
-CONSOLE_BASE=https://host/quotehub \
+CONSOLE_BASE=https://host/acme \
 CONSOLE_USER_X1=... CONSOLE_PASS_X1=... \
 CONSOLE_USER_X2=... CONSOLE_PASS_X2=... \
 CONSOLE_USER_X3=... CONSOLE_PASS_X3=... \
@@ -324,70 +319,70 @@ npm --prefix console run perm:matrix
 （脚本用 `process.exitCode` 收敛而非强退：Windows 上 fetch 的 keep-alive 套接字未关闭时
 强退会触发 libuv 断言，退出码会变成 127 而不是 1，CI 会读错状态。）
 
-## 连接中心自动同步（es.rebuild.console.conn-sync）
+## 连接中心自动同步（searchdeck.elasticsearch.console.conn-sync）
 
 双门设计：宿主注册 ClusterConnContributor Bean **且** enabled=true 才启用；任一缺席=零行为（不建线程、不落库）。
 
 | 配置键 | Java 默认值 | 说明 |
 |---|---|---|
-| `es.rebuild.console.conn-sync.enabled` | `false` | 总开关（默认关） |
-| `es.rebuild.console.conn-sync.interval-seconds` | `3600` | 同步周期秒（引擎侧下限钳 60）；默认对齐连接中心 1h 快照节奏 |
-| `es.rebuild.console.conn-sync.initial-delay-seconds` | `30` | 启动后首跑延迟秒 |
-| `es.rebuild.console.conn-sync.min-role` | `VIEWER` | 同步档案默认 minRole（贡献者未显式给时） |
+| `searchdeck.elasticsearch.console.conn-sync.enabled` | `false` | 总开关（默认关） |
+| `searchdeck.elasticsearch.console.conn-sync.interval-seconds` | `3600` | 同步周期秒（引擎侧下限钳 60）；默认对齐连接中心 1h 快照节奏 |
+| `searchdeck.elasticsearch.console.conn-sync.initial-delay-seconds` | `30` | 启动后首跑延迟秒 |
+| `searchdeck.elasticsearch.console.conn-sync.min-role` | `VIEWER` | 同步档案默认 minRole（贡献者未显式给时） |
 
-## 监控落库（es.rebuild.console.monitor）
+## 监控落库（searchdeck.elasticsearch.console.monitor）
 
 多集群监控历史的唯一写入方是服务端定时任务（每轮落全部连接的最近探活结果）；用户页面轮询只读不入库。
 
 | 配置键 | Java 默认值 | 说明 |
 |---|---|---|
-| `es.rebuild.console.monitor.enabled` | `true` | 落库总开关；false=不启动监控落库调度（探活展示不受影响） |
-| `es.rebuild.console.monitor.interval-seconds` | `60` | 落库节奏秒（下限钳 10；与探活间隔解耦） |
-| `es.rebuild.console.monitor.metrics-interval-seconds` | `60` | 指标采集节奏秒（下限 30，由采集器侧钳制） |
-| `es.rebuild.console.monitor.index-name` | `es_console_monitor` | 监控日期索引前缀（查询/清理打 `<前缀>-*`） |
+| `searchdeck.elasticsearch.console.monitor.enabled` | `true` | 落库总开关；false=不启动监控落库调度（探活展示不受影响） |
+| `searchdeck.elasticsearch.console.monitor.interval-seconds` | `60` | 落库节奏秒（下限钳 10；与探活间隔解耦） |
+| `searchdeck.elasticsearch.console.monitor.metrics-interval-seconds` | `60` | 指标采集节奏秒（下限 30，由采集器侧钳制） |
+| `searchdeck.elasticsearch.console.monitor.index-name` | `searchdeck_monitor` | 监控日期索引前缀（查询/清理打 `<前缀>-*`） |
 
-## 宿主鉴权委托（es.rebuild.console.auth.delegate）
+## 宿主鉴权委托（searchdeck.elasticsearch.console.auth.delegate）
 
 不写一行 Java 即可把控制台登录接到宿主凭据体系；宿主若注册 ConsoleAuthDelegate 代码 SPI Bean，代码 SPI 优先（本配置被忽略）。mode 不配 = 不启用。
 
 | 配置键 | Java 默认值 | 说明 |
 |---|---|---|
-| `es.rebuild.console.auth.delegate.mode` | （空串） | 委托模式：`jwt`（本地验签宿主 JWT）/ `endpoint`（回调宿主校验接口）/ `header`（信任网关注入头） |
-| `es.rebuild.console.auth.delegate.token-header` | `Authorization` | 携带宿主凭据的请求头（jwt/endpoint 模式取 token 用，Bearer 前缀自动剥离） |
-| `es.rebuild.console.auth.delegate.role-mapping` | （空 Map） | 角色映射：console 角色 → 宿主角色逗号串（如 ADMIN=admin,superuser）；宿主角色未命中一律 VIEWER |
+| `searchdeck.elasticsearch.console.auth.delegate.mode` | （空串） | 委托模式：`jwt`（本地验签宿主 JWT）/ `endpoint`（回调宿主校验接口）/ `header`（信任网关注入头） |
+| `searchdeck.elasticsearch.console.auth.delegate.token-header` | `Authorization` | 携带宿主凭据的请求头（jwt/endpoint 模式取 token 用，Bearer 前缀自动剥离） |
+| `searchdeck.elasticsearch.console.auth.delegate.role-mapping` | （空 Map） | 角色映射：console 角色 → 宿主角色逗号串（如 ADMIN=admin,superuser）；宿主角色未命中一律 VIEWER |
 
 ### jwt 模式（本地验签宿主 JWT，HS256 共享密钥 / RS256 公钥二选一，同配以 alg 为准）
 
 | 配置键 | Java 默认值 | 说明 |
 |---|---|---|
-| `es.rebuild.console.auth.delegate.jwt.secret` | （空串） | HS256 共享密钥（支持 `${ENV}` 环境变量引用） |
-| `es.rebuild.console.auth.delegate.jwt.public-key` | （空串） | RS256 PEM 公钥 |
-| `es.rebuild.console.auth.delegate.jwt.username-claim` | `sub` | 用户名 claim（支持 a.b.c 点分路径） |
-| `es.rebuild.console.auth.delegate.jwt.roles-claim` | `roles` | 角色 claim（数组或逗号串） |
-| `es.rebuild.console.auth.delegate.jwt.display-name-claim` | （空串） | 展示名 claim（点分路径）；空=不取，顶栏回落 username |
-| `es.rebuild.console.auth.delegate.jwt.require-exp` | `true` | 是否强制要求 `exp`：true（默认）缺 exp 即拒——无 exp 的令牌等同永久凭证；旧宿主未签发 exp 可置 false 兼容（启动 WARN），非数值 exp/nbf 始终拒绝 |
+| `searchdeck.elasticsearch.console.auth.delegate.jwt.secret` | （空串） | HS256 共享密钥（支持 `${ENV}` 环境变量引用） |
+| `searchdeck.elasticsearch.console.auth.delegate.jwt.public-key` | （空串） | RS256 PEM 公钥 |
+| `searchdeck.elasticsearch.console.auth.delegate.jwt.username-claim` | `sub` | 用户名 claim（支持 a.b.c 点分路径） |
+| `searchdeck.elasticsearch.console.auth.delegate.jwt.roles-claim` | `roles` | 角色 claim（数组或逗号串） |
+| `searchdeck.elasticsearch.console.auth.delegate.jwt.display-name-claim` | （空串） | 展示名 claim（点分路径）；空=不取，顶栏回落 username |
+| `searchdeck.elasticsearch.console.auth.delegate.jwt.require-exp` | `true` | 是否强制要求 `exp`：true（默认）缺 exp 即拒——无 exp 的令牌等同永久凭证；旧宿主未签发 exp 可置 false 兼容（启动 WARN），非数值 exp/nbf 始终拒绝 |
 
 ### endpoint 模式（凭据转发宿主校验接口，2xx 即认）
 
 | 配置键 | Java 默认值 | 说明 |
 |---|---|---|
-| `es.rebuild.console.auth.delegate.endpoint.verify-url` | （空串） | 宿主校验接口 URL（POST） |
-| `es.rebuild.console.auth.delegate.endpoint.forward-headers` | （空串） | 透传请求头白名单（逗号分隔；默认只透传 token-header） |
-| `es.rebuild.console.auth.delegate.endpoint.username-path` | `username` | 返回 JSON 里用户名字段路径（a.b.c） |
-| `es.rebuild.console.auth.delegate.endpoint.roles-path` | `roles` | 返回 JSON 里角色字段路径（数组或逗号串） |
-| `es.rebuild.console.auth.delegate.endpoint.display-name-path` | （空串） | 返回 JSON 里展示名字段路径；空=不取 |
-| `es.rebuild.console.auth.delegate.endpoint.cache-seconds` | `30` | 校验结果短缓存秒数（按 token 缓存，降低宿主接口压力） |
+| `searchdeck.elasticsearch.console.auth.delegate.endpoint.verify-url` | （空串） | 宿主校验接口 URL（POST） |
+| `searchdeck.elasticsearch.console.auth.delegate.endpoint.forward-headers` | （空串） | 透传请求头白名单（逗号分隔；默认只透传 token-header） |
+| `searchdeck.elasticsearch.console.auth.delegate.endpoint.username-path` | `username` | 返回 JSON 里用户名字段路径（a.b.c） |
+| `searchdeck.elasticsearch.console.auth.delegate.endpoint.roles-path` | `roles` | 返回 JSON 里角色字段路径（数组或逗号串） |
+| `searchdeck.elasticsearch.console.auth.delegate.endpoint.display-name-path` | （空串） | 返回 JSON 里展示名字段路径；空=不取 |
+| `searchdeck.elasticsearch.console.auth.delegate.endpoint.cache-seconds` | `30` | 校验结果短缓存秒数（按 token 缓存，降低宿主接口压力） |
 
 ### header 模式（信任网关/上游代理注入的身份头；必须配合网关剥离外部同名头，否则可伪造）
 
 | 配置键 | Java 默认值 | 说明 |
 |---|---|---|
-| `es.rebuild.console.auth.delegate.header.user-header` | （空串） | 用户名头（非空即信任） |
-| `es.rebuild.console.auth.delegate.header.roles-header` | （空串） | 角色头（逗号分隔，经 role-mapping 映射） |
-| `es.rebuild.console.auth.delegate.header.display-name-header` | （空串） | 展示名头；值若经 URL 编码可携中文，服务端自动解码 |
-| `es.rebuild.console.auth.delegate.header.trusted-proxies` | `[]` | 受信代理清单（精确 IP 或 IPv4 CIDR，如 `10.0.0.5,10.8.0.0/16`）。非空时身份头仅在 remoteAddr 命中清单时被采信——推荐显式配置网关地址，把「私网整体信任」收窄到具体代理；留空维持默认行为（回环/私网/链路本地即信）。注意容器网段（如 172.17.x）、CGNAT（100.64/10）与 IPv6 直连不在默认私网清单内——网关地址属这些段时必须显式配置，否则身份头被拒识（日志有 remote 与配置写法提示） |
+| `searchdeck.elasticsearch.console.auth.delegate.header.user-header` | （空串） | 用户名头（非空即信任） |
+| `searchdeck.elasticsearch.console.auth.delegate.header.roles-header` | （空串） | 角色头（逗号分隔，经 role-mapping 映射） |
+| `searchdeck.elasticsearch.console.auth.delegate.header.display-name-header` | （空串） | 展示名头；值若经 URL 编码可携中文，服务端自动解码 |
+| `searchdeck.elasticsearch.console.auth.delegate.header.trusted-proxies` | `[]` | 受信代理清单（精确 IP 或 IPv4 CIDR，如 `10.0.0.5,10.8.0.0/16`）。非空时身份头仅在 remoteAddr 命中清单时被采信——推荐显式配置网关地址，把「私网整体信任」收窄到具体代理；留空维持默认行为（回环/私网/链路本地即信）。注意容器网段（如 172.17.x）、CGNAT（100.64/10）与 IPv6 直连不在默认私网清单内——网关地址属这些段时必须显式配置，否则身份头被拒识（日志有 remote 与配置写法提示） |
 
-## 控制台安全响应头（es.rebuild.console.security）
+## 控制台安全响应头（searchdeck.elasticsearch.console.security）
 
 控制台 API 与控制台 HTML/静态资源统一过安全头过滤器：`X-Content-Type-Options: nosniff`、`Referrer-Policy: no-referrer` 全量；auth 域响应额外 `Cache-Control: no-store`（token/身份档案不留缓存）。
 
@@ -406,7 +401,7 @@ npm --prefix console run perm:matrix
 
 ### 受信代理与来源 IP（审计 / 登录节流）
 
-`es.rebuild.console.auth.delegate.header.trusted-proxies` **同时约束审计来源 IP 与登录节流**：
+`searchdeck.elasticsearch.console.auth.delegate.header.trusted-proxies` **同时约束审计来源 IP 与登录节流**：
 
 - 非空：只有清单内（精确 IP 或 CIDR）的直连方才可经 `X-Forwarded-For` / `X-Real-IP`
   声明客户端地址；清单外的私网直连视为终端本身。
@@ -426,7 +421,7 @@ npm --prefix console run perm:matrix
 - **委托登出会在本实例登记拒绝表**（jwt 到 exp、endpoint 到裁决缓存窗口）；自定义
   `ConsoleAuthDelegate` 只要实现 `tokenOf(request)` 报出原始令牌，内核会在认证前查同一张
   拒绝表——即使 `revoke` 未实现（返回默认 `false`），`/auth/logout` 也由内核按
-  `max(内置 token-ttl-ms, 24h)` 兜底登记（quotehub 形态无需改代码即生效）；委托已自行登记
+  `max(内置 token-ttl-ms, 24h)` 兜底登记（宿主内嵌形态无需改代码即生效）；委托已自行登记
   时不重复写。未实现 `tokenOf` 的委托控制台无法得知令牌原文，`/auth/logout` 不承诺吊销，
   账号切换以宿主自己的 logout（Redis 黑名单）为准。
   进程内表，多实例部署只在当前实例生效，需要全局即时失效请缩短 TTL 或走宿主侧
@@ -436,7 +431,7 @@ npm --prefix console run perm:matrix
   残留的内置 token——否则宿主任一 5xx 都能把已撤销会话升级成本地 ADMIN。只实现
   `tokenOf`、未实现 `hasCredential` 的委托同样受保护；任一探测抛异常按「携带」处理。
   未携带宿主凭证的独立部署仍走内置登录，避免误拦。
-- **内置登录的兜底账号 `admin`/`es-console`** 仅在 `builtin-login-enabled` 打开时可用，
+- **内置登录的兜底账号 `admin`/`searchdeck`** 仅在 `builtin-login-enabled` 打开时可用，
   委托部署默认关闭；用户库为空时还要求 loopback 直连。独立部署请在本机首登改密或配置强
   `fallback-password`（启动日志有 ERROR 提醒）。
 - 读侧「内网拓扑」按**页面语义**收窄：节点 host/IP、远端 seeds、painless 源码只对
@@ -449,14 +444,14 @@ npm --prefix console run perm:matrix
 
 - 未绑定窗口只放行 `setup/status|test|apply`；`test/apply` 在**无委托**时要求
   `X-Setup-Token`（配置后）且默认仅本机可调；**有委托**时要求委托认出的 ADMIN。
-- 配置了 `es.rebuild.console.setup-token` 后，**委托模式与 `setup/rebind` 同样校验该令牌**
+- 配置了 `searchdeck.elasticsearch.console.setup-token` 后，**委托模式与 `setup/rebind` 同样校验该令牌**
   （第二因子：header 模式身份可伪造，「改控制面指向」不能只凭角色）。未配置时行为不变。
 - 反代部署注意：若代理不追加 `X-Forwarded-For`，未绑定请求的 `remoteAddr` 会是回环，
   被判定为本机——请配置 `setup-token` 或仅在初始化窗口短暂暴露。
 
 | 配置键 | Java 默认值 | 说明 |
 |---|---|---|
-| `es.rebuild.console.security.frame-ancestors` | （空串） | iframe 嵌入白名单（CSP `frame-ancestors` 值，如 `'self' https://portal.example.com`）。**空=不下发任何 frame 头**——同源 iframe 嵌入（如 quotehub 形态）与独立部署不受影响；显式配置后仅白名单域可嵌控制台页面（防点击劫持）。清单必须包含实际嵌页的完整 origin |
+| `searchdeck.elasticsearch.console.security.frame-ancestors` | （空串） | iframe 嵌入白名单（CSP `frame-ancestors` 值，如 `'self' https://portal.example.com`）。**空=不下发任何 frame 头**——同源 iframe 嵌入（如 宿主内嵌形态）与独立部署不受影响；显式配置后仅白名单域可嵌控制台页面（防点击劫持）。清单必须包含实际嵌页的完整 origin |
 
 ## 完整默认配置
 
@@ -497,7 +492,7 @@ es:
       conflict-policy: fail
       missing-index-policy: skip
     console:
-      conn-index-name: es_console_conn
+      conn-index-name: searchdeck_conn
       home-dir: ""
       control-mode: auto
       conn-probe-enabled: true
@@ -515,15 +510,15 @@ es:
         enabled: true
         interval-seconds: 60
         metrics-interval-seconds: 60
-        index-name: es_console_monitor
+        index-name: searchdeck_monitor
       auth:
         enabled: true
         fallback-username: admin
-        fallback-password: es-console
+        fallback-password: searchdeck
         token-ttl-ms: 43200000
         token-secret: ""
-        user-index-name: es_console_user
-        ops-audit-index-name: es_console_ops_audit
+        user-index-name: searchdeck_user
+        ops-audit-index-name: searchdeck_ops_audit
         host-audit-merge: false
         audit-retention:
           enabled: true
@@ -555,7 +550,7 @@ es:
 
 ## SearchDeck 平台层（`searchdeck.console`）
 
-平台层只决定「产品面」：品牌、功能包与单页排除；引擎运行参数仍在 `es.rebuild.*`。
+平台层只决定「产品面」：品牌、功能包与单页排除；引擎运行参数仍在 `searchdeck.elasticsearch.*`。
 
 | 配置键 | 默认值 | 说明 |
 |---|---|---|
@@ -564,7 +559,7 @@ es:
 | `searchdeck.console.branding.product-name` | `SearchDeck` | 产品名（侧栏/登录层/标题） |
 | `searchdeck.console.branding.tagline` | `Search operations, on deck.` | 品牌副标语 |
 | `searchdeck.console.branding.integration-id` | `generic` | 宿主集成标识；注册 `ConsoleHostIntegration` Bean 时默认取 Bean 值 |
-| `searchdeck.console.branding.integration-name` | `""` | 宿主展示名（如 `QuoteHub`），作为侧栏副标题 |
+| `searchdeck.console.branding.integration-name` | `""` | 宿主展示名（如 `Acme`），作为侧栏副标题 |
 | `searchdeck.console.branding.docs-url` | `""` | 宿主帮助/文档链接（透传前端） |
 
 运行时前端读取 `GET /internal/es/index/ui/config` 获取合并后的配置；该端点零敏感信息，

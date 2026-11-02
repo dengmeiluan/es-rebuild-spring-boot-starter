@@ -445,7 +445,7 @@
     {
       "id": "d32",
       "method": "PUT",
-      "path": "/es_console_user/_doc/1",
+      "path": "/searchdeck_user/_doc/1",
       "body": "{\"role\":\"ADMIN\"}",
       "allow": false,
       "ui": "deny",
@@ -463,7 +463,7 @@
     {
       "id": "d34",
       "method": "POST",
-      "path": "/logs*_es_rebuild_lock/_delete_by_query",
+      "path": "/logs*_searchdeck_lock/_delete_by_query",
       "body": "{\"query\":{\"match_all\":{}}}",
       "allow": false,
       "ui": "deny",
@@ -526,7 +526,7 @@
     {
       "id": "d41",
       "method": "GET",
-      "path": "/_cat/indices/es_console_user?format=json",
+      "path": "/_cat/indices/searchdeck_user?format=json",
       "body": null,
       "allow": false,
       "ui": "deny",
@@ -572,7 +572,7 @@
       "id": "d46",
       "method": "POST",
       "path": "/_msearch",
-      "body": "{\"indices\":\"es_console_user\"}\n{\"query\":{\"match_all\":{}}}\n",
+      "body": "{\"indices\":\"searchdeck_user\"}\n{\"query\":{\"match_all\":{}}}\n",
       "allow": false,
       "ui": "deny",
       "why": "msearch indices 字符串形态（1046 前端兼容 string/array）"
@@ -653,7 +653,7 @@
       "id": "b01",
       "method": "POST",
       "path": "/_bulk",
-      "body": "{\"index\":{\"_index\":\"es_console_user\",\"_id\":\"1\"}}\n{\"role\":\"ADMIN\"}\n",
+      "body": "{\"index\":{\"_index\":\"searchdeck_user\",\"_id\":\"1\"}}\n{\"role\":\"ADMIN\"}\n",
       "allow": false,
       "ui": "deny",
       "why": "body 夹带控制索引（1046 前端已解析 bulk 动作行）"
@@ -662,7 +662,7 @@
       "id": "b02",
       "method": "POST",
       "path": "/_msearch",
-      "body": "{\"index\":\"es_console_user\"}\n{\"query\":{\"match_all\":{}}}\n",
+      "body": "{\"index\":\"searchdeck_user\"}\n{\"query\":{\"match_all\":{}}}\n",
       "allow": false,
       "ui": "deny",
       "why": "body 头夹带（1046 前端已解析 msearch）"
@@ -671,7 +671,7 @@
       "id": "b03",
       "method": "POST",
       "path": "/_mget",
-      "body": "{\"docs\":[{\"_index\":\"es_console_user\",\"_id\":\"1\"}]}",
+      "body": "{\"docs\":[{\"_index\":\"searchdeck_user\",\"_id\":\"1\"}]}",
       "allow": false,
       "ui": "deny",
       "why": "docs 夹带（1046 前端已解析 mget）"
@@ -680,7 +680,7 @@
       "id": "b04",
       "method": "POST",
       "path": "/_sql",
-      "body": "{\"query\":\"SELECT * FROM es_console_user\"}",
+      "body": "{\"query\":\"SELECT * FROM searchdeck_user\"}",
       "allow": false,
       "ui": "deny",
       "why": "SQL FROM 控制面（1046 前端逐 token 判定）"
@@ -689,7 +689,7 @@
       "id": "b05",
       "method": "POST",
       "path": "/logs/_update/1",
-      "body": "{\"script\":{\"source\":\"ctx._index='es_console_user'\"}}",
+      "body": "{\"script\":{\"source\":\"ctx._index='searchdeck_user'\"}}",
       "allow": false,
       "ui": "any",
       "why": "_index 改写脚本（前端不解析 painless）"

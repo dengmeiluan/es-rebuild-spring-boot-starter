@@ -4,7 +4,7 @@
  * （QUERY_MODES 无 template 键，mode.value 赋它被 normalizeMode 静默回落 dsl）。
  *
  * 形态：照 dsl.carry 同款 sessionStorage 一次性通道（favReplay bulk.carry/ubq.carry 跨页
- * 同构）——replay 写 es-console.search-templates.carry → router.push('/search-templates')
+ * 同构）——replay 写 searchdeck.search-templates.carry → router.push('/search-templates')
  * → 提前 return（不入 mode 切换，URL 不被污染）；接收端 SearchTemplatesView onMounted
  * 消费（读走即删）只做「预填 source 草稿」，play/run 行为由页内既有防呆承担
  * （528 批 histEntry528 双形态裁决：模板源快照可回填执行、渲染产物无法逆向——如实预填
@@ -156,13 +156,13 @@ describe('529 W-B 源码锁：replay template 分支与接收口', () => {
   it('QueryHubView：template 分支=一次性 carry + 跨页 push + 提前 return', () => {
     const v = readFileSync(join(__dirname, '../views/QueryHubView.vue'), 'utf-8');
     expect(v).toMatch(/m === 'template'/);
-    expect(v).toMatch(/writeStoredRaw\(sessionStorage, 'es-console\.search-templates\.carry', it\.query \|\| ''\)/);
+    expect(v).toMatch(/writeStoredRaw\(sessionStorage, 'searchdeck\.search-templates\.carry', it\.query \|\| ''\)/);
     expect(v).toMatch(/router\.push\('\/search-templates'\)/);
-    expect(v).toMatch(/es-console\.search-templates\.carry', it\.query \|\| ''\);\s*if \(idx\) store\.pick\(idx\);[\s\S]*?return;/);
+    expect(v).toMatch(/searchdeck\.search-templates\.carry', it\.query \|\| ''\);\s*if \(idx\) store\.pick\(idx\);[\s\S]*?return;/);
   });
   it('SearchTemplatesView：接收端 onMounted 消费（读走即删），只预填 source 草稿', () => {
     const v = readFileSync(join(__dirname, '../views/SearchTemplatesView.vue'), 'utf-8');
-    expect(v).toMatch(/const ST_SOURCE_CARRY = 'es-console\.search-templates\.carry';/);
+    expect(v).toMatch(/const ST_SOURCE_CARRY = 'searchdeck\.search-templates\.carry';/);
     expect(v).toMatch(/removeStoredRaw\(sessionStorage, ST_SOURCE_CARRY\)/);
     expect(v).toMatch(/source\.value = prettify\(raw\);/);
     expect(v).toMatch(/onMounted\(consumeSourceCarry\)/);
@@ -193,11 +193,11 @@ describe('529 W-B QueryHub replay template 分支（挂载行为）', () => {
     await settle();
     await wait(20); /* router.push 导航微任务链完成（histEntry528 wait 同款） */
     await settle();
-    expect(sessionStorage.getItem('es-console.search-templates.carry')).toBe('{"query":{"match":{"bond_id":"{{bondId}}"}}}');
+    expect(sessionStorage.getItem('searchdeck.search-templates.carry')).toBe('{"query":{"match":{"bond_id":"{{bondId}}"}}}');
     expect(router.currentRoute.value.path, '跨页跳搜索模板中心').toBe('/search-templates');
     expect(store.pickedIdx, '索引上下文跟随（sql/sandbox/pit 分支同款）').toBe('tpl_idx');
     expect(router.currentRoute.value.query.mode, 'mode 不被 template 污染（提前 return）').toBeUndefined();
-    expect(sessionStorage.getItem('es-console.dsl.carry'), '不误走 dsl 分支').toBeNull();
+    expect(sessionStorage.getItem('searchdeck.dsl.carry'), '不误走 dsl 分支').toBeNull();
     unmount();
   });
 });
@@ -205,21 +205,21 @@ describe('529 W-B QueryHub replay template 分支（挂载行为）', () => {
 /* ═══ ③④ 接收端：SearchTemplatesView source 草稿预填（挂载行为） ═══ */
 describe('529 W-B SearchTemplatesView 接收口（挂载行为）', () => {
   it('carry=模板源快照（含 {{}}）→ source 草稿回填 + 键消费即删 + 模板源档 toast', async () => {
-    sessionStorage.setItem('es-console.search-templates.carry', '{"size":"{{size}}","query":{"match":{"{{field}}":"{{keyword}}"}}}');
+    sessionStorage.setItem('searchdeck.search-templates.carry', '{"size":"{{size}}","query":{"match":{"{{field}}":"{{keyword}}"}}}');
     const SearchTemplatesView = (await import('../views/SearchTemplatesView.vue')).default;
     const { host, notify, unmount } = await mountView(SearchTemplatesView);
     expect(host.querySelector('.monaco-stub')!.textContent).toContain('{{keyword}}');
-    expect(sessionStorage.getItem('es-console.search-templates.carry'), '一次性通道读走即删').toBeNull();
+    expect(sessionStorage.getItem('searchdeck.search-templates.carry'), '一次性通道读走即删').toBeNull();
     expect(notify).toHaveBeenCalledWith('success', expect.stringContaining('已从查询历史回填模板源'));
     unmount();
   });
 
   it('carry=渲染产物（纯 JSON）→ 如实预填 + 渲染产物档 toast（不静默假装模板源还原）', async () => {
-    sessionStorage.setItem('es-console.search-templates.carry', '{"size":10,"query":{"match_all":{}}}');
+    sessionStorage.setItem('searchdeck.search-templates.carry', '{"size":10,"query":{"match_all":{}}}');
     const SearchTemplatesView = (await import('../views/SearchTemplatesView.vue')).default;
     const { host, notify, unmount } = await mountView(SearchTemplatesView);
     expect(host.querySelector('.monaco-stub')!.textContent).toContain('"match_all"');
-    expect(sessionStorage.getItem('es-console.search-templates.carry')).toBeNull();
+    expect(sessionStorage.getItem('searchdeck.search-templates.carry')).toBeNull();
     expect(notify).toHaveBeenCalledWith('success', expect.stringContaining('渲染产物'));
     unmount();
   });

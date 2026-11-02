@@ -102,11 +102,11 @@ describe('W2 批：ConfigValidator 双栏比例 + 问题清单高度', () => {
     expect(handle!.getAttribute('aria-orientation')).toBe('vertical');
     expect(host.querySelector('.cv-grid')!.getAttribute('style'), '默认等分无内联变量').toBe(null);
     await dragHandle(handle!, 80);
-    expect(localStorage.getItem('es-console.pref.configvalidator.leftW')).toBe('500');
+    expect(localStorage.getItem('searchdeck.pref.configvalidator.leftW')).toBe('500');
     expect(host.querySelector('.cv-grid')!.getAttribute('style')).toContain('--cv-left-w: 500px');
     handle!.dispatchEvent(new Event('dblclick'));
     await settle();
-    expect(localStorage.getItem('es-console.pref.configvalidator.leftW')).toBe('0');
+    expect(localStorage.getItem('searchdeck.pref.configvalidator.leftW')).toBe('0');
     expect(host.querySelector('.cv-grid')!.getAttribute('style')).toBe(null);
   });
 
@@ -126,7 +126,7 @@ describe('W2 批：ConfigValidator 双栏比例 + 问题清单高度', () => {
     expect(issues!.style.maxHeight).toBe('380px');
     btn(host, '[data-cv-issues-h]').click();
     await settle();
-    expect(localStorage.getItem('es-console.pref.configvalidator.issuesH')).toBe('560');
+    expect(localStorage.getItem('searchdeck.pref.configvalidator.issuesH')).toBe('560');
     expect(host.querySelector<HTMLElement>('.cv-issues')!.style.maxHeight).toBe('560px');
   });
 

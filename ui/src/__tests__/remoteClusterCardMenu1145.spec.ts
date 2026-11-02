@@ -96,7 +96,7 @@ describe('1145 远程集群卡右键', () => {
     expect(labels).toEqual(['在 Dev Tools 看 cluster.settings', '查询工作台 · 沙盒']);
     expect(await clickMenuItem('在 Dev Tools 看 cluster.settings')).toBe(true);
     await tick();
-    const prefill = sessionStorage.getItem('es-console.devtools.open') || '';
+    const prefill = sessionStorage.getItem('searchdeck.devtools.open') || '';
     expect(prefill, '预填指向 cluster.settings 且自动执行').toContain('_cluster/settings');
     expect(prefill).toContain('"run":true');
   });

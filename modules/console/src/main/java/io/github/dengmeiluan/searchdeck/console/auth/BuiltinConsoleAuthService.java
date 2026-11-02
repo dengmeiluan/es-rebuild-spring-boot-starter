@@ -39,10 +39,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 内置控制台账号服务（账号存 ES 索引 {@code es_console_user}，无任何外部依赖。
+ * 内置控制台账号服务（账号存 ES 索引 {@code searchdeck_user}，无任何外部依赖。
  *
  * <p>核心语义（与用户约定一致）：<b>用户索引里一个账号都没有时，用兜底默认账号
- * {@code admin / es-console}（可配置）登录，角色 ADMIN；一旦 ES 里建立了任何账号，
+ * {@code admin / searchdeck}（可配置）登录，角色 ADMIN；一旦 ES 里建立了任何账号，
  * 兜底账号即失效，一切以 ES 里的用户为准。</b></p>
  *
  * <ul>
@@ -61,7 +61,7 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /** 请求头（前端 api.ts 统一附带）。 */
-    public static final String TOKEN_HEADER = "X-Es-Console-Token";
+    public static final String TOKEN_HEADER = "X-SearchDeck-Token";
 
     private static final int PBKDF2_ITERATIONS = 31_000;
     private static final int PBKDF2_KEY_BITS = 256;
@@ -92,13 +92,13 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
         this.tokenTtlMs = tokenTtlMs;
         this.loginEnabled = loginEnabled;
         if (!loginEnabled) {
-            LOG.info("[es-console-auth] 内置账号登录已关闭（检测到宿主鉴权委托）：/auth/login 不再接受本地账号，"
-                    + "如需保留请显式配置 es.rebuild.console.auth.builtin-login-enabled=true");
+            LOG.info("[searchdeck-auth] 内置账号登录已关闭（检测到宿主鉴权委托）：/auth/login 不再接受本地账号，"
+                    + "如需保留请显式配置 searchdeck.elasticsearch.console.auth.builtin-login-enabled=true");
         } else if (isDefaultFallbackCredential()) {
             /* 默认口令 + 内置登录 = 公开已知凭据的 ADMIN 入口。独立部署必须首登改密；
                此处只告警不阻断（阻断会让空库部署无法首登），但必须是 ERROR 级、不可静默。 */
-            LOG.error("[es-console-auth] 兜底账号仍使用默认口令（{} / ***）：任何能访问 /auth/login 的人"
-                    + "都可获得 ADMIN。请立即修改 es.rebuild.console.auth.fallback-username/password，"
+            LOG.error("[searchdeck-auth] 兜底账号仍使用默认口令（{} / ***）：任何能访问 /auth/login 的人"
+                    + "都可获得 ADMIN。请立即修改 searchdeck.elasticsearch.console.auth.fallback-username/password，"
                     + "或关闭内置登录（builtin-login-enabled=false）", fallbackUsername);
         }
         if (configuredSecret != null && !configuredSecret.trim().isEmpty()) {
@@ -107,14 +107,14 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
             byte[] random = new byte[32];
             new SecureRandom().nextBytes(random);
             this.hmacSecret = random;
-            LOG.info("[es-console-auth] 未配置 token secret，已随机生成（实例重启后需重新登录；" +
-                    "多实例部署请配置 es.rebuild.console.auth.token-secret 保证 token 互通）");
+            LOG.info("[searchdeck-auth] 未配置 token secret，已随机生成（实例重启后需重新登录；" +
+                    "多实例部署请配置 searchdeck.elasticsearch.console.auth.token-secret 保证 token 互通）");
         }
     }
 
-    /** 兜底账号是否仍是出厂默认（admin / es-console）。 */
+    /** 兜底账号是否仍是出厂默认（admin / searchdeck）。 */
     private boolean isDefaultFallbackCredential() {
-        return "admin".equals(fallbackUsername) && "es-console".equals(fallbackPassword);
+        return "admin".equals(fallbackUsername) && "searchdeck".equals(fallbackPassword);
     }
 
     /** 登录控制器用：默认口令必须只允许本机登录（公开已知凭据不能作为远程 ADMIN 入口）。 */
@@ -251,7 +251,7 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
                 /* 静默拒绝→WARN——合法兜底 token 被用户索引 IO 失败静默拒绝
                    =用户锁死且零日志（登录失败与「建号后兜底失效」从外表无法分辨）；拒绝语义
                    本身不变（吞异常契约：校验失败一律 null），只补留痕与 username 上下文 */
-                LOG.warn("[es-console-auth] 兜底 token 因用户索引 IO 失败被按无效拒绝 username={}：{}",
+                LOG.warn("[searchdeck-auth] 兜底 token 因用户索引 IO 失败被按无效拒绝 username={}：{}",
                         username, e.getMessage(), e);
                 return null;
             }
@@ -263,7 +263,7 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
         try {
             user = findUser(username);
         } catch (IOException e) {
-            LOG.warn("[es-console-auth] token 纪元回查因用户索引 IO 失败被按无效拒绝 username={}：{}",
+            LOG.warn("[searchdeck-auth] token 纪元回查因用户索引 IO 失败被按无效拒绝 username={}：{}",
                     username, e.getMessage(), e);
             return null;
         }
@@ -311,7 +311,7 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
                 revokedTokens.entrySet().stream()
                         .min(java.util.Comparator.comparingLong(Map.Entry::getValue))
                         .ifPresent(e -> revokedTokens.remove(e.getKey()));
-                LOG.warn("[es-console-auth] 登出吊销表已满，已驱逐最早到期条目为新吊销腾位");
+                LOG.warn("[searchdeck-auth] 登出吊销表已满，已驱逐最早到期条目为新吊销腾位");
             }
         }
         revokedTokens.put(tokenFingerprint(token), tokenExpiresAt(token));
@@ -576,7 +576,7 @@ public class BuiltinConsoleAuthService implements EsConsoleAuthorizer {
             // 全静默→WARN——档案要素损坏（坏 Base64/迭代数坏值等）时登录失败
             // 与「密码错误」从外表无法分辨且零日志；拒绝语义不变（吞异常契约：一律 false），
             // 只补留痕。密码材料零入日志：仅 username + throwable（哈希/salt 绝不打）
-            LOG.warn("[es-console-auth] 密码校验失败（用户档案要素损坏?，按凭证错误拒绝）username={}",
+            LOG.warn("[searchdeck-auth] 密码校验失败（用户档案要素损坏?，按凭证错误拒绝）username={}",
                     username, e);
             return false;
         }

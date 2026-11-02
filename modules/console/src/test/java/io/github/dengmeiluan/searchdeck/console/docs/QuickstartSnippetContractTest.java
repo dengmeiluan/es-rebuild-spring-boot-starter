@@ -79,7 +79,7 @@ public class QuickstartSnippetContractTest {
         assertTrue("quickstart 应含 @Document 实体声明",
                 quickstart.contains("@Document"));
         assertTrue("quickstart 应含 mapping auto-register 配置",
-                quickstart.contains("es.rebuild.mapping.auto-register"));
+                quickstart.contains("searchdeck.elasticsearch.mapping.auto-register"));
         assertTrue("quickstart 应指向 desired-state 页",
                 quickstart.contains("desired-state"));
     }
@@ -105,7 +105,7 @@ public class QuickstartSnippetContractTest {
     @Test
     public void readmeQuickStartTeachesAutoRegisterFlow() {
         assertTrue("README 应含 mapping auto-register 流程",
-                readme.contains("es.rebuild.mapping.auto-register") || readme.contains("desired-state"));
+                readme.contains("searchdeck.elasticsearch.mapping.auto-register") || readme.contains("desired-state"));
         assertTrue(readmeEn.contains("desired-state") || readmeEn.contains("auto-register")
                 || readmeEn.toLowerCase(Locale.ROOT).contains("auto-register"));
     }

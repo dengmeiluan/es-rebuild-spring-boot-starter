@@ -46,46 +46,46 @@ public class EsIndexAdminPitGuard979Test {
         rejected(() -> admin.pitSearch("{\"query\":{\"match_all\":{}}}"), "裸 body=全集群搜索");
         rejected(() -> admin.pitSearch("{\"pit\":{},\"query\":{\"match_all\":{}}}"), "空 pit");
         rejected(() -> admin.pitSearch("{\"pit\":{\"id\":\"\"}}"), "空 pit.id");
-        rejected(() -> admin.pitSearch("{\"pit\":{\"id\":\"abc\"},\"index\":\"es_console_user\"}"), "index 覆盖");
+        rejected(() -> admin.pitSearch("{\"pit\":{\"id\":\"abc\"},\"index\":\"searchdeck_user\"}"), "index 覆盖");
         rejected(() -> admin.pitSearch("not-json"), "非法 JSON");
     }
 
     @Test
     public void pitOpen拒绝控制索引与不可解析通配() throws Exception {
-        rejected(() -> admin.pitOpen("es_console_user", "5m"), "控制面索引");
+        rejected(() -> admin.pitOpen("searchdeck_user", "5m"), "控制面索引");
         rejected(() -> admin.pitOpen("logs*", "5m"), "通配无法解析（无客户端=fail-closed）");
     }
 
     @Test
     public void raw通配破坏性操作解析后拒绝_精确业务索引放行() throws Exception {
         rejected(() -> admin.guardRawGuarded("POST", "/logs*/_delete_by_query", "{}"), "通配 DBQ 无法解析");
-        rejected(() -> admin.guardRawGuarded("POST", "/es_console_user/_delete_by_query", "{}"), "精确控制面 DBQ");
+        rejected(() -> admin.guardRawGuarded("POST", "/searchdeck_user/_delete_by_query", "{}"), "精确控制面 DBQ");
         admin.guardRawGuarded("POST", "/logs-2026/_delete_by_query", "{}");
         admin.guardRawGuarded("POST", "/logs-2026/_update_by_query", "{}");
-        /* 正文里出现 "es_console" 字样的业务文档不得被误伤（只拦精确前缀/通配形态） */
+        /* 正文里出现 "searchdeck" 字样的业务文档不得被误伤（只拦精确前缀/通配形态） */
         admin.guardRawGuarded("POST", "/logs-2026/_search",
-                "{\"query\":{\"match\":{\"message\":\"es_console\"}}}");
+                "{\"query\":{\"match\":{\"message\":\"searchdeck\"}}}");
     }
 
     @Test
     public void pitSearch拒绝termsLookup通配控制面() throws Exception {
         rejected(() -> admin.pitSearch(
-                "{\"pit\":{\"id\":\"abc\"},\"query\":{\"terms\":{\"p\":{\"index\":\"es_console*\"}}}}"),
+                "{\"pit\":{\"id\":\"abc\"},\"query\":{\"terms\":{\"p\":{\"index\":\"searchdeck*\"}}}}"),
                 "terms lookup 通配控制面");
         rejected(() -> admin.pitSearch(
-                "{\"pit\":{\"id\":\"abc\"},\"query\":{\"terms\":{\"p\":{\"index\":\"es_console_conn\"}}}}"),
+                "{\"pit\":{\"id\":\"abc\"},\"query\":{\"terms\":{\"p\":{\"index\":\"searchdeck_conn\"}}}}"),
                 "terms lookup 精确控制面");
         rejected(() -> admin.guardRawGuarded("POST", "/logs-2026/_search",
-                "{\"query\":{\"terms\":{\"p\":{\"index\":\"es_console*\"}}}}"), "raw terms lookup 通配控制面");
+                "{\"query\":{\"terms\":{\"p\":{\"index\":\"searchdeck*\"}}}}"), "raw terms lookup 通配控制面");
     }
 
     @Test
     public void 控制面索引识别覆盖账号连接审计与后缀锁() {
-        org.junit.Assert.assertTrue(admin.isControlIndex("es_console_user"));
-        org.junit.Assert.assertTrue(admin.isControlIndex("es_console_conn"));
-        org.junit.Assert.assertTrue(admin.isControlIndex("es_console_ops_audit-2026.10"));
-        org.junit.Assert.assertTrue(admin.isControlIndex("logs_es_rebuild_lock"));
-        org.junit.Assert.assertTrue(admin.isControlIndex("mig_es_xmigrate_job"));
+        org.junit.Assert.assertTrue(admin.isControlIndex("searchdeck_user"));
+        org.junit.Assert.assertTrue(admin.isControlIndex("searchdeck_conn"));
+        org.junit.Assert.assertTrue(admin.isControlIndex("searchdeck_ops_audit-2026.10"));
+        org.junit.Assert.assertTrue(admin.isControlIndex("logs_searchdeck_lock"));
+        org.junit.Assert.assertTrue(admin.isControlIndex("mig_searchdeck_migrate_job"));
         org.junit.Assert.assertTrue(admin.isControlIndex(".kibana"));
         org.junit.Assert.assertFalse(admin.isControlIndex("logs-2026"));
     }

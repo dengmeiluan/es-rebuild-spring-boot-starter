@@ -107,7 +107,7 @@ public class AuditIndexRetentionSweeper {
                 warnThrottled("清理轮失败", e);
             }
         }, INITIAL_DELAY_SECONDS, SWEEP_PERIOD_SECONDS, TimeUnit.SECONDS);
-        LOG.info("[es-console-audit-retention] started, prefixes={}, maxDays={}, maxTotalBytes={}, dryRun={}",
+        LOG.info("[searchdeck-audit-retention] started, prefixes={}, maxDays={}, maxTotalBytes={}, dryRun={}",
                 indexPrefixes, maxDays, maxTotalBytes, dryRun);
     }
 
@@ -125,13 +125,13 @@ public class AuditIndexRetentionSweeper {
             return;
         }
         if (dryRun) {
-            LOG.info("[es-console-audit-retention] dry-run 命中待删 {} 个（不执行）: {}", toDelete.size(), toDelete);
+            LOG.info("[searchdeck-audit-retention] dry-run 命中待删 {} 个（不执行）: {}", toDelete.size(), toDelete);
             return;
         }
         for (String name : toDelete) {
             try {
                 client.get().getLowLevelClient().performRequest(new Request("DELETE", "/" + name));
-                LOG.info("[es-console-audit-retention] deleted dated index: {}", name);
+                LOG.info("[searchdeck-audit-retention] deleted dated index: {}", name);
             } catch (Exception e) {
                 warnThrottled("删除日期索引失败: " + name, e);
             }
@@ -241,7 +241,7 @@ public class AuditIndexRetentionSweeper {
     private void warnThrottled(String where, Exception e) {
         long failures = failureCount.incrementAndGet();
         if (failures == 1) {
-            LOG.warn("[es-console-audit-retention] {}（首次，后续失败仅累计不再打）：{}", where, e.getMessage(), e);
+            LOG.warn("[searchdeck-audit-retention] {}（首次，后续失败仅累计不再打）：{}", where, e.getMessage(), e);
         }
     }
 }

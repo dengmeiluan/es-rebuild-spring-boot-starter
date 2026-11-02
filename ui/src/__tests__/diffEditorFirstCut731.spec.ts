@@ -123,7 +123,7 @@ async function mountDf(opts: MountOpts = {}) {
   if (opts.mode) q.set('mode', opts.mode);
   if (opts.b) q.set('b', opts.b);
   history.replaceState(null, '', '#/?' + q.toString());
-  if (opts.carry != null) sessionStorage.setItem('es-console.doc-diff.carry.source', opts.carry);
+  if (opts.carry != null) sessionStorage.setItem('searchdeck.doc-diff.carry.source', opts.carry);
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [{ path: '/:pathMatch(.*)*', component: { template: '<div/>' } }],

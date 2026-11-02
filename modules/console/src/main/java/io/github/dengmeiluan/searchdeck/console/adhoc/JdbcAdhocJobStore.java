@@ -33,7 +33,7 @@ import java.util.Optional;
 
 /**
  * {@link AdhocJobStore} 的宿主数据库档（ 平台化底座）：作业落宿主 {@code DataSource}
- * 的 {@code es_rebuild_adhoc_job} 表（首次使用自动建表），重启后仍可在列表页看历史。
+ * 的 {@code searchdeck_adhoc_job} 表（首次使用自动建表），重启后仍可在列表页看历史。
  * 照 {@link io.github.dengmeiluan.searchdeck.console.auth.JdbcConsoleOpsAuditStore} 范式：
  * {@code TABLE} 常量 + {@code volatile schemaReady} + 幂等 {@code CREATE TABLE IF NOT EXISTS}。
  *
@@ -58,7 +58,7 @@ import java.util.Optional;
 public class JdbcAdhocJobStore implements AdhocJobStore {
 
     private static final Logger logger = LoggerFactory.getLogger(JdbcAdhocJobStore.class);
-    private static final String TABLE = "es_rebuild_adhoc_job";
+    private static final String TABLE = "searchdeck_adhoc_job";
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final DataSource dataSource;
@@ -109,7 +109,7 @@ public class JdbcAdhocJobStore implements AdhocJobStore {
                 }
             }
         } catch (Exception e) {
-            logger.warn("[es-rebuild-adhoc-jdbc] 落作业失败（忽略，不反噬重建）：jobId={} {}",
+            logger.warn("[searchdeck-adhoc-jdbc] 落作业失败（忽略，不反噬重建）：jobId={} {}",
                     job == null ? null : job.getJobId(), e.getMessage(), e);
         }
     }
@@ -171,7 +171,7 @@ public class JdbcAdhocJobStore implements AdhocJobStore {
                 ps.executeUpdate();
             }
         } catch (SQLException e) {
-            logger.warn("[es-rebuild-adhoc-jdbc] 删除作业失败（忽略）：jobId={} {}", jobId, e.getMessage(), e);
+            logger.warn("[searchdeck-adhoc-jdbc] 删除作业失败（忽略）：jobId={} {}", jobId, e.getMessage(), e);
         }
     }
 
@@ -201,7 +201,7 @@ public class JdbcAdhocJobStore implements AdhocJobStore {
             }
         } catch (Exception e) {
             // 反序列化失败不致命：至少返回带 jobId 的骨架，列表/查看仍能显示 id。
-            logger.warn("[es-rebuild-adhoc-jdbc] payload 反序列化失败，返回骨架：jobId={} {}",
+            logger.warn("[searchdeck-adhoc-jdbc] payload 反序列化失败，返回骨架：jobId={} {}",
                     jobId, e.getMessage(), e);
         }
         return job;
@@ -245,7 +245,7 @@ public class JdbcAdhocJobStore implements AdhocJobStore {
                     // MySQL 无 CREATE INDEX IF NOT EXISTS：重复建索引报错直接吞（幂等语义自实现）
                     st.execute("CREATE INDEX idx_" + TABLE + "_updated ON " + TABLE + " (updated_ts)");
                 } catch (SQLException ignore) {
-                    logger.debug("[es-rebuild-adhoc-jdbc] updated_ts 索引已存在，跳过");
+                    logger.debug("[searchdeck-adhoc-jdbc] updated_ts 索引已存在，跳过");
                 }
                 schemaReady = true;
                 logger.info("[JdbcAdhocJobStore] schema ready: {}", TABLE);

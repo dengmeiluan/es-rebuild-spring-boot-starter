@@ -17,7 +17,7 @@
 package io.github.dengmeiluan.searchdeck.console.xmigrate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.core.EsIndexAdmin;
 import io.github.dengmeiluan.searchdeck.console.core.IndexMetaRegistry;
 import io.github.dengmeiluan.searchdeck.console.core.RebuildableIndexMeta;
@@ -77,7 +77,7 @@ public class CrossClusterMigrateService {
     private final MigrateJobTracker tracker;
     private final RunningMigrations running;
     private final IndexMetaRegistry indexMetaRegistry;
-    private final EsRebuildProperties properties;
+    private final SearchDeckElasticsearchProperties properties;
     private final Environment environment;
     /** 台账 #69：目标（宿主）集群版本探测；null 表示未注入，守卫按「未知」处理——不假装已知。 */
     private final HostEsVersionProvider hostVersionProvider;
@@ -86,7 +86,7 @@ public class CrossClusterMigrateService {
     public CrossClusterMigrateService(java.util.function.Supplier<RestHighLevelClient> localClient, EsIndexAdmin localAdmin,
                                       RemoteEsClientFactory remoteClientFactory, MigrateJobTracker tracker,
                                       RunningMigrations running, IndexMetaRegistry indexMetaRegistry,
-                                      EsRebuildProperties properties, Environment environment,
+                                      SearchDeckElasticsearchProperties properties, Environment environment,
                                       HostEsVersionProvider hostVersionProvider) {
         this.localClient = localClient;
         this.localAdmin = localAdmin;
@@ -125,10 +125,10 @@ public class CrossClusterMigrateService {
         if (ref == null) return false;
         String k = ref.trim();
         if (k.isEmpty()) return false;
-        if (k.matches("(SOURCE|ES|MIGRATE|QUOTEHUB)_[A-Z0-9_]+")) return true;
+        if (k.matches("(SOURCE|ES|MIGRATE)_[A-Z0-9_]+")) return true;
         /* 控制台鉴权/令牌配置属本应用秘密，迁移源连接解析面绝不开放（token-secret 泄露=可伪造 ADMIN）。
            仅保留迁移自身的连接参数域。 */
-        return k.startsWith("es.rebuild.migrate.");
+        return k.startsWith("searchdeck.elasticsearch.migrate.");
     }
 
     private static boolean sensitiveRef(String ref) {
@@ -146,7 +146,7 @@ public class CrossClusterMigrateService {
         while (m.find()) {
             if (!allowedRef(m.group(1))) {
                 throw new IllegalArgumentException("变量引用不允许：" + m.group(1)
-                        + "（仅允许 SOURCE_/ES_/MIGRATE_/QUOTEHUB_ 或 es.rebuild.* 源连接变量）");
+                        + "（仅允许 SOURCE_/ES_/MIGRATE_ 或 searchdeck.elasticsearch.* 源连接变量）");
             }
         }
     }
@@ -156,7 +156,7 @@ public class CrossClusterMigrateService {
         if (ref != null && !ref.trim().isEmpty()) {
             if (!allowedRef(ref)) {
                 throw new IllegalArgumentException("变量引用不允许：" + ref
-                        + "（仅允许 SOURCE_/ES_/MIGRATE_/QUOTEHUB_ 或 es.rebuild.* 源连接变量）");
+                        + "（仅允许 SOURCE_/ES_/MIGRATE_ 或 searchdeck.elasticsearch.* 源连接变量）");
             }
             String v = environment.getProperty(ref.trim());
             return v == null || v.isEmpty() ? null : v;

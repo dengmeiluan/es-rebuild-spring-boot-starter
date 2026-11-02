@@ -180,7 +180,7 @@ describe('auth.probe 代际守卫', () => {
   });
 
   it('不同用户登录清除上一用户的请求草稿与历史', async () => {
-    localStorage.setItem('es-console.last-user', 'alice');
+    localStorage.setItem('searchdeck.last-user', 'alice');
     localStorage.setItem('es_rest_hist', '[]');
     sessionStorage.setItem('es_devtools_draft:host', '{"path":"/_cluster/settings"}');
     const loginSpy = vi.spyOn(api.auth, 'login').mockResolvedValue(
@@ -194,7 +194,7 @@ describe('auth.probe 代际守卫', () => {
   });
 
   it('同一用户重新登录保留草稿', async () => {
-    localStorage.setItem('es-console.last-user', 'alice');
+    localStorage.setItem('searchdeck.last-user', 'alice');
     sessionStorage.setItem('es_devtools_draft:host', '{"a":1}');
     const loginSpy = vi.spyOn(api.auth, 'login').mockResolvedValue(
       { token: 't', username: 'alice', role: 'VIEWER', fallback: false } as any);

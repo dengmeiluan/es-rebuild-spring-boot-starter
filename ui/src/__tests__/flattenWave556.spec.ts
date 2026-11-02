@@ -128,7 +128,7 @@ async function mountView(name: string) {
 }
 
 beforeEach(() => {
-  localStorage.removeItem('es-console.workspace.v1');
+  localStorage.removeItem('searchdeck.workspace.v1');
   document.body.innerHTML = '';
 });
 

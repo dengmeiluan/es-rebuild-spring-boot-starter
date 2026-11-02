@@ -203,7 +203,7 @@ describe('UpdateByQueryView ubq.scriptH 合并 useTierCycle（）', () => {
   });
 
   it('直连行为：useTierCycle(\'ubq.scriptH\') 三档循环 + 落盘键不变（不依赖组件落盘）', async () => {
-    localStorage.setItem('es-console.pref.ubq.scriptH', JSON.stringify('max(220px, 72vh)')); // 预置末档：验读档+循环回首
+    localStorage.setItem('searchdeck.pref.ubq.scriptH', JSON.stringify('max(220px, 72vh)')); // 预置末档：验读档+循环回首
     const { useTierCycle } = await import('../composables/useTierCycle');
     const TIERS = ['max(110px, 42vh)', 'max(150px, 56vh)', 'max(220px, 72vh)'];
     const { v, cycle } = useTierCycle('ubq.scriptH', TIERS);
@@ -213,11 +213,11 @@ describe('UpdateByQueryView ubq.scriptH 合并 useTierCycle（）', () => {
     cycle();
     expect(v.value, '顺档推进').toBe('max(150px, 56vh)');
     await wait(0);
-    expect(localStorage.getItem('es-console.pref.ubq.scriptH'), '落盘键不变（零迁移）').toBe(JSON.stringify('max(150px, 56vh)'));
+    expect(localStorage.getItem('searchdeck.pref.ubq.scriptH'), '落盘键不变（零迁移）').toBe(JSON.stringify('max(150px, 56vh)'));
   });
 
-  it.skipIf(!compReady)('视图挂载行为：预置末档 → 「高」钮循环回首档，落盘键 es-console.pref.ubq.scriptH 不变（组件在场才跑）', async () => {
-    localStorage.setItem('es-console.pref.ubq.scriptH', JSON.stringify('max(220px, 72vh)'));
+  it.skipIf(!compReady)('视图挂载行为：预置末档 → 「高」钮循环回首档，落盘键 searchdeck.pref.ubq.scriptH 不变（组件在场才跑）', async () => {
+    localStorage.setItem('searchdeck.pref.ubq.scriptH', JSON.stringify('max(220px, 72vh)'));
     const View = (await import('../views/UpdateByQueryView.vue')).default;
     const w = await mountView(View);
     const hBtn = () => w.host.querySelector<HTMLButtonElement>('[data-test="ubq-script-h"]')!;
@@ -229,7 +229,7 @@ describe('UpdateByQueryView ubq.scriptH 合并 useTierCycle（）', () => {
     await settle();
     expect(hBtn().getAttribute('title'), '顺档推进').toBe('脚本编辑器高度档：max(150px, 56vh)');
     await wait(0);
-    expect(localStorage.getItem('es-console.pref.ubq.scriptH'), '落盘键不变（零迁移）').toBe(JSON.stringify('max(150px, 56vh)'));
+    expect(localStorage.getItem('searchdeck.pref.ubq.scriptH'), '落盘键不变（零迁移）').toBe(JSON.stringify('max(150px, 56vh)'));
     w.unmount();
   });
 });

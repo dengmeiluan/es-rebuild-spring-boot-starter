@@ -41,7 +41,7 @@ public class DelegatedBuiltinToken1046Test {
                     }
                     return "{}";
                 }),
-                "es_console_user", "admin", "es-console", 3_600_000L, "it-secret", loginEnabled);
+                "searchdeck_user", "admin", "searchdeck", 3_600_000L, "it-secret", loginEnabled);
     }
 
     @Test

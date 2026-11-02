@@ -1676,7 +1676,7 @@ const MH_RANGE_MS: Record<string, number> = { '1h': 3.6e6, '6h': 2.16e7, '24h': 
 /* 周期档（对标阿里云每卡头「(周期:1分钟)」；626 裁决 D8「周期」半边，零 Java 改动）。
  覆盖既有隐式推导 mh2Interval＝聚合粒度的显式出口；偏好落 usePref（跨会话记忆）。
  档位：自动（按范围）| 原始逐点 | 1m | 5m | 15m | 30m | 1h。
- ⚠不提供 30 秒档：采集默认 60s、下限 30s（ClusterMetricsCollector.java / EsRebuildProperties.java），
+ ⚠不提供 30 秒档：采集默认 60s、下限 30s（ClusterMetricsCollector.java / SearchDeckElasticsearchProperties.java），
  30 秒桶在默认配置下产半空桶（一行有值一行缺省）——不是降采样，是「给读者一个不存在的刻度」。 */
 const histPeriod = usePref<string>('live.histPeriod', 'auto');
 const MH_PERIODS = ['1m', '5m', '15m', '30m', '1h'];
@@ -1932,9 +1932,9 @@ const liveBoot = useGatedBootRead('live', () => loadHist());
 onMounted(() => {
   liveBoot.run();
   /* 命令面板「实时大屏·全屏切换」的一次性载荷：读后即清（刷新不再重复进入挂墙态）。 */
-  if (sessionStorage.getItem('es-console.live.fullscreen') === '1') {
+  if (sessionStorage.getItem('searchdeck.live.fullscreen') === '1') {
     fullscreen.value = true;
-    removeStoredRaw(sessionStorage, 'es-console.live.fullscreen');
+    removeStoredRaw(sessionStorage, 'searchdeck.live.fullscreen');
   }
   /* 入场编排——next rAF 翻真，令 [data-st] 初态先落一帧再起过渡 */
   requestAnimationFrame(() => { pageIn.value = true; });

@@ -18,7 +18,7 @@ describe('IndexHub → DevTools 直达（474 批）', () => {
 
   it('openQryInDevTools：_prefill 契约+当前索引路径+stripJsonComments 美化', () => {
     const body = v.slice(v.indexOf('function openQryInDevTools()'), v.indexOf('function openQryInDevTools()') + 700);
-    expect(body).toContain("'es-console.devtools.open'");
+    expect(body).toContain("'searchdeck.devtools.open'");
     expect(body).toContain('dsl.value');
     expect(body).toContain("router.push('/devtools')");
   });

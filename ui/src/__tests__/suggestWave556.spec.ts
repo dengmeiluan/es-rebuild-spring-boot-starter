@@ -83,7 +83,7 @@ function aggResp(...keys: string[]) {
   return { aggregations: { suggest: { buckets: keys.map(k => ({ key: k })) } } };
 }
 
-const STASH_KEY = 'es_console_terms_stash::@host|logs-x|status';
+const STASH_KEY = 'searchdeck_terms_stash::@host|logs-x|status';
 
 /* ═══ A：useTermsSuggest 首轮同步候选 + stash merge ═══ */
 
@@ -154,7 +154,7 @@ describe('A useTermsSuggest 首轮同步候选', () => {
     });
   });
 
-  it('A6 词项持久档随成功响应滚动更新（key 契约 es_console_terms_stash::target|idx|field）', async () => {
+  it('A6 词项持久档随成功响应滚动更新（key 契约 searchdeck_terms_stash::target|idx|field）', async () => {
     searchRawFn.mockResolvedValue(aggResp('v9', 'v8'));
     const out = withSetup(() => 'logs-x');
     out.suggest('status', '');

@@ -119,7 +119,7 @@ describe('BoolGroupNode', () => {
     children: [{ occur: 'must', node: { id: 'fx1', type: 'leaf', op: 'term', field: 'a', value: 1, params: {}, raw: null } }],
     params: {}, arrForm: { must: true },
   };
-  const FOLD_KEY = 'es-console.draft2:query-builder:host:-:-:bgn-fold:fixb1';
+  const FOLD_KEY = 'searchdeck.draft2:query-builder:host:-:-:bgn-fold:fixb1';
 
   function mountFixed(node: BoolNode) {
     const host = document.createElement('div');

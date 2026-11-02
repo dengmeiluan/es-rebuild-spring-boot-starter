@@ -3,7 +3,7 @@
 > **The embeddable operations platform for Elasticsearch.** Zero-downtime index rebuilds,
 > a query workbench, observability, data browsing, and host integration — one capability set,
 > three delivery modes. 52 pages, **11 feature packs**: all on by default, trimmed by the host.
-> First integration: **QuoteHub**, already running in production.
+> Validated in a real host production environment.
 
 [![Release](https://img.shields.io/github/v/release/dengmeiluan/searchdeck?display_name=release)](https://github.com/dengmeiluan/searchdeck/releases)
 [![CI](https://github.com/dengmeiluan/searchdeck/actions/workflows/ci.yml/badge.svg)](https://github.com/dengmeiluan/searchdeck/actions/workflows/ci.yml)
@@ -14,7 +14,7 @@
 
 ![SearchDeck — Search operations, on deck.](docs/screenshots/searchdeck-banner.svg)
 
-**[Quick start](#-five-minute-integration)** · [中文 README](README.md) · [Feature packs](#-feature-packs) · [QuoteHub integration](docs/integrations/quotehub.md) · [Design constitution](docs/design.md)
+**[Quick start](#-five-minute-integration)** · [中文 README](README.md) · [Feature packs](#-feature-packs) · [Host integration](docs/integration/README.md) · [Design constitution](docs/design.md)
 
 ---
 
@@ -30,7 +30,8 @@ embedded into any search-backed application:
 - **Observability and governance** — node KPIs, alerts, slow requests, top indices, task trees,
   topology, health reports, config drift, and permission surfaces.
 - **Host integration** — authentication delegation, connection directory, page-contract menus,
-  branding and feature-pack selection. QuoteHub is the first integration.
+  branding and feature-pack selection through the `ConsoleHostIntegration` SPI, with no coupling
+  to a specific business system.
 
 ### What it is not
 
@@ -76,12 +77,26 @@ read/write keys in `grantedPages`.
 | `security` | 1 | Security center: accounts, permission surface, ops audit |
 | `devtools` | 3 | REST passthrough, Dev Tools tabs, Painless sandbox |
 
-> `META-INF/es-console-pages.json` is the single source of truth. Feature packs change exposure,
+> `META-INF/searchdeck-pages.json` is the single source of truth. Feature packs change exposure,
 > never page keys.
 
-**QuoteHub-trimmed console** (demo data) — host branding and only 2 groups / 6 pages:
+**Page map** (13 groups / 52 pages; trim by group or by page):
 
-![QuoteHub-trimmed navigation (demo data)](docs/screenshots/searchdeck-quotehub-nav.png)
+| Group | Pages | Highlights |
+|---|---:|---|
+| `core` | 5 | Cluster overview, index workspace, dev workbench, live dashboard, favorites |
+| `search` | 3 | Six-mode query workbench, search templates, data browser |
+| `index` | 5 | Mapping and designer, hot settings, aliases, system indices |
+| `quality` | 5 | Index templates, template gallery, config validator, config drift, optimizer |
+| `data` | 3 | Bulk editor, Update By Query, document diff |
+| `text` | 4 | Analyze, analyzer lab, synonyms, analysis panorama |
+| `rank` | 6 | Score explain, rank detective, boost tuner, match matrix, query X-ray, profile flame graph |
+| `rebuild` | 4 | Managed rebuild, cross-cluster migration, advanced/estimated reindex |
+| `protect` | 4 | Snapshots, SLM, ILM, lifecycle |
+| `health` | 4 | Diagnostics, health report, topology, Watcher |
+| `cluster` | 5 | Tasks/task tree, cluster settings, plugins, remote clusters |
+| `security` | 1 | Security center: accounts, permission surface, ops audit |
+| `devx` | 3 | REST passthrough, Dev Tools tabs, Painless sandbox |
 
 **Explainable disabled-module page** (demo data) — deep links never end in a blank screen or 404:
 
@@ -131,26 +146,25 @@ java -jar searchdeck-server.jar
 
 Ships its own web server (default port `5601`) and ES client stack. Open
 `http://localhost:5601/searchdeck.html` and follow the setup wizard. The bootstrap profile lives
-in `~/.es-console/` and survives restarts. (2.0 multi-module asset name; 1.x releases remain
-`es-rebuild-standalone-*.jar`.)
+in `~/.searchdeck/` and survives restarts. See [apps/server/README.md](apps/server/README.md).
 
 ### B. Embedded console module
 
 Add `searchdeck-console` to a host Spring Boot app. Console assets and HTTP endpoints register automatically;
 authentication can delegate to the host (shared login state via iframe). Ideal for integrated delivery.
 
-### C. Host integration (QuoteHub first)
+### C. Host integration (SPI-driven, host-agnostic)
 
-QuoteHub already runs the auth delegate, connection-center contributor, page-contract menu
-provisioner, and host audit contributor in production. SearchDeck adds a **branding + feature-pack**
-declaration:
+SearchDeck does not force a host into a particular business shape. Implement
+`ConsoleHostIntegration` to declare branding and default packs, then opt into authentication
+delegation, connection directory, and audit contribution as needed:
 
 ```java
 @Bean
-public ConsoleHostIntegration searchDeckQuoteHubIntegration() {
+public ConsoleHostIntegration searchDeckHostIntegration() {
     return new ConsoleHostIntegration() {
-        public String id() { return "quotehub"; }
-        public String displayName() { return "QuoteHub"; }
+        public String id() { return "acme"; }
+        public String displayName() { return "Acme Search"; }
         public List<String> preferredPacks() {
             return Arrays.asList("platform", "search", "index", "data",
                     "lifecycle", "observe", "security", "devtools");
@@ -159,33 +173,31 @@ public ConsoleHostIntegration searchDeckQuoteHubIntegration() {
 }
 ```
 
-Full integration surface, QA-era audit retirement, and the acceptance checklist:
-[docs/integrations/quotehub.md](docs/integrations/quotehub.md).
+Every host-facing surface is an interface: `ConsoleAuthDelegate` (auth), `ConnStore` (connection
+directory), `ConsoleAuditContributor` (audit), and `ConsolePageCatalog` (menus). Full integration
+surface and acceptance checklist: [docs/integration/README.md](docs/integration/README.md).
+
+**Choose by scenario**:
+
+| Your scenario | Use | Extra work |
+|---|---|---|
+| Operate one or more ES clusters standalone | `searchdeck-server` jar | None; open the setup wizard |
+| Existing Spring Boot application | `searchdeck-console` embedded | Declare `@Document` entities; optionally delegate auth |
+| Unified host accounts, menus, and audit | `searchdeck-console` + host SPIs | Implement `ConsoleHostIntegration` and `ConsoleAuthDelegate` |
+| Engine only (rebuild/migration) | `searchdeck-console`, `mode=rebuild-only` | No console pages or static assets exposed |
 
 ---
 
 ## ⚡ Five-minute integration
 
-> **Coordinate migration**: the single-jar `es-rebuild-spring-boot-starter` is moving to the
-> multi-module `searchdeck-*` 2.0 line: `searchdeck-platform` (kernel), `searchdeck-console`
-> (embeddable console), `searchdeck-server` (standalone), `searchdeck-quotehub` (first host adapter).
-> The 1.x coordinate remains available during the migration.
-
 ### 1. Dependency
 
 ```xml
-<!-- SearchDeck 2.0: embeddable console (brings the platform kernel) -->
+<!-- Embeddable console module (brings the platform kernel) -->
 <dependency>
     <groupId>io.github.dengmeiluan</groupId>
     <artifactId>searchdeck-console</artifactId>
     <version>2.0.0</version>
-</dependency>
-
-<!-- 1.x compatibility coordinate (current published release) -->
-<dependency>
-    <groupId>io.github.dengmeiluan</groupId>
-    <artifactId>es-rebuild-spring-boot-starter</artifactId>
-    <version>1.0.76</version>
 </dependency>
 ```
 
@@ -228,8 +240,8 @@ searchdeck:
     branding:
       product-name: SearchDeck
       tagline: Search operations, on deck.
-      integration-id: quotehub
-      integration-name: QuoteHub
+      integration-id: acme
+      integration-name: Acme Search
     features:
       packs: [platform, search, index, lifecycle, observe, devtools]
       exclude-pages: []
@@ -241,7 +253,6 @@ searchdeck:
 
 The platform layer (`searchdeck.console.*`) describes the product surface; the engine layer
 (`searchdeck.elasticsearch.*`) describes rebuild/migration/storage runtime parameters.
-Legacy `es.rebuild.*` keys remain available through a transparent environment bridge.
 
 ### 4. HTTP endpoints
 
@@ -255,8 +266,8 @@ Mapping reconciliation is exposed by `InternalEsIndexRebuildController` under `/
 
 ### 5. Mapping reconciliation
 
-At startup, `MappingReconcile` runs when `es.rebuild.mapping.auto-register=startup`: new fields are
-added safely. Conflicts follow `es.rebuild.mapping.conflict-policy` (`fail` refuses to boot /
+At startup, `MappingReconcile` runs when `searchdeck.elasticsearch.mapping.auto-register=startup`: new fields are
+added safely. Conflicts follow `searchdeck.elasticsearch.mapping.conflict-policy` (`fail` refuses to boot /
 `warn` submits only conflict-free additions); conflict remediation returns `USE_ADHOC_REBUILD` for
 the managed rebuild. See [integration docs](docs/integration/README.md).
 
@@ -266,7 +277,7 @@ the managed rebuild. See [integration docs](docs/integration/README.md).
 
 ```mermaid
 flowchart LR
-  Host["QuoteHub / host app"] -->|ConsoleHostIntegration| Platform
+  Host["Host App"] -->|ConsoleHostIntegration| Platform
 
   subgraph Platform["SearchDeck Platform"]
     Packs["Feature pack registry"]
@@ -292,7 +303,6 @@ searchdeck/
 ├─ platform/                 searchdeck-platform: page contract, packs, branding, host SPI
 ├─ modules/console/          searchdeck-console: engine + console + embedded UI assets
 ├─ apps/server/              searchdeck-server: Kibana-style standalone deployment
-├─ integrations/quotehub/    searchdeck-quotehub: first host adapter
 ├─ ui/                       @searchdeck/ui: Vue 3 console source
 └─ examples/demo-host/       runnable host example
 ```
@@ -328,7 +338,7 @@ Full rules: [docs/design.md](docs/design.md).
   then pass after the fix.
 
 ```bash
-cd console && npm ci
+cd ui && npm ci
 npm run typecheck
 npm test
 
@@ -341,11 +351,15 @@ npm test
 ## 🗺️ Roadmap
 
 - [x] **Phase 1 · platform identity** — SearchDeck branding, contract packs, runtime UI config,
-  `ConsoleHostIntegration` SPI, QuoteHub integration docs, disabled-module page and shortcut trimming.
-- [ ] **Phase 2 · coordinates and package structure** — Maven coordinates, Java packages, frontend
-  directory/component naming; QuoteHub upgrade and three-account matrix regression.
-- [ ] **Phase 3 · open-source launch** — GitHub repository rename, static entry/event/storage key
-  migration, release assets and documentation site.
+  `ConsoleHostIntegration` SPI, disabled-module page and shortcut trimming.
+- [x] **Phase 2 · modules and components** — `platform` / `console` / `server` split, Java packages,
+  Maven coordinates, frontend directory/component naming, host upgrade regression.
+- [x] **Phase 3 · open-source launch** — repository rename, bilingual README and capability catalog,
+  static entry and runtime key migration, example host and integration docs.
+- [ ] **Phase 4 · engine extraction** — break the `auth ↔ multicluster ↔ xmigrate ↔ config` cycle and
+  publish the rebuild/migration engine as a standalone artifact for engine-only adopters.
+- [ ] **Phase 5 · ecosystem and adoption cost** — versioned page contract, plugin manifest, more host
+  templates and a one-command onboarding scaffold.
 
 ---
 

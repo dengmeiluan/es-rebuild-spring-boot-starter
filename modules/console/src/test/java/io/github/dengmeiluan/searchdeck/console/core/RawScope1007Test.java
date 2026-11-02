@@ -93,7 +93,7 @@ public class RawScope1007Test {
         assertRejected(() -> admin.guardRawGuarded("POST", "/logs/_cache/clear", null), "raw cache clear");
         assertRejected(() -> admin.guardRawGuarded("POST",
                 "/logs/_forcemerge?max_num_segments=1", null), "raw forcemerge");
-        assertRejected(() -> admin.guardRawGuarded("POST", "/es_console_users/_refresh", null),
+        assertRejected(() -> admin.guardRawGuarded("POST", "/searchdeck_users/_refresh", null),
                 "控制面索引维护写");
     }
 
@@ -123,7 +123,7 @@ public class RawScope1007Test {
     @Test
     public void 根级analyze不得以body目标控制面索引() {
         assertRejected(() -> admin.guardRawGuarded("POST", "/_analyze",
-                "{\"index\":\"es_console_users\",\"text\":\"a\"}"),
+                "{\"index\":\"searchdeck_users\",\"text\":\"a\"}"),
                 "body.index 指向控制面索引");
         assertAllowed(() -> admin.guardRawGuarded("POST", "/_analyze",
                 "{\"index\":\"logs\",\"text\":\"a\"}"),

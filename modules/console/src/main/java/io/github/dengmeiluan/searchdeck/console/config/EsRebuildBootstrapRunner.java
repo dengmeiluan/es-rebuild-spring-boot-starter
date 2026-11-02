@@ -49,7 +49,7 @@ public class EsRebuildBootstrapRunner {
 
     @EventListener(ApplicationReadyEvent.class)
     public void onReady() {
-        Thread t = new Thread(this::ensureAllIndices, "es-rebuild-bootstrap");
+        Thread t = new Thread(this::ensureAllIndices, "searchdeck-bootstrap");
         t.setDaemon(true);
         t.start();
     }

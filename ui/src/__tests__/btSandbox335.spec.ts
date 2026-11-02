@@ -1,5 +1,5 @@
 /**
- * 三百三十五批：BoostTuner「送入搜索沙盒」——sessionStorage 契约（es-console.sandbox.body）
+ * 三百三十五批：BoostTuner「送入搜索沙盒」——sessionStorage 契约（searchdeck.sandbox.body）
  * + /search?mode=sandbox 直达（TemplateGallery toSandbox 同范式）；调参结果可继续加聚合/profile。
  */
 import { describe, it, expect } from 'vitest';
@@ -12,7 +12,7 @@ describe('送入搜索沙盒（335 批）', () => {
   it('按钮+函数+会话契约', () => {
     expect(v).toContain('> 送入沙盒');
     expect(v).toMatch(/function toSandbox\(\)/);
-    expect(v).toMatch(/writeStoredRaw\(sessionStorage, 'es-console\.sandbox\.body', JSON\.stringify\(builtQuery\.value, null, 2\)\)/);
+    expect(v).toMatch(/writeStoredRaw\(sessionStorage, 'searchdeck\.sandbox\.body', JSON\.stringify\(builtQuery\.value, null, 2\)\)/);
     expect(v).toMatch(/router\.push\(\{ path: '\/search', query: \{ mode: 'sandbox' \} \}\)/);
   });
 });

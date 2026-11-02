@@ -12,7 +12,7 @@ SearchDeck 的独立部署形态：一个可启动 jar，自带 Web 服务器与
 # 产物：apps/server/target/searchdeck-server-2.0.0.jar
 ```
 
-`StandalonePomContractTest`（保留历史类名）守卫 server 模块的可执行 jar 纪律：
+`ServerPomContractTest`（保留历史类名）守卫 server 模块的可执行 jar 纪律：
 repackage 永远生效，`searchdeck-console` 依赖版本由 reactor 统一。
 
 ## 运行
@@ -25,8 +25,8 @@ java -jar apps/server/target/searchdeck-server-2.0.0.jar
 |---|---|
 | 控制台入口 | `http://localhost:5601/searchdeck.html` |
 | 首连向导 | 未绑定控制集群时自动出现（`/internal/es/index/setup/status` 报 `bound:false`） |
-| 控制集群档案 | `~/.es-console/searchdeck-server/`（重启仍在） |
-| 默认登录 | `admin` / `es-console`——仅在用户索引为空时有效，创建真实账号后自动失效 |
+| 控制集群档案 | `~/.searchdeck/searchdeck-server/`（重启仍在） |
+| 默认登录 | `admin` / `searchdeck`——仅在用户索引为空时有效，创建真实账号后自动失效 |
 | 端口 | `--server.port=...`（默认 `5601`） |
 
 ### 首次启动顺序
@@ -37,7 +37,6 @@ java -jar apps/server/target/searchdeck-server-2.0.0.jar
 3. 用默认凭据登录并创建自己的账号（创建任意用户后兜底账号失效）。
 
 > **要暴露到 localhost 之外？** 先创建真实账号，或在 jar 前放自己的网关鉴权。
-> 配置键以 `searchdeck.elasticsearch.*` 为主；一代 `es.rebuild.*` 仍可用。
 > 完整键表见 [docs/integration/configuration-reference.md](../../docs/integration/configuration-reference.md)。
 
 ## 与嵌入式形态的关系

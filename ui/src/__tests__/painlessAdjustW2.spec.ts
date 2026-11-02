@@ -108,7 +108,7 @@ describe('W2 批：PainlessLab 布局可调', () => {
     expect(host.querySelector('.pl-body')!.getAttribute('style')).toContain('--pl-rail-w: 260px');
     btn(host, '[data-pl-rail-w]').click();
     await settle();
-    expect(localStorage.getItem('es-console.pref.painless.railW')).toBe('320');
+    expect(localStorage.getItem('searchdeck.pref.painless.railW')).toBe('320');
     expect(host.querySelector('.pl-body')!.getAttribute('style')).toContain('--pl-rail-w: 320px');
   });
 
@@ -125,7 +125,7 @@ describe('W2 批：PainlessLab 布局可调', () => {
     expect(out!.style.maxHeight).toBe('260px');
     btn(host, '[data-pl-out-h]').click();
     await settle();
-    expect(localStorage.getItem('es-console.pref.painless.outH')).toBe('400');
+    expect(localStorage.getItem('searchdeck.pref.painless.outH')).toBe('400');
     expect(host.querySelector<HTMLElement>('.pl-out')!.style.maxHeight).toBe('400px');
   });
 
@@ -137,11 +137,11 @@ describe('W2 批：PainlessLab 布局可调', () => {
     const srcEd = host.querySelector<HTMLElement>('.pl-src-ed');
     expect(srcEd!.style.height, '默认 15:11 flex，无内联高').toBe('');
     await dragHandle(handle!, 80);
-    expect(localStorage.getItem('es-console.pref.painless.srcH')).toBe('230');
+    expect(localStorage.getItem('searchdeck.pref.painless.srcH')).toBe('230');
     expect(srcEd!.style.height).toBe('230px');
     handle!.dispatchEvent(new Event('dblclick'));
     await settle();
-    expect(localStorage.getItem('es-console.pref.painless.srcH')).toBe('0');
+    expect(localStorage.getItem('searchdeck.pref.painless.srcH')).toBe('0');
     expect(srcEd!.style.height).toBe('');
   });
 

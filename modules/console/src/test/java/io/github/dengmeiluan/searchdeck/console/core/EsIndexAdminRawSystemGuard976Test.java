@@ -149,23 +149,23 @@ public class EsIndexAdminRawSystemGuard976Test {
             /* 通过守卫后因无 client 失败，说明组件模板未被 patterns 守卫拒绝 */
         }
         assertAllowed(() -> EsIndexAdmin.guardPathToken("模板@v1", "模板名"), "unicode/@ 模板名");
-        assertRejected(() -> EsIndexAdmin.guardPathToken("../../es_console_user", "模板名"), "模板名穿越");
+        assertRejected(() -> EsIndexAdmin.guardPathToken("../../searchdeck_user", "模板名"), "模板名穿越");
         assertRejected(() -> EsIndexAdmin.guardPathToken("x*", "模板名"), "模板名通配");
     }
 
     @Test
     public void 精确索引操作拒绝逗号列表通配与路径注入() {
         assertRejected(() -> {
-            try { admin.deleteIndex("logs,es_console_user"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
+            try { admin.deleteIndex("logs,searchdeck_user"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "删除索引逗号夹带控制面");
         assertRejected(() -> {
-            try { admin.deleteIndex("logs,es_console_*"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
+            try { admin.deleteIndex("logs,searchdeck_*"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "删除索引逗号通配");
         assertRejected(() -> {
             try { admin.deleteIndex("logs*"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "删除索引通配");
         assertRejected(() -> {
-            try { admin.deleteTemplate("index", "../../es_console_user"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
+            try { admin.deleteTemplate("index", "../../searchdeck_user"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "模板名穿越");
         assertRejected(() -> {
             try { admin.putTemplate("index", "x", "{\"template\":{}}"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
@@ -212,25 +212,25 @@ public class EsIndexAdminRawSystemGuard976Test {
 
     @Test
     public void 控制面与系统索引读取仍然拒绝() {
-        assertRejected(() -> admin.guardRawGuarded("GET", "/_cat/indices/es_console*", null), "cat 控制面");
+        assertRejected(() -> admin.guardRawGuarded("GET", "/_cat/indices/searchdeck*", null), "cat 控制面");
         assertRejected(() -> admin.guardRawGuarded("GET", "/_cat/indices/.kibana", null), "点号系统索引");
-        assertRejected(() -> admin.guardRawGuarded("GET", "/_cat/indices/es_console_validate_1", null), "校验临时索引");
-        assertRejected(() -> admin.guardRawGuarded("GET", "/_search?index=es_console_validate_*", null), "校验临时索引查询");
+        assertRejected(() -> admin.guardRawGuarded("GET", "/_cat/indices/searchdeck_validate_1", null), "校验临时索引");
+        assertRejected(() -> admin.guardRawGuarded("GET", "/_search?index=searchdeck_validate_*", null), "校验临时索引查询");
         assertRejected(() -> admin.guardRawGuarded("POST", "/_msearch",
-                "{\"index\":\"es_console_validate_*\"}\n{}\n"), "校验临时索引 msearch");
-        assertRejected(() -> admin.guardRawGuarded("GET", "/_search?index=es_console*", null), "查询控制面");
-        assertRejected(() -> admin.guardRawGuarded("GET", "/_field_caps?index=es_console_user", null), "字段控制面");
-        assertRejected(() -> admin.guardRawGuarded("GET", "/_cluster/state/metadata/es_console_user", null), "元数据控制面");
-        assertRejected(() -> admin.guardRawGuarded("GET", "/remote1:es_console_user/_search", null), "跨集群控制面");
+                "{\"index\":\"searchdeck_validate_*\"}\n{}\n"), "校验临时索引 msearch");
+        assertRejected(() -> admin.guardRawGuarded("GET", "/_search?index=searchdeck*", null), "查询控制面");
+        assertRejected(() -> admin.guardRawGuarded("GET", "/_field_caps?index=searchdeck_user", null), "字段控制面");
+        assertRejected(() -> admin.guardRawGuarded("GET", "/_cluster/state/metadata/searchdeck_user", null), "元数据控制面");
+        assertRejected(() -> admin.guardRawGuarded("GET", "/remote1:searchdeck_user/_search", null), "跨集群控制面");
     }
 
     @Test
     public void xpackSQL与控制面查询参数同样受守卫() {
         assertRejected(() -> admin.guardRawGuarded("POST", "/_xpack/sql",
-                "{\"query\":\"SELECT * FROM es_console_users\"}"), "_xpack/sql 控制面");
+                "{\"query\":\"SELECT * FROM searchdeck_users\"}"), "_xpack/sql 控制面");
         assertRejected(() -> admin.guardRawGuarded("POST", "/_xpack/sql",
                 "{\"query\":\"SELECT * FROM .security\"}"), "_xpack/sql 系统索引");
-        assertRejected(() -> admin.guardRawGuarded("GET", "/_search?%69ndex=es_console_users", null),
+        assertRejected(() -> admin.guardRawGuarded("GET", "/_search?%69ndex=searchdeck_users", null),
                 "编码参数名");
         assertRejected(() -> admin.guardRawGuarded("GET", "/_mapping", null), "全量 mapping");
         assertRejected(() -> admin.guardRawGuarded("GET", "/_settings", null), "全量 settings");
@@ -245,17 +245,17 @@ public class EsIndexAdminRawSystemGuard976Test {
     @Test
     public void SQL通配不得借unicode注释或反引号绕过() {
         assertRejected(() -> admin.guardRawGuarded("POST", "/_xpack/sql",
-                "{\"query\":\"SELECT * FROM " + "\\" + "u0065*\"}"), "unicode 转义通配");
+                "{\"query\":\"SELECT * FROM " + "\\" + "u0073*\"}"), "unicode 转义通配");
         assertRejected(() -> admin.guardRawGuarded("POST", "/_xpack/sql",
-                "{\"query\":\"SELECT * FROM/**/e*\"}"), "块注释通配");
+                "{\"query\":\"SELECT * FROM/**/s*\"}"), "块注释通配");
         assertRejected(() -> admin.guardRawGuarded("POST", "/_xpack/sql",
-                "{\"query\":\"SELECT * FROM `e*`\"}"), "反引号通配");
+                "{\"query\":\"SELECT * FROM `s*`\"}"), "反引号通配");
         assertRejected(() -> admin.guardRawGuarded("POST", "/_xpack/sql",
-                "{\"query\":\"SELECT * FROM -- x\ne*\"}"), "行注释通配");
+                "{\"query\":\"SELECT * FROM -- x\ns*\"}"), "行注释通配");
         assertRejected(() -> admin.guardRawGuarded("POST", "/_xpack/sql",
-                "{\"query\":\"SELECT * FROM\\/**\\/e*\"}"), "JSON 转义斜杠藏块注释");
+                "{\"query\":\"SELECT * FROM\\/**\\/s*\"}"), "JSON 转义斜杠藏块注释");
         assertRejected(() -> admin.guardRawGuarded("POST", "/_xpack/sql",
-                "{\"query\":\"SELECT * FROM\\te*\"}"), "JSON 空白转义");
+                "{\"query\":\"SELECT * FROM\\ts*\"}"), "JSON 空白转义");
         assertAllowed(() -> admin.guardRawGuarded("POST", "/_xpack/sql",
                 "{\"query\":\"SELECT * FROM logs-*\"}"), "业务索引通配");
     }
@@ -265,7 +265,7 @@ public class EsIndexAdminRawSystemGuard976Test {
         assertRejected(() -> admin.guardRawGuarded("POST", "/logs/_msearch",
                 "{\"index\":\"*\"}\n{}\n"), "前缀 msearch 通配头");
         assertRejected(() -> admin.guardRawGuarded("POST", "/logs/_msearch",
-                "{\"index\":\"es_console_users\"}\n{}\n"), "前缀 msearch 控制面头");
+                "{\"index\":\"searchdeck_users\"}\n{}\n"), "前缀 msearch 控制面头");
         assertAllowed(() -> admin.guardRawGuarded("POST", "/logs/_msearch",
                 "{}\n{}\n"), "前缀 msearch 继承路径索引");
         assertRejected(() -> admin.guardRawGuarded("POST", "/logs/_mget",
@@ -303,29 +303,29 @@ public class EsIndexAdminRawSystemGuard976Test {
     @Test
     public void 结构化读与bulk同样不得触达控制面() {
         assertRejected(() -> {
-            try { admin.searchRaw("es_console_users", "{}"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
+            try { admin.searchRaw("searchdeck_users", "{}"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "search-raw 控制面");
         assertRejected(() -> {
-            try { admin.searchRaw("remote:es_console_users", "{}"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
+            try { admin.searchRaw("remote:searchdeck_users", "{}"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "search-raw 跨集群");
         assertRejected(() -> {
             try { admin.getMappingDetail(".security"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "mapping 系统索引");
         assertRejected(() -> {
-            try { admin.getAnalysisSettings("es_console_users"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
+            try { admin.getAnalysisSettings("searchdeck_users"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "analysis 控制面");
         assertRejected(() -> {
-            try { admin.getIndexSettings("es_console_users"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
+            try { admin.getIndexSettings("searchdeck_users"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "settings 控制面");
         assertRejected(() -> {
-            try { admin.luceneSearch("es_console_users", "*", 10, 0, null, null); }
+            try { admin.luceneSearch("searchdeck_users", "*", 10, 0, null, null); }
             catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "lucene 控制面");
         assertRejected(() -> {
-            try { admin.resolveSchema("es_console_users"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
+            try { admin.resolveSchema("searchdeck_users"); } catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "schema 控制面");
         assertRejected(() -> {
-            try { admin.sqlLenient("{\"query\":\"SELECT * FROM es_console_users\"}"); }
+            try { admin.sqlLenient("{\"query\":\"SELECT * FROM searchdeck_users\"}"); }
             catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "sql lenient 控制面");
         assertRejected(() -> {
@@ -355,13 +355,13 @@ public class EsIndexAdminRawSystemGuard976Test {
                 "{\"indices\":\"logs-*\",\"feature_states\":[\"security\"]}"), "恢复安全 feature state");
         assertAllowed(() -> admin.guardRestoreBody("{\"indices\":\"logs-*\"}"), "恢复业务索引");
         assertRejected(() -> admin.guardRestoreBody(
-                "{\"indices\":\"logs\",\"rename_pattern\":\"(.+)\",\"rename_replacement\":\"es_console_$1\"}"),
+                "{\"indices\":\"logs\",\"rename_pattern\":\"(.+)\",\"rename_replacement\":\"searchdeck_$1\"}"),
                 "重命名写入控制面");
         assertRejected(() -> admin.guardRestoreBody(
                 "{\"indices\":\"logs\",\"rename_pattern\":\"(.+)\",\"rename_replacement\":\".security_$1\"}"),
                 "重命名写入系统索引");
         assertRejected(() -> admin.guardRestoreBody(
-                "{\"indices\":\"e_user\",\"rename_pattern\":\"(.*)\",\"rename_replacement\":\"es_consol$1\"}"),
+                "{\"indices\":\"k_user\",\"rename_pattern\":\"(.*)\",\"rename_replacement\":\"searchdec$1\"}"),
                 "$1 展开拼出控制面");
         assertRejected(() -> admin.guardRestoreBody(
                 "{\"indices\":\"logs*\",\"rename_pattern\":\"(.+)\",\"rename_replacement\":\"restored_$1\"}"),
@@ -370,7 +370,7 @@ public class EsIndexAdminRawSystemGuard976Test {
                 "{\"indices\":\"logs\",\"rename_pattern\":\"(.+)\",\"rename_replacement\":\"logs-restored-$1\"}"),
                 "重命名到业务索引");
         assertRejected(() -> {
-            try { admin.getIndexSettingsWithDefaults("%65s_console_user"); }
+            try { admin.getIndexSettingsWithDefaults("%73earchdeck_user"); }
             catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "settings 双重编码读取控制面");
         assertRejected(() -> admin.guardReindexRemote(
@@ -380,7 +380,7 @@ public class EsIndexAdminRawSystemGuard976Test {
                 "{\"source\":{\"index\":\"logs-*\"},\"dest\":{\"index\":\"copy\"}}"), "业务 reindex");
         assertRejected(() -> admin.guardReindexBody(
                 "{\"source\":{\"index\":\"logs\"},\"dest\":{\"index\":\"copy\"},"
-                + "\"script\":{\"source\":\"ctx._index='es_consol'+'e_user'\"}}"), "reindex 脚本改写目标");
+                + "\"script\":{\"source\":\"ctx._index='searchdec'+'k_user'\"}}"), "reindex 脚本改写目标");
     }
 
     @Test
@@ -388,7 +388,7 @@ public class EsIndexAdminRawSystemGuard976Test {
         assertRejected(() -> admin.guardSnapshotCreateBody(null), "空 body=全量");
         assertRejected(() -> admin.guardSnapshotCreateBody("{}"), "缺 indices=全量");
         assertRejected(() -> admin.guardSnapshotCreateBody("{\"indices\":\"*\"}"), "通配");
-        assertRejected(() -> admin.guardSnapshotCreateBody("{\"indices\":\"es_console_*\"}"), "控制面");
+        assertRejected(() -> admin.guardSnapshotCreateBody("{\"indices\":\"searchdeck_*\"}"), "控制面");
         assertRejected(() -> admin.guardSnapshotCreateBody(
                 "{\"indices\":\"logs-*\",\"include_global_state\":true}"), "全局状态");
         assertRejected(() -> admin.guardSnapshotCreateBody(
@@ -412,6 +412,6 @@ public class EsIndexAdminRawSystemGuard976Test {
         assertRejected(() -> admin.guardIndexTemplateBody(
                 "{\"index_patterns\":[\"*\"]}"), "模板通配 catch-all");
         assertRejected(() -> admin.guardIndexTemplateBody(
-                "{\"index_patterns\":[\"es_console_*\"]}"), "模板控制面");
+                "{\"index_patterns\":[\"searchdeck_*\"]}"), "模板控制面");
     }
 }

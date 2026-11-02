@@ -267,7 +267,7 @@ function foldedGroupIds(): Set<string> {
   const s = new Set<string>();
   for (let i = 0; i < sessionStorage.length; i++) {
     const k = sessionStorage.key(i);
-    /* draft2 键形：es-console.draft2:query-builder:<host>:<idx>:-:-:bgn-fold:<组id>，
+    /* draft2 键形：searchdeck.draft2:query-builder:<host>:<idx>:-:-:bgn-fold:<组id>，
      值 '1' = 折叠（展开态键被 writeRaw(null) 删除）；中段维度可变，认尾部 bgn-fold: 标记 */
     if (k && k.includes(':bgn-fold:') && sessionStorage.getItem(k) === '1') {
       s.add(k.slice(k.indexOf(':bgn-fold:') + ':bgn-fold:'.length));

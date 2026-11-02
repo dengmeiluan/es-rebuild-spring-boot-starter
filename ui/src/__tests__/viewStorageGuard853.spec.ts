@@ -148,7 +148,7 @@ describe('viewStorageGuard853 · 视图/组件层存储写入防御', () => {
     try {
       const hd = host.querySelector('.nav-g-hd') as HTMLElement;
       expect(hd).toBeTruthy();
-      const LS_KEY = 'es-console.nav.collapsed';
+      const LS_KEY = 'searchdeck.nav.collapsed';
       /* 阶段一（无膛）：点击翻转并持久化=链路本身是活的 */
       hd.click();
       await nextTick();

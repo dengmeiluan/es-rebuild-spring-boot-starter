@@ -192,7 +192,7 @@ describe('FieldSelect used 前置段', () => {
   it('recent 段保持最前：次序 recent → used → 其余（段间去重不重复出项）', async () => {
     setFieldSearchIndex('idx-525');
     setFieldSearchUsedFields(['alpha', 'zeta']);
-    localStorage.setItem('es_console_qb_field_recent::idx-525', JSON.stringify(['zeta']));
+    localStorage.setItem('searchdeck_qb_field_recent::idx-525', JSON.stringify(['zeta']));
     const { host } = mountSelect({ fields: ['beta', 'alpha', 'zeta'] });
     await focus(host);
     expect(names(), 'zeta(recent+used 双命中)最前且只出一次，alpha(used)次之').toEqual(['zeta', 'alpha', 'beta']);
@@ -229,7 +229,7 @@ describe('FieldSelect used 前置段', () => {
 
 describe('FieldPicker recent 前置（候选侧补读，与 FieldSelect 同口径）', () => {
   it('per-index recent 命中段式全前置、段内保持原序；页脚计数不变', async () => {
-    localStorage.setItem('es_console_qb_field_recent::logs-2026.08', JSON.stringify(['status']));
+    localStorage.setItem('searchdeck_qb_field_recent::logs-2026.08', JSON.stringify(['status']));
     const { host } = await mountPicker();
     const fxpInp = host.querySelector<HTMLInputElement>('.fxp-inp')!;
     fxpInp.dispatchEvent(new Event('focus'));
@@ -239,7 +239,7 @@ describe('FieldPicker recent 前置（候选侧补读，与 FieldSelect 同口�
   });
 
   it('recent 字段不在候选集（幽灵记录）时零变化：既有排序不回归', async () => {
-    localStorage.setItem('es_console_qb_field_recent::logs-2026.08', JSON.stringify(['ghost_field']));
+    localStorage.setItem('searchdeck_qb_field_recent::logs-2026.08', JSON.stringify(['ghost_field']));
     const { host } = await mountPicker();
     const fxpInp = host.querySelector<HTMLInputElement>('.fxp-inp')!;
     fxpInp.dispatchEvent(new Event('focus'));
@@ -248,7 +248,7 @@ describe('FieldPicker recent 前置（候选侧补读，与 FieldSelect 同口�
   });
 
   it('recent 键拼 index prop（与 choose 回写同键）：切键不串索引', async () => {
-    localStorage.setItem('es_console_qb_field_recent::other-idx', JSON.stringify(['status']));
+    localStorage.setItem('searchdeck_qb_field_recent::other-idx', JSON.stringify(['status']));
     const { host } = await mountPicker({ index: 'logs-2026.08' });
     const fxpInp = host.querySelector<HTMLInputElement>('.fxp-inp')!;
     fxpInp.dispatchEvent(new Event('focus'));

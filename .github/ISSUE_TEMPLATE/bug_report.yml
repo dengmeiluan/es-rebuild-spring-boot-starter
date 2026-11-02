@@ -20,7 +20,7 @@ body:
     attributes:
       label: 版本信息
       placeholder: |
-        - es-rebuild-spring-boot-starter 版本（如 1.0.2）
+        - SearchDeck 版本（如 2.0.0）
         - Spring Boot 版本
         - Elasticsearch 服务端与客户端版本
         - JDK 版本

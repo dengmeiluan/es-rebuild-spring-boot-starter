@@ -106,7 +106,7 @@ public class EsClusterConnSyncEndpointTest {
             c.syncRun();
             fail("未启用同步时 POST sync/run 必须显式报错");
         } catch (IllegalStateException expected) {
-            assertEquals("未启用连接中心同步(需注册 ClusterConnContributor 并开启 es.rebuild.console.conn-sync.enabled)",
+            assertEquals("未启用连接中心同步(需注册 ClusterConnContributor 并开启 searchdeck.elasticsearch.console.conn-sync.enabled)",
                     expected.getMessage());
         }
     }

@@ -30,7 +30,7 @@ vi.mock('../api', async (importOriginal) => {
 import FavoritesView from '../views/FavoritesView.vue';
 import { topLabels, topButtons, openGroup, subButtons, clickMenuItem, menuRoot } from './helpers/ctxMenu';
 
-const FAV_KEY = 'es-console.favorites.v1';
+const FAV_KEY = 'searchdeck.favorites.v1';
 const apps: ReturnType<typeof createApp>[] = [];
 let host: HTMLElement;
 

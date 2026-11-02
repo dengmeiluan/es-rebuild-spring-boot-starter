@@ -514,8 +514,8 @@ function gotoQuery() {
 }
 function gotoLucene() {
   if (!lucene.value) return;
-  writeStoredRaw(sessionStorage, 'es-console.lucene.q', lucene.value);
-  if (store.pickedIdx) writeStoredRaw(sessionStorage, 'es-console.lucene.index', store.pickedIdx);
+  writeStoredRaw(sessionStorage, 'searchdeck.lucene.q', lucene.value);
+  if (store.pickedIdx) writeStoredRaw(sessionStorage, 'searchdeck.lucene.index', store.pickedIdx);
   router.push({ path: '/search', query: { mode: 'lucene' } });
 }
 

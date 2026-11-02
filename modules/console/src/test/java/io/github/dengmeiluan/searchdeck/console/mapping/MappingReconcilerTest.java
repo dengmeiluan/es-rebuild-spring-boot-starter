@@ -21,7 +21,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.core.RebuildableIndexMeta;
 import io.github.dengmeiluan.searchdeck.platform.spi.ManagedEsIndex;
 import org.apache.http.conn.ConnectTimeoutException;
@@ -593,7 +593,7 @@ public class MappingReconcilerTest {
     @Test
     public void disabledConfigurationDoesNotReadOrWrite() {
         RecordingPort port = new RecordingPort();
-        EsRebuildProperties properties = properties("fail", "skip");
+        SearchDeckElasticsearchProperties properties = properties("fail", "skip");
         properties.getMapping().setAutoRegister("off");
 
         MappingReconcileReport report = new MappingReconciler(port, properties)
@@ -606,10 +606,10 @@ public class MappingReconcilerTest {
 
     @Test
     public void constructorsAndRequiredArgumentsRejectNull() {
-        assertNullRejected(() -> new MappingReconciler(null, new EsRebuildProperties()));
+        assertNullRejected(() -> new MappingReconciler(null, new SearchDeckElasticsearchProperties()));
         assertNullRejected(() -> new MappingReconciler(new RecordingPort(), null));
 
-        MappingReconciler reconciler = new MappingReconciler(new RecordingPort(), new EsRebuildProperties());
+        MappingReconciler reconciler = new MappingReconciler(new RecordingPort(), new SearchDeckElasticsearchProperties());
         assertNullRejected(() -> reconciler.reconcile(null, EXISTING_CODE, MappingReconcileReport.Source.MAPPING_FILE));
         assertNullRejected(() -> reconciler.reconcile(meta(), EXISTING_CODE, null));
     }
@@ -634,8 +634,8 @@ public class MappingReconcilerTest {
         return new MappingReconciler(port, properties(conflictPolicy, missingPolicy));
     }
 
-    private static EsRebuildProperties properties(String conflictPolicy, String missingPolicy) {
-        EsRebuildProperties properties = new EsRebuildProperties();
+    private static SearchDeckElasticsearchProperties properties(String conflictPolicy, String missingPolicy) {
+        SearchDeckElasticsearchProperties properties = new SearchDeckElasticsearchProperties();
         properties.getMapping().setConflictPolicy(conflictPolicy);
         properties.getMapping().setMissingIndexPolicy(missingPolicy);
         return properties;

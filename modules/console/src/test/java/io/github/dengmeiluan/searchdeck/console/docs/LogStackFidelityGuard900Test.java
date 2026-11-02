@@ -42,7 +42,7 @@ import static org.junit.Assert.assertTrue;
  * 收尾，堆栈区分是任务已完成还是控制面不可达；</li>
  * <li><b>时间字段候选解析失败</b>（{@code [AdhocRebuild]} parse mapping failed）：候选
  * 集合为空继续，堆栈区分是映射缺失还是 JSON 结构不符；</li>
- * <li><b>作业落库失败</b>（{@code [es-rebuild-adhoc-es]} / {@code [es-rebuild-adhoc-jdbc]}
+ * <li><b>作业落库失败</b>（{@code [searchdeck-adhoc-es]} / {@code [searchdeck-adhoc-jdbc]}
  * 落作业失败）：作业档案写不进去时重建照跑，堆栈区分是索引映射冲突还是连接断开；</li>
  * <li><b>作业删除失败</b>（同标签族删除作业失败）：删除失败留脏档案，堆栈区分是
  * 404 还是网关错误；</li>

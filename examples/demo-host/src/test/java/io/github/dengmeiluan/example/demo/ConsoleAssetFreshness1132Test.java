@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>背景（实测缺陷）：`maven-resources-plugin` 只覆盖式复制、从不删除目标目录里多出的文件，
  * 而 vite 每次构建都换哈希名。不跑 `mvn clean` 的增量构建会让
  * `target/classes/static/searchdeck/assets/` 堆积历史 bundle（实测 5849 个 vs 源码 278 个）。
- * 这些文件经 `/console/assets/**`（直连 classpath，正常启用时无白名单）**可被 HTTP 直接请求**——
+ * 这些文件经 `/searchdeck/assets/**`（直连 classpath，正常启用时无白名单）**可被 HTTP 直接请求**——
  * 拿旧文件名就能加载修复前的控制台代码，等于绕过本轮全部权限加固。</p>
  *
  * <p>本测试从两个方向钉死：</p>
@@ -101,7 +101,7 @@ class ConsoleAssetFreshness1132Test {
         missing.removeAll(jarNames);
 
         assertTrue(stale.isEmpty(),
-                "jar 里有 " + stale.size() + " 个源码侧不存在的历史 bundle（可被 /console/assets/** 直接请求，"
+                "jar 里有 " + stale.size() + " 个源码侧不存在的历史 bundle（可被 /searchdeck/assets/** 直接请求，"
                         + "等于对外提供旧控制台代码）：" + stale.stream().limit(10).collect(Collectors.toList()));
         assertTrue(missing.isEmpty(),
                 "源码侧的 bundle 未被打进 jar：" + missing.stream().limit(10).collect(Collectors.toList()));
@@ -133,7 +133,7 @@ class ConsoleAssetFreshness1132Test {
     @Test
     void 历史哈希bundle返回404() {
         int code = rest.getForEntity(
-                "http://localhost:" + port + "/console/assets/index-00000000.js", String.class)
+                "http://localhost:" + port + "/searchdeck/assets/index-00000000.js", String.class)
                 .getStatusCodeValue();
         assertEquals(404, code, "不存在的 bundle 不应返回 200");
     }

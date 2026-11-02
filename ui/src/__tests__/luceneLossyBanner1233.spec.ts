@@ -11,7 +11,7 @@
  * 真浏览器实测（DSL 页灌入含 nested 的查询 → 点「DSL→Lucene」）：
  * 告警条文案 = 「这份查询从 DSL 翻译而来，但有 1 处 query_string 表达不了：nested」
  * ＋「这些条件当前缺失——需要完整语义请回查询工作台用 DSL 通道执行。」，
- * 且 sessionStorage 里 `es-console.lucene.lossy` 已被读走清空（stored: null）。
+ * 且 sessionStorage 里 `searchdeck.lucene.lossy` 已被读走清空（stored: null）。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -21,8 +21,8 @@ const lucene = readFileSync(join(__dirname, '../views/LuceneQueryView.vue'), 'ut
 
 describe('1233 翻译缺失提示常驻', () => {
   it('进站读取 lossy 成页面状态，并清掉存储键（一次性 carry）', () => {
-    expect(lucene).toContain("sessionStorage.getItem('es-console.lucene.lossy')");
-    expect(lucene).toContain("removeStoredRaw(sessionStorage, 'es-console.lucene.lossy')");
+    expect(lucene).toContain("sessionStorage.getItem('searchdeck.lucene.lossy')");
+    expect(lucene).toContain("removeStoredRaw(sessionStorage, 'searchdeck.lucene.lossy')");
     expect(lucene).toContain('const carriedLossy = ref<string[]>([]);');
   });
 
@@ -42,7 +42,7 @@ describe('1233 翻译缺失提示常驻', () => {
   it('两个生产方（DSL 页 / 命令面板）都写这个键（只修一端等于没修）', () => {
     for (const rel of ['views/DslQueryView.vue', 'components/CmdPalette.vue']) {
       const s = readFileSync(join(__dirname, '..', rel), 'utf-8');
-      expect(s, rel).toContain("writeStoredRaw(sessionStorage, 'es-console.lucene.lossy'");
+      expect(s, rel).toContain("writeStoredRaw(sessionStorage, 'searchdeck.lucene.lossy'");
     }
   });
 });

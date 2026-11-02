@@ -786,7 +786,7 @@ const props = withDefaults(defineProps<{
  通道，恒可达）；非表格档表格体隐藏（hideBody 语义内化进 bodyHidden——工具行常驻、
  不破）、内建 alt 体区渲染 AltHitsViews（565 共享件单源，DQ/IH 自造 seg+
  hideBody 退役由消费面迁移批执行—— 冻结面解锁后接线）。
- viewPrefKey 提供时档位 usePref 落盘（跨会话记忆，es-console.pref.* 命名空间）；缺省仅
+ viewPrefKey 提供时档位 usePref 落盘（跨会话记忆，searchdeck.pref.* 命名空间）；缺省仅
  内存态——KeepAlive 下组件实例常驻，状态不重置。
  alt 三档数据源=数据驱动出档（提供哪档出哪档，表格档恒在）：jsonHtml=高亮 pretty HTML
  （宿主 markHtmlAll/highlightDslJson 链产出，DQ/IH 同构）；treeData=行集

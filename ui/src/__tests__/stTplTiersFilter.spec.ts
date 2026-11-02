@@ -111,17 +111,17 @@ describe('模板中心编辑器高度四档（五百二十批）', () => {
     btns[2].click();
     await settle();
     expect(mhost()!.style.height).toBe('560px');
-    expect(localStorage.getItem('es-console.pref.st.editorH')).toBe('"l"');
+    expect(localStorage.getItem('searchdeck.pref.st.editorH')).toBe('"l"');
     /* 满档：wrap 弹性（st-h-full），Monaco 高度交 wrap 接管 */
     btns[3].click();
     await settle();
     expect(mhost()!.style.height).toBe('100%');
     expect(host.querySelector('.st-ed-wrap')!.className).toContain('st-h-full');
-    expect(localStorage.getItem('es-console.pref.st.editorH')).toBe('"full"');
+    expect(localStorage.getItem('searchdeck.pref.st.editorH')).toBe('"full"');
   });
 
   it('预置偏好挂载即恢复（M 档 360px），不需点一次档位', async () => {
-    localStorage.setItem('es-console.pref.st.editorH', JSON.stringify('m'));
+    localStorage.setItem('searchdeck.pref.st.editorH', JSON.stringify('m'));
     const host = await mountView();
     expect(host.querySelector<HTMLElement>('.st-ed-wrap .monaco-host')!.style.height).toBe('360px');
     expect(host.querySelectorAll('.st-eh-btn.on')[0]?.textContent?.trim()).toBe('M');

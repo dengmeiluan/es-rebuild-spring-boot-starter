@@ -45,8 +45,6 @@ public class ConsolePageCatalog {
 
     /** 契约资源路径（classpath 相对）。 */
     public static final String RESOURCE = "META-INF/searchdeck-pages.json";
-    /** 一代兼容资源名。 */
-    public static final String LEGACY_RESOURCE = "META-INF/es-console-pages.json";
 
     /** 模块统一惯例：静态共享 ObjectMapper（线程安全，免每实例新建）。 */
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -74,9 +72,6 @@ public class ConsolePageCatalog {
             cl = ConsolePageCatalog.class.getClassLoader();
         }
         InputStream in = cl.getResourceAsStream(RESOURCE);
-        if (in == null) {
-            in = cl.getResourceAsStream(LEGACY_RESOURCE);
-        }
         if (in == null) {
             throw new IllegalStateException("控制台页面契约缺失: classpath:" + RESOURCE
                     + "（SearchDeck 控制台构建产物不完整）");

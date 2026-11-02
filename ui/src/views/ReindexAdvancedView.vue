@@ -680,12 +680,12 @@ watch([srcRemote, srcIndex, destIndex, srcQueryStr, destOpType, destVersionType,
 
 onMounted(async () => {
   /* 若来自 template gallery 或 favorites 携带 body，尝试注入 */
-  const carry = sessionStorage.getItem('es-console.reindex-advanced.body');
+  const carry = sessionStorage.getItem('searchdeck.reindex-advanced.body');
   if (carry) {
     rawBody.value = carry;
     bodyTouched.value = true; // G3-A1：外部注入 body 是权威内容，表单改动不覆写
     showBody.value = true;
-    removeStoredRaw(sessionStorage, 'es-console.reindex-advanced.body');
+    removeStoredRaw(sessionStorage, 'searchdeck.reindex-advanced.body');
   } else {
     rawBody.value = JSON.stringify(buildBody(), null, 2);
   }

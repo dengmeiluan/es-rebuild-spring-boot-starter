@@ -46,7 +46,7 @@ describe('continuity 工作现场恢复（R61）', () => {
 
   it('坏值/无记录静默返回 null', () => {
     expect(readLastRoute()).toBeNull();
-    localStorage.setItem('es-console.last-route', '{broken');
+    localStorage.setItem('searchdeck.last-route', '{broken');
     expect(readLastRoute()).toBeNull();
     expect(restorable('#/', null)).toBeNull();
   });

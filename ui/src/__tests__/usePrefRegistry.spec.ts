@@ -4,7 +4,7 @@ import { expect, test } from 'vitest';
 
 /**
  * 第四十五批守卫：全站 usePref 偏好注册表。
- * 「用户工作偏好一律 usePref（es-console.pref.* 键空间）」的口径资产化——
+ * 「用户工作偏好一律 usePref（searchdeck.pref.* 键空间）」的口径资产化——
  * 已知消费点清单在这里锁定：删键/改键必须显式演进本 spec；新增偏好未走
  * usePref（手写 localStorage）在回潮扫描里会暴露（既有手写键名单独断言）。
  *

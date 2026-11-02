@@ -54,7 +54,7 @@ public class JdbcConnStoreAuthTypeTest {
 
     /** 存量旧表 DDL(加 auth_type 之前的历史形态,含 sync_state 列)。 */
     private static final String LEGACY_DDL =
-            "CREATE TABLE es_console_conn ("
+            "CREATE TABLE searchdeck_conn ("
                     + "id VARCHAR(64) PRIMARY KEY,"
                     + "name VARCHAR(128) NOT NULL,"
                     + "scheme VARCHAR(8),"
@@ -103,7 +103,7 @@ public class JdbcConnStoreAuthTypeTest {
     public void 存量表无auth_type列时ensureSchema幂等ALTER迁移() throws Exception {
         try (Connection c = dataSource.getConnection(); Statement st = c.createStatement()) {
             st.execute(LEGACY_DDL);
-            st.execute("INSERT INTO es_console_conn (id,name,created_at,updated_at) "
+            st.execute("INSERT INTO searchdeck_conn (id,name,created_at,updated_at) "
                     + "VALUES ('old-1','历史连接',1,1)");
         }
         JdbcConnStore onLegacy = new JdbcConnStore(dataSource);

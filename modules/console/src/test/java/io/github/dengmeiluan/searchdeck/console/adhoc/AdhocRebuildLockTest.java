@@ -90,7 +90,7 @@ public class AdhocRebuildLockTest {
         final AtomicInteger getCalls = new AtomicInteger();
         volatile boolean acquireResult = true;
         /**
-         * 对应 {@code es.rebuild.lock.enabled}。false 时忠实复刻真实 store 的<b>整套</b>降级语义：
+         * 对应 {@code searchdeck.elasticsearch.lock.enabled}。false 时忠实复刻真实 store 的<b>整套</b>降级语义：
          * {@code tryAcquire}/{@code renew} 恒 true、{@code release} 空转、<b>{@code get} 恒 null</b>。
          * 桩若只复刻前两条（比真实实现<b>窄</b>），「关掉锁 → get 恒 null → 被误判失锁」这条
          * 真实分支就永远不会被驱动到。
@@ -472,7 +472,7 @@ public class AdhocRebuildLockTest {
     // ================================================================ lock.enabled=false 降级
 
     /**
-     * <b>失败模式 X（C1）</b>：{@code es.rebuild.lock.enabled=false} 时作业被<b>误判失锁而拒绝切换</b>。
+     * <b>失败模式 X（C1）</b>：{@code searchdeck.elasticsearch.lock.enabled=false} 时作业被<b>误判失锁而拒绝切换</b>。
      *
      * <p>{@code Lock.enabled} 的 javadoc 明写「单实例或测试场景可关」，是<b>受支持的生产开关</b>。
      * 关闭时真实 store 的 {@code tryAcquire}/{@code renew} 恒 true，但 <b>{@code get} 恒 null</b>。

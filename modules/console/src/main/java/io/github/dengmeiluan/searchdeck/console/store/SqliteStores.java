@@ -25,7 +25,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
- * 本地 SQLite 档装配工具（{@code es.rebuild.console.store=sqlite}）：作业与审计元数据
+ * 本地 SQLite 档装配工具（{@code searchdeck.elasticsearch.console.store=sqlite}）：作业与审计元数据
  * 落同一个本地库文件，重启后历史可查，零外部服务依赖。
  *
  * <p>驱动 {@code org.xerial:sqlite-jdbc} 在 starter 里是 optional（不传染嵌入宿主）；
@@ -49,15 +49,15 @@ public final class SqliteStores {
     }
 
     /**
-     * 库文件路径：显式配置（{@code es.rebuild.console.sqlite.path}）逐字优先；
-     * 空 → {@code ~/.es-console/<appName>/jobs.db}（与控制集群自举档案同目录哲学）。
+     * 库文件路径：显式配置（{@code searchdeck.elasticsearch.console.sqlite.path}）逐字优先；
+     * 空 → {@code ~/.searchdeck/<appName>/jobs.db}（与控制集群自举档案同目录哲学）。
      */
     public static Path resolveDatabaseFile(String configuredPath, String appName) {
         if (configuredPath != null && !configuredPath.trim().isEmpty()) {
             return Paths.get(configuredPath.trim()).toAbsolutePath().normalize();
         }
         String app = (appName == null || appName.trim().isEmpty()) ? "default" : appName.trim();
-        return Paths.get(System.getProperty("user.home"), ".es-console", app, "jobs.db");
+        return Paths.get(System.getProperty("user.home"), ".searchdeck", app, "jobs.db");
     }
 
     /** 建库连接源：父目录不存在则自建（首启零手工准备）。 */

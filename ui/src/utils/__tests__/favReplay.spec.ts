@@ -23,39 +23,39 @@ const pushedPath = () => (typeof pushed[0] === 'string' ? pushed[0] : pushed[0]?
 describe('replayFavorite 正常分发矩阵', () => {
   it('dsl → carry 键 + 查询工作台 DSL 模式', () => {
     replayFavorite({ kind: 'dsl', payload: { body: '{"query":{}}', index: 'idx1' } }, router, notify);
-    expect(sessionStorage.getItem('es-console.dsl.carry')).toBe('{"query":{}}');
-    expect(sessionStorage.getItem('es-console.dsl.carry.index')).toBe('idx1');
+    expect(sessionStorage.getItem('searchdeck.dsl.carry')).toBe('{"query":{}}');
+    expect(sessionStorage.getItem('searchdeck.dsl.carry.index')).toBe('idx1');
     expect(pushed[0]).toEqual({ path: '/search', query: { mode: 'dsl' } });
     expect(notices[0].type).toBe('success');
   });
 
   it('rest+sql → prefill 键 + 工作台 SQL 模式自动执行', () => {
     replayFavorite({ kind: 'rest', tags: ['sql'], payload: { sql: 'SELECT 1' } }, router, notify);
-    expect(sessionStorage.getItem('es-console.sql.prefill')).toBe('SELECT 1');
+    expect(sessionStorage.getItem('searchdeck.sql.prefill')).toBe('SELECT 1');
     expect(pushed[0]).toEqual({ path: '/search', query: { mode: 'sql' } });
   });
 
   it('rest+lucene → q/index 键 + 排序参数随 mode 走 query（R55/R64）', () => {
     replayFavorite({ kind: 'rest', tags: ['lucene'], payload: { q: 'a:1', index: 'i1', sortField: 'ts', sortOrder: 'desc' } }, router, notify);
-    expect(sessionStorage.getItem('es-console.lucene.q')).toBe('a:1');
+    expect(sessionStorage.getItem('searchdeck.lucene.q')).toBe('a:1');
     expect(pushed[0].query).toEqual({ mode: 'lucene', sort: 'ts', order: 'desc' });
   });
 
   it('rest+bulk → carry 键（视图挂载消费）+ idx query（八十二批改一次性 carry）', () => {
     replayFavorite({ kind: 'rest', tags: ['bulk'], payload: { body: '{"index":{}}', index: 'i1' } }, router, notify);
-    expect(sessionStorage.getItem('es-console.bulk.carry')).toBe('{"index":{}}');
+    expect(sessionStorage.getItem('searchdeck.bulk.carry')).toBe('{"index":{}}');
     expect(pushed[0]).toEqual({ path: '/bulk', query: { idx: 'i1' } });
   });
 
   it('rest+ubq → carry 键（视图挂载解析 query）+ mode/idx（八十二批）', () => {
     replayFavorite({ kind: 'rest', tags: ['ubq'], payload: { body: '{"query":{"term":{"a":1}}}', index: 'i1', mode: 'preview' } }, router, notify);
-    expect(sessionStorage.getItem('es-console.ubq.carry')).toBe('{"query":{"term":{"a":1}}}');
+    expect(sessionStorage.getItem('searchdeck.ubq.carry')).toBe('{"query":{"term":{"a":1}}}');
     expect(pushed[0].query).toEqual({ idx: 'i1', mode: 'preview' });
   });
 
   it('rest+doc → carry.source + idx/id query（R55）', () => {
     replayFavorite({ kind: 'rest', tags: ['doc'], payload: { index: 'i1', id: 'd1', source: '{"a":1}' } }, router, notify);
-    expect(sessionStorage.getItem('es-console.doc-diff.carry.source')).toBe('{"a":1}');
+    expect(sessionStorage.getItem('searchdeck.doc-diff.carry.source')).toBe('{"a":1}');
     expect(pushed[0]).toEqual({ path: '/doc-diff', query: { idx: 'i1', id: 'd1' } });
   });
 
@@ -78,14 +78,14 @@ describe('replayFavorite 正常分发矩阵', () => {
 
   it('template → sandbox 键 + 工作台沙盒模式', () => {
     replayFavorite({ kind: 'template', payload: '{"query":{}}' }, router, notify);
-    expect(sessionStorage.getItem('es-console.sandbox.body')).toBe('{"query":{}}');
+    expect(sessionStorage.getItem('searchdeck.sandbox.body')).toBe('{"query":{}}');
     expect(pushed[0]).toEqual({ path: '/search', query: { mode: 'sandbox' } });
   });
 
   it('页面门拒绝时不写 carry/不跳转/不报已恢复', () => {
     replayFavorite({ kind: 'dsl', payload: { body: '{"query":{}}' } }, router, notify, () => false);
     expect(pushed).toHaveLength(0);
-    expect(sessionStorage.getItem('es-console.dsl.carry')).toBeNull();
+    expect(sessionStorage.getItem('searchdeck.dsl.carry')).toBeNull();
     expect(notices[0].type).toBe('warning');
     expect(notices[0].msg).toContain('无');
   });
@@ -95,7 +95,7 @@ describe('replayFavorite 损坏 payload 容错（R56：不再静默假成功）'
   it('sql 缺 p.sql → warning + 仍跳工作台 SQL 模式 + 不写 prefill + 不污染 rest 草稿', () => {
     replayFavorite({ kind: 'rest', tags: ['sql'], payload: {} }, router, notify);
     expect(pushedPath()).toBe('/search');
-    expect(sessionStorage.getItem('es-console.sql.prefill')).toBeNull();
+    expect(sessionStorage.getItem('searchdeck.sql.prefill')).toBeNull();
     expect(sessionStorage.getItem(draftStorageKey({ route: 'rest', target: () => '' }, 'method'))).toBeNull();
     expect(notices[0].type).toBe('warning');
     expect(notices[0].msg).toContain('不完整');
@@ -110,7 +110,7 @@ describe('replayFavorite 损坏 payload 容错（R56：不再静默假成功）'
 
   it('ubq body 非法 JSON → 原文透传 carry（视图侧容错入草稿）+ 提醒核对（八十二批）', () => {
     replayFavorite({ kind: 'rest', tags: ['ubq'], payload: { body: '{broken', index: 'i1' } }, router, notify);
-    expect(sessionStorage.getItem('es-console.ubq.carry')).toBe('{broken');
+    expect(sessionStorage.getItem('searchdeck.ubq.carry')).toBe('{broken');
     expect(notices[0].type).toBe('success');
     expect(notices[0].msg).toContain('再次核对');
   });

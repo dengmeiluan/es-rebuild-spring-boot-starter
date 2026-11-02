@@ -75,7 +75,7 @@ describe('分词实验室输入高度持久化（五百二十批）', () => {
     expect(ta().style.height).toBe('');
     apps.forEach(a => a.unmount()); apps.length = 0;
     document.body.innerHTML = '';
-    localStorage.setItem('es-console.pref.al.taH', JSON.stringify('120px'));
+    localStorage.setItem('searchdeck.pref.al.taH', JSON.stringify('120px'));
     const host2 = await mountView();
     expect(host2.querySelector<HTMLTextAreaElement>('.al-txt')!.style.height).toBe('120px');
   });
@@ -86,7 +86,7 @@ describe('分词实验室输入高度持久化（五百二十批）', () => {
     /* happy-dom 无布局：rect 高 0 → 守卫拦住，不把 '0px' 写进偏好 */
     ta.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
     await settle();
-    expect(localStorage.getItem('es-console.pref.al.taH')).toBe(null);
+    expect(localStorage.getItem('searchdeck.pref.al.taH')).toBe(null);
     /* 源码锁：resize 落盘链在位 */
     const v = readFileSync(join(__dirname, '../views/AnalyzerLabView.vue'), 'utf-8');
     expect(v).toMatch(/\.al-txt \{[^}]*resize: vertical/);

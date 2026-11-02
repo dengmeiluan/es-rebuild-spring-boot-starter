@@ -241,14 +241,14 @@ const queuePtLint = useDebounceFn(() => {
 watch(filterDsl, () => queuePtLint(), { immediate: true });
 
 /* 回放预填消费（QueryHubView.replay 的 pit 分支写入，读走即删）——
- es-console.pit.filter=历史条目 filter 原文；es-console.pit.prefill=执行时 carry 快照（sort/order）。
+ searchdeck.pit.filter=历史条目 filter 原文；searchdeck.pit.prefill=执行时 carry 快照（sort/order）。
  仅回放路径有键，普通进入/重挂载零影响；坏快照静默忽略（sort/order 保持草稿值） */
 onMounted(() => {
-  const pf = sessionStorage.getItem('es-console.pit.filter');
-  if (pf !== null) { filterDsl.value = pf; removeStoredRaw(sessionStorage, 'es-console.pit.filter'); }
-  const carry = sessionStorage.getItem('es-console.pit.prefill');
+  const pf = sessionStorage.getItem('searchdeck.pit.filter');
+  if (pf !== null) { filterDsl.value = pf; removeStoredRaw(sessionStorage, 'searchdeck.pit.filter'); }
+  const carry = sessionStorage.getItem('searchdeck.pit.prefill');
   if (carry) {
-    removeStoredRaw(sessionStorage, 'es-console.pit.prefill');
+    removeStoredRaw(sessionStorage, 'searchdeck.pit.prefill');
     try {
       const c = JSON.parse(carry);
       if (typeof c.sort === 'string') sortField.value = c.sort;
@@ -318,12 +318,12 @@ async function doOpen() {
     store.notify('success', 'PIT 已开');
     /* PIT 的「查询」定义为 filter DSL（留空=match_all）；sort/keepAlive 不落历史 */
     useQueryHistoryStore().push('pit', filterDsl.value, index.value.trim() || undefined);
-    /* filter/sort 快照写 sessionStorage（es-console.pit.carry）——历史条目形状扩展
+    /* filter/sort 快照写 sessionStorage（searchdeck.pit.carry）——历史条目形状扩展
  （store 文件）不在文件清单，回放的 sort/order 降级走 sessionStorage 直传：
- QueryHubView.replay(pit) 把快照转运为 es-console.pit.prefill，PitScrollView onMounted
+ QueryHubView.replay(pit) 把快照转运为 searchdeck.pit.prefill，PitScrollView onMounted
  读走即删；普通进入/重挂载不消费，同会话内回放即对应最近一次执行的现场 */
     try {
-      writeStoredRaw(sessionStorage, 'es-console.pit.carry', JSON.stringify({
+      writeStoredRaw(sessionStorage, 'searchdeck.pit.carry', JSON.stringify({
         filter: filterDsl.value, sort: sortField.value.trim(), order: sortOrder.value.v,
       }));
     } catch { /* 存储满/隐私模式：回放退化为只带索引（现状），不影响执行 */ }

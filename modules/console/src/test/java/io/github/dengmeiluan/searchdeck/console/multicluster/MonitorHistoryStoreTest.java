@@ -35,7 +35,7 @@ import static org.junit.Assert.assertTrue;
  */
 public class MonitorHistoryStoreTest {
 
-    private static final String PREFIX = "es_console_monitor";
+    private static final String PREFIX = "searchdeck_monitor";
 
     @Test
     public void buildSearchBody_全维筛选落bool_filter() {

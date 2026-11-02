@@ -73,14 +73,14 @@ public class EsIndexAdmin {
     /* ============================================================================
      * 控制面索引保护（963）：用户库/审计/连接档案/监控等控制索引与数据面同集群时，
      * 通用数据端点（查询 / 文档 CRUD / 批量写 / mapping / settings / reindex / SQL / 模板 / ILM）
-     * 不得触达 es_console_*——否则 VIEWER 可读用户哈希与审计、OPERATOR 可篡改审计/伪造用户。
+     * 不得触达 searchdeck_*——否则 VIEWER 可读用户哈希与审计、OPERATOR 可篡改审计/伪造用户。
      * ADMIN raw 是唯一逃生通道（performUnguarded），不在此守卫范围。
      * ============================================================================ */
 
     /** 控制面索引前缀（用户库/审计/连接档案/监控/校验临时索引）。 */
-    static final String CONTROL_INDEX_PREFIX = "es_console_";
+    static final String CONTROL_INDEX_PREFIX = "searchdeck_";
     /** 配置校验临时索引：校验器创建后即删，允许其经 EsIndexAdmin 走建/删/存在性检查。 */
-    static final String VALIDATE_INDEX_PREFIX = "es_console_validate_";
+    static final String VALIDATE_INDEX_PREFIX = "searchdeck_validate_";
 
     /** 宿主可配置的控制索引实名（用户库/审计/连接档案/监控），由自动装配注入。 */
     private volatile Set<String> extraControlIndexNames = Collections.emptySet();
@@ -106,10 +106,10 @@ public class EsIndexAdmin {
         /* 点号索引是 ES 系统/隐藏索引（.security/.watches/.kibana 等），通用数据面一律不得触达 */
         if (n.startsWith(".")) return true;
         if (n.startsWith(CONTROL_INDEX_PREFIX)
-                || n.equals("es_rebuild_adhoc_job")
-                || n.startsWith("es_rebuild_adhoc_job-")
-                || n.endsWith("_es_rebuild_lock")
-                || n.endsWith("_es_xmigrate_job")) {
+                || n.equals("searchdeck_adhoc_job")
+                || n.startsWith("searchdeck_adhoc_job-")
+                || n.endsWith("_searchdeck_lock")
+                || n.endsWith("_searchdeck_migrate_job")) {
             return true;
         }
         for (String x : extraControlIndexNames) {
@@ -128,9 +128,9 @@ public class EsIndexAdmin {
     private boolean couldMatchControl(String literal) {
         if (literal == null || literal.isEmpty()) return true;
         if (CONTROL_INDEX_PREFIX.startsWith(literal)
-                || "es_rebuild_adhoc_job".startsWith(literal)
-                || "_es_rebuild_lock".startsWith(literal)
-                || "_es_xmigrate_job".startsWith(literal)) {
+                || "searchdeck_adhoc_job".startsWith(literal)
+                || "_searchdeck_lock".startsWith(literal)
+                || "_searchdeck_migrate_job".startsWith(literal)) {
             return true;
         }
         for (String x : extraControlIndexNames) {
@@ -236,7 +236,7 @@ public class EsIndexAdmin {
 
     /**
      * 索引表达式结构字符守卫：ES 索引名不允许 {@code < > { } " |} 与空白。
-     * date-math（{@code <es_console_user>}）会在 ES 侧被解析回控制索引名，若只按
+     * date-math（{@code <searchdeck_user>}）会在 ES 侧被解析回控制索引名，若只按
      * 字面前缀判定即可绕过全部控制面守卫；数据面端点一律不接受 date-math 包装。
      */
     private static void rejectIndexExpressionChars(String lower, String original) {
@@ -259,7 +259,7 @@ public class EsIndexAdmin {
         String n = stripBom(name).trim().toLowerCase(Locale.ROOT);
         rejectIndexExpressionChars(n, name);
         /* 精确索引操作不接受逗号列表/通配：ES 的 DeleteIndexRequest 会按逗号拆成多目标，
-           logs,es_console_user 这类载荷能绕过单名控制面判定。 */
+           logs,searchdeck_user 这类载荷能绕过单名控制面判定。 */
         if (n.indexOf(',') >= 0 || n.indexOf('*') >= 0 || n.indexOf('?') >= 0) {
             throw new ControlPlaneGuardException("精确索引操作不允许逗号列表或通配符：" + name);
         }
@@ -277,7 +277,7 @@ public class EsIndexAdmin {
         }
         /* 校验器临时索引前缀属于控制面命名空间（isControlIndexName 已覆盖）：
            不能在通用守卫里做前缀豁免——否则任何持 create-index/doc 写键的人都能建
-           es_console_validate_* 隐藏索引（所有非 ADMIN 列表都看不到，仍可写）。
+           searchdeck_validate_* 隐藏索引（所有非 ADMIN 列表都看不到，仍可写）。
            校验器走专用 createValidatorTempIndex/deleteValidatorTempIndex 通道。 */
         if (isControlIndexName(n)) {
             throw new ControlPlaneGuardException("控制面索引不对通用数据接口开放：" + name);
@@ -326,10 +326,10 @@ public class EsIndexAdmin {
             if (isControlIndexName(p)) {
                 throw new ControlPlaneGuardException("控制面索引不对通用数据接口开放：" + pattern);
             }
-            /* 后缀型控制索引（*_es_rebuild_lock / *_es_xmigrate_job）无法靠“字面前缀”判断，
-               模式里出现控制面词根时直接拒绝，防 logs*_es_rebuild_lock* 这类通配命中。 */
-            if (p.contains(CONTROL_INDEX_PREFIX) || p.contains("es_rebuild_adhoc_job")
-                    || p.contains("_es_rebuild_lock") || p.contains("_es_xmigrate_job")) {
+            /* 后缀型控制索引（*_searchdeck_lock / *_searchdeck_migrate_job）无法靠“字面前缀”判断，
+               模式里出现控制面词根时直接拒绝，防 logs*_searchdeck_lock* 这类通配命中。 */
+            if (p.contains(CONTROL_INDEX_PREFIX) || p.contains("searchdeck_adhoc_job")
+                    || p.contains("_searchdeck_lock") || p.contains("_searchdeck_migrate_job")) {
                 throw new ControlPlaneGuardException("索引模式含控制面词根，已拒绝：" + pattern);
             }
             int wild = -1;
@@ -359,7 +359,7 @@ public class EsIndexAdmin {
 
     /**
      * 通配模式真实目标解析：字面前缀判定看不到 {@code logs-2026*} 命中
-     * {@code logs-2026_es_rebuild_lock} 这类后缀控制索引。解析失败/为空一律 fail-closed，
+     * {@code logs-2026_searchdeck_lock} 这类后缀控制索引。解析失败/为空一律 fail-closed，
      * 与 {@link #guardDestructivePattern(String)} 同口径；解析成功则逐个过精确名守卫。
      */
     private void resolveWildcardTargets(String pattern) {
@@ -385,7 +385,7 @@ public class EsIndexAdmin {
 
     /**
      * 破坏性通配操作（_delete_by_query/_update_by_query）的目标解析：
-     * {@code logs-2026*} 会命中 {@code logs-2026_es_rebuild_lock} 这类“后缀控制索引”，
+     * {@code logs-2026*} 会命中 {@code logs-2026_searchdeck_lock} 这类“后缀控制索引”，
      * 字面前缀判定看不出来。先向集群解析出真实索引名，再逐个过精确名守卫；
      * 解析失败时 fail-closed（无法证明通配不覆盖控制面就不执行）。
      */
@@ -435,12 +435,12 @@ public class EsIndexAdmin {
         body = stripBom(body);
         if (body == null || body.isEmpty()) return;
         // ES 解码 JSON unicode 转义；字面扫描前同步解码，防转义绕过按名守卫。
-        // 精确前缀之外补通配形态（es_console* 可匹配账号/连接/审计族），但不用裸词根
-        // 以免误伤正文里出现 "es_console" 字样的业务文档。
+        // 精确前缀之外补通配形态（searchdeck* 可匹配账号/连接/审计族），但不用裸词根
+        // 以免误伤正文里出现 "searchdeck" 字样的业务文档。
         String lower = decodeJsonUnicodeEscapes(body).toLowerCase(Locale.ROOT);
-        if (lower.contains(CONTROL_INDEX_PREFIX) || lower.contains("es_console*") || lower.contains("es_console?")
-                || lower.contains("es_rebuild_adhoc_job")
-                || lower.contains("_es_rebuild_lock") || lower.contains("_es_xmigrate_job")
+        if (lower.contains(CONTROL_INDEX_PREFIX) || lower.contains("searchdeck*") || lower.contains("searchdeck?")
+                || lower.contains("searchdeck_adhoc_job")
+                || lower.contains("_searchdeck_lock") || lower.contains("_searchdeck_migrate_job")
                 || lower.contains(".security") || lower.contains(".kibana")) {
             throw new ControlPlaneGuardException("请求体不得引用控制面索引：" + CONTROL_INDEX_PREFIX + "*");
         }
@@ -454,7 +454,7 @@ public class EsIndexAdmin {
     /**
      * 搜索 DSL 的结构化目标守卫：{@code terms/terms_set/percolate} 的 lookup index 与
      * {@code more_like_this} 的文档 _index 是请求体里的<b>二级数据源</b>，字面扫描
-     * （只查 .security / es_console_ 精确词）挡不住 {@code .securit*} 等通配形态。
+     * （只查 .security / searchdeck_ 精确词）挡不住 {@code .securit*} 等通配形态。
      * 逐个解析并复用统一索引表达式守卫。
      */
     void guardSearchBody(String body) {
@@ -466,7 +466,7 @@ public class EsIndexAdmin {
         } catch (Exception e) {
             return; // 非 JSON 由 ES 原始报错
         }
-        /* 只做结构化目标扫描：查询值里合法出现 "es_console"/".security" 字样
+        /* 只做结构化目标扫描：查询值里合法出现 "searchdeck"/".security" 字样
            （业务日志检索）不能误杀；索引目标由 _index/terms/wrapper/indices/模板体逐层守卫。 */
         guardSearchTargets(root, true);
     }
@@ -539,9 +539,9 @@ public class EsIndexAdmin {
 
     private static boolean containsControlLiteral(String lower) {
         return lower.contains(CONTROL_INDEX_PREFIX)
-                || lower.contains("es_console*") || lower.contains("es_console?")
-                || lower.contains("es_rebuild_adhoc_job")
-                || lower.contains("_es_rebuild_lock") || lower.contains("_es_xmigrate_job")
+                || lower.contains("searchdeck*") || lower.contains("searchdeck?")
+                || lower.contains("searchdeck_adhoc_job")
+                || lower.contains("_searchdeck_lock") || lower.contains("_searchdeck_migrate_job")
                 || lower.contains(".security") || lower.contains(".kibana");
     }
 
@@ -845,7 +845,7 @@ public class EsIndexAdmin {
             }
             i++;
         }
-        /* 通配表可能命中后缀型控制索引（logs-2026* -> logs-2026_es_rebuild_lock）：
+        /* 通配表可能命中后缀型控制索引（logs-2026* -> logs-2026_searchdeck_lock）：
            有 ES 客户端时解析真实目标；测试/无客户端环境维持既有字面守卫。 */
         if (hasIndexClient()) {
             for (String pattern : wildcardTables) {
@@ -1081,7 +1081,7 @@ public class EsIndexAdmin {
     /** reindex body 守卫：source.index / dest.index 可为字符串或数组；通配 * 同样拒绝。 */
     void guardReindexBody(String body) {
         body = stripBom(body);
-        /* 不做整串字面扫描：source.query 里检索 "es_console" 字样是合法业务；
+        /* 不做整串字面扫描：source.query 里检索 "searchdeck" 字样是合法业务；
            源/目标索引由 guardReindexTarget 结构化校验，脚本已整体禁止。 */
         guardSearchBody(body);
         if (body == null || body.isEmpty()) return;
@@ -1357,7 +1357,7 @@ public class EsIndexAdmin {
         } else {
             throw new ControlPlaneGuardException("恢复快照必须显式指定 indices（不允许恢复全部）");
         }
-        /* 业务快照可以被重命名：不校验最终目标名，就能把快照写成 es_console_users
+        /* 业务快照可以被重命名：不校验最终目标名，就能把快照写成 searchdeck_users
            等控制索引（覆盖账号/连接档案，借恢复注入管理员文档）。 */
         guardRestoreRename(renameReplacement, renamePattern, indices);
     }
@@ -1374,13 +1374,13 @@ public class EsIndexAdmin {
         if (lower.startsWith(".") || lower.contains("..") || lower.contains("/") || lower.contains("\\")
                 || lower.contains(":") || lower.contains("*") || lower.contains("?")
                 || lower.contains("#") || lower.contains("%")
-                || lower.contains(CONTROL_INDEX_PREFIX) || lower.contains("es_rebuild_adhoc_job")
-                || lower.contains("_es_rebuild_lock") || lower.contains("_es_xmigrate_job")) {
+                || lower.contains(CONTROL_INDEX_PREFIX) || lower.contains("searchdeck_adhoc_job")
+                || lower.contains("_searchdeck_lock") || lower.contains("_searchdeck_migrate_job")) {
             throw new ControlPlaneGuardException("恢复快照的重命名目标不得指向系统/控制面索引：" + renameReplacement);
         }
         if (!s.contains("$")) return;
         /* 占位符展开后的真实名字才是 ES 落地的索引名：es_consol$1 + 源 e_user 会拼出
-           es_console_user。通配/排除源无法枚举时拒绝占位符重命名。 */
+           searchdeck_user。通配/排除源无法枚举时拒绝占位符重命名。 */
         java.util.List<String> sources = concreteIndexNames(indices);
         if (sources == null) {
             throw new ControlPlaneGuardException("通配/排除索引恢复不允许 $ 占位符重命名，请显式列出索引");
@@ -1457,7 +1457,7 @@ public class EsIndexAdmin {
     }
 
     /**
-     * 校验器 dry-run 临时索引专用通道：只接受 {@code es_console_validate_} 前缀。
+     * 校验器 dry-run 临时索引专用通道：只接受 {@code searchdeck_validate_} 前缀。
      * 通用 createIndex 不再豁免该前缀（防任意写键创建不可见控制面索引）。
      */
     public void createValidatorTempIndex(String index, String settingsJson, String mappingJson) throws IOException {
@@ -2640,7 +2640,7 @@ public class EsIndexAdmin {
            大小写敏感兜底，一旦中间介入代理或版本升级放宽即失去守卫。仅守卫链内部
            归一，不改变实际发出的路径与查询串。 */
         String pGuard = p.toLowerCase(Locale.ROOT);
-        /* 不在入口盲扫 body：文档源正文可以合法包含 ".security"/"es_console" 字样，
+        /* 不在入口盲扫 body：文档源正文可以合法包含 ".security"/"searchdeck" 字样，
            盲扫会把正常写入误杀。各结构化渠道（bulk/msearch/mget/sql/reindex/alias/
            template/restore/search）在下面逐一做目标级守卫。 */
         List<String> segments = rawSegments(p);
@@ -2653,7 +2653,7 @@ public class EsIndexAdmin {
                 guardRawIndexToken(first);
             } else if (segments.size() > 1) {
                 /* 系统 API 的第二段以后同样可能是索引名/别名/仓库名——逐段做控制面判定，
-                   防止 _cat/indices/es_console*、_cluster/state/metadata/es_console_users
+                   防止 _cat/indices/searchdeck*、_cluster/state/metadata/searchdeck_users
                    这类“首段是 _ 系统词”的读取把控制面元数据带出。 */
                 for (int i = 1; i < segments.size(); i++) {
                     String seg = segments.get(i);
@@ -3028,7 +3028,7 @@ public class EsIndexAdmin {
             if ("_rank_eval".equals(op)) guardStoredTemplateReference(body);
         } else if ("_delete_by_query".equals(op) || "_update_by_query".equals(op)) {
             /* 通配破坏性操作必须解析真实索引名再逐个判定——logs-* 会命中
-               *_es_rebuild_lock / *_es_xmigrate_job 这类后缀控制索引，字面前缀看不出来。 */
+               *_searchdeck_lock / *_searchdeck_migrate_job 这类后缀控制索引，字面前缀看不出来。 */
             guardDestructivePattern(defaultIndex);
             guardSearchBody(body);
             if ("_update_by_query".equals(op)) guardUpdateByQueryScript(body);
@@ -4286,7 +4286,7 @@ public class EsIndexAdmin {
 
     /**
      * 快照恢复的通配目标解析：{@code logs-2026*} 在集群/快照里可能命中
-     * {@code logs-2026_es_rebuild_lock}（后缀型控制索引），仅看请求字面量拦不住。
+     * {@code logs-2026_searchdeck_lock}（后缀型控制索引），仅看请求字面量拦不住。
      * 非 ADMIN 恢复含通配时必须先读快照元数据，逐个匹配名过精确守卫；元数据读不到即拒绝。
      */
     void guardSnapshotWildcardTargets(String repo, String name, String bodyJson) throws IOException {
@@ -5826,7 +5826,7 @@ public class EsIndexAdmin {
     public Map<String, Object> pitOpen(String index, String keepAlive) throws IOException {
         if (index == null || index.trim().isEmpty()) throw new IllegalArgumentException("index 不能为空");
         /* PIT 会锁定索引快照供后续搜索读取：通配必须解析真实索引名逐个判定，
-           否则 logs-* 会把 *logs_es_rebuild_lock 等后缀控制索引一并锁进 PIT。 */
+           否则 logs-* 会把 *logs_searchdeck_lock 等后缀控制索引一并锁进 PIT。 */
         guardDestructivePattern(index);
         String ka = (keepAlive == null || keepAlive.trim().isEmpty()) ? "5m" : keepAlive.trim();
         try {
@@ -5881,11 +5881,11 @@ public class EsIndexAdmin {
      * 非 ADMIN PIT keep-alive 上限（分钟）：默认 60。
      *
      * <p>用 JVM 系统属性而非 Spring 配置，是因为本类也被非 Spring 直调路径（单测/内部任务）
-     * 使用；属性名沿用 {@code es.rebuild.*} 命名域，便于运维在同一处检索。
+     * 使用；属性名沿用 {@code searchdeck.elasticsearch.*} 命名域，便于运维在同一处检索。
      * 非正整数/解析失败一律回落默认 60 分钟（fail-closed 方向是「更小上限」）。</p>
      */
     private static long pitKeepAliveCapMillis() {
-        String v = System.getProperty("es.rebuild.console.pit.max-keep-alive-minutes", "60");
+        String v = System.getProperty("searchdeck.elasticsearch.console.pit.max-keep-alive-minutes", "60");
         try {
             long minutes = Long.parseLong(v.trim());
             return minutes > 0 ? minutes * 60_000L : 60 * 60_000L;
@@ -6508,7 +6508,7 @@ public class EsIndexAdmin {
 
     /**
      * 别名操作 body 守卫：actions 里 add/remove 的 index 字段逐个过通配守卫。
-     * 字面 body 闸只认控制名子串，拦不住 {@code "es_console*"} 这类无下划线字面的
+     * 字面 body 闸只认控制名子串，拦不住 {@code "searchdeck*"} 这类无下划线字面的
      * 通配形态——别名一旦绑上控制索引，后续按名守卫对别名全部失明。
      */
     void guardAliasActionsBody(String body) {

@@ -4,8 +4,8 @@
  * option 走虚拟列表不渲染，键切换用「click 开菜单 → ArrowDown → Enter」键盘路径驱动）：
  * 1) 默认：顺序=start_time 降序（迁移前固定序语义），sv.sortBy/sv.sortRev 不落盘
  *    （usePref 同值赋值 watch 不触发，默认值不落盘口径同 browser.sortReversed）；
- * 2) 切换排序键：键盘选「名称」→ 顺序真实变化 + es-console.pref.sv.sortBy 落盘；
- * 3) 方向钮：翻转 + es-console.pref.sv.sortRev 落盘，再点回 false；
+ * 2) 切换排序键：键盘选「名称」→ 顺序真实变化 + searchdeck.pref.sv.sortBy 落盘；
+ * 3) 方向钮：翻转 + searchdeck.pref.sv.sortRev 落盘，再点回 false；
  * 4) 预置偏好挂载恢复 + duration 缺失兜底 0 排自然序末尾不炸。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -77,8 +77,8 @@ async function pickNextSortKey() {
 const dirBtn = () => host.querySelector('button[aria-label="排序方向"]') as HTMLButtonElement;
 const click = (el: HTMLElement) => el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-const KEY_BY = 'es-console.pref.sv.sortBy';
-const KEY_REV = 'es-console.pref.sv.sortRev';
+const KEY_BY = 'searchdeck.pref.sv.sortBy';
+const KEY_REV = 'searchdeck.pref.sv.sortRev';
 
 beforeEach(() => {
   localStorage.clear();

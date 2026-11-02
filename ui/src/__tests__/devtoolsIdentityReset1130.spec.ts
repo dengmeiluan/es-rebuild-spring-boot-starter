@@ -7,7 +7,7 @@ import { join } from 'node:path';
  *
  * 缺口实证：`onIdentityChanged`（App.vue）会清 ioRecorder / store / 各类模块缓存，
  * 但 DevTools 组件内的局部状态（Tab 草稿、变量弹窗草稿 varsMap、响应过滤表达式）
- * 完全没有监听 `es-console:identity-changed`——换号后上一个账号的请求路径、
+ * 完全没有监听 `searchdeck:identity-changed`——换号后上一个账号的请求路径、
  * 变量值、过滤表达式仍留在页面上，下一个用户点执行就会带着它们发出去。
  *
  * 与「存储层已清 es_vars」不是一回事：内存草稿不落盘也照样在屏幕上。
@@ -15,8 +15,8 @@ import { join } from 'node:path';
 const view = readFileSync(join(__dirname, '../views/DevToolsView.vue'), 'utf-8');
 
 describe('DevTools 换号清理（1130）', () => {
-  it('监听 es-console:identity-changed', () => {
-    expect(view).toContain("'es-console:identity-changed'");
+  it('监听 searchdeck:identity-changed', () => {
+    expect(view).toContain("'searchdeck:identity-changed'");
   });
 
   it('卸载时摘除该监听（避免泄漏）', () => {

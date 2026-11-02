@@ -28,17 +28,17 @@ import java.util.Map;
  * 启动配置里重复写 product/integration 文案。显式 {@code searchdeck.console.*}
  * 配置优先级更高，便于宿主运维临时覆盖。</p>
  *
- * <p>首个实现：QuoteHub（宿主侧 {@code com.quotehub.admin.integration.SearchDeckIntegration}）。
- * starter 不反向依赖宿主业务类。</p>
+ * <p>宿主侧实现并注册自己的 {@code ConsoleHostIntegration} Bean；本接口不绑定任何具体宿主，
+ * starter 也不反向依赖宿主业务类。</p>
  *
  * @author aicoding
  */
 public interface ConsoleHostIntegration {
 
-    /** 集成标识（小写字母/数字/连字符），如 {@code quotehub}。 */
+    /** 集成标识（小写字母/数字/连字符），如 {@code acme}。 */
     String id();
 
-    /** 展示名，如 {@code QuoteHub}；控制台品牌副标题使用。 */
+    /** 展示名，如 {@code Acme}；控制台品牌副标题使用。 */
     String displayName();
 
     /** 可选副标语；为空时回落到平台默认 tagline。 */

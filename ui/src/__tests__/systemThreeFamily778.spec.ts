@@ -107,7 +107,7 @@ function findBtn(host: ParentNode, re: RegExp, scope?: ParentNode): HTMLButtonEl
   return btn!;
 }
 
-const INSPECT_778 = { name: 'es_rebuild_sys_lock', docCount: 42 };
+const INSPECT_778 = { name: 'searchdeck_sys_lock', docCount: 42 };
 /* 分布式锁 3 行（SY_TYPES：job_id/status_name/index_name=keyword、created_ts=long） */
 const HITS_778 = [
   { _id: 'lock-1', _source: { job_id: 'J-778-001', status_name: 'RUNNING', index_name: 'orders-v9', created_ts: 1759800000000 } },
@@ -152,7 +152,7 @@ describe('778 A0 挂载不变量现状守卫', () => {
     expect((host.textContent || '')).toContain('系统索引');
     expect(findBtn(host, /刷新/), '刷新钮在场').toBeTruthy();
     const meta = (host.textContent || '').replace(/\s+/g, '');
-    expect(meta).toContain('es_rebuild_sys_lock');
+    expect(meta).toContain('searchdeck_sys_lock');
     expect(meta).toContain('42');
     expect(host.querySelector('.sy-run-row .btn.pri'), '执行钮在场').toBeTruthy();
     expect(host.querySelectorAll('.sy-qrt tbody tr').length, 'QRT 3 行').toBe(3);
@@ -273,7 +273,7 @@ describe('778 G260 三钮在途双态（铁律 D·次刀）', () => {
     releaseInspect();
     await settle(8);
     expect(host.querySelector('.sy-inspect-err'), '复常横幅移除').toBeFalsy();
-    expect((host.textContent || '').replace(/\s+/g, ''), 'MetaStrip 复现').toContain('es_rebuild_sys_lock');
+    expect((host.textContent || '').replace(/\s+/g, ''), 'MetaStrip 复现').toContain('searchdeck_sys_lock');
   });
 });
 

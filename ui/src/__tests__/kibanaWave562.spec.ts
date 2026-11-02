@@ -369,7 +369,7 @@ describe('562 K4：DslQueryView/IndexHubView 历史面板 newtab（_prefill 通�
     expect(dq).toMatch(/:actions="\['play', 'fill', 'copy', 'fav', 'curl', 'newtab', 'del'\]"/);
     expect(dq).toContain('@newtab="histNewTab"');
     expect(dq).toContain('function histNewTab(h: { query: string; index?: string }) {');
-    expect(dq).toContain("writeStoredRaw(sessionStorage, 'es-console.devtools.open'");
+    expect(dq).toContain("writeStoredRaw(sessionStorage, 'searchdeck.devtools.open'");
     expect(dq).toContain("router.push('/devtools');");
   });
 
@@ -377,7 +377,7 @@ describe('562 K4：DslQueryView/IndexHubView 历史面板 newtab（_prefill 通�
     expect(ih).toMatch(/:actions="\['play', 'fill', 'copy', 'fav', 'curl', 'newtab', 'del'\]"/);
     expect(ih).toContain('@newtab="ihHistNewTab"');
     expect(ih).toContain('function ihHistNewTab(h: { query?: string; index?: string; mode?: string }) {');
-    expect(ih).toContain("writeStoredRaw(sessionStorage, 'es-console.devtools.open'");
+    expect(ih).toContain("writeStoredRaw(sessionStorage, 'searchdeck.devtools.open'");
     expect(ih).toContain("router.push('/devtools');");
     expect(ih).toMatch(/h\.mode && h\.mode !== 'dsl'/);
   });

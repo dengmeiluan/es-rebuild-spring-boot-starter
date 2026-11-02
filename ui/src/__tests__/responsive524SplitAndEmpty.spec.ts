@@ -147,7 +147,7 @@ describe('524 批：TaskTreeView 分栏拖拽 + 空态 EmptyState compact', () =
       taskId: 'node-es-01:1', action: 'indices:data/write/reindex', node: 'node-es-01',
       description: 'reindex', runningTimeNanos: 1_000_000_000, cancellable: true,
     }]);
-    sessionStorage.setItem('es-console.draft2:task-tree:host:-:-:filter', 'zzz_no_match');
+    sessionStorage.setItem('searchdeck.draft2:task-tree:host:-:-:filter', 'zzz_no_match');
     const { app, host } = await mountView(TaskTreeView);
     const empty = host.querySelector('.tt-left .empty-state');
     expect(empty, '过滤致空走 EmptyState compact').toBeTruthy();

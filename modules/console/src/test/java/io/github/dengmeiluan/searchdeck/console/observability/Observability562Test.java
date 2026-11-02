@@ -23,7 +23,7 @@ import ch.qos.logback.core.read.ListAppender;
 import io.github.dengmeiluan.searchdeck.console.adhoc.AdhocRebuildJob;
 import io.github.dengmeiluan.searchdeck.console.adhoc.AdhocRebuildService;
 import io.github.dengmeiluan.searchdeck.console.client.EsWriteRetryTemplate;
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import io.github.dengmeiluan.searchdeck.console.core.EsIndexAdmin;
 import io.github.dengmeiluan.searchdeck.console.core.EsIndexRebuildService;
 import io.github.dengmeiluan.searchdeck.console.lock.EsRebuildLockStore;
@@ -242,7 +242,7 @@ public class Observability562Test {
     /* ══ 第 3 件：EsWriteRetryTemplate 重试 WARN 按 action 键 60s 节流 ══ */
 
     private static EsWriteRetryTemplate retryTemplate() {
-        EsRebuildProperties.Retry retry = new EsRebuildProperties.Retry();
+        SearchDeckElasticsearchProperties.Retry retry = new SearchDeckElasticsearchProperties.Retry();
         retry.setMaxAttempts(6);        // 6 次总尝试 = 每次调用 5 条重试 WARN（节流前）
         retry.setInitBackoffMs(1L);     // 退避压到 1ms，测试毫秒级
         retry.setMaxBackoffMs(1L);

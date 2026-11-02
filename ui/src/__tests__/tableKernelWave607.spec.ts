@@ -10,7 +10,7 @@
  *  ② 非表格档表格体隐藏（561 退聚焦 watch 源升 bodyHidden=hideBody ∪ 内建非表格档，
  *     hideBody 单独流转行为等值）+ 内建 alt 体区渲染 AltHitsViews（565 共享件单源，
  *     勿再造壳；卡片 @open-doc 透传宿主）。
- *  ③ viewPrefKey 提供时 usePref 落盘（跨会话记忆，es-console.pref.* 命名空间）；数据
+ *  ③ viewPrefKey 提供时 usePref 落盘（跨会话记忆，searchdeck.pref.* 命名空间）；数据
  *     缺席的持久化档位诚实回落表格（偏好保留不回写）。
  *  ④ 独立壳分支条件扩 viewSegOn（无 storageKey 通道 seg 同样可达，pagerInHead 同口径）。
  *  ⑤ 首消费面 SearchTemplatesView 接线源码锁（571-C1：约定批必须自带首个消费面；
@@ -123,7 +123,7 @@ describe('六百零七批三：viewPrefKey 落盘与回落', () => {
   it('viewPrefKey：切档落盘+重挂载恢复持久化档', async () => {
     await mountTbl(() => ({ hits: K607_HITS, storageKey: 'k607p', viewSeg: true, jsonHtml: K607_JSON_HTML, treeData: K607_TREE, viewPrefKey: 'k607view' }));
     await clickIt(segBtn('Tree')!);
-    expect(localStorage.getItem('es-console.pref.k607view'), 'usePref 落盘（es-console.pref.* 命名空间）').toBe(JSON.stringify('tree'));
+    expect(localStorage.getItem('searchdeck.pref.k607view'), 'usePref 落盘（searchdeck.pref.* 命名空间）').toBe(JSON.stringify('tree'));
     /* 重挂载（同 key）：持久化档恢复——非表格档直接生效（状态不重置） */
     apps.forEach(a => { try { a.unmount(); } catch { /* 已卸载 */ } });
     apps.length = 0;
@@ -133,12 +133,12 @@ describe('六百零七批三：viewPrefKey 落盘与回落', () => {
     expect(host.querySelector('.qrt-alt-body .jtree'), 'Tree 体直接在场').toBeTruthy();
   });
   it('数据缺席诚实回落：持久化档=tree 但 treeData 缺席 → 表格档照常出体，偏好保留不回写', async () => {
-    localStorage.setItem('es-console.pref.k607view2', JSON.stringify('tree'));
+    localStorage.setItem('searchdeck.pref.k607view2', JSON.stringify('tree'));
     await mountTbl(() => ({ hits: K607_HITS, storageKey: 'k607f', viewSeg: true, jsonHtml: K607_JSON_HTML, viewPrefKey: 'k607view2' }));
     expect(segLabels(), '数据驱动只出两档').toEqual(['表格', 'JSON']);
     expect(host.querySelector('.qrt-wrap'), '缺席档位回落表格（体在场）').toBeTruthy();
     expect(host.querySelector('.qrt-alt-body'), '回落不渲染 alt 体').toBeNull();
-    expect(localStorage.getItem('es-console.pref.k607view2'), '偏好保留不回写').toBe(JSON.stringify('tree'));
+    expect(localStorage.getItem('searchdeck.pref.k607view2'), '偏好保留不回写').toBe(JSON.stringify('tree'));
   });
 });
 

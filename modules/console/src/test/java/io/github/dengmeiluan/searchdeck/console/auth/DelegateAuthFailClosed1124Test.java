@@ -36,7 +36,7 @@ import static org.junit.Assert.assertTrue;
  * 就能把已被宿主撤销的会话升级成本地 ADMIN；但「没带宿主凭证」的独立部署仍必须能
  * 走内置登录（有权限的人不能被门禁拖死）。</p>
  *
- * <p>② 自定义委托只实现 {@code tokenOf}（quotehub 形态、不实现 revoke）时，控制台
+ * <p>② 自定义委托只实现 {@code tokenOf}（宿主内嵌形态、不实现 revoke）时，控制台
  * 登出必须由内核兜底登记拒绝表——产线实测曾是 200 → 旧令牌继续可用。</p>
  */
 public class DelegateAuthFailClosed1124Test {
@@ -108,7 +108,7 @@ public class DelegateAuthFailClosed1124Test {
 
     @Test
     public void 只实现tokenOf的委托被拒时同样不回落内置身份() {
-        /* quotehub 形态：有 tokenOf、没有 hasCredential（默认 false）。
+        /* 宿主内嵌形态：有 tokenOf、没有 hasCredential（默认 false）。
            只看 hasCredential 会让「被宿主拒绝」的请求回落到内置 ADMIN。 */
         ConsoleAuthDelegate tokenOnly = new ConsoleAuthDelegate() {
             @Override public ConsolePrincipal authenticate(HttpServletRequest request) { return null; }
@@ -156,27 +156,27 @@ public class DelegateAuthFailClosed1124Test {
     @Test
     public void 自定义委托只报令牌时登出由内核兜底吊销() {
         DelegatedTokenRevocations.clear();
-        String token = "quotehub-host-jwt";
+        String token = "acme-host-jwt";
         ConsolePrincipal hostUser = new ConsolePrincipal("host-user", ConsoleRole.ADMIN, false, true,
                 "宿主用户", null, Collections.<String>emptySet());
-        /* quotehub 形态：authenticate + tokenOf 已实现，revoke 走 SPI 默认 false。 */
-        ConsoleAuthDelegate quotehubLike = new ConsoleAuthDelegate() {
+        /* 宿主内嵌形态：authenticate + tokenOf 已实现，revoke 走 SPI 默认 false。 */
+        ConsoleAuthDelegate acmeLike = new ConsoleAuthDelegate() {
             @Override public ConsolePrincipal authenticate(HttpServletRequest request) { return hostUser; }
             @Override public String tokenOf(HttpServletRequest request) {
                 return request.getHeader(HOST_TOKEN_HEADER);
             }
         };
         ConsoleAuthController controller = new ConsoleAuthController(
-                new BuiltinConsoleAuthService(() -> null, "es_console_user", "admin", "es-console", 3_600_000L, "s"),
+                new BuiltinConsoleAuthService(() -> null, "searchdeck_user", "admin", "searchdeck", 3_600_000L, "s"),
                 noopAudit(), ConsolePageCatalog.load(), true);
-        injectDelegates(controller, Collections.singletonList(quotehubLike));
+        injectDelegates(controller, Collections.singletonList(acmeLike));
 
         HttpServletRequest req = requestWith(HOST_TOKEN_HEADER, token);
         java.util.Map<String, Object> out = controller.logout(req);
         assertEquals(Boolean.TRUE, out.get("revoked"));
         assertTrue("自定义委托报出的令牌必须进入本实例拒绝表", DelegatedTokenRevocations.isRevoked(token));
 
-        DelegatingConsoleAuthorizer authorizer = new DelegatingConsoleAuthorizer(quotehubLike, null);
+        DelegatingConsoleAuthorizer authorizer = new DelegatingConsoleAuthorizer(acmeLike, null);
         assertNull("登出后同一宿主令牌不得再通过鉴权",
                 authorizer.authenticate(requestWith(HOST_TOKEN_HEADER, token)));
         DelegatedTokenRevocations.clear();
@@ -194,7 +194,7 @@ public class DelegateAuthFailClosed1124Test {
             }
         };
         ConsoleAuthController controller = new ConsoleAuthController(
-                new BuiltinConsoleAuthService(() -> null, "es_console_user", "admin", "es-console", 3_600_000L, "s"),
+                new BuiltinConsoleAuthService(() -> null, "searchdeck_user", "admin", "searchdeck", 3_600_000L, "s"),
                 noopAudit(), ConsolePageCatalog.load(), true);
         injectDelegates(controller, Collections.singletonList(revoking));
 
@@ -211,7 +211,7 @@ public class DelegateAuthFailClosed1124Test {
             @Override public ConsolePrincipal authenticate(HttpServletRequest request) { return null; }
         };
         ConsoleAuthController controller = new ConsoleAuthController(
-                new BuiltinConsoleAuthService(() -> null, "es_console_user", "admin", "es-console", 3_600_000L, "s"),
+                new BuiltinConsoleAuthService(() -> null, "searchdeck_user", "admin", "searchdeck", 3_600_000L, "s"),
                 noopAudit(), ConsolePageCatalog.load(), true);
         injectDelegates(controller, Collections.singletonList(headerMode));
 

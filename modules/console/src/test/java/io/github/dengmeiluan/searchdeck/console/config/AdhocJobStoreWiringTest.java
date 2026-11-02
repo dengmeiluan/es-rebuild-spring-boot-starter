@@ -42,14 +42,14 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 不触真 ES/DB —— {@code JdbcAdhocJobStore}/{@code EsAdhocJobStore} 构造均为懒解析，不在装配期连接。</p>
  *
  * <p>三选一 Bean 落在 {@code ConsoleModeConfiguration}（{@code havingValue="console"}），
- * 故每个场景都必须带 {@code es.rebuild.mode=console}，否则整块不装、拿不到任何 store。</p>
+ * 故每个场景都必须带 {@code searchdeck.elasticsearch.mode=console}，否则整块不装、拿不到任何 store。</p>
  */
 public class AdhocJobStoreWiringTest {
 
     private ApplicationContextRunner runner() {
         return new ApplicationContextRunner()
-                .withConfiguration(AutoConfigurations.of(EsRebuildAutoConfiguration.class))
-                .withPropertyValues("es.rebuild.mode=console");
+                .withConfiguration(AutoConfigurations.of(SearchDeckConsoleAutoConfiguration.class))
+                .withPropertyValues("searchdeck.elasticsearch.mode=console");
     }
 
     /** 场景①：store=jdbc + 宿主提供 DataSource → 注入 JdbcAdhocJobStore。 */
@@ -57,7 +57,7 @@ public class AdhocJobStoreWiringTest {
     public void jdbcStoreWithDataSourceWiresJdbcAdhocJobStore() {
         runner()
                 .withUserConfiguration(HostDataSourceConfiguration.class)
-                .withPropertyValues("es.rebuild.console.store=jdbc")
+                .withPropertyValues("searchdeck.elasticsearch.console.store=jdbc")
                 .run(ctx -> {
                     assertThat(ctx.getStartupFailure())
                             .as("有 DataSource 时 store=jdbc 必须启动成功").isNull();
@@ -82,7 +82,7 @@ public class AdhocJobStoreWiringTest {
     /**
      * 场景③：store=jdbc 但无 DataSource → 上下文启动失败，根因是 IllegalStateException 并点名开关。
      *
-     * <p><b>判别力隔离</b>：{@code es.rebuild.console.store} 开关被三个 Bean 共读，
+     * <p><b>判别力隔离</b>：{@code searchdeck.elasticsearch.console.store} 开关被三个 Bean 共读，
      * jdbc 无 DataSource 时都会抛同款异常。若不隔离，本条会靠别的 Bean 变绿，
      * 变异步骤（删掉 {@code adhocJobStore} 的抛异常）便无法察觉。故：
      * <ul>
@@ -97,8 +97,8 @@ public class AdhocJobStoreWiringTest {
     public void jdbcStoreWithoutDataSourceFailsFast() {
         runner()
                 .withUserConfiguration(HostConnStoreConfiguration.class)
-                .withPropertyValues("es.rebuild.console.store=jdbc",
-                        "es.rebuild.console.auth.enabled=false")
+                .withPropertyValues("searchdeck.elasticsearch.console.store=jdbc",
+                        "searchdeck.elasticsearch.console.auth.enabled=false")
                 .run(ctx -> {
                     assertThat(ctx).hasFailed();
                     Throwable root = org.springframework.core.NestedExceptionUtils
@@ -107,8 +107,8 @@ public class AdhocJobStoreWiringTest {
                             .as("显式配 jdbc 却无 DataSource 是配置错误，必须响亮失败（与审计契约一致）")
                             .isInstanceOf(IllegalStateException.class);
                     assertThat(root.getMessage())
-                            .as("失败信息必须点名 es.rebuild.console.store=jdbc，否则接入方不知道该配什么")
-                            .contains("es.rebuild.console.store=jdbc");
+                            .as("失败信息必须点名 searchdeck.elasticsearch.console.store=jdbc，否则接入方不知道该配什么")
+                            .contains("searchdeck.elasticsearch.console.store=jdbc");
                 });
     }
 

@@ -6,6 +6,13 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend:
     runs-on: ubuntu-latest
@@ -22,31 +29,27 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: console/package-lock.json
-      # 前端产物 git-ignored。npm ci 优先（严格锁安装）；锁文件在 Windows 上生成、
-      # 跨平台偶发可选依赖覆盖缺口，失败时回落 npm install 活解析自愈并把诊断写进
-      # step summary（本步红则后两步被跳过，定位一目了然）
-      - name: Install console deps
-        working-directory: console
+          cache-dependency-path: ui/package-lock.json
+      # The console assets are git-ignored and generated at build time.
+      - name: Install UI deps
+        working-directory: ui
         run: |
           if ! npm ci; then
             echo "### npm ci failed — falling back to npm install (self-heal)" >> "$GITHUB_STEP_SUMMARY"
             npm install --no-audit --no-fund --loglevel=error || exit 1
           fi
-      - name: Build console
-        working-directory: console
+      - name: Build UI
+        working-directory: ui
         run: npm run build
-      - name: Backend tests (default path, npm inside maven on POSIX)
-        # 1710 批：Surefire 2 fork 并行（每 fork 独立 JVM，规避测试间静态状态串扰）；
-        # 2 核 runner 上 2 fork 已能覆盖编译后的主要等待，继续加 fork 收益递减
+      - name: Backend tests
         run: mvn -B clean test -DforkCount=2
-      # surefire 失败明细以 ::error:: 注解上报（镜像 frontend 作业的 vitest 注解技法）：
-      # 作业日志需 admin 权限，注解走公开 check-runs API 即可读取，定位不必升权
+      - name: Package (boot jar + module jars)
+        run: mvn -B package -DskipTests -Dconsole.build.skip=true
       - name: Report surefire failures as annotations
         if: failure()
         run: |
           found=0
-          for f in target/surefire-reports/*.txt; do
+          for f in */target/surefire-reports/*.txt */*/target/surefire-reports/*.txt; do
             [ -e "$f" ] || continue
             if grep -q "<<< FAILURE!\|<<< ERROR!" "$f"; then
               found=1
@@ -58,20 +61,13 @@ jobs:
           done
           if [ "$found" = "0" ]; then
             echo "::error::backend mvn step failed with no surefire failure files - see raw log (compile/build error?)"
-            ls target/surefire-reports/ 2>/dev/null | head -5
           fi
-      # 双部署形态回归：standalone（可执行应用 jar）依赖本地仓里的 starter，
-      # install 后构建并跑其契约+启动冒烟测试（空环境起完整上下文）
-      - name: Standalone build & smoke tests
-        run: |
-          mvn -B install -DskipTests
-          cd standalone && mvn -B test
 
   frontend-typecheck:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: console
+        working-directory: ui
     env:
       TZ: Asia/Shanghai
     steps:
@@ -80,8 +76,8 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: console/package-lock.json
-      - name: Install console deps
+          cache-dependency-path: ui/package-lock.json
+      - name: Install UI deps
         run: |
           if ! npm ci; then
             echo "### npm ci failed — falling back to npm install (self-heal)" >> "$GITHUB_STEP_SUMMARY"
@@ -90,9 +86,8 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-  # 前端全量按 8 路矩阵拆到独立 runner：每作业只跑一个分片，作业内仍串行 +
-  # 失败文件串行复验。2 核 runner 上 8 路是墙钟甜点（更多路只增加安装/构建重复），
-  # 私有仓想省 CI 分钟可把 matrix 改成 4 路并同步 --only-shard 的分母。
+  # Split the full suite across 8 runners; each job still runs one shard serially
+  # and re-verifies a failing file serially before reporting it.
   frontend-tests:
     runs-on: ubuntu-latest
     strategy:
@@ -101,9 +96,7 @@ jobs:
         shard: [1, 2, 3, 4, 5, 6, 7, 8]
     defaults:
       run:
-        working-directory: console
-    # 控制台日期/时间显示按东八区产品语义断言（若干守卫用例对固定 epoch 断言本地时刻），
-    # runner 默认 UTC 会让 epoch 落日漂移——显式钉定时区，与主要用户环境一致
+        working-directory: ui
     env:
       TZ: Asia/Shanghai
     steps:
@@ -112,24 +105,22 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: console/package-lock.json
-      - name: Install console deps
+          cache-dependency-path: ui/package-lock.json
+      - name: Install UI deps
         run: |
           if ! npm ci; then
             echo "### npm ci failed — falling back to npm install (self-heal)" >> "$GITHUB_STEP_SUMMARY"
             npm install --no-audit --no-fund --loglevel=error || exit 1
           fi
-      # 产物体积守卫（bundleBudget436）扫描 vite 产物目录——每个分片作业独立 build
-      - name: Build console
+      # The bundle-size guard scans the Vite output, so every shard builds first.
+      - name: Build UI
         run: npm run build
       - name: Unit tests (shard ${{ matrix.shard }}/8)
-        # runner 的 --only-shard 只跑当前分片；本作业内的并发伪失败会串行复验，
-        # 复验通过打 warning，复验失败才 ::error:: 并让该作业红。
         run: node scripts/test-parallel.mjs --only-shard=${{ matrix.shard }}/8
       - name: Upload shard logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: vitest-shard-${{ matrix.shard }}
-          path: console/.tmp/vitest-parallel/
+          path: ui/.tmp/vitest-parallel/
           retention-days: 7

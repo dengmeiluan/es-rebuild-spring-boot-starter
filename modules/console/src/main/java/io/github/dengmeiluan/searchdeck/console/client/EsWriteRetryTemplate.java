@@ -16,7 +16,7 @@
 
 package io.github.dengmeiluan.searchdeck.console.client;
 
-import io.github.dengmeiluan.searchdeck.console.config.EsRebuildProperties;
+import io.github.dengmeiluan.searchdeck.console.config.SearchDeckElasticsearchProperties;
 import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.rest.RestStatus;
 import org.slf4j.Logger;
@@ -36,9 +36,9 @@ import java.net.SocketTimeoutException;
  * <p>异常识别遍历 cause 链，兼顾「HTTP 状态码 + 消息特征」，以兼容 spring-data 等对底层 ES 异常的包装。
  * ES 的 save 为按 _id upsert、delete 为按 _id/query 删除，均幂等，故整段写操作重试安全。</p>
  *
- * <p>重试参数由 {@link EsRebuildProperties.Retry} 注入（前缀 {@code es.rebuild.retry}）。</p>
+ * <p>重试参数由 {@link SearchDeckElasticsearchProperties.Retry} 注入（前缀 {@code searchdeck.elasticsearch.retry}）。</p>
  *
- * <p><b>如何关闭重试</b>：配置 {@code es.rebuild.retry.max-attempts=1}。
+ * <p><b>如何关闭重试</b>：配置 {@code searchdeck.elasticsearch.retry.max-attempts=1}。
  * {@code maxAttempts} 是<b>总尝试次数（含首次）</b>而非「重试次数」，故 1 = 只调用一次 = 完全不重试；
  * 校验要求 {@code >= 1}，1 即合法下限。本类<b>刻意不提供</b> {@code enabled} 开关 ——
  * 多一个语义重叠的配置项只会制造「两个开关谁说了算」的歧义。
@@ -70,7 +70,7 @@ public class EsWriteRetryTemplate {
     private final java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.atomic.AtomicLong> retryFailSinceWarn =
             new java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.atomic.AtomicLong>();
 
-    public EsWriteRetryTemplate(EsRebuildProperties.Retry retry) {
+    public EsWriteRetryTemplate(SearchDeckElasticsearchProperties.Retry retry) {
         this.maxAttempts = retry.getMaxAttempts();
         this.initBackoffMs = retry.getInitBackoffMs();
         this.maxBackoffMs = retry.getMaxBackoffMs();

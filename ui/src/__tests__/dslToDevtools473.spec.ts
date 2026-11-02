@@ -19,7 +19,7 @@ describe('DslQuery → DevTools 直达（473 批）', () => {
   it('openInDevTools：_prefill 会话契约+索引路径组装+run 直达', () => {
     expect(v).toMatch(/function openInDevTools\(\) \{/);
     const body = v.slice(v.indexOf('function openInDevTools()'), v.indexOf('function openInDevTools()') + 700);
-    expect(body).toContain("'es-console.devtools.open'");
+    expect(body).toContain("'searchdeck.devtools.open'");
     expect(body).toContain("'/_search'");
     expect(body).toContain('run: true');
     expect(body).toContain("router.push('/devtools')");

@@ -99,11 +99,11 @@ describe('W2 批：DiffEditor 左右比例可调', () => {
     expect(handle!.getAttribute('aria-orientation')).toBe('vertical');
     expect(grid!.getAttribute('style'), '默认等分无内联变量').toBe(null);
     await dragHandle(handle!, 80);
-    expect(localStorage.getItem('es-console.pref.docdiff.leftW')).toBe('560');
+    expect(localStorage.getItem('searchdeck.pref.docdiff.leftW')).toBe('560');
     expect(host.querySelector('.df-grid')!.getAttribute('style')).toContain('--df-left-w: 560px');
     handle!.dispatchEvent(new Event('dblclick'));
     await settle();
-    expect(localStorage.getItem('es-console.pref.docdiff.leftW')).toBe('0');
+    expect(localStorage.getItem('searchdeck.pref.docdiff.leftW')).toBe('0');
     expect(host.querySelector('.df-grid')!.getAttribute('style')).toBe(null);
   });
 

@@ -73,7 +73,7 @@ async function openCfg() {
   return btn;
 }
 
-const LS_KEY = 'es-console.workspace.v1';
+const LS_KEY = 'searchdeck.workspace.v1';
 
 beforeEach(() => {
   localStorage.clear();
@@ -126,7 +126,7 @@ describe('G45：快速动作「DSL 查询」显式 mode=dsl 落点钉死（G40 �
   it('点 DSL 钮 → router.push 带 { path: /search, query: { mode: dsl } }', async () => {
     await mountView();
     /* 种沙盒记忆（R90 病根复现前置：QueryHub 无 ?mode= 时吃 qh.mode 记忆） */
-    localStorage.setItem('es-console.pref.qh.mode', 'sandbox');
+    localStorage.setItem('searchdeck.pref.qh.mode', 'sandbox');
     const btn = [...host.querySelectorAll('.ws-sc button')].find(b => (b.textContent || '').includes('DSL 查询')) as HTMLButtonElement;
     expect(btn, 'DSL 快速动作钮在场').toBeTruthy();
     btn.click();

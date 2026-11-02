@@ -55,12 +55,12 @@ public class ClusterConnSyncWiringTest {
             () -> Collections.emptyList();
 
     private ClusterConnSyncEngine build(ClusterConnContributor contributor, boolean enabled) {
-        EsRebuildProperties props = new EsRebuildProperties();
+        SearchDeckElasticsearchProperties props = new SearchDeckElasticsearchProperties();
         props.getConsole().getConnSync().setEnabled(enabled);
         // initialDelay 拉大:测试窗口内绝不真跑调度轮;tearDown shutdown 清线程
         props.getConsole().getConnSync().setInitialDelaySeconds(3600);
-        EsRebuildAutoConfiguration.ConsoleModeConfiguration cfg =
-                new EsRebuildAutoConfiguration.ConsoleModeConfiguration();
+        SearchDeckConsoleAutoConfiguration.ConsoleModeConfiguration cfg =
+                new SearchDeckConsoleAutoConfiguration.ConsoleModeConfiguration();
         return cfg.clusterConnSyncEngine(null, null, provider(null), provider(contributor), props);
     }
 

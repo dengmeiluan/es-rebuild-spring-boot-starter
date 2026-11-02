@@ -22,10 +22,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 /**
- * 控制面索引守卫（通用数据端点不得触达 es_console_*）。
+ * 控制面索引守卫（通用数据端点不得触达 searchdeck_*）。
  *
  * <p>风险：VIEWER 可通过 /cluster/query、文档 CRUD、bulk/SQL/reindex 读写控制集群里的
- * es_console_user（密码哈希）/ es_console_ops_audit，绕过安全中心与审计权限。守卫覆盖
+ * searchdeck_user（密码哈希）/ searchdeck_ops_audit，绕过安全中心与审计权限。守卫覆盖
  * 精确名、通配模式、SQL FROM/JOIN、批量/重索引/模板/ILM/快照 body 与目录穿越编码。</p>
  */
 public class EsIndexAdminControlGuard963Test {
@@ -43,13 +43,13 @@ public class EsIndexAdminControlGuard963Test {
 
     @Test
     public void 控制索引路径拒绝_通配与穿越编码也不放过() {
-        assertRejected(() -> admin.guardControlPath("/es_console_user/_doc/1"), "精确控制索引");
-        assertRejected(() -> admin.guardControlPath("/ES_CONSOLE_USER/_search"), "大小写变体");
-        assertRejected(() -> admin.guardControlPath("/%65s_console_user/_doc/1"), "百分号编码");
-        assertRejected(() -> admin.guardControlPath("/%2e%2e/es_console_user/_search"), "目录穿越");
-        assertRejected(() -> admin.guardControlPath("/es_console*/_search"), "通配控制索引");
+        assertRejected(() -> admin.guardControlPath("/searchdeck_user/_doc/1"), "精确控制索引");
+        assertRejected(() -> admin.guardControlPath("/SEARCHDECK_ELASTICSEARCH_USER/_search"), "大小写变体");
+        assertRejected(() -> admin.guardControlPath("/%73earchdeck_user/_doc/1"), "百分号编码");
+        assertRejected(() -> admin.guardControlPath("/%2e%2e/searchdeck_user/_search"), "目录穿越");
+        assertRejected(() -> admin.guardControlPath("/searchdeck*/_search"), "通配控制索引");
         assertRejected(() -> admin.guardControlPath("/%2A/_search"), "全量通配");
-        assertRejected(() -> admin.guardControlPath("/es_console_validate_123/_mapping"), "校验器临时索引走公开路径");
+        assertRejected(() -> admin.guardControlPath("/searchdeck_validate_123/_mapping"), "校验器临时索引走公开路径");
         admin.guardControlPath("/logs-*/_search");
         assertRejected(() -> admin.guardControlPath("/_all/_search"), "全量别名路径");
         admin.guardControlPath("/_cluster/health");
@@ -57,32 +57,32 @@ public class EsIndexAdminControlGuard963Test {
 
     @Test
     public void 控制索引名与模式_校验临时索引只走专用通道() {
-        assertRejected(() -> admin.guardIndexName("es_console_validate_1"), "校验器临时索引走通用写通道");
+        assertRejected(() -> admin.guardIndexName("searchdeck_validate_1"), "校验器临时索引走通用写通道");
         admin.guardIndexName("logs-2026");
-        assertRejected(() -> admin.guardIndexName("es_console_user"), "用户库");
-        assertRejected(() -> admin.guardIndexName("../es_console_user"), "穿越名");
+        assertRejected(() -> admin.guardIndexName("searchdeck_user"), "用户库");
+        assertRejected(() -> admin.guardIndexName("../searchdeck_user"), "穿越名");
 
         assertRejected(() -> admin.guardIndexPattern("*"), "全量");
         assertRejected(() -> admin.guardIndexPattern("_all"), "全量别名");
-        assertRejected(() -> admin.guardIndexPattern("es_*"), "es 前缀通配");
-        assertRejected(() -> admin.guardIndexPattern("e*"), "e 前缀通配");
-        assertRejected(() -> admin.guardIndexPattern("logs-*,es_console_user"), "逗号列表夹带");
+        assertRejected(() -> admin.guardIndexPattern("searchdeck_*"), "es 前缀通配");
+        assertRejected(() -> admin.guardIndexPattern("s*"), "e 前缀通配");
+        assertRejected(() -> admin.guardIndexPattern("logs-*,searchdeck_user"), "逗号列表夹带");
         admin.guardIndexPattern("logs-*");
-        assertRejected(() -> admin.guardIndexPattern("es_console_validate_*"), "校验器临时索引通配走公开模式");
+        assertRejected(() -> admin.guardIndexPattern("searchdeck_validate_*"), "校验器临时索引通配走公开模式");
     }
 
     @Test
     public void 请求体与SQL守卫() {
-        assertRejected(() -> admin.guardControlBody("{\"query\":\"SELECT * FROM es_console_user\"}"), "body 字面");
-        assertRejected(() -> admin.guardControlBody("{\"source\":{\"index\":\"es_console_ops_audit\"}}"), "reindex body");
-        assertRejected(() -> admin.guardSql("SELECT * FROM es_console_user"), "SQL 精确");
+        assertRejected(() -> admin.guardControlBody("{\"query\":\"SELECT * FROM searchdeck_user\"}"), "body 字面");
+        assertRejected(() -> admin.guardControlBody("{\"source\":{\"index\":\"searchdeck_ops_audit\"}}"), "reindex body");
+        assertRejected(() -> admin.guardSql("SELECT * FROM searchdeck_user"), "SQL 精确");
         assertRejected(() -> admin.guardSql("SELECT * FROM *"), "SQL 全量通配");
-        assertRejected(() -> admin.guardSql("SELECT * FROM logs-* JOIN es_console_audit ON 1=1"), "SQL JOIN");
+        assertRejected(() -> admin.guardSql("SELECT * FROM logs-* JOIN searchdeck_audit ON 1=1"), "SQL JOIN");
         admin.guardSql("SELECT * FROM logs-*");
         admin.guardControlBody("{\"doc\":{\"message\":\"hello\"}}");
         assertRejected(() -> admin.guardReindexBody("{\"source\":{\"index\":\"*\"},\"dest\":{\"index\":\"copy\"}}"),
                 "reindex 全量通配");
-        assertRejected(() -> admin.guardReindexBody("{\"source\":{\"index\":[\"logs-*\",\"es_console_user\"]},\"dest\":{\"index\":\"copy\"}}"),
+        assertRejected(() -> admin.guardReindexBody("{\"source\":{\"index\":[\"logs-*\",\"searchdeck_user\"]},\"dest\":{\"index\":\"copy\"}}"),
                 "reindex 数组夹带");
         admin.guardReindexBody("{\"source\":{\"index\":\"logs-*\"},\"dest\":{\"index\":\"copy\"}}");
         assertRejected(() -> {
@@ -90,22 +90,22 @@ public class EsIndexAdminControlGuard963Test {
             catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "raw 全量路径");
         assertRejected(() -> {
-            try { admin.rawGuarded("GET", "/es_console_user/_search", null); }
+            try { admin.rawGuarded("GET", "/searchdeck_user/_search", null); }
             catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "raw 控制索引");
         assertRejected(() -> {
             try { admin.rawGuarded("POST", "/_bulk",
-                    "{\"index\":{\"_index\":\"es_console_ops_audit\"}}\n{}\n"); }
+                    "{\"index\":{\"_index\":\"searchdeck_ops_audit\"}}\n{}\n"); }
             catch (java.io.IOException e) { throw new RuntimeException(e); }
         }, "raw bulk 控制索引");
         assertRejected(() -> admin.guardRestoreBody(null), "restore 全部（空 body）");
         assertRejected(() -> admin.guardRestoreBody("{\"include_global_state\":true}"), "restore 缺 indices");
         assertRejected(() -> admin.guardRestoreBody("{\"indices\":\"*\"}"), "restore 全量通配");
-        assertRejected(() -> admin.guardRestoreBody("{\"indices\":[\"logs-*\",\"es_console_user\"]}"), "restore 夹带控制索引");
+        assertRejected(() -> admin.guardRestoreBody("{\"indices\":[\"logs-*\",\"searchdeck_user\"]}"), "restore 夹带控制索引");
         admin.guardRestoreBody("{\"indices\":\"logs-*\"}");
         admin.guardRestoreBody("{\"indices\":[\"logs-2026\",\"orders-*\"]}");
         assertRejected(() -> admin.guardIndexTemplateBody("{\"index_patterns\":[\"*\"]}"), "模板全量通配");
-        assertRejected(() -> admin.guardIndexTemplateBody("{\"index_patterns\":[\"es_console_*\"]}"), "模板控制面通配");
+        assertRejected(() -> admin.guardIndexTemplateBody("{\"index_patterns\":[\"searchdeck_*\"]}"), "模板控制面通配");
         admin.guardIndexTemplateBody("{\"index_patterns\":[\"logs-*\",\"orders-*\"]}");
         admin.guardIndexTemplateBody("{\"template\":{\"settings\":{}}}");
     }
@@ -113,21 +113,21 @@ public class EsIndexAdminControlGuard963Test {
     @Test
     public void SQL表清单解析覆盖引号无空白逗号别名与注释() {
         /* 旧正则漏掉的五类真实载荷：FROM 后无空白、引号列表第二项、引号别名、块/行注释、反引号 */
-        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM\\\"e*\\\"\"}"), "FROM 后无空白");
-        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM \\\"logs\\\", \\\"e*\\\"\"}"), "逗号列表夹带");
-        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM \\\"logs\\\" AS \\\"l\\\", \\\"e*\\\"\"}"),
+        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM\\\"s*\\\"\"}"), "FROM 后无空白");
+        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM \\\"logs\\\", \\\"s*\\\"\"}"), "逗号列表夹带");
+        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM \\\"logs\\\" AS \\\"l\\\", \\\"s*\\\"\"}"),
                 "引号别名后的逗号列表");
-        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM/*x*/e*\"}"), "块注释");
-        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM -- x\\ne*\"}"), "行注释");
-        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM `e*`\"}"), "反引号");
+        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM/*x*/s*\"}"), "块注释");
+        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM -- x\\ns*\"}"), "行注释");
+        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM `s*`\"}"), "反引号");
         /* 未闭合注释/非法 JSON 必须 fail-closed，不能把整条 SQL 当引号跳过 */
-        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM/*x e*\"}"), "未闭合块注释");
-        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM -- x\ne*\"}"), "JSON 未转义换行");
+        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM/*x s*\"}"), "未闭合块注释");
+        assertRejected(() -> admin.guardSql("{\"query\":\"SELECT * FROM -- x\ns*\"}"), "JSON 未转义换行");
         assertRejected(() -> admin.guardSql("{\"notQuery\":\"x\"}"), "缺 query");
         /* 合法业务 SQL 与字符串字面量不得误伤 */
         admin.guardSql("{\"query\":\"SELECT * FROM \\\"logs-*\\\"\"}");
         admin.guardSql("{\"query\":\"SELECT * FROM logs AS l, other WHERE x=1\"}");
-        admin.guardSql("{\"query\":\"SELECT 'FROM e*' AS x FROM logs-*\"}");
+        admin.guardSql("{\"query\":\"SELECT 'FROM s*' AS x FROM logs-*\"}");
         admin.guardSql("SELECT * FROM logs-* JOIN orders-* ON 1=1");
         admin.guardSql("{\"cursor\":\"abc\"}");
         assertRejected(() -> admin.guardSql("SHOW TABLES"), "元数据枚举");
@@ -139,7 +139,7 @@ public class EsIndexAdminControlGuard963Test {
         assertRejected(() -> admin.guardRawGuarded("POST", "/_mget", "{\"docs\":[{\"_id\":\"1\"}]}"),
                 "根 _mget 缺 _index");
         assertRejected(() -> admin.guardRawGuarded("POST", "/logs/_mget",
-                "{\"docs\":[{\"_id\":\"1\",\"_index\":\"es_console_user\"}]}"), "文档级控制索引");
+                "{\"docs\":[{\"_id\":\"1\",\"_index\":\"searchdeck_user\"}]}"), "文档级控制索引");
     }
 
     @Test
@@ -155,10 +155,10 @@ public class EsIndexAdminControlGuard963Test {
     @Test
     public void Painless执行体不得读取控制面索引() {
         assertRejected(() -> admin.guardPainlessBody(
-                "{\"script\":{\"source\":\"1\"},\"context_setup\":{\"index\":\"es_console_user\"}}"),
+                "{\"script\":{\"source\":\"1\"},\"context_setup\":{\"index\":\"searchdeck_user\"}}"),
                 "painless 控制索引上下文");
         assertRejected(() -> admin.guardPainlessBody(
-                "{\"index\":[\"logs-*\",\"es_console_user\"]}"), "painless index 数组夹带");
+                "{\"index\":[\"logs-*\",\"searchdeck_user\"]}"), "painless index 数组夹带");
         admin.guardPainlessBody("{\"script\":{\"source\":\"1\"},\"context_setup\":{\"index\":\"logs-*\"}}");
     }
 

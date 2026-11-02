@@ -52,14 +52,14 @@ public class EsIndexAdminTypedRoute999Test {
                         "{\"index\":{\"_index\":\".security\"}}"),
                 "typed bulk 的动作行 _index 不再被逐行校验看见");
         assertRejected(() -> admin.guardRawGuarded("POST", "/logs/_doc/1/_update",
-                        "{\"script\":{\"source\":\"ctx._index='es_console_users'\"}}"),
+                        "{\"script\":{\"source\":\"ctx._index='searchdeck_users'\"}}"),
                 "typed update 的脚本守卫不能因动词后置而失明");
     }
 
     @Test
     public void typed路由的检索与批量读拒绝() {
         assertRejected(() -> admin.guardRawGuarded("POST", "/logs/_doc/_search",
-                        "{\"query\":{\"terms\":{\"x\":{\"index\":\"es_console_users\"}}}}"),
+                        "{\"query\":{\"terms\":{\"x\":{\"index\":\"searchdeck_users\"}}}}"),
                 "typed search 的跨索引 terms lookup 必须拒");
         assertRejected(() -> admin.guardRawGuarded("POST", "/logs/_doc/_msearch", "{}"),
                 "typed msearch 的 header index 通道必须拒");
@@ -100,7 +100,7 @@ public class EsIndexAdminTypedRoute999Test {
     @Test
     public void 单数termvectors的跨索引body拒绝() {
         assertRejected(() -> admin.guardRawGuarded("POST", "/logs/_termvectors",
-                        "{\"docs\":[{\"_index\":\"es_console_users\",\"_id\":\"1\"}]}"),
+                        "{\"docs\":[{\"_index\":\"searchdeck_users\",\"_id\":\"1\"}]}"),
                 "单数 _termvectors 的 docs[] 可带 _index 跨索引，与 _mtermvectors 同守卫");
         assertAllowed(() -> admin.guardRawGuarded("POST", "/logs/_termvectors",
                         "{\"fields\":[\"body\"],\"doc\":{\"body\":\"hello\"}}"),

@@ -5,7 +5,6 @@ target/
 !.mvn/wrapper/maven-wrapper.jar
 
 # 前端构建产物（打包时由 vite 现生成；pom 里有 require-console-assets 兜底校验）
-modules/console/src/main/resources/static/console/
 modules/console/src/main/resources/static/searchdeck/
 
 # Node
