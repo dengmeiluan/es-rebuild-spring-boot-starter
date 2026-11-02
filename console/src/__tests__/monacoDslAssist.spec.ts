@@ -1324,6 +1324,14 @@ describe('1439 Watcher 体补全', () => {
     const emailBody = '{\n  "actions": {\n    "mail": {\n      "email": {\n        "body": {\n          "\n        }\n      }\n    }\n  }\n}';
     expect(suggest(emailBody, emailBody.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['text', 'html']);
 
+    const emailAtt = '{\n  "actions": {\n    "mail": {\n      "email": {\n        "attachments": {\n          "report": {\n            "\n          }\n        }\n      }\n    }\n  }\n}';
+    expect(suggest(emailAtt, emailAtt.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['http', 'reporting', 'data']);
+
+    const emailAttHttp = '{\n  "actions": {\n    "mail": {\n      "email": {\n        "attachments": {\n          "report": {\n            "http": {\n              "\n            }\n          }\n        }\n      }\n    }\n  }\n}';
+    expect(suggest(emailAttHttp, emailAttHttp.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
+      'content_type', 'inline', 'request',
+    ]);
+
     const slackMsg = '{\n  "actions": {\n    "chat": {\n      "slack": {\n        "message": {\n          "\n        }\n      }\n    }\n  }\n}';
     expect(suggest(slackMsg, slackMsg.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
       'text', 'from', 'to', 'attachments',

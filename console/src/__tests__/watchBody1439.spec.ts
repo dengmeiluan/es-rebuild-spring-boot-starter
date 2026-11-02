@@ -16,6 +16,8 @@ import {
   httpAuthBasicKeyItems, httpProxyKeyItems, watchPagerdutyContextKeyItems,
   watchSlackAttachmentKeyItems, watchSlackAttachmentFieldKeyItems,
   watchArrayCompareKeyItems, watchArrayCompareOpKeyItems,
+  watchEmailAttachmentKeyItems, watchEmailHttpAttachmentKeyItems, watchEmailReportingAttachmentKeyItems,
+  watchEmailDataAttachmentKeyItems,
 } from '../utils/dslCompletionContext';
 import { lintStructuredBody } from '../utils/dslLint';
 
@@ -85,6 +87,10 @@ describe('1439 Watcher 体分档', () => {
       'path', 'eq', 'not_eq', 'lt', 'gt', 'lte', 'gte',
     ]);
     expect(watchArrayCompareOpKeyItems().map(i => i.label)).toEqual(['quantifier', 'value']);
+    expect(watchEmailAttachmentKeyItems().map(i => i.label)).toEqual(['http', 'reporting', 'data']);
+    expect(watchEmailHttpAttachmentKeyItems().map(i => i.label)).toEqual(['content_type', 'inline', 'request']);
+    expect(watchEmailReportingAttachmentKeyItems().map(i => i.label)).toContain('url');
+    expect(watchEmailDataAttachmentKeyItems().map(i => i.label)).toEqual(['format']);
   });
 
   it('区域：根 / trigger / schedule / input / condition / action / 更深', () => {
@@ -109,6 +115,10 @@ describe('1439 Watcher 体分档', () => {
     expect(at('{"actions": {"notify": {')).toBe('action');
     expect(at('{"actions": {"notify": {"logging": {')).toBe('action-params');
     expect(at('{"actions": {"mail": {"email": {"body": {')).toBe('action-email-body');
+    expect(at('{"actions": {"mail": {"email": {"attachments": {"report": {')).toBe('email-attachment');
+    expect(at('{"actions": {"mail": {"email": {"attachments": {"report": {"http": {')).toBe('email-att-http');
+    expect(at('{"actions": {"mail": {"email": {"attachments": {"report": {"reporting": {')).toBe('email-att-reporting');
+    expect(at('{"actions": {"mail": {"email": {"attachments": {"report": {"data": {')).toBe('email-att-data');
     expect(at('{"actions": {"chat": {"slack": {"message": {')).toBe('action-slack-message');
     expect(at('{"actions": {"ticket": {"jira": {"fields": {')).toBe('action-jira-fields');
     expect(at('{"actions": {"hook": {"webhook": {"auth": {"basic": {')).toBe('http-auth-basic');

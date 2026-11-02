@@ -51,6 +51,8 @@ import {
   watchEmailBodyKeyItems, watchSlackMessageKeyItems, watchJiraFieldsKeyItems, httpAuthBasicKeyItems, httpProxyKeyItems,
   watchPagerdutyContextKeyItems, watchSlackAttachmentKeyItems, watchSlackAttachmentFieldKeyItems,
   watchArrayCompareKeyItems, watchArrayCompareOpKeyItems,
+  watchEmailAttachmentKeyItems, watchEmailHttpAttachmentKeyItems, watchEmailReportingAttachmentKeyItems,
+  watchEmailDataAttachmentKeyItems,
   securityRoleMappingRuleKeyItems,
   snapshotCloneBodyKeyItems, watchInlineExecuteBodyKeyItems, snapshotMountBodyKeyItems,
   nodesReloadSecureSettingsBodyKeyItems,
@@ -261,6 +263,10 @@ function allProblems(): string[] {
   out.push(...snippetProblems('WSF', watchSlackAttachmentFieldKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('WAC', watchArrayCompareKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('WAO', watchArrayCompareOpKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('WEA', watchEmailAttachmentKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('WEH', watchEmailHttpAttachmentKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('WER', watchEmailReportingAttachmentKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('WED', watchEmailDataAttachmentKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('RMR', securityRoleMappingRuleKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('SMT', snapshotMountBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('NRS', nodesReloadSecureSettingsBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));

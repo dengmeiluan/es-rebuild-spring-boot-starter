@@ -2207,6 +2207,45 @@ export function watchSlackMessageKeyItems(): AssistItem[] {
   ];
 }
 
+/** email 动作 attachments.<名> 对象的键 */
+export function watchEmailAttachmentKeyItems(): AssistItem[] {
+  return [
+    { label: 'http', detail: 'HTTP 拉取附件', snippet: true,
+      insertText: '"http": { "request": { "url": "${1:https://example.com/report.pdf}" } }' },
+    { label: 'reporting', detail: 'Kibana 报表附件', snippet: true,
+      insertText: '"reporting": { "url": "${1:https://kibana/report.pdf}" }' },
+    { label: 'data', detail: '数据附件（JSON/YAML）', snippet: true, insertText: '"data": { "format": "${1|json,yaml|}" }' },
+  ];
+}
+
+/** email attachments.<名>.http 的键 */
+export function watchEmailHttpAttachmentKeyItems(): AssistItem[] {
+  return [
+    { label: 'content_type', detail: '附件 MIME 类型', snippet: true, insertText: '"content_type": "${1:application/pdf}"' },
+    { label: 'inline', detail: '是否内嵌显示', snippet: true, insertText: '"inline": ${1|false,true|}' },
+    { label: 'request', detail: 'HTTP 请求定义（url/method/headers…）', snippet: true,
+      insertText: '"request": {\n  "url": "${1:https://example.com/report.pdf}"\n}' },
+  ];
+}
+
+/** email attachments.<名>.reporting 的键 */
+export function watchEmailReportingAttachmentKeyItems(): AssistItem[] {
+  return [
+    { label: 'url', detail: '报表下载地址', snippet: true, insertText: '"url": "${1:https://kibana/report.pdf}"' },
+    { label: 'inline', detail: '是否内嵌显示', snippet: true, insertText: '"inline": ${1|false,true|}' },
+    { label: 'retries', detail: '下载重试次数', snippet: true, insertText: '"retries": ${1:3}' },
+    { label: 'interval', detail: '重试间隔', snippet: true, insertText: '"interval": "${1:10s}"' },
+    { label: 'request', detail: 'HTTP 请求定义', snippet: true, insertText: '"request": {\n  ${0}\n}' },
+  ];
+}
+
+/** email attachments.<名>.data 的键 */
+export function watchEmailDataAttachmentKeyItems(): AssistItem[] {
+  return [
+    { label: 'format', detail: '数据格式（json/yaml）', snippet: true, insertText: '"format": "${1|json,yaml|}"' },
+  ];
+}
+
 /** slack 动作 attachments[] 元素的键 */
 export function watchSlackAttachmentKeyItems(): AssistItem[] {
   return [
@@ -2290,6 +2329,7 @@ export function watchRegionAt(doc: string, offset: number):
   | 'condition' | 'condition-params' | 'array-compare-body' | 'array-compare-op'
   | 'action' | 'action-params'
   | 'action-email-body' | 'action-slack-message' | 'action-jira-fields'
+  | 'email-attachment' | 'email-att-http' | 'email-att-reporting' | 'email-att-data'
   | 'slack-attachment' | 'slack-attachment-field'
   | 'http-auth-basic' | 'http-proxy' | 'pagerduty-context' | 'deep' {
   const stack = frameKeysAt(doc, offset);
@@ -2348,6 +2388,12 @@ export function watchRegionAt(doc: string, offset: number):
     if (stack.length === 5 && stack[2] === 'email' && stack[3] === 'body') return 'action-email-body';
     if (stack.length === 5 && stack[2] === 'slack' && stack[3] === 'message') return 'action-slack-message';
     if (stack.length === 5 && stack[2] === 'jira' && stack[3] === 'fields') return 'action-jira-fields';
+    if (stack[2] === 'email' && stack[3] === 'attachments') {
+      if (stack.length === 6) return 'email-attachment';
+      if (stack.length === 7 && stack[5] === 'http') return 'email-att-http';
+      if (stack.length === 7 && stack[5] === 'reporting') return 'email-att-reporting';
+      if (stack.length === 7 && stack[5] === 'data') return 'email-att-data';
+    }
     if (stack.length === 6 && stack[2] === 'webhook' && stack[3] === 'auth' && stack[4] === 'basic') {
       return 'http-auth-basic';
     }
@@ -3375,6 +3421,7 @@ export function watchInlineExecuteRegionAt(doc: string, offset: number):
   | 'watch-condition' | 'condition-params' | 'array-compare-body' | 'array-compare-op'
   | 'watch-action' | 'action-params'
   | 'action-email-body' | 'action-slack-message' | 'action-jira-fields'
+  | 'email-attachment' | 'email-att-http' | 'email-att-reporting' | 'email-att-data'
   | 'slack-attachment' | 'slack-attachment-field'
   | 'http-auth-basic' | 'http-proxy' | 'pagerduty-context' | 'deep' {
   const stack = frameKeysAt(doc, offset);
@@ -3434,6 +3481,12 @@ export function watchInlineExecuteRegionAt(doc: string, offset: number):
     if (stack.length === 6 && stack[3] === 'email' && stack[4] === 'body') return 'action-email-body';
     if (stack.length === 6 && stack[3] === 'slack' && stack[4] === 'message') return 'action-slack-message';
     if (stack.length === 6 && stack[3] === 'jira' && stack[4] === 'fields') return 'action-jira-fields';
+    if (stack[3] === 'email' && stack[4] === 'attachments') {
+      if (stack.length === 7) return 'email-attachment';
+      if (stack.length === 8 && stack[6] === 'http') return 'email-att-http';
+      if (stack.length === 8 && stack[6] === 'reporting') return 'email-att-reporting';
+      if (stack.length === 8 && stack[6] === 'data') return 'email-att-data';
+    }
     if (stack.length === 7 && stack[3] === 'webhook' && stack[4] === 'auth' && stack[5] === 'basic') {
       return 'http-auth-basic';
     }
