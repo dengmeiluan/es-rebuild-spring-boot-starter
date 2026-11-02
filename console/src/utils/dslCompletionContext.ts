@@ -1397,7 +1397,11 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   if (/(^|\/)_aliases(\/|$)/.test(p)) return 'aliases-body';
   /* 1439：游标翻页/清理的体是 {scroll,scroll_id}/{scroll_id}，不是无档 */
   if (/(^|\/)_clear_scroll(\/|$)/.test(p)) return 'clear-scroll-body';
-  if (/(^|\/)_search\/scroll(\/|$)/.test(p)) return 'scroll-body';
+  /* 同一路径按方法分档：DELETE /_search/scroll 是清理（只收 scroll_id），
+     POST/GET 才是续翻（scroll + scroll_id）。 */
+  if (/(^|\/)_search\/scroll(\/|$)/.test(p)) {
+    return method.toUpperCase() === 'DELETE' ? 'clear-scroll-body' : 'scroll-body';
+  }
   /* 1439：词项向量两端点的体是结构化配置（mtermvectors 先判，避免被 termvectors 吞） */
   if (/(^|\/)_mtermvectors(\/|$)/.test(p)) return 'mtermvectors-body';
   if (/(^|\/)_termvectors(\/|$)/.test(p)) return 'termvectors-body';

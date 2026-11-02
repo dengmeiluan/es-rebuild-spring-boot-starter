@@ -14,6 +14,9 @@ describe('1439 游标翻页 / 清理游标体', () => {
     expect(bodyKindForPath('/idx/_search/scroll', 'POST')).toBe('scroll-body');
     expect(bodyKindForPath('/_search/scroll', 'GET')).toBe('scroll-body');
     expect(bodyKindForPath('_search/scroll', 'POST')).toBe('scroll-body');
+    /* DELETE 同路径是清理：只收 scroll_id */
+    expect(bodyKindForPath('/_search/scroll', 'DELETE')).toBe('clear-scroll-body');
+    expect(bodyKindForPath('/idx/_search/scroll', 'DELETE')).toBe('clear-scroll-body');
     expect(bodyKindForPath('/_clear_scroll', 'DELETE')).toBe('clear-scroll-body');
     expect(bodyKindForPath('idx/_clear_scroll', 'POST')).toBe('clear-scroll-body');
     expect(bodyKindForPath('/idx/_search', 'POST')).toBe('search');

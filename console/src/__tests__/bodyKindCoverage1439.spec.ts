@@ -45,6 +45,7 @@ const MATRIX: Row[] = [
   ['/_scripts/my-script/painless_test', 'POST', 'stored-script-body'],
   ['/_scripts/my-script/_execute', 'POST', 'script-execute-body'],
   ['/_search/scroll', 'POST', 'scroll-body'],
+  ['/_search/scroll', 'DELETE', 'clear-scroll-body'],
   ['/_clear_scroll', 'POST', 'clear-scroll-body'],
   ['/idx/_termvectors/1', 'POST', 'termvectors-body'],
   ['/idx/_mtermvectors', 'POST', 'mtermvectors-body'],
