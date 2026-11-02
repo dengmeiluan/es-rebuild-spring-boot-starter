@@ -305,6 +305,12 @@ describe('1439 外围写体：区域助手（query 位回落 / 元素分派）',
     expect(securityCrossClusterApiKeyRegionAt(...at('{ "access": { "|": 1 } }'))).toBe('access');
     expect(securityCrossClusterApiKeyRegionAt(...at('{ "access": { "search": [ { "|": 1 } ] } }'))).toBe('entry');
     expect(securityCrossClusterApiKeyRegionAt(...at('{ "access": { "replication": [ { "|": 1 } ] } }'))).toBe('entry');
+    expect(securityCrossClusterApiKeyRegionAt(
+      ...at('{ "access": { "search": [ { "query": { "|": 1 } } ] } }'),
+    )).toBe('query');
+    expect(securityCrossClusterApiKeyRegionAt(
+      ...at('{ "access": { "search": [ { "query": { "bool": { "|": 1 } } } ] } }'),
+    )).toBe('query');
     expect(securityCrossClusterApiKeyRegionAt(...at('{ "access": { "search": [ { "field_security": { "|": 1 } } ] } }'))).toBe('deep');
   });
 

@@ -1379,6 +1379,14 @@ describe('1439 安全体系写体补全', () => {
     expect(suggest(namePos, namePos.lastIndexOf('"') + 1), '角色名是动态键').toEqual([]);
   });
 
+  it('跨集群 Key access[].query 内回落 Query DSL', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'security-cross-cluster-api-key-body' } });
+    const q = '{\n  "access": {\n    "search": [\n      {\n        "query": {\n          "\n        }\n      }\n    ]\n  }\n}';
+    const labels = suggest(q, q.lastIndexOf('"') + 1).map(i => i.label);
+    expect(labels).toContain('match');
+    expect(labels).toContain('bool');
+  });
+
   it('代授 Key api_key.role_descriptors 内给角色体键', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'security-api-key-grant-body' } });
     const role = '{\n  "api_key": {\n    "role_descriptors": {\n      "admin": {\n        "\n      }\n    }\n  }\n}';

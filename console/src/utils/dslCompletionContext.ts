@@ -3090,9 +3090,11 @@ export function securityCrossClusterAccessEntryKeyItems(): AssistItem[] {
 
 /** 跨集群 Key 体区域：根 / access / access 元素 / 更深 */
 export function securityCrossClusterApiKeyRegionAt(doc: string, offset: number):
-  'root' | 'access' | 'entry' | 'deep' {
+  'root' | 'access' | 'entry' | 'query' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
+  /* access.<search|replication>[] 元素里的 query 是 Query DSL */
+  if (stack[0] === 'access' && stack.includes('query')) return 'query';
   if (stack[0] === 'access' && stack.length === 2) return 'access';
   if (stack[0] === 'access' && (stack[1] === 'search' || stack[1] === 'replication') && stack.length === 4) return 'entry';
   return 'deep';
