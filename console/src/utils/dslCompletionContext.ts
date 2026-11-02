@@ -317,6 +317,13 @@ export const ROOT_KEY_SNIPPETS: Record<string, { text: string; detail: string }>
   stats:            { text: '"stats": [ "${1:group}" ]',                                    detail: '统计分组标签（打点用）' },
   profile:          { text: '"profile": ${1|true,false|}',                                  detail: '耗时剖析（profile 树）' },
 };
+
+/** search 体根键候选（嵌套 search body 区域与 W6 根档共用同一目录） */
+export function searchRootKeyItems(): AssistItem[] {
+  return ROOT_KEYS.map(k => ({
+    label: k, detail: ROOT_KEY_SNIPPETS[k].detail, snippet: true, insertText: ROOT_KEY_SNIPPETS[k].text,
+  }));
+}
 /** 叶子查询子句（值位是字段名对象）。
  2.6.0：exists 移出——其键位钉死 "field"（exists-key 档），出字段名档是语义误导。
  1439：改由 OPS_META.form==='field' 派生——match_phrase_prefix / intervals / span_term /
@@ -2002,7 +2009,8 @@ export function watchActionTypeKeyItems(): AssistItem[] {
 }
 
 /** Watcher 体区域：根 / 触发器 / 调度 / 输入 / 条件 / 动作类型；更深层不出键 */
-export function watchRegionAt(doc: string, offset: number): 'root' | 'trigger' | 'schedule' | 'input' | 'condition' | 'action' | 'deep' {
+export function watchRegionAt(doc: string, offset: number):
+  'root' | 'trigger' | 'schedule' | 'input' | 'search-body' | 'search-query' | 'condition' | 'action' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
   if (stack[0] === 'trigger') {
@@ -2010,7 +2018,15 @@ export function watchRegionAt(doc: string, offset: number): 'root' | 'trigger' |
     if (stack.length === 3 && stack[1] === 'schedule') return 'schedule';
     return 'deep';
   }
-  if (stack[0] === 'input' && stack.length === 2) return 'input';
+  if (stack[0] === 'input') {
+    if (stack.length === 2) return 'input';
+    /* input.search.request.body 是整棵 search body：根层给 search 根键，query 子树回落查询补全 */
+    if (stack[1] === 'search' && stack[2] === 'request' && stack[3] === 'body') {
+      if (stack.length === 5) return 'search-body';
+      if (stack.includes('query')) return 'search-query';
+    }
+    return 'deep';
+  }
   if (stack[0] === 'condition' && stack.length === 2) return 'condition';
   if (stack[0] === 'actions' && stack.length === 3) return 'action';
   return 'deep';
@@ -2983,7 +2999,8 @@ export function watchInlineExecuteBodyKeyItems(): AssistItem[] {
 
 /** 内联试跑体区域：根 / watch 定义（复用 watch 各子区）/ 更深 */
 export function watchInlineExecuteRegionAt(doc: string, offset: number):
-  'root' | 'watch' | 'watch-trigger' | 'watch-schedule' | 'watch-input' | 'watch-condition' | 'watch-action' | 'deep' {
+  'root' | 'watch' | 'watch-trigger' | 'watch-schedule' | 'watch-input' | 'watch-search-body'
+  | 'watch-search-query' | 'watch-condition' | 'watch-action' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
   if (stack[0] !== 'watch') return 'deep';
@@ -2993,7 +3010,15 @@ export function watchInlineExecuteRegionAt(doc: string, offset: number):
     if (stack.length === 4 && stack[2] === 'schedule') return 'watch-schedule';
     return 'deep';
   }
-  if (stack[1] === 'input' && stack.length === 3) return 'watch-input';
+  if (stack[1] === 'input') {
+    if (stack.length === 3) return 'watch-input';
+    /* watch.input.search.request.body 同样是 search body：根层给根键，query 子树回落查询 */
+    if (stack[2] === 'search' && stack[3] === 'request' && stack[4] === 'body') {
+      if (stack.length === 6) return 'watch-search-body';
+      if (stack.includes('query')) return 'watch-search-query';
+    }
+    return 'deep';
+  }
   if (stack[1] === 'condition' && stack.length === 3) return 'watch-condition';
   if (stack[1] === 'actions' && stack.length === 4) return 'watch-action';
   return 'deep';

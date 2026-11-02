@@ -318,6 +318,12 @@ describe('1439 外围写体：区域助手（query 位回落 / 元素分派）',
     expect(watchInlineExecuteRegionAt(...at('{ "watch": { "actions": { "log": { "|": 1 } } } }'))).toBe('watch-action');
     expect(watchInlineExecuteRegionAt(...at('{ "trigger_data": { "|": 1 } }'))).toBe('deep');
     expect(watchInlineExecuteRegionAt(...at('{ "watch": { "input": { "search": { "|": 1 } } } }'))).toBe('deep');
+    expect(watchInlineExecuteRegionAt(
+      ...at('{ "watch": { "input": { "search": { "request": { "body": { "|": 1 } } } } } }'),
+    )).toBe('watch-search-body');
+    expect(watchInlineExecuteRegionAt(
+      ...at('{ "watch": { "input": { "search": { "request": { "body": { "query": { "|": 1 } } } } } } }'),
+    )).toBe('watch-search-query');
   });
 
   it('ILM 推进区域：根 / current_step·next_step / 更深', () => {

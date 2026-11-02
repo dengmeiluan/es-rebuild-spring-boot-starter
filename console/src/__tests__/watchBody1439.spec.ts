@@ -56,6 +56,8 @@ describe('1439 Watcher 体分档', () => {
     expect(at('{"trigger": {')).toBe('trigger');
     expect(at('{"trigger": {"schedule": {')).toBe('schedule');
     expect(at('{"input": {')).toBe('input');
+    expect(at('{"input": {"search": {"request": {"body": {')).toBe('search-body');
+    expect(at('{"input": {"search": {"request": {"body": {"query": {')).toBe('search-query');
     expect(at('{"condition": {')).toBe('condition');
     expect(at('{"actions": {"notify": {')).toBe('action');
     expect(at('{"actions": {"notify": {"logging": {')).toBe('deep');

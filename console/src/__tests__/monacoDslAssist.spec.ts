@@ -1212,6 +1212,18 @@ describe('1439 ILM 策略体补全', () => {
 });
 
 describe('1439 Watcher 体补全', () => {
+  it('内联试跑：watch.input.search.request.body 回落整棵查询补全', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'watch-inline-execute-body' } });
+    const sb = '{\n  "watch": {\n    "input": {\n      "search": {\n        "request": {\n          "body": {\n            "\n          }\n        }\n      }\n    }\n  }\n}';
+    const labels = suggest(sb, sb.lastIndexOf('"') + 1).map(i => i.label);
+    expect(labels).toContain('query');
+    expect(labels).toContain('aggs');
+
+    const sbQuery = '{\n  "watch": {\n    "input": {\n      "search": {\n        "request": {\n          "body": {\n            "query": {\n              "\n            }\n          }\n        }\n      }\n    }\n  }\n}';
+    const qLabels = suggest(sbQuery, sbQuery.lastIndexOf('"') + 1).map(i => i.label);
+    expect(qLabels).toContain('match');
+  });
+
   it('六段：根 → trigger/schedule → input → condition → 动作类型', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'watch-body' } });
     const root = '{\n  "\n}';
@@ -1229,6 +1241,16 @@ describe('1439 Watcher 体补全', () => {
 
     const inp = '{\n  "input": {\n    "\n  }\n}';
     expect(suggest(inp, inp.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['search', 'simple', 'http', 'chain']);
+
+    const searchBody = '{\n  "input": {\n    "search": {\n      "request": {\n        "body": {\n          "\n        }\n      }\n    }\n  }\n}';
+    const sbLabels = suggest(searchBody, searchBody.lastIndexOf('"') + 1).map(i => i.label);
+    expect(sbLabels).toContain('query');
+    expect(sbLabels).toContain('aggs');
+
+    const sbQuery = '{\n  "input": {\n    "search": {\n      "request": {\n        "body": {\n          "query": {\n            "\n          }\n        }\n      }\n    }\n  }\n}';
+    const sbqLabels = suggest(sbQuery, sbQuery.lastIndexOf('"') + 1).map(i => i.label);
+    expect(sbqLabels).toContain('match');
+    expect(sbqLabels).toContain('bool');
 
     const cond = '{\n  "condition": {\n    "\n  }\n}';
     expect(suggest(cond, cond.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
