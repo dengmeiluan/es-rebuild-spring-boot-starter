@@ -1115,7 +1115,8 @@ export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 
 | 'ml-filter-body' | 'ml-calendar-body' | 'ml-calendar-events-body' | 'graph-explore-body'
 | 'ccr-follow-body' | 'ccr-auto-follow-body' | 'security-api-key-grant-body' | 'license-body'
 | 'security-api-key-query-body' | 'security-api-key-invalidate-body' | 'ml-filter-update-body'
-| 'security-cross-cluster-api-key-body' | 'watch-execute-body' | 'none';
+| 'security-cross-cluster-api-key-body' | 'watch-execute-body'
+| 'security-privilege-body' | 'ilm-move-body' | 'snapshot-clone-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1240,6 +1241,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：ILM 策略体（PUT /_ilm/policy/<id>，6.x 兼容 _xpack/ilm）是
      {policy:{phases:{hot|warm|cold|frozen|delete:{min_age,actions}}}} */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_(?:xpack\/)?ilm\/policy\/[^/]+(\/|$)/.test(p)) return 'ilm-policy-body';
+  /* 1439：ILM 手动推进体（POST /_ilm/move/<index>）是 {current_step,next_step}，
+     每步 {phase,action,name}——与策略体不同档。 */
+  if (method.toUpperCase() === 'POST' && /(^|\/)_(?:xpack\/)?ilm\/move\/[^/]+(\/|$)/.test(p)) return 'ilm-move-body';
   /* 1439：Watcher watch 体（PUT /_watcher/watch/<id>，6.x 兼容 _xpack/watcher）：
      {trigger,input,condition,actions,metadata,throttle_period} */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_(?:xpack\/)?watcher\/watch\/[^/]+(\/|$)/.test(p)) return 'watch-body';
@@ -1267,6 +1271,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：跨集群 API Key 体（POST /_security/cross_cluster/api_key）是
      {name,access:{search:[…],replication:[…]},expiration,metadata}。 */
   if (secMethod === 'POST' && /(^|\/)_(?:xpack\/)?security\/cross_cluster\/api_key\/?$/.test(p)) return 'security-cross-cluster-api-key-body';
+  /* 1439：应用权限体（PUT /_security/privilege/<application>/<privilege>）是 {actions,metadata} */
+  if (secMethod === 'PUT'
+      && /(^|\/)_(?:xpack\/)?security\/privilege\/[^/]+\/[^/]+\/?$/.test(p)) return 'security-privilege-body';
   /* 1439：Ingest 管道体（PUT /_ingest/pipeline/<id>）是 {description,version,processors,on_failure,_meta}；
      _simulate（POST）是另一种体，不并进本档。 */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_ingest\/pipeline\/[^/]+(\/|$)/.test(p)) return 'ingest-pipeline-body';
@@ -1313,6 +1320,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
     if (after === 2 && (m === 'PUT' || m === 'POST')
         && !segs[si + 1].startsWith('_') && !segs[si + 2].startsWith('_')) return 'snapshot-create-body';
     if (after === 3 && m === 'POST' && segs[si + 3] === '_restore') return 'snapshot-restore-body';
+    /* 1439：克隆快照（PUT /_snapshot/<repo>/<snap>/_clone）体是
+       {indices,index_settings,ignore_index_settings} */
+    if (after === 3 && m === 'PUT' && segs[si + 3] === '_clone') return 'snapshot-clone-body';
   }
   if (p.includes('_settings')) return 'settings';
   if (p.includes('_mapping')) return 'mapping';
@@ -2818,6 +2828,51 @@ export function watchExecuteBodyKeyItems(): AssistItem[] {
   ];
 }
 
+/** 应用权限体（PUT /_security/privilege/<application>/<privilege>）的根键 */
+export function securityPrivilegeBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'actions', detail: '该应用权限包含的动作清单', snippet: true, insertText: '"actions": ["${1:read}"]' },
+    { label: 'metadata', detail: '应用自定义元数据', snippet: true, insertText: '"metadata": {\n  ${0}\n}' },
+  ];
+}
+
+/** ILM 手动推进体（POST /_ilm/move/<索引>）的根键 */
+export function ilmMoveBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'current_step', detail: '当前步骤（phase/action/name）', snippet: true,
+      insertText: '"current_step": {\n  "phase": "${1:hot}",\n  "action": "${2:rollover}"\n}' },
+    { label: 'next_step', detail: '目标步骤（phase/action/name）', snippet: true,
+      insertText: '"next_step": {\n  "phase": "${1:hot}",\n  "action": "${2:rollover}",\n  "name": "${3:attempt_rollover}"\n}' },
+  ];
+}
+
+/** current_step / next_step 的键 */
+export function ilmMoveStepKeyItems(): AssistItem[] {
+  return [
+    { label: 'phase', detail: '阶段名', snippet: true, insertText: '"phase": "${1|hot,warm,cold,frozen,delete|}"' },
+    { label: 'action', detail: '动作名（rollover/forcemerge/…）', snippet: true, insertText: '"action": "${1:rollover}"' },
+    { label: 'name', detail: '动作实例名（可省略）', snippet: true, insertText: '"name": "${1:attempt_rollover}"' },
+  ];
+}
+
+/** ILM 推进体区域：根 / 步骤对象 / 更深 */
+export function ilmMoveRegionAt(doc: string, offset: number): 'root' | 'step' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if ((stack[0] === 'current_step' || stack[0] === 'next_step') && stack.length === 2) return 'step';
+  return 'deep';
+}
+
+/** 克隆快照体（PUT /_snapshot/<repo>/<snap>/_clone）的根键 */
+export function snapshotCloneBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'indices', detail: '要复制的索引（逗号分隔/通配）', snippet: true, insertText: '"indices": "${1:logs-*}"' },
+    { label: 'index_settings', detail: '克隆时覆盖的索引设置', snippet: true, insertText: '"index_settings": {\n  ${0}\n}' },
+    { label: 'ignore_index_settings', detail: '忽略的索引设置清单', snippet: true,
+      insertText: '"ignore_index_settings": ["${1:index.refresh_interval}"]' },
+  ];
+}
+
 /** 许可证更新体（PUT|POST /_license）的根键 */
 export function licenseBodyKeyItems(): AssistItem[] {
   return [
@@ -3701,6 +3756,10 @@ export const securityCrossClusterApiKeyBodyRootKeys = securityCrossClusterApiKey
 export const securityCrossClusterAccessKeys = securityCrossClusterAccessKeyItems().map(i => i.label);
 export const securityCrossClusterAccessEntryKeys = securityCrossClusterAccessEntryKeyItems().map(i => i.label);
 export const watchExecuteBodyRootKeys = watchExecuteBodyKeyItems().map(i => i.label);
+export const securityPrivilegeBodyRootKeys = securityPrivilegeBodyKeyItems().map(i => i.label);
+export const ilmMoveBodyRootKeys = ilmMoveBodyKeyItems().map(i => i.label);
+export const ilmMoveStepKeys = ilmMoveStepKeyItems().map(i => i.label);
+export const snapshotCloneBodyRootKeys = snapshotCloneBodyKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

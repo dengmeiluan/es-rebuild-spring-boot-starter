@@ -15,14 +15,15 @@ import { join } from 'node:path';
 import {
   bodyKindForPath, STRUCTURED_VALUE_ENUMS,
   mlCalendarEventsRegionAt, graphExploreRegionAt,
-  securityApiKeyGrantRegionAt, securityApiKeyQueryRegionAt, securityCrossClusterApiKeyRegionAt, licenseRegionAt,
+  securityApiKeyGrantRegionAt, securityApiKeyQueryRegionAt, securityCrossClusterApiKeyRegionAt, ilmMoveRegionAt, licenseRegionAt,
   mlFilterBodyRootKeys, mlFilterUpdateBodyRootKeys, mlCalendarBodyRootKeys, mlCalendarEventKeys,
   graphExploreBodyRootKeys, graphVertexKeys, graphHopKeys,
   ccrFollowBodyRootKeys, ccrAutoFollowBodyRootKeys,
   securityApiKeyGrantBodyRootKeys, securityApiKeyGrantKeys,
   securityApiKeyQueryBodyRootKeys, securityApiKeyInvalidateBodyRootKeys,
   securityCrossClusterApiKeyBodyRootKeys, securityCrossClusterAccessKeys, securityCrossClusterAccessEntryKeys,
-  watchExecuteBodyRootKeys,
+  watchExecuteBodyRootKeys, securityPrivilegeBodyRootKeys, ilmMoveBodyRootKeys, ilmMoveStepKeys,
+  snapshotCloneBodyRootKeys,
   licenseBodyRootKeys, licenseEntryKeys,
 } from '../utils/dslCompletionContext';
 import { lintStructuredBody } from '../utils/dslLint';
@@ -45,6 +46,9 @@ describe('1439 外围写体：路由按方法/子路径精确分派', () => {
     expect(bodyKindForPath('/_ml/filters/safe-domains/_update', 'POST')).toBe('ml-filter-update-body');
     expect(bodyKindForPath('/_security/cross_cluster/api_key', 'POST')).toBe('security-cross-cluster-api-key-body');
     expect(bodyKindForPath('/_watcher/watch/error-rate/_execute', 'POST')).toBe('watch-execute-body');
+    expect(bodyKindForPath('/_security/privilege/myapp/read', 'PUT')).toBe('security-privilege-body');
+    expect(bodyKindForPath('/_ilm/move/logs', 'POST')).toBe('ilm-move-body');
+    expect(bodyKindForPath('/_snapshot/repo/snap/_clone', 'PUT')).toBe('snapshot-clone-body');
     expect(bodyKindForPath('/_license', 'PUT')).toBe('license-body');
     expect(bodyKindForPath('/_license', 'POST')).toBe('license-body');
   });
@@ -73,6 +77,9 @@ describe('1439 外围写体：路由按方法/子路径精确分派', () => {
     expect(bodyKindForPath('/_security/cross_cluster/api_key', 'GET')).toBe('search');
     expect(bodyKindForPath('/_watcher/watch/error-rate/_execute', 'GET')).toBe('search');
     expect(bodyKindForPath('/_watcher/watch/_execute', 'POST')).toBe('search');
+    expect(bodyKindForPath('/_security/privilege/myapp/read', 'GET')).toBe('search');
+    expect(bodyKindForPath('/_ilm/move/logs', 'GET')).toBe('search');
+    expect(bodyKindForPath('/_snapshot/repo/snap/_clone', 'POST')).toBe('search');
   });
 });
 
@@ -105,6 +112,10 @@ describe('1439 外围写体：目录与 lint 同源', () => {
     expect(watchExecuteBodyRootKeys).toEqual([
       'trigger_data', 'alternative_input', 'ignore_condition', 'action_modes', 'record_execution',
     ]);
+    expect(securityPrivilegeBodyRootKeys).toEqual(['actions', 'metadata']);
+    expect(ilmMoveBodyRootKeys).toEqual(['current_step', 'next_step']);
+    expect(ilmMoveStepKeys).toEqual(['phase', 'action', 'name']);
+    expect(snapshotCloneBodyRootKeys).toEqual(['indices', 'index_settings', 'ignore_index_settings']);
     expect(licenseBodyRootKeys).toEqual(['licenses', 'license']);
     expect(licenseEntryKeys).toContain('uid');
     expect(licenseEntryKeys).toContain('max_resource_units');
@@ -122,6 +133,11 @@ describe('1439 外围写体：目录与 lint 同源', () => {
       '{"name":"ccs","access":{"search":[{"names":["logs-*"]}],"replication":[{"names":["archive-*"]}]}}')).toEqual([]);
     expect(lintStructuredBody('watch-execute-body',
       '{"ignore_condition":false,"record_execution":true,"action_modes":{"notify":"force_execute"}}')).toEqual([]);
+    expect(lintStructuredBody('security-privilege-body', '{"actions":["read"],"metadata":{}}')).toEqual([]);
+    expect(lintStructuredBody('ilm-move-body',
+      '{"current_step":{"phase":"hot","action":"rollover"},"next_step":{"phase":"warm","action":"forcemerge"}}')).toEqual([]);
+    expect(lintStructuredBody('snapshot-clone-body',
+      '{"indices":"logs-*","index_settings":{"index.number_of_replicas":1},"ignore_index_settings":["index.refresh_interval"]}')).toEqual([]);
     expect(lintStructuredBody('ml-calendar-body', '{"job_ids":["j1"],"description":"outages"}')).toEqual([]);
     expect(lintStructuredBody('ml-calendar-events-body',
       '{"events":[{"description":"m","start_time":1700000000000,"end_time":1700003600000,'
@@ -163,6 +179,12 @@ describe('1439 外围写体：目录与 lint 同源', () => {
       .some(f => f.message.includes('跨集群 search #1'))).toBe(true);
     expect(lintStructuredBody('watch-execute-body', '{"record":true}')
       .some(f => f.message.includes('试跑 Watch 体'))).toBe(true);
+    expect(lintStructuredBody('security-privilege-body', '{"action":[]}')
+      .some(f => f.message.includes('应用权限体'))).toBe(true);
+    expect(lintStructuredBody('ilm-move-body', '{"current_step":{"phas":"hot"}}')
+      .some(f => f.message.includes('ILM 当前步骤'))).toBe(true);
+    expect(lintStructuredBody('snapshot-clone-body', '{"index":[]}')
+      .some(f => f.message.includes('克隆快照体'))).toBe(true);
     expect(lintStructuredBody('graph-explore-body',
       '{"vertices":[{"filed":"a"}],"connections":{"vertex":[]}}')
       .some(f => f.message.includes('顶点 #1'))).toBe(true);
@@ -226,6 +248,13 @@ describe('1439 外围写体：区域助手（query 位回落 / 元素分派）',
     expect(securityCrossClusterApiKeyRegionAt(...at('{ "access": { "search": [ { "field_security": { "|": 1 } } ] } }'))).toBe('deep');
   });
 
+  it('ILM 推进区域：根 / current_step·next_step / 更深', () => {
+    expect(ilmMoveRegionAt(...at('{ "|": 1 }'))).toBe('root');
+    expect(ilmMoveRegionAt(...at('{ "current_step": { "|": 1 } }'))).toBe('step');
+    expect(ilmMoveRegionAt(...at('{ "next_step": { "|": 1 } }'))).toBe('step');
+    expect(ilmMoveRegionAt(...at('{ "current_step": { "phase": { "|": 1 } } }'))).toBe('deep');
+  });
+
   it('代授区域：根 / api_key 对象 / 更深', () => {
     expect(securityApiKeyGrantRegionAt(...at('{ "|": 1 }'))).toBe('root');
     expect(securityApiKeyGrantRegionAt(...at('{ "api_key": { "|": 1 } }'))).toBe('api-key');
@@ -257,6 +286,7 @@ describe('1439 外围写体：W6/lint 接线在（只加路由不算完成）', 
       'ccr-follow-body', 'ccr-auto-follow-body', 'security-api-key-grant-body', 'license-body',
       'security-api-key-query-body', 'security-api-key-invalidate-body', 'ml-filter-update-body',
       'security-cross-cluster-api-key-body', 'watch-execute-body',
+      'security-privilege-body', 'ilm-move-body', 'snapshot-clone-body',
     ]) {
       expect(monacoSrc, k).toContain(`bk === '${k}'`);
     }
@@ -269,6 +299,7 @@ describe('1439 外围写体：W6/lint 接线在（只加路由不算完成）', 
       'ccr-follow-body', 'ccr-auto-follow-body', 'security-api-key-grant-body', 'license-body',
       'security-api-key-query-body', 'security-api-key-invalidate-body', 'ml-filter-update-body',
       'security-cross-cluster-api-key-body', 'watch-execute-body',
+      'security-privilege-body', 'ilm-move-body', 'snapshot-clone-body',
     ]) {
       expect(lintSrc, k).toContain(`case '${k}'`);
     }

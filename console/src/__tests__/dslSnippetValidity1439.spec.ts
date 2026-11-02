@@ -44,7 +44,8 @@ import {
   licenseBodyKeyItems, licenseEntryKeyItems,
   mlFilterUpdateBodyKeyItems, securityApiKeyQueryBodyKeyItems, securityApiKeyInvalidateBodyKeyItems,
   securityCrossClusterApiKeyBodyKeyItems, securityCrossClusterAccessKeyItems, securityCrossClusterAccessEntryKeyItems,
-  watchExecuteBodyKeyItems,
+  watchExecuteBodyKeyItems, securityPrivilegeBodyKeyItems, ilmMoveBodyKeyItems, ilmMoveStepKeyItems,
+  snapshotCloneBodyKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -224,6 +225,10 @@ function allProblems(): string[] {
   out.push(...snippetProblems('CCA', securityCrossClusterAccessKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('CCE', securityCrossClusterAccessEntryKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('WEX', watchExecuteBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('SPV', securityPrivilegeBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('ILM', ilmMoveBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('ILMS', ilmMoveStepKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('SCL', snapshotCloneBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;
 }
 

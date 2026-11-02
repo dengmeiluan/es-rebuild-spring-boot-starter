@@ -67,7 +67,8 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   licenseBodyRootKeys, licenseEntryKeys,
   securityApiKeyQueryBodyRootKeys, securityApiKeyInvalidateBodyRootKeys, mlFilterUpdateBodyRootKeys,
   securityCrossClusterApiKeyBodyRootKeys, securityCrossClusterAccessKeys, securityCrossClusterAccessEntryKeys,
-  watchExecuteBodyRootKeys,
+  watchExecuteBodyRootKeys, securityPrivilegeBodyRootKeys, ilmMoveBodyRootKeys, ilmMoveStepKeys,
+  snapshotCloneBodyRootKeys,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -1501,6 +1502,12 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
       return out;
     }
     case 'watch-execute-body': return lintBodyKeys(obj, watchExecuteBodyRootKeys, '试跑 Watch 体');
+    case 'security-privilege-body': return lintBodyKeys(obj, securityPrivilegeBodyRootKeys, '应用权限体');
+    case 'ilm-move-body':
+      return [...lintBodyKeys(obj, ilmMoveBodyRootKeys, 'ILM 推进体'),
+        ...lintBodyKeys(obj?.current_step, ilmMoveStepKeys, 'ILM 当前步骤'),
+        ...lintBodyKeys(obj?.next_step, ilmMoveStepKeys, 'ILM 目标步骤')];
+    case 'snapshot-clone-body': return lintBodyKeys(obj, snapshotCloneBodyRootKeys, '克隆快照体');
     case 'ingest-pipeline-body': {
       const out = [...lintBodyKeys(obj, ingestPipelineBodyRootKeys, 'Ingest 管道体')];
       if (Array.isArray(obj?.processors)) {
