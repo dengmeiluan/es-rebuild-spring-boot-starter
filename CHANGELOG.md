@@ -19,6 +19,8 @@ All notable changes to SearchDeck are documented here. The format follows
   documentation relative-link guard, and module-boundary/release-version tests.
 - Community and package metadata: homepage/bugs/keywords for npm packages, Maven issue/CI metadata,
   CODEOWNERS, and release version alignment across POM, UI, launchers, and CITATION.
+- Query workbench mode tabs now expose a right-click menu with mode deep-link copy, an optional
+  default entry mode, cross-mode history, and keyboard ContextMenu/Shift+F10 access.
 
 ### Changed
 

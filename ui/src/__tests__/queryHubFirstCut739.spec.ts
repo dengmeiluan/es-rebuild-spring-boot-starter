@@ -210,6 +210,56 @@ describe('739 G142 模式组 aria（弱 P3 随批·733 G114 同族）', () => {
   });
 });
 
+describe('1445 查询模式右键：深链/默认模式/历史（只读动作）', () => {
+  it('模式钮右键打开菜单并切到该模式', async () => {
+    const { host } = await mountAt(QueryHubView, '/search');
+    const btn = host.querySelectorAll<HTMLButtonElement>('.qh-mode')[1];
+    btn.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 24, clientY: 24 }));
+    await settle();
+    const menu = document.body.querySelector<HTMLElement>('.ccm');
+    expect(menu, '模式右键菜单').toBeTruthy();
+    expect(menu!.textContent).toContain('查询模式 · ' + QUERY_MODES[1].t);
+    for (const label of ['复制此模式深链', '设为默认进入模式', '打开跨模式查询历史']) {
+      expect(menu!.textContent, `菜单项 ${label}`).toContain(label);
+    }
+    (menu!.querySelector('[data-key="mode-switch"]') as HTMLElement).click();
+    await settle();
+    expect(host.querySelector('.qh-mode.on')?.textContent, '右键切换后 SQL 选中').toContain('SQL');
+    expect(document.body.querySelector('.ccm'), '动作后菜单关闭').toBeNull();
+    expect(errors).toEqual([]);
+  });
+
+  it('设为默认进入模式持久化，且日常切换不覆盖', async () => {
+    const { host } = await mountAt(QueryHubView, '/search');
+    const modes = host.querySelectorAll<HTMLButtonElement>('.qh-mode');
+    modes[1].dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 24, clientY: 24 }));
+    await settle();
+    (document.body.querySelector('[data-key="mode-default"]') as HTMLElement).click();
+    await settle();
+    expect(JSON.parse(localStorage.getItem('searchdeck.pref.qh.default') || '""')).toBe('sql');
+    modes[0].click();
+    await settle();
+    expect(JSON.parse(localStorage.getItem('searchdeck.pref.qh.default') || '""'), '切换模式不改默认').toBe('sql');
+    /* 新开一次裸进（无 ?mode=）必须落到默认 SQL，而不是上次使用的 DSL */
+    apps.pop()!.unmount();
+    document.body.innerHTML = '';
+    history.replaceState(null, '', '#/search');
+    const again = await mountAt(QueryHubView, '/search');
+    await settle();
+    expect(again.host.querySelector('.qh-mode.on')?.textContent, '裸进采用默认模式').toContain(QUERY_MODES[1].t);
+    expect(errors).toEqual([]);
+  });
+
+  it('键盘 ContextMenu/Shift+F10 打开同一菜单', async () => {
+    const { host } = await mountAt(QueryHubView, '/search');
+    const btn = host.querySelectorAll<HTMLButtonElement>('.qh-mode')[2];
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ContextMenu', bubbles: true }));
+    await settle();
+    expect(document.body.querySelector('.ccm')?.textContent).toContain('查询模式 · ' + QUERY_MODES[2].t);
+    expect(errors).toEqual([]);
+  });
+});
+
 describe('739 G140 场景条旧壳三组死样式退役（源码锁；737 G131 同族）', () => {
   it('死族零残留（含注释；705-C1 零符号字面量）+活锚 toggle/pop 双锚保留', () => {
     const v = read('../views/QueryHubView.vue');

@@ -9,6 +9,8 @@
           class="qh-mode" :class="{ on: modeK === m.k }"
           :title="m.essence" :aria-pressed="modeK === m.k"
           @click="switchMode(m.k)"
+          @contextmenu.prevent="openModeMenu($event, m)"
+          @keydown="onModeKeydown($event, m)"
         >
           <component :is="ICONS[m.icon]" :size="15" class="qh-mode-ic" />
           <span class="qh-mode-tx">
@@ -119,8 +121,7 @@
     </div>
 
     <!-- 跨模式查询历史抽屉（六通道共用，倒序回放） -->
-    <NDrawer v-model:show="histOpen" :width="histDrawerW" placement="right">
-      <NDrawerContent title="跨模式查询历史" closable>
+    <NDrawer v-model:show="histOpen" :width="histDrawerW" placement="right">      <NDrawerContent title="跨模式查询历史" closable>
         <!-- 面板合并 QueryHistoryPanel 共享件（新增过滤/复制；清空确认仍在父） -->
         <!-- 跨模式历史导入合并（store.mergeFrom 同闭环扩展至第二入口；消费即计数反馈） -->
         <input ref="importFileEl" type="file" accept=".json,application/json" style="display:none"
@@ -136,6 +137,13 @@
         />
       </NDrawerContent>
     </NDrawer>
+
+    <!-- 六模式切换条右键：深链/默认模式/跨模式历史。全部只读动作，不改查询或集群状态。 -->
+    <CellContextMenu
+      v-if="modeMenu"
+      :x="modeMenu.x" :y="modeMenu.y" :title="'查询模式 · ' + modeMenu.m.t"
+      :items="modeMenuItems" @close="modeMenu = null"
+    />
   </div>
 </template>
 
@@ -144,7 +152,7 @@ import { computed, ref, watch, defineAsyncComponent, defineComponent, onActivate
 import { NPopover, NDrawer, NDrawerContent } from 'naive-ui';
 import { useRouter } from 'vue-router';
 import {
-  TerminalSquare, Database, SearchCode, Beaker, Layers, ArrowLeftRight, Sparkles, Play, History, SearchCheck, ChevronDown, Copy,
+  TerminalSquare, Database, SearchCode, Beaker, Layers, ArrowLeftRight, Sparkles, Play, History, SearchCheck, ChevronDown, Copy, Pin, Link2,
 } from 'lucide-vue-next';
 import { useAppStore } from '../stores/app';
 import { RELEVANCE_LABS } from '../utils/relevanceLabs';
@@ -154,6 +162,8 @@ import { useUrlState, readHashQuery, usePref } from '../composables/urlState';
 import { askConfirm } from '../composables/confirm';
 import QueryHistoryPanel from '../components/QueryHistoryPanel.vue';
 import FieldPicker from '../components/FieldPicker.vue';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
+import { copyText } from '../utils/format';
 /* 懒加载骨架的块件（QhPaneLoading 渲染函数件消费） */
 import SkeletonBox from '../components/SkeletonBox.vue';
 /* 页头只读当前索引 chip（静默消费 pickedIdx 的可视锚，空索引不渲染） */
@@ -208,8 +218,11 @@ const COMP: Record<string, any> = {
 const mode = useUrlState('mode', DEFAULT_MODE);
 /* 惯用通道记忆：侧边栏裸进（无 ?mode=）时回到上次用的模式；深链指定的 mode 优先 */
 const lastMode = usePref('qh.mode', DEFAULT_MODE);
-if (!readHashQuery().get('mode') && lastMode.value !== mode.value) {
-  mode.value = normalizeMode(lastMode.value);
+/* 右键菜单「设为默认进入模式」的显式偏好；优先于 lastMode，但不随日常切换漂移 */
+const pinnedMode = usePref('qh.default', '');
+if (!readHashQuery().get('mode')) {
+  const preferred = pinnedMode.value || lastMode.value;
+  if (preferred !== mode.value) mode.value = normalizeMode(preferred);
 }
 const modeK = computed(() => normalizeMode(mode.value));
 watch(modeK, v => { lastMode.value = v; });
@@ -254,6 +267,51 @@ onActivated(() => {
 
 function switchMode(k: string) {
   if (k !== modeK.value) mode.value = k;
+}
+
+/* ═══ 模式切换条右键：深链 / 默认模式 / 历史（全部只读，不改查询或集群状态） ═══ */
+const modeMenu = ref<{ x: number; y: number; m: any } | null>(null);
+function openModeMenu(e: MouseEvent, m: any) {
+  modeMenu.value = { x: e.clientX, y: e.clientY, m };
+}
+/* 键盘等价：ContextMenu 键 / Shift+F10 在模式钮上打开同一菜单 */
+function onModeKeydown(e: KeyboardEvent, m: any) {
+  if (e.key !== 'ContextMenu' && !(e.key === 'F10' && e.shiftKey)) return;
+  e.preventDefault();
+  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  modeMenu.value = { x: r.left + 8, y: r.bottom + 4, m };
+}
+const modeMenuItems = computed<CcmItem[]>(() => {
+  const mm = modeMenu.value;
+  if (!mm) return [];
+  const m = mm.m;
+  const items: CcmItem[] = [];
+  if (m.k !== modeK.value) {
+    items.push({ key: 'mode-switch', label: `切换到「${m.t}」`, icon: ICONS[m.icon], run: () => switchMode(m.k) });
+  }
+  items.push({ key: 'mode-link', label: '复制此模式深链', icon: Link2, run: () => copyModeLink(m) });
+  items.push({
+    key: 'mode-default',
+    label: pinnedMode.value === m.k ? '清除默认进入模式' : '设为默认进入模式',
+    icon: Pin,
+    run: () => toggleDefaultMode(m),
+  });
+  items.push({ key: 'mode-history', label: '打开跨模式查询历史', icon: History, sep: true, run: () => { histOpen.value = true; } });
+  return items;
+});
+async function copyModeLink(m: any) {
+  const rawHash = window.location.hash || '#/';
+  const [base, qs = ''] = rawHash.split('?');
+  const q = new URLSearchParams(qs);
+  q.set('mode', m.k);
+  const url = window.location.origin + window.location.pathname + base + '?' + q.toString();
+  const ok = await copyText(url);
+  store.notify(ok ? 'success' : 'error', ok ? `已复制「${m.t}」深链` : '复制失败：浏览器拦截了剪贴板');
+}
+function toggleDefaultMode(m: any) {
+  const next = pinnedMode.value === m.k ? '' : m.k;
+  pinnedMode.value = next;
+  store.notify('success', next ? `默认进入模式已设为「${m.t}」` : '已清除默认进入模式，恢复按上次使用');
 }
 
 const taskOpen = ref('');
