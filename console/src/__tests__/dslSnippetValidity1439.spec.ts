@@ -24,6 +24,7 @@ import {
   termvectorsKeyItems, mtermvectorsBodyKeyItems, mtermvectorsDocKeyItems,
   eqlBodyKeyItems, clusterSettingsBodyKeyItems,
   rerouteBodyKeyItems, rerouteCommandKeyItems, rerouteCommandParamKeyItems, allocationExplainBodyKeyItems,
+  snapshotRepoBodyKeyItems, snapshotCreateBodyKeyItems, snapshotRestoreBodyKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -128,6 +129,9 @@ function allProblems(): string[] {
     out.push(...snippetProblems('RP:' + cmd, rerouteCommandParamKeyItems(cmd).map(i => ({ text: i.insertText, key: i.label }))));
   }
   out.push(...snippetProblems('AE', allocationExplainBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('SR', snapshotRepoBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('SD', snapshotCreateBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('ST', snapshotRestoreBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;
 }
 

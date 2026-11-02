@@ -11,6 +11,7 @@ import {
   updateBodyKeyItems, dbqBodyKeyItems, ubqBodyKeyItems, sqlBodyKeyItems, termvectorsKeyItems,
   reindexBodyKeyItems, scriptExecuteBodyKeyItems, eqlBodyKeyItems,
   rerouteCommandParamKeyItems, allocationExplainBodyKeyItems,
+  snapshotRepoBodyKeyItems, snapshotCreateBodyKeyItems, snapshotRestoreBodyKeyItems,
 } from '../utils/dslCompletionContext';
 
 describe('1439 结构化体值枚举', () => {
@@ -27,6 +28,7 @@ describe('1439 结构化体值枚举', () => {
       'doc_as_upsert', 'columnar', 'field_multi_value_leniency', 'allow_partial_search_results',
       'keep_on_completion', 'index_include_frozen', '_source', 'case_sensitive',
       'allow_primary', 'accept_data_loss', 'primary', 'include_disk_info', 'include_yes_decisions',
+      'verify', 'ignore_unavailable', 'include_global_state', 'partial', 'include_aliases',
       'offsets', 'positions', 'term_statistics', 'field_statistics']) {
       expect(STRUCTURED_VALUE_ENUMS[k], k).toBeTruthy();
       expect(STRUCTURED_VALUE_ENUMS[k].quoted, k).toBe(false);
@@ -45,6 +47,9 @@ describe('1439 结构化体值枚举', () => {
       ...rerouteCommandParamKeyItems('cancel'),
       ...rerouteCommandParamKeyItems('allocate_empty_primary'),
       ...allocationExplainBodyKeyItems(),
+      ...snapshotRepoBodyKeyItems(),
+      ...snapshotCreateBodyKeyItems(),
+      ...snapshotRestoreBodyKeyItems(),
     ].map(i => i.label));
     for (const k of Object.keys(STRUCTURED_VALUE_ENUMS)) {
       expect(union.has(k), k + ' 已不在任何结构化体目录中').toBe(true);

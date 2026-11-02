@@ -1109,7 +1109,8 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'msearch-template-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'eql-body' | 'cluster-settings-body' | 'reroute-body' | 'allocation-explain-body' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'msearch-template-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'eql-body' | 'cluster-settings-body' | 'reroute-body' | 'allocation-explain-body'
+| 'snapshot-repo-body' | 'snapshot-create-body' | 'snapshot-restore-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1224,6 +1225,19 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
      allocation/explain 的体是 {index,shard,primary,…}——默认 search 档给 query/aggs 都是非法键。 */
   if (/(^|\/)_cluster\/reroute(\/|$)/.test(p)) return 'reroute-body';
   if (/(^|\/)_cluster\/allocation\/explain(\/|$)/.test(p)) return 'allocation-explain-body';
+  /* 1439：_snapshot 三个写体——注册仓库（PUT /_snapshot/<repo>）、创建快照
+     （PUT|POST /_snapshot/<repo>/<snap>）、恢复（POST …/_restore）。
+     其余 _snapshot 子路径（_status/GET/DELETE）无体，不抢 search 默认档。 */
+  if (p.includes('/_snapshot/')) {
+    const segs = p.split('/').filter(Boolean);
+    const si = segs.indexOf('_snapshot');
+    const after = si >= 0 ? segs.length - si - 1 : -1;
+    const m = method.toUpperCase();
+    if (after === 1 && m === 'PUT' && !segs[si + 1].startsWith('_')) return 'snapshot-repo-body';
+    if (after === 2 && (m === 'PUT' || m === 'POST')
+        && !segs[si + 1].startsWith('_') && !segs[si + 2].startsWith('_')) return 'snapshot-create-body';
+    if (after === 3 && m === 'POST' && segs[si + 3] === '_restore') return 'snapshot-restore-body';
+  }
   if (p.includes('_settings')) return 'settings';
   if (p.includes('_mapping')) return 'mapping';
   /* 1439：PUT /<索引名> = 创建索引——体是 {settings, mappings, aliases}，不是 search body */
@@ -1581,6 +1595,59 @@ export function rerouteRegionAt(doc: string, offset: number): 'root' | 'command'
 export function rerouteCommandNameAt(doc: string, offset: number): string {
   const stack = frameKeysAt(doc, offset);
   return stack[0] === 'commands' && stack.length >= 4 ? (stack[2] ?? '') : '';
+}
+
+/** 快照仓库类型（内置 + 常见官方插件；最终以集群已装插件为准，仅作候选） */
+export const SNAPSHOT_REPO_TYPES: Array<{ label: string; detail: string }> = [
+  { label: 'fs', detail: '共享文件系统（需 path.repo）' },
+  { label: 'url', detail: '只读 URL 仓库（http/https/file）' },
+  { label: 's3', detail: 'AWS S3（repository-s3 插件）' },
+  { label: 'gcs', detail: 'Google Cloud Storage（repository-gcs 插件）' },
+  { label: 'azure', detail: 'Azure Blob（repository-azure 插件）' },
+  { label: 'hdfs', detail: 'HDFS（repository-hdfs 插件）' },
+];
+
+/** 注册快照仓库体（PUT /_snapshot/<repo>）的根键 */
+export function snapshotRepoBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'type', detail: '仓库类型（fs/url/s3/gcs/azure/hdfs）', snippet: true, insertText: '"type": "${1|fs,url,s3,gcs,azure,hdfs|}"' },
+    { label: 'settings', detail: '仓库连接/存储参数（location、bucket、base_path…）', snippet: true,
+      insertText: '"settings": {\n  ${0}\n}' },
+    { label: 'verify', detail: '注册时校验仓库可读写（默认 true）', snippet: true, insertText: '"verify": ${1|true,false|}' },
+  ];
+}
+
+/** 创建快照体（PUT/POST /_snapshot/<repo>/<snap>）的根键 */
+export function snapshotCreateBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'indices', detail: '要包含的索引（支持通配/逗号串或数组，省略=全部）', snippet: true,
+      insertText: '"indices": "${1:*}"' },
+    { label: 'ignore_unavailable', detail: '忽略不存在的索引', snippet: true, insertText: '"ignore_unavailable": ${1|true,false|}' },
+    { label: 'include_global_state', detail: '包含集群全局状态（模板/持久设置等）', snippet: true,
+      insertText: '"include_global_state": ${1|false,true|}' },
+    { label: 'partial', detail: '允许部分分片缺失的快照（默认 false）', snippet: true, insertText: '"partial": ${1|false,true|}' },
+    { label: 'metadata', detail: '附加到快照的自定义元数据', snippet: true, insertText: '"metadata": {\n  ${0}\n}' },
+    { label: 'feature_states', detail: '要包含的功能状态（如 geoip）', snippet: true, insertText: '"feature_states": ["${1:geoip}"]' },
+  ];
+}
+
+/** 恢复快照体（POST /_snapshot/<repo>/<snap>/_restore）的根键 */
+export function snapshotRestoreBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'indices', detail: '要恢复的索引（省略=全部）', snippet: true, insertText: '"indices": "${1:*}"' },
+    { label: 'ignore_unavailable', detail: '忽略快照中不存在的索引', snippet: true, insertText: '"ignore_unavailable": ${1|true,false|}' },
+    { label: 'include_global_state', detail: '恢复集群全局状态（高危：会覆盖当前集群状态）', snippet: true,
+      insertText: '"include_global_state": ${1|false,true|}' },
+    { label: 'partial', detail: '允许部分恢复', snippet: true, insertText: '"partial": ${1|false,true|}' },
+    { label: 'rename_pattern', detail: '索引重命名正则（源名匹配）', snippet: true, insertText: '"rename_pattern": "${1:(.+)}"' },
+    { label: 'rename_replacement', detail: '重命名替换串（$1 引用分组）', snippet: true,
+      insertText: '"rename_replacement": "${1:restored_$1}"' },
+    { label: 'include_aliases', detail: '同时恢复别名', snippet: true, insertText: '"include_aliases": ${1|true,false|}' },
+    { label: 'index_settings', detail: '恢复时覆盖的索引设置', snippet: true, insertText: '"index_settings": {\n  ${0}\n}' },
+    { label: 'ignore_index_settings', detail: '恢复时忽略的索引设置键', snippet: true,
+      insertText: '"ignore_index_settings": ["${1:index.refresh_interval}"]' },
+    { label: 'feature_states', detail: '要恢复的功能状态', snippet: true, insertText: '"feature_states": ["${1:geoip}"]' },
+  ];
 }
 
 /** 分片分配诊断体（POST /_cluster/allocation/explain）的根键 */
@@ -2132,6 +2199,11 @@ export const STRUCTURED_VALUE_ENUMS: Record<string, { values: string[]; quoted: 
   primary: { values: ['true', 'false'], quoted: false, detail: '主分片' },
   include_disk_info: { values: ['true', 'false'], quoted: false, detail: '含磁盘用量' },
   include_yes_decisions: { values: ['true', 'false'], quoted: false, detail: '含允许分配的决策明细' },
+  verify: { values: ['true', 'false'], quoted: false, detail: '注册仓库时校验可读写' },
+  ignore_unavailable: { values: ['true', 'false'], quoted: false, detail: '忽略不存在的索引' },
+  include_global_state: { values: ['false', 'true'], quoted: false, detail: '包含集群全局状态（高危）' },
+  partial: { values: ['false', 'true'], quoted: false, detail: '允许部分分片/恢复' },
+  include_aliases: { values: ['true', 'false'], quoted: false, detail: '恢复时包含别名' },
   index_include_frozen: { values: ['true', 'false'], quoted: false, detail: '含冻结索引' },
   _source: { values: ['true', 'false'], quoted: false, detail: '回源开关（也可传字段数组）' },
   offsets: { values: ['false', 'true'], quoted: false, detail: '返回词项偏移' },
@@ -2306,6 +2378,9 @@ export const eqlBodyRootKeys = eqlBodyKeyItems().map(i => i.label);
 export const clusterSettingsBodyRootKeys = clusterSettingsBodyKeyItems().map(i => i.label);
 export const rerouteBodyRootKeys = rerouteBodyKeyItems().map(i => i.label);
 export const allocationExplainBodyRootKeys = allocationExplainBodyKeyItems().map(i => i.label);
+export const snapshotRepoBodyRootKeys = snapshotRepoBodyKeyItems().map(i => i.label);
+export const snapshotCreateBodyRootKeys = snapshotCreateBodyKeyItems().map(i => i.label);
+export const snapshotRestoreBodyRootKeys = snapshotRestoreBodyKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

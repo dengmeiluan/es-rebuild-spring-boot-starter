@@ -22,7 +22,8 @@ import { useAppStore } from '../stores/app';
 import { dslContext, QUERY_SNIPPETS, querySnippetDetail, RANGE_OPS, AGG_SNIPPETS, RETRIEVER_SNIPPETS, SUGGESTER_SNIPPETS, aggBodyKeys, queryBodyKeys, clauseValueKeys, retrieverBodyKeys, suggesterBodyKeys, ROOT_KEYS, ROOT_KEY_SNIPPETS, commaAffixes, settingsKeyItems, mappingKeyItems, mappingFieldKeyItems, mappingFieldConfigAt, indexBodyKeyItems, indexBodyRegionAt, aliasKeyItems, aliasConfigAt, reindexBodyKeyItems, reindexBodyRegionAt, sqlBodyKeyItems, SQL_VALUE_SNIPPETS, SQL_KEYWORD_SNIPPETS, updateBodyKeyItems, scriptObjectKeyItems, updateBodyRegionAt, rolloverBodyKeyItems, rolloverConditionKeyItems, rolloverBodyRegionAt, dbqBodyKeyItems, ubqBodyKeyItems, queryWriteRegionAt, queryOnlyBodyKeyItems, templateSearchBodyKeyItems, rootOnlyRegionAt, mgetBodyKeyItems, mgetDocKeyItems, mgetRegionAt, storedScriptBodyKeyItems, storedScriptKeyItems, storedScriptRegionAt, sqlFilterRegionAt, eqlFilterRegionAt, eqlBodyKeyItems, EQL_VALUE_SNIPPETS, EQL_KEYWORD_SNIPPETS,
   clusterSettingsBodyKeyItems, clusterSettingsKeyItems, clusterSettingsRegionAt,
   rerouteBodyKeyItems, rerouteCommandKeyItems, rerouteCommandParamKeyItems, rerouteRegionAt, rerouteCommandNameAt,
-  allocationExplainBodyKeyItems, scriptExecuteBodyKeyItems, msearchHeaderKeyItems, msearchHeaderLineAt, msearchTemplateBodyKeyItems, bulkActionKeyItems, bulkActionMetaKeyItems, bulkLineKindAt, bulkActionMetaAt, fieldCapsBodyKeyItems, termsEnumBodyKeyItems, indexFilterRegionAt, rankEvalBodyKeyItems, rankEvalRequestKeyItems, rankEvalMetricKeyItems, rankEvalRegionAt, RUNTIME_FIELD_TYPES, runtimeFieldTypeAt, inRuntimeMappingsAt, aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems, aliasesBodyRegionAt, scrollBodyKeyItems, clearScrollBodyKeyItems, termvectorsKeyItems, mtermvectorsBodyKeyItems, mtermvectorsDocKeyItems, STRUCTURED_VALUE_ENUMS, MAPPING_TYPES, templateKeyItems, templateRegionAt, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
+  allocationExplainBodyKeyItems, snapshotRepoBodyKeyItems, snapshotCreateBodyKeyItems, snapshotRestoreBodyKeyItems,
+  SNAPSHOT_REPO_TYPES, scriptExecuteBodyKeyItems, msearchHeaderKeyItems, msearchHeaderLineAt, msearchTemplateBodyKeyItems, bulkActionKeyItems, bulkActionMetaKeyItems, bulkLineKindAt, bulkActionMetaAt, fieldCapsBodyKeyItems, termsEnumBodyKeyItems, indexFilterRegionAt, rankEvalBodyKeyItems, rankEvalRequestKeyItems, rankEvalMetricKeyItems, rankEvalRegionAt, RUNTIME_FIELD_TYPES, runtimeFieldTypeAt, inRuntimeMappingsAt, aliasesBodyKeyItems, aliasActionKeyItems, aliasAddConfigKeyItems, aliasRemoveConfigKeyItems, aliasRemoveIndexConfigKeyItems, aliasesBodyRegionAt, scrollBodyKeyItems, clearScrollBodyKeyItems, termvectorsKeyItems, mtermvectorsBodyKeyItems, mtermvectorsDocKeyItems, STRUCTURED_VALUE_ENUMS, MAPPING_TYPES, templateKeyItems, templateRegionAt, ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS, lineIndentAt, reindentSnippet, commentEnd, isEscapedQuote, painlessFieldAt, orderFieldsByTypeForOp, dslValueFieldAt, dslArrayElemFieldAt, DSL_VALUE_TYPE_HINTS, DSL_ARRAY_ELEM_TYPE_HINTS, DSL_ARRAY_ELEM_CHAINS } from '../utils/dslCompletionContext';
 import { makeDslValueSuggestProvider } from '../utils/dslValueSuggest';
 import type { AssistItem, BodyKind } from '../utils/dslCompletionContext';
 import { ensureLanguages } from '../utils/monacoLanguages';
@@ -830,7 +831,8 @@ onMounted(() => {
         /* 1439：_rank_eval 按根/评估项/metric 区域分派 */
         const rankRegion = bk === 'rank-eval-body' ? rankEvalRegionAt(doc, offset) : null;
         if (!rtCtx && fcRegion !== 'query' && qwRegion !== 'query' && sfRegion !== 'query' && eqRegion !== 'query' && rIdxRegion !== 'query' && (bk === 'settings' || bk === 'mapping' || bk === 'template' || bk === 'index-body' || bk === 'alias-body' || bk === 'aliases-body' || bk === 'reindex-body' || bk === 'sql-body' || bk === 'update-body' || bk === 'rollover-body' || bk === 'dbq-body' || bk === 'ubq-body' || bk === 'query-body' || bk === 'template-search-body' || bk === 'mget-body' || bk === 'stored-script-body' || bk === 'script-execute-body' || bk === 'scroll-body' || bk === 'clear-scroll-body' || bk === 'termvectors-body' || bk === 'mtermvectors-body' || bk === 'field-caps-body' || bk === 'terms-enum-body' || bk === 'rank-eval-body' || bk === 'eql-body' || bk === 'cluster-settings-body'
-          || bk === 'reroute-body' || bk === 'allocation-explain-body')) {
+          || bk === 'reroute-body' || bk === 'allocation-explain-body'
+          || bk === 'snapshot-repo-body' || bk === 'snapshot-create-body' || bk === 'snapshot-restore-body')) {
           const g = dslKeyGuard(doc, offset);
           /* 1439：_reindex 的 source.sort / source._source 数组元素是字段名位 */
           if (g.inStr && g.arrayElem && (rIdxRegion === 'sort' || rIdxRegion === 'source-fields')) {
@@ -941,6 +943,32 @@ onMounted(() => {
               filterText: dslFilterText(f.path), sortText: dslSortText(i, f.path),
             })) };
           }
+          /* 1439：快照仓库 type 值位给仓库类型（fs/url/s3/gcs/azure/hdfs）——
+             串内覆盖整串，裸值位光标处插入，均带引号。 */
+          if (bk === 'snapshot-repo-body' && g.valueKey === 'type') {
+            let trRange;
+            if (g.inStr) {
+              const tEnd = scanStringEnd(doc, Math.max(0, Math.min(offset, doc.length)));
+              const tsp = model.getPositionAt(g.strStart);
+              const tep = model.getPositionAt(tEnd);
+              trRange = {
+                startLineNumber: tsp.lineNumber, startColumn: tsp.column,
+                endLineNumber: tep.lineNumber, endColumn: tep.column,
+              };
+            } else {
+              const cp = model.getPositionAt(Math.max(0, Math.min(offset, doc.length)));
+              trRange = {
+                startLineNumber: cp.lineNumber, startColumn: cp.column,
+                endLineNumber: cp.lineNumber, endColumn: cp.column,
+              };
+            }
+            return { suggestions: SNAPSHOT_REPO_TYPES.map((t, i) => ({
+              label: t.label, kind: monaco.languages.CompletionItemKind.Value,
+              insertText: jsonStringLiteral(t.label), range: trRange, command: ACCEPT_FORMAT_COMMAND,
+              detail: t.detail,
+              filterText: dslFilterText(t.label), sortText: dslSortText(i, t.label),
+            })) };
+          }
           /* 1439：结构化体值域封闭的键在值位给枚举（version_type/布尔开关/slices:auto）——
              布尔值插裸 true/false，串枚举带引号；range 覆盖整串，接受即合法。 */
           const enumHint = g.valueKey ? STRUCTURED_VALUE_ENUMS[g.valueKey] : undefined;
@@ -1003,6 +1031,9 @@ onMounted(() => {
                 : [])
             : bk === 'allocation-explain-body'
               ? (aeRegion === 'root' ? allocationExplainBodyKeyItems() : [])
+            : bk === 'snapshot-repo-body' ? snapshotRepoBodyKeyItems()
+            : bk === 'snapshot-create-body' ? snapshotCreateBodyKeyItems()
+            : bk === 'snapshot-restore-body' ? snapshotRestoreBodyKeyItems()
             : bk === 'stored-script-body'
               ? (ssRegion === 'root' ? storedScriptBodyKeyItems()
                 : ssRegion === 'script' ? storedScriptKeyItems()

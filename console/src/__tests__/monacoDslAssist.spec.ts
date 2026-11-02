@@ -1125,6 +1125,45 @@ describe('1439 集群运维体（reroute / allocation explain）补全', () => {
   });
 });
 
+describe('1439 快照写体（仓库 / 创建 / 恢复）补全', () => {
+  it('仓库体：根键三项；type 值位给六类仓库（串内/裸值位均可）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'snapshot-repo-body' } });
+    const root = '{\n  "\n}';
+    expect(suggest(root, 5).map(i => i.label)).toEqual(['type', 'settings', 'verify']);
+    const strVals = suggest('{"type": "');
+    expect(strVals.map(i => i.label)).toEqual(['fs', 'url', 's3', 'gcs', 'azure', 'hdfs']);
+    const afterStr = acceptSnippet('{"type": "', strVals[0]);
+    expect(afterStr).toContain('"type": "fs"');
+    const bareDoc = '{"type": }';
+    const bareVals = suggest(bareDoc, bareDoc.indexOf('}'));
+    expect(bareVals.map(i => i.label)).toEqual(['fs', 'url', 's3', 'gcs', 'azure', 'hdfs']);
+    const afterBare = acceptSnippet(bareDoc, bareVals[0]);
+    expect(afterBare).toContain('"type": "fs"');
+    expect(() => JSON.parse(afterBare), afterBare).not.toThrow();
+  });
+
+  it('创建体：根键六项；布尔裸值位给 true/false', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'snapshot-create-body' } });
+    const root = '{\n  "\n}';
+    expect(suggest(root, 5).map(i => i.label)).toEqual([
+      'indices', 'ignore_unavailable', 'include_global_state', 'partial', 'metadata', 'feature_states',
+    ]);
+    const doc = '{"partial": }';
+    expect(suggest(doc, doc.indexOf('}')).map(i => i.label)).toEqual(['false', 'true']);
+  });
+
+  it('恢复体：根键十项（rename/include_aliases/index_settings 均在）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'snapshot-restore-body' } });
+    const root = '{\n  "\n}';
+    const labels = suggest(root, 5).map(i => i.label);
+    expect(labels).toEqual([
+      'indices', 'ignore_unavailable', 'include_global_state', 'partial',
+      'rename_pattern', 'rename_replacement', 'include_aliases',
+      'index_settings', 'ignore_index_settings', 'feature_states',
+    ]);
+  });
+});
+
 describe('1439 子句体键位（query-body-key / clause-field-key / retriever-body-key）', () => {
   it('bool 体给 must/filter/should/must_not，接受后 JSON 合法', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });

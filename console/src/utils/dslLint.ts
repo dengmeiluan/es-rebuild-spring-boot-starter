@@ -45,6 +45,7 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   termvectorsBodyRootKeys, mtermvectorsBodyRootKeys, reindexBodyRootKeys, scriptExecuteBodyRootKeys,
   BULK_ACTIONS, msearchHeaderKeyItems, msearchTemplateBodyKeyItems, fieldCapsBodyRootKeys, termsEnumBodyRootKeys, rankEvalBodyRootKeys,
   eqlBodyRootKeys, clusterSettingsBodyRootKeys, rerouteBodyRootKeys, allocationExplainBodyRootKeys,
+  snapshotRepoBodyRootKeys, snapshotCreateBodyRootKeys, snapshotRestoreBodyRootKeys,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -1394,6 +1395,9 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
     case 'cluster-settings-body': return lintBodyKeys(obj, clusterSettingsBodyRootKeys, '集群设置体');
     case 'reroute-body': return lintBodyKeys(obj, rerouteBodyRootKeys, '分片重路由体');
     case 'allocation-explain-body': return lintBodyKeys(obj, allocationExplainBodyRootKeys, '分配诊断体');
+    case 'snapshot-repo-body': return lintBodyKeys(obj, snapshotRepoBodyRootKeys, '快照仓库体');
+    case 'snapshot-create-body': return lintBodyKeys(obj, snapshotCreateBodyRootKeys, '创建快照体');
+    case 'snapshot-restore-body': return lintBodyKeys(obj, snapshotRestoreBodyRootKeys, '恢复快照体');
     default: return [];
   }
 }
