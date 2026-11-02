@@ -7,7 +7,7 @@
  * ⑩ BoolGroupNode 折叠摘要；⑪ 字段选择器伸展守卫。
  * 范式同 fieldSelect.spec.ts：createApp 手工 mount，无 @vue/test-utils；弹层 Teleport 到 body。
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createApp, h, ref, nextTick, type App } from 'vue';
@@ -312,6 +312,34 @@ describe('defaultLeaf 记忆与面板增强', () => {
   it('字段选择器伸展守卫：.cn 行内 .fs 吃满剩余空间（长路径不截断）', () => {
     const s = readFileSync(join(__dirname, '../components/builder/ClauseNode.vue'), 'utf-8');
     expect(s).toMatch(/\.cn \.fs \{ flex: 1 1 150px; min-width: 0; \}/);
+  });
+
+  /* ==== 右键菜单：候选行选用/复制（共享 CellContextMenu；键盘 ContextMenu 同入口） ==== */
+  it('候选行右键：标题带字段+类型，复制字段名走剪贴板；键盘 ContextMenu 开同一菜单并选用', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const { host, val } = mountSelect({ fields: ['message', 'status'], types: { message: 'text', status: 'keyword' } });
+    await focus(host);
+    items()[0].dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 12, clientY: 24 }));
+    await settle();
+    const menu = document.body.querySelector('.ccm') as HTMLElement;
+    expect(menu, '右键必须出共享 CellContextMenu').toBeTruthy();
+    expect(menu.querySelector('.ccm-hd')!.textContent).toContain('message');
+    expect(menu.querySelector('.ccm-hd')!.textContent).toContain('text');
+    (menu.querySelector('[data-key="field-copy"]') as HTMLElement).click();
+    await settle(3);
+    expect(writeText).toHaveBeenCalledWith('message');
+    delete (navigator as any).clipboard;
+
+    await key(host, 'ContextMenu');
+    const menu2 = document.body.querySelector('.ccm') as HTMLElement;
+    expect(menu2, 'ContextMenu 键必须对高亮候选项开菜单').toBeTruthy();
+    expect(menu2.querySelector('.ccm-hd')!.textContent).toContain('message');
+    (menu2.querySelector('[data-key="field-pick"]') as HTMLElement).click();
+    await settle();
+    expect(val.value, '菜单选用必须回填字段').toBe('message');
+    await settle();
+    expect(pop(), '选用后面板必须关闭').toBeNull();
   });
 });
 

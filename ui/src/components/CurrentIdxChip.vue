@@ -25,12 +25,14 @@
  （green→ok/yellow→warn/red→err/未知灰）；docs·size 小字与 TopBar idx-meta 同口径。 */
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Copy, ExternalLink, X } from 'lucide-vue-next';
+import { Copy, ExternalLink, ShieldCheck, X } from 'lucide-vue-next';
 import CellContextMenu, { type CcmItem } from './CellContextMenu.vue';
 import { useAppStore } from '../stores/app';
 import { copyText, fmtNum, fmtSize } from '../utils/format';
+import { useQueryAccess } from '../composables/useQueryAccess';
 
 const store = useAppStore();
+const { summary: accessSummary } = useQueryAccess();
 const router = useRouter();
 const rootEl = ref<HTMLElement>();
 const menu = ref<{ x: number; y: number } | null>(null);
@@ -72,6 +74,12 @@ async function copyLink() {
   store.notify(ok ? 'success' : 'error', ok ? '深链已复制' : '复制失败：浏览器拦截了剪贴板');
 }
 
+/* 支持工单用：索引 + 目标/env/角色/查询读写摘要，只读本地面，不触发服务端写 */
+async function copyAccess() {
+  const ok = await copyText(accessSummary.value + ' index=' + store.pickedIdx);
+  store.notify(ok ? 'success' : 'error', ok ? '权限摘要已复制' : '复制失败：浏览器拦截了剪贴板');
+}
+
 function openMenu(e: MouseEvent) {
   menu.value = { x: e.clientX, y: e.clientY };
 }
@@ -81,6 +89,7 @@ const menuItems = computed<CcmItem[]>(() => [
     store.notify(ok ? 'success' : 'error', ok ? '已复制索引名' : '复制失败：浏览器拦截了剪贴板');
   } },
   { key: 'copy-link', label: '复制深链', icon: Copy, run: () => { void copyLink(); } },
+  { key: 'copy-access', label: '复制查询权限摘要', icon: ShieldCheck, run: () => { void copyAccess(); } },
   { key: 'goto-indices', label: '去索引工作区', icon: ExternalLink, run: gotoIndices },
   { key: 'clear', label: '清除当前索引', icon: X, danger: true, sep: true, run: () => store.pick('') },
 ]);

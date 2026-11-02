@@ -14,4 +14,10 @@ describe('速查面板登记补全（455 批）', () => {
     expect(s).toMatch(/\{ keys: \['←', '→'\], desc: '分页器内翻页/);
     expect(s).toMatch(/\{ keys: \['Esc'\], desc: '退出结果区聚焦全屏/);
   });
+
+  /* INTERACTION.md：新增键盘交互必须同步登记速查面板——右键菜单键盘入口两行 */
+  it('右键菜单键盘入口登记：模式条/候选列表与 RT/QRT 列头', () => {
+    expect(s).toMatch(/模式条 \/ 字段与值候选开右键菜单（Shift\+F10 同效）/);
+    expect(s).toMatch(/列头打开列管理菜单（Shift\+F10 同效）/);
+  });
 });

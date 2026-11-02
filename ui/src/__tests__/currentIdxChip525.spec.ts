@@ -119,12 +119,24 @@ describe('CurrentIdxChip（五百二十五批）', () => {
     };
     let menu = await openMenu();
     expect(menu.textContent).toContain('当前索引 · orders-2024');
-    for (const label of ['复制索引名', '复制深链', '去索引工作区', '清除当前索引']) {
+    for (const label of ['复制索引名', '复制深链', '复制查询权限摘要', '去索引工作区', '清除当前索引']) {
       expect(menu.textContent, `菜单项 ${label}`).toContain(label);
     }
     (menu.querySelector('[data-key="copy-name"]') as HTMLElement).click();
     await settle();
     expect(mocks.copyText).toHaveBeenLastCalledWith('orders-2024');
+
+    menu = await openMenu();
+    (menu.querySelector('[data-key="copy-access"]') as HTMLElement).click();
+    await settle();
+    const calls = mocks.copyText.mock.calls;
+    const summary = calls[calls.length - 1][0] as string;
+    expect(summary, '权限摘要带目标/env/角色/读写').toContain('target=host');
+    expect(summary).toContain('env=');
+    expect(summary).toContain('role=');
+    expect(summary).toContain('read=');
+    expect(summary).toContain('write=');
+    expect(summary, '索引上下文并入摘要').toContain('index=orders-2024');
 
     menu = await openMenu();
     (menu.querySelector('[data-key="goto-indices"]') as HTMLElement).click();

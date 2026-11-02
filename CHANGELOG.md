@@ -22,8 +22,16 @@ All notable changes to SearchDeck are documented here. The format follows
 - Query workbench mode tabs now expose a right-click menu with mode deep-link copy, an optional
   default entry mode, cross-mode history, current env/role context, a copyable read/write permission
   summary, and keyboard ContextMenu/Shift+F10 access.
-- The current-index chip now has a right-click menu for copying the index name/deep link, opening
-  the index workspace, and clearing the local selection.
+- The current-index chip now has a right-click menu for copying the index name/deep link, copying
+  a query permission summary (target/env/role/read/write plus the index), opening the index
+  workspace, and clearing the local selection. The summary is shared with the mode menu through
+  one access composable so both surfaces cannot drift.
+- Field and value candidates in the query workbench (FieldPicker, builder FieldSelect,
+  MultiFieldPicker, and LuceneInput) now support right-click and keyboard ContextMenu/Shift+F10:
+  choose/expand the field, toggle the multi-field selection, fill the candidate, or copy its text,
+  with the shared menu shell and no server-side writes.
+- The keyboard shortcuts panel now documents the menu key / Shift+F10 entry for query mode tabs,
+  field/value candidates, and RT/QRT column headers.
 
 ### Changed
 

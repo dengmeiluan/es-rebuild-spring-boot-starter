@@ -152,6 +152,8 @@ function buildGroups(): { title: string; rows: HkRow[] }[] {
  分页器 ←/→ 翻页、聚焦面 Esc 层级退出（输入控件内先收内嵌查找） */
       { keys: ['←', '→'], desc: '分页器内翻页（焦点在分页器任一控件时，跳页输入框内为移动光标）', sep: '/' },
       { keys: ['Esc'], desc: '退出结果区聚焦全屏（Lucene/PIT/模板/DSL/DevTools；Monaco 查找栏内先收查找）', pageKeys: ['search', 'devtools', 'templates'] },
+      /* 右键菜单键盘入口（模式条/候选列表）——INTERACTION.md 要求新增键盘交互同步登记 */
+      { keys: ['菜单键'], desc: '查询工作台：模式条 / 字段与值候选开右键菜单（Shift+F10 同效）', pageKeys: ['search'] },
     ],
   },
   {
@@ -181,6 +183,8 @@ function buildGroups(): { title: string; rows: HkRow[] }[] {
       /* 已实现未登记补全（ Ctrl+Z 撤销 / 列头排序语义只在 title 里） */
       { keys: ['Ctrl', 'Z'], desc: 'RT：撤销上一条待提交编辑（栈式回退，输入框内不接管）' },
       { keys: ['Shift', '点击列头'], desc: 'RT / QRT：追加/翻转次键排序（多列组合排序）' },
+      /* 列头键盘菜单（colMenuKeyboard 能力）——此前未进速查面板 */
+      { keys: ['菜单键'], desc: 'RT / QRT：列头打开列管理菜单（Shift+F10 同效）' },
     ],
   },
   {

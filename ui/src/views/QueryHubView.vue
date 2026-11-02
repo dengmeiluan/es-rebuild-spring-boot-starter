@@ -155,11 +155,11 @@ import {
   TerminalSquare, Database, SearchCode, Beaker, Layers, ArrowLeftRight, Sparkles, Play, History, SearchCheck, ChevronDown, Copy, Pin, Link2, ShieldCheck,
 } from 'lucide-vue-next';
 import { useAppStore } from '../stores/app';
-import { useAuthStore } from '../stores/auth';
 import { RELEVANCE_LABS } from '../utils/relevanceLabs';
 import { useQueryHistoryStore } from '../stores/queryHistory';
 import { describeSqlOpts } from '../utils/sqlOpts';
 import { useUrlState, readHashQuery, usePref } from '../composables/urlState';
+import { useQueryAccess } from '../composables/useQueryAccess';
 import { askConfirm } from '../composables/confirm';
 import QueryHistoryPanel from '../components/QueryHistoryPanel.vue';
 import FieldPicker from '../components/FieldPicker.vue';
@@ -175,7 +175,6 @@ import { useIndexFields } from '../composables/useIndexFields';
 import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 
 const store = useAppStore();
-const auth = useAuthStore();
 const router = useRouter();
 const ICONS: Record<string, any> = { TerminalSquare, Database, SearchCode, Beaker, Layers, ArrowLeftRight };
 /* 相关性实验室入口：藏在侧栏的强能力，这里给一条主入口（带当前索引上下文可直跳） */
@@ -273,9 +272,7 @@ function switchMode(k: string) {
 
 /* ═══ 模式切换条右键：深链 / 默认模式 / 历史（全部只读，不改查询或集群状态） ═══ */
 const modeMenu = ref<{ x: number; y: number; m: any } | null>(null);
-const currentEnv = computed(() => store.conns.find(c => c.id === store.target)?.env || '');
-const currentRole = computed(() => auth.me?.role
-  || (auth.authDisabled ? 'auth-off' : auth.probed ? 'anonymous' : 'probing'));
+const { env: currentEnv, role: currentRole, summary: accessSummary } = useQueryAccess();
 const modeMenuTitle = computed(() => {
   const mm = modeMenu.value;
   if (!mm) return '';
@@ -331,14 +328,7 @@ function toggleDefaultMode(m: any) {
 }
 /* 支持工单用：把当前目标/环境/角色/查询读写能力复制成一行，不触发任何服务端写。 */
 async function copyAccessSummary(m: any) {
-  const summary = [
-    `target=${store.target || 'host'}`,
-    `env=${currentEnv.value || '—'}`,
-    `role=${currentRole.value}`,
-    `read=${auth.canReadPage('search', store.target) ? 'yes' : 'no'}`,
-    `write=${auth.canWriteOn(store.target) ? 'yes' : 'no'}`,
-    `mode=${m.k}`,
-  ].join(' ');
+  const summary = accessSummary.value + ' mode=' + m.k;
   const ok = await copyText(summary);
   store.notify(ok ? 'success' : 'error', ok ? '权限摘要已复制' : '复制失败：浏览器拦截了剪贴板');
 }

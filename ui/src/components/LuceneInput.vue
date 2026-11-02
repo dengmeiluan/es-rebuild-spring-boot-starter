@@ -13,7 +13,7 @@
       :aria-controls="listId"
       :aria-activedescendant="open && items[cursor] ? itemId(cursor) : undefined"
       @input="onInput"
-      @keydown="onKey"
+      @keydown="onInputKey"
       @keyup="onKeyUp"
       @click="onCursorMove"
       @focus="onFocusSelectPlaceholder"
@@ -51,6 +51,7 @@
             class="li-item" :class="{ act: i === cursor }"
             role="option" :id="itemId(i)" :aria-selected="i === cursor" tabindex="-1"
             @mouseenter="cursor = i" @click="choose(it)" @keydown.enter.prevent="choose(it)"
+            @contextmenu.prevent="openRowMenu($event, it, i)"
           >
             <!-- 类型徽标挂全站色卡 .mft-type（theme.css），删局部四类型撞色规则 -->
             <span v-if="it.type" class="li-type mono mft-type" :data-t="it.type">{{ it.type }}</span>
@@ -65,6 +66,9 @@
       </div>
       </transition>
     </Teleport>
+
+    <CellContextMenu v-if="rowMenu" :x="rowMenu.x" :y="rowMenu.y" :title="rowMenuTitle"
+      :items="rowMenuItems" @close="rowMenu = null" />
   </div>
 </template>
 
@@ -81,11 +85,13 @@
  items 由快照生成，两者必须同源；且 v-model 重渲染 patch value（新值≠旧值）会把 selectionStart
  重置到文本尾，choose 时刻再读光标已不可信。回填后 nextTick 显式 setSelectionRange 置段尾。 */
 import { ref, computed, watch, nextTick } from 'vue';
-import { AlertTriangle } from 'lucide-vue-next';
+import { AlertTriangle, Copy, CornerDownLeft } from 'lucide-vue-next';
 import { useAppStore } from '../stores/app';
 import { useIndexFields } from '../composables/useIndexFields';
 import { useTermsSuggest } from '../composables/useTermsSuggest';
 import { usePopupList } from '../composables/usePopupList';
+import CellContextMenu, { type CcmItem } from './CellContextMenu.vue';
+import { copyText } from '../utils/format';
 import { luceneSegment, type LuceneSeg } from '../utils/luceneContext';
 import { isEscapedQuote } from '../utils/dslCompletionContext';
 /* field 段候选收口 fieldSearch 共享内核（rank 排序/splitMark 切分与 FieldPicker/FieldSelect
@@ -383,6 +389,44 @@ const {
   idPrefix: 'li',
   activeSelector: '.li-item.act',
 });
+
+/* 候选行右键/键盘 ContextMenu —— 全站共享壳；填入/复制都只读本地，不触发服务端写 */
+const rowMenu = ref<{ x: number; y: number; it: LiItem } | null>(null);
+const rowMenuTitle = computed(() => {
+  const m = rowMenu.value;
+  return m ? '候选 · ' + m.it.text + (m.it.type ? ' · ' + m.it.type : '') : '';
+});
+const rowMenuItems = computed<CcmItem[]>(() => {
+  const m = rowMenu.value;
+  if (!m) return [];
+  return [
+    { key: 'li-pick', label: '填入此候选', icon: CornerDownLeft, run: () => choose(m.it) },
+    { key: 'li-copy', label: '复制候选文本', icon: Copy, run: () => copyCandidate(m.it.text) },
+  ];
+});
+function copyCandidate(text: string) {
+  void copyText(text).then(ok => store.notify(ok ? 'success' : 'error',
+    ok ? '已复制：' + text : '复制失败：浏览器拦截了剪贴板'));
+}
+function showRowMenu(x: number, y: number, it: LiItem, i: number) {
+  cursor.value = i;
+  rowMenu.value = { x, y, it };
+}
+function openRowMenu(e: MouseEvent, it: LiItem, i: number) {
+  showRowMenu(e.clientX, e.clientY, it, i);
+}
+/* 键盘入口：焦点在输入框，ContextMenu/Shift+F10 对当前高亮候选开菜单 */
+function onInputKey(e: KeyboardEvent) {
+  const it = items.value[cursor.value];
+  if (!e.isComposing && (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey))
+    && open.value && it) {
+    e.preventDefault();
+    const r = inputEl.value?.getBoundingClientRect();
+    showRowMenu(r ? r.left + 12 : 0, r ? r.bottom : 0, it, cursor.value);
+    return;
+  }
+  onKey(e);
+}
 
 /* 出层状态单一收口：input 事件与异步数据（fields/suggestions）到位都走这里。
  有候选或有 hint 要展示 → 开层；否则关层（phrase/未知字段值段零降级）。 */

@@ -434,4 +434,29 @@ describe('LuceneInput 评审修复回归（I1/I2/M1/M4）', () => {
     expect(state.modelValue).toBe('status');
     expect(entered, '有候选 Enter 不透发').toEqual([]);
   });
+
+  /* ==== 右键菜单：候选行填入/复制（共享 CellContextMenu；键盘 ContextMenu 同入口） ==== */
+  it('候选行右键：标题带候选/类型，复制候选文本走剪贴板；键盘 ContextMenu 开同一菜单并填入', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const { host, state } = await mountInput();
+    await type(host, 'sta');
+    items()[0].dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 12, clientY: 24 }));
+    await settle();
+    const menu = document.body.querySelector('.ccm') as HTMLElement;
+    expect(menu, '右键必须出共享 CellContextMenu').toBeTruthy();
+    expect(menu.querySelector('.ccm-hd')!.textContent).toContain('status');
+    expect(menu.querySelector('.ccm-hd')!.textContent).toContain('keyword');
+    (menu.querySelector('[data-key="li-copy"]') as HTMLElement).click();
+    await settle(3);
+    expect(writeText).toHaveBeenCalledWith('status');
+    delete (navigator as any).clipboard;
+
+    await key(host, 'ContextMenu');
+    const menu2 = document.body.querySelector('.ccm') as HTMLElement;
+    expect(menu2, 'ContextMenu 键必须对高亮候选开菜单').toBeTruthy();
+    (menu2.querySelector('[data-key="li-pick"]') as HTMLElement).click();
+    await settle();
+    expect(state.modelValue, '菜单填入必须回填候选').toBe('status');
+  });
 });

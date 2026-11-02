@@ -3,7 +3,7 @@
    此前字段列表只能逗号手输（拼错即零匹配）。选择器=teleport 弹层（搜索 rank 沿用
    fieldSearch 单源 + 复选框列表 + 已选计数），勾选即写回字段列表（逗号串 ↔ string[]
    既有 onFields 通道零改动，AST 零改动）。 */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseTree, serializeTree } from '../utils/queryAst';
@@ -106,6 +106,50 @@ describe('1042 选择器动线（挂载）', () => {
     content.click();
     await new Promise(r => setTimeout(r, 30));
     expect(last && last.fields, 'fields 写回全量名单').toEqual(['title', 'content']);
+    app.unmount();
+    host.remove();
+    document.body.innerHTML = '';
+  });
+
+  it('候选行右键 / 菜单键：勾选切换与复制字段名（共享 CellContextMenu）', async () => {
+    const { createApp, h } = await import('vue');
+    const MultiFieldPicker = (await import('../components/builder/MultiFieldPicker.vue')).default;
+    document.body.innerHTML = '';
+    let last: string[] | null = null;
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const app = createApp({ render: () => h(MultiFieldPicker as any, {
+      modelValue: ['title'],
+      fields: ['title', 'content', 'abstract'],
+      types: { title: 'text', content: 'text', abstract: 'text' },
+      'onUpdate:modelValue': (v: string[]) => { last = v; },
+    }) });
+    app.mount(host);
+    await new Promise(r => setTimeout(r, 30));
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+
+    const row = document.body.querySelectorAll<HTMLElement>('.mfp-row')[1];
+    row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 10, clientY: 20 }));
+    await new Promise(r => setTimeout(r, 30));
+    const menu = document.body.querySelector<HTMLElement>('.ccm');
+    expect(menu, '右键必须出共享 CellContextMenu').toBeTruthy();
+    expect(menu!.textContent).toContain('字段 · content');
+    expect(menu!.textContent).toContain('勾选此字段');
+    (menu!.querySelector('[data-key="mfp-toggle"]') as HTMLElement).click();
+    await new Promise(r => setTimeout(r, 30));
+    expect(last, '菜单勾选即写回名单').toEqual(['title', 'content']);
+
+    const box = document.body.querySelector<HTMLInputElement>('input[data-path="content"]')!;
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'ContextMenu', bubbles: true }));
+    await new Promise(r => setTimeout(r, 30));
+    const menu2 = document.body.querySelector<HTMLElement>('.ccm');
+    expect(menu2, '复选框菜单键必须开同一菜单').toBeTruthy();
+    expect(menu2!.textContent).toContain('取消勾选此字段');
+    (menu2!.querySelector('[data-key="mfp-copy"]') as HTMLElement).click();
+    await new Promise(r => setTimeout(r, 30));
+    expect(writeText).toHaveBeenCalledWith('content');
+    delete (navigator as any).clipboard;
     app.unmount();
     host.remove();
     document.body.innerHTML = '';

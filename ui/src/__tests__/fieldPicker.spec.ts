@@ -430,4 +430,44 @@ describe('FieldPicker 行为保护网', () => {
     expect(ft, 'cap 50 截断：显示 50/60 匹配').toContain('50/60 匹配');
     expect(ft).toContain('仅显示前 50 个');
   });
+
+  /* ==== 右键菜单：候选行选用/复制（共享 CellContextMenu；键盘 ContextMenu 同入口） ==== */
+
+  it('候选行右键：标题带字段+类型，选用回填并关层；键盘 ContextMenu 对高亮项开同一菜单', async () => {
+    const { host, state, picked } = await mountPicker();
+    await focus(host);
+    items()[1].dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 30, clientY: 40 }));
+    await settle();
+    const menu = document.body.querySelector('.ccm') as HTMLElement;
+    expect(menu, '右键必须出共享 CellContextMenu').toBeTruthy();
+    expect(menu.querySelector('.ccm-hd')!.textContent).toContain('message.keyword');
+    const labels = Array.from(menu.querySelectorAll('.ccm-it')).map(el => el.textContent?.trim());
+    expect(labels).toEqual(['选用此字段', '复制字段名']);
+    (menu.querySelector('[data-key="field-pick"]') as HTMLElement).click();
+    await settle();
+    expect(state.modelValue).toBe('message.keyword');
+    expect(picked).toEqual(['message.keyword']);
+    await flushLeave();
+    expect(pop(), '选用后面板必须关闭').toBeNull();
+
+    /* 键盘入口：弹层焦点在输入框，ContextMenu 对当前高亮候选开菜单 */
+    await focus(host);
+    await key(host, 'ContextMenu');
+    const menu2 = document.body.querySelector('.ccm') as HTMLElement;
+    expect(menu2, 'ContextMenu 键必须对高亮候选项开菜单').toBeTruthy();
+    expect(menu2.querySelector('.ccm-hd')!.textContent).toContain('message.keyword');
+  });
+
+  it('候选行右键复制字段名：剪贴板写入字段路径并给成功提示', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const { host } = await mountPicker();
+    await focus(host);
+    items()[2].dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 10, clientY: 20 }));
+    await settle();
+    (document.body.querySelector('.ccm [data-key="field-copy"]') as HTMLElement).click();
+    await settle(3);
+    expect(writeText).toHaveBeenCalledWith('status');
+    delete (navigator as any).clipboard;
+  });
 });

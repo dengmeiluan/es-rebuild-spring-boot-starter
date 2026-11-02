@@ -229,6 +229,23 @@ describe('1445 查询模式右键：深链/默认模式/历史（只读动作）
     expect(errors).toEqual([]);
   });
 
+  it('复制查询权限摘要：带目标/env/角色/读写与 mode（工单可复现口径）', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const { host } = await mountAt(QueryHubView, '/search');
+    const btn = host.querySelectorAll<HTMLButtonElement>('.qh-mode')[1];
+    btn.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 24, clientY: 24 }));
+    await settle();
+    (document.body.querySelector('[data-key="mode-access"]') as HTMLElement).click();
+    await settle();
+    const summary = writeText.mock.calls[0][0] as string;
+    for (const seg of ['target=', 'env=', 'role=', 'read=', 'write=', 'mode=sql']) {
+      expect(summary, `摘要段 ${seg}`).toContain(seg);
+    }
+    delete (navigator as any).clipboard;
+    expect(errors).toEqual([]);
+  });
+
   it('设为默认进入模式持久化，且日常切换不覆盖', async () => {
     const { host } = await mountAt(QueryHubView, '/search');
     const modes = host.querySelectorAll<HTMLButtonElement>('.qh-mode');

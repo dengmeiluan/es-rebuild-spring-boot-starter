@@ -16,7 +16,7 @@
         :aria-activedescendant="open && items[cursor] ? itemId(cursor) : undefined"
         @input="onInput"
         @focus="openPanel"
-        @keydown="onKey"
+        @keydown="onInputKey"
       />
       <button aria-label="清空" v-if="modelValue" class="fxp-x" title="清空" tabindex="-1" @mousedown.prevent="clear">
         <X :size="11" />
@@ -46,6 +46,7 @@
               class="fxp-item" :class="{ act: r.i === cursor }"
               role="option" :id="itemId(r.i!)" :aria-selected="r.i === cursor" tabindex="-1"
               @mouseenter="cursor = r.i!" @click="choose(r.f!.path)" @keydown.enter.prevent="choose(r.f!.path)"
+              @contextmenu.prevent="openRowMenu($event, r.f!, r.i!)"
             >
               <!-- 类型徽标挂全站色卡 .mft-type（theme.css），删局部四类型撞色规则 -->
               <span class="fxp-type mono mft-type" :data-t="r.f!.type">{{ r.f!.type }}</span>
@@ -68,6 +69,9 @@
       </div>
       </transition>
     </Teleport>
+
+    <CellContextMenu v-if="rowMenu" :x="rowMenu.x" :y="rowMenu.y" :title="rowMenuTitle"
+      :items="rowMenuItems" @close="rowMenu = null" />
   </div>
 </template>
 
@@ -76,11 +80,13 @@
  数据源 useIndexFields（mappingDetail 拍平/缓存统一收口，key=集群目标|索引）；
  multi 模式支持逗号分隔多字段（只补全最后一段）。 */
 import { ref, computed, watch } from 'vue';
-import { Braces, X } from 'lucide-vue-next';
+import { Braces, Copy, CornerDownLeft, X } from 'lucide-vue-next';
 import { useAppStore } from '../stores/app';
 import { useIndexFields, type FieldItem } from '../composables/useIndexFields';
 import { usePopupList } from '../composables/usePopupList';
 import MarkText from './MarkText.vue';
+import CellContextMenu, { type CcmItem } from './CellContextMenu.vue';
+import { copyText } from '../utils/format';
 import { searchFields, groupByLabel, loadRecentFields, rememberRecentField, type FieldHit } from '../utils/fieldSearch';
 
 const props = withDefaults(defineProps<{
@@ -189,6 +195,45 @@ function onInput(e: Event) {
   emit('update:modelValue', (e.target as HTMLInputElement).value);
   cursor.value = 0;
   if (!open.value) openPanel();
+}
+
+/* 候选行右键/键盘 ContextMenu —— 与全站 CellContextMenu 同一壳；动作只读本地
+ （选用回填、复制字段名），不触发服务端写，不需要权限门。 */
+const rowMenu = ref<{ x: number; y: number; f: FxpItem; i: number } | null>(null);
+const rowMenuTitle = computed(() => {
+  const m = rowMenu.value;
+  return m ? '字段 · ' + m.f.path + (m.f.type ? ' · ' + m.f.type : '') : '';
+});
+const rowMenuItems = computed<CcmItem[]>(() => {
+  const m = rowMenu.value;
+  if (!m) return [];
+  return [
+    { key: 'field-pick', label: '选用此字段', icon: CornerDownLeft, run: () => choose(m.f.path) },
+    { key: 'field-copy', label: '复制字段名', icon: Copy, run: () => copyFieldName(m.f.path) },
+  ];
+});
+function copyFieldName(path: string) {
+  void copyText(path).then(ok => store.notify(ok ? 'success' : 'error',
+    ok ? '已复制字段名：' + path : '复制失败：浏览器拦截了剪贴板'));
+}
+function showRowMenu(x: number, y: number, f: FxpItem, i: number) {
+  cursor.value = i;
+  rowMenu.value = { x, y, f, i };
+}
+function openRowMenu(e: MouseEvent, f: FxpItem, i: number) {
+  showRowMenu(e.clientX, e.clientY, f, i);
+}
+/* 键盘入口：候选弹层焦点在输入框，ContextMenu/Shift+F10 对当前高亮项开菜单 */
+function onInputKey(e: KeyboardEvent) {
+  const f = items.value[cursor.value];
+  if (!e.isComposing && (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey))
+    && open.value && f) {
+    e.preventDefault();
+    const r = inputEl.value?.getBoundingClientRect();
+    showRowMenu(r ? r.left + 12 : 0, r ? r.bottom : 0, f, cursor.value);
+    return;
+  }
+  onKey(e);
 }
 
 function choose(path: string) {

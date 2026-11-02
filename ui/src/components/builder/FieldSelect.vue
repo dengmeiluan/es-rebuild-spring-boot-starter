@@ -1,6 +1,7 @@
 <template>
   <div class="fs" :class="{ 'fs-has-nos': runtimeNoScript }" ref="rootEl">
     <input
+      ref="inpEl"
       class="inp fs-inp mono" :value="modelValue" :placeholder="placeholder || '选字段…'"
       spellcheck="false" autocomplete="off" role="combobox" aria-autocomplete="list"
       :aria-expanded="open ? 'true' : 'false'" :aria-controls="listId"
@@ -37,6 +38,7 @@
               role="option" :id="itemId(r.hit!.i)" :aria-selected="r.hit!.i === cursor"
               :aria-setsize="flat.length" :aria-posinset="r.hit!.i + 1" tabindex="-1"
               @mouseenter="cursor = r.hit!.i" @click="pick(r.hit!)" @keydown.enter.prevent="pick(r.hit!)"
+              @contextmenu.prevent="openRowMenu($event, r.hit!)"
             >
               <!-- 类型徽标挂全站色卡 .mft-type（theme.css），删局部四类型撞色规则 -->
               <span v-if="r.hit!.type" class="fs-ty mono mft-type" :data-t="r.hit!.type">{{ r.hit!.type }}</span>
@@ -57,6 +59,8 @@
         </div>
       </div>
     </Teleport>
+    <CellContextMenu v-if="rowMenu" :x="rowMenu.x" :y="rowMenu.y" :title="rowMenuTitle"
+      :items="rowMenuItems" @close="rowMenu = null" />
   </div>
 </template>
 
@@ -67,9 +71,13 @@
  最近使用升级 per-index（key 拼当前索引，读不到回退全局），且选中字段回写记忆。 */
 import { computed, nextTick, ref, watch, onBeforeUnmount, onDeactivated, inject } from 'vue';
 import { getActivePinia } from 'pinia';
+import { Copy, CornerDownLeft } from 'lucide-vue-next';
 import { RUNTIME_FIELD_CTX } from './runtimeFieldContext';
 import { usePopupList } from '../../composables/usePopupList';
 import { useTermsSuggest } from '../../composables/useTermsSuggest';
+import { useAppStore } from '../../stores/app';
+import CellContextMenu, { type CcmItem } from '../CellContextMenu.vue';
+import { copyText } from '../../utils/format';
 import {
   searchFields, groupByLabel, type FieldHit,
   loadRecentFields, rememberRecentField, curFieldSearchIndex,
@@ -90,6 +98,12 @@ const props = defineProps<{
   rolePriority?: FieldRole[];
 }>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: string): void; (e: 'picked', v: string): void }>();
+
+/* 宿主 store 可选：builder 裸挂载测试无 pinia 时复制动作仍执行，只是没有 toast 出口。
+   显式传 activePinia（而非依赖 inject）——裸挂载不装 pinia 时也不会打 injection 警告 */
+const activePinia = getActivePinia();
+const store = activePinia ? useAppStore(activePinia) : null;
+const inpEl = ref<HTMLInputElement>();
 
 /* 1004：候选虚拟列表——扫描上限放大到全量（超大索引几千字段可滚动浏览全部匹配），
    DOM 只渲染可视区窗口（统一行高 ROW_H + 上下垫片）；rank/分组/键盘导航语义不变。
@@ -245,6 +259,14 @@ function scrollCur() {
   nextTick(() => listEl.value?.querySelector('.fs-item.act')?.scrollIntoView({ block: 'nearest' }));
 }
 function onFsKey(e: KeyboardEvent) {
+  const f = res.value.flat[cursor.value];
+  if (!e.isComposing && open.value && f
+    && (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey))) {
+    e.preventDefault();
+    const r = inpEl.value?.getBoundingClientRect();
+    showRowMenu(r ? r.left + 12 : 0, r ? r.bottom : 0, f);
+    return;
+  }
   if (!e.isComposing && open.value && (e.key === 'Home' || e.key === 'End')) {
     e.preventDefault();
     cursor.value = e.key === 'Home' ? 0 : Math.max(0, res.value.flat.length - 1);
@@ -252,6 +274,34 @@ function onFsKey(e: KeyboardEvent) {
     return;
   }
   onKey(e);
+}
+
+/* 候选行右键/键盘 ContextMenu —— 与全站 CellContextMenu 同一壳；选用/复制均为本地只读，
+  不触发服务端写，无需权限门（容器字段的「选用」实际是展开子字段，按 pick 的现有语义）。 */
+const rowMenu = ref<{ x: number; y: number; h: FieldHit } | null>(null);
+const rowMenuTitle = computed(() => {
+  const m = rowMenu.value;
+  return m ? '字段 · ' + m.h.path + (m.h.type ? ' · ' + m.h.type : '') : '';
+});
+const rowMenuItems = computed<CcmItem[]>(() => {
+  const m = rowMenu.value;
+  if (!m) return [];
+  const container = m.h.type === 'object' || m.h.type === 'nested';
+  return [
+    { key: 'field-pick', label: container ? '展开子字段' : '选用此字段', icon: CornerDownLeft, run: () => pick(m.h) },
+    { key: 'field-copy', label: '复制字段名', icon: Copy, run: () => copyFieldName(m.h.path) },
+  ];
+});
+function copyFieldName(path: string) {
+  void copyText(path).then(ok => store?.notify(ok ? 'success' : 'error',
+    ok ? '已复制字段名：' + path : '复制失败：浏览器拦截了剪贴板'));
+}
+function showRowMenu(x: number, y: number, h: FieldHit) {
+  cursor.value = h.i;
+  rowMenu.value = { x, y, h };
+}
+function openRowMenu(e: MouseEvent, h: FieldHit) {
+  showRowMenu(e.clientX, e.clientY, h);
 }
 
 function onInput(e: Event) {
