@@ -23,6 +23,7 @@ import {
   scrollBodyKeyItems, clearScrollBodyKeyItems,
   termvectorsKeyItems, mtermvectorsBodyKeyItems, mtermvectorsDocKeyItems,
   eqlBodyKeyItems, clusterSettingsBodyKeyItems,
+  rerouteBodyKeyItems, rerouteCommandKeyItems, rerouteCommandParamKeyItems, allocationExplainBodyKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -121,6 +122,12 @@ function allProblems(): string[] {
   out.push(...snippetProblems('MD2', mtermvectorsDocKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('EQ', eqlBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('CS', clusterSettingsBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('RR', rerouteBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('RC', rerouteCommandKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  for (const cmd of ['move', 'cancel', 'allocate_replica', 'allocate_stale_primary', 'allocate_empty_primary']) {
+    out.push(...snippetProblems('RP:' + cmd, rerouteCommandParamKeyItems(cmd).map(i => ({ text: i.insertText, key: i.label }))));
+  }
+  out.push(...snippetProblems('AE', allocationExplainBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;
 }
 

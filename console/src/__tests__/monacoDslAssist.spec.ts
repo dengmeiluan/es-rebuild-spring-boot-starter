@@ -1095,6 +1095,36 @@ describe('1439 集群设置体（_cluster/settings）补全', () => {
   });
 });
 
+describe('1439 集群运维体（reroute / allocation explain）补全', () => {
+  it('reroute：根键 commands → 命令键 → 命令参数（move 给 from/to）', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'reroute-body' } });
+    const root = '{\n  "\n}';
+    const r = suggest(root, 5);
+    expect(r.map(i => i.label)).toEqual(['commands']);
+    const after = acceptSnippet(root, r[0]);
+    expect(() => JSON.parse(after), after).not.toThrow();
+
+    const cmdDoc = '{\n  "commands": [\n    {\n      "\n    }\n  ]\n}';
+    const cmds = suggest(cmdDoc, cmdDoc.lastIndexOf('"') + 1);
+    expect(cmds.map(i => i.label)).toEqual(['move', 'cancel', 'allocate_replica', 'allocate_stale_primary', 'allocate_empty_primary']);
+
+    const paramDoc = '{\n  "commands": [\n    {\n      "move": {\n        "\n      }\n    }\n  ]\n}';
+    const params = suggest(paramDoc, paramDoc.lastIndexOf('"') + 1);
+    expect(params.map(i => i.label)).toContain('from_node');
+    expect(params.map(i => i.label)).toContain('to_node');
+    expect(params.map(i => i.label)).not.toContain('accept_data_loss');
+  });
+
+  it('allocation explain：根键六项；值位压住', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => [], bodyKind: () => 'allocation-explain-body' } });
+    const root = '{\n  "\n}';
+    const s = suggest(root, 5).map(i => i.label);
+    expect(s).toEqual(['index', 'shard', 'primary', 'current_node', 'include_disk_info', 'include_yes_decisions']);
+    const val = '{\n  "index": "\n}';
+    expect(suggest(val, val.indexOf('\n}')), 'index 值位不出键').toEqual([]);
+  });
+});
+
 describe('1439 子句体键位（query-body-key / clause-field-key / retriever-body-key）', () => {
   it('bool 体给 must/filter/should/must_not，接受后 JSON 合法', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });

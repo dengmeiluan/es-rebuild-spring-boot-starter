@@ -1109,7 +1109,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'msearch-template-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'eql-body' | 'cluster-settings-body' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'msearch-template-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'eql-body' | 'cluster-settings-body' | 'reroute-body' | 'allocation-explain-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1220,6 +1220,10 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：_cluster/settings 的体是 {persistent,transient} 两层集群设置，
      不是 search 体也不是索引设置体——默认档此前给 query/sort/aggs，写下去 ES 直接拒。 */
   if (/(^|\/)_cluster\/settings(\/|$)/.test(p)) return 'cluster-settings-body';
+  /* 1439：_cluster/reroute 的体是 {commands:[{move|allocate_*|cancel:{…}}]}；
+     allocation/explain 的体是 {index,shard,primary,…}——默认 search 档给 query/aggs 都是非法键。 */
+  if (/(^|\/)_cluster\/reroute(\/|$)/.test(p)) return 'reroute-body';
+  if (/(^|\/)_cluster\/allocation\/explain(\/|$)/.test(p)) return 'allocation-explain-body';
   if (p.includes('_settings')) return 'settings';
   if (p.includes('_mapping')) return 'mapping';
   /* 1439：PUT /<索引名> = 创建索引——体是 {settings, mappings, aliases}，不是 search body */
@@ -1510,6 +1514,86 @@ export function clusterSettingsRegionAt(doc: string, offset: number): 'root' | '
   if (stack.length <= 1) return 'root';
   if ((stack[0] === 'persistent' || stack[0] === 'transient') && stack.length === 2) return 'settings';
   return 'deep';
+}
+
+/** _cluster/reroute 的合法命令（ES 官方五种） */
+export const REROUTE_COMMANDS = ['move', 'cancel', 'allocate_replica', 'allocate_stale_primary', 'allocate_empty_primary'] as const;
+
+/** 分片重路由体（POST /_cluster/reroute）的根键 */
+export function rerouteBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'commands', detail: '一条或多条重路由命令', snippet: true,
+      insertText: '"commands": [\n  {\n    "move": { "index": "${1:my-index}", "shard": ${2:0}, "from_node": "${3:node-a}", "to_node": "${4:node-b}" }\n  }\n]' },
+  ];
+}
+
+/** commands[] 元素的命令键 */
+export function rerouteCommandKeyItems(): AssistItem[] {
+  return [
+    { label: 'move', detail: '把分片从一个节点迁到另一个节点', snippet: true,
+      insertText: '"move": { "index": "${1:my-index}", "shard": ${2:0}, "from_node": "${3:node-a}", "to_node": "${4:node-b}" }' },
+    { label: 'cancel', detail: '取消分片的正在进行的分配/恢复', snippet: true,
+      insertText: '"cancel": { "index": "${1:my-index}", "shard": ${2:0}, "node": "${3:node-a}" }' },
+    { label: 'allocate_replica', detail: '给未分配副本指定节点', snippet: true,
+      insertText: '"allocate_replica": { "index": "${1:my-index}", "shard": ${2:0}, "node": "${3:node-a}" }' },
+    { label: 'allocate_stale_primary', detail: '用陈旧副本强制分配主分片（可能丢数据）', snippet: true,
+      insertText: '"allocate_stale_primary": { "index": "${1:my-index}", "shard": ${2:0}, "node": "${3:node-a}", "accept_data_loss": true }' },
+    { label: 'allocate_empty_primary', detail: '用空分片强制分配主分片（数据丢失）', snippet: true,
+      insertText: '"allocate_empty_primary": { "index": "${1:my-index}", "shard": ${2:0}, "node": "${3:node-a}", "accept_data_loss": true }' },
+  ];
+}
+
+/** 命令参数键——五种命令的官方参数集不同（move 有 from/to，cancel 有 allow_primary…） */
+export function rerouteCommandParamKeyItems(cmd: string): AssistItem[] {
+  const base: AssistItem[] = [
+    { label: 'index', detail: '目标索引', snippet: true, insertText: '"index": "${1:my-index}"' },
+    { label: 'shard', detail: '分片序号', snippet: true, insertText: '"shard": ${1:0}' },
+  ];
+  if (cmd === 'move') {
+    return [...base,
+      { label: 'from_node', detail: '迁出节点', snippet: true, insertText: '"from_node": "${1:node-a}"' },
+      { label: 'to_node', detail: '迁入节点', snippet: true, insertText: '"to_node": "${1:node-b}"' }];
+  }
+  if (cmd === 'cancel') {
+    return [...base,
+      { label: 'node', detail: '取消该节点上的分配/恢复', snippet: true, insertText: '"node": "${1:node-a}"' },
+      { label: 'allow_primary', detail: '允许取消主分片恢复（默认 false）', snippet: true, insertText: '"allow_primary": ${1|true,false|}' }];
+  }
+  const alloc: AssistItem[] = [...base, { label: 'node', detail: '目标节点', snippet: true, insertText: '"node": "${1:node-a}"' }];
+  if (cmd === 'allocate_stale_primary' || cmd === 'allocate_empty_primary') {
+    alloc.push({ label: 'accept_data_loss', detail: '确认接受数据丢失（必填 true）', snippet: true,
+      insertText: '"accept_data_loss": ${1|true,false|}' });
+  }
+  return alloc;
+}
+
+/** 重路由体区域：根层给 commands；命令对象内给命令键；命令参数对象内给参数键 */
+export function rerouteRegionAt(doc: string, offset: number): 'root' | 'command' | 'params' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] === 'commands' && stack.length === 3) return 'command';
+  if (stack[0] === 'commands' && stack.length === 4
+      && stack[2] && (REROUTE_COMMANDS as readonly string[]).includes(stack[2])) return 'params';
+  return 'deep';
+}
+
+/** params 区域当前命令名（非 params 区域返回空串） */
+export function rerouteCommandNameAt(doc: string, offset: number): string {
+  const stack = frameKeysAt(doc, offset);
+  return stack[0] === 'commands' && stack.length >= 4 ? (stack[2] ?? '') : '';
+}
+
+/** 分片分配诊断体（POST /_cluster/allocation/explain）的根键 */
+export function allocationExplainBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'index', detail: '目标索引（省略则诊断第一个未分配分片）', snippet: true, insertText: '"index": "${1:my-index}"' },
+    { label: 'shard', detail: '分片序号', snippet: true, insertText: '"shard": ${1:0}' },
+    { label: 'primary', detail: '是否诊断主分片', snippet: true, insertText: '"primary": ${1|true,false|}' },
+    { label: 'current_node', detail: '假设分片当前所在节点（模拟分配）', snippet: true, insertText: '"current_node": "${1:node-a}"' },
+    { label: 'include_disk_info', detail: '返回磁盘用量信息', snippet: true, insertText: '"include_disk_info": ${1|true,false|}' },
+    { label: 'include_yes_decisions', detail: '返回「允许分配」的决策明细', snippet: true,
+      insertText: '"include_yes_decisions": ${1|true,false|}' },
+  ];
 }
 
 /** 核心字段类型目录（ES 8.x mapping 文档）——补全、mapping-type lint、
@@ -2043,6 +2127,11 @@ export const STRUCTURED_VALUE_ENUMS: Record<string, { values: string[]; quoted: 
   allow_partial_search_results: { values: ['true', 'false'], quoted: false, detail: '允许部分结果' },
   keep_on_completion: { values: ['true', 'false'], quoted: false, detail: '完成后保留结果' },
   case_sensitive: { values: ['false', 'true'], quoted: false, detail: 'EQL 字符串比较区分大小写' },
+  allow_primary: { values: ['true', 'false'], quoted: false, detail: '允许取消主分片恢复' },
+  accept_data_loss: { values: ['true', 'false'], quoted: false, detail: '确认接受数据丢失' },
+  primary: { values: ['true', 'false'], quoted: false, detail: '主分片' },
+  include_disk_info: { values: ['true', 'false'], quoted: false, detail: '含磁盘用量' },
+  include_yes_decisions: { values: ['true', 'false'], quoted: false, detail: '含允许分配的决策明细' },
   index_include_frozen: { values: ['true', 'false'], quoted: false, detail: '含冻结索引' },
   _source: { values: ['true', 'false'], quoted: false, detail: '回源开关（也可传字段数组）' },
   offsets: { values: ['false', 'true'], quoted: false, detail: '返回词项偏移' },
@@ -2215,6 +2304,8 @@ export const termsEnumBodyRootKeys = termsEnumBodyKeyItems().map(i => i.label);
 export const rankEvalBodyRootKeys = rankEvalBodyKeyItems().map(i => i.label);
 export const eqlBodyRootKeys = eqlBodyKeyItems().map(i => i.label);
 export const clusterSettingsBodyRootKeys = clusterSettingsBodyKeyItems().map(i => i.label);
+export const rerouteBodyRootKeys = rerouteBodyKeyItems().map(i => i.label);
+export const allocationExplainBodyRootKeys = allocationExplainBodyKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

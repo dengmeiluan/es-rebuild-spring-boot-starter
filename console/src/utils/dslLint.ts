@@ -44,7 +44,7 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   storedScriptBodyRootKeys, aliasesBodyRootKeys, scrollBodyRootKeys, clearScrollBodyRootKeys,
   termvectorsBodyRootKeys, mtermvectorsBodyRootKeys, reindexBodyRootKeys, scriptExecuteBodyRootKeys,
   BULK_ACTIONS, msearchHeaderKeyItems, msearchTemplateBodyKeyItems, fieldCapsBodyRootKeys, termsEnumBodyRootKeys, rankEvalBodyRootKeys,
-  eqlBodyRootKeys, clusterSettingsBodyRootKeys,
+  eqlBodyRootKeys, clusterSettingsBodyRootKeys, rerouteBodyRootKeys, allocationExplainBodyRootKeys,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -1392,6 +1392,8 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
     case 'rank-eval-body': return lintBodyKeys(obj, rankEvalBodyRootKeys, '排序评估体');
     case 'eql-body': return lintBodyKeys(obj, eqlBodyRootKeys, 'EQL 体');
     case 'cluster-settings-body': return lintBodyKeys(obj, clusterSettingsBodyRootKeys, '集群设置体');
+    case 'reroute-body': return lintBodyKeys(obj, rerouteBodyRootKeys, '分片重路由体');
+    case 'allocation-explain-body': return lintBodyKeys(obj, allocationExplainBodyRootKeys, '分配诊断体');
     default: return [];
   }
 }

@@ -50,6 +50,8 @@ export const ES_ENDPOINTS: EsEndpoint[] = [
     body: '{\n  "persistent": {\n    "cluster.routing.allocation.enable": "all"\n  }\n}' },
   { methods: ['GET', 'POST'], path: '/_cluster/allocation/explain', doc: '分片分配原因诊断',
     body: '{\n  "index": "my-index",\n  "shard": 0,\n  "primary": true\n}' },
+  { methods: ['POST'], path: '/_cluster/reroute', doc: '分片重路由（move / allocate_* / cancel）',
+    body: '{\n  "commands": [\n    { "move": { "index": "my-index", "shard": 0, "from_node": "node-a", "to_node": "node-b" } }\n  ]\n}' },
   { methods: ['GET'], path: '/_nodes/stats', doc: '节点统计' },
   { methods: ['GET'], path: '/_tasks', doc: '任务清单' },
   { methods: ['GET', 'POST'], path: '/{index}/_search/template', doc: '搜索模板执行' },
