@@ -1107,7 +1107,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  增 'analyze' 档——_analyze body（视图侧 bodyKind: () => 'analyze' 直传，
  不吃 bodyKindForPath 分派）；键位出 ANALYZE_KEY_SNIPPETS 八键骨架，
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
-export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'none';
+export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1239,6 +1239,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
       || /(^|\/)_validate\/query(\/|$)/.test(p)) return 'query-body';
   /* 1439：_mget 的体是 {docs:[{_index,_id,…}]} 或 {ids:[…]}——结构化体，不是无档 */
   if (/(^|\/)_mget(\/|$)/.test(p)) return 'mget-body';
+  /* 1439：执行脚本 POST /_scripts/<id>/[_<context>/]_execute 的体是 {script,context,context_setup} */
+  if (method.toUpperCase() === 'POST'
+      && /(^|\/)_scripts\/[^/]+\/(?:[^/]+\/)?_execute(\/|$)/.test(p)) return 'script-execute-body';
   /* 1439：PUT /_scripts/<id> 存脚本的体是 {script:{lang,source,params}}；
      _execute 是执行脚本，体形态不同，不并进本档 */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_scripts\/[^/]+(\/|$)/.test(p)
@@ -1716,6 +1719,18 @@ export function storedScriptKeyItems(): AssistItem[] {
   ];
 }
 
+/** 执行脚本体（POST /_scripts/<id>/_execute）的根键 */
+export function scriptExecuteBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'script', detail: '要执行的 Painless 脚本', snippet: true,
+      insertText: '"script": {\n  "source": "${1:return 1;}"\n}' },
+    { label: 'context', detail: '执行上下文（painless_test/score/filter…）', snippet: true,
+      insertText: '"context": "${1:painless_test}"' },
+    { label: 'context_setup', detail: '上下文初始化参数（如 index/document）', snippet: true,
+      insertText: '"context_setup": {\n  ${0}\n}' },
+  ];
+}
+
 /** 存脚本体区域：根层 / script 对象 / 更深层（params 内自由命名） */
 export function storedScriptRegionAt(doc: string, offset: number): 'root' | 'script' | 'deep' {
   const stack = frameKeysAt(doc, offset);
@@ -1746,6 +1761,7 @@ export const STRUCTURED_VALUE_ENUMS: Record<string, { values: string[]; quoted: 
   term_statistics: { values: ['false', 'true'], quoted: false, detail: '词项全局统计' },
   field_statistics: { values: ['true', 'false'], quoted: false, detail: '字段级统计' },
   op_type: { values: ['index', 'create'], quoted: true, detail: '写入形态（create=已存在则失败）' },
+  context: { values: ['painless_test', 'score', 'filter'], quoted: true, detail: '脚本执行上下文' },
 };
 
 /** SQL 体的区域：根层给 SQL 键；filter 内是 Query DSL（回落到整棵查询补全）；其余子对象不出键 */
@@ -1893,6 +1909,7 @@ export const templateSearchBodyRootKeys = templateSearchBodyKeyItems().map(i => 
 export const sqlBodyRootKeys = sqlBodyKeyItems().map(i => i.label);
 export const mgetBodyRootKeys = mgetBodyKeyItems().map(i => i.label);
 export const storedScriptBodyRootKeys = storedScriptBodyKeyItems().map(i => i.label);
+export const scriptExecuteBodyRootKeys = scriptExecuteBodyKeyItems().map(i => i.label);
 export const aliasesBodyRootKeys = aliasesBodyKeyItems().map(i => i.label);
 export const scrollBodyRootKeys = scrollBodyKeyItems().map(i => i.label);
 export const clearScrollBodyRootKeys = clearScrollBodyKeyItems().map(i => i.label);

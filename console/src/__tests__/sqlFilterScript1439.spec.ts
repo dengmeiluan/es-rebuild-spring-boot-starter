@@ -12,11 +12,12 @@ import {
 } from '../utils/dslCompletionContext';
 
 describe('1439 SQL filter / 存储脚本体', () => {
-  it('bodyKind：PUT /_scripts/<id> → stored-script-body；GET 与 _execute 仍 none', () => {
+  it('bodyKind：PUT /_scripts/<id> → stored-script-body；GET 仍 none；_execute 1439 起单列执行体', () => {
     expect(bodyKindForPath('/_scripts/my-script', 'PUT')).toBe('stored-script-body');
     expect(bodyKindForPath('_scripts/my-script', 'PUT')).toBe('stored-script-body');
     expect(bodyKindForPath('/_scripts/my-script', 'GET')).toBe('none');
-    expect(bodyKindForPath('/_scripts/painless/_execute', 'POST')).toBe('none');
+    expect(bodyKindForPath('/_scripts/painless/_execute', 'POST')).toBe('script-execute-body');
+    expect(bodyKindForPath('/_scripts/painless/_execute', 'GET')).toBe('none');
     expect(bodyKindForPath('/_scripts', 'PUT')).toBe('none');
     expect(bodyKindForPath('/idx/_sql', 'POST')).toBe('sql-body');
   });

@@ -1465,6 +1465,18 @@ describe('1439 SQL filter 回落 / 存储脚本体', () => {
     }
     expect(suggest('{"script": {"params": {"')).toEqual([]);
   });
+
+  it('script-execute：根 script/context/context_setup；context 值位闭集；script 内含 id', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'script-execute-body' as const } });
+    const root = suggest('{"');
+    expect(root.map((i: any) => i.label)).toEqual(['script', 'context', 'context_setup']);
+    for (const i of root) {
+      expect(() => JSON.parse(acceptSnippet('{', i) + '}'), i.label + ' 接受后非法').not.toThrow();
+    }
+    expect(suggest('{"context": "').map((i: any) => i.label)).toEqual(['painless_test', 'score', 'filter']);
+    expect(suggest('{"script": {"').map((i: any) => i.label)).toEqual(['source', 'lang', 'params', 'id']);
+    expect(suggest('{"context_setup": {"')).toEqual([]);
+  });
 });
 
 describe('1439 别名批量动作体键位补全', () => {

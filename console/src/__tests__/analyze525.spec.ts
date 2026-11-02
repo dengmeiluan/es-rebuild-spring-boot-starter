@@ -4,8 +4,9 @@
  * ① analyze 档（BodyKind 扩 'analyze'，视图侧 bodyKind: () => 'analyze' 直传）：
  *    键位（串内）出 ANALYZE_KEY_SNIPPETS 八键骨架（analyzer/text/field/tokenizer/
  *    filter/char_filter/normalizer/explain，Snippet+detail+W5-1 双关+逗号自适应）；
- *    值位分派——analyzer/search_analyzer/normalizer/tokenizer 出「BUILTIN_ANALYZERS 内置
- *    ∪ dslAssist.analyzers() 实名组件」（缺席=纯内置不关档；Set 去重）；field 出 fields()；
+ *    值位分派——analyzer/search_analyzer→BUILTIN_ANALYZERS，tokenizer→BUILTIN_TOKENIZERS，
+ *    filter→BUILTIN_TOKEN_FILTERS，char_filter→BUILTIN_CHAR_FILTERS（各自 ∪ analyzers() 实名），
+ *    normalizer 只出实名组件（无内置）；field 出 fields()；
  *    text 等白名单外值位压住；串外压住（W6 三档同口径）。
  * ② 不回归：search 档 analyzer 值位仍钉空（524+1 既有口径）；mapping 档 analyzers 通道
  *    仍只出实名（内置清单不泄入）。
@@ -92,7 +93,7 @@ vi.mock('monaco-editor/esm/vs/language/json/json.worker?worker', () => ({ defaul
 
 import * as monacoStub from 'monaco-editor/esm/vs/editor/editor.api';
 import MonacoEditor from '../components/MonacoEditor.vue';
-import { ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS } from '../utils/dslCompletionContext';
+import { ANALYZE_KEY_SNIPPETS, BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS } from '../utils/dslCompletionContext';
 
 const registrations = () => (monacoStub as any).__registrations as Reg[];
 const completionRegs = (lang: string) => registrations().filter(r => r.kind === 'completion' && r.lang === lang);
@@ -204,14 +205,24 @@ describe('525 analyze 档分派（MonacoEditor computeSuggestions）', () => {
     expect(JSON.parse(after).analyzer).toBe('ik_max_word');
   });
 
-  it('analyzers() 缺席 = 纯内置（通道关但不关档）；search_analyzer/normalizer/tokenizer 同通道', () => {
+  it('analyzers() 缺席：analyzer 纯内置；tokenizer/filter/char_filter 各用各自内置表；normalizer 无内置', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'analyze' as const } });
-    const doc = '{"analyzer": "ik';
-    expect(suggest(doc).map(i => i.label)).toEqual(BUILTIN_ANALYZERS);
-    for (const key of ['search_analyzer', 'normalizer', 'tokenizer']) {
-      const d = `{"${key}": "x`;
-      expect(suggest(d).map(i => i.label), key + ' 值位同通道').toEqual(BUILTIN_ANALYZERS);
-    }
+    expect(suggest('{"analyzer": "ik').map(i => i.label)).toEqual(BUILTIN_ANALYZERS);
+    expect(suggest('{"search_analyzer": "x').map(i => i.label)).toEqual(BUILTIN_ANALYZERS);
+    expect(suggest('{"tokenizer": "x').map(i => i.label)).toEqual(BUILTIN_TOKENIZERS);
+    expect(suggest('{"filter": "x').map(i => i.label)).toEqual(BUILTIN_TOKEN_FILTERS);
+    expect(suggest('{"char_filter": "x').map(i => i.label)).toEqual(BUILTIN_CHAR_FILTERS);
+    /* 数组首元素位（"filter": ["）同样归位 */
+    expect(suggest('{"filter": ["').map(i => i.label)).toEqual(BUILTIN_TOKEN_FILTERS);
+    expect(suggest('{"char_filter": ["').map(i => i.label)).toEqual(BUILTIN_CHAR_FILTERS);
+    expect(suggest('{"normalizer": "x'), 'normalizer 无内置且无实名时压住').toEqual([]);
+  });
+
+  it('实名组件并入对应类：tokenizer/filter 各自 ∪ custom，normalizer 只出 custom', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { ...AZ_ASSIST, analyzers: () => ['my_tok', 'my_norm'] } });
+    expect(suggest('{"tokenizer": "x').map(i => i.label)).toEqual([...BUILTIN_TOKENIZERS, 'my_tok', 'my_norm']);
+    expect(suggest('{"filter": "x').map(i => i.label)).toEqual([...BUILTIN_TOKEN_FILTERS, 'my_tok', 'my_norm']);
+    expect(suggest('{"normalizer": "x').map(i => i.label)).toEqual(['my_tok', 'my_norm']);
   });
 
   it('field 值位出 fields()；text 值位压住（白名单外不弹）', () => {
