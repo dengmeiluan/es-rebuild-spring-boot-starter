@@ -44,7 +44,10 @@ jobs:
         if: matrix.language == 'java-kotlin'
         working-directory: ui
         run: |
-          npm ci --no-audit --no-fund
+          if ! npm ci --no-audit --no-fund; then
+            echo "### npm ci failed — falling back to npm install (self-heal)" >> "$GITHUB_STEP_SUMMARY"
+            npm install --no-audit --no-fund --loglevel=error || exit 1
+          fi
           npm run build
 
       - name: Initialize CodeQL
