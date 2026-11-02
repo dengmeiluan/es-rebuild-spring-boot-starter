@@ -219,7 +219,7 @@ describe('1445 查询模式右键：深链/默认模式/历史（只读动作）
     const menu = document.body.querySelector<HTMLElement>('.ccm');
     expect(menu, '模式右键菜单').toBeTruthy();
     expect(menu!.textContent).toContain('查询模式 · ' + QUERY_MODES[1].t);
-    for (const label of ['复制此模式深链', '设为默认进入模式', '打开跨模式查询历史']) {
+    for (const label of ['复制此模式深链', '设为默认进入模式', '复制当前查询权限摘要', '打开跨模式查询历史']) {
       expect(menu!.textContent, `菜单项 ${label}`).toContain(label);
     }
     (menu!.querySelector('[data-key="mode-switch"]') as HTMLElement).click();
