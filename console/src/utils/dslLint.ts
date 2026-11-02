@@ -58,6 +58,7 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   transformSyncKeys, transformSyncTimeKeys, transformRetentionKeys, transformRetentionTimeKeys,
   rollupJobBodyRootKeys, rollupGroupKeys, rollupDateGroupKeys, rollupTermsGroupKeys,
   rollupHistogramGroupKeys, rollupMetricKeys,
+  mlDatafeedBodyRootKeys, mlDelayedKeys, mlChunkingKeys, mlIndicesOptionsKeys,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -1498,6 +1499,11 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
         ...lintBodyKeys(obj?.match, enrichMatchKeys, 'Enrich match 策略'),
         ...lintBodyKeys(obj?.geo_match, enrichMatchKeys, 'Enrich geo_match 策略'),
         ...lintBodyKeys(obj?.range, enrichRangeKeys, 'Enrich range 策略')];
+    case 'ml-datafeed-body':
+      return [...lintBodyKeys(obj, mlDatafeedBodyRootKeys, 'ML 数据馈送体'),
+        ...lintBodyKeys(obj?.delayed_data_check_config, mlDelayedKeys, 'ML 延迟检查'),
+        ...lintBodyKeys(obj?.chunking_config, mlChunkingKeys, 'ML 分块配置'),
+        ...lintBodyKeys(obj?.indices_options, mlIndicesOptionsKeys, 'ML 索引选项')];
     case 'rollup-job-body': {
       const out = [...lintBodyKeys(obj, rollupJobBodyRootKeys, 'Rollup 作业体'),
         ...lintBodyKeys(obj?.groups, rollupGroupKeys, 'Rollup 分组')];

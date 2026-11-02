@@ -35,6 +35,7 @@ import {
   transformBodyKeyItems, transformSourceKeyItems, transformDestKeyItems, transformPivotKeyItems,
   transformTimeKeyItems, transformTimeConfigKeyItems,
   rollupJobBodyKeyItems, rollupGroupsKeyItems, rollupDateGroupKeyItems, rollupFieldGroupKeyItems, rollupMetricKeyItems,
+  mlDatafeedBodyKeyItems, mlDelayedCheckKeyItems, mlChunkingKeyItems, mlIndicesOptionsKeyItems,
 } from '../utils/dslCompletionContext';
 import { AGG_BODY_PARAMS } from '../utils/queryAstOps';
 
@@ -183,6 +184,10 @@ function allProblems(): string[] {
   out.push(...snippetProblems('RT', rollupFieldGroupKeyItems('terms').map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('RH', rollupFieldGroupKeyItems('histogram').map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('RM', rollupMetricKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('MDF', mlDatafeedBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('MDD', mlDelayedCheckKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('MDC', mlChunkingKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('MDI', mlIndicesOptionsKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   return out;
 }
 

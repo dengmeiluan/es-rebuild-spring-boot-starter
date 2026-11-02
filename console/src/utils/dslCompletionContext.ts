@@ -1111,7 +1111,7 @@ export function dslArrayElemFieldAt(elemKey: string | null, ownerKey: string | n
  值位分派见 MonacoEditor computeSuggestions analyze 分支。 */
 export type BodyKind = 'search' | 'settings' | 'mapping' | 'template' | 'doc' | 'analyze' | 'index-body' | 'alias-body' | 'aliases-body' | 'reindex-body' | 'sql-body' | 'update-body' | 'rollover-body' | 'dbq-body' | 'ubq-body' | 'query-body' | 'template-search-body' | 'mget-body' | 'stored-script-body' | 'script-execute-body' | 'scroll-body' | 'clear-scroll-body' | 'termvectors-body' | 'mtermvectors-body' | 'msearch-body' | 'msearch-template-body' | 'bulk-body' | 'field-caps-body' | 'terms-enum-body' | 'rank-eval-body' | 'eql-body' | 'cluster-settings-body' | 'reroute-body' | 'allocation-explain-body'
 | 'snapshot-repo-body' | 'snapshot-create-body' | 'snapshot-restore-body' | 'slm-policy-body' | 'ilm-policy-body' | 'watch-body'
-| 'security-role-body' | 'security-user-body' | 'security-role-mapping-body' | 'security-api-key-body' | 'ingest-pipeline-body' | 'enrich-policy-body' | 'transform-body' | 'rollup-job-body' | 'none';
+| 'security-role-body' | 'security-user-body' | 'security-role-mapping-body' | 'security-api-key-body' | 'ingest-pipeline-body' | 'enrich-policy-body' | 'transform-body' | 'rollup-job-body' | 'ml-datafeed-body' | 'none';
 
 /* _analyze body 键骨架（analyze 档键位候选，snippet+detail 与 W6 三档同形态）。
  analyzer/field 互斥（二选一）；filter/char_filter 是数组骨架。 */
@@ -1256,6 +1256,9 @@ export function bodyKindForPath(rawPath: string, method = ''): BodyKind {
   /* 1439：Rollup 作业体（PUT /_rollup/job/<id>，6.x 兼容 _xpack/rollup）：
      {index_pattern,rollup_index,cron,page_size,groups,metrics,…} */
   if (method.toUpperCase() === 'PUT' && /(^|\/)_(?:xpack\/)?rollup\/job\/[^/]+(\/|$)/.test(p)) return 'rollup-job-body';
+  /* 1439：ML 数据馈送体（PUT /_ml/datafeeds/<id>，6.x 兼容 _xpack/ml）：
+     {job_id,indexes,query,frequency,scroll_size,chunking_config,…} */
+  if (method.toUpperCase() === 'PUT' && /(^|\/)_(?:xpack\/)?ml\/datafeeds\/[^/]+(\/|$)/.test(p)) return 'ml-datafeed-body';
   if (p.includes('/_snapshot/')) {
     const segs = p.split('/').filter(Boolean);
     const si = segs.indexOf('_snapshot');
@@ -2344,6 +2347,64 @@ export function rollupRegionAt(doc: string, offset: number):
   return 'deep';
 }
 
+/** ML 数据馈送体（PUT /_ml/datafeeds/<id>）的根键 */
+export function mlDatafeedBodyKeyItems(): AssistItem[] {
+  return [
+    { label: 'job_id', detail: '关联的异常检测作业 id', snippet: true, insertText: '"job_id": "${1:my-job}"' },
+    { label: 'indexes', detail: '源索引（数组/通配）', snippet: true, insertText: '"indexes": ["${1:logs-*}"]' },
+    { label: 'query', detail: '取数过滤查询（Query DSL）', snippet: true, insertText: '"query": {\n  ${0}\n}' },
+    { label: 'query_delay', detail: '额外查询延迟（等待迟到数据）', snippet: true, insertText: '"query_delay": "${1:60s}"' },
+    { label: 'frequency', detail: '取数频率（默认等于 bucket_span）', snippet: true, insertText: '"frequency": "${1:60s}"' },
+    { label: 'scroll_size', detail: '单次滚动取数条数', snippet: true, insertText: '"scroll_size": ${1:1000}' },
+    { label: 'delayed_data_check_config', detail: '延迟数据检查（enabled/check_window）', snippet: true,
+      insertText: '"delayed_data_check_config": { "enabled": ${1|true,false|}, "check_window": "${2:1h}" }' },
+    { label: 'chunking_config', detail: '分块模式（auto/manual/off）', snippet: true,
+      insertText: '"chunking_config": { "mode": "${1|auto,manual,off|}" }' },
+    { label: 'indices_options', detail: '索引选项（通配展开/忽略缺失）', snippet: true,
+      insertText: '"indices_options": {\n  "expand_wildcards": ["${1:open}"],\n  "ignore_unavailable": ${2|true,false|}\n}' },
+    { label: 'runtime_mappings', detail: '取数时生效的运行时字段', snippet: true, insertText: '"runtime_mappings": {\n  ${0}\n}' },
+    { label: 'headers', detail: '请求头（安全/跨集群场景）', snippet: true, insertText: '"headers": {\n  ${0}\n}' },
+  ];
+}
+
+/** delayed_data_check_config 的键 */
+export function mlDelayedCheckKeyItems(): AssistItem[] {
+  return [
+    { label: 'enabled', detail: '启用延迟数据检查', snippet: true, insertText: '"enabled": ${1|true,false|}' },
+    { label: 'check_window', detail: '检查窗口（窗口内无数据则告警）', snippet: true, insertText: '"check_window": "${1:1h}"' },
+  ];
+}
+
+/** chunking_config 的键 */
+export function mlChunkingKeyItems(): AssistItem[] {
+  return [
+    { label: 'mode', detail: '分块模式（auto/manual/off）', snippet: true, insertText: '"mode": "${1|auto,manual,off|}"' },
+    { label: 'time_span', detail: 'manual 模式下的分块时间跨度', snippet: true, insertText: '"time_span": "${1:3h}"' },
+  ];
+}
+
+/** indices_options 的键 */
+export function mlIndicesOptionsKeyItems(): AssistItem[] {
+  return [
+    { label: 'expand_wildcards', detail: '通配展开范围（open/closed/hidden/none/all）', snippet: true,
+      insertText: '"expand_wildcards": ["${1|open,closed,hidden,none,all|}"]' },
+    { label: 'ignore_unavailable', detail: '忽略不存在的索引', snippet: true, insertText: '"ignore_unavailable": ${1|true,false|}' },
+    { label: 'allow_no_indices', detail: '通配无匹配时不报错', snippet: true, insertText: '"allow_no_indices": ${1|true,false|}' },
+  ];
+}
+
+/** ML 数据馈送体区域：根 / query（交给查询补全）/ 延迟检查 / 分块 / 索引选项 / 更深 */
+export function mlDatafeedRegionAt(doc: string, offset: number):
+  'root' | 'query' | 'delayed' | 'chunking' | 'indices' | 'deep' {
+  const stack = frameKeysAt(doc, offset);
+  if (stack.length <= 1) return 'root';
+  if (stack[0] === 'query' && stack.length >= 2) return 'query';
+  if (stack[0] === 'delayed_data_check_config' && stack.length === 2) return 'delayed';
+  if (stack[0] === 'chunking_config' && stack.length === 2) return 'chunking';
+  if (stack[0] === 'indices_options' && stack.length === 2) return 'indices';
+  return 'deep';
+}
+
 /** 分片分配诊断体（POST /_cluster/allocation/explain）的根键 */
 export function allocationExplainBodyKeyItems(): AssistItem[] {
   return [
@@ -3111,6 +3172,10 @@ export const rollupDateGroupKeys = rollupDateGroupKeyItems().map(i => i.label);
 export const rollupTermsGroupKeys = rollupFieldGroupKeyItems('terms').map(i => i.label);
 export const rollupHistogramGroupKeys = rollupFieldGroupKeyItems('histogram').map(i => i.label);
 export const rollupMetricKeys = rollupMetricKeyItems().map(i => i.label);
+export const mlDatafeedBodyRootKeys = mlDatafeedBodyKeyItems().map(i => i.label);
+export const mlDelayedKeys = mlDelayedCheckKeyItems().map(i => i.label);
+export const mlChunkingKeys = mlChunkingKeyItems().map(i => i.label);
+export const mlIndicesOptionsKeys = mlIndicesOptionsKeyItems().map(i => i.label);
 
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */

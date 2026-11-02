@@ -1401,6 +1401,36 @@ describe('1439 Rollup 作业体补全', () => {
   });
 });
 
+describe('1439 ML 数据馈送体补全', () => {
+  it('根键 → query 回落 → 延迟/分块/索引选项；更深层压住', () => {
+    mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS, bodyKind: () => 'ml-datafeed-body' } });
+    const root = '{\n  "\n}';
+    const labels = suggest(root, 5).map(i => i.label);
+    for (const k of ['job_id', 'indexes', 'query', 'query_delay', 'frequency', 'scroll_size', 'delayed_data_check_config', 'chunking_config', 'indices_options', 'runtime_mappings', 'headers']) {
+      expect(labels, k).toContain(k);
+    }
+
+    const q = '{"query": {"';
+    const qLabels = suggest(q).map(i => i.label);
+    expect(qLabels).toContain('match');
+    expect(qLabels).toContain('term');
+
+    const delayed = '{\n  "delayed_data_check_config": {\n    "\n  }\n}';
+    expect(suggest(delayed, delayed.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['enabled', 'check_window']);
+
+    const chunk = '{\n  "chunking_config": {\n    "\n  }\n}';
+    expect(suggest(chunk, chunk.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['mode', 'time_span']);
+
+    const idx = '{\n  "indices_options": {\n    "\n  }\n}';
+    expect(suggest(idx, idx.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
+      'expand_wildcards', 'ignore_unavailable', 'allow_no_indices',
+    ]);
+
+    const deep = '{"indices_options": {"expand_wildcards": ["';
+    expect(suggest(deep).map(i => i.label), '通配展开数组位不出键').toEqual([]);
+  });
+});
+
 describe('1439 子句体键位（query-body-key / clause-field-key / retriever-body-key）', () => {
   it('bool 体给 must/filter/should/must_not，接受后 JSON 合法', () => {
     mountEditor({ modelValue: '{}', dslAssist: { fields: () => FIELDS } });
