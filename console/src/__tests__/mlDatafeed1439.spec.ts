@@ -36,6 +36,7 @@ describe('1439 ML 数据馈送体分档', () => {
   it('目录：根十一键 + 三个嵌套配置', () => {
     expect(mlDatafeedBodyRootKeys).toEqual([
       'job_id', 'indexes', 'query', 'query_delay', 'frequency', 'scroll_size',
+      'aggregations', 'script_fields', 'max_empty_searches',
       'delayed_data_check_config', 'chunking_config', 'indices_options', 'runtime_mappings', 'headers',
     ]);
     expect(mlDelayedKeys).toEqual(['enabled', 'check_window']);
@@ -58,6 +59,13 @@ describe('1439 ML 数据馈送体分档', () => {
 
   it('lint：样例体静默；根键/延迟/分块拼错分段点名；search 根键被拒', () => {
     expect(lintStructuredBody('ml-datafeed-body', JSON.stringify(SAMPLE))).toEqual([]);
+    expect(lintStructuredBody('ml-datafeed-body', JSON.stringify({
+      job_id: 'summary-job',
+      indexes: ['logs-*'],
+      aggregations: { by_host: { terms: { field: 'host' } } },
+      script_fields: { hour: { script: { source: 'doc["@timestamp"].value.hour' } } },
+      max_empty_searches: 10,
+    }))).toEqual([]);
 
     const root = lintStructuredBody('ml-datafeed-body', JSON.stringify({ jobidd: 'x' }));
     expect(root.some(f => f.message.includes('ML 数据馈送体') && f.message.includes('最接近：job_id'))).toBe(true);
