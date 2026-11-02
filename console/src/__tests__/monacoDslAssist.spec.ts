@@ -1632,5 +1632,11 @@ describe('1439 _reindex 查询回落 / 脚本键', () => {
     expect(suggest('{"script": {"params": {"')).toEqual([]);
     expect(suggest('{"source": {"sort": [{')).toEqual([]);
     expect(suggest('{"').map((i: any) => i.label)).toContain('source');
+    /* 1439：source.sort / source._source 的串元素位给字段名 */
+    expect(suggest('{"source": {"sort": ["').map((i: any) => i.label)).toEqual(expect.arrayContaining(['title', 'price']));
+    expect(suggest('{"source": {"_source": ["').map((i: any) => i.label)).toEqual(expect.arrayContaining(['title', 'price']));
+    const sf = suggest('{"source": {"sort": ["');
+    const afterSort = acceptSnippet('{"source": {"sort": ["', sf.find((i: any) => i.label === 'title'));
+    expect(() => JSON.parse(afterSort + ']}}')).not.toThrow();
   });
 });

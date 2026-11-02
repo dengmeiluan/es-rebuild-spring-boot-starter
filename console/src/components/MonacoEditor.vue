@@ -654,6 +654,22 @@ onMounted(() => {
         const rIdxRegion = bk === 'reindex-body' ? reindexBodyRegionAt(doc, offset) : 'root';
         if (qwRegion !== 'query' && sfRegion !== 'query' && rIdxRegion !== 'query' && (bk === 'settings' || bk === 'mapping' || bk === 'template' || bk === 'index-body' || bk === 'alias-body' || bk === 'aliases-body' || bk === 'reindex-body' || bk === 'sql-body' || bk === 'update-body' || bk === 'rollover-body' || bk === 'dbq-body' || bk === 'ubq-body' || bk === 'query-body' || bk === 'template-search-body' || bk === 'mget-body' || bk === 'stored-script-body' || bk === 'script-execute-body' || bk === 'scroll-body' || bk === 'clear-scroll-body' || bk === 'termvectors-body' || bk === 'mtermvectors-body')) {
           const g = dslKeyGuard(doc, offset);
+          /* 1439：_reindex 的 source.sort / source._source 数组元素是字段名位 */
+          if (g.inStr && g.arrayElem && (rIdxRegion === 'sort' || rIdxRegion === 'source-fields')) {
+            const rfEnd = scanStringEnd(doc, Math.max(0, Math.min(offset, doc.length)));
+            const rfsp = model.getPositionAt(g.strStart);
+            const rfep = model.getPositionAt(rfEnd);
+            const rfRange = {
+              startLineNumber: rfsp.lineNumber, startColumn: rfsp.column,
+              endLineNumber: rfep.lineNumber, endColumn: rfep.column,
+            };
+            return { suggestions: props.dslAssist!.fields().map((f, i) => ({
+              label: f.path, kind: monaco.languages.CompletionItemKind.Value,
+              insertText: '"' + f.path + '"', range: rfRange, command: ACCEPT_FORMAT_COMMAND,
+              detail: f.type,
+              filterText: dslFilterText(f.path), sortText: dslSortText(i, f.path),
+            })) };
+          }
           /* 1439：SQL 体的 "query": 值位——空串给 SELECT 骨架；串内已有内容改为在光标处插关键字，
              绝不整串替换（此前中途 Ctrl+Space 会把已输入的 SQL 整个换成骨架）。
              必须放在下面「值位一律不出档」的压制之前，否则永远到不了。 */

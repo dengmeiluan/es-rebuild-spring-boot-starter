@@ -145,6 +145,9 @@ describe('1439 重建索引体（_reindex）', () => {
     expect(at('{"source": {"query": { "')).toBe('query');
     expect(at('{"source": {"query": {"bool": {"')).toBe('query');
     expect(at('{"source": {"sort": [{ "')).toBe('deep');
+    /* 1439：source.sort / source._source 的数组元素位是字段名位 */
+    expect(at('{"source": {"sort": ["')).toBe('sort');
+    expect(at('{"source": {"_source": ["')).toBe('source-fields');
     /* 1439：根层 script 对象给脚本键 */
     expect(at('{"script": { "')).toBe('script');
     expect(at('{"script": {"params": { "')).toBe('deep');

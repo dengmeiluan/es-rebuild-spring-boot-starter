@@ -1920,7 +1920,7 @@ export const reindexBodyRootKeys = reindexBodyKeyItems('root').map(i => i.label)
 /** 重建索引体（POST /_reindex）的区域：根层 / source 体 / dest 体；更深层（source.query、
     source.sort 元素等）返回 'deep'——那些位置给本表键是误导，直接不出档。 */
 export function reindexBodyRegionAt(doc: string, offset: number):
-  'root' | 'source' | 'dest' | 'script' | 'query' | 'deep' {
+  'root' | 'source' | 'dest' | 'script' | 'query' | 'sort' | 'source-fields' | 'deep' {
   const stack = frameKeysAt(doc, offset);
   if (stack.length <= 1) return 'root';
   const k0 = stack[0];
@@ -1928,6 +1928,9 @@ export function reindexBodyRegionAt(doc: string, offset: number):
     if (stack.length === 2) return 'source';
     /* 1439：source.query 内是整棵 Query DSL——回落到查询补全，不再当深层压掉 */
     if (stack[1] === 'query') return 'query';
+    /* 1439：source.sort / source._source 的**串元素**位是字段名位；对象元素位不出档 */
+    if (stack[1] === 'sort') return stack.length === 3 ? 'sort' : 'deep';
+    if (stack[1] === '_source') return stack.length === 3 ? 'source-fields' : 'deep';
     return 'deep';
   }
   if (k0 === 'dest') return stack.length === 2 ? 'dest' : 'deep';
@@ -1937,8 +1940,8 @@ export function reindexBodyRegionAt(doc: string, offset: number):
 }
 
 /** 重建索引体的键（根层 / source 体 / dest 体 / script 对象四档） */
-export function reindexBodyKeyItems(region: 'root' | 'source' | 'dest' | 'script' | 'query' | 'deep'): AssistItem[] {
-  if (region === 'deep' || region === 'query') return [];
+export function reindexBodyKeyItems(region: 'root' | 'source' | 'dest' | 'script' | 'query' | 'sort' | 'source-fields' | 'deep'): AssistItem[] {
+  if (region === 'deep' || region === 'query' || region === 'sort' || region === 'source-fields') return [];
   if (region === 'script') return scriptObjectKeyItems();
   if (region === 'source') {
     return [
