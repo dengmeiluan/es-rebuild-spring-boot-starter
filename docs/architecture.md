@@ -1,0 +1,102 @@
+# Architecture
+
+SearchDeck separates the product surface from the Elasticsearch engine so a host can adopt only the
+parts it needs.
+
+## System shape
+
+```mermaid
+flowchart LR
+  Browser["Browser / Chrome extension / DBX workbench"] --> UI["Console UI<br/>Vue 3, 52 pages"]
+  UI --> Console["searchdeck-console<br/>HTTP, auth, engine"]
+  Host["Host Spring Boot app"] -->|ConsoleHostIntegration| Platform["searchdeck-platform<br/>contract, packs, branding, SPI"]
+  Console --> Platform
+  Console --> ES[("Elasticsearch 7.x")]
+  Server["searchdeck-server<br/>standalone"] --> Console
+```
+
+## Modules
+
+| Module | Artifact | Responsibility | May depend on |
+|---|---|---|---|
+| `platform` | `searchdeck-platform` | Page contract, feature packs, branding, `ConsoleHostIntegration`, `ManagedEsIndex` | Spring Boot core only; no Elasticsearch client |
+| `modules/console` | `searchdeck-console` | Engine (rebuild, migration, mapping), console HTTP API, auth, audit, embedded UI assets | `platform`, host-provided Elasticsearch client |
+| `apps/server` | `searchdeck-server` | Bootable standalone app (Kibana-style), setup wizard, SQLite defaults | `searchdeck-console` |
+| `ui` | `@searchdeck/ui` | Vue 3 + TypeScript console source, built into console static assets | Page contract via `@contract` |
+| `extensions/chrome` | Chrome MV3 extension | Launcher for a running server; URL and per-origin access only | Server HTTP surface |
+| `extensions/dbx` | DBX `.dbxp` | DBX workbench launcher following the DBX sandbox contract | Server HTTP surface via the browser |
+| `examples/demo-host` | demo | Minimal host wiring for development | `searchdeck-console` |
+
+Dependency rule: `platform` never depends on Elasticsearch; `console` never depends on `server`;
+launchers never bundle a second console.
+
+## Page contract
+
+`platform/src/main/resources/META-INF/searchdeck-pages.json` is the single source of truth for:
+
+- page keys, routes, groups, feature packs, hotkeys, and API prefixes;
+- backend page-level authorization (`ConsolePageCatalog` and `ConsoleAuthInterceptor`);
+- frontend navigation and command palette (built through the `@contract` alias);
+- host menu provisioning (hosts may read the same resource from the classpath).
+
+The contract is validated at load time; a missing or malformed contract fails startup instead of
+silently producing an empty navigation or an authorization hole.
+
+## Runtime layers
+
+| Layer | Prefix | Owns |
+|---|---|---|
+| Platform | `searchdeck.console.*` | Branding, integration identity, feature packs, excluded pages |
+| Engine | `searchdeck.elasticsearch.*` | Deployment mode, cluster bootstrap, rebuild/migration/mapping, storage, auth, monitoring |
+
+`mode=client` installs only the client-side mapping/desired-state surface. `mode=console` installs the
+full console and engine. `mode=rebuild-only` exists for engine-only adopters; the console pages and
+static assets are not exposed.
+
+## Host SPI
+
+| Interface | Package | Purpose |
+|---|---|---|
+| `ConsoleHostIntegration` | `io.github.dengmeiluan.searchdeck.platform.integration` | Branding and preferred feature packs |
+| `ConsoleAuthDelegate` | `io.github.dengmeiluan.searchdeck.console.auth` | Host authentication, roles, logout/revocation |
+| `ConnStore` | `io.github.dengmeiluan.searchdeck.console.multicluster` | Connection directory |
+| `ConsoleAuditContributor` | `io.github.dengmeiluan.searchdeck.console.auth` | Host audit contribution and merge |
+| `ManagedEsIndex` | `io.github.dengmeiluan.searchdeck.platform.spi` | Marks an entity as managed (legacy provider implementations are rejected) |
+
+Hosts implement only the interfaces they need; the console falls back to its built-in behavior.
+
+## Deployment modes
+
+| Mode | Entry | Use |
+|---|---|---|
+| Standalone | `java -jar searchdeck-server.jar` | Operate one or more clusters without a host |
+| Embedded console | `searchdeck-console` in a host app | Share the host process, routes, and authentication |
+| Host integration | `searchdeck-console` + SPIs | Unified accounts, menus, connections, and audit |
+| Engine only | `searchdeck-console`, `mode=rebuild-only` | Mapping/rebuild automation without the console |
+| Launcher | Chrome MV3 / DBX `.dbxp` | Open a remote console from the browser or DBX |
+
+## Security boundaries
+
+- The console uses page-level authorization: `conn:{connId}:{page}` for read and
+  `conn:{connId}:w:{page}` for write; `null` grants mean page-level authorization is disabled.
+- `mode=console` should use `ConsoleAuthDelegate` or a gateway in front of `/internal/es/**`.
+- The engine never stores Elasticsearch credentials; connection secrets stay in the host/control
+  plane and are omitted from list responses.
+- The Chrome extension requests host access per saved origin and stores no credentials.
+- DBX plugins run in a sandbox without arbitrary network or frame access; the DBX integration is a
+  launcher, not a hidden proxy.
+
+## Engine boundary and roadmap
+
+The engine currently lives inside `modules/console` because `auth`, `multicluster`, `xmigrate`, and
+`config` form package cycles. The `engine/` package is an explicit boundary; extracting it into a
+standalone artifact is a roadmap item that follows the RFC process. Until then, `server` and hosts
+consume the console artifact.
+
+## Build and release
+
+- Backend: Maven reactor, Java 8 bytecode, Spring Boot 2.3.x baseline.
+- Frontend: Vite + Vue 3 + TypeScript, built into `modules/console/src/main/resources/static/searchdeck`.
+- Release builds use a fixed `project.build.outputTimestamp` for reproducible archives.
+- CI runs backend tests, frontend shards, typecheck, extension tests, and DBX package verification.
+  The release workflow attaches the server jar, launchers, checksums, and an SBOM to a GitHub Release.

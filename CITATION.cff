@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use SearchDeck in research or production, cite this project."
+title: SearchDeck
+abstract: >-
+  A pluggable Elasticsearch operations platform with a page-level contract, feature packs,
+  a Vue console, a standalone server, and host integration SPIs.
+type: software
+authors:
+  - family-names: Deng
+    given-names: Meiluan
+    website: https://github.com/dengmeiluan
+repository-code: https://github.com/dengmeiluan/searchdeck
+url: https://github.com/dengmeiluan/searchdeck
+license: Apache-2.0
+version: 2.0.0
+date-released: 2026-11-02
+keywords:
+  - elasticsearch
+  - observability
+  - operations
+  - search
+  - spring-boot
+  - vue

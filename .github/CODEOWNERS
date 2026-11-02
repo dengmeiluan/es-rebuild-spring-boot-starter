@@ -1,0 +1,10 @@
+# Review ownership. Keep module boundaries aligned with docs/architecture.md.
+* @dengmeiluan
+
+/platform/ @dengmeiluan
+/modules/console/ @dengmeiluan
+/apps/server/ @dengmeiluan
+/ui/ @dengmeiluan
+/extensions/ @dengmeiluan
+/docs/ @dengmeiluan
+/.github/ @dengmeiluan

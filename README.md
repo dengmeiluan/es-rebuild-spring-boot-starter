@@ -11,10 +11,12 @@
 [![Elasticsearch](https://img.shields.io/badge/Elasticsearch-7.6%2B-005571?logo=elasticsearch&logoColor=white)](https://www.elastic.co)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#贡献)
+[![CodeQL](https://github.com/dengmeiluan/searchdeck/actions/workflows/codeql.yml/badge.svg)](https://github.com/dengmeiluan/searchdeck/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/dengmeiluan/searchdeck/badge)](https://securityscorecards.dev/viewer/?uri=github.com/dengmeiluan/searchdeck)
 
 ![SearchDeck — Search operations, on deck.](docs/screenshots/searchdeck-banner.svg)
 
-**[快速开始](#-5-分钟接入)** · [English README](README_EN.md) · [功能包](#-功能包11-个模块按需上甲板) · [宿主集成](docs/integration/README.md) · [交互宪法](docs/design.md)
+**[快速开始](#-5-分钟接入)** · [English README](README_EN.md) · [功能包](#-功能包11-个模块按需上甲板) · [宿主集成](docs/integration/README.md) · [架构](docs/architecture.md) · [交互宪法](docs/design.md)
 
 ---
 
@@ -186,6 +188,14 @@ public ConsoleHostIntegration searchDeckHostIntegration() {
 
 **浏览器与客户端启动器**：`extensions/chrome/` 提供 Manifest V3 扩展，`extensions/dbx/` 提供 DBX 插件工作台。两者都只保存控制台地址，不接管登录态或 ES 凭据；Chrome 扩展按 origin 授权，DBX 插件遵守其沙箱边界（详见 [Chrome 扩展](docs/integration/browser-extension.md) · [DBX 插件](docs/integration/dbx-plugin.md)）。
 
+**Chrome 启动器**（未配置态，真实渲染）：
+
+![Chrome 扩展弹窗](docs/screenshots/searchdeck-chrome-popup.png)
+
+**DBX 工作台**（Standalone preview 态，真实渲染）：
+
+![DBX 插件工作台](docs/screenshots/searchdeck-dbx-launcher.png)
+
 ---
 
 ## ⚡ 5 分钟接入
@@ -301,6 +311,7 @@ searchdeck/
 ├─ modules/console/          searchdeck-console：引擎 + 控制台 + 内嵌 UI 资源
 ├─ apps/server/              searchdeck-server：Kibana 式独立部署
 ├─ extensions/               Chrome MV3 扩展 / DBX 插件启动器
+├─ docs/                     架构、接入、设计与启动器文档
 ├─ ui/                       @searchdeck/ui：Vue 3 控制台源码
 └─ examples/demo-host/       可运行宿主示例
 ```
@@ -341,6 +352,10 @@ searchdeck/
 - **后端全量门禁**：Maven 测试覆盖认证、页面授权、重建状态机、映射对账、跨集群迁移与存储档。
 - **真实浏览器验证**：Mock ES + 真实控制台，验证补全、lint、导航裁剪、深链停用页与权限矩阵。
 - **反向对照**：非法契约、未知功能包、空页面授权等失败样本必须先红后绿，不靠「没报错」证明正确。
+- **可复现发布**：固定 `project.build.outputTimestamp`；release profile 产出 sources/javadoc/SBOM；
+  同一源码重复构建的 `platform` / `console` / `server` jar SHA-256 必须一致。
+- **供应链与安全自动化**：CodeQL、OpenSSF Scorecard、Dependency Review、Dependabot 与 tag 驱动的
+  Release workflow（校验版本、生成校验和与 provenance attestation）。
 
 ```bash
 # 前端
@@ -394,9 +409,11 @@ cd ui && npm test && cd ..
 
 ## 贡献
 
-欢迎 Issue / PR。开始之前请读 [CONTRIBUTING.md](CONTRIBUTING.md) 与
-[docs/design.md](docs/design.md)。涉及宿主集成时，优先通过 SPI 扩展，
-不要在 starter 里硬编码业务字段。
+欢迎 Issue / PR。开始之前请读 [贡献指南](CONTRIBUTING.md)、[架构说明](docs/architecture.md)、
+[文档索引](docs/README.md) 与 [设计宪法](docs/design.md)。参与即表示遵守
+[行为准则](CODE_OF_CONDUCT.md)；决策与发布流程见 [治理](GOVERNANCE.md)，提问渠道见
+[支持](SUPPORT.md)。涉及宿主集成时，优先通过 SPI 扩展，不要在平台里硬编码业务字段。
+
 
 ## License
 

@@ -3,3 +3,9 @@ contact_links:
   - name: 使用疑问 / 交流
     url: https://github.com/dengmeiluan/searchdeck/discussions
     about: 不确定是 bug 还是用法问题时，先到这里聊
+  - name: 文档索引
+    url: https://github.com/dengmeiluan/searchdeck/blob/main/docs/README.md
+    about: 架构、接入、配置、启动器与排障文档入口
+  - name: 安全漏洞（私密）
+    url: https://github.com/dengmeiluan/searchdeck/security/advisories/new
+    about: 请勿公开披露可利用细节；走私密 Security Advisory

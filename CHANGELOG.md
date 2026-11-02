@@ -4,6 +4,24 @@ All notable changes to SearchDeck are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Community health and governance files: Code of Conduct, governance, support, NOTICE, citation,
+  editorconfig, CODEOWNERS, and a documentation index with an architecture guide.
+- Security and supply-chain automation: Dependabot, CodeQL, OpenSSF Scorecard, dependency review,
+  and a tag-driven release workflow with version validation, checksums, SBOM, and provenance
+  attestation.
+- Maven `release` profile: attached sources/Javadoc jars, aggregate CycloneDX SBOM, enforcer rules,
+  and a fixed `project.build.outputTimestamp` for reproducible archives.
+- Local verification now includes Chrome/DBX launcher tests and DBX package verification.
+
+### Changed
+
+- Contributor, PR, issue, security, and README entry points now link the community and
+  architecture documentation.
+
 ## [2.0.0] — 2026-11-02
 
 ### Added

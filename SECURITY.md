@@ -2,7 +2,7 @@
 
 ## 数据与凭据边界
 
-- starter 是**库**：不持有、不存储任何 ES 凭据。连接凭据完全由宿主的
+- SearchDeck 是**库与应用集合**：不持有、不存储任何 ES 凭据。连接凭据完全由宿主的
   `spring.data.elasticsearch.*` 与 `ElasticsearchRestClient` 配置供给，starter 只消费
   宿主容器里现成的 client bean。
 - 运维控制台（`searchdeck.elasticsearch.mode=console`）**自带鉴权是可选的**：默认 `client` 模式
@@ -16,11 +16,21 @@
 
 请勿公开 issue 披露可被利用的问题。通过 GitHub
 [Security Advisories](https://github.com/dengmeiluan/searchdeck/security/advisories/new)
-私密报告，或私信仓库所有者。预计 7 天内回应。
+私密报告。预计 7 天内回应。报告时请附版本、部署模式、复现步骤和影响范围；
+不要附加真实凭据或客户数据。
+
+## 支持版本
+
+| 版本 | 安全修复 |
+|---|---|
+| `2.x` | 支持，修复进入最新 minor |
+| `1.x` | 已停止维护 |
 
 ## 已知取舍
 
-- starter 的 HTTP 面以「部署在内网/受网关保护」为威胁模型：`/internal/es/**` 前缀
+- `SearchDeck` 的 HTTP 面以「部署在内网/受网关保护」为威胁模型：`/internal/es/**` 前缀
   表明这些端点不该裸露公网。`mode=console` 下请务必接入鉴权 SPI 或网关拦截。
 - 控制台的数据面能力（文档 CRUD/DSL 查询/删除复活）等价于你授予 ES 账号的权限——
-  最小权限原则请在 ES 侧落实，starter 不做第二套权限模型。
+  最小权限原则请在 ES 侧落实，SearchDeck 不做第二套 ES 权限模型。
+- Chrome 扩展与 DBX 插件只保存控制台地址，不保存登录态或 ES 凭据；它们的边界见
+  [Chrome 扩展](docs/integration/browser-extension.md) 与 [DBX 插件](docs/integration/dbx-plugin.md)。

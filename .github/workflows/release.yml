@@ -1,0 +1,122 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "8"
+          cache: maven
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Validate tag against project versions
+        run: |
+          VERSION=$(python3 - <<'PY'
+          import re
+          pom = open("pom.xml", encoding="utf-8").read()
+          start = pom.index("<artifactId>searchdeck</artifactId>")
+          print(re.search(r"<version>([^<]+)</version>", pom[start:]).group(1))
+          PY
+          )
+          python3 - "$VERSION" <<'PY'
+          import json, re, sys
+          version = sys.argv[1]
+          for path in ("extensions/chrome/manifest.json", "extensions/dbx/manifest.json", "extensions/chrome/package.json", "extensions/dbx/package.json", "ui/package.json"):
+              declared = json.load(open(path, encoding="utf-8"))["version"]
+              if declared != version:
+                  raise SystemExit(f"{path}: {declared} != {version}")
+          citation = open("CITATION.cff", encoding="utf-8").read()
+          declared = re.search(r"^version:\s*(\S+)\s*$", citation, re.MULTILINE).group(1)
+          if declared != version:
+              raise SystemExit(f"CITATION.cff: {declared} != {version}")
+          print(f"version {version}")
+          PY
+          if [ "$GITHUB_REF_NAME" != "v$VERSION" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match project version v$VERSION" >&2
+            exit 1
+          fi
+
+      - name: Build UI
+        working-directory: ui
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+
+      - name: Build Maven release artifacts and SBOM
+        run: mvn -B -P release -DskipTests -Dconsole.build.skip=true verify
+
+      - name: Extension contract tests
+        run: |
+          node --test extensions/chrome/test/*.test.mjs
+          node --test extensions/dbx/test/*.test.mjs
+
+      - name: Build launcher packages
+        run: |
+          VERSION=$(python3 - <<'PY'
+          import json
+          print(json.load(open("extensions/chrome/manifest.json"))["version"])
+          PY
+          )
+          mkdir -p dist
+          cp "apps/server/target/searchdeck-server-${VERSION}.jar" dist/
+          cp "platform/target/searchdeck-platform-${VERSION}.jar" dist/
+          cp "modules/console/target/searchdeck-console-${VERSION}.jar" dist/
+          for f in platform/target/searchdeck-platform-${VERSION}-sources.jar \
+                   platform/target/searchdeck-platform-${VERSION}-javadoc.jar \
+                   modules/console/target/searchdeck-console-${VERSION}-sources.jar \
+                   modules/console/target/searchdeck-console-${VERSION}-javadoc.jar; do
+            if [ -f "$f" ]; then cp "$f" dist/; fi
+          done
+          cp target/searchdeck-sbom.json dist/
+          (cd extensions/chrome && zip -qr "../../dist/searchdeck-chrome-${VERSION}.zip" manifest.json src icons README.md)
+          python3 extensions/dbx/scripts/package.py
+          cp extensions/dbx/dist/*.dbxp dist/
+
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum * > SHA256SUMS
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "dist/*"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --generate-notes --title "SearchDeck ${{ github.ref_name }}"
+
+      - name: Upload release artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-dist
+          path: dist
+          retention-days: 7

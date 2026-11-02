@@ -11,10 +11,12 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.3.x-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Elasticsearch](https://img.shields.io/badge/Elasticsearch-7.6%2B-005571?logo=elasticsearch&logoColor=white)](https://www.elastic.co)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+[![CodeQL](https://github.com/dengmeiluan/searchdeck/actions/workflows/codeql.yml/badge.svg)](https://github.com/dengmeiluan/searchdeck/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/dengmeiluan/searchdeck/badge)](https://securityscorecards.dev/viewer/?uri=github.com/dengmeiluan/searchdeck)
 
 ![SearchDeck — Search operations, on deck.](docs/screenshots/searchdeck-banner.svg)
 
-**[Quick start](#-five-minute-integration)** · [中文 README](README.md) · [Feature packs](#-feature-packs) · [Host integration](docs/integration/README.md) · [Design constitution](docs/design.md)
+**[Quick start](#-five-minute-integration)** · [中文 README](README.md) · [Feature packs](#-feature-packs) · [Host integration](docs/integration/README.md) · [Architecture](docs/architecture.md) · [Design constitution](docs/design.md)
 
 ---
 
@@ -194,6 +196,14 @@ session or ES credentials. The Chrome extension requests access per origin; the 
 inside DBX's sandbox boundaries (see [Chrome extension](docs/integration/browser-extension.md) ·
 [DBX plugin](docs/integration/dbx-plugin.md)).
 
+**Chrome launcher** (unconfigured state, real rendering):
+
+![Chrome extension popup](docs/screenshots/searchdeck-chrome-popup.png)
+
+**DBX workbench** (standalone preview, real rendering):
+
+![DBX plugin workbench](docs/screenshots/searchdeck-dbx-launcher.png)
+
 ---
 
 ## ⚡ Five-minute integration
@@ -312,6 +322,7 @@ searchdeck/
 ├─ modules/console/          searchdeck-console: engine + console + embedded UI assets
 ├─ apps/server/              searchdeck-server: Kibana-style standalone deployment
 ├─ extensions/               Chrome MV3 extension / DBX plugin launcher
+├─ docs/                     architecture, integration, design and launcher guides
 ├─ ui/                       @searchdeck/ui: Vue 3 console source
 └─ examples/demo-host/       runnable host example
 ```
@@ -356,6 +367,11 @@ Full rules: [docs/design.md](docs/design.md).
   trimming, disabled-module deep links, and permission matrices.
 - **Negative controls** — invalid contracts, unknown packs, and empty page grants must fail first,
   then pass after the fix.
+- **Reproducible releases** — fixed `project.build.outputTimestamp`; the release profile produces
+  sources, Javadocs, and an SBOM; rebuilding the same source must keep identical `platform` /
+  `console` / `server` jar SHA-256 hashes.
+- **Supply-chain automation** — CodeQL, OpenSSF Scorecard, Dependency Review, Dependabot, and a
+  tag-driven release workflow (version validation, checksums, provenance attestation).
 
 ```bash
 cd ui && npm ci
@@ -400,8 +416,12 @@ Runnable example: [examples/demo-host](examples/demo-host/).
 
 ## Contributing
 
-Issues and PRs are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/design.md](docs/design.md)
-before starting. Prefer SPI extensions over hard-coded business fields in the starter.
+Issues and PRs are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md),
+[the architecture](docs/architecture.md), [the documentation index](docs/README.md), and
+[the design constitution](docs/design.md) before starting. Participation is governed by the
+[Code of Conduct](CODE_OF_CONDUCT.md); decision and release policy is in [GOVERNANCE.md](GOVERNANCE.md);
+support channels are in [SUPPORT.md](SUPPORT.md). Prefer SPI extensions over hard-coded business
+fields in the platform.
 
 ## License
 

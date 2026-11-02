@@ -3,6 +3,8 @@
 `extensions/chrome` is a Manifest V3 launcher for a running SearchDeck server. It is intentionally
 small: the console, its session, and all Elasticsearch credentials stay on the server origin.
 
+![Chrome extension popup — unconfigured state](../screenshots/searchdeck-chrome-popup.png)
+
 ## Install (development)
 
 1. Start a SearchDeck server (`java -jar apps/server/target/searchdeck-server-2.0.0.jar`).

@@ -1,7 +1,20 @@
 # 贡献指南
 
-感谢关注 searchdeck！这是一个克制而专注的项目：**零停机重建 + 开箱即用的运维控制台**，
-一个 jar 交付，宿主实现一个接口即可接入。提交贡献前请先读完本页，能省掉一轮返工。
+感谢关注 SearchDeck！这是一个克制而专注的项目：**Elasticsearch 零停机重建 + 可嵌入的运维控制台**。
+平台内核、控制台、独立服务与浏览器/DBX 启动器分模块交付，宿主按需接入。
+
+## 项目结构
+
+| 目录 | 内容 |
+|---|---|
+| `platform/` | 页面契约、功能包、品牌与宿主 SPI（不依赖 ES 客户端） |
+| `modules/console/` | 引擎、控制台 HTTP API、鉴权、审计与内嵌 UI 资源 |
+| `apps/server/` | Kibana 式独立部署 |
+| `ui/` | Vue 3 + TypeScript 控制台源码 |
+| `extensions/chrome/`、`extensions/dbx/` | Chrome MV3 / DBX 启动器 |
+| `examples/demo-host/` | 最小宿主示例 |
+
+详见 [架构说明](docs/architecture.md) 与 [文档索引](docs/README.md)。
 
 ## 环境准备
 
@@ -14,9 +27,13 @@ cd ui && npm ci && cd ..
 
 # 后端（JDK 8+；默认构建会在 generate-resources 阶段自动调 vite）
 mvn clean test
+
+# 启动器（无需安装依赖）
+node --test extensions/chrome/test/*.test.mjs
+cd extensions/dbx && npm test && python scripts/package.py && cd ../..
 ```
 
-要求：JDK 8+、Node 18+、Maven 3.6+。
+要求：JDK 8+、Node 18+、Maven 3.6+。编辑器配置见 [.editorconfig](.editorconfig)。
 
 ## 提交前必须全绿
 
@@ -33,7 +50,14 @@ node scripts/verify.mjs --server  # 发版前追加 server 构建与冒烟
 cd ui && npm test             # 前端全量（自动分片；失败文件自动串行复验）
 cd ui && npm run test:serial  # 前端串行基准（排障/确认并发伪失败）
 mvn clean test -Dconsole.build.skip=true  # 后端全量（默认 4 fork；低核/CI 用 -DforkCount=N 覆盖）
+node --test extensions/chrome/test/*.test.mjs
+cd extensions/dbx && npm test && python scripts/package.py && cd ../..
+mvn -P release -DskipTests -Dconsole.build.skip=true verify  # 发布档案：sources/javadoc/SBOM/可复现时间戳
 ```
+
+> 发布档案绑定固定 `project.build.outputTimestamp`：同一源码重复 `package` 的
+> `platform` / `console` / `server` jar SHA-256 必须一致。改动构建插件或资源打包后
+> 请本地复跑一次哈希对照，避免把不可复现的变更带进 release。
 
 > 并发不是无脑加线程：前端仍保持 `fileParallelism:false`（242 批的稳定性决定），
 > 并发度来自进程级分片；分片内 20s 超时只吸收并发慢时钟，失败文件会在全部分片退出后
@@ -74,8 +98,18 @@ mvn clean test -Dconsole.build.skip=true  # 后端全量（默认 4 fork；低�
 - 提交信息一句话说清「改了什么、为什么」；一个提交一个主题。
 - 构建产物（`modules/console/src/main/resources/static/searchdeck/`）、IDE 文件、本地日志不入库（`.gitignore` 已拦）。
 - 文档现在时、无时间线、无占位符（`TODO`/`TBD`/`待补充` 会被文档契约测试拦截）。
+- 提交即表示你同意以 [Apache-2.0](LICENSE) 许可贡献该代码；不要提交来源不明或带专有许可的代码。
+- 涉及安全问题的修复请先看 [SECURITY.md](SECURITY.md)，不要公开披露可利用细节。
+
+## 社区
+
+- [行为准则](CODE_OF_CONDUCT.md) · [治理与决策](GOVERNANCE.md) · [支持渠道](SUPPORT.md)
+- [文档索引](docs/README.md) · [架构说明](docs/architecture.md) · [设计宪法](docs/design.md)
 
 ## 报告问题
 
-提 issue 时请附：Spring Boot / ES 服务端与客户端版本、复现步骤、期望与实际行为、
-相关日志（`[EsStackContract]`/`[MappingReconcile]`/rebuild 前缀）。**不要贴凭据。**
+提 issue 时请附：SearchDeck / Spring Boot / ES 服务端与客户端版本、部署模式、复现步骤、
+期望与实际行为、相关日志（`[EsStackContract]`/`[MappingReconcile]`/rebuild 前缀）。
+**不要贴凭据或客户数据。** 安全问题请走
+[私密 Security Advisory](https://github.com/dengmeiluan/searchdeck/security/advisories/new)，
+不要开 public issue。

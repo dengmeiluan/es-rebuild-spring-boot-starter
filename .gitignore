@@ -31,6 +31,9 @@ ui/docs/GOAL-*
 # local visual-test temp artifacts
 ui/vite.browser.tmp.config.mjs
 ui/vitest-final.json
+# Chrome extension pack artifacts (the .pem is a private signing key)
+extensions/*.crx
+extensions/*.pem
 # one-off probe artifacts (screenshots / node dumps) — never distributed
 .tmp-*
 .workbuddy/

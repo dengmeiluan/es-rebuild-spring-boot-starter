@@ -85,6 +85,7 @@ async function main() {
   const later = [];
   if (!opts.noBackend) later.push(runLane('backend', mvnTestArgs()));
   if (!opts.noFrontend) later.push(runLane('frontend', npmCmd(opts.serial ? ['run', 'test:serial'] : ['test'])));
+  if (!opts.noExtensions) later.push(runLane('extensions', extensionArgs()));
   if (opts.server) {
     later.push((async () => {
       if (!opts.noBackend) {
@@ -184,6 +185,19 @@ function serverArgs() {
   };
 }
 
+function extensionArgs() {
+  const python = isWin ? 'python' : 'python3';
+  const dbxDir = join(root, 'extensions', 'dbx');
+  return {
+    chain: [
+      { cmd: npm, args: ['--prefix', 'extensions/chrome', 'test'], cwd: root },
+      { cmd: npm, args: ['--prefix', 'extensions/dbx', 'test'], cwd: root },
+      { cmd: python, args: ['scripts/package.py'], cwd: dbxDir },
+      { cmd: python, args: ['scripts/verify_package.py'], cwd: dbxDir },
+    ],
+  };
+}
+
 function npmCmd(args) {
   const env = {};
   if (args[0] === 'test' && !opts.serial) env.VITEST_SHARDS = String(frontendShards);
@@ -249,7 +263,7 @@ function rel(file) {
 function parseArgs(argv) {
   const out = {
     serial: false, server: false, online: false, help: false,
-    noBuild: false, noBackend: false, noFrontend: false, noTypecheck: false, noPermScan: false,
+    noBuild: false, noBackend: false, noFrontend: false, noTypecheck: false, noPermScan: false, noExtensions: false,
     shards: 0, backendForks: 0,
   };
   for (const arg of argv) {
@@ -263,6 +277,7 @@ function parseArgs(argv) {
     else if (arg === '--no-frontend') out.noFrontend = true;
     else if (arg === '--no-typecheck') out.noTypecheck = true;
     else if (arg === '--no-perm-scan') out.noPermScan = true;
+    else if (arg === '--no-extensions') out.noExtensions = true;
     else if (arg.startsWith('--shards=')) out.shards = Number(arg.slice('--shards='.length));
     else if (arg.startsWith('--backend-forks=')) out.backendForks = Number(arg.slice('--backend-forks='.length));
     else {
@@ -286,6 +301,7 @@ function printHelp() {
   --no-frontend         跳过前端全量
   --no-typecheck        跳过 vue-tsc
   --no-perm-scan        跳过权限一致性扫描
+  --no-extensions       跳过 Chrome/DBX 启动器测试与打包
   -h, --help            显示本帮助
 
 日志与汇总: .tmp/verify/`);

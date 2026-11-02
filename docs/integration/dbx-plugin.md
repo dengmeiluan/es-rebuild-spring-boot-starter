@@ -3,6 +3,8 @@
 `extensions/dbx` packages SearchDeck as a frontend-only **DBX plugin** (Manifest v1, host API 1).
 It adds a SearchDeck workbench that stores a console URL and opens it in your browser.
 
+![DBX workbench — standalone preview](../screenshots/searchdeck-dbx-launcher.png)
+
 ## Why a launcher
 
 DBX plugin UIs are sandboxed iframes:

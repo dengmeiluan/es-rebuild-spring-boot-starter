@@ -16,6 +16,7 @@ concurrency:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
@@ -45,6 +46,8 @@ jobs:
         run: mvn -B clean test -DforkCount=2
       - name: Package (boot jar + module jars)
         run: mvn -B package -DskipTests -Dconsole.build.skip=true
+      - name: Verify release profile
+        run: mvn -B -P release -DskipTests -Dconsole.build.skip=true verify
       - name: Report surefire failures as annotations
         if: failure()
         run: |
@@ -65,11 +68,15 @@ jobs:
 
   extension:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - name: Chrome extension contract tests
         run: node --test extensions/chrome/test/*.test.mjs
       - name: DBX plugin contract tests
@@ -81,6 +88,7 @@ jobs:
 
   frontend-typecheck:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: ui
@@ -106,6 +114,7 @@ jobs:
   # and re-verifies a failing file serially before reporting it.
   frontend-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
