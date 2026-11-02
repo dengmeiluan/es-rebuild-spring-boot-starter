@@ -257,6 +257,23 @@ describe('532 dtLint 档路由五分派（视图级 · 底部条观测）', () =
     expect(bar, 'msearch 落单头行应有底部条').toBeTruthy();
     expect(bar!.textContent).toContain('数量不匹配');
   });
+
+  it('⑭ NDJSON 行键 lint：_msearch 头行 indxe / _bulk 动作 indx 进底部条', async () => {
+    const { host } = await mountView(DevToolsView, '#/devtools');
+    await type(dtInp(host), '/_msearch');
+    bodyCap().emit('update:modelValue', '{"indxe":"a"}\n{"query":{}}');
+    await settle(6);
+    let bar = lintBar(host);
+    expect(bar, 'msearch 头行拼错应有底部条').toBeTruthy();
+    expect(bar!.textContent).toContain('indxe');
+    expect(bar!.textContent).toContain('index');
+    await type(dtInp(host), '/idx/_bulk');
+    bodyCap().emit('update:modelValue', '{"indx":{"_index":"a"}}');
+    await settle(6);
+    bar = lintBar(host);
+    expect(bar, 'bulk 动作行拼错应有底部条').toBeTruthy();
+    expect(bar!.textContent).toContain('indx');
+  });
 });
 
 describe('532 lintSettingsBody（纯函数）', () => {

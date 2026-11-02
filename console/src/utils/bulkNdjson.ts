@@ -44,12 +44,15 @@ export function ndjsonLint(text: string, mode: 'bulk' | 'msearch' = 'bulk'): Ndj
     return { level: 'ok', msg: `配对正常：头行 ${lines.length / 2} · 查询体行 ${lines.length / 2}` };
   }
   let actions = 0, docs = 0, deletes = 0, badJson = 0;
+  let expectDoc = false;
   for (const l of lines) {
     let obj: any = null;
-    try { obj = JSON.parse(l); } catch { badJson++; continue; }
-    const op = obj && typeof obj === 'object' && BULK_OPS.find(k => k in obj);
-    if (op) { actions++; if (op === 'delete') deletes++; }
-    else docs++;
+    try { obj = JSON.parse(l); } catch { badJson++; expectDoc = false; continue; }
+    if (expectDoc) { docs++; expectDoc = false; continue; }
+    actions++;
+    const op = obj && typeof obj === 'object' ? BULK_OPS.find(k => k in obj) : undefined;
+    if (op === 'delete') deletes++;
+    else expectDoc = true; /* 未知动作键也按动作行处理并期待文档行——避免整行被误计成文档 */
   }
   const needDoc = actions - deletes;
   if (badJson) return { level: 'warn', msg: `${badJson} 行不是合法 JSON（动作/文档行都必须是单行 JSON）` };

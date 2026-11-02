@@ -81,6 +81,9 @@ describe('1439 lintStructuredBody 共享分派（DevTools / RestView 同源）',
 
   it('lintNdjsonBody：成对零输出、落单告警（两页共用入口）', () => {
     expect(lintNdjsonBody('{"index":{}}\n{"a":1}')).toEqual([]);
+    /* 1439：动作行后的下一行即使长得像动作，也按文档行算（ES 语义） */
+    expect(lintNdjsonBody('{"index":{}}\n{"index":{}}')).toEqual([]);
+    expect(lintNdjsonBody('{"a":1}').map(f => f.rule)).toEqual(['ndjson-pair']);
     const bad = lintNdjsonBody('{"index":{}}\n{"index":{}}\n{"a":1}');
     expect(bad.map(f => f.rule)).toEqual(['ndjson-pair']);
     expect(bad[0].severity).toBe('warning');

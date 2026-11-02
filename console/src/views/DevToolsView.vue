@@ -513,7 +513,7 @@ import { bodyKindForPath, bodyLangForPath } from '../utils/dslCompletionContext'
 /* dtLint 档路由——search→lintDsl / bulk→lintNdjsonBody（与 REST 同源）/
  settings→lintSettingsBody / mapping→lintMappingBody / 结构化体→lintStructuredBody（与 RestView 同源）；
  Finding 形态供行内 marker 与底部条共用 */
-import { lintDsl, lintSettingsBody, lintMappingBody, lintStructuredBody, lintNdjsonBody, type Finding } from '../utils/dslLint';
+import { lintDsl, lintSettingsBody, lintMappingBody, lintStructuredBody, lintNdjsonBody, lintNdjsonLineKeys, type Finding } from '../utils/dslLint';
 import { parseCurl, diagnoseCurl } from '../utils/curlParse';
 import { friendlyEsError } from '../utils/esError';
 import { toJs, toPython } from '../utils/codegen';
@@ -762,7 +762,11 @@ const dtLint = computed<Finding[]>(() => {
   const body = cur.value?.body || '';
   try {
     if (kind === 'none' || kind === 'msearch-body' || kind === 'bulk-body') {
-      return lintNdjsonBody(body, kind === 'msearch-body' ? 'msearch' : 'bulk');
+      const mode = kind === 'msearch-body' ? 'msearch' as const : 'bulk' as const;
+      const base = lintNdjsonBody(body, mode);
+      return (kind === 'msearch-body' || kind === 'bulk-body')
+        ? [...base, ...lintNdjsonLineKeys(body, mode)]
+        : base;
     }
     if (kind === 'settings') return lintSettingsBody(JSON.parse(body));
     if (kind === 'mapping') return lintMappingBody(JSON.parse(body));

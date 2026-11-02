@@ -43,6 +43,7 @@ import { ROOT_KEYS, MAPPING_TYPES, queryBodyKeys,
   queryOnlyBodyRootKeys, templateSearchBodyRootKeys, sqlBodyRootKeys, mgetBodyRootKeys,
   storedScriptBodyRootKeys, aliasesBodyRootKeys, scrollBodyRootKeys, clearScrollBodyRootKeys,
   termvectorsBodyRootKeys, mtermvectorsBodyRootKeys, reindexBodyRootKeys, scriptExecuteBodyRootKeys,
+  BULK_ACTIONS, msearchHeaderKeyItems,
 } from './dslCompletionContext';
 import type { BodyKind } from './dslCompletionContext';
 import { AGG_OPS, NUMERIC_FIELD_TYPES, FIELD_BODY_AGGS, PATH_BODY_AGGS } from './queryAstOps';
@@ -60,7 +61,7 @@ type LintRule =
   | 'ndjson-pair' | 'settings-key' | 'settings-value' | 'mapping-key' | 'mapping-type'
   | 'agg-type-typo' | 'date-term-value' | 'should-in-filter' | 'body-key-typo' | 'agg-field-key-typo'
   | 'shard-doc-sort' | 'agg-required-param' | 'agg-sub-aggs'
-  | 'body-root-key'
+  | 'body-root-key' | 'ndjson-line-key'
   | 'query-subsearches-conflict' | 'subsearches-no-rank' | 'retriever-conflict'
   | 'rare-type';
 
@@ -1387,6 +1388,61 @@ export function lintStructuredBody(kind: BodyKind, body: string): Finding[] {
     case 'reindex-body': return lintBodyKeys(obj, reindexBodyRootKeys, '重建索引体');
     default: return [];
   }
+}
+
+/** NDJSON 行键校验：_msearch 头行 / _bulk 动作行的顶层键必须来自官方目录。
+    nth 按 anchor 在全文中的同名键出现次数计（含查询体/文档行里的同名键），
+    保证 Monaco findMatches 定位到正确的一处。 */
+export function lintNdjsonLineKeys(text: string, mode: 'msearch' | 'bulk'): Finding[] {
+  const lines = String(text || '').split('\n').map(l => l.trim()).filter(Boolean);
+  if (!lines.length) return [];
+  const parsed = lines.map(l => {
+    try {
+      const o = JSON.parse(l);
+      return o && typeof o === 'object' && !Array.isArray(o) ? (o as Record<string, unknown>) : null;
+    } catch { return null; }
+  });
+  /* 第一遍：全文按键出现顺序编号（all keys, 所有可解析行） */
+  const counters = new Map<string, number>();
+  const nthPerLine = parsed.map(o => {
+    const m = new Map<string, number>();
+    if (!o) return m;
+    for (const k of Object.keys(o)) {
+      const n = counters.get(k) ?? 0;
+      counters.set(k, n + 1);
+      m.set(k, n);
+    }
+    return m;
+  });
+  const allowed = mode === 'msearch' ? msearchHeaderKeyItems().map(i => i.label) : [...BULK_ACTIONS];
+  const vocab = new Set(allowed);
+  const out: Finding[] = [];
+  let expectDoc = false;
+  parsed.forEach((obj, idx) => {
+    if (!obj) return;
+    const keys = Object.keys(obj);
+    const isHeader = mode === 'msearch' ? idx % 2 === 0 : !expectDoc;
+    if (!isHeader) {
+      /* bulk 文档行消费掉「待文档」状态；msearch 体行无需状态 */
+      if (mode === 'bulk') expectDoc = false;
+      return;
+    }
+    if (mode === 'bulk') {
+      const op = ('delete' in obj) && keys.length === 1 ? 'delete' : BULK_ACTIONS.find(k => k in obj);
+      expectDoc = !!op && op !== 'delete';
+    }
+    for (const k of keys) {
+      if (vocab.has(k)) continue;
+      const near = nearestKey(k, vocab);
+      out.push({
+        rule: 'ndjson-line-key', severity: 'warning',
+        message: `${mode === 'msearch' ? '_msearch 头行' : '批量动作行'}键「${k}」${near ? `疑似拼写错误（最接近：${near}）` : '不是合法键'}——ES 会拒绝该行`,
+        suggestion: near ? `改为 "${near}"（可用 Ctrl+Space 查看全部键）` : `可用键：${allowed.join(' / ')}`,
+        path: k, anchor: k, nth: nthPerLine[idx].get(k) ?? 0,
+      });
+    }
+  });
+  return out;
 }
 
 export function lintSettingsBody(obj: unknown): Finding[] {  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return [];

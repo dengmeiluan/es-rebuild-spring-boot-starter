@@ -188,7 +188,7 @@ import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue
 import { useIndexFields } from '../composables/useIndexFields';
 import { useTermsSuggest } from '../composables/useTermsSuggest';
 import { bodyKindForPath, bodyLangForPath } from '../utils/dslCompletionContext';
-import { lintDsl, lintStructuredBody, lintSettingsBody, lintMappingBody, lintNdjsonBody } from '../utils/dslLint'; /* ：DSL 静态体检（与 DevTools 同源分派） */
+import { lintDsl, lintStructuredBody, lintSettingsBody, lintMappingBody, lintNdjsonBody, lintNdjsonLineKeys } from '../utils/dslLint'; /* ：DSL 静态体检（与 DevTools 同源分派） */
 import { useDebounceFn } from '../composables/useDebounceFn'; /* P0-1：划线防抖统一件 */
 import EndpointPathInput from '../components/devtools/EndpointPathInput.vue';
 import { REST_METHODS, type EsEndpoint } from '../utils/esEndpoints';
@@ -405,7 +405,11 @@ const rtLint = computed(() => {
   if (!hasBody.value) return [];
   const kind = rtBodyKind.value;
   if (kind === 'none' || kind === 'msearch-body' || kind === 'bulk-body') {
-    return lintNdjsonBody(body.value || '', kind === 'msearch-body' ? 'msearch' : 'bulk');
+    const mode = kind === 'msearch-body' ? 'msearch' as const : 'bulk' as const;
+    const base = lintNdjsonBody(body.value || '', mode);
+    return (kind === 'msearch-body' || kind === 'bulk-body')
+      ? [...base, ...lintNdjsonLineKeys(body.value || '', mode)]
+      : base;
   }
   if (kind === 'settings') { try { return lintSettingsBody(JSON.parse(body.value || '')); } catch { return []; } }
   if (kind === 'mapping') { try { return lintMappingBody(JSON.parse(body.value || '')); } catch { return []; } }
