@@ -77,6 +77,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Documentation link check
+        run: node scripts/check-doc-links.mjs
       - name: Chrome extension contract tests
         run: node --test extensions/chrome/test/*.test.mjs
       - name: DBX plugin contract tests

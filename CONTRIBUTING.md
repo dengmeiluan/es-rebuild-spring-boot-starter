@@ -49,6 +49,7 @@ node scripts/verify.mjs --server  # 发版前追加 server 构建与冒烟
 ```bash
 cd ui && npm test             # 前端全量（自动分片；失败文件自动串行复验）
 cd ui && npm run test:serial  # 前端串行基准（排障/确认并发伪失败）
+node scripts/check-doc-links.mjs  # 文档相对链接
 mvn clean test -Dconsole.build.skip=true  # 后端全量（默认 4 fork；低核/CI 用 -DforkCount=N 覆盖）
 node --test extensions/chrome/test/*.test.mjs
 cd extensions/dbx && npm test && python scripts/package.py && cd ../..

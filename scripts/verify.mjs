@@ -64,6 +64,7 @@ async function main() {
   const manifest = [{ name: 'mode', detail: opts.serial ? 'serial' : `backendForks=${backendForks}, frontendShards=${frontendShards}` }];
 
   const early = [];
+  if (!opts.noDocs) early.push(runLane('docs-links', { cmd: process.execPath, args: ['scripts/check-doc-links.mjs'], cwd: root }));
   if (!opts.noTypecheck) early.push(runLane('typecheck', npmCmd(['run', 'typecheck'])));
   if (!opts.noPermScan) early.push(runLane('perm-scan', npmCmd(['run', 'perm:scan'])));
   if (!opts.noBuild) early.push(runLane('build', npmCmd(['run', 'build'])));
@@ -263,7 +264,7 @@ function rel(file) {
 function parseArgs(argv) {
   const out = {
     serial: false, server: false, online: false, help: false,
-    noBuild: false, noBackend: false, noFrontend: false, noTypecheck: false, noPermScan: false, noExtensions: false,
+    noBuild: false, noBackend: false, noFrontend: false, noTypecheck: false, noPermScan: false, noExtensions: false, noDocs: false,
     shards: 0, backendForks: 0,
   };
   for (const arg of argv) {
@@ -278,6 +279,7 @@ function parseArgs(argv) {
     else if (arg === '--no-typecheck') out.noTypecheck = true;
     else if (arg === '--no-perm-scan') out.noPermScan = true;
     else if (arg === '--no-extensions') out.noExtensions = true;
+    else if (arg === '--no-docs') out.noDocs = true;
     else if (arg.startsWith('--shards=')) out.shards = Number(arg.slice('--shards='.length));
     else if (arg.startsWith('--backend-forks=')) out.backendForks = Number(arg.slice('--backend-forks='.length));
     else {
@@ -302,6 +304,7 @@ function printHelp() {
   --no-typecheck        跳过 vue-tsc
   --no-perm-scan        跳过权限一致性扫描
   --no-extensions       跳过 Chrome/DBX 启动器测试与打包
+  --no-docs             跳过文档相对链接检查
   -h, --help            显示本帮助
 
 日志与汇总: .tmp/verify/`);
