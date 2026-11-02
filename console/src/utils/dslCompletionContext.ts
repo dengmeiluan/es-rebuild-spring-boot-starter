@@ -2511,6 +2511,7 @@ export function mlDatafeedRegionAt(doc: string, offset: number):
 /** ML 异常检测作业体（PUT /_ml/anomaly_detectors/<id>）的根键 */
 export function mlJobBodyKeyItems(): AssistItem[] {
   return [
+    { label: 'job_id', detail: '作业 id（省略则用路径上的 id）', snippet: true, insertText: '"job_id": "${1:latency-job}"' },
     { label: 'analysis_config', detail: '分析配置（bucket_span + detectors，作业核心）', snippet: true,
       insertText: '"analysis_config": {\n  "bucket_span": "${1:15m}",\n  "detectors": [\n    { "function": "${2:mean}", "field_name": "${3:responsetime}" }\n  ]\n}' },
     { label: 'analysis_limits', detail: '资源上限（模型内存/分类示例数）', snippet: true,
@@ -2519,9 +2520,17 @@ export function mlJobBodyKeyItems(): AssistItem[] {
       insertText: '"data_description": { "time_field": "${1:@timestamp}" }' },
     { label: 'description', detail: '作业用途说明', snippet: true, insertText: '"description": "${1:latency anomaly job}"' },
     { label: 'groups', detail: '作业分组（便于批量管理）', snippet: true, insertText: '"groups": ["${1:default}"]' },
+    { label: 'background_persist_interval', detail: '后台持久化间隔（如 1h）', snippet: true,
+      insertText: '"background_persist_interval": "${1:1h}"' },
+    { label: 'model_plot_config', detail: '模型绘图（enabled/terms）', snippet: true,
+      insertText: '"model_plot_config": { "enabled": ${1|true,false|} }' },
     { label: 'model_snapshot_retention_days', detail: '模型快照保留天数', snippet: true, insertText: '"model_snapshot_retention_days": ${1:10}' },
     { label: 'daily_model_snapshot_retention_after_days', detail: '近期快照按天保留天数', snippet: true,
       insertText: '"daily_model_snapshot_retention_after_days": ${1:1}' },
+    { label: 'renormalization_window_days', detail: '分数重归一化窗口（天）', snippet: true,
+      insertText: '"renormalization_window_days": ${1:30}' },
+    { label: 'results_retention_days', detail: '结果保留天数（不填=永久）', snippet: true,
+      insertText: '"results_retention_days": ${1:30}' },
     { label: 'results_index_name', detail: '结果索引名（shared=共用索引）', snippet: true, insertText: '"results_index_name": "${1:shared}"' },
     { label: 'allow_lazy_open', detail: '允许惰性打开（不预加载模型）', snippet: true, insertText: '"allow_lazy_open": ${1|false,true|}' },
     { label: 'custom_settings', detail: '自定义设置（结果索引等）', snippet: true, insertText: '"custom_settings": {\n  ${0}\n}' },

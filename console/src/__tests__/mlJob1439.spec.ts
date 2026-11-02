@@ -14,6 +14,7 @@ import {
 import { lintStructuredBody } from '../utils/dslLint';
 
 const SAMPLE = {
+  job_id: 'latency-job',
   analysis_config: {
     bucket_span: '15m',
     detectors: [{ function: 'mean', field_name: 'responsetime', by_field_name: 'airline' }],
@@ -22,7 +23,11 @@ const SAMPLE = {
   analysis_limits: { model_memory_limit: '1024mb', categorization_examples_limit: 4 },
   data_description: { time_field: '@timestamp' },
   description: 'latency anomaly job',
+  background_persist_interval: '1h',
+  model_plot_config: { enabled: true },
   model_snapshot_retention_days: 10,
+  renormalization_window_days: 30,
+  results_retention_days: 30,
   allow_lazy_open: false,
 };
 
@@ -34,10 +39,12 @@ describe('1439 ML 作业体分档', () => {
     expect(bodyKindForPath('/_ml/anomaly_detectors/latency', 'GET')).toBe('search');
   });
 
-  it('目录：根十一键 + 分析配置/检测器/上限/数据描述', () => {
+  it('目录：根十六键 + 分析配置/检测器/上限/数据描述', () => {
     expect(mlJobBodyRootKeys).toEqual([
-      'analysis_config', 'analysis_limits', 'data_description', 'description', 'groups',
+      'job_id', 'analysis_config', 'analysis_limits', 'data_description', 'description', 'groups',
+      'background_persist_interval', 'model_plot_config',
       'model_snapshot_retention_days', 'daily_model_snapshot_retention_after_days',
+      'renormalization_window_days', 'results_retention_days',
       'results_index_name', 'allow_lazy_open', 'custom_settings', 'datafeed_config',
     ]);
     expect(mlAnalysisConfigKeys).toEqual([
