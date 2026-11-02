@@ -52,9 +52,18 @@ describe('525 AnalyzeView：stacked 坍缩修复 + 结果区纵缝 + assist 接�
     expect(analyze).toMatch(/api\.analysisSettings\(idx\)/);
     /* 按索引记忆一次，失败静默空=值位通道关闭（MappingView 弹层同款守卫） */
     expect(analyze).toMatch(/if \(!idx \|\| analyzersLoadedFor === idx\) return;/);
-    expect(analyze).toMatch(/\} catch \{ analyzerCandidates\.value = \[\]; \}/);
-    /* 三组件名候选通道 + analyze BodyKind 档（W5b 并行落地） */
+    expect(analyze).toMatch(/catch \{\s*analyzerCandidates\.value = \[\];/);
+    /* 三组件名候选通道 + analyze BodyKind 档（W5b 并行落地）；1439 起按类别分列，
+       通道自身触发惰性拉取（组件值位不读 fields，单靠 fields 触发拉不到自定义名） */
     expect(analyze).toMatch(/Object\.keys\(a\.analyzer \|\| \{\}\)/);
+    for (const [chan, ref] of [
+      ['tokenizers', 'tokenizerCandidates'],
+      ['normalizers', 'normalizerCandidates'],
+      ['filters', 'filterCandidates'],
+      ['charFilters', 'charFilterCandidates'],
+    ]) {
+      expect(analyze, chan).toMatch(new RegExp(`${chan}: \\(\\) => \\{[\\s\\S]{0,140}?return ${ref}\\.value;`));
+    }
     expect(analyze).toMatch(/bodyKind: \(\) => 'analyze' as any/);
     /* 惰性触发挂在 fields()（补全触发才拉，挂载零请求） */
     expect(analyze).toMatch(/void ensureAssistFields\(\); void loadAnalyzerNames\(\);/);

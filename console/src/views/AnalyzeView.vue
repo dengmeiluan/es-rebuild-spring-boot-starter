@@ -250,7 +250,13 @@ const activePreset = ref<string>('standard');
  记忆一次（失败静默空=值位通道关闭），触发时机并到 fields() 首次补全，不另开请求入口。
  'analyze' BodyKind 档由并行批落地 dslCompletionContext/MonacoEditor，此处 as any 过渡 */
 const { fields: assistFields, ensure: ensureAssistFields } = useIndexFields(() => index.value);
+/* 1439：实名组件按类别分列——analyzer/normalizer/tokenizer/filter/char_filter 各归其位，
+   不再合并进 analyzers() 让 tokenizer 值位出 analyzer 名 */
 const analyzerCandidates = ref<string[]>([]);
+const normalizerCandidates = ref<string[]>([]);
+const tokenizerCandidates = ref<string[]>([]);
+const filterCandidates = ref<string[]>([]);
+const charFilterCandidates = ref<string[]>([]);
 let analyzersLoadedFor = '';
 async function loadAnalyzerNames() {
   const idx = index.value.trim();
@@ -259,12 +265,18 @@ async function loadAnalyzerNames() {
   try {
     const r: any = await api.analysisSettings(idx);
     const a = r?.analysis || {};
-    analyzerCandidates.value = [
-      ...Object.keys(a.analyzer || {}),
-      ...Object.keys(a.normalizer || {}),
-      ...Object.keys(a.tokenizer || {}),
-    ];
-  } catch { analyzerCandidates.value = []; }
+    analyzerCandidates.value = Object.keys(a.analyzer || {});
+    normalizerCandidates.value = Object.keys(a.normalizer || {});
+    tokenizerCandidates.value = Object.keys(a.tokenizer || {});
+    filterCandidates.value = Object.keys(a.filter || {});
+    charFilterCandidates.value = Object.keys(a.char_filter || {});
+  } catch {
+    analyzerCandidates.value = [];
+    normalizerCandidates.value = [];
+    tokenizerCandidates.value = [];
+    filterCandidates.value = [];
+    charFilterCandidates.value = [];
+  }
 }
 const avBodyAssist = {
   fields: () => {
@@ -272,7 +284,12 @@ const avBodyAssist = {
     return assistFields.value;
   },
   bodyKind: () => 'analyze' as any,
-  analyzers: () => analyzerCandidates.value,
+  /* 1439：组件值位不读 fields()——通道自身触发惰性拉取，否则自定义组件永远到不了候选 */
+  analyzers: () => { if (index.value.trim()) void loadAnalyzerNames(); return analyzerCandidates.value; },
+  normalizers: () => { if (index.value.trim()) void loadAnalyzerNames(); return normalizerCandidates.value; },
+  tokenizers: () => { if (index.value.trim()) void loadAnalyzerNames(); return tokenizerCandidates.value; },
+  filters: () => { if (index.value.trim()) void loadAnalyzerNames(); return filterCandidates.value; },
+  charFilters: () => { if (index.value.trim()) void loadAnalyzerNames(); return charFilterCandidates.value; },
 };
 
 interface Token { token: string; start_offset: number; end_offset: number; position: number; type: string; }

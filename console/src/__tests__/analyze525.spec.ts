@@ -225,6 +225,34 @@ describe('525 analyze 档分派（MonacoEditor computeSuggestions）', () => {
     expect(suggest('{"normalizer": "x').map(i => i.label)).toEqual(['my_tok', 'my_norm']);
   });
 
+  it('1439：按类别实名通道（analyzers/normalizers/tokenizers/filters/charFilters）各取各的', () => {
+    mountEditor({
+      modelValue: '{}',
+      dslAssist: {
+        fields: () => FIELDS, bodyKind: () => 'analyze' as const,
+        analyzers: () => ['a1'], normalizers: () => ['n1'], tokenizers: () => ['t1'],
+        filters: () => ['f1'], charFilters: () => ['c1'],
+      },
+    });
+    expect(suggest('{"analyzer": "x').map(i => i.label)).toEqual([...BUILTIN_ANALYZERS, 'a1']);
+    expect(suggest('{"tokenizer": "x').map(i => i.label)).toEqual([...BUILTIN_TOKENIZERS, 't1']);
+    expect(suggest('{"filter": "x').map(i => i.label)).toEqual([...BUILTIN_TOKEN_FILTERS, 'f1']);
+    expect(suggest('{"char_filter": "x').map(i => i.label)).toEqual([...BUILTIN_CHAR_FILTERS, 'c1']);
+    expect(suggest('{"normalizer": "x').map(i => i.label)).toEqual(['n1']);
+  });
+
+  it('1439：mapping 档 normalizer 值位只出 normalizers 通道（不再混 analyzer 实名）', () => {
+    mountEditor({
+      modelValue: '{}',
+      dslAssist: {
+        fields: () => FIELDS, bodyKind: () => 'mapping' as const,
+        analyzers: () => ['a1'], normalizers: () => ['n1'],
+      },
+    });
+    expect(suggest('{"properties": {"a": {"analyzer": "').map(i => i.label)).toEqual(['a1']);
+    expect(suggest('{"properties": {"a": {"normalizer": "').map(i => i.label)).toEqual(['n1']);
+  });
+
   it('field 值位出 fields()；text 值位压住（白名单外不弹）', () => {
     mountEditor({ modelValue: '{}', dslAssist: AZ_ASSIST });
     expect(suggest('{"field": "ti').map(i => i.label)).toEqual(['title', 'price']);

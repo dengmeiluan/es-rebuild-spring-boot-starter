@@ -259,7 +259,17 @@ const props = withDefaults(defineProps<{
  normalizer/tokenizer 值位出「内置清单 ∪ 实名组件」（缺席=纯内置，语义不关档）
  契约再扩 terms——search 档可聚合字段值位出 top20 真实值动态候选
  （655 设计 P2，独立第六通道 provider；缺席=零注册行为零变，524+1 先例） */
-  dslAssist?: { fields: () => { path: string; type: string }[]; bodyKind?: () => BodyKind; analyzers?: () => string[]; terms?: (field: string, prefix: string) => Promise<string[]> };
+  dslAssist?: {
+    fields: () => { path: string; type: string }[];
+    bodyKind?: () => BodyKind;
+    /** 1439：分析组件实名通道按类别分列（缺省回退 analyzers()，旧视图零破坏） */
+    analyzers?: () => string[];
+    tokenizers?: () => string[];
+    normalizers?: () => string[];
+    filters?: () => string[];
+    charFilters?: () => string[];
+    terms?: (field: string, prefix: string) => Promise<string[]>;
+  };
 }>(), {
   language: 'json',
   height: '320px',
@@ -539,15 +549,16 @@ onMounted(() => {
           };
           if (g.valueKey) {
             /* 1439：四类组件各归其位——tokenizer/filter/char_filter 用各自内置表，
-               normalizer 无内置（只出视图侧实名组件）；此前四键都套 analyzer 清单，
-               tokenizer 值位给出 simple/stop 这类非分词器名。 */
-            const custom = props.dslAssist!.analyzers?.() ?? [];
+               normalizer 无内置（只出视图侧实名组件）；实名通道按类别取，
+               旧视图只给 analyzers() 时回退到它（零破坏）。 */
+            const legacy = props.dslAssist!.analyzers?.() ?? [];
+            const customFor = (chan?: () => string[]) => (chan ? chan() : legacy);
             const componentVals = g.valueKey === 'analyzer' || g.valueKey === 'search_analyzer'
-              ? [...BUILTIN_ANALYZERS, ...custom]
-              : g.valueKey === 'tokenizer' ? [...BUILTIN_TOKENIZERS, ...custom]
-              : g.valueKey === 'filter' ? [...BUILTIN_TOKEN_FILTERS, ...custom]
-              : g.valueKey === 'char_filter' ? [...BUILTIN_CHAR_FILTERS, ...custom]
-              : g.valueKey === 'normalizer' ? custom
+              ? [...BUILTIN_ANALYZERS, ...customFor(props.dslAssist!.analyzers)]
+              : g.valueKey === 'tokenizer' ? [...BUILTIN_TOKENIZERS, ...customFor(props.dslAssist!.tokenizers)]
+              : g.valueKey === 'filter' ? [...BUILTIN_TOKEN_FILTERS, ...customFor(props.dslAssist!.filters)]
+              : g.valueKey === 'char_filter' ? [...BUILTIN_CHAR_FILTERS, ...customFor(props.dslAssist!.charFilters)]
+              : g.valueKey === 'normalizer' ? customFor(props.dslAssist!.normalizers)
               : null;
             if (componentVals) {
               const uniq = [...new Set(componentVals)];
@@ -590,7 +601,12 @@ onMounted(() => {
         if (mappingValueCtx) {
           const g0 = dslKeyGuard(doc, offset);
           if (g0.ok && g0.inStr && g0.valueKey && ANALYZER_VALUE_KEYS.has(g0.valueKey)) {
-            const names = props.dslAssist!.analyzers?.() ?? [];
+            /* 1439：按类别取实名（tokenizer→tokenizers，normalizer→normalizers），
+               旧视图只有 analyzers() 时回退到它（零破坏）。 */
+            const legacy = props.dslAssist!.analyzers?.() ?? [];
+            const names = g0.valueKey === 'tokenizer' ? (props.dslAssist!.tokenizers?.() ?? legacy)
+              : g0.valueKey === 'normalizer' ? (props.dslAssist!.normalizers?.() ?? legacy)
+              : legacy;
             if (names.length) {
               const aEnd = scanStringEnd(doc, Math.max(0, Math.min(offset, doc.length)));
               const asp = model.getPositionAt(g0.strStart);

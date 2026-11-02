@@ -227,13 +227,16 @@ function gotoDesigner() { router.push({ path: '/mapping-designer', query: { idx:
 function gotoRebuild() { router.push({ path: '/adhoc-rebuild', query: { index: store.pickedIdx } }); }
 /* ux2 ：两个 n-modal 编辑器挂 dslAssist（mapping 骨架/settings 键，W6 现成分档）。
  +1：mpMappingAssist 增 analyzers 值位通道——「添加字段」弹层打开时拉一次
- analysisSettings（按索引记忆，失败零降级=不出值位候选），把自定义 analyzer/normalizer/
- tokenizer 组件名注入，mapping 里写 "analyzer": " 直出真名候选（Monaco 524+1 通道）。 */
+ analysisSettings（按索引记忆，失败零降级=不出值位候选），把自定义 analyzer 组件名注入。
+ 1439：normalizer 单列通道（mapping 的 normalizer 键只应出 normalizer 名，
+ 不再把 analyzer/tokenizer 名混进来）。 */
 const analyzerCandidates = ref<string[]>([]);
+const normalizerCandidates = ref<string[]>([]);
 const mpMappingAssist = {
   fields: (): { path: string; type: string }[] => [],
   bodyKind: (): BodyKind => 'mapping',
   analyzers: () => analyzerCandidates.value,
+  normalizers: () => normalizerCandidates.value,
 };
 const mpSettingsAssist = { fields: (): { path: string; type: string }[] => [], bodyKind: (): BodyKind => 'settings' };
 const data = ref<any>(null);
@@ -426,12 +429,9 @@ async function loadAnalyzerNames() {
   try {
     const r: any = await api.analysisSettings(store.pickedIdx);
     const a = r?.analysis || {};
-    analyzerCandidates.value = [
-      ...Object.keys(a.analyzer || {}),
-      ...Object.keys(a.normalizer || {}),
-      ...Object.keys(a.tokenizer || {}),
-    ];
-  } catch { analyzerCandidates.value = []; }
+    analyzerCandidates.value = Object.keys(a.analyzer || {});
+    normalizerCandidates.value = Object.keys(a.normalizer || {});
+  } catch { analyzerCandidates.value = []; normalizerCandidates.value = []; }
 }
 watch(addOpen, v => { if (v) loadAnalyzerNames(); });
 const newMapping = ref('{\n  "properties": {\n    "new_field": {\n      "type": "keyword"\n    }\n  }\n}');
