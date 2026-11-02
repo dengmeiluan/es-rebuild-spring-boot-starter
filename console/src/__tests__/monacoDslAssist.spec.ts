@@ -1299,6 +1299,14 @@ describe('1439 Watcher 体补全', () => {
       'source', 'lang', 'params', 'id',
     ]);
 
+    const arrCmp = '{\n  "condition": {\n    "array_compare": {\n      "ctx.payload.hits.hits": {\n        "\n      }\n    }\n  }\n}';
+    expect(suggest(arrCmp, arrCmp.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
+      'path', 'eq', 'not_eq', 'lt', 'gt', 'lte', 'gte',
+    ]);
+
+    const arrOp = '{\n  "condition": {\n    "array_compare": {\n      "ctx.payload.hits.hits": {\n        "gte": {\n          "\n        }\n      }\n    }\n  }\n}';
+    expect(suggest(arrOp, arrOp.lastIndexOf('"') + 1).map(i => i.label)).toEqual(['quantifier', 'value']);
+
     const acts = '{\n  "actions": {\n    "notify": {\n      "\n    }\n  }\n}';
     expect(suggest(acts, acts.lastIndexOf('"') + 1).map(i => i.label)).toEqual([
       'email', 'webhook', 'index', 'logging', 'slack', 'pagerduty', 'jira',

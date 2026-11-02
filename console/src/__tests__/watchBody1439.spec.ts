@@ -15,6 +15,7 @@ import {
   watchEmailBodyKeyItems, watchSlackMessageKeyItems, watchJiraFieldsKeyItems,
   httpAuthBasicKeyItems, httpProxyKeyItems, watchPagerdutyContextKeyItems,
   watchSlackAttachmentKeyItems, watchSlackAttachmentFieldKeyItems,
+  watchArrayCompareKeyItems, watchArrayCompareOpKeyItems,
 } from '../utils/dslCompletionContext';
 import { lintStructuredBody } from '../utils/dslLint';
 
@@ -80,6 +81,10 @@ describe('1439 Watcher 体分档', () => {
     expect(watchSlackAttachmentKeyItems().map(i => i.label)).toContain('title');
     expect(watchSlackAttachmentKeyItems().map(i => i.label)).toContain('fields');
     expect(watchSlackAttachmentFieldKeyItems().map(i => i.label)).toEqual(['short', 'title', 'value']);
+    expect(watchArrayCompareKeyItems().map(i => i.label)).toEqual([
+      'path', 'eq', 'not_eq', 'lt', 'gt', 'lte', 'gte',
+    ]);
+    expect(watchArrayCompareOpKeyItems().map(i => i.label)).toEqual(['quantifier', 'value']);
   });
 
   it('区域：根 / trigger / schedule / input / condition / action / 更深', () => {
@@ -99,6 +104,8 @@ describe('1439 Watcher 体分档', () => {
     expect(at('{"input": {"search": {"request": {"body": {"query": {')).toBe('search-query');
     expect(at('{"condition": {')).toBe('condition');
     expect(at('{"condition": {"script": {')).toBe('condition-params');
+    expect(at('{"condition": {"array_compare": {"ctx.payload.hits.hits": {')).toBe('array-compare-body');
+    expect(at('{"condition": {"array_compare": {"ctx.payload.hits.hits": {"gte": {')).toBe('array-compare-op');
     expect(at('{"actions": {"notify": {')).toBe('action');
     expect(at('{"actions": {"notify": {"logging": {')).toBe('action-params');
     expect(at('{"actions": {"mail": {"email": {"body": {')).toBe('action-email-body');

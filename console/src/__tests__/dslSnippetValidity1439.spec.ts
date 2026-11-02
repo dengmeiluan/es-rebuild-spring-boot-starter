@@ -50,6 +50,7 @@ import {
   watchChainTriggerKeyItems, watchChainNestedTriggerKeyItems, watchChainInputKeyItems,
   watchEmailBodyKeyItems, watchSlackMessageKeyItems, watchJiraFieldsKeyItems, httpAuthBasicKeyItems, httpProxyKeyItems,
   watchPagerdutyContextKeyItems, watchSlackAttachmentKeyItems, watchSlackAttachmentFieldKeyItems,
+  watchArrayCompareKeyItems, watchArrayCompareOpKeyItems,
   securityRoleMappingRuleKeyItems,
   snapshotCloneBodyKeyItems, watchInlineExecuteBodyKeyItems, snapshotMountBodyKeyItems,
   nodesReloadSecureSettingsBodyKeyItems,
@@ -258,6 +259,8 @@ function allProblems(): string[] {
   out.push(...snippetProblems('WPC', watchPagerdutyContextKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('WSA', watchSlackAttachmentKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('WSF', watchSlackAttachmentFieldKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('WAC', watchArrayCompareKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
+  out.push(...snippetProblems('WAO', watchArrayCompareOpKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('RMR', securityRoleMappingRuleKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('SMT', snapshotMountBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));
   out.push(...snippetProblems('NRS', nodesReloadSecureSettingsBodyKeyItems().map(i => ({ text: i.insertText, key: i.label }))));

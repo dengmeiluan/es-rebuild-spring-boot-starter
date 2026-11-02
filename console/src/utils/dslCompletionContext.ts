@@ -2022,9 +2022,36 @@ export function watchActionTypeKeyItems(): AssistItem[] {
   ];
 }
 
-/** condition.<类型> 对象的参数键（script 复用脚本体目录；compare/array_compare 是动态表达式） */
+/** condition.<类型> 对象的参数键（script 复用脚本体目录；compare 是动态表达式） */
 export function watchConditionParamsKeyItems(type: string): AssistItem[] {
   return type === 'script' ? scriptObjectKeyItems() : [];
+}
+
+/** array_compare 的 ctx 路径对象键：path + 条件算子 */
+export function watchArrayCompareKeyItems(): AssistItem[] {
+  return [
+    { label: 'path', detail: '数组元素的取值路径（如 _source.status）', snippet: true, insertText: '"path": "${1:_source.status}"' },
+    { label: 'eq', detail: '等于（quantifier + value）', snippet: true,
+      insertText: '"eq": { "quantifier": "${1|some,all|}", "value": "${2:error}" }' },
+    { label: 'not_eq', detail: '不等于', snippet: true,
+      insertText: '"not_eq": { "quantifier": "${1|some,all|}", "value": "${2:error}" }' },
+    { label: 'lt', detail: '小于', snippet: true,
+      insertText: '"lt": { "quantifier": "${1|some,all|}", "value": ${2:0} }' },
+    { label: 'gt', detail: '大于', snippet: true,
+      insertText: '"gt": { "quantifier": "${1|some,all|}", "value": ${2:0} }' },
+    { label: 'lte', detail: '小于等于', snippet: true,
+      insertText: '"lte": { "quantifier": "${1|some,all|}", "value": ${2:0} }' },
+    { label: 'gte', detail: '大于等于', snippet: true,
+      insertText: '"gte": { "quantifier": "${1|some,all|}", "value": ${2:0} }' },
+  ];
+}
+
+/** array_compare 条件算子对象的键 */
+export function watchArrayCompareOpKeyItems(): AssistItem[] {
+  return [
+    { label: 'quantifier', detail: '量词（some=任一 / all=全部）', snippet: true, insertText: '"quantifier": "${1|some,all|}"' },
+    { label: 'value', detail: '比较值', snippet: true, insertText: '"value": "${1:error}"' },
+  ];
 }
 
 /** HTTP 请求定义（webhook 动作与 input.http.request 共用） */
@@ -2260,7 +2287,8 @@ export function watchRegionAt(doc: string, offset: number):
   | 'search-body' | 'search-query' | 'http-input' | 'http-request'
   | 'chain-input-container' | 'chain-input'
   | 'chain-trigger' | 'chain-trigger-container'
-  | 'condition' | 'condition-params' | 'action' | 'action-params'
+  | 'condition' | 'condition-params' | 'array-compare-body' | 'array-compare-op'
+  | 'action' | 'action-params'
   | 'action-email-body' | 'action-slack-message' | 'action-jira-fields'
   | 'slack-attachment' | 'slack-attachment-field'
   | 'http-auth-basic' | 'http-proxy' | 'pagerduty-context' | 'deep' {
@@ -2308,6 +2336,10 @@ export function watchRegionAt(doc: string, offset: number):
   if (stack[0] === 'condition') {
     if (stack.length === 2) return 'condition';
     if (stack.length === 3) return 'condition-params';
+    if (stack[1] === 'array_compare') {
+      if (stack.length === 4) return 'array-compare-body';
+      if (stack.length === 5 && stack[3] !== 'path') return 'array-compare-op';
+    }
     return 'deep';
   }
   if (stack[0] === 'actions') {
@@ -3340,7 +3372,8 @@ export function watchInlineExecuteRegionAt(doc: string, offset: number):
   | 'watch-search-body' | 'watch-search-query' | 'http-input' | 'http-request'
   | 'chain-input-container' | 'chain-input'
   | 'chain-trigger' | 'chain-trigger-container'
-  | 'watch-condition' | 'condition-params' | 'watch-action' | 'action-params'
+  | 'watch-condition' | 'condition-params' | 'array-compare-body' | 'array-compare-op'
+  | 'watch-action' | 'action-params'
   | 'action-email-body' | 'action-slack-message' | 'action-jira-fields'
   | 'slack-attachment' | 'slack-attachment-field'
   | 'http-auth-basic' | 'http-proxy' | 'pagerduty-context' | 'deep' {
@@ -3389,6 +3422,10 @@ export function watchInlineExecuteRegionAt(doc: string, offset: number):
   if (stack[1] === 'condition') {
     if (stack.length === 3) return 'watch-condition';
     if (stack.length === 4) return 'condition-params';
+    if (stack[2] === 'array_compare') {
+      if (stack.length === 5) return 'array-compare-body';
+      if (stack.length === 6 && stack[4] !== 'path') return 'array-compare-op';
+    }
     return 'deep';
   }
   if (stack[1] === 'actions') {
