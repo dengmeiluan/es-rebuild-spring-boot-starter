@@ -1,6 +1,6 @@
 <template>
   <div class="agn">
-    <div class="agn-hd" @contextmenu.prevent="openRowMenu">
+    <div class="agn-hd" tabindex="0" @contextmenu.prevent="openRowMenu" @keydown.self="onRowMenuKey">
       <input class="inp agn-name mono" :value="node.name" title="聚合名"
              @input="emit('update:node', { ...node, name: ($event.target as HTMLInputElement).value })" />
       <!-- 聚合类型：族→算子二段式选择器（此前是 68 项平铺的原生 datalist，
@@ -74,6 +74,7 @@ import AggBoundsPanel from './AggBoundsPanel.vue';
 import AggCompositePanel from './AggCompositePanel.vue';
 import AggOpPicker from './AggOpPicker.vue';
 import { AGG_BODY_PARAMS, FIELD_BODY_AGGS, PATH_BODY_AGGS, NUMERIC_FIELD_TYPES } from '../../utils/queryAstOps';
+import { isMenuKey, menuKeyAnchor } from '../../utils/menuKey';
 import { nid, serAggNode, type AggNode } from '../../utils/queryAst';
 
 const props = defineProps<{ node: AggNode; fields: string[]; types: Record<string, string> }>();
@@ -93,6 +94,11 @@ function openRowMenu(e: MouseEvent) {
   const t = e.target as HTMLElement | null;
   if (t?.closest('input, textarea, select, .monaco-editor')) return;
   rowMenu.value = { x: e.clientX, y: e.clientY };
+}
+function onRowMenuKey(e: KeyboardEvent) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  rowMenu.value = menuKeyAnchor(e);
 }
 async function copyJson() {
   const ok = await copyText(JSON.stringify(serAggNode(props.node), null, 2));

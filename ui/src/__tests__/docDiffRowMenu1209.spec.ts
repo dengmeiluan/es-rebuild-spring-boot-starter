@@ -18,9 +18,13 @@ const src = readFileSync(join(__dirname, '../components/DocDiffModal.vue'), 'utf
 
 describe('1209 文档对比差异表右键', () => {
   it('三个槽位都挂了 contextmenu（字段列 / 基准列 / 各目标列）', () => {
-    expect(src).toContain('<td class="p mono" :title="r.path" @contextmenu.prevent="openCellMenu($event, r, -1)">');
+    expect(src).toContain('@contextmenu.prevent="openCellMenu($event, r, -1)"');
     expect(src).toContain('@contextmenu.prevent="openCellMenu($event, r, 0)"');
     expect(src).toContain('@contextmenu.prevent="openCellMenu($event, r, ti + 1)"');
+    /* 1443：三个槽位都补菜单键入口（字段列同时补可聚焦） */
+    expect(src).toContain('@keydown="onCellMenuKey($event, r, -1)"');
+    expect(src).toContain('@keydown="onCellMenuKey($event, r, 0)"');
+    expect(src).toContain('@keydown="onCellMenuKey($event, r, ti + 1)"');
   });
 
   it('共享件而非自造菜单：CellContextMenu + CcmItem', () => {

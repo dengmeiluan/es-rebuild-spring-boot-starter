@@ -11,8 +11,8 @@
     </div>
     <div class="scroll-y" :style="maxHeight ? { maxHeight } : undefined">
       <div
-        v-for="(r, i) in shown" :key="r.k" class="sg-row" :class="{ 'sg-def': r.def }"
-        :data-hit-idx="i + 1" @contextmenu.prevent="openRowMenu($event, r)"
+        v-for="(r, i) in shown" :key="r.k" class="sg-row" :class="{ 'sg-def': r.def }" tabindex="0"
+        :data-hit-idx="i + 1" @contextmenu.prevent="openRowMenu($event, r)" @keydown="onRowMenuKey($event, r)"
       >
         <span class="sg-k">
           <DotKey :k="displayKey(r.k)" :full="r.k" />
@@ -62,6 +62,7 @@ import { FlaskConical, SlidersHorizontal, Copy, Braces, ClipboardList } from 'lu
 import { useAppStore } from '../stores/app';
 import { copyText } from '../utils/format';
 import { filterSettingRows, isStaticSettingKey, type SettingRow } from '../utils/settingsView';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 import { useHitLocate } from '../composables/useHitNav';
 /* 裸 .empty 迁 EmptyState compact */
 import EmptyState from './EmptyState.vue';
@@ -121,6 +122,11 @@ async function copyRow(r: SettingRow) {
 const rowMenu = ref<{ x: number; y: number; r: SettingRow } | null>(null);
 function openRowMenu(e: MouseEvent, r: SettingRow) {
   rowMenu.value = { x: e.clientX, y: e.clientY, r };
+}
+function onRowMenuKey(e: KeyboardEvent, r: SettingRow) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  rowMenu.value = { ...menuKeyAnchor(e), r };
 }
 const rowMenuItems = computed<CcmItem[]>(() => {
   const m = rowMenu.value;

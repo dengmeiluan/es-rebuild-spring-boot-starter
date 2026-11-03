@@ -42,9 +42,9 @@
           </thead>
           <tbody>
             <tr v-for="r in rows" :key="r.path" :class="'k-' + r.status">
-              <td class="p mono" :title="r.path" @contextmenu.prevent="openCellMenu($event, r, -1)"><MarkText :text="r.path" :kw="pathKw" /></td>
-              <td class="v mono cell" :title="fmt(r.base)" tabindex="0" role="button" :aria-label="'复制基线值 ' + r.path" @contextmenu.prevent="openCellMenu($event, r, 0)" @keydown.enter.prevent="copyCell(r.path, r.base)" @keydown.space.prevent="copyCell(r.path, r.base)" @click="copyCell(r.path, r.base)">{{ fmt(r.base) }}<Copy v-if="r.base !== undefined" :size="10" class="c-ic" /></td>
-              <td v-for="(tv, ti) in r.targets" :key="ti" class="v mono cell" :class="cellCls(r.kinds[ti])" :title="fmt(tv)" tabindex="0" role="button" :aria-label="'复制目标值 ' + r.path" @contextmenu.prevent="openCellMenu($event, r, ti + 1)" @keydown.enter.prevent="copyCell(r.path, tv)" @keydown.space.prevent="copyCell(r.path, tv)" @click="copyCell(r.path, tv)">
+              <td class="p mono" :title="r.path" tabindex="0" @contextmenu.prevent="openCellMenu($event, r, -1)" @keydown="onCellMenuKey($event, r, -1)"><MarkText :text="r.path" :kw="pathKw" /></td>
+              <td class="v mono cell" :title="fmt(r.base)" tabindex="0" role="button" :aria-label="'复制基线值 ' + r.path" @contextmenu.prevent="openCellMenu($event, r, 0)" @keydown="onCellMenuKey($event, r, 0)" @keydown.enter.prevent="copyCell(r.path, r.base)" @keydown.space.prevent="copyCell(r.path, r.base)" @click="copyCell(r.path, r.base)">{{ fmt(r.base) }}<Copy v-if="r.base !== undefined" :size="10" class="c-ic" /></td>
+              <td v-for="(tv, ti) in r.targets" :key="ti" class="v mono cell" :class="cellCls(r.kinds[ti])" :title="fmt(tv)" tabindex="0" role="button" :aria-label="'复制目标值 ' + r.path" @contextmenu.prevent="openCellMenu($event, r, ti + 1)" @keydown="onCellMenuKey($event, r, ti + 1)" @keydown.enter.prevent="copyCell(r.path, tv)" @keydown.space.prevent="copyCell(r.path, tv)" @click="copyCell(r.path, tv)">
                 {{ fmt(tv) }}<Copy v-if="tv !== undefined" :size="10" class="c-ic" />
               </td>
             </tr>
@@ -67,6 +67,7 @@ import { ClipboardList, Copy, ExternalLink, Filter } from 'lucide-vue-next';
 import { NModal } from 'naive-ui';
 import { docDiffMulti, docDiffToMarkdown, type MultiDocDiffRow } from '../utils/docDiffMulti';
 import { copyText } from '../utils/format';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 import MarkText from './MarkText.vue';
 import CellContextMenu, { type CcmItem } from './CellContextMenu.vue';
 import { useAppStore } from '../stores/app';
@@ -156,6 +157,12 @@ const cellMenu = ref<{ x: number; y: number; title: string; row: MultiDocDiffRow
 function openCellMenu(e: MouseEvent, row: MultiDocDiffRow, ci: number) {
   const label = ci < 0 ? '字段' : ci === 0 ? '基准' : `#${targetNo(ci - 1)}`;
   cellMenu.value = { x: e.clientX, y: e.clientY, title: `${label} · ${row.path}`, row, ci };
+}
+function onCellMenuKey(e: KeyboardEvent, row: MultiDocDiffRow, ci: number) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  const label = ci < 0 ? '字段' : ci === 0 ? '基准' : `#${targetNo(ci - 1)}`;
+  cellMenu.value = { ...menuKeyAnchor(e), title: `${label} · ${row.path}`, row, ci };
 }
 
 /** 槽位值取数：字段列没有"值"，返回 undefined 由调用方判空 */

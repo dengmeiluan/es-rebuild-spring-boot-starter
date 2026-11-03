@@ -41,6 +41,18 @@ const ROWS: Array<[string, string]> = [
   ['views/XmigrateView.vue', '@keydown="onJobMenuKey($event, rowJob(row))"'],
   ['views/IndexSettingsView.vue', '@keydown="openRowMenu($event)"'],
   ['views/RestView.vue', '@keydown="onRespMenuKey"'],
+  ['components/QueryHistoryPanel.vue', '@keydown="onRowMenuKey($event, it)"'],
+  ['components/SettingsGrid.vue', '@keydown="onRowMenuKey($event, r)"'],
+  ['components/MappingFieldTree.vue', '@keydown="onRowMenuKey($event, f)"'],
+  ['components/ExplainTree.vue', '@keydown="onCtxKey($event)"'],
+  ['components/DocDiffModal.vue', '@keydown="onCellMenuKey($event, r, -1)"'],
+  ['components/builder/AggTreeNode.vue', '@keydown.self="onRowMenuKey"'],
+  ['components/builder/BoolGroupNode.vue', '@keydown.self="onRowMenuKey"'],
+  ['components/builder/ClauseNode.vue', '@keydown.self="onRowMenuKey"'],
+  ['components/builder/MultiNodeRow.vue', '@keydown.self="onRowMenuKey"'],
+  ['components/builder/WrapNodeRow.vue', '@keydown.self="onRowMenuKey"'],
+  ['components/builder/RootExtrasPane.vue', '@keydown.self="onSortMenuKey($event, s, i)"'],
+  ['components/builder/RootExtrasPane.vue', '@keydown.self="onHlMenuKey($event, i)"'],
 ];
 
 describe('1443 行级右键菜单键盘入口', () => {
@@ -67,7 +79,7 @@ describe('1443 行级右键菜单键盘入口', () => {
       expect(s, `${file} 未接入 menuKeyAnchor`).toContain('menuKeyAnchor');
       seen.add(file);
     }
-    expect(seen.size).toBe(25);
+    expect(seen.size).toBe(36);
   });
 
   it('TemplatesView 不再使用匹配不到 ContextMenu 的 @keydown.menu 修饰符', () => {
@@ -101,7 +113,7 @@ describe('1443 行级右键菜单键盘入口', () => {
 
   it('快捷键速查面板登记了列表/卡片行入口', () => {
     const hk = src('components/HotkeyPanel.vue');
-    expect(hk).toContain('列表/卡片行（任务、快照、别名、索引、体检项、告警、策略、模板、校验、差分行、火焰图、DevTools 标签/响应行）');
+    expect(hk).toContain('列表/卡片行（任务、快照、别名、索引、体检项、告警、策略、模板、校验、差分行、火焰图、查询记录行、设置行、mapping 字段、explain 行、文档差异格、构建器条件/聚合行、DevTools 标签/响应行）');
     expect(hk).toContain('Shift+F10 同效');
   });
 });

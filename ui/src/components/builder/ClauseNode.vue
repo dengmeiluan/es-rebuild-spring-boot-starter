@@ -1,7 +1,7 @@
 <template>
   <div class="cn" :data-nid="node.id"
        :style="node.disabled ? { opacity: .45 } : undefined"
-       @contextmenu.prevent="openRowMenu">
+       tabindex="0" @contextmenu.prevent="openRowMenu" @keydown.self="onRowMenuKey">
     <NodeSelectBox :id="node.id" />
     <button v-if="node.disabled" aria-label="恢复参与匹配" class="btn xs ghost cn-pw on"
             title="该条件已临时停用，点击恢复参与匹配" @click="toggleDisabled(false)">
@@ -511,6 +511,11 @@ function openRowMenu(e: MouseEvent) {
   if (t?.closest('input, textarea, select, .monaco-editor')) return;
   rowMenu.value = { x: e.clientX, y: e.clientY };
 }
+function onRowMenuKey(e: KeyboardEvent) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  rowMenu.value = menuKeyAnchor(e);
+}
 async function copyJson() {
   const ok = await copyText(JSON.stringify(props.node, null, 2));
   showNudge(ok ? '已复制条件 JSON' : '复制失败');
@@ -878,6 +883,7 @@ import { getActivePinia } from 'pinia';
 import { useQueryHistoryStore } from '../../stores/queryHistory';
 import { useTermsSuggest } from '../../composables/useTermsSuggest';
 import { curFieldSearchIndex } from '../../utils/fieldSearch';
+import { isMenuKey, menuKeyAnchor } from '../../utils/menuKey';
 import { KEYWORD_VALUE_TYPES } from '../../utils/sqlCompletion';
 const qhStore = getActivePinia() ? useQueryHistoryStore() : null;
 /* terms-agg 值候选源——同 qhStore 静默闸（无 pinia 裸挂载 null 零降级）；索引语境

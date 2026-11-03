@@ -20,8 +20,8 @@
     <!-- 排序 -->
     <div v-if="open.has('sort')" class="rx-open">
       <div v-if="tree.sort === null" class="rx-none">未设置 <button class="btn sm ghost rx-sort-add" @click="addSort">+ 加排序</button></div>
-      <div v-for="(s, i) in tree.sort || []" :key="s.id" class="rx-sort-row"
-           @contextmenu.prevent="openSortMenu($event, s, i)">
+      <div v-for="(s, i) in tree.sort || []" :key="s.id" class="rx-sort-row" tabindex="0"
+           @contextmenu.prevent="openSortMenu($event, s, i)" @keydown.self="onSortMenuKey($event, s, i)">
         <!-- 排序行字段选择器只出可排序类型（ES doc_values 口径，含 boolean）；
  【W3b】候选内 date/数值族置顶（typePriority 只重排分组，候选集不变）
  998：多键排序项（{a:'asc',b:'desc'} 合并写法）不拆行——原样保留整项，用参数表编辑 -->
@@ -87,8 +87,8 @@ ES 默认返回全部字段
         <button class="btn sm ghost rx-hl-set" @click="hlSet">启用</button>
       </div>
       <template v-else>
-        <div v-for="(f, i) in tree.highlight.fields" :key="i" class="rx-hl-row"
-             @contextmenu.prevent="openHlMenu($event, f, i)">
+        <div v-for="(f, i) in tree.highlight.fields" :key="i" class="rx-hl-row" tabindex="0"
+             @contextmenu.prevent="openHlMenu($event, f, i)" @keydown.self="onHlMenuKey($event, i)">
           <!-- 高亮行只出可分词高亮的文本类字段（text/keyword）；
  【W3b】候选内 text 置顶（全文高亮主场景是分词字段） -->
           <FieldSelect :model-value="f.name" :fields="hlFields" :types="types" :type-filter="HL_TYPES" :type-priority="HL_PRIO_TYPES" @update:model-value="v => hlPatchField(i, { name: v })" />
@@ -443,6 +443,7 @@ import { runtimeScriptMissing } from '../../utils/runtimeFields';
 import { RUNTIME_FIELD_CTX } from './runtimeFieldContext';
 import { SEARCH_PARAM_META, SEARCH_PARAM_GROUPS } from '../../utils/queryBodyParams';
 import { setFieldSearchIndex } from '../../utils/fieldSearch';
+import { isMenuKey, menuKeyAnchor } from '../../utils/menuKey';
 import { SORTABLE_FIELD_TYPES, NUMERIC_FIELD_TYPES } from '../../utils/queryAstOps';
 
 const props = defineProps<{ tree: QueryTree; fields: string[]; types: Record<string, string>; index?: string }>();
@@ -739,6 +740,11 @@ function openSortMenu(e: MouseEvent, s: SortItem, i: number) {
   if (t?.closest('input, textarea, select, .monaco-editor')) return;
   sortMenu.value = { x: e.clientX, y: e.clientY, id: s.id, i };
 }
+function onSortMenuKey(e: KeyboardEvent, s: SortItem, i: number) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  sortMenu.value = { ...menuKeyAnchor(e), id: s.id, i };
+}
 async function copySortJson() {
   const m = sortMenu.value;
   const s = m ? (props.tree.sort || []).find(x => x.id === m.id) : null;
@@ -818,6 +824,11 @@ function openHlMenu(e: MouseEvent, _f: { name: string }, i: number) {
   const t = e.target as HTMLElement | null;
   if (t?.closest('input, textarea, select, .monaco-editor')) return;
   hlMenu.value = { x: e.clientX, y: e.clientY, i };
+}
+function onHlMenuKey(e: KeyboardEvent, i: number) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  hlMenu.value = { ...menuKeyAnchor(e), i };
 }
 async function copyHlJson() {
   const f = hlMenuField.value;

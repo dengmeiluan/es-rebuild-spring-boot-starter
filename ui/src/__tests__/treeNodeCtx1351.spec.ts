@@ -143,7 +143,7 @@ describe('1351 查询树三类容器节点右键', () => {
 
   it('⑤ 负控：去掉模板上的 @contextmenu → 源判据必须红（判据不是恒真）', () => {
     const s = read('MultiNodeRow.vue');
-    const stripped = s.replace('<div class="mnr-hd" @contextmenu.prevent="openRowMenu">', '<div class="mnr-hd">');
+    const stripped = s.replace('<div class="mnr-hd" tabindex="0" @contextmenu.prevent="openRowMenu" @keydown.self="onRowMenuKey">', '<div class="mnr-hd">');
     expect(stripped, '负控必须真的改掉模板').not.toBe(s);
     const i = stripped.indexOf('class="mnr-hd"');
     const tagEnd = stripped.indexOf('>', i);

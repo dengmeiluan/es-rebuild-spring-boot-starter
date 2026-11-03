@@ -53,7 +53,7 @@
                 <component :is="collapsed.has(f.path) ? ChevronRight : ChevronDown" :size="12" />
               </button>
               <span v-else-if="f.depth" class="mft-tree">└</span>
-              <span class="mft-name" :title="f.path + '（点击复制路径 · 右键更多操作）'" tabindex="0" role="button" @keydown.enter.prevent="copyPath(f.path)" @keydown.space.prevent="copyPath(f.path)" @click="copyPath(f.path)"
+              <span class="mft-name" :title="f.path + '（点击复制路径 · 右键更多操作）'" tabindex="0" role="button" @keydown.enter.prevent="copyPath(f.path)" @keydown.space.prevent="copyPath(f.path)" @click="copyPath(f.path)" @keydown="onRowMenuKey($event, f)"
                 @contextmenu.prevent="openRowMenu($event, f)"><!--
                 --><template v-for="(seg, si) in hlSegs(f.name)" :key="si"><!--
                   --><mark v-if="seg.hit" class="mft-mark">{{ seg.t }}</mark><!--
@@ -103,6 +103,7 @@ import { useRouter } from 'vue-router';
 import { Search, ChevronRight, ChevronDown, ChevronsUpDown, ChevronsDownUp, ShieldAlert, Hammer, Copy, Braces } from 'lucide-vue-next';
 import { flattenMapping, detectDslPollution, visibleRows, descendantCount, type MappingRow } from '../utils/mappingTree';
 import { copyText } from '../utils/format';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 /* 两处裸 .empty 迁 EmptyState compact */
 import EmptyState from './EmptyState.vue';
 import SearchFilterBar from './SearchFilterBar.vue'; /* 轨4：手作绝对图标过滤胞改用统一件（sfbUnify650 锁） */
@@ -284,6 +285,11 @@ function childCount(path: string): number { return descendantCount(rows.value, p
 const rowMenu = ref<{ x: number; y: number; f: any } | null>(null);
 function openRowMenu(e: MouseEvent, f: any) {
   rowMenu.value = { x: e.clientX, y: e.clientY, f };
+}
+function onRowMenuKey(e: KeyboardEvent, f: any) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  rowMenu.value = { ...menuKeyAnchor(e), f };
 }
 const rowMenuItems = computed(() => {
   const rm = rowMenu.value; if (!rm) return [];

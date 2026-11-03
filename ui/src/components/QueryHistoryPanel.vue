@@ -36,6 +36,7 @@
         class="qhp-item" :class="{ clickable: clickable }"
         @click="clickable && $emit('play', it)"
         @contextmenu.prevent="openRowMenu($event, it)"
+        @keydown="onRowMenuKey($event, it)"
        role="button" tabindex="0" @keydown.enter.prevent="clickable && $emit('play', it)" @keydown.space.prevent="clickable && $emit('play', it)">
         <div class="qhp-row">
           <span v-if="it.name" class="qhp-name" :title="it.name"><MarkText :text="it.name" :kw="kw" /></span>
@@ -99,6 +100,7 @@ import SearchFilterBar from './SearchFilterBar.vue'; /* 轨4：过滤框统一�
 import CellContextMenu, { type CcmItem } from './CellContextMenu.vue'; /* 1142：行右键（分组） */
 import { exportStamp, relTime, copyText, downloadText, fmtTook, tookClass } from '../utils/format';
 import { QUERY_MODES } from '../utils/queryHub';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 
 /** 统一条目形状：DslQueryView 旧历史（dsl/idx）与 queryHistory store（query/index）在父侧映射 */
 export interface HistRow {
@@ -182,6 +184,11 @@ const now = useNow();
 const rowMenu = ref<{ x: number; y: number; it: HistRow } | null>(null);
 function openRowMenu(e: MouseEvent, it: HistRow) {
   rowMenu.value = { x: e.clientX, y: e.clientY, it };
+}
+function onRowMenuKey(e: KeyboardEvent, it: HistRow) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  rowMenu.value = { ...menuKeyAnchor(e), it };
 }
 const rowMenuItems = computed<CcmItem[]>(() => {
   const m = rowMenu.value; if (!m) return [];

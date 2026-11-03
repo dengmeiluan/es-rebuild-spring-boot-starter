@@ -1,6 +1,6 @@
 <template>
   <div class="mnr" :data-nid="node.id">
-    <div class="mnr-hd" @contextmenu.prevent="openRowMenu">
+    <div class="mnr-hd" tabindex="0" @contextmenu.prevent="openRowMenu" @keydown.self="onRowMenuKey">
       <NodeSelectBox :id="node.id" />
       <span class="mnr-grip" title="拖拽排序（按住拖动）；Alt+↑/↓ 上移/下移" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
       <span class="mnr-op">{{ MULTI_LABELS[node.op] || node.op }}</span>
@@ -54,6 +54,7 @@ import { serQueryNode } from '../../utils/queryAst';
 import { DRAG_KEY, fireDrag } from './treeBus';
 import { MULTI_META, MULTI_LABELS, NAME_PARAM } from '../../utils/queryAstOps';
 import { nid, wrapInBool, type MultiNode, type QueryNode, type LeafNode } from '../../utils/queryAst';
+import { isMenuKey, menuKeyAnchor } from '../../utils/menuKey';
 import { defaultLeafTarget, curFieldSearchIndex } from '../../utils/fieldSearch';
 
 const props = defineProps<{ node: MultiNode; fields: string[]; types: Record<string, string> }>();
@@ -111,6 +112,11 @@ function openRowMenu(e: MouseEvent) {
   const t = e.target as HTMLElement | null;
   if (t?.closest('input, textarea, select, .monaco-editor')) return;
   rowMenu.value = { x: e.clientX, y: e.clientY };
+}
+function onRowMenuKey(e: KeyboardEvent) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  rowMenu.value = menuKeyAnchor(e);
 }
 async function copyJson() {
   const ok = await copyText(JSON.stringify(props.node, null, 2));

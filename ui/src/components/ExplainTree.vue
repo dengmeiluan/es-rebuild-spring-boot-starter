@@ -1,6 +1,6 @@
 <template>
   <div class="xt-node" :style="{ '--xt-depth': depth }">
-    <div class="xt-row" :class="kindClass" role="button" tabindex="0" :aria-expanded="open" @click="open = !open" @keydown.enter.prevent="open = !open" @keydown.space.prevent="open = !open"
+    <div class="xt-row" :class="kindClass" role="button" tabindex="0" :aria-expanded="open" @click="open = !open" @keydown.enter.prevent="open = !open" @keydown.space.prevent="open = !open" @keydown="onCtxKey($event)"
       @contextmenu.prevent.stop="openCtx($event)">
       <ChevronRight v-if="hasKids" :size="10" class="xt-caret" :class="{ open }" />
       <span v-else class="xt-caret-ph" />
@@ -24,6 +24,7 @@
 import { ref, computed } from 'vue';
 import { Braces, ChevronRight, ClipboardList, Copy, Hash, Info } from 'lucide-vue-next';
 import { copyText } from '../utils/format';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 import CellContextMenu, { type CcmItem } from './CellContextMenu.vue';
 
 /**
@@ -87,7 +88,13 @@ function fmtVal(v: any) {
 const ctx = ref<{ x: number; y: number; title: string; items: CcmItem[] } | null>(null);
 const flash = ref<{ x: number; y: number; text: string } | null>(null);
 let flashTimer: ReturnType<typeof setTimeout> | null = null;
-async function copyNear(text: string, msg: string, e: MouseEvent) {
+function onCtxKey(e: KeyboardEvent) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  const at = menuKeyAnchor(e);
+  openCtx({ clientX: at.x, clientY: at.y });
+}
+async function copyNear(text: string, msg: string, e: { clientX: number; clientY: number }) {
   if (!text) return;
   const ok = await copyText(text);
   flash.value = { x: e.clientX + 10, y: e.clientY + 14, text: ok ? msg : '复制失败' };
@@ -102,7 +109,7 @@ function rowLine(): string {
   if (d) parts.push(d);
   return parts.join(' · ');
 }
-function openCtx(e: MouseEvent) {
+function openCtx(e: { clientX: number; clientY: number }) {
   const d = String(props.node?.description || '');
   ctx.value = {
     x: e.clientX, y: e.clientY,

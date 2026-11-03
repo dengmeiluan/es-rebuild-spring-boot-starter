@@ -1,6 +1,6 @@
 <template>
   <div ref="rootEl" class="bgn" :class="{ folded: collapsed }" :data-nid="node.id">
-    <div class="bgn-hd" @contextmenu.prevent="openRowMenu">
+    <div class="bgn-hd" tabindex="0" @contextmenu.prevent="openRowMenu" @keydown.self="onRowMenuKey">
       <NodeSelectBox :id="node.id" />
       <span class="bgn-grip" title="拖拽整组排序（按住拖动）" draggable="true" @dragstart.stop="onDragStart" @dragend="endDrag">⋮⋮</span>
       <button aria-label="折叠或展开整组" class="btn sm ghost" :title="collapsed ? '展开整组' : '折叠整组'"
@@ -126,6 +126,7 @@ import { TREE_BUS, DRAG_KEY, DRAG_EVENT, fireDrag } from './treeBus';
 import { defaultLeafTarget, curFieldSearchIndex } from '../../utils/fieldSearch';
 import { useScopedDraft } from '../../composables/useScopedDraft';
 import { ADV_MENU, labelOfOp, BOOL_PARAMS } from '../../utils/queryAstOps';
+import { isMenuKey, menuKeyAnchor } from '../../utils/menuKey';
 import {
   OCCURS, nid, removeNodeById, wrapInBool, dissolveBool, makeNodeByOp,
   type BoolNode, type LeafNode, type QueryNode, type Occur,
@@ -222,6 +223,11 @@ function openRowMenu(e: MouseEvent) {
   const t = e.target as HTMLElement | null;
   if (t?.closest('input, textarea, select, .monaco-editor')) return;
   rowMenu.value = { x: e.clientX, y: e.clientY };
+}
+function onRowMenuKey(e: KeyboardEvent) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  rowMenu.value = menuKeyAnchor(e);
 }
 async function copyJson() {
   const ok = await copyText(JSON.stringify(props.node, null, 2));
