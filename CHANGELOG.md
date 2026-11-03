@@ -41,6 +41,9 @@ All notable changes to SearchDeck are documented here. The format follows
 - The shared context menu now moves focus to its first item when opened, supports ↑/↓ cycling
   between actions, and restores focus to the trigger on close. This applies to every right-click
   surface using `CellContextMenu`, including the new query-workbench menus.
+- Context menus now use a dedicated top z-index tier (`--z-ctx-top`) above picker islands and
+  fullscreen surfaces, fixing menus opened from field candidates being covered by the candidate
+  popup in the real browser.
 
 ### Changed
 

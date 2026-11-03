@@ -7,7 +7,7 @@
  渲染成父行（右箭头），悬停即开二级；二级同样做视口翻转。键盘：→/Enter 开二级，
  ←/Esc 先关二级再关整菜单（ARIA menu 惯例）。 -->
   <teleport to="body">
-    <div ref="maskEl" class="ccm-mask" role="presentation" @click="emit('close')" @contextmenu.prevent="emit('close')" @keydown.esc="emit('close')" tabindex="-1">
+    <div class="ccm-mask" role="presentation" @click="emit('close')" @contextmenu.prevent="emit('close')" @keydown.esc="emit('close')" tabindex="-1">
       <div ref="menuEl" class="ccm" role="menu" :aria-label="title || '操作菜单'" :style="{ left: pos.x + 'px', top: pos.y + 'px' }"
         @click.stop @contextmenu.prevent @keydown.esc.stop="onEsc" @keydown="onMenuKey" tabindex="-1">
         <div v-if="title" class="ccm-hd mono">{{ title }}</div>
@@ -51,7 +51,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { ChevronRight } from 'lucide-vue-next';
-import zIndexManager from 'vdirs/es/zindexable/z-index-manager';
 import { fitPopupPos } from '../utils/popFit';
 
 export interface CcmItem {
@@ -115,18 +114,9 @@ onBeforeUnmount(() => {
   if (!closedByAction && restoreFocus?.isConnected) restoreFocus.focus();
 });
 
-/* 层序动态跟随（1208）：静态档 --z-ctx 1200 压不过 naive 弹层——弹层从 2000 起自增，
-   而右键菜单常从弹层内触发（单元格/JSON 详情、连接管理、对比弹窗都在 n-modal 里），
-   实测弹窗容器 z=2000 而菜单 z=1201、elementFromPoint 命中的是弹窗内容，整张菜单不可见。
-   与 ModalShell 同解：确有已注册层时把 mask 注册进 naive 同款计数器（后开者胜，面板/二级在
-   mask 内部按 +1/+2 相对定位），卸载反注册；无层时保持 CSS 的 --z-ctx，页面内右键层序不变。 */
-const maskEl = ref<HTMLElement>();
-onMounted(() => {
-  const el = maskEl.value;
-  if (el && zIndexManager.elementCount > 0) zIndexManager.ensureZIndex(el);
-});
-onBeforeUnmount(() => { if (maskEl.value) zIndexManager.unregister(maskEl.value); });
-
+/* 顶档层序（--z-ctx-top=10001）：必须压过 Picker 浮岛（--z-island=9000）、
+   naive 弹层（2000+）与全屏（10000）；字段候选里右键的菜单曾被浮岛盖住，
+   旧动态注册只能追到 naive 计数器，无法越过浮岛档。 */
 /* ═══ 1142：二级菜单 ═══ */
 const sub = ref<{ key: string; label: string; items: CcmItem[]; anchorTop: number; anchorRight: number } | null>(null);
 const subPos = ref({ x: 0, y: 0 });
@@ -202,13 +192,13 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey, true));
 
 <style scoped>
 /* 全局右键菜单统一样式（dbx 紧凑风格；RT/QRT 复用）
- z 字面量收口全局 token——mask=--z-ctx（1200 上下文层）、面板=+1，语义不变 */
-.ccm-mask { position: fixed; inset: 0; z-index: var(--z-ctx); }
-.ccm { position: fixed; min-width: 168px; padding: var(--sp-1); background: var(--bg1); border: 1px solid var(--line-strong); border-radius: 10px; box-shadow: var(--shadow-pop); z-index: calc(var(--z-ctx) + 1);
+ z 字面量收口全局 token——mask=--z-ctx-top、面板=+1，压过 Picker 浮岛/全屏 */
+.ccm-mask { position: fixed; inset: 0; z-index: var(--z-ctx-top); }
+.ccm { position: fixed; min-width: 168px; padding: var(--sp-1); background: var(--bg1); border: 1px solid var(--line-strong); border-radius: 10px; box-shadow: var(--shadow-pop); z-index: calc(var(--z-ctx-top) + 1);
   /* 超长按视口限高内滚——再长的菜单也全程可用 */
   max-height: calc(100vh - 16px); overflow-y: auto; }
 /* 二级贴一级右侧，层级 +1（仍低于筛选弹层）；不限高由 fitPopupPos 兜 */
-.ccm-sub { z-index: calc(var(--z-ctx) + 2); min-width: 190px; max-height: calc(100vh - 16px); overflow-y: auto; }
+.ccm-sub { z-index: calc(var(--z-ctx-top) + 2); min-width: 190px; max-height: calc(100vh - 16px); overflow-y: auto; }
 /* 二级面板嵌在主面板 DOM 内（取项/读屏可达），fixed 定位脱离滚动容器 */
 .ccm > .ccm-sub { position: fixed; }
 .ccm-hd { font-size: var(--fs-2xs); font-weight: 650; color: var(--tx2); letter-spacing: .06em; padding: var(--sp-1) var(--sp-2h) var(--sp-1h); border-bottom: 1px solid var(--line); margin-bottom: 3px; }

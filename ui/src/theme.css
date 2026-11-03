@@ -122,14 +122,16 @@
   /* 确认弹窗宽度档 --dlg-w 四档约定：small 340 / info 460 / confirm 560 / large 640。
      现散值：ModalShell 默认 460（info 档）/ GuardedActionButton 480（confirm 档散值，待收编）；
      后续批次经 ModalShell width prop 收编消费端（本批只立档不迁移任何消费端） */
-  /* W8 z 补档（取阶梯空档，不动既有值）：--z-ctx 1200=单元格右键菜单/表格浮层 chip 档
+  /* W8 z 补档（取阶梯空档，不动既有值）：--z-ctx 1200=表格浮层 chip 档；
+     --z-ctx-top 10001=右键菜单顶档（必须高于 Picker 浮岛 9000 与全屏 10000，
+     否则从字段候选里右键时菜单会被浮岛盖住）；
      （夹在局部浮层 1150 与确认弹窗 1300 之间；下一波收编 RT/QRT/CellContextMenu 的 .xx-pop）；
      --z-island 9000=Picker 浮岛档（naive 模态内可用依赖，禁降档——低于 naive 动态 2000+ 会被模态压住）；
      --z-fullscreen 10000=全屏门禁档（登录/安装向导，盖过全部业务浮层与 naive 动态）；
      --z-routebar 9999=路由进度条档（App.vue .route-bar 顶部 ind-bar；夹在浮岛 9000 与全屏门禁 10000 之间；
      W7 注：任务书原拟名 --z-receipt 已被 v3.0.1 阶梯占用（1310 回执 toast 档，GuardedActionButton 在消费），
      同名重复定义会让回执静默跳 9999，故改用专名 --z-routebar，route-bar 数值零变化） */
-  --z-ctx: 1200; --z-island: 9000; --z-routebar: 9999; --z-fullscreen: 10000;
+  --z-ctx: 1200; --z-ctx-top: 10001; --z-island: 9000; --z-routebar: 9999; --z-fullscreen: 10000;
   /* 按钮内高光（顶部 1px 提亮，塑造立体感；浅色主题自动削弱） */
   --btn-gloss: inset 0 1px 0 rgba(255, 255, 255, .06);
   /* 遮罩两档（弹窗蒙层 / 全屏门禁），浅色主题自动减重避免糊成黑布 */

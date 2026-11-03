@@ -6,7 +6,7 @@
  *    Esc/点遮罩 close、默认插槽（Browser 复制整列值底栏位）；
  * 2) 消费端最终 DOM（QRT + BrowserView 挂载）——保命挂载锁：类名与交互锚点逐字；
  * 3) z 层级：mask=var(--z-ctx)、面板=calc(var(--z-ctx) + 1)（.float-pop 自带 --z-island
- *    被局部覆写压回 ctx 档——弹层仍归页面滚动遮罩语义管理，不升浮岛档）。
+ *    浮岛档，被局部覆写压回 ctx 档）；CellContextMenu 单独使用 --z-ctx-top 顶档。
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createApp, h, nextTick, ref } from 'vue';
@@ -304,9 +304,10 @@ describe('z 层级收口（五百二十四批）', () => {
       const s = readFileSync(join(__dirname, f), 'utf-8');
       expect(s, f + ' 不应再有 z-index:1200/1201 字面量').not.toMatch(/z-index:\s*120[01]/);
     }
-    /* CellContextMenu 与共享壳同一 ctx 档语义（原 1200/1201 平移） */
+    /* 右键菜单独立顶档：必须压过 Picker 浮岛（--z-island）/全屏——旧 ctx 档 1200 会
+       在字段候选浮层里被盖住（真实浏览器实测） */
     const ccm = readFileSync(join(__dirname, '../components/CellContextMenu.vue'), 'utf-8');
-    expect(ccm).toMatch(/\.ccm-mask \{ position: fixed; inset: 0; z-index: var\(--z-ctx\); \}/);
-    expect(ccm).toMatch(/z-index: calc\(var\(--z-ctx\) \+ 1\);/);
+    expect(ccm).toMatch(/\.ccm-mask \{ position: fixed; inset: 0; z-index: var\(--z-ctx-top\); \}/);
+    expect(ccm).toMatch(/z-index: calc\(var\(--z-ctx-top\) \+ 1\);/);
   });
 });
