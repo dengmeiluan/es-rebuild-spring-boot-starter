@@ -121,8 +121,8 @@
       </div>
 
       <div v-if="report.issues.length" class="cv-issues" role="status" :style="{ maxHeight: cvIssuesH + 'px' }">
-        <div v-for="(iss, i) in report.issues" :key="i" class="cv-issue" :class="iss.severity.toLowerCase()"
-          @contextmenu.prevent="openIssueMenu($event, iss)">
+        <div v-for="(iss, i) in report.issues" :key="i" class="cv-issue" :class="iss.severity.toLowerCase()" tabindex="0"
+          @contextmenu.prevent="openIssueMenu($event, iss)" @keydown="onIssueMenuKey($event, iss)">
           <!-- severity 裸英文枚举换 StatusPill+sevZh（档位 sevPill 五主档已接，
  524 锚 cv-iss-sev pill 形态随组件化改锁 :tone 同源调用） -->
           <StatusPill class="cv-iss-sev" :tone="cvSevPill(iss.severity)" :label="cvSevZh(iss.severity)" />
@@ -188,6 +188,7 @@ import { friendlyEsError } from '../utils/esError';
 import { useInputLint, indexNameRule, dupRule } from '../composables/useInputLint';
 import type { BodyKind } from '../utils/dslCompletionContext';
 import { lintSettingsBody, lintMappingBody } from '../utils/dslLint'; /* P1-1：档路由静态 lint */
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 import { useDebounceFn } from '../composables/useDebounceFn'; /* P1-1：划线防抖统一件 */
 
 import { useScopedDraft } from '../composables/useScopedDraft';
@@ -285,6 +286,11 @@ const LAYER_NAMES: Record<string, string> = { LINT: 'L1 Lint', DRYRUN: 'L2 Dry-r
 const issueMenu = ref<{ x: number; y: number; iss: any } | null>(null);
 function openIssueMenu(e: MouseEvent, iss: any) {
   issueMenu.value = { x: e.clientX, y: e.clientY, iss };
+}
+function onIssueMenuKey(e: KeyboardEvent, iss: any) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  issueMenu.value = { ...menuKeyAnchor(e), iss };
 }
 async function copyIssueText(text: string, okMsg: string) {
   const ok = await copyText(text);

@@ -132,7 +132,8 @@
  widthPct 下限）× track 约 600px ≈ 48px，中文「删除/冻结」1-2 字（≤24px）比英文裸串
  （delete 6 字符 mono ≈ 43px）更窄——条内亦收中文不溢出，title 恒双语「中文（english）」兜底 -->
       <div v-else-if="policies.length" class="lc-gantt">
-        <div v-for="p in policies" :key="p.name" class="lc-gantt-row" @contextmenu.prevent="openLcMenu($event, p)">
+        <div v-for="p in policies" :key="p.name" class="lc-gantt-row" tabindex="0"
+          @contextmenu.prevent="openLcMenu($event, p)" @keydown="onLcMenuKey($event, p)">
           <div class="lc-gantt-label" :title="p.name">{{ p.name }}</div>
           <div class="lc-gantt-track">
             <div v-for="ph in p.phases" :key="ph.name" class="lc-gantt-bar" :class="'ph-' + ph.name"
@@ -237,6 +238,7 @@ import { lintClause } from '../utils/dslLint'; /* ：rollover 条件结构体检
 import { phaseZh, ILM_PHASE_ZH, ILM_ACTION_ZH } from '../utils/esEnumZh'; /* ：甘特/图例 phase 中文（esEnumZh 单源）；：move 弹窗 datalist 候选域 */
 import { useDebounceFn } from '../composables/useDebounceFn'; /* ：划线注入防抖统一件 */
 import { removeStoredRaw } from '../utils/safeJson';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 
 const store = useAppStore();
 
@@ -244,6 +246,11 @@ const store = useAppStore();
 const lcMenu = ref<{ x: number; y: number; p: any } | null>(null);
 function openLcMenu(e: MouseEvent, p: any) {
   lcMenu.value = { x: e.clientX, y: e.clientY, p };
+}
+function onLcMenuKey(e: KeyboardEvent, p: any) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  lcMenu.value = { ...menuKeyAnchor(e), p };
 }
 const lcMenuItems = computed<CcmItem[]>(() => {
   const m = lcMenu.value; if (!m) return [];

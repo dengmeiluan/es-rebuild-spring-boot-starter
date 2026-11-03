@@ -71,6 +71,14 @@ All notable changes to SearchDeck are documented here. The format follows
   keyboard ContextMenu/Shift+F10 to open the document or copy its _id/document JSON/_source.
 - DSL aggregation bucket rows now support right-click and keyboard ContextMenu/Shift+F10 to drill
   down/exclude a bucket or copy its key/count.
+- Every custom list/card row menu (tasks, snapshots, aliases, index list, health checks, watcher,
+  ILM/lifecycle/SLM policies, templates, remote clusters, favorites, topology shards, flame rows,
+  config validation, diffs, optimizer suggestions, analysis components, DevTools tabs/response
+  rows, REST response, hot settings, migration jobs) now also opens from the menu key or
+  Shift+F10, with focusable rows and a shared `utils/menuKey.ts` anchor. The hotkey panel lists
+  the new entry.
+- `TemplatesView` menu-key entry was bound to `@keydown.menu`, which never matches the browser's
+  `ContextMenu` key; it now uses the shared predicate and also accepts Shift+F10.
 
 ### Changed
 

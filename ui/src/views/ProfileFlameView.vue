@@ -63,9 +63,9 @@
           </button>
         </div>
         <div class="pf-flame">
-          <div v-for="(n, i) in focused.nodes" :key="i" class="pf-flame-row"
+          <div v-for="(n, i) in focused.nodes" :key="i" class="pf-flame-row" tabindex="0"
             :style="{ paddingLeft: n.depth * 16 + 'px' }"
-            @contextmenu.prevent="openFlameMenu($event, n, i)">
+            @contextmenu.prevent="openFlameMenu($event, n, i)" @keydown="onFlameMenuKey($event, n, i)">
             <div class="pf-flame-bar" :style="{ width: (n.took / focused.took * 100).toFixed(1) + '%', background: heatColor(n.took) }"
               :title="`${n.type} · ${n.description || ''} · ${(n.took / 1_000_000).toFixed(2)}ms`">
               <span class="pf-flame-type">{{ n.type }}</span>
@@ -154,6 +154,7 @@ import { EDITOR_H_TIERS, type EditorHKey } from '../utils/editorTiers';
 import { copyText } from '../utils/format';
 import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import { lintDsl } from '../utils/dslLint'; /* ：DSL 静态体检（RankDebugView 同款接线） */
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 import { useDebounceFn } from '../composables/useDebounceFn'; /* ：lint 划线防抖统一件 */
 
 const store = useAppStore();
@@ -208,6 +209,11 @@ const focused = ref<any>(null);
  菜单刻意不含任何 danger / 配置写入动作。 */
 const flameMenu = ref<{ x: number; y: number; title: string; n: any } | null>(null);
 const msOf = (ns: number) => (Number(ns || 0) / 1e6).toFixed(2) + 'ms';
+function onFlameMenuKey(e: KeyboardEvent, n: any, i: number) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  flameMenu.value = { ...menuKeyAnchor(e), title: n.type + ' · ' + msOf(n.took) + ' · 第 ' + (i + 1) + ' 行', n };
+}
 function openFlameMenu(e: MouseEvent, n: any, i: number) {
   flameMenu.value = { x: e.clientX, y: e.clientY, title: n.type + ' · ' + msOf(n.took) + ' · 第 ' + (i + 1) + ' 行', n };
 }

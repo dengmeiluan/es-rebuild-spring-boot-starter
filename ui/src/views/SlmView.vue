@@ -72,7 +72,8 @@
         text="当前无 SLM 策略"
         hint="请到 Kibana 或调用 PUT /_slm/policy/{id} 创建备份策略"
       />
-      <div v-for="p in policyRows" :key="p.id" class="slm-card" @contextmenu.prevent="openRowMenu($event, p)">
+      <div v-for="p in policyRows" :key="p.id" class="slm-card" tabindex="0"
+        @contextmenu.prevent="openRowMenu($event, p)" @keydown="onSlmMenuKey($event, p)">
         <div class="slm-card-l">
           <div class="slm-card-tt"><Calendar :size="12" /> {{ p.name || p.id }}</div>
           <div class="slm-card-sub">仓库 <b>{{ p.repository }}</b> · Cron <code>{{ p.schedule }}</code></div>
@@ -120,6 +121,7 @@ import { semFormat } from '../composables/useSemFormat'; /* ：时长档单源�
 import { useAutoRefresh } from '../composables/useAutoRefresh'; /* ：自动刷新 */
 import { usePref } from '../composables/urlState';
 import { slmOpModeZh, slmOpModeTone } from '../utils/esEnumZh'; /* ：operation_mode 中文主显收口件 */
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 import AutoRefreshSelect from '../components/AutoRefreshSelect.vue';
 
 const store = useAppStore();
@@ -283,6 +285,11 @@ function copyBody(p: any) {
 const rowMenu = ref<{ x: number; y: number; p: any } | null>(null);
 function openRowMenu(e: MouseEvent, p: any) {
   rowMenu.value = { x: e.clientX, y: e.clientY, p };
+}
+function onSlmMenuKey(e: KeyboardEvent, p: any) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  rowMenu.value = { ...menuKeyAnchor(e), p };
 }
 const rowMenuItems = computed(() => {
   const rm = rowMenu.value; if (!rm) return [];

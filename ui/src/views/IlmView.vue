@@ -79,7 +79,7 @@
               class="ilm-p" :class="{ on: selected?.name === p.name }" :data-hit-idx="i + 1"
               :aria-current="selected?.name === p.name || undefined"
               @click="pickPolicy(p)"
-              @contextmenu.prevent="openIlmMenu($event, p)"
+              @contextmenu.prevent="openIlmMenu($event, p)" @keydown="onIlmMenuKey($event, p)"
               role="button" tabindex="0" @keydown.enter.prevent="pickPolicy(p)" @keydown.space.prevent="pickPolicy(p)">
             <div class="ilm-p-head">
               <b class="mono"><MarkText :text="p.name" :kw="filter" /></b>
@@ -272,6 +272,7 @@ import { useModalEnter } from '../composables/useModalEnter';
 import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue'; /* 1144：策略卡右键 */
 import { copyText } from '../utils/format';
 import { writeStoredRaw } from '../utils/safeJson';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 
 const store = useAppStore();
 /* 权限门禁——ILM 策略保存/删除与 move step=rank3 档
@@ -468,6 +469,11 @@ function pickPolicy(p: any) {
 const ilmMenu = ref<{ x: number; y: number; p: any } | null>(null);
 function openIlmMenu(e: MouseEvent, p: any) {
   ilmMenu.value = { x: e.clientX, y: e.clientY, p };
+}
+function onIlmMenuKey(e: KeyboardEvent, p: any) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  ilmMenu.value = { ...menuKeyAnchor(e), p };
 }
 const ilmMenuItems = computed<CcmItem[]>(() => {
   const m = ilmMenu.value; if (!m) return [];

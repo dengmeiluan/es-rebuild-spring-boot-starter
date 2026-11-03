@@ -104,7 +104,7 @@
  置动作群末尾不进 resp-only 分组，失败响应同样可查） -->
         <button class="btn sm ghost" data-test="raw-io" aria-label="查看原始 IO（REST 直连）" title="最近一次透传请求/响应原文（复制/回放/语义分档高亮）" @click="openRawIo"><Terminal :size="12" /> 原始 IO</button>
       </div>
-      <div ref="respBox" class="scroll-y rt-resp-scroll" @contextmenu.prevent="openRespMenu">
+      <div ref="respBox" class="scroll-y rt-resp-scroll" tabindex="0" @contextmenu.prevent="openRespMenu" @keydown="onRespMenuKey">
         <!-- respErr 裸 pre → highlightJson v-html（转义安全，jsonc.ts 单一出处）——
  错误保原文全文 + JSON 错误体上色（j-key/j-str 语义），非 JSON 纯文本不着色仍走 .rt-err-pre 红。
  补 friendly 人话标题行（双轨范式）+ 上色内核换 errPreHtml
@@ -195,6 +195,7 @@ import { REST_METHODS, type EsEndpoint } from '../utils/esEndpoints';
 import { useInputLint, jqLiteRule } from '../composables/useInputLint';
 /* 视图内搜索 mark 内核合并 respMark 单源（escapeRe/markHtmlAll，本文件三件本地实现退役） */
 import { markHtmlAll } from '../utils/respMark';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 /* 历史弹窗体改用 QueryHistoryPanel 统一件（本地过滤/导出/空态实现退役） */
 import QueryHistoryPanel, { type HistRow } from '../components/QueryHistoryPanel.vue';
 /* 非 ADMIN 数据面写白名单（与后端 guardRawGuarded 同口径的客户端预暴露） */
@@ -582,6 +583,11 @@ const respMenu = ref<{ x: number; y: number } | null>(null);
 function openRespMenu(e: MouseEvent) {
   if (!resp.value) return; /* 无响应不出菜单（与工具栏复制钮禁用同判） */
   respMenu.value = { x: e.clientX, y: e.clientY };
+}
+function onRespMenuKey(e: KeyboardEvent) {
+  if (!isMenuKey(e) || !resp.value) return;
+  e.preventDefault();
+  respMenu.value = menuKeyAnchor(e);
 }
 function respText(): string {
   const v = jqResult.value !== null ? jqResult.value : respParsed.value;

@@ -152,7 +152,8 @@
         <div class="card-t hr-sec-hd">检查项 <StatusPill class="hr-sec-cnt" tone="n" :label="String(data.checks?.length || 0)" /></div>
         <div class="hr-checks">
           <div v-for="(c, i) in data.checks" :key="i" class="hr-check" :class="'lv-' + c.level"
-            @contextmenu.prevent="openCheckMenu($event, c)">
+            tabindex="0"
+            @contextmenu.prevent="openCheckMenu($event, c)" @keydown="onCheckMenuKey($event, c)">
             <span class="hr-lv"><Circle v-if="c.level==='info'" :size="8" fill="currentColor" /><AlertTriangle v-else-if="c.level==='warn'" :size="12" /><AlertOctagon v-else :size="13" /></span>
             <span class="hr-name">{{ c.name }}</span>
             <span class="hr-msg">{{ c.message }}</span>
@@ -279,6 +280,7 @@ import { highlightJson } from '../utils/jsonc';
 import QueryResultTable from '../components/QueryResultTable.vue'; /* W5：双表换 QRT rows 型 */
 import { metricTone } from '../utils/metricThresholds'; /* W-F：节点表行级水位档（hotCls 语义回收，阈值单一真源） */
 import { writeStoredRaw } from '../utils/safeJson';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 
 const store = useAppStore();
 const router = useRouter();
@@ -593,6 +595,11 @@ async function copyCheck(c: any) {
 const checkMenu = ref<{ x: number; y: number; c: any } | null>(null);
 function openCheckMenu(e: MouseEvent, c: any) {
   checkMenu.value = { x: e.clientX, y: e.clientY, c };
+}
+function onCheckMenuKey(e: KeyboardEvent, c: any) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  checkMenu.value = { ...menuKeyAnchor(e), c };
 }
 async function copyCheckText(text: string, okMsg: string) {
   const ok = await copyText(text);

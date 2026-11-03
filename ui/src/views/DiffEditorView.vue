@@ -151,8 +151,8 @@
           </div>
         </div>
         <div class="df-diff">
-          <div v-for="(l, i) in diffLines" :key="i" class="df-diff-line" :class="l.op"
-               @contextmenu.prevent="openLineMenu($event, l, i)">
+          <div v-for="(l, i) in diffLines" :key="i" class="df-diff-line" :class="l.op" tabindex="0"
+               @contextmenu.prevent="openLineMenu($event, l, i)" @keydown="onLineMenuKey($event, l, i)">
             <span class="df-diff-op">{{ l.op === 'add' ? '+' : l.op === 'del' ? '-' : ' ' }}</span>
             <span class="df-diff-tx">{{ l.tx }}</span>
           </div>
@@ -213,6 +213,7 @@ import { diffDocFields, diffSummary, type FieldDiff } from '../utils/docDiff';
 import { fmtTime } from '../utils/format';
 import { friendlyEsError } from '../utils/esError';
 import { removeStoredRaw } from '../utils/safeJson';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 
 const store = useAppStore();
 /* 权限门禁——PUT 覆盖/_update=/cluster/doc(/update)=普通写档（OPERATOR+，文档编辑属角色定义低危写）；
@@ -366,6 +367,12 @@ const diffCount = computed(() => diffLines.value.filter(l => l.op !== 'eq').leng
  一级 = 2 个高频 + 1 个分组父项（项目右键约定）；写操作（提交/覆盖）**刻意不进右键**——
  那是页面上带确认语义的主按钮，不该藏在右键里被误触。 */
 const lineMenu = ref<{ x: number; y: number; title: string; line: { op: 'add' | 'del' | 'eq'; tx: string }; idx: number } | null>(null);
+function onLineMenuKey(e: KeyboardEvent, l: { op: 'add' | 'del' | 'eq'; tx: string }, i: number) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  const opZh = l.op === 'add' ? '新增' : l.op === 'del' ? '删除' : '未变';
+  lineMenu.value = { ...menuKeyAnchor(e), title: opZh + ' · 第 ' + (i + 1) + ' 行', line: l, idx: i };
+}
 function openLineMenu(e: MouseEvent, l: { op: 'add' | 'del' | 'eq'; tx: string }, i: number) {
   const opZh = l.op === 'add' ? '新增' : l.op === 'del' ? '删除' : '未变';
   lineMenu.value = { x: e.clientX, y: e.clientY, title: opZh + ' · 第 ' + (i + 1) + ' 行', line: l, idx: i };

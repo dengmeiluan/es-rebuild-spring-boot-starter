@@ -100,7 +100,8 @@
       </div>
       <div v-else-if="filtered.length" class="sv-tl">
         <div v-for="(s, i) in filtered" :key="s.snapshot" class="sv-tl-row" :class="'st-' + (s.state || '').toLowerCase()" :data-hit-idx="i + 1"
-          @contextmenu.prevent="openSnapMenu($event, s)">
+          tabindex="0"
+          @contextmenu.prevent="openSnapMenu($event, s)" @keydown="onSnapMenuKey($event, s)">
           <div class="sv-tl-dot"><component :is="stateIcon(s.state)" :size="14" /></div>
           <div class="sv-tl-body">
             <div class="sv-tl-head">
@@ -296,6 +297,7 @@ import { copyText } from '../utils/format';
 import { useScopedDraft } from '../composables/useScopedDraft';
 import { friendlyApiError } from '../utils/esError';
 import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误条双参改用（code/endpoint 元信息行） */
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 import { snapshotStateZh } from '../utils/esEnumZh'; /* ：快照 state 枚举中文接线 */
 /* 时长档单源（快照耗时 fmtMs） */
 import { semFormat } from '../composables/useSemFormat';
@@ -706,6 +708,11 @@ function openRestore(s: any) {
 const snapMenu = ref<{ x: number; y: number; s: any } | null>(null);
 function openSnapMenu(e: MouseEvent, s: any) {
   snapMenu.value = { x: e.clientX, y: e.clientY, s };
+}
+function onSnapMenuKey(e: KeyboardEvent, s: any) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  snapMenu.value = { ...menuKeyAnchor(e), s };
 }
 const snapMenuItems = computed(() => {
   const m = snapMenu.value; if (!m) return [];

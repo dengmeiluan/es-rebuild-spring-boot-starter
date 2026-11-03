@@ -69,7 +69,7 @@
             @click="select(t)"
            role="button" tabindex="0" @keydown.enter.prevent="select(t)" @keydown.space.prevent="select(t)"
            @contextmenu.prevent="openTplMenu($event, t)"
-           @keydown.menu.prevent="openTplMenuAt($event, t)">
+           @keydown="onTplMenuKey($event, t)">
             <div class="tv2-row-l">
               <div class="tv2-row-name mono"><MarkText :text="t.name" :kw="filter" /></div>
               <div class="tv2-row-sub mono">
@@ -204,6 +204,7 @@ import SplitHandle from '../components/SplitHandle.vue';
 import { usePopupList } from '../composables/usePopupList';
 import type { BodyKind } from '../utils/dslCompletionContext';
 import { writeStoredRaw } from '../utils/safeJson';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 import { useRouter } from 'vue-router';
 
 const store = useAppStore();
@@ -214,10 +215,11 @@ const tplMenu = ref<{ x: number; y: number; t: any } | null>(null);
 function openTplMenu(e: MouseEvent, t: any) {
   tplMenu.value = { x: e.clientX, y: e.clientY, t };
 }
-/* 键盘 Menu 键（Shift+F10）：以行左下角为锚，不用鼠标也能开菜单 */
-function openTplMenuAt(e: KeyboardEvent, t: any) {
-  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-  tplMenu.value = { x: Math.round(r.left), y: Math.round(r.bottom + 4), t };
+/* 键盘 Menu 键（Shift+F10）——Vue 的 .menu 修饰符匹配不到 ContextMenu 键，改统一判据 */
+function onTplMenuKey(e: KeyboardEvent, t: any) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  tplMenu.value = { ...menuKeyAnchor(e), t };
 }
 const tplMenuItems = computed<CcmItem[]>(() => {
   const m = tplMenu.value; if (!m) return [];

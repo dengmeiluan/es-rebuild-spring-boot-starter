@@ -359,8 +359,8 @@ mapping <span class="dim">字段映射</span>
  added/removed 对使用者天然歧义，必须给人话标签。
  -9 / I-4：标签与提示已提成纯函数并由断言看守，模板只做调用。 -->
             <!-- 真差异区始终展开。 -->
-            <tr v-for="row in cfgParts.real" :key="'r-' + row.path" class="cd-real" :class="'cd-' + row.kind"
-              @contextmenu.prevent="openDiffMenu($event, row)">
+            <tr v-for="row in cfgParts.real" :key="'r-' + row.path" class="cd-real" :class="'cd-' + row.kind" tabindex="0"
+              @contextmenu.prevent="openDiffMenu($event, row)" @keydown="onDiffMenuKey($event, row)">
               <td class="cd-path mono">{{ row.path }}</td>
               <td class="cd-kind">{{ kindLabel(row.kind) }}</td>
               <td class="cd-l mono">{{ fmtVal(row.expected) }}</td>
@@ -535,7 +535,8 @@ mapping <span class="dim">字段映射</span>
         <table class="tbl ar-rounds" v-if="job.rounds?.length">
           <thead><tr><th>轮次</th><th>阶段</th><th>总计</th><th>已建</th><th>已更新</th><th>冲突跳过</th></tr></thead>
           <tbody>
-            <tr v-for="r in job.rounds" :key="r.round + r.phase" @contextmenu.prevent="openRoundMenu($event, r)">
+            <tr v-for="r in job.rounds" :key="r.round + r.phase" tabindex="0"
+              @contextmenu.prevent="openRoundMenu($event, r)" @keydown="onRoundMenuKey($event, r)">
               <td>{{ r.round }}</td><td><StatusPill tone="b" :label="roundZh(r.phase) || r.phase" :en="roundZh(r.phase) ? r.phase : undefined" /></td><!-- ：r.phase 裸枚举 → roundZh 中文接线（Lead 收口实地核 addRound 四值 FULL/CATCHUP/CATCHUP_BLOCKED/FINAL 全收录）。：轮次阶段私造胶囊改用 StatusPill b 档——未收录新枚举回退原英文（label 兜底），en 英文小字归组件 sp-en -->
               <td>{{ r.total != null ? fmtNum(r.total) : '-' }}</td><td>{{ r.created != null ? fmtNum(r.created) : '-' }}</td><td>{{ r.updated != null ? fmtNum(r.updated) : '-' }}</td><td>{{ r.versionConflicts != null ? fmtNum(r.versionConflicts) : '-' }}</td>
             </tr>
@@ -742,6 +743,7 @@ import { useDebounceFn } from '../composables/useDebounceFn';
 /* W2：pasteRaw 高度档循环统一件（useTierCycle 三件套：档值数组+usePref+cycle） */
 import { useTierCycle } from '../composables/useTierCycle';
 import { removeStoredRaw } from '../utils/safeJson';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 
 /* 预填即 pretty：压缩单行 JSON 对人审阅障碍极大 */
 function prettyJson(s: string): string {
@@ -1456,8 +1458,18 @@ const rowMenu = ref<{ x: number; y: number; title: string; kind: 'diff' | 'round
 function openDiffMenu(e: MouseEvent, row: ConfigDiffRow) {
   rowMenu.value = { x: e.clientX, y: e.clientY, title: '差异 · ' + row.path, kind: 'diff', row };
 }
+function onDiffMenuKey(e: KeyboardEvent, row: ConfigDiffRow) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  rowMenu.value = { ...menuKeyAnchor(e), title: '差异 · ' + row.path, kind: 'diff', row };
+}
 function openRoundMenu(e: MouseEvent, r: any) {
   rowMenu.value = { x: e.clientX, y: e.clientY, title: '第 ' + r.round + ' 轮 · ' + (roundZh(r.phase) || r.phase), kind: 'round', row: r };
+}
+function onRoundMenuKey(e: KeyboardEvent, r: any) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  rowMenu.value = { ...menuKeyAnchor(e), title: '第 ' + r.round + ' 轮 · ' + (roundZh(r.phase) || r.phase), kind: 'round', row: r };
 }
 async function copyWithToast(text: string, okMsg: string) {
   const ok = await copyText(text);

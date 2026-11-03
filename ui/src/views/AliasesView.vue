@@ -175,7 +175,7 @@
         </div>
       </div>
       <div v-for="(g, i) in groups" :key="g.alias" class="alv-group" :class="{ 'alv-deep-hit': isDeepHit(g) }" :data-hit-idx="i + 1">
-        <div class="alv-g-hd" @contextmenu.prevent="openAliasMenu($event, g)">
+        <div class="alv-g-hd" tabindex="0" @contextmenu.prevent="openAliasMenu($event, g)" @keydown="onAliasMenuKey($event, g)">
           <div class="alv-g-hd-l">
             <Link2 :size="13" class="alv-g-ic" />
             <span class="mono alv-g-alias" :title="g.alias"><MarkText :text="g.alias" :kw="query" /></span>
@@ -200,7 +200,9 @@
         </div>
         <div class="alv-g-arrows">
           <template v-for="(r, i) in shownRows(g)" :key="r.index">
-            <div class="alv-arrow-row" :class="{ 'is-write': r.isWriteIndex }" @contextmenu.prevent="openRowMenu($event, g, r.index, r.isWriteIndex)">
+            <div class="alv-arrow-row" :class="{ 'is-write': r.isWriteIndex }" tabindex="0"
+              @contextmenu.prevent="openRowMenu($event, g, r.index, r.isWriteIndex)"
+              @keydown="onAliasRowMenuKey($event, g, r.index, r.isWriteIndex)">
               <span class="alv-arrow">
                 <span class="alv-arrow-dot"></span>
                 <span class="alv-arrow-line"></span>
@@ -288,6 +290,7 @@ import { usePopupList } from '../composables/usePopupList';
 /* 本地 pending-action ConfirmModal 宿主退役，改全局确认服务；loadErr 友好化 */
 import { askConfirm } from '../composables/confirm';
 import { friendlyEsError } from '../utils/esError';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 import SkeletonBox from '../components/SkeletonBox.vue';
 import EmptyState from '../components/EmptyState.vue';
 import StatusPill from '../components/StatusPill.vue'; /* ：状态徽标统一件 */
@@ -653,6 +656,11 @@ const aliasMenu = ref<{ x: number; y: number; g: Group } | null>(null);
 function openAliasMenu(e: MouseEvent, g: Group) {
   aliasMenu.value = { x: e.clientX, y: e.clientY, g };
 }
+function onAliasMenuKey(e: KeyboardEvent, g: Group) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  aliasMenu.value = { ...menuKeyAnchor(e), g };
+}
 const aliasMenuItems = computed(() => {
   const m = aliasMenu.value; if (!m) return [];
   const g = m.g;
@@ -675,6 +683,11 @@ const aliasMenuItems = computed(() => {
 const rowMenu = ref<{ x: number; y: number; g: Group; index: string; isWrite: boolean | null } | null>(null);
 function openRowMenu(e: MouseEvent, g: Group, index: string, isWrite: boolean | null) {
   rowMenu.value = { x: e.clientX, y: e.clientY, g, index, isWrite };
+}
+function onAliasRowMenuKey(e: KeyboardEvent, g: Group, index: string, isWrite: boolean | null) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  rowMenu.value = { ...menuKeyAnchor(e), g, index, isWrite };
 }
 const rowMenuItems = computed(() => {
   const m = rowMenu.value; if (!m) return [];

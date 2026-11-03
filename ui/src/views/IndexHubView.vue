@@ -685,6 +685,7 @@
               :data-hit-idx="i + 1"
               @click="select(idx.index)"
               @contextmenu.prevent="openIdxMenu($event, idx.index)"
+              @keydown="onIdxMenuKey($event, idx.index)"
               role="button" tabindex="0" @keydown.enter.prevent="select(idx.index)" @keydown.space.prevent="select(idx.index)">
               <span class="ih-hdot" :style="{ background: healthColor(idx.health) }"></span>
               <div class="ih-row-main">
@@ -819,6 +820,7 @@ import { useQueryRun } from '../composables/useQueryRun'; /*  P0-A：执行读�
 import { writeStoredRaw } from '../utils/safeJson';
 import { resolveSortField } from '../utils/sortField';
 import { appendLuceneClause } from '../utils/filterMerge';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 
 const router = useRouter();
 const store = useAppStore();
@@ -2105,6 +2107,11 @@ async function doCopyName(name: string) {
 const idxMenu = ref<{ x: number; y: number; name: string } | null>(null);
 function openIdxMenu(e: MouseEvent, name: string) {
   idxMenu.value = { x: e.clientX, y: e.clientY, name };
+}
+function onIdxMenuKey(e: KeyboardEvent, name: string) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  idxMenu.value = { ...menuKeyAnchor(e), name };
 }
 /* bar-extra 槽里的两枚图标钮，在工具行右键的「更多…」里给出等价的可读菜单项。
    工具行右键是「表格操作那个表头」的完整入口——只加图标钮不进菜单，

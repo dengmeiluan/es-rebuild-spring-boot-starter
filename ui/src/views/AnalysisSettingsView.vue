@@ -68,8 +68,9 @@
  「保留」裁决由合并约定覆盖） -->
             <EmptyState v-if="!g.shown || !Object.keys(g.shown).length" compact :icon="Info" text="-" />
             <div v-else class="as-items">
-              <div v-for="(cfg, name) in g.shown" :key="name" class="as-item" :class="{ expanded: openMap[g.key + ':' + name] }"
-                @contextmenu.prevent="openItemMenu($event, g.key, String(name), cfg)">
+              <div v-for="(cfg, name) in g.shown" :key="name" class="as-item" :class="{ expanded: openMap[g.key + ':' + name] }" tabindex="0"
+                @contextmenu.prevent="openItemMenu($event, g.key, String(name), cfg)"
+                @keydown="onItemMenuKey($event, g.key, String(name), cfg)">
                 <div class="as-item-hd" role="button" tabindex="0" :aria-expanded="!!openMap[g.key + ':' + String(name)]" @click="toggle(g.key, String(name))" @keydown.enter.prevent="toggle(g.key, String(name))" @keydown.space.prevent="toggle(g.key, String(name))">
                   <ChevronRight :size="10" class="as-caret" :class="{ open: openMap[g.key + ':' + name] }" />
                   <!-- 条目名/类型走 MarkText 命中高亮（textContent 与原文一致，title 不受影响） -->
@@ -161,6 +162,7 @@ import EmptyState from '../components/EmptyState.vue'; /* ：as-empty 裸空态�
 import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue'; /* 1367：条目右键菜单（项目统一件） */
 import SearchFilterBar from '../components/SearchFilterBar.vue'; /* ：五类过滤行统一件（第 15 胞） */
 import { highlightJson, prettyJson } from '../utils/jsonc';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 /* 页头统计串合并 MetaStrip 统一件 + MarkText 命中高亮（过滤行用） */
 import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue';
 import MarkText from '../components/MarkText.vue';
@@ -239,6 +241,11 @@ type AsItemMenu = { x: number; y: number; g: string; name: string; cfg: any; tit
 const itemMenu = ref<AsItemMenu | null>(null);
 function openItemMenu(e: MouseEvent, g: string, name: string, cfg: any) {
   itemMenu.value = { x: e.clientX, y: e.clientY, g, name, cfg, title: `${g} · ${name}` };
+}
+function onItemMenuKey(e: KeyboardEvent, g: string, name: string, cfg: any) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  itemMenu.value = { ...menuKeyAnchor(e), g, name, cfg, title: `${g} · ${name}` };
 }
 /* 属性名按 ES settings.analysis 的段名走（用户要粘到 mapping 里能直接用） */
 const AS_SEG: Record<string, string> = {

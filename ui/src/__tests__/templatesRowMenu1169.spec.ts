@@ -79,11 +79,25 @@ describe('1169 模板行右键', () => {
     document.querySelectorAll('.ccm-mask').forEach(e => e.remove());
   });
 
-  it('源码锁：行挂 contextmenu + 键盘 Menu 键，菜单走共享 CellContextMenu', () => {
+  it('源码锁：行挂 contextmenu + 菜单键（统一判据），菜单走共享 CellContextMenu', () => {
     expect(tplSrc).toContain('@contextmenu.prevent="openTplMenu($event, t)"');
-    expect(tplSrc).toContain('@keydown.menu.prevent="openTplMenuAt($event, t)"');
+    /* 原 @keydown.menu 修饰符匹配不到 ContextMenu 键，1443 改统一判据（含 Shift+F10） */
+    expect(tplSrc).toContain('@keydown="onTplMenuKey($event, t)"');
+    expect(tplSrc).toMatch(/function onTplMenuKey\(e: KeyboardEvent/);
     expect(tplSrc).toMatch(/<CellContextMenu\s+v-if="tplMenu"/);
   });
+
+  it('菜单键真开菜单（焦点行按 ContextMenu）', async () => {
+    await mountView();
+    const row = host.querySelector('.tv2-row') as HTMLElement;
+    expect(row, '模板行已渲染').toBeTruthy();
+    row.focus();
+    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'ContextMenu', bubbles: true, cancelable: true }));
+    await nextTick();
+    const menu = document.querySelector('.ccm-mask .ccm');
+    expect(menu, '菜单键已开菜单').toBeTruthy();
+    expect((menu!.querySelector('.ccm-hd')?.textContent || '')).toContain('logs-tpl');
+  }, 20000); /* 本文件首个挂载用例承担 Monaco/模板冷转译，默认 5s 不够 */
 
   it('源码锁：一级 2 项 + 更多… 二级；删除不进右键（破坏性动作留行内）', () => {
     const menu = tplSrc.slice(tplSrc.indexOf('const tplMenuItems'), tplSrc.indexOf('function select('));

@@ -47,8 +47,8 @@
     </EmptyState>
 
     <div v-else class="rc-list">
-      <div v-for="r in rows" :key="r.name" class="rc-card" :class="{ off: !r.connected }"
-        @contextmenu.prevent="openRcMenu($event, r)">
+      <div v-for="r in rows" :key="r.name" class="rc-card" :class="{ off: !r.connected }" tabindex="0"
+        @contextmenu.prevent="openRcMenu($event, r)" @keydown="onRcMenuKey($event, r)">
         <div class="rc-card-l">
           <div class="rc-card-tt">
             <Network :size="12" /> {{ r.name }}
@@ -104,6 +104,7 @@ import { friendlyEsError } from '../utils/esError';
 import { highlightJson } from '../utils/jsonc';
 import { copyText } from '../utils/format';
 import { writeStoredRaw } from '../utils/safeJson';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 import { useAuthStore } from '../stores/auth'; /* DevTools 入口能力门（1124） */
 import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue'; /* 1145：远程集群卡右键 */
 
@@ -191,6 +192,11 @@ function copyBody(r: any) {
 const rcMenu = ref<{ x: number; y: number; r: any } | null>(null);
 function openRcMenu(e: MouseEvent, r: any) {
   rcMenu.value = { x: e.clientX, y: e.clientY, r };
+}
+function onRcMenuKey(e: KeyboardEvent, r: any) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  rcMenu.value = { ...menuKeyAnchor(e), r };
 }
 const rcMenuItems = computed<CcmItem[]>(() => {
   const m = rcMenu.value; if (!m) return [];

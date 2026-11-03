@@ -61,8 +61,8 @@
       action-text="清除过滤" @action="kw = ''; kind = 'all'" />
 
     <div v-else class="fv-list">
-      <div v-for="(it, i) in filtered" :key="it.id" class="fv-card" :class="{ 'fv-sel': selected.has(it.id) }" :data-hit-idx="i + 1"
-        @contextmenu.prevent="openFavMenu($event, it)">
+      <div v-for="(it, i) in filtered" :key="it.id" class="fv-card" :class="{ 'fv-sel': selected.has(it.id) }" :data-hit-idx="i + 1" tabindex="0"
+        @contextmenu.prevent="openFavMenu($event, it)" @keydown="onFavMenuKey($event, it)">
         <!-- 批量选择勾选框 -->
         <input type="checkbox" class="fv-chk" :checked="selected.has(it.id)"
           :aria-label="'选中收藏：' + it.title" @click.stop @change="toggleSel(it.id)" />
@@ -151,6 +151,7 @@ import EmptyState from '../components/EmptyState.vue';
 import HitNav from '../components/HitNav.vue';
 import { useHitLocate } from '../composables/useHitNav';
 import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 
 const store = useAppStore();
 const auth = useAuthStore();
@@ -259,6 +260,11 @@ function replay(it: any) {
 const favMenu = ref<{ x: number; y: number; it: any } | null>(null);
 function openFavMenu(e: MouseEvent, it: any) {
   favMenu.value = { x: e.clientX, y: e.clientY, it };
+}
+function onFavMenuKey(e: KeyboardEvent, it: any) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  favMenu.value = { ...menuKeyAnchor(e), it };
 }
 const favMenuItems = computed<CcmItem[]>(() => {
   const m = favMenu.value; if (!m) return [];

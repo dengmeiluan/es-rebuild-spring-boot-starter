@@ -107,7 +107,9 @@
           :class="{ 'tv-hit': t.taskId === deepTaskId }"
           :data-task-id="t.taskId"
           :style="{ paddingLeft: (12 + t.depth * 18) + 'px' }"
+          tabindex="0"
           @contextmenu.prevent="openTaskMenu($event, t)"
+          @keydown="onTaskMenuKey($event, t)"
         >
           <div class="tv-node-l">
             <span
@@ -211,6 +213,7 @@ import { semFormat } from '../composables/useSemFormat';
 import { friendlyEsError } from '../utils/esError';
 /* 错误面双参改用（code/endpoint 元信息行，DiagView 547 同范式） */
 import { errPreHtml, errMeta } from '../utils/errPre';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 /* actionShort/actionColor 迁 utils/esEnumZh 收口（taskActionZh 契约签名
  (a: string): string、色档拆 taskActionTone）——别名绑定供模板与既有调用点零改动消费 */
 import { taskActionZh as actionShort, taskActionTone as actionColor } from '../utils/esEnumZh';
@@ -453,6 +456,11 @@ async function copyTasksMd() {
 const taskMenu = ref<{ x: number; y: number; t: Task } | null>(null);
 function openTaskMenu(e: MouseEvent, t: Task) {
   taskMenu.value = { x: e.clientX, y: e.clientY, t };
+}
+function onTaskMenuKey(e: KeyboardEvent, t: Task) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  taskMenu.value = { ...menuKeyAnchor(e), t };
 }
 const taskMenuItems = computed(() => {
   const m = taskMenu.value; if (!m) return [];

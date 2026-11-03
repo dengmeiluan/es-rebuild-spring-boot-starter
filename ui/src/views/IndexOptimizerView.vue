@@ -79,8 +79,8 @@
  Workspace/Plugins 先例，留白/图标档归组件单源） -->
         <EmptyState v-if="recs.length === 0" compact :icon="CheckCircle2" text="索引参数已符合推荐配置，无需调整" />
         <div v-else class="io-rec-list">
-          <div v-for="r in recs" :key="r.id" class="io-rec" :class="'sv-' + r.severity"
-            @contextmenu.prevent="openRecMenu($event, r)">
+          <div v-for="r in recs" :key="r.id" class="io-rec" :class="'sv-' + r.severity" tabindex="0"
+            @contextmenu.prevent="openRecMenu($event, r)" @keydown="onRecMenuKey($event, r)">
             <label class="io-rec-l">
               <input type="checkbox" v-model="checked[r.id]" />
               <span class="io-rec-tt sec-t">{{ r.title }}</span>
@@ -194,6 +194,7 @@ import { friendlyEsError } from '../utils/esError';
 import { highlightJson } from '../utils/jsonc';
 /* G183：当前设置键中文释义接共享索引设置目录（集群目录同款单源消费面） */
 import { SETTINGS_CATALOG } from '../utils/indexSettingsCatalog';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 import {
   evaluateSegments, parseStoreSize, parseCatNumber,
   SEGMENTS_PER_SHARD_THRESHOLD, type SegmentAdvice,
@@ -259,6 +260,11 @@ interface Rec { id: string; key: string; title: string; desc: string; current: a
 const recMenu = ref<{ x: number; y: number; rec: Rec; title: string } | null>(null);
 function openRecMenu(e: MouseEvent, r: Rec) {
   recMenu.value = { x: e.clientX, y: e.clientY, rec: r, title: `${svLabel(r.severity)} · ${r.key}` };
+}
+function onRecMenuKey(e: KeyboardEvent, r: Rec) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  recMenu.value = { ...menuKeyAnchor(e), rec: r, title: `${svLabel(r.severity)} · ${r.key}` };
 }
 /* 建议配置片段：与页面下方「Body 预览」同一形状（{ index: {…} } 根层 + dot-path 展开）。
    注意 rec.path 是**相对 index. 的路径**（如 'refresh_interval'、'blocks.read_only_allow_delete'），

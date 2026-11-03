@@ -72,18 +72,18 @@
         <div class="is-form">
           <div class="card-t"><Zap :size="13" /> 热参数（点击即可动态生效）</div>
           <div class="is-rows">
-            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)">
+            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)" @keydown="openRowMenu($event)">
               <label><DotKey k="refresh_interval" /></label>
               <input v-model="form.refresh_interval" class="is-input mono" placeholder="1s / 30s / -1（禁用）" @blur="riCheck(form.refresh_interval)" />
               <div v-if="riHint" class="il-hint" :class="'il-' + riLevel">{{ riHint }}</div>
               <div class="is-hint">批量导入时改 <code>-1</code>，完成后再调回 <code>1s</code>；数值越大 CPU/IO 越省</div>
             </div>
-            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)">
+            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)" @keydown="openRowMenu($event)">
               <label><DotKey k="number_of_replicas" /></label>
               <input v-model="form.number_of_replicas" class="is-input mono" placeholder="0 / 1 / 2" />
               <div class="is-hint">调 <code>0</code> 加速导入；调回 <code>1+</code> 恢复高可用</div>
             </div>
-            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)">
+            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)" @keydown="openRowMenu($event)">
               <label><DotKey k="blocks.read_only" /></label>
               <select v-model="form['blocks.read_only']" class="is-input">
                 <option value="">- 未设置 -</option>
@@ -92,7 +92,7 @@
               </select>
               <div class="is-hint">紧急冻结索引写入；恢复用 <code>false</code></div>
             </div>
-            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)">
+            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)" @keydown="openRowMenu($event)">
               <label><DotKey k="blocks.read_only_allow_delete" /></label>
               <select v-model="form['blocks.read_only_allow_delete']" class="is-input">
                 <option value="">- 未设置 -</option>
@@ -101,7 +101,7 @@
               </select>
               <div class="is-hint">磁盘 flood-stage 时 ES 会置 <code>true</code>；清盘后手工置 <code>false</code></div>
             </div>
-            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)">
+            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)" @keydown="openRowMenu($event)">
               <label><DotKey k="blocks.write" /></label>
               <select v-model="form['blocks.write']" class="is-input">
                 <option value="">- 未设置 -</option>
@@ -110,17 +110,17 @@
               </select>
               <div class="is-hint">shrink/split/clone 前需临时置 true</div>
             </div>
-            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)">
+            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)" @keydown="openRowMenu($event)">
               <label><DotKey k="routing.allocation.total_shards_per_node" /></label>
               <input v-model="form['routing.allocation.total_shards_per_node']" type="number" class="is-input mono" placeholder="留空 = 不限" />
               <div class="is-hint">单节点承载该索引最大分片数；平衡热点</div>
             </div>
-            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)">
+            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)" @keydown="openRowMenu($event)">
               <label><DotKey k="max_result_window" /></label>
               <input v-model="form.max_result_window" type="number" class="is-input mono" placeholder="10000（默认）" />
               <div class="is-hint">深分页阈值；建议改用 search_after 而非提高该值</div>
             </div>
-            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)">
+            <div class="is-row" @contextmenu.prevent.stop="openRowMenu($event)" @keydown="openRowMenu($event)">
               <label><DotKey k="highlight.max_analyzed_offset" /></label>
               <input v-model="form['highlight.max_analyzed_offset']" type="number" class="is-input mono" placeholder="1000000（默认）" />
               <div class="is-hint">解决长文本高亮 illegal_argument_exception</div>
@@ -279,6 +279,7 @@ import { friendlyEsError } from '../utils/esError';
 import { SETTINGS_CATALOG } from '../utils/indexSettingsCatalog'; /* ：自定义行悬停释义单源 */
 import { fmtTime, fmtNum, copyText } from '../utils/format';
 import { highlightJson } from '../utils/jsonc';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 import SkeletonBox from '../components/SkeletonBox.vue';
 import InsightRail from '../components/InsightRail.vue';
 import GuardedActionButton from '../components/GuardedActionButton.vue';
@@ -362,9 +363,10 @@ function selectAllRaw(e: MouseEvent | KeyboardEvent) {
 const rowMenu = ref<{ x: number; y: number; key: string; val: string } | null>(null);
 
 /** 从被右键的 .is-row 里读出键名与当前值（值取该行 .is-input 的 value）。 */
-function openRowMenu(e: MouseEvent) {
+function openRowMenu(e: MouseEvent | KeyboardEvent) {
   const row = (e.currentTarget as HTMLElement) || null;
   if (!row) return;
+  if (e instanceof KeyboardEvent && !isMenuKey(e)) return;
   /* 键名只认 DotKey：它的 title 恒为完整键（.dotkey 内部用 <wbr> 断行，
      textContent 可能被折成「refre sh_interval」，所以取 title 而不是文本）。 */
   const dk = row.querySelector('.dotkey') as HTMLElement | null;
@@ -372,7 +374,8 @@ function openRowMenu(e: MouseEvent) {
   if (!key) return;
   const el = row.querySelector('input.is-input, select.is-input') as HTMLInputElement | HTMLSelectElement | null;
   const val = el ? String(el.value ?? '') : '';
-  rowMenu.value = { x: e.clientX, y: e.clientY, key, val };
+  const at = e instanceof KeyboardEvent ? menuKeyAnchor(e) : { x: e.clientX, y: e.clientY };
+  rowMenu.value = { ...at, key, val };
 }
 
 const rowMenuItems = computed<CcmItem[]>(() => {

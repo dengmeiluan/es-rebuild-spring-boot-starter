@@ -330,7 +330,8 @@
           <!-- 作业行菜单（CellContextMenu）——行级 contextmenu 被 QRT 内核列管理占用，
  入口改行尾菜单钮（左键/右键皆开）；行展开由内核行尾钮/E 键承接 -->
           <button aria-label="作业行菜单" class="btn sm ghost" title="复制 jobId / 复制作业信息（右键本钮同效）"
-            @click.stop="openJobMenu($event, rowJob(row))" @contextmenu.stop.prevent="openJobMenu($event, rowJob(row))"><MoreHorizontal :size="11" /></button>
+            @click.stop="openJobMenu($event, rowJob(row))" @contextmenu.stop.prevent="openJobMenu($event, rowJob(row))"
+            @keydown="onJobMenuKey($event, rowJob(row))"><MoreHorizontal :size="11" /></button>
 </template>
       </QueryResultTable>
       <!-- G3-C1：空态归位 EmptyState 组件（S6），不再用旧全局 .empty 裸文案；
@@ -404,6 +405,7 @@ import { xmStatusZh as statusZh } from '../utils/esEnumZh';
 import { askConfirm } from '../composables/confirm';
 import { prettyJson } from '../utils/jsonc';
 import { copyText } from '../utils/format';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 import TimeCell from '../components/TimeCell.vue';
 import SkeletonBox from '../components/SkeletonBox.vue';
 import EmptyState from '../components/EmptyState.vue';
@@ -1114,7 +1116,14 @@ async function goVerify(j: any) {
  焦点行 E 键承接（TableExpandRow，宿主不可程序化控制）；列管理白得内核 ColPicker ═══ */
 const jobMenu = ref<{ x: number; y: number; job: any } | null>(null);
 function openJobMenu(e: MouseEvent, job: any) {
-  jobMenu.value = { x: e.clientX, y: e.clientY, job };
+  /* 键盘 Enter 激活按钮走原生 click，坐标是 0,0——落锚回退到按钮盒 */
+  const at = e.clientX || e.clientY ? { x: e.clientX, y: e.clientY } : menuKeyAnchor(e);
+  jobMenu.value = { ...at, job };
+}
+function onJobMenuKey(e: KeyboardEvent, job: any) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  jobMenu.value = { ...menuKeyAnchor(e), job };
 }
 const jobMenuItems = computed(() => {
   const m = jobMenu.value; if (!m) return [];

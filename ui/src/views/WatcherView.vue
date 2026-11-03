@@ -73,7 +73,9 @@
       <div
         v-for="(w, i) in filteredWatches" :key="w._id"
         class="wt-card" :data-hit-idx="i + 1"
+        tabindex="0"
         @contextmenu.prevent="openWatchMenu($event, w)"
+        @keydown="onWatchMenuKey($event, w)"
       >
         <div class="wt-card-l">
           <!-- G2-C5：长 watch id 省略 + title 全名可达（-->
@@ -148,6 +150,7 @@ import MarkText from '../components/MarkText.vue';
 import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue'; /* 页头执行统计串统一件 */
 import { useHitLocate } from '../composables/useHitNav';
 import { writeStoredRaw } from '../utils/safeJson';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 
 const store = useAppStore();
 const auth = useAuthStore();
@@ -293,6 +296,11 @@ function toDevTools(w: any) {
 const watchMenu = ref<{ x: number; y: number; w: any } | null>(null);
 function openWatchMenu(e: MouseEvent, w: any) {
   watchMenu.value = { x: e.clientX, y: e.clientY, w };
+}
+function onWatchMenuKey(e: KeyboardEvent, w: any) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  watchMenu.value = { ...menuKeyAnchor(e), w };
 }
 /* 「更多」钮同源：以按钮位置为菜单锚点，两条入口共用一份菜单内容 */
 function openWatchMenuAt(e: MouseEvent, w: any) {

@@ -21,8 +21,8 @@
     </div>
 
     <div class="tg-grid">
-      <div v-for="t in filtered" :key="t.id" class="tg-card" :class="{ open: expanded.has(t.id) }"
-        @contextmenu.prevent="openTgMenu($event, t)">
+      <div v-for="t in filtered" :key="t.id" class="tg-card" :class="{ open: expanded.has(t.id) }" tabindex="0"
+        @contextmenu.prevent="openTgMenu($event, t)" @keydown="onTgMenuKey($event, t)">
         <div class="tg-c-hd">
           <div class="tg-c-tt">
             <component :is="ICONS[t.icon] || Sparkles" :size="13" class="tg-c-ic" />
@@ -103,6 +103,7 @@ import { highlightJson } from '../utils/jsonc';
 import EmptyState from '../components/EmptyState.vue';
 import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import { writeStoredRaw } from '../utils/safeJson';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 
 const router = useRouter();
 const store = useAppStore();
@@ -199,6 +200,11 @@ function isFav(t: Tpl) {
 const tgMenu = ref<{ x: number; y: number; t: Tpl } | null>(null);
 function openTgMenu(e: MouseEvent, t: Tpl) {
   tgMenu.value = { x: e.clientX, y: e.clientY, t };
+}
+function onTgMenuKey(e: KeyboardEvent, t: Tpl) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  tgMenu.value = { ...menuKeyAnchor(e), t };
 }
 const tgMenuItems = computed<CcmItem[]>(() => {
   const m = tgMenu.value; if (!m) return [];

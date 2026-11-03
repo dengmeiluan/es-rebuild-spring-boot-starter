@@ -36,7 +36,7 @@
       <div v-for="(t, i) in tabs" :key="t.id" class="dt-tab" :class="{ active: i === active }"
         role="tab" :aria-selected="i === active" :tabindex="i === active ? 0 : -1"
         @click="renamingIdx !== i && (active = i)" @mousedown.middle.prevent="closeTab(i)"
-        @contextmenu.prevent="openTabMenu($event, i)"
+        @contextmenu.prevent="openTabMenu($event, i)" @keydown="onTabMenuKey($event, i)"
         @dblclick.self="startRename(i)" @keydown.enter.prevent="renamingIdx !== i && (active = i)"
         @keydown.space.self.prevent="renamingIdx !== i && (active = i)">
         <input v-if="renamingIdx === i" v-model="renameVal" class="dt-tab-ren mono" :aria-label="'重命名标签 ' + (i + 1)"
@@ -345,7 +345,7 @@
             <tbody>
               <tr v-for="(r, ri) in respTbl.rows" :key="ri" tabindex="0" title="点击复制该行 JSON（右键更多操作）"
                 @click="copyRespRow(r)" @keydown.enter.prevent="copyRespRow(r)"
-                @contextmenu.prevent="openRespRowMenu($event, r, ri)">
+                @contextmenu.prevent="openRespRowMenu($event, r, ri)" @keydown="onRespRowMenuKey($event, r, ri)">
                 <td class="dt-resp-tbl-ix">{{ ri + 1 }}</td>
                 <td v-for="c in respTbl.cols" :key="c">{{ respCell(r[c]) }}</td>
               </tr>
@@ -356,7 +356,7 @@
             <tbody>
               <tr v-for="([k, val]) in respTbl.kv" :key="k" tabindex="0" title="点击复制该行 JSON（右键更多操作）"
                 @click="copyRespRow({ [k]: val })" @keydown.enter.prevent="copyRespRow({ [k]: val })"
-                @contextmenu.prevent="openRespRowMenu($event, { [k]: val }, -1)">
+                @contextmenu.prevent="openRespRowMenu($event, { [k]: val }, -1)" @keydown="onRespRowMenuKey($event, { [k]: val }, -1)">
                 <td>{{ k }}</td>
                 <td>{{ respCell(val) }}</td>
               </tr>
@@ -538,6 +538,7 @@ import WorkbenchLayout, { type WorkbenchPaneSpec } from '../components/Workbench
 import FocusableSurface from '../components/FocusableSurface.vue';
 import PageHeader from '../components/PageHeader.vue';
 import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 import { nonAdminDataPlaneWriteAllowed, nonAdminRootSearchNeedsIndex,
   nonAdminIndexQueryParamRejected, nonAdminControlIndexDenied, nonAdminWildcardTargetAdvisory,
   nonAdminBodyTargetsControl, nonAdminCatNeedsJson, nonAdminAsyncResultRead } from '../utils/devtoolsScope';
@@ -935,6 +936,11 @@ const vFocus = { mounted: (el: HTMLElement) => el.focus() };
 const tabMenu = ref<{ x: number; y: number; i: number } | null>(null);
 function openTabMenu(e: MouseEvent, i: number) {
   tabMenu.value = { x: e.clientX, y: e.clientY, i };
+}
+function onTabMenuKey(e: KeyboardEvent, i: number) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  tabMenu.value = { ...menuKeyAnchor(e), i };
 }
 function closeOthers(keep: number) {
   const kept = tabs.value[keep];
@@ -1638,6 +1644,13 @@ function openRespRowMenu(e: MouseEvent, row: any, ri: number) {
   const keys = row && typeof row === 'object' && !Array.isArray(row) ? Object.keys(row) : [];
   const title = keys.length ? `响应行 · ${keys.slice(0, 2).join(', ')}${keys.length > 2 ? '…' : ''}` : '响应行';
   respRowMenu.value = { x: e.clientX, y: e.clientY, title, row, ri };
+}
+function onRespRowMenuKey(e: KeyboardEvent, row: any, ri: number) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  const keys = row && typeof row === 'object' && !Array.isArray(row) ? Object.keys(row) : [];
+  const title = keys.length ? `响应行 · ${keys.slice(0, 2).join(', ')}${keys.length > 2 ? '…' : ''}` : '响应行';
+  respRowMenu.value = { ...menuKeyAnchor(e), title, row, ri };
 }
 const respRowMenuItems = computed<CcmItem[]>(() => {
   const m = respRowMenu.value; if (!m) return [];

@@ -90,7 +90,7 @@
              :transform="`translate(${12 + (si % COLS) * (CELL + GAP)}, ${g.headH + Math.floor(si / COLS) * (CELL + GAP)})`"
              @mouseenter="cellEnter($event, s)"
              @focus="cellFocus($event, s)" @blur="cellBlur(s)"
-             @contextmenu.prevent="openShardMenu($event, s)"
+             @contextmenu.prevent="openShardMenu($event, s)" @keydown="onShardMenuKey($event, s)"
              @click="gotoShard(s)" @keydown.enter.prevent="gotoShard(s)" @keydown.space.prevent="gotoShard(s)">
             <rect
               class="tp-cell"
@@ -185,6 +185,7 @@ import { friendlyEsError } from '../utils/esError';
 import { shardStateZh, shardStateTone } from '../utils/esEnumZh'; /* ：shard 状态收口 */
 import { semFormat } from '../composables/useSemFormat'; /* ：fmtB 手写档退役换 semFormat bytes */
 import { metricColor } from '../utils/metricThresholds'; /* ：磁盘水位色档全站单源（disk warn 80/bad 90，视图层不自造阈值） */
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 const store = useAppStore();
 const router = useRouter();
@@ -205,6 +206,11 @@ interface Shard {
    拼进 `_cluster/reroute` 的 exclude 段；此前只能看着 tooltip 手抄。
    一级两项直达（复制分片标识 / 复制诊断用 JSON），其余进「更多…」分组。 */
 const shardMenu = ref<{ x: number; y: number; s: Shard } | null>(null);
+function onShardMenuKey(e: KeyboardEvent, s: Shard) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  shardMenu.value = { ...menuKeyAnchor(e), s };
+}
 function openShardMenu(e: MouseEvent, s: Shard) {
   shardMenu.value = { x: e.clientX, y: e.clientY, s };
 }
