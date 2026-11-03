@@ -24,6 +24,7 @@ describe('速查面板登记补全（455 批）', () => {
     expect(s).toMatch(/集群切换器连接行：切换 \/ 复制连接信息右键菜单（Shift\+F10 同效）/);
     expect(s).toMatch(/概览索引 \/ 健康 \/ 作业行：打开 \/ 复制右键菜单（Shift\+F10 同效）/);
     expect(s).toMatch(/监控屏节点卡 \/ 活动告警：诊断 \/ 定位 \/ 复制右键菜单（Shift\+F10 同效）/);
+    expect(s).toMatch(/结果卡片（alt 视图）：打开文档 \/ 复制 _id\/JSON 右键菜单（Shift\+F10 同效）/);
     expect(s).toMatch(/列头打开列管理菜单（Shift\+F10 同效）/);
     expect(s).toMatch(/QRT 结果表：焦点行打开单元格菜单（含「用户操作…」等宿主组，Shift\+F10 同效）/);
     expect(s).toMatch(/RT 结果表：焦点行打开单元格菜单（Shift\+F10 同效）/);

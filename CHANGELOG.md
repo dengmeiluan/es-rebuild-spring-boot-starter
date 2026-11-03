@@ -67,6 +67,8 @@ All notable changes to SearchDeck are documented here. The format follows
 - Live dashboard node cards and active alerts now open the shared menu on right-click or
   ContextMenu/Shift+F10: open node diagnostics/alert destination or copy node/alert identifiers and
   thresholds.
+- The shared alt-view result cards (DSL/IndexHub json/tree/cards) now support right-click and
+  keyboard ContextMenu/Shift+F10 to open the document or copy its _id/document JSON/_source.
 
 ### Changed
 

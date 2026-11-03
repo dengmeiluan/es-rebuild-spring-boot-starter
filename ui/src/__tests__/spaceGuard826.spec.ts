@@ -40,7 +40,6 @@ const SITES: Array<{ file: string; handler: string }> = [
   { file: '../views/WatcherView.vue', handler: 'onMetaKey' },
   { file: '../views/XmigrateView.vue', handler: 'form.sourceIndex = ri.index; if (!form.destIndex) form.destIndex = ri.index' },
   { file: '../views/SecurityView.vue', handler: 'value && openDetailCell(row)' },
-  { file: '../components/AltHitsViews.vue', handler: "emit('open-doc', h)" },
   { file: '../components/DocDiffModal.vue', handler: 'copyCell(r.path, r.base)' },
   { file: '../components/DocDiffModal.vue', handler: 'copyCell(r.path, tv)' },
   { file: '../components/IndexPicker.vue', handler: 'choose(store.pickedIdx)' },
@@ -93,6 +92,12 @@ describe('spaceGuard826 全域守卫', () => {
     const v = rd('../views/LiveDashboardView.vue');
     expect(v).toMatch(/@keydown="onLdCardKey\(\$event, 'node-card', n\)"/);
     expect(v).toMatch(/@keydown="onLdCardKey\(\$event, 'active-alert', a\)"/);
+    expect(v).toMatch(/if \(e\.key === 'Enter' \|\| e\.key === ' '\)/);
+  });
+
+  it('AltHitsViews 卡片（已含右键菜单）：Enter/Space 仍在 onCardKey 内成对', () => {
+    const v = rd('../components/AltHitsViews.vue');
+    expect(v).toMatch(/@keydown="onCardKey\(\$event, h\)"/);
     expect(v).toMatch(/if \(e\.key === 'Enter' \|\| e\.key === ' '\)/);
   });
   function walk(dir: string): string[] {

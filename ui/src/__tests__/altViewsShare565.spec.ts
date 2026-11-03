@@ -14,7 +14,7 @@
  *    667 批解冻收口改用落地（六分支内脏进共享件、包裹层 v-show 容器留宿主；锁同步更新见
  *    ihUnify554 二段/四段与本件 it4 翻转；新扫描锁 ihAltShare667）。
  */
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createApp, h, nextTick } from 'vue';
@@ -168,5 +168,37 @@ describe('565 件③：AltHitsViews 三形态渲染（行为锁）', () => {
       app.unmount();
       host.remove();
     }
+  });
+});
+
+describe('1439i AltHitsViews cards 行右键', () => {
+  it('右键/菜单键：打开文档 + 复制 _id/文档 JSON/_source', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const opened: any[] = [];
+    const host = await mountAv({ view: 'cards', hits: HITS, onOpenDoc: (h: any) => opened.push(h) });
+    const card = host.querySelector('.dq-card') as HTMLElement;
+    card.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 10, clientY: 10 }));
+    await nextTick();
+    const menu = document.body.querySelector<HTMLElement>('.ccm');
+    expect(menu, '右键菜单').toBeTruthy();
+    expect(menu!.textContent).toContain('文档 · a1');
+    for (const label of ['打开文档', '复制 _id', '复制文档 JSON', '复制 _source']) {
+      expect(menu!.textContent, `菜单项 ${label}`).toContain(label);
+    }
+    (menu!.querySelector('[data-key="card-open"]') as HTMLElement).click();
+    await nextTick();
+    expect(opened[0]?._id, '打开文档 emit').toBe('a1');
+
+    card.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 10, clientY: 10 }));
+    await nextTick();
+    (document.body.querySelector('[data-key="card-copy-id"]') as HTMLElement).click();
+    await nextTick();
+    expect(writeText).toHaveBeenCalledWith('a1');
+
+    card.dispatchEvent(new KeyboardEvent('keydown', { key: 'ContextMenu', bubbles: true, cancelable: true }));
+    await nextTick();
+    expect(document.body.querySelector('.ccm'), '菜单键开同一菜单').toBeTruthy();
+    delete (navigator as any).clipboard;
   });
 });

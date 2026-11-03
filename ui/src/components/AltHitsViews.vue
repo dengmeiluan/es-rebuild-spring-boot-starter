@@ -45,7 +45,7 @@
   <!-- cards：卡片行（DQ 旧体逐字平移——_id 行 + 前 5 字段行 + 42 截断；单击点开文档，
    拖选字段值松手不触发；键盘 Enter/Space 直开） -->
   <template v-else-if="view === 'cards'">
-    <div v-for="h in hits" :key="h._id" class="dq-card" @mousedown="onCardDown" @click="onCardClick($event, h)" @dblclick="onCardDblClick" role="button" tabindex="0" @keydown.enter.prevent="emit('open-doc', h)" @keydown.space.prevent="emit('open-doc', h)">
+    <div v-for="h in hits" :key="h._id" class="dq-card" @mousedown="onCardDown" @click="onCardClick($event, h)" @dblclick="onCardDblClick" role="button" tabindex="0" @contextmenu.prevent="openCardMenu($event, h)" @keydown="onCardKey($event, h)">
       <div class="dq-card-id mono" :title="h._id">{{ h._id }}</div>
       <div v-for="f in Object.keys(h._source).slice(0, 5)" :key="f" class="dq-card-row">
         <span class="dq-card-k mono" :title="f">{{ f }}</span>
@@ -53,12 +53,18 @@
       </div>
     </div>
   </template>
+  <CellContextMenu v-if="cardMenu" :x="cardMenu.x" :y="cardMenu.y" :title="cardMenuTitle"
+    :items="cardMenuItems" @close="cardMenu = null" />
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { getActivePinia } from 'pinia';
+import { Copy, Braces, ExternalLink } from 'lucide-vue-next';
 import JsonTree from './JsonTree.vue';
-import { trunc } from '../utils/format';
+import CellContextMenu, { type CcmItem } from './CellContextMenu.vue';
+import { trunc, copyText } from '../utils/format';
+import { useAppStore } from '../stores/app';
 import { createPressGuard, isKeyboardClick } from '../utils/pressGuard';
 import type { SearchHit } from '../types';
 
@@ -149,6 +155,45 @@ function onCardClick(e: MouseEvent, h: SearchHit) {
   guard.single(() => emit('open-doc', h));
 }
 function onCardDblClick() { guard.cancelPending(); }
+
+/* 卡片行右键/菜单键：打开文档 + 复制 _id/文档 JSON/_source——只读本地。 */
+const activePinia = getActivePinia();
+const store = activePinia ? useAppStore(activePinia) : null;
+const cardMenu = ref<{ x: number; y: number; h: SearchHit } | null>(null);
+const cardMenuTitle = computed(() => (cardMenu.value ? `文档 · ${cardMenu.value.h._id}` : ''));
+const cardMenuItems = computed<CcmItem[]>(() => {
+  const m = cardMenu.value;
+  if (!m) return [];
+  const h = m.h;
+  return [
+    { key: 'card-open', label: '打开文档', icon: ExternalLink, run: () => emit('open-doc', h) },
+    {
+      key: 'card-copy', label: '复制…', icon: Copy, children: [
+        { key: 'card-copy-id', label: '复制 _id', icon: Copy, run: () => copyCard(String(h._id ?? ''), '_id') },
+        { key: 'card-copy-doc', label: '复制文档 JSON', icon: Braces, run: () => copyCard(JSON.stringify({ _id: h._id, ...(h._source ?? {}) }, null, 2), '文档 JSON') },
+        { key: 'card-copy-src', label: '复制 _source', icon: Braces, run: () => copyCard(JSON.stringify(h._source ?? {}, null, 2), '_source') },
+      ],
+    },
+  ];
+});
+function copyCard(text: string, label: string) {
+  void copyText(text).then(ok => store?.notify(ok ? 'success' : 'error', ok ? `已复制${label}` : '复制失败'));
+}
+function openCardMenu(e: MouseEvent, h: SearchHit) {
+  cardMenu.value = { x: e.clientX, y: e.clientY, h };
+}
+function onCardKey(e: KeyboardEvent, h: SearchHit) {
+  if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
+    e.preventDefault();
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    cardMenu.value = { x: r.left + 12, y: r.bottom, h };
+    return;
+  }
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    emit('open-doc', h);
+  }
+}
 
 /* json 形态 pre 元素出口：宿主 jsonFind 命中定位（querySelector data-hit-idx）与
  滚动位归零（scrollTop=0）经此承接——旧 ref="jsonBox" 直挂 pre 的链等价迁移 */
