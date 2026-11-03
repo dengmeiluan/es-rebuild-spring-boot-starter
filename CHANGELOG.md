@@ -92,6 +92,8 @@ All notable changes to SearchDeck are documented here. The format follows
   between sibling rows (Home/End jump to the first/last). Inner inputs keep their native key
   handling, nested lists do not mix into the same sequence, and the same rows still open their
   menu with the Menu key or Shift+F10.
+- Topology shard cells now navigate as a grid: ←/→ move within a row, ↑/↓ move by the matrix
+  column count, and Home/End jump to the first/last shard; Enter still opens the shard.
 
 ### Changed
 

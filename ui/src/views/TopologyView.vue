@@ -86,11 +86,11 @@
 
           <!-- 分片矩阵（ 后矩阵起点随节点头高度让位：有磁盘行 68 / 无 44） -->
           <g v-for="(s, si) in g.shards" :key="si"
-             role="button" tabindex="0" :aria-label="'分片 ' + s.shard + '（点击查看定位）'"
+             role="button" tabindex="0" :aria-label="'分片 ' + s.shard + '（点击查看定位）'" :data-shard-idx="si"
              :transform="`translate(${12 + (si % COLS) * (CELL + GAP)}, ${g.headH + Math.floor(si / COLS) * (CELL + GAP)})`"
              @mouseenter="cellEnter($event, s)"
              @focus="cellFocus($event, s)" @blur="cellBlur(s)"
-             @contextmenu.prevent="openShardMenu($event, s)" @keydown="onShardMenuKey($event, s)"
+             @contextmenu.prevent="openShardMenu($event, s)" @keydown="onShardKey($event, g, s, si)"
              @click="gotoShard(s)" @keydown.enter.prevent="gotoShard(s)" @keydown.space.prevent="gotoShard(s)">
             <rect
               class="tp-cell"
@@ -186,6 +186,7 @@ import { shardStateZh, shardStateTone } from '../utils/esEnumZh'; /* ：shard �
 import { semFormat } from '../composables/useSemFormat'; /* ：fmtB 手写档退役换 semFormat bytes */
 import { metricColor } from '../utils/metricThresholds'; /* ：磁盘水位色档全站单源（disk warn 80/bad 90，视图层不自造阈值） */
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { gridNext } from '../utils/gridNav';
 import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 const store = useAppStore();
 const router = useRouter();
@@ -206,6 +207,20 @@ interface Shard {
    拼进 `_cluster/reroute` 的 exclude 段；此前只能看着 tooltip 手抄。
    一级两项直达（复制分片标识 / 复制诊断用 JSON），其余进「更多…」分组。 */
 const shardMenu = ref<{ x: number; y: number; s: Shard } | null>(null);
+/* 单一 keydown 入口：菜单键开菜单，方向键走矩阵导航（SFC 不允许重复 @keydown 属性） */
+function onShardKey(e: KeyboardEvent, g: any, s: Shard, si: number) {
+  onShardMenuKey(e, s);
+  onShardNav(e, g, si);
+}
+/* 分片矩阵方向键：←/→ 同行、↑/↓ 按 COLS 跨行，Home/End 首末；边界不拦截滚动 */
+function onShardNav(e: KeyboardEvent, g: any, si: number) {
+  const next = gridNext(e.key, si, COLS, g.shards?.length ?? 0);
+  if (next === null) return;
+  e.preventDefault();
+  const cells = (e.currentTarget as SVGGElement).parentElement
+    ?.querySelectorAll<SVGGElement>('[data-shard-idx]');
+  cells?.[next]?.focus();
+}
 function onShardMenuKey(e: KeyboardEvent, s: Shard) {
   if (!isMenuKey(e)) return;
   e.preventDefault();
