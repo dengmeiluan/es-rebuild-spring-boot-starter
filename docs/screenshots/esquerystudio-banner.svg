@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="360" viewBox="0 0 1280 360" role="img" aria-label="ESQueryStudio — the Elasticsearch query workbench for Spring Boot">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#081011"/>
+      <stop offset="0.55" stop-color="#0b1516"/>
+      <stop offset="1" stop-color="#071a19"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.82" cy="0.18" r="0.66">
+      <stop offset="0" stop-color="#14b8a6" stop-opacity="0.24"/>
+      <stop offset="0.55" stop-color="#14b8a6" stop-opacity="0.05"/>
+      <stop offset="1" stop-color="#14b8a6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2dd4bf"/>
+      <stop offset="1" stop-color="#0d9488"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#172324"/>
+      <stop offset="1" stop-color="#0d1718"/>
+    </linearGradient>
+    <linearGradient id="score" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2dd4bf"/>
+      <stop offset="1" stop-color="#5eead4" stop-opacity="0.35"/>
+    </linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#c8f0eb" stroke-opacity="0.04" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1280" height="360" fill="url(#bg)"/>
+  <rect width="1280" height="360" fill="url(#grid)"/>
+  <rect width="1280" height="360" fill="url(#glow)"/>
+
+  <g transform="translate(64 74)">
+    <rect x="0" y="0" width="42" height="6" rx="3" fill="url(#accent)"/>
+    <text x="0" y="76" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="64" font-weight="750" letter-spacing="-2.2" fill="#f0fffc">ESQueryStudio</text>
+    <text x="2" y="108" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="13.5" font-weight="600" letter-spacing="3.2" fill="#7fd8cc">THE ELASTICSEARCH QUERY WORKBENCH</text>
+    <text x="2" y="132" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="13" letter-spacing="0.5" fill="#8fb3ad">for Spring Boot teams that live in their search.</text>
+
+    <g transform="translate(2 166)" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="10" letter-spacing="1.5">
+      <rect x="0" y="0" width="116" height="26" rx="13" fill="#2dd4bf" fill-opacity="0.09" stroke="#2dd4bf" stroke-opacity="0.30"/>
+      <text x="58" y="17" text-anchor="middle" fill="#8fe9dd">6 QUERY MODES</text>
+      <rect x="126" y="0" width="128" height="26" rx="13" fill="#2dd4bf" fill-opacity="0.09" stroke="#2dd4bf" stroke-opacity="0.30"/>
+      <text x="190" y="17" text-anchor="middle" fill="#8fe9dd">MAPPING-AWARE</text>
+      <rect x="264" y="0" width="108" height="26" rx="13" fill="#2dd4bf" fill-opacity="0.09" stroke="#2dd4bf" stroke-opacity="0.30"/>
+      <text x="318" y="17" text-anchor="middle" fill="#8fe9dd">EMBEDDABLE</text>
+    </g>
+  </g>
+
+  <g transform="translate(732 42)">
+    <rect x="0" y="0" width="490" height="292" rx="16" fill="url(#panel)" stroke="#c8f0eb" stroke-opacity="0.14"/>
+    <circle cx="20" cy="20" r="4" fill="#ff6b6b" opacity="0.7"/>
+    <circle cx="34" cy="20" r="4" fill="#fbbf24" opacity="0.7"/>
+    <circle cx="48" cy="20" r="4" fill="#34d399" opacity="0.7"/>
+    <text x="70" y="24" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="10" letter-spacing="0.8" fill="#9fc7c0">research_report · 128 docs</text>
+    <text x="404" y="24" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="9" letter-spacing="1" fill="#34d399">green</text>
+    <g transform="translate(18 42)">
+      <rect x="0" y="0" width="54" height="24" rx="6" fill="#2dd4bf" fill-opacity="0.16" stroke="#2dd4bf" stroke-opacity="0.35"/>
+      <text x="27" y="16" text-anchor="middle" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="9" font-weight="650" fill="#5eead4">DSL</text>
+      <text x="78" y="16" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="9" fill="#75908b">ES-SQL</text>
+      <text x="132" y="16" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="9" fill="#75908b">Lucene</text>
+      <text x="376" y="16" text-anchor="end" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="9" fill="#75908b">⌘↵ run</text>
+    </g>
+    <rect x="18" y="78" width="286" height="138" rx="9" fill="#0b1415" stroke="#c8f0eb" stroke-opacity="0.08"/>
+    <g font-family="JetBrains Mono, Consolas, monospace" font-size="9.5" fill="#a8c7c1">
+      <text x="30" y="96" fill="#6f8b83">1</text><text x="46" y="96" fill="#c8f0eb">{</text>
+      <text x="56" y="112" fill="#6f8b83">2</text><text x="70" y="112" fill="#c8f0eb">"query"</text><text x="118" y="112" fill="#7fd8cc">: {</text>
+      <text x="56" y="128" fill="#6f8b83">3</text><text x="86" y="128" fill="#c8f0eb">"bool"</text><text x="124" y="128" fill="#7fd8cc">: {</text>
+      <text x="56" y="144" fill="#6f8b83">4</text><text x="102" y="144" fill="#c8f0eb">"must"</text><text x="140" y="144" fill="#7fd8cc">: [</text>
+      <text x="56" y="160" fill="#6f8b83">5</text><text x="118" y="160" fill="#5eead4">{ "match"</text><text x="176" y="160" fill="#7fd8cc">: {</text>
+      <text x="56" y="176" fill="#6f8b83">6</text><text x="146" y="176" fill="#5eead4">"title"</text><text x="182" y="176" fill="#7fd8cc">: "研报" } }</text>
+      <text x="56" y="192" fill="#6f8b83">7</text><text x="118" y="192" fill="#5eead4">{ "term"</text><text x="168" y="192" fill="#7fd8cc">: {</text>
+      <text x="56" y="208" fill="#6f8b83">8</text><text x="146" y="208" fill="#5eead4">"status"</text><text x="190" y="208" fill="#7fd8cc">: "ACTIVE" } }</text>
+    </g>
+    <g transform="translate(318 78)">
+      <rect x="0" y="0" width="154" height="138" rx="9" fill="#0b1415" stroke="#c8f0eb" stroke-opacity="0.08"/>
+      <text x="12" y="18" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="8" letter-spacing="1.2" fill="#6f8b83">CONDITION TREE</text>
+      <circle cx="18" cy="38" r="4" fill="#2dd4bf"/>
+      <text x="30" y="42" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="9" fill="#e6fffb">bool · must</text>
+      <path d="M18 46v14M18 60h8" stroke="#2dd4bf" stroke-opacity="0.35" fill="none"/>
+      <circle cx="36" cy="68" r="3" fill="#5eead4"/>
+      <text x="46" y="72" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="9" fill="#b7d7d1">title 包含</text>
+      <rect x="46" y="76" width="58" height="12" rx="3" fill="#2dd4bf" fill-opacity="0.12"/>
+      <text x="75" y="85" text-anchor="middle" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="7.5" fill="#8fe9dd">「研报」</text>
+      <circle cx="36" cy="104" r="3" fill="#5eead4"/>
+      <text x="46" y="108" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="9" fill="#b7d7d1">status 等于</text>
+      <rect x="46" y="112" width="46" height="12" rx="3" fill="#2dd4bf" fill-opacity="0.12"/>
+      <text x="69" y="121" text-anchor="middle" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="7.5" fill="#8fe9dd">ACTIVE</text>
+    </g>
+    <g transform="translate(18 206)">
+      <text x="0" y="10" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="8" letter-spacing="1.2" fill="#6f8b83">TOP HITS</text>
+      <g transform="translate(60 0)">
+        <text x="0" y="10" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="8.5" fill="#b7d7d1">2026 Q3 半导体行业深度研报</text>
+        <rect x="300" y="2" width="110" height="6" rx="3" fill="#12302d"/>
+        <rect x="300" y="2" width="92" height="6" rx="3" fill="url(#score)"/>
+        <text x="438" y="10" text-anchor="end" font-family="JetBrains Mono, Consolas, monospace" font-size="8.5" fill="#5eead4">3.42</text>
+      </g>
+      <g transform="translate(60 22)">
+        <text x="0" y="10" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="8.5" fill="#8fb3ad">新能源车产业链专题：固态电池拐点</text>
+        <rect x="300" y="2" width="110" height="6" rx="3" fill="#12302d"/>
+        <rect x="300" y="2" width="78" height="6" rx="3" fill="url(#score)"/>
+        <text x="438" y="10" text-anchor="end" font-family="JetBrains Mono, Consolas, monospace" font-size="8.5" fill="#5eead4">3.18</text>
+      </g>
+      <g transform="translate(60 44)">
+        <text x="0" y="10" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="8.5" fill="#6f8b83">AI 算力基础设施年度展望</text>
+        <rect x="300" y="2" width="110" height="6" rx="3" fill="#12302d"/>
+        <rect x="300" y="2" width="64" height="6" rx="3" fill="url(#score)"/>
+        <text x="438" y="10" text-anchor="end" font-family="JetBrains Mono, Consolas, monospace" font-size="8.5" fill="#5eead4">2.97</text>
+      </g>
+    </g>
+  </g>
+
+  <g transform="translate(64 316)">
+    <circle cx="3" cy="3" r="3" fill="#34d399"/>
+    <text x="14" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="9.5" letter-spacing="1.5" fill="#6f8b83">DSL</text>
+    <text x="52" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="9.5" letter-spacing="1.5" fill="#3f5b55">·</text>
+    <text x="68" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="9.5" letter-spacing="1.5" fill="#b7d7d1">ES-SQL</text>
+    <text x="126" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="9.5" letter-spacing="1.5" fill="#3f5b55">·</text>
+    <text x="142" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="9.5" letter-spacing="1.5" fill="#b7d7d1">LUCENE</text>
+    <text x="210" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="9.5" letter-spacing="1.5" fill="#3f5b55">·</text>
+    <text x="226" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="9.5" letter-spacing="1.5" fill="#b7d7d1">SANDBOX</text>
+    <text x="302" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="9.5" letter-spacing="1.5" fill="#3f5b55">·</text>
+    <text x="318" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="9.5" letter-spacing="1.5" fill="#b7d7d1">PIT PAGINATION</text>
+    <text x="432" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="9.5" letter-spacing="1.5" fill="#3f5b55">·</text>
+    <text x="448" y="7" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="9.5" letter-spacing="1.5" fill="#b7d7d1">SYNTAX BRIDGE</text>
+    <text x="1120" y="7" text-anchor="end" font-family="Inter, -apple-system, Segoe UI, sans-serif" font-size="9.5" letter-spacing="1.2" fill="#3f5b55">ESQUERYSTUDIO 1.0</text>
+  </g>
+  <rect x="0" y="358" width="1280" height="2" fill="url(#accent)" opacity="0.55"/>
+</svg>
