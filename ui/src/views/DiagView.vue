@@ -111,8 +111,8 @@
             <button class="btn sm ghost" :disabled="!pending.length" style="margin-left:auto" @click.prevent="copyPending" title="复制 pending tasks 为 Markdown（群聊/工单直贴）"><ClipboardCopy :size="11" /> Markdown</button>
           </div>
           <div v-if="pending.length" class="dg-pending">
-            <div v-for="(p, i) in pending" :key="i" class="dg-pending-row"
-                 @contextmenu.prevent="openPendingMenu($event, p)">
+            <div v-for="(p, i) in pending" :key="i" class="dg-pending-row" tabindex="0"
+                 @contextmenu.prevent="openPendingMenu($event, p)" @keydown="onPendingMenuKey($event, p)">
               <span class="chip mono" :style="p.priority === 'URGENT' ? 'color:var(--err)' : p.priority === 'HIGH' ? 'color:var(--warn)' : ''">{{ p.priority || '-' }}</span>
               <span class="mono" style="flex:1;color:var(--tx1)">{{ p.source }}</span>
               <!-- +'ms' 裸拼退役 → queueMsText（semFormat duration，≥1000 转 s 档） -->
@@ -239,6 +239,7 @@ import { exportStamp, copyText, downloadText, csvCell } from '../utils/format';
 /* escapeHtml 三连转义合并 utils/highlightSanitize 导出单源（本地私造退役，
  与 hlSafe 同仓同源）；hotThreadsHtml 私造 span 分档逻辑保留只换转义源 */
 import { escapeHtml } from '../utils/highlightSanitize';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 /* semFormat 语义格式化统一件（bytes/duration——fmtB 手写档与 +'ms' 裸拼退役） */
 import { semFormat } from '../composables/useSemFormat';
 
@@ -585,6 +586,11 @@ function openPendingMenu(e: MouseEvent, p: any) {
     title: '待处理任务 · ' + (p.source || '-'),
     p,
   };
+}
+function onPendingMenuKey(e: KeyboardEvent, p: any) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  pendingMenu.value = { ...menuKeyAnchor(e), title: '待处理任务 · ' + (p.source || '-'), p };
 }
 function copyPendingText(text: string, msg: string) {
   copyText(text).then(ok => store.notify(ok ? 'success' : 'error', ok ? msg : '复制失败'));

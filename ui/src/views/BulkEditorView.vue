@@ -139,8 +139,8 @@
         </div>
         <div v-if="result.failedSample && result.failedSample.length" class="be-fail">
           <div class="be-fail-tt">前 20 条失败样例：</div>
-          <details v-for="(f, i) in result.failedSample" :key="i" class="be-fail-item"
-            @contextmenu.prevent="openFailMenu($event, f, i)">
+          <details v-for="(f, i) in result.failedSample" :key="i" class="be-fail-item" tabindex="0"
+            @contextmenu.prevent="openFailMenu($event, f, i)" @keydown="onFailMenuKey($event, f, i)">
             <!-- W4c：f.status 裸渲染 → W-D 改用 StatusPill（<300 g/<500 y/其余 r，RestView HTTP 状态徽标同款） -->
             <summary>#{{ i + 1 }} — <StatusPill :tone="statusPillCls(f.status)" :label="String(f.status)" /> — {{ (f.error && f.error.type) || 'error' }}</summary>
             <div class="be-fail-body"><JsonTree :data="f" /></div>
@@ -200,6 +200,7 @@ import { ndjsonLint as ndjsonLintOf } from '../utils/bulkNdjson';
 import MonacoEditor from '../components/MonacoEditor.vue';
 import { useIndexFields } from '../composables/useIndexFields';
 import { removeStoredRaw } from '../utils/safeJson';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 
 const store = useAppStore();
 
@@ -211,6 +212,12 @@ const failMenu = ref<{ x: number; y: number; f: any; i: number; title: string } 
 function openFailMenu(e: MouseEvent, f: any, i: number) {
   const type = (f && f.error && f.error.type) || 'error';
   failMenu.value = { x: e.clientX, y: e.clientY, f, i, title: `第 ${i + 1} 条 · ${type}` };
+}
+function onFailMenuKey(e: KeyboardEvent, f: any, i: number) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  const type = (f && f.error && f.error.type) || 'error';
+  failMenu.value = { ...menuKeyAnchor(e), f, i, title: `第 ${i + 1} 条 · ${type}` };
 }
 async function failCopy(text: string, okMsg: string) {
   const ok = await copyText(text);

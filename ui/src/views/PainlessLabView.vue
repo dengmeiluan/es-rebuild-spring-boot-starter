@@ -55,7 +55,7 @@
             <div v-if="storedLoading && !storedList.length" class="pl-load-mini">正在拉取已存储脚本…</div>
             <EmptyState v-else-if="!storedErr && !storedList.length" compact :icon="Save" text="暂无存储脚本" hint="左侧写好后点「存储」入集群，供 script_score 等复用" />
             <div v-for="s in storedList" :key="s.id" class="pl-stored" :class="{ active: selectedStored === s.id }"
-              @click="pickStored(s)" role="button" tabindex="0" @keydown.enter.prevent="pickStored(s)" @keydown.space.prevent="pickStored(s)"
+              @click="pickStored(s)" role="button" tabindex="0" @keydown.enter.prevent="pickStored(s)" @keydown.space.prevent="pickStored(s)" @keydown="onStoredMenuKey($event, s)"
               @contextmenu.prevent.stop="openStoredMenu($event, s)">
               <span class="pl-stored-id" :title="s.id">{{ s.id }}</span>
               <span class="pl-stored-lang">{{ s.lang }}</span>
@@ -165,6 +165,7 @@ import { stripJsonComments, highlightJson } from '../utils/jsonc';
 import { errPreHtml, errMeta } from '../utils/errPre';
 import { copyText } from '../utils/format';
 import { writeStoredRaw } from '../utils/safeJson';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 
 const store = useAppStore();
 /* 权限门禁——stored script 保存/删除=/cluster/scripts/put|delete=CLUSTER 档（rank3+）；
@@ -352,6 +353,11 @@ function pickStored(s: any) {
 const storedMenu = ref<{ x: number; y: number; s: any } | null>(null);
 function openStoredMenu(e: MouseEvent, s: any) {
   storedMenu.value = { x: e.clientX, y: e.clientY, s };
+}
+function onStoredMenuKey(e: KeyboardEvent, s: any) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  storedMenu.value = { ...menuKeyAnchor(e), s };
 }
 const storedMenuItems = computed<CcmItem[]>(() => {
   const m = storedMenu.value;

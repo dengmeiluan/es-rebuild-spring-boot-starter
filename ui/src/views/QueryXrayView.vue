@@ -65,8 +65,8 @@
  vrErr 标题行 已是此口径，结论档漏网补齐） -->
         <span v-if="vr.error" class="qx-verr" :title="vr.error">{{ friendlyEsError(vr.error) }}</span>
       </div>
-      <div v-for="(ex, i) in vr?.explanations || []" :key="i" class="qx-card"
-        @contextmenu.prevent="openExMenu($event, ex)">
+      <div v-for="(ex, i) in vr?.explanations || []" :key="i" class="qx-card" tabindex="0"
+        @contextmenu.prevent="openExMenu($event, ex)" @keydown="onExMenuKey($event, ex)">
         <div class="qx-card-hd">
           <Regex :size="12" /> Lucene 实际执行（{{ ex.index }}）
           <button class="btn ghost xs qx-run" @click="copyText(ex.explanation).then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制解释全文' : '复制失败'))"><Copy :size="10" /> 复制</button>
@@ -201,6 +201,7 @@ import { copyText as clipboardCopy, fmtNum } from '../utils/format';
 import { matrixText } from '../utils/copyMatrix';
 import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-html 内核；534 收口波：双参改用（errMeta 旁路） */
 import { friendlyEsError } from '../utils/esError'; /* ：错误标题行人话 */
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 /* 裸 sessionStorage 收发换 useLinkCarry 统一件（530 W-D 遗留清单合并，
  键与 payload 逐字保持：analyzer {index,text} / xray {index,id}） */
 import { useLinkCarry } from '../composables/useLinkCarry';
@@ -218,6 +219,11 @@ const store = useAppStore();
 const exMenu = ref<{ x: number; y: number; ex: any } | null>(null);
 function openExMenu(e: MouseEvent, ex: any) {
   exMenu.value = { x: e.clientX, y: e.clientY, ex };
+}
+function onExMenuKey(e: KeyboardEvent, ex: any) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  exMenu.value = { ...menuKeyAnchor(e), ex };
 }
 async function copyEx(text: string, okMsg: string) {
   const ok = await copyText(text);

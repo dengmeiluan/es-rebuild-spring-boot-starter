@@ -275,8 +275,8 @@
             <tbody>
               <!-- 过滤态命中行给锚点——_id 套 MarkText 高亮 + 行底色类 + aria-current
  （轻量版：滚动定位仍归 QRT/HitNav 链路；kw 空时无类无属性，零扰动） -->
-              <tr v-for="h in jsonHits" :key="h._id" :class="{ 'lc-hit-row': !!jsonMarkKw }" :aria-current="jsonMarkKw ? 'true' : undefined"
-                @contextmenu.prevent="openHitMenu($event, h)">
+              <tr v-for="h in jsonHits" :key="h._id" :class="{ 'lc-hit-row': !!jsonMarkKw }" :aria-current="jsonMarkKw ? 'true' : undefined" tabindex="0"
+                @contextmenu.prevent="openHitMenu($event, h)" @keydown="onHitMenuKey($event, h)">
                 <td><code><MarkText :text="h._id" :kw="jsonMarkKw" /></code></td>
                 <td>{{ fmtScore(h._score) }}</td>
                 <!-- 548 E2 回收——JsonTree 开 highlightKw 外部高亮通道（tools 私有
@@ -356,6 +356,7 @@ import { useRouter } from 'vue-router';
 import { encodeDslParam } from '../utils/queryHub';
 import { exportStamp, copyText, fmtTime, downloadText, totalOf, fmtNum, csvCell, fmtCell } from '../utils/format';
 import { removeStoredRaw } from '../utils/safeJson';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 import { useAuthStore } from '../stores/auth'; /* 历史回放自动执行的身份/读页门（1124 续） */
 
 const store = useAppStore();
@@ -494,6 +495,11 @@ const jsonMarkKw = computed(() => jsonKw.value.trim());
 const hitMenu = ref<{ x: number; y: number; h: any } | null>(null);
 function openHitMenu(e: MouseEvent, h: any) {
   hitMenu.value = { x: e.clientX, y: e.clientY, h };
+}
+function onHitMenuKey(e: KeyboardEvent, h: any) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  hitMenu.value = { ...menuKeyAnchor(e), h };
 }
 async function copyHit(text: string, okMsg: string) {
   const ok = await copyText(text);

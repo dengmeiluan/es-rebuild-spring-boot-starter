@@ -161,8 +161,8 @@
  _id/_index 裸 mark 改用 MarkText 统一件（splitMark 单源封装，
  mt-mark 全站统一命中底色；textContent 与原文一致、无 v-html 注入面契约不变），
  kw 空时单段平文零扰动 -->
-            <div v-for="({ h, i }) in shownHits" :key="h._id + '_' + i" class="ss-hit"
-                 @contextmenu.prevent="openHitMenu($event, h)">
+            <div v-for="({ h, i }) in shownHits" :key="h._id + '_' + i" class="ss-hit" tabindex="0"
+                 @contextmenu.prevent="openHitMenu($event, h)" @keydown="onHitMenuKey($event, h)">
               <div class="ss-hit-head">
                 <b class="mono"><MarkText :text="String(h._index ?? '')" :kw="hitsMarkKw" /></b>
                 <span class="mono ss-hit-id">#<MarkText :text="String(h._id ?? '')" :kw="hitsMarkKw" /></span>
@@ -314,6 +314,7 @@ import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-
 import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue';
 import TookBadge from '../components/TookBadge.vue';
 import { removeStoredRaw, writeStoredRaw } from '../utils/safeJson';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 import { useAuthStore } from '../stores/auth'; /* 历史回放自动执行的身份/读页门（1124 续） */
 
 const store = useAppStore();
@@ -580,6 +581,11 @@ function openRawIo() {
 const hitMenu = ref<{ x: number; y: number; title: string; h: any } | null>(null);
 function openHitMenu(e: MouseEvent, h: any) {
   hitMenu.value = { x: e.clientX, y: e.clientY, title: '# ' + String(h?._id ?? ''), h };
+}
+function onHitMenuKey(e: KeyboardEvent, h: any) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  hitMenu.value = { ...menuKeyAnchor(e), title: '# ' + String(h?._id ?? ''), h };
 }
 const hitMenuItems = computed<CcmItem[]>(() => {
   const h = hitMenu.value?.h;

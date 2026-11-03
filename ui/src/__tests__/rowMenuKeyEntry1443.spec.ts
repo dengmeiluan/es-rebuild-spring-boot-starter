@@ -53,6 +53,14 @@ const ROWS: Array<[string, string]> = [
   ['components/builder/WrapNodeRow.vue', '@keydown.self="onRowMenuKey"'],
   ['components/builder/RootExtrasPane.vue', '@keydown.self="onSortMenuKey($event, s, i)"'],
   ['components/builder/RootExtrasPane.vue', '@keydown.self="onHlMenuKey($event, i)"'],
+  ['views/BulkEditorView.vue', '@keydown="onFailMenuKey($event, f, i)"'],
+  ['views/DiagView.vue', '@keydown="onPendingMenuKey($event, p)"'],
+  ['views/LuceneQueryView.vue', '@keydown="onHitMenuKey($event, h)"'],
+  ['views/PainlessLabView.vue', '@keydown="onStoredMenuKey($event, s)"'],
+  ['views/QueryXrayView.vue', '@keydown="onExMenuKey($event, ex)"'],
+  ['views/ScoreExplainView.vue', '@keydown="onHitMenuKey($event, h)"'],
+  ['views/SearchSandboxView.vue', '@keydown="onHitMenuKey($event, h)"'],
+  ['views/TaskTreeView.vue', '@keydown="onRowMenuKey($event, root)"'],
 ];
 
 describe('1443 行级右键菜单键盘入口', () => {
@@ -79,7 +87,7 @@ describe('1443 行级右键菜单键盘入口', () => {
       expect(s, `${file} 未接入 menuKeyAnchor`).toContain('menuKeyAnchor');
       seen.add(file);
     }
-    expect(seen.size).toBe(36);
+    expect(seen.size).toBe(44);
   });
 
   it('TemplatesView 不再使用匹配不到 ContextMenu 的 @keydown.menu 修饰符', () => {
@@ -113,7 +121,7 @@ describe('1443 行级右键菜单键盘入口', () => {
 
   it('快捷键速查面板登记了列表/卡片行入口', () => {
     const hk = src('components/HotkeyPanel.vue');
-    expect(hk).toContain('列表/卡片行（任务、快照、别名、索引、体检项、告警、策略、模板、校验、差分行、火焰图、查询记录行、设置行、mapping 字段、explain 行、文档差异格、构建器条件/聚合行、DevTools 标签/响应行）');
+    expect(hk).toContain('列表/卡片行（任务/快照/别名/索引/体检/告警/策略/模板/校验/差分行/火焰图/查询记录/设置/mapping/explain/文档差异/构建器/DevTools/检索/沙盒/打分/X 光/失败样例/诊断待办/任务树）');
     expect(hk).toContain('Shift+F10 同效');
   });
 });

@@ -72,8 +72,8 @@
                     text="尚无打分解剖结果"
                     hint="左侧写 query 后点「执行解剖」，每个命中会展开 tf/idf/boost/norm 完整打分树" />
         <template v-else>
-        <div v-for="(h, i) in hits" :key="h._id" class="se-hit" :class="{ open: openIdx === i }"
-             @contextmenu.prevent="openHitMenu($event, h)">
+        <div v-for="(h, i) in hits" :key="h._id" class="se-hit" :class="{ open: openIdx === i }" tabindex="0"
+             @contextmenu.prevent="openHitMenu($event, h)" @keydown="onHitMenuKey($event, h)">
           <div class="se-hit-hd" role="button" tabindex="0" :aria-expanded="openIdx === i" @click="openIdx = openIdx === i ? -1 : i" @keydown.enter.prevent="openIdx = openIdx === i ? -1 : i" @keydown.space.prevent="openIdx = openIdx === i ? -1 : i">
             <span class="se-rank">#{{ i + 1 }}</span>
             <span class="se-id" :title="h._id">{{ h._id }}</span>
@@ -143,6 +143,7 @@ import { friendlyEsError } from '../utils/esError'; /* ：runErr 人话化 */
 import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-html 内核；534 收口波：双参改用（errMeta 旁路） */
 import JsonArea from '../components/JsonArea.vue';
 import { lintDsl } from '../utils/dslLint'; /* ：DSL 静态体检 */
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 import JsonTree from '../components/JsonTree.vue';
 import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 
@@ -295,6 +296,11 @@ function gotoXray(h: any) {
 const hitMenu = ref<{ x: number; y: number; title: string; h: any } | null>(null);
 function openHitMenu(e: MouseEvent, h: any) {
   hitMenu.value = { x: e.clientX, y: e.clientY, title: '# ' + String(h?._id ?? ''), h };
+}
+function onHitMenuKey(e: KeyboardEvent, h: any) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  hitMenu.value = { ...menuKeyAnchor(e), title: '# ' + String(h?._id ?? ''), h };
 }
 const hitMenuItems = computed<CcmItem[]>(() => {
   const h = hitMenu.value?.h;

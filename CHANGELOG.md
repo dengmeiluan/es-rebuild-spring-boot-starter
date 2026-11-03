@@ -75,8 +75,9 @@ All notable changes to SearchDeck are documented here. The format follows
   ILM/lifecycle/SLM policies, templates, remote clusters, favorites, topology shards, flame rows,
   config validation, diffs, optimizer suggestions, analysis components, DevTools tabs/response
   rows, REST response, hot settings, migration jobs, query history, settings rows, mapping fields,
-  explain rows, document-diff cells, builder clause/agg/sort/highlight rows) now also opens from
-  the menu key or Shift+F10, with focusable rows and a shared `utils/menuKey.ts` anchor. The
+  explain rows, document-diff cells, builder clause/agg/sort/highlight rows, Lucene/sandbox/score
+  hit rows, X-ray cards, bulk failure samples, diagnostic pending rows, task tree) now also opens
+  from the menu key or Shift+F10, with focusable rows and a shared `utils/menuKey.ts` anchor. The
   hotkey panel lists the new entry.
 - `TemplatesView` menu-key entry was bound to `@keydown.menu`, which never matches the browser's
   `ContextMenu` key; it now uses the shared predicate and also accepts Shift+F10.
