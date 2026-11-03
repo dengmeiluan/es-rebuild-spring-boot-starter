@@ -64,6 +64,9 @@ All notable changes to SearchDeck are documented here. The format follows
 - Overview index ranking, health distribution, and recent-job rows now support right-click and
   keyboard ContextMenu/Shift+F10 to open the index workspace/browser/job page or copy the
   name/status/deep link.
+- Live dashboard node cards and active alerts now open the shared menu on right-click or
+  ContextMenu/Shift+F10: open node diagnostics/alert destination or copy node/alert identifiers and
+  thresholds.
 
 ### Changed
 

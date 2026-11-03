@@ -236,7 +236,8 @@
         <div v-for="n in sortedNodes" :key="n.nodeId" class="ld-node" :class="nodeTone(n)" role="button" tabindex="0"
           :aria-label="`节点 ${n.name}，点击进入诊断`" title="点击进入诊断"
           @click="router.push({ path: '/diag', query: { node: n.name } })"
-          @keydown.enter.prevent="router.push({ path: '/diag', query: { node: n.name } })" @keydown.space.prevent="router.push({ path: '/diag', query: { node: n.name } })">
+          @contextmenu.prevent="openLdRowMenu($event, 'node-card', n)"
+          @keydown="onLdCardKey($event, 'node-card', n)">
           <div class="ld-node-hd">
             <span class="ld-node-name">
               <!-- 节点健康色点改用 MetaStrip dot 形态单源（DiagView dgMeta 先例）——
@@ -296,7 +297,8 @@
       <!-- 告警横条键盘可达（role/tabindex/Enter 触发——纯 click 绑定对键盘用户不可达） -->
       <div v-for="a in activeAlerts" :key="a.key" class="ld-alert" :class="a.severity" role="button" tabindex="0"
         :aria-label="`告警：${a.title}，点击定位到对应处置`" title="点击定位到对应处置"
-        @click="alertRoute(a)" @keydown.enter.prevent="alertRoute(a)" @keydown.space.prevent="alertRoute(a)">
+        @click="alertRoute(a)" @contextmenu.prevent="openLdRowMenu($event, 'active-alert', a)"
+        @keydown="onLdCardKey($event, 'active-alert', a)">
         <span class="ld-alert-m">
           <b>{{ a.title }}</b>
           <span class="ld-alert-v">{{ fmtNum(a.num) }}{{ a.unit }}</span>
@@ -1418,14 +1420,30 @@ const detailCanExport = computed(() => {
  一级 = 该行最常用的一步（慢请求=复制 URI；告警=复制文案；Top=在数据浏览器打开）；
  复制整行 JSON 与其余项收进「复制…」二级（与全站卡片菜单同一两级语言）。
  只读视图：不提供任何写动作，避免监控屏变成误操作面。 */
-type LdMenuKind = 'top' | 'slow' | 'alert' | 'node';
+type LdMenuKind = 'top' | 'slow' | 'alert' | 'node' | 'node-card' | 'active-alert';
 const ldMenu = ref<{ x: number; y: number; title: string; kind: LdMenuKind; row: any } | null>(null);
 function openLdRowMenu(e: MouseEvent, kind: LdMenuKind, row: any) {
   const title = kind === 'top' ? `索引 · ${row.index}`
     : kind === 'slow' ? `慢请求 · ${row.uri || '-'}`
     : kind === 'node' ? `节点 · ${row.nodeName || row.connId || '-'}`
+    : kind === 'node-card' ? `节点 · ${row.name || row.nodeId || '-'}`
+    : kind === 'active-alert' ? `告警 · ${row.title || row.key || '-'}`
     : `告警 · ${metricZh(row.metric)}`;
   ldMenu.value = { x: e.clientX, y: e.clientY, title, kind, row };
+}
+/* 节点卡/活动告警的键盘入口：Enter/Space 走原主操作，菜单键/Shift+F10 开菜单 */
+function onLdCardKey(e: KeyboardEvent, kind: 'node-card' | 'active-alert', row: any) {
+  if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
+    e.preventDefault();
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    ldMenu.value = { x: r.left + 12, y: r.bottom, kind, title: kind === 'node-card' ? `节点 · ${row.name || row.nodeId || '-'}` : `告警 · ${row.title || row.key || '-'}`, row };
+    return;
+  }
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    if (kind === 'node-card') router.push({ path: '/diag', query: { node: row.name } });
+    else alertRoute(row);
+  }
 }
 const ldMenuItems = computed<CcmItem[]>(() => {
   const m = ldMenu.value; if (!m) return [];
@@ -1481,6 +1499,30 @@ const ldMenuItems = computed<CcmItem[]>(() => {
         void copy(`${node}  heap=${fmtN(row.heapUsedPct)}  cpu=${fmtN(row.cpuPct)}  disk=${fmtN(row.diskUsedPct)}`, '已复制该节点水位');
       } },
       copyGroup,
+    ];
+  }
+  if (m.kind === 'node-card') {
+    return [
+      { key: 'node-card-open', label: '打开节点诊断', icon: ExternalLink, run: () => { void router.push({ path: '/diag', query: { node: row.name } }); } },
+      {
+        key: 'node-card-copy', label: '复制…', icon: Copy, children: [
+          { key: 'node-card-name', label: '复制节点名', icon: Copy, run: () => void copy(String(row.name ?? ''), '已复制节点名') },
+          { key: 'node-card-id', label: '复制节点 ID', icon: Copy, run: () => void copy(String(row.nodeId ?? ''), '已复制节点 ID') },
+          { key: 'node-card-role', label: '复制角色', icon: Copy, run: () => void copy(roleLabel(row), '已复制角色') },
+        ],
+      },
+    ];
+  }
+  if (m.kind === 'active-alert') {
+    return [
+      { key: 'alert-go', label: '定位到处置', icon: ExternalLink, run: () => alertRoute(row) },
+      {
+        key: 'alert-copy', label: '复制…', icon: Copy, children: [
+          { key: 'alert-copy-title', label: '复制告警标题', icon: Copy, run: () => void copy(String(row.title ?? ''), '已复制告警标题') },
+          { key: 'alert-copy-key', label: '复制告警键', icon: Copy, run: () => void copy(String(row.key ?? ''), '已复制告警键') },
+          { key: 'alert-copy-threshold', label: '复制阈值', icon: Copy, run: () => void copy(String(row.threshold ?? ''), '已复制阈值') },
+        ],
+      },
     ];
   }
   return [

@@ -63,8 +63,6 @@ const SITES: Array<{ file: string; handler: string }> = [
   { file: '../views/IlmView.vue', handler: 'pickPolicy(p)' },
   { file: '../views/IndexHubView.vue', handler: 'copyShardLocate(grp.node, s)' },
   { file: '../views/IndexHubView.vue', handler: 'select(idx.index)' },
-  { file: '../views/LiveDashboardView.vue', handler: "router.push({ path: '/diag', query: { node: n.name } })" },
-  { file: '../views/LiveDashboardView.vue', handler: 'alertRoute(a)' },
   { file: '../views/PainlessLabView.vue', handler: 'pickStored(s)' },
   { file: '../views/SearchTemplatesView.vue', handler: 'pick(t)' },
   { file: '../views/SnapshotsView.vue', handler: 'gotoIndex(idx)' },
@@ -88,6 +86,13 @@ describe('spaceGuard826 全域守卫', () => {
   it('ConfigDrift 泛 keydown 站点（已含右键菜单）：Enter/Space 仍在 handler 内成对', () => {
     const v = rd('../views/ConfigDriftView.vue');
     expect(v).toMatch(/@keydown="onKeyMenuKey\(\$event, k\)"/);
+    expect(v).toMatch(/if \(e\.key === 'Enter' \|\| e\.key === ' '\)/);
+  });
+
+  it('LiveDashboard 节点卡/活动告警卡（已含右键菜单）：Enter/Space 仍在 onLdCardKey 内成对', () => {
+    const v = rd('../views/LiveDashboardView.vue');
+    expect(v).toMatch(/@keydown="onLdCardKey\(\$event, 'node-card', n\)"/);
+    expect(v).toMatch(/@keydown="onLdCardKey\(\$event, 'active-alert', a\)"/);
     expect(v).toMatch(/if \(e\.key === 'Enter' \|\| e\.key === ' '\)/);
   });
   function walk(dir: string): string[] {
