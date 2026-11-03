@@ -61,6 +61,7 @@ const ROWS: Array<[string, string]> = [
   ['views/ScoreExplainView.vue', '@keydown="onHitMenuKey($event, h)"'],
   ['views/SearchSandboxView.vue', '@keydown="onHitMenuKey($event, h)"'],
   ['views/TaskTreeView.vue', '@keydown="onRowMenuKey($event, root)"'],
+  ['components/TableShell.vue', '@keydown.self="onBarKey"'],
 ];
 
 describe('1443 行级右键菜单键盘入口', () => {
@@ -87,7 +88,7 @@ describe('1443 行级右键菜单键盘入口', () => {
       expect(s, `${file} 未接入 menuKeyAnchor`).toContain('menuKeyAnchor');
       seen.add(file);
     }
-    expect(seen.size).toBe(44);
+    expect(seen.size).toBe(45);
   });
 
   it('TemplatesView 不再使用匹配不到 ContextMenu 的 @keydown.menu 修饰符', () => {

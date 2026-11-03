@@ -2282,7 +2282,7 @@ const actMenuItems = computed<CcmItem[]>(() => {
       : []),
   ];
 });
-function openBarMenu(e: MouseEvent) {
+function openBarMenu(e: { clientX: number; clientY: number }) {
   barMenu.value = { x: e.clientX, y: e.clientY };
 }
 const barMenuItems = computed<CcmItem[]>(() => {

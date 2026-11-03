@@ -15,6 +15,7 @@
 import { defineComponent, h, type PropType } from 'vue';
 import { ArrowUp, X } from 'lucide-vue-next';
 import JsonTree from './JsonTree.vue';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 
 /* 行内展开详情行——W7 双内核同构段合并。open=false 渲染 null（与原 v-if tr 同为占位，
  单根不产生 fragment，规避 T39 叠挂卸载断裂）。 */
@@ -66,7 +67,14 @@ export const TableBacktop = defineComponent({
  类名以 props 注入（'rt-bar'/'rt-bar-r'、'qrt-bar'/'qrt-bar-r'）——守卫在内核源码
  indexOf 这些类名串定位钮序，串必须留在内核文件；子组件根元素继承父 scopeId，
  内核 scoped 的 .rt-bar/.qrt-bar 规则照常命中，样式零迁移。 */
-const emit = defineEmits<{ (e: 'bar-contextmenu', ev: MouseEvent): void }>();
+/* 工具行菜单只消费坐标：鼠标右键与菜单键（Shift+F10）共用同一事件与菜单内容 */
+const emit = defineEmits<{ (e: 'bar-contextmenu', ev: { clientX: number; clientY: number }): void }>();
+function onBarKey(e: KeyboardEvent) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  const at = menuKeyAnchor(e);
+  emit('bar-contextmenu', { clientX: at.x, clientY: at.y });
+}
 
 defineProps<{
   /* 卡头容器类（内核各自前缀：rt-bar / qrt-bar） */
@@ -81,7 +89,7 @@ defineProps<{
 </script>
 
 <template>
-  <div :class="barClass" @contextmenu.stop.prevent="emit('bar-contextmenu', $event)">
+  <div :class="barClass" tabindex="0" @contextmenu.stop.prevent="emit('bar-contextmenu', $event)" @keydown.self="onBarKey">
     <!-- 1163 工具行右键：事件只转发坐标，菜单内容归内核（两表动作集不同）；stop 避免冒泡到页面级手势。
          根注释必须在 div 内：根级注释=fragment 根，叠加卸载断裂（T39 同款坑）。 -->
     <slot name="bar-left" :filter-mode="filterMode ?? 'AND'" />

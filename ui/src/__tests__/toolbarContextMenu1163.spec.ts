@@ -16,7 +16,10 @@ const shell = readFileSync(join(__dirname, '../components/TableShell.vue'), 'utf
 describe('1163 工具行右键', () => {
   it('TableShell 统一转发 bar-contextmenu（两表同源）', () => {
     expect(shell).toContain(`@contextmenu.stop.prevent="emit('bar-contextmenu', $event)"`);
-    expect(shell).toContain(`(e: 'bar-contextmenu', ev: MouseEvent): void`);
+    expect(shell).toContain(`(e: 'bar-contextmenu', ev: { clientX: number; clientY: number }): void`);
+    /* 1443：工具条自身聚焦时菜单键/Shift+F10 走同一事件 */
+    expect(shell).toContain('@keydown.self="onBarKey"');
+    expect(shell).toContain('function onBarKey');
   });
 
   it('两表都接事件并各自挂菜单', () => {

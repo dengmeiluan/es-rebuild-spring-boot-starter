@@ -1901,7 +1901,7 @@ const colMenu = ref<{ x: number; y: number; col: string } | null>(null);
  一级 = 导出 ▾ / 行高切换 / 列选；其余（重置列宽、全列适应、聚合行、转置、语义格式化）
  收进「更多…」二级。 */
 const barMenu = ref<{ x: number; y: number } | null>(null);
-function openBarMenu(e: MouseEvent) {
+function openBarMenu(e: { clientX: number; clientY: number }) {
   barMenu.value = { x: e.clientX, y: e.clientY };
 }
 const barMenuItems = computed<CcmItem[]>(() => {
