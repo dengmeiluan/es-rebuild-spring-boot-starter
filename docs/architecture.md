@@ -71,6 +71,9 @@ The console is composed from shared interaction kernels rather than per-view cop
 
 - `CellContextMenu` renders the shared right-click surfaces from a host-built `CcmItem[]` (viewport
   fitting, submenus, keyboard navigation, and z-index management in one place).
+- `utils/menuKey.ts` is the shared predicate and anchor for row-menu keyboard entry: the Menu key
+  and Shift+F10 open the same menu as the mouse, anchored to the focused row instead of 0,0.
+  A census test fails when a component gains `@contextmenu` without a keyboard entry.
 - `useQueryAccess` is the single source for the query workbench permission summary
   (target/env/role/read/write) used by the mode and current-index context menus.
 - `FieldPicker`, builder `FieldSelect`, `MultiFieldPicker`, and `LuceneInput` share the same

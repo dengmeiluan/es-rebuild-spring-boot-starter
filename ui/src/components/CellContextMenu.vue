@@ -109,7 +109,7 @@ let restoreFocus: HTMLElement | null = null;
 let closedByAction = false;
 onMounted(() => {
   restoreFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-  void nextTick(() => menuEl.value?.querySelector<HTMLElement>('.ccm-it')?.focus());
+  void nextTick(() => menuEl.value?.querySelector<HTMLElement>(':scope > .ccm-it')?.focus());
 });
 onBeforeUnmount(() => {
   if (!closedByAction && restoreFocus?.isConnected) restoreFocus.focus();
@@ -159,14 +159,18 @@ function toggleSub(it: CcmItem, e: Event) {
   if (sub.value?.key !== it.key) setSub(it, e);
 }
 function onMenuKey(e: KeyboardEvent) {
-  /* ↑/↓ 在菜单项间循环；→ 开当前父项二级；← 关二级；Esc 先关二级（整菜单的 Esc 见 onEsc） */
-  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-    const btns = Array.from(menuEl.value?.querySelectorAll<HTMLElement>('.ccm-it') ?? []);
+  /* ↑/↓ 循环，Home/End 跳首末（ARIA menu 惯例）；
+     → 开当前父项二级；← 关二级；Esc 先关二级（整菜单的 Esc 见 onEsc） */
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Home' || e.key === 'End') {
+    /* :scope 只取一级项——二级常驻 DOM 且隐藏，不能混进一级 ↑/↓/Home/End 序列 */
+    const btns = Array.from(menuEl.value?.querySelectorAll<HTMLElement>(':scope > .ccm-it') ?? []);
     if (!btns.length) return;
     e.preventDefault();
     const cur = btns.indexOf(document.activeElement as HTMLElement);
     const delta = e.key === 'ArrowDown' ? 1 : -1;
-    btns[cur < 0 ? 0 : (cur + delta + btns.length) % btns.length].focus();
+    const next = e.key === 'Home' ? 0 : e.key === 'End' ? btns.length - 1
+      : (cur < 0 ? 0 : (cur + delta + btns.length) % btns.length);
+    btns[next].focus();
     return;
   }
   if (e.key === 'ArrowRight') {
@@ -193,17 +197,19 @@ function onParentKey(e: KeyboardEvent, it: CcmItem) {
 function closeSubAndFocusParent() {
   const key = sub.value?.key;
   closeSub();
-  if (key) void nextTick(() => menuEl.value?.querySelector<HTMLElement>(`.ccm-it[data-key="${key}"]`)?.focus());
+  if (key) void nextTick(() => menuEl.value?.querySelector<HTMLElement>(`:scope > .ccm-it[data-key="${key}"]`)?.focus());
 }
 function onSubKey(e: KeyboardEvent) {
   const btns = Array.from(subEl.value?.querySelectorAll<HTMLElement>('.ccm-it') ?? []);
   if (!btns.length) return;
-  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Home' || e.key === 'End') {
     e.preventDefault();
     e.stopPropagation(); /* 二级在 panel 内，别让一级 onMenuKey 再抢焦点 */
     const cur = btns.indexOf(document.activeElement as HTMLElement);
     const delta = e.key === 'ArrowDown' ? 1 : -1;
-    btns[cur < 0 ? 0 : (cur + delta + btns.length) % btns.length].focus();
+    const next = e.key === 'Home' ? 0 : e.key === 'End' ? btns.length - 1
+      : (cur < 0 ? 0 : (cur + delta + btns.length) % btns.length);
+    btns[next].focus();
   } else if (e.key === 'ArrowLeft') {
     e.preventDefault();
     e.stopPropagation();
