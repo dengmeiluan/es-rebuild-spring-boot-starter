@@ -11,13 +11,13 @@
     </template>
     <div class="cs-menu">
       <!-- .2：纯管理平台形态藏掉宿主项——数据面只认自定义连接档案；：切换项键盘可达（role/tabindex/Enter， Overview 同口径） -->
-      <div v-if="store.hostVisible && hostAllowed" class="cs-item" :class="{ on: !store.isRemote }" role="button" tabindex="0" aria-label="切换到宿主集群" @click="pickTarget('', '')" @keydown.enter.prevent="pickTarget('', '')" @keydown.space.prevent="pickTarget('', '')">
+      <div v-if="store.hostVisible && hostAllowed" class="cs-item" :class="{ on: !store.isRemote }" role="button" tabindex="0" aria-label="切换到宿主集群" @click="pickTarget('', '')" @contextmenu.prevent="openConnMenu($event, null)" @keydown="onConnKey($event, null)">
         <Server :size="12" />
         <span class="cs-item-name">宿主集群</span>
         <span v-if="store.clusterSelf" class="cs-item-sub mono">{{ store.clusterSelf }}</span>
         <Check v-if="!store.isRemote" :size="12" class="cs-check" />
       </div>
-      <div v-for="c in sortedConns" :key="c.id" class="cs-item" :class="{ on: store.target === c.id, stale: c.syncState === 'STALE' }" role="button" tabindex="0" :aria-label="'切换到 ' + c.name" @click="pickTarget(c.id, c.name)" @keydown.enter.prevent="pickTarget(c.id, c.name)" @keydown.space.prevent="pickTarget(c.id, c.name)">
+      <div v-for="c in sortedConns" :key="c.id" class="cs-item" :class="{ on: store.target === c.id, stale: c.syncState === 'STALE' }" role="button" tabindex="0" :aria-label="'切换到 ' + c.name" @click="pickTarget(c.id, c.name)" @contextmenu.prevent="openConnMenu($event, c)" @keydown="onConnKey($event, c)">
         <span class="cs-hdot" :class="hdotCls(c.health)" :title="hdotTip(c.health)"></span>
         <Globe :size="12" />
         <span class="cs-item-name">{{ c.name }}</span>
@@ -197,13 +197,16 @@
 
   <!-- 卡片次级菜单改 NPopover 锚定按钮(placement left-start)——CellContextMenu 挂 body
  在抽屉场景会盖到抽屉外的页面(观感「飘出去」);naive 弹层随按钮定位永在抽屉内 -->
+  <CellContextMenu v-if="connMenu" :x="connMenu.x" :y="connMenu.y" :title="connMenuTitle"
+    :items="connMenuItems" @close="connMenu = null" />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue';
 import { NPopover, NModal } from 'naive-ui';
-import { Server, Globe, ChevronDown, Check, Settings2, PlugZap, Pencil, Trash2, Save, CircleCheck, CircleAlert, Activity } from 'lucide-vue-next';
-import CellContextMenu from '../components/CellContextMenu.vue';
+import { Server, Globe, ChevronDown, Check, Settings2, PlugZap, Pencil, Trash2, Save, CircleCheck, CircleAlert, Activity, Copy } from 'lucide-vue-next';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
+import { copyText } from '../utils/format';
 import { useAppStore } from '../stores/app';
 import { usePref } from '../composables/urlState';
 import { sortConns, normalizeSortMode, moveInOrder, type SortMode } from '../utils/connSort'; /* ：列表状态分类排序+可调；：增手动档+moveInOrder 落位 */
@@ -360,6 +363,60 @@ async function pickTarget(id: string, name: string) {
 function doPick(id: string, name: string) {
   store.setTarget(id, name);
   store.notify('success', id ? `数据面已切到：${name}` : '已切回宿主集群');
+}
+
+/* 连接行右键/菜单键：切换（复用 pickTarget 的授权与 RED 确认）+ 复制连接信息，
+   只读本地；生产/测试连接的身份、env、端点可一键带走。 */
+const connMenu = ref<{ x: number; y: number; c: ClusterConnView | null } | null>(null);
+const connMenuTitle = computed(() => (connMenu.value ? `连接 · ${connMenu.value.c?.name || '宿主集群'}` : ''));
+const connMenuItems = computed<CcmItem[]>(() => {
+  const m = connMenu.value;
+  if (!m) return [];
+  const c = m.c;
+  const current = c ? store.target === c.id : !store.isRemote;
+  const items: CcmItem[] = [];
+  if (!current) {
+    items.push({
+      key: 'conn-switch',
+      label: c ? `切换到「${c.name}」` : '切换到宿主集群',
+      icon: Globe,
+      run: () => { void pickTarget(c ? c.id : '', c ? c.name : ''); },
+    });
+  }
+  const copyChildren: CcmItem[] = [
+    { key: 'conn-copy-name', label: '复制名称', icon: Copy, run: () => copyConnVal(c ? c.name : '宿主集群', '名称') },
+  ];
+  if (c) {
+    copyChildren.push({ key: 'conn-copy-id', label: '复制连接 ID', icon: Copy, run: () => copyConnVal(c.id, '连接 ID') });
+    copyChildren.push({ key: 'conn-copy-endpoint', label: '复制端点', icon: Copy, run: () => copyConnVal(`${c.scheme}://${c.host}:${c.port}`, '端点') });
+    if (c.env) {
+      const env = c.env;
+      copyChildren.push({ key: 'conn-copy-env', label: '复制环境', icon: Copy, run: () => copyConnVal(env, '环境') });
+    }
+  } else {
+    const self = store.clusterSelf;
+    if (self) copyChildren.push({ key: 'conn-copy-self', label: '复制实例', icon: Copy, run: () => copyConnVal(self, '实例') });
+  }
+  items.push({ key: 'conn-copy', label: '复制…', icon: Copy, sep: items.length > 0, children: copyChildren });
+  return items;
+});
+function copyConnVal(text: string, label: string) {
+  void copyText(text).then(ok => store.notify(ok ? 'success' : 'error', ok ? `已复制${label}` : '复制失败'));
+}
+function openConnMenu(e: MouseEvent, c: ClusterConnView | null) {
+  connMenu.value = { x: e.clientX, y: e.clientY, c };
+}
+function onConnKey(e: KeyboardEvent, c: ClusterConnView | null) {
+  if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
+    e.preventDefault();
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    connMenu.value = { x: r.left + 12, y: r.bottom, c };
+    return;
+  }
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    void pickTarget(c ? c.id : '', c ? c.name : '');
+  }
 }
 
 async function probeConn(c: ClusterConnView) {

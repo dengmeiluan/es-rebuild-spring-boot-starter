@@ -11,7 +11,8 @@ import { join } from 'node:path';
 const files: [string, number][] = [
   ['../views/OverviewView.vue', 5],
   ['../components/WelcomeWizard.vue', 4],
-  ['../components/ClusterSwitcher.vue', 3],
+  ['../components/ClusterSwitcher.vue', 1], /* 1439f：宿主/连接行改统一 onConnKey（Enter/Space/菜单键同口），
+      显式 Space 只剩「管理连接」；双键语义由下方 handler 断言保真 */
   ['../views/DiagView.vue', 1], /* 五百二十五批 W5：节点名 span 的 Enter+Space 双键随节点表
       换 QRT 壳退役——采热直达改 row-actions 注入原生 button（Enter/Space 为浏览器原生语义，
       无需 prevent 手挂）；余 1 处=dg-meta-link（重建锁下钻 span）双键不变 */
@@ -36,5 +37,11 @@ describe('Space 键双键口径补齐（373 批）', () => {
       const pairs = v.match(/@keydown\.enter\.prevent="[^"]+" @keydown\.space\.prevent="[^"]+"/g) ?? [];
       expect(pairs.length, `${f} Enter+Space 成对数`).toBeGreaterThanOrEqual(1);
     }
+  });
+
+  it('ClusterSwitcher 统一 onConnKey 仍保留 Enter/Space 双键（1439f 泛 keydown 域）', () => {
+    const v = readFileSync(join(__dirname, '../components/ClusterSwitcher.vue'), 'utf-8');
+    expect(v).toMatch(/if \(e\.key === 'Enter' \|\| e\.key === ' '\)/);
+    expect(v).toMatch(/@keydown="onConnKey\(\$event, c\)"/);
   });
 });

@@ -58,6 +58,9 @@ All notable changes to SearchDeck are documented here. The format follows
   drift check, copy the indexKey/alias, or copy a deep link; all actions stay read-only.
 - Shared context menus now support full submenu keyboard navigation: →/Enter focuses the first
   child, ↑/↓ cycles children, and ←/Esc returns focus to the parent group before closing.
+- Cluster switcher connection rows now support right-click and keyboard ContextMenu/Shift+F10:
+  switch to the connection (same authorization and RED-cluster confirmation as click) or copy its
+  name, ID, endpoint, and environment; all actions stay local/read-only.
 
 ### Changed
 

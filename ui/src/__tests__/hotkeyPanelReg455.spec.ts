@@ -21,6 +21,7 @@ describe('速查面板登记补全（455 批）', () => {
     expect(s).toMatch(/Boost 调参字段行：复制 \/ 启停 \/ 删除右键菜单（Shift\+F10 同效）/);
     expect(s).toMatch(/工作台配置行：显隐 \/ 列宽 \/ 排序右键菜单（Shift\+F10 同效）/);
     expect(s).toMatch(/配置漂移对象行：检测 \/ 复制 indexKey \/ 深链右键菜单（Shift\+F10 同效）/);
+    expect(s).toMatch(/集群切换器连接行：切换 \/ 复制连接信息右键菜单（Shift\+F10 同效）/);
     expect(s).toMatch(/列头打开列管理菜单（Shift\+F10 同效）/);
     expect(s).toMatch(/QRT 结果表：焦点行打开单元格菜单（含「用户操作…」等宿主组，Shift\+F10 同效）/);
     expect(s).toMatch(/RT 结果表：焦点行打开单元格菜单（Shift\+F10 同效）/);

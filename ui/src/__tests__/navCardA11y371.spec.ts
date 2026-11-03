@@ -21,8 +21,10 @@ describe('导航/切换卡键盘可达（371 批）', () => {
   });
 
   it('ClusterSwitcher 三切换项 role+tabindex+Enter（373 起 Enter+Space 双键）', () => {
-    expect(cs).toMatch(/<div v-if="store\.hostVisible && hostAllowed" class="cs-item"[^>]*role="button" tabindex="0" aria-label="切换到宿主集群" @click="pickTarget\('', ''\)" @keydown\.enter\.prevent="pickTarget\('', ''\)"/);
-    expect(cs).toMatch(/<div v-for="c in sortedConns"[^>]*role="button" tabindex="0" :aria-label="'切换到 ' \+ c\.name" @click="pickTarget\(c\.id, c\.name\)" @keydown\.enter\.prevent="pickTarget\(c\.id, c\.name\)"/);
+    /* 1439f：宿主/连接行改统一 onConnKey（Enter/Space 选择 + 菜单键），双键语义在 handler 内 */
+    expect(cs).toMatch(/<div v-if="store\.hostVisible && hostAllowed" class="cs-item"[^>]*role="button" tabindex="0" aria-label="切换到宿主集群" @click="pickTarget\('', ''\)" @contextmenu\.prevent="openConnMenu\(\$event, null\)" @keydown="onConnKey\(\$event, null\)"/);
+    expect(cs).toMatch(/<div v-for="c in sortedConns"[^>]*role="button" tabindex="0" :aria-label="'切换到 ' \+ c\.name" @click="pickTarget\(c\.id, c\.name\)" @contextmenu\.prevent="openConnMenu\(\$event, c\)" @keydown="onConnKey\(\$event, c\)"/);
+    expect(cs).toMatch(/if \(e\.key === 'Enter' \|\| e\.key === ' '\)/);
     expect(cs).toMatch(/<div v-if="canAdmin" class="cs-item manage" role="button" tabindex="0" aria-label="管理连接" @click="openManage" @keydown\.enter\.prevent="openManage" @keydown\.space\.prevent="openManage">/);
   });
 

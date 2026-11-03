@@ -157,6 +157,7 @@ function buildGroups(): { title: string; rows: HkRow[] }[] {
       { keys: ['菜单键'], desc: 'Boost 调参字段行：复制 / 启停 / 删除右键菜单（Shift+F10 同效）', pageKeys: ['boost-tuner'] },
       { keys: ['菜单键'], desc: '工作台配置行：显隐 / 列宽 / 排序右键菜单（Shift+F10 同效）', pageKeys: ['workspace'] },
       { keys: ['菜单键'], desc: '配置漂移对象行：检测 / 复制 indexKey / 深链右键菜单（Shift+F10 同效）', pageKeys: ['config-drift'] },
+      { keys: ['菜单键'], desc: '集群切换器连接行：切换 / 复制连接信息右键菜单（Shift+F10 同效）' },
     ],
   },
   {
