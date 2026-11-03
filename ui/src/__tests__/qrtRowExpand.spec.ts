@@ -4,7 +4,7 @@
  * 挂载样板照抄 QueryResultTable.spec（裸 createApp + pinia，QRT 不依赖 api/router）。
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { findMenuItem } from './helpers/ctxMenu'; /* 1142：二级菜单取项 */
+import { findMenuItem, allLabels } from './helpers/ctxMenu'; /* 1142：二级菜单取项 */
 import { createApp, h, nextTick } from 'vue';
 import { createPinia } from 'pinia';
 import QueryResultTable from '../components/QueryResultTable.vue';
@@ -121,5 +121,34 @@ describe('QRT 行内展开详情（W7 RT 镜像）', () => {
     th.click();
     await tick();
     expect(expandRows().length, '排序应清空行展开（坐标键防错位）').toBe(0);
+  });
+});
+
+describe('1439b QRT 单元格菜单键盘入口与宿主行操作组', () => {
+  it('ContextMenu 键：焦点行打开单元格菜单，rowActionGroup 并入宿主组', async () => {
+    await mountTbl({
+      cols: ['用户名', '角色'],
+      rows: [['alice', 'ADMIN']],
+      sortable: true,
+      rowActionGroup: (row: any[]) => ({
+        key: 'user-ops',
+        label: '用户操作…',
+        children: [
+          { key: 'u-copy', label: '复制用户名', run: () => { void row; } },
+          { key: 'u-del', label: '删除用户', danger: true, run: () => {} },
+        ],
+      }),
+    });
+    const root = host.querySelector('.qrt') as HTMLElement;
+    root.focus();
+    root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    await tick();
+    root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ContextMenu', bubbles: true, cancelable: true }));
+    await tick();
+    expect(document.querySelector('.ccm'), '菜单键必须开单元格菜单').toBeTruthy();
+    expect(await menuItem('用户操作…'), '宿主行操作组父项').toBeTruthy();
+    const labels = await allLabels();
+    expect(labels).toContain('复制用户名');
+    expect(labels).toContain('删除用户');
   });
 });

@@ -155,6 +155,7 @@
             export-name="security-users"
             :selectable="canWriteUsers"
             @selection-change="usSel = $event"
+            :row-action-group="userRowAction"
             max-height="none"
           >
             <template #cell-用户名="{ value }"><span class="mono">{{ value }}</span></template>
@@ -443,6 +444,7 @@ import { usePref } from '../composables/urlState'; /* ：审计时间范围落�
  宿主漏斗胶水（useColFilters+ColFilterPopover+af-btn）随壳退役（PluginsView 525 W5 同判据）；
  用户表同步换壳后 useTableSort 全退役，import 同步更新删除 */
 import QueryResultTable from '../components/QueryResultTable.vue';
+import type { CcmItem } from '../components/CellContextMenu.vue';
 import { matrixText } from '../utils/copyMatrix';
 import { askConfirm } from '../composables/confirm';
 import { friendlyEsError } from '../utils/esError';
@@ -892,6 +894,25 @@ async function doDelete(username: string) {
   } finally {
     deleting.value = false;
   }
+}
+
+/* 用户表行级操作组（并入 QRT 单元格右键）：复制用户名/角色为只读；删除复用
+   doDelete 的完整权限链与 critical 确认，不在菜单里另开写通道。 */
+function copyUserValue(text: string, label: string) {
+  void copyText(text).then(ok => store.notify(ok ? 'success' : 'error', ok ? `已复制${label}` : '复制失败'));
+}
+function userRowAction(row: any[]): CcmItem | null {
+  const username = String(row?.[0] ?? '');
+  if (!username) return null;
+  const role = String(row?.[1] ?? '');
+  const children: CcmItem[] = [
+    { key: 'user-copy-name', label: '复制用户名', icon: Copy, run: () => copyUserValue(username, '用户名') },
+  ];
+  if (role) children.push({ key: 'user-copy-role', label: '复制角色', icon: Copy, run: () => copyUserValue(role, '角色') });
+  if (canWriteUsers.value) {
+    children.push({ key: 'user-del', label: '删除用户', icon: Trash2, danger: true, sep: true, run: () => { void doDelete(username); } });
+  }
+  return { key: 'user-ops', label: '用户操作…', icon: Users, children };
 }
 
 async function fetchAuditPage(offset: number): Promise<{ rows: any[]; hasMore: boolean }> {

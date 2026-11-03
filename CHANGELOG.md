@@ -48,6 +48,9 @@ All notable changes to SearchDeck are documented here. The format follows
   field name, toggle disable/enable, or remove the field; only the local tuning draft changes.
 - Workspace config rows now support right-click and keyboard ContextMenu/Shift+F10 to show/hide a
   widget, change its column span, or move it up/down; the layout persists locally.
+- The Security users table now merges a host `用户操作…` group into the QRT cell menu (copy
+  username/role, delete). Delete stays behind `canWriteUsers` and the existing critical-confirm
+  chain; QRT also opens the cell menu from a focused row via ContextMenu/Shift+F10.
 
 ### Changed
 

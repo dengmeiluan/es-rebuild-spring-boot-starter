@@ -727,6 +727,9 @@ interface Props {
  与既有选中/焦点类并存）；undefined/null/空串跳过。row=当前渲染行单元（hit 型=hit、
  rows 型=矩阵行），index=渲染行序。缺省零增量 */
   rowClass?: (row: any, index: number) => string | undefined;
+  /* 1439b：宿主行级操作组并入单元格右键菜单（父分组+二级动作）——账号/角色等
+     领域动作不必另造菜单壳；返回 null 零增量。回调行同 rowClass 口径。 */
+  rowActionGroup?: (row: any, index: number) => CcmItem | null;
   /* G149：列头中文语义 tip（列名→中文语义）——可选通道缺省零增量；
  悬浮两段拼接（中文语义+内建排序/列管理提示，thTitle 单源），列名显示与
  导出 CSV/TSV 表头同源口径不动（717 G60/736 G133 双语同款落法） */
@@ -1887,6 +1890,9 @@ const { fitCol, fitAll } = useColFit({
 function openCellMenu(e: MouseEvent, ri: number, ci: number) {
   cellMenu.value = { x: e.clientX, y: e.clientY, ri, ci };
 }
+function openCellMenuAt(x: number, y: number, ri: number, ci: number) {
+  cellMenu.value = { x, y, ri, ci };
+}
 function closeCellMenu() { cellMenu.value = null; }
 /* 列头右键=列管理菜单（与 RT 同款；仅记忆启用时暴露列管理项） */
 const colMenu = ref<{ x: number; y: number; col: string } | null>(null);
@@ -2355,6 +2361,7 @@ const cellMenuItems = computed(() => {
   const colChildren = [...colOpsChildren, ...exportChildren];
   /* 无记忆维度（SQL 等通道）时列管理项整组不出——只剩导出，分组名跟着换。 */
   const colGroup = { key: 'col-group', label: '列操作…', icon: MoveHorizontal, children: colOpsChildren };
+  const hostRowGroup = props.rowActionGroup?.(renderRows.value[m.ri], m.ri) ?? null;
   return [
     /* 一级：当前格最高频两件事（复制值/完整值）——单击一步到位，不逼两级 */
     { key: 'copy-val', label: '复制值', icon: Copy, run: copyChildren[0].run },
@@ -2365,6 +2372,7 @@ const cellMenuItems = computed(() => {
     { key: 'query-group', label: '筛选与排序…', icon: Filter, sep: true, children: queryChildren },
     { key: 'export-group', label: '导出…', icon: FileDown, sep: true, children: exportChildren },
     ...(colOpsChildren.length ? [colGroup] : []),
+    ...(hostRowGroup ? [{ ...hostRowGroup, sep: true }] : []),
   ];
 });
 /* 删除 menuCopyVal/menuCopyRowJson/menuSortCol——独立函数版菜单实现，
@@ -2392,6 +2400,18 @@ const { focusIdx, tblFocus, onRowNavKey } = useRowNav(computed(() => renderRows.
 /* W7：E=展开/收起焦点行内嵌详情（输入态让路；Enter 语义保持既有不变）；
  其余键转交行导航内核（同元素不重复挂 @keydown 的收口范式与 RT onGridKeydown 一致） */
 function onQKeydown(e: KeyboardEvent) {
+  /* 菜单键/Shift+F10：焦点行打开单元格菜单（含宿主 rowActionGroup）——
+     此前单元格右键只有鼠标入口，键盘用户无法触达复制/行操作分组 */
+  if ((e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) && focusIdx.value >= 0) {
+    e.preventDefault();
+    const trs = [...(rootEl.value?.querySelectorAll('tbody tr') ?? [])]
+      .filter(el => !el.classList.contains('rt-expand')) as HTMLElement[];
+    const tr = trs[focusIdx.value];
+    const td = tr?.querySelector('td[data-col]') as HTMLElement | null;
+    const r = (td ?? tr)?.getBoundingClientRect();
+    openCellMenuAt(r ? r.left + 8 : 0, r ? r.top + 8 : 0, focusIdx.value, 0);
+    return;
+  }
   if ((e.key === 'e' || e.key === 'E') && !e.ctrlKey && !e.metaKey && !e.altKey && focusIdx.value >= 0) {
     const t = e.target as HTMLElement | null;
     const isInput = !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);

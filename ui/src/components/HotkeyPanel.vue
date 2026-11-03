@@ -187,6 +187,7 @@ function buildGroups(): { title: string; rows: HkRow[] }[] {
       { keys: ['Shift', '点击列头'], desc: 'RT / QRT：追加/翻转次键排序（多列组合排序）' },
       /* 列头键盘菜单（colMenuKeyboard 能力）——此前未进速查面板 */
       { keys: ['菜单键'], desc: 'RT / QRT：列头打开列管理菜单（Shift+F10 同效）' },
+      { keys: ['菜单键'], desc: 'QRT 结果表：焦点行打开单元格菜单（含「用户操作…」等宿主组，Shift+F10 同效）' },
     ],
   },
   {
