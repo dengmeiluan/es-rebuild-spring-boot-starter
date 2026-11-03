@@ -36,7 +36,7 @@
         class="qhp-item" :class="{ clickable: clickable }"
         @click="clickable && $emit('play', it)"
         @contextmenu.prevent="openRowMenu($event, it)"
-        @keydown="onRowMenuKey($event, it)"
+        @keydown="onRowMenuKey($event, it)" data-row-nav @keydown.self="rowArrowNav"
        role="button" tabindex="0" @keydown.enter.prevent="clickable && $emit('play', it)" @keydown.space.prevent="clickable && $emit('play', it)">
         <div class="qhp-row">
           <span v-if="it.name" class="qhp-name" :title="it.name"><MarkText :text="it.name" :kw="kw" /></span>
@@ -101,6 +101,7 @@ import CellContextMenu, { type CcmItem } from './CellContextMenu.vue'; /* 1142�
 import { exportStamp, relTime, copyText, downloadText, fmtTook, tookClass } from '../utils/format';
 import { QUERY_MODES } from '../utils/queryHub';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 
 /** 统一条目形状：DslQueryView 旧历史（dsl/idx）与 queryHistory store（query/index）在父侧映射 */
 export interface HistRow {

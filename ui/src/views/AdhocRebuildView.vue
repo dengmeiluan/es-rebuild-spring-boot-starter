@@ -360,7 +360,7 @@ mapping <span class="dim">字段映射</span>
  -9 / I-4：标签与提示已提成纯函数并由断言看守，模板只做调用。 -->
             <!-- 真差异区始终展开。 -->
             <tr v-for="row in cfgParts.real" :key="'r-' + row.path" class="cd-real" :class="'cd-' + row.kind" tabindex="0"
-              @contextmenu.prevent="openDiffMenu($event, row)" @keydown="onDiffMenuKey($event, row)">
+              @contextmenu.prevent="openDiffMenu($event, row)" @keydown="onDiffMenuKey($event, row)" data-row-nav @keydown.self="rowArrowNav">
               <td class="cd-path mono">{{ row.path }}</td>
               <td class="cd-kind">{{ kindLabel(row.kind) }}</td>
               <td class="cd-l mono">{{ fmtVal(row.expected) }}</td>
@@ -536,7 +536,7 @@ mapping <span class="dim">字段映射</span>
           <thead><tr><th>轮次</th><th>阶段</th><th>总计</th><th>已建</th><th>已更新</th><th>冲突跳过</th></tr></thead>
           <tbody>
             <tr v-for="r in job.rounds" :key="r.round + r.phase" tabindex="0"
-              @contextmenu.prevent="openRoundMenu($event, r)" @keydown="onRoundMenuKey($event, r)">
+              @contextmenu.prevent="openRoundMenu($event, r)" @keydown="onRoundMenuKey($event, r)" data-row-nav @keydown.self="rowArrowNav">
               <td>{{ r.round }}</td><td><StatusPill tone="b" :label="roundZh(r.phase) || r.phase" :en="roundZh(r.phase) ? r.phase : undefined" /></td><!-- ：r.phase 裸枚举 → roundZh 中文接线（Lead 收口实地核 addRound 四值 FULL/CATCHUP/CATCHUP_BLOCKED/FINAL 全收录）。：轮次阶段私造胶囊改用 StatusPill b 档——未收录新枚举回退原英文（label 兜底），en 英文小字归组件 sp-en -->
               <td>{{ r.total != null ? fmtNum(r.total) : '-' }}</td><td>{{ r.created != null ? fmtNum(r.created) : '-' }}</td><td>{{ r.updated != null ? fmtNum(r.updated) : '-' }}</td><td>{{ r.versionConflicts != null ? fmtNum(r.versionConflicts) : '-' }}</td>
             </tr>
@@ -744,6 +744,7 @@ import { useDebounceFn } from '../composables/useDebounceFn';
 import { useTierCycle } from '../composables/useTierCycle';
 import { removeStoredRaw } from '../utils/safeJson';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 
 /* 预填即 pretty：压缩单行 JSON 对人审阅障碍极大 */
 function prettyJson(s: string): string {

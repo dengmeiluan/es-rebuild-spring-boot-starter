@@ -12,7 +12,7 @@
     <div class="scroll-y" :style="maxHeight ? { maxHeight } : undefined">
       <div
         v-for="(r, i) in shown" :key="r.k" class="sg-row" :class="{ 'sg-def': r.def }" tabindex="0"
-        :data-hit-idx="i + 1" @contextmenu.prevent="openRowMenu($event, r)" @keydown="onRowMenuKey($event, r)"
+        :data-hit-idx="i + 1" @contextmenu.prevent="openRowMenu($event, r)" @keydown="onRowMenuKey($event, r)" data-row-nav @keydown.self="rowArrowNav"
       >
         <span class="sg-k">
           <DotKey :k="displayKey(r.k)" :full="r.k" />
@@ -63,6 +63,7 @@ import { useAppStore } from '../stores/app';
 import { copyText } from '../utils/format';
 import { filterSettingRows, isStaticSettingKey, type SettingRow } from '../utils/settingsView';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 import { useHitLocate } from '../composables/useHitNav';
 /* 裸 .empty 迁 EmptyState compact */
 import EmptyState from './EmptyState.vue';

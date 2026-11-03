@@ -80,7 +80,7 @@
         <EmptyState v-if="recs.length === 0" compact :icon="CheckCircle2" text="索引参数已符合推荐配置，无需调整" />
         <div v-else class="io-rec-list">
           <div v-for="r in recs" :key="r.id" class="io-rec" :class="'sv-' + r.severity" tabindex="0"
-            @contextmenu.prevent="openRecMenu($event, r)" @keydown="onRecMenuKey($event, r)">
+            @contextmenu.prevent="openRecMenu($event, r)" @keydown="onRecMenuKey($event, r)" data-row-nav @keydown.self="rowArrowNav">
             <label class="io-rec-l">
               <input type="checkbox" v-model="checked[r.id]" />
               <span class="io-rec-tt sec-t">{{ r.title }}</span>
@@ -195,6 +195,7 @@ import { highlightJson } from '../utils/jsonc';
 /* G183：当前设置键中文释义接共享索引设置目录（集群目录同款单源消费面） */
 import { SETTINGS_CATALOG } from '../utils/indexSettingsCatalog';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 import {
   evaluateSegments, parseStoreSize, parseCatNumber,
   SEGMENTS_PER_SHARD_THRESHOLD, type SegmentAdvice,

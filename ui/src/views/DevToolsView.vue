@@ -345,7 +345,7 @@
             <tbody>
               <tr v-for="(r, ri) in respTbl.rows" :key="ri" tabindex="0" title="点击复制该行 JSON（右键更多操作）"
                 @click="copyRespRow(r)" @keydown.enter.prevent="copyRespRow(r)"
-                @contextmenu.prevent="openRespRowMenu($event, r, ri)" @keydown="onRespRowMenuKey($event, r, ri)">
+                @contextmenu.prevent="openRespRowMenu($event, r, ri)" @keydown="onRespRowMenuKey($event, r, ri)" data-row-nav @keydown.self="rowArrowNav">
                 <td class="dt-resp-tbl-ix">{{ ri + 1 }}</td>
                 <td v-for="c in respTbl.cols" :key="c">{{ respCell(r[c]) }}</td>
               </tr>
@@ -356,7 +356,7 @@
             <tbody>
               <tr v-for="([k, val]) in respTbl.kv" :key="k" tabindex="0" title="点击复制该行 JSON（右键更多操作）"
                 @click="copyRespRow({ [k]: val })" @keydown.enter.prevent="copyRespRow({ [k]: val })"
-                @contextmenu.prevent="openRespRowMenu($event, { [k]: val }, -1)" @keydown="onRespRowMenuKey($event, { [k]: val }, -1)">
+                @contextmenu.prevent="openRespRowMenu($event, { [k]: val }, -1)" @keydown="onRespRowMenuKey($event, { [k]: val }, -1)" data-row-nav @keydown.self="rowArrowNav">
                 <td>{{ k }}</td>
                 <td>{{ respCell(val) }}</td>
               </tr>
@@ -539,6 +539,7 @@ import FocusableSurface from '../components/FocusableSurface.vue';
 import PageHeader from '../components/PageHeader.vue';
 import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 import { nonAdminDataPlaneWriteAllowed, nonAdminRootSearchNeedsIndex,
   nonAdminIndexQueryParamRejected, nonAdminControlIndexDenied, nonAdminWildcardTargetAdvisory,
   nonAdminBodyTargetsControl, nonAdminCatNeedsJson, nonAdminAsyncResultRead } from '../utils/devtoolsScope';

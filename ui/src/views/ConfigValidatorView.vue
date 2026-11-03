@@ -122,7 +122,7 @@
 
       <div v-if="report.issues.length" class="cv-issues" role="status" :style="{ maxHeight: cvIssuesH + 'px' }">
         <div v-for="(iss, i) in report.issues" :key="i" class="cv-issue" :class="iss.severity.toLowerCase()" tabindex="0"
-          @contextmenu.prevent="openIssueMenu($event, iss)" @keydown="onIssueMenuKey($event, iss)">
+          @contextmenu.prevent="openIssueMenu($event, iss)" @keydown="onIssueMenuKey($event, iss)" data-row-nav @keydown.self="rowArrowNav">
           <!-- severity 裸英文枚举换 StatusPill+sevZh（档位 sevPill 五主档已接，
  524 锚 cv-iss-sev pill 形态随组件化改锁 :tone 同源调用） -->
           <StatusPill class="cv-iss-sev" :tone="cvSevPill(iss.severity)" :label="cvSevZh(iss.severity)" />
@@ -189,6 +189,7 @@ import { useInputLint, indexNameRule, dupRule } from '../composables/useInputLin
 import type { BodyKind } from '../utils/dslCompletionContext';
 import { lintSettingsBody, lintMappingBody } from '../utils/dslLint'; /* P1-1：档路由静态 lint */
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 import { useDebounceFn } from '../composables/useDebounceFn'; /* P1-1：划线防抖统一件 */
 
 import { useScopedDraft } from '../composables/useScopedDraft';

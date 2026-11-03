@@ -152,7 +152,7 @@
         </div>
         <div class="df-diff">
           <div v-for="(l, i) in diffLines" :key="i" class="df-diff-line" :class="l.op" tabindex="0"
-               @contextmenu.prevent="openLineMenu($event, l, i)" @keydown="onLineMenuKey($event, l, i)">
+               @contextmenu.prevent="openLineMenu($event, l, i)" @keydown="onLineMenuKey($event, l, i)" data-row-nav @keydown.self="rowArrowNav">
             <span class="df-diff-op">{{ l.op === 'add' ? '+' : l.op === 'del' ? '-' : ' ' }}</span>
             <span class="df-diff-tx">{{ l.tx }}</span>
           </div>
@@ -214,6 +214,7 @@ import { fmtTime } from '../utils/format';
 import { friendlyEsError } from '../utils/esError';
 import { removeStoredRaw } from '../utils/safeJson';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 
 const store = useAppStore();
 /* 权限门禁——PUT 覆盖/_update=/cluster/doc(/update)=普通写档（OPERATOR+，文档编辑属角色定义低危写）；

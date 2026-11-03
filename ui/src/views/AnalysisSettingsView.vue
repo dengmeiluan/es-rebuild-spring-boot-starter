@@ -70,7 +70,7 @@
             <div v-else class="as-items">
               <div v-for="(cfg, name) in g.shown" :key="name" class="as-item" :class="{ expanded: openMap[g.key + ':' + name] }" tabindex="0"
                 @contextmenu.prevent="openItemMenu($event, g.key, String(name), cfg)"
-                @keydown="onItemMenuKey($event, g.key, String(name), cfg)">
+                @keydown="onItemMenuKey($event, g.key, String(name), cfg)" data-row-nav @keydown.self="rowArrowNav">
                 <div class="as-item-hd" role="button" tabindex="0" :aria-expanded="!!openMap[g.key + ':' + String(name)]" @click="toggle(g.key, String(name))" @keydown.enter.prevent="toggle(g.key, String(name))" @keydown.space.prevent="toggle(g.key, String(name))">
                   <ChevronRight :size="10" class="as-caret" :class="{ open: openMap[g.key + ':' + name] }" />
                   <!-- 条目名/类型走 MarkText 命中高亮（textContent 与原文一致，title 不受影响） -->
@@ -163,6 +163,7 @@ import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue
 import SearchFilterBar from '../components/SearchFilterBar.vue'; /* ：五类过滤行统一件（第 15 胞） */
 import { highlightJson, prettyJson } from '../utils/jsonc';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 /* 页头统计串合并 MetaStrip 统一件 + MarkText 命中高亮（过滤行用） */
 import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue';
 import MarkText from '../components/MarkText.vue';
