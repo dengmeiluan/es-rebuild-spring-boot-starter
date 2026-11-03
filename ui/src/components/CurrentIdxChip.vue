@@ -3,7 +3,7 @@
  （别名组/recent/健康度都在顶栏），本件只读 store 自显 + 三个助攻动作。
  未选索引整件不渲染（根 v-if），页内空态兜底契约留给各视图。 -->
   <span v-if="store.pickedIdx" ref="rootEl" class="cic" :title="store.pickedIdx"
-        @contextmenu.prevent="openMenu">
+        @contextmenu.prevent="openMenu" @keydown="onChipKey">
     <span class="cic-dot" :class="'h-' + (store.pickedInfo?.health || 'grey')" aria-hidden="true"></span>
     <span class="cic-nm">{{ store.pickedIdx }}</span>
     <span v-if="meta" class="cic-meta">{{ meta }}</span>
@@ -13,7 +13,7 @@
     <!-- 右键复用共享 CellContextMenu；只读/本地动作，不触发集群写 -->
     <CellContextMenu
       v-if="menu"
-      :x="menu.x" :y="menu.y" :title="'当前索引 · ' + store.pickedIdx"
+      :x="menu.x" :y="menu.y" :title="'当前索引 · ' + store.pickedIdx + (accessLabel ? ' · ' + accessLabel : '')"
       :items="menuItems" @close="menu = null"
     />
   </span>
@@ -32,7 +32,7 @@ import { copyText, fmtNum, fmtSize } from '../utils/format';
 import { useQueryAccess } from '../composables/useQueryAccess';
 
 const store = useAppStore();
-const { summary: accessSummary } = useQueryAccess();
+const { accessLabel, summary: accessSummary } = useQueryAccess();
 const router = useRouter();
 const rootEl = ref<HTMLElement>();
 const menu = ref<{ x: number; y: number } | null>(null);
@@ -82,6 +82,14 @@ async function copyAccess() {
 
 function openMenu(e: MouseEvent) {
   menu.value = { x: e.clientX, y: e.clientY };
+}
+/* 键盘入口：chip 内任一按钮聚焦时 ContextMenu/Shift+F10 对整件开菜单
+ （chip 根不作 tab 停靠点，避免多一个空焦点站） */
+function onChipKey(e: KeyboardEvent) {
+  if (e.key !== 'ContextMenu' && !(e.key === 'F10' && e.shiftKey)) return;
+  e.preventDefault();
+  const r = rootEl.value?.getBoundingClientRect();
+  menu.value = { x: (r?.left ?? 0) + 12, y: r?.bottom ?? 0 };
 }
 const menuItems = computed<CcmItem[]>(() => [
   { key: 'copy-name', label: '复制索引名', icon: Copy, run: async () => {

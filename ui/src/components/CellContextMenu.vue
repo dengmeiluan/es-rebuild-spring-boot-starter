@@ -76,6 +76,7 @@ const emit = defineEmits<{ (e: 'close'): void }>();
 
 /* 动作执行后自动关闭——此前点完菜单还开着，需再点空白才能收起 */
 function runItem(it: CcmItem) {
+  closedByAction = true;
   it.run?.();
   emit('close');
 }
@@ -99,6 +100,20 @@ watch(() => [props.x, props.y], () => { sub.value = null; void adjust(); });
 
 /* 首帧落位 + 复用时跟点（immediate 版已退役：immediate 回调早于下方 sub 声明） */
 onMounted(() => { void adjust(); });
+/* 打开即把焦点交给首个菜单项：右键/菜单键入口之后键盘可直接 Enter/↑↓/Esc，
+ 不再停留在触发器上；关闭时若触发器仍在 DOM 则归还焦点。 */
+let restoreFocus: HTMLElement | null = null;
+/* 动作可能已经关闭/卸载触发器（候选选择、导航、删除行）——此时归还焦点会触发
+   focus 处理器把弹层重新打开（候选选择器实机路径）；动作自行管理焦点，只有
+   Esc/点外部关闭才归还。 */
+let closedByAction = false;
+onMounted(() => {
+  restoreFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  void nextTick(() => menuEl.value?.querySelector<HTMLElement>('.ccm-it')?.focus());
+});
+onBeforeUnmount(() => {
+  if (!closedByAction && restoreFocus?.isConnected) restoreFocus.focus();
+});
 
 /* 层序动态跟随（1208）：静态档 --z-ctx 1200 压不过 naive 弹层——弹层从 2000 起自增，
    而右键菜单常从弹层内触发（单元格/JSON 详情、连接管理、对比弹窗都在 n-modal 里），
@@ -153,7 +168,16 @@ function toggleSub(it: CcmItem, e: Event) {
   if (sub.value?.key !== it.key) setSub(it, e);
 }
 function onMenuKey(e: KeyboardEvent) {
-  /* 键盘等价：→ 开当前父项二级；← 关二级；Esc 先关二级（整菜单的 Esc 见 onEsc） */
+  /* ↑/↓ 在菜单项间循环；→ 开当前父项二级；← 关二级；Esc 先关二级（整菜单的 Esc 见 onEsc） */
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    const btns = Array.from(menuEl.value?.querySelectorAll<HTMLElement>('.ccm-it') ?? []);
+    if (!btns.length) return;
+    e.preventDefault();
+    const cur = btns.indexOf(document.activeElement as HTMLElement);
+    const delta = e.key === 'ArrowDown' ? 1 : -1;
+    btns[cur < 0 ? 0 : (cur + delta + btns.length) % btns.length].focus();
+    return;
+  }
   if (e.key === 'ArrowRight') {
     const cur = (e.target as HTMLElement | null)?.closest?.(`.ccm-it[data-key]`) as HTMLElement | null;
     const key = cur?.getAttribute('data-key');

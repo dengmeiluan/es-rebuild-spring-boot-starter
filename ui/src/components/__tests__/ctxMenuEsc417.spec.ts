@@ -58,4 +58,46 @@ describe('右键菜单 Esc 关闭（417 批）', () => {
     await nextTick();
     expect(closed).toHaveBeenCalledTimes(1);
   });
+
+  it('打开即聚焦首个菜单项；↑/↓ 循环移动；Esc 关闭', async () => {
+    const closed = vi.fn();
+    const Host = defineComponent({
+      setup() {
+        const open = ref(true);
+        return () => open.value
+          ? h(CellContextMenu, {
+              x: 40, y: 40,
+              items: [
+                { key: 'a', label: '动作 A', run: () => {} },
+                { key: 'b', label: '动作 B', run: () => {} },
+              ],
+              onClose: () => { closed(); open.value = false; },
+            })
+          : null;
+      },
+    });
+    const app = createApp(Host);
+    apps.push(app);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    app.mount(host);
+    await nextTick();
+    await nextTick();
+    const btns = Array.from(document.querySelectorAll<HTMLElement>('.ccm-it'));
+    expect(btns.length, '两个菜单项').toBe(2);
+    expect(document.activeElement, '打开后焦点必须进入首个菜单项').toBe(btns[0]);
+    btns[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await nextTick();
+    expect(document.activeElement, '↓ 移到下一项').toBe(btns[1]);
+    btns[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await nextTick();
+    expect(document.activeElement, '↓ 末项环绕到首项').toBe(btns[0]);
+    btns[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    await nextTick();
+    expect(document.activeElement, '↑ 首项环绕到末项').toBe(btns[1]);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await nextTick();
+    expect(closed, 'Esc 关闭').toHaveBeenCalledTimes(1);
+    expect(host.querySelector('.ccm'), '关闭后菜单卸载').toBeNull();
+  });
 });

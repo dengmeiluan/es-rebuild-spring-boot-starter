@@ -272,11 +272,11 @@ function switchMode(k: string) {
 
 /* ═══ 模式切换条右键：深链 / 默认模式 / 历史（全部只读，不改查询或集群状态） ═══ */
 const modeMenu = ref<{ x: number; y: number; m: any } | null>(null);
-const { env: currentEnv, role: currentRole, summary: accessSummary } = useQueryAccess();
+const { env: currentEnv, role: currentRole, accessLabel, summary: accessSummary } = useQueryAccess();
 const modeMenuTitle = computed(() => {
   const mm = modeMenu.value;
   if (!mm) return '';
-  return ['查询模式 · ' + mm.m.t, currentEnv.value, currentRole.value].filter(Boolean).join(' · ');
+  return ['查询模式 · ' + mm.m.t, currentEnv.value, currentRole.value, accessLabel.value].filter(Boolean).join(' · ');
 });
 function openModeMenu(e: MouseEvent, m: any) {
   modeMenu.value = { x: e.clientX, y: e.clientY, m };

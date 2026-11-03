@@ -21,17 +21,26 @@ All notable changes to SearchDeck are documented here. The format follows
   CODEOWNERS, and release version alignment across POM, UI, launchers, and CITATION.
 - Query workbench mode tabs now expose a right-click menu with mode deep-link copy, an optional
   default entry mode, cross-mode history, current env/role context, a copyable read/write permission
-  summary, and keyboard ContextMenu/Shift+F10 access.
+  summary, and keyboard ContextMenu/Shift+F10 access. After the identity probe settles, the menu
+  header also shows a read/write badge (可写 / 只读 / 无查询读权).
 - The current-index chip now has a right-click menu for copying the index name/deep link, copying
   a query permission summary (target/env/role/read/write plus the index), opening the index
-  workspace, and clearing the local selection. The summary is shared with the mode menu through
-  one access composable so both surfaces cannot drift.
+  workspace, and clearing the local selection, with keyboard ContextMenu/Shift+F10 access from any
+  chip button. The summary is shared with the mode menu through one access composable so both
+  surfaces cannot drift.
 - Field and value candidates in the query workbench (FieldPicker, builder FieldSelect,
   MultiFieldPicker, and LuceneInput) now support right-click and keyboard ContextMenu/Shift+F10:
   choose/expand the field, toggle the multi-field selection, fill the candidate, or copy its text,
   with the shared menu shell and no server-side writes.
-- The keyboard shortcuts panel now documents the menu key / Shift+F10 entry for query mode tabs,
-  field/value candidates, and RT/QRT column headers.
+- The keyboard shortcuts panel now documents the menu key / Shift+F10 entry (with ↑/↓ selection
+  inside the menu) for query mode tabs, field/value candidates, index chips, and RT/QRT column
+  headers.
+- The architecture guide now documents the shared frontend interaction kernels
+  (`CellContextMenu`, `useQueryAccess`, and the candidate pickers) so contributors extend them
+  instead of forking per-view menus.
+- The shared context menu now moves focus to its first item when opened, supports ↑/↓ cycling
+  between actions, and restores focus to the trigger on close. This applies to every right-click
+  surface using `CellContextMenu`, including the new query-workbench menus.
 
 ### Changed
 

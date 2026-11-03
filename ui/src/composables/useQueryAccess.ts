@@ -13,6 +13,13 @@ export function useQueryAccess() {
     || (auth.authDisabled ? 'auth-off' : auth.probed ? 'anonymous' : 'probing'));
   const canRead = computed(() => auth.canReadPage('search', store.target));
   const canWrite = computed(() => auth.canWriteOn(store.target));
+  /* 身份探测未落地时不下结论（避免把「未知」显示成可写）；探测完成/无鉴权后
+     才给「可写/只读/无查询读权」三档，供右键菜单标题一眼识别生产/测试角色。 */
+  const accessLabel = computed(() => {
+    if (auth.probeStarted && !auth.probed && !auth.authDisabled) return '';
+    if (!canRead.value) return '无查询读权';
+    return canWrite.value ? '可写' : '只读';
+  });
 
   const summary = computed(() => [
     `target=${store.target || 'host'}`,
@@ -22,5 +29,5 @@ export function useQueryAccess() {
     `write=${canWrite.value ? 'yes' : 'no'}`,
   ].join(' '));
 
-  return { env, role, canRead, canWrite, summary };
+  return { env, role, canRead, canWrite, accessLabel, summary };
 }

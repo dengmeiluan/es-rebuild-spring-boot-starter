@@ -65,6 +65,20 @@ static assets are not exposed.
 
 Hosts implement only the interfaces they need; the console falls back to its built-in behavior.
 
+## Frontend composition
+
+The console is composed from shared interaction kernels rather than per-view copies:
+
+- `CellContextMenu` renders the shared right-click surfaces from a host-built `CcmItem[]` (viewport
+  fitting, submenus, keyboard navigation, and z-index management in one place).
+- `useQueryAccess` is the single source for the query workbench permission summary
+  (target/env/role/read/write) used by the mode and current-index context menus.
+- `FieldPicker`, builder `FieldSelect`, `MultiFieldPicker`, and `LuceneInput` share the same
+  candidate-menu contract: choose/expand, toggle, fill, or copy without server-side writes.
+
+New surfaces add behavior tests and register keyboard entries in the shortcuts panel instead of
+forking these kernels.
+
 ## Deployment modes
 
 | Mode | Entry | Use |

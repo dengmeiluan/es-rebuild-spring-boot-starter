@@ -119,6 +119,7 @@ describe('CurrentIdxChip（五百二十五批）', () => {
     };
     let menu = await openMenu();
     expect(menu.textContent).toContain('当前索引 · orders-2024');
+    expect(menu.textContent, '菜单标题带当前读写档').toMatch(/当前索引 · orders-2024 · (可写|只读)/);
     for (const label of ['复制索引名', '复制深链', '复制查询权限摘要', '去索引工作区', '清除当前索引']) {
       expect(menu.textContent, `菜单项 ${label}`).toContain(label);
     }
@@ -148,5 +149,23 @@ describe('CurrentIdxChip（五百二十五批）', () => {
     await settle();
     expect(store.pickedIdx).toBe('');
     expect(host.querySelector('.cic'), '清除后 chip 移除').toBeNull();
+  });
+
+  it('菜单键 / Shift+F10：chip 内按钮聚焦时开同一菜单（键盘入口契约）', async () => {
+    const { host, store } = await mountChip();
+    store.pick('orders-2024');
+    await settle();
+    const btn = host.querySelector<HTMLElement>('.cic-btn')!;
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ContextMenu', bubbles: true }));
+    await settle();
+    let menu = document.body.querySelector<HTMLElement>('.ccm');
+    expect(menu, 'ContextMenu 键必须打开 chip 菜单').toBeTruthy();
+    expect(menu!.textContent).toContain('当前索引 · orders-2024');
+    menu!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await settle();
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'F10', shiftKey: true, bubbles: true }));
+    await settle();
+    menu = document.body.querySelector<HTMLElement>('.ccm');
+    expect(menu, 'Shift+F10 必须同效').toBeTruthy();
   });
 });

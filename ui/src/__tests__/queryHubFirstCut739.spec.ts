@@ -97,6 +97,7 @@ vi.mock('../api', async (importOriginal) => {
 
 import DslQueryView from '../views/DslQueryView.vue';
 import QueryHubView from '../views/QueryHubView.vue';
+import { useAuthStore } from '../stores/auth';
 import { QUERY_MODES } from '../utils/queryHub';
 import { __clearFieldCache } from '../composables/useIndexFields';
 
@@ -243,6 +244,21 @@ describe('1445 查询模式右键：深链/默认模式/历史（只读动作）
       expect(summary, `摘要段 ${seg}`).toContain(seg);
     }
     delete (navigator as any).clipboard;
+    expect(errors).toEqual([]);
+  });
+
+  it('只读身份：模式菜单标题显示「只读」而不是「可写」', async () => {
+    const { host } = await mountAt(QueryHubView, '/search');
+    const auth = useAuthStore();
+    auth.me = { username: 'viewer', role: 'VIEWER', grantedPages: ['search'] } as any;
+    auth.probed = true;
+    await settle();
+    const btn = host.querySelectorAll<HTMLButtonElement>('.qh-mode')[0];
+    btn.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 24, clientY: 24 }));
+    await settle();
+    const menu = document.body.querySelector('.ccm');
+    expect(menu?.textContent, '只读身份必须显示只读档').toContain('只读');
+    expect(menu?.textContent, '只读身份不得显示可写').not.toContain('可写');
     expect(errors).toEqual([]);
   });
 
