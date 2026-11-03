@@ -237,7 +237,7 @@
           :aria-label="`节点 ${n.name}，点击进入诊断`" title="点击进入诊断"
           @click="router.push({ path: '/diag', query: { node: n.name } })"
           @contextmenu.prevent="openLdRowMenu($event, 'node-card', n)"
-          @keydown="onLdCardKey($event, 'node-card', n)">
+          @keydown="onLdCardKey($event, 'node-card', n)" data-row-nav @keydown.self="rowArrowNav">
           <div class="ld-node-hd">
             <span class="ld-node-name">
               <!-- 节点健康色点改用 MetaStrip dot 形态单源（DiagView dgMeta 先例）——
@@ -298,7 +298,7 @@
       <div v-for="a in activeAlerts" :key="a.key" class="ld-alert" :class="a.severity" role="button" tabindex="0"
         :aria-label="`告警：${a.title}，点击定位到对应处置`" title="点击定位到对应处置"
         @click="alertRoute(a)" @contextmenu.prevent="openLdRowMenu($event, 'active-alert', a)"
-        @keydown="onLdCardKey($event, 'active-alert', a)">
+        @keydown="onLdCardKey($event, 'active-alert', a)" data-row-nav @keydown.self="rowArrowNav">
         <span class="ld-alert-m">
           <b>{{ a.title }}</b>
           <span class="ld-alert-v">{{ fmtNum(a.num) }}{{ a.unit }}</span>
@@ -750,6 +750,7 @@ import LiveChartCard from '../components/LiveChartCard.vue'; /* P1a-2：实时�
 import { sparkHoverAt, lineYAtFrac, type SparkHoverHit } from '../utils/sparkHover';
 import { useHoverEscape } from '../composables/useHoverEscape';
 import { friendlyEsError } from '../utils/esError';
+import { rowArrowNav } from '../utils/rowNav';
 import { usePref } from '../composables/urlState';
 import { useAutoRefresh } from '../composables/useAutoRefresh';
 

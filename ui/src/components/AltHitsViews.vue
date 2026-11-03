@@ -45,7 +45,7 @@
   <!-- cards：卡片行（DQ 旧体逐字平移——_id 行 + 前 5 字段行 + 42 截断；单击点开文档，
    拖选字段值松手不触发；键盘 Enter/Space 直开） -->
   <template v-else-if="view === 'cards'">
-    <div v-for="h in hits" :key="h._id" class="dq-card" @mousedown="onCardDown" @click="onCardClick($event, h)" @dblclick="onCardDblClick" role="button" tabindex="0" @contextmenu.prevent="openCardMenu($event, h)" @keydown="onCardKey($event, h)">
+    <div v-for="h in hits" :key="h._id" class="dq-card" @mousedown="onCardDown" @click="onCardClick($event, h)" @dblclick="onCardDblClick" role="button" tabindex="0" @contextmenu.prevent="openCardMenu($event, h)" @keydown="onCardKey($event, h)" data-row-nav @keydown.self="rowArrowNav">
       <div class="dq-card-id mono" :title="h._id">{{ h._id }}</div>
       <div v-for="f in Object.keys(h._source).slice(0, 5)" :key="f" class="dq-card-row">
         <span class="dq-card-k mono" :title="f">{{ f }}</span>
@@ -66,6 +66,7 @@ import CellContextMenu, { type CcmItem } from './CellContextMenu.vue';
 import { trunc, copyText } from '../utils/format';
 import { useAppStore } from '../stores/app';
 import { createPressGuard, isKeyboardClick } from '../utils/pressGuard';
+import { rowArrowNav } from '../utils/rowNav';
 import type { SearchHit } from '../types';
 
 const props = defineProps<{

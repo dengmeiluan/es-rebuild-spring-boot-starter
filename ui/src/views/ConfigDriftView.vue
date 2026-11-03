@@ -53,7 +53,7 @@
           @click="loadDrift(k.indexKey)"
           @contextmenu.prevent="openKeyMenu($event, k)"
          role="button" tabindex="0"
-         @keydown="onKeyMenuKey($event, k)">
+         @keydown="onKeyMenuKey($event, k)" data-row-nav @keydown.self="rowArrowNav">
           <div class="cd-item-key" :title="k.indexKey"><MarkText :text="k.indexKey" :kw="kw" /></div>
           <div class="cd-item-alias" :title="k.alias"><MarkText :text="k.alias" :kw="kw" /></div>
           <!-- 清单角标改用 StatusPill 统一件（558b 回滚件解禁重做——525:210 逐字锁
@@ -234,6 +234,7 @@ import { useUrlState } from '../composables/urlState';
 import { useHitLocate } from '../composables/useHitNav';
 import { copyText } from '../utils/format';
 import { friendlyEsError } from '../utils/esError';
+import { rowArrowNav } from '../utils/rowNav';
 
 const store = useAppStore();
 const auth = useAuthStore();

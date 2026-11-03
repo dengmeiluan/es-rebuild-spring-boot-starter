@@ -90,6 +90,8 @@ describe('1443 行导航 helper', () => {
       'components/QueryHistoryPanel.vue', 'components/SettingsGrid.vue',
       'views/IndexOptimizerView.vue', 'views/ConfigValidatorView.vue', 'views/DiffEditorView.vue',
       'views/AnalysisSettingsView.vue', 'views/AdhocRebuildView.vue', 'views/DevToolsView.vue',
+      'views/OverviewView.vue', 'views/LiveDashboardView.vue', 'views/ConfigDriftView.vue',
+      'components/AltHitsViews.vue',
     ];
     for (const f of files) {
       const s = src(f);

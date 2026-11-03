@@ -95,7 +95,7 @@
       <!-- 大小 Top10。：顶层 .card 壳退役（约定④）→ border-top 分节（SecurityView 同步同语言） -->
       <div class="ov-cell">
         <div class="card-t"><HardDrive :size="13" /> 存储 Top 10</div>
-        <div v-for="idx in topBySize" :key="idx.index" class="ov-bar-row" role="button" tabindex="0" :aria-label="'查看索引 ' + idx.index" @click="goIndex(idx.index)" @contextmenu.prevent="openOvMenu($event, 'idx', idx)" @keydown="onOvKey($event, 'idx', idx)">
+        <div v-for="idx in topBySize" :key="idx.index" class="ov-bar-row" role="button" tabindex="0" :aria-label="'查看索引 ' + idx.index" @click="goIndex(idx.index)" @contextmenu.prevent="openOvMenu($event, 'idx', idx)" @keydown="onOvKey($event, 'idx', idx)" data-row-nav @keydown.self="rowArrowNav">
           <span class="ov-bar-name mono" :title="idx.index">{{ idx.index }}</span>
           <div class="ov-bar-track">
             <div class="ov-bar-fill" :style="{ width: (idx._sizeN / topBySize[0]._sizeN * 100) + '%' }"></div>
@@ -111,7 +111,7 @@
       <!-- 文档数 Top10。：同上款 .card 壳退役 → border-top 分节 -->
       <div class="ov-cell">
         <div class="card-t"><FileText :size="13" /> 文档数 Top 10</div>
-        <div v-for="idx in topByDocs" :key="idx.index" class="ov-bar-row" role="button" tabindex="0" :aria-label="'查看索引 ' + idx.index" @click="goIndex(idx.index)" @contextmenu.prevent="openOvMenu($event, 'idx', idx)" @keydown="onOvKey($event, 'idx', idx)">
+        <div v-for="idx in topByDocs" :key="idx.index" class="ov-bar-row" role="button" tabindex="0" :aria-label="'查看索引 ' + idx.index" @click="goIndex(idx.index)" @contextmenu.prevent="openOvMenu($event, 'idx', idx)" @keydown="onOvKey($event, 'idx', idx)" data-row-nav @keydown.self="rowArrowNav">
           <span class="ov-bar-name mono" :title="idx.index">{{ idx.index }}</span>
           <div class="ov-bar-track">
             <div class="ov-bar-fill docs" :style="{ width: (Number(idx['docs.count']) / Number(topByDocs[0]['docs.count'] || 1) * 100) + '%' }"></div>
@@ -127,7 +127,7 @@
       <div class="ov-cell">
         <div class="card-t"><Activity :size="13" /> 健康分布</div>
         <div class="ov-health">
-          <div v-for="h in healthDist" :key="h.name" class="ov-h-item" role="button" tabindex="0" :aria-label="'查看 ' + h.name + ' 索引清单'" @click="goHealth(h.name)" @contextmenu.prevent="openOvMenu($event, 'health', h)" @keydown="onOvKey($event, 'health', h)" :title="'查看 ' + h.name + ' 索引清单'">
+          <div v-for="h in healthDist" :key="h.name" class="ov-h-item" role="button" tabindex="0" :aria-label="'查看 ' + h.name + ' 索引清单'" @click="goHealth(h.name)" @contextmenu.prevent="openOvMenu($event, 'health', h)" @keydown="onOvKey($event, 'health', h)" data-row-nav @keydown.self="rowArrowNav" :title="'查看 ' + h.name + ' 索引清单'">
             <!-- 健康分布色点改用 MetaStrip dot 形态单源（DiagView dgMeta 先例）——
  .ov-h-dot 私造圆点退役，8px 圆点形态归组件 .ms-dot 单源（色值 h.color 直传） -->
             <MetaStrip :items="[{ dot: h.color }]" />
@@ -153,7 +153,7 @@
         <div v-else-if="recentJobs.length">
           <!-- key 禁用 jobId——19 位雪花 long 曾被 JSON.parse 截断成重复值，keyed diff 失效导致
  每轮 5s 轮询整块重挂 + rise 动画重放（布局抖动）；indexKey 每索引一条、天然唯一且稳定 -->
-          <div v-for="(j, i) in recentJobs" :key="j.indexKey" class="ov-job rise" :style="{ animationDelay: i * 45 + 'ms' }" role="button" tabindex="0" aria-label="前往托管重建" @click="goJob(j)" @contextmenu.prevent="openOvMenu($event, 'job', j)" @keydown="onOvKey($event, 'job', j)" :title="j.indexKey">
+          <div v-for="(j, i) in recentJobs" :key="j.indexKey" class="ov-job rise" :style="{ animationDelay: i * 45 + 'ms' }" role="button" tabindex="0" aria-label="前往托管重建" @click="goJob(j)" @contextmenu.prevent="openOvMenu($event, 'job', j)" @keydown="onOvKey($event, 'job', j)" data-row-nav @keydown.self="rowArrowNav" :title="j.indexKey">
             <!-- 状态徽标改用 StatusPill（中文主显 jobStatusZh + en 英文小字档组件化，
  英文小字类同步更新退役）。dot-pulse 呼吸点保留本地：StatusPill 无插槽不硬塞，
  点以兄弟元素随行渲染（） -->
@@ -279,7 +279,8 @@ import { semFormat } from '../composables/useSemFormat';
 /* 最近作业状态枚举中文接线； ：健康词汇（KPI/健康分布/
  状态 pill/状态 option 四处）接 CLUSTER_HEALTH_ZH 单源，裸英文三形态归位（esEnumZh 只消费） */
 import { jobStatusZh, clusterHealthZh } from '../utils/esEnumZh';
-import { friendlyEsError } from '../utils/esError'; /* ：err-bar 三源 reason 裸拼人话化 */
+import { friendlyEsError } from '../utils/esError';
+import { rowArrowNav } from '../utils/rowNav'; /* ：err-bar 三源 reason 裸拼人话化 */
 import QueryResultTable from '../components/QueryResultTable.vue'; /* 监控历史表格内核 */
 import AutoRefreshSelect from '../components/AutoRefreshSelect.vue'; /* ：自动刷新档位统一件（监控历史） */
 import { usePref } from '../composables/urlState'; /* 监控历史时间范围偏好 */
