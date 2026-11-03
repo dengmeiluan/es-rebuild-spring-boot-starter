@@ -14,12 +14,13 @@ const src = readFileSync(join(__dirname, '../views/MatchMatrixView.vue'), 'utf-8
 describe('MatchMatrix 矩阵表导出（532 换壳：手写 CSV 退役归内核）', () => {
   it('手写 exportCsv/csvText 全退役不回潮', () => {
     expect(src).not.toMatch(/function exportCsv\(\)/);
-    expect(src).not.toContain("from '../utils/format'");
+    /* 只禁回退到 CSV/导出手写助手；copyText（行菜单复制）与被退役的导出链无关 */
+    expect(src).not.toMatch(/import\s*\{[^}]*\b(csvText|csvCell|exportStamp|downloadText)\b[^}]*\}\s*from\s*'\.\.\/utils\/format'/);
     expect(src).not.toMatch(/:disabled="!clauseStats\.length"[^>]*@click="exportCsv"/);
   });
 
   it('导出归 QRT 内核：export-name="match-matrix"（时间戳后缀由内核统一拼 exportStamp）', () => {
     expect(src).toContain('export-name="match-matrix"');
-    expect(src).toMatch(/<QueryResultTable v-if="hits\.length" :cols="mmCols" :rows="mmRows" sortable\s*\n\s*storage-key="mm"/);
+    expect(src).toMatch(/<QueryResultTable v-if="hits\.length" :cols="mmCols" :rows="mmRows" sortable[^>]*storage-key="mm"/);
   });
 });

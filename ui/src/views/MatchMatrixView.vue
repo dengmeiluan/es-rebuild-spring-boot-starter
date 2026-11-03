@@ -78,6 +78,7 @@
  子句 ✔/· 走 #cell- 动态槽保色档；_id 列补查询 X 光下钻芯片（useLinkCarry('xray') 现成键）；
  得分列 #cell- 槽保 3 位小数显示（title/复制/导出恒 raw 全精度，内核契约）。 -->
     <QueryResultTable v-if="hits.length" :cols="mmCols" :rows="mmRows" sortable
+      :row-action-group="mmRowAction"
       storage-key="mm" :field-types="{ 得分: 'double' }"
       max-height="calc(100vh - var(--vh-offset) - 210px)"
       export-name="match-matrix" empty-text="无命中文档">
@@ -102,7 +103,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Grid3x3, Wand2, Play, FileJson, SlidersHorizontal, AlertCircle, ExternalLink, Loader2, Terminal } from 'lucide-vue-next';
+import { Grid3x3, Wand2, Play, FileJson, SlidersHorizontal, AlertCircle, ExternalLink, Loader2, Terminal, Copy, Braces } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';
 import LabNav from '../components/LabNav.vue';import { api, ioRecorder, type RawIoRec } from '../api';
@@ -115,6 +116,8 @@ import { friendlyEsError } from '../utils/esError'; /* ：runErr 人话化 */
 import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-html 内核；534 收口波：双参改用（errMeta 旁路） */
 import { useScopedDraft } from '../composables/useScopedDraft';
 import { useLinkCarry } from '../composables/useLinkCarry'; /* ：跨页一次性值携带统一件 */
+import type { CcmItem } from '../components/CellContextMenu.vue';
+import { copyText } from '../utils/format';
 import { useIndexFields } from '../composables/useIndexFields';
 import { useTermsSuggest } from '../composables/useTermsSuggest'; /* ：值位动态候选（661 范式） */
 import CurrentIdxChip from '../components/CurrentIdxChip.vue';
@@ -273,6 +276,25 @@ function gotoXray(id?: string) {
   if (!id) return;
   xrayCarry.send({ index: index.value, id });
   router.push('/query-xray');
+}
+/* 矩阵行宿主组：行是 [ _id, 得分, ...子句✔/· ] 数组——复制 _id/整行或带去 X 光，
+   与单元格菜单共用内核；键盘聚焦行后菜单键同源可达。 */
+function mmCopy(text: string, okMsg: string) {
+  void copyText(text).then(ok => store.notify(ok ? 'success' : 'error', ok ? okMsg : '复制失败'));
+}
+function mmRowAction(row: any[]): CcmItem | null {
+  const id = String(row?.[0] ?? '');
+  if (!id) return null;
+  return {
+    key: 'mm-doc',
+    label: '文档…',
+    icon: FileJson,
+    children: [
+      { key: 'mm-copy-id', label: '复制 _id', icon: Copy, run: () => mmCopy(id, '已复制 _id') },
+      { key: 'mm-copy-row', label: '复制整行（含子句命中）', icon: Braces, run: () => mmCopy(JSON.stringify(row), '已复制整行') },
+      { key: 'mm-xray', label: '在查询 X 光中分析', icon: ExternalLink, sep: true, run: () => gotoXray(id) },
+    ],
+  };
 }
 
 const clauseStats = computed(() => clauseNames.value.map(name => {

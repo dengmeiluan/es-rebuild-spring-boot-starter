@@ -85,6 +85,9 @@ All notable changes to SearchDeck are documented here. The format follows
   `ContextMenu` key; it now uses the shared predicate and also accepts Shift+F10.
 - Click-only text controls are now keyboard controls too: the migration job source cell (copy) and
   query-sentence fragments (locate the clause) expose `role`/`tabindex` and handle Enter/Space.
+- Match Matrix rows now merge a `文档…` host group into the QRT cell menu: copy the `_id`, copy the
+  full matrix row (score plus clause hits), or open the document in Query X-ray. The focused-row
+  Menu key opens the same menu.
 
 ### Changed
 

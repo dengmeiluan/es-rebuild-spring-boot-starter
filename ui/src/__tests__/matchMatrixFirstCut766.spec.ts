@@ -182,3 +182,40 @@ describe('766 G235 stats 容器 aria（弱 P3·随批可裁·757 G210/761 G224/7
     app.unmount();
   });
 });
+
+describe('1443 矩阵行宿主菜单（复制 _id/整行、去 X 光）', () => {
+  it('源码锁：QRT 挂 row-action-group，组内三动作与权限无关（只读/导航）', () => {
+    expect(src).toContain(':row-action-group="mmRowAction"');
+    expect(src).toContain("label: '文档…'");
+    expect(src).toContain("label: '复制 _id'");
+    expect(src).toContain("label: '复制整行（含子句命中）'");
+    expect(src).toContain("label: '在查询 X 光中分析'");
+    expect(src).toContain('function mmRowAction');
+    expect(src).toContain('gotoXray(id)');
+  });
+
+  it('行为：键盘聚焦行开单元格菜单，宿主组并入且二级三动作在场', async () => {
+    const { app, host } = await mountMm();
+    runBtnOf(host)!.click();
+    await settle(10);
+    const qrt = host.querySelector('.qrt') as HTMLElement;
+    expect(qrt, 'QRT 已渲染').toBeTruthy();
+    qrt.focus();
+    qrt.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    await settle(2);
+    qrt.dispatchEvent(new KeyboardEvent('keydown', { key: 'ContextMenu', bubbles: true, cancelable: true }));
+    await settle(3);
+    const menu = document.querySelector('.ccm') as HTMLElement;
+    expect(menu, '菜单键开菜单').toBeTruthy();
+    const parent = menu.querySelector('.ccm-it[data-key="mm-doc"]') as HTMLElement;
+    expect(parent, '宿主行操作组父项').toBeTruthy();
+    expect(parent.getAttribute('aria-haspopup')).toBe('menu');
+    parent.dispatchEvent(new MouseEvent('mouseenter'));
+    await settle(2);
+    const labels = [...document.querySelectorAll('.ccm-sub .ccm-it')].map(b => (b.textContent || '').trim());
+    expect(labels).toContain('复制 _id');
+    expect(labels).toContain('复制整行（含子句命中）');
+    expect(labels).toContain('在查询 X 光中分析');
+    app.unmount();
+  });
+});
