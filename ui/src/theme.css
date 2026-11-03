@@ -652,6 +652,10 @@ pre.json-view { margin: 0; font: var(--fs-sm)/1.6 var(--mono); white-space: pre-
 .n-base-selection:has(.n-base-selection-label:focus-visible) {
   border-color: var(--ac-line); box-shadow: var(--focus-ring);
 }
+/* Monaco：键盘焦点落在隐藏 textarea（.inputarea），编辑器外框补可见环；鼠标点击不亮环。 */
+.monaco-editor:has(textarea.inputarea:focus-visible) {
+  outline: 2px solid var(--ac); outline-offset: 2px;
+}
 
 /* 读屏专用视觉隐藏（aria-live 播报区）——display:none 对辅助技术静默，
    必须保留可访问性树节点而视觉不可见 */

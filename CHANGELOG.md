@@ -113,6 +113,9 @@ All notable changes to SearchDeck are documented here. The format follows
 - Naive UI selects now show a visible focus ring when tabbed into: focus lands on the inner
   `.n-base-selection-label`, whose library styles removed the outline, so the outer selection box
   now renders the shared `--focus-ring` via `:has(:focus-visible)`.
+- Monaco editors now show a visible frame when keyboard focus enters the hidden `.inputarea`:
+  the editor root renders the accent outline only for `:focus-visible`, so mouse users see no
+  extra chrome.
 - The audit observability test now drains its asynchronous tasks before returning, preventing a
   late WARN from leaking into the next test method and flaking CI.
 - Right-clicking a connection row inside the cluster switcher now opens its context menu instead
