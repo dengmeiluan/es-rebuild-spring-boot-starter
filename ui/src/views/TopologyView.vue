@@ -56,11 +56,11 @@
       </div>
       <svg v-else-if="shards.length" :viewBox="`0 0 ${W} ${H}`" class="tp-svg" :style="{ minWidth: svgMinW + 'px' }" preserveAspectRatio="xMidYMin meet">
         <!-- 节点组 -->
-        <g v-for="(g, gi) in layout" :key="g.node" :transform="`translate(${g.x}, ${g.y})`">
+        <g v-for="(g, gi) in layout" :key="g.node" :transform="`translate(${g.x}, ${g.y})`" @contextmenu.prevent="openNodeMenu($event, g)">
           <!-- 节点框 -->
           <rect class="tp-node" :width="NODE_W" :height="g.h" rx="8" :class="{ 'tp-node-un': g.node === '__UNASSIGNED__' && uaAbnormal }" />
           <!-- 节点名（单节点副本未分配是拓扑常态，分组标签不打 ⚠） -->
-          <text :x="12" :y="18" class="tp-node-name">
+          <text :x="12" :y="18" class="tp-node-name" tabindex="0" role="button" :aria-label="'节点 ' + g.node" @keydown="onNodeKey($event, g)">
             <template v-if="g.node === '__UNASSIGNED__'">{{ uaAbnormal ? '⚠ 未分配' : '未分配（常态）' }}</template>
             <template v-else>{{ g.nameFit }}<title>{{ g.node }}</title></template>
           </text>
@@ -90,7 +90,7 @@
              :transform="`translate(${12 + (si % COLS) * (CELL + GAP)}, ${g.headH + Math.floor(si / COLS) * (CELL + GAP)})`"
              @mouseenter="cellEnter($event, s)"
              @focus="cellFocus($event, s)" @blur="cellBlur(s)"
-             @contextmenu.prevent="openShardMenu($event, s)" @keydown="onShardKey($event, g, s, si)"
+             @contextmenu.prevent.stop="openShardMenu($event, s)" @keydown="onShardKey($event, g, s, si)"
              @click="gotoShard(s)" @keydown.enter.prevent="gotoShard(s)" @keydown.space.prevent="gotoShard(s)">
             <rect
               class="tp-cell"
@@ -115,6 +115,9 @@
       <CellContextMenu v-if="shardMenu" :x="shardMenu.x" :y="shardMenu.y"
         :title="`${shardMenu.s.index} #${shardMenu.s.shard}`"
         :items="shardMenuItems" @close="shardMenu = null" />
+      <CellContextMenu v-if="nodeMenu" :x="nodeMenu.x" :y="nodeMenu.y"
+        :title="'节点 · ' + (nodeMenu.g.nameFit || nodeMenu.g.node)"
+        :items="nodeMenuItems" @close="nodeMenu = null" />
 
       <!-- Tooltip -->
       <div v-if="tip" class="tp-tip" :style="{ left: (tip.x + 14) + 'px', top: (tip.y - 8) + 'px' }">
@@ -168,7 +171,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Network, RefreshCw, Palette, ClipboardCopy, Braces } from 'lucide-vue-next';
+import { Network, RefreshCw, Palette, ClipboardCopy, Braces, ExternalLink } from 'lucide-vue-next';
 import { api } from '../api';
 import PageHeader from '../components/PageHeader.vue';
 import { useAutoRefresh } from '../composables/useAutoRefresh';
@@ -251,6 +254,43 @@ const shardMenuItems = computed<CcmItem[]>(() => {
       { key: 'copy-reroute', label: '复制 reroute exclude 片段', icon: ClipboardCopy, run: () => copy(JSON.stringify({ index: s.index, shard: s.shard, primary: s.prirep === 'p' }, null, 2), '已复制 reroute 片段') },
     ] },
   ];
+});
+
+/* 节点区右键/键盘：复制节点名与承载信息、跳节点诊断（未分配分组无诊断） */
+const nodeMenu = ref<{ x: number; y: number; g: any } | null>(null);
+function openNodeMenu(e: MouseEvent, g: any) {
+  nodeMenu.value = { x: e.clientX, y: e.clientY, g };
+}
+function gotoNodeDiag(g: any) {
+  if (!g?.node || g.node === '__UNASSIGNED__') return;
+  router.push({ path: '/diag', query: { node: g.node } });
+}
+function onNodeKey(e: KeyboardEvent, g: any) {
+  if (isMenuKey(e)) {
+    e.preventDefault();
+    nodeMenu.value = { ...menuKeyAnchor(e), g };
+    return;
+  }
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    gotoNodeDiag(g);
+  }
+}
+const nodeMenuItems = computed<CcmItem[]>(() => {
+  const g = nodeMenu.value?.g;
+  if (!g) return [];
+  const copy = (text: string, okMsg: string) => {
+    void copyText(text).then(ok => store.notify(ok ? 'success' : 'error', ok ? okMsg : '复制失败'));
+  };
+  const info = `${g.node} · ${g.ip || '-'} · ${g.shards?.length ?? 0} 分片 · ${fmtB(g.storeBytes)}`;
+  const items: CcmItem[] = [
+    { key: 'node-copy-name', label: '复制节点名', icon: ClipboardCopy, run: () => copy(String(g.node), '已复制节点名') },
+    { key: 'node-copy-info', label: '复制节点承载信息', icon: Braces, run: () => copy(info, '已复制节点信息') },
+  ];
+  if (g.node !== '__UNASSIGNED__') {
+    items.push({ key: 'node-diag', label: '打开节点诊断', icon: ExternalLink, sep: true, run: () => gotoNodeDiag(g) });
+  }
+  return items;
 });
 
 const shards = ref<Shard[]>([]);

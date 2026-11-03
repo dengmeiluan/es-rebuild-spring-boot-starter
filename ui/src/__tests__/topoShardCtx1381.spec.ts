@@ -27,7 +27,7 @@ function block(): string {
 
 describe('1381 拓扑分片右键', () => {
   it('① 分片 <g> 挂 @contextmenu.prevent，且菜单组件挂载', () => {
-    expect(src, '分片格必须挂右键').toMatch(/@contextmenu\.prevent="openShardMenu\(\$event, s\)"/);
+    expect(src, '分片格必须挂右键（stop 防冒泡到节点菜单）').toMatch(/@contextmenu\.prevent\.stop="openShardMenu\(\$event, s\)"/);
     expect(src, '菜单必须渲染').toContain(':items="shardMenuItems"');
     expect(src, '无分片数据时不渲染菜单（v-if shardMenu）').toMatch(/<CellContextMenu v-if="shardMenu"/);
   });
@@ -52,5 +52,27 @@ describe('1381 拓扑分片右键', () => {
     expect(b, 'primary 不能写死 true').not.toMatch(/primary: true/);
     /* docs/store 允许 null（未分配分片无值），不能兜成 0 假装有数据 */
     expect(b).toMatch(/docs: s\.docs \?\? null/);
+  });
+});
+
+describe('1443 拓扑节点区右键/键盘', () => {
+  it('节点组挂右键，分片右键 stop（只开一层菜单）', () => {
+    expect(src).toContain('@contextmenu.prevent="openNodeMenu($event, g)"');
+    expect(src).toContain('@contextmenu.prevent.stop="openShardMenu($event, s)"');
+    expect(src).toContain('<CellContextMenu v-if="nodeMenu"');
+  });
+
+  it('节点名可聚焦：菜单键开菜单、Enter 打开节点诊断', () => {
+    expect(src).toContain(`tabindex="0" role="button" :aria-label="'节点 ' + g.node" @keydown="onNodeKey($event, g)"`);
+    expect(src).toContain('function onNodeKey');
+    expect(src).toContain('isMenuKey(e)');
+    expect(src).toContain("router.push({ path: '/diag', query: { node: g.node } })");
+  });
+
+  it('节点菜单：复制名/承载信息，未分配分组不给诊断入口', () => {
+    expect(src).toContain("label: '复制节点名'");
+    expect(src).toContain("label: '复制节点承载信息'");
+    expect(src).toContain("label: '打开节点诊断'");
+    expect(src).toContain("if (g.node !== '__UNASSIGNED__')");
   });
 });
