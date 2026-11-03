@@ -9,7 +9,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const files: [string, number][] = [
-  ['../views/OverviewView.vue', 5],
+  ['../views/OverviewView.vue', 1], /* 1439g：索引/健康/作业行改统一 onOvKey（Enter/Space/菜单键同口），
+      显式 Space 只剩拓扑入口；双键语义由下方 handler 断言保真 */
   ['../components/WelcomeWizard.vue', 4],
   ['../components/ClusterSwitcher.vue', 1], /* 1439f：宿主/连接行改统一 onConnKey（Enter/Space/菜单键同口），
       显式 Space 只剩「管理连接」；双键语义由下方 handler 断言保真 */
@@ -43,5 +44,11 @@ describe('Space 键双键口径补齐（373 批）', () => {
     const v = readFileSync(join(__dirname, '../components/ClusterSwitcher.vue'), 'utf-8');
     expect(v).toMatch(/if \(e\.key === 'Enter' \|\| e\.key === ' '\)/);
     expect(v).toMatch(/@keydown="onConnKey\(\$event, c\)"/);
+  });
+
+  it('Overview 统一 onOvKey 仍保留 Enter/Space 双键（1439g 泛 keydown 域）', () => {
+    const v = readFileSync(join(__dirname, '../views/OverviewView.vue'), 'utf-8');
+    expect(v).toMatch(/if \(e\.key === 'Enter' \|\| e\.key === ' '\)/);
+    expect(v).toMatch(/@keydown="onOvKey\(\$event, 'idx', idx\)"/);
   });
 });

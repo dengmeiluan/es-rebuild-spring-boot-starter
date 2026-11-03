@@ -101,7 +101,9 @@ describe('六百三十四批：拆胞/接线回归护栏（既有锁零迁移面
   });
 
   it('键盘可达五处 role/tabindex/Enter+Space 成对契约不变（spaceKeyPair373 计数）', () => {
-    expect((ov.match(/@keydown\.space\.prevent=/g) ?? []).length, 'Space 绑定数').toBe(5);
+    /* 1439g：四行改统一 onOvKey，显式 Space 只剩拓扑入口；Enter/Space 语义在 handler 内 */
+    expect((ov.match(/@keydown\.space\.prevent=/g) ?? []).length, 'Space 绑定数').toBe(1);
+    expect(ov).toMatch(/if \(e\.key === 'Enter' \|\| e\.key === ' '\)/);
     expect(ov, '五处下钻卡 role=button 齐备').toMatch(/<div class="ov-topo" role="button" tabindex="0"/);
   });
 

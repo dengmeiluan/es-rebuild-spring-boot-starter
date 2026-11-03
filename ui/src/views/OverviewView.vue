@@ -95,7 +95,7 @@
       <!-- 大小 Top10。：顶层 .card 壳退役（约定④）→ border-top 分节（SecurityView 同步同语言） -->
       <div class="ov-cell">
         <div class="card-t"><HardDrive :size="13" /> 存储 Top 10</div>
-        <div v-for="idx in topBySize" :key="idx.index" class="ov-bar-row" role="button" tabindex="0" :aria-label="'查看索引 ' + idx.index" @click="goIndex(idx.index)" @keydown.enter.prevent="goIndex(idx.index)" @keydown.space.prevent="goIndex(idx.index)">
+        <div v-for="idx in topBySize" :key="idx.index" class="ov-bar-row" role="button" tabindex="0" :aria-label="'查看索引 ' + idx.index" @click="goIndex(idx.index)" @contextmenu.prevent="openOvMenu($event, 'idx', idx)" @keydown="onOvKey($event, 'idx', idx)">
           <span class="ov-bar-name mono" :title="idx.index">{{ idx.index }}</span>
           <div class="ov-bar-track">
             <div class="ov-bar-fill" :style="{ width: (idx._sizeN / topBySize[0]._sizeN * 100) + '%' }"></div>
@@ -111,7 +111,7 @@
       <!-- 文档数 Top10。：同上款 .card 壳退役 → border-top 分节 -->
       <div class="ov-cell">
         <div class="card-t"><FileText :size="13" /> 文档数 Top 10</div>
-        <div v-for="idx in topByDocs" :key="idx.index" class="ov-bar-row" role="button" tabindex="0" :aria-label="'查看索引 ' + idx.index" @click="goIndex(idx.index)" @keydown.enter.prevent="goIndex(idx.index)" @keydown.space.prevent="goIndex(idx.index)">
+        <div v-for="idx in topByDocs" :key="idx.index" class="ov-bar-row" role="button" tabindex="0" :aria-label="'查看索引 ' + idx.index" @click="goIndex(idx.index)" @contextmenu.prevent="openOvMenu($event, 'idx', idx)" @keydown="onOvKey($event, 'idx', idx)">
           <span class="ov-bar-name mono" :title="idx.index">{{ idx.index }}</span>
           <div class="ov-bar-track">
             <div class="ov-bar-fill docs" :style="{ width: (Number(idx['docs.count']) / Number(topByDocs[0]['docs.count'] || 1) * 100) + '%' }"></div>
@@ -127,7 +127,7 @@
       <div class="ov-cell">
         <div class="card-t"><Activity :size="13" /> 健康分布</div>
         <div class="ov-health">
-          <div v-for="h in healthDist" :key="h.name" class="ov-h-item" role="button" tabindex="0" :aria-label="'查看 ' + h.name + ' 索引清单'" @click="goHealth(h.name)" @keydown.enter.prevent="goHealth(h.name)" @keydown.space.prevent="goHealth(h.name)" :title="'查看 ' + h.name + ' 索引清单'">
+          <div v-for="h in healthDist" :key="h.name" class="ov-h-item" role="button" tabindex="0" :aria-label="'查看 ' + h.name + ' 索引清单'" @click="goHealth(h.name)" @contextmenu.prevent="openOvMenu($event, 'health', h)" @keydown="onOvKey($event, 'health', h)" :title="'查看 ' + h.name + ' 索引清单'">
             <!-- 健康分布色点改用 MetaStrip dot 形态单源（DiagView dgMeta 先例）——
  .ov-h-dot 私造圆点退役，8px 圆点形态归组件 .ms-dot 单源（色值 h.color 直传） -->
             <MetaStrip :items="[{ dot: h.color }]" />
@@ -153,7 +153,7 @@
         <div v-else-if="recentJobs.length">
           <!-- key 禁用 jobId——19 位雪花 long 曾被 JSON.parse 截断成重复值，keyed diff 失效导致
  每轮 5s 轮询整块重挂 + rise 动画重放（布局抖动）；indexKey 每索引一条、天然唯一且稳定 -->
-          <div v-for="(j, i) in recentJobs" :key="j.indexKey" class="ov-job rise" :style="{ animationDelay: i * 45 + 'ms' }" role="button" tabindex="0" aria-label="前往托管重建" @click="goJob(j)" @keydown.enter.prevent="goJob(j)" @keydown.space.prevent="goJob(j)" :title="j.indexKey">
+          <div v-for="(j, i) in recentJobs" :key="j.indexKey" class="ov-job rise" :style="{ animationDelay: i * 45 + 'ms' }" role="button" tabindex="0" aria-label="前往托管重建" @click="goJob(j)" @contextmenu.prevent="openOvMenu($event, 'job', j)" @keydown="onOvKey($event, 'job', j)" :title="j.indexKey">
             <!-- 状态徽标改用 StatusPill（中文主显 jobStatusZh + en 英文小字档组件化，
  英文小字类同步更新退役）。dot-pulse 呼吸点保留本地：StatusPill 无插槽不硬塞，
  点以兄弟元素随行渲染（） -->
@@ -240,6 +240,8 @@
         hint="服务端定时任务每分钟落一轮全集群探活快照，产生后在此回看" />
     </div>
   </div>
+  <CellContextMenu v-if="ovMenu" :x="ovMenu.x" :y="ovMenu.y" :title="ovMenuTitle"
+    :items="ovMenuItems" @close="ovMenu = null" />
 </template>
 
 <script lang="ts">
@@ -255,7 +257,7 @@ export function evalTopoClip(sw: number, cw: number): boolean {
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useAutoRefresh } from '../composables/useAutoRefresh';
 import { useRouter } from 'vue-router';
-import { HardDrive, FileText, Activity, History, Network, AlertOctagon, Gauge, RotateCw } from 'lucide-vue-next';
+import { HardDrive, FileText, Activity, History, Network, AlertOctagon, Gauge, RotateCw, Copy, Link2, ExternalLink } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';
 import EmptyState from '../components/EmptyState.vue';
@@ -264,6 +266,7 @@ import StatusPill from '../components/StatusPill.vue'; /* ：状态徽标统一�
 import { api } from '../api';
 import { probeDigest } from '../utils/monitorSeries';
 import { useAppStore } from '../stores/app';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import { useAuthStore } from '../stores/auth';
 import { useLiveMonitorStore } from '../stores/liveMonitor';
 import SkeletonBox from '../components/SkeletonBox.vue';
@@ -588,6 +591,78 @@ function goIndex(idx: string) {
 /* 健康分布计数可点——跳索引工作区并带上 health 过滤（工作区侧 healthF 是 URL 状态） */
 function goHealth(name: string) {
   router.push({ path: '/indices', query: { health: name } });
+}
+
+/* 概览行右键/菜单键：索引排行、健康分布、最近作业各自的高频动作 + 复制；
+   Enter/Space 仍走原主操作，菜单键/右键开共享菜单。 */
+type OvKind = 'idx' | 'health' | 'job';
+const ovMenu = ref<{ x: number; y: number; kind: OvKind; data: any } | null>(null);
+const ovMenuTitle = computed(() => {
+  const m = ovMenu.value;
+  if (!m) return '';
+  if (m.kind === 'idx') return `索引 · ${m.data.index}`;
+  if (m.kind === 'health') return `健康分布 · ${clusterHealthZh(m.data.name) || m.data.name}`;
+  return `最近作业 · ${m.data.indexKey}`;
+});
+const ovMenuItems = computed<CcmItem[]>(() => {
+  const m = ovMenu.value;
+  if (!m) return [];
+  const origin = window.location.origin + window.location.pathname;
+  if (m.kind === 'idx') {
+    return [
+      { key: 'ov-open-idx', label: '打开索引工作区', icon: ExternalLink, run: () => goIndex(m.data.index) },
+      {
+        key: 'ov-copy-idx', label: '复制…', icon: Copy, children: [
+          { key: 'ov-copy-idx-name', label: '复制索引名', icon: Copy, run: () => copyOv(m.data.index, '索引名') },
+          { key: 'ov-copy-idx-link', label: '复制深链', icon: Link2, run: () => copyOv(origin + '#/indices?idx=' + encodeURIComponent(m.data.index), '深链') },
+        ],
+      },
+      { key: 'ov-open-browser', label: '在数据浏览器打开', icon: ExternalLink, run: () => { void router.push({ path: '/browser', query: { idx: m.data.index } }); } },
+    ];
+  }
+  if (m.kind === 'health') {
+    return [
+      { key: 'ov-open-health', label: '查看该健康索引清单', icon: ExternalLink, run: () => goHealth(m.data.name) },
+      {
+        key: 'ov-copy-health', label: '复制…', icon: Copy, children: [
+          { key: 'ov-copy-health-name', label: '复制健康状态', icon: Copy, run: () => copyOv(m.data.name, '健康状态') },
+          { key: 'ov-copy-health-link', label: '复制深链', icon: Link2, run: () => copyOv(origin + '#/indices?health=' + encodeURIComponent(m.data.name), '深链') },
+        ],
+      },
+    ];
+  }
+  const statusItems: CcmItem[] = m.data.status
+    ? [{ key: 'ov-copy-job-status', label: '复制状态', icon: Copy, run: () => copyOv(m.data.status, '状态') }]
+    : [];
+  return [
+    { key: 'ov-open-job', label: '去托管重建', icon: ExternalLink, run: () => goJob(m.data) },
+    {
+      key: 'ov-copy-job', label: '复制…', icon: Copy, children: [
+        { key: 'ov-copy-job-key', label: '复制 indexKey', icon: Copy, run: () => copyOv(m.data.indexKey, 'indexKey') },
+        ...statusItems,
+      ],
+    },
+  ];
+});
+function copyOv(text: string, label: string) {
+  void copyText(text).then(ok => store.notify(ok ? 'success' : 'error', ok ? `已复制${label}` : '复制失败'));
+}
+function openOvMenu(e: MouseEvent, kind: OvKind, data: any) {
+  ovMenu.value = { x: e.clientX, y: e.clientY, kind, data };
+}
+function onOvKey(e: KeyboardEvent, kind: OvKind, data: any) {
+  if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
+    e.preventDefault();
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    ovMenu.value = { x: r.left + 12, y: r.bottom, kind, data };
+    return;
+  }
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    if (kind === 'idx') goIndex(data.index);
+    else if (kind === 'health') goHealth(data.name);
+    else goJob(data);
+  }
 }
 
 /* ═══ 监控快照落库批④：集群监控历史（本区纯只读——服务端定时任务是唯一写入方） ═══ */

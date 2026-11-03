@@ -15,12 +15,14 @@ describe('Overview 下钻卡键盘可达（369 批）', () => {
     const cards = [
       /* 五百五十四批同步更新：ov-topo .card 壳退役（class 字面摘 card，role/tabindex/Enter 契约零触） */
       /<div class="ov-topo" role="button" tabindex="0" aria-label="进入完整分布式拓扑视图" @click="router\.push\('\/topology'\)" @keydown\.enter\.prevent="router\.push\('\/topology'\)"/,
-      /<div v-for="idx in topBySize"[^>]*role="button" tabindex="0" :aria-label="'查看索引 ' \+ idx\.index" @click="goIndex\(idx\.index\)" @keydown\.enter\.prevent="goIndex\(idx\.index\)"/,
-      /<div v-for="idx in topByDocs"[^>]*role="button" tabindex="0" :aria-label="'查看索引 ' \+ idx\.index" @click="goIndex\(idx\.index\)" @keydown\.enter\.prevent="goIndex\(idx\.index\)"/,
-      /<div v-for="h in healthDist"[^>]*role="button" tabindex="0" :aria-label="'查看 ' \+ h\.name \+ ' 索引清单'" @click="goHealth\(h\.name\)" @keydown\.enter\.prevent="goHealth\(h\.name\)"/,
-      /<div v-for="\(j, i\) in recentJobs"[^>]*role="button" tabindex="0" aria-label="前往托管重建" @click="goJob\(j\)" @keydown\.enter\.prevent="goJob\(j\)"/,
+      /* 1439g：四行改统一 onOvKey（Enter/Space 主操作 + 菜单键），role/tabindex 契约不变 */
+      /<div v-for="idx in topBySize"[^>]*role="button" tabindex="0" :aria-label="'查看索引 ' \+ idx\.index" @click="goIndex\(idx\.index\)" @contextmenu\.prevent="openOvMenu\(\$event, 'idx', idx\)" @keydown="onOvKey\(\$event, 'idx', idx\)"/,
+      /<div v-for="idx in topByDocs"[^>]*role="button" tabindex="0" :aria-label="'查看索引 ' \+ idx\.index" @click="goIndex\(idx\.index\)" @contextmenu\.prevent="openOvMenu\(\$event, 'idx', idx\)" @keydown="onOvKey\(\$event, 'idx', idx\)"/,
+      /<div v-for="h in healthDist"[^>]*role="button" tabindex="0" :aria-label="'查看 ' \+ h\.name \+ ' 索引清单'" @click="goHealth\(h\.name\)" @contextmenu\.prevent="openOvMenu\(\$event, 'health', h\)" @keydown="onOvKey\(\$event, 'health', h\)"/,
+      /<div v-for="\(j, i\) in recentJobs"[^>]*role="button" tabindex="0" aria-label="前往托管重建" @click="goJob\(j\)" @contextmenu\.prevent="openOvMenu\(\$event, 'job', j\)" @keydown="onOvKey\(\$event, 'job', j\)"/,
     ];
     for (const re of cards) expect(v).toMatch(re);
+    expect(v).toMatch(/if \(e\.key === 'Enter' \|\| e\.key === ' '\)/);
   });
 
   it('可点击无 role 残留清零（v-for 下钻元素不再有裸 @click）', () => {

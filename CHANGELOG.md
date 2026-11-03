@@ -61,6 +61,9 @@ All notable changes to SearchDeck are documented here. The format follows
 - Cluster switcher connection rows now support right-click and keyboard ContextMenu/Shift+F10:
   switch to the connection (same authorization and RED-cluster confirmation as click) or copy its
   name, ID, endpoint, and environment; all actions stay local/read-only.
+- Overview index ranking, health distribution, and recent-job rows now support right-click and
+  keyboard ContextMenu/Shift+F10 to open the index workspace/browser/job page or copy the
+  name/status/deep link.
 
 ### Changed
 
