@@ -285,3 +285,32 @@ describe('757 G210 清单容器语义+选中行 aria-current（G47/G142/G154 族
     expect(items[1].getAttribute('aria-current'), '未选中行无').toBeFalsy();
   });
 });
+
+describe('1439d 配置对象行右键', () => {
+  it('右键/菜单键：检测、复制 indexKey/alias/深链（只读本地）', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const host = await mountView();
+    releaseKeys();
+    await settle(8);
+    const item = host.querySelector('.cd-list .cd-item:not(.cd-none)') as HTMLElement;
+    item.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 20, clientY: 20 }));
+    await settle();
+    const menu = document.body.querySelector<HTMLElement>('.ccm');
+    expect(menu, '右键菜单').toBeTruthy();
+    expect(menu!.textContent).toContain('配置对象 · probe-orders-v2');
+    for (const label of ['检测此对象', '复制 indexKey', '复制 alias', '复制深链']) {
+      expect(menu!.textContent, `菜单项 ${label}`).toContain(label);
+    }
+    (menu!.querySelector('[data-key="cd-copy-key"]') as HTMLElement).click();
+    await settle(3);
+    expect(writeText).toHaveBeenCalledWith('probe-orders-v2');
+
+    item.dispatchEvent(new KeyboardEvent('keydown', { key: 'ContextMenu', bubbles: true, cancelable: true }));
+    await settle();
+    expect(document.body.querySelector('.ccm'), '菜单键必须开同一菜单').toBeTruthy();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await settle();
+    delete (navigator as any).clipboard;
+  });
+});

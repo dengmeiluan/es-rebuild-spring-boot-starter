@@ -42,7 +42,11 @@ describe('列表行键盘可达收口（442 批）', () => {
     /* 五百三十一批：「选完即收」退役（选中不自动关抽屉，支持跨索引反复对比）——Enter 触发
        表达式同批同步更新去掉 listOpen = false，role/tabindex 键盘可达契约不变 */
     expect(readFileSync(join(SRC, 'views/IndexHubView.vue'), 'utf-8')).toMatch(/role="button" tabindex="0" @keydown\.enter\.prevent="select\(idx\.index\)"/);
-    expect(readFileSync(join(SRC, 'views/ConfigDriftView.vue'), 'utf-8')).toMatch(/role="button" tabindex="0" @keydown\.enter\.prevent="loadDrift\(k\.indexKey\)"/);
+    /* 1439d：ConfigDrift 行统一 keydown 收口（右键菜单 + Enter/Space 检测），
+       键盘可达契约仍在 handler 内；按 spaceGuard826 约定②泛 keydown 域判定 */
+    const cd = readFileSync(join(SRC, 'views/ConfigDriftView.vue'), 'utf-8');
+    expect(cd).toMatch(/role="button" tabindex="0"\s+@keydown="onKeyMenuKey\(\$event, k\)"/);
+    expect(cd).toMatch(/if \(e\.key === 'Enter' \|\| e\.key === ' '\)/);
     expect(readFileSync(join(SRC, 'components/QueryHistoryPanel.vue'), 'utf-8')).toMatch(/role="button" tabindex="0" @keydown\.enter\.prevent="clickable && \$emit\('play', it\)"/);
   });
 });

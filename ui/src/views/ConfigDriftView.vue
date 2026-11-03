@@ -51,7 +51,9 @@
           :data-hit-idx="i + 1"
           :aria-current="picked === k.indexKey || undefined"
           @click="loadDrift(k.indexKey)"
-         role="button" tabindex="0" @keydown.enter.prevent="loadDrift(k.indexKey)" @keydown.space.prevent="loadDrift(k.indexKey)">
+          @contextmenu.prevent="openKeyMenu($event, k)"
+         role="button" tabindex="0"
+         @keydown="onKeyMenuKey($event, k)">
           <div class="cd-item-key" :title="k.indexKey"><MarkText :text="k.indexKey" :kw="kw" /></div>
           <div class="cd-item-alias" :title="k.alias"><MarkText :text="k.alias" :kw="kw" /></div>
           <!-- 清单角标改用 StatusPill 统一件（558b 回滚件解禁重做——525:210 逐字锁
@@ -204,13 +206,15 @@
     </WorkbenchLayout>
     <!-- G206：原始 IO 快查弹窗（ModalShell 壳，Esc/遮罩关闭随壳） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
+    <CellContextMenu v-if="keyMenu" :x="keyMenu.x" :y="keyMenu.y" :title="keyMenuTitle"
+      :items="keyMenuItems" @close="keyMenu = null" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, defineComponent, h, type PropType } from 'vue';
 import { useRouter } from 'vue-router';
-import { GitCompareArrows, RefreshCw, MousePointer, AlertTriangle, Copy, Wrench, CheckCircle2, Info, FileDown, Terminal } from 'lucide-vue-next';
+import { GitCompareArrows, RefreshCw, MousePointer, AlertTriangle, Copy, Wrench, CheckCircle2, Info, FileDown, Terminal, Link2 } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import EmptyState from '../components/EmptyState.vue';
 import MarkText from '../components/MarkText.vue';
@@ -219,6 +223,7 @@ import SkeletonBox from '../components/SkeletonBox.vue'; /* W-D：loading 占位
 import StatusPill from '../components/StatusPill.vue'; /* W-D：结论徽标统一件 */
 import SearchFilterBar from '../components/SearchFilterBar.vue'; /* ：清单过滤胶囊统一件 */
 import QueryResultTable from '../components/QueryResultTable.vue'; /* ：settings 差异表换壳 */
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import WorkbenchLayout, { type WorkbenchPaneSpec } from '../components/WorkbenchLayout.vue';
 import RawIoModal from '../components/RawIoModal.vue'; /* G206：原始 IO 快查弹窗（755 G200 同构） */
 import { api, ioRecorder, type RawIoRec } from '../api';
@@ -359,6 +364,41 @@ function openRawIo() {
 async function copyStr(s: string, label: string) {
   const ok = await copyText(String(s ?? ''));
   store.notify(ok ? 'success' : 'error', ok ? `已复制 ${label}` : '复制失败');
+}
+
+/* 对象清单行右键/菜单键：检测、复制 indexKey/alias、复制深链——只读本地动作；
+   Enter/Space 仍走原「检测此对象」键盘语义。 */
+const keyMenu = ref<{ x: number; y: number; k: any } | null>(null);
+const keyMenuTitle = computed(() => (keyMenu.value ? `配置对象 · ${keyMenu.value.k.indexKey}` : ''));
+const keyMenuItems = computed<CcmItem[]>(() => {
+  const m = keyMenu.value;
+  if (!m) return [];
+  const k = m.k;
+  const items: CcmItem[] = [
+    { key: 'cd-detect', label: '检测此对象', icon: GitCompareArrows, run: () => { void loadDrift(k.indexKey); } },
+    { key: 'cd-copy-key', label: '复制 indexKey', icon: Copy, run: () => { void copyStr(k.indexKey, 'indexKey'); } },
+  ];
+  if (k.alias) items.push({ key: 'cd-copy-alias', label: '复制 alias', icon: Copy, run: () => { void copyStr(k.alias, 'alias'); } });
+  items.push({ key: 'cd-copy-link', label: '复制深链', icon: Link2, sep: true, run: () => { void copyStr(keyDeepLink(k.indexKey), '深链'); } });
+  return items;
+});
+function keyDeepLink(indexKey: string) {
+  return window.location.origin + window.location.pathname + '#/config-drift?key=' + encodeURIComponent(indexKey);
+}
+function openKeyMenu(e: MouseEvent, k: any) {
+  keyMenu.value = { x: e.clientX, y: e.clientY, k };
+}
+function onKeyMenuKey(e: KeyboardEvent, k: any) {
+  if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
+    e.preventDefault();
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    keyMenu.value = { x: r.left + 12, y: r.bottom, k };
+    return;
+  }
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    void loadDrift(k.indexKey);
+  }
 }
 
 /* ═══ ：settings 差异表 QRT rows 型数据映射 ═══

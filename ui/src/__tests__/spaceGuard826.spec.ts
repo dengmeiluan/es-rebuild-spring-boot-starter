@@ -56,7 +56,6 @@ const SITES: Array<{ file: string; handler: string }> = [
   { file: '../views/AliasesView.vue', handler: 'goHub(r.index)' },
   { file: '../views/AnalysisSettingsView.vue', handler: 'toggle(g.key, String(name))' },
   { file: '../views/BrowserView.vue', handler: 'goHub(value)' },
-  { file: '../views/ConfigDriftView.vue', handler: 'loadDrift(k.indexKey)' },
   { file: '../views/ConfigValidatorView.vue', handler: 'applyTemplate(t)' },
   { file: '../views/DslQueryView.vue', handler: 'drillAgg(a, b, false)' },
   { file: '../views/FavoritesView.vue', handler: 'importInput?.click()' },
@@ -86,6 +85,11 @@ describe('spaceGuard826 逐站点锚（48 站点 Enter+Space 成对，属性紧�
 });
 
 describe('spaceGuard826 全域守卫', () => {
+  it('ConfigDrift 泛 keydown 站点（已含右键菜单）：Enter/Space 仍在 handler 内成对', () => {
+    const v = rd('../views/ConfigDriftView.vue');
+    expect(v).toMatch(/@keydown="onKeyMenuKey\(\$event, k\)"/);
+    expect(v).toMatch(/if \(e\.key === 'Enter' \|\| e\.key === ' '\)/);
+  });
   function walk(dir: string): string[] {
     return readdirSync(dir).flatMap(n => {
       const p = join(dir, n);

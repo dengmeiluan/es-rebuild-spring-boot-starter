@@ -54,6 +54,8 @@ All notable changes to SearchDeck are documented here. The format follows
 - RT (index workspace result table) now opens its cell menu from a focused row via
   ContextMenu/Shift+F10; its window-level close guard now only reacts to Escape instead of any
   keydown, which previously closed the menu in the same keystroke.
+- Config Drift object rows now support right-click and keyboard ContextMenu/Shift+F10 to run the
+  drift check, copy the indexKey/alias, or copy a deep link; all actions stay read-only.
 
 ### Changed
 

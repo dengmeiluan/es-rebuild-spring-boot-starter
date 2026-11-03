@@ -57,6 +57,7 @@
 | Boost 调参字段行 | 右键 / ContextMenu / Shift+F10 | 复制字段名、停用/启用、删除字段 | 只改本地调参草稿；执行仍走查询门 |
 | 工作台配置行 | 右键 / ContextMenu / Shift+F10 | 显示/隐藏、列宽（1/2/3 列）、上移/下移 | 只改本地布局并落盘 |
 | 安全中心用户表（QRT 单元格菜单） | 右键 / ContextMenu / Shift+F10（表格聚焦行） | 用户操作…：复制用户名/角色、删除用户 | 复制只读；删除仅 `canWriteUsers`，复用 critical 确认与 ADMIN 守卫 |
+| 配置漂移对象清单行 | 右键 / ContextMenu / Shift+F10 | 检测此对象、复制 indexKey/alias、复制深链 | 只读本地 |
 
 规则：**菜单不自行判断权限**；宿主只把当前身份允许的动作放进 items（隐藏而不是仅置灰），
 服务端仍按页面读/写键与连接 env 模板二次裁决。PROD/QA/STAGING 只改变可用动作与顶部环境
