@@ -140,7 +140,7 @@
         <div v-if="result.failedSample && result.failedSample.length" class="be-fail">
           <div class="be-fail-tt">前 20 条失败样例：</div>
           <details v-for="(f, i) in result.failedSample" :key="i" class="be-fail-item" tabindex="0"
-            @contextmenu.prevent="openFailMenu($event, f, i)" @keydown="onFailMenuKey($event, f, i)">
+            @contextmenu.prevent="openFailMenu($event, f, i)" @keydown="onFailMenuKey($event, f, i)" data-row-nav @keydown.self="rowArrowNav">
             <!-- W4c：f.status 裸渲染 → W-D 改用 StatusPill（<300 g/<500 y/其余 r，RestView HTTP 状态徽标同款） -->
             <summary>#{{ i + 1 }} — <StatusPill :tone="statusPillCls(f.status)" :label="String(f.status)" /> — {{ (f.error && f.error.type) || 'error' }}</summary>
             <div class="be-fail-body"><JsonTree :data="f" /></div>
@@ -201,6 +201,7 @@ import MonacoEditor from '../components/MonacoEditor.vue';
 import { useIndexFields } from '../composables/useIndexFields';
 import { removeStoredRaw } from '../utils/safeJson';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 
 const store = useAppStore();
 

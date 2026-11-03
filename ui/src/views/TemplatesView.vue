@@ -69,7 +69,7 @@
             @click="select(t)"
            role="button" tabindex="0" @keydown.enter.prevent="select(t)" @keydown.space.prevent="select(t)"
            @contextmenu.prevent="openTplMenu($event, t)"
-           @keydown="onTplMenuKey($event, t)">
+           @keydown="onTplMenuKey($event, t)" data-row-nav @keydown.self="rowArrowNav">
             <div class="tv2-row-l">
               <div class="tv2-row-name mono"><MarkText :text="t.name" :kw="filter" /></div>
               <div class="tv2-row-sub mono">
@@ -205,6 +205,7 @@ import { usePopupList } from '../composables/usePopupList';
 import type { BodyKind } from '../utils/dslCompletionContext';
 import { writeStoredRaw } from '../utils/safeJson';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 import { useRouter } from 'vue-router';
 
 const store = useAppStore();

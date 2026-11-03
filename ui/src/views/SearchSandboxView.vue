@@ -162,7 +162,7 @@
  mt-mark 全站统一命中底色；textContent 与原文一致、无 v-html 注入面契约不变），
  kw 空时单段平文零扰动 -->
             <div v-for="({ h, i }) in shownHits" :key="h._id + '_' + i" class="ss-hit" tabindex="0"
-                 @contextmenu.prevent="openHitMenu($event, h)" @keydown="onHitMenuKey($event, h)">
+                 @contextmenu.prevent="openHitMenu($event, h)" @keydown="onHitMenuKey($event, h)" data-row-nav @keydown.self="rowArrowNav">
               <div class="ss-hit-head">
                 <b class="mono"><MarkText :text="String(h._index ?? '')" :kw="hitsMarkKw" /></b>
                 <span class="mono ss-hit-id">#<MarkText :text="String(h._id ?? '')" :kw="hitsMarkKw" /></span>
@@ -315,6 +315,7 @@ import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue';
 import TookBadge from '../components/TookBadge.vue';
 import { removeStoredRaw, writeStoredRaw } from '../utils/safeJson';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 import { useAuthStore } from '../stores/auth'; /* 历史回放自动执行的身份/读页门（1124 续） */
 
 const store = useAppStore();

@@ -48,7 +48,7 @@
  真空态分档防误导语义不变，stTplTiersFilter textContent 锚保真） -->
         <EmptyState v-if="tplFilter && !filteredTemplates.length" compact :icon="LayoutTemplate" text="无匹配模板" />
         <div v-for="t in filteredTemplates" :key="t.id" class="st-item" :class="{ on: t.id === curId }" @click="pick(t)"
-          @contextmenu.prevent="openTplMenu($event, t)" @keydown="onTplMenuKey($event, t)" role="button" tabindex="0" @keydown.enter.prevent="pick(t)" @keydown.space.prevent="pick(t)">
+          @contextmenu.prevent="openTplMenu($event, t)" @keydown="onTplMenuKey($event, t)" data-row-nav @keydown.self="rowArrowNav" role="button" tabindex="0" @keydown.enter.prevent="pick(t)" @keydown.space.prevent="pick(t)">
           <FileCode2 :size="12" class="st-item-ic" />
           <!-- 裸插值换 MarkText——过滤词命中段 <mark>（textContent 与原文一致） -->
           <span class="st-item-nm" :title="t.id"><MarkText :text="t.id" :kw="tplFilter" /></span>
@@ -230,6 +230,7 @@ import TookBadge from '../components/TookBadge.vue';
 import type { MetaStripItem } from '../components/MetaStrip.vue';
 import { removeStoredRaw } from '../utils/safeJson';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 
 const store = useAppStore();
 /* 权限写门——保存/删除模板（putStoredScript/deleteStoredScript 集群写）=ops 档，VIEWER 不可见 */

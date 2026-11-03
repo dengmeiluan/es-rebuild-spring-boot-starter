@@ -175,7 +175,7 @@
         </div>
       </div>
       <div v-for="(g, i) in groups" :key="g.alias" class="alv-group" :class="{ 'alv-deep-hit': isDeepHit(g) }" :data-hit-idx="i + 1">
-        <div class="alv-g-hd" tabindex="0" @contextmenu.prevent="openAliasMenu($event, g)" @keydown="onAliasMenuKey($event, g)">
+        <div class="alv-g-hd" tabindex="0" @contextmenu.prevent="openAliasMenu($event, g)" @keydown="onAliasMenuKey($event, g)" data-row-nav @keydown.self="rowArrowNav">
           <div class="alv-g-hd-l">
             <Link2 :size="13" class="alv-g-ic" />
             <span class="mono alv-g-alias" :title="g.alias"><MarkText :text="g.alias" :kw="query" /></span>
@@ -202,7 +202,7 @@
           <template v-for="(r, i) in shownRows(g)" :key="r.index">
             <div class="alv-arrow-row" :class="{ 'is-write': r.isWriteIndex }" tabindex="0"
               @contextmenu.prevent="openRowMenu($event, g, r.index, r.isWriteIndex)"
-              @keydown="onAliasRowMenuKey($event, g, r.index, r.isWriteIndex)">
+              @keydown="onAliasRowMenuKey($event, g, r.index, r.isWriteIndex)" data-row-nav @keydown.self="rowArrowNav">
               <span class="alv-arrow">
                 <span class="alv-arrow-dot"></span>
                 <span class="alv-arrow-line"></span>
@@ -291,6 +291,7 @@ import { usePopupList } from '../composables/usePopupList';
 import { askConfirm } from '../composables/confirm';
 import { friendlyEsError } from '../utils/esError';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 import SkeletonBox from '../components/SkeletonBox.vue';
 import EmptyState from '../components/EmptyState.vue';
 import StatusPill from '../components/StatusPill.vue'; /* ：状态徽标统一件 */

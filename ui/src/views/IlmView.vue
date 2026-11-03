@@ -79,7 +79,7 @@
               class="ilm-p" :class="{ on: selected?.name === p.name }" :data-hit-idx="i + 1"
               :aria-current="selected?.name === p.name || undefined"
               @click="pickPolicy(p)"
-              @contextmenu.prevent="openIlmMenu($event, p)" @keydown="onIlmMenuKey($event, p)"
+              @contextmenu.prevent="openIlmMenu($event, p)" @keydown="onIlmMenuKey($event, p)" data-row-nav @keydown.self="rowArrowNav"
               role="button" tabindex="0" @keydown.enter.prevent="pickPolicy(p)" @keydown.space.prevent="pickPolicy(p)">
             <div class="ilm-p-head">
               <b class="mono"><MarkText :text="p.name" :kw="filter" /></b>
@@ -273,6 +273,7 @@ import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue
 import { copyText } from '../utils/format';
 import { writeStoredRaw } from '../utils/safeJson';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 
 const store = useAppStore();
 /* 权限门禁——ILM 策略保存/删除与 move step=rank3 档

@@ -109,7 +109,7 @@
           :style="{ paddingLeft: (12 + t.depth * 18) + 'px' }"
           tabindex="0"
           @contextmenu.prevent="openTaskMenu($event, t)"
-          @keydown="onTaskMenuKey($event, t)"
+          @keydown="onTaskMenuKey($event, t)" data-row-nav @keydown.self="rowArrowNav"
         >
           <div class="tv-node-l">
             <span
@@ -214,6 +214,7 @@ import { friendlyEsError } from '../utils/esError';
 /* 错误面双参改用（code/endpoint 元信息行，DiagView 547 同范式） */
 import { errPreHtml, errMeta } from '../utils/errPre';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 /* actionShort/actionColor 迁 utils/esEnumZh 收口（taskActionZh 契约签名
  (a: string): string、色档拆 taskActionTone）——别名绑定供模板与既有调用点零改动消费 */
 import { taskActionZh as actionShort, taskActionTone as actionColor } from '../utils/esEnumZh';

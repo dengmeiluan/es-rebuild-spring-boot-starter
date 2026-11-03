@@ -75,7 +75,7 @@
         class="wt-card" :data-hit-idx="i + 1"
         tabindex="0"
         @contextmenu.prevent="openWatchMenu($event, w)"
-        @keydown="onWatchMenuKey($event, w)"
+        @keydown="onWatchMenuKey($event, w)" data-row-nav @keydown.self="rowArrowNav"
       >
         <div class="wt-card-l">
           <!-- G2-C5：长 watch id 省略 + title 全名可达（-->
@@ -151,6 +151,7 @@ import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue'; /* 
 import { useHitLocate } from '../composables/useHitNav';
 import { writeStoredRaw } from '../utils/safeJson';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 
 const store = useAppStore();
 const auth = useAuthStore();

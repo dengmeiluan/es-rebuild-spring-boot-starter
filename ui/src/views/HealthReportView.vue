@@ -153,7 +153,7 @@
         <div class="hr-checks">
           <div v-for="(c, i) in data.checks" :key="i" class="hr-check" :class="'lv-' + c.level"
             tabindex="0"
-            @contextmenu.prevent="openCheckMenu($event, c)" @keydown="onCheckMenuKey($event, c)">
+            @contextmenu.prevent="openCheckMenu($event, c)" @keydown="onCheckMenuKey($event, c)" data-row-nav @keydown.self="rowArrowNav">
             <span class="hr-lv"><Circle v-if="c.level==='info'" :size="8" fill="currentColor" /><AlertTriangle v-else-if="c.level==='warn'" :size="12" /><AlertOctagon v-else :size="13" /></span>
             <span class="hr-name">{{ c.name }}</span>
             <span class="hr-msg">{{ c.message }}</span>
@@ -281,6 +281,7 @@ import QueryResultTable from '../components/QueryResultTable.vue'; /* W5：双�
 import { metricTone } from '../utils/metricThresholds'; /* W-F：节点表行级水位档（hotCls 语义回收，阈值单一真源） */
 import { writeStoredRaw } from '../utils/safeJson';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 
 const store = useAppStore();
 const router = useRouter();

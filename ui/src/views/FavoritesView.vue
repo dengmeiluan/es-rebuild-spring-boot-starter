@@ -62,7 +62,7 @@
 
     <div v-else class="fv-list">
       <div v-for="(it, i) in filtered" :key="it.id" class="fv-card" :class="{ 'fv-sel': selected.has(it.id) }" :data-hit-idx="i + 1" tabindex="0"
-        @contextmenu.prevent="openFavMenu($event, it)" @keydown="onFavMenuKey($event, it)">
+        @contextmenu.prevent="openFavMenu($event, it)" @keydown="onFavMenuKey($event, it)" data-row-nav @keydown.self="rowArrowNav">
         <!-- 批量选择勾选框 -->
         <input type="checkbox" class="fv-chk" :checked="selected.has(it.id)"
           :aria-label="'选中收藏：' + it.title" @click.stop @change="toggleSel(it.id)" />
@@ -152,6 +152,7 @@ import HitNav from '../components/HitNav.vue';
 import { useHitLocate } from '../composables/useHitNav';
 import { writeStoredRaw, removeStoredRaw } from '../utils/safeJson';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 
 const store = useAppStore();
 const auth = useAuthStore();

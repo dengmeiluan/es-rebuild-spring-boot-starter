@@ -53,7 +53,7 @@
           :text="'无匹配任务（共 ' + totalTasks + ' 个，被当前过滤条件隐藏）'"
           action-text="清除过滤" @action="filter = ''" />
         <div v-for="root in filteredRoots" :key="root.taskId" class="tt-node" tabindex="0"
-          @contextmenu.prevent="openRowMenu($event, root)" @keydown="onRowMenuKey($event, root)">
+          @contextmenu.prevent="openRowMenu($event, root)" @keydown="onRowMenuKey($event, root)" data-row-nav @keydown.self="rowArrowNav">
           <TaskRow :n="root" :active-id="activeId" :sel="selected" :editable="canWrite" :kw="filter" @sel="toggleSel" @pick="pick" />
         </div>
         <!-- 任务行右键菜单（复制 taskId/复制信息/打开父动作页/取消——与详情栏动作同源）；
@@ -137,6 +137,7 @@ import { friendlyEsError } from '../utils/esError';
 import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面双参改用（code/endpoint 元信息行，BoostTuner 等 15 视图先例） */
 import { highlightJson } from '../utils/jsonc';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 
 const store = useAppStore();
 /* 权限门禁——取消任务=/cluster/tasks/cancel=重建专项档（rank3+，与 TasksView 同口径）；

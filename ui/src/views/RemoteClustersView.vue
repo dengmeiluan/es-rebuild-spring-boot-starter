@@ -48,7 +48,7 @@
 
     <div v-else class="rc-list">
       <div v-for="r in rows" :key="r.name" class="rc-card" :class="{ off: !r.connected }" tabindex="0"
-        @contextmenu.prevent="openRcMenu($event, r)" @keydown="onRcMenuKey($event, r)">
+        @contextmenu.prevent="openRcMenu($event, r)" @keydown="onRcMenuKey($event, r)" data-row-nav @keydown.self="rowArrowNav">
         <div class="rc-card-l">
           <div class="rc-card-tt">
             <Network :size="12" /> {{ r.name }}
@@ -105,6 +105,7 @@ import { highlightJson } from '../utils/jsonc';
 import { copyText } from '../utils/format';
 import { writeStoredRaw } from '../utils/safeJson';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 import { useAuthStore } from '../stores/auth'; /* DevTools 入口能力门（1124） */
 import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue'; /* 1145：远程集群卡右键 */
 

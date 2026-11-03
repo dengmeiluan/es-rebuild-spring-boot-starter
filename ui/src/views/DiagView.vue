@@ -112,7 +112,7 @@
           </div>
           <div v-if="pending.length" class="dg-pending">
             <div v-for="(p, i) in pending" :key="i" class="dg-pending-row" tabindex="0"
-                 @contextmenu.prevent="openPendingMenu($event, p)" @keydown="onPendingMenuKey($event, p)">
+                 @contextmenu.prevent="openPendingMenu($event, p)" @keydown="onPendingMenuKey($event, p)" data-row-nav @keydown.self="rowArrowNav">
               <span class="chip mono" :style="p.priority === 'URGENT' ? 'color:var(--err)' : p.priority === 'HIGH' ? 'color:var(--warn)' : ''">{{ p.priority || '-' }}</span>
               <span class="mono" style="flex:1;color:var(--tx1)">{{ p.source }}</span>
               <!-- +'ms' 裸拼退役 → queueMsText（semFormat duration，≥1000 转 s 档） -->
@@ -240,6 +240,7 @@ import { exportStamp, copyText, downloadText, csvCell } from '../utils/format';
  与 hlSafe 同仓同源）；hotThreadsHtml 私造 span 分档逻辑保留只换转义源 */
 import { escapeHtml } from '../utils/highlightSanitize';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 /* semFormat 语义格式化统一件（bytes/duration——fmtB 手写档与 +'ms' 裸拼退役） */
 import { semFormat } from '../composables/useSemFormat';
 

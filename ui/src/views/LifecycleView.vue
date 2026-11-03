@@ -133,7 +133,7 @@
  （delete 6 字符 mono ≈ 43px）更窄——条内亦收中文不溢出，title 恒双语「中文（english）」兜底 -->
       <div v-else-if="policies.length" class="lc-gantt">
         <div v-for="p in policies" :key="p.name" class="lc-gantt-row" tabindex="0"
-          @contextmenu.prevent="openLcMenu($event, p)" @keydown="onLcMenuKey($event, p)">
+          @contextmenu.prevent="openLcMenu($event, p)" @keydown="onLcMenuKey($event, p)" data-row-nav @keydown.self="rowArrowNav">
           <div class="lc-gantt-label" :title="p.name">{{ p.name }}</div>
           <div class="lc-gantt-track">
             <div v-for="ph in p.phases" :key="ph.name" class="lc-gantt-bar" :class="'ph-' + ph.name"
@@ -239,6 +239,7 @@ import { phaseZh, ILM_PHASE_ZH, ILM_ACTION_ZH } from '../utils/esEnumZh'; /* ：
 import { useDebounceFn } from '../composables/useDebounceFn'; /* ：划线注入防抖统一件 */
 import { removeStoredRaw } from '../utils/safeJson';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 
 const store = useAppStore();
 

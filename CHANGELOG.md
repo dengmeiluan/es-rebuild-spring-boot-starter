@@ -88,6 +88,9 @@ All notable changes to SearchDeck are documented here. The format follows
 - Match Matrix rows now merge a `文档…` host group into the QRT cell menu: copy the `_id`, copy the
   full matrix row (score plus clause hits), or open the document in Query X-ray. The focused-row
   Menu key opens the same menu.
+- Custom list and card rows now support arrow-key navigation: focus a row and use ↑/↓ to move
+  (Home/End jump to the first/last row). Inner inputs keep their native key handling, and the same
+  rows still open their menu with the Menu key or Shift+F10.
 
 ### Changed
 

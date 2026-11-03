@@ -22,7 +22,7 @@
 
     <div class="tg-grid">
       <div v-for="t in filtered" :key="t.id" class="tg-card" :class="{ open: expanded.has(t.id) }" tabindex="0"
-        @contextmenu.prevent="openTgMenu($event, t)" @keydown="onTgMenuKey($event, t)">
+        @contextmenu.prevent="openTgMenu($event, t)" @keydown="onTgMenuKey($event, t)" data-row-nav @keydown.self="rowArrowNav">
         <div class="tg-c-hd">
           <div class="tg-c-tt">
             <component :is="ICONS[t.icon] || Sparkles" :size="13" class="tg-c-ic" />
@@ -104,6 +104,7 @@ import EmptyState from '../components/EmptyState.vue';
 import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import { writeStoredRaw } from '../utils/safeJson';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 
 const router = useRouter();
 const store = useAppStore();

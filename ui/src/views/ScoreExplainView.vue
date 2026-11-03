@@ -73,7 +73,7 @@
                     hint="左侧写 query 后点「执行解剖」，每个命中会展开 tf/idf/boost/norm 完整打分树" />
         <template v-else>
         <div v-for="(h, i) in hits" :key="h._id" class="se-hit" :class="{ open: openIdx === i }" tabindex="0"
-             @contextmenu.prevent="openHitMenu($event, h)" @keydown="onHitMenuKey($event, h)">
+             @contextmenu.prevent="openHitMenu($event, h)" @keydown="onHitMenuKey($event, h)" data-row-nav @keydown.self="rowArrowNav">
           <div class="se-hit-hd" role="button" tabindex="0" :aria-expanded="openIdx === i" @click="openIdx = openIdx === i ? -1 : i" @keydown.enter.prevent="openIdx = openIdx === i ? -1 : i" @keydown.space.prevent="openIdx = openIdx === i ? -1 : i">
             <span class="se-rank">#{{ i + 1 }}</span>
             <span class="se-id" :title="h._id">{{ h._id }}</span>
@@ -144,6 +144,7 @@ import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-
 import JsonArea from '../components/JsonArea.vue';
 import { lintDsl } from '../utils/dslLint'; /* ：DSL 静态体检 */
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 import JsonTree from '../components/JsonTree.vue';
 import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 

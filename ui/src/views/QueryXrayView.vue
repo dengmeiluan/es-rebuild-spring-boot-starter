@@ -66,7 +66,7 @@
         <span v-if="vr.error" class="qx-verr" :title="vr.error">{{ friendlyEsError(vr.error) }}</span>
       </div>
       <div v-for="(ex, i) in vr?.explanations || []" :key="i" class="qx-card" tabindex="0"
-        @contextmenu.prevent="openExMenu($event, ex)" @keydown="onExMenuKey($event, ex)">
+        @contextmenu.prevent="openExMenu($event, ex)" @keydown="onExMenuKey($event, ex)" data-row-nav @keydown.self="rowArrowNav">
         <div class="qx-card-hd">
           <Regex :size="12" /> Lucene 实际执行（{{ ex.index }}）
           <button class="btn ghost xs qx-run" @click="copyText(ex.explanation).then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制解释全文' : '复制失败'))"><Copy :size="10" /> 复制</button>
@@ -202,6 +202,7 @@ import { matrixText } from '../utils/copyMatrix';
 import { errPreHtml, errMeta } from '../utils/errPre'; /* ：错误面板 pre v-html 内核；534 收口波：双参改用（errMeta 旁路） */
 import { friendlyEsError } from '../utils/esError'; /* ：错误标题行人话 */
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 /* 裸 sessionStorage 收发换 useLinkCarry 统一件（530 W-D 遗留清单合并，
  键与 payload 逐字保持：analyzer {index,text} / xray {index,id}） */
 import { useLinkCarry } from '../composables/useLinkCarry';

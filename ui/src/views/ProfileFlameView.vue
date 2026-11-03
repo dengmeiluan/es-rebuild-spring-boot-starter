@@ -65,7 +65,7 @@
         <div class="pf-flame">
           <div v-for="(n, i) in focused.nodes" :key="i" class="pf-flame-row" tabindex="0"
             :style="{ paddingLeft: n.depth * 16 + 'px' }"
-            @contextmenu.prevent="openFlameMenu($event, n, i)" @keydown="onFlameMenuKey($event, n, i)">
+            @contextmenu.prevent="openFlameMenu($event, n, i)" @keydown="onFlameMenuKey($event, n, i)" data-row-nav @keydown.self="rowArrowNav">
             <div class="pf-flame-bar" :style="{ width: (n.took / focused.took * 100).toFixed(1) + '%', background: heatColor(n.took) }"
               :title="`${n.type} · ${n.description || ''} · ${(n.took / 1_000_000).toFixed(2)}ms`">
               <span class="pf-flame-type">{{ n.type }}</span>
@@ -155,6 +155,7 @@ import { copyText } from '../utils/format';
 import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import { lintDsl } from '../utils/dslLint'; /* ：DSL 静态体检（RankDebugView 同款接线） */
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 import { useDebounceFn } from '../composables/useDebounceFn'; /* ：lint 划线防抖统一件 */
 
 const store = useAppStore();

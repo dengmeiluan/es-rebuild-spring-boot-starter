@@ -73,7 +73,7 @@
         hint="请到 Kibana 或调用 PUT /_slm/policy/{id} 创建备份策略"
       />
       <div v-for="p in policyRows" :key="p.id" class="slm-card" tabindex="0"
-        @contextmenu.prevent="openRowMenu($event, p)" @keydown="onSlmMenuKey($event, p)">
+        @contextmenu.prevent="openRowMenu($event, p)" @keydown="onSlmMenuKey($event, p)" data-row-nav @keydown.self="rowArrowNav">
         <div class="slm-card-l">
           <div class="slm-card-tt"><Calendar :size="12" /> {{ p.name || p.id }}</div>
           <div class="slm-card-sub">仓库 <b>{{ p.repository }}</b> · Cron <code>{{ p.schedule }}</code></div>
@@ -122,6 +122,7 @@ import { useAutoRefresh } from '../composables/useAutoRefresh'; /* ：自动刷�
 import { usePref } from '../composables/urlState';
 import { slmOpModeZh, slmOpModeTone } from '../utils/esEnumZh'; /* ：operation_mode 中文主显收口件 */
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
+import { rowArrowNav } from '../utils/rowNav';
 import AutoRefreshSelect from '../components/AutoRefreshSelect.vue';
 
 const store = useAppStore();
