@@ -647,6 +647,11 @@ pre.json-view { margin: 0; font: var(--fs-sm)/1.6 var(--mono); white-space: pre-
 /* ═══ 微交互 / 动效（互联网产品级质感） ═══ */
 .card { transition: border-color var(--tr), box-shadow var(--tr); }
 :focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; }
+/* Naive UI Select：键盘焦点落在内层 .n-base-selection-label（tabindex=0），库样式清掉 outline；
+   外框按 :has(:focus-visible) 兑付可见聚焦环（鼠标打开不亮环）。 */
+.n-base-selection:has(.n-base-selection-label:focus-visible) {
+  border-color: var(--ac-line); box-shadow: var(--focus-ring);
+}
 
 /* 读屏专用视觉隐藏（aria-live 播报区）——display:none 对辅助技术静默，
    必须保留可访问性树节点而视觉不可见 */
