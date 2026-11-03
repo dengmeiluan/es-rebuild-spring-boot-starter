@@ -197,6 +197,18 @@ function onTreeKey(e: KeyboardEvent) {
     tgl.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     return;
   }
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    const row = rowNow();
+    const exp = row?.getAttribute('aria-expanded');
+    if (!row || exp == null) return;
+    const wantOpen = e.key === 'ArrowRight';
+    if ((exp === 'true') === wantOpen) return;
+    const tgl = row.querySelector<HTMLElement>('.jarr');
+    if (!tgl) return;
+    e.preventDefault(); e.stopPropagation();
+    tgl.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    return;
+  }
   if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
   const rows = treeRows();
   if (!rows.length) return;

@@ -32,7 +32,7 @@
     <div class="md-grid">
       <div class="md-card">
         <div class="md-card-hd card-t">字段树</div>
-        <div class="md-tree">
+        <div class="md-tree" role="tree" aria-label="字段树">
           <MappingNode v-for="n in tree" :key="n.name" :node="n" :prefix="''" @pick="pickField" @ctx="openFieldMenu" />
           <!-- 加载中/失败/未加载三态分明；loading 位走 SkeletonBox 骨架（不复用空态文案/类名）。
  md-empty 裸 div 换 EmptyState compact 统一件（分支顺序与文案语义原样保留，
@@ -235,7 +235,7 @@ const MappingNode: any = defineComponent({
     const open = ref(true);
     /* 字段行键盘：菜单键/Shift+F10 开同一菜单，Enter/Space 等价点选，
        方向键在整棵字段树的可见行间移动（嵌套树按扁平 DOM 序）。 */
-    const onNodeKey = (e: KeyboardEvent, n: any, full: string) => {
+    const onNodeKey = (e: KeyboardEvent, n: any, full: string, hasChild: boolean) => {
       if (isMenuKey(e)) {
         e.preventDefault();
         const at = menuKeyAnchor(e);
@@ -245,6 +245,11 @@ const MappingNode: any = defineComponent({
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         emit('pick', { ...n, name: full });
+        return;
+      }
+      if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && hasChild) {
+        e.preventDefault(); e.stopPropagation();
+        open.value = e.key === 'ArrowRight';
         return;
       }
       if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
@@ -267,8 +272,10 @@ const MappingNode: any = defineComponent({
         /* 1344：字段行右键——字段**全路径**（含嵌套前缀）是这页最常被拿走的东西：
            贴进 DSL/查询、贴进 PUT mapping、发给同事。点选只喂「新建字段」表单，拿不到路径。 */
         h('div', { class: cls, onClick: () => emit('pick', { ...n, name: full }),
-          tabindex: '0', role: 'button', 'aria-label': '字段 ' + full,
-          onKeydown: (e: KeyboardEvent) => onNodeKey(e, n, full),
+          tabindex: '0', role: 'treeitem', 'aria-level': String(full.split('.').length),
+          ...(hasChild ? { 'aria-expanded': String(open.value) } : {}),
+          'aria-label': '字段 ' + full,
+          onKeydown: (e: KeyboardEvent) => onNodeKey(e, n, full, hasChild),
           onContextmenu: (e: any) => { e.preventDefault(); e.stopPropagation(); emit('ctx', { ev: e, node: { ...n, name: full } }); } }, [
           hasChild ? h('span', { class: 'md-caret', onClick: (e: any) => { e.stopPropagation(); open.value = !open.value; } },
             [h(open.value ? ChevronDown : ChevronRight, { size: 11 })]) : h('span', { class: 'md-caret-pl' }),
@@ -279,7 +286,7 @@ const MappingNode: any = defineComponent({
           n.analyzer ? h('span', { class: 'md-badge an' }, n.analyzer) : null,
         ]),
         hasChild && open.value
-          ? h('div', { class: 'md-children' }, n.children.map((c: any) =>
+          ? h('div', { class: 'md-children', role: 'group' }, n.children.map((c: any) =>
               h(MappingNode, { node: c, prefix: full, onPick: (v: any) => emit('pick', v), onCtx: (v: any) => emit('ctx', v) })))
           : null,
       ]);

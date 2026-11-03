@@ -165,7 +165,7 @@ function buildGroups(): { title: string; rows: HkRow[] }[] {
       { keys: ['菜单键'], desc: '列表/卡片行（任务/快照/别名/索引/体检/告警/策略/模板/校验/差分行/火焰图/查询记录/设置/mapping/explain/文档差异/构建器/DevTools/检索/沙盒/打分/X 光/失败样例/诊断待办/任务树/分词 token）：打开与右键相同的行菜单（Shift+F10 同效）' },
       { keys: ['↑', '↓'], desc: '自定义列表/卡片行：聚焦行内 ↑/↓ 移动焦点，Home/End 跳首末（行内输入控件与菜单内让路）', sep: '/' },
       { keys: ['方向键'], desc: '拓扑：节点名 ↑/↓ 切换（Home/End 首末）、Enter 打开节点诊断、菜单键开节点菜单；分片格 ←/→/↑/↓ 矩阵内移动（Enter 定位）', pageKeys: ['topology'] },
-      { keys: ['方向键'], desc: 'JSON 树 / Mapping 字段树：Tab 进树后 ↑/↓ 游走行，Home/End 首末，Enter 展开收起，菜单键开行菜单' },
+      { keys: ['方向键'], desc: 'JSON 树 / Mapping 字段树：Tab 进树后 ↑/↓ 游走行，Home/End 首末，←/→ 或 Enter 收起/展开，菜单键开行菜单' },
     ],
   },
   {

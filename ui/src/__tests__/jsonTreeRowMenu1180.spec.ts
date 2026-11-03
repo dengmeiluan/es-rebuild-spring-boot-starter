@@ -103,6 +103,14 @@ describe('1443 JSON 树键盘导航', () => {
     await tick();
     expect(child(), 'Enter 再展开').toBeTruthy();
     expect(pub.getAttribute('aria-expanded')).toBe('true');
+    pub.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+    await tick();
+    expect(child(), '← 收起').toBe(null);
+    expect(pub.getAttribute('aria-expanded')).toBe('false');
+    pub.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    await tick();
+    expect(child(), '→ 展开').toBeTruthy();
+    expect(pub.getAttribute('aria-expanded')).toBe('true');
   });
 });
 

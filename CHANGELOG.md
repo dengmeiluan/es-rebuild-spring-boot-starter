@@ -98,9 +98,9 @@ All notable changes to SearchDeck are documented here. The format follows
   use the Menu key / Shift+F10, to copy the node name or carrying info, or open its diagnostics
   (the unassigned bucket has no diagnostics action).
 - The JSON tree and Mapping Designer field tree are keyboard-operable: Tab enters the tree, ↑/↓
-  walk visible rows, Home/End jump to the first/last, Enter/Space expands or collapses a branch
-  (or picks the field), and the Menu key / Shift+F10 opens the focused row's menu. The JSON tree
-  also exposes `tree`/`treeitem` roles with `aria-expanded` and `aria-level`.
+  walk visible rows, Home/End jump to the first/last, ←/→ (or Enter/Space) expands or collapses a
+  branch, Enter/Space still picks the Mapping field, and the Menu key / Shift+F10 opens the focused
+  row's menu. Both trees expose `tree`/`treeitem` roles with `aria-expanded` and `aria-level`.
 
 ### Changed
 

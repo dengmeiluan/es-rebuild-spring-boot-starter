@@ -30,8 +30,14 @@ const src = readFileSync(join(__dirname, '../views/MappingDesignerView.vue'), 'u
 
 describe('1443 Mapping 字段树键盘', () => {
   it('字段行可聚焦，菜单键/Enter/Space/方向键接线', () => {
-    expect(src).toContain("tabindex: '0', role: 'button'");
-    expect(src).toContain('onKeydown: (e: KeyboardEvent) => onNodeKey(e, n, full)');
+    expect(src).toContain("tabindex: '0', role: 'treeitem'");
+    expect(src).toContain(`'aria-level': String(full.split('.').length)`);
+    expect(src).toContain(`'aria-expanded': String(open.value)`);
+    expect(src).toContain('role="tree" aria-label="字段树"');
+    expect(src).toContain("role: 'group'");
+    expect(src).toContain('onKeydown: (e: KeyboardEvent) => onNodeKey(e, n, full, hasChild)');
+    expect(src).toContain("e.key === 'ArrowRight' || e.key === 'ArrowLeft'");
+    expect(src).toContain("open.value = e.key === 'ArrowRight'");
     expect(src).toContain('const onNodeKey = (e: KeyboardEvent');
     expect(src).toContain('isMenuKey(e)');
     expect(src).toContain('menuKeyAnchor(e)');
