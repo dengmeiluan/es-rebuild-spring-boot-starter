@@ -65,6 +65,8 @@ describe('1443 JSON 树键盘导航', () => {
     const h = mountTree();
     const root = h.host.querySelector('.jtree') as HTMLElement;
     expect(root.tabIndex, '树根是唯一 Tab 停靠点').toBe(0);
+    expect(root.getAttribute('role')).toBe('tree');
+    expect(root.getAttribute('aria-label')).toContain('JSON');
     const rows = [...h.host.querySelectorAll<HTMLElement>('.jrow:not(.jmore)')];
     expect(rows.length).toBeGreaterThan(2);
     root.focus();
@@ -89,13 +91,17 @@ describe('1443 JSON 树键盘导航', () => {
     const pub = row(h, '_source.publisher');
     const child = () => h.host.querySelector('[data-jid="_source.publisher.org_name"]');
     expect(child(), '初始展开').toBeTruthy();
+    expect(pub.getAttribute('role')).toBe('treeitem');
+    expect(pub.getAttribute('aria-expanded')).toBe('true');
     pub.focus();
     pub.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     await tick();
     expect(child(), 'Enter 收起').toBe(null);
+    expect(pub.getAttribute('aria-expanded'), '收起后 aria-expanded=false').toBe('false');
     pub.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     await tick();
     expect(child(), 'Enter 再展开').toBeTruthy();
+    expect(pub.getAttribute('aria-expanded')).toBe('true');
   });
 });
 

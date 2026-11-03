@@ -1,5 +1,5 @@
 <template>
-  <div class="jtree mono" ref="rootEl" tabindex="0" @keydown="onTreeKey">
+  <div class="jtree mono" ref="rootEl" role="tree" aria-label="JSON 数据树" tabindex="0" @keydown="onTreeKey">
     <!-- -D2：输出区统一能力——一键复制 + 关键字高亮（命中时自动展开全部节点）。
  默认关：大量调用方是表格行内嵌入（每行一棵树），工具条只在大面板场景显式开启 -->
     <div v-if="tools" class="jt-tools">
@@ -236,7 +236,9 @@ const JNode: any = defineComponent({
             const isCollapsed = effKw.value ? false : (collapsed.value[key] ?? p.depth >= 2);
             const leaf = isObj ? null : leafText(v);
             return h('div', {
-              class: 'jrow', key, tabindex: '-1',
+              class: 'jrow', key, tabindex: '-1', role: 'treeitem',
+              'aria-level': String(p.depth + 1),
+              ...(isObj ? { 'aria-expanded': String(!isCollapsed) } : {}),
               /* 点分路径（先序 DFS 同序）：宿主层「渲染数据直达」委托按首段定位文档 */
               'data-jid': id,
               ref: (el: any) => { if (el) rowCtx.set(el as HTMLElement, { id, k, v }); },
