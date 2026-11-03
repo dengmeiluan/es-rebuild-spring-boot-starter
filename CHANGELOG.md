@@ -69,6 +69,8 @@ All notable changes to SearchDeck are documented here. The format follows
   thresholds.
 - The shared alt-view result cards (DSL/IndexHub json/tree/cards) now support right-click and
   keyboard ContextMenu/Shift+F10 to open the document or copy its _id/document JSON/_source.
+- DSL aggregation bucket rows now support right-click and keyboard ContextMenu/Shift+F10 to drill
+  down/exclude a bucket or copy its key/count.
 
 ### Changed
 

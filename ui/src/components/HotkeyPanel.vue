@@ -161,6 +161,7 @@ function buildGroups(): { title: string; rows: HkRow[] }[] {
       { keys: ['菜单键'], desc: '概览索引 / 健康 / 作业行：打开 / 复制右键菜单（Shift+F10 同效）', pageKeys: ['overview'] },
       { keys: ['菜单键'], desc: '监控屏节点卡 / 活动告警：诊断 / 定位 / 复制右键菜单（Shift+F10 同效）', pageKeys: ['live'] },
       { keys: ['菜单键'], desc: '结果卡片（alt 视图）：打开文档 / 复制 _id/JSON 右键菜单（Shift+F10 同效）' },
+      { keys: ['菜单键'], desc: 'DSL 聚合桶行：下钻 / 排除 / 复制桶键右键菜单（Shift+F10 同效）', pageKeys: ['search'] },
     ],
   },
   {

@@ -488,7 +488,7 @@
               <div class="dq-agg-t mono">{{ a.name }}</div>
               <div v-for="b in a.buckets" :key="String(b.key)" class="dq-agg-row dq-agg-drill" role="button" tabindex="0"
                 :title="'点击下钻「' + (b.key_as_string || b.key) + '」追加 term 过滤；Alt+点击=排除（must_not）'"
-                @click="drillAgg(a, b, $event.altKey)" @keydown.enter.prevent="drillAgg(a, b, false)" @keydown.space.prevent="drillAgg(a, b, false)">
+                @click="drillAgg(a, b, $event.altKey)" @contextmenu.prevent="openAggMenu($event, a, b)" @keydown="onAggKey($event, a, b)">
                 <span class="mono dq-agg-k" :title="String(b.key)">{{ b.key_as_string || b.key }}</span>
                 <div class="dq-agg-track"><i :style="{ width: (b.doc_count / maxOf(a) * 100) + '%' }"></i></div>
                 <span class="mono dq-agg-n">{{ fmtNum(b.doc_count) }}</span>
@@ -795,6 +795,8 @@
 
     <!-- 原始 IO 快查弹窗（IndexHub docs/query 同款——记录环取最近一次 /cluster/query） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
+    <CellContextMenu v-if="aggMenu" :x="aggMenu.x" :y="aggMenu.y" :title="aggMenuTitle"
+      :items="aggMenuItems" @close="aggMenu = null" />
   </div>
 </template>
 
@@ -807,9 +809,9 @@ import {
   FilePlus2, CopyPlus, Wand2, GitCompareArrows, ListTree, Clock, ExternalLink,
   ArrowLeftRight,
   AlertTriangle, FileSearch,
-  TerminalSquare, Terminal, PanelBottomClose, PanelBottomOpen, CircleAlert, ShieldCheck, SearchX, Ellipsis, MoreHorizontal, } from 'lucide-vue-next';
+  TerminalSquare, Terminal, PanelBottomClose, PanelBottomOpen, CircleAlert, ShieldCheck, SearchX, Ellipsis, MoreHorizontal, Copy, } from 'lucide-vue-next';
 import MonacoEditor from '../components/MonacoEditor.vue';
-import type { CcmItem } from '../components/CellContextMenu.vue';
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import ResultTable from '../components/ResultTable.vue';
 import JsonTree from '../components/JsonTree.vue';
 import AltHitsViews from '../components/AltHitsViews.vue'; /* ：alt 三视图体共享件（与 IH 同构体收口；IH 已于 改用接入） */
@@ -2213,6 +2215,48 @@ function drillAgg(a: TermsAgg, b: TermsAgg['buckets'][number], exclude: boolean)
   dsl.value = JSON.stringify(obj, null, 2);
   store.notify('info', (exclude ? '已排除 ' : '已下钻 ') + field + '=' + key + '（条件已追加进 DSL，编辑器内可撤销）');
   runQuery();
+}
+
+/* 聚合桶行右键/菜单键：下钻/排除 + 复制桶键与计数；Enter/Space 仍走原下钻。 */
+type AggBucket = TermsAgg['buckets'][number];
+const aggMenu = ref<{ x: number; y: number; a: TermsAgg; b: AggBucket } | null>(null);
+const aggMenuTitle = computed(() => {
+  const m = aggMenu.value;
+  if (!m) return '';
+  return `聚合桶 · ${m.b.key_as_string || m.b.key} · ${fmtNum(m.b.doc_count)} 条`;
+});
+const aggMenuItems = computed<CcmItem[]>(() => {
+  const m = aggMenu.value;
+  if (!m) return [];
+  const key = String(m.b.key_as_string ?? m.b.key);
+  return [
+    { key: 'agg-drill', label: `下钻「${key}」`, run: () => drillAgg(m.a, m.b, false) },
+    { key: 'agg-exclude', label: `排除「${key}」`, danger: true, run: () => drillAgg(m.a, m.b, true) },
+    {
+      key: 'agg-copy', label: '复制…', icon: Copy, sep: true, children: [
+        { key: 'agg-copy-key', label: '复制桶键', icon: Copy, run: () => copyAgg(key, '桶键') },
+        { key: 'agg-copy-count', label: '复制计数', icon: Copy, run: () => copyAgg(String(m.b.doc_count ?? ''), '计数') },
+      ],
+    },
+  ];
+});
+function copyAgg(text: string, label: string) {
+  void copyText(text).then(ok => store.notify(ok ? 'success' : 'error', ok ? `已复制${label}` : '复制失败'));
+}
+function openAggMenu(e: MouseEvent, a: TermsAgg, b: AggBucket) {
+  aggMenu.value = { x: e.clientX, y: e.clientY, a, b };
+}
+function onAggKey(e: KeyboardEvent, a: TermsAgg, b: AggBucket) {
+  if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
+    e.preventDefault();
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    aggMenu.value = { x: r.left + 12, y: r.bottom, a, b };
+    return;
+  }
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    drillAgg(a, b, false);
+  }
 }
 
 /* ═══ RT 行内标签下钻消费端（filter-hit）═══

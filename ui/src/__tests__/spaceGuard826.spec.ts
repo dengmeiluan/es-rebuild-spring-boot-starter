@@ -56,7 +56,6 @@ const SITES: Array<{ file: string; handler: string }> = [
   { file: '../views/AnalysisSettingsView.vue', handler: 'toggle(g.key, String(name))' },
   { file: '../views/BrowserView.vue', handler: 'goHub(value)' },
   { file: '../views/ConfigValidatorView.vue', handler: 'applyTemplate(t)' },
-  { file: '../views/DslQueryView.vue', handler: 'drillAgg(a, b, false)' },
   { file: '../views/FavoritesView.vue', handler: 'importInput?.click()' },
   { file: '../views/FavoritesView.vue', handler: 'prefsInput?.click()' },
   { file: '../views/IlmView.vue', handler: 'pickPolicy(p)' },
@@ -98,6 +97,12 @@ describe('spaceGuard826 全域守卫', () => {
   it('AltHitsViews 卡片（已含右键菜单）：Enter/Space 仍在 onCardKey 内成对', () => {
     const v = rd('../components/AltHitsViews.vue');
     expect(v).toMatch(/@keydown="onCardKey\(\$event, h\)"/);
+    expect(v).toMatch(/if \(e\.key === 'Enter' \|\| e\.key === ' '\)/);
+  });
+
+  it('DSL 聚合桶行（已含右键菜单）：Enter/Space 仍在 onAggKey 内成对', () => {
+    const v = rd('../views/DslQueryView.vue');
+    expect(v).toMatch(/@keydown="onAggKey\(\$event, a, b\)"/);
     expect(v).toMatch(/if \(e\.key === 'Enter' \|\| e\.key === ' '\)/);
   });
   function walk(dir: string): string[] {
