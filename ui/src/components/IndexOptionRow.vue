@@ -17,9 +17,9 @@
     <div v-if="aliases && aliases.length" class="ior-aliases">
       <span
         v-for="a in aliases" :key="a"
-        class="ior-chip" :title="'以别名查询：' + a" tabindex="0"
+        class="ior-chip" :title="'以别名查询：' + a" tabindex="0" role="button" :aria-label="'以别名查询：' + a"
         @mousedown.stop.prevent @click.stop="emit('select-alias', a)"
-        @keydown.enter.prevent="emit('select-alias', a)"
+        @keydown.enter.prevent="emit('select-alias', a)" @keydown.space.prevent="emit('select-alias', a)"
       >{{ a }}</span>
     </div>
   </div>

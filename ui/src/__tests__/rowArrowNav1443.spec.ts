@@ -78,6 +78,13 @@ describe('1443 行导航 helper', () => {
     expect(document.activeElement, '组头无同级行时保持焦点').toBe(hd);
   });
 
+  it('索引别名芯片：可聚焦按钮语义 + Enter/Space 双键', () => {
+    const s = src('components/IndexOptionRow.vue');
+    expect(s).toContain('tabindex="0" role="button"');
+    expect(s).toContain(`@keydown.enter.prevent="emit('select-alias', a)"`);
+    expect(s).toContain(`@keydown.space.prevent="emit('select-alias', a)"`);
+  });
+
   it('源码锁：核心自定义行都接同一行导航（data-row-nav + .self）', () => {
     const files = [
       'views/TasksView.vue', 'views/SnapshotsView.vue', 'views/HealthReportView.vue',
