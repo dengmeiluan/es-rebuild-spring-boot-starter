@@ -131,7 +131,11 @@ describe('1443 行级右键菜单键盘入口', () => {
     });
     const files = [...walk(join(root, 'views')), ...walk(join(root, 'components'))];
     expect(files.length, '目录枚举失效').toBeGreaterThan(100);
-    const withMenu = files.filter(f => readFileSync(f, 'utf-8').includes('@contextmenu'));
+    /* 同时扫模板 @contextmenu 与渲染函数 onContextmenu——只扫模板会漏掉字段树/JSON 树 */
+    const withMenu = files.filter(f => {
+      const s = readFileSync(f, 'utf-8');
+      return s.includes('@contextmenu') || s.includes('onContextmenu');
+    });
     expect(withMenu.length, '右键面数量太少（枚举/路径异常）').toBeGreaterThanOrEqual(60);
     const KERNEL = new Set(['components/CellContextMenu.vue']); /* 菜单内核本身不接菜单键 */
     const missing = withMenu

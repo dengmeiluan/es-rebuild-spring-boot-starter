@@ -94,6 +94,9 @@ All notable changes to SearchDeck are documented here. The format follows
   menu with the Menu key or Shift+F10.
 - Topology shard cells now navigate as a grid: ←/→ move within a row, ↑/↓ move by the matrix
   column count, and Home/End jump to the first/last shard; Enter still opens the shard.
+- The JSON tree and Mapping Designer field tree are keyboard-operable: Tab enters the tree, ↑/↓
+  walk visible rows, Home/End jump to the first/last, Enter/Space expands or collapses a branch
+  (or picks the field), and the Menu key / Shift+F10 opens the focused row's menu.
 
 ### Changed
 

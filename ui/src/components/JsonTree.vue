@@ -1,5 +1,5 @@
 <template>
-  <div class="jtree mono" ref="rootEl">
+  <div class="jtree mono" ref="rootEl" tabindex="0" @keydown="onTreeKey">
     <!-- -D2：输出区统一能力——一键复制 + 关键字高亮（命中时自动展开全部节点）。
  默认关：大量调用方是表格行内嵌入（每行一棵树），工具条只在大面板场景显式开启 -->
     <div v-if="tools" class="jt-tools">
@@ -23,6 +23,7 @@
 import { computed, defineComponent, h, ref, type PropType } from 'vue';
 import { Braces, ChevronRight, ClipboardList, Copy, Info, Type } from 'lucide-vue-next';
 import { copyText } from '../utils/format';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 import { useHitLocate } from '../composables/useHitNav';
 import { splitMark } from '../composables/useGridSearch';
 import HitNav from './HitNav.vue';
@@ -170,6 +171,42 @@ function leafText(v: any): { text: string; clipped: boolean } {
   return { text: t, clipped: false };
 }
 
+/* 行元素 → 菜单数据（键盘菜单键用；鼠标右键仍走行内闭包） */
+const rowCtx = new WeakMap<HTMLElement, { id: string; k: string; v: any }>();
+const treeRows = () => [...(rootEl.value?.querySelectorAll<HTMLElement>('.jrow:not(.jmore)') ?? [])];
+/* 树键盘：根一个 Tab 停靠点，↑/↓ 游走可见行、Home/End 首末；行内 Enter/Space 展开收起；
+   菜单键/Shift+F10 以行盒为锚开该行菜单。输入框与工具条内让路。 */
+function onTreeKey(e: KeyboardEvent) {
+  const t = e.target as HTMLElement | null;
+  if (t?.closest?.('input, textarea, .jt-tools')) return;
+  const rowNow = () => (document.activeElement as HTMLElement | null)?.closest?.('.jrow') as HTMLElement | null;
+  if (isMenuKey(e)) {
+    const row = rowNow();
+    const data = row ? rowCtx.get(row) : null;
+    if (!row || !data) return;
+    e.preventDefault(); e.stopPropagation();
+    const at = menuKeyAnchor({ currentTarget: row });
+    openRowCtx({ clientX: at.x, clientY: at.y, preventDefault() {}, stopPropagation() {} } as unknown as MouseEvent, data.id, data.k, data.v);
+    return;
+  }
+  if (e.key === 'Enter' || e.key === ' ') {
+    const row = rowNow();
+    const tgl = row?.querySelector<HTMLElement>('.jarr, .j-prev');
+    if (!tgl) return;
+    e.preventDefault(); e.stopPropagation();
+    tgl.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    return;
+  }
+  if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+  const rows = treeRows();
+  if (!rows.length) return;
+  const cur = rows.indexOf(document.activeElement as HTMLElement);
+  const next = e.key === 'Home' ? 0 : e.key === 'End' ? rows.length - 1
+    : cur < 0 ? 0 : Math.max(0, Math.min(rows.length - 1, cur + (e.key === 'ArrowDown' ? 1 : -1)));
+  e.preventDefault(); e.stopPropagation();
+  rows[next].focus();
+}
+
 /* 递归节点组件（自引用，显式 any 打破 TS 循环推断） */
 const JNode: any = defineComponent({
   name: 'JNode',
@@ -199,9 +236,10 @@ const JNode: any = defineComponent({
             const isCollapsed = effKw.value ? false : (collapsed.value[key] ?? p.depth >= 2);
             const leaf = isObj ? null : leafText(v);
             return h('div', {
-              class: 'jrow', key,
+              class: 'jrow', key, tabindex: '-1',
               /* 点分路径（先序 DFS 同序）：宿主层「渲染数据直达」委托按首段定位文档 */
               'data-jid': id,
+              ref: (el: any) => { if (el) rowCtx.set(el as HTMLElement, { id, k, v }); },
               onContextmenu: (ev: MouseEvent) => openRowCtx(ev, id, k, v),
               ...(hitIdx != null ? { 'data-hit-idx': String(hitIdx) } : {}),
             }, [
@@ -236,6 +274,8 @@ const JNode: any = defineComponent({
 
 <style scoped>
 .jtree { font-size: var(--fs-sm); line-height: 1.7; }
+.jtree:focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; border-radius: var(--r-xs); }
+:deep(.jrow:focus-visible) { outline: 1px solid var(--ac); outline-offset: -1px; background: var(--bg2); border-radius: 3px; }
 .jt-tools { display: flex; align-items: center; gap: var(--sp-1h); justify-content: flex-end; margin-bottom: var(--sp-1); }
 .jt-kw { width: 130px; font-size: var(--fs-xs); padding: var(--sp-0) var(--sp-2); background: var(--bg1); border: 1px solid var(--line); border-radius: var(--r-xs); color: var(--tx0); outline: none; font-family: inherit; }
 .jt-kw:focus { border-color: var(--ac); }

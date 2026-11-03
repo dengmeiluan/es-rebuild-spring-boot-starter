@@ -160,6 +160,7 @@ import EmptyState from '../components/EmptyState.vue'; /* ：md-empty 裸空态�
 import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue';
 import { highlightJson } from '../utils/jsonc';
 import { friendlyEsError } from '../utils/esError';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 
 const store = useAppStore();
 const auth = useAuthStore();
@@ -232,6 +233,31 @@ const MappingNode: any = defineComponent({
   emits: ['pick', 'ctx'],
   setup(props, { emit }) {
     const open = ref(true);
+    /* 字段行键盘：菜单键/Shift+F10 开同一菜单，Enter/Space 等价点选，
+       方向键在整棵字段树的可见行间移动（嵌套树按扁平 DOM 序）。 */
+    const onNodeKey = (e: KeyboardEvent, n: any, full: string) => {
+      if (isMenuKey(e)) {
+        e.preventDefault();
+        const at = menuKeyAnchor(e);
+        emit('ctx', { ev: { clientX: at.x, clientY: at.y } as MouseEvent, node: { ...n, name: full } });
+        return;
+      }
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        emit('pick', { ...n, name: full });
+        return;
+      }
+      if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+      const host = (e.currentTarget as HTMLElement).closest('.md-tree');
+      if (!host) return;
+      const rows = [...host.querySelectorAll<HTMLElement>('.md-node')];
+      const cur = rows.indexOf(e.currentTarget as HTMLElement);
+      if (cur < 0) return;
+      const next = e.key === 'Home' ? 0 : e.key === 'End' ? rows.length - 1
+        : Math.max(0, Math.min(rows.length - 1, cur + (e.key === 'ArrowDown' ? 1 : -1)));
+      e.preventDefault();
+      rows[next]?.focus();
+    };
     return () => {
       const n: any = props.node;
       const full = props.prefix ? props.prefix + '.' + n.name : n.name;
@@ -241,6 +267,8 @@ const MappingNode: any = defineComponent({
         /* 1344：字段行右键——字段**全路径**（含嵌套前缀）是这页最常被拿走的东西：
            贴进 DSL/查询、贴进 PUT mapping、发给同事。点选只喂「新建字段」表单，拿不到路径。 */
         h('div', { class: cls, onClick: () => emit('pick', { ...n, name: full }),
+          tabindex: '0', role: 'button', 'aria-label': '字段 ' + full,
+          onKeydown: (e: KeyboardEvent) => onNodeKey(e, n, full),
           onContextmenu: (e: any) => { e.preventDefault(); e.stopPropagation(); emit('ctx', { ev: e, node: { ...n, name: full } }); } }, [
           hasChild ? h('span', { class: 'md-caret', onClick: (e: any) => { e.stopPropagation(); open.value = !open.value; } },
             [h(open.value ? ChevronDown : ChevronRight, { size: 11 })]) : h('span', { class: 'md-caret-pl' }),
@@ -416,6 +444,7 @@ async function doAdd() {
 :deep(.md-branch) { margin: 1px 0; }
 :deep(.md-node) { display: flex; align-items: center; gap: var(--sp-2); padding: 3px var(--sp-2); border-radius: var(--r-xs); cursor: pointer; font-size: var(--fs-sm); font-family: var(--mono); }
 :deep(.md-node:hover) { background: var(--bg2); }
+:deep(.md-node:focus-visible) { outline: 2px solid var(--ac); outline-offset: -2px; }
 :deep(.md-caret), :deep(.md-caret-pl) { width: 14px; display: inline-flex; align-items: center; justify-content: center; }
 :deep(.md-nm) { color: var(--fg); }
 :deep(.md-tp) { color: var(--brand); font-size: var(--fs-xs); }

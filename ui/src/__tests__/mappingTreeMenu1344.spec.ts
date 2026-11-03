@@ -28,6 +28,19 @@ import { join } from 'node:path';
 
 const src = readFileSync(join(__dirname, '../views/MappingDesignerView.vue'), 'utf-8');
 
+describe('1443 Mapping 字段树键盘', () => {
+  it('字段行可聚焦，菜单键/Enter/Space/方向键接线', () => {
+    expect(src).toContain("tabindex: '0', role: 'button'");
+    expect(src).toContain('onKeydown: (e: KeyboardEvent) => onNodeKey(e, n, full)');
+    expect(src).toContain('const onNodeKey = (e: KeyboardEvent');
+    expect(src).toContain('isMenuKey(e)');
+    expect(src).toContain('menuKeyAnchor(e)');
+    expect(src).toContain("e.key === 'Enter' || e.key === ' '");
+    expect(src).toContain("querySelectorAll<HTMLElement>('.md-node')");
+    expect(src).toContain(':deep(.md-node:focus-visible)');
+  });
+});
+
 describe('1344 Mapping 字段树行右键', () => {
   it('节点挂 onContextmenu，且 preventDefault + stopPropagation', () => {
     const i = src.indexOf('onContextmenu:');

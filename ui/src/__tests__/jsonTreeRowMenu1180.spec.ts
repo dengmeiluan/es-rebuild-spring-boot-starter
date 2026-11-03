@@ -60,6 +60,45 @@ const clickLabel = (label: string) => {
   btn.click();
 };
 
+describe('1443 JSON 树键盘导航', () => {
+  it('根 Tab 停靠；↑/↓/Home/End 游走行；菜单键开当前行菜单；Enter 收起/展开', async () => {
+    const h = mountTree();
+    const root = h.host.querySelector('.jtree') as HTMLElement;
+    expect(root.tabIndex, '树根是唯一 Tab 停靠点').toBe(0);
+    const rows = [...h.host.querySelectorAll<HTMLElement>('.jrow:not(.jmore)')];
+    expect(rows.length).toBeGreaterThan(2);
+    root.focus();
+    root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(rows[0]);
+    rows[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(rows[1]);
+    rows[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(rows[rows.length - 1]);
+    rows[rows.length - 1].dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(rows[0]);
+
+    const leaf = row(h, '_source.title');
+    leaf.focus();
+    leaf.dispatchEvent(new KeyboardEvent('keydown', { key: 'ContextMenu', bubbles: true, cancelable: true }));
+    await tick();
+    expect(document.querySelector('.ccm'), '菜单键开菜单').toBeTruthy();
+    expect(document.querySelector('.ccm-hd')?.textContent || '').toContain('_source.title');
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await tick();
+
+    const pub = row(h, '_source.publisher');
+    const child = () => h.host.querySelector('[data-jid="_source.publisher.org_name"]');
+    expect(child(), '初始展开').toBeTruthy();
+    pub.focus();
+    pub.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await tick();
+    expect(child(), 'Enter 收起').toBe(null);
+    pub.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await tick();
+    expect(child(), 'Enter 再展开').toBeTruthy();
+  });
+});
+
 describe('1180 JSON 视图行级右键', () => {
   it('右键叶子行：标题是点分路径，一级只有两项 + 分组父行', async () => {
     const h = mountTree();
