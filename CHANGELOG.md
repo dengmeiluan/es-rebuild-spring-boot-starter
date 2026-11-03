@@ -51,6 +51,9 @@ All notable changes to SearchDeck are documented here. The format follows
 - The Security users table now merges a host `用户操作…` group into the QRT cell menu (copy
   username/role, delete). Delete stays behind `canWriteUsers` and the existing critical-confirm
   chain; QRT also opens the cell menu from a focused row via ContextMenu/Shift+F10.
+- RT (index workspace result table) now opens its cell menu from a focused row via
+  ContextMenu/Shift+F10; its window-level close guard now only reacts to Escape instead of any
+  keydown, which previously closed the menu in the same keystroke.
 
 ### Changed
 

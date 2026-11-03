@@ -19,8 +19,12 @@ describe('键盘闭环：输入焦点让路 + 跨层串扰隔离', () => {
   it('RT 网格键处理：编辑键/导航键在输入焦点下归还浏览器（Delete/Backspace 分支前有守卫）', () => {
     /* 六百一十二批同步更新：窗口 2000→2600——Esc 分支补输入态让路守卫（t0，searchable 接线
        后「过滤→全选→Esc 清词」动线下 Esc 冒泡 clearSel 静默清勾选的状态重置违例修复）
-       函数体增长把 Delete 分支推出旧窗口，扩窗保判别力（守卫先于 Delete 分支断言原样） */
-    const gridFn = rt.slice(rt.indexOf('function onGridKeydown'), rt.indexOf('function onGridKeydown') + 2600);
+       函数体增长把 Delete 分支推出旧窗口，扩窗保判别力（守卫先于 Delete 分支断言原样）。
+       1439c：ContextMenu 分支再次撑长函数体——改为按「下一个顶层 function」切片，
+       不再用固定字符窗口，避免每次加分支都要调窗。 */
+    const start = rt.indexOf('function onGridKeydown');
+    const end = rt.indexOf('\nfunction ', start + 10);
+    const gridFn = rt.slice(start, end > start ? end : undefined);
     const guardPos = gridFn.search(/tgt\.(tagName === 'INPUT'|tagName === 'TEXTAREA')/);
     const delPos = gridFn.indexOf("e.key === 'Delete'");
     expect(guardPos, '输入焦点守卫必须存在').toBeGreaterThan(-1);

@@ -1673,6 +1673,23 @@ function onGridKeydown(e: KeyboardEvent) {
  ↑↓/Home/End/Ctrl+C/F2 同样被网格语义截胡，输入框键盘闭环断裂 */
   const tgt = e.target as HTMLElement | null;
   if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT' || tgt.isContentEditable)) return;
+  /* 菜单键/Shift+F10：焦点行打开单元格菜单（与 QRT 对齐）——此前单元格右键
+     只有鼠标入口，键盘用户无法触达复制/DSL/行操作分组 */
+  if ((e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey))) {
+    const ri = focusIdx.value >= 0 ? focusIdx.value : (renderHits.value.length ? 0 : -1);
+    const h = ri >= 0 ? renderHits.value[ri] : undefined;
+    const col = visibleCols.value[0];
+    if (h && col) {
+      e.preventDefault();
+      const trs = [...(rootEl.value?.querySelectorAll('tbody tr') ?? [])]
+        .filter(el => !el.classList.contains('rt-expand')) as HTMLElement[];
+      const tr = trs[ri];
+      const td = tr?.querySelector('td[data-col]') as HTMLElement | null;
+      const r = (td ?? tr)?.getBoundingClientRect();
+      openCellMenuAt(r ? r.left + 8 : 0, r ? r.top + 8 : 0, h, col, ri);
+      return;
+    }
+  }
   /* 待提交一键提交（键盘路径）——表格聚焦且有 pending 时 Ctrl+S / Ctrl+Enter
  直提 commitPending（此前提交必须鼠标两击：点 chip 开气泡→点「提交全部」）。
  输入态让路守卫照抄上方既有短路（历史坑：查找框 Backspace 被网格语义截胡）——
@@ -2228,6 +2245,9 @@ const cellMenu = ref<{ x: number; y: number; hit: SearchHit; col: string; ri: nu
 function openCellMenu(e: MouseEvent, hit: SearchHit, col: string, ri: number) {
   cellMenu.value = { x: e.clientX, y: e.clientY, hit, col, ri };
 }
+function openCellMenuAt(x: number, y: number, hit: SearchHit, col: string, ri: number) {
+  cellMenu.value = { x, y, hit, col, ri };
+}
 /* 列头右键=列管理菜单（不用先瞄单元格；复用同一 CellContextMenu 实例） */
 const colMenu = ref<{ x: number; y: number; col: string } | null>(null);
 
@@ -2481,7 +2501,11 @@ function menuCopySelTerms() {
     store.notify(ok ? 'success' : 'error', ok ? `已复制 ${rows.length} 行 ${m.col} 的 terms 查询` : '复制失败'));
 }
 /* 全局点击/Esc 关闭（菜单挂 body，事件不冒泡到组件作用域） */
-function onGlobalClose(e: Event) { if (cellMenu.value) closeCellMenu(); }
+function onGlobalClose(e: Event) {
+  /* 只认 Esc 关闭；此前任意 keydown 都关——菜单键打开右键菜单会被同一拍立刻关掉 */
+  if (e.type === 'keydown' && (e as KeyboardEvent).key !== 'Escape') return;
+  if (cellMenu.value) closeCellMenu();
+}
 window.addEventListener('click', onGlobalClose);
 window.addEventListener('keydown', onGlobalClose);
 onBeforeUnmount(() => {

@@ -106,3 +106,18 @@ describe('RT 复制为 DSL（227 批）', () => {
     expect(document.body.querySelector('.ccm'), '动作后菜单应自动关闭').toBeFalsy();
   });
 });
+
+describe('1439c RT 单元格菜单键盘入口', () => {
+  it('ContextMenu 键：焦点行打开单元格菜单（与 QRT 对齐）', async () => {
+    await mountTbl({ hits: HITS, fieldTypes: { name: 'text', age: 'long' } });
+    const root = host.querySelector('.rt') as HTMLElement;
+    root.focus();
+    root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    await tick();
+    root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ContextMenu', bubbles: true, cancelable: true }));
+    await tick();
+    expect(document.querySelector('.ccm'), '菜单键必须开单元格菜单').toBeTruthy();
+    expect(await menuItem('复制值'), '一级高频项').toBeTruthy();
+    expect(document.querySelector('.ccm .ccm-it')?.textContent, '首项焦点').toContain('复制值');
+  });
+});
