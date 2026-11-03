@@ -67,6 +67,7 @@ describe('1443 JSON 树键盘导航', () => {
     expect(root.tabIndex, '树根是唯一 Tab 停靠点').toBe(0);
     expect(root.getAttribute('role')).toBe('tree');
     expect(root.getAttribute('aria-label')).toContain('JSON');
+    expect(root.querySelector('.jnode')?.getAttribute('role'), 'treeitem 容器为 group').toBe('group');
     const rows = [...h.host.querySelectorAll<HTMLElement>('.jrow:not(.jmore)')];
     expect(rows.length).toBeGreaterThan(2);
     root.focus();

@@ -225,7 +225,7 @@ const JNode: any = defineComponent({
         ? all.slice(0, props.maxChildren)
         : all;
       const overflow = all.length - capped.length;
-      return h('div', { class: 'jnode' },
+      return h('div', { class: 'jnode', role: 'group' },
         [
           ...capped.map(({ k, v }) => {
             const isObj = v != null && typeof v === 'object';
@@ -267,7 +267,7 @@ const JNode: any = defineComponent({
                 : null,
             ]);
           }),
-          ...(overflow > 0 ? [h('div', { class: 'jrow jmore' }, `… 共 ${all.length} 项（已截断显示前 ${capped.length} 项）`)] : []),
+          ...(overflow > 0 ? [h('div', { class: 'jrow jmore', role: 'none' }, `… 共 ${all.length} 项（已截断显示前 ${capped.length} 项）`)] : []),
         ]);
     };
   },
