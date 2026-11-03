@@ -285,7 +285,8 @@
         </template>
         <template #cell-源="{ row }">
           <span class="mono xm-src-cell" :title="rowJob(row)?.sourceIndex + ' ← ' + rowJob(row)?.remoteEndpoint + '（点击复制）'" style="cursor:pointer"
-            @click.stop="copyText(rowJob(row)?.sourceIndex + ' ← ' + rowJob(row)?.remoteEndpoint).then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制源信息' : '复制失败'))">{{ rowJob(row)?.sourceIndex }} ← {{ rowJob(row)?.remoteEndpoint }}</span>
+            role="button" tabindex="0" :aria-label="'复制源信息：' + (rowJob(row)?.sourceIndex || '')"
+            @click.stop="copySrc(row)" @keydown.enter.prevent="copySrc(row)" @keydown.space.prevent="copySrc(row)">{{ rowJob(row)?.sourceIndex }} ← {{ rowJob(row)?.remoteEndpoint }}</span>
         </template>
         <!-- 进度槽：进度条 + migrated/total meta + 观测行（耗时人话化 / sliceMigrated Σ
  速率 docs/s / 失败切片红 chip）——旧 JSON 无新字段时全部静默降级不显（null 安全） -->
@@ -1115,6 +1116,10 @@ async function goVerify(j: any) {
  菜单入口改行尾菜单钮（左键/右键皆开）；「展开详情」条目退役——行展开由内核行尾钮/
  焦点行 E 键承接（TableExpandRow，宿主不可程序化控制）；列管理白得内核 ColPicker ═══ */
 const jobMenu = ref<{ x: number; y: number; job: any } | null>(null);
+function copySrc(row: any) {
+  const j = rowJob(row);
+  void copyText(j?.sourceIndex + ' ← ' + j?.remoteEndpoint).then(ok => store.notify(ok ? 'success' : 'error', ok ? '已复制源信息' : '复制失败'));
+}
 function openJobMenu(e: MouseEvent, job: any) {
   /* 键盘 Enter 激活按钮走原生 click，坐标是 0,0——落锚回退到按钮盒 */
   const at = e.clientX || e.clientY ? { x: e.clientX, y: e.clientY } : menuKeyAnchor(e);
