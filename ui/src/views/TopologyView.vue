@@ -275,6 +275,15 @@ function onNodeKey(e: KeyboardEvent, g: any) {
     e.preventDefault();
     gotoNodeDiag(g);
   }
+  if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+  const names = [...document.querySelectorAll<SVGTextElement>('.tp-node-name')];
+  if (names.length < 2) return;
+  const cur = names.indexOf(e.currentTarget as SVGTextElement);
+  if (cur < 0) return;
+  const next = e.key === 'Home' ? 0 : e.key === 'End' ? names.length - 1
+    : Math.max(0, Math.min(names.length - 1, cur + (e.key === 'ArrowDown' ? 1 : -1)));
+  e.preventDefault(); e.stopPropagation();
+  names[next]?.focus();
 }
 const nodeMenuItems = computed<CcmItem[]>(() => {
   const g = nodeMenu.value?.g;
@@ -688,6 +697,7 @@ function cellBlur(s: Shard) {
 /* ：磁盘水位条（track 弱底；bar 前景 fill 由 metricColor 单源绑定，CSS 不设色） */
 .tp-disk-track { fill: var(--bg2); }
 .tp-disk-bar { transition: width var(--tr); }
+.tp-node-name:focus-visible { outline: none; text-decoration: underline; text-decoration-color: var(--ac); text-decoration-thickness: 2px; }
 .tp-cell { cursor: pointer; transition: opacity 120ms; }
 .tp-cell:hover { opacity: 1 !important; }
 /* （/）：键盘聚焦视觉档——g 聚焦时 rect 描边统一 --ac 焦点环

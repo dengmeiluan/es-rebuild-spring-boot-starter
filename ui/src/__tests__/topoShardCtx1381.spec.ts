@@ -62,11 +62,14 @@ describe('1443 拓扑节点区右键/键盘', () => {
     expect(src).toContain('<CellContextMenu v-if="nodeMenu"');
   });
 
-  it('节点名可聚焦：菜单键开菜单、Enter 打开节点诊断', () => {
+  it('节点名可聚焦：菜单键开菜单、Enter 打开节点诊断、↑/↓ 切换节点', () => {
     expect(src).toContain(`tabindex="0" role="button" :aria-label="'节点 ' + g.node" @keydown="onNodeKey($event, g)"`);
     expect(src).toContain('function onNodeKey');
     expect(src).toContain('isMenuKey(e)');
     expect(src).toContain("router.push({ path: '/diag', query: { node: g.node } })");
+    expect(src).toContain("querySelectorAll<SVGTextElement>('.tp-node-name')");
+    expect(src).toContain("e.key === 'ArrowDown' ? 1 : -1");
+    expect(src, '节点名焦点可见').toContain('.tp-node-name:focus-visible');
   });
 
   it('节点菜单：复制名/承载信息，未分配分组不给诊断入口', () => {
