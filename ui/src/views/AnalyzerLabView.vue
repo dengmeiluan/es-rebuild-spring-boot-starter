@@ -161,9 +161,9 @@
           <div v-else class="al-toks" :class="{ dense: alDense }" :style="{ maxHeight: alToksH + 'px' }">
             <!-- 1340：单个 token 右键——分词调试时最常干的事是「把这一个词拿走」
      （比对词表 / 贴进 term 查询 / 报给同事），此前只能整列导出 TSV 再手工挑。 -->
-            <span v-for="(t, ti) in l.tokens" :key="ti" class="al-tok" :class="tokTier(t.type)"
+            <span v-for="(t, ti) in l.tokens" :key="ti" class="al-tok" :class="tokTier(t.type)" tabindex="0"
                   :title="`pos=${t.position} · offsets=${t.start_offset}-${t.end_offset} · type=${t.type}`"
-                  @contextmenu.prevent.stop="openTokMenu($event, l, t)">
+                  @contextmenu.prevent.stop="openTokMenu($event, l, t)" @keydown="onTokMenuKey($event, l, t)">
               {{ t.token }}
             </span>
           </div>
@@ -206,6 +206,7 @@ import { copyText } from '../utils/format';
 import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import { BUILTIN_ANALYZERS, BUILTIN_TOKENIZERS, BUILTIN_CHAR_FILTERS, BUILTIN_TOKEN_FILTERS, ANALYZER_COMPONENT_ZH } from '../utils/dslCompletionContext'; /* ：analyzer 族四输入 datalist 候选源（共享表只读消费）；：自定义组合三件套分表同源；：组件名中文释义表（option title 单源） */
 import { friendlyEsError } from '../utils/esError';
+import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 import { useAppStore } from '../stores/app';
 import { useGatedBootRead } from '../composables/usePageIdentityGate';
 import { useIdxState, useUrlState, usePref } from '../composables/urlState';
@@ -237,6 +238,11 @@ async function copyLaneJson(l: Lane) {
 const tokMenu = ref<{ x: number; y: number; t: any } | null>(null);
 function openTokMenu(e: MouseEvent, _lane: any, t: any) {
   tokMenu.value = { x: e.clientX, y: e.clientY, t };
+}
+function onTokMenuKey(e: KeyboardEvent, _lane: any, t: any) {
+  if (!isMenuKey(e)) return;
+  e.preventDefault();
+  tokMenu.value = { ...menuKeyAnchor(e), t };
 }
 const tokMenuItems = computed<CcmItem[]>(() => {
   const m = tokMenu.value;

@@ -62,6 +62,7 @@ const ROWS: Array<[string, string]> = [
   ['views/SearchSandboxView.vue', '@keydown="onHitMenuKey($event, h)"'],
   ['views/TaskTreeView.vue', '@keydown="onRowMenuKey($event, root)"'],
   ['components/TableShell.vue', '@keydown.self="onBarKey"'],
+  ['views/AnalyzerLabView.vue', '@keydown="onTokMenuKey($event, l, t)"'],
 ];
 
 describe('1443 行级右键菜单键盘入口', () => {
@@ -88,7 +89,7 @@ describe('1443 行级右键菜单键盘入口', () => {
       expect(s, `${file} 未接入 menuKeyAnchor`).toContain('menuKeyAnchor');
       seen.add(file);
     }
-    expect(seen.size).toBe(45);
+    expect(seen.size).toBe(46);
   });
 
   it('TemplatesView 不再使用匹配不到 ContextMenu 的 @keydown.menu 修饰符', () => {
@@ -122,7 +123,7 @@ describe('1443 行级右键菜单键盘入口', () => {
 
   it('快捷键速查面板登记了列表/卡片行入口', () => {
     const hk = src('components/HotkeyPanel.vue');
-    expect(hk).toContain('列表/卡片行（任务/快照/别名/索引/体检/告警/策略/模板/校验/差分行/火焰图/查询记录/设置/mapping/explain/文档差异/构建器/DevTools/检索/沙盒/打分/X 光/失败样例/诊断待办/任务树）');
+    expect(hk).toContain('列表/卡片行（任务/快照/别名/索引/体检/告警/策略/模板/校验/差分行/火焰图/查询记录/设置/mapping/explain/文档差异/构建器/DevTools/检索/沙盒/打分/X 光/失败样例/诊断待办/任务树/分词 token）');
     expect(hk).toContain('Shift+F10 同效');
   });
 });

@@ -162,7 +162,7 @@ function buildGroups(): { title: string; rows: HkRow[] }[] {
       { keys: ['菜单键'], desc: '监控屏节点卡 / 活动告警：诊断 / 定位 / 复制右键菜单（Shift+F10 同效）', pageKeys: ['live'] },
       { keys: ['菜单键'], desc: '结果卡片（alt 视图）：打开文档 / 复制 _id/JSON 右键菜单（Shift+F10 同效）' },
       { keys: ['菜单键'], desc: 'DSL 聚合桶行：下钻 / 排除 / 复制桶键右键菜单（Shift+F10 同效）', pageKeys: ['search'] },
-      { keys: ['菜单键'], desc: '列表/卡片行（任务/快照/别名/索引/体检/告警/策略/模板/校验/差分行/火焰图/查询记录/设置/mapping/explain/文档差异/构建器/DevTools/检索/沙盒/打分/X 光/失败样例/诊断待办/任务树）：打开与右键相同的行菜单（Shift+F10 同效）' },
+      { keys: ['菜单键'], desc: '列表/卡片行（任务/快照/别名/索引/体检/告警/策略/模板/校验/差分行/火焰图/查询记录/设置/mapping/explain/文档差异/构建器/DevTools/检索/沙盒/打分/X 光/失败样例/诊断待办/任务树/分词 token）：打开与右键相同的行菜单（Shift+F10 同效）' },
     ],
   },
   {
