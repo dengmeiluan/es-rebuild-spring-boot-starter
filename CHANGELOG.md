@@ -81,6 +81,9 @@ All notable changes to SearchDeck are documented here. The format follows
 
 - The audit observability test now drains its asynchronous tasks before returning, preventing a
   late WARN from leaking into the next test method and flaking CI.
+- Right-clicking a connection row inside the cluster switcher now opens its context menu instead
+  of closing the switcher popover first; the rows stop the mousedown bubble so the menu has a
+  live anchor.
 
 ## [2.0.0] — 2026-11-02
 

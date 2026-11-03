@@ -11,13 +11,13 @@
     </template>
     <div class="cs-menu">
       <!-- .2：纯管理平台形态藏掉宿主项——数据面只认自定义连接档案；：切换项键盘可达（role/tabindex/Enter， Overview 同口径） -->
-      <div v-if="store.hostVisible && hostAllowed" class="cs-item" :class="{ on: !store.isRemote }" role="button" tabindex="0" aria-label="切换到宿主集群" @click="pickTarget('', '')" @contextmenu.prevent="openConnMenu($event, null)" @keydown="onConnKey($event, null)">
+      <div v-if="store.hostVisible && hostAllowed" class="cs-item" :class="{ on: !store.isRemote }" role="button" tabindex="0" aria-label="切换到宿主集群" @mousedown.stop @click="pickTarget('', '')" @contextmenu.prevent="openConnMenu($event, null)" @keydown="onConnKey($event, null)">
         <Server :size="12" />
         <span class="cs-item-name">宿主集群</span>
         <span v-if="store.clusterSelf" class="cs-item-sub mono">{{ store.clusterSelf }}</span>
         <Check v-if="!store.isRemote" :size="12" class="cs-check" />
       </div>
-      <div v-for="c in sortedConns" :key="c.id" class="cs-item" :class="{ on: store.target === c.id, stale: c.syncState === 'STALE' }" role="button" tabindex="0" :aria-label="'切换到 ' + c.name" @click="pickTarget(c.id, c.name)" @contextmenu.prevent="openConnMenu($event, c)" @keydown="onConnKey($event, c)">
+      <div v-for="c in sortedConns" :key="c.id" class="cs-item" :class="{ on: store.target === c.id, stale: c.syncState === 'STALE' }" role="button" tabindex="0" :aria-label="'切换到 ' + c.name" @mousedown.stop @click="pickTarget(c.id, c.name)" @contextmenu.prevent="openConnMenu($event, c)" @keydown="onConnKey($event, c)">
         <span class="cs-hdot" :class="hdotCls(c.health)" :title="hdotTip(c.health)"></span>
         <Globe :size="12" />
         <span class="cs-item-name">{{ c.name }}</span>

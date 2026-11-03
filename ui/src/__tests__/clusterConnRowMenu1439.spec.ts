@@ -13,6 +13,12 @@ describe('1439f 集群切换器连接行右键', () => {
     expect(cs).toContain('<CellContextMenu v-if="connMenu"');
   });
 
+  /* 右键在 n-popover 内先触发 mousedown——不吞会先关弹层致 contextmenu 无从落地 */
+  it('切换菜单行吞掉 mousedown 冒泡，右键不被 n-popover 抢先关闭', () => {
+    expect(cs).toMatch(/@mousedown\.stop @click="pickTarget\('', ''\)"/);
+    expect(cs).toMatch(/@mousedown\.stop @click="pickTarget\(c\.id, c\.name\)"/);
+  });
+
   it('动作：切换走 pickTarget 授权链，复制名称/ID/端点/环境', () => {
     expect(cs).toMatch(/run: \(\) => \{ void pickTarget\(c \? c\.id : '', c \? c\.name : ''\); \}/);
     expect(cs).toContain("label: '复制名称'");

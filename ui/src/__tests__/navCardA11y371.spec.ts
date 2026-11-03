@@ -22,8 +22,9 @@ describe('导航/切换卡键盘可达（371 批）', () => {
 
   it('ClusterSwitcher 三切换项 role+tabindex+Enter（373 起 Enter+Space 双键）', () => {
     /* 1439f：宿主/连接行改统一 onConnKey（Enter/Space 选择 + 菜单键），双键语义在 handler 内 */
-    expect(cs).toMatch(/<div v-if="store\.hostVisible && hostAllowed" class="cs-item"[^>]*role="button" tabindex="0" aria-label="切换到宿主集群" @click="pickTarget\('', ''\)" @contextmenu\.prevent="openConnMenu\(\$event, null\)" @keydown="onConnKey\(\$event, null\)"/);
-    expect(cs).toMatch(/<div v-for="c in sortedConns"[^>]*role="button" tabindex="0" :aria-label="'切换到 ' \+ c\.name" @click="pickTarget\(c\.id, c\.name\)" @contextmenu\.prevent="openConnMenu\(\$event, c\)" @keydown="onConnKey\(\$event, c\)"/);
+    /* 1443：行内 @mousedown.stop 吞冒泡（右键不被 n-popover 抢先关），位于 @click 之前 */
+    expect(cs).toMatch(/<div v-if="store\.hostVisible && hostAllowed" class="cs-item"[^>]*role="button" tabindex="0" aria-label="切换到宿主集群" @mousedown\.stop @click="pickTarget\('', ''\)" @contextmenu\.prevent="openConnMenu\(\$event, null\)" @keydown="onConnKey\(\$event, null\)"/);
+    expect(cs).toMatch(/<div v-for="c in sortedConns"[^>]*role="button" tabindex="0" :aria-label="'切换到 ' \+ c\.name" @mousedown\.stop @click="pickTarget\(c\.id, c\.name\)" @contextmenu\.prevent="openConnMenu\(\$event, c\)" @keydown="onConnKey\(\$event, c\)"/);
     expect(cs).toMatch(/if \(e\.key === 'Enter' \|\| e\.key === ' '\)/);
     expect(cs).toMatch(/<div v-if="canAdmin" class="cs-item manage" role="button" tabindex="0" aria-label="管理连接" @click="openManage" @keydown\.enter\.prevent="openManage" @keydown\.space\.prevent="openManage">/);
   });
