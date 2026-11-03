@@ -4,8 +4,8 @@
  * 统一判据落在 utils/menuKey（ContextMenu 键 / Shift+F10，锚点取行盒左下角）。
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { isMenuKey, menuKeyAnchor } from '../utils/menuKey';
 
 const src = (p: string) => readFileSync(join(__dirname, '..', p), 'utf-8');
@@ -119,6 +119,30 @@ describe('1443 行级右键菜单键盘入口', () => {
     ]) {
       expect(src(file), `${file} 行不可聚焦`).toContain('tabindex="0"');
     }
+  });
+
+  /* 契约（docs/design.md）：新增右键面必须同时补键盘入口。
+     本普查按目录枚举而非手抄清单——新增组件漏补时在这里红，而不是等用户发现。 */
+  it('普查：每个挂 @contextmenu 的视图/组件都带键盘入口', () => {
+    const root = join(__dirname, '..');
+    const walk = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap(d => {
+      const p = join(dir, d.name);
+      return d.isDirectory() ? walk(p) : (d.name.endsWith('.vue') ? [p] : []);
+    });
+    const files = [...walk(join(root, 'views')), ...walk(join(root, 'components'))];
+    expect(files.length, '目录枚举失效').toBeGreaterThan(100);
+    const withMenu = files.filter(f => readFileSync(f, 'utf-8').includes('@contextmenu'));
+    expect(withMenu.length, '右键面数量太少（枚举/路径异常）').toBeGreaterThanOrEqual(60);
+    const KERNEL = new Set(['components/CellContextMenu.vue']); /* 菜单内核本身不接菜单键 */
+    const missing = withMenu
+      .filter(f => {
+        const rel = relative(root, f).replace(/\\/g, '/');
+        if (KERNEL.has(rel)) return false;
+        const s = readFileSync(f, 'utf-8');
+        return !s.includes('isMenuKey') && !s.includes("ContextMenu'");
+      })
+      .map(f => relative(root, f).replace(/\\/g, '/'));
+    expect(missing, '右键面缺键盘入口').toEqual([]);
   });
 
   it('快捷键速查面板登记了列表/卡片行入口', () => {
