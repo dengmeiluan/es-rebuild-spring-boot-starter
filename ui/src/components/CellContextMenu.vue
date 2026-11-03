@@ -7,7 +7,8 @@
  渲染成父行（右箭头），悬停即开二级；二级同样做视口翻转。键盘：→/Enter 开二级，
  ←/Esc 先关二级再关整菜单（ARIA menu 惯例）。 -->
   <teleport to="body">
-    <div class="ccm-mask" role="presentation" @click="emit('close')" @contextmenu.prevent="emit('close')" @keydown.esc="emit('close')" tabindex="-1">
+    <!-- .self：菜单键打开后浏览器会向聚焦项补发原生 contextmenu，冒泡到遮罩会立刻自关 -->
+    <div class="ccm-mask" role="presentation" @click="emit('close')" @contextmenu.prevent.self="emit('close')" @keydown.esc="emit('close')" tabindex="-1">
       <div ref="menuEl" class="ccm" role="menu" :aria-label="title || '操作菜单'" :style="{ left: pos.x + 'px', top: pos.y + 'px' }"
         @click.stop @contextmenu.prevent @keydown.esc.stop="onEsc" @keydown="onMenuKey" tabindex="-1">
         <div v-if="title" class="ccm-hd mono">{{ title }}</div>

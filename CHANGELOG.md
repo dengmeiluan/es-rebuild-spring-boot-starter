@@ -93,6 +93,9 @@ All notable changes to SearchDeck are documented here. The format follows
 - Right-clicking a connection row inside the cluster switcher now opens its context menu instead
   of closing the switcher popover first; the rows stop the mousedown bubble so the menu has a
   live anchor.
+- Menus opened with the keyboard Menu key no longer close immediately in real browsers: Chrome
+  dispatches a follow-up native contextmenu at the newly focused item, which bubbled to the
+  backdrop and closed it. The backdrop now closes only on its own contextmenu.
 
 ## [2.0.0] — 2026-11-02
 
