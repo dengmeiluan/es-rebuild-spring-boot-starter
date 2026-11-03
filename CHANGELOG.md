@@ -4,7 +4,7 @@ All notable changes to SearchDeck are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [2.0.0] — 2026-11-03
 
 ### Added
 
@@ -102,33 +102,6 @@ All notable changes to SearchDeck are documented here. The format follows
   expands or collapses a branch, Enter/Space still picks the Mapping field, and the Menu key /
   Shift+F10 opens the focused row's menu. The JSON and Mapping trees expose `tree`/`treeitem`
   roles with `aria-expanded` and `aria-level`.
-
-### Changed
-
-- Contributor, PR, issue, security, and README entry points now link the community and
-  architecture documentation.
-
-### Fixed
-
-- Naive UI selects now show a visible focus ring when tabbed into: focus lands on the inner
-  `.n-base-selection-label`, whose library styles removed the outline, so the outer selection box
-  now renders the shared `--focus-ring` via `:has(:focus-visible)`.
-- Monaco editors now show a visible frame when keyboard focus enters the hidden `.inputarea`:
-  the editor root renders the accent outline only for `:focus-visible`, so mouse users see no
-  extra chrome.
-- The audit observability test now drains its asynchronous tasks before returning, preventing a
-  late WARN from leaking into the next test method and flaking CI.
-- Right-clicking a connection row inside the cluster switcher now opens its context menu instead
-  of closing the switcher popover first; the rows stop the mousedown bubble so the menu has a
-  live anchor.
-- Menus opened with the keyboard Menu key no longer close immediately in real browsers: Chrome
-  dispatches a follow-up native contextmenu at the newly focused item, which bubbled to the
-  backdrop and closed it. The backdrop now closes only on its own contextmenu.
-
-## [2.0.0] — 2026-11-02
-
-### Added
-
 - **Multi-module architecture**: `searchdeck-platform` (page contract, feature packs, branding,
   host SPI), `searchdeck-console` (engine + console + embedded UI), `searchdeck-server`
   (standalone deployment), and `@searchdeck/ui` (Vue 3 console source).
@@ -146,6 +119,8 @@ All notable changes to SearchDeck are documented here. The format follows
 
 ### Changed
 
+- Contributor, PR, issue, security, and README entry points now link the community and
+  architecture documentation.
 - Renamed the project, repository, Maven coordinates, Java packages, SQLite defaults, runtime
   storage keys, and default credentials to the SearchDeck identity.
 - Replaced the single static entry with `/searchdeck.html` → `/searchdeck/index.html`; removed
@@ -154,6 +129,23 @@ All notable changes to SearchDeck are documented here. The format follows
   JavaScript twins in favor of TypeScript sources.
 - Consolidated rebuild, migration, mapping, observability, and security pages under one console
   with a shared table kernel, command palette, and keyboard model.
+
+### Fixed
+
+- Naive UI selects now show a visible focus ring when tabbed into: focus lands on the inner
+  `.n-base-selection-label`, whose library styles removed the outline, so the outer selection box
+  now renders the shared `--focus-ring` via `:has(:focus-visible)`.
+- Monaco editors now show a visible frame when keyboard focus enters the hidden `.inputarea`:
+  the editor root renders the accent outline only for `:focus-visible`, so mouse users see no
+  extra chrome.
+- The audit observability test now drains its asynchronous tasks before returning, preventing a
+  late WARN from leaking into the next test method and flaking CI.
+- Right-clicking a connection row inside the cluster switcher now opens its context menu instead
+  of closing the switcher popover first; the rows stop the mousedown bubble so the menu has a
+  live anchor.
+- Menus opened with the keyboard Menu key no longer close immediately in real browsers: Chrome
+  dispatches a follow-up native contextmenu at the newly focused item, which bubbled to the
+  backdrop and closed it. The backdrop now closes only on its own contextmenu.
 
 ### Removed
 
