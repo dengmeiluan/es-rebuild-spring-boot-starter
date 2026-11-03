@@ -89,8 +89,9 @@ All notable changes to SearchDeck are documented here. The format follows
   full matrix row (score plus clause hits), or open the document in Query X-ray. The focused-row
   Menu key opens the same menu.
 - Custom list and card rows now support arrow-key navigation: focus a row and use ↑/↓ to move
-  (Home/End jump to the first/last row). Inner inputs keep their native key handling, and the same
-  rows still open their menu with the Menu key or Shift+F10.
+  between sibling rows (Home/End jump to the first/last). Inner inputs keep their native key
+  handling, nested lists do not mix into the same sequence, and the same rows still open their
+  menu with the Menu key or Shift+F10.
 
 ### Changed
 

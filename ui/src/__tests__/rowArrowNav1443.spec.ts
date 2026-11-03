@@ -60,6 +60,24 @@ describe('1443 行导航 helper', () => {
     orphanHost.remove();
   });
 
+  it('嵌套行不混入：组头 ↓ 不跳进组内嵌套行', () => {
+    const group = document.createElement('div');
+    group.className = 'g';
+    const hd = document.createElement('div');
+    hd.setAttribute('data-row-nav', '');
+    hd.tabIndex = 0;
+    const inner = document.createElement('div');
+    const row = document.createElement('div');
+    row.setAttribute('data-row-nav', '');
+    row.tabIndex = 0;
+    inner.appendChild(row);
+    group.append(hd, inner);
+    rowsHost.appendChild(group);
+    hd.focus();
+    key('ArrowDown', hd);
+    expect(document.activeElement, '组头无同级行时保持焦点').toBe(hd);
+  });
+
   it('源码锁：核心自定义行都接同一行导航（data-row-nav + .self）', () => {
     const files = [
       'views/TasksView.vue', 'views/SnapshotsView.vue', 'views/HealthReportView.vue',
