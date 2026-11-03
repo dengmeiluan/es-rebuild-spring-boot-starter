@@ -1,6 +1,6 @@
 <template>
   <div class="xt-node" :style="{ '--xt-depth': depth }">
-    <div class="xt-row" :class="kindClass" role="button" tabindex="0" :aria-expanded="open" @click="open = !open" @keydown.enter.prevent="open = !open" @keydown.space.prevent="open = !open" @keydown="onCtxKey($event)"
+    <div class="xt-row" :class="kindClass" role="button" tabindex="0" :aria-expanded="open" @click="open = !open" @keydown.enter.prevent="open = !open" @keydown.space.prevent="open = !open" @keydown="onRowKey($event)"
       @contextmenu.prevent.stop="openCtx($event)">
       <ChevronRight v-if="hasKids" :size="10" class="xt-caret" :class="{ open }" />
       <span v-else class="xt-caret-ph" />
@@ -93,6 +93,31 @@ function onCtxKey(e: KeyboardEvent) {
   e.preventDefault();
   const at = menuKeyAnchor(e);
   openCtx({ clientX: at.x, clientY: at.y });
+}
+/* 解释树键盘：菜单键开菜单；↑/↓/Home/End 在整棵可见行间移动；←/→ 收起/展开。 */
+function onRowKey(e: KeyboardEvent) {
+  if (isMenuKey(e)) { onCtxKey(e); return; }
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    if (!hasKids.value) return;
+    const want = e.key === 'ArrowRight';
+    if (open.value === want) return;
+    e.preventDefault(); e.stopPropagation();
+    open.value = want;
+    return;
+  }
+  if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+  const rowEl = e.currentTarget as HTMLElement;
+  let root = rowEl.closest('.xt-node') as HTMLElement | null;
+  while (root?.parentElement?.closest('.xt-node')) root = root.parentElement.closest('.xt-node') as HTMLElement;
+  if (!root) return;
+  const rows = [...root.querySelectorAll<HTMLElement>('.xt-row')];
+  if (rows.length < 2) return;
+  const cur = rows.indexOf(rowEl);
+  if (cur < 0) return;
+  const next = e.key === 'Home' ? 0 : e.key === 'End' ? rows.length - 1
+    : Math.max(0, Math.min(rows.length - 1, cur + (e.key === 'ArrowDown' ? 1 : -1)));
+  e.preventDefault(); e.stopPropagation();
+  rows[next]?.focus();
 }
 async function copyNear(text: string, msg: string, e: { clientX: number; clientY: number }) {
   if (!text) return;

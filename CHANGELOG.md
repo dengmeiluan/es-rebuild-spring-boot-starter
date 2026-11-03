@@ -97,10 +97,11 @@ All notable changes to SearchDeck are documented here. The format follows
 - Topology node areas now have their own menu: right-click a node card, or focus the node name and
   use the Menu key / Shift+F10, to copy the node name or carrying info, or open its diagnostics
   (the unassigned bucket has no diagnostics action).
-- The JSON tree and Mapping Designer field tree are keyboard-operable: Tab enters the tree, ↑/↓
-  walk visible rows, Home/End jump to the first/last, ←/→ (or Enter/Space) expands or collapses a
-  branch, Enter/Space still picks the Mapping field, and the Menu key / Shift+F10 opens the focused
-  row's menu. Both trees expose `tree`/`treeitem` roles with `aria-expanded` and `aria-level`.
+- The JSON tree, Mapping Designer field tree, and scoring explanation tree are keyboard-operable:
+  Tab enters the tree, ↑/↓ walk visible rows, Home/End jump to the first/last, ←/→ (or Enter/Space)
+  expands or collapses a branch, Enter/Space still picks the Mapping field, and the Menu key /
+  Shift+F10 opens the focused row's menu. The JSON and Mapping trees expose `tree`/`treeitem`
+  roles with `aria-expanded` and `aria-level`.
 
 ### Changed
 

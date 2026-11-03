@@ -51,7 +51,7 @@
 | 结果表列头 | 右键 / ContextMenu / Shift+F10 | 排序、筛选、复制列、列宽、冻结、列管理 | 只读/本地偏好 |
 | 结果表单元格 | 右键 / ContextMenu / Shift+F10（表格聚焦行） | 复制值/行/列、单元格详情、行展开、筛选、生成 DSL、行详情 | 只读；生成查询只复制文本 |
 | 命中矩阵行（QRT 宿主组） | 右键 / ContextMenu / Shift+F10（表格聚焦行） | 文档…：复制 `_id`、复制整行（含子句命中）、在查询 X 光中分析 | 只读/导航；无写路径 |
-| JSON 树行 / Mapping 设计器字段行 | 右键 / ContextMenu / Shift+F10（Tab 进树后行可聚焦） | 复制值/节点 JSON、复制路径/字段全路径、复制键名等；Enter/Space 展开收起或选中字段 | 只读/本地；无写路径 |
+| JSON 树行 / Mapping 设计器字段行 / 评分解释树行 | 右键 / ContextMenu / Shift+F10（Tab 进树后行可聚焦） | 复制值/节点 JSON、复制路径/字段全路径、复制键名等；↑/↓/Home/End 行移动，←/→/Enter 收起展开（Mapping Enter/Space 选中字段） | 只读/本地；无写路径 |
 | 结果表行尾「更多」/行菜单 | 点击/右键 | 查看/展开/复制行 JSON、解释得分、编辑/删除文档 | 编辑仅 `editable && canWrite`；删除仅 `canOps`；受 env 页面模板封顶 |
 | Lucene/沙盒命中行 | 右键 / ContextMenu / Shift+F10（行可聚焦） | 复制 `_id`/文档/转 DSL | 只读 |
 | 查询历史行 | 右键 / ContextMenu / Shift+F10（行可聚焦） | 回放、收藏、复制、删除本地历史 | 本地状态；不触发服务端写 |
