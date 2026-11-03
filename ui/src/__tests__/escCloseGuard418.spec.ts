@@ -35,9 +35,11 @@ describe('Esc 收起路径守卫（418 批）', () => {
 
   it('CellContextMenu：Esc 关闭（417 capture 监听+卸载移除）', () => {
     const s = C('CellContextMenu.vue');
-    /* 1142：Esc 两段——capture 监听仍停播，处理改走 onEsc（先关二级再关整菜单） */
+    /* 1142：Esc 两段——capture 监听仍停播，处理改走 onEsc（先关二级再关整菜单）；
+       1439e：关二级同时把焦点归还父项（二级键盘闭环） */
     expect(s).toMatch(/function onKey\(e: KeyboardEvent\) \{\s*if \(e\.key === 'Escape'\) \{ e\.stopPropagation\(\); onEsc\(\); \}\s*\}/);
-    expect(s).toContain("function onEsc() { if (sub.value) { sub.value = null; return; } emit('close'); }");
+    expect(s).toMatch(/function onEsc\(\) \{\s*if \(sub\.value\) \{ closeSubAndFocusParent\(\); return; \}\s*emit\('close'\);\s*\}/);
+    expect(s).toMatch(/function closeSubAndFocusParent\(\)/);
     expect(s).toMatch(/document\.addEventListener\('keydown', onKey, true\);/);
     expect(s).toMatch(/onBeforeUnmount\(\(\) => document\.removeEventListener\('keydown', onKey, true\)\);/);
   });

@@ -56,6 +56,8 @@ All notable changes to SearchDeck are documented here. The format follows
   keydown, which previously closed the menu in the same keystroke.
 - Config Drift object rows now support right-click and keyboard ContextMenu/Shift+F10 to run the
   drift check, copy the indexKey/alias, or copy a deep link; all actions stay read-only.
+- Shared context menus now support full submenu keyboard navigation: →/Enter focuses the first
+  child, ↑/↓ cycles children, and ←/Esc returns focus to the parent group before closing.
 
 ### Changed
 

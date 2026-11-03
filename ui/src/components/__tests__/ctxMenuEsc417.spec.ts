@@ -100,4 +100,56 @@ describe('右键菜单 Esc 关闭（417 批）', () => {
     expect(closed, 'Esc 关闭').toHaveBeenCalledTimes(1);
     expect(host.querySelector('.ccm'), '关闭后菜单卸载').toBeNull();
   });
+
+  it('二级键盘：→/Enter 进首项，↑↓ 循环，←/Esc 回父项', async () => {
+    const closed = vi.fn();
+    const Host = defineComponent({
+      setup() {
+        const open = ref(true);
+        return () => open.value
+          ? h(CellContextMenu, {
+              x: 40, y: 40,
+              items: [{
+                key: 'more', label: '更多…',
+                children: [
+                  { key: 'a', label: '复制 A', run: () => {} },
+                  { key: 'b', label: '复制 B', run: () => {} },
+                ],
+              }],
+              onClose: () => { closed(); open.value = false; },
+            })
+          : null;
+      },
+    });
+    const app = createApp(Host);
+    apps.push(app);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    app.mount(host);
+    await nextTick();
+    await nextTick();
+    const parent = document.querySelector<HTMLElement>('.ccm-it[data-key="more"]')!;
+    parent.focus();
+    parent.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    await nextTick();
+    const subs = Array.from(document.querySelectorAll<HTMLElement>('.ccm-sub .ccm-it'));
+    expect(subs.length, '二级两项').toBe(2);
+    expect(document.activeElement, '→ 进二级首项').toBe(subs[0]);
+    subs[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await nextTick();
+    expect(document.activeElement, '二级 ↓ 移动').toBe(subs[1]);
+    subs[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    await nextTick();
+    expect(document.activeElement, '← 回父项').toBe(parent);
+    parent.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await nextTick();
+    expect(document.activeElement, 'Enter 进二级首项').toBe(subs[0]);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await nextTick();
+    expect(document.activeElement, 'Esc 先回父项').toBe(parent);
+    expect(closed, '一级菜单未关闭').not.toHaveBeenCalled();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await nextTick();
+    expect(closed, '再 Esc 关闭整菜单').toHaveBeenCalledTimes(1);
+  });
 });

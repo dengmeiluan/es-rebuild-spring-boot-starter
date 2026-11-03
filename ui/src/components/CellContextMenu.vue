@@ -15,7 +15,7 @@
           <div v-if="it.sep" class="ccm-sep" role="separator" />
           <button v-if="it.children && it.children.length" class="ccm-it ccm-parent" :class="{ danger: it.danger, on: sub?.key === it.key }"
             role="menuitem" aria-haspopup="menu" :aria-expanded="sub?.key === it.key" :data-key="it.key"
-            @click="toggleSub(it, $event)" @mouseenter="openSub(it, $event)">
+            @click="toggleSub(it, $event)" @mouseenter="openSub(it, $event)" @keydown="onParentKey($event, it)">
             <component :is="it.icon" :size="12" v-if="it.icon" />
             <span class="ccm-lb">{{ it.label }}</span>
             <ChevronRight :size="12" class="ccm-arrow" />
@@ -33,7 +33,7 @@
         :ref="el => { if (sub?.key === grp.key) subEl = el as HTMLElement }" class="ccm ccm-sub" role="menu"
         :aria-label="grp.label" :aria-hidden="sub?.key !== grp.key"
         :style="{ left: subPos.x + 'px', top: subPos.y + 'px' }"
-        @click.stop @contextmenu.prevent @keydown.esc.stop="onEsc">
+        @click.stop @contextmenu.prevent @keydown="onSubKey">
         <div class="ccm-hd mono">{{ grp.label }}</div>
         <template v-for="c in grp.children" :key="c.key">
           <div v-if="c.sep" class="ccm-sep" role="separator" />
@@ -172,13 +172,47 @@ function onMenuKey(e: KeyboardEvent) {
     const cur = (e.target as HTMLElement | null)?.closest?.(`.ccm-it[data-key]`) as HTMLElement | null;
     const key = cur?.getAttribute('data-key');
     const it = props.items.find(i => i.key === key);
-    if (it?.children?.length) { e.preventDefault(); setSub(it); }
+    if (it?.children?.length) { e.preventDefault(); openSubAndFocus(it); }
   } else if (e.key === 'ArrowLeft' && sub.value) {
     e.preventDefault();
-    closeSub();
+    closeSubAndFocusParent();
   }
 }
-function onEsc() { if (sub.value) { sub.value = null; return; } emit('close'); }
+/* 二级键盘闭环：→/Enter 进首项，↑↓ 循环，←/Esc 回父项 */
+function openSubAndFocus(it: CcmItem, e?: Event) {
+  setSub(it, e);
+  void nextTick(() => subEl.value?.querySelector<HTMLElement>('.ccm-it')?.focus());
+}
+function onParentKey(e: KeyboardEvent, it: CcmItem) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    openSubAndFocus(it);
+  }
+}
+function closeSubAndFocusParent() {
+  const key = sub.value?.key;
+  closeSub();
+  if (key) void nextTick(() => menuEl.value?.querySelector<HTMLElement>(`.ccm-it[data-key="${key}"]`)?.focus());
+}
+function onSubKey(e: KeyboardEvent) {
+  const btns = Array.from(subEl.value?.querySelectorAll<HTMLElement>('.ccm-it') ?? []);
+  if (!btns.length) return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    e.stopPropagation(); /* 二级在 panel 内，别让一级 onMenuKey 再抢焦点 */
+    const cur = btns.indexOf(document.activeElement as HTMLElement);
+    const delta = e.key === 'ArrowDown' ? 1 : -1;
+    btns[cur < 0 ? 0 : (cur + delta + btns.length) % btns.length].focus();
+  } else if (e.key === 'ArrowLeft') {
+    e.preventDefault();
+    e.stopPropagation();
+    closeSubAndFocusParent();
+  }
+}
+function onEsc() {
+  if (sub.value) { closeSubAndFocusParent(); return; }
+  emit('close');
+}
 
 /* Esc 关闭（ARIA 菜单惯例）——此前只能点遮罩/执行动作收起；
  capture 阶段先于 Monaco 等内部消费者，stopPropagation 防泄漏；
