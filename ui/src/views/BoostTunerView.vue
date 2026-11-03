@@ -44,7 +44,9 @@
           <SearchFilterBar v-if="fields.length" v-model="fieldKw" class="bt-fkw-wrap" input-class="bt-fkw" placeholder="过滤字段名…" />
           <!-- 真空态合并 EmptyState compact（文案逐字保留，pane 窄栏走 compact） -->
           <EmptyState v-if="!fields.length" compact :icon="Plus" text="点「加字段」，输入参与打分的字段名" />
-          <div v-for="x in shownFields" :key="x.i" class="bt-field">
+          <div v-for="x in shownFields" :key="x.i" class="bt-field"
+               @contextmenu.prevent="openRowMenu($event, x)"
+               @keydown="onRowKey($event, x)">
             <!-- 行级停用位（checkbox；draft 旧形状无 disabled 字段按启用处理零迁移，
  builtQuery 同步滤除停用行） -->
             <input type="checkbox" class="bt-fen" :checked="x.f.disabled !== true"
@@ -165,13 +167,15 @@
 
     <!-- 原始 IO 弹窗（宿主受控开关；rec 取本页最近一条 /cluster/search-raw 记录） -->
     <RawIoModal v-model:show="rawIoShow" :rec="rawIoRec" />
+    <CellContextMenu v-if="rowMenu" :x="rowMenu.x" :y="rowMenu.y" :title="rowMenuTitle"
+      :items="rowMenuItems" @close="rowMenu = null" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
 import { SlidersHorizontal, Search, Plus, X, Anchor, RefreshCw, Download, FileJson,
-  ArrowUp, ArrowDown, TriangleAlert, AlertCircle, Terminal, Send, Loader2 } from 'lucide-vue-next';
+  ArrowUp, ArrowDown, TriangleAlert, AlertCircle, Terminal, Send, Loader2, Copy, Power, Trash2 } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';
 import LabNav from '../components/LabNav.vue';import { api, ioRecorder, type RawIoRec } from '../api';
@@ -193,6 +197,7 @@ import { useIndexFields } from '../composables/useIndexFields';
 import EmptyState from '../components/EmptyState.vue';
 import SkeletonBox from '../components/SkeletonBox.vue';
 import QueryResultTable from '../components/QueryResultTable.vue'; /* ：排名表换壳 */
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import { copyText } from '../utils/format';
 import { friendlyEsError } from '../utils/esError'; /* ：runErr 人话化 */
 import { highlightDslJson } from '../utils/jsonc'; /* ：DSL 语义键 j-clause 着色（highlightJson 语法遍同内核） */
@@ -325,6 +330,54 @@ function toggleAllFields() {
 
 function onTune() {
   if (live.value && canRun.value && baseline.value.length) run(false);
+}
+
+/* 调参字段行右键/菜单键：复制字段名、停用/启用、删除——只改本地调参草稿，
+   执行仍由 run() 走查询门；共享 CellContextMenu 统一层序与键盘焦点。 */
+type TuneField = { name: string; boost: number; disabled?: boolean };
+type TuneRow = { f: TuneField; i: number };
+const rowMenu = ref<{ x: number; y: number; f: TuneField; i: number } | null>(null);
+const rowMenuTitle = computed(() => {
+  const m = rowMenu.value;
+  if (!m) return '';
+  return `调参字段 · ${m.f.name || '未命名'} · ×${fmtBoost(m.f.boost)}${m.f.disabled === true ? ' · 已停用' : ''}`;
+});
+const rowMenuItems = computed<CcmItem[]>(() => {
+  const m = rowMenu.value;
+  if (!m) return [];
+  const items: CcmItem[] = [];
+  if (m.f.name) {
+    items.push({ key: 'bt-copy', label: '复制字段名', icon: Copy, run: () => copyFieldName(m.f.name) });
+  }
+  items.push({
+    key: 'bt-toggle',
+    label: m.f.disabled === true ? '启用此字段' : '停用此字段',
+    icon: Power,
+    run: () => { m.f.disabled = m.f.disabled !== true; onTune(); },
+  });
+  items.push({
+    key: 'bt-del',
+    label: '删除调参字段',
+    icon: Trash2,
+    danger: true,
+    sep: true,
+    run: () => { fields.value.splice(m.i, 1); onTune(); },
+  });
+  return items;
+});
+function copyFieldName(name: string) {
+  void copyText(name).then(ok => store.notify(ok ? 'success' : 'error',
+    ok ? '已复制字段名：' + name : '复制失败：浏览器拦截了剪贴板'));
+}
+function openRowMenu(e: MouseEvent, x: TuneRow) {
+  rowMenu.value = { x: e.clientX, y: e.clientY, f: x.f, i: x.i };
+}
+function onRowKey(e: KeyboardEvent, x: TuneRow) {
+  if (e.defaultPrevented) return; /* FieldPicker 候选菜单已消费 */
+  if (e.key !== 'ContextMenu' && !(e.key === 'F10' && e.shiftKey)) return;
+  e.preventDefault();
+  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  rowMenu.value = { x: r.left + 12, y: r.bottom, f: x.f, i: x.i };
 }
 
 const baseRankMap = computed(() => {

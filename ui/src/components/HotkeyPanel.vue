@@ -154,6 +154,8 @@ function buildGroups(): { title: string; rows: HkRow[] }[] {
       { keys: ['Esc'], desc: '退出结果区聚焦全屏（Lucene/PIT/模板/DSL/DevTools；Monaco 查找栏内先收查找）', pageKeys: ['search', 'devtools', 'templates'] },
       /* 右键菜单键盘入口（模式条/候选列表）——INTERACTION.md 要求新增键盘交互同步登记 */
       { keys: ['菜单键'], desc: '查询工作台：模式条 / 字段与值候选 / 当前索引 chip 开右键菜单（↑/↓ 选择，Shift+F10 同效）', pageKeys: ['search'] },
+      { keys: ['菜单键'], desc: 'Boost 调参字段行：复制 / 启停 / 删除右键菜单（Shift+F10 同效）', pageKeys: ['boost-tuner'] },
+      { keys: ['菜单键'], desc: '工作台配置行：显隐 / 列宽 / 排序右键菜单（Shift+F10 同效）', pageKeys: ['workspace'] },
     ],
   },
   {

@@ -16,8 +16,10 @@ describe('速查面板登记补全（455 批）', () => {
   });
 
   /* INTERACTION.md：新增键盘交互必须同步登记速查面板——右键菜单键盘入口两行 */
-  it('右键菜单键盘入口登记：模式条/候选列表/索引 chip 与 RT/QRT 列头', () => {
+  it('右键菜单键盘入口登记：模式条/候选列表/索引 chip、Boost 字段行、工作台配置行与 RT/QRT 列头', () => {
     expect(s).toMatch(/模式条 \/ 字段与值候选 \/ 当前索引 chip 开右键菜单（↑\/↓ 选择，Shift\+F10 同效）/);
+    expect(s).toMatch(/Boost 调参字段行：复制 \/ 启停 \/ 删除右键菜单（Shift\+F10 同效）/);
+    expect(s).toMatch(/工作台配置行：显隐 \/ 列宽 \/ 排序右键菜单（Shift\+F10 同效）/);
     expect(s).toMatch(/列头打开列管理菜单（Shift\+F10 同效）/);
   });
 });

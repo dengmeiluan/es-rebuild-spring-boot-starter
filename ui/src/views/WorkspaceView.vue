@@ -24,7 +24,9 @@
       <div class="ws-cfg-list">
         <div v-for="(w, i) in layout" :key="w.k" class="ws-cfg-row"
           @dragover.prevent
-          @drop="moveTo(i)">
+          @drop="moveTo(i)"
+          @contextmenu.prevent="openRowMenu($event, w, i)"
+          @keydown="onRowKey($event, w, i)">
           <!-- G44+：勾选/跨度即落盘（@change=persist，副标题持久化承诺兑现）
  + checkbox/select 补部件名 aria-label、grab 装饰字 aria-hidden。
  拖拽源只在 grab 柄：根 draggable 会劫持行内 checkbox/select 的原生手势 -->
@@ -136,6 +138,8 @@
                   text="当前无可见组件"
                   hint="点「编辑布局」勾选要显示的组件"
                   action-text="编辑布局" @action="showConfig = true" class="ws-empty" />
+      <CellContextMenu v-if="rowMenu" :x="rowMenu.x" :y="rowMenu.y" :title="rowMenuTitle"
+        :items="rowMenuItems" @close="rowMenu = null" />
     </div>
 </template>
 
@@ -144,11 +148,13 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import {
   LayoutDashboard, SlidersHorizontal, RotateCcw, RefreshCw, X, HeartPulse, Star,
   Zap, Rows3, Recycle, FileCode2, Wand2, FlaskConical, Database, Network, GitBranch, Layers,
+  Eye, EyeOff, ArrowUp, ArrowDown, Columns3,
 } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api } from '../api';
 import EmptyState from '../components/EmptyState.vue';
 import MetaStrip from '../components/MetaStrip.vue'; /* ：ws-kv meta 行统一件 */
+import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue';
 import { useAppStore } from '../stores/app';
 import { useGatedBootRead } from '../composables/usePageIdentityGate';
 import { } from '../composables/urlState';
@@ -227,13 +233,69 @@ function moveTo(i: number) {
   persist();
 }
 
+/* 配置行右键/菜单键：显隐、列宽、排序——只改本地布局并落盘，不触发服务端写。 */
+const rowMenu = ref<{ x: number; y: number; w: Layout; i: number } | null>(null);
+const rowMenuTitle = computed(() => {
+  const m = rowMenu.value;
+  if (!m) return '';
+  const name = widgetOf(m.w.k)?.name ?? m.w.k;
+  return `组件 · ${name} · ${m.w.span} 列${m.w.on ? '' : ' · 已隐藏'}`;
+});
+const rowMenuItems = computed<CcmItem[]>(() => {
+  const m = rowMenu.value;
+  if (!m) return [];
+  const sortChildren: CcmItem[] = [];
+  if (m.i > 0) {
+    sortChildren.push({ key: 'ws-up', label: '上移', icon: ArrowUp, run: () => moveRow(m.i, -1) });
+  }
+  if (m.i < layout.value.length - 1) {
+    sortChildren.push({ key: 'ws-down', label: '下移', icon: ArrowDown, run: () => moveRow(m.i, 1) });
+  }
+  return [
+    {
+      key: 'ws-toggle',
+      label: m.w.on ? '隐藏此组件' : '显示此组件',
+      icon: m.w.on ? EyeOff : Eye,
+      run: () => { m.w.on = !m.w.on; persist(); },
+    },
+    {
+      key: 'ws-span',
+      label: '列宽',
+      icon: Columns3,
+      children: [1, 2, 3].map(n => ({
+        key: 'ws-span-' + n,
+        label: n + ' 列' + (n === 3 ? '（整行）' : ''),
+        run: () => { m.w.span = n; persist(); },
+      })),
+    },
+    { key: 'ws-move', label: '排序', icon: ArrowUp, sep: true, children: sortChildren },
+  ];
+});
+function moveRow(i: number, delta: number) {
+  const j = i + delta;
+  if (j < 0 || j >= layout.value.length) return;
+  const [item] = layout.value.splice(i, 1);
+  layout.value.splice(j, 0, item);
+  persist();
+}
+function openRowMenu(e: MouseEvent, w: Layout, i: number) {
+  rowMenu.value = { x: e.clientX, y: e.clientY, w, i };
+}
+function onRowKey(e: KeyboardEvent, w: Layout, i: number) {
+  if (e.defaultPrevented) return;
+  if (e.key !== 'ContextMenu' && !(e.key === 'F10' && e.shiftKey)) return;
+  e.preventDefault();
+  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  rowMenu.value = { x: r.left + 12, y: r.bottom, w, i };
+}
+
 /* ：配置面板 Esc 收口（665 window 捕获级范式）—— 时点裁「非弹层
  569 边界外」裁决收口：面板是「编辑布局」钮触发的编辑态面，Esc 退出+焦点回触发钮
- 与 Kibana dashboard 编辑模式同语言；弹层让路守卫=.msk-box/.cf 在开时 Esc 归弹层单源不抢 */
+ 与 Kibana dashboard 编辑模式同语言；弹层让路守卫=.msk-box/.cf/.ccm 在开时 Esc 归弹层单源不抢 */
 const cfgBtnEl = ref<HTMLButtonElement | null>(null);
 function onCfgEsc(e: KeyboardEvent) {
   if (e.key !== 'Escape' || !showConfig.value) return;
-  if (document.querySelector('.msk-box, .cf')) return;
+  if (document.querySelector('.msk-box, .cf, .ccm')) return;
   e.stopPropagation();
   showConfig.value = false;
   cfgBtnEl.value?.focus();

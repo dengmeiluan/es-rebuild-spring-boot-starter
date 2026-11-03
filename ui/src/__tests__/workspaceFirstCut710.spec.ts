@@ -189,3 +189,51 @@ describe('G48：配置面板 Esc 收口（665 window 捕获级范式+弹层让�
     }
   });
 });
+
+describe('1439 配置行右键', () => {
+  it('右键/菜单键：隐藏、列宽、排序，均落盘（共享 CellContextMenu）', async () => {
+    await mountView();
+    await openCfg();
+    const row = host.querySelector<HTMLElement>('.ws-cfg-row')!;
+    const open = async () => {
+      row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 20, clientY: 20 }));
+      await flush();
+      const menu = document.body.querySelector<HTMLElement>('.ccm');
+      expect(menu, '右键菜单').toBeTruthy();
+      return menu!;
+    };
+    let menu = await open();
+    expect(menu.textContent).toContain('组件 · 集群体检 · 1 列');
+    expect(menu.textContent).toContain('隐藏此组件');
+    expect(menu.textContent).toContain('列宽');
+    expect(menu.textContent).toContain('排序');
+    (menu.querySelector('[data-key="ws-toggle"]') as HTMLElement).click();
+    await flush();
+    expect((host.querySelector('.ws-cfg-row input[type=checkbox]') as HTMLInputElement).checked).toBe(false);
+    expect(JSON.parse(localStorage.getItem(LS_KEY) || '[]')[0].on, '隐藏即落盘').toBe(false);
+
+    menu = await open();
+    (menu.querySelector('[data-key="ws-span"]') as HTMLElement).click();
+    await flush();
+    const span3 = menu.querySelector('[data-key="ws-span-3"]') as HTMLElement;
+    expect(span3, '列宽二级项').toBeTruthy();
+    span3.click();
+    await flush();
+    expect((host.querySelector('.ws-cfg-row select') as HTMLSelectElement).value).toBe('3');
+    expect(JSON.parse(localStorage.getItem(LS_KEY) || '[]')[0].span, '列宽即落盘').toBe(3);
+
+    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'ContextMenu', bubbles: true }));
+    await flush();
+    expect(document.body.querySelector('.ccm'), '菜单键开同一菜单').toBeTruthy();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await flush();
+    expect(document.body.querySelector('.ccm'), 'Esc 关闭').toBeNull();
+
+    menu = await open();
+    (menu.querySelector('[data-key="ws-move"]') as HTMLElement).click();
+    await flush();
+    (menu.querySelector('[data-key="ws-down"]') as HTMLElement).click();
+    await flush();
+    expect(JSON.parse(localStorage.getItem(LS_KEY) || '[]')[1].k, '下移即落盘').toBe('health');
+  });
+});

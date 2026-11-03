@@ -44,6 +44,10 @@ All notable changes to SearchDeck are documented here. The format follows
 - Context menus now use a dedicated top z-index tier (`--z-ctx-top`) above picker islands and
   fullscreen surfaces, fixing menus opened from field candidates being covered by the candidate
   popup in the real browser.
+- Boost Tuner field rows now support right-click and keyboard ContextMenu/Shift+F10 to copy the
+  field name, toggle disable/enable, or remove the field; only the local tuning draft changes.
+- Workspace config rows now support right-click and keyboard ContextMenu/Shift+F10 to show/hide a
+  widget, change its column span, or move it up/down; the layout persists locally.
 
 ### Changed
 

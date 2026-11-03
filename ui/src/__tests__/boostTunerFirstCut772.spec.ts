@@ -246,3 +246,45 @@ describe('772 G247 aria 补位（弱 P3·随批可裁·G192/G224/G235 族）', (
     app.unmount();
   });
 });
+
+describe('1439 调参字段行右键', () => {
+  it('右键复制/停用/删除；菜单键开同一菜单（共享 CellContextMenu）', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const { app, host } = await mountBt();
+    writeFields(host, [{ name: 'name', boost: 1 }]);
+    await settle();
+    const row = host.querySelector<HTMLElement>('.bt-field')!;
+    const open = async () => {
+      row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 20, clientY: 20 }));
+      await settle();
+      const menu = document.body.querySelector<HTMLElement>('.ccm');
+      expect(menu, '右键菜单').toBeTruthy();
+      return menu!;
+    };
+    let menu = await open();
+    expect(menu.textContent).toContain('调参字段 · name · ×1.0');
+    for (const label of ['复制字段名', '停用此字段', '删除调参字段']) {
+      expect(menu.textContent, `菜单项 ${label}`).toContain(label);
+    }
+    (menu.querySelector('[data-key="bt-copy"]') as HTMLElement).click();
+    await settle();
+    expect(writeText).toHaveBeenCalledWith('name');
+
+    menu = await open();
+    (menu.querySelector('[data-key="bt-toggle"]') as HTMLElement).click();
+    await settle();
+    expect(host.querySelector<HTMLInputElement>('.bt-fen')!.checked, '停用后 checkbox 未勾选').toBe(false);
+
+    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'ContextMenu', bubbles: true }));
+    await settle();
+    const kbMenu = document.body.querySelector<HTMLElement>('.ccm');
+    expect(kbMenu, '菜单键必须开同一菜单').toBeTruthy();
+    expect(kbMenu!.textContent, '已停用后菜单显示启用动作').toContain('启用此字段');
+    (kbMenu!.querySelector('[data-key="bt-del"]') as HTMLElement).click();
+    await settle();
+    expect(host.querySelectorAll('.bt-field').length, '删除后字段行移除').toBe(0);
+    delete (navigator as any).clipboard;
+    app.unmount();
+  });
+});
