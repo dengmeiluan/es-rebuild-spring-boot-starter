@@ -17,7 +17,7 @@
 
 ![ESQueryStudio — The Elasticsearch query workbench for Spring Boot.](docs/screenshots/esquerystudio-banner.svg)
 
-**[Five-minute integration](#-five-minute-integration)** · [中文 README](README.md) · [Query workbench](docs/query-workbench.md) · [Chrome extension](#-chrome-extension-the-query-workbench-front-end-direct) · [Feature packs](#-feature-packs) · [Host integration](docs/integration/README.md) · [Architecture](docs/architecture.md)
+**[Five-minute integration](#-five-minute-integration)** · [中文 README](README.md) · [Query workbench](docs/query-workbench.md) · [Chrome extension](#-chrome-extension-native-vue-console-one-source-two-modes) · [Feature packs](#-feature-packs) · [Host integration](docs/integration/README.md) · [Architecture](docs/architecture.md)
 
 ---
 

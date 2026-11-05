@@ -3,7 +3,8 @@ import { parseJsonSafe, writeStoredRaw, removeStoredRaw } from './utils/safeJson
 import { browserFetch, isBrowserMode } from './platform/browserApi';
 
 /* 纯前端 / 服务端双模式：页面与 api 方法不变，只切换最底层 transport。 */
-const doFetch: typeof fetch = isBrowserMode ? (browserFetch as unknown as typeof fetch) : fetch.bind(window);
+const doFetch: typeof fetch = ((input: RequestInfo | URL, init?: RequestInit) =>
+  isBrowserMode ? browserFetch(input, init) : fetch(input, init)) as typeof fetch;
 /* 宿主可能配了 servlet context-path（如 /quotehub）。
  控制台 2.0 静态入口挂在 {ctx}/esquerystudio/ 下（1.x 为 {ctx}/console/），路由是 hash 模式，
  pathname 不含页内路由，故截取入口目录之前的段即为 context-path（无 ctx 宿主得 ''，行为不变）。
@@ -13,7 +14,7 @@ export function deriveContextPath(pathname: string): string {
   const m = pathname.match(/^(.*?)\/(?:console|esquerystudio)\//);
   return m ? m[1] : '';
 }
-const CTX = (globalThis as any).__ESQUERYSTUDIO_CTX_OVERRIDE__ ?? deriveContextPath(window.location.pathname);
+const CTX = deriveContextPath(window.location.pathname);
 export const EP = `${CTX}/internal/es/index`;
 const XB = `${CTX}/internal/es/xmigrate`;
 

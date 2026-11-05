@@ -24,6 +24,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { isBrowserMode } from '../platform/browserApi';
+import { writeStoredRaw } from '../utils/safeJson';
 
 const show = ref(false);
 const url = ref('http://localhost:9200');
@@ -36,7 +37,7 @@ function connect() {
   if (!url.value) return;
   busy.value = true; err.value = '';
   try {
-    localStorage.setItem('esquerystudio.browser.profile', JSON.stringify({
+    writeStoredRaw(localStorage, 'esquerystudio.browser.profile', JSON.stringify({
       url: url.value.replace(/\/+$/, ''), username: username.value, password: password.value,
     }));
     location.reload();
@@ -52,14 +53,14 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.bc-mask { position: fixed; inset: 0; z-index: 12000; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.62); backdrop-filter: blur(6px); }
-.bc-card { width: 460px; max-width: 92vw; padding: 24px; border-radius: 14px; background: #111819; border: 1px solid rgba(200,240,235,.16); box-shadow: 0 24px 70px rgba(0,0,0,.5); }
-.bc-kicker { font-size: 10px; letter-spacing: 1.6px; color: #1fc8b4; }
-.bc-card h2 { margin: 6px 0 4px; font-size: 20px; color: #e2eeea; }
-.bc-sub { margin: 0 0 14px; font-size: 11px; line-height: 1.6; color: #6f8b83; }
-.bc-label { display: block; margin: 8px 0 4px; font-size: 11px; color: #a8beb8; }
+.bc-mask { position: fixed; inset: 0; z-index: calc(var(--z-fullscreen) + 2); display: flex; align-items: center; justify-content: center; background: var(--mask-heavy); backdrop-filter: blur(6px); }
+.bc-card { width: 460px; max-width: 92vw; padding: 24px; border-radius: var(--r-l); background: var(--bg1); border: 1px solid var(--line-strong); box-shadow: var(--shadow-pop); }
+.bc-kicker { font-size: var(--fs-2xs); letter-spacing: 1.6px; color: var(--ac); }
+.bc-card h2 { margin: 6px 0 4px; font-size: var(--fs-num); color: var(--tx0); }
+.bc-sub { margin: 0 0 14px; font-size: var(--fs-xs); line-height: 1.6; color: var(--tx2); }
+.bc-label { display: block; margin: 8px 0 4px; font-size: var(--fs-xs); color: var(--tx1); }
 .bc-ipt { width: 100%; }
 .bc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.bc-err { margin-top: 10px; color: #fecaca; font-size: 11px; }
+.bc-err { margin-top: 10px; color: var(--err); font-size: var(--fs-xs); }
 .bc-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 </style>

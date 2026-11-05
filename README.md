@@ -16,7 +16,7 @@
 
 ![ESQueryStudio — The Elasticsearch query workbench for Spring Boot.](docs/screenshots/esquerystudio-banner.svg)
 
-**[5 分钟接入](#-5-分钟接入)** · [English README](README_EN.md) · [查询工作台](docs/query-workbench.md) · [Chrome 扩展](#-chrome-扩展前端直连的查询工作台) · [功能包](#-功能包11-个模块按需上甲板) · [宿主集成](docs/integration/README.md) · [架构](docs/architecture.md)
+**[5 分钟接入](#-5-分钟接入)** · [English README](README_EN.md) · [查询工作台](docs/query-workbench.md) · [Chrome 扩展](#-chrome-扩展原生-vue-控制台双模式同源) · [功能包](#-功能包11-个模块按需上甲板) · [宿主集成](docs/integration/README.md) · [架构](docs/architecture.md)
 
 ---
 
