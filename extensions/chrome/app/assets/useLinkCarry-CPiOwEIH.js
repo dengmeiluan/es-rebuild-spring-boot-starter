@@ -1,1 +1,0 @@
-import{au as o,I as i}from"./index-abksdKHA.js";function a(t){const r="esquerystudio.link."+t;function n(e){i(sessionStorage,r,JSON.stringify(e))}function s(){try{const e=sessionStorage.getItem(r);return e==null?null:(o(sessionStorage,r),JSON.parse(e))}catch{return null}}return{send:n,receive:s}}export{a as u};

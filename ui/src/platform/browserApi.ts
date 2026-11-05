@@ -316,6 +316,32 @@ async function route(path: string, query: string, method: string, bodyText: stri
       username: p.username || '', hasPassword: !!p.password, authType: 'BASIC', env: 'BROWSER',
     }]);
   }
+  if (path === '/clusters/save') {
+    const url = String(body?.url || '').trim();
+    if (!/^https?:\/\//.test(url)) return fail(400, 'URL 格式应为 http://host:9200');
+    saveProfile({ url, username: body?.username || '', password: body?.password || '' });
+    const u = new URL(url);
+    return response({ id: 'browser', name: body?.name || u.hostname, scheme: u.protocol.replace(':', ''), host: u.hostname, port: Number(u.port || 9200), username: body?.username || '', hasPassword: !!body?.password, authType: 'BASIC', env: 'BROWSER' });
+  }
+  if (path === '/clusters/delete') {
+    try { localStorage.removeItem(PROFILE_KEY); } catch { /* ignore */ }
+    return response({ ok: true });
+  }
+  if (path === '/clusters/test') {
+    const url = String(body?.url || profile()?.url || '').trim();
+    if (!url) return fail(400, '请输入 Elasticsearch 地址');
+    try {
+      const r = await fetch(url.replace(/\/+$/, '') + '/', { headers: authHeaders({ url, username: body?.username, password: body?.password }), credentials: 'omit' });
+      const d = await r.json();
+      return response({ ok: true, clusterName: d.cluster_name || 'cluster', version: d.version?.number || '—', status: d.tagline ? 'green' : 'green', nodes: 1 });
+    } catch (e: any) { return response({ ok: false, message: String(e?.message || e) }); }
+  }
+  if (/^\/clusters\/[^/]+\/probe$/.test(path)) {
+    const h = await must('/_cluster/health').catch((e: any) => ({ status: 'unknown', error: e.message }));
+    return response({ ok: !h.error, status: h.status, clusterName: h.cluster_name, nodes: h.number_of_nodes || 0, latencyMs: 0 });
+  }
+  if (path === '/clusters/sync') return response(null);
+  if (path === '/clusters/sync/run') return response({ checkedAt: Date.now(), changes: [], errors: [] });
   if (path === '/health') return response({ status: 'green', mode: 'browser' });
   if (path === '/keys') return response([]);
   /* 浏览器模式没有服务端环形历史/告警存储：返回空集，让同一 Vue 页面渲染空态而不是报错。 */
@@ -716,6 +742,19 @@ async function route(path: string, query: string, method: string, bodyText: stri
     catch (e: any) { return response({ available: false, reason: e.message, hint: '当前集群未启用 painless _execute（可能是 OSS 或权限不足）' }); }
   }
   /* ── Reindex / 批量 / SQL 全通道 / Lucene / PIT / schema / termvectors ── */
+  if (path === '/cluster/reindex-preview') {
+    const source = q.get('source') || index;
+    const cntBody = bodyText && bodyText.trim() ? bodyText : '{"query":{"match_all":{}}}';
+    const cnt = await must('/' + enc(source) + '/_count', 'POST', cntBody);
+    const st = await must('/' + enc(source) + '/_stats/store,docs');
+    let totalDocs = 0, primaryBytes = 0;
+    for (const v of Object.values<any>(st?.indices || {})) {
+      totalDocs += Number(v?.primaries?.docs?.count || 0);
+      primaryBytes += Number(v?.primaries?.store?.size_in_bytes || 0);
+    }
+    const avg = totalDocs > 0 ? primaryBytes / totalDocs : 0;
+    return response({ docs: Number(cnt?.count || 0), sourceTotalDocs: totalDocs, sourcePrimaryBytes: primaryBytes, avgDocBytes: avg, estimatedTargetBytes: Math.round(avg * Number(cnt?.count || 0)) });
+  }
   if (path === '/cluster/reindex-advanced') {
     const map: Record<string, string> = { slices: 'slices', refresh: 'refresh', waitForCompletion: 'wait_for_completion', requestsPerSecond: 'requests_per_second', scroll: 'scroll', timeout: 'timeout', waitForActiveShards: 'wait_for_active_shards' };
     const qs2: string[] = [];
@@ -863,7 +902,7 @@ async function route(path: string, query: string, method: string, bodyText: stri
         if (form === 'other') { (samples[f] ||= {})[form] = [...((samples[f]?.[form]) || []), String(v)].slice(0, 5); }
       }
     }
-    return response({ index, physicalIndex: index, sampled: sources.length, total: resp?.total ?? 0, sampling: 'random_score', dateFields, forms, samples });
+    return response({ index, physicalIndex: index, sampled: sources.length, total: resp?.hits?.total?.value ?? resp?.hits?.total ?? 0, sampling: 'random_score', dateFields, forms, samples });
   }
   return fail(501, '浏览器模式暂未映射端点：' + path, 'BROWSER_MODE_UNMAPPED');
 }
