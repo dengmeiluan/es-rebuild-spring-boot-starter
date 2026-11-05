@@ -240,7 +240,9 @@ extension: connect to any ES 7.x/8.x cluster and run DSL, Lucene, ES-SQL and PIT
 per-document `_explain` score trees, DSL `profile`, and a live cluster monitor
 (health + nodes stats, 5-second sampling) with no backend.
 
-![Chrome extension: query workbench direct to Elasticsearch](docs/screenshots/extension.png)
+![Chrome extension: full console (real 52-page UI)](docs/screenshots/extension-full-console.png)
+
+![Chrome extension: direct workbench](docs/screenshots/extension.png)
 
 - **Kept**: DSL / Lucene / ES-SQL, PIT deep pagination, Explain, Profile, table / JSON / CSV export, query history and favorites, live QPS / indexing / heap / CPU / shard monitoring, plus a **REST console** — reindex, tasks, snapshots, settings and any ES API can be issued directly; the user owns the risk. Mapping-aware field insert / lint, a condition summary, selection-to-query context menus, configurable sampling interval / history cap, saved profiles and guided reindex with async task polling/cancel are wired in.
 - **Still owned by the backend/host**: accounts/roles/page-level permissions, audit persistence, job SQLite/JDBC stores, scheduling, the full 52-page ops surface and host SSO/menus — the extension does not impersonate a server-side control plane.

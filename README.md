@@ -229,7 +229,9 @@ public ConsoleHostIntegration esQueryStudioHostIntegration() {
 连接任意 ES 7.x/8.x 集群后，直接执行 DSL、Lucene、ES-SQL 与 PIT 查询，单文档
 `_explain` 打分树、DSL `profile`、实时集群监控（health + nodes stats，5 秒采样）都在里面。
 
-![Chrome 扩展：查询工作台直连 Elasticsearch](docs/screenshots/extension.png)
+![Chrome 扩展：完整控制台（真实 52 页 UI）](docs/screenshots/extension-full-console.png)
+
+![Chrome 扩展：前端直连工作台](docs/screenshots/extension.png)
 
 - **保留**：DSL / Lucene / ES-SQL 直查、PIT 深分页、Explain、Profile、结果表 / JSON / CSV 导出、查询历史与收藏、实时 QPS / 写入 / Heap / CPU / 分片监控，以及 **REST 控制台**——reindex、tasks、snapshots、settings 等任意 ES API 可直接发起，风险由使用者承担。mapping 感知的字段插入 / lint、条件摘要、右键选中文本直达查询、可调采样间隔与历史上限、保存连接与引导式 Reindex（异步 task 轮询/取消）也已接通。
 - **仍由后端/宿主承担**：账号/角色/页面级权限、审计持久化、作业 SQLite/JDBC、定时调度、52 页完整运维面与宿主 SSO/菜单——扩展不冒充服务端控制面。
