@@ -1,6 +1,6 @@
 # 查询工作台
 
-> ShardDesk 的核心不是「又一个 Elasticsearch 管理页」，而是一块把查询写成、跑通、解释清楚、
+> ESQueryStudio 的核心不是「又一个 Elasticsearch 管理页」，而是一块把查询写成、跑通、解释清楚、
 > 再定位慢点的连续工作台。本文说明它的六种模式、语义层、双向同步、结果面和相关性实验室。
 
 ![查询工作台](screenshots/query-workbench.png)
@@ -14,7 +14,7 @@ Elasticsearch 查询的日常摩擦通常不在「不知道 DSL 怎么写」，�
 3. 条件树和原始 JSON 各改各的，切换一次就有一边过期；
 4. 查询能跑但结果不对，或者查询很慢，却没有一条从「哪条子句命中」到「时间花在哪」的路径。
 
-ShardDesk 的查询工作台把四件事收进同一个现场：**请求体、条件树、结果、解释**。六种模式只是
+ESQueryStudio 的查询工作台把四件事收进同一个现场：**请求体、条件树、结果、解释**。六种模式只是
 同一个现场的六种入口，不是六个互不相干的工具页。
 
 ## 六种模式
@@ -116,7 +116,7 @@ lint 只做**静态可判定**的检查：结构、字段存在性、类型可�
 | DSL lint / 补全上下文 | `ui/src/utils/dslLint.ts`、`dslCompletionContext` |
 | 表格内核 | `ui/src/components/ResultTable.vue`、`QueryResultTable.vue` |
 | 相关性实验室 | `ui/src/views/ScoreExplainView.vue`、`RankDebugView.vue`、`QueryXrayView.vue`、`ProfileFlameView.vue` |
-| 页面契约 | `platform/src/main/resources/META-INF/sharddesk-pages.json` |
+| 页面契约 | `platform/src/main/resources/META-INF/esquerystudio-pages.json` |
 
 ## 验证方式
 
