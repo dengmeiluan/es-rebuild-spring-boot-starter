@@ -92,8 +92,9 @@ identity, audit and long-running job orchestration.
 - Credentials stay in this extension's local storage (`localStorage` plus a
   `chrome.storage.local` mirror used by the background sampler) and are sent only
   to the Elasticsearch endpoint you configured. No third-party telemetry.
-- The service worker is a narrow broker: only `http`/`https`, allowlisted
-  methods, 8 MB request cap, no remote code, no third-party telemetry.
+- The service worker is a narrow broker for the context-menu tool page: only `http`/`https`,
+  allowlisted methods, 8 MB request cap, no remote code, no third-party telemetry. The native
+  Vue console uses the extension's `host_permissions` directly against the configured ES endpoint.
 - `host_permissions` cover `http/https` so users can connect arbitrary clusters;
   this is a deliberate install-time trade-off for a direct-ES console.
 - Requests use the extension's http/https host permission. Cluster CORS,
