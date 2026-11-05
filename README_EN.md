@@ -246,7 +246,7 @@ per-document `_explain` score trees, DSL `profile`, and a live cluster monitor
 - **Still owned by the backend/host**: accounts/roles/page-level permissions, audit persistence, job SQLite/JDBC stores, scheduling, the full 52-page ops surface and host SSO/menus — the extension does not impersonate a server-side control plane.
 - **Trade-offs made visible**: monitor samples live only in page memory, capped at 120 points (~10 min), and are discarded on refresh; history and favorites are capped at 100 / 50 in `chrome.storage.local`; credentials stay local and are held only in page memory when “remember” is off.
 - **Full console**: the extension's “Full console” tab loads the real 52-page ESQueryStudio UI unmodified from a running server/host entry; the direct workbench needs no backend.
-- **Install**: open `chrome://extensions` → Developer mode → Load unpacked → select `extensions/chrome`; or download `esquerystudio-chrome-1.0.0.zip` from GitHub Releases.
+- **Install**: open `chrome://extensions` → enable Developer mode → **Load unpacked** → select the folder containing `manifest.json` (`extensions/chrome` in the repo; extract the release zip first — do not select the zip itself).
 - **Boundary**: browser-direct access still obeys cluster CORS / TLS / gateway allowlists; the extension declares http/https host permissions and only sends requests to the cluster URL the user enters.
 
 Details and security notes: [extensions/chrome/README.md](extensions/chrome/README.md).

@@ -6,12 +6,25 @@ not need server-side orchestration.
 
 ## Install (unpacked)
 
-1. Open `chrome://extensions` and enable **Developer mode**.
-2. Choose **Load unpacked** and select this `extensions/chrome` directory.
+1. Open `chrome://extensions` and enable **Developer mode** (top-right).
+2. Choose **Load unpacked** and select the **folder that contains `manifest.json`** —
+   in this repo that is `extensions/chrome`; if you downloaded the release zip, **extract
+   it first** and select the extracted `esquerystudio-chrome-1.0.0` folder. Do **not**
+   select the `.zip` file itself; Chrome cannot load a zip as an unpacked extension.
 3. Pin **ESQueryStudio** and click the icon — the workbench opens in a tab.
 4. Enter the cluster URL, choose auth, click **连接并检查**. The extension declares
    `http/https` host permission at install time; it only sends requests to the URL
    you enter. Chrome may show a broad-host warning for unpacked installs.
+
+### If install fails
+
+| Symptom | Fix |
+|---|---|
+| `Manifest file is missing or unreadable` | You selected the parent folder or the zip. Select the folder that directly contains `manifest.json`. |
+| `Cannot load extension with file or directory name _metadata` | Remove `__MACOSX` / `_metadata` from the extracted folder, then retry. |
+| `This extension is not allowed` / policy block | Use a non-managed Chrome profile, or install in Chrome/Edge with Developer mode enabled; managed profiles can forbid unpacked extensions. |
+| Button is greyed out | Enable **Developer mode** first. |
+| Extension loads but icon is missing | Pin it from the puzzle menu; open `chrome://extensions` and check for load errors. |
 
 A packaged zip is attached to each GitHub Release.
 

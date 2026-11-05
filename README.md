@@ -235,7 +235,7 @@ public ConsoleHostIntegration esQueryStudioHostIntegration() {
 - **仍由后端/宿主承担**：账号/角色/页面级权限、审计持久化、作业 SQLite/JDBC、定时调度、52 页完整运维面与宿主 SSO/菜单——扩展不冒充服务端控制面。
 - **取舍写清楚**：监控采样只在当前页内存保留 120 点（约 10 分钟），刷新即清空；查询历史与收藏在 `chrome.storage.local` 限制 100 / 50 条；凭据默认只存本机，不勾选“记住凭据”则仅当前页面内存持有。
 - **完整控制台**：扩展内「完整控制台」页可直接加载真实 52 页 ESQueryStudio UI（指向运行中的 server/宿主入口，UI 原样保留）；直连工作台则不需要后端。
-- **安装**：打开 `chrome://extensions` → 开发者模式 → 加载已解压的扩展程序 → 选择 `extensions/chrome`；或从 GitHub Release 下载 `esquerystudio-chrome-1.0.0.zip`。
+- **安装**：打开 `chrome://extensions` → 开启开发者模式 → **加载已解压的扩展程序** → 选择包含 `manifest.json` 的文件夹（源码为 `extensions/chrome`；Release zip 请先解压，不要直接选 zip）。
 - **边界**：浏览器直连仍受集群 CORS / TLS / 网关白名单约束；扩展安装时声明 http/https host permission，仅向用户填写的集群地址发请求。
 
 细节与安全说明见 [extensions/chrome/README.md](extensions/chrome/README.md)。
