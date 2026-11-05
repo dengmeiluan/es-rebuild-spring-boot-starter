@@ -63,6 +63,14 @@ assert.ok(existsSync(join(EXT, 'app/index.html')), 'native Vue app bundle');
 assert.ok(background.includes('app/index.html'), 'action opens native Vue app');
 assert.ok(existsSync(join(ROOT, 'ui/src/platform/browserApi.ts')), 'browser transport exists');
 assert.ok(readFileSync(join(ROOT, 'ui/src/api.ts'), 'utf8').includes('isBrowserMode'), 'API switches transport by mode');
+{
+  const bridge = readFileSync(join(ROOT, 'ui/src/platform/browserApi.ts'), 'utf8');
+  for (const ep of ['/cluster/templates', '/cluster/snapshot/repos', '/cluster/ilm/policies', '/cluster/reindex-advanced', '/cluster/resolve-schema', '/cluster/health-report']) {
+    assert.ok(bridge.includes(ep), `browser bridge maps ${ep}`);
+  }
+  assert.ok(bridge.includes('BROWSER_MODE_SERVER_ONLY'), 'server-only endpoints are labelled, not silently faked');
+  assert.ok(existsSync(join(ROOT, 'ui/src/components/BrowserServerOnly.vue')), 'server-only page notice exists');
+}
 assert.ok(monitor.includes('setInterval(sample, state.interval)'), 'live loop uses configured interval');
 assert.ok(monitor.includes('state.samples.shift()'), 'ring buffer eviction');
 

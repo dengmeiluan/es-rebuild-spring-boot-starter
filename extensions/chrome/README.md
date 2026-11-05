@@ -63,17 +63,20 @@ A packaged zip is attached to each GitHub Release.
 | History / favorites | `chrome.storage.local`, capped at 100 / 50 entries; saved connection profiles and per-mode drafts |
 | Mapping assist | Field insert from live mapping, JSON syntax/field lint, condition summary; right-click selected text opens Lucene/DSL prefill |
 
-## Full-console note
+## Browser-mode coverage
 
-The full console is deliberately **not reimplemented** in the extension: the real Vue app is loaded
-from a running server, so UI pages, interactions and backend-only features stay exactly as shipped.
-The direct workbench covers the no-backend path; it does not pretend to be the full 52-page UI.
+The native Vue console talks to Elasticsearch directly through a compatibility bridge
+(`ui/src/platform/browserApi.ts`), not through a second hand-written UI.
 
-## Server-side control plane (not duplicated)
-
-- Accounts, roles, page-level permissions and server-enforced authorization
-- Audit persistence, job stores (SQLite/JDBC), scheduled tasks and Watchers
-- The full 52-page console, feature packs, host menu/SSO integration
+| Area | Browser mode |
+|---|---|
+| Overview, indices, documents, DSL/Lucene/SQL, PIT, reindex, bulk | Direct ES REST |
+| Mapping, settings, aliases, templates, analysis, synonyms, scripts, Painless | Direct ES REST |
+| Snapshots, ILM, SLM, Watcher, remote clusters, plugins | Direct ES REST |
+| Tasks, nodes stats, shards, allocation explain, health report | Direct ES REST |
+| Search templates, term vectors, validate/explain, profile | Direct ES REST |
+| Monitor history / alerts | In-memory only; empty instead of a fake history |
+| Security, system indices, managed rebuild, cross-cluster migration, config lab | Server-side control plane; the page shows an explicit "needs server" notice |
 
 The REST console deliberately exposes reindex, tasks, snapshots and settings
 directly; the user owns the cluster credentials and accepts the risk. The

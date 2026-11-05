@@ -59,7 +59,7 @@ describe('API 层写门：无权限请求零发出', () => {
     expect(apiSrc).toContain('if (!apiWriteGuard(fetchMethod, cleanBase + path, targetId))');
     expect(apiSrc).toContain("'CLIENT_WRITE_DENIED'");
     const guardAt = apiSrc.indexOf('apiWriteGuard(fetchMethod');
-    const fetchAt = apiSrc.indexOf('await fetch(base + path');
+    const fetchAt = apiSrc.indexOf('await doFetch(base + path');
     expect(guardAt).toBeGreaterThan(0);
     expect(guardAt).toBeLessThan(fetchAt);
   });

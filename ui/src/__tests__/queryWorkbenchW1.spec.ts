@@ -33,7 +33,7 @@ const lcSrc = rd('views/LuceneQueryView.vue');
 
 describe('P0 超宽屏：meta.wide 豁免机制（router.ts + App.vue）', () => {
   it('App.vue：.page 挂 page-wide 动态类，media 内覆盖居中 padding', () => {
-    expect(appSrc).toMatch(/<div class="page scroll-y" :class="\{ 'page-wide': pageWide \}">/);
+    expect(appSrc).toMatch(/<div(?: v-else)? class="page scroll-y" :class="\{ 'page-wide': pageWide \}">/);
     expect(appSrc).toMatch(/const pageWide = computed\(\(\) => route\.meta\.wide === true\);/);
     /* 覆盖规则必须写在 ≥1920 媒体查询内（只在该断点豁免，常规视口零变化） */
     expect(appSrc).toMatch(

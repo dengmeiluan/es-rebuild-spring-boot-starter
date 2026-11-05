@@ -50,7 +50,7 @@ function fail(status: number, message: string, code?: string): Response {
   return response({ error: true, message, ...(code ? { code } : {}) }, status);
 }
 
-async function esDirect(path: string, method = 'GET', body?: string): Promise<{ status: number; data: any; text: string }> {
+async function esDirect(path: string, method = 'GET', body?: string, contentType = 'application/json'): Promise<{ status: number; data: any; text: string }> {
   const p = profile();
   if (!p) throw new Error('浏览器模式尚未连接 Elasticsearch');
   const base = p.url.replace(/\/+$/, '');
@@ -58,7 +58,7 @@ async function esDirect(path: string, method = 'GET', body?: string): Promise<{ 
     method,
     headers: {
       Accept: 'application/json',
-      ...(body ? { 'Content-Type': 'application/json' } : {}),
+      ...(body ? { 'Content-Type': contentType } : {}),
       ...authHeaders(p),
     },
     body: method === 'GET' || method === 'HEAD' ? undefined : body,
@@ -73,6 +73,183 @@ async function esDirect(path: string, method = 'GET', body?: string): Promise<{ 
 
 function bodyOf(init?: RequestInit): any {
   try { return init?.body ? JSON.parse(String(init.body)) : null; } catch { return null; }
+}
+
+/** ES 请求失败：保留真实状态码与响应体，交给上层的 ApiError 通道。 */
+class EsHttpError extends Error {
+  constructor(public status: number, public data: any) {
+    super(typeof data === 'string' ? data : JSON.stringify(data));
+  }
+}
+
+async function must(path: string, method = 'GET', body?: string): Promise<any> {
+  const r = await esDirect(path, method, body);
+  if (r.status >= 400) throw new EsHttpError(r.status, r.data ?? r.text);
+  return r.data;
+}
+
+function enc(v: string): string { return encodeURIComponent(v); }
+
+function searchQs(q: URLSearchParams): string {
+  const keys = ['routing', 'preference', 'search_type', 'allow_partial_search_results', 'ignore_unavailable', 'expand_wildcards'];
+  const out: string[] = [];
+  for (const k of keys) {
+    const v = q.get(k);
+    if (v) out.push(k + '=' + enc(v));
+  }
+  return out.length ? '&' + out.join('&') : '';
+}
+
+function unwrapTypeLayer(m: any): any {
+  if (!m || typeof m !== 'object') return m;
+  if (m.properties) return m;
+  const keys = Object.keys(m);
+  if (keys.length === 1 && m[keys[0]] && typeof m[keys[0]] === 'object' && m[keys[0]].properties) {
+    return m[keys[0]];
+  }
+  return m;
+}
+
+function fieldTree(props: any): any[] {
+  const out: any[] = [];
+  for (const [name, raw] of Object.entries<any>(props || {})) {
+    if (!raw) continue;
+    const type = raw.type || (raw.properties ? 'object' : 'unknown');
+    const node: any = { name, type, isNested: type === 'nested', isObject: type === 'object' || !!raw.properties };
+    if (raw.analyzer) node.analyzer = raw.analyzer;
+    if (raw.search_analyzer) node.searchAnalyzer = raw.search_analyzer;
+    if (raw.format) node.format = raw.format;
+    if (raw.index !== undefined) node.indexed = raw.index;
+    if (raw.doc_values !== undefined) node.docValues = raw.doc_values;
+    if (raw.copy_to !== undefined) node.copyTo = raw.copy_to;
+    if (raw.null_value !== undefined) node.nullValue = raw.null_value;
+    if (raw.fields) {
+      node.multiFields = Object.entries<any>(raw.fields).map(([n, d]) => ({
+        name: n, type: d?.type, isMultiField: true, ...(d?.analyzer ? { analyzer: d.analyzer } : {}),
+      }));
+    }
+    if (raw.properties) node.children = fieldTree(raw.properties);
+    out.push(node);
+  }
+  return out;
+}
+
+function treeStats(tree: any[]): any {
+  const s = { total: 0, nested: 0, text: 0, keyword: 0, object: 0 };
+  const stk = [...tree];
+  while (stk.length) {
+    const n = stk.pop();
+    s.total++;
+    if (n.type === 'nested') s.nested++;
+    else if (n.type === 'object') s.object++;
+    else if (n.type === 'text') s.text++;
+    else if (n.type === 'keyword') s.keyword++;
+    if (n.children) stk.push(...n.children);
+  }
+  return s;
+}
+
+/** 字段结构探测（SQL/Lucene 能力面板）：mapping 类型 + 样本行实际多值判定。 */
+async function resolveSchema(index: string): Promise<any> {
+  const mResp = await must('/' + enc(index) + '/_mapping');
+  let mappings: any = {};
+  for (const v of Object.values<any>(mResp || {})) { mappings = unwrapTypeLayer(v?.mappings || {}); break; }
+  const props = mappings?.properties || {};
+  const arrayFields = new Set<string>();
+  try {
+    const sample = await must('/' + enc(index) + '/_search?size=1', 'POST', '{"query":{"match_all":{}}}');
+    const src = sample?.hits?.hits?.[0]?._source;
+    const scan = (o: any, p: string) => {
+      for (const [k, v] of Object.entries<any>(o || {})) {
+        const name = p ? p + '.' + k : k;
+        if (Array.isArray(v)) arrayFields.add(name);
+        else if (v && typeof v === 'object') scan(v, name);
+      }
+    };
+    if (src) scan(src, '');
+  } catch { /* 样本失败仅降级 isArray */ }
+  const fields: any[] = []; const warnings: string[] = [];
+  const walk = (p: any, prefix: string) => {
+    for (const [name0, def] of Object.entries<any>(p || {})) {
+      const name = prefix ? prefix + '.' + name0 : name0;
+      const type = String(def?.type || 'object');
+      const isText = type === 'text', isNested = type === 'nested', isKeyword = type === 'keyword';
+      const isArray = arrayFields.has(name);
+      const supportsSql = !(isArray || isNested);
+      fields.push({ name, type, isText, isNested, isKeyword, isArray, supportsSql });
+      if (!supportsSql) warnings.push('字段 [' + name + '] 为 ' + (isNested ? 'nested' : 'array') + '，ES-SQL SELECT 将报错，建议改用 Lucene / DSL / PIT');
+      for (const [sub, sd] of Object.entries<any>(def?.fields || {})) fields.push({ name: name + '.' + sub, type: sd?.type, isSubField: true, supportsSql: true });
+      if (def?.properties) walk(def.properties, name);
+    }
+  };
+  walk(props, '');
+  return { index, fields, warnings, arrayFieldCount: arrayFields.size };
+}
+/** 一键体检：health + 不健康索引 + 节点水位，返回与服务端同构的报告。 */
+async function healthReport(): Promise<any> {
+  const checks: any[] = [];
+  let score = 100;
+  const add = (level: string, name: string, message: string) => checks.push({ level, name, message });
+  const ch = await must('/_cluster/health');
+  const status = String(ch?.status || 'unknown');
+  const nodes = Number(ch?.number_of_data_nodes || 0);
+  const single = nodes <= 1;
+  if (status === 'red') { add('critical', 'cluster.status', '集群状态 RED，存在不可用主分片（数据面事故，立即处置）'); score -= 40; }
+  else if (status === 'yellow' && !single) { add('warn', 'cluster.status', '集群状态 YELLOW，副本分片未分配（多节点集群应排查：节点掉线/磁盘水位/分配规则）'); score -= 20; }
+  else if (status === 'yellow') add('info', 'cluster.status', '集群状态 YELLOW：单数据节点无法放置副本分片（拓扑常态，非异常）');
+  else add('info', 'cluster.status', '集群状态 GREEN');
+  const unassigned = Number(ch?.unassigned_shards || 0);
+  if (unassigned > 0) add(status === 'red' ? 'critical' : single ? 'info' : 'warn', 'shards.unassigned', unassigned + ' 个分片未分配');
+  const pending = Number(ch?.number_of_pending_tasks || 0);
+  if (pending > 0) { add(pending > 20 ? 'critical' : 'warn', 'pending.tasks', pending + ' 个 pending task'); score -= pending > 20 ? 25 : 10; }
+  const allIdx = await must('/_cat/indices?format=json&h=index,health,pri,rep,docs.count,store.size');
+  const unhealthy = (allIdx || []).filter((m: any) => !String(m.index || '').startsWith('.') && ['red', 'yellow'].includes(String(m.health).toLowerCase()));
+  if (unhealthy.length) add(unhealthy.some((m: any) => m.health === 'red') ? 'critical' : single ? 'info' : 'warn', 'indices.health', unhealthy.length + ' 个索引非 GREEN');
+  else add('info', 'indices.health', '全部索引 GREEN');
+  const catNodes = await must('/_cat/nodes?format=json&h=name,heap.percent,cpu,load_1m,disk.used_percent,ram.percent');
+  let hot = 0;
+  for (const n of catNodes || []) {
+    if (Number(n['heap.percent']) >= 85) { hot++; add('warn', 'nodes.heap', n.name + ' heap>=85%'); score -= 10; }
+    if (Number(n['disk.used_percent']) >= 85) { hot++; add('critical', 'nodes.disk', n.name + ' 磁盘>=85%'); score -= 25; }
+    if (Number(n.cpu) >= 90) { hot++; add('warn', 'nodes.cpu', n.name + ' CPU>=90%'); score -= 10; }
+  }
+  return {
+    generatedAt: new Date().toISOString(), clusterHealth: ch, unhealthyIndices: unhealthy,
+    nodes: catNodes || [], summary: { status, unassigned, initializing: ch?.initializing_shards || 0, relocating: ch?.relocating_shards || 0, pending, unhealthyIndices: unhealthy.length, nodes: (catNodes || []).length, hotNodes: hot },
+    score: Math.max(0, score), checks,
+  };
+}
+function snapshotSummary(raw: any, repo: string, name: string): any {
+  const snap = raw?.snapshots?.[0] || {};
+  const idxMap = snap.indices || {};
+  const stages = ['INIT', 'STARTED', 'START', 'FINALIZE', 'DONE', 'FAILURE'];
+  const indices: any[] = [];
+  let total = 0, done = 0, failed = 0;
+  for (const [i, v] of Object.entries<any>(idxMap)) {
+    const shards = v?.shards || {};
+    const stageCounts: any = {};
+    for (const k of stages) stageCounts[k] = 0;
+    for (const sh of Object.values<any>(shards)) {
+      const st = String(sh?.stage || '');
+      stageCounts[st] = (stageCounts[st] || 0) + 1;
+      total++;
+      if (st === 'DONE') done++;
+      if (st === 'FAILURE') failed++;
+    }
+    indices.push({
+      index: i, shardsTotal: Object.keys(shards).length,
+      shardsDone: stageCounts.DONE, shardsFailed: stageCounts.FAILURE, stageCounts,
+    });
+  }
+  const ss = snap.shards_stats || {};
+  const t = Number(ss.total ?? total) || 0;
+  const d = Number(ss.done ?? done) || 0;
+  return {
+    repository: snap.repository || repo, snapshot: snap.snapshot || name,
+    state: snap.state || '', startTimeMillis: snap.start_time_millis || 0,
+    shardsStats: { total: t, done: d, failed: Number(ss.failed ?? failed) || 0 },
+    pct: t ? Math.round((d / t) * 100) : 0, indices,
+  };
 }
 
 function splitPath(input: RequestInfo | URL): { path: string; query: string } | null {
@@ -120,6 +297,15 @@ async function route(path: string, query: string, method: string, bodyText: stri
   }
   if (path === '/auth/login') return response({ token: 'browser' });
   if (path === '/auth/logout') return response({ ok: true });
+  if (path === '/auth/change-password') return fail(400, '浏览器模式使用 Elasticsearch 自身账号，控制台不改密');
+  if (path === '/auth/permissions') {
+    return response({ role: 'ADMIN', username: 'browser', pages: [], raw: true, all: true });
+  }
+  if (path === '/auth/users' || path === '/auth/ops-audit' || path === '/auth/ops-audit/mine') return response([]);
+  if (path === '/auth/users/upsert' || path === '/auth/users/delete') return fail(403, '浏览器模式没有服务端用户库');
+  if (path === '/auth/audit-facets') return response({ actions: [], conns: [], users: [], uris: [] });
+  if (path === '/ring-usage') return response({ auditPrefix: '', monitorPrefix: '', auditBytes: 0, monitorBytes: 0, totalBytes: 0, capBytes: 0 });
+  if (path === '/mapping-reconcile/report') return response({ records: [] });
   if (path === '/clusters') {
     const p = profile();
     if (!p) return response([]);
@@ -141,37 +327,105 @@ async function route(path: string, query: string, method: string, bodyText: stri
     const health = await esDirect('/_cluster/health');
     return response({ indices: cat.data || [], health: health.data || {}, mode: 'browser' });
   }
+  if (path.startsWith('/adhoc-rebuild') || path.startsWith('/config-lab') || path.startsWith('/xb') || path.startsWith('/insight')
+      || path.startsWith('/system-') || path === '/force-merge' || path === '/replicas' || path === '/status' || path === '/progress') {
+    return fail(501, '该能力依赖服务端控制台进程/存储，请使用服务端模式：' + path, 'BROWSER_MODE_SERVER_ONLY');
+  }
   if (!path.startsWith('/cluster/')) return fail(501, '浏览器模式暂未映射端点：' + path, 'BROWSER_MODE_UNMAPPED');
 
   const q = new URLSearchParams(query);
   const index = q.get('index') || '';
   const idx = index ? '/' + encodeURIComponent(index) : '';
+  if (path === '/cluster/hot-threads') {
+    const nodeId = q.get('nodeId');
+    const p = '/_nodes/' + (nodeId ? enc(nodeId) + '/' : '') + 'hot_threads?threads=' + Number(q.get('threads') || 3)
+      + '&interval=' + enc(q.get('interval') || '500ms') + '&type=' + enc(q.get('type') || 'cpu');
+    const r = await esDirect(p);
+    return new Response(r.text, { status: r.status, headers: { 'content-type': 'text/plain;charset=UTF-8' } });
+  }
   if (path === '/cluster/health') return response((await esDirect('/_cluster/health')).data);
-  if (path === '/cluster/indices') return response((await esDirect('/_cat/indices?format=json&h=index,health,status,docs.count,store.size,pri,rep&s=index')).data);
+  if (path === '/cluster/indices') {
+    const list = (await esDirect('/_cat/indices?format=json&h=index,health,status,docs.count,store.size,pri,rep,creation.date.string,segments.count,docs.deleted')).data || [];
+    const rows = (Array.isArray(list) ? list : []).filter((r: any) => !String(r.index || '').startsWith('.'));
+    rows.sort((a: any, b: any) => String(a.index).localeCompare(String(b.index)));
+    return response(rows);
+  }
   if (path === '/cluster/inspect') {
-    const r = await esDirect(idx + '/_mapping');
-    const map = r.data?.[index]?.mappings || {};
-    return response({ mappings: { [index]: map }, index });
+    const out: any = { name: index };
+    try {
+      const m = await must('/' + enc(index) + '/_mapping');
+      const by: any = {};
+      for (const [i, v] of Object.entries<any>(m)) by[i] = unwrapTypeLayer(v?.mappings || {});
+      out.mappings = by;
+    } catch (e: any) { out.mappingsError = e.message; }
+    try {
+      const s = await must('/' + enc(index) + '/_settings?flat_settings=true');
+      const by: any = {};
+      for (const [i, v] of Object.entries<any>(s)) by[i] = v?.settings || {};
+      out.settings = by;
+    } catch (e: any) { out.settingsError = e.message; }
+    try { out.docCount = (await must('/' + enc(index) + '/_count', 'POST', '{"query":{"match_all":{}}}')).count; }
+    catch (e: any) { out.docCountError = e.message; }
+    try {
+      const a = await must('/' + enc(index) + '/_alias');
+      const by: any = {};
+      for (const [i, v] of Object.entries<any>(a)) by[i] = Object.keys(v?.aliases || {});
+      out.aliases = by;
+    } catch (e: any) { out.aliasesError = e.message; }
+    const sampleSize = Math.min(50, Math.max(0, Number(new URLSearchParams(query).get('sampleSize') || 5)));
+    if (sampleSize > 0) {
+      try {
+        const r = await must('/' + enc(index) + '/_search?size=' + sampleSize);
+        out.sample = (r?.hits?.hits || []).map((h: any) => ({ _id: h._id, _index: h._index, _source: h._source }));
+      } catch (e: any) { out.sampleError = e.message; }
+    }
+    return response(out);
   }
   if (path === '/cluster/mapping-detail') {
-    const r = await esDirect(idx + '/_mapping');
-    return response({ raw: r.data?.[index]?.mappings || {}, index });
+    const raw = await must('/' + enc(index) + '/_mapping');
+    const out: any = { index };
+    for (const [, v] of Object.entries<any>(raw)) {
+      const mappings = unwrapTypeLayer(v?.mappings || {});
+      const tree = fieldTree(mappings?.properties || {});
+      out.tree = tree; out.raw = mappings; out.stats = treeStats(tree);
+      break;
+    }
+    return response(out);
   }
   if (path === '/cluster/index-settings') {
-    const r = await esDirect(idx + '/_settings');
-    return response(r.data);
+    const r = await esDirect(idx + '/_settings?include_defaults=true&flat_settings=false');
+    return response(r.data, r.status);
   }
   if (path === '/cluster/index-settings-defaults') {
-    const r = await esDirect(idx + '/_settings?include_defaults=true');
-    return response(r.data);
+    const r = await esDirect(idx + '/_settings?include_defaults=true&flat_settings=true');
+    return response({ status: r.status, body: r.text });
   }
   if (path === '/cluster/shards') {
-    const p = index ? '/_cat/shards/' + encodeURIComponent(index) + '?format=json' : '/_cat/shards?format=json';
-    return response((await esDirect(p)).data);
+    const p = index ? '/_cat/shards/' + enc(index) : '/_cat/shards';
+    const rows = (await must(p + '?format=json&bytes=b&h=index,shard,prirep,state,docs,store,node,ip')) || [];
+    return response((Array.isArray(rows) ? rows : [])
+      .filter((r: any) => !String(r.index || '').startsWith('.'))
+      .map((r: any) => ({
+        index: r.index, shard: Number(r.shard), prirep: r.prirep, state: r.state,
+        docs: r.docs == null ? null : Number(r.docs), storeBytes: r.store == null ? null : Number(r.store),
+        node: r.node, ip: r.ip,
+      })));
   }
-  if (path === '/cluster/aliases') return response((await esDirect('/_cat/aliases?format=json')).data);
+  if (path === '/cluster/aliases') {
+    const raw = await must('/_alias');
+    const out: any[] = [];
+    for (const [i, v] of Object.entries<any>(raw)) {
+      if (i.startsWith('.')) continue;
+      for (const [alias, meta] of Object.entries<any>(v?.aliases || {})) {
+        out.push({ alias, index: i, isWriteIndex: meta?.is_write_index, filter: meta?.filter, routing: meta?.index_routing });
+      }
+    }
+    out.sort((a, b) => a.alias.localeCompare(b.alias) || a.index.localeCompare(b.index));
+    return response(out);
+  }
   if (path === '/cluster/query') {
-    const r = await esDirect(idx + '/_search', 'POST', bodyText || '{}');
+    const size = Math.max(0, Math.min(100, Number(q.get('size') || 10)));
+    const r = await esDirect(idx + '/_search?size=' + size + searchQs(q), 'POST', bodyText || '{}');
     if (r.status >= 400) return response(r.data, r.status);
     const h = r.data?.hits || {};
     return response({
@@ -182,12 +436,23 @@ async function route(path: string, query: string, method: string, bodyText: stri
       hits: h.hits || [],
     });
   }
-  if (path === '/cluster/search-raw' || path === '/cluster/search-dsl') {
+  if (path === '/cluster/search-raw') {
     const r = await esDirect(idx + '/_search', 'POST', bodyText || '{}');
     return response(r.data, r.status);
   }
+  if (path === '/cluster/search-dsl') {
+    let bodyObj: any = {};
+    try { bodyObj = bodyText ? JSON.parse(bodyText) : {}; } catch { bodyObj = {}; }
+    if (q.get('profile') === 'true') bodyObj.profile = true;
+    const explain = q.get('explain') === 'true' ? '?explain=true' : '';
+    const r = await esDirect(idx + '/_search' + explain, 'POST', JSON.stringify(bodyObj));
+    return response(r.data, r.status);
+  }
   if (path === '/cluster/profile') {
-    const r = await esDirect(idx + '/_search', 'POST', bodyText || '{}');
+    let b: any = {};
+    try { b = bodyText ? JSON.parse(bodyText) : {}; } catch { b = {}; }
+    b.profile = true;
+    const r = await esDirect(idx + '/_search' + searchQs(q), 'POST', JSON.stringify(b));
     return response(r.data, r.status);
   }
   if (path === '/cluster/sql') {
@@ -199,10 +464,30 @@ async function route(path: string, query: string, method: string, bodyText: stri
     return response((await esDirect(idx + '/_analyze', 'POST', bodyText || '{}')).data);
   }
   if (path === '/cluster/count') {
-    return response((await esDirect(idx + '/_count', 'POST', bodyText || '{}')).data);
+    let countBody = '{"query":{"match_all":{}}}';
+    try { const d = bodyText ? JSON.parse(bodyText) : null; if (d?.query) countBody = JSON.stringify({ query: d.query }); } catch { /* 交给 ES 报错 */ }
+    return response(await must(idx + '/_count', 'POST', countBody));
   }
   if (path === '/cluster/doc') {
-    return response((await esDirect(idx + '/_doc/' + encodeURIComponent(q.get('id') || ''))).data);
+    const id = enc(q.get('id') || '');
+    if (method === 'GET') return response((await esDirect(idx + '/_doc/' + id)).data);
+    const refresh = q.get('refresh');
+    return response(await must(idx + '/_doc/' + id + (refresh ? '?refresh=' + enc(refresh) : ''), 'PUT', bodyText));
+  }
+  if (path === '/cluster/delete-by-id') {
+    const r = await esDirect(idx + '/_doc/' + enc(q.get('id') || ''), 'DELETE');
+    return response(r.data, r.status);
+  }
+  if (path === '/cluster/update-document') {
+    const refresh = q.get('refresh');
+    return response(await must(idx + '/_doc/' + enc(q.get('id') || '') + (refresh ? '?refresh=' + enc(refresh) : ''), 'PUT', bodyText));
+  }
+  if (path === '/cluster/update-partial') {
+    return response(await must(idx + '/_update/' + enc(q.get('id') || '') + '?refresh=true', 'POST', '{"doc":' + (bodyText || '{}') + '}'));
+  }
+  if (path === '/cluster/doc/update') {
+    const refresh = q.get('refresh');
+    return response(await must(idx + '/_update/' + enc(q.get('id') || '') + (refresh ? '?refresh=' + enc(refresh) : ''), 'POST', bodyText));
   }
   if (path === '/cluster/explain-doc') {
     return response((await esDirect(idx + '/_explain/' + encodeURIComponent(q.get('id') || ''), 'POST', bodyText || '{}')).data);
@@ -211,13 +496,69 @@ async function route(path: string, query: string, method: string, bodyText: stri
     return response((await esDirect(idx + '/_field_caps?fields=*')).data);
   }
   if (path === '/cluster/tasks') {
-    const r = await esDirect('/_tasks?group_by=parents&detailed=true');
-    return response(Object.values(r.data?.tasks || {}));
+    const detailed = q.get('detailed') !== 'false';
+    const actions = q.get('actions');
+    const raw = await must('/_tasks?detailed=' + detailed + (actions ? '&actions=' + enc(actions) : ''));
+    const out: any[] = [];
+    for (const [nodeId, nodeInfo] of Object.entries<any>(raw?.nodes || {})) {
+      for (const [taskId, t] of Object.entries<any>(nodeInfo?.tasks || {})) {
+        const nanos = Number(t.running_time_in_nanos);
+        out.push({
+          taskId, node: nodeInfo?.name || nodeId, action: t.action, description: t.description,
+          parentTaskId: t.parent_task_id, startTimeMillis: t.start_time_in_millis,
+          runningTimeNanos: t.running_time_in_nanos, tookMs: Number.isFinite(nanos) ? Math.floor(nanos / 1e6) : -1,
+          cancellable: t.cancellable, status: t.status,
+        });
+      }
+    }
+    return response(out);
+  }
+  if (path === '/cluster/tasks/cancel') {
+    return response(await must('/_tasks/' + enc(q.get('taskId') || '') + '/_cancel', 'POST'));
+  }
+  if (path === '/cluster/task-detail') {
+    return response(await must('/_tasks/' + enc(q.get('taskId') || '') + '?wait_for_completion=false'));
   }
   if (path === '/cluster/pending-tasks') return response((await esDirect('/_cluster/pending_tasks')).data);
-  if (path === '/cluster/nodes-stats') return response((await esDirect('/_nodes/stats')).data);
-  if (path === '/cluster/settings') return response((await esDirect('/_cluster/settings?include_defaults=true')).data);
-  if (path === '/cluster/aliases') return response((await esDirect('/_cat/aliases?format=json')).data);
+  if (path === '/cluster/nodes-stats') {
+    const raw = await must('/_nodes/stats/jvm,fs,os,thread_pool');
+    const out: any[] = [];
+    for (const [nodeId, n] of Object.entries<any>(raw?.nodes || {})) {
+      const row: any = { nodeId, name: n.name, host: n.host, roles: n.roles };
+      if (n.jvm?.mem) row.jvm = { heapUsedBytes: n.jvm.mem.heap_used_in_bytes, heapMaxBytes: n.jvm.mem.heap_max_in_bytes, heapUsedPercent: n.jvm.mem.heap_used_percent };
+      if (n.fs?.total) row.fs = { totalBytes: n.fs.total.total_in_bytes, freeBytes: n.fs.total.free_in_bytes, availableBytes: n.fs.total.available_in_bytes };
+      const load = n.os?.load_average ?? n.os?.cpu?.load_average;
+      row.os = { cpuPercent: n.os?.cpu?.percent, loadAverage: load };
+      const pools: any = {};
+      for (const p of ['search', 'write', 'bulk', 'get', 'flush', 'refresh']) {
+        if (n.thread_pool?.[p]) pools[p] = { active: n.thread_pool[p].active, queue: n.thread_pool[p].queue, rejected: n.thread_pool[p].rejected, completed: n.thread_pool[p].completed };
+      }
+      row.threadPool = pools;
+      out.push(row);
+    }
+    return response(out);
+  }
+  if (path === '/cluster/nodes-stats-brief') {
+    const raw = await must('/_nodes/stats/jvm,os,fs,indices,thread_pool?filter_path=nodes.*.name,nodes.*.host,nodes.*.roles,'
+      + 'nodes.*.jvm.mem.heap_used_percent,nodes.*.jvm.mem.heap_used_in_bytes,nodes.*.jvm.mem.heap_max_in_bytes,'
+      + 'nodes.*.os.cpu.percent,nodes.*.os.cpu.load_average,nodes.*.fs.total.total_in_bytes,nodes.*.fs.total.free_in_bytes,'
+      + 'nodes.*.fs.total.available_in_bytes,nodes.*.indices.docs.count,nodes.*.indices.store.size_in_bytes,'
+      + 'nodes.*.indices.indexing.index_total,nodes.*.indices.search.query_total,'
+      + 'nodes.*.thread_pool.search.active,nodes.*.thread_pool.search.queue');
+    const out: any[] = [];
+    for (const [nodeId, n] of Object.entries<any>(raw?.nodes || {})) {
+      out.push({
+        nodeId, name: n.name, host: n.host, roles: n.roles,
+        heapPct: n.jvm?.mem?.heap_used_percent, heapUsed: n.jvm?.mem?.heap_used_in_bytes, heapMax: n.jvm?.mem?.heap_max_in_bytes,
+        cpuPct: n.os?.cpu?.percent, load: n.os?.cpu?.load_average,
+        diskTotal: n.fs?.total?.total_in_bytes, diskFree: n.fs?.total?.free_in_bytes, diskAvail: n.fs?.total?.available_in_bytes,
+        docCount: n.indices?.docs?.count, storeSize: n.indices?.store?.size_in_bytes,
+        indexTotal: n.indices?.indexing?.index_total, queryTotal: n.indices?.search?.query_total,
+        tpSearchActive: n.thread_pool?.search?.active, tpSearchQueue: n.thread_pool?.search?.queue,
+      });
+    }
+    return response(out);
+  }
   if (path === '/cluster/validate-query') {
     return response((await esDirect(idx + '/_validate/query?explain=true', 'POST', bodyText || '{}')).data);
   }
@@ -230,10 +571,309 @@ async function route(path: string, query: string, method: string, bodyText: stri
   if (path === '/cluster/allocation-explain') {
     return response((await esDirect('/_cluster/allocation/explain', 'POST', bodyText || '{}')).data);
   }
+  /* ── 索引运维：建/删索引、Mapping、Settings、merge、rollover、reroute、别名原子操作 ── */
+  if (path === '/cluster/create-index') {
+    const b = body || {};
+    const bodyObj: any = {};
+    try { if (b.settings) bodyObj.settings = typeof b.settings === 'string' ? JSON.parse(b.settings) : b.settings; } catch { /* 交给 ES 报错 */ }
+    try { if (b.mapping) bodyObj.mappings = typeof b.mapping === 'string' ? JSON.parse(b.mapping) : b.mapping; } catch { /* 交给 ES 报错 */ }
+    return response(await must('/' + enc(index), 'PUT', Object.keys(bodyObj).length ? JSON.stringify(bodyObj) : undefined));
+  }
+  if (path === '/cluster/delete-index') {
+    const r = await esDirect('/' + enc(index), 'DELETE');
+    return response(r.data, r.status);
+  }
+  if (path === '/cluster/put-mapping' || path === '/cluster/mapping-put') {
+    return response(await must('/' + enc(index) + '/_mapping', 'PUT', bodyText));
+  }
+  if (path === '/cluster/update-settings' || path === '/cluster/index-settings/update') {
+    return response(await must('/' + enc(index) + '/_settings', 'PUT', bodyText));
+  }
+  if (path === '/cluster/force-merge') {
+    const n = Math.max(1, Number(q.get('maxSegments') || 1));
+    return response(await must('/' + enc(index) + '/_forcemerge?max_num_segments=' + n, 'POST'));
+  }
+  if (path === '/cluster/rollover') {
+    const alias = String(q.get('alias') || index || '');
+    const dry = q.get('dryRun') === 'true';
+    return response(await must('/' + enc(alias) + '/_rollover' + (dry ? '?dry_run=true' : ''), 'POST', bodyText || undefined));
+  }
+  if (path === '/cluster/reroute') {
+    const qs2: string[] = [];
+    if (q.get('dryRun') === 'true') qs2.push('dry_run=true');
+    if (q.get('explain') !== 'false') qs2.push('explain=true');
+    if (q.get('retryFailed') === 'true') qs2.push('retry_failed=true');
+    return response(await must('/_cluster/reroute' + (qs2.length ? '?' + qs2.join('&') : ''), 'POST', bodyText || '{"commands":[]}'));
+  }
+  if (path === '/cluster/reroute/retry-failed') {
+    return response(await must('/_cluster/reroute?retry_failed=true', 'POST', '{"commands":[]}'));
+  }
+  if (path === '/cluster/alias-actions') {
+    return response(await must('/_aliases', 'POST', bodyText));
+  }
+  if (path === '/cluster/settings') return response((await esDirect('/_cluster/settings?include_defaults=true')).data);
+  if (path === '/cluster/settings/put') return response(await must('/_cluster/settings', 'PUT', bodyText));
+  /* ── 模板 / 快照 ── */
+  if (path === '/cluster/templates') {
+    try {
+      const a = await must('/_index_template');
+      const b = await must('/_component_template');
+      return response({ index_templates: a?.index_templates || [], component_templates: b?.component_templates || [] });
+    } catch (e) {
+      const legacy = await must('/_template');
+      return response({
+        index_templates: Object.entries<any>(legacy || {}).map(([name, v]) => ({ name, index_template: v })),
+        component_templates: [], legacy: true,
+      });
+    }
+  }
+  if (path === '/cluster/templates/put') {
+    const kind = q.get('kind') === 'component' ? 'component' : 'index';
+    const base = kind === 'component' ? '/_component_template/' : '/_index_template/';
+    return response(await must(base + enc(q.get('name') || ''), 'PUT', bodyText));
+  }
+  if (path === '/cluster/templates/delete') {
+    const kind = q.get('kind') === 'component' ? 'component' : 'index';
+    const base = kind === 'component' ? '/_component_template/' : '/_index_template/';
+    return response(await must(base + enc(q.get('name') || ''), 'DELETE'));
+  }
+  if (path === '/cluster/snapshot/repos') {
+    const raw = await must('/_snapshot');
+    return response(Object.entries<any>(raw || {}).map(([name, v]) => ({ name, type: v?.type, settings: v?.settings })));
+  }
+  if (path === '/cluster/snapshot/list') {
+    const repo = enc(q.get('repo') || '');
+    const raw = await must('/_snapshot/' + repo + '/_all?ignore_unavailable=true');
+    return response(raw?.snapshots || []);
+  }
+  if (path === '/cluster/snapshot/create') {
+    return response(await must('/_snapshot/' + enc(q.get('repo') || '') + '/' + enc(q.get('name') || '') + '?wait_for_completion=false', 'PUT', bodyText || undefined));
+  }
+  if (path === '/cluster/snapshot/restore') {
+    return response(await must('/_snapshot/' + enc(q.get('repo') || '') + '/' + enc(q.get('name') || '') + '/_restore?wait_for_completion=false', 'POST', bodyText || undefined));
+  }
+  if (path === '/cluster/snapshot/delete') {
+    return response(await must('/_snapshot/' + enc(q.get('repo') || '') + '/' + enc(q.get('name') || ''), 'DELETE'));
+  }
+  if (path === '/cluster/snapshot/status') {
+    const repo = q.get('repo'); const name = q.get('name');
+    const p = !repo ? '/_snapshot/_status'
+      : !name ? '/_snapshot/' + enc(repo) + '/_current/_status'
+      : '/_snapshot/' + enc(repo) + '/' + enc(name) + '/_status';
+    const raw = await must(p);
+    if (q.get('summary') !== 'true') return response(raw);
+    return response(snapshotSummary(raw, repo || '', name || ''));
+  }
+  /* ── ILM / SLM / Watcher / 远程集群 / 插件 / 脚本 / Painless ── */
+  if (path === '/cluster/ilm/policies') {
+    const raw = await must('/_ilm/policy');
+    return response(Object.entries<any>(raw || {}).map(([name, v]) => ({ name, ...(v || {}) })));
+  }
+  if (path === '/cluster/ilm/policy') {
+    const p = '/_ilm/policy/' + enc(q.get('name') || '');
+    return response(method === 'DELETE' ? await must(p, 'DELETE') : await must(p, 'PUT', bodyText));
+  }
+  if (path === '/cluster/ilm/explain') return response(await must('/' + enc(index) + '/_ilm/explain'));
+  if (path === '/cluster/ilm/move') return response(await must('/_ilm/move/' + enc(index), 'POST', bodyText));
+  if (path === '/cluster/ilm/start') return response(await must('/_ilm/start', 'POST', '{}'));
+  if (path === '/cluster/ilm/stop') return response(await must('/_ilm/stop', 'POST', '{}'));
+  if (path === '/cluster/ilm/status') return response(await must('/_ilm/status'));
+  if (path === '/cluster/slm/policies') return response(await must('/_slm/policy'));
+  if (path === '/cluster/slm/execute') return response(await must('/_slm/policy/' + enc(q.get('policyId') || '') + '/_execute', 'POST', '{}'));
+  if (path === '/cluster/slm/status') return response({ status: await must('/_slm/status'), stats: await must('/_slm/stats') });
+  if (path === '/cluster/watcher') {
+    const out: any = { available: true };
+    try { out.stats = await must('/_watcher/stats'); } catch (e: any) { return response({ available: false, reason: e.message }); }
+    try { out.watches = await must('/.watches/_search', 'POST', JSON.stringify({ size: 200, _source: ['metadata', 'trigger', 'actions'] })); }
+    catch (e: any) { out.watches = {}; out.reason = e.message; }
+    return response(out);
+  }
+  if (path === '/cluster/remote-clusters') {
+    const out: any = { remotes: {}, count: 0 };
+    try { out.remotes = await must('/_remote/info'); out.count = Object.keys(out.remotes || {}).length; } catch (e: any) { out.reason = e.message; }
+    try { const self = await must('/'); out.localClusterName = self.cluster_name; out.localVersion = self.version; } catch { /* 本端信息可缺 */ }
+    return response(out);
+  }
+  if (path === '/cluster/plugins') {
+    let rows: any[];
+    try { rows = await must('/_cat/plugins?format=json&v=true') || []; } catch (e: any) { return response({ available: false, reason: e.message }); }
+    const byPlugin: Record<string, Set<string>> = {};
+    const allNodes = new Set<string>();
+    for (const r of rows) { const nn = String(r.name); const pn = String(r.component); allNodes.add(nn); (byPlugin[pn] ||= new Set()).add(nn); }
+    const summary = Object.entries(byPlugin).map(([plugin, set]) => ({ plugin, installedOn: [...set], count: set.size, complete: set.size === allNodes.size }));
+    const mismatches = summary.filter(x => !x.complete).map(x => x.plugin + ' 缺少节点：' + [...allNodes].filter(n => !x.installedOn.includes(n)).join(','));
+    return response({ available: true, nodes: rows, summary, mismatches, nodeCount: allNodes.size, pluginCount: Object.keys(byPlugin).length });
+  }
+  if (path === '/cluster/scripts') {
+    const raw = await must('/_cluster/state/metadata?filter_path=metadata.stored_scripts');
+    const scripts = raw?.metadata?.stored_scripts || {};
+    return response({ scripts, count: Object.keys(scripts).length });
+  }
+  if (path === '/cluster/scripts/put') return response(await must('/_scripts/' + enc(q.get('id') || ''), 'PUT', bodyText));
+  if (path === '/cluster/scripts/delete') return response(await must('/_scripts/' + enc(q.get('id') || ''), 'DELETE'));
+  if (path === '/cluster/painless/execute') {
+    try { return response(await must('/_scripts/painless/_execute', 'POST', bodyText)); }
+    catch (e: any) { return response({ available: false, reason: e.message, hint: '当前集群未启用 painless _execute（可能是 OSS 或权限不足）' }); }
+  }
+  /* ── Reindex / 批量 / SQL 全通道 / Lucene / PIT / schema / termvectors ── */
+  if (path === '/cluster/reindex-advanced') {
+    const map: Record<string, string> = { slices: 'slices', refresh: 'refresh', waitForCompletion: 'wait_for_completion', requestsPerSecond: 'requests_per_second', scroll: 'scroll', timeout: 'timeout', waitForActiveShards: 'wait_for_active_shards' };
+    const qs2: string[] = [];
+    for (const [from, to] of Object.entries(map)) { const v = q.get(from); if (v) qs2.push(to + '=' + enc(v)); }
+    const p = '/_reindex' + (qs2.length ? '?' + qs2.join('&') : '');
+    const data = await must(p, 'POST', bodyText);
+    return response({ ...(data || {}), taskId: data?.task == null ? undefined : String(data.task), finalPath: p });
+  }
+  if (path === '/cluster/update-by-query' || path === '/cluster/delete-by-query') {
+    const qs2: string[] = [];
+    for (const k of ['conflicts', 'slices', 'refresh', 'waitForCompletion', 'requestsPerSecond', 'scroll', 'timeout', 'waitForActiveShards', 'maxDocs']) {
+      const v = q.get(k); if (v) qs2.push((k === 'waitForCompletion' ? 'wait_for_completion' : k === 'requestsPerSecond' ? 'requests_per_second' : k === 'waitForActiveShards' ? 'wait_for_active_shards' : k === 'maxDocs' ? 'max_docs' : k) + '=' + enc(v));
+    }
+    const suffix = path.endsWith('delete-by-query') ? '_delete_by_query' : '_update_by_query';
+    const p = '/' + enc(index) + '/' + suffix + (qs2.length ? '?' + qs2.join('&') : '');
+    const data = await must(p, 'POST', bodyText || '{"query":{"match_all":{}}}');
+    return response({ ...(data || {}), taskId: data?.task == null ? undefined : String(data.task), finalPath: p });
+  }
+  if (path === '/cluster/bulk') {
+    const p = (q.get('index') ? '/' + enc(String(q.get('index'))) : '') + '/_bulk';
+    const r = await esDirect(p, 'POST', bodyText, 'application/x-ndjson');
+    if (r.status >= 400) return response(r.data, r.status);
+    const items = r.data?.items || [];
+    let ok = 0, err = 0; const failed: any[] = [];
+    for (const it of items) {
+      const op = Object.values<any>(it)[0] || {};
+      if (Number(op.status) < 300) ok++; else { err++; if (failed.length < 20) failed.push(op); }
+    }
+    return response({ took: r.data?.took, errors: r.data?.errors, okCount: ok, errCount: err, total: items.length, failedSample: failed, finalPath: p });
+  }
+  if (path === '/cluster/sql/query' || path === '/cluster/sql/lenient') {
+    let payload = bodyText || '{}';
+    if (path.endsWith('lenient')) {
+      try { const o = JSON.parse(payload); if (!('field_multi_value_leniency' in o)) payload = JSON.stringify({ field_multi_value_leniency: true, ...o }); } catch { /* 原样 */ }
+    }
+    const r = await esDirect('/_sql?format=json', 'POST', payload);
+    if (r.status >= 400 && (r.status === 404 || r.status === 405)) {
+      return response({ available: false, reason: r.text, hint: '当前集群未启用 _sql，或该查询违反 SQL 限制；建议改用 Lucene / DSL 接口' });
+    }
+    return response(r.data, r.status);
+  }
+  if (path === '/cluster/sql/translate') {
+    const r = await esDirect('/_sql/translate', 'POST', bodyText || '{}');
+    return response(r.data, r.status);
+  }
+  if (path === '/cluster/sql/cursor') {
+    const b: any = { cursor: q.get('cursor') || '' };
+    const tz = q.get('timeZone'); if (tz) b.time_zone = tz;
+    if (q.get('columnar') === 'true') b.columnar = true;
+    const r = await esDirect('/_sql?format=json', 'POST', JSON.stringify(b));
+    return response(r.data, r.status);
+  }
+  if (path === '/cluster/sql/close') {
+    const r = await esDirect('/_sql/close', 'POST', JSON.stringify({ cursor: q.get('cursor') || '' }));
+    return response(r.data, r.status);
+  }
+  if (path === '/cluster/lucene-search') {
+    const qs2 = ['q=' + enc(q.get('q') || '*'), 'size=' + Number(q.get('size') || 100), 'from=' + Number(q.get('from') || 0)];
+    const sf = q.get('sortField'); if (sf) qs2.push('sort=' + enc(sf + ':' + (q.get('sortOrder') === 'asc' ? 'asc' : 'desc')));
+    qs2.push('lenient=true', 'analyze_wildcard=true', 'track_total_hits=true');
+    return response(await must('/' + enc(index) + '/_search?' + qs2.join('&')));
+  }
+  if (path === '/cluster/pit/open') {
+    return response(await must('/' + enc(index) + '/_pit?keep_alive=' + enc(q.get('keepAlive') || '5m'), 'POST'));
+  }
+  if (path === '/cluster/pit/search') return response(await must('/_search', 'POST', bodyText));
+  if (path === '/cluster/pit/close') {
+    return response(await must('/_pit', 'DELETE', JSON.stringify({ id: q.get('pitId') || '' })));
+  }
+  if (path === '/cluster/resolve-schema') {
+    return response(await resolveSchema(index));
+  }
+  if (path === '/cluster/field-caps' || path === '/cluster/terms-enum') {
+    return response(await must('/' + enc(index) + '/_field_caps?fields=*'));
+  }
+  if (path === '/cluster/term-vectors') {
+    const fields = q.get('fields');
+    return response(await must('/' + enc(index) + '/_termvectors/' + enc(q.get('id') || '')
+      + '?term_statistics=true&field_statistics=true&positions=false&offsets=false' + (fields ? '&fields=' + enc(fields) : '')));
+  }
+  /* ── Analysis / 同义词 / 模板渲染 / 体检 / date 形态采样 ── */
+  if (path === '/cluster/analysis-settings') {
+    const raw = await must('/' + enc(index) + '/_settings?include_defaults=false&flat_settings=false');
+    const out: any = { index, analysis: {}, summary: { analyzers: 0, tokenizers: 0, filters: 0, charFilters: 0, normalizers: 0 } };
+    for (const v of Object.values<any>(raw || {})) {
+      const a = v?.settings?.index?.analysis || {};
+      out.analysis = a;
+      out.summary = {
+        analyzers: Object.keys(a.analyzer || {}).length, tokenizers: Object.keys(a.tokenizer || {}).length,
+        filters: Object.keys(a.filter || {}).length, charFilters: Object.keys(a.char_filter || {}).length,
+        normalizers: Object.keys(a.normalizer || {}).length,
+      };
+      break;
+    }
+    return response(out);
+  }
+  if (path === '/cluster/analysis-update') {
+    const steps: string[] = [];
+    try {
+      await must('/' + enc(index) + '/_close', 'POST'); steps.push('close-ok');
+      await must('/' + enc(index) + '/_settings', 'PUT', bodyText); steps.push('put-settings-ok');
+    } finally {
+      try { await must('/' + enc(index) + '/_open', 'POST'); steps.push('open-ok'); } catch (e: any) { steps.push('open-FAILED: ' + e.message); }
+    }
+    return response({ steps, ok: steps.includes('put-settings-ok') && steps.includes('open-ok') });
+  }
+  if (path === '/cluster/reload-analyzers') return response(await must('/' + enc(index) + '/_reload_search_analyzers', 'POST'));
+  if (path === '/cluster/synonyms-upsert') {
+    const entries = (() => { try { return JSON.parse(bodyText || '[]'); } catch { return []; } })();
+    const filter = q.get('filter') || 'custom_synonyms';
+    const expand = q.get('expand') === 'true';
+    const body = JSON.stringify({ analysis: { filter: { [filter]: { type: 'synonym_graph', expand, synonyms: entries } } } });
+    const steps: string[] = [];
+    try {
+      await must('/' + enc(index) + '/_close', 'POST'); steps.push('close-ok');
+      await must('/' + enc(index) + '/_settings', 'PUT', body); steps.push('put-settings-ok');
+    } finally {
+      try { await must('/' + enc(index) + '/_open', 'POST'); steps.push('open-ok'); } catch (e: any) { steps.push('open-FAILED: ' + e.message); }
+    }
+    return response({ steps, ok: steps.includes('put-settings-ok') && steps.includes('open-ok') });
+  }
+  if (path === '/cluster/render-template') return response(await must('/_render/template', 'POST', bodyText));
+  if (path === '/cluster/search-template') return response(await must('/' + enc(index) + '/_search/template', 'POST', bodyText));
+  if (path === '/cluster/health-report') return response(await healthReport());
+  if (path === '/cluster/date-forms') {
+    const size = Math.min(500, Math.max(1, Number(q.get('size') || 50)));
+    const dsl = JSON.stringify({ query: { function_score: { query: { match_all: {} }, random_score: {} } } });
+    const resp = await must('/' + enc(index) + '/_search?size=' + size, 'POST', dsl);
+    const sources = (resp?.hits?.hits || []).map((h: any) => h._source || {});
+    const mp = await must('/' + enc(index) + '/_mapping');
+    const dateFields: string[] = [];
+    for (const v of Object.values<any>(mp || {})) {
+      const p = unwrapTypeLayer(v?.mappings || {})?.properties || {};
+      for (const [n, d] of Object.entries<any>(p)) if (String(d?.type).startsWith('date')) dateFields.push(n);
+    }
+    const forms: any = {}; const samples: any = {};
+    for (const f of dateFields) {
+      forms[f] = {}; 
+      for (const src of sources) {
+        const v = src[f];
+        if (v === undefined || v === null) continue;
+        const form = typeof v === 'number' ? (String(v).length === 13 ? 'epoch_millis' : 'epoch_seconds')
+          : typeof v === 'string' ? (/^\d{4}-\d{2}-\d{2}/.test(v) ? 'iso_string' : 'string') : 'other';
+        forms[f][form] = (forms[f][form] || 0) + 1;
+        if (form === 'other') { (samples[f] ||= {})[form] = [...((samples[f]?.[form]) || []), String(v)].slice(0, 5); }
+      }
+    }
+    return response({ index, physicalIndex: index, sampled: sources.length, total: resp?.total ?? 0, sampling: 'random_score', dateFields, forms, samples });
+  }
   return fail(501, '浏览器模式暂未映射端点：' + path, 'BROWSER_MODE_UNMAPPED');
 }
 
 export async function browserFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  /* 顶栏作业跟踪器会轮询宿主迁移接口；浏览器模式没有迁移编排，直接空集。 */
+  try {
+    const u = new URL(String(input), location.href);
+    if (u.pathname.includes('/internal/es/xmigrate/')) return response([]);
+  } catch { /* 非法 URL 交给下方原逻辑 */ }
   const target = splitPath(input);
   if (!target) return fetch(input, init);
   const method = String(init?.method || 'GET').toUpperCase();
@@ -241,6 +881,7 @@ export async function browserFetch(input: RequestInfo | URL, init?: RequestInit)
   try {
     return await route(target.path, target.query, method, bodyText, bodyOf(init));
   } catch (e) {
+    if (e instanceof EsHttpError) return response(e.data, e.status);
     return fail(500, String((e as any)?.message || e), 'BROWSER_BRIDGE_FAILED');
   }
 }

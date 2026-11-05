@@ -23,7 +23,10 @@
                 <AlertTriangle :size="13" />
                 <span>尚未选择集群连接，请在顶栏切换器中选择或添加目标集群</span>
               </div>
-              <div class="page scroll-y" :class="{ 'page-wide': pageWide }">
+              <div v-if="browserBlocked" class="page scroll-y">
+                <BrowserServerOnly />
+              </div>
+              <div v-else class="page scroll-y" :class="{ 'page-wide': pageWide }">
                 <!-- 页面在后台（document.hidden）时 rAF 被冻结，out-in 过渡会永久卡在旧视图——后台时直接无过渡切换 -->
                 <!-- key 带上数据面目标，切集群即整页重挂载，所有视图 onMounted 按新目标重拉，杀死旧集群残留数据 -->
                 <!-- KeepAlive 白名单：重状态页（查询工作台/数据浏览器等）侧栏切页不再清空现场——
@@ -84,6 +87,9 @@ import WelcomeWizard from './components/WelcomeWizard.vue';
 import LoginOverlay from './components/LoginOverlay.vue';
 import SetupWizard from './components/SetupWizard.vue';
 import BrowserConnect from './components/BrowserConnect.vue';
+import BrowserServerOnly from './components/BrowserServerOnly.vue';
+import { isBrowserMode } from './platform/browserApi';
+import { browserServerOnlyOf } from './utils/browserUnsupported';
 import { NAV_ITEMS, pageDeniedRedirect, peekDeniedPage, consumeDeniedPage, clearDeniedPage, moduleOffRedirect } from './router';
 import { GOTO_MAP } from './utils/hotkeys';
 import { readLastRoute, saveLastRoute, restorable } from './composables/continuity';
@@ -232,6 +238,7 @@ const hostOnlyRoute = computed(() => HOST_ONLY.has(route.path));
  （查询工作台/索引工作区/重建迁移/开发者工具/表格观测页）。实报 2000px 视口下
  查询工作台被压成 ~40% 居中窄列，结果区被顶出视口，豁免后吃满可用宽。 */
 const pageWide = computed(() => route.meta.wide === true);
+const browserBlocked = computed(() => isBrowserMode && !!browserServerOnlyOf(route.path));
 
 /* Naive 主题跟随应用主题（light 时传 null） */
 const naiveTheme = computed(() => store.effectiveTheme === 'light' ? null : darkTheme);

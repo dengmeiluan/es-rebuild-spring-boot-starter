@@ -248,6 +248,7 @@ components and styles are identical to server mode.
 - **Server mode**: the same Vue source is served by the Spring Boot server through `/internal/es/index`; all 52 pages, 11 packs and host SPI remain.
 - **Browser mode**: the extension runs the same Vue source in a `browser` build; the `api.ts` transport switches to direct Elasticsearch. The native connection layer stores credentials locally only.
 - **Direct tool page**: right-click the extension icon for a lightweight debug page (DSL/Lucene/ES-SQL/PIT, Explain, REST, Reindex, monitor); it does not pretend to be the full console.
+- **Coverage**: indices, mappings, settings, aliases, templates, snapshots, ILM/SLM, Watcher, tasks, nodes, REST, SQL, PIT, reindex and bulk call Elasticsearch directly; server-only pages (security, system indices, managed rebuild, cross-cluster migration, config lab) show an explicit "needs server" notice instead of faking data.
 - **Boundary**: browser mode does not fake server-side control-plane features (accounts/roles/page permissions, audit persistence, job SQLite/JDBC, scheduling, host SSO/menus); those stay in the server/host.
 - **Install**: open `chrome://extensions` → enable Developer mode → **Load unpacked** → select the folder containing `manifest.json` (`extensions/chrome` in the repo; extract the release zip first — do not select the zip itself).
 

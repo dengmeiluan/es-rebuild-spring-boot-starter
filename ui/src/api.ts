@@ -613,7 +613,8 @@ export const api = {
   hotThreads: (threads = 3, interval = '500ms', type = 'cpu', nodeId?: string) => {
     const url = `${EP}/cluster/hot-threads?${q({ threads, interval, type, nodeId })}`;
     const startedAt = performance.now();
-    return fetch(url, { headers: { ...authHeaders(), ...hostHeaders(), ...targetHeaders() } }).then(async r => {
+    const send: typeof fetch = isBrowserMode ? browserFetch : fetch;
+    return send(url, { headers: { ...authHeaders(), ...hostHeaders(), ...targetHeaders() } }).then(async r => {
       const txt = await r.text();
       try { recordIo(url, 'GET', '', r.status, r.ok, performance.now() - startedAt, txt); } catch { /* 观测旁路静默 */ }
       if (!r.ok) throw new ApiError(r.status, txt || `HTTP ${r.status}`);

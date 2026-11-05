@@ -234,6 +234,7 @@ public ConsoleHostIntegration esQueryStudioHostIntegration() {
 - **服务端模式**：同一套 Vue 源码由 Spring Boot server 提供，经 `/internal/es/index` 后端适配；原有 52 页、11 功能包、宿主 SPI 全部保留。
 - **浏览器模式**：插件内运行同一套 Vue 源码的 `browser` 构建，`api.ts` 底层 transport 切换为浏览器直连 ES；首次连接在原生连接层填写地址，凭据只存本机。
 - **直连工具页**：右键扩展图标打开轻量调试页（DSL/Lucene/ES-SQL/PIT、Explain、REST、Reindex、监控），不冒充完整控制台。
+- **覆盖**：索引/Mapping/Setting/别名/模板、快照/ILM/SLM/Watcher、任务/节点/REST/SQL/PIT/Reindex/Bulk 等 ES 原生能力均直连集群；服务端专属页（安全中心、系统索引、托管重建、跨集群迁移、配置实验室）显示明确的「需要服务端」说明，不伪造数据。
 - **边界**：浏览器模式不伪造服务端控制面能力（账号/角色/页面权限、审计持久化、作业 SQLite/JDBC、定时调度、宿主 SSO/菜单）；这些继续由 server/宿主承担。
 - **安装**：打开 `chrome://extensions` → 开启开发者模式 → **加载已解压的扩展程序** → 选择包含 `manifest.json` 的文件夹（源码为 `extensions/chrome`；Release zip 请先解压，不要直接选 zip）。
 
