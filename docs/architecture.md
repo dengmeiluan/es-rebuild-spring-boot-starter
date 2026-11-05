@@ -22,7 +22,7 @@ flowchart LR
 | `platform` | `esquerystudio-platform` | Page contract, feature packs, branding, `ConsoleHostIntegration`, `ManagedEsIndex` | Spring Boot core only; no Elasticsearch client |
 | `modules/console` | `esquerystudio-console` | Engine (rebuild, migration, mapping), console HTTP API, auth, audit, embedded UI assets | `platform`, host-provided Elasticsearch client |
 | `apps/server` | `esquerystudio-server` | Bootable standalone app (Kibana-style), setup wizard, SQLite defaults | `esquerystudio-console` |
-| `extensions/chrome` | MV3 extension | Front-end direct query workbench: DSL/Lucene/SQL/PIT, explain, REST console, live monitor | http/https host permission; no backend |
+| `extensions/chrome` | MV3 extension | Front-end direct query workbench: DSL/Lucene/SQL/PIT, explain, REST console, live monitor | http/https host permission; direct mode no backend, full-console tab loads server UI |
 | `ui` | `@esquerystudio/ui` | Vue 3 + TypeScript console source, built into console static assets | Page contract via `@contract` |
 | `examples/demo-host` | demo | Minimal host wiring for development | `esquerystudio-console` |
 

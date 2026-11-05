@@ -1,16 +1,16 @@
 :root {
-  --bg: #0b1112;
-  --bg2: #0f1718;
-  --panel: #141f20;
-  --panel2: #10191a;
-  --line: #243334;
-  --line2: #1b292a;
-  --tx: #e5f1ee;
-  --tx2: #a2b8b3;
-  --dim: #6f8580;
-  --ac: #2dd4bf;
-  --ac2: #14b8a6;
-  --ac-soft: rgba(45, 212, 191, 0.12);
+  --bg: #0c1213;
+  --bg2: #111819;
+  --panel: #111819;
+  --panel2: #0f1718;
+  --line: rgba(200, 240, 235, .09);
+  --line2: rgba(200, 240, 235, .06);
+  --tx: #e2eeea;
+  --tx2: #a8beb8;
+  --dim: #6f8b83;
+  --ac: #1fc8b4;
+  --ac2: #1fc8b4;
+  --ac-soft: rgba(31, 200, 180, .12);
   --danger: #f87171;
   --warn: #fbbf24;
   --ok: #34d399;
@@ -50,7 +50,7 @@ code { font-family: var(--mono); color: #8fe9dd; font-size: 11px; }
 
 .shell { display: flex; height: calc(100vh - 54px); }
 .sidebar {
-  width: 286px; flex: 0 0 286px; padding: 12px; overflow: auto;
+  width: 244px; flex: 0 0 244px; padding: 12px; overflow: auto;
   background: var(--bg2); border-right: 1px solid var(--line);
   display: flex; flex-direction: column; gap: 10px;
 }
@@ -106,7 +106,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--ac2); box-shadow
   padding: 7px 11px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;
 }
 .btn:hover { border-color: #38504e; color: var(--tx); }
-.btn.primary { background: var(--ac2); border-color: var(--ac2); color: #04201c; font-weight: 700; }
+.btn.primary { background: var(--ac2); border-color: var(--ac2); color: #0d0e12; font-weight: 700; }
 .btn.primary:hover { background: var(--ac); }
 .btn.ghost { background: transparent; }
 .btn.sm { padding: 5px 9px; font-size: 11px; }
