@@ -75,8 +75,11 @@ The native Vue console talks to Elasticsearch directly through a compatibility b
 | Snapshots, ILM, SLM, Watcher, remote clusters, plugins | Direct ES REST |
 | Tasks, nodes stats, shards, allocation explain, health report | Direct ES REST |
 | Search templates, term vectors, validate/explain, profile | Direct ES REST |
-| Monitor history / alerts | In-memory only; empty instead of a fake history |
-| Security, system indices, managed rebuild, cross-cluster migration, config lab | Server-side control plane; the page shows an explicit "needs server" notice |
+| Monitor history / alerts | Local IndexedDB minute sampling while the console is open; alerts derived from the same samples |
+| Operation audit | Local IndexedDB request log, shown in Security; ES-native accounts replace the server user store |
+| Managed rebuild | Client-side `_reindex` + `_tasks` polling + atomic alias swap, persisted as local jobs |
+| Config validator | Client L1 lint + L2 temp-index dry-run; drift remains server-side |
+| System indices, cross-cluster migration, config drift | Server-side control plane; the page shows an explicit "needs server" notice |
 
 The REST console deliberately exposes reindex, tasks, snapshots and settings
 directly; the user owns the cluster credentials and accepts the risk. The
@@ -85,8 +88,9 @@ identity, audit and long-running job orchestration.
 
 ## Data and security
 
-- Credentials stay on this machine in `chrome.storage.local` only when **记住凭据**
-  is checked; otherwise they live in this page's memory.
+- Credentials stay in this extension's local storage (`localStorage` plus a
+  `chrome.storage.local` mirror used by the background sampler) and are sent only
+  to the Elasticsearch endpoint you configured. No third-party telemetry.
 - The service worker is a narrow broker: only `http`/`https`, allowlisted
   methods, 8 MB request cap, no remote code, no third-party telemetry.
 - `host_permissions` cover `http/https` so users can connect arbitrary clusters;
@@ -94,8 +98,10 @@ identity, audit and long-running job orchestration.
 - Requests use the extension's http/https host permission. Cluster CORS,
   TLS, gateway allowlists and network reachability still apply; ask the ES
   administrator to allow the extension origin if a gateway blocks it.
-- Live-monitor samples are kept in memory only, capped at 120 points (~10 min),
-  and are discarded on refresh. No silent persistence of monitoring history.
+- The native Vue console keeps monitor samples in local IndexedDB (7 days / 20k rows,
+  one sample per minute while a console tab is open; the service-worker alarm also
+  samples while Chrome runs). Audit entries and managed-rebuild jobs stay local too.
+  The separate direct tool page keeps its live samples in memory (120 points, ~10 min).
 
 ## Verification
 

@@ -1,7 +1,12 @@
 <template>
-  <div class="sec">
+  <div class="sec" :class="{ 'sec-browser': isBrowserMode }">
     <!-- 宿主作用域由横幅降级为副标题自述（纯宿主页的恒定事实不该以警告形态常驻） -->
     <PageHeader :icon="ShieldCheck" title="安全中心" subtitle="页面授权 · 操作审计 · 内置账号（独立部署）" />
+
+    <div v-if="isBrowserMode" class="sec-browser-note">
+      <AlertTriangle :size="14" />
+      <span>浏览器模式没有服务端用户库：账号与页面权限由 Elasticsearch 自身和插件连接档案管理；下方操作审计是本机 IndexedDB 记录，仅保存在当前浏览器。</span>
+    </div>
 
     <!-- 兜底账号横幅 -->
     <div v-if="auth.me?.fallback" class="fb-banner">
@@ -431,6 +436,7 @@ import {
  （全模板 0 引用），运行时恒告警 Failed to resolve component */
 
 import PageHeader from '../components/PageHeader.vue';import { api } from '../api';
+import { isBrowserMode } from '../platform/browserApi';
 /* 两处裸 .empty 迁 EmptyState compact */
 import EmptyState from '../components/EmptyState.vue';
 import SkeletonBox from '../components/SkeletonBox.vue';
@@ -1169,4 +1175,7 @@ watch(canAuditAll, (v) => {
 .us-card { grid-column: 1 / -1; } /* ：用户管理表格需要全宽（窄列挤压修复） */
 /* 只读区块说明（重绑等 ADMIN 专属区块隐藏时不留无解释的空缺；IlmView ilm-perm-note 同款） */
 .sec-ro-note { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx2); font-size: var(--fs-xs); margin-top: var(--sp-2); }
+/* 纯浏览器模式：服务端账号/控制集群区块不属于本模式，只保留本机操作审计 */
+.sec-browser-note { display: flex; align-items: flex-start; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx1); font-size: var(--fs-xs); line-height: 1.6; margin-bottom: var(--sp-3); }
+.sec-browser .me-card, .sec-browser .us-card, .sec-browser .ctl-card, .sec-browser .fb-banner { display: none; }
 </style>

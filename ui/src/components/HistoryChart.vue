@@ -141,7 +141,7 @@ import { Activity, Maximize2, Minimize2 } from 'lucide-vue-next';
 
 import EmptyState from './EmptyState.vue';
 import { yMaxOf, timeTicks, fmtUnit, polylineSegments, type NamedSeries, type SeriesPoint } from '../utils/monitorSeries';
-import { catmullRomPath, type Pt } from '../utils/sparkChart'; /* ：折线平滑统一（六卡同款 Catmull-Rom 单源） */
+import { catmullRomPath, catmullRomAreaPath, type Pt } from '../utils/sparkChart'; /* ：折线平滑统一（六卡同款 Catmull-Rom 单源） */
 
 const props = defineProps<{
   /** 图卡标题（如「QPS（搜索/秒）」——单位已含中文括号时 unit 省略） */
@@ -316,10 +316,11 @@ function lineSegPaths(s: NamedSeries): string[] {
 }
 function areaSegs(s: NamedSeries): string[] {
   return lineSegs(s).map(attr => {
-    const pts = attr.split(' ').map(p => p.split(',').map(Number));
-    const first = pts[0]!;
-    const last = pts[pts.length - 1]!;
-    return `${attr} L ${last[0]!.toFixed(1)} ${PLOT_H} L ${first[0]!.toFixed(1)} ${PLOT_H} Z`;
+    const pts: Pt[] = attr.split(' ').map(pair => {
+      const [x, y] = pair.split(',').map(Number);
+      return { x, y };
+    });
+    return catmullRomAreaPath(pts, PLOT_W, PLOT_H);
   });
 }
 

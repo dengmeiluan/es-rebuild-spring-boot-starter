@@ -54,4 +54,21 @@ describe('browserApi bridge', () => {
     expect(String(init.body)).toContain('"cursor":"abc"');
     expect(String(init.body)).toContain('"time_zone":"Asia/Shanghai"');
   });
+
+  it('配置校验：未知字段类型报错，dry-run 建临时索引后清理', async () => {
+    const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({ acknowledged: true }));
+    const bad = await browserFetch('/internal/es/index/config-lab/validate', {
+      method: 'POST', body: JSON.stringify({ mapping: JSON.stringify({ properties: { a: { type: 'nope' } } }), dryRun: false }),
+    });
+    expect((await bad.json()).issues.some((i: any) => i.code === 'UNKNOWN_FIELD_TYPE')).toBe(true);
+
+    const ok = await browserFetch('/internal/es/index/config-lab/validate', {
+      method: 'POST', body: JSON.stringify({ settings: '{"refresh_interval":"1s"}', mapping: '{"properties":{"a":{"type":"keyword"}}}', dryRun: true }),
+    });
+    const report = await ok.json();
+    expect(report).toMatchObject({ valid: true, dryRunExecuted: true, dryRunPassed: true });
+    const methods = spy.mock.calls.map(c => c[1]?.method);
+    expect(methods).toContain('PUT');
+    expect(methods).toContain('DELETE');
+  });
 });

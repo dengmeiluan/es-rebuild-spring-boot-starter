@@ -40,6 +40,11 @@ function connect() {
     writeStoredRaw(localStorage, 'esquerystudio.browser.profile', JSON.stringify({
       url: url.value.replace(/\/+$/, ''), username: username.value, password: password.value,
     }));
+    try {
+      (globalThis as any).chrome?.storage?.local?.set?.({
+        'esquerystudio.browser.profile': { url: url.value.replace(/\/+$/, ''), username: username.value, password: password.value },
+      });
+    } catch { /* 非扩展环境 */ }
     location.reload();
   } catch (e) {
     err.value = String((e as any)?.message || e); busy.value = false;

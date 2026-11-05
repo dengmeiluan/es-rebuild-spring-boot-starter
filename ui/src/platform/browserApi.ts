@@ -11,6 +11,12 @@
 
 export const isBrowserMode = import.meta.env.MODE === 'browser';
 
+import {
+  startBrowserMonitor, queryMonitorMetrics, queryMonitorHistory, queryMonitorAlerts,
+  queryTopIndexes, monitorRingUsage, recordAudit, queryLocalAudit, auditFacetsLocal,
+} from './browserMonitor';
+import { adhocPrepare, adhocStart, adhocStatus, adhocJobs, adhocAbort, adhocConfirm } from './browserAdhoc';
+
 export interface BrowserProfile {
   url: string;
   username?: string;
@@ -30,6 +36,9 @@ function profile(): BrowserProfile | null {
 
 function saveProfile(p: BrowserProfile): void {
   localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
+  /* Chrome 扩展的 service worker 读不到页面 localStorage；同一份档案镜像到
+     chrome.storage.local，报警器/后台采样才能继续工作。 */
+  try { (globalThis as any).chrome?.storage?.local?.set?.({ [PROFILE_KEY]: p }); } catch { /* 非扩展环境 */ }
 }
 
 function authHeaders(p: BrowserProfile): Record<string, string> {
@@ -147,6 +156,75 @@ function treeStats(tree: any[]): any {
     if (n.children) stk.push(...n.children);
   }
   return s;
+}
+
+/** 浏览器模式配置校验：L1 结构/类型 lint + L2 临时索引试建（零残留）。 */
+function lintConfig(settingsText?: string, mappingText?: string): { issues: any[]; settings: any; mapping: any } {
+  const issues: any[] = [];
+  const add = (severity: string, code: string, path: string, message: string, suggestion?: string) =>
+    issues.push({ layer: 'LINT', severity, code, path, message, ...(suggestion ? { suggestion } : {}) });
+  let settings: any = {};
+  let mapping: any = {};
+  try { settings = settingsText ? JSON.parse(settingsText) : {}; } catch { add('ERROR', 'JSON_INVALID', 'settings', 'settings 不是合法 JSON'); }
+  try { mapping = mappingText ? JSON.parse(mappingText) : {}; } catch { add('ERROR', 'JSON_INVALID', 'mapping', 'mapping 不是合法 JSON'); }
+  if (Array.isArray(settings) || typeof settings !== 'object') add('ERROR', 'SETTINGS_NOT_OBJECT', 'settings', 'settings 顶层必须是对象');
+  if (Array.isArray(mapping) || typeof mapping !== 'object') add('ERROR', 'MAPPING_NOT_OBJECT', 'mapping', 'mapping 顶层必须是对象');
+  let props = mapping?.properties || mapping?.mappings?.properties;
+  if (!props && mapping && Object.keys(mapping).length === 1) {
+    const only: any = Object.values(mapping)[0];
+    props = only?.mappings?.properties || only?.properties;
+  }
+  if (!props && mappingText && mappingText.trim()) add('WARN', 'EMPTY_MAPPING', 'mapping', 'mapping 未包含 properties，目标索引将没有显式字段');
+  const types = new Set(['text', 'keyword', 'integer', 'long', 'short', 'byte', 'double', 'float', 'half_float', 'scaled_float', 'date', 'date_nanos', 'boolean', 'binary', 'object', 'nested', 'geo_point', 'geo_shape', 'ip', 'completion', 'search_as_you_type', 'token_count', 'dense_vector', 'sparse_vector', 'rank_feature', 'rank_features', 'alias', 'join', 'flattened', 'unsigned_long', 'histogram', 'wildcard', 'constant_keyword']);
+  const walk = (p: any, prefix: string) => {
+    for (const [name, def] of Object.entries<any>(p || {})) {
+      const path = prefix ? prefix + '.' + name : name;
+      const t = def?.type || (def?.properties ? 'object' : '');
+      if (t && !types.has(String(t))) add('ERROR', 'UNKNOWN_FIELD_TYPE', path, '未知字段类型：' + t, '检查 type 拼写；自定义类型需先安装对应插件');
+      if (def?.analyzer && !settings?.analysis && !settings?.index?.analysis) add('WARN', 'ANALYZER_UNKNOWN', path, '字段使用 analyzer=' + def.analyzer + '，但 settings 中没有 analysis 定义', '在 settings.analysis 中定义该 analyzer');
+      if (def?.properties) walk(def.properties, path);
+      for (const [sub, sd] of Object.entries<any>(def?.fields || {})) {
+        if (sd?.type && !types.has(String(sd.type))) add('ERROR', 'UNKNOWN_FIELD_TYPE', path + '.' + sub, '未知 multi-field 类型：' + sd.type);
+      }
+    }
+  };
+  walk(props, '');
+  for (const k of Object.keys(settings || {})) {
+    if (k === 'properties' || k === 'mappings' || k === 'type') add('WARN', 'MAPPING_KEY_IN_SETTINGS', k, 'settings 中出现 mapping 形态的键', '把该键移到 mapping 输入框');
+  }
+  return { issues, settings, mapping };
+}
+
+async function validateConfig(settingsText: string | undefined, mappingText: string | undefined, dryRun: boolean): Promise<any> {
+  const t0 = Date.now();
+  const { issues, settings, mapping } = lintConfig(settingsText, mappingText);
+  const errors = () => issues.filter(i => i.severity === 'ERROR').length;
+  let dryRunExecuted = false, dryRunPassed = false;
+  if (dryRun && !errors()) {
+    dryRunExecuted = true;
+    const tmp = 'esquerystudio_validate_' + Date.now() + '_' + Math.random().toString(16).slice(2, 6);
+    const s: any = { ...(settings || {}) };
+    delete s.number_of_shards; delete s.number_of_replicas; delete s['index.number_of_shards']; delete s['index.number_of_replicas'];
+    if (s.index && typeof s.index === 'object') { delete s.index.number_of_shards; delete s.index.number_of_replicas; }
+    s.number_of_shards = 1; s.number_of_replicas = 0;
+    const props = mapping?.properties || mapping?.mappings?.properties || (Object.values<any>(mapping || {})[0]?.mappings?.properties);
+    const body: any = { settings: s };
+    if (props) body.mappings = { properties: props };
+    try {
+      await must('/' + tmp, 'PUT', JSON.stringify(body));
+      dryRunPassed = true;
+    } catch (e: any) {
+      issues.push({ layer: 'DRYRUN', severity: 'ERROR', code: 'DRYRUN_FAILED', path: '', message: 'ES 服务端拒绝：' + (e?.message || e), suggestion: '检查 settings/mapping 的字段类型与参数组合' });
+    } finally {
+      try { await must('/' + tmp, 'DELETE'); } catch { /* 清理失败不掩盖校验结果 */ }
+    }
+  }
+  return {
+    valid: errors() === 0, dryRunExecuted, dryRunPassed,
+    elapsedMs: Date.now() - t0, errorCount: errors(),
+    warnCount: issues.filter(i => i.severity === 'WARN').length,
+    infoCount: issues.filter(i => i.severity === 'INFO').length, issues,
+  };
 }
 
 /** 字段结构探测（SQL/Lucene 能力面板）：mapping 类型 + 样本行实际多值判定。 */
@@ -301,10 +379,25 @@ async function route(path: string, query: string, method: string, bodyText: stri
   if (path === '/auth/permissions') {
     return response({ role: 'ADMIN', username: 'browser', pages: [], raw: true, all: true });
   }
-  if (path === '/auth/users' || path === '/auth/ops-audit' || path === '/auth/ops-audit/mine') return response([]);
+  if (path === '/auth/users') return response([]);
+  if (path === '/auth/ops-audit' || path === '/auth/ops-audit/mine') {
+    const p = new URLSearchParams(query);
+    return response({
+      records: await queryLocalAudit({
+        username: path.endsWith('/mine') ? 'browser' : (p.get('username') || undefined),
+        action: p.get('action') || undefined,
+        size: p.get('size') ? Number(p.get('size')) : undefined, from: p.get('from') ? Number(p.get('from')) : undefined,
+        since: p.get('since') ? Number(p.get('since')) : undefined,
+        connName: p.get('connName') || undefined, uriPrefix: p.get('uriPrefix') || undefined,
+        minCostMs: p.get('minCostMs') ? Number(p.get('minCostMs')) : undefined,
+        fromMs: p.get('fromMs') ? Number(p.get('fromMs')) : undefined,
+        toMs: p.get('toMs') ? Number(p.get('toMs')) : undefined,
+      }),
+    });
+  }
   if (path === '/auth/users/upsert' || path === '/auth/users/delete') return fail(403, '浏览器模式没有服务端用户库');
-  if (path === '/auth/audit-facets') return response({ actions: [], conns: [], users: [], uris: [] });
-  if (path === '/ring-usage') return response({ auditPrefix: '', monitorPrefix: '', auditBytes: 0, monitorBytes: 0, totalBytes: 0, capBytes: 0 });
+  if (path === '/auth/audit-facets') return response(await auditFacetsLocal());
+  if (path === '/ring-usage') return response(await monitorRingUsage());
   if (path === '/mapping-reconcile/report') return response({ records: [] });
   if (path === '/clusters') {
     const p = profile();
@@ -344,16 +437,51 @@ async function route(path: string, query: string, method: string, bodyText: stri
   if (path === '/clusters/sync/run') return response({ checkedAt: Date.now(), changes: [], errors: [] });
   if (path === '/health') return response({ status: 'green', mode: 'browser' });
   if (path === '/keys') return response([]);
-  /* 浏览器模式没有服务端环形历史/告警存储：返回空集，让同一 Vue 页面渲染空态而不是报错。 */
-  if (path === '/monitor-history') return response([]);
-  if (path === '/monitor-alerts') return response({ records: [] });
-  if (path === '/monitor-metrics' || path === '/monitor-metrics/top-indexes') return response({ records: [] });
+  /* 浏览器模式用本机 IndexedDB 复刻服务端监控环形存储；无样本时返回空集而不是假数据。 */
+  if (path === '/monitor-history') {
+    const p = new URLSearchParams(query);
+    return response(await queryMonitorHistory({
+      connId: p.get('connId') || undefined, status: p.get('status') || undefined,
+      fromMs: p.get('fromMs') ? Number(p.get('fromMs')) : undefined,
+      toMs: p.get('toMs') ? Number(p.get('toMs')) : undefined,
+      size: p.get('size') ? Number(p.get('size')) : undefined, from: p.get('from') ? Number(p.get('from')) : undefined,
+    }));
+  }
+  if (path === '/monitor-alerts') {
+    const p = new URLSearchParams(query);
+    return response(await queryMonitorAlerts(Number(p.get('size') || 50), p.get('fromMs') ? Number(p.get('fromMs')) : undefined, p.get('toMs') ? Number(p.get('toMs')) : undefined));
+  }
+  if (path === '/monitor-metrics') {
+    const p = new URLSearchParams(query);
+    return response(await queryMonitorMetrics({
+      scope: p.get('scope') || undefined, connName: p.get('connName') || undefined,
+      fromMs: p.get('fromMs') ? Number(p.get('fromMs')) : undefined,
+      toMs: p.get('toMs') ? Number(p.get('toMs')) : undefined,
+      size: p.get('size') ? Number(p.get('size')) : undefined,
+      interval: p.get('interval') || undefined, agg: p.get('agg') || undefined,
+    }));
+  }
+  if (path === '/monitor-metrics/top-indexes') {
+    const p = new URLSearchParams(query);
+    return response(await queryTopIndexes(p.get('connName') || undefined, Number(p.get('limit') || 8)));
+  }
+  if (path === '/ring-usage') return response(await monitorRingUsage());
   if (path === '/overview') {
     const cat = await esDirect('/_cat/indices?format=json&h=index,health,status,docs.count,store.size,pri,rep&s=index');
     const health = await esDirect('/_cluster/health');
     return response({ indices: cat.data || [], health: health.data || {}, mode: 'browser' });
   }
-  if (path.startsWith('/adhoc-rebuild') || path.startsWith('/config-lab') || path.startsWith('/xb') || path.startsWith('/insight')
+  if (path === '/ui/config') return response({});
+  if (path === '/adhoc-rebuild/prepare') return response(await adhocPrepare(must, String(new URLSearchParams(query).get('index') || '')));
+  if (path === '/adhoc-rebuild/start') return response(await adhocStart(must, body || {}));
+  if (path === '/adhoc-rebuild/status') return response(await adhocStatus(must, String(new URLSearchParams(query).get('jobId') || '')));
+  if (path === '/adhoc-rebuild/abort') return response(await adhocAbort(must, String(new URLSearchParams(query).get('jobId') || '')));
+  if (path === '/adhoc-rebuild/confirm-switch') return response(await adhocConfirm(must, String(new URLSearchParams(query).get('jobId') || '')));
+  if (path === '/adhoc-rebuild/jobs') return response(await adhocJobs(must));
+  if (path === '/config-lab/validate') {
+    return response(await validateConfig(body?.settings, body?.mapping, !!body?.dryRun));
+  }
+  if (path.startsWith('/config-lab') || path.startsWith('/xb') || path.startsWith('/insight')
       || path.startsWith('/system-') || path === '/force-merge' || path === '/replicas' || path === '/status' || path === '/progress') {
     return fail(501, '该能力依赖服务端控制台进程/存储，请使用服务端模式：' + path, 'BROWSER_MODE_SERVER_ONLY');
   }
@@ -917,10 +1045,25 @@ export async function browserFetch(input: RequestInfo | URL, init?: RequestInit)
   if (!target) return fetch(input, init);
   const method = String(init?.method || 'GET').toUpperCase();
   const bodyText = init?.body == null ? '' : String(init.body);
+  const startedAt = performance.now();
   try {
-    return await route(target.path, target.query, method, bodyText, bodyOf(init));
+    const res = await route(target.path, target.query, method, bodyText, bodyOf(init));
+    const quiet = /^\/(monitor-|auth\/me|auth\/ops-audit|auth\/audit-facets|clusters|health|setup|ui\/config|adhoc-rebuild\/jobs)/.test(target.path);
+    if (!quiet) void recordAudit({
+      method, path: target.path + target.query, status: res.status, ok: res.ok,
+      costMs: performance.now() - startedAt, connName: localStorage.getItem('esquerystudio.monitor.connName') || '',
+      detail: bodyText.slice(0, 400),
+    });
+    return res;
   } catch (e) {
-    if (e instanceof EsHttpError) return response(e.data, e.status);
+    if (e instanceof EsHttpError) {
+      void recordAudit({
+        method, path: target.path + target.query, status: e.status, ok: false,
+        costMs: performance.now() - startedAt, connName: localStorage.getItem('esquerystudio.monitor.connName') || '',
+        detail: typeof e.data === 'string' ? e.data.slice(0, 400) : JSON.stringify(e.data ?? '').slice(0, 400),
+      });
+      return response(e.data, e.status);
+    }
     return fail(500, String((e as any)?.message || e), 'BROWSER_BRIDGE_FAILED');
   }
 }

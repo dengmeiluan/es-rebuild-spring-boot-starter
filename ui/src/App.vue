@@ -89,6 +89,7 @@ import SetupWizard from './components/SetupWizard.vue';
 import BrowserConnect from './components/BrowserConnect.vue';
 import BrowserServerOnly from './components/BrowserServerOnly.vue';
 import { isBrowserMode } from './platform/browserApi';
+import { startBrowserMonitor } from './platform/browserMonitor';
 import { browserServerOnlyOf } from './utils/browserUnsupported';
 import { NAV_ITEMS, pageDeniedRedirect, peekDeniedPage, consumeDeniedPage, clearDeniedPage, moduleOffRedirect } from './router';
 import { GOTO_MAP } from './utils/hotkeys';
@@ -570,6 +571,7 @@ function onResumeScene() {
   if (s) router.push(s.fullPath);
 }
 onMounted(() => {
+  if (isBrowserMode) startBrowserMonitor();
   window.addEventListener('keydown', onKey);
   window.addEventListener('esquerystudio:identity-changed', onIdentityChanged);
   window.addEventListener('esquerystudio:forbidden', refreshIdentityIfStale);

@@ -22,7 +22,8 @@
   },
   "permissions": [
     "storage",
-    "contextMenus"
+    "contextMenus",
+    "alarms"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
