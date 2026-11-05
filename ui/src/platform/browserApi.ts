@@ -16,6 +16,11 @@ import {
   queryTopIndexes, monitorRingUsage, recordAudit, queryLocalAudit, auditFacetsLocal,
 } from './browserMonitor';
 import { adhocPrepare, adhocStart, adhocStatus, adhocJobs, adhocAbort, adhocConfirm } from './browserAdhoc';
+import {
+  connectCheck as xmConnectCheck, fetchConfig as xmFetchConfig, resolvePreview as xmResolvePreview,
+  destIndices as xmDestIndices, preflight as xmPreflight, start as xmStart,
+  progress as xmProgress, listJobs as xmListJobs, abort as xmAbort, resume as xmResume,
+} from './browserXmigrate';
 
 export interface BrowserProfile {
   url: string;
@@ -1035,11 +1040,40 @@ async function route(path: string, query: string, method: string, bodyText: stri
   return fail(501, '浏览器模式暂未映射端点：' + path, 'BROWSER_MODE_UNMAPPED');
 }
 
+async function xmigrateFetch(u: URL, method: string, body: any): Promise<Response> {
+  const i = u.pathname.indexOf('/internal/es/xmigrate');
+  const path = u.pathname.slice(i + '/internal/es/xmigrate'.length) || '/';
+  const q = new URLSearchParams(u.search);
+  try {
+    if (path === '/connect-check') return response(await xmConnectCheck(body || {}));
+    if (path === '/fetch-config') return response(await xmFetchConfig(body || {}, q.get('sourceIndex') || ''));
+    if (path === '/resolve-preview') return response(await xmResolvePreview(body || {}));
+    if (path === '/dest-indices') return response(await xmDestIndices(must));
+    if (path === '/preflight') return response(await xmPreflight(must, body || {}));
+    if (path === '/start') {
+      if (!body?.conn) throw new Error('浏览器模式请直接填写源集群连接信息（手工连接）');
+      return response(await xmStart(must, body, body.conn));
+    }
+    if (path === '/progress') return response(await xmProgress(q.get('jobId') || ''));
+    if (path === '/jobs') return response(await xmListJobs(must, Number(q.get('limit') || 20)));
+    if (path === '/abort') return response(await xmAbort(q.get('jobId') || ''));
+    if (path === '/resume') {
+      if (!body) throw new Error('浏览器模式续跑需要重新提供源集群连接信息');
+      return response(await xmResume(must, q.get('jobId') || '', body));
+    }
+    return fail(501, '浏览器模式暂未映射迁移端点：' + path, 'BROWSER_MODE_UNMAPPED');
+  } catch (e: any) {
+    return fail(400, String(e?.message || e), 'XMIGRATE_FAILED');
+  }
+}
+
 export async function browserFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  /* 顶栏作业跟踪器会轮询宿主迁移接口；浏览器模式没有迁移编排，直接空集。 */
+  /* 跨集群迁移有独立 base；由浏览器兼容层用源集群凭据现场搬运。 */
   try {
     const u = new URL(String(input), location.href);
-    if (u.pathname.includes('/internal/es/xmigrate/')) return response([]);
+    if (u.pathname.includes('/internal/es/xmigrate')) {
+      return await xmigrateFetch(u, String(init?.method || 'GET').toUpperCase(), bodyOf(init));
+    }
   } catch { /* 非法 URL 交给下方原逻辑 */ }
   const target = splitPath(input);
   if (!target) return fetch(input, init);

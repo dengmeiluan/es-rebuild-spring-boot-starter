@@ -78,8 +78,9 @@ The native Vue console talks to Elasticsearch directly through a compatibility b
 | Monitor history / alerts | Local IndexedDB minute sampling while the console is open; alerts derived from the same samples |
 | Operation audit | Local IndexedDB request log, shown in Security; ES-native accounts replace the server user store |
 | Managed rebuild | Client-side `_reindex` + `_tasks` polling + atomic alias swap, persisted as local jobs |
+| Cross-cluster migration | Client `scroll` + `_bulk` from a manually entered source into the connected host; local job records |
 | Config validator | Client L1 lint + L2 temp-index dry-run; drift remains server-side |
-| System indices, cross-cluster migration, config drift | Server-side control plane; the page shows an explicit "needs server" notice |
+| System indices, config drift | Server-side control plane; the page shows an explicit "needs server" notice |
 
 The REST console deliberately exposes reindex, tasks, snapshots and settings
 directly; the user owns the cluster credentials and accepts the risk. The

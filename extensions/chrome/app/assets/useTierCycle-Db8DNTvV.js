@@ -1,1 +1,0 @@
-import{d as s}from"./index-Cda9h8GN.js";import{c as v}from"./vendor-sqc6-qKQ.js";function i(a,e,u){const n=u!==void 0?u:e[0],c=s(a,n),l=v({get:()=>e.includes(c.value)?c.value:n,set:o=>{c.value=o}});function t(){const o=e.indexOf(c.value);c.value=e[(o+1)%e.length]}return{v:l,cycle:t}}export{i as u};

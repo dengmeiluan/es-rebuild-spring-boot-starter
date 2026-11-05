@@ -70,7 +70,7 @@ assert.ok(readFileSync(join(ROOT, 'ui/src/api.ts'), 'utf8').includes('isBrowserM
   }
   assert.ok(bridge.includes('BROWSER_MODE_SERVER_ONLY'), 'server-only endpoints are labelled, not silently faked');
   assert.ok(existsSync(join(ROOT, 'ui/src/components/BrowserServerOnly.vue')), 'server-only page notice exists');
-  for (const f of ['browserStore.ts', 'browserMonitor.ts', 'browserAdhoc.ts']) {
+  for (const f of ['browserStore.ts', 'browserMonitor.ts', 'browserAdhoc.ts', 'browserXmigrate.ts']) {
     assert.ok(existsSync(join(ROOT, 'ui/src/platform', f)), `browser persistence module ${f} exists`);
   }
   assert.ok(manifest.permissions.includes('alarms'), 'background monitor alarm permission');
