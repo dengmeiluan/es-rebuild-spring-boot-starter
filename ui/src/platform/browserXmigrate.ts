@@ -10,6 +10,7 @@ const BATCH_DEFAULT = 500;
 let hostCall: HostCall | null = null;
 let running = false;
 const stopFlags = new Set<string>();
+const activeJobs = new Set<string>();
 
 function enc(v: string): string { return encodeURIComponent(v); }
 function jobs(): any[] {
@@ -109,6 +110,7 @@ async function ensureDest(host: HostCall, req: any, conn: any): Promise<void> {
 
 async function runJob(job: any, req: any, conn: any): Promise<void> {
   const host = hostCall!;
+  activeJobs.add(job.jobId);
   const batch = Math.max(50, Math.min(5000, Number(req.batchSize || BATCH_DEFAULT)));
   job.status = 'RUNNING'; job.message = '准备迁移'; putJob(job);
   try {
@@ -147,6 +149,7 @@ async function runJob(job: any, req: any, conn: any): Promise<void> {
   } catch (e: any) {
     job.status = 'FAILED'; job.message = String(e?.message || e); job.finishTime = Date.now(); putJob(job);
   } finally {
+    activeJobs.delete(job.jobId);
     running = false;
   }
 }
@@ -168,11 +171,20 @@ export async function start(host: HostCall, req: any, conn: any): Promise<any> {
 export async function progress(jobId: string): Promise<any> {
   const j = jobs().find(x => x.jobId === jobId);
   if (!j) throw new Error('作业不存在：' + jobId);
-  return j;
+  return markIfStale(j);
 }
 export async function listJobs(host: HostCall, limit = 20): Promise<any[]> {
   hostCall = host;
-  return jobs().slice(0, Math.max(1, Math.min(500, limit)));
+  const list = jobs();
+  for (const j of list) markIfStale(j);
+  saveJobs(list);
+  return list.slice(0, Math.max(1, Math.min(500, limit)));
+}
+function markIfStale(j: any): any {
+  if (j.status === 'RUNNING' && !activeJobs.has(j.jobId)) {
+    j.status = 'INTERRUPTED'; j.message = '页面已关闭，搬运中断；已写入目标的数据保留，可重新发起或续跑';
+  }
+  return j;
 }
 export async function abort(jobId: string): Promise<any> {
   stopFlags.add(jobId);
