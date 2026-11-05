@@ -12,15 +12,21 @@ const ALLOWED_METHODS = new Set(['GET', 'POST', 'PUT', 'DELETE', 'HEAD']);
 const MAX_BODY_BYTES = 8 * 1024 * 1024;
 
 chrome.action.onClicked.addListener(() => {
-  chrome.tabs.create({ url: chrome.runtime.getURL('index.html') });
+  /* 原生 Vue 控制台（browser 构建）是插件主界面；直连单页保留给右键菜单。 */
+  chrome.tabs.create({ url: chrome.runtime.getURL('app/index.html') });
 });
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({ id: 'esq-lucene', title: '用选中文本发起 Lucene 查询', contexts: ['selection'] });
   chrome.contextMenus.create({ id: 'esq-dsl', title: '把选中内容作为 DSL 打开', contexts: ['selection'] });
+  chrome.contextMenus.create({ id: 'esq-workbench', title: '打开直连工作台', contexts: ['action'] });
 });
 
 chrome.contextMenus.onClicked.addListener((info) => {
+  if (info.menuItemId === 'esq-workbench') {
+    chrome.tabs.create({ url: chrome.runtime.getURL('index.html') });
+    return;
+  }
   const text = String(info.selectionText || '').slice(0, 20000);
   const mode = info.menuItemId === 'esq-dsl' ? 'dsl' : 'lucene';
   chrome.tabs.create({ url: chrome.runtime.getURL('index.html') + '?mode=' + mode + '&prefill=' + encodeURIComponent(text) });

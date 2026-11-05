@@ -88,7 +88,6 @@
         <div class="nav-group-label">开发者工具 <span>2</span></div>
         <nav class="nav">
           <button class="nav-item" data-view="rest"><span>REST 控制台</span><kbd>5</kbd></button>
-          <button class="nav-item" data-view="console"><span>完整控制台</span><kbd>7</kbd></button>
         </nav>
         <div class="nav-group-label">帮助 <span>1</span></div>
         <nav class="nav">
@@ -289,26 +288,6 @@
         </div>
       </section>
 
-      <section id="view-console" class="view hidden">
-        <div class="view-hd">
-          <div><h1>完整控制台</h1><p class="sub">嵌入真实 ESQueryStudio 52 页控制台 · 需要可访问的控制台服务端</p></div>
-          <div class="live-actions">
-            <button id="consoleOpenTabBtn" class="btn ghost sm">新标签打开</button>
-            <button id="consoleLoadBtn" class="btn primary sm">加载</button>
-          </div>
-        </div>
-        <div class="chart-card">
-          <div class="card-hd"><span>控制台地址</span><span class="dim">独立 server 例：http://localhost:5601/esquerystudio/index.html；宿主控制台填完整入口 URL</span></div>
-          <div class="rest-bar">
-            <input id="consoleUrl" placeholder="http://localhost:5601/esquerystudio/index.html" />
-          </div>
-          <div class="console-note" id="consoleNote">加载后 52 个页面、查询工作台与运维能力都在 iframe 内原样运行；若目标站点设置 X-Frame-Options/CSP，请用「新标签打开」。QuoteHub 生产控制台请从 QuoteHub 菜单进入，本扩展直连模式使用查询工作台。</div>
-        </div>
-        <div class="chart-card console-frame-wrap">
-          <iframe id="consoleFrame" title="ESQueryStudio 完整控制台" src="about:blank"></iframe>
-        </div>
-      </section>
-
       <section id="view-about" class="view hidden">
         <div class="view-hd"><div><h1>能力与边界</h1><p class="sub">前端直连版做了什么、砍了什么、数据留在哪里</p></div></div>
         <div class="about-grid">
@@ -362,7 +341,6 @@
   <script src="monitor.js"></script>
   <script src="rest.js"></script>
   <script src="reindex.js"></script>
-  <script src="consoleView.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -223,22 +223,19 @@ public ConsoleHostIntegration esQueryStudioHostIntegration() {
 
 ---
 
-## 🧩 Chrome 扩展：前端直连的查询工作台
+## 🧩 Chrome 扩展：原生 Vue 控制台，双模式同源
 
-不需要后端，也能把核心查询工作台装进浏览器。`extensions/chrome` 是一个 MV3 扩展：
-连接任意 ES 7.x/8.x 集群后，直接执行 DSL、Lucene、ES-SQL 与 PIT 查询，单文档
-`_explain` 打分树、DSL `profile`、实时集群监控（health + nodes stats，5 秒采样）都在里面。
+同一套 Vue 控制台源码，服务端模式（Spring Boot 提供 `/internal/es/index`）与浏览器模式（插件内直连 ES）只切换 transport，不再维护第二套 UI。插件主界面就是完整 52 页 Vue 控制台（browser 构建），首次打开填写 ES 地址后，页面/路由/组件/样式与服务端模式完全同源。
 
-![Chrome 扩展：完整控制台（真实 52 页 UI）](docs/screenshots/extension-full-console.png)
+![Chrome 扩展：原生 Vue 控制台（browser mode）](docs/screenshots/extension-vue-browser.png)
 
-![Chrome 扩展：前端直连工作台](docs/screenshots/extension.png)
+![Chrome 扩展：直连工具页](docs/screenshots/extension.png)
 
-- **保留**：DSL / Lucene / ES-SQL 直查、PIT 深分页、Explain、Profile、结果表 / JSON / CSV 导出、查询历史与收藏、实时 QPS / 写入 / Heap / CPU / 分片监控，以及 **REST 控制台**——reindex、tasks、snapshots、settings 等任意 ES API 可直接发起，风险由使用者承担。mapping 感知的字段插入 / lint、条件摘要、右键选中文本直达查询、可调采样间隔与历史上限、保存连接与引导式 Reindex（异步 task 轮询/取消）也已接通。
-- **仍由后端/宿主承担**：账号/角色/页面级权限、审计持久化、作业 SQLite/JDBC、定时调度、52 页完整运维面与宿主 SSO/菜单——扩展不冒充服务端控制面。
-- **取舍写清楚**：监控采样只在当前页内存保留 120 点（约 10 分钟），刷新即清空；查询历史与收藏在 `chrome.storage.local` 限制 100 / 50 条；凭据默认只存本机，不勾选“记住凭据”则仅当前页面内存持有。
-- **完整控制台**：扩展内「完整控制台」页可直接加载真实 52 页 ESQueryStudio UI（指向运行中的 server/宿主入口，UI 原样保留）；直连工作台则不需要后端。
+- **服务端模式**：同一套 Vue 源码由 Spring Boot server 提供，经 `/internal/es/index` 后端适配；原有 52 页、11 功能包、宿主 SPI 全部保留。
+- **浏览器模式**：插件内运行同一套 Vue 源码的 `browser` 构建，`api.ts` 底层 transport 切换为浏览器直连 ES；首次连接在原生连接层填写地址，凭据只存本机。
+- **直连工具页**：右键扩展图标打开轻量调试页（DSL/Lucene/ES-SQL/PIT、Explain、REST、Reindex、监控），不冒充完整控制台。
+- **边界**：浏览器模式不伪造服务端控制面能力（账号/角色/页面权限、审计持久化、作业 SQLite/JDBC、定时调度、宿主 SSO/菜单）；这些继续由 server/宿主承担。
 - **安装**：打开 `chrome://extensions` → 开启开发者模式 → **加载已解压的扩展程序** → 选择包含 `manifest.json` 的文件夹（源码为 `extensions/chrome`；Release zip 请先解压，不要直接选 zip）。
-- **边界**：浏览器直连仍受集群 CORS / TLS / 网关白名单约束；扩展安装时声明 http/https host permission，仅向用户填写的集群地址发请求。
 
 细节与安全说明见 [extensions/chrome/README.md](extensions/chrome/README.md)。
 

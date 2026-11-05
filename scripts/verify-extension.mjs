@@ -59,7 +59,10 @@ assert.ok(monitor.includes('monitorInterval'), 'configurable sampling interval')
 assert.ok(query.includes('openPrefill'), 'deep-link prefill');
 assert.ok(query.includes('DRAFT_KEY') && query.includes('saveDrafts'), 'per-mode draft persistence');
 assert.ok(read('reindex.js').includes('_reindex') && read('reindex.js').includes('_tasks/'), 'guided reindex task flow');
-assert.ok(html.includes('consoleFrame') && read('consoleView.js').includes('esquerystudio.ext.consoleUrl'), 'full console host');
+assert.ok(existsSync(join(EXT, 'app/index.html')), 'native Vue app bundle');
+assert.ok(background.includes('app/index.html'), 'action opens native Vue app');
+assert.ok(existsSync(join(ROOT, 'ui/src/platform/browserApi.ts')), 'browser transport exists');
+assert.ok(readFileSync(join(ROOT, 'ui/src/api.ts'), 'utf8').includes('isBrowserMode'), 'API switches transport by mode');
 assert.ok(monitor.includes('setInterval(sample, state.interval)'), 'live loop uses configured interval');
 assert.ok(monitor.includes('state.samples.shift()'), 'ring buffer eviction');
 

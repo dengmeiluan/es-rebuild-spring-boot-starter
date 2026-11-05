@@ -1,8 +1,9 @@
 # ESQueryStudio Chrome Extension
 
-**Direct-to-Elasticsearch query workbench, no backend required.** Load it unpacked in
-Chrome/Edge, connect to an ES 7.x/8.x cluster, and use the query surfaces that do
-not need server-side orchestration.
+**The native ESQueryStudio Vue console, with a browser transport.** Load it unpacked in
+Chrome/Edge; the toolbar opens the full 52-page Vue console (the same `ui/` source as the
+server), and the browser transport talks directly to Elasticsearch. A small direct tool page
+is kept for debugging via the extension context menu.
 
 ## Install (unpacked)
 
@@ -11,10 +12,10 @@ not need server-side orchestration.
    in this repo that is `extensions/chrome`; if you downloaded the release zip, **extract
    it first** and select the extracted `esquerystudio-chrome-1.0.0` folder. Do **not**
    select the `.zip` file itself; Chrome cannot load a zip as an unpacked extension.
-3. Pin **ESQueryStudio** and click the icon — the workbench opens in a tab.
-4. Enter the cluster URL, choose auth, click **连接并检查**. The extension declares
-   `http/https` host permission at install time; it only sends requests to the URL
-   you enter. Chrome may show a broad-host warning for unpacked installs.
+3. Pin **ESQueryStudio** and click the icon — the native Vue console opens in a tab.
+4. In the browser connection layer, enter the ES URL/auth and connect. The extension declares
+   `http/https` host permission at install time; it only sends requests to the URL you enter.
+   Chrome may show a broad-host warning for unpacked installs.
 
 ### If install fails
 
@@ -26,17 +27,27 @@ not need server-side orchestration.
 | Button is greyed out | Enable **Developer mode** first. |
 | Extension loads but icon is missing | Pin it from the puzzle menu; open `chrome://extensions` and check for load errors. |
 
+Build the bundled Vue app from the same source:
+
+```bash
+cd ui
+npm run build:extension
+```
+
 A packaged zip is attached to each GitHub Release.
 
-## Two modes
+## One Vue source, two transports
 
-- **Direct workbench** — the embedded single-page query/ops console in this folder; no backend needed.
-- **Full console** — the *actual* 52-page ESQueryStudio UI loaded unmodified in an iframe from a
-  running server (standalone `esquerystudio-server` or a host console entry). It preserves every
-  page/interaction; point it at `http://<host>:5601/esquerystudio/index.html`. If the target sets
-  `X-Frame-Options`/CSP, use **Open in new tab**.
+- **Native Vue console (browser build)** — `app/` is the same `ui/` Vue source built with
+  `--mode browser`; `api.ts` swaps only its lowest transport to direct Elasticsearch. The
+  toolbar opens the complete 52-page console with identical routes/components/styles. First
+  open shows the native connection layer; credentials stay local.
+- **Server mode** — the same `ui/` source is still served by the Spring Boot server through
+  `/internal/es/index`. No second UI is maintained.
+- **Direct tool page** — right-click the extension icon for the lightweight single-page
+  debugging tools; it is intentionally not presented as the full console.
 
-## Included (direct mode)
+## Direct tool page surfaces
 
 | Surface | Direct ES call |
 |---|---|

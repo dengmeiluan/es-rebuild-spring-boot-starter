@@ -53,6 +53,7 @@
           <WelcomeWizard ref="wizardRef" />
           <LoginOverlay />
           <SetupWizard />
+          <BrowserConnect />
           <!-- -D3：分组快捷键速查面板（? 开关）。-13：goto 登记表已迁至 utils/hotkeys.ts，
  面板由该表渲染，不再是需要手工同步的第二份数据 -->
           <HotkeyPanel :show="helpOpen" @close="helpOpen = false" />
@@ -82,6 +83,7 @@ import { confirmState, resolveConfirm } from './composables/confirm';
 import WelcomeWizard from './components/WelcomeWizard.vue';
 import LoginOverlay from './components/LoginOverlay.vue';
 import SetupWizard from './components/SetupWizard.vue';
+import BrowserConnect from './components/BrowserConnect.vue';
 import { NAV_ITEMS, pageDeniedRedirect, peekDeniedPage, consumeDeniedPage, clearDeniedPage, moduleOffRedirect } from './router';
 import { GOTO_MAP } from './utils/hotkeys';
 import { readLastRoute, saveLastRoute, restorable } from './composables/continuity';

@@ -345,7 +345,6 @@
     els.indexSelect.onchange = () => selectIndex(els.indexSelect.value);
     document.querySelectorAll('.nav-item').forEach((b) => { b.onclick = () => openView(b.dataset.view); });
     $('openOptionsBtn').onclick = () => { openView('query'); document.getElementById('connBox').scrollIntoView({ behavior: 'smooth' }); };
-    $('openConsoleBtn').onclick = () => openView('console');
     $('toggleConnBtn').onclick = () => {
       const box = $('connBox');
       box.classList.toggle('hidden');
@@ -362,7 +361,6 @@
       if (e.key === '4') openView('about');
       if (e.key === '5') openView('rest');
       if (e.key === '6') openView('reindex');
-      if (e.key === '7') openView('console');
     });
     $('dialogClose').onclick = () => $('jsonDialog').close();
   }
@@ -386,7 +384,6 @@
     if (window.ESMonitor) window.ESMonitor.init();
     if (window.ESRest) window.ESRest.init();
     if (window.ESReindex) window.ESReindex.init();
-    if (window.ESConsoleView) window.ESConsoleView.init();
     try {
       const params = new URLSearchParams(location.search);
       const prefill = params.get('prefill');

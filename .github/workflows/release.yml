@@ -68,6 +68,7 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           npm run build
+          npm run build:extension
 
       - name: Verify Chrome extension
         run: node scripts/verify-extension.mjs

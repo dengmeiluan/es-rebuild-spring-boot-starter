@@ -233,23 +233,23 @@ surface and acceptance checklist: [docs/integration/README.md](docs/integration/
 
 ---
 
-## 🧩 Chrome extension: the query workbench, front-end direct
+## 🧩 Chrome extension: native Vue console, one source, two modes
 
-The core query workbench also ships as a browser extension. `extensions/chrome` is an MV3
-extension: connect to any ES 7.x/8.x cluster and run DSL, Lucene, ES-SQL and PIT queries,
-per-document `_explain` score trees, DSL `profile`, and a live cluster monitor
-(health + nodes stats, 5-second sampling) with no backend.
+The same `ui/` Vue console source powers both modes. Server mode keeps the Spring Boot
+`/internal/es/index` backend; browser mode swaps only the transport and talks directly to
+Elasticsearch from the extension. There is no second UI to drift. The extension's main page
+is the full 52-page Vue console (browser build); first open asks for the ES URL, then routes,
+components and styles are identical to server mode.
 
-![Chrome extension: full console (real 52-page UI)](docs/screenshots/extension-full-console.png)
+![Chrome extension: native Vue console (browser mode)](docs/screenshots/extension-vue-browser.png)
 
-![Chrome extension: direct workbench](docs/screenshots/extension.png)
+![Chrome extension: direct tool page](docs/screenshots/extension.png)
 
-- **Kept**: DSL / Lucene / ES-SQL, PIT deep pagination, Explain, Profile, table / JSON / CSV export, query history and favorites, live QPS / indexing / heap / CPU / shard monitoring, plus a **REST console** — reindex, tasks, snapshots, settings and any ES API can be issued directly; the user owns the risk. Mapping-aware field insert / lint, a condition summary, selection-to-query context menus, configurable sampling interval / history cap, saved profiles and guided reindex with async task polling/cancel are wired in.
-- **Still owned by the backend/host**: accounts/roles/page-level permissions, audit persistence, job SQLite/JDBC stores, scheduling, the full 52-page ops surface and host SSO/menus — the extension does not impersonate a server-side control plane.
-- **Trade-offs made visible**: monitor samples live only in page memory, capped at 120 points (~10 min), and are discarded on refresh; history and favorites are capped at 100 / 50 in `chrome.storage.local`; credentials stay local and are held only in page memory when “remember” is off.
-- **Full console**: the extension's “Full console” tab loads the real 52-page ESQueryStudio UI unmodified from a running server/host entry; the direct workbench needs no backend.
+- **Server mode**: the same Vue source is served by the Spring Boot server through `/internal/es/index`; all 52 pages, 11 packs and host SPI remain.
+- **Browser mode**: the extension runs the same Vue source in a `browser` build; the `api.ts` transport switches to direct Elasticsearch. The native connection layer stores credentials locally only.
+- **Direct tool page**: right-click the extension icon for a lightweight debug page (DSL/Lucene/ES-SQL/PIT, Explain, REST, Reindex, monitor); it does not pretend to be the full console.
+- **Boundary**: browser mode does not fake server-side control-plane features (accounts/roles/page permissions, audit persistence, job SQLite/JDBC, scheduling, host SSO/menus); those stay in the server/host.
 - **Install**: open `chrome://extensions` → enable Developer mode → **Load unpacked** → select the folder containing `manifest.json` (`extensions/chrome` in the repo; extract the release zip first — do not select the zip itself).
-- **Boundary**: browser-direct access still obeys cluster CORS / TLS / gateway allowlists; the extension declares http/https host permissions and only sends requests to the cluster URL the user enters.
 
 Details and security notes: [extensions/chrome/README.md](extensions/chrome/README.md).
 
