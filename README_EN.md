@@ -242,11 +242,12 @@ per-document `_explain` score trees, DSL `profile`, and a live cluster monitor
 
 ![Chrome extension: query workbench direct to Elasticsearch](docs/screenshots/extension.png)
 
-- **Kept**: DSL / Lucene / ES-SQL, PIT deep pagination, Explain, Profile, table / JSON / CSV export, query history and favorites, live QPS / indexing / heap / CPU / shard monitoring, plus a **REST console** — reindex, tasks, snapshots, settings and any ES API can be issued directly; the user owns the risk.
+- **Kept**: DSL / Lucene / ES-SQL, PIT deep pagination, Explain, Profile, table / JSON / CSV export, query history and favorites, live QPS / indexing / heap / CPU / shard monitoring, plus a **REST console** — reindex, tasks, snapshots, settings and any ES API can be issued directly; the user owns the risk. Mapping-aware field insert / lint, a condition summary, selection-to-query context menus, configurable sampling interval / history cap, saved profiles and guided reindex with async task polling/cancel are wired in.
 - **Still owned by the backend/host**: accounts/roles/page-level permissions, audit persistence, job SQLite/JDBC stores, scheduling, the full 52-page ops surface and host SSO/menus — the extension does not impersonate a server-side control plane.
 - **Trade-offs made visible**: monitor samples live only in page memory, capped at 120 points (~10 min), and are discarded on refresh; history and favorites are capped at 100 / 50 in `chrome.storage.local`; credentials stay local and are held only in page memory when “remember” is off.
+- **Full console**: the extension's “Full console” tab loads the real 52-page ESQueryStudio UI unmodified from a running server/host entry; the direct workbench needs no backend.
 - **Install**: open `chrome://extensions` → Developer mode → Load unpacked → select `extensions/chrome`; or download `esquerystudio-chrome-1.0.0.zip` from GitHub Releases.
-- **Boundary**: browser-direct access still obeys cluster CORS / TLS / gateway allowlists; the extension uses optional host permissions limited to origins the user grants.
+- **Boundary**: browser-direct access still obeys cluster CORS / TLS / gateway allowlists; the extension declares http/https host permissions and only sends requests to the cluster URL the user enters.
 
 Details and security notes: [extensions/chrome/README.md](extensions/chrome/README.md).
 

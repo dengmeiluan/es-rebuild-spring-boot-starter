@@ -15,6 +15,17 @@ chrome.action.onClicked.addListener(() => {
   chrome.tabs.create({ url: chrome.runtime.getURL('index.html') });
 });
 
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({ id: 'esq-lucene', title: '用选中文本发起 Lucene 查询', contexts: ['selection'] });
+  chrome.contextMenus.create({ id: 'esq-dsl', title: '把选中内容作为 DSL 打开', contexts: ['selection'] });
+});
+
+chrome.contextMenus.onClicked.addListener((info) => {
+  const text = String(info.selectionText || '').slice(0, 20000);
+  const mode = info.menuItemId === 'esq-dsl' ? 'dsl' : 'lucene';
+  chrome.tabs.create({ url: chrome.runtime.getURL('index.html') + '?mode=' + mode + '&prefill=' + encodeURIComponent(text) });
+});
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (!message || message.type !== 'esRequest') return false;
 

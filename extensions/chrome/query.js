@@ -4,6 +4,9 @@
   const C = window.ESCore;
   const $ = (id) => document.getElementById(id);
   let mode = 'dsl';
+  const DRAFT_KEY = 'esquerystudio.ext.drafts';
+  let drafts = { dsl: '', lucene: '', sql: '', pit: '' };
+  let lastMode = 'dsl';
   let resultView = 'table';
   let pit = null;
   let lastHits = [];
@@ -18,8 +21,21 @@
 
   function app() { return window.ESApp; }
 
+  function saveDrafts() {
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ drafts, mode: lastMode })); } catch (_) { /* ignore */ }
+  }
+  function readDrafts() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}');
+      if (saved.drafts && typeof saved.drafts === 'object') drafts = Object.assign(drafts, saved.drafts);
+      if (['dsl','lucene','sql','pit'].includes(saved.mode)) lastMode = saved.mode;
+    } catch (_) { /* ignore */ }
+  }
   function setMode(next) {
+    if (mode && mode !== next && $('queryInput').value.trim()) drafts[mode] = $('queryInput').value;
     mode = next;
+    lastMode = next;
+    saveDrafts();
     document.querySelectorAll('.mode-tab').forEach((b) => {
       const on = b.dataset.mode === next;
       b.classList.toggle('on', on);
@@ -29,11 +45,12 @@
     $('editorTitle').textContent = titles[next];
     $('pitBar').classList.toggle('hidden', next !== 'pit');
     if (next !== 'pit' && pit) closePit(true);
-    if (next === 'lucene') $('queryInput').value = TEMPLATES.lucene;
+    if (drafts[next]) $('queryInput').value = drafts[next];
+    else if (next === 'lucene') $('queryInput').value = TEMPLATES.lucene;
     else if (next === 'sql') $('queryInput').value = TEMPLATES.sql.replace('research_report', app().state.selectedIndex || 'your-index');
-    else if (next === 'pit') $('queryInput').value = TEMPLATES.dsl;
-    else if (!$('queryInput').value.trim()) $('queryInput').value = TEMPLATES.dsl;
+    else $('queryInput').value = TEMPLATES.dsl;
     updateHint();
+    updateMeta();
   }
 
   function updateHint() {
@@ -270,6 +287,17 @@
     download('esquerystudio-' + Date.now() + '.json', JSON.stringify(lastRaw, null, 2), 'application/json');
   }
 
+  function openPrefill(nextMode, text) {
+    setMode(nextMode === 'dsl' ? 'dsl' : 'lucene');
+    $('queryInput').value = String(text || '');
+    drafts[mode] = $('queryInput').value;
+    saveDrafts();
+    updateMeta();
+    if (nextMode === 'dsl') {
+      try { parseDsl(); } catch (_) { /* keep the text as-is for editing */ }
+    }
+  }
+
   function loadEntry(entry) {
     if (!entry) return;
     setMode(entry.mode || 'dsl');
@@ -281,14 +309,222 @@
     updateHint();
   }
 
+
+  const FIELD_CLAUSES = new Set(['term','match','match_phrase','range','exists','terms','wildcard','prefix','regexp','fuzzy','match_bool_prefix','match_phrase_prefix','ids','geo_distance','geo_bounding_box','geo_shape','shape','rank_feature','distance_feature']);
+  const CLAUSE_OPTIONS = new Set(['boost','_name','case_insensitive','rewrite','analyzer','search_analyzer','fuzziness','operator','minimum_should_match','slop','zero_terms_query','lenient','time_zone','format','relation','unit','distance','validation_method','ignore_unmapped']);
+
+  function fieldMap() { return new Map((app().state.fields || []).map((f) => [f.name, f.type])); }
+  function fieldType(name) {
+    const map = fieldMap();
+    if (map.has(name)) return map.get(name);
+    const base = String(name || '').split('.').slice(0, -1).join('.');
+    return map.get(base) || '';
+  }
+  function debounce(fn, ms) { let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); }; }
+
+  function collectFieldIssues(body, issues) {
+    const fields = fieldMap();
+    if (!fields.size) return;
+    const visit = (node) => {
+      if (!node || typeof node !== 'object') return;
+      for (const [key, value] of Object.entries(node)) {
+        if (FIELD_CLAUSES.has(key) && value && typeof value === 'object' && !Array.isArray(value)) {
+          for (const name of Object.keys(value)) {
+            if (CLAUSE_OPTIONS.has(name) || name === 'query' || name === 'fields') continue;
+            if (name === '_id') continue;
+            if (!fields.has(name)) {
+              issues.push({ level: 'err', text: '字段不存在: ' + name });
+            } else if (fieldType(name) === 'text' && (key === 'term' || key === 'terms' || key === 'prefix' || key === 'wildcard' || key === 'regexp')) {
+              issues.push({ level: 'warn', text: name + ' 是 text，精确匹配建议用 ' + name + '.keyword' });
+            }
+          }
+        }
+        if (key === 'sort' && Array.isArray(value)) {
+          for (const item of value) {
+            if (!item || typeof item !== 'object') continue;
+            for (const name of Object.keys(item)) {
+              if (name === '_score') continue;
+              if (!fields.has(name)) issues.push({ level: 'err', text: '排序字段不存在: ' + name });
+              else if (fieldType(name) === 'text') issues.push({ level: 'warn', text: name + ' 是 text，排序建议用 .keyword' });
+            }
+          }
+        }
+        if ((key === 'aggs' || key === 'aggregations') && value && typeof value === 'object') {
+          for (const agg of Object.values(value)) {
+            if (!agg || typeof agg !== 'object') continue;
+            for (const type of ['terms','date_histogram','histogram','cardinality','avg','sum','min','max']) {
+              const def = agg[type];
+              if (def && typeof def === 'object' && def.field && !fields.has(def.field)) issues.push({ level: 'err', text: '聚合字段不存在: ' + def.field });
+            }
+          }
+        }
+        visit(value);
+      }
+    };
+    visit(body);
+  }
+
+  function renderLint(body, error) {
+    const bar = $('lintBar');
+    if (error) {
+      bar.className = 'lint-bar err'; bar.textContent = 'DSL 不合法：' + error.message; return;
+    }
+    if (mode === 'sql' || mode === 'lucene') { bar.className = 'lint-bar hidden'; return; }
+    const issues = [];
+    collectFieldIssues(body, issues);
+    if (!app().state.fields.length) { bar.className = 'lint-bar'; bar.textContent = 'mapping 未加载，暂不做字段校验'; return; }
+    if (!issues.length) { bar.className = 'lint-bar ok'; bar.textContent = '语法 OK · 字段均存在 · 可执行'; return; }
+    bar.className = 'lint-bar ' + (issues.some((i) => i.level === 'err') ? 'err' : '');
+    bar.textContent = (issues.some((i) => i.level === 'err') ? '错误：' : '提示：')
+      + issues.slice(0, 4).map((i) => i.text).join('；') + (issues.length > 4 ? '；…' : '');
+  }
+
+  function clauseLabel(name, value) {
+    if (!value || typeof value !== 'object') return name;
+    if (name === 'bool' || name === 'match_all' || name === 'query_string' || name === 'multi_match') return name;
+    const keys = Object.keys(value).filter((k) => !CLAUSE_OPTIONS.has(k) && k !== 'query');
+    if (['range','term','match','exists','match_phrase','wildcard','prefix','regexp'].includes(name)) return name + ' ' + (keys[0] || 'field');
+    return name + (keys.length ? ' ' + keys[0] : '');
+  }
+
+  function renderSummary(body) {
+    const box = $('dslSummary');
+    if (mode === 'sql') { box.textContent = 'SQL 模式 · 结果列由 _sql 返回'; return; }
+    if (mode === 'lucene') { box.textContent = 'Lucene · query_string'; return; }
+    if (!body || typeof body !== 'object') { box.textContent = '等待查询'; return; }
+    const bits = [];
+    const q = body.query;
+    if (q && q.bool && typeof q.bool === 'object') {
+      bits.push('bool');
+      for (const section of ['must','filter','should','must_not']) {
+        const arr = q.bool[section];
+        if (Array.isArray(arr) && arr.length) {
+          bits.push(section + '[' + arr.map((n) => clauseLabel(Object.keys(n)[0] || '?', Object.values(n)[0])).join(', ') + ']');
+        }
+      }
+    } else if (q && typeof q === 'object') {
+      const key = Object.keys(q)[0];
+      bits.push(clauseLabel(key, q[key]));
+    }
+    if (body.size != null) bits.push('size=' + body.size);
+    if (Array.isArray(body.sort) && body.sort.length) bits.push('sort×' + body.sort.length);
+    if (body.aggs || body.aggregations) bits.push('aggs×' + Object.keys(body.aggs || body.aggregations || {}).length);
+    box.textContent = bits.length ? '语句 · ' + bits.join('  ·  ') : '语法对象';
+  }
+
+
+  function treeRow(kind, label, detail, depth) {
+    const row = document.createElement('div');
+    row.className = 'tree-node' + (kind === 'section' ? ' section' : '');
+    row.style.paddingLeft = (depth * 14) + 'px';
+    const dot = document.createElement('span'); dot.className = 'tn-dot';
+    const k = document.createElement('span'); k.className = 'tn-kind'; k.textContent = label;
+    row.append(dot, k);
+    if (detail) { const d = document.createElement('span'); d.className = 'tn-detail'; d.textContent = detail; row.appendChild(d); }
+    return row;
+  }
+
+  function renderTree(body) {
+    const box = $('dslTree');
+    const count = $('treeCount');
+    box.innerHTML = '';
+    if (!body || typeof body !== 'object' || !body.query) {
+      const empty = document.createElement('div'); empty.className = 'tree-empty'; empty.textContent = 'JSON 完整后显示条件树'; box.appendChild(empty);
+      count.textContent = '0'; return;
+    }
+    let clauses = 0;
+    const addClause = (name, value, depth) => {
+      clauses++;
+      const label = Object.keys(value || {})[0] || '?';
+      const raw = value && typeof value === 'object' ? value[label] : value;
+      const detail = raw === undefined ? '' : JSON.stringify(raw).slice(0, 90);
+      box.appendChild(treeRow('clause', name + ' · ' + label, detail, depth));
+    };
+    const visit = (node, depth) => {
+      if (!node || typeof node !== 'object') return;
+      const entries = Object.entries(node);
+      if (!entries.length) return;
+      const [name, value] = entries[0];
+      if (name === 'bool' && value && typeof value === 'object') {
+        box.appendChild(treeRow('section', 'bool', '', depth));
+        for (const section of ['must','filter','should','must_not']) {
+          const arr = value[section];
+          if (!Array.isArray(arr) || !arr.length) continue;
+          box.appendChild(treeRow('section', section, '×' + arr.length, depth + 1));
+          for (const clause of arr) {
+            const c = Object.keys(clause || {})[0];
+            if (c) addClause(c, clause[c], depth + 2);
+          }
+        }
+        return;
+      }
+      if (name === 'function_score' || name === 'boosting' || name === 'dis_max' || name === 'constant_score') {
+        box.appendChild(treeRow('section', name, '', depth));
+        const inner = value.query || value.positive || value.queries;
+        if (Array.isArray(inner)) inner.forEach((q) => visit(q, depth + 1));
+        else if (inner) visit(inner, depth + 1);
+        return;
+      }
+      addClause(name, value, depth);
+    };
+    visit(body.query, 0);
+    const chips = document.createElement('div'); chips.className = 'tree-chips';
+    for (const [label, value] of [['size', body.size], ['sort', Array.isArray(body.sort) ? body.sort.length : null], ['aggs', Object.keys(body.aggs || body.aggregations || {}).length]]) {
+      if (value == null || (label === 'aggs' && !value)) continue;
+      const tag = document.createElement('span'); tag.className = 'chip'; tag.textContent = label + ' ' + value; chips.appendChild(tag);
+    }
+    if (chips.children.length) box.appendChild(chips);
+    count.textContent = String(clauses);
+  }
+
+  function updateMeta() {
+    const text = $('queryInput').value.trim();
+    if (!text) { $('dslSummary').textContent = '等待查询'; $('lintBar').className = 'lint-bar hidden'; renderTree(null); return; }
+    if (mode === 'sql' || mode === 'lucene') { renderSummary(null); $('lintBar').className = 'lint-bar hidden'; renderTree(null); return; }
+    let body;
+    try { body = JSON.parse(text); } catch (e) { $('dslSummary').textContent = '语法未完成'; renderTree(null); renderLint(null, e); return; }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) { $('dslSummary').textContent = 'DSL 必须是对象'; renderLint(null, new Error('DSL 必须是 JSON 对象')); return; }
+    renderSummary(body);
+    renderTree(body);
+    renderLint(body);
+  }
+
+  function populateFields() {
+    const sel = $('fieldSelect');
+    const fields = app().state.fields || [];
+    sel.innerHTML = '<option value="">字段…</option>';
+    for (const f of fields) {
+      const opt = document.createElement('option');
+      opt.value = f.name; opt.textContent = f.name + ' · ' + f.type;
+      sel.appendChild(opt);
+    }
+  }
+
+  function insertField() {
+    const name = $('fieldSelect').value;
+    if (!name) return;
+    const el = $('queryInput');
+    const start = el.selectionStart || 0;
+    el.setRangeText('"' + name + '"', start, el.selectionEnd || start, 'end');
+    el.focus();
+    $('fieldSelect').value = '';
+    updateMeta();
+  }
+
   function init() {
     document.querySelectorAll('.mode-tab').forEach((b) => { b.onclick = () => setMode(b.dataset.mode); });
     $('runBtn').onclick = run;
+    $('queryInput').addEventListener('input', debounce(() => {
+      drafts[mode] = $('queryInput').value;
+      saveDrafts();
+      updateMeta();
+    }, 180));
+    $('fieldSelect').onchange = insertField;
     $('formatBtn').onclick = () => {
-      try { $('queryInput').value = JSON.stringify(parseDsl(), null, 2); }
+      try { $('queryInput').value = JSON.stringify(parseDsl(), null, 2); updateMeta(); }
       catch (e) { app().toast(e.message, true); }
     };
-    $('exampleBtn').onclick = () => { $('queryInput').value = TEMPLATES[mode] || TEMPLATES.dsl; updateHint(); };
+    $('exampleBtn').onclick = () => { $('queryInput').value = TEMPLATES[mode] || TEMPLATES.dsl; updateHint(); updateMeta(); };
     $('profileToggle').onclick = () => {
       const on = $('profileToggle').getAttribute('aria-pressed') === 'true';
       $('profileToggle').setAttribute('aria-pressed', String(!on));
@@ -318,8 +554,11 @@
         updateHint();
       };
     });
-    setMode('dsl');
+    readDrafts();
+    setMode(lastMode);
+    populateFields();
+    updateMeta();
   }
 
-  window.ESQuery = { init, run, loadEntry, onIndexChanged: updateHint };
+  window.ESQuery = { init, run, loadEntry, openPrefill, onIndexChanged: () => { updateHint(); populateFields(); updateMeta(); } };
 })();

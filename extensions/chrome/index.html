@@ -23,6 +23,7 @@
     </div>
     <div class="top-right">
       <span id="connPill" class="pill off">未连接</span>
+      <button id="openConsoleBtn" class="btn ghost sm" title="加载真实 52 页控制台">完整控制台</button>
       <button id="openOptionsBtn" class="btn ghost sm" title="连接设置">连接设置</button>
     </div>
   </header>
@@ -32,6 +33,13 @@
       <section class="side-card">
         <div class="side-hd"><span>连接</span><button id="toggleConnBtn" class="icon-btn" title="收起">−</button></div>
         <div id="connBox" class="side-body hidden">
+          <label class="field">已保存连接
+            <select id="profileSelect"><option value="">新建连接…</option></select>
+          </label>
+          <div class="profile-actions">
+            <button id="saveProfileBtn" class="btn ghost xs">保存</button>
+            <button id="deleteProfileBtn" class="btn ghost xs">删除</button>
+          </div>
           <label class="field">集群地址
             <input id="baseUrl" type="url" placeholder="https://es.example.com:9200" autocomplete="off" />
           </label>
@@ -49,7 +57,7 @@
           <div id="apiKeyFields" class="auth-fields hidden">
             <input id="apiKey" placeholder="Base64 API Key" autocomplete="off" />
           </div>
-          <label class="check"><input id="remember" type="checkbox" /> 在本机记住凭据</label>
+          <label class="check"><input id="remember" type="checkbox" checked /> 在本机记住凭据</label>
           <button id="connectBtn" class="btn primary block">连接并检查</button>
           <div id="connMsg" class="hint" role="status"></div>
         </div>
@@ -72,13 +80,15 @@
           <button class="nav-item on" data-view="query"><span>查询工作台</span><kbd>1</kbd></button>
           <button class="nav-item" data-view="monitor"><span>实时监控</span><kbd>2</kbd></button>
         </nav>
-        <div class="nav-group-label">数据与资产 <span>1</span></div>
+        <div class="nav-group-label">数据与资产 <span>2</span></div>
         <nav class="nav">
           <button class="nav-item" data-view="history"><span>历史与收藏</span><kbd>3</kbd></button>
+          <button class="nav-item" data-view="reindex"><span>Reindex 重建</span><kbd>6</kbd></button>
         </nav>
-        <div class="nav-group-label">开发者工具 <span>1</span></div>
+        <div class="nav-group-label">开发者工具 <span>2</span></div>
         <nav class="nav">
           <button class="nav-item" data-view="rest"><span>REST 控制台</span><kbd>5</kbd></button>
+          <button class="nav-item" data-view="console"><span>完整控制台</span><kbd>7</kbd></button>
         </nav>
         <div class="nav-group-label">帮助 <span>1</span></div>
         <nav class="nav">
@@ -113,11 +123,15 @@
               <span id="editorTitle">Query DSL</span>
               <div class="card-actions">
                 <span id="fieldHint" class="chip">未选择索引</span>
+                <select id="fieldSelect" class="field-select" title="从 mapping 插入字段"><option value="">字段…</option></select>
                 <button id="formatBtn" class="btn ghost xs" title="格式化 JSON">格式化</button>
                 <button id="exampleBtn" class="btn ghost xs" title="插入示例">示例</button>
               </div>
             </div>
             <textarea id="queryInput" spellcheck="false" aria-label="查询输入"></textarea>
+            <div id="dslSummary" class="dsl-summary" aria-live="polite">等待查询</div>
+            <details class="tree-wrap" open><summary>条件树 <span id="treeCount" class="dim">0</span></summary><div id="dslTree" class="dsl-tree"></div></details>
+            <div id="lintBar" class="lint-bar hidden" role="alert"></div>
             <div class="editor-foot">
               <span id="queryHint" class="hint">选择索引后执行查询</span>
               <div class="run-group">
@@ -172,6 +186,8 @@
           </div>
           <div class="live-actions">
             <span id="livePill" class="pill off">LIVE 停止</span>
+            <select id="monitorInterval" class="field-select" title="采样间隔"><option value="3000">3s</option><option value="5000" selected>5s</option><option value="10000">10s</option><option value="30000">30s</option></select>
+            <select id="monitorCap" class="field-select" title="历史点数上限"><option value="60">60 点</option><option value="120" selected>120 点</option><option value="240">240 点</option></select>
             <button id="monitorToggleBtn" class="btn primary sm">开始采集</button>
             <button id="monitorClearBtn" class="btn ghost sm">清空采样</button>
           </div>
@@ -246,6 +262,53 @@
         </div>
       </section>
 
+      <section id="view-reindex" class="view hidden">
+        <div class="view-hd">
+          <div><h1>Reindex 重建</h1><p class="sub">直连 _reindex · 支持 query / slices / 异步 task 轮询与取消</p></div>
+          <span id="reindexState" class="chip">待执行</span>
+        </div>
+        <div class="chart-card">
+          <div class="card-hd"><span>源与目标</span><span class="dim">源索引 → 目标索引（不会自动删除源）</span></div>
+          <div class="reindex-grid">
+            <label class="field">源索引<input id="reindexSource" placeholder="old-index" /></label>
+            <label class="field">目标索引<input id="reindexDest" placeholder="new-index" /></label>
+            <label class="field">slices<select id="reindexSlices"><option value="auto">auto</option><option value="1">1</option><option value="2">2</option><option value="4">4</option><option value="8">8</option></select></label>
+            <label class="check"><input id="reindexAsync" type="checkbox" checked /> 异步执行（轮询 task）</label>
+          </div>
+          <div class="card-hd"><span>可选 query / script</span><span class="dim">JSON；留空=全量复制</span></div>
+          <textarea id="reindexQuery" spellcheck="false" placeholder='{"query":{"range":{"publish_time":{"gte":"now-30d"}}}}'></textarea>
+          <div class="quick-row">
+            <button id="reindexRun" class="btn primary sm">开始 Reindex</button>
+            <button id="reindexCancel" class="btn ghost sm hidden">取消 task</button>
+            <span id="reindexMeta" class="dim"></span>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="card-hd"><span>响应 / 进度</span><span class="dim">GET _tasks/&lt;id&gt;</span></div>
+          <pre id="reindexResult" class="json-view rest-result">等待执行…</pre>
+        </div>
+      </section>
+
+      <section id="view-console" class="view hidden">
+        <div class="view-hd">
+          <div><h1>完整控制台</h1><p class="sub">嵌入真实 ESQueryStudio 52 页控制台 · 需要可访问的控制台服务端</p></div>
+          <div class="live-actions">
+            <button id="consoleOpenTabBtn" class="btn ghost sm">新标签打开</button>
+            <button id="consoleLoadBtn" class="btn primary sm">加载</button>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="card-hd"><span>控制台地址</span><span class="dim">独立 server 例：http://localhost:5601/esquerystudio/index.html；宿主控制台填完整入口 URL</span></div>
+          <div class="rest-bar">
+            <input id="consoleUrl" placeholder="http://localhost:5601/esquerystudio/index.html" />
+          </div>
+          <div class="console-note" id="consoleNote">加载后 52 个页面、查询工作台与运维能力都在 iframe 内原样运行；若目标站点设置 X-Frame-Options/CSP，请用「新标签打开」。QuoteHub 生产控制台请从 QuoteHub 菜单进入，本扩展直连模式使用查询工作台。</div>
+        </div>
+        <div class="chart-card console-frame-wrap">
+          <iframe id="consoleFrame" title="ESQueryStudio 完整控制台" src="about:blank"></iframe>
+        </div>
+      </section>
+
       <section id="view-about" class="view hidden">
         <div class="view-hd"><div><h1>能力与边界</h1><p class="sub">前端直连版做了什么、砍了什么、数据留在哪里</p></div></div>
         <div class="about-grid">
@@ -273,7 +336,7 @@
             <div class="card-hd"><span>数据与安全</span></div>
             <ul class="bullet">
               <li>凭据默认只存本机 <code>chrome.storage.local</code>；取消勾选“记住凭据”则仅当前页面内存持有</li>
-              <li>扩展只向用户授权的 ES origin 发起 http/https 请求；不加载远程脚本</li>
+              <li>扩展声明 http/https host permission，只向用户填写的 ES 地址发起请求；不加载远程脚本</li>
               <li>浏览器直连受集群 CORS/TLS/网络策略约束；需要网关白名单时请让管理员放行扩展来源</li>
               <li>监控采样仅在本页内存，刷新即清空，避免把历史数据悄悄落盘</li>
             </ul>
@@ -298,6 +361,8 @@
   <script src="query.js"></script>
   <script src="monitor.js"></script>
   <script src="rest.js"></script>
+  <script src="reindex.js"></script>
+  <script src="consoleView.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

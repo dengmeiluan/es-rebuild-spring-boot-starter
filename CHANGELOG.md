@@ -28,8 +28,13 @@ and the same console carries index lifecycle, observability and host integration
 
 - MV3 front-end direct query workbench: DSL, Lucene, ES-SQL, PIT pagination,
   per-document explain, profile, CSV/JSON export and a live cluster monitor.
-- Optional host permissions, service-worker network broker, local-only assets,
-  local history/favorites caps and in-memory monitor samples (120 points).
+- Mapping-aware field insert, semantic lint, condition tree, saved connection
+  profiles, per-mode drafts, selection-to-query context menus and guided
+  reindex with async task polling/cancel.
+- A “Full console” host tab loads the real 52-page UI unmodified from a running
+  server; the direct workbench remains the no-backend path.
+- `http/https` host permissions, service-worker network broker, local-only assets,
+  local history/favorites caps and configurable in-memory monitor samples.
 - Backend-only features are documented as out of scope instead of silently faked.
 
 ### Platform

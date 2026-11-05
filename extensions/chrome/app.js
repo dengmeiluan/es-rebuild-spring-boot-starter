@@ -7,6 +7,7 @@
     profile: 'esquerystudio.ext.profile',
     history: 'esquerystudio.ext.history',
     favorites: 'esquerystudio.ext.favorites',
+    profiles: 'esquerystudio.ext.profiles',
   };
 
   const state = {
@@ -18,6 +19,8 @@
     fields: [],
     history: [],
     favorites: [],
+    profiles: [],
+    profileId: '',
     view: 'query',
     lastResult: null,
     lastQuery: null,
@@ -28,6 +31,7 @@
   const els = {
     baseUrl: $('baseUrl'), authMode: $('authMode'), username: $('username'), password: $('password'),
     apiKey: $('apiKey'), remember: $('remember'), basicFields: $('basicFields'), apiKeyFields: $('apiKeyFields'),
+    saveProfileBtn: $('saveProfileBtn'), deleteProfileBtn: $('deleteProfileBtn'),
     connectBtn: $('connectBtn'), connMsg: $('connMsg'), connPill: $('connPill'), sideDot: $('sideDot'),
     sideStatus: $('sideStatus'), indexFilter: $('indexFilter'), indexSelect: $('indexSelect'),
     indexCount: $('indexCount'), indexMeta: $('indexMeta'), fieldHint: $('fieldHint'),
@@ -41,28 +45,57 @@
     if (!(window.chrome && chrome.storage && chrome.storage.local)) return Promise.resolve();
     return new Promise((resolve) => chrome.storage.local.set({ [key]: value }, resolve));
   }
-  function saveProfile() {
+  async function saveProfile() {
     const p = Object.assign({}, state.profile);
     if (!p.remember) { p.password = ''; p.apiKey = ''; }
-    return storageSet(KEY.profile, p);
+    p.id = p.baseUrl || ('profile-' + Date.now());
+    state.profile = p;
+    state.profileId = p.id;
+    state.profiles = [p].concat(state.profiles.filter((x) => x.id !== p.id)).slice(0, 20);
+    renderProfiles();
+    await Promise.all([storageSet(KEY.profile, p), storageSet(KEY.profiles, state.profiles)]);
+    return p;
+  }
+
+  function fillProfile(p) {
+    state.profile = Object.assign({}, state.profile, p);
+    state.profileId = p.id || p.baseUrl || '';
+    els.baseUrl.value = p.baseUrl || '';
+    els.authMode.value = p.authMode || 'none';
+    els.username.value = p.username || '';
+    els.password.value = p.remember === false ? '' : (p.password || '');
+    els.apiKey.value = p.remember === false ? '' : (p.apiKey || '');
+    els.remember.checked = p.remember !== false;
+    els.authMode.onchange();
+  }
+
+  function renderProfiles() {
+    const sel = $('profileSelect');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">新建连接…</option>';
+    for (const p of state.profiles) {
+      const opt = document.createElement('option');
+      opt.value = p.id || p.baseUrl;
+      opt.textContent = (p.baseUrl || '未命名') + (p.authMode && p.authMode !== 'none' ? ' · ' + p.authMode : '');
+      sel.appendChild(opt);
+    }
+    sel.value = state.profileId || '';
   }
   function loadStored() {
     return Promise.all([
       storageGet(KEY.profile, state.profile),
       storageGet(KEY.history, []),
       storageGet(KEY.favorites, []),
-    ]).then(([profile, history, favorites]) => {
+      storageGet(KEY.profiles, []),
+    ]).then(([profile, history, favorites, profiles]) => {
       state.profile = Object.assign(state.profile, profile || {});
       state.history = Array.isArray(history) ? history.slice(0, C.HISTORY_CAP) : [];
       state.favorites = Array.isArray(favorites) ? favorites.slice(0, C.FAVORITE_CAP) : [];
-      if (profile && profile.baseUrl) {
-        els.baseUrl.value = profile.baseUrl;
-        els.authMode.value = profile.authMode || 'none';
-        els.username.value = profile.username || '';
-        els.password.value = profile.remember ? (profile.password || '') : '';
-        els.apiKey.value = profile.remember ? (profile.apiKey || '') : '';
-        els.remember.checked = profile.remember !== false;
-      }
+      state.profiles = Array.isArray(profiles) ? profiles.slice(0, 20) : [];
+      if (!state.profiles.length && profile && profile.baseUrl) state.profiles = [profile];
+      state.profileId = (profile && (profile.id || profile.baseUrl)) || '';
+      if (profile && profile.baseUrl) fillProfile(profile);
+      renderProfiles();
     });
   }
 
@@ -98,10 +131,11 @@
   }
 
   async function requestPermission(baseUrl) {
-    if (!(window.chrome && chrome.permissions && chrome.permissions.request)) return true;
+    /* host_permissions covers http(s) at install time; keep a cheap check for
+       managed/enterprise installs that may narrow site access later. */
+    if (!(window.chrome && chrome.permissions && chrome.permissions.contains)) return true;
     const origin = new URL(baseUrl).origin + '/*';
-    const granted = await chrome.permissions.request({ origins: [origin] });
-    if (!granted) throw new Error('未授权访问 ' + origin + '，请在扩展详情中允许该地址');
+    if (await chrome.permissions.contains({ origins: [origin] })) return true;
     return true;
   }
 
@@ -285,6 +319,21 @@
     };
     els.connectBtn.onclick = connect;
     els.remember.onchange = saveProfile;
+    els.saveProfileBtn.onclick = () => { readForm(); saveProfile().then(() => toast('连接配置已保存')); };
+    els.deleteProfileBtn.onclick = async () => {
+      const id = $('profileSelect').value;
+      if (!id) return;
+      state.profiles = state.profiles.filter((p) => (p.id || p.baseUrl) !== id);
+      state.profileId = '';
+      await storageSet(KEY.profiles, state.profiles);
+      renderProfiles();
+      toast('已删除连接配置');
+    };
+    $('profileSelect').onchange = () => {
+      const id = $('profileSelect').value;
+      const p = state.profiles.find((x) => (x.id || x.baseUrl) === id);
+      if (p) { fillProfile(p); connect(); }
+    };
     els.indexFilter.oninput = renderIndices;
     $('navSearch').oninput = () => {
       const q = $('navSearch').value.trim().toLowerCase();
@@ -295,6 +344,7 @@
     els.indexSelect.onchange = () => selectIndex(els.indexSelect.value);
     document.querySelectorAll('.nav-item').forEach((b) => { b.onclick = () => openView(b.dataset.view); });
     $('openOptionsBtn').onclick = () => { openView('query'); document.getElementById('connBox').scrollIntoView({ behavior: 'smooth' }); };
+    $('openConsoleBtn').onclick = () => openView('console');
     $('toggleConnBtn').onclick = () => {
       const box = $('connBox');
       box.classList.toggle('hidden');
@@ -310,6 +360,8 @@
       if (e.key === '3') openView('history');
       if (e.key === '4') openView('about');
       if (e.key === '5') openView('rest');
+      if (e.key === '6') openView('reindex');
+      if (e.key === '7') openView('console');
     });
     $('dialogClose').onclick = () => $('jsonDialog').close();
   }
@@ -321,7 +373,8 @@
     loadStored().then(() => {
       renderStorageLists();
       if (state.profile.baseUrl) {
-        els.connMsg.textContent = '已恢复连接配置，点击「连接并检查」';
+        els.connMsg.textContent = '已恢复连接配置，正在自动连接…';
+        if (state.profile.remember !== false) connect();
       } else {
         $('connBox').classList.remove('hidden');
         $('toggleConnBtn').textContent = '−';
@@ -331,6 +384,13 @@
     if (window.ESQuery) window.ESQuery.init();
     if (window.ESMonitor) window.ESMonitor.init();
     if (window.ESRest) window.ESRest.init();
+    if (window.ESReindex) window.ESReindex.init();
+    if (window.ESConsoleView) window.ESConsoleView.init();
+    try {
+      const params = new URLSearchParams(location.search);
+      const prefill = params.get('prefill');
+      if (prefill && window.ESQuery) window.ESQuery.openPrefill(params.get('mode'), prefill);
+    } catch (_) { /* ignore malformed deep link */ }
   }
 
   window.ESApp = { state, els, es, toast, openView, addHistory, toggleFavorite, renderStorageLists, selectIndex, get cluster() { return state.cluster; } };
