@@ -28,8 +28,6 @@ not need server-side orchestration.
 
 A packaged zip is attached to each GitHub Release.
 
-![Full console inside the extension](../../docs/screenshots/extension-full-console.png)
-
 ## Two modes
 
 - **Direct workbench** — the embedded single-page query/ops console in this folder; no backend needed.
