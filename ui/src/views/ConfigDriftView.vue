@@ -10,6 +10,12 @@
       </button>
     </div>
 
+    <div v-if="isBrowserMode" class="cd-browser-note">
+      <AlertTriangle :size="14" />
+      <span>浏览器模式没有代码 provider：这里的「代码/期望」是本机首次检测时采集的基线；线上配置变化会显示为漂移。</span>
+      <button v-if="picked" class="btn ghost xs" :disabled="driftBusy" @click="resetBaseline">重采基线</button>
+    </div>
+
     <!-- G6-B4：err-bar 独立于数据互斥链顶置（G2/ 教训）——原「失败 EmptyState」困在链内：
  有旧 keys 刷新失败时 body 分支获胜，loadErr 无渲染出口退化为仅 toast；现与旧清单并存 -->
     <div v-if="loadErr" role="alert" class="err-bar rise-in">
@@ -227,6 +233,7 @@ import CellContextMenu, { type CcmItem } from '../components/CellContextMenu.vue
 import WorkbenchLayout, { type WorkbenchPaneSpec } from '../components/WorkbenchLayout.vue';
 import RawIoModal from '../components/RawIoModal.vue'; /* G206：原始 IO 快查弹窗（755 G200 同构） */
 import { api, ioRecorder, type RawIoRec } from '../api';
+import { isBrowserMode } from '../platform/browserApi';
 import { useScopedDraft } from '../composables/useScopedDraft';
 import { useAppStore } from '../stores/app';
 import { useAuthStore } from '../stores/auth';
@@ -346,6 +353,17 @@ async function loadDrift(indexKey: string) {
     driftErr.value = friendlyEsError(String(e?.message ?? e));
     store.notify('error', '检测失败：' + driftErr.value);
   } finally { if (indexKey === picked.value) driftBusy.value = false; }
+}
+
+async function resetBaseline() {
+  if (!picked.value) return;
+  try {
+    await api.configLab.resetBaseline(picked.value);
+    store.notify('success', '已清除本机基线，重新检测时会以当前线上配置重采');
+    await loadDrift(picked.value);
+  } catch (e: any) {
+    store.notify('error', '重采基线失败：' + friendlyEsError(String(e?.message ?? e)));
+  }
 }
 
 /* G206：原始 IO 快查（755 G200/747 G162 三件套同构）——按本页
@@ -726,4 +744,5 @@ watch(() => [auth.probed, auth.authDisabled, auth.me?.username, store.target], (
   .cd-hd { flex-direction: column; align-items: stretch; gap: var(--sp-2); }
   .cd-verdict-bar { flex-wrap: wrap; }
 }
+.cd-browser-note { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx1); font-size: var(--fs-xs); line-height: 1.6; margin-bottom: var(--sp-3); }
 </style>

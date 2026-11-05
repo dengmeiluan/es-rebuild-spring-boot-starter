@@ -821,6 +821,7 @@ export const api = {
       post<any>('/config-lab/validate', { settings, mapping, dryRun }),
     driftKeys: () => get<any[]>('/config-lab/drift/keys'),
     drift: (indexKey: string) => get<any>(`/config-lab/drift?${q({ indexKey })}`),
+    resetBaseline: (indexKey: string) => post<any>(`/config-lab/drift-reset?${q({ indexKey })}`),
   },
 
   /* 现场内嵌智能 + 护栏动作协议（estimate→dry-run→confirmToken→execute→回执） */

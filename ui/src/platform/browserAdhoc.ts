@@ -223,6 +223,8 @@ export async function adhocStatus(es: EsCall, jobId: string): Promise<any> {
   return jobMap(await refreshJob(j));
 }
 
+export function adhocLocalJobs(): any[] { return jobs(); }
+
 export async function adhocJobs(es: EsCall): Promise<any[]> {
   esCall = es;
   ensurePoller();

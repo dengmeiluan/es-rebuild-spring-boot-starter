@@ -15,12 +15,13 @@ import {
   startBrowserMonitor, queryMonitorMetrics, queryMonitorHistory, queryMonitorAlerts,
   queryTopIndexes, monitorRingUsage, recordAudit, queryLocalAudit, auditFacetsLocal,
 } from './browserMonitor';
-import { adhocPrepare, adhocStart, adhocStatus, adhocJobs, adhocAbort, adhocConfirm } from './browserAdhoc';
+import { adhocPrepare, adhocStart, adhocStatus, adhocJobs, adhocAbort, adhocConfirm, adhocLocalJobs } from './browserAdhoc';
 import {
   connectCheck as xmConnectCheck, fetchConfig as xmFetchConfig, resolvePreview as xmResolvePreview,
   destIndices as xmDestIndices, preflight as xmPreflight, start as xmStart,
   progress as xmProgress, listJobs as xmListJobs, abort as xmAbort, resume as xmResume,
 } from './browserXmigrate';
+import { driftKeys as localDriftKeys, drift as localDrift, resetBaseline as resetDriftBaseline } from './browserDrift';
 
 export interface BrowserProfile {
   url: string;
@@ -163,7 +164,32 @@ function treeStats(tree: any[]): any {
   return s;
 }
 
-/** 浏览器模式配置校验：L1 结构/类型 lint + L2 临时索引试建（零残留）。 */
+function localLockDocs(): any[] {
+  return adhocLocalJobs()
+    .filter(j => j.status === 'RUNNING')
+    .map(j => ({
+      _id: j.jobId, _index: 'browser-local-locks',
+      _source: {
+        jobId: j.jobId, owner: j.ownerUsername || 'browser', logicalName: j.logicalName,
+        sourcePhysical: j.sourcePhysical, destPhysical: j.destPhysical,
+        stage: j.stage, acquiredAt: j.startedAt, lockActive: false,
+        note: '浏览器本机作业锁；不跨页面实例',
+      },
+    }));
+}
+
+async function systemQuery(which: string, dsl: string): Promise<any> {
+  const t0 = Date.now();
+  let body: any = {};
+  try { body = dsl ? JSON.parse(dsl) : {}; } catch { throw new Error('DSL 不是合法 JSON'); }
+  let docs = which === 'lock' ? localLockDocs() : [];
+  const term = body?.query?.term;
+  if (term && typeof term === 'object') {
+    const [field, value] = Object.entries<any>(term)[0] || [];
+    docs = docs.filter(d => String(field === 'jobId' ? d._source.jobId : d._source[field]) === String(value?.value ?? value));
+  }
+  return { total: docs.length, took: Date.now() - t0, hits: docs };
+}
 function lintConfig(settingsText?: string, mappingText?: string): { issues: any[]; settings: any; mapping: any } {
   const issues: any[] = [];
   const add = (severity: string, code: string, path: string, message: string, suggestion?: string) =>
@@ -485,6 +511,28 @@ async function route(path: string, query: string, method: string, bodyText: stri
   if (path === '/adhoc-rebuild/jobs') return response(await adhocJobs(must));
   if (path === '/config-lab/validate') {
     return response(await validateConfig(body?.settings, body?.mapping, !!body?.dryRun));
+  }
+  if (path === '/config-lab/drift/keys') return response(await localDriftKeys(must));
+  if (path === '/config-lab/drift') {
+    const p = new URLSearchParams(query);
+    return response(await localDrift(must, String(p.get('indexKey') || '')));
+  }
+  if (path === '/config-lab/drift-reset') {
+    const p = new URLSearchParams(query);
+    return response(await resetDriftBaseline(String(p.get('indexKey') || '')));
+  }
+  if (path === '/system-inspect') {
+    const which = String(new URLSearchParams(query).get('which') || 'lock');
+    const docs = which === 'lock' ? localLockDocs() : [];
+    return response({
+      name: 'browser-local-locks-' + which,
+      mappings: { properties: { jobId: { type: 'keyword' }, owner: { type: 'keyword' }, logicalName: { type: 'keyword' }, stage: { type: 'keyword' }, acquiredAt: { type: 'long' } } },
+      settings: {}, docCount: docs.length, sample: docs,
+    });
+  }
+  if (path === '/system-query') {
+    const p = new URLSearchParams(query);
+    return response(await systemQuery(String(p.get('which') || 'lock'), bodyText));
   }
   if (path.startsWith('/config-lab') || path.startsWith('/xb') || path.startsWith('/insight')
       || path.startsWith('/system-') || path === '/force-merge' || path === '/replicas' || path === '/status' || path === '/progress') {

@@ -234,8 +234,8 @@ public ConsoleHostIntegration esQueryStudioHostIntegration() {
 - **服务端模式**：同一套 Vue 源码由 Spring Boot server 提供，经 `/internal/es/index` 后端适配；原有 52 页、11 功能包、宿主 SPI 全部保留。
 - **浏览器模式**：插件内运行同一套 Vue 源码的 `browser` 构建，`api.ts` 底层 transport 切换为浏览器直连 ES；首次连接在原生连接层填写地址，凭据只存本机。
 - **直连工具页**：右键扩展图标打开轻量调试页（DSL/Lucene/ES-SQL/PIT、Explain、REST、Reindex、监控），不冒充完整控制台。
-- **覆盖**：索引/Mapping/Setting/别名/模板、快照/ILM/SLM/Watcher、任务/节点/REST/SQL/PIT/Reindex/Bulk/托管重建、跨集群迁移（客户端 scroll+bulk）、配置校验（L1+L2 dry-run）均可用；监控历史/告警、操作审计、重建/迁移作业落在本机 IndexedDB/localStorage，页面仍走同一套 API 契约。
-- **边界**：系统索引、配置漂移继续依赖服务端控制面，进入时显示明确说明；本机监控每分钟采样（控制台打开时由页面采样，关闭后由扩展 service worker 继续），只保存在本机，不伪造离线历史；账号由 Elasticsearch 自身认证。
+- **覆盖**：索引/Mapping/Setting/别名/模板、快照/ILM/SLM/Watcher、任务/节点/REST/SQL/PIT/Reindex/Bulk/托管重建、跨集群迁移（客户端 scroll+bulk）、配置校验（L1+L2 dry-run）、配置漂移（本机基线）、系统索引（本机作业锁）均可用；监控历史/告警、操作审计、重建/迁移作业落在本机 IndexedDB/localStorage，页面仍走同一套 API 契约。
+- **边界**：浏览器模式没有跨实例分布式锁和代码 provider，系统索引页展示本机作业锁、配置漂移以本机首次基线为准；本机监控每分钟采样（页面或 service worker），只保存在本机，不伪造离线历史；账号由 Elasticsearch 自身认证。
 - **安装**：打开 `chrome://extensions` → 开启开发者模式 → **加载已解压的扩展程序** → 选择包含 `manifest.json` 的文件夹（源码为 `extensions/chrome`；Release zip 请先解压，不要直接选 zip）。
 
 细节与安全说明见 [extensions/chrome/README.md](extensions/chrome/README.md)。

@@ -75,12 +75,13 @@ The native Vue console talks to Elasticsearch directly through a compatibility b
 | Snapshots, ILM, SLM, Watcher, remote clusters, plugins | Direct ES REST |
 | Tasks, nodes stats, shards, allocation explain, health report | Direct ES REST |
 | Search templates, term vectors, validate/explain, profile | Direct ES REST |
-| Monitor history / alerts | Local IndexedDB minute sampling while the console is open; alerts derived from the same samples |
+| Monitor history / alerts | Local IndexedDB minute sampling (page + service-worker alarm); alerts derived from the same samples |
 | Operation audit | Local IndexedDB request log, shown in Security; ES-native accounts replace the server user store |
 | Managed rebuild | Client-side `_reindex` + `_tasks` polling + atomic alias swap, persisted as local jobs |
 | Cross-cluster migration | Client `scroll` + `_bulk` from a manually entered source into the connected host; local job records |
-| Config validator | Client L1 lint + L2 temp-index dry-run; drift remains server-side |
-| System indices, config drift | Server-side control plane; the page shows an explicit "needs server" notice |
+| Config validator | Client L1 lint + L2 temp-index dry-run |
+| Config drift | Local baseline captured on first check, compared with the live mapping/settings |
+| System indices | Local job-lock view for the current browser; true cross-instance locking remains a server capability |
 
 The REST console deliberately exposes reindex, tasks, snapshots and settings
 directly; the user owns the cluster credentials and accepts the risk. The

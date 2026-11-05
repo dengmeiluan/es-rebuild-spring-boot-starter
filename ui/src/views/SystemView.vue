@@ -22,6 +22,11 @@
       <span>{{ retiredNote }}</span>
     </div>
 
+    <div v-if="isBrowserMode" class="sy-browser-note">
+      <Info :size="13" style="flex-shrink:0;margin-top:1px" />
+      <span>浏览器模式没有跨实例分布式锁：这里展示当前浏览器内的托管重建作业锁；真正的跨实例互斥由服务端控制面提供。</span>
+    </div>
+
     <!-- 索引信息（ W-D：sy-meta 手写 chip 行 + pill r 换 MetaStrip 统一件，
  值亮+标签暗+·分隔同构；mapping 读取失败并入 err 档，文案逐字） -->
     <MetaStrip v-if="info" :items="syMeta" />
@@ -129,6 +134,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { RefreshCw, Play, DatabaseZap, Info, Braces, Settings2, Terminal, Loader2 } from 'lucide-vue-next';
 
 import PageHeader from '../components/PageHeader.vue';import { api, ioRecorder, type RawIoRec } from '../api';
+import { isBrowserMode } from '../platform/browserApi';
 /* 两处裸 .empty 迁 EmptyState compact */
 import EmptyState from '../components/EmptyState.vue';
 /* 天罗W6：结果网格整表换 QueryResultTable（漏斗/tfoot 聚合/列详情/复制矩阵/导出/行导航） */
@@ -386,6 +392,7 @@ const jsonHtml = computed(() => {
 /* 响应式顺带（responsive900Sweep529 口径：只加 CSS 零结构动、档内非空）——
  本页 .sy 为单列 flex 无分栏堆叠诉求（1100 档无落点，不造空壳档），900 紧凑档只收查询卡/
  结果条侧距 */
+.sy-browser-note { display: flex; align-items: flex-start; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--bg-alt); color: var(--tx1); font-size: var(--fs-xs); line-height: 1.6; margin-bottom: var(--sp-3); }
 @media (max-width: 900px) {
   .sy-qcard { padding: var(--sp-2) var(--sp-3); }
 }
