@@ -48,7 +48,8 @@
   async function saveProfile() {
     const p = Object.assign({}, state.profile);
     if (!p.remember) { p.password = ''; p.apiKey = ''; }
-    p.id = p.baseUrl || ('profile-' + Date.now());
+    if (!p.baseUrl) { state.profile = p; return p; }
+    p.id = p.baseUrl;
     state.profile = p;
     state.profileId = p.id;
     state.profiles = [p].concat(state.profiles.filter((x) => x.id !== p.id)).slice(0, 20);
