@@ -97,7 +97,7 @@ class EsHttpError extends Error {
 }
 
 async function must(path: string, method = 'GET', body?: string): Promise<any> {
-  const r = await esDirect(path, method, body);
+  const r = await esDirect(path, method, body, /\/_bulk(\?|$)/.test(path) ? 'application/x-ndjson' : 'application/json');
   if (r.status >= 400) throw new EsHttpError(r.status, r.data ?? r.text);
   return r.data;
 }
