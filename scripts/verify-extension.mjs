@@ -68,14 +68,32 @@ assert.ok(readFileSync(join(ROOT, 'ui/src/api.ts'), 'utf8').includes('isBrowserM
   for (const ep of ['/cluster/templates', '/cluster/snapshot/repos', '/cluster/ilm/policies', '/cluster/reindex-advanced', '/cluster/resolve-schema', '/cluster/health-report']) {
     assert.ok(bridge.includes(ep), `browser bridge maps ${ep}`);
   }
+  for (const ep of ["path === '/progress'", '/insight/settings-impact', 'insightAction']) {
+    assert.ok(bridge.includes(ep), `browser bridge handles ${ep}`);
+  }
+  /* 首屏门禁互斥：浏览器模式只能出现 BrowserConnect；LoginOverlay/SetupWizard 若同时挂载
+     会叠三层全屏遮罩并抢焦点（实测集群录入后狂闪/不可用）。 */
+  const appVue = readFileSync(join(ROOT, 'ui/src/App.vue'), 'utf8');
+  assert.ok(appVue.includes('<LoginOverlay v-if="!isBrowserMode" />'), 'browser mode hides LoginOverlay');
+  assert.ok(appVue.includes('<SetupWizard v-if="!isBrowserMode" />'), 'browser mode hides SetupWizard');
+  assert.ok(appVue.includes('<BrowserConnect v-if="isBrowserMode" />'), 'browser mode mounts BrowserConnect only');
+  const apiTs = readFileSync(join(ROOT, 'ui/src/api.ts'), 'utf8');
+  assert.ok(apiTs.includes('browserSetupProbe'), 'browser /auth/me 401 does not open the login overlay');
   assert.ok(bridge.includes('BROWSER_MODE_SERVER_ONLY'), 'server-only endpoints are labelled, not silently faked');
   assert.ok(existsSync(join(ROOT, 'ui/src/components/BrowserServerOnly.vue')), 'server-only page notice exists');
-  for (const f of ['browserStore.ts', 'browserMonitor.ts', 'browserAdhoc.ts', 'browserXmigrate.ts']) {
+  for (const f of ['browserStore.ts', 'browserMonitor.ts', 'browserAdhoc.ts', 'browserXmigrate.ts', 'browserInsight.ts', 'browserProfiles.ts']) {
     assert.ok(existsSync(join(ROOT, 'ui/src/platform', f)), `browser persistence module ${f} exists`);
   }
+  const insight = readFileSync(join(ROOT, 'ui/src/platform/browserInsight.ts'), 'utf8');
+  assert.ok(insight.includes('APPLY_INDEX_SETTINGS') && insight.includes('confirmToken'), 'local guarded-action protocol exists');
+  assert.ok(insight.includes("es('/' + enc(index) + '/_settings', 'PUT'"), 'guarded execute writes real index settings');
+  const profiles = readFileSync(join(ROOT, 'ui/src/platform/browserProfiles.ts'), 'utf8');
+  assert.ok(profiles.includes('esquerystudio.browser.profiles') && profiles.includes('esquerystudio.browser.active'), 'multi-profile local storage exists');
+  assert.ok(bridge.includes('profiles().map(connView)'), 'connection list uses local profiles');
   assert.ok(manifest.permissions.includes('alarms'), 'background monitor alarm permission');
   const bg = readFileSync(join(ROOT, 'extensions/chrome/background.js'), 'utf8');
   assert.ok(bg.includes('esq-monitor') && bg.includes('sampleMonitor'), 'service worker samples monitor history');
+  assert.ok(bg.includes('sampleProfile') && bg.includes('PROFILES_KEY'), 'service worker samples every saved profile');
 }
 assert.ok(monitor.includes('setInterval(sample, state.interval)'), 'live loop uses configured interval');
 assert.ok(monitor.includes('state.samples.shift()'), 'ring buffer eviction');

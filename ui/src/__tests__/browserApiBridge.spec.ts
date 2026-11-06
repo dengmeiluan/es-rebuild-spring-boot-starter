@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { browserFetch } from '../platform/browserApi';
+import { __resetBrowserProfilesForTests } from '../platform/browserProfiles';
 
 const base = 'http://es.local:9200';
 
@@ -10,6 +11,7 @@ function json(body: any, status = 200) {
 describe('browserApi bridge', () => {
   beforeEach(() => {
     localStorage.clear();
+    __resetBrowserProfilesForTests();
     localStorage.setItem('esquerystudio.browser.profile', JSON.stringify({ url: base }));
     vi.restoreAllMocks();
   });
@@ -70,5 +72,74 @@ describe('browserApi bridge', () => {
     const methods = spy.mock.calls.map(c => c[1]?.method);
     expect(methods).toContain('PUT');
     expect(methods).toContain('DELETE');
+  });
+
+  it('progress 映射 ES task status 为 ReindexProgress；任务消失按完成处理', async () => {
+    const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(json({
+      completed: false,
+      task: { status: { total: 10, created: 3, updated: 1, deleted: 0, version_conflicts: 2 } },
+    }));
+    const running = await browserFetch('/internal/es/index/progress?taskId=n1%3A9');
+    expect(await running.json()).toMatchObject({
+      completed: false, status: 'RUNNING', total: 10, created: 3, updated: 1, versionConflicts: 2,
+    });
+    expect(String(spy.mock.calls[0][0])).toContain('/_tasks/n1%3A9');
+
+    spy.mockResolvedValueOnce(json({ error: { type: 'resource_not_found_exception' } }, 404));
+    const gone = await browserFetch('/internal/es/index/progress?taskId=n1%3A10');
+    expect(await gone.json()).toMatchObject({ completed: true, status: 'COMPLETED' });
+  });
+
+  it('连接档案：可保存多条，探活返回 ConnHealth 契约（GREEN/latency/lastProbeAt）', async () => {
+    /* 本用例从空白档案开始（beforeEach 的旧单档留给其余窄用例做迁移覆盖）。 */
+    localStorage.removeItem('esquerystudio.browser.profile');
+    __resetBrowserProfilesForTests();
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({
+      cluster_name: 'demo', version: { number: '7.10.2' }, number_of_nodes: 3,
+    }));
+    const a = await (await browserFetch('/internal/es/index/clusters/save', {
+      method: 'POST', body: JSON.stringify({ name: 'A', url: 'http://es-a:9200' }),
+    })).json();
+    const b = await (await browserFetch('/internal/es/index/clusters/save', {
+      method: 'POST', body: JSON.stringify({ name: 'B', url: 'http://es-b:9200', authType: 'API_KEY', password: 'k' }),
+    })).json();
+    expect(a.id).toBeTruthy();
+    expect(b.id).not.toBe(a.id);
+
+    const list = await (await browserFetch('/internal/es/index/clusters')).json();
+    expect(list).toHaveLength(2);
+    expect(list.map((x: any) => x.name)).toEqual(['A', 'B']);
+
+    const probe = await (await browserFetch(`/internal/es/index/clusters/${a.id}/probe`)).json();
+    expect(probe).toMatchObject({ status: 'GREEN', error: null, nodes: 3 });
+    expect(typeof probe.latencyMs).toBe('number');
+    expect(typeof probe.lastProbeAt).toBe('number');
+  });
+
+  it('insight 护栏：estimate 发 token，execute 走同一设置写端点', async () => {
+    const spy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: any, init?: RequestInit) => {
+      const p = new URL(String(input)).pathname;
+      if (p.endsWith('/_settings') && init?.method === 'PUT') return json({ acknowledged: true });
+      return json({});
+    });
+    const params = { index: 'logs', changes: { refresh_interval: '30s' } };
+    const est = await browserFetch('/internal/es/index/insight/actions/apply-index-settings/estimate', {
+      method: 'POST', body: JSON.stringify(params),
+    });
+    const estimate = await est.json();
+    expect(estimate).toMatchObject({ riskLevel: 'MEDIUM', supportsDryRun: true });
+    expect(estimate.confirmToken).toBeTruthy();
+    expect(estimate.analysis.items[0].kind).toBe('DYNAMIC');
+
+    const done = await browserFetch('/internal/es/index/insight/actions/apply-index-settings/execute', {
+      method: 'POST', body: JSON.stringify({ params, confirmToken: estimate.confirmToken }),
+    });
+    expect(done.status).toBe(200);
+    const receipt = await done.json();
+    expect(receipt.receiptId).toBeTruthy();
+    expect(spy.mock.calls.some(c => {
+      const p = new URL(String(c[0])).pathname;
+      return p === '/logs/_settings' && c[1]?.method === 'PUT';
+    })).toBe(true);
   });
 });

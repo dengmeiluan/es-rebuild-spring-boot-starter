@@ -6,10 +6,18 @@
         <h2>连接 Elasticsearch</h2>
         <p class="bc-sub">纯前端模式：查询直接从浏览器发往集群；凭据只保存在本机扩展存储。</p>
         <label class="bc-label">集群地址</label>
-        <input v-model.trim="url" class="ipt bc-ipt mono" placeholder="http://es-host:9200" @keyup.enter="connect" />
-        <div class="bc-row">
+        <input ref="urlInput" v-model.trim="url" class="ipt bc-ipt mono" placeholder="http://es-host:9200" @keyup.enter="connect" />
+        <div class="bc-auth" role="group" aria-label="认证方式">
+          <button class="bc-auth-btn" :class="{ on: authType === 'BASIC' }" type="button" :aria-pressed="authType === 'BASIC'" @click="authType = 'BASIC'">用户名 / 密码</button>
+          <button class="bc-auth-btn" :class="{ on: authType === 'API_KEY' }" type="button" :aria-pressed="authType === 'API_KEY'" @click="authType = 'API_KEY'">API Key</button>
+        </div>
+        <div v-if="authType === 'BASIC'" class="bc-row">
           <div><label class="bc-label">用户名（可选）</label><input v-model.trim="username" class="ipt bc-ipt" autocomplete="off" /></div>
           <div><label class="bc-label">密码（可选）</label><input v-model="password" type="password" class="ipt bc-ipt" autocomplete="off" /></div>
+        </div>
+        <div v-else>
+          <label class="bc-label">API Key</label>
+          <input v-model="password" type="password" class="ipt bc-ipt mono" autocomplete="off" placeholder="base64 的 id:api_key" />
         </div>
         <div v-if="err" class="bc-err" role="alert">{{ err }}</div>
         <div class="bc-actions">
@@ -22,29 +30,36 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, nextTick } from 'vue';
 import { isBrowserMode } from '../platform/browserApi';
-import { writeStoredRaw } from '../utils/safeJson';
+import { profiles, upsertProfile } from '../platform/browserProfiles';
 
 const show = ref(false);
+const urlInput = ref<HTMLInputElement>();
 const url = ref('http://localhost:9200');
 const username = ref('');
 const password = ref('');
+const authType = ref<'BASIC' | 'API_KEY'>('BASIC');
 const busy = ref(false);
 const err = ref('');
 
 function connect() {
   if (!url.value) return;
+  if (!/^https?:\/\/.+/.test(url.value)) { err.value = '集群地址应为 http://host:9200 或 https://host:9200'; return; }
   busy.value = true; err.value = '';
   try {
-    writeStoredRaw(localStorage, 'esquerystudio.browser.profile', JSON.stringify({
-      url: url.value.replace(/\/+$/, ''), username: username.value, password: password.value,
-    }));
-    try {
-      (globalThis as any).chrome?.storage?.local?.set?.({
-        'esquerystudio.browser.profile': { url: url.value.replace(/\/+$/, ''), username: username.value, password: password.value },
-      });
-    } catch { /* 非扩展环境 */ }
+    let name = url.value;
+    try { name = new URL(url.value).hostname; } catch { /* 交给下方保存校验 */ }
+    const saved = upsertProfile({
+      name, url: url.value,
+      username: authType.value === 'BASIC' ? username.value : '',
+      password: password.value, authType: authType.value, env: 'BROWSER',
+    });
+    if (!saved) {
+      err.value = '连接保存失败：地址格式应为 http://host:9200 或 https://host:9200';
+      busy.value = false;
+      return;
+    }
     location.reload();
   } catch (e) {
     err.value = String((e as any)?.message || e); busy.value = false;
@@ -53,7 +68,9 @@ function connect() {
 function close() { show.value = false; }
 onMounted(() => {
   if (!isBrowserMode) return;
-  try { show.value = !JSON.parse(localStorage.getItem('esquerystudio.browser.profile') || 'null')?.url; } catch { show.value = true; }
+  show.value = profiles().length === 0;
+  /* 单遮罩后主动把焦点放进唯一输入框；不再让后台 SetupWizard 的 autofocus 抢焦点。 */
+  if (show.value) void nextTick(() => urlInput.value?.focus());
 });
 </script>
 
@@ -66,6 +83,9 @@ onMounted(() => {
 .bc-label { display: block; margin: 8px 0 4px; font-size: var(--fs-xs); color: var(--tx1); }
 .bc-ipt { width: 100%; }
 .bc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.bc-auth { display: flex; gap: 6px; margin-top: 10px; }
+.bc-auth-btn { padding: 3px 9px; border: 1px solid var(--line); border-radius: var(--r-s); background: var(--bg2); color: var(--tx2); font-size: var(--fs-xs); cursor: pointer; }
+.bc-auth-btn.on { color: var(--ac-hi); border-color: var(--ac-line); background: var(--ac-soft); }
 .bc-err { margin-top: 10px; color: var(--err); font-size: var(--fs-xs); }
 .bc-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 </style>

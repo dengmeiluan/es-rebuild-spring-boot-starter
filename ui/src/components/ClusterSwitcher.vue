@@ -49,9 +49,12 @@
     style="width:720px;max-width:94vw;max-height:86vh;display:flex;flex-direction:column" :bordered="false">
     <template #header>集群连接管理 <span class="cm-cnt mono">{{ visibleConns.length }} 连接<template v-if="errCount"> · <b>{{ errCount }} 异常</b></template></span></template>
     <div class="cm-tip">
-      连接档案保存在控制集群索引中，密码只在服务端流转、前端不回显。数据面功能（查询/索引/运维等）跟随所选目标；
-      <template v-if="store.hostVisible">登录鉴权、Provider 重建、托管重建、配置实验室恒定作用于宿主集群。</template>
-      <template v-else>当前部署为纯管理平台形态，所有数据面操作均需先选择一个集群连接。</template>
+      <template v-if="isBrowserMode">连接档案保存在本机扩展存储（localStorage），密码只在本机流转、不上传任何服务端；数据面功能跟随所选连接。删除档案不影响目标 Elasticsearch 集群本身。</template>
+      <template v-else>
+        连接档案保存在控制集群索引中，密码只在服务端流转、前端不回显。数据面功能（查询/索引/运维等）跟随所选目标；
+        <template v-if="store.hostVisible">登录鉴权、Provider 重建、托管重建、配置实验室恒定作用于宿主集群。</template>
+        <template v-else>当前部署为纯管理平台形态，所有数据面操作均需先选择一个集群连接。</template>
+      </template>
     </div>
     <div class="cm-sort" role="group" aria-label="列表排序方式">
       <span class="dim sm-txt">排序</span>
@@ -168,14 +171,16 @@
 </button>
           </div>
         </div>
-        <div class="cm-f">
-          <label>连接超时 ms（空=全局默认）</label>
-          <input v-model.number="form.connectTimeoutMs" class="ipt mono" type="number" min="1" placeholder="如 5000" />
-        </div>
-        <div class="cm-f">
-          <label>读写超时 ms（空=全局默认）</label>
-          <input v-model.number="form.socketTimeoutMs" class="ipt mono" type="number" min="1" placeholder="如 60000" />
-        </div>
+        <template v-if="!isBrowserMode">
+          <div class="cm-f">
+            <label>连接超时 ms（空=全局默认）</label>
+            <input v-model.number="form.connectTimeoutMs" class="ipt mono" type="number" min="1" placeholder="如 5000" />
+          </div>
+          <div class="cm-f">
+            <label>读写超时 ms（空=全局默认）</label>
+            <input v-model.number="form.socketTimeoutMs" class="ipt mono" type="number" min="1" placeholder="如 60000" />
+          </div>
+        </template>
       </div>
       <div class="cm-form-ops">
         <button v-if="form.id" class="btn sm ghost" @click="cancelForm">取消编辑</button>
@@ -213,6 +218,7 @@ import { sortConns, normalizeSortMode, moveInOrder, type SortMode } from '../uti
 import { useAuthStore } from '../stores/auth';
 import { askConfirm } from '../composables/confirm';
 import { api } from '../api';
+import { isBrowserMode } from '../platform/browserApi';
 import type { ClusterConnView, ConnHealth } from '../api';
 import { useModalEnter } from '../composables/useModalEnter';
 import { friendlyEsError } from '../utils/esError';

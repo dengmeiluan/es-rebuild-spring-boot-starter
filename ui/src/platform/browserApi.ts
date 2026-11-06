@@ -22,36 +22,75 @@ import {
   progress as xmProgress, listJobs as xmListJobs, abort as xmAbort, resume as xmResume,
 } from './browserXmigrate';
 import { driftKeys as localDriftKeys, drift as localDrift, resetBaseline as resetDriftBaseline } from './browserDrift';
+import {
+  analyzeSettingsImpact, estimateGuardedAction, dryRunGuardedAction, executeGuardedAction,
+  BrowserInsightError,
+} from './browserInsight';
+import {
+  activeProfile, dataProfile, profiles, profileById, upsertProfile, deleteProfile,
+  type BrowserProfile,
+} from './browserProfiles';
 
-export interface BrowserProfile {
-  url: string;
-  username?: string;
-  password?: string;
-}
-
-const PROFILE_KEY = 'esquerystudio.browser.profile';
 const PREFIX = '/internal/es/index';
 
+/** 数据面档案：顶栏目标优先，未选目标用激活档案。 */
 function profile(): BrowserProfile | null {
-  try {
-    const raw = localStorage.getItem(PROFILE_KEY);
-    const p = raw ? JSON.parse(raw) : null;
-    return p && typeof p.url === 'string' && p.url ? p : null;
-  } catch { return null; }
+  return dataProfile();
 }
 
-function saveProfile(p: BrowserProfile): void {
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
-  /* Chrome 扩展的 service worker 读不到页面 localStorage；同一份档案镜像到
-     chrome.storage.local，报警器/后台采样才能继续工作。 */
-  try { (globalThis as any).chrome?.storage?.local?.set?.({ [PROFILE_KEY]: p }); } catch { /* 非扩展环境 */ }
-}
-
-function authHeaders(p: BrowserProfile): Record<string, string> {
+function authHeaders(p: { username?: string; password?: string; authType?: 'BASIC' | 'API_KEY' }): Record<string, string> {
+  if (p.authType === 'API_KEY' && p.password) {
+    return { Authorization: 'ApiKey ' + p.password };
+  }
   if (p.username) {
     return { Authorization: 'Basic ' + btoa(unescape(encodeURIComponent(p.username + ':' + (p.password || '')))) };
   }
   return {};
+}
+
+function auditConn(): { connId: string; connName: string } {
+  const p = profile();
+  return {
+    connId: p?.id || 'browser',
+    connName: localStorage.getItem('esquerystudio.monitor.connName') || p?.name || '',
+  };
+}
+
+function connView(p: BrowserProfile): any {
+  let u: URL;
+  try { u = new URL(p.url); } catch { u = new URL('http://invalid.local:9200'); }
+  return {
+    id: p.id, name: p.name || u.hostname || 'Elasticsearch',
+    scheme: u.protocol.replace(':', ''), host: u.hostname,
+    port: Number(u.port || (u.protocol === 'https:' ? 443 : 9200)),
+    username: p.username || '', hasPassword: !!p.password,
+    authType: p.authType || 'BASIC', env: p.env || 'BROWSER',
+    health: { status: 'UNKNOWN', latencyMs: null, lastProbeAt: null, error: null },
+  };
+}
+
+async function probeProfile(p: BrowserProfile): Promise<any> {
+  const t0 = Date.now();
+  try {
+    const r = await fetch(p.url.replace(/\/+$/, '') + '/', {
+      headers: { Accept: 'application/json', ...authHeaders(p) },
+      credentials: 'omit', cache: 'no-store',
+    });
+    const text = await r.text();
+    let d: any = null;
+    try { d = text ? JSON.parse(text) : null; } catch { /* 非 JSON 也保留 HTTP 结果 */ }
+    if (!r.ok) {
+      return { status: 'RED', latencyMs: Date.now() - t0, lastProbeAt: Date.now(), error: 'HTTP ' + r.status };
+    }
+    return {
+      status: 'GREEN', latencyMs: Date.now() - t0, lastProbeAt: Date.now(), error: null,
+      version: d?.version?.number || null,
+      clusterName: d?.cluster_name || d?.name || 'cluster',
+      nodes: Number(d?.number_of_nodes || 0),
+    };
+  } catch (e: any) {
+    return { status: 'RED', latencyMs: Date.now() - t0, lastProbeAt: Date.now(), error: String(e?.message || e) };
+  }
 }
 
 function response(data: unknown, status = 200): Response {
@@ -370,10 +409,12 @@ function splitPath(input: RequestInfo | URL): { path: string; query: string } | 
 
 async function route(path: string, query: string, method: string, bodyText: string, body: any): Promise<Response> {
   if (path === '/setup/status') {
-    const p = profile();
+    const all = profiles();
+    const p = activeProfile() || profile();
     return response({
-      bound: !!p, mode: p ? 'BROWSER' : 'NONE', endpoint: p?.url || null,
-      appName: 'ESQueryStudio Browser', hostVisible: true, authEnabled: false,
+      bound: all.length > 0, mode: all.length ? 'BROWSER' : 'NONE', endpoint: p?.url || null,
+      /* 浏览器模式没有服务端宿主集群：切换器只列本机连接档案，不展示「宿主集群」伪目标。 */
+      appName: 'ESQueryStudio Browser', hostVisible: false, authEnabled: false,
       builtinLogin: false, setupTokenRequired: false,
     });
   }
@@ -382,7 +423,10 @@ async function route(path: string, query: string, method: string, bodyText: stri
     if (!url) return fail(400, '请输入 Elasticsearch 地址');
     try {
       const r = await fetch(url.replace(/\/+$/, '') + '/', {
-        headers: authHeaders({ url, username: body?.username, password: body?.password }),
+        headers: authHeaders({
+          username: body?.username, password: body?.password,
+          authType: body?.authType === 'API_KEY' ? 'API_KEY' : 'BASIC',
+        }),
         credentials: 'omit',
       });
       const d = await r.json();
@@ -394,7 +438,14 @@ async function route(path: string, query: string, method: string, bodyText: stri
   if (path === '/setup/apply' || path === '/setup/rebind') {
     const url = String(body?.url || '').trim();
     if (!url) return fail(400, '请输入 Elasticsearch 地址');
-    saveProfile({ url, username: body?.username || '', password: body?.password || '' });
+    let name = url;
+    try { name = new URL(url).hostname; } catch { /* 交给上层 URL 校验 */ }
+    const saved = upsertProfile({
+      id: activeProfile()?.id,
+      name, url, username: body?.username || '', password: body?.password || '',
+      authType: body?.authType, env: 'BROWSER',
+    });
+    if (!saved) return fail(400, 'ES 地址格式应为 http://host:9200 或 https://host:9200');
     return response({ bound: true });
   }
   if (path === '/auth/me') {
@@ -429,40 +480,55 @@ async function route(path: string, query: string, method: string, bodyText: stri
   if (path === '/auth/users/upsert' || path === '/auth/users/delete') return fail(403, '浏览器模式没有服务端用户库');
   if (path === '/auth/audit-facets') return response(await auditFacetsLocal());
   if (path === '/ring-usage') return response(await monitorRingUsage());
-  if (path === '/mapping-reconcile/report') return response({ records: [] });
+  if (path === '/mapping-reconcile/report') {
+    /* 浏览器模式没有服务端代码 provider / @Mapping 来源，启动期补全对账不适用。
+       返回 reports 空集保持抽屉契约，并显式带 browserMode 让 UI 说明边界。 */
+    return response({ reports: [], browserMode: true });
+  }
   if (path === '/clusters') {
-    const p = profile();
-    if (!p) return response([]);
-    const u = new URL(p.url);
-    return response([{
-      id: 'browser', name: u.hostname || 'Elasticsearch', scheme: u.protocol.replace(':', ''),
-      host: u.hostname, port: Number(u.port || (u.protocol === 'https:' ? 443 : 9200)),
-      username: p.username || '', hasPassword: !!p.password, authType: 'BASIC', env: 'BROWSER',
-    }]);
+    return response(profiles().map(connView));
   }
   if (path === '/clusters/save') {
     const url = String(body?.url || '').trim();
     if (!/^https?:\/\//.test(url)) return fail(400, 'URL 格式应为 http://host:9200');
-    saveProfile({ url, username: body?.username || '', password: body?.password || '' });
-    const u = new URL(url);
-    return response({ id: 'browser', name: body?.name || u.hostname, scheme: u.protocol.replace(':', ''), host: u.hostname, port: Number(u.port || 9200), username: body?.username || '', hasPassword: !!body?.password, authType: 'BASIC', env: 'BROWSER' });
+    const saved = upsertProfile({
+      id: body?.id ? String(body.id) : undefined,
+      name: body?.name, url,
+      username: body?.username || '', password: body?.password || '',
+      authType: body?.authType, env: body?.env || 'BROWSER',
+    });
+    if (!saved) return fail(400, '连接档案保存失败');
+    return response(connView(saved));
   }
   if (path === '/clusters/delete') {
-    try { localStorage.removeItem(PROFILE_KEY); } catch { /* ignore */ }
-    return response({ ok: true });
+    const p = new URLSearchParams(query);
+    const id = String(p.get('id') || body?.id || '');
+    if (!id) return fail(400, '缺少连接 id');
+    return response({ ok: deleteProfile(id) });
   }
   if (path === '/clusters/test') {
-    const url = String(body?.url || profile()?.url || '').trim();
+    const id = String(body?.id || '');
+    const stored = id ? profileById(id) : null;
+    const url = String(body?.url || stored?.url || profile()?.url || '').trim();
     if (!url) return fail(400, '请输入 Elasticsearch 地址');
-    try {
-      const r = await fetch(url.replace(/\/+$/, '') + '/', { headers: authHeaders({ url, username: body?.username, password: body?.password }), credentials: 'omit' });
-      const d = await r.json();
-      return response({ ok: true, clusterName: d.cluster_name || 'cluster', version: d.version?.number || '—', status: d.tagline ? 'green' : 'green', nodes: 1 });
-    } catch (e: any) { return response({ ok: false, message: String(e?.message || e) }); }
+    const probe: BrowserProfile = {
+      id: stored?.id || 'test', name: stored?.name || url, url,
+      username: body?.username !== undefined ? String(body.username) : stored?.username,
+      password: body?.password || stored?.password,
+      authType: (body?.authType || stored?.authType || 'BASIC') as 'BASIC' | 'API_KEY',
+      env: stored?.env || 'BROWSER',
+    };
+    const h = await probeProfile(probe);
+    return response(h.status === 'GREEN'
+      ? { ok: true, clusterName: h.clusterName, version: h.version || '—', status: 'green', nodes: h.nodes || 1 }
+      : { ok: false, message: h.error || '连接失败' });
   }
-  if (/^\/clusters\/[^/]+\/probe$/.test(path)) {
-    const h = await must('/_cluster/health').catch((e: any) => ({ status: 'unknown', error: e.message }));
-    return response({ ok: !h.error, status: h.status, clusterName: h.cluster_name, nodes: h.number_of_nodes || 0, latencyMs: 0 });
+  const probeMatch = /^\/clusters\/([^/]+)\/probe$/.exec(path);
+  if (probeMatch) {
+    const id = decodeURIComponent(probeMatch[1]);
+    const p = profileById(id);
+    if (!p) return fail(404, '连接档案不存在：' + id);
+    return response(await probeProfile(p));
   }
   if (path === '/clusters/sync') return response(null);
   if (path === '/clusters/sync/run') return response({ checkedAt: Date.now(), changes: [], errors: [] });
@@ -485,7 +551,8 @@ async function route(path: string, query: string, method: string, bodyText: stri
   if (path === '/monitor-metrics') {
     const p = new URLSearchParams(query);
     return response(await queryMonitorMetrics({
-      scope: p.get('scope') || undefined, connName: p.get('connName') || undefined,
+      scope: p.get('scope') || undefined, connId: p.get('connId') || undefined,
+      connName: p.get('connName') || undefined,
       fromMs: p.get('fromMs') ? Number(p.get('fromMs')) : undefined,
       toMs: p.get('toMs') ? Number(p.get('toMs')) : undefined,
       size: p.get('size') ? Number(p.get('size')) : undefined,
@@ -533,6 +600,68 @@ async function route(path: string, query: string, method: string, bodyText: stri
   if (path === '/system-query') {
     const p = new URLSearchParams(query);
     return response(await systemQuery(String(p.get('which') || 'lock'), bodyText));
+  }
+  /* 任务进度：服务端 ReindexProgress 同构（RUNNING/COMPLETED/UNKNOWN + 计数）。
+     ES 任务完成后会从 _tasks 消失（404）——这是完成常态，不渲染成失败。 */
+  if (path === '/progress') {
+    const taskId = String(new URLSearchParams(query).get('taskId') || '');
+    const empty = { total: null, created: null, updated: null, deleted: null, versionConflicts: null };
+    if (taskId.lastIndexOf(':') <= 0) {
+      return response({ completed: false, status: 'UNKNOWN', detail: 'invalid taskId: ' + taskId, ...empty });
+    }
+    const r = await esDirect('/_tasks/' + enc(taskId));
+    if (r.status === 404) {
+      return response({ completed: true, status: 'COMPLETED', detail: 'task not found (likely completed)', ...empty });
+    }
+    if (r.status >= 400) return response(r.data ?? r.text, r.status);
+    const st = r.data?.task?.status;
+    const statusMap = st && typeof st === 'object' ? st : null;
+    const asLong = (v: any) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+    return response({
+      completed: !!r.data?.completed,
+      status: r.data?.completed ? 'COMPLETED' : 'RUNNING',
+      detail: statusMap ? JSON.stringify(statusMap) : 'running',
+      total: asLong(statusMap?.total),
+      created: asLong(statusMap?.created),
+      updated: asLong(statusMap?.updated),
+      deleted: asLong(statusMap?.deleted),
+      versionConflicts: asLong(statusMap?.version_conflicts),
+    });
+  }
+  /* 现场智能：服务端 SettingsChangeAnalyzer + 护栏协议的本机等价物。
+     有损边界：分类表/L1 门禁/静态预估按服务端同口径移植，token 只在当前页面内存有效。 */
+  if (path === '/insight/settings-impact') {
+    try {
+      return response(await analyzeSettingsImpact(
+        must, String(body?.index || ''),
+        body?.changes && typeof body.changes === 'object' && !Array.isArray(body.changes) ? body.changes : {},
+      ));
+    } catch (e: any) {
+      if (e instanceof BrowserInsightError) return fail(e.status, e.message, e.code);
+      return fail(400, String(e?.message || e));
+    }
+  }
+  const insightAction = /^\/insight\/actions\/([^/]+)\/(estimate|dry-run|execute)$/.exec(path);
+  if (insightAction) {
+    const actionId = decodeURIComponent(insightAction[1]);
+    try {
+      if (insightAction[2] === 'estimate') return response(await estimateGuardedAction(must, actionId, body || {}));
+      if (insightAction[2] === 'dry-run') return response(await dryRunGuardedAction(must, actionId, body || {}));
+      const t0 = Date.now();
+      const result = await executeGuardedAction(must, actionId, body?.params || {}, String(body?.confirmToken || ''));
+      const conn = auditConn();
+      void recordAudit({
+        method: 'POST', path: path + query, status: 200, ok: true,
+        costMs: Date.now() - t0,
+        connId: conn.connId, connName: conn.connName,
+        action: 'GUARDED_ACTION',
+        detail: JSON.stringify({ receiptId: result.receiptId, actionId, params: body?.params, result: result.result }).slice(0, 2000),
+      });
+      return response(result);
+    } catch (e: any) {
+      if (e instanceof BrowserInsightError) return fail(e.status, e.message, e.code);
+      return fail(400, String(e?.message || e));
+    }
   }
   if (path.startsWith('/config-lab') || path.startsWith('/xb') || path.startsWith('/insight')
       || path.startsWith('/system-') || path === '/force-merge' || path === '/replicas' || path === '/status' || path === '/progress') {
@@ -1131,17 +1260,21 @@ export async function browserFetch(input: RequestInfo | URL, init?: RequestInit)
   try {
     const res = await route(target.path, target.query, method, bodyText, bodyOf(init));
     const quiet = /^\/(monitor-|auth\/me|auth\/ops-audit|auth\/audit-facets|clusters|health|setup|ui\/config|adhoc-rebuild\/jobs)/.test(target.path);
-    if (!quiet) void recordAudit({
-      method, path: target.path + target.query, status: res.status, ok: res.ok,
-      costMs: performance.now() - startedAt, connName: localStorage.getItem('esquerystudio.monitor.connName') || '',
-      detail: bodyText.slice(0, 400),
-    });
+    if (!quiet) {
+      const conn = auditConn();
+      void recordAudit({
+        method, path: target.path + target.query, status: res.status, ok: res.ok,
+        costMs: performance.now() - startedAt, connId: conn.connId, connName: conn.connName,
+        detail: bodyText.slice(0, 400),
+      });
+    }
     return res;
   } catch (e) {
     if (e instanceof EsHttpError) {
+      const conn = auditConn();
       void recordAudit({
         method, path: target.path + target.query, status: e.status, ok: false,
-        costMs: performance.now() - startedAt, connName: localStorage.getItem('esquerystudio.monitor.connName') || '',
+        costMs: performance.now() - startedAt, connId: conn.connId, connName: conn.connName,
         detail: typeof e.data === 'string' ? e.data.slice(0, 400) : JSON.stringify(e.data ?? '').slice(0, 400),
       });
       return response(e.data, e.status);

@@ -84,6 +84,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 const MONITOR_ALARM = 'esq-monitor';
 const MONITOR_DB = 'esquerystudio.browser';
 const PROFILE_KEY = 'esquerystudio.browser.profile';
+const PROFILES_KEY = 'esquerystudio.browser.profiles';
+const ACTIVE_KEY = 'esquerystudio.browser.active';
+const LAST_SAMPLE_PREFIX = 'esquerystudio.monitor.lastSample:';
 
 function ensureMonitorAlarm() {
   try {
@@ -128,13 +131,13 @@ function dbAddMonitor(record) {
   }));
 }
 
-function dbLatestMonitor() {
+function dbLatestMonitor(connId) {
   return openMonitorDb().then(db => new Promise((resolve) => {
     if (!db) return resolve(null);
     try {
       const req = db.transaction('monitor', 'readonly').objectStore('monitor').getAll();
       req.onsuccess = () => {
-        const rows = (req.result || []).filter(r => r.scope === 'cluster');
+        const rows = (req.result || []).filter(r => r.scope === 'cluster' && r.connId === connId);
         resolve(rows.length ? rows[rows.length - 1] : null);
       };
       req.onerror = () => resolve(null);
@@ -143,6 +146,7 @@ function dbLatestMonitor() {
 }
 
 function monitorAuth(p) {
+  if (p && p.authType === 'API_KEY' && p.password) return { Authorization: 'ApiKey ' + p.password };
   if (!p || !p.username) return {};
   return { Authorization: 'Basic ' + btoa(unescape(encodeURIComponent(p.username + ':' + (p.password || '')))) };
 }
@@ -158,12 +162,13 @@ async function monitorFetch(p, path) {
   return data;
 }
 
-async function sampleMonitor() {
-  const saved = await chrome.storage.local.get([PROFILE_KEY, 'esquerystudio.monitor.lastSample']);
-  const p = saved[PROFILE_KEY];
+async function sampleProfile(p, saved) {
   if (!p || !p.url) return;
+  const connId = p.id || 'browser';
+  const lastKey = LAST_SAMPLE_PREFIX + connId;
   const now = Date.now();
-  if (saved['esquerystudio.monitor.lastSample'] && now - saved['esquerystudio.monitor.lastSample'] < 55000) return;
+  const last = Number(saved[lastKey] || (connId === 'browser' ? saved['esquerystudio.monitor.lastSample'] : 0) || 0);
+  if (last && now - last < 55000) return;
   const started = Date.now();
   let root = null, health = null, stats = null, cat = [];
   let error = '';
@@ -177,15 +182,15 @@ async function sampleMonitor() {
   } catch (e) {
     error = String(e && e.message ? e.message : e).slice(0, 500);
   }
-  const prev = await dbLatestMonitor();
+  const prev = await dbLatestMonitor(connId);
   const nodes = stats && stats.nodes ? Object.values(stats.nodes) : [];
   const sum = (fn) => nodes.reduce((n, x) => n + (Number(fn(x)) || 0), 0);
-  const connName = (health && health.cluster_name) || (root && root.cluster_name) || 'cluster';
+  const connName = (health && health.cluster_name) || (root && root.cluster_name) || p.name || 'cluster';
   const dt = prev ? Math.max(1, (now - prev.timestamp) / 1000) : 0;
   const searchTotal = sum(x => x?.indices?.search?.query_total);
   const indexTotal = sum(x => x?.indices?.indexing?.index_total);
   const rec = {
-    timestamp: now, connId: 'browser', connName, env: 'BROWSER', scope: 'cluster',
+    timestamp: now, connId, connName, env: p.env || 'BROWSER', scope: 'cluster',
     status: error ? 'RED' : String((health && health.status) || 'unknown'),
     latencyMs: Date.now() - started,
     esVersion: root && root.version ? root.version.number : undefined,
@@ -203,5 +208,27 @@ async function sampleMonitor() {
     rec.indexRate = Math.round(((indexTotal - Number(prev._indexTotal || 0)) / dt) * 100) / 100;
   }
   await dbAddMonitor(rec);
-  await chrome.storage.local.set({ 'esquerystudio.monitor.lastSample': now });
+  await chrome.storage.local.set({ [lastKey]: now, 'esquerystudio.monitor.lastSample': now });
+}
+
+/* 后台采集器：遍历所有已存连接（服务端多集群采样的有损本机等价物）。
+   - 页面打开时，同 profile 的 55s 节流键由页面和本函数共享，避免双写；
+   - 页面关闭后，alarm 仍按分钟为每条连接写集群健康行；
+   - 单条连接失败只记该连接的 RED 行，不影响其他连接。 */
+async function sampleMonitor() {
+  const saved = await chrome.storage.local.get([
+    PROFILES_KEY, ACTIVE_KEY, PROFILE_KEY, 'esquerystudio.monitor.lastSample',
+  ]);
+  let list = Array.isArray(saved[PROFILES_KEY]) ? saved[PROFILES_KEY] : [];
+  if (!list.length && saved[PROFILE_KEY] && saved[PROFILE_KEY].url) {
+    list = [{ ...saved[PROFILE_KEY], id: saved[PROFILE_KEY].id || 'browser', env: saved[PROFILE_KEY].env || 'BROWSER' }];
+  }
+  const seen = new Set();
+  for (const p of list) {
+    if (!p || !p.url) continue;
+    const id = p.id || 'browser';
+    if (seen.has(id)) continue;
+    seen.add(id);
+    await sampleProfile(p, saved);
+  }
 }

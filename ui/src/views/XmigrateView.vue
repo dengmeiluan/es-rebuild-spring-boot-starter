@@ -127,7 +127,7 @@
             <div class="xm-f-row xm-inline">
               <span class="xm-inline-lb">建索引方式</span>
               <div class="seg">
-                <button v-for="m in DEST_MODES" :key="m.k" :class="{ on: form.destCreateMode === m.k }" @click="form.destCreateMode = m.k" :title="m.tip">{{ m.t }}</button>
+                <button v-for="m in destModes" :key="m.k" :class="{ on: form.destCreateMode === m.k }" @click="form.destCreateMode = m.k" :title="m.tip">{{ m.t }}</button>
               </div>
             </div>
 
@@ -387,6 +387,7 @@ import QueryResultTable from '../components/QueryResultTable.vue'; /* W-C：作�
 import StatusPill from '../components/StatusPill.vue'; /* ：状态手滚 pill 改用统一件（ 范式） */
 import MetaStrip, { type MetaStripItem } from '../components/MetaStrip.vue'; /* ：进度 meta 手滚 mono 串换统一件 */
 import { api, ioRecorder, type RawIoRec } from '../api';
+import { isBrowserMode } from '../platform/browserApi';
 /* 原始请求/响应快查弹窗（源配置预览分节消费，ioRecorder 记录环取数） */
 import RawIoModal from '../components/RawIoModal.vue';
 import { friendlyApiError } from '../utils/esError';
@@ -455,6 +456,11 @@ const DEST_MODES = [
   { k: 'FROM_ENTITY', t: '按实体建', tip: '目标不存在时，按业务侧实体类注解(@Field)推导建索引（需选 indexKey）' },
   { k: 'REBUILD', t: '删旧重建', tip: '⚠ 先删除已有目标索引（含全部数据!），再按源结构建新索引，然后全量迁入（用于目标脏了想从头来）' },
 ] as const;
+/* 浏览器模式没有服务端 @Mapping 注册表：FROM_ENTITY 不可兑现，直接收起该档，
+   不让用户选到一个必然报错的入口（手输/草稿恢复也归一到「已存在」）。 */
+const destModes = computed(() => isBrowserMode
+  ? DEST_MODES.filter(m => m.k !== 'FROM_ENTITY')
+  : [...DEST_MODES]);
 
 /* formOpen 落盘（usePref 'xm.formOpen'，默认 true=既有行为零变化；
  550 轨2 ② DevTools dt.histOpen 同范式——展开/收起跨会话记忆） */
@@ -520,6 +526,8 @@ const XM_FORM_DEFAULT = ({
  启动成功后的清除语义保留（clear()）。 */
 const formDraft = useScopedDraftState<any>('form', { route: 'xmigrate',}, XM_FORM_DEFAULT);
 const form = formDraft.state;
+/* 浏览器模式隐藏 FROM_ENTITY 后，恢复的旧草稿不能停留在不可见档位。 */
+if (isBrowserMode && form.value.destCreateMode === 'FROM_ENTITY') form.value.destCreateMode = 'NONE';
 /* 第 2 步宿主目标索引默认回填顶栏选中（ 单一真相）：一次性初值，仅空时回填——
  不改用户已输/草稿恢复值；写类视图不做持续 follow（ 白名单口径，防「A 的目标
  被顶栏切换悄悄改掉」），要换目标由用户显式改输入。 */

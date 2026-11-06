@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { dbClear } from '../platform/browserStore';
+import { __resetBrowserProfilesForTests, upsertProfile } from '../platform/browserProfiles';
 import {
   sampleMonitorOnce, queryMonitorMetrics, queryMonitorHistory, queryTopIndexes,
   queryMonitorAlerts, monitorRingUsage, recordAudit, queryLocalAudit,
@@ -25,6 +26,7 @@ function mockEs() {
 describe('browser monitor persistence', () => {
   beforeEach(async () => {
     localStorage.clear();
+    __resetBrowserProfilesForTests();
     localStorage.setItem('esquerystudio.browser.profile', JSON.stringify({ url: 'http://es.local:9200' }));
     healthStatus = 'green';
     vi.restoreAllMocks();
@@ -56,6 +58,27 @@ describe('browser monitor persistence', () => {
     await sampleMonitorOnce();
     alerts = await queryMonitorAlerts(20);
     expect(alerts.records.some(a => a.recovered)).toBe(true);
+  });
+
+  it('多连接采样按 connId 隔离，不会被同名集群混写', async () => {
+    localStorage.removeItem('esquerystudio.browser.profile');
+    __resetBrowserProfilesForTests();
+    const a = upsertProfile({ name: 'A', url: 'http://es-a.local:9200' })!;
+    const b = upsertProfile({ name: 'B', url: 'http://es-b.local:9200' })!;
+    mockEs();
+    localStorage.setItem('esquerystudio.target', a.id);
+    await sampleMonitorOnce();
+    localStorage.setItem('esquerystudio.target', b.id);
+    await sampleMonitorOnce();
+
+    const ra = await queryMonitorMetrics({ connId: a.id, size: 100 });
+    const rb = await queryMonitorMetrics({ connId: b.id, size: 100 });
+    expect(ra.records.length).toBeGreaterThan(0);
+    expect(rb.records.length).toBeGreaterThan(0);
+    expect(ra.records.every(r => r.connId === a.id)).toBe(true);
+    expect(rb.records.every(r => r.connId === b.id)).toBe(true);
+    const ha = await queryMonitorHistory({ connId: a.id, size: 10 });
+    expect(ha.records.every(r => r.connId === a.id)).toBe(true);
   });
 
   it('本机审计可按用户/URI 查询并生成 facets 数据', async () => {

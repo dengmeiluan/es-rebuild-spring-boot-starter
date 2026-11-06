@@ -1,25 +1,25 @@
 /* 纯浏览器模式的监控采样器：用页面定时器 + IndexedDB 复刻服务端的分钟采样、
  * 环形保留与告警事件。页面关闭后不采样（这是浏览器模式的真实边界，UI 不伪造历史）。 */
 import { dbAdd, dbAll, dbDeleteMany, metaGet, metaSet, STORE_ALERTS, STORE_MONITOR, STORE_AUDIT } from './browserStore';
-
-const PROFILE_KEY = 'esquerystudio.browser.profile';
+import { dataProfile, type BrowserProfile } from './browserProfiles';
 const LAST_SAMPLE_KEY = 'esquerystudio.monitor.lastSample';
 const ALERT_STATE_KEY = 'monitor.alertState';
 const SAMPLE_MS = 60_000;
 const MAX_ROWS = 20_000;
 const RETENTION_MS = 7 * 24 * 3600_000;
+const AUDIT_MAX_ROWS = 20_000;
+const AUDIT_TRIM_EVERY_MS = 60_000;
 
 let started = false;
 let timer: any = null;
+let lastAuditTrimAt = 0;
 
-function profile(): { url: string; username?: string; password?: string } | null {
-  try {
-    const p = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null');
-    return p && p.url ? p : null;
-  } catch { return null; }
+function profile(): BrowserProfile | null {
+  return dataProfile();
 }
 
-function authHeaders(p: { username?: string; password?: string }): Record<string, string> {
+function authHeaders(p: { username?: string; password?: string; authType?: 'BASIC' | 'API_KEY' }): Record<string, string> {
+  if (p.authType === 'API_KEY' && p.password) return { Authorization: 'ApiKey ' + p.password };
   if (!p.username) return {};
   return { Authorization: 'Basic ' + btoa(unescape(encodeURIComponent(p.username + ':' + (p.password || '')))) };
 }
@@ -40,19 +40,23 @@ function num(v: any): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-async function lastCluster(connName: string): Promise<any | null> {
+async function lastCluster(connId: string): Promise<any | null> {
   const all = await dbAll<any>(STORE_MONITOR);
-  const rows = all.filter(r => r.scope === 'cluster' && r.connName === connName).sort((a, b) => b.timestamp - a.timestamp);
+  const rows = all.filter(r => r.scope === 'cluster' && r.connId === connId).sort((a, b) => b.timestamp - a.timestamp);
   return rows[0] || null;
 }
 
-function addAlert(list: any[], connName: string, level: string, metric: string, value: any, threshold: any, message: string, recovered = false) {
-  list.push({ timestamp: Date.now(), connId: 'browser', connName, env: 'BROWSER', level, metric, value, threshold, message, recovered });
+function alertStateKey(connId: string): string { return ALERT_STATE_KEY + ':' + connId; }
+function lastSampleKey(connId: string): string { return LAST_SAMPLE_KEY + ':' + connId; }
+
+function addAlert(list: any[], connId: string, connName: string, level: string, metric: string, value: any, threshold: any, message: string, recovered = false) {
+  list.push({ timestamp: Date.now(), connId, connName, env: 'BROWSER', level, metric, value, threshold, message, recovered });
 }
 
 export async function sampleMonitorOnce(): Promise<void> {
   const p = profile();
   if (!p) return;
+  const connId = p.id || 'browser';
   const startedAt = Date.now();
   let health: any = null, stats: any = null, cat: any[] = [], root: any = null, idxStats: any = null;
   let error = '';
@@ -69,7 +73,7 @@ export async function sampleMonitorOnce(): Promise<void> {
   }
   const latencyMs = Date.now() - startedAt;
   const connName = String(health?.cluster_name || root?.cluster_name || new URL(p.url).hostname);
-  const prev = await lastCluster(connName);
+  const prev = await lastCluster(connId);
   const now = Date.now();
   const dtSec = prev?.timestamp ? Math.max(1, (now - prev.timestamp) / 1000) : 0;
   const nodes: any[] = Object.values<any>(stats?.nodes || {});
@@ -86,7 +90,7 @@ export async function sampleMonitorOnce(): Promise<void> {
   const writeRej = sum(nodes.map(n => num(n?.thread_pool?.write?.rejected)));
   const searchRej = sum(nodes.map(n => num(n?.thread_pool?.search?.rejected)));
   const cluster: any = {
-    timestamp: now, connId: 'browser', connName, env: 'BROWSER', scope: 'cluster',
+    timestamp: now, connId, connName, env: p.env || 'BROWSER', scope: 'cluster',
     status: error ? 'RED' : String(health?.status || 'unknown'),
     latencyMs, esVersion: root?.version?.number,
     nodes: Number(health?.number_of_nodes || nodes.length),
@@ -132,7 +136,7 @@ export async function sampleMonitorOnce(): Promise<void> {
     const prevNodeRow = prev?.nodesDetail?.find((x: any) => x.nodeName === n.name);
     const wRej = num(n?.thread_pool?.write?.rejected), sRej = num(n?.thread_pool?.search?.rejected);
     nodeRows.push({
-      timestamp: now, connId: 'browser', connName, env: 'BROWSER', scope: 'node', nodeName: n.name,
+      timestamp: now, connId, connName, env: p.env || 'BROWSER', scope: 'node', nodeName: n.name,
       status: error ? 'RED' : String(health?.status || 'unknown'),
       heapUsedPct: num(n?.jvm?.mem?.heap_used_percent), heapUsedMb: Math.round(num(n?.jvm?.mem?.heap_used_in_bytes) / 1048576),
       cpuPct: num(n?.os?.cpu?.percent), esCpuPct: num(n?.os?.cpu?.percent), load1m: num(n?.os?.cpu?.load_average?.['1m']),
@@ -158,27 +162,29 @@ export async function sampleMonitorOnce(): Promise<void> {
   } else {
     active['connection'] = { level: 'CRIT', value: 1, threshold: 0, message: '集群连接失败：' + error };
   }
-  const prevState: Record<string, any> = (await metaGet(ALERT_STATE_KEY)) || {};
+  const prevState: Record<string, any> = (await metaGet(alertStateKey(connId))) || {};
   for (const [metric, a] of Object.entries<any>(active)) {
-    if (!prevState[metric] || prevState[metric].level !== a.level) addAlert(alerts, connName, a.level, metric, a.value, a.threshold, a.message);
+    if (!prevState[metric] || prevState[metric].level !== a.level) addAlert(alerts, connId, connName, a.level, metric, a.value, a.threshold, a.message);
   }
   for (const metric of Object.keys(prevState)) {
-    if (!active[metric]) addAlert(alerts, connName, 'INFO', metric, 0, 0, '指标已恢复：' + metric, true);
+    if (!active[metric]) addAlert(alerts, connId, connName, 'INFO', metric, 0, 0, '指标已恢复：' + metric, true);
   }
-  await metaSet(ALERT_STATE_KEY, active);
+  await metaSet(alertStateKey(connId), active);
 
   localStorage.setItem('esquerystudio.monitor.connName', connName);
+  localStorage.setItem(lastSampleKey(connId), String(now));
   localStorage.setItem(LAST_SAMPLE_KEY, String(now));
   try {
     (globalThis as any).chrome?.storage?.local?.set?.({
       'esquerystudio.monitor.lastSample': now,
+      [lastSampleKey(connId)]: now,
       'esquerystudio.browser.profile': p,
     });
   } catch { /* 非扩展环境 */ }
   await dbAdd(STORE_MONITOR, cluster);
   for (const n of nodeRows) await dbAdd(STORE_MONITOR, n);
   for (const a of alerts) await dbAdd(STORE_ALERTS, a);
-  localStorage.setItem(LAST_SAMPLE_KEY, String(now));
+  localStorage.setItem(lastSampleKey(connId), String(now));
 
   const all = await dbAll<any>(STORE_MONITOR);
   if (all.length > MAX_ROWS || (all.length && all[0].timestamp < now - RETENTION_MS)) {
@@ -192,14 +198,16 @@ export async function sampleMonitorOnce(): Promise<void> {
 export function startBrowserMonitor(): void {
   if (started) return;
   started = true;
-  const last = Number(localStorage.getItem(LAST_SAMPLE_KEY) || 0);
+  const p = profile();
+  const last = Number(localStorage.getItem(p ? lastSampleKey(p.id || 'browser') : LAST_SAMPLE_KEY) || 0);
   if (!last || Date.now() - last > 55_000) setTimeout(() => { void sampleMonitorOnce(); }, 1200);
   timer = setInterval(() => { void sampleMonitorOnce(); }, SAMPLE_MS);
 }
 
-export async function queryMonitorMetrics(p: { scope?: string; connName?: string; fromMs?: number; toMs?: number; size?: number; interval?: string; agg?: string }): Promise<{ records: any[] }> {
+export async function queryMonitorMetrics(p: { scope?: string; connId?: string; connName?: string; fromMs?: number; toMs?: number; size?: number; interval?: string; agg?: string }): Promise<{ records: any[] }> {
   const all = (await dbAll<any>(STORE_MONITOR)).filter(r =>
     (!p.scope || r.scope === p.scope)
+    && (!p.connId || r.connId === p.connId)
     && (!p.connName || r.connName === p.connName)
     && (!p.fromMs || r.timestamp >= p.fromMs)
     && (!p.toMs || r.timestamp <= p.toMs));
@@ -232,10 +240,11 @@ export async function queryMonitorMetrics(p: { scope?: string; connName?: string
 export async function queryMonitorHistory(p: { connId?: string; status?: string; fromMs?: number; toMs?: number; size?: number; from?: number }): Promise<{ records: any[] }> {
   const rows = (await dbAll<any>(STORE_MONITOR))
     .filter(r => r.scope === 'cluster')
-    .filter(r => (!p.status || String(r.status).toUpperCase() === String(p.status).toUpperCase())
+    .filter(r => (!p.connId || r.connId === p.connId)
+      && (!p.status || String(r.status).toUpperCase() === String(p.status).toUpperCase())
       && (!p.fromMs || r.timestamp >= p.fromMs) && (!p.toMs || r.timestamp <= p.toMs))
     .sort((a, b) => b.timestamp - a.timestamp)
-    .map(r => ({ timestamp: r.timestamp, connId: 'browser', connName: r.connName, env: 'BROWSER', status: r.status, latencyMs: r.latencyMs, esVersion: r.esVersion, error: r.error }));
+    .map(r => ({ timestamp: r.timestamp, connId: r.connId || 'browser', connName: r.connName, env: r.env || 'BROWSER', status: r.status, latencyMs: r.latencyMs, esVersion: r.esVersion, error: r.error }));
   const from = Math.max(0, Number(p.from || 0));
   const size = Math.max(1, Math.min(1000, Number(p.size || 200)));
   return { records: rows.slice(from, from + size) };
@@ -268,13 +277,28 @@ export async function monitorRingUsage(): Promise<any> {
   };
 }
 
-export async function recordAudit(entry: { method: string; path: string; status: number; ok: boolean; costMs: number; connName?: string; detail?: string }): Promise<void> {
+async function trimAuditIfNeeded(): Promise<void> {
+  const now = Date.now();
+  if (now - lastAuditTrimAt < AUDIT_TRIM_EVERY_MS) return;
+  lastAuditTrimAt = now;
+  try {
+    const rows = await dbAll<any>(STORE_AUDIT);
+    if (rows.length <= AUDIT_MAX_ROWS) return;
+    const doomed = rows.sort((a, b) => a.timestamp - b.timestamp)
+      .slice(0, rows.length - AUDIT_MAX_ROWS)
+      .map(r => r.id);
+    await dbDeleteMany(STORE_AUDIT, doomed);
+  } catch { /* 治理失败不阻断审计写入 */ }
+}
+
+export async function recordAudit(entry: { method: string; path: string; status: number; ok: boolean; costMs: number; connId?: string; connName?: string; detail?: string; action?: string }): Promise<void> {
   try {
     await dbAdd(STORE_AUDIT, {
-      timestamp: Date.now(), username: 'browser', role: 'ADMIN', source: 'host', action: entry.ok ? 'ES_REQUEST' : 'ES_ERROR',
-      method: entry.method, uri: entry.path, connId: 'browser', connName: entry.connName || '',
+      timestamp: Date.now(), username: 'browser', role: 'ADMIN', source: 'host', action: entry.action || (entry.ok ? 'ES_REQUEST' : 'ES_ERROR'),
+      method: entry.method, uri: entry.path, connId: entry.connId || 'browser', connName: entry.connName || '',
       ip: '127.0.0.1', httpStatus: entry.status, costMs: Math.round(entry.costMs), detail: entry.detail || '',
     });
+    void trimAuditIfNeeded();
   } catch { /* 审计旁路静默 */ }
 }
 

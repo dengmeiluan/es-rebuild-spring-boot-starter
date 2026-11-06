@@ -318,7 +318,11 @@ async function request<T = any>(path: string, init?: RequestInit & { timeoutMs?:
     // 401 且非登录接口本身 → 广播弹登录遮罩（LoginOverlay 监听）；
     // 若期间凭证已换新（内置 token 或宿主 hostToken 有一个变了），说明是旧凭证时代发出的过期请求，
     // 忽略避免把刚认出的身份又顶回遮罩（.2：iframe 握手与首次 probe 存在天然竞态）
-    if (resp.status === 401 && !path.includes('/auth/login')
+    /* 浏览器模式的 /auth/me 是「尚未录入连接」探针：401 交给 BrowserConnect 引导，
+       不是控制台登录会话失效。误触 unauthorized 会把 LoginOverlay 一起弹出来，
+       首屏变成三层遮罩抢焦点（实测狂闪/不可用）。 */
+    const browserSetupProbe = isBrowserMode && path.includes('/auth/me');
+    if (resp.status === 401 && !path.includes('/auth/login') && !browserSetupProbe
         && getToken() === tokenAtRequest && hostToken === hostTokenAtRequest) {
       window.dispatchEvent(new CustomEvent('esquerystudio:unauthorized'));
     }

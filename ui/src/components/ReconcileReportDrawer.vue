@@ -18,6 +18,10 @@
  锁语义天然继承）；导出 CSV/MD/XLSX/PNG 与右键复制矩阵归内核（状态列导出人话值与旧
  copyMatrix 同口径，说明列恒 raw 原文）。空态/骨架走内核 empty-text/empty-hint/loading。 -->
       <template v-else>
+        <div v-if="isBrowserMode" class="rr-tip">
+          浏览器模式没有服务端代码 provider 的 <span class="mono">@Mapping</span> 来源，启动期自动补全对账不适用。
+          可在 <router-link to="/config-drift">配置漂移</router-link> 页保存本机基线，对比线上 mapping/settings 差异。
+        </div>
         <div v-if="rows.length" class="rr-tip">
           只补新增字段,绝不修改/删除既有映射;类型冲突 fail-closed,需走
           <b>托管重建</b>。字段级明细见启动日志 <span class="mono">[MappingReconcile]</span>。
@@ -63,6 +67,7 @@ import { useRouter } from 'vue-router';
 import { RefreshCw, ExternalLink } from 'lucide-vue-next';
 import { NDrawer, NDrawerContent } from 'naive-ui';
 import { api } from '../api';
+import { isBrowserMode } from '../platform/browserApi';
 import { friendlyEsError } from '../utils/esError';
 import { useAppStore } from '../stores/app';
 import QueryResultTable from './QueryResultTable.vue';

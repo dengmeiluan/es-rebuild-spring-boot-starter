@@ -653,8 +653,11 @@ const saveBtnText = computed(() => {
 });
 const guardParams = computed(() => ({ index: index.value, changes: changesFlat.value }));
 
-function onExecuted() {
-  /* 反馈去重——GuardedActionButton 自带「已执行·回执」滑出条，此处只做数据刷新 */
+function onExecuted(receipt: any) {
+  /* 保存成功后 diff 归零会让护栏按钮卸载，组件自带的回执滑出条随卸载消失；
+     这里补一条全局通知，保证回执号/审计检索提示始终可见。 */
+  const id = String(receipt?.receiptId || '').slice(0, 8);
+  store.notify('success', id ? `已执行 · 回执 ${id}（审计可按回执号检索）` : '索引设置已执行');
   loadSettings();
 }
 

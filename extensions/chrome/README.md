@@ -70,29 +70,42 @@ The native Vue console talks to Elasticsearch directly through a compatibility b
 
 | Area | Browser mode |
 |---|---|
+| Connections | Multiple local profiles in extension storage; the top-bar switcher selects the active target; passwords never leave the browser |
 | Overview, indices, documents, DSL/Lucene/SQL, PIT, reindex, bulk | Direct ES REST |
 | Mapping, settings, aliases, templates, analysis, synonyms, scripts, Painless | Direct ES REST |
 | Snapshots, ILM, SLM, Watcher, remote clusters, plugins | Direct ES REST |
 | Tasks, nodes stats, shards, allocation explain, health report | Direct ES REST |
 | Search templates, term vectors, validate/explain, profile | Direct ES REST |
-| Monitor history / alerts | Local IndexedDB minute sampling (page + service-worker alarm); alerts derived from the same samples |
+| Monitor history / alerts | Local IndexedDB minute sampling (page + service-worker alarm); the alert state machine runs while a console tab is open, while the closed-tab alarm writes cluster-level health rows |
 | Operation audit | Local IndexedDB request log, shown in Security; ES-native accounts replace the server user store |
+| Task progress | `_tasks/<taskId>` → the server `ReindexProgress` shape (RUNNING / COMPLETED / UNKNOWN + counts); vanished tasks are treated as completed |
+| Settings impact / guarded apply | Local ES 7.10 DYNAMIC/STATIC/ILLEGAL classification + L1 value gate + rebuild estimate; in-page confirmToken binds action + params; execute writes `PUT /{index}/_settings` and records a local GUARDED_ACTION receipt |
 | Managed rebuild | Client-side `_reindex` + `_tasks` polling + atomic alias swap, persisted as local jobs |
 | Cross-cluster migration | Client `scroll` + `_bulk` from a manually entered source into the connected host; local job records |
 | Config validator | Client L1 lint + L2 temp-index dry-run |
 | Config drift | Local baseline captured on first check, compared with the live mapping/settings |
 | System indices | Local job-lock view for the current browser; true cross-instance locking remains a server capability |
 
+### Honest browser-mode limits
+
+These are intentional lossy equivalents, labelled in the UI rather than faked:
+
+- **Cross-instance locks** — the System page shows jobs running in this browser only; two browsers cannot coordinate a cluster-wide lock.
+- **Code-provider mapping reconcile** — the startup reconcile report needs server-side `@Mapping` sources; browser mode offers the local config-drift baseline instead.
+- **Closed-tab sampling** — the service worker writes one cluster-level health row per saved profile per minute; node/top-index detail resumes when a console tab is open.
+- **Client migration** — `scroll` + `_bulk` stops when the tab closes; written documents remain and the job is marked `INTERRUPTED` for an explicit resume.
+- **Audit scope** — the local audit ring is per browser profile and capped at 20k rows; it is not a compliance-grade cross-instance ledger.
+
 The REST console deliberately exposes reindex, tasks, snapshots and settings
 directly; the user owns the cluster credentials and accepts the risk. The
 Spring Boot starter / standalone server remains the control plane for host
-identity, audit and long-running job orchestration.
+identity, cross-instance audit and server-managed job orchestration.
 
 ## Data and security
 
-- Credentials stay in this extension's local storage (`localStorage` plus a
-  `chrome.storage.local` mirror used by the background sampler) and are sent only
-  to the Elasticsearch endpoint you configured. No third-party telemetry.
+- Connection profiles and credentials stay in this extension's local storage
+  (`localStorage` plus a `chrome.storage.local` mirror used by the background sampler);
+  each saved profile is sent only to its own Elasticsearch endpoint. No third-party telemetry.
 - The service worker is a narrow broker for the context-menu tool page: only `http`/`https`,
   allowlisted methods, 8 MB request cap, no remote code, no third-party telemetry. The native
   Vue console uses the extension's `host_permissions` directly against the configured ES endpoint.
@@ -102,9 +115,11 @@ identity, audit and long-running job orchestration.
   TLS, gateway allowlists and network reachability still apply; ask the ES
   administrator to allow the extension origin if a gateway blocks it.
 - The native Vue console keeps monitor samples in local IndexedDB (7 days / 20k rows,
-  one sample per minute while a console tab is open; the service-worker alarm also
-  samples while Chrome runs). Audit entries and managed-rebuild jobs stay local too.
-  The separate direct tool page keeps its live samples in memory (120 points, ~10 min).
+  one sample per minute while a console tab is open; the service-worker alarm samples
+  every saved profile while Chrome runs, writing one cluster-level row per profile per
+  minute and isolating records by profile id). Audit entries are capped at 20k rows and
+  managed-rebuild jobs stay local too. The separate direct tool page keeps its live
+  samples in memory (120 points, ~10 min).
 
 ## Verification
 

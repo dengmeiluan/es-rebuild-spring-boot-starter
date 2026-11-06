@@ -54,9 +54,13 @@
             :facts="confirmState.facts"
             @confirm="resolveConfirm(true)" @update:show="v => !v && resolveConfirm(false)" />
           <WelcomeWizard ref="wizardRef" />
-          <LoginOverlay />
-          <SetupWizard />
-          <BrowserConnect />
+          <!-- 首屏门禁互斥：服务端模式用 SetupWizard / LoginOverlay；浏览器模式只有
+               BrowserConnect（ES 原生账号，无控制台登录/控制集群绑定）。三者同时挂载会
+               叠出三层全屏遮罩，且 SetupWizard 的 autofocus 会把焦点抢到 BrowserConnect 背后，
+               表现为页面狂闪/不可用。 -->
+          <LoginOverlay v-if="!isBrowserMode" />
+          <SetupWizard v-if="!isBrowserMode" />
+          <BrowserConnect v-if="isBrowserMode" />
           <!-- -D3：分组快捷键速查面板（? 开关）。-13：goto 登记表已迁至 utils/hotkeys.ts，
  面板由该表渲染，不再是需要手工同步的第二份数据 -->
           <HotkeyPanel :show="helpOpen" @close="helpOpen = false" />
