@@ -25,6 +25,8 @@ All notable changes to ESQueryStudio are documented here. The format follows
 - Fixed first-run browser mode mounting three full-screen gates at once
   (`LoginOverlay` + `SetupWizard` + `BrowserConnect`); focus now stays in the
   single browser connection dialog and failed profile saves no longer reload.
+- Browser connection now probes the endpoint and credentials before persisting
+  the profile; a wrong address/key stays in the dialog with the real error.
 
 ## [1.0.0] — 2026-11-05
 

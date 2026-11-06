@@ -56,8 +56,10 @@ Load `extensions/chrome` (the folder containing `manifest.json`) in
 `chrome://extensions` with Developer mode enabled. A packaged zip is attached to
 each GitHub Release; extract it before loading.
 
-First run shows only the browser connection dialog. The server-mode
-`LoginOverlay`/`SetupWizard` are intentionally not mounted in browser mode.
+First run shows only the browser connection dialog. It probes the endpoint and
+credentials before saving; a wrong address or key stays in the dialog with the
+real error. The server-mode `LoginOverlay`/`SetupWizard` are intentionally not
+mounted in browser mode.
 
 ## Data and security
 
